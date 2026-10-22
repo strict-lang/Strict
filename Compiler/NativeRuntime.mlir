@@ -10782,6 +10782,11 @@
   // a launch runs the 32 bit kernel when any list it reads is packed (bits below 64), the double one otherwise
   llvm.mlir.global internal constant @strict_gpu_quantize_name("strict_device_quantize\00") : !llvm.array<23 x i8>
   llvm.mlir.global internal @strict_gpu_quantize_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  llvm.mlir.global internal constant @strict_gpu_quantize_tokens_name("strict_device_quantize_tokens\00") : !llvm.array<30 x i8>
+  llvm.mlir.global internal @strict_gpu_quantize_tokens_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  // the width of the tokens strict_gpu_tokens quantizes with one scale per token (rows with one scale each), 0 for a
+  // scale per 32 numbers
+  llvm.mlir.global internal @strict_gpu_quantize_width(0 : i64) : i64
   // device address, size and next offset of the 8 bit numbers made for dot products, one stream runs everything in order
   // so a quantization only overwrites bytes of dot products that ran already, it grows to 4 times a list that needs more
   // than a quarter (the inputs of a long prompt)
@@ -10889,29 +10894,50 @@
     %after = arith.addi %at, %bytes : i64
     llvm.store %after, %nextSlot : i64, !llvm.ptr
     %target = arith.addi %start, %at : i64
-    %name = llvm.mlir.addressof @strict_gpu_quantize_name : !llvm.ptr
-    %slot = llvm.mlir.addressof @strict_gpu_quantize_slot : !llvm.ptr
+    %widthSlot = llvm.mlir.addressof @strict_gpu_quantize_width : !llvm.ptr
+    %tokenWidth = llvm.load %widthSlot : !llvm.ptr -> i64
+    %hasTokenWidth = arith.cmpi sgt, %tokenWidth, %none : i64
+    %safeWidth = arith.select %hasTokenWidth, %tokenWidth, %thirtyTwo : i64
+    %tokenRest = arith.remui %length, %safeWidth : i64
+    %wholeTokens = arith.cmpi eq, %tokenRest, %none : i64
+    %perToken = arith.andi %hasTokenWidth, %wholeTokens : i1
+    %blockName = llvm.mlir.addressof @strict_gpu_quantize_name : !llvm.ptr
+    %blockSlot = llvm.mlir.addressof @strict_gpu_quantize_slot : !llvm.ptr
+    %tokenName = llvm.mlir.addressof @strict_gpu_quantize_tokens_name : !llvm.ptr
+    %tokenSlot = llvm.mlir.addressof @strict_gpu_quantize_tokens_slot : !llvm.ptr
+    %name = llvm.select %perToken, %tokenName, %blockName : i1, !llvm.ptr
+    %slot = llvm.select %perToken, %tokenSlot, %blockSlot : i1, !llvm.ptr
     %function = func.call @strict_gpu_function(%ptx, %name, %slot) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %unset = llvm.mlir.zero : !llvm.ptr
     %missing = llvm.icmp "eq" %function, %unset : !llvm.ptr
     cf.cond_br %missing, ^done, ^launch
   ^launch:
     %three = arith.constant 3 : i64
-    %arguments = llvm.alloca %three x i64 : (i64) -> !llvm.ptr
-    %parameters = llvm.alloca %three x !llvm.ptr : (i64) -> !llvm.ptr
+    %four = arith.constant 4 : i64
+    %arguments = llvm.alloca %four x i64 : (i64) -> !llvm.ptr
+    %parameters = llvm.alloca %four x !llvm.ptr : (i64) -> !llvm.ptr
     llvm.store %device, %arguments : i64, !llvm.ptr
     %lengthArgument = llvm.getelementptr %arguments[1] : (!llvm.ptr) -> !llvm.ptr, i64
     llvm.store %length, %lengthArgument : i64, !llvm.ptr
-    %targetArgument = llvm.getelementptr %arguments[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %widthArgument = llvm.getelementptr %arguments[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %tokenWidth, %widthArgument : i64, !llvm.ptr
+    %targetIndex = arith.select %perToken, %three, %two : i64
+    %targetArgument = llvm.getelementptr %arguments[%targetIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
     llvm.store %target, %targetArgument : i64, !llvm.ptr
     llvm.store %arguments, %parameters : !llvm.ptr, !llvm.ptr
     %lengthParameter = llvm.getelementptr %parameters[1] : (!llvm.ptr) -> !llvm.ptr, !llvm.ptr
     llvm.store %lengthArgument, %lengthParameter : !llvm.ptr, !llvm.ptr
-    %targetParameter = llvm.getelementptr %parameters[2] : (!llvm.ptr) -> !llvm.ptr, !llvm.ptr
-    llvm.store %targetArgument, %targetParameter : !llvm.ptr, !llvm.ptr
+    %secondParameter = llvm.getelementptr %parameters[2] : (!llvm.ptr) -> !llvm.ptr, !llvm.ptr
+    %secondArgument = llvm.select %perToken, %widthArgument, %targetArgument : i1, !llvm.ptr
+    llvm.store %secondArgument, %secondParameter : !llvm.ptr, !llvm.ptr
+    %thirdParameter = llvm.getelementptr %parameters[3] : (!llvm.ptr) -> !llvm.ptr, !llvm.ptr
+    llvm.store %targetArgument, %thirdParameter : !llvm.ptr, !llvm.ptr
     %threads = arith.constant 256 : i64
+    %tokenCount = arith.divui %length, %safeWidth : i64
+    %tokenThreads = arith.muli %tokenCount, %threads : i64
+    %launchThreads = arith.select %perToken, %tokenThreads, %length : i64
     %flushed = func.call @strict_gpu_flush() : () -> i1
-    %launched = func.call @strict_gpu_launch(%function, %length, %threads, %parameters) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i1
+    %launched = func.call @strict_gpu_launch(%function, %launchThreads, %threads, %parameters) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i1
     %quantized = arith.andi %flushed, %launched : i1
     cf.cond_br %quantized, ^swap, ^done
   ^swap:
@@ -11523,8 +11549,29 @@
     %slot = llvm.select %eights, %eightsSlot, %longSlot : i1, !llvm.ptr
     %lanes = arith.select %eights, %eightLanes, %longLanes : i64
     %integers = arith.constant -1 : i64
+    %tokenWidth = func.call @strict_gpu_token_width(%rows, %width, %eights) : (f64, f64, i1) -> i64
+    %tokenWidthSlot = llvm.mlir.addressof @strict_gpu_quantize_width : !llvm.ptr
+    llvm.store %tokenWidth, %tokenWidthSlot : i64, !llvm.ptr
     %result = func.call @strict_gpu_run(%ptx, %name, %slot, %count, %zero, %none, %values, %six, %listsMask, %one, %two, %lanes, %none, %integers) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> f64
+    llvm.store %none, %tokenWidthSlot : i64, !llvm.ptr
     return %result : f64
+  }
+  // the tokens of strict_device_eights are quantized with one scale per token (width) when the first row has one scale,
+  // it adds up whole rows when every row has (strict_gpu_uniform)
+  func.func private @strict_gpu_token_width(%rows: f64, %width: f64, %eights: i1) -> i64 {
+    %none = arith.constant 0 : i64
+    %zero = arith.constant 0.0 : f64
+    cf.cond_br %eights, ^first, ^done(%none : i64)
+  ^first:
+    %first = func.call @strict_list_get(%rows, %zero) : (f64, f64) -> f64
+    %data = func.call @strict_gpu_host(%first) : (f64) -> !llvm.ptr
+    %bits = func.call @strict_gpu_bits(%first) : (f64) -> i64
+    %columns = arith.fptosi %width : f64 to i64
+    %uniform = func.call @strict_gpu_uniform(%data, %columns, %bits) : (!llvm.ptr, i64, i64) -> i1
+    %chosen = arith.select %uniform, %columns, %none : i64
+    cf.br ^done(%chosen : i64)
+  ^done(%tokenWidth: i64):
+    return %tokenWidth : i64
   }
   // strict_device_tiles fits 64 tokens or more with Q4_K or Q6_K rows whose 32 bit tokens become 8 bit numbers (width a
   // multiple of 32)
@@ -11827,10 +11874,10 @@
     %countHigh = arith.shli %count, %countShift : i64
     %strideAndCount = arith.ori %rowStride, %countHigh : i64
     llvm.store %strideAndCount, %staging : i64, !llvm.ptr
-    cf.br ^row(%none : i64)
-  ^row(%rowIndex: i64):
+    cf.br ^row(%none, %true : i64, i1)
+  ^row(%rowIndex: i64, %uniformRows: i1):
     %moreRows = arith.cmpi slt, %rowIndex, %count : i64
-    cf.cond_br %moreRows, ^gather, ^upload
+    cf.cond_br %moreRows, ^gather, ^flagged
   ^gather:
     %rowSlot = llvm.getelementptr %items[%rowIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     %gathered = llvm.load %rowSlot : !llvm.ptr -> f64
@@ -11856,7 +11903,15 @@
     cf.br ^gathered
   ^gathered:
     %nextRow = arith.addi %rowIndex, %one : i64
-    cf.br ^row(%nextRow : i64)
+    %uniformRow = func.call @strict_gpu_uniform(%destination, %columns, %storedBits) : (!llvm.ptr, i64, i64) -> i1
+    %stillUniform = arith.andi %uniformRows, %uniformRow : i1
+    cf.br ^row(%nextRow, %stillUniform : i64, i1)
+  ^flagged:
+    %uniformBit = arith.constant 2147483648 : i64
+    %uniformFlag = arith.select %uniformRows, %uniformBit, %none : i64
+    %flaggedWord = arith.ori %strideAndCount, %uniformFlag : i64
+    llvm.store %flaggedWord, %staging : i64, !llvm.ptr
+    cf.br ^upload
   ^upload:
     cf.cond_br %big, ^dedicated, ^temporary
   ^dedicated:
@@ -11884,6 +11939,36 @@
   ^unavailable:
     llvm.call @free(%staging) : (!llvm.ptr) -> ()
     return %false : i1
+  }
+  // 8 bit numbers whose scales per 32 all are the first (one scale per row like convrot int8 rows): strict_gpu_rows sets
+  // bit 31 of the rows header (above the stride) when every row is, strict_device_eights then adds up whole rows
+  func.func private @strict_gpu_uniform(%data: !llvm.ptr, %columns: i64, %bits: i64) -> i1 {
+    %false = arith.constant false
+    %true = arith.constant true
+    %one = arith.constant 1 : i64
+    %eight = arith.constant 8 : i64
+    %five = arith.constant 5 : i64
+    %thirtyOne = arith.constant 31 : i64
+    %isEight = arith.cmpi eq, %bits, %eight : i64
+    cf.cond_br %isEight, ^scan, ^done(%false : i1)
+  ^scan:
+    %dataBytes = func.call @strict_packed_data(%columns, %eight) : (i64, i64) -> i64
+    %scales = llvm.getelementptr %data[%dataBytes] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %partsUp = arith.addi %columns, %thirtyOne : i64
+    %parts = arith.shrui %partsUp, %five : i64
+    %first = llvm.load %scales : !llvm.ptr -> i32
+    cf.br ^next(%one : i64)
+  ^next(%part: i64):
+    %more = arith.cmpi slt, %part, %parts : i64
+    cf.cond_br %more, ^compare, ^done(%true : i1)
+  ^compare:
+    %slot = llvm.getelementptr %scales[%part] : (!llvm.ptr, i64) -> !llvm.ptr, i32
+    %scale = llvm.load %slot : !llvm.ptr -> i32
+    %same = arith.cmpi eq, %scale, %first : i32
+    %following = arith.addi %part, %one : i64
+    cf.cond_br %same, ^next(%following : i64), ^done(%false : i1)
+  ^done(%uniform: i1):
+    return %uniform : i1
   }
   // a matrix of packed rows (8, 16 or 32 bits) and rows unpacked on the CPU (doubles, like the token embeddings read for
   // a prompt) goes up all packed when that format keeps every number of the unpacked rows exactly, not 64 bits wide

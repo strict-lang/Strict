@@ -240,7 +240,7 @@
     %eight = arith.constant 8 : i64
     %fifteen = arith.constant 15 : i64
     %alignMask = arith.constant -16 : i64
-    %lowHalf = arith.constant 4294967295 : i64
+    %lowHalf = arith.constant 2147483647 : i64
     %thirtyTwo = arith.constant 32 : i64
     %word = llvm.load %source : !llvm.ptr -> i64
     %stride = arith.andi %word, %lowHalf : i64
@@ -1681,6 +1681,98 @@
     %scaleSlot = llvm.getelementptr %scales[%scaleIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f32
     llvm.store %scale, %scaleSlot : f32, !llvm.ptr
     cf.br ^exit
+  ^exit:
+    llvm.return
+  }
+  // 32 bit numbers to 8 bit numbers with one scale per token of width numbers (a block of 256 threads per token, its
+  // scales per 32 all are the scale of the token, like the activations of ComfyUI's int8 layers) for strict_device_eights
+  llvm.mlir.global internal @strict_device_quantize_largest() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<8 x f32>
+  llvm.func @strict_device_quantize_tokens(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>} {
+    %c0 = arith.constant 0 : i32
+    %c1 = arith.constant 1 : i32
+    %c5 = arith.constant 5 : i32
+    %c8 = arith.constant 8 : i32
+    %c31 = arith.constant 31 : i32
+    %five = arith.constant 5 : i64
+    %threads = arith.constant 256 : i64
+    %zero = arith.constant 0.0 : f32
+    %most = arith.constant 127.0 : f32
+    %thread = func.call @strict_device_thread_index() : () -> i32
+    %block = func.call @strict_device_block_index() : () -> i32
+    %thread64 = arith.extui %thread : i32 to i64
+    %token = arith.extui %block : i32 to i64
+    %start = arith.muli %token, %width : i64
+    %source32 = llvm.getelementptr %source[%start] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    cf.br ^find(%thread64, %zero : i64, f32)
+  ^find(%at: i64, %largest: f32):
+    %moreFound = arith.cmpi slt, %at, %width : i64
+    cf.cond_br %moreFound, ^findBody, ^reduce
+  ^findBody:
+    %slot = llvm.getelementptr %source32[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %value = llvm.load %slot : !llvm.ptr -> f32
+    %magnitude = llvm.call_intrinsic "llvm.fabs.f32"(%value) : (f32) -> f32
+    %larger = arith.maxnumf %largest, %magnitude : f32
+    %atNext = arith.addi %at, %threads : i64
+    cf.br ^find(%atNext, %larger : i64, f32)
+  ^reduce:
+    %warpLargest = func.call @strict_device_largest(%largest) : (f32) -> f32
+    %shared = llvm.mlir.addressof @strict_device_quantize_largest : !llvm.ptr<3>
+    %warp = arith.shrui %thread, %c5 : i32
+    %lane = arith.andi %thread, %c31 : i32
+    %isFirst = arith.cmpi eq, %lane, %c0 : i32
+    cf.cond_br %isFirst, ^share, ^shared
+  ^share:
+    %warp64 = arith.extui %warp : i32 to i64
+    %sharedSlot = llvm.getelementptr %shared[%warp64] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
+    llvm.store %warpLargest, %sharedSlot : f32, !llvm.ptr<3>
+    cf.br ^shared
+  ^shared:
+    func.call @strict_device_barrier() : () -> ()
+    cf.br ^gather(%c0, %zero : i32, f32)
+  ^gather(%other: i32, %gathered: f32):
+    %moreOthers = arith.cmpi slt, %other, %c8 : i32
+    cf.cond_br %moreOthers, ^gatherBody, ^scaled
+  ^gatherBody:
+    %other64 = arith.extui %other : i32 to i64
+    %otherSlot = llvm.getelementptr %shared[%other64] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
+    %otherLargest = llvm.load %otherSlot : !llvm.ptr<3> -> f32
+    %gatheredNext = arith.maxnumf %gathered, %otherLargest : f32
+    %otherNext = arith.addi %other, %c1 : i32
+    cf.br ^gather(%otherNext, %gatheredNext : i32, f32)
+  ^scaled:
+    %scale = arith.divf %gathered, %most : f32
+    %isEmpty = arith.cmpf oeq, %gathered, %zero : f32
+    %inverse = arith.divf %most, %gathered : f32
+    %factor = arith.select %isEmpty, %zero, %inverse : f32
+    %bytes = llvm.getelementptr %target[%start] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    cf.br ^write(%thread64 : i64)
+  ^write(%writeAt: i64):
+    %moreWritten = arith.cmpi slt, %writeAt, %width : i64
+    cf.cond_br %moreWritten, ^writeBody, ^scales
+  ^writeBody:
+    %writeSlot = llvm.getelementptr %source32[%writeAt] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %written = llvm.load %writeSlot : !llvm.ptr -> f32
+    %multiplied = arith.mulf %written, %factor : f32
+    %rounded = func.call @strict_device_rounded(%multiplied) : (f32) -> i32
+    %byte = arith.trunci %rounded : i32 to i8
+    %byteSlot = llvm.getelementptr %bytes[%writeAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %byte, %byteSlot : i8, !llvm.ptr
+    %writeNext = arith.addi %writeAt, %threads : i64
+    cf.br ^write(%writeNext : i64)
+  ^scales:
+    %scaleStart = llvm.getelementptr %target[%count] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %tokenParts = arith.shrui %start, %five : i64
+    %parts = arith.shrui %width, %five : i64
+    cf.br ^scale(%thread64 : i64)
+  ^scale(%part: i64):
+    %moreParts = arith.cmpi slt, %part, %parts : i64
+    cf.cond_br %moreParts, ^scaleBody, ^exit
+  ^scaleBody:
+    %partIndex = arith.addi %tokenParts, %part : i64
+    %scaleSlot = llvm.getelementptr %scaleStart[%partIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    llvm.store %scale, %scaleSlot : f32, !llvm.ptr
+    %partNext = arith.addi %part, %threads : i64
+    cf.br ^scale(%partNext : i64)
   ^exit:
     llvm.return
   }
