@@ -15,6 +15,7 @@ In priority order, short and actionable. Remove what is done (results go into th
 ## Bugs
 - `Greedy.Best(Float8.Packed(...), 1, length)` with more than 2^24 outputs fails in the 32 bit kernel with "a loop on the GPU read outside of a list" (fine below 2^24 and on the CPU), only when `Clamp(0, width)` gets the free `width` instead of a literal; the test needing 16M numbers is too slow for the VM.
 - `Qwen3Text` (Q8_0 through `Generation`) takes 196.6 ms per token on the RTX 3080 while `Qwen3Benchmark` decodes Q4_K_M in 2.4 ms (2026-10-22): find which loops of `Generation` stay on the CPU.
+- GPU device functions name the parts of a variable slot by appending d, n, b (and e for exact numbers), so a parameter `gate` has `%v_gated` as its part and a local `gated` in the same method collides: `redefinition of SSA value '%v_gated.private'` (StrictComfy `MossBlock.Situ`, `MossImage` does not build). Fix: a separator in `MlirTyped.Parts` and the literal suffixes of the device code (`_d`, `_n`, `_b`, `_e`).
 
 ## Waiting
 - Base library: Number `Sign`, `Wrap`, `ArcTangent2` and inverse trigonometry, Text to Numbers, fixed decimal text, `Truncated`.
