@@ -1,0 +1,43 @@
+has function MlirFunction
+has position Number
+constant Blurring = MlirWholeLanes(MlirWholeKernel.Kernel.function, 5)
+constant Zero = "    %wzero = arith.constant 0 : i64"
+constant Stored = ("    %wb = arith.trunci %wr : i64 to i32", "    %wp = llvm.getelementptr %wout[%wk] : (!llvm.ptr, i64) -> !llvm.ptr, i32", "    llvm.store %wb, %wp : i32, !llvm.ptr")
+Lines(header Text, fallback Texts) Texts
+	Text.Combine(Blurring.Lines("h", List(Text))).IndexOf("@Board_Picked_2_whole(%t8wa0, %t8wa1)") > 0
+	MlirWholeChild(Blurring.function, 5).IsWhole
+	let counter = MlirWholeBody(function).Slot("%wloop", "i64")
+	(header, "    %one = arith.constant 1 : i64", counter) + Guarded + fallback + Looped + "  }"
+Guarded Texts
+	Text.Combine(Blurring.Guarded).IndexOf("%t8wh0m0k = func.call @strict_list_packed(%t8wh0m0v)") > 0
+	Blurring.Guarded.Last is "    cf.cond_br %t8whok, ^wholestart, ^generic"
+	let call = MlirWholeCall(function, Kernel.Call)
+	mutable lines = MlirWholeGuard(function, Kernel.Call).Started + MlirWholeChild(function, position).Result
+	mutable conditions = List(Mutable(Text))
+	for Kernel.Reads
+		if Kernel.Source(value) is not "index"
+			lines = lines + Input(index)
+			conditions.Add(call.Temp("wh" + index + "o"))
+	let joined = MlirWholeGuard(function, Kernel.Call).Joined(conditions)
+	lines + joined + (Zero, "    cf.cond_br " + call.Temp("whok") + ", ^wholestart, ^generic")
+Input(read Number) Texts
+	Blurring.Input(0).First is "    %t8wl0a = llvm.getelementptr %context[10] : (!llvm.ptr) -> !llvm.ptr, f64"
+	let call = MlirWholeCall(function, Kernel.Call)
+	let kind = MlirWholeFunction(Kernel.Callee).Kinds(read)
+	let name = call.Temp("wl" + read)
+	let loaded = MlirWholeChild(function, position).Loaded(name, "%v_" + Kernel.Source(Kernel.Reads(read)))
+	let converted = MlirWholeValues(Kernel.Call).Converted(name, "f", "i", call.Temp("wa" + read))
+	loaded + call.Checked(read, kind) + (kind is in ("p", "d", "o") then List(Text) else List(Text) + converted)
+Looped Texts
+	Blurring.Looped(Blurring.Looped.Length - 7) is "    llvm.store %wb, %wp : i32, !llvm.ptr"
+	let call = MlirWholeCall(function, Kernel.Call)
+	let callee = MlirWholeFunction(Kernel.Callee)
+	mutable lines = MlirWholeChild.Started + MlirWholeChild.Checked
+	for Kernel.Reads
+		if Kernel.Source(value) is "index"
+			lines = lines + ("    " + call.Temp("wa" + index) + " = arith.addi %wk, %wzero : i64")
+	let called = MlirWholeValues(Kernel.Call).Called("%wr", callee.Symbol, call.Temp("wa"), callee.Kinds, "i")
+	lines + called + Stored + MlirWholeChild.Next + MlirWholeChild.Exit
+Kernel MlirWholeKernel
+	Blurring.Kernel.Call is 8
+	MlirWholeKernel(function, position)
