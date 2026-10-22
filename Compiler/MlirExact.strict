@@ -72,6 +72,10 @@ Types Texts
 	for Parts
 		types = types + "i64"
 	types
+Returned Text
+	Single.Returned is "!llvm.struct<(f32, i64, i64)>"
+	Double.Returned is "!llvm.struct<(f64)>"
+	"!llvm.struct<(" + Text.Combine(Types, ", ") + ")>"
 Parameters(name Text) Texts
 	Single.Parameters("%p1") is ("%p1: f32", "%p1_e: i64", "%p1_q: i64")
 	let types = Types

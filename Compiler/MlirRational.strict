@@ -5,15 +5,27 @@ constant Adding = InstructionEntry.Binary(InstructionType.Add, (0, 1, 2))
 constant Less = InstructionEntry.Binary(InstructionType.LessThan, (0, 1))
 constant Kinds = MlirSingle.Operators + InstructionType.Modulo
 Operated(entry InstructionEntry) Texts
-	Single.Operated(Adding).Last is "    llvm.store %x2d, %r2_q : i64, !llvm.ptr"
+	Single.Operated(Adding).Last is "    llvm.store %x2bd, %r2_q : i64, !llvm.ptr"
 	"    llvm.store %x2h, %r2 : f32, !llvm.ptr" is in Single.Operated(Adding)
+	"    %x2bd = arith.select %x2bk, %x2d, %inexact : i64" is in Single.Operated(Adding)
 	Double.Operated(Adding).Length is 0
 	Single.Operated(InstructionEntry.Binary(InstructionType.Power, (0, 1, 2))).Length is 0
 	if (exact.Parts.Length is 0) or (entry.kind is not in Kinds)
 		return List(Text)
 	let operands = exact.Loaded(Temp("a"), "%r" + entry.payload(1)) + exact.Loaded(Temp("b"), "%r" + entry.payload(2))
 	let target = "%r" + entry.payload(3)
-	operands + Rational(entry.kind) + Rounded(Temp("n"), Temp("d"), target) + exact.Set(Temp("n"), Temp("d"), target)
+	let bounded = Bounded(Temp("n"), Temp("d")) + Rounded(Temp("n"), Temp("bd"), target)
+	operands + Rational(entry.kind) + bounded + exact.Set(Temp("n"), Temp("bd"), target)
+Bounded(numerator Text, denominator Text) Texts
+	Single.Bounded("%n", "%d")(2) is "    %x2ba = arith.maxsi %n, %x2bm : i64"
+	Single.Bounded("%n", "%d").Last is "    %x2bd = arith.select %x2bk, %d, %inexact : i64"
+	let negated = Integer("bm", "arith.subi %inexact, " + numerator)
+	let magnitude = Integer("ba", "arith.maxsi " + numerator + ", " + Temp("bm"))
+	let small = Integer("bs", "arith.cmpi sle, " + Temp("ba") + ", " + Temp("bl"))
+	let denominated = Integer("bt", "arith.cmpi sle, " + denominator + ", " + Temp("bl"))
+	let both = "    " + Temp("bk") + " = arith.andi " + Temp("bs") + ", " + Temp("bt") + " : i1"
+	let chosen = Integer("bd", "arith.select " + Temp("bk") + ", " + denominator + ", %inexact")
+	(Integer("bl", "arith.constant 2147483647"), negated, magnitude, small, denominated, both, chosen)
 Rounded(numerator Text, denominator Text, target Text) Texts
 	Single.Rounded("%n", "%d", "%r2").First is "    %x2hw = arith.cmpi eq, %d, %one : i64"
 	Single.Rounded("%n", "%d", "%r2")(1) is "    %x2hc = arith.sitofp %n : i64 to f32"

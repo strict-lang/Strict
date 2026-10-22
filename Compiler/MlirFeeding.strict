@@ -7,12 +7,40 @@ constant Unfloated = (InstructionType.StoreRegisterToVariable, InstructionType.C
 Stored(number Text, target Text) Texts
 	Summing.Stored("%d6", "%r4") is ("    llvm.store %d6, %r4 : f64, !llvm.ptr")
 	Singled.Stored("%d6", "%r4").Last is "    llvm.store %inexact, %r4_q : i64, !llvm.ptr"
-	MlirFeeding(MlirDeviceStatements.Singled, 2).Stored("%d2", "%r2").Last.EndsWith("%r2_q : i64, !llvm.ptr")
+	MlirFeeding(MlirDeviceStatements.Singled, 2).Stored("%d2", "%r2") is ("    llvm.store %d2, %r2 : f32, !llvm.ptr")
 	let entry = function.method.instructions(at)
-	if (entry.kind is in MlirRational.Kinds) or IsFeeding(at, LoadReuse(function.method.instructions).Written(entry))
+	if entry.kind is in MlirRational.Kinds
+		return List(Text) + MlirTyped(function.Float).Store(number, target)
+	if IsFeeding(at, LoadReuse(function.method.instructions).Written(entry))
 		return List(Text) + function.Store(number, target)
 	let inexact = MlirExact(function, at).Set("%inexact", "%inexact", target)
 	(List(Text) + MlirTyped(function.Float).Store(number, target)) + inexact
+Packed(name Text) Texts
+	Singled.Packed("%d3").Last is "    %d3r3 = llvm.insertvalue %d3_q, %d3r2[2] : !llvm.struct<(f32, i64, i64)>"
+	Summing.Packed("%d3").Length is 2
+	let returned = MlirExact(function, at).Returned
+	mutable lines = List(Text) + ("    " + name + "r0 = llvm.mlir.undef : " + returned)
+	for MlirExact(function, at).Names(name)
+		let packed = " = llvm.insertvalue " + value + ", " + name + "r" + index + "[" + index + "] : "
+		lines = lines + ("    " + name + "r" + (index + 1) + packed + returned)
+	lines
+Unpacked(name Text) Texts
+	Singled.Unpacked("%d6").First is "    %d6 = llvm.extractvalue %d6r[0] : !llvm.struct<(f32, i64, i64)>"
+	Summing.Unpacked("%d6") is ("    %d6 = llvm.extractvalue %d6r[0] : !llvm.struct<(f64)>")
+	let returned = MlirExact(function, at).Returned
+	for MlirExact(function, at).Names(name)
+		"    " + value + " = llvm.extractvalue " + name + "r[" + index + "] : " + returned
+Invoked(calls MlirDeviceCalls, result Text, operands Text) Texts
+	Summing.Invoked(MlirDeviceCalls.Twice, "%d6", "(%a)").First.StartsWith("    %d6r = func.call @Rows_Twice_1_device(%a)")
+	Singled.Invoked(MlirDeviceCalls.Twice, "%d6", "(%a)").Last.StartsWith("    %d6_q = llvm.extractvalue %d6r[2]")
+	let symbol = calls.callee.Symbol + "_device" + MlirTyped(function.Float).Suffix
+	let call = "    " + result + "r = func.call @" + symbol + operands
+	(List(Text) + (call + " : (" + calls.Types + ") -> " + MlirExact(function, at).Returned)) + Unpacked(result)
+Called(number Text, target Text) Texts
+	Singled.Called("%d6", "%r4").Last is "    llvm.store %d6_q, %r4_q : i64, !llvm.ptr"
+	Summing.Called("%d6", "%r4") is ("    llvm.store %d6, %r4 : f64, !llvm.ptr")
+	let exact = MlirExact(function, at).Set(number + "_e", number + "_q", target)
+	(List(Text) + MlirTyped(function.Float).Store(number, target)) + exact
 IsFeeding(position Number, register Number) Boolean
 	Chained.IsFeeding(1, 1)
 	Chained.IsFeeding(4, 3) is false

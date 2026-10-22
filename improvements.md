@@ -10,8 +10,7 @@ In priority order, short and actionable. Remove what is done (results go into th
 5. **GPU memory at the edge of the WDDM budget**: lists on the GPU are freed by their counts at a missing block (strict_rc_reclaim, device flag 64), so MossImage at 720x1280 runs without full collections per step (95 % GPU busy, 470 ms); with ~0.9 GB used by other programs the pool sits at its 256 MB headroom and still has 1-8 full collections, 2-5 cuMemAlloc/cuMemFree/cuCtxSynchronize and ~100 young collections per step (462-499 ms, was 1.5 s): a sub-allocating pool (any free block serves any size) would end that; the arena wrap synchronizes every second step; MossImage's per-step reference list (7 MB) is only freed by a later collection.
 
 ## Bugs
-- `DeltaChunks.test.exe` fails 6 tests (`Read`, `Fresh`, `Outputs`, `Remembered`) with `STRICT_GPU=all` (tiny loops on the GPU), all pass without it; `Products` alone passes.
-- A device call returns only its 32 bit float (`Position` in `DeltaChunks.Weighted`), so a list index computed from it is exact only below 2^24: return the exact parts too.
+- Qwen3.8 prompts of 1366 tokens and more decode `!` (NaN from block 5 on): from there `DeltaChunks.Paired` (48 * 16 * tokens numbers) reaches 2^20 and is stored as bfloat16, the triangular inverse (`Inverted`) amplifies its rounding; with 32 bit lists 1370 and 2000 tokens give sensible text (item 3).
 
 ## Later
 Language model research (`NeuralNetworks/README.md`), big models and memory (Qwen3-Coder-30B with all experts), image blur on the GPU, web and mobile platforms, Apple Silicon, AMD GPUs.

@@ -15,7 +15,7 @@ constant Absolute = MlirDeviceStatements(MlirGpuCheck.Absolute, 2)
 constant Passing = MlirDeviceStatements(Layered, 5)
 Emitted Texts
 	MlirDeviceStatements(Doubled, 3).Emitted.First is "    %d3 = llvm.load %v_value : !llvm.ptr -> f64"
-	MlirDeviceStatements(Twice, 3).Emitted.Last is "    return %d3 : f64"
+	MlirDeviceStatements(Twice, 3).Emitted.Last is "    return %d3r1 : !llvm.struct<(f64)>"
 	let entry = function.method.instructions(at)
 	if entry.kind < InstructionType.IndexCall
 		return Moved(entry)
@@ -113,10 +113,8 @@ Called(entry InstructionEntry) Texts
 		return MlirDeviceCalls(function, at, function).Native(entry)
 	let calls = MlirDeviceCalls(function, at, Callee)
 	let arguments = "(" + Text.Combine(calls.Arguments(entry), ", ") + ")"
-	let symbol = calls.callee.Symbol + "_device" + MlirTyped(function.Float).Suffix
-	let call = "    " + Temp("") + " = func.call @" + symbol + arguments
-	let typed = call + " : (" + calls.Types + ") -> " + function.Float
-	(calls.Loaded(entry) + typed) + MlirFeeding(function, at).Stored(Temp(""), "%r" + entry.payload(0))
+	let feeding = MlirFeeding(function, at)
+	(calls.Loaded(entry) + feeding.Invoked(calls, Temp(""), arguments)) + feeding.Called(Temp(""), "%r" + entry.payload(0))
 Callee MlirFunction
 	Calling.Callee.Symbol is "Rows_Twice_1"
 	MlirModule(function.types, "").Called(function, at).First
@@ -127,9 +125,14 @@ Finished(entry InstructionEntry) Texts
 		return List(Text)
 	if entry.kind is in (InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue, InstructionType.JumpEnd)
 		return MlirStatements(function, at).Jumped(entry)
-	if entry.kind is InstructionType.Return
-		return (function.Load(Temp(""), "%r" + entry.payload(0)), "    return " + Temp("") + " : " + function.Float)
-	Collected(entry)
+	entry.kind is InstructionType.Return then Returned("%r" + entry.payload(0)) else Collected(entry)
+Returned(register Text) Texts
+	MlirDeviceStatements(Singled, 3).Returned("%r1").Last is "    return %d3r3 : !llvm.struct<(f32, i64, i64)>"
+	MlirDeviceStatements(Singled, 3).Returned("%r1")(1) is "    %d3_e = llvm.load %r1_e : !llvm.ptr -> i64"
+	let exact = MlirExact(function, at)
+	let loaded = (List(Text) + function.Load(Temp(""), register)) + exact.Loaded(Temp(""), register)
+	let packed = Temp("r" + exact.Names(Temp("")).Length)
+	(loaded + MlirFeeding(function, at).Packed(Temp(""))) + ("    return " + packed + " : " + exact.Returned)
 Labeled Texts
 	MlirDeviceStatements(Absolute.function, 4).Labeled is ("  ^bb4:")
 	MlirDeviceStatements(Absolute.function, 10).Labeled is ("    cf.br ^bb10", "  ^bb10:")

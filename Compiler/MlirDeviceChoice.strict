@@ -93,7 +93,7 @@ Reduced(end Number) Texts
 			lines = lines + Rounds(value - 1, "%d" + end, Chosen.Index(entry.texts(0)))
 	lines
 Rounds(call Number, prefix Text, number Number) Texts
-	Maximum.Rounds(10, "%d12", 0).Length is 18
+	Maximum.Rounds(10, "%d12", 0).Length is 23
 	let calls = MlirDeviceCalls(function, call, MlirModule(function.types, "").Called(function, call).First)
 	let name = "%v_" + function.method.instructions(call + 1).texts(0)
 	let first = function.Load(prefix + "c" + number + "r0", name)
@@ -103,15 +103,14 @@ Rounds(call Number, prefix Text, number Number) Texts
 		lines = lines + Round(calls, prefix, number, index)
 	lines + function.Store(prefix + "c" + number + "r" + Offsets.Length, name)
 Round(calls MlirDeviceCalls, prefix Text, number Number, round Number) Texts
-	Rounded.Last.IndexOf("(%failed, %lane, %lanes, %d12h0, %d12c0r4, %d12s0r4)") > 0
+	Rounded(2).IndexOf("(%failed, %lane, %lanes, %d12h0, %d12c0r4, %d12s0r4)") > 0
+	Rounded.Last.StartsWith("    %d12c0r5 = llvm.extractvalue %d12c0r5r[0]")
 	let current = prefix + "c" + number + "r" + round
 	let offset = prefix + "o" + number + "r" + round
 	let shuffled = prefix + "s" + number + "r" + round
-	let symbol = calls.callee.Symbol + "_device" + MlirTyped(function.Float).Suffix
 	let exact = MlirExact(function, at)
 	let numbers = exact.Names(prefix + "h" + number) + exact.Inexact(current) + exact.Inexact(shuffled)
 	let operands = "(" + Text.Combine(("%failed", "%lane", "%lanes") + numbers + calls.MemberArguments, ", ") + ")"
-	let combined = "    " + prefix + "c" + number + "r" + (round + 1) + " = func.call @" + symbol + operands
+	let invoked = MlirFeeding(function, at).Invoked(calls, prefix + "c" + number + "r" + (round + 1), operands)
 	let offsetLine = "    " + offset + " = arith.constant " + Offsets(round) + " : i32"
-	let typed = combined + " : (" + calls.Types + ") -> " + function.Float
-	(offsetLine, MlirTyped(function.Float).Shuffled(shuffled, current, offset), typed)
+	(offsetLine, MlirTyped(function.Float).Shuffled(shuffled, current, offset)) + invoked

@@ -57,11 +57,12 @@ Stores(source Text, target Text) Texts
 	for MlirTyped.Parts
 		MlirTyped(MlirTyped.Types(index)).Store(source + value, target + value)
 Function Texts
-	Twice.Function.First.EndsWith("%lane: i64, %lanes: i64, %p0: f64, %p1: f64) -> f64 {")
+	Twice.Function.First.EndsWith("%lane: i64, %lanes: i64, %p0: f64, %p1: f64) -> !llvm.struct<(f64)> {")
 	Twice.Function.Last is "  }"
 	let typed = MlirDeviceCalls(function, 0, function).Parameters + MlirDeviceMembers(function).Typed(function.Float)
 	let symbol = function.Symbol + "_device" + MlirTyped(function.Float).Suffix
-	let header = "  func.func private @" + symbol + "(" + Text.Combine(typed, ", ") + ") -> " + function.Float + " {"
+	let returned = MlirExact(function, 0).Returned
+	let header = "  func.func private @" + symbol + "(" + Text.Combine(typed, ", ") + ") -> " + returned + " {"
 	(List(Text) + header) + Slots + Entry + Emitted(0, function.method.instructions.Length) + "  }"
 Slots Texts
 	Doubling.Slots.Last is "    %loop2 = llvm.addrspacecast %loop2.private : !llvm.ptr<5> to !llvm.ptr"
