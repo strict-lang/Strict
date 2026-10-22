@@ -10,12 +10,14 @@ Affine(map FeatureMap) Numbers
 	GroupNorm((1, 1), (0, 0), 1).Affine(Column)(0).IsNearlyEqual(1 / 3.5.SquareRoot)
 	GroupNorm((2, 1), (0.5, 0), 2).Affine(FeatureMap(Column.values, 1, 2, (1, 0)))(2).IsNearlyEqual(-3.5)
 	let means = Means(map)
-	let variances = Variances(map, means)
-	for 2 * map.channels
-		let channel = index % map.channels
-		let group = (channel / (map.channels / groups)).Floor
+	Scaled(means, Variances(map, means), map.offsets)
+Scaled(means Numbers, variances Numbers, offsets Numbers) Numbers
+	Pair.Scaled((2, 4), (1, 4), (0, 0))(3).IsNearlyEqual(-2)
+	for 2 * offsets.Length
+		let channel = index % offsets.Length
+		let group = (channel / (offsets.Length / groups)).Floor
 		let scale = weights(channel) / (variances(group) + Epsilon).SquareRoot
-		index < map.channels then scale else biases(channel) + (map.offsets(channel) - means(group)) * scale
+		index < offsets.Length then scale else biases(channel) + (offsets(channel) - means(group)) * scale
 Means(map FeatureMap) Numbers
 	Pair.Means(Column) is (2, 4)
 	Pair.Means(FeatureMap(Column.values, 1, 2, (1, 0))) is (3, 4)
