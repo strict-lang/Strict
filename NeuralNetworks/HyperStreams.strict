@@ -1,0 +1,48 @@
+has norm Numbers
+has down Layer
+has up Layer
+has inject Layer
+constant Count = 4
+constant Down = Layer(((1, 1, 0, 0, 0, 0, 0, 0), (0, 0, 1, 0, 0, 1, 0, -1)), Layer.Unbiased)
+constant Up = Layer(((1, 0), (0, 1), (1, 1), (0, 0), (-1, 0), (0, -1), (2, 0), (0, 2)), Layer.Unbiased)
+constant Picks = ((1, 0, 0, 0, 0, 0, 0, 0), (0, 1, 0, 0, 0, 0, 0, 0))
+constant Inject = Layer(Picks + ((0, 0, 0, 0, 1, 1, 0, 0), Layer.Zeros(8)), Layer.Unbiased)
+constant Tiny = HyperStreams((1, 2, 1, 1, 0.5, 1, 1, 2), Down, Up, Inject)
+constant Streams = (1, 2, 3, 4, 0, 1, 2, 0)
+Started(embedding Numbers) Numbers
+	Tiny.Started((1, 2)) is (1, 2, 1, 2, 1, 2, 1, 2)
+	for embedding.Length * Count
+		embedding(index % embedding.Length)
+Normalized(streams Numbers) Numbers
+	Tiny.Normalized(Streams)(1).IsNearlyEqual(2.529821)
+	Tiny.Normalized(Streams)(6).IsNearlyEqual(1.414213)
+	let width = streams.Length / Count
+	let scales = Qwen3Block.Scales(streams, width, Qwen3Block.Epsilon)
+	for streams
+		value * norm(index) * scales((index / width).Floor)
+Mixed(streams Numbers) Numbers
+	Tiny.Mixed(Streams).First.IsNearlyEqual(0.515501)
+	Tiny.Mixed(Streams).Last.IsNearlyEqual(0.659311)
+	let normalized = Normalized(streams)
+	let gates = up.Sums(Squashed(down.Sums(normalized)))
+	for streams.Length / Count
+		Gated(normalized, gates, index, streams.Length / Count)
+Squashed(sums Numbers) Numbers
+	Tiny.Squashed((4, 0)) is (Activation.Swish.Output(1), 0)
+	for sums
+		Activation.Swish.Output(value / Count)
+Gated(normalized Numbers, gates Numbers, position Number, width Number) Number
+	Tiny.Gated((1, 2, 3, 4, 5, 6, 7, 8), Layer.Zeros(8), 1, 2) is 2.5
+	mutable sum = 0
+	for Count
+		sum = sum + normalized(index * width + position) * Activation.Sigmoid.Output(gates(index * width + position))
+	sum / Count
+Injected(streams Numbers) Numbers
+	Tiny.Injected(Streams)(1).IsNearlyEqual(2.529821)
+	Tiny.Injected(Streams)(2).IsNearlyEqual(1.414212)
+	inject.Sums(Normalized(streams))
+Combined(streams Numbers, block Numbers, injected Numbers) Numbers
+	Tiny.Combined(Streams, (1, -1), Tiny.Injected(Streams))(2).IsNearlyEqual(4.306092)
+	Tiny.Combined(Streams, (1, -1), Tiny.Injected(Streams))(7) is -1
+	for streams
+		value + 2 * Activation.Sigmoid.Output(injected((index / block.Length).Floor) / Count) * block(index % block.Length)

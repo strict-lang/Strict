@@ -10,9 +10,9 @@ has experts Experts
 has window Numbers = List(Number)
 has memory Numbers = List(Number)
 has merged Numbers = List(Number)
-constant Model = Gguf("NeuralNetworks/tinyqwen35.gguf")
-constant Tiny = DeltaBlock.Loaded(Model, "blk.0.", Layer.Zeros(16))
-constant Rows = Model.Rows("token_embd.weight")
+has sigmoidGate Boolean = false
+constant Tiny = DeltaBlock.Loaded(Drafter.Model, "blk.0.", Layer.Zeros(16))
+constant Rows = Drafter.Model.Rows("token_embd.weight")
 Loaded(model Gguf, prefix Text, zeros Numbers) DeltaBlock
 	Tiny.inputs.weights.Length is 32
 	let combined = Qwen3Block.Dense(model, prefix, ("attn_qkv", "attn_gate", "ssm_beta", "ssm_alpha"))
@@ -128,13 +128,15 @@ Read(keyed Numbers, token Number, part Number) Numbers
 		sum
 Gated(raw Numbers, combined Numbers) Numbers
 	Tiny.Gated(Layer.Zeros(8), Layer.Zeros(32)) is Layer.Zeros(8)
+	DeltaBlock(Tiny, sigmoidGate = true).Gated((3, 4), Layer.Zeros(32)).First.IsNearlyEqual(0.424264 * Tiny.norm.First)
 	let size = norm.Length
 	let values = decays.Length * size
 	let width = combined.Length * values / raw.Length
 	let scales = Qwen3Block.Scales(raw, size, Qwen3Block.Epsilon)
 	for raw
 		let gate = combined((index / values).Floor * width + convolution.Length / 4 + index % values)
-		value * scales((index / size).Floor) * norm(index % size) * gate / (1 + (0 - gate).Exponential)
+		let scaled = value * scales((index / size).Floor) * norm(index % size)
+		(sigmoidGate then scaled else scaled * gate) / (1 + (0 - gate).Exponential)
 Output(input Numbers) Numbers
 	Tiny.Cached(Tiny.Combined(Rows(1))).Output(Rows(1)).Length is 8
 	let attended = Batch(projection.weights, input).Sums(merged)

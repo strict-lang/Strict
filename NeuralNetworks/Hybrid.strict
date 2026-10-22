@@ -6,13 +6,14 @@ constant None = Hybrid(List(DeltaBlock))
 constant Tiny = Hybrid(List(DeltaBlock) + DeltaBlock.Tiny)
 constant Single = Tiny.Prepared(DeltaBlock.Rows(1))
 Loaded(model Gguf, first Number, count Number, zeros Numbers) Hybrid
-	Hybrid.Loaded(DeltaBlock.Model, 0, 3, DeltaBlock.Tiny.memory).layers.Length is 3
+	Hybrid.Loaded(Drafter.Model, 0, 3, DeltaBlock.Tiny.memory).layers.Length is 3
+	let sigmoid = model.Value("general.architecture") is "qwen4exp"
 	mutable loaded = List(Mutable(DeltaBlock))
 	for count
-		loaded.Add(DeltaBlock.Loaded(model, "blk." + (first + index) + ".", zeros))
+		loaded.Add(DeltaBlock(DeltaBlock.Loaded(model, "blk." + (first + index) + ".", zeros), sigmoidGate = sigmoid))
 	Hybrid(loaded)
 Memory(model Gguf) Numbers
-	Hybrid.Memory(DeltaBlock.Model) is DeltaBlock.Tiny.memory
+	Hybrid.Memory(Drafter.Model) is DeltaBlock.Tiny.memory
 	let architecture = model.Value("general.architecture")
 	let heads = model.Value(architecture + ".ssm.time_step_rank")
 	let size = model.Value(architecture + ".ssm.state_size")

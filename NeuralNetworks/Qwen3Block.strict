@@ -41,7 +41,7 @@ Dense(model Gguf, prefix Text, names Texts) Layer
 	Layer(rows, Layer.Unbiased)
 Norms(model Gguf, prefix Text, rows HeadRows) List(Numbers)
 	Tiny.Norms(Gguf("NeuralNetworks/tinyqwen3.gguf"), "blk.0.", HeadRows(4, 4, 2)).Length is 4
-	Tiny.Norms(DeltaBlock.Model, "blk.3.", HeadRows(4, 2, 2))(1).Length is 4
+	Tiny.Norms(Drafter.Model, "blk.3.", HeadRows(4, 2, 2))(1).Length is 4
 	let after = model.Shape(prefix + "ffn_norm.weight").Length > 0 then "ffn_norm" else "post_attention_norm"
 	for ("attn_norm", "attn_q_norm", "attn_k_norm", after)
 		let weights = model.Values(prefix + value + ".weight")
