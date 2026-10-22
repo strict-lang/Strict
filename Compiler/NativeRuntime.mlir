@@ -9866,11 +9866,12 @@
   ^carve:
     %smallest = arith.constant 256 : i64
     %size = arith.shli %smallest, %class : i64
-    // blocks of 2 MB and more are allocations of their own, so a big block neither ends the 64 MB chunk smaller ones
+    // blocks of 16 MB and more are allocations of their own (a driver allocation took 0.8 ms next to Qwen3.8, its 4 MB
+    // DeltaNet states come from chunks), so a big block neither ends the 64 MB chunk smaller ones
     // are cut from nor stays in the pool when an allocation runs out of memory (strict_gpu_starved gives them back, the
     // free blocks of other sizes once held 5.5 of the 6 GB left next to Qwen3.8 27B)
     %ownBytes = arith.constant 67108864 : i64
-    %ownLimit = arith.constant 2097152 : i64
+    %ownLimit = arith.constant 16777216 : i64
     %isOwn = arith.cmpi uge, %size, %ownLimit : i64
     cf.cond_br %isOwn, ^own, ^cutSmall
   ^own:
@@ -9928,7 +9929,7 @@
     %one = arith.constant 1 : i64
     %smallest = arith.constant 256 : i64
     %full = arith.constant true
-    %firstOwn = arith.constant 13 : i64
+    %firstOwn = arith.constant 16 : i64
     %largest = arith.constant 47 : i64
     func.call @strict_gc_run(%full) : (i1) -> ()
     func.call @strict_gpu_replay() : () -> ()
@@ -11594,7 +11595,7 @@
   llvm.mlir.global internal constant @strict_gpu_eights_name("strict_device_eights\00strict_device_eightss\00") : !llvm.array<43 x i8>
   llvm.mlir.global internal @strict_gpu_eights_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   // the dot products of `Batch.Sums` for several tokens (strict_device_blocks, 64 or more with 8 bit tokens and Q4_K or Q6_K
-  // rows strict_device_tiles, with 8 bit rows strict_device_eights, one token strict_device_tokens): every row with the numbers of every token (token t at
+  // rows strict_device_tiles, with 8 bit rows strict_device_eights, up to 4 tokens strict_device_tokens): every row with the numbers of every token (token t at
   // t * width of input), row r and token t at t * rows + r of the result plus biases(index % biases.Length) unless
   // biases is 0.0, the rows of token t start at bases(t / 64) unless bases is 0.0 (`Batch.Grouped`), 0.0 when the GPU
   // can not
@@ -11610,8 +11611,8 @@
     %rowsAtLeast = arith.maximumf %rowCount, %oneRow : f64
     %countNumber = arith.sitofp %count : i64 to f64
     %tokens = arith.divf %countNumber, %rowsAtLeast : f64
-    %twoTokens = arith.constant 2.0 : f64
-    %long = arith.cmpf oge, %tokens, %twoTokens : f64
+    %fiveTokens = arith.constant 5.0 : f64
+    %long = arith.cmpf oge, %tokens, %fiveTokens : f64
     %blockLanes = arith.constant -64 : i64
     %rowLanes = arith.constant -8 : i64
     %perWarp = arith.select %long, %blockLanes, %rowLanes : i64
