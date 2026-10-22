@@ -515,6 +515,33 @@
     %bits = func.call @strict_bits(%global) : (!llvm.ptr) -> f64
     return %bits : f64
   }
+  llvm.func @system(!llvm.ptr) -> i32
+  // runs a program with the console of this one (its output appears right away) and returns its exit code
+  func.func private @strict_process_started(%path: f64, %arguments: f64) -> f64 {
+    %eight = arith.constant 8 : i32
+    %byte = arith.constant 255 : i32
+    %signals = arith.constant 127 : i32
+    %none = arith.constant 0 : i32
+    %signaled = arith.constant 128 : i32
+    %execQuote = llvm.mlir.addressof @strict_exec_quote : !llvm.ptr
+    %quoteSpace = llvm.mlir.addressof @strict_quote_space : !llvm.ptr
+    %execText = func.call @strict_text_of(%execQuote) : (!llvm.ptr) -> f64
+    %quoteSpaceText = func.call @strict_text_of(%quoteSpace) : (!llvm.ptr) -> f64
+    %quoted = func.call @strict_text_concat(%execText, %path) : (f64, f64) -> f64
+    %program = func.call @strict_text_concat(%quoted, %quoteSpaceText) : (f64, f64) -> f64
+    %command = func.call @strict_text_concat(%program, %arguments) : (f64, f64) -> f64
+    %commandText = func.call @strict_ptr(%command) : (f64) -> !llvm.ptr
+    func.call @strict_flush() : () -> ()
+    %status = llvm.call @system(%commandText) : (!llvm.ptr) -> i32
+    %signal = arith.andi %status, %signals : i32
+    %shifted = arith.shrui %status, %eight : i32
+    %exited = arith.andi %shifted, %byte : i32
+    %isSignaled = arith.cmpi ne, %signal, %none : i32
+    %killed = arith.addi %signal, %signaled : i32
+    %code = arith.select %isSignaled, %killed, %exited : i32
+    %number = arith.sitofp %code : i32 to f64
+    return %number : f64
+  }
   func.func private @strict_process_execute(%path: f64, %arguments: f64) -> f64 {
     %none = arith.constant 0 : i32
     %noHang = arith.constant 1 : i32

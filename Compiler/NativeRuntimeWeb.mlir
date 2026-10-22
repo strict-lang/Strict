@@ -452,6 +452,10 @@
     %bits = func.call @strict_bits(%global) : (!llvm.ptr) -> f64
     return %bits : f64
   }
+  func.func private @strict_process_started(%path: f64, %arguments: f64) -> f64 {
+    %missing = arith.constant 127.0 : f64
+    return %missing : f64
+  }
   func.func private @strict_process_execute(%path: f64, %arguments: f64) -> f64 {
     %startCode = arith.constant 1.0 : f64
     %startText = llvm.mlir.addressof @strict_start_failed : !llvm.ptr

@@ -524,6 +524,48 @@
     %deleted = llvm.call @DeleteFileA(%name) : (!llvm.ptr) -> i32
     return %text : f64
   }
+  // runs a program with the console of this one (its output appears right away) and returns its exit code
+  func.func private @strict_process_started(%path: f64, %arguments: f64) -> f64 {
+    %count = arith.constant 1 : i64
+    %startupSize = arith.constant 104 : i64
+    %startupLength = arith.constant 104 : i32
+    %informationSize = arith.constant 24 : i64
+    %codeSize = arith.constant 4 : i64
+    %inherit = arith.constant 1 : i32
+    %noFlags = arith.constant 0 : i32
+    %infinite = arith.constant -1 : i32
+    %quoteText = llvm.mlir.addressof @strict_quote : !llvm.ptr
+    %quote = func.call @strict_bits(%quoteText) : (!llvm.ptr) -> f64
+    %quoteSpaceText = llvm.mlir.addressof @strict_quote_space : !llvm.ptr
+    %quoteSpace = func.call @strict_bits(%quoteSpaceText) : (!llvm.ptr) -> f64
+    %quoted = func.call @strict_text_concat(%quote, %path) : (f64, f64) -> f64
+    %program = func.call @strict_text_concat(%quoted, %quoteSpace) : (f64, f64) -> f64
+    %command = func.call @strict_text_concat(%program, %arguments) : (f64, f64) -> f64
+    %startup = llvm.call @calloc(%count, %startupSize) : (i64, i64) -> !llvm.ptr
+    llvm.store %startupLength, %startup : i32, !llvm.ptr
+    %information = llvm.call @calloc(%count, %informationSize) : (i64, i64) -> !llvm.ptr
+    %commandText = func.call @strict_ptr(%command) : (f64) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    func.call @strict_flush() : () -> ()
+    %started = llvm.call @CreateProcessA(%null, %commandText, %null, %null, %inherit, %noFlags, %null, %null, %startup, %information) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    %failed = arith.cmpi eq, %started, %noFlags : i32
+    cf.cond_br %failed, ^notStarted, ^running
+  ^notStarted:
+    %missing = arith.constant 127.0 : f64
+    return %missing : f64
+  ^running:
+    %process = llvm.load %information : !llvm.ptr -> !llvm.ptr
+    %threadSlot = llvm.getelementptr %information[8] : (!llvm.ptr) -> !llvm.ptr, i8
+    %thread = llvm.load %threadSlot : !llvm.ptr -> !llvm.ptr
+    %waited = llvm.call @WaitForSingleObject(%process, %infinite) : (!llvm.ptr, i32) -> i32
+    %codeSlot = llvm.call @calloc(%count, %codeSize) : (i64, i64) -> !llvm.ptr
+    %gotCode = llvm.call @GetExitCodeProcess(%process, %codeSlot) : (!llvm.ptr, !llvm.ptr) -> i32
+    %exitCode = llvm.load %codeSlot : !llvm.ptr -> i32
+    %exitNumber = arith.sitofp %exitCode : i32 to f64
+    %closedProcess = llvm.call @CloseHandle(%process) : (!llvm.ptr) -> i32
+    %closedThread = llvm.call @CloseHandle(%thread) : (!llvm.ptr) -> i32
+    return %exitNumber : f64
+  }
   func.func private @strict_process_execute(%path: f64, %arguments: f64) -> f64 {
     %count = arith.constant 1 : i64
     %startupSize = arith.constant 104 : i64
