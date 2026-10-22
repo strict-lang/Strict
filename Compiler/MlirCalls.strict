@@ -129,12 +129,25 @@ Loads(entry InstructionEntry, type TypeEntry) Texts
 	let self = entry.texts(1) is "from" then "%r" + entry.payload(0) else owned
 	constant none = "    " + Temp("m") + " = arith.constant 0.0 : f64"
 	let first = self is "" then none else function.Load(Temp("m"), self)
-	List(Text) + first + ArgumentLoads(entry)
-ArgumentLoads(entry InstructionEntry) Texts
-	MlirCalls(Shapes, 2).ArgumentLoads(Area).Length is 0
-	let countPosition = 5 + entry.payload(3)
-	for entry.payload(countPosition)
-		function.Load(Temp("a" + index), "%r" + entry.payload(countPosition + 1 + index))
+	List(Text) + first + ArgumentLoads(entry, type)
+ArgumentLoads(entry InstructionEntry, type TypeEntry) Texts
+	MlirCalls(Shapes, 2).ArgumentLoads(Area, AreaShape).Length is 0
+	Counters.ArgumentLoads(NewCounter, CounterType).First is "    %t2a0 = llvm.load %r0 : !llvm.ptr -> f64"
+	for entry.payload(5 + entry.payload(3))
+		Argument(entry, type, index)
+Argument(entry InstructionEntry, type TypeEntry, number Number) Text
+	Counters.Argument(NewCounter, CounterType, 1) is "    %t2a1 = llvm.load %r1 : !llvm.ptr -> f64"
+	let register = entry.payload(6 + entry.payload(3) + number)
+	let layout = MlirLayout(function)
+	if layout.Represented(MlirKinds(function).KindOf(position, register)) is not "List(Number)"
+		return function.Load(Temp("a" + number), "%r" + register)
+	let parameters = PayloadDecoder(entry).Callee(type).parameters
+	let wanted = number < parameters.Length then TypeEntry.ShortName(parameters(number).typeName) else ""
+	if layout.Represented(wanted) is not "List(Text)"
+		return function.Load(Temp("a" + number), "%r" + register)
+	let raw = Temp("an" + number)
+	let texts = MlirMemory(function, position).Called(Temp("a" + number), "strict_list_texts", List(Text) + raw)
+	function.Load(raw, "%r" + register) + Character.NewLine + texts
 ArgumentNames(count Number) Texts
 	MlirCalls(Shapes, 2).ArgumentNames(2) is ("%t2a0", "%t2a1")
 	for count

@@ -25,6 +25,7 @@ Combine(texts Texts, separator = ", ") Text
 	Combine(("a", "b", "c")) is "a, b, c"
 	Combine(("a", "b"), "") is "ab"
 	Combine(("hi", "there"), Character.NewLine) is "hi\nthere"
+	Combine((1, 2.5)) is "1, 2.5"
 	for texts
 		(index is 0 then "" else separator) + value
 EndsWith(text) Boolean
