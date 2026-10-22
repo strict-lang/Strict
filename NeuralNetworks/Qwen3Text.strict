@@ -10,7 +10,13 @@ Run
 	let tokenizer = Gpt2Tokens.Loaded(Gguf(Folder + "model.gguf"))
 	let model = Qwen3.Loaded(Folder + "model.gguf", 8)
 	let loaded = Process.Elapsed
+	let first = tokenizer.Decoded(Generation(model).Generated(tokenizer.Encoded(Prompt), 1))
+	let warmed = Process.Elapsed
 	let generated = Generation(model).Generated(tokenizer.Encoded(Prompt), Count)
-	let milliseconds = ((Process.Elapsed - loaded) * 1000 / Count).Round(1)
 	logger.Log(Prompt + tokenizer.Decoded(generated))
-	logger.Log("Qwen3 0.6B loaded in " + ((loaded - started) * 1000).Round + " ms, " + milliseconds + " ms per token")
+	logger.Log(Timings((started, loaded, warmed, Process.Elapsed), first))
+Timings(times Numbers, first Text) Text
+	Qwen3Text(Logger).Timings((0, 1.5, 2, 2.1), " a").EndsWith("1500 ms, first token a after 500 ms, then 5 ms per token")
+	let loading = "Qwen3 0.6B loaded in " + ((times(1) - times(0)) * 1000).Round + " ms, first token" + first
+	let warming = " after " + ((times(2) - times(1)) * 1000).Round + " ms, then "
+	loading + warming + ((times(3) - times(2)) * 1000 / Count).Round(1) + " ms per token"
