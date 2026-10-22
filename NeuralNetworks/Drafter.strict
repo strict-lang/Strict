@@ -55,10 +55,10 @@ Drafts(model Qwen3, position Number, count Number) Numbers
 	mutable current = value
 	mutable drafts = List(Number)
 	for count
-		let drafted = Qwen3(model, hidden = current.hidden, norm = headNorm).Nexts.First
+		let drafted = Qwen3(model, hidden = current.hidden, norm = headNorm).Nexts
 		drafts = drafts + drafted
 		current = index + 1 < count then current.Further(model, drafted, position + index + 1) else current
 	drafts
-Further(model Qwen3, token Number, position Number) Drafter
-	Tiny.Extended(Stepped, Stepped.hidden, List(Number) + 2, List(Number) + 1).Further(Stepped, 3, 2).hidden.Length is 8
-	Extended(model, hidden, List(Number) + token, List(Number) + position)
+Further(model Qwen3, tokens Numbers, position Number) Drafter
+	Tiny.Primed(Stepped, (1, 2)).Further(Stepped, List(Number) + 3, 2).hidden.Length is 8
+	Extended(model, hidden, tokens, List(Number) + position)
