@@ -1,6 +1,7 @@
 has path Text
 has bits Number = 32
 constant Tiny = Gguf("NeuralNetworks/tiny.gguf")
+constant Quants = Gguf("NeuralNetworks/quants.gguf")
 Value(key Text) Text
 	Tiny.Value("general.architecture") is "qwen3"
 	Tiny.Value("qwen3.block_count") is "1"
@@ -20,6 +21,9 @@ Values(name Text) Numbers
 	Tiny.Values("k4").Sum is 31000.5
 	Tiny.Values("k6").Sum is 238.25
 	(Tiny.Values("k4").First, Tiny.Values("k6").Last) is (55.75, 36.125)
+	(Quants.Values("q5_1").Sum, Quants.Values("q5_1")(5), Quants.Values("q5_1")(37)) is (1237.5, 6.5, 3)
+	(Quants.Values("q5_k").Sum, Quants.Values("q5_k")(5), Quants.Values("q5_k")(37)) is (2759.328125, 17.921875, 6.390625)
+	(Quants.Values("iq4_nl").Sum, Quants.Values("iq4_nl")(5), Quants.Values("iq4_nl")(37)) is (26.5, 9.5, -11)
 	GgufFile.Values(path, name)
 Rows(name Text) List(Numbers)
 	Tiny.Rows("m") is ((1, 2, 3), (4, 5, 6))

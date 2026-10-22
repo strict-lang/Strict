@@ -14,9 +14,9 @@
 #endif
 
 /* A GGUF file (llama.cpp models): the metadata (keys with numbers, texts or arrays of them) and the tensor infos are read
-   once per path, tensors when asked for. Supported tensor types are F32, F16, BF16, Q8_0, Q4_K and Q6_K, blocks decode to
-   floats exactly like ggml's dequantize_row functions (no fused multiply-add). */
-enum { F32 = 0, F16 = 1, Q8_0 = 8, Q4_K = 12, Q6_K = 14, BF16 = 30 };
+   once per path, tensors when asked for. Supported tensor types are F32, F16, BF16, Q8_0, Q5_1, Q4_K, Q5_K, Q6_K and
+   IQ4_NL, blocks decode to floats exactly like ggml's dequantize_row functions (no fused multiply-add). */
+enum { F32 = 0, F16 = 1, Q5_1 = 7, Q8_0 = 8, Q4_K = 12, Q5_K = 13, Q6_K = 14, IQ4_NL = 20, BF16 = 30 };
 typedef struct { char* key; char* value; } Entry;
 typedef struct { char* name; uint32_t type; uint32_t dimensions; uint64_t shape[4]; uint64_t offset; } Tensor;
 typedef struct { FILE* file; int failed; } Reader;
@@ -230,8 +230,27 @@ STRICT_EXPORT double GgufFile_Shape(double self, double path, double name)
 }
 
 
-static uint64_t BlockNumbers(uint32_t type) { return type == Q8_0 ? 32 : type == Q4_K || type == Q6_K ? 256 : 1; }
-static uint64_t BlockBytes(uint32_t type) { return type == F32 ? 4 : type == Q8_0 ? 34 : type == Q4_K ? 144 : type == Q6_K ? 210 : 2; }
+static uint64_t BlockNumbers(uint32_t type)
+{
+	return type == Q8_0 || type == Q5_1 || type == IQ4_NL ? 32 : type == Q4_K || type == Q5_K || type == Q6_K ? 256 : 1;
+}
+
+/* The bytes of one block of the type, 0 if the type is not supported. */
+static uint64_t BlockBytes(uint32_t type)
+{
+	switch (type)
+	{
+	case F32: return 4;
+	case F16: case BF16: return 2;
+	case Q5_1: return 24;
+	case Q8_0: return 34;
+	case Q4_K: return 144;
+	case Q5_K: return 176;
+	case Q6_K: return 210;
+	case IQ4_NL: return 18;
+	default: return 0;
+	}
+}
 static float HalfAt(const unsigned char* bytes) { return strict_half_float((uint16_t)(bytes[0] | bytes[1] << 8)); }
 
 /* The 6 bit scale and minimum of group j of a Q4_K block (get_scale_min_k4 of ggml). */
@@ -241,11 +260,13 @@ static void ScaleMin(int j, const unsigned char* q, int* scale, int* minimum)
 	*minimum = j < 4 ? q[j + 4] & 63 : (q[j + 4] >> 4) | ((q[j] >> 6) << 4);
 }
 
-/* 256 numbers of 4 bits with a scale and minimum per 32 (d, dmin, 12 bytes of scales, 128 bytes of nibbles). */
-static void DecodedQ4K(const unsigned char* block, float* y)
+/* 256 numbers of 4 bits with a scale and minimum per 32 (d, dmin, 12 bytes of scales, 128 bytes of nibbles), Q5_K
+   blocks have 32 bytes of fifth bits (bit j of byte index is number j * 32 + index) before the nibbles. */
+static void DecodedQ4KOrQ5K(const unsigned char* block, int hasFifthBits, float* y)
 {
 	float d = HalfAt(block), low = HalfAt(block + 2);
-	const unsigned char* q = block + 16;
+	const unsigned char* high = block + 16;
+	const unsigned char* q = block + (hasFifthBits ? 48 : 16);
 	for (int first = 0; first < 256; first += 64, q += 32)
 	{
 		int scale, minimum;
@@ -255,8 +276,9 @@ static void DecodedQ4K(const unsigned char* block, float* y)
 		float d2 = d * scale, m2 = low * minimum;
 		for (int index = 0; index < 32; index++)
 		{
-			y[first + index] = d1 * (q[index] & 0xF) - m1;
-			y[first + 32 + index] = d2 * (q[index] >> 4) - m2;
+			int fifth = hasFifthBits ? high[index] >> (first / 32) : 0;
+			y[first + index] = d1 * ((q[index] & 0xF) | (fifth & 1) << 4) - m1;
+			y[first + 32 + index] = d2 * ((q[index] >> 4) | (fifth & 2) << 3) - m2;
 		}
 	}
 }
@@ -279,6 +301,30 @@ static void DecodedQ6K(const unsigned char* block, float* y)
 		}
 }
 
+/* 32 numbers of 5 bits: half d and minimum m, 4 bytes of fifth bits and 16 bytes of nibbles (low ones first). */
+static void DecodedQ51(const unsigned char* block, float* y)
+{
+	float d = HalfAt(block), m = HalfAt(block + 2);
+	uint32_t high = (uint32_t)block[4] | (uint32_t)block[5] << 8 | (uint32_t)block[6] << 16 | (uint32_t)block[7] << 24;
+	for (int index = 0; index < 16; index++)
+	{
+		y[index] = ((block[8 + index] & 0xF) | ((high >> index) & 1) << 4) * d + m;
+		y[index + 16] = ((block[8 + index] >> 4) | ((high >> (index + 16)) & 1) << 4) * d + m;
+	}
+}
+
+/* 32 numbers of 4 bit indices into the non-linear kvalues_iq4nl of ggml times half d (low nibbles first). */
+static void DecodedIQ4NL(const unsigned char* block, float* y)
+{
+	static const int8_t values[16] = { -127, -104, -83, -65, -49, -35, -22, -10, 1, 13, 25, 38, 53, 69, 89, 113 };
+	float d = HalfAt(block);
+	for (int index = 0; index < 16; index++)
+	{
+		y[index] = d * values[block[2 + index] & 0xF];
+		y[index + 16] = d * values[block[2 + index] >> 4];
+	}
+}
+
 /* Decodes one block of the tensor's type into floats. */
 static void Decoded(uint32_t type, const unsigned char* block, float* y)
 {
@@ -291,8 +337,12 @@ static void Decoded(uint32_t type, const unsigned char* block, float* y)
 	else if (type == Q8_0)
 		for (int index = 0; index < 32; index++)
 			y[index] = HalfAt(block) * (int8_t)block[2 + index];
-	else if (type == Q4_K)
-		DecodedQ4K(block, y);
+	else if (type == Q5_1)
+		DecodedQ51(block, y);
+	else if (type == Q4_K || type == Q5_K)
+		DecodedQ4KOrQ5K(block, type == Q5_K, y);
+	else if (type == IQ4_NL)
+		DecodedIQ4NL(block, y);
 	else
 		DecodedQ6K(block, y);
 }
@@ -302,10 +352,9 @@ static unsigned char* Blocks(const char* path, const Tensor* tensor, uint64_t co
 {
 	uint32_t type = tensor->type;
 	uint64_t blockBytes = BlockBytes(type), blocks = count / BlockNumbers(type);
-	if ((type != F32 && type != F16 && type != BF16 && type != Q8_0 && type != Q4_K && type != Q6_K) ||
-		count % BlockNumbers(type) != 0)
+	if (blockBytes == 0 || count % BlockNumbers(type) != 0)
 	{
-		*failure = "OnlyF32F16BF16Q8_0Q4_KAndQ6_KTensorsAreSupported";
+		*failure = "OnlyF32F16BF16Q8_0Q5_1Q4_KQ5_KQ6_KAndIQ4_NLTensorsAreSupported";
 		return 0;
 	}
 	FILE* file = fopen(path, "rb");
