@@ -9873,7 +9873,21 @@
     %ownBytes = arith.constant 67108864 : i64
     %ownLimit = arith.constant 2097152 : i64
     %isOwn = arith.cmpi uge, %size, %ownLimit : i64
-    cf.cond_br %isOwn, ^own, ^cutSmall
+    cf.cond_br %isOwn, ^ownShort, ^cutSmall
+  ^ownShort:
+    // short of memory a full collection first (a young one does not find them), a dead list of this class (like the
+    // last layer's) is reused then, an allocation would give it back to the driver and allocate it again
+    %freeNow = func.call @strict_gpu_free_memory() : () -> i64
+    %ownReserve = arith.constant 1073741824 : i64
+    %ownNeeded = arith.addi %size, %ownReserve : i64
+    %isShort = arith.cmpi ult, %freeNow, %ownNeeded : i64
+    cf.cond_br %isShort, ^ownCollect, ^own
+  ^ownCollect:
+    %fully = arith.constant true
+    func.call @strict_gc_run(%fully) : (i1) -> ()
+    %collectedCount = llvm.load %countSlot : !llvm.ptr -> i64
+    %reusable = arith.cmpi sgt, %collectedCount, %none : i64
+    cf.cond_br %reusable, ^again, ^own
   ^own:
     %owned = func.call @strict_gpu_alloc(%size) : (i64) -> i64
     %hasOwned = arith.cmpi ne, %owned, %none : i64
