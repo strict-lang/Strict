@@ -20,12 +20,16 @@ Compared(entry InstructionEntry, float Text, target Text) Texts
 		return List(Text)
 	let operands = exact.Loaded(Temp("a"), "%r" + entry.payload(1)) + exact.Loaded(Temp("b"), "%r" + entry.payload(2))
 	let whole = Predicate(entry.kind)
+	let compared = "    " + Temp("i") + " = arith.cmpi " + whole + ", " + Temp("l") + ", " + Temp("r") + " : i64"
+	let guards = MlirGuards(exact.function, exact.at).Guards(("%r" + entry.payload(1), "%r" + entry.payload(2)), Temp("v"))
+	let fallback = guards.Length > 0 then Temp("i") else float
+	let chosen = "    " + target + " = arith.select " + Temp("v") + ", " + Temp("i") + ", " + fallback + " : i1"
+	operands + Crossed + Valid + compared + guards + chosen
+Valid Texts
+	Single.Valid.Last is "    %x2v = arith.andi %x2w, %x2y : i1"
 	let left = "    " + Temp("w") + " = arith.cmpi ne, " + Temp("a_q") + ", %inexact : i64"
 	let right = "    " + Temp("y") + " = arith.cmpi ne, " + Temp("b_q") + ", %inexact : i64"
-	let valid = "    " + Temp("v") + " = arith.andi " + Temp("w") + ", " + Temp("y") + " : i1"
-	let compared = "    " + Temp("i") + " = arith.cmpi " + whole + ", " + Temp("l") + ", " + Temp("r") + " : i64"
-	let chosen = "    " + target + " = arith.select " + Temp("v") + ", " + Temp("i") + ", " + float + " : i1"
-	operands + Crossed + (left, right, valid, compared, chosen)
+	(left, right, "    " + Temp("v") + " = arith.andi " + Temp("w") + ", " + Temp("y") + " : i1")
 Predicate(kind Number) Text
 	Single.Predicate(InstructionType.LessThan) is "slt"
 	Single.Predicate(InstructionType.NotEqual) is "ne"
@@ -70,11 +74,13 @@ Floored(source Text, target Text) Texts
 	Double.Floored("%r1", "%r2").Length is 0
 	if exact.Parts.Length is 0
 		return List(Text)
-	let numerator = Integer("fx", "arith.select " + Temp("fv") + ", " + Temp("ff") + ", " + Temp("o_e"))
-	let denominator = Integer("fy", "arith.select " + Temp("fv") + ", %one, " + Temp("o_q"))
+	let guards = MlirGuards(exact.function, exact.at).Guards(List(Text) + source, Temp("fv"))
+	let fallback = guards.Length > 0 then (Temp("ff"), "%one") else (Temp("o_e"), Temp("o_q"))
+	let numerator = Integer("fx", "arith.select " + Temp("fv") + ", " + Temp("ff") + ", " + fallback(0))
+	let denominator = Integer("fy", "arith.select " + Temp("fv") + ", %one, " + fallback(1))
 	let kept = exact.Loaded(Temp("o"), target) + (numerator, denominator)
 	let refreshed = exact.Set(Temp("fx"), Temp("fy"), target) + Refreshed(Temp("fx"), Temp("fy"), target)
-	exact.Loaded(Temp("f"), source) + Quotient + kept + refreshed
+	exact.Loaded(Temp("f"), source) + Quotient + guards + kept + refreshed
 Refreshed(numerator Text, denominator Text, slot Text) Texts
 	Single.Refreshed("%n", "%d", "%r1").First is "    %x2hv = arith.cmpi eq, %d, %one : i64"
 	Single.Refreshed("%n", "%d", "%r1")(5) is "    %x2hn = arith.sitofp %x2hi : i32 to f32"

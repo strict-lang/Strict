@@ -1,0 +1,109 @@
+has function MlirFunction
+has at Number
+constant Offset = MemberEntry("offset", "Strict/Number", List(InstructionEntry), false)
+constant Shifting = (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "index"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "offset"), InstructionEntry.Binary(InstructionType.Add, (1, 2, 3)), InstructionEntry(InstructionType.IndexCall, "numbers", (4, 3, -1)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 5, "value"), InstructionEntry.Binary(InstructionType.Add, (4, 5, 6)), InstructionEntry.Named(InstructionType.InvokeWriteToList, 6, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 8))
+constant Shifted = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Shifted", (MlirLists.Items, Offset), "Strict/List(Number)", Shifting), Float = "f32", Guarded = 2)
+constant Shifts = MlirGuards(Shifted, 2)
+constant Reading = MlirGuards(Shifted, 6)
+constant Flooring = InstructionEntry.Invoke(3, ("Strict/Number", "Floor", "Strict/Number"), List(Number), 2)
+constant Calculated = (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply, InstructionType.Divide, InstructionType.Modulo)
+Guards(slots Texts, condition Text) Texts
+	Reading.Guards(List(Text) + "%r3", "%d6kv") is ("    cf.cond_br %d6kv, ^d6kvexact, ^generic", "  ^d6kvexact:")
+	Reading.Guards(List(Text) + "%r5", "%d6kv").Length is 0
+	MlirGuards(MlirFunction(Shifted, Guarded = -1), 6).Guards(List(Text) + "%r3", "%d6kv").Length is 0
+	if function.Guarded < 0
+		return List(Text)
+	for slots
+		if (value.StartsWith("%r") is false) or ("?" is in Origins(at, value.Substring(2, value.Length - 2) to Number))
+			return List(Text)
+	let label = condition.Substring(1, condition.Length - 1) + "exact"
+	("    cf.cond_br " + condition + ", ^" + label + ", ^generic", "  ^" + label + ":")
+Origins(position Number, register Number) Texts
+	Shifts.Origins(6, 3) is ("offset")
+	Shifts.Origins(8, 5) is ("?")
+	let writer = MlirKinds(function).Writer(position, register)
+	writer <= function.Guarded then List(Text) + "?" else Written(writer)
+Written(writer Number) Texts
+	Shifts.Written(5) is ("offset")
+	Shifts.Written(6) is ("?")
+	let entry = function.method.instructions(writer)
+	if entry.kind is InstructionType.LoadVariableToRegister
+		return Variable(writer, entry.texts(0))
+	if entry.kind is InstructionType.LoadConstantToRegister
+		return MlirWholeValues(writer).IsWhole(PayloadDecoder(entry).Value(1)) then List(Text) else List(Text) + "?"
+	if entry.kind is in Calculated
+		return Origins(writer, entry.payload(1)) + Origins(writer, entry.payload(2))
+	entry.kind is InstructionType.Invoke then Called(writer, entry) else List(Text) + "?"
+Called(writer Number, entry InstructionEntry) Texts
+	Shifts.Called(5, Flooring) is ("offset")
+	let name = PayloadDecoder(entry).Text(2)
+	if name is "Floor"
+		return Origins(writer, MlirDeviceCalls(function, writer, function).Register(entry))
+	name is "Length" then List(Text) else List(Text) + "?"
+Variable(position Number, name Text) Texts
+	Shifts.Variable(4, "offset") is ("offset")
+	Shifts.Variable(4, "index").Length is 0
+	Shifts.Variable(7, "value") is ("?")
+	let stored = MlirKinds(function).Stored(position, name)
+	if stored > function.Guarded
+		return Origins(stored, function.method.instructions(stored).payload(0))
+	if name is "index"
+		return List(Text)
+	MlirKinds(function).VariableKind(function.Guarded, name) is "Number" then List(Text) + name else List(Text) + "?"
+Sited(position Number) Texts
+	Shifts.Sited(6) is ("offset")
+	Shifts.Sited(5) is ("?")
+	let entry = function.method.instructions(position)
+	let kind = entry.kind
+	if (kind > InstructionType.ArithmeticSeparator) and (kind < InstructionType.BinaryOperatorsSeparator)
+		return Origins(position, entry.payload(1)) + Origins(position, entry.payload(2))
+	if kind is InstructionType.IndexCall
+		return Origins(position, entry.payload(1))
+	if (kind is InstructionType.LoopBegin) and (position > function.Guarded)
+		return Origins(position, entry.payload(0))
+	let isFloor = (kind is InstructionType.Invoke) and (PayloadDecoder(entry).Text(2) is "Floor")
+	isFloor then Origins(position, MlirDeviceCalls(function, position, function).Register(entry)) else List(Text) + "?"
+Parameters Texts
+	Shifts.Parameters is ("offset")
+	mutable names = List(Mutable(Text))
+	for Range(at + 1, function.method.LoopEndOf(at))
+		let origins = Sited(value)
+		if "?" is not in origins
+			names = names + origins
+	names.Unique
+IsUseful Boolean
+	Shifts.IsUseful
+	MlirGuards(MlirFunction(Shifted, Float = "f64"), 2).IsUseful is false
+	let sums = MlirDeviceSums(function, at)
+	if (function.Float is not "f32") or (function.Group >= 0) or sums.IsWarped or sums.IsSpread
+		return false
+	for Range(at + 1, function.method.LoopEndOf(at))
+		if "?" is not in Sited(value)
+			return true
+	false
+Entry Texts
+	Shifts.Entry(2) is "    cf.cond_br %g_offset_w, ^g_offset, ^generic"
+	mutable lines = List(Mutable(Text))
+	for Parameters
+		lines = lines + Entered(value)
+	lines
+Entered(name Text) Texts
+	Shifts.Entered("offset").Last is "    llvm.store %one, %v_offset_q : i64, !llvm.ptr"
+	let loaded = MlirTyped.Integer.Load("%g_" + name + "_q", "%v_" + name + "_q")
+	let whole = "    %g_" + name + "_w = arith.cmpi eq, %g_" + name + "_q, %one : i64"
+	let branch = "    cf.cond_br %g_" + name + "_w, ^g_" + name + ", ^generic"
+	(loaded, whole, branch, "  ^g_" + name + ":", MlirTyped.Integer.Store("%one", "%v_" + name + "_q"))
+Copy Texts
+	Text.Combine(Shifts.Copy).IndexOf("%gd6k = arith.select %gd6kv, %gd6k_e, %gd6k_e : i64") > 0
+	Shifts.Copy.Last is "  ^generic:"
+	MlirGuards(MlirFunction(Shifted, Float = "f64"), 2).Copy.Length is 0
+	if IsUseful is false
+		return List(Text)
+	let emitted = MlirDevice(function, at).Emitted(at + 1, function.method.LoopEndOf(at))
+	(Entry + Renamed(emitted)) + ("    cf.br ^exit", "  ^generic:")
+Renamed(lines Texts) Texts
+	Shifts.Renamed(("    %d4k = %x4a", "  ^d4read:")) is ("    %gd4k = %gx4a", "  ^gd4read:")
+	Shifts.Renamed(("    cf.br ^exit", "  ^generic:")) is ("    cf.br ^exit", "  ^generic:")
+	for lines
+		let labeled = value.Replace("^", "^g").Replace("^gexit", "^exit").Replace("^ggeneric", "^generic")
+		labeled.Replace("%d", "%gd").Replace("%x", "%gx").Replace("%t", "%gt")

@@ -24,7 +24,8 @@ Kernel Texts
 		return MlirDevice(MlirFunction(function, Group = call), position).Kernel
 	let header = "  llvm.func @" + Name + "(" + Fixed + Freed + ", %results: i64) attributes {nvvm.kernel} {"
 	let body = Emitted(position + 1, function.method.LoopEndOf(position))
-	(List(Text) + header) + Slots + Given + Indexed + Started + body + Ending
+	let guarded = MlirGuards(MlirFunction(function, Guarded = position), position).Copy
+	(List(Text) + header) + Slots + Given + Indexed + Started + guarded + body + Ending
 Freed Text
 	Doubling.Freed is ""
 	Layering.Freed.StartsWith(", %f_input_d: !llvm.ptr, %f_input_n: i64")

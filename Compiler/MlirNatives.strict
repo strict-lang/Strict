@@ -7,7 +7,8 @@ constant TextNames = ("StartsWith", "IndexOf", "LastIndexOf", "Substring", "Uppe
 constant TextHelpers = ("strict_text_starts", "strict_text_index", "strict_text_last_index", "strict_text_substring", "strict_text_upper", "strict_text_lower", "strict_text_capitalize", "strict_text_trim", "strict_text_trim_start", "strict_text_trim_end", "strict_text_combine")
 constant Destining = List(Text) + "strict_list_swap_removed"
 constant DefaultedLast = ("strict_text_index", "strict_text_starts", "strict_directory_files", "strict_text_combine")
-constant Texts = MlirFunction(List(TypeEntry), MlirFunction.Named, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "ab"), LengthCall, Search)))
+constant Named = TypeEntry("Strict/Named", (MemberEntry("name", "Strict/Text", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
+constant Texts = MlirFunction(List(TypeEntry), Named, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "ab"), LengthCall, Search)))
 Helper(typeName Text, name Text, count Number) Text
 	MlirNatives(Texts, 1).Helper("Strict/Text", "Length", 0) is "strict_text_length"
 	MlirNatives(Texts, 1).Helper("Strict/List(Number)", "Count", 0) is "strict_list_length"
