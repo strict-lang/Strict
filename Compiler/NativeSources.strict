@@ -9,21 +9,20 @@ Files Texts
 	for folders
 		files = files + Directory.Files(value, "*.c")
 	files
-Flags(platform Number) Text
-	Adding.Flags(Platform.Windows) is ""
+Flags(platform Number, root Text) Text
+	Adding.Flags(Platform.Windows, ".") is ""
 	mutable flags = ""
 	for folders
 		let file = value + "/" + Platform.NameOf(platform) + ".flags"
 		if File(file).Exists
-			flags = flags + Rooted(Text.Combine(File(file).ReadLines, " "), value)
+			flags = flags + Rooted(Text.Combine(File(file).ReadLines, " "), value, root)
 	flags
-Rooted(flags Text, folder Text) Text
-	Adding.Rooted("-DX a/b.c a/d.m -Ia/c", "../E/F/native") is " -DX ../E/a/b.c ../E/a/d.m -I../E/a/c"
-	Adding.Rooted("-DX a/b.c", "Frameworks/native") is " -DX a/b.c"
-	if folder.StartsWith("../") is false
-		return " " + flags
-	let parts = folder.Split("/")
-	let project = "../" + parts(1) + "/"
+Rooted(flags Text, folder Text, root Text) Text
+	Adding.Rooted("-DX a/b.c a/d.m -Ia/c", "../E/F/native", ".") is " -DX ../E/a/b.c ../E/a/d.m -I../E/a/c"
+	Adding.Rooted("-DX a/b.c", "Frameworks/native", ".") is " -DX a/b.c"
+	Adding.Rooted("-DX a/b.c -Ia/c", "C:/s/E/native", "C:/s") is " -DX C:/s/a/b.c -IC:/s/a/c"
+	let inside = folder.StartsWith(root + "/") then root + "/" else ""
+	let project = folder.StartsWith("../") then "../" + folder.Split("/")(1) + "/" else inside
 	mutable rooted = ""
 	for flags.Split(" ")
 		let isInclude = value.StartsWith("-I")
@@ -38,13 +37,13 @@ Arguments(platform Number, root Text) Text
 	mutable arguments = ""
 	for Files
 		arguments = arguments + " \"" + value + "\""
-	arguments + " -I\"" + root + "/Compiler\"" + Flags(platform)
+	arguments + " -I\"" + root + "/Compiler\"" + Flags(platform, root)
 Objects(platform Number, root Text, level Text) Text
 	Adding.Objects(Platform.Current, ".", NativeBuild.Fast).StartsWith(" \"Examples/NativeAdd/native/Adder.o\"")
 	NativeSources(List(Text)).Objects(Platform.Current, ".", NativeBuild.Fast) is ""
 	if folders.Length is 0
 		return ""
-	let tokens = Flags(platform).Split(" ")
+	let tokens = Flags(platform, root).Split(" ")
 	mutable arguments = ""
 	for Files + Sources(tokens)
 		let object = Object(value, platform, root, level + Options(tokens, false))
@@ -135,6 +134,6 @@ LinuxLinked(base Text, program Text, root Text) Text
 		sources = sources + " " + tools.Quoted(tools.WslPath(value))
 	let gcc = folders.Length is 0 then "-e gcc -static " else "-e gcc "
 	let linkage = gcc + tools.Quoted(tools.WslPath(base + ".linux.o"))
-	let output = " -o " + tools.Quoted(tools.WslPath(program)) + " -lm -lpthread" + Flags(Platform.Linux)
+	let output = " -o " + tools.Quoted(tools.WslPath(program)) + " -lm -lpthread" + Flags(Platform.Linux, root)
 	let linked = ToolRunner("wsl").Execute(linkage + sources + output)
 	linked.Failed then "Linux build skipped (needs WSL with gcc): " + linked.error else "Built " + program + " for Linux"
