@@ -5,21 +5,6 @@ has isWeb Boolean = false
 constant Fast = " -O2"
 constant Small = " -Os"
 constant Intermediates = (".llvm.mlir", ".ll", ".res", ".gpu.mlir", ".gpu.llvm.mlir", ".gpu.ll", ".sm_75.ptx", ".sm_80.ptx", ".amd.mlir", ".amd.llvm.mlir", ".amd.ll", ".amd.bc", ".linux.mlir", ".linux.llvm.mlir", ".linux.ll", ".linux.o", ".pre.js", ".o", ".gpu.opt.ll")
-Built(path Text, root Text) Number
-	if isWeb or IsProgram(path) or (Execute(logger).Stale(List(Text) + path).Length is 0)
-		let failed = Execute(logger).Test(path, root)
-		return failed > 0 then failed else Compile(path, root)
-	Gated(path, root)
-Gated(path Text, root Text) Number
-	let executable = Toolchain(Platform.Current, root).Executable(Output(path, false))
-	File(executable).Delete
-	let failed = Compile(path, root, false, true)
-	if File(executable).Exists and (ToolRunner.IsCrash(failed) is false)
-		return failed
-	let problem = File(executable).Exists then " crashed (exit code " + failed + ")" else " did not build"
-	logger.Log("The native tests of " + path + problem + ", running them on the Strict VM")
-	let checked = Execute(logger).Test(path, root)
-	checked > 0 then checked else failed
 IsProgram(path Text) Boolean
 	NativeBuild.IsProgram("Examples/Sum.strict")
 	NativeBuild.IsProgram("Character.strict") is false

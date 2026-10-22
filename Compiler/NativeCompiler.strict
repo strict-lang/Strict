@@ -10,7 +10,8 @@ Built(rest Texts) Number
 		return LibraryBuild(logger).Built(rest(0), rest(1))
 	let options = Options(rest)
 	let isWeb = "web" is in options
-	NativeBuild(logger, ("linux" is in options) and (isWeb is false), Level(rest), isWeb).Built(rest(0), rest(1))
+	let build = NativeBuild(logger, ("linux" is in options) and (isWeb is false), Level(rest), isWeb)
+	NativeGate(logger, build).Built(rest(0), rest(1))
 Level(rest Texts) Text
 	NativeCompiler.Level(("a.strict", ".", "linux", "small")) is NativeBuild.Small
 	NativeCompiler.Level(("a.strict", ".")) is NativeBuild.Fast

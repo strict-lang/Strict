@@ -2,6 +2,7 @@ has types TypeCodegen
 has isQuiet Boolean = false
 constant Even = TestCodegen(TypeCodegen("Strict/Even", ("IsEven(number Number) Boolean", "\tIsEven(2) is true", "\tnumber % 2 is 0"), TypeCodegen.NoTypes, List(Text)))
 constant Counter = CodeBlock.Empty.Declare("failed", "Number").Declare("started", "Number")
+constant TestedNumber = Counter.Declare(ErrorCodegen.Tested, "Number")
 constant Elapsed = SyntaxParser(Tokenizer("Process.Elapsed").Tokens).Parse
 constant Duration = SyntaxParser(Tokenizer("((Process.Elapsed - started) * 1000).Round(2) + \" ms)\"").Tokens).Parse
 constant OneIsOne = SyntaxNode("Binary", "is", (MethodCodegen.One, MethodCodegen.One))
@@ -10,6 +11,7 @@ constant EvenFailed = InstructionEntry(InstructionType.Print, "Test failed: IsEv
 constant EvenPassed = InstructionEntry(InstructionType.Print, "Test passed: IsEven(2) is true in IsEven at Even.strict:line 2 (", (-1, 1, 15, 1), 2)
 constant Shown = SyntaxParser(Tokenizer("tested is Error then (tested to Text).Replace((tested to Text).Lines.First, tested.Code) else tested.Code").Tokens).Parse
 constant Runner = "$Tests"
+constant Erring = TestCodegen(TypeCodegen("Strict/Erring", ("Error(number Number) Number", "\tError(2) is 2", "\tnumber"), TypeCodegen.NoTypes, List(Text)))
 constant Processing = TestCodegen(TypeCodegen("Strict/Image", ("Process(number Number) Image", "	Process(1) is Image", "	Image"), TypeInference(KnownTypes(("Process", "Image"), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Scope(List(Text) + "Elapsed", List(Text) + "Number"), Scope(List(Text) + "Process", List(Text) + "Image")), (KnownTypes.NoMembers, KnownTypes.NoMembers)), (KnownTypes.NoMembers, KnownTypes.NoMembers)), List(Text)))
 Tests MethodEntry
 	Even.Tests.Name is Runner
@@ -49,7 +51,7 @@ Checked(test SyntaxNode, method Text, block CodeBlock) CodeBlock
 	Even.Checked(SyntaxNode("Boolean", "true"), "A", Counter).instructions.Last.kind is InstructionType.JumpEnd
 	let failure = block.nextId
 	let marked = block.WithNextId.Declare(ErrorCodegen.FailureMarker, failure to Text)
-	let timed = isQuiet then marked else Clock.Expression(Elapsed, marked).Stored("started")
+	let timed = isQuiet then marked else Neutral.Expression(Elapsed, marked).Stored("started")
 	let rounded = StepRounding(types.Generator).Rounded(test, timed)
 	let compared = Compared(rounded, timed).Declare(ErrorCodegen.FailureMarker, "")
 	let place = Place(test, method)
@@ -82,18 +84,19 @@ Timed(block CodeBlock, message Text) CodeBlock
 	TestCodegen(Even.types, true).Timed(Counter, "x").instructions.Last.texts is ("x")
 	if isQuiet
 		return block.Add(InstructionEntry.Print(message))
-	let duration = Clock.Expression(Duration, block)
+	let duration = Neutral.Expression(Duration, block)
 	duration.Add(InstructionEntry.PrintValue(message + " (", duration.Result, true))
 Got(block CodeBlock) CodeBlock
-	Even.Got(Counter.Declare(ErrorCodegen.Tested, "Number")).instructions.Last.kind is InstructionType.Print
-	Even.Got(Counter.Declare(ErrorCodegen.Tested, "Number")).instructions.First.texts is List(Text) + ErrorCodegen.Tested
-	let shown = types.Generator.Expression(Shown, block)
+	Even.Got(TestedNumber).instructions.Last.kind is InstructionType.Print
+	Even.Got(TestedNumber).instructions.First.texts is List(Text) + ErrorCodegen.Tested
+	Erring.Got(TestedNumber).instructions(2).texts is ("Strict/Erring", "Error", "Strict/Error")
+	let shown = Neutral.Expression(Shown, block)
 	shown.Add(InstructionEntry.PrintValue("  got: ", shown.Result, true))
 Counted(block CodeBlock) CodeBlock
 	Even.Counted(Counter).instructions.Last.texts is ("failed")
 	constant sum = SyntaxNode("Binary", "+", (SyntaxNode("Identifier", "failed"), SyntaxNode("Number", "1")))
 	types.Generator.Expression(sum, block).Stored("failed")
-Clock ValueCodegen
-	Processing.Clock.Expression(Elapsed, Counter).instructions.First.texts.First is "Strict/Process"
+Neutral ValueCodegen
+	Processing.Neutral.Expression(Elapsed, Counter).instructions.First.texts.First is "Strict/Process"
 	let neutral = CallTarget(types.inference.types, TypeShape(List(Text)), types.fullName, List(Text))
 	ValueCodegen(types.inference, MethodCodegen.NoScope, neutral)
