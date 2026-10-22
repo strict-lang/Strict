@@ -10,6 +10,7 @@ constant Packing = MlirLayout(MlirFunction(List(TypeEntry) + MlirFunction.Shape,
 constant LoggerField = InstructionEntry(InstructionType.FieldLoad, "logger", (2, 1, -1))
 constant Logged = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 3), MlirInstances.Built, LoggerField)))
 constant Eights = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Packed", List(MemberEntry) + MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false), "Strict/Float8s", (MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/Float8s", (0, 6, -1, 0)), "forResult"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 3), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "forResult"), InstructionEntry.Return(0))), List(Number), -1, "", "f32")
+constant Halves = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Packed", List(MemberEntry) + MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false), "Strict/NeuralNetworks/BFloat16s", (MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/NeuralNetworks/BFloat16s", (0, 6, -1, 0)), "forResult"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 3), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "forResult"), InstructionEntry.Return(0))), List(Number), -1, "", "f32")
 constant Bytings = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Packed", List(MemberEntry) + MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false), "Strict/Bytes", (MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/Bytes", (0, 6, -1, 0)), "forResult"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 3), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "forResult"), InstructionEntry.Return(0))), List(Number), -1, "", "f32")
 IsAliased(entry InstructionEntry, position Number) Boolean
 	MlirLayout(MlirInstances.Shapes).IsAliased(MlirInstances.Width, 2) is false
@@ -60,6 +61,14 @@ Wrapped(typeName Text) Text
 	Wrapping.Wrapped("Shape") is ""
 	Wrapping.Wrapped("Number") is ""
 	function.TypeOf(TypeEntry.ShortName(typeName)).Wrapped
+Owner(type TypeEntry, name Text) TypeEntry
+	TypeEntry.ShortName(Wrapping.Owner(Angle, "Floor").Name) is "Number"
+	Wrapping.Owner(MlirFunction.Shape, "Floor").Name is MlirFunction.Shape.Name
+	for type.methods
+		if value.Name is name
+			return type
+	let inner = type.Wrapped is "" then type else function.TypeOf(TypeEntry.ShortName(type.Wrapped))
+	(inner.Name is "") or (inner.Name is type.Name) then type else Owner(inner, name)
 IsInitializer Boolean
 	Wrapping.IsInitializer is false
 	Packing.IsInitializer
@@ -101,11 +110,14 @@ Paired(kind Text) Texts
 Packed(position Number) Number
 	MlirLayout(Eights).Packed(2) is 7
 	MlirLayout(Bytings).Packed(2) is 9
+	MlirLayout(Halves).Packed(2) is 17
 	Wrapping.Packed(0) is 0
 	MlirLayout(MlirLanes.Collecting).Packed(2) is 33
 	let kind = MlirKinds(function).VariableKind(position, "forResult")
 	if MlirLanes(function, 0).IsPacked(MlirKinds(function).ElementKind(kind))
 		return 33
+	if kind is in ("BFloat16s", "List(BFloat16)")
+		return 17
 	kind is in ("Float8s", "List(Float8)") then 7 else (kind is in ("Bytes", "List(Byte)") then 9 else 0)
 Collected(register Text, pointer Text, at Number) Texts
 	MlirLayout(Eights).Collected("%d", "%p", 4)(1) is "    %db = func.call @strict_device_float8(%d) : (f32) -> i8"
@@ -115,9 +127,10 @@ Collected(register Text, pointer Text, at Number) Texts
 Stored(register Text, pointer Text, at Number) Texts
 	MlirLayout(Eights).Stored("%d", "%p", 4).Last is "    llvm.store %db, %p : i8, !llvm.ptr"
 	MlirLayout(Bytings).Stored("%d", "%p", 4)(1) is "    %db = func.call @strict_device_byte(%d) : (f32) -> i8"
+	MlirLayout(Halves).Stored("%d", "%p", 4).First.StartsWith("    func.call @strict_device_stored(%result, %at, %d")
 	MlirLayout(MlirGuards.Shifted).Stored("%d", "%p", 9).First.EndsWith("(%result, %at, %d, %results)" + Storing)
 	let address = "    " + pointer + " = llvm.getelementptr %result[%at]" + MlirFastLoop.Pointer
-	if Packed(function.method.LoopBeginOf(at)) is 0
+	if Packed(function.method.LoopBeginOf(at)) is in (0, 17)
 		return List(Text) + ("    func.call @strict_device_stored(%result, %at, " + register + ", %results)" + Storing)
 	let encoder = Packed(function.method.LoopBeginOf(at)) is 9 then "@strict_device_byte(" else "@strict_device_float8("
 	let encoded = "    " + register + "b = func.call " + encoder + register + ") : (f32) -> i8"

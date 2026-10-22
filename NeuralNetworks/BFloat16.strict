@@ -1,0 +1,16 @@
+has number
+from(unrounded Number)
+	BFloat16(1) is 1
+	BFloat16(1.00390625) is 1
+	BFloat16(1.01171875) is 1.015625
+	BFloat16(0.1) is 0.10009765625
+	BFloat16(-300.5) is -300
+	BFloat16(41473) is 41472
+	BFloat16(0) is 0
+	let exponent = unrounded is 0 then 0 else (unrounded.Absolute.Logarithm / 2.Logarithm).Floor
+	let step = 2 ^ (exponent - 7)
+	(unrounded / step).Counted("Even") * step
+Packed(numbers Numbers) BFloat16s
+	BFloat16.Packed((0.5, 1.00390625, -3.25)) is (0.5, 1, -3.25)
+	for numbers
+		BFloat16(value)

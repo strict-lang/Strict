@@ -65,7 +65,7 @@ Invoked(entry InstructionEntry, decoder PayloadDecoder) Texts
 	MlirCalls(Shapes, 2).Invoked(Area, PayloadDecoder(Area)).Last is "    llvm.store %t2tr, %r2 : f64, !llvm.ptr"
 	Text.Combine(MlirCalls(MlirGroups.Norming.function, 11).Emitted).IndexOf("^t11kept") > 0
 	MlirCalls(MlirTails.Sample.function, 1).Emitted.Last is "  ^tail1:"
-	let type = function.TypeOf(decoder.Text(1))
+	let type = MlirLayout(function).Owner(function.TypeOf(decoder.Text(1)), decoder.Text(2))
 	if MlirTails(function, position).IsTail
 		return MlirTails(function, position).Jumped(entry, type)
 	let count = entry.payload(5 + entry.payload(3))
