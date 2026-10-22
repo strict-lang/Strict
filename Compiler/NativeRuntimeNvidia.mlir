@@ -23,7 +23,7 @@
     return %other : i32
   }
   func.func private @strict_device_barrier() attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
-    nvvm.barrier0
+    nvvm.barrier
     return
   }
   // 2 to the power of number (flushing results below the smallest normal float to 0)
