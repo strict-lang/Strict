@@ -11496,7 +11496,7 @@
   func.func private @strict_gpu_stored(%count: i64, %packed: i64) -> i64 {
     %brainBits = arith.constant 17 : i64
     %thirtyTwo = arith.constant 32 : i64
-    %large = arith.constant 1099511627776 : i64
+    %large = arith.constant 1048576 : i64
     %isBrain = arith.cmpi eq, %packed, %brainBits : i64
     %isLarge = arith.cmpi sge, %count, %large : i64
     %halved = arith.andi %isBrain, %isLarge : i1
