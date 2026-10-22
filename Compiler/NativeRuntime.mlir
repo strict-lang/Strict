@@ -8777,6 +8777,11 @@
   llvm.mlir.global internal constant @strict_gpu_warm_switch("STRICT_GPU_WARM\00") : !llvm.array<16 x i8>
   func.func private @strict_gpu_warm(%ptx: !llvm.ptr) {
     %zero = arith.constant 0 : i64
+    %stateSlot = llvm.mlir.addressof @strict_gpu_state : !llvm.ptr
+    %state = llvm.load %stateSlot : !llvm.ptr -> i64
+    %tried = arith.cmpi ne, %state, %zero : i64
+    cf.cond_br %tried, ^done, ^untried
+  ^untried:
     %first = llvm.load %ptx : !llvm.ptr -> i8
     %nothing = arith.constant 0 : i8
     %empty = arith.cmpi eq, %first, %nothing : i8
@@ -8796,11 +8801,7 @@
     %minimum = func.call @strict_gpu_threshold() : () -> i64
     %never = arith.constant 9223372036854775807 : i64
     %disabled = arith.cmpi eq, %minimum, %never : i64
-    %stateSlot = llvm.mlir.addressof @strict_gpu_state : !llvm.ptr
-    %state = llvm.load %stateSlot : !llvm.ptr -> i64
-    %tried = arith.cmpi ne, %state, %zero : i64
-    %skipped = arith.ori %disabled, %tried : i1
-    cf.cond_br %skipped, ^done, ^warm
+    cf.cond_br %disabled, ^done, ^warm
   ^warm:
     %warming = arith.constant 3 : i64
     llvm.store %warming, %stateSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
