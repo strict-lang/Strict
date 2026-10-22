@@ -43,16 +43,22 @@ Completed Numbers
 	FeatureMap((1, 2, 3, 4), 1, 2, (1, -1)).Completed is (2, 1, 4, 3)
 	for values
 		value + offsets(index % channels)
+Runs Number
+	Square.Runs is 1
+	(values.Length / channels / 1024).Ceiling
 Partials(groups Number, centers Numbers, squared Boolean) Numbers
-	FeatureMap((1, 2, 3, 6), 1, 2, (0, 0)).Partials(2, (0, 0), false) is (1, 2, 3, 6)
-	FeatureMap((1, 2, 3, 6), 1, 2, (0, 0)).Partials(2, (2, 4), true) is (1, 4, 1, 4)
+	FeatureMap((1, 2, 3, 6), 1, 2, (0, 0)).Partials(2, (0, 0), false) is (4, 8)
+	FeatureMap((1, 2, 3, 6), 1, 2, (0, 0)).Partials(2, (2, 4), true) is (2, 8)
 	let size = channels / groups
-	for Height * groups
-		let first = (index / groups).Floor * width * channels + (index % groups) * size
-		let center = centers(index % groups)
-		mutable sum = 0
-		for width * size
-			let channel = (index / size).Floor * channels + index % size
-			let difference = values(first + channel) + offsets((first + channel) % channels) - center
-			sum = sum + difference * (squared then difference else 1)
-		sum
+	for Runs * channels
+		let first = (index / channels).Floor * 1024
+		let channel = index % channels
+		let shift = offsets(channel) - centers((channel / size).Floor)
+		Run(first * channels + channel, (values.Length / channels - first).Clamp(0, 1024), shift, squared)
+Run(start Number, count Number, shift Number, squared Boolean) Number
+	FeatureMap((1, 2, 3, 6), 1, 2, (0, 0)).Run(1, 2, -4, true) is 8
+	mutable sum = 0
+	for count
+		let difference = values(start + index * channels) + shift
+		sum = sum + difference * (squared then difference else 1)
+	sum

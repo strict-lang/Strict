@@ -22,19 +22,30 @@ Means(map FeatureMap) Numbers
 	Pair.Means(Column) is (2, 4)
 	Pair.Means(FeatureMap(Column.values, 1, 2, (1, 0))) is (3, 4)
 	let count = map.values.Length / groups
-	for Totals(map.Partials(groups, Layer.Zeros(groups), false), map.Height)
+	for Grouped(Totals(map.Partials(groups, Layer.Zeros(groups), false), map.Runs))
 		value / count
 Variances(map FeatureMap, means Numbers) Numbers
 	Pair.Variances(Column, (2, 4)) is (1, 4)
 	GroupNorm((1, 1), (0, 0), 1).Variances(Column, List(Number) + 3) is List(Number) + 3.5
 	let count = map.values.Length / groups
-	for Totals(map.Partials(groups, means, true), map.Height)
+	for Grouped(Totals(map.Partials(groups, means, true), map.Runs))
 		value / count
 Totals(partials Numbers, rows Number) Numbers
 	Pair.Totals((1, 2, 3, 6), 2) is (4, 8)
+	let width = partials.Length / rows
+	for width
+		let channel = index
+		mutable sum = 0
+		for rows
+			sum = sum + partials(index * width + channel)
+		sum
+Grouped(totals Numbers) Numbers
+	Pair.Grouped((1, 2)) is (1, 2)
+	GroupNorm((1, 1), (0, 0), 1).Grouped((1, 2)) is List(Number) + 3
+	let size = totals.Length / groups
 	for groups
 		let group = index
 		mutable sum = 0
-		for rows
-			sum = sum + partials(index * groups + group)
+		for size
+			sum = sum + totals(group * size + index)
 		sum
