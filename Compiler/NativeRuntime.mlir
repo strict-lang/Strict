@@ -9479,7 +9479,8 @@
     return %done : i1
   }
   // blocks of 512 threads are those of strict_device_tiles, which keep their rows and tokens in 52224 bytes of dynamic
-  // shared memory (more than the 48 KB a kernel gets without asking)
+  // shared memory (more than the 48 KB a kernel gets without asking), strict_device_eights has 3 stages of 24576 bytes
+  // from sm_80 on and takes 45056 bytes where fewer are allowed (before sm_80, AMD)
   func.func private @strict_gpu_launch(%function: !llvm.ptr, %count: i64, %threads: i64, %parameters: !llvm.ptr) -> i1 {
     %zero32 = arith.constant 0 : i32
     %one32 = arith.constant 1 : i32
@@ -9487,15 +9488,32 @@
     %tileThreads = arith.constant 512 : i64
     %isTiles = arith.cmpi eq, %threads, %tileThreads : i64
     %tileShared = arith.constant 52224 : i32
-    %shared = arith.select %isTiles, %tileShared, %zero32 : i32
-    cf.cond_br %isTiles, ^allowShared, ^launch
+    %eightsSlot = llvm.mlir.addressof @strict_gpu_eights_slot : !llvm.ptr
+    %eightsWide = llvm.load %eightsSlot : !llvm.ptr -> i64
+    %eightsSingleSlot = llvm.getelementptr %eightsSlot[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %eightsSingle = llvm.load %eightsSingleSlot : !llvm.ptr -> i64
+    %functionBits = llvm.ptrtoint %function : !llvm.ptr to i64
+    %isEightsWide = arith.cmpi eq, %functionBits, %eightsWide : i64
+    %isEightsSingle = arith.cmpi eq, %functionBits, %eightsSingle : i64
+    %isEights = arith.ori %isEightsWide, %isEightsSingle : i1
+    %eightsShared = arith.constant 73728 : i32
+    %eightsHalves = arith.constant 45056 : i32
+    %isAmd = func.call @strict_gpu_is_amd() : () -> i1
+    %eightsWanted = arith.select %isAmd, %eightsHalves, %eightsShared : i32
+    %otherShared = arith.select %isTiles, %tileShared, %zero32 : i32
+    %wanted = arith.select %isEights, %eightsWanted, %otherShared : i32
+    %asking = arith.cmpi ne, %wanted, %zero32 : i32
+    cf.cond_br %asking, ^allowShared, ^launch(%zero32 : i32)
   ^allowShared:
     %attributeIndex = arith.constant 31 : i64
     %setAttribute = func.call @strict_gpu_call(%attributeIndex) : (i64) -> !llvm.ptr
     %maximumDynamicShared = arith.constant 8 : i32
-    %allowed = llvm.call %setAttribute(%function, %maximumDynamicShared, %tileShared) : !llvm.ptr, (!llvm.ptr, i32, i32) -> i32
-    cf.br ^launch
-  ^launch:
+    %allowed = llvm.call %setAttribute(%function, %maximumDynamicShared, %wanted) : !llvm.ptr, (!llvm.ptr, i32, i32) -> i32
+    %isAllowed = arith.cmpi eq, %allowed, %zero32 : i32
+    %fallback = arith.select %isEights, %eightsHalves, %wanted : i32
+    %granted = arith.select %isAllowed, %wanted, %fallback : i32
+    cf.br ^launch(%granted : i32)
+  ^launch(%shared: i32):
     %spare = arith.subi %threads, %one : i64
     %rounded = arith.addi %count, %spare : i64
     %blocks = arith.divui %rounded, %threads : i64
@@ -11276,8 +11294,10 @@
     %eighting = arith.cmpi eq, %perWarp, %eightLanes : i64
     %eightRowsUp = arith.addi %rowTotal, %tileRowSpare : i64
     %eightRowTiles = arith.shrui %eightRowsUp, %tileRowShift : i64
-    %eightTokensUp = arith.addi %tokens, %tileRowSpare : i64
-    %eightTokenTiles = arith.shrui %eightTokensUp, %tileRowShift : i64
+    %eightTokenSpare = arith.constant 255 : i64
+    %eightTokenShift = arith.constant 8 : i64
+    %eightTokensUp = arith.addi %tokens, %eightTokenSpare : i64
+    %eightTokenTiles = arith.shrui %eightTokensUp, %eightTokenShift : i64
     %eightTiles = arith.muli %eightRowTiles, %eightTokenTiles : i64
     %eightThreads = arith.muli %eightTiles, %eightLanes : i64
     %chosenEights = arith.select %eighting, %eightThreads, %chosenTiles : i64

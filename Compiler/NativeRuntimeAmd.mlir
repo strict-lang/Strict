@@ -229,6 +229,18 @@
     %rounded = arith.fptosi %even : f32 to i32
     return %rounded : i32
   }
+  // the copies of strict_device_copy are a load and a store, done when they return
+  func.func private @strict_device_copy(%shared: !llvm.ptr<3>, %global: !llvm.ptr) attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
+    %words = llvm.load %global invariant {alignment = 16 : i64} : !llvm.ptr -> vector<4xi32>
+    llvm.store %words, %shared {alignment = 16 : i64} : vector<4xi32>, !llvm.ptr<3>
+    return
+  }
+  func.func private @strict_device_copies_commit() attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
+    return
+  }
+  func.func private @strict_device_copies_wait() attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
+    return
+  }
   // older GPUs have no 8 bit dot product instruction (sdot4 needs gfx906), four multiplies of the signed bytes
   func.func private @strict_device_dp4a(%left: i32, %right: i32, %sum: i32) -> i32 attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
     %leftBytes = llvm.bitcast %left : i32 to vector<4xi8>

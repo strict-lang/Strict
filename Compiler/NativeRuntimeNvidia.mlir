@@ -103,6 +103,45 @@
     %loaded = llvm.call_intrinsic "llvm.nvvm.ldmatrix.sync.aligned.m8n8.x4.b16.p3"(%slot) : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
     return %loaded : !llvm.struct<(i32, i32, i32, i32)>
   }
+  // 16 bytes of global memory into shared memory without waiting for them (cp.async from sm_80 on, a load and a store
+  // before), the copies of a thread since the last commit are one group, waited for until at most one group is pending
+  func.func private @strict_device_copy(%shared: !llvm.ptr<3>, %global: !llvm.ptr) attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
+    %arch = func.call @strict_device_arch() : () -> i32
+    %c800 = arith.constant 800 : i32
+    %isAsync = arith.cmpi sge, %arch, %c800 : i32
+    cf.cond_br %isAsync, ^async, ^plain
+  ^async:
+    %source = llvm.addrspacecast %global : !llvm.ptr to !llvm.ptr<1>
+    llvm.call_intrinsic "llvm.nvvm.cp.async.cg.shared.global.16"(%shared, %source) : (!llvm.ptr<3>, !llvm.ptr<1>) -> ()
+    return
+  ^plain:
+    %words = llvm.load %global invariant {alignment = 16 : i64} : !llvm.ptr -> vector<4xi32>
+    llvm.store %words, %shared {alignment = 16 : i64} : vector<4xi32>, !llvm.ptr<3>
+    return
+  }
+  func.func private @strict_device_copies_commit() attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
+    %arch = func.call @strict_device_arch() : () -> i32
+    %c800 = arith.constant 800 : i32
+    %isAsync = arith.cmpi sge, %arch, %c800 : i32
+    cf.cond_br %isAsync, ^async, ^done
+  ^async:
+    llvm.call_intrinsic "llvm.nvvm.cp.async.commit.group"() : () -> ()
+    cf.br ^done
+  ^done:
+    return
+  }
+  func.func private @strict_device_copies_wait() attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
+    %arch = func.call @strict_device_arch() : () -> i32
+    %c800 = arith.constant 800 : i32
+    %isAsync = arith.cmpi sge, %arch, %c800 : i32
+    cf.cond_br %isAsync, ^async, ^done
+  ^async:
+    %pending = llvm.mlir.constant(1 : i32) : i32
+    llvm.call_intrinsic "llvm.nvvm.cp.async.wait.group"(%pending) : (i32) -> ()
+    cf.br ^done
+  ^done:
+    return
+  }
   func.func private @strict_device_dp4a(%left: i32, %right: i32, %sum: i32) -> i32 attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
     %result = llvm.call_intrinsic "llvm.nvvm.idp4a.s.s"(%left, %right, %sum) : (i32, i32, i32) -> i32
     return %result : i32
