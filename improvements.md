@@ -19,6 +19,7 @@ In priority order, short and actionable. Remove what is done (results go into th
 - `strict test NeuralNetworks lines` crashes natively on macOS (`strict_list_restoring` reaches a null link).
 - `strict test` sometimes crashes at start (segfault, no output) or hangs, and `strict check Bytecode` / `strict check Runtime` hung for 2 hours 3 times on 2026-10-21 (the same command takes 1 s on a rerun). Not reproduced with 40 concurrent runs of one file or with `CUDA_CACHE_DISABLE=1`; suspects: dozens of parallel `strict test` processes (VS Code) sharing the base type `.strictbinary` files, which `Execute` writes in place (`File(cache.Path).Write`, no temporary file and rename).
 - Implicit self calls in replacement constructors fail natively (`Creature(value, previous = Pose(9))`).
+- A `Batch` loop over rows times tokens with the token index fastest (`Dot(weights((index / tokens).Floor), 0, input, (index % tokens) * width)`, the cheap way to verify 2-8 drafted tokens: 2 tokens take 36 instead of 24 ms in tiles) stops with `a loop on the GPU read outside of a list` on Qwen3.8 while its VM tests pass.
 - `strict check` does not run the type checks of `ResolveCheck` (`ArgumentTypeMismatch`, `CopyWithoutChanges`), only `strict test` and `strict build` report them.
 - `strict test Examples` crashed once at start (segfault, 2026-10-21), not reproduced.
 - `strict test` prints `Unsupported native call` for a test calling a method with too many arguments and still reports all tests passed (DeltaBlock, 2026-10-21).
