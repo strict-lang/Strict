@@ -39,9 +39,16 @@ Amd(device Text, runtimes Texts) Text
 	combined.Replace("{nvvm.kernel", "{rocdl.kernel").Replace("nvptx64-nvidia-cuda", "amdgcn-amd-amdhsa")
 Built(base Text, device Text, runtimes Texts) Texts
 	Local.Built(Kernels, "module {\n  x\n}", List(Text)).First.StartsWith("mlir-opt failed")
-	File(base + ".gpu.mlir").Write(Combined(device, runtimes))
+	let combined = Combined(device, runtimes)
 	let amd = Hsaco(base, device, runtimes)
-	amd is "" then Ptx(base, device.IndexOf(MlirTokens.Marker) >= 0) else List(Text) + amd
+	if amd is not ""
+		return List(Text) + amd
+	let isTiling = device.IndexOf(MlirTokens.Marker) >= 0
+	let previous = tools.platform is Platform.MacOS then List(Text) else PtxCache(base).Previous(combined, isTiling)
+	if previous.Length > 0
+		return previous
+	File(base + ".gpu.mlir").Write(combined)
+	PtxCache(base).Remembered(combined, Ptx(base, isTiling))
 Hsaco(base Text, device Text, runtimes Texts) Text
 	DeviceBuild(Toolchain(Platform.MacOS, ".")).Hsaco(Kernels, "module {\n}", List(Text)) is ""
 	File(Kernels + ".hsaco").Exists is false
