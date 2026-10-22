@@ -32,21 +32,22 @@ Advanced Speculation
 	let accepted = Accepted(draft, predictions)
 	let kept = Safetensors.Part(block, 0, accepted + 1, 1)
 	let truncated = accepted is draft.Length then verified else Truncated(verified, kept)
-	let remembered = Remembered(verified, kept)
+	let remembered = Remembered(verified, kept, predictions(accepted))
 	Speculation(truncated, context + kept, predictions(accepted), Adapted(draft.Length, accepted), steps + 1, remembered)
 Drafted Numbers
 	Started.Drafted.Length is 0
 	Drafting.Drafted.Length is 3
-	drafter.headNorm.Length is 0 then Lookup(context + next) else drafter.Drafts(model, next, context.Length, drafts)
-Remembered(verified Qwen3, kept Numbers) Drafter
-	Started.Remembered(Started.model, List(Number) + 2).headNorm.Length is 0
-	Drafting.Remembered(Verified, (5, 4)).blocks.First.keys.Length is 8
+	let primed = drafter.Primed(model, next, context.Length)
+	drafter.headNorm.Length is 0 then Lookup(context + next) else primed.Drafts(model, context.Length, drafts)
+Remembered(verified Qwen3, kept Numbers, following Number) Drafter
+	Started.Remembered(Started.model, List(Number) + 2, 1).headNorm.Length is 0
+	Drafting.Remembered(Verified, (5, 4), 1).blocks.First.keys.Length is 12
 	if drafter.headNorm.Length is 0
 		return drafter
-	let width = drafter.embedNorm.Length
-	let last = Safetensors.Part(model.hidden, model.hidden.Length - width, width, 1)
-	let rows = last + Safetensors.Part(verified.hidden, 0, (kept.Length - 1) * width, 1)
-	drafter.Extended(model, rows, kept, Qwen3.Positions(context.Length, kept.Length))
+	let rows = Safetensors.Part(verified.hidden, 0, kept.Length * drafter.embedNorm.Length, 1)
+	let tokens = Safetensors.Part(kept, 1, kept.Length - 1, 1) + following
+	let primed = drafter.Primed(model, next, context.Length)
+	primed.Extended(model, rows, tokens, Qwen3.Positions(context.Length + 1, kept.Length))
 Adapted(drafted Number, accepted Number) Number
 	Started.Adapted(0, 0) is Started.drafts
 	Started.Adapted(15, 3) is 15

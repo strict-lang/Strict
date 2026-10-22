@@ -23,13 +23,15 @@ Loaded(model Gguf, heads Number) Drafter
 Extended(model Qwen3, rows Numbers, tokens Numbers, positions Numbers) Drafter
 	Tiny.Extended(Stepped, Stepped.hidden, List(Number) + 2, List(Number) + 1).hidden.Length is 8
 	Tiny.Extended(Stepped, Stepped.hidden + Stepped.hidden, (2, 3), (1, 2)).blocks.First.keys.Length is 8
+	Tiny.Extended(Stepped, Stepped.hidden + Stepped.hidden, (2, 3), (1, 2)).hidden.Length is 8
 	let width = embedNorm.Length
 	let embedded = Qwen3Block.Normalized(model.Embedded(tokens), 0, tokens.Length * width, embedNorm)
 	let joined = Joined(embedded, Qwen3Block.Normalized(rows, 0, rows.Length, hiddenNorm))
 	let projected = Batch(projection.weights, projection.biases).Sums(joined)
 	let cached = blocks.First.Cached(projected, model.Rotations(positions), model.cacheBits)
 	let kept = List(Qwen3Block) + Qwen3Block(cached, queries = List(Number), hybrid = Hybrid.None)
-	Drafter(value, blocks = kept, hidden = cached.Output(projected, 1))
+	let output = cached.Output(projected, 1)
+	Drafter(value, blocks = kept, hidden = Safetensors.Part(output, output.Length - width, width, 1))
 Joined(first Numbers, second Numbers) Numbers
 	Tiny.Joined((1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8), Layer.Zeros(16))(8) is 0
 	Tiny.Joined((1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8), Layer.Zeros(16))(16) is 1
@@ -38,15 +40,24 @@ Joined(first Numbers, second Numbers) Numbers
 		let at = index % (2 * width)
 		let row = (index / (2 * width)).Floor * width
 		at < width then first(row + at) else second(row + at - width)
-Drafts(model Qwen3, next Number, position Number, count Number) Numbers
-	Tiny.Drafts(Stepped, 2, 1, 3).Length is 3
-	Tiny.Drafts(Stepped, 2, 1, 1).First is Tiny.Drafts(Stepped, 2, 1, 3).First
+Primed(model Qwen3, next Number, position Number) Drafter
+	Tiny.Primed(Stepped, 2, 1).hidden.Length is 8
+	Tiny.Primed(Stepped, 2, 1).Primed(Stepped, 3, 2).blocks.First.keys.Length is 4
+	if (hidden.Length > 0) or (headNorm.Length is 0)
+		return value
 	let width = embedNorm.Length
 	let last = Safetensors.Part(model.hidden, model.hidden.Length - width, width, 1)
-	mutable current = Extended(model, last, List(Number) + next, List(Number) + position)
+	Extended(model, last, List(Number) + next, List(Number) + position)
+Drafts(model Qwen3, position Number, count Number) Numbers
+	Tiny.Primed(Stepped, 2, 1).Drafts(Stepped, 1, 3).Length is 3
+	Tiny.Primed(Stepped, 2, 1).Drafts(Stepped, 1, 1).First is Tiny.Primed(Stepped, 2, 1).Drafts(Stepped, 1, 3).First
+	mutable current = value
 	mutable drafts = List(Number)
 	for count
 		let drafted = Qwen3(model, hidden = current.hidden, norm = headNorm).Nexts.First
 		drafts = drafts + drafted
-		current = current.Extended(model, current.hidden, List(Number) + drafted, List(Number) + (position + index + 1))
+		current = index + 1 < count then current.Further(model, drafted, position + index + 1) else current
 	drafts
+Further(model Qwen3, token Number, position Number) Drafter
+	Tiny.Extended(Stepped, Stepped.hidden, List(Number) + 2, List(Number) + 1).Further(Stepped, 3, 2).hidden.Length is 8
+	Extended(model, hidden, List(Number) + token, List(Number) + position)
