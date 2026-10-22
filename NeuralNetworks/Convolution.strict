@@ -1,0 +1,38 @@
+has weights Numbers
+has biases Numbers
+constant Center = Convolution((0, 0, 0, 0, 1, 0, 0, 0, 0), List(Number) + 0.5)
+constant Square = FeatureMap((1, 2, 3, 4), 2, 1, List(Number) + 0)
+Rearranged(values Numbers, inputs Number, side Number) Numbers
+	Center.Rearranged((0, 1, 0, 0, 0, 0, 0, 0, 0), 1, 3) is (0, 0, 0, 1, 0, 0, 0, 0, 0)
+	Center.Rearranged((0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0), 2, 3)(13) is 1
+	let size = side * side * inputs
+	for values.Length
+		let rest = index % size
+		let row = (rest / inputs).Floor % side
+		let column = (rest / (side * inputs)).Floor
+		values((((index / size).Floor * inputs + rest % inputs) * side + row) * side + column)
+Applied(map FeatureMap, affine Numbers, swish Boolean, doubled Boolean) FeatureMap
+	Center.Applied(Square, (1, 0), false, false) is FeatureMap((1, 2, 3, 4), 2, 1, List(Number) + 0.5)
+	Convolution((0, 0, 0, 1, 0, 0, 0, 0, 0), Center.biases).Applied(Square, (1, 0), false, false).values is (0, 0, 1, 2)
+	Convolution((0, 1, 0, 0, 0, 0, 0, 0, 0), Center.biases).Applied(Square, (1, 0), false, false).values is (0, 1, 0, 3)
+	Center.Applied(Square, (1, 0), false, true).values is (1, 1, 2, 2, 1, 1, 2, 2, 3, 3, 4, 4, 3, 3, 4, 4)
+	let columns = map.width * (doubled then 2 else 1)
+	let inputs = 3 * map.channels
+	let shape = (map.Height * columns / map.width, columns, 3 * inputs, biases.Length)
+	let strides = (0, (columns + 2) * inputs, inputs, 1, 0, 0, 1, 3 * inputs)
+	let products = Products(map.Stacked(affine, swish, doubled), weights, shape, strides)
+	FeatureMap(products.Multiplied, columns, biases.Length, biases)
+Projected(map FeatureMap) FeatureMap
+	Convolution((1, 2, 3, 4), (0, 1)).Projected(FeatureMap((1, 0, 0, 1), 1, 2, (1, 1))).values is (1, 3, 2, 4)
+	Convolution((1, 2, 3, 4), (0, 1)).Projected(FeatureMap((1, 0, 0, 1), 1, 2, (1, 1))).offsets is (3, 8)
+	let shape = (1, map.values.Length / map.channels, map.channels, biases.Length)
+	let products = Products(map.values, weights, shape, (0, 0, map.channels, 1, 0, 0, 1, map.channels))
+	FeatureMap(products.Multiplied, map.width, biases.Length, Offsets(map.offsets))
+Offsets(offsets Numbers) Numbers
+	Convolution((1, 2, 3, 4), (0, 1)).Offsets((1, 1)) is (3, 8)
+	for biases.Length
+		let output = index
+		mutable sum = biases(output)
+		for offsets
+			sum = sum + weights(output * offsets.Length + index) * value
+		sum
