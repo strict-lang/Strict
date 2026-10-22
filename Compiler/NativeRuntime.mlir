@@ -1949,13 +1949,19 @@
     return
   }
   // words pointing into the large object marked last are skipped (the rows of a matrix share one, strict_packed_rows),
-  // so are words outside the heap without a call (numbers: a full collection of Qwen3.8 scans 57 million words)
+  // so are words outside the heap without a call (numbers: a full collection of Qwen3.8 scans 57 million words) and
+  // numbers: only plain pointers and the NaN tags 32761-32767 (Errors, packed results) refer to objects, the low 48
+  // bits of a number in a list of 50 million kept every other big list and its device copy alive
   func.func private @strict_gc_mark_range(%from: i64, %to: i64) {
     %none = arith.constant 0 : i64
     %wordSlot = llvm.mlir.addressof @strict_word_bytes : !llvm.ptr
     %eight = llvm.load %wordSlot : !llvm.ptr -> i64
     %alignMask = arith.subi %none, %eight : i64
     %address = arith.constant 281474976710655 : i64
+    %tagShift = arith.constant 48 : i64
+    %firstTag = arith.constant 32761 : i64
+    %tagCount = arith.constant 7 : i64
+    %false = arith.constant false
     %aligned = arith.andi %from, %alignMask : i64
     %baseSlot = llvm.mlir.addressof @strict_gc_base : !llvm.ptr
     %base = llvm.load %baseSlot : !llvm.ptr -> i64
@@ -1975,7 +1981,14 @@
     %belowBase = arith.cmpi ult, %word, %base : i64
     %aboveTop = arith.cmpi uge, %word, %top : i64
     %outside = arith.ori %belowBase, %aboveTop : i1
-    %skipped = arith.ori %inside, %outside : i1
+    %tag = arith.shrui %value, %tagShift : i64
+    %isPlain = arith.cmpi eq, %tag, %none : i64
+    %tagOffset = arith.subi %tag, %firstTag : i64
+    %isTagged = arith.cmpi ult, %tagOffset, %tagCount : i64
+    %isReference = arith.ori %isPlain, %isTagged : i1
+    %isNumber = arith.cmpi eq, %isReference, %false : i1
+    %notObject = arith.ori %outside, %isNumber : i1
+    %skipped = arith.ori %inside, %notObject : i1
     cf.cond_br %skipped, ^loop(%next, %skipStart, %skipEnd : i64, i64, i64), ^mark
   ^mark:
     %range:2 = func.call @strict_gc_mark(%value) : (i64) -> (i64, i64)
@@ -9916,6 +9929,34 @@
     %any = arith.cmpi sgt, %released, %none : i64
     return %any : i1
   }
+  // a big host list uploaded into an allocation of its own counts like a block cut from a chunk: a full collection
+  // first once more than half of the free memory went out since the last one, its device copy lives as long as the
+  // list, and a dead old list (Flux VAE activations) only goes in a full collection
+  func.func private @strict_gpu_crowded(%bytes: i64) {
+    %one = arith.constant 1 : i64
+    %full = arith.constant true
+    %chunk = llvm.mlir.addressof @strict_gpu_chunk : !llvm.ptr
+    %sinceSlot = llvm.getelementptr %chunk[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %since = llvm.load %sinceSlot : !llvm.ptr -> i64
+    %limitSlot = llvm.getelementptr %chunk[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    %measured = llvm.load %limitSlot : !llvm.ptr -> i64
+    %gigabyte = arith.constant 1073741824 : i64
+    %limit = arith.maxui %measured, %gigabyte : i64
+    %after = arith.addi %since, %bytes : i64
+    %crowded = arith.cmpi ugt, %after, %limit : i64
+    cf.cond_br %crowded, ^collect, ^count
+  ^collect:
+    func.call @strict_gc_run(%full) : (i1) -> ()
+    %free = func.call @strict_gpu_free_memory() : () -> i64
+    %half = arith.shrui %free, %one : i64
+    llvm.store %half, %limitSlot : i64, !llvm.ptr
+    cf.br ^count
+  ^count:
+    %current = llvm.load %sinceSlot : !llvm.ptr -> i64
+    %grown = arith.addi %current, %bytes : i64
+    llvm.store %grown, %sinceSlot : i64, !llvm.ptr
+    return
+  }
   func.func private @strict_gpu_obtained(%bytes: i64) {
     %chunk = llvm.mlir.addressof @strict_gpu_chunk : !llvm.ptr
     %obtainedSlot = llvm.getelementptr %chunk[5] : (!llvm.ptr) -> !llvm.ptr, i64
@@ -11775,6 +11816,7 @@
     llvm.store %none, %buffer : i64, !llvm.ptr
     return %uploaded : i1
   ^dedicated:
+    func.call @strict_gpu_crowded(%size) : (i64) -> ()
     %owned = func.call @strict_gpu_alloc(%size) : (i64) -> i64
     llvm.store %owned, %buffer : i64, !llvm.ptr
     cf.br ^allocated(%owned : i64)
@@ -12327,7 +12369,8 @@
   llvm.mlir.global internal @strict_gpu_arena(dense<0> : tensor<6xi64>) : !llvm.array<6 x i64>
   // the arena is a ring: small inputs of a launch are staged in pinned memory and copied asynchronously, an input that
   // does not fit behind the previous ones waits for the GPU and starts again at the front, the arena grows at the start
-  // of a launch when the previous one needed more than half of it
+  // of a launch when the previous one needed more than half of it, to 4 times that but at most 1 GB (a Flux VAE launch
+  // wanting 950 MB made it 3.8 GB plus as much pinned memory), bigger inputs and results get allocations of their own
   func.func private @strict_gpu_reset() {
     %none = arith.constant 0 : i64
     %arena = llvm.mlir.addressof @strict_gpu_arena : !llvm.ptr
@@ -12342,8 +12385,16 @@
     llvm.store %nothingStaged, %lowSlot : i64, !llvm.ptr
     %one = arith.constant 1 : i64
     %doubled = arith.shli %wanted, %one : i64
+    %two = arith.constant 2 : i64
+    %quadrupled = arith.shli %wanted, %two : i64
+    %smallest = arith.constant 1048576 : i64
+    %largest = arith.constant 1073741824 : i64
+    %atLeast = arith.maxui %quadrupled, %smallest : i64
+    %grown = arith.minui %atLeast, %largest : i64
     %tooSmall = arith.cmpi ugt, %doubled, %capacity : i64
-    cf.cond_br %tooSmall, ^grow, ^done
+    %larger = arith.cmpi ugt, %grown, %capacity : i64
+    %growing = arith.andi %tooSmall, %larger : i1
+    cf.cond_br %growing, ^grow, ^done
   ^grow:
     func.call @strict_gpu_synchronize() : () -> ()
     %base = llvm.load %arena : !llvm.ptr -> i64
@@ -12351,10 +12402,6 @@
     %stagingSlot = llvm.getelementptr %arena[4] : (!llvm.ptr) -> !llvm.ptr, i64
     %oldStaging = llvm.load %stagingSlot : !llvm.ptr -> i64
     func.call @strict_gpu_unpinned(%oldStaging) : (i64) -> ()
-    %two = arith.constant 2 : i64
-    %quadrupled = arith.shli %wanted, %two : i64
-    %smallest = arith.constant 1048576 : i64
-    %grown = arith.maxui %quadrupled, %smallest : i64
     %fresh = func.call @strict_gpu_alloc(%grown) : (i64) -> i64
     llvm.store %fresh, %arena : i64, !llvm.ptr
     %staging = func.call @strict_gpu_pinned(%grown) : (i64) -> i64
