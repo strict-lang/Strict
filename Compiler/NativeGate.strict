@@ -20,7 +20,9 @@ Measured(path Text, root Text) Number
 	let natively = NativeTests(path, root)
 	natively > 0 then natively else built
 Gated(path Text, root Text, isProgram Boolean) Number
-	let failed = NativeTests(path, root)
+	let failed = Execute(logger).Kept(path, root) > 0 then -1 else NativeTests(path, root)
+	if failed is not 0
+		File(BinaryFile(FileCompiler.Normalized(path)).Path).Delete
 	if failed >= 0
 		return failed
 	let checked = Execute(logger).Test(path, root)

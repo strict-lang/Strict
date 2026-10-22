@@ -62,14 +62,20 @@ IsEdited(path Text) Boolean
 	Execute(Logger).IsEdited("Missing.strict") is false
 	let source = FileCompiler.Normalized(path)
 	File(source).Exists and (File(source).Modified is 0)
-Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInference) Number
+Kept(path Text, root Text) Number
+	Execute(Logger).Kept("Missing.strict", ".") is 1
+	if File(path).Exists is false
+		return 1
+	let files = SourceFiles(root).Of(FileCompiler.Normalized(path))
+	Verified(path, root, true, files, ResolveCheck.Inference(files), false)
+Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInference, isTested = true) Number
 	let cache = BinaryFile(FileCompiler.Normalized(path))
 	let stamped = BinarySources(files + cache.Data(cache.source)).Stamped
 	let types = FileCompiler(logger, isQuiet).Built(path, root, true, files, inference)
 	if types.Length is 0
 		return 1
 	let before = Process.FilesRead.Length
-	let failed = Tested(types, path)
+	let failed = isTested then Tested(types, path) else 0
 	if (failed is 0) and (IsEdited(path) is false)
 		let header = Completed(cache, root, files, stamped, before).Kept(types).Header
 		cache.Saved(cache.Packed(header, types, List(TypeEntry)))
