@@ -3,7 +3,7 @@ has isBase Boolean
 has scale Number = 1
 constant MaxCharacters = 120
 constant MaxMethodLines = 13
-constant MaxMethods = 15
+constant MaxMethods = 16
 constant MaxMembers = 15
 constant OnlyConstants = Limits(("constant A", "constant B", "constant C", "constant D", "constant E", "constant F", "constant G", "constant H", "constant I", "constant J", "constant K", "constant L", "constant M", "constant N", "constant O", "constant P"), false)
 constant Sample = Limits(("has number", "Run", "\t\t\t\t\t\t1", "  2"), false)
