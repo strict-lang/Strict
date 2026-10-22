@@ -1,5 +1,4 @@
 has line Text
-constant WordCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 Tokens Texts
 	Tokenizer("a + b").Tokens is ("a", "+", "b")
 	Tokenizer("Add(5, x.y)").Tokens is ("Add", "(", "5", ",", "x", ".", "y", ")")
@@ -44,9 +43,9 @@ WordLength(start Number) Number
 	Tokenizer("Vector2.One").WordLength(0) is 7
 	Tokenizer("1e-5)").WordLength(0) is 4
 	for Range(start, line.Length)
-		let character = line.Substring(value, 1)
-		let isNumberPart = (character is ".") and IsDecimalPoint(value) or (character is "-") and IsExponentSign(start, value)
-		if (WordCharacters.IndexOf(character) is -1) and (not isNumberPart)
+		let code = line.characters(value).number
+		let isNumberPart = (code is 46) and IsDecimalPoint(value) or (code is 45) and IsExponentSign(start, value)
+		if (IsWordCode(code) is false) and (not isNumberPart)
 			return value - start
 	line.Length - start
 IsDecimalPoint(position Number) Boolean
@@ -64,7 +63,14 @@ IsWordCharacter(character Text) Boolean
 	IsWordCharacter("a")
 	IsWordCharacter("7")
 	IsWordCharacter("(") is false
-	WordCharacters.IndexOf(character) is not -1
+	(character.Length is 1) and IsWordCode(character.characters(0).number)
+IsWordCode(code Number) Boolean
+	IsWordCode(97)
+	IsWordCode(90)
+	IsWordCode(55)
+	IsWordCode(40) is false
+	IsWordCode(95) is false
+	(code >= 97) and (code <= 122) or (code >= 65) and (code <= 90) or (code >= 48) and (code <= 57)
 IsDigit(character Text) Boolean
 	IsDigit("7")
 	IsDigit("a") is false
