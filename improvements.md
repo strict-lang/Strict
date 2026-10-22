@@ -11,6 +11,8 @@ In priority order, short and actionable. Remove what is done (results go into th
 
 ## Bugs
 - Qwen3.8 prompts of 911 tokens and more stop with `a loop on the GPU read outside of a list` in `DeltaChunks.Corrected` (`STRICT_GPU_CHECK=1` names the loop): it runs over 4 * 48 * 128 * tokens elements and its fourth part starts past 2^24 from 911 tokens on (910 prefills). A probe with the same `DeltaChunks` sizes, GPU computed inputs and the identical kernel passes at 950 tokens, so the Qwen3 run takes the generic 32 bit body (a failed guard), whose f32 index math is wrong past 2^24: find the failing guard, and make the generic body exact for loops of more than 2^24 elements.
+- `Number to Text` writes numbers from 8 digits on with an exponent (`1.39002525e9`, even `9.002525e7`): whole numbers should print all their digits (DeviceBuild.Referenced takes its hash mod 9999991 to stay below it).
+- `Text.Combine` of a list of numbers crashes natively with an access violation (the VM is fine).
 
 ## Later
 Language model research (`NeuralNetworks/README.md`), big models and memory (Qwen3-Coder-30B with all experts), image blur on the GPU, web and mobile platforms, Apple Silicon, AMD GPUs.
