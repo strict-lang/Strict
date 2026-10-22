@@ -2,7 +2,10 @@ has entry TypeEntry
 constant Sizing = TypeSource(TypeEntry("Strict/Math/Size", List(MemberEntry), List(MethodEntry)))
 Root Text
 	TypeSource.Root is "."
-	File("Any.strict").Exists then "." else Path(Process.Current.executable.Replace("\\", "/")).PathOnly.text
+	let folder = Path(Process.Current.executable.Replace("\\", "/")).PathOnly.text
+	if File("Any.strict").Exists
+		return "."
+	File(folder + "/Any.strict").Exists then folder else Path(folder).PathOnly.text
 Located(folder Text) Text
 	Sizing.Located("./Fonts") is "Math/Size.strict"
 	TypeSource(TypeEntry("Strict/List(Number)", List(MemberEntry), List(MethodEntry))).Located("") is "List.strict"

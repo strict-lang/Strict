@@ -47,7 +47,6 @@ VariableNames Texts
 	names
 TypeOf(name Text) TypeEntry
 	Counter.TypeOf("Strict/Other").members.Length is 0
-	MlirFunction(Counter.types + Shape, Shape, Counter.method, typeIndex = Natives.Shapes.Indexed).TypeOf("Shape") is Shape
 	name is in typeIndex then types(typeIndex(name)) else Natives(types).TypeOf(name)
 Load(target Text, slot Text) Text
 	Counter.Load("%a", "%r0") is "    %a = llvm.load %r0 : !llvm.ptr -> f64"

@@ -70,7 +70,7 @@ strict version                            version and build time of this strict
 
 Needed tools: `mlir-opt`, `mlir-translate`, `clang`, `opt` and `llc` of LLVM 22 (on Windows the msys2 ucrt64 `mlir` package and the LLVM release). When they are missing `strict` says so and installs them (Windows: winget and pacman, Linux: the LLVM release into `Tools/`, macOS: conda-forge with micromamba into `Tools/`).
 
-Bootstrap a fresh checkout from the checked-in seed with `Compiler\Bootstrap.cmd` (Windows) or `sh Compiler/bootstrap.sh` (Linux and macOS), then `strict build Strict.strict` builds the current compiler; building twice gives identical output.
+`strict` runs, tests and checks on the Strict VM and hands `build` and `test ... lines` to `Compiler/NativeCompiler` (`.exe` on Windows), the native compiler next to it. Bootstrap a fresh checkout from the checked-in seed with `Compiler\Bootstrap.cmd` (Windows) or `sh Compiler/bootstrap.sh` (Linux and macOS): it builds `Compiler/NativeCompiler` from the seed, which then builds `strict`. After changing the compiler rebuild both, `strict build Compiler/NativeCompiler.strict` then `strict build Strict.strict`; building twice gives identical output.
 
 ## Rules worth knowing
 - Limits: 120 characters per line, 13 lines per method (header and tests included), 4 parameters, 15 methods, 15 members, nesting depth 5, names 2-50 characters. Files in a `Generated` folder get 10 times as much.

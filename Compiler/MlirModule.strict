@@ -38,7 +38,19 @@ Functions List(MlirFunction)
 Entries List(MlirFunction)
 	Pair.Entries.Last.Symbol is "Other_Run_0"
 	for Range(0, entries)
-		MlirFunction(types, types(value), RunMethod(types(value)), typeIndex = Natives(types).Indexed)
+		MlirFunction(types, types(value), RunMethod(types(value)), typeIndex = TypeIndex)
+TypeIndex Dictionary(Text, Number)
+	Counters.TypeIndex("Counter") is 0
+	Counters.TypeIndex("Strict/Counter") is 0
+	mutable indexed = Dictionary(Text, Number)
+	for types
+		if value.Name is not in indexed
+			indexed(value.Name) = index
+	for types
+		let short = Path(value.Name).FileName.text
+		if short is not in indexed
+			indexed(short) = index
+	indexed
 Mains List(TypeEntry)
 	Pair.Mains.Last.Name is "Strict/Other"
 	for Range(0, entries)
