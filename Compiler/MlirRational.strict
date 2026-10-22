@@ -5,14 +5,14 @@ constant Adding = InstructionEntry.Binary(InstructionType.Add, (0, 1, 2))
 constant Less = InstructionEntry.Binary(InstructionType.LessThan, (0, 1))
 constant Kinds = MlirSingle.Operators + InstructionType.Modulo
 Operated(entry InstructionEntry) Texts
-	Single.Operated(Adding).Last is "    llvm.store %x2hr, %r2 : f32, !llvm.ptr"
+	Single.Operated(Adding).Last is "    llvm.store %x2d, %r2_q : i64, !llvm.ptr"
 	Double.Operated(Adding).Length is 0
 	Single.Operated(InstructionEntry.Binary(InstructionType.Power, (0, 1, 2))).Length is 0
 	if (exact.Parts.Length is 0) or (entry.kind is not in Kinds)
 		return List(Text)
 	let operands = exact.Loaded(Temp("a"), "%r" + entry.payload(1)) + exact.Loaded(Temp("b"), "%r" + entry.payload(2))
 	let target = "%r" + entry.payload(3)
-	operands + Rational(entry.kind) + exact.Set(Temp("n"), Temp("d"), target) + Refreshed(Temp("n"), Temp("d"), target)
+	operands + Rational(entry.kind) + exact.Set(Temp("n"), Temp("d"), target)
 Compared(entry InstructionEntry, float Text, target Text) Texts
 	Single.Compared(Less, "%f", "%c").Last is "    %c = arith.select %x2v, %x2i, %f : i1"
 	Double.Compared(Adding, "%f", "%c").Length is 0
@@ -70,7 +70,7 @@ Divided Texts
 	let denominator = Integer("d", "arith.select " + Temp("z") + ", %inexact, " + Temp("p"))
 	(List(Text) + negative) + negated + (numerator, positive, zero, denominator)
 Floored(source Text, target Text) Texts
-	Single.Floored("%r1", "%r2").Last is "    llvm.store %x2hr, %r2 : f32, !llvm.ptr"
+	Single.Floored("%r1", "%r2").Last is "    llvm.store %x2fy, %r2_q : i64, !llvm.ptr"
 	Double.Floored("%r1", "%r2").Length is 0
 	if exact.Parts.Length is 0
 		return List(Text)

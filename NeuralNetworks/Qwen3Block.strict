@@ -22,7 +22,7 @@ Loaded(model Gguf, prefix Text, queryHeads Number) Qwen3Block
 	let queried = model.Rows(prefix + "attn_q.weight")
 	let keyed = rows.Permuted(model.Rows(prefix + "attn_k.weight"))
 	let attended = rows.Queries(queried) + keyed + model.Rows(prefix + "attn_v.weight") + rows.Gates(queried)
-	let layer = Layer(attended, Layer.Zeros(attended.Length))
+	let layer = Layer(attended, Layer.Unbiased)
 	let projected = Dense(model, prefix, List(Text) + "attn_output")
 	let feedForward = FeedForward(model, prefix)
 	Qwen3Block(norms(0), layer, projected, norms(1), norms(2), norms(3), feedForward, queryHeads, keyed.Length / rows.size)
@@ -34,11 +34,11 @@ FeedForward(model Gguf, prefix Text) Experts
 	Experts.Dense(Dense(model, prefix, ("ffn_gate", "ffn_up")), Dense(model, prefix, List(Text) + "ffn_down"))
 Dense(model Gguf, prefix Text, names Texts) Layer
 	Tiny.Dense(Gguf("NeuralNetworks/tinyqwen3.gguf"), "blk.0.", List(Text) + "ffn_down").weights.Length is 8
-	Tiny.Dense(Gguf("NeuralNetworks/tinyqwen3.gguf"), "blk.0.", List(Text) + "ffn_down").biases.Length is 8
+	Tiny.Dense(Gguf("NeuralNetworks/tinyqwen3.gguf"), "blk.0.", List(Text) + "ffn_down").biases is Layer.Unbiased
 	mutable rows = List(Numbers)
 	for names
 		rows = rows + model.Rows(prefix + value + ".weight")
-	Layer(rows, Layer.Zeros(rows.Length))
+	Layer(rows, Layer.Unbiased)
 Norms(model Gguf, prefix Text, rows HeadRows) List(Numbers)
 	Tiny.Norms(Gguf("NeuralNetworks/tinyqwen3.gguf"), "blk.0.", HeadRows(4, 4, 2)).Length is 4
 	Tiny.Norms(DeltaBlock.Model, "blk.3.", HeadRows(4, 2, 2))(1).Length is 4
@@ -88,8 +88,14 @@ Normalized(input Numbers, start Number, count Number, weights Numbers) Numbers
 	Tiny.Normalized((3, 4, 0, 1), 0, 4, (1, 2)).Last.IsNearlyEqual(2.828424)
 	Tiny.Normalized((3, 4, 0, 1), 2, 2, (1, 2)).Last.IsNearlyEqual(2.828424)
 	let size = weights.Length
+	let part = (start is 0) and (count is input.Length) then input else Safetensors.Part(input, start, count, 1)
+	let scales = Scales(part, size, Epsilon)
 	for count
-		input(start + index) * weights(index % size) * HeadScale(input, start + (index / size).Floor * size, size, Epsilon)
+		part(index) * weights(index % size) * scales((index / size).Floor)
+Scales(input Numbers, size Number, epsilon Number) Numbers
+	Tiny.Scales((3, 4, 0, 1), 2, Epsilon)(1).IsNearlyEqual(1.414213)
+	for input.Length / size
+		HeadScale(input, index * size, size, epsilon)
 HeadScale(input Numbers, first Number, size Number, epsilon Number) Number
 	Tiny.HeadScale((3, 4, 0, 1), 2, 2, Epsilon).IsNearlyEqual(1.414213)
 	mutable sum = 0
