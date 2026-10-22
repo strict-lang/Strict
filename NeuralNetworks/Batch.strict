@@ -50,6 +50,7 @@ Dot(row Numbers, first Number, input Numbers, start Number) Number
 	Batch(Blocks.Rows("four"), Long).Sums(Long)(1277).IsNearlyEqual(4.533, 0.5)
 	Batch(Blocks.Rows("wide"), List(Number) + 0).Sums(Wide)(1000).IsNearlyEqual(-9.015, 0.5)
 	Batch(Blocks.Rows("eight"), List(Number) + 0).Sums(Long)(1277).IsNearlyEqual(-1.514, 0.05)
+	Batch(Gguf("NeuralNetworks/blocks.gguf", 32).Rows("four"), List(Number) + 0).Sums(Long)(1277).IsNearlyEqual(5.001, 0.5)
 	Batch(Safetensors.Bytes.Quantized("a"), List(Number) + 0).Sums(Tokens)(255).IsNearlyEqual(383.65, 2)
 	mutable sum = 0
 	for row.Length
