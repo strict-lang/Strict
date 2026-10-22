@@ -8,6 +8,7 @@ constant Painting = ConstantFolding("Painter", TypeInference(KnownTypes(("Count"
 constant Limit = SyntaxNode("Identifier", "Limit")
 constant Two = SyntaxNode("Number", "2")
 constant Count = SyntaxNode("Identifier", "Count")
+constant Plus = SyntaxNode("Binary", "+", (Limit, Two))
 constant Local = BodyParser("Run", "\tconstant a = 2", "\tconstant b = a * 3", "\tb + a").Block(1, 1)
 constant Owned = ConstantFolding("Text", TypeInference(KnownTypes.Sample, (Scope(("Limit", "Twice", "Alias", "Loop", "Missing"), ("3", "Limit * 2", "Limit", "Loop", "Error")), TypeInference.NoShape)))
 constant Wrapping = ConstantFolding("C", TypeInference(KnownTypes(("Vector2", "Angle"), (Scope(List(Text) + "numbers", List(Text) + "Numbers"), Scope(List(Text) + "degrees", List(Text) + "Number")), (KnownTypes.NoMembers, Scope(List(Text) + "from", List(Text) + "Angle")), (KnownTypes.NoMembers, KnownTypes.NoMembers)), (KnownTypes.NoMembers, KnownTypes.NoMembers)))
@@ -22,8 +23,21 @@ Folded(node SyntaxNode) SyntaxNode
 	let left = Folded(negated.children(0))
 	let right = Folded(negated.children(1))
 	if left.Kind is not "Number" or right.Kind is not "Number" or (right.text is "0")
-		return negated
+		return Appended(negated, left, right)
 	SyntaxNode("Number", Calculated(negated.text, left.text to Number, right.text to Number) to Text)
+Appended(binary SyntaxNode, list SyntaxNode, element SyntaxNode) SyntaxNode
+	Limits.Folded(SyntaxParser(Tokenizer("List(Number) + 0 + 2").Tokens).Parse) to Text is "(0, 2)"
+	Limits.Appended(Plus, SyntaxParser(Tokenizer("List(Text)").Tokens).Parse, Two).Kind is "Binary"
+	Limits.Appended(Plus, SyntaxParser(Tokenizer("(1, \"a\")").Tokens).Parse, Two).Kind is "Binary"
+	let isEmpty = (list.Kind is "Call") and (list.text is "List") and (list.children.Length is 1)
+	let isTyped = isEmpty and (list.children(0).text is element.Kind) or (list.Kind is "List")
+	if (binary.text is not "+") or (element.IsLiteral is false) or (isTyped is false)
+		return binary
+	let elements = isEmpty then List(SyntaxNode) else list.children
+	for elements
+		if value.Kind is not element.Kind
+			return binary
+	SyntaxNode("List", "", elements + element)
 Inlined(body SyntaxNode) SyntaxNode
 	Limits.Inlined(Local).Lines("") is ("6 + 2")
 	mutable constants = List(Mutable(SyntaxNode))
