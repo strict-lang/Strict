@@ -40,6 +40,8 @@ Scores(positions Number) Numbers
 			sum = sum + queries(queryStart + index) * keys(keyStart + index)
 		sum / size.SquareRoot
 Last(row Number, positions Number, tokens Number) Number
+	Attention(Prompt.Slice(0, 4000), Prompt, Prompt, 2, 1, 40).Merged(5).IsNearlyEqual(0.064627, 0.002)
+	Attention(Prompt.Slice(0, 4000), Prompt, Prompt, 2, 1, 40, 1, false).Merged(5).IsNearlyEqual(0.081243, 0.002)
 	Single.Last(3, 5, 2) is 4
 	Prompted.Merged(4095).IsNearlyEqual(0.061657, 0.005)
 	Attention(Prompt.Slice(0, 256), Prompted.keys, Prompted.values, 4, 2, 64).Merged(255).IsNearlyEqual(0.104795, 0.005)
@@ -50,6 +52,8 @@ Last(row Number, positions Number, tokens Number) Number
 	Attention(Pair.queries, Pair.keys, (3, 4, 7, 8, 5, 6, 9, 10), 1, 1, 2, 1, false).Merged(3).IsNearlyEqual(7.3395231)
 	causal then positions - tokens + (row / heads).Floor % tokens else positions - 1
 Visible(score Number, position Number, limit Number) Number
+	Attention(Prompt, Prompt, Prompt, 1, 1, 128, 1, false).Merged(10239).IsNearlyEqual(-0.24048, 0.002)
+	Attention(Prompt, Prompt, Prompt, 1, 1, 128).Merged(100).IsNearlyEqual(0.196385, 0.002)
 	Single.Visible(2, 1, 1) is 2
 	Single.Visible(2, 2, 1) is -1000000000
 	Prompted.Merged(1866).IsNearlyEqual(-0.025784, 0.005)

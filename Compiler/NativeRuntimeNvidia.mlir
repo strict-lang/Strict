@@ -26,6 +26,11 @@
     nvvm.barrier0
     return
   }
+  // 2 to the power of number (flushing results below the smallest normal float to 0)
+  func.func private @strict_device_binary_power(%number: f32) -> f32 attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
+    %power = llvm.call_intrinsic "llvm.nvvm.ex2.approx.ftz.f"(%number) : (f32) -> f32
+    return %power : f32
+  }
   func.func private @strict_device_binary_logarithm(%number: f32) -> f32 attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
     %binary = llvm.call_intrinsic "llvm.nvvm.lg2.approx.f"(%number) : (f32) -> f32
     return %binary : f32
@@ -98,6 +103,28 @@
   ^narrow:
     %halves = func.call @strict_device_halves_mma8x2(%a0, %a1, %a2, %a3, %b0, %b1, %c0, %c1, %c2, %c3) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
     return %halves : !llvm.struct<(f32, f32, f32, f32)>
+  }
+  // strict_device_halves_mma16 adding to 16 bit sums (c0 the two of row g, c1 those of row g + 8), twice as fast as 32
+  // bit sums on consumer GPUs
+  func.func private @strict_device_halves_mma16_halves(%a0: vector<2xf16>, %a1: vector<2xf16>, %a2: vector<2xf16>, %a3: vector<2xf16>, %b0: vector<2xf16>, %b1: vector<2xf16>, %c0: vector<2xf16>, %c1: vector<2xf16>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)> attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
+    %arch = func.call @strict_device_arch() : () -> i32
+    %c800 = arith.constant 800 : i32
+    %isWide = arith.cmpi sge, %arch, %c800 : i32
+    cf.cond_br %isWide, ^wide, ^narrow
+  ^wide:
+    %d = llvm.call_intrinsic "llvm.nvvm.mma.m16n8k16.row.col.f16.f16"(%a0, %a1, %a2, %a3, %b0, %b1, %c0, %c1) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
+    return %d : !llvm.struct<(vector<2xf16>, vector<2xf16>)>
+  ^narrow:
+    %low = llvm.call_intrinsic "llvm.nvvm.mma.m16n8k8.row.col.f16.f16"(%a0, %a1, %b0, %c0, %c1) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
+    %low0 = llvm.extractvalue %low[0] : !llvm.struct<(vector<2xf16>, vector<2xf16>)>
+    %low1 = llvm.extractvalue %low[1] : !llvm.struct<(vector<2xf16>, vector<2xf16>)>
+    %high = llvm.call_intrinsic "llvm.nvvm.mma.m16n8k8.row.col.f16.f16"(%a2, %a3, %b1, %low0, %low1) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
+    return %high : !llvm.struct<(vector<2xf16>, vector<2xf16>)>
+  }
+  // ldmatrix.x4.trans: lane l gets the numbers of rows 2 * (l % 4) and the next in column l / 4 of each matrix
+  func.func private @strict_device_matrices_transposed(%slot: !llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)> attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
+    %loaded = llvm.call_intrinsic "llvm.nvvm.ldmatrix.sync.aligned.m8n8.x4.trans.b16.p3"(%slot) : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
+    return %loaded : !llvm.struct<(i32, i32, i32, i32)>
   }
   func.func private @strict_device_matrices(%slot: !llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)> attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
     %loaded = llvm.call_intrinsic "llvm.nvvm.ldmatrix.sync.aligned.m8n8.x4.b16.p3"(%slot) : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>

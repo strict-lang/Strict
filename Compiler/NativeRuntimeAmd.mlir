@@ -214,11 +214,90 @@
     %bits = llvm.load %pointer {alignment = 4 : i64} : !llvm.ptr<3> -> i32
     return %bits : i32
   }
+  // strict_device_halves_mma16 adding to 16 bit sums (c0 the two of row g, c1 those of row g + 8)
+  func.func private @strict_device_halves_mma16_halves(%a0: vector<2xf16>, %a1: vector<2xf16>, %a2: vector<2xf16>, %a3: vector<2xf16>, %b0: vector<2xf16>, %b1: vector<2xf16>, %c0: vector<2xf16>, %c1: vector<2xf16>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)> attributes {llvm.linkage = #llvm.linkage<internal>} {
+    %i0 = arith.constant 0 : i32
+    %i1 = arith.constant 1 : i32
+    %lowWide = arith.extf %c0 : vector<2xf16> to vector<2xf32>
+    %highWide = arith.extf %c1 : vector<2xf16> to vector<2xf32>
+    %sum0 = llvm.extractelement %lowWide[%i0 : i32] : vector<2xf32>
+    %sum1 = llvm.extractelement %lowWide[%i1 : i32] : vector<2xf32>
+    %sum2 = llvm.extractelement %highWide[%i0 : i32] : vector<2xf32>
+    %sum3 = llvm.extractelement %highWide[%i1 : i32] : vector<2xf32>
+    %wide = func.call @strict_device_halves_mma16(%a0, %a1, %a2, %a3, %b0, %b1, %sum0, %sum1, %sum2, %sum3) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
+    %d0 = llvm.extractvalue %wide[0] : !llvm.struct<(f32, f32, f32, f32)>
+    %d1 = llvm.extractvalue %wide[1] : !llvm.struct<(f32, f32, f32, f32)>
+    %d2 = llvm.extractvalue %wide[2] : !llvm.struct<(f32, f32, f32, f32)>
+    %d3 = llvm.extractvalue %wide[3] : !llvm.struct<(f32, f32, f32, f32)>
+    %empty = llvm.mlir.undef : vector<2xf32>
+    %low0 = llvm.insertelement %d0, %empty[%i0 : i32] : vector<2xf32>
+    %low = llvm.insertelement %d1, %low0[%i1 : i32] : vector<2xf32>
+    %high0 = llvm.insertelement %d2, %empty[%i0 : i32] : vector<2xf32>
+    %high = llvm.insertelement %d3, %high0[%i1 : i32] : vector<2xf32>
+    %lowHalves = arith.truncf %low : vector<2xf32> to vector<2xf16>
+    %highHalves = arith.truncf %high : vector<2xf32> to vector<2xf16>
+    %none = llvm.mlir.undef : !llvm.struct<(vector<2xf16>, vector<2xf16>)>
+    %withLow = llvm.insertvalue %lowHalves, %none[0] : !llvm.struct<(vector<2xf16>, vector<2xf16>)>
+    %both = llvm.insertvalue %highHalves, %withLow[1] : !llvm.struct<(vector<2xf16>, vector<2xf16>)>
+    return %both : !llvm.struct<(vector<2xf16>, vector<2xf16>)>
+  }
+  // ldmatrix.x4.trans: lane l gets the numbers of rows 2 * (l % 4) and the next in column l / 4 of each matrix
+  func.func private @strict_device_matrices_transposed(%slot: !llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)> attributes {llvm.linkage = #llvm.linkage<internal>} {
+    %c1 = arith.constant 1 : i32
+    %c2 = arith.constant 2 : i32
+    %c3 = arith.constant 3 : i32
+    %c8 = arith.constant 8 : i32
+    %c16 = arith.constant 16 : i32
+    %c24 = arith.constant 24 : i32
+    %lane = func.call @strict_device_lane_index() : () -> i32
+    %row = arith.shrui %lane, %c2 : i32
+    %quad = arith.andi %lane, %c3 : i32
+    %column = arith.shli %row, %c1 : i32
+    %pair = arith.shli %quad, %c1 : i32
+    %address = llvm.ptrtoint %slot : !llvm.ptr<3> to i32
+    %second = arith.addi %pair, %c8 : i32
+    %third = arith.addi %pair, %c16 : i32
+    %fourth = arith.addi %pair, %c24 : i32
+    %m0 = func.call @strict_device_matrix_column(%address, %pair, %column) : (i32, i32, i32) -> i32
+    %m1 = func.call @strict_device_matrix_column(%address, %second, %column) : (i32, i32, i32) -> i32
+    %m2 = func.call @strict_device_matrix_column(%address, %third, %column) : (i32, i32, i32) -> i32
+    %m3 = func.call @strict_device_matrix_column(%address, %fourth, %column) : (i32, i32, i32) -> i32
+    %empty = llvm.mlir.undef : !llvm.struct<(i32, i32, i32, i32)>
+    %with0 = llvm.insertvalue %m0, %empty[0] : !llvm.struct<(i32, i32, i32, i32)>
+    %with1 = llvm.insertvalue %m1, %with0[1] : !llvm.struct<(i32, i32, i32, i32)>
+    %with2 = llvm.insertvalue %m2, %with1[2] : !llvm.struct<(i32, i32, i32, i32)>
+    %with3 = llvm.insertvalue %m3, %with2[3] : !llvm.struct<(i32, i32, i32, i32)>
+    return %with3 : !llvm.struct<(i32, i32, i32, i32)>
+  }
+  // the 16 bit numbers at column (bytes) of the rows lanes source and source + 1 point to, as low and high half
+  func.func private @strict_device_matrix_column(%address: i32, %source: i32, %column: i32) -> i32 attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
+    %c1 = arith.constant 1 : i32
+    %c16 = arith.constant 16 : i32
+    %next = arith.addi %source, %c1 : i32
+    %firstRow = func.call @strict_device_lane(%address, %source) : (i32, i32) -> i32
+    %secondRow = func.call @strict_device_lane(%address, %next) : (i32, i32) -> i32
+    %firstAt = arith.addi %firstRow, %column : i32
+    %secondAt = arith.addi %secondRow, %column : i32
+    %firstPointer = llvm.inttoptr %firstAt : i32 to !llvm.ptr<3>
+    %secondPointer = llvm.inttoptr %secondAt : i32 to !llvm.ptr<3>
+    %low = llvm.load %firstPointer {alignment = 2 : i64} : !llvm.ptr<3> -> i16
+    %high = llvm.load %secondPointer {alignment = 2 : i64} : !llvm.ptr<3> -> i16
+    %lowWide = arith.extui %low : i16 to i32
+    %highWide = arith.extui %high : i16 to i32
+    %shifted = arith.shli %highWide, %c16 : i32
+    %bits = arith.ori %lowWide, %shifted : i32
+    return %bits : i32
+  }
   func.func private @strict_device_barrier() attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
     llvm.fence syncscope("workgroup") release
     llvm.call_intrinsic "llvm.amdgcn.s.barrier"() : () -> ()
     llvm.fence syncscope("workgroup") acquire
     return
+  }
+  // 2 to the power of number (flushing results below the smallest normal float to 0)
+  func.func private @strict_device_binary_power(%number: f32) -> f32 attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
+    %power = llvm.call_intrinsic "llvm.exp2.f32"(%number) : (f32) -> f32
+    return %power : f32
   }
   func.func private @strict_device_binary_logarithm(%number: f32) -> f32 attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
     %binary = llvm.call_intrinsic "llvm.log2.f32"(%number) : (f32) -> f32
