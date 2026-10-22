@@ -1,0 +1,14 @@
+has logger
+Run(path Text, count Number, drafts Number)
+	let tokenizer = Gpt2Tokens.Loaded(Gguf(path))
+	let model = Qwen3(Qwen3.Loaded(path, 4), cacheBits = 32)
+	let prompt = tokenizer.Encoded(Qwen3Benchmark.Prompt)
+	let gguf = Gguf(path, 4)
+	let drafter = Drafter.Loaded(gguf, gguf.Value("qwen35.attention.head_count") to Number)
+	let prefilled = model.Prefilled(prompt, 0)
+	let warmed = Speculation(prefilled, prompt, prefilled.Next, drafts, 0, drafter).Finished(8)
+	let started = warmed.steps > 0 then Process.Elapsed else 0
+	let finished = Speculation(model.Prefilled(prompt, 0), prompt, prefilled.Next, drafts, 0, drafter).Finished(count)
+	let milliseconds = ((Process.Elapsed - started) * 1000 / count).Round(2)
+	logger.Log(tokenizer.Decoded(Safetensors.Part(finished.context, prompt.Length, count, 1)))
+	logger.Log(milliseconds + " ms per token, " + (count / finished.steps).Round(2) + " tokens per step")

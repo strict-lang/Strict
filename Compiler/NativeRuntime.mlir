@@ -9217,7 +9217,7 @@
     %zero32 = arith.constant 0 : i32
     %one = arith.constant 1 : i64
     %free = func.call @strict_gpu_free_memory() : () -> i64
-    %reserve = arith.constant 536870912 : i64
+    %reserve = arith.constant 1073741824 : i64
     %needed = arith.addi %bytes, %reserve : i64
     %short = arith.cmpi ult, %free, %needed : i64
     cf.cond_br %short, ^release, ^allocate
@@ -9762,6 +9762,7 @@
   llvm.mlir.global internal @strict_gpu_residing(dense<0> : tensor<3xi64>) : !llvm.array<3 x i64>
   llvm.mlir.global internal @strict_gpu_failure(0 : i64) : i64
   llvm.mlir.global internal @strict_gpu_mutex(0 : i64) : i64
+  llvm.mlir.global internal constant @strict_gpu_broken_text("Error: the GPU stopped, out of GPU memory or a launch failed\0A\00") : !llvm.array<62 x i8>
   llvm.mlir.global internal constant @strict_gpu_failed_text("Error: a loop on the GPU read outside of a list\0A\00") : !llvm.array<49 x i8>
   func.func private @strict_gpu_class(%bytes: i64) -> i64 {
     %none = arith.constant 0 : i64
@@ -10356,7 +10357,9 @@
   ^done(%result: !llvm.ptr):
     return %result : !llvm.ptr
   ^fail:
-    %message = llvm.mlir.addressof @strict_gpu_failed_text : !llvm.ptr
+    %outside = llvm.mlir.addressof @strict_gpu_failed_text : !llvm.ptr
+    %broken = llvm.mlir.addressof @strict_gpu_broken_text : !llvm.ptr
+    %message = arith.select %got, %outside, %broken : !llvm.ptr
     %printed = llvm.call @printf(%message) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr) -> i32
     %code = arith.constant 1 : i32
     llvm.call @exit(%code) : (i32) -> ()

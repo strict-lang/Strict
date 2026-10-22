@@ -56,6 +56,9 @@ Visible(score Number, position Number, limit Number) Number
 	Spread.Merged(14).IsNearlyEqual(0.050249, 0.001)
 	Spread.Merged(30).IsNearlyEqual(0.043154, 0.001)
 	Attention(Prompted.queries, Prompted.keys, Prompted.values, 4, 2, 64, 1, false).Merged(0).IsNearlyEqual(-0.2334, 0.005)
-	Unmasked.Merged(0).IsNearlyEqual(-0.0168, 0.005)
-	Unmasked.Merged(63).IsNearlyEqual(0.02, 0.005)
+	Attention.Unmasked(0).Merged(0).IsNearlyEqual(-0.0168, 0.005)
+	Attention.Unmasked(2016).Merged(31).IsNearlyEqual(0.02, 0.005)
 	position > limit then -1000000000 else score
+Unmasked(start Number) Attention
+	Attention.Unmasked(0).queries.Length is 32
+	Attention(Safetensors.Part(Prompt, start, 32, 1), Prompted.keys, Prompted.values, 2, 1, 16, 1, false)
