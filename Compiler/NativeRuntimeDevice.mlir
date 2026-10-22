@@ -284,9 +284,11 @@
     %widthSlot = llvm.getelementptr %source[%widthAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %width = llvm.load %widthSlot : !llvm.ptr -> i8
     %bits = arith.extui %width : i8 to i64
+    %lineSpare = arith.constant 127 : i64
+    %lineMask = arith.constant -128 : i64
     %withTable = arith.addi %count, %eight : i64
-    %paddedHeader = arith.addi %withTable, %fifteen : i64
-    %header = arith.andi %paddedHeader, %alignMask : i64
+    %paddedHeader = arith.addi %withTable, %lineSpare : i64
+    %header = arith.andi %paddedHeader, %lineMask : i64
     %rowOffset = arith.muli %at, %stride : i64
     %offset = arith.addi %header, %rowOffset : i64
     %row = llvm.getelementptr %source[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
@@ -642,13 +644,19 @@
     llvm.store %one, %failed : i64, !llvm.ptr
     return %left : f64
   }
-  // 32 bit powers: square roots and small whole exponents exactly, powers of e and other bases with the approximate
-  // exponential and logarithm of base 2 (ex2.approx and lg2.approx, about 2 units in the last place)
+  // 32 bit powers: powers of e with the approximate exponential of base 2 first (Exponential is E ^ value, the check
+  // folds away and no exponent is tested), square roots and small whole exponents of other bases exactly, the rest
+  // with the approximate exponential and logarithm of base 2 (ex2.approx and lg2.approx, about 2 units in the last place)
   func.func private @strict_device_powers(%failed: !llvm.ptr, %left: f32, %right: f32) -> f32 {
     %zero = arith.constant 0.0 : f32
     %half = arith.constant 0.5 : f32
     %one = arith.constant 1.0 : f32
     %two = arith.constant 2.0 : f32
+    %e = arith.constant 2.71828175 : f32
+    %log2e = arith.constant 1.44269504 : f32
+    %isE = arith.cmpf oeq, %left, %e : f32
+    cf.cond_br %isE, ^exponential(%log2e, %one : f32, f32), ^other
+  ^other:
     %isRoot = arith.cmpf oeq, %right, %half : f32
     cf.cond_br %isRoot, ^root, ^whole
   ^root:
@@ -665,11 +673,6 @@
     %isExact = arith.ori %isSmall, %isTwo : i1
     cf.cond_br %isExact, ^done(%smallOrOne : f32), ^base
   ^base:
-    %e = arith.constant 2.71828175 : f32
-    %isE = arith.cmpf oeq, %left, %e : f32
-    %log2e = arith.constant 1.44269504 : f32
-    cf.cond_br %isE, ^exponential(%log2e, %one : f32, f32), ^signed
-  ^signed:
     %size = llvm.intr.fabs(%left) : (f32) -> f32
     %logarithm = func.call @strict_device_binary_logarithm(%size) : (f32) -> f32
     %isNegative = arith.cmpf olt, %left, %zero : f32

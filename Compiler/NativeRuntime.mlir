@@ -13249,9 +13249,11 @@
   ^sized:
     %fifteen = arith.constant 15 : i64
     %sixteenMask = arith.constant -16 : i64
+    %lineSpare = arith.constant 127 : i64
+    %lineMask = arith.constant -128 : i64
     %withTable = arith.addi %count, %eight : i64
-    %paddedHeader = arith.addi %withTable, %fifteen : i64
-    %header = arith.andi %paddedHeader, %sixteenMask : i64
+    %paddedHeader = arith.addi %withTable, %lineSpare : i64
+    %header = arith.andi %paddedHeader, %lineMask : i64
     %paddedStride = arith.addi %chosenStride, %fifteen : i64
     %rowStride = arith.andi %paddedStride, %sixteenMask : i64
     %rowsBytes = arith.muli %rowStride, %count : i64
