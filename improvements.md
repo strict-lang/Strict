@@ -19,7 +19,6 @@ In priority order, short and actionable. Remove what is done (results go into th
 11. **AMD GPUs**: about 250 us of host work per launch (GPT-2 48 ms per token on the RX 480), `sdot4`, WMMA and MFMA, the 512 thread tiles need more than the 64 KB of an AMD workgroup, ROCm on Linux.
 
 ## Bugs
-- `"abc".characters(0).number` is the text "a" on the Strict VM (its FieldLoad has no `Character` owner, `Machine.Field` only converts with one) and 97 natively, where `"code " + it` still prints "a": the tokenizer could compare character codes instead of one letter substrings (`Tokenizer.WordLength` is 6-11% of loading types from source).
 - `a % b / c` parses as `a % (b / c)` (FluxDecoder's Convolved.Source needed parentheses), check the precedence rule.
 - A loop reading a list member of a parameter or of a member (`map.values(...)`, `combined.biases(...)`) stays on the CPU (no kernel is generated, found in `GroupNorm.Partials`, `GroupNorm.Affine`, `FluxAttention.Queries`, which now take the lists): find the rule in `MlirGpuCheck`.
 - `Float8(0.3)` keeps 0.3 on the Strict VM and in native CPU code but rounds to E4M3 (0.3125, at most 448) on the GPU, so the same program gives different numbers (8 bit Qwen KV cache, `Float8.Packed` lists): round when a `Float8` is constructed like `Byte` wraps (a change to the root type `Float8.strict`).
