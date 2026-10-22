@@ -11,6 +11,7 @@ constant Pair = Attention((1, 0, 0, 1), (1, 0, 1, 0, 0, 1, 0, 1), (3, 4, 7, 8, 5
 constant Prompt = Gguf("NeuralNetworks/blocks.gguf", 32).Rows("prompt").First
 constant Prompted = Attention(Safetensors.Part(Prompt, 0, 4096, 1), Safetensors.Part(Prompt, 4096, 3072, 1), Safetensors.Part(Prompt, 7168, 3072, 1), 4, 2, 64)
 constant Tiled = Attention(Safetensors.Part(Prompt, 0, 4096, 1), Safetensors.Part(Prompt, 4096, 3072, 1), Safetensors.Part(Prompt, 7168, 3072, 1), 4, 1, 64)
+constant Unmasked = Attention(Prompt.Slice(0, 32) + Prompt.Slice(2016, 32), Prompted.keys, Prompted.values, 2, 1, 16, 1, false)
 constant Spread = Attention(Safetensors.Part(Prompt, 9600, 32, 1), Safetensors.Part(Prompt, 0, 4800, 2), Safetensors.Part(Prompt, 1, 4800, 2), 2, 1, 8)
 Merged Numbers
 	Single.Merged.First.IsNearlyEqual(3.6604769013466867)
