@@ -14,9 +14,10 @@ In priority order, short and actionable. Remove what is done (results go into th
 
 ## Bugs
 - A `let` from the inner index in a warp summed loop of a 32 bit kernel reads wrong positions (RTX 4090, chunked `DeltaBlock`).
+- `Greedy.Best(Float8.Packed(...), 1, length)` with more than 2^24 outputs fails in the 32 bit kernel with "a loop on the GPU read outside of a list" (fine below 2^24 and on the CPU), only when `Clamp(0, width)` gets the free `width` instead of a literal; the test needing 16M numbers is too slow for the VM.
 - Unpacked rows of a matrix stay pinned while the model lives.
 - `strict test NeuralNetworks lines` crashes natively on macOS (`strict_list_restoring` reaches a null link).
-- `strict test` sometimes crashes at start (segfault, no output) or hangs, and `strict check Bytecode` / `strict check Runtime` hung for 2 hours 3 times on 2026-10-21 (the same command takes 1 s on a rerun). Not reproduced with 40 concurrent runs of one file or with `CUDA_CACHE_DISABLE=1`; suspects: dozens of parallel `strict test` processes (VS Code) sharing the base type `.strictbinary` files, which `Execute` writes in place (`File(cache.Path).Write`, no temporary file and rename).
+- `strict test` sometimes crashed at start (segfault, no output) or `strict check` hung for hours (2026-10-21/22, a rerun passes). Caches are written atomically since 2026-10-22 (`BinaryFile.Saved`, the main suspect with dozens of parallel VS Code test runs); if it happens again, note the command and what else was running.
 - `Qwen3Text` (Q8_0 through `Generation`) takes 196.6 ms per token on the RTX 3080 while `Qwen3Benchmark` decodes Q4_K_M in 2.4 ms (2026-10-22): find which loops of `Generation` stay on the CPU.
 
 ## Waiting
