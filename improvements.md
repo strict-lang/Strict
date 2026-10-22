@@ -20,7 +20,6 @@ In priority order, short and actionable. Remove what is done (results go into th
 
 ## Bugs
 - `a % b / c` parses as `a % (b / c)` (FluxDecoder's Convolved.Source needed parentheses), check the precedence rule.
-- A loop reading a list member of a parameter or of a member (`map.values(...)`, `combined.biases(...)`) stays on the CPU (no kernel is generated, found in `GroupNorm.Partials`, `GroupNorm.Affine`, `FluxAttention.Queries`, which now take the lists): find the rule in `MlirGpuCheck`.
 - Qwen3.8 prompts of about 920 tokens and more stop with `a loop on the GPU read outside of a list` again: refreshing the f32 value from the exact parts after every operation in 32 bit kernels (d0f4a743) let 930 tokens prefill, but it changed Qwen3.8's tokens (some exact parts are wrong, the float path matches Ollama) and cost 4 ms per decoded token and 25% of the prefill, so it was taken out; refreshing only whole numbers past 2^24 did not fix the long prompts.
 
 ## Waiting
