@@ -37,16 +37,16 @@ Advanced Speculation
 Drafted Numbers
 	Started.Drafted.Length is 0
 	Drafting.Drafted.Length is 3
-	let primed = drafter.Primed(model, next, context.Length)
+	let primed = drafter.Primed(model, context + next)
 	drafter.headNorm.Length is 0 then Lookup(context + next) else primed.Drafts(model, context.Length, drafts)
 Remembered(verified Qwen3, kept Numbers, following Number) Drafter
 	Started.Remembered(Started.model, List(Number) + 2, 1).headNorm.Length is 0
-	Drafting.Remembered(Verified, (5, 4), 1).blocks.First.keys.Length is 12
+	Drafting.Remembered(Verified, (5, 4), 1).blocks.First.keys.Length is 20
 	if drafter.headNorm.Length is 0
 		return drafter
 	let rows = Safetensors.Part(verified.hidden, 0, kept.Length * drafter.embedNorm.Length, 1)
 	let tokens = Safetensors.Part(kept, 1, kept.Length - 1, 1) + following
-	let primed = drafter.Primed(model, next, context.Length)
+	let primed = drafter.Primed(model, context + next)
 	primed.Extended(model, rows, tokens, Qwen3.Positions(context.Length + 1, kept.Length))
 Adapted(drafted Number, accepted Number) Number
 	Started.Adapted(0, 0) is Started.drafts
