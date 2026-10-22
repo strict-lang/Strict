@@ -2591,17 +2591,17 @@
     return %sums : vector<64xf32>
   }
   // the 16 bytes at column of row (or token) index of data (stride bytes apart) into the shared memory at offset
-  func.func private @strict_device_eights_part(%data: !llvm.ptr, %index: i64, %stride: i64, %column: i64, %at: i32) attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_eights_part(%data: !llvm.ptr, %index: i64, %stride: i64, %column: i64, %at: i32, %hasStage: i1) attributes {llvm.passthrough = ["alwaysinline"]} {
     %start = arith.muli %index, %stride : i64
     %offset = arith.addi %start, %column : i64
     %source = llvm.getelementptr %data[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %slot = func.call @strict_device_eights_shared(%at) : (i32) -> !llvm.ptr<3>
-    func.call @strict_device_copy(%slot, %source) : (!llvm.ptr<3>, !llvm.ptr) -> ()
+    func.call @strict_device_copy_filled(%slot, %source, %hasStage) : (!llvm.ptr<3>, !llvm.ptr, i1) -> ()
     return
   }
-  // the copies of stage (64 columns) into buffer of strict_device_eights_pipelined if there is such a stage, one group
-  // either way: a thread copies 16 bytes of 4 rows and of 2 tokens (those after the last repeat the last), 64 bytes per
-  // row or token with part p (16 bytes) at p xor bits 1 and 2 of the row, the rows at buffer * 24576, the tokens after
+  // the copies of stage (64 columns) into buffer of strict_device_eights_pipelined, zeros past the last stage (no branch
+  // in the main loop), one group: a thread copies 16 bytes of 4 rows and of 2 tokens (those after the last repeat the
+  // last), 64 bytes per row or token with part p (16 bytes) at p xor bits 1 and 2 of the row, the rows at buffer * 24576
   func.func private @strict_device_eights_copies(%firstData: !llvm.ptr, %stride: i64, %rowFirst: i64, %rowLast: i64, %input: !llvm.ptr, %width: i64, %tokenFirst: i64, %tokenLast: i64, %stage: i64, %stages: i64, %buffer: i32, %thread: i32) attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
@@ -2612,18 +2612,18 @@
     %c4096 = llvm.mlir.constant(4096 : i32) : i32
     %c8192 = llvm.mlir.constant(8192 : i32) : i32
     %c24576 = llvm.mlir.constant(24576 : i32) : i32
+    %zero = arith.constant 0 : i64
     %two = arith.constant 2 : i64
     %three = arith.constant 3 : i64
     %four = arith.constant 4 : i64
     %six = arith.constant 6 : i64
     %sixtyFour = arith.constant 64 : i64
     %hasStage = arith.cmpi slt, %stage, %stages : i64
-    cf.cond_br %hasStage, ^copy, ^commit
-  ^copy:
+    %copiedStage = arith.select %hasStage, %stage, %zero : i64
     %thread64 = arith.extui %thread : i32 to i64
     %piece = arith.andi %thread64, %three : i64
     %pieceBytes = arith.shli %piece, %four : i64
-    %stageColumn = arith.shli %stage, %six : i64
+    %stageColumn = arith.shli %copiedStage, %six : i64
     %column = arith.addi %stageColumn, %pieceBytes : i64
     %local = arith.shrui %thread64, %two : i64
     %piecePart = arith.andi %thread, %c3 : i32
@@ -2647,7 +2647,7 @@
     %rowOwn = arith.addi %rowFirst, %rowLocal : i64
     %row = arith.minsi %rowOwn, %rowLast : i64
     %rowIndex = arith.subi %row, %rowFirst : i64
-    func.call @strict_device_eights_part(%firstData, %rowIndex, %stride, %column, %rowAt) : (!llvm.ptr, i64, i64, i64, i32) -> ()
+    func.call @strict_device_eights_part(%firstData, %rowIndex, %stride, %column, %rowAt, %hasStage) : (!llvm.ptr, i64, i64, i64, i32, i1) -> ()
     %rowPartNext = arith.addi %rowPart, %c1 : i32
     %rowLocalNext = arith.addi %rowLocal, %sixtyFour : i64
     %rowAtNext = arith.addi %rowAt, %c4096 : i32
@@ -2662,7 +2662,7 @@
   ^tokenBody:
     %tokenOwn = arith.addi %tokenFirst, %tokenLocal : i64
     %token = arith.minsi %tokenOwn, %tokenLast : i64
-    func.call @strict_device_eights_part(%input, %token, %width, %column, %tokenAt) : (!llvm.ptr, i64, i64, i64, i32) -> ()
+    func.call @strict_device_eights_part(%input, %token, %width, %column, %tokenAt, %hasStage) : (!llvm.ptr, i64, i64, i64, i32, i1) -> ()
     %partNext = arith.addi %part, %c1 : i32
     %localNext = arith.addi %tokenLocal, %sixtyFour : i64
     %atNext = arith.addi %tokenAt, %c4096 : i32

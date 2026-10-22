@@ -314,6 +314,13 @@
     llvm.store %words, %shared {alignment = 16 : i64} : vector<4xi32>, !llvm.ptr<3>
     return
   }
+  func.func private @strict_device_copy_filled(%shared: !llvm.ptr<3>, %global: !llvm.ptr, %isCopied: i1) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+    %zeros = arith.constant dense<0> : vector<4xi32>
+    %words = llvm.load %global invariant {alignment = 16 : i64} : !llvm.ptr -> vector<4xi32>
+    %filled = arith.select %isCopied, %words, %zeros : vector<4xi32>
+    llvm.store %filled, %shared {alignment = 16 : i64} : vector<4xi32>, !llvm.ptr<3>
+    return
+  }
   func.func private @strict_device_copy_word(%shared: !llvm.ptr<3>, %global: !llvm.ptr) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %word = llvm.load %global invariant : !llvm.ptr -> i32
     llvm.store %word, %shared : i32, !llvm.ptr<3>
