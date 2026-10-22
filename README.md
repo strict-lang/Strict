@@ -61,10 +61,10 @@ strict test Examples/Sum.strict values    run the tests on the Strict VM, then s
 strict update .                           copy or download the packages of a folder again
 strict version                            version and build time of this strict
 ```
-- A type without `Run` builds its tests: `strict build Character.strict` gives `Character.test.exe`, its exit code is the number of failed tests. Each test prints `Test passed: <test> in <Method> at <File>.strict:line <N>` or `Test failed: ...` with the value it got.
+- A type without `Run` builds its tests: `strict build Character.strict` gives `Character.test.exe` and runs it as the test gate instead of the Strict VM (StrictComfy MossBlock 56-66 to 15 s, Moss 46 to 15 s), its exit code is the number of failed tests. When the test executable does not build or crashes, the tests run on the Strict VM. A program with `Run`, a `web` or `library` build still runs the tests on the Strict VM first. Each test prints `Test passed: <test> in <Method> at <File>.strict:line <N>` or `Test failed: ...` with the value it got.
 - Exit codes: 0 success, `test` and `build` return the number of failed tests, 2 wrong usage or a missing file, an unhandled Error from `Run` exits with 1.
 - `strict check` prints each issue as `<File>.strict:line <N>: <Rule>: <detail>`.
-- Files whose tests passed get a `Name.strictbinary` (bytecode of all used types), while it is up to date `strict test` reports them as passed right away and running and building reuse it.
+- Files whose tests passed on the Strict VM get a `Name.strictbinary` (bytecode of all used types), while it is up to date `strict test` reports them as passed right away and running and building reuse it. Passing native tests write none, `strict test` still runs them on the VM.
 - Types are looked up in the current folder (and its sub folders in a project), next to `strict` (base types and packages like `Math`), in the projects next to the current one, then in GitHub repositories linked in the project's README and github.com/strict-lang (copied into the project with a `.origin` file).
 - Errors before anything runs: `TypeNotFound`, `ParsingFailed`, `NameNotFound`, `MethodNotFound`, each with file and line. At runtime an Error prints its name and the stack trace back to the `.strict` source (at most the first 40 and last 10 lines), a call nested too deep returns `StackOverflow`.
 

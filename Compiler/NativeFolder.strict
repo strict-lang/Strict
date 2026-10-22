@@ -22,7 +22,7 @@ Natives(path Text, root Text, types List(TypeEntry)) Texts
 CountedFiles(paths Texts, root Text) Texts
 	NativeFolder(Logger).CountedFiles(List(Text) + "./Examples/Sum.strict", ".") is ("Examples/Sum.strict")
 	for paths
-		NativeBuild(logger).CountedFile(value, root)
+		TypeEntry(FileCompiler.FullName(value, root), List(MemberEntry), List(MethodEntry)).Source
 Paths(path Text) Texts
 	NativeFolder.Paths("Examples/Sum.strict") is ("Examples/Sum.strict")
 	Directory.Exists(path) then Files(path) else List(Text) + path

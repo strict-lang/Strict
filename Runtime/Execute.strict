@@ -96,7 +96,7 @@ Tested(types List(TypeEntry), path Text) Number
 	failed
 Loaded(path Text, root Text) List(TypeEntry)
 	let cache = BinaryFile(FileCompiler.Normalized(path))
-	let types = cache.Types(cache.Unpacked(File(cache.Path).ReadBytes))
+	let types = IsEdited(path) then List(TypeEntry) else cache.Current(cache.Unpacked(File(cache.Path).ReadBytes))
 	types.Length > 0 then types else FileCompiler(logger).Compiled(path, root, true)
 HasRun(type TypeEntry) Boolean
 	Execute.HasRun(TypeEntry.HelloLogger)
