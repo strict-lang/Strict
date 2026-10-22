@@ -1,6 +1,6 @@
 has function MlirFunction
 has callers List(MlirFunction) = List(MlirFunction)
-constant Inlined = " attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = [\"alwaysinline\"]} {"
+constant Inlined = " attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = [\"alwaysinline\"]} {"
 constant Row = MlirWholeBody(MlirWhole.Row.function)
 constant Halving = MlirWholeBody(MlirWholeTypes.Halving.function)
 constant Module = MlirModule(List(TypeEntry) + MlirArguments.Halves + MlirFunction.Shape, "Run")
@@ -8,6 +8,7 @@ constant Halfway = MlirWholeBody(MlirArguments.Called, MlirArguments.Halfway.fun
 constant Constants = MlirWholeBody(MlirArguments.Called, MlirArguments.Calling.functions)
 Lines Texts
 	Row.Lines.First.EndsWith(Inlined)
+	Row.Lines.First.IndexOf("llvm.passthrough = [\"alwaysinline\"]") > 0
 	Row.Lines.Last is "  }"
 	MlirWholeBody(MlirLoops.Counting.function).Lines.Length is 0
 	if MlirWholeFunction(function).IsWhole is false

@@ -265,7 +265,7 @@
     %number = func.call @strict_canonical(%result) : (f64) -> f64
     return %number : f64
   }
-  func.func private @strict_canonical(%value: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_canonical(%value: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %isTagged = func.call @strict_is_failure(%value) : (f64) -> i1
     %canonical = arith.constant 0x7FF8000000000000 : f64
     %result = arith.select %isTagged, %canonical, %value : f64
@@ -467,7 +467,7 @@
     %result = func.call @strict_bits(%view) : (!llvm.ptr) -> f64
     return %result : f64
   }
-  func.func private @strict_packed_data(%count: i64, %bits: i64) -> i64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_packed_data(%count: i64, %bits: i64) -> i64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %three = arith.constant 3 : i64
     %four = arith.constant 4 : i64
     %six = arith.constant 6 : i64
@@ -488,7 +488,7 @@
     %data = arith.select %isFour, %fourBytes, %orSix : i64
     return %data : i64
   }
-  func.func private @strict_packed_bytes(%count: i64, %bits: i64) -> i64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_packed_bytes(%count: i64, %bits: i64) -> i64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %eight = arith.constant 8 : i64
@@ -536,7 +536,7 @@
     %bytes = arith.select %isQuantized, %quantizedBytes, %orSix : i64
     return %bytes : i64
   }
-  func.func private @strict_packed_scales(%data: !llvm.ptr, %count: i64, %bits: i64) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_packed_scales(%data: !llvm.ptr, %count: i64, %bits: i64) -> !llvm.ptr attributes {llvm.passthrough = ["alwaysinline"]} {
     %aligned = func.call @strict_packed_data(%count, %bits) : (i64, i64) -> i64
     %scales = llvm.getelementptr %data[%aligned] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     return %scales : !llvm.ptr
@@ -801,7 +801,7 @@
   llvm.mlir.global internal constant @strict_stack_overflow("StackOverflow\00") : !llvm.array<14 x i8>
   // a method entered with less than 1 MB of the main stack left returns a StackOverflow Error (the Strict VM after
   // 20000 nested calls), the stacks of other threads lie outside of it
-  func.func private @strict_stack_short() -> i1 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_stack_short() -> i1 attributes {llvm.passthrough = ["alwaysinline"]} {
     %stackNow = llvm.intr.stacksave : !llvm.ptr
     %stackAt = llvm.ptrtoint %stackNow : !llvm.ptr to i64
     %bottomSlot = llvm.mlir.addressof @strict_stack_bottom : !llvm.ptr
@@ -811,7 +811,7 @@
     %short = arith.cmpi ult, %left, %margin : i64
     return %short : i1
   }
-  func.func private @strict_stack_overflowed() -> f64 attributes {passthrough = ["noinline"]} {
+  func.func private @strict_stack_overflowed() -> f64 attributes {llvm.passthrough = ["noinline"]} {
     %name = llvm.mlir.addressof @strict_stack_overflow : !llvm.ptr
     %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
     return %error : f64
@@ -1813,7 +1813,7 @@
     llvm.store %increased, %usedSlot : i64, !llvm.ptr
     return
   }
-  func.func private @strict_gc_locate(%tagged: i64) -> (!llvm.ptr, i64, i64, i1, i1) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_gc_locate(%tagged: i64) -> (!llvm.ptr, i64, i64, i1, i1) attributes {llvm.passthrough = ["alwaysinline"]} {
     %address = arith.constant 281474976710655 : i64
     %word = arith.andi %tagged, %address : i64
     %zero = arith.constant 0 : i64
@@ -2138,13 +2138,13 @@
   }
   // a write of a value into an object that may be old marks the card (512 bytes) of its slot, a young collection
   // scans the old objects of marked cards: they are the only old objects that can point to young ones
-  func.func private @strict_gc_written(%slot: !llvm.ptr) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_gc_written(%slot: !llvm.ptr) attributes {llvm.passthrough = ["alwaysinline"]} {
     func.call @strict_rc_written(%slot) : (!llvm.ptr) -> ()
     func.call @strict_gc_card(%slot) : (!llvm.ptr) -> ()
     return
   }
   // marks the card of a written heap address for the young collection, the count of the value is not touched
-  func.func private @strict_gc_card(%slot: !llvm.ptr) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_gc_card(%slot: !llvm.ptr) attributes {llvm.passthrough = ["alwaysinline"]} {
     %address = llvm.ptrtoint %slot : !llvm.ptr to i64
     %baseSlot = llvm.mlir.addressof @strict_gc_base : !llvm.ptr
     %base = llvm.load %baseSlot : !llvm.ptr -> i64
@@ -2202,7 +2202,7 @@
   llvm.mlir.global internal constant @strict_rc_missing_format("Reference count too low: object %p (%lld bytes) at slot %lld of object %p (%lld bytes) starting %llx %llx %llx, target starting %llx\0A\00") : !llvm.array<134 x i8>
   llvm.mlir.global internal constant @strict_rc_summary_format("Reference counts checked: %lld too low\0A\00") : !llvm.array<40 x i8>
   // the object a word points to: pointer bits or an Error, 0 for numbers and other tagged values
-  func.func private @strict_rc_target(%word: i64) -> i64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_rc_target(%word: i64) -> i64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %shift = arith.constant 48 : i64
     %address = arith.constant 281474976710655 : i64
     %errorTag = arith.constant 32762 : i64
@@ -2218,7 +2218,7 @@
     %target = arith.select %isTarget, %low, %zero : i64
     return %target : i64
   }
-  func.func private @strict_rc_counter(%markSlot: !llvm.ptr, %object: i64, %isLarge: i1) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_rc_counter(%markSlot: !llvm.ptr, %object: i64, %isLarge: i1) -> !llvm.ptr attributes {llvm.passthrough = ["alwaysinline"]} {
     cf.cond_br %isLarge, ^large, ^small
   ^large:
     %largeCounter = llvm.getelementptr %markSlot[3] : (!llvm.ptr) -> !llvm.ptr, i64
@@ -2240,7 +2240,7 @@
     %counter = llvm.inttoptr %counterAddress : i64 to !llvm.ptr
     return %counter : !llvm.ptr
   }
-  func.func private @strict_rc_flags(%markSlot: !llvm.ptr, %object: i64, %isLarge: i1) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_rc_flags(%markSlot: !llvm.ptr, %object: i64, %isLarge: i1) -> !llvm.ptr attributes {llvm.passthrough = ["alwaysinline"]} {
     cf.cond_br %isLarge, ^large, ^small
   ^large:
     %largeFlags = llvm.getelementptr %markSlot[4] : (!llvm.ptr) -> !llvm.ptr, i64
@@ -2285,7 +2285,7 @@
     return
   }
   // adds step to the count of the object word points to, unless it points into container itself
-  func.func private @strict_rc_add(%word: i64, %container: i64, %step: i32) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_rc_add(%word: i64, %container: i64, %step: i32) attributes {llvm.passthrough = ["alwaysinline"]} {
     %zero = arith.constant 0 : i64
     %target = func.call @strict_rc_target(%word) : (i64) -> i64
     %isTarget = arith.cmpi ne, %target, %zero : i64
@@ -2454,7 +2454,7 @@
     return
   }
   // counts the reference just stored into the heap slot
-  func.func private @strict_rc_written(%slot: !llvm.ptr) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_rc_written(%slot: !llvm.ptr) attributes {llvm.passthrough = ["alwaysinline"]} {
     %zero = arith.constant 0 : i64
     %up = arith.constant 1 : i32
     %word = llvm.load %slot : !llvm.ptr -> i64
@@ -2552,7 +2552,7 @@
     return
   }
   // appends object to the table, growing it when it is full
-  func.func private @strict_rc_remember(%object: i64) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_rc_remember(%object: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
     %one = arith.constant 1 : i64
     %lengthSlot = llvm.mlir.addressof @strict_rc_length : !llvm.ptr
     %length = llvm.load %lengthSlot : !llvm.ptr -> i64
@@ -4086,7 +4086,7 @@
   llvm.mlir.global internal constant @strict_trace_in(" in \00") : !llvm.array<5 x i8>
   llvm.mlir.global internal constant @strict_error_prefix("Error: \00") : !llvm.array<8 x i8>
   llvm.mlir.global internal constant @strict_error_newline("\0A\00") : !llvm.array<2 x i8>
-  func.func private @strict_error_trace(%value: f64, %location: !llvm.ptr, %line: i64) -> f64 attributes {passthrough = ["noinline"]} {
+  func.func private @strict_error_trace(%value: f64, %location: !llvm.ptr, %line: i64) -> f64 attributes {llvm.passthrough = ["noinline"]} {
     %one = arith.constant 1 : i64
     %error = func.call @strict_failed_error(%value) : (f64) -> f64
     %method = func.call @strict_bits(%location) : (!llvm.ptr) -> f64
@@ -4170,7 +4170,7 @@
     return %traces : f64
   }
   // every checked value passes here: the failure test is inlined, only an Error calls the trace
-  func.func private @strict_trace_checked(%value: f64, %where: !llvm.ptr, %line: i64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_trace_checked(%value: f64, %where: !llvm.ptr, %line: i64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %failed = func.call @strict_is_failure(%value) : (f64) -> i1
     cf.cond_br %failed, ^check, ^done
   ^check:
@@ -4179,7 +4179,7 @@
   ^done:
     return %value : f64
   }
-  func.func private @strict_trace_failed(%value: f64, %where: !llvm.ptr, %line: i64) -> f64 attributes {passthrough = ["noinline", "cold"]} {
+  func.func private @strict_trace_failed(%value: f64, %where: !llvm.ptr, %line: i64) -> f64 attributes {llvm.passthrough = ["noinline", "cold"]} {
     %error = func.call @strict_failed_error(%value) : (f64) -> f64
     %method = func.call @strict_bits(%where) : (!llvm.ptr) -> f64
     %here = func.call @strict_traced_in(%error, %method) : (f64, f64) -> i1
@@ -4296,7 +4296,7 @@
     %result = func.call @strict_text_concat(%fourth, %number) : (f64, f64) -> f64
     return %result : f64
   }
-  func.func private @strict_error_report(%value: f64) -> f64 attributes {passthrough = ["noinline"]} {
+  func.func private @strict_error_report(%value: f64) -> f64 attributes {llvm.passthrough = ["noinline"]} {
     %zero = arith.constant 0.0 : f64
     %one = arith.constant 1.0 : f64
     %error = func.call @strict_failed_error(%value) : (f64) -> f64
@@ -4365,7 +4365,7 @@
     %f = arith.bitcast %i : i64 to f64
     return %f : f64
   }
-  func.func private @strict_list_new(%capacity: f64, %length: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_list_new(%capacity: f64, %length: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %none = arith.constant 0 : i64
     %list = func.call @strict_list_reserved(%capacity, %length, %none) : (f64, f64, i64) -> f64
     return %list : f64
@@ -4481,7 +4481,7 @@
     %result = arith.subf %self, %one : f64
     return %result : f64
   }
-  func.func private @strict_list_remove(%list: f64, %item: f64, %equal: (f64, f64) -> f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_list_remove(%list: f64, %item: f64, %equal: (f64, f64) -> f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %start = arith.constant 0 : i64
     %step = arith.constant 1 : i64
     %sixteen = arith.constant 16 : i64
@@ -4923,7 +4923,7 @@
     return %null : !llvm.ptr
   }
   // the 4 byte lanes of a list in format 33 (a type of 2 to 6 bytes like Color) for reads in place, null otherwise
-  func.func private @strict_list_lanes(%list: f64) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_list_lanes(%list: f64) -> !llvm.ptr attributes {llvm.passthrough = ["alwaysinline"]} {
     %packed = func.call @strict_list_packed(%list) : (f64) -> i64
     %laneFormat = arith.constant 33 : i64
     %isLanes = arith.cmpi eq, %packed, %laneFormat : i64
@@ -4946,7 +4946,7 @@
   ^lanes:
     return %null : !llvm.ptr
   }
-  func.func private @strict_hoisted_lane_item(%lanes: !llvm.ptr, %items: !llvm.ptr, %index: f64, %version: i64, %list: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_hoisted_lane_item(%lanes: !llvm.ptr, %items: !llvm.ptr, %index: f64, %version: i64, %list: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %now = func.call @strict_list_version() : () -> i64
     %same = arith.cmpi eq, %now, %version : i64
     %null = llvm.mlir.zero : !llvm.ptr
@@ -4964,7 +4964,7 @@
     return %item : f64
   }
   // an element of a list iterated with strict_list_byte_items: a byte where it is, other lists like strict_hoisted_item
-  func.func private @strict_hoisted_byte_item(%bytes: !llvm.ptr, %items: !llvm.ptr, %index: f64, %version: i64, %list: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_hoisted_byte_item(%bytes: !llvm.ptr, %items: !llvm.ptr, %index: f64, %version: i64, %list: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %now = func.call @strict_list_version() : () -> i64
     %same = arith.cmpi eq, %now, %version : i64
     %null = llvm.mlir.zero : !llvm.ptr
@@ -4981,7 +4981,7 @@
     %item = func.call @strict_hoisted_item(%items, %index, %version, %list) : (!llvm.ptr, f64, i64, f64) -> f64
     return %item : f64
   }
-  func.func private @strict_hoisted_item(%items: !llvm.ptr, %index: f64, %version: i64, %list: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_hoisted_item(%items: !llvm.ptr, %index: f64, %version: i64, %list: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %now = func.call @strict_list_version() : () -> i64
     %same = arith.cmpi eq, %now, %version : i64
     %null = llvm.mlir.zero : !llvm.ptr
@@ -5171,7 +5171,7 @@
     %error = func.call @strict_error_named(%pointer) : (!llvm.ptr) -> f64
     return %error : f64
   }
-  func.func private @strict_index_error(%name: f64) -> f64 attributes {passthrough = ["noinline"]} {
+  func.func private @strict_index_error(%name: f64) -> f64 attributes {llvm.passthrough = ["noinline"]} {
     %one = arith.constant 1 : i64
     %errorName = llvm.mlir.addressof @strict_index_out_of_range : !llvm.ptr
     %errorNameBits = func.call @strict_bits(%errorName) : (!llvm.ptr) -> f64
@@ -5210,7 +5210,7 @@
     return %value : f64
   }
   // the bytes of a list in format 9 (Bytes) for reads in place, null for any other list
-  func.func private @strict_list_bytes(%list: f64) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_list_bytes(%list: f64) -> !llvm.ptr attributes {llvm.passthrough = ["alwaysinline"]} {
     %packed = func.call @strict_list_packed(%list) : (f64) -> i64
     %byteFormat = arith.constant 9 : i64
     %isBytes = arith.cmpi eq, %packed, %byteFormat : i64
@@ -5223,7 +5223,7 @@
     return %null : !llvm.ptr
   }
   // a read of a Bytes parameter: a byte where it is, other lists like strict_hoisted_read
-  func.func private @strict_hoisted_byte_read(%bytes: !llvm.ptr, %items: !llvm.ptr, %length: f64, %index: f64, %name: f64, %version: i64, %list: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_hoisted_byte_read(%bytes: !llvm.ptr, %items: !llvm.ptr, %length: f64, %index: f64, %name: f64, %version: i64, %list: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %null = llvm.mlir.zero : !llvm.ptr
     %isPlain = llvm.icmp "eq" %bytes, %null : !llvm.ptr
     cf.cond_br %isPlain, ^plain, ^checked
@@ -5243,7 +5243,7 @@
     %number = arith.uitofp %byte : i8 to f64
     return %number : f64
   }
-  func.func private @strict_hoisted_read(%items: !llvm.ptr, %length: f64, %index: f64, %name: f64, %version: i64, %list: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_hoisted_read(%items: !llvm.ptr, %length: f64, %index: f64, %name: f64, %version: i64, %list: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %zero = arith.constant 0.0 : f64
     %negative = arith.cmpf olt, %index, %zero : f64
     %wrapped = arith.addf %index, %length : f64
@@ -5270,7 +5270,7 @@
     %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
     return %items : !llvm.ptr
   }
-  func.func private @strict_list_hoisted(%list: f64) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_list_hoisted(%list: f64) -> !llvm.ptr attributes {llvm.passthrough = ["alwaysinline"]} {
     %packed = func.call @strict_list_packed(%list) : (f64) -> i64
     %none = arith.constant 0 : i64
     %isPlain = arith.cmpi eq, %packed, %none : i64
@@ -5282,14 +5282,14 @@
     %null = llvm.mlir.zero : !llvm.ptr
     return %null : !llvm.ptr
   }
-  func.func private @strict_list_packed(%list: f64) -> i64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_list_packed(%list: f64) -> i64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %holder = func.call @strict_list_holder(%list) : (f64) -> !llvm.ptr
     %bits = func.call @strict_holder_packed(%holder) : (!llvm.ptr) -> i64
     return %bits : i64
   }
   // the holder of a list once, a fast loop reads the packed data of the holder it chose its width by, another thread
   // can unpack the list meanwhile (strict_list_restore gives the list a new holder, the old one stays until it ends)
-  func.func private @strict_list_holder(%list: f64) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_list_holder(%list: f64) -> !llvm.ptr attributes {llvm.passthrough = ["alwaysinline"]} {
     %zero = arith.constant 0.0 : f64
     %unset = arith.cmpf oeq, %list, %zero : f64
     cf.cond_br %unset, ^none, ^some
@@ -5303,7 +5303,7 @@
     %holder = func.call @strict_ptr(%holderBits) : (f64) -> !llvm.ptr
     return %holder : !llvm.ptr
   }
-  func.func private @strict_holder_packed(%holder: !llvm.ptr) -> i64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_holder_packed(%holder: !llvm.ptr) -> i64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
     %null = llvm.mlir.zero : !llvm.ptr
@@ -5327,19 +5327,19 @@
   ^plain:
     return %none : i64
   }
-  func.func private @strict_list_scales(%list: f64) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_list_scales(%list: f64) -> !llvm.ptr attributes {llvm.passthrough = ["alwaysinline"]} {
     %holder = func.call @strict_list_holder(%list) : (f64) -> !llvm.ptr
     %scales = func.call @strict_holder_scales(%holder) : (!llvm.ptr) -> !llvm.ptr
     return %scales : !llvm.ptr
   }
-  func.func private @strict_holder_scales(%holder: !llvm.ptr) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_holder_scales(%holder: !llvm.ptr) -> !llvm.ptr attributes {llvm.passthrough = ["alwaysinline"]} {
     %data = func.call @strict_holder_data(%holder) : (!llvm.ptr) -> !llvm.ptr
     %count = func.call @strict_holder_count(%holder) : (!llvm.ptr) -> i64
     %bits = func.call @strict_holder_packed(%holder) : (!llvm.ptr) -> i64
     %scales = func.call @strict_packed_scales(%data, %count, %bits) : (!llvm.ptr, i64, i64) -> !llvm.ptr
     return %scales : !llvm.ptr
   }
-  func.func private @strict_holder_count(%holder: !llvm.ptr) -> i64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_holder_count(%holder: !llvm.ptr) -> i64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %usedSlot = llvm.getelementptr %holder[1] : (!llvm.ptr) -> !llvm.ptr, f64
     %used = llvm.load %usedSlot : !llvm.ptr -> f64
     %count = arith.fptosi %used : f64 to i64
@@ -5420,7 +5420,7 @@
     return
   }
   // the 6 bit scale and minimum of group number group (0 to 7) of a Q4_K block (get_scale_min_k4 of ggml)
-  func.func private @strict_k4_scale(%scales: !llvm.ptr, %group: i64) -> (f32, f32) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_k4_scale(%scales: !llvm.ptr, %group: i64) -> (f32, f32) attributes {llvm.passthrough = ["alwaysinline"]} {
     %four = arith.constant 4 : i64
     %sixBits = arith.constant 63 : i32
     %fourBits = arith.constant 15 : i32
@@ -5456,7 +5456,7 @@
     return %scaleNumber, %minimumNumber : f32, f32
   }
   // a float in all 32 lanes of a vector
-  func.func private @strict_splat(%value: f32) -> vector<32xf32> attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_splat(%value: f32) -> vector<32xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
     %undefined = llvm.mlir.undef : vector<32xf32>
     %first = llvm.mlir.constant(0 : i32) : i32
     %inserted = llvm.insertelement %value, %undefined[%first : i32] : vector<32xf32>
@@ -5654,12 +5654,12 @@
   ^done:
     return
   }
-  func.func private @strict_list_data(%list: f64) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_list_data(%list: f64) -> !llvm.ptr attributes {llvm.passthrough = ["alwaysinline"]} {
     %holder = func.call @strict_list_holder(%list) : (f64) -> !llvm.ptr
     %data = func.call @strict_holder_data(%holder) : (!llvm.ptr) -> !llvm.ptr
     return %data : !llvm.ptr
   }
-  func.func private @strict_holder_data(%holder: !llvm.ptr) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_holder_data(%holder: !llvm.ptr) -> !llvm.ptr attributes {llvm.passthrough = ["alwaysinline"]} {
     %dataSlot = llvm.getelementptr %holder[3] : (!llvm.ptr) -> !llvm.ptr, f64
     %dataBits = llvm.load %dataSlot : !llvm.ptr -> f64
     %zero = arith.constant 0.0 : f64
@@ -5803,7 +5803,7 @@
     return %list : f64
   }
   // a new list for a collecting loop, a flat list when its elements are flat blocks of count numbers
-  func.func private @strict_list_created(%capacity: f64, %count: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_list_created(%capacity: f64, %count: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %zero = arith.constant 0.0 : f64
     %isFlat = arith.cmpf ogt, %count, %zero : f64
     cf.cond_br %isFlat, ^flat, ^plain
@@ -5906,7 +5906,7 @@
   // a collecting loop of a list destined method (MlirDestined) refills the dying list of an alone local: a new
   // empty view onto its items, every push releases the element it overwrites; shared or packed items are left alone
   llvm.mlir.global internal @strict_list_destination(0.0 : f64) : f64
-  func.func private @strict_list_destine(%old: f64) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_list_destine(%old: f64) attributes {llvm.passthrough = ["alwaysinline"]} {
     %slot = llvm.mlir.addressof @strict_list_destination : !llvm.ptr
     llvm.store %old, %slot : f64, !llvm.ptr
     return
@@ -6957,7 +6957,7 @@
     %result = func.call @strict_bits(%block) : (!llvm.ptr) -> f64
     return %result : f64
   }
-  func.func private @strict_flat_set(%flat: f64, %index: f64, %value: f64) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_flat_set(%flat: f64, %index: f64, %value: f64) attributes {llvm.passthrough = ["alwaysinline"]} {
     %block = func.call @strict_ptr(%flat) : (f64) -> !llvm.ptr
     %at = arith.fptosi %index : f64 to i64
     %one = arith.constant 1 : i64
@@ -6967,7 +6967,7 @@
     llvm.store %single, %slot : f32, !llvm.ptr
     return
   }
-  func.func private @strict_flat_at(%flat: f64, %index: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_flat_at(%flat: f64, %index: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %block = func.call @strict_ptr(%flat) : (f64) -> !llvm.ptr
     %at = arith.fptosi %index : f64 to i64
     %one = arith.constant 1 : i64
@@ -6977,27 +6977,27 @@
     %value = arith.extf %single : f32 to f64
     return %value : f64
   }
-  func.func private @strict_flat_x(%flat: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_flat_x(%flat: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %index = arith.constant 0.0 : f64
     %value = func.call @strict_flat_at(%flat, %index) : (f64, f64) -> f64
     return %value : f64
   }
-  func.func private @strict_flat_y(%flat: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_flat_y(%flat: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %index = arith.constant 1.0 : f64
     %value = func.call @strict_flat_at(%flat, %index) : (f64, f64) -> f64
     return %value : f64
   }
-  func.func private @strict_flat_z(%flat: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_flat_z(%flat: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %index = arith.constant 2.0 : f64
     %value = func.call @strict_flat_at(%flat, %index) : (f64, f64) -> f64
     return %value : f64
   }
-  func.func private @strict_flat_w(%flat: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_flat_w(%flat: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %index = arith.constant 3.0 : f64
     %value = func.call @strict_flat_at(%flat, %index) : (f64, f64) -> f64
     return %value : f64
   }
-  func.func private @strict_flat_length(%flat: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_flat_length(%flat: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %block = func.call @strict_ptr(%flat) : (f64) -> !llvm.ptr
     %single = llvm.load %block : !llvm.ptr -> f32
     %signed = arith.extf %single : f32 to f64
@@ -7018,7 +7018,7 @@
   }
   // the dying flat value of an alone local (MlirDestined) becomes the block the next destined call writes into
   llvm.mlir.global internal @strict_flat_destination(0.0 : f64) : f64
-  func.func private @strict_flat_destine(%old: f64) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_flat_destine(%old: f64) attributes {llvm.passthrough = ["alwaysinline"]} {
     %zero = arith.constant 0.0 : f64
     %slot = llvm.mlir.addressof @strict_flat_destination : !llvm.ptr
     %unset = arith.cmpf oeq, %old, %zero : f64
@@ -7038,7 +7038,7 @@
   // a method returning a struct it constructs takes the dying block a caller hands it (MlirStructs) and rebuilds
   // it in place, its prologue reads and clears the global right away so no other call sees it
   llvm.mlir.global internal @strict_struct_destination(0.0 : f64) : f64
-  func.func private @strict_struct_destine(%old: f64) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_struct_destine(%old: f64) attributes {llvm.passthrough = ["alwaysinline"]} {
     %slot = llvm.mlir.addressof @strict_struct_destination : !llvm.ptr
     llvm.store %old, %slot : f64, !llvm.ptr
     return
@@ -7234,7 +7234,7 @@
   ^done:
     return
   }
-  func.func private @strict_flat_into(%destination: f64, %count: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_flat_into(%destination: f64, %count: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %zero = arith.constant 0.0 : f64
     %unset = arith.cmpf oeq, %destination, %zero : f64
     cf.cond_br %unset, ^fresh, ^given
@@ -7313,7 +7313,7 @@
     %text = func.call @strict_list_text_number(%list) : (f64) -> f64
     return %text : f64
   }
-  func.func private @strict_two_packed(%first: f64, %second: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_two_packed(%first: f64, %second: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %firstSingle = arith.truncf %first : f64 to f32
     %secondSingle = arith.truncf %second : f64 to f32
     %firstBits = arith.bitcast %firstSingle : f32 to i32
@@ -7327,7 +7327,7 @@
     return %pair : f64
   }
   // a number of a type whose one member is 32 bit (Degrees), an Error keeps its NaN tag
-  func.func private @strict_single(%number: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_single(%number: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %single = arith.truncf %number : f64 to f32
     %rounded = arith.extf %single : f32 to f64
     %isTagged = arith.cmpf uno, %number, %number : f64
@@ -7335,14 +7335,14 @@
     return %result : f64
   }
   // a Byte keeps the whole part of a number like a C cast (0.5 * 255 is 127), Errors keep their tag
-  func.func private @strict_byte(%number: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_byte(%number: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %whole = llvm.intr.trunc(%number) : (f64) -> f64
     %isTagged = arith.cmpf uno, %number, %number : f64
     %result = arith.select %isTagged, %number, %whole : f64
     return %result : f64
   }
   // a member of a type made of Bytes (Color) in its lane of one whole number: the lowest 8 bits of its whole part, shifted
-  func.func private @strict_byte_lane(%number: f64, %shift: i64) -> i64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_byte_lane(%number: f64, %shift: i64) -> i64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %mask = arith.constant 255 : i64
     %whole = arith.fptosi %number : f64 to i64
     %low = arith.andi %whole, %mask : i64
@@ -7350,7 +7350,7 @@
     return %lane : i64
   }
   // the member of a type made of Bytes at its lane (8 bits from shift)
-  func.func private @strict_byte_of(%packed: f64, %shift: i64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_byte_of(%packed: f64, %shift: i64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %bits = arith.fptosi %packed : f64 to i64
     %moved = arith.shrui %bits, %shift : i64
     %mask = arith.constant 255 : i64
@@ -7424,7 +7424,7 @@
   ^unset:
     return %default : i64
   }
-  func.func private @strict_byte_packed(%number: f64) -> i8 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_byte_packed(%number: f64) -> i8 attributes {llvm.passthrough = ["alwaysinline"]} {
     %zero = arith.constant 0.0 : f64
     %largest = arith.constant 255.0 : f64
     %low = arith.maximumf %number, %zero : f64
@@ -7432,7 +7432,7 @@
     %byte = arith.fptoui %clamped : f64 to i8
     return %byte : i8
   }
-  func.func private @strict_two_half(%pair: f64, %shift: i64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_two_half(%pair: f64, %shift: i64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %bits = arith.bitcast %pair : f64 to i64
     %shifted = arith.shrui %bits, %shift : i64
     %half = arith.trunci %shifted : i64 to i32
@@ -7440,17 +7440,17 @@
     %number = arith.extf %single : f32 to f64
     return %number : f64
   }
-  func.func private @strict_two_x(%pair: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_two_x(%pair: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %none = arith.constant 0 : i64
     %number = func.call @strict_two_half(%pair, %none) : (f64, i64) -> f64
     return %number : f64
   }
-  func.func private @strict_two_y(%pair: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_two_y(%pair: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %shift = arith.constant 32 : i64
     %number = func.call @strict_two_half(%pair, %shift) : (f64, i64) -> f64
     return %number : f64
   }
-  func.func private @strict_two_length(%pair: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_two_length(%pair: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %two = arith.constant 2.0 : f64
     return %two : f64
   }
@@ -7717,13 +7717,13 @@
   ^different:
     return %zero : f64
   }
-  func.func private @strict_list_matches(%value: f64, %item: f64, %equal: (f64, f64) -> f64) -> i1 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_list_matches(%value: f64, %item: f64, %equal: (f64, f64) -> f64) -> i1 attributes {llvm.passthrough = ["alwaysinline"]} {
     %zero = arith.constant 0.0 : f64
     %equalItems = func.call_indirect %equal(%value, %item) : (f64, f64) -> f64
     %same = arith.cmpf one, %equalItems, %zero : f64
     return %same : i1
   }
-  func.func private @strict_list_find(%list: f64, %item: f64, %equal: (f64, f64) -> f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_list_find(%list: f64, %item: f64, %equal: (f64, f64) -> f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %start = arith.constant 0 : i64
     %step = arith.constant 1 : i64
     %none = arith.constant -1.0 : f64
@@ -7746,7 +7746,7 @@
   ^missing:
     return %none : f64
   }
-  func.func private @strict_list_count(%list: f64, %item: f64, %equal: (f64, f64) -> f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_list_count(%list: f64, %item: f64, %equal: (f64, f64) -> f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %start = arith.constant 0 : i64
     %step = arith.constant 1 : i64
     %zero = arith.constant 0.0 : f64
@@ -10650,7 +10650,7 @@
   }
   // a loop of at least 256 elements tries the GPU, a smaller one too once lists live there (it may read one of them),
   // an empty one never (a launch without blocks fails a graph)
-  func.func private @strict_gpu_wanted(%count: i64) -> i1 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_gpu_wanted(%count: i64) -> i1 attributes {llvm.passthrough = ["alwaysinline"]} {
     %threshold = arith.constant 256 : i64
     %enough = arith.cmpi sge, %count, %threshold : i64
     %present = func.call @strict_gpu_present() : () -> i1
@@ -10660,7 +10660,7 @@
     %wanted = arith.ori %enough, %readable : i1
     return %wanted : i1
   }
-  func.func private @strict_gpu_present() -> i1 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_gpu_present() -> i1 attributes {llvm.passthrough = ["alwaysinline"]} {
     %none = arith.constant 0 : i64
     %residing = llvm.mlir.addressof @strict_gpu_residing : !llvm.ptr
     %usedSlot = llvm.getelementptr %residing[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<3 x i64>
@@ -10768,11 +10768,7 @@
     %formatNumber = arith.negf %negativeFormat : f64
     %format = arith.fptosi %formatNumber : f64 to i64
     %bytes = func.call @strict_packed_bytes(%count, %format) : (i64, i64) -> i64
-    %thirtyTwo = arith.constant 32 : i64
-    %brainBits = arith.constant 17 : i64
-    %isSingles = arith.cmpi eq, %format, %thirtyTwo : i64
-    %isBrain = arith.cmpi eq, %format, %brainBits : i64
-    %isFloats = arith.ori %isSingles, %isBrain : i1
+    %isFloats = func.call @strict_gpu_floats(%format) : (i64) -> i1
     %floats = arith.select %isFloats, %count, %none : i64
     %size = arith.maxui %bytes, %eight : i64
     %host = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
@@ -11328,8 +11324,38 @@
     %enabled = arith.cmpi eq, %known, %one : i64
     return %enabled : i1
   }
-  // 32 bit numbers on the GPU only read by dot products with rows become 8 bit numbers (a scale per 32) in the scratch
-  // block, dp4a multiplies 4 of them with 4 packed numbers of a row at once
+  // launches strict_device_quantize, its _tokens or strict_device_hadamard_tokens, all take the source, its count and
+  // token width, the target and the format of the source
+  func.func private @strict_gpu_quantize_launch(%function: !llvm.ptr, %source: i64, %count: i64, %width: i64, %target: i64, %bits: i64, %total: i64, %threads: i64) -> i1 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %three = arith.constant 3 : i64
+    %four = arith.constant 4 : i64
+    %five = arith.constant 5 : i64
+    %arguments = llvm.alloca %five x i64 : (i64) -> !llvm.ptr
+    %parameters = llvm.alloca %five x !llvm.ptr : (i64) -> !llvm.ptr
+    func.call @strict_gpu_argument(%arguments, %parameters, %none, %source) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
+    func.call @strict_gpu_argument(%arguments, %parameters, %one, %count) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
+    func.call @strict_gpu_argument(%arguments, %parameters, %two, %width) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
+    func.call @strict_gpu_argument(%arguments, %parameters, %three, %target) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
+    func.call @strict_gpu_argument(%arguments, %parameters, %four, %bits) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
+    %flushed = func.call @strict_gpu_flush() : () -> i1
+    %launched = func.call @strict_gpu_launch(%function, %total, %threads, %parameters) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i1
+    %started = arith.andi %flushed, %launched : i1
+    return %started : i1
+  }
+  // 32 bit floats and bfloat16 (formats 32 and 17), the lists computed on the GPU besides packed results
+  func.func private @strict_gpu_floats(%bits: i64) -> i1 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %thirtyTwo = arith.constant 32 : i64
+    %brainBits = arith.constant 17 : i64
+    %isSingle = arith.cmpi eq, %bits, %thirtyTwo : i64
+    %isBrain = arith.cmpi eq, %bits, %brainBits : i64
+    %floats = arith.ori %isSingle, %isBrain : i1
+    return %floats : i1
+  }
+  // 32 bit or bfloat16 numbers on the GPU only read by dot products with rows become 8 bit numbers (a scale per 32) in
+  // the scratch block, dp4a multiplies 4 of them with 4 packed numbers of a row at once
   func.func private @strict_gpu_quantized(%ptx: !llvm.ptr, %view: !llvm.ptr) {
     %none = arith.constant 0 : i64
     %two = arith.constant 2 : i64
@@ -11344,7 +11370,7 @@
     %length = llvm.load %lengthSlot : !llvm.ptr -> i64
     %bitsSlot = llvm.getelementptr %view[2] : (!llvm.ptr) -> !llvm.ptr, i64
     %bits = llvm.load %bitsSlot : !llvm.ptr -> i64
-    %isSingle = arith.cmpi eq, %bits, %thirtyTwo : i64
+    %isSingle = func.call @strict_gpu_floats(%bits) : (i64) -> i1
     %rest = arith.andi %length, %thirtyOne : i64
     %whole = arith.cmpi eq, %rest, %none : i64
     %some = arith.cmpi sge, %length, %thirtyTwo : i64
@@ -11430,20 +11456,9 @@
   ^fuseLaunch:
     %sourceSlot = llvm.getelementptr %rotation[1] : (!llvm.ptr) -> !llvm.ptr, i64
     %source = llvm.load %sourceSlot : !llvm.ptr -> i64
-    %fuseCount = arith.constant 4 : i64
-    %fuseArguments = llvm.alloca %fuseCount x i64 : (i64) -> !llvm.ptr
-    %fuseParameters = llvm.alloca %fuseCount x !llvm.ptr : (i64) -> !llvm.ptr
-    func.call @strict_gpu_argument(%fuseArguments, %fuseParameters, %none, %source) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
-    %oneArgument = arith.constant 1 : i64
-    func.call @strict_gpu_argument(%fuseArguments, %fuseParameters, %oneArgument, %length) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
-    func.call @strict_gpu_argument(%fuseArguments, %fuseParameters, %two, %tokenWidth) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
-    %threeArguments = arith.constant 3 : i64
-    func.call @strict_gpu_argument(%fuseArguments, %fuseParameters, %threeArguments, %target) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
     %fuseThreads = arith.shrui %tokenWidth, %byEight : i64
     %fuseTotal = arith.shrui %length, %byEight : i64
-    %fuseFlushed = func.call @strict_gpu_flush() : () -> i1
-    %fuseLaunched = func.call @strict_gpu_launch(%fused, %fuseTotal, %fuseThreads, %fuseParameters) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i1
-    %fuseDone = arith.andi %fuseFlushed, %fuseLaunched : i1
+    %fuseDone = func.call @strict_gpu_quantize_launch(%fused, %source, %length, %tokenWidth, %target, %bits, %fuseTotal, %fuseThreads) : (!llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> i1
     cf.cond_br %fuseDone, ^swap, ^unfused
   ^unfused:
     func.call @strict_gpu_rotated(%device) : (i64) -> ()
@@ -11458,33 +11473,11 @@
     %missing = llvm.icmp "eq" %function, %unset : !llvm.ptr
     cf.cond_br %missing, ^done, ^launch
   ^launch:
-    %three = arith.constant 3 : i64
-    %four = arith.constant 4 : i64
-    %arguments = llvm.alloca %four x i64 : (i64) -> !llvm.ptr
-    %parameters = llvm.alloca %four x !llvm.ptr : (i64) -> !llvm.ptr
-    llvm.store %device, %arguments : i64, !llvm.ptr
-    %lengthArgument = llvm.getelementptr %arguments[1] : (!llvm.ptr) -> !llvm.ptr, i64
-    llvm.store %length, %lengthArgument : i64, !llvm.ptr
-    %widthArgument = llvm.getelementptr %arguments[2] : (!llvm.ptr) -> !llvm.ptr, i64
-    llvm.store %tokenWidth, %widthArgument : i64, !llvm.ptr
-    %targetIndex = arith.select %perToken, %three, %two : i64
-    %targetArgument = llvm.getelementptr %arguments[%targetIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
-    llvm.store %target, %targetArgument : i64, !llvm.ptr
-    llvm.store %arguments, %parameters : !llvm.ptr, !llvm.ptr
-    %lengthParameter = llvm.getelementptr %parameters[1] : (!llvm.ptr) -> !llvm.ptr, !llvm.ptr
-    llvm.store %lengthArgument, %lengthParameter : !llvm.ptr, !llvm.ptr
-    %secondParameter = llvm.getelementptr %parameters[2] : (!llvm.ptr) -> !llvm.ptr, !llvm.ptr
-    %secondArgument = llvm.select %perToken, %widthArgument, %targetArgument : i1, !llvm.ptr
-    llvm.store %secondArgument, %secondParameter : !llvm.ptr, !llvm.ptr
-    %thirdParameter = llvm.getelementptr %parameters[3] : (!llvm.ptr) -> !llvm.ptr, !llvm.ptr
-    llvm.store %targetArgument, %thirdParameter : !llvm.ptr, !llvm.ptr
     %threads = arith.constant 256 : i64
     %tokenCount = arith.divui %length, %safeWidth : i64
     %tokenThreads = arith.muli %tokenCount, %threads : i64
     %launchThreads = arith.select %perToken, %tokenThreads, %length : i64
-    %flushed = func.call @strict_gpu_flush() : () -> i1
-    %launched = func.call @strict_gpu_launch(%function, %launchThreads, %threads, %parameters) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i1
-    %quantized = arith.andi %flushed, %launched : i1
+    %quantized = func.call @strict_gpu_quantize_launch(%function, %device, %length, %tokenWidth, %target, %bits, %launchThreads, %threads) : (!llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> i1
     cf.cond_br %quantized, ^swap, ^done
   ^swap:
     llvm.store %target, %view : i64, !llvm.ptr
@@ -11551,7 +11544,7 @@
   func.func private @strict_gpu_stored(%count: i64, %packed: i64) -> i64 {
     %brainBits = arith.constant 17 : i64
     %thirtyTwo = arith.constant 32 : i64
-    %large = arith.constant 1048576 : i64
+    %large = arith.constant 1099511627776 : i64
     %isBrain = arith.cmpi eq, %packed, %brainBits : i64
     %isLarge = arith.cmpi sge, %count, %large : i64
     %halved = arith.andi %isBrain, %isLarge : i1
@@ -12105,13 +12098,12 @@
   llvm.mlir.global internal constant @strict_gpu_hadamard_name("strict_device_hadamard\00strict_device_hadamards\00") : !llvm.array<47 x i8>
   llvm.mlir.global internal @strict_gpu_hadamard_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   // `Convrot.Rotated` (the 4 radix-4 butterflies of every group of 256 values) as one kernel, a block per group, 0.0
-  // when the length is no multiple of 256 or the GPU can not; of 32 bit numbers on the GPU it waits (strict_gpu_rotations)
+  // when the length is no multiple of 256 or the GPU can not; of 32 or 16 bit numbers on the GPU it waits
+  // (strict_gpu_rotations, in their format)
   func.func private @strict_gpu_hadamard(%ptx: !llvm.ptr, %values: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
-    %four = arith.constant 4 : i64
-    %thirtyTwo = arith.constant 32 : i64
     %group = arith.constant 255 : i64
     %length = func.call @strict_list_length(%values) : (f64) -> f64
     %count = arith.fptosi %length : f64 to i64
@@ -12128,7 +12120,7 @@
     cf.cond_br %resides, ^format, ^run
   ^format:
     %format = func.call @strict_gpu_format(%values) : (f64) -> i64
-    %isFloats = arith.cmpi eq, %format, %thirtyTwo : i64
+    %isFloats = func.call @strict_gpu_floats(%format) : (i64) -> i1
     cf.cond_br %isFloats, ^function, ^run
   ^function:
     %nameLength = llvm.call @strlen(%name) : (!llvm.ptr) -> i64
@@ -12141,13 +12133,13 @@
     cf.cond_br %missing, ^run, ^obtain
   ^obtain:
     func.call @strict_gpu_rotated(%device) : (i64) -> ()
-    %bytes = arith.muli %count, %four : i64
+    %bytes = func.call @strict_packed_bytes(%count, %format) : (i64, i64) -> i64
     %class = func.call @strict_gpu_class(%bytes) : (i64) -> i64
     %block = func.call @strict_gpu_obtain(%class) : (i64) -> i64
     %obtained = arith.cmpi ne, %block, %none : i64
     cf.cond_br %obtained, ^wait, ^run
   ^wait:
-    %list = func.call @strict_gpu_resident(%count, %block, %class, %thirtyTwo) : (i64, i64, i64, i64) -> f64
+    %list = func.call @strict_gpu_resident(%count, %block, %class, %format) : (i64, i64, i64, i64) -> f64
     %rotations = llvm.mlir.addressof @strict_gpu_rotations : !llvm.ptr
     %nextSlot = llvm.getelementptr %rotations[0, 48] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<49 x i64>
     %next = llvm.load %nextSlot : !llvm.ptr -> i64
@@ -12174,8 +12166,8 @@
   ^run:
     %slots = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %values, %slots : f64, !llvm.ptr
-    %integers = arith.constant -1 : i64
-    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %count, %zero, %none, %slots, %one, %one, %none, %none, %one, %none, %integers) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> f64
+    %halves = arith.constant 17 : i64
+    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %count, %zero, %none, %slots, %one, %one, %none, %none, %one, %none, %halves) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> f64
     return %result : f64
   ^unable:
     return %zero : f64
@@ -12235,7 +12227,7 @@
     %keptSlot = llvm.getelementptr %entry[5] : (!llvm.ptr) -> !llvm.ptr, i64
     %kept = llvm.load %keptSlot : !llvm.ptr -> i64
     llvm.store %none, %keptSlot : i64, !llvm.ptr
-    %parameterCount = arith.constant 9 : i64
+    %parameterCount = arith.constant 10 : i64
     %arguments = llvm.alloca %parameterCount x i64 : (i64) -> !llvm.ptr
     %parameters = llvm.alloca %parameterCount x !llvm.ptr : (i64) -> !llvm.ptr
     %failure = func.call @strict_gpu_failure_word() : () -> i64
@@ -12247,8 +12239,9 @@
     %six = arith.constant 6 : i64
     %seven = arith.constant 7 : i64
     %eight = arith.constant 8 : i64
+    %nine = arith.constant 9 : i64
     %doubleBits = arith.constant 64 : i64
-    %floatBits = arith.constant 32 : i64
+    %format = func.call @strict_gpu_format(%list) : (f64) -> i64
     func.call @strict_gpu_argument(%arguments, %parameters, %none, %count) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
     func.call @strict_gpu_argument(%arguments, %parameters, %one, %result) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
     func.call @strict_gpu_argument(%arguments, %parameters, %two, %failure) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
@@ -12257,7 +12250,8 @@
     func.call @strict_gpu_argument(%arguments, %parameters, %five, %doubleBits) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
     func.call @strict_gpu_argument(%arguments, %parameters, %six, %source) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
     func.call @strict_gpu_argument(%arguments, %parameters, %seven, %count) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
-    func.call @strict_gpu_argument(%arguments, %parameters, %eight, %floatBits) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
+    func.call @strict_gpu_argument(%arguments, %parameters, %eight, %format) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
+    func.call @strict_gpu_argument(%arguments, %parameters, %nine, %format) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
     %threads = arith.constant 256 : i64
     %flushed = func.call @strict_gpu_flush() : () -> i1
     %launched = func.call @strict_gpu_launch(%function, %count, %threads, %parameters) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i1
@@ -12612,8 +12606,8 @@
   ^done(%tokenWidth: i64):
     return %tokenWidth : i64
   }
-  // strict_device_tiles fits 64 tokens or more with Q4_K or Q6_K rows whose 32 bit tokens become 8 bit numbers (width a
-  // multiple of 32)
+  // strict_device_tiles fits 64 tokens or more with Q4_K or Q6_K rows whose 32 or 16 bit tokens become 8 bit numbers
+  // (width a multiple of 32)
   func.func private @strict_gpu_tiled(%rows: f64, %input: f64, %tokens: f64, %width: f64) -> i1 {
     %false = arith.constant false
     %none = arith.constant 0 : i64
@@ -12637,14 +12631,13 @@
     %isSixBits = arith.cmpi eq, %bits, %six : i64
     %isFour = arith.ori %isFourBits, %isSixBits : i1
     %inputBits = func.call @strict_gpu_bits(%input) : (f64) -> i64
-    %singles = arith.constant 32 : i64
-    %isSingle = arith.cmpi eq, %inputBits, %singles : i64
+    %isSingle = func.call @strict_gpu_floats(%inputBits) : (i64) -> i1
     %fits = arith.andi %isFour, %isSingle : i1
     cf.br ^done(%fits : i1)
   ^done(%tiled: i1):
     return %tiled : i1
   }
-  // strict_device_eights fits 64 tokens or more with 8 bit rows whose 32 bit tokens become 8 bit numbers (width a
+  // strict_device_eights fits 64 tokens or more with 8 bit rows whose 32 or 16 bit tokens become 8 bit numbers (width a
   // multiple of 64) unless the rows of the tokens start at bases
   func.func private @strict_gpu_eights(%rows: f64, %input: f64, %tokens: f64, %width: f64, %bases: f64) -> i1 {
     %false = arith.constant false
@@ -12669,8 +12662,7 @@
     %eight = arith.constant 8 : i64
     %isEight = arith.cmpi eq, %bits, %eight : i64
     %inputBits = func.call @strict_gpu_bits(%input) : (f64) -> i64
-    %singles = arith.constant 32 : i64
-    %isSingle = arith.cmpi eq, %inputBits, %singles : i64
+    %isSingle = func.call @strict_gpu_floats(%inputBits) : (i64) -> i1
     %fits = arith.andi %isEight, %isSingle : i1
     cf.br ^done(%fits : i1)
   ^done(%fitting: i1):

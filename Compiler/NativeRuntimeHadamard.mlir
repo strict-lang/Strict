@@ -2,7 +2,7 @@
   llvm.mlir.global internal @strict_device_hadamard_numbers() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<256 x f32>
   // one radix-4 butterfly of the 256 numbers of a block at step (1, 4, 16, 64) for its thread: the sum of the 4 numbers
   // of its quad halved, the one at 3 - digit negated, like `Convrot.Butterfly`
-  func.func private @strict_device_hadamard_stage(%value: f32, %thread: i64, %step: i64) -> f32 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_hadamard_stage(%value: f32, %thread: i64, %step: i64) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
     %c3 = arith.constant 3 : i64
     %shared = llvm.mlir.addressof @strict_device_hadamard_numbers : !llvm.ptr<3>
     %own = llvm.getelementptr %shared[%thread] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
@@ -18,7 +18,7 @@
     return %sum : f32
   }
   // the quad from first at step in shared memory through strict_device_hadamard_sum
-  func.func private @strict_device_hadamard_quad(%shared: !llvm.ptr<3>, %first: i64, %step: i64, %partner: i64) -> f32 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_hadamard_quad(%shared: !llvm.ptr<3>, %first: i64, %step: i64, %partner: i64) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
     %at1 = arith.addi %first, %step : i64
     %at2 = arith.addi %at1, %step : i64
     %at3 = arith.addi %at2, %step : i64
@@ -34,7 +34,7 @@
     return %sum : f32
   }
   // ((x0 s0 + x1 s1) + x2 s2) + x3 s3 of a quad, s is -0.5 at partner and 0.5 elsewhere
-  func.func private @strict_device_hadamard_sum(%x0: f32, %x1: f32, %x2: f32, %x3: f32, %partner: i64) -> f32 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_hadamard_sum(%x0: f32, %x1: f32, %x2: f32, %x3: f32, %partner: i64) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = arith.constant 0 : i64
     %c1 = arith.constant 1 : i64
     %c2 = arith.constant 2 : i64
@@ -59,8 +59,9 @@
     return %sum : f32
   }
   // `Convrot.Rotated`: a block of 256 threads per group of 256 numbers (count a multiple of 256), each thread one number
-  // through the 4 radix-4 butterflies in shared memory, written as doubles when wide (to the host) or 32 bit floats
-  func.func private @strict_device_hadamard_run(%count: i64, %result: !llvm.ptr, %wide: i1, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64) {
+  // through the 4 radix-4 butterflies in shared memory, written as doubles when wide (to the host), else in the format
+  // results (32 or 17, strict_device_stored)
+  func.func private @strict_device_hadamard_run(%count: i64, %result: !llvm.ptr, %wide: i1, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %results: i64) {
     %c1 = arith.constant 1 : i64
     %c4 = arith.constant 4 : i64
     %c16 = arith.constant 16 : i64
@@ -87,25 +88,24 @@
     llvm.store %double, %doubleSlot : f64, !llvm.ptr
     cf.br ^done
   ^single:
-    %singleSlot = llvm.getelementptr %result[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    llvm.store %fourth, %singleSlot : f32, !llvm.ptr
+    func.call @strict_device_stored(%result, %at, %fourth, %results) : (!llvm.ptr, i64, f32, i64) -> ()
     cf.br ^done
   ^done:
     return
   }
-  llvm.func @strict_device_hadamard(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>} {
+  llvm.func @strict_device_hadamard(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %results: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>} {
     %wide = llvm.mlir.constant(true) : i1
-    func.call @strict_device_hadamard_run(%count, %result, %wide, %values, %valuesCount, %valuesBits) : (i64, !llvm.ptr, i1, !llvm.ptr, i64, i64) -> ()
+    func.call @strict_device_hadamard_run(%count, %result, %wide, %values, %valuesCount, %valuesBits, %results) : (i64, !llvm.ptr, i1, !llvm.ptr, i64, i64, i64) -> ()
     llvm.return
   }
-  llvm.func @strict_device_hadamards(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>} {
+  llvm.func @strict_device_hadamards(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %results: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>} {
     %wide = llvm.mlir.constant(false) : i1
-    func.call @strict_device_hadamard_run(%count, %result, %wide, %values, %valuesCount, %valuesBits) : (i64, !llvm.ptr, i1, !llvm.ptr, i64, i64) -> ()
+    func.call @strict_device_hadamard_run(%count, %result, %wide, %values, %valuesCount, %valuesBits, %results) : (i64, !llvm.ptr, i1, !llvm.ptr, i64, i64, i64) -> ()
     llvm.return
   }
   // the quad number of a lane whose digit is at shift of its lane number, the lanes xor 1, 2 and 3 times 1 << shift hold
   // the other numbers of the quad (steps 1 and 4 of strict_device_hadamard_tokens)
-  func.func private @strict_device_hadamard_lanes(%value: f32, %lane: i32, %shift: i32) -> f32 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_hadamard_lanes(%value: f32, %lane: i32, %shift: i32) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
     %c1 = arith.constant 1 : i32
     %c2 = arith.constant 2 : i32
     %c3 = arith.constant 3 : i32
@@ -130,7 +130,7 @@
     %sum = func.call @strict_device_hadamard_sum(%x0, %x1, %x2, %x3, %partner) : (f32, f32, f32, f32, i64) -> f32
     return %sum : f32
   }
-  func.func private @strict_device_hadamard_pick(%index: i32, %v0: f32, %v1: f32, %v2: f32, %v3: f32) -> f32 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_hadamard_pick(%index: i32, %v0: f32, %v1: f32, %v2: f32, %v3: f32) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
     %c1 = arith.constant 1 : i32
     %c2 = arith.constant 2 : i32
     %odd = arith.andi %index, %c1 : i32
@@ -143,7 +143,7 @@
   }
   // the quad number at step 16 of the even or odd j (isOdd 0 or 1) of a lane from its even and odd numbers and those of
   // the lane 16 apart (high is bit 4 of the lane)
-  func.func private @strict_device_hadamard_pair(%even: f32, %odd: f32, %otherEven: f32, %otherOdd: f32, %high: i1, %isOdd: i64) -> f32 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_hadamard_pair(%even: f32, %odd: f32, %otherEven: f32, %otherOdd: f32, %high: i1, %isOdd: i64) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
     %one = arith.constant 1 : i64
     %three = arith.constant 3 : i64
     %x0 = arith.select %high, %otherEven, %even : f32
@@ -159,10 +159,10 @@
   }
   // the largest magnitude of each warp of a block of strict_device_hadamard_tokens
   llvm.mlir.global internal @strict_device_hadamard_largest() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<32 x f32>
-  // strict_device_quantize_tokens of `Convrot.Rotated` of 32 bit source numbers without writing the rotated ones: a block
-  // of width / 8 threads per token (width a multiple of 256 up to 8192), a warp per group of 256 numbers whose lane holds
-  // number lane + 32 j (j 0 to 7), so steps 1 and 4 go over lanes, 16 over lanes and j, 64 over j
-  llvm.func @strict_device_hadamard_tokens(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1024, 1, 1>} {
+  // strict_device_quantize_tokens of `Convrot.Rotated` of 32 or 16 bit source numbers (bits) without writing the rotated
+  // ones: a block of width / 8 threads per token (width a multiple of 256 up to 8192), a warp per group of 256 numbers
+  // whose lane holds number lane + 32 j (j 0 to 7), so steps 1 and 4 go over lanes, 16 over lanes and j, 64 over j
+  llvm.func @strict_device_hadamard_tokens(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1024, 1, 1>} {
     %c0 = arith.constant 0 : i32
     %c2 = arith.constant 2 : i32
     %c5 = arith.constant 5 : i32
@@ -188,23 +188,28 @@
     %groupOffset = arith.muli %warp64, %groupSize : i64
     %groupStart = arith.addi %start, %groupOffset : i64
     %at = arith.addi %groupStart, %lane64 : i64
-    %numbers = llvm.getelementptr %source[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    %slot0 = llvm.getelementptr %numbers[0] : (!llvm.ptr) -> !llvm.ptr, f32
-    %r0 = llvm.load %slot0 : !llvm.ptr -> f32
-    %slot1 = llvm.getelementptr %numbers[32] : (!llvm.ptr) -> !llvm.ptr, f32
-    %r1 = llvm.load %slot1 : !llvm.ptr -> f32
-    %slot2 = llvm.getelementptr %numbers[64] : (!llvm.ptr) -> !llvm.ptr, f32
-    %r2 = llvm.load %slot2 : !llvm.ptr -> f32
-    %slot3 = llvm.getelementptr %numbers[96] : (!llvm.ptr) -> !llvm.ptr, f32
-    %r3 = llvm.load %slot3 : !llvm.ptr -> f32
-    %slot4 = llvm.getelementptr %numbers[128] : (!llvm.ptr) -> !llvm.ptr, f32
-    %r4 = llvm.load %slot4 : !llvm.ptr -> f32
-    %slot5 = llvm.getelementptr %numbers[160] : (!llvm.ptr) -> !llvm.ptr, f32
-    %r5 = llvm.load %slot5 : !llvm.ptr -> f32
-    %slot6 = llvm.getelementptr %numbers[192] : (!llvm.ptr) -> !llvm.ptr, f32
-    %r6 = llvm.load %slot6 : !llvm.ptr -> f32
-    %slot7 = llvm.getelementptr %numbers[224] : (!llvm.ptr) -> !llvm.ptr, f32
-    %r7 = llvm.load %slot7 : !llvm.ptr -> f32
+    %r0 = func.call @strict_device_floats(%source, %bits, %at) : (!llvm.ptr, i64, i64) -> f32
+    %apart1 = arith.constant 32 : i64
+    %at1 = arith.addi %at, %apart1 : i64
+    %r1 = func.call @strict_device_floats(%source, %bits, %at1) : (!llvm.ptr, i64, i64) -> f32
+    %apart2 = arith.constant 64 : i64
+    %at2 = arith.addi %at, %apart2 : i64
+    %r2 = func.call @strict_device_floats(%source, %bits, %at2) : (!llvm.ptr, i64, i64) -> f32
+    %apart3 = arith.constant 96 : i64
+    %at3 = arith.addi %at, %apart3 : i64
+    %r3 = func.call @strict_device_floats(%source, %bits, %at3) : (!llvm.ptr, i64, i64) -> f32
+    %apart4 = arith.constant 128 : i64
+    %at4 = arith.addi %at, %apart4 : i64
+    %r4 = func.call @strict_device_floats(%source, %bits, %at4) : (!llvm.ptr, i64, i64) -> f32
+    %apart5 = arith.constant 160 : i64
+    %at5 = arith.addi %at, %apart5 : i64
+    %r5 = func.call @strict_device_floats(%source, %bits, %at5) : (!llvm.ptr, i64, i64) -> f32
+    %apart6 = arith.constant 192 : i64
+    %at6 = arith.addi %at, %apart6 : i64
+    %r6 = func.call @strict_device_floats(%source, %bits, %at6) : (!llvm.ptr, i64, i64) -> f32
+    %apart7 = arith.constant 224 : i64
+    %at7 = arith.addi %at, %apart7 : i64
+    %r7 = func.call @strict_device_floats(%source, %bits, %at7) : (!llvm.ptr, i64, i64) -> f32
     %a0 = func.call @strict_device_hadamard_lanes(%r0, %lane, %c0) : (f32, i32, i32) -> f32
     %a1 = func.call @strict_device_hadamard_lanes(%r1, %lane, %c0) : (f32, i32, i32) -> f32
     %a2 = func.call @strict_device_hadamard_lanes(%r2, %lane, %c0) : (f32, i32, i32) -> f32
