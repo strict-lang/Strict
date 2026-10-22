@@ -8839,6 +8839,12 @@
     %two = arith.constant 2 : i64
     %result = arith.select %opened, %one, %two : i64
     llvm.store %result, %stateSlot : i64, !llvm.ptr
+    cf.cond_br %opened, ^opened, ^unopened
+  ^unopened:
+    %unopened = llvm.mlir.addressof @strict_gpu_unopened_text : !llvm.ptr
+    func.call @strict_gpu_required(%unopened) : (!llvm.ptr) -> ()
+    cf.br ^opened
+  ^opened:
     return %opened : i1
   }
   // a kernel loop with at least 1/64 of the GPU minimum elements opens the GPU in a thread (strict_gpu_spawn per
@@ -8892,7 +8898,11 @@
     %one = arith.constant 1 : i64
     %two = arith.constant 2 : i64
     %opened = func.call @strict_gpu_open() : () -> i1
-    cf.cond_br %opened, ^load, ^store(%two : i64)
+    cf.cond_br %opened, ^load, ^unopened
+  ^unopened:
+    %unopened = llvm.mlir.addressof @strict_gpu_unopened_text : !llvm.ptr
+    func.call @strict_gpu_required(%unopened) : (!llvm.ptr) -> ()
+    cf.br ^store(%two : i64)
   ^load:
     %ptxSlot = llvm.mlir.addressof @strict_gpu_warm_ptx : !llvm.ptr
     %ptxBits = llvm.load %ptxSlot : !llvm.ptr -> i64
@@ -8961,7 +8971,8 @@
     %hasShare = arith.cmpi sgt, %share, %none : i64
     cf.cond_br %hasShare, ^gpu, ^cpu(%none : i64)
   ^gpu:
-    %resident = func.call @strict_gpu_run(%ptx, %name, %slot, %share, %source, %kind, %values, %valueCount, %mask, %rows, %dots, %lanes, %group, %sharedPacked) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> f64
+    %noGuards0 = arith.constant 0 : i64
+    %resident = func.call @strict_gpu_run(%ptx, %name, %slot, %share, %source, %kind, %values, %valueCount, %mask, %rows, %dots, %lanes, %group, %sharedPacked, %noGuards0) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
     %failed = arith.cmpf oeq, %resident, %zero : f64
     cf.cond_br %failed, ^cpu(%none : i64), ^started
   ^started:
@@ -9218,7 +9229,7 @@
     return %isSet : i1
   }
   // the PTX of a program lives next to its executable (Name.ptx, Name.older.ptx for older GPUs), the generated code
-  // only names it ("file:Name"), the first launch reads both into "newer\0older\0", programs without GPU skip it
+  // only names it ("hash:Name\0hash\0"), the first launch reads both into "newer\0older\0", programs without GPU skip it
   llvm.mlir.global internal @strict_gpu_code(0 : i64) : i64
   llvm.mlir.global internal constant @strict_gpu_amd_ending(".hsaco\00") : !llvm.array<7 x i8>
   llvm.mlir.global internal constant @strict_gpu_reading("rb\00") : !llvm.array<3 x i8>
@@ -9227,7 +9238,10 @@
     %one = arith.constant 1 : i64
     %first = llvm.load %ptx : !llvm.ptr -> i8
     %fileMark = arith.constant 102 : i8
-    %isFile = arith.cmpi eq, %first, %fileMark : i8
+    %hashMark = arith.constant 104 : i8
+    %isUnhashed = arith.cmpi eq, %first, %fileMark : i8
+    %isHashed = arith.cmpi eq, %first, %hashMark : i8
+    %isFile = arith.ori %isUnhashed, %isHashed : i1
     cf.cond_br %isFile, ^cached, ^embedded
   ^embedded:
     return %ptx : !llvm.ptr
@@ -9253,6 +9267,7 @@
     %newerEnding = llvm.mlir.addressof @strict_gpu_ptx_ending : !llvm.ptr
     %olderEnding = llvm.mlir.addressof @strict_gpu_older_ending : !llvm.ptr
     %newer = func.call @strict_gpu_beside(%stem, %newerEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    func.call @strict_gpu_matched(%ptx, %newerEnding, %newer) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> ()
     %older = func.call @strict_gpu_beside(%stem, %olderEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %newerLength = llvm.call @strlen(%newer) : (!llvm.ptr) -> i64
     %olderLength = llvm.call @strlen(%older) : (!llvm.ptr) -> i64
@@ -9272,6 +9287,73 @@
     %bufferBits = llvm.ptrtoint %buffer : !llvm.ptr to i64
     llvm.store %bufferBits, %codeSlot : i64, !llvm.ptr
     return %buffer : !llvm.ptr
+  }
+  // the generated code names the PTX with the hash it was built with ("hash:Name\0hash\0", HashCode % 9999991), a
+  // missing PTX or one of another program or version stops instead of running wrong kernels or all on the CPU,
+  // "file:Name" of older compilers like the bootstrap seed is not checked
+  llvm.mlir.global internal constant @strict_gpu_missing_text("Error: %s%s next to %s is missing or empty, build the program again with strict build\0A\00") : !llvm.array<87 x i8>
+  llvm.mlir.global internal constant @strict_gpu_mismatch_text("Error: %s%s next to %s was built for another program or version, build the program again with strict build\0A\00") : !llvm.array<108 x i8>
+  func.func private @strict_gpu_matched(%ptx: !llvm.ptr, %ending: !llvm.ptr, %code: !llvm.ptr) {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %first = llvm.load %ptx : !llvm.ptr -> i8
+    %hashMark = arith.constant 104 : i8
+    %isHashed = arith.cmpi eq, %first, %hashMark : i8
+    cf.cond_br %isHashed, ^hashed, ^done
+  ^hashed:
+    %stem = llvm.getelementptr %ptx[5] : (!llvm.ptr) -> !llvm.ptr, i8
+    %stemLength = llvm.call @strlen(%stem) : (!llvm.ptr) -> i64
+    %hashStart = arith.addi %stemLength, %one : i64
+    %hashText = llvm.getelementptr %stem[%hashStart] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %expected = llvm.call @atoll(%hashText) : (!llvm.ptr) -> i64
+    %length = llvm.call @strlen(%code) : (!llvm.ptr) -> i64
+    %isEmpty = arith.cmpi eq, %length, %zero : i64
+    %missing = llvm.mlir.addressof @strict_gpu_missing_text : !llvm.ptr
+    cf.cond_br %isEmpty, ^failed(%missing : !llvm.ptr), ^hash(%zero, %zero : i64, i64)
+  ^hash(%index: i64, %hash: i64):
+    %more = arith.cmpi ult, %index, %length : i64
+    cf.cond_br %more, ^add, ^compare
+  ^add:
+    %slot = llvm.getelementptr %code[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %byte = llvm.load %slot : !llvm.ptr -> i8
+    %value = arith.extui %byte : i8 to i64
+    %thirtyOne = arith.constant 31 : i64
+    %scaled = arith.muli %hash, %thirtyOne : i64
+    %added = arith.addi %scaled, %value : i64
+    %mask = arith.constant 4294967295 : i64
+    %wrapped = arith.andi %added, %mask : i64
+    %next = arith.addi %index, %one : i64
+    cf.br ^hash(%next, %wrapped : i64, i64)
+  ^compare:
+    %prime = arith.constant 9999991 : i64
+    %kept = arith.remui %hash, %prime : i64
+    %isSame = arith.cmpi eq, %kept, %expected : i64
+    %mismatch = llvm.mlir.addressof @strict_gpu_mismatch_text : !llvm.ptr
+    cf.cond_br %isSame, ^done, ^failed(%mismatch : !llvm.ptr)
+  ^failed(%format: !llvm.ptr):
+    %executable = func.call @strict_gpu_executable() : () -> !llvm.ptr
+    %printed = llvm.call @printf(%format, %stem, %ending, %executable) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    %exitCode = arith.constant 1 : i32
+    llvm.call @exit(%exitCode) : (i32) -> ()
+    cf.br ^done
+  ^done:
+    return
+  }
+  // STRICT_GPU=all asks for every loop on the GPU, a GPU that can not be used stops the program instead of the CPU
+  llvm.mlir.global internal constant @strict_gpu_unopened_text("Error: STRICT_GPU=all but no GPU driver could be opened\0A\00") : !llvm.array<57 x i8>
+  llvm.mlir.global internal constant @strict_gpu_unloaded_text("Error: STRICT_GPU=all but the GPU driver did not load the kernels next to the executable\0A\00") : !llvm.array<90 x i8>
+  func.func private @strict_gpu_required(%message: !llvm.ptr) {
+    %one = arith.constant 1 : i64
+    %minimum = func.call @strict_gpu_threshold() : () -> i64
+    %isAll = arith.cmpi eq, %minimum, %one : i64
+    cf.cond_br %isAll, ^failed, ^done
+  ^failed:
+    %printed = llvm.call @printf(%message) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr) -> i32
+    %exitCode = arith.constant 1 : i32
+    llvm.call @exit(%exitCode) : (i32) -> ()
+    cf.br ^done
+  ^done:
+    return
   }
   // the path of the executable copied out of the collected heap once: the warm thread must not allocate there, the
   // allocator only locks while parallel loops run
@@ -9430,6 +9512,8 @@
     %newModule = llvm.load %moduleSlot : !llvm.ptr -> i64
     return %newModule : i64
   ^failed:
+    %unloaded = llvm.mlir.addressof @strict_gpu_unloaded_text : !llvm.ptr
+    func.call @strict_gpu_required(%unloaded) : (!llvm.ptr) -> ()
     return %zero : i64
   }
   // the driver on Windows (WDDM) does not fail an allocation past the free memory, it pages memory out and every
@@ -9784,7 +9868,7 @@
   ^done:
     return
   }
-  func.func private @strict_gpu_run(%ptx: !llvm.ptr, %name: !llvm.ptr, %slot: !llvm.ptr, %count: i64, %source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64, %rows: i64, %dots: i64, %lanes: i64, %group: i64, %packed: i64) -> f64 {
+  func.func private @strict_gpu_run(%ptx: !llvm.ptr, %name: !llvm.ptr, %slot: !llvm.ptr, %count: i64, %source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64, %rows: i64, %dots: i64, %lanes: i64, %group: i64, %packed: i64, %guards: i64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -9938,6 +10022,11 @@
     %narrowSingle = arith.cmpi ne, %narrowed, %none : i64
     func.call @strict_gpu_singles(%narrowSingle, %values, %valueCount, %mask, %rows, %slots) : (i1, !llvm.ptr, i64, i64, i64, !llvm.ptr) -> ()
     func.call @strict_gpu_exacts(%values, %valueCount, %mask, %slots, %slotIndex) : (!llvm.ptr, i64, i64, !llvm.ptr, i64) -> ()
+    // a kernel with an exact copy (MlirGuards) runs it when its guarded numbers are whole and its guarded lists 32 or 16 bit
+    %hasGuards = arith.cmpi ne, %guards, %none : i64
+    %guardsHold = func.call @strict_gpu_guarded(%values, %valueCount, %mask, %slots, %slotIndex, %guards) : (!llvm.ptr, i64, i64, !llvm.ptr, i64, i64) -> i1
+    %guarded = arith.andi %hasGuards, %guardsHold : i1
+    %runsExact = arith.andi %guarded, %narrowSingle : i1
     // a loop collecting 8 bit floats (7) or bytes (9) keeps its result on the GPU also from the double kernel, which
     // computes its values exactly (only positions stay exact in the 32 bit kernel)
     %eightBits = arith.constant 7 : i64
@@ -9953,8 +10042,14 @@
     %skipped = arith.addi %nameLength, %one : i64
     %singleName = llvm.getelementptr %name[%skipped] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %singleSlot = llvm.getelementptr %slot[1] : (!llvm.ptr) -> !llvm.ptr, i64
-    %chosenName = llvm.select %narrowSingle, %singleName, %name : i1, !llvm.ptr
-    %chosenSlot = llvm.select %narrowSingle, %singleSlot, %slot : i1, !llvm.ptr
+    %singleLength = llvm.call @strlen(%singleName) : (!llvm.ptr) -> i64
+    %singleSkipped = arith.addi %singleLength, %one : i64
+    %exactName = llvm.getelementptr %singleName[%singleSkipped] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %exactSlot = llvm.getelementptr %slot[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %narrowName = llvm.select %narrowSingle, %singleName, %name : i1, !llvm.ptr
+    %narrowKernelSlot = llvm.select %narrowSingle, %singleSlot, %slot : i1, !llvm.ptr
+    %chosenName = llvm.select %runsExact, %exactName, %narrowName : i1, !llvm.ptr
+    %chosenSlot = llvm.select %runsExact, %exactSlot, %narrowKernelSlot : i1, !llvm.ptr
     %function = func.call @strict_gpu_function(%ptx, %chosenName, %chosenSlot) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %missing = llvm.icmp "eq" %function, %unset : !llvm.ptr
     %widest = arith.constant 256 : i64
@@ -11938,7 +12033,8 @@
     %slot = llvm.mlir.addressof @strict_gpu_attention_slot : !llvm.ptr
     %lanes = arith.constant -128 : i64
     %integers = arith.constant -1 : i64
-    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %queryCount, %zero, %none, %valuesSlots, %eight, %seven, %none, %none, %lanes, %none, %integers) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> f64
+    %noGuards1 = arith.constant 0 : i64
+    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %queryCount, %zero, %none, %valuesSlots, %eight, %seven, %none, %none, %lanes, %none, %integers, %noGuards1) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
     return %result : f64
   ^unable:
     return %zero : f64
@@ -12090,7 +12186,8 @@
     %slotPair = llvm.select %tiled, %tileSlot, %warpSlot : i1, !llvm.ptr
     %listsMask = arith.constant 3 : i64
     %integers = arith.constant -1 : i64
-    %result = func.call @strict_gpu_run(%ptx, %name, %slotPair, %count, %zero, %none, %slots, %fourteen, %listsMask, %none, %none, %lanes, %none, %integers) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> f64
+    %noGuards2 = arith.constant 0 : i64
+    %result = func.call @strict_gpu_run(%ptx, %name, %slotPair, %count, %zero, %none, %slots, %fourteen, %listsMask, %none, %none, %lanes, %none, %integers, %noGuards2) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
     return %result : f64
   ^unable:
     return %zero : f64
@@ -12167,7 +12264,8 @@
     %slots = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %values, %slots : f64, !llvm.ptr
     %halves = arith.constant 17 : i64
-    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %count, %zero, %none, %slots, %one, %one, %none, %none, %one, %none, %halves) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> f64
+    %noGuards3 = arith.constant 0 : i64
+    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %count, %zero, %none, %slots, %one, %one, %none, %none, %one, %none, %halves, %noGuards3) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
     return %result : f64
   ^unable:
     return %zero : f64
@@ -12464,7 +12562,8 @@
     %listsMask = arith.constant 7 : i64
     %lanes = arith.constant -2048 : i64
     %integers = arith.constant -1 : i64
-    %result = func.call @strict_gpu_run(%ptx, %name, %slotPair, %count, %zero, %none, %slots, %slotCount, %listsMask, %none, %none, %lanes, %none, %integers) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> f64
+    %noGuards4 = arith.constant 0 : i64
+    %result = func.call @strict_gpu_run(%ptx, %name, %slotPair, %count, %zero, %none, %slots, %slotCount, %listsMask, %none, %none, %lanes, %none, %integers, %noGuards4) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
     return %result : f64
   ^unable:
     return %zero : f64
@@ -12583,9 +12682,13 @@
     %slot = llvm.select %eights, %eightsChosenSlot, %longSlot : i1, !llvm.ptr
     %lanes = arith.select %eights, %eightsLanes, %longLanes : i64
     %integers = arith.constant -1 : i64
+    %halves = arith.constant 17 : i64
+    %wholeChosen = arith.andi %eights, %wholeRows : i1
+    %resultPacked = arith.select %wholeChosen, %halves, %integers : i64
     %tokenWidthSlot = llvm.mlir.addressof @strict_gpu_quantize_width : !llvm.ptr
     llvm.store %tokenWidth, %tokenWidthSlot : i64, !llvm.ptr
-    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %count, %zero, %none, %values, %six, %listsMask, %one, %two, %lanes, %none, %integers) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> f64
+    %noGuards5 = arith.constant 0 : i64
+    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %count, %zero, %none, %values, %six, %listsMask, %one, %two, %lanes, %none, %resultPacked, %noGuards5) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
     llvm.store %none, %tokenWidthSlot : i64, !llvm.ptr
     return %result : f64
   }
@@ -12888,6 +12991,57 @@
     cf.br ^next(%nextIndex, %following : i64, i64)
   ^done:
     return
+  }
+  // whether the values with a bit in guards suit the exact copy of a 32 bit kernel: lists of 32 bit, bfloat16 or 16 bit
+  // numbers (their views in slots from 6 on, three slots each), whole numbers (their exact slots from exacts + 1 on, two each)
+  func.func private @strict_gpu_guarded(%values: !llvm.ptr, %valueCount: i64, %mask: i64, %slots: !llvm.ptr, %exacts: i64, %guards: i64) -> i1 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %three = arith.constant 3 : i64
+    %six = arith.constant 6 : i64
+    %sixteen = arith.constant 16 : i64
+    %brainBits = arith.constant 17 : i64
+    %thirtyTwo = arith.constant 32 : i64
+    %inexact = arith.constant -9223372036854775808 : i64
+    %true = arith.constant true
+    %false = arith.constant false
+    %firstExact = arith.addi %exacts, %one : i64
+    cf.br ^next(%none, %six, %firstExact : i64, i64, i64)
+  ^next(%index: i64, %slotIndex: i64, %exactIndex: i64):
+    %more = arith.cmpi slt, %index, %valueCount : i64
+    cf.cond_br %more, ^value, ^held
+  ^value:
+    %shifted = arith.shrui %mask, %index : i64
+    %isList = arith.trunci %shifted : i64 to i1
+    %guardShifted = arith.shrui %guards, %index : i64
+    %isGuarded = arith.trunci %guardShifted : i64 to i1
+    %nextIndex = arith.addi %index, %one : i64
+    cf.cond_br %isList, ^list, ^number
+  ^list:
+    %bitsIndex = arith.addi %slotIndex, %two : i64
+    %bitsSlot = llvm.getelementptr %slots[%bitsIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %bits = llvm.load %bitsSlot : !llvm.ptr -> i64
+    %isSingle = arith.cmpi eq, %bits, %thirtyTwo : i64
+    %isBrain = arith.cmpi eq, %bits, %brainBits : i64
+    %isHalf = arith.cmpi eq, %bits, %sixteen : i64
+    %halves = arith.ori %isBrain, %isHalf : i1
+    %floating = arith.ori %isSingle, %halves : i1
+    %listSlot = arith.addi %slotIndex, %three : i64
+    %listFails = arith.cmpi ult, %floating, %isGuarded : i1
+    cf.cond_br %listFails, ^failed, ^next(%nextIndex, %listSlot, %exactIndex : i64, i64, i64)
+  ^number:
+    %exactSlot = llvm.getelementptr %slots[%exactIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %exact = llvm.load %exactSlot : !llvm.ptr -> i64
+    %isWhole = arith.cmpi ne, %exact, %inexact : i64
+    %numberSlot = arith.addi %slotIndex, %one : i64
+    %nextExact = arith.addi %exactIndex, %two : i64
+    %numberFails = arith.cmpi ult, %isWhole, %isGuarded : i1
+    cf.cond_br %numberFails, ^failed, ^next(%nextIndex, %numberSlot, %nextExact : i64, i64, i64)
+  ^failed:
+    return %false : i1
+  ^held:
+    return %true : i1
   }
   func.func private @strict_gpu_exact(%value: f64) -> i64 {
     %inexact = arith.constant -9223372036854775808 : i64

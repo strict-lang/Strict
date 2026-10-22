@@ -1,5 +1,5 @@
   // the 4 numbers of a pixel from channel (zeros when outside) normed with the scales and shifts of affine in shared
-  // memory (swish when asked), one vector load of 32 bit floats when fast
+  // memory (swish when asked), one vector load of 32 bit floats or bfloat16 when fast
   func.func private @strict_device_convolution_quad(%values: !llvm.ptr, %count: i64, %bits: i64, %affined: !llvm.ptr<3>, %at: i64, %channel: i64, %channels: i64, %inside: i1, %fast: i1, %swish: i1) -> vector<4xf16> attributes {llvm.passthrough = ["alwaysinline"]} {
     %one = arith.constant 1 : i64
     %two = arith.constant 2 : i64
@@ -12,6 +12,15 @@
   ^read:
     cf.cond_br %vectored, ^vector, ^single
   ^vector:
+    %brainBits = arith.constant 17 : i64
+    %isBrain = arith.cmpi eq, %bits, %brainBits : i64
+    cf.cond_br %isBrain, ^brainVector, ^singleVector
+  ^brainVector:
+    %brainSlot = llvm.getelementptr %values[%at] : (!llvm.ptr, i64) -> !llvm.ptr, bf16
+    %brains = llvm.load %brainSlot invariant {alignment = 8 : i64} : !llvm.ptr -> vector<4xbf16>
+    %fromBrains = arith.extf %brains : vector<4xbf16> to vector<4xf32>
+    cf.br ^normed(%fromBrains : vector<4xf32>)
+  ^singleVector:
     %slot = llvm.getelementptr %values[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f32
     %loaded = llvm.load %slot invariant {alignment = 16 : i64} : !llvm.ptr -> vector<4xf32>
     cf.br ^normed(%loaded : vector<4xf32>)
@@ -251,7 +260,10 @@
     %side = arith.trunci %sideNumber : i64 to i32
     %stages = arith.shrui %taps, %five : i64
     %lastStage = arith.subi %stages, %one : i64
-    %isSingle = arith.cmpi eq, %bits, %thirtyTwo : i64
+    %brainFormat = arith.constant 17 : i64
+    %isFloats = arith.cmpi eq, %bits, %thirtyTwo : i64
+    %isBrainFloats = arith.cmpi eq, %bits, %brainFormat : i64
+    %isSingle = arith.ori %isFloats, %isBrainFloats : i1
     %address = llvm.ptrtoint %values : !llvm.ptr to i64
     %addressRest = arith.andi %address, %fifteen : i64
     %aligned = arith.cmpi eq, %addressRest, %none : i64

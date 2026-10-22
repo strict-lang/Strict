@@ -122,19 +122,21 @@ Runtime(names Texts) Text
 		combined = combined + "\n" + Text.Combine(File(path).ReadLines, "\n")
 	combined
 Embedded(host Text, ptx Texts, base Text) Text
-	Missing.Embedded("module {\n}", List(Text) + "// a", Kernels).EndsWith("file:Kernels\\00\") : !llvm.array<13 x i8>\n}")
+	Missing.Embedded("module {\n}", List(Text) + "// a", Kernels).EndsWith("s\\001446433\\00\") : !llvm.array<21 x i8>\n}")
 	File(Kernels + ".ptx").ReadLines is ("// a")
 	Missing.Embedded("module {\n}", List(Text) + "clang failed: x", Kernels) is "GPU kernels failed: clang failed: x"
-	Missing.Embedded("module {\n}", List(Text), "Compiler/output/N").EndsWith("file:N\\00\") : !llvm.array<7 x i8>\n}")
+	Missing.Embedded("module {\n}", List(Text), "Compiler/output/N").EndsWith(":N\\000\\00\") : !llvm.array<9 x i8>\n}")
 	if ptx.Length is 0
-		return Referenced(host, base)
+		return Referenced(host, base, "")
 	if ptx.First.StartsWith("//") is false
 		return "GPU kernels failed: " + ptx.First
 	let ending = tools.platform is Platform.MacOS then ".metal" else ".ptx"
 	PtxCache(base).Written(ptx, ending)
-	Referenced(host, base)
-Referenced(host Text, base Text) Text
-	Missing.Referenced("module {\n}", "A").EndsWith("file:A\\00\") : !llvm.array<7 x i8>\n}")
+	Referenced(host, base, ptx.First)
+Referenced(host Text, base Text, newer Text) Text
+	Missing.Referenced("module {\n}", "A", "// a").EndsWith("hash:A\\001446433\\00\") : !llvm.array<15 x i8>\n}")
+	Missing.Referenced("module {\n}", "A", "// abc").EndsWith("hash:A\\0026501\\00\") : !llvm.array<13 x i8>\n}")
 	let stem = Path(base).FileName.text
-	let global = "\n  llvm.mlir.global internal constant @strict_gpu_ptx(\"file:" + stem + "\\00\")"
-	host.Substring(0, host.Length - 1) + global + " : !llvm.array<" + (stem.Length + 6) + " x i8>\n}"
+	let hash = "" + (HashCode(newer).number % 9999991)
+	let global = "\n  llvm.mlir.global internal constant @strict_gpu_ptx(\"hash:" + stem + "\\00" + hash + "\\00\")"
+	host.Substring(0, host.Length - 1) + global + " : !llvm.array<" + (stem.Length + hash.Length + 7) + " x i8>\n}"

@@ -146,6 +146,26 @@
     llvm.store %words, %shared {alignment = 16 : i64} : vector<4xi32>, !llvm.ptr<3>
     return
   }
+  // strict_device_copy of 16 bytes if isCopied, else 16 zeros: no branch around copies that happen in some iterations
+  func.func private @strict_device_copy_filled(%shared: !llvm.ptr<3>, %global: !llvm.ptr, %isCopied: i1) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+    %arch = func.call @strict_device_arch() : () -> i32
+    %c800 = arith.constant 800 : i32
+    %isAsync = arith.cmpi sge, %arch, %c800 : i32
+    cf.cond_br %isAsync, ^async, ^plain
+  ^async:
+    %c0 = arith.constant 0 : i32
+    %c16 = arith.constant 16 : i32
+    %bytes = arith.select %isCopied, %c16, %c0 : i32
+    %source = llvm.addrspacecast %global : !llvm.ptr to !llvm.ptr<1>
+    llvm.call_intrinsic "llvm.nvvm.cp.async.cg.shared.global.16.s"(%shared, %source, %bytes) : (!llvm.ptr<3>, !llvm.ptr<1>, i32) -> ()
+    return
+  ^plain:
+    %zeros = arith.constant dense<0> : vector<4xi32>
+    %words = llvm.load %global invariant {alignment = 16 : i64} : !llvm.ptr -> vector<4xi32>
+    %filled = arith.select %isCopied, %words, %zeros : vector<4xi32>
+    llvm.store %filled, %shared {alignment = 16 : i64} : vector<4xi32>, !llvm.ptr<3>
+    return
+  }
   // 4 bytes like strict_device_copy (cp.async.ca, 16 byte copies bypass L1 but 4 byte ones can not)
   func.func private @strict_device_copy_word(%shared: !llvm.ptr<3>, %global: !llvm.ptr) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %arch = func.call @strict_device_arch() : () -> i32

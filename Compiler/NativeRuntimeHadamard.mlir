@@ -162,7 +162,7 @@
   // strict_device_quantize_tokens of `Convrot.Rotated` of 32 or 16 bit source numbers (bits) without writing the rotated
   // ones: a block of width / 8 threads per token (width a multiple of 256 up to 8192), a warp per group of 256 numbers
   // whose lane holds number lane + 32 j (j 0 to 7), so steps 1 and 4 go over lanes, 16 over lanes and j, 64 over j
-  llvm.func @strict_device_hadamard_tokens(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1024, 1, 1>} {
+  func.func private @strict_device_hadamard_tokens_run(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = arith.constant 0 : i32
     %c2 = arith.constant 2 : i32
     %c5 = arith.constant 5 : i32
@@ -345,5 +345,16 @@
     llvm.store %scale, %scaleSlot : f32, !llvm.ptr
     cf.br ^exit
   ^exit:
+    return
+  }
+  llvm.func @strict_device_hadamard_tokens(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1024, 1, 1>} {
+    %brainBits = arith.constant 17 : i64
+    %isBrain = arith.cmpi eq, %bits, %brainBits : i64
+    cf.cond_br %isBrain, ^brain, ^other
+  ^brain:
+    func.call @strict_device_hadamard_tokens_run(%source, %count, %width, %target, %brainBits) : (!llvm.ptr, i64, i64, !llvm.ptr, i64) -> ()
+    llvm.return
+  ^other:
+    func.call @strict_device_hadamard_tokens_run(%source, %count, %width, %target, %bits) : (!llvm.ptr, i64, i64, !llvm.ptr, i64) -> ()
     llvm.return
   }

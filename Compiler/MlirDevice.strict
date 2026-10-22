@@ -4,6 +4,7 @@ constant Doubling = MlirDevice(MlirParallel.Doubling.function, 2)
 constant Twice = MlirDevice(MlirFunction(Doubling.function.types, MlirParallel.Rows, MlirParallel.Twice), 0)
 constant Layering = MlirDevice(MlirGpu.Layering.function, 2)
 constant Summing = MlirDevice(MlirFunction(MlirGpu.Layering.function.types, GpuSamples.Layered, GpuSamples.Summed), 0)
+constant Exact = MlirDevice(MlirGuards.Shifted, 2)
 constant Gated = MlirDevice(MlirFunction(Doubling.function.types, MlirParallel.Rows, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "gate"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "gated")))), 0)
 constant Fixed = "%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64"
 constant DoublingHeader = "  llvm.func @Rows_Doubled_1_gpu2(" + Fixed + ", %results: i64) attributes {nvvm.kernel} {"
@@ -12,20 +13,22 @@ constant Launches = ("    %lanesWanted = arith.constant 32 : i64", "    %lanesSi
 Name Text
 	Doubling.Name is "Rows_Doubled_1_gpu2"
 	MlirDevice(MlirFunction(Doubling.function, Float = "f32"), 2).Name is "Rows_Doubled_1_gpu2s"
-	function.Symbol + "_gpu" + position + MlirTyped(function.Float).Suffix
+	Exact.Name.EndsWith("_gpu2sx")
+	let suffix = MlirTyped(function.Float).Suffix + (function.Guarded is position then "x" else "")
+	function.Symbol + "_gpu" + position + suffix
 Kernel Texts
 	Doubling.Kernel.First is DoublingHeader
 	Text.Combine(MlirDevice(MlirGroups.Norming.function, 2).Kernel).IndexOf("arith.minsi %group") > 0
 	Text.Combine(Doubling.Kernel).IndexOf("func.call @Rows_Twice_1_device(") > 0
 	Layering.Kernel.First.IndexOf("%f_biases_b: i64, %results: i64) attributes") > 0
 	Text.Combine(MlirDevice(MlirFunction(Doubling.function, Float = "f32"), 2).Kernel).IndexOf("i32 to f32") > 0
+	Text.Combine(Exact.Kernel).IndexOf("^generic") is -1
 	let call = MlirGroups(function, position).Call
 	if (function.Group < 0) and (call >= 0)
 		return MlirDevice(MlirFunction(function, Group = call), position).Kernel
 	let header = "  llvm.func @" + Name + "(" + Fixed + Freed + MlirPassed(function, position).Header
 	let body = Emitted(position + 1, function.method.LoopEndOf(position))
-	let guarded = MlirGuards(MlirFunction(function, Guarded = position), position).Copy
-	(List(Text) + header) + Slots + Given + Indexed + Started + guarded + body + Ending
+	(List(Text) + header) + Slots + Given + Indexed + Started + body + Ending
 Freed Text
 	Doubling.Freed is ""
 	Layering.Freed.StartsWith(", %f_input_d: !llvm.ptr, %f_input_n: i64")
@@ -51,7 +54,11 @@ Given Texts
 		let typed = MlirTyped(function.Float).Given(given, slot)
 		let number = typed + MlirPassed(function, position).Given(value, slot)
 		lines = IsList(value) then lines + Stores(given, slot) else lines + number
-	lines
+	lines + (function.Guarded is position then Assumed else List(Text))
+Assumed Texts
+	Exact.Assumed is ("    llvm.store %one, %v_offset_q : i64, !llvm.ptr")
+	for MlirGuards(function, position).Parameters
+		MlirTyped.Integer.Store("%one", "%v_" + value + "_q")
 Stores(source Text, target Text) Texts
 	Doubling.Stores("%a", "%b").First is "    llvm.store %a_d, %b_d : !llvm.ptr, !llvm.ptr"
 	for MlirTyped.Parts
