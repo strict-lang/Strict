@@ -9688,6 +9688,7 @@
     func.call @strict_gpu_quantized(%ptx, %quantizedView) : (!llvm.ptr, !llvm.ptr) -> ()
     cf.br ^quantize(%followingValue, %followingSlot : i64, i64)
   ^chooseKernel:
+    func.call @strict_gpu_rotated_slots(%slots, %slotIndex) : (!llvm.ptr, i64) -> ()
     // with a packed list the 32 bit kernel runs (its positions stay exact as integers, MlirExact), otherwise the double
     // kernel, which writes 32 or 8 bit floats that stay on the GPU like those of the 32 bit kernel when its inputs allow
     // that (the last parameter, 64 for doubles to the host)
@@ -10063,6 +10064,9 @@
     %isSet = arith.cmpi ne, %device, %none : i64
     cf.cond_br %isSet, ^push, ^done
   ^push:
+    %kept = func.call @strict_gpu_given(%device, %class) : (i64, i64) -> i1
+    cf.cond_br %kept, ^done, ^stacked
+  ^stacked:
     %stack = func.call @strict_gpu_stack(%class) : (i64) -> !llvm.ptr
     %countSlot = llvm.getelementptr %stack[1] : (!llvm.ptr) -> !llvm.ptr, i64
     %count = llvm.load %countSlot : !llvm.ptr -> i64
@@ -10385,6 +10389,7 @@
     %fetching = arith.andi %stillMissing, %hasDevice : i1
     cf.cond_br %fetching, ^fetch, ^present
   ^fetch:
+    func.call @strict_gpu_rotated(%device) : (i64) -> ()
     %usedSlot = llvm.getelementptr %holder[1] : (!llvm.ptr) -> !llvm.ptr, f64
     %used = llvm.load %usedSlot : !llvm.ptr -> f64
     %count = arith.fptosi %used : f64 to i64
@@ -10555,6 +10560,8 @@
     %taggedSlot = llvm.getelementptr %holder[4] : (!llvm.ptr) -> !llvm.ptr, i64
     %tagged = llvm.load %taggedSlot : !llvm.ptr -> i64
     %leftDevice = arith.andi %tagged, %addressMask : i64
+    func.call @strict_gpu_rotated(%leftDevice) : (i64) -> ()
+    func.call @strict_gpu_rotated(%rightDevice) : (i64) -> ()
     %class = arith.andi %tagged, %classMask : i64
     %capacity = arith.shli %smallest, %class : i64
     %newest = arith.cmpf oeq, %leftNumber, %used : f64
@@ -10950,6 +10957,7 @@
   func.func private @strict_gpu_quantized(%ptx: !llvm.ptr, %view: !llvm.ptr) {
     %none = arith.constant 0 : i64
     %two = arith.constant 2 : i64
+    %byEight = arith.constant 3 : i64
     %five = arith.constant 5 : i64
     %eight = arith.constant 8 : i64
     %thirtyOne = arith.constant 31 : i64
@@ -11025,6 +11033,44 @@
     %tokenRest = arith.remui %length, %safeWidth : i64
     %wholeTokens = arith.cmpi eq, %tokenRest, %none : i64
     %perToken = arith.andi %hasTokenWidth, %wholeTokens : i1
+    %rotation = func.call @strict_gpu_rotation(%device, %none) : (i64, i64) -> !llvm.ptr
+    %unrotated = llvm.mlir.zero : !llvm.ptr
+    %isRotated = llvm.icmp "ne" %rotation, %unrotated : !llvm.ptr
+    %groupRest = arith.andi %tokenWidth, %spare : i64
+    %wholeGroups = arith.cmpi eq, %groupRest, %none : i64
+    %widest = arith.constant 8192 : i64
+    %fitsBlock = arith.cmpi sle, %tokenWidth, %widest : i64
+    %rotatedTokens = arith.andi %perToken, %isRotated : i1
+    %groupedTokens = arith.andi %wholeGroups, %fitsBlock : i1
+    %fusing = arith.andi %rotatedTokens, %groupedTokens : i1
+    cf.cond_br %fusing, ^fuse, ^unfused
+  ^fuse:
+    %fusedName = llvm.mlir.addressof @strict_gpu_hadamard_tokens_name : !llvm.ptr
+    %fusedSlot = llvm.mlir.addressof @strict_gpu_hadamard_tokens_slot : !llvm.ptr
+    %fused = func.call @strict_gpu_function(%ptx, %fusedName, %fusedSlot) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %noFused = llvm.mlir.zero : !llvm.ptr
+    %fusedMissing = llvm.icmp "eq" %fused, %noFused : !llvm.ptr
+    cf.cond_br %fusedMissing, ^unfused, ^fuseLaunch
+  ^fuseLaunch:
+    %sourceSlot = llvm.getelementptr %rotation[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %source = llvm.load %sourceSlot : !llvm.ptr -> i64
+    %fuseCount = arith.constant 4 : i64
+    %fuseArguments = llvm.alloca %fuseCount x i64 : (i64) -> !llvm.ptr
+    %fuseParameters = llvm.alloca %fuseCount x !llvm.ptr : (i64) -> !llvm.ptr
+    func.call @strict_gpu_argument(%fuseArguments, %fuseParameters, %none, %source) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
+    %oneArgument = arith.constant 1 : i64
+    func.call @strict_gpu_argument(%fuseArguments, %fuseParameters, %oneArgument, %length) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
+    func.call @strict_gpu_argument(%fuseArguments, %fuseParameters, %two, %tokenWidth) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
+    %threeArguments = arith.constant 3 : i64
+    func.call @strict_gpu_argument(%fuseArguments, %fuseParameters, %threeArguments, %target) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
+    %fuseThreads = arith.shrui %tokenWidth, %byEight : i64
+    %fuseTotal = arith.shrui %length, %byEight : i64
+    %fuseFlushed = func.call @strict_gpu_flush() : () -> i1
+    %fuseLaunched = func.call @strict_gpu_launch(%fused, %fuseTotal, %fuseThreads, %fuseParameters) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i1
+    %fuseDone = arith.andi %fuseFlushed, %fuseLaunched : i1
+    cf.cond_br %fuseDone, ^swap, ^unfused
+  ^unfused:
+    func.call @strict_gpu_rotated(%device) : (i64) -> ()
     %blockName = llvm.mlir.addressof @strict_gpu_quantize_name : !llvm.ptr
     %blockSlot = llvm.mlir.addressof @strict_gpu_quantize_slot : !llvm.ptr
     %tokenName = llvm.mlir.addressof @strict_gpu_quantize_tokens_name : !llvm.ptr
@@ -11671,11 +11717,13 @@
   llvm.mlir.global internal constant @strict_gpu_hadamard_name("strict_device_hadamard\00strict_device_hadamards\00") : !llvm.array<47 x i8>
   llvm.mlir.global internal @strict_gpu_hadamard_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   // `Convrot.Rotated` (the 4 radix-4 butterflies of every group of 256 values) as one kernel, a block per group, 0.0
-  // when the length is no multiple of 256 or the GPU can not
+  // when the length is no multiple of 256 or the GPU can not; of 32 bit numbers on the GPU it waits (strict_gpu_rotations)
   func.func private @strict_gpu_hadamard(%ptx: !llvm.ptr, %values: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
+    %four = arith.constant 4 : i64
+    %thirtyTwo = arith.constant 32 : i64
     %group = arith.constant 255 : i64
     %length = func.call @strict_list_length(%values) : (f64) -> f64
     %count = arith.fptosi %length : f64 to i64
@@ -11683,17 +11731,244 @@
     %whole = arith.cmpi eq, %rest, %none : i64
     %some = arith.cmpi sgt, %count, %none : i64
     %fits = arith.andi %whole, %some : i1
-    cf.cond_br %fits, ^run, ^unable
+    %name = llvm.mlir.addressof @strict_gpu_hadamard_name : !llvm.ptr
+    %slot = llvm.mlir.addressof @strict_gpu_hadamard_slot : !llvm.ptr
+    cf.cond_br %fits, ^resident, ^unable
+  ^resident:
+    %device = func.call @strict_gpu_device(%values) : (f64) -> i64
+    %resides = arith.cmpi ne, %device, %none : i64
+    cf.cond_br %resides, ^format, ^run
+  ^format:
+    %format = func.call @strict_gpu_format(%values) : (f64) -> i64
+    %isFloats = arith.cmpi eq, %format, %thirtyTwo : i64
+    cf.cond_br %isFloats, ^function, ^run
+  ^function:
+    %nameLength = llvm.call @strlen(%name) : (!llvm.ptr) -> i64
+    %skipped = arith.addi %nameLength, %one : i64
+    %singleName = llvm.getelementptr %name[%skipped] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %singleSlot = llvm.getelementptr %slot[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %function = func.call @strict_gpu_function(%ptx, %singleName, %singleSlot) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %missing = llvm.icmp "eq" %function, %unset : !llvm.ptr
+    cf.cond_br %missing, ^run, ^obtain
+  ^obtain:
+    func.call @strict_gpu_rotated(%device) : (i64) -> ()
+    %bytes = arith.muli %count, %four : i64
+    %class = func.call @strict_gpu_class(%bytes) : (i64) -> i64
+    %block = func.call @strict_gpu_obtain(%class) : (i64) -> i64
+    %obtained = arith.cmpi ne, %block, %none : i64
+    cf.cond_br %obtained, ^wait, ^run
+  ^wait:
+    %list = func.call @strict_gpu_resident(%count, %block, %class, %thirtyTwo) : (i64, i64, i64, i64) -> f64
+    %rotations = llvm.mlir.addressof @strict_gpu_rotations : !llvm.ptr
+    %nextSlot = llvm.getelementptr %rotations[0, 48] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<49 x i64>
+    %next = llvm.load %nextSlot : !llvm.ptr -> i64
+    %following = arith.addi %next, %one : i64
+    llvm.store %following, %nextSlot : i64, !llvm.ptr
+    %entriesMask = arith.constant 7 : i64
+    %index = arith.andi %next, %entriesMask : i64
+    %six = arith.constant 6 : i64
+    %offset = arith.muli %index, %six : i64
+    %rotation = llvm.getelementptr %rotations[0, %offset] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<49 x i64>
+    func.call @strict_gpu_rotate(%rotation) : (!llvm.ptr) -> ()
+    llvm.store %block, %rotation : i64, !llvm.ptr
+    %sourceSlot = llvm.getelementptr %rotation[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %device, %sourceSlot : i64, !llvm.ptr
+    %countSlot = llvm.getelementptr %rotation[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %count, %countSlot : i64, !llvm.ptr
+    %listSlot = llvm.getelementptr %rotation[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %list, %listSlot : f64, !llvm.ptr
+    %functionSlot = llvm.getelementptr %rotation[4] : (!llvm.ptr) -> !llvm.ptr, !llvm.ptr
+    llvm.store %function, %functionSlot : !llvm.ptr, !llvm.ptr
+    %keptSlot = llvm.getelementptr %rotation[5] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %none, %keptSlot : i64, !llvm.ptr
+    return %list : f64
   ^run:
     %slots = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %values, %slots : f64, !llvm.ptr
-    %name = llvm.mlir.addressof @strict_gpu_hadamard_name : !llvm.ptr
-    %slot = llvm.mlir.addressof @strict_gpu_hadamard_slot : !llvm.ptr
     %integers = arith.constant -1 : i64
     %result = func.call @strict_gpu_run(%ptx, %name, %slot, %count, %zero, %none, %slots, %one, %one, %none, %none, %one, %none, %integers) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> f64
     return %result : f64
   ^unable:
     return %zero : f64
+  }
+  // the rotations strict_gpu_hadamard did not launch yet: 8 entries of result and source device address (0 for a free
+  // entry), count, list, kernel and class + 1 of the source block once it is given back (kept until the rotation ran or
+  // was dropped), then the next entry. A rotation runs before a launch or download reads its list and is dropped when
+  // its block is given back, a quantization of its list with one scale per token rotates the source itself
+  // (strict_device_hadamard_tokens)
+  llvm.mlir.global internal @strict_gpu_rotations(dense<0> : tensor<49xi64>) : !llvm.array<49 x i64>
+  llvm.mlir.global internal constant @strict_gpu_hadamard_tokens_name("strict_device_hadamard_tokens\00") : !llvm.array<30 x i8>
+  llvm.mlir.global internal @strict_gpu_hadamard_tokens_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  // the entry of a waiting rotation whose result (field 0) or source (field 1) is device, null when there is none
+  func.func private @strict_gpu_rotation(%device: i64, %field: i64) -> !llvm.ptr {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %six = arith.constant 6 : i64
+    %entries = arith.constant 8 : i64
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %rotations = llvm.mlir.addressof @strict_gpu_rotations : !llvm.ptr
+    %isSet = arith.cmpi ne, %device, %none : i64
+    cf.cond_br %isSet, ^next(%none : i64), ^missing
+  ^next(%index: i64):
+    %more = arith.cmpi slt, %index, %entries : i64
+    cf.cond_br %more, ^check, ^missing
+  ^check:
+    %offset = arith.muli %index, %six : i64
+    %entry = llvm.getelementptr %rotations[0, %offset] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<49 x i64>
+    %result = llvm.load %entry : !llvm.ptr -> i64
+    %wordSlot = llvm.getelementptr %entry[%field] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %word = llvm.load %wordSlot : !llvm.ptr -> i64
+    %waiting = arith.cmpi ne, %result, %none : i64
+    %isDevice = arith.cmpi eq, %word, %device : i64
+    %found = arith.andi %waiting, %isDevice : i1
+    %following = arith.addi %index, %one : i64
+    cf.cond_br %found, ^found, ^next(%following : i64)
+  ^found:
+    return %entry : !llvm.ptr
+  ^missing:
+    return %unset : !llvm.ptr
+  }
+  func.func private @strict_gpu_rotate(%entry: !llvm.ptr) {
+    %none = arith.constant 0 : i64
+    %result = llvm.load %entry : !llvm.ptr -> i64
+    %waiting = arith.cmpi ne, %result, %none : i64
+    cf.cond_br %waiting, ^launch, ^done
+  ^launch:
+    llvm.store %none, %entry : i64, !llvm.ptr
+    %sourceSlot = llvm.getelementptr %entry[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %source = llvm.load %sourceSlot : !llvm.ptr -> i64
+    %countSlot = llvm.getelementptr %entry[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %count = llvm.load %countSlot : !llvm.ptr -> i64
+    %listSlot = llvm.getelementptr %entry[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %list = llvm.load %listSlot : !llvm.ptr -> f64
+    %functionSlot = llvm.getelementptr %entry[4] : (!llvm.ptr) -> !llvm.ptr, !llvm.ptr
+    %function = llvm.load %functionSlot : !llvm.ptr -> !llvm.ptr
+    %keptSlot = llvm.getelementptr %entry[5] : (!llvm.ptr) -> !llvm.ptr, i64
+    %kept = llvm.load %keptSlot : !llvm.ptr -> i64
+    llvm.store %none, %keptSlot : i64, !llvm.ptr
+    %parameterCount = arith.constant 9 : i64
+    %arguments = llvm.alloca %parameterCount x i64 : (i64) -> !llvm.ptr
+    %parameters = llvm.alloca %parameterCount x !llvm.ptr : (i64) -> !llvm.ptr
+    %failure = func.call @strict_gpu_failure_word() : () -> i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %three = arith.constant 3 : i64
+    %four = arith.constant 4 : i64
+    %five = arith.constant 5 : i64
+    %six = arith.constant 6 : i64
+    %seven = arith.constant 7 : i64
+    %eight = arith.constant 8 : i64
+    %doubleBits = arith.constant 64 : i64
+    %floatBits = arith.constant 32 : i64
+    func.call @strict_gpu_argument(%arguments, %parameters, %none, %count) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
+    func.call @strict_gpu_argument(%arguments, %parameters, %one, %result) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
+    func.call @strict_gpu_argument(%arguments, %parameters, %two, %failure) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
+    func.call @strict_gpu_argument(%arguments, %parameters, %three, %none) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
+    func.call @strict_gpu_argument(%arguments, %parameters, %four, %none) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
+    func.call @strict_gpu_argument(%arguments, %parameters, %five, %doubleBits) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
+    func.call @strict_gpu_argument(%arguments, %parameters, %six, %source) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
+    func.call @strict_gpu_argument(%arguments, %parameters, %seven, %count) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
+    func.call @strict_gpu_argument(%arguments, %parameters, %eight, %floatBits) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
+    %threads = arith.constant 256 : i64
+    %flushed = func.call @strict_gpu_flush() : () -> i1
+    %launched = func.call @strict_gpu_launch(%function, %count, %threads, %parameters) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i1
+    %started = arith.andi %flushed, %launched : i1
+    cf.cond_br %started, ^marked, ^failed
+  ^marked:
+    %segment = func.call @strict_gpu_segment() : () -> i64
+    func.call @strict_gpu_mark(%list, %count, %segment) : (f64, i64, i64) -> ()
+    func.call @strict_gpu_kept(%source, %kept) : (i64, i64) -> ()
+    cf.br ^done
+  ^failed:
+    %broken = llvm.mlir.addressof @strict_gpu_broken_text : !llvm.ptr
+    %printed = llvm.call @printf(%broken) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr) -> i32
+    %code = arith.constant 1 : i32
+    llvm.call @exit(%code) : (i32) -> ()
+    cf.br ^done
+  ^done:
+    return
+  }
+  // a source block kept for a rotation (kept is its class + 1) goes back once the rotation ran or was dropped
+  func.func private @strict_gpu_kept(%source: i64, %kept: i64) {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %isKept = arith.cmpi ne, %kept, %none : i64
+    cf.cond_br %isKept, ^give, ^done
+  ^give:
+    %class = arith.subi %kept, %one : i64
+    func.call @strict_gpu_give(%source, %class) : (i64, i64) -> ()
+    cf.br ^done
+  ^done:
+    return
+  }
+  // value is kernel parameter index (its slot in arguments)
+  func.func private @strict_gpu_argument(%arguments: !llvm.ptr, %parameters: !llvm.ptr, %index: i64, %value: i64) {
+    %argument = llvm.getelementptr %arguments[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    llvm.store %value, %argument : i64, !llvm.ptr
+    %parameter = llvm.getelementptr %parameters[%index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.ptr
+    llvm.store %argument, %parameter : !llvm.ptr, !llvm.ptr
+    return
+  }
+  // a read of the list of a waiting rotation (at device) on the GPU or the CPU lets it run first
+  func.func private @strict_gpu_rotated(%device: i64) {
+    %none = arith.constant 0 : i64
+    %entry = func.call @strict_gpu_rotation(%device, %none) : (i64, i64) -> !llvm.ptr
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %found = llvm.icmp "ne" %entry, %unset : !llvm.ptr
+    cf.cond_br %found, ^rotate, ^done
+  ^rotate:
+    func.call @strict_gpu_rotate(%entry) : (!llvm.ptr) -> ()
+    cf.br ^done
+  ^done:
+    return
+  }
+  // the list views (and numbers, which never are a device address) of a launch from slot 3 to end
+  func.func private @strict_gpu_rotated_slots(%slots: !llvm.ptr, %end: i64) {
+    %one = arith.constant 1 : i64
+    %first = arith.constant 3 : i64
+    cf.br ^next(%first : i64)
+  ^next(%index: i64):
+    %more = arith.cmpi slt, %index, %end : i64
+    cf.cond_br %more, ^check, ^done
+  ^check:
+    %slot = llvm.getelementptr %slots[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %word = llvm.load %slot : !llvm.ptr -> i64
+    func.call @strict_gpu_rotated(%word) : (i64) -> ()
+    %following = arith.addi %index, %one : i64
+    cf.br ^next(%following : i64)
+  ^done:
+    return
+  }
+  // a block given back: a waiting rotation into it is dropped, the source block of one is kept (true) until it ran
+  func.func private @strict_gpu_given(%device: i64, %class: i64) -> i1 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %entry = func.call @strict_gpu_rotation(%device, %none) : (i64, i64) -> !llvm.ptr
+    %isResult = llvm.icmp "ne" %entry, %unset : !llvm.ptr
+    cf.cond_br %isResult, ^dropped, ^source
+  ^dropped:
+    llvm.store %none, %entry : i64, !llvm.ptr
+    %sourceSlot = llvm.getelementptr %entry[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %source = llvm.load %sourceSlot : !llvm.ptr -> i64
+    %keptSlot = llvm.getelementptr %entry[5] : (!llvm.ptr) -> !llvm.ptr, i64
+    %kept = llvm.load %keptSlot : !llvm.ptr -> i64
+    llvm.store %none, %keptSlot : i64, !llvm.ptr
+    func.call @strict_gpu_kept(%source, %kept) : (i64, i64) -> ()
+    %false = arith.constant false
+    return %false : i1
+  ^source:
+    %sourceEntry = func.call @strict_gpu_rotation(%device, %one) : (i64, i64) -> !llvm.ptr
+    %isSource = llvm.icmp "ne" %sourceEntry, %unset : !llvm.ptr
+    cf.cond_br %isSource, ^keep, ^done
+  ^keep:
+    %classPlusOne = arith.addi %class, %one : i64
+    %sourceKeptSlot = llvm.getelementptr %sourceEntry[5] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %classPlusOne, %sourceKeptSlot : i64, !llvm.ptr
+    return %isSource : i1
+  ^done:
+    return %isSource : i1
   }
   llvm.mlir.global internal constant @strict_gpu_convolution_name("strict_device_convolution\00strict_device_convolutions\00") : !llvm.array<53 x i8>
   llvm.mlir.global internal @strict_gpu_convolution_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
