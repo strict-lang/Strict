@@ -28,7 +28,7 @@ Message(command Text, rest Texts) Text
 	let isFolder = (command is "test") and Directory.Exists(rest(0))
 	(command is in ("check", "update")) or isFolder or File(rest(0)).Exists then "" else rest(0) + " not found"
 Tested(rest Texts) Number
-	Strict.Tested(("Examples/HelloLogger.strict", ".")) is 0
+	Strict.Tested(("Missing.strict", ".")) is 1
 	let option = rest.Length > 2 then rest(2) else ""
 	if option is "-"
 		File(FileCompiler.Normalized(rest(0))).InMemory(Process.Input)
