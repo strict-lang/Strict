@@ -8688,6 +8688,7 @@
     %ptxBits = llvm.ptrtoint %ptx : !llvm.ptr to i64
     %ptxSlot = llvm.mlir.addressof @strict_gpu_warm_ptx : !llvm.ptr
     llvm.store %ptxBits, %ptxSlot : i64, !llvm.ptr
+    %executable = func.call @strict_gpu_executable() : () -> !llvm.ptr
     %spawned = func.call @strict_gpu_spawn() : () -> i1
     cf.cond_br %spawned, ^done, ^unspawned
   ^unspawned:
@@ -9078,13 +9079,36 @@
     llvm.store %bufferBits, %codeSlot : i64, !llvm.ptr
     return %buffer : !llvm.ptr
   }
+  // the path of the executable copied out of the collected heap once: the warm thread must not allocate there, the
+  // allocator only locks while parallel loops run
+  llvm.mlir.global internal @strict_gpu_executable_path(0 : i64) : i64
+  func.func private @strict_gpu_executable() -> !llvm.ptr {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %slot = llvm.mlir.addressof @strict_gpu_executable_path : !llvm.ptr
+    %known = llvm.load %slot : !llvm.ptr -> i64
+    %isKnown = arith.cmpi ne, %known, %zero : i64
+    cf.cond_br %isKnown, ^done(%known : i64), ^copy
+  ^copy:
+    %none = arith.constant 0.0 : f64
+    %executableBits = func.call @strict_process_current(%none) : (f64) -> f64
+    %executable = func.call @strict_ptr(%executableBits) : (f64) -> !llvm.ptr
+    %length = llvm.call @strlen(%executable) : (!llvm.ptr) -> i64
+    %size = arith.addi %length, %one : i64
+    %copy = llvm.call @malloc(%size) : (i64) -> !llvm.ptr
+    %copied = llvm.call @memcpy(%copy, %executable, %size) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %copyBits = llvm.ptrtoint %copy : !llvm.ptr to i64
+    llvm.store %copyBits, %slot : i64, !llvm.ptr
+    cf.br ^done(%copyBits : i64)
+  ^done(%bits: i64):
+    %path = llvm.inttoptr %bits : i64 to !llvm.ptr
+    return %path : !llvm.ptr
+  }
   // the whole file stem + ending in the folder of the executable as text, an empty text when it cannot be read
   func.func private @strict_gpu_beside(%stem: !llvm.ptr, %ending: !llvm.ptr) -> !llvm.ptr {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
-    %none = arith.constant 0.0 : f64
-    %executableBits = func.call @strict_process_current(%none) : (f64) -> f64
-    %executable = func.call @strict_ptr(%executableBits) : (f64) -> !llvm.ptr
+    %executable = func.call @strict_gpu_executable() : () -> !llvm.ptr
     %length = llvm.call @strlen(%executable) : (!llvm.ptr) -> i64
     cf.br ^find(%length : i64)
   ^find(%at: i64):
