@@ -2,7 +2,7 @@
   // of an ldmatrix lie in different banks)
   llvm.mlir.global internal @strict_device_attention_keys() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<8704 x f16>
   llvm.mlir.global internal @strict_device_attention_values() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<13056 x f16>
-  // 4 numbers from at of a list of doubles, 32 or 16 bit floats or 8 bit floats (bits 7) as 32 bit floats
+  // 4 numbers from at of a list of doubles, 32 or 16 bit floats, bfloat16 or 8 bit floats (bits 7) as 32 bit floats
   func.func private @strict_device_attention_read(%data: !llvm.ptr, %bits: i64, %at: i64) -> vector<4xf32> attributes {passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
@@ -12,6 +12,7 @@
       default: ^doubles,
       32: ^singles,
       16: ^halves,
+      17: ^brains,
       7: ^bytes
     ]
   ^doubles:
@@ -28,6 +29,11 @@
     %halves = llvm.load %halfSlot invariant {alignment = 8 : i64} : !llvm.ptr -> vector<4xf16>
     %widened = arith.extf %halves : vector<4xf16> to vector<4xf32>
     return %widened : vector<4xf32>
+  ^brains:
+    %brainSlot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, bf16
+    %brains = llvm.load %brainSlot invariant {alignment = 8 : i64} : !llvm.ptr -> vector<4xbf16>
+    %fromBrains = arith.extf %brains : vector<4xbf16> to vector<4xf32>
+    return %fromBrains : vector<4xf32>
   ^bytes:
     %byteSlot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %bytes = llvm.load %byteSlot invariant {alignment = 4 : i64} : !llvm.ptr -> vector<4xi8>
@@ -66,6 +72,7 @@
       default: ^doubles,
       32: ^singles,
       16: ^halves,
+      17: ^brains,
       7: ^bytes
     ]
   ^doubles:
@@ -80,6 +87,10 @@
     %halfBits = arith.constant 16 : i64
     %halves = func.call @strict_device_attention_fetched(%data, %halfBits, %first, %positions, %stride, %base, %size, %thread) : (!llvm.ptr, i64, i32, i32, i32, i32, i32, i32) -> vector<16xf32>
     return %halves : vector<16xf32>
+  ^brains:
+    %brainBits = arith.constant 17 : i64
+    %brains = func.call @strict_device_attention_fetched(%data, %brainBits, %first, %positions, %stride, %base, %size, %thread) : (!llvm.ptr, i64, i32, i32, i32, i32, i32, i32) -> vector<16xf32>
+    return %brains : vector<16xf32>
   ^bytes:
     %byteBits = arith.constant 7 : i64
     %bytes = func.call @strict_device_attention_fetched(%data, %byteBits, %first, %positions, %stride, %base, %size, %thread) : (!llvm.ptr, i64, i32, i32, i32, i32, i32, i32) -> vector<16xf32>
@@ -613,11 +624,18 @@
   // strict_device_attention_query with the bits known in each branch, so its loads are not separated by branches
   func.func private @strict_device_attention_queries(%queries: !llvm.ptr, %bits: i64, %first: i64, %second: i64, %size: i32, %quad: i32, %scale: f32) -> vector<32xi32> attributes {passthrough = ["alwaysinline"]} {
     %singles = arith.constant 32 : i64
-    %isSingle = arith.cmpi eq, %bits, %singles : i64
-    cf.cond_br %isSingle, ^single, ^double
+    %brainBits = arith.constant 17 : i64
+    cf.switch %bits : i64, [
+      default: ^double,
+      32: ^single,
+      17: ^brain
+    ]
   ^single:
     %singlePairs = func.call @strict_device_attention_query(%queries, %singles, %first, %second, %size, %quad, %scale) : (!llvm.ptr, i64, i64, i64, i32, i32, f32) -> vector<32xi32>
     return %singlePairs : vector<32xi32>
+  ^brain:
+    %brainPairs = func.call @strict_device_attention_query(%queries, %brainBits, %first, %second, %size, %quad, %scale) : (!llvm.ptr, i64, i64, i64, i32, i32, f32) -> vector<32xi32>
+    return %brainPairs : vector<32xi32>
   ^double:
     %doubles = arith.constant 64 : i64
     %doublePairs = func.call @strict_device_attention_query(%queries, %doubles, %first, %second, %size, %quad, %scale) : (!llvm.ptr, i64, i64, i64, i32, i32, f32) -> vector<32xi32>
@@ -661,16 +679,26 @@
   }
   // two numbers from at times scale as a 16 bit pair
   func.func private @strict_device_attention_two(%data: !llvm.ptr, %bits: i64, %at: i64, %scale: f32) -> i32 attributes {passthrough = ["alwaysinline"]} {
-    %one = arith.constant 1 : i64
-    %thirtyTwo = arith.constant 32 : i64
-    %isSingle = arith.cmpi eq, %bits, %thirtyTwo : i64
-    cf.cond_br %isSingle, ^single, ^double
+    cf.switch %bits : i64, [
+      default: ^double,
+      32: ^single,
+      17: ^brain
+    ]
   ^single:
     %singleSlot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f32
     %singleFirst = llvm.load %singleSlot invariant : !llvm.ptr -> f32
     %singleNext = llvm.getelementptr %singleSlot[1] : (!llvm.ptr) -> !llvm.ptr, f32
     %singleSecond = llvm.load %singleNext invariant : !llvm.ptr -> f32
     cf.br ^scaled(%singleFirst, %singleSecond : f32, f32)
+  ^brain:
+    %brainSlot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, bf16
+    %brains = llvm.load %brainSlot invariant : !llvm.ptr -> vector<2xbf16>
+    %brainSingles = arith.extf %brains : vector<2xbf16> to vector<2xf32>
+    %c0 = llvm.mlir.constant(0 : i32) : i32
+    %c1 = llvm.mlir.constant(1 : i32) : i32
+    %brainFirst = llvm.extractelement %brainSingles[%c0 : i32] : vector<2xf32>
+    %brainSecond = llvm.extractelement %brainSingles[%c1 : i32] : vector<2xf32>
+    cf.br ^scaled(%brainFirst, %brainSecond : f32, f32)
   ^double:
     %doubleSlot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     %doubleFirst = llvm.load %doubleSlot invariant : !llvm.ptr -> f64
@@ -737,14 +765,22 @@
   ^prompt:
     %c128 = llvm.mlir.constant(128 : i32) : i32
     %singleBits = arith.constant 32 : i64
+    %brainBits = arith.constant 17 : i64
     %isWhole = arith.cmpi eq, %size, %c128 : i32
-    %singleKeys = arith.cmpi eq, %keyBits, %singleBits : i64
-    %singleValues = arith.cmpi eq, %valueBits, %singleBits : i64
-    %singleBoth = arith.andi %singleKeys, %singleValues : i1
-    %known = arith.andi %isWhole, %singleBoth : i1
-    cf.cond_br %known, ^knownPrompt, ^anyPrompt
+    %sameBits = arith.cmpi eq, %keyBits, %valueBits : i64
+    %known = arith.andi %isWhole, %sameBits : i1
+    cf.cond_br %known, ^knownBits, ^anyPrompt
+  ^knownBits:
+    cf.switch %keyBits : i64, [
+      default: ^anyPrompt,
+      32: ^knownPrompt,
+      17: ^brainPrompt
+    ]
   ^knownPrompt:
     func.call @strict_device_attention_prompt(%result, %queries, %queryBits, %keys, %singleBits, %values, %singleBits, %heads, %groups, %c128, %sequences, %tokens, %positions, %causal, %wide) : (!llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, !llvm.ptr, i64, i32, i32, i32, i32, i32, i32, i1, i1) -> ()
+    return
+  ^brainPrompt:
+    func.call @strict_device_attention_prompt(%result, %queries, %queryBits, %keys, %brainBits, %values, %brainBits, %heads, %groups, %c128, %sequences, %tokens, %positions, %causal, %wide) : (!llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, !llvm.ptr, i64, i32, i32, i32, i32, i32, i32, i1, i1) -> ()
     return
   ^anyPrompt:
     func.call @strict_device_attention_prompt(%result, %queries, %queryBits, %keys, %keyBits, %values, %valueBits, %heads, %groups, %size, %sequences, %tokens, %positions, %causal, %wide) : (!llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, !llvm.ptr, i64, i32, i32, i32, i32, i32, i32, i1, i1) -> ()
@@ -946,12 +982,13 @@
   ^done:
     return
   }
-  // one number at at of a list of doubles, 32 or 16 bit floats or 8 bit floats (bits 7) as a 32 bit float
+  // one number at at of a list of doubles, 32 or 16 bit floats, bfloat16 or 8 bit floats (bits 7) as a 32 bit float
   func.func private @strict_device_attention_number(%data: !llvm.ptr, %bits: i64, %at: i64) -> f32 attributes {passthrough = ["alwaysinline"]} {
     cf.switch %bits : i64, [
       default: ^double,
       32: ^single,
       16: ^half,
+      17: ^brain,
       7: ^byte
     ]
   ^double:
@@ -968,6 +1005,11 @@
     %half = llvm.load %halfSlot invariant : !llvm.ptr -> f16
     %widened = arith.extf %half : f16 to f32
     return %widened : f32
+  ^brain:
+    %brainSlot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, bf16
+    %brain = llvm.load %brainSlot invariant : !llvm.ptr -> bf16
+    %fromBrain = arith.extf %brain : bf16 to f32
+    return %fromBrain : f32
   ^byte:
     %byteSlot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %byte = llvm.load %byteSlot invariant : !llvm.ptr -> i8
@@ -983,6 +1025,7 @@
       default: ^double,
       32: ^single,
       16: ^half,
+      17: ^brain,
       7: ^byte
     ]
   ^double:
@@ -999,6 +1042,12 @@
     %halfSlot = llvm.getelementptr %data[%at64] : (!llvm.ptr, i64) -> !llvm.ptr, f16
     %halves = llvm.load %halfSlot invariant {alignment = 4 : i64} : !llvm.ptr -> vector<2xf16>
     return %halves : vector<2xf16>
+  ^brain:
+    %brainSlot = llvm.getelementptr %data[%at64] : (!llvm.ptr, i64) -> !llvm.ptr, bf16
+    %brains = llvm.load %brainSlot invariant {alignment = 4 : i64} : !llvm.ptr -> vector<2xbf16>
+    %brainSingles = arith.extf %brains : vector<2xbf16> to vector<2xf32>
+    %fromBrains = arith.truncf %brainSingles : vector<2xf32> to vector<2xf16>
+    return %fromBrains : vector<2xf16>
   ^byte:
     %byteSlot = llvm.getelementptr %data[%at64] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %bytes = llvm.load %byteSlot invariant {alignment = 2 : i64} : !llvm.ptr -> vector<2xi8>

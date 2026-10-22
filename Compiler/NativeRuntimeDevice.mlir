@@ -1735,20 +1735,20 @@
     %reduced = func.call @strict_device_lanes_sums(%total, %lane, %lanes) : (f32, i64, i64) -> f32
     return %reduced : f32
   }
-  // 32 bit numbers to 8 bit numbers with a scale per 32 (a warp shares the largest magnitude), the numbers that dot
-  // products with packed rows read through dp4a
-  llvm.func @strict_device_quantize(%source: !llvm.ptr, %count: i64, %target: !llvm.ptr) attributes {nvvm.kernel} {
+  // 32 or 16 bit numbers (bits as in strict_device_floats) to 8 bit numbers with a scale per 32 (a warp shares the
+  // largest magnitude), the numbers that dot products with packed rows read through dp4a; width is not used, the
+  // parameters are those of strict_device_quantize_tokens
+  llvm.func @strict_device_quantize(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64) attributes {nvvm.kernel} {
     %thread = func.call @strict_device_thread_index() : () -> i32
     %block = func.call @strict_device_block_index() : () -> i32
-    %width = func.call @strict_device_block_size() : () -> i32
-    %start = arith.muli %block, %width : i32
+    %blockSize = func.call @strict_device_block_size() : () -> i32
+    %start = arith.muli %block, %blockSize : i32
     %sum = arith.addi %start, %thread : i32
     %at = arith.extui %sum : i32 to i64
     %inside = arith.cmpi slt, %at, %count : i64
     cf.cond_br %inside, ^body, ^exit
   ^body:
-    %slot = llvm.getelementptr %source[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    %value = llvm.load %slot : !llvm.ptr -> f32
+    %value = func.call @strict_device_floats(%source, %bits, %at) : (!llvm.ptr, i64, i64) -> f32
     %magnitude = llvm.call_intrinsic "llvm.fabs.f32"(%value) : (f32) -> f32
     %largest = func.call @strict_device_largest(%magnitude) : (f32) -> f32
     %most = arith.constant 127.0 : f32
@@ -1777,10 +1777,10 @@
   ^exit:
     llvm.return
   }
-  // 32 bit numbers to 8 bit numbers with one scale per token of width numbers (a block of 256 threads per token, its
+  // 32 or 16 bit numbers to 8 bit numbers with one scale per token of width numbers (a block of 256 threads per token, its
   // scales per 32 all are the scale of the token, like the activations of ComfyUI's int8 layers) for strict_device_eights
   llvm.mlir.global internal @strict_device_quantize_largest() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<8 x f32>
-  llvm.func @strict_device_quantize_tokens(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>} {
+  llvm.func @strict_device_quantize_tokens(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>} {
     %c0 = arith.constant 0 : i32
     %c1 = arith.constant 1 : i32
     %c5 = arith.constant 5 : i32
@@ -1795,14 +1795,13 @@
     %thread64 = arith.extui %thread : i32 to i64
     %token = arith.extui %block : i32 to i64
     %start = arith.muli %token, %width : i64
-    %source32 = llvm.getelementptr %source[%start] : (!llvm.ptr, i64) -> !llvm.ptr, f32
     cf.br ^find(%thread64, %zero : i64, f32)
   ^find(%at: i64, %largest: f32):
     %moreFound = arith.cmpi slt, %at, %width : i64
     cf.cond_br %moreFound, ^findBody, ^reduce
   ^findBody:
-    %slot = llvm.getelementptr %source32[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    %value = llvm.load %slot : !llvm.ptr -> f32
+    %valueAt = arith.addi %start, %at : i64
+    %value = func.call @strict_device_floats(%source, %bits, %valueAt) : (!llvm.ptr, i64, i64) -> f32
     %magnitude = llvm.call_intrinsic "llvm.fabs.f32"(%value) : (f32) -> f32
     %larger = arith.maxnumf %largest, %magnitude : f32
     %atNext = arith.addi %at, %threads : i64
@@ -1843,8 +1842,8 @@
     %moreWritten = arith.cmpi slt, %writeAt, %width : i64
     cf.cond_br %moreWritten, ^writeBody, ^scales
   ^writeBody:
-    %writeSlot = llvm.getelementptr %source32[%writeAt] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    %written = llvm.load %writeSlot : !llvm.ptr -> f32
+    %writtenAt = arith.addi %start, %writeAt : i64
+    %written = func.call @strict_device_floats(%source, %bits, %writtenAt) : (!llvm.ptr, i64, i64) -> f32
     %multiplied = arith.mulf %written, %factor : f32
     %rounded = func.call @strict_device_rounded(%multiplied) : (f32) -> i32
     %byte = arith.trunci %rounded : i32 to i8
