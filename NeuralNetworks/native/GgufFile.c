@@ -604,7 +604,7 @@ const char* ggml_type_name(enum ggml_type type) { GGML_ABORT("ggml_type_name is 
 typedef void (*Dot)(int, float*, size_t, const void*, size_t, const void*, size_t, int);
 typedef struct { Dot dot; void (*quantize)(const float*, void*, int64_t); uint64_t numbers; uint64_t bytes; } Product;
 
-/* ggml's dot product of a row of type with an input quantized to the type ggml pairs with it, no dot if there is none. */
+/* ggml's dot product of a row of type with an input quantized to the type ggml pairs with it, no dot without one. */
 static Product Multiplied(uint32_t type)
 {
 	Product none = { 0, 0, 1, 0 };
@@ -643,6 +643,8 @@ static const Tensor* Stacked(double path, double prefix, const char* name, const
 	return *failure ? 0 : tensor;
 }
 
+static int IsIndex(double number, uint64_t count) { return number >= 0 && number < count && number == floor(number); }
+
 static const char* Mismatched(const Tensor* gate, const Tensor* up, const Tensor* down, const strict_numbers* chosen,
 	const strict_numbers* input)
 {
@@ -655,7 +657,7 @@ static const char* Mismatched(const Tensor* gate, const Tensor* up, const Tensor
 	if ((uint64_t)input->count != hidden)
 		return "ExpertsInputLengthDiffers";
 	for (uint64_t index = 0; index < (uint64_t)chosen->count; index++)
-		if (chosen->items[index] < 0 || chosen->items[index] >= count || chosen->items[index] != floor(chosen->items[index]))
+		if (!IsIndex(chosen->items[index], count))
 			return "ExpertNumberOutOfRange";
 	return 0;
 }
@@ -775,7 +777,14 @@ static void Parallel(void (*work)(void*, uint64_t), void* context, uint64_t coun
 }
 
 enum { RowChunk = 16 };
-typedef struct { const unsigned char* rows; uint64_t rowBytes, width, height; Dot dot; const void* input; float* output; } Task;
+typedef struct
+{
+	const unsigned char* rows;
+	uint64_t rowBytes, width, height;
+	Dot dot;
+	const void* input;
+	float* output;
+} Task;
 typedef struct { const Task* tasks; uint64_t chunks; } Job;
 
 /* The rows of the matrix of expert in stacked times the quantized input into output. */
@@ -851,7 +860,10 @@ STRICT_EXPORT double GgufFile_ExpertOutputs(double self, double path, double pre
 	unsigned char* activated = Activated(down, gated, upped, count);
 	uint64_t activatedBytes = width / Multiplied(down->type).numbers * Multiplied(down->type).bytes;
 	for (uint64_t index = 0; index < count; index++)
-		tasks[index] = Rows(down, (uint64_t)experts->items[index], activated + index * activatedBytes, downs + index * hidden);
+	{
+		const void* input = activated + index * activatedBytes;
+		tasks[index] = Rows(down, (uint64_t)experts->items[index], input, downs + index * hidden);
+	}
 	Ran(tasks, count);
 	free(outputs);
 	outputs = malloc(sizeof(strict_numbers) + count * hidden * sizeof(double));
@@ -863,4 +875,40 @@ STRICT_EXPORT double GgufFile_ExpertOutputs(double self, double path, double pre
 	free(quantized);
 	free(floats);
 	return strict_numbers_result(outputs);
+}
+
+/* The numbers of the rows (the contiguous dimension) of the tensor name one after the other, decoded like Values from
+   the mapped file, so a huge table (the n-gram embeddings of Qwen3.8-Flash-Next) is never loaded as a whole. */
+STRICT_EXPORT double GgufFile_Picked(double self, double path, double name, double rows)
+{
+	static strict_numbers* picked = 0;
+	const char* failure = 0;
+	const Tensor* tensor = Requested(path, name, 0, &failure);
+	const strict_numbers* chosen = strict_numbers_of(rows);
+	uint32_t type = tensor ? tensor->type : F32;
+	uint64_t width = tensor ? tensor->shape[0] : 0, height = tensor ? Elements(tensor) / width : 0;
+	if (tensor && (BlockBytes(type) == 0 || width % BlockNumbers(type) != 0))
+		failure = "OnlyF32F16BF16Q8_0Q5_1Q4_KQ5_KQ6_KAndIQ4_NLTensorsAreSupported";
+	const unsigned char* data = failure ? 0 : Mapped(tensor);
+	failure = failure ? failure : data ? 0 : "GgufTensorDataTruncated";
+	for (uint64_t index = 0; !failure && index < (uint64_t)chosen->count; index++)
+		if (!IsIndex(chosen->items[index], height))
+			failure = "GgufRowOutOfRange";
+	if (failure)
+		return strict_fail(failure);
+	uint64_t count = (uint64_t)chosen->count, blockNumbers = BlockNumbers(type);
+	uint64_t rowBytes = width / blockNumbers * BlockBytes(type);
+	float decoded[256];
+	free(picked);
+	picked = malloc(sizeof(strict_numbers) + count * width * sizeof(double));
+	picked->count = (double)(count * width);
+	for (uint64_t index = 0; index < count; index++)
+		for (uint64_t column = 0; column < width; column += blockNumbers)
+		{
+			const unsigned char* row = data + (uint64_t)chosen->items[index] * rowBytes;
+			Decoded(type, row + column / blockNumbers * BlockBytes(type), decoded);
+			for (uint64_t number = 0; number < blockNumbers; number++)
+				picked->items[index * width + column + number] = decoded[number];
+		}
+	return strict_numbers_result(picked);
 }
