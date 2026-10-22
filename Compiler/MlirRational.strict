@@ -53,12 +53,16 @@ Crossed Texts
 	let left = Integer("l", "arith.muli " + Temp("a_e") + ", " + Temp("b_q"))
 	(left, Integer("r", "arith.muli " + Temp("b_e") + ", " + Temp("a_q")))
 Remainder Texts
-	Single.Remainder(2) is "    %x2n = arith.remsi %x2l, %x2s : i64"
+	Single.Remainder(3) is "    %x2nm = arith.muli %x2nq, %x2s : i64"
 	let zero = Integer("z", "arith.cmpi eq, " + Temp("r") + ", %inexact")
 	let safe = Integer("s", "arith.select " + Temp("z") + ", %one, " + Temp("r"))
-	let remainder = Integer("n", "arith.remsi " + Temp("l") + ", " + Temp("s"))
+	let divisor = "%r" + exact.function.method.instructions(exact.at).payload(2)
+	let quotient = MlirPassed(exact.function, exact.at).Divided(Temp("l"), Temp("s"), divisor, Temp("nq"))
+	let product = Integer("nm", "arith.muli " + Temp("nq") + ", " + Temp("s"))
+	let remainder = Integer("n", "arith.subi " + Temp("l") + ", " + Temp("nm"))
 	let denominator = Integer("m", "arith.muli " + Temp("a_q") + ", " + Temp("b_q"))
-	(zero, safe, remainder, denominator, Integer("d", "arith.select " + Temp("z") + ", %inexact, " + Temp("m")))
+	let chosen = Integer("d", "arith.select " + Temp("z") + ", %inexact, " + Temp("m"))
+	(zero, safe) + quotient + (product, remainder, denominator, chosen)
 Divided Texts
 	Single.Divided.First is "    %x2g = arith.cmpi slt, %x2r, %inexact : i64"
 	Single.Divided.Last is "    %x2d = arith.select %x2z, %inexact, %x2p : i64"
@@ -80,7 +84,7 @@ Floored(source Text, target Text) Texts
 	let denominator = Integer("fy", "arith.select " + Temp("fv") + ", %one, " + fallback(1))
 	let kept = exact.Loaded(Temp("o"), target) + (numerator, denominator)
 	let refreshed = exact.Set(Temp("fx"), Temp("fy"), target) + Refreshed(Temp("fx"), Temp("fy"), target)
-	exact.Loaded(Temp("f"), source) + Quotient + guards + kept + refreshed
+	exact.Loaded(Temp("f"), source) + Quotient(source) + guards + kept + refreshed
 Refreshed(numerator Text, denominator Text, slot Text) Texts
 	Single.Refreshed("%n", "%d", "%r1").First is "    %x2hv = arith.cmpi eq, %d, %one : i64"
 	Single.Refreshed("%n", "%d", "%r1")(5) is "    %x2hn = arith.sitofp %x2hi : i32 to f32"
@@ -104,16 +108,17 @@ IsFloated Boolean
 	MlirRational(MlirExact(MlirFeeding.Chained.function, 1)).IsFloated is false
 	let written = LoadReuse(exact.function.method.instructions).Written(exact.function.method.instructions(exact.at))
 	MlirFeeding(exact.function, exact.at).IsFloated(exact.at, written)
-Quotient Texts
-	Single.Quotient.Last is "    %x2ff = arith.select %x2fn, %x2fb, %x2ft : i64"
+Quotient(source Text) Texts
+	Single.Quotient("%r1").Last is "    %x2ff = arith.select %x2fn, %x2fb, %x2ft : i64"
 	let valid = Integer("fv", "arith.cmpi ne, " + Temp("f_q") + ", %inexact")
 	let safe = Integer("fs", "arith.select " + Temp("fv") + ", " + Temp("f_q") + ", %one")
-	let quotient = Integer("ft", "arith.divsi " + Temp("f_e") + ", " + Temp("fs"))
-	let remainder = Integer("fr", "arith.remsi " + Temp("f_e") + ", " + Temp("fs"))
+	let quotient = MlirPassed(exact.function, exact.at).Divided(Temp("f_e"), Temp("fs"), source, Temp("ft"))
+	let product = Integer("fp", "arith.muli " + Temp("ft") + ", " + Temp("fs"))
+	let remainder = Integer("fr", "arith.subi " + Temp("f_e") + ", " + Temp("fp"))
 	let negative = Integer("fn", "arith.cmpi slt, " + Temp("fr") + ", %inexact")
 	let below = Integer("fb", "arith.subi " + Temp("ft") + ", %one")
 	let floor = Integer("ff", "arith.select " + Temp("fn") + ", " + Temp("fb") + ", " + Temp("ft"))
-	(valid, safe, quotient, remainder, negative, below, floor)
+	(valid, safe) + quotient + (product, remainder, negative, below, floor)
 Integer(name Text, operation Text) Text
 	Single.Integer("n", "arith.addi %a, %b") is "    %x2n = arith.addi %a, %b : i64"
 	exact.Integer(name, operation)

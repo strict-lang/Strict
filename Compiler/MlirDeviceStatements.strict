@@ -59,29 +59,32 @@ IsList(kind Text) Boolean
 	MlirLayout(function).Represented(kind) is "List(Number)"
 Indexed(entry InstructionEntry) Texts
 	Text.Combine(Reading.Indexed(Lookup)).IndexOf("@strict_device_element(%d6d, %d6b, %d6k, %d6n)") > 0
-	Reading.Indexed(Lookup)(5).StartsWith("    llvm.store %d6y, %r")
+	Reading.Indexed(Lookup)(4).StartsWith("    llvm.store %d6y, %r")
+	Reading.Indexed(Lookup)(5) is "    %d6o = arith.cmpi ult, %d6k, %d6n : i64"
 	let list = "%v_" + entry.texts(0)
 	let position = MlirExact(function, at).Position("%r" + entry.payload(1), Temp("k"))
-	let length = (MlirTyped.Integer.Load(Temp("n"), list + "_n"), MlirTyped.Integer.Constant(Temp("z"), "0"))
+	let length = MlirTyped.Integer.Load(Temp("n"), list + "_n")
 	let target = "%r" + entry.payload(0)
 	let cleared = MlirTyped(function.Float).Number(Temp("y"), "0x0") + MlirFeeding(function, at).Stored(Temp("y"), target)
-	let low = "    " + Temp("l") + " = arith.cmpi sge, " + Temp("k") + ", " + Temp("z") + " : i64"
-	let high = "    " + Temp("h") + " = arith.cmpi slt, " + Temp("k") + ", " + Temp("n") + " : i64"
-	let inside = "    " + Temp("o") + " = arith.andi " + Temp("l") + ", " + Temp("h") + " : i1"
+	let inside = "    " + Temp("o") + " = arith.cmpi ult, " + Temp("k") + ", " + Temp("n") + " : i64"
 	let branch = "    cf.cond_br " + Temp("o") + ", ^d" + at + "read, ^d" + at + "fail"
-	position + length + cleared + (low, high, inside, branch) + Failed + Read(list, target)
+	position + length + cleared + (inside, branch) + Failed + Read(list, target)
 Failed Texts
 	Reading.Failed.First is "  ^d6fail:"
 	let one = MlirTyped.Integer.Constant(Temp("f"), "1")
 	("  ^d" + at + "fail:", one, MlirTyped.Integer.Store(Temp("f"), "%failed"), "    cf.br ^d" + at + "done")
 Read(list Text, target Text) Texts
 	Reading.Read("%v_input", "%r4").Last is "  ^d6done:"
+	MlirDeviceStatements(MlirGuards.Shifted, 6).Read("%v_numbers", "%r4")(3).EndsWith("load %d6p : !llvm.ptr -> f32")
 	let data = MlirTyped.Pointer.Load(Temp("d"), list + "_d")
 	let bits = MlirTyped.Integer.Load(Temp("b"), list + "_b")
 	let operands = "(" + Temp("d") + ", " + Temp("b") + ", " + Temp("k") + ", " + Temp("n") + ")"
-	let read = MlirTyped(function.Float).Read(Temp(""), operands)
+	let read = (bits, MlirTyped(function.Float).Read(Temp(""), operands))
+	let element = " = llvm.getelementptr " + Temp("d") + "[" + Temp("k") + "]" + MlirFastLoop.Pointer
+	let single = ("    " + Temp("p") + element + "f32", MlirTyped.Single.Load(Temp(""), Temp("p")))
+	let loaded = MlirGuards(function, function.Guarded).IsSingle(at) then single else read
 	let done = ("    cf.br ^d" + at + "done", "  ^d" + at + "done:")
-	(("  ^d" + at + "read:", data, bits, read) + MlirFeeding(function, at).Stored(Temp(""), target)) + done
+	(("  ^d" + at + "read:", data) + loaded + MlirFeeding(function, at).Stored(Temp(""), target)) + done
 Calculated(entry InstructionEntry) Texts
 	Multiplying.Calculated(Twice.method.instructions(2)).Last is "    llvm.store %d2, %r2 : f64, !llvm.ptr"
 	Text.Combine(MlirDeviceStatements(Singled, 2).Calculated(Twice.method.instructions(2))).IndexOf(" : f32") > 0
