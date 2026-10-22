@@ -48,8 +48,8 @@ The base types are the documentation: every method starts with tests showing how
 ```
 strict Examples/Sum.strict 5 10 20        run on the Strict VM, arguments go to Run
 strict test Examples/Sum.strict           run the inline tests on the Strict VM (a folder: every file and package sub folder)
-strict build Examples/Sum.strict          run the tests, then build the native executable (on Windows also the Linux one through WSL)
-strict build Examples/Sum.strict windows  without the Linux executable
+strict build Examples/Sum.strict          run the tests, then build the native executable
+strict build Examples/Sum.strict linux    also the Linux executable (on Windows through WSL)
 strict build Examples/Sum.strict web      .html, .js and .wasm for the browser (Emscripten, installed when missing)
 strict build Examples/Sum.strict small    optimized for size instead of speed
 strict build Policy.strict library        Policy.dll (.so, .dylib) exporting the public methods for C and C#, plus Policy.cs
