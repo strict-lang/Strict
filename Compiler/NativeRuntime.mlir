@@ -1721,6 +1721,9 @@
     llvm.store %list, %listSlot : i64, !llvm.ptr
     %largeCountSlot = llvm.getelementptr %pagePointer[5] : (!llvm.ptr) -> !llvm.ptr, i64
     llvm.store %zero, %largeCountSlot : i64, !llvm.ptr
+    %scannedSlot = llvm.getelementptr %pagePointer[52] : (!llvm.ptr) -> !llvm.ptr, i8
+    %unknown = arith.constant 0 : i32
+    llvm.store %unknown, %scannedSlot : i32, !llvm.ptr
     %largeSlot = llvm.mlir.addressof @strict_gc_large : !llvm.ptr
     %previous = llvm.load %largeSlot : !llvm.ptr -> i64
     %nextSlot = llvm.getelementptr %pagePointer[3] : (!llvm.ptr) -> !llvm.ptr, i64
@@ -1884,7 +1887,9 @@
   ^none:
     return %unset, %zero, %zero, %false, %false : !llvm.ptr, i64, i64, i1, i1
   }
-  // the start and end of the large object the tagged value points into (0, 0 for a small one), it is marked now
+  // the start and end of the large object the tagged value points into (0, 0 for a small one), it is marked now; a
+  // large object scans only up to its last reference of the scan before while nothing was written into it (header
+  // bytes 52-55: those words plus one, 0 unknown), a full collection rescanned the numbers of all big lists each time
   func.func private @strict_gc_mark(%tagged: i64) -> (i64, i64) {
     %located:5 = func.call @strict_gc_locate(%tagged) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
     %unset = llvm.mlir.zero : !llvm.ptr
@@ -1913,9 +1918,24 @@
     cf.br ^counted(%located#1, %largeEnd : i64, i64)
   ^counted(%start: i64, %end: i64):
     func.call @strict_gc_add_marked(%located#2) : (i64) -> ()
-    cf.cond_br %located#4, ^scan, ^done(%start, %end : i64, i64)
-  ^scan:
-    func.call @strict_gc_push(%located#1, %located#2) : (i64, i64) -> ()
+    cf.cond_br %located#4, ^known, ^done(%start, %end : i64, i64)
+  ^known:
+    cf.cond_br %located#3, ^largeKnown, ^scan(%located#2 : i64)
+  ^largeKnown:
+    %scannedSlot = llvm.getelementptr %located#0[36] : (!llvm.ptr) -> !llvm.ptr, i8
+    %scanned = llvm.load %scannedSlot : !llvm.ptr -> i32
+    %scannedWords = arith.extui %scanned : i32 to i64
+    %unknown = arith.cmpi eq, %scannedWords, %zero : i64
+    %oneWord = arith.constant 1 : i64
+    %three = arith.constant 3 : i64
+    %knownWords = arith.subi %scannedWords, %oneWord : i64
+    %knownBytes = arith.shli %knownWords, %three : i64
+    %fewer = arith.minui %knownBytes, %located#2 : i64
+    %scanBytes = arith.select %unknown, %located#2, %fewer : i64
+    %hasReferences = arith.cmpi ne, %scanBytes, %zero : i64
+    cf.cond_br %hasReferences, ^scan(%scanBytes : i64), ^done(%start, %end : i64, i64)
+  ^scan(%scanSize: i64):
+    func.call @strict_gc_push(%located#1, %scanSize) : (i64, i64) -> ()
     cf.br ^done(%start, %end : i64, i64)
   ^done(%rangeStart: i64, %rangeEnd: i64):
     return %rangeStart, %rangeEnd : i64, i64
@@ -1951,8 +1971,9 @@
   // words pointing into the large object marked last are skipped (the rows of a matrix share one, strict_packed_rows),
   // so are words outside the heap without a call (numbers: a full collection of Qwen3.8 scans 57 million words) and
   // numbers: only plain pointers and the NaN tags 32761-32767 (Errors, packed results) refer to objects, the low 48
-  // bits of a number in a list of 50 million kept every other big list and its device copy alive
-  func.func private @strict_gc_mark_range(%from: i64, %to: i64) {
+  // bits of a number in a list of 50 million kept every other big list and its device copy alive; returns the end of
+  // the last word referring to an object (from when there is none)
+  func.func private @strict_gc_mark_range(%from: i64, %to: i64) -> i64 {
     %none = arith.constant 0 : i64
     %wordSlot = llvm.mlir.addressof @strict_word_bytes : !llvm.ptr
     %eight = llvm.load %wordSlot : !llvm.ptr -> i64
@@ -1967,8 +1988,8 @@
     %base = llvm.load %baseSlot : !llvm.ptr -> i64
     %topSlot = llvm.mlir.addressof @strict_gc_top : !llvm.ptr
     %top = llvm.load %topSlot : !llvm.ptr -> i64
-    cf.br ^loop(%aligned, %none, %none : i64, i64, i64)
-  ^loop(%at: i64, %skipStart: i64, %skipEnd: i64):
+    cf.br ^loop(%aligned, %none, %none, %aligned : i64, i64, i64, i64)
+  ^loop(%at: i64, %skipStart: i64, %skipEnd: i64, %referenced: i64):
     %more = arith.cmpi ult, %at, %to : i64
     cf.cond_br %more, ^word, ^done
   ^word:
@@ -1988,16 +2009,17 @@
     %isReference = arith.ori %isPlain, %isTagged : i1
     %isNumber = arith.cmpi eq, %isReference, %false : i1
     %notObject = arith.ori %outside, %isNumber : i1
+    %refers = arith.select %notObject, %referenced, %next : i64
     %skipped = arith.ori %inside, %notObject : i1
-    cf.cond_br %skipped, ^loop(%next, %skipStart, %skipEnd : i64, i64, i64), ^mark
+    cf.cond_br %skipped, ^loop(%next, %skipStart, %skipEnd, %refers : i64, i64, i64, i64), ^mark
   ^mark:
     %range:2 = func.call @strict_gc_mark(%value) : (i64) -> (i64, i64)
     %isLarge = arith.cmpi ne, %range#1, %none : i64
     %start = arith.select %isLarge, %range#0, %skipStart : i64
     %end = arith.select %isLarge, %range#1, %skipEnd : i64
-    cf.br ^loop(%next, %start, %end : i64, i64, i64)
+    cf.br ^loop(%next, %start, %end, %refers : i64, i64, i64, i64)
   ^done:
-    return
+    return %referenced : i64
   }
   func.func private @strict_gc_drain() {
     %zero = arith.constant 0 : i64
@@ -2021,7 +2043,21 @@
     %sizeEntry = llvm.getelementptr %entry[1] : (!llvm.ptr) -> !llvm.ptr, i64
     %size = llvm.load %sizeEntry : !llvm.ptr -> i64
     %end = arith.addi %object, %size : i64
-    func.call @strict_gc_mark_range(%object, %end) : (i64, i64) -> ()
+    %referenced = func.call @strict_gc_mark_range(%object, %end) : (i64, i64) -> i64
+    %smallLimit = arith.constant 16384 : i64
+    %isLarge = arith.cmpi ugt, %size, %smallLimit : i64
+    cf.cond_br %isLarge, ^remember, ^loop
+  ^remember:
+    %objectPointer = llvm.inttoptr %object : i64 to !llvm.ptr
+    %scannedSlot = llvm.getelementptr %objectPointer[-12] : (!llvm.ptr) -> !llvm.ptr, i8
+    %referencedBytes = arith.subi %referenced, %object : i64
+    %seven = arith.constant 7 : i64
+    %three = arith.constant 3 : i64
+    %roundedBytes = arith.addi %referencedBytes, %seven : i64
+    %referencedWords = arith.shrui %roundedBytes, %three : i64
+    %known = arith.addi %referencedWords, %one : i64
+    %scanned = arith.trunci %known : i64 to i32
+    llvm.store %scanned, %scannedSlot : i32, !llvm.ptr
     cf.br ^loop
   ^done:
     return
@@ -2856,16 +2892,16 @@
     %stackSlot = llvm.mlir.addressof @strict_gc_stack : !llvm.ptr
     %stackBase = llvm.load %stackSlot : !llvm.ptr -> i64
     %to = arith.addi %stackBase, %sixteen : i64
-    func.call @strict_gc_mark_range(%from, %to) : (i64, i64) -> ()
+    func.call @strict_gc_mark_range(%from, %to) : (i64, i64) -> i64
     %pinnedSlot = llvm.mlir.addressof @strict_gc_pinned : !llvm.ptr
     %pinnedStart = llvm.load %pinnedSlot : !llvm.ptr -> i64
     %pinnedCountSlot = llvm.mlir.addressof @strict_gc_pinned_count : !llvm.ptr
     %pinnedCount = llvm.load %pinnedCountSlot : !llvm.ptr -> i64
     %pinnedBytes = arith.muli %pinnedCount, %eight : i64
     %pinnedEnd = arith.addi %pinnedStart, %pinnedBytes : i64
-    func.call @strict_gc_mark_range(%pinnedStart, %pinnedEnd) : (i64, i64) -> ()
+    func.call @strict_gc_mark_range(%pinnedStart, %pinnedEnd) : (i64, i64) -> i64
     %spilled:2 = func.call @strict_registers_spilled() : () -> (i64, i64)
-    func.call @strict_gc_mark_range(%spilled#0, %spilled#1) : (i64, i64) -> ()
+    func.call @strict_gc_mark_range(%spilled#0, %spilled#1) : (i64, i64) -> i64
     func.call @strict_gc_drain() : () -> ()
     return
   }
@@ -3345,6 +3381,7 @@
   func.func private @strict_gc_dirty_card(%index: i64) {
     %one = arith.constant 1 : i64
     %eight = arith.constant 8 : i64
+    func.call @strict_gc_unscanned(%index) : (i64) -> ()
     %dirty = llvm.mlir.addressof @strict_gc_dirty : !llvm.ptr
     %countSlot = llvm.getelementptr %dirty[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<3 x i64>
     %count = llvm.load %countSlot : !llvm.ptr -> i64
@@ -3378,6 +3415,41 @@
     llvm.store %index, %slot : i64, !llvm.ptr
     %more = arith.addi %count, %one : i64
     llvm.store %more, %countSlot : i64, !llvm.ptr
+    return
+  }
+  // a write into a large object makes the next collection scan all of it again
+  func.func private @strict_gc_unscanned(%index: i64) {
+    %nine = arith.constant 9 : i64
+    %sixteen = arith.constant 16 : i64
+    %eight = arith.constant 8 : i64
+    %kindMask = arith.constant 255 : i64
+    %two = arith.constant 2 : i64
+    %three = arith.constant 3 : i64
+    %offset = arith.shli %index, %nine : i64
+    %pageIndex = arith.shrui %offset, %sixteen : i64
+    %tableSlot = llvm.mlir.addressof @strict_gc_table : !llvm.ptr
+    %table = llvm.load %tableSlot : !llvm.ptr -> i64
+    %tablePointer = llvm.inttoptr %table : i64 to !llvm.ptr
+    %entrySlot = llvm.getelementptr %tablePointer[%pageIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %entry = llvm.load %entrySlot : !llvm.ptr -> i64
+    %kind = arith.andi %entry, %kindMask : i64
+    %isFirst = arith.cmpi eq, %kind, %two : i64
+    %isContinued = arith.cmpi eq, %kind, %three : i64
+    %isLarge = arith.ori %isFirst, %isContinued : i1
+    cf.cond_br %isLarge, ^large, ^done
+  ^large:
+    %continuedFrom = arith.shrui %entry, %eight : i64
+    %firstIndex = arith.select %isContinued, %continuedFrom, %pageIndex : i64
+    %baseSlot = llvm.mlir.addressof @strict_gc_base : !llvm.ptr
+    %base = llvm.load %baseSlot : !llvm.ptr -> i64
+    %largeStart = arith.shli %firstIndex, %sixteen : i64
+    %header = arith.addi %base, %largeStart : i64
+    %headerPointer = llvm.inttoptr %header : i64 to !llvm.ptr
+    %scannedSlot = llvm.getelementptr %headerPointer[52] : (!llvm.ptr) -> !llvm.ptr, i8
+    %unknown = arith.constant 0 : i32
+    llvm.store %unknown, %scannedSlot : i32, !llvm.ptr
+    cf.br ^done
+  ^done:
     return
   }
   // cleans all marked cards, a young collection first marks what the old objects in them point to
@@ -3477,7 +3549,7 @@
     %high = arith.minui %objectEnd, %end : i64
     %lowAddress = arith.addi %page, %low : i64
     %highAddress = arith.addi %page, %high : i64
-    func.call @strict_gc_mark_range(%lowAddress, %highAddress) : (i64, i64) -> ()
+    func.call @strict_gc_mark_range(%lowAddress, %highAddress) : (i64, i64) -> i64
     cf.br ^object(%nextObject : i64)
   ^other:
     %two = arith.constant 2 : i64
@@ -3511,7 +3583,7 @@
     %scanLarge = arith.andi %oldScanned, %overlaps : i1
     cf.cond_br %scanLarge, ^scanLarge, ^done
   ^scanLarge:
-    func.call @strict_gc_mark_range(%largeLow, %largeHigh) : (i64, i64) -> ()
+    func.call @strict_gc_mark_range(%largeLow, %largeHigh) : (i64, i64) -> i64
     cf.br ^done
   ^done:
     return
@@ -3808,7 +3880,7 @@
     %stackBase = llvm.load %stackSlot : !llvm.ptr -> i64
     %sixteen = arith.constant 16 : i64
     %to = arith.addi %stackBase, %sixteen : i64
-    func.call @strict_gc_mark_range(%from, %to) : (i64, i64) -> ()
+    func.call @strict_gc_mark_range(%from, %to) : (i64, i64) -> i64
     %pinnedSlot = llvm.mlir.addressof @strict_gc_pinned : !llvm.ptr
     %pinnedStart = llvm.load %pinnedSlot : !llvm.ptr -> i64
     %pinnedCountSlot = llvm.mlir.addressof @strict_gc_pinned_count : !llvm.ptr
@@ -3816,9 +3888,9 @@
     %wordBytes = arith.constant 8 : i64
     %pinnedBytes = arith.muli %pinnedCount, %wordBytes : i64
     %pinnedEnd = arith.addi %pinnedStart, %pinnedBytes : i64
-    func.call @strict_gc_mark_range(%pinnedStart, %pinnedEnd) : (i64, i64) -> ()
+    func.call @strict_gc_mark_range(%pinnedStart, %pinnedEnd) : (i64, i64) -> i64
     %spilled:2 = func.call @strict_registers_spilled() : () -> (i64, i64)
-    func.call @strict_gc_mark_range(%spilled#0, %spilled#1) : (i64, i64) -> ()
+    func.call @strict_gc_mark_range(%spilled#0, %spilled#1) : (i64, i64) -> i64
     func.call @strict_gc_drain() : () -> ()
     %checkingSlot = llvm.mlir.addressof @strict_rc_checking : !llvm.ptr
     %checking = llvm.load %checkingSlot : !llvm.ptr -> i64
