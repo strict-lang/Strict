@@ -66,7 +66,7 @@ IsPureCall(inspected MlirFunction, at Number, depth Number) Boolean
 	if (TypeEntry.ShortName(decoder.Text(1)) is in UnsafeTypes) or (decoder.Text(2) is "Random")
 		return false
 	let callees = MlirModule(inspected.types, "").Called(inspected, at)
-	if callees.Length is 0
+	if (callees.Length is 0) or MlirDeviceCalls(inspected, at, inspected).IsRounding(entry)
 		let returned = MlirLayout(inspected).Represented(TypeEntry.ShortName(decoder.Text(4 + entry.payload(3))))
 		return returned is in ("Number", "Boolean")
 	(depth < 3) and (MlirForeign(callees.First).IsForeign is false) and IsPureMethod(callees.First, depth + 1)

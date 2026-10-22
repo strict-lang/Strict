@@ -129,7 +129,9 @@ Devices(inspected MlirFunction, first Number, limit Number, depth Number) List(M
 	MlirGpu.Devices(Doubling.function, 0, 7, 0).First.Symbol is "Rows_Twice_1"
 	mutable found = List(Mutable(MlirFunction))
 	for Range(first, limit)
-		if (depth < 3) and (inspected.method.instructions(value).kind is InstructionType.Invoke)
+		let entry = inspected.method.instructions(value)
+		let isRounding = MlirDeviceCalls(inspected, value, inspected).IsRounding(entry)
+		if (depth < 3) and (entry.kind is InstructionType.Invoke) and (isRounding is false)
 			let callee = MlirModule(inspected.types, "").Called(inspected, value)
 			for callee
 				found = found + value + Devices(value, 0, value.method.instructions.Length, depth + 1)

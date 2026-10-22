@@ -36,7 +36,8 @@ IsNativeConversion Boolean
 IsMemberValue(type TypeEntry) Boolean
 	Coding.IsMemberValue(TypeEntry.CharacterEntry)
 	Parsing.IsMemberValue(TypeEntry.CharacterEntry) is false
-	if IsWrapping(type) is false
+	Coding.IsMemberValue(TypeEntry.Rounded) is false
+	if (IsWrapping(type) is false) or type.HasMemberFrom
 		return false
 	let kind = TypeEntry.ShortName(Arguments.First.kind)
 	let member = TypeEntry.ShortName(type.Changing.First.typeName)

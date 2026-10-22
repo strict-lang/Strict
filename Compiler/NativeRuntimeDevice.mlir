@@ -134,7 +134,7 @@
     %byte = arith.fptoui %clamped : f32 to i8
     return %byte : i8
   }
-  // the nearest 8 bit float (format 7, see strict_device_float8_number) of value, larger magnitudes become 448
+  // Float8 of value (format 7, see strict_device_float8_number): nearest, ties to even, larger magnitudes become 448
   func.func private @strict_device_float8(%value: f32) -> i8 attributes {passthrough = ["alwaysinline"]} {
     %bits = arith.bitcast %value : f32 to i32
     %twentyFour = arith.constant 24 : i32
@@ -144,23 +144,26 @@
     %signBit = arith.constant 128 : i32
     %rebias = arith.constant 120 : i32
     %mantissaMask = arith.constant 8388607 : i32
-    %half = arith.constant 524288 : i32
+    %belowHalf = arith.constant 524287 : i32
+    %one = arith.constant 1 : i32
     %largest = arith.constant 448.0 : f32
     %smallestNormal = arith.constant 0.015625 : f32
     %steps = arith.constant 512.0 : f32
-    %halfStep = arith.constant 0.5 : f32
     %shiftedSign = arith.shrui %bits, %twentyFour : i32
     %sign = arith.andi %shiftedSign, %signBit : i32
     %magnitude = llvm.call_intrinsic "llvm.fabs.f32"(%value) : (f32) -> f32
     %clamped = arith.minnumf %magnitude, %largest : f32
     %scaled = arith.mulf %clamped, %steps : f32
-    %roundedScaled = arith.addf %scaled, %halfStep : f32
+    %roundedScaled = llvm.call_intrinsic "llvm.roundeven.f32"(%scaled) : (f32) -> f32
     %subnormal = arith.fptoui %roundedScaled : f32 to i32
     %clampedBits = arith.bitcast %clamped : f32 to i32
     %exponentField = arith.shrui %clampedBits, %twentyThree : i32
     %exponent = arith.subi %exponentField, %rebias : i32
     %mantissaField = arith.andi %clampedBits, %mantissaMask : i32
-    %roundedField = arith.addi %mantissaField, %half : i32
+    %lastKept = arith.shrui %mantissaField, %twenty : i32
+    %isOdd = arith.andi %lastKept, %one : i32
+    %tieUp = arith.addi %belowHalf, %isOdd : i32
+    %roundedField = arith.addi %mantissaField, %tieUp : i32
     %mantissa = arith.shrui %roundedField, %twenty : i32
     %exponentBits = arith.shli %exponent, %three : i32
     %normal = arith.addi %exponentBits, %mantissa : i32
@@ -169,6 +172,18 @@
     %signed = arith.ori %code, %sign : i32
     %byte = arith.trunci %signed : i32 to i8
     return %byte : i8
+  }
+  // Float8.from on the device: the number strict_device_float8 stores
+  func.func private @strict_device_float8_rounded(%number: f64) -> f64 attributes {passthrough = ["alwaysinline"]} {
+    %single = arith.truncf %number : f64 to f32
+    %rounded = func.call @strict_device_float8_roundeds(%single) : (f32) -> f32
+    %wide = arith.extf %rounded : f32 to f64
+    return %wide : f64
+  }
+  func.func private @strict_device_float8_roundeds(%number: f32) -> f32 attributes {passthrough = ["alwaysinline"]} {
+    %byte = func.call @strict_device_float8(%number) : (f32) -> i8
+    %rounded = func.call @strict_device_float8_number(%byte) : (i8) -> f32
+    return %rounded : f32
   }
   // mirrors strict_packed_data of the host runtime: the bytes of the numbers, after them come the scales
   func.func private @strict_device_data(%count: i64, %bits: i64) -> i64 {
