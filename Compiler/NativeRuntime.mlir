@@ -11267,14 +11267,42 @@
     %eightTiles = arith.muli %eightRowTiles, %eightTokenTiles : i64
     %eightThreads = arith.muli %eightTiles, %eightLanes : i64
     %chosenEights = arith.select %eighting, %eightThreads, %chosenTiles : i64
+    %productLanes = arith.constant 1024 : i64
+    %producing = arith.cmpi eq, %perWarp, %productLanes : i64
+    %productThreads = func.call @strict_gpu_product_threads(%values) : (!llvm.ptr) -> i64
+    %chosenProducts = arith.select %producing, %productThreads, %chosenEights : i64
     %attentionLanes = arith.constant 128 : i64
     %attending = arith.cmpi eq, %perWarp, %attentionLanes : i64
-    cf.cond_br %attending, ^attention, ^done(%chosenEights : i64)
+    cf.cond_br %attending, ^attention, ^done(%chosenProducts : i64)
   ^attention:
     %attentionThreads = func.call @strict_gpu_attention_threads(%count, %values) : (i64, !llvm.ptr) -> i64
     cf.br ^done(%attentionThreads : i64)
   ^done(%total: i64):
     return %total : i64
+  }
+  // strict_device_product_tiles takes a block of 256 threads per tile of 128 rows by 128 columns of a batch (the shape
+  // of strict_gpu_products follows its two lists)
+  func.func private @strict_gpu_product_threads(%values: !llvm.ptr) -> i64 {
+    %seven = arith.constant 7 : i64
+    %spare = arith.constant 127 : i64
+    %perBlock = arith.constant 256 : i64
+    %batchesSlot = llvm.getelementptr %values[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %rowsSlot = llvm.getelementptr %values[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %columnsSlot = llvm.getelementptr %values[5] : (!llvm.ptr) -> !llvm.ptr, f64
+    %batchesNumber = llvm.load %batchesSlot : !llvm.ptr -> f64
+    %rowsNumber = llvm.load %rowsSlot : !llvm.ptr -> f64
+    %columnsNumber = llvm.load %columnsSlot : !llvm.ptr -> f64
+    %batches = arith.fptosi %batchesNumber : f64 to i64
+    %rows = arith.fptosi %rowsNumber : f64 to i64
+    %columns = arith.fptosi %columnsNumber : f64 to i64
+    %rowsUp = arith.addi %rows, %spare : i64
+    %rowTiles = arith.shrui %rowsUp, %seven : i64
+    %columnsUp = arith.addi %columns, %spare : i64
+    %columnTiles = arith.shrui %columnsUp, %seven : i64
+    %batchTiles = arith.muli %rowTiles, %columnTiles : i64
+    %tiles = arith.muli %batches, %batchTiles : i64
+    %threads = arith.muli %tiles, %perBlock : i64
+    return %threads : i64
   }
   // strict_device_attention takes a block of 256 threads per sequence, group of keys and 128 rows of tokens and heads,
   // up to 4 warps of tokens (decoding, verifying drafts) get a block per tile of a warp and 128 positions (at most 16,
@@ -11555,24 +11583,15 @@
     %tiles = arith.muli %batches, %perBatch : i64
     %threads = arith.muli %tiles, %thirtyTwo : i64
     %spare = arith.subi %count, %one : i64
-    %hundredTwentySeven = arith.constant 127 : i64
-    %blockShift = arith.constant 7 : i64
-    %blockThreads = arith.constant 256 : i64
-    %rowBlocksUp = arith.addi %rows, %hundredTwentySeven : i64
-    %rowBlocks = arith.shrui %rowBlocksUp, %blockShift : i64
-    %columnBlocksUp = arith.addi %columns, %hundredTwentySeven : i64
-    %columnBlocks = arith.shrui %columnBlocksUp, %blockShift : i64
-    %batchBlocks = arith.muli %rowBlocks, %columnBlocks : i64
-    %blocks = arith.muli %batches, %batchBlocks : i64
-    %tileThreads = arith.muli %blocks, %blockThreads : i64
     %sixtyFour = arith.constant 64 : i64
     %manyRows = arith.cmpi sge, %rows, %sixtyFour : i64
     %manyColumns = arith.cmpi sge, %columns, %thirtyTwo : i64
     %tiled = arith.andi %manyRows, %manyColumns : i1
-    %neededThreads = arith.select %tiled, %tileThreads, %threads : i64
-    %threadsUp = arith.addi %neededThreads, %spare : i64
+    %threadsUp = arith.addi %threads, %spare : i64
     %lanesNeeded = arith.divui %threadsUp, %count : i64
-    %lanes = arith.maxui %lanesNeeded, %one : i64
+    %warpLanes = arith.maxui %lanesNeeded, %one : i64
+    %tileLanes = arith.constant -1024 : i64
+    %lanes = arith.select %tiled, %tileLanes, %warpLanes : i64
     %warpName = llvm.mlir.addressof @strict_gpu_products_name : !llvm.ptr
     %warpSlot = llvm.mlir.addressof @strict_gpu_products_slot : !llvm.ptr
     %tileName = llvm.mlir.addressof @strict_gpu_product_tiles_name : !llvm.ptr
