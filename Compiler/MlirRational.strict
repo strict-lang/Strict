@@ -5,7 +5,7 @@ constant Adding = InstructionEntry.Binary(InstructionType.Add, (0, 1, 2))
 constant Less = InstructionEntry.Binary(InstructionType.LessThan, (0, 1))
 constant Kinds = MlirSingle.Operators + InstructionType.Modulo
 Operated(entry InstructionEntry) Texts
-	Single.Operated(Adding).Last is "    llvm.store %x2d, %r2q : i64, !llvm.ptr"
+	Single.Operated(Adding).Last is "    llvm.store %x2d, %r2_q : i64, !llvm.ptr"
 	Double.Operated(Adding).Length is 0
 	Single.Operated(InstructionEntry.Binary(InstructionType.Power, (0, 1, 2))).Length is 0
 	if (exact.Parts.Length is 0) or (entry.kind is not in Kinds)
@@ -19,8 +19,8 @@ Compared(entry InstructionEntry, float Text, target Text) Texts
 		return List(Text)
 	let operands = exact.Loaded(Temp("a"), "%r" + entry.payload(1)) + exact.Loaded(Temp("b"), "%r" + entry.payload(2))
 	let whole = Predicate(entry.kind)
-	let left = "    " + Temp("w") + " = arith.cmpi ne, " + Temp("aq") + ", %inexact : i64"
-	let right = "    " + Temp("y") + " = arith.cmpi ne, " + Temp("bq") + ", %inexact : i64"
+	let left = "    " + Temp("w") + " = arith.cmpi ne, " + Temp("a_q") + ", %inexact : i64"
+	let right = "    " + Temp("y") + " = arith.cmpi ne, " + Temp("b_q") + ", %inexact : i64"
 	let valid = "    " + Temp("v") + " = arith.andi " + Temp("w") + ", " + Temp("y") + " : i1"
 	let compared = "    " + Temp("i") + " = arith.cmpi " + whole + ", " + Temp("l") + ", " + Temp("r") + " : i64"
 	let chosen = "    " + target + " = arith.select " + Temp("v") + ", " + Temp("i") + ", " + float + " : i1"
@@ -31,28 +31,28 @@ Predicate(kind Number) Text
 	let predicate = MlirStatements.Copy.Predicate(kind)
 	predicate is "oeq" then "eq" else (predicate is "une" then "ne" else "s" + predicate.Substring(1, 2))
 Rational(kind Number) Texts
-	Single.Rational(InstructionType.Multiply).First is "    %x2n = arith.muli %x2ae, %x2be : i64"
+	Single.Rational(InstructionType.Multiply).First is "    %x2n = arith.muli %x2a_e, %x2b_e : i64"
 	Single.Rational(InstructionType.Subtract)(2) is "    %x2n = arith.subi %x2l, %x2r : i64"
 	Single.Rational(InstructionType.Modulo).Last is "    %x2d = arith.select %x2z, %inexact, %x2m : i64"
 	if kind is InstructionType.Divide
 		return Crossed + Divided
 	if kind is InstructionType.Modulo
 		return Crossed + Remainder
-	let denominator = Integer("d", "arith.muli " + Temp("aq") + ", " + Temp("bq"))
+	let denominator = Integer("d", "arith.muli " + Temp("a_q") + ", " + Temp("b_q"))
 	if kind is InstructionType.Multiply
-		return (Integer("n", "arith.muli " + Temp("ae") + ", " + Temp("be")), denominator)
+		return (Integer("n", "arith.muli " + Temp("a_e") + ", " + Temp("b_e")), denominator)
 	let operation = kind is InstructionType.Add then "arith.addi " else "arith.subi "
 	Crossed + (Integer("n", operation + Temp("l") + ", " + Temp("r")), denominator)
 Crossed Texts
-	Single.Crossed is ("    %x2l = arith.muli %x2ae, %x2bq : i64", "    %x2r = arith.muli %x2be, %x2aq : i64")
-	let left = Integer("l", "arith.muli " + Temp("ae") + ", " + Temp("bq"))
-	(left, Integer("r", "arith.muli " + Temp("be") + ", " + Temp("aq")))
+	Single.Crossed is ("    %x2l = arith.muli %x2a_e, %x2b_q : i64", "    %x2r = arith.muli %x2b_e, %x2a_q : i64")
+	let left = Integer("l", "arith.muli " + Temp("a_e") + ", " + Temp("b_q"))
+	(left, Integer("r", "arith.muli " + Temp("b_e") + ", " + Temp("a_q")))
 Remainder Texts
 	Single.Remainder(2) is "    %x2n = arith.remsi %x2l, %x2s : i64"
 	let zero = Integer("z", "arith.cmpi eq, " + Temp("r") + ", %inexact")
 	let safe = Integer("s", "arith.select " + Temp("z") + ", %one, " + Temp("r"))
 	let remainder = Integer("n", "arith.remsi " + Temp("l") + ", " + Temp("s"))
-	let denominator = Integer("m", "arith.muli " + Temp("aq") + ", " + Temp("bq"))
+	let denominator = Integer("m", "arith.muli " + Temp("a_q") + ", " + Temp("b_q"))
 	(zero, safe, remainder, denominator, Integer("d", "arith.select " + Temp("z") + ", %inexact, " + Temp("m")))
 Divided Texts
 	Single.Divided.First is "    %x2g = arith.cmpi slt, %x2r, %inexact : i64"
@@ -61,24 +61,24 @@ Divided Texts
 	let negated = (Integer("o", "arith.subi %inexact, " + Temp("l")), Integer("u", "arith.subi %inexact, " + Temp("r")))
 	let numerator = Integer("n", "arith.select " + Temp("g") + ", " + Temp("o") + ", " + Temp("l"))
 	let positive = Integer("p", "arith.select " + Temp("g") + ", " + Temp("u") + ", " + Temp("r"))
-	let zero = Integer("z", "arith.cmpi eq, " + Temp("bq") + ", %inexact")
+	let zero = Integer("z", "arith.cmpi eq, " + Temp("b_q") + ", %inexact")
 	let denominator = Integer("d", "arith.select " + Temp("z") + ", %inexact, " + Temp("p"))
 	(List(Text) + negative) + negated + (numerator, positive, zero, denominator)
 Floored(source Text, target Text) Texts
-	Single.Floored("%r1", "%r2").Last is "    llvm.store %x2fy, %r2q : i64, !llvm.ptr"
+	Single.Floored("%r1", "%r2").Last is "    llvm.store %x2fy, %r2_q : i64, !llvm.ptr"
 	Double.Floored("%r1", "%r2").Length is 0
 	if exact.Parts.Length is 0
 		return List(Text)
-	let numerator = Integer("fx", "arith.select " + Temp("fv") + ", " + Temp("ff") + ", " + Temp("oe"))
-	let denominator = Integer("fy", "arith.select " + Temp("fv") + ", %one, " + Temp("oq"))
+	let numerator = Integer("fx", "arith.select " + Temp("fv") + ", " + Temp("ff") + ", " + Temp("o_e"))
+	let denominator = Integer("fy", "arith.select " + Temp("fv") + ", %one, " + Temp("o_q"))
 	let kept = exact.Loaded(Temp("o"), target) + (numerator, denominator)
 	exact.Loaded(Temp("f"), source) + Quotient + kept + exact.Set(Temp("fx"), Temp("fy"), target)
 Quotient Texts
 	Single.Quotient.Last is "    %x2ff = arith.select %x2fn, %x2fb, %x2ft : i64"
-	let valid = Integer("fv", "arith.cmpi ne, " + Temp("fq") + ", %inexact")
-	let safe = Integer("fs", "arith.select " + Temp("fv") + ", " + Temp("fq") + ", %one")
-	let quotient = Integer("ft", "arith.divsi " + Temp("fe") + ", " + Temp("fs"))
-	let remainder = Integer("fr", "arith.remsi " + Temp("fe") + ", " + Temp("fs"))
+	let valid = Integer("fv", "arith.cmpi ne, " + Temp("f_q") + ", %inexact")
+	let safe = Integer("fs", "arith.select " + Temp("fv") + ", " + Temp("f_q") + ", %one")
+	let quotient = Integer("ft", "arith.divsi " + Temp("f_e") + ", " + Temp("fs"))
+	let remainder = Integer("fr", "arith.remsi " + Temp("f_e") + ", " + Temp("fs"))
 	let negative = Integer("fn", "arith.cmpi slt, " + Temp("fr") + ", %inexact")
 	let below = Integer("fb", "arith.subi " + Temp("ft") + ", %one")
 	let floor = Integer("ff", "arith.select " + Temp("fn") + ", " + Temp("fb") + ", " + Temp("ft"))

@@ -3,56 +3,56 @@ has at Number
 constant Single = MlirExact(MlirDeviceStatements.Singled, 2)
 constant Double = MlirExact(MlirDevice.Twice.function, 2)
 Parts Texts
-	Single.Parts is ("e", "q")
+	Single.Parts is ("_e", "_q")
 	Double.Parts.Length is 0
-	function.Float is "f32" then ("e", "q") else List(Text)
+	function.Float is "f32" then ("_e", "_q") else List(Text)
 Slots(name Text) Texts
-	Single.Slots("%r0").First is "    %r0e.private = llvm.alloca %one x i64 : (i64) -> !llvm.ptr<5>"
-	Single.Slots("%r0").Last is "    llvm.store %inexact, %r0q : i64, !llvm.ptr"
+	Single.Slots("%r0").First is "    %r0_e.private = llvm.alloca %one x i64 : (i64) -> !llvm.ptr<5>"
+	Single.Slots("%r0").Last is "    llvm.store %inexact, %r0_q : i64, !llvm.ptr"
 	Double.Slots("%r0").Length is 0
 	mutable lines = List(Mutable(Text))
 	for Parts
 		lines = lines + MlirTyped.Integer.Private(name + value)
-	Parts.Length is 0 then lines else lines + MlirTyped.Integer.Store("%inexact", name + "q")
+	Parts.Length is 0 then lines else lines + MlirTyped.Integer.Store("%inexact", name + "_q")
 Exact(number Text, type Text, name Text) Texts
 	Single.Exact("%a", "f32", "%b").First.EndsWith("\"llvm.fptosi.sat.i32.f32\"(%a) : (f32) -> i32")
-	Single.Exact("%a", "f32", "%b").Last is "    %bq = arith.extui %bs : i1 to i64"
+	Single.Exact("%a", "f32", "%b").Last is "    %b_q = arith.extui %bs : i1 to i64"
 	Single.Exact("%a", "f64", "%b").First is "    %bb = llvm.bitcast %a : f64 to i64"
 	if type is "f64"
 		return MlirBits(name).Converted(number)
 	let whole = " = llvm.call_intrinsic \"llvm.fptosi.sat.i32.f32\"(" + number + ") : (f32) -> i32"
 	let back = "    " + name + "w = arith.sitofp " + name + "i : i32 to f32"
 	let same = "    " + name + "s = arith.cmpf oeq, " + name + "w, " + number + " : f32"
-	let widened = "    " + name + "e = arith.extsi " + name + "i : i32 to i64"
-	("    " + name + "i" + whole, back, same, widened, "    " + name + "q = arith.extui " + name + "s : i1 to i64")
+	let widened = "    " + name + "_e = arith.extsi " + name + "i : i32 to i64"
+	("    " + name + "i" + whole, back, same, widened, "    " + name + "_q = arith.extui " + name + "s : i1 to i64")
 Converted(number Text, type Text, slot Text) Texts
-	Single.Converted("%a", "f64", "%v_b").Last is "    llvm.store %a_v_bq, %v_bq : i64, !llvm.ptr"
+	Single.Converted("%a", "f64", "%v_b").Last is "    llvm.store %a_v_b_q, %v_b_q : i64, !llvm.ptr"
 	Double.Converted("%a", "f64", "%r1").Length is 0
 	if Parts.Length is 0
 		return List(Text)
 	let name = number.Replace("#", "_") + slot.Replace("%", "_")
-	Exact(number, type, name) + Set(name + "e", name + "q", slot)
+	Exact(number, type, name) + Set(name + "_e", name + "_q", slot)
 Set(numerator Text, denominator Text, slot Text) Texts
-	Single.Set("%n", "%d", "%r1").Last is "    llvm.store %d, %r1q : i64, !llvm.ptr"
+	Single.Set("%n", "%d", "%r1").Last is "    llvm.store %d, %r1_q : i64, !llvm.ptr"
 	Double.Set("%n", "%d", "%r1").Length is 0
-	let stored = (MlirTyped.Integer.Store(numerator, slot + "e"), MlirTyped.Integer.Store(denominator, slot + "q"))
+	let stored = (MlirTyped.Integer.Store(numerator, slot + "_e"), MlirTyped.Integer.Store(denominator, slot + "_q"))
 	Parts.Length is 0 then List(Text) else stored
 Loaded(name Text, slot Text) Texts
-	Single.Loaded("%a", "%r1").Last is "    %aq = llvm.load %r1q : !llvm.ptr -> i64"
+	Single.Loaded("%a", "%r1").Last is "    %a_q = llvm.load %r1_q : !llvm.ptr -> i64"
 	Double.Loaded("%a", "%r1").Length is 0
 	for Parts
 		MlirTyped.Integer.Load(name + value, slot + value)
 Whole(name Text, number Text) Texts
-	Single.Whole("%h", "0") is ("    %he = arith.constant 0 : i64", "    %hq = arith.constant 1 : i64")
+	Single.Whole("%h", "0") is ("    %h_e = arith.constant 0 : i64", "    %h_q = arith.constant 1 : i64")
 	Double.Whole("%h", "0").Length is 0
-	let parts = (MlirTyped.Integer.Constant(name + "e", number), MlirTyped.Integer.Constant(name + "q", "1"))
+	let parts = (MlirTyped.Integer.Constant(name + "_e", number), MlirTyped.Integer.Constant(name + "_q", "1"))
 	Parts.Length is 0 then List(Text) else parts
 Copied(source Text, target Text) Texts
-	Single.Copied("%v_a", "%r1").Last is "    llvm.store %x2cq, %r1q : i64, !llvm.ptr"
+	Single.Copied("%v_a", "%r1").Last is "    llvm.store %x2c_q, %r1_q : i64, !llvm.ptr"
 	Double.Copied("%v_a", "%r1").Length is 0
-	Loaded(Temp("c"), source) + Set(Temp("ce"), Temp("cq"), target)
+	Loaded(Temp("c"), source) + Set(Temp("c_e"), Temp("c_q"), target)
 Names(name Text) Texts
-	Single.Names("%a") is ("%a", "%ae", "%aq")
+	Single.Names("%a") is ("%a", "%a_e", "%a_q")
 	Double.Names("%a") is ("%a")
 	mutable names = List(Text) + name
 	for Parts
@@ -73,7 +73,7 @@ Types Texts
 		types = types + "i64"
 	types
 Parameters(name Text) Texts
-	Single.Parameters("%p1") is ("%p1: f32", "%p1e: i64", "%p1q: i64")
+	Single.Parameters("%p1") is ("%p1: f32", "%p1_e: i64", "%p1_q: i64")
 	let types = Types
 	for Names(name)
 		value + ": " + types(index)
@@ -85,9 +85,9 @@ Position(slot Text, target Text) Texts
 		return (loaded, "    " + target + " = arith.fptosi " + target + "f : f64 to i64")
 	let narrow = "    " + target + "n = arith.fptosi " + target + "f : f32 to i32"
 	let whole = "    " + target + "j = arith.extsi " + target + "n : i32 to i64"
-	let valid = "    " + target + "v = arith.cmpi ne, " + target + "q, %inexact : i64"
-	let safe = "    " + target + "s = arith.select " + target + "v, " + target + "q, %one : i64"
-	let quotient = "    " + target + "t = arith.divsi " + target + "e, " + target + "s : i64"
+	let valid = "    " + target + "v = arith.cmpi ne, " + target + "_q, %inexact : i64"
+	let safe = "    " + target + "s = arith.select " + target + "v, " + target + "_q, %one : i64"
+	let quotient = "    " + target + "t = arith.divsi " + target + "_e, " + target + "s : i64"
 	let chosen = "    " + target + " = arith.select " + target + "v, " + target + "t, " + target + "j : i64"
 	(loaded, narrow, whole) + Loaded(target, slot) + (valid, safe, quotient, chosen)
 Integer(name Text, operation Text) Text

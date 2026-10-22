@@ -5,7 +5,7 @@ Names Texts
 	MlirDeviceMembers(Head).Names is ("heads", "weights")
 	Heading.Names is ("heads", "weights")
 	MlirDeviceMembers(MlirParallel.Doubling.function).Names.Length is 0
-	MlirDevice(Head, 0).Function.First.EndsWith("%m0: f64, %m1d: !llvm.ptr, %m1n: i64, %m1b: i64) -> f64 {")
+	MlirDevice(Head, 0).Function.First.EndsWith("%m0: f64, %m1_d: !llvm.ptr, %m1_n: i64, %m1_b: i64) -> f64 {")
 	Read(function, 0)
 Read(inspected MlirFunction, depth Number) Texts
 	Heading.Read(Head, 3).Length is 0
@@ -67,7 +67,7 @@ Calling(first Number, limit Number, known Texts) Texts
 				names = names + value
 	names
 Typed(float Text) Texts
-	MlirDeviceMembers(Head).Typed("f64") is ("%m0: f64", "%m1d: !llvm.ptr", "%m1n: i64", "%m1b: i64")
+	MlirDeviceMembers(Head).Typed("f64") is ("%m0: f64", "%m1_d: !llvm.ptr", "%m1_n: i64", "%m1_b: i64")
 	let types = Types(float)
 	for Arguments("%m", false)
 		value + ": " + types(index)
@@ -79,12 +79,12 @@ IsList(name Text) Boolean
 			return TypeEntry.ShortName(value.typeName) is in ("List(Number)", "Numbers")
 	false
 Arguments(prefix Text, isNamed Boolean) Texts
-	MlirDeviceMembers(Head).Arguments("%m", false) is ("%m0", "%m1d", "%m1n", "%m1b")
-	MlirDeviceMembers(Head).Arguments("%v_", true).Last is "%v_weightsb"
+	MlirDeviceMembers(Head).Arguments("%m", false) is ("%m0", "%m1_d", "%m1_n", "%m1_b")
+	MlirDeviceMembers(Head).Arguments("%v_", true).Last is "%v_weights_b"
 	mutable names = List(Text)
 	for Names
 		let name = prefix + (isNamed then value else index to Text)
-		names = IsList(value) then names + (name + "d", name + "n", name + "b") else names + name
+		names = IsList(value) then names + (name + "_d", name + "_n", name + "_b") else names + name
 	names
 Types(float Text) Texts
 	MlirDeviceMembers(Head).Types("f32") is ("f32", "!llvm.ptr", "i64", "i64")
@@ -93,7 +93,7 @@ Types(float Text) Texts
 		types = IsList(value) then types + MlirTyped.Types else types + float
 	types
 Loads(prefix Text, float Text) Texts
-	MlirDeviceMembers(Head).Loads("%x", "f64").Last is "    %x1b = llvm.load %v_weightsb : !llvm.ptr -> i64"
+	MlirDeviceMembers(Head).Loads("%x", "f64").Last is "    %x1_b = llvm.load %v_weights_b : !llvm.ptr -> i64"
 	let types = Types(float)
 	let slots = Arguments("%v_", true)
 	for Arguments(prefix, false)

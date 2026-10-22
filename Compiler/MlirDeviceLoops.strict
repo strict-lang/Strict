@@ -3,7 +3,7 @@ has at Number
 constant Beginning = MlirDeviceLoops(MlirDeviceStatements.Summed, 2)
 constant Ending = MlirDeviceLoops(MlirDeviceStatements.Summed, 11)
 constant Opening = MlirDeviceStatements.Summed.method.instructions(2)
-constant Saved = ("", "d", "n", "b")
+constant Saved = ("", "_d", "_n", "_b")
 constant Kinds = ("f64", "!llvm.ptr", "i64", "i64", "i64", "i64")
 constant Ranging = MlirDeviceLoops(MlirLoops.Ranging.function, 3)
 constant Singled = MlirDeviceLoops(MlirFunction(MlirLoops.Ranging.function, Float = "f32"), 3)
@@ -22,7 +22,7 @@ Begin(register Text, entry InstructionEntry) Texts
 	Text.Combine(Beginning.Begin("%r0", Opening)).IndexOf("cf.br ^d2loop") > 0
 	let isList = MlirDeviceStatements(function, at).IsList(MlirKinds(function).KindOf(at, entry.payload(0)))
 	let number = MlirExact(function, at).Position(register, Temp("c"))
-	let count = isList then List(Text) + MlirTyped.Integer.Load(Temp("c"), register + "n") else number
+	let count = isList then List(Text) + MlirTyped.Integer.Load(Temp("c"), register + "_n") else number
 	let start = Started
 	let loop = ("    cf.br ^d" + at + "loop", "  ^d" + at + "loop:", MlirTyped.Integer.Load(Temp("k"), "%loop" + at))
 	let check = "    " + Temp("m") + " = arith.cmpi slt, " + Temp("k") + ", " + Temp("c") + " : i64"
@@ -63,8 +63,8 @@ Current(register Text, isList Boolean) Texts
 	let index = (narrowed, converted, function.Store(Temp("x"), "%v_index")) + exact.Set(Temp("k"), "%one", "%v_index")
 	if isList is false
 		return (index + function.Store(Temp("x"), "%v_value")) + exact.Set(Temp("k"), "%one", "%v_value")
-	let data = MlirTyped.Pointer.Load(Temp("ed"), register + "d")
-	let sizes = (MlirTyped.Integer.Load(Temp("eb"), register + "b"), MlirTyped.Integer.Load(Temp("en"), register + "n"))
+	let data = MlirTyped.Pointer.Load(Temp("ed"), register + "_d")
+	let sizes = (MlirTyped.Integer.Load(Temp("eb"), register + "_b"), MlirTyped.Integer.Load(Temp("en"), register + "_n"))
 	let operands = "(" + Temp("ed") + ", " + Temp("eb") + ", " + Temp("k") + ", " + Temp("en") + ")"
 	let read = MlirTyped(function.Float).Read(Temp("e"), operands)
 	index + data + sizes + (read, function.Store(Temp("e"), "%v_value"))
@@ -95,7 +95,7 @@ Restored(begin Number) Texts
 	let exact = MlirExact(function, begin)
 	for Saved + exact.Parts
 		lines = lines + Part(index).Store("%d" + begin + "s" + value, "%v_value" + value)
-	(lines + function.Store("%d" + begin + "sx", "%v_index")) + exact.Set(exact.Temp("ie"), exact.Temp("iq"), "%v_index")
+	(lines + function.Store("%d" + begin + "sx", "%v_index")) + exact.Set(exact.Temp("i_e"), exact.Temp("i_q"), "%v_index")
 Counted Texts
 	Beginning.Counted is ("    %index = arith.sitofp %narrow : i32 to f64")
 	Ranging.Counted.Last is "    %index = arith.addf %counted, %ranged : f64"
@@ -109,17 +109,17 @@ Counted Texts
 	counted + ranged + ("    %index = arith.addf %counted, %ranged : " + function.Float)
 Indexes Texts
 	Beginning.Indexes.Length is 0
-	Singled.Indexes.Last is "    %indexe = arith.addi %at, %starte : i64"
+	Singled.Indexes.Last is "    %index_e = arith.addi %at, %start_e : i64"
 	let exact = MlirExact(function, at)
 	if exact.Parts.Length is 0
 		return List(Text)
 	let isRanged = function.method.instructions(at).payload(1) is 1
 	let start = isRanged then exact.Exact("%rangedw", "f64", "%start") else exact.Whole("%start", "0")
-	start + "    %indexe = arith.addi %at, %starte : i64"
+	start + "    %index_e = arith.addi %at, %start_e : i64"
 Indexed(slot Text) Texts
 	Beginning.Indexed("%v_index") is ("    llvm.store %index, %v_index : f64, !llvm.ptr")
-	Singled.Indexed("%v_index").Last is "    llvm.store %startq, %v_indexq : i64, !llvm.ptr"
-	(List(Text) + function.Store("%index", slot)) + MlirExact(function, at).Set("%indexe", "%startq", slot)
+	Singled.Indexed("%v_index").Last is "    llvm.store %start_q, %v_index_q : i64, !llvm.ptr"
+	(List(Text) + function.Store("%index", slot)) + MlirExact(function, at).Set("%index_e", "%start_q", slot)
 Part(number Number) MlirTyped
 	Beginning.Part(0).type is "f64"
 	Beginning.Part(1).type is "!llvm.ptr"

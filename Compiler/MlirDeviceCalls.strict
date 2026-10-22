@@ -17,7 +17,7 @@ Parameters Texts
 	mutable parameters = ("%failed: !llvm.ptr", "%lane: i64", "%lanes: i64") + exact.Parameters("%p0")
 	for callee.method.parameters
 		let name = "%p" + (index + 1)
-		let parts = (name + "d: !llvm.ptr", name + "n: i64", name + "b: i64")
+		let parts = (name + "_d: !llvm.ptr", name + "_n: i64", name + "_b: i64")
 		parameters = IsList(index) then parameters + parts else parameters + exact.Parameters(name)
 	parameters
 IsList(parameter Number) Boolean
@@ -26,15 +26,15 @@ IsList(parameter Number) Boolean
 	MlirLayout(callee).Represented(TypeEntry.ShortName(callee.method.parameters(parameter).typeName)) is "List(Number)"
 Arguments(entry InstructionEntry) Texts
 	Twice.Arguments(Twicing) is ("%failed", "%lane", "%lanes", "%d4i", "%d4p0")
-	Heads.Arguments(GpuSamples.Heading.instructions(4)).Last is "%d4m1b"
+	Heads.Arguments(GpuSamples.Heading.instructions(4)).Last is "%d4m1_b"
 	let exact = MlirExact(function, at)
 	mutable names = ("%failed", "%lane", "%lanes") + exact.Names(Temp("i"))
 	for entry.payload(5 + entry.payload(3))
-		let parts = (Temp("p" + index + "d"), Temp("p" + index + "n"), Temp("p" + index + "b"))
+		let parts = (Temp("p" + index + "_d"), Temp("p" + index + "_n"), Temp("p" + index + "_b"))
 		names = IsList(index) then names + parts else names + exact.Names(Temp("p" + index))
 	names + MemberArguments
 MemberArguments Texts
-	Heads.MemberArguments is ("%d4m0", "%d4m1d", "%d4m1n", "%d4m1b")
+	Heads.MemberArguments is ("%d4m0", "%d4m1_d", "%d4m1_n", "%d4m1_b")
 	MlirDeviceMembers(callee).Arguments(Temp("m"), false)
 Types Text
 	Twice.Types is "!llvm.ptr, i64, i64, f64, f64"
@@ -93,7 +93,7 @@ Logarithmic(entry InstructionEntry) Texts
 	Loaded(entry) + logarithm + function.Store(Temp(""), "%r" + entry.payload(0))
 Argument(parameter Number, register Text) Texts
 	Twice.Argument(0, "%r1") is ("    %d4p0 = llvm.load %r1 : !llvm.ptr -> f64")
-	Summing.Argument(0, "%r1").Last is "    %d5p0b = llvm.load %r1b : !llvm.ptr -> i64"
+	Summing.Argument(0, "%r1").Last is "    %d5p0_b = llvm.load %r1_b : !llvm.ptr -> i64"
 	if IsList(parameter) is false
 		let exact = MlirExact(function, at).Loaded(Temp("p" + parameter), register)
 		return (List(Text) + function.Load(Temp("p" + parameter), register)) + exact
