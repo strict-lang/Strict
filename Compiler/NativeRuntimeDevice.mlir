@@ -1738,7 +1738,7 @@
   // 32 or 16 bit numbers (bits as in strict_device_floats) to 8 bit numbers with a scale per 32 (a warp shares the
   // largest magnitude), the numbers that dot products with packed rows read through dp4a; width is not used, the
   // parameters are those of strict_device_quantize_tokens
-  llvm.func @strict_device_quantize(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64) attributes {nvvm.kernel} {
+  func.func private @strict_device_quantize_run(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
     %thread = func.call @strict_device_thread_index() : () -> i32
     %block = func.call @strict_device_block_index() : () -> i32
     %blockSize = func.call @strict_device_block_size() : () -> i32
@@ -1775,12 +1775,23 @@
     llvm.store %scale, %scaleSlot : f32, !llvm.ptr
     cf.br ^exit
   ^exit:
+    return
+  }
+  llvm.func @strict_device_quantize(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64) attributes {nvvm.kernel} {
+    %brainBits = arith.constant 17 : i64
+    %isBrain = arith.cmpi eq, %bits, %brainBits : i64
+    cf.cond_br %isBrain, ^brain, ^other
+  ^brain:
+    func.call @strict_device_quantize_run(%source, %count, %width, %target, %brainBits) : (!llvm.ptr, i64, i64, !llvm.ptr, i64) -> ()
+    llvm.return
+  ^other:
+    func.call @strict_device_quantize_run(%source, %count, %width, %target, %bits) : (!llvm.ptr, i64, i64, !llvm.ptr, i64) -> ()
     llvm.return
   }
   // 32 or 16 bit numbers to 8 bit numbers with one scale per token of width numbers (a block of 256 threads per token, its
   // scales per 32 all are the scale of the token, like the activations of ComfyUI's int8 layers) for strict_device_eights
   llvm.mlir.global internal @strict_device_quantize_largest() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<8 x f32>
-  llvm.func @strict_device_quantize_tokens(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>} {
+  func.func private @strict_device_quantize_tokens_run(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = arith.constant 0 : i32
     %c1 = arith.constant 1 : i32
     %c5 = arith.constant 5 : i32
@@ -1866,6 +1877,17 @@
     %partNext = arith.addi %part, %threads : i64
     cf.br ^scale(%partNext : i64)
   ^exit:
+    return
+  }
+  llvm.func @strict_device_quantize_tokens(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>} {
+    %brainBits = arith.constant 17 : i64
+    %isBrain = arith.cmpi eq, %bits, %brainBits : i64
+    cf.cond_br %isBrain, ^brain, ^other
+  ^brain:
+    func.call @strict_device_quantize_tokens_run(%source, %count, %width, %target, %brainBits) : (!llvm.ptr, i64, i64, !llvm.ptr, i64) -> ()
+    llvm.return
+  ^other:
+    func.call @strict_device_quantize_tokens_run(%source, %count, %width, %target, %bits) : (!llvm.ptr, i64, i64, !llvm.ptr, i64) -> ()
     llvm.return
   }
   func.func private @strict_device_largest(%value: f32) -> f32 {

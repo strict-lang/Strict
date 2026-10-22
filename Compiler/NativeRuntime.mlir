@@ -12583,9 +12583,12 @@
     %slot = llvm.select %eights, %eightsChosenSlot, %longSlot : i1, !llvm.ptr
     %lanes = arith.select %eights, %eightsLanes, %longLanes : i64
     %integers = arith.constant -1 : i64
+    %halves = arith.constant 17 : i64
+    %wholeChosen = arith.andi %eights, %wholeRows : i1
+    %resultPacked = arith.select %wholeChosen, %halves, %integers : i64
     %tokenWidthSlot = llvm.mlir.addressof @strict_gpu_quantize_width : !llvm.ptr
     llvm.store %tokenWidth, %tokenWidthSlot : i64, !llvm.ptr
-    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %count, %zero, %none, %values, %six, %listsMask, %one, %two, %lanes, %none, %integers) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> f64
+    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %count, %zero, %none, %values, %six, %listsMask, %one, %two, %lanes, %none, %resultPacked) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> f64
     llvm.store %none, %tokenWidthSlot : i64, !llvm.ptr
     return %result : f64
   }
