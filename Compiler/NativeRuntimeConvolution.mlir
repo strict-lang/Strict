@@ -1,6 +1,6 @@
   // the 4 numbers of a pixel from channel (zeros when outside) normed with the scales and shifts of affine in shared
   // memory (swish when asked), one vector load of 32 bit floats when fast
-  func.func private @strict_device_convolution_quad(%values: !llvm.ptr, %count: i64, %bits: i64, %affined: !llvm.ptr<3>, %at: i64, %channel: i64, %channels: i64, %inside: i1, %fast: i1, %swish: i1) -> vector<4xf16> attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_convolution_quad(%values: !llvm.ptr, %count: i64, %bits: i64, %affined: !llvm.ptr<3>, %at: i64, %channel: i64, %channels: i64, %inside: i1, %fast: i1, %swish: i1) -> vector<4xf16> attributes {llvm.passthrough = ["alwaysinline"]} {
     %one = arith.constant 1 : i64
     %two = arith.constant 2 : i64
     %three = arith.constant 3 : i64
@@ -51,7 +51,7 @@
     %halves = arith.truncf %activated : vector<4xf32> to vector<4xf16>
     return %halves : vector<4xf16>
   }
-  func.func private @strict_device_convolution_vector(%first: f32, %second: f32, %third: f32, %fourth: f32) -> vector<4xf32> attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_convolution_vector(%first: f32, %second: f32, %third: f32, %fourth: f32) -> vector<4xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -66,7 +66,7 @@
   // the 16 numbers a thread copies of its 4 pixels (rows and columns, the row is -2 past the last pixel) by the 32
   // numbers of stage along the side x side taps of channels: 4 channels of the pixel the tap shifts to (row and column
   // - 1 to + 1, for the 2 x 2 taps of a doubled image - 1 to 0 plus the parity of the output), zeros outside of the image
-  func.func private @strict_device_convolution_fetch(%values: !llvm.ptr, %count: i64, %bits: i64, %affined: !llvm.ptr<3>, %height: i32, %width: i32, %channels: i32, %side: i32, %rowParity: i32, %columnParity: i32, %rows: vector<4xi32>, %columns: vector<4xi32>, %stage: i32, %thread: i32, %fast: i1, %swish: i1) -> vector<16xf16> attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_convolution_fetch(%values: !llvm.ptr, %count: i64, %bits: i64, %affined: !llvm.ptr<3>, %height: i32, %width: i32, %channels: i32, %side: i32, %rowParity: i32, %columnParity: i32, %rows: vector<4xi32>, %columns: vector<4xi32>, %stage: i32, %thread: i32, %fast: i1, %swish: i1) -> vector<16xf16> attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -132,7 +132,7 @@
   }
   // the rows and columns of the 4 pixels a thread copies (part p is pixel first + (thread + 256 p) / 8), a row of -2
   // past the last pixel so every tap lies outside
-  func.func private @strict_device_convolution_pixels(%pixelFirst: i64, %pixels: i64, %width: i32, %thread: i32) -> (vector<4xi32>, vector<4xi32>) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_convolution_pixels(%pixelFirst: i64, %pixels: i64, %width: i32, %thread: i32) -> (vector<4xi32>, vector<4xi32>) attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c3 = llvm.mlir.constant(3 : i32) : i32
@@ -166,7 +166,7 @@
   // the scales and then the shifts of affine as 32 bit floats in shared memory (2 numbers per channel, at most 512
   // channels), copied by all threads of the block
   llvm.mlir.global internal @strict_device_convolution_affine() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<1024 x f32>
-  func.func private @strict_device_convolution_staged(%affine: !llvm.ptr, %affineCount: i64, %affineBits: i64, %thread: i32) -> !llvm.ptr<3> attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_convolution_staged(%affine: !llvm.ptr, %affineCount: i64, %affineBits: i64, %thread: i32) -> !llvm.ptr<3> attributes {llvm.passthrough = ["alwaysinline"]} {
     %false = arith.constant false
     %step = arith.constant 256 : i64
     %affined = llvm.mlir.addressof @strict_device_convolution_affine : !llvm.ptr<3>
@@ -187,7 +187,7 @@
   // `Convolved.Summed` of channels a multiple of 32: a block of 8 warps takes 128 pixels by 128 outputs over the 9 taps
   // in stages of 32 numbers (the stage of a tap never crosses into the next), the weights like the right of
   // strict_device_product_tiles; the output tiles of the same pixels lie next to each other
-  func.func private @strict_device_convolution_run(%result: !llvm.ptr, %wide: i1, %values: !llvm.ptr, %count: i64, %bits: i64, %affine: !llvm.ptr, %affineCount: i64, %affineBits: i64, %weights: !llvm.ptr, %weightsCount: i64, %weightsBits: i64, %shape: vector<6xf64>) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_convolution_run(%result: !llvm.ptr, %wide: i1, %values: !llvm.ptr, %count: i64, %bits: i64, %affine: !llvm.ptr, %affineCount: i64, %affineBits: i64, %weights: !llvm.ptr, %weightsCount: i64, %weightsBits: i64, %shape: vector<6xf64>) attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -356,7 +356,7 @@
     func.call @strict_device_convolution_run(%result, %wide, %values, %valuesCount, %valuesBits, %affine, %affineCount, %affineBits, %weights, %weightsCount, %weightsBits, %shape) : (!llvm.ptr, i1, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, vector<6xf64>) -> ()
     llvm.return
   }
-  func.func private @strict_device_convolution_shape(%height: f64, %width: f64, %channels: f64, %outputs: f64, %swish: f64, %factor: f64) -> vector<6xf64> attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_convolution_shape(%height: f64, %width: f64, %channels: f64, %outputs: f64, %swish: f64, %factor: f64) -> vector<6xf64> attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32

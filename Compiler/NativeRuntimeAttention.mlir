@@ -3,7 +3,7 @@
   llvm.mlir.global internal @strict_device_attention_keys() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<8704 x f16>
   llvm.mlir.global internal @strict_device_attention_values() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<13056 x f16>
   // 4 numbers from at of a list of doubles, 32 or 16 bit floats, bfloat16 or 8 bit floats (bits 7) as 32 bit floats
-  func.func private @strict_device_attention_read(%data: !llvm.ptr, %bits: i64, %at: i64) -> vector<4xf32> attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_read(%data: !llvm.ptr, %bits: i64, %at: i64) -> vector<4xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -53,7 +53,7 @@
     return %with3 : vector<4xf32>
   }
   // two 32 bit floats as the 16 bit pair of an mma operand
-  func.func private @strict_device_attention_pair(%first: f32, %second: f32) -> i32 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_pair(%first: f32, %second: f32) -> i32 attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %firstHalf = arith.truncf %first : f32 to f16
@@ -67,7 +67,7 @@
   // the numbers of a tile of 32 positions from first (keys or values) a thread stores into shared memory, loaded
   // without waiting for them: parts thread + 256 * i of 4 numbers of the rows of size rounded up to 16, zeros after the
   // last position and after size
-  func.func private @strict_device_attention_fetch(%data: !llvm.ptr, %bits: i64, %first: i32, %positions: i32, %stride: i32, %base: i32, %size: i32, %thread: i32) -> vector<16xf32> attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_fetch(%data: !llvm.ptr, %bits: i64, %first: i32, %positions: i32, %stride: i32, %base: i32, %size: i32, %thread: i32) -> vector<16xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
     cf.switch %bits : i64, [
       default: ^doubles,
       32: ^singles,
@@ -96,7 +96,7 @@
     %bytes = func.call @strict_device_attention_fetched(%data, %byteBits, %first, %positions, %stride, %base, %size, %thread) : (!llvm.ptr, i64, i32, i32, i32, i32, i32, i32) -> vector<16xf32>
     return %bytes : vector<16xf32>
   }
-  func.func private @strict_device_attention_fetched(%data: !llvm.ptr, %bits: i64, %first: i32, %positions: i32, %stride: i32, %base: i32, %size: i32, %thread: i32) -> vector<16xf32> attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_fetched(%data: !llvm.ptr, %bits: i64, %first: i32, %positions: i32, %stride: i32, %base: i32, %size: i32, %thread: i32) -> vector<16xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -149,7 +149,7 @@
     return %numbers : vector<16xf32>
   }
   // parts of 4 numbers per position of a tile: size rounded up to 16 so the last mma step reads zeros
-  func.func private @strict_device_attention_parts(%size: i32) -> i32 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_parts(%size: i32) -> i32 attributes {llvm.passthrough = ["alwaysinline"]} {
     %c2 = llvm.mlir.constant(2 : i32) : i32
     %c15 = llvm.mlir.constant(15 : i32) : i32
     %wholeMask = llvm.mlir.constant(-16 : i32) : i32
@@ -159,7 +159,7 @@
     return %parts : i32
   }
   // where tile number buffer of 32 positions starts in keys or values
-  func.func private @strict_device_attention_buffer(%tiles: !llvm.ptr<3>, %buffer: i32) -> !llvm.ptr<3> attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_buffer(%tiles: !llvm.ptr<3>, %buffer: i32) -> !llvm.ptr<3> attributes {llvm.passthrough = ["alwaysinline"]} {
     %tileHalves = llvm.mlir.constant(4352 : i32) : i32
     %start = arith.muli %buffer, %tileHalves : i32
     %start64 = arith.extui %start : i32 to i64
@@ -168,7 +168,7 @@
   }
   // the numbers of strict_device_attention_fetch as 16 bit floats into a tile in shared memory (136 numbers per
   // position so the 8 rows of an ldmatrix lie in different banks)
-  func.func private @strict_device_attention_stored(%tile: !llvm.ptr<3>, %numbers: vector<16xf32>, %size: i32, %thread: i32) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_stored(%tile: !llvm.ptr<3>, %numbers: vector<16xf32>, %size: i32, %thread: i32) attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -220,7 +220,7 @@
   // the scores of the 16 rows of a warp with the 32 positions of a key tile (4 parts of 8 positions, a lane has 4 of
   // each: row lane / 4 and the one 8 below, positions 2 * (lane % 4) and the next), queries scaled; an m16n8k16 per 16
   // numbers, one ldmatrix.x4 gives the key operands of two parts
-  func.func private @strict_device_attention_scores(%queries: vector<32xi32>, %keyTile: !llvm.ptr<3>, %size: i32, %lane: i32) -> vector<16xf32> attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_scores(%queries: vector<32xi32>, %keyTile: !llvm.ptr<3>, %size: i32, %lane: i32) -> vector<16xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -292,7 +292,7 @@
     return %scores : vector<16xf32>
   }
   // an m16n8k16 adding the a operands times the b operands (bits of 16 bit pairs) to the 4 sums at slot of sums
-  func.func private @strict_device_attention_product(%a0: vector<2xf16>, %a1: vector<2xf16>, %a2: vector<2xf16>, %a3: vector<2xf16>, %bits0: i32, %bits1: i32, %sums: vector<16xf32>, %slot: i32) -> vector<16xf32> attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_product(%a0: vector<2xf16>, %a1: vector<2xf16>, %a2: vector<2xf16>, %a3: vector<2xf16>, %bits0: i32, %bits1: i32, %sums: vector<16xf32>, %slot: i32) -> vector<16xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
     %c3 = llvm.mlir.constant(3 : i32) : i32
@@ -318,7 +318,7 @@
   }
   // the largest of the 16 scores of a lane for its row lane / 4 (lower) or the one 8 below, over the 4 lanes of a row,
   // positions after last hidden
-  func.func private @strict_device_attention_largest(%scores: vector<16xf32>, %lower: i32, %first: i32, %quad: i32, %last: i32) -> f32 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_largest(%scores: vector<16xf32>, %lower: i32, %first: i32, %quad: i32, %last: i32) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -358,7 +358,7 @@
   // the scores of a tile turned into shares (2 to the power of score minus the new largest score of the row, 0 after
   // the last visible position), the new largest scores and sums of the two rows of a lane and how much the outputs
   // shrink
-  func.func private @strict_device_attention_softmax(%scores: vector<16xf32>, %state: vector<4xf32>, %first: i32, %lastLower: i32, %lastUpper: i32, %quad: i32) -> (vector<16xf32>, vector<4xf32>, f32, f32) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_softmax(%scores: vector<16xf32>, %state: vector<4xf32>, %first: i32, %lastLower: i32, %lastUpper: i32, %quad: i32) -> (vector<16xf32>, vector<4xf32>, f32, f32) attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -411,7 +411,7 @@
   }
   // the shares (2 to the power of score minus largest, 0 after last) of the two scores at slot and the next, written
   // back for the values
-  func.func private @strict_device_attention_shares(%scores: vector<16xf32>, %slot: i32, %position: i32, %positionNext: i32, %last: i32, %largest: f32) -> (f32, f32, vector<16xf32>) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_shares(%scores: vector<16xf32>, %slot: i32, %position: i32, %positionNext: i32, %last: i32, %largest: f32) -> (f32, f32, vector<16xf32>) attributes {llvm.passthrough = ["alwaysinline"]} {
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %zero = arith.constant 0.0 : f32
     %slotNext = arith.addi %slot, %c1 : i32
@@ -432,7 +432,7 @@
   // the outputs of the two rows of a lane shrunk by their scales plus the shares times a value tile: an m16n8k16 with
   // 16 bit sums per 16 positions and 8 numbers (a tile of 32 positions adds up in 16 bits, the outputs in 32 bits), one
   // ldmatrix.x4.trans gives the value operands of 16 numbers
-  func.func private @strict_device_attention_weighted(%shares: vector<16xf32>, %outputs: vector<64xf32>, %lowerScale: f32, %upperScale: f32, %valueTile: !llvm.ptr<3>, %size: i32, %lane: i32) -> vector<64xf32> attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_weighted(%shares: vector<16xf32>, %outputs: vector<64xf32>, %lowerScale: f32, %upperScale: f32, %valueTile: !llvm.ptr<3>, %size: i32, %lane: i32) -> vector<64xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -528,7 +528,7 @@
     return %sums : vector<64xf32>
   }
   // an m16n8k16 with 16 bit sums adding shares times values to the 16 bit pairs at slot and the next of partials
-  func.func private @strict_device_attention_accumulated(%a0: vector<2xf16>, %a1: vector<2xf16>, %a2: vector<2xf16>, %a3: vector<2xf16>, %bits0: i32, %bits1: i32, %partials: vector<32xi32>, %slot: i32) -> vector<32xi32> attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_accumulated(%a0: vector<2xf16>, %a1: vector<2xf16>, %a2: vector<2xf16>, %a3: vector<2xf16>, %bits0: i32, %bits1: i32, %partials: vector<32xi32>, %slot: i32) -> vector<32xi32> attributes {llvm.passthrough = ["alwaysinline"]} {
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %b0 = llvm.bitcast %bits0 : i32 to vector<2xf16>
     %b1 = llvm.bitcast %bits1 : i32 to vector<2xf16>
@@ -548,7 +548,7 @@
   }
   // the shares of an m16n8k16 operand (slots slot, + 2, + 4 and + 6 and the next of each) as 16 bit pairs into
   // operands from at
-  func.func private @strict_device_attention_shared(%shares: vector<16xf32>, %slot: i32, %operands: vector<8xi32>, %at: i32) -> vector<8xi32> attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_shared(%shares: vector<16xf32>, %slot: i32, %operands: vector<8xi32>, %at: i32) -> vector<8xi32> attributes {llvm.passthrough = ["alwaysinline"]} {
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
     %c3 = llvm.mlir.constant(3 : i32) : i32
@@ -593,7 +593,7 @@
   // an m16n8k16 with 16 bit sums adding shares times values to the 16 bit pairs at slot and the next of partials
   // the 16 bit sums of a tile (low the two of row lane / 4, high those of the row 8 below) added to the 4 outputs at
   // slot shrunk by the scales of their rows
-  func.func private @strict_device_attention_folded(%sums: vector<64xf32>, %slot: i32, %low: vector<2xf16>, %high: vector<2xf16>, %lowerScale: f32, %upperScale: f32) -> vector<64xf32> attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_folded(%sums: vector<64xf32>, %slot: i32, %low: vector<2xf16>, %high: vector<2xf16>, %lowerScale: f32, %upperScale: f32) -> vector<64xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -622,7 +622,7 @@
     return %with3 : vector<64xf32>
   }
   // strict_device_attention_query with the bits known in each branch, so its loads are not separated by branches
-  func.func private @strict_device_attention_queries(%queries: !llvm.ptr, %bits: i64, %first: i64, %second: i64, %size: i32, %quad: i32, %scale: f32) -> vector<32xi32> attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_queries(%queries: !llvm.ptr, %bits: i64, %first: i64, %second: i64, %size: i32, %quad: i32, %scale: f32) -> vector<32xi32> attributes {llvm.passthrough = ["alwaysinline"]} {
     %singles = arith.constant 32 : i64
     %brainBits = arith.constant 17 : i64
     cf.switch %bits : i64, [
@@ -643,7 +643,7 @@
   }
   // the query numbers of the two rows of a lane (rows at first and second, row lane / 4 and the one 8 below) as the 16
   // bit operands of all 16 steps of 8 numbers, times scale; steps after size / 8 stay zero
-  func.func private @strict_device_attention_query(%queries: !llvm.ptr, %bits: i64, %first: i64, %second: i64, %size: i32, %quad: i32, %scale: f32) -> vector<32xi32> attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_query(%queries: !llvm.ptr, %bits: i64, %first: i64, %second: i64, %size: i32, %quad: i32, %scale: f32) -> vector<32xi32> attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c3 = llvm.mlir.constant(3 : i32) : i32
@@ -678,7 +678,7 @@
     return %pairs : vector<32xi32>
   }
   // two numbers from at times scale as a 16 bit pair
-  func.func private @strict_device_attention_two(%data: !llvm.ptr, %bits: i64, %at: i64, %scale: f32) -> i32 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_two(%data: !llvm.ptr, %bits: i64, %at: i64, %scale: f32) -> i32 attributes {llvm.passthrough = ["alwaysinline"]} {
     cf.switch %bits : i64, [
       default: ^double,
       32: ^single,
@@ -790,7 +790,7 @@
   // of keys and the rows (token and head) of up to 8 x 16 of its queries, walks the visible positions in tiles of 32
   // (two in shared memory, the next one loads while the block computes the current one) and keeps the largest score
   // and sum of every row, so the scores are never stored
-  func.func private @strict_device_attention_prompt(%result: !llvm.ptr, %queries: !llvm.ptr, %queryBits: i64, %keys: !llvm.ptr, %keyBits: i64, %values: !llvm.ptr, %valueBits: i64, %heads: i32, %groups: i32, %size: i32, %sequences: i32, %tokens: i32, %positions: i32, %causal: i1, %wide: i1) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_prompt(%result: !llvm.ptr, %queries: !llvm.ptr, %queryBits: i64, %keys: !llvm.ptr, %keyBits: i64, %values: !llvm.ptr, %valueBits: i64, %heads: i32, %groups: i32, %size: i32, %sequences: i32, %tokens: i32, %positions: i32, %causal: i1, %wide: i1) attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -920,14 +920,14 @@
   // the token of a row of a warp (16 rows of tokens times the heads of a group), its last visible position and where
   // its query starts
   // the position before the first token's own (the last visible of every token without causal masking) and the last position
-  func.func private @strict_device_attention_before(%positions: i32, %tokens: i32, %causal: i1) -> (i32, i32) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_before(%positions: i32, %tokens: i32, %causal: i1) -> (i32, i32) attributes {llvm.passthrough = ["alwaysinline"]} {
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %positionLast = arith.subi %positions, %c1 : i32
     %causalBefore = arith.subi %positions, %tokens : i32
     %before = arith.select %causal, %causalBefore, %positionLast : i32
     return %before, %positionLast : i32, i32
   }
-  func.func private @strict_device_attention_row(%row: i32, %perGroup: i32, %warpFirst: i32, %tokenLast: i32, %before: i32, %openLast: i32, %groupHeads: i32, %sequenceTokens: i32, %heads: i32, %size: i32) -> (i32, i32, i64) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_row(%row: i32, %perGroup: i32, %warpFirst: i32, %tokenLast: i32, %before: i32, %openLast: i32, %groupHeads: i32, %sequenceTokens: i32, %heads: i32, %size: i32) -> (i32, i32, i64) attributes {llvm.passthrough = ["alwaysinline"]} {
     %inWarp = arith.divui %row, %perGroup : i32
     %head = arith.remui %row, %perGroup : i32
     %token = arith.addi %warpFirst, %inWarp : i32
@@ -944,7 +944,7 @@
     return %token, %last, %query : i32, i32, i64
   }
   // a sum over the 4 lanes of a row
-  func.func private @strict_device_attention_quad(%part: f32) -> f32 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_quad(%part: f32) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
     %fromOne = func.call @strict_device_shuffles(%part, %c1) : (f32, i32) -> f32
@@ -955,7 +955,7 @@
   }
   // the two outputs at slot and the next times inverse (1 / sum of the row) into the result at at and the next (at is
   // even)
-  func.func private @strict_device_attention_written(%result: !llvm.ptr, %wide: i1, %outputs: vector<64xf32>, %slot: i32, %at: i64, %inverse: f32, %writing: i1) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_written(%result: !llvm.ptr, %wide: i1, %outputs: vector<64xf32>, %slot: i32, %at: i64, %inverse: f32, %writing: i1) attributes {llvm.passthrough = ["alwaysinline"]} {
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %one = arith.constant 1 : i64
     cf.cond_br %writing, ^write, ^done
@@ -983,7 +983,7 @@
     return
   }
   // one number at at of a list of doubles, 32 or 16 bit floats, bfloat16 or 8 bit floats (bits 7) as a 32 bit float
-  func.func private @strict_device_attention_number(%data: !llvm.ptr, %bits: i64, %at: i64) -> f32 attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_number(%data: !llvm.ptr, %bits: i64, %at: i64) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
     cf.switch %bits : i64, [
       default: ^double,
       32: ^single,
@@ -1017,7 +1017,7 @@
     return %number : f32
   }
   // the numbers at at and the next of a list (at even) as the 16 bit pair of an mma operand, read at once
-  func.func private @strict_device_attention_adjacent(%data: !llvm.ptr, %bits: i64, %at: i32) -> vector<2xf16> attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_adjacent(%data: !llvm.ptr, %bits: i64, %at: i32) -> vector<2xf16> attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %at64 = arith.extui %at : i32 to i64
@@ -1060,7 +1060,7 @@
     return %pair : vector<2xf16>
   }
   // the numbers at first and second of a list as the 16 bit pair of an mma operand
-  func.func private @strict_device_attention_numbers(%data: !llvm.ptr, %bits: i64, %first: i32, %second: i32) -> vector<2xf16> attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_numbers(%data: !llvm.ptr, %bits: i64, %first: i32, %second: i32) -> vector<2xf16> attributes {llvm.passthrough = ["alwaysinline"]} {
     %first64 = arith.extui %first : i32 to i64
     %second64 = arith.extui %second : i32 to i64
     %firstNumber = func.call @strict_device_attention_number(%data, %bits, %first64) : (!llvm.ptr, i64, i64) -> f32
@@ -1071,7 +1071,7 @@
   }
   // the key and value operands like strict_device_attention_loaded, with the bits of both lists known for 32 and 8
   // bit caches the loads are not separated by branches and wait for memory together
-  func.func private @strict_device_attention_operands(%keys: !llvm.ptr, %keyBits: i64, %values: !llvm.ptr, %valueBits: i64, %first: i32, %positionLast: i32, %stride: i32, %base: i32, %size: i32, %row: i32, %quad: i32) -> (vector<16xi32>, vector<16xi32>) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_operands(%keys: !llvm.ptr, %keyBits: i64, %values: !llvm.ptr, %valueBits: i64, %first: i32, %positionLast: i32, %stride: i32, %base: i32, %size: i32, %row: i32, %quad: i32) -> (vector<16xi32>, vector<16xi32>) attributes {llvm.passthrough = ["alwaysinline"]} {
     %singles = arith.constant 32 : i64
     %bytes = arith.constant 7 : i64
     %same = arith.cmpi eq, %keyBits, %valueBits : i64
@@ -1095,7 +1095,7 @@
   // the key and value operands of 8 positions from first for a lane (keys of position first + lane / 4, numbers
   // 2 * (lane % 4) and the next of each step of 8, values of positions first + 2 * (lane % 4) and the next, number
   // lane / 4 of each 8), all loads first so they wait for memory together
-  func.func private @strict_device_attention_loaded(%keys: !llvm.ptr, %keyBits: i64, %values: !llvm.ptr, %valueBits: i64, %first: i32, %positionLast: i32, %stride: i32, %base: i32, %size: i32, %row: i32, %quad: i32) -> (vector<16xi32>, vector<16xi32>) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_loaded(%keys: !llvm.ptr, %keyBits: i64, %values: !llvm.ptr, %valueBits: i64, %first: i32, %positionLast: i32, %stride: i32, %base: i32, %size: i32, %row: i32, %quad: i32) -> (vector<16xi32>, vector<16xi32>) attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c3 = llvm.mlir.constant(3 : i32) : i32
@@ -1146,7 +1146,7 @@
   // 8 positions from first for a warp while decoding (key and value operands loaded before): the scores of the two
   // rows of a lane, the new largest scores and sums, the outputs rescaled and the shares times the values added
   // (positions after last hidden)
-  func.func private @strict_device_attention_chunk(%queries: vector<32xi32>, %outputs: vector<64xf32>, %state: vector<4xf32>, %keyPairs: vector<16xi32>, %valuePairs: vector<16xi32>, %first: i32, %lastLower: i32, %lastUpper: i32, %size: i32, %quad: i32) -> (vector<64xf32>, vector<4xf32>) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_chunk(%queries: vector<32xi32>, %outputs: vector<64xf32>, %state: vector<4xf32>, %keyPairs: vector<16xi32>, %valuePairs: vector<16xi32>, %first: i32, %lastLower: i32, %lastUpper: i32, %size: i32, %quad: i32) -> (vector<64xf32>, vector<4xf32>) attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -1268,7 +1268,7 @@
     return %columnOutputs, %newState : vector<64xf32>, vector<4xf32>
   }
   // the shares of the scores of positions position and the next (2 to the power of score minus largest, 0 after last)
-  func.func private @strict_device_attention_pairShares(%score: f32, %scoreNext: f32, %position: i32, %last: i32, %largest: f32) -> (f32, f32) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_pairShares(%score: f32, %scoreNext: f32, %position: i32, %last: i32, %largest: f32) -> (f32, f32) attributes {llvm.passthrough = ["alwaysinline"]} {
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %zero = arith.constant 0.0 : f32
     %positionNext = arith.addi %position, %c1 : i32
@@ -1283,7 +1283,7 @@
     return %shown, %shownNext : f32, f32
   }
   // the outputs and state of another warp or block (the same rows and numbers in the same lanes) merged into these
-  func.func private @strict_device_attention_merge(%outputs: vector<64xf32>, %state: vector<4xf32>, %otherOutputs: vector<64xf32>, %otherState: vector<4xf32>) -> (vector<64xf32>, vector<4xf32>) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_merge(%outputs: vector<64xf32>, %state: vector<4xf32>, %otherOutputs: vector<64xf32>, %otherState: vector<4xf32>) -> (vector<64xf32>, vector<4xf32>) attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -1340,7 +1340,7 @@
   }
   // the 64 outputs and the state of a lane to to (17 parts of 4 numbers, each 32 parts apart so the lanes write
   // neighbors)
-  func.func private @strict_device_attention_put(%to: !llvm.ptr, %lane: i32, %outputs: vector<64xf32>, %state: vector<4xf32>) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_put(%to: !llvm.ptr, %lane: i32, %outputs: vector<64xf32>, %state: vector<4xf32>) attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -1373,7 +1373,7 @@
     return
   }
   // where part number part of a lane starts
-  func.func private @strict_device_attention_slot(%start: !llvm.ptr, %part: i32, %lane: i32) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_slot(%start: !llvm.ptr, %part: i32, %lane: i32) -> !llvm.ptr attributes {llvm.passthrough = ["alwaysinline"]} {
     %c2 = llvm.mlir.constant(2 : i32) : i32
     %c5 = llvm.mlir.constant(5 : i32) : i32
     %row = arith.shli %part, %c5 : i32
@@ -1383,14 +1383,14 @@
     %slot = llvm.getelementptr %start[%numbers64] : (!llvm.ptr, i64) -> !llvm.ptr, f32
     return %slot : !llvm.ptr
   }
-  func.func private @strict_device_attention_part(%to: !llvm.ptr, %part: i32, %lane: i32, %numbers: vector<4xf32>) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_part(%to: !llvm.ptr, %part: i32, %lane: i32, %numbers: vector<4xf32>) attributes {llvm.passthrough = ["alwaysinline"]} {
     %slot = func.call @strict_device_attention_slot(%to, %part, %lane) : (!llvm.ptr, i32, i32) -> !llvm.ptr
     llvm.store %numbers, %slot {alignment = 16 : i64} : vector<4xf32>, !llvm.ptr
     return
   }
   // the 64 outputs and the state of a lane written by strict_device_attention_put, fresh past the cache of the SM for
   // the outputs of other blocks
-  func.func private @strict_device_attention_get(%from: !llvm.ptr, %lane: i32, %fresh: i1) -> (vector<64xf32>, vector<4xf32>) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_get(%from: !llvm.ptr, %lane: i32, %fresh: i1) -> (vector<64xf32>, vector<4xf32>) attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -1421,7 +1421,7 @@
     %state = func.call @strict_device_attention_read_part(%from, %c16, %lane, %fresh) : (!llvm.ptr, i32, i32, i1) -> vector<4xf32>
     return %readOutputs, %state : vector<64xf32>, vector<4xf32>
   }
-  func.func private @strict_device_attention_read_part(%from: !llvm.ptr, %part: i32, %lane: i32, %fresh: i1) -> vector<4xf32> attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_read_part(%from: !llvm.ptr, %part: i32, %lane: i32, %fresh: i1) -> vector<4xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
     %slot = func.call @strict_device_attention_slot(%from, %part, %lane) : (!llvm.ptr, i32, i32) -> !llvm.ptr
     cf.cond_br %fresh, ^uncached, ^cached
   ^uncached:
@@ -1432,7 +1432,7 @@
     return %cachedNumbers : vector<4xf32>
   }
   // where warps 4 to 7 (then 2 and 3, then 1) put their outputs for the warp 4 (2, 1) below: 2 regions in each tile
-  func.func private @strict_device_attention_region(%region: i32) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_region(%region: i32) -> !llvm.ptr attributes {llvm.passthrough = ["alwaysinline"]} {
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
     %c2176 = llvm.mlir.constant(2176 : i32) : i32
@@ -1450,7 +1450,7 @@
   }
   // the outputs and states of the 8 warps of a block merged into warp 0 through the shared tiles: warps 4 to 7 into
   // 0 to 3, then 1 to 3 into 0
-  func.func private @strict_device_attention_warps(%outputs: vector<64xf32>, %state: vector<4xf32>, %warp: i32, %lane: i32) -> (vector<64xf32>, vector<4xf32>) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_warps(%outputs: vector<64xf32>, %state: vector<4xf32>, %warp: i32, %lane: i32) -> (vector<64xf32>, vector<4xf32>) attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
     %c4 = llvm.mlir.constant(4 : i32) : i32
@@ -1498,7 +1498,7 @@
   llvm.mlir.global internal @strict_device_attention_counters(dense<0> : tensor<512xi32>) {addr_space = 1 : i32} : !llvm.array<512 x i32>
   llvm.mlir.global internal @strict_device_attention_last() {addr_space = 3 : i32} : i32
   // the start of the partial outputs of block number at
-  func.func private @strict_device_attention_partial(%at: i32) -> !llvm.ptr attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_partial(%at: i32) -> !llvm.ptr attributes {llvm.passthrough = ["alwaysinline"]} {
     %c2176 = llvm.mlir.constant(2176 : i32) : i32
     %partials = llvm.mlir.addressof @strict_device_attention_partials : !llvm.ptr<1>
     %start = llvm.addrspacecast %partials : !llvm.ptr<1> to !llvm.ptr
@@ -1652,7 +1652,7 @@
   }
   // the outputs of the two rows of a lane divided by their sums (over the 4 lanes of a row) into the result, rows
   // after the last token are left out
-  func.func private @strict_device_attention_finish(%result: !llvm.ptr, %wide: i1, %outputs: vector<64xf32>, %state: vector<4xf32>, %lowerToken: i32, %upperToken: i32, %tokenLast: i32, %lowerQuery: i64, %upperQuery: i64, %size: i32, %quad: i32) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_finish(%result: !llvm.ptr, %wide: i1, %outputs: vector<64xf32>, %state: vector<4xf32>, %lowerToken: i32, %upperToken: i32, %tokenLast: i32, %lowerQuery: i64, %upperQuery: i64, %size: i32, %quad: i32) attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
