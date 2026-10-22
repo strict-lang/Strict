@@ -16,7 +16,7 @@ constant Colors = TypeInference(KnownTypes(("Color", "ColorValue"), (Scope(List(
 ConstantOf(typeName Text, name Text) Text
 	TypeInference(KnownTypes.Sample, Limits).ConstantOf("Count", "Limit") is "3"
 	NoInference.ConstantOf("A", "Missing") is ""
-	let index = types.names.Index(typeName)
+	let index = types.Index(typeName)
 	index is -1 then "" else constants(index).TypeOf(name)
 TypeOf(node SyntaxNode, scope Scope, own Scope) Text
 	NoInference.TypeOf(SyntaxNode("Number", "1"), NoShape, NoShape) is "Number"

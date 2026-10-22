@@ -2,16 +2,26 @@ has names Texts
 has members Scopes
 has methods Scopes
 has parameters Scopes
+has positions Dictionary(Text, Number) = Dictionary(Text, Number)
 constant NoMembers = Scope(List(Text), List(Text))
 constant CountMembers = Scope(("number", "unused"), ("Number", "Unused"))
 constant CountMethods = Scope(("Increment", "Twice"), ("Count", "Count"))
 constant CountParameters = Scope(("Increment", "Increment mutable", "Twice", "Twice", "Twice types"), ("", "Mutable", "times,offset", "times", "Number"))
 constant SampleParameters = (CountParameters, NoMembers)
 constant Sample = KnownTypes(("Count", "Text"), (CountMembers, NoMembers), (CountMethods, NoMembers), SampleParameters)
+constant Indexed = KnownTypes(Sample.names, Sample.members, Sample.methods, Sample.parameters, Dictionary(("Count", 0), ("Text", 1)))
 IsKnown(typeName Text) Boolean
 	Sample.IsKnown("Count")
 	Sample.IsKnown("Missing") is false
-	typeName is in names
+	Index(typeName) >= 0
+Index(typeName Text) Number
+	Sample.Index("Text") is 1
+	Sample.Index("Missing") is -1
+	Indexed.Index("Text") is 1
+	Indexed.Index("Missing") is -1
+	if positions.Length is 0
+		return names.Index(typeName)
+	typeName is in positions then positions(typeName) else -1
 IsPlural(typeName Text) Boolean
 	Sample.IsPlural("Counts")
 	Sample.IsPlural("Text") is false
@@ -26,12 +36,12 @@ BaseName(typeName Text) Text
 	open > 0 then typeName.Substring(0, open) else typeName
 MembersOf(typeName Text) Scope
 	Sample.MembersOf("Count").TypeOf("number") is "Number"
-	let index = names.Index(BaseName(typeName))
+	let index = Index(BaseName(typeName))
 	index is -1 then NoMembers else members(index)
 MethodsOf(typeName Text) Scope
 	Sample.MethodsOf("Count").TypeOf("Increment") is "Count"
 	Sample.MethodsOf("Count(Number)").TypeOf("Increment") is "Count"
-	let index = names.Index(BaseName(typeName))
+	let index = Index(BaseName(typeName))
 	index is -1 then NoMembers else methods(index)
 ParametersOf(typeName Text, method Text, arguments Number) Texts
 	Sample.ParametersOf("Count", "Twice", 2) is ("times", "offset")
@@ -44,7 +54,7 @@ ParametersOf(typeName Text, method Text, arguments Number) Texts
 	ParameterNames(scope.TypeOf(method))
 ParameterScope(typeName Text) Scope
 	Sample.ParameterScope("Count").TypeOf("Twice types") is "Number"
-	let position = names.Index(BaseName(typeName))
+	let position = Index(BaseName(typeName))
 	position is -1 then NoMembers else parameters(position)
 ParameterNames(joined Text) Texts
 	Sample.ParameterNames("a,b") is ("a", "b")
