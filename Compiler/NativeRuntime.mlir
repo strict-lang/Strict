@@ -9191,7 +9191,9 @@
   ^failed:
     return %unset : !llvm.ptr
   }
-  // the PTX module of the program, loaded once (the newer PTX, the one for older GPUs when the driver rejects it)
+  // the PTX module of the program, loaded once (the newer PTX, the one for older GPUs when the driver rejects it, then
+  // strict_gpu_older is 1)
+  llvm.mlir.global internal @strict_gpu_older(0 : i64) : i64
   func.func private @strict_gpu_module(%ptx: !llvm.ptr) -> i64 {
     %zero = arith.constant 0 : i64
     %zero32 = arith.constant 0 : i32
@@ -9227,6 +9229,8 @@
   ^loadOlder:
     %olderLoaded = llvm.call %loadData(%moduleSlot, %olderPtx) : !llvm.ptr, (!llvm.ptr, !llvm.ptr) -> i32
     %olderFailed = arith.cmpi ne, %olderLoaded, %zero32 : i32
+    %olderSlot = llvm.mlir.addressof @strict_gpu_older : !llvm.ptr
+    llvm.store %one, %olderSlot : i64, !llvm.ptr
     cf.cond_br %olderFailed, ^failed, ^loaded
   ^loaded:
     %newModule = llvm.load %moduleSlot : !llvm.ptr -> i64
@@ -11849,8 +11853,8 @@
   llvm.mlir.global internal constant @strict_gpu_whole_name("strict_device_whole\00strict_device_wholes\00") : !llvm.array<41 x i8>
   llvm.mlir.global internal @strict_gpu_whole_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   // the dot products of `Batch.Sums` for several tokens (strict_device_blocks, 64 or more with 8 bit tokens and Q4_K or Q6_K
-  // rows strict_device_tiles, with 8 bit rows strict_device_eights, strict_device_whole when the first has one scale, one
-  // token strict_device_tokens): every row with the numbers of every token (token t at
+  // rows strict_device_tiles, with 8 bit rows strict_device_eights, strict_device_whole when the first has one scale from
+  // sm_80 on, one token strict_device_tokens): every row with the numbers of every token (token t at
   // t * width of input), row r and token t at t * rows + r of the result plus biases(index % biases.Length) unless
   // biases is 0.0, the rows of token t start at bases(t / 64) unless bases is 0.0 (`Batch.Grouped`), 0.0 when the GPU
   // can not
@@ -11900,7 +11904,15 @@
     %eightsSlot = llvm.mlir.addressof @strict_gpu_eights_slot : !llvm.ptr
     %eightLanes = arith.constant -256 : i64
     %tokenWidth = func.call @strict_gpu_token_width(%rows, %width, %eights) : (f64, f64, i1) -> i64
-    %wholeRows = arith.cmpi ne, %tokenWidth, %none : i64
+    %oneScale = arith.cmpi ne, %tokenWidth, %none : i64
+    %olderSlot = llvm.mlir.addressof @strict_gpu_older : !llvm.ptr
+    %older = llvm.load %olderSlot : !llvm.ptr -> i64
+    %isOlder = arith.cmpi ne, %older, %none : i64
+    %isAmd = func.call @strict_gpu_is_amd() : () -> i1
+    %beforeAmpere = arith.ori %isOlder, %isAmd : i1
+    %true = arith.constant true
+    %pipelined = arith.xori %beforeAmpere, %true : i1
+    %wholeRows = arith.andi %oneScale, %pipelined : i1
     %wholeName = llvm.mlir.addressof @strict_gpu_whole_name : !llvm.ptr
     %wholeSlot = llvm.mlir.addressof @strict_gpu_whole_slot : !llvm.ptr
     %wholeLanes = arith.constant -4096 : i64

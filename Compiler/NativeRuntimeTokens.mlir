@@ -3211,6 +3211,26 @@
   ^exit:
     return
   }
+  // the row and token tile of block: groups of 4 row tiles (fewer in the last group) go through the token tiles
+  // together, so the blocks running at the same time share their rows and tokens in the L2 cache
+  func.func private @strict_device_whole_tile(%block: i64, %rows: i64, %tokenTiles: i64) -> (i64, i64) attributes {passthrough = ["alwaysinline"]} {
+    %two = arith.constant 2 : i64
+    %four = arith.constant 4 : i64
+    %eight = arith.constant 8 : i64
+    %twoHundredFiftyFive = arith.constant 255 : i64
+    %rowsUp = arith.addi %rows, %twoHundredFiftyFive : i64
+    %rowTiles = arith.shrui %rowsUp, %eight : i64
+    %groupBlocks = arith.shli %tokenTiles, %two : i64
+    %group = arith.divui %block, %groupBlocks : i64
+    %inGroup = arith.remui %block, %groupBlocks : i64
+    %groupFirst = arith.shli %group, %two : i64
+    %rowTilesLeft = arith.subi %rowTiles, %groupFirst : i64
+    %groupRows = arith.minui %rowTilesLeft, %four : i64
+    %rowInGroup = arith.remui %inGroup, %groupRows : i64
+    %rowTile = arith.addi %groupFirst, %rowInGroup : i64
+    %tokenTile = arith.divui %inGroup, %groupRows : i64
+    return %rowTile, %tokenTile : i64, i64
+  }
   // the dot of row r and token t becomes number t * rows + r of the result
   func.func private @strict_device_whole_run(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %rowsData: !llvm.ptr, %columns: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %widthNumber: f64, %rowsNumber: f64, %wide: i1, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64) attributes {passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
@@ -3239,8 +3259,7 @@
     %oneHundredTwentySeven = arith.constant 127 : i64
     %tokensUp = arith.addi %tokens, %oneHundredTwentySeven : i64
     %tokenTiles = arith.shrui %tokensUp, %seven : i64
-    %tokenTile = arith.remui %block, %tokenTiles : i64
-    %rowTile = arith.divui %block, %tokenTiles : i64
+    %rowTile, %tokenTile = func.call @strict_device_whole_tile(%block, %rows, %tokenTiles) : (i64, i64, i64) -> (i64, i64)
     %rowFirst = arith.shli %rowTile, %eight : i64
     %tokenFirst = arith.shli %tokenTile, %seven : i64
     %rowLast = arith.subi %rows, %one : i64
