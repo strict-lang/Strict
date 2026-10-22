@@ -1,0 +1,51 @@
+has function MlirFunction
+has at Number
+constant Chained = MlirFeeding(MlirFunction(List(TypeEntry) + GpuSamples.Layered, GpuSamples.Layered, MethodEntry("Chained", List(MemberEntry) + MemberEntry("input", "Strict/List(Number)", List(InstructionEntry), false), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "index"), InstructionEntry(InstructionType.IndexCall, "input", (1, 0, -1)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "offset"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "offset"), InstructionEntry(InstructionType.IndexCall, "input", (3, 2, -1)), InstructionEntry.Return(3)))), 0)
+constant Summing = MlirFeeding(MlirDeviceStatements.Summed, 6)
+constant Singled = MlirFeeding(MlirFunction(MlirDeviceStatements.Summed, Float = "f32"), 6)
+Stored(number Text, target Text) Texts
+	Summing.Stored("%d6", "%r4") is ("    llvm.store %d6, %r4 : f64, !llvm.ptr")
+	Singled.Stored("%d6", "%r4").Last is "    llvm.store %inexact, %r4_q : i64, !llvm.ptr"
+	MlirFeeding(MlirDeviceStatements.Singled, 2).Stored("%d2", "%r2").Last.EndsWith("%r2_q : i64, !llvm.ptr")
+	let entry = function.method.instructions(at)
+	if (entry.kind is in MlirRational.Kinds) or IsFeeding(at, LoadReuse(function.method.instructions).Written(entry))
+		return List(Text) + function.Store(number, target)
+	let inexact = MlirExact(function, at).Set("%inexact", "%inexact", target)
+	(List(Text) + MlirTyped(function.Float).Store(number, target)) + inexact
+IsFeeding(position Number, register Number) Boolean
+	Chained.IsFeeding(1, 1)
+	Chained.IsFeeding(4, 3) is false
+	Summing.IsFeeding(6, 4) is false
+	let reuse = LoadReuse(function.method.instructions)
+	for Range(position + 1, function.method.instructions.Length)
+		let entry = function.method.instructions(value)
+		let isRead = (register is in reuse.Reads(entry)) and IsPositional(value, entry)
+		if isRead or IsStored(value, entry, register)
+			return true
+		if reuse.Written(entry) is register
+			return false
+	false
+IsStored(position Number, entry InstructionEntry, register Number) Boolean
+	Chained.IsStored(2, Chained.function.method.instructions(2), 1)
+	Summing.IsStored(10, Summing.function.method.instructions(10), 6) is false
+	let isStore = (entry.kind is InstructionType.StoreRegisterToVariable) and (entry.payload(0) is register)
+	isStore and IsLoaded(position, entry.texts(0))
+IsPositional(position Number, entry InstructionEntry) Boolean
+	Chained.IsPositional(4, Chained.function.method.instructions(4))
+	Summing.IsPositional(8, Summing.function.method.instructions(8)) is false
+	let kind = entry.kind
+	let isCompared = (kind > InstructionType.ArithmeticSeparator) and (kind < InstructionType.BinaryOperatorsSeparator)
+	if (kind is InstructionType.IndexCall) or isCompared
+		return true
+	let isCalculated = (kind > InstructionType.StoreSeparator) and (kind < InstructionType.ArithmeticSeparator)
+	let written = LoadReuse(function.method.instructions).Written(entry)
+	((kind is InstructionType.Invoke) or isCalculated) and IsFeeding(position, written)
+IsLoaded(position Number, name Text) Boolean
+	Chained.IsLoaded(2, "offset")
+	Summing.IsLoaded(10, "sum") is false
+	for Range(position + 1, function.method.instructions.Length)
+		let entry = function.method.instructions(value)
+		let isNamed = (entry.kind is InstructionType.LoadVariableToRegister) and (entry.texts(0) is name)
+		if isNamed and IsFeeding(value, entry.payload(0))
+			return true
+	false

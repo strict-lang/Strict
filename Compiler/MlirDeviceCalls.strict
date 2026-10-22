@@ -90,7 +90,7 @@ Logarithmic(entry InstructionEntry) Texts
 	let typed = MlirTyped(function.Float)
 	let call = " = func.call @strict_device_logarithm" + typed.Suffix + "(%failed, " + Temp("i") + ")"
 	let logarithm = "    " + Temp("") + call + " : (!llvm.ptr, " + typed.type + ") -> " + typed.type
-	Loaded(entry) + logarithm + function.Store(Temp(""), "%r" + entry.payload(0))
+	(Loaded(entry) + logarithm) + MlirFeeding(function, at).Stored(Temp(""), "%r" + entry.payload(0))
 Argument(parameter Number, register Text) Texts
 	Twice.Argument(0, "%r1") is ("    %d4p0 = llvm.load %r1 : !llvm.ptr -> f64")
 	Summing.Argument(0, "%r1").Last is "    %d5p0_b = llvm.load %r1_b : !llvm.ptr -> i64"

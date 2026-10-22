@@ -78,7 +78,7 @@ Read(list Text, target Text) Texts
 	let operands = "(" + Temp("d") + ", " + Temp("b") + ", " + Temp("k") + ", " + Temp("n") + ")"
 	let read = MlirTyped(function.Float).Read(Temp(""), operands)
 	let done = ("    cf.br ^d" + at + "done", "  ^d" + at + "done:")
-	("  ^d" + at + "read:", data, bits, read, function.Store(Temp(""), target)) + done
+	(("  ^d" + at + "read:", data, bits, read) + MlirFeeding(function, at).Stored(Temp(""), target)) + done
 Calculated(entry InstructionEntry) Texts
 	Multiplying.Calculated(Twice.method.instructions(2)).Last is "    llvm.store %d2, %r2 : f64, !llvm.ptr"
 	Text.Combine(MlirDeviceStatements(Singled, 2).Calculated(Twice.method.instructions(2))).IndexOf(" : f32") > 0
@@ -89,8 +89,8 @@ Calculated(entry InstructionEntry) Texts
 	let right = function.Load(Temp("b"), "%r" + entry.payload(2))
 	let flags = IsContracted(entry) then " fastmath<contract>" else ""
 	let calculated = MlirTyped(function.Float).Operated(Temp(""), entry.kind, Temp("a") + ", " + Temp("b") + flags)
-	let exact = MlirRational(MlirExact(function, at)).Operated(entry)
-	(left, right, calculated, function.Store(Temp(""), "%r" + entry.payload(3))) + exact
+	let stored = MlirFeeding(function, at).Stored(Temp(""), "%r" + entry.payload(3))
+	((left, right, calculated) + stored) + MlirRational(MlirExact(function, at)).Operated(entry)
 IsContracted(entry InstructionEntry) Boolean
 	MlirDeviceStatements(Summed, 9).IsContracted(Summed.method.instructions(9))
 	Multiplying.IsContracted(Twice.method.instructions(2)) is false
@@ -110,7 +110,7 @@ Called(entry InstructionEntry) Texts
 	let symbol = calls.callee.Symbol + "_device" + MlirTyped(function.Float).Suffix
 	let call = "    " + Temp("") + " = func.call @" + symbol + arguments
 	let typed = call + " : (" + calls.Types + ") -> " + function.Float
-	calls.Loaded(entry) + typed + function.Store(Temp(""), "%r" + entry.payload(0))
+	(calls.Loaded(entry) + typed) + MlirFeeding(function, at).Stored(Temp(""), "%r" + entry.payload(0))
 Callee MlirFunction
 	Calling.Callee.Symbol is "Rows_Twice_1"
 	MlirModule(function.types, "").Called(function, at).First
