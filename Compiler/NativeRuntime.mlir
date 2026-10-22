@@ -8651,9 +8651,9 @@
     llvm.store %result, %stateSlot : i64, !llvm.ptr
     return %opened : i1
   }
-  // a kernel loop with at least 1/64 of the GPU minimum elements opens the GPU in a thread (strict_gpu_spawn per
-  // platform) that loads the PTX, the state stays 3 (warming) until then, so the first big loop finds it ready; small
-  // loops never open it (strict.exe 276 to 41 MB peak memory and 0.8 to 0.5 s CPU for a 0.5 s test without the GPU)
+  // a program with kernels opens its GPU while it starts: main calls strict_gpu_warm, a thread (strict_gpu_spawn per
+  // platform) opens the device and loads the PTX, the state stays 3 (warming) until then, so the first launch finds
+  // the GPU ready instead of paying about 100 ms for the context and the PTX
   llvm.mlir.global internal @strict_gpu_warm_ptx(0 : i64) : i64
   llvm.mlir.global internal constant @strict_gpu_warm_switch("STRICT_GPU_WARM\00") : !llvm.array<16 x i8>
   func.func private @strict_gpu_warm(%ptx: !llvm.ptr) {
@@ -9508,15 +9508,7 @@
   ^small:
     %never = arith.constant 9223372036854775807 : i64
     %disabled = arith.cmpi eq, %minimum, %never : i64
-    cf.cond_br %disabled, ^failed, ^near
-  ^near:
-    %nearShift = arith.constant 6 : i64
-    %nearWork = arith.shli %work, %nearShift : i64
-    %isNear = arith.cmpi sge, %nearWork, %minimum : i64
-    cf.cond_br %isNear, ^warm, ^inputs
-  ^warm:
-    func.call @strict_gpu_warm(%ptx) : (!llvm.ptr) -> ()
-    cf.br ^inputs
+    cf.cond_br %disabled, ^failed, ^inputs
   ^inputs:
     %onDevice = func.call @strict_gpu_residents(%source, %kind, %values, %valueCount, %mask) : (f64, i64, !llvm.ptr, i64, i64) -> i1
     %hasRows = arith.cmpi ne, %rows, %none : i64

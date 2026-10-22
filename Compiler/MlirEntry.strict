@@ -1,11 +1,13 @@
 has entry MlirFunction
 has others List(MlirFunction) = List(MlirFunction)
+has isGpu Boolean = false
 constant Counted = MlirEntry(MlirModule.Counters.Functions.First)
 constant Frames = MemberEntry("frames", "Strict/Number", List(InstructionEntry) + InstructionEntry.Set(List(Text), (1, 7)), false)
 constant Both = MlirEntry(Counted.entry, List(MlirFunction) + Counted.entry)
 constant Framed = MlirEntry(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + Frames, "Strict/Number", List(InstructionEntry) + InstructionEntry.Return(0))))
 constant Unhandled = ("    %unhandled = func.call @strict_unhandled(%result) : (f64) -> i1", "    %failing = arith.constant 1 : i32")
 constant Finished = "    func.call @strict_rc_finished() : () -> ()"
+constant Warm = ("    %warmPtx = llvm.mlir.addressof @strict_gpu_ptx : !llvm.ptr", "    func.call @strict_gpu_warm(%warmPtx) : (!llvm.ptr) -> ()")
 constant Exit = "    %exit = arith.select %unhandled, %failing, %code : i32"
 constant CollectorStart = ("    %stackBase = llvm.call_intrinsic \"llvm.addressofreturnaddress.p0\"() : () -> !llvm.ptr", "    func.call @strict_gc_init(%stackBase) : (!llvm.ptr) -> ()", "    func.call @strict_rc_counted() : () -> ()")
 Main Texts
@@ -13,6 +15,7 @@ Main Texts
 	Counted.Main.Index("    func.call @strict_gc_init(%stackBase) : (!llvm.ptr) -> ()") is 2
 	Counted.Main(1).IndexOf("llvm.addressofreturnaddress.p0") > 0
 	Both.Main.Index("    %total1 = arith.addf %result, %result1 : f64") > 0
+	MlirEntry(Counted.entry, List(MlirFunction), true).Main.Index(Warm.Last) is 8
 	constant self = "    %self = llvm.load %selfslot : !llvm.ptr -> f64"
 	let prepared = Header + MlirInstances(entry, 0).Fresh(entry.type, "%selfslot", "", List(Text)) + Arguments
 	let printed = entry.IsCounted then List(Text) + MlirLines.Print else List(Text)
@@ -20,9 +23,11 @@ Main Texts
 	called + Finished + Unhandled + Exit + printed + ("    return %exit : i32", "  }")
 Header Texts
 	Counted.Header.Length is 7
+	MlirEntry(Counted.entry, List(MlirFunction), true).Header.Last is Warm.Last
 	constant slot = "    %selfslot = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
 	constant constants = ("    %one = arith.constant 1 : i64", "    %zero = arith.constant 0.0 : f64", slot)
-	List(Text) + "  func.func @main(%argc: i32, %argv: !llvm.ptr) -> i32 {" + CollectorStart + constants
+	let header = List(Text) + "  func.func @main(%argc: i32, %argv: !llvm.ptr) -> i32 {" + CollectorStart + constants
+	isGpu then header + Warm else header
 Code Text
 	Counted.Code is "    %code = arith.constant 0 : i32"
 	let total = others.Length is 0 then "%result" else "%total" + others.Length
