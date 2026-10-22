@@ -7,7 +7,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      FOLDERS: Bytecode Compression Validators Runtime Expressions Examples Examples/BaseTypesTest Examples/CompactTypeTest Examples/NativeAdd Examples/Parsing ImageProcessing MachineLearning Math
+      FOLDERS: Bytecode Compression Validators Examples Examples/BaseTypesTest Examples/CompactTypeTest Examples/NativeAdd Examples/Parsing ImageProcessing MachineLearning Math
+      NATIVE: Compression Math Examples/NativeAdd Examples/BaseTypesTest Examples/CompactTypeTest Examples/Parsing
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache/restore@v4
@@ -34,11 +35,19 @@ jobs:
           for folder in $FOLDERS; do
             ./strict test "$folder" > test.log 2>&1 || { grep -v "^Test passed" test.log; exit 1; }
           done
+      - name: Native builds and tests
+        run: |
+          for folder in $NATIVE; do
+            for file in "$folder"/*.strict; do
+              ./strict build "$file" > build.log 2>&1 || { code=$?; grep -v "^Test passed" build.log; echo "::error::native build of $file failed with exit code $code"; exit 1; }
+            done
+          done
   windows:
     runs-on: windows-latest
     timeout-minutes: 10
     env:
-      FOLDERS: Compression Validators Examples/BaseTypesTest Examples/CompactTypeTest Examples/NativeAdd Examples/Parsing Math
+      FOLDERS: Compression Validators Runtime Expressions Examples/BaseTypesTest Examples/CompactTypeTest Examples/NativeAdd Examples/Parsing Math
+      NATIVE: Examples/NativeAdd Compression
     defaults:
       run:
         shell: bash
@@ -71,4 +80,11 @@ jobs:
         run: |
           for folder in $FOLDERS; do
             ./strict.exe test "$folder" > test.log 2>&1 || { grep -v "^Test passed" test.log; exit 1; }
+          done
+      - name: Native builds and tests
+        run: |
+          for folder in $NATIVE; do
+            for file in "$folder"/*.strict; do
+              ./strict.exe build "$file" > build.log 2>&1 || { code=$?; grep -v "^Test passed" build.log; echo "::error::native build of $file failed with exit code $code"; exit 1; }
+            done
           done
