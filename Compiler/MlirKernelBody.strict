@@ -7,9 +7,9 @@ constant Placed = "    %wp = llvm.getelementptr %result[%at] : (!llvm.ptr, i64) 
 constant Attributes = ", %results: i64) attributes {nvvm.kernel} {"
 constant Threads = ("    %thread = func.call @strict_device_thread_index() : () -> i32", "    %block = func.call @strict_device_block_index() : () -> i32", "    %width = func.call @strict_device_block_size() : () -> i32", "    %start = arith.muli %block, %width : i32", "    %sum = arith.addi %start, %thread : i32", "    %at = arith.extui %sum : i32 to i64")
 Lines Texts
-	Body.Lines.First.StartsWith("  llvm.func @Board_Blurred_1_gpu5(" + MlirDevice.Fixed + ", %f_board_cellsd: !llvm.ptr")
+	Body.Lines.First.StartsWith("  llvm.func @Board_Blurred_1_gpu5(" + MlirDevice.Fixed + ", %f_board_cells_d: !llvm.ptr")
 	Body.Lines.Last is "  }"
-	Text.Combine(Body.Lines).IndexOf("@Board_Picked_2_whole_flat(%f_board_cellsd, %at) : (!llvm.ptr, i64)") > 0
+	Text.Combine(Body.Lines).IndexOf("@Board_Picked_2_whole_flat(%f_board_cells_d, %at) : (!llvm.ptr, i64)") > 0
 	let device = MlirDevice(function, position)
 	let header = "  llvm.func @" + device.Name + "(" + MlirDevice.Fixed + Freed + Attributes
 	(List(Text) + header) + Threads + MlirGrouped.Plain + "  ^body:" + Arguments + Stored + MlirDevice.Ending
@@ -17,11 +17,11 @@ Kernels Texts
 	Body.Kernels.Length is Body.Lines.Length * 2 + Body.Functions.Length
 	Lines + MlirKernelBody(MlirFunction(function, Float = "f32"), position).Lines + Functions
 Freed Text
-	Body.Freed is ", %f_board_cellsd: !llvm.ptr, %f_board_cellsn: i64, %f_board_cellsb: i64"
+	Body.Freed is ", %f_board_cells_d: !llvm.ptr, %f_board_cells_n: i64, %f_board_cells_b: i64"
 	let kernel = MlirWholeKernel(function, position)
 	mutable text = ""
 	for kernel.Free
-		let parts = ", %f_" + value + "d: !llvm.ptr, %f_" + value + "n: i64, %f_" + value + "b: i64"
+		let parts = ", %f_" + value + "_d: !llvm.ptr, %f_" + value + "_n: i64, %f_" + value + "_b: i64"
 		text = text + (kernel.IsList(value) then parts else ", %f_" + value + ": f64")
 	text
 Arguments Texts
@@ -43,7 +43,7 @@ Members(name Text, input Number) Texts
 		if kernel.Kind(name + "_" + value) is "i"
 			"    %w" + input + "_" + value + " = arith.fptosi %f_" + name + "_" + value + " : f64 to i64"
 Names Texts
-	Body.Names is ("%f_board_cellsd", "%at")
+	Body.Names is ("%f_board_cells_d", "%at")
 	let kernel = MlirWholeKernel(function, position)
 	let kinds = MlirWholeFunction(kernel.Callee).Kinds
 	mutable names = List(Mutable(Text))
@@ -55,10 +55,10 @@ Names Texts
 			names.Add(name is "index" then "%at" else "%w" + index)
 	names
 MemberNames(name Text, input Number) Texts
-	Body.MemberNames("board", 0) is List(Text) + "%f_board_cellsd"
+	Body.MemberNames("board", 0) is List(Text) + "%f_board_cells_d"
 	let kernel = MlirWholeKernel(function, position)
 	for MlirWholeInstance(kernel.Callee).Members(input)
-		kernel.Kind(name + "_" + value) is "d" then "%f_" + name + "_" + value + "d" else "%w" + input + "_" + value
+		kernel.Kind(name + "_" + value) is "d" then "%f_" + name + "_" + value + "_d" else "%w" + input + "_" + value
 Stored Texts
 	Body.Stored.Last is Store
 	let kernel = MlirWholeKernel(function, position)

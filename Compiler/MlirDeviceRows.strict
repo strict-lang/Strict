@@ -18,7 +18,7 @@ Emitted(entry InstructionEntry) Texts
 	let list = "%v_" + entry.texts(0)
 	let position = MlirExact(function, at).Position("%r" + entry.payload(1), Temp("k"))
 	let called = " = func.call @strict_device_row(" + Temp("d") + ", " + Temp("k") + ")" + Types
-	let row = (MlirTyped.Pointer.Load(Temp("d"), list + "d"), "    " + Temp("w") + ":3" + called)
+	let row = (MlirTyped.Pointer.Load(Temp("d"), list + "_d"), "    " + Temp("w") + ":3" + called)
 	let failed = MlirDeviceStatements(function, at).Failed
 	position + row + Bounded + failed + Viewed(list, "%r" + entry.payload(0))
 Bounded Texts
@@ -29,10 +29,10 @@ Bounded Texts
 	let branch = "    cf.cond_br " + Temp("o") + ", ^d" + at + "read, ^d" + at + "fail"
 	(MlirTyped.Integer.Constant(Temp("z"), "0"), low, high, inside, branch)
 Viewed(list Text, target Text) Texts
-	MlirDeviceRows(Picking, 4).Viewed("%v_weights", "%r2")(1) is "    llvm.store %d4w#0, %r2d : !llvm.ptr, !llvm.ptr"
-	let pointer = MlirTyped.Pointer.Store(Temp("w") + "#0", target + "d")
-	let bits = MlirTyped.Integer.Store(Temp("w") + "#1", target + "b")
-	let columns = (MlirTyped.Integer.Load(Temp("n"), list + "n"), MlirTyped.Integer.Store(Temp("n"), target + "n"))
+	MlirDeviceRows(Picking, 4).Viewed("%v_weights", "%r2")(1) is "    llvm.store %d4w#0, %r2_d : !llvm.ptr, !llvm.ptr"
+	let pointer = MlirTyped.Pointer.Store(Temp("w") + "#0", target + "_d")
+	let bits = MlirTyped.Integer.Store(Temp("w") + "#1", target + "_b")
+	let columns = (MlirTyped.Integer.Load(Temp("n"), list + "_n"), MlirTyped.Integer.Store(Temp("n"), target + "_n"))
 	let done = ("    cf.br ^d" + at + "done", "  ^d" + at + "done:")
 	(List(Text) + ("  ^d" + at + "read:") + pointer + bits) + columns + done
 Called(entry InstructionEntry) Texts
@@ -41,7 +41,7 @@ Called(entry InstructionEntry) Texts
 		return MlirDeviceStatements(function, at).Called(entry)
 	let countPosition = 5 + entry.payload(3)
 	let instance = entry.payload(countPosition + 2 + entry.payload(countPosition))
-	let count = MlirTyped.Integer.Load(Temp("n"), "%r" + instance + "n")
+	let count = MlirTyped.Integer.Load(Temp("n"), "%r" + instance + "_n")
 	let converted = "    " + Temp("") + " = arith.sitofp " + Temp("n") + " : i64 to " + function.Float
 	let exact = MlirExact(function, at).Set(Temp("n"), "%one", "%r" + entry.payload(0))
 	(count, converted, function.Store(Temp(""), "%r" + entry.payload(0))) + exact

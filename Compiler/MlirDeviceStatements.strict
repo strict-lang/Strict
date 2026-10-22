@@ -32,7 +32,7 @@ Temp(suffix Text) Text
 Moved(entry InstructionEntry) Texts
 	MlirDeviceStatements(Twice, 1).Moved(Twice.method.instructions(1)).First.EndsWith("0x4000000000000000 : f64")
 	Text.Combine(MlirDeviceStatements(Singled, 1).Moved(Twice.method.instructions(1))).IndexOf("f64 to f32") > 0
-	MlirDeviceStatements(Layered, 4).Moved(Layered.method.instructions(4)).Last.EndsWith(", %r2b : i64, !llvm.ptr")
+	MlirDeviceStatements(Layered, 4).Moved(Layered.method.instructions(4)).Last.EndsWith(", %r2_b : i64, !llvm.ptr")
 	if entry.kind is InstructionType.LoadVariableToRegister
 		return Copied("%v_" + entry.texts(0), "%r" + entry.payload(0), entry.texts(0))
 	if entry.kind is InstructionType.StoreRegisterToVariable
@@ -44,7 +44,7 @@ Moved(entry InstructionEntry) Texts
 	loaded + function.Store(Temp(""), target)
 Copied(source Text, target Text, name Text) Texts
 	MlirDeviceStatements(Doubled, 3).Copied("%v_value", "%r1", "value").Last is "    llvm.store %d3, %r1 : f64, !llvm.ptr"
-	MlirDeviceStatements(MlirDeviceRows.Nesting, 5).Emitted.Last.EndsWith("%v_list0b : i64, !llvm.ptr")
+	MlirDeviceStatements(MlirDeviceRows.Nesting, 5).Emitted.Last.EndsWith("%v_list0_b : i64, !llvm.ptr")
 	if IsList(MlirKinds(function).VariableKind(at + 1, name)) is false
 		let moved = (function.Load(Temp(""), source), function.Store(Temp(""), target))
 		return moved + MlirExact(function, at).Copied(source, target)
@@ -61,7 +61,7 @@ Indexed(entry InstructionEntry) Texts
 	Text.Combine(Reading.Indexed(Lookup)).IndexOf("@strict_device_element(%d6d, %d6b, %d6k, %d6n)") > 0
 	let list = "%v_" + entry.texts(0)
 	let position = MlirExact(function, at).Position("%r" + entry.payload(1), Temp("k"))
-	let length = (MlirTyped.Integer.Load(Temp("n"), list + "n"), MlirTyped.Integer.Constant(Temp("z"), "0"))
+	let length = (MlirTyped.Integer.Load(Temp("n"), list + "_n"), MlirTyped.Integer.Constant(Temp("z"), "0"))
 	let low = "    " + Temp("l") + " = arith.cmpi sge, " + Temp("k") + ", " + Temp("z") + " : i64"
 	let high = "    " + Temp("h") + " = arith.cmpi slt, " + Temp("k") + ", " + Temp("n") + " : i64"
 	let inside = "    " + Temp("o") + " = arith.andi " + Temp("l") + ", " + Temp("h") + " : i1"
@@ -73,8 +73,8 @@ Failed Texts
 	("  ^d" + at + "fail:", one, MlirTyped.Integer.Store(Temp("f"), "%failed"), "    cf.br ^d" + at + "done")
 Read(list Text, target Text) Texts
 	Reading.Read("%v_input", "%r4").Last is "  ^d6done:"
-	let data = MlirTyped.Pointer.Load(Temp("d"), list + "d")
-	let bits = MlirTyped.Integer.Load(Temp("b"), list + "b")
+	let data = MlirTyped.Pointer.Load(Temp("d"), list + "_d")
+	let bits = MlirTyped.Integer.Load(Temp("b"), list + "_b")
 	let operands = "(" + Temp("d") + ", " + Temp("b") + ", " + Temp("k") + ", " + Temp("n") + ")"
 	let read = MlirTyped(function.Float).Read(Temp(""), operands)
 	let done = ("    cf.br ^d" + at + "done", "  ^d" + at + "done:")
@@ -100,7 +100,7 @@ IsContracted(entry InstructionEntry) Boolean
 	isCalculation and isLooped and MlirDeviceSums(function, begin).IsSum
 Called(entry InstructionEntry) Texts
 	Text.Combine(Calling.Called(Call)).IndexOf("@Rows_Twice_1_device(%failed, %lane, %lanes, %d4i, %d4p0)") > 0
-	Text.Combine(Passing.Called(Layered.method.instructions(5))).IndexOf("%d5p0d, %d5p0n, %d5p0b") > 0
+	Text.Combine(Passing.Called(Layered.method.instructions(5))).IndexOf("%d5p0_d, %d5p0_n, %d5p0_b") > 0
 	MlirDeviceStatements(MlirGpuCheck.Floored, 1).Called(MlirGpuCheck.Flooring)(1).IndexOf("floor(%d1i)") > 0
 	MlirDeviceStatements(MlirTokens.Summing.function, 15).Called(MlirTokens.Dotting)(1).IndexOf("%source") > 0
 	if MlirDeviceCalls(function, at, function).IsNative(entry)

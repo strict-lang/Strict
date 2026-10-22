@@ -55,7 +55,7 @@ Chosen(name Text, argumentTypes Texts) HeaderTokens
 	let ordinal = Overloads(types).Chosen(TypeName, name, argumentTypes)
 	mutable seen = -1
 	for shape.lines
-		if shape.IsMethodHeader(value) and (Tokenizer(value).Tokens.First is name)
+		if value.StartsWith(name) and shape.IsMethodHeader(value) and (Tokenizer(value).Tokens.First is name)
 			seen = seen + 1
 			let header = HeaderTokens(Tokenizer(value).Tokens)
 			if (seen is ordinal) or ((ordinal < 0) and (header.ParameterNames.Length is argumentTypes.Length))
@@ -76,7 +76,7 @@ Header(name Text) HeaderTokens
 	Plain.Header("Greet").ReturnType is "Text"
 	Plain.Header("Missing").tokens.Length is 0
 	for shape.lines
-		if shape.IsMethodHeader(value) and (Tokenizer(value).Tokens.First is name)
+		if value.StartsWith(name) and shape.IsMethodHeader(value) and (Tokenizer(value).Tokens.First is name)
 			return HeaderTokens(Tokenizer(value).Tokens)
 	HeaderTokens(List(Text))
 WithErrorArguments(node SyntaxNode, scope Scope) SyntaxNode
@@ -100,8 +100,9 @@ IsMember(type Text, name Text) Boolean
 InheritingMember(name Text) Text
 	CallTarget(NoTypes, TypeShape("has a A"), "Strict/C", List(Text)).InheritingMember("x") is "a"
 	Plain.InheritingMember("x") is ""
-	for shape.MemberScope.names
-		if types.MethodsOf(shape.MemberScope.TypeOf(value)).TypeOf(name) is not ""
+	let members = shape.MemberScope
+	for members.names
+		if types.MethodsOf(members.types(index)).TypeOf(name) is not ""
 			return value
 	""
 FullName(type Text) Text
@@ -127,7 +128,7 @@ PackageType(type Text) Text
 	if local is in typeNames
 		return local + arguments
 	for typeNames
-		if Path(value).FileName.text is base
+		if value.EndsWith("/" + base) or (value is base)
 			return value + arguments
 	""
 TypeName Text

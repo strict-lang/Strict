@@ -15,8 +15,7 @@ IsKnown(typeName Text) Boolean
 IsPlural(typeName Text) Boolean
 	Sample.IsPlural("Counts")
 	Sample.IsPlural("Text") is false
-	let isPluralName = typeName.Length > 1 and (typeName.Substring(typeName.Length - 1, 1) is "s")
-	(not IsKnown(typeName)) and isPluralName
+	typeName.Length > 1 and typeName.EndsWith("s") and (not IsKnown(typeName))
 BaseName(typeName Text) Text
 	Sample.BaseName("Counts") is "List"
 	Sample.BaseName("Count(Number)") is "Count"
@@ -101,8 +100,9 @@ DeclaredType(typeName Text, name Text, depth Number) Text
 	let typeMembers = MembersOf(typeName)
 	if typeMembers.TypeOf(name) is not ""
 		return typeMembers.TypeOf(name)
-	if MethodsOf(typeName).TypeOf(name) is not "" or (depth is 0)
-		return MethodsOf(typeName).TypeOf(name)
+	let methodType = MethodsOf(typeName).TypeOf(name)
+	if methodType is not "" or (depth is 0)
+		return methodType
 	for typeMembers.types
 		let type = MemberMethodType(value, name, depth - 1)
 		if type is not ""

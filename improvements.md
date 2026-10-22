@@ -21,13 +21,7 @@ In priority order, short and actionable. Remove what is done (results go into th
 11. **AMD GPUs**: about 250 us of host work per launch (GPT-2 48 ms per token on the RX 480), `sdot4`, WMMA and MFMA, the 512 thread tiles need more than the 64 KB of an AMD workgroup, ROCm on Linux.
 
 ## Bugs
-- `Greedy.Best(Float8.Packed(...), 1, length)` with more than 2^24 outputs fails in the 32 bit kernel with "a loop on the GPU read outside of a list" (fine below 2^24 and on the CPU), only when `Clamp(0, width)` gets the free `width` instead of a literal; the test needing 16M numbers is too slow for the VM.
-- `Qwen3Text` (Q8_0 through `Generation`) takes 196.6 ms per token on the RTX 3080 while `Qwen3Benchmark` decodes Q4_K_M in 2.4 ms (2026-10-22): find which loops of `Generation` stay on the CPU.
-- GPU device functions name the parts of a variable slot by appending d, n, b (and e for exact numbers), so a parameter `gate` has `%v_gated` as its part and a local `gated` in the same method collides: `redefinition of SSA value '%v_gated.private'` (StrictComfy `MossBlock.Situ`, `MossImage` does not build). Fix: a separator in `MlirTyped.Parts` and the literal suffixes of the device code (`_d`, `_n`, `_b`, `_e`).
-- `strict build MossBlock.strict` (StrictComfy) crashed with a segfault and no message in 4 of about 25 runs on 2026-10-22, after the types loaded, during MLIR generation (`MlirModule.Declared` in a run with timing logs); a rerun passed. Other sessions rebuilt `strict.exe` and wrote `.strictbinary` files at the same time. Also seen 2026-10-22: `strict build` hanging at full CPU without output (Strict.strict 13 min with the VM gate, Text.strict over 4 min with the native one), reruns took 50 and 3 s; `strict build Strict.strict` and `MossImage.strict` segfaulted after 0.2-0.4 s once each.
-
-- Qwen3.8 prompts of 920 tokens and more stop with `a loop on the GPU read outside of a list` in `DeltaChunks.Corrected` (22.7M outputs, 900 tokens work, the same kernel with zero inputs at 925 tokens works, still after 6d15a28d): the exact integer shadows past 2^24.
-- Native programs (`strict.exe` builds, `Qwen3Benchmark`) crash at start about 1 in 8 runs with an access violation (2 of 12 starts of `Qwen3Benchmark` with Qwen3-0.6B on 2026-10-22, still after 6d15a28d); a second start works.
+- `Float8(0.3)` keeps 0.3 on the Strict VM and in native CPU code but rounds to E4M3 (0.3125, at most 448) on the GPU, so the same program gives different numbers (8 bit Qwen KV cache, `Float8.Packed` lists): round when a `Float8` is constructed like `Byte` wraps (a change to the root type `Float8.strict`).
 
 ## Waiting
 - Base library: Number `Sign`, `Wrap`, `ArcTangent2` and inverse trigonometry, Text to Numbers, fixed decimal text, `Truncated`.

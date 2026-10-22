@@ -54,7 +54,7 @@ Load(target Text, slot Text) Text
 	"    " + target + " = llvm.load " + slot + " : !llvm.ptr -> " + Float
 Store(stored Text, slot Text) Text
 	Counter.Store("%a", "%r0") is "    llvm.store %a, %r0 : f64, !llvm.ptr"
-	MlirFunction(Counter, Float = "f32").Store("%a", "%r0").EndsWith("llvm.store %a_r0q, %r0q : i64, !llvm.ptr")
+	MlirFunction(Counter, Float = "f32").Store("%a", "%r0").EndsWith("llvm.store %a_r0_q, %r0_q : i64, !llvm.ptr")
 	let line = "    llvm.store " + stored + ", " + slot + " : " + Float + ", !llvm.ptr"
 	let isNumber = slot.StartsWith("%r") or slot.StartsWith("%v_")
 	let exact = MlirExact(value, 0).Converted(stored, Float, slot)

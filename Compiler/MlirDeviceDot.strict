@@ -115,9 +115,10 @@ Sum Text
 	Summing.Sum is "sum"
 	function.method.instructions(at + 1).texts(0)
 Parts(letter Text, list Text) Texts
-	Summing.Parts("r", "%r0").First is "    %d2rd = llvm.load %r0d : !llvm.ptr -> !llvm.ptr"
-	let data = MlirTyped.Pointer.Load(Temp(letter + "d"), list + "d")
-	(data, MlirTyped.Integer.Load(Temp(letter + "b"), list + "b"), MlirTyped.Integer.Load(Temp(letter + "n"), list + "n"))
+	Summing.Parts("r", "%r0").First is "    %d2rd = llvm.load %r0_d : !llvm.ptr -> !llvm.ptr"
+	let data = MlirTyped.Pointer.Load(Temp(letter + "d"), list + "_d")
+	let bits = MlirTyped.Integer.Load(Temp(letter + "b"), list + "_b")
+	(data, bits, MlirTyped.Integer.Load(Temp(letter + "n"), list + "_n"))
 Temp(suffix Text) Text
 	Summing.Temp("s") is "%d2s"
 	"%d" + at + suffix

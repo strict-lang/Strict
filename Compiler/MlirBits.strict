@@ -2,7 +2,7 @@ has name Text
 constant Converting = MlirBits("%n")
 Converted(number Text) Texts
 	Converting.Converted("%v").First is "    %nb = llvm.bitcast %v : f64 to i64"
-	Converting.Converted("%v").Last is "    %nq = arith.extui %nv : i1 to i64"
+	Converting.Converted("%v").Last is "    %n_q = arith.extui %nv : i1 to i64"
 	let fields = (Line("b", "llvm.bitcast " + number + " : f64 to i64"), Constant("0", "0"), Constant("1", "1"))
 	fields + Integers + Magnitude + Exact
 Integers Texts
@@ -12,19 +12,19 @@ Integers Texts
 	let implicit = (Constant("ii", "4503599627370496"), Operation("i", "ori", "m", "ii"))
 	exponent + masked + implicit + (Constant("rr", "1075"), Operation("r", "subi", "rr", "k"))
 Magnitude Texts
-	Converting.Magnitude.Last is "    %ne = arith.select %nn, %nc, %nf : i64"
+	Converting.Magnitude.Last is "    %n_e = arith.select %nn, %nc, %nf : i64"
 	let shifted = (Constant("63", "63"), Operation("t", "minui", "r", "63"), Operation("f", "shrui", "i", "t"))
 	let negative = (Operation("n", "cmpi slt,", "b", "0"), Operation("c", "subi", "0", "f"))
-	shifted + negative + Line("e", "arith.select " + Named("n") + ", " + Named("c") + ", " + Named("f") + " : i64")
+	shifted + negative + Line("_e", "arith.select " + Named("n") + ", " + Named("c") + ", " + Named("f") + " : i64")
 Exact Texts
 	Converting.Exact(1) is "    %ny = arith.subi %nh, %n1 : i64"
-	Converting.Exact.Last is "    %nq = arith.extui %nv : i1 to i64"
+	Converting.Exact.Last is "    %n_q = arith.extui %nv : i1 to i64"
 	let lost = (Operation("h", "shli", "1", "t"), Operation("y", "subi", "h", "1"), Operation("j", "andi", "i", "y"))
 	let range = (Operation("w", "cmpi eq,", "j", "0"), Operation("p", "cmpi sge,", "r", "0"))
 	let inside = Operation("s", "cmpi sle,", "r", "52")
 	let zero = (Operation("z", "shli", "b", "1"), Operation("o", "cmpi eq,", "z", "0"))
 	let whole = (Logical("a", "andi", "w", "p"), Logical("g", "andi", "a", "s"), Logical("v", "ori", "g", "o"))
-	lost + range + inside + zero + whole + Line("q", "arith.extui " + Named("v") + " : i1 to i64")
+	lost + range + inside + zero + whole + Line("_q", "arith.extui " + Named("v") + " : i1 to i64")
 Operation(result Text, operation Text, left Text, right Text) Text
 	Converting.Operation("k", "andi", "x", "k1") is "    %nk = arith.andi %nx, %nk1 : i64"
 	Line(result, "arith." + operation + " " + Named(left) + ", " + Named(right) + " : i64")
