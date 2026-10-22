@@ -53,14 +53,29 @@ Build(base Text, program Text, tools Toolchain, isCounting = false) Number
 	if missing.Length > 0
 		logger.Log(tools.Installing(missing))
 		return 1
-	File(base + ".mlir").Write(Mlir(program, tools.root, tools.isWeb then Platform.Web else Platform.Current))
-	let built = Linked(base, tools)
+	let mlir = Mlir(program, tools.root, tools.isWeb then Platform.Web else Platform.Current) + "\n// " + level.Trim
+	let built = Rebuilt(base, mlir, tools)
 	logger.Log(built)
 	if built.StartsWith("Built ") is false
 		return 1
 	let crossed = CrossBuild(base, program, tools, isCounting)
 	Removed(base)
 	Release(logger, base).Packaged(program, crossed, tools.isWeb, isCrossing)
+IsUnchanged(base Text, mlir Text, tools Toolchain) Boolean
+	NativeBuild(Logger).IsUnchanged("Compiler/output/missing", "module {\n}", Toolchain.OnWindows) is false
+	let sources = NativeSources(tools.natives)
+	let headers = tools.natives.Length is 0 then List(Text) else sources.Inputs(Platform.Current, tools.root)
+	let inputs = (base + ".mlir", Process.Current.executable, Release(logger, base).Icon) + sources.Files + headers
+	let previous = File(base + ".mlir")
+	if tools.isWeb or (previous.Exists is false) or (sources.IsCurrent(tools.Executable(base), inputs) is false)
+		return false
+	Text.Combine(previous.ReadLines, "\n") is mlir
+Rebuilt(base Text, mlir Text, tools Toolchain) Text
+	NativeBuild(Logger).Rebuilt("Compiler/output/Written", "x", Toolchain.OnWindows).StartsWith("mlir-opt failed")
+	if IsUnchanged(base, mlir, tools)
+		return "Built " + tools.Executable(base) + ", unchanged"
+	File(base + ".mlir").Write(mlir)
+	Linked(base, tools)
 Ran(base Text, tools Toolchain, path Text, isCounting Boolean) Number
 	let executable = tools.Executable(base)
 	let result = ToolRunner(executable).Execute("")
