@@ -4,7 +4,7 @@ has heads Number
 constant Partial = HeadRows(4, 2, 1)
 Of(model Gguf, headSize Number, count Number) HeadRows
 	HeadRows.Of(Gguf("NeuralNetworks/tinyqwen3.gguf"), 4, 2).rotary is 4
-	HeadRows.Of(DeltaBlock.Model, 4, 2).rotary is 2
+	HeadRows.Of(Drafter.Model, 4, 2).rotary is 2
 	let given = model.Value(model.Value("general.architecture") + ".rope.dimension_count")
 	HeadRows(headSize, given is "" then headSize else given to Number, count)
 Order(position Number) Number
