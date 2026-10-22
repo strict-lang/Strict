@@ -43,7 +43,9 @@ Stored(source Text, kind Text, name Text) Text
 Converted(source Text, kind Text, target Text) Texts
 	Sized.Converted("%v", "i", "%w") is ("    %w = arith.fptosi %v : f64 to i64")
 	Sized.Converted("%v", "d", "%w") is ("    %w = func.call @strict_list_lanes(%v) : (f64) -> !llvm.ptr")
-	if kind is "i"
-		return List(Text) + ("    " + target + " = arith.fptosi " + source + " : f64 to i64")
+	Sized.Converted("%v", "c", "%w") is ("    %w = arith.bitcast %v : f64 to i64")
+	if kind is in ("i", "c")
+		let operation = kind is "i" then " = arith.fptosi " else " = arith.bitcast "
+		return List(Text) + ("    " + target + operation + source + " : f64 to i64")
 	let helper = kind is "d" then "strict_list_lanes" else "strict_list_bytes"
 	List(Text) + ("    " + target + " = func.call @" + helper + "(" + source + ") : (f64) -> !llvm.ptr")

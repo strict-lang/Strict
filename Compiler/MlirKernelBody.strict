@@ -1,6 +1,7 @@
 has function MlirFunction
 has position Number
 constant Body = MlirKernelBody(MlirWholeKernel.Kernel.function, 5)
+constant Sized = MlirKernelBody(MlirWholeKernel.Measure.function, 5)
 constant Store = "    llvm.store %wn, %wp : i32, !llvm.ptr"
 constant Narrowed = "    %wn = arith.trunci %wr : i64 to i32"
 constant Placed = "    %wp = llvm.getelementptr %result[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i32"
@@ -38,10 +39,12 @@ Arguments Texts
 	lines
 Members(name Text, input Number) Texts
 	Body.Members("board", 0).Length is 0
+	Sized.Members("board", 0).Last.EndsWith("arith.bitcast %f_board_Size : f64 to i64")
 	let kernel = MlirWholeKernel(function, position)
 	for MlirWholeInstance(kernel.Callee).Members(input)
-		if kernel.Kind(name + "_" + value) is "i"
-			"    %w" + input + "_" + value + " = arith.fptosi %f_" + name + "_" + value + " : f64 to i64"
+		let kind = kernel.Kind(name + "_" + value)
+		if kind is in ("i", "c")
+			MlirWholeFields(function).Converted("%f_" + name + "_" + value, kind, "%w" + input + "_" + value).First
 Names Texts
 	Body.Names is ("%f_board_cells_d", "%at")
 	let kernel = MlirWholeKernel(function, position)

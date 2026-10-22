@@ -1,17 +1,16 @@
-has width Number
-has height Number
+has Size
 has Colors
 has IsOpaque Boolean
 constant Gray = (Color(0, 0, 0), Color(9, 9, 9))
-constant Tiny = Bitmap(3, 3, Gray + Gray + Gray + Gray + Color(0, 0, 0), true)
+constant Tiny = Bitmap(Size(3, 3), Gray + Gray + Gray + Gray + Color(0, 0, 0), true)
 Center Number
 	Tiny.Center is 4
-	(height / 2).Floor * width + (width / 2).Floor
+	(Size.Height / 2).Floor * Size.Width + (Size.Width / 2).Floor
 IsInside(pixel Number, x Number, y Number) Boolean
 	Tiny.IsInside(4, 1, -1)
 	Tiny.IsInside(3, -1, 0) is false
 	Tiny.IsInside(2, 0, 1)
 	Tiny.IsInside(6, 0, 1) is false
-	let column = pixel % width + x
-	let row = (pixel / width).Floor + y
-	column >= 0 and column < width and row >= 0 and row < height
+	let column = pixel % Size.Width + x
+	let row = (pixel / Size.Width).Floor + y
+	column >= 0 and column < Size.Width and row >= 0 and row < Size.Height

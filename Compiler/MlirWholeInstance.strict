@@ -5,6 +5,7 @@ constant Grid = TypeEntry("Strict/Grid", (MemberEntry("width", "Strict/Number", 
 constant Types = (MlirLayout.Byting, MlirLanes.Rgb, Grid)
 constant Fits = MlirWholeInstance(MlirFunction(Types, Grid, Fitting))
 constant Sized = MlirWholeInstance(MlirFunction(Types, Grid, Sizing))
+constant Coupled = MlirWholeInstance(MlirFunction(Types + MlirCouples.Sizing, Grid, Sizing))
 IsInstance(typeName Text) Boolean
 	Sized.IsInstance("Grid")
 	Sized.IsInstance("Number") is false
@@ -25,11 +26,14 @@ MemberKind(typeName Text, member Text) Text
 Kind(typeName Text) Text
 	Sized.Kind("Strict/Number") is "i"
 	Sized.Kind("Strict/Grid") is ""
+	Coupled.Kind("Strict/Math/Sizing") is "c"
 	let short = TypeEntry.ShortName(typeName)
 	if (short is in ("Number", "Boolean")) or MlirLayout(function).IsByte(short)
 		return "i"
 	if MlirLanes(function, 0).IsPacked(MlirKinds(function).ElementKind(short))
 		return "d"
+	if MlirCouples(function, 0).IsCoupled(short)
+		return "c"
 	short is in ("Bytes", "List(Byte)") then "p" else ""
 UsesSelf Boolean
 	Fits.UsesSelf
@@ -105,8 +109,10 @@ OwnKind(name Text) Text
 	isOwn then MemberKind(function.type.Name, name) else "-"
 IsReadable(entry InstructionEntry) Boolean
 	Sized.IsReadable(Sizing.instructions(1))
+	Coupled.IsReadable(MlirWholeNative.Widths)
 	MlirWholeInstance(MlirLanes.Sample.function).IsReadable(MlirLanes.Greens)
-	let isOwner = IsInstance(entry.texts(1)) or MlirLanes(function, 0).IsPacked(entry.texts(1))
+	let isPacked = MlirLanes(function, 0).IsPacked(entry.texts(1)) or MlirCouples(function, 0).IsCoupled(entry.texts(1))
+	let isOwner = IsInstance(entry.texts(1)) or isPacked
 	isOwner and (MemberKind(entry.texts(1), entry.texts(0)) is not "")
 IsMemberList(name Text) Boolean
 	Sized.IsMemberList("list0")

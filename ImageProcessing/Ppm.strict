@@ -1,13 +1,13 @@
 constant Sample = (80, 54, 10, 50, 32, 49, 10, 50, 53, 53, 10, 1, 2, 3, 4, 5, 6)
 Loaded(path Text) Bitmap
-	Ppm.Loaded("ImageProcessing/Missing.ppm").Colors.Length is 0
-	File(path).Exists then Decoded(File(path).ReadBytes) else Bitmap(0, 0, List(Color), true)
+	Ppm.Loaded("ImageProcessing/Missing.ppm") is Error
+	File(path).Exists then Decoded(File(path).ReadBytes) else Error("MissingFile")
 Decoded(bytes Bytes) Bitmap
 	Ppm.Decoded(Sample).Colors is (Color(1, 2, 3), Color(4, 5, 6))
-	Ppm.Decoded(Sample).height is 1
+	Ppm.Decoded(Sample).Size.Height is 1
 	let width = Field(bytes, 1)
 	let height = Field(bytes, 2)
-	Bitmap(width, height, Colors(bytes, Start(bytes), width * height), true)
+	Bitmap(Size(width, height), Colors(bytes, Start(bytes), width * height), true)
 Colors(bytes Bytes, start Number, count Number) Colors
 	Ppm.Colors(Sample, 11, 2) is (Color(1, 2, 3), Color(4, 5, 6))
 	for count
@@ -16,7 +16,7 @@ Save(bitmap Bitmap, path Text)
 	File(path).Write(Encoded(bitmap))
 Encoded(bitmap Bitmap) Bytes
 	Ppm.Encoded(Ppm.Decoded(Sample)) is Sample
-	let header = (80, 54, 10) + Digits(bitmap.width) + 32 + Digits(bitmap.height) + (10, 50, 53, 53, 10)
+	let header = (80, 54, 10) + Digits(bitmap.Size.Width) + 32 + Digits(bitmap.Size.Height) + (10, 50, 53, 53, 10)
 	let rgb = Rgb(bitmap.Colors)
 	for header.Length + rgb.Length
 		index < header.Length then header(index) else rgb(index - header.Length)

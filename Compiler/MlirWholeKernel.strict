@@ -8,8 +8,12 @@ constant Blurred = MethodEntry("Blurred", List(MemberEntry) + MemberEntry("board
 constant Board = TypeEntry("Strict/Board", (MemberEntry("width", "Strict/Number", List(InstructionEntry), false), Cells), (Picked, Blurred))
 constant Types = (MlirLayout.Byting, MlirLanes.Rgb, Board)
 constant Kernel = MlirWholeKernel(MlirFunction(Types, Board, Blurred), 5)
+constant Measuring = (Picking(0), Picking(1), Picking(2), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "board"), InstructionEntry(InstructionType.FieldLoad, ("Size", "Board"), (3, 2, -1, -2)), InstructionEntry(InstructionType.FieldLoad, ("Width", "Sizing"), (4, 3, -1)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 5, "pixel"), InstructionEntry.Binary(InstructionType.Modulo, (5, 4, 6)), InstructionEntry(InstructionType.IndexCall, "list0", (7, 6, -1)), InstructionEntry.Return(7))
+constant Measured = TypeEntry("Strict/Board", (MemberEntry("Size", "Strict/Math/Sizing", List(InstructionEntry), false), Cells), (MethodEntry("Picked", Picked.parameters, "Strict/Rgb", Measuring), Blurred))
+constant Measure = MlirWholeKernel(MlirFunction((MlirLayout.Byting, MlirLanes.Rgb, MlirCouples.Sizing, Measured), Measured, Blurred), 5)
 IsKernel Boolean
 	Kernel.IsKernel
+	Measure.IsKernel
 	MlirWholeKernel(MlirParallel.Doubling.function, 2).IsKernel is false
 	MlirWholeKernel(Kernel.function, 0).IsKernel is false
 	let isBegin = function.method.instructions(position).kind is InstructionType.LoopBegin
@@ -63,11 +67,12 @@ Source(register Number) Text
 	loaded.kind is InstructionType.LoadVariableToRegister then loaded.texts(0) else ""
 MemberKinds(input Number) Texts
 	Kernel.MemberKinds(0) is List(Text) + "d"
+	Measure.MemberKinds(0) is ("d", "c")
 	let callee = Callee
 	mutable kinds = List(Mutable(Text))
 	for MlirWholeInstance(callee).Members(input)
 		let kind = MlirWholeInstance(callee).MemberKind(MlirWholeFlat(callee).Owner(input), value)
-		if kind is not in ("i", "d")
+		if kind is not in ("i", "d", "c")
 			return List(Text)
 		kinds.Add(kind)
 	kinds
