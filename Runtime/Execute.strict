@@ -14,8 +14,11 @@ Run(arguments Texts) Number
 		texts.Add(VmValue.OfText(arguments(value)))
 	Started(types, arguments(0)).Launch(types.First.Name, texts)
 Test(path Text, root Text) Number
-	if Directory.Exists(path) is false
+	Execute(Logger).Test("Missing.strict", ".") is 1
+	if File(path).Exists and (Directory.Exists(path) is false)
 		return Failures(List(Text) + path, root, false)
+	if Directory.Exists(path) is false
+		return 1
 	mutable failed = 0
 	for ResolveCheck.Tree(path)
 		failed = failed + Failures(Directory.Files(value, "*.strict"), root, false)
@@ -40,7 +43,7 @@ Compacted(paths Texts, owners List(TypeEntry)) Number
 		let cache = BinaryFile(FileCompiler.Normalized(value))
 		let entries = File(cache.Path).Exists then cache.Unpacked(File(cache.Path).ReadBytes) else List(ZipEntry)
 		if cache.IsFresh(entries)
-			File(cache.Path).Write(cache.Packed(ByteEncoder(entries.First.content).Integers, cache.Types(entries), owners))
+			cache.Saved(cache.Packed(ByteEncoder(entries.First.content).Integers, cache.Types(entries), owners))
 			compacted = compacted + 1
 	compacted
 Owners(paths Texts) List(TypeEntry)
@@ -69,7 +72,7 @@ Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInfer
 	let failed = Tested(types, path)
 	if (failed is 0) and (IsEdited(path) is false)
 		let header = Completed(cache, root, files, stamped, before).Kept(types).Header
-		File(cache.Path).Write(cache.Packed(header, types, List(TypeEntry)))
+		cache.Saved(cache.Packed(header, types, List(TypeEntry)))
 	failed
 Completed(cache BinaryFile, root Text, files Texts, stamped BinarySources, before Number) BinarySources
 	Execute(Logger).Completed(Adder, ".", AdderFiles, BinarySources.Mixed, Process.FilesRead.Length).stamps is (1, 2, 3)

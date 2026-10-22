@@ -63,7 +63,7 @@ Compared(entry InstructionEntry) Texts
 	Row.At(6).Compared(Less)(2) is "    %t6c = arith.cmpi slt, %t6a, %t6b : i64"
 	let type = MlirWholeTypes(function).Operands(entry, position, registers, naturals)
 	let predicate = MlirStatements.Copy.Predicate(entry.kind)
-	let whole = predicate is "oeq" then "eq" else (predicate is "une" then "ne" else "s" + predicate.Substring(1, 2))
+	let whole = MlirRational.Single.Predicate(entry.kind)
 	let operands = (type is "i" then "i " + whole else "f " + predicate) + ", " + Temp("a") + ", " + Temp("b")
 	let compare = "    " + Temp("c") + " = arith.cmp" + operands + " : " + MlirWholeValues(position).Typed(type)
 	let loads = Load("a", entry.payload(1), type) + Load("b", entry.payload(2), type)

@@ -2,6 +2,7 @@ has function MlirFunction
 has position Number
 constant Copy = MlirStatements(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 7), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "a"), InstructionEntry.Return(0)))), 0)
 constant Summing = MlirStatements(MlirFastLoop.Summing.function, 5)
+constant Exact = "    %t0c = arith.select %x0v, %x0i, %t0f : i1"
 Emitted Texts
 	Copy.Emitted.Last is "    llvm.store %t0c, %r0 : f64, !llvm.ptr"
 	let entry = function.method.instructions(position)
@@ -110,8 +111,12 @@ Predicate(kind Number) Text
 	kind is InstructionType.LessThan then "olt" else "ogt"
 Compared(entry InstructionEntry, operands Text) Texts
 	Copy.Compared(InstructionEntry.Binary(InstructionType.Equal, (0, 1)), "%a, %b").Length is 2
-	let compare = "    " + Temp("") + "c = arith.cmpf " + Predicate(entry.kind) + ", " + operands + " : " + function.Float
-	let flagged = (compare, "    llvm.store " + Temp("") + "c, %flag : i1, !llvm.ptr")
+	constant single = MlirStatements(MlirFunction(Copy.function, Float = "f32"), 0)
+	Exact is in single.Compared(InstructionEntry.Binary(InstructionType.LessThan, (0, 1)), "%a, %b")
+	let exact = MlirRational(MlirExact(function, position)).Compared(entry, Temp("f"), Temp("") + "c")
+	let compared = Temp("") + (exact.Length is 0 then "c" else "f")
+	let compare = "    " + compared + " = arith.cmpf " + Predicate(entry.kind) + ", " + operands + " : " + function.Float
+	let flagged = (List(Text) + compare) + exact + ("    llvm.store " + Temp("") + "c, %flag : i1, !llvm.ptr")
 	entry.payload(0) is not 3 then flagged else flagged + Numbered(Temp("c"), entry)
 Numbered(flag Text, entry InstructionEntry) Texts
 	Copy.Numbered("%f", InstructionEntry.Binary(InstructionType.Equal, (0, 1, 2))).Length is 2

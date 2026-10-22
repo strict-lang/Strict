@@ -1,0 +1,52 @@
+has values Numbers
+has width Number
+has channels Number
+has offsets Numbers
+constant Square = FeatureMap((1, 2, 3, 4), 2, 1, List(Number) + 0)
+constant Plain = (1, 0)
+Height Number
+	Square.Height is 2
+	values.Length / width / channels
+Stacked(affine Numbers, swish Boolean, doubled Boolean) Numbers
+	Square.Stacked(Plain, false, false) is (0, 0, 0, 0, 1, 3, 0, 2, 4, 0, 0, 0, 0, 0, 0, 1, 3, 0, 2, 4, 0, 0, 0, 0)
+	Square.Stacked((2, 1), false, false)(4) is 3
+	Square.Stacked(Plain, false, true).Length is 4 * 6 * 3
+	let scale = doubled then 2 else 1
+	let columns = width * scale + 2
+	for Height * scale * columns * 3 * channels
+		let channel = index % channels
+		let at = Source((index / (3 * channels)).Floor + ((index / channels).Floor % 3) * columns, columns, scale)
+		at < 0 then 0 else Activated(values(at + channel), affine(channel), affine(channels + channel), swish)
+Source(position Number, columns Number, scale Number) Number
+	Square.Source(23, 6, 2) is -1
+	Square.Source(19, 6, 2) is 2
+	Square.Source(9, 6, 2) is 1
+	Square.Source(5, 4, 1) is 0
+	let row = (position / columns).Floor - 1
+	let column = position % columns - 1
+	let inside = row >= 0 and row < Height * scale and column >= 0 and column < columns - 2
+	inside then ((row / scale).Floor * width + (column / scale).Floor) * channels else -1
+Activated(number Number, scale Number, shift Number, swish Boolean) Number
+	Square.Activated(2, 3, -5, false) is 1
+	Square.Activated(0.5, 2, 0, true).IsNearlyEqual(0.7310585786300049)
+	let normed = number * scale + shift
+	swish then normed / (1 + (0 - normed).Exponential) else normed
+Identity Numbers
+	Square.Identity is (1, 0)
+	FeatureMap((1, 2), 1, 2, (3, 4)).Identity is (1, 1, 3, 4)
+	for 2 * channels
+		index < channels then 1 else offsets(index - channels)
+Plus(other FeatureMap) FeatureMap
+	Square.Plus(FeatureMap((1, 1, 1, 1), 2, 1, List(Number) + 3)) is FeatureMap((2, 3, 4, 5), 2, 1, List(Number) + 3)
+	FeatureMap(Gpt2Block.Added(values, other.values), width, channels, Gpt2Block.Added(offsets, other.offsets))
+Applied(affine Numbers, swish Boolean) FeatureMap
+	FeatureMap((1, 2), 1, 2, (0, 0)).Applied((2, 1, 0.5, 0), false) is FeatureMap((2.5, 2), 1, 2, (0, 0))
+	FeatureMap(Activations(affine, swish), width, channels, Layer.Zeros(channels))
+Activations(affine Numbers, swish Boolean) Numbers
+	Square.Activations((2, 1), true)(1).IsNearlyEqual(4.9665330)
+	for values
+		Activated(value, affine(index % channels), affine(channels + index % channels), swish)
+Completed Numbers
+	FeatureMap((1, 2, 3, 4), 1, 2, (1, -1)).Completed is (2, 1, 4, 3)
+	for values
+		value + offsets(index % channels)

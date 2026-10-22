@@ -100,6 +100,8 @@ CrossBuild(base Text, program Text, tools Toolchain, isCounting Boolean) Number
 Removed(base Text)
 	for Intermediates
 		File(base + value).Delete
+	for Toolchain.Parts
+		File(base + "-" + value).Delete
 Output(path Text, isProgram Boolean) Text
 	NativeBuild.Output("Character.strict", false) is "./Character.test"
 	NativeBuild.Output("C:/s/A.strict", true) is "C:/s/A"

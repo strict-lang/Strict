@@ -1,5 +1,5 @@
 has values ValueCodegen
-constant Scalars = ("Text", "Boolean", "Error", "ErrorWithValue")
+constant Scalars = ("Text", "Boolean", "Error", "ErrorWithValue", "Dictionary")
 constant Plain = TestComparison(ValueCodegen.Plain)
 Precise(left SyntaxNode, right SyntaxNode, block CodeBlock) Boolean
 	let kinds = (values.TypeOf(left, block), values.TypeOf(right, block))

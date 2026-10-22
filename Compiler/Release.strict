@@ -9,21 +9,29 @@ Packaged(program Text, built Number, isWeb = false, isCrossing = false) Number
 	if (built is not 0) or base.EndsWith(".test") or (isWindowed is false)
 		return built
 	if isWeb
-		return Refreshed(Parent + "/Release/Web", "", (".html", ".js", ".wasm", ".data"))
+		return IsDemo then built else Refreshed(Parent + "/Release/Web", "", (".html", ".js", ".wasm", ".data"))
 	NativePackaged(isCrossing)
 NativePackaged(isCrossing Boolean) Number
 	let shared = Parent + "/Release/Content"
 	if Content(shared) < 0
 		return 1
+	let ending = Platform.Current is Platform.Windows then ".exe" else ""
+	if IsDemo
+		return Refreshed(Parent + "/Release", "", List(Text) + ending)
 	if Platform.Current is Platform.MacOS
 		return MacOSBundle(logger, base).Released
 	let folder = Parent + "/Release/" + Platform.NameOf(Platform.Current)
-	let ending = Platform.Current is Platform.Windows then ".exe" else ""
 	let result = Refreshed(folder, folder + "/Content", List(Text) + ending)
 	let crossing = isCrossing and (Platform.Current is Platform.Windows)
 	if (result is not 0) or (crossing is false) or (File(base).Exists is false)
 		return result
 	Refreshed(Parent + "/Release/Linux", Parent + "/Release/Linux/Content", List(Text) + "")
+IsDemo Boolean
+	Release(Logger, TypeSource.Root + "/Examples/NativeAdd/AtlasDemo").IsDemo
+	Release(Logger, "Missing/AtlasDemo").IsDemo is false
+	Release(Logger, "Games/Samples/AtlasDemo").IsDemo is false
+	let game = Parent + "/" + Path(Parent).FileName.text + ".strict"
+	base.EndsWith("Demo") and File(game).Exists
 Parent Text
 	Release(Logger, "Missing/App").Parent is "Missing"
 	Release(Logger, "App").Parent is "."

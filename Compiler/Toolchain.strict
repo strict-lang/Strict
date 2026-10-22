@@ -9,6 +9,8 @@ constant LinuxDownload = "https://github.com/llvm/llvm-project/releases/download
 constant LinuxMembers = " LLVM-22.1.0-Linux-X64/bin/clang LLVM-22.1.0-Linux-X64/bin/clang-22 LLVM-22.1.0-Linux-X64/bin/mlir-opt LLVM-22.1.0-Linux-X64/bin/mlir-translate LLVM-22.1.0-Linux-X64/bin/opt LLVM-22.1.0-Linux-X64/bin/llc LLVM-22.1.0-Linux-X64/bin/lld LLVM-22.1.0-Linux-X64/bin/ld.lld LLVM-22.1.0-Linux-X64/bin/clang-offload-bundler LLVM-22.1.0-Linux-X64/bin/amdgpu-arch LLVM-22.1.0-Linux-X64/lib/clang/22/include"
 constant SingleThreaded = " --mlir-disable-threading"
 constant Optimized = " -march=native -Wno-override-module"
+constant Parts = 16
+constant Thin = " -x none -flto=thin -fuse-ld=lld -Wl,/opt:lldltojobs=all -Wl,/mllvm:-mcpu=native -Wl,clang_rt.builtins-x86_64.lib"
 constant OnWindows = Toolchain(Platform.Windows, "C:/s")
 constant OnLinux = Toolchain(Platform.Linux, "/s")
 Located(name Text) Text
@@ -86,9 +88,21 @@ Built(base Text, executable Text, level Text) Text
 	let resource = sources.StartsWith("clang") then sources else NativeSources(natives).Resource(base, platform, root)
 	if resource.StartsWith("llvm-rc failed") or resource.StartsWith("clang failed")
 		return resource
-	let linking = Quoted(base + ".ll") + sources + resource + " -o " + Quoted(executable) + Optimized + level + system
+	let linking = Inputs(base) + sources + resource + " -o " + Quoted(executable) + Optimized + level + system
 	let linked = ToolRunner(Located("clang")).Execute(linking)
 	linked.Failed then "clang failed: " + linked.error else "Built " + executable
+Inputs(base Text) Text
+	OnLinux.Inputs("Compiler/output/missing") is "\"Compiler/output/missing.ll\""
+	let splitter = platform is Platform.Windows then Located("llvm-split") else ""
+	if splitter is ""
+		return Quoted(base + ".ll")
+	let split = ToolRunner(splitter).Execute("-j " + Parts + " " + Quoted(base + ".ll") + " -o " + Quoted(base + "-"))
+	if split.Failed
+		return Quoted(base + ".ll")
+	mutable parts = " -x ir"
+	for Parts
+		parts = parts + " " + Quoted(base + "-" + value)
+	parts + Thin + " -Wno-unused-command-line-argument"
 CrossBuilt(base Text, level Text) Text
 	OnWindows.CrossBuilt("Compiler/output/missing", NativeBuild.Fast).StartsWith("mlir-opt failed")
 	let lowered = Lowered(base + ".linux")

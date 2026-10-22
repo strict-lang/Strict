@@ -1,0 +1,51 @@
+has weights Numbers
+has biases Numbers
+has groups Number
+constant Epsilon = 0.000001
+constant Pair = GroupNorm((1, 1), (0, 0), 2)
+constant Column = FeatureMap((1, 2, 3, 6), 1, 2, (0, 0))
+Affine(map FeatureMap) Numbers
+	Pair.Affine(Column)(1).IsNearlyEqual(0.5)
+	Pair.Affine(Column)(3).IsNearlyEqual(-2)
+	GroupNorm((1, 1), (0, 0), 1).Affine(Column)(0).IsNearlyEqual(1 / 3.5.SquareRoot)
+	GroupNorm((2, 1), (0.5, 0), 2).Affine(FeatureMap(Column.values, 1, 2, (1, 0)))(2).IsNearlyEqual(-3.5)
+	let means = Means(map)
+	let variances = Variances(map, means)
+	for 2 * map.channels
+		let channel = index % map.channels
+		let group = (channel / (map.channels / groups)).Floor
+		let scale = weights(channel) / (variances(group) + Epsilon).SquareRoot
+		index < map.channels then scale else biases(channel) + (map.offsets(channel) - means(group)) * scale
+Means(map FeatureMap) Numbers
+	Pair.Means(Column) is (2, 4)
+	Pair.Means(FeatureMap(Column.values, 1, 2, (1, 0))) is (3, 4)
+	let count = map.values.Length / groups
+	for Totals(Partials(map, Layer.Zeros(groups), false), map.Height)
+		value / count
+Variances(map FeatureMap, means Numbers) Numbers
+	Pair.Variances(Column, (2, 4)) is (1, 4)
+	GroupNorm((1, 1), (0, 0), 1).Variances(Column, List(Number) + 3) is List(Number) + 3.5
+	let count = map.values.Length / groups
+	for Totals(Partials(map, means, true), map.Height)
+		value / count
+Partials(map FeatureMap, centers Numbers, squared Boolean) Numbers
+	Pair.Partials(Column, (0, 0), false) is (1, 2, 3, 6)
+	Pair.Partials(Column, (2, 4), true) is (1, 4, 1, 4)
+	let size = map.channels / groups
+	for map.Height * groups
+		let first = (index / groups).Floor * map.width * map.channels + (index % groups) * size
+		let center = centers(index % groups)
+		mutable sum = 0
+		for map.width * size
+			let channel = (index / size).Floor * map.channels + index % size
+			let difference = map.values(first + channel) + map.offsets((first + channel) % map.channels) - center
+			sum = sum + difference * (squared then difference else 1)
+		sum
+Totals(partials Numbers, rows Number) Numbers
+	Pair.Totals((1, 2, 3, 6), 2) is (4, 8)
+	for groups
+		let group = index
+		mutable sum = 0
+		for rows
+			sum = sum + partials(index * groups + group)
+		sum

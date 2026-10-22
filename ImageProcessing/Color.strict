@@ -8,6 +8,7 @@ to ColorValue
 	ColorValue(Red / 255, Green / 255, Blue / 255, Alpha / 255)
 +(other) Color
 	Color(1, 2, 3, 4) + Color(5, 6, 7, 8) is Color(6, 8, 10, 12)
+	Color(255, 0, 0, 255) + Color(1, 0, 0, 1) is Color(0, 0, 0, 0)
 	Color(Red + other.Red, Green + other.Green, Blue + other.Blue, Alpha + other.Alpha)
 /(divisor Number) Color
 	Color(9, 9, 9, 9) / 2 is Color(4, 4, 4, 4)
