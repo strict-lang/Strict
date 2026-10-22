@@ -9740,6 +9740,50 @@
   llvm.func @free(!llvm.ptr)
   // a value is a list when its bit in mask is set, a list of rows when its bit in rows is set too
   // dots marks lists only read by dot products, with a list of rows they become 8 bit numbers
+  // STRICT_GPU_CHECK=1 waits for every loop on the GPU and names the first one that read outside of a list (slow)
+  llvm.mlir.global internal @strict_gpu_check(-1 : i64) : i64
+  llvm.mlir.global internal constant @strict_gpu_check_switch("STRICT_GPU_CHECK\00") : !llvm.array<17 x i8>
+  llvm.mlir.global internal constant @strict_gpu_check_text("Error: the GPU loop %s read outside of a list\0A\00") : !llvm.array<47 x i8>
+  llvm.mlir.global internal constant @strict_gpu_check_before("Error: a GPU kernel launched before the GPU loop %s read outside of a list\0A\00") : !llvm.array<76 x i8>
+  func.func private @strict_gpu_checked(%name: !llvm.ptr, %text: !llvm.ptr) {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %checkSlot = llvm.mlir.addressof @strict_gpu_check : !llvm.ptr
+    %check = llvm.load %checkSlot : !llvm.ptr -> i64
+    %unknown = arith.cmpi slt, %check, %none : i64
+    cf.cond_br %unknown, ^read, ^known(%check : i64)
+  ^read:
+    %switch = llvm.mlir.addressof @strict_gpu_check_switch : !llvm.ptr
+    %setting = llvm.call @getenv(%switch) : (!llvm.ptr) -> !llvm.ptr
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %isSet = llvm.icmp "ne" %setting, %unset : !llvm.ptr
+    %decided = arith.select %isSet, %one, %none : i64
+    llvm.store %decided, %checkSlot : i64, !llvm.ptr
+    cf.br ^known(%decided : i64)
+  ^known(%known: i64):
+    %wanted = arith.cmpi eq, %known, %one : i64
+    cf.cond_br %wanted, ^wait, ^done
+  ^wait:
+    %wordSlot = llvm.mlir.addressof @strict_gpu_failure : !llvm.ptr
+    %word = llvm.load %wordSlot : !llvm.ptr -> i64
+    %hasWord = arith.cmpi ne, %word, %none : i64
+    cf.cond_br %hasWord, ^readWord(%word : i64), ^done
+  ^readWord(%pinned: i64):
+    %synchronizeIndex = arith.constant 11 : i64
+    %synchronize = func.call @strict_gpu_call(%synchronizeIndex) : (i64) -> !llvm.ptr
+    %synchronized = llvm.call %synchronize() : !llvm.ptr, () -> i32
+    %pointer = llvm.inttoptr %pinned : i64 to !llvm.ptr
+    %failed = llvm.load %pointer : !llvm.ptr -> i64
+    %isFailed = arith.cmpi ne, %failed, %none : i64
+    cf.cond_br %isFailed, ^fail, ^done
+  ^fail:
+    %printed = llvm.call @printf(%text, %name) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr) -> i32
+    %code = arith.constant 1 : i32
+    llvm.call @exit(%code) : (i32) -> ()
+    cf.br ^done
+  ^done:
+    return
+  }
   func.func private @strict_gpu_run(%ptx: !llvm.ptr, %name: !llvm.ptr, %slot: !llvm.ptr, %count: i64, %source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64, %rows: i64, %dots: i64, %lanes: i64, %group: i64, %packed: i64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
@@ -9747,6 +9791,8 @@
     %three = arith.constant 3 : i64
     %four = arith.constant 4 : i64
     %five = arith.constant 5 : i64
+    %beforeText = llvm.mlir.addressof @strict_gpu_check_before : !llvm.ptr
+    func.call @strict_gpu_checked(%name, %beforeText) : (!llvm.ptr, !llvm.ptr) -> ()
     %six = arith.constant 6 : i64
     %eight = arith.constant 8 : i64
     %unset = llvm.mlir.zero : !llvm.ptr
@@ -9957,6 +10003,8 @@
     %asyncLaunched = func.call @strict_gpu_launch(%function, %threadTotal, %threads, %parameters) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i1
     cf.cond_br %asyncLaunched, ^asyncDone, ^asyncFailed
   ^asyncDone:
+    %afterText = llvm.mlir.addressof @strict_gpu_check_text : !llvm.ptr
+    func.call @strict_gpu_checked(%name, %afterText) : (!llvm.ptr, !llvm.ptr) -> ()
     %segment = func.call @strict_gpu_segment() : () -> i64
     %residentList = func.call @strict_gpu_resident(%count, %resident, %class, %resultBits) : (i64, i64, i64, i64) -> f64
     func.call @strict_gpu_mark(%residentList, %count, %segment) : (f64, i64, i64) -> ()
