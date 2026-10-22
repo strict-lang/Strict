@@ -284,9 +284,11 @@
     %widthSlot = llvm.getelementptr %source[%widthAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %width = llvm.load %widthSlot : !llvm.ptr -> i8
     %bits = arith.extui %width : i8 to i64
+    %lineSpare = arith.constant 127 : i64
+    %lineMask = arith.constant -128 : i64
     %withTable = arith.addi %count, %eight : i64
-    %paddedHeader = arith.addi %withTable, %fifteen : i64
-    %header = arith.andi %paddedHeader, %alignMask : i64
+    %paddedHeader = arith.addi %withTable, %lineSpare : i64
+    %header = arith.andi %paddedHeader, %lineMask : i64
     %rowOffset = arith.muli %at, %stride : i64
     %offset = arith.addi %header, %rowOffset : i64
     %row = llvm.getelementptr %source[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
