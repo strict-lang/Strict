@@ -146,6 +146,21 @@
     llvm.store %words, %shared {alignment = 16 : i64} : vector<4xi32>, !llvm.ptr<3>
     return
   }
+  // 4 bytes like strict_device_copy (cp.async.ca, 16 byte copies bypass L1 but 4 byte ones can not)
+  func.func private @strict_device_copy_word(%shared: !llvm.ptr<3>, %global: !llvm.ptr) attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
+    %arch = func.call @strict_device_arch() : () -> i32
+    %c800 = arith.constant 800 : i32
+    %isAsync = arith.cmpi sge, %arch, %c800 : i32
+    cf.cond_br %isAsync, ^async, ^plain
+  ^async:
+    %source = llvm.addrspacecast %global : !llvm.ptr to !llvm.ptr<1>
+    llvm.call_intrinsic "llvm.nvvm.cp.async.ca.shared.global.4"(%shared, %source) : (!llvm.ptr<3>, !llvm.ptr<1>) -> ()
+    return
+  ^plain:
+    %word = llvm.load %global invariant : !llvm.ptr -> i32
+    llvm.store %word, %shared : i32, !llvm.ptr<3>
+    return
+  }
   func.func private @strict_device_copies_commit() attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
     %arch = func.call @strict_device_arch() : () -> i32
     %c800 = arith.constant 800 : i32
