@@ -11,8 +11,6 @@ In priority order, short and actionable. Remove what is done (results go into th
 6. **Generated 32 bit GPU loops still cost 2-3x hand written kernels**: MossBlock_Rotated takes 279 us (exact kernel, 3740x3072 bfloat16) against 121 us for the same math in CUDA with checked loads (kb harness: the real PTX launched on synthetic data, scratchpad of the 2026-10-22 session). Measured by removing pieces of its PTX: the uniform format branch of every read (strict_device_floats, 32 or 16 bit) costs 69 us, the 64 bit and missing magic fallbacks of the three divisions 36 us; doing the format without a branch (both loads, one aligned load, predicated loads) or the bounds checks with selects measured slower. Both need the uniform launch values known when the kernel is compiled: a launch-time specialization (formats, exact parameters, magic numbers written into the PTX of a kernel at its first launch with them, cached per signature) would remove both.
 
 ## Bugs
-- `Compiler/MlirDeviceDot.strict` line 108 expects `%d2ait` in `Whole`, the exact part is called `%d2ai_e` since the slot parts got their separator (488bf243): the expectation is stale (fails on master too).
-- `Number to Text` writes numbers from 8 digits on with an exponent (`1.39002525e9`, even `9.002525e7`): whole numbers should print all their digits (DeviceBuild.Referenced takes its hash mod 9999991 to stay below it).
 - `Text.Combine` of a list of numbers crashes natively with an access violation (the VM is fine).
 
 ## Later

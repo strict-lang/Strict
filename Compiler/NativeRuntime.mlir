@@ -7629,10 +7629,18 @@
     %buffer = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
     %absolute = llvm.intr.fabs(%number) : (f64) -> f64
     %isLarge = arith.cmpf oge, %absolute, %large : f64
+    %truncated = llvm.intr.trunc(%number) : (f64) -> f64
+    %isInteger = arith.cmpf oeq, %truncated, %number : f64
+    %exactLimit = arith.constant 9007199254740992.0 : f64
+    %isExact = arith.cmpf olt, %absolute, %exactLimit : f64
+    %isWhole = arith.andi %isInteger, %isExact : i1
+    %true = arith.constant true
+    %isFraction = arith.xori %isWhole, %true : i1
+    %isLargeFraction = arith.andi %isLarge, %isFraction : i1
     %isPositive = arith.cmpf ogt, %absolute, %zero : f64
     %isTiny = arith.cmpf ole, %absolute, %tiny : f64
     %isSmall = arith.andi %isPositive, %isTiny : i1
-    %scientific = arith.ori %isLarge, %isSmall : i1
+    %scientific = arith.ori %isLargeFraction, %isSmall : i1
     %first = arith.constant 15 : i32
     cf.cond_br %scientific, ^exponent, ^plain(%first : i32)
   ^plain(%precision: i32):
