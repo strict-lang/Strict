@@ -11,11 +11,17 @@ Checked(folder Text, root Text) Number
 	let isBase = folder.Replace("\\", "/").Replace("/.", "") is root
 	let duplicates = Duplicates.Of(files + Directory.Files(root, "*.strict"))
 	let shared = DroppedResults.Shared(duplicates, mutations)
+	let inference = ResolveCheck(logger).Inference(files.Length is 0 then files else SourceFiles(root).Of(files.First))
 	mutable issues = 0
 	for files
 		let found = CheckFile(value, mutations, isBase, shared) + duplicates.Issues(value, File(value).ReadLines)
-		issues = issues + Logged(value, found)
+		issues = issues + Logged(value, found) + Unresolved(value, inference)
 	issues
+Unresolved(path Text, inference Expressions/TypeInference) Number
+	let unresolved = ResolveCheck(logger).Unresolved(path, inference)
+	for unresolved
+		logger.Log(value)
+	unresolved.Length
 CheckFile(path Text, mutations Texts, isBase Boolean, shared Texts) List(ValidationIssue)
 	let lines = File(path).ReadLines
 	let typeName = Path(path).FileName.RemoveExtension.text

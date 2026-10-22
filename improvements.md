@@ -9,7 +9,6 @@ In priority order, short and actionable. Remove what is done (results go into th
 
 ## Bugs
 - Qwen3.8 prompts of about 920 tokens and more stop with `a loop on the GPU read outside of a list`: refreshing the f32 value from the exact parts after every operation in 32 bit kernels (d0f4a743) let 930 tokens prefill, but changed Qwen3.8's tokens and cost 4 ms per decoded token, so it was taken out; refreshing only whole numbers past 2^24 did not fix it.
-- `strict check` does not report an argument of the wrong type for a constructor (`MlirLines(value)` inside a `for` over instructions built an `MlirLines` from an `InstructionEntry`, the VM ran it, natively it crashed).
 
 ## Later
 Language model research (`NeuralNetworks/README.md`), big models and memory (Qwen3-Coder-30B with all experts), image blur on the GPU, web and mobile platforms, Apple Silicon, AMD GPUs.
