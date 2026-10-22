@@ -79,17 +79,15 @@ Parameters(name Text) Texts
 		value + ": " + types(index)
 Position(slot Text, target Text) Texts
 	Double.Position("%r1", "%k").Last is "    %k = arith.fptosi %kf : f64 to i64"
-	Single.Position("%r1", "%k").Last is "    %k = arith.select %kv, %kt, %kj : i64"
+	Single.Position("%r1", "%k").Last is "    %k = arith.select %kv, %k_e, %kj : i64"
 	let loaded = function.Load(target + "f", slot)
 	if Parts.Length is 0
 		return (loaded, "    " + target + " = arith.fptosi " + target + "f : f64 to i64")
 	let narrow = "    " + target + "n = arith.fptosi " + target + "f : f32 to i32"
 	let whole = "    " + target + "j = arith.extsi " + target + "n : i32 to i64"
-	let valid = "    " + target + "v = arith.cmpi ne, " + target + "_q, %inexact : i64"
-	let safe = "    " + target + "s = arith.select " + target + "v, " + target + "_q, %one : i64"
-	let quotient = "    " + target + "t = arith.divsi " + target + "_e, " + target + "s : i64"
-	let chosen = "    " + target + " = arith.select " + target + "v, " + target + "t, " + target + "j : i64"
-	(loaded, narrow, whole) + Loaded(target, slot) + (valid, safe, quotient, chosen)
+	let valid = "    " + target + "v = arith.cmpi eq, " + target + "_q, %one : i64"
+	let chosen = "    " + target + " = arith.select " + target + "v, " + target + "_e, " + target + "j : i64"
+	(loaded, narrow, whole) + Loaded(target, slot) + (valid, chosen)
 Integer(name Text, operation Text) Text
 	Single.Integer("n", "arith.addi %a, %b") is "    %x2n = arith.addi %a, %b : i64"
 	"    " + Temp(name) + " = " + operation + " : i64"

@@ -3,6 +3,7 @@ has at Number
 constant Chained = MlirFeeding(MlirFunction(List(TypeEntry) + GpuSamples.Layered, GpuSamples.Layered, MethodEntry("Chained", List(MemberEntry) + MemberEntry("input", "Strict/List(Number)", List(InstructionEntry), false), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "index"), InstructionEntry(InstructionType.IndexCall, "input", (1, 0, -1)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "offset"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "offset"), InstructionEntry(InstructionType.IndexCall, "input", (3, 2, -1)), InstructionEntry.Return(3)))), 0)
 constant Summing = MlirFeeding(MlirDeviceStatements.Summed, 6)
 constant Singled = MlirFeeding(MlirFunction(MlirDeviceStatements.Summed, Float = "f32"), 6)
+constant Unfloated = (InstructionType.StoreRegisterToVariable, InstructionType.CheckError, InstructionType.IndexCall, InstructionType.LoopBegin)
 Stored(number Text, target Text) Texts
 	Summing.Stored("%d6", "%r4") is ("    llvm.store %d6, %r4 : f64, !llvm.ptr")
 	Singled.Stored("%d6", "%r4").Last is "    llvm.store %inexact, %r4_q : i64, !llvm.ptr"
@@ -47,5 +48,37 @@ IsLoaded(position Number, name Text) Boolean
 		let entry = function.method.instructions(value)
 		let isNamed = (entry.kind is InstructionType.LoadVariableToRegister) and (entry.texts(0) is name)
 		if isNamed and IsFeeding(value, entry.payload(0))
+			return true
+	false
+IsFloated(position Number, register Number) Boolean
+	Chained.IsFloated(4, 3)
+	Chained.IsFloated(1, 1) is false
+	let reuse = LoadReuse(function.method.instructions)
+	for Range(position + 1, function.method.instructions.Length)
+		let entry = function.method.instructions(value)
+		let isStored = (entry.kind is InstructionType.StoreRegisterToVariable) and (entry.payload(0) is register)
+		let isRead = (register is in reuse.Reads(entry)) and IsFloating(value, entry)
+		if isRead or (isStored and IsFloatedVariable(value, entry.texts(0)))
+			return true
+		if reuse.Written(entry) is register
+			return false
+	false
+IsFloating(position Number, entry InstructionEntry) Boolean
+	Chained.IsFloating(5, Chained.function.method.instructions(5))
+	Chained.IsFloating(4, Chained.function.method.instructions(4)) is false
+	let kind = entry.kind
+	let isCompared = (kind > InstructionType.ArithmeticSeparator) and (kind < InstructionType.BinaryOperatorsSeparator)
+	if isCompared or (kind is in Unfloated)
+		return false
+	let isCalculated = (kind > InstructionType.StoreSeparator) and (kind < InstructionType.ArithmeticSeparator)
+	let isFloor = (kind is InstructionType.Invoke) and (entry.texts(1) is "Floor")
+	(isCalculated or isFloor) then IsFloated(position, LoadReuse(function.method.instructions).Written(entry)) else true
+IsFloatedVariable(position Number, name Text) Boolean
+	Chained.IsFloatedVariable(2, "offset") is false
+	Summing.IsFloatedVariable(10, "sum")
+	for Range(position + 1, function.method.instructions.Length)
+		let entry = function.method.instructions(value)
+		let isNamed = (entry.kind is InstructionType.LoadVariableToRegister) and (entry.texts(0) is name)
+		if isNamed and IsFloated(value, entry.payload(0))
 			return true
 	false
