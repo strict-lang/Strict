@@ -3,6 +3,7 @@ Parse SyntaxNode
 	SyntaxParser(Tokenizer("a + b * c").Tokens).Parse to Text is "a + b * c"
 	SyntaxParser(Tokenizer("(a + b) * c").Tokens).Parse to Text is "(a + b) * c"
 	SyntaxParser(Tokenizer("a - b - c").Tokens).Parse to Text is "a - b - c"
+	SyntaxParser(Tokenizer("a % b / c").Tokens).Parse.text is "/"
 	SyntaxParser(Tokenizer("Add(5, x.y).Length").Tokens).Parse to Text is "Add(5, x.y).Length"
 	SyntaxParser(Tokenizer("(not a) and b").Tokens).Parse to Text is "(not a) and b"
 	SyntaxParser(Tokenizer("x is not 5").Tokens).Parse to Text is "x is not 5"
