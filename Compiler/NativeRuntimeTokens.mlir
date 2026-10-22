@@ -2028,7 +2028,7 @@
   llvm.mlir.global internal @strict_device_eights_token_scales() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<512 x f32>
   // the 2 parts of 16 bytes of the rows and of the tokens and the row and token scale a thread copies for the 64 columns
   // of stage (rows and tokens after the last repeat the last), loaded into registers while the other stage computes
-  func.func private @strict_device_eights_fetch(%firstData: !llvm.ptr, %stride: i64, %rowFirst: i64, %rowLast: i64, %columns: i64, %input: !llvm.ptr, %inputScales: !llvm.ptr, %width: i64, %tokenFirst: i64, %tokenLast: i64, %stage: i64, %thread: i32) -> (vector<16xi32>, vector<2xf32>) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_eights_fetch(%firstData: !llvm.ptr, %stride: i64, %rowFirst: i64, %rowLast: i64, %columns: i64, %input: !llvm.ptr, %inputScales: !llvm.ptr, %width: i64, %tokenFirst: i64, %tokenLast: i64, %stage: i64, %thread: i32, %whole: i1) -> (vector<16xi32>, vector<2xf32>) attributes {passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -2049,7 +2049,7 @@
     cf.br ^part(%c0, %firstLocal, %zeroWords : i32, i64, vector<16xi32>)
   ^part(%step: i32, %local: i64, %words: vector<16xi32>):
     %moreParts = arith.cmpi slt, %step, %c2 : i32
-    cf.cond_br %moreParts, ^partBody, ^scales
+    cf.cond_br %moreParts, ^partBody, ^scaling
   ^partBody:
     %ownRow = arith.addi %rowFirst, %local : i64
     %row = arith.minsi %ownRow, %rowLast : i64
@@ -2070,6 +2070,9 @@
     %stepNext = arith.addi %step, %c1 : i32
     %localNext = arith.addi %local, %sixtyFour : i64
     llvm.br ^part(%stepNext, %localNext, %withToken : i32, i64, vector<16xi32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+  ^scaling:
+    %unscaled = arith.constant dense<0.0> : vector<2xf32>
+    cf.cond_br %whole, ^fetched(%unscaled : vector<2xf32>), ^scales
   ^scales:
     %scaleLocal = arith.shrui %thread64, %one : i64
     %sub = arith.andi %thread64, %one : i64
@@ -2094,10 +2097,12 @@
     %noScales = llvm.mlir.undef : vector<2xf32>
     %withRowScale = llvm.insertelement %rowScale, %noScales[%c0 : i32] : vector<2xf32>
     %scales = llvm.insertelement %tokenScale, %withRowScale[%c1 : i32] : vector<2xf32>
-    return %words, %scales : vector<16xi32>, vector<2xf32>
+    cf.br ^fetched(%scales : vector<2xf32>)
+  ^fetched(%fetchedScales: vector<2xf32>):
+    return %words, %fetchedScales : vector<16xi32>, vector<2xf32>
   }
   // the parts strict_device_eights_fetch loaded into stage buffer (0 or 1) of the shared memory
-  func.func private @strict_device_eights_put(%words: vector<16xi32>, %scales: vector<2xf32>, %buffer: i32, %thread: i32) attributes {passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_eights_put(%words: vector<16xi32>, %scales: vector<2xf32>, %buffer: i32, %thread: i32, %whole: i1) attributes {passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -2132,6 +2137,8 @@
     llvm.store %firstTokens, %firstTokenSlot {alignment = 16 : i64} : vector<4xi32>, !llvm.ptr<3>
     %secondTokenSlot = func.call @strict_device_tile_at(%tokens, %secondAt) : (!llvm.ptr<3>, i32) -> !llvm.ptr<3>
     llvm.store %secondTokens, %secondTokenSlot {alignment = 16 : i64} : vector<4xi32>, !llvm.ptr<3>
+    cf.cond_br %whole, ^done, ^scales
+  ^scales:
     %scaleBuffer = arith.shli %buffer, %c8 : i32
     %sub = arith.andi %thread, %c1 : i32
     %subStart = arith.shli %sub, %c7 : i32
@@ -2145,6 +2152,8 @@
     llvm.store %rowScale, %rowScaleSlot : f32, !llvm.ptr<3>
     %tokenScaleSlot = llvm.getelementptr %tokenScales[%scaleAt64] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
     llvm.store %tokenScale, %tokenScaleSlot : f32, !llvm.ptr<3>
+    cf.br ^done
+  ^done:
     return
   }
   // the 4 integer sums from slot (as bits of floats) plus the mma.m16n8k32 of a and b, rows with one scale add up whole
@@ -2249,10 +2258,10 @@
     %laneTokenScales = arith.addi %scaleStart, %warpToken : i32
     %firstScaleAt = arith.addi %laneTokenScales, %pairToken : i32
     %noScales = arith.constant dense<0.0> : vector<8xf32>
-    cf.br ^scale(%c0, %firstScaleAt, %noScales : i32, i32, vector<8xf32>)
+    cf.cond_br %whole, ^rowTiles(%noScales : vector<8xf32>), ^scale(%c0, %firstScaleAt, %noScales : i32, i32, vector<8xf32>)
   ^scale(%scaleTile: i32, %scaleAt: i32, %tokenScaleValues: vector<8xf32>):
     %moreScales = arith.cmpi slt, %scaleTile, %c4 : i32
-    cf.cond_br %moreScales, ^scaleBody, ^rowTiles
+    cf.cond_br %moreScales, ^scaleBody, ^rowTiles(%tokenScaleValues : vector<8xf32>)
   ^scaleBody:
     %scaleAt64 = arith.extui %scaleAt : i32 to i64
     %scaleSlot = llvm.getelementptr %tokenScales[%scaleAt64] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
@@ -2266,7 +2275,7 @@
     %scaleTileNext = arith.addi %scaleTile, %c1 : i32
     %scaleAtNext = arith.addi %scaleAt, %c8 : i32
     llvm.br ^scale(%scaleTileNext, %scaleAtNext, %withHigh : i32, i32, vector<8xf32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
-  ^rowTiles:
+  ^rowTiles(%tileScales: vector<8xf32>):
     cf.br ^rowTile(%c0, %sums : i32, vector<64xf32>)
   ^rowTile(%rowTileIndex: i32, %rowSums: vector<64xf32>):
     %moreRowTiles = arith.cmpi slt, %rowTileIndex, %c4 : i32
@@ -2311,8 +2320,8 @@
     %dot1 = llvm.extractvalue %dot[1] : !llvm.struct<(i32, i32, i32, i32)>
     %dot2 = llvm.extractvalue %dot[2] : !llvm.struct<(i32, i32, i32, i32)>
     %dot3 = llvm.extractvalue %dot[3] : !llvm.struct<(i32, i32, i32, i32)>
-    %lowTokenScale = llvm.extractelement %tokenScaleValues[%lowOperand : i32] : vector<8xf32>
-    %highTokenScale = llvm.extractelement %tokenScaleValues[%highOperand : i32] : vector<8xf32>
+    %lowTokenScale = llvm.extractelement %tileScales[%lowOperand : i32] : vector<8xf32>
+    %highTokenScale = llvm.extractelement %tileScales[%highOperand : i32] : vector<8xf32>
     %scale0 = arith.mulf %upperScale, %lowTokenScale : f32
     %scale1 = arith.mulf %upperScale, %highTokenScale : f32
     %scale2 = arith.mulf %lowerScale, %lowTokenScale : f32
@@ -2345,8 +2354,8 @@
     %zeros = arith.constant dense<0.0> : vector<64xf32>
     %stages = arith.shrui %columns, %six : i64
     %lastStage = arith.subi %stages, %one : i64
-    %firstWords, %firstScales = func.call @strict_device_eights_fetch(%firstData, %stride, %rowFirst, %rowLast, %columns, %input, %inputScales, %width, %tokenFirst, %tokenLast, %none, %thread) : (!llvm.ptr, i64, i64, i64, i64, !llvm.ptr, !llvm.ptr, i64, i64, i64, i64, i32) -> (vector<16xi32>, vector<2xf32>)
-    func.call @strict_device_eights_put(%firstWords, %firstScales, %c0, %thread) : (vector<16xi32>, vector<2xf32>, i32, i32) -> ()
+    %firstWords, %firstScales = func.call @strict_device_eights_fetch(%firstData, %stride, %rowFirst, %rowLast, %columns, %input, %inputScales, %width, %tokenFirst, %tokenLast, %none, %thread, %whole) : (!llvm.ptr, i64, i64, i64, i64, !llvm.ptr, !llvm.ptr, i64, i64, i64, i64, i32, i1) -> (vector<16xi32>, vector<2xf32>)
+    func.call @strict_device_eights_put(%firstWords, %firstScales, %c0, %thread, %whole) : (vector<16xi32>, vector<2xf32>, i32, i32, i1) -> ()
     func.call @strict_device_barrier() : () -> ()
     cf.br ^stage(%none, %zeros : i64, vector<64xf32>)
   ^stage(%stage: i64, %sums: vector<64xf32>):
@@ -2355,7 +2364,7 @@
   ^compute:
     %nextStage = arith.addi %stage, %one : i64
     %fetchedStage = arith.minsi %nextStage, %lastStage : i64
-    %nextWords, %nextScales = func.call @strict_device_eights_fetch(%firstData, %stride, %rowFirst, %rowLast, %columns, %input, %inputScales, %width, %tokenFirst, %tokenLast, %fetchedStage, %thread) : (!llvm.ptr, i64, i64, i64, i64, !llvm.ptr, !llvm.ptr, i64, i64, i64, i64, i32) -> (vector<16xi32>, vector<2xf32>)
+    %nextWords, %nextScales = func.call @strict_device_eights_fetch(%firstData, %stride, %rowFirst, %rowLast, %columns, %input, %inputScales, %width, %tokenFirst, %tokenLast, %fetchedStage, %thread, %whole) : (!llvm.ptr, i64, i64, i64, i64, !llvm.ptr, !llvm.ptr, i64, i64, i64, i64, i32, i1) -> (vector<16xi32>, vector<2xf32>)
     %stageParity = arith.andi %stage, %one : i64
     %buffer = arith.trunci %stageParity : i64 to i32
     %firstSub = func.call @strict_device_eights_sub(%sums, %buffer, %c0, %warpRow, %warpToken, %lane, %whole) : (vector<64xf32>, i32, i32, i32, i32, i32, i1) -> vector<64xf32>
@@ -2364,7 +2373,7 @@
     cf.cond_br %hasNext, ^put, ^stage(%nextStage, %bothSubs : i64, vector<64xf32>)
   ^put:
     %otherBuffer = arith.xori %buffer, %c1 : i32
-    func.call @strict_device_eights_put(%nextWords, %nextScales, %otherBuffer, %thread) : (vector<16xi32>, vector<2xf32>, i32, i32) -> ()
+    func.call @strict_device_eights_put(%nextWords, %nextScales, %otherBuffer, %thread, %whole) : (vector<16xi32>, vector<2xf32>, i32, i32, i1) -> ()
     func.call @strict_device_barrier() : () -> ()
     cf.br ^stage(%nextStage, %bothSubs : i64, vector<64xf32>)
   ^done:
