@@ -75,7 +75,7 @@ Failed Texts
 	("  ^d" + at + "fail:", one, MlirTyped.Integer.Store(Temp("f"), "%failed"), "    cf.br ^d" + at + "done")
 Read(list Text, target Text) Texts
 	Reading.Read("%v_input", "%r4").Last is "  ^d6done:"
-	MlirDeviceStatements(MlirGuards.Shifted, 6).Read("%v_numbers", "%r4")(3).EndsWith("load %d6p : !llvm.ptr -> f32")
+	MlirDeviceStatements(MlirGuards.Shifted, 6).Read("%v_numbers", "%r4")(3).EndsWith("@strict_device_floats(%d6d, %d6b, %d6k) : (!llvm.ptr, i64, i64) -> f32")
 	let data = MlirTyped.Pointer.Load(Temp("d"), list + "_d")
 	let bits = MlirTyped.Integer.Load(Temp("b"), list + "_b")
 	let operands = "(" + Temp("d") + ", " + Temp("b") + ", " + Temp("k") + ", " + Temp("n") + ")"

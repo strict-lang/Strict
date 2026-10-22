@@ -37,7 +37,7 @@ Run Texts
 	let run = "    " + Temp("gl") + " = func.call @strict_gpu_run(" + Text.Combine(first + second, ", ") + ") : " + Running
 	(List(Text) + ("  ^loop" + position + "gpu:")) + addresses + tokens.Launched + Values + sizes + run + Finished
 Values Texts
-	Doubling.Values.Last is "    %t2gpf = arith.constant 0 : i64"
+	Doubling.Values.Last is "    %t2gpf = arith.constant 17 : i64"
 	"    %t2gr = arith.constant 1 : i64" is in MlirGpu(MlirDeviceRows.Picking, 2).Values
 	"    %t2go = arith.constant 1 : i64" is in Layering.Values
 	let free = MlirGpuCheck(function, position).Free
@@ -64,9 +64,10 @@ Value(at Number, name Text) Texts
 	let slot = "    " + Temp("gx" + at) + " = llvm.getelementptr " + Temp("ga") + "[" + at + Indexing
 	(function.Load(loaded, "%v_" + name), slot, function.Store(loaded, Temp("gx" + at)))
 Counted(count Number, mask Number, rows Number, dots Number) Texts
-	Doubling.Counted(2, 3, 1, 2).Last is "    %t2gpf = arith.constant 0 : i64"
+	Doubling.Counted(2, 3, 1, 2).Last is "    %t2gpf = arith.constant 17 : i64"
 	constant names = ("gw", "gm", "gr", "go", "gpf")
-	for (count, mask, rows, dots, MlirLayout(function).Packed(position))
+	let packed = MlirLayout(function).Packed(position)
+	for (count, mask, rows, dots, packed is 0 then MlirLayout.BrainFloats else packed)
 		MlirTyped.Integer.Constant(Temp(names(index)), value to Text)
 Finished Texts
 	Doubling.Finished.Last is "    cf.br ^loop2exit"

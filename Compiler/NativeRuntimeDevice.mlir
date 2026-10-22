@@ -1,4 +1,12 @@
   func.func private @strict_device_element(%data: !llvm.ptr, %bits: i64, %at: i64, %count: i64) -> f64 {
+    %brainBits = arith.constant 17 : i64
+    %isBrain = arith.cmpi eq, %bits, %brainBits : i64
+    cf.cond_br %isBrain, ^brain, ^notBrain
+  ^brain:
+    %brainSingle = func.call @strict_device_bfloat16_read(%data, %at) : (!llvm.ptr, i64) -> f32
+    %brainNumber = arith.extf %brainSingle : f32 to f64
+    return %brainNumber : f64
+  ^notBrain:
     %sixteen = arith.constant 16 : i64
     %isHalf = arith.cmpi eq, %bits, %sixteen : i64
     cf.cond_br %isHalf, ^half, ^wider
@@ -133,6 +141,18 @@
     %clamped = arith.minimumf %low, %largest : f32
     %byte = arith.fptoui %clamped : f32 to i8
     return %byte : i8
+  }
+  // a number of a list in format 17 (bfloat16: the high half of a float)
+  func.func private @strict_device_bfloat16_read(%data: !llvm.ptr, %at: i64) -> f32 attributes {passthrough = ["alwaysinline"]} {
+    %slot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, bf16
+    %brain = llvm.load %slot : !llvm.ptr -> bf16
+    %number = arith.extf %brain : bf16 to f32
+    return %number : f32
+  }
+  // bfloat16 of value (format 17): nearest, ties to even
+  func.func private @strict_device_bfloat16(%value: f32) -> bf16 attributes {passthrough = ["alwaysinline"]} {
+    %brain = arith.truncf %value : f32 to bf16
+    return %brain : bf16
   }
   // Float8 of value (format 7, see strict_device_float8_number): nearest, ties to even, larger magnitudes become 448
   func.func private @strict_device_float8(%value: f32) -> i8 attributes {passthrough = ["alwaysinline"]} {
@@ -381,6 +401,13 @@
     %singleValue = llvm.load %singleSlot : !llvm.ptr -> f32
     return %singleValue : f32
   ^narrower:
+    %brainBits = arith.constant 17 : i64
+    %isBrain = arith.cmpi eq, %bits, %brainBits : i64
+    cf.cond_br %isBrain, ^brain, ^halfOrPacked
+  ^brain:
+    %brainNumber = func.call @strict_device_bfloat16_read(%data, %at) : (!llvm.ptr, i64) -> f32
+    return %brainNumber : f32
+  ^halfOrPacked:
     %sixteen = arith.constant 16 : i64
     %isHalf = arith.cmpi eq, %bits, %sixteen : i64
     cf.cond_br %isHalf, ^half, ^packed
