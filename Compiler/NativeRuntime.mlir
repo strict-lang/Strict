@@ -10062,16 +10062,22 @@
     %missing = llvm.icmp "eq" %function, %unset : !llvm.ptr
     %widest = arith.constant 256 : i64
     %grouped = arith.cmpi sgt, %group, %none : i64
-    %groupLanes = arith.minsi %group, %widest : i64
+    %groupLanes = func.call @strict_gpu_group_lanes(%group) : (i64) -> i64
     %laneTotal = arith.muli %count, %lanes : i64
     %tokened = arith.cmpi slt, %lanes, %none : i64
     %tokenTotal = func.call @strict_gpu_token_threads(%count, %lanes, %values, %rows) : (i64, i64, !llvm.ptr, i64) -> i64
     %elementTotal = arith.select %tokened, %tokenTotal, %laneTotal : i64
-    %threadTotal = arith.select %grouped, %count, %elementTotal : i64
+    %groupDivisor = arith.select %grouped, %group, %one : i64
+    %groupCount = arith.divui %count, %groupDivisor : i64
+    %groupThreads = arith.muli %groupCount, %groupLanes : i64
+    %threadTotal = arith.select %grouped, %groupThreads, %elementTotal : i64
     %tileLanes = arith.constant -512 : i64
     %tiling = arith.cmpi eq, %lanes, %tileLanes : i64
     %tileBlock = arith.constant 512 : i64
-    %laneThreads = arith.select %grouped, %groupLanes, %widest : i64
+    %warpLanes = arith.constant 32 : i64
+    %warpGroups = arith.cmpi eq, %groupLanes, %warpLanes : i64
+    %groupBlock = arith.select %warpGroups, %widest, %groupLanes : i64
+    %laneThreads = arith.select %grouped, %groupBlock, %widest : i64
     %threads = arith.select %tiling, %tileBlock, %laneThreads : i64
     cf.cond_br %missing, ^release, ^chosen
   ^chosen:
@@ -11589,18 +11595,26 @@
   ^done:
     return
   }
-  // the blocks of a grouped launch (one element per lane, up to 256 lanes) compute the call of their group together, a
-  // block must not reach into the next group: whole warps up to 256 lanes, beyond that whole blocks of 256
+  // a grouped launch runs a block of lanes per group that computes the call of the group once together, every lane
+  // takes every lanes-th element: a warp up to 1024 numbers (summed with shuffles alone), wider groups 256 lanes
+  func.func private @strict_gpu_group_lanes(%group: i64) -> i64 {
+    %warp = arith.constant 32 : i64
+    %block = arith.constant 256 : i64
+    %warpLimit = arith.constant 1024 : i64
+    %isWide = arith.cmpi sgt, %group, %warpLimit : i64
+    %widest = arith.select %isWide, %block, %warp : i64
+    %lanes = arith.minsi %group, %widest : i64
+    return %lanes : i64
+  }
   func.func private @strict_gpu_grouping(%count: i64, %group: i64) -> i1 {
     %none = arith.constant 0 : i64
     %thirtyOne = arith.constant 31 : i64
-    %widest = arith.constant 256 : i64
     %ungrouped = arith.cmpi sle, %group, %none : i64
     cf.cond_br %ungrouped, ^fits, ^check
   ^check:
     %rest = arith.remui %count, %group : i64
     %divides = arith.cmpi eq, %rest, %none : i64
-    %lanes = arith.minsi %group, %widest : i64
+    %lanes = func.call @strict_gpu_group_lanes(%group) : (i64) -> i64
     %blockRest = arith.remui %group, %lanes : i64
     %blocks = arith.cmpi eq, %blockRest, %none : i64
     %warpRest = arith.andi %lanes, %thirtyOne : i64
@@ -13002,6 +13016,7 @@
   }
   // whether the values with a bit in guards suit the exact copy of a 32 bit kernel: lists of 32 bit, bfloat16 or 16 bit
   // numbers (their views in slots from 6 on, three slots each), whole numbers (their exact slots from exacts + 1 on, two each)
+  // and for a bit 32 places higher a magic number (a divisor from 1 to 2^31, the kernel assumes it, MlirPassed.Bounded)
   func.func private @strict_gpu_guarded(%values: !llvm.ptr, %valueCount: i64, %mask: i64, %slots: !llvm.ptr, %exacts: i64, %guards: i64) -> i1 {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -13044,7 +13059,16 @@
     %isWhole = arith.cmpi ne, %exact, %inexact : i64
     %numberSlot = arith.addi %slotIndex, %one : i64
     %nextExact = arith.addi %exactIndex, %two : i64
-    %numberFails = arith.cmpi ult, %isWhole, %isGuarded : i1
+    %wholeFails = arith.cmpi ult, %isWhole, %isGuarded : i1
+    %divisorIndex = arith.addi %index, %thirtyTwo : i64
+    %divisorShifted = arith.shrui %guards, %divisorIndex : i64
+    %isDivisor = arith.trunci %divisorShifted : i64 to i1
+    %magicIndex = arith.addi %exactIndex, %one : i64
+    %magicSlot = llvm.getelementptr %slots[%magicIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %magic = llvm.load %magicSlot : !llvm.ptr -> i64
+    %hasMagic = arith.cmpi ne, %magic, %none : i64
+    %magicFails = arith.cmpi ult, %hasMagic, %isDivisor : i1
+    %numberFails = arith.ori %wholeFails, %magicFails : i1
     cf.cond_br %numberFails, ^failed, ^next(%nextIndex, %numberSlot, %nextExact : i64, i64, i64)
   ^failed:
     return %false : i1

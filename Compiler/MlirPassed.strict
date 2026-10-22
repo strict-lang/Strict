@@ -88,3 +88,33 @@ Label(temp Text) Text
 Joined(temp Text, result Text) Text
 	Wraps.Joined("%q", "%qs") is "    cf.br ^qdivided(%qs : i64)"
 	"    cf.br " + Label(temp) + "divided(" + result + " : i64)"
+Divisors Texts
+	MlirPassed(Wrapped, 2).Divisors is ("offset")
+	MlirPassed(MlirFunction(Wrapped, Guarded = -1), 2).Divisors.Length is 0
+	mutable names = List(Mutable(Text))
+	for Range(position + 1, function.method.LoopEndOf(position))
+		let entry = function.method.instructions(value)
+		let isDivision = entry.kind is in (InstructionType.Divide, InstructionType.Modulo)
+		let divisor = isDivision then MlirPassed(function, value).Candidate("%r" + entry.payload(2)) else ""
+		names = divisor is "" then names else names + divisor
+	names.Unique
+Assumed Texts
+	MlirPassed(Wrapped, 2).Assumed.First is "    %e_offset_a = arith.cmpi sge, %e_offset, %one : i64"
+	MlirPassed(Wrapped, 2).Assumed(1) is "    llvm.intr.assume %e_offset_a : i1"
+	MlirPassed(Wrapped, 2).Assumed.Last is "    llvm.intr.assume %m_offset_a : i1"
+	mutable lines = List(Mutable(Text))
+	for Divisors
+		lines = lines + Bounded(value)
+	lines
+Bounded(name Text) Texts
+	MlirPassed(Wrapped, 2).Bounded("offset")(3) is "    %e_offset_b = arith.cmpi sle, %e_offset, %e_offset_l : i64"
+	let exact = "%e_" + name
+	let magic = "%m_" + name
+	let positive = (Line(exact, "_a", "cmpi sge, " + exact + ", %one : i64"), Assumption(exact + "_a"))
+	let limit = MlirTyped.Integer.Constant(exact + "_l", "2147483648")
+	let below = (limit, Line(exact, "_b", "cmpi sle, " + exact + ", " + exact + "_l : i64"), Assumption(exact + "_b"))
+	let known = (Line(magic, "_a", "cmpi ne, " + magic + ", %inexact : i64"), Assumption(magic + "_a"))
+	positive + below + known
+Assumption(condition Text) Text
+	Wraps.Assumption("%c") is "    llvm.intr.assume %c : i1"
+	"    llvm.intr.assume " + condition + " : i1"

@@ -87,8 +87,8 @@ Parameters Texts
 IsUseful Boolean
 	Shifts.IsUseful
 	MlirGuards(MlirFunction(Shifted, Float = "f64"), 2).IsUseful is false
-	let sums = MlirDeviceSums(function, at)
-	if (function.Float is not "f32") or (function.Group >= 0) or sums.IsWarped or sums.IsSpread
+	MlirGuards(MlirFunction(MlirGroups.Norming.function, Float = "f32", Group = 11), 2).IsUseful
+	if function.Float is not "f32"
 		return false
 	for Range(at + 1, function.method.LoopEndOf(at))
 		if "?" is not in Sited(value)
@@ -113,11 +113,14 @@ IsSingle(position Number) Boolean
 Mask Number
 	Shifts.Mask > 0
 	MlirGuards(MlirFunction(Shifted, Float = "f64"), 2).Mask is 0
+	MlirGuards(MlirPassed.Wrapped, 2).Mask is 2 ^ 32 + 3
 	if IsUseful is false
 		return 0
 	mutable mask = 0
+	let divisors = MlirPassed(MlirFunction(function, Guarded = at), at).Divisors
 	for MlirGpuCheck(function, at).Free
 		mask = (value is in Parameters) or (value is in Reads) then mask + 2 ^ index else mask
+		mask = (index < 20) and (value is in divisors) then mask + 2 ^ (32 + index) else mask
 	mask
 Kernel Texts
 	Text.Combine(Shifts.Kernel).IndexOf("_gpu2sx(") > 0

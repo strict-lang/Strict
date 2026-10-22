@@ -18,7 +18,7 @@ Name Text
 	function.Symbol + "_gpu" + position + suffix
 Kernel Texts
 	Doubling.Kernel.First is DoublingHeader
-	Text.Combine(MlirDevice(MlirGroups.Norming.function, 2).Kernel).IndexOf("arith.minsi %group") > 0
+	Text.Combine(MlirDevice(MlirGroups.Norming.function, 2).Kernel).IndexOf("@strict_device_group_lanes(%group)") > 0
 	Text.Combine(Doubling.Kernel).IndexOf("func.call @Rows_Twice_1_device(") > 0
 	Layering.Kernel.First.IndexOf("%f_biases_b: i64, %results: i64) attributes") > 0
 	Text.Combine(MlirDevice(MlirFunction(Doubling.function, Float = "f32"), 2).Kernel).IndexOf("i32 to f32") > 0
@@ -28,7 +28,7 @@ Kernel Texts
 		return MlirDevice(MlirFunction(function, Group = call), position).Kernel
 	let header = "  llvm.func @" + Name + "(" + Fixed + Freed + MlirPassed(function, position).Header
 	let body = Emitted(position + 1, function.method.LoopEndOf(position))
-	(List(Text) + header) + Slots + Given + Indexed + Started + body + Ending
+	(List(Text) + header) + Slots + Given + Indexed + Started + body + MlirGrouped(function, position).Ending
 Freed Text
 	Doubling.Freed is ""
 	Layering.Freed.StartsWith(", %f_input_d: !llvm.ptr, %f_input_n: i64")
@@ -57,8 +57,11 @@ Given Texts
 	lines + (function.Guarded is position then Assumed else List(Text))
 Assumed Texts
 	Exact.Assumed is ("    llvm.store %one, %v_offset_q : i64, !llvm.ptr")
+	MlirDevice(MlirPassed.Wrapped, 2).Assumed(1) is "    llvm.intr.assume %e_offset_a : i1"
+	mutable lines = MlirPassed(function, position).Assumed
 	for MlirGuards(function, position).Parameters
-		MlirTyped.Integer.Store("%one", "%v_" + value + "_q")
+		lines = lines + MlirTyped.Integer.Store("%one", "%v_" + value + "_q")
+	lines
 Stores(source Text, target Text) Texts
 	Doubling.Stores("%a", "%b").First is "    llvm.store %a_d, %b_d : !llvm.ptr, !llvm.ptr"
 	for MlirTyped.Parts
@@ -125,9 +128,8 @@ Laned Texts
 Started Texts
 	Doubling.Started.Last is "    llvm.store %element, %v_value : f64, !llvm.ptr"
 	Layering.Started.Last is "    llvm.store %rowed#1, %v_value_b : i64, !llvm.ptr"
-	constant narrow = "    %narrow = arith.trunci %at : i64 to i32"
 	let loops = MlirDeviceLoops(function, position)
-	let index = (("  ^body:", narrow) + loops.Counted + loops.Indexes) + loops.Indexed("%v_index")
+	let index = (MlirGrouped(function, position).Body + loops.Counted + loops.Indexes) + loops.Indexed("%v_index")
 	let collection = MlirLoops(function, position).Collection
 	if collection is ""
 		return index + loops.Indexed("%v_value")
@@ -146,5 +148,6 @@ Emitted(first Number, limit Number) Texts
 	mutable lines = List(Mutable(Text))
 	for Range(first, limit)
 		if MlirDeviceDot(function, value).IsCovered is false
-			lines = lines + MlirDeviceStatements(function, value).Labeled + MlirDeviceStatements(function, value).Emitted
+			let emitted = MlirGrouped(function, value).Remembered(MlirDeviceStatements(function, value).Emitted)
+			lines = lines + MlirDeviceStatements(function, value).Labeled + emitted
 	lines

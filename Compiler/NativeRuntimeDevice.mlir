@@ -333,6 +333,16 @@
     return %sum : f64
   }
   llvm.mlir.global internal @strict_device_partials() {addr_space = 3 : i32} : !llvm.array<32 x f64>
+  // the lanes strict_gpu_group_lanes launches per group: a warp up to 1024 numbers, wider groups 256 lanes
+  func.func private @strict_device_group_lanes(%group: i64) -> i64 {
+    %warp = arith.constant 32 : i64
+    %block = arith.constant 256 : i64
+    %warpLimit = arith.constant 1024 : i64
+    %isWide = arith.cmpi sgt, %group, %warpLimit : i64
+    %widest = arith.select %isWide, %block, %warp : i64
+    %lanes = arith.minsi %group, %widest : i64
+    return %lanes : i64
+  }
   // the sum over the lanes of an element: one lane has it, up to 32 lanes are a warp, more lanes are a whole block of
   // warps (a group) that add their warp sums in shared memory, every lane gets the sum
   func.func private @strict_device_lanes_sum(%value: f64, %lane: i64, %lanes: i64) -> f64 {
