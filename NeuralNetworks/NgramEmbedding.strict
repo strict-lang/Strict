@@ -13,6 +13,14 @@ constant Tiny = NgramEmbedding(Keys, Values, Norm, Ones, Norm, Kernel + Kernel +
 constant Zero = Layer.Zeros(8)
 constant Silence = (Zero, Zero, Zero, Zero, Zero, Zero, Zero, Zero, Zero, Zero)
 constant Sample = Tiny.Gated(HyperStreams.Streams, (3, 1))
+Loaded(model Gguf, prefix Text) NgramEmbedding
+	NgramEmbedding.Loaded(HyperStreams.Flash, "blk.1.").conv.Length is 256
+	NgramEmbedding.Loaded(HyperStreams.Flash, "blk.1.").keyProjection.weights.Length is 256
+	let keyed = Layer(model.Rows(prefix + "ple_key.weight"), Layer.Unbiased)
+	let valued = Layer(model.Rows(prefix + "ple_value.weight"), Layer.Unbiased)
+	let norms = (model.Values(prefix + "ple_norm_key.weight"), model.Values(prefix + "ple_norm_query.weight"))
+	let taps = Gguf(model, bits = 32).Rows(prefix + "ple_conv1d.weight")
+	NgramEmbedding(keyed, valued, norms(0), norms(1), model.Values(prefix + "ple_norm_conv.weight"), taps)
 Embedded(table List(Numbers), rows Numbers) Numbers
 	Tiny.Embedded(((1), (2), (3)), (2, 0)) is (3, 1)
 	mutable embedding = List(Number)

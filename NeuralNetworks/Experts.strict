@@ -26,7 +26,7 @@ Routed(model Gguf, prefix Text) Experts
 	Experts.Routed(Model, "blk.0.").expansions.Length is 0
 	let architecture = model.Value("general.architecture")
 	let count = model.Value(architecture + ".expert_count") to Number
-	let routing = Layer(model.Rows(prefix + "ffn_gate_inp.weight"), Layer.Zeros(count))
+	let routing = Layer(Gguf(model, bits = 32).Rows(prefix + "ffn_gate_inp.weight"), Layer.Zeros(count))
 	Experts(routing, List(Layer), List(Layer), model.Value(architecture + ".expert_used_count") to Number)
 Dense(expansion Layer, contraction Layer) Experts
 	Experts.Dense(Tiny.expansions.First, Tiny.contractions.First).Forward(Probe) is Tiny.Expert(0, Probe)
