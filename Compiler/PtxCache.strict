@@ -18,6 +18,12 @@ Read(ending Text) Text
 Remembered(device Text, ptx Texts) Texts
 	PtxCache("Compiler/output/Failed").Remembered("module {\n}", ("clang failed: x")) is ("clang failed: x")
 	File("Compiler/output/Failed.kernels.mlir").Exists is false
+	PtxCache("Compiler/output/Written").Remembered("module {\n}", ("// new", "// old")) is ("// new", "// old")
+	PtxCache("Compiler/output/Written").Read(".older.ptx") is "// old"
 	if ptx.First.StartsWith("//")
+		Written(ptx, ".ptx")
 		File(base + ".kernels.mlir").Write(device)
 	ptx
+Written(ptx Texts, ending Text)
+	File(base + ending).Write(ptx.First)
+	File(base + ".older" + ending).Write(ptx.Length > 1 then ptx.Last else "")

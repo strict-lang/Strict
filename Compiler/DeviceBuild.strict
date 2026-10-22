@@ -131,8 +131,7 @@ Embedded(host Text, ptx Texts, base Text) Text
 	if ptx.First.StartsWith("//") is false
 		return "GPU kernels failed: " + ptx.First
 	let ending = tools.platform is Platform.MacOS then ".metal" else ".ptx"
-	File(base + ending).Write(ptx.First)
-	File(base + ".older" + ending).Write(ptx.Length > 1 then ptx.Last else "")
+	PtxCache(base).Written(ptx, ending)
 	Referenced(host, base)
 Referenced(host Text, base Text) Text
 	Missing.Referenced("module {\n}", "A").EndsWith("file:A\\00\") : !llvm.array<7 x i8>\n}")

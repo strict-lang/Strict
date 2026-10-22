@@ -98,8 +98,7 @@ Entered(name Text, tested Texts) Texts
 Formatted(name Text) Texts
 	Shifts.Formatted("numbers").Last is "    %g_numbers_w = func.call @strict_device_floating(%g_numbers_b) : (i64) -> i1"
 	let bits = MlirTyped.Integer.Load("%g_" + name + "_b", "%v_" + name + "_b")
-	let single = MlirTyped.Integer.Constant("%g_" + name + "_s", "32")
-	(bits, single, "    %g_" + name + "_w = arith.cmpi eq, %g_" + name + "_b, %g_" + name + "_s : i64")
+	(bits, "    %g_" + name + "_w = func.call @strict_device_floating(%g_" + name + "_b) : (i64) -> i1")
 Reads Texts
 	Shifts.Reads is ("numbers")
 	mutable names = List(Mutable(Text))

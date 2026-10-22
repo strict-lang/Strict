@@ -392,6 +392,52 @@
     func.call @strict_device_barrier() : () -> ()
     return %total : f64
   }
+  // the formats the guarded body of a 32 bit kernel reads with strict_device_floats: 32 bit floats, halves, bfloat16
+  func.func private @strict_device_floating(%bits: i64) -> i1 attributes {passthrough = ["alwaysinline"]} {
+    %one = arith.constant 1 : i64
+    %thirtyTwo = arith.constant 32 : i64
+    %brainBits = arith.constant 17 : i64
+    %isSingle = arith.cmpi eq, %bits, %thirtyTwo : i64
+    %paired = arith.ori %bits, %one : i64
+    %isHalves = arith.cmpi eq, %paired, %brainBits : i64
+    %floating = arith.ori %isSingle, %isHalves : i1
+    return %floating : i1
+  }
+  func.func private @strict_device_floats(%data: !llvm.ptr, %bits: i64, %at: i64) -> f32 attributes {passthrough = ["alwaysinline"]} {
+    %thirtyTwo = arith.constant 32 : i64
+    %isSingle = arith.cmpi eq, %bits, %thirtyTwo : i64
+    cf.cond_br %isSingle, ^single, ^halves
+  ^single:
+    %singleSlot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %single = llvm.load %singleSlot : !llvm.ptr -> f32
+    return %single : f32
+  ^halves:
+    %brainBits = arith.constant 17 : i64
+    %isBrain = arith.cmpi eq, %bits, %brainBits : i64
+    %slot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i16
+    %word = llvm.load %slot : !llvm.ptr -> i16
+    %brain = arith.bitcast %word : i16 to bf16
+    %half = arith.bitcast %word : i16 to f16
+    %fromBrain = arith.extf %brain : bf16 to f32
+    %fromHalf = arith.extf %half : f16 to f32
+    %number = arith.select %isBrain, %fromBrain, %fromHalf : f32
+    return %number : f32
+  }
+  // a number of a 32 bit kernel into its result in the format strict_gpu_run chose (17 bfloat16, else 32 bit floats)
+  func.func private @strict_device_stored(%result: !llvm.ptr, %at: i64, %value: f32, %bits: i64) attributes {passthrough = ["alwaysinline"]} {
+    %brainBits = arith.constant 17 : i64
+    %isBrain = arith.cmpi eq, %bits, %brainBits : i64
+    cf.cond_br %isBrain, ^brain, ^single
+  ^brain:
+    %brain = func.call @strict_device_bfloat16(%value) : (f32) -> bf16
+    %brainSlot = llvm.getelementptr %result[%at] : (!llvm.ptr, i64) -> !llvm.ptr, bf16
+    llvm.store %brain, %brainSlot : bf16, !llvm.ptr
+    return
+  ^single:
+    %singleSlot = llvm.getelementptr %result[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    llvm.store %value, %singleSlot : f32, !llvm.ptr
+    return
+  }
   func.func private @strict_device_elements(%data: !llvm.ptr, %bits: i64, %at: i64, %count: i64) -> f32 attributes {passthrough = ["alwaysinline"]} {
     %thirtyTwo = arith.constant 32 : i64
     %isSingle = arith.cmpi eq, %bits, %thirtyTwo : i64

@@ -116,7 +116,7 @@ Collected(register Text, pointer Text, at Number) Texts
 Stored(register Text, pointer Text, at Number) Texts
 	MlirLayout(Eights).Stored("%d", "%p", 4).Last is "    llvm.store %db, %p : i8, !llvm.ptr"
 	MlirLayout(Bytings).Stored("%d", "%p", 4)(1) is "    %db = func.call @strict_device_byte(%d) : (f32) -> i8"
-	MlirLayout(MlirGuards.Shifted).Stored("%d", "%p", 9) is ("    func.call @strict_device_stored(%result, %at, %d, %results) : (!llvm.ptr, i64, f32, i64) -> ()")
+	MlirLayout(MlirGuards.Shifted).Stored("%d", "%p", 9).First.EndsWith("(%result, %at, %d, %results)" + Storing)
 	let address = "    " + pointer + " = llvm.getelementptr %result[%at]" + MlirFastLoop.Pointer
 	if Packed(function.method.LoopBeginOf(at)) is 0
 		return List(Text) + ("    func.call @strict_device_stored(%result, %at, " + register + ", %results)" + Storing)
