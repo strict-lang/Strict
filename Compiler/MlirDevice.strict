@@ -57,8 +57,11 @@ Given Texts
 	lines + (function.Guarded is position then Assumed else List(Text))
 Assumed Texts
 	Exact.Assumed is ("    llvm.store %one, %v_offset_q : i64, !llvm.ptr")
+	MlirDevice(MlirPassed.Wrapped, 2).Assumed(1) is "    llvm.intr.assume %e_offset_a : i1"
+	mutable lines = MlirPassed(function, position).Assumed
 	for MlirGuards(function, position).Parameters
-		MlirTyped.Integer.Store("%one", "%v_" + value + "_q")
+		lines = lines + MlirTyped.Integer.Store("%one", "%v_" + value + "_q")
+	lines
 Stores(source Text, target Text) Texts
 	Doubling.Stores("%a", "%b").First is "    llvm.store %a_d, %b_d : !llvm.ptr, !llvm.ptr"
 	for MlirTyped.Parts

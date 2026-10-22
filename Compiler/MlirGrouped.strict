@@ -8,7 +8,7 @@ constant Allocated = " = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
 constant Plain = ("    %inside = arith.cmpi slt, %at, %count : i64", "    cf.cond_br %inside, ^body, ^exit")
 constant Looped = ("    %inside = arith.cmpi slt, %atFirst, %count : i64", "    cf.cond_br %inside, ^body(%atFirst : i64), ^exit")
 constant Next = ("    cf.br ^next", "  ^next:", "    %atNext = arith.addi %at, %lanes : i64", "    %more = arith.cmpi slt, %atNext, %groupEnd : i64", "    cf.cond_br %more, ^body(%atNext : i64), ^last", "  ^last:")
-constant Lanes = ("    %lanes = func.call @strict_device_group_lanes(%group) : (i64) -> i64", "    %lane = arith.remui %global, %lanes : i64", "    %groupIndex = arith.divui %global, %lanes : i64", "    %groupStart = arith.muli %groupIndex, %group : i64", "    %groupEnd = arith.addi %groupStart, %group : i64", "    %atFirst = arith.addi %groupStart, %lane : i64")
+constant Lanes = ("    %lanes = func.call @strict_device_group_lanes(%group) : (i64) -> i64", "    %lane = arith.remui %global, %lanes : i64", "    %groupIndex = arith.divui %global, %lanes : i64", "    %groupStart = arith.muli %groupIndex, %group : i64", "    %groupEnd = arith.addi %groupStart, %group : i64", "    %atFirst = arith.addi %groupStart, %lane : i64", "    %countLimit = arith.constant 4294967295 : i64", "    %countFits = arith.cmpi ule, %count, %countLimit : i64", "    llvm.intr.assume %countFits : i1")
 Indexed Texts
 	Norming.Indexed.First is "    %groupd = llvm.load %v_size : !llvm.ptr -> f64"
 	Norming.Indexed(2) is "    %lanes = func.call @strict_device_group_lanes(%group) : (i64) -> i64"
@@ -74,10 +74,14 @@ Memo Text
 	"%memo" + position
 Body Texts
 	Norming.Body.First is "  ^body(%at: i64):"
+	Norming.Body(2) is "    llvm.intr.assume %atInside : i1"
 	Doubling.Body is ("  ^body:", "    %narrow = arith.trunci %at : i64 to i32")
 	Text.Combine(MlirDevice(MlirGroups.Norming.function, 2).Kernel).IndexOf("  ^body(%at: i64):") > 0
 	constant narrow = "    %narrow = arith.trunci %at : i64 to i32"
-	(function.Group < 0 then "  ^body:" else "  ^body(%at: i64):", narrow)
+	if function.Group < 0
+		return ("  ^body:", narrow)
+	constant inside = ("    %atInside = arith.cmpi ult, %at, %count : i64", "    llvm.intr.assume %atInside : i1")
+	(List(Text) + "  ^body(%at: i64):") + inside + narrow
 Ending Texts
 	Norming.Ending(4) is "    cf.cond_br %more, ^body(%atNext : i64), ^last"
 	Doubling.Ending is MlirDevice.Ending

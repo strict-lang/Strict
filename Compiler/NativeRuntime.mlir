@@ -13016,6 +13016,7 @@
   }
   // whether the values with a bit in guards suit the exact copy of a 32 bit kernel: lists of 32 bit, bfloat16 or 16 bit
   // numbers (their views in slots from 6 on, three slots each), whole numbers (their exact slots from exacts + 1 on, two each)
+  // and for a bit 32 places higher a magic number (a divisor from 1 to 2^31, the kernel assumes it, MlirPassed.Bounded)
   func.func private @strict_gpu_guarded(%values: !llvm.ptr, %valueCount: i64, %mask: i64, %slots: !llvm.ptr, %exacts: i64, %guards: i64) -> i1 {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -13058,7 +13059,16 @@
     %isWhole = arith.cmpi ne, %exact, %inexact : i64
     %numberSlot = arith.addi %slotIndex, %one : i64
     %nextExact = arith.addi %exactIndex, %two : i64
-    %numberFails = arith.cmpi ult, %isWhole, %isGuarded : i1
+    %wholeFails = arith.cmpi ult, %isWhole, %isGuarded : i1
+    %divisorIndex = arith.addi %index, %thirtyTwo : i64
+    %divisorShifted = arith.shrui %guards, %divisorIndex : i64
+    %isDivisor = arith.trunci %divisorShifted : i64 to i1
+    %magicIndex = arith.addi %exactIndex, %one : i64
+    %magicSlot = llvm.getelementptr %slots[%magicIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %magic = llvm.load %magicSlot : !llvm.ptr -> i64
+    %hasMagic = arith.cmpi ne, %magic, %none : i64
+    %magicFails = arith.cmpi ult, %hasMagic, %isDivisor : i1
+    %numberFails = arith.ori %wholeFails, %magicFails : i1
     cf.cond_br %numberFails, ^failed, ^next(%nextIndex, %numberSlot, %nextExact : i64, i64, i64)
   ^failed:
     return %false : i1
