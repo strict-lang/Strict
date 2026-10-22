@@ -161,6 +161,18 @@ TypeOf(name Text) TypeEntry
 		if IsNamed(value, name, short)
 			return value
 	TypeEntry(name, List(MemberEntry), List(MethodEntry))
+Indexed Dictionary(Text, Number)
+	Shapes.Indexed("Shape") is 0
+	Shapes.Indexed("Strict/Shape") is 0
+	mutable indexed = Dictionary(Text, Number)
+	for types
+		if value.Name is not in indexed
+			indexed(value.Name) = index
+	for types
+		let short = Path(value.Name).FileName.text
+		if short is not in indexed
+			indexed(short) = index
+	indexed
 IsNamed(type TypeEntry, name Text, short Text) Boolean
 	Shapes.IsNamed(Shape, "Shape", "Shape")
 	Shapes.IsNamed(Shape, "Strict/Other", "Other") is false

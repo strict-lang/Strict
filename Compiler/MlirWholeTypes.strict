@@ -140,7 +140,7 @@ Called(entry InstructionEntry) Text
 	if isFloor or (decoder.Text(2) is in ("Length", "Validated", "from"))
 		return "i"
 	let type = function.TypeOf(decoder.Text(1))
-	MlirWholeTypes(MlirFunction(function.types, type, decoder.Callee(type))).Returned
+	MlirWholeTypes(MlirFunction(function.types, type, decoder.Callee(type), typeIndex = function.typeIndex)).Returned
 Length(at Number) Text
 	MlirWholeTypes(MlirWholeChild.Brightening.function).Length(4) is "pixels"
 	Halving.Length(3) is ""

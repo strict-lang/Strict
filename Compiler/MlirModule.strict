@@ -38,7 +38,7 @@ Functions List(MlirFunction)
 Entries List(MlirFunction)
 	Pair.Entries.Last.Symbol is "Other_Run_0"
 	for Range(0, entries)
-		MlirFunction(types, types(value), RunMethod(types(value)))
+		MlirFunction(types, types(value), RunMethod(types(value)), typeIndex = Natives(types).Indexed)
 Mains List(TypeEntry)
 	Pair.Mains.Last.Name is "Strict/Other"
 	for Range(0, entries)
@@ -82,7 +82,7 @@ Called(function MlirFunction, position Number) List(MlirFunction)
 	let decoder = PayloadDecoder(entry)
 	if MlirCalls(function, position).NativeHelper(entry, decoder) is not ""
 		return List(MlirFunction)
-	let type = Natives(types).TypeOf(decoder.Text(1))
+	let type = function.TypeOf(decoder.Text(1))
 	let callee = decoder.Callee(type)
-	let called = MlirFunction(types, type, callee)
+	let called = MlirFunction(types, type, callee, typeIndex = function.typeIndex)
 	(callee.instructions.Length > 0) or MlirForeign(called).IsForeign then NoFunctions + called else NoFunctions

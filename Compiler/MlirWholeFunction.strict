@@ -128,7 +128,7 @@ Callee(entry InstructionEntry) MlirFunction
 	Halving.Callee(MlirWholeTypes.Halves(3)).method.Name is "Floor"
 	let decoder = PayloadDecoder(entry)
 	let type = function.TypeOf(decoder.Text(1))
-	MlirFunction(function.types, type, decoder.Callee(type))
+	MlirFunction(function.types, type, decoder.Callee(type), typeIndex = function.typeIndex)
 Kinds Texts
 	Halving.Kinds is ("i")
 	Row.Kinds is ("p", "i", "i")

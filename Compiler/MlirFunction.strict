@@ -7,17 +7,17 @@ has Packing Text = ""
 has Float Text = "f64"
 has Group Number = -1
 has IsRecursive Boolean = true
+has typeIndex Dictionary(Text, Number) = Dictionary(Text, Number)
 constant Counter = MlirFunction(List(TypeEntry), TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry)), MethodEntry.CountingLoop)
 constant Shape = TypeEntry("Strict/Shape", (MemberEntry("width", "Strict/Number", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
 constant Named = TypeEntry("Strict/Named", (MemberEntry("name", "Strict/Text", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
-constant Adding = MlirFunction(List(TypeEntry), Shape, MethodEntry("+", List(MemberEntry), "None", List(InstructionEntry)))
 constant ListKinds = (InstructionType.IndexCall, InstructionType.InvokeWriteToList, InstructionType.CopyList, InstructionType.InvokeRemove)
 constant NamedKinds = (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable, InstructionType.InvokeWriteToList, InstructionType.IndexCall)
 IsCounted = lineSlots.Length > 0
 Symbol Text
 	Counter.Symbol is "Counter_Run_0"
-	Adding.Symbol is "Shape_Plus_0"
-	MlirFunction(Adding, method = MethodEntry(Adding.method, Name = "<")).Symbol is "Shape_Less_0"
+	MlirFunction(Counter.types, Shape, MethodEntry(Counter.method, Name = "+")).Symbol is "Shape_Plus_0"
+	MlirFunction(Counter.types, Shape, MethodEntry(Counter.method, Name = "<")).Symbol is "Shape_Less_0"
 	if MlirForeign(value).IsForeign
 		return MlirForeign(value).Wrapper
 	let name = MlirEquality(value, 0).Symbol(type.JustName)
@@ -47,7 +47,8 @@ VariableNames Texts
 	names
 TypeOf(name Text) TypeEntry
 	Counter.TypeOf("Strict/Other").members.Length is 0
-	Natives(types).TypeOf(name)
+	MlirFunction(Counter.types + Shape, Shape, Counter.method, typeIndex = Natives.Shapes.Indexed).TypeOf("Shape") is Shape
+	name is in typeIndex then types(typeIndex(name)) else Natives(types).TypeOf(name)
 Load(target Text, slot Text) Text
 	Counter.Load("%a", "%r0") is "    %a = llvm.load %r0 : !llvm.ptr -> f64"
 	MlirFunction(Counter, Float = "f32").Load("%a", "%r0") is "    %a = llvm.load %r0 : !llvm.ptr -> f32"
