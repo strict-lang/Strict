@@ -11585,6 +11585,33 @@
   ^unable:
     return %zero : f64
   }
+  llvm.mlir.global internal constant @strict_gpu_hadamard_name("strict_device_hadamard\00strict_device_hadamards\00") : !llvm.array<47 x i8>
+  llvm.mlir.global internal @strict_gpu_hadamard_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  // `Convrot.Rotated` (the 4 radix-4 butterflies of every group of 256 values) as one kernel, a block per group, 0.0
+  // when the length is no multiple of 256 or the GPU can not
+  func.func private @strict_gpu_hadamard(%ptx: !llvm.ptr, %values: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %group = arith.constant 255 : i64
+    %length = func.call @strict_list_length(%values) : (f64) -> f64
+    %count = arith.fptosi %length : f64 to i64
+    %rest = arith.andi %count, %group : i64
+    %whole = arith.cmpi eq, %rest, %none : i64
+    %some = arith.cmpi sgt, %count, %none : i64
+    %fits = arith.andi %whole, %some : i1
+    cf.cond_br %fits, ^run, ^unable
+  ^run:
+    %slots = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %values, %slots : f64, !llvm.ptr
+    %name = llvm.mlir.addressof @strict_gpu_hadamard_name : !llvm.ptr
+    %slot = llvm.mlir.addressof @strict_gpu_hadamard_slot : !llvm.ptr
+    %integers = arith.constant -1 : i64
+    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %count, %zero, %none, %slots, %one, %one, %none, %none, %one, %none, %integers) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> f64
+    return %result : f64
+  ^unable:
+    return %zero : f64
+  }
   llvm.mlir.global internal constant @strict_gpu_tokens_name("strict_device_tokens\00strict_device_tokenss\00") : !llvm.array<43 x i8>
   llvm.mlir.global internal @strict_gpu_tokens_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   llvm.mlir.global internal constant @strict_gpu_blocks_name("strict_device_blocks\00strict_device_blockss\00") : !llvm.array<43 x i8>
