@@ -96,7 +96,7 @@ Entered(name Text, tested Texts) Texts
 	Shifts.Entered("numbers", List(Text)) is ("    cf.cond_br %g_numbers_w, ^g_numbers, ^generic", "  ^g_numbers:")
 	tested + ("    cf.cond_br %g_" + name + "_w, ^g_" + name + ", ^generic", "  ^g_" + name + ":")
 Formatted(name Text) Texts
-	Shifts.Formatted("numbers").Last is "    %g_numbers_w = arith.cmpi eq, %g_numbers_b, %g_numbers_s : i64"
+	Shifts.Formatted("numbers").Last is "    %g_numbers_w = func.call @strict_device_floating(%g_numbers_b) : (i64) -> i1"
 	let bits = MlirTyped.Integer.Load("%g_" + name + "_b", "%v_" + name + "_b")
 	let single = MlirTyped.Integer.Constant("%g_" + name + "_s", "32")
 	(bits, single, "    %g_" + name + "_w = arith.cmpi eq, %g_" + name + "_b, %g_" + name + "_s : i64")

@@ -353,15 +353,13 @@
   func.func private @strict_packed_copied(%data: !llvm.ptr, %packed: !llvm.ptr) {
     %none = arith.constant 0 : i64
     %eight = arith.constant 8 : i64
-    %sixteen = arith.constant 16 : i64
     %shape:2 = func.call @strict_packed_shape(%packed) : (!llvm.ptr) -> (i64, i64)
     %bytes = func.call @strict_packed_bytes(%shape#0, %shape#1) : (i64, i64) -> i64
     %source = llvm.getelementptr %packed[2] : (!llvm.ptr) -> !llvm.ptr, f64
     %copied = llvm.call @memcpy(%data, %source, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
-    %isHalf = arith.cmpi eq, %shape#1, %sixteen : i64
     %isQuantized = arith.cmpi sle, %shape#1, %eight : i64
     %floats = arith.select %isQuantized, %none, %shape#0 : i64
-    func.call @strict_packed_canonical(%data, %floats, %isHalf) : (!llvm.ptr, i64, i1) -> ()
+    func.call @strict_packed_canonical(%data, %floats, %shape#1) : (!llvm.ptr, i64, i64) -> ()
     return
   }
   // packed rows of a foreign result all go into one unscanned block (their numbers, then their views), so a collection
@@ -527,7 +525,11 @@
     %lanes = arith.constant 33 : i64
     %isLanes = arith.cmpi eq, %bits, %lanes : i64
     %laneBytes = arith.shli %count, %two : i64
-    %orLanes = arith.select %isLanes, %laneBytes, %plainBytes : i64
+    %brainBits = arith.constant 17 : i64
+    %isBrain = arith.cmpi eq, %bits, %brainBits : i64
+    %brainBytes = arith.shli %count, %one : i64
+    %orBrain = arith.select %isBrain, %brainBytes, %plainBytes : i64
+    %orLanes = arith.select %isLanes, %laneBytes, %orBrain : i64
     %orFloat8 = arith.select %isByteWide, %aligned, %orLanes : i64
     %orFour = arith.select %isFour, %fourBytes, %orFloat8 : i64
     %orSix = arith.select %isSix, %sixBytes, %orFour : i64
@@ -539,13 +541,23 @@
     %scales = llvm.getelementptr %data[%aligned] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     return %scales : !llvm.ptr
   }
-  func.func private @strict_packed_canonical(%data: !llvm.ptr, %count: i64, %isHalf: i1) {
+  // NaNs of numbers in format bits (16 for halves, 17 for bfloat16, else 32 bit floats) become the one NaN
+  func.func private @strict_packed_canonical(%data: !llvm.ptr, %count: i64, %bits: i64) {
     %start = arith.constant 0 : i64
     %step = arith.constant 1 : i64
     %singleExponent = arith.constant 2139095040 : i32
     %singleNaN = arith.constant 2143289344 : i32
-    %halfExponent = arith.constant 31744 : i16
-    %halfNaN = arith.constant 32256 : i16
+    %sixteen = arith.constant 16 : i64
+    %brainBits = arith.constant 17 : i64
+    %isHalfOnly = arith.cmpi eq, %bits, %sixteen : i64
+    %isBrain = arith.cmpi eq, %bits, %brainBits : i64
+    %isHalf = arith.ori %isHalfOnly, %isBrain : i1
+    %halvesExponent = arith.constant 31744 : i16
+    %halvesNaN = arith.constant 32256 : i16
+    %brainExponent = arith.constant 32640 : i16
+    %brainNaN = arith.constant 32704 : i16
+    %halfExponent = arith.select %isBrain, %brainExponent, %halvesExponent : i16
+    %halfNaN = arith.select %isBrain, %brainNaN, %halvesNaN : i16
     cf.br ^check(%start : i64)
   ^check(%index: i64):
     %more = arith.cmpi slt, %index, %count : i64
@@ -2312,15 +2324,22 @@
     %noFlags = arith.constant 0 : i8
     %isEntered = arith.cmpi ne, %targetEntered, %noFlags : i8
     %entersContainer = arith.ori %isLarger, %isEntered : i1
+    %deviceFlag = arith.constant 64 : i8
+    %targetDevice = arith.andi %targetFlagByte, %deviceFlag : i8
+    %holdsDevice = arith.cmpi ne, %targetDevice, %noFlags : i8
     cf.cond_br %entersContainer, ^enter, ^done
   ^enter:
     func.call @strict_rc_enter(%container) : (i64) -> ()
+    cf.cond_br %holdsDevice, ^device, ^done
+  ^device:
+    func.call @strict_rc_flag(%container, %deviceFlag) : (i64, i8) -> ()
     cf.br ^done
   ^done:
     return
   }
   // a small object referencing an object of 256 bytes or more (a view of a long list) is freed by its count too,
-  // so the long list can go when the view does (flag 16: entered into the table)
+  // so the long list can go when the view does (flag 16: entered into the table); a list on the GPU and the objects
+  // holding one (flag 64) stay in the table while they live, so their device blocks go back without a collection
   func.func private @strict_rc_enter(%container: i64) {
     %zero = arith.constant 0 : i64
     %noFlags = arith.constant 0 : i8
@@ -2721,7 +2740,11 @@
     %wasKept = arith.cmpi ne, %keptBefore, %noFlags : i8
     %withKept = arith.ori %flagByte, %keptFlag : i8
     llvm.store %withKept, %flags : i8, !llvm.ptr
-    cf.cond_br %wasKept, ^nothing, ^again
+    %deviceFlag = arith.constant 64 : i8
+    %device = arith.andi %flagByte, %deviceFlag : i8
+    %isHost = arith.cmpi eq, %device, %noFlags : i8
+    %dropped = arith.andi %wasKept, %isHost : i1
+    cf.cond_br %dropped, ^nothing, ^again
   ^again:
     return %kept : i64
   ^freeable:
@@ -3086,8 +3109,6 @@
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %classCount = arith.constant 64 : i64
-    %lengthSlot = llvm.mlir.addressof @strict_rc_length : !llvm.ptr
-    llvm.store %zero, %lengthSlot : i64, !llvm.ptr
     %recycled = llvm.mlir.addressof @strict_rc_recycled : !llvm.ptr
     cf.br ^loop(%zero : i64)
   ^loop(%class: i64):
@@ -3134,6 +3155,34 @@
     return %true : i1
   ^none:
     return %false : i1
+  }
+  // after the marking of a collection the table keeps the objects it marked, the others may be swept
+  func.func private @strict_rc_survived() {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %lengthSlot = llvm.mlir.addressof @strict_rc_length : !llvm.ptr
+    %length = llvm.load %lengthSlot : !llvm.ptr -> i64
+    %tableSlot = llvm.mlir.addressof @strict_rc_table : !llvm.ptr
+    %tableBits = llvm.load %tableSlot : !llvm.ptr -> i64
+    %table = llvm.inttoptr %tableBits : i64 to !llvm.ptr
+    cf.br ^loop(%zero, %zero : i64, i64)
+  ^loop(%index: i64, %kept: i64):
+    %more = arith.cmpi ult, %index, %length : i64
+    cf.cond_br %more, ^entry, ^done
+  ^entry:
+    %entrySlot = llvm.getelementptr %table[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %object = llvm.load %entrySlot : !llvm.ptr -> i64
+    %next = arith.addi %index, %one : i64
+    %marked = func.call @strict_gc_is_marked(%object) : (i64) -> i1
+    cf.cond_br %marked, ^keep, ^loop(%next, %kept : i64, i64)
+  ^keep:
+    %keptSlot = llvm.getelementptr %table[%kept] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    llvm.store %object, %keptSlot : i64, !llvm.ptr
+    %moreKept = arith.addi %kept, %one : i64
+    cf.br ^loop(%next, %moreKept : i64, i64)
+  ^done:
+    llvm.store %kept, %lengthSlot : i64, !llvm.ptr
+    return
   }
   // STRICT_RC_CHECK=1: after the marking of a full collection every live scanned object takes its references off the
   // counts of their targets, a count below zero is a missed increment, then the counts are restored
@@ -3892,6 +3941,7 @@
     %spilled:2 = func.call @strict_registers_spilled() : () -> (i64, i64)
     func.call @strict_gc_mark_range(%spilled#0, %spilled#1) : (i64, i64) -> i64
     func.call @strict_gc_drain() : () -> ()
+    func.call @strict_rc_survived() : () -> ()
     %checkingSlot = llvm.mlir.addressof @strict_rc_checking : !llvm.ptr
     %checking = llvm.load %checkingSlot : !llvm.ptr -> i64
     %isChecking = arith.cmpi ne, %checking, %zero : i64
@@ -4673,6 +4723,19 @@
     %more = arith.cmpi slt, %index, %count : i64
     cf.cond_br %more, ^element, ^done
   ^element:
+    %brainCapacity = arith.constant -17.0 : f64
+    %isBrain = arith.cmpf oeq, %capacity, %brainCapacity : f64
+    cf.cond_br %isBrain, ^brain, ^notBrain
+  ^brain:
+    %brainSlot = llvm.getelementptr %data[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i16
+    %brainBits = llvm.load %brainSlot : !llvm.ptr -> i16
+    %brainWide = arith.extui %brainBits : i16 to i32
+    %brainShift = arith.constant 16 : i32
+    %singleBits = arith.shli %brainWide, %brainShift : i32
+    %brainSingle = arith.bitcast %singleBits : i32 to f32
+    %fromBrain = arith.extf %brainSingle : f32 to f64
+    cf.br ^store(%fromBrain : f64)
+  ^notBrain:
     cf.cond_br %isHalf, ^half, ^wider
   ^half:
     %halfSlot = llvm.getelementptr %data[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i16
@@ -9359,13 +9422,14 @@
     return %zero : i64
   }
   // the driver on Windows (WDDM) does not fail an allocation past the free memory, it pages memory out and every
-  // kernel gets several times slower, so the pool gives its free big blocks back first when memory runs short
+  // kernel gets several times slower, so the pool gives its free big blocks back first when less than 256 MB would be
+  // left (with 1 GB a pool reused every layer went to the driver and back next to 0.5 GB of other programs)
   func.func private @strict_gpu_alloc(%bytes: i64) -> i64 {
     %zero = arith.constant 0 : i64
     %zero32 = arith.constant 0 : i32
     %one = arith.constant 1 : i64
     %free = func.call @strict_gpu_free_memory() : () -> i64
-    %reserve = arith.constant 1073741824 : i64
+    %reserve = arith.constant 268435456 : i64
     %needed = arith.addi %bytes, %reserve : i64
     %short = arith.cmpi ult, %free, %needed : i64
     cf.cond_br %short, ^release, ^allocate
@@ -9941,9 +10005,10 @@
     return %zero : f64
   }
   // device memory for lists computed on the GPU: blocks of 256 << class bytes from 64 MB chunks, a free block goes on
-  // the stack of its class; when a class has none, a young collection frees unreachable lists once 256 MB were taken
-  // since the last collection, a full one once more than half of the free device memory (at least 1 GB) was cut from
-  // chunks since the last full collection, the free memory is measured with every new chunk
+  // the stack of its class; when a class has none, the lists no count and no stack word refers to give theirs back
+  // first (strict_rc_reclaim: the activations of the last layer), then a young collection frees unreachable lists once
+  // 256 MB were taken since the last collection, a full one once more than half of the free device memory (at least
+  // 1 GB) was cut from chunks since the last full collection, the free memory is measured with every new chunk
   // chunks are never returned and the rest of a chunk too small for the next block is lost
   llvm.mlir.global internal @strict_gpu_blocks(dense<0> : tensor<144xi64>) : !llvm.array<144 x i64>
   llvm.mlir.global internal @strict_gpu_chunk(dense<0> : tensor<6xi64>) : !llvm.array<6 x i64>
@@ -9992,6 +10057,11 @@
     func.call @strict_gpu_obtained(%blockSize) : (i64) -> ()
     return %device : i64
   ^fresh:
+    func.call @strict_rc_reclaim() : () -> ()
+    %reclaimedCount = llvm.load %countSlot : !llvm.ptr -> i64
+    %reclaimed = arith.cmpi sgt, %reclaimedCount, %none : i64
+    cf.cond_br %reclaimed, ^again, ^unreclaimed
+  ^unreclaimed:
     %chunk = llvm.mlir.addressof @strict_gpu_chunk : !llvm.ptr
     %sinceSlot = llvm.getelementptr %chunk[3] : (!llvm.ptr) -> !llvm.ptr, i64
     %since = llvm.load %sinceSlot : !llvm.ptr -> i64
@@ -10251,6 +10321,10 @@
     %tagged = arith.ori %device, %class : i64
     %deviceBits = arith.bitcast %tagged : i64 to f64
     %list = func.call @strict_packed_view(%count, %bits, %zero, %deviceBits) : (i64, i64, f64, f64) -> f64
+    %view = arith.bitcast %list : f64 to i64
+    func.call @strict_rc_enter(%view) : (i64) -> ()
+    %deviceFlag = arith.constant 64 : i8
+    func.call @strict_rc_flag(%view, %deviceFlag) : (i64, i8) -> ()
     %residing = llvm.mlir.addressof @strict_gpu_residing : !llvm.ptr
     %usedSlot = llvm.getelementptr %residing[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<3 x i64>
     %used = llvm.load %usedSlot : !llvm.ptr -> i64
@@ -10523,7 +10597,10 @@
     %format = arith.fptosi %formatNumber : f64 to i64
     %bytes = func.call @strict_packed_bytes(%count, %format) : (i64, i64) -> i64
     %thirtyTwo = arith.constant 32 : i64
-    %isFloats = arith.cmpi eq, %format, %thirtyTwo : i64
+    %brainBits = arith.constant 17 : i64
+    %isSingles = arith.cmpi eq, %format, %thirtyTwo : i64
+    %isBrain = arith.cmpi eq, %format, %brainBits : i64
+    %isFloats = arith.ori %isSingles, %isBrain : i1
     %floats = arith.select %isFloats, %count, %none : i64
     %size = arith.maxui %bytes, %eight : i64
     %host = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
@@ -10550,8 +10627,7 @@
     %fine = arith.andi %got, %problem : i1
     cf.cond_br %fine, ^store, ^fail
   ^store:
-    %false = arith.constant false
-    func.call @strict_packed_canonical(%host, %floats, %false) : (!llvm.ptr, i64, i1) -> ()
+    func.call @strict_packed_canonical(%host, %floats, %format) : (!llvm.ptr, i64, i64) -> ()
     %hostBits = func.call @strict_bits(%host) : (!llvm.ptr) -> f64
     llvm.store %hostBits, %dataSlot : f64, !llvm.ptr
     func.call @strict_gc_written(%dataSlot) : (!llvm.ptr) -> ()
@@ -10670,7 +10746,11 @@
     %byteFormat = arith.constant 9 : i64
     %isBytes = arith.cmpi eq, %leftFormat, %byteFormat : i64
     %isByteWide = arith.ori %isFloat8, %isBytes : i1
-    %width = arith.select %isByteWide, %one, %four : i64
+    %brainFormat = arith.constant 17 : i64
+    %isBrain = arith.cmpi eq, %leftFormat, %brainFormat : i64
+    %two = arith.constant 2 : i64
+    %wordWidth = arith.select %isBrain, %two, %four : i64
+    %width = arith.select %isByteWide, %one, %wordWidth : i64
     %bytes = arith.muli %total, %width : i64
     %leftBytes = arith.muli %leftCount, %width : i64
     %rightBytes = arith.muli %rightCount, %width : i64
@@ -11323,8 +11403,8 @@
     %isSingle = arith.cmpi eq, %width, %four : i64
     cf.cond_br %isSingle, ^singles, ^done
   ^singles:
-    %false = arith.constant false
-    func.call @strict_packed_canonical(%items, %count, %false) : (!llvm.ptr, i64, i1) -> ()
+    %thirtyTwo = arith.constant 32 : i64
+    func.call @strict_packed_canonical(%items, %count, %thirtyTwo) : (!llvm.ptr, i64, i64) -> ()
     cf.br ^done
   ^done:
     return

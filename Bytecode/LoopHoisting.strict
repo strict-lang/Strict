@@ -1,0 +1,74 @@
+has values ValueCodegen
+constant Bagged = KnownTypes(("Bag", "B"), (Scope(List(Text) + "values", List(Text) + "Numbers"), CallTarget.NoScope), CallTarget.NoScopes, CallTarget.NoScopes)
+constant Hoisting = LoopHoisting(ValueCodegen(TypeInference(Bagged, CallTarget.NoScopes), MethodCodegen.NoScope, CallTarget(Bagged, TypeShape("has bags Bag"), "Strict/C", List(Text))))
+constant Bag = CodeBlock.Empty.Declare("bag", "Bag")
+constant Looping = BodyParser("Run", "\tfor 3", "\t\tbag.values(index) * bag.values(0)").Block(1, 1)
+constant Twice = BodyParser("Run", "\tfor 3", "\t\tbag.values(index)", "\tfor 2", "\t\tbag.values(index)").Block(1, 1)
+constant Shadowing = BodyParser("Run", "\tfor 3", "\t\tlet bag = bags", "\t\tbag.values(0) + bags.values(1)").Block(1, 1)
+Hoisted(body SyntaxNode, block CodeBlock) SyntaxNode
+	Hoisting.Hoisted(Looping, Bag).children(0) to Text is "let bagValues = bag.values"
+	Hoisting.Hoisted(Looping, Bag).children(1).children.Last.children(0) to Text is "bagValues(index) * bagValues(0)"
+	Hoisting.Hoisted(Looping, CodeBlock.Empty).children.Length is 1
+	Hoisting.Hoisted(Twice, Bag).children.Length is 3
+	Hoisting.Hoisted(Shadowing, Bag).children(0) to Text is "let bagsValues = bags.values"
+	Hoisting.Hoisted(Shadowing, Bag).children.Length is 2
+	mutable statements = List(Mutable(SyntaxNode))
+	for body.children
+		for value.Kind is "For" then Lifted(value, block) else List(SyntaxNode) + value
+			if (value.Kind is not "Declaration") or (value is not in statements)
+				statements.Add(value)
+	SyntaxNode("Body", body.text, statements, body.line)
+Lifted(loop SyntaxNode, block CodeBlock) SyntaxNodes
+	Hoisting.Lifted(Looping.children(0), Bag).Length is 2
+	let declared = Declared(loop)
+	mutable reads = List(Mutable(SyntaxNode))
+	for Reads(loop, block)
+		if (value.children(0).text is not in declared) and (value is not in reads)
+			reads.Add(value)
+	if reads.Length is 0
+		return List(SyntaxNode) + loop
+	mutable lifted = List(Mutable(SyntaxNode))
+	for reads
+		lifted.Add(SyntaxNode("Declaration", "let " + Name(value), List(SyntaxNode) + value))
+	lifted + Replaced(loop, reads)
+Reads(node SyntaxNode, block CodeBlock) SyntaxNodes
+	Hoisting.Reads(Looping.children(0), Bag).Length is 2
+	mutable found = List(Mutable(SyntaxNode))
+	if IsHoistable(node, block)
+		found.Add(Member(node))
+	for node.children
+		found = found + Reads(value, block)
+	found
+IsHoistable(node SyntaxNode, block CodeBlock) Boolean
+	Hoisting.IsHoistable(Looping.children(0).children(1).children(0).children(0), Bag)
+	Hoisting.IsHoistable(Looping.children(0).children(1).children(0).children(0), CodeBlock.Empty) is false
+	if (node.Kind is not "MethodCall") or (node.children.Length is not 2) or (node.children(0).Kind is not "Identifier")
+		return false
+	let root = node.children(0).text
+	let own = values.target.shape.MemberScope.TypeOf(root)
+	let type = block.scope.TypeOf(root) is "" then own else block.scope.TypeOf(root)
+	(root is not in ("value", "index", "outer")) and (type is not "") and values.target.IsMember(type, node.text)
+Replaced(node SyntaxNode, reads SyntaxNodes) SyntaxNode
+	Hoisting.Replaced(Looping.children(0), Hoisting.Reads(Looping, Bag)) to Text is "for 3"
+	let member = node.children.Length is 2 then Member(node) else node
+	if (node.Kind is "MethodCall") and (member is in reads)
+		return SyntaxNode("Call", Name(member), List(SyntaxNode) + Replaced(node.children(1), reads))
+	mutable children = List(Mutable(SyntaxNode))
+	for node.children
+		children.Add(Replaced(value, reads))
+	SyntaxNode(node.Kind, node.text, children, node.line)
+Member(call SyntaxNode) SyntaxNode
+	Hoisting.Member(Looping.children(0).children(1).children(0).children(0)) to Text is "bag.values"
+	SyntaxNode("Member", call.text, List(SyntaxNode) + call.children(0))
+Name(member SyntaxNode) Text
+	Hoisting.Name(SyntaxNode("Member", "values", List(SyntaxNode) + SyntaxNode("Identifier", "bag"))) is "bagValues"
+	let rest = member.text.Substring(1, member.text.Length - 1)
+	member.children(0).text + member.text.Substring(0, 1).Upper + rest
+Declared(node SyntaxNode) Texts
+	Hoisting.Declared(Shadowing.children(0)) is ("bag")
+	mutable names = List(Mutable(Text))
+	if node.Kind is "Declaration"
+		names.Add(node.text.Split(" ").Last)
+	for node.children
+		names = names + Declared(value)
+	names

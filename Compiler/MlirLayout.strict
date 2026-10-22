@@ -3,6 +3,8 @@ constant Degrees = TypeEntry("Strict/Degrees", (MemberEntry("number", "Strict/Nu
 constant Angle = TypeEntry("Strict/Angle", (MemberEntry("degrees", "Strict/Degrees", List(InstructionEntry), false)), List(MethodEntry))
 constant Byting = TypeEntry("Strict/Byte", (MemberEntry("number", "Strict/Number", List(InstructionEntry), false, 8), MemberEntry("Max", "Strict/Number", List(InstructionEntry), true)), List(MethodEntry))
 constant Red = MemberEntry("red", "Strict/Byte", List(InstructionEntry), false)
+constant BrainFloats = 17
+constant Storing = " : (!llvm.ptr, i64, f32, i64) -> ()"
 constant Wrapping = MlirLayout(MlirFunction(List(TypeEntry) + MlirFunction.Shape + Degrees + Angle + Byting, Degrees, MethodEntry.CountingLoop))
 constant Widened = (InstructionEntry.LoadNumber(0, 2), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "width"), InstructionEntry.Return(0))
 constant Packing = MlirLayout(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("from", List(MemberEntry), "Strict/Shape", Widened)))
@@ -114,9 +116,10 @@ Collected(register Text, pointer Text, at Number) Texts
 Stored(register Text, pointer Text, at Number) Texts
 	MlirLayout(Eights).Stored("%d", "%p", 4).Last is "    llvm.store %db, %p : i8, !llvm.ptr"
 	MlirLayout(Bytings).Stored("%d", "%p", 4)(1) is "    %db = func.call @strict_device_byte(%d) : (f32) -> i8"
+	MlirLayout(MlirGuards.Shifted).Stored("%d", "%p", 9) is ("    func.call @strict_device_stored(%result, %at, %d, %results) : (!llvm.ptr, i64, f32, i64) -> ()")
 	let address = "    " + pointer + " = llvm.getelementptr %result[%at]" + MlirFastLoop.Pointer
 	if Packed(function.method.LoopBeginOf(at)) is 0
-		return (address + "f32", "    llvm.store " + register + ", " + pointer + " : f32, !llvm.ptr")
+		return List(Text) + ("    func.call @strict_device_stored(%result, %at, " + register + ", %results)" + Storing)
 	let encoder = Packed(function.method.LoopBeginOf(at)) is 9 then "@strict_device_byte(" else "@strict_device_float8("
 	let encoded = "    " + register + "b = func.call " + encoder + register + ") : (f32) -> i8"
 	(address + "i8", encoded, "    llvm.store " + register + "b, " + pointer + " : i8, !llvm.ptr")

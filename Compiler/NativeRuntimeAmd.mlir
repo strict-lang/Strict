@@ -314,6 +314,11 @@
     llvm.store %words, %shared {alignment = 16 : i64} : vector<4xi32>, !llvm.ptr<3>
     return
   }
+  func.func private @strict_device_copy_word(%shared: !llvm.ptr<3>, %global: !llvm.ptr) attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
+    %word = llvm.load %global invariant : !llvm.ptr -> i32
+    llvm.store %word, %shared : i32, !llvm.ptr<3>
+    return
+  }
   func.func private @strict_device_copies_commit() attributes {llvm.linkage = #llvm.linkage<internal>, passthrough = ["alwaysinline"]} {
     return
   }
