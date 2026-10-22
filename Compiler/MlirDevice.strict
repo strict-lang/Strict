@@ -18,7 +18,7 @@ Name Text
 	function.Symbol + "_gpu" + position + suffix
 Kernel Texts
 	Doubling.Kernel.First is DoublingHeader
-	Text.Combine(MlirDevice(MlirGroups.Norming.function, 2).Kernel).IndexOf("arith.minsi %group") > 0
+	Text.Combine(MlirDevice(MlirGroups.Norming.function, 2).Kernel).IndexOf("@strict_device_group_lanes(%group)") > 0
 	Text.Combine(Doubling.Kernel).IndexOf("func.call @Rows_Twice_1_device(") > 0
 	Layering.Kernel.First.IndexOf("%f_biases_b: i64, %results: i64) attributes") > 0
 	Text.Combine(MlirDevice(MlirFunction(Doubling.function, Float = "f32"), 2).Kernel).IndexOf("i32 to f32") > 0

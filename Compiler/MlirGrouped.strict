@@ -8,10 +8,10 @@ constant Allocated = " = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
 constant Plain = ("    %inside = arith.cmpi slt, %at, %count : i64", "    cf.cond_br %inside, ^body, ^exit")
 constant Looped = ("    %inside = arith.cmpi slt, %atFirst, %count : i64", "    cf.cond_br %inside, ^body(%atFirst : i64), ^exit")
 constant Next = ("    cf.br ^next", "  ^next:", "    %atNext = arith.addi %at, %lanes : i64", "    %more = arith.cmpi slt, %atNext, %groupEnd : i64", "    cf.cond_br %more, ^body(%atNext : i64), ^last", "  ^last:")
-constant Lanes = ("    %widest = arith.constant 256 : i64", "    %lanes = arith.minsi %group, %widest : i64", "    %lane = arith.remui %global, %lanes : i64", "    %groupIndex = arith.divui %global, %lanes : i64", "    %groupStart = arith.muli %groupIndex, %group : i64", "    %groupEnd = arith.addi %groupStart, %group : i64", "    %atFirst = arith.addi %groupStart, %lane : i64")
+constant Lanes = ("    %lanes = func.call @strict_device_group_lanes(%group) : (i64) -> i64", "    %lane = arith.remui %global, %lanes : i64", "    %groupIndex = arith.divui %global, %lanes : i64", "    %groupStart = arith.muli %groupIndex, %group : i64", "    %groupEnd = arith.addi %groupStart, %group : i64", "    %atFirst = arith.addi %groupStart, %lane : i64")
 Indexed Texts
 	Norming.Indexed.First is "    %groupd = llvm.load %v_size : !llvm.ptr -> f64"
-	Norming.Indexed(3) is "    %lanes = arith.minsi %group, %widest : i64"
+	Norming.Indexed(2) is "    %lanes = func.call @strict_device_group_lanes(%group) : (i64) -> i64"
 	Doubling.Indexed.Last is "    cf.cond_br %inside, ^body, ^exit"
 	Norming.Indexed.Last is "    cf.cond_br %inside, ^body(%atFirst : i64), ^exit"
 	if function.Group < 0

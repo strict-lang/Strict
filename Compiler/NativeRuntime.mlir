@@ -10062,7 +10062,7 @@
     %missing = llvm.icmp "eq" %function, %unset : !llvm.ptr
     %widest = arith.constant 256 : i64
     %grouped = arith.cmpi sgt, %group, %none : i64
-    %groupLanes = arith.minsi %group, %widest : i64
+    %groupLanes = func.call @strict_gpu_group_lanes(%group) : (i64) -> i64
     %laneTotal = arith.muli %count, %lanes : i64
     %tokened = arith.cmpi slt, %lanes, %none : i64
     %tokenTotal = func.call @strict_gpu_token_threads(%count, %lanes, %values, %rows) : (i64, i64, !llvm.ptr, i64) -> i64
@@ -10074,7 +10074,10 @@
     %tileLanes = arith.constant -512 : i64
     %tiling = arith.cmpi eq, %lanes, %tileLanes : i64
     %tileBlock = arith.constant 512 : i64
-    %laneThreads = arith.select %grouped, %groupLanes, %widest : i64
+    %warpLanes = arith.constant 32 : i64
+    %warpGroups = arith.cmpi eq, %groupLanes, %warpLanes : i64
+    %groupBlock = arith.select %warpGroups, %widest, %groupLanes : i64
+    %laneThreads = arith.select %grouped, %groupBlock, %widest : i64
     %threads = arith.select %tiling, %tileBlock, %laneThreads : i64
     cf.cond_br %missing, ^release, ^chosen
   ^chosen:
@@ -11592,18 +11595,26 @@
   ^done:
     return
   }
-  // a grouped launch runs a block of up to 256 lanes per group (every lane takes every 256th element of it), which
-  // computes the call of its group once together: whole warps up to 256 lanes, beyond that whole blocks of 256
+  // a grouped launch runs a block of lanes per group that computes the call of the group once together, every lane
+  // takes every lanes-th element: a warp up to 1024 numbers (summed with shuffles alone), wider groups 256 lanes
+  func.func private @strict_gpu_group_lanes(%group: i64) -> i64 {
+    %warp = arith.constant 32 : i64
+    %block = arith.constant 256 : i64
+    %warpLimit = arith.constant 1024 : i64
+    %isWide = arith.cmpi sgt, %group, %warpLimit : i64
+    %widest = arith.select %isWide, %block, %warp : i64
+    %lanes = arith.minsi %group, %widest : i64
+    return %lanes : i64
+  }
   func.func private @strict_gpu_grouping(%count: i64, %group: i64) -> i1 {
     %none = arith.constant 0 : i64
     %thirtyOne = arith.constant 31 : i64
-    %widest = arith.constant 256 : i64
     %ungrouped = arith.cmpi sle, %group, %none : i64
     cf.cond_br %ungrouped, ^fits, ^check
   ^check:
     %rest = arith.remui %count, %group : i64
     %divides = arith.cmpi eq, %rest, %none : i64
-    %lanes = arith.minsi %group, %widest : i64
+    %lanes = func.call @strict_gpu_group_lanes(%group) : (i64) -> i64
     %blockRest = arith.remui %group, %lanes : i64
     %blocks = arith.cmpi eq, %blockRest, %none : i64
     %warpRest = arith.andi %lanes, %thirtyOne : i64
