@@ -1,27 +1,82 @@
 has weights Numbers
 has biases Numbers
 constant Center = Convolution((0, 0, 0, 0, 1, 0, 0, 0, 0), List(Number) + 0.5)
+constant Above = Convolution((0, 1, 0, 0, 0, 0, 0, 0, 0), List(Number) + 0.5)
+constant Box = Convolution((1, 1, 1, 1, 1, 1, 1, 1, 1), List(Number) + 0)
 constant Square = FeatureMap((1, 2, 3, 4), 2, 1, List(Number) + 0)
+constant Padded = Square.Padded((1, 0), false)
 Rearranged(values Numbers, inputs Number, side Number) Numbers
-	Center.Rearranged((0, 1, 0, 0, 0, 0, 0, 0, 0), 1, 3) is (0, 0, 0, 1, 0, 0, 0, 0, 0)
-	Center.Rearranged((0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0), 2, 3)(13) is 1
+	Center.Rearranged((0, 1, 0, 0, 0, 0, 0, 0, 0), 1, 3) is (0, 1, 0, 0, 0, 0, 0, 0, 0)
+	Center.Rearranged((0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0), 2, 3)(5) is 1
 	let size = side * side * inputs
 	for values.Length
 		let rest = index % size
-		let row = (rest / inputs).Floor % side
-		let column = (rest / (side * inputs)).Floor
+		let row = (rest / (side * inputs)).Floor
+		let column = (rest / inputs).Floor % side
 		values((((index / size).Floor * inputs + rest % inputs) * side + row) * side + column)
-Applied(map FeatureMap, affine Numbers, swish Boolean, doubled Boolean) FeatureMap
-	Center.Applied(Square, (1, 0), false, false) is FeatureMap((1, 2, 3, 4), 2, 1, List(Number) + 0.5)
-	Convolution((0, 0, 0, 1, 0, 0, 0, 0, 0), Center.biases).Applied(Square, (1, 0), false, false).values is (0, 0, 1, 2)
-	Convolution((0, 1, 0, 0, 0, 0, 0, 0, 0), Center.biases).Applied(Square, (1, 0), false, false).values is (0, 1, 0, 3)
-	Center.Applied(Square, (1, 0), false, true).values is (1, 1, 2, 2, 1, 1, 2, 2, 3, 3, 4, 4, 3, 3, 4, 4)
-	let columns = map.width * (doubled then 2 else 1)
-	let inputs = 3 * map.channels
-	let shape = (map.Height * columns / map.width, columns, 3 * inputs, biases.Length)
-	let strides = (0, (columns + 2) * inputs, inputs, 1, 0, 0, 1, 3 * inputs)
-	let products = Products(map.Stacked(affine, swish, doubled), weights, shape, strides)
-	FeatureMap(products.Multiplied, columns, biases.Length, biases)
+Applied(map FeatureMap, affine Numbers, swish Boolean) FeatureMap
+	Center.Applied(Square, (1, 0), false) is FeatureMap((1, 2, 3, 4), 2, 1, List(Number) + 0.5)
+	Above.Applied(Square, (1, 0), false).values is (0, 0, 1, 2)
+	Convolution((0, 0, 0, 1, 0, 0, 0, 0, 0), Center.biases).Applied(Square, (1, 0), false).values is (0, 1, 0, 3)
+	let padded = map.Padded(affine, swish)
+	let summed = Summed(Shifted(padded, map, 0), Shifted(padded, map, 1), Shifted(padded, map, 2))
+	FeatureMap(summed, map.width, biases.Length, biases)
+Shifted(padded Numbers, map FeatureMap, row Number) Numbers
+	Box.Shifted(Padded, Square, 1) is (3, 3, 7, 7)
+	let inputs = map.channels
+	let columns = map.width + 2
+	let shape = (map.Height, map.width, 3 * inputs, biases.Length)
+	let strides = (row * columns * inputs, columns * inputs, inputs, 1, row * 3 * inputs, 0, 1, 9 * inputs)
+	Products(padded, weights, shape, strides).Multiplied
+Summed(first Numbers, second Numbers, third Numbers) Numbers
+	Box.Summed((1, 2), (2, 3), (3, 4)) is (6, 9)
+	for first
+		value + second(index) + third(index)
+Doubled(map FeatureMap) FeatureMap
+	Center.Doubled(Square).values is (1, 1, 2, 2, 1, 1, 2, 2, 3, 3, 4, 4, 3, 3, 4, 4)
+	Above.Doubled(Square).values is (0, 0, 0, 0, 1, 1, 2, 2, 1, 1, 2, 2, 3, 3, 4, 4)
+	Box.Doubled(Square).values(5) is 18
+	let padded = map.Padded(map.Identity, false)
+	let outputs = biases.Length
+	let top = Woven(Parity(padded, map, 0), Parity(padded, map, 1), outputs)
+	let bottom = Woven(Parity(padded, map, 2), Parity(padded, map, 3), outputs)
+	FeatureMap(Woven(top, bottom, 2 * map.width * outputs), 2 * map.width, outputs, biases)
+Parity(padded Numbers, map FeatureMap, parity Number) Numbers
+	Box.Parity(Padded, Square, 0)(0) is 4
+	Gpt2Block.Added(Tapped(padded, map, 2 * parity), Tapped(padded, map, 2 * parity + 1))
+Tapped(padded Numbers, map FeatureMap, tap Number) Numbers
+	Box.Tapped(Padded, Square, 0)(0) is 0
+	Box.Tapped(Padded, Square, 1)(0) is 4
+	let inputs = map.channels
+	let columns = map.width + 2
+	let start = (((tap / 4).Floor + tap % 2) * columns + (tap / 2).Floor % 2) * inputs
+	let shape = (map.Height, map.width, 2 * inputs, biases.Length)
+	Products(padded, Folded(tap, inputs), shape, (start, columns * inputs, inputs, 1, 0, 0, 1, 2 * inputs)).Multiplied
+Folded(tap Number, inputs Number) Numbers
+	Center.Folded(0, 1) is (0, 0)
+	Box.Folded(0, 1) is (1, 2)
+	Box.Folded(1, 1) is (2, 4)
+	for biases.Length * 2 * inputs
+		let column = (index / inputs).Floor % 2
+		let first = (index / (2 * inputs)).Floor * 9 * inputs + index % inputs
+		mutable sum = 0
+		for 4
+			let row = Kernel((tap / 4).Floor, tap % 2, (index / 2).Floor)
+			let kernelColumn = Kernel((tap / 2).Floor % 2, column, index % 2)
+			sum = sum + (row < 0 or kernelColumn < 0 then 0 else weights(first + (row * 3 + kernelColumn) * inputs))
+		sum
+Kernel(parity Number, tap Number, step Number) Number
+	Box.Kernel(0, 1, 1) is 2
+	Box.Kernel(1, 1, 1) is -1
+	Box.Kernel(1, 0, 1) is 1
+	step < 1 + (parity - tap).Absolute then tap * (1 + parity) + step else -1
+Woven(left Numbers, right Numbers, size Number) Numbers
+	Box.Woven((1, 2), (3, 4), 1) is (1, 3, 2, 4)
+	Box.Woven((1, 2), (3, 4), 2) is (1, 2, 3, 4)
+	for left.Length * 2
+		let block = (index / size).Floor
+		let at = (block / 2).Floor * size + index % size
+		block % 2 is 0 then left(at) else right(at)
 Projected(map FeatureMap) FeatureMap
 	Convolution((1, 2, 3, 4), (0, 1)).Projected(FeatureMap((1, 0, 0, 1), 1, 2, (1, 1))).values is (1, 3, 2, 4)
 	Convolution((1, 2, 3, 4), (0, 1)).Projected(FeatureMap((1, 0, 0, 1), 1, 2, (1, 1))).offsets is (3, 8)
