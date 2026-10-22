@@ -29,11 +29,11 @@ IsReference(name Text) Boolean
 IsContained(name Text) Boolean
 	Owner.IsContained("moved")
 	for function.method.instructions
-		let isNamed = (value.kind is in Named) and (value.texts(0) is name)
-		let isLoad = value.kind is InstructionType.LoadVariableToRegister
-		let isKept = isLoad then IsSafeRead(index, name) else IsFresh(function, index, value.payload(0), 0)
-		if isNamed and (isKept is false)
-			return false
+		if (value.kind is in Named) and (value.texts(0) is name)
+			let isLoad = value.kind is InstructionType.LoadVariableToRegister
+			let isKept = isLoad then IsSafeRead(index, name) else IsFresh(function, index, value.payload(0), 0)
+			if isKept is false
+				return false
 	true
 IsFresh(inspected MlirFunction, at Number, register Number, depth Number) Boolean
 	Owner.IsFresh(MlirInstances.Shapes, 2, 0, 0)
