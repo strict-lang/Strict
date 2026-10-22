@@ -18,7 +18,7 @@
    IQ4_NL, blocks decode to floats exactly like ggml's dequantize_row functions (no fused multiply-add). */
 enum { F32 = 0, F16 = 1, Q5_1 = 7, Q8_0 = 8, Q4_K = 12, Q5_K = 13, Q6_K = 14, IQ4_NL = 20, BF16 = 30 };
 typedef struct { char* key; char* value; } Entry;
-typedef struct { char* name; uint32_t type; uint32_t dimensions; uint64_t shape[4]; uint64_t offset; } Tensor;
+typedef struct { char* name; uint32_t type; uint32_t dimensions; uint64_t shape[4]; uint64_t offset; uint32_t shard; uint64_t start; } Tensor;
 typedef struct { FILE* file; int failed; } Reader;
 typedef struct { char* data; uint64_t length; uint64_t capacity; } Builder;
 static char* loadedPath = 0;
@@ -26,7 +26,8 @@ static Entry* entries = 0;
 static uint64_t entryCount = 0;
 static Tensor* tensors = 0;
 static uint64_t tensorCount = 0;
-static uint64_t dataStart = 0;
+static char** shardPaths = 0;
+static uint32_t shardCount = 0;
 
 static void Read(Reader* reader, void* target, uint64_t size)
 {
@@ -128,21 +129,23 @@ static void Forget(void)
 	}
 	for (uint64_t index = 0; index < tensorCount; index++)
 		free(tensors[index].name);
+	for (uint32_t shard = 0; shard < shardCount; shard++)
+		free(shardPaths[shard]);
 	free(entries);
 	free(tensors);
+	free(shardPaths);
 	free(loadedPath);
 	entries = 0;
 	tensors = 0;
+	shardPaths = 0;
 	loadedPath = 0;
 	entryCount = tensorCount = 0;
+	shardCount = 0;
 }
 
-/* Reads the header of the file at path unless it is the one already loaded, returns the failure name if it can't. */
-static const char* Loaded(const char* path)
+/* Adds the metadata and tensor infos of one file of a model to the loaded ones, returns the failure name if it can't. */
+static const char* Header(const char* path, uint32_t shard)
 {
-	if (loadedPath && strcmp(loadedPath, path) == 0)
-		return 0;
-	Forget();
 	Reader reader = { fopen(path, "rb"), 0 };
 	if (!reader.file)
 		return "GgufFileNotReadable";
@@ -155,10 +158,12 @@ static const char* Loaded(const char* path)
 		fclose(reader.file);
 		return "NotAGgufFile";
 	}
-	uint64_t alignment = 32;
-	entries = calloc(declaredEntries + 1, sizeof(Entry));
-	tensors = calloc(declaredTensors + 1, sizeof(Tensor));
-	for (; entryCount < declaredEntries && !reader.failed; entryCount++)
+	uint64_t alignment = 32, firstTensor = tensorCount;
+	entries = realloc(entries, (entryCount + declaredEntries + 1) * sizeof(Entry));
+	tensors = realloc(tensors, (tensorCount + declaredTensors + 1) * sizeof(Tensor));
+	memset(entries + entryCount, 0, (declaredEntries + 1) * sizeof(Entry));
+	memset(tensors + tensorCount, 0, (declaredTensors + 1) * sizeof(Tensor));
+	for (uint64_t index = 0; index < declaredEntries && !reader.failed; index++, entryCount++)
 	{
 		entries[entryCount].key = Text(&reader);
 		entries[entryCount].value = entries[entryCount].key ? Value(&reader) : 0;
@@ -167,7 +172,7 @@ static const char* Loaded(const char* path)
 		else if (strcmp(entries[entryCount].key, "general.alignment") == 0)
 			alignment = strtoull(entries[entryCount].value, 0, 10);
 	}
-	for (; tensorCount < declaredTensors && !reader.failed; tensorCount++)
+	for (uint64_t index = 0; index < declaredTensors && !reader.failed; index++, tensorCount++)
 	{
 		Tensor* tensor = &tensors[tensorCount];
 		tensor->name = Text(&reader);
@@ -178,15 +183,59 @@ static const char* Loaded(const char* path)
 			tensor->shape[dimension] = Unsigned(&reader, 8);
 		tensor->type = (uint32_t)Unsigned(&reader, 4);
 		tensor->offset = Unsigned(&reader, 8);
+		tensor->shard = shard;
 	}
 	uint64_t end = (uint64_t)strict_tell(reader.file);
 	fclose(reader.file);
 	if (reader.failed || alignment == 0)
+		return "GgufHeaderTruncated";
+	for (uint64_t index = firstTensor; index < tensorCount; index++)
+		tensors[index].start = (end + alignment - 1) / alignment * alignment;
+	return 0;
+}
+
+/* The name of file shard (from 0) of a model split like llama.cpp does (Name-00001-of-00004.gguf), 0 if path is not
+   the first of such files. */
+static char* ShardPath(const char* path, uint32_t shard)
+{
+	const char* marker = strstr(path, "-00001-of-");
+	if (!marker)
+		return 0;
+	char* named = malloc(strlen(path) + 1);
+	char number[8];
+	strcpy(named, path);
+	snprintf(number, sizeof(number), "%05u", shard + 1);
+	memcpy(named + (marker - path) + 1, number, 5);
+	return named;
+}
+
+/* Reads the header of the file at path unless it is the one already loaded, and of the other files of a split model
+   (split.count in the first), returns the failure name if it can't. */
+static const char* Loaded(const char* path)
+{
+	if (loadedPath && strcmp(loadedPath, path) == 0)
+		return 0;
+	Forget();
+	const char* failure = Header(path, 0);
+	uint32_t count = 1;
+	for (uint64_t index = 0; !failure && index < entryCount; index++)
+		if (strcmp(entries[index].key, "split.count") == 0)
+			count = (uint32_t)strtoul(entries[index].value, 0, 10);
+	shardPaths = calloc(count + 1, sizeof(char*));
+	shardPaths[0] = malloc(strlen(path) + 1);
+	strcpy(shardPaths[0], path);
+	shardCount = 1;
+	for (uint32_t shard = 1; !failure && shard < count; shard++)
+	{
+		shardPaths[shard] = ShardPath(path, shard);
+		shardCount++;
+		failure = shardPaths[shard] ? Header(shardPaths[shard], shard) : "GgufSplitFileNameNotFound";
+	}
+	if (failure)
 	{
 		Forget();
-		return "GgufHeaderTruncated";
+		return failure;
 	}
-	dataStart = (end + alignment - 1) / alignment * alignment;
 	loadedPath = malloc(strlen(path) + 1);
 	strcpy(loadedPath, path);
 	return 0;
@@ -348,7 +397,7 @@ static void Decoded(uint32_t type, const unsigned char* block, float* y)
 }
 
 /* Reads the blocks of the tensor as they are stored, 0 and the failure name if it can't. */
-static unsigned char* Blocks(const char* path, const Tensor* tensor, uint64_t count, const char** failure)
+static unsigned char* Blocks(const Tensor* tensor, uint64_t count, const char** failure)
 {
 	uint32_t type = tensor->type;
 	uint64_t blockBytes = BlockBytes(type), blocks = count / BlockNumbers(type);
@@ -357,10 +406,10 @@ static unsigned char* Blocks(const char* path, const Tensor* tensor, uint64_t co
 		*failure = "OnlyF32F16BF16Q8_0Q5_1Q4_KQ5_KQ6_KAndIQ4_NLTensorsAreSupported";
 		return 0;
 	}
-	FILE* file = fopen(path, "rb");
+	FILE* file = fopen(shardPaths[tensor->shard], "rb");
 	unsigned char* raw = malloc(blocks * blockBytes + 1);
 	size_t read = 0;
-	if (file && strict_seek(file, (int64_t)(dataStart + tensor->offset), SEEK_SET) == 0)
+	if (file && strict_seek(file, (int64_t)(tensor->start + tensor->offset), SEEK_SET) == 0)
 		read = fread(raw, blockBytes, blocks, file);
 	if (file)
 		fclose(file);
@@ -372,9 +421,9 @@ static unsigned char* Blocks(const char* path, const Tensor* tensor, uint64_t co
 }
 
 /* Reads all numbers of the tensor as floats, 0 and the failure name if it can't. */
-static float* Floats(const char* path, const Tensor* tensor, uint64_t count, const char** failure)
+static float* Floats(const Tensor* tensor, uint64_t count, const char** failure)
 {
-	unsigned char* raw = Blocks(path, tensor, count, failure);
+	unsigned char* raw = Blocks(tensor, count, failure);
 	float* floats = raw ? malloc(count * sizeof(float) + 1) : 0;
 	uint64_t blockNumbers = BlockNumbers(tensor->type), blockBytes = BlockBytes(tensor->type);
 	for (uint64_t block = 0; floats && block < count / blockNumbers; block++)
@@ -407,7 +456,7 @@ STRICT_EXPORT double GgufFile_Values(double self, double path, double name)
 	const char* failure = 0;
 	const Tensor* tensor = Requested(path, name, 0, &failure);
 	uint64_t count = tensor ? Elements(tensor) : 0;
-	float* floats = tensor ? Floats(strict_text(path), tensor, count, &failure) : 0;
+	float* floats = tensor ? Floats(tensor, count, &failure) : 0;
 	if (!floats)
 		return strict_fail(failure);
 	free(numbers);
@@ -450,8 +499,8 @@ STRICT_EXPORT double GgufFile_Rows(double self, double path, double name, double
 	uint32_t type = tensor ? tensor->type : F32;
 	uint64_t kept = bits != 4 ? (uint64_t)bits : type == Q4_K ? 4 : type == Q6_K ? 6 : 8;
 	int isBlocked = kept == 4 || kept == 6;
-	unsigned char* raw = tensor && isBlocked ? Blocks(strict_text(path), tensor, width * height, &failure) : 0;
-	float* floats = tensor && !isBlocked ? Floats(strict_text(path), tensor, width * height, &failure) : 0;
+	unsigned char* raw = tensor && isBlocked ? Blocks(tensor, width * height, &failure) : 0;
+	float* floats = tensor && !isBlocked ? Floats(tensor, width * height, &failure) : 0;
 	if (!floats && !raw)
 		return strict_fail(failure);
 	uint64_t size = (sizeof(strict_packed) + strict_packed_bytes(width, kept) + 7) / 8 * 8;

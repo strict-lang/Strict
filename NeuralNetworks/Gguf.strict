@@ -2,12 +2,14 @@ has path Text
 has bits Number = 32
 constant Tiny = Gguf("NeuralNetworks/tiny.gguf")
 constant Quants = Gguf("NeuralNetworks/quants.gguf")
+constant Split = Gguf("NeuralNetworks/tinysplit-00001-of-00003.gguf")
 Value(key Text) Text
 	Tiny.Value("general.architecture") is "qwen3"
 	Tiny.Value("qwen3.block_count") is "1"
 	Tiny.Value("qwen3.rope.freq_base") is "1000000"
 	Tiny.Value("tokenizer.ggml.tokens").Lines is ("a", "b", "c", "Ġ", "ab", "Ġc")
 	Tiny.Value("missing") is ""
+	Split.Value("general.architecture") is "qwen3"
 	GgufFile.Value(path, key)
 Shape(name Text) Numbers
 	Tiny.Shape("m") is (2, 3)
@@ -18,6 +20,7 @@ Values(name Text) Numbers
 	Tiny.Values("h") is (1, 2, 3, 4, 5, 6)
 	Tiny.Values("b") is (1, 2, 3, 4, 5, 6)
 	Tiny.Values("missing") is Error
+	Split.Values("v") is (0.5, -1.5, 2.25)
 	Tiny.Values("k4").Sum is 31000.5
 	Tiny.Values("k6").Sum is 238.25
 	(Tiny.Values("k4").First, Tiny.Values("k6").Last) is (55.75, 36.125)
@@ -27,6 +30,7 @@ Values(name Text) Numbers
 	GgufFile.Values(path, name)
 Rows(name Text) List(Numbers)
 	Tiny.Rows("m") is ((1, 2, 3), (4, 5, 6))
+	Split.Rows("r6") is Tiny.Rows("r6")
 	Gguf("NeuralNetworks/tiny.gguf", 16).Rows("h") is ((1, 2, 3), (4, 5, 6))
 	Gguf("NeuralNetworks/tiny.gguf", 8).Rows("q") is Tiny.Rows("q")
 	Gguf("NeuralNetworks/tiny.gguf", 4).Rows("r4") is Tiny.Rows("r4")
