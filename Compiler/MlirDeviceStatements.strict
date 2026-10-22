@@ -59,14 +59,17 @@ IsList(kind Text) Boolean
 	MlirLayout(function).Represented(kind) is "List(Number)"
 Indexed(entry InstructionEntry) Texts
 	Text.Combine(Reading.Indexed(Lookup)).IndexOf("@strict_device_element(%d6d, %d6b, %d6k, %d6n)") > 0
+	Reading.Indexed(Lookup)(5).StartsWith("    llvm.store %d6y, %r")
 	let list = "%v_" + entry.texts(0)
 	let position = MlirExact(function, at).Position("%r" + entry.payload(1), Temp("k"))
 	let length = (MlirTyped.Integer.Load(Temp("n"), list + "_n"), MlirTyped.Integer.Constant(Temp("z"), "0"))
+	let target = "%r" + entry.payload(0)
+	let cleared = MlirTyped(function.Float).Number(Temp("y"), "0x0") + MlirFeeding(function, at).Stored(Temp("y"), target)
 	let low = "    " + Temp("l") + " = arith.cmpi sge, " + Temp("k") + ", " + Temp("z") + " : i64"
 	let high = "    " + Temp("h") + " = arith.cmpi slt, " + Temp("k") + ", " + Temp("n") + " : i64"
 	let inside = "    " + Temp("o") + " = arith.andi " + Temp("l") + ", " + Temp("h") + " : i1"
 	let branch = "    cf.cond_br " + Temp("o") + ", ^d" + at + "read, ^d" + at + "fail"
-	position + length + (low, high, inside, branch) + Failed + Read(list, "%r" + entry.payload(0))
+	position + length + cleared + (low, high, inside, branch) + Failed + Read(list, target)
 Failed Texts
 	Reading.Failed.First is "  ^d6fail:"
 	let one = MlirTyped.Integer.Constant(Temp("f"), "1")

@@ -357,25 +357,30 @@
     func.call @strict_device_barrier() : () -> ()
     return %total : f64
   }
-  func.func private @strict_device_elements(%data: !llvm.ptr, %bits: i64, %at: i64, %count: i64) -> f32 {
+  func.func private @strict_device_elements(%data: !llvm.ptr, %bits: i64, %at: i64, %count: i64) -> f32 attributes {passthrough = ["alwaysinline"]} {
+    %thirtyTwo = arith.constant 32 : i64
+    %isSingle = arith.cmpi eq, %bits, %thirtyTwo : i64
+    cf.cond_br %isSingle, ^single, ^narrower
+  ^single:
+    %singleSlot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %singleValue = llvm.load %singleSlot : !llvm.ptr -> f32
+    return %singleValue : f32
+  ^narrower:
     %sixteen = arith.constant 16 : i64
-    %two = arith.constant 2 : i64
     %isHalf = arith.cmpi eq, %bits, %sixteen : i64
-    cf.cond_br %isHalf, ^half, ^wider
+    cf.cond_br %isHalf, ^half, ^packed
   ^half:
     %halfSlot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f16
     %halfValue = llvm.load %halfSlot : !llvm.ptr -> f16
     %halfNumber = arith.extf %halfValue : f16 to f32
     return %halfNumber : f32
-  ^wider:
-    %thirtyTwo = arith.constant 32 : i64
-    %isSingle = arith.cmpi eq, %bits, %thirtyTwo : i64
-    cf.cond_br %isSingle, ^single, ^other
-  ^single:
-    %singleSlot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    %singleValue = llvm.load %singleSlot : !llvm.ptr -> f32
-    return %singleValue : f32
-  ^other:
+  ^packed:
+    %packedNumber = func.call @strict_device_packed_elements(%data, %bits, %at, %count) : (!llvm.ptr, i64, i64, i64) -> f32
+    return %packedNumber : f32
+  }
+  func.func private @strict_device_packed_elements(%data: !llvm.ptr, %bits: i64, %at: i64, %count: i64) -> f32 {
+    %sixteen = arith.constant 16 : i64
+    %two = arith.constant 2 : i64
     %eight = arith.constant 8 : i64
     %six = arith.constant 6 : i64
     %four = arith.constant 4 : i64
