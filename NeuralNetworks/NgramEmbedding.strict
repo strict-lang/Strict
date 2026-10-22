@@ -1,0 +1,47 @@
+has keyProjection Layer
+has valueProjection Layer
+has normKey Numbers
+has normQuery Numbers
+has normConv Numbers
+has conv List(Numbers)
+constant Keys = Layer(((1, 0), (0, 1), (1, 1), (1, -1), (0, 2), (2, 0), (1, 0), (0, 1)), Layer.Unbiased)
+constant Values = Layer(((1, 0), (0, 1)), Layer.Unbiased)
+constant Ones = (1, 1, 1, 1, 1, 1, 1, 1)
+constant Kernel = ((0.5, 1, 1, 0.25), (1, 1, 1, 1))
+constant Norm = HyperStreams.Tiny.norm
+constant Tiny = NgramEmbedding(Keys, Values, Norm, Ones, Norm, Kernel + Kernel + Kernel + Kernel)
+constant Zero = Layer.Zeros(8)
+constant Silence = (Zero, Zero, Zero, Zero, Zero, Zero, Zero, Zero, Zero, Zero)
+constant Sample = Tiny.Gated(HyperStreams.Streams, (3, 1))
+Embedded(table List(Numbers), rows Numbers) Numbers
+	Tiny.Embedded(((1), (2), (3)), (2, 0)) is (3, 1)
+	mutable embedding = List(Number)
+	for rows
+		embedding = embedding + table(value)
+	embedding
+Grouped(values Numbers, weights Numbers) Numbers
+	Tiny.Grouped(HyperStreams.Streams, Norm) is HyperStreams.Tiny.Normalized(HyperStreams.Streams)
+	HyperStreams(weights, HyperStreams.Down, HyperStreams.Up, HyperStreams.Inject).Normalized(values)
+Gates(keys Numbers, queries Numbers) Numbers
+	Tiny.Gates((1, 2, 0, 0, 1, 2, 0, 0), (3, 4, 3, 4, 0 - 3, 0 - 4, 0, 0))(0).IsNearlyEqual(0.9420751133972743)
+	Tiny.Gates((1, 2, 0, 0, 1, 2, 0, 0), (3, 4, 3, 4, 0 - 3, 0 - 4, 0, 0))(2).IsNearlyEqual(0.057924886602725566)
+	let width = keys.Length / HyperStreams.Count
+	for HyperStreams.Count
+		Ngrams.Flash.Gate(keys.Slice(index * width, width), queries.Slice(index * width, width))
+Gated(hidden Numbers, embedding Numbers) Numbers
+	Tiny.Gated(HyperStreams.Streams, (3, 1))(0).IsNearlyEqual(2.296576550080954)
+	Tiny.Gated(HyperStreams.Streams, (3, 1))(3).IsNearlyEqual(0.7548562572496241)
+	Tiny.Gated(HyperStreams.Streams, (3, 1))(7).IsNearlyEqual(0.7610222206595999)
+	let gates = Gates(Grouped(keyProjection.Sums(embedding), normKey), Grouped(hidden, normQuery))
+	let values = valueProjection.Sums(embedding)
+	for values.Length * HyperStreams.Count
+		values(index % values.Length) * gates((index / values.Length).Floor)
+Shifted(history List(Numbers), gated Numbers) List(Numbers)
+	Tiny.Shifted((Ones, Ones), Sample)(1)(3).IsNearlyEqual(0.4472135170150118)
+	Ngrams.Flash.Shifted(history, Grouped(gated, normConv))
+Combined(hidden Numbers, gated Numbers, history List(Numbers)) Numbers
+	Tiny.Combined(HyperStreams.Streams, Sample, Tiny.Shifted(Silence, Sample))(0).IsNearlyEqual(3.4921458714006173)
+	Tiny.Combined(HyperStreams.Streams, Sample, Tiny.Shifted(Silence, Sample))(7).IsNearlyEqual(1.3958891357351382)
+	let convolved = Ngrams.Flash.Convolved(Ngrams.Flash.Taps(history), conv)
+	for hidden
+		value + gated(index) + convolved(index)
