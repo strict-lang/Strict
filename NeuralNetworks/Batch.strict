@@ -49,6 +49,8 @@ Dot(row Numbers, first Number, input Numbers, start Number) Number
 	Batch(Blocks.Rows("six"), List(Number) + 0).Sums(Long)(1140).IsNearlyEqual(-3.413, 0.2)
 	Batch(Blocks.Rows("four"), Long).Sums(Long)(1277).IsNearlyEqual(4.533, 0.5)
 	Batch(Blocks.Rows("wide"), List(Number) + 0).Sums(Wide)(1000).IsNearlyEqual(-9.015, 0.5)
+	Batch(Blocks.Rows("eight"), List(Number) + 0).Sums(Long)(1277).IsNearlyEqual(-1.514, 0.05)
+	Batch(Safetensors.Bytes.Quantized("a"), List(Number) + 0).Sums(Tokens)(255).IsNearlyEqual(383.65, 2)
 	mutable sum = 0
 	for row.Length
 		sum = sum + row(first + index) * input(start + index)

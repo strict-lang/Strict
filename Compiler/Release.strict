@@ -70,7 +70,8 @@ Content(target Text) Number
 	if File(builder).Exists is false
 		return Copied(source, target) + Removed(source, target)
 	let arguments = "\"" + builder + "\" \"" + source + "\" \"" + target + "\""
-	let built = ToolRunner(Process.Current.executable).Execute(arguments)
+	let strict = Toolchain(Platform.Current, TypeSource.Root).Executable(TypeSource.Root + "/Strict")
+	let built = ToolRunner(strict).Execute(arguments)
 	if built.Failed
 		logger.Log("Content build failed: " + builder + " " + built.error + built.Output)
 	built.Failed then -1 else 0

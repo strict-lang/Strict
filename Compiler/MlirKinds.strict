@@ -69,13 +69,13 @@ VariableKind(position Number, name Text) Text
 Stored(position Number, name Text) Number
 	Graded.Stored(2, "letter") is 1
 	Graded.Stored(2, "width") is -1
-	mutable found = -1
 	for position
-		let entry = function.method.instructions(index)
+		let at = position - 1 - index
+		let entry = function.method.instructions(at)
 		let isStore = (entry.kind is InstructionType.StoreRegisterToVariable) and (entry.texts(0) is name)
-		let isConstant = (entry.kind is InstructionType.StoreConstantToVariable) and (entry.texts.Last is name)
-		found = isStore or isConstant then index else found
-	found
+		if isStore or (entry.kind is InstructionType.StoreConstantToVariable) and (entry.texts.Last is name)
+			return at
+	-1
 DeclaredKind(position Number, name Text) Text
 	Graded.DeclaredKind(0, "width") is "Number"
 	Graded.DeclaredKind(0, "value") is "Shape"

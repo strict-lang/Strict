@@ -16,7 +16,7 @@ constant Started = MethodEntry("from", Add.parameters, "Strict/Examples/NativeAd
 IsForeign Boolean
 	MlirForeign(Adder).IsForeign
 	MlirForeign(MlirFunction.Counter).IsForeign is false
-	MlirForeign(MlirFunction.Adding).IsForeign is false
+	MlirForeign(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry.CountingLoop)).IsForeign is false
 	MlirForeign(Booleans).IsForeign is false
 	MlirForeign(MlirFunction(List(TypeEntry), Adder.type, TypeEntry.ToNumber)).IsForeign is false
 	MlirForeign(Counting).IsForeign

@@ -14,7 +14,7 @@ Run(arguments Texts) Number
 		return Tool(command, rest)
 	if command is "test"
 		return Tested(rest)
-	command is "build" then Built(rest) else Execute(logger).Run(rest)
+	command is "build" then Native(command, rest) else Execute(logger).Run(rest)
 Message(command Text, rest Texts) Text
 	Strict.Message("version", List(Text)).StartsWith(Version + " 20")
 	Strict.Message("help", List(Text)).StartsWith("strict <file> [arguments]  run")
@@ -35,7 +35,7 @@ Tested(rest Texts) Number
 	if option is in ("values", "trace")
 		let trace = ValueTrace(logger)
 		return option is "values" then trace.Run(rest(0), rest(1)) else trace.Traced(rest(0), rest(1))
-	option is "lines" then NativeBuild(logger).Compile(rest(0), rest(1), true) else Execute(logger).Test(rest(0), rest(1))
+	option is "lines" then Native("test", rest) else Execute(logger).Test(rest(0), rest(1))
 Rooted(arguments Texts) Texts
 	Strict.Rooted(List(Text) + "a.strict") is ("a.strict", ".")
 	Strict.Rooted(("a.strict", ".")) is ("a.strict", ".")
@@ -60,17 +60,20 @@ Checked(checker Validators/ValidateCheck, folder Text, root Text) Number
 Updated(updater Bytecode/Repositories, folder Text) Number
 	logger.Log("Updated " + updater.Updated(folder) + " packages in " + folder)
 	0
-Built(rest Texts) Number
-	let option = rest.Length > 2 then rest(2) else ""
-	if option is "library"
-		return LibraryBuild(logger).Built(rest(0), rest(1))
-	let options = Rest(Rest(rest))
-	let isWeb = "web" is in options
-	NativeBuild(logger, ("linux" is in options) and (isWeb is false), Level(rest), isWeb).Built(rest(0), rest(1))
-Level(rest Texts) Text
-	Strict.Level(("a.strict", ".", "linux", "small")) is NativeBuild.Small
-	Strict.Level(("a.strict", ".")) is NativeBuild.Fast
-	"small" is in Rest(Rest(rest)) then NativeBuild.Small else NativeBuild.Fast
+Native(command Text, rest Texts, compiler = "") Number
+	Strict(Logger).Native("test", List(Text), "Missing.exe") is 2
+	let path = compiler is "" then TypeSource.Root + "/Compiler/NativeCompiler" + Extension else compiler
+	if File(path).Exists is false
+		logger.Log(path + " not found, build it with Compiler/Bootstrap.cmd or sh Compiler/bootstrap.sh")
+		return 2
+	Process(path).Started(Arguments(command, rest))
+Arguments(command Text, rest Texts) Text
+	Strict.Arguments("build", ("a b.strict", ".")) is "build \"a b.strict\" \".\""
+	mutable text = command
+	for rest
+		text = text + " \"" + value + "\""
+	text
+Extension = Platform.Current is Platform.Windows then ".exe" else ""
 Format(path Text) Number
 	Strict.Format("Examples/HelloLogger.strict") is 0
 	let lines = RoundTrip(logger).Tabbed(File(path).ReadLines)

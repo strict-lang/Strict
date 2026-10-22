@@ -1,7 +1,7 @@
 has source Text
 constant Probe = BinaryFile("./Bytecode/Probe.strict")
 constant Packing = Probe.Unpacked(Probe.Packed(BinarySources(List(Text)).Header, List(TypeEntry) + TypeEntry.HelloLogger, List(TypeEntry)))
-constant Outdated = Probe.Unpacked(Probe.Packed(BinaryNames(List(Text) + "./Any.strict").Integers + TypeEntry.FormatVersion + 5, List(TypeEntry), List(TypeEntry)))
+constant Outdated = Probe.Unpacked(Probe.Packed(BinaryNames(List(Text) + "./Any.strict").Integers + TypeEntry.FormatVersion + 5, List(TypeEntry) + TypeEntry.HelloLogger, List(TypeEntry)))
 Path Text
 	Probe.Path is "./Bytecode/Probe.strictbinary"
 	source.Substring(0, source.Length - 7) + ".strictbinary"
@@ -34,6 +34,10 @@ IsFresh(entries List(ZipEntry)) Boolean
 		if value.Name.EndsWith(".reference") and (Owned(value.Name.Substring(0, value.Name.Length - 10)).Name is "")
 			return false
 	true
+Current(entries List(ZipEntry)) List(TypeEntry)
+	Probe.Current(Packing) is List(TypeEntry) + TypeEntry.HelloLogger
+	Probe.Current(Outdated).Length is 0
+	IsFresh(entries) then Types(entries) else List(TypeEntry)
 IsCurrent(entries List(ZipEntry)) Boolean
 	Probe.IsCurrent(Packing)
 	Probe.IsCurrent(Outdated) is false

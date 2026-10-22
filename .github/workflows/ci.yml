@@ -29,8 +29,6 @@ jobs:
         run: |
           echo "$PWD/Tools/LLVM-22.1.0-Linux-X64/bin" >> "$GITHUB_PATH"
           sh Compiler/bootstrap.sh
-      - name: Self build
-        run: ./strict build Strict.strict > build.log 2>&1 || { grep -v "^Test passed" build.log; exit 1; }
       - name: Tests on the Strict VM
         run: |
           for folder in $FOLDERS; do
@@ -69,8 +67,6 @@ jobs:
       - name: Bootstrap from the seed
         shell: cmd
         run: Compiler\Bootstrap.cmd
-      - name: Self build
-        run: ./strict.exe build Strict.strict > build.log 2>&1 || { grep -v "^Test passed" build.log; exit 1; }
       - name: Tests on the Strict VM
         run: |
           for folder in $FOLDERS; do

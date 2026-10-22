@@ -6,14 +6,27 @@ constant Fast = " -O2"
 constant Small = " -Os"
 constant Intermediates = (".llvm.mlir", ".ll", ".res", ".gpu.mlir", ".gpu.llvm.mlir", ".gpu.ll", ".sm_75.ptx", ".sm_80.ptx", ".amd.mlir", ".amd.llvm.mlir", ".amd.ll", ".amd.bc", ".linux.mlir", ".linux.llvm.mlir", ".linux.ll", ".linux.o", ".pre.js", ".o", ".gpu.opt.ll")
 Built(path Text, root Text) Number
-	let failed = Execute(logger).Test(path, root)
-	failed > 0 then failed else Compile(path, root)
+	if isWeb or IsProgram(path) or (Execute(logger).Stale(List(Text) + path).Length is 0)
+		let failed = Execute(logger).Test(path, root)
+		return failed > 0 then failed else Compile(path, root)
+	Gated(path, root)
+Gated(path Text, root Text) Number
+	let executable = Toolchain(Platform.Current, root).Executable(Output(path, false))
+	File(executable).Delete
+	let failed = Compile(path, root, false, true)
+	if File(executable).Exists and (ToolRunner.IsCrash(failed) is false)
+		return failed
+	let problem = File(executable).Exists then " crashed (exit code " + failed + ")" else " did not build"
+	logger.Log("The native tests of " + path + problem + ", running them on the Strict VM")
+	let checked = Execute(logger).Test(path, root)
+	checked > 0 then checked else failed
 IsProgram(path Text) Boolean
 	NativeBuild.IsProgram("Examples/Sum.strict")
 	NativeBuild.IsProgram("Character.strict") is false
 	"Run" is in TypeShape(File(path).ReadLines).MethodScope.names
-Compile(path Text, root Text, isCounting = false) Number
-	let isProgram = (isCounting is false) and IsProgram(path)
+Compile(path Text, root Text, isCounting = false, isGating = false) Number
+	let isTesting = isCounting or isGating
+	let isProgram = (isTesting is false) and IsProgram(path)
 	let module = NativeFolder(logger).Module(path, root, isCounting, isProgram)
 	if module.types.Length is 0
 		return 1
@@ -23,7 +36,7 @@ Compile(path Text, root Text, isCounting = false) Number
 		return 1
 	let natives = NativeFolder(logger).Natives(path, root, module.types)
 	let built = Build(base, program, Toolchain(Platform.Current, root, natives, isWeb), isCounting)
-	isCounting and (built is 0) then Ran(base, Toolchain(Platform.Current, root), path) else built
+	isTesting and (built is 0) then Ran(base, Toolchain(Platform.Current, root), path, isCounting) else built
 Device(program Text, base Text, root Text) Text
 	NativeBuild.Device("module {\n}", "A", ".") is "module {\n}"
 	let at = Unsupported(program)
@@ -50,9 +63,6 @@ Natives(path Text, root Text, types List(TypeEntry)) Texts
 		if Directory.Exists(folder) and (folder is not in folders)
 			folders.Add(folder)
 	folders
-CountedFile(path Text, root Text) Text
-	NativeBuild.CountedFile("./Examples/Sum.strict", ".") is "Examples/Sum.strict"
-	TypeEntry(FileCompiler.FullName(path, root), List(MemberEntry), List(MethodEntry)).Source
 Build(base Text, program Text, tools Toolchain, isCounting = false) Number
 	let missing = tools.Missing(tools.isWeb then Toolchain.Needed + "emcc" else Toolchain.Needed)
 	if missing.Length > 0
@@ -66,14 +76,15 @@ Build(base Text, program Text, tools Toolchain, isCounting = false) Number
 	let crossed = CrossBuild(base, program, tools, isCounting)
 	Removed(base)
 	Release(logger, base).Packaged(program, crossed, tools.isWeb, isCrossing)
-Ran(base Text, tools Toolchain, path Text) Number
+Ran(base Text, tools Toolchain, path Text, isCounting Boolean) Number
 	let executable = tools.Executable(base)
 	let result = ToolRunner(executable).Execute("")
 	logger.Log(result.Output.Trim)
-	if (result.exitCode >= 0) and (result.exitCode < 128)
+	if ToolRunner.IsCrash(result.exitCode) is false
 		logger.Log(Execute.Summary(result.exitCode, path))
-	File(executable).Delete
-	File(base + ".mlir").Delete
+	if isCounting
+		File(executable).Delete
+		File(base + ".mlir").Delete
 	result.exitCode
 Linked(base Text, tools Toolchain) Text
 	NativeBuild.Linked("Compiler/output/missing", Toolchain.OnWindows).StartsWith("mlir-opt failed")

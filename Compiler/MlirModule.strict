@@ -27,7 +27,7 @@ Combined(lines Texts, functions List(MlirFunction), counted List(MlirFunction)) 
 	Counters.Combined(List(Text), Counters.Functions, Counters.Functions).EndsWith("}")
 	let table = countedFiles.Length is 0 then List(Text) else MlirLines.Table(functions, Mains, countedFiles)
 	let device = MlirGpu.Module(functions)
-	let main = MlirEntry(counted.First, Others(counted), device is not "").Main
+	let main = MlirEntry(counted.First, Others(counted)).Main
 	let host = outer.Text.Combine(lines + MlirGlobals(functions).Lines + table + main + "}", "\n")
 	device is "" then host else host + "\n" + device
 Functions List(MlirFunction)
@@ -38,7 +38,19 @@ Functions List(MlirFunction)
 Entries List(MlirFunction)
 	Pair.Entries.Last.Symbol is "Other_Run_0"
 	for Range(0, entries)
-		MlirFunction(types, types(value), RunMethod(types(value)))
+		MlirFunction(types, types(value), RunMethod(types(value)), typeIndex = TypeIndex)
+TypeIndex Dictionary(Text, Number)
+	Counters.TypeIndex("Counter") is 0
+	Counters.TypeIndex("Strict/Counter") is 0
+	mutable indexed = Dictionary(Text, Number)
+	for types
+		if value.Name is not in indexed
+			indexed(value.Name) = index
+	for types
+		let short = Path(value.Name).FileName.text
+		if short is not in indexed
+			indexed(short) = index
+	indexed
 Mains List(TypeEntry)
 	Pair.Mains.Last.Name is "Strict/Other"
 	for Range(0, entries)
@@ -82,7 +94,7 @@ Called(function MlirFunction, position Number) List(MlirFunction)
 	let decoder = PayloadDecoder(entry)
 	if MlirCalls(function, position).NativeHelper(entry, decoder) is not ""
 		return List(MlirFunction)
-	let type = Natives(types).TypeOf(decoder.Text(1))
+	let type = function.TypeOf(decoder.Text(1))
 	let callee = decoder.Callee(type)
-	let called = MlirFunction(types, type, callee)
+	let called = MlirFunction(types, type, callee, typeIndex = function.typeIndex)
 	(callee.instructions.Length > 0) or MlirForeign(called).IsForeign then NoFunctions + called else NoFunctions

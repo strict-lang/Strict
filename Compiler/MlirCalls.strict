@@ -38,7 +38,7 @@ Created(entry InstructionEntry, decoder PayloadDecoder) Texts
 	let custom = decoder.Callee(type)
 	let instances = MlirInstances(function, position)
 	let target = "%r" + entry.payload(0)
-	let isForeign = MlirForeign(MlirFunction(function.types, type, custom)).IsForeign
+	let isForeign = MlirForeign(MlirFunction(function.types, type, custom, typeIndex = function.typeIndex)).IsForeign
 	if ((custom.instructions.Length is 0) and (isForeign is false)) or IsMemberValue(entry, type)
 		return Shared(MlirPairs(function, position).Constructed(entry, decoder.Text(1), instances), target)
 	instances.Fresh(type, target, "f", List(Text)) + Compiled(entry, decoder, type, count)
@@ -77,7 +77,7 @@ Invoked(entry InstructionEntry, decoder PayloadDecoder) Texts
 Compiled(entry InstructionEntry, decoder PayloadDecoder, type TypeEntry, count Number) Texts
 	MlirCalls(Shapes, 2).Compiled(Area, PayloadDecoder(Area), AreaShape, 0).Length is 6
 	let callee = decoder.Callee(type)
-	let target = MlirFunction(function.types, type, callee)
+	let target = MlirFunction(function.types, type, callee, typeIndex = function.typeIndex)
 	if (callee.instructions.Length is 0) and (MlirForeign(target).IsForeign is false)
 		return List(Text) + MlirStatements(function, position).Unsupported("call of " + type.Name + "." + decoder.Text(2))
 	let types = Text.Combine(ArgumentTypes(target.Parameters.Length), ", ")

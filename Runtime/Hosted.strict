@@ -12,7 +12,7 @@ constant Logging = Invocation(InstructionEntry.Invoke(1, ("Strict/Number", "Loga
 constant Sine = Invocation(InstructionEntry.Invoke(1, ("Strict/Math/Degrees", "Sin", "Strict/Math/Ratio"), List(Number), 0), List(VmValue), VmValue.OfNumber(90))
 constant Aiming = Invocation(InstructionEntry.Invoke(1, ("Strict/Math/Vector2", "Atan", "Strict/Number"), List(Number), 0), List(VmValue), VmValue("Strict/Math/Vector2", 0, "", (VmValue.OfNumber(1), VmValue.OfNumber(0))))
 constant Deleting = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "Delete", "None"), List(Number), 0), List(VmValue), VmValue("Strict/File", 0, "", List(VmValue) + VmValue.OfText("Runtime/missing")))
-constant Methods = ("File.ReadLines", "File.Exists", "File.Write", "File.Delete", "File.Rename", "File.ReadBytes", "File.WriteLines", "File.WriteBytes", "File.Modified", "Directory.Files", "Directory.Directories", "Directory.Exists", "Directory.Create", "Directory.Current", "File.InMemory", "Process.Input", "Process.Find", "Process.RunTool", "Process.OperatingSystem", "Process.Current", "Process.Built", "Process.Elapsed", "Process.FilesRead", "Time.Now", "Number.Logarithm", "Number.Random", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan", "Vector2.Atan", "Library.Call", "Library.TextSlot", "Library.NumbersSlot", "Library.TextResult", "Library.NumbersResult", "Library.Failure")
+constant Methods = ("File.ReadLines", "File.Exists", "File.Write", "File.Delete", "File.Rename", "File.ReadBytes", "File.WriteLines", "File.WriteBytes", "File.Modified", "Directory.Files", "Directory.Directories", "Directory.Exists", "Directory.Create", "Directory.Current", "File.InMemory", "Process.Input", "Process.Find", "Process.RunTool", "Process.Started", "Process.OperatingSystem", "Process.Current", "Process.Built", "Process.Elapsed", "Process.FilesRead", "Time.Now", "Number.Logarithm", "Number.Random", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan", "Vector2.Atan", "Library.Call", "Library.TextSlot", "Library.NumbersSlot", "Library.TextResult", "Library.NumbersResult", "Library.Failure")
 IsHosted Boolean
 	Hosted(SystemCall).IsHosted
 	Hosted(Invocation.AddCall).IsHosted is false
@@ -25,7 +25,7 @@ Result VmValue
 	if (call.MethodName is "Input") or (type is "Directory") and (call.MethodName is "Current")
 		return VmValue.OfText(call.MethodName is "Input" then Process.Input else Directory.Current)
 	if type is in ("Process", "Library")
-		return type is "Process" then Processed else Foreign(call, List(TypeEntry)).Hosted
+		return type is "Process" then HostedProcess(call).Result else Foreign(call, List(TypeEntry)).Hosted
 	if type is not in ("File", "Directory")
 		return type is "Time" then VmValue.OfNumber(Time.Now) else Measured
 	call.MethodName is in ("ReadLines", "ReadBytes", "Files", "Directories") then Entries else Stored

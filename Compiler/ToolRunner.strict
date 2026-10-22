@@ -10,5 +10,10 @@ Execute(arguments Text) ProcessResult
 	ToolRunner("cmd").Execute("/c echo a").Output.IndexOf("\r") is -1
 	let result = Process.RunTool(name, arguments)
 	ProcessResult(result.exitCode, result.Output.Replace("\r", ""), result.error.Replace("\r", ""))
+IsCrash(exitCode Number) Boolean
+	ToolRunner.IsCrash(139)
+	ToolRunner.IsCrash(-1073741819)
+	ToolRunner.IsCrash(3) is false
+	(exitCode < 0) or (exitCode >= 128)
 to Text
 	name

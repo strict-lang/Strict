@@ -1,0 +1,23 @@
+has base Text
+constant Sample = PtxCache("Compiler/output/Kept")
+Previous(device Text, isTiling Boolean) Texts
+	PtxCache("Compiler/output/missing").Previous("module {\n}", false).Length is 0
+	Sample.Remembered("module {\n\n}", ("// new", "// old")) is ("// new", "// old")
+	DeviceBuild.Missing.Embedded("module {\n}", ("// new", "// old"), Sample.base).Length > 0
+	Sample.Previous("module {\n\n}", true) is ("// new", "// old")
+	Sample.Previous("module {\n\n}", false) is ("// new")
+	Sample.Previous("module {\n}", true).Length is 0
+	let key = File(base + ".kernels.mlir")
+	let isCurrent = key.Exists and (key.Modified > File(Process.Current.executable).Modified)
+	if (isCurrent is false) or (File(base + ".ptx").Exists is false) or (Read(".kernels.mlir") is not device)
+		return List(Text)
+	isTiling then (Read(".ptx"), Read(".older.ptx")) else List(Text) + Read(".ptx")
+Read(ending Text) Text
+	Sample.Read(".ptx") is "// new"
+	Text.Combine(File(base + ending).ReadLines, "\n")
+Remembered(device Text, ptx Texts) Texts
+	PtxCache("Compiler/output/Failed").Remembered("module {\n}", ("clang failed: x")) is ("clang failed: x")
+	File("Compiler/output/Failed.kernels.mlir").Exists is false
+	if ptx.First.StartsWith("//")
+		File(base + ".kernels.mlir").Write(device)
+	ptx

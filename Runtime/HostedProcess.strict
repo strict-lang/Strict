@@ -1,0 +1,6 @@
+has call Invocation
+Result VmValue
+	HostedProcess(Hosted.SystemCall).Result.text is in ("Windows", "Linux", "MacOS", "Unknown")
+	if call.MethodName is "Started"
+		return VmValue.OfNumber(Process(call.Instance.Member(0).text).Started(call.Arguments.First.text))
+	Hosted(call).Processed
