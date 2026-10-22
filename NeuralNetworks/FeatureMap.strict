@@ -43,3 +43,16 @@ Completed Numbers
 	FeatureMap((1, 2, 3, 4), 1, 2, (1, -1)).Completed is (2, 1, 4, 3)
 	for values
 		value + offsets(index % channels)
+Partials(groups Number, centers Numbers, squared Boolean) Numbers
+	FeatureMap((1, 2, 3, 6), 1, 2, (0, 0)).Partials(2, (0, 0), false) is (1, 2, 3, 6)
+	FeatureMap((1, 2, 3, 6), 1, 2, (0, 0)).Partials(2, (2, 4), true) is (1, 4, 1, 4)
+	let size = channels / groups
+	for Height * groups
+		let first = (index / groups).Floor * width * channels + (index % groups) * size
+		let center = centers(index % groups)
+		mutable sum = 0
+		for width * size
+			let channel = (index / size).Floor * channels + index % size
+			let difference = values(first + channel) + offsets((first + channel) % channels) - center
+			sum = sum + difference * (squared then difference else 1)
+		sum

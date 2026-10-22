@@ -20,27 +20,14 @@ Means(map FeatureMap) Numbers
 	Pair.Means(Column) is (2, 4)
 	Pair.Means(FeatureMap(Column.values, 1, 2, (1, 0))) is (3, 4)
 	let count = map.values.Length / groups
-	for Totals(Partials(map, Layer.Zeros(groups), false), map.Height)
+	for Totals(map.Partials(groups, Layer.Zeros(groups), false), map.Height)
 		value / count
 Variances(map FeatureMap, means Numbers) Numbers
 	Pair.Variances(Column, (2, 4)) is (1, 4)
 	GroupNorm((1, 1), (0, 0), 1).Variances(Column, List(Number) + 3) is List(Number) + 3.5
 	let count = map.values.Length / groups
-	for Totals(Partials(map, means, true), map.Height)
+	for Totals(map.Partials(groups, means, true), map.Height)
 		value / count
-Partials(map FeatureMap, centers Numbers, squared Boolean) Numbers
-	Pair.Partials(Column, (0, 0), false) is (1, 2, 3, 6)
-	Pair.Partials(Column, (2, 4), true) is (1, 4, 1, 4)
-	let size = map.channels / groups
-	for map.Height * groups
-		let first = (index / groups).Floor * map.width * map.channels + (index % groups) * size
-		let center = centers(index % groups)
-		mutable sum = 0
-		for map.width * size
-			let channel = (index / size).Floor * map.channels + index % size
-			let difference = map.values(first + channel) + map.offsets((first + channel) % map.channels) - center
-			sum = sum + difference * (squared then difference else 1)
-		sum
 Totals(partials Numbers, rows Number) Numbers
 	Pair.Totals((1, 2, 3, 6), 2) is (4, 8)
 	for groups

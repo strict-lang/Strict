@@ -138,10 +138,11 @@ static float* Read(double path, const Tensor* tensor, const char** failure)
 	return floats;
 }
 
-/* The numbers of the tensor that entry describes, as doubles. */
+/* The numbers of the tensor that entry describes: 32 bit floats for float tensors (exact, the GPU keeps them as they
+   are), doubles for integers. */
 STRICT_EXPORT double TensorFile_Floats(double self, double path, double entry)
 {
-	static strict_numbers* numbers = 0;
+	static unsigned char* storage = 0;
 	const char* failure = 0;
 	Tensor tensor;
 	failure = Described(strict_text(entry), &tensor);
@@ -149,8 +150,19 @@ STRICT_EXPORT double TensorFile_Floats(double self, double path, double entry)
 	if (!floats)
 		return strict_fail(failure);
 	uint64_t total = tensor.height * tensor.width;
-	free(numbers);
-	numbers = malloc(sizeof(strict_numbers) + total * sizeof(double));
+	free(storage);
+	if (tensor.bytes > 1)
+	{
+		storage = malloc(sizeof(strict_packed) + total * sizeof(float));
+		strict_packed* packed = (strict_packed*)storage;
+		packed->count = (double)total;
+		packed->bits = 32;
+		memcpy(packed->data, floats, total * sizeof(float));
+		free(floats);
+		return strict_packed_result(packed);
+	}
+	strict_numbers* numbers = malloc(sizeof(strict_numbers) + total * sizeof(double));
+	storage = (unsigned char*)numbers;
 	numbers->count = (double)total;
 	for (uint64_t index = 0; index < total; index++)
 		numbers->items[index] = floats[index];
