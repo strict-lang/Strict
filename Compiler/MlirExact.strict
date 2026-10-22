@@ -86,10 +86,9 @@ Position(slot Text, target Text) Texts
 	let narrow = "    " + target + "n = arith.fptosi " + target + "f : f32 to i32"
 	let whole = "    " + target + "j = arith.extsi " + target + "n : i32 to i64"
 	let valid = "    " + target + "v = arith.cmpi eq, " + target + "_q, %one : i64"
-	let guards = MlirGuards(function, at).Guards(List(Text) + slot, target + "v")
-	let fallback = guards.Length > 0 then target + "_e" else target + "j"
+	let fallback = MlirGuards(function, at).IsWhole(slot) then target + "_e" else target + "j"
 	let chosen = "    " + target + " = arith.select " + target + "v, " + target + "_e, " + fallback + " : i64"
-	(loaded, narrow, whole) + Loaded(target, slot) + valid + guards + chosen
+	(loaded, narrow, whole) + Loaded(target, slot) + valid + chosen
 Integer(name Text, operation Text) Text
 	Single.Integer("n", "arith.addi %a, %b") is "    %x2n = arith.addi %a, %b : i64"
 	"    " + Temp(name) + " = " + operation + " : i64"

@@ -21,10 +21,10 @@ Compared(entry InstructionEntry, float Text, target Text) Texts
 	let operands = exact.Loaded(Temp("a"), "%r" + entry.payload(1)) + exact.Loaded(Temp("b"), "%r" + entry.payload(2))
 	let whole = Predicate(entry.kind)
 	let compared = "    " + Temp("i") + " = arith.cmpi " + whole + ", " + Temp("l") + ", " + Temp("r") + " : i64"
-	let guards = MlirGuards(exact.function, exact.at).Guards(("%r" + entry.payload(1), "%r" + entry.payload(2)), Temp("v"))
-	let fallback = guards.Length > 0 then Temp("i") else float
+	let isKnown = MlirGuards(exact.function, exact.at).IsKnown(("%r" + entry.payload(1), "%r" + entry.payload(2)))
+	let fallback = isKnown then Temp("i") else float
 	let chosen = "    " + target + " = arith.select " + Temp("v") + ", " + Temp("i") + ", " + fallback + " : i1"
-	operands + Crossed + Valid + compared + guards + chosen
+	operands + Crossed + Valid + compared + chosen
 Valid Texts
 	Single.Valid.Last is "    %x2v = arith.andi %x2w, %x2y : i1"
 	let left = "    " + Temp("w") + " = arith.cmpi ne, " + Temp("a_q") + ", %inexact : i64"
@@ -78,13 +78,13 @@ Floored(source Text, target Text) Texts
 	Double.Floored("%r1", "%r2").Length is 0
 	if exact.Parts.Length is 0
 		return List(Text)
-	let guards = MlirGuards(exact.function, exact.at).Guards(List(Text) + source, Temp("fv"))
-	let fallback = guards.Length > 0 then (Temp("ff"), "%one") else (Temp("o_e"), Temp("o_q"))
+	let isKnown = MlirGuards(exact.function, exact.at).IsKnown(List(Text) + source)
+	let fallback = isKnown then (Temp("ff"), "%one") else (Temp("o_e"), Temp("o_q"))
 	let numerator = Integer("fx", "arith.select " + Temp("fv") + ", " + Temp("ff") + ", " + fallback(0))
 	let denominator = Integer("fy", "arith.select " + Temp("fv") + ", %one, " + fallback(1))
 	let kept = exact.Loaded(Temp("o"), target) + (numerator, denominator)
 	let refreshed = exact.Set(Temp("fx"), Temp("fy"), target)
-	exact.Loaded(Temp("f"), source) + Quotient(source) + guards + kept + refreshed
+	exact.Loaded(Temp("f"), source) + Quotient(source) + kept + refreshed
 Quotient(source Text) Texts
 	Single.Quotient("%r1").Last is "    %x2ff = arith.select %x2fn, %x2fb, %x2ft : i64"
 	let valid = Integer("fv", "arith.cmpi ne, " + Temp("f_q") + ", %inexact")

@@ -9,7 +9,7 @@ constant Twiced = List(MlirFunction) + MlirDevice.Twice.function
 constant Indexing = "] : (!llvm.ptr) -> !llvm.ptr, f64"
 constant Marker = "// device kernels"
 constant NameGlobal = "  llvm.mlir.global internal constant @kRows_Doubled_1_gpu2(\"Rows_Doubled_1_gpu2\\00Rows_Doubled_1_gpu2s\\00\") : !llvm.array<41 x i8>"
-constant Running = "(!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> f64"
+constant Running = "(!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64"
 Launched Texts
 	Doubling.Launched.Last is "  ^loop2host:"
 	Randomizing.Launched.Length is 0
@@ -24,17 +24,17 @@ Launched Texts
 	let wanted = (List(Text) + count) + MlirLoops(function, position).Wanted
 	wanted + branch + Run + ("  ^loop" + position + "host:")
 Run Texts
-	Text.Combine(Doubling.Run).IndexOf("%t2gc, %t2v, %t2gq, %t2ga, %t2gw, %t2gm, %t2gr, %t2go, %t2gy, %t2gg, %t2gpf)") > 0
+	Text.Combine(Doubling.Run).IndexOf("%t2gy, %t2gg, %t2gpf, %t2gj)") > 0
 	Text.Combine(MlirGpu(MlirTokens.Summing.function, 2).Run).IndexOf("@strict_gpu_tokens(%t2gp, %t2gc, %t2gh0") > 0
 	let name = MlirDevice(function, position).Name
 	let addresses = (Address("gp", "strict_gpu_ptx"), Address("gk", "k" + name), Address("gs", "f" + name))
 	let tokens = MlirTokenLaunch(function, position)
-	let sourced = tokens.Sourced
 	let lanes = MlirDeviceSums(function, position).Lanes(Temp("gy"), Temp("gc")) + MlirGrouped(function, position).Launched
-	let sizes = (List(Text) + MlirTyped.Integer.Constant(Temp("gq"), sourced.Last)) + lanes
-	let first = (Temp("gp"), Temp("gk"), Temp("gs"), Temp("gc"), sourced.First, Temp("gq"))
+	let sizes = (List(Text) + MlirTyped.Integer.Constant(Temp("gq"), tokens.Sourced.Last)) + lanes
+	let first = (Temp("gp"), Temp("gk"), Temp("gs"), Temp("gc"), tokens.Sourced.First, Temp("gq"))
 	let second = (Temp("ga"), Temp("gw"), Temp("gm"), Temp("gr"), Temp("go"), Temp("gy"), Temp("gg"), Temp("gpf"))
-	let run = "    " + Temp("gl") + " = func.call @strict_gpu_run(" + Text.Combine(first + second, ", ") + ") : " + Running
+	let operands = Text.Combine(first + second + Temp("gj"), ", ")
+	let run = "    " + Temp("gl") + " = func.call @strict_gpu_run(" + operands + ") : " + Running
 	(List(Text) + ("  ^loop" + position + "gpu:")) + addresses + tokens.Launched + Values + sizes + run + Finished
 Values Texts
 	Doubling.Values.Last is "    %t2gpf = arith.constant 17 : i64"
@@ -65,9 +65,10 @@ Value(at Number, name Text) Texts
 	(function.Load(loaded, "%v_" + name), slot, function.Store(loaded, Temp("gx" + at)))
 Counted(count Number, mask Number, rows Number, dots Number) Texts
 	Doubling.Counted(2, 3, 1, 2).Last is "    %t2gpf = arith.constant 17 : i64"
-	constant names = ("gw", "gm", "gr", "go", "gpf")
+	constant names = ("gw", "gm", "gr", "go", "gj", "gpf")
 	let packed = MlirLayout(function).Packed(position)
-	for (count, mask, rows, dots, packed is 0 then MlirLayout.BrainFloats else packed)
+	let guards = MlirGuards(MlirFunction(function, Float = "f32", Guarded = position), position).Mask
+	for (count, mask, rows, dots, guards, packed is 0 then MlirLayout.BrainFloats else packed)
 		MlirTyped.Integer.Constant(Temp(names(index)), value to Text)
 Finished Texts
 	Doubling.Finished.Last is "    cf.br ^loop2exit"
@@ -88,10 +89,7 @@ Globals Texts
 	mutable lines = List(Mutable(Text))
 	for function.method.instructions
 		if (value.kind is InstructionType.LoopBegin) and MlirGpuCheck(function, index).IsGpu
-			let name = MlirDevice(function, index).Name
-			let text = "  llvm.mlir.global internal constant @k" + name + "(\"" + name + "\\00" + name + "s\\00\")"
-			let slot = "  llvm.mlir.global internal @f" + name + "(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>"
-			lines = lines + (text + " : !llvm.array<" + (name.Length * 2 + 3) + " x i8>") + slot
+			lines = lines + MlirGuards(MlirFunction(function, Float = "f32", Guarded = index), index).Named
 	lines
 Module(functions List(MlirFunction)) Text
 	MlirGpu.Module(List(MlirFunction) + Doubling.function).StartsWith(Marker)
@@ -113,7 +111,8 @@ Kernels(inspected MlirFunction) Texts
 	for inspected.method.instructions
 		if (value.kind is InstructionType.LoopBegin) and MlirGpuCheck(inspected, index).IsGpu
 			let single = MlirFunction(inspected, Float = "f32")
-			let kernels = MlirDevice(inspected, index).Kernel + MlirDevice(single, index).Kernel
+			let exact = MlirGuards(MlirFunction(single, Guarded = index), index).Kernel
+			let kernels = MlirDevice(inspected, index).Kernel + MlirDevice(single, index).Kernel + exact
 			let isKernel = MlirWholeKernel(inspected, index).IsKernel
 			lines = lines + (isKernel then MlirKernelBody(inspected, index).Kernels else kernels)
 	lines
