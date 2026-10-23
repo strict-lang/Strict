@@ -74,8 +74,13 @@ Added(input Numbers, residual Numbers) Numbers
 Shared(layers List(Layer), input Numbers) Numbers
 	Tiny.Shared(Sharing, Probe).First.IsNearlyEqual(0.060086650174007626 * Tiny.Expert(0, Probe).First, 0.000001)
 	Tiny.Shared(Sharing, Probe).Last.IsNearlyEqual(0.060086650174007626 * Tiny.Expert(0, Probe).Last, 0.000001)
-	let scale = Activation.Sigmoid.Output(layers.Last.Sums(input).First)
-	Experts.Dense(layers.First, layers(1)).Expert(0, input) * scale
+	Tiny.Shared(Sharing, Twice)(9).IsNearlyEqual(Tiny.Shared(Sharing, Probe.Reverse)(1), 0.000001)
+	let tokens = input.Length / layers.First.weights.First.Length
+	let expanded = Batch(layers.First.weights, layers.First.biases).Sums(input)
+	let contracted = Batch(layers(1).weights, layers(1).biases).Sums(Gated(expanded, expanded.Length / tokens / 2))
+	let scales = Batch(layers.Last.weights, layers.Last.biases).Sums(input)
+	for contracted
+		value * Activation.Sigmoid.Output(scales((index / (contracted.Length / tokens)).Floor))
 Expanded(chosen Numbers, input Numbers) Numbers
 	Tiny.Expanded((1, 3), Probe).Length is 16
 	Tiny.Expanded((1, 3), Probe).Last is Tiny.expansions(3).Sums(Probe).Last

@@ -8,6 +8,8 @@ has streams Numbers = List(Number)
 constant Flash = HyperStreams.Flash
 constant First = FlashLayer.Loaded(Flash, 0)
 constant Mixed = First.mixing.Mixed(HyperStreams.Embedded)
+constant Twice = HyperStreams.Embedded + HyperStreams.Embedded.Reverse
+constant Stepped = First.Forward(HyperStreams.Embedded, List(Number)).Forward(HyperStreams.Embedded.Reverse, List(Number))
 Loaded(model Gguf, layer Number) FlashLayer
 	First.linear.Length is 1
 	FlashLayer.Loaded(Flash, 3).attention.Length is 1
@@ -37,6 +39,7 @@ Shared(model Gguf, prefix Text) List(Layer)
 Forward(input Numbers, rotation Numbers) FlashLayer
 	First.Forward(HyperStreams.Embedded, List(Number)).streams(0).IsNearlyEqual(0.311525, 0.000001)
 	First.Forward(HyperStreams.Embedded, List(Number)).streams(5).IsNearlyEqual(-1.372745, 0.000001)
+	First.Forward(Twice, List(Number)).streams(261).IsNearlyEqual(Stepped.streams(5), 0.000001)
 	let cached = Cached(mixing.Mixed(input), rotation)
 	let combined = mixing.Combined(input, cached.Attended, mixing.Injected(input))
 	let fed = Fed(feeding.Mixed(combined))
