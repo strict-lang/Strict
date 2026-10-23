@@ -11,6 +11,9 @@ Operated(entry InstructionEntry) Texts
 	Single.Operated(InstructionEntry.Binary(InstructionType.Power, (0, 1, 2))).Length is 0
 	if (exact.Parts.Length is 0) or (entry.kind is not in Kinds)
 		return List(Text)
+	let grouped = MlirGroupIndex(exact.function, exact.at).Remainder
+	grouped.Length > 0 then grouped else OrdinaryOperated(entry)
+OrdinaryOperated(entry InstructionEntry) Texts
 	let operands = exact.Loaded(Temp("a"), "%r" + entry.payload(1)) + exact.Loaded(Temp("b"), "%r" + entry.payload(2))
 	let target = "%r" + entry.payload(3)
 	operands + Rational(entry.kind) + exact.Set(Temp("n"), Temp("d"), target)
@@ -79,6 +82,11 @@ Floored(source Text, target Text) Texts
 	Double.Floored("%r1", "%r2").Length is 0
 	if exact.Parts.Length is 0
 		return List(Text)
+	let grouped = MlirGroupIndex(exact.function, exact.at).Floored
+	if grouped.Length > 0
+		return grouped
+	OrdinaryFloor(source, target)
+OrdinaryFloor(source Text, target Text) Texts
 	let isKnown = MlirGuards(exact.function, exact.at).IsKnown(List(Text) + source)
 	let fallback = isKnown then (Temp("ff"), "%one") else (Temp("o_e"), Temp("o_q"))
 	let numerator = Integer("fx", "arith.select " + Temp("fv") + ", " + Temp("ff") + ", " + fallback(0))
