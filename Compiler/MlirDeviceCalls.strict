@@ -7,7 +7,11 @@ constant Flooring = MlirDeviceCalls(MlirGpuCheck.Floored, 1, MlirGpuCheck.Floore
 constant Making = InstructionEntry.Invoke(1, ("Strict/Degrees", "from", "Strict/Degrees", "number"), List(Number) + 0, -1)
 constant Rounding = InstructionEntry.Invoke(1, ("Strict/Float8", "from", "Strict/Float8", "number"), List(Number) + 0, -1)
 constant Heads = MlirDeviceCalls(MlirGpuCheck.Heading.function, 4, MlirDeviceMembers.Head)
-constant Natives = ("Floor", "Logarithm", "from")
+constant Sining = GpuSamples.Sined.instructions(1)
+constant Logarithmic = InstructionEntry.Invoke(1, ("Strict/Number", "Logarithm", "Strict/Number"), List(Number), 0)
+constant Natives = ("Floor", "Logarithm", "from", "Sin", "Cos")
+constant Approximations = ("Logarithm", "Sin", "Cos")
+constant Symbols = ("logarithm", "sine", "cosine")
 constant Summing = MlirDeviceCalls(MlirGpu.Layering.function, 5, MlirDeviceStatements.Summed)
 Temp(suffix Text) Text
 	Twice.Temp("i") is "%d4i"
@@ -79,8 +83,8 @@ Native(entry InstructionEntry) Texts
 	Text.Combine(Flooring.Native(Rounding)).IndexOf("@strict_device_float8_rounded(%d1)") > 0
 	if entry.texts(1) is not in Natives
 		return MlirTokenLaunch(function, function.method.LoopBeginOf(at)).Read(at)
-	if entry.texts(1) is "Logarithm"
-		return Logarithmic(entry)
+	if entry.texts(1) is in Approximations
+		return Approximated(entry)
 	if entry.texts(1) is "from"
 		return Made(entry)
 	let target = "%r" + entry.payload(0)
@@ -104,10 +108,12 @@ IsRounding(entry InstructionEntry) Boolean
 	if entry.kind is not InstructionType.Invoke
 		return false
 	(entry.texts(1) is "from") and (TypeEntry.ShortName(entry.texts(0)) is "Float8")
-Logarithmic(entry InstructionEntry) Texts
-	Text.Combine(Flooring.Logarithmic(MlirGpuCheck.Flooring)).IndexOf("@strict_device_logarithm(%failed, %d1i)") > 0
+Approximated(entry InstructionEntry) Texts
+	Text.Combine(Flooring.Approximated(Logarithmic)).IndexOf("@strict_device_logarithm(%failed, %d1i)") > 0
+	Text.Combine(Flooring.Approximated(Sining)).IndexOf("@strict_device_sine(%failed, %d1i)") > 0
 	let typed = MlirTyped(function.Float)
-	let call = " = func.call @strict_device_logarithm" + typed.Suffix + "(%failed, " + Temp("i") + ")"
+	let symbol = "@strict_device_" + Symbols(Approximations.Index(entry.texts(1)))
+	let call = " = func.call " + symbol + typed.Suffix + "(%failed, " + Temp("i") + ")"
 	let logarithm = "    " + Temp("") + call + " : (!llvm.ptr, " + typed.type + ") -> " + typed.type
 	(Loaded(entry) + logarithm) + MlirFeeding(function, at).Stored(Temp(""), "%r" + entry.payload(0))
 Argument(parameter Number, register Text) Texts
