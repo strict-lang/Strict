@@ -1,8 +1,10 @@
 has function MlirFunction
 has callers List(MlirFunction) = List(MlirFunction)
+has row Number = -1
 constant Inlined = " attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = [\"alwaysinline\"]} {"
 constant Row = MlirWholeBody(MlirWhole.Row.function)
 constant Halving = MlirWholeBody(MlirWholeTypes.Halving.function)
+constant Picked = MlirWholeBody(MlirWholeKernel.Measure.Callee)
 constant Module = MlirModule(List(TypeEntry) + MlirArguments.Halves + MlirFunction.Shape, "Run")
 constant Halfway = MlirWholeBody(MlirArguments.Called, MlirArguments.Halfway.functions)
 constant Constants = MlirWholeBody(MlirArguments.Called, MlirArguments.Calling.functions)
@@ -11,8 +13,16 @@ Lines Texts
 	Row.Lines.First.IndexOf("llvm.passthrough = [\"alwaysinline\"]") > 0
 	Row.Lines.Last is "  }"
 	MlirWholeBody(MlirLoops.Counting.function).Lines.Length is 0
+	Text.Combine(Picked.Lines).IndexOf("_row1(%p0: !llvm.ptr, %p1: i64, %rx: i64, %ry: i64, %rw: i64)") > 0
 	if MlirWholeFunction(function).IsWhole is false
 		return List(Text)
+	mutable lines = Whole
+	for function.method.parameters
+		if (row < 0) and MlirWholeRows(function, index).IsRowed
+			lines = lines + MlirWholeBody(function, callers, index).Whole
+	lines
+Whole Texts
+	Halving.Whole.Last is "  }"
 	let parts = MlirWholeTypes(function).Settled.Split("|")
 	(List(Text) + Header) + Slots(parts(0), parts(1)) + Body(parts(0), parts(1), parts(2), false) + "  }"
 Body(registers Text, variables Text, naturals Text, isFlat Boolean) Texts
@@ -20,7 +30,8 @@ Body(registers Text, variables Text, naturals Text, isFlat Boolean) Texts
 	mutable lines = List(Mutable(Text))
 	for function.method.instructions
 		let statements = MlirWholeStatements(function, index, registers, variables, naturals, isFlat)
-		lines = lines + function.Label(index) + statements.Emitted
+		let emitted = row < 0 then statements.Emitted else MlirWholeRows(function, row).Emitted(statements)
+		lines = lines + function.Label(index) + emitted
 	lines
 Header Text
 	Halving.Header.StartsWith("  func.func private @Shape_Halved_1_whole(%p0: i64) -> i64")
@@ -29,8 +40,11 @@ Header Text
 	mutable typed = List(Mutable(Text))
 	for MlirWholeFunction(function).Kinds
 		typed.Add("%p" + index + ": " + values.Typed(value))
+	for row < 0 then List(Text) else MlirWholeRows.Extras
+		typed.Add(value + ": i64")
 	let returned = ") -> " + values.Typed(MlirWholeTypes(function).Returned)
-	"  func.func private @" + MlirWholeFunction(function).Symbol + "(" + Text.Combine(typed, ", ") + returned + Inlined
+	let symbol = row < 0 then MlirWholeFunction(function).Symbol else MlirWholeRows(function, row).Symbol
+	"  func.func private @" + symbol + "(" + Text.Combine(typed, ", ") + returned + Inlined
 Slots(registers Text, variables Text) Texts
 	Halving.Slots("iifi", "--i").Last is "    llvm.store %p0, %v_number : i64, !llvm.ptr"
 	Constants.Slots("iifi", "--i").Last is "    llvm.store %c0i, %v_number : i64, !llvm.ptr"
