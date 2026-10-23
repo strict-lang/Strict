@@ -1,0 +1,29 @@
+has function MlirFunction
+has position Number
+Inputs Texts
+	for MlirGpuCheck(function, position).Free
+		if MlirDevice(function, position).IsList(value)
+			value
+Bits(name Text, format Number) Number
+	let brain = (format is 1) or ((format is 2) and (name is Inputs.First))
+	brain then 17 else 32
+Given(name Text, format Number) Texts
+	let source = "%f_" + name
+	let target = "%v_" + name
+	if format < 0
+		return MlirDevice(function, position).Stores(source, target)
+	let bits = Bits(name, format)
+	let fixed = "%format_" + name
+	let data = MlirTyped.Pointer.Store(source + "_d", target + "_d")
+	let count = MlirTyped.Integer.Store(source + "_n", target + "_n")
+	(data, count, MlirTyped.Integer.Constant(fixed, bits to Text), MlirTyped.Integer.Store(fixed, target + "_b"))
+Kernels Texts
+	mutable lines = List(Mutable(Text))
+	for 3
+		lines = lines + MlirDevice(function, position, index).Kernel
+	lines
+Names(name Text) Text
+	mutable text = ""
+	for 3
+		text = text + name + "sxf" + index + "\00"
+	text

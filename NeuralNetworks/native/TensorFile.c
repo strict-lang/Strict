@@ -85,18 +85,28 @@ static const char* Described(const char* entry, Tensor* tensor)
 		tensor->isSigned || strncmp(type, "U8\"", 3) == 0 ? 1 : 0;
 	if (!tensor->bytes)
 		return "OnlyF32F16BF16I8AndU8TensorsAreSupported";
-	uint64_t dimensions[4] = { 1, 1, 1, 1 }, range[2];
-	int rank = Listed(shape + 9, dimensions, 4);
-	if (rank < 0 || Listed(offsets + 16, range, 2) != 2)
-		return "OnlyTensorsUpToFourDimensionsAreSupported";
-	tensor->rank = (uint64_t)rank;
-	tensor->width = rank > 0 ? dimensions[rank - 1] : 1;
+	uint64_t range[2];
+	if (Listed(offsets + 16, range, 2) != 2)
+		return "TensorOffsetsMalformed";
+	tensor->rank = 0;
+	tensor->width = 1;
 	tensor->height = 1;
-	for (int dimension = 0; dimension + 1 < rank; dimension++)
-		tensor->height *= dimensions[dimension];
+	char* dimension = (char*)shape + 9;
+	while (*dimension != ']')
+	{
+		if (*dimension < '0' || *dimension > '9')
+			return "TensorShapeMalformed";
+		tensor->height *= tensor->width;
+		tensor->width = strtoull(dimension, &dimension, 10);
+		if (tensor->height > (1ull << 30) || tensor->width > (1ull << 30))
+			return "TensorTooLarge";
+		tensor->rank++;
+		if (*dimension == ',')
+			dimension++;
+		else if (*dimension != ']')
+			return "TensorShapeMalformed";
+	}
 	tensor->start = range[0];
-	if (tensor->height > (1ull << 30) || tensor->width > (1ull << 30))
-		return "TensorTooLarge";
 	if (range[1] < range[0] || range[1] - range[0] != tensor->height * tensor->width * tensor->bytes)
 		return "TensorSizeMismatch";
 	return 0;

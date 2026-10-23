@@ -6,6 +6,7 @@ from(unrounded Number)
 	BFloat16(0.1) is 0.10009765625
 	BFloat16(-300.5) is -300
 	BFloat16(41473) is 41472
+	BFloat16(0.1).IsNearlyEqual(0.10009765625)
 	BFloat16(0) is 0
 	let exponent = unrounded is 0 then 0 else (unrounded.Absolute.Logarithm / 2.Logarithm).Floor
 	let step = 2 ^ (exponent - 7)

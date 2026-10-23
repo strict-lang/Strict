@@ -3,6 +3,9 @@ has position Number
 constant Normed = MethodEntry("Normed", (MemberEntry("input", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("size", "Strict/Number", List(InstructionEntry), false), MemberEntry("count", "Strict/Number", List(InstructionEntry), false)), "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "count"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "input"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "index"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "size"), InstructionEntry.Binary(InstructionType.Divide, (2, 3, 4)), InstructionEntry.Invoke(5, ("Strict/Number", "Floor", "Strict/Number"), List(Number), 4), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "size"), InstructionEntry.Binary(InstructionType.Multiply, (5, 6, 7)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 8, "size"), InstructionEntry.Invoke(9, ("Strict/Grouped", "Squared", "Strict/Number", "input", "start", "size"), (1, 7, 8), -1), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 9), InstructionEntry.Named(InstructionType.InvokeWriteToList, 9, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 12), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "forResult"), InstructionEntry.Return(0)))
 constant Grouped = TypeEntry("Strict/Grouped", List(MemberEntry), (Normed, GpuSamples.Squared))
 constant Norming = MlirGroups(MlirFunction(List(TypeEntry) + Grouped, Grouped, Normed), 2)
+constant AlignedCode = Normed.instructions.Slice(0, 6) + (InstructionEntry.Binary(InstructionType.Modulo, (2, 3, 4)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 4, "within"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "within"), InstructionEntry.Binary(InstructionType.Subtract, (2, 6, 7))) + Normed.instructions.Slice(10, 7)
+constant Aligning = MlirGroups(MlirFunction(Norming.function, method = MethodEntry(Normed, instructions = AlignedCode)), 2)
+constant Ranging = MlirGroups(MlirFunction(Aligning.function, method = MethodEntry(Normed, instructions = AlignedCode.Slice(0, 2) + InstructionEntry.LoopBegin(0, 1) + AlignedCode.Slice(3, 14))), 2)
 Call Number
 	Norming.Call is 11
 	MlirGroups(MlirGpu.Layering.function, 2).Call is -1
@@ -28,6 +31,7 @@ Adding(at Number) Number
 			return -1
 	MlirDeviceSums(callee, 0).IsSummed(callee, 0, callee.method.instructions.Length, false) then 1 else 0
 Size(at Number) Text
+	Aligning.Call is 11 and Ranging.Call is -1
 	Norming.Size(11) is "size"
 	Norming.Size(7) is ""
 	let size = Arguments(function.method.instructions(at), at)
@@ -87,7 +91,36 @@ Calculated(entry InstructionEntry, at Number) Text
 	let named = function.method.instructions(divisor < 0 then at else divisor)
 	let isNamed = (divisor >= 0) and (named.kind is InstructionType.LoadVariableToRegister)
 	let isGrouping = (entry.kind is InstructionType.Divide) and (left is "!") and (right is "") and isNamed
-	isGrouping then "?" + named.texts(0) else Combined(left, right)
+	let aligned = Aligned(entry, at)
+	aligned is not "" then aligned else (isGrouping then "?" + named.texts(0) else Combined(left, right))
+Aligned(entry InstructionEntry, at Number) Text
+	if (entry.kind is not InstructionType.Subtract) or (IsIndex(entry.payload(1), at) is false)
+		return ""
+	let writer = Resolved(entry.payload(2), at)
+	let remainder = function.method.instructions(writer < 0 then at else writer)
+	if (writer < 0) or (remainder.kind is not InstructionType.Modulo) or (IsIndex(remainder.payload(1), writer) is false)
+		return ""
+	let divisor = Writer(remainder.payload(2), writer)
+	let named = function.method.instructions(divisor < 0 then writer else divisor)
+	let isNamed = (divisor >= 0) and (named.kind is InstructionType.LoadVariableToRegister)
+	isNamed and (Grouping(remainder.payload(2), writer) is "") then named.texts(0) else ""
+Resolved(register Number, before Number) Number
+	let writer = Writer(register, before)
+	let entry = function.method.instructions(writer < 0 then before else writer)
+	if (writer < 0) or (entry.kind is not InstructionType.LoadVariableToRegister)
+		return writer
+	for writer - position - 1
+		let at = writer - 1 - index
+		let stored = function.method.instructions(at)
+		if (stored.kind is InstructionType.StoreRegisterToVariable) and (stored.texts(0) is entry.texts(0))
+			return Resolved(stored.payload(0), at)
+	writer
+IsIndex(register Number, before Number) Boolean
+	if function.method.instructions(position).payload(1) is 1
+		return false
+	let writer = Writer(register, before)
+	let entry = function.method.instructions(writer < 0 then before else writer)
+	(writer >= 0) and (entry.kind is InstructionType.LoadVariableToRegister) and (entry.texts(0) is "index")
 Combined(left Text, right Text) Text
 	Norming.Combined("", "size") is "size"
 	Norming.Combined("size", "count") is "!"

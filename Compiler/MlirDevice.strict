@@ -1,5 +1,6 @@
 has function MlirFunction
 has position Number
+has Format Number = -1
 constant Doubling = MlirDevice(MlirParallel.Doubling.function, 2)
 constant Twice = MlirDevice(MlirFunction(Doubling.function.types, MlirParallel.Rows, MlirParallel.Twice), 0)
 constant Layering = MlirDevice(MlirGpu.Layering.function, 2)
@@ -15,7 +16,7 @@ Name Text
 	MlirDevice(MlirFunction(Doubling.function, Float = "f32"), 2).Name is "Rows_Doubled_1_gpu2s"
 	Exact.Name.EndsWith("_gpu2sx")
 	let suffix = MlirTyped(function.Float).Suffix + (function.Guarded is position then "x" else "")
-	function.Symbol + "_gpu" + position + suffix
+	function.Symbol + "_gpu" + position + suffix + (Format >= 0 then "f" + Format else "")
 Kernel Texts
 	Doubling.Kernel.First is DoublingHeader
 	Text.Combine(MlirDevice(MlirGroups.Norming.function, 2).Kernel).IndexOf("@strict_device_group_lanes(%group)") > 0
@@ -25,7 +26,7 @@ Kernel Texts
 	Text.Combine(Exact.Kernel).IndexOf("^generic") is -1
 	let call = MlirGroups(function, position).Call
 	if (function.Group < 0) and (call >= 0)
-		return MlirDevice(MlirFunction(function, Group = call), position).Kernel
+		return MlirDevice(MlirFunction(function, Group = call), position, Format).Kernel
 	let header = "  llvm.func @" + Name + "(" + Fixed + Freed + MlirPassed(function, position).Header
 	let body = Emitted(position + 1, function.method.LoopEndOf(position))
 	(List(Text) + header) + Slots + Given + Indexed + Started + body + MlirGrouped(function, position).Ending
@@ -53,7 +54,7 @@ Given Texts
 		let slot = "%v_" + value
 		let typed = MlirTyped(function.Float).Given(given, slot)
 		let number = typed + MlirPassed(function, position).Given(value, slot)
-		lines = IsList(value) then lines + Stores(given, slot) else lines + number
+		lines = IsList(value) then lines + MlirFormats(function, position).Given(value, Format) else lines + number
 	lines + (function.Guarded is position then Assumed else List(Text))
 Assumed Texts
 	Exact.Assumed is ("    llvm.store %one, %v_offset_q : i64, !llvm.ptr")
