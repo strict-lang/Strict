@@ -10,6 +10,7 @@ has history List(Numbers)
 has tokens Numbers = List(Number)
 has streams Numbers = List(Number)
 constant Tiny = FlashNext.Loaded("NeuralNetworks/tinyqwen4exp.gguf", 32)
+constant Rewound = Tiny.Steps((1, 2, 3), 0).Truncated(Tiny, (1, 2))
 Loaded(path Text, bits = 8) FlashNext
 	Tiny.layers.Length is 4
 	Tiny.pleLayer is 1
@@ -79,3 +80,18 @@ Scored Numbers
 	Generation(Tiny).Generated((1, 2), 2) is (19, 13)
 	let width = head.norm.Length
 	Batch(outputs, List(Number) + 0).Sums(head.Mixed(Safetensors.Part(streams, streams.Length - width, width, 1)))
+Nexts Numbers
+	Tiny.Steps((1, 2), 0).Nexts.Last is 19
+	Tiny.Steps((1, 2), 0).Nexts.First is Greedy.Largest(Tiny.Step(1, 0).Scored)
+	Greedy.Rows(Batch(outputs, List(Number) + 0).Sums(head.Mixed(streams)), outputs.Length)
+Truncated(original FlashNext, kept Numbers) FlashNext
+	Rewound.Step(5, 2).Scored(1).IsNearlyEqual(Tiny.Steps((1, 2, 5), 0).Scored(1), 0.00001)
+	let count = kept.Length
+	mutable truncated = List(Mutable(FlashLayer))
+	for layers
+		truncated.Add(value.Truncated(original.layers(index), count, original.tokens.Length + count))
+	let added = history.Slice(history.Length - tokens.Length + original.tokens.Length, count)
+	let remembered = original.history.Slice(count, original.history.Length - count) + added
+	let width = head.norm.Length
+	let rows = Safetensors.Part(streams, 0, count * width, 1)
+	FlashNext(value, layers = truncated, tokens = original.tokens + kept, streams = rows, history = remembered)
