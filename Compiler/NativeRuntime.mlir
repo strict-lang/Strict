@@ -9025,7 +9025,8 @@
     %device = llvm.load %deviceEntry : !llvm.ptr -> i64
     %bytesEntry = llvm.getelementptr %merging[0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<3 x i64>
     %bytes = llvm.load %bytesEntry : !llvm.ptr -> i64
-    %bounce = func.call @strict_gpu_bounce(%bytes) : (i64) -> !llvm.ptr
+    %bounced = llvm.mlir.addressof @strict_gpu_bounced : !llvm.ptr
+    %bounce = func.call @strict_gpu_bounce(%bounced, %bytes) : (!llvm.ptr, i64) -> !llvm.ptr
     %hasEvent = arith.cmpi ne, %eventBits, %none : i64
     cf.cond_br %hasEvent, ^after, ^plain
   ^after:
@@ -10886,7 +10887,8 @@
     %size = arith.maxui %bytes, %eight : i64
     %host = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
     %current = func.call @strict_gpu_current() : () -> i1
-    %bounce = func.call @strict_gpu_bounce(%size) : (i64) -> !llvm.ptr
+    %bounced = llvm.mlir.addressof @strict_gpu_bounced : !llvm.ptr
+    %bounce = func.call @strict_gpu_bounce(%bounced, %size) : (!llvm.ptr, i64) -> !llvm.ptr
     %event = func.call @strict_gpu_marked(%holder) : (!llvm.ptr) -> !llvm.ptr
     %noEvent = llvm.mlir.zero : !llvm.ptr
     %isMarked = llvm.icmp "ne" %event, %noEvent : !llvm.ptr
@@ -10934,8 +10936,7 @@
   }
   // downloads go through pinned memory, copies into pageable memory ran at about 1 GB/s
   llvm.mlir.global internal @strict_gpu_bounced(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
-  func.func private @strict_gpu_bounce(%bytes: i64) -> !llvm.ptr {
-    %bounced = llvm.mlir.addressof @strict_gpu_bounced : !llvm.ptr
+  func.func private @strict_gpu_bounce(%bounced: !llvm.ptr, %bytes: i64) -> !llvm.ptr {
     %capacitySlot = llvm.getelementptr %bounced[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<2 x i64>
     %capacity = llvm.load %capacitySlot : !llvm.ptr -> i64
     %enough = arith.cmpi uge, %capacity, %bytes : i64
@@ -13346,7 +13347,7 @@
     %rowsBytes = arith.muli %rowStride, %count : i64
     %total = arith.addi %header, %rowsBytes : i64
     %big = arith.cmpi uge, %total, %cacheable : i64
-    %staging = llvm.call @malloc(%total) : (i64) -> !llvm.ptr
+    %staging = func.call @strict_gpu_staging(%total) : (i64) -> !llvm.ptr
     %countShift = arith.constant 32 : i64
     %countHigh = arith.shli %count, %countShift : i64
     %strideAndCount = arith.ori %rowStride, %countHigh : i64
@@ -13404,7 +13405,7 @@
     cf.cond_br %hasDevice, ^copy, ^unavailable
   ^copy:
     %put = func.call @strict_gpu_stage(%device, %staging, %total) : (i64, !llvm.ptr, i64) -> i1
-    llvm.call @free(%staging) : (!llvm.ptr) -> ()
+    func.call @strict_gpu_unstaged(%staging) : (!llvm.ptr) -> ()
     %keeping = arith.andi %put, %big : i1
     cf.cond_br %keeping, ^remember, ^copiedRows
   ^remember:
@@ -13414,8 +13415,39 @@
   ^copiedRows:
     return %put : i1
   ^unavailable:
-    llvm.call @free(%staging) : (!llvm.ptr) -> ()
+    func.call @strict_gpu_unstaged(%staging) : (!llvm.ptr) -> ()
     return %false : i1
+  }
+  // rows tables up to 64 MB are gathered in one pinned buffer: a fresh allocation for each faulted its pages in and the
+  // driver copied it once more (Qwen3.8-Flash-Next 523 -> 488 ms per token, with 32 GPU expert slots 2974 -> 2738 ms)
+  llvm.mlir.global internal @strict_gpu_staged(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  func.func private @strict_gpu_staging(%bytes: i64) -> !llvm.ptr {
+    %most = arith.constant 67108864 : i64
+    %fits = arith.cmpi ule, %bytes, %most : i64
+    cf.cond_br %fits, ^pinned, ^pageable
+  ^pinned:
+    %staged = llvm.mlir.addressof @strict_gpu_staged : !llvm.ptr
+    %buffer = func.call @strict_gpu_bounce(%staged, %bytes) : (!llvm.ptr, i64) -> !llvm.ptr
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %isPinned = llvm.icmp "ne" %buffer, %unset : !llvm.ptr
+    cf.cond_br %isPinned, ^done(%buffer : !llvm.ptr), ^pageable
+  ^pageable:
+    %allocated = llvm.call @malloc(%bytes) : (i64) -> !llvm.ptr
+    cf.br ^done(%allocated : !llvm.ptr)
+  ^done(%chosen: !llvm.ptr):
+    return %chosen : !llvm.ptr
+  }
+  func.func private @strict_gpu_unstaged(%buffer: !llvm.ptr) {
+    %staged = llvm.mlir.addressof @strict_gpu_staged : !llvm.ptr
+    %pinned = llvm.load %staged : !llvm.ptr -> i64
+    %bufferBits = llvm.ptrtoint %buffer : !llvm.ptr to i64
+    %isPinned = arith.cmpi eq, %bufferBits, %pinned : i64
+    cf.cond_br %isPinned, ^done, ^free
+  ^free:
+    llvm.call @free(%buffer) : (!llvm.ptr) -> ()
+    cf.br ^done
+  ^done:
+    return
   }
   // 8 bit numbers whose scales per 32 all are the first (one scale per row like convrot int8 rows): strict_gpu_rows sets
   // bit 31 of the rows header (above the stride) when every row is, strict_device_eights then adds up whole rows
