@@ -29,7 +29,7 @@ Advanced Speculation
 	let positions = Qwen3.Positions(context.Length, block.Length)
 	let verified = draft.Length is 0 then model.Step(next, context.Length) else model.Steps(block, positions, 1)
 	let predictions = draft.Length is 0 then List(Number) + verified.Next else verified.Nexts
-	let accepted = Accepted(draft, predictions)
+	let accepted = Greedy.Accepted(draft, predictions)
 	let kept = Safetensors.Part(block, 0, accepted + 1, 1)
 	let truncated = accepted is draft.Length then verified else Truncated(verified, kept)
 	let remembered = Remembered(verified, kept, predictions(accepted))
@@ -83,13 +83,6 @@ IsMatch(tokens Numbers, start Number, length Number) Boolean
 		if tokens(start + index) is not tokens(last + index)
 			return false
 	true
-Accepted(draft Numbers, predictions Numbers) Number
-	Started.Accepted((4, 5, 6), (4, 5, 7, 9)) is 2
-	Started.Accepted((4, 5), (3, 5, 1)) is 0
-	mutable count = 0
-	for draft
-		count = (count is index) and (value is predictions(index)) then count + 1 else count
-	count
 Truncated(verified Qwen3, kept Numbers) Qwen3
 	Speculation(Started, context = (1)).Truncated(Started.model, (5)).blocks.First.keys.Length is 2 * 4
 	Kept.Step(2, 4).Scored.Last.IsNearlyEqual(Prompted.Step(5, 3).Step(2, 4).Scored.Last)

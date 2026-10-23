@@ -1,13 +1,29 @@
 has logger
 constant Weights = "Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf"
 constant Count = 30
-Run(folder Text)
+constant Probe = FlashNextText(Logger)
+constant Head = "NeuralNetworks/tinyqwen4expmtp.gguf"
+Run(folder Text, draft = "")
 	let path = folder + "/" + Weights
 	let started = Process.Elapsed
 	let tokenizer = Gpt2Tokens.Loaded(Gguf(path))
+	let prompt = tokenizer.Encoded(Qwen3Text.Prompt)
 	let model = FlashNext.Loaded(path, 8)
 	let loaded = Process.Elapsed
-	let generated = Generation(model).Generated(tokenizer.Encoded(Qwen3Text.Prompt), Count)
-	let milliseconds = ((Process.Elapsed - loaded) * 1000 / Count).Round(1)
+	let prefilled = model.Steps(prompt, 0)
+	let prompted = Process.Elapsed
+	let generated = Continued(prefilled, prompt, draft, Count)
+	let finished = Process.Elapsed
 	logger.Log(Qwen3Text.Prompt + tokenizer.Decoded(generated))
-	logger.Log("Qwen3.8-Flash-Next loaded in " + (loaded - started).Round(1) + " s, " + milliseconds + " ms per token")
+	logger.Log("Qwen3.8-Flash-Next loaded in " + (loaded - started).Round(1) + " s, " + Timed(loaded, prompted, finished))
+Continued(prefilled FlashNext, prompt Numbers, draft Text, count Number) Numbers
+	Probe.Continued(FlashNext.Tiny.Steps((1, 2), 0), (1, 2), "", 2) is (19, 13)
+	Probe.Continued(FlashSpeculation.Prompted, (1, 2, 3), Head, 3) is Generation(FlashNext.Tiny).Generated((1, 2, 3), 3)
+	if draft is ""
+		return Generation(prefilled).Continued(prompt.Length, count)
+	let drafter = FlashDrafter.Loaded(Gguf(draft, 8))
+	FlashSpeculation(prefilled, prompt, Greedy.Largest(prefilled.Scored), drafter).Generated(count)
+Timed(loaded Number, prompted Number, finished Number) Text
+	Probe.Timed(0, 1, 4) is "prompt 1000 ms, 100 ms per token"
+	let decoded = ((finished - prompted) * 1000 / Count).Round(1)
+	"prompt " + ((prompted - loaded) * 1000).Round + " ms, " + decoded + " ms per token"

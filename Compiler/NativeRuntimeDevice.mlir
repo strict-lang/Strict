@@ -649,6 +649,41 @@
     %logarithm = arith.mulf %binary, %natural : f32
     return %logarithm : f32
   }
+  // Sin and Cos of Degrees (32 bit numbers) also in 64 bit kernels: the degrees reduced to [-180, 180] (exact, 360 is a
+  // float) go to sin.approx and cos.approx, which are within 2^-20 of the result there
+  func.func private @strict_device_sine(%failed: !llvm.ptr, %degrees: f64) -> f64 {
+    %narrow = arith.truncf %degrees : f64 to f32
+    %sine = func.call @strict_device_sines(%failed, %narrow) : (!llvm.ptr, f32) -> f32
+    %wide = arith.extf %sine : f32 to f64
+    return %wide : f64
+  }
+  func.func private @strict_device_sines(%failed: !llvm.ptr, %degrees: f32) -> f32 {
+    %radians = func.call @strict_device_radians(%degrees) : (f32) -> f32
+    %sine = func.call @strict_device_radian_sine(%radians) : (f32) -> f32
+    return %sine : f32
+  }
+  func.func private @strict_device_cosine(%failed: !llvm.ptr, %degrees: f64) -> f64 {
+    %narrow = arith.truncf %degrees : f64 to f32
+    %cosine = func.call @strict_device_cosines(%failed, %narrow) : (!llvm.ptr, f32) -> f32
+    %wide = arith.extf %cosine : f32 to f64
+    return %wide : f64
+  }
+  func.func private @strict_device_cosines(%failed: !llvm.ptr, %degrees: f32) -> f32 {
+    %radians = func.call @strict_device_radians(%degrees) : (f32) -> f32
+    %cosine = func.call @strict_device_radian_cosine(%radians) : (f32) -> f32
+    return %cosine : f32
+  }
+  func.func private @strict_device_radians(%degrees: f32) -> f32 {
+    %turn = arith.constant 360.0 : f32
+    %perTurn = arith.constant 0.00277777785 : f32
+    %perDegree = arith.constant 0.0174532924 : f32
+    %turns = arith.mulf %degrees, %perTurn : f32
+    %whole = llvm.call_intrinsic "llvm.roundeven.f32"(%turns) : (f32) -> f32
+    %back = arith.negf %whole : f32
+    %reduced = llvm.call_intrinsic "llvm.fma.f32"(%back, %turn, %degrees) : (f32, f32, f32) -> f32
+    %radians = arith.mulf %reduced, %perDegree : f32
+    return %radians : f32
+  }
   func.func private @strict_device_power(%failed: !llvm.ptr, %left: f64, %right: f64) -> f64 {
     %one = arith.constant 1 : i64
     llvm.store %one, %failed : i64, !llvm.ptr

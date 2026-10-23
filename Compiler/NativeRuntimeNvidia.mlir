@@ -35,6 +35,14 @@
     %binary = llvm.call_intrinsic "llvm.nvvm.lg2.approx.f"(%number) : (f32) -> f32
     return %binary : f32
   }
+  func.func private @strict_device_radian_sine(%radians: f32) -> f32 attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+    %sine = llvm.call_intrinsic "llvm.nvvm.sin.approx.f"(%radians) : (f32) -> f32
+    return %sine : f32
+  }
+  func.func private @strict_device_radian_cosine(%radians: f32) -> f32 attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+    %cosine = llvm.call_intrinsic "llvm.nvvm.cos.approx.f"(%radians) : (f32) -> f32
+    return %cosine : f32
+  }
   func.func private @strict_device_rounded(%number: f32) -> i32 attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %rounded = llvm.call_intrinsic "llvm.nvvm.f2i.rn"(%number) : (f32) -> i32
     return %rounded : i32

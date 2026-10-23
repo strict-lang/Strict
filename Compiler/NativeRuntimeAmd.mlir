@@ -303,6 +303,14 @@
     %binary = llvm.call_intrinsic "llvm.log2.f32"(%number) : (f32) -> f32
     return %binary : f32
   }
+  func.func private @strict_device_radian_sine(%radians: f32) -> f32 attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+    %sine = llvm.call_intrinsic "llvm.sin.f32"(%radians) : (f32) -> f32
+    return %sine : f32
+  }
+  func.func private @strict_device_radian_cosine(%radians: f32) -> f32 attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+    %cosine = llvm.call_intrinsic "llvm.cos.f32"(%radians) : (f32) -> f32
+    return %cosine : f32
+  }
   func.func private @strict_device_rounded(%number: f32) -> i32 attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %even = llvm.call_intrinsic "llvm.rint.f32"(%number) : (f32) -> f32
     %rounded = arith.fptosi %even : f32 to i32
