@@ -15,10 +15,4 @@ Forward(input Numbers) Numbers
 Outputs(chosen Numbers, input Numbers) Numbers
 	Mixture.Outputs((1, 0), Small * 50)(261).IsNearlyEqual(12.111, 0.05)
 	Mixture.Outputs((1, 0, 0, 1), Small + Small).Length is 1024
-	let used = experts.used
-	let hidden = input.Length * used / chosen.Length
-	mutable outputs = List(Number)
-	for chosen.Length / used
-		let token = input.Slice(index * hidden, hidden)
-		outputs = outputs + model.ExpertOutputs(prefix, chosen.Slice(index * used, used), token)
-	outputs
+	model.ExpertOutputs(prefix, chosen, input)
