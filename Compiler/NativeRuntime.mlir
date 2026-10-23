@@ -9784,7 +9784,10 @@
     %wholeSlot = llvm.mlir.addressof @strict_gpu_whole_slot : !llvm.ptr
     %functionBits = llvm.ptrtoint %function : !llvm.ptr to i64
     %isEights = func.call @strict_gpu_is_kernel(%eightsSlot, %functionBits) : (!llvm.ptr, i64) -> i1
-    %isWhole = func.call @strict_gpu_is_kernel(%wholeSlot, %functionBits) : (!llvm.ptr, i64) -> i1
+    %isWholeOld = func.call @strict_gpu_is_kernel(%wholeSlot, %functionBits) : (!llvm.ptr, i64) -> i1
+    %fastWholeSlot = llvm.mlir.addressof @strict_gpu_whole_fast_slot : !llvm.ptr
+    %isWholeFast = func.call @strict_gpu_is_kernel(%fastWholeSlot, %functionBits) : (!llvm.ptr, i64) -> i1
+    %isWhole = arith.ori %isWholeOld, %isWholeFast : i1
     %eightsShared = arith.constant 45056 : i32
     %wholeShared = arith.constant 73728 : i32
     %isAmd = func.call @strict_gpu_is_amd() : () -> i1
@@ -12687,6 +12690,26 @@
   llvm.mlir.global internal @strict_gpu_eights_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   llvm.mlir.global internal constant @strict_gpu_whole_name("strict_device_whole\00strict_device_wholes\00") : !llvm.array<41 x i8>
   llvm.mlir.global internal @strict_gpu_whole_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  llvm.mlir.global internal constant @strict_gpu_whole_fast_name("strict_device_whole\00strict_device_wholes_fast\00") : !llvm.array<46 x i8>
+  llvm.mlir.global internal @strict_gpu_whole_fast_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  func.func private @strict_gpu_whole_target(%rows: f64, %rowCount: f64, %wanted: i1) -> (!llvm.ptr, !llvm.ptr) {
+    %name = llvm.mlir.addressof @strict_gpu_whole_name : !llvm.ptr
+    %slot = llvm.mlir.addressof @strict_gpu_whole_slot : !llvm.ptr
+    cf.cond_br %wanted, ^check, ^done(%name, %slot : !llvm.ptr, !llvm.ptr)
+  ^check:
+    %three = arith.constant 3 : i64
+    %four = arith.constant 4 : i64
+    %view = llvm.alloca %three x i64 : (i64) -> !llvm.ptr
+    %count = arith.fptosi %rowCount : f64 to i64
+    %uniform = func.call @strict_gpu_cached(%rows, %four, %count, %view) : (f64, i64, i64, !llvm.ptr) -> i1
+    %fastName = llvm.mlir.addressof @strict_gpu_whole_fast_name : !llvm.ptr
+    %fastSlot = llvm.mlir.addressof @strict_gpu_whole_fast_slot : !llvm.ptr
+    %chosenName = llvm.select %uniform, %fastName, %name : i1, !llvm.ptr
+    %chosenSlot = llvm.select %uniform, %fastSlot, %slot : i1, !llvm.ptr
+    cf.br ^done(%chosenName, %chosenSlot : !llvm.ptr, !llvm.ptr)
+  ^done(%resultName: !llvm.ptr, %resultSlot: !llvm.ptr):
+    return %resultName, %resultSlot : !llvm.ptr, !llvm.ptr
+  }
   // the dot products of `Batch.Sums` for several tokens (strict_device_blocks, 64 or more with 8 bit tokens and Q4_K or Q6_K
   // rows strict_device_tiles, with 8 bit rows strict_device_eights, strict_device_whole when the first has one scale from
   // sm_80 on, up to 4 tokens strict_device_tokens): every row with the numbers of every token (token t at
@@ -12748,8 +12771,7 @@
     %true = arith.constant true
     %pipelined = arith.xori %beforeAmpere, %true : i1
     %wholeRows = arith.andi %oneScale, %pipelined : i1
-    %wholeName = llvm.mlir.addressof @strict_gpu_whole_name : !llvm.ptr
-    %wholeSlot = llvm.mlir.addressof @strict_gpu_whole_slot : !llvm.ptr
+    %wholeName, %wholeSlot = func.call @strict_gpu_whole_target(%rows, %rowCount, %wholeRows) : (f64, f64, i1) -> (!llvm.ptr, !llvm.ptr)
     %wholeLanes = arith.constant -4096 : i64
     %eightsChosenName = llvm.select %wholeRows, %wholeName, %eightsName : i1, !llvm.ptr
     %eightsChosenSlot = llvm.select %wholeRows, %wholeSlot, %eightsSlot : i1, !llvm.ptr
@@ -13461,7 +13483,9 @@
     %keeping = arith.andi %put, %big : i1
     cf.cond_br %keeping, ^remember, ^copiedRows
   ^remember:
-    func.call @strict_gpu_remember(%rows, %two, %count, %out, %none) : (f64, i64, i64, !llvm.ptr, i64) -> ()
+    %uniformKind = arith.constant 4 : i64
+    %rowKind = arith.select %uniformRows, %uniformKind, %two : i64
+    func.call @strict_gpu_remember(%rows, %rowKind, %count, %out, %none) : (f64, i64, i64, !llvm.ptr, i64) -> ()
     llvm.store %none, %buffer : i64, !llvm.ptr
     return %true : i1
   ^copiedRows:
@@ -13706,7 +13730,13 @@
     %countSlot = llvm.getelementptr %entry[6] : (!llvm.ptr) -> !llvm.ptr, i64
     %storedCount = llvm.load %countSlot : !llvm.ptr -> i64
     %sameList = arith.cmpi eq, %stored, %listBits : i64
-    %sameKind = arith.cmpi eq, %storedKind, %kind : i64
+    %rowsKind = arith.constant 2 : i64
+    %uniformKind = arith.constant 4 : i64
+    %exactKind = arith.cmpi eq, %storedKind, %kind : i64
+    %wantedRows = arith.cmpi eq, %kind, %rowsKind : i64
+    %storedUniform = arith.cmpi eq, %storedKind, %uniformKind : i64
+    %uniformRows = arith.andi %wantedRows, %storedUniform : i1
+    %sameKind = arith.ori %exactKind, %uniformRows : i1
     %sameCount = arith.cmpi eq, %storedCount, %count : i64
     %sameShape = arith.andi %sameKind, %sameCount : i1
     %found = arith.andi %sameList, %sameShape : i1
