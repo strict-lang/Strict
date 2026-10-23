@@ -11,14 +11,11 @@
 #pragma STDC FP_CONTRACT OFF
 #ifdef _WIN32
 #include <windows.h>
-#define strict_seek _fseeki64
 #define strict_tell _ftelli64
 #else
 #include <fcntl.h>
 #include <pthread.h>
-#include <sys/mman.h>
 #include <unistd.h>
-#define strict_seek fseeko
 #define strict_tell ftello
 #endif
 
@@ -30,7 +27,6 @@ typedef struct { char* key; char* value; } Entry;
 typedef struct { char* name; uint32_t type; uint32_t dimensions; uint64_t shape[4]; uint64_t offset; uint32_t shard; uint64_t start; } Tensor;
 typedef struct { FILE* file; int failed; } Reader;
 typedef struct { char* data; uint64_t length; uint64_t capacity; } Builder;
-typedef struct { const unsigned char* data; uint64_t size; } Mapping;
 static char* loadedPath = 0;
 static Entry* entries = 0;
 static uint64_t entryCount = 0;
@@ -38,7 +34,6 @@ static Tensor* tensors = 0;
 static uint64_t tensorCount = 0;
 static char** shardPaths = 0;
 static uint32_t shardCount = 0;
-static Mapping* mappings = 0;
 
 static void Read(Reader* reader, void* target, uint64_t size)
 {
@@ -132,42 +127,64 @@ static char* Value(Reader* reader)
 }
 
 #ifdef _WIN32
-/* The whole file at path mapped read only (pages load when used), no data if it can't be mapped. */
-static Mapping MappedFile(const char* path)
+typedef HANDLE Opening;
+/* The file at path opened for reads at any offset from any thread, its size, 0 if it can't be opened. */
+static Opening OpenedFile(const char* path, uint64_t* size)
 {
-	Mapping mapping = { 0, 0 };
-	LARGE_INTEGER size;
-	HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+	LARGE_INTEGER length;
+	HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, 0);
 	if (file == INVALID_HANDLE_VALUE)
-		return mapping;
-	int isSized = GetFileSizeEx(file, &size) && size.QuadPart > 0;
-	HANDLE view = isSized ? CreateFileMappingA(file, 0, PAGE_READONLY, 0, 0, 0) : 0;
-	CloseHandle(file);
-	mapping.data = view ? MapViewOfFile(view, FILE_MAP_READ, 0, 0, 0) : 0;
-	mapping.size = mapping.data ? (uint64_t)size.QuadPart : 0;
-	if (view)
-		CloseHandle(view);
-	return mapping;
+		return 0;
+	*size = GetFileSizeEx(file, &length) ? (uint64_t)length.QuadPart : 0;
+	return file;
 }
 
-static void Unmapped(Mapping mapping) { UnmapViewOfFile(mapping.data); }
-#else
-static Mapping MappedFile(const char* path)
+static void Closed(Opening file) { CloseHandle(file); }
+
+/* Reads bytes at offset of the file into target, threads read at the same time, in parts of at most 1 GB. */
+static int ReadFrom(Opening file, uint64_t offset, unsigned char* target, uint64_t bytes)
 {
-	Mapping mapping = { 0, 0 };
+	int isRead = 1;
+	HANDLE event = CreateEventA(0, TRUE, FALSE, 0);
+	for (uint64_t done = 0; isRead && done < bytes;)
+	{
+		DWORD part = bytes - done > 1073741824 ? 1073741824 : (DWORD)(bytes - done), read = 0;
+		OVERLAPPED overlapped = { 0 };
+		overlapped.Offset = (DWORD)(offset + done);
+		overlapped.OffsetHigh = (DWORD)((offset + done) >> 32);
+		overlapped.hEvent = event;
+		int isStarted = ReadFile(file, target + done, part, 0, &overlapped) || GetLastError() == ERROR_IO_PENDING;
+		isRead = isStarted && GetOverlappedResult(file, &overlapped, &read, TRUE) && read > 0;
+		done += read;
+	}
+	CloseHandle(event);
+	return isRead;
+}
+#else
+typedef intptr_t Opening;
+/* The file at path opened for reads (its descriptor + 1), its size, 0 if it can't be opened. */
+static Opening OpenedFile(const char* path, uint64_t* size)
+{
 	int file = open(path, O_RDONLY);
 	if (file < 0)
-		return mapping;
-	off_t size = lseek(file, 0, SEEK_END);
-	void* data = size > 0 ? mmap(0, (size_t)size, PROT_READ, MAP_SHARED, file, 0) : MAP_FAILED;
-	close(file);
-	mapping.data = data == MAP_FAILED ? 0 : data;
-	mapping.size = mapping.data ? (uint64_t)size : 0;
-	return mapping;
+		return 0;
+	off_t length = lseek(file, 0, SEEK_END);
+	*size = length > 0 ? (uint64_t)length : 0;
+	return file + 1;
 }
 
-static void Unmapped(Mapping mapping) { munmap((void*)mapping.data, (size_t)mapping.size); }
+static void Closed(Opening file) { close((int)file - 1); }
+
+static int ReadFrom(Opening file, uint64_t offset, unsigned char* target, uint64_t bytes)
+{
+	ssize_t read = 1;
+	for (uint64_t done = 0; read > 0 && done < bytes; done += (uint64_t)read)
+		read = pread((int)file - 1, target + done, bytes - done, (off_t)(offset + done));
+	return read > 0;
+}
 #endif
+static Opening* openings = 0;
+static uint64_t* openingSizes = 0;
 
 static void Forget(void)
 {
@@ -181,11 +198,13 @@ static void Forget(void)
 	for (uint32_t shard = 0; shard < shardCount; shard++)
 	{
 		free(shardPaths[shard]);
-		if (mappings && mappings[shard].data)
-			Unmapped(mappings[shard]);
+		if (openings && openings[shard])
+			Closed(openings[shard]);
 	}
-	free(mappings);
-	mappings = 0;
+	free(openings);
+	free(openingSizes);
+	openings = 0;
+	openingSizes = 0;
 	free(entries);
 	free(tensors);
 	free(shardPaths);
@@ -451,6 +470,26 @@ static void Decoded(uint32_t type, const unsigned char* block, float* y)
 		DecodedQ6K(block, y);
 }
 
+static uint64_t Elements(const Tensor* tensor)
+{
+	uint64_t elements = 1;
+	for (uint32_t index = 0; index < tensor->dimensions; index++)
+		elements *= tensor->shape[index];
+	return elements;
+}
+
+
+/* Whether the file of the tensor holds all of its data, the file is open for reads then. */
+static int Covered(const Tensor* tensor)
+{
+	if (!openings)
+		openings = calloc(shardCount, sizeof(Opening)), openingSizes = calloc(shardCount, sizeof(uint64_t));
+	if (!openings[tensor->shard])
+		openings[tensor->shard] = OpenedFile(shardPaths[tensor->shard], &openingSizes[tensor->shard]);
+	uint64_t end = tensor->start + tensor->offset + Elements(tensor) / BlockNumbers(tensor->type) * BlockBytes(tensor->type);
+	return openings[tensor->shard] && end <= openingSizes[tensor->shard];
+}
+
 /* Reads the blocks of the tensor as they are stored, 0 and the failure name if it can't. */
 static unsigned char* Blocks(const Tensor* tensor, uint64_t count, const char** failure)
 {
@@ -461,14 +500,8 @@ static unsigned char* Blocks(const Tensor* tensor, uint64_t count, const char** 
 		*failure = "OnlyF32F16BF16Q8_0Q5_1Q4_KQ5_KQ6_KAndIQ4_NLTensorsAreSupported";
 		return 0;
 	}
-	FILE* file = fopen(shardPaths[tensor->shard], "rb");
 	unsigned char* raw = malloc(blocks * blockBytes + 1);
-	size_t read = 0;
-	if (file && strict_seek(file, (int64_t)(tensor->start + tensor->offset), SEEK_SET) == 0)
-		read = fread(raw, blockBytes, blocks, file);
-	if (file)
-		fclose(file);
-	if (read == blocks)
+	if (Covered(tensor) && ReadFrom(openings[tensor->shard], tensor->start + tensor->offset, raw, blocks * blockBytes))
 		return raw;
 	free(raw);
 	*failure = "GgufTensorDataTruncated";
@@ -494,14 +527,6 @@ static const Tensor* Requested(double path, double name, uint32_t dimensions, co
 	if (!*failure && (!tensor || (dimensions && tensor->dimensions != dimensions)))
 		*failure = "GgufTensorNotFound";
 	return *failure ? 0 : tensor;
-}
-
-static uint64_t Elements(const Tensor* tensor)
-{
-	uint64_t elements = 1;
-	for (uint32_t index = 0; index < tensor->dimensions; index++)
-		elements *= tensor->shape[index];
-	return elements;
 }
 
 /* All numbers of the tensor name as doubles. */
@@ -615,18 +640,6 @@ static Product Multiplied(uint32_t type)
 	return type == Q4_K ? q4k : type == Q5_K ? q5k : type == Q5_1 ? q51 : type == Q8_0 ? q80 : none;
 }
 
-/* The data of the tensor in its mapped file, 0 if the file can't be mapped or is shorter than the tensor. */
-static const unsigned char* Mapped(const Tensor* tensor)
-{
-	if (!mappings)
-		mappings = calloc(shardCount, sizeof(Mapping));
-	if (!mappings[tensor->shard].data)
-		mappings[tensor->shard] = MappedFile(shardPaths[tensor->shard]);
-	uint64_t start = tensor->start + tensor->offset;
-	uint64_t end = start + Elements(tensor) / BlockNumbers(tensor->type) * BlockBytes(tensor->type);
-	return end <= mappings[tensor->shard].size ? mappings[tensor->shard].data + start : 0;
-}
-
 /* The stacked expert matrices name (columns, rows, experts) of the layer prefix, of a type ggml multiplies. */
 static const Tensor* Stacked(double path, double prefix, const char* name, const char** failure)
 {
@@ -638,7 +651,7 @@ static const Tensor* Stacked(double path, double prefix, const char* name, const
 		*failure = "GgufExpertsNotFound";
 	else if (!*failure && (!Multiplied(tensor->type).dot || tensor->shape[0] % Multiplied(tensor->type).numbers != 0))
 		*failure = "OnlyQ4_KQ5_KQ5_1AndQ8_0ExpertsAreSupported";
-	else if (!*failure && !Mapped(tensor))
+	else if (!*failure && !Covered(tensor))
 		*failure = "GgufTensorDataTruncated";
 	return *failure ? 0 : tensor;
 }
@@ -779,22 +792,50 @@ static void Parallel(void (*work)(void*, uint64_t), void* context, uint64_t coun
 enum { RowChunk = 16 };
 typedef struct
 {
-	const unsigned char* rows;
-	uint64_t rowBytes, width, height;
+	unsigned char* rows;
+	uint64_t rowBytes, width, height, offset;
+	Opening file;
 	Dot dot;
 	const void* input;
 	float* output;
 } Task;
 typedef struct { const Task* tasks; uint64_t chunks; } Job;
 
-/* The rows of the matrix of expert in stacked times the quantized input into output. */
+/* The rows of the matrix of expert in stacked (read by Staged) times the quantized input into output. */
 static Task Rows(const Tensor* stacked, uint64_t expert, const void* input, float* output)
 {
 	uint64_t width = stacked->shape[0], height = stacked->shape[1];
 	uint64_t rowBytes = width / BlockNumbers(stacked->type) * BlockBytes(stacked->type);
-	const unsigned char* rows = Mapped(stacked) + expert * height * rowBytes;
-	Task task = { rows, rowBytes, width, height, Multiplied(stacked->type).dot, input, output };
+	uint64_t offset = stacked->start + stacked->offset + expert * height * rowBytes;
+	Task task = { 0, rowBytes, width, height, offset, openings[stacked->shard], Multiplied(stacked->type).dot, input, output };
 	return task;
+}
+
+static atomic_int stagingFailed;
+
+static void Fetched(void* context, uint64_t item)
+{
+	Task* task = &((Task*)context)[item];
+	if (!ReadFrom(task->file, task->offset, task->rows, task->height * task->rowBytes))
+		atomic_store(&stagingFailed, 1);
+}
+
+/* Reads the rows of all tasks into one buffer kept for the next call, one read per matrix on all threads: reading
+   them from the file cache is copying, the pages of a mapping fault one by one (40 to 120 thousand a second). */
+static int Staged(Task* tasks, uint64_t count)
+{
+	static unsigned char* staged = 0;
+	static uint64_t stagedBytes = 0;
+	uint64_t total = 0;
+	for (uint64_t index = 0; index < count; index++)
+		total += tasks[index].height * tasks[index].rowBytes;
+	if (total > stagedBytes)
+		free(staged), staged = malloc(total), stagedBytes = total;
+	for (uint64_t index = 0, at = 0; index < count; at += tasks[index].height * tasks[index].rowBytes, index++)
+		tasks[index].rows = staged + at;
+	atomic_store(&stagingFailed, 0);
+	Parallel(Fetched, tasks, count);
+	return !atomic_load(&stagingFailed);
 }
 
 /* RowChunk rows of a task of the job, one ggml dot product per row. */
@@ -827,7 +868,7 @@ static unsigned char* Activated(const Tensor* down, float* gated, const float* u
 }
 
 /* The outputs of the chosen experts of the layer prefix for one input one after the other like llama.cpp's CPU backend
-   computes them: down(silu(gate input) * up input), each product ggml's dot product of rows as stored (mapped from the
+   computes them: down(silu(gate input) * up input), each product ggml's dot product of rows as stored (read from the
    files, Q4_K, Q5_K, Q5_1 or Q8_0) with the input quantized for them, the rows spread over all threads. */
 STRICT_EXPORT double GgufFile_ExpertOutputs(double self, double path, double prefix, double chosen, double input)
 {
@@ -850,21 +891,25 @@ STRICT_EXPORT double GgufFile_ExpertOutputs(double self, double path, double pre
 	for (uint64_t index = 0; index < hidden; index++)
 		floats[index] = (float)values->items[index];
 	void* quantized = Quantized(gate->type, floats, hidden);
-	Task* tasks = malloc((count * 2 + 1) * sizeof(Task));
+	Task* tasks = malloc((count * 3 + 1) * sizeof(Task));
 	for (uint64_t index = 0; index < count; index++)
 	{
-		tasks[index * 2] = Rows(gate, (uint64_t)experts->items[index], quantized, gated + index * width);
-		tasks[index * 2 + 1] = Rows(up, (uint64_t)experts->items[index], quantized, upped + index * width);
+		uint64_t expert = (uint64_t)experts->items[index];
+		tasks[index * 2] = Rows(gate, expert, quantized, gated + index * width);
+		tasks[index * 2 + 1] = Rows(up, expert, quantized, upped + index * width);
+		tasks[count * 2 + index] = Rows(down, expert, 0, downs + index * hidden);
+	}
+	if (!Staged(tasks, count * 3))
+	{
+		free(tasks), free(quantized), free(floats);
+		return strict_fail("GgufTensorDataTruncated");
 	}
 	Ran(tasks, count * 2);
 	unsigned char* activated = Activated(down, gated, upped, count);
 	uint64_t activatedBytes = width / Multiplied(down->type).numbers * Multiplied(down->type).bytes;
 	for (uint64_t index = 0; index < count; index++)
-	{
-		const void* input = activated + index * activatedBytes;
-		tasks[index] = Rows(down, (uint64_t)experts->items[index], input, downs + index * hidden);
-	}
-	Ran(tasks, count);
+		tasks[count * 2 + index].input = activated + index * activatedBytes;
+	Ran(tasks + count * 2, count);
 	free(outputs);
 	outputs = malloc(sizeof(strict_numbers) + count * hidden * sizeof(double));
 	outputs->count = (double)(count * hidden);
@@ -877,8 +922,8 @@ STRICT_EXPORT double GgufFile_ExpertOutputs(double self, double path, double pre
 	return strict_numbers_result(outputs);
 }
 
-/* The numbers of the rows (the contiguous dimension) of the tensor name one after the other, decoded like Values from
-   the mapped file, so a huge table (the n-gram embeddings of Qwen3.8-Flash-Next) is never loaded as a whole. */
+/* The numbers of the rows (the contiguous dimension) of the tensor name one after the other, decoded like Values, read
+   row by row, so a huge table (the n-gram embeddings of Qwen3.8-Flash-Next) is never loaded as a whole. */
 STRICT_EXPORT double GgufFile_Picked(double self, double path, double name, double rows)
 {
 	static strict_numbers* picked = 0;
@@ -889,8 +934,7 @@ STRICT_EXPORT double GgufFile_Picked(double self, double path, double name, doub
 	uint64_t width = tensor ? tensor->shape[0] : 0, height = tensor ? Elements(tensor) / width : 0;
 	if (tensor && (BlockBytes(type) == 0 || width % BlockNumbers(type) != 0))
 		failure = "OnlyF32F16BF16Q8_0Q5_1Q4_KQ5_KQ6_KAndIQ4_NLTensorsAreSupported";
-	const unsigned char* data = failure ? 0 : Mapped(tensor);
-	failure = failure ? failure : data ? 0 : "GgufTensorDataTruncated";
+	failure = failure ? failure : Covered(tensor) ? 0 : "GgufTensorDataTruncated";
 	for (uint64_t index = 0; !failure && index < (uint64_t)chosen->count; index++)
 		if (!IsIndex(chosen->items[index], height))
 			failure = "GgufRowOutOfRange";
@@ -899,16 +943,22 @@ STRICT_EXPORT double GgufFile_Picked(double self, double path, double name, doub
 	uint64_t count = (uint64_t)chosen->count, blockNumbers = BlockNumbers(type);
 	uint64_t rowBytes = width / blockNumbers * BlockBytes(type);
 	float decoded[256];
+	unsigned char* row = malloc(rowBytes + 1);
 	free(picked);
 	picked = malloc(sizeof(strict_numbers) + count * width * sizeof(double));
 	picked->count = (double)(count * width);
 	for (uint64_t index = 0; index < count; index++)
+	{
+		uint64_t offset = tensor->start + tensor->offset + (uint64_t)chosen->items[index] * rowBytes;
+		if (!ReadFrom(openings[tensor->shard], offset, row, rowBytes))
+			memset(row, 0, rowBytes), failure = "GgufTensorDataTruncated";
 		for (uint64_t column = 0; column < width; column += blockNumbers)
 		{
-			const unsigned char* row = data + (uint64_t)chosen->items[index] * rowBytes;
 			Decoded(type, row + column / blockNumbers * BlockBytes(type), decoded);
 			for (uint64_t number = 0; number < blockNumbers; number++)
 				picked->items[index * width + column + number] = decoded[number];
 		}
-	return strict_numbers_result(picked);
+	}
+	free(row);
+	return failure ? strict_fail(failure) : strict_numbers_result(picked);
 }
