@@ -8,6 +8,7 @@ constant Types = " : (!llvm.ptr, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, i64, 
 constant Offsets = (InstructionType.LoadVariableToRegister, InstructionType.LoadVariableToRegister, InstructionType.LoadVariableToRegister, InstructionType.Add, InstructionType.IndexCall, InstructionType.CheckError, InstructionType.LoadVariableToRegister, InstructionType.LoadVariableToRegister, InstructionType.Add, InstructionType.IndexCall, InstructionType.CheckError, InstructionType.Multiply, InstructionType.Add, InstructionType.StoreRegisterToVariable, InstructionType.LoopEnd)
 constant Lanes = ", %lane, %lanes)"
 constant OffsetTypes = " : (!llvm.ptr, !llvm.ptr, i64, i64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64) -> f32"
+constant SquareTypes = " : (!llvm.ptr, !llvm.ptr, i64, i64, i64, i64, i64, i64) -> f32"
 IsDot Boolean
 	Summing.IsDot
 	MlirDeviceDot(MlirDeviceStatements.Summed, 2).IsDot is false
@@ -72,9 +73,11 @@ IsCovered Boolean
 Emitted Texts
 	Text.Combine(Summing.Emitted).IndexOf("@strict_device_dots(%failed, %d2rd, %d2rb, %d2rn, %d2od") > 0
 	Summing.Emitted.Last.StartsWith("    llvm.store %d2s1, %v_sum : f32, !llvm.ptr")
-	Text.Combine(Squaring.Emitted).IndexOf("offset_dots(%failed, %d2xd, %d2xb, %d2xn, %d2ai, %d2yd") > 0
+	Text.Combine(Squaring.Emitted).IndexOf("@strict_device_squares(%failed, %d2xd, %d2xb, %d2xn, %d2ci, %d2ai") > 0
 	if function.method.LoopEndOf(at) is at + 15
-		return OffsetEmitted
+		let reads = function.method.instructions(at + 5).texts(0) is function.method.instructions(at + 10).texts(0)
+		let starts = function.method.instructions(at + 2).texts(0) is function.method.instructions(at + 7).texts(0)
+		return reads and starts then SquaredEmitted else OffsetEmitted
 	let other = "%v_" + function.method.instructions(at + 4).texts(0)
 	let rows = Temp("rd") + ", " + Temp("rb") + ", " + Temp("rn") + ", "
 	let operands = rows + Temp("od") + ", " + Temp("ob") + ", " + Temp("on") + ", %lane, %lanes)"
@@ -89,6 +92,15 @@ OffsetEmitted Texts
 	let second = Temp("yd") + ", " + Temp("yb") + ", " + Temp("yn") + ", " + Temp("bi") + ", " + Temp("ci") + Lanes
 	let call = "    " + Temp("") + " = func.call @strict_device_offset_dots(%failed, " + first + second + OffsetTypes
 	parts + counted + Whole("c", "%r" + instructions(at).payload(0)) + call + Accumulated
+SquaredEmitted Texts
+	Squaring.SquaredEmitted.Last.StartsWith("    llvm.store %d2s1, %v_sum : f32, !llvm.ptr")
+	let instructions = function.method.instructions
+	let parts = Parts("x", "%v_" + instructions(at + 5).texts(0))
+	let counted = Whole("a", "%v_" + instructions(at + 2).texts(0)) + Whole("c", "%r" + instructions(at).payload(0))
+	let first = Temp("xd") + ", " + Temp("xb") + ", " + Temp("xn") + ", "
+	let operands = "%failed, " + first + Temp("ci") + ", " + Temp("ai") + Lanes + SquareTypes
+	let call = List(Text) + ("    " + Temp("") + " = func.call @strict_device_squares(" + operands)
+	parts + counted + call + Accumulated
 Operands Texts
 	Summing.Operands is ("input")
 	Squaring.Operands is ("input", "input")
