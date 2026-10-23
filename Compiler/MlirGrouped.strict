@@ -26,7 +26,7 @@ Launched Texts
 	let groups = MlirGroups(function, position)
 	let call = groups.Call
 	if call < 0
-		return List(Text) + MlirTyped.Integer.Constant(name, "0")
+		return List(Text) + MlirTyped.Integer.Constant(name, MlirBatched(function, position).IsUsed then "-4" else "0")
 	(function.Load(name + "d", "%v_" + groups.Size(call)), "    " + name + " = arith.fptosi " + name + "d : f64 to i64")
 Memos Texts
 	MlirGrouped(MlirGroups.Norming.function, 0).Memos.First is "    %memo11 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"

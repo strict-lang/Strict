@@ -1,0 +1,43 @@
+has function MlirFunction
+has position Number
+IsUsed Boolean
+	if IsPlain is false
+		return false
+	let reads = Reads
+	if reads.Length is not 2
+		return false
+	let name = function.method.instructions(reads.First).texts(0)
+	let linear = MlirBatchLinear(MlirFunction(function, Float = "f32"), position).IsLinear
+	IsSafe and linear and (function.method.instructions(reads.Last).texts(0) is name)
+IsPlain Boolean
+	if function.method.instructions(position).kind is not InstructionType.LoopBegin
+		return false
+	let loops = MlirLoops(function, position)
+	if (loops.Collection is not "") or (loops.IsCollecting is false) or (function.Group >= 0)
+		return false
+	(MlirGroups(function, position).Call < 0) and (MlirLayout(function).Packed(position) is in (0, 17))
+Reads Numbers
+	mutable reads = List(Mutable(Number))
+	for Range(position + 1, function.method.LoopEndOf(position))
+		if function.method.instructions(value).kind is InstructionType.IndexCall
+			reads.Add(value)
+	reads
+IsSafe Boolean
+	for Range(position + 1, function.method.LoopEndOf(position))
+		let entry = function.method.instructions(value)
+		if IsAllowed(value, entry) is false
+			return false
+	true
+IsAllowed(at Number, entry InstructionEntry) Boolean
+	if entry.kind is InstructionType.IndexCall
+		return IsRead(at, entry)
+	if entry.kind is InstructionType.Invoke
+		return (at > Reads.Last) or (entry.texts(1) is in ("Floor", "Length"))
+	let moved = entry.kind is in MlirGpuCheck.Moves
+	let calculated = (entry.kind > InstructionType.StoreSeparator) and (entry.kind < InstructionType.ArithmeticSeparator)
+	moved or calculated or (entry.kind is in (InstructionType.CheckError, InstructionType.InvokeWriteToList))
+IsRead(at Number, entry InstructionEntry) Boolean
+	let kind = MlirKinds(function).VariableKind(at, entry.texts(0))
+	let flat = MlirDeviceStatements(function, at).IsList(kind)
+	let free = entry.texts(0) is in MlirGpuCheck(function, position).Free
+	flat and free and (MlirFeeding(function, at).IsFeeding(at, entry.payload(0)) is false)

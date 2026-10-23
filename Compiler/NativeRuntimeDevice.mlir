@@ -436,6 +436,144 @@
     return %number : f32
   }
   // a number of a 32 bit kernel into its result in the format strict_gpu_run chose (17 bfloat16, else 32 bit floats)
+  func.func private @strict_device_cached_four(%failed: !llvm.ptr, %data: !llvm.ptr, %bits: i64, %count: i64, %indexes: !llvm.ptr, %cached: !llvm.ptr, %active: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %three = arith.constant 3 : i64
+    %four = arith.constant 4 : i64
+    %singleBits = arith.constant 32 : i64
+    %brainBits = arith.constant 17 : i64
+    %halfBits = arith.constant 16 : i64
+    %doubleBits = arith.constant 64 : i64
+    %full = arith.cmpi eq, %active, %four : i64
+    cf.cond_br %full, ^checked, ^scalarStart
+  ^checked:
+    %index0 = llvm.load %indexes : !llvm.ptr -> i64
+    %pointer1 = llvm.getelementptr %indexes[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %pointer2 = llvm.getelementptr %indexes[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %pointer3 = llvm.getelementptr %indexes[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %index1 = llvm.load %pointer1 : !llvm.ptr -> i64
+    %index2 = llvm.load %pointer2 : !llvm.ptr -> i64
+    %index3 = llvm.load %pointer3 : !llvm.ptr -> i64
+    %next1 = arith.addi %index0, %one : i64
+    %next2 = arith.addi %index0, %two : i64
+    %next3 = arith.addi %index0, %three : i64
+    %same1 = arith.cmpi eq, %index1, %next1 : i64
+    %same2 = arith.cmpi eq, %index2, %next2 : i64
+    %same3 = arith.cmpi eq, %index3, %next3 : i64
+    %firsts = arith.andi %same1, %same2 : i1
+    %consecutive = arith.andi %firsts, %same3 : i1
+    %rest = arith.andi %index0, %three : i64
+    %aligned = arith.cmpi eq, %rest, %zero : i64
+    %nonnegative = arith.cmpi sge, %index0, %zero : i64
+    %inside = arith.cmpi ult, %next3, %count : i64
+    %bounded = arith.andi %nonnegative, %inside : i1
+    %whole = arith.andi %aligned, %full : i1
+    %linear = arith.andi %consecutive, %whole : i1
+    %usable = arith.andi %linear, %bounded : i1
+    cf.cond_br %usable, ^vector, ^scalarStart
+  ^vector:
+    cf.switch %bits : i64, [
+      default: ^scalarStart,
+      32: ^single,
+      17: ^brain,
+      16: ^half,
+      64: ^double
+    ]
+  ^single:
+    %singlePointer = llvm.getelementptr %data[%index0] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %singles = llvm.load %singlePointer {alignment = 16 : i64} : !llvm.ptr -> vector<4xf32>
+    cf.br ^stored(%singles : vector<4xf32>)
+  ^brain:
+    %brainPointer = llvm.getelementptr %data[%index0] : (!llvm.ptr, i64) -> !llvm.ptr, bf16
+    %brains = llvm.load %brainPointer {alignment = 8 : i64} : !llvm.ptr -> vector<4xbf16>
+    %fromBrains = arith.extf %brains : vector<4xbf16> to vector<4xf32>
+    cf.br ^stored(%fromBrains : vector<4xf32>)
+  ^half:
+    %halfPointer = llvm.getelementptr %data[%index0] : (!llvm.ptr, i64) -> !llvm.ptr, f16
+    %halves = llvm.load %halfPointer {alignment = 8 : i64} : !llvm.ptr -> vector<4xf16>
+    %fromHalves = arith.extf %halves : vector<4xf16> to vector<4xf32>
+    cf.br ^stored(%fromHalves : vector<4xf32>)
+  ^double:
+    %doublePointer = llvm.getelementptr %data[%index0] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %doubles = llvm.load %doublePointer {alignment = 16 : i64} : !llvm.ptr -> vector<4xf64>
+    %fromDoubles = arith.truncf %doubles : vector<4xf64> to vector<4xf32>
+    cf.br ^stored(%fromDoubles : vector<4xf32>)
+  ^stored(%numbers: vector<4xf32>):
+    llvm.store %numbers, %cached : vector<4xf32>, !llvm.ptr
+    return
+  ^scalarStart:
+    cf.br ^scalar(%zero : i64)
+  ^scalar(%lane: i64):
+    %more = arith.cmpi ult, %lane, %four : i64
+    cf.cond_br %more, ^live, ^done
+  ^live:
+    %isActive = arith.cmpi ult, %lane, %active : i64
+    cf.cond_br %isActive, ^check, ^next
+  ^check:
+    %indexPointer = llvm.getelementptr %indexes[%lane] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %index = llvm.load %indexPointer : !llvm.ptr -> i64
+    %inList = arith.cmpi ult, %index, %count : i64
+    cf.cond_br %inList, ^read, ^failed
+  ^read:
+    %number = func.call @strict_device_elements(%data, %bits, %index, %count) : (!llvm.ptr, i64, i64, i64) -> f32
+    cf.br ^cached(%number : f32)
+  ^failed:
+    llvm.store %one, %failed : i64, !llvm.ptr
+    %empty = arith.constant 0.0 : f32
+    cf.br ^cached(%empty : f32)
+  ^cached(%value: f32):
+    %cachePointer = llvm.getelementptr %cached[%lane] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    llvm.store %value, %cachePointer : f32, !llvm.ptr
+    cf.br ^next
+  ^next:
+    %next = arith.addi %lane, %one : i64
+    llvm.br ^scalar(%next : i64) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+  ^done:
+    return
+  }
+  func.func private @strict_device_cached_stored(%result: !llvm.ptr, %at: i64, %active: i64, %cached: !llvm.ptr, %bits: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %four = arith.constant 4 : i64
+    %brainBits = arith.constant 17 : i64
+    %doubleBits = arith.constant 64 : i64
+    %full = arith.cmpi eq, %active, %four : i64
+    cf.cond_br %full, ^vector, ^scalarStart
+  ^vector:
+    %numbers = llvm.load %cached : !llvm.ptr -> vector<4xf32>
+    %isBrain = arith.cmpi eq, %bits, %brainBits : i64
+    cf.cond_br %isBrain, ^brain, ^single
+  ^brain:
+    %brains = arith.truncf %numbers : vector<4xf32> to vector<4xbf16>
+    %brainPointer = llvm.getelementptr %result[%at] : (!llvm.ptr, i64) -> !llvm.ptr, bf16
+    llvm.store %brains, %brainPointer {alignment = 8 : i64} : vector<4xbf16>, !llvm.ptr
+    return
+  ^single:
+    %singlePointer = llvm.getelementptr %result[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    llvm.store %numbers, %singlePointer {alignment = 16 : i64} : vector<4xf32>, !llvm.ptr
+    return
+  ^scalarStart:
+    cf.br ^scalar(%zero : i64)
+  ^scalar(%lane: i64):
+    %more = arith.cmpi ult, %lane, %four : i64
+    cf.cond_br %more, ^live, ^done
+  ^live:
+    %isActive = arith.cmpi ult, %lane, %active : i64
+    cf.cond_br %isActive, ^write, ^next
+  ^write:
+    %pointer = llvm.getelementptr %cached[%lane] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %value = llvm.load %pointer : !llvm.ptr -> f32
+    %index = arith.addi %at, %lane : i64
+    func.call @strict_device_stored(%result, %index, %value, %bits) : (!llvm.ptr, i64, f32, i64) -> ()
+    cf.br ^next
+  ^next:
+    %next = arith.addi %lane, %one : i64
+    llvm.br ^scalar(%next : i64) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+  ^done:
+    return
+  }
   func.func private @strict_device_stored(%result: !llvm.ptr, %at: i64, %value: f32, %bits: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
     %brainBits = arith.constant 17 : i64
     %isBrain = arith.cmpi eq, %bits, %brainBits : i64

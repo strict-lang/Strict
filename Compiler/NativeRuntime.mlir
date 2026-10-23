@@ -10075,7 +10075,12 @@
     %groupDivisor = arith.select %grouped, %group, %one : i64
     %groupCount = arith.divui %count, %groupDivisor : i64
     %groupThreads = arith.muli %groupCount, %groupLanes : i64
-    %threadTotal = arith.select %grouped, %groupThreads, %elementTotal : i64
+    %scalarThreads = arith.select %grouped, %groupThreads, %elementTotal : i64
+    %batchGroup = arith.constant -4 : i64
+    %batched = arith.cmpi eq, %group, %batchGroup : i64
+    %batchRounded = arith.addi %count, %three : i64
+    %batchThreads = arith.divui %batchRounded, %four : i64
+    %threadTotal = arith.select %batched, %batchThreads, %scalarThreads : i64
     %tileLanes = arith.constant -512 : i64
     %tiling = arith.cmpi eq, %lanes, %tileLanes : i64
     %tileBlock = arith.constant 512 : i64
