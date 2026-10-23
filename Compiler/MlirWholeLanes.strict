@@ -1,0 +1,86 @@
+has function MlirFunction
+has position Number
+constant Blurring = MlirWholeLanes(MlirWholeKernel.Kernel.function, 5)
+constant Sized = MlirWholeLanes(MlirWholeKernel.Measure.function, 5)
+constant Zero = "    %wzero = arith.constant 0 : i64"
+constant Begun = ("  ^wholestart:", "    llvm.store %from, %wloop : i64, !llvm.ptr", "    %wy0 = arith.divsi %from, %ww : i64", "    %wx0 = arith.remsi %from, %ww : i64", "    llvm.store %wx0, %wx : i64, !llvm.ptr", "    llvm.store %wy0, %wy : i64, !llvm.ptr", "    cf.br ^wloop", "  ^wloop:")
+constant Advanced = ("    %wx1 = arith.addi %wxv, %one : i64", "    %wwrap = arith.cmpi eq, %wx1, %ww : i64", "    %wxn = arith.select %wwrap, %wzero, %wx1 : i64", "    %wy1 = arith.addi %wyv, %one : i64", "    %wyn = arith.select %wwrap, %wy1, %wyv : i64", "    llvm.store %wxn, %wx : i64, !llvm.ptr", "    llvm.store %wyn, %wy : i64, !llvm.ptr")
+constant Stored = ("    %wb = arith.trunci %wr : i64 to i32", "    %wp = llvm.getelementptr %wout[%wk] : (!llvm.ptr, i64) -> !llvm.ptr, i32", "    llvm.store %wb, %wp : i32, !llvm.ptr")
+Lines(header Text, fallback Texts) Texts
+	Text.Combine(Blurring.Lines("h", List(Text))).IndexOf("@Board_Picked_2_whole(%t8wa0, %t8wa1)") > 0
+	MlirWholeChild(Blurring.function, 5).IsWhole
+	Text.Combine(Sized.Lines("h", List(Text))).IndexOf("_row1(%t8wa0, %t8wa1, %t8wa2, %t8wa3, %t8wa4)") > 0
+	let body = MlirWholeBody(function)
+	let counter = body.Slot("%wloop", "i64")
+	let positions = Rowed < 0 then List(Text) else (body.Slot("%wx", "i64"), body.Slot("%wy", "i64"))
+	(header, "    %one = arith.constant 1 : i64", counter) + positions + Guarded + fallback + Looped + "  }"
+Guarded Texts
+	Text.Combine(Blurring.Guarded).IndexOf("%t8wh0m0k = func.call @strict_list_packed(%t8wh0m0v)") > 0
+	Blurring.Guarded.Last is "    cf.cond_br %t8whok, ^wholestart, ^generic"
+	let call = MlirWholeCall(function, Kernel.Call)
+	mutable lines = MlirWholeGuard(function, Kernel.Call).Started + MlirWholeChild(function, position).Result
+	mutable conditions = List(Mutable(Text))
+	for Kernel.Reads
+		if Kernel.Source(value) is not "index"
+			lines = lines + Input(index)
+			conditions.Add(call.Temp("wh" + index + "o"))
+	let joined = MlirWholeGuard(function, Kernel.Call).Joined(Rowed < 0 then conditions else conditions + "%wwp")
+	lines + Widths + joined + (Zero, "    cf.cond_br " + call.Temp("whok") + ", ^wholestart, ^generic")
+Widths Texts
+	Blurring.Widths.Length is 0
+	Sized.Widths.Last is "    %wwp = arith.cmpi sgt, %ww, %wwz : i64"
+	if Rowed < 0
+		return List(Text)
+	let width = "    %ww = arith.fptosi " + Width + " : f64 to i64"
+	(width, "    %wwz = arith.constant 0 : i64", "    %wwp = arith.cmpi sgt, %ww, %wwz : i64")
+Input(read Number) Texts
+	Blurring.Input(0).First is "    %t8wl0a = llvm.getelementptr %context[10] : (!llvm.ptr) -> !llvm.ptr, f64"
+	let call = MlirWholeCall(function, Kernel.Call)
+	let kind = MlirWholeFunction(Kernel.Callee).Kinds(read)
+	let name = call.Temp("wl" + read)
+	let loaded = MlirWholeChild(function, position).Loaded(name, "%v_" + Kernel.Source(Kernel.Reads(read)))
+	let converted = MlirWholeValues(Kernel.Call).Converted(name, "f", "i", call.Temp("wa" + read))
+	loaded + call.Checked(read, kind) + (kind is in ("p", "d", "o") then List(Text) else List(Text) + converted)
+Looped Texts
+	Blurring.Looped(Blurring.Looped.Length - 7) is "    llvm.store %wb, %wp : i32, !llvm.ptr"
+	let isRowed = Rowed >= 0
+	let callee = MlirWholeFunction(Kernel.Callee)
+	mutable lines = (isRowed then Begun else MlirWholeChild.Started) + MlirWholeChild.Checked
+	for Kernel.Reads
+		if Kernel.Source(value) is "index"
+			lines = lines + ("    " + Arguments + index + " = arith.addi %wk, %wzero : i64")
+	let kinds = callee.Kinds + (isRowed then ("i", "i", "i") else List(Text))
+	let symbol = isRowed then MlirWholeRows(Kernel.Callee, Rowed).Symbol else callee.Symbol
+	let called = MlirWholeValues(Kernel.Call).Called("%wr", symbol, Arguments, kinds, "i")
+	let ending = (isRowed then Advanced else List(Text)) + MlirWholeChild.Next + MlirWholeChild.Exit
+	lines + (isRowed then Positions else List(Text)) + called + Stored + ending
+Positions Texts
+	Sized.Positions(2) is "    %t8wa2 = arith.ori %wxv, %wxv : i64"
+	let count = MlirWholeFunction(Kernel.Callee).Kinds.Length
+	mutable lines = ("    %wxv = llvm.load %wx : !llvm.ptr -> i64", "    %wyv = llvm.load %wy : !llvm.ptr -> i64")
+	for ("%wxv", "%wyv", "%ww")
+		lines = lines + ("    " + Arguments + (count + index) + " = arith.ori " + value + ", " + value + " : i64")
+	lines
+Arguments Text
+	Sized.Arguments is "%t8wa"
+	MlirWholeCall(function, Kernel.Call).Temp("wa")
+Kernel MlirWholeKernel
+	Blurring.Kernel.Call is 8
+	MlirWholeKernel(function, position)
+Rowed Number
+	Blurring.Rowed is -1
+	Sized.Rowed is 1
+	if Width is ""
+		return -1
+	for Kernel.Reads
+		if (Kernel.Source(value) is "index") and MlirWholeRows(Kernel.Callee, index).IsRowed
+			return index
+	-1
+Width Text
+	Blurring.Width is ""
+	Sized.Width is "%t8wh0m1xv"
+	for Kernel.Reads
+		let found = MlirWholeInstance(Kernel.Callee).Members(index).Index("Size")
+		if (MlirWholeFunction(Kernel.Callee).Kinds(index) is "o") and (found >= 0)
+			return MlirWholeCall(function, Kernel.Call).Temp("wh" + index + "m" + found + "xv")
+	""

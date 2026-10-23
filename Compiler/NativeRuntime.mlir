@@ -10052,8 +10052,12 @@
     %singleSlot = llvm.getelementptr %slot[1] : (!llvm.ptr) -> !llvm.ptr, i64
     %singleLength = llvm.call @strlen(%singleName) : (!llvm.ptr) -> i64
     %singleSkipped = arith.addi %singleLength, %one : i64
-    %exactName = llvm.getelementptr %singleName[%singleSkipped] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %exactSlot = llvm.getelementptr %slot[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %unformattedName = llvm.getelementptr %singleName[%singleSkipped] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %formatIndex = func.call @strict_gpu_formats(%slots, %valueCount, %mask, %runsExact) : (!llvm.ptr, i64, i64, i1) -> i64
+    %exactName = func.call @strict_gpu_name(%unformattedName, %formatIndex) : (!llvm.ptr, i64) -> !llvm.ptr
+    %two = arith.constant 2 : i64
+    %exactIndex = arith.addi %formatIndex, %two : i64
+    %exactSlot = llvm.getelementptr %slot[%exactIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
     %narrowName = llvm.select %narrowSingle, %singleName, %name : i1, !llvm.ptr
     %narrowKernelSlot = llvm.select %narrowSingle, %singleSlot, %slot : i1, !llvm.ptr
     %chosenName = llvm.select %runsExact, %exactName, %narrowName : i1, !llvm.ptr
@@ -13074,6 +13078,65 @@
     return %false : i1
   ^held:
     return %true : i1
+  }
+  func.func private @strict_gpu_name(%name: !llvm.ptr, %index: i64) -> !llvm.ptr {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    cf.br ^next(%name, %none : !llvm.ptr, i64)
+  ^next(%current: !llvm.ptr, %at: i64):
+    %more = arith.cmpi ult, %at, %index : i64
+    cf.cond_br %more, ^skip, ^done
+  ^skip:
+    %length = llvm.call @strlen(%current) : (!llvm.ptr) -> i64
+    %width = arith.addi %length, %one : i64
+    %following = llvm.getelementptr %current[%width] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %after = arith.addi %at, %one : i64
+    cf.br ^next(%following, %after : !llvm.ptr, i64)
+  ^done:
+    return %current : !llvm.ptr
+  }
+  func.func private @strict_gpu_formats(%slots: !llvm.ptr, %count: i64, %mask: i64, %enabled: i1) -> i64 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %three = arith.constant 3 : i64
+    %six = arith.constant 6 : i64
+    %brainBits = arith.constant 17 : i64
+    %singleBits = arith.constant 32 : i64
+    %true = arith.constant true
+    %false = arith.constant false
+    cf.cond_br %enabled, ^next(%none, %six, %true, %true, %true, %false : i64, i64, i1, i1, i1, i1), ^generic
+  ^next(%index: i64, %slotIndex: i64, %singles: i1, %brains: i1, %mixed: i1, %seen: i1):
+    %more = arith.cmpi ult, %index, %count : i64
+    cf.cond_br %more, ^value, ^choose
+  ^value:
+    %shifted = arith.shrui %mask, %index : i64
+    %isList = arith.trunci %shifted : i64 to i1
+    %after = arith.addi %index, %one : i64
+    cf.cond_br %isList, ^list, ^number
+  ^number:
+    %afterNumber = arith.addi %slotIndex, %one : i64
+    cf.br ^next(%after, %afterNumber, %singles, %brains, %mixed, %seen : i64, i64, i1, i1, i1, i1)
+  ^list:
+    %bitsIndex = arith.addi %slotIndex, %two : i64
+    %bitsSlot = llvm.getelementptr %slots[%bitsIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %bits = llvm.load %bitsSlot : !llvm.ptr -> i64
+    %single = arith.cmpi eq, %bits, %singleBits : i64
+    %brain = arith.cmpi eq, %bits, %brainBits : i64
+    %mix = arith.select %seen, %single, %brain : i1
+    %allSingles = arith.andi %singles, %single : i1
+    %allBrains = arith.andi %brains, %brain : i1
+    %allMixed = arith.andi %mixed, %mix : i1
+    %afterList = arith.addi %slotIndex, %three : i64
+    cf.br ^next(%after, %afterList, %allSingles, %allBrains, %allMixed, %true : i64, i64, i1, i1, i1, i1)
+  ^choose:
+    %mixedIndex = arith.select %mixed, %three, %none : i64
+    %brainIndex = arith.select %brains, %two, %mixedIndex : i64
+    %singleIndex = arith.select %singles, %one, %brainIndex : i64
+    %chosen = arith.select %seen, %singleIndex, %none : i64
+    return %chosen : i64
+  ^generic:
+    return %none : i64
   }
   func.func private @strict_gpu_exact(%value: f64) -> i64 {
     %inexact = arith.constant -9223372036854775808 : i64

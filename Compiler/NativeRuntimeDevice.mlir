@@ -2434,3 +2434,71 @@
     %reduced = func.call @strict_device_lanes_sums(%total, %lane, %lanes) : (f32, i64, i64) -> f32
     return %reduced : f32
   }
+  // the sum of squares of count numbers of one list from its start: each number is read once, 32 bit floats four at a
+  // time when the start is 16 byte aligned
+  func.func private @strict_device_squares(%failed: !llvm.ptr, %data: !llvm.ptr, %bits: i64, %dataCount: i64, %count: i64, %start: i64, %lane: i64, %lanes: i64) -> f32 {
+    %zero = arith.constant 0.0 : f32
+    %none = arith.constant 0 : i64
+    %two = arith.constant 2 : i64
+    %three = arith.constant 3 : i64
+    %end = arith.addi %start, %count : i64
+    %low = arith.cmpi slt, %start, %none : i64
+    %high = arith.cmpi sgt, %end, %dataCount : i64
+    %outside = arith.ori %low, %high : i1
+    cf.cond_br %outside, ^fail, ^check
+  ^fail:
+    %failure = arith.constant 1 : i64
+    llvm.store %failure, %failed : i64, !llvm.ptr
+    return %zero : f32
+  ^check:
+    %thirtyTwo = arith.constant 32 : i64
+    %isSingle = arith.cmpi eq, %bits, %thirtyTwo : i64
+    %rest = arith.andi %count, %three : i64
+    %whole = arith.cmpi eq, %rest, %none : i64
+    %startRest = arith.andi %start, %three : i64
+    %startAligned = arith.cmpi eq, %startRest, %none : i64
+    %vectors = arith.andi %isSingle, %whole : i1
+    %fours = arith.andi %vectors, %startAligned : i1
+    cf.cond_br %fours, ^fourStart, ^genericStart
+  ^fourStart:
+    %fourFirst = arith.shli %lane, %two : i64
+    %fourStep = arith.shli %lanes, %two : i64
+    cf.br ^fours(%fourFirst, %zero : i64, f32)
+  ^fours(%fourIndex: i64, %fourSum: f32):
+    %fourMore = arith.cmpi slt, %fourIndex, %count : i64
+    cf.cond_br %fourMore, ^fourBody, ^reduce(%fourSum : f32)
+  ^fourBody:
+    %c0 = llvm.mlir.constant(0 : i32) : i32
+    %c1 = llvm.mlir.constant(1 : i32) : i32
+    %c2 = llvm.mlir.constant(2 : i32) : i32
+    %c3 = llvm.mlir.constant(3 : i32) : i32
+    %fourAt = arith.addi %start, %fourIndex : i64
+    %slot = llvm.getelementptr %data[%fourAt] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %four = llvm.load %slot {alignment = 16 : i64} : !llvm.ptr -> vector<4xf32>
+    %squared = arith.mulf %four, %four fastmath<contract> : vector<4xf32>
+    %s0 = llvm.extractelement %squared[%c0 : i32] : vector<4xf32>
+    %s1 = llvm.extractelement %squared[%c1 : i32] : vector<4xf32>
+    %s2 = llvm.extractelement %squared[%c2 : i32] : vector<4xf32>
+    %s3 = llvm.extractelement %squared[%c3 : i32] : vector<4xf32>
+    %added0 = arith.addf %fourSum, %s0 fastmath<contract> : f32
+    %added1 = arith.addf %added0, %s1 fastmath<contract> : f32
+    %added2 = arith.addf %added1, %s2 fastmath<contract> : f32
+    %added3 = arith.addf %added2, %s3 fastmath<contract> : f32
+    %fourFollowing = arith.addi %fourIndex, %fourStep : i64
+    cf.br ^fours(%fourFollowing, %added3 : i64, f32)
+  ^genericStart:
+    cf.br ^generic(%lane, %zero : i64, f32)
+  ^generic(%index: i64, %sum: f32):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^genericBody, ^reduce(%sum : f32)
+  ^genericBody:
+    %at = arith.addi %start, %index : i64
+    %value = func.call @strict_device_elements(%data, %bits, %at, %dataCount) : (!llvm.ptr, i64, i64, i64) -> f32
+    %product = arith.mulf %value, %value fastmath<contract> : f32
+    %next = arith.addf %sum, %product fastmath<contract> : f32
+    %following = arith.addi %index, %lanes : i64
+    cf.br ^generic(%following, %next : i64, f32)
+  ^reduce(%total: f32):
+    %reduced = func.call @strict_device_lanes_sums(%total, %lane, %lanes) : (f32, i64, i64) -> f32
+    return %reduced : f32
+  }

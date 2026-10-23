@@ -9,6 +9,7 @@ Create the input once (Python with Pillow): `python -c "from PIL import Image; I
 | Strict | `strict build ImageProcessing/BenchBlur.strict` in the repository root, then `ImageProcessing/BenchBlur.exe` there (`STRICT_THREADS=1` for one thread, `STRICT_GPU=0` for the CPU only) |
 | C | `clang -O3 -march=native blur.c` (add `-fopenmp` for the rows on all cores) |
 | Rust | `rustc -C opt-level=3 -C target-cpu=native blur.rs` (`blur_parallel.rs` splits the rows over all cores with scoped threads) |
+| Goose | `goose build blur.goose --cc clang -o blur_goose.exe` ([goose](https://github.com/aardappel/goose) built with CMake) |
 | C# | `dotnet run -c Release blur.cs` (`blur_parallel.cs` uses `Parallel.For`) |
 | TypeScript | `node blur.ts` |
 | Python | `python blur.py` (a few minutes), `python blur_numpy.py` adds each of the 81 offsets for all pixels at once with NumPy |

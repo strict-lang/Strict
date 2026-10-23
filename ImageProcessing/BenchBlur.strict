@@ -4,14 +4,16 @@ constant Target = Source.Replace(".ppm", ".strict.ppm")
 constant Radius = 4
 Run
 	let bitmap = Ppm.Loaded(Source)
-	if bitmap.Colors.Length is 0
+	if bitmap is Error
 		logger.Log("Missing " + Source + ", see ImageProcessing/Compare/README.md")
 	else
+		let warmup = Blurred(bitmap)
 		let started = Process.Elapsed
 		let blurred = Blurred(bitmap)
 		let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
-		Ppm.Save(Bitmap(bitmap.width, bitmap.height, blurred, bitmap.IsOpaque), Target)
-		logger.Log("Blurred " + bitmap.width + "x" + bitmap.height + " in " + milliseconds + " ms")
+		let difference = warmup is blurred then "" else ", the first call differs"
+		Ppm.Save(Bitmap(bitmap.Size, blurred, bitmap.IsOpaque), Target)
+		logger.Log("Blurred " + bitmap.Size.Width + "x" + bitmap.Size.Height + " in " + milliseconds + " ms" + difference)
 Blurred(bitmap Bitmap) Colors
 	BenchBlur.Blurred(Bitmap.Tiny)(0) is Color(4, 4, 4)
 	for bitmap.Colors
@@ -21,4 +23,4 @@ Neighbors(bitmap Bitmap, pixel Number) Colors
 	for Range(-Radius, Radius + 1)
 		for Range(-Radius, Radius + 1)
 			if bitmap.IsInside(pixel, value, outer)
-				bitmap.Colors(pixel + outer * bitmap.width + value)
+				bitmap.Colors(pixel + outer * bitmap.Size.Width + value)

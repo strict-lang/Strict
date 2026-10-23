@@ -1,0 +1,80 @@
+has function MlirFunction
+has row Number
+constant Picking = MlirWholeRows(MlirWholeKernel.Measure.Callee, 1)
+constant Types = MlirWholeTypes(MlirWholeKernel.Measure.Callee)
+constant Extras = ("%rx", "%ry", "%rw")
+constant Relays = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "board"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "pixel"), InstructionEntry.Invoke(2, ("Strict/Board", "Picked", "Strict/Rgb", "board", "pixel"), (0, 1), -1), InstructionEntry.Return(2))
+constant Relay = MlirFunction(MlirWholeKernel.Measure.function.types, MlirWholeKernel.Measured, MethodEntry("Relay", MlirWholeKernel.Picked.parameters, "Strict/Rgb", Relays))
+constant Relaying = MlirWholeRows(Relay, 1)
+constant Relayed = MlirWholeStatements(Relay, 2, MlirWholeTypes(Relay).Part(0), MlirWholeTypes(Relay).Part(1), MlirWholeTypes(Relay).Part(2))
+constant Wrapping = MlirWholeStatements(MlirWholeKernel.Measure.Callee, 7, Types.Part(0), Types.Part(1), Types.Part(2))
+IsRowed Boolean
+	Picking.IsRowed
+	MlirWholeRows(MlirWholeKernel.Kernel.Callee, 1).IsRowed is false
+	MlirWholeRows(MlirWholeKernel.Measure.Callee, 0).IsRowed is false
+	if MlirWholeFunction(function).Kinds(row) is not "i"
+		return false
+	for function.method.instructions
+		let isDivided = value.kind is in (InstructionType.Modulo, InstructionType.Divide)
+		if isDivided and IsIndex(value.payload(1), index) or (Passed(value, index) >= 0)
+			return true
+	false
+IsIndex(register Number, at Number) Boolean
+	Picking.IsIndex(5, 7)
+	Picking.IsIndex(4, 7) is false
+	let writer = MlirKinds(function).Writer(at, register)
+	let loaded = writer < 0 then InstructionEntry.Return(0) else function.method.instructions(writer)
+	(loaded.kind is InstructionType.LoadVariableToRegister) and (loaded.texts(0) is function.method.parameters(row).Name)
+Passed(entry InstructionEntry, at Number) Number
+	Picking.Passed(MlirWholeKernel.Measuring(7), 7) is -1
+	if entry.kind is not InstructionType.Invoke
+		return -1
+	let callee = MlirWholeFunction(function).Callee(entry)
+	let isWhole = (callee.Symbol is not function.Symbol) and MlirWholeFunction(callee).IsWhole
+	for LoadReuse(function.method.instructions).InvokeReads(entry)
+		if isWhole and IsIndex(entry.payload(value), at) and MlirWholeRows(callee, index).IsRowed
+			return index
+	-1
+Emitted(statements MlirWholeStatements) Texts
+	Text.Combine(Picking.Emitted(Wrapping)).IndexOf("cf.br ^t7rowed(%rx : i64)") > 0
+	Picking.Emitted(Wrapping.At(6)) is Wrapping.At(6).Emitted
+	let at = statements.position
+	let entry = function.method.instructions(at)
+	let isDivided = entry.kind is in (InstructionType.Modulo, InstructionType.Divide)
+	if isDivided and IsIndex(entry.payload(1), at) and (statements.naturals.Substring(at, 1) is "i")
+		return Divided(statements, entry)
+	let passed = Passed(entry, at)
+	if (passed >= 0) and (MlirWholeNative(statements).Emitted(entry).Length is 0)
+		return Called(statements, entry, passed)
+	statements.Emitted
+Divided(statements MlirWholeStatements, entry InstructionEntry) Texts
+	Picking.Divided(Wrapping, MlirWholeKernel.Measuring(7))(3) is "    cf.cond_br %t7q, ^t7row, ^t7divide"
+	let loads = statements.Load("a", entry.payload(1), "i") + statements.Load("b", entry.payload(2), "i")
+	loads + Branches(statements, entry.kind is InstructionType.Modulo) + statements.Store("c", "i", entry.payload(3))
+Branches(statements MlirWholeStatements, isModulo Boolean) Texts
+	Picking.Branches(Wrapping, false)(6) is "    cf.br ^t7rowed(%ry : i64)"
+	let label = "^t" + statements.position
+	let quotient = statements.Temp("d")
+	let operation = (isModulo then "arith.remsi " else "arith.floordivsi ") + statements.Temp("a") + ", "
+	let divided = "    " + quotient + " = " + operation + statements.Temp("b") + " : i64"
+	let compared = "    " + statements.Temp("q") + " = arith.cmpi eq, " + statements.Temp("b") + ", %rw : i64"
+	let branch = "    cf.cond_br " + statements.Temp("q") + ", " + label + "row, " + label + "divide"
+	let joined = "    cf.br " + label + "rowed("
+	let rowed = ("  " + label + "row:", joined + (isModulo then "%rx" else "%ry") + " : i64)")
+	let division = ("  " + label + "divide:", divided, joined + quotient + " : i64)") + rowed
+	(compared, branch) + division + ("  " + label + "rowed(" + statements.Temp("c") + ": i64):")
+Called(statements MlirWholeStatements, entry InstructionEntry, passed Number) Texts
+	Text.Combine(Relaying.Called(Relayed, Relays(2), 1)).IndexOf("_whole_row1(%t2a0, %t2a1, %t2a2, %t2a3, %t2a4)") > 0
+	let callee = MlirWholeFunction(function).Callee(entry)
+	let kinds = MlirWholeFunction(callee).Kinds
+	let values = MlirWholeValues(statements.position)
+	mutable lines = statements.Arguments(entry, kinds)
+	for Extras
+		lines = lines + values.Line("a" + (kinds.Length + index), "arith.ori " + value + ", " + value + " : i64")
+	let returned = MlirWholeTypes(callee).Returned
+	let symbol = MlirWholeRows(callee, passed).Symbol
+	let call = values.Called(statements.Temp("c"), symbol, statements.Temp("a"), kinds + ("i", "i", "i"), returned)
+	lines + call + statements.Store("c", returned, entry.payload(0))
+Symbol Text
+	Picking.Symbol.EndsWith("_whole_row1")
+	MlirWholeFunction(function).Symbol + "_row" + row

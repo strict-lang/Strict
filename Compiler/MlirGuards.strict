@@ -124,16 +124,18 @@ Mask Number
 	mask
 Kernel Texts
 	Text.Combine(Shifts.Kernel).IndexOf("_gpu2sx(") > 0
+	Text.Combine(Shifts.Kernel).IndexOf("%format_numbers = arith.constant 17 : i64") > 0
 	MlirGuards(MlirFunction(Shifted, Float = "f64"), 2).Kernel.Length is 0
-	IsUseful then MlirDevice(function, at).Kernel else List(Text)
+	IsUseful then MlirDevice(function, at).Kernel + MlirFormats(function, at).Kernels else List(Text)
 Named Texts
-	Shifts.Named.Last.EndsWith("(dense<0> : tensor<3xi64>) : !llvm.array<3 x i64>")
+	Shifts.Named.Last.EndsWith("(dense<0> : tensor<6xi64>) : !llvm.array<6 x i64>")
 	MlirGuards(MlirFunction(Shifted, Float = "f64"), 2).Named.Last.EndsWith("!llvm.array<2 x i64>")
 	let name = MlirDevice(MlirFunction(function, Float = "f64", Guarded = -1), at).Name
 	let isExact = Mask > 0
-	let names = name + "\00" + name + "s\00" + (isExact then name + "sx\00" else "")
-	let size = isExact then name.Length * 3 + 6 else name.Length * 2 + 3
-	let kernels = isExact then 3 else 2
+	let formatted = isExact then MlirFormats(function, at).Names(name) else ""
+	let names = name + "\00" + name + "s\00" + (isExact then name + "sx\00" else "") + formatted
+	let size = isExact then name.Length * 6 + 21 else name.Length * 2 + 3
+	let kernels = isExact then 6 else 2
 	let cache = "(dense<0> : tensor<" + kernels + "xi64>) : !llvm.array<" + kernels + " x i64>"
 	let text = "  llvm.mlir.global internal constant @k" + name + "(\"" + names + "\") : !llvm.array<" + size + " x i8>"
 	(text, "  llvm.mlir.global internal @f" + name + cache)

@@ -1,9 +1,10 @@
 has lines Texts
 has folder = ""
-constant Sums = ("Sums(bitmap Bitmap, pixel Number) Number", "\tmutable sum = 0", "\tfor Range(-1, 2)", "\t\tfor Range(-1, 2)", "\t\t\tif bitmap.IsInside(pixel, value, outer)", "\t\t\t\tsum = sum + bitmap.Colors(pixel + outer * bitmap.width + value).Red", "\tsum")
+constant Sums = ("Sums(bitmap Bitmap, pixel Number) Number", "\tmutable sum = 0", "\tfor Range(-1, 2)", "\t\tfor Range(-1, 2)", "\t\t\tif bitmap.IsInside(pixel, value, outer)", "\t\t\t\tsum = sum + bitmap.Colors(pixel + outer * bitmap.Size.Width + value).Red", "\tsum")
 constant Blurring = Callees(Sums, "ImageProcessing")
+constant Inside = "\tcolumn >= 0 and column < Size.Width and row >= 0 and row < Size.Height"
 Lines(receiver Text, method Text, at Number) Texts
-	Blurring.Lines("bitmap", "IsInside", 4).Last is "\tcolumn >= 0 and column < width and row >= 0 and row < height"
+	Blurring.Lines("bitmap", "IsInside", 4).Last is Inside
 	Blurring.Lines("bitmap", "IsInside", 4).First is "IsInside(pixel Number, x Number, y Number) Boolean"
 	Blurring.Lines("bitmap", "Missing", 4).Length is 0
 	Blurring.Lines("pixel", "Floor", 4).Length is 0
@@ -14,7 +15,7 @@ Lines(receiver Text, method Text, at Number) Texts
 			return found.Slice(index, Callees(found, folder).BlockEnd(index) - index)
 	List(Text)
 Source(type Text) Texts
-	Blurring.Source("Bitmap").First is "has width Number"
+	Blurring.Source("Bitmap").First is "has Size"
 	Blurring.Source("").Length is 0
 	Blurring.Source("Missing").Length is 0
 	let path = folder + "/" + type + ".strict"

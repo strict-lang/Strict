@@ -3,6 +3,8 @@ constant Halves = (InstructionEntry.Named(InstructionType.LoadVariableToRegister
 constant Halved = MethodEntry("Halved", List(MemberEntry) + MemberEntry("number", "Strict/Number", List(InstructionEntry), false), "Strict/Number", Halves)
 constant Halving = MlirWholeTypes(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, Halved))
 constant Row = MlirWholeTypes(MlirWhole.Row.function)
+constant Byted = Halves.Slice(0, 3) + InstructionEntry.Invoke(3, ("Strict/Byte", "from", "Strict/Byte", "number"), List(Number) + 2, -1)
+constant Byting = MlirWholeTypes(MlirFunction(Halving.function.types, MlirFunction.Shape, MethodEntry("Byted", Halved.parameters, "Strict/Byte", Byted + InstructionEntry.Return(3))))
 constant Shadowed = MlirWholeTypes(MlirFunction(MlirArguments.Called.types, MlirArguments.Halves, MethodEntry("Run", List(MemberEntry), "Strict/Number", MlirArguments.Calls.Slice(0, 3) + InstructionEntry.Binary(InstructionType.Add, (2, 0, 3)) + InstructionEntry.Binary(InstructionType.Divide, (0, 1, 2)) + InstructionEntry.Return(3))))
 constant Reused = MlirWholeTypes(MlirFunction(MlirArguments.Called.types, MlirArguments.Halves, MethodEntry("Run", List(MemberEntry), "Strict/Number", MlirArguments.Calls.Slice(0, 4) + InstructionEntry.Binary(InstructionType.Divide, (0, 1, 2)) + InstructionEntry.Return(3))))
 Part(number Number) Text
@@ -119,14 +121,19 @@ Natural(at Number, registers Text, variables Text, naturals Text) Text
 	kind is in (InstructionType.Invoke, InstructionType.FieldLoad) then Called(entry) else "i"
 Calculated(entry InstructionEntry, at Number, registers Text, naturals Text) Text
 	Halving.Calculated(Halves(2), 2, "iiii", "ii") is "i"
+	Byting.Calculated(Halves(2), 2, "iiii", "ii") is "i"
 	Shadowed.Calculated(Shadowed.function.method.instructions(4), 4, Shadowed.Part(0), Shadowed.Part(2)) is "f"
 	let operands = Operands(entry, at, registers, naturals)
 	if (entry.kind is not InstructionType.Divide) or (operands is "f") or (at + 1 >= function.method.instructions.Length)
 		return operands
 	let next = function.method.instructions(at + 1)
-	if (next.kind is not InstructionType.Invoke) or (PayloadDecoder(next).Text(2) is not "Floor")
+	if (next.kind is not InstructionType.Invoke) or (Floored(next) is false)
 		return "f"
 	next.payload(LoadReuse(function.method.instructions).InvokeReads(next).Last) is entry.payload(3) then "i" else "f"
+Floored(next InstructionEntry) Boolean
+	Halving.Floored(Halves(3))
+	Byting.Floored(Byted(3))
+	PayloadDecoder(next).Text(1) + "." + PayloadDecoder(next).Text(2) is in ("Strict/Number.Floor", "Strict/Byte.from")
 Operands(entry InstructionEntry, at Number, registers Text, naturals Text) Text
 	Shadowed.Operands(MlirArguments.Calls(2), 2, Shadowed.Part(0), Shadowed.Part(2)) is "i"
 	let left = Reaching(entry.payload(1), at, registers, naturals)

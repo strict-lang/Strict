@@ -16,8 +16,9 @@ constant Element = ("    %wvp = llvm.getelementptr %witems[%wk]" + Pointer, "   
 IsWhole Boolean
 	Brightening.IsWhole
 	MlirWholeChild(MlirParallel.Doubling.function, 2).IsWhole is false
-	if (MlirParallel(function, position).IsParallel is false) or (MlirLayout(function).Packed(position) is not 9)
-		return false
+	let isKernel = MlirWholeKernel(function, position).IsKernel
+	if isKernel or MlirParallel(function, position).IsParallel is false or (MlirLayout(function).Packed(position) is not 9)
+		return isKernel
 	if (MlirLoops(function, position).Collection is not "") and (MlirBytes(function, position).Iterated is not 9)
 		return false
 	let settled = MlirWholeTypes(function).Settled
@@ -45,12 +46,16 @@ Lines Texts
 	MlirWholeChild(MlirParallel.Doubling.function, 2).Lines.Length is 0
 	if IsWhole is false
 		return List(Text)
-	let parts = MlirWholeTypes(function).Settled.Split("|")
 	let header = "  func.func private @" + Symbol + MlirParallel.Signature
+	if MlirWholeKernel(function, position).IsKernel
+		return MlirWholeLanes(function, position).Lines(header, Fallback)
+	let parts = MlirWholeTypes(function).Settled.Split("|")
 	let allocated = MlirWholeBody(function).Allocated(parts(0), parts(1)) + MlirWholeBody(function).Slot("%wloop", "i64")
+	(List(Text) + header) + allocated + Guarded + Fallback + Looped(parts(0), parts(1), parts(2)) + "  }"
+Fallback Texts
+	Brightening.Fallback.Last is "    return %wg : f64"
 	let generic = "    %wg = func.call @" + function.Symbol + "_loop" + position + "(%context, %from, %to)"
-	let fallback = ("  ^generic:", generic + " : " + MlirParallel.Shape, "    return %wg : f64")
-	(List(Text) + header) + allocated + Guarded + fallback + Looped(parts(0), parts(1), parts(2)) + "  }"
+	("  ^generic:", generic + " : " + MlirParallel.Shape, "    return %wg : f64")
 Inputs Texts
 	Brightening.Inputs is ("pixels")
 	Reading.Inputs is ("pixels")
@@ -96,11 +101,14 @@ Loaded(name Text, slot Text) Texts
 	(address, "    " + name + " = llvm.load " + name + "a : !llvm.ptr -> f64")
 Collections Texts
 	Brightening.Collections.Last.EndsWith("%t2wh1o = arith.cmpi ne, %t2wh1i, %t2whz : i64")
-	let result = Loaded("%wrl", "%v_forResult") + "    %wout = func.call @strict_list_data(%wrl) : (f64) -> !llvm.ptr"
+	let result = Result
 	if MlirLoops(function, position).Collection is ""
 		return result
 	let iterated = Loaded("%wil", "%r" + function.method.instructions(position).payload(0))
 	result + iterated + Items + MlirWholeGuard(function, position).Present("%witems", Inputs.Length)
+Result Texts
+	Brightening.Result.Last is "    %wout = func.call @strict_list_data(%wrl) : (f64) -> !llvm.ptr"
+	Loaded("%wrl", "%v_forResult") + "    %wout = func.call @strict_list_data(%wrl) : (f64) -> !llvm.ptr"
 Looped(registers Text, variables Text, naturals Text) Texts
 	Text.Combine(Brightening.Looped(Types.Part(0), Types.Part(1), Types.Part(2))).IndexOf("@Rows_Twice_1_whole(") > 0
 	mutable lines = Started + Checked + Current(variables)

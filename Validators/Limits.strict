@@ -71,4 +71,6 @@ Counted(rule Text, count Number, limit Number) ValidationIssues
 Scale(path Text) Number
 	Limits.Scale("Games/Generated/Atlas.strict") is 10
 	Limits.Scale("Games\\Atlas.strict") is 1
-	Path(Path(path.Replace("\\", "/")).PathOnly.text).FileName.text is "Generated" then 10 else 1
+	Limits.Scale("Content/SheetCatalog.strict") is 2
+	let folder = Path(Path(path.Replace("\\", "/")).PathOnly.text).FileName.text
+	folder is "Generated" then 10 else (folder is "Content" then 2 else 1)

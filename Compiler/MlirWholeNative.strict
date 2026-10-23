@@ -4,6 +4,10 @@ constant Sizing = MlirWholeNative(MlirWholeStatements(MlirWholeInstance.Sized.fu
 constant Mixing = MlirFunction(MlirArguments.Called.types, MlirArguments.Halves, MethodEntry("Run", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 3), InstructionEntry.LoadNumber(1, 2), InstructionEntry.Binary(InstructionType.Divide, (0, 1, 0)), InstructionEntry.Return(0))))
 constant Mixed = MlirWholeNative(MlirWholeStatements(Mixing, 0, MlirWholeTypes(Mixing).Part(0), MlirWholeTypes(Mixing).Part(1), MlirWholeTypes(Mixing).Part(2)))
 constant Painting = MlirWholeStatements(MlirLanes.Sample.function, 3, "iiiii", "--", "iiiii")
+constant Framing = TypeEntry("Strict/Framing", List(MemberEntry) + MemberEntry("Size", "Strict/Math/Sizing", List(InstructionEntry), false), List(MethodEntry))
+constant Widths = InstructionEntry(InstructionType.FieldLoad, ("Width", "Sizing"), (1, 0, -1))
+constant Widening = MethodEntry("Wide", List(MemberEntry), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "Size"), Widths, InstructionEntry.Return(1)))
+constant Framed = MlirWholeNative(MlirWholeStatements(MlirFunction((MlirCouples.Sizing, Framing), Framing, Widening), 1, "ci", "c", "ci"))
 Emitted(entry InstructionEntry) Texts
 	Floor.Emitted(MlirWholeTypes.Halves(3)).Last is "    llvm.store %t3a, %r3 : i64, !llvm.ptr"
 	MlirWholeNative(MlirWholeStatements.Halving.At(1)).Emitted(MlirWholeCall.Twice.instructions(1)).Length is 0
@@ -67,6 +71,8 @@ Lane(entry InstructionEntry, name Text, lane Number) Texts
 	loaded + bounds + low + high + statements.Operation("b" + lane, "arith.shli", "h" + lane, "s" + lane)
 Read(entry InstructionEntry) Texts
 	MlirWholeNative(Painting.At(4)).Read(MlirLanes.Greens).Last is "    llvm.store %t4m, %r4 : i64, !llvm.ptr"
+	if MlirCouples(statements.function, 0).IsCoupled(entry.texts(1))
+		return Half(entry)
 	if MlirWholeInstance(statements.function).IsInstance(entry.texts(1))
 		return Member(entry)
 	let kind = MlirKinds(statements.function).KindOf(statements.position, entry.payload(1))
@@ -76,6 +82,19 @@ Read(entry InstructionEntry) Texts
 	let moved = statements.Operation("v", "arith.shrui", "a", "s")
 	let masked = statements.Operation("m", "arith.andi", "v", "y")
 	statements.Load("a", entry.payload(1), "i") + constants + moved + masked + statements.Store("m", "i", entry.payload(0))
+Half(entry InstructionEntry) Texts
+	Framed.Half(Widths)(2) is "    %t1v = arith.shrui %t1a, %t1s : i64"
+	Framed.Half(Widths)(4) is "    %t1f = arith.bitcast %t1h : i32 to f32"
+	let halves = MlirCouples(statements.function, 0).Halves(statements.function.TypeOf(entry.texts(1)))
+	let shift = halves.First.Name is entry.texts(0) then 0 else 32
+	let values = MlirWholeValues(statements.position)
+	let truncated = values.Line("h", "arith.trunci " + statements.Temp("v") + " : i64 to i32")
+	let single = values.Line("f", "arith.bitcast " + statements.Temp("h") + " : i32 to f32")
+	let whole = values.Line("m", "arith.fptosi " + statements.Temp("f") + " : f32 to i64")
+	let shifted = values.Line("s", "arith.constant " + shift + " : i64")
+	let moved = (shifted, statements.Operation("v", "arith.shrui", "a", "s"))
+	let stored = statements.Store("m", "i", entry.payload(0))
+	statements.Load("a", entry.payload(1), "c") + moved + (truncated, single, whole) + stored
 Member(entry InstructionEntry) Texts
 	Sizing.Member(MlirWholeInstance.Sizing.instructions(1)).First.EndsWith("%v_grid_cells : !llvm.ptr -> !llvm.ptr")
 	let instance = MlirWholeInstance(statements.function)

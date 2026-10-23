@@ -78,12 +78,15 @@ Called(entry InstructionEntry) Texts
 		return native
 	let callee = MlirWholeFunction(function).Callee(entry)
 	let kinds = MlirWholeFunction(callee).Kinds
+	let returned = MlirWholeTypes(callee).Returned
+	let call = MlirWholeValues(position).Called(Temp("c"), MlirWholeFunction(callee).Symbol, Temp("a"), kinds, returned)
+	Arguments(entry, kinds) + call + Store("c", returned, entry.payload(0))
+Arguments(entry InstructionEntry, kinds Texts) Texts
+	Halving.At(3).Arguments(MlirWholeTypes.Halves(3), ("i")) is ("    %t3a0 = llvm.load %r2 : !llvm.ptr -> i64")
 	mutable lines = List(Mutable(Text))
 	for LoadReuse(function.method.instructions).InvokeReads(entry)
 		lines = lines + Load("a" + index, entry.payload(value), kinds(index))
-	let returned = MlirWholeTypes(callee).Returned
-	let call = MlirWholeValues(position).Called(Temp("c"), MlirWholeFunction(callee).Symbol, Temp("a"), kinds, returned)
-	lines + call + Store("c", returned, entry.payload(0))
+	lines
 Read(entry InstructionEntry) Texts
 	Row.At(15).Read(MlirWhole.Rows(15))(2).EndsWith("[%t15i]" + Bytes)
 	Lanes.Read(Reading)(4) is "    %t0c = arith.extui %t0b : i32 to i64"
