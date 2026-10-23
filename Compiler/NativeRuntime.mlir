@@ -11976,14 +11976,57 @@
   }
   llvm.mlir.global internal constant @strict_gpu_attention_name("strict_device_attention\00strict_device_attentions\00") : !llvm.array<49 x i8>
   llvm.mlir.global internal @strict_gpu_attention_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  func.func private @strict_gpu_attention_view(%valueLength: f64, %positions: i64, %width: i64, %offsetNumber: f64, %strideNumber: f64) -> i1 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %seven = arith.constant 7 : i64
+    %limit = arith.constant 2147483647 : i64
+    %false = arith.constant false
+    %offset = llvm.call_intrinsic "llvm.fptosi.sat.i64.f64"(%offsetNumber) : (f64) -> i64
+    %requested = llvm.call_intrinsic "llvm.fptosi.sat.i64.f64"(%strideNumber) : (f64) -> i64
+    %offsetBack = arith.sitofp %offset : i64 to f64
+    %strideBack = arith.sitofp %requested : i64 to f64
+    %offsetWhole = arith.cmpf oeq, %offsetBack, %offsetNumber : f64
+    %strideWhole = arith.cmpf oeq, %strideBack, %strideNumber : f64
+    %whole = arith.andi %offsetWhole, %strideWhole : i1
+    %packed = arith.cmpi eq, %requested, %none : i64
+    %stride = arith.select %packed, %width, %requested : i64
+    %offsetFits = arith.cmpi ule, %offset, %limit : i64
+    %strideFits = arith.cmpi ule, %stride, %limit : i64
+    %positionsFit = arith.cmpi ule, %positions, %limit : i64
+    %widthFits = arith.cmpi ule, %width, %limit : i64
+    %offsetRest = arith.andi %offset, %seven : i64
+    %strideRest = arith.andi %stride, %seven : i64
+    %rest = arith.ori %offsetRest, %strideRest : i64
+    %aligned = arith.cmpi eq, %rest, %none : i64
+    %partsFit = arith.andi %offsetFits, %strideFits : i1
+    %shapeFits = arith.andi %positionsFit, %widthFits : i1
+    %fits = arith.andi %partsFit, %shapeFits : i1
+    %valid = arith.andi %whole, %aligned : i1
+    %usable = arith.andi %fits, %valid : i1
+    cf.cond_br %usable, ^bound, ^unable
+  ^bound:
+    %lastPosition = arith.subi %positions, %one : i64
+    %lastRow = arith.muli %lastPosition, %stride : i64
+    %lastStart = arith.addi %offset, %lastRow : i64
+    %end = arith.addi %lastStart, %width : i64
+    %last = arith.subi %end, %one : i64
+    %lastFits = arith.cmpi ule, %last, %limit : i64
+    %lengthNumber = arith.sitofp %end : i64 to f64
+    %inside = arith.cmpf ole, %lengthNumber, %valueLength : f64
+    %bounded = arith.andi %inside, %lastFits : i1
+    return %bounded : i1
+  ^unable:
+    return %false : i1
+  }
   // `Attention.Merged` on the 16 bit tensor cores (strict_device_attention): queries, keys and values like there, 0.0
   // when the GPU can not, then the method itself runs (head size not a multiple of 8 or above 128, more than 16 heads
   // per group of keys, lists that do not match)
-  func.func private @strict_gpu_attention(%ptx: !llvm.ptr, %queries: f64, %keys: f64, %values: f64, %heads: f64, %groups: f64, %size: f64, %sequences: f64, %causal: f64) -> f64 {
+  func.func private @strict_gpu_attention(%ptx: !llvm.ptr, %queries: f64, %keys: f64, %values: f64, %heads: f64, %groups: f64, %size: f64, %sequences: f64, %causal: f64, %valueOffset: f64, %valueStride: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
     %seven = arith.constant 7 : i64
-    %eight = arith.constant 8 : i64
+    %ten = arith.constant 10 : i64
     %sixteen = arith.constant 16 : i64
     %largest = arith.constant 128 : i64
     %headCount = arith.fptosi %heads : f64 to i64
@@ -12032,7 +12075,7 @@
     %wholeKeys = arith.cmpi eq, %keysRest, %none : i64
     %someTokens = arith.cmpi sgt, %tokens, %none : i64
     %enoughPositions = arith.cmpi sge, %positions, %tokens : i64
-    %sameValues = arith.cmpf oeq, %valueLength, %keyLength : f64
+    %sameValues = func.call @strict_gpu_attention_view(%valueLength, %positions, %positionSize, %valueOffset, %valueStride) : (f64, i64, i64, f64, f64) -> i1
     %listsFit = arith.andi %wholeQueries, %wholeKeys : i1
     %tokensFit = arith.andi %someTokens, %enoughPositions : i1
     %rowsFit = arith.andi %wholeRows, %sameValues : i1
@@ -12040,7 +12083,7 @@
     %attending = arith.andi %fitting, %rowsFit : i1
     cf.cond_br %attending, ^run, ^unable
   ^run:
-    %valuesSlots = llvm.alloca %eight x f64 : (i64) -> !llvm.ptr
+    %valuesSlots = llvm.alloca %ten x f64 : (i64) -> !llvm.ptr
     llvm.store %queries, %valuesSlots : f64, !llvm.ptr
     %keysSlot = llvm.getelementptr %valuesSlots[1] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %keys, %keysSlot : f64, !llvm.ptr
@@ -12056,12 +12099,16 @@
     llvm.store %sequences, %sequencesSlot : f64, !llvm.ptr
     %causalSlot = llvm.getelementptr %valuesSlots[7] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %causal, %causalSlot : f64, !llvm.ptr
+    %offsetSlot = llvm.getelementptr %valuesSlots[8] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %valueOffset, %offsetSlot : f64, !llvm.ptr
+    %strideSlot = llvm.getelementptr %valuesSlots[9] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %valueStride, %strideSlot : f64, !llvm.ptr
     %name = llvm.mlir.addressof @strict_gpu_attention_name : !llvm.ptr
     %slot = llvm.mlir.addressof @strict_gpu_attention_slot : !llvm.ptr
     %lanes = arith.constant -128 : i64
     %integers = arith.constant -1 : i64
     %noGuards1 = arith.constant 0 : i64
-    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %queryCount, %zero, %none, %valuesSlots, %eight, %seven, %none, %none, %lanes, %none, %integers, %noGuards1) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
+    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %queryCount, %zero, %none, %valuesSlots, %ten, %seven, %none, %none, %lanes, %none, %integers, %noGuards1) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
     return %result : f64
   ^unable:
     return %zero : f64

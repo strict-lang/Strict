@@ -6,14 +6,16 @@ has groups Number
 has size Number
 has sequences Number = 1
 has causal Boolean = true
+has valueOffset Number = 0
+has valueStride Number = 0
 constant Single = Attention((1, 0), (1, 0, 0, 1), (3, 4, 5, 6), 1, 1, 2)
 constant Pair = Attention((1, 0, 0, 1), (1, 0, 1, 0, 0, 1, 0, 1), (3, 4, 7, 8, 5, 6, 5, 6), 1, 1, 2, 2)
 constant Prompt = Gguf("NeuralNetworks/blocks.gguf", 32).Rows("prompt").First
 constant Prompted = Attention(Safetensors.Part(Prompt, 0, 4096, 1), Safetensors.Part(Prompt, 4096, 3072, 1), Safetensors.Part(Prompt, 7168, 3072, 1), 4, 2, 64)
-constant Tiled = Attention(Safetensors.Part(Prompt, 0, 4096, 1), Safetensors.Part(Prompt, 4096, 3072, 1), Safetensors.Part(Prompt, 7168, 3072, 1), 4, 1, 64)
 constant Spread = Attention(Safetensors.Part(Prompt, 9600, 32, 1), Safetensors.Part(Prompt, 0, 4800, 2), Safetensors.Part(Prompt, 1, 4800, 2), 2, 1, 8)
 Merged Numbers
 	Single.Merged.First.IsNearlyEqual(3.6604769013466867)
+	Attention(Single, values = (0, 3, 4, 0, 5, 6), valueOffset = 1, valueStride = 3).Merged.First.IsNearlyEqual(3.6604769)
 	Single.Merged.Last.IsNearlyEqual(4.660476901346686)
 	Pair.Merged(1).IsNearlyEqual(4.660476901346686)
 	Pair.Merged(2).IsNearlyEqual(5.660476901346686)
@@ -22,9 +24,16 @@ Merged Numbers
 	let perSequence = queries.Length / sequences
 	for queries.Length
 		let row = (index / size).Floor
-		let group = (index / perSequence).Floor * groups + ((row % heads) * groups / heads).Floor
 		let visible = Last(row, positions, perSequence / heads / size) + 1
-		Softmax.Weighted(shares, row * positions, visible, values, group * size + index % size, sequences * groups * size)
+		Softmax.Weighted(shares, row * positions, visible, values, ValueStart(index), Stride)
+Stride Number
+	Attention(Prompted, values = Prompt, valueOffset = 7168, valueStride = 128).Merged(4095).IsNearlyEqual(0.061657, 0.005)
+	valueStride is 0 then sequences * groups * size else valueStride
+ValueStart(at Number) Number
+	let row = (at / size).Floor
+	let sequence = (at / (queries.Length / sequences)).Floor
+	let group = sequence * groups + ((row % heads) * groups / heads).Floor
+	valueOffset + group * size + at % size
 Scores(positions Number) Numbers
 	Single.Scores(2).First.IsNearlyEqual(0.7071067811865476)
 	Single.Scores(2).Last is 0
@@ -44,8 +53,8 @@ Last(row Number, positions Number, tokens Number) Number
 	Single.Last(3, 5, 2) is 4
 	Prompted.Merged(4095).IsNearlyEqual(0.061657, 0.005)
 	Attention(Prompt.Slice(0, 256), Prompted.keys, Prompted.values, 4, 2, 64).Merged(255).IsNearlyEqual(0.104795, 0.005)
-	Tiled.Merged(1500).IsNearlyEqual(0.031491, 0.005)
-	Tiled.Merged(4095).IsNearlyEqual(0.045206, 0.005)
+	Attention(Prompted, groups = 1).Merged(1500).IsNearlyEqual(0.031491, 0.005)
+	Attention(Prompted, groups = 1).Merged(4095).IsNearlyEqual(0.045206, 0.005)
 	Attention(Pair.queries, Pair.keys, (3, 4, 7, 8, 5, 6, 9, 10), 1, 1, 2, 1, false).Merged.First.IsNearlyEqual(5.6604769)
 	Attention(Pair.queries, Pair.keys, (3, 4, 7, 8, 5, 6, 9, 10), 1, 1, 2).Merged.First is 5
 	Attention(Pair.queries, Pair.keys, (3, 4, 7, 8, 5, 6, 9, 10), 1, 1, 2, 1, false).Merged(3).IsNearlyEqual(7.3395231)
