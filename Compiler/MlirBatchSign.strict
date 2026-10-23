@@ -1,0 +1,33 @@
+has function MlirFunction
+has position Number
+IsNonnegative(at Number, register Number) Boolean
+	let writer = MlirKinds(function).Writer(at, register)
+	(writer > position) and Written(writer)
+Written(at Number) Boolean
+	let entry = function.method.instructions(at)
+	if entry.kind is InstructionType.LoadVariableToRegister
+		return Variable(at, entry.texts(0))
+	if entry.kind is InstructionType.LoadConstantToRegister
+		let number = PayloadDecoder(entry).Value(1)
+		return MlirWholeValues(at).IsWhole(number) and (number.number >= 0)
+	if entry.kind is InstructionType.Invoke
+		return Called(at, entry)
+	Calculated(at, entry)
+Variable(at Number, name Text) Boolean
+	let stored = MlirKinds(function).Stored(at, name)
+	if stored > position
+		return IsNonnegative(stored, function.method.instructions(stored).payload(0))
+	(name is in ("index", "value")) or (name is in MlirBatchLinear(function, position).Parameters)
+Calculated(at Number, entry InstructionEntry) Boolean
+	if entry.kind is not in (InstructionType.Add, InstructionType.Multiply, InstructionType.Divide, InstructionType.Modulo)
+		return false
+	let left = IsNonnegative(at, entry.payload(1))
+	if entry.kind is in (InstructionType.Divide, InstructionType.Modulo)
+		return left and MlirBatchLinear(function, position).Divisor(at, entry.payload(2))
+	left and IsNonnegative(at, entry.payload(2))
+Called(at Number, entry InstructionEntry) Boolean
+	if entry.texts(1) is "Length"
+		return true
+	if entry.texts(1) is not "Floor"
+		return false
+	IsNonnegative(at, MlirDeviceCalls(function, at, function).Register(entry))

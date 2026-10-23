@@ -28,8 +28,8 @@ Kernel Texts
 	if (function.Group < 0) and (call >= 0)
 		return MlirDevice(MlirFunction(function, Group = call), position, Format).Kernel
 	let header = "  llvm.func @" + Name + "(" + Fixed + Freed + MlirPassed(function, position).Header
-	let body = Emitted(position + 1, function.method.LoopEndOf(position))
-	(List(Text) + header) + Slots + Given + Indexed + Started + body + MlirGrouped(function, position).Ending
+	let body = MlirBatched(function, position).Body
+	(List(Text) + header) + Slots + Given + Indexed + body + MlirBatched(function, position).Ending
 Freed Text
 	Doubling.Freed is ""
 	Layering.Freed.StartsWith(", %f_input_d: !llvm.ptr, %f_input_n: i64")
@@ -87,7 +87,7 @@ Slots Texts
 	for function.method.instructions
 		if value.kind is InstructionType.LoopBegin
 			lines = lines + MlirTyped.Integer.Private("%loop" + index)
-	lines
+	lines + MlirBatched(function, position).Slots
 Slot(name Text) Texts
 	Doubling.Slot("%r0").Last is "    %r0_b = llvm.addrspacecast %r0_b.private : !llvm.ptr<5> to !llvm.ptr"
 	mutable lines = MlirTyped(function.Float).Private(name)
@@ -116,7 +116,7 @@ Indexed Texts
 	constant start = "    %start = arith.muli %block, %width : i32"
 	constant sum = "    %sum = arith.addi %start, %thread : i32"
 	constant global = "    %global = arith.extui %sum : i32 to i64"
-	(thread, block, width, start, sum, global) + MlirGrouped(function, position).Indexed
+	(thread, block, width, start, sum, global) + MlirBatched(function, position).Indexed
 Laned Texts
 	Layering.Laned.First is "    %lanes = arith.constant 32 : i64"
 	Doubling.Laned.First is "    %lanes = arith.constant 1 : i64"
