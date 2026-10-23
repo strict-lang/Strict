@@ -9884,6 +9884,8 @@
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
+    %activeFrameSlot = llvm.mlir.addressof @strict_gpu_active : !llvm.ptr
+    %previousActiveFrame = llvm.load %activeFrameSlot : !llvm.ptr -> i64
     %three = arith.constant 3 : i64
     %four = arith.constant 4 : i64
     %five = arith.constant 5 : i64
@@ -9954,6 +9956,15 @@
     llvm.store %none, %bufferSlot : i64, !llvm.ptr
     cf.br ^clear(%clearNext : i64)
   ^sources:
+    %activeFrame = llvm.alloca %three x i64 : (i64) -> !llvm.ptr
+    llvm.store %previousActiveFrame, %activeFrame : i64, !llvm.ptr
+    %activeSlotsSlot = llvm.getelementptr %activeFrame[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %activeCountSlot = llvm.getelementptr %activeFrame[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %activeSlotsBits = llvm.ptrtoint %slots : !llvm.ptr to i64
+    llvm.store %activeSlotsBits, %activeSlotsSlot : i64, !llvm.ptr
+    llvm.store %slotCount, %activeCountSlot : i64, !llvm.ptr
+    %activeFrameBits = llvm.ptrtoint %activeFrame : !llvm.ptr to i64
+    llvm.store %activeFrameBits, %activeFrameSlot : i64, !llvm.ptr
     llvm.store %count, %slots : i64, !llvm.ptr
     %sourceSlot = llvm.getelementptr %slots[3] : (!llvm.ptr) -> !llvm.ptr, i64
     %sourceBuffer = llvm.getelementptr %buffers[2] : (!llvm.ptr) -> !llvm.ptr, i64
@@ -10131,6 +10142,7 @@
     %residentList = func.call @strict_gpu_resident(%count, %resident, %class, %resultBits) : (i64, i64, i64, i64) -> f64
     func.call @strict_gpu_mark(%residentList, %count, %segment) : (f64, i64, i64) -> ()
     func.call @strict_gpu_settle(%buffers, %bufferCount) : (!llvm.ptr, i64) -> ()
+    llvm.store %previousActiveFrame, %activeFrameSlot : i64, !llvm.ptr
     return %residentList : f64
   ^asyncFailed:
     func.call @strict_gpu_give(%resident, %class) : (i64, i64) -> ()
@@ -10165,6 +10177,7 @@
   ^together:
     %fetched = func.call @strict_gpu_fetch(%result, %failedDevice, %count, %eight) : (i64, i64, i64, i64) -> f64
     func.call @strict_gpu_settle(%buffers, %bufferCount) : (!llvm.ptr, i64) -> ()
+    llvm.store %previousActiveFrame, %activeFrameSlot : i64, !llvm.ptr
     return %fetched : f64
   ^check:
     %checked = func.call @strict_gpu_get(%flag, %failedDevice, %eight) : (!llvm.ptr, i64, i64) -> i1
@@ -10178,11 +10191,13 @@
     %got = func.call @strict_gpu_get(%items, %result, %bytes) : (!llvm.ptr, i64, i64) -> i1
     func.call @strict_gpu_settle(%buffers, %bufferCount) : (!llvm.ptr, i64) -> ()
     %chosen = arith.select %got, %list, %zero : f64
+    llvm.store %previousActiveFrame, %activeFrameSlot : i64, !llvm.ptr
     return %chosen : f64
   ^release:
     func.call @strict_gpu_settle(%buffers, %bufferCount) : (!llvm.ptr, i64) -> ()
     cf.br ^failed
   ^failed:
+    llvm.store %previousActiveFrame, %activeFrameSlot : i64, !llvm.ptr
     return %zero : f64
   }
   // device memory for lists computed on the GPU: blocks of 256 << class bytes from 64 MB chunks, a free block goes on
@@ -10458,6 +10473,100 @@
   // 16 MB and more go back to the driver, the largest first until needed bytes are, after the captured launches ran
   // (they may still use a block that died meanwhile, giving back every block made the next prefill allocate them
   // again), true when one did
+  // Prepared kernel arguments stay pinned across nested dispatch and allocation-triggered cache eviction.
+  llvm.mlir.global internal @strict_gpu_active(0 : i64) : i64
+  func.func private @strict_gpu_active_has(%device: i64) -> i1 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %true = arith.constant true
+    %false = arith.constant false
+    %active = llvm.mlir.addressof @strict_gpu_active : !llvm.ptr
+    %first = llvm.load %active : !llvm.ptr -> i64
+    cf.br ^frame(%first : i64)
+  ^frame(%bits: i64):
+    %present = arith.cmpi ne, %bits, %none : i64
+    cf.cond_br %present, ^opened, ^missing
+  ^opened:
+    %frame = llvm.inttoptr %bits : i64 to !llvm.ptr
+    %previous = llvm.load %frame : !llvm.ptr -> i64
+    %slotsSlot = llvm.getelementptr %frame[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %countSlot = llvm.getelementptr %frame[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %slotsBits = llvm.load %slotsSlot : !llvm.ptr -> i64
+    %count = llvm.load %countSlot : !llvm.ptr -> i64
+    %slots = llvm.inttoptr %slotsBits : i64 to !llvm.ptr
+    cf.br ^slot(%none : i64)
+  ^slot(%index: i64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^word, ^frame(%previous : i64)
+  ^word:
+    %slot = llvm.getelementptr %slots[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %word = llvm.load %slot : !llvm.ptr -> i64
+    %same = arith.cmpi eq, %word, %device : i64
+    %next = arith.addi %index, %one : i64
+    cf.cond_br %same, ^found, ^slot(%next : i64)
+  ^found:
+    return %true : i1
+  ^missing:
+    return %false : i1
+  }
+  // Only host-backed dedicated copies are candidates; device-owned activations and prepared inputs stay live.
+  func.func private @strict_gpu_oldest() -> !llvm.ptr {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %entries = arith.constant 65536 : i64
+    %latest = arith.constant 9223372036854775807 : i64
+    %unset = llvm.mlir.zero : !llvm.ptr
+    cf.br ^next(%none, %unset, %latest : i64, !llvm.ptr, i64)
+  ^next(%index: i64, %oldest: !llvm.ptr, %age: i64):
+    %more = arith.cmpi slt, %index, %entries : i64
+    cf.cond_br %more, ^check, ^done
+  ^check:
+    %entry = func.call @strict_gpu_entry(%index) : (i64) -> !llvm.ptr
+    %key = llvm.load %entry : !llvm.ptr -> i64
+    %deviceSlot = llvm.getelementptr %entry[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %usedSlot = llvm.getelementptr %entry[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    %poolSlot = llvm.getelementptr %entry[7] : (!llvm.ptr) -> !llvm.ptr, i64
+    %device = llvm.load %deviceSlot : !llvm.ptr -> i64
+    %used = llvm.load %usedSlot : !llvm.ptr -> i64
+    %pool = llvm.load %poolSlot : !llvm.ptr -> i64
+    %valid = arith.cmpi ne, %key, %none : i64
+    %allocated = arith.cmpi ne, %device, %none : i64
+    %dedicated = arith.cmpi eq, %pool, %none : i64
+    %older = arith.cmpi ult, %used, %age : i64
+    %owned = arith.andi %valid, %allocated : i1
+    %eligible = arith.andi %owned, %dedicated : i1
+    %candidate = arith.andi %eligible, %older : i1
+    %following = arith.addi %index, %one : i64
+    cf.cond_br %candidate, ^pin, ^next(%following, %oldest, %age : i64, !llvm.ptr, i64)
+  ^pin:
+    %pinned = func.call @strict_gpu_active_has(%device) : (i64) -> i1
+    cf.cond_br %pinned, ^next(%following, %oldest, %age : i64, !llvm.ptr, i64), ^next(%following, %entry, %used : i64, !llvm.ptr, i64)
+  ^done:
+    return %oldest : !llvm.ptr
+  }
+  func.func private @strict_gpu_cold(%bytes: i64) -> i64 {
+    %none = arith.constant 0 : i64
+    %before = func.call @strict_gpu_free_memory() : () -> i64
+    %target = arith.addi %before, %bytes : i64
+    %unset = llvm.mlir.zero : !llvm.ptr
+    cf.br ^next
+  ^next:
+    %free = func.call @strict_gpu_free_memory() : () -> i64
+    %enough = arith.cmpi uge, %free, %target : i64
+    cf.cond_br %enough, ^done, ^choose
+  ^choose:
+    %entry = func.call @strict_gpu_oldest() : () -> !llvm.ptr
+    %missing = llvm.icmp "eq" %entry, %unset : !llvm.ptr
+    cf.cond_br %missing, ^done, ^evict
+  ^evict:
+    func.call @strict_gpu_evict(%entry) : (!llvm.ptr) -> ()
+    %unspared = func.call @strict_gpu_unspared() : () -> i64
+    cf.br ^next
+  ^done:
+    %after = arith.subi %free, %before : i64
+    %released = arith.maxsi %after, %none : i64
+    return %released : i64
+  }
   func.func private @strict_gpu_starved(%needed: i64) -> i1 {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -10496,7 +10605,15 @@
     %nextClass = arith.subi %class, %one : i64
     cf.br ^class(%nextClass, %released : i64, i64)
   ^done:
-    %any = arith.cmpi sgt, %released, %none : i64
+    %shortfall = arith.subi %needed, %released : i64
+    %stillShort = arith.cmpi sgt, %shortfall, %none : i64
+    cf.cond_br %stillShort, ^cold, ^answer(%released : i64)
+  ^cold:
+    %extra = func.call @strict_gpu_cold(%shortfall) : (i64) -> i64
+    %total = arith.addi %released, %extra : i64
+    cf.br ^answer(%total : i64)
+  ^answer(%freedTotal: i64):
+    %any = arith.cmpi sgt, %freedTotal, %none : i64
     return %any : i1
   }
   // a big host list uploaded into an allocation of its own counts like a block cut from a chunk: a full collection
