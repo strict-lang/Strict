@@ -28,3 +28,7 @@ Mixture of experts (Qwen3-Coder-30B-A3B Q4_K_M, the `qwen3-coder:30b` blob of Ol
 Bigger data does not belong into this repository: the MNIST digits are in [Mnist](https://github.com/strict-lang/Mnist), larger datasets should be downloaded when they are needed.
 
 `Float8` (E4M3) and `BFloat16` are the number formats of this package: a GPU loop of a method returning `BFloat16s` stores its numbers as bfloat16 (from 2^20 numbers on, below that 32 bit floats), meant for results only int8 or 16 bit tensor core kernels read (MossBlock.Modulated and Activated feed the int8 products); `BFloat16(number)` rounds like the GPU does, a loop body may also give plain numbers.
+
+## GPU workspace lifetime
+
+`GpuMemory.Released` explicitly collects dead temporaries and releases unused large GPU pool blocks at a workload boundary. Live tensor copies remain cached. It returns the bytes released from that pool; the VM returns zero. Use it between different GPU phases when retained workspace prevents a live model from fitting, rather than between layers that reuse the same buffers. The automatic allocation/eviction policy is unchanged.

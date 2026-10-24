@@ -151,6 +151,9 @@ __HELPERS__
 pool=[]
 for name in ['strict_gpu_stack','strict_gpu_obtain','strict_gpu_lend','strict_gpu_lent_class','strict_gpu_pair_put','strict_gpu_pair_taken','strict_gpu_obtained']:
 	pool.append(re.search(r'  func.func private @'+name+r'\(.*?\n  \}',source,re.S)[0])
+release=re.search(r'  func.func private @strict_gpu_trim_unused\(.*?\n  \}',source,re.S)
+assert release, 'Missing explicit phase-boundary release of unused GPU pool buffers'
+pool.append(release[0])
 trim=re.search(r'  func.func private @strict_gpu_trim\(.*?\n  \}',source,re.S)
 if trim:
 	pool.append(trim[0])
@@ -158,9 +161,17 @@ for name in ['strict_gpu_blocks','strict_gpu_chunk','strict_gpu_lent']:
 	pool.append(re.search(r'  llvm.mlir.global internal @'+name+r'[^\n]*',source)[0])
 pool.append('''
   llvm.mlir.global internal @strict_gc_young_limit(0 : i64) : i64
-  llvm.mlir.global internal @pool_counters(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  llvm.mlir.global internal @pool_counters(dense<0> : tensor<3xi64>) : !llvm.array<3 x i64>
   func.func private @strict_rc_reclaim() { return }
-  func.func private @strict_gc_run(%full: i1) { return }
+  func.func private @strict_gc_run(%full: i1) {
+    %counters = llvm.mlir.addressof @pool_counters : !llvm.ptr
+    %slot = llvm.getelementptr %counters[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %calls = llvm.load %slot : !llvm.ptr -> i64
+    %one = arith.extui %full : i1 to i64
+    %next = arith.addi %calls, %one : i64
+    llvm.store %next, %slot : i64, !llvm.ptr
+    return
+  }
   func.func private @strict_gpu_free_memory() -> i64 {
     %counters = llvm.mlir.addressof @pool_counters : !llvm.ptr
     %freed = llvm.load %counters : !llvm.ptr -> i64
@@ -201,18 +212,23 @@ pool.append('''
     %real = func.call @strict_gpu_lent_class(%device, %class) : (i64, i64) -> i64
     llvm.return %real : i64
   }
+  llvm.func @pool_clear() -> f64 {
+    %none = arith.constant 0.0 : f64
+    %released = func.call @strict_gpu_trim_unused(%none) : (f64) -> f64
+    llvm.return %released : f64
+  }
   llvm.func @pool_stats() -> !llvm.ptr {
     %counters = llvm.mlir.addressof @pool_counters : !llvm.ptr
     llvm.return %counters : !llvm.ptr
   }
 ''')
-module=module[:-2]+pressure.replace('__HELPERS__','\n'.join(helpers))+'\n'.join(pool)+'}\n'
+module=module[:-2]+pressure.replace('__HELPERS__','\n'.join(helpers))+'\n'.join(pool).replace('@strict_gpu_', '@pool_gpu_')+'}\n'
 (root/'cache-kind.mlir').write_text(module,encoding='utf-8')
 subprocess.run(['C:/msys64/ucrt64/bin/mlir-opt.exe','--mlir-disable-threading',str(root/'cache-kind.mlir'),'--convert-arith-to-llvm','--convert-func-to-llvm','--convert-cf-to-llvm','--reconcile-unrealized-casts','-o',str(root/'cache-kind.llvm.mlir')],check=True)
 subprocess.run(['C:/msys64/ucrt64/bin/mlir-translate.exe','--mlir-disable-threading','--mlir-to-llvmir',str(root/'cache-kind.llvm.mlir'),'-o',str(root/'cache-kind.ll')],check=True)
 llvm_ir=root/'cache-kind.ll';llvm_ir.write_text(llvm_ir.read_text(encoding='utf-8')+'\n@_fltused = global i32 0\n',encoding='utf-8')
 subprocess.run(['C:/Program Files/LLVM/bin/clang.exe','--target=x86_64-pc-windows-msvc','-Wno-override-module','-O2','-c',str(llvm_ir),'-o',str(root/'cache-kind.obj')],check=True)
-subprocess.run(['C:/Program Files/LLVM/bin/lld-link.exe','/dll','/noentry','/export:cached_kind','/export:scope_choice','/export:cache_address','/export:rows_kind','/export:budget_free','/export:budget_alloc','/export:budget_release','/out:'+str(root/'cache-kind.dll'),str(root/'cache-kind.obj')],check=True)
+subprocess.run(['C:/Program Files/LLVM/bin/lld-link.exe','/dll','/noentry','/export:cached_kind','/export:scope_choice','/export:cache_address','/export:rows_kind','/export:budget_free','/export:budget_alloc','/export:budget_release','/export:pool_address','/export:pool_take','/export:pool_real','/export:pool_stats','/export:pool_clear','/out:'+str(root/'cache-kind.dll'),str(root/'cache-kind.obj')],check=True)
 lib=ctypes.CDLL(str(root/'cache-kind.dll'));lib.cached_kind.argtypes=[ctypes.c_int64,ctypes.c_int64]
 for stored,requested,expected in [(4,2,1),(4,4,1),(2,2,1),(2,4,0),(3,2,0),(1,1,1)]:
 	actual=lib.cached_kind(stored,requested)
@@ -261,7 +277,7 @@ assert lib.pool_real(123,16)==17 and lib.pool_real(123,16)==16,'A borrowed block
 assert lib.pool_take(16)==456 and lib.pool_real(456,16)==18,'Must reuse the second larger class when the nearest is empty'
 assert lib.pool_take(16)==0,'Empty pool must fall through to the driver allocation'
 lib.pool_stats.restype=ctypes.c_void_p
-counters=(ctypes.c_int64*2).from_address(lib.pool_stats())
+counters=(ctypes.c_int64*3).from_address(lib.pool_stats())
 assert counters[1]==0,'An empty pool must not flush GPU work'
 small=(ctypes.c_int64*1)(256<<20);large=(ctypes.c_int64*1)(512<<20)
 blocks[20*3]=ctypes.addressof(small);blocks[20*3+1]=1;blocks[20*3+2]=1
@@ -271,6 +287,18 @@ assert counters[0]==768<<20,'Unused large pool blocks must go before an allocati
 assert counters[1]==1,'Freeing several pool blocks must drain queued GPU work only once'
 assert blocks[20*3+1]==0 and blocks[21*3+1]==0,'Trimmed blocks must leave their free lists'
 print('GPU pool borrows correctly and trims unused large buffers before allocating under pressure')
+firstPhase=(ctypes.c_int64*1)(64<<20);secondPhase=(ctypes.c_int64*1)(512<<20)
+blocks[18*3]=ctypes.addressof(firstPhase);blocks[18*3+1]=1;blocks[18*3+2]=1
+blocks[21*3]=ctypes.addressof(secondPhase);blocks[21*3+1]=1;blocks[21*3+2]=1
+live=list(cache[:24]);collected=counters[2];waited=counters[1]
+lib.pool_clear.restype=ctypes.c_double
+assert lib.pool_clear()==576<<20,'An explicit workload boundary releases every unused large pool block'
+assert blocks[18*3+1]==0 and blocks[21*3+1]==0,'Released blocks must leave the free lists'
+assert counters[2]==collected+1 and counters[1]==waited+1,'Collect once and drain once for a release'
+assert list(cache[:24])==live,'Live tensor cache entries must remain intact'
+assert lib.pool_clear()==0 and counters[1]==waited+1,'An empty pool must not drain work'
+print('Explicit phase-boundary release collects once and preserves live tensor copies')
+
 
 ctypes.windll.kernel32.FreeLibrary.argtypes=[ctypes.c_void_p]
 assert ctypes.windll.kernel32.FreeLibrary(lib._handle)
