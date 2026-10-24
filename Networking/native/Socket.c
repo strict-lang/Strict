@@ -13,6 +13,7 @@
 typedef int socket_size;
 #else
 #include <sys/socket.h>
+#include <sys/ioctl.h>
 #include <netdb.h>
 #include <unistd.h>
 #include <arpa/inet.h>
