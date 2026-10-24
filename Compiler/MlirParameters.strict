@@ -28,11 +28,11 @@ Hoisted Texts
 Started(name Text, parameter Text) Texts
 	Reading.Started("numbers", "%p1").First is "    %h_numbers = func.call @strict_list_hoisted(%p1) : (f64) -> !llvm.ptr"
 	Reading.Started("numbers", "%p1").Last is "    %k_numbers = func.call @strict_list_version() : () -> i64"
-	Bytes.Started("pixels", "%p1").Last is "    %b_pixels = func.call @strict_list_bytes(%p1) : (f64) -> !llvm.ptr"
+	Bytes.Started("pixels", "%p1").Last is "    %b_pixels = func.call @strict_list_host_bytes(%p1) : (f64) -> !llvm.ptr"
 	let items = "    %h_" + name + " = func.call @strict_list_hoisted(" + parameter + ") : (f64) -> !llvm.ptr"
 	let length = "    %n_" + name + " = func.call @strict_list_length(" + parameter + ") : (f64) -> f64"
 	let started = (items, length, "    %k_" + name + " = func.call @strict_list_version() : () -> i64")
-	let bytes = "    %b_" + name + " = func.call @strict_list_bytes(" + parameter + ") : (f64) -> !llvm.ptr"
+	let bytes = "    %b_" + name + " = func.call @strict_list_host_bytes(" + parameter + ") : (f64) -> !llvm.ptr"
 	IsBytes(name) then started + bytes else started
 Read(name Text, list Text, position Text, nameBits Text, result Text) Text
 	Reading.Read("a", "%l", "%i", "%nb", "%x").IndexOf("@strict_hoisted_read(%h_a, %n_a, %i, %nb, %k_a, %l)") > 0

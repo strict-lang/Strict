@@ -5280,6 +5280,22 @@
     %null = llvm.mlir.zero : !llvm.ptr
     return %null : !llvm.ptr
   }
+  // strict_list_bytes of bytes on the host, null for bytes only on the GPU: a method hoisting a Bytes parameter does not
+  // download them before its loop runs on the GPU, its CPU loop reads them with strict_list_get
+  func.func private @strict_list_host_bytes(%list: f64) -> !llvm.ptr attributes {llvm.passthrough = ["alwaysinline"]} {
+    %holder = func.call @strict_list_holder(%list) : (f64) -> !llvm.ptr
+    %dataSlot = llvm.getelementptr %holder[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %dataBits = llvm.load %dataSlot : !llvm.ptr -> f64
+    %zero = arith.constant 0.0 : f64
+    %onHost = arith.cmpf one, %dataBits, %zero : f64
+    cf.cond_br %onHost, ^host, ^device
+  ^host:
+    %bytes = func.call @strict_list_bytes(%list) : (f64) -> !llvm.ptr
+    return %bytes : !llvm.ptr
+  ^device:
+    %null = llvm.mlir.zero : !llvm.ptr
+    return %null : !llvm.ptr
+  }
   // a read of a Bytes parameter: a byte where it is, other lists like strict_hoisted_read
   func.func private @strict_hoisted_byte_read(%bytes: !llvm.ptr, %items: !llvm.ptr, %length: f64, %index: f64, %name: f64, %version: i64, %list: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %null = llvm.mlir.zero : !llvm.ptr

@@ -1,7 +1,8 @@
 import os,subprocess,sys,tempfile
 from pathlib import Path
 # a table a GPU loop computes from numbers alone and only GPU loops read stays on the GPU: no download, no upload again;
-# one needing a 64 bit Power (not on the GPU) is computed on the CPU right away instead of failing there first
+# one needing a 64 bit Power (not on the GPU) is computed on the CPU right away instead of failing there first; Bytes
+# stay too, also when the method of the GPU loop reading them hoists them for its CPU loop
 root=Path(__file__).resolve().parent.parent
 folder=Path(tempfile.mkdtemp(prefix='strict-residency-'))
 program='''has logger
@@ -47,4 +48,5 @@ assert 'Strict GPU download of 4096 numbers' in ran.stdout,'the downloaded resul
 assert 'Strict GPU download of 1000 numbers in 64 bits' in ran.stdout,'the table the CPU reads did not stay on the GPU until then'
 assert 'Strict GPU download of 16384 numbers' not in ran.stdout,'the table went from the GPU to the host and back'
 assert 'Strict GPU download of 8192 numbers' not in ran.stdout,'the squares failed on the GPU first and came back'
+assert 'Strict GPU download of 16000 numbers' not in ran.stdout,'the bytes went from the GPU to the host before a GPU loop read them'
 print('A list computed on the GPU from numbers alone stays there until the CPU reads it')
