@@ -12188,12 +12188,26 @@
     %floats = arith.ori %isSingle, %isBrain : i1
     return %floats : i1
   }
+  // the threads of a block of strict_device_hadamard_tokens for a token of width numbers: a warp per group of 256, half
+  // as many warps with two groups each above 32 groups
+  func.func private @strict_gpu_hadamard_threads(%width: i64) -> i64 {
+    %one = arith.constant 1 : i64
+    %five = arith.constant 5 : i64
+    %eight = arith.constant 8 : i64
+    %thirtyTwo = arith.constant 32 : i64
+    %groups = arith.shrui %width, %eight : i64
+    %isWide = arith.cmpi sgt, %groups, %thirtyTwo : i64
+    %paired = arith.addi %groups, %one : i64
+    %halved = arith.shrui %paired, %one : i64
+    %warps = arith.select %isWide, %halved, %groups : i64
+    %threads = arith.shli %warps, %five : i64
+    return %threads : i64
+  }
   // 32 bit or bfloat16 numbers on the GPU only read by dot products with rows become 8 bit numbers (a scale per 32) in
   // the scratch block, dp4a multiplies 4 of them with 4 packed numbers of a row at once
   func.func private @strict_gpu_quantized(%ptx: !llvm.ptr, %view: !llvm.ptr) {
     %none = arith.constant 0 : i64
     %two = arith.constant 2 : i64
-    %byEight = arith.constant 3 : i64
     %five = arith.constant 5 : i64
     %eight = arith.constant 8 : i64
     %thirtyOne = arith.constant 31 : i64
@@ -12274,7 +12288,7 @@
     %isRotated = llvm.icmp "ne" %rotation, %unrotated : !llvm.ptr
     %groupRest = arith.andi %tokenWidth, %spare : i64
     %wholeGroups = arith.cmpi eq, %groupRest, %none : i64
-    %widest = arith.constant 8192 : i64
+    %widest = arith.constant 16384 : i64
     %fitsBlock = arith.cmpi sle, %tokenWidth, %widest : i64
     %rotatedTokens = arith.andi %perToken, %isRotated : i1
     %groupedTokens = arith.andi %wholeGroups, %fitsBlock : i1
@@ -12290,8 +12304,9 @@
   ^fuseLaunch:
     %sourceSlot = llvm.getelementptr %rotation[1] : (!llvm.ptr) -> !llvm.ptr, i64
     %source = llvm.load %sourceSlot : !llvm.ptr -> i64
-    %fuseThreads = arith.shrui %tokenWidth, %byEight : i64
-    %fuseTotal = arith.shrui %length, %byEight : i64
+    %fuseThreads = func.call @strict_gpu_hadamard_threads(%tokenWidth) : (i64) -> i64
+    %fuseTokens = arith.divui %length, %tokenWidth : i64
+    %fuseTotal = arith.muli %fuseTokens, %fuseThreads : i64
     %fuseDone = func.call @strict_gpu_quantize_launch(%fused, %source, %length, %tokenWidth, %target, %bits, %fuseTotal, %fuseThreads) : (!llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> i1
     cf.cond_br %fuseDone, ^swap, ^unfused
   ^unfused:
