@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <math.h>
 #include <string.h>
 #include "strict.h"
 #include "Parallel.h"
@@ -314,4 +315,117 @@ STRICT_EXPORT double TensorFile_Quantized(double self, double path, double entry
 	}
 	free(factors);
 	return failure ? strict_fail(failure) : strict_numbers_result((strict_numbers*)rows);
+}
+
+typedef struct { float* downs; float* ups; uint64_t width, rank, size, height, seed; } Tuning;
+enum { TileRows = 8, BlockColumns = 128 };
+
+/* A number in [0, 1) for place in the stream of seed (splitmix64). */
+static float Uniform(uint64_t seed, uint64_t place)
+{
+	uint64_t mixed = seed + (place + 1) * 0x9E3779B97F4A7C15ull;
+	mixed = (mixed ^ (mixed >> 30)) * 0xBF58476D1CE4E5B9ull;
+	mixed = (mixed ^ (mixed >> 27)) * 0x94D049BB133111EBull;
+	return (float)((mixed ^ (mixed >> 31)) >> 40) / 16777216.0f;
+}
+
+/* Quantizes row again from its tuned values with one scale, rounding stochastically like ComfyUI does for LoRAs on
+   int8 weights, so small updates are kept on average. */
+static void Requantized(const Tuning* tuning, uint64_t row, const float* values)
+{
+	uint64_t width = tuning->width;
+	strict_packed* packed = (strict_packed*)(storage + row * tuning->size);
+	signed char* numbers = (signed char*)packed->data;
+	float* parts = (float*)(packed->data + strict_packed_data(width, 8)), largest = 0;
+	for (uint64_t column = 0; column < width; column++)
+		largest = fabsf(values[column]) > largest ? fabsf(values[column]) : largest;
+	float scale = largest / 127;
+	for (uint64_t column = 0; column < width; column++)
+	{
+		float scaled = scale > 0 ? values[column] / scale : 0, lower = floorf(scaled);
+		float rounded = lower + (scaled - lower > Uniform(tuning->seed, row * width + column) ? 1 : 0);
+		numbers[column] = (signed char)(rounded > 127 ? 127 : rounded < -127 ? -127 : rounded);
+	}
+	for (uint64_t part = 0; part < (width + 31) / 32; part++)
+		parts[part] = scale;
+}
+
+/* Adds the update to the rows of one chunk that have one, a tile of rows and a block of columns at a time so the
+   numbers being added to stay in the L1 cache and every part of a down row is read once per tile (rank 384 rows of
+   5376 are 8 MB): 11.7 instead of 4.6 multiply-adds per ns on one Threadripper 3990X thread. */
+static void TunedChunk(void* context, uint64_t chunk)
+{
+	Tuning* tuning = context;
+	uint64_t width = tuning->width, rank = tuning->rank, first = chunk * ChunkRows, tuned[TileRows];
+	uint64_t last = first + ChunkRows < tuning->height ? first + ChunkRows : tuning->height;
+	float* values = malloc(TileRows * width * sizeof(float));
+	for (uint64_t row = first; values && row < last;)
+	{
+		uint64_t count = 0;
+		for (; row < last && count < TileRows; row++)
+		{
+			const float* up = tuning->ups + row * rank;
+			int isTuned = 0;
+			for (uint64_t part = 0; part < rank; part++)
+				isTuned |= up[part] != 0;
+			if (!isTuned)
+				continue;
+			strict_packed* packed = (strict_packed*)(storage + row * tuning->size);
+			const signed char* numbers = (const signed char*)packed->data;
+			float scale = ((float*)(packed->data + strict_packed_data(width, 8)))[0], *target = values + count * width;
+			for (uint64_t column = 0; column < width; column++)
+				target[column] = numbers[column] * scale;
+			tuned[count++] = row;
+		}
+		for (uint64_t start = 0; start < width; start += BlockColumns)
+		{
+			uint64_t end = start + BlockColumns < width ? start + BlockColumns : width;
+			for (uint64_t part = 0; part < rank; part++)
+			{
+				const float* down = tuning->downs + part * width;
+				for (uint64_t index = 0; index < count; index++)
+				{
+					float factor = tuning->ups[tuned[index] * rank + part], *target = values + index * width;
+					for (uint64_t column = start; column < end; column++)
+						target[column] += factor * down[column];
+				}
+			}
+		}
+		for (uint64_t index = 0; index < count; index++)
+			Requantized(tuning, tuned[index], values + index * width);
+	}
+	free(values);
+}
+
+/* The rows of TensorFile_Quantized plus a low rank update: factors are the downs (rank x columns, in the rotated space
+   of convrot rows), the ups (rows x rank) and one scale per rank; rows without an update stay as they are in the file. */
+STRICT_EXPORT double TensorFile_Tuned(double self, double path, double entry, double scales, double factors)
+{
+	double quantized = TensorFile_Quantized(self, path, entry, scales);
+	const strict_numbers* given = strict_numbers_of(factors);
+	if (strict_bits(quantized) >> 48 == 0x7FFC || given->count == 0)
+		return quantized;
+	uint64_t height = (uint64_t)rows[0], width = (uint64_t)((strict_packed*)storage)->count;
+	uint64_t rank = (uint64_t)given->count / (width + height + 1);
+	if (rank == 0 || rank * (width + height + 1) != (uint64_t)given->count)
+		return strict_fail("TunedFactorsDoNotFitTheMatrix");
+	Tuning tuning = { malloc(rank * width * sizeof(float)), malloc(rank * height * sizeof(float)), width, rank,
+		(sizeof(strict_packed) + strict_packed_bytes(width, 8) + 7) / 8 * 8, height, 1469598103934665603ull };
+	if (!tuning.downs || !tuning.ups)
+	{
+		free(tuning.downs);
+		free(tuning.ups);
+		return strict_fail("TensorTooLarge");
+	}
+	const double* ranked = given->items + rank * (width + height);
+	for (uint64_t index = 0; index < rank * width; index++)
+		tuning.downs[index] = (float)given->items[index];
+	for (uint64_t index = 0; index < rank * height; index++)
+		tuning.ups[index] = (float)(given->items[rank * width + index] * ranked[index % rank]);
+	for (const char* name = strict_text(entry); *name; name++)
+		tuning.seed = (tuning.seed ^ (unsigned char)*name) * 1099511628211ull;
+	Parallel(TunedChunk, &tuning, (height + ChunkRows - 1) / ChunkRows);
+	free(tuning.downs);
+	free(tuning.ups);
+	return quantized;
 }
