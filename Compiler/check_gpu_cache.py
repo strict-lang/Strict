@@ -12,6 +12,15 @@ for name in ['strict_gpu_active_has', 'strict_gpu_oldest']:
 for name in ['strict_gpu_evicted', 'strict_gpu_handed']:
 	body=re.search(r'  func.func private @'+name+r'\(.*?\n  \}',source,re.S)[0]
 	assert 'call @strict_gpu_active_has' in body, 'Missing active-input lifetime protection for GPU cache eviction: '+name
+rows=re.search(r'  func.func private @strict_gpu_is_rows\(.*?\n  \}',source,re.S)
+assert rows, 'Missing strict_gpu_is_rows: spilled and handed rows include rows with one scale (kind 4)'
+helpers.append(rows[0])
+for name in ['strict_gpu_spill', 'strict_gpu_handed']:
+	body=re.search(r'  func.func private @'+name+r'\(.*?\n  \}',source,re.S)[0]
+	assert 'call @strict_gpu_is_rows' in body, name+' skips rows with one scale (kind 4)'
+for name in ['strict_gpu_spill', 'strict_gpu_unspilled']:
+	body=re.search(r'  func.func private @'+name+r'\(.*?\n  \}',source,re.S)[0]
+	assert '%slot[6]' in body, name+' loses the kind of spilled rows'
 cached=re.search(r'  func.func private @strict_gpu_cached\(.*?\n  \}',source,re.S)[0]
 module='''module {
   llvm.mlir.global internal @testSlot(dense<0> : tensor<8xi64>) : !llvm.array<8 x i64>
@@ -70,6 +79,11 @@ __HELPERS__
     %bits = llvm.ptrtoint %candidate : !llvm.ptr to i64
     llvm.return %bits : i64
   }
+  llvm.func @rows_kind(%kind: i64) -> i32 {
+    %rows = func.call @strict_gpu_is_rows(%kind) : (i64) -> i1
+    %result = arith.extui %rows : i1 to i32
+    llvm.return %result : i32
+  }
 '''
 module=module[:-2]+pressure.replace('__HELPERS__','\n'.join(helpers))+'}\n'
 (root/'cache-kind.mlir').write_text(module,encoding='utf-8')
@@ -77,12 +91,14 @@ subprocess.run(['C:/msys64/ucrt64/bin/mlir-opt.exe','--mlir-disable-threading',s
 subprocess.run(['C:/msys64/ucrt64/bin/mlir-translate.exe','--mlir-disable-threading','--mlir-to-llvmir',str(root/'cache-kind.llvm.mlir'),'-o',str(root/'cache-kind.ll')],check=True)
 llvm_ir=root/'cache-kind.ll';llvm_ir.write_text(llvm_ir.read_text(encoding='utf-8')+'\n@_fltused = global i32 0\n',encoding='utf-8')
 subprocess.run(['C:/Program Files/LLVM/bin/clang.exe','--target=x86_64-pc-windows-msvc','-Wno-override-module','-O2','-c',str(llvm_ir),'-o',str(root/'cache-kind.obj')],check=True)
-subprocess.run(['C:/Program Files/LLVM/bin/lld-link.exe','/dll','/noentry','/export:cached_kind','/export:scope_choice','/export:cache_address','/out:'+str(root/'cache-kind.dll'),str(root/'cache-kind.obj')],check=True)
+subprocess.run(['C:/Program Files/LLVM/bin/lld-link.exe','/dll','/noentry','/export:cached_kind','/export:scope_choice','/export:cache_address','/export:rows_kind','/out:'+str(root/'cache-kind.dll'),str(root/'cache-kind.obj')],check=True)
 lib=ctypes.CDLL(str(root/'cache-kind.dll'));lib.cached_kind.argtypes=[ctypes.c_int64,ctypes.c_int64]
 for stored,requested,expected in [(4,2,1),(4,4,1),(2,2,1),(2,4,0),(3,2,0),(1,1,1)]:
 	actual=lib.cached_kind(stored,requested)
 	print(stored,requested,actual,flush=True)
 	assert actual==expected,(stored,requested,actual,expected)
+for kind,expected in [(2,1),(4,1),(3,0),(1,0)]:
+	assert lib.rows_kind(kind)==expected,('rows kind',kind)
 lib.cache_address.restype=ctypes.c_void_p
 cache=(ctypes.c_int64*524288).from_address(lib.cache_address())
 for index,device in enumerate([101,202,303]):

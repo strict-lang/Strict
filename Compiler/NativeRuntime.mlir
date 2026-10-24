@@ -10870,17 +10870,17 @@
   ^done(%result: i1):
     return %result : i1
   }
-  // evicted rows (kind 2) of live lists keep their device layout in pinned host memory, their next upload is one copy
-  // instead of packing every row again from pageable memory: 1024 times the list, row count, pinned memory, bytes,
-  // columns and bits
-  llvm.mlir.global internal @strict_gpu_spills(dense<0> : tensor<6144xi64>) : !llvm.array<6144 x i64>
+  // evicted rows (strict_gpu_is_rows) of live lists keep their device layout in pinned host memory, their next upload is
+  // one copy instead of packing every row again from pageable memory: 1024 times the list, row count, pinned memory,
+  // bytes, columns, bits and kind
+  llvm.mlir.global internal @strict_gpu_spills(dense<0> : tensor<7168xi64>) : !llvm.array<7168 x i64>
   // pinned bytes of all spills, at most 8 GB (host memory is shared with the program and other programs)
   llvm.mlir.global internal @strict_gpu_spilled_bytes(0 : i64) : i64
   func.func private @strict_gpu_spill_at(%index: i64) -> !llvm.ptr {
-    %six = arith.constant 6 : i64
+    %seven = arith.constant 7 : i64
     %spills = llvm.mlir.addressof @strict_gpu_spills : !llvm.ptr
-    %offset = arith.muli %index, %six : i64
-    %slot = llvm.getelementptr %spills[0, %offset] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<6144 x i64>
+    %offset = arith.muli %index, %seven : i64
+    %slot = llvm.getelementptr %spills[0, %offset] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<7168 x i64>
     return %slot : !llvm.ptr
   }
   // the spill slot of list (rows of count), else the first free slot when free is true, else null
@@ -10913,11 +10913,20 @@
     %chosen = llvm.select %free, %empty, %nothing : i1, !llvm.ptr
     return %chosen : !llvm.ptr
   }
+  // the rows of a matrix in the cache: kind 2, or 4 when every row has one scale (strict_gpu_whole_target picks the faster
+  // GEMM for those)
+  func.func private @strict_gpu_is_rows(%kind: i64) -> i1 {
+    %rowsKind = arith.constant 2 : i64
+    %uniformKind = arith.constant 4 : i64
+    %isRows = arith.cmpi eq, %kind, %rowsKind : i64
+    %isUniform = arith.cmpi eq, %kind, %uniformKind : i64
+    %either = arith.ori %isRows, %isUniform : i1
+    return %either : i1
+  }
   // copies the device rows of entry into pinned host memory once (header word, then header and rows), the GPU is idle
   func.func private @strict_gpu_spill(%entry: !llvm.ptr) {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
-    %two = arith.constant 2 : i64
     %eight = arith.constant 8 : i64
     %thirtyTwo = arith.constant 32 : i64
     %lineSpare = arith.constant 127 : i64
@@ -10928,7 +10937,7 @@
     %false = arith.constant false
     %kindSlot = llvm.getelementptr %entry[5] : (!llvm.ptr) -> !llvm.ptr, i64
     %kind = llvm.load %kindSlot : !llvm.ptr -> i64
-    %isRows = arith.cmpi eq, %kind, %two : i64
+    %isRows = func.call @strict_gpu_is_rows(%kind) : (i64) -> i1
     cf.cond_br %isRows, ^known, ^done
   ^known:
     %listBits = llvm.load %entry : !llvm.ptr -> i64
@@ -10990,6 +10999,8 @@
     llvm.store %length, %slotLength : i64, !llvm.ptr
     %slotBits = llvm.getelementptr %slot[5] : (!llvm.ptr) -> !llvm.ptr, i64
     llvm.store %bits, %slotBits : i64, !llvm.ptr
+    %slotKind = llvm.getelementptr %slot[6] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %kind, %slotKind : i64, !llvm.ptr
     llvm.store %spilledAfter, %spilledSlot : i64, !llvm.ptr
     cf.br ^done
   ^done:
@@ -11003,7 +11014,6 @@
   func.func private @strict_gpu_handed(%total: i64) -> i64 {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
-    %two = arith.constant 2 : i64
     %window = arith.constant 16 : i64
     %entries = arith.constant 65536 : i64
     %false = arith.constant false
@@ -11031,7 +11041,7 @@
     %poolSlot = llvm.getelementptr %entry[7] : (!llvm.ptr) -> !llvm.ptr, i64
     %pool = llvm.load %poolSlot : !llvm.ptr -> i64
     %isUsed = arith.cmpi ne, %listBits, %none : i64
-    %isRows = arith.cmpi eq, %kind, %two : i64
+    %isRows = func.call @strict_gpu_is_rows(%kind) : (i64) -> i1
     %isOwn = arith.cmpi eq, %pool, %none : i64
     %isOld = arith.cmpi slt, %used, %recent : i64
     %isLater = arith.cmpi sgt, %used, %bestUse : i64
@@ -11077,7 +11087,6 @@
   // the place of), in order on the stream without waiting for it, false when not spilled
   func.func private @strict_gpu_unspilled(%rows: f64, %count: i64, %out: !llvm.ptr) -> i1 {
     %none = arith.constant 0 : i64
-    %two = arith.constant 2 : i64
     %nothing = llvm.mlir.zero : !llvm.ptr
     %false = arith.constant false
     %true = arith.constant true
@@ -11110,7 +11119,9 @@
     %bitsSlot = llvm.getelementptr %slot[5] : (!llvm.ptr) -> !llvm.ptr, i64
     %bits = llvm.load %bitsSlot : !llvm.ptr -> i64
     func.call @strict_gpu_view(%out, %device, %length, %bits) : (!llvm.ptr, i64, i64, i64) -> ()
-    func.call @strict_gpu_remember(%rows, %two, %count, %out, %none) : (f64, i64, i64, !llvm.ptr, i64) -> ()
+    %kindSlot = llvm.getelementptr %slot[6] : (!llvm.ptr) -> !llvm.ptr, i64
+    %kind = llvm.load %kindSlot : !llvm.ptr -> i64
+    func.call @strict_gpu_remember(%rows, %kind, %count, %out, %none) : (f64, i64, i64, !llvm.ptr, i64) -> ()
     return %true : i1
   ^missing:
     return %false : i1
