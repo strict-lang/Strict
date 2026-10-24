@@ -1963,6 +1963,28 @@
   ^exit:
     return
   }
+  // the doubles of a list computed on the GPU as 32 bit floats (strict_gpu_narrow), rounded like arith.truncf on the CPU
+  llvm.func @strict_device_singles(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64) attributes {nvvm.kernel} {
+    %thread = func.call @strict_device_thread_index() : () -> i32
+    %block = func.call @strict_device_block_index() : () -> i32
+    %size = func.call @strict_device_block_size() : () -> i32
+    %thread64 = arith.extui %thread : i32 to i64
+    %block64 = arith.extui %block : i32 to i64
+    %size64 = arith.extui %size : i32 to i64
+    %start = arith.muli %block64, %size64 : i64
+    %at = arith.addi %start, %thread64 : i64
+    %inside = arith.cmpi slt, %at, %count : i64
+    cf.cond_br %inside, ^convert, ^exit
+  ^convert:
+    %doubleSlot = llvm.getelementptr %source[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %double = llvm.load %doubleSlot : !llvm.ptr -> f64
+    %single = arith.truncf %double : f64 to f32
+    %singleSlot = llvm.getelementptr %target[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    llvm.store %single, %singleSlot : f32, !llvm.ptr
+    cf.br ^exit
+  ^exit:
+    llvm.return
+  }
   llvm.func @strict_device_quantize(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64) attributes {nvvm.kernel} {
     %brainBits = arith.constant 17 : i64
     %isBrain = arith.cmpi eq, %bits, %brainBits : i64

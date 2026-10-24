@@ -1,0 +1,57 @@
+has function MlirFunction
+has position Number
+constant Count = MemberEntry("count", "Strict/Number", List(InstructionEntry), false)
+constant Tabled = MethodEntry("Tabled", List(MemberEntry) + Count, "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "count"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "index"), InstructionEntry.LoadNumber(2, 8), InstructionEntry.Binary(InstructionType.Divide, (1, 2, 3)), InstructionEntry.Named(InstructionType.InvokeWriteToList, 3, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 5)))
+constant Squared = MethodEntry("Squared", Tabled.parameters, Tabled.returnType, Tabled.instructions.Slice(0, 5) + InstructionEntry.Binary(InstructionType.Power, (1, 2, 3)) + Tabled.instructions.Slice(6, 2))
+constant Tabling = MlirDoubles(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, Tabled), 2)
+constant Squaring = MlirDoubles(MlirFunction(Tabling.function.types, MlirParallel.Rows, Squared), 2)
+Failing Boolean
+	Squaring.Failing
+	Tabling.Failing is false
+	MlirDoubles(MlirGpu.Doubling.function, 2).Failing is false
+	Text.Combine(MlirGpu.Kernels(Squaring.function)).IndexOf("_gpu2s(") > 0
+	Text.Combine(MlirGpu.Kernels(Squaring.function)).IndexOf("_gpu2(") is -1
+	MlirGuards(MlirFunction(Squaring.function, Guarded = 2), 2).Named.First.IndexOf("(\"\00") > 0
+	Fails(function, position + 1, function.method.LoopEndOf(position), 0)
+Fails(inspected MlirFunction, first Number, limit Number, depth Number) Boolean
+	Squaring.Fails(Squaring.function, 3, 7, 0)
+	Tabling.Fails(Tabling.function, 3, 7, 0) is false
+	for Range(first, limit)
+		let entry = inspected.method.instructions(value)
+		let isLogarithm = (entry.kind is InstructionType.Invoke) and (entry.texts(1) is "Logarithm")
+		if (entry.kind is InstructionType.Power) or isLogarithm
+			return true
+		if (depth < 3) and (entry.kind is InstructionType.Invoke)
+			for MlirModule(inspected.types, "").Called(inspected, value)
+				if Fails(value, 0, value.method.instructions.Length, depth + 1)
+					return true
+	false
+Kept Boolean
+	Tabling.Kept
+	Squaring.Kept is false
+	MlirDoubles(MlirGpu.Doubling.function, 2).Kept is false
+	MlirDoubles(MlirLoops.Counting.function, 0).Kept is false
+	let isPlain = (Uses(InstructionType.Invoke) is false) and (Uses(InstructionType.Power) is false)
+	MlirLoops(function, position).IsCollecting and (IsListed is false) and isPlain
+IsListed Boolean
+	MlirDoubles(MlirGpu.Doubling.function, 2).IsListed
+	Tabling.IsListed is false
+	if MlirLoops(function, position).Collection is not ""
+		return true
+	for MlirGpuCheck(function, position).Free
+		if MlirDevice(function, position).IsList(value)
+			return true
+	false
+Uses(kind Number) Boolean
+	Squaring.Uses(InstructionType.Power)
+	Tabling.Uses(InstructionType.Power) is false
+	for Range(position + 1, function.method.LoopEndOf(position))
+		if function.method.instructions(value).kind is kind
+			return true
+	false
+Format Number
+	Tabling.Format is 64
+	Squaring.Format is 0
+	MlirDoubles(MlirLayout.Halves, 2).Format is 17
+	let packed = MlirLayout(function).Packed(position)
+	(packed is 0) and Kept then 64 else packed
