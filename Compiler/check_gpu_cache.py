@@ -21,6 +21,12 @@ for name in ['strict_gpu_spill', 'strict_gpu_handed']:
 for name in ['strict_gpu_spill', 'strict_gpu_unspilled']:
 	body=re.search(r'  func.func private @'+name+r'\(.*?\n  \}',source,re.S)[0]
 	assert '%slot[6]' in body, name+' loses the kind of spilled rows'
+obtain=re.search(r'  func.func private @strict_gpu_obtain\(.*?\n  \}',source,re.S)[0]
+collected=obtain[obtain.index('  ^ownCollect:'):]
+assert -1<collected.find('call @strict_gpu_lend')<collected.find('call @strict_gpu_alloc'),'A block of a larger class the full collection freed is lent before a driver allocation (else 256 and 512 MB blocks churn through the driver)'
+for name in ['strict_gpu_alloc', 'strict_gpu_free', 'strict_gpu_free_memory', 'strict_gpu_driver_free', 'strict_gpu_sized', 'strict_gpu_size_slot']:
+	helpers+=re.findall(r'  func.func private @'+name+r'\(.*?\n  \}',source,re.S)
+helpers+=re.findall(r'  llvm.mlir.global internal @strict_gpu_(?:budget|sizes)\(.*',source)
 cached=re.search(r'  func.func private @strict_gpu_cached\(.*?\n  \}',source,re.S)[0]
 module='''module {
   llvm.mlir.global internal @testSlot(dense<0> : tensor<8xi64>) : !llvm.array<8 x i64>
@@ -79,6 +85,63 @@ __HELPERS__
     %bits = llvm.ptrtoint %candidate : !llvm.ptr to i64
     llvm.return %bits : i64
   }
+  llvm.mlir.global internal @testDriverFree(0 : i64) : i64
+  llvm.mlir.global internal @testAllocations(0 : i64) : i64
+  llvm.func @testAlloc(%slot: !llvm.ptr, %bytes: i64) -> i32 {
+    %zero = llvm.mlir.constant(0 : i32) : i32
+    %one = llvm.mlir.constant(1 : i64) : i64
+    %shift = llvm.mlir.constant(40 : i64) : i64
+    %countSlot = llvm.mlir.addressof @testAllocations : !llvm.ptr
+    %count = llvm.load %countSlot : !llvm.ptr -> i64
+    %next = llvm.add %count, %one : i64
+    llvm.store %next, %countSlot : i64, !llvm.ptr
+    %high = llvm.shl %next, %shift : i64
+    %device = llvm.or %high, %bytes : i64
+    llvm.store %device, %slot : i64, !llvm.ptr
+    llvm.return %zero : i32
+  }
+  llvm.func @testRelease(%device: i64) -> i32 {
+    %zero = llvm.mlir.constant(0 : i32) : i32
+    llvm.return %zero : i32
+  }
+  llvm.func @testInfo(%free: !llvm.ptr, %total: !llvm.ptr) -> i32 {
+    %zero = llvm.mlir.constant(0 : i32) : i32
+    %slot = llvm.mlir.addressof @testDriverFree : !llvm.ptr
+    %value = llvm.load %slot : !llvm.ptr -> i64
+    llvm.store %value, %free : i64, !llvm.ptr
+    llvm.store %value, %total : i64, !llvm.ptr
+    llvm.return %zero : i32
+  }
+  func.func private @strict_gpu_call(%index: i64) -> !llvm.ptr {
+    %alloc = llvm.mlir.addressof @testAlloc : !llvm.ptr
+    %release = llvm.mlir.addressof @testRelease : !llvm.ptr
+    %info = llvm.mlir.addressof @testInfo : !llvm.ptr
+    %six = arith.constant 6 : i64
+    %seven = arith.constant 7 : i64
+    %isAlloc = arith.cmpi eq, %index, %six : i64
+    %isRelease = arith.cmpi eq, %index, %seven : i64
+    %orRelease = llvm.select %isRelease, %release, %info : i1, !llvm.ptr
+    %chosen = llvm.select %isAlloc, %alloc, %orRelease : i1, !llvm.ptr
+    return %chosen : !llvm.ptr
+  }
+  func.func private @strict_gpu_starved(%needed: i64) -> i1 {
+    %false = arith.constant false
+    return %false : i1
+  }
+  llvm.func @budget_free(%driver: i64) -> i64 {
+    %slot = llvm.mlir.addressof @testDriverFree : !llvm.ptr
+    llvm.store %driver, %slot : i64, !llvm.ptr
+    %free = func.call @strict_gpu_free_memory() : () -> i64
+    llvm.return %free : i64
+  }
+  llvm.func @budget_alloc(%bytes: i64) -> i64 {
+    %device = func.call @strict_gpu_alloc(%bytes) : (i64) -> i64
+    llvm.return %device : i64
+  }
+  llvm.func @budget_release(%device: i64) {
+    func.call @strict_gpu_free(%device) : (i64) -> ()
+    llvm.return
+  }
   llvm.func @rows_kind(%kind: i64) -> i32 {
     %rows = func.call @strict_gpu_is_rows(%kind) : (i64) -> i1
     %result = arith.extui %rows : i1 to i32
@@ -91,7 +154,7 @@ subprocess.run(['C:/msys64/ucrt64/bin/mlir-opt.exe','--mlir-disable-threading',s
 subprocess.run(['C:/msys64/ucrt64/bin/mlir-translate.exe','--mlir-disable-threading','--mlir-to-llvmir',str(root/'cache-kind.llvm.mlir'),'-o',str(root/'cache-kind.ll')],check=True)
 llvm_ir=root/'cache-kind.ll';llvm_ir.write_text(llvm_ir.read_text(encoding='utf-8')+'\n@_fltused = global i32 0\n',encoding='utf-8')
 subprocess.run(['C:/Program Files/LLVM/bin/clang.exe','--target=x86_64-pc-windows-msvc','-Wno-override-module','-O2','-c',str(llvm_ir),'-o',str(root/'cache-kind.obj')],check=True)
-subprocess.run(['C:/Program Files/LLVM/bin/lld-link.exe','/dll','/noentry','/export:cached_kind','/export:scope_choice','/export:cache_address','/export:rows_kind','/out:'+str(root/'cache-kind.dll'),str(root/'cache-kind.obj')],check=True)
+subprocess.run(['C:/Program Files/LLVM/bin/lld-link.exe','/dll','/noentry','/export:cached_kind','/export:scope_choice','/export:cache_address','/export:rows_kind','/export:budget_free','/export:budget_alloc','/export:budget_release','/out:'+str(root/'cache-kind.dll'),str(root/'cache-kind.obj')],check=True)
 lib=ctypes.CDLL(str(root/'cache-kind.dll'));lib.cached_kind.argtypes=[ctypes.c_int64,ctypes.c_int64]
 for stored,requested,expected in [(4,2,1),(4,4,1),(2,2,1),(2,4,0),(3,2,0),(1,1,1)]:
 	actual=lib.cached_kind(stored,requested)
@@ -116,6 +179,15 @@ for frame,expected in [(inner,202),(outer,202),(None,101),(allFrame,0)]:
 	assert chosen(frame)==expected,('active input lifetime',expected)
 cache[15]=1
 assert chosen(inner)==0,'Pooled copies must remain outside dedicated-cache eviction'
+lib.budget_free.argtypes=[ctypes.c_int64];lib.budget_free.restype=ctypes.c_int64
+lib.budget_alloc.argtypes=[ctypes.c_int64];lib.budget_alloc.restype=ctypes.c_int64
+lib.budget_release.argtypes=[ctypes.c_int64]
+gigabyte=1<<30
+start=lib.budget_free(10*gigabyte)
+device=lib.budget_alloc(2*gigabyte)
+assert lib.budget_free(10*gigabyte)==start-2*gigabyte,'An allocation counts against the GPU budget at once, the driver may report it later'
+lib.budget_release(device)
+assert lib.budget_free(9*gigabyte)==start,'A free gives its bytes back to the budget at once, whatever the driver reports'
 print('Native row-cache and nested input lifetime contracts passed')
 
 ctypes.windll.kernel32.FreeLibrary.argtypes=[ctypes.c_void_p]

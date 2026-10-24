@@ -9685,6 +9685,67 @@
   // the driver on Windows (WDDM) does not fail an allocation past the free memory, it pages memory out and every
   // kernel gets several times slower, so the pool gives its free big blocks back first when less than 256 MB would be
   // left (with 1 GB a pool reused every layer went to the driver and back next to 0.5 GB of other programs)
+  // the GPU memory the runtime may hold and the bytes its driver allocations hold now: the free memory the driver reports
+  // at the first question plus what was held then, less 512 MB for what the runtime does not count (context, graphs,
+  // local memory), lowered to what is held when the driver refuses an allocation
+  llvm.mlir.global internal @strict_gpu_budget(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  // address and bytes of every driver allocation in 8192 slots (open addressing from a hash of the address)
+  llvm.mlir.global internal @strict_gpu_sizes(dense<0> : tensor<16384xi64>) : !llvm.array<16384 x i64>
+  // the slot holding wanted (an address, 0 for a free slot) on the probe path of device, null when none does
+  func.func private @strict_gpu_size_slot(%device: i64, %wanted: i64) -> !llvm.ptr {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %slots = arith.constant 8192 : i64
+    %mask = arith.constant 8191 : i64
+    %golden = arith.constant -7046029254386353131 : i64
+    %shift = arith.constant 51 : i64
+    %sizes = llvm.mlir.addressof @strict_gpu_sizes : !llvm.ptr
+    %mixed = arith.muli %device, %golden : i64
+    %start = arith.shrui %mixed, %shift : i64
+    cf.br ^probe(%none : i64)
+  ^probe(%step: i64):
+    %more = arith.cmpi slt, %step, %slots : i64
+    cf.cond_br %more, ^look, ^missing
+  ^look:
+    %position = arith.addi %start, %step : i64
+    %at = arith.andi %position, %mask : i64
+    %offset = arith.shli %at, %one : i64
+    %slot = llvm.getelementptr %sizes[0, %offset] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<16384 x i64>
+    %held = llvm.load %slot : !llvm.ptr -> i64
+    %found = arith.cmpi eq, %held, %wanted : i64
+    %next = arith.addi %step, %one : i64
+    cf.cond_br %found, ^done(%slot : !llvm.ptr), ^probe(%next : i64)
+  ^missing:
+    %nothing = llvm.mlir.zero : !llvm.ptr
+    return %nothing : !llvm.ptr
+  ^done(%result: !llvm.ptr):
+    return %result : !llvm.ptr
+  }
+  // counts a driver allocation of bytes at device in the budget, or forgets it (bytes 0) when it is given back
+  func.func private @strict_gpu_sized(%device: i64, %bytes: i64) {
+    %none = arith.constant 0 : i64
+    %isAdded = arith.cmpi ne, %bytes, %none : i64
+    %wanted = arith.select %isAdded, %none, %device : i64
+    %slot = func.call @strict_gpu_size_slot(%device, %wanted) : (i64, i64) -> !llvm.ptr
+    %nothing = llvm.mlir.zero : !llvm.ptr
+    %found = llvm.icmp "ne" %slot, %nothing : !llvm.ptr
+    cf.cond_br %found, ^count, ^done
+  ^count:
+    %bytesSlot = llvm.getelementptr %slot[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %old = llvm.load %bytesSlot : !llvm.ptr -> i64
+    %address = arith.select %isAdded, %device, %none : i64
+    llvm.store %address, %slot : i64, !llvm.ptr
+    llvm.store %bytes, %bytesSlot : i64, !llvm.ptr
+    %budget = llvm.mlir.addressof @strict_gpu_budget : !llvm.ptr
+    %heldSlot = llvm.getelementptr %budget[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %held = llvm.load %heldSlot : !llvm.ptr -> i64
+    %added = arith.addi %held, %bytes : i64
+    %changed = arith.subi %added, %old : i64
+    llvm.store %changed, %heldSlot : i64, !llvm.ptr
+    cf.br ^done
+  ^done:
+    return
+  }
   func.func private @strict_gpu_alloc(%bytes: i64) -> i64 {
     %zero = arith.constant 0 : i64
     %zero32 = arith.constant 0 : i32
@@ -9706,8 +9767,15 @@
     %result = llvm.call %alloc(%slot, %bytes) : !llvm.ptr, (!llvm.ptr, i64) -> i32
     %failed = arith.cmpi ne, %result, %zero32 : i32
     %device = llvm.load %slot : !llvm.ptr -> i64
-    cf.cond_br %failed, ^starved, ^done(%device : i64)
+    cf.cond_br %failed, ^starved, ^counted
+  ^counted:
+    func.call @strict_gpu_sized(%device, %bytes) : (i64, i64) -> ()
+    cf.br ^done(%device : i64)
   ^starved:
+    %budget = llvm.mlir.addressof @strict_gpu_budget : !llvm.ptr
+    %heldSlot = llvm.getelementptr %budget[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %held = llvm.load %heldSlot : !llvm.ptr -> i64
+    llvm.store %held, %budget : i64, !llvm.ptr
     %released = func.call @strict_gpu_starved(%needed) : (i64) -> i1
     cf.cond_br %released, ^again, ^done(%zero : i64)
   ^again:
@@ -9717,6 +9785,8 @@
     return %chosen : i64
   }
   func.func private @strict_gpu_free(%device: i64) {
+    %none = arith.constant 0 : i64
+    func.call @strict_gpu_sized(%device, %none) : (i64, i64) -> ()
     %freeIndex = arith.constant 7 : i64
     %free = func.call @strict_gpu_call(%freeIndex) : (i64) -> !llvm.ptr
     %result = llvm.call %free(%device) : !llvm.ptr, (i64) -> i32
@@ -10474,15 +10544,19 @@
   ^ownLend:
     %borrowed = func.call @strict_gpu_lend(%class) : (i64) -> i64
     %hasBorrowed = arith.cmpi ne, %borrowed, %none : i64
-    cf.cond_br %hasBorrowed, ^borrowed, ^ownCollect
-  ^borrowed:
-    return %borrowed : i64
+    cf.cond_br %hasBorrowed, ^borrowed(%borrowed : i64), ^ownCollect
+  ^borrowed(%lent: i64):
+    return %lent : i64
   ^ownCollect:
     %fully = arith.constant true
     func.call @strict_gc_run(%fully) : (i1) -> ()
     %collectedCount = llvm.load %countSlot : !llvm.ptr -> i64
     %reusable = arith.cmpi sgt, %collectedCount, %none : i64
-    cf.cond_br %reusable, ^again, ^own
+    cf.cond_br %reusable, ^again, ^ownRelend
+  ^ownRelend:
+    %collectedLent = func.call @strict_gpu_lend(%class) : (i64) -> i64
+    %hasCollectedLent = arith.cmpi ne, %collectedLent, %none : i64
+    cf.cond_br %hasCollectedLent, ^borrowed(%collectedLent : i64), ^own
   ^own:
     %owned = func.call @strict_gpu_alloc(%size) : (i64) -> i64
     %hasOwned = arith.cmpi ne, %owned, %none : i64
@@ -11195,7 +11269,34 @@
     llvm.store %more, %obtainedSlot : i64, !llvm.ptr
     return
   }
+  // the bytes left of the budget (strict_gpu_budget), the same for the same allocations whatever the GPU did meanwhile
+  // or when the driver counts them
   func.func private @strict_gpu_free_memory() -> i64 {
+    %none = arith.constant 0 : i64
+    %budgetSlot = llvm.mlir.addressof @strict_gpu_budget : !llvm.ptr
+    %heldSlot = llvm.getelementptr %budgetSlot[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %budget = llvm.load %budgetSlot : !llvm.ptr -> i64
+    %held = llvm.load %heldSlot : !llvm.ptr -> i64
+    %measured = arith.cmpi ne, %budget, %none : i64
+    cf.cond_br %measured, ^left(%budget : i64), ^measure
+  ^measure:
+    %driver = func.call @strict_gpu_driver_free() : () -> i64
+    %margin = arith.constant 536870912 : i64
+    %whole = arith.addi %driver, %held : i64
+    %roomy = arith.cmpi ugt, %whole, %margin : i64
+    %spare = arith.subi %whole, %margin : i64
+    %one = arith.constant 1 : i64
+    %limit = arith.select %roomy, %spare, %one : i64
+    llvm.store %limit, %budgetSlot : i64, !llvm.ptr
+    cf.br ^left(%limit : i64)
+  ^left(%total: i64):
+    %hasRoom = arith.cmpi ugt, %total, %held : i64
+    %room = arith.subi %total, %held : i64
+    %free = arith.select %hasRoom, %room, %none : i64
+    return %free : i64
+  }
+  // the free memory the driver reports
+  func.func private @strict_gpu_driver_free() -> i64 {
     %none = arith.constant 0 : i64
     %two = arith.constant 2 : i64
     %sizes = llvm.alloca %two x i64 : (i64) -> !llvm.ptr
