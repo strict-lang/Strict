@@ -342,7 +342,7 @@ def built(name,text,exports):
 	subprocess.run(['C:/Program Files/LLVM/bin/lld-link.exe','/dll','/noentry']+['/export:'+export for export in exports]+['/out:'+str(root/(name+'.dll')),str(root/(name+'.obj'))],check=True)
 	return ctypes.CDLL(str(root/(name+'.dll')))
 lib=built('cache-kind',module[:-2]+pressure.replace('__HELPERS__','\n'.join(helpers))+'}\n',['cached_kind','scope_choice','cache_address','rows_kind','budget_free','budget_alloc','budget_release','spill_upload','ahead_used','spills_address','ahead_address','calls_address','handed_address'])
-pools=built('cache-pool','module {\n'+'\n'.join(pool)+'}\n',['pool_address','pool_take','pool_real','pool_stats','pool_spilled'])
+pools=built('cache-pool','module {\n'+'\n'.join(pool)+'}\n',['pool_address','pool_take','pool_real','pool_stats','pool_spilled','pool_clear'])
 lib.cached_kind.argtypes=[ctypes.c_int64,ctypes.c_int64]
 for stored,requested,expected in [(4,2,1),(4,4,1),(2,2,1),(2,4,0),(3,2,0),(1,1,1)]:
 	actual=lib.cached_kind(stored,requested)
@@ -416,7 +416,7 @@ assert pools.pool_real(123,16)==17 and pools.pool_real(123,16)==16,'A borrowed b
 assert pools.pool_take(16)==456 and pools.pool_real(456,16)==18,'Must reuse the second larger class when the nearest is empty'
 assert pools.pool_take(16)==0,'Empty pool must fall through to the driver allocation'
 pools.pool_stats.restype=ctypes.c_void_p
-counters=(ctypes.c_int64*2).from_address(pools.pool_stats())
+counters=(ctypes.c_int64*3).from_address(pools.pool_stats())
 assert counters[1]==0,'An empty pool must not flush GPU work'
 small=(ctypes.c_int64*1)(256<<20);large=(ctypes.c_int64*1)(512<<20)
 blocks[20*3]=ctypes.addressof(small);blocks[20*3+1]=1;blocks[20*3+2]=1
@@ -430,18 +430,18 @@ spilled=(ctypes.c_int64*1).from_address(pools.pool_spilled())
 spilled[0]=1;blocks[20*3+1]=1;blocks[21*3+1]=1;counters[0]=0
 pools.pool_take(16)
 assert counters[0]==0 and blocks[20*3+1]==1 and blocks[21*3+1]==1,'With streamed rows spilled an allocation evicts those (strict_gpu_starved) instead of trimming pool blocks the next layers allocate again'
-spilled[0]=0
+spilled[0]=0;blocks[20*3+1]=0
 print('GPU pool borrows correctly and trims unused large buffers before allocating under pressure')
 firstPhase=(ctypes.c_int64*1)(64<<20);secondPhase=(ctypes.c_int64*1)(512<<20)
 blocks[18*3]=ctypes.addressof(firstPhase);blocks[18*3+1]=1;blocks[18*3+2]=1
 blocks[21*3]=ctypes.addressof(secondPhase);blocks[21*3+1]=1;blocks[21*3+2]=1
 live=list(cache[:24]);collected=counters[2];waited=counters[1]
-lib.pool_clear.restype=ctypes.c_double
-assert lib.pool_clear()==576<<20,'An explicit workload boundary releases every unused large pool block'
+pools.pool_clear.restype=ctypes.c_double
+assert pools.pool_clear()==576<<20,'An explicit workload boundary releases every unused large pool block'
 assert blocks[18*3+1]==0 and blocks[21*3+1]==0,'Released blocks must leave the free lists'
 assert counters[2]==collected+1 and counters[1]==waited+1,'Collect once and drain once for a release'
 assert list(cache[:24])==live,'Live tensor cache entries must remain intact'
-assert lib.pool_clear()==0 and counters[1]==waited+1,'An empty pool must not drain work'
+assert pools.pool_clear()==0 and counters[1]==waited+1,'An empty pool must not drain work'
 print('Explicit phase-boundary release collects once and preserves live tensor copies')
 
 

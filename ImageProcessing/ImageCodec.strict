@@ -1,0 +1,1 @@
+SaveJpeg(path Text, pixels Numbers, width Number, quality Number) Number
