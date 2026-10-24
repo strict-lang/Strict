@@ -27,6 +27,14 @@ assert -1<collected.find('call @strict_gpu_lend')<collected.find('call @strict_g
 for name in ['strict_gpu_alloc', 'strict_gpu_free', 'strict_gpu_free_memory', 'strict_gpu_driver_free', 'strict_gpu_sized', 'strict_gpu_size_slot']:
 	helpers+=re.findall(r'  func.func private @'+name+r'\(.*?\n  \}',source,re.S)
 helpers+=re.findall(r'  llvm.mlir.global internal @strict_gpu_(?:budget|sizes)\(.*',source)
+for name in ['strict_gpu_unspilled','strict_gpu_spilled','strict_gpu_spill_at','strict_gpu_put_async','strict_gpu_put_ahead','strict_gpu_ahead_join','strict_gpu_followed','strict_gpu_prefetch','strict_gpu_ahead_hit']:
+	match=re.search(r'  func.func private @'+name+r'\(.*?\n  \}',source,re.S)
+	assert match,'Missing '+name+': the spilled rows that went up next the last time go up ahead on a copy stream'
+	helpers.append(match[0])
+helpers+=re.findall(r'  llvm.mlir.global internal @strict_gpu_(?:spills|ahead)\(.*',source)
+for name,called in [('strict_gpu_rows','strict_gpu_ahead_hit'),('strict_gpu_replay','strict_gpu_ahead_join'),('strict_gpu_capture','strict_gpu_ahead_join')]:
+	body=re.search(r'  func.func private @'+name+r'\(.*?\n  \}',source,re.S)[0]
+	assert 'call @'+called in body,name+' must call '+called+': launches wait for uploads ahead at the first use of their rows and before a capture begins or ends'
 cached=re.search(r'  func.func private @strict_gpu_cached\(.*?\n  \}',source,re.S)[0]
 module='''module {
   llvm.mlir.global internal @testSlot(dense<0> : tensor<8xi64>) : !llvm.array<8 x i64>
@@ -116,13 +124,112 @@ __HELPERS__
     %alloc = llvm.mlir.addressof @testAlloc : !llvm.ptr
     %release = llvm.mlir.addressof @testRelease : !llvm.ptr
     %info = llvm.mlir.addressof @testInfo : !llvm.ptr
+    %put = llvm.mlir.addressof @testPut : !llvm.ptr
+    %record = llvm.mlir.addressof @testRecord : !llvm.ptr
+    %wait = llvm.mlir.addressof @testWait : !llvm.ptr
     %six = arith.constant 6 : i64
     %seven = arith.constant 7 : i64
+    %fourteen = arith.constant 14 : i64
+    %twentySeven = arith.constant 27 : i64
+    %thirtyThree = arith.constant 33 : i64
     %isAlloc = arith.cmpi eq, %index, %six : i64
     %isRelease = arith.cmpi eq, %index, %seven : i64
-    %orRelease = llvm.select %isRelease, %release, %info : i1, !llvm.ptr
+    %isPut = arith.cmpi eq, %index, %fourteen : i64
+    %isRecord = arith.cmpi eq, %index, %twentySeven : i64
+    %isWait = arith.cmpi eq, %index, %thirtyThree : i64
+    %orWait = llvm.select %isWait, %wait, %info : i1, !llvm.ptr
+    %orRecord = llvm.select %isRecord, %record, %orWait : i1, !llvm.ptr
+    %orPut = llvm.select %isPut, %put, %orRecord : i1, !llvm.ptr
+    %orRelease = llvm.select %isRelease, %release, %orPut : i1, !llvm.ptr
     %chosen = llvm.select %isAlloc, %alloc, %orRelease : i1, !llvm.ptr
     return %chosen : !llvm.ptr
+  }
+  llvm.mlir.global internal @testCalls(dense<0> : tensor<64xi64>) : !llvm.array<64 x i64>
+  llvm.mlir.global internal @testHanded(0 : i64) : i64
+  func.func private @strict_gpu_handed(%total: i64) -> i64 {
+    %one = arith.constant 1 : i64
+    %slot = llvm.mlir.addressof @testHanded : !llvm.ptr
+    %device = llvm.load %slot : !llvm.ptr -> i64
+    %next = arith.addi %device, %one : i64
+    llvm.store %next, %slot : i64, !llvm.ptr
+    return %device : i64
+  }
+  func.func private @strict_gpu_release(%device: i64) { return }
+  func.func private @strict_gpu_remember(%list: f64, %kind: i64, %count: i64, %out: !llvm.ptr, %pool: i64) { return }
+  func.func private @strict_gpu_captured(%function: !llvm.ptr) { return }
+  func.func private @strict_gpu_stream() -> !llvm.ptr {
+    %main = llvm.mlir.constant(999 : i64) : i64
+    %stream = llvm.inttoptr %main : i64 to !llvm.ptr
+    return %stream : !llvm.ptr
+  }
+  llvm.func @testLogged(%kind: i64, %first: i64, %second: i64) -> i32 {
+    %zero = llvm.mlir.constant(0 : i32) : i32
+    %one = llvm.mlir.constant(1 : i64) : i64
+    %three = llvm.mlir.constant(3 : i64) : i64
+    %calls = llvm.mlir.addressof @testCalls : !llvm.ptr
+    %count = llvm.load %calls : !llvm.ptr -> i64
+    %offset = llvm.mul %count, %three : i64
+    %start = llvm.add %offset, %one : i64
+    %kindSlot = llvm.getelementptr %calls[%start] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    llvm.store %kind, %kindSlot : i64, !llvm.ptr
+    %firstSlot = llvm.getelementptr %kindSlot[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %first, %firstSlot : i64, !llvm.ptr
+    %secondSlot = llvm.getelementptr %kindSlot[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %second, %secondSlot : i64, !llvm.ptr
+    %next = llvm.add %count, %one : i64
+    llvm.store %next, %calls : i64, !llvm.ptr
+    llvm.return %zero : i32
+  }
+  llvm.func @testPut(%device: i64, %host: !llvm.ptr, %bytes: i64, %stream: !llvm.ptr) -> i32 {
+    %kind = llvm.mlir.constant(1 : i64) : i64
+    %streamBits = llvm.ptrtoint %stream : !llvm.ptr to i64
+    %logged = llvm.call @testLogged(%kind, %streamBits, %device) : (i64, i64, i64) -> i32
+    llvm.return %logged : i32
+  }
+  llvm.func @testRecord(%event: !llvm.ptr, %stream: !llvm.ptr) -> i32 {
+    %kind = llvm.mlir.constant(2 : i64) : i64
+    %eventBits = llvm.ptrtoint %event : !llvm.ptr to i64
+    %streamBits = llvm.ptrtoint %stream : !llvm.ptr to i64
+    %logged = llvm.call @testLogged(%kind, %eventBits, %streamBits) : (i64, i64, i64) -> i32
+    llvm.return %logged : i32
+  }
+  llvm.func @testWait(%stream: !llvm.ptr, %event: !llvm.ptr, %flags: i32) -> i32 {
+    %kind = llvm.mlir.constant(3 : i64) : i64
+    %streamBits = llvm.ptrtoint %stream : !llvm.ptr to i64
+    %eventBits = llvm.ptrtoint %event : !llvm.ptr to i64
+    %logged = llvm.call @testLogged(%kind, %streamBits, %eventBits) : (i64, i64, i64) -> i32
+    llvm.return %logged : i32
+  }
+  llvm.func @spill_upload(%listBits: i64, %count: i64) -> i64 {
+    %three = arith.constant 3 : i64
+    %out = llvm.alloca %three x i64 : (i64) -> !llvm.ptr
+    %rows = arith.bitcast %listBits : i64 to f64
+    %uploaded = func.call @strict_gpu_unspilled(%rows, %count, %out) : (f64, i64, !llvm.ptr) -> i1
+    %device = llvm.load %out : !llvm.ptr -> i64
+    llvm.return %device : i64
+  }
+  llvm.func @ahead_used(%device: i64) {
+    %three = arith.constant 3 : i64
+    %out = llvm.alloca %three x i64 : (i64) -> !llvm.ptr
+    llvm.store %device, %out : i64, !llvm.ptr
+    func.call @strict_gpu_ahead_hit(%out) : (!llvm.ptr) -> ()
+    llvm.return
+  }
+  llvm.func @spills_address() -> !llvm.ptr {
+    %spills = llvm.mlir.addressof @strict_gpu_spills : !llvm.ptr
+    llvm.return %spills : !llvm.ptr
+  }
+  llvm.func @ahead_address() -> !llvm.ptr {
+    %ahead = llvm.mlir.addressof @strict_gpu_ahead : !llvm.ptr
+    llvm.return %ahead : !llvm.ptr
+  }
+  llvm.func @calls_address() -> !llvm.ptr {
+    %calls = llvm.mlir.addressof @testCalls : !llvm.ptr
+    llvm.return %calls : !llvm.ptr
+  }
+  llvm.func @handed_address() -> !llvm.ptr {
+    %handed = llvm.mlir.addressof @testHanded : !llvm.ptr
+    llvm.return %handed : !llvm.ptr
   }
   func.func private @strict_gpu_starved(%needed: i64) -> i1 {
     %false = arith.constant false
@@ -154,7 +261,7 @@ for name in ['strict_gpu_stack','strict_gpu_obtain','strict_gpu_lend','strict_gp
 trim=re.search(r'  func.func private @strict_gpu_trim\(.*?\n  \}',source,re.S)
 if trim:
 	pool.append(trim[0])
-for name in ['strict_gpu_blocks','strict_gpu_chunk','strict_gpu_lent']:
+for name in ['strict_gpu_blocks','strict_gpu_chunk','strict_gpu_lent','strict_gpu_spilled_bytes']:
 	pool.append(re.search(r'  llvm.mlir.global internal @'+name+r'[^\n]*',source)[0])
 pool.append('''
   llvm.mlir.global internal @strict_gc_young_limit(0 : i64) : i64
@@ -205,15 +312,22 @@ pool.append('''
     %counters = llvm.mlir.addressof @pool_counters : !llvm.ptr
     llvm.return %counters : !llvm.ptr
   }
+  llvm.func @pool_spilled() -> !llvm.ptr {
+    %spilled = llvm.mlir.addressof @strict_gpu_spilled_bytes : !llvm.ptr
+    llvm.return %spilled : !llvm.ptr
+  }
 ''')
-module=module[:-2]+pressure.replace('__HELPERS__','\n'.join(helpers))+'\n'.join(pool)+'}\n'
-(root/'cache-kind.mlir').write_text(module,encoding='utf-8')
-subprocess.run(['C:/msys64/ucrt64/bin/mlir-opt.exe','--mlir-disable-threading',str(root/'cache-kind.mlir'),'--convert-arith-to-llvm','--convert-func-to-llvm','--convert-cf-to-llvm','--reconcile-unrealized-casts','-o',str(root/'cache-kind.llvm.mlir')],check=True)
-subprocess.run(['C:/msys64/ucrt64/bin/mlir-translate.exe','--mlir-disable-threading','--mlir-to-llvmir',str(root/'cache-kind.llvm.mlir'),'-o',str(root/'cache-kind.ll')],check=True)
-llvm_ir=root/'cache-kind.ll';llvm_ir.write_text(llvm_ir.read_text(encoding='utf-8')+'\n@_fltused = global i32 0\n',encoding='utf-8')
-subprocess.run(['C:/Program Files/LLVM/bin/clang.exe','--target=x86_64-pc-windows-msvc','-Wno-override-module','-O2','-c',str(llvm_ir),'-o',str(root/'cache-kind.obj')],check=True)
-subprocess.run(['C:/Program Files/LLVM/bin/lld-link.exe','/dll','/noentry','/export:cached_kind','/export:scope_choice','/export:cache_address','/export:rows_kind','/export:budget_free','/export:budget_alloc','/export:budget_release','/out:'+str(root/'cache-kind.dll'),str(root/'cache-kind.obj')],check=True)
-lib=ctypes.CDLL(str(root/'cache-kind.dll'));lib.cached_kind.argtypes=[ctypes.c_int64,ctypes.c_int64]
+def built(name,text,exports):
+	(root/(name+'.mlir')).write_text(text,encoding='utf-8')
+	subprocess.run(['C:/msys64/ucrt64/bin/mlir-opt.exe','--mlir-disable-threading',str(root/(name+'.mlir')),'--convert-arith-to-llvm','--convert-func-to-llvm','--convert-cf-to-llvm','--reconcile-unrealized-casts','-o',str(root/(name+'.llvm.mlir'))],check=True)
+	subprocess.run(['C:/msys64/ucrt64/bin/mlir-translate.exe','--mlir-disable-threading','--mlir-to-llvmir',str(root/(name+'.llvm.mlir')),'-o',str(root/(name+'.ll'))],check=True)
+	llvm_ir=root/(name+'.ll');llvm_ir.write_text(llvm_ir.read_text(encoding='utf-8')+'\n@_fltused = global i32 0\n',encoding='utf-8')
+	subprocess.run(['C:/Program Files/LLVM/bin/clang.exe','--target=x86_64-pc-windows-msvc','-Wno-override-module','-O2','-c',str(llvm_ir),'-o',str(root/(name+'.obj'))],check=True)
+	subprocess.run(['C:/Program Files/LLVM/bin/lld-link.exe','/dll','/noentry']+['/export:'+export for export in exports]+['/out:'+str(root/(name+'.dll')),str(root/(name+'.obj'))],check=True)
+	return ctypes.CDLL(str(root/(name+'.dll')))
+lib=built('cache-kind',module[:-2]+pressure.replace('__HELPERS__','\n'.join(helpers))+'}\n',['cached_kind','scope_choice','cache_address','rows_kind','budget_free','budget_alloc','budget_release','spill_upload','ahead_used','spills_address','ahead_address','calls_address','handed_address'])
+pools=built('cache-pool','module {\n'+'\n'.join(pool)+'}\n',['pool_address','pool_take','pool_real','pool_stats','pool_spilled'])
+lib.cached_kind.argtypes=[ctypes.c_int64,ctypes.c_int64]
 for stored,requested,expected in [(4,2,1),(4,4,1),(2,2,1),(2,4,0),(3,2,0),(1,1,1)]:
 	actual=lib.cached_kind(stored,requested)
 	print(stored,requested,actual,flush=True)
@@ -246,32 +360,64 @@ device=lib.budget_alloc(2*gigabyte)
 assert lib.budget_free(10*gigabyte)==start-2*gigabyte,'An allocation counts against the GPU budget at once, the driver may report it later'
 lib.budget_release(device)
 assert lib.budget_free(9*gigabyte)==start,'A free gives its bytes back to the budget at once, whatever the driver reports'
+for name in ['spills_address','ahead_address','calls_address','handed_address']:
+	getattr(lib,name).restype=ctypes.c_void_p
+lib.spill_upload.argtypes=[ctypes.c_int64,ctypes.c_int64];lib.spill_upload.restype=ctypes.c_int64
+lib.ahead_used.argtypes=[ctypes.c_int64]
+spills=(ctypes.c_int64*8192).from_address(lib.spills_address())
+ahead=(ctypes.c_int64*7).from_address(lib.ahead_address())
+calls=(ctypes.c_int64*64).from_address(lib.calls_address())
+(ctypes.c_int64*1).from_address(lib.handed_address())[0]=7000
+pinned=(ctypes.c_int64*4)()
+first,second=0x5008,0x6008
+for index,rows in enumerate([first,second]):
+	spills[index*8:index*8+8]=[rows,4,ctypes.addressof(pinned),4096,4,8,2,0]
+ahead[0:3]=[111,222,333]
+def logged(call):
+	calls[0]=0
+	result=call()
+	return result,[tuple(calls[1+3*index:4+3*index]) for index in range(calls[0])]
+logged(lambda:lib.spill_upload(first,4));logged(lambda:lib.spill_upload(second,4))
+assert spills[7]==lib.spills_address()+64,'Spilled rows going up after others become their next ones'
+device,log=logged(lambda:lib.spill_upload(first,4))
+assert log[0]==(1,999,device),'Spilled rows go up in order on the stream of the launches using them'
+assert log[1:]==[(2,222,999),(3,111,222),(1,111,device+1),(2,333,111)],'Their next rows go up on the copy stream after the launches so far'
+assert ahead[3]==device+1,'The launches wait for rows that went up ahead only when they use them'
+_,log=logged(lambda:lib.ahead_used(device+1))
+assert log[0]==(3,999,333) and ahead[3]==device+2,'The first use of rows that went up ahead waits for them and sends their next rows up'
 print('Native row-cache and nested input lifetime contracts passed')
 
-lib.pool_address.restype=ctypes.c_void_p
-blocks=(ctypes.c_int64*144).from_address(lib.pool_address())
-lib.pool_take.argtypes=[ctypes.c_int64];lib.pool_take.restype=ctypes.c_int64
-lib.pool_real.argtypes=[ctypes.c_int64,ctypes.c_int64];lib.pool_real.restype=ctypes.c_int64
+pools.pool_address.restype=ctypes.c_void_p
+blocks=(ctypes.c_int64*144).from_address(pools.pool_address())
+pools.pool_take.argtypes=[ctypes.c_int64];pools.pool_take.restype=ctypes.c_int64
+pools.pool_real.argtypes=[ctypes.c_int64,ctypes.c_int64];pools.pool_real.restype=ctypes.c_int64
 first=(ctypes.c_int64*1)(123);second=(ctypes.c_int64*1)(456)
 blocks[17*3]=ctypes.addressof(first);blocks[17*3+1]=1;blocks[17*3+2]=1
 blocks[18*3]=ctypes.addressof(second);blocks[18*3+1]=1;blocks[18*3+2]=1
-assert lib.pool_take(16)==123,'Pool must borrow a larger free block under memory pressure'
+assert pools.pool_take(16)==123,'Pool must borrow a larger free block under memory pressure'
 assert blocks[17*3+1]==0 and blocks[18*3+1]==1,'Must borrow the nearest available larger class'
-assert lib.pool_real(123,16)==17 and lib.pool_real(123,16)==16,'A borrowed block must return to its original class exactly once'
-assert lib.pool_take(16)==456 and lib.pool_real(456,16)==18,'Must reuse the second larger class when the nearest is empty'
-assert lib.pool_take(16)==0,'Empty pool must fall through to the driver allocation'
-lib.pool_stats.restype=ctypes.c_void_p
-counters=(ctypes.c_int64*2).from_address(lib.pool_stats())
+assert pools.pool_real(123,16)==17 and pools.pool_real(123,16)==16,'A borrowed block must return to its original class exactly once'
+assert pools.pool_take(16)==456 and pools.pool_real(456,16)==18,'Must reuse the second larger class when the nearest is empty'
+assert pools.pool_take(16)==0,'Empty pool must fall through to the driver allocation'
+pools.pool_stats.restype=ctypes.c_void_p
+counters=(ctypes.c_int64*2).from_address(pools.pool_stats())
 assert counters[1]==0,'An empty pool must not flush GPU work'
 small=(ctypes.c_int64*1)(256<<20);large=(ctypes.c_int64*1)(512<<20)
 blocks[20*3]=ctypes.addressof(small);blocks[20*3+1]=1;blocks[20*3+2]=1
 blocks[21*3]=ctypes.addressof(large);blocks[21*3+1]=1;blocks[21*3+2]=1
-lib.pool_take(16)
+pools.pool_take(16)
 assert counters[0]==768<<20,'Unused large pool blocks must go before an allocation exhausts VRAM headroom'
 assert counters[1]==1,'Freeing several pool blocks must drain queued GPU work only once'
 assert blocks[20*3+1]==0 and blocks[21*3+1]==0,'Trimmed blocks must leave their free lists'
+pools.pool_spilled.restype=ctypes.c_void_p
+spilled=(ctypes.c_int64*1).from_address(pools.pool_spilled())
+spilled[0]=1;blocks[20*3+1]=1;blocks[21*3+1]=1;counters[0]=0
+pools.pool_take(16)
+assert counters[0]==0 and blocks[20*3+1]==1 and blocks[21*3+1]==1,'With streamed rows spilled an allocation evicts those (strict_gpu_starved) instead of trimming pool blocks the next layers allocate again'
+spilled[0]=0
 print('GPU pool borrows correctly and trims unused large buffers before allocating under pressure')
 
 ctypes.windll.kernel32.FreeLibrary.argtypes=[ctypes.c_void_p]
-assert ctypes.windll.kernel32.FreeLibrary(lib._handle)
+for loaded in [lib,pools]:
+	assert ctypes.windll.kernel32.FreeLibrary(loaded._handle)
 temporary.cleanup()

@@ -1371,6 +1371,11 @@
   ^done(%answer: i32):
     llvm.return %answer : i32
   }
+  // the one Metal queue runs every command buffer in order
+  llvm.func @strict_metal_cuStreamWaitEvent(%stream: !llvm.ptr, %event: !llvm.ptr, %flags: i32) -> i32 {
+    %result = llvm.call @strict_metal_succeeded() : () -> i32
+    llvm.return %result : i32
+  }
   llvm.func @strict_metal_cuEventCreate(%event: !llvm.ptr, %flags: i32) -> i32 {
     %eight = llvm.mlir.constant(8 : i64) : i64
     %record = llvm.call @malloc(%eight) : (i64) -> !llvm.ptr
@@ -1493,7 +1498,7 @@
   func.func private @strict_metal_index(%name: !llvm.ptr) -> i64 {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
-    %count = arith.constant 33 : i64
+    %count = arith.constant 34 : i64
     %none = arith.constant 0 : i32
     %names = llvm.mlir.addressof @strict_gpu_names : !llvm.ptr
     cf.br ^check(%zero, %names : i64, !llvm.ptr)
@@ -1545,7 +1550,8 @@
       29: ^c29,
       30: ^c30,
       31: ^c31,
-      32: ^c32
+      32: ^c32,
+      33: ^c33
     ]
   ^none:
     %null = llvm.mlir.zero : !llvm.ptr
@@ -1649,4 +1655,7 @@
   ^c32:
     %f32 = llvm.mlir.addressof @strict_metal_cuDeviceGetAttribute : !llvm.ptr
     llvm.return %f32 : !llvm.ptr
+  ^c33:
+    %f33 = llvm.mlir.addressof @strict_metal_cuStreamWaitEvent : !llvm.ptr
+    llvm.return %f33 : !llvm.ptr
   }

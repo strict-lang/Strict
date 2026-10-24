@@ -8884,12 +8884,12 @@
   // loops reading fewer than 4M numbers stay on the CPU unless STRICT_GPU=all (a launch costs about 130 us), lists already on the GPU run there
   llvm.mlir.global internal @strict_gpu_minimum(4194304 : i64) : i64
   llvm.mlir.global internal @strict_gpu_setting(0 : i64) : i64
-  llvm.mlir.global internal @strict_gpu_calls(dense<0> : tensor<33xi64>) : !llvm.array<33 x i64>
+  llvm.mlir.global internal @strict_gpu_calls(dense<0> : tensor<34xi64>) : !llvm.array<34 x i64>
   llvm.mlir.global internal @strict_gpu_handles(dense<0> : tensor<4xi64>) : !llvm.array<4 x i64>
-  llvm.mlir.global internal constant @strict_gpu_names("cuInit\00cuDeviceGet\00cuDevicePrimaryCtxRetain\00cuCtxSetCurrent\00cuModuleLoadData\00cuModuleGetFunction\00cuMemAlloc_v2\00cuMemFree_v2\00cuMemcpyHtoD_v2\00cuMemcpyDtoH_v2\00cuLaunchKernel\00cuCtxSynchronize\00cuMemAllocHost_v2\00cuMemFreeHost\00cuMemcpyHtoDAsync_v2\00cuMemcpyDtoDAsync_v2\00cuStreamCreate\00cuStreamBeginCapture_v2\00cuStreamEndCapture\00cuGraphInstantiateWithFlags\00cuGraphExecUpdate_v2\00cuGraphLaunch\00cuGraphDestroy\00cuGraphExecDestroy\00cuMemGetInfo_v2\00cuStreamQuery\00cuEventCreate\00cuEventRecord\00cuEventSynchronize\00cuMemcpyDtoHAsync_v2\00cuStreamSynchronize\00cuFuncSetAttribute\00cuDeviceGetAttribute\00") : !llvm.array<575 x i8>
+  llvm.mlir.global internal constant @strict_gpu_names("cuInit\00cuDeviceGet\00cuDevicePrimaryCtxRetain\00cuCtxSetCurrent\00cuModuleLoadData\00cuModuleGetFunction\00cuMemAlloc_v2\00cuMemFree_v2\00cuMemcpyHtoD_v2\00cuMemcpyDtoH_v2\00cuLaunchKernel\00cuCtxSynchronize\00cuMemAllocHost_v2\00cuMemFreeHost\00cuMemcpyHtoDAsync_v2\00cuMemcpyDtoDAsync_v2\00cuStreamCreate\00cuStreamBeginCapture_v2\00cuStreamEndCapture\00cuGraphInstantiateWithFlags\00cuGraphExecUpdate_v2\00cuGraphLaunch\00cuGraphDestroy\00cuGraphExecDestroy\00cuMemGetInfo_v2\00cuStreamQuery\00cuEventCreate\00cuEventRecord\00cuEventSynchronize\00cuMemcpyDtoHAsync_v2\00cuStreamSynchronize\00cuFuncSetAttribute\00cuDeviceGetAttribute\00cuStreamWaitEvent\00") : !llvm.array<593 x i8>
   // AMD GPUs through HIP when there is no NVIDIA driver, its functions mirror the CUDA driver ones in the same order
   // (hipCtxSynchronize is not supported and hipMemAllocHost fails on the Windows driver, their replacements work)
-  llvm.mlir.global internal constant @strict_gpu_amd_names("hipInit\00hipDeviceGet\00hipDevicePrimaryCtxRetain\00hipCtxSetCurrent\00hipModuleLoadData\00hipModuleGetFunction\00hipMalloc\00hipFree\00hipMemcpyHtoD\00hipMemcpyDtoH\00hipModuleLaunchKernel\00hipDeviceSynchronize\00hipMallocHost\00hipHostFree\00hipMemcpyHtoDAsync\00hipMemcpyDtoDAsync\00hipStreamCreateWithFlags\00hipStreamBeginCapture\00hipStreamEndCapture\00hipGraphInstantiateWithFlags\00hipGraphExecUpdate\00hipGraphLaunch\00hipGraphDestroy\00hipGraphExecDestroy\00hipMemGetInfo\00hipStreamQuery\00hipEventCreateWithFlags\00hipEventRecord\00hipEventSynchronize\00hipMemcpyDtoHAsync\00hipStreamSynchronize\00hipFuncSetAttribute\00hipDeviceGetAttribute\00") : !llvm.array<592 x i8>
+  llvm.mlir.global internal constant @strict_gpu_amd_names("hipInit\00hipDeviceGet\00hipDevicePrimaryCtxRetain\00hipCtxSetCurrent\00hipModuleLoadData\00hipModuleGetFunction\00hipMalloc\00hipFree\00hipMemcpyHtoD\00hipMemcpyDtoH\00hipModuleLaunchKernel\00hipDeviceSynchronize\00hipMallocHost\00hipHostFree\00hipMemcpyHtoDAsync\00hipMemcpyDtoDAsync\00hipStreamCreateWithFlags\00hipStreamBeginCapture\00hipStreamEndCapture\00hipGraphInstantiateWithFlags\00hipGraphExecUpdate\00hipGraphLaunch\00hipGraphDestroy\00hipGraphExecDestroy\00hipMemGetInfo\00hipStreamQuery\00hipEventCreateWithFlags\00hipEventRecord\00hipEventSynchronize\00hipMemcpyDtoHAsync\00hipStreamSynchronize\00hipFuncSetAttribute\00hipDeviceGetAttribute\00hipStreamWaitEvent\00") : !llvm.array<611 x i8>
   llvm.mlir.global internal @strict_gpu_amd(0 : i64) : i64
   llvm.mlir.global internal constant @strict_gpu_switch("STRICT_GPU\00") : !llvm.array<11 x i8>
   func.func private @strict_gpu_ready() -> i1 {
@@ -9188,7 +9188,7 @@
   func.func private @strict_gpu_resolve(%library: !llvm.ptr, %names: !llvm.ptr) -> i1 {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
-    %count = arith.constant 33 : i64
+    %count = arith.constant 34 : i64
     %calls = llvm.mlir.addressof @strict_gpu_calls : !llvm.ptr
     %unset = llvm.mlir.zero : !llvm.ptr
     %true = arith.constant true
@@ -9203,7 +9203,7 @@
     cf.cond_br %missing, ^failed, ^store
   ^store:
     %bits = llvm.ptrtoint %function : !llvm.ptr to i64
-    %slot = llvm.getelementptr %calls[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<33 x i64>
+    %slot = llvm.getelementptr %calls[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<34 x i64>
     llvm.store %bits, %slot : i64, !llvm.ptr
     %length = llvm.call @strlen(%name) : (!llvm.ptr) -> i64
     %skipped = arith.addi %length, %one : i64
@@ -9229,7 +9229,7 @@
     cf.br ^lookup
   ^lookup:
     %calls = llvm.mlir.addressof @strict_gpu_calls : !llvm.ptr
-    %slot = llvm.getelementptr %calls[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<33 x i64>
+    %slot = llvm.getelementptr %calls[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<34 x i64>
     %bits = llvm.load %slot : !llvm.ptr -> i64
     %function = llvm.inttoptr %bits : i64 to !llvm.ptr
     return %function : !llvm.ptr
@@ -10560,7 +10560,13 @@
   ^own:
     %freeForOwn = func.call @strict_gpu_free_memory() : () -> i64
     %trimNeeded = arith.cmpi ult, %freeForOwn, %ownNeeded : i64
-    cf.cond_br %trimNeeded, ^trimOwn, ^allocateOwn
+    // with streamed rows spilled the allocation evicts those first (strict_gpu_starved), trimming here gave back the
+    // blocks the next layers allocate again and waited for the GPU each time (H3: 285 times in its first step)
+    %spilledSlot = llvm.mlir.addressof @strict_gpu_spilled_bytes : !llvm.ptr
+    %spilled = llvm.load %spilledSlot : !llvm.ptr -> i64
+    %noneSpilled = arith.cmpi eq, %spilled, %none : i64
+    %trimming = arith.andi %trimNeeded, %noneSpilled : i1
+    cf.cond_br %trimming, ^trimOwn, ^allocateOwn
   ^trimOwn:
     %shortfall = arith.subi %ownNeeded, %freeForOwn : i64
     %waiting = arith.constant true
@@ -10968,15 +10974,15 @@
   }
   // evicted rows (strict_gpu_is_rows) of live lists keep their device layout in pinned host memory, their next upload is
   // one copy instead of packing every row again from pageable memory: 1024 times the list, row count, pinned memory,
-  // bytes, columns, bits and kind
-  llvm.mlir.global internal @strict_gpu_spills(dense<0> : tensor<7168xi64>) : !llvm.array<7168 x i64>
+  // bytes, columns, bits, kind and the address of the spill that went up after it the last time
+  llvm.mlir.global internal @strict_gpu_spills(dense<0> : tensor<8192xi64>) : !llvm.array<8192 x i64>
   // pinned bytes of all spills, at most 8 GB (host memory is shared with the program and other programs)
   llvm.mlir.global internal @strict_gpu_spilled_bytes(0 : i64) : i64
   func.func private @strict_gpu_spill_at(%index: i64) -> !llvm.ptr {
-    %seven = arith.constant 7 : i64
+    %eight = arith.constant 8 : i64
     %spills = llvm.mlir.addressof @strict_gpu_spills : !llvm.ptr
-    %offset = arith.muli %index, %seven : i64
-    %slot = llvm.getelementptr %spills[0, %offset] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<7168 x i64>
+    %offset = arith.muli %index, %eight : i64
+    %slot = llvm.getelementptr %spills[0, %offset] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<8192 x i64>
     return %slot : !llvm.ptr
   }
   // the spill slot of list (rows of count), else the first free slot when free is true, else null
@@ -11097,6 +11103,8 @@
     llvm.store %bits, %slotBits : i64, !llvm.ptr
     %slotKind = llvm.getelementptr %slot[6] : (!llvm.ptr) -> !llvm.ptr, i64
     llvm.store %kind, %slotKind : i64, !llvm.ptr
+    %slotNext = llvm.getelementptr %slot[7] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %none, %slotNext : i64, !llvm.ptr
     llvm.store %spilledAfter, %spilledSlot : i64, !llvm.ptr
     cf.br ^done
   ^done:
@@ -11160,7 +11168,12 @@
     %rowsDeviceSlot = llvm.getelementptr %entry[1] : (!llvm.ptr) -> !llvm.ptr, i64
     %rowsDevice = llvm.load %rowsDeviceSlot : !llvm.ptr -> i64
     %active = func.call @strict_gpu_active_has(%rowsDevice) : (i64) -> i1
-    %fits = arith.select %active, %false, %sameSize : i1
+    %ahead = llvm.mlir.addressof @strict_gpu_ahead : !llvm.ptr
+    %pendingSlot = llvm.getelementptr %ahead[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %pending = llvm.load %pendingSlot : !llvm.ptr -> i64
+    %isPending = arith.cmpi eq, %rowsDevice, %pending : i64
+    %blocked = arith.ori %active, %isPending : i1
+    %fits = arith.select %blocked, %false, %sameSize : i1
     %chosenIndex = arith.select %fits, %following, %best : i64
     %chosenUse = arith.select %fits, %used, %bestUse : i64
     cf.br ^scan(%following, %chosenIndex, %chosenUse : i64, i64, i64)
@@ -11218,6 +11231,7 @@
     %kindSlot = llvm.getelementptr %slot[6] : (!llvm.ptr) -> !llvm.ptr, i64
     %kind = llvm.load %kindSlot : !llvm.ptr -> i64
     func.call @strict_gpu_remember(%rows, %kind, %count, %out, %none) : (f64, i64, i64, !llvm.ptr, i64) -> ()
+    func.call @strict_gpu_followed(%slot) : (!llvm.ptr) -> ()
     return %true : i1
   ^missing:
     return %false : i1
@@ -12012,6 +12026,8 @@
     %isCapturing = arith.cmpi ne, %capturing, %none : i64
     cf.cond_br %isCapturing, ^done, ^begin
   ^begin:
+    func.call @strict_gpu_ahead_create() : () -> ()
+    func.call @strict_gpu_ahead_join() : () -> ()
     %stream = func.call @strict_gpu_stream() : () -> !llvm.ptr
     %beginIndex = arith.constant 17 : i64
     %begin = func.call @strict_gpu_call(%beginIndex) : (i64) -> !llvm.ptr
@@ -12066,6 +12082,7 @@
     %isCapturing = arith.cmpi ne, %capturing, %none : i64
     cf.cond_br %isCapturing, ^end, ^done
   ^end:
+    func.call @strict_gpu_ahead_join() : () -> ()
     llvm.store %none, %capturingSlot : i64, !llvm.ptr
     // after an early end (a download waits for the GPU) the GPU runs dry, segments of 8 doubling up to 256 refill it
     %segmentSlot = llvm.getelementptr %graph[4] : (!llvm.ptr) -> !llvm.ptr, i64
@@ -12227,6 +12244,205 @@
     %synchronizeIndex = arith.constant 11 : i64
     %synchronize = func.call @strict_gpu_call(%synchronizeIndex) : (i64) -> !llvm.ptr
     %result = llvm.call %synchronize() : !llvm.ptr, () -> i32
+    return
+  }
+  // the next spilled rows go up on a copy stream of their own while the launches before their first use run: copy
+  // stream, event where an upload forks from the stream, event after the last upload, device of an upload the stream
+  // waits for at its next join, the spill and device of the rows that went up ahead, the spill that went up last
+  llvm.mlir.global internal @strict_gpu_ahead(dense<0> : tensor<7xi64>) : !llvm.array<7 x i64>
+  func.func private @strict_gpu_ahead_create() {
+    %none = arith.constant 0 : i64
+    %ahead = llvm.mlir.addressof @strict_gpu_ahead : !llvm.ptr
+    %existing = llvm.load %ahead : !llvm.ptr -> i64
+    %isNew = arith.cmpi eq, %existing, %none : i64
+    cf.cond_br %isNew, ^create, ^done
+  ^create:
+    %eventIndex = arith.constant 26 : i64
+    %event = func.call @strict_gpu_call(%eventIndex) : (i64) -> !llvm.ptr
+    %withoutTiming = arith.constant 2 : i32
+    %forkSlot = llvm.getelementptr %ahead[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %forked = llvm.call %event(%forkSlot, %withoutTiming) : !llvm.ptr, (!llvm.ptr, i32) -> i32
+    %copiedSlot = llvm.getelementptr %ahead[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %copied = llvm.call %event(%copiedSlot, %withoutTiming) : !llvm.ptr, (!llvm.ptr, i32) -> i32
+    %zero32 = arith.constant 0 : i32
+    %isForked = arith.cmpi eq, %forked, %zero32 : i32
+    %isCopied = arith.cmpi eq, %copied, %zero32 : i32
+    %hasEvents = arith.andi %isForked, %isCopied : i1
+    cf.cond_br %hasEvents, ^stream, ^done
+  ^stream:
+    %createIndex = arith.constant 16 : i64
+    %create = func.call @strict_gpu_call(%createIndex) : (i64) -> !llvm.ptr
+    %nonBlocking = arith.constant 1 : i32
+    %created = llvm.call %create(%ahead, %nonBlocking) : !llvm.ptr, (!llvm.ptr, i32) -> i32
+    cf.br ^done
+  ^done:
+    return
+  }
+  // bytes of host go up on the copy stream after the launches so far, the launches after the next join wait for them
+  func.func private @strict_gpu_put_ahead(%device: i64, %host: !llvm.ptr, %bytes: i64) -> i1 {
+    %zero32 = arith.constant 0 : i32
+    %ahead = llvm.mlir.addressof @strict_gpu_ahead : !llvm.ptr
+    %copyBits = llvm.load %ahead : !llvm.ptr -> i64
+    %copy = llvm.inttoptr %copyBits : i64 to !llvm.ptr
+    %forkSlot = llvm.getelementptr %ahead[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %forkBits = llvm.load %forkSlot : !llvm.ptr -> i64
+    %fork = llvm.inttoptr %forkBits : i64 to !llvm.ptr
+    %copiedSlot = llvm.getelementptr %ahead[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %copiedBits = llvm.load %copiedSlot : !llvm.ptr -> i64
+    %copied = llvm.inttoptr %copiedBits : i64 to !llvm.ptr
+    %stream = func.call @strict_gpu_stream() : () -> !llvm.ptr
+    %recordIndex = arith.constant 27 : i64
+    %record = func.call @strict_gpu_call(%recordIndex) : (i64) -> !llvm.ptr
+    %forked = llvm.call %record(%fork, %stream) : !llvm.ptr, (!llvm.ptr, !llvm.ptr) -> i32
+    %waitIndex = arith.constant 33 : i64
+    %wait = func.call @strict_gpu_call(%waitIndex) : (i64) -> !llvm.ptr
+    %joined = llvm.call %wait(%copy, %fork, %zero32) : !llvm.ptr, (!llvm.ptr, !llvm.ptr, i32) -> i32
+    %putIndex = arith.constant 14 : i64
+    %put = func.call @strict_gpu_call(%putIndex) : (i64) -> !llvm.ptr
+    %result = llvm.call %put(%device, %host, %bytes, %copy) : !llvm.ptr, (i64, !llvm.ptr, i64, !llvm.ptr) -> i32
+    %recorded = llvm.call %record(%copied, %copy) : !llvm.ptr, (!llvm.ptr, !llvm.ptr) -> i32
+    %pendingSlot = llvm.getelementptr %ahead[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %device, %pendingSlot : i64, !llvm.ptr
+    func.call @strict_gpu_captured(%wait) : (!llvm.ptr) -> ()
+    %done = arith.cmpi eq, %result, %zero32 : i32
+    return %done : i1
+  }
+  // the launches after this wait for the uploads ahead when one is pending (before a capture begins or ends, at the first
+  // use of rows that went up ahead)
+  func.func private @strict_gpu_ahead_join() {
+    %zero32 = arith.constant 0 : i32
+    %none = arith.constant 0 : i64
+    %ahead = llvm.mlir.addressof @strict_gpu_ahead : !llvm.ptr
+    %pendingSlot = llvm.getelementptr %ahead[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %pending = llvm.load %pendingSlot : !llvm.ptr -> i64
+    %isPending = arith.cmpi ne, %pending, %none : i64
+    cf.cond_br %isPending, ^join, ^done
+  ^join:
+    %copiedSlot = llvm.getelementptr %ahead[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %copiedBits = llvm.load %copiedSlot : !llvm.ptr -> i64
+    %copied = llvm.inttoptr %copiedBits : i64 to !llvm.ptr
+    %waitIndex = arith.constant 33 : i64
+    %wait = func.call @strict_gpu_call(%waitIndex) : (i64) -> !llvm.ptr
+    %stream = func.call @strict_gpu_stream() : () -> !llvm.ptr
+    %joined = llvm.call %wait(%stream, %copied, %zero32) : !llvm.ptr, (!llvm.ptr, !llvm.ptr, i32) -> i32
+    llvm.store %none, %pendingSlot : i64, !llvm.ptr
+    cf.br ^done
+  ^done:
+    return
+  }
+  // the spill that went up last gets slot as its next one, the next one of slot goes up ahead
+  func.func private @strict_gpu_followed(%slot: !llvm.ptr) {
+    %none = arith.constant 0 : i64
+    %ahead = llvm.mlir.addressof @strict_gpu_ahead : !llvm.ptr
+    %lastSlot = llvm.getelementptr %ahead[6] : (!llvm.ptr) -> !llvm.ptr, i64
+    %last = llvm.load %lastSlot : !llvm.ptr -> i64
+    %slotBits = llvm.ptrtoint %slot : !llvm.ptr to i64
+    %hasLast = arith.cmpi ne, %last, %none : i64
+    %isOther = arith.cmpi ne, %last, %slotBits : i64
+    %linked = arith.andi %hasLast, %isOther : i1
+    cf.cond_br %linked, ^link, ^moved
+  ^link:
+    %previous = llvm.inttoptr %last : i64 to !llvm.ptr
+    %previousNext = llvm.getelementptr %previous[7] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %slotBits, %previousNext : i64, !llvm.ptr
+    cf.br ^moved
+  ^moved:
+    llvm.store %slotBits, %lastSlot : i64, !llvm.ptr
+    %nextSlot = llvm.getelementptr %slot[7] : (!llvm.ptr) -> !llvm.ptr, i64
+    %next = llvm.load %nextSlot : !llvm.ptr -> i64
+    func.call @strict_gpu_prefetch(%next) : (i64) -> ()
+    return
+  }
+  // the rows of spill slot next (its address, 0 for none) go up ahead when they are not on the GPU, one at a time
+  func.func private @strict_gpu_prefetch(%next: i64) {
+    %none = arith.constant 0 : i64
+    %two = arith.constant 2 : i64
+    %three = arith.constant 3 : i64
+    %ahead = llvm.mlir.addressof @strict_gpu_ahead : !llvm.ptr
+    %copy = llvm.load %ahead : !llvm.ptr -> i64
+    %pendingSlot = llvm.getelementptr %ahead[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %pending = llvm.load %pendingSlot : !llvm.ptr -> i64
+    %hasCopy = arith.cmpi ne, %copy, %none : i64
+    %isIdle = arith.cmpi eq, %pending, %none : i64
+    %hasNext = arith.cmpi ne, %next, %none : i64
+    %canStart = arith.andi %hasCopy, %isIdle : i1
+    %ready = arith.andi %canStart, %hasNext : i1
+    cf.cond_br %ready, ^listed, ^done
+  ^listed:
+    %slot = llvm.inttoptr %next : i64 to !llvm.ptr
+    %listBits = llvm.load %slot : !llvm.ptr -> i64
+    %isAlive = arith.cmpi ne, %listBits, %none : i64
+    cf.cond_br %isAlive, ^probe, ^done
+  ^probe:
+    %countSlot = llvm.getelementptr %slot[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %count = llvm.load %countSlot : !llvm.ptr -> i64
+    %list = arith.bitcast %listBits : i64 to f64
+    %out = llvm.alloca %three x i64 : (i64) -> !llvm.ptr
+    %resident = func.call @strict_gpu_cached(%list, %two, %count, %out) : (f64, i64, i64, !llvm.ptr) -> i1
+    cf.cond_br %resident, ^done, ^place
+  ^place:
+    %totalSlot = llvm.getelementptr %slot[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %total = llvm.load %totalSlot : !llvm.ptr -> i64
+    %handed = func.call @strict_gpu_handed(%total) : (i64) -> i64
+    %isHanded = arith.cmpi ne, %handed, %none : i64
+    cf.cond_br %isHanded, ^upload(%handed : i64), ^room
+  ^room:
+    %free = func.call @strict_gpu_free_memory() : () -> i64
+    %reserve = arith.constant 268435456 : i64
+    %needed = arith.addi %total, %reserve : i64
+    %fits = arith.cmpi uge, %free, %needed : i64
+    cf.cond_br %fits, ^allocate, ^done
+  ^allocate:
+    %allocated = func.call @strict_gpu_alloc(%total) : (i64) -> i64
+    %hasDevice = arith.cmpi ne, %allocated, %none : i64
+    cf.cond_br %hasDevice, ^upload(%allocated : i64), ^done
+  ^upload(%device: i64):
+    %pinnedSlot = llvm.getelementptr %slot[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %pinned = llvm.load %pinnedSlot : !llvm.ptr -> i64
+    %host = llvm.inttoptr %pinned : i64 to !llvm.ptr
+    %put = func.call @strict_gpu_put_ahead(%device, %host, %total) : (i64, !llvm.ptr, i64) -> i1
+    cf.cond_br %put, ^view, ^failed
+  ^failed:
+    func.call @strict_gpu_ahead_join() : () -> ()
+    func.call @strict_gpu_release(%device) : (i64) -> ()
+    cf.br ^done
+  ^view:
+    %lengthSlot = llvm.getelementptr %slot[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    %length = llvm.load %lengthSlot : !llvm.ptr -> i64
+    %bitsSlot = llvm.getelementptr %slot[5] : (!llvm.ptr) -> !llvm.ptr, i64
+    %bits = llvm.load %bitsSlot : !llvm.ptr -> i64
+    func.call @strict_gpu_view(%out, %device, %length, %bits) : (!llvm.ptr, i64, i64, i64) -> ()
+    %kindSlot = llvm.getelementptr %slot[6] : (!llvm.ptr) -> !llvm.ptr, i64
+    %kind = llvm.load %kindSlot : !llvm.ptr -> i64
+    func.call @strict_gpu_remember(%list, %kind, %count, %out, %none) : (f64, i64, i64, !llvm.ptr, i64) -> ()
+    %aheadSlot = llvm.getelementptr %ahead[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %next, %aheadSlot : i64, !llvm.ptr
+    %aheadDevice = llvm.getelementptr %ahead[5] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %device, %aheadDevice : i64, !llvm.ptr
+    cf.br ^done
+  ^done:
+    return
+  }
+  // the first use of rows that went up ahead waits for their upload and sends the next ones up
+  func.func private @strict_gpu_ahead_hit(%out: !llvm.ptr) {
+    %none = arith.constant 0 : i64
+    %ahead = llvm.mlir.addressof @strict_gpu_ahead : !llvm.ptr
+    %device = llvm.load %out : !llvm.ptr -> i64
+    %aheadDevice = llvm.getelementptr %ahead[5] : (!llvm.ptr) -> !llvm.ptr, i64
+    %expected = llvm.load %aheadDevice : !llvm.ptr -> i64
+    %isExpected = arith.cmpi eq, %device, %expected : i64
+    %isSet = arith.cmpi ne, %expected, %none : i64
+    %wentAhead = arith.andi %isExpected, %isSet : i1
+    cf.cond_br %wentAhead, ^take, ^done
+  ^take:
+    func.call @strict_gpu_ahead_join() : () -> ()
+    llvm.store %none, %aheadDevice : i64, !llvm.ptr
+    %aheadSlot = llvm.getelementptr %ahead[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    %slotBits = llvm.load %aheadSlot : !llvm.ptr -> i64
+    %slot = llvm.inttoptr %slotBits : i64 to !llvm.ptr
+    func.call @strict_gpu_followed(%slot) : (!llvm.ptr) -> ()
+    cf.br ^done
+  ^done:
     return
   }
   func.func private @strict_gpu_put_async(%device: i64, %host: !llvm.ptr, %bytes: i64) -> i1 {
@@ -14249,7 +14465,10 @@
     return %true : i1
   ^first:
     %hit = func.call @strict_gpu_cached(%rows, %two, %count, %out) : (f64, i64, i64, !llvm.ptr) -> i1
-    cf.cond_br %hit, ^owned, ^spilled
+    cf.cond_br %hit, ^hit, ^spilled
+  ^hit:
+    func.call @strict_gpu_ahead_hit(%out) : (!llvm.ptr) -> ()
+    cf.br ^owned
   ^spilled:
     %unspilled = func.call @strict_gpu_unspilled(%rows, %count, %out) : (f64, i64, !llvm.ptr) -> i1
     cf.cond_br %unspilled, ^owned, ^measure
