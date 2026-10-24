@@ -4,7 +4,7 @@ has level Text = Fast
 has isWeb Boolean = false
 constant Fast = " -O2"
 constant Small = " -Os"
-constant Intermediates = (".llvm.mlir", ".ll", ".res", ".gpu.mlir", ".gpu.llvm.mlir", ".gpu.ll", ".sm_75.ptx", ".sm_80.ptx", ".amd.mlir", ".amd.llvm.mlir", ".amd.ll", ".amd.bc", ".linux.mlir", ".linux.llvm.mlir", ".linux.ll", ".linux.o", ".pre.js", ".o", ".gpu.opt.ll")
+constant Intermediates = (".llvm.mlir", ".ll", ".res", ".gpu.mlir", ".gpu.llvm.mlir", ".gpu.ll", ".sm_75.ptx", ".sm_80.ptx", ".amd.mlir", ".amd.llvm.mlir", ".amd.ll", ".amd.bc", ".linux.mlir", ".linux.llvm.mlir", ".linux.ll", ".linux.o", ".pre.js", ".o", ".gpu.opt.ll", ".runtime.gpu.mlir", ".runtime.gpu.llvm.mlir", ".runtime.gpu.ll", ".runtime.sm_75.ptx", ".runtime.sm_80.ptx")
 IsProgram(path Text) Boolean
 	NativeBuild.IsProgram("Examples/Sum.strict")
 	NativeBuild.IsProgram("Character.strict") is false

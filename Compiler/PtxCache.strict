@@ -24,6 +24,13 @@ Remembered(device Text, ptx Texts) Texts
 		Written(ptx, ".ptx")
 		File(base + ".kernels.mlir").Write(device)
 	ptx
+Built(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Texts
+	PtxCache("Compiler/output/Invalid").Built("x", false, DeviceBuild.Missing, "").First.StartsWith("mlir-opt failed")
+	let previous = builder.tools.platform is Platform.MacOS then List(Text) else Previous(device, isTiling)
+	if previous.Length > 0
+		return previous
+	File(base + ".gpu.mlir").Write(device)
+	Remembered(device, builder.Ptx(base, isTiling, kept))
 Written(ptx Texts, ending Text)
 	File(base + ending).Write(ptx.First)
 	File(base + ".older" + ending).Write(ptx.Length > 1 then ptx.Last else "")

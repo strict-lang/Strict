@@ -131,11 +131,12 @@ WslPath(path Text) Text
 	let slashed = path.Replace("\\", "/")
 	let drive = "/mnt/" + slashed.Substring(0, 1).Lower
 	slashed.IndexOf(":") is 1 then drive + slashed.Substring(2, slashed.Length - 2) else slashed
-Lowered(base Text) Text
+Lowered(base Text, kept = "") Text
 	OnWindows.Lowered("Compiler/output/missing").StartsWith("mlir-opt failed")
 	constant passes = " --symbol-dce --convert-scf-to-cf --convert-arith-to-llvm --convert-func-to-llvm"
 	let output = " --convert-cf-to-llvm --reconcile-unrealized-casts -o " + Quoted(base + ".llvm.mlir")
-	let lowering = Quoted(base + ".mlir") + passes + output
+	let privatized = kept is "" then "" else " --symbol-privatize=exclude=" + kept
+	let lowering = Quoted(base + ".mlir") + privatized + passes + output
 	let lowered = ToolRunner(Located("mlir-opt")).Execute(lowering)
 	if lowered.Failed
 		return "mlir-opt failed: " + lowered.error

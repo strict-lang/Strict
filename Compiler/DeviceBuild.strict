@@ -8,10 +8,12 @@ constant Kernels = "Compiler/output/Kernels"
 constant Local = DeviceBuild(Toolchain(Platform.Current, "."))
 constant Attending = List(Text) + "Attention"
 constant Without = List(Text)
-Ptx(base Text, isTiling = false) Texts
+constant Doubled = "Compiler/output/Doubled"
+constant Doubling = MlirGpu.Module(List(MlirFunction) + MlirGpu.Doubling.function)
+Ptx(base Text, isTiling = false, kept = "") Texts
 	Missing.Ptx("Compiler/output/missing").First.StartsWith("mlir-opt failed")
 	DeviceBuild(Toolchain(Platform.MacOS, ".")).Ptx("Compiler/output/missing").First.StartsWith("mlir-opt failed")
-	let lowered = tools.Lowered(base + ".gpu")
+	let lowered = tools.Lowered(base + ".gpu", kept)
 	if tools.platform is Platform.MacOS
 		return List(Text) + (lowered is "" then MetalBuild(tools).Source(base) else lowered)
 	if lowered is not ""
@@ -45,16 +47,22 @@ Amd(device Text, runtimes Texts) Text
 	combined.Replace("{nvvm.kernel", "{rocdl.kernel").Replace("nvptx64-nvidia-cuda", "amdgcn-amd-amdhsa")
 Built(base Text, device Text, runtimes Texts) Texts
 	Local.Built(Kernels, "module {\n  x\n}", List(Text)).First.StartsWith("mlir-opt failed")
-	let combined = Combined(device, runtimes)
+	Local.Built(Doubled, Doubling, Without).First.IndexOf(" .entry strict_device_quantize(") is -1
 	let amd = Hsaco(base, device, runtimes)
 	if amd is not ""
 		return List(Text) + amd
 	let isTiling = device.IndexOf(MlirTokens.Marker) >= 0
-	let previous = tools.platform is Platform.MacOS then List(Text) else PtxCache(base).Previous(combined, isTiling)
-	if previous.Length > 0
-		return previous
-	File(base + ".gpu.mlir").Write(combined)
-	PtxCache(base).Remembered(combined, Ptx(base, isTiling))
+	let kept = tools.platform is Platform.MacOS then "" else Text.Combine(MlirGpu.Exported(device), ",")
+	let program = PtxCache(base).Built(Combined(device, runtimes), isTiling, DeviceBuild(tools), kept)
+	if (kept is "") or (program.First.StartsWith("//") is false)
+		return program
+	let shared = Shared(base, device, runtimes, isTiling)
+	shared.First.StartsWith("//") then program else shared
+Shared(base Text, device Text, runtimes Texts, isTiling Boolean) Texts
+	Local.Shared(Doubled, Doubling, Without, false).First.IndexOf(" .entry strict_device_quantize(") > 0
+	Local.Shared(Doubled, Doubling, Without, false).First.IndexOf("Rows_Doubled") is -1
+	let header = device.Substring(0, device.IndexOf("\n  ") + 1) + (isTiling then MlirTokens.Marker + "\n}" else "}")
+	PtxCache(base + ".runtime").Built(Combined(header, runtimes), isTiling, DeviceBuild(tools), "")
 Hsaco(base Text, device Text, runtimes Texts) Text
 	DeviceBuild(Toolchain(Platform.MacOS, ".")).Hsaco(Kernels, "module {\n}", List(Text)) is ""
 	File(Kernels + ".hsaco").Exists is false
@@ -136,7 +144,10 @@ Embedded(host Text, ptx Texts, base Text) Text
 Referenced(host Text, base Text, newer Text) Text
 	Missing.Referenced("module {\n}", "A", "// a").EndsWith("hash:A\\001446433\\00\") : !llvm.array<15 x i8>\n}")
 	Missing.Referenced("module {\n}", "A", "// abc").EndsWith("hash:A\\0026501\\00\") : !llvm.array<13 x i8>\n}")
+	PtxCache("Compiler/output/Shared.runtime").Remembered("module {\n}", ("// b", "")) is ("// b", "")
+	Missing.Referenced("module {\n}", "Compiler/output/Shared", "// a").IndexOf("hash:Shared\\007868034\\00") > 0
 	let stem = Path(base).FileName.text
-	let hash = "" + (HashCode(newer).number % 9999991)
+	let shared = File(base + ".runtime.ptx").Exists then PtxCache(base + ".runtime").Read(".ptx") else ""
+	let hash = "" + (HashCode(newer + shared).number % 9999991)
 	let global = "\n  llvm.mlir.global internal constant @strict_gpu_ptx(\"hash:" + stem + "\\00" + hash + "\\00\")"
 	host.Substring(0, host.Length - 1) + global + " : !llvm.array<" + (stem.Length + hash.Length + 7) + " x i8>\n}"

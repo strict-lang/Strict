@@ -103,6 +103,11 @@ Module(functions List(MlirFunction)) Text
 		return ""
 	let header = (Marker, "module attributes {llvm.target_triple = \"nvptx64-nvidia-cuda\"} {")
 	Text.Combine(header + kernels + Functions(callees) + "}", "\n")
+Exported(device Text) Texts
+	MlirGpu.Exported(MlirDevice.DoublingHeader + "\n  llvm.func @Rows_Twice_1_device(") is ("Rows_Doubled_1_gpu2")
+	for device.Lines
+		if value.StartsWith("  llvm.func @") and (value.IndexOf("nvvm.kernel") > 0)
+			value.Substring(13, value.IndexOf("(") - 13)
 Kernels(inspected MlirFunction) Texts
 	MlirGpu.Kernels(Doubling.function).First is MlirDevice.DoublingHeader
 	Text.Combine(MlirGpu.Kernels(Doubling.function)).IndexOf("llvm.func @Rows_Doubled_1_gpu2s(") > 0

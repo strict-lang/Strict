@@ -258,7 +258,9 @@
   }
   // the scores of the 16 rows of a warp with the 32 positions of a key tile (4 parts of 8 positions, a lane has 4 of
   // each: row lane / 4 and the one 8 below, positions 2 * (lane % 4) and the next), queries scaled; an m16n8k16 per 16
-  // numbers, one ldmatrix.x4 gives the key operands of two parts
+  // numbers with 16 bit sums over each half of 64 numbers added in 32 bits (twice the rate of 32 bit sums on GeForce
+  // cards, H3 attention 6 % faster, its block errors up to 7 % larger), one ldmatrix.x4 gives the key operands of two
+  // parts
   func.func private @strict_device_attention_scores(%queries: vector<32xi32>, %keyTile: !llvm.ptr<3>, %size: i32, %lane: i32) -> vector<16xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
@@ -282,13 +284,21 @@
     %matrixColumn = arith.shli %laneOdd, %c3 : i32
     %rowStart = arith.muli %matrixRow, %c136 : i32
     %laneStart = arith.addi %rowStart, %matrixColumn : i32
-    cf.br ^step(%c0, %zeros : i32, vector<16xf32>)
-  ^step(%step: i32, %scores: vector<16xf32>):
-    %moreSteps = arith.cmpi slt, %step, %c8 : i32
-    cf.cond_br %moreSteps, ^stepCheck, ^done
+    %noPartials = arith.constant dense<0> : vector<32xi32>
+    cf.br ^group(%c0, %zeros : i32, vector<16xf32>)
+  ^group(%group: i32, %scores: vector<16xf32>):
+    %moreGroups = arith.cmpi slt, %group, %c2 : i32
+    cf.cond_br %moreGroups, ^groupStart, ^done
+  ^groupStart:
+    %groupFirst = arith.shli %group, %c2 : i32
+    cf.br ^step(%c0, %noPartials : i32, vector<32xi32>)
+  ^step(%inGroup: i32, %partials: vector<32xi32>):
+    %moreSteps = arith.cmpi slt, %inGroup, %c4 : i32
+    cf.cond_br %moreSteps, ^stepCheck, ^fold(%c0, %scores : i32, vector<16xf32>)
   ^stepCheck:
+    %step = arith.addi %groupFirst, %inGroup : i32
     %used = arith.cmpi slt, %step, %steps : i32
-    cf.cond_br %used, ^stepBody, ^stepNext(%scores : vector<16xf32>)
+    cf.cond_br %used, ^stepBody, ^stepNext(%partials : vector<32xi32>)
   ^stepBody:
     %slot = arith.shli %step, %c2 : i32
     %slot1 = arith.addi %slot, %c1 : i32
@@ -304,31 +314,78 @@
     %query3 = llvm.bitcast %bits3 : i32 to vector<2xf16>
     %stepNumbers = arith.shli %step, %c4 : i32
     %stepStart = arith.addi %laneStart, %stepNumbers : i32
-    cf.br ^pair(%c0, %scores : i32, vector<16xf32>)
-  ^pair(%pair: i32, %pairScores: vector<16xf32>):
+    cf.br ^pair(%c0, %partials : i32, vector<32xi32>)
+  ^pair(%pair: i32, %pairPartials: vector<32xi32>):
     %morePairs = arith.cmpi slt, %pair, %c2 : i32
-    cf.cond_br %morePairs, ^pairBody, ^stepNext(%pairScores : vector<16xf32>)
+    cf.cond_br %morePairs, ^pairBody, ^stepNext(%pairPartials : vector<32xi32>)
   ^pairBody:
     %pairOffset = arith.muli %pair, %c2176 : i32
     %at = arith.addi %stepStart, %pairOffset : i32
     %at64 = arith.extui %at : i32 to i64
     %keySlot = llvm.getelementptr %keyTile[%at64] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f16
     %matrices = func.call @strict_device_matrices(%keySlot) : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
-    %firstScores = arith.shli %pair, %c3 : i32
-    %secondScores = arith.addi %firstScores, %c4 : i32
+    %firstPartials = arith.shli %pair, %c2 : i32
+    %secondPartials = arith.addi %firstPartials, %c2 : i32
     %matrix0 = llvm.extractvalue %matrices[0] : !llvm.struct<(i32, i32, i32, i32)>
     %matrix1 = llvm.extractvalue %matrices[1] : !llvm.struct<(i32, i32, i32, i32)>
     %matrix2 = llvm.extractvalue %matrices[2] : !llvm.struct<(i32, i32, i32, i32)>
     %matrix3 = llvm.extractvalue %matrices[3] : !llvm.struct<(i32, i32, i32, i32)>
-    %withFirst = func.call @strict_device_attention_product(%query0, %query1, %query2, %query3, %matrix0, %matrix1, %pairScores, %firstScores) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, i32, i32, vector<16xf32>, i32) -> vector<16xf32>
-    %withSecond = func.call @strict_device_attention_product(%query0, %query1, %query2, %query3, %matrix2, %matrix3, %withFirst, %secondScores) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, i32, i32, vector<16xf32>, i32) -> vector<16xf32>
+    %withFirst = func.call @strict_device_attention_accumulated(%query0, %query1, %query2, %query3, %matrix0, %matrix1, %pairPartials, %firstPartials) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, i32, i32, vector<32xi32>, i32) -> vector<32xi32>
+    %withSecond = func.call @strict_device_attention_accumulated(%query0, %query1, %query2, %query3, %matrix2, %matrix3, %withFirst, %secondPartials) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, i32, i32, vector<32xi32>, i32) -> vector<32xi32>
     %pairFollowing = arith.addi %pair, %c1 : i32
-    llvm.br ^pair(%pairFollowing, %withSecond : i32, vector<16xf32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
-  ^stepNext(%nextScores: vector<16xf32>):
-    %stepFollowing = arith.addi %step, %c1 : i32
-    llvm.br ^step(%stepFollowing, %nextScores : i32, vector<16xf32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+    llvm.br ^pair(%pairFollowing, %withSecond : i32, vector<32xi32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+  ^stepNext(%nextPartials: vector<32xi32>):
+    %stepFollowing = arith.addi %inGroup, %c1 : i32
+    llvm.br ^step(%stepFollowing, %nextPartials : i32, vector<32xi32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+  ^fold(%part: i32, %folding: vector<16xf32>):
+    %moreParts = arith.cmpi slt, %part, %c4 : i32
+    cf.cond_br %moreParts, ^foldBody, ^groupNext(%folding : vector<16xf32>)
+  ^foldBody:
+    %lowSlot = arith.shli %part, %c1 : i32
+    %highSlot = arith.addi %lowSlot, %c1 : i32
+    %lowBits = llvm.extractelement %partials[%lowSlot : i32] : vector<32xi32>
+    %highBits = llvm.extractelement %partials[%highSlot : i32] : vector<32xi32>
+    %low = llvm.bitcast %lowBits : i32 to vector<2xf16>
+    %high = llvm.bitcast %highBits : i32 to vector<2xf16>
+    %lowFloats = arith.extf %low : vector<2xf16> to vector<2xf32>
+    %highFloats = arith.extf %high : vector<2xf16> to vector<2xf32>
+    %scoreSlot = arith.shli %part, %c2 : i32
+    %folded = func.call @strict_device_attention_added(%folding, %scoreSlot, %lowFloats, %highFloats) : (vector<16xf32>, i32, vector<2xf32>, vector<2xf32>) -> vector<16xf32>
+    %partFollowing = arith.addi %part, %c1 : i32
+    llvm.br ^fold(%partFollowing, %folded : i32, vector<16xf32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+  ^groupNext(%groupScores: vector<16xf32>):
+    %groupFollowing = arith.addi %group, %c1 : i32
+    llvm.br ^group(%groupFollowing, %groupScores : i32, vector<16xf32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
   ^done:
     return %scores : vector<16xf32>
+  }
+  // the 16 bit sums of a part (low the two of row lane / 4, high those of the row 8 below) added to the 4 scores at
+  // slot
+  func.func private @strict_device_attention_added(%scores: vector<16xf32>, %slot: i32, %low: vector<2xf32>, %high: vector<2xf32>) -> vector<16xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
+    %c0 = llvm.mlir.constant(0 : i32) : i32
+    %c1 = llvm.mlir.constant(1 : i32) : i32
+    %c2 = llvm.mlir.constant(2 : i32) : i32
+    %c3 = llvm.mlir.constant(3 : i32) : i32
+    %slot1 = arith.addi %slot, %c1 : i32
+    %slot2 = arith.addi %slot, %c2 : i32
+    %slot3 = arith.addi %slot, %c3 : i32
+    %score0 = llvm.extractelement %scores[%slot : i32] : vector<16xf32>
+    %score1 = llvm.extractelement %scores[%slot1 : i32] : vector<16xf32>
+    %score2 = llvm.extractelement %scores[%slot2 : i32] : vector<16xf32>
+    %score3 = llvm.extractelement %scores[%slot3 : i32] : vector<16xf32>
+    %low0 = llvm.extractelement %low[%c0 : i32] : vector<2xf32>
+    %low1 = llvm.extractelement %low[%c1 : i32] : vector<2xf32>
+    %high0 = llvm.extractelement %high[%c0 : i32] : vector<2xf32>
+    %high1 = llvm.extractelement %high[%c1 : i32] : vector<2xf32>
+    %sum0 = arith.addf %score0, %low0 : f32
+    %sum1 = arith.addf %score1, %low1 : f32
+    %sum2 = arith.addf %score2, %high0 : f32
+    %sum3 = arith.addf %score3, %high1 : f32
+    %with0 = llvm.insertelement %sum0, %scores[%slot : i32] : vector<16xf32>
+    %with1 = llvm.insertelement %sum1, %with0[%slot1 : i32] : vector<16xf32>
+    %with2 = llvm.insertelement %sum2, %with1[%slot2 : i32] : vector<16xf32>
+    %with3 = llvm.insertelement %sum3, %with2[%slot3 : i32] : vector<16xf32>
+    return %with3 : vector<16xf32>
   }
   // an m16n8k16 adding the a operands times the b operands (bits of 16 bit pairs) to the 4 sums at slot of sums
   func.func private @strict_device_attention_product(%a0: vector<2xf16>, %a1: vector<2xf16>, %a2: vector<2xf16>, %a3: vector<2xf16>, %bits0: i32, %bits1: i32, %sums: vector<16xf32>, %slot: i32) -> vector<16xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
