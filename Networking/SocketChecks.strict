@@ -1,0 +1,25 @@
+Failures Number
+	Socket.Send(0, List(Number)) is Error("InvalidSocket")
+	Socket.Receive(0, 1) is Error("InvalidSocket")
+	Socket.Close(0) is 0
+	Loopback is 0
+	0
+Loopback Number
+	let server = Socket.Listen(34567)
+	if server is Error
+		return 1
+	let client = Socket.Connect("127.0.0.1", 34567)
+	if client is Error
+		return 2
+	let accepted = Socket.Accept(server)
+	if accepted is Error
+		return 3
+	if Socket.Send(client, (1, 2, 3)) is not 3
+		return 4
+	let received = Socket.Receive(accepted, 3)
+	if received is not (1, 2, 3)
+		return 5
+	Socket.Close(client)
+	Socket.Close(accepted)
+	Socket.Close(server)
+	0
