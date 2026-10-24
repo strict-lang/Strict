@@ -59,12 +59,15 @@ Refreshed(release Text, content Text, endings Texts) Number
 	Mirrored(content)
 Sidecar(release Text) Number
 	Release(Logger, "Missing/App").Sidecar("Missing/Release") is 0
-	let ending = Platform.Current is Platform.MacOS then ".metal" else ".ptx"
-	let sidecar = base + ending
-	if File(sidecar).Exists is false
-		return 0
-	File(release + "/" + Named(sidecar)).Write(File(sidecar).ReadBytes)
-	1
+	mutable copied = 0
+	for Sidecars
+		let sidecar = base + value
+		if File(sidecar).Exists and (File(sidecar).Length > 0)
+			File(release + "/" + Named(sidecar)).Write(File(sidecar).ReadBytes)
+			copied = copied + 1
+	copied
+Sidecars Texts
+	(".ptx", ".older.ptx", ".runtime.ptx", ".runtime.older.ptx", ".hsaco", ".metal")
 Mirrored(target Text) Number
 	if target is not ""
 		let shared = Parent + "/Release/Content"
