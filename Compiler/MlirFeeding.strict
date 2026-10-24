@@ -3,6 +3,7 @@ has at Number
 constant Chained = MlirFeeding(MlirFunction(List(TypeEntry) + GpuSamples.Layered, GpuSamples.Layered, MethodEntry("Chained", List(MemberEntry) + MemberEntry("input", "Strict/List(Number)", List(InstructionEntry), false), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "index"), InstructionEntry(InstructionType.IndexCall, "input", (1, 0, -1)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "offset"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "offset"), InstructionEntry(InstructionType.IndexCall, "input", (3, 2, -1)), InstructionEntry.Return(3)))), 0)
 constant Summing = MlirFeeding(MlirDeviceStatements.Summed, 6)
 constant Singled = MlirFeeding(MlirFunction(MlirDeviceStatements.Summed, Float = "f32"), 6)
+constant Passing = MlirFeeding(MlirFunction(List(TypeEntry) + GpuSamples.Headed, GpuSamples.Headed, MethodEntry("Passed", List(MemberEntry) + MemberEntry("count", "Strict/Number", List(InstructionEntry), false), "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "count"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "index"), InstructionEntry(InstructionType.IndexCall, "weights", (2, 1, -1)), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 2), InstructionEntry.Invoke(3, ("Strict/Headed", "Head", "Strict/Number", "position"), List(Number) + 2, -1), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 3), InstructionEntry.Named(InstructionType.InvokeWriteToList, 3, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 7), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "forResult"), InstructionEntry.Return(0)))), 4)
 constant Unfloated = (InstructionType.StoreRegisterToVariable, InstructionType.CheckError, InstructionType.IndexCall, InstructionType.LoopBegin)
 Stored(number Text, target Text) Texts
 	Summing.Stored("%d6", "%r4") is ("    llvm.store %d6, %r4 : f64, !llvm.ptr")
@@ -48,7 +49,7 @@ IsFeeding(position Number, register Number) Boolean
 	let reuse = LoadReuse(function.method.instructions)
 	for Range(position + 1, function.method.instructions.Length)
 		let entry = function.method.instructions(value)
-		let isRead = (register is in reuse.Reads(entry)) and IsPositional(value, entry)
+		let isRead = (register is in reuse.Reads(entry)) and IsPositional(value, entry, register)
 		if isRead or IsStored(value, entry, register)
 			return true
 		if reuse.Written(entry) is register
@@ -59,16 +60,30 @@ IsStored(position Number, entry InstructionEntry, register Number) Boolean
 	Summing.IsStored(10, Summing.function.method.instructions(10), 6) is false
 	let isStore = (entry.kind is InstructionType.StoreRegisterToVariable) and (entry.payload(0) is register)
 	isStore and IsLoaded(position, entry.texts(0))
-IsPositional(position Number, entry InstructionEntry) Boolean
-	Chained.IsPositional(4, Chained.function.method.instructions(4))
-	Summing.IsPositional(8, Summing.function.method.instructions(8)) is false
+IsPositional(position Number, entry InstructionEntry, register Number) Boolean
+	Chained.IsPositional(4, Chained.function.method.instructions(4), 3)
+	Passing.IsPositional(6, Passing.function.method.instructions(6), 2)
+	Summing.IsPositional(8, Summing.function.method.instructions(8), 5) is false
 	let kind = entry.kind
 	let isCompared = (kind > InstructionType.ArithmeticSeparator) and (kind < InstructionType.BinaryOperatorsSeparator)
-	if (kind is InstructionType.IndexCall) or isCompared
+	if (kind is InstructionType.IndexCall) or isCompared or IsPassed(position, register)
 		return true
 	let isCalculated = (kind > InstructionType.StoreSeparator) and (kind < InstructionType.ArithmeticSeparator)
 	let written = LoadReuse(function.method.instructions).Written(entry)
 	((kind is InstructionType.Invoke) or isCalculated) and IsFeeding(position, written)
+IsPassed(position Number, register Number) Boolean
+	Passing.IsPassed(6, 2)
+	MlirFeeding(MlirParallel.Doubling.function, 4).IsPassed(4, 1) is false
+	let entry = function.method.instructions(position)
+	let callees = MlirModule(function.types, "").Called(function, position)
+	if callees.Length is 0
+		return false
+	let countPosition = 5 + entry.payload(3)
+	for entry.payload(countPosition)
+		let name = callees.First.method.parameters(index).Name
+		if (entry.payload(countPosition + 1 + index) is register) and MlirFeeding(callees.First, 0).IsLoaded(-1, name)
+			return true
+	false
 IsLoaded(position Number, name Text) Boolean
 	Chained.IsLoaded(2, "offset")
 	Summing.IsLoaded(10, "sum") is false

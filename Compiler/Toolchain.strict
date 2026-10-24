@@ -140,7 +140,8 @@ Lowered(base Text, kept = "") Text
 	let lowered = ToolRunner(Located("mlir-opt")).Execute(lowering)
 	if lowered.Failed
 		return "mlir-opt failed: " + lowered.error
-	let translation = " --mlir-to-llvmir " + Quoted(base + ".llvm.mlir") + " -o " + Quoted(base + ".ll")
+	constant sequential = " --mlir-disable-threading --mlir-to-llvmir "
+	let translation = sequential + Quoted(base + ".llvm.mlir") + " -o " + Quoted(base + ".ll")
 	let translated = ToolRunner(Located("mlir-translate")).Execute(translation)
 	translated.Failed then "mlir-translate failed: " + translated.error else ""
 Quoted(path Text) Text

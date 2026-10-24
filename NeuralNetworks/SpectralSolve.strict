@@ -1,0 +1,26 @@
+has matrix Numbers
+has right Numbers
+constant Pair = SpectralSolve((2, -1, -1, 1), (1, 1))
+Solved Numbers
+	Pair.Solved is (2, 3)
+	SpectralSolve(List(Number) + 0, List(Number) + 1).Solved is Error("Singular spectral fit")
+	mutable rows = Augmented
+	for right.Length
+		rows = Reduced(rows, index)
+	for right.Length
+		rows(index * (right.Length + 1) + right.Length)
+Augmented Numbers
+	for right.Length * (right.Length + 1)
+		let row = (index / (right.Length + 1)).Floor
+		let column = index % (right.Length + 1)
+		column is right.Length then right(row) else matrix(row * right.Length + column)
+Reduced(rows Numbers, pivot Number) Numbers
+	let width = right.Length + 1
+	let diagonal = rows(pivot * width + pivot)
+	if (diagonal.IsFinite is false) or (diagonal.Absolute < 0.000000000001)
+		return Error("Singular spectral fit")
+	for rows.Length
+		let row = (index / width).Floor
+		let column = index % width
+		let normalized = rows(pivot * width + column) / diagonal
+		row is pivot then normalized else rows(index) - rows(row * width + pivot) * normalized

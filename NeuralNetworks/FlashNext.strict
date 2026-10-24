@@ -10,6 +10,7 @@ has history List(Numbers)
 has tokens Numbers = List(Number)
 has streams Numbers = List(Number)
 constant Tiny = FlashNext.Loaded("NeuralNetworks/tinyqwen4exp.gguf", 32)
+constant Rewound = Tiny.Steps((1, 2, 3), 0).Truncated(Tiny, (1, 2))
 Loaded(path Text, bits = 8) FlashNext
 	Tiny.layers.Length is 4
 	Tiny.pleLayer is 1
@@ -42,28 +43,55 @@ Silence(width Number) List(Numbers)
 Step(token Number, position Number) FlashNext
 	Tiny.Step(1, 0).Scored(0).IsNearlyEqual(-0.699458, 0.00001)
 	Tiny.Step(1, 0).Step(2, 1).Scored(0).IsNearlyEqual(-0.842374, 0.00001)
-	let rotation = rope.Rotations(List(Number) + position)
-	mutable current = Started(token)
+	Steps(List(Number) + token, position)
+Steps(chosen Numbers, start Number) FlashNext
+	Tiny.Steps((1, 2), 0).Scored(0).IsNearlyEqual(-0.842374, 0.00001)
+	Tiny.Steps((1, 2, 3), 0).Scored(1).IsNearlyEqual(0.874213, 0.00001)
+	Tiny.Step(1, 0).Steps((2, 3), 1).Scored(1).IsNearlyEqual(0.874213, 0.00001)
+	let rotation = rope.Rotations(Qwen3.Positions(start, chosen.Length))
+	mutable current = Started(chosen)
 	mutable stepped = List(Mutable(FlashLayer))
 	for layers
 		if index is pleLayer
-			current = current.Remembered(position)
-		let forwarded = value.Forward(current.streams, rotation)
-		current = FlashNext(current, streams = forwarded.streams)
-		stepped.Add(forwarded)
+			current = current.Remembered(start)
+		stepped.Add(value.Forward(current.streams, rotation))
+		current = FlashNext(current, streams = stepped.Last.streams)
 	FlashNext(current, layers = stepped)
-Started(token Number) FlashNext
-	Tiny.Started(1).streams.Length is 256
-	let embedded = source.Picked("token_embd.weight", List(Number) + token)
-	FlashNext(value, tokens = tokens + token, streams = head.Started(embedded))
-Remembered(position Number) FlashNext
+Started(chosen Numbers) FlashNext
+	Tiny.Started(List(Number) + 1).streams.Length is 256
+	Tiny.Started((1, 2)).streams.Length is 512
+	let embedded = source.Picked("token_embd.weight", chosen)
+	FlashNext(value, tokens = tokens + chosen, streams = head.Started(embedded, chosen.Length))
+Remembered(start Number) FlashNext
 	Tiny.Step(1, 0).Remembered(0).history.Last.Length is 256
 	Tiny.Step(1, 0).Step(2, 1).Step(3, 2).Scored(1).IsNearlyEqual(0.874213, 0.00001)
-	let gated = embedding.Gated(streams, source.Picked(Ngrams.Table, ngrams.Rows(tokens, position)))
-	let remembered = embedding.Shifted(history, gated)
-	FlashNext(value, history = remembered, streams = embedding.Combined(streams, gated, remembered))
+	let width = head.norm.Length
+	mutable kept = history
+	mutable combined = List(Number)
+	for streams.Length / width
+		let own = Safetensors.Part(streams, index * width, width, 1)
+		let gated = embedding.Gated(own, source.Picked(Ngrams.Table, ngrams.Rows(tokens, start + index)))
+		kept = embedding.Shifted(kept, gated)
+		combined = combined + embedding.Combined(own, gated, kept)
+	FlashNext(value, history = kept, streams = combined)
 Scored Numbers
 	Tiny.Step(1, 0).Scored.Length is 32
 	Tiny.Step(1, 0).Scored(2).IsNearlyEqual(1.48686, 0.00001)
 	Generation(Tiny).Generated((1, 2), 2) is (19, 13)
-	Batch(outputs, List(Number) + 0).Sums(head.Mixed(streams))
+	let width = head.norm.Length
+	Batch(outputs, List(Number) + 0).Sums(head.Mixed(Safetensors.Part(streams, streams.Length - width, width, 1)))
+Nexts Numbers
+	Tiny.Steps((1, 2), 0).Nexts.Last is 19
+	Tiny.Steps((1, 2), 0).Nexts.First is Greedy.Largest(Tiny.Step(1, 0).Scored)
+	Greedy.Rows(Batch(outputs, List(Number) + 0).Sums(head.Mixed(streams)), outputs.Length)
+Truncated(original FlashNext, kept Numbers) FlashNext
+	Rewound.Step(5, 2).Scored(1).IsNearlyEqual(Tiny.Steps((1, 2, 5), 0).Scored(1), 0.00001)
+	let count = kept.Length
+	mutable truncated = List(Mutable(FlashLayer))
+	for layers
+		truncated.Add(value.Truncated(original.layers(index), count, original.tokens.Length + count))
+	let added = history.Slice(history.Length - tokens.Length + original.tokens.Length, count)
+	let remembered = original.history.Slice(count, original.history.Length - count) + added
+	let width = head.norm.Length
+	let rows = Safetensors.Part(streams, 0, count * width, 1)
+	FlashNext(value, layers = truncated, tokens = original.tokens + kept, streams = rows, history = remembered)

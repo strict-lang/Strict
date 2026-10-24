@@ -43,6 +43,7 @@ IsDeviceBody Boolean
 IsDevice(inspected MlirFunction, at Number, depth Number) Boolean
 	Doubling.IsDevice(Doubling.function, 4, 0)
 	Randomizing.IsDevice(Randomizing.function, 4, 0) is false
+	Doubling.IsDevice(MlirFunction(Powered.types, Powered.type, GpuSamples.Sined), 1, 0)
 	let entry = inspected.method.instructions(at)
 	if entry.kind is in Moves
 		return IsValued(inspected, at, depth)
@@ -50,9 +51,8 @@ IsDevice(inspected MlirFunction, at Number, depth Number) Boolean
 		return IsList(inspected, at, entry.texts(0))
 	if entry.kind is InstructionType.Invoke
 		return IsCall(inspected, at, depth)
-	if entry.kind < InstructionType.BinaryOperatorsSeparator
-		return IsArithmetic(inspected, at)
-	IsControl(inspected, at, depth)
+	let isArithmetic = entry.kind < InstructionType.BinaryOperatorsSeparator
+	isArithmetic then IsArithmetic(inspected, at) else IsControl(inspected, at, depth)
 IsValued(inspected MlirFunction, at Number, depth Number) Boolean
 	Doubling.IsValued(Doubling.function, 3, 0)
 	Layering.IsValued(Layering.function, 4, 0)
@@ -123,8 +123,8 @@ IsCall(inspected MlirFunction, at Number, depth Number) Boolean
 		return MlirDeviceStatements(inspected, at).IsList(instance)
 	let callees = MlirDeviceMembers(inspected).Passable(at)
 	let fits = (callees.Length is 1) and (callees.First.method.parameters.Length is entry.payload(5 + entry.payload(3)))
-	let isMade = (entry.texts(1) is "from") and IsNumbered(inspected, TypeEntry.ShortName(entry.texts(0)))
-	let isNative = (entry.texts(1) is in ("Floor", "Logarithm")) or isMade
+	let isWrapping = (entry.texts(1) is "from") and (IsNumbered(inspected, TypeEntry.ShortName(entry.texts(0))) is false)
+	let isNative = (entry.texts(1) is in MlirDeviceCalls.Natives) and (isWrapping is false)
 	IsNumbered(inspected, instance) and (depth < 3) and (isNative or (fits and IsDeviceMethod(callees, depth + 1)))
 Instance(inspected MlirFunction, at Number) Text
 	Layering.Instance(Floored, 1) is "Number"
@@ -137,10 +137,17 @@ IsDeviceMethod(callees List(MlirFunction), depth Number) Boolean
 	if (callees.Length is not 1) or (callees.First.method.instructions.Length is 0)
 		return false
 	let callee = callees.First
-	if callee.method.instructions.Last.kind is not InstructionType.Return
+	if (callee.method.instructions.Last.kind is not InstructionType.Return) or (IsPassable(callee) is false)
 		return false
 	for callee.method.instructions
 		if IsDevice(callee, index, depth) is false
+			return false
+	true
+IsPassable(callee MlirFunction) Boolean
+	Layering.IsPassable(Summed)
+	Layering.IsPassable(MlirFunction(Summed.types, GpuSamples.Layered, GpuSamples.Rowed)) is false
+	for callee.method.parameters
+		if MlirDeviceRows(callee, 0).IsRows(TypeEntry.ShortName(value.typeName))
 			return false
 	true
 Free Texts

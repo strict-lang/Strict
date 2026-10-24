@@ -157,6 +157,35 @@ static void Forget(void)
 	shardCount = 0;
 }
 
+/* Every model loaded so far, the current one also in the globals above: switching between models (a draft head and its
+   trunk) keeps their metadata and open files instead of reading all headers again (~265 ms for Qwen3.8-Flash-Next). */
+typedef struct
+{
+	char* path;
+	Entry* entries;
+	Tensor* tensors;
+	char** shardPaths;
+	Opening* openings;
+	uint64_t* openingSizes;
+	uint64_t entryCount, tensorCount;
+	uint32_t shardCount;
+} Model;
+static Model* models = 0;
+static uint64_t modelCount = 0, currentModel = 0;
+
+static void Kept(void)
+{
+	Model model = { loadedPath, entries, tensors, shardPaths, openings, openingSizes, entryCount, tensorCount, shardCount };
+	models[currentModel] = model;
+}
+
+static void Switched(const Model* model)
+{
+	loadedPath = model->path, entries = model->entries, tensors = model->tensors, shardPaths = model->shardPaths;
+	openings = model->openings, openingSizes = model->openingSizes;
+	entryCount = model->entryCount, tensorCount = model->tensorCount, shardCount = model->shardCount;
+}
+
 /* Adds the metadata and tensor infos of one file of a model to the loaded ones, returns the failure name if it can't. */
 static const char* Header(const char* path, uint32_t shard)
 {
@@ -229,7 +258,16 @@ static const char* Loaded(const char* path)
 {
 	if (loadedPath && strcmp(loadedPath, path) == 0)
 		return 0;
-	Forget();
+	if (loadedPath)
+		Kept();
+	for (currentModel = 0; currentModel < modelCount; currentModel++)
+		if (strcmp(models[currentModel].path, path) == 0)
+		{
+			Switched(&models[currentModel]);
+			return 0;
+		}
+	Model empty = { 0 };
+	Switched(&empty);
 	const char* failure = Header(path, 0);
 	uint32_t count = 1;
 	for (uint64_t index = 0; !failure && index < entryCount; index++)
@@ -252,6 +290,9 @@ static const char* Loaded(const char* path)
 	}
 	loadedPath = malloc(strlen(path) + 1);
 	strcpy(loadedPath, path);
+	models = realloc(models, (modelCount + 1) * sizeof(Model));
+	currentModel = modelCount++;
+	Kept();
 	return 0;
 }
 
@@ -607,7 +648,8 @@ static const char* Mismatched(const Tensor* gate, const Tensor* up, const Tensor
 		return "GgufExpertsShapesDiffer";
 	if (Multiplied(up->type).quantize != Multiplied(gate->type).quantize)
 		return "GgufExpertsGateAndUpTypesDiffer";
-	if ((uint64_t)input->count != hidden)
+	uint64_t tokens = (uint64_t)input->count / hidden;
+	if (tokens == 0 || (uint64_t)input->count % hidden != 0 || (uint64_t)chosen->count % tokens != 0)
 		return "ExpertsInputLengthDiffers";
 	for (uint64_t index = 0; index < (uint64_t)chosen->count; index++)
 		if (!IsIndex(chosen->items[index], count))
@@ -702,9 +744,39 @@ static unsigned char* Activated(const Tensor* down, float* gated, const float* u
 	return activated;
 }
 
-/* The outputs of the chosen experts of the layer prefix for one input one after the other like llama.cpp's CPU backend
-   computes them: down(silu(gate input) * up input), each product ggml's dot product of rows as stored (read from the
-   files, Q4_K, Q5_K, Q5_1 or Q8_0) with the input quantized for them, the rows spread over all threads. */
+/* Stages the gate, up and down rows of each distinct expert of the tasks once (pairs of gate and up tasks, then the
+   downs) and points the tasks of every token choosing it at them. */
+static int Shared(Task* tasks, uint64_t count, const strict_numbers* experts, uint64_t expertCount)
+{
+	uint64_t* slots = malloc((expertCount + count + 1) * sizeof(uint64_t)), * chosen = slots + expertCount, distinct = 0;
+	Task* staging = malloc((count * 3 + 1) * sizeof(Task));
+	for (uint64_t expert = 0; expert < expertCount; expert++)
+		slots[expert] = count;
+	for (uint64_t index = 0; index < count; index++)
+	{
+		uint64_t expert = (uint64_t)experts->items[index];
+		if (slots[expert] == count)
+		{
+			staging[distinct * 3] = tasks[index * 2], staging[distinct * 3 + 1] = tasks[index * 2 + 1];
+			staging[distinct * 3 + 2] = tasks[count * 2 + index], slots[expert] = distinct++;
+		}
+		chosen[index] = slots[expert];
+	}
+	int isStaged = Staged(staging, distinct * 3);
+	for (uint64_t index = 0; index < count; index++)
+	{
+		tasks[index * 2].rows = staging[chosen[index] * 3].rows;
+		tasks[index * 2 + 1].rows = staging[chosen[index] * 3 + 1].rows;
+		tasks[count * 2 + index].rows = staging[chosen[index] * 3 + 2].rows;
+	}
+	free(staging), free(slots);
+	return isStaged;
+}
+
+/* The outputs of the chosen experts of the layer prefix for each input token (as many chosen experts per token) one
+   after the other like llama.cpp's CPU backend computes them: down(silu(gate input) * up input), each product ggml's
+   dot product of rows as stored (read from the files, Q4_K, Q5_K, Q5_1 or Q8_0) with the input quantized for them, the
+   rows spread over all threads, an expert chosen by several tokens read once. */
 STRICT_EXPORT double GgufFile_ExpertOutputs(double self, double path, double prefix, double chosen, double input)
 {
 	static strict_numbers* outputs = 0;
@@ -721,20 +793,23 @@ STRICT_EXPORT double GgufFile_ExpertOutputs(double self, double path, double pre
 		ggml_table_f32_f16[bits] = ggml_compute_fp16_to_fp32((ggml_fp16_t)bits);
 	isTabled = 1;
 	uint64_t hidden = gate->shape[0], width = gate->shape[1], count = (uint64_t)experts->count;
-	float* floats = malloc((hidden + count * (width * 2 + hidden) + 1) * sizeof(float));
-	float* gated = floats + hidden, * upped = gated + count * width, * downs = upped + count * width;
-	for (uint64_t index = 0; index < hidden; index++)
+	uint64_t tokens = (uint64_t)values->count / hidden, used = count / tokens;
+	float* floats = malloc((tokens * hidden + count * (width * 2 + hidden) + 1) * sizeof(float));
+	float* gated = floats + tokens * hidden, * upped = gated + count * width, * downs = upped + count * width;
+	for (uint64_t index = 0; index < tokens * hidden; index++)
 		floats[index] = (float)values->items[index];
-	void* quantized = Quantized(gate->type, floats, hidden);
+	unsigned char* quantized = Quantized(gate->type, floats, tokens * hidden);
+	uint64_t inputBytes = hidden / Multiplied(gate->type).numbers * Multiplied(gate->type).bytes;
 	Task* tasks = malloc((count * 3 + 1) * sizeof(Task));
 	for (uint64_t index = 0; index < count; index++)
 	{
 		uint64_t expert = (uint64_t)experts->items[index];
-		tasks[index * 2] = Rows(gate, expert, quantized, gated + index * width);
-		tasks[index * 2 + 1] = Rows(up, expert, quantized, upped + index * width);
+		const unsigned char* token = quantized + index / used * inputBytes;
+		tasks[index * 2] = Rows(gate, expert, token, gated + index * width);
+		tasks[index * 2 + 1] = Rows(up, expert, token, upped + index * width);
 		tasks[count * 2 + index] = Rows(down, expert, 0, downs + index * hidden);
 	}
-	if (!Staged(tasks, count * 3))
+	if (!Shared(tasks, count, experts, gate->shape[2]))
 	{
 		free(tasks), free(quantized), free(floats);
 		return strict_fail("GgufTensorDataTruncated");

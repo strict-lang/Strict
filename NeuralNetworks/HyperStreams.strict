@@ -21,40 +21,49 @@ Loaded(model Gguf, prefix Text) HyperStreams
 	let lowered = Layer(model.Rows(prefix + "_down.weight"), Layer.Unbiased)
 	let raised = Layer(model.Rows(prefix + "_up.weight"), Layer.Unbiased)
 	HyperStreams(model.Values(prefix + "_norm.weight"), lowered, raised, injecting)
-Started(embedding Numbers) Numbers
+Started(embedding Numbers, tokens = 1) Numbers
 	Tiny.Started((1, 2)) is (1, 2, 1, 2, 1, 2, 1, 2)
+	Tiny.Started((1, 2, 3, 4), 2) is (1, 2, 1, 2, 1, 2, 1, 2, 3, 4, 3, 4, 3, 4, 3, 4)
+	let width = embedding.Length / tokens
 	for embedding.Length * Count
-		embedding(index % embedding.Length)
+		embedding((index / width / Count).Floor * width + index % width)
 Normalized(streams Numbers) Numbers
 	Tiny.Normalized(Streams)(1).IsNearlyEqual(2.529821)
 	Tiny.Normalized(Streams)(6).IsNearlyEqual(1.414213)
-	let width = streams.Length / Count
+	Tiny.Normalized(Streams + Streams)(14).IsNearlyEqual(1.414213)
+	let width = norm.Length / Count
 	let scales = Qwen3Block.Scales(streams, width, Qwen3Block.Epsilon)
 	for streams
-		value * norm(index) * scales((index / width).Floor)
+		value * norm(index % norm.Length) * scales((index / width).Floor)
 Mixed(streams Numbers) Numbers
 	Tiny.Mixed(Streams).First.IsNearlyEqual(0.515501)
 	Tiny.Mixed(Streams).Last.IsNearlyEqual(0.659311)
+	Tiny.Mixed(Streams + Streams)(3).IsNearlyEqual(0.659311)
 	let normalized = Normalized(streams)
-	let gates = up.Sums(Squashed(down.Sums(normalized)))
+	let gates = Batch(up.weights, up.biases).Sums(Squashed(Batch(down.weights, down.biases).Sums(normalized)))
 	for streams.Length / Count
-		Gated(normalized, gates, index, streams.Length / Count)
+		Gated(normalized, gates, index, norm.Length / Count)
 Squashed(sums Numbers) Numbers
 	Tiny.Squashed((4, 0)) is (Activation.Swish.Output(1), 0)
 	for sums
 		Activation.Swish.Output(value / Count)
 Gated(normalized Numbers, gates Numbers, position Number, width Number) Number
 	Tiny.Gated((1, 2, 3, 4, 5, 6, 7, 8), Layer.Zeros(8), 1, 2) is 2.5
+	let first = (position / width).Floor * width * Count + position % width
 	mutable sum = 0
 	for Count
-		sum = sum + normalized(index * width + position) * Activation.Sigmoid.Output(gates(index * width + position))
+		sum = sum + normalized(first + index * width) * Activation.Sigmoid.Output(gates(first + index * width))
 	sum / Count
 Injected(streams Numbers) Numbers
 	Tiny.Injected(Streams)(1).IsNearlyEqual(2.529821)
 	Tiny.Injected(Streams)(2).IsNearlyEqual(1.414212)
-	inject.Sums(Normalized(streams))
+	Tiny.Injected(Streams + Streams)(6).IsNearlyEqual(1.414212)
+	Batch(inject.weights, inject.biases).Sums(Normalized(streams))
 Combined(streams Numbers, block Numbers, injected Numbers) Numbers
 	Tiny.Combined(Streams, (1, -1), Tiny.Injected(Streams))(2).IsNearlyEqual(4.306092)
 	Tiny.Combined(Streams, (1, -1), Tiny.Injected(Streams))(7) is -1
+	Tiny.Combined(Streams + Streams, (1, -1, 1, -1), Tiny.Injected(Streams + Streams))(10).IsNearlyEqual(4.306092)
+	let width = norm.Length / Count
 	for streams
-		value + 2 * Activation.Sigmoid.Output(injected((index / block.Length).Floor) / Count) * block(index % block.Length)
+		let token = (index / norm.Length).Floor
+		value + 2 * Activation.Sigmoid.Output(injected((index / width).Floor) / Count) * block(token * width + index % width)

@@ -6,6 +6,8 @@ constant Split = Gguf("NeuralNetworks/tinysplit-00001-of-00003.gguf")
 constant Mixture = Gguf("NeuralNetworks/experts.gguf")
 constant Down = "blk.1.ffn_down_exps.weight"
 constant Routed = Mixture.Values("blk.0.ffn_gate_inp.weight").Slice(0, 256)
+constant Reversed = Routed.Reverse
+constant Tokens = Routed + Reversed
 Value(key Text) Text
 	Tiny.Value("general.architecture") is "qwen3"
 	Tiny.Value("qwen3.block_count") is "1"
@@ -51,4 +53,5 @@ ExpertOutputs(prefix Text, chosen Numbers, input Numbers) Numbers
 	Mixture.ExpertOutputs("blk.0.", (1, 0), Routed)(261).IsNearlyEqual(12.111, 0.05)
 	Mixture.ExpertOutputs("blk.1.", (1, 0), Routed)(261).IsNearlyEqual(100.175, 0.05)
 	Mixture.ExpertOutputs("blk.0.", (2), Routed) is Error
+	Mixture.ExpertOutputs("blk.0.", (1, 0, 0, 1), Tokens)(773) is Mixture.ExpertOutputs("blk.0.", (0, 1), Reversed)(261)
 	GgufFile.ExpertOutputs(path, prefix, chosen, input)

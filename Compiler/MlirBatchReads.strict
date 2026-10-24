@@ -1,0 +1,82 @@
+constant Storing = "    func.call @strict_device_cached_stored(%result, %batchFirst, %batchActive, %batchOutput, %results)"
+has function MlirFunction
+has position Number
+Slots Texts
+	mutable lines = Allocated("%batchOutput", "f32")
+	for MlirBatchCheck(function, position).Reads
+		lines = lines + Allocated("%indices" + value, "i64") + Allocated("%cached" + value, "f32")
+	lines
+Allocated(name Text, kind Text) Texts
+	let allocated = "    " + name + "Private = llvm.alloca %batchSize x " + kind
+	constant typed = " : (i64) -> !llvm.ptr<5>"
+	let casted = "    " + name + " = llvm.addrspacecast " + name + "Private : !llvm.ptr<5> to !llvm.ptr"
+	(allocated + typed, casted)
+Prefetched(at Number) Texts
+	let entry = function.method.instructions(at)
+	if entry.kind is InstructionType.IndexCall
+		return Saved(at)
+	let feeding = MlirFeeding(function, at)
+	let written = LoadReuse(function.method.instructions).Written(entry)
+	let stored = entry.kind is in (InstructionType.StoreRegisterToVariable, InstructionType.StoreConstantToVariable)
+	let needed = stored then feeding.IsLoaded(at, entry.texts.Last) else feeding.IsFeeding(at, written)
+	needed then MlirDeviceStatements(function, at).Emitted else List(Text)
+Saved(at Number) Texts
+	let entry = function.method.instructions(at)
+	let temp = "%d" + at
+	let indexed = MlirExact(function, at).Position("%r" + entry.payload(1), temp + "position")
+	let pointer = "    " + temp + "Pointer = llvm.getelementptr %indices" + at + "[%batchIndex]"
+	constant typed = " : (!llvm.ptr, i64) -> !llvm.ptr, i64"
+	indexed + pointer + typed + MlirTyped.Integer.Store(temp + "position", temp + "Pointer")
+Loaded Texts
+	mutable lines = List(Mutable(Text))
+	for MlirBatchCheck(function, position).Reads
+		lines = lines + LoadedRead(value)
+	lines
+LoadedRead(at Number) Texts
+	let temp = "%read" + at
+	let list = "%v_" + function.method.instructions(at).texts(0)
+	let data = MlirTyped.Pointer.Load(temp + "Data", list + "_d")
+	let bits = MlirTyped.Integer.Load(temp + "Bits", list + "_b")
+	let count = MlirTyped.Integer.Load(temp + "Count", list + "_n")
+	let call = "    func.call @strict_device_cached_four(%failed, " + temp + "Data, " + temp + "Bits, "
+	let arguments = temp + "Count, %indices" + at + ", %cached" + at + ", %batchActive)"
+	(data, bits, count, call + arguments + " : (!llvm.ptr, !llvm.ptr, i64, i64, !llvm.ptr, !llvm.ptr, i64) -> ()")
+Computed(at Number) Texts
+	let entry = function.method.instructions(at)
+	if function.Float is "f64"
+		return MlirDeviceStatements(function, at).Emitted
+	if entry.kind is InstructionType.IndexCall
+		return Cached(at)
+	if entry.kind is InstructionType.InvokeWriteToList
+		return Collected(at)
+	MlirDeviceStatements(function, at).Emitted
+Cached(at Number) Texts
+	let temp = "%d" + at
+	let pointer = "    " + temp + "Pointer = llvm.getelementptr %cached" + at + "[%batchIndex]"
+	constant typed = " : (!llvm.ptr, i64) -> !llvm.ptr, f32"
+	let read = function.Load(temp + "Value", temp + "Pointer")
+	let target = "%r" + function.method.instructions(at).payload(0)
+	(pointer + typed, read) + MlirFeeding(function, at).Stored(temp + "Value", target)
+Collected(at Number) Texts
+	let temp = "%d" + at
+	let pointer = "    " + temp + "Pointer = llvm.getelementptr %batchOutput[%batchIndex]"
+	constant typed = " : (!llvm.ptr, i64) -> !llvm.ptr, f32"
+	let read = function.Load(temp + "Value", "%r" + function.method.instructions(at).payload(0))
+	(pointer + typed, read, function.Store(temp + "Value", temp + "Pointer"))
+Stored Texts
+	List(Text) + Storing + " : (!llvm.ptr, i64, i64, !llvm.ptr, i64) -> ()"
+LinearPrefetched(at Number) Texts
+	let emitted = Prefetched(at)
+	if function.method.instructions(at).kind is not InstructionType.IndexCall
+		return emitted
+	emitted + Filled(at)
+Filled(at Number) Texts
+	mutable lines = List(Mutable(Text))
+	for 3
+		let prefix = "%d" + at + "Next" + index
+		let number = MlirTyped.Integer.Constant(prefix + "Lane", "" + (index + 1))
+		let added = "    " + prefix + " = arith.addi %d" + at + "position, " + prefix + "Lane : i64"
+		let pointer = "    " + prefix + "Pointer = llvm.getelementptr %indices" + at + "[" + (index + 1) + "]"
+		constant typed = " : (!llvm.ptr) -> !llvm.ptr, i64"
+		lines = lines + number + added + (pointer + typed) + MlirTyped.Integer.Store(prefix, prefix + "Pointer")
+	lines

@@ -1,0 +1,42 @@
+has function MlirFunction
+has position Number
+constant Norming = MlirGroupIndex(MlirFunction(MlirGroups.Norming.function, Float = "f32", Guarded = 2, Group = 11), 7)
+constant Aligning = MlirGroupIndex(MlirFunction(MlirGroups.Aligning.function, Float = "f32", Guarded = 2, Group = 11), 6)
+Floored Texts
+	Norming.Floored.First is "    llvm.store %groupIndex, %r5_e : i64, !llvm.ptr"
+	Norming.Floored.Last is "    llvm.store %one, %r5_q : i64, !llvm.ptr"
+	MlirGroupIndex(MlirFunction(Norming.function, Group = -1), 7).Floored.Length is 0
+	let entry = function.method.instructions(position)
+	if (entry.kind is not InstructionType.Invoke) or (entry.texts(1) is not "Floor")
+		return List(Text)
+	let source = MlirDeviceCalls(function, position, function).Register(entry)
+	let writer = MlirKinds(function).Writer(position, source)
+	if (writer < 0) or (Matches(writer, InstructionType.Divide) is false)
+		return List(Text)
+	MlirExact(function, position).Set("%groupIndex", "%one", "%r" + entry.payload(0))
+Matches(at Number, kind Number) Boolean
+	if (function.Group < 0) or (function.Guarded < 0) or (function.Float is not "f32")
+		return false
+	let entry = function.method.instructions(at)
+	if entry.kind is not kind
+		return false
+	let groups = MlirGroups(function, function.Guarded)
+	let writer = groups.Writer(entry.payload(2), at)
+	let divisor = function.method.instructions(writer < 0 then at else writer)
+	let named = (writer >= 0) and (divisor.kind is InstructionType.LoadVariableToRegister)
+	named and IsDivisor(divisor.texts(0), at) and groups.IsIndex(entry.payload(1), at)
+IsDivisor(name Text, at Number) Boolean
+	let size = MlirGroups(function, function.Guarded).Size(function.Group)
+	(name is size) and (MlirKinds(function).Stored(at, name) <= function.Guarded)
+Remainder Texts
+	Aligning.Remainder.First is "    %groupRemainder6 = arith.subi %at, %groupStart : i64"
+	if Matches(position, InstructionType.Modulo) is false
+		return List(Text)
+	let temp = "%groupRemainder" + position
+	let computed = "    " + temp + " = arith.subi %at, %groupStart : i64"
+	let target = "%r" + function.method.instructions(position).payload(3)
+	(List(Text) + computed) + MlirExact(function, position).Set(temp, "%one", target)
+Fallbacks Boolean
+	MlirGroupIndex(MlirFunction(Norming.function, Guarded = -1), 7).Floored.Length is 0
+	MlirGroupIndex(MlirFunction(Norming.function, Float = "f64"), 7).Floored.Length is 0
+	true

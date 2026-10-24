@@ -65,9 +65,10 @@ Value(at Number, name Text) Texts
 	(function.Load(loaded, "%v_" + name), slot, function.Store(loaded, Temp("gx" + at)))
 Counted(count Number, mask Number, rows Number, dots Number) Texts
 	Doubling.Counted(2, 3, 1, 2).Last is "    %t2gpf = arith.constant 0 : i64"
+	MlirGpu(MlirDoubles.Tabling.function, 2).Counted(0, 0, 0, 0).Last is "    %t2gpf = arith.constant 64 : i64"
 	constant names = ("gw", "gm", "gr", "go", "gj", "gpf")
 	let guards = MlirGuards(MlirFunction(function, Float = "f32", Guarded = position), position).Mask
-	for (count, mask, rows, dots, guards, MlirLayout(function).Packed(position))
+	for (count, mask, rows, dots, guards, MlirDoubles(function, position).Format)
 		MlirTyped.Integer.Constant(Temp(names(index)), value to Text)
 Finished Texts
 	Doubling.Finished.Last is "    cf.br ^loop2exit"
@@ -116,7 +117,8 @@ Kernels(inspected MlirFunction) Texts
 		if (value.kind is InstructionType.LoopBegin) and MlirGpuCheck(inspected, index).IsGpu
 			let single = MlirFunction(inspected, Float = "f32")
 			let exact = MlirGuards(MlirFunction(single, Guarded = index), index).Kernel
-			let kernels = MlirDevice(inspected, index).Kernel + MlirDevice(single, index).Kernel + exact
+			let doubled = MlirDoubles(inspected, index).Failing then List(Text) else MlirDevice(inspected, index).Kernel
+			let kernels = doubled + MlirDevice(single, index).Kernel + exact
 			let isKernel = MlirWholeKernel(inspected, index).IsKernel
 			lines = lines + (isKernel then MlirKernelBody(inspected, index).Kernels else kernels)
 	lines

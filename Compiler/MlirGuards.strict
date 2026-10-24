@@ -7,6 +7,8 @@ constant Shifts = MlirGuards(Shifted, 2)
 constant Reading = MlirGuards(Shifted, 6)
 constant Flooring = InstructionEntry.Invoke(3, ("Strict/Number", "Floor", "Strict/Number"), List(Number), 2)
 constant Calculated = (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply, InstructionType.Modulo)
+constant ExactSlots = "(dense<0> : tensor<6xi64>) : !llvm.array<6 x i64>"
+constant PlainSlots = "(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>"
 Origins(position Number, register Number) Texts
 	Shifts.Origins(6, 3) is ("offset")
 	Shifts.Origins(8, 5) is ("?")
@@ -133,9 +135,9 @@ Named Texts
 	let name = MlirDevice(MlirFunction(function, Float = "f64", Guarded = -1), at).Name
 	let isExact = Mask > 0
 	let formatted = isExact then MlirFormats(function, at).Names(name) else ""
-	let names = name + "\00" + name + "s\00" + (isExact then name + "sx\00" else "") + formatted
-	let size = isExact then name.Length * 6 + 21 else name.Length * 2 + 3
-	let kernels = isExact then 6 else 2
-	let cache = "(dense<0> : tensor<" + kernels + "xi64>) : !llvm.array<" + kernels + " x i64>"
+	let first = MlirDoubles(function, at).Failing then "" else name
+	let names = first + "\00" + name + "s\00" + (isExact then name + "sx\00" else "") + formatted
+	let size = first.Length + (isExact then name.Length * 5 + 21 else name.Length + 3)
+	let cache = isExact then ExactSlots else PlainSlots
 	let text = "  llvm.mlir.global internal constant @k" + name + "(\"" + names + "\") : !llvm.array<" + size + " x i8>"
 	(text, "  llvm.mlir.global internal @f" + name + cache)

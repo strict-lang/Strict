@@ -1,0 +1,35 @@
+has coords Numbers = List(Number)
+has features Numbers = List(Number)
+has width Number = 0
+has fit SpectralFit = SpectralFit
+has maximum Number = 8
+constant Pair = SpectralHistory((-1, 0), (1, 2, 3, 4), 2, SpectralFit(1, 0, 1), 2)
+Ready Boolean
+	Pair.Ready
+	SpectralHistory.Ready is false
+	let shaped = (width > 0) and (features.Length is width * coords.Length)
+	shaped and fit.IsValid and (coords.Length >= fit.degree + 1)
+Remembered(coord Number, feature Numbers) SpectralHistory
+	Pair.Remembered(0.5, (5, 6)).coords is (0, 0.5)
+	Pair.Remembered(0.5, (5, 6)).features is (3, 4, 5, 6)
+	Pair.Remembered(0.5, (1, 2, 3)).coords is List(Number) + 0.5
+	if (coord.IsFinite is false) or (feature.Length < 1) or (maximum < fit.degree + 1)
+		return Error("Invalid spectral history")
+	if (coords.Length > 0) and (coord <= coords.Last)
+		return Error("Spectral coordinates must increase")
+	Appended(coord, feature)
+Appended(coord Number, feature Numbers) SpectralHistory
+	let count = feature.Length is width then coords.Length else 0
+	let kept = count.Clamp(0, maximum - 1)
+	let times = coords.Slice(count - kept, kept)
+	let data = features.Slice((count - kept) * width, kept * width)
+	SpectralHistory(times + coord, data + feature, feature.Length, fit, maximum)
+Predicted(coord Number) Numbers
+	Pair.Predicted(1) is (5, 6)
+	if Ready is false
+		return Error("Spectral history is not ready")
+	let weights = fit.Weights(coords, coord)
+	let count = coords.Length
+	let data = features
+	for width
+		Softmax.Weighted(weights, 0, count, data, index, width)

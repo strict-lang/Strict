@@ -3502,7 +3502,7 @@
     return %rowTile, %tokenTile : i64, i64
   }
   // the dot of row r and token t becomes number t * rows + r of the result
-  func.func private @strict_device_whole_run(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %rowsData: !llvm.ptr, %columns: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %widthNumber: f64, %rowsNumber: f64, %wide: i1, %brain: i1, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_whole_run(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %rowsData: !llvm.ptr, %columns: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %widthNumber: f64, %rowsNumber: f64, %wide: i1, %brain: i1, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64, %checkedWhole: i1) attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c5 = llvm.mlir.constant(5 : i32) : i32
@@ -3566,6 +3566,10 @@
     %arch = func.call @strict_device_arch() : () -> i32
     %isAsync = arith.cmpi sge, %arch, %c800 : i32
     %pipelining = arith.andi %whole, %isAsync : i1
+    cf.cond_br %checkedWhole, ^checked, ^compatible
+  ^checked:
+    cf.cond_br %pipelining, ^pipelined, ^unusable
+  ^compatible:
     cf.cond_br %pipelining, ^pipelined, ^halves
   ^pipelined:
     %warpTokens = arith.shli %warpTokenIndex, %c6 : i32
@@ -3608,16 +3612,18 @@
   }
   llvm.func @strict_device_whole(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %rowsData: !llvm.ptr, %rowsCount: i64, %rowsBits: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %width: f64, %rows: f64, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64, %bases: !llvm.ptr, %basesCount: i64, %basesBits: i64, %results: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>, nvvm.minctasm = 1 : i32} {
     %wide = llvm.mlir.constant(true) : i1
+    %checkedWhole = llvm.mlir.constant(false) : i1
     %brainBits = arith.constant 17 : i64
     %brain = arith.cmpi eq, %results, %brainBits : i64
-    func.call @strict_device_whole_run(%count, %result, %failed, %rowsData, %rowsCount, %input, %inputCount, %inputBits, %width, %rows, %wide, %brain, %biases, %biasesCount, %biasesBits) : (i64, !llvm.ptr, !llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, i64, f64, f64, i1, i1, !llvm.ptr, i64, i64) -> ()
+    func.call @strict_device_whole_run(%count, %result, %failed, %rowsData, %rowsCount, %input, %inputCount, %inputBits, %width, %rows, %wide, %brain, %biases, %biasesCount, %biasesBits, %checkedWhole) : (i64, !llvm.ptr, !llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, i64, f64, f64, i1, i1, !llvm.ptr, i64, i64, i1) -> ()
     llvm.return
   }
   llvm.func @strict_device_wholes(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %rowsData: !llvm.ptr, %rowsCount: i64, %rowsBits: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %width: f64, %rows: f64, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64, %bases: !llvm.ptr, %basesCount: i64, %basesBits: i64, %results: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>, nvvm.minctasm = 1 : i32} {
     %wide = llvm.mlir.constant(false) : i1
+    %checkedWhole = llvm.mlir.constant(false) : i1
     %brainBits = arith.constant 17 : i64
     %brain = arith.cmpi eq, %results, %brainBits : i64
-    func.call @strict_device_whole_run(%count, %result, %failed, %rowsData, %rowsCount, %input, %inputCount, %inputBits, %width, %rows, %wide, %brain, %biases, %biasesCount, %biasesBits) : (i64, !llvm.ptr, !llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, i64, f64, f64, i1, i1, !llvm.ptr, i64, i64) -> ()
+    func.call @strict_device_whole_run(%count, %result, %failed, %rowsData, %rowsCount, %input, %inputCount, %inputBits, %width, %rows, %wide, %brain, %biases, %biasesCount, %biasesBits, %checkedWhole) : (i64, !llvm.ptr, !llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, i64, f64, f64, i1, i1, !llvm.ptr, i64, i64, i1) -> ()
     llvm.return
   }
   llvm.func @strict_device_tiles(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %rowsData: !llvm.ptr, %rowsCount: i64, %rowsBits: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %width: f64, %rows: f64, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64, %bases: !llvm.ptr, %basesCount: i64, %basesBits: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 512, 1, 1>, nvvm.minctasm = 1 : i32} {
@@ -3648,5 +3654,13 @@
   llvm.func @strict_device_tokenss(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %rowsData: !llvm.ptr, %rowsCount: i64, %rowsBits: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %width: f64, %rows: f64, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64, %bases: !llvm.ptr, %basesCount: i64, %basesBits: i64) attributes {nvvm.kernel} {
     %wide = llvm.mlir.constant(false) : i1
     func.call @strict_device_tokens_rows(%count, %result, %failed, %rowsData, %rowsCount, %input, %inputCount, %inputBits, %width, %rows, %wide, %biases, %biasesCount, %biasesBits, %bases, %basesCount, %basesBits) : (i64, !llvm.ptr, !llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, i64, f64, f64, i1, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64) -> ()
+    llvm.return
+  }
+  llvm.func @strict_device_wholes_fast(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %rowsData: !llvm.ptr, %rowsCount: i64, %rowsBits: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %width: f64, %rows: f64, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64, %bases: !llvm.ptr, %basesCount: i64, %basesBits: i64, %results: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>, nvvm.minctasm = 1 : i32} {
+    %wide = llvm.mlir.constant(false) : i1
+    %checkedWhole = llvm.mlir.constant(true) : i1
+    %brainBits = arith.constant 17 : i64
+    %brain = arith.cmpi eq, %results, %brainBits : i64
+    func.call @strict_device_whole_run(%count, %result, %failed, %rowsData, %rowsCount, %input, %inputCount, %inputBits, %width, %rows, %wide, %brain, %biases, %biasesCount, %biasesBits, %checkedWhole) : (i64, !llvm.ptr, !llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, i64, f64, f64, i1, i1, !llvm.ptr, i64, i64, i1) -> ()
     llvm.return
   }
