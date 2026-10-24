@@ -13,6 +13,7 @@ In priority order, short and actionable. Remove what is done (results go into th
 
 9. **MOSS generation-to-VAE transition overhead**: safe cold GPU-cache eviction now prevents the split/ThinLTO Spectrum runner from exhausting VRAM, preserving exact off output. The same standard build still decodes in 1.4-4.9 s versus 0.46 s standalone on the 3080; profile repeated full collection/cache eviction and retained model lifetimes without discarding valid roots. Reproduction/results: `../StrictComfy/Handoff.md`, `D:/StrictDumps/spectrum-moss/verified-{off,on}.log`.
 
+10. **A list literal as a call argument fails in the VM code generation**: Network.Sent(client, (UnitCommand.MoveRight,)) dies with IndexOutOfRange in ValueCodegen.Invoke/ListCodegen.Argument (Bytecode), while let commands = List(UnitCommand) + UnitCommand.MoveRight then Network.Sent(client, commands) works. The tuple is read as its elements, so the argument list of the call is built wrong; a list literal in an argument position should be passed as one list.
 ## Later
 Language model research (`NeuralNetworks/README.md`), big models and memory (Qwen3-Coder-30B with all experts), image blur on the GPU, web and mobile platforms, Apple Silicon, AMD GPUs.
 
