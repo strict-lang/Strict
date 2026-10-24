@@ -258,6 +258,9 @@ __HELPERS__
 pool=[]
 for name in ['strict_gpu_stack','strict_gpu_obtain','strict_gpu_lend','strict_gpu_lent_class','strict_gpu_pair_put','strict_gpu_pair_taken','strict_gpu_obtained']:
 	pool.append(re.search(r'  func.func private @'+name+r'\(.*?\n  \}',source,re.S)[0])
+release=re.search(r'  func.func private @strict_gpu_trim_unused\(.*?\n  \}',source,re.S)
+assert release, 'Missing explicit phase-boundary release of unused GPU pool buffers'
+pool.append(release[0])
 trim=re.search(r'  func.func private @strict_gpu_trim\(.*?\n  \}',source,re.S)
 if trim:
 	pool.append(trim[0])
@@ -265,9 +268,17 @@ for name in ['strict_gpu_blocks','strict_gpu_chunk','strict_gpu_lent','strict_gp
 	pool.append(re.search(r'  llvm.mlir.global internal @'+name+r'[^\n]*',source)[0])
 pool.append('''
   llvm.mlir.global internal @strict_gc_young_limit(0 : i64) : i64
-  llvm.mlir.global internal @pool_counters(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  llvm.mlir.global internal @pool_counters(dense<0> : tensor<3xi64>) : !llvm.array<3 x i64>
   func.func private @strict_rc_reclaim() { return }
-  func.func private @strict_gc_run(%full: i1) { return }
+  func.func private @strict_gc_run(%full: i1) {
+    %counters = llvm.mlir.addressof @pool_counters : !llvm.ptr
+    %slot = llvm.getelementptr %counters[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %calls = llvm.load %slot : !llvm.ptr -> i64
+    %one = arith.extui %full : i1 to i64
+    %next = arith.addi %calls, %one : i64
+    llvm.store %next, %slot : i64, !llvm.ptr
+    return
+  }
   func.func private @strict_gpu_free_memory() -> i64 {
     %counters = llvm.mlir.addressof @pool_counters : !llvm.ptr
     %freed = llvm.load %counters : !llvm.ptr -> i64
@@ -307,6 +318,11 @@ pool.append('''
   llvm.func @pool_real(%device: i64, %class: i64) -> i64 {
     %real = func.call @strict_gpu_lent_class(%device, %class) : (i64, i64) -> i64
     llvm.return %real : i64
+  }
+  llvm.func @pool_clear() -> f64 {
+    %none = arith.constant 0.0 : f64
+    %released = func.call @strict_gpu_trim_unused(%none) : (f64) -> f64
+    llvm.return %released : f64
   }
   llvm.func @pool_stats() -> !llvm.ptr {
     %counters = llvm.mlir.addressof @pool_counters : !llvm.ptr
@@ -416,6 +432,18 @@ pools.pool_take(16)
 assert counters[0]==0 and blocks[20*3+1]==1 and blocks[21*3+1]==1,'With streamed rows spilled an allocation evicts those (strict_gpu_starved) instead of trimming pool blocks the next layers allocate again'
 spilled[0]=0
 print('GPU pool borrows correctly and trims unused large buffers before allocating under pressure')
+firstPhase=(ctypes.c_int64*1)(64<<20);secondPhase=(ctypes.c_int64*1)(512<<20)
+blocks[18*3]=ctypes.addressof(firstPhase);blocks[18*3+1]=1;blocks[18*3+2]=1
+blocks[21*3]=ctypes.addressof(secondPhase);blocks[21*3+1]=1;blocks[21*3+2]=1
+live=list(cache[:24]);collected=counters[2];waited=counters[1]
+lib.pool_clear.restype=ctypes.c_double
+assert lib.pool_clear()==576<<20,'An explicit workload boundary releases every unused large pool block'
+assert blocks[18*3+1]==0 and blocks[21*3+1]==0,'Released blocks must leave the free lists'
+assert counters[2]==collected+1 and counters[1]==waited+1,'Collect once and drain once for a release'
+assert list(cache[:24])==live,'Live tensor cache entries must remain intact'
+assert lib.pool_clear()==0 and counters[1]==waited+1,'An empty pool must not drain work'
+print('Explicit phase-boundary release collects once and preserves live tensor copies')
+
 
 ctypes.windll.kernel32.FreeLibrary.argtypes=[ctypes.c_void_p]
 for loaded in [lib,pools]:

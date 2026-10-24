@@ -10820,6 +10820,16 @@
     %released = arith.maxsi %after, %none : i64
     return %released : i64
   }
+  // explicit workload boundary: collect dead temporaries and release unused pool blocks, retaining live tensor copies
+  func.func private @strict_gpu_trim_unused(%self: f64) -> f64 {
+    %full = arith.constant true
+    func.call @strict_gc_run(%full) : (i1) -> ()
+    %most = arith.constant 9223372036854775807 : i64
+    %none = arith.constant 0 : i64
+    %released = func.call @strict_gpu_trim(%most, %none, %full) : (i64, i64, i1) -> i64
+    %result = arith.uitofp %released : i64 to f64
+    return %result : f64
+  }
   // free unused large pool blocks, draining queued launches once and only when a block is freed
   func.func private @strict_gpu_trim(%needed: i64, %initial: i64, %waiting: i1) -> i64 {
     %none = arith.constant 0 : i64

@@ -1,4 +1,5 @@
 has path Text
+has compressed Boolean = true
 constant Signature = (137, 80, 78, 71, 13, 10, 26, 10)
 constant Header = 1229472850
 constant End = 1229278788
@@ -8,10 +9,14 @@ Bytes(image Image) Bytes
 	ImageSaver("").Bytes(Image.Blank(Size(1, 1))).Length is 68
 	ImageSaver("").Bytes(Image.Blank(Size(16, 16))).Length < 200
 	let header = Big32(image.Size.Width) + Big32(image.Size.Height) + (8, 6, 0, 0, 0)
-	let data = Deflate(Scanlines(image)).Zlib
+	let data = Data(image)
 	let numbers = Signature + Chunk(Header, header) + Chunk(Png.ImageData, data) + Chunk(End, List(Number))
 	for numbers
 		Byte(value)
+Data(image Image) Numbers
+	ImageSaver("", false).Data(Image.Blank(Size(16, 16))).Length is 1051
+	let deflate = Deflate(Scanlines(image))
+	compressed then deflate.Zlib else deflate.Stored
 Chunk(type Number, data Numbers) Numbers
 	ImageSaver("").Chunk(End, List(Number)) is (0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130)
 	let typed = Big32(type) + data
