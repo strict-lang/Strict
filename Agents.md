@@ -282,6 +282,7 @@ No exceptions without your human partner's permission.
 
 ## Optimization Work
 - Demonstrate actual measured improvement in generated executable size and execution speed, not just theoretical flag changes.
+- Neural-network precision is a hard compiler/runtime design rule: prefer int8 Convrot for supported quantized projections, bf16 for activations, residuals and attention operands when int8 is unsuitable, and f32 storage only where measured performance is unaffected or accuracy requires it (for example H3 audio VAE). Keep required int32/f32 accumulators and sensitive reductions, normalization, softmax, inverses and recurrent state at sufficient precision; storage precision and accumulator precision are separate decisions. Preserve explicit source precision contracts and general Number semantics: never narrow arbitrary lists by size alone. Keep index/address arithmetic exact and integer regardless of tensor dtype. Avoid repeated bf16-to-f32-to-f16 staging when a measured native bf16 tensor-core path is faster; retain a validated mixed path when it wins. Validate each precision change against the model reference for quality and paired full-model performance; record the tradeoff and retain a precise path where required. Lower precision is the preferred implementation, not permission to silently accept NaNs or unmeasured quality loss.
 
 ## Runtime Features
 - Treat Error as the exception model (no throw/catch); async/await, HTTP download and reflection come later.

@@ -51,7 +51,7 @@ Built(base Text, device Text, runtimes Texts) Texts
 	let amd = Hsaco(base, device, runtimes)
 	if amd is not ""
 		return List(Text) + amd
-	let isTiling = device.IndexOf(MlirTokens.Marker) >= 0
+	let isTiling = (device.IndexOf(MlirTokens.Marker) >= 0) or ("Attention" is in runtimes)
 	let kept = tools.platform is Platform.MacOS then "" else Text.Combine(MlirGpu.Exported(device), ",")
 	let program = PtxCache(base).Built(Combined(device, runtimes), isTiling, DeviceBuild(tools), kept)
 	if (kept is "") or (program.First.StartsWith("//") is false)

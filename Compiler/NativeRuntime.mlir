@@ -10484,6 +10484,15 @@
     %reusable = arith.cmpi sgt, %collectedCount, %none : i64
     cf.cond_br %reusable, ^again, ^own
   ^own:
+    %freeForOwn = func.call @strict_gpu_free_memory() : () -> i64
+    %trimNeeded = arith.cmpi ult, %freeForOwn, %ownNeeded : i64
+    cf.cond_br %trimNeeded, ^trimOwn, ^allocateOwn
+  ^trimOwn:
+    %shortfall = arith.subi %ownNeeded, %freeForOwn : i64
+    %waiting = arith.constant true
+    %trimmed = func.call @strict_gpu_trim(%shortfall, %none, %waiting) : (i64, i64, i1) -> i64
+    cf.br ^allocateOwn
+  ^allocateOwn:
     %owned = func.call @strict_gpu_alloc(%size) : (i64) -> i64
     %hasOwned = arith.cmpi ne, %owned, %none : i64
     cf.cond_br %hasOwned, ^ownedBlock, ^none
@@ -10731,27 +10740,16 @@
     %released = arith.maxsi %after, %none : i64
     return %released : i64
   }
-  // when the GPU memory runs out: a full collection, then the kept allocations of evicted lists go back to the driver
-  // and rows with a pinned copy are evicted (weights streamed every step come back cheaply, the pool keeps the blocks
-  // the next layer allocates again), else the free blocks of 16 MB and more go back, the largest first until needed
-  // bytes are, after the captured launches ran (they may still use a block that died meanwhile, giving back every block
-  // made the next prefill allocate them again), then device copies of any live host lists (the least recently used
-  // outside the prepared launches last), true when one did
-  func.func private @strict_gpu_starved(%needed: i64) -> i1 {
+  // free unused large pool blocks, draining queued launches once and only when a block is freed
+  func.func private @strict_gpu_trim(%needed: i64, %initial: i64, %waiting: i1) -> i64 {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %smallest = arith.constant 256 : i64
-    %full = arith.constant true
     %firstOwn = arith.constant 16 : i64
     %largest = arith.constant 47 : i64
-    func.call @strict_gc_run(%full) : (i1) -> ()
-    func.call @strict_gpu_replay() : () -> ()
-    func.call @strict_gpu_synchronize() : () -> ()
-    %spared = func.call @strict_gpu_unspared() : () -> i64
-    %spilledOnly = arith.constant true
-    %restored = func.call @strict_gpu_evicted(%needed, %spilledOnly) : (i64, i1) -> i1
-    cf.cond_br %restored, ^enough, ^class(%largest, %spared : i64, i64)
-  ^class(%class: i64, %released: i64):
+    %notWaiting = arith.constant false
+    cf.br ^class(%largest, %initial, %waiting : i64, i64, i1)
+  ^class(%class: i64, %released: i64, %wait: i1):
     %more = arith.cmpi uge, %class, %firstOwn : i64
     %short = arith.cmpi ult, %released, %needed : i64
     %going = arith.andi %more, %short : i1
@@ -10763,6 +10761,12 @@
     %hasBlock = arith.cmpi sgt, %count, %none : i64
     cf.cond_br %hasBlock, ^free, ^next
   ^free:
+    cf.cond_br %wait, ^drain, ^releaseBlock
+  ^drain:
+    func.call @strict_gpu_replay() : () -> ()
+    func.call @strict_gpu_synchronize() : () -> ()
+    cf.br ^releaseBlock
+  ^releaseBlock:
     %itemsBits = llvm.load %stack : !llvm.ptr -> i64
     %items = llvm.inttoptr %itemsBits : i64 to !llvm.ptr
     %top = arith.subi %count, %one : i64
@@ -10772,11 +10776,29 @@
     func.call @strict_gpu_free(%device) : (i64) -> ()
     %size = arith.shli %smallest, %class : i64
     %freed = arith.addi %released, %size : i64
-    cf.br ^class(%class, %freed : i64, i64)
+    cf.br ^class(%class, %freed, %notWaiting : i64, i64, i1)
   ^next:
     %nextClass = arith.subi %class, %one : i64
-    cf.br ^class(%nextClass, %released : i64, i64)
+    cf.br ^class(%nextClass, %released, %wait : i64, i64, i1)
   ^done:
+    return %released : i64
+  }
+  // collect and drain first; release kept allocations and pinned rows, then unused pool blocks and cold host copies
+  func.func private @strict_gpu_starved(%needed: i64) -> i1 {
+    %none = arith.constant 0 : i64
+    %full = arith.constant true
+    func.call @strict_gc_run(%full) : (i1) -> ()
+    func.call @strict_gpu_replay() : () -> ()
+    func.call @strict_gpu_synchronize() : () -> ()
+    %spared = func.call @strict_gpu_unspared() : () -> i64
+    %spilledOnly = arith.constant true
+    %restored = func.call @strict_gpu_evicted(%needed, %spilledOnly) : (i64, i1) -> i1
+    cf.cond_br %restored, ^enough, ^trim
+  ^trim:
+    %notWaiting = arith.constant false
+    %trimmed = func.call @strict_gpu_trim(%needed, %spared, %notWaiting) : (i64, i64, i1) -> i64
+    cf.br ^done(%trimmed : i64)
+  ^done(%released: i64):
     %any = arith.cmpi sgt, %released, %none : i64
     %stillShort = arith.cmpi ult, %released, %needed : i64
     cf.cond_br %stillShort, ^evict, ^enough

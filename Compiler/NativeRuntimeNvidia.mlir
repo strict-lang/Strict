@@ -112,6 +112,25 @@
     %halves = func.call @strict_device_halves_mma8x2(%a0, %a1, %a2, %a3, %b0, %b1, %c0, %c1, %c2, %c3) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
     return %halves : !llvm.struct<(f32, f32, f32, f32)>
   }
+  func.func private @strict_device_attention_mma16(%a0: vector<2xf16>, %a1: vector<2xf16>, %a2: vector<2xf16>, %a3: vector<2xf16>, %b0: vector<2xf16>, %b1: vector<2xf16>, %c0: f32, %c1: f32, %c2: f32, %c3: f32, %brain: i1) -> !llvm.struct<(f32, f32, f32, f32)> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+    %arch = func.call @strict_device_arch() : () -> i32
+    %c800 = arith.constant 800 : i32
+    %isWide = arith.cmpi sge, %arch, %c800 : i32
+    %native = arith.andi %brain, %isWide : i1
+    cf.cond_br %native, ^brains, ^halves
+  ^brains:
+    %a0Bits = llvm.bitcast %a0 : vector<2xf16> to i32
+    %a1Bits = llvm.bitcast %a1 : vector<2xf16> to i32
+    %a2Bits = llvm.bitcast %a2 : vector<2xf16> to i32
+    %a3Bits = llvm.bitcast %a3 : vector<2xf16> to i32
+    %b0Bits = llvm.bitcast %b0 : vector<2xf16> to i32
+    %b1Bits = llvm.bitcast %b1 : vector<2xf16> to i32
+    %product = llvm.call_intrinsic "llvm.nvvm.mma.m16n8k16.row.col.bf16"(%a0Bits, %a1Bits, %a2Bits, %a3Bits, %b0Bits, %b1Bits, %c0, %c1, %c2, %c3) : (i32, i32, i32, i32, i32, i32, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
+    return %product : !llvm.struct<(f32, f32, f32, f32)>
+  ^halves:
+    %halves = func.call @strict_device_halves_mma16(%a0, %a1, %a2, %a3, %b0, %b1, %c0, %c1, %c2, %c3) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
+    return %halves : !llvm.struct<(f32, f32, f32, f32)>
+  }
   // strict_device_halves_mma16 adding to 16 bit sums (c0 the two of row g, c1 those of row g + 8), twice as fast as 32
   // bit sums on consumer GPUs
   func.func private @strict_device_halves_mma16_halves(%a0: vector<2xf16>, %a1: vector<2xf16>, %a2: vector<2xf16>, %a3: vector<2xf16>, %b0: vector<2xf16>, %b1: vector<2xf16>, %c0: vector<2xf16>, %c1: vector<2xf16>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {

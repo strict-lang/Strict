@@ -3,12 +3,10 @@ has position Number
 IsUsed Boolean
 	if IsPlain is false
 		return false
-	let reads = Reads
-	if reads.Length is not 2
+	if Reads.Length is 0
 		return false
-	let name = function.method.instructions(reads.First).texts(0)
 	let linear = MlirBatchLinear(MlirFunction(function, Float = "f32"), position).IsLinear
-	IsSafe and linear and (function.method.instructions(reads.Last).texts(0) is name)
+	IsSafe and linear
 IsPlain Boolean
 	if function.method.instructions(position).kind is not InstructionType.LoopBegin
 		return false
