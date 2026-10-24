@@ -148,7 +148,65 @@ __HELPERS__
     llvm.return %result : i32
   }
 '''
-module=module[:-2]+pressure.replace('__HELPERS__','\n'.join(helpers))+'}\n'
+pool=[]
+for name in ['strict_gpu_stack','strict_gpu_obtain','strict_gpu_lend','strict_gpu_lent_class','strict_gpu_pair_put','strict_gpu_pair_taken','strict_gpu_obtained']:
+	pool.append(re.search(r'  func.func private @'+name+r'\(.*?\n  \}',source,re.S)[0])
+trim=re.search(r'  func.func private @strict_gpu_trim\(.*?\n  \}',source,re.S)
+if trim:
+	pool.append(trim[0])
+for name in ['strict_gpu_blocks','strict_gpu_chunk','strict_gpu_lent']:
+	pool.append(re.search(r'  llvm.mlir.global internal @'+name+r'[^\n]*',source)[0])
+pool.append('''
+  llvm.mlir.global internal @strict_gc_young_limit(0 : i64) : i64
+  llvm.mlir.global internal @pool_counters(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  func.func private @strict_rc_reclaim() { return }
+  func.func private @strict_gc_run(%full: i1) { return }
+  func.func private @strict_gpu_free_memory() -> i64 {
+    %counters = llvm.mlir.addressof @pool_counters : !llvm.ptr
+    %freed = llvm.load %counters : !llvm.ptr -> i64
+    %initial = arith.constant 536870912 : i64
+    %free = arith.addi %initial, %freed : i64
+    return %free : i64
+  }
+  func.func private @strict_gpu_free(%device: i64) {
+    %counters = llvm.mlir.addressof @pool_counters : !llvm.ptr
+    %freed = llvm.load %counters : !llvm.ptr -> i64
+    %more = arith.addi %freed, %device : i64
+    llvm.store %more, %counters : i64, !llvm.ptr
+    return
+  }
+  func.func private @strict_gpu_replay() {
+    %counters = llvm.mlir.addressof @pool_counters : !llvm.ptr
+    %waitsSlot = llvm.getelementptr %counters[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %waits = llvm.load %waitsSlot : !llvm.ptr -> i64
+    %one = arith.constant 1 : i64
+    %more = arith.addi %waits, %one : i64
+    llvm.store %more, %waitsSlot : i64, !llvm.ptr
+    return
+  }
+  func.func private @strict_gpu_synchronize() { return }
+  func.func private @strict_gpu_alloc(%bytes: i64) -> i64 {
+    %none = arith.constant 0 : i64
+    return %none : i64
+  }
+  llvm.func @pool_address() -> !llvm.ptr {
+    %blocks = llvm.mlir.addressof @strict_gpu_blocks : !llvm.ptr
+    llvm.return %blocks : !llvm.ptr
+  }
+  llvm.func @pool_take(%class: i64) -> i64 {
+    %device = func.call @strict_gpu_obtain(%class) : (i64) -> i64
+    llvm.return %device : i64
+  }
+  llvm.func @pool_real(%device: i64, %class: i64) -> i64 {
+    %real = func.call @strict_gpu_lent_class(%device, %class) : (i64, i64) -> i64
+    llvm.return %real : i64
+  }
+  llvm.func @pool_stats() -> !llvm.ptr {
+    %counters = llvm.mlir.addressof @pool_counters : !llvm.ptr
+    llvm.return %counters : !llvm.ptr
+  }
+''')
+module=module[:-2]+pressure.replace('__HELPERS__','\n'.join(helpers))+'\n'.join(pool)+'}\n'
 (root/'cache-kind.mlir').write_text(module,encoding='utf-8')
 subprocess.run(['C:/msys64/ucrt64/bin/mlir-opt.exe','--mlir-disable-threading',str(root/'cache-kind.mlir'),'--convert-arith-to-llvm','--convert-func-to-llvm','--convert-cf-to-llvm','--reconcile-unrealized-casts','-o',str(root/'cache-kind.llvm.mlir')],check=True)
 subprocess.run(['C:/msys64/ucrt64/bin/mlir-translate.exe','--mlir-disable-threading','--mlir-to-llvmir',str(root/'cache-kind.llvm.mlir'),'-o',str(root/'cache-kind.ll')],check=True)
@@ -189,6 +247,30 @@ assert lib.budget_free(10*gigabyte)==start-2*gigabyte,'An allocation counts agai
 lib.budget_release(device)
 assert lib.budget_free(9*gigabyte)==start,'A free gives its bytes back to the budget at once, whatever the driver reports'
 print('Native row-cache and nested input lifetime contracts passed')
+
+lib.pool_address.restype=ctypes.c_void_p
+blocks=(ctypes.c_int64*144).from_address(lib.pool_address())
+lib.pool_take.argtypes=[ctypes.c_int64];lib.pool_take.restype=ctypes.c_int64
+lib.pool_real.argtypes=[ctypes.c_int64,ctypes.c_int64];lib.pool_real.restype=ctypes.c_int64
+first=(ctypes.c_int64*1)(123);second=(ctypes.c_int64*1)(456)
+blocks[17*3]=ctypes.addressof(first);blocks[17*3+1]=1;blocks[17*3+2]=1
+blocks[18*3]=ctypes.addressof(second);blocks[18*3+1]=1;blocks[18*3+2]=1
+assert lib.pool_take(16)==123,'Pool must borrow a larger free block under memory pressure'
+assert blocks[17*3+1]==0 and blocks[18*3+1]==1,'Must borrow the nearest available larger class'
+assert lib.pool_real(123,16)==17 and lib.pool_real(123,16)==16,'A borrowed block must return to its original class exactly once'
+assert lib.pool_take(16)==456 and lib.pool_real(456,16)==18,'Must reuse the second larger class when the nearest is empty'
+assert lib.pool_take(16)==0,'Empty pool must fall through to the driver allocation'
+lib.pool_stats.restype=ctypes.c_void_p
+counters=(ctypes.c_int64*2).from_address(lib.pool_stats())
+assert counters[1]==0,'An empty pool must not flush GPU work'
+small=(ctypes.c_int64*1)(256<<20);large=(ctypes.c_int64*1)(512<<20)
+blocks[20*3]=ctypes.addressof(small);blocks[20*3+1]=1;blocks[20*3+2]=1
+blocks[21*3]=ctypes.addressof(large);blocks[21*3+1]=1;blocks[21*3+2]=1
+lib.pool_take(16)
+assert counters[0]==768<<20,'Unused large pool blocks must go before an allocation exhausts VRAM headroom'
+assert counters[1]==1,'Freeing several pool blocks must drain queued GPU work only once'
+assert blocks[20*3+1]==0 and blocks[21*3+1]==0,'Trimmed blocks must leave their free lists'
+print('GPU pool borrows correctly and trims unused large buffers before allocating under pressure')
 
 ctypes.windll.kernel32.FreeLibrary.argtypes=[ctypes.c_void_p]
 assert ctypes.windll.kernel32.FreeLibrary(lib._handle)
