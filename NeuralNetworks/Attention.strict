@@ -9,16 +9,16 @@ has causal Boolean = true
 has valueOffset Number = 0
 has valueStride Number = 0
 has quantized Boolean = false
+has routing Number = 0
 constant Single = Attention((1, 0), (1, 0, 0, 1), (3, 4, 5, 6), 1, 1, 2)
-constant Pair = Attention((1, 0, 0, 1), (1, 0, 1, 0, 0, 1, 0, 1), (3, 4, 7, 8, 5, 6, 5, 6), 1, 1, 2, 2)
 constant Prompt = Gguf("NeuralNetworks/blocks.gguf", 32).Rows("prompt").First
 constant Prompted = Attention(Safetensors.Part(Prompt, 0, 4096, 1), Safetensors.Part(Prompt, 4096, 3072, 1), Safetensors.Part(Prompt, 7168, 3072, 1), 4, 2, 64)
 Merged Numbers
 	Single.Merged.First.IsNearlyEqual(3.6604769013466867)
 	Attention(Single, values = (0, 3, 4, 0, 5, 6), valueOffset = 1, valueStride = 3).Merged.First.IsNearlyEqual(3.6604769)
 	Single.Merged.Last.IsNearlyEqual(4.660476901346686)
-	Pair.Merged(1).IsNearlyEqual(4.660476901346686)
-	Pair.Merged(2).IsNearlyEqual(5.660476901346686)
+	Attention.Pair.Merged(1).IsNearlyEqual(4.660476901346686)
+	Attention.Pair.Merged(2).IsNearlyEqual(5.660476901346686)
 	let positions = keys.Length / groups / size / sequences
 	let shares = Softmax.Shares(Scores(positions), positions)
 	let perSequence = queries.Length / sequences
@@ -55,9 +55,9 @@ Last(row Number, positions Number, tokens Number) Number
 	Attention(Prompt.Slice(0, 256), Prompted.keys, Prompted.values, 4, 2, 64).Merged(255).IsNearlyEqual(0.104795, 0.005)
 	Attention(Prompted, groups = 1).Merged(1500).IsNearlyEqual(0.031491, 0.005)
 	Attention(Prompted, groups = 1).Merged(4095).IsNearlyEqual(0.045206, 0.005)
-	Attention(Pair.queries, Pair.keys, (3, 4, 7, 8, 5, 6, 9, 10), 1, 1, 2, 1, false).Merged.First.IsNearlyEqual(5.6604769)
-	Attention(Pair.queries, Pair.keys, (3, 4, 7, 8, 5, 6, 9, 10), 1, 1, 2).Merged.First is 5
-	Attention(Pair.queries, Pair.keys, (3, 4, 7, 8, 5, 6, 9, 10), 1, 1, 2, 1, false).Merged(3).IsNearlyEqual(7.3395231)
+	Attention.Paired((3, 4, 7, 8, 5, 6, 9, 10), false).Merged.First.IsNearlyEqual(5.6604769)
+	Attention.Paired((3, 4, 7, 8, 5, 6, 9, 10), true).Merged.First is 5
+	Attention.Paired((3, 4, 7, 8, 5, 6, 9, 10), false).Merged(3).IsNearlyEqual(7.3395231)
 	causal then positions - tokens + (row / heads).Floor % tokens else positions - 1
 Visible(score Number, position Number, limit Number) Number
 	Attention(Prompt, Prompt, Prompt, 1, 1, 128, 1, false).Merged(10239).IsNearlyEqual(-0.24048, 0.002)
@@ -78,3 +78,9 @@ Spread Attention
 	Attention.Spread.queries.Length is 32
 	let evenRows = Safetensors.Part(Prompt, 0, 4800, 2)
 	Attention(Safetensors.Part(Prompt, 9600, 32, 1), evenRows, Safetensors.Part(Prompt, 1, 4800, 2), 2, 1, 8)
+Pair Attention
+	Attention.Pair.sequences is 2
+	Attention((1, 0, 0, 1), (1, 0, 1, 0, 0, 1, 0, 1), (3, 4, 7, 8, 5, 6, 5, 6), 1, 1, 2, 2)
+Paired(pairValues Numbers, masked Boolean) Attention
+	Attention.Paired((1, 2), false).values.Length is 2
+	Attention(Attention.Pair.queries, Attention.Pair.keys, pairValues, 1, 1, 2, 1, masked)
