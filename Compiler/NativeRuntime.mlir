@@ -14812,11 +14812,12 @@
     func.call @strict_gpu_unstaged(%staging) : (!llvm.ptr) -> ()
     return %false : i1
   }
-  // rows tables up to 64 MB are gathered in one pinned buffer: a fresh allocation for each faulted its pages in and the
-  // driver copied it once more (Qwen3.8-Flash-Next 523 -> 488 ms per token, with 32 GPU expert slots 2974 -> 2738 ms)
+  // rows tables up to 256 MB are gathered in one pinned buffer: a fresh allocation for each faulted its pages in and the
+  // driver copied it once more (Qwen3.8-Flash-Next 523 -> 488 ms per token, with 32 GPU expert slots 2974 -> 2738 ms;
+  // H3's first step, all 21.8 GB in tables of up to 165 MB, 14.4-14.9 -> 10.1-10.6 s)
   llvm.mlir.global internal @strict_gpu_staged(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   func.func private @strict_gpu_staging(%bytes: i64) -> !llvm.ptr {
-    %most = arith.constant 67108864 : i64
+    %most = arith.constant 268435456 : i64
     %fits = arith.cmpi ule, %bytes, %most : i64
     cf.cond_br %fits, ^pinned, ^pageable
   ^pinned:
