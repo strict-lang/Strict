@@ -12,12 +12,23 @@ Typed(shape TypeShape, scope Scope, typeName Text) Scope
 	for shape.lines
 		let tokens = Tokenizer(value).Tokens
 		if value.StartsWith("constant ") and ((value.IndexOf(".") > 0) or (value.IndexOf("(") > 0))
-			result = Known(result, tokens(1), ChainType(tokens, typeName, result))
+			result = Refined(result, tokens(1), ChainType(tokens, typeName, result))
 		else if shape.IsComputed(value)
 			result = result.With(tokens(0), ComputedType(tokens, typeName, result))
 		else if shape.IsMethodHeader(value)
 			result = Known(result, tokens(0), Instantiation(inference.types).Template(shape, index, typeName))
 	result
+Refined(scope Scope, name Text, type Text) Scope
+	Counting.Refined(Scope(List(Text) + "a", List(Text) + "Box"), "a", "Item").names.Length is 1
+	Counting.Refined(Scope(List(Text) + "a", List(Text) + "Box"), "a", "Item").TypeOf("a") is "Item"
+	Counting.Refined(KnownTypes.NoMembers, "a", "Item").TypeOf("a") is "Item"
+	if (type is "") or (scope.Count(name) is 0)
+		return Known(scope, name, type)
+	mutable types = scope.types
+	for scope.names
+		if value is name
+			types(index) = type
+	Scope(scope.names, types)
 Known(scope Scope, name Text, type Text) Scope
 	Counting.Known(KnownTypes.NoMembers, "a", "").names.Length is 0
 	Counting.Known(KnownTypes.NoMembers, "a", "Number").TypeOf("a") is "Number"

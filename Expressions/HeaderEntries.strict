@@ -16,11 +16,10 @@ Parameters Scope
 Required Number
 	HeaderEntries(HeaderTokens(Tokenizer("Add(x Number, y = 1, z Number with value > 0)").Tokens)).Required is 2
 	HeaderEntries(HeaderTokens(Tokenizer("Add(x Number, y Text = \"a\")").Tokens)).Required is 1
+	Defaulting.Required is 1
 	mutable required = 0
 	for header.ParametersEnd
-		let tokens = header.tokens
-		let isDefault = (tokens(index + 1) is "=") or (index + 2 < tokens.Length) and (tokens(index + 2) is "=")
-		if (index > 1) and header.IsParameterStart(index) and (isDefault is false)
+		if (index > 1) and header.IsParameterStart(index) and (Default(index).Length is 0)
 			required = required + 1
 	required
 Defaults(scope Scope) Scope

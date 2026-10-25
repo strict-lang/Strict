@@ -19,12 +19,17 @@ Arranged(call SyntaxNode, block CodeBlock) SyntaxNode
 	Curved.Arranged(SyntaxParser(Tokenizer("Part(1)").Tokens).Parse, CodeBlock.Empty) to Text is "Part(1, 0, Curve.Flat)"
 	Curved.Arranged(SyntaxParser(Tokenizer("Part()").Tokens).Parse, CodeBlock.Empty).children(0).Kind is "Identifier"
 	let positional = Positional(call)
-	let isType = (call.Kind is "Call") and values.inference.types.IsKnown(call.text)
+	let isType = IsConstructor(call)
 	let isReplacing = isType and (positional > 0) and (values.TypeOf(call.children(0), block) is call.text)
 	if (isType is false) or isReplacing
 		return call
 	let names = values.target.FromNames(call.text)
 	Last(call, names) < positional then call else Filled(call, names, positional)
+IsConstructor(call SyntaxNode) Boolean
+	Parts.IsConstructor(Masked)
+	Parts.IsConstructor(SyntaxParser(Tokenizer("Missing(1)").Tokens).Parse) is false
+	let isOwnMethod = values.target.Header(call.text).tokens.Length > 0
+	(call.Kind is "Call") and values.inference.types.IsKnown(call.text) and (isOwnMethod is false)
 Filled(call SyntaxNode, names Texts, positional Number) SyntaxNode
 	Parts.Filled(Masked, ("buffer", "light", "mask"), 1) to Text is "Part(1, 0, 3)"
 	mutable arguments = List(Mutable(SyntaxNode))
@@ -49,11 +54,12 @@ Last(call SyntaxNode, names Texts) Number
 		let position = value.Kind is "Reassignment" then names.Index(value.children(0).text) else given
 		last = position > last then position else last
 	last
-IsComputed(type Text, name Text) Boolean
+IsComputed(owner Text, key Text) Boolean
 	Curved.IsComputed("Part", "mask")
 	Curved.IsComputed("Part", "light") is false
-	let fallback = values.inference.types.ParameterScope(type).TypeOf(name + " default")
-	(fallback is not "") and (Parsed(fallback).Kind is "Member")
+	Shined.IsComputed("Part", "Shine mask")
+	let fallback = Fallback(owner, key)
+	(fallback is not "") and (ConstantFolding(owner, values.inference).Unwrapped(Parsed(fallback)).IsLiteral is false)
 Argument(call SyntaxNode, name Text, position Number) SyntaxNode
 	Parts.Argument(Masked, "light", -1).text is "0"
 	Parts.Argument(Masked, "mask", -1).text is "3"
@@ -62,7 +68,7 @@ Argument(call SyntaxNode, name Text, position Number) SyntaxNode
 	for call.children
 		if (value.Kind is "Reassignment") and (value.children(0).text is name)
 			return value.children(1)
-	let fallback = values.inference.types.ParameterScope(call.text).TypeOf(name + " default")
+	let fallback = Fallback(call.text, name)
 	fallback is "" then SyntaxNode("Identifier", name) else Parsed(fallback)
 Defaulted(call SyntaxNode, owner Text, start Number) SyntaxNode
 	Shined.Defaulted(SyntaxParser(Tokenizer("Shine(1)").Tokens).Parse, "Part", 0) to Text is "Shine(1, Curve.Flat)"
@@ -74,21 +80,20 @@ Defaulted(call SyntaxNode, owner Text, start Number) SyntaxNode
 		return call
 	mutable children = call.children
 	for Range(given, last + 1)
-		children = children + Qualified(owner, Fallback(owner, call.text, names(value)))
+		children = children + Qualified(owner, Fallback(owner, call.text + " " + names(value)))
 	SyntaxNode(call.Kind, call.text, children, call.line)
 Computed(method Text, owner Text, names Texts, given Number) Number
 	Shined.Computed("Shine", "Part", ("light", "mask"), 0) is 1
 	Shined.Computed("Shine", "Part", List(Text) + "light", 0) is -1
 	mutable last = -1
 	for names
-		let fallback = Fallback(owner, method, value)
-		let isLiteral = ConstantFolding(owner, values.inference).Unwrapped(Parsed(fallback)).IsLiteral
-		if (index >= given) and (fallback is not "") and (isLiteral is false)
+		if (index >= given) and IsComputed(owner, method + " " + value)
 			last = index
 	last
-Fallback(owner Text, method Text, name Text) Text
-	Shined.Fallback("Part", "Shine", "mask") is "Curve.Flat"
-	values.inference.types.ParameterScope(owner).TypeOf(method + " " + name + " default")
+Fallback(owner Text, key Text) Text
+	Shined.Fallback("Part", "Shine mask") is "Curve.Flat"
+	Parts.Fallback("Part", "light") is "0"
+	values.inference.types.ParameterScope(owner).TypeOf(key + " default")
 Qualified(owner Text, fallback Text) SyntaxNode
 	Shined.Qualified("Part", "Curve.Flat").Kind is "Member"
 	Lit.Qualified("Part", "Light") to Text is "Part.Light"

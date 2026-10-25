@@ -31,9 +31,15 @@ Variable(node SyntaxNode, block CodeBlock) CodeBlock
 		return InstanceCall(SyntaxNode("Member", node.text, SyntaxNode("Identifier", owner)), block)
 	if IsMethodCall(node, block) or isFree and (node.text is "Error")
 		return Invoke(node, block, -1, TypeOf(node, block))
-	if isFree and inference.types.IsPlural(node.text)
-		return Elements.Empty(node.text, block)
+	if isFree and (inference.types.IsPlural(node.text) or IsTypeName(node, block))
+		return TypeValue(node, block)
 	block.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, node.text))
+TypeValue(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.TypeValue(SyntaxNode("Identifier", "Numbers"), CodeBlock.Empty).instructions(0).payload is (0, 6, -1, 0)
+	Plain.TypeValue(SyntaxNode("Identifier", "B"), CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
+	if inference.types.IsPlural(node.text)
+		return Elements.Empty(node.text, block)
+	Call(SyntaxNode("Call", node.text, List(SyntaxNode), node.line), block)
 Leaf(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Leaf(SyntaxNode("Number", "7"), CodeBlock.Empty).instructions(0).payload is (0, 1, 7)
 	Plain.Leaf(SyntaxNode("Text", "\"a\""), CodeBlock.Empty).instructions(0).texts is ("a")

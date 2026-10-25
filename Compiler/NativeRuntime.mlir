@@ -715,7 +715,7 @@
   }
   llvm.mlir.global internal constant @strict_library_missing("LibraryNotFound\00") : !llvm.array<16 x i8>
   llvm.mlir.global internal constant @strict_library_symbol_missing("LibrarySymbolNotFound\00") : !llvm.array<22 x i8>
-  llvm.mlir.global internal constant @strict_library_arguments("LibraryCallNeedsOneToFiveNumbers\00") : !llvm.array<33 x i8>
+  llvm.mlir.global internal constant @strict_library_arguments("LibraryCallNeedsOneToEightNumbers\00") : !llvm.array<34 x i8>
   func.func private @strict_library_invoke(%function: !llvm.ptr, %arguments: f64) -> f64 {
     %items = func.call @strict_list_items(%arguments) : (f64) -> !llvm.ptr
     %countNumber = func.call @strict_list_length(%arguments) : (f64) -> f64
@@ -726,7 +726,10 @@
       2: ^two,
       3: ^three,
       4: ^four,
-      5: ^five
+      5: ^five,
+      6: ^six,
+      7: ^seven,
+      8: ^eight
     ]
   ^one:
     %a10 = llvm.load %items : !llvm.ptr -> f64
@@ -768,6 +771,54 @@
     %a54 = llvm.load %p54 : !llvm.ptr -> f64
     %r5 = llvm.call %function(%a50, %a51, %a52, %a53, %a54) : !llvm.ptr, (f64, f64, f64, f64, f64) -> f64
     return %r5 : f64
+  ^six:
+    %a60 = llvm.load %items : !llvm.ptr -> f64
+    %p61 = llvm.getelementptr %items[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a61 = llvm.load %p61 : !llvm.ptr -> f64
+    %p62 = llvm.getelementptr %items[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a62 = llvm.load %p62 : !llvm.ptr -> f64
+    %p63 = llvm.getelementptr %items[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a63 = llvm.load %p63 : !llvm.ptr -> f64
+    %p64 = llvm.getelementptr %items[4] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a64 = llvm.load %p64 : !llvm.ptr -> f64
+    %p65 = llvm.getelementptr %items[5] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a65 = llvm.load %p65 : !llvm.ptr -> f64
+    %r6 = llvm.call %function(%a60, %a61, %a62, %a63, %a64, %a65) : !llvm.ptr, (f64, f64, f64, f64, f64, f64) -> f64
+    return %r6 : f64
+  ^seven:
+    %a70 = llvm.load %items : !llvm.ptr -> f64
+    %p71 = llvm.getelementptr %items[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a71 = llvm.load %p71 : !llvm.ptr -> f64
+    %p72 = llvm.getelementptr %items[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a72 = llvm.load %p72 : !llvm.ptr -> f64
+    %p73 = llvm.getelementptr %items[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a73 = llvm.load %p73 : !llvm.ptr -> f64
+    %p74 = llvm.getelementptr %items[4] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a74 = llvm.load %p74 : !llvm.ptr -> f64
+    %p75 = llvm.getelementptr %items[5] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a75 = llvm.load %p75 : !llvm.ptr -> f64
+    %p76 = llvm.getelementptr %items[6] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a76 = llvm.load %p76 : !llvm.ptr -> f64
+    %r7 = llvm.call %function(%a70, %a71, %a72, %a73, %a74, %a75, %a76) : !llvm.ptr, (f64, f64, f64, f64, f64, f64, f64) -> f64
+    return %r7 : f64
+  ^eight:
+    %a80 = llvm.load %items : !llvm.ptr -> f64
+    %p81 = llvm.getelementptr %items[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a81 = llvm.load %p81 : !llvm.ptr -> f64
+    %p82 = llvm.getelementptr %items[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a82 = llvm.load %p82 : !llvm.ptr -> f64
+    %p83 = llvm.getelementptr %items[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a83 = llvm.load %p83 : !llvm.ptr -> f64
+    %p84 = llvm.getelementptr %items[4] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a84 = llvm.load %p84 : !llvm.ptr -> f64
+    %p85 = llvm.getelementptr %items[5] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a85 = llvm.load %p85 : !llvm.ptr -> f64
+    %p86 = llvm.getelementptr %items[6] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a86 = llvm.load %p86 : !llvm.ptr -> f64
+    %p87 = llvm.getelementptr %items[7] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a87 = llvm.load %p87 : !llvm.ptr -> f64
+    %r8 = llvm.call %function(%a80, %a81, %a82, %a83, %a84, %a85, %a86, %a87) : !llvm.ptr, (f64, f64, f64, f64, f64, f64, f64, f64) -> f64
+    return %r8 : f64
   ^unsupported:
     %argumentsMessage = llvm.mlir.addressof @strict_library_arguments : !llvm.ptr
     %argumentsError = func.call @strict_error_named(%argumentsMessage) : (!llvm.ptr) -> f64

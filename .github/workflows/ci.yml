@@ -4,11 +4,31 @@ on:
   pull_request:
 jobs:
   linux:
+    name: linux ${{ matrix.name }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: base
+            folders: Bytecode Compression Validators Examples Examples/BaseTypesTest Examples/CompactTypeTest Examples/NativeAdd Examples/Parsing ImageProcessing MachineLearning Math Runtime Expressions Networking Json Xml Binary
+            native: Compression Math Examples/NativeAdd Examples/BaseTypesTest Examples/CompactTypeTest Examples/Parsing
+            part: 0/1
+          - name: neural
+            folders: NeuralNetworks
+            native: NeuralNetworks/Layer.strict
+            part: 0/1
+          - name: compiler 1
+            folders: Compiler
+            part: 0/2
+          - name: compiler 2
+            folders: Compiler
+            part: 1/2
     env:
-      FOLDERS: Bytecode Compression Validators Examples Examples/BaseTypesTest Examples/CompactTypeTest Examples/NativeAdd Examples/Parsing ImageProcessing MachineLearning Math
-      NATIVE: Compression Math Examples/NativeAdd Examples/BaseTypesTest Examples/CompactTypeTest Examples/Parsing
+      FOLDERS: ${{ matrix.folders }}
+      NATIVE: ${{ matrix.native }}
+      PART: ${{ matrix.part }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache/restore@v4
@@ -30,15 +50,15 @@ jobs:
         run: |
           echo "$PWD/Tools/LLVM-23.1.3-Linux-X64/bin" >> "$GITHUB_PATH"
           sh Compiler/bootstrap.sh
-      - name: Tests on the Strict VM
+      - name: Tests on the Strict VM, one process per file on all cores
         run: |
-          for folder in $FOLDERS; do
-            ./strict test "$folder" > test.log 2>&1 || { grep -v "^Test passed" test.log; exit 1; }
-          done
+          for folder in $FOLDERS; do ls "$folder"/*.strict; done | awk -v part="${PART%/*}" -v parts="${PART#*/}" '(NR - 1) % parts == part' > files.txt
+          xargs -P "$(nproc)" -I {} sh -c './strict test "$1" > "$1.log" 2>&1 || { grep -v "^Test passed" "$1.log"; exit 255; }' _ {} < files.txt
       - name: Native builds and tests
+        if: env.NATIVE != ''
         run: |
-          for folder in $NATIVE; do
-            for file in "$folder"/*.strict; do
+          for entry in $NATIVE; do
+            for file in $( [ -d "$entry" ] && ls "$entry"/*.strict || echo "$entry" ); do
               ./strict build "$file" > build.log 2>&1 || { code=$?; grep -v "^Test passed" build.log; echo "::error::native build of $file failed with exit code $code"; exit 1; }
             done
           done
@@ -46,7 +66,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 10
     env:
-      FOLDERS: Compression Validators Runtime Expressions Examples/BaseTypesTest Examples/CompactTypeTest Examples/NativeAdd Examples/Parsing Math
+      FOLDERS: Compression Validators Runtime Expressions Examples/BaseTypesTest Examples/CompactTypeTest Examples/NativeAdd Examples/Parsing Math Networking Json Xml Binary
       NATIVE: Examples/NativeAdd Compression
     defaults:
       run:
@@ -76,11 +96,10 @@ jobs:
       - name: Bootstrap from the seed
         shell: cmd
         run: Compiler\Bootstrap.cmd
-      - name: Tests on the Strict VM
+      - name: Tests on the Strict VM, one process per file on all cores
         run: |
-          for folder in $FOLDERS; do
-            ./strict.exe test "$folder" > test.log 2>&1 || { grep -v "^Test passed" test.log; exit 1; }
-          done
+          for folder in $FOLDERS; do ls "$folder"/*.strict; done > files.txt
+          xargs -P "$(nproc)" -I {} sh -c './strict.exe test "$1" > "$1.log" 2>&1 || { grep -v "^Test passed" "$1.log"; exit 255; }' _ {} < files.txt
       - name: Native builds and tests
         run: |
           for folder in $NATIVE; do

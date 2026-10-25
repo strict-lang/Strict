@@ -7,6 +7,7 @@ constant HelloLogger = TypeEntry("HelloLogger", MemberEntry.LoggerMember, Method
 constant CharacterEntry = TypeEntry("Strict/Character", List(MemberEntry) + MemberEntry("number", "Strict/Number", List(InstructionEntry), false), List(MethodEntry))
 constant Rounded = TypeEntry("Strict/Float8", CharacterEntry.members, List(MethodEntry) + MethodEntry("from", CharacterEntry.members, "Strict/Float8", List(InstructionEntry)))
 constant Scaling = TypeEntry("Strict/Vector", List(MemberEntry), (MethodEntry("*", List(MemberEntry) + MemberEntry("other", "Strict/Vector", List(InstructionEntry), false), "Strict/Number", List(InstructionEntry)), MethodEntry("*", List(MemberEntry) + MemberEntry("scale", "Strict/Number", List(InstructionEntry), false), "Strict/Vector", List(InstructionEntry))))
+constant Initialized = TypeEntry("A", List(MemberEntry) + MemberEntry("B", "C", MethodEntry.GoRun.instructions, true), List(MethodEntry))
 constant Kept = TypeEntry("A", List(MemberEntry) + MemberEntry("B", "C", List(InstructionEntry), true), List(MethodEntry) + MethodEntry("B", List(MemberEntry), "C", List(InstructionEntry)))
 constant ToNumber = MethodEntry("to", List(MemberEntry), "Strict/Number", List(InstructionEntry))
 constant Converting = TypeEntry("Strict/Digit", List(MemberEntry), (ToNumber, MethodEntry("to", List(MemberEntry) + MemberEntry.SevenMember, "Strict/Text", List(InstructionEntry))))
@@ -128,9 +129,12 @@ ConstantSlot(method MethodEntry) Number
 	-1
 Invoked Texts
 	TypeEntry("A", List(MemberEntry), MethodEntry.GoRun).Invoked is ("Strict/B.Go")
+	Initialized.Invoked is ("Strict/B.Go")
 	mutable targets = List(Mutable(Text))
 	for methods
 		targets = targets + value.Invoked
+	for members
+		targets = targets + MethodEntry(value.Name, List(MemberEntry), value.typeName, value.initial).Invoked
 	targets
 Source Text
 	CharacterEntry.Source is "Character.strict"
