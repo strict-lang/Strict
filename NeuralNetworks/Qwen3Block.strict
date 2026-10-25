@@ -110,9 +110,6 @@ Scales(input Numbers, size Number, epsilon Number) Numbers
 	Tiny.Scales((3, 4, 0, 1), 2, Epsilon)(1).IsNearlyEqual(1.414213)
 	for input.Length / size
 		Normalization.Scale(Normalization.Squared(input, index * size, size), size, epsilon)
-HeadScale(input Numbers, first Number, size Number, epsilon Number) Number
-	Tiny.HeadScale((3, 4, 0, 1), 2, 2, Epsilon).IsNearlyEqual(1.414213)
-	Normalization.Scale(Normalization.Squared(input, first, size), size, epsilon)
 Output(input Numbers, sequences Number) Numbers
 	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm, 32).Output(Tiny.attentionNorm, 1).Length is 8
 	let attended = experts.basis.Sums(projection.weights, input, Merged(sequences))

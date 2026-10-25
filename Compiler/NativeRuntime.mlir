@@ -8685,6 +8685,77 @@
     %result = func.call @strict_bits(%text) : (!llvm.ptr) -> f64
     return %result : f64
   }
+  // the standard input, opened once so Process.InputLine keeps what its buffer read ahead for the next line
+  llvm.mlir.global internal @strict_input_stream(0 : i64) : i64
+  func.func private @strict_input() -> !llvm.ptr {
+    %slot = llvm.mlir.addressof @strict_input_stream : !llvm.ptr
+    %stored = llvm.load %slot : !llvm.ptr -> i64
+    %none = arith.constant 0 : i64
+    %missing = arith.cmpi eq, %stored, %none : i64
+    cf.cond_br %missing, ^open, ^opened(%stored : i64)
+  ^open:
+    %stream = func.call @strict_standard_input() : () -> !llvm.ptr
+    %address = llvm.ptrtoint %stream : !llvm.ptr to i64
+    llvm.store %address, %slot : i64, !llvm.ptr
+    cf.br ^opened(%address : i64)
+  ^opened(%value: i64):
+    %file = llvm.inttoptr %value : i64 to !llvm.ptr
+    return %file : !llvm.ptr
+  }
+  func.func private @strict_process_input(%self: f64) -> f64 {
+    %file = func.call @strict_input() : () -> !llvm.ptr
+    %result = func.call @strict_stream_text(%file) : (!llvm.ptr) -> f64
+    return %result : f64
+  }
+  // the next line of the standard input without its line break (\n or \r\n), "" at the end of the input
+  func.func private @strict_process_inputline(%self: f64) -> f64 {
+    %file = func.call @strict_input() : () -> !llvm.ptr
+    %initial = arith.constant 256 : i64
+    %start = arith.constant 0 : i64
+    %buffer = llvm.call @malloc(%initial) : (i64) -> !llvm.ptr
+    cf.br ^read(%buffer, %initial, %start : !llvm.ptr, i64, i64)
+  ^read(%text: !llvm.ptr, %capacity: i64, %used: i64):
+    %character = llvm.call @fgetc(%file) : (!llvm.ptr) -> i32
+    %newline = arith.constant 10 : i32
+    %endOfInput = arith.constant -1 : i32
+    %isNewline = arith.cmpi eq, %character, %newline : i32
+    %isEnd = arith.cmpi eq, %character, %endOfInput : i32
+    %stop = arith.ori %isNewline, %isEnd : i1
+    cf.cond_br %stop, ^done(%text, %used : !llvm.ptr, i64), ^check(%text, %capacity, %used, %character : !llvm.ptr, i64, i64, i32)
+  ^check(%current: !llvm.ptr, %size: i64, %length: i64, %code: i32):
+    %one = arith.constant 1 : i64
+    %needed = arith.addi %length, %one : i64
+    %full = arith.cmpi uge, %needed, %size : i64
+    cf.cond_br %full, ^grow(%current, %size, %length, %code : !llvm.ptr, i64, i64, i32), ^put(%current, %size, %length, %code : !llvm.ptr, i64, i64, i32)
+  ^grow(%small: !llvm.ptr, %smallSize: i64, %count: i64, %pending: i32):
+    %doubled = arith.addi %smallSize, %smallSize : i64
+    %grown = llvm.call @realloc(%small, %doubled) : (!llvm.ptr, i64) -> !llvm.ptr
+    cf.br ^put(%grown, %doubled, %count, %pending : !llvm.ptr, i64, i64, i32)
+  ^put(%target: !llvm.ptr, %targetSize: i64, %at: i64, %value: i32):
+    %byte = arith.trunci %value : i32 to i8
+    %slot = llvm.getelementptr %target[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %byte, %slot : i8, !llvm.ptr
+    %step = arith.constant 1 : i64
+    %next = arith.addi %at, %step : i64
+    cf.br ^read(%target, %targetSize, %next : !llvm.ptr, i64, i64)
+  ^done(%line: !llvm.ptr, %total: i64):
+    %zero = arith.constant 0 : i64
+    %single = arith.constant 1 : i64
+    %carriage = arith.constant 13 : i8
+    %terminator = arith.constant 0 : i8
+    %hasAny = arith.cmpi ugt, %total, %zero : i64
+    %lastIndex = arith.subi %total, %single : i64
+    %safeIndex = arith.select %hasAny, %lastIndex, %zero : i64
+    %lastSlot = llvm.getelementptr %line[%safeIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %last = llvm.load %lastSlot : !llvm.ptr -> i8
+    %isCarriage = arith.cmpi eq, %last, %carriage : i8
+    %strip = arith.andi %hasAny, %isCarriage : i1
+    %trimmed = arith.select %strip, %lastIndex, %total : i64
+    %end = llvm.getelementptr %line[%trimmed] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %terminator, %end : i8, !llvm.ptr
+    %result = func.call @strict_bits(%line) : (!llvm.ptr) -> f64
+    return %result : f64
+  }
   func.func private @strict_file_text(%path: f64) -> f64 {
     %overriddenText = func.call @strict_overridden(%path) : (f64) -> f64
     %unsetText = arith.constant 0.0 : f64

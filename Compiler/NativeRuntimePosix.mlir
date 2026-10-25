@@ -97,12 +97,11 @@
   }
   llvm.func @getcwd(!llvm.ptr, i64) -> !llvm.ptr
   llvm.func @fdopen(i32, !llvm.ptr) -> !llvm.ptr
-  func.func private @strict_process_input(%self: f64) -> f64 {
+  func.func private @strict_standard_input() -> !llvm.ptr {
     %standardInput = arith.constant 0 : i32
     %mode = llvm.mlir.addressof @strict_read_mode : !llvm.ptr
     %stream = llvm.call @fdopen(%standardInput, %mode) : (i32, !llvm.ptr) -> !llvm.ptr
-    %result = func.call @strict_stream_text(%stream) : (!llvm.ptr) -> f64
-    return %result : f64
+    return %stream : !llvm.ptr
   }
   func.func private @strict_directory_current(%self: f64) -> f64 {
     %size = arith.constant 4096 : i64

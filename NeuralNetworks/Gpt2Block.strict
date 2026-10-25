@@ -68,7 +68,8 @@ Normalized(input Numbers, gain Numbers, bias Numbers) Numbers
 	let centered = Centered(input, size)
 	for centered.Length
 		let first = (index / size).Floor * size
-		gain(index % size) * centered(index) * Qwen3Block.HeadScale(centered, first, size, 0.00001) + bias(index % size)
+		let scale = Normalization.Scale(Normalization.Squared(centered, first, size), size, 0.00001)
+		gain(index % size) * centered(index) * scale + bias(index % size)
 Centered(input Numbers, size Number) Numbers
 	Tiny.Centered((1, 2, 4, 8), 2) is (-0.5, 0.5, -2, 2)
 	for input.Length

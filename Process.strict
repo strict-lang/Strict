@@ -35,6 +35,8 @@ FilesRead Texts
 	List(Text)
 Input Text
 	""
+InputLine Text
+	""
 Built Text
 	Process.Current.Built.Length is 19
 	""
