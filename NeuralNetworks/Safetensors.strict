@@ -4,6 +4,9 @@ has prefix Text = ""
 constant Tiny = Safetensors("NeuralNetworks/tiny.safetensors")
 constant Halves = Safetensors("NeuralNetworks/tinyhalves.safetensors")
 constant Bytes = Safetensors("NeuralNetworks/tinyint8.safetensors")
+constant Second = Safetensors.Bytes.Part(Safetensors.Bytes.Values("a.weight"), 64, 64, 1)
+constant Exact = Safetensors.Bytes.Quantized("a")
+constant Firsts = Safetensors.Bytes.Part(Safetensors.Bytes.Values("a.weight"), 0, 128, 1)
 Entry(name Text) Text
 	Tiny.Entry("b") is "\"dtype\":\"F32\",\"shape\":[3],\"data_offsets\":[24,36]"
 	Tiny.Entry("missing") is ""
@@ -46,6 +49,13 @@ Quantized(name Text) List(Numbers)
 	Bytes.Quantized("a").First(1) is -63
 	Bytes.Quantized("a")(2).First is 2
 	TensorFile.Quantized(path, Entry(name + ".weight"), Entry(name + ".weight_scale"))
+Tuned(name Text, downs Numbers, ups Numbers, scales Numbers) List(Numbers)
+	Bytes.Tuned("a", List(Number), List(Number), List(Number)) is Bytes.Quantized("a")
+	Bytes.Tuned("a", Second, (1, 0, 0, 0), List(Number) + 0.5)(2) is Bytes.Quantized("a")(2)
+	Bytes.Tuned("a", Second, (1, 0, 0, 0), List(Number) + 0.5)(0)(5).IsNearlyEqual(Exact(0)(5) + Second(5) / 2, 1)
+	Bytes.Tuned("a", Firsts, (0, 1, 0, 0, 0, 0, 0, 1), (0.5, 0.25))(3)(7).IsNearlyEqual(Exact(3)(7) + Second(7) / 4, 1)
+	Bytes.Tuned("a", (1, 2), (1, 0, 0, 0), List(Number) + 1) is Error
+	TensorFile.Tuned(path, Entry(name + ".weight"), Entry(name + ".weight_scale"), downs + ups + scales)
 Columns(name Text) List(Numbers)
 	Tiny.Columns("a") is ((1, 4), (2, 5), (3, 6))
 	Halves.Columns("a") is ((1, 4), (2, 5), (3, 6))
