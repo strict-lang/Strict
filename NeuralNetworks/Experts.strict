@@ -70,10 +70,8 @@ Added(input Numbers, residual Numbers) Numbers
 	Single.Added(Probe, Probe) is Gpt2Block.Added(Probe, Tiny.Expert(0, Probe))
 	if router.weights.Length > 0
 		return Gpt2Block.Added(residual, Forward(input))
-	let rotated = basis.Rotated(input, expansions.First.weights.First.Length)
-	let expanded = Batch(expansions.First.weights, expansions.First.biases).Sums(rotated)
-	let gated = Gated(expanded, expansions.First.weights.Length / 2)
-	Batch(contractions.First.weights, residual).Sums(basis.Rotated(gated, contractions.First.weights.First.Length))
+	let expanded = basis.Sums(expansions.First.weights, expansions.First.biases, input)
+	basis.Sums(contractions.First.weights, residual, Gated(expanded, expansions.First.weights.Length / 2))
 Shared(layers List(Layer), input Numbers) Numbers
 	Tiny.Shared(Sharing, Probe).First.IsNearlyEqual(0.060086650174007626 * Tiny.Expert(0, Probe).First, 0.000001)
 	Tiny.Shared(Sharing, Probe).Last.IsNearlyEqual(0.060086650174007626 * Tiny.Expert(0, Probe).Last, 0.000001)

@@ -45,7 +45,7 @@ KeyHeads Number
 Combined(input Numbers) Numbers
 	DeltaBlock(Tiny, rates = Layer(List(Numbers) + Layer.Zeros(8), Layer.Unbiased)).Combined(Drafter.Pair).Length is 66
 	let normed = Qwen3Block.Normalized(input, 0, input.Length, attentionNorm)
-	let mixed = Batch(inputs.weights, inputs.biases).Sums(experts.basis.Rotated(normed, inputs.weights.First.Length))
+	let mixed = experts.basis.Sums(inputs.weights, inputs.biases, normed)
 	if rates.weights.Length is 0
 		return mixed
 	let rated = Batch(rates.weights, rates.biases).Sums(normed)
@@ -159,5 +159,5 @@ Gated(raw Numbers, combined Numbers) Numbers
 Output(input Numbers) Numbers
 	Tiny.Cached(Tiny.Combined(Drafter.Rows(1))).Output(Drafter.Rows(1)).Length is 8
 	let grouped = experts.basis.Grouped(merged, norm.Length, KeyHeads, decays.Length)
-	let attended = Batch(projection.weights, input).Sums(experts.basis.Rotated(grouped, projection.weights.First.Length))
+	let attended = experts.basis.Sums(projection.weights, input, grouped)
 	experts.Added(Qwen3Block.Normalized(attended, 0, attended.Length, mlpNorm), attended)

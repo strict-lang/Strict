@@ -518,10 +518,8 @@
     return %result : f64
   }
   func.func private @strict_packed_data(%count: i64, %bits: i64) -> i64 attributes {llvm.passthrough = ["alwaysinline"]} {
-    %two = arith.constant 2 : i64
     %three = arith.constant 3 : i64
     %four = arith.constant 4 : i64
-    %five = arith.constant 5 : i64
     %six = arith.constant 6 : i64
     %seven = arith.constant 7 : i64
     %eight = arith.constant 8 : i64
@@ -530,7 +528,6 @@
     %fourBlock = arith.constant 144 : i64
     %sixBlock = arith.constant 208 : i64
     %alignMask = arith.constant -4 : i64
-    %isTwo = arith.cmpi eq, %bits, %two : i64
     %isFour = arith.cmpi eq, %bits, %four : i64
     %isSix = arith.cmpi eq, %bits, %six : i64
     %rounded = arith.addi %count, %spare : i64
@@ -539,15 +536,13 @@
     %sixBytes = arith.muli %blocks, %sixBlock : i64
     %groupRounded = arith.addi %count, %groupSpare : i64
     %groups = arith.shrui %groupRounded, %seven : i64
-    %twoBytes = arith.shli %groups, %five : i64
     %tritBlock = arith.constant 28 : i64
     %isThree = arith.cmpi eq, %bits, %three : i64
     %threeBytes = arith.muli %groups, %tritBlock : i64
     %padded = arith.addi %count, %three : i64
     %aligned = arith.andi %padded, %alignMask : i64
     %orThree = arith.select %isThree, %threeBytes, %aligned : i64
-    %orTwo = arith.select %isTwo, %twoBytes, %orThree : i64
-    %orSix = arith.select %isSix, %sixBytes, %orTwo : i64
+    %orSix = arith.select %isSix, %sixBytes, %orThree : i64
     %data = arith.select %isFour, %fourBytes, %orSix : i64
     return %data : i64
   }
@@ -574,14 +569,6 @@
     %alignMask = arith.constant -4 : i64
     %halvesBytes = arith.andi %paddedHalves, %alignMask : i64
     %sixBytes = arith.addi %aligned, %halvesBytes : i64
-    %groupSpare = arith.constant 127 : i64
-    %groupRounded = arith.addi %count, %groupSpare : i64
-    %groupShift = arith.constant 7 : i64
-    %groups = arith.shrui %groupRounded, %groupShift : i64
-    %groupHalves = arith.shli %groups, %one : i64
-    %paddedGroupHalves = arith.addi %groupHalves, %three : i64
-    %groupHalvesBytes = arith.andi %paddedGroupHalves, %alignMask : i64
-    %twoBytes = arith.addi %aligned, %groupHalvesBytes : i64
     %fourBytes = arith.addi %aligned, %none : i64
     %cells = arith.muli %count, %bits : i64
     %plainBytes = arith.divui %cells, %eight : i64
@@ -605,9 +592,7 @@
     %orFour = arith.select %isFour, %fourBytes, %orFloat8 : i64
     %isThree = arith.cmpi eq, %bits, %three : i64
     %orThree = arith.select %isThree, %aligned, %orFour : i64
-    %isTwo = arith.cmpi eq, %bits, %two : i64
-    %orTwo = arith.select %isTwo, %twoBytes, %orThree : i64
-    %orSix = arith.select %isSix, %sixBytes, %orTwo : i64
+    %orSix = arith.select %isSix, %sixBytes, %orThree : i64
     %bytes = arith.select %isQuantized, %quantizedBytes, %orSix : i64
     return %bytes : i64
   }
@@ -4806,13 +4791,6 @@
     %more = arith.cmpi slt, %index, %count : i64
     cf.cond_br %more, ^element, ^done
   ^element:
-    %ternaryCapacity = arith.constant -2.0 : f64
-    %isTernary = arith.cmpf oeq, %capacity, %ternaryCapacity : f64
-    cf.cond_br %isTernary, ^ternary, ^notTernary
-  ^ternary:
-    %fromTernary = func.call @strict_ternary_number(%data, %scales, %index) : (!llvm.ptr, !llvm.ptr, i64) -> f64
-    cf.br ^store(%fromTernary : f64)
-  ^notTernary:
     %tritsCapacity = arith.constant -3.0 : f64
     %isTrits = arith.cmpf oeq, %capacity, %tritsCapacity : f64
     cf.cond_br %isTrits, ^trits, ^notTrits
@@ -5011,42 +4989,6 @@
     %tripled = arith.muli %fraction, %c3 : i32
     %code = arith.shrui %tripled, %c8 : i32
     return %code : i32
-  }
-  // number at of a list of 2 bit ternary codes (strict.h): (code - 1) times the half scale of its 128 numbers
-  func.func private @strict_ternary_number(%data: !llvm.ptr, %scales: !llvm.ptr, %at: i64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
-    %one = arith.constant 1 : i64
-    %three = arith.constant 3 : i64
-    %four = arith.constant 4 : i64
-    %five = arith.constant 5 : i64
-    %six = arith.constant 6 : i64
-    %seven = arith.constant 7 : i64
-    %fifteen = arith.constant 15 : i64
-    %codeMask = arith.constant 3 : i32
-    %offset = arith.constant 1 : i32
-    %group = arith.shrui %at, %seven : i64
-    %half = arith.shrui %at, %six : i64
-    %halfBit = arith.andi %half, %one : i64
-    %fieldBits = arith.shrui %at, %four : i64
-    %field = arith.andi %fieldBits, %three : i64
-    %byteInHalf = arith.andi %at, %fifteen : i64
-    %groupStart = arith.shli %group, %five : i64
-    %halfStart = arith.shli %halfBit, %four : i64
-    %halfAt = arith.addi %groupStart, %halfStart : i64
-    %byteAt = arith.addi %halfAt, %byteInHalf : i64
-    %byteSlot = llvm.getelementptr %data[%byteAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %byte = llvm.load %byteSlot : !llvm.ptr -> i8
-    %wide = arith.extui %byte : i8 to i32
-    %shiftWide = arith.shli %field, %one : i64
-    %shift = arith.trunci %shiftWide : i64 to i32
-    %shifted = arith.shrui %wide, %shift : i32
-    %code = arith.andi %shifted, %codeMask : i32
-    %centered = arith.subi %code, %offset : i32
-    %level = arith.sitofp %centered : i32 to f64
-    %scaleSlot = llvm.getelementptr %scales[%group] : (!llvm.ptr, i64) -> !llvm.ptr, i16
-    %scaleBits = llvm.load %scaleSlot : !llvm.ptr -> i16
-    %scale = func.call @strict_half_number(%scaleBits) : (i16) -> f64
-    %number = arith.mulf %level, %scale : f64
-    return %number : f64
   }
   // an 8 bit float of a list in format 7 (E4M3: sign, 4 exponent bits with bias 7, 3 mantissa bits, at most 448)
   func.func private @strict_float8_number(%byte: i8) -> f64 {
@@ -12873,7 +12815,7 @@
     %true = arith.constant true
     return %true : i1
   }
-  // rows of 2, 3, 4, 6 or 8 bits are what dot products with 8 bit numbers are made for
+  // rows of 3, 4, 6 or 8 bits are what dot products with 8 bit numbers are made for
   func.func private @strict_gpu_packed(%view: !llvm.ptr, %packedSlot: !llvm.ptr) {
     %four = arith.constant 4 : i64
     %six = arith.constant 6 : i64
@@ -12883,14 +12825,11 @@
     %isFour = arith.cmpi eq, %bits, %four : i64
     %isSix = arith.cmpi eq, %bits, %six : i64
     %isEight = arith.cmpi eq, %bits, %eight : i64
-    %two = arith.constant 2 : i64
     %three = arith.constant 3 : i64
-    %isTwo = arith.cmpi eq, %bits, %two : i64
     %isThree = arith.cmpi eq, %bits, %three : i64
-    %isTernary = arith.ori %isTwo, %isThree : i1
     %isBlocked = arith.ori %isFour, %isSix : i1
     %isWide = arith.ori %isBlocked, %isEight : i1
-    %isPacked = arith.ori %isWide, %isTernary : i1
+    %isPacked = arith.ori %isWide, %isThree : i1
     %packed = arith.extui %isPacked : i1 to i64
     %before = llvm.load %packedSlot : !llvm.ptr -> i64
     %combined = arith.ori %before, %packed : i64
@@ -14143,7 +14082,7 @@
   ^done(%tokenWidth: i64):
     return %tokenWidth : i64
   }
-  // strict_device_tiles fits 64 tokens or more with Q4_K or Q6_K rows (or 2 or 3 bit rows of whole blocks of 256 numbers)
+  // strict_device_tiles fits 64 tokens or more with Q4_K or Q6_K rows (or 3 bit rows of whole blocks of 256 numbers)
   // whose 32 or 16 bit tokens become 8 bit numbers (width a multiple of 32)
   func.func private @strict_gpu_tiled(%rows: f64, %input: f64, %tokens: f64, %width: f64) -> i1 {
     %false = arith.constant false
@@ -14166,17 +14105,14 @@
     %six = arith.constant 6 : i64
     %isFourBits = arith.cmpi eq, %bits, %four : i64
     %isSixBits = arith.cmpi eq, %bits, %six : i64
-    %two = arith.constant 2 : i64
     %three = arith.constant 3 : i64
     %blockSpare = arith.constant 255 : i64
-    %isTwoBits = arith.cmpi eq, %bits, %two : i64
     %isThreeBits = arith.cmpi eq, %bits, %three : i64
-    %isTernary = arith.ori %isTwoBits, %isThreeBits : i1
     %blockRest = arith.andi %wholeWidth, %blockSpare : i64
     %wholeBlocks = arith.cmpi eq, %blockRest, %none : i64
-    %isTwo = arith.andi %isTernary, %wholeBlocks : i1
+    %isThree = arith.andi %isThreeBits, %wholeBlocks : i1
     %isFour = arith.ori %isFourBits, %isSixBits : i1
-    %isTiled = arith.ori %isFour, %isTwo : i1
+    %isTiled = arith.ori %isFour, %isThree : i1
     %inputBits = func.call @strict_gpu_bits(%input) : (f64) -> i64
     %isSingle = func.call @strict_gpu_floats(%inputBits) : (i64) -> i1
     %fits = arith.andi %isTiled, %isSingle : i1
