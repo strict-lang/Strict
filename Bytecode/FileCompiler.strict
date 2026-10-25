@@ -86,6 +86,7 @@ IsParsed(line Text) Boolean
 IsComplete(node SyntaxNode) Boolean
 	FileCompiler.IsComplete(SyntaxParser(Tokenizer("a + b * c").Tokens).Parse)
 	FileCompiler.IsComplete(SyntaxParser(Tokenizer("a + + b").Tokens).Parse) is false
+	FileCompiler.IsComplete(SyntaxParser(Tokenizer("Joined(number, (Two,))").Tokens).Parse) is false
 	for node.children
 		if (value.Kind is "Missing") and IsOperand(node, index)
 			return false
@@ -95,7 +96,9 @@ IsComplete(node SyntaxNode) Boolean
 IsOperand(node SyntaxNode, position Number) Boolean
 	FileCompiler.IsOperand(SyntaxNode("Binary", "+", (SyntaxNode("Missing", ""), SyntaxNode("Missing", ""))), 1)
 	FileCompiler.IsOperand(SyntaxNode("Binary", "is", (SyntaxNode("Missing", ""), SyntaxNode("Missing", ""))), 1) is false
-	(node.Kind is in ("Not", "Negate")) or ((node.Kind is "Binary") and ((position is 0) or (node.text is not "is")))
+	FileCompiler.IsOperand(SyntaxParser(Tokenizer("(a,)").Tokens).Parse, 1)
+	let isBinary = (node.Kind is "Binary") and ((position is 0) or (node.text is not "is"))
+	(node.Kind is in ("Not", "Negate", "List")) or isBinary
 Resolved(source Text, inference TypeInference) Boolean
 	FileCompiler.Resolved("./Logger.strict", ResolveCheck.Inference(("./Logger.strict", "./TextWriter.strict")))
 	let unresolved = ResolveCheck(logger).Unresolved(source, inference)

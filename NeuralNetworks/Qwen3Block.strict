@@ -75,16 +75,25 @@ Interleaved(cache Numbers, count Number) Numbers
 Rotated(input Numbers, start Number, count Number, weights Numbers, rotation Numbers) Numbers
 	Tiny.Rotated((3, 4, 0, 1), 0, 4, (1, 2), (1, 1, -1, 1)).First.IsNearlyEqual(-1.414214)
 	let size = weights.Length
-	let gap = (input.Length - count) * size * 2 / rotation.Length
+	let scales = HeadScales(input, start, count, size, rotation.Length)
 	for count
 		let head = (index / size).Floor
 		let token = (head * rotation.Length / count / 2).Floor
 		let within = index % size
-		let first = token * gap + start + head * size
+		let first = token * Gap(input, count, size, rotation.Length) + start + head * size
 		let partner = (within + size / 2) % size
 		let own = input(first + within) * weights(within) * rotation(token * 2 * size + within)
 		let other = input(first + partner) * weights(partner) * rotation((token * 2 + 1) * size + within)
-		(own + other) * HeadScale(input, first, size, Epsilon)
+		(own + other) * scales(head)
+HeadScales(input Numbers, start Number, count Number, size Number, rotations Number) Numbers
+	Tiny.HeadScales((3, 4, 0, 1), 0, 4, 2, 4)(1).IsNearlyEqual(1.414213)
+	for count / size
+		let token = (index * rotations / count / 2).Floor
+		let first = token * Gap(input, count, size, rotations) + start + index * size
+		Normalization.Scale(Normalization.Squared(input, first, size), size, Epsilon)
+Gap(input Numbers, count Number, size Number, rotations Number) Number
+	Tiny.Gap((1, 2, 3, 4, 5, 6), 2, 2, 4) is 4
+	(input.Length - count) * size * 2 / rotations
 Normalized(input Numbers, start Number, count Number, weights Numbers) Numbers
 	Tiny.Normalized((3, 4), 0, 2, (1, 2)).First.IsNearlyEqual(0.848528)
 	Tiny.Normalized((3, 4, 0, 1), 0, 4, (1, 2)).Last.IsNearlyEqual(2.828424)
@@ -100,13 +109,10 @@ Normalized(input Numbers, start Number, count Number, weights Numbers) Numbers
 Scales(input Numbers, size Number, epsilon Number) Numbers
 	Tiny.Scales((3, 4, 0, 1), 2, Epsilon)(1).IsNearlyEqual(1.414213)
 	for input.Length / size
-		HeadScale(input, index * size, size, epsilon)
+		Normalization.Scale(Normalization.Squared(input, index * size, size), size, epsilon)
 HeadScale(input Numbers, first Number, size Number, epsilon Number) Number
 	Tiny.HeadScale((3, 4, 0, 1), 2, 2, Epsilon).IsNearlyEqual(1.414213)
-	mutable sum = 0
-	for size
-		sum = sum + input(first + index) * input(first + index)
-	1 / (sum / size + epsilon).SquareRoot
+	Normalization.Scale(Normalization.Squared(input, first, size), size, epsilon)
 Output(input Numbers, sequences Number) Numbers
 	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm, 32).Output(Tiny.attentionNorm, 1).Length is 8
 	let attended = experts.basis.Sums(projection.weights, input, Merged(sequences))

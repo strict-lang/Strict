@@ -8,11 +8,11 @@ has sequences Number = 1
 has causal Boolean = true
 has valueOffset Number = 0
 has valueStride Number = 0
+has quantized Boolean = false
 constant Single = Attention((1, 0), (1, 0, 0, 1), (3, 4, 5, 6), 1, 1, 2)
 constant Pair = Attention((1, 0, 0, 1), (1, 0, 1, 0, 0, 1, 0, 1), (3, 4, 7, 8, 5, 6, 5, 6), 1, 1, 2, 2)
 constant Prompt = Gguf("NeuralNetworks/blocks.gguf", 32).Rows("prompt").First
 constant Prompted = Attention(Safetensors.Part(Prompt, 0, 4096, 1), Safetensors.Part(Prompt, 4096, 3072, 1), Safetensors.Part(Prompt, 7168, 3072, 1), 4, 2, 64)
-constant Spread = Attention(Safetensors.Part(Prompt, 9600, 32, 1), Safetensors.Part(Prompt, 0, 4800, 2), Safetensors.Part(Prompt, 1, 4800, 2), 2, 1, 8)
 Merged Numbers
 	Single.Merged.First.IsNearlyEqual(3.6604769013466867)
 	Attention(Single, values = (0, 3, 4, 0, 5, 6), valueOffset = 1, valueStride = 3).Merged.First.IsNearlyEqual(3.6604769)
@@ -65,8 +65,8 @@ Visible(score Number, position Number, limit Number) Number
 	Single.Visible(2, 1, 1) is 2
 	Single.Visible(2, 2, 1) is -1000000000
 	Prompted.Merged(1866).IsNearlyEqual(-0.025784, 0.005)
-	Spread.Merged(14).IsNearlyEqual(0.050249, 0.001)
-	Spread.Merged(30).IsNearlyEqual(0.043154, 0.001)
+	Attention.Spread.Merged(14).IsNearlyEqual(0.050249, 0.001)
+	Attention.Spread.Merged(30).IsNearlyEqual(0.043154, 0.001)
 	Attention(Prompted.queries, Prompted.keys, Prompted.values, 4, 2, 64, 1, false).Merged(0).IsNearlyEqual(-0.2334, 0.005)
 	Attention.Unmasked(0).Merged(0).IsNearlyEqual(-0.0168, 0.005)
 	Attention.Unmasked(2016).Merged(31).IsNearlyEqual(0.02, 0.005)
@@ -74,3 +74,7 @@ Visible(score Number, position Number, limit Number) Number
 Unmasked(start Number) Attention
 	Attention.Unmasked(0).queries.Length is 32
 	Attention(Safetensors.Part(Prompt, start, 32, 1), Prompted.keys, Prompted.values, 2, 1, 16, 1, false)
+Spread Attention
+	Attention.Spread.queries.Length is 32
+	let evenRows = Safetensors.Part(Prompt, 0, 4800, 2)
+	Attention(Safetensors.Part(Prompt, 9600, 32, 1), evenRows, Safetensors.Part(Prompt, 1, 4800, 2), 2, 1, 8)

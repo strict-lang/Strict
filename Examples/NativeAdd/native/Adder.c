@@ -6,6 +6,11 @@ STRICT_EXPORT double Adder_Add(double self, double left, double right)
 	return left + right;
 }
 
+STRICT_EXPORT double Adder_Sum(double self, double first, double second, double third, double fourth, double fifth, double sixth)
+{
+	return first + second + third + fourth + fifth + sixth;
+}
+
 STRICT_EXPORT double Adder_Greeting(double self, double name)
 {
 	static char greeting[256];

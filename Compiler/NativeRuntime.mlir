@@ -715,7 +715,7 @@
   }
   llvm.mlir.global internal constant @strict_library_missing("LibraryNotFound\00") : !llvm.array<16 x i8>
   llvm.mlir.global internal constant @strict_library_symbol_missing("LibrarySymbolNotFound\00") : !llvm.array<22 x i8>
-  llvm.mlir.global internal constant @strict_library_arguments("LibraryCallNeedsOneToFiveNumbers\00") : !llvm.array<33 x i8>
+  llvm.mlir.global internal constant @strict_library_arguments("LibraryCallNeedsOneToEightNumbers\00") : !llvm.array<34 x i8>
   func.func private @strict_library_invoke(%function: !llvm.ptr, %arguments: f64) -> f64 {
     %items = func.call @strict_list_items(%arguments) : (f64) -> !llvm.ptr
     %countNumber = func.call @strict_list_length(%arguments) : (f64) -> f64
@@ -726,7 +726,10 @@
       2: ^two,
       3: ^three,
       4: ^four,
-      5: ^five
+      5: ^five,
+      6: ^six,
+      7: ^seven,
+      8: ^eight
     ]
   ^one:
     %a10 = llvm.load %items : !llvm.ptr -> f64
@@ -768,6 +771,54 @@
     %a54 = llvm.load %p54 : !llvm.ptr -> f64
     %r5 = llvm.call %function(%a50, %a51, %a52, %a53, %a54) : !llvm.ptr, (f64, f64, f64, f64, f64) -> f64
     return %r5 : f64
+  ^six:
+    %a60 = llvm.load %items : !llvm.ptr -> f64
+    %p61 = llvm.getelementptr %items[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a61 = llvm.load %p61 : !llvm.ptr -> f64
+    %p62 = llvm.getelementptr %items[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a62 = llvm.load %p62 : !llvm.ptr -> f64
+    %p63 = llvm.getelementptr %items[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a63 = llvm.load %p63 : !llvm.ptr -> f64
+    %p64 = llvm.getelementptr %items[4] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a64 = llvm.load %p64 : !llvm.ptr -> f64
+    %p65 = llvm.getelementptr %items[5] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a65 = llvm.load %p65 : !llvm.ptr -> f64
+    %r6 = llvm.call %function(%a60, %a61, %a62, %a63, %a64, %a65) : !llvm.ptr, (f64, f64, f64, f64, f64, f64) -> f64
+    return %r6 : f64
+  ^seven:
+    %a70 = llvm.load %items : !llvm.ptr -> f64
+    %p71 = llvm.getelementptr %items[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a71 = llvm.load %p71 : !llvm.ptr -> f64
+    %p72 = llvm.getelementptr %items[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a72 = llvm.load %p72 : !llvm.ptr -> f64
+    %p73 = llvm.getelementptr %items[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a73 = llvm.load %p73 : !llvm.ptr -> f64
+    %p74 = llvm.getelementptr %items[4] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a74 = llvm.load %p74 : !llvm.ptr -> f64
+    %p75 = llvm.getelementptr %items[5] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a75 = llvm.load %p75 : !llvm.ptr -> f64
+    %p76 = llvm.getelementptr %items[6] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a76 = llvm.load %p76 : !llvm.ptr -> f64
+    %r7 = llvm.call %function(%a70, %a71, %a72, %a73, %a74, %a75, %a76) : !llvm.ptr, (f64, f64, f64, f64, f64, f64, f64) -> f64
+    return %r7 : f64
+  ^eight:
+    %a80 = llvm.load %items : !llvm.ptr -> f64
+    %p81 = llvm.getelementptr %items[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a81 = llvm.load %p81 : !llvm.ptr -> f64
+    %p82 = llvm.getelementptr %items[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a82 = llvm.load %p82 : !llvm.ptr -> f64
+    %p83 = llvm.getelementptr %items[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a83 = llvm.load %p83 : !llvm.ptr -> f64
+    %p84 = llvm.getelementptr %items[4] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a84 = llvm.load %p84 : !llvm.ptr -> f64
+    %p85 = llvm.getelementptr %items[5] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a85 = llvm.load %p85 : !llvm.ptr -> f64
+    %p86 = llvm.getelementptr %items[6] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a86 = llvm.load %p86 : !llvm.ptr -> f64
+    %p87 = llvm.getelementptr %items[7] : (!llvm.ptr) -> !llvm.ptr, f64
+    %a87 = llvm.load %p87 : !llvm.ptr -> f64
+    %r8 = llvm.call %function(%a80, %a81, %a82, %a83, %a84, %a85, %a86, %a87) : !llvm.ptr, (f64, f64, f64, f64, f64, f64, f64, f64) -> f64
+    return %r8 : f64
   ^unsupported:
     %argumentsMessage = llvm.mlir.addressof @strict_library_arguments : !llvm.ptr
     %argumentsError = func.call @strict_error_named(%argumentsMessage) : (!llvm.ptr) -> f64
@@ -10342,7 +10393,9 @@
     %packedRows = llvm.load %packedSlot : !llvm.ptr -> i64
     %hasPackedRows = arith.cmpi ne, %packedRows, %none : i64
     %hasDots = arith.cmpi ne, %dots, %none : i64
-    %quantizing = arith.andi %hasPackedRows, %hasDots : i1
+    %noRows = arith.cmpi eq, %rows, %none : i64
+    %dotsUsable = arith.ori %hasPackedRows, %noRows : i1
+    %quantizing = arith.andi %dotsUsable, %hasDots : i1
     cf.cond_br %quantizing, ^quantize(%none, %six : i64, i64), ^chooseKernel
   ^quantize(%quantizeIndex: i64, %quantizeSlot: i64):
     %moreQuantized = arith.cmpi slt, %quantizeIndex, %valueCount : i64
@@ -13254,7 +13307,9 @@
   // `Attention.Merged` on the 16 bit tensor cores (strict_device_attention): queries, keys and values like there, 0.0
   // when the GPU can not, then the method itself runs (head size not a multiple of 8 or above 128, more than 16 heads
   // per group of keys, lists that do not match)
-  func.func private @strict_gpu_attention(%ptx: !llvm.ptr, %queries: f64, %keys: f64, %values: f64, %heads: f64, %groups: f64, %size: f64, %sequences: f64, %causal: f64, %valueOffset: f64, %valueStride: f64) -> f64 {
+  // quantized: the keys of prompts of size 128 become 8 bit numbers with a scale per position and head (one quantize
+  // launch), strict_device_attention then computes the scores with 8 bit products
+  func.func private @strict_gpu_attention(%ptx: !llvm.ptr, %queries: f64, %keys: f64, %values: f64, %heads: f64, %groups: f64, %size: f64, %sequences: f64, %causal: f64, %valueOffset: f64, %valueStride: f64, %quantized: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
     %seven = arith.constant 7 : i64
@@ -13340,7 +13395,19 @@
     %lanes = arith.constant -128 : i64
     %integers = arith.constant -1 : i64
     %noGuards1 = arith.constant 0 : i64
-    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %queryCount, %zero, %none, %valuesSlots, %ten, %seven, %none, %none, %lanes, %none, %integers, %noGuards1) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
+    %eightsSet = arith.cmpf une, %quantized, %zero : f64
+    %headSized = arith.cmpi eq, %numbers, %largest : i64
+    %promptTokens = arith.constant 64 : i64
+    %isPrompt = arith.cmpi sgt, %tokens, %promptTokens : i64
+    %eightsShaped = arith.andi %headSized, %isPrompt : i1
+    %eightsKeys = arith.andi %eightsSet, %eightsShaped : i1
+    %keysBit = arith.constant 2 : i64
+    %dots = arith.select %eightsKeys, %keysBit, %none : i64
+    %keyWidth = arith.select %eightsKeys, %numbers, %none : i64
+    %widthSlot = llvm.mlir.addressof @strict_gpu_quantize_width : !llvm.ptr
+    llvm.store %keyWidth, %widthSlot : i64, !llvm.ptr
+    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %queryCount, %zero, %none, %valuesSlots, %ten, %seven, %none, %dots, %lanes, %none, %integers, %noGuards1) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
+    llvm.store %none, %widthSlot : i64, !llvm.ptr
     return %result : f64
   ^unable:
     return %zero : f64
@@ -14812,11 +14879,12 @@
     func.call @strict_gpu_unstaged(%staging) : (!llvm.ptr) -> ()
     return %false : i1
   }
-  // rows tables up to 64 MB are gathered in one pinned buffer: a fresh allocation for each faulted its pages in and the
-  // driver copied it once more (Qwen3.8-Flash-Next 523 -> 488 ms per token, with 32 GPU expert slots 2974 -> 2738 ms)
+  // rows tables up to 256 MB are gathered in one pinned buffer: a fresh allocation for each faulted its pages in and the
+  // driver copied it once more (Qwen3.8-Flash-Next 523 -> 488 ms per token, with 32 GPU expert slots 2974 -> 2738 ms;
+  // H3's first step, all 21.8 GB in tables of up to 165 MB, 14.4-14.9 -> 10.1-10.6 s)
   llvm.mlir.global internal @strict_gpu_staged(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   func.func private @strict_gpu_staging(%bytes: i64) -> !llvm.ptr {
-    %most = arith.constant 67108864 : i64
+    %most = arith.constant 268435456 : i64
     %fits = arith.cmpi ule, %bytes, %most : i64
     cf.cond_br %fits, ^pinned, ^pageable
   ^pinned:

@@ -2,6 +2,9 @@ has logger
 Added Number
 	NativeAdd.Added is 3
 	Adder.Add(1, 2)
+Sums Number
+	NativeAdd.Sums is 21
+	Adder.Sum(1, 2, 3, 4, 5, 6)
 Greeted Text
 	NativeAdd.Greeted is "Hello Strict"
 	Adder.Greeting("Strict")

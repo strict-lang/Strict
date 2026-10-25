@@ -11,8 +11,16 @@ Normed Numbers
 		value * scales((index / gain.Length).Floor)
 Scales(centered Numbers) Numbers
 	Sample.Scales((1, -1, 0, 2, -2, 0)).Last.IsNearlyEqual(0.612372)
-	for centered.Length / gain.Length
-		Qwen3Block.HeadScale(centered, index * gain.Length, gain.Length, 0.00001)
+	Qwen3Block.Scales(centered, gain.Length, 0.00001)
+Scale(sum Number, size Number, epsilon Number) Number
+	Sample.Scale(1, 2, 0.000001).IsNearlyEqual(1.414213)
+	1 / (sum / size + epsilon).SquareRoot
+Squared(numbers Numbers, first Number, size Number) Number
+	Sample.Squared((3, 4, 0, 1), 2, 2) is 1
+	mutable sum = 0
+	for size
+		sum = sum + numbers(first + index) * numbers(first + index)
+	sum
 Inputs(gradient Numbers) Numbers
 	Sample.Inputs(Gradient)(0).IsNearlyEqual(0.17753688616769236)
 	Sample.Inputs(Gradient)(5).IsNearlyEqual(-0.5715433200905821)
