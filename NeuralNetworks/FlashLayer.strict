@@ -70,5 +70,5 @@ Truncated(original FlashLayer, count Number, length Number) FlashLayer
 		let keys = Safetensors.Part(block.keys, 0, width, 1)
 		let cut = Qwen3Block(block, keys = keys, values = Safetensors.Part(block.values, 0, width, 1))
 		return FlashLayer(value, attention = List(Qwen3Block) + cut)
-	let rows = Safetensors.Part(entered, 0, count * linear.First.inputs.weights.Length, 1)
+	let rows = Safetensors.Part(entered, 0, count * linear.First.Width, 1)
 	FlashLayer(value, linear = List(DeltaBlock) + original.linear.First.Rewound(rows))

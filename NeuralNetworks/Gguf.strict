@@ -21,17 +21,17 @@ Shape(name Text) Numbers
 	Tiny.Shape("missing").Length is 0
 	GgufFile.Shape(path, name)
 Values(name Text) Numbers
-	Tiny.Values("v") is (0.5, -1.5, 2.25)
-	Tiny.Values("h") is (1, 2, 3, 4, 5, 6)
-	Tiny.Values("b") is (1, 2, 3, 4, 5, 6)
+	(Tiny.Values("v"), Split.Values("v")) is ((0.5, -1.5, 2.25), (0.5, -1.5, 2.25))
+	(Tiny.Values("h"), Tiny.Values("b")) is ((1, 2, 3, 4, 5, 6), (1, 2, 3, 4, 5, 6))
 	Tiny.Values("missing") is Error
-	Split.Values("v") is (0.5, -1.5, 2.25)
-	Tiny.Values("k4").Sum is 31000.5
-	Tiny.Values("k6").Sum is 238.25
+	(Tiny.Values("k4").Sum, Tiny.Values("k6").Sum) is (31000.5, 238.25)
 	(Tiny.Values("k4").First, Tiny.Values("k6").Last) is (55.75, 36.125)
 	(Quants.Values("q5_1").Sum, Quants.Values("q5_1")(5), Quants.Values("q5_1")(37)) is (1237.5, 6.5, 3)
 	(Quants.Values("q5_k").Sum, Quants.Values("q5_k")(5), Quants.Values("q5_k")(37)) is (2759.328125, 17.921875, 6.390625)
 	(Quants.Values("iq4_nl").Sum, Quants.Values("iq4_nl")(5), Quants.Values("iq4_nl")(37)) is (26.5, 9.5, -11)
+	(Quants.Values("ptq1_0").Sum, Quants.Values("ptq1_0")(81), Quants.Values("ptq1_0")(130)) is (4.5, 0.5, -1.5)
+	Quants.Values("pq2_0") is Quants.Values("ptq1_0")
+	(Quants.Values("q2_0")(64), Quants.Values("q2_0")(65), Quants.Values("q2_0").Last) is (-1.5, 1.5, 3)
 	GgufFile.Values(path, name)
 Rows(name Text) List(Numbers)
 	Tiny.Rows("m") is ((1, 2, 3), (4, 5, 6))
@@ -40,6 +40,7 @@ Rows(name Text) List(Numbers)
 	Gguf("NeuralNetworks/tiny.gguf", 8).Rows("q") is Tiny.Rows("q")
 	Gguf("NeuralNetworks/tiny.gguf", 4).Rows("r4") is Tiny.Rows("r4")
 	Gguf("NeuralNetworks/tiny.gguf", 4).Rows("r6") is Tiny.Rows("r6")
+	Gguf("NeuralNetworks/tiny.gguf", 4).Rows("r2") is Tiny.Rows("r2")
 	Gguf("NeuralNetworks/tinyqwen3moe.gguf").Rows("blk.0.ffn_gate_exps.weight").Length is 16
 	GgufFile.Rows(path, name, bits)
 Picked(name Text, rows Numbers) Numbers

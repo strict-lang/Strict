@@ -4,6 +4,7 @@ has contractions List(Layer)
 has used Number
 has gateUps List(Numbers) = List(Numbers)
 has downs List(Numbers) = List(Numbers)
+has basis Basis = Basis.None
 constant Model = Gguf("NeuralNetworks/tinyqwen3moe.gguf")
 constant Tiny = Experts.Loaded(Model, "blk.0.")
 constant Single = Experts.Dense(Tiny.expansions.First, Tiny.contractions.First)
@@ -30,7 +31,7 @@ Routed(model Gguf, prefix Text) Experts
 	Experts(routing, List(Layer), List(Layer), model.Value(architecture + ".expert_used_count") to Number)
 Dense(expansion Layer, contraction Layer) Experts
 	Experts.Dense(Tiny.expansions.First, Tiny.contractions.First).Forward(Probe) is Tiny.Expert(0, Probe)
-	Experts(Layer(List(Numbers), List(Number)), List(Layer) + expansion, List(Layer) + contraction, 1)
+	Experts(Layer.None, List(Layer) + expansion, List(Layer) + contraction, 1)
 Stacked(rows List(Numbers), count Number) List(Layer)
 	Tiny.Stacked(((1, 2), (3, 4), (5, 6), (7, 8)), 2).Last.weights is ((5, 6), (7, 8))
 	let size = rows.Length / count
@@ -69,8 +70,10 @@ Added(input Numbers, residual Numbers) Numbers
 	Single.Added(Probe, Probe) is Gpt2Block.Added(Probe, Tiny.Expert(0, Probe))
 	if router.weights.Length > 0
 		return Gpt2Block.Added(residual, Forward(input))
-	let expanded = Batch(expansions.First.weights, expansions.First.biases).Sums(input)
-	Batch(contractions.First.weights, residual).Sums(Gated(expanded, expansions.First.weights.Length / 2))
+	let rotated = basis.Rotated(input, expansions.First.weights.First.Length)
+	let expanded = Batch(expansions.First.weights, expansions.First.biases).Sums(rotated)
+	let gated = Gated(expanded, expansions.First.weights.Length / 2)
+	Batch(contractions.First.weights, residual).Sums(basis.Rotated(gated, contractions.First.weights.First.Length))
 Shared(layers List(Layer), input Numbers) Numbers
 	Tiny.Shared(Sharing, Probe).First.IsNearlyEqual(0.060086650174007626 * Tiny.Expert(0, Probe).First, 0.000001)
 	Tiny.Shared(Sharing, Probe).Last.IsNearlyEqual(0.060086650174007626 * Tiny.Expert(0, Probe).Last, 0.000001)

@@ -17,9 +17,10 @@
 #endif
 
 /* A GGUF file (llama.cpp models): the metadata (keys with numbers, texts or arrays of them) and the tensor infos are read
-   once per path, tensors when asked for. Supported tensor types are F32, F16, BF16, Q8_0, Q5_1, Q4_K, Q5_K, Q6_K and
-   IQ4_NL, blocks decode to floats exactly like ggml's dequantize_row functions (no fused multiply-add). */
-enum { F32 = 0, F16 = 1, Q5_1 = 7, Q8_0 = 8, Q4_K = 12, Q5_K = 13, Q6_K = 14, IQ4_NL = 20, BF16 = 30 };
+   once per path, tensors when asked for. Supported tensor types are F32, F16, BF16, Q8_0, Q5_1, Q4_K, Q5_K, Q6_K,
+   IQ4_NL and the ternary Q2_0, PQ2_0 and PTQ1_0 (Prism ML's llama.cpp fork), blocks decode to floats exactly like ggml's
+   dequantize_row functions (no fused multiply-add). */
+enum { F32 = 0, F16 = 1, Q5_1 = 7, Q8_0 = 8, Q4_K = 12, Q5_K = 13, Q6_K = 14, IQ4_NL = 20, BF16 = 30, Q2_0 = 42, PQ2_0 = 142, PTQ1_0 = 143 };
 typedef struct { char* key; char* value; } Entry;
 typedef struct { char* name; uint32_t type; uint32_t dimensions; uint64_t shape[4]; uint64_t offset; uint32_t shard; uint64_t start; } Tensor;
 typedef struct { FILE* file; int failed; } Reader;
@@ -336,7 +337,8 @@ STRICT_EXPORT double GgufFile_Shape(double self, double path, double name)
 
 static uint64_t BlockNumbers(uint32_t type)
 {
-	return type == Q8_0 || type == Q5_1 || type == IQ4_NL ? 32 : type == Q4_K || type == Q5_K || type == Q6_K ? 256 : 1;
+	return type == Q8_0 || type == Q5_1 || type == IQ4_NL ? 32 : type == Q4_K || type == Q5_K || type == Q6_K ? 256 :
+		type == Q2_0 ? 64 : type == PQ2_0 || type == PTQ1_0 ? 128 : 1;
 }
 
 /* The bytes of one block of the type, 0 if the type is not supported. */
@@ -352,6 +354,9 @@ static uint64_t BlockBytes(uint32_t type)
 	case Q5_K: return 176;
 	case Q6_K: return 210;
 	case IQ4_NL: return 18;
+	case Q2_0: return 18;
+	case PQ2_0: return 34;
+	case PTQ1_0: return 28;
 	default: return 0;
 	}
 }
@@ -429,6 +434,23 @@ static void DecodedIQ4NL(const unsigned char* block, float* y)
 	}
 }
 
+/* The codes (ternary weight + 1) of the numbers of a Q2_0 or PQ2_0 block (the half d, then 4 codes of 2 bits per byte from
+   the lowest bits on) or a PTQ1_0 block: 24 bytes of 5 trits (bytes 0 to 15 give numbers 0 to 79, 16 to 23 numbers 80 to
+   119, each trit n of all bytes of a stage after another), 2 bytes of 4 trits, then the half d; a byte holds its trits as
+   a fraction of 243. */
+static void Codes(uint32_t type, const unsigned char* block, unsigned char* codes)
+{
+	static const uint8_t powers[5] = { 1, 3, 9, 27, 81 };
+	static const int stages[3][3] = { { 0, 16, 5 }, { 16, 8, 5 }, { 24, 2, 4 } };
+	for (int index = 0; type != PTQ1_0 && index < (int)BlockNumbers(type); index++)
+		codes[index] = (block[2 + index / 4] >> index % 4 * 2) & 3;
+	for (int stage = 0, number = 0; type == PTQ1_0 && stage < 3; stage++)
+		for (int trit = 0; trit < stages[stage][2]; trit++)
+			for (int byte = 0; byte < stages[stage][1]; byte++)
+				codes[number++] = (unsigned char)((uint16_t)(uint8_t)(block[stages[stage][0] + byte] * powers[trit]) * 3 >> 8);
+}
+static const unsigned char* TernaryHalf(uint32_t type, const unsigned char* block) { return type == PTQ1_0 ? block + 26 : block; }
+
 /* Decodes one block of the tensor's type into floats. */
 static void Decoded(uint32_t type, const unsigned char* block, float* y)
 {
@@ -447,6 +469,13 @@ static void Decoded(uint32_t type, const unsigned char* block, float* y)
 		DecodedQ4KOrQ5K(block, type == Q5_K, y);
 	else if (type == IQ4_NL)
 		DecodedIQ4NL(block, y);
+	else if (type == Q2_0 || type == PQ2_0 || type == PTQ1_0)
+	{
+		unsigned char codes[128];
+		Codes(type, block, codes);
+		for (int index = 0; index < (int)BlockNumbers(type); index++)
+			y[index] = (codes[index] - 1) * HalfAt(TernaryHalf(type, block));
+	}
 	else
 		DecodedQ6K(block, y);
 }
@@ -478,7 +507,7 @@ static unsigned char* Blocks(const Tensor* tensor, uint64_t count, const char** 
 	uint64_t blockBytes = BlockBytes(type), blocks = count / BlockNumbers(type);
 	if (blockBytes == 0 || count % BlockNumbers(type) != 0)
 	{
-		*failure = "OnlyF32F16BF16Q8_0Q5_1Q4_KQ5_KQ6_KAndIQ4_NLTensorsAreSupported";
+		*failure = "GgufTensorTypeNotSupported";
 		return 0;
 	}
 	unsigned char* raw = malloc(blocks * blockBytes + 1);
@@ -531,9 +560,10 @@ STRICT_EXPORT double GgufFile_Values(double self, double path, double name)
 
 /* The rows of the matrix name (its contiguous dimension is a row) packed with bits 32, 16 or 8. Q8_0 rows packed with 8
    bits keep their numbers: their scales are halves, so strict_quantized finds the same scales and bytes again. */
-/* The blocks of one row of a Q4_K or Q6_K matrix as a packed row of 4 or 6 bits: Q4_K blocks stay as they are, Q6_K
-   blocks give their half scale d to the end of the row. */
-static void Repacked(const unsigned char* blocks, uint64_t bits, uint64_t width, strict_packed* packed)
+/* The blocks of one row of a Q4_K, Q6_K, PQ2_0 or PTQ1_0 matrix as a packed row of 4, 6 or 2 bits: Q4_K blocks stay as
+   they are, Q6_K blocks give their half scale d to the end of the row, ternary blocks become 2 bit codes (strict.h) with
+   their half scales at the end. */
+static void Repacked(const unsigned char* blocks, uint32_t type, uint64_t bits, uint64_t width, strict_packed* packed)
 {
 	uint64_t count = width / 256;
 	if (bits == 4)
@@ -543,10 +573,50 @@ static void Repacked(const unsigned char* blocks, uint64_t bits, uint64_t width,
 		memcpy(packed->data + block * 208, blocks + block * 210, 208);
 		memcpy(packed->data + count * 208 + block * 2, blocks + block * 210 + 208, 2);
 	}
+	for (uint64_t group = 0; bits == 2 && group < width / 128; group++)
+	{
+		const unsigned char* block = blocks + group * BlockBytes(type);
+		unsigned char codes[128], * packedCodes = packed->data + group * 32;
+		Codes(type, block, codes);
+		for (int index = 0; index < 32; index++)
+		{
+			const unsigned char* fields = codes + index / 16 * 64 + index % 16;
+			packedCodes[index] = (unsigned char)(fields[0] | fields[16] << 2 | fields[32] << 4 | fields[48] << 6);
+		}
+		memcpy(packed->data + width / 128 * 32 + group * 2, TernaryHalf(type, block), 2);
+	}
 }
 
-/* Rows of 32, 16 or 8 bits, 4 keeps Q4_K and Q6_K matrices in 4 and 6 bits (other types become 8 bits). The matrices of
-   a stack (the experts of a mixture) follow each other. */
+enum { RowChunk = 16 };
+typedef struct { const unsigned char* raw; const float* floats; unsigned char* storage; double* rows; uint64_t size, width, height, kept; uint32_t type; } Packing;
+
+/* RowChunk rows of the packing from item on: blocks repacked, floats quantized to 8 or kept as 16 or 32 bits. */
+static void Packed(void* context, uint64_t item)
+{
+	const Packing* packing = context;
+	uint64_t width = packing->width, kept = packing->kept;
+	for (uint64_t row = item * RowChunk; row < (item + 1) * RowChunk && row < packing->height; row++)
+	{
+		strict_packed* packed = (strict_packed*)(packing->storage + row * packing->size);
+		const float* floats = packing->floats ? packing->floats + row * width : 0;
+		packed->count = (double)width;
+		packed->bits = (double)kept;
+		uint64_t rowBytes = width / BlockNumbers(packing->type) * BlockBytes(packing->type);
+		if (packing->raw)
+			Repacked(packing->raw + row * rowBytes, packing->type, kept, width, packed);
+		else if (kept == 8)
+			strict_quantized(packed, floats, width, 1);
+		for (uint64_t column = 0; floats && kept != 8 && column < width; column++)
+			if (kept == 16)
+				((uint16_t*)packed->data)[column] = strict_half(floats[column]);
+			else
+				((float*)packed->data)[column] = floats[column];
+		packing->rows[1 + row] = strict_packed_result(packed);
+	}
+}
+
+/* Rows of 32, 16 or 8 bits, 4 keeps Q4_K, Q6_K and the ternary PQ2_0 and PTQ1_0 matrices in 4, 6 and 2 bits (other types
+   become 8 bits). The matrices of a stack (the experts of a mixture) follow each other. */
 STRICT_EXPORT double GgufFile_Rows(double self, double path, double name, double bits)
 {
 	static double* rows = 0;
@@ -558,8 +628,8 @@ STRICT_EXPORT double GgufFile_Rows(double self, double path, double name, double
 	uint64_t width = tensor ? tensor->shape[0] : 0;
 	uint64_t height = tensor ? tensor->shape[1] * (tensor->dimensions == 3 ? tensor->shape[2] : 1) : 0;
 	uint32_t type = tensor ? tensor->type : F32;
-	uint64_t kept = bits != 4 ? (uint64_t)bits : type == Q4_K ? 4 : type == Q6_K ? 6 : 8;
-	int isBlocked = kept == 4 || kept == 6;
+	uint64_t kept = bits != 4 ? (uint64_t)bits : type == Q4_K ? 4 : type == Q6_K ? 6 : type == PQ2_0 || type == PTQ1_0 ? 2 : 8;
+	int isBlocked = kept == 4 || kept == 6 || kept == 2;
 	unsigned char* raw = tensor && isBlocked ? Blocks(tensor, width * height, &failure) : 0;
 	float* floats = tensor && !isBlocked ? Floats(tensor, width * height, &failure) : 0;
 	if (!floats && !raw)
@@ -570,22 +640,8 @@ STRICT_EXPORT double GgufFile_Rows(double self, double path, double name, double
 	rows = malloc((1 + height) * sizeof(double));
 	storage = malloc(height * size + 1);
 	rows[0] = (double)height;
-	for (uint64_t row = 0; row < height; row++)
-	{
-		strict_packed* packed = (strict_packed*)(storage + row * size);
-		packed->count = (double)width;
-		packed->bits = (double)kept;
-		if (isBlocked)
-			Repacked(raw + row * (width / 256) * BlockBytes(type), kept, width, packed);
-		else if (kept == 8)
-			strict_quantized(packed, floats + row * width, width, 1);
-		for (uint64_t column = 0; floats && kept != 8 && column < width; column++)
-			if (kept == 16)
-				((uint16_t*)packed->data)[column] = strict_half(floats[row * width + column]);
-			else
-				((float*)packed->data)[column] = floats[row * width + column];
-		rows[1 + row] = strict_packed_result(packed);
-	}
+	Packing packing = { raw, floats, storage, rows, size, width, height, kept, type };
+	Parallel(Packed, &packing, (height + RowChunk - 1) / RowChunk);
 	free(floats);
 	free(raw);
 	return strict_numbers_result((strict_numbers*)rows);
@@ -666,7 +722,6 @@ static void* Quantized(uint32_t type, const float* values, uint64_t count)
 	return quantized;
 }
 
-enum { RowChunk = 16 };
 typedef struct
 {
 	unsigned char* rows;
@@ -843,7 +898,7 @@ STRICT_EXPORT double GgufFile_Picked(double self, double path, double name, doub
 	uint32_t type = tensor ? tensor->type : F32;
 	uint64_t width = tensor ? tensor->shape[0] : 0, height = tensor ? Elements(tensor) / width : 0;
 	if (tensor && (BlockBytes(type) == 0 || width % BlockNumbers(type) != 0))
-		failure = "OnlyF32F16BF16Q8_0Q5_1Q4_KQ5_KQ6_KAndIQ4_NLTensorsAreSupported";
+		failure = "GgufTensorTypeNotSupported";
 	failure = failure ? failure : Covered(tensor) ? 0 : "GgufTensorDataTruncated";
 	for (uint64_t index = 0; !failure && index < (uint64_t)chosen->count; index++)
 		if (!IsIndex(chosen->items[index], height))
