@@ -19,17 +19,31 @@ Remembered(coord Number, feature Numbers) SpectralHistory
 		return Error("Spectral coordinates must increase")
 	Appended(coord, feature)
 Appended(coord Number, feature Numbers) SpectralHistory
+	SpectralHistory((-1, 0), (1, 2, 3, 4), 2, SpectralFit(1, 0, 1), 3).Appended(0.5, (5, 6)).features is (1, 2, 3, 4, 5, 6)
 	let count = feature.Length is width then coords.Length else 0
 	let kept = count.Clamp(0, maximum - 1)
-	let times = coords.Slice(count - kept, kept)
-	let data = features.Slice((count - kept) * width, kept * width)
+	let dropped = count - kept
+	let times = kept is 0 then List(Number) else (dropped is 0 then coords else coords.Slice(dropped, kept))
+	let span = kept * width
+	let data = kept is 0 then List(Number) else (dropped is 0 then features else features.Slice(dropped * width, span))
 	SpectralHistory(times + coord, data + feature, feature.Length, fit, maximum)
 Predicted(coord Number) Numbers
 	Pair.Predicted(1) is (5, 6)
+	SpectralHistory((-1, 0, 1), (1, 2, 3, 4, 5, 6), 2, SpectralFit(1, 0, 1), 3).Predicted(2) is (7, 8)
 	if Ready is false
 		return Error("Spectral history is not ready")
 	let weights = fit.Weights(coords, coord)
-	let count = coords.Length
+	if coords.Length <= 4
+		let padded = weights + (0, 0, 0, 0)
+		return Combined(features, width, padded(0), padded(1), padded(2), padded(3))
 	let data = features
 	for width
-		Softmax.Weighted(weights, 0, count, data, index, width)
+		Softmax.Weighted(weights, 0, coords.Length, data, index, width)
+Combined(data Numbers, span Number, first Number, second Number, third Number, fourth Number) Numbers
+	Combined((1, 2, 3, 4, 5, 6), 2, 0.5, 0.5, 1, 0) is (7, 9)
+	let secondOffset = second is 0 then 0 else span
+	let thirdOffset = third is 0 then 0 else span * 2
+	let fourthOffset = fourth is 0 then 0 else span * 3
+	for span
+		let pair = data(index) * first + data(secondOffset + index) * second
+		pair + data(thirdOffset + index) * third + data(fourthOffset + index) * fourth

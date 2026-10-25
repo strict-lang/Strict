@@ -1,0 +1,55 @@
+has function MlirFunction
+has position Number
+constant WithinLoad = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 10, "within")
+constant InputRead = InstructionEntry(InstructionType.IndexCall, "input", (11, 10, -1))
+constant Scaled = InstructionEntry.Binary(InstructionType.Multiply, (9, 11, 12))
+constant Written = InstructionEntry.Named(InstructionType.InvokeWriteToList, 12, "forResult")
+constant Tail = (WithinLoad, InputRead, Scaled, Written) + MlirGroups.Normed.instructions.Slice(14, 3)
+constant SampleMethod = MethodEntry(MlirGroups.Normed, instructions = MlirGroups.AlignedCode.Slice(0, 13) + Tail)
+constant Sample = MlirGroupBatched(MlirFunction(MlirGroups.Aligning.function, method = SampleMethod, Float = "f32", Guarded = 2, Group = 11), 2)
+constant Guard = ("  ^quadEntry:", "    %batchZero = arith.constant 0 : i64", "    %quadShift = arith.constant 2 : i64", "    %batchActive = arith.constant 4 : i64", "    %quadStep = arith.shli %lanes, %quadShift : i64", "    %quadRest = arith.remui %group, %quadStep : i64", "    %isQuad = arith.cmpi eq, %quadRest, %batchZero : i64", "    cf.cond_br %isQuad, ^quadHead, ^body(%atFirst : i64)")
+constant HeadStart = ("  ^quadHead:", "    %quadHead_at = arith.addi %atFirst, %batchZero : i64", "    cf.br ^quadHead_body")
+constant ChunkHeader = ("    %quadOffset = arith.shli %lane, %quadShift : i64", "    %quadFirst = arith.addi %groupStart, %quadOffset : i64", "    cf.br ^quadChunk(%quadFirst : i64)", "  ^quadChunk(%batchFirst: i64):")
+constant LoopBack = ("    %quadNext = arith.addi %batchFirst, %quadStep : i64", "    %quadMore = arith.cmpi slt, %quadNext, %groupEnd : i64", "    cf.cond_br %quadMore, ^quadChunk(%quadNext : i64), ^exit")
+IsUsed Boolean
+	Sample.IsUsed
+	MlirGroupBatched(MlirBatched.Single.function, 2).IsUsed is false
+	if (function.Group < 0) or (function.Guarded is not position) or (function.Float is not "f32")
+		return false
+	let check = MlirBatchCheck(function, position)
+	let collecting = MlirLoops(function, position).IsCollecting and (MlirLayout(function).Packed(position) is in (0, 17))
+	let target = function.method.instructions(function.Group).payload(0)
+	let unchained = MlirFeeding(function, function.Group).IsFeeding(function.Group, target) is false
+	collecting and (check.Reads.Length > 0) and (check.Reads.First > function.Group) and unchained and check.IsSafe
+Body Texts
+	Text.Combine(MlirDevice(Sample.function, 2, 1).Kernel).IndexOf("@strict_device_cached_four") > 0
+	Text.Combine(MlirDevice(Sample.function, 2, 1).Kernel).IndexOf("@strict_device_cached_stored") > 0
+	let reads = MlirBatchReads(function, position)
+	let loaded = Phase("quadLoad", "quadLoaded", true) + "  ^quadLoaded:" + reads.Loaded
+	let computed = Phase("quadCompute", "quadStored", false) + "  ^quadStored:" + reads.Stored
+	Guard + Head + ChunkHeader + loaded + computed + LoopBack
+Head Texts
+	let groupCall = MlirDeviceStatements(function, function.Group)
+	let target = "%r" + function.method.instructions(function.Group).payload(0)
+	let saved = MlirGrouped(function, function.Group).Saved(target, "%groupMemo", "q")
+	let before = MlirDevice(function, position).Emitted(position + 1, function.Group)
+	let body = PlainStarted + before + groupCall.Labeled + groupCall.Emitted + saved
+	HeadStart + MlirBatched(function, position).Computed(body, "quadHead")
+Phase(label Text, done Text, loading Boolean) Texts
+	let batched = MlirBatched(function, position)
+	let entry = "    cf.br ^" + label + "(%batchFirst, %batchZero : i64, i64)"
+	let header = "  ^" + label + "(%" + label + "_at: i64, %" + label + "_batchIndex: i64):"
+	let body = batched.Computed(PlainStarted + Emitted(loading), label)
+	let next = batched.Advanced(label, label + "_batchIndex", label + "_at", done)
+	(entry, header, "    cf.br ^" + label + "_body") + body + next
+Emitted(loading Boolean) Texts
+	mutable lines = List(Mutable(Text))
+	let reads = MlirBatchReads(function, position)
+	let target = "%r" + function.method.instructions(function.Group).payload(0)
+	let groupRead = loading then List(Text) else MlirGrouped(function, function.Group).Saved("%groupMemo", target, "m")
+	for Range(position + 1, function.method.LoopEndOf(position))
+		let step = loading then reads.Prefetched(value) else reads.Computed(value)
+		lines = lines + (value is function.Group then groupRead else step)
+	lines
+PlainStarted Texts
+	MlirDevice(MlirFunction(function, Group = -1), position).Started

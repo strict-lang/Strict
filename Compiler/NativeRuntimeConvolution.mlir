@@ -196,7 +196,7 @@
   // `Convolved.Summed` of channels a multiple of 32: a block of 8 warps takes 128 pixels by 128 outputs over the 9 taps
   // in stages of 32 numbers (the stage of a tap never crosses into the next), the weights like the right of
   // strict_device_product_tiles; the output tiles of the same pixels lie next to each other
-  func.func private @strict_device_convolution_run(%result: !llvm.ptr, %wide: i1, %values: !llvm.ptr, %count: i64, %bits: i64, %affine: !llvm.ptr, %affineCount: i64, %affineBits: i64, %weights: !llvm.ptr, %weightsCount: i64, %weightsBits: i64, %shape: vector<6xf64>) attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_convolution_run(%result: !llvm.ptr, %results: i64, %values: !llvm.ptr, %count: i64, %bits: i64, %affine: !llvm.ptr, %affineCount: i64, %affineBits: i64, %weights: !llvm.ptr, %weightsCount: i64, %weightsBits: i64, %shape: vector<6xf64>) attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -350,22 +350,21 @@
     %pixel = arith.select %isGridPixel, %outputPixel, %pixels : i64
     %output = arith.addi %outputFirst, %columnLocal64 : i64
     %value = llvm.extractelement %sums[%slot : i32] : vector<64xf32>
-    func.call @strict_device_products_written(%result, %wide, %value, %none, %pixel, %output, %pixels, %outputs) : (!llvm.ptr, i1, f32, i64, i64, i64, i64, i64) -> ()
+    func.call @strict_device_products_written(%result, %results, %value, %none, %pixel, %output, %pixels, %outputs) : (!llvm.ptr, i64, f32, i64, i64, i64, i64, i64) -> ()
     %slotNext = arith.addi %slot, %c1 : i32
     llvm.br ^write(%slotNext : i32) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
   ^exit:
     return
   }
   llvm.func @strict_device_convolution(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %affine: !llvm.ptr, %affineCount: i64, %affineBits: i64, %weights: !llvm.ptr, %weightsCount: i64, %weightsBits: i64, %height: f64, %width: f64, %channels: f64, %outputs: f64, %swish: f64, %factor: f64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>, nvvm.minctasm = 2 : i32} {
-    %wide = llvm.mlir.constant(true) : i1
+    %results = llvm.mlir.constant(64 : i64) : i64
     %shape = func.call @strict_device_convolution_shape(%height, %width, %channels, %outputs, %swish, %factor) : (f64, f64, f64, f64, f64, f64) -> vector<6xf64>
-    func.call @strict_device_convolution_run(%result, %wide, %values, %valuesCount, %valuesBits, %affine, %affineCount, %affineBits, %weights, %weightsCount, %weightsBits, %shape) : (!llvm.ptr, i1, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, vector<6xf64>) -> ()
+    func.call @strict_device_convolution_run(%result, %results, %values, %valuesCount, %valuesBits, %affine, %affineCount, %affineBits, %weights, %weightsCount, %weightsBits, %shape) : (!llvm.ptr, i64, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, vector<6xf64>) -> ()
     llvm.return
   }
-  llvm.func @strict_device_convolutions(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %affine: !llvm.ptr, %affineCount: i64, %affineBits: i64, %weights: !llvm.ptr, %weightsCount: i64, %weightsBits: i64, %height: f64, %width: f64, %channels: f64, %outputs: f64, %swish: f64, %factor: f64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>, nvvm.minctasm = 2 : i32} {
-    %wide = llvm.mlir.constant(false) : i1
+  llvm.func @strict_device_convolutions(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %affine: !llvm.ptr, %affineCount: i64, %affineBits: i64, %weights: !llvm.ptr, %weightsCount: i64, %weightsBits: i64, %height: f64, %width: f64, %channels: f64, %outputs: f64, %swish: f64, %factor: f64, %results: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>, nvvm.minctasm = 2 : i32} {
     %shape = func.call @strict_device_convolution_shape(%height, %width, %channels, %outputs, %swish, %factor) : (f64, f64, f64, f64, f64, f64) -> vector<6xf64>
-    func.call @strict_device_convolution_run(%result, %wide, %values, %valuesCount, %valuesBits, %affine, %affineCount, %affineBits, %weights, %weightsCount, %weightsBits, %shape) : (!llvm.ptr, i1, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, vector<6xf64>) -> ()
+    func.call @strict_device_convolution_run(%result, %results, %values, %valuesCount, %valuesBits, %affine, %affineCount, %affineBits, %weights, %weightsCount, %weightsBits, %shape) : (!llvm.ptr, i64, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, vector<6xf64>) -> ()
     llvm.return
   }
   func.func private @strict_device_convolution_shape(%height: f64, %width: f64, %channels: f64, %outputs: f64, %swish: f64, %factor: f64) -> vector<6xf64> attributes {llvm.passthrough = ["alwaysinline"]} {

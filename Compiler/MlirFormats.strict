@@ -1,12 +1,20 @@
 has function MlirFunction
 has position Number
+constant Sample = MlirFormats(MlirFunction(MlirBiased.Biasing.function, Float = "f32", Guarded = 2), 2)
 Inputs Texts
 	for MlirGpuCheck(function, position).Free
 		if MlirDevice(function, position).IsList(value)
 			value
+Count Number
+	MlirFormats(MlirGuards.Shifted, 2).Count is 2
+	let total = Inputs.Length
+	total is 0 then 0 else (total is 1 then 2 else (total is 2 then 4 else 5))
 Bits(name Text, format Number) Number
-	let brain = (format is 1) or ((format is 2) and (name is Inputs.First))
-	brain then 17 else 32
+	Sample.Bits("biases", 3) is 17
+	Sample.Bits("input", 4) is 17 and Sample.Bits("biases", 4) is 32
+	let inputs = Inputs
+	let leading = ((format is 2) and (name is inputs.First)) or ((format is 4) and (name is not inputs.Last))
+	(format is 1) or leading or ((format is 3) and (name is inputs.Last)) then 17 else 32
 Given(name Text, format Number) Texts
 	let source = "%f_" + name
 	let target = "%v_" + name
@@ -19,11 +27,12 @@ Given(name Text, format Number) Texts
 	(data, count, MlirTyped.Integer.Constant(fixed, bits to Text), MlirTyped.Integer.Store(fixed, target + "_b"))
 Kernels Texts
 	mutable lines = List(Mutable(Text))
-	for 3
+	for Count
 		lines = lines + MlirDevice(function, position, index).Kernel
 	lines
 Names(name Text) Text
+	Sample.Names("K").EndsWith("Ksxf4\00")
 	mutable text = ""
-	for 3
+	for Count
 		text = text + name + "sxf" + index + "\00"
 	text

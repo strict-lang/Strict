@@ -333,6 +333,7 @@
     return %sum : f64
   }
   llvm.mlir.global internal @strict_device_partials() {addr_space = 3 : i32} : !llvm.array<32 x f64>
+  llvm.mlir.global internal @strict_device_partial_floats() {addr_space = 3 : i32} : !llvm.array<32 x f32>
   // the lanes strict_gpu_group_lanes launches per group: a warp up to 1024 numbers, wider groups 256 lanes
   func.func private @strict_device_group_lanes(%group: i64) -> i64 {
     %warp = arith.constant 32 : i64
@@ -370,12 +371,35 @@
     %isWarp = arith.cmpi sle, %lanes, %warpSize : i64
     cf.cond_br %isWarp, ^done(%warped : f32), ^block
   ^block:
-    %wide = arith.extf %warped : f32 to f64
-    %blocked = func.call @strict_device_block_sum(%wide, %lane, %lanes) : (f64, i64, i64) -> f64
-    %narrow = arith.truncf %blocked : f64 to f32
-    cf.br ^done(%narrow : f32)
+    %blocked = func.call @strict_device_lanes_blocked(%warped, %lane, %lanes) : (f32, i64, i64) -> f32
+    cf.br ^done(%blocked : f32)
   ^done(%sum: f32):
     return %sum : f32
+  }
+  func.func private @strict_device_lanes_blocked(%warped: f32, %lane: i64, %lanes: i64) -> f32 {
+    %none = arith.constant 0 : i64
+    %five = arith.constant 5 : i64
+    %thirtyOne = arith.constant 31 : i64
+    %zero = arith.constant 0.0 : f32
+    %partials = llvm.mlir.addressof @strict_device_partial_floats : !llvm.ptr<3>
+    %inWarp = arith.andi %lane, %thirtyOne : i64
+    %warp = arith.shrui %lane, %five : i64
+    %isFirst = arith.cmpi eq, %inWarp, %none : i64
+    cf.cond_br %isFirst, ^share, ^shared
+  ^share:
+    %slot = llvm.getelementptr %partials[0, %warp] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, !llvm.array<32 x f32>
+    llvm.store %warped, %slot : f32, !llvm.ptr<3>
+    cf.br ^shared
+  ^shared:
+    func.call @strict_device_barrier() : () -> ()
+    %warps = arith.shrui %lanes, %five : i64
+    %isPartial = arith.cmpi slt, %inWarp, %warps : i64
+    %partialSlot = llvm.getelementptr %partials[0, %inWarp] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, !llvm.array<32 x f32>
+    %partial = llvm.load %partialSlot : !llvm.ptr<3> -> f32
+    %mine = arith.select %isPartial, %partial, %zero : f32
+    %total = func.call @strict_device_sums(%mine) : (f32) -> f32
+    func.call @strict_device_barrier() : () -> ()
+    return %total : f32
   }
   // the first lane of each warp shares its warp sum, every warp adds them up, the second barrier keeps the next sum
   // from overwriting them early
@@ -2646,13 +2670,16 @@
     llvm.store %failure, %failed : i64, !llvm.ptr
     return %zero : f32
   ^check:
+    %brainBits = arith.constant 17 : i64
     %thirtyTwo = arith.constant 32 : i64
     %isSingle = arith.cmpi eq, %bits, %thirtyTwo : i64
+    %isBrain = arith.cmpi eq, %bits, %brainBits : i64
+    %isVectorBits = arith.ori %isSingle, %isBrain : i1
     %rest = arith.andi %count, %three : i64
     %whole = arith.cmpi eq, %rest, %none : i64
     %startRest = arith.andi %start, %three : i64
     %startAligned = arith.cmpi eq, %startRest, %none : i64
-    %vectors = arith.andi %isSingle, %whole : i1
+    %vectors = arith.andi %isVectorBits, %whole : i1
     %fours = arith.andi %vectors, %startAligned : i1
     cf.cond_br %fours, ^fourStart, ^genericStart
   ^fourStart:
@@ -2668,8 +2695,17 @@
     %c2 = llvm.mlir.constant(2 : i32) : i32
     %c3 = llvm.mlir.constant(3 : i32) : i32
     %fourAt = arith.addi %start, %fourIndex : i64
+    cf.cond_br %isBrain, ^brainFour, ^singleFour
+  ^brainFour:
+    %brainSlot = llvm.getelementptr %data[%fourAt] : (!llvm.ptr, i64) -> !llvm.ptr, bf16
+    %brainFour = llvm.load %brainSlot {alignment = 8 : i64} : !llvm.ptr -> vector<4xbf16>
+    %fromBrains = arith.extf %brainFour : vector<4xbf16> to vector<4xf32>
+    cf.br ^fourLoaded(%fromBrains : vector<4xf32>)
+  ^singleFour:
     %slot = llvm.getelementptr %data[%fourAt] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    %four = llvm.load %slot {alignment = 16 : i64} : !llvm.ptr -> vector<4xf32>
+    %singleFour = llvm.load %slot {alignment = 16 : i64} : !llvm.ptr -> vector<4xf32>
+    cf.br ^fourLoaded(%singleFour : vector<4xf32>)
+  ^fourLoaded(%four: vector<4xf32>):
     %squared = arith.mulf %four, %four fastmath<contract> : vector<4xf32>
     %s0 = llvm.extractelement %squared[%c0 : i32] : vector<4xf32>
     %s1 = llvm.extractelement %squared[%c1 : i32] : vector<4xf32>

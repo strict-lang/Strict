@@ -18,7 +18,9 @@ Indexed Texts
 		return MlirDevice(function, position).Laned + Plain
 	let size = function.Load("%groupd", "%v_" + MlirGroups(function, position).Size(function.Group))
 	let memo = MlirDevice(function, position).Slot("%groupMemo")
-	(size, "    %group = arith.fptosi %groupd : " + function.Float + " to i64") + Lanes + memo + Looped
+	let target = MlirGroupBatched(function, position).IsUsed then "^quadEntry" else "^body(%atFirst : i64)"
+	let looped = (Looped.First, "    cf.cond_br %inside, " + target + ", ^exit")
+	(size, "    %group = arith.fptosi %groupd : " + function.Float + " to i64") + Lanes + memo + looped
 Launched Texts
 	Norming.Launched.Last is "    %t2gg = arith.fptosi %t2ggd : f64 to i64"
 	Doubling.Launched is ("    %t2gg = arith.constant 0 : i64")

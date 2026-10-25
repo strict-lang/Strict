@@ -111,11 +111,11 @@ IsFloating(position Number, entry InstructionEntry) Boolean
 	Chained.IsFloating(4, Chained.function.method.instructions(4)) is false
 	let kind = entry.kind
 	let isCompared = (kind > InstructionType.ArithmeticSeparator) and (kind < InstructionType.BinaryOperatorsSeparator)
-	if isCompared or (kind is in Unfloated)
+	if (position is function.Group) or isCompared or (kind is in Unfloated)
 		return false
 	let isCalculated = (kind > InstructionType.StoreSeparator) and (kind < InstructionType.ArithmeticSeparator)
-	let isFloor = (kind is InstructionType.Invoke) and (entry.texts(1) is "Floor")
-	(isCalculated or isFloor) then IsFloated(position, LoadReuse(function.method.instructions).Written(entry)) else true
+	let isWhole = (kind is InstructionType.Invoke) and (entry.texts(1) is in ("Floor", "Length"))
+	(isCalculated or isWhole) then IsFloated(position, LoadReuse(function.method.instructions).Written(entry)) else true
 IsFloatedVariable(position Number, name Text) Boolean
 	Chained.IsFloatedVariable(2, "offset") is false
 	Summing.IsFloatedVariable(10, "sum")

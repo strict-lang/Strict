@@ -7,7 +7,7 @@ constant Shifts = MlirGuards(Shifted, 2)
 constant Reading = MlirGuards(Shifted, 6)
 constant Flooring = InstructionEntry.Invoke(3, ("Strict/Number", "Floor", "Strict/Number"), List(Number), 2)
 constant Calculated = (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply, InstructionType.Modulo)
-constant ExactSlots = "(dense<0> : tensor<6xi64>) : !llvm.array<6 x i64>"
+constant ExactSlots = "(dense<0> : tensor<8xi64>) : !llvm.array<8 x i64>"
 constant PlainSlots = "(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>"
 Origins(position Number, register Number) Texts
 	Shifts.Origins(6, 3) is ("offset")
@@ -130,14 +130,14 @@ Kernel Texts
 	MlirGuards(MlirFunction(Shifted, Float = "f64"), 2).Kernel.Length is 0
 	IsUseful then MlirDevice(function, at).Kernel + MlirFormats(function, at).Kernels else List(Text)
 Named Texts
-	Shifts.Named.Last.EndsWith("(dense<0> : tensor<6xi64>) : !llvm.array<6 x i64>")
+	Shifts.Named.Last.EndsWith("(dense<0> : tensor<8xi64>) : !llvm.array<8 x i64>")
 	MlirGuards(MlirFunction(Shifted, Float = "f64"), 2).Named.Last.EndsWith("!llvm.array<2 x i64>")
 	let name = MlirDevice(MlirFunction(function, Float = "f64", Guarded = -1), at).Name
 	let isExact = Mask > 0
-	let formatted = isExact then MlirFormats(function, at).Names(name) else ""
+	let formats = MlirFormats(function, at)
 	let first = MlirDoubles(function, at).Failing then "" else name
-	let names = first + "\00" + name + "s\00" + (isExact then name + "sx\00" else "") + formatted
-	let size = first.Length + (isExact then name.Length * 5 + 21 else name.Length + 3)
-	let cache = isExact then ExactSlots else PlainSlots
+	let names = first + "\00" + name + "s\00" + (isExact then name + "sx\00" + formats.Names(name) else "")
+	let extra = isExact then name.Length + 3 + formats.Count * (name.Length + 5) else 0
+	let size = first.Length + name.Length + 3 + extra
 	let text = "  llvm.mlir.global internal constant @k" + name + "(\"" + names + "\") : !llvm.array<" + size + " x i8>"
-	(text, "  llvm.mlir.global internal @f" + name + cache)
+	(text, "  llvm.mlir.global internal @f" + name + (isExact then ExactSlots else PlainSlots))

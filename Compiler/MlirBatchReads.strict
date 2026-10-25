@@ -42,6 +42,8 @@ LoadedRead(at Number) Texts
 	let arguments = temp + "Count, %indices" + at + ", %cached" + at + ", %batchActive)"
 	(data, bits, count, call + arguments + " : (!llvm.ptr, !llvm.ptr, i64, i64, !llvm.ptr, !llvm.ptr, i64) -> ()")
 Computed(at Number) Texts
+	MlirBatchReads(MlirBatched.Single.function, 2).Computed(6).Length is 0
+	MlirBatchReads(MlirBatched.Single.function, 2).Computed(8).Length > 0
 	let entry = function.method.instructions(at)
 	if function.Float is "f64"
 		return MlirDeviceStatements(function, at).Emitted
@@ -49,7 +51,13 @@ Computed(at Number) Texts
 		return Cached(at)
 	if entry.kind is InstructionType.InvokeWriteToList
 		return Collected(at)
-	MlirDeviceStatements(function, at).Emitted
+	IsComputed(at, entry) then MlirDeviceStatements(function, at).Emitted else List(Text)
+IsComputed(at Number, entry InstructionEntry) Boolean
+	let feeding = MlirFeeding(function, at)
+	if entry.kind is in (InstructionType.StoreRegisterToVariable, InstructionType.StoreConstantToVariable)
+		return feeding.IsFloatedVariable(at, entry.texts.Last)
+	let written = LoadReuse(function.method.instructions).Written(entry)
+	(written < 0) or feeding.IsFloated(at, written)
 Cached(at Number) Texts
 	let temp = "%d" + at
 	let pointer = "    " + temp + "Pointer = llvm.getelementptr %cached" + at + "[%batchIndex]"

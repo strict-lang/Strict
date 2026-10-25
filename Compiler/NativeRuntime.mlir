@@ -10342,7 +10342,12 @@
     %threads = arith.select %tiling, %tileBlock, %laneThreads : i64
     cf.cond_br %missing, ^release, ^chosen
   ^chosen:
-    %floatBits = func.call @strict_gpu_stored(%count, %packed) : (i64, i64) -> i64
+    %unpackedResult = arith.cmpi eq, %packed, %none : i64
+    %allBrainInputs = func.call @strict_gpu_all_brains(%slots, %kind, %valueCount, %mask, %rows) : (!llvm.ptr, i64, i64, i64, i64) -> i1
+    %autoBrainResult = arith.andi %unpackedResult, %allBrainInputs : i1
+    %brainResultBits = arith.constant 17 : i64
+    %effectivePacked = arith.select %autoBrainResult, %brainResultBits, %packed : i64
+    %floatBits = func.call @strict_gpu_stored(%count, %effectivePacked) : (i64, i64) -> i64
     %doubleBits = arith.constant 64 : i64
     %byteOrFloat = arith.select %isByteResult, %byteBits, %floatBits : i64
     %laneOrByte = arith.select %isLaneResult, %laneBits, %byteOrFloat : i64
@@ -12745,6 +12750,51 @@
     llvm.store %combined, %narrowSlot : i64, !llvm.ptr
     return
   }
+  func.func private @strict_gpu_all_brains(%slots: !llvm.ptr, %kind: i64, %count: i64, %mask: i64, %rows: i64) -> i1 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %three = arith.constant 3 : i64
+    %six = arith.constant 6 : i64
+    %brainBits = arith.constant 17 : i64
+    %true = arith.constant true
+    %false = arith.constant false
+    %isListSource = arith.cmpi eq, %kind, %one : i64
+    %isRowsSource = arith.cmpi eq, %kind, %two : i64
+    %sourceBitsSlot = llvm.getelementptr %slots[5] : (!llvm.ptr) -> !llvm.ptr, i64
+    %sourceBits = llvm.load %sourceBitsSlot : !llvm.ptr -> i64
+    %sourceBrain = arith.cmpi eq, %sourceBits, %brainBits : i64
+    %startBrains = arith.select %isListSource, %sourceBrain, %true : i1
+    %notRowsSource = arith.xori %isRowsSource, %true : i1
+    %initialBrains = arith.andi %startBrains, %notRowsSource : i1
+    cf.br ^next(%none, %six, %initialBrains, %isListSource : i64, i64, i1, i1)
+  ^next(%index: i64, %slotIndex: i64, %brains: i1, %seen: i1):
+    %more = arith.cmpi ult, %index, %count : i64
+    cf.cond_br %more, ^value, ^done
+  ^value:
+    %shifted = arith.shrui %mask, %index : i64
+    %isList = arith.trunci %shifted : i64 to i1
+    %after = arith.addi %index, %one : i64
+    cf.cond_br %isList, ^list, ^number
+  ^number:
+    %afterNumber = arith.addi %slotIndex, %one : i64
+    cf.br ^next(%after, %afterNumber, %brains, %seen : i64, i64, i1, i1)
+  ^list:
+    %rowsShifted = arith.shrui %rows, %index : i64
+    %isRows = arith.trunci %rowsShifted : i64 to i1
+    %notRows = arith.xori %isRows, %true : i1
+    %bitsIndex = arith.addi %slotIndex, %two : i64
+    %bitsSlot = llvm.getelementptr %slots[%bitsIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %bits = llvm.load %bitsSlot : !llvm.ptr -> i64
+    %isBrain = arith.cmpi eq, %bits, %brainBits : i64
+    %plainBrain = arith.andi %isBrain, %notRows : i1
+    %nextBrains = arith.andi %brains, %plainBrain : i1
+    %afterList = arith.addi %slotIndex, %three : i64
+    cf.br ^next(%after, %afterList, %nextBrains, %true : i64, i64, i1, i1)
+  ^done:
+    %allBrains = arith.andi %seen, %brains : i1
+    return %allBrains : i1
+  }
   // the format of a list of count numbers a kernel computes on the GPU and keeps there (packed 17 when it can write
   // bfloat16): bfloat16 from 2^20 numbers on, smaller lists save next to nothing and keep the 32 bit precision
   func.func private @strict_gpu_stored(%count: i64, %packed: i64) -> i64 {
@@ -13343,9 +13393,9 @@
     %name = llvm.select %tiled, %tileName, %warpName : i1, !llvm.ptr
     %slotPair = llvm.select %tiled, %tileSlot, %warpSlot : i1, !llvm.ptr
     %listsMask = arith.constant 3 : i64
-    %integers = arith.constant -1 : i64
+    %brainPacked = arith.constant 17 : i64
     %noGuards2 = arith.constant 0 : i64
-    %result = func.call @strict_gpu_run(%ptx, %name, %slotPair, %count, %zero, %none, %slots, %fourteen, %listsMask, %none, %none, %lanes, %none, %integers, %noGuards2) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
+    %result = func.call @strict_gpu_run(%ptx, %name, %slotPair, %count, %zero, %none, %slots, %fourteen, %listsMask, %none, %none, %lanes, %none, %brainPacked, %noGuards2) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
     return %result : f64
   ^unable:
     return %zero : f64
@@ -13719,9 +13769,9 @@
     %slotPair = llvm.mlir.addressof @strict_gpu_convolution_slot : !llvm.ptr
     %listsMask = arith.constant 7 : i64
     %lanes = arith.constant -2048 : i64
-    %integers = arith.constant -1 : i64
+    %brainPacked = arith.constant 17 : i64
     %noGuards4 = arith.constant 0 : i64
-    %result = func.call @strict_gpu_run(%ptx, %name, %slotPair, %count, %zero, %none, %slots, %slotCount, %listsMask, %none, %none, %lanes, %none, %integers, %noGuards4) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
+    %result = func.call @strict_gpu_run(%ptx, %name, %slotPair, %count, %zero, %none, %slots, %slotCount, %listsMask, %none, %none, %lanes, %none, %brainPacked, %noGuards4) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
     return %result : f64
   ^unable:
     return %zero : f64
@@ -14251,13 +14301,15 @@
     %one = arith.constant 1 : i64
     %two = arith.constant 2 : i64
     %three = arith.constant 3 : i64
+    %four = arith.constant 4 : i64
+    %five = arith.constant 5 : i64
     %six = arith.constant 6 : i64
     %brainBits = arith.constant 17 : i64
     %singleBits = arith.constant 32 : i64
     %true = arith.constant true
     %false = arith.constant false
-    cf.cond_br %enabled, ^next(%none, %six, %true, %true, %true, %false : i64, i64, i1, i1, i1, i1), ^generic
-  ^next(%index: i64, %slotIndex: i64, %singles: i1, %brains: i1, %mixed: i1, %seen: i1):
+    cf.cond_br %enabled, ^next(%none, %six, %true, %true, %true, %false, %false, %false : i64, i64, i1, i1, i1, i1, i1, i1), ^generic
+  ^next(%index: i64, %slotIndex: i64, %singles: i1, %brains: i1, %mixed: i1, %lastBrain: i1, %lastSingle: i1, %seen: i1):
     %more = arith.cmpi ult, %index, %count : i64
     cf.cond_br %more, ^value, ^choose
   ^value:
@@ -14267,7 +14319,7 @@
     cf.cond_br %isList, ^list, ^number
   ^number:
     %afterNumber = arith.addi %slotIndex, %one : i64
-    cf.br ^next(%after, %afterNumber, %singles, %brains, %mixed, %seen : i64, i64, i1, i1, i1, i1)
+    cf.br ^next(%after, %afterNumber, %singles, %brains, %mixed, %lastBrain, %lastSingle, %seen : i64, i64, i1, i1, i1, i1, i1, i1)
   ^list:
     %bitsIndex = arith.addi %slotIndex, %two : i64
     %bitsSlot = llvm.getelementptr %slots[%bitsIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
@@ -14275,13 +14327,19 @@
     %single = arith.cmpi eq, %bits, %singleBits : i64
     %brain = arith.cmpi eq, %bits, %brainBits : i64
     %mix = arith.select %seen, %single, %brain : i1
+    %seenSingles = arith.andi %seen, %singles : i1
+    %seenBrains = arith.andi %seen, %brains : i1
+    %nextLastBrain = arith.andi %seenSingles, %brain : i1
+    %nextLastSingle = arith.andi %seenBrains, %single : i1
     %allSingles = arith.andi %singles, %single : i1
     %allBrains = arith.andi %brains, %brain : i1
     %allMixed = arith.andi %mixed, %mix : i1
     %afterList = arith.addi %slotIndex, %three : i64
-    cf.br ^next(%after, %afterList, %allSingles, %allBrains, %allMixed, %true : i64, i64, i1, i1, i1, i1)
+    cf.br ^next(%after, %afterList, %allSingles, %allBrains, %allMixed, %nextLastBrain, %nextLastSingle, %true : i64, i64, i1, i1, i1, i1, i1, i1)
   ^choose:
-    %mixedIndex = arith.select %mixed, %three, %none : i64
+    %lastSingleIndex = arith.select %lastSingle, %five, %none : i64
+    %lastBrainIndex = arith.select %lastBrain, %four, %lastSingleIndex : i64
+    %mixedIndex = arith.select %mixed, %three, %lastBrainIndex : i64
     %brainIndex = arith.select %brains, %two, %mixedIndex : i64
     %singleIndex = arith.select %singles, %one, %brainIndex : i64
     %chosen = arith.select %seen, %singleIndex, %none : i64

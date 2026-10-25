@@ -1,4 +1,4 @@
-constant Names = ("%read", "^x", "%x", "%d", "%t", "^d", "^bb", "^body", "%at", "%narrow", "%index", "%counted", "%ranged", "%start", "%batchIndex")
+constant Names = ("%read", "^x", "%x", "%d", "%t", "^d", "^bb", "^body", "%at", "%narrow", "%index", "%counted", "%ranged", "%start", "%batchIndex", "%groupRemainder")
 constant Loading = ("  ^loadStart:", "    cf.br ^load(%batchFirst, %batchZero : i64, i64)", "  ^load(%at: i64, %batchIndex: i64):", "    %loadLive = arith.cmpi ult, %batchIndex, %batchActive : i64", "    cf.cond_br %loadLive, ^body, ^loadNextBlock")
 constant Computing = ("    cf.br ^compute(%batchFirst, %batchZero : i64, i64)", "  ^compute(%compute_at: i64, %compute_batchIndex: i64):", "    %computeLive = arith.cmpi ult, %compute_batchIndex, %batchActive : i64", "    cf.cond_br %computeLive, ^compute_body, ^computeNextBlock")
 has function MlirFunction
@@ -17,7 +17,7 @@ IsUsed Boolean
 	MlirBatchCheck(function, position).IsUsed
 Slots Texts
 	Text.Combine(Single.Kernel).IndexOf("@strict_device_cached_four") > 0
-	if IsUsed is false
+	if (IsUsed or MlirGroupBatched(function, position).IsUsed) is false
 		return List(Text)
 	let batch = List(Text) + MlirTyped.Integer.Constant("%batchSize", "4")
 	function.Float is "f32" then batch + MlirBatchReads(function, position).Slots else batch
@@ -26,8 +26,10 @@ Indexed Texts
 	IsUsed then Setup else MlirGrouped(function, position).Indexed
 Body Texts
 	let device = MlirDevice(function, position)
+	let grouped = MlirGroupBatched(function, position)
 	if IsUsed is false
-		return device.Started + device.Emitted(position + 1, function.method.LoopEndOf(position))
+		let scalar = device.Started + device.Emitted(position + 1, function.method.LoopEndOf(position))
+		return grouped.IsUsed then grouped.Body + scalar else scalar
 	let loaded = function.Float is "f32" then Prefetched else List(Text) + "  ^loadStart:"
 	let body = device.Started + Emitted(false)
 	loaded + "    cf.br ^computeEntry" + "  ^computeEntry:" + Computing + Computed(body)

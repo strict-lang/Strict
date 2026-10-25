@@ -30,7 +30,7 @@ IsAllowed(at Number, entry InstructionEntry) Boolean
 	if entry.kind is InstructionType.IndexCall
 		return IsRead(at, entry)
 	if entry.kind is InstructionType.Invoke
-		return (at > Reads.Last) or (entry.texts(1) is in ("Floor", "Length"))
+		return (at is function.Group) or (at > Reads.Last) or (entry.texts(1) is in ("Floor", "Length"))
 	let moved = entry.kind is in MlirGpuCheck.Moves
 	let calculated = (entry.kind > InstructionType.StoreSeparator) and (entry.kind < InstructionType.ArithmeticSeparator)
 	moved or calculated or (entry.kind is in (InstructionType.CheckError, InstructionType.InvokeWriteToList))
