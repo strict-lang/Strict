@@ -53,7 +53,7 @@ jobs:
       - name: Tests on the Strict VM, one process per file on all cores
         run: |
           for folder in $FOLDERS; do ls "$folder"/*.strict; done | awk -v part="${PART%/*}" -v parts="${PART#*/}" '(NR - 1) % parts == part' > files.txt
-          xargs -P "$(nproc)" -I {} sh -c './strict test "$1" > "$1.log" 2>&1 || { grep -v "^Test passed" "$1.log"; exit 255; }' _ {} < files.txt
+          xargs -P "$(nproc)" -I {} sh -c './strict test "$1" > "$1.log" 2>&1 || { grep -v "^Test passed" "$1.log"; exit 1; }' _ {} < files.txt
       - name: Native builds and tests
         if: env.NATIVE != ''
         run: |
@@ -99,7 +99,7 @@ jobs:
       - name: Tests on the Strict VM, one process per file on all cores
         run: |
           for folder in $FOLDERS; do ls "$folder"/*.strict; done > files.txt
-          xargs -P "$(nproc)" -I {} sh -c './strict.exe test "$1" > "$1.log" 2>&1 || { grep -v "^Test passed" "$1.log"; exit 255; }' _ {} < files.txt
+          xargs -P "$(nproc)" -I {} sh -c './strict.exe test "$1" > "$1.log" 2>&1 || { grep -v "^Test passed" "$1.log"; exit 1; }' _ {} < files.txt
       - name: Native builds and tests
         run: |
           for folder in $NATIVE; do

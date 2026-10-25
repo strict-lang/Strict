@@ -13,14 +13,13 @@ Loopback Number
 	if client is Error
 		return 2
 	let accepted = Socket.Accept(server)
-	if accepted is Error
-		return 3
+	let result = accepted is Error then 3 else Exchanged(client, accepted)
+	Socket.Close(client)
+	Socket.Close(server)
+	result
+Exchanged(client Number, accepted Number) Number
 	if Socket.Send(client, (1, 2, 3)) is not 3
 		return 4
 	let received = Socket.Receive(accepted, 3)
-	if received is not (1, 2, 3)
-		return 5
-	Socket.Close(client)
 	Socket.Close(accepted)
-	Socket.Close(server)
-	0
+	received is (1, 2, 3) then 0 else 5

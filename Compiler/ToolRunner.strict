@@ -1,4 +1,7 @@
 has name Text
+constant IsWindows = Process.OperatingSystem is "Windows"
+constant Echo = IsWindows then ToolRunner("cmd") else ToolRunner("echo")
+constant Echoed = IsWindows then "/c echo " else ""
 Executable Text
 	ToolRunner("noSuchStrictTool").Executable is ""
 	Process.Find(name).executable
@@ -7,11 +10,11 @@ IsAvailable Boolean
 	Process.Find(name).IsAvailable
 Execute(arguments Text) ProcessResult
 	ToolRunner("noSuchStrictTool").Execute("").Failed
-	ToolRunner("cmd").Execute("/c echo a").Output.IndexOf("\r") is -1
+	Echo.Execute(Echoed + "a").Output.IndexOf("\r") is -1
 	ExecuteAll(List(Text) + arguments).First
 ExecuteAll(arguments Texts) List(ProcessResult)
 	ToolRunner("noSuchStrictTool").ExecuteAll(("", "")).Last.Failed
-	ToolRunner("cmd").ExecuteAll(("/c echo a", "/c echo b")).Last.Output is "b\n"
+	Echo.ExecuteAll((Echoed + "a", Echoed + "b")).Last.Output is "b\n"
 	for Process.RunTools(name, arguments)
 		ProcessResult(value.exitCode, value.Output.Replace("\r", ""), value.error.Replace("\r", ""))
 IsCrash(exitCode Number) Boolean

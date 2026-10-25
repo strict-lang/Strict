@@ -197,6 +197,7 @@ STRICT_EXPORT double Socket_Pending(double self, double socket)
 
 STRICT_EXPORT double Socket_Close(double self, double socket)
 {
-	close_socket((int)socket);
+	if ((int)socket > 0)
+		close_socket((int)socket);
 	return 0;
 }

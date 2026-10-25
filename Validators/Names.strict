@@ -1,6 +1,6 @@
 has lines Texts
 constant Looping = Names(("Filled(value Number) Numbers", "\tfor 3", "\t\tvalue"))
-constant Sample = Names(("has from Text", "constant Number = 3", "Listed Number", "\tlet constant = 1", "\t1"))
+constant Sample = Names(("has from Text", "constant Number = 3", "ListNumbers Number", "\tlet constant = 1", "\t1"))
 Issues ValidationIssues
 	Sample.Issues.Length is 3
 	Names(("has text", "Run(count Number) Number", "\tlet total = count", "\ttotal")).Issues.Length is 0
@@ -30,17 +30,19 @@ NameIssues(line Text, name Text, isMethod Boolean, number Number) ValidationIssu
 		issues.Add(ValidationIssue("LoopNameMustNotBeDeclared", name, number))
 	issues
 IsListPrefixed(line Text, name Text) Boolean
-	Sample.IsListPrefixed("Listed Number", "Listed")
+	Sample.IsListPrefixed("ListNumbers Number", "ListNumbers")
+	Sample.IsListPrefixed("Listen(port Number) Number", "Listen") is false
 	Sample.IsListPrefixed("\tlet listed = 1", "listed") is false
 	let isTyped = TypeShape(lines).IsMethodHeader(line) or line.StartsWith("has ") or line.StartsWith("mutable ")
 	let isListed = (name.StartsWith("List") or name.StartsWith("list")) and (name.Length > 4)
-	isTyped and isListed and (name.Substring(4, 1) is not "(")
+	let next = isListed then name.Substring(4, 1) else ""
+	isTyped and isListed and (next.Upper is next) and (next is not "(")
 IsMisnamedConstant(line Text, name Text) Boolean
 	Sample.IsMisnamedConstant("constant Number = 3", "Number") is false
-	Sample.IsMisnamedConstant("constant Listed = 1", "Listed")
+	Sample.IsMisnamedConstant("constant ListNumbers = 1", "ListNumbers")
 	line.StartsWith("constant ") and IsMethodName(name)
 IsMethodName(name Text) Boolean
-	Sample.IsMethodName("Listed")
+	Sample.IsMethodName("ListNumbers")
 	Sample.IsMethodName("Number") is false
 	let shape = TypeShape(lines)
 	for lines

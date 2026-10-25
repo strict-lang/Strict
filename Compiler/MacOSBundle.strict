@@ -34,7 +34,7 @@ Released Number
 	Directory.Exists("Compiler/output/Release/MacOS/App.app/Contents/Resources")
 	let app = Contents.Substring(0, Contents.Length - 9)
 	let folder = Release(logger, base).Parent + "/Release"
-	for (folder, folder + "/MacOS", app, Contents, Contents + "/Resources")
+	for (Release(logger, base).Parent, folder, folder + "/MacOS", app, Contents, Contents + "/Resources")
 		Directory.Create(value)
 	let refreshed = Release(logger, base).Refreshed(Contents + "/MacOS", Contents + "/Resources/Content", List(Text) + "")
 	refreshed is not 0 then refreshed else Completed(Release(logger, base).Icon)
