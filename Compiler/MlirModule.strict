@@ -5,6 +5,10 @@ has entries = 1
 constant Counters = MlirModule(List(TypeEntry) + TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry) + MethodEntry.CountingLoop), "Run")
 constant Pair = MlirModule(Counters.types + TypeEntry("Strict/Other", List(MemberEntry), List(MethodEntry) + MethodEntry.CountingLoop), "Run", List(Text), 2)
 constant NoFunctions = List(MlirFunction)
+constant Floor = MethodEntry("Floor", List(MemberEntry), "Strict/Number", List(InstructionEntry) + InstructionEntry.Return(0))
+constant FloorCall = InstructionEntry.Invoke(0, ("Strict/Degrees", "Floor", "Strict/Number"), List(Number), -1)
+constant Caller = TypeEntry("Strict/Caller", List(MemberEntry), MethodEntry("Run", List(MemberEntry), "None", FloorCall))
+constant Floored = MlirModule((Caller, MlirLayout.Degrees, TypeEntry("Strict/Number", List(MemberEntry), List(MethodEntry) + Floor)), "Run")
 constant NoRun = MlirModule(List(TypeEntry) + TypeEntry("Strict/Empty", List(MemberEntry), List(MethodEntry)), "Tests")
 Text Text
 	Counters.Text.StartsWith("module {")
@@ -34,6 +38,7 @@ Functions List(MlirFunction)
 	Counters.Functions.Length is 1
 	Pair.Functions.Length is 2
 	Pair.Text.IndexOf("@Other_Run_0(%self1)") > 0
+	Floored.Functions.Last.Symbol is "Number_Floor_0"
 	Reachable(Entries, Entries)
 Entries List(MlirFunction)
 	Pair.Entries.Last.Symbol is "Other_Run_0"
@@ -94,7 +99,7 @@ Called(function MlirFunction, position Number) List(MlirFunction)
 	let decoder = PayloadDecoder(entry)
 	if MlirCalls(function, position).NativeHelper(entry, decoder) is not ""
 		return List(MlirFunction)
-	let type = function.TypeOf(decoder.Text(1))
+	let type = MlirLayout(function).Owner(function.TypeOf(decoder.Text(1)), decoder.Text(2))
 	let callee = decoder.Callee(type)
 	let called = MlirFunction(types, type, callee, typeIndex = function.typeIndex)
 	(callee.instructions.Length > 0) or MlirForeign(called).IsForeign then NoFunctions + called else NoFunctions

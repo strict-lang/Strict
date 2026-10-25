@@ -13467,6 +13467,54 @@
   }
   llvm.mlir.global internal constant @strict_gpu_hadamard_name("strict_device_hadamard\00strict_device_hadamards\00") : !llvm.array<47 x i8>
   llvm.mlir.global internal @strict_gpu_hadamard_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  llvm.mlir.global internal constant @strict_gpu_sylvester_name("strict_device_sylvester\00strict_device_sylvesters\00") : !llvm.array<49 x i8>
+  llvm.mlir.global internal @strict_gpu_sylvester_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  // `Sylvester.Rotated` (the normalized Sylvester-Hadamard transform of every group of size flipped values) as one kernel
+  // with a block of 256 threads per 1024 values (group -4: a thread per 4 values), 0.0 (the loops run) unless size is a
+  // power of two from 32 to 1024 dividing the count
+  func.func private @strict_gpu_sylvester(%ptx: !llvm.ptr, %values: f64, %flips: f64, %size: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %three = arith.constant 3 : i64
+    %smallest = arith.constant 32 : i64
+    %largest = arith.constant 1024 : i64
+    %length = func.call @strict_list_length(%values) : (f64) -> f64
+    %count = arith.fptosi %length : f64 to i64
+    %flipsLength = func.call @strict_list_length(%flips) : (f64) -> f64
+    %flipsCount = arith.fptosi %flipsLength : f64 to i64
+    %group = arith.fptosi %size : f64 to i64
+    %isSmall = arith.cmpi sle, %group, %largest : i64
+    %isLarge = arith.cmpi sge, %group, %smallest : i64
+    %inRange = arith.andi %isSmall, %isLarge : i1
+    %divisor = arith.select %inRange, %group, %one : i64
+    %below = arith.subi %divisor, %one : i64
+    %shared = arith.andi %divisor, %below : i64
+    %isPower = arith.cmpi eq, %shared, %none : i64
+    %countRest = arith.remui %count, %divisor : i64
+    %countWhole = arith.cmpi eq, %countRest, %none : i64
+    %hasCount = arith.cmpi sgt, %count, %none : i64
+    %hasFlips = arith.cmpi sgt, %flipsCount, %none : i64
+    %sized = arith.andi %inRange, %isPower : i1
+    %filled = arith.andi %hasCount, %hasFlips : i1
+    %wholeFilled = arith.andi %countWhole, %filled : i1
+    %fits = arith.andi %sized, %wholeFilled : i1
+    cf.cond_br %fits, ^run, ^unable
+  ^run:
+    %slots = llvm.alloca %three x f64 : (i64) -> !llvm.ptr
+    llvm.store %values, %slots : f64, !llvm.ptr
+    %flipsSlot = llvm.getelementptr %slots[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %flips, %flipsSlot : f64, !llvm.ptr
+    %sizeSlot = llvm.getelementptr %slots[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %size, %sizeSlot : f64, !llvm.ptr
+    %name = llvm.mlir.addressof @strict_gpu_sylvester_name : !llvm.ptr
+    %slot = llvm.mlir.addressof @strict_gpu_sylvester_slot : !llvm.ptr
+    %quarters = arith.constant -4 : i64
+    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %count, %zero, %none, %slots, %three, %three, %none, %none, %one, %quarters, %none, %none) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
+    return %result : f64
+  ^unable:
+    return %zero : f64
+  }
   // `Convrot.Rotated` (the 4 radix-4 butterflies of every group of 256 values) as one kernel, a block per group, 0.0
   // when the length is no multiple of 256 or the GPU can not; of 32 or 16 bit numbers on the GPU it waits
   // (strict_gpu_rotations, in their format)

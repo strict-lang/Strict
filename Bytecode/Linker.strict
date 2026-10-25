@@ -11,6 +11,7 @@ constant Hello = Linker(".", TypeCodegen.Hello)
 constant Reading = TypeEntry("A", List(MemberEntry) + MemberEntry("b", "Strict/List(Byte)", List(InstructionEntry), false), List(MethodEntry))
 constant Parameters = TypeEntry("Strict/Bytecode/MethodEntry", List(MemberEntry) + MemberEntry("parameters", "Strict/List(MemberEntry)", List(InstructionEntry), false), List(MethodEntry))
 constant DictionaryCode = MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Invoke(0, ("Strict/Dictionary(Number, Text)", "Code", "Strict/Text"), List(Number), -1))
+constant Wrappers = (TypeEntry.CharacterEntry, TypeEntry("Strict/Dictionary(Text)", MemberEntry.NumbersMember, List(MethodEntry)))
 constant Natives = ("to", "not", "and", "or", "xor", "Exists", "ReadLines")
 Linked(entries List(TypeEntry), signatures Texts, depth Number) List(TypeEntry)
 	Hello.Linked(TypeEntry.HelloLogger, List(Text), 3).Length is 5
@@ -126,6 +127,19 @@ Qualified(element Text, package Text) Text
 	Sample.Qualified("Logger", "Strict/Bytecode") is "Strict/Logger"
 	let nearby = package + "/" + element
 	File(SourcePath(nearby)).Exists then nearby else "Strict/" + element
+Forwarded(entries List(TypeEntry), targets Texts) Texts
+	Sample.Forwarded(Wrappers, List(Text) + "Strict/Character.Floor") is ("Strict/Number.Floor")
+	Sample.Forwarded(Wrappers, ("Strict/Character.from", "Strict/Dictionary(Text).in")).Length is 0
+	mutable forwarded = List(Mutable(Text))
+	for entries
+		let name = value.Name.IndexOf("/") < 0 then Path(main.fullName).PathOnly.text + "/" + value.Name else value.Name
+		let member = value.Changing.Length is 1 then value.Changing.First.typeName + "." else ""
+		let entry = value
+		for targets
+			let method = value.StartsWith(name + ".") and (member is not "") then value.Split(".").Last else "from"
+			if (method is not "from") and (IsNative(name, method) is false) and (entry.Chosen(method, -1, "", List(Text)) < 0)
+				forwarded.Add(member + method)
+	forwarded
 Targets(entries List(TypeEntry)) Texts
 	Sample.Targets(Go) is ("Strict/B.Go")
 	Sample.Targets(Counted) is ("Strict/Range.Count")
@@ -136,5 +150,5 @@ Targets(entries List(TypeEntry)) Texts
 		targets = targets + value.Invoked
 	for targets
 		if value.StartsWith("Strict/Dictionary(") and value.EndsWith(".Code")
-			return targets + "Strict/Text.Code"
-	targets
+			return targets + Forwarded(entries, targets) + "Strict/Text.Code"
+	targets + Forwarded(entries, targets)

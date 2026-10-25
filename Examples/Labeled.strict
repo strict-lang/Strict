@@ -1,5 +1,6 @@
 has label Text = "Names"
 has names Texts = ("a", "b")
+constant Short = Labeled("Short")
 Described Text
 	Labeled.Described is "Names a b"
 	Labeled("Letters").Described is "Letters a b"
@@ -8,3 +9,7 @@ Prefixed(separator = ": ") Text
 	Labeled.Prefixed is "Names: a"
 	Labeled.Prefixed(" - ") is "Names - a"
 	label + separator + names.First
+Combined(other Labeled = Short) Text
+	Labeled.Combined is "Names Short"
+	Labeled.Combined(Labeled("Long")) is "Names Long"
+	label + " " + other.label

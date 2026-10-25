@@ -7,6 +7,11 @@ constant Curving = Scope(("from", "from types", "light default", "mask default")
 constant Curved = NamedArguments(ValueCodegen(TypeInference(KnownTypes(("Part", "Curve"), (Members, KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Curving, KnownTypes.NoMembers)), CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget(Types, CallTarget.Greeter, "Strict/Part", List(Text))))
 constant Named = SyntaxParser(Tokenizer("Part(buffer = 1, mask = 3)").Tokens).Parse
 constant Masked = SyntaxParser(Tokenizer("Part(1, mask = 3)").Tokens).Parse
+constant Shining = Constructing.WithAll(("Shine", "Shine light default", "Shine mask default"), ("light,mask", "0", "Curve.Flat"))
+constant ShineTypes = KnownTypes(Types.names, Types.members, Types.methods, (Shining, KnownTypes.NoMembers))
+constant Shined = NamedArguments(ValueCodegen(TypeInference(ShineTypes, CallTarget.NoScopes), KnownTypes.NoMembers, Parts.values.target))
+constant Lights = (Scope(List(Text) + "Light", List(Text) + "1"), KnownTypes.NoMembers)
+constant Lit = NamedArguments(ValueCodegen(Shined.values, inference = TypeInference(ShineTypes, Lights)))
 Arranged(call SyntaxNode, block CodeBlock) SyntaxNode
 	Parts.Arranged(Masked, CodeBlock.Empty) to Text is "Part(1, 0, 3)"
 	Parts.Arranged(SyntaxParser(Tokenizer("Part(1, 2)").Tokens).Parse, CodeBlock.Empty) to Text is "Part(1, 2)"
@@ -48,7 +53,7 @@ IsComputed(type Text, name Text) Boolean
 	Curved.IsComputed("Part", "mask")
 	Curved.IsComputed("Part", "light") is false
 	let fallback = values.inference.types.ParameterScope(type).TypeOf(name + " default")
-	(fallback is not "") and (SyntaxParser(Tokenizer(fallback).Tokens).Parse.Kind is "Member")
+	(fallback is not "") and (Parsed(fallback).Kind is "Member")
 Argument(call SyntaxNode, name Text, position Number) SyntaxNode
 	Parts.Argument(Masked, "light", -1).text is "0"
 	Parts.Argument(Masked, "mask", -1).text is "3"
@@ -58,4 +63,39 @@ Argument(call SyntaxNode, name Text, position Number) SyntaxNode
 		if (value.Kind is "Reassignment") and (value.children(0).text is name)
 			return value.children(1)
 	let fallback = values.inference.types.ParameterScope(call.text).TypeOf(name + " default")
-	fallback is "" then SyntaxNode("Identifier", name) else SyntaxParser(Tokenizer(fallback).Tokens).Parse
+	fallback is "" then SyntaxNode("Identifier", name) else Parsed(fallback)
+Defaulted(call SyntaxNode, owner Text, start Number) SyntaxNode
+	Shined.Defaulted(SyntaxParser(Tokenizer("Shine(1)").Tokens).Parse, "Part", 0) to Text is "Shine(1, Curve.Flat)"
+	Parts.Defaulted(Masked, "Part", 0) to Text is "Part(1, mask = 3)"
+	let given = call.children.Length - start
+	let names = values.inference.types.ParametersOf(owner, call.text, given)
+	let last = Computed(call.text, owner, names, given)
+	if last < given
+		return call
+	mutable children = call.children
+	for Range(given, last + 1)
+		children = children + Qualified(owner, Fallback(owner, call.text, names(value)))
+	SyntaxNode(call.Kind, call.text, children, call.line)
+Computed(method Text, owner Text, names Texts, given Number) Number
+	Shined.Computed("Shine", "Part", ("light", "mask"), 0) is 1
+	Shined.Computed("Shine", "Part", List(Text) + "light", 0) is -1
+	mutable last = -1
+	for names
+		let fallback = Fallback(owner, method, value)
+		let isLiteral = ConstantFolding(owner, values.inference).Unwrapped(Parsed(fallback)).IsLiteral
+		if (index >= given) and (fallback is not "") and (isLiteral is false)
+			last = index
+	last
+Fallback(owner Text, method Text, name Text) Text
+	Shined.Fallback("Part", "Shine", "mask") is "Curve.Flat"
+	values.inference.types.ParameterScope(owner).TypeOf(method + " " + name + " default")
+Qualified(owner Text, fallback Text) SyntaxNode
+	Shined.Qualified("Part", "Curve.Flat").Kind is "Member"
+	Lit.Qualified("Part", "Light") to Text is "Part.Light"
+	Lit.Qualified("Part", "Dark") to Text is "Dark"
+	let node = Parsed(fallback)
+	let isOwn = (node.Kind is "Identifier") and (values.inference.ConstantOf(owner, node.text) is not "")
+	isOwn then Parsed(TypeEntry.ShortName(owner) + "." + fallback) else node
+Parsed(text Text) SyntaxNode
+	Parts.Parsed("Curve.Flat").Kind is "Member"
+	SyntaxParser(Tokenizer(text).Tokens).Parse

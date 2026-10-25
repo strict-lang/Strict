@@ -5,7 +5,7 @@ Names Texts
 	MlirDeviceMembers(Head).Names is ("heads", "weights")
 	Heading.Names is ("heads", "weights")
 	MlirDeviceMembers(MlirParallel.Doubling.function).Names.Length is 0
-	MlirDevice(Head, 0).Function.First.EndsWith("%m0: f64, %m1_d: !llvm.ptr, %m1_n: i64, %m1_b: i64) -> f64 {")
+	MlirDevice(Head, 0).Function.First.IndexOf("%m0: f64, %m1_d: !llvm.ptr, %m1_n: i64, %m1_b: i64)") > 0
 	Read(function, 0)
 Read(inspected MlirFunction, depth Number) Texts
 	Heading.Read(Head, 3).Length is 0

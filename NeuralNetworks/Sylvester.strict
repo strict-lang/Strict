@@ -1,0 +1,42 @@
+has values Numbers
+has flips Numbers
+has size Number
+constant Radix = 32
+constant Unflipped = List(Number) + 1
+constant Pattern = Sylvester(List(Number), Unflipped, 1024).Repeated(2048)
+constant Wide = Sylvester(Pattern, Unflipped, 1024)
+Rotated Numbers
+	Sylvester((0, 1, 0, 0, 0, 0, 1, 0), Unflipped, 4).Rotated is (0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5)
+	Sylvester((0, 1, 0, 0), (1, -1), 4).Rotated is (-0.5, 0.5, -0.5, 0.5)
+	Sylvester(Wide.Rotated, Unflipped, 1024).Rotated(1500).IsNearlyEqual(Pattern(1500))
+	let first = Stage(values, flips, 1)
+	let radix = (size / Radix).Clamp(1, Radix)
+	for first
+		let digit = (index / Radix).Floor % radix
+		let start = index - digit * Radix
+		mutable sum = 0
+		for radix
+			sum = sum + Sign(digit, index) * first(start + index * Radix)
+		sum / radix.SquareRoot
+Stage(input Numbers, flipping Numbers, step Number) Numbers
+	Sylvester(List(Number), Unflipped, 64).Stage((0, 1) + Layer.Zeros(62), Unflipped, 1)(3).IsNearlyEqual(-0.176777)
+	Sylvester(List(Number), Unflipped, 8).Stage((1, 0, 0, 0, 0, 0, 0, 0), Unflipped, 1).Last.IsNearlyEqual(0.353553)
+	let radix = (size / step).Clamp(1, Radix)
+	for input
+		let digit = (index / step).Floor % radix
+		let first = index - digit * step
+		mutable sum = 0
+		for radix
+			let at = first + index * step
+			sum = sum + Sign(digit, index) * input(at) * flipping(at % flipping.Length)
+		sum / radix.SquareRoot
+Sign(row Number, column Number) Number
+	Wide.Sign(3, 1) is -1
+	Wide.Sign(31, 21) is -1
+	let first = (row % 2) * (column % 2) + ((row / 2).Floor % 2) * ((column / 2).Floor % 2)
+	let second = ((row / 4).Floor % 2) * ((column / 4).Floor % 2) + ((row / 8).Floor % 2) * ((column / 8).Floor % 2)
+	1 - 2 * ((first + second + ((row / 16).Floor % 2) * ((column / 16).Floor % 2)) % 2)
+Repeated(count Number) Numbers
+	Wide.Repeated(9) is (-3, -2, -1, 0, 1, 2, 3, -3, -2)
+	for count
+		index % 7 - 3

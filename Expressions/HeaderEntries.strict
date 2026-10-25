@@ -1,14 +1,16 @@
 has header HeaderTokens
 constant Mutating = HeaderEntries(HeaderTokens(Tokenizer("Add(x Number) Mutable(List)").Tokens))
 constant Adding = HeaderEntries(HeaderTokens(Tokenizer("Add(x Number) Number").Tokens))
+constant Defaulting = HeaderEntries(HeaderTokens(Tokenizer("Add(x Number, y List(Text) = List(Text), z = Basis.None)").Tokens))
 Parameters Scope
 	Mutating.Parameters.TypeOf("Add mutable") is "Mutable"
 	Adding.Parameters.names is ("Add", "Add types", "Add required")
+	Defaulting.Parameters.TypeOf("Add z default") is "Basis . None"
 	HeaderEntries(HeaderTokens(Tokenizer("B(a Number with Step 0.5)").Tokens)).Parameters.TypeOf("B a step") is "0.5"
 	HeaderEntries(HeaderTokens(Tokenizer("T(a Number) Number with Step 0.5").Tokens)).Parameters.TypeOf("T step") is "0.5"
 	let name = header.tokens(0)
 	let parameters = (Text.Combine(header.ParameterNames, ","), Text.Combine(header.ParameterTypes, ","), Required to Text)
-	let steps = Steps(header.tokens).Entries(header)
+	let steps = Defaults(Steps(header.tokens).Entries(header))
 	let entries = Scope((name, name + " types", name + " required"), parameters).WithAll(steps.names, steps.types)
 	header.ReturnsMutable then entries.With(name + " mutable", "Mutable") else entries
 Required Number
@@ -21,3 +23,25 @@ Required Number
 		if (index > 1) and header.IsParameterStart(index) and (isDefault is false)
 			required = required + 1
 	required
+Defaults(scope Scope) Scope
+	Defaulting.Defaults(Scope(List(Text), List(Text))).names is ("Add y default", "Add z default")
+	mutable names = List(Mutable(Text))
+	mutable values = List(Mutable(Text))
+	for header.ParametersEnd
+		if (index > 1) and header.IsParameterStart(index) and (Default(index).Length > 0)
+			names.Add(header.tokens(0) + " " + header.tokens(index) + " default")
+			values.Add(Text.Combine(Default(index), " "))
+	scope.WithAll(names, values)
+Default(position Number) Texts
+	Defaulting.Default(5) is ("List", "(", "Text", ")")
+	Defaulting.Default(2).Length is 0
+	mutable tokens = List(Mutable(Text))
+	mutable isDefault = false
+	for Range(position + 1, header.ParametersEnd)
+		let token = header.tokens(value)
+		if (header.Depth(value) is 1) and (token is in (",", "with"))
+			return tokens
+		if isDefault
+			tokens.Add(token)
+		isDefault = isDefault or ((token is "=") and (header.Depth(value) is 1))
+	tokens
