@@ -229,9 +229,13 @@
     %groupRounded = arith.addi %count, %groupSpare : i64
     %groups = arith.shrui %groupRounded, %seven : i64
     %twoBytes = arith.shli %groups, %five : i64
+    %tritBlock = arith.constant 28 : i64
+    %isThree = arith.cmpi eq, %bits, %three : i64
+    %threeBytes = arith.muli %groups, %tritBlock : i64
     %padded = arith.addi %count, %three : i64
     %aligned = arith.andi %padded, %alignMask : i64
-    %orTwo = arith.select %isTwo, %twoBytes, %aligned : i64
+    %orThree = arith.select %isThree, %threeBytes, %aligned : i64
+    %orTwo = arith.select %isTwo, %twoBytes, %orThree : i64
     %orSix = arith.select %isSix, %sixBytes, %orTwo : i64
     %data = arith.select %isFour, %fourBytes, %orSix : i64
     return %data : i64
@@ -693,10 +697,17 @@
     cf.cond_br %isBytes, ^byte, ^ternaryOrDouble
   ^ternaryOrDouble:
     %isTernary = arith.cmpi eq, %bits, %two : i64
-    cf.cond_br %isTernary, ^ternary, ^double
+    cf.cond_br %isTernary, ^ternary, ^tritsOrDouble
   ^ternary:
     %ternaryNumber = func.call @strict_device_ternary(%data, %scales, %at) : (!llvm.ptr, !llvm.ptr, i64) -> f32
     return %ternaryNumber : f32
+  ^tritsOrDouble:
+    %tritsCode = arith.constant 3 : i64
+    %isTrits = arith.cmpi eq, %bits, %tritsCode : i64
+    cf.cond_br %isTrits, ^trits, ^double
+  ^trits:
+    %tritsNumber = func.call @strict_device_trits(%data, %at) : (!llvm.ptr, i64) -> f32
+    return %tritsNumber : f32
   ^byte:
     %unsignedSingle = func.call @strict_device_byte_read(%data, %at) : (!llvm.ptr, i64) -> f32
     return %unsignedSingle : f32
@@ -796,6 +807,211 @@
     %doubleValue = llvm.load %doubleSlot : !llvm.ptr -> f64
     %narrowed = arith.truncf %doubleValue : f64 to f32
     return %narrowed : f32
+  }
+  // mirrors strict_trits_number of the host runtime (PTQ1_0 blocks, 3 bits): (code - 1) times the half scale of its 128
+  func.func private @strict_device_trits(%data: !llvm.ptr, %at: i64) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %one = arith.constant 1 : i64
+    %three = arith.constant 3 : i64
+    %four = arith.constant 4 : i64
+    %seven = arith.constant 7 : i64
+    %fifteen = arith.constant 15 : i64
+    %sixteen = arith.constant 16 : i64
+    %twentyFour = arith.constant 24 : i64
+    %number = arith.constant 127 : i64
+    %blockBytes = arith.constant 28 : i64
+    %secondStart = arith.constant 80 : i64
+    %thirdStart = arith.constant 120 : i64
+    %offset = arith.constant 1 : i32
+    %block = arith.shrui %at, %seven : i64
+    %inBlock = arith.andi %at, %number : i64
+    %blockStart = arith.muli %block, %blockBytes : i64
+    %blockData = llvm.getelementptr %data[%blockStart] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %isFirst = arith.cmpi slt, %inBlock, %secondStart : i64
+    %isThird = arith.cmpi sge, %inBlock, %thirdStart : i64
+    %second = arith.subi %inBlock, %secondStart : i64
+    %third = arith.subi %inBlock, %thirdStart : i64
+    %firstByte = arith.andi %inBlock, %fifteen : i64
+    %firstCode = arith.shrui %inBlock, %four : i64
+    %secondInByte = arith.andi %second, %seven : i64
+    %secondByte = arith.addi %secondInByte, %sixteen : i64
+    %secondCode = arith.shrui %second, %three : i64
+    %thirdInByte = arith.andi %third, %one : i64
+    %thirdByte = arith.addi %thirdInByte, %twentyFour : i64
+    %thirdCode = arith.shrui %third, %one : i64
+    %laterByte = arith.select %isThird, %thirdByte, %secondByte : i64
+    %laterCode = arith.select %isThird, %thirdCode, %secondCode : i64
+    %byteAt = arith.select %isFirst, %firstByte, %laterByte : i64
+    %codeAt = arith.select %isFirst, %firstCode, %laterCode : i64
+    %codeIndex = arith.trunci %codeAt : i64 to i32
+    %byteSlot = llvm.getelementptr %blockData[%byteAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %byte = llvm.load %byteSlot : !llvm.ptr -> i8
+    %wide = arith.extui %byte : i8 to i32
+    %power = func.call @strict_device_trits_power(%codeIndex) : (i32) -> i32
+    %signed = func.call @strict_device_trits_code(%wide, %power) : (i32, i32) -> i32
+    %low = arith.trunci %signed : i32 to i8
+    %level = arith.sitofp %low : i8 to f32
+    %scaleSlot = llvm.getelementptr %blockData[26] : (!llvm.ptr) -> !llvm.ptr, i8
+    %scaleHalf = llvm.load %scaleSlot : !llvm.ptr -> f16
+    %scale = arith.extf %scaleHalf : f16 to f32
+    %value = arith.mulf %level, %scale : f32
+    return %value : f32
+  }
+  // 3^index for the code number index (0 to 4) of a byte of PTQ1_0 codes
+  func.func private @strict_device_trits_power(%index: i32) -> i32 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %c1 = arith.constant 1 : i32
+    %c2 = arith.constant 2 : i32
+    %c3 = arith.constant 3 : i32
+    %c9 = arith.constant 9 : i32
+    %c27 = arith.constant 27 : i32
+    %c81 = arith.constant 81 : i32
+    %isOne = arith.cmpi eq, %index, %c1 : i32
+    %isTwo = arith.cmpi eq, %index, %c2 : i32
+    %isThree = arith.cmpi eq, %index, %c3 : i32
+    %isLow = arith.cmpi ult, %index, %c1 : i32
+    %highPower = arith.select %isThree, %c27, %c81 : i32
+    %middlePower = arith.select %isTwo, %c9, %highPower : i32
+    %lowPower = arith.select %isOne, %c3, %middlePower : i32
+    %power = arith.select %isLow, %c1, %lowPower : i32
+    return %power : i32
+  }
+  // the 4 bytes of word spread over the 16 bit lanes of two words (bytes 0 and 1 in low, 2 and 3 in high, each in the low
+  // byte of its lane), so one multiplication steps two codes without carries (the byte shuffles become prmt)
+  func.func private @strict_device_trits_spread(%word: i32) -> (i32, i32) attributes {llvm.passthrough = ["alwaysinline"]} {
+    %zeros = llvm.mlir.constant(dense<0> : vector<4xi8>) : vector<4xi8>
+    %bytes = llvm.bitcast %word : i32 to vector<4xi8>
+    %lowBytes = llvm.shufflevector %bytes, %zeros [0, 4, 1, 4] : vector<4xi8>
+    %highBytes = llvm.shufflevector %bytes, %zeros [2, 4, 3, 4] : vector<4xi8>
+    %low = llvm.bitcast %lowBytes : vector<4xi8> to i32
+    %high = llvm.bitcast %highBytes : vector<4xi8> to i32
+    return %low, %high : i32, i32
+  }
+  // the signed weights c - 1 of the 4 codes c in the high bytes of the lanes of first and second, as (c + 127) ^ 128
+  func.func private @strict_device_trits_signed(%first: i32, %second: i32) -> i32 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %lift = arith.constant 2139062143 : i32
+    %sign = arith.constant -2139062144 : i32
+    %firstBytes = llvm.bitcast %first : i32 to vector<4xi8>
+    %secondBytes = llvm.bitcast %second : i32 to vector<4xi8>
+    %codeBytes = llvm.shufflevector %firstBytes, %secondBytes [1, 3, 5, 7] : vector<4xi8>
+    %codes = llvm.bitcast %codeBytes : vector<4xi8> to i32
+    %lifted = arith.addi %codes, %lift : i32
+    %signed = arith.xori %lifted, %sign : i32
+    return %signed : i32
+  }
+  // the next code of the 4 bytes spread over low and high (strict.h: a byte holds its codes as a fraction of 243, times 3
+  // its high byte is the code, the low byte what stays for the codes after it): its signed weights, the rest of both
+  func.func private @strict_device_trits_step(%low: i32, %high: i32) -> (i32, i32, i32) attributes {llvm.passthrough = ["alwaysinline"]} {
+    %c3 = arith.constant 3 : i32
+    %lanes = arith.constant 16711935 : i32
+    %lowTripled = arith.muli %low, %c3 : i32
+    %highTripled = arith.muli %high, %c3 : i32
+    %signed = func.call @strict_device_trits_signed(%lowTripled, %highTripled) : (i32, i32) -> i32
+    %nextLow = arith.andi %lowTripled, %lanes : i32
+    %nextHigh = arith.andi %highTripled, %lanes : i32
+    return %signed, %nextLow, %nextHigh : i32, i32, i32
+  }
+  // code n of the 4 bytes of word as signed weights, power is 3^n
+  func.func private @strict_device_trits_code(%word: i32, %power: i32) -> i32 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %lanes = arith.constant 16711935 : i32
+    %low, %high = func.call @strict_device_trits_spread(%word) : (i32) -> (i32, i32)
+    %lowPowered = arith.muli %low, %power : i32
+    %highPowered = arith.muli %high, %power : i32
+    %lowRest = arith.andi %lowPowered, %lanes : i32
+    %highRest = arith.andi %highPowered, %lanes : i32
+    %signed, %nextLow, %nextHigh = func.call @strict_device_trits_step(%lowRest, %highRest) : (i32, i32) -> (i32, i32, i32)
+    return %signed : i32
+  }
+  // the signed weights of numbers 120 to 123 and 124 to 127 of a PTQ1_0 block from its last word: bytes 24 and 25 hold 4
+  // codes each, number 120 + 2n + b is code n of byte 24 + b, then the half scale
+  func.func private @strict_device_trits_tail(%last: i32) -> (i32, i32) attributes {llvm.passthrough = ["alwaysinline"]} {
+    %c3 = arith.constant 3 : i32
+    %lanes = arith.constant 16711935 : i32
+    %pair, %scaleLane = func.call @strict_device_trits_spread(%last) : (i32) -> (i32, i32)
+    %first = arith.muli %pair, %c3 : i32
+    %firstRest = arith.andi %first, %lanes : i32
+    %second = arith.muli %firstRest, %c3 : i32
+    %secondRest = arith.andi %second, %lanes : i32
+    %third = arith.muli %secondRest, %c3 : i32
+    %thirdRest = arith.andi %third, %lanes : i32
+    %fourth = arith.muli %thirdRest, %c3 : i32
+    %lower = func.call @strict_device_trits_signed(%first, %second) : (i32, i32) -> i32
+    %upper = func.call @strict_device_trits_signed(%third, %fourth) : (i32, i32) -> i32
+    return %lower, %upper : i32, i32
+  }
+  // the 128 signed weights of the PTQ1_0 block at block and its half scale (strict_device_trits_unpacked)
+  func.func private @strict_device_trits_block(%block: !llvm.ptr) -> (vector<32xi32>, f32) attributes {llvm.passthrough = ["alwaysinline"]} {
+    %words = func.call @strict_device_trits_words(%block) : (!llvm.ptr) -> vector<8xi32>
+    %weights, %scale = func.call @strict_device_trits_unpacked(%words) : (vector<8xi32>) -> (vector<32xi32>, f32)
+    return %weights, %scale : vector<32xi32>, f32
+  }
+  // the 128 signed weights of the 7 words of a PTQ1_0 block in order, word k of the result holds numbers 4k to 4k + 3:
+  // codes t of words 0 to 3 are numbers 16t to 16t + 15 (words 4t + w), those of words 4 and 5 numbers 80 + 8t to + 7
+  // (20 + 2t + w - 4), the tail is 30 and 31; and the half scale of the block
+  func.func private @strict_device_trits_unpacked(%words: vector<8xi32>) -> (vector<32xi32>, f32) attributes {llvm.passthrough = ["alwaysinline"]} {
+    %c0 = arith.constant 0 : i32
+    %c1 = arith.constant 1 : i32
+    %c2 = arith.constant 2 : i32
+    %c4 = arith.constant 4 : i32
+    %c5 = arith.constant 5 : i32
+    %c6 = arith.constant 6 : i32
+    %c16 = arith.constant 16 : i32
+    %c30 = arith.constant 30 : i32
+    %c31 = arith.constant 31 : i32
+    %narrowStart = arith.constant 16 : i32
+    %zeros = arith.constant dense<0> : vector<32xi32>
+    cf.br ^word(%c0, %zeros : i32, vector<32xi32>)
+  ^word(%index: i32, %weights: vector<32xi32>):
+    %moreWords = arith.cmpi slt, %index, %c6 : i32
+    cf.cond_br %moreWords, ^wordBody, ^tail
+  ^wordBody:
+    %word = llvm.extractelement %words[%index : i32] : vector<8xi32>
+    %low, %high = func.call @strict_device_trits_spread(%word) : (i32) -> (i32, i32)
+    %isWide = arith.cmpi slt, %index, %c4 : i32
+    %narrowFirst = arith.addi %index, %narrowStart : i32
+    %first = arith.select %isWide, %index, %narrowFirst : i32
+    %stride = arith.select %isWide, %c4, %c2 : i32
+    cf.br ^code(%c0, %low, %high, %weights : i32, i32, i32, vector<32xi32>)
+  ^code(%code: i32, %codeLow: i32, %codeHigh: i32, %codeWeights: vector<32xi32>):
+    %moreCodes = arith.cmpi slt, %code, %c5 : i32
+    cf.cond_br %moreCodes, ^codeBody, ^wordNext(%codeWeights : vector<32xi32>)
+  ^codeBody:
+    %signed, %nextLow, %nextHigh = func.call @strict_device_trits_step(%codeLow, %codeHigh) : (i32, i32) -> (i32, i32, i32)
+    %codeOffset = arith.muli %code, %stride : i32
+    %position = arith.addi %first, %codeOffset : i32
+    %placed = llvm.insertelement %signed, %codeWeights[%position : i32] : vector<32xi32>
+    %nextCode = arith.addi %code, %c1 : i32
+    llvm.br ^code(%nextCode, %nextLow, %nextHigh, %placed : i32, i32, i32, vector<32xi32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+  ^wordNext(%wordWeights: vector<32xi32>):
+    %nextIndex = arith.addi %index, %c1 : i32
+    llvm.br ^word(%nextIndex, %wordWeights : i32, vector<32xi32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+  ^tail:
+    %last = llvm.extractelement %words[%c6 : i32] : vector<8xi32>
+    %lower, %upper = func.call @strict_device_trits_tail(%last) : (i32) -> (i32, i32)
+    %withLower = llvm.insertelement %lower, %weights[%c30 : i32] : vector<32xi32>
+    %withUpper = llvm.insertelement %upper, %withLower[%c31 : i32] : vector<32xi32>
+    %scaleWord = arith.shrui %last, %c16 : i32
+    %scaleShort = arith.trunci %scaleWord : i32 to i16
+    %half = arith.bitcast %scaleShort : i16 to f16
+    %scale = arith.extf %half : f16 to f32
+    return %withUpper, %scale : vector<32xi32>, f32
+  }
+  // the 7 words of a PTQ1_0 block (4 byte aligned) and a zero
+  func.func private @strict_device_trits_words(%block: !llvm.ptr) -> vector<8xi32> attributes {llvm.passthrough = ["alwaysinline"]} {
+    %c0 = arith.constant 0 : i32
+    %c1 = arith.constant 1 : i32
+    %c7 = arith.constant 7 : i32
+    %zeros = arith.constant dense<0> : vector<8xi32>
+    cf.br ^word(%c0, %zeros : i32, vector<8xi32>)
+  ^word(%index: i32, %words: vector<8xi32>):
+    %more = arith.cmpi slt, %index, %c7 : i32
+    cf.cond_br %more, ^load, ^done
+  ^load:
+    %slot = llvm.getelementptr %block[%index] : (!llvm.ptr, i32) -> !llvm.ptr, i32
+    %word = llvm.load %slot invariant {alignment = 4 : i64} : !llvm.ptr -> i32
+    %placed = llvm.insertelement %word, %words[%index : i32] : vector<8xi32>
+    %next = arith.addi %index, %c1 : i32
+    llvm.br ^word(%next, %placed : i32, vector<8xi32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+  ^done:
+    return %words : vector<8xi32>
   }
   // mirrors strict_ternary_number of the host runtime: (code - 1) times the half scale of its 128 numbers
   func.func private @strict_device_ternary(%data: !llvm.ptr, %scales: !llvm.ptr, %at: i64) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
@@ -2279,6 +2495,7 @@
     cf.switch %rowBits : i64, [
       default: ^bytes(%lane, %zero : i64, f32),
       2: ^two(%lane, %zero : i64, f32),
+      3: ^two(%lane, %zero : i64, f32),
       4: ^four(%lane, %zero : i64, f32),
       6: ^six(%lane, %zero : i64, f32)
     ]
@@ -2288,7 +2505,7 @@
     %twoMore = arith.cmpi slt, %twoUnit, %twoUnits : i64
     cf.cond_br %twoMore, ^twoBody, ^reduce(%twoSum : f32)
   ^twoBody:
-    %twoWeights:7 = func.call @strict_device_two_weights(%row, %count, %twoUnit) : (!llvm.ptr, i64, i64) -> (vector<4xi32>, vector<4xi32>, vector<4xi32>, vector<4xi32>, f32, i64, i64)
+    %twoWeights:7 = func.call @strict_device_ternary_weights(%row, %rowBits, %count, %twoUnit) : (!llvm.ptr, i64, i64, i64) -> (vector<4xi32>, vector<4xi32>, vector<4xi32>, vector<4xi32>, f32, i64, i64)
     %twoNext = func.call @strict_device_two_token(%twoWeights#0, %twoWeights#1, %twoWeights#2, %twoWeights#3, %twoWeights#4, %twoWeights#5, %twoWeights#6, %bytes, %scales, %twoSum) : (vector<4xi32>, vector<4xi32>, vector<4xi32>, vector<4xi32>, f32, i64, i64, !llvm.ptr, !llvm.ptr, f32) -> f32
     %twoFollowing = arith.addi %twoUnit, %lanes : i64
     cf.br ^two(%twoFollowing, %twoNext : i64, f32)
@@ -2628,6 +2845,42 @@
     %scaleIndex = arith.shrui %first, %five : i64
     return %weights0, %weights1, %weights2, %weights3, %scale, %first, %scaleIndex : vector<4xi32>, vector<4xi32>, vector<4xi32>, vector<4xi32>, f32, i64, i64
   }
+  // the 64 ternary weights of unit (half a PTQ1_0 block) of a 3 bit row like strict_device_two_weights, so 3 and 2 bit
+  // rows add up the same numbers in the same order: the lanes of a warp take both halves, each decodes the whole block
+  func.func private @strict_device_trits_weights(%row: !llvm.ptr, %count: i64, %unit: i64) -> (vector<4xi32>, vector<4xi32>, vector<4xi32>, vector<4xi32>, f32, i64, i64) attributes {llvm.passthrough = ["alwaysinline"]} {
+    %one = arith.constant 1 : i64
+    %five = arith.constant 5 : i64
+    %six = arith.constant 6 : i64
+    %blockBytes = arith.constant 28 : i64
+    %block = arith.shrui %unit, %one : i64
+    %halfBit = arith.andi %unit, %one : i64
+    %isLater = arith.cmpi eq, %halfBit, %one : i64
+    %blockStart = arith.muli %block, %blockBytes : i64
+    %blockData = llvm.getelementptr %row[%blockStart] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %all, %scale = func.call @strict_device_trits_block(%blockData) : (!llvm.ptr) -> (vector<32xi32>, f32)
+    %earlier = llvm.shufflevector %all, %all [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] : vector<32xi32>
+    %later = llvm.shufflevector %all, %all [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31] : vector<32xi32>
+    %half = arith.select %isLater, %later, %earlier : vector<16xi32>
+    %weights0 = llvm.shufflevector %half, %half [0, 1, 2, 3] : vector<16xi32>
+    %weights1 = llvm.shufflevector %half, %half [4, 5, 6, 7] : vector<16xi32>
+    %weights2 = llvm.shufflevector %half, %half [8, 9, 10, 11] : vector<16xi32>
+    %weights3 = llvm.shufflevector %half, %half [12, 13, 14, 15] : vector<16xi32>
+    %first = arith.shli %unit, %six : i64
+    %scaleIndex = arith.shrui %first, %five : i64
+    return %weights0, %weights1, %weights2, %weights3, %scale, %first, %scaleIndex : vector<4xi32>, vector<4xi32>, vector<4xi32>, vector<4xi32>, f32, i64, i64
+  }
+  // strict_device_two_weights of 2 bit rows, strict_device_trits_weights of 3 bit rows
+  func.func private @strict_device_ternary_weights(%row: !llvm.ptr, %rowBits: i64, %count: i64, %unit: i64) -> (vector<4xi32>, vector<4xi32>, vector<4xi32>, vector<4xi32>, f32, i64, i64) attributes {llvm.passthrough = ["alwaysinline"]} {
+    %three = arith.constant 3 : i64
+    %isTrits = arith.cmpi eq, %rowBits, %three : i64
+    cf.cond_br %isTrits, ^trits, ^codes
+  ^trits:
+    %trits:7 = func.call @strict_device_trits_weights(%row, %count, %unit) : (!llvm.ptr, i64, i64) -> (vector<4xi32>, vector<4xi32>, vector<4xi32>, vector<4xi32>, f32, i64, i64)
+    return %trits#0, %trits#1, %trits#2, %trits#3, %trits#4, %trits#5, %trits#6 : vector<4xi32>, vector<4xi32>, vector<4xi32>, vector<4xi32>, f32, i64, i64
+  ^codes:
+    %codes:7 = func.call @strict_device_two_weights(%row, %count, %unit) : (!llvm.ptr, i64, i64) -> (vector<4xi32>, vector<4xi32>, vector<4xi32>, vector<4xi32>, f32, i64, i64)
+    return %codes#0, %codes#1, %codes#2, %codes#3, %codes#4, %codes#5, %codes#6 : vector<4xi32>, vector<4xi32>, vector<4xi32>, vector<4xi32>, f32, i64, i64
+  }
   // the ternary weights of strict_device_two_weights times the 8 bit numbers of one token (two scales of 32), added to sum
   func.func private @strict_device_two_token(%weights0: vector<4xi32>, %weights1: vector<4xi32>, %weights2: vector<4xi32>, %weights3: vector<4xi32>, %scale: f32, %first: i64, %scaleIndex: i64, %bytes: !llvm.ptr, %scales: !llvm.ptr, %twoSum: f32) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
     %inputSlot0 = llvm.getelementptr %bytes[%first] : (!llvm.ptr, i64) -> !llvm.ptr, i8
@@ -2657,8 +2910,8 @@
     %twoNext = arith.addf %twoSum, %scaled : f32
     return %twoNext : f32
   }
-  // dots8 needs whole blocks of the row (256 numbers for 4 and 6 bits, 128 for 2, 32 for 8) and 16 byte aligned vector
-  // loads
+  // dots8 needs whole blocks of the row (256 numbers for 4 and 6 bits, 128 for 2 and 3, 32 for 8) and 16 byte aligned
+  // vector loads (3 bit rows are read in words)
   func.func private @strict_device_fits8(%row: !llvm.ptr, %rowBits: i64, %count: i64, %bytes: !llvm.ptr) -> i1 {
     %none = arith.constant 0 : i64
     %four = arith.constant 4 : i64
@@ -2670,7 +2923,10 @@
     %true = arith.constant true
     %two = arith.constant 2 : i64
     %groupMask = arith.constant 127 : i64
+    %three = arith.constant 3 : i64
     %isTwo = arith.cmpi eq, %rowBits, %two : i64
+    %isThree = arith.cmpi eq, %rowBits, %three : i64
+    %isTernary = arith.ori %isTwo, %isThree : i1
     %isFour = arith.cmpi eq, %rowBits, %four : i64
     %isSix = arith.cmpi eq, %rowBits, %six : i64
     %isEight = arith.cmpi eq, %rowBits, %eight : i64
@@ -2683,7 +2939,7 @@
     %wholeGroups = arith.cmpi eq, %groupRest, %none : i64
     %blockedFits = arith.andi %isBlocked, %wholeBlocks : i1
     %eightFits = arith.andi %isEight, %wholeWords : i1
-    %twoFits = arith.andi %isTwo, %wholeGroups : i1
+    %twoFits = arith.andi %isTernary, %wholeGroups : i1
     %wordFits = arith.ori %blockedFits, %eightFits : i1
     %sizeFits = arith.ori %wordFits, %twoFits : i1
     %rowAddress = llvm.ptrtoint %row : !llvm.ptr to i64

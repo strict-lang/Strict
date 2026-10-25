@@ -560,14 +560,14 @@ STRICT_EXPORT double GgufFile_Values(double self, double path, double name)
 
 /* The rows of the matrix name (its contiguous dimension is a row) packed with bits 32, 16 or 8. Q8_0 rows packed with 8
    bits keep their numbers: their scales are halves, so strict_quantized finds the same scales and bytes again. */
-/* The blocks of one row of a Q4_K, Q6_K, PQ2_0 or PTQ1_0 matrix as a packed row of 4, 6 or 2 bits: Q4_K blocks stay as
-   they are, Q6_K blocks give their half scale d to the end of the row, ternary blocks become 2 bit codes (strict.h) with
-   their half scales at the end. */
+/* The blocks of one row of a Q4_K, Q6_K, PQ2_0 or PTQ1_0 matrix as a packed row of 4, 6, 3 or 2 bits: Q4_K and PTQ1_0
+   blocks stay as they are, Q6_K blocks give their half scale d to the end of the row, 2 bits are ternary blocks as 2 bit
+   codes (strict.h) with their half scales at the end. */
 static void Repacked(const unsigned char* blocks, uint32_t type, uint64_t bits, uint64_t width, strict_packed* packed)
 {
 	uint64_t count = width / 256;
-	if (bits == 4)
-		memcpy(packed->data, blocks, count * 144);
+	if (bits == 4 || bits == 3)
+		memcpy(packed->data, blocks, strict_packed_data(width, bits));
 	for (uint64_t block = 0; bits == 6 && block < count; block++)
 	{
 		memcpy(packed->data + block * 208, blocks + block * 210, 208);
@@ -615,21 +615,24 @@ static void Packed(void* context, uint64_t item)
 	}
 }
 
-/* Rows of 32, 16 or 8 bits, 4 keeps Q4_K, Q6_K and the ternary PQ2_0 and PTQ1_0 matrices in 4, 6 and 2 bits (other types
-   become 8 bits). The matrices of a stack (the experts of a mixture) follow each other. */
+/* Rows of 32, 16 or 8 bits, 4 keeps Q4_K, Q6_K and the ternary PQ2_0 and PTQ1_0 matrices as they are in 4, 6, 2 and 3
+   bits, 2 does the same with all ternary matrices in 2 bits (other types become 8 bits). The matrices of a stack (the
+   experts of a mixture) follow each other. */
 STRICT_EXPORT double GgufFile_Rows(double self, double path, double name, double bits)
 {
 	static double* rows = 0;
 	static unsigned char* storage = 0;
-	const char* failure = bits != 4 && bits != 8 && bits != 16 && bits != 32 ? "OnlyMatricesOf4Or8Or16Or32BitsAreSupported" : 0;
+	const char* failure = bits != 2 && bits != 4 && bits != 8 && bits != 16 && bits != 32 ?
+		"OnlyMatricesOf2Or4Or8Or16Or32BitsAreSupported" : 0;
 	const Tensor* tensor = failure ? 0 : Requested(path, name, 0, &failure);
 	if (tensor && tensor->dimensions != 2 && tensor->dimensions != 3)
 		tensor = 0, failure = "OnlyMatricesAndStacksOfThemHaveRows";
 	uint64_t width = tensor ? tensor->shape[0] : 0;
 	uint64_t height = tensor ? tensor->shape[1] * (tensor->dimensions == 3 ? tensor->shape[2] : 1) : 0;
 	uint32_t type = tensor ? tensor->type : F32;
-	uint64_t kept = bits != 4 ? (uint64_t)bits : type == Q4_K ? 4 : type == Q6_K ? 6 : type == PQ2_0 || type == PTQ1_0 ? 2 : 8;
-	int isBlocked = kept == 4 || kept == 6 || kept == 2;
+	uint64_t kept = bits != 4 && bits != 2 ? (uint64_t)bits : type == Q4_K ? 4 : type == Q6_K ? 6 :
+		type == PTQ1_0 && bits == 4 ? 3 : type == PQ2_0 || type == PTQ1_0 ? 2 : 8;
+	int isBlocked = kept == 4 || kept == 6 || kept == 2 || kept == 3;
 	unsigned char* raw = tensor && isBlocked ? Blocks(tensor, width * height, &failure) : 0;
 	float* floats = tensor && !isBlocked ? Floats(tensor, width * height, &failure) : 0;
 	if (!floats && !raw)

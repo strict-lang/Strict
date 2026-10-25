@@ -7,6 +7,7 @@ constant Prompt = Gguf("NeuralNetworks/blocks.gguf", 32).Rows("prompt").First
 constant Long = Gguf("NeuralNetworks/blocks.gguf", 32).Rows("long").First
 constant Wide = Gguf("NeuralNetworks/blocks.gguf", 32).Rows("wider").First
 constant Fours = Batch(Blocks.Rows("four"), List(Number) + 0)
+constant Codes = Batch(Gguf("NeuralNetworks/blocks.gguf", 2).Rows("two"), List(Number) + 0)
 constant Tile = 64
 Sums(input Numbers) Numbers
 	(Pair.Sums((1, 1)), Pair.Sums((1, 1, 2, 0))) is ((13, 27), (13, 27, 12, 26))
@@ -28,6 +29,8 @@ Grouped(bases Numbers, count Number, input Numbers) Numbers
 	Fours.Grouped((0, 8), 8, Long)(83).IsNearlyEqual(Fours.Sums(Long)(163), 0.5)
 	Fours.Grouped((0, 8), 8, Long)(523).IsNearlyEqual(Fours.Sums(Long)(1051), 0.5)
 	Batch(Blocks.Rows("two"), List(Number) + 0).Grouped((0, 0), 16, Long)(1277).IsNearlyEqual(3.704, 0.2)
+	Codes.Grouped((0, 0), 16, Long)(1277).IsNearlyEqual(3.704, 0.2)
+	Codes.Sums(Tokens)(255).IsNearlyEqual(-1.549, 0.2)
 	let width = weights.First.Length
 	for count * input.Length / width
 		Dot(weights(bases((index / count / Tile).Floor) + index % count), 0, input, (index / count).Floor * width)

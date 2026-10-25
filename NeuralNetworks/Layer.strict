@@ -11,6 +11,7 @@ constant Fours = Layer(Gguf("NeuralNetworks/tiny.gguf", 4).Rows("r4"), (0, 0))
 constant Sixes = Layer(Gguf("NeuralNetworks/tiny.gguf", 4).Rows("r6"), (0, 0))
 constant Eights = Layer(Gguf("NeuralNetworks/tiny.gguf", 8).Rows("q"), (0, 0))
 constant Twos = Layer(Gguf("NeuralNetworks/tiny.gguf", 4).Rows("r2"), (0, 0))
+constant Codes = Layer(Gguf("NeuralNetworks/tiny.gguf", 2).Rows("r2"), (0, 0))
 Random(inputs Number, outputs Number, function = Activation.Sigmoid) Layer
 	Layer.Random(2, 3).weights.Length is 3
 	Layer.Random(2, 3).weights.First.Length is 2
@@ -41,6 +42,7 @@ Sums(input Numbers) Numbers
 	Sixes.Sums(Gpt2Block.Added(Fours.weights.First, Sixes.weights.First)).Last.IsNearlyEqual(-71957.5, 1000)
 	Eights.Sums(Gpt2Block.Added(Eights.weights.First, Eights.weights.Last)).Last.IsNearlyEqual(25678.23355948925, 30)
 	Twos.Sums(Gguf("NeuralNetworks/tiny.gguf", 32).Rows("r2").Last).Last.IsNearlyEqual(45.75, 0.01)
+	Codes.Sums(Gguf("NeuralNetworks/tiny.gguf", 32).Rows("r2").Last).Last.IsNearlyEqual(45.75, 0.01)
 	for weights
 		Summed(value, input) + biases(index % biases.Length)
 Summed(row Numbers, input Numbers) Number
