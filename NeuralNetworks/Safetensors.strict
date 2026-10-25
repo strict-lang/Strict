@@ -56,6 +56,12 @@ Tuned(name Text, downs Numbers, ups Numbers, scales Numbers) List(Numbers)
 	Bytes.Tuned("a", Firsts, (0, 1, 0, 0, 0, 0, 0, 1), (0.5, 0.25))(3)(7).IsNearlyEqual(Exact(3)(7) + Second(7) / 4, 1)
 	Bytes.Tuned("a", (1, 2), (1, 0, 0, 0), List(Number) + 1) is Error
 	TensorFile.Tuned(path, Entry(name + ".weight"), Entry(name + ".weight_scale"), downs + ups + scales)
+Written(name Text, numbers Numbers) Number
+	Safetensors("NeuralNetworks/written.tmp").Written("x", (1.5, -2, 3)) is 3
+	Safetensors("NeuralNetworks/written.tmp").Values("x") is (1.5, -2, 3)
+	Safetensors("NeuralNetworks/written.tmp").Shape("x")(0) is 3
+	Safetensors("NeuralNetworks/missing/written.tmp").Written("x", (1, 2)) is Error
+	TensorFile.Written(path, prefix + name, numbers)
 Columns(name Text) List(Numbers)
 	Tiny.Columns("a") is ((1, 4), (2, 5), (3, 6))
 	Halves.Columns("a") is ((1, 4), (2, 5), (3, 6))

@@ -429,3 +429,34 @@ STRICT_EXPORT double TensorFile_Tuned(double self, double path, double entry, do
 	free(tuning.ups);
 	return quantized;
 }
+
+/* Writes numbers as the one F32 tensor of a new .safetensors file at path (the header padded to 8 bytes), their count. */
+STRICT_EXPORT double TensorFile_Written(double self, double path, double entry, double numbers)
+{
+	const strict_numbers* given = strict_numbers_of(numbers);
+	uint64_t count = (uint64_t)given->count;
+	char header[1024];
+	int length = snprintf(header, sizeof header, "{\"%s\":{\"dtype\":\"F32\",\"shape\":[%llu],\"data_offsets\":[0,%llu]}}",
+		strict_text(entry), (unsigned long long)count, (unsigned long long)(count * sizeof(float)));
+	if (length < 0 || length + 8 >= (int)sizeof header)
+		return strict_fail("TensorEntryTooLong");
+	while (length % 8)
+		header[length++] = ' ';
+	unsigned char size[8];
+	for (int index = 0; index < 8; index++)
+		size[index] = (unsigned char)((uint64_t)length >> (8 * index));
+	float* floats = malloc(count * sizeof(float) + 1);
+	FILE* file = floats ? fopen(strict_text(path), "wb") : 0;
+	if (!file)
+	{
+		free(floats);
+		return strict_fail("TensorFileNotWritable");
+	}
+	for (uint64_t index = 0; index < count; index++)
+		floats[index] = (float)given->items[index];
+	int complete = fwrite(size, 1, 8, file) == 8 && fwrite(header, 1, length, file) == (size_t)length &&
+		fwrite(floats, sizeof(float), count, file) == count;
+	complete = fclose(file) == 0 && complete;
+	free(floats);
+	return complete ? (double)count : strict_fail("TensorFileNotWritable");
+}
