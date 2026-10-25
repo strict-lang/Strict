@@ -10342,7 +10342,9 @@
     %packedRows = llvm.load %packedSlot : !llvm.ptr -> i64
     %hasPackedRows = arith.cmpi ne, %packedRows, %none : i64
     %hasDots = arith.cmpi ne, %dots, %none : i64
-    %quantizing = arith.andi %hasPackedRows, %hasDots : i1
+    %noRows = arith.cmpi eq, %rows, %none : i64
+    %dotsUsable = arith.ori %hasPackedRows, %noRows : i1
+    %quantizing = arith.andi %dotsUsable, %hasDots : i1
     cf.cond_br %quantizing, ^quantize(%none, %six : i64, i64), ^chooseKernel
   ^quantize(%quantizeIndex: i64, %quantizeSlot: i64):
     %moreQuantized = arith.cmpi slt, %quantizeIndex, %valueCount : i64
@@ -13254,7 +13256,9 @@
   // `Attention.Merged` on the 16 bit tensor cores (strict_device_attention): queries, keys and values like there, 0.0
   // when the GPU can not, then the method itself runs (head size not a multiple of 8 or above 128, more than 16 heads
   // per group of keys, lists that do not match)
-  func.func private @strict_gpu_attention(%ptx: !llvm.ptr, %queries: f64, %keys: f64, %values: f64, %heads: f64, %groups: f64, %size: f64, %sequences: f64, %causal: f64, %valueOffset: f64, %valueStride: f64) -> f64 {
+  // quantized: the keys of prompts of size 128 become 8 bit numbers with a scale per position and head (one quantize
+  // launch), strict_device_attention then computes the scores with 8 bit products
+  func.func private @strict_gpu_attention(%ptx: !llvm.ptr, %queries: f64, %keys: f64, %values: f64, %heads: f64, %groups: f64, %size: f64, %sequences: f64, %causal: f64, %valueOffset: f64, %valueStride: f64, %quantized: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
     %seven = arith.constant 7 : i64
@@ -13340,7 +13344,19 @@
     %lanes = arith.constant -128 : i64
     %integers = arith.constant -1 : i64
     %noGuards1 = arith.constant 0 : i64
-    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %queryCount, %zero, %none, %valuesSlots, %ten, %seven, %none, %none, %lanes, %none, %integers, %noGuards1) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
+    %eightsSet = arith.cmpf une, %quantized, %zero : f64
+    %headSized = arith.cmpi eq, %numbers, %largest : i64
+    %promptTokens = arith.constant 64 : i64
+    %isPrompt = arith.cmpi sgt, %tokens, %promptTokens : i64
+    %eightsShaped = arith.andi %headSized, %isPrompt : i1
+    %eightsKeys = arith.andi %eightsSet, %eightsShaped : i1
+    %keysBit = arith.constant 2 : i64
+    %dots = arith.select %eightsKeys, %keysBit, %none : i64
+    %keyWidth = arith.select %eightsKeys, %numbers, %none : i64
+    %widthSlot = llvm.mlir.addressof @strict_gpu_quantize_width : !llvm.ptr
+    llvm.store %keyWidth, %widthSlot : i64, !llvm.ptr
+    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %queryCount, %zero, %none, %valuesSlots, %ten, %seven, %none, %dots, %lanes, %none, %integers, %noGuards1) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
+    llvm.store %none, %widthSlot : i64, !llvm.ptr
     return %result : f64
   ^unable:
     return %zero : f64
