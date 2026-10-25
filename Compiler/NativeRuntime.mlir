@@ -10394,7 +10394,11 @@
     %hasPackedRows = arith.cmpi ne, %packedRows, %none : i64
     %hasDots = arith.cmpi ne, %dots, %none : i64
     %noRows = arith.cmpi eq, %rows, %none : i64
-    %dotsUsable = arith.ori %hasPackedRows, %noRows : i1
+    %dotsWidthSlot = llvm.mlir.addressof @strict_gpu_quantize_width : !llvm.ptr
+    %dotsWidth = llvm.load %dotsWidthSlot : !llvm.ptr -> i64
+    %hasDotsWidth = arith.cmpi sgt, %dotsWidth, %none : i64
+    %widthDots = arith.andi %noRows, %hasDotsWidth : i1
+    %dotsUsable = arith.ori %hasPackedRows, %widthDots : i1
     %quantizing = arith.andi %dotsUsable, %hasDots : i1
     cf.cond_br %quantizing, ^quantize(%none, %six : i64, i64), ^chooseKernel
   ^quantize(%quantizeIndex: i64, %quantizeSlot: i64):
