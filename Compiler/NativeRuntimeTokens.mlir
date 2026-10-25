@@ -21,9 +21,36 @@
     %zeros = arith.constant dense<0.0> : vector<4xf32>
     cf.switch %rowBits : i64, [
       default: ^bytes(%lane, %zeros : i64, vector<4xf32>),
+      2: ^two(%lane, %zeros : i64, vector<4xf32>),
       4: ^four(%lane, %zeros : i64, vector<4xf32>),
       6: ^six(%lane, %zeros : i64, vector<4xf32>)
     ]
+  ^two(%twoUnit: i64, %twoSums: vector<4xf32>):
+    %unitShift = arith.constant 6 : i64
+    %twoUnits = arith.shrui %count, %unitShift : i64
+    %twoMore = arith.cmpi slt, %twoUnit, %twoUnits : i64
+    cf.cond_br %twoMore, ^twoBody, ^reduce(%none, %twoSums : i64, vector<4xf32>)
+  ^twoBody:
+    %twoWeights:7 = func.call @strict_device_two_weights(%row, %count, %twoUnit) : (!llvm.ptr, i64, i64) -> (vector<4xi32>, vector<4xi32>, vector<4xi32>, vector<4xi32>, f32, i64, i64)
+    cf.br ^twoToken(%none, %twoSums : i64, vector<4xf32>)
+  ^twoToken(%twoIndex: i64, %twoTotals: vector<4xf32>):
+    %twoTokens = arith.cmpi slt, %twoIndex, %four : i64
+    cf.cond_br %twoTokens, ^twoUsed, ^twoNext
+  ^twoUsed:
+    %twoUsed = arith.cmpi sle, %twoIndex, %last : i64
+    cf.cond_br %twoUsed, ^twoAdd, ^twoJoined(%twoTotals : vector<4xf32>)
+  ^twoAdd:
+    %twoInputs:2 = func.call @strict_device_token_inputs(%bytes, %scales, %stride, %twoIndex, %last) : (!llvm.ptr, !llvm.ptr, i64, i64, i64) -> (!llvm.ptr, !llvm.ptr)
+    %twoOld = llvm.extractelement %twoTotals[%twoIndex : i64] : vector<4xf32>
+    %twoNew = func.call @strict_device_two_token(%twoWeights#0, %twoWeights#1, %twoWeights#2, %twoWeights#3, %twoWeights#4, %twoWeights#5, %twoWeights#6, %twoInputs#0, %twoInputs#1, %twoOld) : (vector<4xi32>, vector<4xi32>, vector<4xi32>, vector<4xi32>, f32, i64, i64, !llvm.ptr, !llvm.ptr, f32) -> f32
+    %twoUpdated = llvm.insertelement %twoNew, %twoTotals[%twoIndex : i64] : vector<4xf32>
+    cf.br ^twoJoined(%twoUpdated : vector<4xf32>)
+  ^twoJoined(%twoKept: vector<4xf32>):
+    %twoAfter = arith.addi %twoIndex, %one : i64
+    llvm.br ^twoToken(%twoAfter, %twoKept : i64, vector<4xf32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+  ^twoNext:
+    %twoFollowing = arith.addi %twoUnit, %lanes : i64
+    cf.br ^two(%twoFollowing, %twoTotals : i64, vector<4xf32>)
   ^four(%unit: i64, %fourSums: vector<4xf32>):
     %units = arith.shrui %count, %five : i64
     %fourMore = arith.cmpi slt, %unit, %units : i64

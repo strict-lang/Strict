@@ -185,4 +185,4 @@ NeuralNetworks/qwen3/
 !NeuralNetworks/tiny.gguf
 !NeuralNetworks/tinyqwen3.gguf
 !NeuralNetworks/tinyqwen3moe.gguf
-/graphify-out
+!NeuralNetworks/tinyqwen35basis.gguf

@@ -518,23 +518,32 @@
     return %result : f64
   }
   func.func private @strict_packed_data(%count: i64, %bits: i64) -> i64 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %two = arith.constant 2 : i64
     %three = arith.constant 3 : i64
     %four = arith.constant 4 : i64
+    %five = arith.constant 5 : i64
     %six = arith.constant 6 : i64
+    %seven = arith.constant 7 : i64
     %eight = arith.constant 8 : i64
     %spare = arith.constant 255 : i64
+    %groupSpare = arith.constant 127 : i64
     %fourBlock = arith.constant 144 : i64
     %sixBlock = arith.constant 208 : i64
     %alignMask = arith.constant -4 : i64
+    %isTwo = arith.cmpi eq, %bits, %two : i64
     %isFour = arith.cmpi eq, %bits, %four : i64
     %isSix = arith.cmpi eq, %bits, %six : i64
     %rounded = arith.addi %count, %spare : i64
     %blocks = arith.shrui %rounded, %eight : i64
     %fourBytes = arith.muli %blocks, %fourBlock : i64
     %sixBytes = arith.muli %blocks, %sixBlock : i64
+    %groupRounded = arith.addi %count, %groupSpare : i64
+    %groups = arith.shrui %groupRounded, %seven : i64
+    %twoBytes = arith.shli %groups, %five : i64
     %padded = arith.addi %count, %three : i64
     %aligned = arith.andi %padded, %alignMask : i64
-    %orSix = arith.select %isSix, %sixBytes, %aligned : i64
+    %orTwo = arith.select %isTwo, %twoBytes, %aligned : i64
+    %orSix = arith.select %isSix, %sixBytes, %orTwo : i64
     %data = arith.select %isFour, %fourBytes, %orSix : i64
     return %data : i64
   }
@@ -561,6 +570,14 @@
     %alignMask = arith.constant -4 : i64
     %halvesBytes = arith.andi %paddedHalves, %alignMask : i64
     %sixBytes = arith.addi %aligned, %halvesBytes : i64
+    %groupSpare = arith.constant 127 : i64
+    %groupRounded = arith.addi %count, %groupSpare : i64
+    %groupShift = arith.constant 7 : i64
+    %groups = arith.shrui %groupRounded, %groupShift : i64
+    %groupHalves = arith.shli %groups, %one : i64
+    %paddedGroupHalves = arith.addi %groupHalves, %three : i64
+    %groupHalvesBytes = arith.andi %paddedGroupHalves, %alignMask : i64
+    %twoBytes = arith.addi %aligned, %groupHalvesBytes : i64
     %fourBytes = arith.addi %aligned, %none : i64
     %cells = arith.muli %count, %bits : i64
     %plainBytes = arith.divui %cells, %eight : i64
@@ -582,7 +599,9 @@
     %orLanes = arith.select %isLanes, %laneBytes, %orBrain : i64
     %orFloat8 = arith.select %isByteWide, %aligned, %orLanes : i64
     %orFour = arith.select %isFour, %fourBytes, %orFloat8 : i64
-    %orSix = arith.select %isSix, %sixBytes, %orFour : i64
+    %isTwo = arith.cmpi eq, %bits, %two : i64
+    %orTwo = arith.select %isTwo, %twoBytes, %orFour : i64
+    %orSix = arith.select %isSix, %sixBytes, %orTwo : i64
     %bytes = arith.select %isQuantized, %quantizedBytes, %orSix : i64
     return %bytes : i64
   }
@@ -4781,6 +4800,13 @@
     %more = arith.cmpi slt, %index, %count : i64
     cf.cond_br %more, ^element, ^done
   ^element:
+    %ternaryCapacity = arith.constant -2.0 : f64
+    %isTernary = arith.cmpf oeq, %capacity, %ternaryCapacity : f64
+    cf.cond_br %isTernary, ^ternary, ^notTernary
+  ^ternary:
+    %fromTernary = func.call @strict_ternary_number(%data, %scales, %index) : (!llvm.ptr, !llvm.ptr, i64) -> f64
+    cf.br ^store(%fromTernary : f64)
+  ^notTernary:
     %brainCapacity = arith.constant -17.0 : f64
     %isBrain = arith.cmpf oeq, %capacity, %brainCapacity : f64
     cf.cond_br %isBrain, ^brain, ^notBrain
@@ -4894,6 +4920,42 @@
     cf.br ^unpacked
   ^unpacked:
     return %copyItems : !llvm.ptr
+  }
+  // number at of a list of 2 bit ternary codes (strict.h): (code - 1) times the half scale of its 128 numbers
+  func.func private @strict_ternary_number(%data: !llvm.ptr, %scales: !llvm.ptr, %at: i64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %one = arith.constant 1 : i64
+    %three = arith.constant 3 : i64
+    %four = arith.constant 4 : i64
+    %five = arith.constant 5 : i64
+    %six = arith.constant 6 : i64
+    %seven = arith.constant 7 : i64
+    %fifteen = arith.constant 15 : i64
+    %codeMask = arith.constant 3 : i32
+    %offset = arith.constant 1 : i32
+    %group = arith.shrui %at, %seven : i64
+    %half = arith.shrui %at, %six : i64
+    %halfBit = arith.andi %half, %one : i64
+    %fieldBits = arith.shrui %at, %four : i64
+    %field = arith.andi %fieldBits, %three : i64
+    %byteInHalf = arith.andi %at, %fifteen : i64
+    %groupStart = arith.shli %group, %five : i64
+    %halfStart = arith.shli %halfBit, %four : i64
+    %halfAt = arith.addi %groupStart, %halfStart : i64
+    %byteAt = arith.addi %halfAt, %byteInHalf : i64
+    %byteSlot = llvm.getelementptr %data[%byteAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %byte = llvm.load %byteSlot : !llvm.ptr -> i8
+    %wide = arith.extui %byte : i8 to i32
+    %shiftWide = arith.shli %field, %one : i64
+    %shift = arith.trunci %shiftWide : i64 to i32
+    %shifted = arith.shrui %wide, %shift : i32
+    %code = arith.andi %shifted, %codeMask : i32
+    %centered = arith.subi %code, %offset : i32
+    %level = arith.sitofp %centered : i32 to f64
+    %scaleSlot = llvm.getelementptr %scales[%group] : (!llvm.ptr, i64) -> !llvm.ptr, i16
+    %scaleBits = llvm.load %scaleSlot : !llvm.ptr -> i16
+    %scale = func.call @strict_half_number(%scaleBits) : (i16) -> f64
+    %number = arith.mulf %level, %scale : f64
+    return %number : f64
   }
   // an 8 bit float of a list in format 7 (E4M3: sign, 4 exponent bits with bias 7, 3 mantissa bits, at most 448)
   func.func private @strict_float8_number(%byte: i8) -> f64 {
@@ -12730,8 +12792,11 @@
     %isFour = arith.cmpi eq, %bits, %four : i64
     %isSix = arith.cmpi eq, %bits, %six : i64
     %isEight = arith.cmpi eq, %bits, %eight : i64
+    %two = arith.constant 2 : i64
+    %isTwo = arith.cmpi eq, %bits, %two : i64
     %isBlocked = arith.ori %isFour, %isSix : i1
-    %isPacked = arith.ori %isBlocked, %isEight : i1
+    %isWide = arith.ori %isBlocked, %isEight : i1
+    %isPacked = arith.ori %isWide, %isTwo : i1
     %packed = arith.extui %isPacked : i1 to i64
     %before = llvm.load %packedSlot : !llvm.ptr -> i64
     %combined = arith.ori %before, %packed : i64

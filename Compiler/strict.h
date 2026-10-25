@@ -23,17 +23,21 @@ static inline double strict_numbers_result(const strict_numbers* numbers) { retu
    one per row. 8 bits are a signed byte per number followed (at a multiple of 4 bytes) by a float scale for every 32
    numbers, a number is its byte times the scale of its 32 (Q8_0 of ggml with the scales apart, strict_quantized). 4 bits
    are the Q4_K blocks of ggml (144 bytes for 256 numbers), 6 bits the Q6_K blocks without their half scale d (208
-   bytes for 256 numbers) followed by the d of every block, so each block starts 16 byte aligned, both decode like ggml. */
+   bytes for 256 numbers) followed by the d of every block, so each block starts 16 byte aligned, both decode like ggml.
+   2 bits are ternary weights: 32 bytes of codes for every 128 numbers (in each 64, bits 2k of byte b are number 16k + b)
+   followed by a half scale for every 128, a number is (code - 1) times its scale. */
 typedef struct { double count; double bits; unsigned char data[]; } strict_packed;
 static inline double strict_packed_result(const strict_packed* packed) { return strict_value(0x7FF9000000000000ull | (uint64_t)(uintptr_t)packed); }
 static inline uint64_t strict_packed_data(uint64_t count, uint64_t bits)
 {
-	return bits == 4 ? (count + 255) / 256 * 144 : bits == 6 ? (count + 255) / 256 * 208 : (count + 3) / 4 * 4;
+	return bits == 4 ? (count + 255) / 256 * 144 : bits == 6 ? (count + 255) / 256 * 208 : bits == 2 ? (count + 127) / 128 * 32 :
+		(count + 3) / 4 * 4;
 }
 static inline uint64_t strict_packed_bytes(uint64_t count, uint64_t bits)
 {
 	uint64_t data = strict_packed_data(count, bits);
-	return bits == 8 ? data + (count + 31) / 32 * 4 : bits == 6 ? data + ((count + 255) / 256 * 2 + 3) / 4 * 4 : bits == 4 ? data : count * bits / 8;
+	return bits == 8 ? data + (count + 31) / 32 * 4 : bits == 6 ? data + ((count + 255) / 256 * 2 + 3) / 4 * 4 : bits == 4 ? data :
+		bits == 2 ? data + ((count + 127) / 128 * 2 + 3) / 4 * 4 : count * bits / 8;
 }
 /* Packs count floats (stride apart) into 8 bits, the scale of 32 numbers is their largest magnitude / 127. */
 static inline void strict_quantized(strict_packed* packed, const float* values, uint64_t count, uint64_t stride)
