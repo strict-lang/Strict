@@ -96,17 +96,13 @@ Steps(chosen Numbers, positions Numbers, sequences Number) Qwen3
 	Qwen3(value, blocks = updated, hidden = current)
 Scored Numbers
 	Tiny.Step(1, 0).Scored.Length is 6
-	let normed = Qwen3Block.Normalized(hidden, hidden.Length - norm.Length, norm.Length, norm)
-	let rotated = basis.Rotated(normed, norm.Length)
-	for outputs
-		Layer.Summed(value, rotated)
+	basis.Sums(outputs, Layer.Unbiased, Qwen3Block.Normalized(hidden, hidden.Length - norm.Length, norm.Length, norm))
 Next Number
 	Tiny.Step(1, 0).Next is 0
 	Greedy.Largest(Scored)
 Nexts Numbers
 	Prompted.Copies(2).Steps((3, 4), (2, 2), 2).Nexts is (Prompted.Step(3, 2).Next, Prompted.Step(4, 2).Next)
-	let normed = basis.Rotated(Qwen3Block.Normalized(hidden, 0, hidden.Length, norm), norm.Length)
-	let logits = Batch(outputs, List(Number) + 0).Sums(normed)
+	let logits = basis.Sums(outputs, Layer.Unbiased, Qwen3Block.Normalized(hidden, 0, hidden.Length, norm))
 	Greedy.Rows(logits, outputs.Length)
 Embedded(chosen Numbers) Numbers
 	Tiny.Embedded((1, 2)).Length is 16

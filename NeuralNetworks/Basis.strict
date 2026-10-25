@@ -40,6 +40,10 @@ Rotated(input Numbers, width Number) Numbers
 	Tiny.Rotated((0, 1, 0, 0, 0, 0, 0, 0), 8).Length is 8
 	Tiny.Restored(Tiny.Rotated(Probe + Probe, 8), 8) is Probe + Probe
 	signs.Length is 0 then input else Sylvester(input, Signs(width), block).Rotated
+Sums(weights List(Numbers), biases Numbers, input Numbers) Numbers
+	None.Sums(List(Numbers) + Probe, Layer.Unbiased, Probe) is List(Number) + 35.25
+	Tiny.Sums(List(Numbers) + Tiny.Rotated(Probe, 8), Layer.Unbiased, Probe).First.IsNearlyEqual(35.25)
+	Batch(weights, biases).Sums(Rotated(input, weights.First.Length))
 Restored(input Numbers, width Number) Numbers
 	None.Restored((1, 2), 2) is (1, 2)
 	signs.Length is 0 then input else Flipped(Sylvester(input, Sylvester.Unflipped, block).Rotated, Signs(width))

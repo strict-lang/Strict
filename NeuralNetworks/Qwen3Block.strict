@@ -51,8 +51,8 @@ Cached(input Numbers, rotation Numbers, bits Number) Qwen3Block
 	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm, 32).keys.Length is 4
 	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm, 32).queries.Length is 8
 	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm, 8).Cached(Tiny.mlpNorm, Tiny.mlpNorm, 8).values.Length is 8
-	let normed = experts.basis.Rotated(Normalized(input, 0, input.Length, attentionNorm), attention.weights.First.Length)
-	let combined = Batch(attention.weights, attention.biases).Sums(normed)
+	let normed = Normalized(input, 0, input.Length, attentionNorm)
+	let combined = experts.basis.Sums(attention.weights, attention.biases, normed)
 	let size = queryNorm.Length
 	let tokens = input.Length / attention.weights.First.Length
 	let queried = Rotated(combined, 0, tokens * heads * size, queryNorm, rotation)
@@ -109,8 +109,7 @@ HeadScale(input Numbers, first Number, size Number, epsilon Number) Number
 	1 / (sum / size + epsilon).SquareRoot
 Output(input Numbers, sequences Number) Numbers
 	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm, 32).Output(Tiny.attentionNorm, 1).Length is 8
-	let merged = experts.basis.Rotated(Merged(sequences), projection.weights.First.Length)
-	let attended = Batch(projection.weights, input).Sums(merged)
+	let attended = experts.basis.Sums(projection.weights, input, Merged(sequences))
 	experts.Added(Normalized(attended, 0, attended.Length, mlpNorm), attended)
 Merged(sequences Number) Numbers
 	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm, 32).Merged(1).Length is 8

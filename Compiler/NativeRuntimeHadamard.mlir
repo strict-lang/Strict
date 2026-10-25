@@ -81,14 +81,7 @@
     %second = func.call @strict_device_hadamard_stage(%first, %thread, %c4) : (f32, i64, i64) -> f32
     %third = func.call @strict_device_hadamard_stage(%second, %thread, %c16) : (f32, i64, i64) -> f32
     %fourth = func.call @strict_device_hadamard_stage(%third, %thread, %c64) : (f32, i64, i64) -> f32
-    cf.cond_br %wide, ^double, ^single
-  ^double:
-    %double = arith.extf %fourth : f32 to f64
-    %doubleSlot = llvm.getelementptr %result[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
-    llvm.store %double, %doubleSlot : f64, !llvm.ptr
-    cf.br ^done
-  ^single:
-    func.call @strict_device_stored(%result, %at, %fourth, %results) : (!llvm.ptr, i64, f32, i64) -> ()
+    func.call @strict_device_result(%result, %at, %fourth, %wide, %results) : (!llvm.ptr, i64, f32, i1, i64) -> ()
     cf.br ^done
   ^done:
     return

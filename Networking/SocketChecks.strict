@@ -2,6 +2,7 @@ Failures Number
 	Socket.Send(0, List(Number)) is Error("InvalidSocket")
 	Socket.Receive(0, 1) is Error("InvalidSocket")
 	Socket.Close(0) is 0
+	Socket.Waiting(0) is Error("InvalidSocket")
 	Loopback is 0
 	0
 Loopback Number

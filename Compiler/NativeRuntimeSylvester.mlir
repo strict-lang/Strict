@@ -93,14 +93,7 @@
     %readSlot = llvm.getelementptr %shared[%writeIndex] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
     %rotated = llvm.load %readSlot : !llvm.ptr<3> -> f32
     %scaled = arith.mulf %rotated, %factor : f32
-    cf.cond_br %wide, ^double, ^single
-  ^double:
-    %double = arith.extf %scaled : f32 to f64
-    %doubleSlot = llvm.getelementptr %result[%target] : (!llvm.ptr, i64) -> !llvm.ptr, f64
-    llvm.store %double, %doubleSlot : f64, !llvm.ptr
-    cf.br ^writeNext
-  ^single:
-    func.call @strict_device_stored(%result, %target, %scaled, %results) : (!llvm.ptr, i64, f32, i64) -> ()
+    func.call @strict_device_result(%result, %target, %scaled, %wide, %results) : (!llvm.ptr, i64, f32, i1, i64) -> ()
     cf.br ^writeNext
   ^writeNext:
     %writeFollowing = arith.addi %writePart, %c1 : i64

@@ -438,16 +438,38 @@ static void DecodedIQ4NL(const unsigned char* block, float* y)
    the lowest bits on) or a PTQ1_0 block: 24 bytes of 5 trits (bytes 0 to 15 give numbers 0 to 79, 16 to 23 numbers 80 to
    119, each trit n of all bytes of a stage after another), 2 bytes of 4 trits, then the half d; a byte holds its trits as
    a fraction of 243. */
+static const int TritStages[3][3] = { { 0, 16, 5 }, { 16, 8, 5 }, { 24, 2, 4 } };
 static void Codes(uint32_t type, const unsigned char* block, unsigned char* codes)
 {
 	static const uint8_t powers[5] = { 1, 3, 9, 27, 81 };
-	static const int stages[3][3] = { { 0, 16, 5 }, { 16, 8, 5 }, { 24, 2, 4 } };
 	for (int index = 0; type != PTQ1_0 && index < (int)BlockNumbers(type); index++)
 		codes[index] = (block[2 + index / 4] >> index % 4 * 2) & 3;
 	for (int stage = 0, number = 0; type == PTQ1_0 && stage < 3; stage++)
-		for (int trit = 0; trit < stages[stage][2]; trit++)
-			for (int byte = 0; byte < stages[stage][1]; byte++)
-				codes[number++] = (unsigned char)((uint16_t)(uint8_t)(block[stages[stage][0] + byte] * powers[trit]) * 3 >> 8);
+		for (int trit = 0; trit < TritStages[stage][2]; trit++)
+			for (int byte = 0; byte < TritStages[stage][1]; byte++)
+				codes[number++] = (unsigned char)((uint16_t)(uint8_t)(block[TritStages[stage][0] + byte] * powers[trit]) * 3 >> 8);
+}
+/* The PTQ1_0 block of 128 codes below 3 and the half d: a byte holds the base 3 number of its trits (the first highest,
+   a missing fifth 0) times 256 / 243 rounded up, like ggml's TQ1_0, so Codes finds them again. */
+static void Trits(const unsigned char* codes, const unsigned char* half, unsigned char* block)
+{
+	for (int stage = 0, first = 0; stage < 3; first += TritStages[stage][1] * TritStages[stage][2], stage++)
+		for (int byte = 0; byte < TritStages[stage][1]; byte++)
+		{
+			int number = 0;
+			for (int trit = 0; trit < 5; trit++)
+				number = number * 3 + (trit < TritStages[stage][2] ? codes[first + trit * TritStages[stage][1] + byte] : 0);
+			block[TritStages[stage][0] + byte] = (unsigned char)((number * 256 + 242) / 243);
+		}
+	memcpy(block + 26, half, 2);
+}
+/* Whether all codes of count PQ2_0 blocks are below 3 (no byte with both bits of a code set), so they fit PTQ1_0 blocks. */
+static int IsTernary(const unsigned char* blocks, uint64_t count)
+{
+	for (uint64_t at = 0; at < count * 34; at++)
+		if (at % 34 >= 2 && (blocks[at] & blocks[at] >> 1 & 0x55))
+			return 0;
+	return 1;
 }
 static const unsigned char* TernaryHalf(uint32_t type, const unsigned char* block) { return type == PTQ1_0 ? block + 26 : block; }
 
@@ -560,30 +582,23 @@ STRICT_EXPORT double GgufFile_Values(double self, double path, double name)
 
 /* The rows of the matrix name (its contiguous dimension is a row) packed with bits 32, 16 or 8. Q8_0 rows packed with 8
    bits keep their numbers: their scales are halves, so strict_quantized finds the same scales and bytes again. */
-/* The blocks of one row of a Q4_K, Q6_K, PQ2_0 or PTQ1_0 matrix as a packed row of 4, 6, 3 or 2 bits: Q4_K and PTQ1_0
-   blocks stay as they are, Q6_K blocks give their half scale d to the end of the row, 2 bits are ternary blocks as 2 bit
-   codes (strict.h) with their half scales at the end. */
+/* The blocks of one row of a Q4_K, Q6_K, PTQ1_0 or PQ2_0 matrix as a packed row of 4, 6 or 3 bits: Q4_K and PTQ1_0
+   blocks stay as they are, Q6_K blocks give their half scale d to the end of the row, PQ2_0 blocks become PTQ1_0 blocks. */
 static void Repacked(const unsigned char* blocks, uint32_t type, uint64_t bits, uint64_t width, strict_packed* packed)
 {
 	uint64_t count = width / 256;
-	if (bits == 4 || bits == 3)
+	if (bits == 4 || type == PTQ1_0)
 		memcpy(packed->data, blocks, strict_packed_data(width, bits));
 	for (uint64_t block = 0; bits == 6 && block < count; block++)
 	{
 		memcpy(packed->data + block * 208, blocks + block * 210, 208);
 		memcpy(packed->data + count * 208 + block * 2, blocks + block * 210 + 208, 2);
 	}
-	for (uint64_t group = 0; bits == 2 && group < width / 128; group++)
+	for (uint64_t group = 0; type == PQ2_0 && group < width / 128; group++)
 	{
-		const unsigned char* block = blocks + group * BlockBytes(type);
-		unsigned char codes[128], * packedCodes = packed->data + group * 32;
-		Codes(type, block, codes);
-		for (int index = 0; index < 32; index++)
-		{
-			const unsigned char* fields = codes + index / 16 * 64 + index % 16;
-			packedCodes[index] = (unsigned char)(fields[0] | fields[16] << 2 | fields[32] << 4 | fields[48] << 6);
-		}
-		memcpy(packed->data + width / 128 * 32 + group * 2, TernaryHalf(type, block), 2);
+		unsigned char codes[128];
+		Codes(type, blocks + group * 34, codes);
+		Trits(codes, TernaryHalf(type, blocks + group * 34), packed->data + group * 28);
 	}
 }
 
@@ -615,25 +630,24 @@ static void Packed(void* context, uint64_t item)
 	}
 }
 
-/* Rows of 32, 16 or 8 bits, 4 keeps Q4_K, Q6_K and the ternary PQ2_0 and PTQ1_0 matrices as they are in 4, 6, 2 and 3
-   bits, 2 does the same with all ternary matrices in 2 bits (other types become 8 bits). The matrices of a stack (the
-   experts of a mixture) follow each other. */
+/* Rows of 32, 16 or 8 bits, 4 keeps Q4_K, Q6_K and the ternary PTQ1_0 and PQ2_0 matrices in 4, 6 and 3 bits (PQ2_0 with a
+   code 3 and other types become 8 bits). The matrices of a stack (the experts of a mixture) follow each other. */
 STRICT_EXPORT double GgufFile_Rows(double self, double path, double name, double bits)
 {
 	static double* rows = 0;
 	static unsigned char* storage = 0;
-	const char* failure = bits != 2 && bits != 4 && bits != 8 && bits != 16 && bits != 32 ?
-		"OnlyMatricesOf2Or4Or8Or16Or32BitsAreSupported" : 0;
+	const char* failure = bits != 4 && bits != 8 && bits != 16 && bits != 32 ? "OnlyMatricesOf4Or8Or16Or32BitsAreSupported" : 0;
 	const Tensor* tensor = failure ? 0 : Requested(path, name, 0, &failure);
 	if (tensor && tensor->dimensions != 2 && tensor->dimensions != 3)
 		tensor = 0, failure = "OnlyMatricesAndStacksOfThemHaveRows";
 	uint64_t width = tensor ? tensor->shape[0] : 0;
 	uint64_t height = tensor ? tensor->shape[1] * (tensor->dimensions == 3 ? tensor->shape[2] : 1) : 0;
 	uint32_t type = tensor ? tensor->type : F32;
-	uint64_t kept = bits != 4 && bits != 2 ? (uint64_t)bits : type == Q4_K ? 4 : type == Q6_K ? 6 :
-		type == PTQ1_0 && bits == 4 ? 3 : type == PQ2_0 || type == PTQ1_0 ? 2 : 8;
-	int isBlocked = kept == 4 || kept == 6 || kept == 2 || kept == 3;
+	uint64_t kept = bits != 4 ? (uint64_t)bits : type == Q4_K ? 4 : type == Q6_K ? 6 : type == PTQ1_0 || type == PQ2_0 ? 3 : 8;
+	int isBlocked = kept == 4 || kept == 6 || kept == 3;
 	unsigned char* raw = tensor && isBlocked ? Blocks(tensor, width * height, &failure) : 0;
+	if (raw && type == PQ2_0 && !IsTernary(raw, width * height / 128))
+		free(raw), raw = 0, kept = 8, isBlocked = 0;
 	float* floats = tensor && !isBlocked ? Floats(tensor, width * height, &failure) : 0;
 	if (!floats && !raw)
 		return strict_fail(failure);
