@@ -51,6 +51,8 @@ strict test Examples/Sum.strict           run the inline tests on the Strict VM 
 strict build Examples/Sum.strict          run the tests, then build the native executable
 strict build Examples/Sum.strict linux    also the Linux executable (on Windows through WSL)
 strict build Examples/Sum.strict web      .html, .js and .wasm for the browser (Emscripten, installed when missing)
+strict build Examples/Sum.strict android  arm64-v8a shared library and assets in Release/Android (Android NDK)
+strict build Examples/Sum.strict ios      arm64 iOS static archive and assets in Release/iOS (native packages need Xcode)
 strict build Examples/Sum.strict small    optimized for size instead of speed
 strict build Policy.strict library        Policy.dll (.so, .dylib) exporting the public methods for C and C#, plus Policy.cs
 strict build Games/App/App.strict         a windowed program goes into Games/App/Release with its Content (macOS: a signed .app)

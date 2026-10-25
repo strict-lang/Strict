@@ -8,7 +8,7 @@ linked="-lm -lpthread"
 architecture=""
 [ $platform = MacOS ] && architecture=X64 && [ "$(uname -m)" = arm64 ] && architecture=Arm64
 PATH="$(cd .. && pwd)/Tools/LLVM-23.1.3-Linux-X64/bin:$(cd .. && pwd)/Tools/LLVM-23.1.3-MacOS/bin:$PATH"
-{ cat Bootstrap.mlir NativeRuntime.mlir; echo; cat NativeRuntime$platform.mlir; echo; [ -n "$architecture" ] && cat NativeRuntime$platform$architecture.mlir && echo; echo "}"; } > NativeCompiler.$platform.mlir
+{ cat Bootstrap.mlir NativeRuntime.mlir; echo; [ "$platform" = Linux ] && cat NativeRuntimePosix.mlir && echo; [ "$platform" = MacOS ] && cat NativeRuntimeDarwin.mlir && echo; cat NativeRuntime$platform.mlir; echo; [ "$architecture" = Arm64 ] && cat NativeRuntimeArm64.mlir && echo; [ -n "$architecture" ] && cat NativeRuntime$platform$architecture.mlir && echo; echo "}"; } > NativeCompiler.$platform.mlir
 passes="--symbol-dce --convert-scf-to-cf --convert-arith-to-llvm --convert-func-to-llvm --convert-cf-to-llvm --reconcile-unrealized-casts"
 mlir-opt NativeCompiler.$platform.mlir $passes -o NativeCompiler.$platform.llvm.mlir
 mlir-translate --mlir-to-llvmir NativeCompiler.$platform.llvm.mlir -o NativeCompiler.$platform.ll

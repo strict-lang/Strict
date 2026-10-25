@@ -3,13 +3,14 @@ constant Counting = TypeEntry("Strict/A", List(MemberEntry), List(MethodEntry) +
 constant Initializing = TypeEntry("Strict/A", List(MemberEntry), List(MethodEntry) + MethodEntry.Initializing)
 constant Hellos = ("Examples/HelloLogger.strict", "Examples/HelloLogger.strict")
 constant Other = TypeEntry("Strict/B", List(MemberEntry), List(MethodEntry))
-Module(path Text, root Text, isCounting Boolean, isProgram Boolean) MlirModule
+Module(path Text, root Text, isCounting Boolean, isProgram Boolean, platform = -1) MlirModule
 	NativeFolder(Logger).Module("Examples/HelloLogger.strict", ".", false, true).entryName is "Run"
 	let paths = Paths(path)
 	let folders = Directory.Exists(path) then ResolveCheck.Tree(path) else List(Text) + path
 	let types = isCounting then Collected(folders, root) else Execute(logger).Loaded(path, root)
 	let counted = isCounting then CountedFiles(paths, root) else List(Text)
-	MlirModule(Inliner(types).Inlined, isProgram then "Run" else TestCodegen.Runner, counted, paths.Length)
+	let symbol = platform is Platform.IOS then "strict_main" else "main"
+	MlirModule(Inliner(types).Inlined, isProgram then "Run" else TestCodegen.Runner, counted, paths.Length, symbol)
 Natives(path Text, root Text, types List(TypeEntry)) Texts
 	NativeFolder(Logger).Natives("Examples", ".", List(TypeEntry) + Foreign.Adder) is ("Examples/NativeAdd/native")
 	let paths = Paths(path)

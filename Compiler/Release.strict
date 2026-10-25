@@ -1,10 +1,30 @@
 has logger
 has base Text
 constant Opening = "= func.call @" + "Window_Open("
-Packaged(program Text, built Number, isWeb = false, isCrossing = false) Number
+AndroidPackaged Number
+	let release = Parent + "/Release/Android"
+	if Content(Parent + "/Release/Content") < 0
+		return 1
+	Directory.Create(Parent + "/Release")
+	Directory.Create(release)
+	Directory.Create(release + "/jniLibs")
+	Directory.Create(release + "/jniLibs/arm64-v8a")
+	let library = AndroidBuild(Toolchain(Platform.Current, TypeSource.Root)).Executable(base)
+	File(release + "/jniLibs/arm64-v8a/libmain.so").Write(File(library).ReadBytes)
+	Directory.Create(release + "/assets")
+	logger.Log("Android native library and assets: " + release)
+	Mirrored(release + "/assets/Content")
+IOSPackaged Number
+	if Content(Parent + "/Release/Content") < 0
+		return 1
+	let release = Parent + "/Release/iOS"
+	Refreshed(release, release + "/Content", List(Text) + ".ios.a")
+Packaged(program Text, built Number, isWeb = false, isCrossing = false, platform = -1) Number
 	Release(Logger, "Examples/Sum").Packaged("module {\n}", 0) is 0
 	Release(Logger, "Examples/Sum").Packaged("module {\n}", 2) is 2
 	Release(Logger, "Missing/App.test").Packaged(Opening, 0) is 0
+	if (platform is in (Platform.Android, Platform.IOS)) and (built is 0)
+		return platform is Platform.IOS then IOSPackaged else AndroidPackaged
 	let isWindowed = program.IndexOf(Opening) >= 0
 	if (built is not 0) or base.EndsWith(".test") or (isWindowed is false)
 		return built

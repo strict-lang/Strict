@@ -1,0 +1,57 @@
+has tools Toolchain
+constant Target = "aarch64-linux-android26"
+constant Architecture = " --target=" + Target + " -fPIC -Wno-override-module"
+constant Flags = Architecture + " -shared -Wl,--no-undefined -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384 -landroid -llog -lEGL -lGLESv3 -lOpenSLES -lOpenMAXAL -lz -lm -ldl"
+Environment(name Text) Text
+	AndroidBuild(Toolchain.OnWindows).Environment("STRICT_MISSING_ENVIRONMENT") is ""
+	let isWindows = tools.platform is Platform.Windows
+	let result = ToolRunner(isWindows then "cmd" else "env").Execute(isWindows then "/c set" else "")
+	for result.Output.Lines
+		if value.StartsWith(name + "=")
+			return value.Substring(name.Length + 1, value.Length - name.Length - 1)
+	""
+Folder(ndk Text) Text
+	AndroidBuild(Toolchain.OnWindows).Folder("C:/ndk") is "C:/ndk/toolchains/llvm/prebuilt/windows-x86_64/bin/"
+	AndroidBuild(Toolchain.OnLinux).Folder("/ndk") is "/ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/"
+	let unix = tools.platform is Platform.MacOS then "darwin" else "linux"
+	let host = tools.platform is Platform.Windows then "windows" else unix
+	ndk.Replace("\\", "/") + "/toolchains/llvm/prebuilt/" + host + "-x86_64/bin/"
+Compiler(ndk Text) Text
+	AndroidBuild(Toolchain.OnWindows).Compiler("Compiler/output/missing") is ""
+	let compiler = Folder(ndk) + "clang" + tools.Extension
+	(ndk is not "") and File(compiler).Exists then compiler else ""
+Ndk Text
+	let home = Environment("ANDROID_HOME")
+	let sdk = home is "" then Environment("ANDROID_SDK_ROOT") else home
+	let local = tools.platform is Platform.Windows then Environment("LOCALAPPDATA") + "/Android/Sdk" else ""
+	Located(Environment("ANDROID_NDK_ROOT"), sdk is "" then local else sdk)
+Located(ndk Text, sdk Text) Text
+	AndroidBuild(Toolchain.OnWindows).Located("Compiler/output/missing", "Compiler/output/missing") is ""
+	if ndk is not ""
+		return Compiler(ndk) is "" then "" else ndk
+	for Directory.Directories(sdk + "/ndk").Reverse
+		if Compiler(value) is not ""
+			return value
+	""
+Executable(base Text) Text
+	AndroidBuild(Toolchain.OnWindows).Executable("Games/App") is "Games/App.android.so"
+	base + ".android.so"
+Linked(base Text, level Text) Text
+	AndroidBuild(Toolchain.OnWindows).Linked("Compiler/output/missing", "").StartsWith("mlir-opt failed")
+	let compiled = Compiled(base, level)
+	if compiled is not ""
+		return compiled
+	let compiler = Compiler(Ndk)
+	if compiler is ""
+		return "Android NDK not found: set ANDROID_NDK_ROOT or ANDROID_HOME with an installed ndk/<version>"
+	let sources = NativeSources(tools.natives).Arguments(Platform.Android, tools.root)
+	let arguments = tools.Quoted(base + ".android.o") + sources + " -o " + tools.Quoted(Executable(base)) + Flags + level
+	let linked = ToolRunner(compiler).Execute(arguments)
+	linked.Failed then "Android clang failed: " + linked.error + linked.Output else "Built " + Executable(base)
+Compiled(base Text, level Text) Text
+	let lowered = tools.Lowered(base)
+	if lowered is not ""
+		return lowered
+	let arguments = "-c " + tools.Quoted(base + ".ll") + " -o " + tools.Quoted(base + ".android.o")
+	let compiled = ToolRunner(tools.Located("clang")).Execute(arguments + Architecture + level)
+	compiled.Failed then "clang failed: " + compiled.error + compiled.Output else ""

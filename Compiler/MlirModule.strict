@@ -2,6 +2,7 @@ has types List(TypeEntry)
 has entryName Text
 has countedFiles Texts = List(Text)
 has entries = 1
+has entrySymbol Text = "main"
 constant Counters = MlirModule(List(TypeEntry) + TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry) + MethodEntry.CountingLoop), "Run")
 constant Pair = MlirModule(Counters.types + TypeEntry("Strict/Other", List(MemberEntry), List(MethodEntry) + MethodEntry.CountingLoop), "Run", List(Text), 2)
 constant NoFunctions = List(MlirFunction)
@@ -31,7 +32,7 @@ Combined(lines Texts, functions List(MlirFunction), counted List(MlirFunction)) 
 	Counters.Combined(List(Text), Counters.Functions, Counters.Functions).EndsWith("}")
 	let table = countedFiles.Length is 0 then List(Text) else MlirLines.Table(functions, Mains, countedFiles)
 	let device = MlirGpu.Module(functions)
-	let main = MlirEntry(counted.First, Others(counted)).Main
+	let main = MlirEntry(counted.First, Others(counted), entrySymbol).Main
 	let host = outer.Text.Combine(lines + MlirGlobals(functions).Lines + table + main + "}", "\n")
 	device is "" then host else host + "\n" + device
 Functions List(MlirFunction)

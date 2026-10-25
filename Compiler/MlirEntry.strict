@@ -1,5 +1,6 @@
 has entry MlirFunction
 has others List(MlirFunction) = List(MlirFunction)
+has symbol Text = "main"
 constant Counted = MlirEntry(MlirModule.Counters.Functions.First)
 constant Frames = MemberEntry("frames", "Strict/Number", List(InstructionEntry) + InstructionEntry.Set(List(Text), (1, 7)), false)
 constant Both = MlirEntry(Counted.entry, List(MlirFunction) + Counted.entry)
@@ -19,10 +20,12 @@ Main Texts
 	let called = prepared + (self, EntryCall) + Others + Code
 	called + Finished + Unhandled + Exit + printed + ("    return %exit : i32", "  }")
 Header Texts
+	MlirEntry(Counted, symbol = "strict_main").Header.First.StartsWith("  func.func @strict_main(")
 	Counted.Header.Length is 7
 	constant slot = "    %selfslot = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
 	constant constants = ("    %one = arith.constant 1 : i64", "    %zero = arith.constant 0.0 : f64", slot)
-	List(Text) + "  func.func @main(%argc: i32, %argv: !llvm.ptr) -> i32 {" + CollectorStart + constants
+	let declaration = "  func.func @" + symbol + "(%argc: i32, %argv: !llvm.ptr) -> i32 {"
+	List(Text) + declaration + CollectorStart + constants
 Code Text
 	Counted.Code is "    %code = arith.constant 0 : i32"
 	let total = others.Length is 0 then "%result" else "%total" + others.Length

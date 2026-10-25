@@ -2,6 +2,8 @@ constant Windows
 constant Linux
 constant MacOS
 constant Web
+constant Android
+constant IOS
 NameOf(code Number) Text
 	NameOf(Windows) is "Windows"
 	NameOf(Web) is "Web"
@@ -13,23 +15,37 @@ NameOf(code Number) Text
 		return "MacOS"
 	if code is Web
 		return "Web"
-	"Unknown"
+	code is Android then "Android" else (code is IOS then "iOS" else "Unknown")
 Current Number
 	Platform.Current is in (Windows, Linux, MacOS)
 	FromName(Process.OperatingSystem)
 FromName(name Text) Number
+	NameOf(FromName("iOS")) is "iOS"
+	NameOf(FromName("Android")) is "Android"
 	FromName("Linux") is Linux
 	FromName("MacOS") is MacOS
 	if name is "Windows"
 		return Windows
+	if name is "Android"
+		return Android
+	if name is "iOS"
+		return IOS
 	name is "MacOS" then MacOS else Linux
 Architecture Text
 	Platform.Architecture is in ("X64", "Arm64")
 	Process.RunTool("uname", "-m").Output.Trim is "arm64" then "Arm64" else "X64"
 Runtimes(code Number) Texts
-	Platform.Runtimes(Linux) is ("Linux")
-	Platform.Runtimes(MacOS) is ("MacOS", "MacOS" + Platform.Architecture)
-	code is MacOS then ("MacOS", "MacOS" + Architecture) else List(Text) + NameOf(code)
+	Platform.Runtimes(Linux) is ("Posix", "Linux")
+	Platform.Runtimes(MacOS).Last is "MacOS" + Platform.Architecture
+	if code is Linux
+		return ("Posix", "Linux")
+	if code is Android
+		return ("Posix", "Android", "Arm64")
+	if code is IOS
+		return ("Darwin", "IOS", "Arm64", "MacOSArm64")
+	if code is MacOS
+		return Architecture is "Arm64" then ("Darwin", "MacOS", "Arm64", "MacOSArm64") else ("Darwin", "MacOS", "MacOSX64")
+	List(Text) + NameOf(code)
 Runtime(code Number, root Text) Texts
 	Platform.Runtime(Linux, ".").First.StartsWith("  // the heap")
 	for Runtimes(code)
@@ -40,6 +56,8 @@ LibraryExtension(code Number) Text
 	Platform.LibraryExtension(MacOS) is ".dylib"
 	if code is Windows
 		return ".dll"
+	if code is IOS
+		return ".a"
 	code is MacOS then ".dylib" else ".so"
 IsWindows(code Number) Boolean
 	if code is Windows

@@ -3,7 +3,8 @@ has build NativeBuild
 Built(path Text, root Text) Number
 	let isProgram = NativeBuild.IsProgram(path)
 	let isStale = Execute(logger).Stale(List(Text) + path).Length > 0
-	if build.isWeb or (isStale is false) or isProgram and (File(TestExecutable(path, root)).Exists is false)
+	let isCross = build.isAndroid or build.isIOS or build.isWeb
+	if isCross or (isStale is false) or isProgram and (File(TestExecutable(path, root)).Exists is false)
 		return Measured(path, root)
 	let gated = Gated(path, root, isProgram)
 	(gated > 0) or (isProgram is false) then gated else build.Compile(path, root)
@@ -13,7 +14,7 @@ Measured(path Text, root Text) Number
 	let tested = Process.Elapsed
 	let built = failed > 0 then failed else build.Compile(path, root)
 	let compiled = Process.Elapsed
-	if (built > 0) or build.isWeb or (tested - started < 2 * (compiled - tested))
+	if (built > 0) or build.isWeb or build.isAndroid or build.isIOS or (tested - started < 2 * (compiled - tested))
 		return built
 	let took = " took " + (tested - started).Round(1) + " s on the Strict VM, its build " + (compiled - tested).Round(1)
 	logger.Log("The tests of " + path + took + " s: later builds run its native tests instead")
