@@ -3,8 +3,8 @@
 TCP/IP sockets for the programs of the repository: a client connects to a host,
 a server listens on a port and accepts, both send and receive bytes.
 
-- `Socket.Connect(host, port)`: the socket of a client, 0 when the host is not
-  there.
+- `Socket.Connect(host, port)`: the socket of a client, or an Error such as
+  `HostNotFound` or `ConnectionFailed`.
 - `Socket.Listen(port)`: the socket of a server.
 - `Socket.Accept(server)`: the socket of the client that connects.
 - `Socket.Send(socket, bytes)`: sends the bytes (0 to 255) and returns how many

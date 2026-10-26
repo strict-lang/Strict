@@ -8,8 +8,6 @@ What to fix next, one short line each, bugs first. Remove a line once it is atte
 - Ternary Bonsai 27B stalls at a simulated 10 GB only with a raw cuMemAlloc holder in another process (p95 315 against 31 ms per token), not with a torch holder (p95 21-24 ms): find what differs (WDDM residency, memset pages) before blaming the streaming code.
 - Native builds now and then leave an llvm-split part (`Name.test-3`, LLVM bitcode) next to the source: `NativeBuild.Removed` ignores a failed `File.Delete` (likely still open).
 - Parallel `strict build`s after a compiler change all rebuild `Compiler/NativeCompiler` at once and fail linking (`NativeCompiler.res` missing): one build rebuilds, the others wait for it.
-- A GPU loop calling a method that only wraps one summing call (`Normalization.Scale(Normalization.Squared(...))`) sums the whole group again per element (Moss sampling 4.0 -> 17.5 s): let `MlirGroups.Adding` look through such a callee, with a MlirGroups test.
-- `Compiler/Bootstrap.mlir` predates the 11 attention arguments: MossGenerate built by the stage 0 compiler of `Bootstrap.cmd` sampled for over 100 s; regenerate it from a fixpoint build.
 - A failed host allocation shows up as `AccessViolation` instead of an out of memory Error (H3 with 40 GB committed by other programs).
 - `File.Length` on the VM returns the collection length, not the file's byte count (release verification uses `ReadBytes.Length` for now).
 - `strict test Compiler/Toolchain.strict` exited 127 without a message once among 16 parallel VM tests, in `PartsCompiled` (`Process.RunTools` starting clang on pool threads).
@@ -17,6 +15,9 @@ What to fix next, one short line each, bugs first. Remove a line once it is atte
 - A method named like a base type is not what a bare name means inside its own loops: in `Bytecode/Signature`, `Signature(value).Type is Type` compared with the base type `Type` (silently false) instead of calling the method; report the ambiguity.
 - Qwen3Benchmark native compilation intermittently exits with heap corruption after GPU preparation; keep the failing cold-build log and investigate in the compiler/runtime session.
 - Native C object cache ignores optimization flags: switching default/small builds can reuse an object compiled at the wrong optimization level.
+- Test-data discovery recursively inventories SDKs and `.git` from quoted directory fragments; separate actual fixtures from tool/VCS state before parallelizing the scan.
+- Native TensorFile result buffers and GgufFile model-selection caches are shared mutable state; audit concurrent exported calls before enabling parallel loading.
+- SocketChecks binds a fixed loopback port; concurrent copies need isolated ports and guaranteed cleanup on connection failure.
 
 ## Next
 - GPU speed and memory (attention, 16 bit lists, memory budget, loading, generated loops): [improvements-gpu.md](improvements-gpu.md).
