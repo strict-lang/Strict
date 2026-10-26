@@ -1,6 +1,11 @@
 has lines Texts
 constant Internal = "llvm.linkage = #llvm.linkage<internal>"
-constant Single = Toolchain.Passes + " --mlir-disable-threading -o \""
+constant Hidden = "  llvm.mlir.global internal "
+constant Visible = "  llvm.mlir.global "
+constant Tricky = "  llvm.mlir.global internal @k(\" constant thread_local \") : f64"
+constant Passes = " --symbol-dce --convert-scf-to-cf --convert-arith-to-llvm --convert-func-to-llvm --convert-cf-to-llvm --reconcile-unrealized-casts"
+constant Translating = " --mlir-disable-threading --mlir-to-llvmir "
+constant Single = Passes + " --mlir-disable-threading -o \""
 constant Sample = MlirSplit(("module {", "  llvm.func @printf(!llvm.ptr, ...) -> i32", "  llvm.mlir.global internal constant @t(\"a\\00\") : !llvm.array<2 x i8>", "  func.func private @A() -> f64 attributes {llvm.linkage = #llvm.linkage<internal>} {", "    %r = func.call @B() : () -> f64", "    return %r : f64", "  }", "  func.func private @B(%p0: f64) -> f64 {", "    return %p0 : f64", "  }", "}"))
 Parts(count Number) Texts
 	Sample.Parts(2).Length is 2
@@ -27,7 +32,7 @@ Shared(isFirst Boolean) Texts
 	Sample.Shared(false).Last is "  llvm.mlir.global external constant @t() : !llvm.array<2 x i8>"
 	for lines
 		if value.StartsWith("  llvm.mlir.global ")
-			isFirst then value.Replace(" internal ", " ") else Global(value)
+			Global(value, isFirst)
 		else if IsDeclaration(value, isFirst)
 			value
 IsDeclaration(line Text, isFirst Boolean) Boolean
@@ -96,7 +101,7 @@ Lowered(base Text, tools Toolchain) Text
 		let part = base + "-" + index
 		File(part + ".mlir").Write(value)
 		optimizing = optimizing + ("\"" + part + ".mlir\"" + Single + part + ".llvm.mlir\"")
-		translating = translating + (Toolchain.Translating + "\"" + part + ".llvm.mlir\" -o \"" + part + "\"")
+		translating = translating + (Translating + "\"" + part + ".llvm.mlir\" -o \"" + part + "\"")
 	File(base + ".ll").Delete
 	let lowered = Ran("mlir-opt", optimizing, tools)
 	lowered is "" then Ran("mlir-translate", translating, tools) else lowered
@@ -106,12 +111,15 @@ Ran(tool Text, arguments Texts, tools Toolchain) Text
 		if value.Failed
 			return tool + " failed: " + value.error
 	""
-Global(line Text) Text
-	Sample.Global("  llvm.mlir.global internal @k(0.0 : f64) : f64") is "  llvm.mlir.global external @k() : f64"
-	Sample.Global("  llvm.mlir.global internal thread_local @d(0 : i64) : i64").EndsWith(" thread_local @d() : i64")
-	let at = line.IndexOf("@")
-	let name = line.Substring(at, line.IndexOf("(", at) - at)
-	let fixed = line.IndexOf(" constant ") > 0 then "constant " else ""
-	let local = line.IndexOf(" thread_local ") > 0 then "thread_local " else ""
+Global(line Text, isFirst Boolean) Text
+	Sample.Global(Tricky, false).EndsWith("external @k() : f64")
+	Sample.Global("  llvm.mlir.global internal @k(\" internal \")", true) is "  llvm.mlir.global @k(\" internal \")"
+	Sample.Global("  llvm.mlir.global internal thread_local @d(0 : i64) : i64", false).EndsWith(" thread_local @d() : i64")
+	if isFirst
+		return line.StartsWith(Hidden) then Visible + line.Substring(Hidden.Length, line.Length - Hidden.Length) else line
+	let flags = line.Substring(0, line.IndexOf("@"))
+	let name = line.Substring(flags.Length, line.IndexOf("(", flags.Length) - flags.Length)
+	let fixed = flags.IndexOf(" constant ") > 0 then "constant " else ""
+	let local = flags.IndexOf(" thread_local ") > 0 then "thread_local " else ""
 	let type = line.Substring(line.LastIndexOf(" : ") + 3, line.Length - line.LastIndexOf(" : ") - 3)
 	"  llvm.mlir.global external " + fixed + local + name + "() : " + type

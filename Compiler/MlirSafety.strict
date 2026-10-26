@@ -1,0 +1,50 @@
+has functions List(MlirFunction)
+has edges List(Numbers)
+constant Rows = (MlirParallel.Doubling.function, MlirFunction(MlirParallel.Doubling.function.types, MlirParallel.Rows, MlirParallel.Twice), MlirParallel.Randomizing.function)
+constant Rowed = MlirSafety(Rows, MlirRecursion(Rows, 1).Edges)
+constant Chain = MlirSafety(List(MlirFunction), ((1), List(Number)))
+Marked List(MlirFunction)
+	Rowed.Marked.First.safeCalls("Rows_Twice_1") is 1
+	let calls = Calls
+	for functions
+		MlirFunction(value, safeCalls = calls)
+Calls Dictionary(Text, Number)
+	Rowed.Calls("Rows_Doubled_1") is 1
+	Rowed.Calls("Rows_Randomized_1") is 0
+	let flags = Spread(Direct)
+	mutable calls = Dictionary(Text, Number)
+	for functions
+		calls(value.Symbol) = 1 - flags(index)
+	calls
+Direct Numbers
+	Rowed.Direct is (0, 0, 1)
+	for functions
+		IsDirect(value) then 1 else 0
+IsDirect(function MlirFunction) Boolean
+	Rowed.IsDirect(Rowed.functions.Last)
+	Rowed.IsDirect(Rowed.functions.First) is false
+	if MlirForeign(function).IsForeign
+		return true
+	let purity = MlirPurity(function, 0)
+	for function.method.instructions
+		let isCall = value.kind is InstructionType.Invoke
+		let callees = isCall then MlirModule(function.types, "").Called(function, index) else List(MlirFunction)
+		if (isCall then purity.IsAllowed(function, index, callees) else purity.IsSafe(function, index, 1)) is false
+			return true
+	false
+Spread(flags Numbers) Numbers
+	Chain.Spread((0, 1)) is (1, 1)
+	let next = Spreading(flags)
+	next is flags then flags else Spread(next)
+Spreading(flags Numbers) Numbers
+	Chain.Spreading((0, 1)) is (1, 1)
+	Chain.Spreading((0, 0)) is (0, 0)
+	for edges
+		(flags(index) is 1) or IsCalling(value, flags) then 1 else 0
+IsCalling(callees Numbers, flags Numbers) Boolean
+	Rowed.IsCalling((2), (0, 0, 1))
+	Rowed.IsCalling((1), (0, 0, 1)) is false
+	for callees
+		if (value < 0) or (flags(value) is 1)
+			return true
+	false

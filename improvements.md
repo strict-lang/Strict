@@ -12,12 +12,14 @@ What to fix next, one short line each, bugs first. Remove a line once it is atte
 - `File.Length` on the VM returns the collection length, not the file's byte count (release verification uses `ReadBytes.Length` for now).
 - `strict test Compiler/Toolchain.strict` exited 127 without a message once among 16 parallel VM tests, in `PartsCompiled` (`Process.RunTools` starting clang on pool threads).
 - `strict test Compiler/ToolRunner.strict native` fails with `unsupported: text of List(IsWindow)` in `$Tests`; conditional constants infer the wrong type (also fails without timing changes).
-- A method named like a base type is not what a bare name means inside its own loops: in `Bytecode/Signature`, `Signature(value).Type is Type` compared with the base type `Type` (silently false) instead of calling the method; report the ambiguity.
+- A method named like a base type is not what a bare name means inside its own loops: in `Bytecode/Signature`, `Signature(value).Type is Type` compared with the base type `Type` (silently false) instead of calling the method; report the ambiguity. Also `List(Text)` inside the loop of `MlirModule.Emitted` called `MlirModule.Text` (stack overflow, `outer.Text` does not help for `List(Text)`).
 - Qwen3Benchmark native compilation intermittently exits with heap corruption after GPU preparation; keep the failing cold-build log and investigate in the compiler/runtime session.
 - Native C object cache ignores optimization flags: switching default/small builds can reuse an object compiled at the wrong optimization level.
 - Test-data discovery recursively inventories SDKs and `.git` from quoted directory fragments; separate actual fixtures from tool/VCS state before parallelizing the scan.
 - Native TensorFile result buffers and GgufFile model-selection caches are shared mutable state; audit concurrent exported calls before enabling parallel loading.
 - SocketChecks binds a fixed loopback port; concurrent copies need isolated ports and guaranteed cleanup on connection failure.
+- `STRICT_THREADS=1 strict build Compiler/NativeCompiler.strict` crashes with AccessViolation after 1.4 s when the compiler has parallel compiler loops: with no pool the outlined loop body runs on the calling thread while in-place updates stay on (probably a captured list changed in place).
+- GPU launches are not guarded on pool threads: `MlirSafety` keeps methods with GPU-able loops out of parallel loops; the runtime should run such loops on the CPU while the pool is busy.
 
 ## Next
 - GPU speed and memory (attention, 16 bit lists, memory budget, loading, generated loops): [improvements-gpu.md](improvements-gpu.md).
@@ -25,7 +27,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is atte
 - Game engine (iOS, Android, one game loop, multiplayer, Spine, platform services): [improvements-engine.md](improvements-engine.md).
 - CI runs few native builds (about 4 minutes per job): add more while each job stays under 10 minutes.
 - Trees as pools with 32 bit backward offsets ([Goose](https://github.com/aardappel/goose)): measure SyntaxNode allocations per `strict build Strict.strict` first.
-- Build speed: under 10 s hard limit, 2-3 s target; reduce compiler/game frontend and emission, cold GPU preparation, retain unchanged dependency IR and validation (`Compiler/README.md`).
+- Build speed: under 10 s hard limit, 2-3 s target. The MLIR split made strict.exe 40 -> 24.5 s and the compiler 75-85 -> 56 s, frontend (23 s) and emission (18 s) remain. With `MlirSafety` 102 compiler loops are parallel (the linker rounds, emission, check per file), but the build gets slower (4 threads 67 s, 36 threads over 200 s): one collector lock for every allocation and count, no in-place updates while the pool runs. Needs per-thread allocation and lock-free counting of new objects (`Compiler/README.md`).
 - 20 ms test budget: move slow integration and model tests (`Compiler/NativeFolder.Counted` 8.4 s on the VM, `Runtime/Execute.Completed` 112 ms) into explicit slow suites with their assertions, then enforce the budget.
 
 ## Waiting

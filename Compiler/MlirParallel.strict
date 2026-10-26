@@ -26,14 +26,6 @@ IsParallel Boolean
 		if MlirPurity(function, position).IsSafe(function, value, 0) is false
 			return false
 	true
-Threshold Number
-	Doubling.Threshold is 256
-	MlirParallel(MlirFunction(List(TypeEntry) + Rows, Rows, Filtered), 2).Threshold is 16384
-	for Range(position + 1, function.method.LoopEndOf(position))
-		let kind = function.method.instructions(value).kind
-		if (kind is InstructionType.Invoke) or (kind is InstructionType.LoopBegin)
-			return 256
-	16384
 Snapshot Texts
 	Doubling.Snapshot is ("%p0", "%p1", "%r0", "%r1", "%r2", "%v_index", "%v_value", "%v_numbers", "%v_forResult")
 	mutable names = List(Mutable(Text))
@@ -54,7 +46,7 @@ Forked Texts
 	if IsParallel is false
 		return List(Text)
 	let count = "    " + Temp("pn") + " = arith.fptosi " + Temp("n") + " : f64 to i64"
-	let threshold = "    " + Temp("pt") + " = arith.constant " + Threshold + " : i64"
+	let threshold = "    " + Temp("pt") + " = arith.constant " + MlirCost(function, position).Threshold + " : i64"
 	let enough = "    " + Temp("pb") + " = arith.cmpi sge, " + Temp("pn") + ", " + Temp("pt") + " : i64"
 	let label = "^loop" + position
 	let branch = "    cf.cond_br " + Temp("pb") + ", " + label + "parallel, " + label + "serial"

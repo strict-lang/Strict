@@ -9,8 +9,6 @@ constant LinuxDownload = "https://github.com/llvm/llvm-project/releases/download
 constant LinuxMembers = " LLVM-23.1.3-Linux-X64/bin/clang LLVM-23.1.3-Linux-X64/bin/clang-23 LLVM-23.1.3-Linux-X64/bin/mlir-opt LLVM-23.1.3-Linux-X64/bin/mlir-translate LLVM-23.1.3-Linux-X64/bin/opt LLVM-23.1.3-Linux-X64/bin/llc LLVM-23.1.3-Linux-X64/bin/lld LLVM-23.1.3-Linux-X64/bin/ld.lld LLVM-23.1.3-Linux-X64/bin/clang-offload-bundler LLVM-23.1.3-Linux-X64/bin/amdgpu-arch LLVM-23.1.3-Linux-X64/lib/clang/23/include"
 constant Optimized = " -march=native -Wno-override-module"
 constant Parts = 16
-constant Passes = " --symbol-dce --convert-scf-to-cf --convert-arith-to-llvm --convert-func-to-llvm --convert-cf-to-llvm --reconcile-unrealized-casts"
-constant Translating = " --mlir-disable-threading --mlir-to-llvmir "
 constant Direct = " -fuse-ld=lld -Wl,clang_rt.builtins-x86_64.lib"
 constant Thin = " -x none -flto=thin -Wl,/opt:lldltojobs=all -Wl,/mllvm:-mcpu=native" + Direct
 constant OnWindows = Toolchain(Platform.Windows, "C:/s")
@@ -96,8 +94,7 @@ Built(base Text, executable Text, level Text) Text
 Inputs(base Text, level Text) Text
 	OnLinux.Inputs("Compiler/output/missing", "") is "\"Compiler/output/missing.ll\""
 	let isDivided = (platform is Platform.Windows) and (File(base + ".ll").Exists is false)
-	let isSplit = (platform is Platform.Windows) and (level is not NativeBuild.Quick) and (isDivided is false)
-	if (isSplit or isDivided) is false
+	if (isDivided is false) and ((platform is not Platform.Windows) or (level is NativeBuild.Quick))
 		return Quoted(base + ".ll") + (platform is Platform.Windows then Direct else "")
 	let splitting = "-j " + Parts + " " + Quoted(base + ".ll") + " -o " + Quoted(base + "-")
 	let split = isDivided then ProcessResult(0, "", "") else ToolRunner(Located("llvm-split")).Execute(splitting)
@@ -142,11 +139,11 @@ Lowered(base Text, kept = "", parts = 1) Text
 	if lines.Length > 100000
 		return MlirSplit(lines).Lowered(base, Toolchain(platform, root, natives, isWeb))
 	let privatized = kept is "" then "" else " --symbol-privatize=exclude=" + kept
-	let lowering = Quoted(base + ".mlir") + privatized + Passes + " -o " + Quoted(base + ".llvm.mlir")
+	let lowering = Quoted(base + ".mlir") + privatized + MlirSplit.Passes + " -o " + Quoted(base + ".llvm.mlir")
 	let lowered = ToolRunner(Located("mlir-opt")).Execute(lowering)
 	if lowered.Failed
 		return "mlir-opt failed: " + lowered.error
-	let translation = Translating + Quoted(base + ".llvm.mlir") + " -o " + Quoted(base + ".ll")
+	let translation = MlirSplit.Translating + Quoted(base + ".llvm.mlir") + " -o " + Quoted(base + ".ll")
 	let translated = ToolRunner(Located("mlir-translate")).Execute(translation)
 	translated.Failed then "mlir-translate failed: " + translated.error else ""
 Quoted(path Text) Text

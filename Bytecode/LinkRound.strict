@@ -1,0 +1,22 @@
+has linker Linker
+has entries List(TypeEntry)
+has signatures Texts
+constant Single = LinkRound(Linker.Sample, List(TypeEntry) + Linker.Go, List(Text))
+constant Twice = LinkRound(Linker.Sample, (Linker.Go, Linker.Go), List(Text) + "Strict/Logger:")
+Entries(signed Texts) List(TypeEntry)
+	Single.Entries(List(Text) + "Strict/Logger:").First.Name is "Strict/Logger"
+	for signed
+		Fresh(value)
+Fresh(signature Text) TypeEntry
+	Single.Fresh("Strict/Logger:").Name is "Strict/Logger"
+	Twice.Fresh("Strict/Logger:Log").methods.Length is 2
+	let known = signatures.Index(signature)
+	if known >= 0
+		return entries(known + 1)
+	let earlier = Signature(signature).Earlier(signatures)
+	let names = Signature(signature).Names
+	let old = earlier < 0 then List(Text) else Signature(signatures(earlier)).Names
+	if (earlier < 0) or ((old - names).Length > 0)
+		return linker.LinkedType(Signature(signature).Type, names)
+	let entry = entries(earlier + 1)
+	TypeEntry(entry.Name, entry.members, entry.methods + linker.LinkedType(Signature(signature).Type, names - old).methods)

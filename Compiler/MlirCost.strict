@@ -1,0 +1,41 @@
+has function MlirFunction
+has position Number
+constant External = ("File", "Directory", "Process")
+constant Outside = 20000
+constant Native = 8
+constant Repeats = 15
+constant Work = 50000
+constant Reading = MethodEntry("Reading", MlirParallel.Randomized.parameters, "Strict/List(Number)", (MlirParallel.Randomized.instructions.Slice(0, 4) + InstructionEntry.Invoke(2, ("Strict/File", "Exists", "Strict/Boolean"), List(Number), 1)) + MlirParallel.Randomized.instructions.Slice(5, 2))
+constant Doubling = MlirCost(MlirParallel.Doubling.function, 2)
+constant Filtering = MlirCost(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, MlirParallel.Filtered), 2)
+Threshold Number
+	Doubling.Threshold is 6250
+	Filtering.Threshold is 8334
+	let count = (Work / Iteration).Ceiling
+	count < 2 then 2 else count
+Iteration Number
+	Doubling.Iteration is 8
+	MlirCost(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, Reading), 2).Iteration is 20002
+	Sum(function, position + 1, function.method.LoopEndOf(position), 0)
+Sum(inspected MlirFunction, first Number, last Number, depth Number) Number
+	Doubling.Sum(Doubling.function, 3, 6, 0) is 8
+	mutable total = 0
+	for Range(first, last)
+		total = total + Instruction(inspected, value, depth)
+	total
+Instruction(inspected MlirFunction, at Number, depth Number) Number
+	Doubling.Instruction(Doubling.function, 3, 0) is 1
+	Doubling.Instruction(Doubling.function, 4, 0) is 6
+	let entry = inspected.method.instructions(at)
+	if entry.kind is InstructionType.LoopBegin
+		return 1 + Repeats * Sum(inspected, at + 1, inspected.method.LoopEndOf(at), depth)
+	entry.kind is InstructionType.Invoke then Called(inspected, at, depth) else 1
+Called(inspected MlirFunction, at Number, depth Number) Number
+	Doubling.Called(Doubling.function, 4, 0) is 6
+	Doubling.Called(Doubling.function, 4, 4) is Native
+	if TypeEntry.ShortName(PayloadDecoder(inspected.method.instructions(at)).Text(1)) is in External
+		return Outside
+	let callees = MlirModule(inspected.types, "").Called(inspected, at)
+	if (callees.Length is 0) or (depth >= 4)
+		return Native
+	2 + Sum(callees.First, 0, callees.First.method.instructions.Length, depth + 1)

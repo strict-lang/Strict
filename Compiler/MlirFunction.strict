@@ -9,10 +9,10 @@ has Group Number = -1
 has Guarded Number = -1
 has IsRecursive Boolean = true
 has typeIndex Dictionary(Text, Number) = Dictionary(Text, Number)
+has safeCalls Dictionary(Text, Number) = Dictionary(Text, Number)
 constant Counter = MlirFunction(List(TypeEntry), TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry)), MethodEntry.CountingLoop)
 constant Shape = TypeEntry("Strict/Shape", (MemberEntry("width", "Strict/Number", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
 constant ListKinds = (InstructionType.IndexCall, InstructionType.InvokeWriteToList, InstructionType.CopyList, InstructionType.InvokeRemove)
-constant NamedKinds = (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable, InstructionType.InvokeWriteToList, InstructionType.IndexCall)
 IsCounted = lineSlots.Length > 0
 Symbol Text
 	Counter.Symbol is "Counter_Run_0"
@@ -36,11 +36,13 @@ Parameters Texts
 	names
 VariableNames Texts
 	Counter.VariableNames is ("index", "value")
+	constant loaded = (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable)
+	constant written = (InstructionType.InvokeWriteToList, InstructionType.IndexCall)
 	mutable names = ("index", "value")
 	for Parameters + MlirInstances(value, 0).StoredNames(type)
 		names = value is in names then names else names + value
 	for method.instructions
-		if (value.kind is in NamedKinds) and value.texts(0).IndexOf("(") < 0
+		if ((value.kind is in loaded) or (value.kind is in written)) and value.texts(0).IndexOf("(") < 0
 			names = value.texts(0) is in names then names else names + value.texts(0)
 		if value.kind is InstructionType.StoreConstantToVariable
 			names = value.texts.Last is in names then names else names + value.texts.Last

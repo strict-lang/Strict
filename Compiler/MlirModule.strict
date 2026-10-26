@@ -14,7 +14,8 @@ constant NoRun = MlirModule(List(TypeEntry) + TypeEntry("Strict/Empty", List(Mem
 Text Text
 	Counters.Text.StartsWith("module {")
 	NoRun.Text.StartsWith("unsupported:")
-	let functions = Functions
+	let reachable = Functions
+	let functions = MlirSafety(reachable, MlirRecursion(reachable, entries).Edges).Marked
 	if functions.First.method.instructions.Length is 0
 		return "unsupported: no " + entryName + " method without parameters in " + types.First.Name
 	let counted = countedFiles.Length is 0 then functions else MlirLines.Counted(functions, Mains, countedFiles)
@@ -23,11 +24,15 @@ Declared(texts List(MlirFunction), functions List(MlirFunction)) Texts
 	Counters.Declared(Counters.Functions, Counters.Functions).First is "module {"
 	MlirRecursion.Looped.Text.IndexOf("^stackChecked") > MlirRecursion.Looped.Text.IndexOf("@Looped_Again_0(")
 	let recursive = MlirRecursion(functions, entries).Recursive
-	mutable lines = ("module {", "  llvm.func @printf(!llvm.ptr, ...) -> i32") + MlirTexts.Declarations
+	let lines = ("module {", "  llvm.func @printf(!llvm.ptr, ...) -> i32") + MlirTexts.Declarations
+	let emitted = Emitted(texts, functions, recursive)
+	lines + emitted + MlirEquality(functions.First, 0).Functions + MlirAutomatic(functions.First).Functions
+Emitted(texts List(MlirFunction), functions List(MlirFunction), recursive Texts) Texts
+	Counters.Emitted(Counters.Functions, Counters.Functions, List(Text)).First.IndexOf("@Counter_Run_0(") > 0
 	for texts
 		let emitted = MlirFunction(value, IsRecursive = value.Symbol is in recursive).Text
-		lines = lines + emitted + MlirWholeBody(value, functions).Lines
-	lines + MlirEquality(functions.First, 0).Functions + MlirAutomatic(functions.First).Functions
+		let whole = MlirWholeBody(value, functions).Lines
+		whole.Length is 0 then emitted else emitted + "\n" + outer.Text.Combine(whole, "\n")
 Combined(lines Texts, functions List(MlirFunction), counted List(MlirFunction)) Text
 	Counters.Combined(List(Text), Counters.Functions, Counters.Functions).EndsWith("}")
 	let table = countedFiles.Length is 0 then List(Text) else MlirLines.Table(functions, Mains, countedFiles)

@@ -1,14 +1,16 @@
 has function MlirFunction
 has position Number
-constant UnsafeTypes = ("File", "Directory", "Process", "Time", "Library", "Logger", "TextReader", "TextWriter", "BytesReader", "BytesWriter")
+constant Never = ("Library", "TextReader", "TextWriter", "BytesReader", "BytesWriter")
 constant Branches = (InstructionType.Jump, InstructionType.JumpIfTrue, InstructionType.JumpIfFalse, InstructionType.JumpIfNotZero)
-constant Unsafe = (InstructionType.Set, InstructionType.InvokeWriteToTable, InstructionType.InvokeRemove, InstructionType.Print, InstructionType.ConstructValueType, InstructionType.CopyList)
+constant Unsafe = (InstructionType.Set, InstructionType.Print)
+constant Writes = (InstructionType.InvokeWriteToList, InstructionType.InvokeWriteToTable, InstructionType.InvokeRemove)
 constant Doubling = MlirPurity(MlirParallel.Doubling.function, 2)
 constant Randomizing = MlirPurity(MlirParallel.Randomizing.function, 2)
 constant Clamped = MethodEntry("Clamped", List(MemberEntry) + MlirLists.Items, "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.LoadNumber(2, 0), InstructionEntry.Binary(InstructionType.GreaterThan, (1, 2)), InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, 0), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "value"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 3, "conditional0"), InstructionEntry.LoadBoolean(4, true), InstructionEntry.Binary(InstructionType.Equal, (4, 4)), InstructionEntry.Jump(InstructionType.JumpEnd, 0), InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, 1), InstructionEntry.LoadNumber(5, 0), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 5, "conditional0"), InstructionEntry.Jump(InstructionType.JumpEnd, 1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "conditional0"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 6, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 16)))
 constant Clamping = MlirPurity(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, Clamped), 2)
 constant Making = MlirFunction(MlirLayout.Wrapping.function.types, MlirLayout.Degrees, MethodEntry("Made", List(MemberEntry), "Strict/Degrees", (InstructionEntry.LoadNumber(0, 1), MlirDeviceCalls.Making, InstructionEntry.Return(1))))
 constant Checking = MethodEntry("Validated", List(MemberEntry), "Strict/Math/Pairing", (InstructionEntry.LoadText(0, "a"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "number"), InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)), InstructionEntry.Return(2)))
+constant Reading = MlirPurity(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, MlirCost.Reading), 2)
 constant Filtering = MlirPurity(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, MlirParallel.Filtered), 2)
 IsSafe(inspected MlirFunction, at Number, depth Number) Boolean
 	Doubling.IsSafe(Doubling.function, 4, 0)
@@ -18,10 +20,10 @@ IsSafe(inspected MlirFunction, at Number, depth Number) Boolean
 	let entry = inspected.method.instructions(at)
 	if entry.kind is InstructionType.Invoke
 		return IsPureCall(inspected, at, depth)
-	if entry.kind is InstructionType.InvokeWriteToList
-		return (depth is 0) and IsCollected(at)
+	if entry.kind is in Writes
+		return depth > 0 then IsOwned(inspected, entry) else IsCollected(at)
 	let isLeaving = (depth is 0) and ((entry.kind is InstructionType.Return) or (entry.kind is in Branches))
-	(isLeaving is false) and IsPlain(inspected, at) and ((depth > 0) or IsLocal(entry))
+	(isLeaving is false) and IsPlain(inspected, at, depth) and ((depth > 0) or IsLocal(entry))
 IsCollected(at Number) Boolean
 	Clamping.IsCollected(17)
 	Filtering.IsCollected(7) is false
@@ -33,19 +35,22 @@ IsCollected(at Number) Boolean
 		if kind is InstructionType.JumpEnd
 			open = open - 1
 	(open is 0) and (function.method.instructions(at).texts(0) is "forResult")
-IsPlain(inspected MlirFunction, at Number) Boolean
-	Doubling.IsPlain(Doubling.function, 3)
-	let entry = inspected.method.instructions(at)
-	let kind = entry.kind
-	if kind is in Unsafe
+IsPlain(inspected MlirFunction, at Number, depth Number) Boolean
+	Doubling.IsPlain(Doubling.function, 3, 0)
+	Doubling.IsPlain(MlirFunction(Doubling.function.types, MlirParallel.Rows, Checking), 2, 0)
+	let kind = inspected.method.instructions(at).kind
+	if kind is not InstructionType.LoopBegin
+		return kind is not in Unsafe
+	(MlirLoops(inspected, at).IsCollecting is false) or ((depth > 0) and (MlirKernel(inspected, at).IsSimple is false))
+IsOwned(inspected MlirFunction, entry InstructionEntry) Boolean
+	Doubling.IsOwned(Doubling.function, InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"))
+	Doubling.IsOwned(Doubling.function, InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "numbers")) is false
+	if (entry.texts.Length is 0) or (entry.texts(0) is in inspected.Parameters)
 		return false
-	if kind is InstructionType.LoopBegin
-		return MlirLoops(inspected, at).IsCollecting is false
-	if kind is InstructionType.LoadConstantToRegister
-		return PayloadDecoder(entry).Value(1).kind is not "List"
-	let isBinary = (kind > InstructionType.StoreSeparator) and (kind < InstructionType.BinaryOperatorsSeparator)
-	let isList = isBinary and MlirListOperators(inspected, at).IsOperation
-	(isList is false) and ((isBinary is false) or (MlirTexts(inspected, at).IsSum is false))
+	for inspected.type.members
+		if value.Name is entry.texts(0)
+			return false
+	true
 IsLocal(entry InstructionEntry) Boolean
 	Doubling.IsLocal(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "numbers")) is false
 	Doubling.IsLocal(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "twice"))
@@ -60,16 +65,26 @@ IsLocal(entry InstructionEntry) Boolean
 IsPureCall(inspected MlirFunction, at Number, depth Number) Boolean
 	Doubling.IsPureCall(Doubling.function, 4, 0)
 	Randomizing.IsPureCall(Randomizing.function, 4, 0) is false
+	Reading.IsPureCall(Reading.function, 4, 0)
 	Doubling.IsPureCall(Making, 1, 0)
-	let entry = inspected.method.instructions(at)
-	let decoder = PayloadDecoder(entry)
-	if (TypeEntry.ShortName(decoder.Text(1)) is in UnsafeTypes) or (decoder.Text(2) is "Random")
-		return false
+	Doubling.IsPureCall(MlirFunction(Doubling.function, safeCalls = Dictionary(("Rows_Twice_1", 0))), 4, 0) is false
 	let callees = MlirModule(inspected.types, "").Called(inspected, at)
-	if (callees.Length is 0) or MlirDeviceCalls(inspected, at, inspected).IsRounding(entry)
-		let returned = MlirLayout(inspected).Represented(TypeEntry.ShortName(decoder.Text(4 + entry.payload(3))))
-		return returned is in ("Number", "Boolean")
-	(depth < 3) and (MlirForeign(callees.First).IsForeign is false) and IsPureMethod(callees.First, depth + 1)
+	if IsAllowed(inspected, at, callees) is false
+		return false
+	if (callees.Length is 0) or MlirDeviceCalls(inspected, at, inspected).IsRounding(inspected.method.instructions(at))
+		return true
+	IsKnown(callees.First, inspected, depth)
+IsAllowed(inspected MlirFunction, at Number, callees List(MlirFunction)) Boolean
+	Randomizing.IsAllowed(Randomizing.function, 4, List(MlirFunction)) is false
+	Reading.IsAllowed(Reading.function, 4, List(MlirFunction))
+	let decoder = PayloadDecoder(inspected.method.instructions(at))
+	let isNever = (TypeEntry.ShortName(decoder.Text(1)) is in Never) or (decoder.Text(2) is "Random")
+	(isNever is false) and ((callees.Length is 0) or (MlirForeign(callees.First).IsForeign is false))
+IsKnown(callee MlirFunction, inspected MlirFunction, depth Number) Boolean
+	Doubling.IsKnown(MlirFunction(Doubling.function.types, MlirParallel.Rows, MlirParallel.Twice), Doubling.function, 0)
+	if callee.Symbol is in inspected.safeCalls
+		return inspected.safeCalls(callee.Symbol) is 1
+	(depth < 3) and IsPureMethod(callee, depth + 1)
 IsPureMethod(callee MlirFunction, depth Number) Boolean
 	Doubling.IsPureMethod(MlirFunction(Doubling.function.types, MlirParallel.Rows, MlirParallel.Twice), 1)
 	Doubling.IsPureMethod(MlirFunction(Doubling.function.types, MlirParallel.Rows, Checking), 1)
