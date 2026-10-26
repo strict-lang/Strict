@@ -89,3 +89,40 @@ Examples and DeltaEngine games, 2026-10-26, using ordinary native builds after t
 | DeltaEngine/Games/Blocks | 5.54 s | 123 ms | None |
 
 ParallelSum has no `Run`, so its build created `ParallelSum.test.exe` without running it. Game commands ran from the DeltaEngine root, for example `strict build Games/WebWars/WebWars.strict`. Individual steps below 3 seconds still contribute to total build time. LogoApp and WebWars exceed the 10-second ceiling; frontend and MLIR emission are the reported game bottlenecks. Per-file stdout and exact wall times/executable sizes are retained in ignored `Compiler/output/*-build.log` and `Compiler/output/build-profile-20261026.json`.
+
+## Build modes and dependency audit
+
+`strict build <file>` remains the optimized release build: `-O2` host code and the existing optimized native/GPU paths. `small` selects `-Os`. New `fast` mode uses `-O0` host code and skips LLVM splitting and ThinLTO; optimized native C objects and GPU kernels remain reusable. Fast builds retain Release staging and content, as requested. They currently support only the current native desktop target and reject combinations with other build options. Switching modes invalidates the build stamp; unchanged fast builds skip like release builds. Executable size and runtime speed are expected to be worse in fast mode.
+
+Native folders are now selected only when a linked type contains a foreign method, using the existing `MlirForeign.IsForeign` predicate. A Strict type sharing a folder with native providers no longer pulls in all those C objects. Xor's release executable fell from 884,736 to 458,752 bytes; its build fell from 3.26 to 2.58 s, then 1.95 s in fast mode. A CPU execution check still converged below 0.0001 error: release training about 22 ms, fast training about 62 ms. This change does not alter numerical storage precision or GPU optimization flags.
+
+Representative audit, 2026-10-26, Windows workstation. Ordinary builds were followed by unchanged calls; native objects, packaged assets and shared GPU caches were retained. Cold GPU work is identified separately. These are selected cases, not a full-package test sweep. No builds executed tests.
+
+| Case | Release build | Fast build | Finding |
+| --- | ---: | ---: | --- |
+| Examples/Swarm | 1.39 s after dependency fix | 0.98 s | Native tests compiled, not executed |
+| Examples/ErrorHandling | 1.97 s | — | Native tests compiled, not executed |
+| Examples/LargeCollections / MemoryPressure | 0.86 / 0.84 s | — | Small native programs |
+| NeuralNetworks/Xor | 2.58 s after dependency fix | 1.95 s | Unneeded native C removed |
+| NeuralNetworks/Iris | 3.32 s before dependency fix | — | Small training program |
+| NeuralNetworks/Gpt2Benchmark | 17.78 s, cold GPU artifacts | — | GPU preparation 14.53 s, clang 12.59 s |
+| NeuralNetworks/Qwen3Benchmark | 6.67 s after GPU preparation | — | First attempt crashed after 21.02 s GPU preparation |
+| ImageProcessing/Png | 3.48 s | — | Native tests compiled, not executed |
+| Compression/Deflate | 2.45 s | — | Native tests compiled, not executed |
+| Json/Json | 1.80 s | — | Native tests compiled, not executed |
+| MachineLearning/KMeans | 3.00 s | — | Native tests compiled, not executed |
+| Math/Matrix | 8.85 s | — | MLIR emission alone 7.00 s |
+| StrictComfy/MossGenerate | 7.30 s, warm GPU cache | 6.21 s | Host backend savings are modest |
+| StrictComfy/MossImage | 6.60 s, warm GPU cache | 5.62 s | Host backend savings are modest |
+| StrictComfy/H3Video | 5.33 s, forced rebuild with warm GPU cache | 5.65 s | No demonstrated overall gain |
+| DeltaEngine/Games/LogoApp | 6.25 s with native objects cached | 6.54 s | Initial 11.10 s included 4.33 s native C compilation |
+| DeltaEngine/Games/WebWars | 23.95 s | 22.94 s | Frontend 8.48 s and emission 7.83 s dominate release |
+| DeltaEngine/Games/Breakout | 6.74 s | 6.15 s | Modest backend savings |
+
+Unchanged builds skipped in 53-163 ms. Times vary with machine load; small release/fast differences are not proven improvements. The host-only experiment on identical IR was clearer: unoptimized clang/linking took 0.20-0.31 s versus 0.80-1.75 s at `-O2`. Fast mode helps host compilation but cannot remove frontend/emission work or first-time GPU preparation. The 2-3 s target and 10 s ceiling remain open for larger cases. Raw records include executable sizes and compiler-change detection in ignored `Compiler/output/build-audit.json`; per-file logs end in `-audit.log`.
+
+Remaining build-pipeline work: native C packages compile all providers and extra C sources from their flags once any provider is needed; native object cache keys need optimization options; native cache dependency lists include broad package inventories, so unrelated edits can invalidate builds. GPU builds currently prepare both sm_80 and sm_75 when tensor kernels require them, with large shared runtime PTX. Keep those caches; dropping required GPU code would change program behavior. Frontend, emission and loop/test parallelization belong to the separate compiler optimization session.
+
+Explicit native compiler-package tests exposed another pipeline cost: dependency snapshots alone took 45-48 s per file, before frontend compilation, while the new native-dependency regression itself ran below a millisecond. Static test-data discovery over the broad source inventory is a separate target from normal build snapshots. NativeBuild, NativeFolder, NativeCompiler and Toolchain native tests passed, as did their focused VM checks, Strict VM tests, the build regression script and Compiler/Examples checks. Some existing VM tests still exceed the test budget and need the explicit slow-suite work already listed in improvements.md.
+
+Full verification stays explicit: `strict check <folder>`, `strict test <file>`, `strict test <file> native`, then an ordinary release build. Existing CI provides the broader checks. A combined full-check command should use the file/package parallel runner being developed by the other session, rather than add a sequential testing gate to builds. No unmeasured `-O3` host mode was added; the default remains the validated release pipeline.

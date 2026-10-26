@@ -79,6 +79,17 @@ with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as 
 	executable.unlink()
 	built = run("build", str(source), "small")
 	assert built.returncode == 0 and executable.exists(), "Missing executable was not rebuilt: " + built.stdout
+	built = run("build", str(source), "fast")
+	assert built.returncode == 0, built.stdout + built.stderr
+	assert source.with_suffix(".mlir").read_text().endswith("// -O0"), "Fast build still optimizes host code"
+	assert subprocess.run([str(executable)], timeout=10).returncode == 2
+	modified = executable.stat().st_mtime_ns
+	source.with_suffix(".mlir").unlink()
+	built = run("build", str(source), "fast")
+	assert built.returncode == 0, built.stdout + built.stderr
+	assert not source.with_suffix(".mlir").exists() and executable.stat().st_mtime_ns == modified, built.stdout
+	built = run("build", str(source), "fast", "small")
+	assert built.returncode != 0 and "Fast builds" in built.stdout, built.stdout + built.stderr
 	tested = run("test", str(source))
 	assert tested.returncode == 1 and "Test failed:" in tested.stdout, tested.stdout + tested.stderr
 	tested = run("test", str(source), "native")
