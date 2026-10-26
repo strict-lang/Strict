@@ -7,7 +7,7 @@ constant Shifts = MlirGuards(Shifted, 2)
 constant Reading = MlirGuards(Shifted, 6)
 constant Flooring = InstructionEntry.Invoke(3, ("Strict/Number", "Floor", "Strict/Number"), List(Number), 2)
 constant Calculated = (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply, InstructionType.Modulo)
-constant ExactSlots = "(dense<0> : tensor<8xi64>) : !llvm.array<8 x i64>"
+constant ExactSlots = "(dense<0> : tensor<9xi64>) : !llvm.array<9 x i64>"
 constant PlainSlots = "(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>"
 Origins(position Number, register Number) Texts
 	Shifts.Origins(6, 3) is ("offset")
@@ -130,7 +130,7 @@ Kernel Texts
 	MlirGuards(MlirFunction(Shifted, Float = "f64"), 2).Kernel.Length is 0
 	IsUseful then MlirDevice(function, at).Kernel + MlirFormats(function, at).Kernels else List(Text)
 Named Texts
-	Shifts.Named.Last.EndsWith("(dense<0> : tensor<8xi64>) : !llvm.array<8 x i64>")
+	Shifts.Named.Last.EndsWith("(dense<0> : tensor<9xi64>) : !llvm.array<9 x i64>")
 	MlirGuards(MlirFunction(Shifted, Float = "f64"), 2).Named.Last.EndsWith("!llvm.array<2 x i64>")
 	let name = MlirDevice(MlirFunction(function, Float = "f64", Guarded = -1), at).Name
 	let isExact = Mask > 0

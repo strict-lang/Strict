@@ -14971,6 +14971,8 @@
   ^done:
     return %current : !llvm.ptr
   }
+  // the AOT copy of a launch by the formats of the lists it reads (1 + its index, 0 for the generic kernel): all 32 bit,
+  // all bfloat16, the first bfloat16, the last bfloat16, all but the last bfloat16, of 4 lists or more the first two
   func.func private @strict_gpu_formats(%slots: !llvm.ptr, %count: i64, %mask: i64, %enabled: i1) -> i64 {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -14983,8 +14985,8 @@
     %singleBits = arith.constant 32 : i64
     %true = arith.constant true
     %false = arith.constant false
-    cf.cond_br %enabled, ^next(%none, %six, %true, %true, %true, %false, %false, %false : i64, i64, i1, i1, i1, i1, i1, i1), ^generic
-  ^next(%index: i64, %slotIndex: i64, %singles: i1, %brains: i1, %mixed: i1, %lastBrain: i1, %lastSingle: i1, %seen: i1):
+    cf.cond_br %enabled, ^next(%none, %six, %true, %true, %true, %false, %false, %false, %none, %true : i64, i64, i1, i1, i1, i1, i1, i1, i64, i1), ^generic
+  ^next(%index: i64, %slotIndex: i64, %singles: i1, %brains: i1, %mixed: i1, %lastBrain: i1, %lastSingle: i1, %seen: i1, %lists: i64, %twoFirst: i1):
     %more = arith.cmpi ult, %index, %count : i64
     cf.cond_br %more, ^value, ^choose
   ^value:
@@ -14994,7 +14996,7 @@
     cf.cond_br %isList, ^list, ^number
   ^number:
     %afterNumber = arith.addi %slotIndex, %one : i64
-    cf.br ^next(%after, %afterNumber, %singles, %brains, %mixed, %lastBrain, %lastSingle, %seen : i64, i64, i1, i1, i1, i1, i1, i1)
+    cf.br ^next(%after, %afterNumber, %singles, %brains, %mixed, %lastBrain, %lastSingle, %seen, %lists, %twoFirst : i64, i64, i1, i1, i1, i1, i1, i1, i64, i1)
   ^list:
     %bitsIndex = arith.addi %slotIndex, %two : i64
     %bitsSlot = llvm.getelementptr %slots[%bitsIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
@@ -15009,10 +15011,17 @@
     %allSingles = arith.andi %singles, %single : i1
     %allBrains = arith.andi %brains, %brain : i1
     %allMixed = arith.andi %mixed, %mix : i1
+    %isLeading = arith.cmpi ult, %lists, %two : i64
+    %wanted = arith.select %isLeading, %brain, %single : i1
+    %stillTwoFirst = arith.andi %twoFirst, %wanted : i1
+    %listsAfter = arith.addi %lists, %one : i64
     %afterList = arith.addi %slotIndex, %three : i64
-    cf.br ^next(%after, %afterList, %allSingles, %allBrains, %allMixed, %nextLastBrain, %nextLastSingle, %true : i64, i64, i1, i1, i1, i1, i1, i1)
+    cf.br ^next(%after, %afterList, %allSingles, %allBrains, %allMixed, %nextLastBrain, %nextLastSingle, %true, %listsAfter, %stillTwoFirst : i64, i64, i1, i1, i1, i1, i1, i1, i64, i1)
   ^choose:
-    %lastSingleIndex = arith.select %lastSingle, %five, %none : i64
+    %enoughLists = arith.cmpi uge, %lists, %four : i64
+    %isTwoFirst = arith.andi %twoFirst, %enoughLists : i1
+    %twoFirstIndex = arith.select %isTwoFirst, %six, %none : i64
+    %lastSingleIndex = arith.select %lastSingle, %five, %twoFirstIndex : i64
     %lastBrainIndex = arith.select %lastBrain, %four, %lastSingleIndex : i64
     %mixedIndex = arith.select %mixed, %three, %lastBrainIndex : i64
     %brainIndex = arith.select %brains, %two, %mixedIndex : i64

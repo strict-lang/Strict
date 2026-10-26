@@ -7,14 +7,21 @@ Inputs Texts
 			value
 Count Number
 	MlirFormats(MlirGuards.Shifted, 2).Count is 2
-	let total = Inputs.Length
-	total is 0 then 0 else (total is 1 then 2 else (total is 2 then 4 else 5))
+	Variants(Inputs.Length)
 Bits(name Text, format Number) Number
 	Sample.Bits("biases", 3) is 17
 	Sample.Bits("input", 4) is 17 and Sample.Bits("biases", 4) is 32
 	let inputs = Inputs
-	let leading = ((format is 2) and (name is inputs.First)) or ((format is 4) and (name is not inputs.Last))
-	(format is 1) or leading or ((format is 3) and (name is inputs.Last)) then 17 else 32
+	Format(inputs.Index(name), inputs.Length, format)
+Variants(total Number) Number
+	Sample.Variants(3) is 5
+	Sample.Variants(4) is 6
+	total is 0 then 0 else (total is 1 then 2 else (total is 2 then 4 else (total is 3 then 5 else 6)))
+Format(at Number, total Number, format Number) Number
+	Sample.Format(1, 4, 5) is 17
+	Sample.Format(2, 4, 5) is 32
+	let leading = ((format is 2) and (at is 0)) or ((format is 4) and (at < total - 1)) or ((format is 5) and (at < 2))
+	(format is 1) or leading or ((format is 3) and (at is total - 1)) then 17 else 32
 Given(name Text, format Number) Texts
 	let source = "%f_" + name
 	let target = "%v_" + name
