@@ -76,11 +76,11 @@ Started(command Text, rest Texts, path Text) Number
 	Process(path).Started(Arguments(command, rest))
 Refreshed(compiler Text, rest Texts) Number
 	Strict(Logger).Refreshed("Missing.exe", ("Compiler/NativeCompiler.strict", ".")) is 0
-	let source = rest(1) + "/Compiler/NativeCompiler.strict"
-	if rest(0).Replace("\\", "/").EndsWith("Compiler/NativeCompiler.strict") or IsCompiled(compiler, rest(1))
+	let source = TypeSource.Root + "/Compiler/NativeCompiler.strict"
+	if rest(0).Replace("\\", "/").EndsWith("Compiler/NativeCompiler.strict") or IsCompiled(compiler, TypeSource.Root)
 		return 0
 	logger.Log(compiler + " is older than the compiler sources, building it again first")
-	let built = Process(compiler).Started(Arguments("build", (source, rest(1))))
+	let built = Process(compiler).Started(Arguments("build", (source, TypeSource.Root)))
 	if built is 0
 		File(Checked(compiler)).Write("built from the compiler sources newer than " + compiler)
 	built

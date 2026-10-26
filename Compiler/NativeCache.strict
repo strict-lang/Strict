@@ -34,7 +34,7 @@ Inputs Texts
 	let sources = SourceFiles(rest(1)).Of(source)
 	let runtimes = Directory.Files(rest(1) + "/Compiler", "NativeRuntime*.mlir")
 	let extension = Toolchain(Platform.Current, rest(1)).Extension
-	let tools = (rest(1) + "/strict" + extension, rest(1) + "/Compiler/NativeCompiler" + extension)
+	let tools = (rest(1) + "/strict" + extension, rest(1) + "/Compiler/NativeCompiler" + extension) - Output - Output.Lower
 	let content = Path(source).PathOnly.text + "/Content"
 	let inputs = sources + runtimes + tools + NativeInputs(Folders(sources)) + Data(sources)
 	inputs + BinaryFile(source).Contained(content) + (content + "/**")

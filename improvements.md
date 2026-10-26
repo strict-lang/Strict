@@ -9,6 +9,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is atte
 - Native builds now and then leave an llvm-split part (`Name.test-3`, LLVM bitcode) next to the source: `NativeBuild.Removed` ignores a failed `File.Delete` (likely still open).
 - Parallel `strict build`s after a compiler change all rebuild `Compiler/NativeCompiler` at once and fail linking (`NativeCompiler.res` missing): one build rebuilds, the others wait for it.
 - A GPU loop calling a method that only wraps one summing call (`Normalization.Scale(Normalization.Squared(...))`) sums the whole group again per element (Moss sampling 4.0 -> 17.5 s): let `MlirGroups.Adding` look through such a callee, with a MlirGroups test.
+- `Compiler/Bootstrap.mlir` predates the 11 attention arguments: MossGenerate built by the stage 0 compiler of `Bootstrap.cmd` sampled for over 100 s; regenerate it from a fixpoint build.
 - A failed host allocation shows up as `AccessViolation` instead of an out of memory Error (H3 with 40 GB committed by other programs).
 - `File.Length` on the VM returns the collection length, not the file's byte count (release verification uses `ReadBytes.Length` for now).
 - `strict test Compiler/Toolchain.strict` exited 127 without a message once among 16 parallel VM tests, in `PartsCompiled` (`Process.RunTools` starting clang on pool threads).
@@ -27,3 +28,4 @@ What to fix next, one short line each, bugs first. Remove a line once it is atte
 - Base library: Number `Sign`, `Wrap`, `ArcTangent2` and inverse trigonometry, Text to Numbers, fixed decimal text, `Truncated`.
 - Qwen3-Coder-Next 80B-A3B pruned to 18-20 GB: needs more VRAM and the `qwen3next` architecture.
 - Later: Qwen3-Coder-30B with all experts, image blur on the GPU, Apple Silicon, AMD GPUs.
+- Later: training ideas (several step sizes evaluated in one batched pass, Muon's orthogonalized updates) and whether batched candidate evaluation carries over to diffusion and token generation.
