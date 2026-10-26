@@ -18,12 +18,15 @@ ImplicitType(nameIndex Number) Text
 ValueType(start Number) Text
 	HeaderTokens("constant", "a", "=", "(", "1", ",", "2", ")").ValueType(3) is "Numbers"
 	HeaderTokens("constant", "a", "=", "-", "1").ValueType(3) is "Number"
+	HeaderTokens(Tokenizer("constant a = IsWindows then \"x\" else \"\"").Tokens).ValueType(3) is "Text"
+	let isWhole = tokens(0) is in ("constant", "has")
+	let lowest = isWhole then SyntaxParser(tokens).LowestOperatorIndex(start, tokens.Length) else -1
+	if (lowest > 0) and (tokens(lowest) is "else")
+		return ValueType(lowest + 1)
 	let first = tokens(start)
 	if first is "("
 		return ValueType(start + 1) + "s"
-	if first is "-"
-		return "Number"
-	let kind = SyntaxParser(tokens).Leaf(first).Kind
+	let kind = first is "-" then "Number" else SyntaxParser(tokens).Leaf(first).Kind
 	kind is "Identifier" then first else kind
 MemberName Text
 	HeaderTokens("has", "Math", "/", "Size").MemberName is "Size"
