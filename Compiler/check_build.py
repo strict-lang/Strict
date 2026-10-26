@@ -5,6 +5,7 @@ import tempfile
 import os
 import json
 from pathlib import Path
+from datetime import datetime
 
 root = Path(__file__).resolve().parent.parent
 assert "@NativeGate_Built_" not in (root / "Compiler/Bootstrap.mlir").read_text(), \
@@ -19,13 +20,26 @@ with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as 
 	asset = content / "data.txt"
 	asset.write_text("first")
 	source.write_text("Run Number\n\t1 is 2\n\tBuildValue.Result", encoding="utf-8")
+	os.utime(source, (1700000000, 1700000000))
 	def run(*arguments):
 		return subprocess.run([str(root / ("strict" + extension)), *arguments], cwd=root,
 			capture_output=True, text=True, timeout=270)
+	profile = Path(folder) / "ProfileCheck.strict"
+	profile.write_text('has profile Compiler/BuildProfile\nRun Number\n'
+		'\tBuildProfile(Logger).Reported("Fast phase", Process.Elapsed)\n'
+		'\tBuildProfile(Logger).Reported("Slow phase", Process.Elapsed - 3.1)\n\t0', encoding="utf-8")
+	def checked_profile(result):
+		assert result.returncode == 0, result.stdout + result.stderr
+		assert "Fast phase:" not in result.stdout, result.stdout
+		assert "Slow phase:" in result.stdout, result.stdout
+	checked_profile(run(str(profile)))
+	profile_build = run("build", str(profile))
+	assert profile_build.returncode == 0, profile_build.stdout + profile_build.stderr
+	checked_profile(subprocess.run([str(profile.with_suffix(extension))], capture_output=True,
+		text=True, timeout=10))
 	built = run("build", str(source))
 	assert built.returncode == 0, built.stdout + built.stderr
-	assert "Frontend:" in built.stdout and "MLIR emission:" in built.stdout, built.stdout
-	assert "Total compilation:" in built.stdout, built.stdout
+	assert "Running Tool" not in built.stdout and "Compiling " not in built.stdout, built.stdout
 	assert "Test passed:" not in built.stdout and "Test failed:" not in built.stdout, built.stdout
 	assert not source.with_suffix(".test" + extension).exists(), "Build compiled unwanted test executable"
 	assert subprocess.run([str(source.with_suffix(extension))], timeout=10).returncode == 0
@@ -34,6 +48,19 @@ with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as 
 	source.with_suffix(".mlir").unlink()
 	built = run("build", str(source))
 	assert built.returncode == 0, built.stdout + built.stderr
+	changed = datetime.fromtimestamp(source.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
+	last_build = datetime.fromtimestamp(executable.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
+	message = f"Up to date: {source} (last changed {changed}) < {executable.name} (last build {last_build})"
+	assert built.stdout.strip() == message, built.stdout
+	direct = subprocess.run([str(root / "Compiler" / ("NativeCompiler" + extension)), "build", str(source), "."],
+		cwd=root, capture_output=True, text=True, timeout=10)
+	assert direct.returncode == 0 and direct.stdout.strip() == message, direct.stdout + direct.stderr
+	message_source = Path(folder) / "MessageCheck.strict"
+	message_source.write_text('has cache Compiler/NativeCache\n'
+		f'constant Source = {json.dumps(str(source))}\nRun Number\n'
+		'\tLogger.Log(NativeCache("build", (Source, ".")).Message)\n\t0', encoding="utf-8")
+	interpreted = run(str(message_source))
+	assert interpreted.returncode == 0 and interpreted.stdout.strip() == message, interpreted.stdout + interpreted.stderr
 	assert not source.with_suffix(".mlir").exists(), "Unchanged build regenerated MLIR"
 	assert executable.stat().st_mtime_ns == modified, "Unchanged build relinked executable"
 	asset.write_text("changed")

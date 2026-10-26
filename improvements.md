@@ -20,7 +20,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is atte
 - Game engine (iOS, Android, one game loop, multiplayer, Spine, platform services): [improvements-engine.md](improvements-engine.md).
 - CI runs few native builds (about 4 minutes per job): add more while each job stays under 10 minutes.
 - Trees as pools with 32 bit backward offsets ([Goose](https://github.com/aardappel/goose)): measure SyntaxNode allocations per `strict build Strict.strict` first.
-- Build speed: under 10 s hard limit, 2-3 s target; reduce compiler frontend/emission and cold GPU preparation, retain unchanged dependency IR and validation (`Compiler/README.md`).
+- Build speed: under 10 s hard limit, 2-3 s target; reduce compiler/game frontend and emission, cold GPU preparation, retain unchanged dependency IR and validation (`Compiler/README.md`).
 - 20 ms test budget: move slow integration and model tests (`Compiler/NativeFolder.Counted` 8.4 s on the VM, `Runtime/Execute.Completed` 112 ms) into explicit slow suites with their assertions, then enforce the budget.
 
 ## Waiting

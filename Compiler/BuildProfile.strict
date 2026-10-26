@@ -1,7 +1,8 @@
 has logger
 Reported(phase Text, started Number) Number
 	let elapsed = Process.Elapsed - started
-	logger.Log(phase + ": " + (elapsed * 1000).Round(1) + " ms")
+	if elapsed >= 3
+		logger.Log(phase + ": " + elapsed.Round(2) + " s")
 	elapsed
 Inputs(cache NativeCache) Texts
 	let started = Process.Elapsed
@@ -9,7 +10,6 @@ Inputs(cache NativeCache) Texts
 	Reported("Dependency snapshot", started)
 	inputs
 Compiled(command Text, rest Texts) Number
-	logger.Log("Compiling " + rest(0))
 	let started = Process.Elapsed
 	let result = NativeCompiler(logger).Compiled(command, rest)
 	Reported("Total compilation", started)

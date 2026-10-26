@@ -12,7 +12,12 @@ Output Text
 	let program = (command is "build") and NativeBuild.IsProgram(rest(0))
 	Toolchain(Platform.Current, rest(1)).Executable(NativeBuild.Output(rest(0), program))
 Message Text
-	(command is "test" then "Tests up to date: " else "Up to date: ") + rest(0)
+	let source = rest(0)
+	let executable = Output
+	let changed = " (last changed " + Process(source).Built.Substring(0, 16) + ")"
+	let built = " (last build " + Process(executable).Built.Substring(0, 16) + ")"
+	let prefix = command is "test" then "Tests up to date: " else "Up to date: "
+	prefix + source + changed + " < " + Path(executable).FileName.text + built
 IsCurrent Boolean
 	if (IsEnabled is false) or (File(CacheFile).Exists is false) or (File(Output).Exists is false)
 		return false

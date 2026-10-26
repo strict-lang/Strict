@@ -88,7 +88,7 @@ Built(base Text, executable Text, level Text) Text
 	if resource.StartsWith("llvm-rc failed") or resource.StartsWith("clang failed")
 		return resource
 	let linking = Inputs(base, level) + sources + resource + " -o " + Quoted(executable) + Optimized + level + system
-	let linked = ToolRunner(Located("clang")).Execute(linking)
+	let linked = ToolRunner(Located("clang")).Execute(linking, "Linking")
 	linked.Failed then "clang failed: " + linked.error + linked.Output else "Built " + executable
 Inputs(base Text, level Text) Text
 	OnLinux.Inputs("Compiler/output/missing", "") is "\"Compiler/output/missing.ll\""

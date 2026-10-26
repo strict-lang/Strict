@@ -8,18 +8,17 @@ Executable Text
 IsAvailable Boolean
 	ToolRunner("noSuchStrictTool").IsAvailable is false
 	Process.Find(name).IsAvailable
-Execute(arguments Text) ProcessResult
+Execute(arguments Text, phase = "") ProcessResult
 	ToolRunner("noSuchStrictTool").Execute("").Failed
 	Echo.Execute(Echoed + "a").Output.IndexOf("\r") is -1
-	ExecuteAll(List(Text) + arguments).First
-ExecuteAll(arguments Texts) List(ProcessResult)
+	ExecuteAll(List(Text) + arguments, phase).First
+ExecuteAll(arguments Texts, phase = "") List(ProcessResult)
 	ToolRunner("noSuchStrictTool").ExecuteAll(("", "")).Last.Failed
 	Echo.ExecuteAll((Echoed + "a", Echoed + "b")).Last.Output is "b\n"
-	let phase = "Tool " + Path(name).FileName.text + " (" + arguments.Length + " jobs)"
-	Logger.Log("Running " + phase)
+	let tool = "Tool " + Path(name).FileName.text + " (" + arguments.Length + " jobs)"
 	let started = Process.Elapsed
 	let results = Process.RunTools(name, arguments)
-	BuildProfile(Logger).Reported(phase, started)
+	BuildProfile(Logger).Reported(phase is "" then tool else phase, started)
 	for results
 		Retried(Cleaned(value), arguments(index))
 Retried(result ProcessResult, arguments Text) ProcessResult
