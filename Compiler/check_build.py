@@ -22,6 +22,8 @@ with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as 
 			capture_output=True, text=True, timeout=270)
 	built = run("build", str(source))
 	assert built.returncode == 0, built.stdout + built.stderr
+	assert "Frontend:" in built.stdout and "MLIR emission:" in built.stdout, built.stdout
+	assert "Total compilation:" in built.stdout, built.stdout
 	assert "Test passed:" not in built.stdout and "Test failed:" not in built.stdout, built.stdout
 	assert not source.with_suffix(".test" + extension).exists(), "Build compiled unwanted test executable"
 	assert subprocess.run([str(source.with_suffix(extension))], timeout=10).returncode == 0
