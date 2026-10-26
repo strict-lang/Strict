@@ -76,7 +76,7 @@ TypeNames(files Texts) Texts
 	for files
 		TypeName(value)
 Inference(files Texts) TypeInference
-	let shapes = Shapes(files)
+	let shapes = BuildProfile(Logger).Shapes(files)
 	let generics = Generics(files, shapes)
 	mutable members = List(Mutable(Scope))
 	mutable methods = List(Mutable(Scope))

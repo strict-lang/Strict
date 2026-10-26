@@ -59,14 +59,14 @@ Build(base Text, program Text, tools Toolchain, isCounting = false) Number
 	if missing.Length > 0
 		logger.Log(tools.Installing(missing))
 		return 1
-	let mlir = Mlir(program, tools.root, Target) + "\n// " + level.Trim
+	let mlir = BuildProfile(logger).Runtime(program, tools.root, Target) + "\n// " + level.Trim
 	let built = Rebuilt(base, mlir, tools)
 	logger.Log(built)
 	if built.StartsWith("Built ") is false
 		return 1
 	let crossed = CrossBuild(base, program, tools, isCounting)
 	Removed(base)
-	Release(logger, base).Packaged(program, crossed, tools.isWeb, isCrossing, Target)
+	BuildProfile(logger).Packaged(value, base, program, crossed, tools)
 Target Number
 	NativeBuild(Logger, isIOS = true).Target is Platform.IOS
 	NativeBuild(Logger, isIOS = true, isSimulator = true).Target is Platform.IOSSimulator

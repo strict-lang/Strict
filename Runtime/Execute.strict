@@ -99,8 +99,11 @@ Tested(types List(TypeEntry), path Text) Number
 		logger.Log(Summary(failed, path))
 	failed
 Loaded(path Text, root Text, withTests = true) List(TypeEntry)
+	let started = Process.Elapsed
 	let cache = BinaryFile(FileCompiler.Normalized(path))
 	let types = IsEdited(path) then List(TypeEntry) else cache.Current(cache.Unpacked(File(cache.Path).ReadBytes))
+	let status = types.Length > 0 then "hit" else "miss"
+	BuildProfile(logger).Reported("Bytecode cache " + status, started)
 	types.Length > 0 then types else FileCompiler(logger).Compiled(path, root, withTests)
 HasRun(type TypeEntry) Boolean
 	Execute.HasRun(TypeEntry.HelloLogger)

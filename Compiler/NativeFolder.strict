@@ -12,7 +12,7 @@ Module(path Text, root Text, isCounting Boolean, isProgram Boolean, platform = -
 	let types = isCounting then Collected(folders, root) else execute.Loaded(path, root, isProgram is false)
 	let counted = isCounting then CountedFiles(paths, root) else List(Text)
 	let symbol = platform is Platform.IOS then "strict_main" else "main"
-	let inlined = Inliner(types).Inlined
+	let inlined = BuildProfile(logger).Inlined(types)
 	BuildProfile(logger).Reported("Frontend", started)
 	MlirModule(inlined, isProgram then "Run" else TestCodegen.Runner, counted, paths.Length, symbol)
 Natives(path Text, root Text, types List(TypeEntry)) Texts

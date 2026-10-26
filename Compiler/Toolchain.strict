@@ -84,7 +84,7 @@ Installing(missing Texts) Text
 	Text.Combine(missing, ", ") + " not found, installing them with " + script + where + problem
 Built(base Text, executable Text, level Text) Text
 	OnWindows.Built("Compiler/output/missing", "missing.exe", NativeBuild.Fast).StartsWith("mlir-opt failed")
-	let lowered = Lowered(base, "", (platform is Platform.Windows) and (level is not NativeBuild.Quick) then Parts else 1)
+	let lowered = BuildProfile(Logger).Lowered(value, base, level)
 	if lowered is not ""
 		return lowered
 	let system = platform is Platform.Windows then " -Wl,-Brepro -Wl,/STACK:67108864" else MacOSTools.Linked(platform)
@@ -114,7 +114,7 @@ PartsCompiled(base Text, level Text) Boolean
 	for Parts
 		let part = base + "-" + value
 		compiling.Add("-c -flto=thin -x ir " + Quoted(part) + " -o " + Quoted(part + ".o") + Optimized + level)
-	for ToolRunner(Located("clang")).ExecuteAll(compiling)
+	for ToolRunner(Located("clang")).ExecuteAll(compiling, "Host clang (" + Parts + " jobs)")
 		if value.Failed
 			return false
 	true

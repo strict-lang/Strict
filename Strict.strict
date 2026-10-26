@@ -70,7 +70,7 @@ Native(command Text, rest Texts, compiler = "") Number
 	refreshed is not 0 then refreshed else Started(command, rest, path)
 Started(command Text, rest Texts, path Text) Number
 	let cache = NativeCache(command, rest)
-	if cache.IsCurrent
+	if BuildProfile(logger).Current(cache, "CLI build cache")
 		logger.Log(cache.Message)
 		return 0
 	Process(path).Started(Arguments(command, rest))

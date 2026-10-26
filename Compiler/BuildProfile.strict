@@ -1,18 +1,35 @@
 has logger
+constant Fallback = Process.OperatingSystem is "Windows" then ("STRICT_BUILD_PROFILE=1" is in Process.RunTool("cmd", "/d /c set STRICT_BUILD_PROFILE").Output.Lines) else Process.RunTool("printenv", "STRICT_BUILD_PROFILE").Output is "1\n"
+Detailed Boolean
+	Fallback
 Reported(phase Text, started Number) Number
 	let elapsed = Process.Elapsed - started
-	if elapsed >= 3
-		logger.Log(phase + ": " + elapsed.Round(2) + " s")
+	if Detailed or (elapsed >= 3)
+		let label = Detailed then "[build] " + phase else phase
+		logger.Log(label + ": " + elapsed.Round(Detailed then 4 else 2) + " s")
 	elapsed
+Current(cache NativeCache, phase = "Compiler build cache") Boolean
+	let started = Process.Elapsed
+	let current = cache.IsCurrent
+	Reported(phase + (current then " hit" else " miss"), started)
+	current
 Inputs(cache NativeCache) Texts
 	let started = Process.Elapsed
-	let inputs = cache.Snapshot(cache.Inputs.Unique)
-	Reported("Dependency snapshot", started)
+	let paths = cache.Inputs.Unique
+	Reported("Dependency inventory (" + paths.Length + " inputs)", started)
+	let before = Process.Elapsed
+	let inputs = cache.Snapshot(paths)
+	Reported("Dependency snapshot", before)
 	inputs
-Compiled(command Text, rest Texts) Number
+Compiled(cache NativeCache) Number
+	let inputs = cache.IsEnabled then Inputs(cache) else List(Text)
 	let started = Process.Elapsed
-	let result = NativeCompiler(logger).Compiled(command, rest)
+	let result = NativeCompiler(logger).Compiled(cache.command, cache.rest)
 	Reported("Total compilation", started)
+	if result is 0
+		let before = Process.Elapsed
+		cache.Saved(inputs)
+		Reported("Build stamp write", before)
 	result
 Program(module MlirModule, base Text, root Text, build NativeBuild) Text
 	let started = Process.Elapsed
@@ -22,3 +39,55 @@ Program(module MlirModule, base Text, root Text, build NativeBuild) Text
 	let program = build.Device(text, base, root)
 	Reported("GPU preparation", before)
 	program
+Entry(main TypeCodegen, withTests Boolean, isQuiet Boolean) TypeEntry
+	let started = Process.Elapsed
+	let entry = main.Entry
+	let methods = withTests then entry.methods + TestCodegen(main, isQuiet).Tests else entry.methods
+	Reported("Frontend / main codegen (" + methods.Length + " methods)", started)
+	TypeEntry(entry.Name, entry.members, methods)
+Linked(linker Linker, entry TypeEntry) List(TypeEntry)
+	let started = Process.Elapsed
+	let linked = linker.Linked(entry, List(Text), 20)
+	Reported("Frontend / dependency linking (" + linked.Length + " types)", started)
+	linked
+Parsed(compiler FileCompiler, sources Texts) Boolean
+	let started = Process.Elapsed
+	let parsed = compiler.Parsed(sources)
+	Reported("Frontend / syntax validation (" + sources.Length + " files)", started)
+	parsed
+Issues(compiler FileCompiler, sources Texts, inference TypeInference) List(Texts)
+	let started = Process.Elapsed
+	let issues = compiler.Issues(sources, inference)
+	Reported("Frontend / name validation (" + sources.Length + " files)", started)
+	issues
+Runtime(program Text, root Text, platform Number) Text
+	let started = Process.Elapsed
+	let text = NativeBuild.Mlir(program, root, platform)
+	Reported("Host runtime assembly", started)
+	text
+Emitted(module MlirModule, texts List(MlirFunction), functions List(MlirFunction), recursive Texts) Texts
+	let started = Process.Elapsed
+	let emitted = module.Emitted(texts, functions, recursive)
+	Reported("Emission / function bodies (" + texts.Length + " functions)", started)
+	emitted
+Shapes(files Texts) List(TypeShape)
+	let started = Process.Elapsed
+	let shapes = ResolveCheck.Shapes(files)
+	Reported("Frontend / shape loading and fusion (" + files.Length + " files)", started)
+	shapes
+Inlined(types List(TypeEntry)) List(TypeEntry)
+	let started = Process.Elapsed
+	let inlined = Inliner(types).Inlined
+	Reported("Frontend / inlining", started)
+	inlined
+Packaged(build NativeBuild, base Text, program Text, built Number, tools Toolchain) Number
+	let started = Process.Elapsed
+	let result = Release(logger, base).Packaged(program, built, tools.isWeb, build.isCrossing, build.Target)
+	Reported("Packaging", started)
+	result
+Lowered(tools Toolchain, base Text, level Text) Text
+	let started = Process.Elapsed
+	let parts = (tools.platform is Platform.Windows) and (level is not NativeBuild.Quick) then Toolchain.Parts else 1
+	let lowered = tools.Lowered(base, "", parts)
+	Reported("Host lowering and translation", started)
+	lowered

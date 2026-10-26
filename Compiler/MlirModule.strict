@@ -14,8 +14,12 @@ constant NoRun = MlirModule(List(TypeEntry) + TypeEntry("Strict/Empty", List(Mem
 Text Text
 	Counters.Text.StartsWith("module {")
 	NoRun.Text.StartsWith("unsupported:")
+	let started = Process.Elapsed
 	let reachable = Functions
+	BuildProfile(Logger).Reported("Emission / reachability (" + reachable.Length + " functions)", started)
+	let before = Process.Elapsed
 	let functions = MlirSafety(reachable, MlirRecursion(reachable, entries).Edges).Marked
+	BuildProfile(Logger).Reported("Emission / safety", before)
 	if functions.First.method.instructions.Length is 0
 		return "unsupported: no " + entryName + " method without parameters in " + types.First.Name
 	let counted = countedFiles.Length is 0 then functions else MlirLines.Counted(functions, Mains, countedFiles)
@@ -23,10 +27,15 @@ Text Text
 Declared(texts List(MlirFunction), functions List(MlirFunction)) Texts
 	Counters.Declared(Counters.Functions, Counters.Functions).First is "module {"
 	MlirRecursion.Looped.Text.IndexOf("^stackChecked") > MlirRecursion.Looped.Text.IndexOf("@Looped_Again_0(")
+	let started = Process.Elapsed
 	let recursive = MlirRecursion(functions, entries).Recursive
+	BuildProfile(Logger).Reported("Emission / recursion", started)
 	let lines = ("module {", "  llvm.func @printf(!llvm.ptr, ...) -> i32") + MlirTexts.Declarations
-	let emitted = Emitted(texts, functions, recursive)
-	lines + emitted + MlirEquality(functions.First, 0).Functions + MlirAutomatic(functions.First).Functions
+	let emitted = BuildProfile(Logger).Emitted(value, texts, functions, recursive)
+	let before = Process.Elapsed
+	let result = lines + emitted + MlirEquality(functions.First, 0).Functions + MlirAutomatic(functions.First).Functions
+	BuildProfile(Logger).Reported("Emission / helpers", before)
+	result
 Emitted(texts List(MlirFunction), functions List(MlirFunction), recursive Texts) Texts
 	Counters.Emitted(Counters.Functions, Counters.Functions, List(Text)).First.IndexOf("@Counter_Run_0(") > 0
 	for texts
@@ -39,9 +48,13 @@ Emission(function MlirFunction, functions List(MlirFunction), recursive Texts) T
 Combined(lines Texts, functions List(MlirFunction), counted List(MlirFunction)) Text
 	Counters.Combined(List(Text), Counters.Functions, Counters.Functions).EndsWith("}")
 	let table = countedFiles.Length is 0 then List(Text) else MlirLines.Table(functions, Mains, countedFiles)
+	let started = Process.Elapsed
 	let device = MlirGpu.Module(functions)
+	BuildProfile(Logger).Reported("Emission / GPU kernels", started)
+	let before = Process.Elapsed
 	let main = MlirEntry(counted.First, Others(counted), entrySymbol).Main
 	let host = outer.Text.Combine(lines + MlirGlobals(functions).Lines + table + main + "}", "\n")
+	BuildProfile(Logger).Reported("Emission / globals and assembly", before)
 	device is "" then host else host + "\n" + device
 Functions List(MlirFunction)
 	Counters.Functions.Length is 1

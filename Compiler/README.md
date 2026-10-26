@@ -7,7 +7,16 @@ Values are rewritten in place where nobody can see the old one: the dying value 
 
 `NativeCompiler.strict` is the native compiler `strict` hands its builds to (`Process.Started`, the output appears right away), so the front end `strict` stays small (2.4 MB instead of 5.2 MB) and builds of other programs do not rebuild it. `Bootstrap.mlir` is the seed, `NativeCompiler` compiled by itself: `Bootstrap.cmd` (Windows) and `bootstrap.sh` (Linux and macOS) build `NativeCompiler` from it, which then builds `strict`.
 
-Completed steps taking at least 3 seconds print their elapsed time in seconds: dependency snapshot, frontend, MLIR emission, GPU preparation and external tools. The final host linker is labeled `Linking`. Faster steps stay silent; there are no tool-start messages. Total compilation is also reported only at 3 seconds or more and excludes dependency snapshots and process startup. GPU preparation includes its nested LLVM tools; do not add those twice. Unchanged builds print only `Up to date` and run no compiler or tests. `check_build.py` checks both fast-step suppression and slow-step reporting in the VM and native code without waiting three seconds.
+Completed steps taking at least 3 seconds print their elapsed time in seconds. Set `STRICT_BUILD_PROFILE=1` to print every measured stage, including sub-millisecond steps, cache hits/misses, linking passes, frontend/emission substeps, GPU target batches, external tools, packaging and build-stamp writes. Other values retain the three-second threshold. This flag changes diagnostics only: it keeps cache hits, optimization options and generated programs. Current compilers read it through a native getenv helper; a cached source fallback keeps the flag usable when building with an older compiler. `python Compiler/check_profile.py` checks VM/native flag behavior and that toggling it preserves unchanged-build skipping.
+
+```powershell
+$env:STRICT_BUILD_PROFILE = "1"
+$env:STRICT_THREADS = "8"
+.\strict.exe build Strict.strict
+Remove-Item Env:STRICT_BUILD_PROFILE
+```
+
+Timings are elapsed wall seconds, rounded to four decimal places in detailed mode. Parent stages include their children: `Frontend` includes dependency linking and validation; `MLIR emission` includes reachability, safety, recursion, function bodies, helpers and globals; `GPU preparation` includes GPU tools; `Host lowering and translation` includes MLIR splitting/preparation and its tool batches. Batch timings describe all concurrent jobs together. Do not add parent and child times. `Total compilation` excludes dependency inventory/snapshot and stamp writing; `Build total` includes these within NativeCompiler, while a CLI cache hit returns after its own timed check. A cached build intentionally has no frontend/backend rows. `check_build.py` retains the normal fast-step suppression and slow-step reporting checks.
 
 The previous bootstrap seed still called `NativeGate`, so rebuilding from it ran tests and used the older compiler pipeline despite current source removing that gate. The seed now comes from byte-identical stages 2 and 3 (SHA-256 `605746933f973a03af535a3a0f051185dcb6115a0754fe95f2bc16e8ce99cef6`). A separately compiled seed built and ran a program containing a failing inline test without creating or running a test executable. `check_build.py` rejects seeds containing the old gate.
 
@@ -223,3 +232,49 @@ Moss binaries were byte-identical before/after populating GPU caches. Immediate 
 Targeted VM and native tests passed for FileCompiler, LinkRound, ResolveCheck, MlirParallel, MlirSafety, NativeCompiler and Strict; Frame and Operations also passed native tests. Compiler, Bytecode, Expressions and Runtime validation reported zero issues. These are targeted recovery checks and representative builds, not the full daily repository/model/game execution sweep. Existing long VM tests remain slow (FileCompiler.Parsed alone took about 34 s); classification and enforcement of the test budget remain in improvements.md.
 
 Final recovery checks also passed nine fresh VM runs at 1, 4 and default threads. MossGenerate, MossImage, LogoApp, WebWars and Qwen3Benchmark rebuilt at 36 threads with byte-identical IR/executables to their eight-thread builds; cached-GPU Qwen3Benchmark took 9.07 s. Compiler/check_build.py passed build/test skipping, cache invalidation, Release retention, GPU-cache reuse and whole-file read semantics. A final strict.exe rebuild took 10.75 s and retained its validated hash.
+
+
+## Detailed build profile after cca586ae
+
+Paired cold-frontend compiler self-builds used the same source and produced identical MLIR and executable hashes at one/eight threads. Native/bytecode stamps and host MLIR were removed; GPU/native caches were retained. Detailed logging was enabled for both runs. Executable size is 4,662,272 bytes (18,944 bytes above the preceding compiler). Stage 2/3 output also matched. These measurements distinguish parallel speedup from costs that remain sequential or dominated by fixed work.
+
+| Stage | One thread | Eight threads | Observation |
+| --- | ---: | ---: | --- |
+| Entire compiler build, wall | 46.57 s | 21.74 s | 2.14x overall |
+| Source discovery | 0.284 s | 0.271 s | Little scaling; 343-file inventory |
+| Shape loading/fusion | 0.042 s | 0.022 s | Small cost already |
+| Type inference, including shapes | 0.208 s | 0.189 s | Scopes/refinement dominate the remainder |
+| Dependency linking | 13.036 s | 8.202 s | Only 1.59x; repeated late passes remain |
+| Syntax validation | 0.395 s | 0.422 s | Essentially unchanged |
+| Name validation | 1.320 s | 0.182 s | 7.26x |
+| Reachability | 0.436 s | 0.344 s | Little scaling |
+| Safety and recursion edges | 0.725 s | 0.611 s | Little scaling |
+| Recursive-function analysis | 0.341 s | 0.524 s | No demonstrated gain |
+| Function-body emission | 5.859 s | 0.862 s | 6.79x |
+| Globals/text assembly | 1.175 s | 1.227 s | Essentially unchanged |
+| Total MLIR emission | 8.819 s | 3.838 s | Faster bodies leave analysis/assembly dominant |
+| Host lowering/translation | 14.513 s | 3.392 s | Existing independent tool jobs benefit strongly |
+| Host clang batch | 3.302 s | 1.015 s | Independent jobs scale |
+| Final linker | 2.804 s | 2.578 s | Little scaling |
+
+The normal compiler link stops at its 20-pass budget with `complete false` in every pass. Types stop growing at 311, but invoked-call counts still grow late in the process. An isolated 25-pass diagnostic reached the current convergence check on pass 21 (15,281 calls before/after); the 20th changed 15,271 to 15,281. This does not by itself prove missing executable code, but the fixed depth guard silently accepts a non-converged result. Investigate dependency work queues/signature reuse and verify the convergence rule rather than increasing the cap as a performance fix. Last four passes each cost roughly one second at both thread counts.
+
+Representative eight-thread profiles, same default optimized release pipeline:
+
+| Program | Frontend | MLIR emission | GPU preparation | Final link | Build total |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Examples/Sum | 0.079 s | 0.003 s | 0 s | 0.254 s | 0.814 s |
+| NeuralNetworks/Xor | 0.660 s | 0.098 s | 0.068 s | 0.554 s | 2.342 s |
+| Strict | 4.123 s | 1.692 s | 0.251 s | 1.498 s | 10.380 s |
+| MossGenerate, GPU/native caches populated | 1.126 s | 1.204 s | 0.599 s | 0.723 s | 5.210 s |
+| MossImage, GPU/native caches populated | 1.040 s | 1.097 s | 0.423 s | 0.631 s | 4.681 s |
+| LogoApp | 1.880 s | 0.184 s | 0.001 s | 0.479 s | 4.973 s |
+| WebWars | 4.600 s | 4.133 s | 0.519 s | 1.297 s | 14.287 s |
+
+Sum spends most time in fixed backend/process work, including 16 clang jobs for only two emitted functions. Xor inventories 458 files for 26 linked types. Moss inventories 492 files for 90-97 linked types. LogoApp/WebWars inventory 770 files, twice: dependency inventory before snapshots and source discovery before inference each take about 1.1 s. Share/narrow that inventory before spending effort on already-small shape parsing (about 0.02 s). Release staging cost 0.061 s for LogoApp and 0.399 s for WebWars in these runs.
+
+WebWars emission is concentrated in generated atlas constructors: seven SceneAtlas_Group/LevelAtlas_Group helpers each emit 306-583 KB of MLIR, about 3.77 MB combined. An isolated parallel per-function probe measured 0.22-0.88 s each, while ordinary game functions were mostly below 25 ms. Their summed wall durations overlap across threads; the measured whole function-body batch was 2.955 s. SceneAtlas.strict is 59,465 source bytes/487 lines and LevelAtlas.strict 39,747 bytes/314 lines. Investigate large constant/record-list lowering and generated asset representation, preserving data exactly, rather than treating every function as an equal unit of work.
+
+Moss has a different emission profile: GPU-kernel emission takes 0.78-0.85 s while host function bodies take 0.10-0.12 s. On the first run after merged GPU/native updates, MossGenerate spent 24.125 s in GPU preparation: program PTX 3.712 s, shared runtime PTX 17.156 s, plus lowering/translation/cache work. Five native C compilations added about 4.45 s sequentially. First build total was 33.345 s; a forced source rebuild with these caches populated took 5.210 s and retained identical binary bytes. MossImage first GPU preparation was 4.988 s, then 0.423 s cached. Further targets are emitted GPU variants/runtime size, independent native C job batching and cache reuse, not the already-fast host-body emission.
+
+Raw logs and parsed stage data are in ignored Compiler/output/ThreadAudit and Compiler/output/ProfileAudit/stages*.json; LinkAudit.strict records call-count/signature changes and EmissionAudit.strict records per-function emission costs. Profiling does not disable parallel loops or add logging inside collecting worker bodies. Native tests passed for BuildProfile, NativeCompiler, MlirNatives, Linker, FileCompiler, ResolveCheck, Hosted, Execute, NativeBuild, NativeFolder, Toolchain, MlirModule and DeviceBuild. VM checks passed for these except NativeFolder, which exceeded its 120-second budget and was killed in Counted; existing NativeBuild and MlirModule VM checks took about 96/88 s. Full daily repository/model execution was not repeated. Slow VM integration checks still need explicit classification.

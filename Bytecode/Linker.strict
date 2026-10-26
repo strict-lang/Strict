@@ -18,12 +18,14 @@ Linked(entries List(TypeEntry), signatures Texts, depth Number) List(TypeEntry)
 	Sample.Linked(Iterating, List(Text), 3).Length is 1
 	if depth is 0
 		return entries
+	let started = Process.Elapsed
 	let targets = Targets(entries)
 	let signed = Signatures(Linkable(BaseTypes(entries, targets)), targets)
 	let linked = Entries(entries, signatures, signed, targets)
-	if (linked.Length is entries.Length) and (Targets(linked).Length is targets.Length)
-		return linked
-	Linked(linked, signed, depth - 1)
+	let complete = (linked.Length is entries.Length) and (Targets(linked).Length is targets.Length)
+	let phase = "Frontend / link pass (" + linked.Length + " types, complete " + complete + ")"
+	BuildProfile(Logger).Reported(phase, started)
+	complete then linked else Linked(linked, signed, depth - 1)
 Entries(entries List(TypeEntry), signatures Texts, signed Texts, targets Texts) List(TypeEntry)
 	Sample.Entries(Go, List(Text), List(Text), List(Text)).Length is 1
 	let automatic = Automatic(main.lines, TypeEntry.ShortName(main.fullName), Instantiation(main.inference.types))

@@ -1,14 +1,14 @@
 has logger
 Run(arguments Texts) Number
+	let started = Process.Elapsed
 	let rest = arguments.Slice(1, arguments.Length - 1)
 	let cache = NativeCache(arguments(0), rest)
-	if cache.IsCurrent
+	if BuildProfile(logger).Current(cache)
 		logger.Log(cache.Message)
+		BuildProfile(logger).Reported("Build total", started)
 		return 0
-	let inputs = cache.IsEnabled then BuildProfile(logger).Inputs(cache) else List(Text)
-	let failed = BuildProfile(logger).Compiled(arguments(0), rest)
-	if failed is 0
-		cache.Saved(inputs)
+	let failed = BuildProfile(logger).Compiled(cache)
+	BuildProfile(logger).Reported("Build total", started)
 	failed
 Compiled(command Text, rest Texts) Number
 	if command is "build"

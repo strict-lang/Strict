@@ -27,7 +27,8 @@ Compiled(base Text, targets Texts) Texts
 	for targets
 		let output = tools.Quoted(base + "." + value + ".ptx")
 		arguments.Add(Nvptx + value + " " + tools.Quoted(base + ".gpu.ll") + " -o " + output)
-	for ToolRunner(tools.Located("clang")).ExecuteAll(arguments)
+	let phase = "GPU PTX " + Path(base).FileName.text + " (" + Text.Combine(targets, ", ") + ")"
+	for ToolRunner(tools.Located("clang")).ExecuteAll(arguments, phase)
 		let output = base + "." + targets(index) + ".ptx"
 		value.Failed then "clang failed: " + value.error else Text.Combine(File(output).ReadLines, "\n")
 Combined(device Text, runtimes Texts, target = "Nvidia") Text
