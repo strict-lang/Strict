@@ -1327,11 +1327,12 @@
     return
   }
   // the plan of a routed prompt block (strict_device_attention_planned): its tiles of 32 positions attended exactly, then
-  // a marker 32768 + chunk per 32 pooled key blocks; the pooled key blocks, their scores for the queries of both halves
-  // of the block (256 apart), the length of the plan and the count of pooled blocks
+  // a marker 32768 + chunk per 32 pooled key blocks (-1 as the length when the tiles do not fit, the block attends
+  // densely); the pooled key blocks, their 16 bit scores for the queries of both halves of the block (512 apart), the
+  // length of the plan and the count of pooled blocks
   llvm.mlir.global internal @strict_device_attention_plan() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<528 x i16>
-  llvm.mlir.global internal @strict_device_attention_pool_blocks() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<256 x i16>
-  llvm.mlir.global internal @strict_device_attention_pool_scores() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<512 x f32>
+  llvm.mlir.global internal @strict_device_attention_pool_blocks() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<512 x i16>
+  llvm.mlir.global internal @strict_device_attention_pool_scores() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<1024 x f16>
   llvm.mlir.global internal @strict_device_attention_plan_counts() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<4 x i32>
   // a pooled number as a 32 bit float or (wide) a double into the result at at
   func.func private @strict_device_attention_pooled_number(%result: !llvm.ptr, %wide: i1, %at: i32, %number: f32) attributes {llvm.passthrough = ["alwaysinline"]} {
@@ -1680,10 +1681,12 @@
     func.call @strict_device_attention_threshold(%secondTile, %c384, %c1, %lane, %routing, %scale) : (!llvm.ptr<3>, i32, i32, i32, f32, f32) -> ()
     cf.br ^scores
   ^scores:
-    %isKeyBlock = arith.cmpi slt, %thread, %keyBlocks : i32
+    cf.br ^scoreBlock(%thread : i32)
+  ^scoreBlock(%scored: i32):
+    %isKeyBlock = arith.cmpi slt, %scored, %keyBlocks : i32
     cf.cond_br %isKeyBlock, ^dot, ^dotsDone
   ^dot:
-    %dotRow = arith.muli %thread, %c128 : i32
+    %dotRow = arith.muli %scored, %c128 : i32
     %dotStart = arith.addi %keyRows, %dotRow : i32
     cf.br ^dotNumber(%c0, %zero, %zero : i32, f32, f32)
   ^dotNumber(%dotIndex: i32, %lowerDot: f32, %upperDot: f32):
@@ -1701,11 +1704,14 @@
     %dotFollowing = arith.addi %dotIndex, %c1 : i32
     cf.br ^dotNumber(%dotFollowing, %nextLowerDot, %nextUpperDot : i32, f32, f32)
   ^dotDone:
-    %lowerDotAt = arith.addi %c1024, %thread : i32
-    %upperDotAt = arith.addi %c1280, %thread : i32
+    %c2048 = llvm.mlir.constant(2048 : i32) : i32
+    %c2560 = llvm.mlir.constant(2560 : i32) : i32
+    %lowerDotAt = arith.addi %c2048, %scored : i32
+    %upperDotAt = arith.addi %c2560, %scored : i32
     func.call @strict_device_attention_scratch_put(%secondTile, %lowerDotAt, %lowerDot) : (!llvm.ptr<3>, i32, f32) -> ()
     func.call @strict_device_attention_scratch_put(%secondTile, %upperDotAt, %upperDot) : (!llvm.ptr<3>, i32, f32) -> ()
-    cf.br ^dotsDone
+    %scoredNext = arith.addi %scored, %c256 : i32
+    cf.br ^scoreBlock(%scoredNext : i32)
   ^dotsDone:
     func.call @strict_device_barrier() : () -> ()
     %isFirstThread = arith.cmpi eq, %thread, %c0 : i32
@@ -1755,8 +1761,10 @@
     %moreBlocks = arith.cmpi slt, %keyBlock, %keyBlocks : i32
     cf.cond_br %moreBlocks, ^route, ^chunks
   ^route:
-    %lowerAt = arith.addi %c1024, %keyBlock : i32
-    %upperAt = arith.addi %c1280, %keyBlock : i32
+    %c2048 = llvm.mlir.constant(2048 : i32) : i32
+    %c2560 = llvm.mlir.constant(2560 : i32) : i32
+    %lowerAt = arith.addi %c2048, %keyBlock : i32
+    %upperAt = arith.addi %c2560, %keyBlock : i32
     %lowerRaw = func.call @strict_device_attention_scratch(%scratch, %lowerAt) : (!llvm.ptr<3>, i32) -> f32
     %upperRaw = func.call @strict_device_attention_scratch(%scratch, %upperAt) : (!llvm.ptr<3>, i32) -> f32
     %lowerCentered = arith.subf %lowerRaw, %lowerMeaned : f32
@@ -1777,6 +1785,11 @@
     %nextBlock = arith.addi %keyBlock, %c1 : i32
     cf.cond_br %attended, ^exactBlock, ^pooledBlock
   ^exactBlock:
+    %longer = arith.addi %length, %c2 : i32
+    %c512 = llvm.mlir.constant(512 : i32) : i32
+    %fitsPlan = arith.cmpi sle, %longer, %c512 : i32
+    cf.cond_br %fitsPlan, ^exactStore, ^block(%nextBlock, %longer, %pooledCount : i32, i32, i32)
+  ^exactStore:
     %firstTile = arith.shli %keyBlock, %c1 : i32
     %secondTile = arith.addi %firstTile, %c1 : i32
     %length64 = arith.extui %length : i32 to i64
@@ -1786,7 +1799,6 @@
     llvm.store %firstEntry, %firstSlot : i16, !llvm.ptr<3>
     %secondSlot = llvm.getelementptr %firstSlot[1] : (!llvm.ptr<3>) -> !llvm.ptr<3>, i16
     llvm.store %secondEntry, %secondSlot : i16, !llvm.ptr<3>
-    %longer = arith.addi %length, %c2 : i32
     cf.br ^block(%nextBlock, %longer, %pooledCount : i32, i32, i32)
   ^pooledBlock:
     %pooled64 = arith.extui %pooledCount : i32 to i64
@@ -1800,15 +1812,26 @@
     %logarithm = func.call @strict_device_binary_logarithm(%lengthFloat) : (f32) -> f32
     %lowerPooled = arith.addf %lowerScore, %logarithm : f32
     %upperPooled = arith.addf %upperScore, %logarithm : f32
-    %upperIndex = arith.addi %pooledCount, %c256 : i32
+    %c512Scores = llvm.mlir.constant(512 : i32) : i32
+    %upperIndex = arith.addi %pooledCount, %c512Scores : i32
     %upperIndex64 = arith.extui %upperIndex : i32 to i64
-    %lowerScoreSlot = llvm.getelementptr %poolScores[%pooled64] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
-    %upperScoreSlot = llvm.getelementptr %poolScores[%upperIndex64] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
-    llvm.store %lowerPooled, %lowerScoreSlot : f32, !llvm.ptr<3>
-    llvm.store %upperPooled, %upperScoreSlot : f32, !llvm.ptr<3>
+    %lowerScoreSlot = llvm.getelementptr %poolScores[%pooled64] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f16
+    %upperScoreSlot = llvm.getelementptr %poolScores[%upperIndex64] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f16
+    %lowerHalf = arith.truncf %lowerPooled : f32 to f16
+    %upperHalf = arith.truncf %upperPooled : f32 to f16
+    llvm.store %lowerHalf, %lowerScoreSlot : f16, !llvm.ptr<3>
+    llvm.store %upperHalf, %upperScoreSlot : f16, !llvm.ptr<3>
     %morePooled = arith.addi %pooledCount, %c1 : i32
     cf.br ^block(%nextBlock, %length, %morePooled : i32, i32, i32)
   ^chunks:
+    %c512Tiles = llvm.mlir.constant(512 : i32) : i32
+    %overflow = arith.cmpi sgt, %length, %c512Tiles : i32
+    cf.cond_br %overflow, ^dense, ^marking
+  ^dense:
+    %unplanned = llvm.mlir.constant(-1 : i32) : i32
+    llvm.store %unplanned, %counts : i32, !llvm.ptr<3>
+    return
+  ^marking:
     %pooledUp = arith.addi %pooledCount, %c31 : i32
     %chunkCount = arith.shrui %pooledUp, %c5 : i32
     cf.br ^chunk(%c0, %length : i32, i32)
@@ -1891,7 +1914,8 @@
     %quad = arith.andi %lane, %c3 : i32
     %quadPositions = arith.shli %quad, %c1 : i32
     %half = arith.shrui %warp, %c2 : i32
-    %halfStart = arith.shli %half, %c8 : i32
+    %c9 = llvm.mlir.constant(9 : i32) : i32
+    %halfStart = arith.shli %half, %c9 : i32
     %chunkStart = arith.shli %chunk, %c5 : i32
     %scoresStart = arith.addi %halfStart, %chunkStart : i32
     cf.br ^part(%c0, %noScores : i32, vector<16xf32>)
@@ -1903,8 +1927,9 @@
     %position = arith.addi %partPositions, %quadPositions : i32
     %at = arith.addi %scoresStart, %position : i32
     %at64 = arith.extui %at : i32 to i64
-    %scoreSlot = llvm.getelementptr %poolScores[%at64] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
-    %pair = llvm.load %scoreSlot {alignment = 8 : i64} : !llvm.ptr<3> -> vector<2xf32>
+    %scoreSlot = llvm.getelementptr %poolScores[%at64] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f16
+    %halves = llvm.load %scoreSlot {alignment = 4 : i64} : !llvm.ptr<3> -> vector<2xf16>
+    %pair = arith.extf %halves : vector<2xf16> to vector<2xf32>
     %score = llvm.extractelement %pair[%c0 : i32] : vector<2xf32>
     %scoreNext = llvm.extractelement %pair[%c1 : i32] : vector<2xf32>
     %lower = arith.addf %score, %lowerShift : f32
@@ -2141,9 +2166,13 @@
     %started = llvm.insertelement %zero, %state2[%c3 : i32] : vector<4xf32>
     %keyTile = llvm.mlir.addressof @strict_device_attention_keys : !llvm.ptr<3>
     %valueTile = llvm.mlir.addressof @strict_device_attention_values : !llvm.ptr<3>
-    cf.cond_br %routed, ^planning, ^planned(%tiles, %zero, %zero, %c0, %c0 : i32, f32, f32, i32, i32)
+    %unrouted = arith.constant false
+    cf.cond_br %routed, ^planning, ^planned(%tiles, %zero, %zero, %c0, %c0, %unrouted : i32, f32, f32, i32, i32, i1)
   ^planning:
     %planLength = func.call @strict_device_attention_planned(%pooled, %routing, %scale, %tokenBlock, %group, %sequence, %heads, %groups, %sequences, %tokens, %positions, %thread, %exact) : (!llvm.ptr, f32, f32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> i32
+    %fitted = arith.cmpi sge, %planLength, %c0 : i32
+    cf.cond_br %fitted, ^routedPlan, ^planned(%tiles, %zero, %zero, %c0, %c0, %unrouted : i32, f32, f32, i32, i32, i1)
+  ^routedPlan:
     %shiftLower = func.call @strict_device_attention_shift(%queries, %queryBits, %lowerQuery, %quad, %scale) : (!llvm.ptr, i64, i64, i32, f32) -> f32
     %shiftUpper = func.call @strict_device_attention_shift(%queries, %queryBits, %upperQuery, %quad, %scale) : (!llvm.ptr, i64, i64, i32, f32) -> f32
     %planStart, %planPooled, %planChunk = func.call @strict_device_attention_entry(%routed, %c0, %planLength) : (i1, i32, i32) -> (i32, i1, i32)
@@ -2158,8 +2187,8 @@
     %groupBlocks = arith.muli %groupStart, %keyBlocks : i32
     %groupRows = arith.muli %groupBlocks, %c128Numbers : i32
     %pooledValueRows = arith.addi %keySection, %groupRows : i32
-    cf.br ^planned(%planLength, %shiftLower, %shiftUpper, %planStart, %pooledValueRows : i32, f32, f32, i32, i32)
-  ^planned(%loopTiles: i32, %lowerShift: f32, %upperShift: f32, %firstStart: i32, %valueRows: i32):
+    cf.br ^planned(%planLength, %shiftLower, %shiftUpper, %planStart, %pooledValueRows, %routed : i32, f32, f32, i32, i32, i1)
+  ^planned(%loopTiles: i32, %lowerShift: f32, %upperShift: f32, %firstStart: i32, %valueRows: i32, %routedHere: i1):
     %firstKeys = func.call @strict_device_attention_fetch(%keys, %keyBits, %firstStart, %positions, %stride, %base, %size, %thread) : (!llvm.ptr, i64, i32, i32, i32, i32, i32, i32) -> vector<16xi32>
     %firstValues = func.call @strict_device_attention_fetch(%values, %valueBits, %firstStart, %positions, %viewStride, %viewBase, %size, %thread) : (!llvm.ptr, i64, i32, i32, i32, i32, i32, i32) -> vector<16xi32>
     func.call @strict_device_attention_keys_stored(%keyTile, %firstKeys, %keyBits, %size, %thread, %brain, %eights) : (!llvm.ptr<3>, vector<16xi32>, i64, i32, i32, i1, i1) -> ()
@@ -2176,9 +2205,9 @@
     %moreTiles = arith.cmpi sle, %tile, %loopTiles : i32
     cf.cond_br %moreTiles, ^load, ^finish
   ^load:
-    %first, %isPooled, %chunk = func.call @strict_device_attention_entry(%routed, %tile, %loopTiles) : (i1, i32, i32) -> (i32, i1, i32)
+    %first, %isPooled, %chunk = func.call @strict_device_attention_entry(%routedHere, %tile, %loopTiles) : (i1, i32, i32) -> (i32, i1, i32)
     %tileFollowing = arith.addi %tile, %c1 : i32
-    %nextFirst, %nextIsPooled, %nextChunk = func.call @strict_device_attention_entry(%routed, %tileFollowing, %loopTiles) : (i1, i32, i32) -> (i32, i1, i32)
+    %nextFirst, %nextIsPooled, %nextChunk = func.call @strict_device_attention_entry(%routedHere, %tileFollowing, %loopTiles) : (i1, i32, i32) -> (i32, i1, i32)
     %nextKeys = func.call @strict_device_attention_fetch(%keys, %keyBits, %nextFirst, %positions, %stride, %base, %size, %thread) : (!llvm.ptr, i64, i32, i32, i32, i32, i32, i32) -> vector<16xi32>
     cf.cond_br %nextIsPooled, ^pooledValues, ^tileValues
   ^pooledValues:

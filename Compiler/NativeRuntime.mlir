@@ -14292,7 +14292,7 @@
     %positionsUp = arith.addi %positions, %blocksSpare : i64
     %sixBits = arith.constant 6 : i64
     %keyBlocks = arith.shrui %positionsUp, %sixBits : i64
-    %mostBlocks = arith.constant 256 : i64
+    %mostBlocks = arith.constant 512 : i64
     %fewBlocks = arith.cmpi sle, %keyBlocks, %mostBlocks : i64
     %routingOpen = arith.andi %eightsKeys, %openAttention : i1
     %routingGroups = arith.andi %oneHeadGroups, %selfAttention : i1
