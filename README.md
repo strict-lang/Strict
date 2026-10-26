@@ -75,6 +75,8 @@ strict version                            version and build time of this strict
 
 Needed tools: `mlir-opt`, `mlir-translate`, `clang`, `opt` and `llc` of LLVM 22 (on Windows the msys2 ucrt64 `mlir` package and the LLVM release). When they are missing `strict` says so and installs them (Windows: winget and pacman, Linux: the LLVM release into `Tools/`, macOS: conda-forge with micromamba into `Tools/`).
 
+External tools crash now and then on valid input (mlir-opt's parallel verifier with an access violation, nsys tracing CUDA graphs, ncu replaying several metrics of one kernel). A build reruns a crashed tool once (`ToolRunner.Retried`); when a build, test or profile still fails without a message, run it again once before investigating, and report a crash that comes back on the same input to that project with the input file.
+
 `strict` runs, tests and checks on the Strict VM and hands `build` and `test ... lines` to `Compiler/NativeCompiler` (`.exe` on Windows), the native compiler next to it. Bootstrap a fresh checkout from the checked-in seed with `Compiler\Bootstrap.cmd` (Windows) or `sh Compiler/bootstrap.sh` (Linux and macOS): it builds `Compiler/NativeCompiler` from the seed, which then builds `strict`. After changing the compiler rebuild both, `strict build Compiler/NativeCompiler.strict` then `strict build Strict.strict`; building twice gives identical output.
 
 ## Rules worth knowing

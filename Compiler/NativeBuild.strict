@@ -87,7 +87,7 @@ Rebuilt(base Text, mlir Text, tools Toolchain) Text
 	isAndroid then AndroidBuild(tools).Linked(base, level) else Linked(base, tools)
 Ran(base Text, tools Toolchain, path Text, isCounting Boolean) Number
 	let executable = tools.Executable(base)
-	let result = ToolRunner(executable).Execute("")
+	let result = ToolRunner(executable).Cleaned(Process.RunTool(executable, ""))
 	logger.Log(result.Output.Trim)
 	if ToolRunner.IsCrash(result.exitCode) is false
 		logger.Log(Execute.Summary(result.exitCode, path))
