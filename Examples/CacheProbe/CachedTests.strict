@@ -1,6 +1,0 @@
-Run Number
-	Touched is true
-	0
-Touched Boolean
-	File("C:/code/GitHub/strict-lang/Strict/Examples/CacheProbe/Ran.exe").Write("tested")
-	true

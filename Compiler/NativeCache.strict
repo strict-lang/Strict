@@ -30,11 +30,14 @@ Saved(inputs Texts) Boolean
 		return false
 	Written(Text.Combine((List(Text) + Key) + inputs + Snapshot(Outputs.Unique), "\n"))
 Inputs Texts
-	let sources = SourceFiles(rest(1)).Of(FileCompiler.Normalized(rest(0)))
+	let source = FileCompiler.Normalized(rest(0))
+	let sources = SourceFiles(rest(1)).Of(source)
 	let runtimes = Directory.Files(rest(1) + "/Compiler", "NativeRuntime*.mlir")
 	let extension = Toolchain(Platform.Current, rest(1)).Extension
 	let tools = (rest(1) + "/strict" + extension, rest(1) + "/Compiler/NativeCompiler" + extension)
-	sources + runtimes + tools + NativeInputs(Folders(sources)) + Data(sources)
+	let content = Path(source).PathOnly.text + "/Content"
+	let inputs = sources + runtimes + tools + NativeInputs(Folders(sources)) + Data(sources)
+	inputs + BinaryFile(source).Contained(content) + (content + "/**")
 Folders(sources Texts) Texts
 	mutable folders = List(Text)
 	for sources
@@ -67,6 +70,9 @@ Snapshot(paths Texts) Texts
 		lines = lines + value + Value(value)
 	lines
 Value(path Text) Text
+	if path.EndsWith("/**")
+		let folder = path.Substring(0, path.Length - 3)
+		return Text.Combine(BinaryFile(rest(0)).Contained(folder).Sorted, "\t")
 	if path.EndsWith("/")
 		return Text.Combine(Directory.Directories(path).Sorted, "\t")
 	if path.EndsWith("/*") is false
@@ -84,6 +90,7 @@ Outputs Texts
 		if File(base + value).Exists
 			files = files + (base + value)
 	for (release.Parent + "/Release", release.Parent + "/Release/" + Platform.NameOf(Platform.Current))
+		files = files + BinaryFile(rest(0)).Contained(value + "/Content")
 		let target = value + "/" + Path(Output).FileName.text
 		if File(target).Exists
 			files = files + target

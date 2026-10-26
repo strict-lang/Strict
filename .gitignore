@@ -187,3 +187,5 @@ NeuralNetworks/qwen3/
 !NeuralNetworks/tinyqwen3.gguf
 !NeuralNetworks/tinyqwen3moe.gguf
 !NeuralNetworks/tinyqwen35basis.gguf
+/Compiler/output
+/Examples/CacheProbe

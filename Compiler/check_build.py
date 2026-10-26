@@ -12,6 +12,10 @@ with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as 
 	source = Path(folder) / "BuildCheck.strict"
 	dependency = Path(folder) / "BuildValue.strict"
 	dependency.write_text("Result Number\n\t0", encoding="utf-8")
+	content = Path(folder) / "Content"
+	content.mkdir()
+	asset = content / "data.txt"
+	asset.write_text("first")
 	source.write_text("Run Number\n\t1 is 2\n\tBuildValue.Result", encoding="utf-8")
 	def run(*arguments):
 		return subprocess.run([str(root / ("strict" + extension)), *arguments], cwd=root,
@@ -28,6 +32,10 @@ with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as 
 	assert built.returncode == 0, built.stdout + built.stderr
 	assert not source.with_suffix(".mlir").exists(), "Unchanged build regenerated MLIR"
 	assert executable.stat().st_mtime_ns == modified, "Unchanged build relinked executable"
+	asset.write_text("changed")
+	built = run("build", str(source))
+	assert built.returncode == 0, built.stdout + built.stderr
+	assert source.with_suffix(".mlir").exists(), "Changed content was skipped"
 	dependency.write_text("Result Number\n\t1", encoding="utf-8")
 	built = run("build", str(source))
 	assert built.returncode == 0, built.stdout + built.stderr
