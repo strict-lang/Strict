@@ -14295,7 +14295,7 @@
     %positionsUp = arith.addi %positions, %blocksSpare : i64
     %sixBits = arith.constant 6 : i64
     %keyBlocks = arith.shrui %positionsUp, %sixBits : i64
-    %mostBlocks = arith.constant 256 : i64
+    %mostBlocks = arith.constant 512 : i64
     %fewBlocks = arith.cmpi sle, %keyBlocks, %mostBlocks : i64
     %routingOpen = arith.andi %eightsKeys, %openAttention : i1
     %routingGroups = arith.andi %oneHeadGroups, %selfAttention : i1
@@ -14947,6 +14947,8 @@
   llvm.mlir.global internal @strict_gpu_whole_fast_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   llvm.mlir.global internal constant @strict_gpu_whole_gated_name("strict_device_whole\00strict_device_wholes_gated\00") : !llvm.array<47 x i8>
   llvm.mlir.global internal @strict_gpu_whole_gated_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  llvm.mlir.global internal constant @strict_gpu_gating_name("strict_device_gating\00strict_device_gatings\00") : !llvm.array<43 x i8>
+  llvm.mlir.global internal @strict_gpu_gating_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   func.func private @strict_gpu_whole_target(%rows: f64, %rowCount: f64, %wanted: i1) -> (!llvm.ptr, !llvm.ptr) {
     %name = llvm.mlir.addressof @strict_gpu_whole_name : !llvm.ptr
     %slot = llvm.mlir.addressof @strict_gpu_whole_slot : !llvm.ptr
@@ -15046,7 +15048,23 @@
     %ungatable = arith.andi %isGated, %notWhole : i1
     cf.cond_br %ungatable, ^ungated, ^launch
   ^ungated:
+    %bothRows = arith.addf %rowCount, %rowCount : f64
+    %bothCount = arith.addi %count, %count : i64
+    %sums = func.call @strict_gpu_tokens(%ptx, %bothCount, %rows, %input, %width, %bothRows, %bases, %biases, %zero) : (!llvm.ptr, i64, f64, f64, f64, f64, f64, f64, f64) -> f64
+    %hasSums = arith.cmpf une, %sums, %zero : f64
+    cf.cond_br %hasSums, ^combine, ^unsummed
+  ^unsummed:
     return %zero : f64
+  ^combine:
+    %gatingValues = llvm.alloca %two x f64 : (i64) -> !llvm.ptr
+    llvm.store %sums, %gatingValues : f64, !llvm.ptr
+    %halfSlot = llvm.getelementptr %gatingValues[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %rowCount, %halfSlot : f64, !llvm.ptr
+    %gatingName = llvm.mlir.addressof @strict_gpu_gating_name : !llvm.ptr
+    %gatingSlot = llvm.mlir.addressof @strict_gpu_gating_slot : !llvm.ptr
+    %noGuards = arith.constant 0 : i64
+    %combined = func.call @strict_gpu_run(%ptx, %gatingName, %gatingSlot, %count, %zero, %none, %gatingValues, %two, %one, %none, %none, %one, %none, %none, %noGuards) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
+    return %combined : f64
   ^launch:
     %gatedName = llvm.mlir.addressof @strict_gpu_whole_gated_name : !llvm.ptr
     %gatedSlot = llvm.mlir.addressof @strict_gpu_whole_gated_slot : !llvm.ptr

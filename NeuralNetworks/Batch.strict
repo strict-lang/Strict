@@ -41,6 +41,7 @@ Gated(input Numbers) Numbers
 	Gates.Gated((1, 1, 2, 0))(2).IsNearlyEqual(7.0463766)
 	Wholes.Gated(Tokens)(0).IsNearlyEqual(Wholes.Sums(Tokens)(0) * Wholes.Sums(Tokens)(2), 40)
 	Wholes.Gated(Tokens)(1).IsNearlyEqual(Wholes.Sums(Tokens)(1) * Wholes.Sums(Tokens)(3), 130)
+	Fours.Gated(Tokens)(77).IsNearlyEqual(-85.234, 2)
 	let width = weights.First.Length
 	let half = weights.Length / 2
 	for half * input.Length / width

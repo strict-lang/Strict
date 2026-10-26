@@ -3931,6 +3931,51 @@
     func.call @strict_device_whole_run(%count, %result, %failed, %rowsData, %rowsCount, %input, %inputCount, %inputBits, %width, %rows, %wide, %brain, %biases, %biasesCount, %biasesBits, %checkedWhole, %gated) : (i64, !llvm.ptr, !llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, i64, f64, f64, i1, i1, !llvm.ptr, i64, i64, i1, i1) -> ()
     llvm.return
   }
+  // the SiLU of gate row r times up row r + half of a GEMM result with 2 x half rows per token: `Batch.Gated` when
+  // strict_device_wholes_gated can not run, doubles when wide
+  llvm.func @strict_device_gating(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %sums: !llvm.ptr, %sumsCount: i64, %sumsBits: i64, %halfNumber: f64, %results: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>} {
+    %wide = llvm.mlir.constant(true) : i1
+    func.call @strict_device_gating_run(%count, %result, %sums, %sumsCount, %sumsBits, %halfNumber, %results, %wide) : (i64, !llvm.ptr, !llvm.ptr, i64, i64, f64, i64, i1) -> ()
+    llvm.return
+  }
+  llvm.func @strict_device_gatings(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %sums: !llvm.ptr, %sumsCount: i64, %sumsBits: i64, %halfNumber: f64, %results: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>} {
+    %wide = llvm.mlir.constant(false) : i1
+    func.call @strict_device_gating_run(%count, %result, %sums, %sumsCount, %sumsBits, %halfNumber, %results, %wide) : (i64, !llvm.ptr, !llvm.ptr, i64, i64, f64, i64, i1) -> ()
+    llvm.return
+  }
+  func.func private @strict_device_gating_run(%count: i64, %result: !llvm.ptr, %sums: !llvm.ptr, %sumsCount: i64, %sumsBits: i64, %halfNumber: f64, %results: i64, %wide: i1) attributes {llvm.passthrough = ["alwaysinline"]} {
+    %thread = func.call @strict_device_thread_index() : () -> i32
+    %block = func.call @strict_device_block_index() : () -> i32
+    %size = func.call @strict_device_block_size() : () -> i32
+    %thread64 = arith.extui %thread : i32 to i64
+    %block64 = arith.extui %block : i32 to i64
+    %size64 = arith.extui %size : i32 to i64
+    %start = arith.muli %block64, %size64 : i64
+    %at = arith.addi %start, %thread64 : i64
+    %inside = arith.cmpi slt, %at, %count : i64
+    cf.cond_br %inside, ^gate, ^exit
+  ^gate:
+    %half = arith.fptosi %halfNumber : f64 to i64
+    %token = arith.divui %at, %half : i64
+    %row = arith.remui %at, %half : i64
+    %tokenRows = arith.addi %half, %half : i64
+    %tokenStart = arith.muli %token, %tokenRows : i64
+    %gateAt = arith.addi %tokenStart, %row : i64
+    %upAt = arith.addi %gateAt, %half : i64
+    %gate = func.call @strict_device_elements(%sums, %sumsBits, %gateAt, %sumsCount) : (!llvm.ptr, i64, i64, i64) -> f32
+    %up = func.call @strict_device_elements(%sums, %sumsBits, %upAt, %sumsCount) : (!llvm.ptr, i64, i64, i64) -> f32
+    %minusLog = arith.constant -1.44269504 : f32
+    %exponent = arith.mulf %gate, %minusLog : f32
+    %decay = func.call @strict_device_binary_power(%exponent) : (f32) -> f32
+    %unit = arith.constant 1.0 : f32
+    %denominator = arith.addf %decay, %unit : f32
+    %activated = arith.divf %gate, %denominator : f32
+    %product = arith.mulf %activated, %up : f32
+    func.call @strict_device_result(%result, %at, %product, %wide, %results) : (!llvm.ptr, i64, f32, i1, i64) -> ()
+    cf.br ^exit
+  ^exit:
+    return
+  }
   llvm.func @strict_device_wholes_fast(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %rowsData: !llvm.ptr, %rowsCount: i64, %rowsBits: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %width: f64, %rows: f64, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64, %bases: !llvm.ptr, %basesCount: i64, %basesBits: i64, %results: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>, nvvm.minctasm = 1 : i32} {
     %wide = llvm.mlir.constant(false) : i1
     %checkedWhole = llvm.mlir.constant(true) : i1
