@@ -61,12 +61,16 @@
   llvm.mlir.global internal @strict_gc_spare_count(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_spare_capacity(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_large(0 : i64) : i64
+  // 1 when the pages strict_gc_take_pages returned last come from growing the heap: never used, zero already
+  llvm.mlir.global internal @strict_gc_fresh(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_work(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_work_size(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_work_capacity(0 : i64) : i64
   // allocation cursors and ends of the 64 size classes per thread, a thread takes its lane at its first allocation,
   // threads past the last lane share lane 0 and allocate under the collector lock while the pool runs
   llvm.mlir.global internal @strict_gc_lanes(dense<0> : tensor<65536xi64>) : !llvm.array<65536 x i64>
+  // where every lane's spans stood when the current pool job started (strict_gc_lanes_carried, strict_gc_mine)
+  llvm.mlir.global internal @strict_gc_carried(dense<0> : tensor<65536xi64>) : !llvm.array<65536 x i64>
   llvm.mlir.global internal @strict_gc_lanes_taken(0 : i64) : i64
   llvm.mlir.global internal thread_local @strict_gc_lane(-1 : i64) : i64
   llvm.mlir.global internal @strict_gc_spans(dense<0> : tensor<64xi64>) : !llvm.array<64 x i64>
@@ -977,11 +981,11 @@
   llvm.mlir.global internal @strict_pool_context(0 : i64) : i64
   llvm.mlir.global internal @strict_pool_count(0 : i64) : i64
   llvm.mlir.global internal @strict_pool_chunk(0 : i64) : i64
-  llvm.mlir.global internal @strict_pool_next(0 : i64) : i64
-  llvm.mlir.global internal @strict_pool_done(0 : i64) : i64
+  llvm.mlir.global internal @strict_pool_next(dense<0> : tensor<8xi64>) {alignment = 64 : i64} : !llvm.array<8 x i64>
+  llvm.mlir.global internal @strict_pool_done(dense<0> : tensor<8xi64>) {alignment = 64 : i64} : !llvm.array<8 x i64>
   llvm.mlir.global internal @strict_pool_failure(0 : i64) : i64
   llvm.mlir.global internal @strict_pool_sleepers(0 : i64) : i64
-  llvm.mlir.global internal @strict_gc_mutex(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_mutex(dense<0> : tensor<8xi64>) {alignment = 64 : i64} : !llvm.array<8 x i64>
   llvm.mlir.global internal constant @strict_build_profile_name("STRICT_BUILD_PROFILE\00") : !llvm.array<21 x i8>
   func.func private @strict_buildprofile_detailed(%self: f64) -> f64 {
     %name = llvm.mlir.addressof @strict_build_profile_name : !llvm.ptr
@@ -1031,7 +1035,7 @@
     %lastJob = llvm.load %soloJobSlot : !llvm.ptr -> i64
     %soloJob = arith.addi %lastJob, %one : i64
     llvm.store %soloJob, %soloJobSlot : i64, !llvm.ptr
-    func.call @strict_gc_lanes_emptied() : () -> ()
+    func.call @strict_gc_lanes_carried() : () -> ()
     llvm.store %one, %busySlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     %soloInsideSlot = llvm.mlir.addressof @strict_pool_inside : !llvm.ptr
     %soloWasInside = llvm.load %soloInsideSlot : !llvm.ptr -> i64
@@ -1071,7 +1075,7 @@
     llvm.store %from, %doneSlot : i64, !llvm.ptr
     %failureSlot = llvm.mlir.addressof @strict_pool_failure : !llvm.ptr
     llvm.store %zero, %failureSlot : i64, !llvm.ptr
-    func.call @strict_gc_lanes_emptied() : () -> ()
+    func.call @strict_gc_lanes_carried() : () -> ()
     llvm.store %one, %busySlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     llvm.store %job, %jobSlot atomic seq_cst {alignment = 8 : i64} : i64, !llvm.ptr
     llvm.call @strict_pool_wake() : () -> ()
@@ -1247,7 +1251,9 @@
     llvm.cond_br %taken, ^done, ^spin
   ^spin:
     llvm.call @strict_pause() : () -> ()
-    llvm.br ^try
+    %held = llvm.load %slot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
+    %free = llvm.icmp "eq" %held, %zero : i64
+    llvm.cond_br %free, ^try, ^spin
   ^done:
     llvm.return
   }
@@ -1363,8 +1369,9 @@
   ^known:
     return %lane : i64
   }
-  // before a pool job every lane drops its spans: everything allocated in the job comes from pages tagged for it
-  func.func private @strict_gc_lanes_emptied() {
+  // before a pool job every lane keeps its spans and where they stand is copied: what a lane allocates from there in
+  // the job is its own like objects on the pages it takes in the job, which are tagged with the job and the lane
+  func.func private @strict_gc_lanes_carried() {
     %one = arith.constant 1 : i64
     %takenSlot = llvm.mlir.addressof @strict_gc_lanes_taken : !llvm.ptr
     %taken = llvm.load %takenSlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
@@ -1374,8 +1381,8 @@
     %rowBytes = arith.constant 1024 : i64
     %bytes = arith.muli %rows, %rowBytes : i64
     %lanes = llvm.mlir.addressof @strict_gc_lanes : !llvm.ptr
-    %noByte = arith.constant 0 : i32
-    %cleared = llvm.call @memset(%lanes, %noByte, %bytes) : (!llvm.ptr, i32, i64) -> !llvm.ptr
+    %carried = llvm.mlir.addressof @strict_gc_carried : !llvm.ptr
+    %copied = llvm.call @memcpy(%carried, %lanes, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     return
   }
   // the tag of pages this thread takes: 0 outside of pool jobs, else the job and the lane
@@ -1391,7 +1398,8 @@
     %tag = arith.select %isInside, %owner, %zero : i64
     return %tag : i64
   }
-  // true when address lies on a small page this thread took in its current pool job: nobody else can see it yet
+  // true when address lies on a small page this thread took in its current pool job or in what its lane allocated
+  // since the job started from a span it carried into the job: nobody else can see it yet
   func.func private @strict_gc_mine(%address: i64) -> i1 {
     %zero = arith.constant 0 : i64
     %no = arith.constant false
@@ -1420,7 +1428,38 @@
     %tagged = arith.shli %owner, %eight : i64
     %small = arith.ori %tagged, %expected : i64
     %isMine = arith.cmpi eq, %entry, %small : i64
-    return %isMine : i1
+    %kindMask = arith.constant 255 : i64
+    %kind = arith.andi %entry, %kindMask : i64
+    %isSmall = arith.cmpi eq, %kind, %expected : i64
+    %lane = func.call @strict_gc_lane_index() : () -> i64
+    %isOwnLane = arith.cmpi ne, %lane, %zero : i64
+    %isCarried = arith.andi %isSmall, %isOwnLane : i1
+    cf.cond_br %isMine, ^mine, ^carried
+  ^carried:
+    cf.cond_br %isCarried, ^span, ^none
+  ^span:
+    %pageOffset = arith.shli %index, %shift : i64
+    %page = arith.addi %base, %pageOffset : i64
+    %pagePointer = llvm.inttoptr %page : i64 to !llvm.ptr
+    %classSlot = llvm.getelementptr %pagePointer[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    %class = llvm.load %classSlot : !llvm.ptr -> i64
+    %stride = arith.constant 128 : i64
+    %row = arith.muli %lane, %stride : i64
+    %startEntry = arith.addi %row, %class : i64
+    %endOffset = arith.constant 64 : i64
+    %endEntry = arith.addi %startEntry, %endOffset : i64
+    %carried = llvm.mlir.addressof @strict_gc_carried : !llvm.ptr
+    %startSlot = llvm.getelementptr %carried[%startEntry] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %start = llvm.load %startSlot : !llvm.ptr -> i64
+    %endSlot = llvm.getelementptr %carried[%endEntry] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %end = llvm.load %endSlot : !llvm.ptr -> i64
+    %fromStart = arith.cmpi uge, %address, %start : i64
+    %beforeEnd = arith.cmpi ult, %address, %end : i64
+    %inSpan = arith.andi %fromStart, %beforeEnd : i1
+    return %inSpan : i1
+  ^mine:
+    %yes = arith.constant true
+    return %yes : i1
   ^none:
     return %no : i1
   }
@@ -1554,9 +1593,7 @@
     func.call @strict_rc_refill(%class) : (i64) -> ()
     cf.br ^try
   ^lockedRefill:
-    llvm.call @strict_gc_lock() : () -> ()
-    func.call @strict_rc_refill(%class) : (i64) -> ()
-    llvm.call @strict_gc_unlock() : () -> ()
+    func.call @strict_gc_refill_busy(%class) : (i64) -> ()
     cf.br ^try
   }
   func.func private @strict_rc_refill(%class: i64) {
@@ -1715,21 +1752,30 @@
     %flagsCleared = llvm.call @memset(%flagsPointer, %clear, %objects) : (!llvm.ptr, i32, i64) -> !llvm.ptr
     return
   }
+  // pool workers push the pages they take in a job without the collector lock, only a collection takes them off
   func.func private @strict_gc_keep_page(%page: i64, %class: i64) {
     %pagePointer = llvm.inttoptr %page : i64 to !llvm.ptr
     %pages = llvm.mlir.addressof @strict_gc_pages : !llvm.ptr
     %pagesSlot = llvm.getelementptr %pages[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<64 x i64>
-    %oldFirst = llvm.load %pagesSlot : !llvm.ptr -> i64
     %nextSlot = llvm.getelementptr %pagePointer[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %seen = llvm.load %pagesSlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
+    cf.br ^push(%seen : i64)
+  ^push(%oldFirst: i64):
     llvm.store %oldFirst, %nextSlot : i64, !llvm.ptr
-    llvm.store %page, %pagesSlot : i64, !llvm.ptr
+    %pair = llvm.cmpxchg %pagesSlot, %oldFirst, %page acq_rel monotonic : !llvm.ptr, i64
+    %pushed = llvm.extractvalue %pair[1] : !llvm.struct<(i64, i1)>
+    %current = llvm.extractvalue %pair[0] : !llvm.struct<(i64, i1)>
+    cf.cond_br %pushed, ^pushed, ^push(%current : i64)
+  ^pushed:
     %none = arith.constant 0 : i64
     %wasEmpty = arith.cmpi eq, %oldFirst, %none : i64
+    cf.cond_br %wasEmpty, ^tail, ^done
+  ^tail:
     %tails = llvm.mlir.addressof @strict_gc_tails : !llvm.ptr
     %tailSlot = llvm.getelementptr %tails[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<64 x i64>
-    %tail = llvm.load %tailSlot : !llvm.ptr -> i64
-    %newTail = arith.select %wasEmpty, %page, %tail : i64
-    llvm.store %newTail, %tailSlot : i64, !llvm.ptr
+    llvm.store %page, %tailSlot : i64, !llvm.ptr
+    cf.br ^done
+  ^done:
     return
   }
   // a page without free objects waits for the next full collection, only old objects are left in it
@@ -1872,37 +1918,53 @@
     llvm.store %kind, %entry : i64, !llvm.ptr
     return
   }
-  func.func private @strict_gc_new_small_page(%class: i64) {
-    %zero = arith.constant 0 : i64
-    %one = arith.constant 1 : i64
-    %usable = arith.constant 65456 : i64
-    %header = arith.constant 64 : i64
-    %fifteen = arith.constant 15 : i64
-    %alignMask = arith.constant -16 : i64
-    %page = func.call @strict_gc_take_pages(%one) : (i64) -> i64
-    %pagePointer = llvm.inttoptr %page : i64 to !llvm.ptr
+  // the size and number of objects on a small page of class: one byte of marks and five of counts per object
+  func.func private @strict_gc_page_objects(%class: i64) -> (i64, i64) {
     %sizeMask = arith.constant 31 : i64
     %sizeClass = arith.andi %class, %sizeMask : i64
     %sizes = llvm.mlir.addressof @strict_gc_sizes : !llvm.ptr
     %sizeSlot = llvm.getelementptr %sizes[0, %sizeClass] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<33 x i64>
     %objectSize = llvm.load %sizeSlot : !llvm.ptr -> i64
+    %usable = arith.constant 65456 : i64
     %six = arith.constant 6 : i64
+    %perObject = arith.addi %objectSize, %six : i64
+    %count = arith.divui %usable, %perObject : i64
+    return %objectSize, %count : i64, i64
+  }
+  func.func private @strict_gc_new_small_page(%class: i64) {
+    %one = arith.constant 1 : i64
+    %page = func.call @strict_gc_take_pages(%one) : (i64) -> i64
+    %freshSlot = llvm.mlir.addressof @strict_gc_fresh : !llvm.ptr
+    %fresh = llvm.load %freshSlot : !llvm.ptr -> i64
+    %span:2 = func.call @strict_gc_small_page(%page, %class, %fresh) : (i64, i64, i64) -> (i64, i64)
+    func.call @strict_gc_add_span(%class, %span#0, %span#1) : (i64, i64, i64) -> ()
+    return
+  }
+  // sets up a taken page for objects of class and returns where they start and end (fresh pages are zero already);
+  // nobody else can see the page yet, a pool worker does this outside of the collector lock
+  func.func private @strict_gc_small_page(%page: i64, %class: i64, %fresh: i64) -> (i64, i64) {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %header = arith.constant 64 : i64
+    %fifteen = arith.constant 15 : i64
+    %alignMask = arith.constant -16 : i64
+    %isFresh = arith.cmpi ne, %fresh, %zero : i64
+    %pagePointer = llvm.inttoptr %page : i64 to !llvm.ptr
+    %objects:2 = func.call @strict_gc_page_objects(%class) : (i64) -> (i64, i64)
     %four = arith.constant 4 : i64
     %seven = arith.constant 7 : i64
     %wordMask = arith.constant -8 : i64
-    %perObject = arith.addi %objectSize, %six : i64
-    %count = arith.divui %usable, %perObject : i64
-    %withMarks = arith.addi %header, %count : i64
+    %withMarks = arith.addi %header, %objects#1 : i64
     %paddedMarks = arith.addi %withMarks, %seven : i64
     %counts = arith.andi %paddedMarks, %wordMask : i64
-    %fourBytes = arith.muli %count, %four : i64
-    %countBytes = arith.addi %fourBytes, %count : i64
+    %fourBytes = arith.muli %objects#1, %four : i64
+    %countBytes = arith.addi %fourBytes, %objects#1 : i64
     %withCounts = arith.addi %counts, %countBytes : i64
     %paddedCounts = arith.addi %withCounts, %fifteen : i64
     %first = arith.andi %paddedCounts, %alignMask : i64
-    llvm.store %objectSize, %pagePointer : i64, !llvm.ptr
+    llvm.store %objects#0, %pagePointer : i64, !llvm.ptr
     %countSlot = llvm.getelementptr %pagePointer[1] : (!llvm.ptr) -> !llvm.ptr, i64
-    llvm.store %count, %countSlot : i64, !llvm.ptr
+    llvm.store %objects#1, %countSlot : i64, !llvm.ptr
     %firstSlot = llvm.getelementptr %pagePointer[2] : (!llvm.ptr) -> !llvm.ptr, i64
     llvm.store %first, %firstSlot : i64, !llvm.ptr
     %classSlot = llvm.getelementptr %pagePointer[4] : (!llvm.ptr) -> !llvm.ptr, i64
@@ -1911,11 +1973,12 @@
     llvm.store %counts, %countsSlot : i64, !llvm.ptr
     %countsPointer = llvm.getelementptr %pagePointer[%counts] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %clearCounts = arith.constant 0 : i32
-    %countsCleared = llvm.call @memset(%countsPointer, %clearCounts, %countBytes) : (!llvm.ptr, i32, i64) -> !llvm.ptr
+    %countsLength = arith.select %isFresh, %zero, %countBytes : i64
+    %countsCleared = llvm.call @memset(%countsPointer, %clearCounts, %countsLength) : (!llvm.ptr, i32, i64) -> !llvm.ptr
     %scale = arith.constant 4294967296 : i64
-    %sizeRest = arith.subi %objectSize, %one : i64
+    %sizeRest = arith.subi %objects#0, %one : i64
     %scaled = arith.addi %scale, %sizeRest : i64
-    %reciprocal = arith.divui %scaled, %objectSize : i64
+    %reciprocal = arith.divui %scaled, %objects#0 : i64
     %reciprocalSlot = llvm.getelementptr %pagePointer[5] : (!llvm.ptr) -> !llvm.ptr, i64
     llvm.store %reciprocal, %reciprocalSlot : i64, !llvm.ptr
     %owner = func.call @strict_gc_owner() : () -> i64
@@ -1924,13 +1987,46 @@
     %ownedSmall = arith.ori %ownerBits, %one : i64
     func.call @strict_gc_page_kind(%page, %ownedSmall) : (i64, i64) -> ()
     func.call @strict_gc_keep_page(%page, %class) : (i64, i64) -> ()
-    %objectBytes = arith.muli %count, %objectSize : i64
+    %objectBytes = arith.muli %objects#1, %objects#0 : i64
     %start = arith.addi %page, %first : i64
     %end = arith.addi %start, %objectBytes : i64
     %objectsPointer = llvm.inttoptr %start : i64 to !llvm.ptr
     %clearObjects = arith.constant 0 : i32
-    %objectsCleared = llvm.call @memset(%objectsPointer, %clearObjects, %objectBytes) : (!llvm.ptr, i32, i64) -> !llvm.ptr
-    func.call @strict_gc_add_span(%class, %start, %end) : (i64, i64, i64) -> ()
+    %objectsLength = arith.select %isFresh, %zero, %objectBytes : i64
+    %objectsCleared = llvm.call @memset(%objectsPointer, %clearObjects, %objectsLength) : (!llvm.ptr, i32, i64) -> !llvm.ptr
+    return %start, %end : i64, i64
+  }
+  // while the pool runs a lane takes a whole page and counts it under the collector lock, it is set up after that
+  func.func private @strict_gc_refill_busy(%class: i64) {
+    %one = arith.constant 1 : i64
+    %objects:2 = func.call @strict_gc_page_objects(%class) : (i64) -> (i64, i64)
+    %bytes = arith.muli %objects#0, %objects#1 : i64
+    llvm.call @strict_gc_lock() : () -> ()
+    %limitSlot = llvm.mlir.addressof @strict_reclaim_bytes : !llvm.ptr
+    %limit = llvm.load %limitSlot : !llvm.ptr -> i64
+    %allocatedSlot = llvm.mlir.addressof @strict_rc_allocated : !llvm.ptr
+    %allocated = llvm.load %allocatedSlot : !llvm.ptr -> i64
+    %isDue = arith.cmpi uge, %allocated, %limit : i64
+    cf.cond_br %isDue, ^reclaim, ^take
+  ^reclaim:
+    func.call @strict_rc_reclaim() : () -> ()
+    cf.br ^take
+  ^take:
+    %page = func.call @strict_gc_take_pages(%one) : (i64) -> i64
+    %freshSlot = llvm.mlir.addressof @strict_gc_fresh : !llvm.ptr
+    %fresh = llvm.load %freshSlot : !llvm.ptr -> i64
+    func.call @strict_gc_add(%bytes) : (i64) -> ()
+    %counted = llvm.load %allocatedSlot : !llvm.ptr -> i64
+    %more = arith.addi %counted, %bytes : i64
+    llvm.store %more, %allocatedSlot : i64, !llvm.ptr
+    llvm.call @strict_gc_unlock() : () -> ()
+    %span:2 = func.call @strict_gc_small_page(%page, %class, %fresh) : (i64, i64, i64) -> (i64, i64)
+    %cursorSlot = func.call @strict_gc_lane_slot(%class) : (i64) -> !llvm.ptr
+    llvm.store %span#0, %cursorSlot : i64, !llvm.ptr
+    %endSlotOffset = arith.constant 64 : i64
+    %endSlotClass = arith.addi %class, %endSlotOffset : i64
+    %endSlot = func.call @strict_gc_lane_slot(%endSlotClass) : (i64) -> !llvm.ptr
+    llvm.store %span#1, %endSlot : i64, !llvm.ptr
     return
   }
   func.func private @strict_gc_take_pages(%count: i64) -> i64 {
@@ -1957,6 +2053,8 @@
     llvm.store %fewer, %pooledSlot : i64, !llvm.ptr
     %headerAndMarks = arith.constant 4096 : i64
     %zeroed = llvm.call @memset(%pooledPointer, %clear, %headerAndMarks) : (!llvm.ptr, i32, i64) -> !llvm.ptr
+    %freshSlot = llvm.mlir.addressof @strict_gc_fresh : !llvm.ptr
+    llvm.store %zero, %freshSlot : i64, !llvm.ptr
     return %pooled : i64
   ^spare:
     %spareCount = llvm.load %spareCountSlot : !llvm.ptr -> i64
@@ -1971,12 +2069,16 @@
     %sparePage = llvm.load %spareEntry : !llvm.ptr -> i64
     %sparePagePointer = llvm.inttoptr %sparePage : i64 to !llvm.ptr
     func.call @strict_commit(%sparePagePointer, %pageSize) : (!llvm.ptr, i64) -> ()
+    %spareFreshSlot = llvm.mlir.addressof @strict_gc_fresh : !llvm.ptr
+    llvm.store %zero, %spareFreshSlot : i64, !llvm.ptr
     return %sparePage : i64
   ^runs:
     %reused = func.call @strict_gc_reuse_run(%count) : (i64) -> i64
     %found = arith.cmpi ne, %reused, %zero : i64
     cf.cond_br %found, ^reusing, ^grow
   ^reusing:
+    %reusedFreshSlot = llvm.mlir.addressof @strict_gc_fresh : !llvm.ptr
+    llvm.store %zero, %reusedFreshSlot : i64, !llvm.ptr
     return %reused : i64
   ^grow:
     %topSlot = llvm.mlir.addressof @strict_gc_top : !llvm.ptr
@@ -2022,6 +2124,8 @@
     func.call @strict_commit(%cardStartPointer, %cardCount) : (!llvm.ptr, i64) -> ()
     cf.br ^ready
   ^ready:
+    %grownFreshSlot = llvm.mlir.addressof @strict_gc_fresh : !llvm.ptr
+    llvm.store %one, %grownFreshSlot : i64, !llvm.ptr
     return %top : i64
   }
   func.func private @strict_gc_release_page(%page: i64) {
@@ -2143,7 +2247,11 @@
   ^done:
     %payload = arith.addi %page, %header : i64
     %result = llvm.inttoptr %payload : i64 to !llvm.ptr
-    %reused = arith.cmpi eq, %pages, %one : i64
+    %single = arith.cmpi eq, %pages, %one : i64
+    %freshSlot = llvm.mlir.addressof @strict_gc_fresh : !llvm.ptr
+    %fresh = llvm.load %freshSlot : !llvm.ptr -> i64
+    %isUsed = arith.cmpi eq, %fresh, %zero : i64
+    %reused = arith.andi %single, %isUsed : i1
     cf.cond_br %reused, ^zero, ^zeroed
   ^zero:
     %clear = arith.constant 0 : i32

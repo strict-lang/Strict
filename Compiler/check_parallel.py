@@ -39,6 +39,52 @@ wrapper = '''
     %zero = arith.constant 0.0 : f64
     return %zero : f64
   }
+  func.func @test_carried(%stack: !llvm.ptr) -> i64 {
+    func.call @strict_gc_init(%stack) : (!llvm.ptr) -> ()
+    %size = arith.constant 48 : i64
+    %before = func.call @strict_alloc(%size) : (i64) -> !llvm.ptr
+    %slots = arith.constant 4 : i64
+    %context = llvm.alloca %slots x i64 : (i64) -> !llvm.ptr
+    %beforeAddress = llvm.ptrtoint %before : !llvm.ptr to i64
+    llvm.store %beforeAddress, %context : i64, !llvm.ptr
+    %body = func.constant @test_carried_body : (!llvm.ptr, i64, i64) -> f64
+    %one = arith.constant 1 : i64
+    %ran = func.call @strict_parallel(%body, %context, %one) : ((!llvm.ptr, i64, i64) -> f64, !llvm.ptr, i64) -> f64
+    %insideSlot = llvm.getelementptr %context[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %inside = llvm.load %insideSlot : !llvm.ptr -> i64
+    %next = arith.addi %beforeAddress, %size : i64
+    %isNext = arith.cmpi eq, %inside, %next : i64
+    %adjacent = arith.extui %isNext : i1 to i64
+    %mineSlot = llvm.getelementptr %context[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %mine = llvm.load %mineSlot : !llvm.ptr -> i64
+    %oldSlot = llvm.getelementptr %context[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %old = llvm.load %oldSlot : !llvm.ptr -> i64
+    %two = arith.constant 2 : i64
+    %four = arith.constant 4 : i64
+    %mineBit = arith.muli %mine, %two : i64
+    %oldBit = arith.muli %old, %four : i64
+    %partial = arith.addi %adjacent, %mineBit : i64
+    %result = arith.addi %partial, %oldBit : i64
+    return %result : i64
+  }
+  func.func private @test_carried_body(%context: !llvm.ptr, %from: i64, %to: i64) -> f64 {
+    %size = arith.constant 48 : i64
+    %object = func.call @strict_alloc(%size) : (i64) -> !llvm.ptr
+    %address = llvm.ptrtoint %object : !llvm.ptr to i64
+    %insideSlot = llvm.getelementptr %context[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %address, %insideSlot : i64, !llvm.ptr
+    %mine = func.call @strict_gc_mine(%address) : (i64) -> i1
+    %mineNumber = arith.extui %mine : i1 to i64
+    %mineSlot = llvm.getelementptr %context[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %mineNumber, %mineSlot : i64, !llvm.ptr
+    %before = llvm.load %context : !llvm.ptr -> i64
+    %old = func.call @strict_gc_mine(%before) : (i64) -> i1
+    %oldNumber = arith.extui %old : i1 to i64
+    %oldSlot = llvm.getelementptr %context[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %oldNumber, %oldSlot : i64, !llvm.ptr
+    %zero = arith.constant 0.0 : f64
+    return %zero : f64
+  }
   llvm.func @test_claiming(i64)
   llvm.func @test_publishing(i64)
   llvm.func @test_retired(i64)
@@ -61,6 +107,7 @@ driver.write_text('''#include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
 extern int64_t test_pinned(void* stack);
+extern int64_t test_carried(void* stack);
 static DWORD caller;
 static HANDLE ready, published, retired;
 static atomic_int publishing, premature;
@@ -96,7 +143,13 @@ static double body(void* context, int64_t from, int64_t to) {
 		atomic_fetch_add(&premature, 1);
 	return 0;
 }
-int main(void) {
+int main(int argc, char** argv) {
+	if (argc > 1) {
+		_putenv_s("STRICT_THREADS", "1");
+		int64_t carried = test_carried(&argc);
+		printf("Lane span carried into a pool job: %lld (3: kept, the job's new object is its own, the older one not)", (long long)carried);
+		return carried != 3;
+	}
 	_putenv_s("STRICT_THREADS", "2");
 	caller = GetCurrentThreadId();
 	ready = CreateEventA(0, TRUE, FALSE, 0);
@@ -115,12 +168,13 @@ int main(void) {
 }
 ''', encoding="utf-8")
 def run(name, arguments):
-	tool = shutil.which(name) or str(Path("C:/msys64/ucrt64/bin") / (name + ".exe"))
+	folders = (Path("C:/Program Files/LLVM/bin"), Path("C:/msys64/ucrt64/bin"))
+	tool = shutil.which(name) or next(str(f / (name + ".exe")) for f in folders if (f / (name + ".exe")).exists())
 	result = subprocess.run([tool, *map(str, arguments)], cwd=root, capture_output=True, text=True, timeout=60)
 	assert result.returncode == 0, result.stdout + result.stderr
 lowered = output / "pool.llvm.mlir"
 llvm = output / "pool.ll"
-run("mlir-opt", [module, "--symbol-privatize=exclude=test_parallel,test_pinned", "--symbol-dce", "--convert-scf-to-cf",
+run("mlir-opt", [module, "--symbol-privatize=exclude=test_parallel,test_pinned,test_carried", "--symbol-dce", "--convert-scf-to-cf",
 	"--convert-arith-to-llvm", "--convert-func-to-llvm", "--convert-cf-to-llvm", "--reconcile-unrealized-casts", "-o", lowered])
 run("mlir-translate", ["--mlir-to-llvmir", lowered, "-o", llvm])
 executable = output / "check.exe"
@@ -128,3 +182,6 @@ run("clang", [llvm, driver, "-O2", "-Wno-override-module", "-fuse-ld=lld", "-o",
 result = subprocess.run([str(executable)], capture_output=True, text=True, timeout=15)
 assert result.returncode == 0, result.stdout + result.stderr
 print(result.stdout.strip())
+carried = subprocess.run([str(executable), "carried"], capture_output=True, text=True, timeout=15)
+print(carried.stdout.strip())
+assert carried.returncode == 0, carried.stdout + carried.stderr
