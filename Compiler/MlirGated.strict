@@ -1,0 +1,122 @@
+has function MlirFunction
+has position Number
+constant Gated = MethodEntry("Gated", MlirTokens.Batched.parameters, "Strict/List(Number)", MlirTokens.Batched.instructions.Slice(0, 16) + (InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 13, "gate"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 14, "gate"), InstructionEntry.LoadNumber(15, 1), InstructionEntry.LoadNumber(16, 0), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 17, "gate"), InstructionEntry.Binary(InstructionType.Subtract, (16, 17, 18)), InstructionEntry.Invoke(19, ("Strict/Number", "Exponential", "Strict/Number"), List(Number), 18), InstructionEntry.Binary(InstructionType.Add, (15, 19, 20)), InstructionEntry.Binary(InstructionType.Divide, (14, 20, 21)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 22, "index"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 23, "rows"), InstructionEntry.Binary(InstructionType.Modulo, (22, 23, 24)), InstructionEntry.Binary(InstructionType.Add, (24, 23, 25)), InstructionEntry(InstructionType.IndexCall, "weights", (26, 25, -1)), InstructionEntry.LoadNumber(27, 0), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 28, "input"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 29, "index"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 30, "rows"), InstructionEntry.Binary(InstructionType.Divide, (29, 30, 31)), InstructionEntry.Invoke(32, ("Strict/Number", "Floor", "Strict/Number"), List(Number), 31), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 33, "width"), InstructionEntry.Binary(InstructionType.Multiply, (32, 33, 34)), InstructionEntry.Invoke(35, ("Strict/Tokens", "Dot", "Strict/Number", "row", "first", "input", "start"), (26, 27, 28, 34), -1), InstructionEntry.Binary(InstructionType.Multiply, (21, 35, 36)), InstructionEntry.Named(InstructionType.InvokeWriteToList, 36, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 39), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "forResult"), InstructionEntry.Return(0)))
+constant Gates = TypeEntry("Strict/Tokens", MlirTokens.Tokens.members, (Gated, MlirTokens.Dotted))
+constant Gating = MlirGated(MlirFunction(List(TypeEntry) + Gates, Gates, Gated), 2)
+constant Summing = MlirGated(MlirTokens.Summing.function, 2)
+constant Euler = 2.718281828459045
+constant Inlined = MethodEntry("Gated", Gated.parameters, "Strict/List(Number)", Gated.instructions.Slice(0, 22) + (InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 18, "value"), InstructionEntry.LoadNumber(40, 2.718281828459045), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 41, "value"), InstructionEntry.Binary(InstructionType.Power, (40, 41, 19))) + Gated.instructions.Slice(23, 18) + (InstructionEntry.Jump(InstructionType.LoopEnd, 42), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "forResult"), InstructionEntry.Return(0)))
+constant Inlining = MlirGated(MlirFunction(List(TypeEntry) + Gates, TypeEntry(Gates.Name, Gates.members, (Inlined, MlirTokens.Dotted)), Inlined), 2)
+IsGated Boolean
+	Gating.IsGated
+	Inlining.IsGated
+	Summing.IsGated is false
+	let written = MlirBiased(function, position).Written
+	let up = Up
+	if (written < 0) or (up < 0)
+		return false
+	let product = Traced(function.method.instructions(written).payload(0), written)
+	let entry = function.method.instructions(product < 0 then position else product)
+	let isUp = (entry.kind is InstructionType.Multiply) and (Traced(entry.payload(2), product) is up)
+	(product >= 0) and isUp and IsActivated(Traced(entry.payload(1), product))
+Up Number
+	Gating.Up is 38
+	Summing.Up is -1
+	let call = MlirTokens(function, position).Call
+	if call < 0
+		return -1
+	for Range(call + 1, function.method.LoopEndOf(position))
+		if IsUp(value, call)
+			return value
+	-1
+IsUp(at Number, call Number) Boolean
+	Gating.IsUp(38, 15)
+	Gating.IsUp(15, 15) is false
+	let tokens = MlirTokens(function, position)
+	if tokens.IsDotted(at) is false
+		return false
+	let entry = function.method.instructions(at)
+	let first = 6 + entry.payload(3)
+	let names = tokens.Names(call)
+	let isRow = Shifted(entry.payload(first), at) is (names(0), names(3))
+	let isStart = tokens.Start(entry.payload(first + 3), at) is (names(3), names(2))
+	let isInput = tokens.Variable(entry.payload(first + 2), at) is names(1)
+	isRow and isStart and isInput and tokens.IsConstant(entry.payload(first + 1), at, 0)
+Shifted(register Number, before Number) Texts
+	Gating.Shifted(26, 38) is ("weights", "rows")
+	Gating.Shifted(4, 15).Length is 0
+	let groups = MlirGroups(function, position)
+	let read = groups.Writer(register, before)
+	let entry = function.method.instructions(read < 0 then position else read)
+	let sum = (read >= 0) and (entry.kind is InstructionType.IndexCall) then groups.Writer(entry.payload(1), read) else -1
+	let added = function.method.instructions(sum < 0 then position else sum)
+	if (sum < 0) or (added.kind is not InstructionType.Add)
+		return List(Text)
+	let tokens = MlirTokens(function, position)
+	let rows = tokens.Indexed(groups.Writer(added.payload(1), sum), InstructionType.Modulo)
+	(rows is not "") and (tokens.Variable(added.payload(2), sum) is rows) then (entry.texts(0), rows) else List(Text)
+IsActivated(at Number) Boolean
+	Gating.IsActivated(24)
+	Gating.IsActivated(23) is false
+	let entry = function.method.instructions(at < 0 then position else at)
+	if (at < 0) or (entry.kind is not InstructionType.Divide)
+		return false
+	IsGate(entry.payload(1), at) and IsDecayed(Traced(entry.payload(2), at))
+IsDecayed(at Number) Boolean
+	Gating.IsDecayed(23)
+	Gating.IsDecayed(21) is false
+	let entry = function.method.instructions(at < 0 then position else at)
+	if (at < 0) or (entry.kind is not InstructionType.Add)
+		return false
+	MlirTokens(function, position).IsConstant(entry.payload(1), at, 1) and IsExponential(Traced(entry.payload(2), at))
+IsExponential(at Number) Boolean
+	Gating.IsExponential(22)
+	Inlining.IsExponential(25)
+	Gating.IsExponential(21) is false
+	let entry = function.method.instructions(at < 0 then position else at)
+	let isPower = entry.kind is InstructionType.Power
+	if (at < 0) or (((entry.kind is InstructionType.Invoke) is false) and (isPower is false))
+		return false
+	let tokens = MlirTokens(function, position)
+	let isBase = isPower then tokens.IsConstant(entry.payload(1), at, Euler) else entry.texts(1) is "Exponential"
+	let instance = isPower then entry.payload(2) else MlirDeviceCalls(function, at, function).Register(entry)
+	isBase and IsNegated(Traced(instance, at))
+IsNegated(at Number) Boolean
+	Gating.IsNegated(21)
+	Gating.IsNegated(23) is false
+	let entry = function.method.instructions(at < 0 then position else at)
+	if (at < 0) or (entry.kind is not InstructionType.Subtract)
+		return false
+	MlirTokens(function, position).IsConstant(entry.payload(1), at, 0) and IsGate(entry.payload(2), at)
+IsGate(register Number, before Number) Boolean
+	Gating.IsGate(14, 24)
+	Gating.IsGate(15, 23) is false
+	let call = MlirTokens(function, position).Call
+	(call >= 0) and (Traced(register, before) is call)
+Operand Text
+	Gating.Operand is "%t2ggated"
+	Summing.Operand is "%zero"
+	IsGated then MlirGpu(function, position).Temp("ggated") else "%zero"
+Loaded Texts
+	Gating.Loaded is ("    %t2ggated = arith.constant 1.0 : f64")
+	Summing.Loaded.Length is 0
+	IsGated then List(Text) + ("    " + Operand + " = arith.constant 1.0 : f64") else List(Text)
+Traced(register Number, before Number) Number
+	Gating.Traced(14, 24) is 15
+	Inlining.Traced(41, 25) is 21
+	Gating.Traced(15, 23) is 18
+	let writer = MlirGroups(function, position).Writer(register, before)
+	let entry = function.method.instructions(writer < 0 then position else writer)
+	if (writer < 0) or (entry.kind is not InstructionType.LoadVariableToRegister)
+		return writer
+	let store = Stored(entry.texts, writer)
+	store < 0 then writer else Traced(function.method.instructions(store).payload(0), store)
+Stored(name Texts, before Number) Number
+	Gating.Stored(List(Text) + "gate", 17) is 16
+	Gating.Stored(List(Text) + "gate", 16) is -1
+	for before - position - 1
+		let candidate = before - 1 - index
+		let entry = function.method.instructions(candidate)
+		if (entry.kind is InstructionType.StoreRegisterToVariable) and (entry.texts is name)
+			return candidate
+	-1

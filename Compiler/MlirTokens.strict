@@ -31,7 +31,7 @@ Names(at Number) Texts
 	let start = Start(entry.payload(first + 3), at)
 	let input = Variable(entry.payload(first + 2), at)
 	let isShared = (row.Length >= 2) and (start.Length is 2) and (input is not "")
-	let isMatched = isShared and (row(1) is start.First) and IsZero(entry.payload(first + 1), at)
+	let isMatched = isShared and (row(1) is start.First) and IsConstant(entry.payload(first + 1), at, 0)
 	isMatched then (row.First, input, start.Last) + row.Slice(1, row.Length - 1) else List(Text)
 IsDotted(at Number) Boolean
 	Summing.IsDotted(15)
@@ -134,9 +134,10 @@ Variable(register Number, before Number) Text
 	let writer = MlirGroups(function, position).Writer(register, before)
 	let entry = function.method.instructions(writer < 0 then before else writer)
 	(writer >= 0) and (entry.kind is InstructionType.LoadVariableToRegister) then entry.texts(0) else ""
-IsZero(register Number, before Number) Boolean
-	Summing.IsZero(5, 15)
-	Summing.IsZero(4, 15) is false
+IsConstant(register Number, before Number, number Number) Boolean
+	Summing.IsConstant(5, 15, 0)
+	Summing.IsConstant(4, 15, 0) is false
 	let writer = MlirGroups(function, position).Writer(register, before)
 	let entry = function.method.instructions(writer < 0 then before else writer)
-	(writer >= 0) and (entry.kind is InstructionType.LoadConstantToRegister) and (entry.payload is (register, 1, 0))
+	let isLoad = (writer >= 0) and (entry.kind is InstructionType.LoadConstantToRegister)
+	isLoad and (entry.payload is InstructionEntry.LoadNumber(register, number).payload)

@@ -930,7 +930,7 @@
   ^done:
     return
   }
-  llvm.mlir.global internal @strict_stack_bottom(0 : i64) : i64
+  llvm.mlir.global internal thread_local @strict_stack_bottom(0 : i64) : i64
   llvm.mlir.global internal constant @strict_stack_overflow("StackOverflow\00") : !llvm.array<14 x i8>
   // a method entered with less than 1 MB of the main stack left returns a StackOverflow Error (the Strict VM after
   // 20000 nested calls), the stacks of other threads lie outside of it
@@ -967,6 +967,9 @@
     return %object : !llvm.ptr
   }
   llvm.mlir.global internal @strict_pool_busy(0 : i64) : i64
+  // the job this thread runs a chunk of (0 outside of pool jobs): allocating and counting ask this instead of the
+  // shared busy flag, pages taken inside a job are tagged with it and the lane (strict_gc_mine)
+  llvm.mlir.global internal thread_local @strict_pool_inside(0 : i64) : i64
   llvm.mlir.global internal @strict_pool_spawned(0 : i64) : i64
   llvm.mlir.global internal @strict_pool_workers(0 : i64) : i64
   llvm.mlir.global internal @strict_pool_job(0 : i64) : i64
@@ -995,10 +998,25 @@
   ^pool:
     %workers = func.call @strict_pool_started() : () -> i64
     %alone = arith.cmpi eq, %workers, %zero : i64
-    cf.cond_br %alone, ^serial, ^shared
+    cf.cond_br %alone, ^solo, ^shared
   ^serial:
     %serialResult = llvm.call %function(%context, %from, %count) : !llvm.ptr, (!llvm.ptr, i64, i64) -> f64
     return %serialResult : f64
+  ^solo:
+    // without workers the body is a pool job of this thread alone: results are stored uncounted like on the pool
+    %soloJobSlot = llvm.mlir.addressof @strict_pool_job : !llvm.ptr
+    %lastJob = llvm.load %soloJobSlot : !llvm.ptr -> i64
+    %soloJob = arith.addi %lastJob, %one : i64
+    llvm.store %soloJob, %soloJobSlot : i64, !llvm.ptr
+    func.call @strict_gc_lanes_emptied() : () -> ()
+    llvm.store %one, %busySlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    %soloInsideSlot = llvm.mlir.addressof @strict_pool_inside : !llvm.ptr
+    %soloWasInside = llvm.load %soloInsideSlot : !llvm.ptr -> i64
+    llvm.store %soloJob, %soloInsideSlot : i64, !llvm.ptr
+    %soloResult = llvm.call %function(%context, %from, %count) : !llvm.ptr, (!llvm.ptr, i64, i64) -> f64
+    llvm.store %soloWasInside, %soloInsideSlot : i64, !llvm.ptr
+    llvm.store %zero, %busySlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    return %soloResult : f64
   ^shared:
     %bodyBits = llvm.ptrtoint %function : !llvm.ptr to i64
     %bodySlot = llvm.mlir.addressof @strict_pool_body : !llvm.ptr
@@ -1030,6 +1048,7 @@
     %first = arith.addi %tagged, %from : i64
     %nextSlot = llvm.mlir.addressof @strict_pool_next : !llvm.ptr
     llvm.store %first, %nextSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    func.call @strict_gc_lanes_emptied() : () -> ()
     llvm.store %one, %busySlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     llvm.store %job, %jobSlot atomic seq_cst {alignment = 8 : i64} : i64, !llvm.ptr
     llvm.call @strict_pool_wake() : () -> ()
@@ -1095,7 +1114,11 @@
     %won = llvm.extractvalue %pair[1] : !llvm.struct<(i64, i1)>
     llvm.cond_br %won, ^work, ^claim
   ^work:
+    %insideSlot = llvm.mlir.addressof @strict_pool_inside : !llvm.ptr
+    %wasInside = llvm.load %insideSlot : !llvm.ptr -> i64
+    llvm.store %job, %insideSlot : i64, !llvm.ptr
     %result = llvm.call @strict_pool_chunk_run(%start, %end) : (i64, i64) -> i1
+    llvm.store %wasInside, %insideSlot : i64, !llvm.ptr
     %finished = llvm.atomicrmw add %doneSlot, %size acq_rel : !llvm.ptr, i64
     llvm.cond_br %result, ^close, ^claim
   ^close:
@@ -1145,10 +1168,15 @@
     llvm.return %failed : i1
   }
   llvm.func @strict_pool_serve() {
+    %stack = llvm.intr.stacksave : !llvm.ptr
+    %stackBottom = func.call @strict_stack_lowest(%stack) : (!llvm.ptr) -> i64
+    %stackBottomSlot = llvm.mlir.addressof @strict_stack_bottom : !llvm.ptr
+    llvm.store %stackBottom, %stackBottomSlot : i64, !llvm.ptr
     %jobSlot = llvm.mlir.addressof @strict_pool_job : !llvm.ptr
     %zero = llvm.mlir.constant(0 : i64) : i64
     %one = llvm.mlir.constant(1 : i64) : i64
-    %limit = llvm.mlir.constant(200000 : i64) : i64
+    // about 0.1 ms of spinning before sleeping: spinning workers slow down the threads sharing their cores
+    %limit = llvm.mlir.constant(2000 : i64) : i64
     llvm.br ^wait(%zero, %zero : i64, i64)
   ^wait(%seen: i64, %spins: i64):
     %current = llvm.load %jobSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
@@ -1220,8 +1248,8 @@
   // then never freed or changed in place by counting, the collector frees it; objects of a worker stay its own
   func.func private @strict_rc_busy() -> i1 attributes {llvm.passthrough = ["alwaysinline"]} {
     %zero = arith.constant 0 : i64
-    %busySlot = llvm.mlir.addressof @strict_pool_busy : !llvm.ptr
-    %busy = llvm.load %busySlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
+    %busySlot = llvm.mlir.addressof @strict_pool_inside : !llvm.ptr
+    %busy = llvm.load %busySlot : !llvm.ptr -> i64
     %isBusy = arith.cmpi ne, %busy, %zero : i64
     return %isBusy : i1
   }
@@ -1274,9 +1302,7 @@
   }
   func.func private @strict_gc_allocate(%size: i64, %list: i64) -> !llvm.ptr {
     %zero = arith.constant 0 : i64
-    %busySlot = llvm.mlir.addressof @strict_pool_busy : !llvm.ptr
-    %busy = llvm.load %busySlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
-    %shared = arith.cmpi ne, %busy, %zero : i64
+    %shared = func.call @strict_rc_busy() : () -> i1
     cf.cond_br %shared, ^locked, ^alone
   ^alone:
     %object = func.call @strict_gc_allocate_now(%size, %list) : (i64, i64) -> !llvm.ptr
@@ -1313,6 +1339,67 @@
     return %chosen : i64
   ^known:
     return %lane : i64
+  }
+  // before a pool job every lane drops its spans: everything allocated in the job comes from pages tagged for it
+  func.func private @strict_gc_lanes_emptied() {
+    %one = arith.constant 1 : i64
+    %takenSlot = llvm.mlir.addressof @strict_gc_lanes_taken : !llvm.ptr
+    %taken = llvm.load %takenSlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
+    %limit = arith.constant 511 : i64
+    %last = arith.minui %taken, %limit : i64
+    %rows = arith.addi %last, %one : i64
+    %rowBytes = arith.constant 1024 : i64
+    %bytes = arith.muli %rows, %rowBytes : i64
+    %lanes = llvm.mlir.addressof @strict_gc_lanes : !llvm.ptr
+    %noByte = arith.constant 0 : i32
+    %cleared = llvm.call @memset(%lanes, %noByte, %bytes) : (!llvm.ptr, i32, i64) -> !llvm.ptr
+    return
+  }
+  // the tag of pages this thread takes: 0 outside of pool jobs, else the job and the lane
+  func.func private @strict_gc_owner() -> i64 {
+    %insideSlot = llvm.mlir.addressof @strict_pool_inside : !llvm.ptr
+    %job = llvm.load %insideSlot : !llvm.ptr -> i64
+    %lanes = arith.constant 512 : i64
+    %row = arith.muli %job, %lanes : i64
+    %lane = func.call @strict_gc_lane_index() : () -> i64
+    %owner = arith.addi %row, %lane : i64
+    %zero = arith.constant 0 : i64
+    %isInside = arith.cmpi ne, %job, %zero : i64
+    %tag = arith.select %isInside, %owner, %zero : i64
+    return %tag : i64
+  }
+  // true when address lies on a small page this thread took in its current pool job: nobody else can see it yet
+  func.func private @strict_gc_mine(%address: i64) -> i1 {
+    %zero = arith.constant 0 : i64
+    %no = arith.constant false
+    %owner = func.call @strict_gc_owner() : () -> i64
+    %isInside = arith.cmpi ne, %owner, %zero : i64
+    cf.cond_br %isInside, ^heap, ^none
+  ^heap:
+    %baseSlot = llvm.mlir.addressof @strict_gc_base : !llvm.ptr
+    %base = llvm.load %baseSlot : !llvm.ptr -> i64
+    %topSlot = llvm.mlir.addressof @strict_gc_top : !llvm.ptr
+    %top = llvm.load %topSlot : !llvm.ptr -> i64
+    %offset = arith.subi %address, %base : i64
+    %size = arith.subi %top, %base : i64
+    %inHeap = arith.cmpi ult, %offset, %size : i64
+    cf.cond_br %inHeap, ^page, ^none
+  ^page:
+    %shift = arith.constant 16 : i64
+    %index = arith.shrui %offset, %shift : i64
+    %tableSlot = llvm.mlir.addressof @strict_gc_table : !llvm.ptr
+    %table = llvm.load %tableSlot : !llvm.ptr -> i64
+    %tablePointer = llvm.inttoptr %table : i64 to !llvm.ptr
+    %entrySlot = llvm.getelementptr %tablePointer[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %entry = llvm.load %entrySlot : !llvm.ptr -> i64
+    %expected = arith.constant 1 : i64
+    %eight = arith.constant 8 : i64
+    %tagged = arith.shli %owner, %eight : i64
+    %small = arith.ori %tagged, %expected : i64
+    %isMine = arith.cmpi eq, %entry, %small : i64
+    return %isMine : i1
+  ^none:
+    return %no : i1
   }
   func.func private @strict_gc_lane_slot(%entry: i64) -> !llvm.ptr attributes {llvm.passthrough = ["alwaysinline"]} {
     %lane = func.call @strict_gc_lane_index() : () -> i64
@@ -1460,6 +1547,9 @@
     func.call @strict_rc_reclaim() : () -> ()
     cf.br ^recycle
   ^recycle:
+    %busy = func.call @strict_rc_busy() : () -> i1
+    cf.cond_br %busy, ^span, ^take
+  ^take:
     %taken = func.call @strict_rc_take(%class) : (i64) -> i1
     cf.cond_br %taken, ^done, ^span
   ^span:
@@ -1512,6 +1602,10 @@
     %spanSlot = llvm.getelementptr %spans[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<64 x i64>
     %sweeps = llvm.mlir.addressof @strict_gc_sweeps : !llvm.ptr
     %sweepSlot = llvm.getelementptr %sweeps[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<64 x i64>
+    // while the pool runs a whole fresh page per refill: swept runs are small and every refill takes the lock
+    %busy = func.call @strict_rc_busy() : () -> i1
+    cf.cond_br %busy, ^fresh, ^unbusy
+  ^unbusy:
     cf.cond_br %due, ^collect, ^search
   ^collect:
     func.call @strict_gc_collect() : () -> ()
@@ -1801,7 +1895,11 @@
     %reciprocal = arith.divui %scaled, %objectSize : i64
     %reciprocalSlot = llvm.getelementptr %pagePointer[5] : (!llvm.ptr) -> !llvm.ptr, i64
     llvm.store %reciprocal, %reciprocalSlot : i64, !llvm.ptr
-    func.call @strict_gc_page_kind(%page, %one) : (i64, i64) -> ()
+    %owner = func.call @strict_gc_owner() : () -> i64
+    %eight = arith.constant 8 : i64
+    %ownerBits = arith.shli %owner, %eight : i64
+    %ownedSmall = arith.ori %ownerBits, %one : i64
+    func.call @strict_gc_page_kind(%page, %ownedSmall) : (i64, i64) -> ()
     func.call @strict_gc_keep_page(%page, %class) : (i64, i64) -> ()
     %objectBytes = arith.muli %count, %objectSize : i64
     %start = arith.addi %page, %first : i64
@@ -3747,19 +3845,18 @@
   ^done:
     return
   }
+  // inside a pool job only the card byte is marked: the next collection scans every card once instead of the list
+  llvm.mlir.global internal @strict_gc_cards_lost(0 : i64) : i64
   func.func private @strict_gc_remember(%index: i64) {
-    %zero = arith.constant 0 : i64
-    %busySlot = llvm.mlir.addressof @strict_pool_busy : !llvm.ptr
-    %busy = llvm.load %busySlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
-    %shared = arith.cmpi ne, %busy, %zero : i64
-    cf.cond_br %shared, ^locked, ^alone
+    %shared = func.call @strict_rc_busy() : () -> i1
+    cf.cond_br %shared, ^lost, ^alone
   ^alone:
     func.call @strict_gc_dirty_card(%index) : (i64) -> ()
     return
-  ^locked:
-    llvm.call @strict_gc_lock() : () -> ()
-    func.call @strict_gc_dirty_card(%index) : (i64) -> ()
-    llvm.call @strict_gc_unlock() : () -> ()
+  ^lost:
+    %one = arith.constant 1 : i64
+    %lostSlot = llvm.mlir.addressof @strict_gc_cards_lost : !llvm.ptr
+    llvm.store %one, %lostSlot atomic monotonic {alignment = 8 : i64} : i64, !llvm.ptr
     return
   }
   func.func private @strict_gc_dirty_card(%index: i64) {
@@ -3865,6 +3962,36 @@
     cf.br ^loop(%next : i64)
   ^done:
     llvm.store %zero, %countSlot : i64, !llvm.ptr
+    %lostSlot = llvm.mlir.addressof @strict_gc_cards_lost : !llvm.ptr
+    %lost = llvm.load %lostSlot : !llvm.ptr -> i64
+    %isLost = arith.cmpi ne, %lost, %zero : i64
+    cf.cond_br %isLost, ^everyCard, ^finished
+  ^everyCard:
+    llvm.store %zero, %lostSlot : i64, !llvm.ptr
+    %baseSlot = llvm.mlir.addressof @strict_gc_base : !llvm.ptr
+    %base = llvm.load %baseSlot : !llvm.ptr -> i64
+    %topSlot = llvm.mlir.addressof @strict_gc_top : !llvm.ptr
+    %top = llvm.load %topSlot : !llvm.ptr -> i64
+    %used = arith.subi %top, %base : i64
+    %nine = arith.constant 9 : i64
+    %cardCount = arith.shrui %used, %nine : i64
+    cf.br ^check(%zero : i64)
+  ^check(%checked: i64):
+    %moreCards = arith.cmpi ult, %checked, %cardCount : i64
+    cf.cond_br %moreCards, ^read, ^finished
+  ^read:
+    %checkedCard = llvm.getelementptr %cards[%checked] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %state = llvm.load %checkedCard : !llvm.ptr -> i8
+    %following = arith.addi %checked, %one : i64
+    %isDirty = arith.cmpi ne, %state, %clean : i8
+    cf.cond_br %isDirty, ^cleanCard, ^check(%following : i64)
+  ^cleanCard:
+    llvm.store %clean, %checkedCard : i8, !llvm.ptr
+    cf.cond_br %scan, ^scanLost, ^check(%following : i64)
+  ^scanLost:
+    func.call @strict_gc_scan_card(%checked) : (i64) -> ()
+    cf.br ^check(%following : i64)
+  ^finished:
     return
   }
   func.func private @strict_gc_scan_card(%index: i64) {
@@ -4150,6 +4277,18 @@
   llvm.mlir.global internal @strict_gc_pinned(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_pinned_count(0 : i64) : i64
   func.func private @strict_pin(%value: f64) {
+    %busy = func.call @strict_rc_busy() : () -> i1
+    cf.cond_br %busy, ^locked, ^alone
+  ^alone:
+    func.call @strict_pin_now(%value) : (f64) -> ()
+    return
+  ^locked:
+    llvm.call @strict_gc_lock() : () -> ()
+    func.call @strict_pin_now(%value) : (f64) -> ()
+    llvm.call @strict_gc_unlock() : () -> ()
+    return
+  }
+  func.func private @strict_pin_now(%value: f64) {
     %one = arith.constant 1 : i64
     %eight = arith.constant 8 : i64
     %countSlot = llvm.mlir.addressof @strict_gc_pinned_count : !llvm.ptr
@@ -5445,7 +5584,8 @@
     %used = llvm.load %usedSlot : !llvm.ptr -> f64
     %capacitySlot = llvm.getelementptr %holder[2] : (!llvm.ptr) -> !llvm.ptr, f64
     %capacity = llvm.load %capacitySlot : !llvm.ptr -> f64
-    %newest = arith.cmpf oeq, %length, %used : f64
+    %newestVersion = arith.cmpf oeq, %length, %used : f64
+    %newest = func.call @strict_list_mine(%list, %newestVersion) : (f64, i1) -> i1
     %growable = arith.cmpf ogt, %capacity, %zero : f64
     %inPlace = arith.andi %newest, %growable : i1
     cf.cond_br %inPlace, ^check_separate, ^copy
@@ -6135,6 +6275,23 @@
   ^done:
     return %zero : f64
   }
+  // inside a pool job other threads may hold the newest version of a list too: it only grows or changes in place when
+  // this thread made its holder in this job
+  func.func private @strict_list_mine(%list: f64, %newest: i1) -> i1 {
+    %busy = func.call @strict_rc_busy() : () -> i1
+    %check = arith.andi %busy, %newest : i1
+    cf.cond_br %check, ^owner, ^done(%newest : i1)
+  ^owner:
+    %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
+    %holderSlot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %holderBits = llvm.load %holderSlot : !llvm.ptr -> f64
+    %holder = func.call @strict_ptr(%holderBits) : (f64) -> !llvm.ptr
+    %holderAddress = llvm.ptrtoint %holder : !llvm.ptr to i64
+    %owned = func.call @strict_gc_mine(%holderAddress) : (i64) -> i1
+    cf.br ^done(%owned : i1)
+  ^done(%mine: i1):
+    return %mine : i1
+  }
   func.func private @strict_list_add(%list: f64, %element: f64) -> f64 {
     %nothing = arith.constant 0.0 : f64
     %unset = arith.cmpf oeq, %list, %nothing : f64
@@ -6157,7 +6314,8 @@
     %holder = func.call @strict_ptr(%holderbits) : (f64) -> !llvm.ptr
     %usedslot = llvm.getelementptr %holder[1] : (!llvm.ptr) -> !llvm.ptr, f64
     %used = llvm.load %usedslot : !llvm.ptr -> f64
-    %newest = arith.cmpf oeq, %length, %used : f64
+    %newestVersion = arith.cmpf oeq, %length, %used : f64
+    %newest = func.call @strict_list_mine(%list, %newestVersion) : (f64, i1) -> i1
     %capacityslot = llvm.getelementptr %holder[2] : (!llvm.ptr) -> !llvm.ptr, f64
     %holdCapacity = llvm.load %capacityslot : !llvm.ptr -> f64
     %nothingYet = arith.constant 0.0 : f64
@@ -6308,7 +6466,8 @@
     %itemsAddress = llvm.ptrtoint %items : !llvm.ptr to i64
     %inlineAddress = arith.addi %holderAddress, %forty : i64
     %isInline = arith.cmpi eq, %itemsAddress, %inlineAddress : i64
-    %newest = arith.cmpf oeq, %length, %used : f64
+    %newestVersion = arith.cmpf oeq, %length, %used : f64
+    %newest = func.call @strict_list_mine(%list, %newestVersion) : (f64, i1) -> i1
     %room = arith.cmpf olt, %used, %capacity : f64
     %open = arith.andi %newest, %room : i1
     %candidate = arith.andi %open, %isInline : i1
@@ -6489,7 +6648,8 @@
     %isShared = arith.andi %isEmpty, %isFixed : i1
     cf.cond_br %isShared, ^fresh, ^grown
   ^grown:
-    %newest = arith.cmpf oeq, %length, %used : f64
+    %newestVersion = arith.cmpf oeq, %length, %used : f64
+    %newest = func.call @strict_list_mine(%list, %newestVersion) : (f64, i1) -> i1
     %room = arith.cmpf olt, %used, %capacity : f64
     %inPlace = arith.andi %newest, %room : i1
     cf.cond_br %inPlace, ^push, ^add
@@ -6572,7 +6732,8 @@
     %used = llvm.load %usedslot : !llvm.ptr -> f64
     %capacityslot = llvm.getelementptr %holder[2] : (!llvm.ptr) -> !llvm.ptr, f64
     %capacity = llvm.load %capacityslot : !llvm.ptr -> f64
-    %newest = arith.cmpf oeq, %leftLength, %used : f64
+    %newestVersion = arith.cmpf oeq, %leftLength, %used : f64
+    %newest = func.call @strict_list_mine(%left, %newestVersion) : (f64, i1) -> i1
     %growable = arith.cmpf ogt, %capacity, %zero : f64
     %inPlace = arith.andi %newest, %growable : i1
     cf.cond_br %inPlace, ^append, ^copy
@@ -6839,7 +7000,63 @@
     %result = arith.xori %spread, %spreadHigh : i64
     return %result : i64
   }
+  // lookups build the hash index on demand: inside a pool job a complete index is only read, building or extending
+  // one takes the collector lock (the list is restored before, restoring takes its own lock)
   func.func private @strict_dictionary_index(%dictionary: f64, %hash: (f64) -> i64) -> !llvm.ptr {
+    %busy = func.call @strict_rc_busy() : () -> i1
+    cf.cond_br %busy, ^shared, ^alone
+  ^alone:
+    %table = func.call @strict_dictionary_index_now(%dictionary, %hash) : (f64, (f64) -> i64) -> !llvm.ptr
+    return %table : !llvm.ptr
+  ^shared:
+    %ready = func.call @strict_dictionary_ready(%dictionary) : (f64) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %isReady = llvm.icmp "ne" %ready, %null : !llvm.ptr
+    cf.cond_br %isReady, ^read, ^build
+  ^read:
+    return %ready : !llvm.ptr
+  ^build:
+    %restored = func.call @strict_list_items(%dictionary) : (f64) -> !llvm.ptr
+    llvm.call @strict_gc_lock() : () -> ()
+    %built = func.call @strict_dictionary_index_now(%dictionary, %hash) : (f64, (f64) -> i64) -> !llvm.ptr
+    llvm.call @strict_gc_unlock() : () -> ()
+    return %built : !llvm.ptr
+  }
+  // the index of the newest version of a dictionary when it covers every pair, else null
+  func.func private @strict_dictionary_ready(%dictionary: f64) -> !llvm.ptr {
+    %zero = arith.constant 0.0 : f64
+    %two = arith.constant 2 : i64
+    %null = llvm.mlir.zero : !llvm.ptr
+    %view = func.call @strict_ptr(%dictionary) : (f64) -> !llvm.ptr
+    %length = llvm.load %view : !llvm.ptr -> f64
+    %holderSlot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %holderBits = llvm.load %holderSlot : !llvm.ptr -> f64
+    %holder = func.call @strict_ptr(%holderBits) : (f64) -> !llvm.ptr
+    %usedSlot = llvm.getelementptr %holder[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %usedCount = llvm.load %usedSlot : !llvm.ptr -> f64
+    %isNewest = arith.cmpf oeq, %length, %usedCount : f64
+    %indexSlot = llvm.getelementptr %holder[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %indexBits = llvm.load %indexSlot : !llvm.ptr -> f64
+    %hasIndex = arith.cmpf one, %indexBits, %zero : f64
+    %usable = arith.andi %isNewest, %hasIndex : i1
+    cf.cond_br %usable, ^check, ^none
+  ^check:
+    %used = arith.fptosi %usedCount : f64 to i64
+    %existing = func.call @strict_ptr(%indexBits) : (f64) -> !llvm.ptr
+    %slots = llvm.load %existing : !llvm.ptr -> i64
+    %countSlot = llvm.getelementptr %existing[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %count = llvm.load %countSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %needed = arith.muli %used, %two : i64
+    %complete = arith.cmpi eq, %count, %used : i64
+    %roomy = arith.cmpi slt, %needed, %slots : i64
+    %ready = arith.andi %complete, %roomy : i1
+    cf.cond_br %ready, ^found, ^none
+  ^found:
+    return %existing : !llvm.ptr
+  ^none:
+    return %null : !llvm.ptr
+  }
+  func.func private @strict_dictionary_index_now(%dictionary: f64, %hash: (f64) -> i64) -> !llvm.ptr {
     %zero = arith.constant 0.0 : f64
     %restored = func.call @strict_list_items(%dictionary) : (f64) -> !llvm.ptr
     %none = arith.constant 0 : i64
@@ -6912,7 +7129,7 @@
     cf.br ^extend(%table, %stored : !llvm.ptr, i64)
   ^done:
     %countTarget = llvm.getelementptr %table[1] : (!llvm.ptr) -> !llvm.ptr, i64
-    llvm.store %used, %countTarget : i64, !llvm.ptr
+    llvm.store %used, %countTarget atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     return %table : !llvm.ptr
   }
   func.func private @strict_dictionary_find(%dictionary: f64, %key: f64, %hash: (f64) -> i64, %equal: (f64, f64) -> f64) -> i64 {
@@ -7057,10 +7274,7 @@
     %address = llvm.ptrtoint %pointer : !llvm.ptr to i64
     %textSlot = llvm.mlir.addressof @strict_measured_text : !llvm.ptr
     %lengthSlot = llvm.mlir.addressof @strict_measured_length : !llvm.ptr
-    %busySlot = llvm.mlir.addressof @strict_pool_busy : !llvm.ptr
-    %busy = llvm.load %busySlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
-    %idle = arith.constant 0 : i64
-    %shared = arith.cmpi ne, %busy, %idle : i64
+    %shared = func.call @strict_rc_busy() : () -> i1
     cf.cond_br %shared, ^direct, ^lookup
   ^direct:
     %directLength = llvm.call @strlen(%pointer) : (!llvm.ptr) -> i64
@@ -10282,6 +10496,43 @@
     %done = arith.cmpi eq, %result, %zero32 : i32
     return %done : i1
   }
+  // bytes of host into an allocation of its own go up on a stream of their own and only that copy is waited for:
+  // strict_gpu_put waits for every launch before it (H3's first step lost 32 ms per block on each of its out_proj and
+  // adaln uploads); not the copy stream of strict_gpu_ahead, a pending prefetch forks it into the capture
+  llvm.mlir.global internal @strict_gpu_aside(0 : i64) : i64
+  func.func private @strict_gpu_put_aside(%device: i64, %host: !llvm.ptr, %bytes: i64) -> i1 {
+    %none = arith.constant 0 : i64
+    %zero32 = arith.constant 0 : i32
+    %asideSlot = llvm.mlir.addressof @strict_gpu_aside : !llvm.ptr
+    %existing = llvm.load %asideSlot : !llvm.ptr -> i64
+    %isNew = arith.cmpi eq, %existing, %none : i64
+    cf.cond_br %isNew, ^create, ^created(%existing : i64)
+  ^create:
+    %createIndex = arith.constant 16 : i64
+    %create = func.call @strict_gpu_call(%createIndex) : (i64) -> !llvm.ptr
+    %nonBlocking = arith.constant 1 : i32
+    %made = llvm.call %create(%asideSlot, %nonBlocking) : !llvm.ptr, (!llvm.ptr, i32) -> i32
+    %fresh = llvm.load %asideSlot : !llvm.ptr -> i64
+    cf.br ^created(%fresh : i64)
+  ^created(%streamBits: i64):
+    %hasStream = arith.cmpi ne, %streamBits, %none : i64
+    cf.cond_br %hasStream, ^aside, ^put
+  ^aside:
+    %stream = llvm.inttoptr %streamBits : i64 to !llvm.ptr
+    %putIndex = arith.constant 14 : i64
+    %put = func.call @strict_gpu_call(%putIndex) : (i64) -> !llvm.ptr
+    %result = llvm.call %put(%device, %host, %bytes, %stream) : !llvm.ptr, (i64, !llvm.ptr, i64, !llvm.ptr) -> i32
+    %synchronizeIndex = arith.constant 30 : i64
+    %synchronize = func.call @strict_gpu_call(%synchronizeIndex) : (i64) -> !llvm.ptr
+    %waited = llvm.call %synchronize(%stream) : !llvm.ptr, (!llvm.ptr) -> i32
+    %copied = arith.cmpi eq, %result, %zero32 : i32
+    %finished = arith.cmpi eq, %waited, %zero32 : i32
+    %done = arith.andi %copied, %finished : i1
+    return %done : i1
+  ^put:
+    %fallback = func.call @strict_gpu_put(%device, %host, %bytes) : (i64, !llvm.ptr, i64) -> i1
+    return %fallback : i1
+  }
   // a download of a small result (up to 256 numbers, like the tokens of a step) waits only for the event recorded after
   // the graph segment of its last write and copies on a stream of its own, the launches after it go on: the last 64
   // segments (numbers, events), launched count, download stream; the last 128 small results (holders, segments), next
@@ -10496,7 +10747,10 @@
     %isWholeOld = func.call @strict_gpu_is_kernel(%wholeSlot, %functionBits) : (!llvm.ptr, i64) -> i1
     %fastWholeSlot = llvm.mlir.addressof @strict_gpu_whole_fast_slot : !llvm.ptr
     %isWholeFast = func.call @strict_gpu_is_kernel(%fastWholeSlot, %functionBits) : (!llvm.ptr, i64) -> i1
-    %isWhole = arith.ori %isWholeOld, %isWholeFast : i1
+    %gatedWholeSlot = llvm.mlir.addressof @strict_gpu_whole_gated_slot : !llvm.ptr
+    %isWholeGated = func.call @strict_gpu_is_kernel(%gatedWholeSlot, %functionBits) : (!llvm.ptr, i64) -> i1
+    %isWholeNew = arith.ori %isWholeFast, %isWholeGated : i1
+    %isWhole = arith.ori %isWholeOld, %isWholeNew : i1
     %eightsShared = arith.constant 45056 : i32
     %wholeShared = arith.constant 73728 : i32
     %isAmd = func.call @strict_gpu_is_amd() : () -> i1
@@ -13760,7 +14014,10 @@
     %wholeRowTiles = arith.shrui %wholeRowsUp, %wholeRowShift : i64
     %wholeTiles = arith.muli %wholeRowTiles, %eightTokenTiles : i64
     %wholeThreads = arith.muli %wholeTiles, %eightLanes : i64
-    %chosenEights = arith.select %wholing, %wholeThreads, %eightsChosen : i64
+    %wholeChosen = arith.select %wholing, %wholeThreads, %eightsChosen : i64
+    %gatedLanes = arith.constant 8192 : i64
+    %gating = arith.cmpi eq, %perWarp, %gatedLanes : i64
+    %chosenEights = arith.select %gating, %eightThreads, %wholeChosen : i64
     %productLanes = arith.constant 1024 : i64
     %producing = arith.cmpi eq, %perWarp, %productLanes : i64
     cf.cond_br %producing, ^products, ^others
@@ -14685,6 +14942,8 @@
   llvm.mlir.global internal @strict_gpu_whole_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   llvm.mlir.global internal constant @strict_gpu_whole_fast_name("strict_device_whole\00strict_device_wholes_fast\00") : !llvm.array<46 x i8>
   llvm.mlir.global internal @strict_gpu_whole_fast_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  llvm.mlir.global internal constant @strict_gpu_whole_gated_name("strict_device_whole\00strict_device_wholes_gated\00") : !llvm.array<47 x i8>
+  llvm.mlir.global internal @strict_gpu_whole_gated_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   func.func private @strict_gpu_whole_target(%rows: f64, %rowCount: f64, %wanted: i1) -> (!llvm.ptr, !llvm.ptr) {
     %name = llvm.mlir.addressof @strict_gpu_whole_name : !llvm.ptr
     %slot = llvm.mlir.addressof @strict_gpu_whole_slot : !llvm.ptr
@@ -14709,7 +14968,7 @@
   // t * width of input), row r and token t at t * rows + r of the result plus biases(index % biases.Length) unless
   // biases is 0.0, the rows of token t start at bases(t / 64) unless bases is 0.0 (`Batch.Grouped`), 0.0 when the GPU
   // can not
-  func.func private @strict_gpu_tokens(%ptx: !llvm.ptr, %count: i64, %rows: f64, %input: f64, %width: f64, %rowCount: f64, %bases: f64, %biases: f64) -> f64 {
+  func.func private @strict_gpu_tokens(%ptx: !llvm.ptr, %count: i64, %rows: f64, %input: f64, %width: f64, %rowCount: f64, %bases: f64, %biases: f64, %gated: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -14779,10 +15038,23 @@
     %halves = arith.constant 17 : i64
     %wholeChosen = arith.andi %eights, %wholeRows : i1
     %resultPacked = arith.select %wholeChosen, %halves, %integers : i64
+    %isGated = arith.cmpf one, %gated, %zero : f64
+    %notWhole = arith.xori %wholeChosen, %true : i1
+    %ungatable = arith.andi %isGated, %notWhole : i1
+    cf.cond_br %ungatable, ^ungated, ^launch
+  ^ungated:
+    return %zero : f64
+  ^launch:
+    %gatedName = llvm.mlir.addressof @strict_gpu_whole_gated_name : !llvm.ptr
+    %gatedSlot = llvm.mlir.addressof @strict_gpu_whole_gated_slot : !llvm.ptr
+    %gatedLanes = arith.constant -8192 : i64
+    %runName = llvm.select %isGated, %gatedName, %name : i1, !llvm.ptr
+    %runSlot = llvm.select %isGated, %gatedSlot, %slot : i1, !llvm.ptr
+    %runLanes = arith.select %isGated, %gatedLanes, %lanes : i64
     %tokenWidthSlot = llvm.mlir.addressof @strict_gpu_quantize_width : !llvm.ptr
     llvm.store %tokenWidth, %tokenWidthSlot : i64, !llvm.ptr
     %noGuards5 = arith.constant 0 : i64
-    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %count, %zero, %none, %values, %six, %listsMask, %one, %two, %lanes, %none, %resultPacked, %noGuards5) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
+    %result = func.call @strict_gpu_run(%ptx, %runName, %runSlot, %count, %zero, %none, %values, %six, %listsMask, %one, %two, %runLanes, %none, %resultPacked, %noGuards5) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
     llvm.store %none, %tokenWidthSlot : i64, !llvm.ptr
     return %result : f64
   }
@@ -15601,7 +15873,14 @@
     %hasDevice = arith.cmpi ne, %device, %none : i64
     cf.cond_br %hasDevice, ^copy, ^unavailable
   ^copy:
-    %put = func.call @strict_gpu_stage(%device, %staging, %total) : (i64, !llvm.ptr, i64) -> i1
+    cf.cond_br %big, ^aside, ^stage
+  ^aside:
+    %putAside = func.call @strict_gpu_put_aside(%device, %staging, %total) : (i64, !llvm.ptr, i64) -> i1
+    cf.br ^put(%putAside : i1)
+  ^stage:
+    %staged = func.call @strict_gpu_stage(%device, %staging, %total) : (i64, !llvm.ptr, i64) -> i1
+    cf.br ^put(%staged : i1)
+  ^put(%put: i1):
     func.call @strict_gpu_unstaged_unless(%staging, %isHosted) : (!llvm.ptr, i1) -> ()
     %keeping = arith.andi %put, %big : i1
     cf.cond_br %keeping, ^remember, ^copiedRows

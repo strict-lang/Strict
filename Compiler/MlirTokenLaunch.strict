@@ -2,7 +2,7 @@ has function MlirFunction
 has position Number
 constant Summing = MlirTokenLaunch(MlirTokens.Summing.function, 2)
 constant Grouped = MlirTokenLaunch(MlirTokens.Grouped.function, 2)
-constant Signature = " : (!llvm.ptr, i64, f64, f64, f64, f64, f64, f64) -> f64"
+constant Signature = " : (!llvm.ptr, i64, f64, f64, f64, f64, f64, f64, f64) -> f64"
 Sourced Texts
 	MlirTokenLaunch(MlirGpu.Doubling.function, 2).Sourced is ("%t2v", "1")
 	Summing.Sourced is ("%t2gb", "1")
@@ -16,6 +16,7 @@ Sourced Texts
 	(collection is "" then gpu.Temp("b") else gpu.Temp("v"), number)
 Launched Texts
 	Summing.Launched.Last is "  ^loop2kernel:"
+	Text.Combine(MlirTokenLaunch(MlirGated.Gating.function, 2).Launched).IndexOf("%t2ggated = arith.constant 1.0") > 0
 	let tokens = MlirTokens(function, position)
 	if tokens.Call < 0
 		return List(Text)
@@ -25,17 +26,19 @@ Launched Texts
 	for tokens.Names(tokens.Call)
 		lines = lines + function.Load(gpu.Temp("gh" + index), "%v_" + value)
 	let call = "    " + gpu.Temp("gb") + " = func.call @strict_gpu_tokens(" + Operands + ")"
-	(lines + biased.Loaded + (call + Signature) + Checked) + biased.Fused
+	(lines + biased.Loaded + MlirGated(function, position).Loaded + (call + Signature) + Checked) + biased.Fused
 Operands Text
-	Summing.Operands is "%t2gp, %t2gc, %t2gh0, %t2gh1, %t2gh2, %t2gh3, %zero, %zero"
-	Grouped.Operands is "%t2gp, %t2gc, %t2gh0, %t2gh1, %t2gh2, %t2gh3, %t2gh4, %zero"
+	Summing.Operands is "%t2gp, %t2gc, %t2gh0, %t2gh1, %t2gh2, %t2gh3, %zero, %zero, %zero"
+	Grouped.Operands is "%t2gp, %t2gc, %t2gh0, %t2gh1, %t2gh2, %t2gh3, %t2gh4, %zero, %zero"
+	MlirTokenLaunch(MlirGated.Gating.function, 2).Operands.EndsWith("%t2gh3, %zero, %zero, %t2ggated")
 	let tokens = MlirTokens(function, position)
 	let gpu = MlirGpu(function, position)
 	let names = tokens.Names(tokens.Call)
 	mutable operands = gpu.Temp("gp") + ", " + gpu.Temp("gc")
 	for names
 		operands = operands + ", " + gpu.Temp("gh" + index)
-	operands + (names.Length is 4 then ", %zero, " else ", ") + MlirBiased(function, position).Operand
+	let biased = (names.Length is 4 then ", %zero, " else ", ") + MlirBiased(function, position).Operand
+	operands + biased + ", " + MlirGated(function, position).Operand
 Checked Texts
 	Summing.Checked.First is "    %t2gn = arith.cmpf une, %t2gb, %zero : f64"
 	let gpu = MlirGpu(function, position)

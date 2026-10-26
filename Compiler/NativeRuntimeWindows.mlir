@@ -745,14 +745,15 @@
     %workers = arith.subi %threads, %one : i64
     %null = llvm.mlir.zero : !llvm.ptr
     %procedure = llvm.mlir.addressof @strict_pool_thread : !llvm.ptr
-    %defaultStack = arith.constant 0 : i64
-    %noFlags = arith.constant 0 : i32
+    // 64 MB reserved like the main thread (STACK_SIZE_PARAM_IS_A_RESERVATION), loop bodies recurse as deep as it
+    %workerStack = arith.constant 67108864 : i64
+    %reserved = arith.constant 65536 : i32
     cf.br ^check(%zero : i64)
   ^check(%index: i64):
     %more = arith.cmpi slt, %index, %workers : i64
     cf.cond_br %more, ^spawn, ^done
   ^spawn:
-    %thread = llvm.call @CreateThread(%null, %defaultStack, %procedure, %null, %noFlags, %null) : (!llvm.ptr, i64, !llvm.ptr, !llvm.ptr, i32, !llvm.ptr) -> !llvm.ptr
+    %thread = llvm.call @CreateThread(%null, %workerStack, %procedure, %null, %reserved, %null) : (!llvm.ptr, i64, !llvm.ptr, !llvm.ptr, i32, !llvm.ptr) -> !llvm.ptr
     %closed = llvm.call @CloseHandle(%thread) : (!llvm.ptr) -> i32
     %next = arith.addi %index, %one : i64
     cf.br ^check(%next : i64)

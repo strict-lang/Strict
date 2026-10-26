@@ -51,11 +51,13 @@ Measured(at Number) Text
 IsFused Boolean
 	Summing.IsFused
 	Biasing.IsFused
+	MlirBiased(MlirGated.Gating.function, 2).IsFused
 	let call = MlirTokens(function, position).Call
 	if (Written < 0) or (call < 0)
 		return false
 	let dot = function.method.instructions(call).payload(0)
-	(function.method.instructions(Written).payload(0) is dot) or (Biases is not "")
+	let isDot = function.method.instructions(Written).payload(0) is dot
+	isDot or (Biases is not "") or MlirGated(function, position).IsGated
 Operand Text
 	Summing.Operand is "%zero"
 	Biasing.Operand is "%t2gbias"
