@@ -10085,6 +10085,32 @@
     %done = arith.cmpi eq, %result, %zero32 : i32
     return %done : i1
   }
+  // bytes of host into an allocation of its own go up on the copy stream and only that copy is waited for: strict_gpu_put
+  // waits for every launch before it (H3's first step lost 32 ms per block on each of its out_proj and adaln uploads)
+  func.func private @strict_gpu_put_aside(%device: i64, %host: !llvm.ptr, %bytes: i64) -> i1 {
+    %none = arith.constant 0 : i64
+    %zero32 = arith.constant 0 : i32
+    func.call @strict_gpu_ahead_create() : () -> ()
+    %ahead = llvm.mlir.addressof @strict_gpu_ahead : !llvm.ptr
+    %streamBits = llvm.load %ahead : !llvm.ptr -> i64
+    %hasStream = arith.cmpi ne, %streamBits, %none : i64
+    cf.cond_br %hasStream, ^aside, ^put
+  ^aside:
+    %stream = llvm.inttoptr %streamBits : i64 to !llvm.ptr
+    %putIndex = arith.constant 14 : i64
+    %put = func.call @strict_gpu_call(%putIndex) : (i64) -> !llvm.ptr
+    %result = llvm.call %put(%device, %host, %bytes, %stream) : !llvm.ptr, (i64, !llvm.ptr, i64, !llvm.ptr) -> i32
+    %synchronizeIndex = arith.constant 30 : i64
+    %synchronize = func.call @strict_gpu_call(%synchronizeIndex) : (i64) -> !llvm.ptr
+    %waited = llvm.call %synchronize(%stream) : !llvm.ptr, (!llvm.ptr) -> i32
+    %copied = arith.cmpi eq, %result, %zero32 : i32
+    %finished = arith.cmpi eq, %waited, %zero32 : i32
+    %done = arith.andi %copied, %finished : i1
+    return %done : i1
+  ^put:
+    %fallback = func.call @strict_gpu_put(%device, %host, %bytes) : (i64, !llvm.ptr, i64) -> i1
+    return %fallback : i1
+  }
   // a download of a small result (up to 256 numbers, like the tokens of a step) waits only for the event recorded after
   // the graph segment of its last write and copies on a stream of its own, the launches after it go on: the last 64
   // segments (numbers, events), launched count, download stream; the last 128 small results (holders, segments), next
@@ -15404,7 +15430,14 @@
     %hasDevice = arith.cmpi ne, %device, %none : i64
     cf.cond_br %hasDevice, ^copy, ^unavailable
   ^copy:
-    %put = func.call @strict_gpu_stage(%device, %staging, %total) : (i64, !llvm.ptr, i64) -> i1
+    cf.cond_br %big, ^aside, ^stage
+  ^aside:
+    %putAside = func.call @strict_gpu_put_aside(%device, %staging, %total) : (i64, !llvm.ptr, i64) -> i1
+    cf.br ^put(%putAside : i1)
+  ^stage:
+    %staged = func.call @strict_gpu_stage(%device, %staging, %total) : (i64, !llvm.ptr, i64) -> i1
+    cf.br ^put(%staged : i1)
+  ^put(%put: i1):
     func.call @strict_gpu_unstaged_unless(%staging, %isHosted) : (!llvm.ptr, i1) -> ()
     %keeping = arith.andi %put, %big : i1
     cf.cond_br %keeping, ^remember, ^copiedRows
