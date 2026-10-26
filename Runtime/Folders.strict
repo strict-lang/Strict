@@ -1,0 +1,26 @@
+has logger
+constant Batch = 128
+Tested(folder Text, root Text) Number
+	Folders(Logger).Tested("Missing", ".") is 0
+	mutable files = List(Text)
+	for ResolveCheck.Tree(folder)
+		files = files + Directory.Files(value, "*.strict")
+	Ran(Commands("test", files, root))
+Commands(command Text, paths Texts, root Text) Texts
+	Folders(Logger).Commands("test", List(Text) + "a.strict", ".") is ("test \"a.strict\" \".\"")
+	for paths
+		command + " \"" + value + "\" \"" + root + "\""
+Ran(arguments Texts) Number
+	Folders(Logger).Ran(List(Text)) is 0
+	mutable failed = 0
+	for Range(0, ((arguments.Length + Batch - 1) / Batch).Floor)
+		let start = value * Batch
+		let count = arguments.Length - start < Batch then arguments.Length - start else Batch
+		for Process.RunTools(Process.Current.executable, arguments.Slice(start, count))
+			logger.Log((value.Output + value.error).Replace("\r", "").Trim)
+			failed = failed + Failed(value.exitCode)
+	failed
+Failed(exitCode Number) Number
+	Folders.Failed(3) is 3
+	Folders.Failed(-1073741819) is 1
+	(exitCode >= 0) and (exitCode < 128) then exitCode else 1

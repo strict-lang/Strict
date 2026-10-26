@@ -17,7 +17,7 @@ A GPU loop of a method returning `BFloat16s` stores bfloat16, never by size alon
 
 ## Memory budget
 H3 DiT steps (21.7 GB of weights, 37 of 50 blocks resident, the rest streamed) take 3.6-3.8 s against ComfyUI's 3.3 s, ~230 ms of it idle; ComfyUI streams too but overlaps it (60 ms idle). Left:
-- uploads wait in order where the prefetch chain (`strict_gpu_prefetch`, one spill ahead) breaks: prefetch two rows or a block ahead
+- three uploads ahead in a ring (StrictComfy scratchpad ahead_ring.py): H3 idle 128 -> 110 ms per step, but Bonsai 27B at 10 GB decode 12.2 -> 15-16 ms from the refill walk per rows use; a ring needs a cheaper refill (check for a free upload before walking the chain)
 - power of two size classes leave ~1.9 GB of H3's pool unused; finer classes churned activations through the driver, they need weights evicted first or blocks lent across classes
 - without spilled rows the trim before an own block runs at every block (9.5-12 s per step with `%ownReserve` at 1 GB instead of 256 MB)
 - MossImage with ~0.9 GB used by other programs still has 1-8 full collections per step: a sub-allocating pool would end them
@@ -32,7 +32,6 @@ The first run of a new build waits for the driver to compile the 20 MB runtime P
 
 ## Generated loops
 Instruction bound on the RTX 3080 (120-330 instructions per number). Left:
-- format mixes without an AOT copy (`MlirFormats`: all f32, all bfloat16, first bfloat16) run the generic kernel: H3's `Rope.Rotated` with 16 bit norm weights 192 against 80 ms per step
 - a loop reading a member of an object parameter (`layout.width` in StrictComfy `H3Final.Unpatched`) stays on the CPU: pass loop invariant members as numbers
 - bounds, reduction and tail checks remain: extend the four wide loads (`MlirBatched`) and fuse memory passes
 - an index with a denominator other than 1 (`size / 2` inlined in MossBlock.Rotated) divides in 64 bits at every read (82 instead of 66 us): shift power of two denominators

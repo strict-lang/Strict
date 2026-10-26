@@ -31,7 +31,9 @@ Entries(entries List(TypeEntry), signatures Texts, signed Texts, targets Texts) 
 	mutable linked = List(TypeEntry) + Specialization(main.Generator).Completed(main, completed, targets)
 	for signed
 		let known = signatures.Index(value)
-		linked = linked + (known < 0 then Fresh(value) else entries(known + 1))
+		let earlier = known < 0 then Signature(value).Earlier(signatures) else -1
+		let previous = earlier < 0 then "" else signatures(earlier)
+		linked = linked + (known < 0 then Fresh(value, previous, entries(earlier + 1)) else entries(known + 1))
 	linked
 Linkable(types Texts) Texts
 	Hello.Linkable("Strict/Logger", "Strict/Missing") is ("Strict/Logger")
@@ -43,12 +45,14 @@ Signatures(types Texts, targets Texts) Texts
 	Sample.Signatures(("Strict/B"), ("Strict/B.Go")) is ("Strict/B:Go")
 	for types
 		value + ":" + Text.Combine(UsedMethods(targets, value), ",")
-Fresh(signature Text) TypeEntry
-	Sample.Fresh("Strict/Logger:").Name is "Strict/Logger"
-	let colon = signature.IndexOf(":")
-	let methods = signature.Substring(colon + 1, signature.Length - colon - 1)
-	let names = methods is "" then List(Text) else methods.Split(",")
-	LinkedType(signature.Substring(0, colon), names)
+Fresh(signature Text, previous Text, entry TypeEntry) TypeEntry
+	Sample.Fresh("Strict/Logger:", "", Go).Name is "Strict/Logger"
+	Sample.Fresh("Strict/Logger:Log", "Strict/Logger:", Go).methods.Length is 2
+	let names = Signature(signature).Names
+	let old = previous is "" then List(Text) else Signature(previous).Names
+	if (previous is "") or ((old - names).Length > 0)
+		return LinkedType(Signature(signature).Type, names)
+	TypeEntry(entry.Name, entry.members, entry.methods + LinkedType(Signature(signature).Type, names - old).methods)
 LinkedType(type Text, methods Texts) TypeEntry
 	Sample.LinkedType("Strict/Logger", List(Text)).Name is "Strict/Logger"
 	Sample.LinkedType("Strict/Bytecode/Crc", List(Text)).Name is "Crc"

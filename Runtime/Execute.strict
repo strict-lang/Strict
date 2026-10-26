@@ -17,12 +17,7 @@ Test(path Text, root Text) Number
 	Execute(Logger).Test("Missing.strict", ".") is 1
 	if File(path).Exists and (Directory.Exists(path) is false)
 		return Failures(List(Text) + path, root, false)
-	if Directory.Exists(path) is false
-		return 1
-	mutable failed = 0
-	for ResolveCheck.Tree(path)
-		failed = failed + Failures(Directory.Files(value, "*.strict"), root, false)
-	failed
+	Directory.Exists(path) then Folders(logger).Tested(path, root) else 1
 Failures(paths Texts, root Text, isQuiet Boolean) Number
 	let stale = Stale(paths)
 	let files = stale.Length is 0 then List(Text) else SourceFiles(root).Of(FileCompiler.Normalized(stale.First))

@@ -9,6 +9,8 @@ constant LinuxDownload = "https://github.com/llvm/llvm-project/releases/download
 constant LinuxMembers = " LLVM-23.1.3-Linux-X64/bin/clang LLVM-23.1.3-Linux-X64/bin/clang-23 LLVM-23.1.3-Linux-X64/bin/mlir-opt LLVM-23.1.3-Linux-X64/bin/mlir-translate LLVM-23.1.3-Linux-X64/bin/opt LLVM-23.1.3-Linux-X64/bin/llc LLVM-23.1.3-Linux-X64/bin/lld LLVM-23.1.3-Linux-X64/bin/ld.lld LLVM-23.1.3-Linux-X64/bin/clang-offload-bundler LLVM-23.1.3-Linux-X64/bin/amdgpu-arch LLVM-23.1.3-Linux-X64/lib/clang/23/include"
 constant Optimized = " -march=native -Wno-override-module"
 constant Parts = 16
+constant Passes = " --symbol-dce --convert-scf-to-cf --convert-arith-to-llvm --convert-func-to-llvm --convert-cf-to-llvm --reconcile-unrealized-casts"
+constant Translating = " --mlir-disable-threading --mlir-to-llvmir "
 constant Thin = " -x none -flto=thin -fuse-ld=lld -Wl,/opt:lldltojobs=all -Wl,/mllvm:-mcpu=native -Wl,clang_rt.builtins-x86_64.lib"
 constant OnWindows = Toolchain(Platform.Windows, "C:/s")
 constant OnLinux = Toolchain(Platform.Linux, "/s")
@@ -79,7 +81,7 @@ Installing(missing Texts) Text
 	Text.Combine(missing, ", ") + " not found, installing them with " + script + where + problem
 Built(base Text, executable Text, level Text) Text
 	OnWindows.Built("Compiler/output/missing", "missing.exe", NativeBuild.Fast).StartsWith("mlir-opt failed")
-	let lowered = Lowered(base)
+	let lowered = Lowered(base, "", platform is Platform.Windows then Parts else 1)
 	if lowered is not ""
 		return lowered
 	let system = platform is Platform.Windows then " -Wl,-Brepro -Wl,/STACK:67108864" else MacOSTools.Linked(platform)
@@ -92,10 +94,12 @@ Built(base Text, executable Text, level Text) Text
 	linked.Failed then "clang failed: " + linked.error + linked.Output else "Built " + executable
 Inputs(base Text, level Text) Text
 	OnLinux.Inputs("Compiler/output/missing", "") is "\"Compiler/output/missing.ll\""
-	let splitter = platform is Platform.Windows then Located("llvm-split") else ""
-	if splitter is ""
+	let isDivided = File(base + ".ll").Exists is false
+	let splitter = isDivided or (platform is not Platform.Windows) then "" else Located("llvm-split")
+	if (splitter is "") and (isDivided is false)
 		return Quoted(base + ".ll")
-	let split = ToolRunner(splitter).Execute("-j " + Parts + " " + Quoted(base + ".ll") + " -o " + Quoted(base + "-"))
+	let splitting = "-j " + Parts + " " + Quoted(base + ".ll") + " -o " + Quoted(base + "-")
+	let split = isDivided then ProcessResult(0, "", "") else ToolRunner(splitter).Execute(splitting)
 	if split.Failed or (PartsCompiled(base, level) is false)
 		return Quoted(base + ".ll")
 	mutable parts = ""
@@ -131,17 +135,17 @@ WslPath(path Text) Text
 	let slashed = path.Replace("\\", "/")
 	let drive = "/mnt/" + slashed.Substring(0, 1).Lower
 	slashed.IndexOf(":") is 1 then drive + slashed.Substring(2, slashed.Length - 2) else slashed
-Lowered(base Text, kept = "") Text
+Lowered(base Text, kept = "", parts = 1) Text
 	OnWindows.Lowered("Compiler/output/missing").StartsWith("mlir-opt failed")
-	constant passes = " --symbol-dce --convert-scf-to-cf --convert-arith-to-llvm --convert-func-to-llvm"
-	let output = " --convert-cf-to-llvm --reconcile-unrealized-casts -o " + Quoted(base + ".llvm.mlir")
+	let lines = parts > 1 then File(base + ".mlir").ReadLines else List(Text)
+	if lines.Length > 100000
+		return MlirSplit(lines).Lowered(base, Toolchain(platform, root, natives, isWeb))
 	let privatized = kept is "" then "" else " --symbol-privatize=exclude=" + kept
-	let lowering = Quoted(base + ".mlir") + privatized + passes + output
+	let lowering = Quoted(base + ".mlir") + privatized + Passes + " -o " + Quoted(base + ".llvm.mlir")
 	let lowered = ToolRunner(Located("mlir-opt")).Execute(lowering)
 	if lowered.Failed
 		return "mlir-opt failed: " + lowered.error
-	constant sequential = " --mlir-disable-threading --mlir-to-llvmir "
-	let translation = sequential + Quoted(base + ".llvm.mlir") + " -o " + Quoted(base + ".ll")
+	let translation = Translating + Quoted(base + ".llvm.mlir") + " -o " + Quoted(base + ".ll")
 	let translated = ToolRunner(Located("mlir-translate")).Execute(translation)
 	translated.Failed then "mlir-translate failed: " + translated.error else ""
 Quoted(path Text) Text

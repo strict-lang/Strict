@@ -73,6 +73,7 @@ IsPureCall(inspected MlirFunction, at Number, depth Number) Boolean
 IsPureMethod(callee MlirFunction, depth Number) Boolean
 	Doubling.IsPureMethod(MlirFunction(Doubling.function.types, MlirParallel.Rows, MlirParallel.Twice), 1)
 	Doubling.IsPureMethod(MlirFunction(Doubling.function.types, MlirParallel.Rows, Checking), 1)
+	Doubling.IsPureMethod(MlirFunction(Doubling.function.types, MlirParallel.Rows, MlirParallel.Doubled), 1)
 	if callee.method.Name is "Validated"
 		return true
 	for callee.method.instructions
