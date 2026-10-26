@@ -499,3 +499,17 @@
   }
   llvm.mlir.global internal constant @strict_gpu_ptx_ending(".ptx\00") : !llvm.array<5 x i8>
   llvm.mlir.global internal constant @strict_gpu_older_ending(".older.ptx\00") : !llvm.array<11 x i8>
+
+  func.func private @strict_test_pause() {
+    return
+  }
+  func.func private @strict_test_spawn() -> i1 {
+    %unavailable = arith.constant false
+    return %unavailable : i1
+  }
+
+  func.func private @strict_test_quit() {
+    %failure = arith.constant 1 : i32
+    llvm.call @exit(%failure) : (i32) -> ()
+    return
+  }

@@ -56,4 +56,4 @@ Method(types TypeCodegen, name Text, line Number) MethodEntry
 	mutable lined = List(Mutable(InstructionEntry))
 	for method.instructions
 		lined.Add(InstructionEntry(value.kind, value.texts, value.payload, line))
-	MethodEntry(method.Name, method.parameters, method.returnType, lined)
+	MethodEntry(method.Name, method.parameters, method.declaredType, lined)

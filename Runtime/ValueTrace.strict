@@ -1,4 +1,5 @@
 has logger
+has selection Text = ""
 constant Events = ("$Hit Strict/Examples/Sum|2", "$Use Strict/Examples/Sum|2|b|5", "$Set Strict/Examples/Sum|2|a|7", "$Hit Strict/Examples/Sum|2", "$Use Strict/Examples/Sum|2|b|5", "$Set Strict/Examples/Sum|2|a|7", "$Hit Sum|3", "$Result Sum|3|1", "$Hit Sum|3", "$Result Sum|3|2")
 constant Operators = ("+", "-", "*", "/", "%", "^", "is", "not", "and", "or", "xor", "to", "in", "then", "else", "=", ">", "<", ">=", "<=", ",", "(")
 constant Summed = "\nUse|b|5"
@@ -6,7 +7,9 @@ Run(path Text, root Text) Number
 	ValueTrace(Logger).Run("Missing.strict", ".") is 2
 	if File(path).Exists is false
 		return 2
-	let result = ToolRunner(Process.Current.executable).Execute("test " + path + " " + root + " trace")
+	let mode = selection is "" then "unit" else (selection is "*" then "" else selection)
+	let arguments = "test \"" + path + "\" \"" + root + "\" trace " + mode
+	let result = ToolRunner(Process.Current.executable).Execute(arguments)
 	let lines = result.Output.Lines
 	for Plain(lines) + Valued(lines, Path(path).PathOnly.text)
 		logger.Log(value)
@@ -22,7 +25,7 @@ Traced(path Text, root Text) Number
 	ValueTrace(Logger).Traced("Missing.strict", ".") is 2
 	if File(path).Exists is false
 		return 2
-	let types = FileCompiler(logger, true).Compiled(path, root, true)
+	let types = FileCompiler(logger, true, selection).Compiled(path, root, true)
 	types.Length is 0 then 1 else Execute(logger).Started(types, path, true).Tested(types.First.Name)
 Valued(lines Texts, folder Text) Texts
 	ValueTrace(Logger).Valued(Events, "Examples").First.EndsWith("line 2 hit 2 times")

@@ -20,7 +20,7 @@ Packed(header Numbers, types List(TypeEntry), owners List(TypeEntry)) Bytes
 		Byte(value)
 Unpacked(bytes Bytes) List(ZipEntry)
 	Packing.Length is 2
-	Packing.First.content is (1, 0, 4)
+	Packing.First.content is (1, 0, 5)
 	mutable numbers = List(Mutable(Number))
 	for bytes
 		numbers.Add(value.number)

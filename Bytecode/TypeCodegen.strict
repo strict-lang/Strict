@@ -12,10 +12,10 @@ constant Created = TypeCodegen("Strict/C", ("has a Number", "from(b Number)", "\
 constant Vectors = TypeCodegen("Strict/C", List(Text), TypeInference(KnownTypes(List(Text) + "Vector2", List(Scope) + Scope(List(Text) + "numbers", List(Text) + "Numbers"), List(Scope) + KnownTypes.NoMembers, List(Scope) + KnownTypes.NoMembers), List(Scope) + KnownTypes.NoMembers), List(Text))
 constant Leveled = TypeCodegen("Strict/L", ("has level = Fast", "constant Fast = \"a\""), NoTypes, List(Text))
 constant Rebuilt = SyntaxParser(Tokenizer("Greeter(Greeter(\"a\"), text = \"b\")").Tokens).Parse
-Entry TypeEntry
+Entry Slow(TypeEntry)
 	Hello.Entry is TypeEntry.HelloLogger
 	TypeEntry(Generator.target.TypeName, Members, Methods(List(Text)))
-Selected(names Texts) TypeEntry
+Selected(names Texts) Slow(TypeEntry)
 	Limit.Selected("Run").Name is "Strict/Limit"
 	Limit.Selected("Missing").methods.Length is 0
 	Limit.Selected(List(Text)).methods.Length is 0
@@ -27,7 +27,7 @@ Generator ValueCodegen
 	Limit.Generator.target.TypeName is "Limit"
 	let target = CallTarget(inference.types, TypeShape(lines), fullName, typeNames)
 	ValueCodegen(inference, inference.types.MethodsOf(target.TypeName), target)
-Members List(MemberEntry)
+Members Slow(List(MemberEntry))
 	Limit.Members.First.initial.First.payload is (1, 10, 0)
 	Leveled.Members.First.typeName is "Strict/Text"
 	mutable members = List(Mutable(MemberEntry))
@@ -84,11 +84,15 @@ Method(start Number) MethodEntry
 	let header = HeaderTokens(Tokenizer(lines(start)).Tokens)
 	constant generator = Generator
 	let scope = MethodScope(header, generator.target)
-	let returnType = header.tokens(0) is "from" then generator.target.TypeName else Concrete(Returned(header))
+	let returnType = Declared(header)
 	let body = TestLines(generator).Guarded(BodyParser(lines).Method(start + 1), header, start + 1, scope)
 	let code = MethodCodegen(generator).Generate(body, scope, BodyType(header))
 	let optimized = LoadReuse(code.instructions).Optimized
-	MethodEntry(header.tokens(0), Parameters(header), generator.target.FullName(returnType), optimized)
+	MethodEntry(header.tokens(0), Parameters(header), returnType, optimized)
+Declared(header HeaderTokens) Text
+	let result = header.tokens(0) is "from" then Generator.target.TypeName else Concrete(Returned(header))
+	let full = Generator.target.FullName(result)
+	header.ReturnsSlow then "Slow(" + full + ")" else full
 MethodScope(header HeaderTokens, target CallTarget) Scope
 	Hello.MethodScope(HeaderTokens("Run"), Hello.Generator.target).TypeOf(CodeBlock.ErrorMarker) is "Run"
 	let declared = Instantiation(inference.types).Members(target.TypeName, target.shape.MemberScope)

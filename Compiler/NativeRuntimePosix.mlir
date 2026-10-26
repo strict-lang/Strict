@@ -711,3 +711,38 @@
   }
   llvm.mlir.global internal constant @strict_gpu_ptx_ending(".ptx\00") : !llvm.array<5 x i8>
   llvm.mlir.global internal constant @strict_gpu_older_ending(".older.ptx\00") : !llvm.array<11 x i8>
+
+  llvm.func @nanosleep(!llvm.ptr, !llvm.ptr) -> i32
+  func.func private @strict_test_pause() {
+    %two = arith.constant 2 : i64
+    %zero = arith.constant 0 : i64
+    %millisecond = arith.constant 1000000 : i64
+    %delay = llvm.alloca %two x i64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %delay : i64, !llvm.ptr
+    %fraction = llvm.getelementptr %delay[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %millisecond, %fraction : i64, !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %paused = llvm.call @nanosleep(%delay, %null) : (!llvm.ptr, !llvm.ptr) -> i32
+    return
+  }
+  llvm.func @strict_test_thread(%argument: !llvm.ptr) -> !llvm.ptr {
+    func.call @strict_test_watch() : () -> ()
+    %null = llvm.mlir.zero : !llvm.ptr
+    llvm.return %null : !llvm.ptr
+  }
+  func.func private @strict_test_spawn() -> i1 {
+    %zero = arith.constant 0 : i32
+    %one = arith.constant 1 : i64
+    %null = llvm.mlir.zero : !llvm.ptr
+    %procedure = llvm.mlir.addressof @strict_test_thread : !llvm.ptr
+    %handle = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
+    %created = llvm.call @pthread_create(%handle, %null, %procedure, %null) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    %spawned = arith.cmpi eq, %created, %zero : i32
+    return %spawned : i1
+  }
+
+  func.func private @strict_test_quit() {
+    %failure = arith.constant 1 : i32
+    llvm.call @_exit(%failure) : (i32) -> ()
+    return
+  }

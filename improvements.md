@@ -16,7 +16,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is atte
 - Qwen3Benchmark native compilation intermittently exits with heap corruption after GPU preparation; keep the failing cold-build log and investigate in the compiler/runtime session.
 - GPU launches are not guarded on pool threads: `MlirSafety` keeps methods with GPU-able loops out of parallel loops; the runtime should run such loops on the CPU while the pool is busy.
 - Pool threads on Linux and macOS keep the default pthread stack (8 MB, 512 KB on macOS) and their stack guard takes the main thread's bound from `strict_stack_lowest`: a deep loop body crashes instead of returning StackOverflow (Windows reserves 64 MB per worker and asks `GetCurrentThreadStackLimits`).
-- Attention prompt VM tests still exceed the editor budget after fixing per-call frame pool jobs: remove boxed numeric allocation/dispatch costs and classify prompt fixtures as slow tests (Runtime/README.md).
+- Speed up boxed numeric VM allocation/dispatch for explicit Attention prompt tests (Runtime/README.md).
 - Native `NeuralNetworks/Batch` fails 3 tests since c06d0649 (passed at f38592f7): `Fours.Grouped(...)(3) is Fours.Sums(Tokens)(11)`, `Fours.Grouped((0, 8), 8, Long)(523)` and `Wholes.Gated(Tokens)(0)`, whose left side now comes out exact (`Wholes.Gated(Tokens)(0)` 7579.69 like the VM instead of the GPU's 7916.48) while the right side runs on the GPU; H3Video still runs the GPU kernels.
 - Linker.Linked exhausts 20 passes with complete false during NativeCompiler self-build; a diagnostic reaches the current convergence check on pass 21: verify closure and convergence instead of silently accepting the depth limit.
 
@@ -27,7 +27,8 @@ What to fix next, one short line each, bugs first. Remove a line once it is atte
 - CI runs few native builds (about 4 minutes per job): add more while each job stays under 10 minutes.
 - Trees as pools with 32 bit backward offsets ([Goose](https://github.com/aardappel/goose)): measure SyntaxNode allocations per `strict build Strict.strict` first.
 - Build speed: under 10 s hard limit, 2-3 s target; profile repeated linker discovery/codegen and emission, compare moderate thread counts before changing pool defaults (Compiler/README.md).
-- 20 ms test budget: move integration/model tests and FileCompiler.Parsed, NativeFolder.Counted and Execute.Completed into explicit slow suites with their assertions, then enforce the budget.
+- Include required shared constant initialization in unit-test budgets; unused Slow fixtures are excluded, but selected fixtures still initialize before the assertion timer.
+- Finish classifying integration tests as Slow; unmarked TypeCodegen.Initial, ValueCodegen.Expression, ErrorCodegen.Compared and Specialization.Header still fail the VM unit budget and need profiling instead of a blanket exemption.
 - Native File.Exists opens and closes each file before checking its directory bit; use platform metadata and measure lookup-heavy linker work.
 - WebWars generated SceneAtlas/LevelAtlas constructors dominate emission; reduce large constant/record-list lowering work without changing atlas data.
 - Build dependency inventory and frontend discovery repeat broad package scans; share/narrow inventory before optimizing small shape-loading costs.

@@ -814,3 +814,37 @@
   }
   llvm.mlir.global internal constant @strict_gpu_ptx_ending(".ptx\00") : !llvm.array<5 x i8>
   llvm.mlir.global internal constant @strict_gpu_older_ending(".older.ptx\00") : !llvm.array<11 x i8>
+
+  llvm.func @Sleep(i32)
+  func.func private @strict_test_pause() {
+    %wait = arith.constant 1 : i32
+    llvm.call @Sleep(%wait) : (i32) -> ()
+    return
+  }
+  llvm.func @strict_test_thread(%argument: !llvm.ptr) -> i32 {
+    func.call @strict_test_watch() : () -> ()
+    %zero = arith.constant 0 : i32
+    llvm.return %zero : i32
+  }
+  func.func private @strict_test_spawn() -> i1 {
+    %null = llvm.mlir.zero : !llvm.ptr
+    %procedure = llvm.mlir.addressof @strict_test_thread : !llvm.ptr
+    %stack = arith.constant 0 : i64
+    %flags = arith.constant 0 : i32
+    %thread = llvm.call @CreateThread(%null, %stack, %procedure, %null, %flags, %null) : (!llvm.ptr, i64, !llvm.ptr, !llvm.ptr, i32, !llvm.ptr) -> !llvm.ptr
+    %created = llvm.icmp "ne" %thread, %null : !llvm.ptr
+    cf.cond_br %created, ^close, ^done
+  ^close:
+    %closed = llvm.call @CloseHandle(%thread) : (!llvm.ptr) -> i32
+    cf.br ^done
+  ^done:
+    return %created : i1
+  }
+
+  func.func private @strict_test_quit() {
+    %current = arith.constant -1 : i64
+    %process = llvm.inttoptr %current : i64 to !llvm.ptr
+    %failure = arith.constant 1 : i32
+    %killed = llvm.call @TerminateProcess(%process, %failure) : (!llvm.ptr, i32) -> i32
+    return
+  }

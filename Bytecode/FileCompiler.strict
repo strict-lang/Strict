@@ -1,5 +1,6 @@
 has logger
 has isQuiet Boolean = false
+has selection Text = ""
 constant Logged = (Linker.Go, TypeEntry.HelloLogger)
 constant Tips = " is not in this folder, next to strict, in a GitHub repository linked in README.md or in github.com/strict-lang. Fix the typo, add its package to this folder or link its repository in README.md"
 Compiled(path Text, root Text, withTests Boolean) List(TypeEntry)
@@ -19,7 +20,7 @@ Built(path Text, root Text, withTests Boolean, files Texts, inference TypeInfere
 		return List(TypeEntry)
 	let fused = Fusion(File(source).ReadLines, Path(source).PathOnly.text).Fused
 	let main = TypeCodegen(FullName(source, root), fused, inference, FullNames(files, root))
-	let entry = BuildProfile(logger).Entry(main, withTests, isQuiet)
+	let entry = BuildProfile(logger).Entry(main, withTests, isQuiet, selection)
 	let linker = Linker(root, main)
 	Checked(linker, BuildProfile(logger).Linked(linker, entry), source, inference)
 Checked(linker Linker, linked List(TypeEntry), source Text, inference TypeInference) List(TypeEntry)
@@ -57,7 +58,7 @@ Located(path Text, root Text, withTests Boolean, type Text) List(TypeEntry)
 			return Compiled(path, root, withTests)
 	logger.Log("TypeNotFound: " + type + " used in " + path + ":" + LineOf(File(path).ReadLines, type) + Tips)
 	List(TypeEntry)
-Parsed(files Texts) Boolean
+Parsed(files Texts) Slow(Boolean)
 	FileCompiler.Parsed(("./Number.strict", "./Text.strict"))
 	for files
 		let lines = File(value).ReadLines
@@ -107,7 +108,7 @@ IsOperand(node SyntaxNode, position Number) Boolean
 	FileCompiler.IsOperand(SyntaxParser(Tokenizer("(a,)").Tokens).Parse, 1)
 	let isBinary = (node.Kind is "Binary") and ((position is 0) or (node.text is not "is"))
 	(node.Kind is in ("Not", "Negate", "List")) or isBinary
-Resolved(source Text, inference TypeInference) Boolean
+Resolved(source Text, inference TypeInference) Slow(Boolean)
 	FileCompiler.Resolved("./Logger.strict", ResolveCheck.Inference(("./Logger.strict", "./TextWriter.strict")))
 	let unresolved = ResolveCheck(logger).Unresolved(source, inference)
 	for unresolved

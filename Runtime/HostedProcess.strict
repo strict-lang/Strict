@@ -3,6 +3,8 @@ constant Running = Invocation(InstructionEntry.Invoke(2, ("Strict/Process", "Run
 Result VmValue
 	HostedProcess(Hosted.SystemCall).Result.text is in ("Windows", "Linux", "MacOS", "Unknown")
 	HostedProcess(Running).Result.items.Last.items.First.number is 127
+	if TypeEntry.ShortName(call.TypeName) is "TestBudget"
+		return HostedBudget(call).Result
 	if call.MethodName is "Started"
 		return VmValue.OfNumber(Process(call.Instance.Member(0).text).Started(call.Arguments.First.text))
 	if call.MethodName is "RunTools"

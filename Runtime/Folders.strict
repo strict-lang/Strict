@@ -7,9 +7,9 @@ Tested(folder Text, root Text) Number
 		files = files + Directory.Files(value, "*.strict")
 	Ran(Commands("test", files, root))
 Commands(command Text, paths Texts, root Text) Texts
-	Folders(Logger).Commands("test", List(Text) + "a.strict", ".") is ("test \"a.strict\" \".\"")
+	Folders(Logger).Commands("test", List(Text) + "a.strict", ".") is ("test \"a.strict\" \".\" unit")
 	for paths
-		command + " \"" + value + "\" \"" + root + "\""
+		command + " \"" + value + "\" \"" + root + "\"" + (command is "test" then " unit" else "")
 Ran(arguments Texts) Number
 	Folders(Logger).Ran(List(Text)) is 0
 	mutable failed = 0
