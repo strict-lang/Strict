@@ -35,6 +35,7 @@ Instruction bound on the RTX 3080 (120-330 instructions per number). Left:
 - a loop reading a member of an object parameter (`layout.width` in StrictComfy `H3Final.Unpatched`) stays on the CPU: pass loop invariant members as numbers
 - bounds, reduction and tail checks remain: extend the four wide loads (`MlirBatched`) and fuse memory passes
 - an index with a denominator other than 1 (`size / 2` inlined in MossBlock.Rotated) divides in 64 bits at every read (82 instead of 66 us): shift power of two denominators
+- `Batch.Gated` without whole 8 bit rows of one scale on sm_80 or later (16 bit rows, AMD, older GPUs) runs its loop with two device dots per number: run the plain GEMM over both halves and combine instead
 
 ## MOSS
 Warm generation 4.10-4.18 s against ComfyUI's 3.51 s with sampling at parity: VAE decode 0.63 against 0.27 s, PNG encoding 0.28 against 0.08 s, cold loading (`../StrictComfy/Performance.md`).

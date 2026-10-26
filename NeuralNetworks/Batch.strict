@@ -10,6 +10,8 @@ constant Fours = Batch(Blocks.Rows("four"), Layer.Unbiased)
 constant Sixes = Batch(Blocks.Rows("six"), Layer.Unbiased)
 constant Eights = Batch(Blocks.Rows("eight"), Layer.Unbiased)
 constant Threes = Batch(Blocks.Rows("two"), Layer.Unbiased)
+constant Gates = Batch(((1, 0), (0, 1), (2, 0), (0, 3)), Layer.Unbiased)
+constant Wholes = Batch(Safetensors.Bytes.Quantized("a"), Layer.Unbiased)
 constant Tile = 64
 Sums(input Numbers) Numbers
 	(Pair.Sums((1, 1)), Pair.Sums((1, 1, 2, 0))) is ((13, 27), (13, 27, 12, 26))
@@ -34,6 +36,16 @@ Grouped(bases Numbers, count Number, input Numbers) Numbers
 	let width = weights.First.Length
 	for count * input.Length / width
 		Dot(weights(bases((index / count / Tile).Floor) + index % count), 0, input, (index / count).Floor * width)
+Gated(input Numbers) Numbers
+	Gates.Gated((1, 1, 2, 0))(1).IsNearlyEqual(2.1931757)
+	Gates.Gated((1, 1, 2, 0))(2).IsNearlyEqual(7.0463766)
+	Wholes.Gated(Tokens)(0).IsNearlyEqual(Wholes.Sums(Tokens)(0) * Wholes.Sums(Tokens)(2), 40)
+	Wholes.Gated(Tokens)(1).IsNearlyEqual(Wholes.Sums(Tokens)(1) * Wholes.Sums(Tokens)(3), 130)
+	let width = weights.First.Length
+	let half = weights.Length / 2
+	for half * input.Length / width
+		let gate = Dot(weights(index % half), 0, input, (index / half).Floor * width)
+		gate / (1 + (0 - gate).Exponential) * Dot(weights(index % half + half), 0, input, (index / half).Floor * width)
 Dot(row Numbers, first Number, input Numbers, start Number) Number
 	Pair.Dot((1, 2), 0, (5, 1, 3), 1) is 7
 	Fours.Sums(Long)(1277).IsNearlyEqual(5.001, 0.5)
@@ -42,7 +54,7 @@ Dot(row Numbers, first Number, input Numbers, start Number) Number
 	Batch(Blocks.Rows("wide"), Layer.Unbiased).Sums(Wide)(1000).IsNearlyEqual(-9.015, 0.5)
 	Eights.Sums(Long)(1277).IsNearlyEqual(-1.514, 0.05)
 	Batch(Gguf("NeuralNetworks/blocks.gguf", 32).Rows("four"), Layer.Unbiased).Sums(Long)(1277).IsNearlyEqual(5.001, 0.5)
-	Batch(Safetensors.Bytes.Quantized("a"), Layer.Unbiased).Sums(Tokens)(255).IsNearlyEqual(383.65, 2)
+	Wholes.Sums(Tokens)(255).IsNearlyEqual(383.65, 2)
 	mutable sum = 0
 	for row.Length
 		sum = sum + row(first + index) * input(start + index)

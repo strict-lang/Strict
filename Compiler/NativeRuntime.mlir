@@ -10336,7 +10336,10 @@
     %isWholeOld = func.call @strict_gpu_is_kernel(%wholeSlot, %functionBits) : (!llvm.ptr, i64) -> i1
     %fastWholeSlot = llvm.mlir.addressof @strict_gpu_whole_fast_slot : !llvm.ptr
     %isWholeFast = func.call @strict_gpu_is_kernel(%fastWholeSlot, %functionBits) : (!llvm.ptr, i64) -> i1
-    %isWhole = arith.ori %isWholeOld, %isWholeFast : i1
+    %gatedWholeSlot = llvm.mlir.addressof @strict_gpu_whole_gated_slot : !llvm.ptr
+    %isWholeGated = func.call @strict_gpu_is_kernel(%gatedWholeSlot, %functionBits) : (!llvm.ptr, i64) -> i1
+    %isWholeNew = arith.ori %isWholeFast, %isWholeGated : i1
+    %isWhole = arith.ori %isWholeOld, %isWholeNew : i1
     %eightsShared = arith.constant 45056 : i32
     %wholeShared = arith.constant 73728 : i32
     %isAmd = func.call @strict_gpu_is_amd() : () -> i1
@@ -13600,7 +13603,10 @@
     %wholeRowTiles = arith.shrui %wholeRowsUp, %wholeRowShift : i64
     %wholeTiles = arith.muli %wholeRowTiles, %eightTokenTiles : i64
     %wholeThreads = arith.muli %wholeTiles, %eightLanes : i64
-    %chosenEights = arith.select %wholing, %wholeThreads, %eightsChosen : i64
+    %wholeChosen = arith.select %wholing, %wholeThreads, %eightsChosen : i64
+    %gatedLanes = arith.constant 8192 : i64
+    %gating = arith.cmpi eq, %perWarp, %gatedLanes : i64
+    %chosenEights = arith.select %gating, %eightThreads, %wholeChosen : i64
     %productLanes = arith.constant 1024 : i64
     %producing = arith.cmpi eq, %perWarp, %productLanes : i64
     cf.cond_br %producing, ^products, ^others
@@ -14525,6 +14531,8 @@
   llvm.mlir.global internal @strict_gpu_whole_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   llvm.mlir.global internal constant @strict_gpu_whole_fast_name("strict_device_whole\00strict_device_wholes_fast\00") : !llvm.array<46 x i8>
   llvm.mlir.global internal @strict_gpu_whole_fast_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  llvm.mlir.global internal constant @strict_gpu_whole_gated_name("strict_device_whole\00strict_device_wholes_gated\00") : !llvm.array<47 x i8>
+  llvm.mlir.global internal @strict_gpu_whole_gated_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   func.func private @strict_gpu_whole_target(%rows: f64, %rowCount: f64, %wanted: i1) -> (!llvm.ptr, !llvm.ptr) {
     %name = llvm.mlir.addressof @strict_gpu_whole_name : !llvm.ptr
     %slot = llvm.mlir.addressof @strict_gpu_whole_slot : !llvm.ptr
@@ -14549,7 +14557,7 @@
   // t * width of input), row r and token t at t * rows + r of the result plus biases(index % biases.Length) unless
   // biases is 0.0, the rows of token t start at bases(t / 64) unless bases is 0.0 (`Batch.Grouped`), 0.0 when the GPU
   // can not
-  func.func private @strict_gpu_tokens(%ptx: !llvm.ptr, %count: i64, %rows: f64, %input: f64, %width: f64, %rowCount: f64, %bases: f64, %biases: f64) -> f64 {
+  func.func private @strict_gpu_tokens(%ptx: !llvm.ptr, %count: i64, %rows: f64, %input: f64, %width: f64, %rowCount: f64, %bases: f64, %biases: f64, %gated: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -14619,10 +14627,23 @@
     %halves = arith.constant 17 : i64
     %wholeChosen = arith.andi %eights, %wholeRows : i1
     %resultPacked = arith.select %wholeChosen, %halves, %integers : i64
+    %isGated = arith.cmpf one, %gated, %zero : f64
+    %notWhole = arith.xori %wholeChosen, %true : i1
+    %ungatable = arith.andi %isGated, %notWhole : i1
+    cf.cond_br %ungatable, ^ungated, ^launch
+  ^ungated:
+    return %zero : f64
+  ^launch:
+    %gatedName = llvm.mlir.addressof @strict_gpu_whole_gated_name : !llvm.ptr
+    %gatedSlot = llvm.mlir.addressof @strict_gpu_whole_gated_slot : !llvm.ptr
+    %gatedLanes = arith.constant -8192 : i64
+    %runName = llvm.select %isGated, %gatedName, %name : i1, !llvm.ptr
+    %runSlot = llvm.select %isGated, %gatedSlot, %slot : i1, !llvm.ptr
+    %runLanes = arith.select %isGated, %gatedLanes, %lanes : i64
     %tokenWidthSlot = llvm.mlir.addressof @strict_gpu_quantize_width : !llvm.ptr
     llvm.store %tokenWidth, %tokenWidthSlot : i64, !llvm.ptr
     %noGuards5 = arith.constant 0 : i64
-    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %count, %zero, %none, %values, %six, %listsMask, %one, %two, %lanes, %none, %resultPacked, %noGuards5) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
+    %result = func.call @strict_gpu_run(%ptx, %runName, %runSlot, %count, %zero, %none, %values, %six, %listsMask, %one, %two, %runLanes, %none, %resultPacked, %noGuards5) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
     llvm.store %none, %tokenWidthSlot : i64, !llvm.ptr
     return %result : f64
   }
