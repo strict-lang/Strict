@@ -23,7 +23,7 @@ H3 DiT steps (21.7 GB of weights, 37 of 50 blocks resident, the rest streamed) t
 - MossImage with ~0.9 GB used by other programs still has 1-8 full collections per step: a sub-allocating pool would end them
 - GPU-only lists can't be spilled, so H3 activations kept across the 50 streamed blocks (Spectrum feature anchors) take every byte from the weights: spillable activations or an explicit move to the host
 - H3's ~98 full collections per step come from strict_gpu_obtain before each 128 and 512 MB activation block (18-28 ms each in strict_gc_mark_range, 40 % of the main thread); collecting less was slower (blocks from the driver evict streamed weights), so make the mark cheaper (skip lists without references)
-- a call result passed straight on (`Latents(Loaded(model), ...)`) stays reachable from the caller's frame after its last use: MossGenerate kept the 5.4 GB Moss weights through the VAE decode (9.5 instead of 4.6 GB, 20-76 s decodes when Windows took 1.1 GB), StrictComfy now loads inside a helper; the collector should not see dead temporaries of a live frame
+- a reference in a local (`let moss = Loaded(model)`) still stays in a callee-saved register or spill slot of a live frame after its last use, the conservative stack scan keeps it alive; call results passed straight on to another call are handed over through a cleared volatile slot (`MlirHanded`)
 
 ## Loading
 The 21 GB H3 DiT loads in 10-12 s (ComfyUI 4-7 s), mostly page faults of the copy into fresh memory, and its first step uploads all of it (10.1-10.6 instead of 3.7 s), now 4.3 s on a 3080 since file matrices of 64 MB and more are locked in place as their own spill. Next: 8 bit rows gathered straight from the mapped file.

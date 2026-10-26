@@ -1,0 +1,79 @@
+has function MlirFunction
+has position Number
+constant Built = MlirHanded(MlirCalls.Shapes, 1)
+constant Area = MlirHanded(MlirCalls.Shapes, 2)
+constant Stored = " : f64, !llvm.ptr"
+Reader Number
+	Built.Reader is 2
+	Area.Reader is -1
+	let entry = function.method.instructions(position)
+	if entry.kind is not InstructionType.Invoke
+		return -1
+	let reader = Next(entry.payload(0))
+	if reader < 0
+		return -1
+	IsPlain(position) and IsReference then reader else -1
+Next(register Number) Number
+	Built.Next(1) is 2
+	let steps = function.method.instructions
+	let reuse = LoadReuse(steps)
+	for Range(position + 1, steps.Length)
+		let isRead = register is in reuse.Reads(steps(value))
+		if isRead and IsPlain(value)
+			return value
+		let isOther = isRead and (steps(value).kind is not InstructionType.CheckError)
+		if isOther or IsFlow(steps(value).kind) or (reuse.Written(steps(value)) is register)
+			return -1
+	-1
+IsFlow(kind Number) Boolean
+	Built.IsFlow(InstructionType.Return)
+	Built.IsFlow(InstructionType.Invoke) is false
+	(kind >= InstructionType.Return) and (kind <= InstructionType.JumpToIdIfTrue)
+IsPlain(at Number) Boolean
+	Built.IsPlain(1)
+	Built.IsPlain(0) is false
+	let tails = MlirTails(function, at)
+	tails.IsCall and (tails.IsTail is false) and (MlirWholeFunction(function).IsInsideLoop(at) is false)
+IsReference Boolean
+	Built.IsReference
+	Area.IsReference is false
+	let represented = MlirLayout(function).Represented(MlirKinds(function).WrittenKind(position))
+	(represented is not "Number") and (represented is not "Boolean")
+Wrapped(emitted Texts) Texts
+	Built.Wrapped(List(Text)).Last is "    llvm.store volatile %t1h, %handed1 : f64, !llvm.ptr"
+	Area.Wrapped(List(Text)).First is "    %t2h1 = llvm.load volatile %handed1 : !llvm.ptr -> f64"
+	Area.Wrapped(List(Text)).Last is "    llvm.store volatile %zero, %handed1 : f64, !llvm.ptr"
+	mutable reloads = List(Mutable(Text))
+	mutable clears = List(Mutable(Text))
+	for Writers
+		reloads = reloads + Reloaded(value)
+		clears = clears + ("    llvm.store volatile %zero, %handed" + value + Stored)
+	reloads + emitted + clears + Kept
+Writers Numbers
+	Area.Writers is (1)
+	let steps = function.method.instructions
+	mutable writers = List(Mutable(Number))
+	for LoadReuse(steps).Reads(steps(position))
+		let writer = MlirKinds(function).Writer(position, value)
+		if (writer >= 0) and (MlirHanded(function, writer).Reader is position)
+			writers.Add(writer)
+	writers
+Reloaded(writer Number) Texts
+	Area.Reloaded(1).Last is "    llvm.store %t2h1, %r1 : f64, !llvm.ptr"
+	let reloaded = "%t" + position + "h" + writer
+	let loaded = "    " + reloaded + " = llvm.load volatile %handed" + writer + " : !llvm.ptr -> f64"
+	(loaded, function.Store(reloaded, "%r" + function.method.instructions(writer).payload(0)))
+Slots Texts
+	Built.Slots.First is "    %handed1 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
+	mutable lines = List(Mutable(Text))
+	for function.method.instructions
+		if MlirHanded(function, index).Reader >= 0
+			lines = lines + function.Slot("%handed" + index)
+	lines
+Kept Texts
+	Built.Kept.First is "    %t1h = llvm.load %r1 : !llvm.ptr -> f64"
+	if Reader < 0
+		return List(Text)
+	let kept = "%t" + position + "h"
+	let register = "%r" + function.method.instructions(position).payload(0)
+	(function.Load(kept, register), "    llvm.store volatile " + kept + ", %handed" + position + Stored)
