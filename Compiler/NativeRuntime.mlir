@@ -11084,7 +11084,11 @@
     %warpGroups = arith.cmpi eq, %groupLanes, %warpLanes : i64
     %groupBlock = arith.select %warpGroups, %widest, %groupLanes : i64
     %laneThreads = arith.select %grouped, %groupBlock, %widest : i64
-    %threads = arith.select %tiling, %tileBlock, %laneThreads : i64
+    %tiledThreads = arith.select %tiling, %tileBlock, %laneThreads : i64
+    %byteLanes = arith.constant -96 : i64
+    %bytesBlock = arith.constant 128 : i64
+    %byteAttention = arith.cmpi eq, %lanes, %byteLanes : i64
+    %threads = arith.select %byteAttention, %bytesBlock, %tiledThreads : i64
     cf.cond_br %missing, ^release, ^chosen
   ^chosen:
     %unpackedResult = arith.cmpi eq, %packed, %none : i64
@@ -14037,7 +14041,14 @@
   ^attentions:
     %attentionLanes = arith.constant 128 : i64
     %attending = arith.cmpi eq, %perWarp, %attentionLanes : i64
-    cf.cond_br %attending, ^attention, ^done(%chosenEights : i64)
+    cf.cond_br %attending, ^attention, ^bytes
+  ^bytes:
+    %bytesLanes = arith.constant 96 : i64
+    %bytesAttending = arith.cmpi eq, %perWarp, %bytesLanes : i64
+    cf.cond_br %bytesAttending, ^bytesAttention, ^done(%chosenEights : i64)
+  ^bytesAttention:
+    %bytesThreads = func.call @strict_gpu_bytes_threads(%values) : (!llvm.ptr) -> i64
+    cf.br ^done(%bytesThreads : i64)
   ^attention:
     %attentionThreads = func.call @strict_gpu_attention_threads(%count, %values) : (i64, !llvm.ptr) -> i64
     cf.br ^done(%attentionThreads : i64)
@@ -14131,6 +14142,35 @@
   }
   llvm.mlir.global internal constant @strict_gpu_attention_name("strict_device_attention\00strict_device_attentions\00") : !llvm.array<49 x i8>
   llvm.mlir.global internal @strict_gpu_attention_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  llvm.mlir.global internal constant @strict_gpu_bytes_name("strict_device_bytes_attention\00strict_device_bytes_attentions\00") : !llvm.array<61 x i8>
+  llvm.mlir.global internal @strict_gpu_bytes_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  // strict_device_bytes_attention takes a block of 128 threads per sequence, head and 64 tokens
+  func.func private @strict_gpu_bytes_threads(%values: !llvm.ptr) -> i64 {
+    %six = arith.constant 6 : i64
+    %seven = arith.constant 7 : i64
+    %spare = arith.constant 63 : i64
+    %headsSlot = llvm.getelementptr %values[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %headsNumber = llvm.load %headsSlot : !llvm.ptr -> f64
+    %sizeSlot = llvm.getelementptr %values[5] : (!llvm.ptr) -> !llvm.ptr, f64
+    %sizeNumber = llvm.load %sizeSlot : !llvm.ptr -> f64
+    %sequencesSlot = llvm.getelementptr %values[6] : (!llvm.ptr) -> !llvm.ptr, f64
+    %sequencesNumber = llvm.load %sequencesSlot : !llvm.ptr -> f64
+    %heads = arith.fptosi %headsNumber : f64 to i64
+    %size = arith.fptosi %sizeNumber : f64 to i64
+    %sequences = arith.fptosi %sequencesNumber : f64 to i64
+    %queriesList = llvm.load %values : !llvm.ptr -> f64
+    %queriesLength = func.call @strict_list_length(%queriesList) : (f64) -> f64
+    %queriesTotal = arith.fptosi %queriesLength : f64 to i64
+    %headsSize = arith.muli %heads, %size : i64
+    %sequenceQueries = arith.muli %headsSize, %sequences : i64
+    %tokens = arith.divui %queriesTotal, %sequenceQueries : i64
+    %tokensUp = arith.addi %tokens, %spare : i64
+    %tokenBlocks = arith.shrui %tokensUp, %six : i64
+    %sequenceHeads = arith.muli %heads, %sequences : i64
+    %blocks = arith.muli %sequenceHeads, %tokenBlocks : i64
+    %threads = arith.shli %blocks, %seven : i64
+    return %threads : i64
+  }
   func.func private @strict_gpu_attention_view(%valueLength: f64, %positions: i64, %width: i64, %offsetNumber: f64, %strideNumber: f64) -> i1 {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -14177,12 +14217,13 @@
   // `Attention.Merged` on the 16 bit tensor cores (strict_device_attention): queries, keys and values like there, 0.0
   // when the GPU can not, then the method itself runs (head size not a multiple of 8 or above 128, more than 16 heads
   // per group of keys, lists that do not match)
-  // routing (a number of standard deviations, Sol-Attn's tau) above 0 routes quantized prompts of one head per group,
-  // strict_device_attention_pools computes their pooled means first
+  // routing (a number of standard deviations, Sol-Attn's tau) above 0 routes the prompts strict_device_bytes_attention
+  // takes, strict_device_attention_pools computes their pooled means first
   llvm.mlir.global internal constant @strict_gpu_attention_pooled_name("strict_device_attention_pooled\00strict_device_attention_pools\00") : !llvm.array<61 x i8>
   llvm.mlir.global internal @strict_gpu_attention_pooled_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   // quantized: the keys of prompts of size 128 become 8 bit numbers with a scale per position and head (one quantize
-  // launch), strict_device_attention then computes the scores with 8 bit products
+  // launch), strict_device_attention then computes the scores with 8 bit products; with a head per group, no causal
+  // mask and packed values those become 8 bit numbers too and strict_device_bytes_attention runs
   func.func private @strict_gpu_attention(%ptx: !llvm.ptr, %queries: f64, %keys: f64, %values: f64, %heads: f64, %groups: f64, %size: f64, %sequences: f64, %causal: f64, %valueOffset: f64, %valueStride: f64, %quantized: f64, %routing: f64, %exact: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
@@ -14302,7 +14343,29 @@
     %routingFits = arith.andi %routingGroups, %fewBlocks : i1
     %routingShaped = arith.andi %routingOpen, %routingFits : i1
     %routingWanted = arith.andi %routingSet, %routingShaped : i1
-    cf.cond_br %routingWanted, ^pooling, ^attending
+    %valueFormat = func.call @strict_gpu_bits(%values) : (f64) -> i64
+    %keyFormat = func.call @strict_gpu_bits(%keys) : (f64) -> i64
+    %floatValues = func.call @strict_gpu_floats(%valueFormat) : (i64) -> i1
+    %floatKeys = func.call @strict_gpu_floats(%keyFormat) : (i64) -> i1
+    %dotting = func.call @strict_gpu_dp4a() : () -> i1
+    %noOffset = arith.cmpf oeq, %valueOffset, %zero : f64
+    %noStride = arith.cmpf oeq, %valueStride, %zero : f64
+    %packedValues = arith.andi %noOffset, %noStride : i1
+    %floatLists = arith.andi %floatValues, %floatKeys : i1
+    %bytesLists = arith.andi %floatLists, %packedValues : i1
+    %bytesOpen = arith.andi %routingOpen, %oneHeadGroups : i1
+    %bytesShaped = arith.andi %bytesOpen, %bytesLists : i1
+    %bytesWanted = arith.andi %bytesShaped, %dotting : i1
+    %bothBits = arith.constant 6 : i64
+    %bytesDots = arith.select %bytesWanted, %bothBits, %dots : i64
+    %bytesName = llvm.mlir.addressof @strict_gpu_bytes_name : !llvm.ptr
+    %bytesSlot = llvm.mlir.addressof @strict_gpu_bytes_slot : !llvm.ptr
+    %chosenName = llvm.select %bytesWanted, %bytesName, %name : i1, !llvm.ptr
+    %chosenSlot = llvm.select %bytesWanted, %bytesSlot, %slot : i1, !llvm.ptr
+    %byteLanes = arith.constant -96 : i64
+    %chosenLanes = arith.select %bytesWanted, %byteLanes, %lanes : i64
+    %routedBytes = arith.andi %routingWanted, %bytesWanted : i1
+    cf.cond_br %routedBytes, ^pooling, ^attending
   ^pooling:
     %groupBlocks = arith.muli %positionSize, %keyBlocks : i64
     %poolRows = arith.addi %groupBlocks, %groupBlocks : i64
@@ -14320,7 +14383,7 @@
   ^attending:
     %widthSlot = llvm.mlir.addressof @strict_gpu_quantize_width : !llvm.ptr
     llvm.store %keyWidth, %widthSlot : i64, !llvm.ptr
-    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %queryCount, %zero, %none, %valuesSlots, %thirteen, %listsMask, %none, %dots, %lanes, %none, %integers, %noGuards1) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
+    %result = func.call @strict_gpu_run(%ptx, %chosenName, %chosenSlot, %queryCount, %zero, %none, %valuesSlots, %thirteen, %listsMask, %none, %bytesDots, %chosenLanes, %none, %integers, %noGuards1) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
     llvm.store %none, %widthSlot : i64, !llvm.ptr
     return %result : f64
   ^unable:
