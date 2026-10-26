@@ -231,6 +231,19 @@
   ^done:
     return
   }
+  // strict_device_copies_wait until no group is pending
+  func.func private @strict_device_copies_waited() attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+    %arch = func.call @strict_device_arch() : () -> i32
+    %c800 = arith.constant 800 : i32
+    %isAsync = arith.cmpi sge, %arch, %c800 : i32
+    cf.cond_br %isAsync, ^async, ^done
+  ^async:
+    %pending = llvm.mlir.constant(0 : i32) : i32
+    llvm.call_intrinsic "llvm.nvvm.cp.async.wait.group"(%pending) : (i32) -> ()
+    cf.br ^done
+  ^done:
+    return
+  }
   func.func private @strict_device_dp4a(%left: i32, %right: i32, %sum: i32) -> i32 attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %result = llvm.call_intrinsic "llvm.nvvm.idp4a.s.s"(%left, %right, %sum) : (i32, i32, i32) -> i32
     return %result : i32

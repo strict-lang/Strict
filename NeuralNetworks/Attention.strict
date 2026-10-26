@@ -28,6 +28,8 @@ Merged Numbers
 		Softmax.Weighted(shares, row * positions, visible, values, ValueStart(index), Stride)
 Stride Number
 	Attention(Prompted, values = Prompt, valueOffset = 7168, valueStride = 128).Merged(4095).IsNearlyEqual(0.061657, 0.005)
+	Attention(Prompt, Prompt, Prompt, 1, 1, 128, 1, false, 0, 0, true).Merged(10239).IsNearlyEqual(-0.24048, 0.01)
+	Attention(Prompt, Prompt, Prompt, 1, 1, 128, 1, false, 0, 0, true, 1).Merged(10239).IsNearlyEqual(-0.24048, 0.01)
 	valueStride is 0 then sequences * groups * size else valueStride
 ValueStart(at Number) Number
 	let row = (at / size).Floor

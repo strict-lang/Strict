@@ -345,6 +345,9 @@
     return
   }
   // older GPUs have no 8 bit dot product instruction (sdot4 needs gfx906), four multiplies of the signed bytes
+  func.func private @strict_device_copies_waited() attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+    return
+  }
   func.func private @strict_device_dp4a(%left: i32, %right: i32, %sum: i32) -> i32 attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %leftBytes = llvm.bitcast %left : i32 to vector<4xi8>
     %rightBytes = llvm.bitcast %right : i32 to vector<4xi8>
