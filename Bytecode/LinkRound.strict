@@ -3,6 +3,7 @@ has entries List(TypeEntry)
 has signatures Texts
 constant Single = LinkRound(Linker.Sample, List(TypeEntry) + Linker.Go, List(Text))
 constant Twice = LinkRound(Linker.Sample, (Linker.Go, Linker.Go), List(Text) + "Strict/Logger:")
+constant Greeting = LinkRound(Linker.Hello, List(TypeEntry) + TypeEntry.HelloLogger, List(Text))
 constant Wrapping = LinkRound(Linker.Sample, (Linker.Go, TypeEntry.CharacterEntry, TypeEntry("Strict/Dictionary(Text)", MemberEntry.NumbersMember, List(MethodEntry))), ("Strict/Character:Floor", "Strict/Dictionary(Text):in"))
 Entries(signed Texts) List(TypeEntry)
 	Single.Entries(List(Text) + "Strict/Logger:").First.Name is "Strict/Logger"
@@ -48,6 +49,10 @@ Indices Dictionary(Text, Number)
 		if value.Changing.Length is 1
 			indices(value.Name.IndexOf("/") < 0 then local else value.Name) = index
 	indices
+Unconverged Text
+	Greeting.Unconverged is "LinkingDidNotConverge: HelloLogger still links Strict/Logger:"
+	let pending = linker.Next(entries, signatures).signatures - signatures
+	"LinkingDidNotConverge: " + TypeEntry.ShortName(linker.main.fullName) + " still links " + Text.Combine(pending, " ")
 IsSettled(next LinkRound) Boolean
 	Single.IsSettled(Single)
 	Single.IsSettled(Twice) is false
