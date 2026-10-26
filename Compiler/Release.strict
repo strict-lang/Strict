@@ -18,13 +18,13 @@ IOSPackaged Number
 	if Content(Parent + "/Release/Content") < 0
 		return 1
 	let release = Parent + "/Release/iOS"
-	Refreshed(release, release + "/Content", List(Text) + ".ios.a")
+	Refreshed(release, release + "/Content", (".ios.a", ".simulator.a"))
 Packaged(program Text, built Number, isWeb = false, isCrossing = false, platform = -1) Number
 	Release(Logger, "Examples/Sum").Packaged("module {\n}", 0) is 0
 	Release(Logger, "Examples/Sum").Packaged("module {\n}", 2) is 2
 	Release(Logger, "Missing/App.test").Packaged(Opening, 0) is 0
-	if (platform is in (Platform.Android, Platform.IOS)) and (built is 0)
-		return platform is Platform.IOS then IOSPackaged else AndroidPackaged
+	if (platform is in (Platform.Android, Platform.IOS, Platform.IOSSimulator)) and (built is 0)
+		return Platform.IsIOS(platform) then IOSPackaged else AndroidPackaged
 	let isWindowed = program.IndexOf(Opening) >= 0
 	if (built is not 0) or base.EndsWith(".test") or (isWindowed is false)
 		return built

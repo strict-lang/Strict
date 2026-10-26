@@ -13,3 +13,8 @@
     %end = arith.addi %start, %bytes : i64
     return %start, %end : i64, i64
   }
+  // MTLSize has 24 bytes, more than 16 go as a pointer to a copy
+  llvm.func @strict_metal_dispatch(%send: !llvm.ptr, %encoder: !llvm.ptr, %selector: !llvm.ptr, %grid: !llvm.ptr, %group: !llvm.ptr) {
+    llvm.call %send(%encoder, %selector, %grid, %group) : !llvm.ptr, (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> ()
+    llvm.return
+  }

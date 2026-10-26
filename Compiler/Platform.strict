@@ -4,8 +4,10 @@ constant MacOS
 constant Web
 constant Android
 constant IOS
+constant IOSSimulator
 NameOf(code Number) Text
 	NameOf(Windows) is "Windows"
+	NameOf(IOSSimulator) is "iOS"
 	NameOf(Web) is "Web"
 	if code is Windows
 		return "Windows"
@@ -15,7 +17,7 @@ NameOf(code Number) Text
 		return "MacOS"
 	if code is Web
 		return "Web"
-	code is Android then "Android" else (code is IOS then "iOS" else "Unknown")
+	code is Android then "Android" else (IsIOS(code) then "iOS" else "Unknown")
 Current Number
 	Platform.Current is in (Windows, Linux, MacOS)
 	FromName(Process.OperatingSystem)
@@ -36,16 +38,19 @@ Architecture Text
 	Process.RunTool("uname", "-m").Output.Trim is "arm64" then "Arm64" else "X64"
 Runtimes(code Number) Texts
 	Platform.Runtimes(Linux) is ("Posix", "Linux")
-	Platform.Runtimes(MacOS).Last is "MacOS" + Platform.Architecture
+	Platform.Runtimes(IOS).First is "Darwin"
 	if code is Linux
 		return ("Posix", "Linux")
 	if code is Android
 		return ("Posix", "Android", "Arm64")
-	if code is IOS
-		return ("Darwin", "IOS", "Arm64", "MacOSArm64")
-	if code is MacOS
-		return Architecture is "Arm64" then ("Darwin", "MacOS", "Arm64", "MacOSArm64") else ("Darwin", "MacOS", "MacOSX64")
-	List(Text) + NameOf(code)
+	code is in (MacOS, IOS, IOSSimulator) then Darwin(code) else List(Text) + NameOf(code)
+Darwin(code Number) Texts
+	Platform.Darwin(MacOS).Last is (Platform.Architecture is "Arm64" then "Directories" else "MacOSX64")
+	Platform.Darwin(IOS) is ("Darwin", "IOS", "Arm64", "Directories")
+	Platform.Darwin(IOSSimulator) is ("Darwin", "IOS", Platform.Architecture, "Directories")
+	let machine = code is IOS then "Arm64" else Architecture
+	let directories = (code is MacOS) and (machine is "X64") then "MacOSX64" else "Directories"
+	("Darwin", code is MacOS then "MacOS" else "IOS", machine, directories)
 Runtime(code Number, root Text) Texts
 	Platform.Runtime(Linux, ".").First.StartsWith("  // the heap")
 	for Runtimes(code)
@@ -56,7 +61,7 @@ LibraryExtension(code Number) Text
 	Platform.LibraryExtension(MacOS) is ".dylib"
 	if code is Windows
 		return ".dll"
-	if code is IOS
+	if IsIOS(code)
 		return ".a"
 	code is MacOS then ".dylib" else ".so"
 IsWindows(code Number) Boolean
@@ -71,3 +76,7 @@ IsMacOS(code Number) Boolean
 	if code is MacOS
 		return true
 	false
+IsIOS(code Number) Boolean
+	IsIOS(IOSSimulator)
+	IsIOS(MacOS) is false
+	code is in (IOS, IOSSimulator)

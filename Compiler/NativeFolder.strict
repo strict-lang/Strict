@@ -10,7 +10,7 @@ Module(path Text, root Text, isCounting Boolean, isProgram Boolean, platform = -
 	let execute = Execute(logger)
 	let types = isCounting then Collected(folders, root) else execute.Loaded(path, root, isProgram is false)
 	let counted = isCounting then CountedFiles(paths, root) else List(Text)
-	let symbol = platform is Platform.IOS then "strict_main" else "main"
+	let symbol = Platform.IsIOS(platform) then "strict_main" else "main"
 	MlirModule(Inliner(types).Inlined, isProgram then "Run" else TestCodegen.Runner, counted, paths.Length, symbol)
 Natives(path Text, root Text, types List(TypeEntry)) Texts
 	NativeFolder(Logger).Natives("Examples", ".", List(TypeEntry) + Foreign.Adder) is ("Examples/NativeAdd/native")
