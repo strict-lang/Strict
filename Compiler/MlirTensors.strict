@@ -1,12 +1,12 @@
 has function MlirFunction
 constant Kinds = ("Attention", "Products", "Hadamard", "Convolution", "Sylvester")
-constant Attentions = ("queries", "keys", "values", "heads", "groups", "size", "sequences", "causal", "valueOffset", "valueStride", "quantized", "routing")
+constant Attentions = ("queries", "keys", "values", "heads", "groups", "size", "sequences", "causal", "valueOffset", "valueStride", "quantized", "routing", "exact")
 constant Productions = ("left", "right", "shape", "strides")
 constant Hadamards = List(Text) + "values"
 constant Sylvesters = ("values", "flips", "size")
 constant Convolutions = ("values", "affine", "weights", "shape")
 constant Merging = MethodEntry("Merged", List(MemberEntry), "Strict/List(Number)", (InstructionEntry.Invoke(0, ("Strict/Softmax", "Shares", "Strict/List(Number)"), List(Number), -1), InstructionEntry.Invoke(1, ("Strict/Softmax", "Weighted", "Strict/Number"), List(Number), -1), MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "queries"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 3)))
-constant Attended = TypeEntry("Strict/Attention", (MemberEntry("queries", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("keys", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("values", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("heads", "Strict/Number", List(InstructionEntry), false), MemberEntry("groups", "Strict/Number", List(InstructionEntry), false), MemberEntry("size", "Strict/Number", List(InstructionEntry), false), MemberEntry("sequences", "Strict/Number", List(InstructionEntry), false), MemberEntry("causal", "Strict/Boolean", List(InstructionEntry), false), MemberEntry("valueOffset", "Strict/Number", List(InstructionEntry), false), MemberEntry("valueStride", "Strict/Number", List(InstructionEntry), false), MemberEntry("quantized", "Strict/Boolean", List(InstructionEntry), false), MemberEntry("routing", "Strict/Number", List(InstructionEntry), false)), List(MethodEntry) + Merging)
+constant Attended = TypeEntry("Strict/Attention", (MemberEntry("queries", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("keys", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("values", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("heads", "Strict/Number", List(InstructionEntry), false), MemberEntry("groups", "Strict/Number", List(InstructionEntry), false), MemberEntry("size", "Strict/Number", List(InstructionEntry), false), MemberEntry("sequences", "Strict/Number", List(InstructionEntry), false), MemberEntry("causal", "Strict/Boolean", List(InstructionEntry), false), MemberEntry("valueOffset", "Strict/Number", List(InstructionEntry), false), MemberEntry("valueStride", "Strict/Number", List(InstructionEntry), false), MemberEntry("quantized", "Strict/Boolean", List(InstructionEntry), false), MemberEntry("routing", "Strict/Number", List(InstructionEntry), false), MemberEntry("exact", "Strict/Number", List(InstructionEntry), false)), List(MethodEntry) + Merging)
 constant Ending = ("    %isTensored = arith.cmpf une, %tensored, %zero : f64", "    cf.cond_br %isTensored, ^tensored, ^computed", "  ^tensored:", "    return %tensored : f64", "  ^computed:")
 constant Attending = MlirTensors(MlirFunction(List(TypeEntry) + Attended, Attended, Merging))
 constant Multiply = MethodEntry("Multiplied", List(MemberEntry), "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "left"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 3)))
@@ -47,7 +47,7 @@ IsComputed Boolean
 			return true
 	false
 Prologue Texts
-	Attending.Prologue.Length is 19
+	Attending.Prologue.Length is 20
 	"    cf.cond_br %isTensored, ^tensored, ^computed" is in Multiplying.Prologue
 	MlirTensors(MlirGpu.Layering.function).Prologue.Length is 0
 	let kind = Kind
@@ -71,7 +71,7 @@ Members(kind Text) Texts
 	Attending.Members("Products").Length is 4
 	Attending.Members("Convolution").Last is "shape"
 	Attending.Members("Sylvester") is Sylvesters
-	Attending.Members("Attention").Last is "routing"
+	Attending.Members("Attention").Last is "exact"
 	if kind is in ("Convolution", "Sylvester")
 		return kind is "Convolution" then Convolutions else Sylvesters
 	kind is "Attention" then Attentions else (kind is "Products" then Productions else Hadamards)

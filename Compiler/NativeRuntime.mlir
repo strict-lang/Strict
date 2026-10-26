@@ -13726,7 +13726,7 @@
   llvm.mlir.global internal @strict_gpu_attention_pooled_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   // quantized: the keys of prompts of size 128 become 8 bit numbers with a scale per position and head (one quantize
   // launch), strict_device_attention then computes the scores with 8 bit products
-  func.func private @strict_gpu_attention(%ptx: !llvm.ptr, %queries: f64, %keys: f64, %values: f64, %heads: f64, %groups: f64, %size: f64, %sequences: f64, %causal: f64, %valueOffset: f64, %valueStride: f64, %quantized: f64, %routing: f64) -> f64 {
+  func.func private @strict_gpu_attention(%ptx: !llvm.ptr, %queries: f64, %keys: f64, %values: f64, %heads: f64, %groups: f64, %size: f64, %sequences: f64, %causal: f64, %valueOffset: f64, %valueStride: f64, %quantized: f64, %routing: f64, %exact: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
     %seven = arith.constant 7 : i64
@@ -13787,8 +13787,8 @@
     %attending = arith.andi %fitting, %rowsFit : i1
     cf.cond_br %attending, ^run, ^unable
   ^run:
-    %twelve = arith.constant 12 : i64
-    %valuesSlots = llvm.alloca %twelve x f64 : (i64) -> !llvm.ptr
+    %thirteen = arith.constant 13 : i64
+    %valuesSlots = llvm.alloca %thirteen x f64 : (i64) -> !llvm.ptr
     llvm.store %queries, %valuesSlots : f64, !llvm.ptr
     %keysSlot = llvm.getelementptr %valuesSlots[1] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %keys, %keysSlot : f64, !llvm.ptr
@@ -13812,6 +13812,8 @@
     llvm.store %queries, %pooledSlot : f64, !llvm.ptr
     %routingSlot = llvm.getelementptr %valuesSlots[11] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %zero, %routingSlot : f64, !llvm.ptr
+    %exactSlot = llvm.getelementptr %valuesSlots[12] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %exact, %exactSlot : f64, !llvm.ptr
     %listsMask = arith.constant 1031 : i64
     %name = llvm.mlir.addressof @strict_gpu_attention_name : !llvm.ptr
     %slot = llvm.mlir.addressof @strict_gpu_attention_slot : !llvm.ptr
@@ -13851,7 +13853,7 @@
     %pooledCount = arith.addi %poolRows, %queryRows : i64
     %pooledName = llvm.mlir.addressof @strict_gpu_attention_pooled_name : !llvm.ptr
     %pooledKernelSlot = llvm.mlir.addressof @strict_gpu_attention_pooled_slot : !llvm.ptr
-    %pooled = func.call @strict_gpu_run(%ptx, %pooledName, %pooledKernelSlot, %pooledCount, %zero, %none, %valuesSlots, %twelve, %listsMask, %none, %none, %lanes, %none, %integers, %noGuards1) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
+    %pooled = func.call @strict_gpu_run(%ptx, %pooledName, %pooledKernelSlot, %pooledCount, %zero, %none, %valuesSlots, %thirteen, %listsMask, %none, %none, %lanes, %none, %integers, %noGuards1) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
     %hasPooled = arith.cmpf une, %pooled, %zero : f64
     %pooledRouting = arith.select %hasPooled, %routing, %zero : f64
     %pooledList = arith.select %hasPooled, %pooled, %queries : f64
@@ -13861,7 +13863,7 @@
   ^attending:
     %widthSlot = llvm.mlir.addressof @strict_gpu_quantize_width : !llvm.ptr
     llvm.store %keyWidth, %widthSlot : i64, !llvm.ptr
-    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %queryCount, %zero, %none, %valuesSlots, %twelve, %listsMask, %none, %dots, %lanes, %none, %integers, %noGuards1) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
+    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %queryCount, %zero, %none, %valuesSlots, %thirteen, %listsMask, %none, %dots, %lanes, %none, %integers, %noGuards1) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
     llvm.store %none, %widthSlot : i64, !llvm.ptr
     return %result : f64
   ^unable:
