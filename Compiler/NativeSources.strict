@@ -74,12 +74,19 @@ Options(tokens Texts, isLinking Boolean) Text
 Object(source Text, platform Number, root Text, options Text) Text
 	Adding.Object("Examples/NativeAdd/native/Adder.c", Platform.Current, ".", "") is "Examples/NativeAdd/native/Adder.o"
 	let target = Path(source).RemoveExtension.text + ".o"
-	if IsCurrent(target, Inputs(platform, root) + source)
+	if IsCompiled(target, Inputs(platform, root) + source, options)
 		return target
 	let building = Path(source).RemoveExtension.text + "." + 999999.Random.Floor + ".o"
 	let compile = "-c \"" + source + "\" -I\"" + root + "/Compiler\"" + options + Toolchain.Optimized
 	let compiled = ToolRunner(Toolchain(platform, root).Located("clang")).Execute(compile + " -o \"" + building + "\"")
-	compiled.Failed then "clang failed for " + source + ": " + compiled.error else Placed(building, target)
+	if compiled.Failed
+		return "clang failed for " + source + ": " + compiled.error
+	let placed = Placed(building, target)
+	File(placed + ".nativecache").Write(options)
+	placed
+IsCompiled(target Text, inputs Texts, options Text) Boolean
+	let flags = File(target + ".nativecache")
+	flags.Exists and (Text.Combine(flags.ReadLines, "\n") is options) and IsCurrent(target, inputs)
 Inputs(platform Number, root Text) Texts
 	Adding.Inputs(Platform.Windows, ".").Last is "Examples/NativeAdd/native/Windows.flags"
 	let flags = folders.First + "/" + Platform.NameOf(platform) + ".flags"

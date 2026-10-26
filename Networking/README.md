@@ -5,7 +5,8 @@ a server listens on a port and accepts, both send and receive bytes.
 
 - `Socket.Connect(host, port)`: the socket of a client, or an Error such as
   `HostNotFound` or `ConnectionFailed`.
-- `Socket.Listen(port)`: the socket of a server.
+- `Socket.Listen(port)`: the socket of a server; zero asks the OS for an available port.
+- `Socket.Port(socket)`: its local port, including the port assigned by the OS.
 - `Socket.Accept(server)`: the socket of the client that connects.
 - `Socket.Send(socket, bytes)`: sends the bytes (0 to 255) and returns how many
   went out.
@@ -18,4 +19,7 @@ a server listens on a port and accepts, both send and receive bytes.
 Windows uses winsock2, Linux and MacOS the BSD sockets, so the same program
 runs on all of them. The native code is in `native/Socket.c`, the checks in
 `SocketChecks.strict` open a server and a client on the loopback interface and
-send bytes between them.
+send bytes between them. Each check gets its own OS-assigned port and closes its sockets
+on connection, acceptance and exchange failure. Windows initializes Winsock once with
+`InitOnceExecuteOnce`. After building SocketChecks, `python Networking/check_sockets.py`
+runs 16 copies concurrently while the former fixed port 34567 is occupied.

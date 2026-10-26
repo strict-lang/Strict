@@ -9,6 +9,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <windows.h>
 #define close_socket closesocket
 typedef int socket_size;
 #else
@@ -22,17 +23,22 @@ typedef int socket_size;
 typedef socklen_t socket_size;
 #endif
 
-static int started = 0;
-
-static void ensure_started(void)
-{
-	if (started)
-		return;
 #ifdef _WIN32
+static INIT_ONCE startup = INIT_ONCE_STATIC_INIT;
+static BOOL CALLBACK started(PINIT_ONCE once, PVOID argument, PVOID* context)
+{
 	WSADATA data;
-	WSAStartup(MAKEWORD(2, 2), &data);
+	return WSAStartup(MAKEWORD(2, 2), &data) == 0;
+}
 #endif
-	started = 1;
+
+static int ensure_started(void)
+{
+#ifdef _WIN32
+	return InitOnceExecuteOnce(&startup, started, 0, 0);
+#else
+	return 1;
+#endif
 }
 
 static int invalid(void)
@@ -46,7 +52,8 @@ static int invalid(void)
 
 STRICT_EXPORT double Socket_Connect(double self, double host, double port)
 {
-	ensure_started();
+	if (!ensure_started())
+		return strict_fail("SocketStartupFailed");
 	char service[16];
 	snprintf(service, sizeof(service), "%d", (int)port);
 	struct addrinfo hints, *list = 0;
@@ -73,7 +80,8 @@ STRICT_EXPORT double Socket_Connect(double self, double host, double port)
 
 STRICT_EXPORT double Socket_Listen(double self, double port)
 {
-	ensure_started();
+	if (!ensure_started())
+		return strict_fail("SocketStartupFailed");
 	int handle = (int)socket(AF_INET, SOCK_STREAM, 0);
 	if (handle == invalid())
 		return strict_fail("SocketFailed");
@@ -90,6 +98,17 @@ STRICT_EXPORT double Socket_Listen(double self, double port)
 		return strict_fail("ListenFailed");
 	}
 	return (double)handle;
+}
+
+STRICT_EXPORT double Socket_Port(double self, double socket)
+{
+	if ((int)socket <= 0)
+		return strict_fail("InvalidSocket");
+	struct sockaddr_in address;
+	socket_size size = sizeof(address);
+	if (getsockname((int)socket, (struct sockaddr*)&address, &size) != 0)
+		return strict_fail("SocketAddressFailed");
+	return ntohs(address.sin_port);
 }
 
 STRICT_EXPORT double Socket_Accept(double self, double server)

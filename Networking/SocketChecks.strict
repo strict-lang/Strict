@@ -3,23 +3,31 @@ Failures Number
 	Socket.Receive(0, 1) is Error("InvalidSocket")
 	Socket.Close(0) is 0
 	Socket.Waiting(0) is Error("InvalidSocket")
+	Socket.Port(0) is Error("InvalidSocket")
 	Loopback is 0
 	0
 Loopback Number
-	let server = Socket.Listen(34567)
+	let server = Socket.Listen(0)
 	if server is Error
 		return 1
-	let client = Socket.Connect("127.0.0.1", 34567)
+	let result = Connected(server)
+	Socket.Close(server)
+	result
+Connected(server Number) Number
+	let client = Socket.Connect("127.0.0.1", Socket.Port(server))
 	if client is Error
 		return 2
 	let accepted = Socket.Accept(server)
-	let result = accepted is Error then 3 else Exchanged(client, accepted)
+	if accepted is Error
+		Socket.Close(client)
+		return 3
+	let result = Exchanged(client, accepted)
+	Socket.Close(accepted)
 	Socket.Close(client)
-	Socket.Close(server)
 	result
 Exchanged(client Number, accepted Number) Number
-	if Socket.Send(client, (1, 2, 3)) is not 3
+	let sent = Socket.Send(client, (1, 2, 3))
+	if (sent is Error) or (sent is not 3)
 		return 4
 	let received = Socket.Receive(accepted, 3)
-	Socket.Close(accepted)
-	received is (1, 2, 3) then 0 else 5
+	(received is Error) then 5 else received is (1, 2, 3) then 0 else 5

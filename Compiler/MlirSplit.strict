@@ -1,6 +1,8 @@
 has lines Texts
 constant Internal = "llvm.linkage = #llvm.linkage<internal>"
 constant Single = Toolchain.Passes + " --mlir-disable-threading -o \""
+constant Quoted = MlirSplit(("  llvm.mlir.global internal constant @t(\" internal \\00\") : !llvm.array<11 x i8>"))
+constant ThreadText = "  llvm.mlir.global internal constant @t(\" thread_local \\00\") : !llvm.array<15 x i8>"
 constant Sample = MlirSplit(("module {", "  llvm.func @printf(!llvm.ptr, ...) -> i32", "  llvm.mlir.global internal constant @t(\"a\\00\") : !llvm.array<2 x i8>", "  func.func private @A() -> f64 attributes {llvm.linkage = #llvm.linkage<internal>} {", "    %r = func.call @B() : () -> f64", "    return %r : f64", "  }", "  func.func private @B(%p0: f64) -> f64 {", "    return %p0 : f64", "  }", "}"))
 Parts(count Number) Texts
 	Sample.Parts(2).Length is 2
@@ -25,9 +27,12 @@ Declarations(starts Numbers) Texts
 Shared(isFirst Boolean) Texts
 	Sample.Shared(true).Last is "  llvm.mlir.global constant @t(\"a\\00\") : !llvm.array<2 x i8>"
 	Sample.Shared(false).Last is "  llvm.mlir.global external constant @t() : !llvm.array<2 x i8>"
+	Quoted.Shared(true).First is Quoted.lines.First.Replace("global internal constant", "global constant")
 	for lines
 		if value.StartsWith("  llvm.mlir.global ")
-			isFirst then value.Replace(" internal ", " ") else Global(value)
+			let name = value.IndexOf("@")
+			let prefix = value.Substring(0, name).Replace(" internal ", " ")
+			isFirst then prefix + value.Substring(name, value.Length - name) else Global(value)
 		else if IsDeclaration(value, isFirst)
 			value
 IsDeclaration(line Text, isFirst Boolean) Boolean
@@ -109,9 +114,11 @@ Ran(tool Text, arguments Texts, tools Toolchain) Text
 Global(line Text) Text
 	Sample.Global("  llvm.mlir.global internal @k(0.0 : f64) : f64") is "  llvm.mlir.global external @k() : f64"
 	Sample.Global("  llvm.mlir.global internal thread_local @d(0 : i64) : i64").EndsWith(" thread_local @d() : i64")
+	Sample.Global(ThreadText) is "  llvm.mlir.global external constant @t() : !llvm.array<15 x i8>"
 	let at = line.IndexOf("@")
 	let name = line.Substring(at, line.IndexOf("(", at) - at)
-	let fixed = line.IndexOf(" constant ") > 0 then "constant " else ""
-	let local = line.IndexOf(" thread_local ") > 0 then "thread_local " else ""
+	let prefix = line.Substring(0, at)
+	let fixed = prefix.IndexOf(" constant ") > 0 then "constant " else ""
+	let local = prefix.IndexOf(" thread_local ") > 0 then "thread_local " else ""
 	let type = line.Substring(line.LastIndexOf(" : ") + 3, line.Length - line.LastIndexOf(" : ") - 3)
 	"  llvm.mlir.global external " + fixed + local + name + "() : " + type
