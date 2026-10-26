@@ -2,6 +2,8 @@
   llvm.mlir.global internal constant @strict_temp_template("./strictXXXXXX\00") : !llvm.array<15 x i8>
   llvm.mlir.global internal constant @strict_shell("/system/bin/sh\00") : !llvm.array<15 x i8>
   llvm.mlir.global internal constant @strict_online(97 : i32) : i32
+  llvm.mlir.global internal constant @strict_physical_pages(98 : i32) : i32
+  llvm.mlir.global internal constant @strict_page_size(39 : i32) : i32
   func.func private @strict_guard() {
     %one = arith.constant 1 : i64
     %stackBytes = arith.constant 65536 : i64

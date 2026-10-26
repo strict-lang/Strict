@@ -668,6 +668,17 @@
     %spawned = arith.cmpi eq, %created, %zero32 : i32
     return %spawned : i1
   }
+  // bytes of physical memory, 0 when unknown
+  func.func private @strict_host_memory() -> i64 {
+    %pagesName = arith.constant 200 : i32
+    %sizeName = arith.constant 29 : i32
+    %pages = llvm.call @sysconf(%pagesName) : (i32) -> i64
+    %size = llvm.call @sysconf(%sizeName) : (i32) -> i64
+    %zero = arith.constant 0 : i64
+    %product = arith.muli %pages, %size : i64
+    %bytes = arith.maxsi %product, %zero : i64
+    return %bytes : i64
+  }
   func.func private @strict_pool_spawn() -> i64 {
     %online = arith.constant 58 : i32
     %processors = llvm.call @sysconf(%online) : (i32) -> i64

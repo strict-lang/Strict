@@ -376,8 +376,9 @@
   ^offsets:
     %offsetBytes = arith.muli %count, %eight : i64
     %offsets = llvm.call @malloc(%offsetBytes) : (i64) -> !llvm.ptr
-    cf.br ^measure(%none, %none : i64, i64)
-  ^measure(%index: i64, %total: i64):
+    %noUneven = arith.constant false
+    cf.br ^measure(%none, %none, %none, %noUneven : i64, i64, i64, i1)
+  ^measure(%index: i64, %total: i64, %firstStride: i64, %uneven: i1):
     %more = arith.cmpi slt, %index, %count : i64
     cf.cond_br %more, ^row, ^allocate
   ^row:
@@ -395,17 +396,33 @@
     llvm.store %total, %offsetSlot : i64, !llvm.ptr
     %longer = arith.addi %total, %stride : i64
     %next = arith.addi %index, %one : i64
-    cf.br ^measure(%next, %longer : i64, i64)
+    %isFirst = arith.cmpi eq, %index, %none : i64
+    %chosenFirst = arith.select %isFirst, %stride, %firstStride : i64
+    %differs = arith.cmpi ne, %stride, %chosenFirst : i64
+    %stillUneven = arith.ori %uneven, %differs : i1
+    cf.br ^measure(%next, %longer, %chosenFirst, %stillUneven : i64, i64, i64, i1)
   ^allocate:
+    %imageSmallest = arith.constant 67108864 : i64
+    %isLarge = arith.cmpi uge, %total, %imageSmallest : i64
+    %isEven = arith.cmpi eq, %uneven, %noUneven : i1
+    %isImage = arith.andi %isLarge, %isEven : i1
+    %imageTable = arith.addi %count, %eight : i64
+    %imageSpare = arith.constant 127 : i64
+    %imageMask = arith.constant -128 : i64
+    %imagePadded = arith.addi %imageTable, %imageSpare : i64
+    %tableHeader = arith.andi %imagePadded, %imageMask : i64
+    %header = arith.select %isImage, %tableHeader, %none : i64
     %views = arith.muli %count, %viewBytes : i64
-    %blockSize = arith.addi %total, %views : i64
+    %rowsAndViews = arith.addi %total, %views : i64
+    %blockSize = arith.addi %header, %rowsAndViews : i64
     %block = func.call @strict_alloc_text(%blockSize) : (i64) -> !llvm.ptr
+    %placedBlock = llvm.getelementptr %block[%header] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
     %contextBytes = arith.constant 40 : i64
     %context = llvm.call @malloc(%contextBytes) : (i64) -> !llvm.ptr
     llvm.store %flat, %context : !llvm.ptr, !llvm.ptr
     %blockSlot = llvm.getelementptr %context[1] : (!llvm.ptr) -> !llvm.ptr, !llvm.ptr
-    llvm.store %block, %blockSlot : !llvm.ptr, !llvm.ptr
+    llvm.store %placedBlock, %blockSlot : !llvm.ptr, !llvm.ptr
     %offsetsSlot = llvm.getelementptr %context[2] : (!llvm.ptr) -> !llvm.ptr, !llvm.ptr
     llvm.store %offsets, %offsetsSlot : !llvm.ptr, !llvm.ptr
     %itemsSlot = llvm.getelementptr %context[3] : (!llvm.ptr) -> !llvm.ptr, !llvm.ptr
@@ -426,6 +443,8 @@
     %nextWritten = arith.addi %writtenIndex, %one : i64
     cf.br ^written(%nextWritten : i64)
   ^placed:
+    %imageBytes = arith.addi %header, %total : i64
+    func.call @strict_gpu_hosting(%list, %count, %block, %imageBytes, %isImage) : (f64, i64, !llvm.ptr, i64, i1) -> ()
     %true = arith.constant true
     return %true : i1
   ^mixed:
@@ -10840,7 +10859,10 @@
     // with streamed rows spilled the allocation evicts those first (strict_gpu_starved), trimming here gave back the
     // blocks the next layers allocate again and waited for the GPU each time (H3: 285 times in its first step)
     %spilledSlot = llvm.mlir.addressof @strict_gpu_spilled_bytes : !llvm.ptr
-    %spilled = llvm.load %spilledSlot : !llvm.ptr -> i64
+    %spilledCopies = llvm.load %spilledSlot : !llvm.ptr -> i64
+    %hostedBytesSlot = llvm.mlir.addressof @strict_gpu_hosted_bytes : !llvm.ptr
+    %hostedBytes = llvm.load %hostedBytesSlot : !llvm.ptr -> i64
+    %spilled = arith.addi %spilledCopies, %hostedBytes : i64
     %noneSpilled = arith.cmpi eq, %spilled, %none : i64
     %trimming = arith.andi %trimNeeded, %noneSpilled : i1
     cf.cond_br %trimming, ^trimOwn, ^allocateOwn
@@ -11523,6 +11545,256 @@
   ^missing:
     return %false : i1
   }
+  // big matrices read from files whose block strict_packed_rows laid out like their rows table on the GPU (header, then
+  // the rows at the GPU stride): the list, its row count, the block and its bytes. Their first upload locks the block in
+  // place (cuMemHostRegister) and keeps it as their spill, the weights are in host memory once instead of a pageable and
+  // a pinned copy (ComfyUI keeps its weights pinned the same way): H3 on a 10 GB card streams ~14 GB every step
+  llvm.mlir.global internal @strict_gpu_hosts(dense<0> : tensor<4096xi64>) : !llvm.array<4096 x i64>
+  // 1 for a spill slot whose memory is the locked block of its list, unlocked (not freed) when the list dies
+  llvm.mlir.global internal @strict_gpu_spill_hosted(dense<0> : tensor<1024xi64>) : !llvm.array<1024 x i64>
+  // locked bytes of those blocks, at most half of the host memory
+  llvm.mlir.global internal @strict_gpu_hosted_bytes(0 : i64) : i64
+  // the driver functions locking and unlocking host memory, 0 before they are looked up, -1 when missing (Metal)
+  llvm.mlir.global internal @strict_gpu_lockers(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  llvm.mlir.global internal constant @strict_gpu_lock_name("cuMemHostRegister_v2\00") : !llvm.array<21 x i8>
+  llvm.mlir.global internal constant @strict_gpu_unlock_name("cuMemHostUnregister\00") : !llvm.array<20 x i8>
+  llvm.mlir.global internal constant @strict_gpu_amd_lock_name("hipHostRegister\00") : !llvm.array<16 x i8>
+  llvm.mlir.global internal constant @strict_gpu_amd_unlock_name("hipHostUnregister\00") : !llvm.array<18 x i8>
+  func.func private @strict_gpu_host_slot(%index: i64) -> !llvm.ptr {
+    %four = arith.constant 4 : i64
+    %hosts = llvm.mlir.addressof @strict_gpu_hosts : !llvm.ptr
+    %offset = arith.muli %index, %four : i64
+    %slot = llvm.getelementptr %hosts[0, %offset] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<4096 x i64>
+    return %slot : !llvm.ptr
+  }
+  // remembers the block of a matrix strict_packed_rows laid out like its rows table (nothing when all 1024 are taken)
+  func.func private @strict_gpu_hosting(%list: f64, %count: i64, %block: !llvm.ptr, %bytes: i64, %isImage: i1) {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %slots = arith.constant 1024 : i64
+    cf.cond_br %isImage, ^find(%none : i64), ^done
+  ^find(%index: i64):
+    %more = arith.cmpi slt, %index, %slots : i64
+    cf.cond_br %more, ^check, ^done
+  ^check:
+    %slot = func.call @strict_gpu_host_slot(%index) : (i64) -> !llvm.ptr
+    %stored = llvm.load %slot : !llvm.ptr -> i64
+    %isFree = arith.cmpi eq, %stored, %none : i64
+    %following = arith.addi %index, %one : i64
+    cf.cond_br %isFree, ^store, ^find(%following : i64)
+  ^store:
+    %listBits = arith.bitcast %list : f64 to i64
+    llvm.store %listBits, %slot : i64, !llvm.ptr
+    %countSlot = llvm.getelementptr %slot[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %count, %countSlot : i64, !llvm.ptr
+    %blockBits = llvm.ptrtoint %block : !llvm.ptr to i64
+    %blockSlot = llvm.getelementptr %slot[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %blockBits, %blockSlot : i64, !llvm.ptr
+    %bytesSlot = llvm.getelementptr %slot[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %bytes, %bytesSlot : i64, !llvm.ptr
+    cf.br ^done
+  ^done:
+    return
+  }
+  // the block laid out for rows (count rows in bytes like their rows table), taken out of strict_gpu_hosts, else null
+  func.func private @strict_gpu_hosted(%rows: f64, %count: i64, %bytes: i64) -> !llvm.ptr {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %slots = arith.constant 1024 : i64
+    %nothing = llvm.mlir.zero : !llvm.ptr
+    %listBits = arith.bitcast %rows : f64 to i64
+    cf.br ^find(%none : i64)
+  ^find(%index: i64):
+    %more = arith.cmpi slt, %index, %slots : i64
+    cf.cond_br %more, ^check, ^done(%nothing : !llvm.ptr)
+  ^check:
+    %slot = func.call @strict_gpu_host_slot(%index) : (i64) -> !llvm.ptr
+    %stored = llvm.load %slot : !llvm.ptr -> i64
+    %countSlot = llvm.getelementptr %slot[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %storedCount = llvm.load %countSlot : !llvm.ptr -> i64
+    %bytesSlot = llvm.getelementptr %slot[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %storedBytes = llvm.load %bytesSlot : !llvm.ptr -> i64
+    %sameList = arith.cmpi eq, %stored, %listBits : i64
+    %sameCount = arith.cmpi eq, %storedCount, %count : i64
+    %sameBytes = arith.cmpi eq, %storedBytes, %bytes : i64
+    %sameShape = arith.andi %sameCount, %sameBytes : i1
+    %found = arith.andi %sameList, %sameShape : i1
+    %following = arith.addi %index, %one : i64
+    cf.cond_br %found, ^take, ^find(%following : i64)
+  ^take:
+    llvm.store %none, %slot : i64, !llvm.ptr
+    %blockSlot = llvm.getelementptr %slot[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %blockBits = llvm.load %blockSlot : !llvm.ptr -> i64
+    %block = llvm.inttoptr %blockBits : i64 to !llvm.ptr
+    cf.br ^done(%block : !llvm.ptr)
+  ^done(%result: !llvm.ptr):
+    return %result : !llvm.ptr
+  }
+  // the blocks of lists that died are forgotten before the collector frees them
+  func.func private @strict_gpu_unhost_dead() {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %slots = arith.constant 1024 : i64
+    cf.br ^next(%none : i64)
+  ^next(%index: i64):
+    %more = arith.cmpi slt, %index, %slots : i64
+    cf.cond_br %more, ^check, ^done
+  ^check:
+    %slot = func.call @strict_gpu_host_slot(%index) : (i64) -> !llvm.ptr
+    %listBits = llvm.load %slot : !llvm.ptr -> i64
+    %following = arith.addi %index, %one : i64
+    %isUsed = arith.cmpi ne, %listBits, %none : i64
+    cf.cond_br %isUsed, ^alive, ^next(%following : i64)
+  ^alive:
+    %marked = func.call @strict_gc_is_marked(%listBits) : (i64) -> i1
+    cf.cond_br %marked, ^next(%following : i64), ^forget
+  ^forget:
+    llvm.store %none, %slot : i64, !llvm.ptr
+    cf.br ^next(%following : i64)
+  ^done:
+    return
+  }
+  // the driver function locking (which 0) or unlocking (1) host memory, null without one
+  func.func private @strict_gpu_locker(%which: i64) -> !llvm.ptr {
+    %none = arith.constant 0 : i64
+    %missing = arith.constant -1 : i64
+    %nothing = llvm.mlir.zero : !llvm.ptr
+    %lockers = llvm.mlir.addressof @strict_gpu_lockers : !llvm.ptr
+    %slot = llvm.getelementptr %lockers[0, %which] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<2 x i64>
+    %bits = llvm.load %slot : !llvm.ptr -> i64
+    %isUnknown = arith.cmpi eq, %bits, %none : i64
+    cf.cond_br %isUnknown, ^look, ^known(%bits : i64)
+  ^look:
+    %amdSlot = llvm.mlir.addressof @strict_gpu_amd : !llvm.ptr
+    %amd = llvm.load %amdSlot : !llvm.ptr -> i64
+    %isAmd = arith.cmpi ne, %amd, %none : i64
+    %library = func.call @strict_gpu_library(%isAmd) : (i1) -> !llvm.ptr
+    %isUnlock = arith.cmpi ne, %which, %none : i64
+    %lockName = llvm.mlir.addressof @strict_gpu_lock_name : !llvm.ptr
+    %unlockName = llvm.mlir.addressof @strict_gpu_unlock_name : !llvm.ptr
+    %amdLockName = llvm.mlir.addressof @strict_gpu_amd_lock_name : !llvm.ptr
+    %amdUnlockName = llvm.mlir.addressof @strict_gpu_amd_unlock_name : !llvm.ptr
+    %nvidiaName = llvm.select %isUnlock, %unlockName, %lockName : i1, !llvm.ptr
+    %amdName = llvm.select %isUnlock, %amdUnlockName, %amdLockName : i1, !llvm.ptr
+    %name = llvm.select %isAmd, %amdName, %nvidiaName : i1, !llvm.ptr
+    %hasLibrary = llvm.icmp "ne" %library, %nothing : !llvm.ptr
+    cf.cond_br %hasLibrary, ^resolve, ^store(%missing : i64)
+  ^resolve:
+    %function = func.call @strict_gpu_lookup(%library, %name) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %functionBits = llvm.ptrtoint %function : !llvm.ptr to i64
+    %isMissing = arith.cmpi eq, %functionBits, %none : i64
+    %resolved = arith.select %isMissing, %missing, %functionBits : i64
+    cf.br ^store(%resolved : i64)
+  ^store(%stored: i64):
+    llvm.store %stored, %slot : i64, !llvm.ptr
+    cf.br ^known(%stored : i64)
+  ^known(%known: i64):
+    %absent = arith.cmpi eq, %known, %missing : i64
+    %pointer = llvm.inttoptr %known : i64 to !llvm.ptr
+    %result = llvm.select %absent, %nothing, %pointer : i1, !llvm.ptr
+    return %result : !llvm.ptr
+  }
+  // locks bytes of block in place for asynchronous copies while at most half of the host memory is locked so
+  func.func private @strict_gpu_locked(%block: !llvm.ptr, %bytes: i64) -> i1 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %zero32 = arith.constant 0 : i32
+    %true = arith.constant true
+    %false = arith.constant false
+    %nothing = llvm.mlir.zero : !llvm.ptr
+    %hostedSlot = llvm.mlir.addressof @strict_gpu_hosted_bytes : !llvm.ptr
+    %hosted = llvm.load %hostedSlot : !llvm.ptr -> i64
+    %after = arith.addi %hosted, %bytes : i64
+    %memory = func.call @strict_host_memory() : () -> i64
+    %half = arith.shrui %memory, %one : i64
+    %fits = arith.cmpi ule, %after, %half : i64
+    cf.cond_br %fits, ^find, ^done(%false : i1)
+  ^find:
+    %lock = func.call @strict_gpu_locker(%none) : (i64) -> !llvm.ptr
+    %hasLock = llvm.icmp "ne" %lock, %nothing : !llvm.ptr
+    cf.cond_br %hasLock, ^lock, ^done(%false : i1)
+  ^lock:
+    func.call @strict_gpu_replay() : () -> ()
+    %result = llvm.call %lock(%block, %bytes, %zero32) : !llvm.ptr, (!llvm.ptr, i64, i32) -> i32
+    %isLocked = arith.cmpi eq, %result, %zero32 : i32
+    cf.cond_br %isLocked, ^count, ^done(%false : i1)
+  ^count:
+    llvm.store %after, %hostedSlot : i64, !llvm.ptr
+    cf.br ^done(%true : i1)
+  ^done(%locked: i1):
+    return %locked : i1
+  }
+  func.func private @strict_gpu_unlocked(%host: i64, %bytes: i64) {
+    %one = arith.constant 1 : i64
+    %nothing = llvm.mlir.zero : !llvm.ptr
+    %unlock = func.call @strict_gpu_locker(%one) : (i64) -> !llvm.ptr
+    %hasUnlock = llvm.icmp "ne" %unlock, %nothing : !llvm.ptr
+    cf.cond_br %hasUnlock, ^unlock, ^count
+  ^unlock:
+    func.call @strict_gpu_replay() : () -> ()
+    %pointer = llvm.inttoptr %host : i64 to !llvm.ptr
+    %result = llvm.call %unlock(%pointer) : !llvm.ptr, (!llvm.ptr) -> i32
+    cf.br ^count
+  ^count:
+    %hostedSlot = llvm.mlir.addressof @strict_gpu_hosted_bytes : !llvm.ptr
+    %hosted = llvm.load %hostedSlot : !llvm.ptr -> i64
+    %remaining = arith.subi %hosted, %bytes : i64
+    llvm.store %remaining, %hostedSlot : i64, !llvm.ptr
+    return
+  }
+  // locks the block strict_gpu_rows filled in place and keeps it as the spill of rows, false when no spill slot is free
+  // or the block could not be locked (it then goes up like any pageable rows table)
+  func.func private @strict_gpu_host_spilled(%rows: f64, %count: i64, %block: !llvm.ptr, %total: i64, %columns: i64, %bits: i64, %kind: i64) -> i1 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %slotBytes = arith.constant 64 : i64
+    %true = arith.constant true
+    %false = arith.constant false
+    %nothing = llvm.mlir.zero : !llvm.ptr
+    %slot = func.call @strict_gpu_spilled(%none, %none, %true) : (i64, i64, i1) -> !llvm.ptr
+    %hasSlot = llvm.icmp "ne" %slot, %nothing : !llvm.ptr
+    cf.cond_br %hasSlot, ^lock, ^done(%false : i1)
+  ^lock:
+    %locked = func.call @strict_gpu_locked(%block, %total) : (!llvm.ptr, i64) -> i1
+    cf.cond_br %locked, ^record, ^done(%false : i1)
+  ^record:
+    %listBits = arith.bitcast %rows : f64 to i64
+    llvm.store %listBits, %slot : i64, !llvm.ptr
+    %countSlot = llvm.getelementptr %slot[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %count, %countSlot : i64, !llvm.ptr
+    %blockBits = llvm.ptrtoint %block : !llvm.ptr to i64
+    %pinnedSlot = llvm.getelementptr %slot[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %blockBits, %pinnedSlot : i64, !llvm.ptr
+    %totalSlot = llvm.getelementptr %slot[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %total, %totalSlot : i64, !llvm.ptr
+    %lengthSlot = llvm.getelementptr %slot[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %columns, %lengthSlot : i64, !llvm.ptr
+    %bitsSlot = llvm.getelementptr %slot[5] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %bits, %bitsSlot : i64, !llvm.ptr
+    %kindSlot = llvm.getelementptr %slot[6] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %kind, %kindSlot : i64, !llvm.ptr
+    %nextSlot = llvm.getelementptr %slot[7] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %none, %nextSlot : i64, !llvm.ptr
+    %spills = llvm.mlir.addressof @strict_gpu_spills : !llvm.ptr
+    %spillsBits = llvm.ptrtoint %spills : !llvm.ptr to i64
+    %slotBits = llvm.ptrtoint %slot : !llvm.ptr to i64
+    %slotOffset = arith.subi %slotBits, %spillsBits : i64
+    %index = arith.divui %slotOffset, %slotBytes : i64
+    %flags = llvm.mlir.addressof @strict_gpu_spill_hosted : !llvm.ptr
+    %flagSlot = llvm.getelementptr %flags[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<1024 x i64>
+    llvm.store %one, %flagSlot : i64, !llvm.ptr
+    cf.br ^done(%true : i1)
+  ^done(%kept: i1):
+    return %kept : i1
+  }
+  func.func private @strict_gpu_unstaged_unless(%buffer: !llvm.ptr, %isHosted: i1) {
+    cf.cond_br %isHosted, ^done, ^release
+  ^release:
+    func.call @strict_gpu_unstaged(%buffer) : (!llvm.ptr) -> ()
+    cf.br ^done
+  ^done:
+    return
+  }
   // the pinned copies of rows whose list died go back
   func.func private @strict_gpu_unspill_dead() {
     %none = arith.constant 0 : i64
@@ -11544,6 +11816,19 @@
   ^release:
     %pinnedSlot = llvm.getelementptr %slot[2] : (!llvm.ptr) -> !llvm.ptr, i64
     %pinned = llvm.load %pinnedSlot : !llvm.ptr -> i64
+    %hostedFlags = llvm.mlir.addressof @strict_gpu_spill_hosted : !llvm.ptr
+    %hostedSlot = llvm.getelementptr %hostedFlags[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<1024 x i64>
+    %hosted = llvm.load %hostedSlot : !llvm.ptr -> i64
+    %isHosted = arith.cmpi ne, %hosted, %none : i64
+    cf.cond_br %isHosted, ^unlock, ^unpin
+  ^unlock:
+    llvm.store %none, %hostedSlot : i64, !llvm.ptr
+    llvm.store %none, %slot : i64, !llvm.ptr
+    %lockedTotalSlot = llvm.getelementptr %slot[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %lockedTotal = llvm.load %lockedTotalSlot : !llvm.ptr -> i64
+    func.call @strict_gpu_unlocked(%pinned, %lockedTotal) : (i64, i64) -> ()
+    cf.br ^next(%following : i64)
+  ^unpin:
     func.call @strict_gpu_unpinned(%pinned) : (i64) -> ()
     llvm.store %none, %slot : i64, !llvm.ptr
     %totalSlot = llvm.getelementptr %slot[3] : (!llvm.ptr) -> !llvm.ptr, i64
@@ -11554,6 +11839,7 @@
     llvm.store %remaining, %spilledSlot : i64, !llvm.ptr
     cf.br ^next(%following : i64)
   ^done:
+    func.call @strict_gpu_unhost_dead() : () -> ()
     return
   }
   // a big host list uploaded into an allocation of its own counts like a block cut from a chunk: a full collection
@@ -14899,6 +15185,74 @@
   ^done(%result: i1):
     return %result : i1
   }
+  // gathers the rows start to end of strict_gpu_rows into its staging buffer on the pool threads (one thread gathered
+  // ~3.7 GB/s, H3 on a 10 GB card gathers ~14 GB per step), the last context word becomes 1 when one of these rows has
+  // more than one scale (a result counts only as an error, which would end the other chunks)
+  func.func private @strict_gpu_gathering(%context: !llvm.ptr, %start: i64, %end: i64) -> f64 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %eight = arith.constant 8 : i64
+    %sixtyFour = arith.constant 64 : i64
+    %true = arith.constant true
+    %items = llvm.load %context : !llvm.ptr -> !llvm.ptr
+    %stagingSlot = llvm.getelementptr %context[1] : (!llvm.ptr) -> !llvm.ptr, !llvm.ptr
+    %staging = llvm.load %stagingSlot : !llvm.ptr -> !llvm.ptr
+    %headerSlot = llvm.getelementptr %context[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %header = llvm.load %headerSlot : !llvm.ptr -> i64
+    %strideSlot = llvm.getelementptr %context[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %rowStride = llvm.load %strideSlot : !llvm.ptr -> i64
+    %columnsSlot = llvm.getelementptr %context[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    %columns = llvm.load %columnsSlot : !llvm.ptr -> i64
+    %narrowestSlot = llvm.getelementptr %context[5] : (!llvm.ptr) -> !llvm.ptr, i64
+    %narrowest = llvm.load %narrowestSlot : !llvm.ptr -> i64
+    %narrowedSlot = llvm.getelementptr %context[6] : (!llvm.ptr) -> !llvm.ptr, i64
+    %narrowedWord = llvm.load %narrowedSlot : !llvm.ptr -> i64
+    %narrowed = arith.cmpi ne, %narrowedWord, %none : i64
+    cf.br ^row(%start, %true : i64, i1)
+  ^row(%rowIndex: i64, %uniformRows: i1):
+    %moreRows = arith.cmpi slt, %rowIndex, %end : i64
+    cf.cond_br %moreRows, ^gather, ^done
+  ^gather:
+    %rowSlot = llvm.getelementptr %items[%rowIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %gathered = llvm.load %rowSlot : !llvm.ptr -> f64
+    %rowBits = func.call @strict_gpu_bits(%gathered) : (f64) -> i64
+    %isWideRow = arith.cmpi eq, %rowBits, %sixtyFour : i64
+    %repacking = arith.andi %narrowed, %isWideRow : i1
+    %storedBits = arith.select %repacking, %narrowest, %rowBits : i64
+    %widthAt = arith.addi %rowIndex, %eight : i64
+    %widthSlot = llvm.getelementptr %staging[%widthAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %width = arith.trunci %storedBits : i64 to i8
+    llvm.store %width, %widthSlot : i8, !llvm.ptr
+    %rowBytes = func.call @strict_packed_bytes(%columns, %storedBits) : (i64, i64) -> i64
+    %rowOffset = arith.muli %rowIndex, %rowStride : i64
+    %offset = arith.addi %header, %rowOffset : i64
+    %destination = llvm.getelementptr %staging[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %rowData = func.call @strict_gpu_host(%gathered) : (f64) -> !llvm.ptr
+    cf.cond_br %repacking, ^repack, ^copyRow
+  ^repack:
+    %repacked = func.call @strict_gpu_repacked(%rowData, %columns, %narrowest, %destination) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i1
+    cf.br ^gathered
+  ^copyRow:
+    %inPlace = llvm.icmp "eq" %destination, %rowData : !llvm.ptr
+    cf.cond_br %inPlace, ^gathered, ^copying
+  ^copying:
+    %copied = llvm.call @memcpy(%destination, %rowData, %rowBytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    cf.br ^gathered
+  ^gathered:
+    %nextRow = arith.addi %rowIndex, %one : i64
+    %uniformRow = func.call @strict_gpu_uniform(%destination, %columns, %storedBits) : (!llvm.ptr, i64, i64) -> i1
+    %stillUniform = arith.andi %uniformRows, %uniformRow : i1
+    cf.br ^row(%nextRow, %stillUniform : i64, i1)
+  ^done:
+    %zero = arith.constant 0.0 : f64
+    cf.cond_br %uniformRows, ^finished, ^mixed
+  ^mixed:
+    %mixedSlot = llvm.getelementptr %context[7] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %one, %mixedSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    cf.br ^finished
+  ^finished:
+    return %zero : f64
+  }
   // the rows of a matrix go up behind a header: the row stride (i64) and one byte per row with its width (64 for doubles),
   // padded to 16 bytes like the stride, so rows start aligned for vector loads, every row keeps its own format (Qwen3
   // has Q4_K query and key rows next to Q6_K value rows)
@@ -14975,49 +15329,56 @@
     %rowsBytes = arith.muli %rowStride, %count : i64
     %total = arith.addi %header, %rowsBytes : i64
     %big = arith.cmpi uge, %total, %cacheable : i64
-    %staging = func.call @strict_gpu_staging(%total) : (i64) -> !llvm.ptr
+    %image = func.call @strict_gpu_hosted(%rows, %count, %total) : (f64, i64, i64) -> !llvm.ptr
+    %unhosted = llvm.mlir.zero : !llvm.ptr
+    %isHosted = llvm.icmp "ne" %image, %unhosted : !llvm.ptr
+    cf.cond_br %isHosted, ^staged(%image : !llvm.ptr), ^freshStaging
+  ^freshStaging:
+    %fresh = func.call @strict_gpu_staging(%total) : (i64) -> !llvm.ptr
+    cf.br ^staged(%fresh : !llvm.ptr)
+  ^staged(%staging: !llvm.ptr):
     %countShift = arith.constant 32 : i64
     %countHigh = arith.shli %count, %countShift : i64
     %strideAndCount = arith.ori %rowStride, %countHigh : i64
     llvm.store %strideAndCount, %staging : i64, !llvm.ptr
-    cf.br ^row(%none, %true : i64, i1)
-  ^row(%rowIndex: i64, %uniformRows: i1):
-    %moreRows = arith.cmpi slt, %rowIndex, %count : i64
-    cf.cond_br %moreRows, ^gather, ^flagged
-  ^gather:
-    %rowSlot = llvm.getelementptr %items[%rowIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f64
-    %gathered = llvm.load %rowSlot : !llvm.ptr -> f64
-    %rowBits = func.call @strict_gpu_bits(%gathered) : (f64) -> i64
-    %isWideRow = arith.cmpi eq, %rowBits, %sixtyFour : i64
-    %repacking = arith.andi %narrowed, %isWideRow : i1
-    %storedBits = arith.select %repacking, %narrowest, %rowBits : i64
-    %widthAt = arith.addi %rowIndex, %eight : i64
-    %widthSlot = llvm.getelementptr %staging[%widthAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %width = arith.trunci %storedBits : i64 to i8
-    llvm.store %width, %widthSlot : i8, !llvm.ptr
-    %rowBytes = func.call @strict_packed_bytes(%columns, %storedBits) : (i64, i64) -> i64
-    %rowOffset = arith.muli %rowIndex, %rowStride : i64
-    %offset = arith.addi %header, %rowOffset : i64
-    %destination = llvm.getelementptr %staging[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %rowData = func.call @strict_gpu_host(%gathered) : (f64) -> !llvm.ptr
-    cf.cond_br %repacking, ^repack, ^copyRow
-  ^repack:
-    %repacked = func.call @strict_gpu_repacked(%rowData, %columns, %narrowest, %destination) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i1
-    cf.br ^gathered
-  ^copyRow:
-    %copied = llvm.call @memcpy(%destination, %rowData, %rowBytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
-    cf.br ^gathered
-  ^gathered:
-    %nextRow = arith.addi %rowIndex, %one : i64
-    %uniformRow = func.call @strict_gpu_uniform(%destination, %columns, %storedBits) : (!llvm.ptr, i64, i64) -> i1
-    %stillUniform = arith.andi %uniformRows, %uniformRow : i1
-    cf.br ^row(%nextRow, %stillUniform : i64, i1)
+    %contextBytes = arith.constant 64 : i64
+    %context = llvm.call @malloc(%contextBytes) : (i64) -> !llvm.ptr
+    llvm.store %items, %context : !llvm.ptr, !llvm.ptr
+    %stagingSlot = llvm.getelementptr %context[1] : (!llvm.ptr) -> !llvm.ptr, !llvm.ptr
+    llvm.store %staging, %stagingSlot : !llvm.ptr, !llvm.ptr
+    %headerSlot = llvm.getelementptr %context[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %header, %headerSlot : i64, !llvm.ptr
+    %strideSlot = llvm.getelementptr %context[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %rowStride, %strideSlot : i64, !llvm.ptr
+    %columnsSlot = llvm.getelementptr %context[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %columns, %columnsSlot : i64, !llvm.ptr
+    %narrowestSlot = llvm.getelementptr %context[5] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %narrowest, %narrowestSlot : i64, !llvm.ptr
+    %narrowedWord = arith.extui %narrowed : i1 to i64
+    %narrowedSlot = llvm.getelementptr %context[6] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %narrowedWord, %narrowedSlot : i64, !llvm.ptr
+    %mixedSlot = llvm.getelementptr %context[7] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %none, %mixedSlot : i64, !llvm.ptr
+    %body = func.constant @strict_gpu_gathering : (!llvm.ptr, i64, i64) -> f64
+    %ran = func.call @strict_parallel(%body, %context, %count) : ((!llvm.ptr, i64, i64) -> f64, !llvm.ptr, i64) -> f64
+    %mixed = llvm.load %mixedSlot : !llvm.ptr -> i64
+    llvm.call @free(%context) : (!llvm.ptr) -> ()
+    %uniformRows = arith.cmpi eq, %mixed, %none : i64
+    cf.br ^flagged
   ^flagged:
     %uniformBit = arith.constant 2147483648 : i64
     %uniformFlag = arith.select %uniformRows, %uniformBit, %none : i64
     %flaggedWord = arith.ori %strideAndCount, %uniformFlag : i64
     llvm.store %flaggedWord, %staging : i64, !llvm.ptr
-    cf.br ^upload
+    cf.cond_br %isHosted, ^hosting, ^upload
+  ^hosting:
+    %hostUniform = arith.constant 4 : i64
+    %hostKind = arith.select %uniformRows, %hostUniform, %two : i64
+    %kept = func.call @strict_gpu_host_spilled(%rows, %count, %staging, %total, %columns, %narrowest, %hostKind) : (f64, i64, !llvm.ptr, i64, i64, i64, i64) -> i1
+    cf.cond_br %kept, ^asSpilled, ^upload
+  ^asSpilled:
+    %upped = func.call @strict_gpu_unspilled(%rows, %count, %out) : (f64, i64, !llvm.ptr) -> i1
+    cf.cond_br %upped, ^owned, ^upload
   ^upload:
     cf.cond_br %big, ^dedicated, ^temporary
   ^dedicated:
@@ -15033,7 +15394,7 @@
     cf.cond_br %hasDevice, ^copy, ^unavailable
   ^copy:
     %put = func.call @strict_gpu_stage(%device, %staging, %total) : (i64, !llvm.ptr, i64) -> i1
-    func.call @strict_gpu_unstaged(%staging) : (!llvm.ptr) -> ()
+    func.call @strict_gpu_unstaged_unless(%staging, %isHosted) : (!llvm.ptr, i1) -> ()
     %keeping = arith.andi %put, %big : i1
     cf.cond_br %keeping, ^remember, ^copiedRows
   ^remember:
@@ -15045,7 +15406,7 @@
   ^copiedRows:
     return %put : i1
   ^unavailable:
-    func.call @strict_gpu_unstaged(%staging) : (!llvm.ptr) -> ()
+    func.call @strict_gpu_unstaged_unless(%staging, %isHosted) : (!llvm.ptr, i1) -> ()
     return %false : i1
   }
   // rows tables up to 256 MB are gathered in one pinned buffer: a fresh allocation for each faulted its pages in and the

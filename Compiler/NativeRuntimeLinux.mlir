@@ -2,6 +2,8 @@
   llvm.mlir.global internal constant @strict_temp_template("/tmp/strictXXXXXX\00") : !llvm.array<18 x i8>
   llvm.mlir.global internal constant @strict_shell("/bin/sh\00") : !llvm.array<8 x i8>
   llvm.mlir.global internal constant @strict_online(84 : i32) : i32
+  llvm.mlir.global internal constant @strict_physical_pages(85 : i32) : i32
+  llvm.mlir.global internal constant @strict_page_size(30 : i32) : i32
   llvm.func @strict_pause() attributes {passthrough = ["alwaysinline"]} {
     llvm.call_intrinsic "llvm.x86.sse2.pause"() : () -> ()
     llvm.return

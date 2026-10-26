@@ -470,6 +470,11 @@
     %libraryError = func.call @strict_error_named(%libraryMessage) : (!llvm.ptr) -> f64
     return %libraryError : f64
   }
+  // bytes of physical memory, 0 when unknown
+  func.func private @strict_host_memory() -> i64 {
+    %none = arith.constant 0 : i64
+    return %none : i64
+  }
   func.func private @strict_pool_spawn() -> i64 {
     %none = arith.constant 0 : i64
     return %none : i64

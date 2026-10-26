@@ -623,6 +623,19 @@
     %spawned = arith.cmpi eq, %created, %zero32 : i32
     return %spawned : i1
   }
+  // bytes of physical memory, 0 when unknown
+  func.func private @strict_host_memory() -> i64 {
+    %pagesSlot = llvm.mlir.addressof @strict_physical_pages : !llvm.ptr
+    %pagesName = llvm.load %pagesSlot : !llvm.ptr -> i32
+    %sizeSlot = llvm.mlir.addressof @strict_page_size : !llvm.ptr
+    %sizeName = llvm.load %sizeSlot : !llvm.ptr -> i32
+    %pages = llvm.call @sysconf(%pagesName) : (i32) -> i64
+    %size = llvm.call @sysconf(%sizeName) : (i32) -> i64
+    %zero = arith.constant 0 : i64
+    %product = arith.muli %pages, %size : i64
+    %bytes = arith.maxsi %product, %zero : i64
+    return %bytes : i64
+  }
   func.func private @strict_pool_spawn() -> i64 {
     %onlineSlot = llvm.mlir.addressof @strict_online : !llvm.ptr
     %online = llvm.load %onlineSlot : !llvm.ptr -> i32

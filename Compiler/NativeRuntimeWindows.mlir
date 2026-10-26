@@ -683,6 +683,7 @@
     return %number : f64
   }
   llvm.func @GetActiveProcessorCount(i16) -> i32
+  llvm.func @GetPhysicallyInstalledSystemMemory(!llvm.ptr) -> i32
   llvm.func @CreateThread(!llvm.ptr, i64, !llvm.ptr, !llvm.ptr, i32, !llvm.ptr) -> !llvm.ptr
   llvm.func @AcquireSRWLockExclusive(!llvm.ptr)
   llvm.func @ReleaseSRWLockExclusive(!llvm.ptr)
@@ -713,6 +714,18 @@
     cf.br ^done
   ^done:
     return %created : i1
+  }
+  // bytes of physical memory, 0 when unknown
+  func.func private @strict_host_memory() -> i64 {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %kilobyte = arith.constant 1024 : i64
+    %installed = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %installed : i64, !llvm.ptr
+    %known = llvm.call @GetPhysicallyInstalledSystemMemory(%installed) : (!llvm.ptr) -> i32
+    %kilobytes = llvm.load %installed : !llvm.ptr -> i64
+    %bytes = arith.muli %kilobytes, %kilobyte : i64
+    return %bytes : i64
   }
   func.func private @strict_pool_spawn() -> i64 {
     %groups = arith.constant -1 : i16
