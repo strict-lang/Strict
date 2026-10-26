@@ -596,6 +596,37 @@
     return %number : f64
   }
   llvm.func @sysconf(i32) -> i64
+  llvm.func @pthread_self() -> i64
+  llvm.func @pthread_getattr_np(i64, !llvm.ptr) -> i32
+  llvm.func @pthread_attr_getstack(!llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+  llvm.func @pthread_attr_destroy(!llvm.ptr) -> i32
+  // the lowest address of this thread's stack, pthread_getattr_np also knows it for threads Strict did not start
+  func.func private @strict_thread_stack_lowest(%stack: !llvm.ptr) -> i64 {
+    %one = arith.constant 1 : i64
+    %attributes = llvm.alloca %one x !llvm.array<64 x i8> : (i64) -> !llvm.ptr
+    %address = llvm.alloca %one x !llvm.ptr : (i64) -> !llvm.ptr
+    %size = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
+    %thread = llvm.call @pthread_self() : () -> i64
+    %got = llvm.call @pthread_getattr_np(%thread, %attributes) : (i64, !llvm.ptr) -> i32
+    %success = arith.constant 0 : i32
+    %failed = arith.cmpi ne, %got, %success : i32
+    cf.cond_br %failed, ^fail, ^read
+  ^read:
+    %read = llvm.call @pthread_attr_getstack(%attributes, %address, %size) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    %destroyed = llvm.call @pthread_attr_destroy(%attributes) : (!llvm.ptr) -> i32
+    %unreadable = arith.cmpi ne, %read, %success : i32
+    cf.cond_br %unreadable, ^fail, ^done
+  ^fail:
+    func.call @strict_gc_fail() : () -> ()
+    %fallback = llvm.ptrtoint %stack : !llvm.ptr to i64
+    return %fallback : i64
+  ^done:
+    %base = llvm.load %address : !llvm.ptr -> !llvm.ptr
+    %lowest = llvm.ptrtoint %base : !llvm.ptr to i64
+    return %lowest : i64
+  }
+  llvm.func @pthread_attr_init(!llvm.ptr) -> i32
+  llvm.func @pthread_attr_setstacksize(!llvm.ptr, i64) -> i32
   llvm.func @pthread_create(!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
   llvm.func @pthread_mutex_lock(!llvm.ptr) -> i32
   llvm.func @pthread_mutex_unlock(!llvm.ptr) -> i32
@@ -655,12 +686,17 @@
     %null = llvm.mlir.zero : !llvm.ptr
     %procedure = llvm.mlir.addressof @strict_pool_thread : !llvm.ptr
     %handle = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
+    %attributes = llvm.alloca %one x !llvm.array<8 x i64> : (i64) -> !llvm.ptr
+    %initialized = llvm.call @pthread_attr_init(%attributes) : (!llvm.ptr) -> i32
+    // 64 MB per worker like the main thread and Windows (the default is RLIMIT_STACK, usually 8 MB)
+    %stackBytes = arith.constant 67108864 : i64
+    %sized = llvm.call @pthread_attr_setstacksize(%attributes, %stackBytes) : (!llvm.ptr, i64) -> i32
     cf.br ^check(%zero : i64)
   ^check(%index: i64):
     %more = arith.cmpi slt, %index, %workers : i64
     cf.cond_br %more, ^spawn, ^done
   ^spawn:
-    %created = llvm.call @pthread_create(%handle, %null, %procedure, %null) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    %created = llvm.call @pthread_create(%handle, %attributes, %procedure, %null) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
     %next = arith.addi %index, %one : i64
     cf.br ^check(%next : i64)
   ^done:
