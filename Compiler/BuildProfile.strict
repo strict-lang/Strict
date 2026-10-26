@@ -47,7 +47,7 @@ Entry(main TypeCodegen, withTests Boolean, isQuiet Boolean) TypeEntry
 	TypeEntry(entry.Name, entry.members, methods)
 Linked(linker Linker, entry TypeEntry) List(TypeEntry)
 	let started = Process.Elapsed
-	let linked = linker.Linked(entry, List(Text), 20)
+	let linked = linker.Linked(entry, List(Text), Linker.Passes)
 	Reported("Frontend / dependency linking (" + linked.Length + " types)", started)
 	linked
 Parsed(compiler FileCompiler, sources Texts) Boolean

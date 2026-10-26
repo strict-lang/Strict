@@ -21,7 +21,7 @@ Prepared(candidates Texts) List(TypeEntry)
 	let tests = TestCodegen(main, true).Tests
 	let runner = MethodEntry(tests, instructions = Silent(tests.instructions))
 	let combined = TypeEntry(entry, methods = entry.methods + methods + runner)
-	Resolver(Linker(root, main).Linked(combined, List(Text), 20)).Resolved
+	Resolver(Linker(root, main).Linked(combined, List(Text), Linker.Passes)).Resolved
 Compiled(body Text, index Number) MethodEntry
 	let generator = main.Generator
 	let scope = main.MethodScope(header, generator.target)

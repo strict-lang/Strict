@@ -3,6 +3,7 @@ has entries List(TypeEntry)
 has signatures Texts
 constant Single = LinkRound(Linker.Sample, List(TypeEntry) + Linker.Go, List(Text))
 constant Twice = LinkRound(Linker.Sample, (Linker.Go, Linker.Go), List(Text) + "Strict/Logger:")
+constant Wrapping = LinkRound(Linker.Sample, (Linker.Go, TypeEntry.CharacterEntry, TypeEntry("Strict/Dictionary(Text)", MemberEntry.NumbersMember, List(MethodEntry))), ("Strict/Character:Floor", "Strict/Dictionary(Text):in"))
 Entries(signed Texts) List(TypeEntry)
 	Single.Entries(List(Text) + "Strict/Logger:").First.Name is "Strict/Logger"
 	for signed
@@ -20,3 +21,36 @@ Fresh(signature Text) TypeEntry
 		return linker.LinkedType(Signature(signature).Type, names)
 	let entry = entries(earlier + 1)
 	TypeEntry(entry.Name, entry.members, entry.methods + linker.LinkedType(Signature(signature).Type, names - old).methods)
+Forwarded(targets Texts) Texts
+	Wrapping.Forwarded(List(Text) + "Strict/Character.Floor") is ("Strict/Number.Floor")
+	Wrapping.Forwarded(("Strict/Character.from", "Strict/Dictionary(Text).in")).Length is 0
+	Wrapping.Forwarded(List(Text) + "Strict/Character.Round").Length is 0
+	let indices = Indices
+	mutable forwarded = List(Mutable(Text))
+	for targets
+		let type = value.Substring(0, value.LastIndexOf("."))
+		let method = value.Substring(type.Length + 1, value.Length - type.Length - 1)
+		if (type is in indices) and IsForwarded(type, indices(type), method)
+			forwarded.Add(entries(indices(type)).Changing.First.typeName + "." + method)
+	forwarded
+IsForwarded(type Text, index Number, method Text) Boolean
+	Wrapping.IsForwarded("Strict/Character", 1, "Floor")
+	Wrapping.IsForwarded("Strict/Character", 1, "Round") is false
+	let isRequested = (index is 0) or (method is in Signature(signatures(index - 1)).Names)
+	let isOwn = (method is "from") or linker.IsNative(type, method)
+	isRequested and (isOwn is false) and (entries(index).Chosen(method, -1, "", List(Text)) < 0)
+Indices Dictionary(Text, Number)
+	Wrapping.Indices("Strict/Character") is 1
+	Wrapping.Indices.Length is 2
+	mutable indices = Dictionary(Text, Number)
+	for entries
+		let local = Path(linker.main.fullName).PathOnly.text + "/" + value.Name
+		if value.Changing.Length is 1
+			indices(value.Name.IndexOf("/") < 0 then local else value.Name) = index
+	indices
+IsSettled(next LinkRound) Boolean
+	Single.IsSettled(Single)
+	Single.IsSettled(Twice) is false
+	Single.IsSettled(LinkRound(Linker.Sample, List(TypeEntry) + TypeEntry.Converting, List(Text))) is false
+	let isSame = (next.signatures.Length is signatures.Length) and ((next.signatures - signatures).Length is 0)
+	isSame and (next.entries.First.methods.Length is entries.First.methods.Length)
