@@ -48,7 +48,7 @@ The base types are the documentation: every method starts with tests showing how
 ```
 strict Examples/Sum.strict 5 10 20        run on the Strict VM, arguments go to Run
 strict test Examples/Sum.strict           run the inline tests on the Strict VM (a folder: every file and package sub folder)
-strict build Examples/Sum.strict          run the tests, then build the native executable
+strict build Examples/Sum.strict          build the native executable without running tests
 strict build Examples/Sum.strict linux    also the Linux executable (on Windows through WSL)
 strict build Examples/Sum.strict web      .html, .js and .wasm for the browser (Emscripten, installed when missing)
 strict build Examples/Sum.strict android  arm64-v8a shared library and assets in Release/Android (Android NDK)
@@ -58,14 +58,15 @@ strict build Policy.strict library        Policy.dll (.so, .dylib) exporting the
 strict build Games/App/App.strict         a windowed program goes into Games/App/Release with its Content (macOS: a signed .app)
 strict check Examples                     validate a folder (type rules, unused members, limits)
 strict format Examples/Sum.strict         print the file in its canonical form
+strict test Examples/Sum.strict native    build and run the tests natively
 strict test Examples/Sum.strict lines     run the tests natively, then show how often and how long each line ran
 strict test Examples/Sum.strict values    run the tests on the Strict VM, then show the values each line produced
 strict update .                           copy or download the packages of a folder again
 strict version                            version and build time of this strict
 ```
-- A type without `Run` builds its tests: `strict build Character.strict` runs `Character.test.exe` as the test gate (exit code: the number of failed tests), the Strict VM only when it does not build or crashes. A program with `Run` tests on the Strict VM unless that took more than twice its native build, then `Name.test.exe` gates later builds (delete it to go back). `web` and `library` builds always test on the Strict VM. Each test prints `Test passed: <test> in <Method> at <File>.strict:line <N>` or `Test failed: ...` with the value it got.
-- `strict build` and `strict test ... lines` run `Compiler/NativeCompiler.exe`; when a file of `Compiler/`, `Bytecode/` or `Expressions/` or a `Compiler/NativeRuntime*.mlir` is newer than it (an edit or a pull), they build the compiler again first and note that in `Compiler/NativeCompiler.checked` (the runtime files are read by every build, the compiler logic is fixed in the executable, both must match).
-- Exit codes: 0 success, `test` and `build` return the number of failed tests, 2 wrong usage or a missing file, an unhandled Error from `Run` exits with 1.
+- `strict build` compiles without running tests, including compiler refreshes, web and library builds. A type without `Run` produces `Name.test.exe` without executing it. Use `strict test <file>` for VM tests or `strict test <file> native` to build and run native tests explicitly; `lines` also collects per-line timings. Native test failures and toolchain errors return a nonzero exit code; neither falls back to the VM. CI requests both builds and native tests.
+- `strict build` and `strict test ... lines` run `Compiler/NativeCompiler.exe`; when a file of `Compiler/`, `Bytecode/` or `Expressions/` or a `Compiler/NativeRuntime*.mlir` is newer than it (an edit or a pull), they build the compiler again first and note that in `Compiler/NativeCompiler.checked`: the runtime files are read by every build while the compiler logic is fixed in the executable, after a pull a compiler from before a change of both (the lanes of grouped GPU loops) wrote only half of the heads of `Qwen3Block.Rotated` on the GPU and Qwen3.8-Flash-Next decoded NaN.
+- Exit codes: 0 success, `test` returns the number of failed tests, `build` returns nonzero on a compilation or toolchain failure, 2 wrong usage or a missing file, an unhandled Error from `Run` exits with 1.
 - `strict check` prints each issue as `<File>.strict:line <N>: <Rule>: <detail>`.
 - Files whose tests passed on the Strict VM get a `Name.strictbinary` (bytecode of all used types), while it is up to date `strict test` reports them as passed right away and running and building reuse it. Passing native tests write none, `strict test` still runs them on the VM.
 - Types are looked up in the current folder (and its sub folders in a project), next to `strict` (base types and packages like `Math`), in the projects next to the current one, then in GitHub repositories linked in the project's README and github.com/strict-lang (copied into the project with a `.origin` file).

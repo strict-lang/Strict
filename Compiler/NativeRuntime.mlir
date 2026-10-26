@@ -8819,6 +8819,55 @@
   ^done(%length: i64):
     return %length : i64
   }
+  func.func private @strict_file_joined_result(%self: f64, %text: f64, %separator: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
+    return %text : f64
+  }
+  func.func private @strict_file_joined(%path: f64) -> f64 {
+    %text = func.call @strict_file_text(%path) : (f64) -> f64
+    %pointer = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr
+    %carriage32 = arith.constant 13 : i32
+    %found = llvm.call @strchr(%pointer, %carriage32) : (!llvm.ptr, i32) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %clean = llvm.icmp "eq" %found, %null : !llvm.ptr
+    cf.cond_br %clean, ^unchanged, ^copy
+  ^unchanged:
+    return %text : f64
+  ^copy:
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %length = llvm.call @strlen(%pointer) : (!llvm.ptr) -> i64
+    %capacity = arith.addi %length, %one : i64
+    %output = func.call @strict_alloc_text(%capacity) : (i64) -> !llvm.ptr
+    cf.br ^scan(%zero, %zero : i64, i64)
+  ^scan(%index: i64, %written: i64):
+    %more = arith.cmpi ult, %index, %length : i64
+    cf.cond_br %more, ^character, ^done
+  ^character:
+    %source = llvm.getelementptr %pointer[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %byte = llvm.load %source : !llvm.ptr -> i8
+    %next = arith.addi %index, %one : i64
+    %following = llvm.getelementptr %pointer[%next] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %after = llvm.load %following : !llvm.ptr -> i8
+    %carriage = arith.constant 13 : i8
+    %newline = arith.constant 10 : i8
+    %isCarriage = arith.cmpi eq, %byte, %carriage : i8
+    %isNewline = arith.cmpi eq, %after, %newline : i8
+    %isLast = arith.cmpi eq, %next, %length : i64
+    %atEnd = arith.ori %isNewline, %isLast : i1
+    %stripped = arith.andi %isCarriage, %atEnd : i1
+    cf.cond_br %stripped, ^scan(%next, %written : i64, i64), ^keep
+  ^keep:
+    %target = llvm.getelementptr %output[%written] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %byte, %target : i8, !llvm.ptr
+    %kept = arith.addi %written, %one : i64
+    cf.br ^scan(%next, %kept : i64, i64)
+  ^done:
+    %end = llvm.getelementptr %output[%written] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %terminator = arith.constant 0 : i8
+    llvm.store %terminator, %end : i8, !llvm.ptr
+    %result = func.call @strict_bits(%output) : (!llvm.ptr) -> f64
+    return %result : f64
+  }
   func.func private @strict_file_read_lines(%path: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %four = arith.constant 4.0 : f64

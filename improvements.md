@@ -9,6 +9,10 @@ What to fix next, one short line each, bugs first. Remove a line once it is atte
 - Ternary Bonsai 27B stalls on 10 GB cards (p95 315 ms per token against 31 with 24 GB), not from collections (5 full ones either way): check uploads of evicted weights.
 - Native builds now and then leave an llvm-split part (`Name.test-3`, LLVM bitcode) next to the source: `NativeBuild.Removed` ignores a failed `File.Delete` (likely still open).
 - Parallel `strict build`s after a compiler change all rebuild `Compiler/NativeCompiler` at once and fail linking (`NativeCompiler.res` missing): one build rebuilds, the others wait for it.
+- A GPU loop calling a method that only wraps one summing call (`Normalization.Scale(Normalization.Squared(...))`) sums the whole group again per element (Moss sampling 4.0 -> 17.5 s): let `MlirGroups.Adding` look through such a callee, with a MlirGroups test.
+- `Compiler/Bootstrap.mlir` predates the 11 attention arguments: MossGenerate built by the stage 0 compiler of `Bootstrap.cmd` sampled for over 100 s; regenerate it from a fixpoint build.
+- A failed host allocation shows up as `AccessViolation` instead of an out of memory Error (H3 with 40 GB committed by other programs).
+- `File.Length` on the VM returns the collection length, not the file's byte count (release verification uses `ReadBytes.Length` for now).
 
 ## Next
 - GPU speed and memory (attention, 16 bit lists, memory budget, loading, generated loops): [improvements-gpu.md](improvements-gpu.md).
@@ -16,6 +20,8 @@ What to fix next, one short line each, bugs first. Remove a line once it is atte
 - Game engine (iOS, Android, one game loop, multiplayer, Spine, platform services): [improvements-engine.md](improvements-engine.md).
 - CI runs few native builds (about 4 minutes per job): add more while each job stays under 10 minutes.
 - Trees as pools with 32 bit backward offsets ([Goose](https://github.com/aardappel/goose)): measure SyntaxNode allocations per `strict build Strict.strict` first.
+- Native build latency: fresh Boolean and example builds still exceed 10/100 ms, warm builds regenerate MLIR before checking the executable, large GPU programs spend seconds emitting kernels and validating PTX; reuse the runtime PTX across programs (MossGenerate and MossImage compile identical modules), profile and cache before emission (`Compiler/README.md`).
+- 20 ms test budget: move slow integration and model tests (`Compiler/NativeFolder.Counted` 8.4 s on the VM, `Runtime/Execute.Completed` 112 ms) into explicit slow suites with their assertions, then enforce the budget.
 
 ## Waiting
 - Base library: Number `Sign`, `Wrap`, `ArcTangent2` and inverse trigonometry, Text to Numbers, fixed decimal text, `Truncated`.

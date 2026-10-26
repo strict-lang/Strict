@@ -23,6 +23,7 @@ H3 DiT steps (21.7 GB of weights, 37 of 50 blocks resident, the rest streamed) t
 - MossImage with ~0.9 GB used by other programs still has 1-8 full collections per step: a sub-allocating pool would end them
 - GPU-only lists can't be spilled, so H3 activations kept across the 50 streamed blocks (Spectrum feature anchors) take every byte from the weights: spillable activations or an explicit move to the host
 - H3's ~98 full collections per step come from strict_gpu_obtain before each 128 and 512 MB activation block (18-28 ms each in strict_gc_mark_range, 40 % of the main thread); collecting less was slower (blocks from the driver evict streamed weights), so make the mark cheaper (skip lists without references)
+- on 10 GB cards `strict_gpu_spill` pins at most 8 GB, the other ~14 GB of H3's DiT are packed and copied from pageable memory every step (5.3-6.4 s per step at ~7 % GPU against ComfyUI's 1.83 s, RTX 3080); every spilled row lives twice (host list and pinned copy): keep rows in pinned memory only (ComfyUI pins 26 GB), budget against the available commit memory (a cap of half the physical memory was tried, not merged)
 
 ## Loading
 The 21 GB H3 DiT loads in 10-12 s (ComfyUI 4-7 s), mostly page faults of the copy into fresh memory, and its first step uploads all of it (10.1-10.6 instead of 3.7 s), mostly gathering each table on one thread before its synchronous copy. Next: gather on the pool threads into two pinned buffers while the other one copies, then 8 bit rows gathered straight from the mapped file.

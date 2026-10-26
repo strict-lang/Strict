@@ -1,0 +1,6 @@
+has cache Compiler/PtxCache
+Run Number
+	GpuCacheCheck(PtxCache("C:/code/GitHub/strict-lang/Strict/Compiler/output/CacheProbe/OldGpu")).Previous is 1
+	0
+Previous Number
+	cache.Previous("module {\n}", false).Length

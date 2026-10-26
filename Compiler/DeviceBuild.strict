@@ -62,7 +62,7 @@ Shared(base Text, device Text, runtimes Texts, isTiling Boolean) Texts
 	Local.Shared(Doubled, Doubling, Without, false).First.IndexOf(" .entry strict_device_quantize(") > 0
 	Local.Shared(Doubled, Doubling, Without, false).First.IndexOf("Rows_Doubled") is -1
 	let header = device.Substring(0, device.IndexOf("\n  ") + 1) + (isTiling then MlirTokens.Marker + "\n}" else "}")
-	PtxCache(base + ".runtime").Built(Combined(header, runtimes), isTiling, DeviceBuild(tools), "")
+	PtxCache(base + ".runtime").Shared(Combined(header, runtimes), isTiling, DeviceBuild(tools))
 Hsaco(base Text, device Text, runtimes Texts) Text
 	DeviceBuild(Toolchain(Platform.MacOS, ".")).Hsaco(Kernels, "module {\n}", List(Text)) is ""
 	File(Kernels + ".hsaco").Exists is false
@@ -139,8 +139,8 @@ Embedded(host Text, ptx Texts, base Text) Text
 	if ptx.First.StartsWith("//") is false
 		return "GPU kernels failed: " + ptx.First
 	let ending = tools.platform is Platform.MacOS then ".metal" else ".ptx"
-	PtxCache(base).Written(ptx, ending)
-	Referenced(host, base, ptx.First)
+	let written = PtxCache(base).Written(ptx, ending)
+	written then Referenced(host, base, ptx.First) else "GPU kernels failed: could not write " + base + ending
 Referenced(host Text, base Text, newer Text) Text
 	Missing.Referenced("module {\n}", "A", "// a").EndsWith("hash:A\\001446433\\00\") : !llvm.array<15 x i8>\n}")
 	Missing.Referenced("module {\n}", "A", "// abc").EndsWith("hash:A\\0026501\\00\") : !llvm.array<13 x i8>\n}")

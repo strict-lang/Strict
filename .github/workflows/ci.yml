@@ -60,6 +60,7 @@ jobs:
           for entry in $NATIVE; do
             for file in $( [ -d "$entry" ] && ls "$entry"/*.strict || echo "$entry" ); do
               ./strict build "$file" > build.log 2>&1 || { code=$?; grep -v "^Test passed" build.log; echo "::error::native build of $file failed with exit code $code"; exit 1; }
+              ./strict test "$file" native > build.log 2>&1 || { code=$?; grep -v "^Test passed" build.log; echo "::error::native tests of $file failed with exit code $code"; exit 1; }
             done
           done
   windows:
@@ -105,5 +106,6 @@ jobs:
           for folder in $NATIVE; do
             for file in "$folder"/*.strict; do
               ./strict.exe build "$file" > build.log 2>&1 || { code=$?; grep -v "^Test passed" build.log; echo "::error::native build of $file failed with exit code $code"; exit 1; }
+              ./strict.exe test "$file" native > build.log 2>&1 || { code=$?; grep -v "^Test passed" build.log; echo "::error::native tests of $file failed with exit code $code"; exit 1; }
             done
           done
