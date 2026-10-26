@@ -15,8 +15,20 @@ Execute(arguments Text) ProcessResult
 ExecuteAll(arguments Texts) List(ProcessResult)
 	ToolRunner("noSuchStrictTool").ExecuteAll(("", "")).Last.Failed
 	Echo.ExecuteAll((Echoed + "a", Echoed + "b")).Last.Output is "b\n"
-	for Process.RunTools(name, arguments)
-		ProcessResult(value.exitCode, value.Output.Replace("\r", ""), value.error.Replace("\r", ""))
+	let phase = "Tool " + Path(name).FileName.text + " (" + arguments.Length + " jobs)"
+	Logger.Log("Running " + phase)
+	let started = Process.Elapsed
+	let results = Process.RunTools(name, arguments)
+	BuildProfile(Logger).Reported(phase, started)
+	for results
+		Retried(Cleaned(value), arguments(index))
+Retried(result ProcessResult, arguments Text) ProcessResult
+	ToolRunner("noSuchStrictTool").Retried(ProcessResult(139, "", ""), "").exitCode is 127
+	ToolRunner("noSuchStrictTool").Retried(ProcessResult(1, "", ""), "").exitCode is 1
+	IsCrash(result.exitCode) then Cleaned(Process.RunTool(name, arguments)) else result
+Cleaned(result ProcessResult) ProcessResult
+	Echo.Cleaned(ProcessResult(0, "a\r\n", "")).Output is "a\n"
+	ProcessResult(result.exitCode, result.Output.Replace("\r", ""), result.error.Replace("\r", ""))
 IsCrash(exitCode Number) Boolean
 	ToolRunner.IsCrash(139)
 	ToolRunner.IsCrash(-1073741819)

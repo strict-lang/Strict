@@ -5,8 +5,8 @@ Run(arguments Texts) Number
 	if cache.IsCurrent
 		logger.Log(cache.Message)
 		return 0
-	let inputs = cache.IsEnabled then cache.Snapshot(cache.Inputs.Unique) else List(Text)
-	let failed = Compiled(arguments(0), rest)
+	let inputs = cache.IsEnabled then BuildProfile(logger).Inputs(cache) else List(Text)
+	let failed = BuildProfile(logger).Compiled(arguments(0), rest)
 	if failed is 0
 		cache.Saved(inputs)
 	failed

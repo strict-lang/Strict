@@ -2957,8 +2957,36 @@
     %reduced = func.call @strict_device_lanes_sums(%total, %lane, %lanes) : (f32, i64, i64) -> f32
     return %reduced : f32
   }
+  // the 4 floats or bfloat16 numbers at at (16 or 8 byte aligned) as floats, and sum plus their squares in order
+  func.func private @strict_device_four_singles(%data: !llvm.ptr, %at: i64) -> vector<4xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
+    %slot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %four = llvm.load %slot {alignment = 16 : i64} : !llvm.ptr -> vector<4xf32>
+    return %four : vector<4xf32>
+  }
+  func.func private @strict_device_four_brains(%data: !llvm.ptr, %at: i64) -> vector<4xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
+    %slot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, bf16
+    %brains = llvm.load %slot {alignment = 8 : i64} : !llvm.ptr -> vector<4xbf16>
+    %four = arith.extf %brains : vector<4xbf16> to vector<4xf32>
+    return %four : vector<4xf32>
+  }
+  func.func private @strict_device_four_squared(%four: vector<4xf32>, %sum: f32) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %c0 = llvm.mlir.constant(0 : i32) : i32
+    %c1 = llvm.mlir.constant(1 : i32) : i32
+    %c2 = llvm.mlir.constant(2 : i32) : i32
+    %c3 = llvm.mlir.constant(3 : i32) : i32
+    %squared = arith.mulf %four, %four fastmath<contract> : vector<4xf32>
+    %s0 = llvm.extractelement %squared[%c0 : i32] : vector<4xf32>
+    %s1 = llvm.extractelement %squared[%c1 : i32] : vector<4xf32>
+    %s2 = llvm.extractelement %squared[%c2 : i32] : vector<4xf32>
+    %s3 = llvm.extractelement %squared[%c3 : i32] : vector<4xf32>
+    %added0 = arith.addf %sum, %s0 fastmath<contract> : f32
+    %added1 = arith.addf %added0, %s1 fastmath<contract> : f32
+    %added2 = arith.addf %added1, %s2 fastmath<contract> : f32
+    %added3 = arith.addf %added2, %s3 fastmath<contract> : f32
+    return %added3 : f32
+  }
   // the sum of squares of count numbers of one list from its start: each number is read once, 32 bit floats four at a
-  // time when the start is 16 byte aligned
+  // time when the start is 16 byte aligned, four of those loads at once (adding in the same order) while they fit
   func.func private @strict_device_squares(%failed: !llvm.ptr, %data: !llvm.ptr, %bits: i64, %dataCount: i64, %count: i64, %start: i64, %lane: i64, %lanes: i64) -> f32 {
     %zero = arith.constant 0.0 : f32
     %none = arith.constant 0 : i64
@@ -2989,38 +3017,63 @@
   ^fourStart:
     %fourFirst = arith.shli %lane, %two : i64
     %fourStep = arith.shli %lanes, %two : i64
-    cf.br ^fours(%fourFirst, %zero : i64, f32)
+    %quadSpan = arith.muli %fourStep, %three : i64
+    %quadStride = arith.shli %fourStep, %two : i64
+    cf.cond_br %isBrain, ^brainQuads(%fourFirst, %zero : i64, f32), ^singleQuads(%fourFirst, %zero : i64, f32)
+  ^singleQuads(%singleIndex: i64, %singleSum: f32):
+    %singleLast = arith.addi %singleIndex, %quadSpan : i64
+    %singleMore = arith.cmpi slt, %singleLast, %count : i64
+    cf.cond_br %singleMore, ^singleQuad, ^fours(%singleIndex, %singleSum : i64, f32)
+  ^singleQuad:
+    %singleAt0 = arith.addi %start, %singleIndex : i64
+    %singleAt1 = arith.addi %singleAt0, %fourStep : i64
+    %singleAt2 = arith.addi %singleAt1, %fourStep : i64
+    %singleAt3 = arith.addi %singleAt2, %fourStep : i64
+    %single0 = func.call @strict_device_four_singles(%data, %singleAt0) : (!llvm.ptr, i64) -> vector<4xf32>
+    %single1 = func.call @strict_device_four_singles(%data, %singleAt1) : (!llvm.ptr, i64) -> vector<4xf32>
+    %single2 = func.call @strict_device_four_singles(%data, %singleAt2) : (!llvm.ptr, i64) -> vector<4xf32>
+    %single3 = func.call @strict_device_four_singles(%data, %singleAt3) : (!llvm.ptr, i64) -> vector<4xf32>
+    %singleSum1 = func.call @strict_device_four_squared(%single0, %singleSum) : (vector<4xf32>, f32) -> f32
+    %singleSum2 = func.call @strict_device_four_squared(%single1, %singleSum1) : (vector<4xf32>, f32) -> f32
+    %singleSum3 = func.call @strict_device_four_squared(%single2, %singleSum2) : (vector<4xf32>, f32) -> f32
+    %singleSum4 = func.call @strict_device_four_squared(%single3, %singleSum3) : (vector<4xf32>, f32) -> f32
+    %singleNext = arith.addi %singleIndex, %quadStride : i64
+    cf.br ^singleQuads(%singleNext, %singleSum4 : i64, f32)
+  ^brainQuads(%brainIndex: i64, %brainSum: f32):
+    %brainLast = arith.addi %brainIndex, %quadSpan : i64
+    %brainMore = arith.cmpi slt, %brainLast, %count : i64
+    cf.cond_br %brainMore, ^brainQuad, ^fours(%brainIndex, %brainSum : i64, f32)
+  ^brainQuad:
+    %brainAt0 = arith.addi %start, %brainIndex : i64
+    %brainAt1 = arith.addi %brainAt0, %fourStep : i64
+    %brainAt2 = arith.addi %brainAt1, %fourStep : i64
+    %brainAt3 = arith.addi %brainAt2, %fourStep : i64
+    %brain0 = func.call @strict_device_four_brains(%data, %brainAt0) : (!llvm.ptr, i64) -> vector<4xf32>
+    %brain1 = func.call @strict_device_four_brains(%data, %brainAt1) : (!llvm.ptr, i64) -> vector<4xf32>
+    %brain2 = func.call @strict_device_four_brains(%data, %brainAt2) : (!llvm.ptr, i64) -> vector<4xf32>
+    %brain3 = func.call @strict_device_four_brains(%data, %brainAt3) : (!llvm.ptr, i64) -> vector<4xf32>
+    %brainSum1 = func.call @strict_device_four_squared(%brain0, %brainSum) : (vector<4xf32>, f32) -> f32
+    %brainSum2 = func.call @strict_device_four_squared(%brain1, %brainSum1) : (vector<4xf32>, f32) -> f32
+    %brainSum3 = func.call @strict_device_four_squared(%brain2, %brainSum2) : (vector<4xf32>, f32) -> f32
+    %brainSum4 = func.call @strict_device_four_squared(%brain3, %brainSum3) : (vector<4xf32>, f32) -> f32
+    %brainNext = arith.addi %brainIndex, %quadStride : i64
+    cf.br ^brainQuads(%brainNext, %brainSum4 : i64, f32)
   ^fours(%fourIndex: i64, %fourSum: f32):
     %fourMore = arith.cmpi slt, %fourIndex, %count : i64
     cf.cond_br %fourMore, ^fourBody, ^reduce(%fourSum : f32)
   ^fourBody:
-    %c0 = llvm.mlir.constant(0 : i32) : i32
-    %c1 = llvm.mlir.constant(1 : i32) : i32
-    %c2 = llvm.mlir.constant(2 : i32) : i32
-    %c3 = llvm.mlir.constant(3 : i32) : i32
     %fourAt = arith.addi %start, %fourIndex : i64
     cf.cond_br %isBrain, ^brainFour, ^singleFour
   ^brainFour:
-    %brainSlot = llvm.getelementptr %data[%fourAt] : (!llvm.ptr, i64) -> !llvm.ptr, bf16
-    %brainFour = llvm.load %brainSlot {alignment = 8 : i64} : !llvm.ptr -> vector<4xbf16>
-    %fromBrains = arith.extf %brainFour : vector<4xbf16> to vector<4xf32>
+    %fromBrains = func.call @strict_device_four_brains(%data, %fourAt) : (!llvm.ptr, i64) -> vector<4xf32>
     cf.br ^fourLoaded(%fromBrains : vector<4xf32>)
   ^singleFour:
-    %slot = llvm.getelementptr %data[%fourAt] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    %singleFour = llvm.load %slot {alignment = 16 : i64} : !llvm.ptr -> vector<4xf32>
-    cf.br ^fourLoaded(%singleFour : vector<4xf32>)
+    %fromSingles = func.call @strict_device_four_singles(%data, %fourAt) : (!llvm.ptr, i64) -> vector<4xf32>
+    cf.br ^fourLoaded(%fromSingles : vector<4xf32>)
   ^fourLoaded(%four: vector<4xf32>):
-    %squared = arith.mulf %four, %four fastmath<contract> : vector<4xf32>
-    %s0 = llvm.extractelement %squared[%c0 : i32] : vector<4xf32>
-    %s1 = llvm.extractelement %squared[%c1 : i32] : vector<4xf32>
-    %s2 = llvm.extractelement %squared[%c2 : i32] : vector<4xf32>
-    %s3 = llvm.extractelement %squared[%c3 : i32] : vector<4xf32>
-    %added0 = arith.addf %fourSum, %s0 fastmath<contract> : f32
-    %added1 = arith.addf %added0, %s1 fastmath<contract> : f32
-    %added2 = arith.addf %added1, %s2 fastmath<contract> : f32
-    %added3 = arith.addf %added2, %s3 fastmath<contract> : f32
+    %added = func.call @strict_device_four_squared(%four, %fourSum) : (vector<4xf32>, f32) -> f32
     %fourFollowing = arith.addi %fourIndex, %fourStep : i64
-    cf.br ^fours(%fourFollowing, %added3 : i64, f32)
+    cf.br ^fours(%fourFollowing, %added : i64, f32)
   ^genericStart:
     cf.br ^generic(%lane, %zero : i64, f32)
   ^generic(%index: i64, %sum: f32):

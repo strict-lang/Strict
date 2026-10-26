@@ -1,11 +1,15 @@
 # Strict.Compiler
-Builds native executables: `NativeBuild` behind `strict build` turns the instructions of all used types into MLIR (`MlirModule`, one `MlirFunction` per method with `MlirStatements`, `MlirCalls`, `MlirLoops` and friends, `MlirKernel` and `MlirFastLoop` add a copy without per element checks to simple loops over lists, LLVM vectorizes it), adds the runtime written directly in MLIR (`NativeRuntime.mlir` for texts, lists, files, processes and the garbage collector, `NativeRuntimeWindows.mlir` or `NativeRuntimeLinux.mlir` for the platform) and runs mlir-opt, mlir-translate and clang (`Toolchain`, `ToolRunner`). mlir-opt first drops every private function nothing calls (`--symbol-dce`, the runtime helpers a program does not use), for the host and the GPU module alike: 420 test and example executables 26% smaller (FizzBuzz 387 to 224 KB, clang 2.1 to 1.0 s), the PTX of a small GPU program 132 to 6 KB (NearestNeighbors), `strict.exe` 3.67 to 3.55 MB, same speed. The GPU module of a successful build is kept as `Name.kernels.mlir` next to `Name.ptx` (`PtxCache`): when the next build generates the same module and `strict` is older, the PTX is reused instead of running mlir-opt, mlir-translate and clang for sm_75 and sm_80 again (MossBlock.test 13.4 to 6.8 s). Builds never run tests or generate an extra test executable for a program. A type without `Run` builds its test executable without running it. `strict test <file> native` explicitly builds and runs native tests; `strict test <file> lines` also instruments per-line timings. Fresh program and library builds omit test bytecode and its dependencies; existing VM bytecode caches remain usable. Release packaging retains the build executable and publishes a checked temporary copy, so repeated game builds can reuse it.
+Builds native executables: `NativeBuild` behind `strict build` turns the instructions of all used types into MLIR (`MlirModule`, one `MlirFunction` per method with `MlirStatements`, `MlirCalls`, `MlirLoops` and friends, `MlirKernel` and `MlirFastLoop` add a copy without per element checks to simple loops over lists, LLVM vectorizes it), adds the runtime written directly in MLIR (`NativeRuntime.mlir` for texts, lists, files, processes and the garbage collector, `NativeRuntimeWindows.mlir` or `NativeRuntimeLinux.mlir` for the platform) and runs mlir-opt, mlir-translate and clang (`Toolchain`, `ToolRunner`). mlir-opt first drops every private function nothing calls (`--symbol-dce`, the runtime helpers a program does not use), for the host and the GPU module alike: 420 test and example executables 26% smaller (FizzBuzz 387 to 224 KB, clang 2.1 to 1.0 s), the PTX of a small GPU program 132 to 6 KB (NearestNeighbors), `strict.exe` 3.67 to 3.55 MB, same speed. The GPU module of a successful build is kept as `Name.kernels.mlir` next to `Name.ptx` (`PtxCache`): when emitted GPU input, code-generation flags and LLVM tools match, the PTX is reused instead of running mlir-opt, mlir-translate and clang for sm_75 and sm_80 again (MossBlock.test 13.4 to 6.8 s). Builds never run tests or generate an extra test executable for a program. A type without `Run` builds its test executable without running it. `strict test <file> native` explicitly builds and runs native tests; `strict test <file> lines` also instruments per-line timings. Fresh program and library builds omit test bytecode and its dependencies; existing VM bytecode caches remain usable. Release packaging retains the build executable and publishes a checked temporary copy, so repeated game builds can reuse it.
 
 A type of two 32 bit numbers (Vector2 `MlirPairs`, Size `MlirCouples`) is one 64-bit slot. A register holding a Vector2 that is read as a list (a `Numbers` parameter or return, a List method other than X, Y and Length, a loop, list arithmetic) becomes a list right after it is written, a list given or returned as a Vector2 becomes a pair (`MlirPacking`, the first such read decides), an index into a Vector2 reads the pair (`strict_two_at`). One-number types with `value.Bits is 32` (Degrees) are rounded to 32 bit when constructed, like on the Strict VM.
 
 Values are rewritten in place where nobody can see the old one: the dying value of a local, a list mapped to the same type or a returned struct becomes the destination of the call or loop replacing it (`MlirOwned`, `MlirDestined`, `MlirListDestined`, `MlirStructs`). A list of a flat type is one allocation with its elements inline (`strict_flat_list_new`).
 
 `NativeCompiler.strict` is the native compiler `strict` hands its builds to (`Process.Started`, the output appears right away), so the front end `strict` stays small (2.4 MB instead of 5.2 MB) and builds of other programs do not rebuild it. `Bootstrap.mlir` is the seed, `NativeCompiler` compiled by itself: `Bootstrap.cmd` (Windows) and `bootstrap.sh` (Linux and macOS) build `NativeCompiler` from it, which then builds `strict`.
+
+Every compilation prints dependency snapshot, frontend, MLIR emission, GPU preparation and total compilation times. Each external tool prints its name and job count before execution, then elapsed time after completion. GPU preparation includes its nested LLVM tools; do not add those twice. Total compilation excludes dependency snapshots and process startup. Unchanged builds print only `Up to date` and run no compiler or tests.
+
+The previous bootstrap seed still called `NativeGate`, so rebuilding from it ran tests and used the older compiler pipeline despite current source removing that gate. The seed now comes from byte-identical stages 2 and 3 (SHA-256 `605746933f973a03af535a3a0f051185dcb6115a0754fe95f2bc16e8ce99cef6`). A separately compiled seed built and ran a program containing a failing inline test without creating or running a test executable. `check_build.py` rejects seeds containing the old gate.
 
 Native model:
 - Every value is one 64-bit slot: numbers are doubles, texts, lists and instances pointer bits, Errors carry a NaN tag so `x is Error` works for any type.
@@ -28,20 +32,43 @@ Output: `X.android.so`, staged as `Release/Android/jniLibs/arm64-v8a/libmain.so`
 
 GPU memory pressure: cached host-backed dedicated copies are evicted by age after queued work completes when collection and free pool blocks are insufficient. Prepared argument buffers stay protected across nested dispatch until the owning call returns. GPU-only resident activations are not cold-copy candidates. `python Compiler/check_gpu_cache.py` checks row-format compatibility, nested input protection, restored scopes, and pooled-copy exclusion. On the RTX 3080 this lets the ordinary split/ThinLTO MOSS Spectrum runner finish its previously failing VAE transition with the exact baseline PNG; decoder transition overhead remains in StrictComfy/Handoff.md.
 
+NativeCache checks dependency stamps in `strict` before launching NativeCompiler, and in NativeCompiler for direct calls. Successful builds and native tests record sources, native C/header/flag inputs, source-folder membership, content, compiler/tool binaries and required outputs. Input snapshots must still match after compilation/tests before results are saved. Unchanged builds perform metadata checks only; unchanged native tests execute nothing. Cross-platform, library and instrumented builds currently bypass this stamp.
 
-Build timings (Windows, 2026-10-25, seconds; existing source caches, first build after a compiler update then two repeats):
+PTX cache keys include emitted input, target flags, exported symbols and LLVM executables. Rebuilding the compiler alone no longer discards identical GPU code. Shared runtime PTX lives under `Tools/PtxCache`, published from a private staging directory so parallel builds cannot read partial results. Program sidecars remain self-contained next to the executable. Whole-file `Text.Combine(File(path).ReadLines, "\n")` reads can lower to one normalized text read (`MlirReadText`); LF, CRLF, trailing CR, BOM, Unicode and empty-file behavior are checked by `python Compiler/check_build.py`.
 
-| Source | Rebuild | Unchanged |
+Measured on Windows, 2026-10-26. Timings include process startup. Cache misses below used an already prepared GPU runtime cache; they are not the cost of preparing a new LLVM/runtime combination.
+
+| Source | Native cache miss | Entire build skipped |
 | --- | ---: | ---: |
-| Boolean | 0.81 | 0.096-0.097 |
-| Examples/Sum | 0.68 | 0.074-0.079 |
-| NeuralNetworks/Xor | 2.66 | 0.965-0.967 |
-| StrictComfy/MossGenerate | 23.08 | 2.05-2.10 |
-| StrictComfy/MossImage | 20.90 | 3.38-3.40 |
-| DeltaEngine/Games/Breakout | 4.31 | 2.64-2.65 |
+| Boolean | 0.8-1.2 s | 62 ms |
+| Examples/Sum | 0.76 s | 55-57 ms |
+| NeuralNetworks/Xor | 3.08 s | 76-78 ms |
+| StrictComfy/MossGenerate | 6.28 s | 70-83 ms |
+| StrictComfy/MossImage | 5.50 s | 72-80 ms |
+| DeltaEngine/Games/Breakout | 17.72 s including native C rebuilds | 114-120 ms |
 
-Before removing the test gate, Boolean took 1.78 s and Sum 0.71 s here; the reported Moss builds also ran model tests and sometimes built another executable just for tests. Before retaining the game executable, each unchanged Breakout build relinked it (4.02-4.15 s with native C objects already built; the initial build including C objects was 16.83 s). NativeCompiler shrank from 5,122,560 to about 4,630,000 bytes; Sum remains 223,232 bytes and prints 35 for arguments 5, 10, 20.
+A separate MossGenerate copy took 11.0 s for its first program-specific GPU build, 6.03 s after changing a host log message, then 74 ms with no changes. Initial shared attention-runtime preparation still made the first build take 22.2 s before whole-file read fusion; subsequent programs reuse that runtime. After the concurrent upstream update changed GPU input, the first MossGenerate build took 21.17 s and MossImage 9.67 s; their next calls skipped in 70 ms. Those cold-cache and 2-3 s source-rebuild targets remain open.
 
-Phase profiling with a temporary native driver: Boolean loading 4 ms, emission 24 ms, host build 786 ms; Sum 3 ms, 4 ms, 611 ms. MossGenerate with bytecode cached spent 30 ms loading, 1.33 s emitting MLIR and 15.20 s building/preparing GPU code. Process sampling observed three MLIR lowering/translation pairs and four GPU clang invocations on a GPU rebuild, plus 16 host clang workers and ThinLTO. MossGenerate and MossImage have byte-identical `.runtime.kernels.mlir` modules but compile/cache the shared runtime separately; sharing that PTX is a remaining opportunity. Replaying Sum through direct clang produced 248,320 bytes versus 223,232 with the current split path and saved little time, so that change was discarded.
+MossImage phase profile: dependency snapshot 0.56 s, frontend 1.68 s, MLIR emission 1.23 s, GPU preparation 0.40 s, host LLVM/linking 1.88 s. Boolean's earlier 0.8 s was native test-code generation plus external LLVM lowering, translation, 16 clang workers and ThinLTO linking, without executing its tests. Xor also generates GPU kernels; compilation does not train the network. Source rebuilds still exceed the requested 10/100 ms small-file targets and 2-3 s complex-file target. Next work belongs in incremental frontend/IR reuse and emission/backend profiling, not rerunning tests or rebuilding identical shared kernels.
 
-These are not the requested fresh-build targets of 10 ms for Boolean and 100 ms for examples. Warm builds still emit modules and load runtime text before checking whether anything changed; fresh builds still launch external LLVM tools. Cache validation before emission and reducing LLVM startup/compilation overhead remain priorities in ../improvements.md. The 20 ms test budget and explicit slow-test selection are also pending; builds now run no tests. Reproduce the build/test and release-cache regression checks with `python Compiler/check_build.py` from Strict.
+Focused VM/native tests and the standalone regression check cover skipping builds/tests, changed source/dependencies/options/content, missing executables and whole-file read semantics. One earlier profiling process exited with Windows heap-corruption status 0xC0000374; repeated builds after a fresh self-build and upstream memory fixes passed, so its cause is unconfirmed.
+
+Latest visible phase measurements on this Windows workstation, using the exact Moss build commands from StrictComfy:
+
+| Phase | NativeCompiler self-build | MossGenerate | MossImage |
+| --- | ---: | ---: | ---: |
+| Dependency snapshot | 0.33 s | 0.41 s | 0.41 s |
+| Frontend | 15.54 s | 1.53 s | 1.43 s |
+| MLIR emission | 5.29 s | 1.39 s | 1.26 s |
+| GPU preparation | 0.20 s | 0.45 s, cached | 4.85 s, program kernels rebuilt |
+| Host MLIR lowering | 4.31 s | 0.48 s | 0.45 s |
+| Host LLVM translation | 2.87 s | 0.34 s | 0.31 s |
+| LLVM splitting | 1.74 s | 0.22 s | 0.20 s |
+| Parallel clang workers | 0.37 s | 0.16 s | 0.17 s |
+| Final clang/ThinLTO link | 3.23 s | 0.81 s | 0.79 s |
+| Wall time | 34.25 s | 6.00 s | 10.08 s |
+| Unchanged repeat | — | 76 ms | 71 ms |
+
+No tests ran during these builds. MossImage GPU preparation included 1.01 s lowering, 0.65 s translation and 2.69 s compiling two GPU targets; shared runtime PTX was already cached. The 10 s hard limit and 2-3 s target remain unmet for self-builds and some GPU cache misses. Frontend and emission dominate compiler self-builds; host linking alone does not explain them.
+
+Validation of this seed/timing update: Compiler check reports zero issues; NativeCompiler VM/native tests, Strict VM tests, ToolRunner VM tests and `python Compiler/check_build.py` pass. ToolRunner native tests fail before tool execution with `unsupported: text of List(IsWindow)` in `$Tests`; an unmodified HEAD copy fails identically. Explicit compiler native tests also exposed expensive dependency snapshots (18-32 s), which are separate from the 0.3-0.4 s build snapshots above.
