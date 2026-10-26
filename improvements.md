@@ -14,7 +14,6 @@ What to fix next, one short line each, bugs first. Remove a line once it is atte
 - `strict test Compiler/ToolRunner.strict native` fails with `unsupported: text of List(IsWindow)` in `$Tests`; conditional constants infer the wrong type (also fails without timing changes).
 - A method named like a base type is not what a bare name means inside its own loops: in `Bytecode/Signature`, `Signature(value).Type is Type` compared with the base type `Type` (silently false) instead of calling the method; report the ambiguity. Also inside `MlirModule.Emitted`'s loop `List(Text)` called `MlirModule.Text` on the VM, and natively `outer.Text.Combine` compiled to a call of `MlirModule.Text` first (endless module emission once a whole function was emitted, the VM was right).
 - Qwen3Benchmark native compilation intermittently exits with heap corruption after GPU preparation; keep the failing cold-build log and investigate in the compiler/runtime session.
-- A strict.exe built with the parallel loop rules crashes now and then in VM tests with 36 threads (`Text`, `Runtime/Frame`, `Runtime/Operations`, an AccessViolation or IndexOutOfRange in `Frame.Stored`), 1 and 4 threads pass: a race left in the runtime or a loop the purity rules let through (the compiler built in parallel rebuilds itself byte-identical).
 - GPU launches are not guarded on pool threads: `MlirSafety` keeps methods with GPU-able loops out of parallel loops; the runtime should run such loops on the CPU while the pool is busy.
 - Pool threads on Linux and macOS keep the default pthread stack (8 MB, 512 KB on macOS) and their stack guard takes the main thread's bound from `strict_stack_lowest`: a deep loop body crashes instead of returning StackOverflow (Windows reserves 64 MB per worker and asks `GetCurrentThreadStackLimits`).
 
@@ -24,8 +23,9 @@ What to fix next, one short line each, bugs first. Remove a line once it is atte
 - Game engine (iOS, Android, one game loop, multiplayer, Spine, platform services): [improvements-engine.md](improvements-engine.md).
 - CI runs few native builds (about 4 minutes per job): add more while each job stays under 10 minutes.
 - Trees as pools with 32 bit backward offsets ([Goose](https://github.com/aardappel/goose)): measure SyntaxNode allocations per `strict build Strict.strict` first.
-- Build speed: under 10 s hard limit, 2-3 s target. The MLIR split made strict.exe 40 -> 24.5 s and the compiler 75-85 -> 56 s. With `MlirSafety` 102 compiler loops are parallel (linker rounds, emission, check per file) and with per-thread allocation lanes and pinning instead of locked counting the compiler builds itself in 25 s with 4-8 threads (frontend 15 s, emission 8 s), but 36 threads take 58 s: find what still contends (pinning shared objects, the refill lock, no early freeing while the pool runs) (`Compiler/README.md`).
-- 20 ms test budget: move slow integration and model tests (`Compiler/NativeFolder.Counted` 8.4 s on the VM, `Runtime/Execute.Completed` 112 ms) into explicit slow suites with their assertions, then enforce the budget.
+- Build speed: under 10 s hard limit, 2-3 s target; profile repeated linker discovery/codegen and emission, compare moderate thread counts before changing pool defaults (Compiler/README.md).
+- 20 ms test budget: move integration/model tests and FileCompiler.Parsed, NativeFolder.Counted and Execute.Completed into explicit slow suites with their assertions, then enforce the budget.
+- Native File.Exists opens and closes each file before checking its directory bit; use platform metadata and measure lookup-heavy linker work.
 
 ## Waiting
 - Base library: Number `Sign`, `Wrap`, `ArcTangent2` and inverse trigonometry, Text to Numbers, fixed decimal text, `Truncated`.

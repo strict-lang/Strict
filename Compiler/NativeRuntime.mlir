@@ -1018,6 +1018,16 @@
     llvm.store %zero, %busySlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     return %soloResult : f64
   ^shared:
+    %jobSlot = llvm.mlir.addressof @strict_pool_job : !llvm.ptr
+    %previous = llvm.load %jobSlot : !llvm.ptr -> i64
+    %job = arith.addi %previous, %one : i64
+    %mask = arith.constant 4294967295 : i64
+    %tag = arith.andi %job, %mask : i64
+    %shift = arith.constant 32 : i64
+    %tagged = arith.shli %tag, %shift : i64
+    %first = arith.addi %tagged, %from : i64
+    %nextSlot = llvm.mlir.addressof @strict_pool_next : !llvm.ptr
+    %invalidated = llvm.atomicrmw xchg %nextSlot, %first acq_rel : !llvm.ptr, i64
     %bodyBits = llvm.ptrtoint %function : !llvm.ptr to i64
     %bodySlot = llvm.mlir.addressof @strict_pool_body : !llvm.ptr
     llvm.store %bodyBits, %bodySlot : i64, !llvm.ptr
@@ -1038,16 +1048,6 @@
     llvm.store %from, %doneSlot : i64, !llvm.ptr
     %failureSlot = llvm.mlir.addressof @strict_pool_failure : !llvm.ptr
     llvm.store %zero, %failureSlot : i64, !llvm.ptr
-    %jobSlot = llvm.mlir.addressof @strict_pool_job : !llvm.ptr
-    %previous = llvm.load %jobSlot : !llvm.ptr -> i64
-    %job = arith.addi %previous, %one : i64
-    %mask = arith.constant 4294967295 : i64
-    %tag = arith.andi %job, %mask : i64
-    %shift = arith.constant 32 : i64
-    %tagged = arith.shli %tag, %shift : i64
-    %first = arith.addi %tagged, %from : i64
-    %nextSlot = llvm.mlir.addressof @strict_pool_next : !llvm.ptr
-    llvm.store %first, %nextSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     func.call @strict_gc_lanes_emptied() : () -> ()
     llvm.store %one, %busySlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     llvm.store %job, %jobSlot atomic seq_cst {alignment = 8 : i64} : i64, !llvm.ptr
@@ -3141,7 +3141,7 @@
     %zeroCount = arith.constant 0 : i32
     %noFlags = arith.constant 0 : i8
     %seenFlag = arith.constant 1 : i8
-    %freeFlag = arith.constant 2 : i8
+    %pinnedFlag = arith.constant 32 : i8
     %located:5 = func.call @strict_gc_locate(%object) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
     %unset = llvm.mlir.zero : !llvm.ptr
     %found = llvm.icmp "ne" %located#0, %unset : !llvm.ptr
@@ -3164,7 +3164,10 @@
     %freeMarker = arith.constant -1 : i64
     %isFree = arith.cmpi eq, %marker, %freeMarker : i64
     %isSeen = arith.cmpi ne, %seen, %noFlags : i8
-    %ignored = arith.ori %isCounted, %isFree : i1
+    %pinned = arith.andi %flagByte, %pinnedFlag : i8
+    %isPinned = arith.cmpi ne, %pinned, %noFlags : i8
+    %isHeld = arith.ori %isCounted, %isPinned : i1
+    %ignored = arith.ori %isHeld, %isFree : i1
     cf.cond_br %ignored, ^nothing, ^unseen
   ^unseen:
     cf.cond_br %isSeen, ^keep, ^freeable

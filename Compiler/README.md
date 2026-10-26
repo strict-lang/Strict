@@ -163,3 +163,63 @@ Current verification: Bytecode, Runtime, Compiler, Networking, MachineLearning a
 Post-fix application checks used ordinary optimized builds and retained Release staging. MossGenerate built in 14.20 s with 6.12 s GPU preparation, MossImage in 9.39 s with 4.78 s GPU preparation, and LogoApp in 14.43 s with a 3.58 s clang job. Unchanged calls skipped in 72-113 ms, and no builds ran tests. These preparation-inclusive runs still exceed the 10 s ceiling for MossGenerate and LogoApp; they do not establish the 2-3 s target. Source/frontend/emission parallelization remains with the compiler optimization session.
 
 With GPU/native preparation cached, deleting only each application's `.nativecache` and host `.mlir` forced complete frontend/emission/host builds: MossGenerate 5.27 s, MossImage 4.79 s, LogoApp 4.74 s including Release/Windows staging. The following unchanged calls took 72, 77 and 112 ms respectively. No test execution occurred. These builds meet the 10 s ceiling but still exceed the 2-3 s target; preparation-inclusive builds and the compiler's own frontend/emission remain the larger cases to optimize.
+
+## Thread-pool merge audit (7c336d6e)
+
+Measured on this Windows machine: 32 logical processors, 64 GB RAM; the runtime default is 24 threads. The executables initially predated merged sources. Bootstrapping NativeCompiler at STRICT_THREADS=8 took 34.86 s. A frozen copy of that first-generation compiler was used for thread-count comparisons. Fresh builds removed the native build stamp and the correct host MLIR (Boolean.test.mlir for Boolean); GPU/native caches and Release staging were retained. Raw JSONL, per-file stdout, binaries and the diagnostic sampler are in ignored Compiler/output/ThreadAudit/. Failed output binaries are not counted as successful builds even when an older executable remains beside the source.
+
+| Fresh build | 4 threads | 8 threads | Default (24) |
+| --- | ---: | ---: | ---: |
+| Boolean | 1.13 s | 1.09 s | 1.11 s |
+| Examples/Sum | 0.70 s | 0.68 s | 0.70 s |
+| NeuralNetworks/Xor | 2.50 s | 2.48 s | 2.49 s |
+| NeuralNetworks/Iris | 2.65 s | 2.59 s | 2.67 s |
+| NativeCompiler self-build | 38.08 s | 35.49 s | 34.16 s |
+
+Small-program IR and executables were byte-identical across thread counts. All three self-builds also produced identical IR (SHA-256 e4e5b5eb8ae4df848e495292351f3980efda9e31677eb93ca4cdfe84f7c4c11f) and executable (4f99f45ce29310fa11090e92389c9c10c9b3dec595917861ddcac14eb9d61819), 4,510,720 bytes. The 4-thread self-build overlapped a short failing Strict build, so its wall time is not an isolated comparison. The serial 8/default results show no large scaling gain; self-build frontend remained about 15.9 s and emission 10.3 s.
+
+Correctness blocks broader performance claims. The first generation contains 30 strict_parallel call sites; the self-built second generation contains 108. The latter intermittently crashes compiling Boolean: AccessViolation (0xc0000005), heap corruption (0xc0000374), or an unsupported call of Error.Strict/List in Boolean_$Tests_0. It also sometimes produces the expected binary, so a single successful run is insufficient. Preserved generation2-NativeCompiler.exe and Compiler/NativeCompiler.audit2.exe reproduce it with `build Boolean.strict <Strict root>` under STRICT_THREADS=4 or 8. No runtime or parallelization source was modified by this audit.
+
+Larger cases with the first-generation compiler also need correctness work: Strict with 4 threads reports unsupported Strict/Execute.Run in Strict_Run_1; at 8 threads it exceeded 120 s after frontend (7.22 s). MossGenerate reports unsupported Strict/Safetensors.Shape in MossGenerate_Configured_2 at both 1 and 8 threads. MossImage reports unsupported Strict/Safetensors.Values in MossImage_ComparedRun_4 at 4 threads. These Comfy probes ran from StrictComfy, with the frozen compiler also copied into Compiler/ to preserve TypeSource.Root's executable-location assumption. LogoApp exceeded a 45 s probe budget before reporting frontend; WebWars exceeded 20 s after frontend (6.46 s). Timed-out process trees were killed. These are failures/stalls, not valid build timings. Existing LinkRound/Linker VM tests and Compiler/Bytecode checks passed despite these integration failures.
+
+Windows kernel CPU tracing could not start (WPR profiling policy, 0xc5585011). A process-only sampler of a mapped diagnostic compiler, built from second-generation IR through the existing MLIR split/ThinLTO pipeline, observed 8 threads before an AccessViolation at 3.36 s. In that short, crashing run, CPU-weighted instruction samples attributed about 35% to strict_pool_serve's idle spin and 42% outside the executable. This is not a healthy-build lock profile and does not prove that collector locks dominate. The map and sample JSON are retained for reproduction.
+
+Source review narrows the remaining synchronization: small allocations use per-thread lanes; lane overflow, large allocations and lane refill still use the collector lock. Pinning performs an atomic flag update only for an object not already pinned. While the pool is busy, count updates switch to pinning and early freeing/in-place behavior changes. Scheduling also spins: workers spin up to 200,000 iterations before sleeping, and the caller spins waiting for completion. Profile those paths separately after the bootstrap and missing-call regressions are resolved; deleting locks without restoring ownership guarantees would not validate correctness. Original pre-audit executables were restored; experimental generations remain isolated in ignored output files.
+
+
+## Pool recovery after c06d0649
+
+Two runtime bugs reproduced before their fixes. A delayed worker could pass the old job check while the caller published the next job's body/count, then claim and execute that new body under the old token. Publishing now invalidates the old token with an acquire/release exchange before changing shared job fields. Separately, pool stores pin references instead of counting them, but strict_rc_fate ignored the pin flag and reclaimed those objects afterward. Reclamation now leaves pinned objects with the collector. No extra allocator lock or conservative loop filter was added. `python Compiler/check_parallel.py` forces both failures against the actual runtime: premature body executions changed from 1 to 0 and reclamation of a pool-pinned object from 1 to 0.
+
+A fresh parallel strict.exe previously crashed in Text.Lines' second test; crash tracing caught an overwritten MethodEntry with the number 2 in its instructions field. After the lifetime fix, 60 fresh Text, Runtime/Frame and Runtime/Operations VM runs at 36 threads passed across two rebuilt versions. Compiler self-builds at 1, 8 and 36 threads produced identical IR and executables. Bootstrap generations also matched. Installed NativeCompiler.exe and strict.exe are clean builds from these sources.
+
+FileCompiler.Checked collected name diagnostics serially. It now collects per-file issue lists independently, then logs and counts them in source order. A two-file invalid project returned identical messages and ordering before/after. The compiler frontend probe measured name validation at 3.68 s before and 0.18 s after at eight threads. Compiler executable size rose from 4,641,280 to 4,643,328 bytes; self-build wall time fell from 26.18 to 22.38 s. The same final code took 47.53 s with one thread and produced the same executable hash, demonstrating about 2.1x total build speedup at eight threads. Earlier 36-thread builds took 31.26 s before this validation change; profiled final runs took about 23.8 s. These results support moderate concurrency here, rather than selecting a new universal default from one machine.
+
+Source-stage review: SourceFiles performs inventory/dependency closure before ResolveCheck builds shapes/inference; Shapes already has a parallel collecting loop. LinkRound independently emits newly needed methods and retains earlier methods across dependency rounds. The C# reference registers type stubs/dependencies before parsing member/method signatures and defers method bodies. Current Strict still repeats source discovery, validation and metadata work. On this machine compiler discovery took about 0.29 s, initial inference 0.18 s, main codegen 0.006 s, dependency linking 8.0-8.5 s, syntax validation 0.4 s, parallel name validation 0.18-0.28 s and inlining 0.06-0.14 s. File loading alone does not explain the remaining frontend time.
+
+A per-build fused-source snapshot experiment reduced 4,074 reads of 343 canonical files to 2,012 reads, eliminating the 747 reads of List.strict. Linking remained about 8.4 s, so the metadata field, cache plumbing and experimental check were removed. The read trace and frontend probe remain in ignored Compiler/output/PoolRecovery and Compiler/output/FrontendAudit.strict for investigation. Native File.Exists currently calls fopen/fclose before checking the directory bit; replacing that with platform metadata is a focused remaining lookup optimization.
+
+A successful mapped compiler build was sampled without kernel tracing. At eight threads about 3.5% of sampled CPU-weighted instruction locations were in strict_gc_small; a 36-thread run reported 22.8%, with more sampled CPU overall. The function includes the refill lock. Pinning accounted for about 1-2%. System locations included NtWaitForAlertByThreadId, NtCreateFile and NtQueryAttributesFile. This suspension sampler weights current instruction pointers with preceding thread CPU deltas; wait contexts and inlining limit attribution. It is evidence for investigating refill contention and repeated filesystem lookups, not a precise lock-time measurement. Raw maps, JSON and logs are under ignored Compiler/output/ThreadAudit.
+
+Representative ordinary release builds below forced frontend/emission/host work by removing native/bytecode stamps and host MLIR. GPU/native caches and Release staging were retained. No build executed tests. Games ran from the DeltaEngine project root.
+
+| Build | Wall time | Remaining cost |
+| --- | ---: | --- |
+| Boolean | 1.71 s | Native test executable generated, tests not executed |
+| Examples/Sum | 0.86 s | Still above the 100 ms source-build target |
+| Examples/ParallelSum | 1.12 s | Native test executable generated |
+| NeuralNetworks/Xor | 2.39 s | GPU cache populated |
+| NeuralNetworks/Iris | 2.54 s | GPU cache populated |
+| Strict | 10.22 s | Frontend 3.87 s; total compilation 9.72 s |
+| NativeCompiler | 22.38 s | Frontend 9.82 s, emission 3.74 s |
+| StrictComfy/MossGenerate | 5.13 s cached GPU; 27.54 s first preparation | First GPU preparation 22.91 s |
+| StrictComfy/MossImage | 4.55 s cached GPU; 8.87 s first preparation | First GPU preparation 4.69 s |
+| DeltaEngine/Games/LogoApp | 4.75 s | Release/Windows staging retained |
+| DeltaEngine/Games/WebWars | 14.32 s | Frontend 4.16 s, emission 4.08 s |
+| NeuralNetworks/Qwen3Benchmark | 32.41 s first preparation | GPU preparation 23.35 s; this run succeeded |
+
+Moss binaries were byte-identical before/after populating GPU caches. Immediate unchanged Moss and game builds skipped in 80-128 ms with source/build timestamps. The prior missing Execute.Run/Safetensors.Shape/Safetensors.Values errors and Strict/LogoApp/WebWars stalls did not recur in these application builds. Cold GPU preparation, WebWars and compiler self-builds still exceed the 10 s ceiling, and the small-file 10/100 ms and complex-build 2-3 s targets remain open.
+
+Targeted VM and native tests passed for FileCompiler, LinkRound, ResolveCheck, MlirParallel, MlirSafety, NativeCompiler and Strict; Frame and Operations also passed native tests. Compiler, Bytecode, Expressions and Runtime validation reported zero issues. These are targeted recovery checks and representative builds, not the full daily repository/model/game execution sweep. Existing long VM tests remain slow (FileCompiler.Parsed alone took about 34 s); classification and enforcement of the test budget remain in improvements.md.
+
+Final recovery checks also passed nine fresh VM runs at 1, 4 and default threads. MossGenerate, MossImage, LogoApp, WebWars and Qwen3Benchmark rebuilt at 36 threads with byte-identical IR/executables to their eight-thread builds; cached-GPU Qwen3Benchmark took 9.07 s. Compiler/check_build.py passed build/test skipping, cache invalidation, Release retention, GPU-cache reuse and whole-file read semantics. A final strict.exe rebuild took 10.75 s and retained its validated hash.

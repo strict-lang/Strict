@@ -23,12 +23,16 @@ Checked(linker Linker, linked List(TypeEntry), source Text, inference TypeInfere
 	let sources = Sources(linker, linked, source)
 	if Parsed(sources) is false
 		return List(TypeEntry)
-	mutable unresolved = List(Mutable(Text))
+	mutable failures = 0
+	for Issues(sources, inference)
+		failures = failures + value.Length
+		for value
+			logger.Log(value)
+	failures is 0 then linked else List(TypeEntry)
+Issues(sources Texts, inference TypeInference) List(Texts)
+	FileCompiler.Issues(List(Text), ResolveCheck.Counting).Length is 0
 	for sources
-		unresolved = unresolved + ResolveCheck(logger).Unresolved(value, inference)
-	for unresolved
-		logger.Log(value)
-	unresolved.Length is 0 then linked else List(TypeEntry)
+		ResolveCheck(logger).Unresolved(value, inference)
 Sources(linker Linker, linked List(TypeEntry), source Text) Texts
 	FileCompiler.Sources(Linker.Sample, Logged, "./Examples/A.strict") is List(Text) + "./Examples/HelloLogger.strict"
 	mutable paths = List(Mutable(Text))
