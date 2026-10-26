@@ -11610,6 +11610,21 @@
     %result = arith.uitofp %released : i64 to f64
     return %result : f64
   }
+  // strict_gpu_trim_unused, then the device copies of live lists are evicted too (all but the 16 used last, their host
+  // copies stay and their next use uploads them again): what a resident program gives back to other programs between jobs
+  func.func private @strict_gpu_evict_all(%self: f64) -> f64 {
+    %released = func.call @strict_gpu_trim_unused(%self) : (f64) -> f64
+    %present = func.call @strict_gpu_present() : () -> i1
+    cf.cond_br %present, ^evict, ^done(%released : f64)
+  ^evict:
+    %everything = arith.constant 1099511627776 : i64
+    %anyKind = arith.constant false
+    %evicted = func.call @strict_gpu_evicted(%everything, %anyKind) : (i64, i1) -> i1
+    %freed = func.call @strict_gpu_trim_unused(%self) : (f64) -> f64
+    cf.br ^done(%freed : f64)
+  ^done(%result: f64):
+    return %result : f64
+  }
   // free unused large pool blocks, draining queued launches once and only when a block is freed
   func.func private @strict_gpu_trim(%needed: i64, %initial: i64, %waiting: i1) -> i64 {
     %none = arith.constant 0 : i64

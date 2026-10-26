@@ -97,10 +97,11 @@ TypeHelper(kind Text, name Text) Text
 	MlirNatives(Texts, 1).TypeHelper("File", "WriteLines") is "strict_file_writelines"
 	MlirNatives(Texts, 1).TypeHelper("File", "Modified") is "strict_file_modified"
 	if kind + "." + name is not in Hosted.Methods
-		return kind + "." + name is "GpuMemory.Released" then "strict_gpu_trim_unused" else ""
+		return kind is "GpuMemory" then ("strict_gpu_" + (name is "Released" then "trim_unused" else "evict_all")) else ""
 	"strict_" + kind.Lower + "_" + (name is "ReadLines" then "read_lines" else name.Lower)
 TextHelper(name Text) Text
 	MlirNatives(Texts, 1).TypeHelper("GpuMemory", "Released") is "strict_gpu_trim_unused"
+	MlirNatives(Texts, 1).TypeHelper("GpuMemory", "Evicted") is "strict_gpu_evict_all"
 	MlirNatives(Texts, 1).TextHelper("Upper") is "strict_text_upper"
 	MlirNatives(Texts, 1).TextHelper("Split") is ""
 	MlirNatives(Texts, 1).TextHelper("Combine") is "strict_text_combine"
