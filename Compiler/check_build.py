@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 
 root = Path(__file__).resolve().parent.parent
+assert "@NativeGate_Built_" not in (root / "Compiler/Bootstrap.mlir").read_text(), \
+	"Bootstrap compiler still runs tests during builds"
 extension = ".exe" if sys.platform == "win32" else ""
 with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as folder:
 	source = Path(folder) / "BuildCheck.strict"
@@ -22,6 +24,8 @@ with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as 
 			capture_output=True, text=True, timeout=270)
 	built = run("build", str(source))
 	assert built.returncode == 0, built.stdout + built.stderr
+	assert "Frontend:" in built.stdout and "MLIR emission:" in built.stdout, built.stdout
+	assert "Total compilation:" in built.stdout, built.stdout
 	assert "Test passed:" not in built.stdout and "Test failed:" not in built.stdout, built.stdout
 	assert not source.with_suffix(".test" + extension).exists(), "Build compiled unwanted test executable"
 	assert subprocess.run([str(source.with_suffix(extension))], timeout=10).returncode == 0

@@ -7,6 +7,10 @@ Values are rewritten in place where nobody can see the old one: the dying value 
 
 `NativeCompiler.strict` is the native compiler `strict` hands its builds to (`Process.Started`, the output appears right away), so the front end `strict` stays small (2.4 MB instead of 5.2 MB) and builds of other programs do not rebuild it. `Bootstrap.mlir` is the seed, `NativeCompiler` compiled by itself: `Bootstrap.cmd` (Windows) and `bootstrap.sh` (Linux and macOS) build `NativeCompiler` from it, which then builds `strict`.
 
+Every compilation prints dependency snapshot, frontend, MLIR emission, GPU preparation and total compilation times. Each external tool prints its name and job count before execution, then elapsed time after completion. GPU preparation includes its nested LLVM tools; do not add those twice. Total compilation excludes dependency snapshots and process startup. Unchanged builds print only `Up to date` and run no compiler or tests.
+
+The previous bootstrap seed still called `NativeGate`, so rebuilding from it ran tests and used the older compiler pipeline despite current source removing that gate. The seed now comes from byte-identical stages 2 and 3 (SHA-256 `605746933f973a03af535a3a0f051185dcb6115a0754fe95f2bc16e8ce99cef6`). A separately compiled seed built and ran a program containing a failing inline test without creating or running a test executable. `check_build.py` rejects seeds containing the old gate.
+
 Native model:
 - Every value is one 64-bit slot: numbers are doubles, texts, lists and instances pointer bits, Errors carry a NaN tag so `x is Error` works for any type.
 - Lists of numbers that C code hands out stay packed (32 bit floats, 16 bit halves, 8, 6 or 4 bit quantized, `Float8` for E4M3) and loops read them directly in 32 bit floats.
@@ -48,3 +52,23 @@ A separate MossGenerate copy took 11.0 s for its first program-specific GPU buil
 MossImage phase profile: dependency snapshot 0.56 s, frontend 1.68 s, MLIR emission 1.23 s, GPU preparation 0.40 s, host LLVM/linking 1.88 s. Boolean's earlier 0.8 s was native test-code generation plus external LLVM lowering, translation, 16 clang workers and ThinLTO linking, without executing its tests. Xor also generates GPU kernels; compilation does not train the network. Source rebuilds still exceed the requested 10/100 ms small-file targets and 2-3 s complex-file target. Next work belongs in incremental frontend/IR reuse and emission/backend profiling, not rerunning tests or rebuilding identical shared kernels.
 
 Focused VM/native tests and the standalone regression check cover skipping builds/tests, changed source/dependencies/options/content, missing executables and whole-file read semantics. One earlier profiling process exited with Windows heap-corruption status 0xC0000374; repeated builds after a fresh self-build and upstream memory fixes passed, so its cause is unconfirmed.
+
+Latest visible phase measurements on this Windows workstation, using the exact Moss build commands from StrictComfy:
+
+| Phase | NativeCompiler self-build | MossGenerate | MossImage |
+| --- | ---: | ---: | ---: |
+| Dependency snapshot | 0.33 s | 0.41 s | 0.41 s |
+| Frontend | 15.54 s | 1.53 s | 1.43 s |
+| MLIR emission | 5.29 s | 1.39 s | 1.26 s |
+| GPU preparation | 0.20 s | 0.45 s, cached | 4.85 s, program kernels rebuilt |
+| Host MLIR lowering | 4.31 s | 0.48 s | 0.45 s |
+| Host LLVM translation | 2.87 s | 0.34 s | 0.31 s |
+| LLVM splitting | 1.74 s | 0.22 s | 0.20 s |
+| Parallel clang workers | 0.37 s | 0.16 s | 0.17 s |
+| Final clang/ThinLTO link | 3.23 s | 0.81 s | 0.79 s |
+| Wall time | 34.25 s | 6.00 s | 10.08 s |
+| Unchanged repeat | — | 76 ms | 71 ms |
+
+No tests ran during these builds. MossImage GPU preparation included 1.01 s lowering, 0.65 s translation and 2.69 s compiling two GPU targets; shared runtime PTX was already cached. The 10 s hard limit and 2-3 s target remain unmet for self-builds and some GPU cache misses. Frontend and emission dominate compiler self-builds; host linking alone does not explain them.
+
+Validation of this seed/timing update: Compiler check reports zero issues; NativeCompiler VM/native tests, Strict VM tests, ToolRunner VM tests and `python Compiler/check_build.py` pass. ToolRunner native tests fail before tool execution with `unsupported: text of List(IsWindow)` in `$Tests`; an unmodified HEAD copy fails identically. Explicit compiler native tests also exposed expensive dependency snapshots (18-32 s), which are separate from the 0.3-0.4 s build snapshots above.

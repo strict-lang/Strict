@@ -1,0 +1,24 @@
+has logger
+Reported(phase Text, started Number) Number
+	let elapsed = Process.Elapsed - started
+	logger.Log(phase + ": " + (elapsed * 1000).Round(1) + " ms")
+	elapsed
+Inputs(cache NativeCache) Texts
+	let started = Process.Elapsed
+	let inputs = cache.Snapshot(cache.Inputs.Unique)
+	Reported("Dependency snapshot", started)
+	inputs
+Compiled(command Text, rest Texts) Number
+	logger.Log("Compiling " + rest(0))
+	let started = Process.Elapsed
+	let result = NativeCompiler(logger).Compiled(command, rest)
+	Reported("Total compilation", started)
+	result
+Program(module MlirModule, base Text, root Text, build NativeBuild) Text
+	let started = Process.Elapsed
+	let text = module.Text
+	Reported("MLIR emission", started)
+	let before = Process.Elapsed
+	let program = build.Device(text, base, root)
+	Reported("GPU preparation", before)
+	program

@@ -18,7 +18,7 @@ Compile(path Text, root Text, isCounting = false, isGating = false) Number
 	if module.types.Length is 0
 		return 1
 	let base = Output(path, isProgram)
-	let program = Device(module.Text, base, root)
+	let program = BuildProfile(logger).Program(module, base, root, value)
 	if program is ""
 		return 1
 	let natives = NativeFolder(logger).Natives(path, root, module.types)
@@ -87,7 +87,7 @@ Rebuilt(base Text, mlir Text, tools Toolchain) Text
 	isAndroid then AndroidBuild(tools).Linked(base, level) else Linked(base, tools)
 Ran(base Text, tools Toolchain, path Text, isCounting Boolean) Number
 	let executable = tools.Executable(base)
-	let result = ToolRunner(executable).Execute("")
+	let result = ToolRunner(executable).Cleaned(Process.RunTool(executable, ""))
 	logger.Log(result.Output.Trim)
 	if ToolRunner.IsCrash(result.exitCode) is false
 		logger.Log(Execute.Summary(result.exitCode, path))
