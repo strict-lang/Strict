@@ -83,7 +83,7 @@ Parameters(name Text) Texts
 		value + ": " + types(index)
 Position(slot Text, target Text) Texts
 	Double.Position("%r1", "%k").Last is "    %k = arith.fptosi %kf : f64 to i64"
-	Single.Position("%r1", "%k").Last is "    %k = arith.select %kv, %k_e, %kj : i64"
+	"    %kd = arith.divsi %k_e, %ks : i64" is in Single.Position("%r1", "%k")
 	let loaded = function.Load(target + "f", slot)
 	if Parts.Length is 0
 		return (loaded, "    " + target + " = arith.fptosi " + target + "f : f64 to i64")
@@ -91,8 +91,7 @@ Position(slot Text, target Text) Texts
 	let whole = "    " + target + "j = arith.extsi " + target + "n : i32 to i64"
 	let valid = "    " + target + "v = arith.cmpi eq, " + target + "_q, %one : i64"
 	let fallback = MlirGuards(function, at).IsWhole(slot) then target + "_e" else target + "j"
-	let chosen = "    " + target + " = arith.select " + target + "v, " + target + "_e, " + fallback + " : i64"
-	(loaded, narrow, whole) + Loaded(target, slot) + valid + chosen
+	(loaded, narrow, whole) + Loaded(target, slot) + valid + MlirRational(MlirExact(function, at)).Whole(target, fallback)
 Integer(name Text, operation Text) Text
 	Single.Integer("n", "arith.addi %a, %b") is "    %x2n = arith.addi %a, %b : i64"
 	"    " + Temp(name) + " = " + operation + " : i64"

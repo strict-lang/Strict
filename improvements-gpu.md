@@ -1,0 +1,40 @@
+# GPU improvements
+Details for the GPU line of [improvements.md](improvements.md). Diffusion models (Moss, H3) and GPU speed are worked on from `../StrictComfy/` (`Plan.md`, `Handoff.md`, `Performance.md`). Remove what is done, add new findings at the end of their section, bugs go into improvements.md.
+
+## Attention
+ComfyUI's comfy_kitchen `int8_attention` (Q and K rotated by a Hadamard of 128, int8 V, uint8 shares) runs H3's step in 2.06 instead of 3.22 s, with Sol-Attn routing in 1.57 s; Strict has `Attention.quantized` and `Attention.routing` (H3 steps 2.53-2.67 s). Left, from ncu (tensor pipe 53 % busy, 35 of it the f16 products of shares and values):
+- uint8 shares times int8 values (values transposed per tile by a quantize pass, sums converted on the FMA pipe)
+- query blocks of 64 instead of 128 tokens (their halves attend 30 % of the key blocks together, 23.5 % alone)
+- routing plans on all threads instead of the first
+- the Hadamard on Q and K
+
+## 16 bit lists
+A GPU loop of a method returning `BFloat16s` stores bfloat16, never by size alone (bfloat16 everywhere made long Qwen3.8 prompts decode NaN). Left:
+- bf16 QK attention beyond the 128 wide QKV path
+- attention, product and hadamard results are 32 bit
+- joining lists of different formats goes through the host
+- LLVM 23 PTX of strict_device_whole(s) is ~3 % slower than LLVM 22's
+
+## Memory budget
+H3 DiT steps (21.7 GB of weights, 37 of 50 blocks resident, the rest streamed) take 3.6-3.8 s against ComfyUI's 3.3 s, ~230 ms of it idle; ComfyUI streams too but overlaps it (60 ms idle). Left:
+- uploads wait in order where the prefetch chain (`strict_gpu_prefetch`, one spill ahead) breaks: prefetch two rows or a block ahead
+- power of two size classes leave ~1.9 GB of H3's pool unused; finer classes churned activations through the driver, they need weights evicted first or blocks lent across classes
+- without spilled rows the trim before an own block runs at every block (9.5-12 s per step with `%ownReserve` at 1 GB instead of 256 MB)
+- MossImage with ~0.9 GB used by other programs still has 1-8 full collections per step: a sub-allocating pool would end them
+- GPU-only lists can't be spilled, so H3 activations kept across the 50 streamed blocks (Spectrum feature anchors) take every byte from the weights: spillable activations or an explicit move to the host
+- H3's ~98 full collections per step come from strict_gpu_obtain before each 128 and 512 MB activation block (18-28 ms each in strict_gc_mark_range, 40 % of the main thread); collecting less was slower (blocks from the driver evict streamed weights), so make the mark cheaper (skip lists without references)
+
+## Loading
+The 21 GB H3 DiT loads in 10-12 s (ComfyUI 4-7 s), mostly page faults of the copy into fresh memory, and its first step uploads all of it (10.1-10.6 instead of 3.7 s), mostly gathering each table on one thread before its synchronous copy. Next: gather on the pool threads into two pinned buffers while the other one copies, then 8 bit rows gathered straight from the mapped file.
+
+The first run of a new build waits for the driver to compile the 20 MB runtime PTX on one thread (MossImage: 114 s); `ptxas -arch=sm_89 --split-compile 0` takes 43 s: write a cubin for the local GPU at build time and load it before the PTX, and split the largest functions (strict_device_whole_run, wholes, whole, eights_scaled: 41-63k PTX lines each).
+
+## Generated loops
+Instruction bound on the RTX 3080 (120-330 instructions per number). Left:
+- format mixes without an AOT copy (`MlirFormats`: all f32, all bfloat16, first bfloat16) run the generic kernel: H3's `Rope.Rotated` with 16 bit norm weights 192 against 80 ms per step
+- a loop reading a member of an object parameter (`layout.width` in StrictComfy `H3Final.Unpatched`) stays on the CPU: pass loop invariant members as numbers
+- bounds, reduction and tail checks remain: extend the four wide loads (`MlirBatched`) and fuse memory passes
+- an index with a denominator other than 1 (`size / 2` inlined in MossBlock.Rotated) divides in 64 bits at every read (82 instead of 66 us): shift power of two denominators
+
+## MOSS
+Warm generation 4.10-4.18 s against ComfyUI's 3.51 s with sampling at parity: VAE decode 0.63 against 0.27 s, PNG encoding 0.28 against 0.08 s, cold loading (`../StrictComfy/Performance.md`).

@@ -117,7 +117,7 @@ IsOperand(name Text) Boolean
 	let dot = MlirDeviceDot(MlirFunction(function, Float = "f32"), begin)
 	dot.IsDot then name is in dot.Operands else false
 Whole(letter Text, slot Text) Texts
-	Squaring.Whole("a", "%v_start").Last is "    %d2ai = arith.select %d2aiv, %d2ai_e, %d2aij : i64"
+	Squaring.Whole("a", "%v_start").Last is "  ^d2aiwhole(%d2ai: i64):"
 	MlirExact(function, at).Position(slot, Temp(letter + "i"))
 Accumulated Texts
 	Summing.Accumulated.First is "    %d2s0 = llvm.load %v_sum : !llvm.ptr -> f32"
