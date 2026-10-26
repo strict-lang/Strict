@@ -10085,14 +10085,25 @@
     %done = arith.cmpi eq, %result, %zero32 : i32
     return %done : i1
   }
-  // bytes of host into an allocation of its own go up on the copy stream and only that copy is waited for: strict_gpu_put
-  // waits for every launch before it (H3's first step lost 32 ms per block on each of its out_proj and adaln uploads)
+  // bytes of host into an allocation of its own go up on a stream of their own and only that copy is waited for:
+  // strict_gpu_put waits for every launch before it (H3's first step lost 32 ms per block on each of its out_proj and
+  // adaln uploads); not the copy stream of strict_gpu_ahead, a pending prefetch forks it into the capture
+  llvm.mlir.global internal @strict_gpu_aside(0 : i64) : i64
   func.func private @strict_gpu_put_aside(%device: i64, %host: !llvm.ptr, %bytes: i64) -> i1 {
     %none = arith.constant 0 : i64
     %zero32 = arith.constant 0 : i32
-    func.call @strict_gpu_ahead_create() : () -> ()
-    %ahead = llvm.mlir.addressof @strict_gpu_ahead : !llvm.ptr
-    %streamBits = llvm.load %ahead : !llvm.ptr -> i64
+    %asideSlot = llvm.mlir.addressof @strict_gpu_aside : !llvm.ptr
+    %existing = llvm.load %asideSlot : !llvm.ptr -> i64
+    %isNew = arith.cmpi eq, %existing, %none : i64
+    cf.cond_br %isNew, ^create, ^created(%existing : i64)
+  ^create:
+    %createIndex = arith.constant 16 : i64
+    %create = func.call @strict_gpu_call(%createIndex) : (i64) -> !llvm.ptr
+    %nonBlocking = arith.constant 1 : i32
+    %made = llvm.call %create(%asideSlot, %nonBlocking) : !llvm.ptr, (!llvm.ptr, i32) -> i32
+    %fresh = llvm.load %asideSlot : !llvm.ptr -> i64
+    cf.br ^created(%fresh : i64)
+  ^created(%streamBits: i64):
     %hasStream = arith.cmpi ne, %streamBits, %none : i64
     cf.cond_br %hasStream, ^aside, ^put
   ^aside:
