@@ -1,0 +1,26 @@
+has logger
+Run(arguments Texts) Number
+	let started = Process.Elapsed
+	let cache = NativeCache("build", arguments)
+	cache.Snapshot(cache.Inputs.Unique)
+	logger.Log("metadata " + (Process.Elapsed - started))
+	let before = Process.Elapsed
+	let module = NativeFolder(logger).Module(arguments(0), arguments(1), false, true)
+	logger.Log("frontend " + (Process.Elapsed - before))
+	Emitted(module, arguments)
+Emitted(module Compiler/MlirModule, arguments Texts) Number
+	let started = Process.Elapsed
+	let program = module.Text
+	logger.Log("emission " + (Process.Elapsed - started))
+	Built(program, module.types, arguments)
+Built(program Text, types List(TypeEntry), arguments Texts) Number
+	let builder = NativeBuild(logger, false)
+	let base = NativeBuild.Output(arguments(0), true)
+	let started = Process.Elapsed
+	let device = builder.Device(program, base, arguments(1))
+	logger.Log("device " + (Process.Elapsed - started))
+	let natives = NativeFolder(logger).Natives(arguments(0), arguments(1), types)
+	let before = Process.Elapsed
+	let result = builder.Build(base, device, Toolchain(Platform.Current, arguments(1), natives))
+	logger.Log("host " + (Process.Elapsed - before))
+	result

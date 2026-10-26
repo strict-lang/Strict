@@ -8,8 +8,9 @@ Previous(device Text, isTiling Boolean) Texts
 	Sample.Previous("module {\n\n}", false) is ("// new")
 	Sample.Previous("module {\n}", true).Length is 0
 	let key = File(base + ".kernels.mlir")
-	let isCurrent = key.Exists and (key.Modified > File(Process.Current.executable).Modified)
-	if (isCurrent is false) or (File(base + ".ptx").Exists is false) or (Read(".kernels.mlir") is not device)
+	let missing = isTiling and (File(base + ".older.ptx").Exists is false)
+	let ready = key.Exists and (missing is false) and File(base + ".ptx").Exists
+	if (ready is false) or (Read(".kernels.mlir") is not device)
 		return List(Text)
 	isTiling then (Read(".ptx"), Read(".older.ptx")) else List(Text) + Read(".ptx")
 Read(ending Text) Text
@@ -20,17 +21,60 @@ Remembered(device Text, ptx Texts) Texts
 	File("Compiler/output/Failed.kernels.mlir").Exists is false
 	PtxCache("Compiler/output/Written").Remembered("module {\n}", ("// new", "// old")) is ("// new", "// old")
 	PtxCache("Compiler/output/Written").Read(".older.ptx") is "// old"
-	if ptx.First.StartsWith("//")
-		Written(ptx, ".ptx")
-		File(base + ".kernels.mlir").Write(device)
-	ptx
+	if ptx.First.StartsWith("//") is false
+		return ptx
+	Written(ptx, ".ptx") and Saved(".kernels.mlir", device) then ptx else List(Text) + ("GPU cache write failed: " + base)
 Built(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Texts
 	PtxCache("Compiler/output/Invalid").Built("x", false, DeviceBuild.Missing, "").First.StartsWith("mlir-opt failed")
-	let previous = builder.tools.platform is Platform.MacOS then List(Text) else Previous(device, isTiling)
+	let key = Fingerprint(device, isTiling, builder, kept)
+	let previous = builder.tools.platform is Platform.MacOS then List(Text) else Previous(key, isTiling)
 	if previous.Length > 0
 		return previous
 	File(base + ".gpu.mlir").Write(device)
-	Remembered(device, builder.Ptx(base, isTiling, kept))
-Written(ptx Texts, ending Text)
-	File(base + ending).Write(ptx.First)
-	File(base + ".older" + ending).Write(ptx.Length > 1 then ptx.Last else "")
+	Remembered(key, builder.Ptx(base, isTiling, kept))
+Fingerprint(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Text
+	let tools = builder.tools
+	mutable key = device + "\n// " + DeviceBuild.Nvptx + " " + isTiling + " " + kept
+	for ("clang", "mlir-opt", "mlir-translate")
+		let path = Process.Find(tools.Located(value)).executable
+		key = key + "\n// " + path + " " + File(path).Modified
+	if tools.platform is Platform.MacOS
+		key = key + "\n// " + File(Process.Current.executable).Modified
+	key
+Shared(device Text, isTiling Boolean, builder DeviceBuild) Texts
+	let key = Fingerprint(device, isTiling, builder, "")
+	let folder = builder.tools.root + "/Tools/PtxCache"
+	Directory.Create(builder.tools.root + "/Tools")
+	Directory.Create(folder)
+	let cache = PtxCache(folder + "/" + HashCode(key).number + "/module")
+	let previous = cache.Previous(key, isTiling)
+	previous.Length > 0 then Remembered(key, previous) else SharedBuild(cache, device, isTiling, builder)
+SharedBuild(cache PtxCache, device Text, isTiling Boolean, builder DeviceBuild) Texts
+	let temporary = Path(cache.base).PathOnly.text + "." + 1000000000.Random.Floor
+	Directory.Create(temporary)
+	let stage = PtxCache(temporary + "/module")
+	let ptx = stage.Built(device, isTiling, builder, "")
+	NativeBuild(Logger).Removed(stage.base)
+	if ptx.First.StartsWith("//")
+		File(temporary).Rename(Path(cache.base).PathOnly.text)
+	let result = Remembered(Fingerprint(device, isTiling, builder, ""), ptx)
+	if Directory.Exists(temporary)
+		Discarded(stage)
+	result
+Discarded(stage PtxCache)
+	for (".ptx", ".older.ptx", ".kernels.mlir")
+		File(stage.base + value).Delete
+	Directory.Delete(Path(stage.base).PathOnly.text)
+Written(ptx Texts, ending Text) Boolean
+	Saved(ending, ptx.First) and Saved(".older" + ending, ptx.Length > 1 then ptx.Last else "")
+Saved(ending Text, text Text) Boolean
+	let path = base + ending
+	let temporary = path + "." + 1000000000.Random.Floor + ".tmp"
+	File(temporary).Write(text)
+	if PtxCache(temporary).Read("") is not text
+		File(temporary).Delete
+		return false
+	File(temporary).Rename(path)
+	let saved = (File(temporary).Exists is false) and File(path).Exists
+	File(temporary).Delete
+	saved

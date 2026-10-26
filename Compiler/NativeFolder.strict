@@ -7,7 +7,8 @@ Module(path Text, root Text, isCounting Boolean, isProgram Boolean, platform = -
 	NativeFolder(Logger).Module("Examples/HelloLogger.strict", ".", false, true).entryName is "Run"
 	let paths = Paths(path)
 	let folders = Directory.Exists(path) then ResolveCheck.Tree(path) else List(Text) + path
-	let types = isCounting then Collected(folders, root) else Execute(logger).Loaded(path, root)
+	let execute = Execute(logger)
+	let types = isCounting then Collected(folders, root) else execute.Loaded(path, root, isProgram is false)
 	let counted = isCounting then CountedFiles(paths, root) else List(Text)
 	let symbol = platform is Platform.IOS then "strict_main" else "main"
 	MlirModule(Inliner(types).Inlined, isProgram then "Run" else TestCodegen.Runner, counted, paths.Length, symbol)

@@ -70,13 +70,22 @@ Refreshed(release Text, content Text, endings Texts) Number
 	for endings
 		let built = base + value
 		if File(built).Exists
-			File(built).Rename(release + "/" + Named(built))
-			if File(built).Exists
+			if Placed(built, release + "/" + Named(built)) is false
 				logger.Log("Release could not replace " + release + "/" + Named(built) + ", is it still running?")
 				return 1
 	logger.Log("Release: " + release)
 	Sidecar(release)
 	Mirrored(content)
+Placed(source Text, target Text) Boolean
+	let temporary = target + "." + 1000000000.Random.Floor + ".tmp"
+	let bytes = File(source).ReadBytes
+	File(temporary).Write(bytes)
+	let isComplete = File(temporary).Exists and (File(temporary).ReadBytes.Length is bytes.Length)
+	if isComplete
+		File(temporary).Rename(target)
+	let isPlaced = isComplete and (File(temporary).Exists is false) and File(target).Exists
+	File(temporary).Delete
+	isPlaced
 Sidecar(release Text) Number
 	Release(Logger, "Missing/App").Sidecar("Missing/Release") is 0
 	mutable copied = 0

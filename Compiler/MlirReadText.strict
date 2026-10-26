@@ -1,0 +1,49 @@
+has function MlirFunction
+has position Number
+Helper(helper Text) Text
+	if (helper is "strict_file_read_lines") and IsRead
+		return "strict_file_joined"
+	if (helper is "strict_text_combine") and IsJoin
+		return "strict_file_joined_result"
+	helper
+IsRead Boolean
+	let steps = function.method.instructions
+	if (position < 0) or (position + 3 >= steps.Length)
+		return false
+	let read = steps(position)
+	if IsCall(read, "File", "ReadLines") is false
+		return false
+	let check = steps(position + 1)
+	let literal = steps(position + 2)
+	let join = steps(position + 3)
+	Matches(read, check, literal, join) and Unused(read.payload(0), position + 3)
+Matches(read InstructionEntry, check InstructionEntry, literal InstructionEntry, join InstructionEntry) Boolean
+	if (check.kind is not InstructionType.CheckError) or (check.payload(0) is not read.payload(0))
+		return false
+	if literal.kind is not InstructionType.LoadConstantToRegister
+		return false
+	if (PayloadDecoder(literal).Value(1).text is not "\n") or (IsCall(join, "Text", "Combine") is false)
+		return false
+	LoadReuse(function.method.instructions).Reads(join) is (read.payload(0), literal.payload(0))
+Unused(register Number, joined Number) Boolean
+	let steps = function.method.instructions
+	if LoadReuse(steps).Written(steps(joined)) is register
+		return true
+	for Range(joined + 1, steps.Length)
+		let result = Outcome(steps(value), register)
+		if result is not 0
+			return result > 0
+	true
+Outcome(entry InstructionEntry, register Number) Number
+	let reuse = LoadReuse(function.method.instructions)
+	if register is in reuse.Reads(entry)
+		return -1
+	if (reuse.Written(entry) is register) or (entry.kind is InstructionType.Return)
+		return 1
+	reuse.IsBoundary(entry) and (entry.kind is not InstructionType.CheckError) then -1 else 0
+IsCall(entry InstructionEntry, owner Text, name Text) Boolean
+	if (entry.kind is not InstructionType.Invoke) or (entry.texts.Length < 3)
+		return false
+	(TypeEntry.ShortName(entry.texts(0)) is owner) and (entry.texts(1) is name)
+IsJoin Boolean
+	(position >= 3) and MlirReadText(function, position - 3).IsRead

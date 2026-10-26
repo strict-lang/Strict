@@ -89,7 +89,7 @@ Built(base Text, executable Text, level Text) Text
 		return resource
 	let linking = Inputs(base, level) + sources + resource + " -o " + Quoted(executable) + Optimized + level + system
 	let linked = ToolRunner(Located("clang")).Execute(linking)
-	linked.Failed then "clang failed: " + linked.error else "Built " + executable
+	linked.Failed then "clang failed: " + linked.error + linked.Output else "Built " + executable
 Inputs(base Text, level Text) Text
 	OnLinux.Inputs("Compiler/output/missing", "") is "\"Compiler/output/missing.ll\""
 	let splitter = platform is Platform.Windows then Located("llvm-split") else ""

@@ -2,7 +2,7 @@ has logger
 constant Version = "1.0"
 constant Commands = ("build", "test", "check", "update", "format", "suggest")
 constant Informing = ("version", "--version", "help", "--help")
-constant Help = ("strict <file> [arguments]  run the Run method on the Strict VM, the fastest, everything stays in memory", "strict build <file>        run the tests, then compile a native executable (Name.test without a Run method)", "strict build <file> linux  also the Linux executable (on Windows through WSL)", "strict build <file> web  build Name.html, .js and .wasm for the browser (Emscripten in Tools/emsdk)", "strict build <file> android  build an arm64-v8a shared library and stage Release/Android (Android NDK)", "strict build <file> ios    build an arm64 iOS static archive and stage Release/iOS (native packages need Xcode)", "strict build <file> small  optimize for size instead of speed (-Os), combines with linux", "strict build <file> library  build a shared library of its public methods and a C# binding", "strict test <file>         run the inline tests of every method on the Strict VM", "strict test <file> -       test the source read from standard input as <file>, nothing is written", "strict test <file> lines   run them natively and print how often and how long each line ran (a folder: one build)", "strict test <file> values  run them on the Strict VM and print how often each line ran and the value it set", "strict check <folder>      validate the .strict files: type rules, unused members, limits", "strict format <file>       print the file in its canonical form, each method body as the parser reads it", "strict update <folder>     refresh the packages copied into the folder (.origin) from their clone or GitHub", "strict version             show the version number and when this strict executable was built", "strict suggest <file> <method>  print bodies passing its tests; add - to read unsaved source")
+constant Help = ("strict <file> [arguments]  run the Run method on the Strict VM, the fastest, everything stays in memory", "strict build <file>        compile a native executable without running tests (Name.test without Run)", "strict build <file> linux  also the Linux executable (on Windows through WSL)", "strict build <file> web  build Name.html, .js and .wasm for the browser (Emscripten in Tools/emsdk)", "strict build <file> android  build an arm64-v8a shared library and stage Release/Android (Android NDK)", "strict build <file> ios    build an arm64 iOS static archive and stage Release/iOS (native packages need Xcode)", "strict build <file> small  optimize for size instead of speed (-Os), combines with linux", "strict build <file> library  build a shared library of its public methods and a C# binding", "strict test <file>         run the inline tests of every method on the Strict VM", "strict test <file> native  build and run its native tests explicitly", "strict test <file> -       test the source read from standard input as <file>, nothing is written", "strict test <file> lines   run them natively and print how often and how long each line ran (a folder: one build)", "strict test <file> values  run them on the Strict VM and print how often each line ran and the value it set", "strict check <folder>      validate the .strict files: type rules, unused members, limits", "strict format <file>       print the file in its canonical form, each method body as the parser reads it", "strict update <folder>     refresh the packages copied into the folder (.origin) from their clone or GitHub", "strict version             show the version number and when this strict executable was built", "strict suggest <file> <method>  print bodies passing its tests; add - to read unsaved source")
 Run(arguments Texts) Number
 	let command = arguments.Length > 0 then arguments(0) else "help"
 	let rest = Rooted(command is in Commands then Rest(arguments) else arguments)
@@ -35,7 +35,7 @@ Tested(rest Texts) Number
 	if option is in ("values", "trace")
 		let trace = ValueTrace(logger)
 		return option is "values" then trace.Run(rest(0), rest(1)) else trace.Traced(rest(0), rest(1))
-	option is "lines" then Native("test", rest) else Execute(logger).Test(rest(0), rest(1))
+	option is in ("lines", "native") then Native("test", rest) else Execute(logger).Test(rest(0), rest(1))
 Rooted(arguments Texts) Texts
 	Strict.Rooted(List(Text) + "a.strict") is ("a.strict", ".")
 	Strict.Rooted(("a.strict", ".")) is ("a.strict", ".")
@@ -67,7 +67,13 @@ Native(command Text, rest Texts, compiler = "") Number
 		logger.Log(path + " not found, build it with Compiler/Bootstrap.cmd or sh Compiler/bootstrap.sh")
 		return 2
 	let refreshed = compiler is "" then Refreshed(path, rest) else 0
-	refreshed is not 0 then refreshed else Process(path).Started(Arguments(command, rest))
+	refreshed is not 0 then refreshed else Started(command, rest, path)
+Started(command Text, rest Texts, path Text) Number
+	let cache = NativeCache(command, rest)
+	if cache.IsCurrent
+		logger.Log(cache.Message)
+		return 0
+	Process(path).Started(Arguments(command, rest))
 Refreshed(compiler Text, rest Texts) Number
 	Strict(Logger).Refreshed("Missing.exe", ("Compiler/NativeCompiler.strict", ".")) is 0
 	let source = rest(1) + "/Compiler/NativeCompiler.strict"

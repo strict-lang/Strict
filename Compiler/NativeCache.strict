@@ -1,0 +1,100 @@
+has command Text
+has rest Texts
+IsEnabled Boolean
+	if (rest.Length < 2) or (File(rest(0)).Exists is false) or (File(rest(0)).Modified is 0)
+		return false
+	(NativeCompiler.Options(rest) - "small" - "native").Length is 0
+CacheFile Text
+	Path(FileCompiler.Normalized(rest(0))).RemoveExtension.text + (command is "test" then ".test" else "") + ".nativecache"
+Key Text
+	"1\t" + Directory.Current + "\t" + command + "\t" + Text.Combine(rest, "\t")
+Output Text
+	let program = (command is "build") and NativeBuild.IsProgram(rest(0))
+	Toolchain(Platform.Current, rest(1)).Executable(NativeBuild.Output(rest(0), program))
+Message Text
+	(command is "test" then "Tests up to date: " else "Up to date: ") + rest(0)
+IsCurrent Boolean
+	if (IsEnabled is false) or (File(CacheFile).Exists is false) or (File(Output).Exists is false)
+		return false
+	let lines = File(CacheFile).ReadLines
+	let valid = (lines.Length > 1) and (lines.Length % 2 is 1) and (lines.First is Key)
+	valid and Matches(lines.Slice(1, lines.Length - 1))
+Matches(lines Texts) Boolean
+	for Range(0, lines.Length / 2)
+		let position = value * 2
+		if Value(lines(position)) is not lines(position + 1)
+			return false
+	true
+Saved(inputs Texts) Boolean
+	if (IsEnabled is false) or (Matches(inputs) is false)
+		return false
+	Written(Text.Combine((List(Text) + Key) + inputs + Snapshot(Outputs.Unique), "\n"))
+Inputs Texts
+	let sources = SourceFiles(rest(1)).Of(FileCompiler.Normalized(rest(0)))
+	let runtimes = Directory.Files(rest(1) + "/Compiler", "NativeRuntime*.mlir")
+	let extension = Toolchain(Platform.Current, rest(1)).Extension
+	let tools = (rest(1) + "/strict" + extension, rest(1) + "/Compiler/NativeCompiler" + extension)
+	sources + runtimes + tools + NativeInputs(Folders(sources)) + Data(sources)
+Folders(sources Texts) Texts
+	mutable folders = List(Text)
+	for sources
+		folders = folders + Path(value).PathOnly.text
+	folders.Unique
+NativeInputs(folders Texts) Texts
+	mutable files = List(Text)
+	let tools = Toolchain(Platform.Current, rest(1))
+	for Toolchain.Needed + ("llvm-split", "lld-link", "llvm-rc")
+		files = files + Process.Find(tools.Located(value)).executable
+	for folders
+		let native = value + "/native"
+		let sources = NativeSources(List(Text) + native)
+		let tokens = sources.Flags(Platform.Current, rest(1)).Split(" ")
+		files = files + sources.Files + sources.Inputs(Platform.Current, rest(1)) + sources.Sources(tokens)
+		files = files + (value + "/README.md", value + "/.origin", value + "/*", value + "/", native + "/*")
+	files
+Data(sources Texts) Texts
+	mutable data = List(Text)
+	if command is "test"
+		constant Kinds = (".mlir", ".ptx", ".ll", ".o", ".exe", ".strictbinary", ".nativecache", ".checked", ".tmp", ".res")
+		for sources
+			for BinaryFile(value).Data(value)
+				if "." + Path(value).FileName.text.Split(".").Last is not in Kinds
+					data = data + value
+	data
+Snapshot(paths Texts) Texts
+	mutable lines = List(Text)
+	for paths
+		lines = lines + value + Value(value)
+	lines
+Value(path Text) Text
+	if path.EndsWith("/")
+		return Text.Combine(Directory.Directories(path).Sorted, "\t")
+	if path.EndsWith("/*") is false
+		return "" + File(path).Modified
+	let folder = path.Substring(0, path.Length - 2)
+	mutable files = List(Text)
+	for ("*.strict", "*.c", "*.h", "*.m", "*.flags", "*.ico")
+		files = files + Directory.Files(folder, value)
+	Text.Combine(files.Sorted, "\t")
+Outputs Texts
+	let base = NativeBuild.Output(rest(0), (command is "build") and NativeBuild.IsProgram(rest(0)))
+	let release = Release(Logger, base)
+	mutable files = List(Text) + Output
+	for Release(Logger, base).Sidecars
+		if File(base + value).Exists
+			files = files + (base + value)
+	for (release.Parent + "/Release", release.Parent + "/Release/" + Platform.NameOf(Platform.Current))
+		let target = value + "/" + Path(Output).FileName.text
+		if File(target).Exists
+			files = files + target
+	files
+Written(text Text) Boolean
+	let temporary = CacheFile + "." + 1000000000.Random.Floor + ".tmp"
+	File(temporary).Write(text)
+	if Text.Combine(File(temporary).ReadLines, "\n") is not text
+		File(temporary).Delete
+		return false
+	File(temporary).Rename(CacheFile)
+	let saved = (File(temporary).Exists is false) and File(CacheFile).Exists
+	File(temporary).Delete
+	saved

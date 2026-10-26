@@ -112,7 +112,7 @@ NativeHelper(entry InstructionEntry, decoder PayloadDecoder) Text
 	let owned = MlirNatives(function, position).Helper(Owner(entry, type), name, count)
 	let paired = MlirPairs(function, position).Helper(entry, Owner(entry, type), name)
 	let fallback = TypeEntry.ShortName(type.Name).StartsWith("Dictionary") or (owned is "") then declared else owned
-	paired is "" then fallback else paired
+	MlirReadText(function, position).Helper(paired is "" then fallback else paired)
 Owner(entry InstructionEntry, type TypeEntry) Text
 	MlirCalls(Shapes, 2).Owner(Area, AreaShape) is "Shape"
 	let countPosition = 5 + entry.payload(3)

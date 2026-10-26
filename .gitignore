@@ -136,6 +136,7 @@ ipch/
 /coverage-results
 /.dotnet-home
 *.strictbinary
+*.nativecache
 Compiler/NativeCompiler.checked
 *.exe
 *.wasm

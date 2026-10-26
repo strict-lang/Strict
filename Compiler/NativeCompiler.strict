@@ -1,9 +1,20 @@
 has logger
 Run(arguments Texts) Number
 	let rest = arguments.Slice(1, arguments.Length - 1)
-	if arguments(0) is "build"
+	let cache = NativeCache(arguments(0), rest)
+	if cache.IsCurrent
+		logger.Log(cache.Message)
+		return 0
+	let inputs = cache.IsEnabled then cache.Snapshot(cache.Inputs.Unique) else List(Text)
+	let failed = Compiled(arguments(0), rest)
+	if failed is 0
+		cache.Saved(inputs)
+	failed
+Compiled(command Text, rest Texts) Number
+	if command is "build"
 		return Built(rest)
-	NativeBuild(logger).Compile(rest(0), rest(1), true)
+	let isCounting = (rest.Length > 2) and (rest(2) is "lines")
+	NativeBuild(logger, false).Compile(rest(0), rest(1), isCounting, isCounting is false)
 Built(rest Texts) Number
 	if (rest.Length > 2) and (rest(2) is "library")
 		return LibraryBuild(logger).Built(rest(0), rest(1))
@@ -16,7 +27,7 @@ Built(rest Texts) Number
 		logger.Log("Mobile target cannot be combined with another platform")
 		return 1
 	let build = NativeBuild(logger, ("linux" is in options) and (isWeb is false), Level(rest), isWeb, isAndroid, isIOS)
-	NativeGate(logger, build).Built(rest(0), rest(1))
+	build.Compile(rest(0), rest(1))
 Level(rest Texts) Text
 	NativeCompiler.Level(("a.strict", ".", "linux", "small")) is NativeBuild.Small
 	NativeCompiler.Level(("a.strict", ".")) is NativeBuild.Fast
