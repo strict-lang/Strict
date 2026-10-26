@@ -55,12 +55,13 @@ Bound(type TypeEntry, instance VmValue, method MethodEntry, arguments List(VmVal
 	Frame.Doubling.Bound(Doubler, VmValue.None, Frame.Twice.method, List(VmValue), VmValue.None).Length is 9
 	Hello.Bound(Texts, VmValue.OfText("ab"), Doubler.methods.First, List(VmValue), VmValue.None).Last.text is "ab"
 	let start = Frame.MembersSlot + type.members.Length
-	let end = start + method.parameters.Length
 	let ownership = Ownership(type, instance.kind)
-	let indexed = Indexed(method, arguments)
-	for end > method.Slots then end else method.Slots
+	mutable slots = List(Mutable(VmValue))
+	for (start + method.parameters.Length, method.Slots).Maximum
 		let found = index < start then Member(type, instance, index, ownership, prototype) else VmValue.None
-		index is Frame.IndexSlot then indexed else index < start then found else Argument(method, arguments, index - start)
+		let slot = index < start then found else Argument(method, arguments, index - start)
+		slots.Add(index is Frame.IndexSlot then Indexed(method, arguments) else slot)
+	slots
 Member(type TypeEntry, instance VmValue, slot Number, ownership Number, prototype VmValue) VmValue
 	Hello.Member(Wrapper, VmValue.OfError("a"), 6, 0, VmValue.None).kind is "Strict/Error"
 	Hello.Member(Wrapper, VmValue.OfError("a"), 7, 0, VmValue.None).number is 7
