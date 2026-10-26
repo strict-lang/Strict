@@ -3,4 +3,6 @@ Compiles Strict types into register based instructions, shared by the Strict VM 
 
 Inline numeric assertions use absolute plus relative tolerance `1e-7 * (1 + max(abs(actual), abs(expected)))`. Step-constrained numbers compare exactly after their normal step rounding, including record fields. Boolean, text and production comparisons keep their existing behavior.
 
+`DataFiles` discovers test fixtures from decoded string literals. It resolves each unique literal once across a native test's source inventory, always prunes `.git`, and uses Git's matching of each repository root's `.gitignore` to prune ignored directories. Explicit existing file literals remain dependencies even when ignored; the ignore rules themselves are dependencies. Global Git excludes do not affect results. Without Git, discovery conservatively retains directories except `.git`. Both VM test stamps and native test stamps share this policy. `python Bytecode/check_data.py` (also with `native`) checks ignored trees, explicit ignored fixtures, retained assets, rule dependencies and escaped strings that previously triggered Windows network lookups.
+
 <!-- test comparisons expand records and lists through eight nested types; deeper or recursive types use existing exact equality. A recursive runtime comparison helper would remove this compiler expansion limit. -->

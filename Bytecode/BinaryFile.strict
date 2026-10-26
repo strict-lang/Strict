@@ -61,40 +61,35 @@ Referenced(entry ZipEntry) TypeEntry
 	Probe.Referenced(ZipEntry("Missing.reference", List(Number))).methods.Length is 0
 	let owner = Owned(entry.Name.Substring(0, entry.Name.Length - 10))
 	TypeReference(owner).Selected(ByteEncoder(entry.content).Integers)
-Data(path Text) Texts
+Data(path Text, ignored Texts = List(Text)) Texts
 	Probe.Data("Compiler/NativeBuild.strict") is ("Compiler/NativeRuntime.mlir")
 	Probe.Data("NeuralNetworks/Dataset.strict").Length is 2
 	mutable files = List(Mutable(Text))
-	for File(path).ReadLines
-		for Tokenizer(value).Tokens
-			let literal = value.StartsWith("\"") then value.Substring(1, value.Length - 2) else ""
-			let name = literal.StartsWith("/") then literal.Substring(1, literal.Length - 1) else literal
-			for Found(name)
-				if (value is not in files) and (value.EndsWith(".strict") is false)
-					files.Add(value)
+	for DataFiles.References(path).Unique
+		for Found(value, ignored)
+			if (value is not in files) and (value.EndsWith(".strict") is false)
+				files.Add(value)
 	files
-Found(name Text) Texts
+Found(name Text, ignored Texts = List(Text)) Texts
 	Probe.Found("Compiler/NativeRuntime.mlir") is List(Text) + "Compiler/NativeRuntime.mlir"
 	Probe.Found("Bytecode").Length is 0
+	Probe.Found(".git").Length is 0
 	Probe.Found("NeuralNetworks/images").Length is 2
 	(Probe.Found("..") + Probe.Found("/") + Probe.Found(".") + Probe.Found("./")).Length is 0
-	if File(name).Exists
-		return IsInput(name) then List(Text) + name else List(Text)
-	let isOutside = (name.IndexOf(":") >= 0) or name.StartsWith("..") or name.StartsWith("/")
-	if (Directory.Exists(name) is false) or isOutside or (name is in (".", "./"))
-		return List(Text)
-	Directory.Files(name, "*.strict").Length is 0 then Contained(name) else List(Text)
+	DataFiles(ignored).Found(name)
 IsInput(name Text) Boolean
 	Probe.IsInput("Compiler/NativeRuntime.mlir")
 	Probe.IsInput("./Character.test") is false
 	Probe.IsInput("strict") is false
 	let isOutput = name.EndsWith(".exe") or name.EndsWith(".test") or name.EndsWith(".strictbinary")
 	(name.LastIndexOf(".") > name.LastIndexOf("/") + 1) and (isOutput is false)
-Contained(folder Text) Texts
+Contained(folder Text, ignored Texts = List(Text)) Texts
 	Probe.Contained("NeuralNetworks/images").Length is Probe.Found("NeuralNetworks/images").Length
+	if DataFiles(ignored).Excluded(folder)
+		return List(Text)
 	mutable files = Directory.Files(folder)
 	for Directory.Directories(folder)
-		files = files + Contained(value)
+		files = files + Contained(value, ignored)
 	files
 Owned(name Text) TypeEntry
 	Probe.Owned("Missing").Name is ""

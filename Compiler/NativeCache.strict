@@ -63,11 +63,11 @@ NativeInputs(folders Texts) Texts
 Data(sources Texts) Texts
 	mutable data = List(Text)
 	if command is "test"
+		let ignored = DataFiles.Ignored((Directory.Current, rest(1)))
 		constant Kinds = (".mlir", ".ptx", ".ll", ".o", ".exe", ".strictbinary", ".nativecache", ".checked", ".tmp", ".res")
-		for sources
-			for BinaryFile(value).Data(value)
-				if "." + Path(value).FileName.text.Split(".").Last is not in Kinds
-					data = data + value
+		for DataFiles(ignored).Selected(sources)
+			if "." + Path(value).FileName.text.Split(".").Last is not in Kinds
+				data = data + value
 	data
 Snapshot(paths Texts) Texts
 	mutable lines = List(Text)

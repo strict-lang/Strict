@@ -76,6 +76,7 @@ static int ReadFrom(Opening file, uint64_t offset, unsigned char* target, uint64
 typedef SRWLOCK Lock;
 typedef CONDITION_VARIABLE Condition;
 static Lock poolLock = SRWLOCK_INIT;
+static Lock poolDispatch = SRWLOCK_INIT;
 static Condition poolStarted = CONDITION_VARIABLE_INIT, poolDone = CONDITION_VARIABLE_INIT;
 static void Locked(Lock* lock) { AcquireSRWLockExclusive(lock); }
 static void Unlocked(Lock* lock) { ReleaseSRWLockExclusive(lock); }
@@ -86,6 +87,7 @@ static uint64_t Processors(void) { return GetActiveProcessorCount(ALL_PROCESSOR_
 typedef pthread_mutex_t Lock;
 typedef pthread_cond_t Condition;
 static Lock poolLock = PTHREAD_MUTEX_INITIALIZER;
+static Lock poolDispatch = PTHREAD_MUTEX_INITIALIZER;
 static Condition poolStarted = PTHREAD_COND_INITIALIZER, poolDone = PTHREAD_COND_INITIALIZER;
 static void Locked(Lock* lock) { pthread_mutex_lock(lock); }
 static void Unlocked(Lock* lock) { pthread_mutex_unlock(lock); }
@@ -161,6 +163,7 @@ static int Started(void)
    58 and 128 threads 135 ms per token). */
 static void Parallel(void (*work)(void*, uint64_t), void* context, uint64_t count)
 {
+	Locked(&poolDispatch);
 	const char* wanted = poolThreads ? 0 : getenv("STRICT_THREADS");
 	uint64_t threads = poolThreads ? 0 : wanted && atoi(wanted) > 0 ? (uint64_t)atoi(wanted) : Processors() / 4;
 	for (poolThreads = poolThreads ? poolThreads : 1; poolThreads < threads && Started(); )
@@ -175,5 +178,6 @@ static void Parallel(void (*work)(void*, uint64_t), void* context, uint64_t coun
 	Worked();
 	for (uint64_t busy = atomic_load(&poolBusy); busy > 0; busy = atomic_load(&poolBusy))
 		Awaited(&poolBusy, busy, &poolDone);
+	Unlocked(&poolDispatch);
 }
 #endif

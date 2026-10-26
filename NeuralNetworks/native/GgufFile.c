@@ -7,6 +7,7 @@
 #include <stdatomic.h>
 #include "strict.h"
 #include "Parallel.h"
+#include "ThreadState.h"
 #include "ggml-cpu/quants.h"
 #include "ggml-impl.h"
 #pragma STDC FP_CONTRACT OFF
@@ -25,13 +26,13 @@ typedef struct { char* key; char* value; } Entry;
 typedef struct { char* name; uint32_t type; uint32_t dimensions; uint64_t shape[4]; uint64_t offset; uint32_t shard; uint64_t start; } Tensor;
 typedef struct { FILE* file; int failed; } Reader;
 typedef struct { char* data; uint64_t length; uint64_t capacity; } Builder;
-static char* loadedPath = 0;
-static Entry* entries = 0;
-static uint64_t entryCount = 0;
-static Tensor* tensors = 0;
-static uint64_t tensorCount = 0;
-static char** shardPaths = 0;
-static uint32_t shardCount = 0;
+static _Thread_local char* loadedPath = 0;
+static _Thread_local Entry* entries = 0;
+static _Thread_local uint64_t entryCount = 0;
+static _Thread_local Tensor* tensors = 0;
+static _Thread_local uint64_t tensorCount = 0;
+static _Thread_local char** shardPaths = 0;
+static _Thread_local uint32_t shardCount = 0;
 
 static void Read(Reader* reader, void* target, uint64_t size)
 {
@@ -124,8 +125,8 @@ static char* Value(Reader* reader)
 	return text.data;
 }
 
-static Opening* openings = 0;
-static uint64_t* openingSizes = 0;
+static _Thread_local Opening* openings = 0;
+static _Thread_local uint64_t* openingSizes = 0;
 
 static void Forget(void)
 {
@@ -171,8 +172,8 @@ typedef struct
 	uint64_t entryCount, tensorCount;
 	uint32_t shardCount;
 } Model;
-static Model* models = 0;
-static uint64_t modelCount = 0, currentModel = 0;
+static _Thread_local Model* models = 0;
+static _Thread_local uint64_t modelCount = 0, currentModel = 0;
 
 static void Kept(void)
 {
@@ -185,6 +186,30 @@ static void Switched(const Model* model)
 	loadedPath = model->path, entries = model->entries, tensors = model->tensors, shardPaths = model->shardPaths;
 	openings = model->openings, openingSizes = model->openingSizes;
 	entryCount = model->entryCount, tensorCount = model->tensorCount, shardCount = model->shardCount;
+}
+
+static _Thread_local strict_numbers *shape, *numbers, *outputs, *picked;
+static _Thread_local double* resultRows;
+static _Thread_local unsigned char *resultStorage, *staged;
+static _Thread_local uint64_t stagedBytes;
+
+static void ThreadReleased(void)
+{
+	if (loadedPath)
+		Kept();
+	for (uint64_t index = 0; index < modelCount; index++)
+	{
+		Switched(&models[index]);
+		Forget();
+	}
+	free(models);
+	free(shape);
+	free(numbers);
+	free(outputs);
+	free(picked);
+	free(resultRows);
+	free(resultStorage);
+	free(staged);
 }
 
 /* Adds the metadata and tensor infos of one file of a model to the loaded ones, returns the failure name if it can't. */
@@ -257,6 +282,8 @@ static char* ShardPath(const char* path, uint32_t shard)
    (split.count in the first), returns the failure name if it can't. */
 static const char* Loaded(const char* path)
 {
+	if (!ThreadReady())
+		return "NativeThreadStateFailed";
 	if (loadedPath && strcmp(loadedPath, path) == 0)
 		return 0;
 	if (loadedPath)
@@ -320,7 +347,6 @@ STRICT_EXPORT double GgufFile_Value(double self, double path, double key)
 /* The shape of the tensor name with the slowest changing dimension first (rows, columns), empty without such a tensor. */
 STRICT_EXPORT double GgufFile_Shape(double self, double path, double name)
 {
-	static strict_numbers* shape = 0;
 	const char* failure = Loaded(strict_text(path));
 	if (failure)
 		return strict_fail(failure);
@@ -564,7 +590,6 @@ static const Tensor* Requested(double path, double name, uint32_t dimensions, co
 /* All numbers of the tensor name as doubles. */
 STRICT_EXPORT double GgufFile_Values(double self, double path, double name)
 {
-	static strict_numbers* numbers = 0;
 	const char* failure = 0;
 	const Tensor* tensor = Requested(path, name, 0, &failure);
 	uint64_t count = tensor ? Elements(tensor) : 0;
@@ -634,8 +659,6 @@ static void Packed(void* context, uint64_t item)
    code 3 and other types become 8 bits). The matrices of a stack (the experts of a mixture) follow each other. */
 STRICT_EXPORT double GgufFile_Rows(double self, double path, double name, double bits)
 {
-	static double* rows = 0;
-	static unsigned char* storage = 0;
 	const char* failure = bits != 4 && bits != 8 && bits != 16 && bits != 32 ? "OnlyMatricesOf4Or8Or16Or32BitsAreSupported" : 0;
 	const Tensor* tensor = failure ? 0 : Requested(path, name, 0, &failure);
 	if (tensor && tensor->dimensions != 2 && tensor->dimensions != 3)
@@ -652,16 +675,16 @@ STRICT_EXPORT double GgufFile_Rows(double self, double path, double name, double
 	if (!floats && !raw)
 		return strict_fail(failure);
 	uint64_t size = (sizeof(strict_packed) + strict_packed_bytes(width, kept) + 7) / 8 * 8;
-	free(rows);
-	free(storage);
-	rows = malloc((1 + height) * sizeof(double));
-	storage = malloc(height * size + 1);
-	rows[0] = (double)height;
-	Packing packing = { raw, floats, storage, rows, size, width, height, kept, type };
+	free(resultRows);
+	free(resultStorage);
+	resultRows = malloc((1 + height) * sizeof(double));
+	resultStorage = malloc(height * size + 1);
+	resultRows[0] = (double)height;
+	Packing packing = { raw, floats, resultStorage, resultRows, size, width, height, kept, type };
 	Parallel(Packed, &packing, (height + RowChunk - 1) / RowChunk);
 	free(floats);
 	free(raw);
-	return strict_numbers_result((strict_numbers*)rows);
+	return strict_numbers_result((strict_numbers*)resultRows);
 }
 
 /* ggml's tables (ggml-cpu.c fills them in ggml_cpu_init) and the functions of ggml.c its quantization code refers to:
@@ -760,21 +783,20 @@ static Task Rows(const Tensor* stacked, uint64_t expert, const void* input, floa
 	return task;
 }
 
-static atomic_int stagingFailed;
+typedef struct { Task* tasks; atomic_int failed; } Staging;
 
 static void Fetched(void* context, uint64_t item)
 {
-	Task* task = &((Task*)context)[item];
+	Staging* staging = context;
+	Task* task = &staging->tasks[item];
 	if (!ReadFrom(task->file, task->offset, task->rows, task->height * task->rowBytes))
-		atomic_store(&stagingFailed, 1);
+		atomic_store(&staging->failed, 1);
 }
 
 /* Reads the rows of all tasks into one buffer kept for the next call, one read per matrix on all threads: reading
    them from the file cache is copying, the pages of a mapping fault one by one (40 to 120 thousand a second). */
 static int Staged(Task* tasks, uint64_t count)
 {
-	static unsigned char* staged = 0;
-	static uint64_t stagedBytes = 0;
 	uint64_t total = 0;
 	for (uint64_t index = 0; index < count; index++)
 		total += tasks[index].height * tasks[index].rowBytes;
@@ -782,9 +804,9 @@ static int Staged(Task* tasks, uint64_t count)
 		free(staged), staged = malloc(total), stagedBytes = total;
 	for (uint64_t index = 0, at = 0; index < count; at += tasks[index].height * tasks[index].rowBytes, index++)
 		tasks[index].rows = staged + at;
-	atomic_store(&stagingFailed, 0);
-	Parallel(Fetched, tasks, count);
-	return !atomic_load(&stagingFailed);
+	Staging staging = { tasks, 0 };
+	Parallel(Fetched, &staging, count);
+	return !atomic_load(&staging.failed);
 }
 
 /* RowChunk rows of a task of the job, one ggml dot product per row. */
@@ -851,8 +873,7 @@ static int Shared(Task* tasks, uint64_t count, const strict_numbers* experts, ui
    rows spread over all threads, an expert chosen by several tokens read once. */
 STRICT_EXPORT double GgufFile_ExpertOutputs(double self, double path, double prefix, double chosen, double input)
 {
-	static strict_numbers* outputs = 0;
-	static int isTabled = 0;
+	static atomic_int isTabled;
 	const char* failure = 0;
 	const Tensor* gate = Stacked(path, prefix, "ffn_gate_exps.weight", &failure);
 	const Tensor* up = Stacked(path, prefix, "ffn_up_exps.weight", &failure);
@@ -861,9 +882,17 @@ STRICT_EXPORT double GgufFile_ExpertOutputs(double self, double path, double pre
 	failure = failure ? failure : Mismatched(gate, up, down, experts, values);
 	if (failure)
 		return strict_fail(failure);
-	for (uint32_t bits = 0; !isTabled && bits < 65536; bits++)
-		ggml_table_f32_f16[bits] = ggml_compute_fp16_to_fp32((ggml_fp16_t)bits);
-	isTabled = 1;
+	if (!atomic_load(&isTabled))
+	{
+		Locked(&poolLock);
+		if (!atomic_load(&isTabled))
+		{
+			for (uint32_t bits = 0; bits < 65536; bits++)
+				ggml_table_f32_f16[bits] = ggml_compute_fp16_to_fp32((ggml_fp16_t)bits);
+			atomic_store(&isTabled, 1);
+		}
+		Unlocked(&poolLock);
+	}
 	uint64_t hidden = gate->shape[0], width = gate->shape[1], count = (uint64_t)experts->count;
 	uint64_t tokens = (uint64_t)values->count / hidden, used = count / tokens;
 	float* floats = malloc((tokens * hidden + count * (width * 2 + hidden) + 1) * sizeof(float));
@@ -908,7 +937,6 @@ STRICT_EXPORT double GgufFile_ExpertOutputs(double self, double path, double pre
    row by row, so a huge table (the n-gram embeddings of Qwen3.8-Flash-Next) is never loaded as a whole. */
 STRICT_EXPORT double GgufFile_Picked(double self, double path, double name, double rows)
 {
-	static strict_numbers* picked = 0;
 	const char* failure = 0;
 	const Tensor* tensor = Requested(path, name, 0, &failure);
 	const strict_numbers* chosen = strict_numbers_of(rows);

@@ -1,0 +1,69 @@
+has ignored Texts = List(Text)
+Canonical(path Text) Text
+	DataFiles.Canonical("Tools/../x").Length > 0
+	let normalized = FileCompiler.Normalized(path)
+	Process.OperatingSystem is "Windows" then normalized.Lower else normalized
+Excluded(path Text) Boolean
+	DataFiles(("./Tools/", "./generated/")).Excluded("Tools")
+	DataFiles(("./Tools/")).Excluded("Toolset") is false
+	DataFiles.Excluded("folder/.git/objects")
+	let normalized = Canonical(path) + "/"
+	if normalized.IndexOf("/.git/") >= 0
+		return true
+	for ignored
+		if value.EndsWith("/") and normalized.StartsWith(Canonical(value))
+			return true
+	false
+Found(name Text) Texts
+	if BinaryFile("").IsInput(name) and File(name).Exists
+		return List(Text) + name
+	let outside = (name.IndexOf(":") >= 0) or name.StartsWith("..") or name.StartsWith("/")
+	if outside or (Directory.Exists(name) is false) or Excluded(name) or (name is in (".", "./"))
+		return List(Text)
+	Directory.Files(name, "*.strict").Length is 0 then BinaryFile("").Contained(name, ignored) else List(Text)
+Ignored(roots Texts) Texts
+	mutable paths = List(Mutable(Text))
+	mutable repositories = List(Text)
+	for roots.Unique
+		let repository = Repository(value)
+		if (repository is not "") and (repository is not in repositories)
+			repositories = repositories + repository
+			paths = paths + In(repository)
+	paths.Unique
+Repository(folder Text) Text
+	let result = Process.RunTool("git", "-C \"" + folder + "\" rev-parse --show-toplevel")
+	result.Failed then "" else result.Output.Trim
+In(repository Text) Texts
+	let rules = repository + "/.gitignore"
+	if File(rules).Exists is false
+		return List(Text)
+	let arguments = "-C \"" + repository + "\" ls-files --others --ignored --directory --exclude-from=\"" + rules + "\""
+	let result = Process.RunTool("git", "-c core.quotePath=false " + arguments)
+	if result.Failed
+		return List(Text) + rules
+	mutable paths = List(Mutable(Text)) + rules
+	for result.Output.Lines
+		if value.EndsWith("/")
+			paths.Add(FileCompiler.Normalized(repository + "/" + value))
+	paths
+Selected(sources Texts) Texts
+	mutable files = List(Mutable(Text))
+	mutable names = List(Mutable(Text))
+	for ignored
+		if value.EndsWith("/") is false
+			files.Add(value)
+	for sources
+		names = names + References(value)
+	for names.Unique
+		for Found(value)
+			if value.EndsWith(".strict") is false
+				files.Add(value)
+	files.Unique
+References(path Text) Texts
+	mutable names = List(Mutable(Text))
+	for File(path).ReadLines
+		for (value.IndexOf("\"") >= 0 then Tokenizer(value).Tokens else List(Text))
+			if value.StartsWith("\"")
+				let literal = SyntaxNode("Text", value).Unquoted
+				names.Add(literal.StartsWith("/") then literal.Substring(1, literal.Length - 1) else literal)
+	names

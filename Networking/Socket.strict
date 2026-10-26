@@ -1,5 +1,6 @@
 Connect(host Text, port Number) Number
 Listen(port Number) Number
+Port(socket Number) Number
 Accept(server Number) Number
 Waiting(server Number) Number
 Send(socket Number, bytes Numbers) Number
