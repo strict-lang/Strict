@@ -11,7 +11,8 @@ constant Optimized = " -march=native -Wno-override-module"
 constant Parts = 16
 constant Passes = " --symbol-dce --convert-scf-to-cf --convert-arith-to-llvm --convert-func-to-llvm --convert-cf-to-llvm --reconcile-unrealized-casts"
 constant Translating = " --mlir-disable-threading --mlir-to-llvmir "
-constant Thin = " -x none -flto=thin -fuse-ld=lld -Wl,/opt:lldltojobs=all -Wl,/mllvm:-mcpu=native -Wl,clang_rt.builtins-x86_64.lib"
+constant Direct = " -fuse-ld=lld -Wl,clang_rt.builtins-x86_64.lib"
+constant Thin = " -x none -flto=thin -Wl,/opt:lldltojobs=all -Wl,/mllvm:-mcpu=native" + Direct
 constant OnWindows = Toolchain(Platform.Windows, "C:/s")
 constant OnLinux = Toolchain(Platform.Linux, "/s")
 Located(name Text) Text
@@ -81,25 +82,25 @@ Installing(missing Texts) Text
 	Text.Combine(missing, ", ") + " not found, installing them with " + script + where + problem
 Built(base Text, executable Text, level Text) Text
 	OnWindows.Built("Compiler/output/missing", "missing.exe", NativeBuild.Fast).StartsWith("mlir-opt failed")
-	let lowered = Lowered(base, "", platform is Platform.Windows then Parts else 1)
+	let lowered = Lowered(base, "", (platform is Platform.Windows) and (level is not NativeBuild.Quick) then Parts else 1)
 	if lowered is not ""
 		return lowered
 	let system = platform is Platform.Windows then " -Wl,-Brepro -Wl,/STACK:67108864" else MacOSTools.Linked(platform)
-	let sources = NativeSources(natives).Objects(platform, root, level)
-	let resource = sources.StartsWith("clang") then sources else NativeSources(natives).Resource(base, platform, root)
+	let files = NativeSources(natives).Objects(platform, root, level is NativeBuild.Quick then NativeBuild.Fast else level)
+	let resource = files.StartsWith("clang") then files else NativeSources(natives).Resource(base, platform, root)
 	if resource.StartsWith("llvm-rc failed") or resource.StartsWith("clang failed")
 		return resource
-	let linking = Inputs(base, level) + sources + resource + " -o " + Quoted(executable) + Optimized + level + system
+	let linking = Inputs(base, level) + files + resource + " -o " + Quoted(executable) + Optimized + level + system
 	let linked = ToolRunner(Located("clang")).Execute(linking, "Linking")
 	linked.Failed then "clang failed: " + linked.error + linked.Output else "Built " + executable
 Inputs(base Text, level Text) Text
 	OnLinux.Inputs("Compiler/output/missing", "") is "\"Compiler/output/missing.ll\""
-	let isDivided = File(base + ".ll").Exists is false
-	let splitter = isDivided or (platform is not Platform.Windows) then "" else Located("llvm-split")
-	if (splitter is "") and (isDivided is false)
-		return Quoted(base + ".ll")
+	let isDivided = (platform is Platform.Windows) and (File(base + ".ll").Exists is false)
+	let isSplit = (platform is Platform.Windows) and (level is not NativeBuild.Quick) and (isDivided is false)
+	if (isSplit or isDivided) is false
+		return Quoted(base + ".ll") + (platform is Platform.Windows then Direct else "")
 	let splitting = "-j " + Parts + " " + Quoted(base + ".ll") + " -o " + Quoted(base + "-")
-	let split = isDivided then ProcessResult(0, "", "") else ToolRunner(splitter).Execute(splitting)
+	let split = isDivided then ProcessResult(0, "", "") else ToolRunner(Located("llvm-split")).Execute(splitting)
 	if split.Failed or (PartsCompiled(base, level) is false)
 		return Quoted(base + ".ll")
 	mutable parts = ""

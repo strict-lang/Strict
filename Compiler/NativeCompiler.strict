@@ -16,9 +16,12 @@ Compiled(command Text, rest Texts) Number
 	let isCounting = (rest.Length > 2) and (rest(2) is "lines")
 	NativeBuild(logger, false).Compile(rest(0), rest(1), isCounting, isCounting is false)
 Built(rest Texts) Number
+	let options = Options(rest)
+	if ("fast" is in options) and ((options - "fast").Length > 0)
+		logger.Log("Fast builds support only the native desktop target and cannot combine with other build options")
+		return 1
 	if (rest.Length > 2) and (rest(2) is "library")
 		return LibraryBuild(logger).Built(rest(0), rest(1))
-	let options = Options(rest)
 	if IsMixed(options)
 		logger.Log("Mobile target cannot be combined with another platform")
 		return 1
@@ -39,6 +42,9 @@ Configured(options Texts, level Text) NativeBuild
 Level(rest Texts) Text
 	NativeCompiler.Level(("a.strict", ".", "linux", "small")) is NativeBuild.Small
 	NativeCompiler.Level(("a.strict", ".")) is NativeBuild.Fast
+	NativeCompiler.Level(("a.strict", ".", "fast")) is " -O0"
+	if "fast" is in Options(rest)
+		return NativeBuild.Quick
 	"small" is in Options(rest) then NativeBuild.Small else NativeBuild.Fast
 Options(rest Texts) Texts
 	NativeCompiler.Options(("a.strict", ".", "linux")) is ("linux")

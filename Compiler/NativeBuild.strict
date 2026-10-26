@@ -6,6 +6,7 @@ has isAndroid Boolean = false
 has isIOS Boolean = false
 has isSimulator Boolean = false
 constant Fast = " -O2"
+constant Quick = " -O0"
 constant Small = " -Os"
 constant Intermediates = (".ios.o", ".ios.new.a", ".android.o", ".llvm.mlir", ".ll", ".res", ".gpu.mlir", ".gpu.llvm.mlir", ".gpu.ll", ".sm_75.ptx", ".sm_80.ptx", ".amd.mlir", ".amd.llvm.mlir", ".amd.ll", ".amd.bc", ".linux.mlir", ".linux.llvm.mlir", ".linux.ll", ".linux.o", ".pre.js", ".o", ".gpu.opt.ll", ".runtime.gpu.mlir", ".runtime.gpu.llvm.mlir", ".runtime.gpu.ll", ".runtime.sm_75.ptx", ".runtime.sm_80.ptx")
 IsProgram(path Text) Boolean
@@ -43,13 +44,15 @@ Failed(message Text) Text
 	""
 Natives(path Text, root Text, types List(TypeEntry)) Texts
 	NativeBuild.Natives("Examples/NativeAdd/NativeAdd.strict", ".", List(TypeEntry)).Length is 0
+	NativeBuild.Natives("Examples/NativeAdd/NativeAdd.strict", ".", List(TypeEntry) + Foreign.Shorter).Length is 0
 	constant imported = NativeBuild.Natives("Examples/HelloLogger.strict", "Compiler", List(TypeEntry) + Foreign.Adder)
 	imported is List(Text) + ("Examples/NativeAdd" + "/native")
 	mutable folders = List(Mutable(Text))
 	for types
-		let folder = TypeSource(value).NativeFolder(path, root)
-		if Directory.Exists(folder) and (folder is not in folders)
-			folders.Add(folder)
+		if NativeFolder.IsNative(value, types)
+			let folder = TypeSource(value).NativeFolder(path, root)
+			if Directory.Exists(folder) and (folder is not in folders)
+				folders.Add(folder)
 	folders
 Build(base Text, program Text, tools Toolchain, isCounting = false) Number
 	let missing = tools.Missing(tools.isWeb then Toolchain.Needed + "emcc" else Toolchain.Needed)

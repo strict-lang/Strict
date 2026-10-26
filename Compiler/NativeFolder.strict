@@ -24,6 +24,13 @@ Natives(path Text, root Text, types List(TypeEntry)) Texts
 			if value is not in folders
 				folders.Add(value)
 	folders
+IsNative(type TypeEntry, types List(TypeEntry)) Boolean
+	NativeFolder.IsNative(Foreign.Adder, List(TypeEntry) + Foreign.Adder)
+	NativeFolder.IsNative(Foreign.Shorter, List(TypeEntry) + Foreign.Shorter) is false
+	for type.methods
+		if MlirForeign(MlirFunction(types, type, value)).IsForeign
+			return true
+	false
 CountedFiles(paths Texts, root Text) Texts
 	NativeFolder(Logger).CountedFiles(List(Text) + "./Examples/Sum.strict", ".") is ("Examples/Sum.strict")
 	for paths

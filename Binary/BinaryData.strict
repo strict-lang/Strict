@@ -32,9 +32,13 @@ Float32(at Number) Number
 	Sample.Float32(8) is 1.5
 	Sample.Float32(18) is -1
 	Sample.Float32(0) is 4 * 2 ^ -149
+	BinaryData((0, 0, 128, 127)).Float32(0) is 1 / 0
+	BinaryData((1, 0, 128, 127)).Float32(0).IsFinite is false
 	let high = bytes(at + 3)
 	let exponent = (high % 128) * 2 + (bytes(at + 2) / 128).Floor
 	let mantissa = (bytes(at + 2) % 128) * 65536 + bytes(at + 1) * 256 + bytes(at)
+	if exponent is 255
+		return mantissa is 0 then (high >= 128 then -1 / 0 else 1 / 0) else 0 / 0
 	let magnitude = exponent is 0 then mantissa * 2 ^ -149 else (1 + mantissa / 8388608) * 2 ^ (exponent - 127)
 	high >= 128 then 0 - magnitude else magnitude
 Text(at Number) Text

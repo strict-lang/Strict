@@ -23,10 +23,8 @@ RemoveExtension Path
 ChangeExtension(newExtension Text) Path
 	Path("file.txt").ChangeExtension("strict") is Path("file.strict")
 	Path("noExt").ChangeExtension("strict") is Path("noExt.strict")
-	let extensionSeparatorIndex = text.LastIndexOf(ExtensionSeparator)
-	if extensionSeparatorIndex is -1
-		return Path(text + ExtensionSeparator + newExtension)
-	Path(text.Substring(0, extensionSeparatorIndex) + ExtensionSeparator + newExtension)
+	Path("dir.with.dot/file").ChangeExtension("strict") is Path("dir.with.dot/file.strict")
+	Path(RemoveExtension.text + ExtensionSeparator + newExtension)
 PathOnly Path
 	Path("/dir/file.txt").PathOnly is Path("/dir")
 	Path("noSlash").PathOnly is Path("")
