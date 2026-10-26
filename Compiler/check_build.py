@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 
 root = Path(__file__).resolve().parent.parent
+assert "@NativeGate_Built_" not in (root / "Compiler/Bootstrap.mlir").read_text(), \
+	"Bootstrap compiler still runs tests during builds"
 extension = ".exe" if sys.platform == "win32" else ""
 with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as folder:
 	source = Path(folder) / "BuildCheck.strict"

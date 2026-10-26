@@ -15,7 +15,12 @@ Execute(arguments Text) ProcessResult
 ExecuteAll(arguments Texts) List(ProcessResult)
 	ToolRunner("noSuchStrictTool").ExecuteAll(("", "")).Last.Failed
 	Echo.ExecuteAll((Echoed + "a", Echoed + "b")).Last.Output is "b\n"
-	for Process.RunTools(name, arguments)
+	let phase = "Tool " + Path(name).FileName.text + " (" + arguments.Length + " jobs)"
+	Logger.Log("Running " + phase)
+	let started = Process.Elapsed
+	let results = Process.RunTools(name, arguments)
+	BuildProfile(Logger).Reported(phase, started)
+	for results
 		Retried(Cleaned(value), arguments(index))
 Retried(result ProcessResult, arguments Text) ProcessResult
 	ToolRunner("noSuchStrictTool").Retried(ProcessResult(139, "", ""), "").exitCode is 127
