@@ -15,8 +15,9 @@ FileName Path
 RemoveExtension Path
 	Path("file.txt").RemoveExtension is Path("file")
 	Path("noExt").RemoveExtension is Path("noExt")
-	let extensionSeparatorIndex = text.LastIndexOf(".")
-	if extensionSeparatorIndex is -1
+	Path("./Compiler/NativeCompiler").RemoveExtension is Path("./Compiler/NativeCompiler")
+	let extensionSeparatorIndex = text.LastIndexOf(ExtensionSeparator)
+	if extensionSeparatorIndex < text.Replace("\\", PathSeparator).LastIndexOf(PathSeparator) + 1
 		return Path(text)
 	Path(text.Substring(0, extensionSeparatorIndex))
 ChangeExtension(newExtension Text) Path

@@ -1,28 +1,29 @@
 # iOS compiler and MacMini handoff
 
-`strict build <file> ios` runs host VM tests and builds an arm64 static archive for iOS 15.0. Generated compute loops keep their CPU fallback. The exported C entry point is `int strict_main(int argc, char **argv)`; UIKit retains ownership of the application's `main` and lifecycle.
+`strict build <file> ios` builds an arm64 static archive for iOS 15.0 devices, `strict build <file> ios simulator` one for the Simulator of the host (x86_64 on Intel Macs, arm64 on Apple Silicon). Generated compute loops keep their CPU fallback. The exported C entry point is `int strict_main(int argc, char **argv)`.
 
-Release output is `Release/iOS/<Name>.ios.a` and `Release/iOS/Content`. Add the archive and content to an Xcode app target. This is an input to an app build, not a signed app or IPA. Plain Strict programs can produce their archive on Windows using LLVM without an Apple SDK. An archive does not resolve system symbols, so SDK linking and execution remain unverified there.
+Release output is `Release/iOS/<Name>.ios.a`, `Release/iOS/<Name>.simulator.a` and `Release/iOS/Content`. Add the archive and content to an Xcode app target. This is an input to an app build, not a signed app or IPA. Plain Strict programs can produce their device archive on Windows using LLVM without an Apple SDK.
 
-Native packages require macOS, full Xcode and a working `xcrun --sdk iphoneos --show-sdk-path`. Their `native/IOS.flags` supply include paths, definitions and extra C/Objective-C sources; Xcode supplies final app frameworks and libraries. Host LLVM compiles Strict IR, Xcode Clang compiles native sources against the iPhoneOS SDK, and `llvm-ar` creates the archive. Missing tools or SDKs fail the build. Device and Simulator binaries are different platforms: this target currently builds device arm64 only.
+Native packages require macOS, full Xcode and a working `xcrun --sdk iphoneos --show-sdk-path` (`iphonesimulator` for the Simulator). Their `native/iOS.flags` supply include paths, definitions and extra C/Objective-C sources (`-Wl,` options are for the app's link). Host LLVM compiles Strict IR, Xcode Clang compiles native sources against the SDK, and `llvm-ar` creates the archive. Missing tools or SDKs fail the build. The x86_64 Simulator is compiled for `x86-64-v2` (without SSE4.1 `llvm.roundeven` becomes a libm call the iOS SDK does not have).
 
-The runtime shares Darwin facilities and arm64 register spilling with macOS. iOS identifies itself separately, uses the app's `TMPDIR` for temporary files, reports temporary-file creation failures, disables desktop GPU loading and reserves a provisional 1 GiB virtual heap. Device memory limits, pointer tagging and collector behavior still require real-device checks.
+The runtime shares Darwin facilities with macOS (`NativeRuntimeDarwin`, the 64 bit inode `NativeRuntimeDirectories`) and the register spilling of its architecture (`NativeRuntimeArm64`, `NativeRuntimeX64`). iOS identifies itself separately, uses the app's `TMPDIR` for temporary files, reports temporary-file creation failures, disables desktop GPU loading and reserves a provisional 1 GiB virtual heap. Device memory limits, pointer tagging and collector behavior still require real-device checks.
 
-## Verified on Windows
+## DeltaEngine games
 
-- Platform-name regression and configurable entry-symbol regression failed before implementation and pass afterward.
-- `strict build Examples/Sum.strict ios` produces a static archive containing a 64-bit arm64 Mach-O object with `LC_BUILD_VERSION` platform `ios`, minimum version 15.0 and exported `_strict_main`, without `_main`.
-- `strict build Compiler/IOSBuild.strict` runs its native tests on the host.
-- SoulCraft's host tests run from the DeltaEngine root; native package compilation needs the Mac SDK.
+`Frameworks/native/IOSWindow.m` is the UIKit host linked from the archive: it owns `main`, changes into the app bundle (Content is read from there), creates an OpenGL ES 3 context on a `CAEAGLLayer` view (Retina, rotation reallocates the framebuffer) and calls `strict_main` on the main thread. `Window_Frame` presents and runs the main run loop until the next `CADisplayLink` refresh, so touches (`IOS_OnTouch`, in pixels) and lifecycle events arrive between frames and a game in the background waits there without touching OpenGL. miniaudio's iOS backend is Objective-C, so `IOSWindow.m` includes `Audio.c`. The Xcode app target needs no sources: the archive, `Content` as a folder reference, an Info.plist (landscape, `UILaunchScreen`) and the frameworks of `Frameworks/native/iOS.flags`.
 
-## MacMini continuation
+## Verified on the MacMini (Intel, macOS 15.8, Xcode 26.3, 2026-10-26)
 
-1. Bring the entire Strict working tree, including the regenerated `Compiler/Bootstrap.mlir`, `NativeRuntimeDarwin.mlir`, `NativeRuntimeIOS.mlir` and existing Android changes. Keep the Strict and DeltaEngine clones side by side. Rebuild the native compiler and Strict command with the documented bootstrap if needed; use full Xcode, not only Command Line Tools.
-2. Verify `xcrun --sdk iphoneos --show-sdk-path`, `strict check Compiler`, changed-file VM/native tests and a native macOS Sum build. Build `Examples/Sum.strict ios`, link the archive into a minimal Xcode iOS app, invoke `strict_main` once with the Sum arguments and verify output 35. Resolve SDK availability diagnostics here; Windows archive creation cannot detect them.
-3. Run that harness on a physical arm64 device. Verify startup, temporary files in the sandbox, stack bounds, allocation/collection under memory pressure and source-linked Error diagnostics. Calibrate the 1 GiB reservation rather than assuming desktop virtual-memory limits.
-4. From DeltaEngine root, run `strict build Games/SoulCraft/SoulCraft.strict ios`. Add focused `IOS.flags` and a native UIKit window, rendering, touch and audio bridge in shared engine packages. Keep SoulCraft rules in Strict. Supply app-bundle resource lookup and writable save paths without writing into the signed bundle. Bind the existing game lifecycle to UIKit's event loop.
-5. Restore app identity, save compatibility and platform services from the actual released SoulCraft app. Confirm identifiers and signing with App Store Connect; do not infer SoulCraft 1 identity from the SoulCraft 3 prototype. Create app icons, launch configuration, entitlements and provisioning in the app project. Validate orientation, Retina scaling, suspension/resume, audio interruption and background behavior on hardware.
-6. Add a separate Simulator target if needed, then create an XCFramework from separate device/Simulator archives. Build an Xcode archive, validate it and deploy a TestFlight build using the team's current signing setup. No signing credentials or provisioning profiles are copied into this repository.
+- `Examples/Sum.strict ios` links into an arm64 iOS app with the iPhoneOS 26.2 SDK; `ios simulator` linked into a command line program prints 35 in the iOS 17 Simulator (`xcrun simctl spawn`).
+- `Games/SoulCraft/SoulCraft.strict ios` links into an arm64 app; the `ios simulator` archive in a `.app` (ad-hoc signed, Content copied) starts in the iPhone 15 Simulator and renders the menu with the 3D hero, fonts and textures.
+- Not verified yet: touch input, audio output, rotation, background and resume, saves (the game writes next to its Content, which is the read-only signed bundle on iOS: needs the app's Documents folder), physical devices (no signing identity on the MacMini).
+
+## Next steps
+
+1. Simulator checks of SoulCraft: touch (tap PLAY, drag), audio, rotation, background and resume. Writable saves: change into the app's Documents folder for writing while Content stays readable from the bundle.
+2. A physical arm64 device (needs a signing identity of team DeltaEngine GmbH on the MacMini, none is installed): startup, temporary files in the sandbox, stack bounds, allocation and collection under memory pressure, source-linked Error diagnostics, calibrate the 1 GiB reservation.
+3. Restore app identity, save compatibility and platform services from the actual released SoulCraft app. Confirm identifiers and signing with App Store Connect; do not infer SoulCraft 1 identity from the SoulCraft 3 prototype. Create app icons, launch configuration, entitlements and provisioning in the app project.
+4. Create an XCFramework from the device and Simulator archives (`xcodebuild -create-xcframework`), build an Xcode archive, validate it and deploy a TestFlight build using the team's current signing setup. No signing credentials or provisioning profiles are copied into this repository.
 
 ## Legacy references
 

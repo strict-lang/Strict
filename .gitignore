@@ -187,6 +187,8 @@ NeuralNetworks/qwen3/
 !NeuralNetworks/tinyqwen3.gguf
 !NeuralNetworks/tinyqwen3moe.gguf
 !NeuralNetworks/tinyqwen35basis.gguf
+*.ios.a
+*.simulator.a
 /Compiler/output
 /Examples/CacheProbe
 /Examples/BuildCheck69w0auym

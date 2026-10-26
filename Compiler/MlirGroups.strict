@@ -1,8 +1,10 @@
 has function MlirFunction
 has position Number
 constant Normed = MethodEntry("Normed", (MemberEntry("input", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("size", "Strict/Number", List(InstructionEntry), false), MemberEntry("count", "Strict/Number", List(InstructionEntry), false)), "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "count"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "input"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "index"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "size"), InstructionEntry.Binary(InstructionType.Divide, (2, 3, 4)), InstructionEntry.Invoke(5, ("Strict/Number", "Floor", "Strict/Number"), List(Number), 4), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "size"), InstructionEntry.Binary(InstructionType.Multiply, (5, 6, 7)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 8, "size"), InstructionEntry.Invoke(9, ("Strict/Grouped", "Squared", "Strict/Number", "input", "start", "size"), (1, 7, 8), -1), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 9), InstructionEntry.Named(InstructionType.InvokeWriteToList, 9, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 12), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "forResult"), InstructionEntry.Return(0)))
-constant Grouped = TypeEntry("Strict/Grouped", List(MemberEntry), (Normed, GpuSamples.Squared))
+constant Scaled = MethodEntry("Scaled", GpuSamples.Squared.parameters, "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "input"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "start"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "size"), InstructionEntry.Invoke(3, ("Strict/Grouped", "Squared", "Strict/Number", "input", "start", "size"), (0, 1, 2), -1), InstructionEntry.LoadNumber(4, 2), InstructionEntry.Binary(InstructionType.Multiply, (3, 4, 5)), InstructionEntry.Return(5)))
+constant Grouped = TypeEntry("Strict/Grouped", List(MemberEntry), (Normed, GpuSamples.Squared, Scaled))
 constant Norming = MlirGroups(MlirFunction(List(TypeEntry) + Grouped, Grouped, Normed), 2)
+constant Wrapping = MlirGroups(MlirFunction(Norming.function, method = MethodEntry(Normed, instructions = Normed.instructions.Slice(0, 11) + InstructionEntry.Invoke(9, ("Strict/Grouped", "Scaled", "Strict/Number", "input", "start", "size"), (1, 7, 8), -1) + Normed.instructions.Slice(12, 5))), 2)
 constant AlignedCode = Normed.instructions.Slice(0, 6) + (InstructionEntry.Binary(InstructionType.Modulo, (2, 3, 4)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 4, "within"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "within"), InstructionEntry.Binary(InstructionType.Subtract, (2, 6, 7))) + Normed.instructions.Slice(10, 7)
 constant Aligning = MlirGroups(MlirFunction(Norming.function, method = MethodEntry(Normed, instructions = AlignedCode)), 2)
 constant Ranging = MlirGroups(MlirFunction(Aligning.function, method = MethodEntry(Normed, instructions = AlignedCode.Slice(0, 2) + InstructionEntry.LoopBegin(0, 1) + AlignedCode.Slice(3, 14))), 2)
@@ -22,6 +24,7 @@ Call Number
 Adding(at Number) Number
 	Norming.Adding(11) is 1
 	Norming.Adding(7) is 0
+	Wrapping.Adding(11) is 1
 	let callees = MlirModule(function.types, "").Called(function, at)
 	if callees.Length is not 1
 		return 0
@@ -29,7 +32,19 @@ Adding(at Number) Number
 	for callee.method.instructions
 		if (value.kind is InstructionType.LoopBegin) and MlirDeviceChoice(callee, index).IsChoice
 			return -1
-	MlirDeviceSums(callee, 0).IsSummed(callee, 0, callee.method.instructions.Length, false) then 1 else 0
+	let summed = MlirDeviceSums(callee, 0).IsSummed(callee, 0, callee.method.instructions.Length, false)
+	summed then 1 else Wraps(callee) then 1 else 0
+Wraps(callee MlirFunction) Boolean
+	Wrapping.Wraps(MlirFunction(Wrapping.function, method = Scaled))
+	Norming.Wraps(Norming.function) is false
+	mutable sums = 0
+	for callee.method.instructions
+		if value.kind is InstructionType.LoopBegin
+			return false
+		if value.kind is InstructionType.Invoke
+			for MlirModule(callee.types, "").Called(callee, index)
+				sums = MlirDeviceSums(value, 0).IsSummed(value, 0, value.method.instructions.Length, false) then sums + 1 else sums
+	sums is 1
 Size(at Number) Text
 	Aligning.Call is 11 and Ranging.Call is -1
 	Norming.Size(11) is "size"

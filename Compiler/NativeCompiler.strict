@@ -19,15 +19,23 @@ Built(rest Texts) Number
 	if (rest.Length > 2) and (rest(2) is "library")
 		return LibraryBuild(logger).Built(rest(0), rest(1))
 	let options = Options(rest)
-	let isWeb = "web" is in options
-	let isAndroid = "android" is in options
-	let isIOS = "ios" is in options
-	let desktop = isWeb or ("linux" is in options)
-	if (isAndroid and isIOS) or ((isAndroid or isIOS) and desktop)
+	if IsMixed(options)
 		logger.Log("Mobile target cannot be combined with another platform")
 		return 1
-	let build = NativeBuild(logger, ("linux" is in options) and (isWeb is false), Level(rest), isWeb, isAndroid, isIOS)
-	build.Compile(rest(0), rest(1))
+	Configured(options, Level(rest)).Compile(rest(0), rest(1))
+IsMixed(options Texts) Boolean
+	NativeCompiler.IsMixed(("android", "ios"))
+	NativeCompiler.IsMixed(("ios", "web"))
+	NativeCompiler.IsMixed(("ios", "simulator")) is false
+	let isMobile = ("android" is in options) or ("ios" is in options)
+	let isDesktop = ("web" is in options) or ("linux" is in options)
+	(("android" is in options) and ("ios" is in options)) or (isMobile and isDesktop)
+Configured(options Texts, level Text) NativeBuild
+	NativeCompiler(Logger).Configured(("ios", "simulator"), NativeBuild.Fast).Target is Platform.IOSSimulator
+	NativeCompiler(Logger).Configured(("linux", "web"), NativeBuild.Fast).isCrossing is false
+	let isWeb = "web" is in options
+	let isCrossing = ("linux" is in options) and (isWeb is false)
+	NativeBuild(logger, isCrossing, level, isWeb, "android" is in options, "ios" is in options, "simulator" is in options)
 Level(rest Texts) Text
 	NativeCompiler.Level(("a.strict", ".", "linux", "small")) is NativeBuild.Small
 	NativeCompiler.Level(("a.strict", ".")) is NativeBuild.Fast

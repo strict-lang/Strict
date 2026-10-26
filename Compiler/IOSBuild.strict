@@ -1,13 +1,25 @@
 has tools Toolchain
-constant Target = "arm64-apple-ios15.0"
-constant Architecture = " --target=" + Target + " -fPIC -Wno-override-module"
+has isSimulator Boolean = false
+constant Simulator = IOSBuild(Toolchain.OnWindows, true)
+Architecture Text
+	IOSBuild(Toolchain.OnWindows).Architecture.StartsWith(" --target=arm64-apple-ios15.0 ")
+	Simulator.Architecture.IndexOf("-apple-ios15.0-simulator ") > 0
+	(Platform.Architecture is "Arm64") or (Simulator.Architecture.IndexOf(" -march=x86-64-v2") > 0)
+	let machine = isSimulator and (Platform.Architecture is "X64") then "x86_64" else "arm64"
+	let target = machine + "-apple-ios15.0" + (isSimulator then "-simulator" else "")
+	let vectors = machine is "x86_64" then " -march=x86-64-v2" else ""
+	" --target=" + target + vectors + " -fPIC -Wno-override-module"
+SdkName Text
+	Simulator.SdkName is "iphonesimulator"
+	isSimulator then "iphonesimulator" else "iphoneos"
 Executable(base Text) Text
 	IOSBuild(Toolchain.OnWindows).Executable("Games/App") is "Games/App.ios.a"
-	base + ".ios.a"
+	Simulator.Executable("Games/App") is "Games/App.simulator.a"
+	base + (isSimulator then ".simulator.a" else ".ios.a")
 Sdk Text
 	if tools.platform is not Platform.MacOS
 		return ""
-	let result = ToolRunner("xcrun").Execute("--sdk iphoneos --show-sdk-path")
+	let result = ToolRunner("xcrun").Execute("--sdk " + SdkName + " --show-sdk-path")
 	result.Failed then "" else result.Output.Trim
 Compiled(base Text, level Text) Text
 	IOSBuild(Toolchain.OnWindows).Compiled("Compiler/output/missing", "").StartsWith("mlir-opt failed")
@@ -31,7 +43,7 @@ Objects(base Text, level Text, sdk Text) Texts
 		objects.Add(compiled)
 	objects
 Object(source Text, target Text, flags Text) Text
-	let arguments = "--sdk iphoneos clang -c " + tools.Quoted(source) + " -o " + tools.Quoted(target) + flags
+	let arguments = "--sdk " + SdkName + " clang -c " + tools.Quoted(source) + " -o " + tools.Quoted(target) + flags
 	let compiled = ToolRunner("xcrun").Execute(arguments)
 	compiled.Failed then "iOS clang failed: " + compiled.error + compiled.Output else target
 Linked(base Text, level Text) Text
@@ -41,7 +53,7 @@ Linked(base Text, level Text) Text
 		return compiled
 	let sdk = Sdk
 	if (tools.natives.Length > 0) and (sdk is "")
-		return "iOS native packages require macOS with full Xcode: xcrun --sdk iphoneos --show-sdk-path"
+		return "iOS native packages require macOS with full Xcode: xcrun --sdk " + SdkName + " --show-sdk-path"
 	let objects = Objects(base, level, sdk)
 	if (objects.Length > 0) and objects.First.StartsWith("iOS clang failed")
 		return objects.First

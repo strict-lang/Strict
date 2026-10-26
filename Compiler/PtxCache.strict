@@ -1,5 +1,6 @@
 has base Text
 constant Sample = PtxCache("Compiler/output/Kept")
+constant Metal = DeviceBuild(Toolchain(Platform.MacOS, "."))
 Previous(device Text, isTiling Boolean) Texts
 	PtxCache("Compiler/output/missing").Previous("module {\n}", false).Length is 0
 	Sample.Remembered("module {\n\n}", ("// new", "// old")) is ("// new", "// old")
@@ -26,12 +27,16 @@ Remembered(device Text, ptx Texts) Texts
 	Written(ptx, ".ptx") and Saved(".kernels.mlir", device) then ptx else List(Text) + ("GPU cache write failed: " + base)
 Built(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Texts
 	PtxCache("Compiler/output/Invalid").Built("x", false, DeviceBuild.Missing, "").First.StartsWith("mlir-opt failed")
+	PtxCache("Compiler/output/Metal").Built("module {\n}", false, Metal, "").Length is 1
+	File("Compiler/output/Metal.ptx").Exists is false
 	let key = Fingerprint(device, isTiling, builder, kept)
-	let previous = builder.tools.platform is Platform.MacOS then List(Text) else Previous(key, isTiling)
+	let isCached = builder.tools.platform is not Platform.MacOS
+	let previous = isCached then Previous(key, isTiling) else List(Text)
 	if previous.Length > 0
 		return previous
 	File(base + ".gpu.mlir").Write(device)
-	Remembered(key, builder.Ptx(base, isTiling, kept))
+	let built = builder.Ptx(base, isTiling, kept)
+	isCached then Remembered(key, built) else built
 Fingerprint(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Text
 	let tools = builder.tools
 	mutable key = device + "\n// " + DeviceBuild.Nvptx + " " + isTiling + " " + kept

@@ -4,6 +4,7 @@ has level Text = Fast
 has isWeb Boolean = false
 has isAndroid Boolean = false
 has isIOS Boolean = false
+has isSimulator Boolean = false
 constant Fast = " -O2"
 constant Small = " -Os"
 constant Intermediates = (".ios.o", ".ios.new.a", ".android.o", ".llvm.mlir", ".ll", ".res", ".gpu.mlir", ".gpu.llvm.mlir", ".gpu.ll", ".sm_75.ptx", ".sm_80.ptx", ".amd.mlir", ".amd.llvm.mlir", ".amd.ll", ".amd.bc", ".linux.mlir", ".linux.llvm.mlir", ".linux.ll", ".linux.o", ".pre.js", ".o", ".gpu.opt.ll", ".runtime.gpu.mlir", ".runtime.gpu.llvm.mlir", ".runtime.gpu.ll", ".runtime.sm_75.ptx", ".runtime.sm_80.ptx")
@@ -64,8 +65,10 @@ Build(base Text, program Text, tools Toolchain, isCounting = false) Number
 	Removed(base)
 	Release(logger, base).Packaged(program, crossed, tools.isWeb, isCrossing, Target)
 Target Number
+	NativeBuild(Logger, isIOS = true).Target is Platform.IOS
+	NativeBuild(Logger, isIOS = true, isSimulator = true).Target is Platform.IOSSimulator
 	if isIOS
-		return Platform.IOS
+		return isSimulator then Platform.IOSSimulator else Platform.IOS
 	isAndroid then Platform.Android else (isWeb then Platform.Web else Platform.Current)
 IsUnchanged(base Text, mlir Text, tools Toolchain) Boolean
 	NativeBuild(Logger).IsUnchanged("Compiler/output/missing", "module {\n}", Toolchain.OnWindows) is false
@@ -83,7 +86,7 @@ Rebuilt(base Text, mlir Text, tools Toolchain) Text
 		return "Built " + tools.Executable(base) + ", unchanged"
 	File(base + ".mlir").Write(mlir)
 	if isIOS
-		return IOSBuild(tools).Linked(base, level)
+		return IOSBuild(tools, isSimulator).Linked(base, level)
 	isAndroid then AndroidBuild(tools).Linked(base, level) else Linked(base, tools)
 Ran(base Text, tools Toolchain, path Text, isCounting Boolean) Number
 	let executable = tools.Executable(base)
