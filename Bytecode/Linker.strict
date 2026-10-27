@@ -76,14 +76,14 @@ UsedMethods(targets Texts, type Text) Texts
 			used.Add(method)
 	used
 IsNative(type Text, method Text) Boolean
-	Sample.IsNative("Strict/Text", "Upper") is false
-	Sample.IsNative("Strict/Range", "Length") is false
+	Sample.IsNative("Strict/Compiler/BuildProfile", "Detailed")
+	(Sample.IsNative("Strict/Text", "Upper") or Sample.IsNative("Strict/Range", "Length")) is false
 	Sample.IsNative("Strict/Bytecode/B", "to") is false
 	Sample.IsNative("Strict/Dictionary(Number, Number)", "get")
 	Sample.IsNative("Strict/Number", "to")
 	Sample.IsNative("Strict/NativeIO", "Exists") is false
 	if type.LastIndexOf("/") > 6
-		return false
+		return TypeEntry.ShortName(type) + "." + method is in Hosted.Methods
 	if (method is in ("Length", "Count")) or (SourceName(type) is "Dictionary")
 		return (SourceName(type) is in ("List", "File", "Dictionary")) or ((type is "Strict/Text") and (method is "Length"))
 	let isOwn = TypeEntry.IsBaseName(TypeEntry.ShortName(type)) or (SourceName(type) is in ("File", "Directory"))

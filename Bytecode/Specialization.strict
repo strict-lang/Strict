@@ -78,6 +78,6 @@ Completed(codegen TypeCodegen, entry TypeEntry, targets Texts) TypeEntry
 	mutable names = List(Text)
 	for targets
 		let method = value.StartsWith(prefix) then value.Substring(prefix.Length, value.Length - prefix.Length) else ""
-		if (method.IndexOf("(") > 0) and (entry.Chosen(method, -1, "", List(Text)) < 0) and (method is not in names)
+		if (method is not "") and (entry.Chosen(method, -1, "", List(Text)) < 0) and (method is not in names)
 			names = names + method
-	names.Length is 0 then entry else TypeEntry(entry.Name, entry.members, entry.methods + Methods(codegen, names))
+	names.Length is 0 then entry else TypeEntry(entry.Name, entry.members, entry.methods + codegen.Methods(names))

@@ -26,6 +26,21 @@ with tempfile.TemporaryDirectory(prefix="TestPolicy", dir=root / "Examples") as 
 		assert checked.returncode != 0 and "TestDurationMustNotExceedTwentyMilliseconds" in checked.stdout + checked.stderr, (
 			str(arguments) + " accepted an over-budget unit test:\n" + checked.stdout + checked.stderr)
 
+	source = folder / "SharedBudget.strict"
+	source.write_text('constant Shared = TestWork.Pause\nCheck Number\n\tSharedBudget.Shared is 1\n\t1', encoding="utf-8")
+	for options in [["unit"], ["unit", "native"]]:
+		shared = subprocess.run([command, "test", str(source), *options], cwd=root, env=environment,
+			capture_output=True, text=True, timeout=90 if "native" in options else 10)
+		assert shared.returncode != 0 and "TestDurationMustNotExceedTwentyMilliseconds" in shared.stdout + shared.stderr, (
+			"An over-budget shared fixture passed:\n" + shared.stdout + shared.stderr)
+
+	source = folder / "LazyFixture.strict"
+	source.write_text('has logger\nconstant Shared = LazyFixture.Created\nCreated Number\n\tlogger.Log("fixture computed")\n\t7\nCheck Number\n\tLazyFixture.Check is 7\n\tShared is 7\n\tShared + Shared is 14\n\tfalse then Shared else 7', encoding="utf-8")
+	lazy = subprocess.run([command, "test", str(source), "unit"], cwd=root, env=environment,
+		capture_output=True, text=True, timeout=10)
+	assert lazy.returncode == 0 and lazy.stdout.count("fixture computed") == 1, lazy.stdout + lazy.stderr
+	assert lazy.stdout.index("Test passed: LazyFixture.Check is 7") < lazy.stdout.index("fixture computed"), lazy.stdout
+
 	source = folder / "SetupBudget.strict"
 	source.write_text('Check Number\n\tconstant sample = TestWork.Pause\n\tsample is 1\n\t1', encoding="utf-8")
 	setup = subprocess.run([command, "test", str(source), "unit"], cwd=root, env=environment,

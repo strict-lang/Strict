@@ -61,7 +61,7 @@ Leading(types List(TypeEntry), count Number) List(TypeEntry)
 	NativeFolder.Leading((Counting, Other), 1) is List(TypeEntry) + Counting
 	for Range(0, count)
 		types(value)
-Counted(paths Texts, root Text) List(TypeEntry)
+Counted(paths Texts, root Text) Slow(List(TypeEntry))
 	NativeFolder(Logger).Counted(Hellos, ".")(1).Name is "HelloLogger"
 	let files = SourceFiles(root).Of(FileCompiler.Normalized(paths.First))
 	let inference = ResolveCheck.Inference(files)

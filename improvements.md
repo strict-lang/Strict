@@ -18,6 +18,8 @@ What to fix next, one short line each, bugs first. Remove a line once it is atte
 - Native `NeuralNetworks/Batch` fails 3 tests since c06d0649 (passed at f38592f7): `Fours.Grouped(...)(3) is Fours.Sums(Tokens)(11)`, `Fours.Grouped((0, 8), 8, Long)(523)` and `Wholes.Gated(Tokens)(0)`, whose left side now comes out exact (`Wholes.Gated(Tokens)(0)` 7579.69 like the VM instead of the GPU's 7916.48) while the right side runs on the GPU; H3Video still runs the GPU kernels.
 - Linker.Linked exhausts 20 passes with complete false during NativeCompiler self-build; a diagnostic reaches the current convergence check on pass 21: verify closure and convergence instead of silently accepting the depth limit.
 
+- A bare zero-argument method used as a constant initializer is re-evaluated: `constant Shared = Created` logs three calls across three reads, while `constant Shared = Type.Created` is cached; recognize the implicit call in ConstantMethods.
+
 ## Next
 - GPU speed and memory (attention, 16 bit lists, memory budget, loading, generated loops): [improvements-gpu.md](improvements-gpu.md).
 - Ternary Bonsai and Qwen3.8-Flash-Next speed: [improvements-models.md](improvements-models.md).
@@ -25,8 +27,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is atte
 - CI runs few native builds (about 4 minutes per job): add more while each job stays under 10 minutes.
 - Trees as pools with 32 bit backward offsets ([Goose](https://github.com/aardappel/goose)): measure SyntaxNode allocations per `strict build Strict.strict` first.
 - Build speed: under 10 s hard limit, 2-3 s target; profile repeated linker discovery/codegen and emission, compare moderate thread counts before changing pool defaults (Compiler/README.md).
-- Include required shared constant initialization in unit-test budgets; unused Slow fixtures are excluded, but selected fixtures still initialize before the assertion timer.
-- Finish classifying integration tests as Slow; unmarked TypeCodegen.Initial, ValueCodegen.Expression, ErrorCodegen.Compared and Specialization.Header still fail the VM unit budget and need profiling instead of a blanket exemption.
+- Profile Bytecode VM unit budget failures: repeated code generation, literal/ZIP fixture materialization and GC pauses; classify filesystem/build integration separately (Runtime/README.md).
 - Native File.Exists opens and closes each file before checking its directory bit; use platform metadata and measure lookup-heavy linker work.
 - WebWars generated SceneAtlas/LevelAtlas constructors dominate emission; reduce large constant/record-list lowering work without changing atlas data.
 - Build dependency inventory and frontend discovery repeat broad package scans; share/narrow inventory before optimizing small shape-loading costs.

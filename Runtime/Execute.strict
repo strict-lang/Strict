@@ -122,4 +122,5 @@ Started(types List(TypeEntry), path Text, isTracing = false) Machine
 	Execute(Logger).Started(List(TypeEntry) + TypeEntry.HelloLogger, "Examples/HelloLogger.strict").folder is "Examples"
 	Execute(Logger).Started(List(TypeEntry) + TypeEntry.HelloLogger, "A.strict", true).isTracing
 	let rewritten = TailCalls(Inliner(types).Inlined).Rewritten
-	Machine(Resolver(rewritten).Resolved, logger, List(VmValue), Path(path).PathOnly.text, isTracing).Prepared
+	let folder = Path(path).PathOnly.text
+	Machine(Resolver(rewritten).Resolved, logger, ConstantCache(List(VmValue)), folder, isTracing).Prepared

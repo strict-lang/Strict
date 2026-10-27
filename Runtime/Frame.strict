@@ -70,7 +70,8 @@ Local(slot Number, slots List(VmValue)) VmValue
 	Twice.Local(IndexSlot, Listed).number is 0
 	Twice.Local(Resolver.OuterSlot, Listed).text is "a"
 	if (slot > IndexSlot) or ((slot >= 0) and (slot is not ValueSlot) and (slot is not IndexSlot))
-		return slots(slot)
+		let found = slots(slot)
+		return found.kind is "$Constant" then Constants(machine).Value(found.number, found.text to Number) else found
 	let state = slots(LoopSlot)
 	let isIndex = (slot is IndexSlot) or (slot is Resolver.OuterIndexSlot)
 	if (slot > 0) and (state.items.Length > 0)
