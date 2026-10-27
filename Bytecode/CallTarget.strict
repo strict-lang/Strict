@@ -37,7 +37,7 @@ ParameterTypes(name Text, type Text, argumentTypes Texts) Texts
 	Plain.ParameterTypes("Length", "Text", List(Text)).Length is 0
 	Counting.ParameterTypes("Twice", "Count", List(Text) + "Number") is ("Number")
 	if (type is TypeName) and name is not type
-		return Chosen(name, argumentTypes).ParameterTypes
+		return HeaderEntries(Chosen(name, argumentTypes), types.MethodsOf(type)).ParameterTypes
 	let declared = Declared(type, (name is type then "from" else name), argumentTypes, " types")
 	if name is not type or declared.Length > 0
 		return declared

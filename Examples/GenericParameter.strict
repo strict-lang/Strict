@@ -1,4 +1,13 @@
 has number
 Scored(model Generic) Number
 	GenericParameter(1).Scored(Size(2, 3)) is 6
-	model.Area
+	model.Area * number
+Scored(model Generic, scale Number) Number
+	GenericParameter(1).Scored(Size(2, 3), 2) is 12
+	model.Area * scale
+Scored(scale Number, model Generic) Number
+	GenericParameter(1).Scored(3, Size(2, 3)) is 18
+	model.Area * scale
+Scored(model Generic, suffix Text) Number
+	GenericParameter(1).Scored(Size(2, 3), "abc") is 9
+	model.Area + suffix.Length

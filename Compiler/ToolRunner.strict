@@ -27,7 +27,10 @@ Retried(result ProcessResult, arguments Text) ProcessResult
 	IsCrash(result.exitCode) then Cleaned(Process.RunTool(name, arguments)) else result
 Cleaned(result ProcessResult) ProcessResult
 	Echo.Cleaned(ProcessResult(0, "a\r\n", "")).Output is "a\n"
-	ProcessResult(result.exitCode, result.Output.Replace("\r", ""), result.error.Replace("\r", ""))
+	Echo.Cleaned(ProcessResult(127, "", "")).error is "Tool " + Echo.name + " exited 127 without output"
+	let silent = result.Failed and (result.Output is "") and (result.error is "")
+	let error = silent then "Tool " + name + " exited " + result.exitCode + " without output" else result.error
+	ProcessResult(result.exitCode, result.Output.Replace("\r", ""), error.Replace("\r", ""))
 IsCrash(exitCode Number) Boolean
 	ToolRunner.IsCrash(139)
 	ToolRunner.IsCrash(-1073741819)

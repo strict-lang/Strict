@@ -24,6 +24,51 @@ with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as 
 	def run(*arguments):
 		return subprocess.run([str(root / ("strict" + extension)), *arguments], cwd=root,
 			capture_output=True, text=True, timeout=270)
+	trait = Path(folder) / "TraitCheck.strict"
+	(Path(folder) / "Service.strict").write_text('Result Number\n', encoding="utf-8")
+	(Path(folder) / "ServiceValue.strict").write_text('has number\nResult Number\n\tnumber\n', encoding="utf-8")
+	(Path(folder) / "ServiceOther.strict").write_text('has number\nResult Number\n\tnumber * 2\n', encoding="utf-8")
+	(Path(folder) / "ServiceHolder.strict").write_text('has service Service\nResult Number\n\tservice.Result\n', encoding="utf-8")
+	trait.write_text('has logger\nRun Number\n\tlet first = ServiceHolder(ServiceValue(7)).Result + Read(ServiceOther(7))\n'
+		'\tlet second = ServiceHolder(ServiceOther(7)).Result + Read(ServiceValue(7))\n'
+		'\tlet result = first + second + ServiceHolder(ServiceValue(7)).service.Result\n'
+		'\tlogger.Log(result)\n\tresult\n'
+		'Read(service Service) Number\n\tservice.Result\n', encoding="utf-8")
+	trait_build = run("build", str(trait))
+	assert trait_build.returncode == 0, trait_build.stdout + trait_build.stderr
+	assert subprocess.run([str(trait.with_suffix(extension))], timeout=10).returncode == 49
+	trait_run = run(str(trait))
+	assert trait_run.returncode == 0 and trait_run.stdout.strip() == "49", trait_run.stdout + trait_run.stderr
+	print("Trait members and parameters call their concrete implementation", flush=True)
+	cleanup = Path(folder) / "CleanupCheck.strict"
+	locked_base = (Path(folder) / "Locked").as_posix()
+	cleanup.write_text('has build Compiler/NativeBuild\nRun Number\n'
+		f'\tNativeBuild(Logger).Removed("{locked_base}") then 0 else 1', encoding="utf-8")
+	with open(locked_base + ".ll", "wb") as locked:
+		cleaned = run(str(cleanup))
+		assert "Could not remove build intermediate: " + locked_base + ".ll" in cleaned.stdout, cleaned.stdout + cleaned.stderr
+		compiled = run("build", str(cleanup))
+		assert compiled.returncode == 0, compiled.stdout + compiled.stderr
+		cleaned = subprocess.run([str(cleanup.with_suffix(extension))], capture_output=True, text=True, timeout=10)
+		assert cleaned.returncode == 1 and "Could not remove build intermediate:" in cleaned.stdout, cleaned.stdout + cleaned.stderr
+	assert subprocess.run([str(cleanup.with_suffix(extension))], timeout=10).returncode == 0
+	print("Locked build intermediates report cleanup failure", flush=True)
+	nested = Path(folder) / "NestedGpu.strict"
+	nested.write_text('has numbers Numbers\nhas logger\nRun Number\n'
+		'\tlet result = NestedGpu(Counted(256), logger).Totals(8192).Sum\n\tlogger.Log(result)\n\t0\n'
+		'Totals(count Number) Numbers\n\tfor count\n\t\tSquared.Sum + index\n'
+		'Squared Numbers\n\tfor numbers\n\t\tvalue * value\n'
+		'Counted(count Number) Numbers\n\tfor count\n\t\tindex', encoding="utf-8")
+	compiled = run("build", str(nested))
+	assert compiled.returncode == 0, compiled.stdout + compiled.stderr
+	module = nested.with_suffix(".mlir").read_text(encoding="utf-8")
+	assert "func.call @strict_parallel(%t" in module and "func.call @strict_gpu_run(%t" in module, "Nested CPU/GPU paths missing"
+	for threads in ("1", "4"):
+		result = subprocess.run([str(nested.with_suffix(extension))], capture_output=True, text=True, timeout=10,
+			env=dict(os.environ, STRICT_THREADS=threads, STRICT_GPU="all"))
+		expected = str(sum(number * number for number in range(256)) * 8192 + sum(range(8192)))
+		assert result.returncode == 0 and result.stdout.strip() == expected, result.stdout + result.stderr
+	print("Nested GPU loops use correct CPU fallback inside pool jobs", flush=True)
 	profile = Path(folder) / "ProfileCheck.strict"
 	profile.write_text('has profile Compiler/BuildProfile\nRun Number\n'
 		'\tBuildProfile(Logger).Reported("Fast phase", Process.Elapsed)\n'

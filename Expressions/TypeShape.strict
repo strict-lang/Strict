@@ -30,6 +30,12 @@ IsTrait Boolean
 		if value.StartsWith("\t") or IsComputed(value)
 			return false
 	true
+IsContract Boolean
+	TypeShape("Result Number").IsContract
+	TypeShape("from(type)").IsContract is false
+	TypeShape("has Name").IsContract is false
+	TypeShape("has number", "constant Max = 255").IsContract is false
+	IsTrait and not UsesGenerics and ((MethodScope.names - ConstantScope.names - "from").Length > 0)
 MemberScope Scope
 	TypeShape("has count Number", "constant Limit = 3").MemberScope.TypeOf("count") is "Number"
 	TypeShape("has count Number", "constant Limit = 3").MemberScope.names.Length is 1
@@ -49,10 +55,11 @@ ParameterScope Scope
 	mutable scope = Scope(List(Text), List(Text))
 	for lines
 		if IsMethodHeader(value)
-			let entries = HeaderEntries(HeaderTokens(Tokenizer(value).Tokens)).Parameters
+			let entries = HeaderEntries(HeaderTokens(Tokenizer(value).Tokens), MethodScope).Parameters
 			scope = scope.WithAll(entries.names, entries.types)
 	let steps = Steps(List(Text)).Members(lines)
-	scope.WithAll(steps.names, steps.types)
+	let result = scope.WithAll(steps.names, steps.types)
+	IsContract then result.With(" trait", "true") else result
 UsesGenerics Boolean
 	TypeShape("has value Generic").UsesGenerics
 	TypeShape("has value Generic or None").UsesGenerics is false

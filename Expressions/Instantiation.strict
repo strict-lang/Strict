@@ -10,13 +10,16 @@ Name(node SyntaxNode, inference TypeInference, scope Scope, current Scope) Text
 	Pairing.Name(SyntaxNode("Call", "Text"), Inferring, KnownTypes.NoMembers, KnownTypes.NoMembers) is ""
 	Pairing.Name(SyntaxNode("Call", "Couple"), Inferring, KnownTypes.NoMembers, KnownTypes.NoMembers) is ""
 	Implicit.Name(Mixed, Inferring, KnownTypes.NoMembers, KnownTypes.NoMembers) is "Couple(Text, Number)"
-	let explicit = types.ParametersOf(node.text, "from types", node.children.Length)
-	let declared = explicit.Length is node.children.Length then explicit else types.MembersOf(node.text).types
+	let isType = types.IsKnown(node.text) and (current.TypeOf(node.text) is "") and (scope.TypeOf(node.text) is "")
+	let declared = isType then ConstructorTypes(node) else List(Text)
 	mutable arguments = List(Mutable(Text))
 	for declared
-		if (value is "Generic") and (index < node.children.Length)
+		if IsGeneric(value) and (index < node.children.Length)
 			arguments.Add(inference.TypeOf(node.children(index), scope, current))
 	arguments.Length is 0 then "" else node.text + "(" + Text.Combine(arguments, ", ") + ")"
+ConstructorTypes(node SyntaxNode) Texts
+	let explicit = types.ParametersOf(node.text, "from types", node.children.Length)
+	explicit.Length is node.children.Length then explicit else types.MembersOf(node.text).types
 Argument(instanceType Text, name Text) Text
 	Pairing.Argument("Couple(Text, Number)", "second") is "Number"
 	Pairing.Argument("Couple(Text, Number)", "first") is "Text"
@@ -34,9 +37,9 @@ Position(instanceType Text, name Text) Number
 	let members = types.MembersOf(instanceType)
 	mutable position = -1
 	for members.names
-		position = members.types(index) is "Generic" then position + 1 else position
+		position = IsGeneric(members.types(index)) then position + 1 else position
 		if value is name
-			return members.types(index) is "Generic" then position else -1
+			return IsGeneric(members.types(index)) then position else -1
 	-1
 Arguments(instanceType Text) Texts
 	Pairing.Arguments("Couple(Text, Number)") is ("Text", "Number")
@@ -54,9 +57,11 @@ Members(typeName Text, members Scope) Scope
 	mutable concrete = List(Mutable(Text))
 	for members.names
 		let type = members.types(index)
-		let argument = type is in ("Generic", "Generics") then Argument(typeName, value) else type
+		let argument = IsGeneric(type) then Argument(typeName, value) else type
 		concrete.Add(type is "Generics" then Plural(argument) else argument)
 	Scope(members.names, concrete)
+IsGeneric(type Text) Boolean
+	(type is in ("Generic", "Generics")) or (types.ParameterScope(type).TypeOf(" trait") is "true")
 Plural(element Text) Text
 	Pairing.Plural("Text") is "Texts"
 	Pairing.Plural("Couple(Text, Number)") is "List(Couple(Text, Number))"

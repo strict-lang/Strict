@@ -19,15 +19,18 @@ Name(node SyntaxNode, parameters Texts, owner Text, block CodeBlock) Text
 	Plain.Name(Passing, List(Text) + "Wrapped", "Using", Wrapping) is Halving
 	Plain.Name(Passing, List(Text) + "Number", "Using", Wrapping) is "Through"
 	Plain.Name(Passing, List(Text) + "Generic", "Using", CodeBlock.Empty.Declare("w", "Halver")) is "Through(Halver)"
-	let start = values.ArgumentStart(node)
-	let isPlain = IsPlain(owner)
+	let arguments = Arguments(node, block)
 	mutable actuals = List(Text)
 	for parameters
-		let isTyped = (IsGeneric(value) or isPlain and (value is "Generic")) and (start + index < node.children.Length)
-		let actual = isTyped then values.TypeOf(node.children(start + index), block) else ""
-		if actual.StartsWith(value + "(") or (value is "Generic") and (actual is not in ("", "Generic"))
+		let trait = IsTrait(value)
+		let isTyped = IsGeneric(value) or (IsPlain(owner) and (value is "Generic"))
+		let actual = isTyped and (index < arguments.Length) then arguments(index) else ""
+		if actual.StartsWith(value + "(") or ((value is "Generic") or trait) and (actual is not in ("", "Generic", value))
 			actuals = actuals + actual
-	actuals.Length is 0 then node.text else node.text + "(" + Text.Combine(actuals) + ")"
+	actuals.Length is 0 then node.text else node.text + "(" + Text.Combine(arguments) + ")"
+Arguments(node SyntaxNode, block CodeBlock) Texts
+	for Range(values.ArgumentStart(node), node.children.Length)
+		values.TypeOf(node.children(value), block)
 IsPlain(owner Text) Boolean
 	Plain.IsPlain("Using")
 	Plain.IsPlain("Strict/Wrapped(Halver)") is false
@@ -38,33 +41,49 @@ IsGeneric(type Text) Boolean
 	Plain.IsGeneric("Wrapped")
 	Plain.IsGeneric("Halver") is false
 	let members = values.target.types.MembersOf(type).types
-	values.target.types.IsKnown(type) and (("Generic" is in members) or ("Generics" is in members))
+	IsTrait(type) or values.target.types.IsKnown(type) and (("Generic" is in members) or ("Generics" is in members))
+IsTrait(type Text) Boolean
+	values.target.types.ParameterScope(type).TypeOf(" trait") is "true"
 Header(line Text, name Text) Text
 	Plain.Header(Using(1), Halving) is "Through(wrapped Wrapped(Halver)) Number"
 	Plain.Header("Scored(model Generic) Number", "Scored(Halver)") is "Scored(model Halver) Number"
 	mutable header = line
 	mutable after = line.IndexOf("(")
 	for Instantiation(values.target.types).Arguments(name)
-		let base = " " + (value.IndexOf("(") > 0 then value.Substring(0, value.IndexOf("(")) else "Generic")
+		let base = " " + Parameter(line, name, index)
 		let at = header.IndexOf(base, after)
 		let rest = header.Substring(at + base.Length, header.Length - at - base.Length)
-		header = at < 0 then header else header.Substring(0, at + 1) + value + rest
-		after = at < 0 then after else at + value.Length
+		header = (at < 0) or (base is " ") then header else header.Substring(0, at + 1) + value + rest
+		after = (at < 0) or (base is " ") then after else at + value.Length
 	header
+Parameter(line Text, name Text, index Number) Text
+	let arguments = Instantiation(values.target.types).Arguments(name)
+	let parameters = HeaderTokens(Tokenizer(line).Tokens).ParameterTypes
+	if arguments.Length is parameters.Length
+		let type = parameters(index)
+		return IsGeneric(type) or (type is "Generic") then type else ""
+	let actual = arguments(index)
+	actual.IndexOf("(") > 0 then actual.Substring(0, actual.IndexOf("(")) else "Generic"
 Methods(codegen TypeCodegen, names Texts) List(MethodEntry)
 	Plain.Methods(Coding, List(Text) + Halving).First.Name is Halving
 	Plain.Methods(Coding, List(Text) + Halving).First.parameters.First.typeName.EndsWith("Wrapped(Halver)")
 	Plain.Methods(Coding, List(Text) + "Through").Length is 0
 	for names
-		let start = value.IndexOf("(") > 0 then Start(codegen.lines, value.Substring(0, value.IndexOf("("))) else -1
+		let start = value.IndexOf("(") > 0 then Start(codegen.lines, value) else -1
 		if start >= 0
 			Specialized(codegen, start, value)
 Start(lines Texts, method Text) Number
 	Plain.Start(Using, "Through") is 1
 	Plain.Start(Using, "Missing") is -1
+	let base = method.Split("(").First
+	let arguments = Instantiation(values.target.types).Arguments(method)
+	let ordinal = Overloads(values.target.types).Chosen(values.target.TypeName, base, arguments)
+	mutable seen = -1
 	for lines
-		if TypeShape(lines).IsMethodHeader(value) and (Tokenizer(value).Tokens.First is method)
-			return index
+		if TypeShape(lines).IsMethodHeader(value) and (Tokenizer(value).Tokens.First is base)
+			seen = seen + 1
+			if (ordinal < 0) or (seen is ordinal)
+				return index
 	-1
 Specialized(codegen TypeCodegen, start Number, name Text) MethodEntry
 	Plain.Specialized(Coding, 1, Halving).Name is Halving
@@ -79,9 +98,8 @@ Completed(codegen TypeCodegen, entry TypeEntry, targets Texts) TypeEntry
 	mutable names = List(Text)
 	for targets
 		let method = value.StartsWith(prefix) then value.Substring(prefix.Length, value.Length - prefix.Length) else ""
-		let isConversion = method.StartsWith("to ")
-		let target = isConversion then method.Substring(3, method.Length - 3) else ""
-		let chosen = entry.Chosen((isConversion then "to" else method), -1, target, List(Text))
+		let converted = method.StartsWith("to ") then method.Split(" ") else (method, "")
+		let chosen = entry.Chosen(converted.First, -1, converted.Last, List(Text))
 		if (method is not "") and (chosen < 0) and (method is not in names)
 			names = names + method
 	names.Length is 0 then entry else TypeEntry(entry.Name, entry.members, entry.methods + codegen.Methods(names))

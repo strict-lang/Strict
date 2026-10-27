@@ -16,25 +16,27 @@ IsCached(owner Text, name Text) Boolean
 	let definition = Definition(owner, name)
 	let isOther = (definition.Kind is "Member") and (definition.children(0).Kind is in ("Identifier", "Type"))
 	let isAlias = isOther and (inference.ConstantOf(definition.children(0).text, definition.text) is not "")
-	(isAlias is false) and HasCall(definition)
-HasCall(node SyntaxNode) Boolean
+	(isAlias is false) and HasCall(definition, owner)
+HasCall(node SyntaxNode, owner Text = "") Boolean
 	Growing.HasCall(SyntaxNode("Member", "Started", SyntaxNode("Type", "Count")))
 	Growing.HasCall(SyntaxNode("Member", "Plain", SyntaxNode("Type", "Count"))) is false
 	let first = node.children.Length > 0 then node.children(0) else node
 	let isOwned = (node.Kind is "Member") and (first.Kind is in ("Identifier", "Type"))
 	if isOwned and (inference.ConstantOf(first.text, node.text) is not "")
 		return IsCached(first.text, node.text)
-	if IsCall(node, first)
+	if IsCall(node, first, owner)
 		return true
 	for node.children
-		if HasCall(value)
+		if HasCall(value, owner)
 			return true
 	false
-IsCall(node SyntaxNode, first SyntaxNode) Boolean
+IsCall(node SyntaxNode, first SyntaxNode, owner Text = "") Boolean
 	Growing.IsCall(SyntaxParser(Tokenizer("Count(1).Twice(2)").Tokens).Parse, SyntaxNode("Call", "Count"))
 	Growing.IsCall(SyntaxNode("MethodCall", "Count", SyntaxNode("Type", "Count")), SyntaxNode("Type", "Count")) is false
 	let isConstructor = (first.Kind is "Type") and (first.text is node.text)
-	(node.Kind is "Member") or (node.Kind is "MethodCall") and (isConstructor is false)
+	let method = inference.types.MethodsOf(owner).TypeOf(node.text)
+	let implicit = (node.Kind is "Identifier") and (method is not "") and (inference.ConstantOf(owner, node.text) is "")
+	implicit or (node.Kind is "Member") or (node.Kind is "MethodCall") and (isConstructor is false)
 Methods(types TypeCodegen, names Texts) Slow(List(MethodEntry))
 	Growing.Methods(Counting, List(Text)).First.Name is "Started"
 	Growing.Methods(Counting, List(Text) + "Twice").Length is 0

@@ -1,4 +1,5 @@
 has header HeaderTokens
+has methods Scope = KnownTypes.NoMembers
 constant Mutating = HeaderEntries(HeaderTokens(Tokenizer("Add(x Number) Mutable(List)").Tokens))
 constant Adding = HeaderEntries(HeaderTokens(Tokenizer("Add(x Number) Number").Tokens))
 constant Defaulting = HeaderEntries(HeaderTokens(Tokenizer("Add(x Number, y List(Text) = List(Text), z = Basis.None)").Tokens))
@@ -10,11 +11,16 @@ Parameters Scope
 	HeaderEntries(HeaderTokens(Tokenizer("B(a Number with Step 0.5)").Tokens)).Parameters.TypeOf("B a step") is "0.5"
 	HeaderEntries(HeaderTokens(Tokenizer("T(a Number) Number with Step 0.5").Tokens)).Parameters.TypeOf("T step") is "0.5"
 	let name = header.tokens(0)
-	let parameters = (Text.Combine(header.ParameterNames, ","), Text.Combine(header.ParameterTypes, ","), Required to Text)
+	let parameters = (Text.Combine(header.ParameterNames, ","), Text.Combine(ParameterTypes, ","), Required to Text)
 	let steps = Defaults(Steps(header.tokens).Entries(header))
 	let entries = Scope((name, name + " types", name + " required"), parameters).WithAll(steps.names, steps.types)
 	let marked = header.ReturnsSlow then entries.With(name + " slow", "Slow") else entries
 	header.ReturnsMutable then marked.With(name + " mutable", "Mutable") else marked
+ParameterTypes Texts
+	for header.ParameterTypes
+		let position = header.tokens.Index(header.ParameterNames(index))
+		let inferred = header.tokens(position + 1) is "=" then methods.TypeOf(value) else ""
+		inferred is "" then value else inferred
 Required Number
 	HeaderEntries(HeaderTokens(Tokenizer("Add(x Number, y = 1, z Number with value > 0)").Tokens)).Required is 2
 	HeaderEntries(HeaderTokens(Tokenizer("Add(x Number, y Text = \"a\")").Tokens)).Required is 1
@@ -42,7 +48,6 @@ Default(position Number) Texts
 		let token = header.tokens(value)
 		if (header.Depth(value) is 1) and (token is in (",", "with"))
 			return tokens
-		if isDefault
-			tokens.Add(token)
+		tokens = isDefault then tokens + token else tokens
 		isDefault = isDefault or ((token is "=") and (header.Depth(value) is 1))
 	tokens

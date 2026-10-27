@@ -35,7 +35,7 @@ with tempfile.TemporaryDirectory(prefix="TestPolicy", dir=root / "Examples") as 
 			"An over-budget shared fixture passed:\n" + shared.stdout + shared.stderr)
 
 	source = folder / "LazyFixture.strict"
-	source.write_text('has logger\nconstant Shared = LazyFixture.Created\nCreated Number\n\tlogger.Log("fixture computed")\n\t7\nCheck Number\n\tLazyFixture.Check is 7\n\tShared is 7\n\tShared + Shared is 14\n\tfalse then Shared else 7', encoding="utf-8")
+	source.write_text('has logger\nconstant Shared = Created\nCreated Number\n\tlogger.Log("fixture computed")\n\t7\nCheck Number\n\tLazyFixture.Check is 7\n\tShared is 7\n\tShared + Shared is 14\n\tfalse then Shared else 7', encoding="utf-8")
 	lazy = subprocess.run([command, "test", str(source), "unit"], cwd=root, env=environment,
 		capture_output=True, text=True, timeout=10)
 	assert lazy.returncode == 0 and lazy.stdout.count("fixture computed") == 1, lazy.stdout + lazy.stderr

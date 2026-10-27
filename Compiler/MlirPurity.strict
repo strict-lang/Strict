@@ -38,11 +38,12 @@ IsCollected(at Number) Boolean
 	(open is 0) and (function.method.instructions(at).texts(0) is "forResult")
 IsPlain(inspected MlirFunction, at Number, depth Number) Boolean
 	Doubling.IsPlain(Doubling.function, 3, 0)
+	Doubling.IsPlain(MlirKernel.Doubling.function, 2, 1)
 	Doubling.IsPlain(MlirFunction(Doubling.function.types, MlirParallel.Rows, Checking), 2, 0)
 	let kind = inspected.method.instructions(at).kind
 	if kind is not InstructionType.LoopBegin
 		return kind is not in Unsafe
-	(MlirLoops(inspected, at).IsCollecting is false) or ((depth > 0) and (MlirKernel(inspected, at).IsSimple is false))
+	(depth > 0) or (MlirLoops(inspected, at).IsCollecting is false)
 IsOwned(inspected MlirFunction, entry InstructionEntry) Boolean
 	Doubling.IsOwned(Doubling.function, InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"))
 	Doubling.IsOwned(Doubling.function, InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "numbers")) is false

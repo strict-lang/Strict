@@ -66,8 +66,8 @@ Build(base Text, program Text, tools Toolchain, isCounting = false) Number
 	if built.StartsWith("Built ") is false
 		return 1
 	let crossed = CrossBuild(base, program, tools, isCounting)
-	Removed(base)
-	BuildProfile(logger).Packaged(value, base, program, crossed, tools)
+	let cleaned = Removed(base)
+	BuildProfile(logger).Packaged(value, base, program, cleaned then crossed else 1, tools)
 Target Number
 	NativeBuild(Logger, isIOS = true).Target is Platform.IOS
 	NativeBuild(Logger, isIOS = true, isSimulator = true).Target is Platform.IOSSimulator
@@ -124,16 +124,19 @@ CrossBuild(base Text, program Text, tools Toolchain, isCounting Boolean) Number
 	let crossed = tools.CrossBuilt(base, level)
 	logger.Log(crossed)
 	crossed.StartsWith("Built ") or crossed.StartsWith("Linux build skipped") then 0 else 1
-Removed(base Text)
-	for Directory.Files(Path(base).PathOnly.text, Path(base).FileName.text + ".ios-*.o")
-		File(value).Delete
+Removed(base Text) Boolean
+	mutable files = Directory.Files(Path(base).PathOnly.text, Path(base).FileName.text + ".ios-*.o")
 	for Intermediates
-		File(base + value).Delete
+		files = files + (base + value)
 	for Toolchain.Parts
-		File(base + "-" + value).Delete
-		File(base + "-" + value + ".o").Delete
-		File(base + "-" + value + ".mlir").Delete
-		File(base + "-" + value + ".llvm.mlir").Delete
+		let part = base + "-" + value
+		files = files + (part, part + ".o", part + ".mlir", part + ".llvm.mlir")
+	for files
+		File(value).Delete
+		if File(value).Exists
+			logger.Log("Could not remove build intermediate: " + value)
+			return false
+	true
 Output(path Text, isProgram Boolean) Text
 	NativeBuild.Output("Character.strict", false) is "./Character.test"
 	NativeBuild.Output("C:/s/A.strict", true) is "C:/s/A"

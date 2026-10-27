@@ -6,6 +6,8 @@ constant Twice = LinkRound(Linker.Sample, (Linker.Go, Linker.Go), List(Text) + "
 constant Greeting = LinkRound(Linker.Hello, List(TypeEntry) + TypeEntry.HelloLogger, List(Text))
 constant Forwarding = (TypeEntry("HelloLogger", MemberEntry.LoggerMember, MethodEntry("Run", List(MemberEntry), "None", InstructionEntry.Invoke(0, ("Strict/W", "Code", "Strict/Text"), List(Number), -1))), TypeEntry("Strict/W", List(MemberEntry) + MemberEntry("hello", "Strict/HelloLogger", List(InstructionEntry), false), List(MethodEntry)))
 constant Wrapping = LinkRound(Linker.Sample, (Linker.Go, TypeEntry.CharacterEntry, TypeEntry("Strict/Dictionary(Text)", MemberEntry.NumbersMember, List(MethodEntry))), ("Strict/Character:Floor", "Strict/Dictionary(Text):in"))
+constant Chained = LinkRound(Linker.Sample, (Linker.Go, TypeEntry("Strict/Angle", List(MemberEntry) + MemberEntry("degrees", "Strict/Degrees", List(InstructionEntry), false), List(MethodEntry)), TypeEntry("Strict/Degrees", List(MemberEntry) + MemberEntry("number", "Strict/Number", List(InstructionEntry), false), List(MethodEntry))), ("Strict/Angle:Floor", "Strict/Degrees:Floor"))
+constant Cycled = LinkRound(Linker.Sample, Chained.entries.Slice(0, 2) + TypeEntry("Strict/Degrees", List(MemberEntry) + MemberEntry("angle", "Strict/Angle", List(InstructionEntry), false), List(MethodEntry)), Chained.signatures)
 Entries(signed Texts) Slow(List(TypeEntry))
 	Single.Entries(List(Text) + "Strict/Logger:").First.Name is "Strict/Logger"
 	for signed
@@ -23,21 +25,29 @@ Fresh(signature Text) Slow(TypeEntry)
 		return linker.LinkedType(Signature(signature).Type, names)
 	let entry = entries(earlier + 1)
 	TypeEntry(entry.Name, entry.members, entry.methods + linker.LinkedType(Signature(signature).Type, names - old).methods)
-Forwarded(targets Texts) Texts
+Forwarded(targets Texts, seen Texts = List(Text)) Texts
 	Wrapping.Forwarded(List(Text) + "Strict/Character.Floor") is ("Strict/Number.Floor")
 	Wrapping.Forwarded(("Strict/Character.from", "Strict/Dictionary(Text).in")).Length is 0
 	Wrapping.Forwarded(List(Text) + "Strict/Character.Round").Length is 0
+	Chained.Forwarded(List(Text) + "Strict/Angle.Floor") is ("Strict/Degrees.Floor", "Strict/Number.Floor")
 	let indices = Indices
 	mutable forwarded = List(Mutable(Text))
-	for targets
-		let type = value.Substring(0, value.LastIndexOf("."))
-		let method = value.Substring(type.Length + 1, value.Length - type.Length - 1)
-		if (type is in indices) and IsForwarded(type, indices(type), method)
-			forwarded.Add(entries(indices(type)).Changing.First.typeName + "." + method)
-	forwarded
+	for targets - seen
+		let target = ForwardedTarget(value, indices)
+		if target is not ""
+			forwarded.Add(target)
+	let fresh = (forwarded - seen - targets).Unique
+	forwarded + (fresh.Length is 0 then List(Text) else Forwarded(fresh, seen + targets))
+ForwardedTarget(target Text, indices Dictionary(Text, Number)) Text
+	let type = target.Substring(0, target.LastIndexOf("."))
+	let method = target.Substring(type.Length + 1, target.Length - type.Length - 1)
+	if (type is in indices) and IsForwarded(type, indices(type), method)
+		return entries(indices(type)).Changing.First.typeName + "." + method
+	""
 IsForwarded(type Text, index Number, method Text) Boolean
 	Wrapping.IsForwarded("Strict/Character", 1, "Floor")
 	Wrapping.IsForwarded("Strict/Character", 1, "Round") is false
+	Cycled.Forwarded(List(Text) + "Strict/Angle.Floor").Length is 2
 	let isRequested = (index is 0) or (method is in Signature(signatures(index - 1)).Names)
 	let isOwn = (method is "from") or linker.IsNative(type, method)
 	isRequested and (isOwn is false) and (entries(index).Chosen(method, -1, "", List(Text)) < 0)

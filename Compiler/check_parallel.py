@@ -21,6 +21,97 @@ section = runtime[start:end].replace("  ^check:\n", "  ^check:\n    llvm.call @t
 section = section.replace("  ^leave:\n", "  ^leave:\n    llvm.call @test_retired(%job) : (i64) -> ()\n", 1)
 runtime = runtime[:start] + section + runtime[end:]
 wrapper = '''
+  func.func @test_pool_gpu() -> i64 {
+    %inside = llvm.mlir.addressof @strict_pool_inside : !llvm.ptr
+    %one = arith.constant 1 : i64
+    llvm.store %one, %inside : i64, !llvm.ptr
+    %check = llvm.mlir.addressof @strict_gpu_check : !llvm.ptr
+    %unknown = arith.constant -1 : i64
+    llvm.store %unknown, %check : i64, !llvm.ptr
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %none = arith.constant 0 : i64
+    %zero = arith.constant 0.0 : f64
+    %result = func.call @strict_gpu_run(%unset, %unset, %unset, %none, %zero, %none, %unset, %none, %none, %none, %none, %none, %none, %none, %none) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
+    %after = llvm.load %check : !llvm.ptr -> i64
+    llvm.store %none, %inside : i64, !llvm.ptr
+    return %after : i64
+  }
+  func.func @test_scan_invalidation(%stack: !llvm.ptr) -> i64 {
+    func.call @strict_gc_init(%stack) : (!llvm.ptr) -> ()
+    %size = arith.constant 32768 : i64
+    %buffer = func.call @strict_alloc(%size) : (i64) -> !llvm.ptr
+    %small = arith.constant 96 : i64
+    %first = func.call @strict_alloc(%small) : (i64) -> !llvm.ptr
+    %second = func.call @strict_alloc(%small) : (i64) -> !llvm.ptr
+    %firstBits = llvm.ptrtoint %first : !llvm.ptr to i64
+    llvm.store %firstBits, %buffer : i64, !llvm.ptr
+    func.call @strict_gc_written(%buffer) : (!llvm.ptr) -> ()
+    %bufferBits = func.call @strict_bits(%buffer) : (!llvm.ptr) -> f64
+    func.call @strict_pin(%bufferBits) : (f64) -> ()
+    func.call @strict_rc_mark_all() : () -> ()
+    %next = llvm.getelementptr %buffer[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %secondBits = llvm.ptrtoint %second : !llvm.ptr to i64
+    llvm.store %secondBits, %next : i64, !llvm.ptr
+    func.call @strict_gc_written(%next) : (!llvm.ptr) -> ()
+    %scannedSlot = llvm.getelementptr %buffer[-12] : (!llvm.ptr) -> !llvm.ptr, i8
+    %scanned = llvm.load %scannedSlot : !llvm.ptr -> i32
+    %result = arith.extui %scanned : i32 to i64
+    return %result : i64
+  }
+  func.func @test_reused_counts(%stack: !llvm.ptr, %same: i1) -> i64 {
+    func.call @strict_gc_init(%stack) : (!llvm.ptr) -> ()
+    func.call @strict_rc_counted() : () -> ()
+    %capacity = arith.constant 4.0 : f64
+    %length = arith.constant 1.0 : f64
+    %zero = arith.constant 0.0 : f64
+    %list = func.call @strict_list_new(%capacity, %length) : (f64, f64) -> f64
+    %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    %size = arith.constant 256 : i64
+    %old = func.call @strict_alloc(%size) : (i64) -> !llvm.ptr
+    %fresh = func.call @strict_alloc(%size) : (i64) -> !llvm.ptr
+    %element = arith.select %same, %old, %fresh : !llvm.ptr
+    %oldBits = llvm.ptrtoint %old : !llvm.ptr to i64
+    llvm.store %oldBits, %items : i64, !llvm.ptr
+    %tail = llvm.getelementptr %items[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %oldBits, %tail : i64, !llvm.ptr
+    %oldLocation:5 = func.call @strict_gc_locate(%oldBits) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %oldCounter = func.call @strict_rc_counter(%oldLocation#0, %oldLocation#1, %oldLocation#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %none = arith.constant 0 : i32
+    %one = arith.constant 1 : i32
+    %held = arith.select %same, %none, %one : i32
+    llvm.store %held, %oldCounter : i32, !llvm.ptr
+    %reused = func.call @strict_list_into(%list, %capacity, %zero) : (f64, f64, f64) -> f64
+    %value = func.call @strict_bits(%element) : (!llvm.ptr) -> f64
+    %pushed = func.call @strict_list_push(%reused, %value) : (f64, f64) -> f64
+    %elementBits = llvm.ptrtoint %element : !llvm.ptr to i64
+    %location:5 = func.call @strict_gc_locate(%elementBits) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %counter = func.call @strict_rc_counter(%location#0, %location#1, %location#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %oldCount = llvm.load %oldCounter : !llvm.ptr -> i32
+    %newCount = llvm.load %counter : !llvm.ptr -> i32
+    %ten = arith.constant 10 : i32
+    %tens = arith.muli %oldCount, %ten : i32
+    %total = arith.addi %tens, %newCount : i32
+    %width = arith.constant 3.0 : f64
+    %flat = func.call @strict_flat_list_new(%capacity, %width) : (f64, f64) -> f64
+    %flatItems = func.call @strict_list_items(%flat) : (f64) -> !llvm.ptr
+    %inline = llvm.load %flatItems : !llvm.ptr -> f64
+    %flatReused = func.call @strict_list_into(%flat, %capacity, %width) : (f64, f64, f64) -> f64
+    %flatPushed = func.call @strict_list_push(%flatReused, %inline) : (f64, f64) -> f64
+    %flatPointer = func.call @strict_ptr(%flat) : (f64) -> !llvm.ptr
+    %flatAddress = llvm.ptrtoint %flatPointer : !llvm.ptr to i64
+    %flatLocation:5 = func.call @strict_gc_locate(%flatAddress) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %flatCounter = func.call @strict_rc_counter(%flatLocation#0, %flatLocation#1, %flatLocation#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %flatCount = llvm.load %flatCounter : !llvm.ptr -> i32
+    %flatCorrect = arith.cmpi eq, %flatCount, %one : i32
+    %tailBits = llvm.load %tail : !llvm.ptr -> i64
+    %empty = arith.constant 0 : i64
+    %tailCorrect = arith.cmpi eq, %tailBits, %empty : i64
+    %correct = arith.andi %flatCorrect, %tailCorrect : i1
+    %failure = arith.constant 99 : i32
+    %checked = arith.select %correct, %total, %failure : i32
+    %result = arith.extui %checked : i32 to i64
+    return %result : i64
+  }
   func.func @test_pinned(%stack: !llvm.ptr) -> i64 {
     func.call @strict_gc_init(%stack) : (!llvm.ptr) -> ()
     func.call @strict_rc_counted() : () -> ()
@@ -140,6 +231,9 @@ driver.write_text('''#include <windows.h>
 extern int64_t test_pinned(void* stack);
 extern int64_t test_carried(void* stack);
 extern int64_t test_checked_collection(void* stack);
+extern int64_t test_reused_counts(void* stack, _Bool same);
+extern int64_t test_scan_invalidation(void* stack);
+extern int64_t test_pool_gpu(void);
 static DWORD caller;
 static HANDLE ready, published, retired;
 static atomic_int publishing, premature;
@@ -190,6 +284,21 @@ static double body(void* context, int64_t from, int64_t to) {
 	return 0;
 }
 int main(int argc, char** argv) {
+	if (argc > 1 && argv[1][0] == 'g') {
+		int64_t state = test_pool_gpu();
+		printf("GPU check state after pool launch: %lld (expected -1)\\n", (long long)state);
+		return state != -1;
+	}
+	if (argc > 1 && argv[1][0] == 's') {
+		int64_t bound = test_scan_invalidation(&argc);
+		printf("Scan bound after a reference write: %lld (expected 0)\\n", (long long)bound);
+		return bound != 0;
+	}
+	if (argc > 1 && argv[1][0] == 'r') {
+		int64_t counts = test_reused_counts(&argc, argv[1][1] == 's');
+		printf("Reused list counts: %lld (expected 11)\\n", (long long)counts);
+		return counts != 11;
+	}
 	if (argc > 1 && argv[1][0] == 'w') {
 		_putenv_s("STRICT_THREADS", "64");
 		published = CreateEventA(0, TRUE, TRUE, 0);
@@ -258,11 +367,15 @@ def run(name, arguments):
 	assert result.returncode == 0, result.stdout + result.stderr
 lowered = output / "pool.llvm.mlir"
 llvm = output / "pool.ll"
-run("mlir-opt", [module, "--symbol-privatize=exclude=test_parallel,test_pinned,test_carried,test_checked_collection", "--symbol-dce", "--convert-scf-to-cf",
+run("mlir-opt", [module, "--symbol-privatize=exclude=test_parallel,test_pinned,test_carried,test_checked_collection,test_reused_counts,test_scan_invalidation,test_pool_gpu", "--symbol-dce", "--convert-scf-to-cf",
 	"--convert-arith-to-llvm", "--convert-func-to-llvm", "--convert-cf-to-llvm", "--reconcile-unrealized-casts", "-o", lowered])
 run("mlir-translate", ["--mlir-to-llvmir", lowered, "-o", llvm])
 executable = output / "check.exe"
-run("clang", [llvm, driver, "-O2", "-Wno-override-module", "-fuse-ld=lld", "-o", executable])
+run("clang", [llvm, driver, "-O2", "-march=native", "-Wno-override-module", "-fuse-ld=lld", "-Wl,clang_rt.builtins-x86_64.lib", "-o", executable])
+for mode in ["gpu", "rsame", "rdifferent", "scan"]:
+	reused = subprocess.run([str(executable), mode], capture_output=True, text=True, timeout=15)
+	print(reused.stdout.strip(), flush=True)
+	assert reused.returncode == 0, reused.stdout + reused.stderr
 result = subprocess.run([str(executable)], capture_output=True, text=True, timeout=15)
 assert result.returncode == 0, result.stdout + result.stderr
 print(result.stdout.strip())

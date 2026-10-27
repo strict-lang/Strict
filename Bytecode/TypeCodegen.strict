@@ -117,7 +117,7 @@ Returned(header HeaderTokens) Text
 Parameters(header HeaderTokens) List(MemberEntry)
 	Hello.Parameters(HeaderTokens("Add", "(", "first", "Number", ")")).Length is 1
 	Hello.Parameters(HeaderTokens("Add", "(", "x", "=", "1", ")")).First.initial.Length is 1
-	let types = header.ParameterTypes
+	let types = HeaderEntries(header, inference.types.MethodsOf(Generator.target.TypeName)).ParameterTypes
 	mutable parameters = List(Mutable(MemberEntry))
 	for header.ParameterNames
 		let type = Generator.target.FullName(Concrete(types(index)))

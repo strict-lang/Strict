@@ -116,6 +116,7 @@ PartsCompiled(base Text, level Text) Boolean
 		compiling.Add("-c -flto=thin -x ir " + Quoted(part) + " -o " + Quoted(part + ".o") + Optimized + level)
 	for ToolRunner(Located("clang")).ExecuteAll(compiling, "Host clang (" + Parts + " jobs)")
 		if value.Failed
+			Logger.Log("clang failed (exit " + value.exitCode + "): " + value.Output + value.error)
 			return false
 	true
 CrossBuilt(base Text, level Text) Text

@@ -110,7 +110,7 @@ ValueOf(typeName Text) Text
 	typeMembers.types.Length is 1 then typeMembers.types(0) else ""
 DeclaredType(typeName Text, name Text, depth Number) Text
 	Sample.DeclaredType("Count", "number", 0) is "Number"
-	let typeMembers = MembersOf(typeName)
+	let typeMembers = Instantiation(value).Members(typeName, MembersOf(typeName))
 	let member = typeMembers.TypeOf(name)
 	if (member is not "") and ((member is not name) or (MethodsOf(member).TypeOf(name) is ""))
 		return member
