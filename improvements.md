@@ -3,7 +3,6 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 
 ## Bugs
 - Ternary Bonsai 27B at a simulated 10 GB stalled once more (first run after a cold build), 12 later runs did not: [improvements-models.md](improvements-models.md).
-- Test comparisons of recursive types compare the repeated type with `is`, without numeric tolerance.
 - `strict_gpu_tiled` and `strict_gpu_eights` read a tile's rows in its first row's format (a row unpacked elsewhere gives wrong numbers); checking every row hangs `strict_device_blocks` on mixed rows with 8 bit input.
 - VM unit tests over 100 ms also alone: `FlashLayer.Cached` (line 51) and `Gpt2Pass.Attending` (line 65).
 

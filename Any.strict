@@ -5,3 +5,4 @@ Code Text
 to HashCode
 Members Variables
 is(other) Boolean
+IsClose(other) Boolean

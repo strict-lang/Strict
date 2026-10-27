@@ -1,7 +1,8 @@
 has lines Texts
 has instance Text
 has instantiation Expressions/Instantiation
-constant Names = ("Members", "Code", "to HashCode", "Validated")
+constant Generating = ("Members", "Code", "to HashCode", "Validated", "IsClose")
+constant Names = Generating.Slice(0, 4)
 constant Wanted = ("Strict/HelloLogger.Run", "Strict/HelloLogger.Members")
 constant Greeter = Automatic(TypeCodegen.Hello.lines, "HelloLogger", Instantiation.Pairing)
 constant Point = Automatic(("has X Number", "mutable Y Number", "has logger", "constant Limit = 3", "Area Number", "\tX * Y"), "Point", Instantiation.Pairing)
@@ -17,7 +18,7 @@ Lines(names Texts) Texts
 	Automatic(("Members List(Number)", "\t(1)"), "B", Instantiation.Pairing).Lines(Names).Length is 6
 	Sized.Lines(List(Text) + "Validated").Index("Validated Size") is 2
 	mutable result = lines
-	for Names
+	for Generating
 		if IsWanted(value, names)
 			result = result + Generated(value)
 	result
@@ -28,7 +29,17 @@ Generated(name Text) Texts
 		return List(Text) + "Members Variables" + Described
 	if name is in ("to HashCode", "Code")
 		return name is "Code" then (List(Text) + "Code Text" + Coded) else (List(Text) + "to HashCode" + Hashed)
+	if name is "IsClose"
+		return Closed
 	List(Text) + ("Validated " + instance) + "\tvalue"
+Closed Texts
+	Point.Closed.First is "IsClose(other Point) Boolean"
+	Point.Closed.Last is "\ttestEqual0"
+	Point.Lines(List(Text) + "IsClose").Index("IsClose(other Point) Boolean") is 6
+	mutable closed = List(Text) + ("IsClose(other " + instance + ") Boolean")
+	for Closeness(instantiation.types).Fields("", "other", instance, "0", List(Text) + instance)
+		closed = closed + ("\t" + value)
+	closed + "\ttestEqual0"
 Validations SyntaxNodes
 	Sized.Validations.First to Text is "if Width > 0 is false"
 	Sized.Validations.First.line is 1
@@ -124,7 +135,7 @@ Completed(main TypeCodegen, entry TypeEntry, targets Texts) TypeEntry
 Missing(entry TypeEntry, targets Texts, fullName Text) Texts
 	Point.Missing(TypeEntry.HelloLogger, Wanted, "Strict/HelloLogger") is ("Members")
 	Point.Missing(TypeEntry.HelloLogger, Wanted, "Strict/Other").Length is 0
-	for Names
+	for Generating
 		let words = value.Split(" ")
-		if ((fullName + "." + value) is in targets) and (entry.Chosen(words.First, 0, words.Last, List(Text)) < 0)
+		if ((fullName + "." + value) is in targets) and (entry.Chosen(words.First, -1, words.Last, List(Text)) < 0)
 			value
