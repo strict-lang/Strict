@@ -2538,9 +2538,9 @@
   // through four buffers by cp.async (the keys, the values 4736 bytes later, both laid out like
   // strict_device_attention_stored_eights), a routed block first plans its tiles (strict_device_bytes_planned)
   llvm.mlir.global internal @strict_device_bytes_tiles() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<37888 x i8>
-  llvm.mlir.global internal @strict_device_bytes_plan() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<528 x i16>
-  llvm.mlir.global internal @strict_device_bytes_pools() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<512 x i16>
-  llvm.mlir.global internal @strict_device_bytes_pool_scores() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<512 x f16>
+  llvm.mlir.global internal @strict_device_bytes_plan() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<544 x i16>
+  llvm.mlir.global internal @strict_device_bytes_pools() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<1024 x i16>
+  llvm.mlir.global internal @strict_device_bytes_pool_scores() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<1024 x f16>
   llvm.mlir.global internal @strict_device_bytes_counts() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<4 x i32>
   // the keys of tile buffer (0 to 3)
   func.func private @strict_device_bytes_buffer(%buffer: i32) -> !llvm.ptr<3> attributes {llvm.passthrough = ["alwaysinline"]} {

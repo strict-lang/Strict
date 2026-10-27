@@ -2,11 +2,12 @@
 Details for the GPU line of [improvements.md](improvements.md). Diffusion models (Moss, H3) and GPU speed are worked on from `../StrictComfy/` (`Plan.md`, `Handoff.md`, `Performance.md`). Remove what is done, add new findings at the end of their section, bugs go into improvements.md.
 
 ## Attention
-ComfyUI's comfy_kitchen `int8_attention` (Q and K rotated by a Hadamard of 128, int8 V, uint8 shares) runs H3's 10 s step in 5.24-5.29 s, Sol-Attn routing in 3.34-3.49 s; Strict's `strict_device_bytes_attention` (8 bit keys, values and shares, 64 tokens per block) 6.89-7.04 s dense and 3.62-3.71 s with `Attention.routing` (StrictComfy Performance.md). Left, from ncu (dense 85 ms per call, tensor pipe 48 % busy, 2 blocks of 4 warps per SM at 238 registers and 41 KB):
+ComfyUI's comfy_kitchen `int8_attention` (Q and K rotated by a Hadamard of 128, int8 V, uint8 shares) runs H3's 10 s step in 5.24-5.29 s, Sol-Attn routing in 3.34-3.49 s; Strict's `strict_device_bytes_attention` (8 bit keys, values and shares, 64 tokens per block) 6.89-7.04 s dense and 3.62-3.71 s with `Attention.routing` (StrictComfy Performance.md). Left, from ncu (dense 85 ms per call, tensor pipe 48 % busy, 2 blocks of 4 warps per SM at 238 registers and 43 KB):
 - 3 blocks per SM like Sol-Attn need at most 168 registers (spills at 168 made it slower) and 33 KB: rows of 128 bytes with a swizzle instead of 144, plans in global memory from a planning kernel
 - values transposed and scaled per number by their quantize pass: no byte permutes after ldmatrix.trans and no scale per position on the shares (about 75 of 446 instructions per tile of 32 positions and warp)
 - the planner reads all pooled keys of a head in every block (moments and centroid scores, about 1.5 of 15 ms routed): moments once per head, the scores as a small product kernel
 - the Hadamard on Q and K
+- routing plans at most 1024 key blocks (65536 positions, about 20 s of 480x832 H3), longer prompts attend densely (2.4 times slower per step): plans in global memory lift the limit
 
 ## 16 bit lists
 A GPU loop of a method returning `BFloat16s` stores bfloat16, never by size alone (bfloat16 everywhere made long Qwen3.8 prompts decode NaN). Left:
