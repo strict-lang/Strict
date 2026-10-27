@@ -128,7 +128,10 @@
     %mode = arith.constant 511 : i32
     %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
     %created = llvm.call @mkdir(%name, %mode) : (!llvm.ptr, i32) -> i32
-    return %zero : f64
+    %success = arith.constant 0 : i32
+    %made = arith.cmpi eq, %created, %success : i32
+    %result = func.call @strict_directory_created(%made, %path) : (i1, f64) -> f64
+    return %result : f64
   }
   func.func private @strict_path_join(%path: f64, %name: f64) -> f64 {
     %separatorText = llvm.mlir.addressof @strict_separator_path : !llvm.ptr

@@ -58,7 +58,8 @@ Stored VmValue
 	if call.MethodName is in ("Delete", "Rename", "InMemory")
 		return Moved
 	if call.MethodName is "Create"
-		Directory.Create(Location)
+		let created = Directory.Create(Location)
+		return created is Error then VmValue.OfError("DirectoryNotCreated") else VmValue.OfBoolean(created)
 	Answered(Location)
 Moved VmValue
 	Hosted(Deleting).Moved.IsTrue is false
