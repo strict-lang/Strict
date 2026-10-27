@@ -61,13 +61,17 @@ Located(path Text, root Text, withTests Boolean, type Text) List(TypeEntry)
 	List(TypeEntry)
 Parsed(files Texts) Slow(Boolean)
 	FileCompiler.Parsed(("./Number.strict", "./Text.strict"))
+	for Problems(files)
+		if value is not ""
+			logger.Log(value)
+			return false
+	true
+Problems(files Texts) Slow(Texts)
+	FileCompiler.Problems(("./Number.strict", "./Text.strict")) is ("", "")
 	for files
 		let lines = File(value).ReadLines
 		let broken = Unparsable(lines)
-		if broken >= 0
-			logger.Log(FileCheck.Problem(lines, broken) + " in " + Normalized(value) + ":" + (broken + 1))
-			return false
-	true
+		broken < 0 then "" else FileCheck.Problem(lines, broken) + " in " + Normalized(value) + ":" + (broken + 1)
 Unparsable(lines Texts) Number
 	FileCompiler.Unparsable(("Add(other Number) Number", "	number + + other")) is 1
 	FileCompiler.Unparsable(("Run", "	logger.Log(1 + 2)")) is -1

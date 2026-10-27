@@ -3,7 +3,6 @@ Open speed work, one short line each, measurements go into commit messages. GPU 
 
 - The VM is about 100 times slower than native on compiler code (boxed numbers, dispatch, allocation): the reason internal package tests count as Slow.
 - Build speed: under 10 s hard limit, 2-3 s target (LogoApp, Blocks and Breakout 3.6-4 s): a build with tests runs the frontend twice (test gate, then native), lowering and the thin LTO link are the largest phases left.
-- Syntax validation (`FileCompiler.Parsed`) parses every source serially: run it in parallel like name validation.
 - Reachability, safety, recursion analysis and globals/text assembly of MLIR emission run serially.
 - Native C files of packages compile one after another and all providers compile once any is needed.
 - Cold GPU builds spend most time on the shared runtime PTX for both sm_75 and sm_80.
