@@ -1,0 +1,58 @@
+has types Expressions/KnownTypes
+constant Scalars = ("Text", "Boolean", "Error", "ErrorWithValue", "Dictionary")
+constant Plain = Closeness(ValueCodegen.Plain.inference.types)
+constant Deep = "Numberssssssssss"
+Lines(left Text, right Text, kinds Texts, slot Text, exact Boolean, expanded Texts) Texts
+	Plain.Lines("left", "right", ("Number", "Number"), "0", true, List(Text)).Last is "let testEqual0 = left is right"
+	let same = List(Text) + ("let testEqual" + slot + " = " + left + " is " + right)
+	if exact or (kinds.First is not kinds.Last)
+		return same
+	if kinds.First is "Number"
+		return Numeric(left, right, slot)
+	if kinds.First is in expanded
+		return Repeated(left, right, kinds.First, slot)
+	if types.BaseName(kinds.First) is "List"
+		return Elements(left, right, kinds.First, slot, expanded + kinds.First)
+	IsRecord(kinds.First) then Fields(left, right, kinds.First, slot, expanded + kinds.First) else same
+Repeated(left Text, right Text, kind Text, slot Text) Texts
+	Plain.Repeated("left", "right", "Number", "0") is ("let testEqual0 = left is right")
+	let compared = IsRecord(kind) then left + ".IsClose(" + right + ")" else left + " is " + right
+	List(Text) + ("let testEqual" + slot + " = " + compared)
+IsRecord(kind Text) Boolean
+	Plain.IsRecord("Number") is false
+	let base = types.BaseName(kind)
+	(types.MembersOf(kind).names.Length > 0) and (base is not in Scalars) and (base is not "List")
+Numeric(left Text, right Text, slot Text) Texts
+	let scale = "testScale" + slot
+	let difference = "testDelta" + slot
+	let maximum = left + ".Absolute > " + right + ".Absolute then " + left + ".Absolute else " + right + ".Absolute"
+	let bound = "0.0000001 * (1 + " + scale + ")"
+	let close = difference + " < 1 / 0 and " + difference + " <= " + bound
+	let first = "let " + scale + " = " + maximum
+	let second = "let " + difference + " = (" + left + " - " + right + ").Absolute"
+	(first, second, "let testEqual" + slot + " = " + left + " is " + right + " or (" + close + ")")
+Elements(left Text, right Text, kind Text, slot Text, expanded Texts) Texts
+	Text.Combine(Plain.Elements("left", "right", Deep, "0", List(Text))).IndexOf("testDelta") > 0
+	let same = "testEqual" + slot
+	let child = slot + "x"
+	let item = types.ElementType(kind)
+	let head = "mutable " + same + " = " + left + ".Length is " + right + ".Length"
+	mutable lines = (head, "if " + same, "\tfor " + left + ".Length")
+	let first = "testLeft" + child
+	let second = "testRight" + child
+	lines = lines + ("\t\tlet " + first + " = " + left + "(index)", "\t\tlet " + second + " = " + right + "(index)")
+	for Lines(first, second, (item, item), child, false, expanded)
+		lines = lines + ("\t\t" + value)
+	lines + ("\t\t" + same + " = " + same + " and testEqual" + child)
+Fields(left Text, right Text, kind Text, slot Text, expanded Texts) Texts
+	Plain.Fields("", "other", "Greet", "0", List(Text)).Length is 1
+	let members = types.MembersOf(kind)
+	mutable lines = List(Text) + ("mutable testEqual" + slot + " = true")
+	for members.names
+		let child = slot + "x" + index
+		let type = members.types(index)
+		let step = types.ParameterScope(kind).TypeOf(value + " step")
+		let own = left is "" then value else left + "." + value
+		let nested = Lines(own, right + "." + value, (type, type), child, step is not "", expanded)
+		lines = lines + nested + ("testEqual" + slot + " = testEqual" + slot + " and testEqual" + child)
+	lines

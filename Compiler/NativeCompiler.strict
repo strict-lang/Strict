@@ -2,6 +2,8 @@ has logger
 Run(arguments Texts) Number
 	let started = Process.Elapsed
 	let rest = arguments.Slice(1, arguments.Length - 1)
+	if Locked(rest(0)) is false
+		return 1
 	let cache = NativeCache(arguments(0), rest)
 	if BuildProfile(logger).Current(cache)
 		logger.Log(cache.Message)
@@ -10,6 +12,18 @@ Run(arguments Texts) Number
 	let failed = BuildProfile(logger).Compiled(cache)
 	BuildProfile(logger).Reported("Build total", started)
 	failed
+Locked(target Text) Slow(Boolean)
+	let lock = File(FileCompiler.Normalized(target) + ".lock")
+	if lock.Locked
+		return true
+	logger.Log("Waiting for the other build of " + target)
+	let started = Process.Elapsed
+	for as long as Process.Elapsed - started < Strict.MaxWait
+		Process.Wait(0.1)
+		if lock.Locked
+			return true
+	logger.Log("The other build of " + target + " did not finish within " + Strict.MaxWait + " seconds")
+	false
 Compiled(command Text, rest Texts, sources Texts = List(Text)) Number
 	if command is "build"
 		return Checked(rest, sources)

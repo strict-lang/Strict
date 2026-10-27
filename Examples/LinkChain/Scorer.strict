@@ -1,0 +1,3 @@
+has number
+Scored(model Generic) Number
+	Measurer(number).Measured(model) + (model to Text).Length

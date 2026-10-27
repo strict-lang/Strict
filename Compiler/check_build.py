@@ -4,6 +4,7 @@ import sys
 import tempfile
 import os
 import json
+import time
 from pathlib import Path
 from datetime import datetime
 
@@ -222,4 +223,67 @@ def check_parallel_refresh():
 	assert not (root / "Compiler/NativeCompiler.building").exists(), "The rebuild lock was left behind"
 	print("Parallel builds after a compiler change rebuild NativeCompiler once")
 
+def check_concurrent_builds():
+	"""Builds of one target take turns on its lock, a killed build releases it and the next one recovers."""
+	with tempfile.TemporaryDirectory(prefix="ConcurrentCheck", dir=root / "Examples") as folder:
+		source = Path(folder) / "ConcurrentCheck.strict"
+		source.write_text("Run Number\n\t1 is 1\n\t3", encoding="utf-8")
+		lock = Path(str(source) + ".lock")
+		executable = source.with_suffix(extension)
+		def started(*options):
+			return subprocess.Popen([str(root / ("strict" + extension)), "build", str(source), *options], cwd=root,
+				stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, start_new_session=sys.platform != "win32")
+		def holding(process):
+			deadline = time.monotonic() + 60
+			while not lock.exists():
+				assert process.poll() is None and time.monotonic() < deadline, "No build lock appeared: " + str(lock)
+				time.sleep(0.02)
+		def waiting(*options):
+			process = started(*options)
+			for line in process.stdout:
+				if line.startswith("Waiting for the other build"):
+					return process
+			assert False, "Build did not wait for the lock: " + process.communicate()[0]
+		def finished(process):
+			output = process.communicate(timeout=120)[0]
+			assert process.returncode == 0, output
+		first = started()
+		holding(first)
+		second = waiting("small")
+		finished(first)
+		finished(second)
+		assert source.with_suffix(".mlir").read_text().endswith("// -Os"), "The waiting build did not build last"
+		assert subprocess.run([str(executable)], timeout=10).returncode == 3
+		lock.unlink(missing_ok=True)
+		killed = started()
+		holding(killed)
+		recovering = waiting("fast")
+		if sys.platform == "win32":
+			subprocess.run(["taskkill", "/T", "/F", "/PID", str(killed.pid)], capture_output=True)
+		else:
+			os.killpg(killed.pid, 9)
+		killed.wait(timeout=10)
+		finished(recovering)
+		assert subprocess.run([str(executable)], timeout=10).returncode == 3
+		leftovers = [path.name for path in Path(folder).iterdir() if path.name.endswith((".new.exe", ".old.exe"))]
+		assert not leftovers, "Replacement executables were left behind: " + str(leftovers)
+	print("Concurrent builds of one target take turns, a killed build releases its lock")
+
+def check_link_workers():
+	"""A program whose calls are found over several link rounds compiles the same with one worker and with all."""
+	source = root / "Examples/LinkChain/LinkChain.strict"
+	modules = []
+	for threads in ("1", ""):
+		for stale in [*source.parent.glob("*.strictbinary"), *source.parent.glob("*.nativecache")]:
+			stale.unlink()
+		environment = dict(os.environ, STRICT_THREADS=threads) if threads else os.environ
+		tested = subprocess.run([str(root / ("strict" + extension)), "test", str(source), "native"], cwd=root,
+			capture_output=True, text=True, timeout=200, env=environment)
+		assert tested.returncode == 0, tested.stdout + tested.stderr
+		modules.append(source.with_suffix(".test.mlir").read_text().rsplit("\n", 1)[0])
+	assert modules[0] == modules[1], "Linking with one worker emitted a different program"
+	print("Links found over several rounds compile the same with one worker and with all")
+
 check_parallel_refresh()
+check_concurrent_builds()
+check_link_workers()

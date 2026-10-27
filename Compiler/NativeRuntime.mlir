@@ -1108,6 +1108,47 @@
   llvm.mlir.global internal thread_local @strict_stack_bottom(0 : i64) : i64
   llvm.mlir.global internal constant @strict_stack_overflow("StackOverflow\00") : !llvm.array<14 x i8>
   llvm.mlir.global internal constant @strict_recursive_constant("RecursiveConstant\00") : !llvm.array<18 x i8>
+  llvm.mlir.global internal thread_local @strict_constant_wait(0 : i64) : i64
+  // waits until the constant state at %set is ready, true when the threads owning it and the constants they wait
+  // for lead back to this thread (%wait, its owner token): none of them can ever finish
+  func.func private @strict_constant_blocked(%set: !llvm.ptr, %wait: !llvm.ptr) -> i1 {
+    %setAddress = llvm.ptrtoint %set : !llvm.ptr to i64
+    llvm.store %setAddress, %wait atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    %self = llvm.ptrtoint %wait : !llvm.ptr to i64
+    %none = arith.constant 0 : i64
+    %ready = arith.constant 2 : i64
+    %one = arith.constant 1 : i64
+    %longest = arith.constant 4096 : i64
+    %false = arith.constant false
+    %true = arith.constant true
+    cf.br ^spin
+  ^spin:
+    llvm.call @strict_pause() : () -> ()
+    %state = llvm.load %set atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %isReady = arith.cmpi eq, %state, %ready : i64
+    cf.cond_br %isReady, ^done(%false : i1), ^walk(%state, %none : i64, i64)
+  ^walk(%owner: i64, %steps: i64):
+    %isSelf = arith.cmpi eq, %owner, %self : i64
+    cf.cond_br %isSelf, ^done(%true : i1), ^follow
+  ^follow:
+    %isFree = arith.cmpi ule, %owner, %ready : i64
+    %isLong = arith.cmpi uge, %steps, %longest : i64
+    %stops = arith.ori %isFree, %isLong : i1
+    cf.cond_br %stops, ^spin, ^owned
+  ^owned:
+    %ownerWait = llvm.inttoptr %owner : i64 to !llvm.ptr
+    %waited = llvm.load %ownerWait atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %isWaiting = arith.cmpi ne, %waited, %none : i64
+    cf.cond_br %isWaiting, ^next, ^spin
+  ^next:
+    %waitedSet = llvm.inttoptr %waited : i64 to !llvm.ptr
+    %nextOwner = llvm.load %waitedSet atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %nextSteps = arith.addi %steps, %one : i64
+    cf.br ^walk(%nextOwner, %nextSteps : i64, i64)
+  ^done(%cycle: i1):
+    llvm.store %none, %wait atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    return %cycle : i1
+  }
   // a method entered with less than 1 MB of the main stack left returns a StackOverflow Error (the Strict VM after
   // 20000 nested calls), the stacks of other threads lie outside of it
   func.func private @strict_stack_short() -> i1 attributes {llvm.passthrough = ["alwaysinline"]} {
@@ -6267,15 +6308,30 @@
     %count = arith.fptosi %used : f64 to i64
     return %count : i64
   }
-  // one buffer per thread, a fast loop has at most one packed source; rows of 4 or 6 bits decode to floats
+  // one buffer per thread for the first and one for the second packed source of a fast loop, rows of 4 or 6 bits
+  // decode to floats
   llvm.mlir.global internal thread_local @strict_float_buffer(0 : i64) : i64
   llvm.mlir.global internal thread_local @strict_float_capacity(0 : i64) : i64
+  llvm.mlir.global internal thread_local @strict_second_float_buffer(0 : i64) : i64
+  llvm.mlir.global internal thread_local @strict_second_float_capacity(0 : i64) : i64
   func.func private @strict_list_floats(%list: f64) -> !llvm.ptr {
     %holder = func.call @strict_list_holder(%list) : (f64) -> !llvm.ptr
     %floats = func.call @strict_holder_floats(%holder) : (!llvm.ptr) -> !llvm.ptr
     return %floats : !llvm.ptr
   }
   func.func private @strict_holder_floats(%holder: !llvm.ptr) -> !llvm.ptr {
+    %bufferSlot = llvm.mlir.addressof @strict_float_buffer : !llvm.ptr
+    %capacitySlot = llvm.mlir.addressof @strict_float_capacity : !llvm.ptr
+    %floats = func.call @strict_holder_decoded(%holder, %bufferSlot, %capacitySlot) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    return %floats : !llvm.ptr
+  }
+  func.func private @strict_holder_second_floats(%holder: !llvm.ptr) -> !llvm.ptr {
+    %bufferSlot = llvm.mlir.addressof @strict_second_float_buffer : !llvm.ptr
+    %capacitySlot = llvm.mlir.addressof @strict_second_float_capacity : !llvm.ptr
+    %floats = func.call @strict_holder_decoded(%holder, %bufferSlot, %capacitySlot) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    return %floats : !llvm.ptr
+  }
+  func.func private @strict_holder_decoded(%holder: !llvm.ptr, %bufferSlot: !llvm.ptr, %capacitySlot: !llvm.ptr) -> !llvm.ptr {
     %eight = arith.constant 8 : i64
     %spare = arith.constant 255 : i64
     %four = arith.constant 4 : i64
@@ -6285,8 +6341,6 @@
     %rounded = arith.addi %count, %spare : i64
     %blocks = arith.shrui %rounded, %eight : i64
     %floats = arith.shli %blocks, %eight : i64
-    %bufferSlot = llvm.mlir.addressof @strict_float_buffer : !llvm.ptr
-    %capacitySlot = llvm.mlir.addressof @strict_float_capacity : !llvm.ptr
     %capacity = llvm.load %capacitySlot : !llvm.ptr -> i64
     %enough = arith.cmpi sge, %capacity, %floats : i64
     cf.cond_br %enough, ^ready, ^grow
@@ -9943,9 +9997,10 @@
     return %result : f64
   }
   // tools started together share the pool: unless STRICT_THREADS is set every child that reads it (the strict test of
-  // each file of a folder) gets the threads divided by how many run at once, at least 4, not a pool as big as this one
-  llvm.mlir.global internal @strict_tool_threads(0 : i64) : i64
-  func.func private @strict_tool_share(%tools: i64) {
+  // each file of a folder) gets the threads divided by how many run at once, at least 4, not a pool as big as this one;
+  // each batch has its own share, the thread starting one of its tools holds it while it does
+  llvm.mlir.global internal thread_local @strict_tool_threads(0 : i64) : i64
+  func.func private @strict_tool_share(%tools: i64) -> i64 {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %least = arith.constant 4 : i64
@@ -9960,14 +10015,12 @@
     %share = arith.divsi %threads, %together : i64
     %enough = arith.maxsi %share, %least : i64
     %chosen = arith.select %isSet, %zero, %enough : i64
-    %slot = llvm.mlir.addressof @strict_tool_threads : !llvm.ptr
-    llvm.store %chosen, %slot : i64, !llvm.ptr
-    return
+    return %chosen : i64
   }
   // Process.RunTools: the pool runs the tool for every argument line at the same time, the results keep their order
   func.func private @strict_process_runtools(%self: f64, %name: f64, %arguments: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
-    %size = arith.constant 32 : i64
+    %size = arith.constant 40 : i64
     %count = func.call @strict_list_length(%arguments) : (f64) -> f64
     %results = func.call @strict_list_new(%count, %zero) : (f64, f64) -> f64
     %items = func.call @strict_list_items(%results) : (f64) -> !llvm.ptr
@@ -9981,11 +10034,10 @@
     llvm.store %items, %itemsSlot : !llvm.ptr, !llvm.ptr
     %body = func.constant @strict_process_tools : (!llvm.ptr, i64, i64) -> f64
     %lines = arith.fptosi %count : f64 to i64
-    func.call @strict_tool_share(%lines) : (i64) -> ()
+    %share = func.call @strict_tool_share(%lines) : (i64) -> i64
+    %shareSlot = llvm.getelementptr %context[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %share, %shareSlot : i64, !llvm.ptr
     %ran = func.call @strict_parallel(%body, %context, %lines) : ((!llvm.ptr, i64, i64) -> f64, !llvm.ptr, i64) -> f64
-    %noShare = arith.constant 0 : i64
-    %shareSlot = llvm.mlir.addressof @strict_tool_threads : !llvm.ptr
-    llvm.store %noShare, %shareSlot : i64, !llvm.ptr
     llvm.call @free(%context) : (!llvm.ptr) -> ()
     %filled = func.call @strict_list_filled(%results, %count) : (f64, f64) -> f64
     return %filled : f64
@@ -9999,6 +10051,11 @@
     %arguments = llvm.load %argumentsSlot : !llvm.ptr -> f64
     %itemsSlot = llvm.getelementptr %context[3] : (!llvm.ptr) -> !llvm.ptr, f64
     %items = llvm.load %itemsSlot : !llvm.ptr -> !llvm.ptr
+    %shareSlot = llvm.getelementptr %context[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    %share = llvm.load %shareSlot : !llvm.ptr -> i64
+    %threadShare = llvm.mlir.addressof @strict_tool_threads : !llvm.ptr
+    %outerShare = llvm.load %threadShare : !llvm.ptr -> i64
+    llvm.store %share, %threadShare : i64, !llvm.ptr
     cf.br ^next(%start : i64)
   ^next(%index: i64):
     %more = arith.cmpi slt, %index, %end : i64
@@ -10012,6 +10069,7 @@
     %following = arith.addi %index, %one : i64
     cf.br ^next(%following : i64)
   ^done:
+    llvm.store %outerShare, %threadShare : i64, !llvm.ptr
     %passed = arith.constant 0.0 : f64
     return %passed : f64
   }

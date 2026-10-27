@@ -1,7 +1,7 @@
 # Strict.Bytecode
 Compiles Strict types into register based instructions, shared by the Strict VM (`Runtime`) and the native compiler (`Compiler`). `FileCompiler` compiles a file: `TypeCodegen` one type, `MethodCodegen`, `ValueCodegen` and friends the statements and expressions, `TestCodegen` the tests at the start of every method, `ConstantFolding` inlines constants, `LoopHoisting` reads a list member of a parameter or member (`map.values(index)`) once before a `for` instead of in every iteration, so GPU loops get it as a list. `Linker` adds every used type with only the methods that are called (`Automatic` writes `Members` and `to HashCode` for a type when they are used), `BinaryFile` reads and writes the `.strictbinary` cache next to each file.
 
-Numeric test comparisons use the tolerance `1e-7 * (1 + max(abs(actual), abs(expected)))`, numbers with a Step compare exactly after rounding, also in record fields. Only test comparisons use this tolerance.
+Numeric test comparisons use the tolerance `1e-7 * (1 + max(abs(actual), abs(expected)))`, numbers with a Step compare exactly after rounding, also in record fields and list elements of any depth (`Closeness`). A type that contains itself (a tree) is compared through its automatic `IsClose(other)` (declared in Any, generated only when a test needs it), which recurses at runtime. Only test comparisons use this tolerance.
 
 Bytecode format 7 binds compact method references to the owner's serialized length and CRC32. Loading checks the owner's source stamps, format, fingerprint and method-index bounds; stale references trigger recompilation.
 

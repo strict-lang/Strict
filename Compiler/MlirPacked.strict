@@ -1,6 +1,6 @@
 has function MlirFunction
 has position Number
-constant Letters = "abcdefghijklmnopqr"
+constant Letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHI"
 constant Widths = (16, 32, 8, 6, 4)
 constant SharedWidths = (16, 32, 8)
 constant Summing = MlirPacked(MlirKernel.Summing.function, 1)
@@ -36,16 +36,36 @@ Keyed(name Text, index Number) Texts
 Case(source Number) Texts
 	Summing.Case(1) is SecondCases
 	for Widths
-		let letter = Letters.Substring(Widths.Length * source + index, 1)
-		((value * 64 ^ source) to Text) + ": ^f" + letter + "loop" + position + "fast"
+		Target(value * 64 ^ source, Widths.Length * source + index)
 Shared(count Number) Texts
 	Summing.Shared(2) is ("1040: ^fkloop1fast", "2080: ^flloop1fast", "520: ^fmloop1fast")
 	Summing.Shared(1).Length is 0
 	if count < 2
 		return List(Text)
 	for SharedWidths
-		let letter = Letters.Substring(Widths.Length * count + index, 1)
-		((value * (64 ^ count - 1) / 63) to Text) + ": ^f" + letter + "loop" + position + "fast"
+		Target(value * (64 ^ count - 1) / 63, Widths.Length * count + index)
+Target(key Number, number Number) Text
+	Summing.Target(1040, 10) is "1040: ^fkloop1fast"
+	(key to Text) + ": ^f" + Letters.Substring(number, 1) + "loop" + position + "fast"
+Cases(count Number) Texts
+	Summing.Cases(2).Length is 35
+	"2052: ^fuloop1fast" is in Summing.Cases(2)
+	mutable cases = Shared(count)
+	for count
+		cases = cases + Case(index)
+	for Mixed(count)
+		cases = cases + Target(value, Widths.Length * count + SharedWidths.Length + index)
+	cases
+Mixed(count Number) Numbers
+	Summing.Mixed(2).Length is 22
+	Summing.Mixed(3).Length is 0
+	if count is not 2
+		return List(Number)
+	for Widths.Length * Widths.Length
+		let first = Widths(index % Widths.Length)
+		let second = Widths((index / Widths.Length).Floor)
+		if (first is not second) or (first is not in SharedWidths)
+			first + 64 * second
 Dispatched Texts
 	Text.Combine(Summing.Dispatched).IndexOf("[default: ^loop1generic, 0: ^floop1fast, 1040: ^fkloop1fast") > 0
 	Text.Combine(Summing.Dispatched).IndexOf("520: ^fmloop1fast, 16: ^faloop1fast") > 0
@@ -53,24 +73,30 @@ Dispatched Texts
 	if names.Length is 0
 		return List(Text)
 	mutable lines = List(Text) + ("  ^floop" + position + "packed:", "    %f" + position + "s0 = arith.constant 0 : i64")
-	mutable cases = Shared(names.Length)
 	for names
 		lines = lines + Keyed(value, index)
-		cases = cases + Case(index)
-	let targets = "[default: ^loop" + position + "generic, 0: ^floop" + position + "fast, " + Text.Combine(cases, ", ")
+	let cases = Text.Combine(Cases(names.Length), ", ")
+	let targets = "[default: ^loop" + position + "generic, 0: ^floop" + position + "fast, " + cases
 	lines + ("    cf.switch %f" + position + "s" + names.Length + " : i64, " + targets + "]") + Variants
 Variants Texts
 	Summing.Variants.First is "  ^faloop1fast:"
 	Text.Combine(Summing.Variants).IndexOf("arith.extf %fa1gsn : f16 to f32") > 0
-	let names = Packable
 	mutable lines = List(Mutable(Text))
+	for Packings(Packable)
+		lines = lines + Variant(value, index)
+	lines
+Packings(names Texts) Texts
+	Summing.Packings(Summing.Packable)(10) is "for 16 numbers 16"
+	Summing.Packings(Summing.Packable).Index("for 4 numbers 32") is 20
+	mutable packings = List(Mutable(Text))
 	for names.Length * Widths.Length
-		lines = lines + Variant(names((index / Widths.Length).Floor) + " " + Widths(index % Widths.Length), index)
+		packings = packings + (names((index / Widths.Length).Floor) + " " + Widths(index % Widths.Length))
 	if names.Length > 1
 		for SharedWidths
-			let packing = Text.Combine(Pairs(names, value), " ")
-			lines = lines + Variant(packing, names.Length * Widths.Length + index)
-	lines
+			packings = packings + Text.Combine(Pairs(names, value), " ")
+	for Mixed(names.Length)
+		packings = packings + (names(0) + " " + value % 64 + " " + names(1) + " " + (value / 64).Floor)
+	packings
 Variant(packing Text, number Number) Texts
 	Summing.Variant("for 16", 0).First is "  ^faloop1fast:"
 	let packed = MlirFunction(function.types, function.type, function.method, function.lineSlots, position, packing)
