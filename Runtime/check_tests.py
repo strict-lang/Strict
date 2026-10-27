@@ -106,4 +106,17 @@ with tempfile.TemporaryDirectory(prefix="TestPolicy", dir=root / "Examples") as 
 		capture_output=True, text=True, timeout=10)
 	assert hung_vm.returncode != 0 and "TestDurationMustNotExceedVmBudget" in hung_vm.stdout + hung_vm.stderr, hung_vm.stdout + hung_vm.stderr
 
-	print("Unit deadlines, native/build failures, Slow selection, transparent values and manual Run order passed")
+	source = folder / "Shares.strict"
+	tool, line = ("cmd", "/c echo %STRICT_THREADS%") if os.name == "nt" else ("sh", "-c 'echo $STRICT_THREADS'")
+	source.write_text('has logger\nRun Number\n\tfor Process.RunTools("' + tool + '", ("' + line + '", "' + line + '"))\n'
+		'\t\tlogger.Log("threads " + value.Output.Trim)\n\t0', encoding="utf-8")
+	unset = dict(environment)
+	unset.pop("STRICT_THREADS")
+	shared = subprocess.run([command, str(source)], cwd=root, env=unset, capture_output=True, text=True, timeout=10)
+	shares = [line.split()[-1] for line in shared.stdout.splitlines() if line.startswith("threads")]
+	assert len(shares) == 2 and all(share.isdigit() and int(share) >= 4 for share in shares), (
+		"Tools started together did not get a share of the threads:\n" + shared.stdout + shared.stderr)
+	kept = subprocess.run([command, str(source)], cwd=root, env=environment, capture_output=True, text=True, timeout=10)
+	assert kept.stdout.count("threads 8") == 2, "STRICT_THREADS of the caller was not kept:\n" + kept.stdout + kept.stderr
+
+	print("Unit deadlines, native/build failures, Slow selection, transparent values, manual Run order and tool thread shares passed")

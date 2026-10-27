@@ -1242,14 +1242,23 @@
     %helpers = arith.minsi %others, %workers : i64
     llvm.call @strict_pool_wake(%helpers) : (i64) -> ()
     llvm.call @strict_pool_run(%job) : (i64) -> ()
-    cf.br ^wait
-  ^wait:
+    cf.br ^wait(%zero : i64)
+  ^wait(%callerSpins: i64):
     %done = llvm.load %doneSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
     %finished = arith.cmpi sge, %done, %count : i64
     cf.cond_br %finished, ^finish, ^spin
   ^spin:
+    // about 0.1 ms like a worker, then the caller sleeps until the last chunk is done (a slow chunk or tool)
+    %callerPatience = arith.constant 2000 : i64
+    %callerTired = arith.cmpi sge, %callerSpins, %callerPatience : i64
+    cf.cond_br %callerTired, ^sleep, ^pause
+  ^pause:
     llvm.call @strict_pause() : () -> ()
-    cf.br ^wait
+    %callerCounted = arith.addi %callerSpins, %one : i64
+    cf.br ^wait(%callerCounted : i64)
+  ^sleep:
+    llvm.call @strict_pool_await(%count) : (i64) -> ()
+    cf.br ^finish
   ^finish:
     llvm.store %zero, %busySlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     %failureBits = llvm.load %failureSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
@@ -1308,7 +1317,14 @@
     llvm.store %job, %insideSlot : i64, !llvm.ptr
     %result = llvm.call @strict_pool_chunk_run(%start, %end) : (i64, i64) -> i1
     llvm.store %wasInside, %insideSlot : i64, !llvm.ptr
-    %finished = llvm.atomicrmw add %doneSlot, %size acq_rel : !llvm.ptr, i64
+    %finished = llvm.atomicrmw add %doneSlot, %size seq_cst : !llvm.ptr, i64
+    %reached = llvm.add %finished, %size : i64
+    %isLast = llvm.icmp "sge" %reached, %count : i64
+    llvm.cond_br %isLast, ^lastChunk, ^continued
+  ^lastChunk:
+    llvm.call @strict_pool_finished() : () -> ()
+    llvm.br ^continued
+  ^continued:
     llvm.cond_br %result, ^close, ^claim
   ^close:
     %open = llvm.load %nextSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
@@ -1326,7 +1342,12 @@
     %skipped = llvm.extractvalue %closing[1] : !llvm.struct<(i64, i1)>
     llvm.cond_br %skipped, ^skippedRest, ^close
   ^skippedRest:
-    %counted = llvm.atomicrmw add %doneSlot, %rest acq_rel : !llvm.ptr, i64
+    %counted = llvm.atomicrmw add %doneSlot, %rest seq_cst : !llvm.ptr, i64
+    %allCounted = llvm.add %counted, %rest : i64
+    %isAll = llvm.icmp "sge" %allCounted, %total : i64
+    llvm.cond_br %isAll, ^skippedLast, ^leave
+  ^skippedLast:
+    llvm.call @strict_pool_finished() : () -> ()
     llvm.return
   ^leave:
     llvm.return
@@ -9844,6 +9865,28 @@
     %result = func.call @strict_process_execute(%path, %arguments) : (f64, f64) -> f64
     return %result : f64
   }
+  // tools started together share the pool: unless STRICT_THREADS is set every child that reads it (the strict test of
+  // each file of a folder) gets the threads divided by how many run at once, at least 4, not a pool as big as this one
+  llvm.mlir.global internal @strict_tool_threads(0 : i64) : i64
+  func.func private @strict_tool_share(%tools: i64) {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %least = arith.constant 4 : i64
+    %name = llvm.mlir.addressof @strict_threads_name : !llvm.ptr
+    %setting = llvm.call @getenv(%name) : (!llvm.ptr) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %isSet = llvm.icmp "ne" %setting, %null : !llvm.ptr
+    %workers = func.call @strict_pool_started() : () -> i64
+    %threads = arith.addi %workers, %one : i64
+    %running = arith.minsi %tools, %threads : i64
+    %together = arith.maxsi %running, %one : i64
+    %share = arith.divsi %threads, %together : i64
+    %enough = arith.maxsi %share, %least : i64
+    %chosen = arith.select %isSet, %zero, %enough : i64
+    %slot = llvm.mlir.addressof @strict_tool_threads : !llvm.ptr
+    llvm.store %chosen, %slot : i64, !llvm.ptr
+    return
+  }
   // Process.RunTools: the pool runs the tool for every argument line at the same time, the results keep their order
   func.func private @strict_process_runtools(%self: f64, %name: f64, %arguments: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
@@ -9861,7 +9904,11 @@
     llvm.store %items, %itemsSlot : !llvm.ptr, !llvm.ptr
     %body = func.constant @strict_process_tools : (!llvm.ptr, i64, i64) -> f64
     %lines = arith.fptosi %count : f64 to i64
+    func.call @strict_tool_share(%lines) : (i64) -> ()
     %ran = func.call @strict_parallel(%body, %context, %lines) : ((!llvm.ptr, i64, i64) -> f64, !llvm.ptr, i64) -> f64
+    %noShare = arith.constant 0 : i64
+    %shareSlot = llvm.mlir.addressof @strict_tool_threads : !llvm.ptr
+    llvm.store %noShare, %shareSlot : i64, !llvm.ptr
     llvm.call @free(%context) : (!llvm.ptr) -> ()
     %filled = func.call @strict_list_filled(%results, %count) : (f64, f64) -> f64
     return %filled : f64

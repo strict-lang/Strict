@@ -34,8 +34,6 @@ What to fix next, one short line each, bugs first. Remove a line once it is atte
 - Syntax validation (`FileCompiler.Parsed`) reads and parses every source serially; run it like name validation (FileCompiler has 16 methods, the syntax checks need a type of their own).
 - Small builds lower and translate the whole runtime every time; cache it as bitcode (keep the 16 split parts, one clang part is slower even for Sum).
 - Source discovery inventories whole packages for every build, also for small programs; narrow it to the files the source can reach.
-- Folder test children each start a pool as big as their parent's; give them a share of the threads (Process cannot set a child's environment yet).
-- The pool caller spins until the last chunk of a job ends, a core during long folder test tails; let the last finisher wake it.
 
 ## Waiting
 - Base library: Number `Sign`, `Wrap`, `ArcTangent2` and inverse trigonometry, Text to Numbers, fixed decimal text, `Truncated`.

@@ -588,6 +588,19 @@
     %closedThread = llvm.call @CloseHandle(%thread) : (!llvm.ptr) -> i32
     return %exitNumber : f64
   }
+  llvm.func @SetEnvironmentVariableA(!llvm.ptr, !llvm.ptr) -> i32
+  // a child of a tool batch inherits STRICT_THREADS while it starts (a share above 0, set and removed under the lock)
+  func.func private @strict_tool_environment(%share: i64, %value: !llvm.ptr) {
+    %zero = arith.constant 0 : i64
+    %sharing = arith.cmpi sgt, %share, %zero : i64
+    cf.cond_br %sharing, ^set, ^done
+  ^set:
+    %name = llvm.mlir.addressof @strict_threads_name : !llvm.ptr
+    %set = llvm.call @SetEnvironmentVariableA(%name, %value) : (!llvm.ptr, !llvm.ptr) -> i32
+    cf.br ^done
+  ^done:
+    return
+  }
   // Process.RunTools starts several at once: a child must not inherit the output files of another one, an SRW lock lets
   // the threads waiting for it sleep while CreateProcessA takes milliseconds (spinning cost a core per waiting thread)
   llvm.mlir.global internal @strict_process_lock(0 : i64) : i64
@@ -609,6 +622,11 @@
     %command = func.call @strict_text_concat(%program, %arguments) : (f64, f64) -> f64
     %outputPath = func.call @strict_temp_file() : () -> f64
     %errorPath = func.call @strict_temp_file() : () -> f64
+    %toolShareSlot = llvm.mlir.addressof @strict_tool_threads : !llvm.ptr
+    %toolShare = llvm.load %toolShareSlot : !llvm.ptr -> i64
+    %toolShareNumber = arith.sitofp %toolShare : i64 to f64
+    %toolShareText = func.call @strict_number_text(%toolShareNumber) : (f64) -> f64
+    %toolShareValue = func.call @strict_ptr(%toolShareText) : (f64) -> !llvm.ptr
     %lock = llvm.mlir.addressof @strict_process_lock : !llvm.ptr
     llvm.call @AcquireSRWLockExclusive(%lock) : (!llvm.ptr) -> ()
     %output = func.call @strict_inherited_file(%outputPath) : (f64) -> !llvm.ptr
@@ -627,7 +645,9 @@
     %information = llvm.call @calloc(%count, %informationSize) : (i64, i64) -> !llvm.ptr
     %commandText = func.call @strict_ptr(%command) : (f64) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
+    func.call @strict_tool_environment(%toolShare, %toolShareValue) : (i64, !llvm.ptr) -> ()
     %started = llvm.call @CreateProcessA(%null, %commandText, %null, %null, %inherit, %noFlags, %null, %null, %startup, %information) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    func.call @strict_tool_environment(%toolShare, %null) : (i64, !llvm.ptr) -> ()
     %closedOutput = llvm.call @CloseHandle(%output) : (!llvm.ptr) -> i32
     %closedError = llvm.call @CloseHandle(%error) : (!llvm.ptr) -> i32
     llvm.call @ReleaseSRWLockExclusive(%lock) : (!llvm.ptr) -> ()
@@ -716,6 +736,8 @@
   llvm.func @WakeConditionVariable(!llvm.ptr)
   llvm.mlir.global internal @strict_pool_lock(0 : i64) : i64
   llvm.mlir.global internal @strict_pool_signal(0 : i64) : i64
+  llvm.mlir.global internal @strict_pool_finish(0 : i64) : i64
+  llvm.mlir.global internal @strict_pool_awaiting(0 : i64) : i64
   llvm.func @strict_pool_thread(%argument: !llvm.ptr) -> i32 {
     llvm.call @strict_pool_serve() : () -> ()
     %zero = llvm.mlir.constant(0 : i32) : i32
@@ -836,6 +858,48 @@
     llvm.call @WakeConditionVariable(%signal) : (!llvm.ptr) -> ()
     %next = llvm.add %woken, %one : i64
     llvm.br ^some(%next : i64)
+  ^leave:
+    llvm.return
+  }
+  // the caller of a job sleeps here until its last chunk is done instead of spinning through a slow chunk
+  // (a folder test's caller spun a core for the slowest child), strict_pool_finished of that chunk wakes it
+  llvm.func @strict_pool_await(%count: i64) {
+    %lock = llvm.mlir.addressof @strict_pool_lock : !llvm.ptr
+    %signal = llvm.mlir.addressof @strict_pool_finish : !llvm.ptr
+    %doneSlot = llvm.mlir.addressof @strict_pool_done : !llvm.ptr
+    %awaitingSlot = llvm.mlir.addressof @strict_pool_awaiting : !llvm.ptr
+    %zero = llvm.mlir.constant(0 : i64) : i64
+    %one = llvm.mlir.constant(1 : i64) : i64
+    llvm.call @AcquireSRWLockExclusive(%lock) : (!llvm.ptr) -> ()
+    llvm.store %one, %awaitingSlot atomic seq_cst {alignment = 8 : i64} : i64, !llvm.ptr
+    llvm.br ^check
+  ^check:
+    %done = llvm.load %doneSlot atomic seq_cst {alignment = 8 : i64} : !llvm.ptr -> i64
+    %finished = llvm.icmp "sge" %done, %count : i64
+    llvm.cond_br %finished, ^leave, ^sleep
+  ^sleep:
+    %forever = llvm.mlir.constant(-1 : i32) : i32
+    %exclusive = llvm.mlir.constant(0 : i32) : i32
+    %slept = llvm.call @SleepConditionVariableSRW(%signal, %lock, %forever, %exclusive) : (!llvm.ptr, !llvm.ptr, i32, i32) -> i32
+    llvm.br ^check
+  ^leave:
+    llvm.store %zero, %awaitingSlot atomic seq_cst {alignment = 8 : i64} : i64, !llvm.ptr
+    llvm.call @ReleaseSRWLockExclusive(%lock) : (!llvm.ptr) -> ()
+    llvm.return
+  }
+  llvm.func @strict_pool_finished() {
+    %lock = llvm.mlir.addressof @strict_pool_lock : !llvm.ptr
+    %signal = llvm.mlir.addressof @strict_pool_finish : !llvm.ptr
+    %awaitingSlot = llvm.mlir.addressof @strict_pool_awaiting : !llvm.ptr
+    %zero = llvm.mlir.constant(0 : i64) : i64
+    %awaiting = llvm.load %awaitingSlot atomic seq_cst {alignment = 8 : i64} : !llvm.ptr -> i64
+    %asleep = llvm.icmp "ne" %awaiting, %zero : i64
+    llvm.cond_br %asleep, ^wake, ^leave
+  ^wake:
+    llvm.call @AcquireSRWLockExclusive(%lock) : (!llvm.ptr) -> ()
+    llvm.call @ReleaseSRWLockExclusive(%lock) : (!llvm.ptr) -> ()
+    llvm.call @WakeConditionVariable(%signal) : (!llvm.ptr) -> ()
+    llvm.return
   ^leave:
     llvm.return
   }

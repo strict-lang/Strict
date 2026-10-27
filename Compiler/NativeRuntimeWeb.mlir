@@ -501,6 +501,12 @@
   llvm.func @strict_pool_wake(%helpers: i64) {
     llvm.return
   }
+  llvm.func @strict_pool_await(%count: i64) {
+    llvm.return
+  }
+  llvm.func @strict_pool_finished() {
+    llvm.return
+  }
   func.func private @strict_gpu_spawn() -> i1 {
     %none = arith.constant false
     return %none : i1

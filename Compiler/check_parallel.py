@@ -152,6 +152,20 @@ void test_retired(int64_t job) {
 	if (job == 1 && GetCurrentThreadId() != caller)
 		SetEvent(retired);
 }
+static HANDLE begun;
+static double tail(void* context, int64_t from, int64_t to) {
+	if (GetCurrentThreadId() == caller)
+		waited(begun);
+	else {
+		SetEvent(begun);
+		Sleep(300);
+	}
+	return 0;
+}
+static double busy(FILETIME user, FILETIME kernel) {
+	return ((double)(((ULONGLONG)user.dwHighDateTime << 32) | user.dwLowDateTime) +
+		(double)(((ULONGLONG)kernel.dwHighDateTime << 32) | kernel.dwLowDateTime)) / 10000;
+}
 static double body(void* context, int64_t from, int64_t to) {
 	if (*(int*)context == 1)
 		waited(ready);
@@ -178,6 +192,20 @@ int main(int argc, char** argv) {
 		}
 		printf("Job of 4 items while 63 workers sleep: %.1f us\\n", spent * 1000);
 		return spent * 1000 > 50;
+	}
+	if (argc > 1 && argv[1][0] == 'a') {
+		_putenv_s("STRICT_THREADS", "2");
+		published = CreateEventA(0, TRUE, TRUE, 0);
+		begun = CreateEventA(0, TRUE, FALSE, 0);
+		caller = GetCurrentThreadId();
+		FILETIME created, ended, kernel, user, kernelAfter, userAfter;
+		GetThreadTimes(GetCurrentThread(), &created, &ended, &kernel, &user);
+		int idle = 0;
+		test_parallel(tail, &idle, 3);
+		GetThreadTimes(GetCurrentThread(), &created, &ended, &kernelAfter, &userAfter);
+		double spent = busy(userAfter, kernelAfter) - busy(user, kernel);
+		printf("Caller CPU while a worker finishes a 300 ms chunk: %.0f ms\\n", spent);
+		return spent > 100;
 	}
 	if (argc > 1) {
 		_putenv_s("STRICT_THREADS", "1");
@@ -223,3 +251,6 @@ assert carried.returncode == 0, carried.stdout + carried.stderr
 woken = subprocess.run([str(executable), "wake"], capture_output=True, text=True, timeout=15)
 print(woken.stdout.strip())
 assert woken.returncode == 0, woken.stdout + woken.stderr
+awaited = subprocess.run([str(executable), "await"], capture_output=True, text=True, timeout=15)
+print(awaited.stdout.strip())
+assert awaited.returncode == 0, awaited.stdout + awaited.stderr

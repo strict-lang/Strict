@@ -498,6 +498,30 @@
     %deleted = llvm.call @unlink(%name) : (!llvm.ptr) -> i32
     return %text : f64
   }
+  llvm.mlir.global internal constant @strict_export_threads("export STRICT_THREADS=\00") : !llvm.array<23 x i8>
+  llvm.mlir.global internal constant @strict_export_end("; \00") : !llvm.array<3 x i8>
+  // the start of a tool's shell command: exports STRICT_THREADS for a child of a tool batch (a share above 0)
+  func.func private @strict_tool_prefix() -> f64 {
+    %zero = arith.constant 0 : i64
+    %slot = llvm.mlir.addressof @strict_tool_threads : !llvm.ptr
+    %share = llvm.load %slot : !llvm.ptr -> i64
+    %sharing = arith.cmpi sgt, %share, %zero : i64
+    cf.cond_br %sharing, ^export, ^none
+  ^none:
+    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %empty = func.call @strict_text_of(%emptyText) : (!llvm.ptr) -> f64
+    return %empty : f64
+  ^export:
+    %exportText = llvm.mlir.addressof @strict_export_threads : !llvm.ptr
+    %export = func.call @strict_text_of(%exportText) : (!llvm.ptr) -> f64
+    %number = arith.sitofp %share : i64 to f64
+    %value = func.call @strict_number_text(%number) : (f64) -> f64
+    %assigned = func.call @strict_text_concat(%export, %value) : (f64, f64) -> f64
+    %endText = llvm.mlir.addressof @strict_export_end : !llvm.ptr
+    %end = func.call @strict_text_of(%endText) : (!llvm.ptr) -> f64
+    %started = func.call @strict_text_concat(%assigned, %end) : (f64, f64) -> f64
+    return %started : f64
+  }
   func.func private @strict_text_of(%global: !llvm.ptr) -> f64 {
     %bits = func.call @strict_bits(%global) : (!llvm.ptr) -> f64
     return %bits : f64
@@ -550,7 +574,9 @@
     %quoteText = func.call @strict_text_of(%quote) : (!llvm.ptr) -> f64
     %outputPath = func.call @strict_temp_file() : () -> f64
     %errorPath = func.call @strict_temp_file() : () -> f64
-    %quoted = func.call @strict_text_concat(%execText, %path) : (f64, f64) -> f64
+    %toolPrefix = func.call @strict_tool_prefix() : () -> f64
+    %prefixed = func.call @strict_text_concat(%toolPrefix, %execText) : (f64, f64) -> f64
+    %quoted = func.call @strict_text_concat(%prefixed, %path) : (f64, f64) -> f64
     %program = func.call @strict_text_concat(%quoted, %quoteSpaceText) : (f64, f64) -> f64
     %called = func.call @strict_text_concat(%program, %arguments) : (f64, f64) -> f64
     %toOutput = func.call @strict_text_concat(%called, %outputText) : (f64, f64) -> f64
@@ -666,6 +692,8 @@
   // PTHREAD_MUTEX_INITIALIZER and PTHREAD_COND_INITIALIZER start with their signature on Darwin
   llvm.mlir.global internal @strict_pool_lock(dense<[850045863, 0, 0, 0, 0, 0, 0, 0]> : tensor<8xi64>) : !llvm.array<8 x i64>
   llvm.mlir.global internal @strict_pool_signal(dense<[1018212795, 0, 0, 0, 0, 0, 0, 0]> : tensor<8xi64>) : !llvm.array<8 x i64>
+  llvm.mlir.global internal @strict_pool_finish(dense<[1018212795, 0, 0, 0, 0, 0, 0, 0]> : tensor<8xi64>) : !llvm.array<8 x i64>
+  llvm.mlir.global internal @strict_pool_awaiting(0 : i64) : i64
   llvm.func @strict_pool_thread(%argument: !llvm.ptr) -> !llvm.ptr {
     llvm.call @strict_pool_serve() : () -> ()
     %null = llvm.mlir.zero : !llvm.ptr
@@ -777,6 +805,46 @@
     %signaled = llvm.call @pthread_cond_signal(%signal) : (!llvm.ptr) -> i32
     %next = llvm.add %woken, %one : i64
     llvm.br ^some(%next : i64)
+  ^leave:
+    llvm.return
+  }
+  // the caller of a job sleeps here until its last chunk is done instead of spinning through a slow chunk
+  // (a folder test's caller spun a core for the slowest child), strict_pool_finished of that chunk wakes it
+  llvm.func @strict_pool_await(%count: i64) {
+    %lock = llvm.mlir.addressof @strict_pool_lock : !llvm.ptr
+    %signal = llvm.mlir.addressof @strict_pool_finish : !llvm.ptr
+    %doneSlot = llvm.mlir.addressof @strict_pool_done : !llvm.ptr
+    %awaitingSlot = llvm.mlir.addressof @strict_pool_awaiting : !llvm.ptr
+    %zero = llvm.mlir.constant(0 : i64) : i64
+    %one = llvm.mlir.constant(1 : i64) : i64
+    %locked = llvm.call @pthread_mutex_lock(%lock) : (!llvm.ptr) -> i32
+    llvm.store %one, %awaitingSlot atomic seq_cst {alignment = 8 : i64} : i64, !llvm.ptr
+    llvm.br ^check
+  ^check:
+    %done = llvm.load %doneSlot atomic seq_cst {alignment = 8 : i64} : !llvm.ptr -> i64
+    %finished = llvm.icmp "sge" %done, %count : i64
+    llvm.cond_br %finished, ^leave, ^sleep
+  ^sleep:
+    %waited = llvm.call @pthread_cond_wait(%signal, %lock) : (!llvm.ptr, !llvm.ptr) -> i32
+    llvm.br ^check
+  ^leave:
+    llvm.store %zero, %awaitingSlot atomic seq_cst {alignment = 8 : i64} : i64, !llvm.ptr
+    %unlocked = llvm.call @pthread_mutex_unlock(%lock) : (!llvm.ptr) -> i32
+    llvm.return
+  }
+  llvm.func @strict_pool_finished() {
+    %lock = llvm.mlir.addressof @strict_pool_lock : !llvm.ptr
+    %signal = llvm.mlir.addressof @strict_pool_finish : !llvm.ptr
+    %awaitingSlot = llvm.mlir.addressof @strict_pool_awaiting : !llvm.ptr
+    %zero = llvm.mlir.constant(0 : i64) : i64
+    %awaiting = llvm.load %awaitingSlot atomic seq_cst {alignment = 8 : i64} : !llvm.ptr -> i64
+    %asleep = llvm.icmp "ne" %awaiting, %zero : i64
+    llvm.cond_br %asleep, ^wake, ^leave
+  ^wake:
+    %locked = llvm.call @pthread_mutex_lock(%lock) : (!llvm.ptr) -> i32
+    %unlocked = llvm.call @pthread_mutex_unlock(%lock) : (!llvm.ptr) -> i32
+    %signaled = llvm.call @pthread_cond_signal(%signal) : (!llvm.ptr) -> i32
+    llvm.return
   ^leave:
     llvm.return
   }
