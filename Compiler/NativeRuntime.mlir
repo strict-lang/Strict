@@ -11231,8 +11231,9 @@
     return %done : i1
   }
   // blocks of 512 threads are those of strict_device_tiles, which keep their rows and tokens in 52224 bytes of dynamic
-  // shared memory (more than the 48 KB a kernel gets without asking), strict_device_eights 45056 bytes and
-  // strict_device_whole 3 stages of 24576 bytes from sm_80 on, 45056 bytes where fewer are allowed (before sm_80, AMD)
+  // shared memory (more than the 48 KB a kernel gets without asking), strict_device_eights 45056 bytes,
+  // strict_device_whole 3 stages of 24576 bytes from sm_80 on, 45056 bytes where fewer are allowed (before sm_80, AMD),
+  // strict_device_dense_attention 8 tile buffers of 9472 bytes
   func.func private @strict_gpu_launch(%function: !llvm.ptr, %count: i64, %threads: i64, %parameters: !llvm.ptr) -> i1 {
     %zero32 = arith.constant 0 : i32
     %one32 = arith.constant 1 : i32
@@ -11251,13 +11252,17 @@
     %isWholeGated = func.call @strict_gpu_is_kernel(%gatedWholeSlot, %functionBits) : (!llvm.ptr, i64) -> i1
     %isWholeNew = arith.ori %isWholeFast, %isWholeGated : i1
     %isWhole = arith.ori %isWholeOld, %isWholeNew : i1
+    %denseSlot = llvm.mlir.addressof @strict_gpu_dense_slot : !llvm.ptr
+    %isDense = func.call @strict_gpu_is_kernel(%denseSlot, %functionBits) : (!llvm.ptr, i64) -> i1
+    %denseShared = arith.constant 75776 : i32
     %eightsShared = arith.constant 45056 : i32
     %wholeShared = arith.constant 73728 : i32
     %isAmd = func.call @strict_gpu_is_amd() : () -> i1
     %wholeWanted = arith.select %isAmd, %eightsShared, %wholeShared : i32
     %otherShared = arith.select %isTiles, %tileShared, %zero32 : i32
     %eightsOrOther = arith.select %isEights, %eightsShared, %otherShared : i32
-    %wanted = arith.select %isWhole, %wholeWanted, %eightsOrOther : i32
+    %wholeOrOther = arith.select %isWhole, %wholeWanted, %eightsOrOther : i32
+    %wanted = arith.select %isDense, %denseShared, %wholeOrOther : i32
     %asking = arith.cmpi ne, %wanted, %zero32 : i32
     cf.cond_br %asking, ^allowShared, ^launch(%zero32 : i32)
   ^allowShared:

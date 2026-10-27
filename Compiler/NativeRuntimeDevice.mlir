@@ -1,3 +1,47 @@
+  // strict_device_mma16 of unsigned 8 bit a (0 to 255) with the signed product: twice the product of a / 2 plus that of
+  // the lowest bits of a
+  func.func private @strict_device_mma16_halves(%a0: i32, %a1: i32, %a2: i32, %a3: i32, %b0: i32, %b1: i32, %c0: i32, %c1: i32, %c2: i32, %c3: i32) -> !llvm.struct<(i32, i32, i32, i32)> attributes {llvm.passthrough = ["alwaysinline"]} {
+    %one = arith.constant 1 : i32
+    %zero = arith.constant 0 : i32
+    %halfMask = arith.constant 2139062143 : i32
+    %lowMask = arith.constant 16843009 : i32
+    %shifted0 = arith.shrui %a0, %one : i32
+    %shifted1 = arith.shrui %a1, %one : i32
+    %shifted2 = arith.shrui %a2, %one : i32
+    %shifted3 = arith.shrui %a3, %one : i32
+    %half0 = arith.andi %shifted0, %halfMask : i32
+    %half1 = arith.andi %shifted1, %halfMask : i32
+    %half2 = arith.andi %shifted2, %halfMask : i32
+    %half3 = arith.andi %shifted3, %halfMask : i32
+    %low0 = arith.andi %a0, %lowMask : i32
+    %low1 = arith.andi %a1, %lowMask : i32
+    %low2 = arith.andi %a2, %lowMask : i32
+    %low3 = arith.andi %a3, %lowMask : i32
+    %halves = func.call @strict_device_mma16(%half0, %half1, %half2, %half3, %b0, %b1, %zero, %zero, %zero, %zero) : (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> !llvm.struct<(i32, i32, i32, i32)>
+    %lows = func.call @strict_device_mma16(%low0, %low1, %low2, %low3, %b0, %b1, %c0, %c1, %c2, %c3) : (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> !llvm.struct<(i32, i32, i32, i32)>
+    %halves0 = llvm.extractvalue %halves[0] : !llvm.struct<(i32, i32, i32, i32)>
+    %halves1 = llvm.extractvalue %halves[1] : !llvm.struct<(i32, i32, i32, i32)>
+    %halves2 = llvm.extractvalue %halves[2] : !llvm.struct<(i32, i32, i32, i32)>
+    %halves3 = llvm.extractvalue %halves[3] : !llvm.struct<(i32, i32, i32, i32)>
+    %lows0 = llvm.extractvalue %lows[0] : !llvm.struct<(i32, i32, i32, i32)>
+    %lows1 = llvm.extractvalue %lows[1] : !llvm.struct<(i32, i32, i32, i32)>
+    %lows2 = llvm.extractvalue %lows[2] : !llvm.struct<(i32, i32, i32, i32)>
+    %lows3 = llvm.extractvalue %lows[3] : !llvm.struct<(i32, i32, i32, i32)>
+    %twice0 = arith.shli %halves0, %one : i32
+    %twice1 = arith.shli %halves1, %one : i32
+    %twice2 = arith.shli %halves2, %one : i32
+    %twice3 = arith.shli %halves3, %one : i32
+    %d0 = arith.addi %lows0, %twice0 : i32
+    %d1 = arith.addi %lows1, %twice1 : i32
+    %d2 = arith.addi %lows2, %twice2 : i32
+    %d3 = arith.addi %lows3, %twice3 : i32
+    %empty = llvm.mlir.undef : !llvm.struct<(i32, i32, i32, i32)>
+    %with0 = llvm.insertvalue %d0, %empty[0] : !llvm.struct<(i32, i32, i32, i32)>
+    %with1 = llvm.insertvalue %d1, %with0[1] : !llvm.struct<(i32, i32, i32, i32)>
+    %with2 = llvm.insertvalue %d2, %with1[2] : !llvm.struct<(i32, i32, i32, i32)>
+    %with3 = llvm.insertvalue %d3, %with2[3] : !llvm.struct<(i32, i32, i32, i32)>
+    return %with3 : !llvm.struct<(i32, i32, i32, i32)>
+  }
   func.func private @strict_device_element(%data: !llvm.ptr, %bits: i64, %at: i64, %count: i64) -> f64 {
     %brainBits = arith.constant 17 : i64
     %isBrain = arith.cmpi eq, %bits, %brainBits : i64
