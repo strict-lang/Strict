@@ -435,9 +435,38 @@
   ^done:
     return
   }
+  // m16n8k16 of 16 bit floats, or of bfloat16 when brain (natively from sm_80 on, before and on AMD converted to 16 bit
+  // floats first)
+  func.func private @strict_device_product_dot(%a0: vector<2xf16>, %a1: vector<2xf16>, %a2: vector<2xf16>, %a3: vector<2xf16>, %b0: vector<2xf16>, %b1: vector<2xf16>, %c0: f32, %c1: f32, %c2: f32, %c3: f32, %brain: i1) -> !llvm.struct<(f32, f32, f32, f32)> attributes {llvm.passthrough = ["alwaysinline"]} {
+    %arch = func.call @strict_device_arch() : () -> i32
+    %c800 = arith.constant 800 : i32
+    %isWide = arith.cmpi sge, %arch, %c800 : i32
+    %native = arith.andi %brain, %isWide : i1
+    cf.cond_br %native, ^brains, ^converted
+  ^brains:
+    %product = func.call @strict_device_attention_mma16(%a0, %a1, %a2, %a3, %b0, %b1, %c0, %c1, %c2, %c3, %brain) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32, i1) -> !llvm.struct<(f32, f32, f32, f32)>
+    return %product : !llvm.struct<(f32, f32, f32, f32)>
+  ^converted:
+    %h0 = func.call @strict_device_product_halves(%a0, %brain) : (vector<2xf16>, i1) -> vector<2xf16>
+    %h1 = func.call @strict_device_product_halves(%a1, %brain) : (vector<2xf16>, i1) -> vector<2xf16>
+    %h2 = func.call @strict_device_product_halves(%a2, %brain) : (vector<2xf16>, i1) -> vector<2xf16>
+    %h3 = func.call @strict_device_product_halves(%a3, %brain) : (vector<2xf16>, i1) -> vector<2xf16>
+    %k0 = func.call @strict_device_product_halves(%b0, %brain) : (vector<2xf16>, i1) -> vector<2xf16>
+    %k1 = func.call @strict_device_product_halves(%b1, %brain) : (vector<2xf16>, i1) -> vector<2xf16>
+    %halves = func.call @strict_device_halves_mma16(%h0, %h1, %h2, %h3, %k0, %k1, %c0, %c1, %c2, %c3) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
+    return %halves : !llvm.struct<(f32, f32, f32, f32)>
+  }
+  // the two numbers of a pair as 16 bit floats, from bfloat16 bits when brain
+  func.func private @strict_device_product_halves(%pair: vector<2xf16>, %brain: i1) -> vector<2xf16> attributes {llvm.passthrough = ["alwaysinline"]} {
+    %brains = llvm.bitcast %pair : vector<2xf16> to vector<2xbf16>
+    %wide = arith.extf %brains : vector<2xbf16> to vector<2xf32>
+    %narrow = arith.truncf %wide : vector<2xf32> to vector<2xf16>
+    %chosen = arith.select %brain, %narrow, %pair : vector<2xf16>
+    return %chosen : vector<2xf16>
+  }
   // the 4 sums from slot plus the 16 x 8 by 8 products of 16 numbers along inner (a: rows g and g + 8 of numbers 0 to 7,
   // then of 8 to 15, b: 0 to 7 and 8 to 15 of column g)
-  func.func private @strict_device_product_mma(%sums: vector<64xf32>, %slot: i32, %a0: i32, %a1: i32, %a2: i32, %a3: i32, %b0: i32, %b1: i32) -> vector<64xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_product_mma(%sums: vector<64xf32>, %slot: i32, %a0: i32, %a1: i32, %a2: i32, %a3: i32, %b0: i32, %b1: i32, %brain: i1) -> vector<64xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
     %c3 = llvm.mlir.constant(3 : i32) : i32
@@ -454,7 +483,7 @@
     %h3 = llvm.bitcast %a3 : i32 to vector<2xf16>
     %k0 = llvm.bitcast %b0 : i32 to vector<2xf16>
     %k1 = llvm.bitcast %b1 : i32 to vector<2xf16>
-    %dot = func.call @strict_device_halves_mma16(%h0, %h1, %h2, %h3, %k0, %k1, %old0, %old1, %old2, %old3) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
+    %dot = func.call @strict_device_product_dot(%h0, %h1, %h2, %h3, %k0, %k1, %old0, %old1, %old2, %old3, %brain) : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32, i1) -> !llvm.struct<(f32, f32, f32, f32)>
     %new0 = llvm.extractvalue %dot[0] : !llvm.struct<(f32, f32, f32, f32)>
     %new1 = llvm.extractvalue %dot[1] : !llvm.struct<(f32, f32, f32, f32)>
     %new2 = llvm.extractvalue %dot[2] : !llvm.struct<(f32, f32, f32, f32)>
@@ -468,7 +497,7 @@
   // 16 numbers along inner (half 0 or 1 of a stage) of stage buffer for the 64 rows and 32 columns of a warp: an
   // ldmatrix.x4 per 16 rows and per 16 columns, 16 mma; sums holds the 4 results (rows g and g + 8 of the lane by columns
   // 2 * (lane % 4) and the next) of the 4 x 4 tiles of 16 rows by 8 columns, row tile first
-  func.func private @strict_device_product_half(%sums: vector<64xf32>, %buffer: i32, %half: i32, %warpRow: i32, %warpColumn: i32, %lane: i32) -> vector<64xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_product_half(%sums: vector<64xf32>, %buffer: i32, %half: i32, %warpRow: i32, %warpColumn: i32, %lane: i32, %brain: i1) -> vector<64xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -550,7 +579,7 @@
     %b1 = llvm.extractelement %columnOperands[%highOperand : i32] : vector<8xi32>
     %columnSlots = arith.shli %columnTileIndex, %c2 : i32
     %slot = arith.addi %tileSlots, %columnSlots : i32
-    %nextSums = func.call @strict_device_product_mma(%columnSums, %slot, %a0, %a1, %a2, %a3, %b0, %b1) : (vector<64xf32>, i32, i32, i32, i32, i32, i32, i32) -> vector<64xf32>
+    %nextSums = func.call @strict_device_product_mma(%columnSums, %slot, %a0, %a1, %a2, %a3, %b0, %b1, %brain) : (vector<64xf32>, i32, i32, i32, i32, i32, i32, i32, i1) -> vector<64xf32>
     %columnTileNext = arith.addi %columnTileIndex, %c1 : i32
     llvm.br ^columnTile(%columnTileNext, %nextSums : i32, vector<64xf32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
   ^rowTileNext:
@@ -789,6 +818,7 @@
   // the block computes the tile batch, rows from rowFirst and columns from columnFirst over all stages of 32 numbers
   // along inner (the next stage loaded into registers while one computes), each warp its 64 rows by 32 columns
   func.func private @strict_device_product_stages(%left: !llvm.ptr, %leftCount: i64, %leftBits: i64, %leftBase: i64, %leftRow: i64, %leftInner: i64, %right: !llvm.ptr, %rightCount: i64, %rightBits: i64, %rightBase: i64, %rightColumn: i64, %rightInner: i64, %rows: i64, %columns: i64, %inner: i64, %rowFirst: i64, %columnFirst: i64, %thread: i32) -> vector<64xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
+    %halvesOnly = arith.constant false
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c5 = llvm.mlir.constant(5 : i32) : i32
@@ -858,8 +888,8 @@
     %bRawR = func.call @strict_device_product_load_brains(%right, %rightBase, %rightColumn, %columns, %columnFirst, %bFetched, %thread) : (!llvm.ptr, i64, i64, i64, i64, i64, i32) -> vector<8xi32>
     %bParity = arith.andi %bStage, %one : i64
     %bBuffer = arith.trunci %bParity : i64 to i32
-    %bFirst = func.call @strict_device_product_half(%bSums, %bBuffer, %c0, %warpRow, %warpColumn, %lane) : (vector<64xf32>, i32, i32, i32, i32, i32) -> vector<64xf32>
-    %bBoth = func.call @strict_device_product_half(%bFirst, %bBuffer, %c1, %warpRow, %warpColumn, %lane) : (vector<64xf32>, i32, i32, i32, i32, i32) -> vector<64xf32>
+    %bFirst = func.call @strict_device_product_half(%bSums, %bBuffer, %c0, %warpRow, %warpColumn, %lane, %halvesOnly) : (vector<64xf32>, i32, i32, i32, i32, i32, i1) -> vector<64xf32>
+    %bBoth = func.call @strict_device_product_half(%bFirst, %bBuffer, %c1, %warpRow, %warpColumn, %lane, %halvesOnly) : (vector<64xf32>, i32, i32, i32, i32, i32, i1) -> vector<64xf32>
     %bHasNext = arith.cmpi slt, %bNext, %stages : i64
     cf.cond_br %bHasNext, ^brainPut, ^brainStage(%bNext, %bBoth : i64, vector<64xf32>)
   ^brainPut:
@@ -885,8 +915,8 @@
     %fNextR = func.call @strict_device_product_fetch_fast(%right, %rightBits, %rightBase, %rightColumn, %columns, %columnFirst, %fFetched, %thread) : (!llvm.ptr, i64, i64, i64, i64, i64, i64, i32) -> vector<16xf16>
     %fParity = arith.andi %fStage, %one : i64
     %fBuffer = arith.trunci %fParity : i64 to i32
-    %fFirst = func.call @strict_device_product_half(%fSums, %fBuffer, %c0, %warpRow, %warpColumn, %lane) : (vector<64xf32>, i32, i32, i32, i32, i32) -> vector<64xf32>
-    %fBoth = func.call @strict_device_product_half(%fFirst, %fBuffer, %c1, %warpRow, %warpColumn, %lane) : (vector<64xf32>, i32, i32, i32, i32, i32) -> vector<64xf32>
+    %fFirst = func.call @strict_device_product_half(%fSums, %fBuffer, %c0, %warpRow, %warpColumn, %lane, %halvesOnly) : (vector<64xf32>, i32, i32, i32, i32, i32, i1) -> vector<64xf32>
+    %fBoth = func.call @strict_device_product_half(%fFirst, %fBuffer, %c1, %warpRow, %warpColumn, %lane, %halvesOnly) : (vector<64xf32>, i32, i32, i32, i32, i32, i1) -> vector<64xf32>
     %fHasNext = arith.cmpi slt, %fNext, %stages : i64
     cf.cond_br %fHasNext, ^fastPut, ^fastStage(%fNext, %fBoth : i64, vector<64xf32>)
   ^fastPut:
@@ -912,8 +942,8 @@
     %nextRights = func.call @strict_device_product_fetch(%right, %rightCount, %rightBits, %rightBase, %rightColumn, %rightInner, %columns, %columnFirst, %inner, %fetchedStage, %thread, %rightByRows, %rightFast) : (!llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64, i64, i32, i1, i1) -> vector<16xf16>
     %stageParity = arith.andi %stage, %one : i64
     %buffer = arith.trunci %stageParity : i64 to i32
-    %firstHalf = func.call @strict_device_product_half(%sums, %buffer, %c0, %warpRow, %warpColumn, %lane) : (vector<64xf32>, i32, i32, i32, i32, i32) -> vector<64xf32>
-    %bothHalves = func.call @strict_device_product_half(%firstHalf, %buffer, %c1, %warpRow, %warpColumn, %lane) : (vector<64xf32>, i32, i32, i32, i32, i32) -> vector<64xf32>
+    %firstHalf = func.call @strict_device_product_half(%sums, %buffer, %c0, %warpRow, %warpColumn, %lane, %halvesOnly) : (vector<64xf32>, i32, i32, i32, i32, i32, i1) -> vector<64xf32>
+    %bothHalves = func.call @strict_device_product_half(%firstHalf, %buffer, %c1, %warpRow, %warpColumn, %lane, %halvesOnly) : (vector<64xf32>, i32, i32, i32, i32, i32, i1) -> vector<64xf32>
     %hasNext = arith.cmpi slt, %nextStage, %stages : i64
     cf.cond_br %hasNext, ^put, ^stage(%nextStage, %bothHalves : i64, vector<64xf32>)
   ^put:

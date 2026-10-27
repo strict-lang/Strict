@@ -15387,30 +15387,83 @@
     %fits = arith.andi %sized, %factorFits : i1
     cf.cond_br %fits, ^run, ^unable
   ^run:
+    %swishSlot = llvm.getelementptr %slots[7] : (!llvm.ptr) -> !llvm.ptr, f64
+    %swish = llvm.load %swishSlot : !llvm.ptr -> f64
+    %unit = arith.constant 1.0 : f64
+    %normed = func.call @strict_gpu_convolution_normed(%ptx, %values, %affine, %channelsNumber, %swish, %unit) : (!llvm.ptr, f64, f64, f64, f64, f64) -> f64
+    %halves = func.call @strict_gpu_convolution_normed(%ptx, %weights, %affine, %channelsNumber, %zero, %zero) : (!llvm.ptr, f64, f64, f64, f64, f64) -> f64
+    %normedMade = arith.cmpf one, %normed, %zero : f64
+    %halvesMade = arith.cmpf one, %halves, %zero : f64
+    %bothMade = arith.andi %normedMade, %halvesMade : i1
+    cf.cond_br %bothMade, ^convolve, ^unable
+  ^convolve:
+    %convolvedCount = arith.constant 7 : i64
+    %convolved = llvm.alloca %convolvedCount x f64 : (i64) -> !llvm.ptr
+    llvm.store %normed, %convolved : f64, !llvm.ptr
+    %halvesSlot = llvm.getelementptr %convolved[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %halves, %halvesSlot : f64, !llvm.ptr
+    %shapeHeight = llvm.getelementptr %convolved[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %heightNumber, %shapeHeight : f64, !llvm.ptr
+    %shapeWidth = llvm.getelementptr %convolved[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %widthNumber, %shapeWidth : f64, !llvm.ptr
+    %shapeChannels = llvm.getelementptr %convolved[4] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %channelsNumber, %shapeChannels : f64, !llvm.ptr
+    %shapeOutputs = llvm.getelementptr %convolved[5] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %outputsNumber, %shapeOutputs : f64, !llvm.ptr
+    %shapeFactor = llvm.getelementptr %convolved[6] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %factorNumber, %shapeFactor : f64, !llvm.ptr
     %name = llvm.mlir.addressof @strict_gpu_convolution_name : !llvm.ptr
     %slotPair = llvm.mlir.addressof @strict_gpu_convolution_slot : !llvm.ptr
-    %listsMask = arith.constant 7 : i64
+    %listsMask = arith.constant 3 : i64
     %lanes = arith.constant -2048 : i64
     %brainPacked = arith.constant 17 : i64
     %noGuards4 = arith.constant 0 : i64
-    %result = func.call @strict_gpu_run(%ptx, %name, %slotPair, %count, %zero, %none, %slots, %slotCount, %listsMask, %none, %none, %lanes, %none, %brainPacked, %noGuards4) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
+    %result = func.call @strict_gpu_run(%ptx, %name, %slotPair, %count, %zero, %none, %convolved, %convolvedCount, %listsMask, %none, %none, %lanes, %none, %brainPacked, %noGuards4) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
     return %result : f64
   ^unable:
     return %zero : f64
   }
+  // values (normed with affine and swished when normed is 1, as they are when 0) as a bfloat16 list on the GPU for
+  // strict_device_convolution, 0 when that is not possible
+  func.func private @strict_gpu_convolution_normed(%ptx: !llvm.ptr, %values: f64, %affine: f64, %channels: f64, %swish: f64, %normed: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %slotCount = arith.constant 5 : i64
+    %length = func.call @strict_list_length(%values) : (f64) -> f64
+    %count = arith.fptosi %length : f64 to i64
+    %slots = llvm.alloca %slotCount x f64 : (i64) -> !llvm.ptr
+    llvm.store %values, %slots : f64, !llvm.ptr
+    %affineSlot = llvm.getelementptr %slots[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %affine, %affineSlot : f64, !llvm.ptr
+    %channelsSlot = llvm.getelementptr %slots[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %channels, %channelsSlot : f64, !llvm.ptr
+    %swishSlot = llvm.getelementptr %slots[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %swish, %swishSlot : f64, !llvm.ptr
+    %normedSlot = llvm.getelementptr %slots[4] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %normed, %normedSlot : f64, !llvm.ptr
+    %name = llvm.mlir.addressof @strict_gpu_convolution_normed_name : !llvm.ptr
+    %slot = llvm.mlir.addressof @strict_gpu_convolution_normed_slot : !llvm.ptr
+    %listsMask = arith.constant 3 : i64
+    %brainPacked = arith.constant 17 : i64
+    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %count, %zero, %none, %slots, %slotCount, %listsMask, %none, %none, %one, %none, %brainPacked, %none) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
+    return %result : f64
+  }
+  llvm.mlir.global internal constant @strict_gpu_convolution_normed_name("strict_device_convolution_normed\00strict_device_convolution_normeds\00") : !llvm.array<67 x i8>
+  llvm.mlir.global internal @strict_gpu_convolution_normed_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   // strict_device_convolution takes a block of 256 threads per tile of 128 pixels (of the input when doubled, for each
   // of the 4 output parities) by 128 outputs
   func.func private @strict_gpu_convolution_threads(%values: !llvm.ptr) -> i64 {
     %seven = arith.constant 7 : i64
     %spare = arith.constant 127 : i64
     %perBlock = arith.constant 256 : i64
-    %heightSlot = llvm.getelementptr %values[3] : (!llvm.ptr) -> !llvm.ptr, f64
-    %widthSlot = llvm.getelementptr %values[4] : (!llvm.ptr) -> !llvm.ptr, f64
-    %outputsSlot = llvm.getelementptr %values[6] : (!llvm.ptr) -> !llvm.ptr, f64
+    %heightSlot = llvm.getelementptr %values[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %widthSlot = llvm.getelementptr %values[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %outputsSlot = llvm.getelementptr %values[5] : (!llvm.ptr) -> !llvm.ptr, f64
     %heightNumber = llvm.load %heightSlot : !llvm.ptr -> f64
     %widthNumber = llvm.load %widthSlot : !llvm.ptr -> f64
     %outputsNumber = llvm.load %outputsSlot : !llvm.ptr -> f64
-    %factorSlot = llvm.getelementptr %values[8] : (!llvm.ptr) -> !llvm.ptr, f64
+    %factorSlot = llvm.getelementptr %values[6] : (!llvm.ptr) -> !llvm.ptr, f64
     %factorNumber = llvm.load %factorSlot : !llvm.ptr -> f64
     %gridHeight = arith.divf %heightNumber, %factorNumber : f64
     %gridWidth = arith.divf %widthNumber, %factorNumber : f64

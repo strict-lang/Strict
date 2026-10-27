@@ -39,4 +39,4 @@ Instruction bound on the RTX 3080 (120-330 instructions per number). Left:
 - an index with a denominator other than 1 (`size / 2` inlined in MossBlock.Rotated) divides in 64 bits at every read (82 instead of 66 us): shift power of two denominators
 
 ## MOSS
-Warm generation 4.10-4.18 s against ComfyUI's 3.51 s with sampling at parity: VAE decode 0.63 against 0.27 s, PNG encoding 0.28 against 0.08 s, cold loading (`../StrictComfy/Performance.md`).
+Warm 720x1280 VAE decode on a 3080 0.27-0.28 s like ComfyUI's 0.27 s since `strict_device_convolutions` copies bfloat16 stages asynchronously (50-58 instead of 19-24 TFLOPS). Left: the bfloat16 input and weights each convolution writes first (a list as big as its input, freed by the collector), stages of 64 channels or 3 buffers once the shared memory allows it, PNG encoding 0.28 against 0.08 s, cold loading (`../StrictComfy/Performance.md`).
