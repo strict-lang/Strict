@@ -1,0 +1,3 @@
+has factor Number
+Measured(model Generic) Number
+	model.Area * factor

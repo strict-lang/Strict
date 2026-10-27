@@ -388,6 +388,10 @@
     %mixed = arith.xori %now, %address : i64
     return %mixed : i64
   }
+  func.func private @strict_file_locked(%path: f64) -> f64 {
+    %held = arith.constant 1.0 : f64
+    return %held : f64
+  }
   func.func private @strict_file_rename(%path: f64, %newPath: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr

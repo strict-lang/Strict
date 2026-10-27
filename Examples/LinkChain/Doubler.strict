@@ -1,0 +1,3 @@
+has number
+Twice Number
+	number * 2

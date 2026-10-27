@@ -4,8 +4,8 @@ constant Kept = MlirCached(MlirFunction(List(TypeEntry) + TypeEntry.Kept, TypeEn
 constant Global = "  llvm.mlir.global internal @"
 constant Pointer = " : !llvm.ptr"
 constant Address = " = llvm.mlir.addressof @"
-constant Checked = ("    %unset = arith.constant 0 : i64", "    %busy = arith.constant 1 : i64", "    %ready = arith.constant 2 : i64", "    %setBits = llvm.load %set atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64", "    %isSet = arith.cmpi eq, %setBits, %ready : i64", "    cf.cond_br %isSet, ^cached, ^claim", "  ^claim:", "    %activeBits = llvm.load %active : !llvm.ptr -> i64", "    %recursive = arith.cmpi ne, %activeBits, %unset : i64", "    cf.cond_br %recursive, ^recursive, ^take", "  ^recursive:", "    %errorName = llvm.mlir.addressof @strict_recursive_constant : !llvm.ptr", "    %error = func.call @strict_error_named(%errorName) : (!llvm.ptr) -> f64", "    return %error : f64", "  ^take:", "    %claimed = llvm.cmpxchg %set, %unset, %busy acq_rel acquire : !llvm.ptr, i64", "    %owns = llvm.extractvalue %claimed[1] : !llvm.struct<(i64, i1)>", "    cf.cond_br %owns, ^compute, ^wait", "  ^wait:", "    llvm.call @strict_pause() : () -> ()", "    %waiting = llvm.load %set atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64", "    %finished = arith.cmpi eq, %waiting, %ready : i64", "    cf.cond_br %finished, ^cached, ^wait", "  ^cached:", "    %cached = llvm.load %cache : !llvm.ptr -> f64", "    cf.br ^done(%cached : f64)", "  ^compute:", "    llvm.store %busy, %active : i64, !llvm.ptr")
-constant Stored = ("    func.call @strict_pin(%computed) : (f64) -> ()", "    llvm.store %unset, %active : i64, !llvm.ptr", "    llvm.store %computed, %cache : f64, !llvm.ptr", "    llvm.store %ready, %set atomic release {alignment = 8 : i64} : i64, !llvm.ptr", "    cf.br ^done(%computed : f64)", "  ^done(%result: f64):", "    return %result : f64", "  }")
+constant Checked = ("    %ready = arith.constant 2 : i64", "    %setBits = llvm.load %set atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64", "    %isSet = arith.cmpi eq, %setBits, %ready : i64", "    cf.cond_br %isSet, ^cached, ^claim", "  ^claim:", "    %wait = llvm.mlir.addressof @strict_constant_wait : !llvm.ptr", "    %owner = llvm.ptrtoint %wait : !llvm.ptr to i64", "    %recursive = arith.cmpi eq, %setBits, %owner : i64", "    cf.cond_br %recursive, ^recursive, ^take", "  ^recursive:", "    %errorName = llvm.mlir.addressof @strict_recursive_constant : !llvm.ptr", "    %error = func.call @strict_error_named(%errorName) : (!llvm.ptr) -> f64", "    return %error : f64", "  ^take:", "    %unset = arith.constant 0 : i64", "    %claimed = llvm.cmpxchg %set, %unset, %owner acq_rel acquire : !llvm.ptr, i64", "    %owns = llvm.extractvalue %claimed[1] : !llvm.struct<(i64, i1)>", "    cf.cond_br %owns, ^compute, ^wait", "  ^wait:", "    %blocked = func.call @strict_constant_blocked(%set, %wait) : (!llvm.ptr, !llvm.ptr) -> i1", "    cf.cond_br %blocked, ^recursive, ^cached", "  ^cached:", "    %cached = llvm.load %cache : !llvm.ptr -> f64", "    cf.br ^done(%cached : f64)", "  ^compute:")
+constant Stored = ("    func.call @strict_pin(%computed) : (f64) -> ()", "    llvm.store %computed, %cache : f64, !llvm.ptr", "    llvm.store %ready, %set atomic release {alignment = 8 : i64} : i64, !llvm.ptr", "    cf.br ^done(%computed : f64)", "  ^done(%result: f64):", "    return %result : f64", "  }")
 Called Text
 	Kept.Called is "A_B_0Cached"
 	MlirCached(MlirFunction.Counter).Called is "Counter_Run_0"
@@ -22,12 +22,10 @@ Wrapper Texts
 	let compute = "    %computed = func.call @" + symbol + "(%p0) : (f64) -> f64"
 	Globals + header + Addresses + Checked + compute + Stored
 Globals Texts
-	Kept.Globals.Last.StartsWith("  llvm.mlir.global internal thread_local @aA_B_0")
+	Kept.Globals.Last is "  llvm.mlir.global internal @sA_B_0(0 : i64) : i64"
 	let symbol = function.Symbol
-	let shared = (Global + "k" + symbol + "(0.0 : f64) : f64", Global + "s" + symbol + "(0 : i64) : i64")
-	shared + ("  llvm.mlir.global internal thread_local @a" + symbol + "(0 : i64) : i64")
+	(Global + "k" + symbol + "(0.0 : f64) : f64", Global + "s" + symbol + "(0 : i64) : i64")
 Addresses Texts
-	Kept.Addresses.Last is "    %active = llvm.mlir.addressof @aA_B_0 : !llvm.ptr"
+	Kept.Addresses.Last is "    %set = llvm.mlir.addressof @sA_B_0 : !llvm.ptr"
 	let symbol = function.Symbol
-	let shared = ("    %cache" + Address + "k" + symbol + Pointer, "    %set" + Address + "s" + symbol + Pointer)
-	shared + ("    %active" + Address + "a" + symbol + Pointer)
+	("    %cache" + Address + "k" + symbol + Pointer, "    %set" + Address + "s" + symbol + Pointer)

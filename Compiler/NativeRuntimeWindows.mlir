@@ -545,6 +545,21 @@
     %handle = llvm.call @CreateFileA(%name, %write, %share, %attributes, %always, %normal, %null) : (!llvm.ptr, i32, i32, !llvm.ptr, i32, i32, !llvm.ptr) -> !llvm.ptr
     return %handle : !llvm.ptr
   }
+  // holds the file exclusively until this process ends, Windows deletes it then
+  func.func private @strict_file_locked(%path: f64) -> f64 {
+    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %access = arith.constant 1073807360 : i32
+    %share = arith.constant 0 : i32
+    %always = arith.constant 4 : i32
+    %deleting = arith.constant 67108992 : i32
+    %null = llvm.mlir.zero : !llvm.ptr
+    %handle = llvm.call @CreateFileA(%name, %access, %share, %null, %always, %deleting, %null) : (!llvm.ptr, i32, i32, !llvm.ptr, i32, i32, !llvm.ptr) -> !llvm.ptr
+    %invalid = arith.constant -1 : i64
+    %address = llvm.ptrtoint %handle : !llvm.ptr to i64
+    %held = arith.cmpi ne, %address, %invalid : i64
+    %result = arith.uitofp %held : i1 to f64
+    return %result : f64
+  }
   func.func private @strict_removed_file(%path: f64) -> f64 {
     %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
     %text = func.call @strict_file_text(%path) : (f64) -> f64

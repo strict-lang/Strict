@@ -1,0 +1,4 @@
+has scorer Scorer
+Label(shape Shape) Text
+	let text = shape to Text
+	(scorer.Scored(shape) to Text) + " " + text
