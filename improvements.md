@@ -26,7 +26,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is atte
 - CI runs few native builds (about 4 minutes per job): add more while each job stays under 10 minutes.
 - Trees as pools with 32 bit backward offsets ([Goose](https://github.com/aardappel/goose)): measure SyntaxNode allocations per `strict build Strict.strict` first.
 - Build speed: under 10 s hard limit, 2-3 s target; profile repeated linker discovery/codegen and emission, compare moderate thread counts before changing pool defaults (Compiler/README.md).
-- Profile Bytecode VM unit budget failures: repeated code generation, literal/ZIP fixture materialization and GC pauses; classify filesystem/build integration separately (Runtime/README.md).
+- Profile remaining compiler/VM self-test allocation and dispatch overhead; named files now have bounded VM-only allowances while native tests retain 20 ms (Runtime/README.md).
 - Native File.Exists opens and closes each file before checking its directory bit; use platform metadata and measure lookup-heavy linker work.
 - WebWars generated SceneAtlas/LevelAtlas constructors dominate emission; reduce large constant/record-list lowering work without changing atlas data.
 - MlirCost sums expensive alternative call paths and overestimates tiny loops; calibrate branch-sensitive work estimates against private frame initialization before relaxing thresholds further.

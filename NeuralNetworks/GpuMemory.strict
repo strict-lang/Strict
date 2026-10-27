@@ -1,3 +1,6 @@
 Released Number
 	GpuMemory.Released >= 0
 	0
+Evicted Number
+	GpuMemory.Evicted >= 0
+	0

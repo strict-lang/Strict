@@ -100,5 +100,10 @@ with tempfile.TemporaryDirectory(prefix="TestPolicy", dir=root / "Examples") as 
 	assert native.returncode != 0 and "TestDurationMustNotExceedTwentyMilliseconds" in native.stdout + native.stderr, native.stdout + native.stderr
 	over_budget = vm_budget(0.15)
 	assert over_budget.returncode != 0 and "TestDurationMustNotExceedVmBudget" in over_budget.stdout + over_budget.stderr, over_budget.stdout + over_budget.stderr
+	source.write_text('Delay Number\n\tValueCodegen.Delay is 1\n\tmutable count = 0\n'
+		'\tfor as long as Process.Elapsed >= 0\n\t\tcount = count + 1\n\tcount', encoding="utf-8")
+	hung_vm = subprocess.run([command, "test", str(source), "unit"], cwd=root, env=environment,
+		capture_output=True, text=True, timeout=10)
+	assert hung_vm.returncode != 0 and "TestDurationMustNotExceedVmBudget" in hung_vm.stdout + hung_vm.stderr, hung_vm.stdout + hung_vm.stderr
 
 	print("Unit deadlines, native/build failures, Slow selection, transparent values and manual Run order passed")
