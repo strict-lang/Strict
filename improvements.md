@@ -6,7 +6,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - Reproduce the reported `NeuralNetworks/Batch` CPU/GPU exact-comparison mismatch on the original GPU.
 - Why the check marking before a reclaim (`strict_rc_mark_all`) lost live objects with young collections (STRICT_RC_CHECK collects fully now).
 - Ternary Bonsai 27B stalls at a simulated 10 GB only with a raw cuMemAlloc holder in another process, not with a torch holder.
-- Test comparisons expand records and lists only through eight nested types, deeper types compare without numeric tolerance.
+- Test comparisons of recursive types compare the repeated type with `is`, without numeric tolerance.
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).

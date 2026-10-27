@@ -1,6 +1,7 @@
 has values ValueCodegen
 constant Scalars = ("Text", "Boolean", "Error", "ErrorWithValue", "Dictionary")
 constant Plain = TestComparison(ValueCodegen.Plain)
+constant Deep = "Numberssssssssss"
 Precise(left SyntaxNode, right SyntaxNode, block CodeBlock) Boolean
 	let kinds = (values.TypeOf(left, block), values.TypeOf(right, block))
 	if values.IsTypeName(right, block) or (kinds.Last is in ("Error", "ErrorWithValue"))
@@ -24,24 +25,24 @@ Compared(left SyntaxNode, right SyntaxNode, block CodeBlock, exact Boolean) Code
 	let generated = values.Expression(right, block).Stored("testExpected").At(block.register)
 	let declared = generated.Declare("testExpected", values.TypeOf(right, block))
 	let kinds = (values.TypeOf(left, block), values.TypeOf(right, block))
-	let lines = Lines(left to Text, "testExpected", kinds, "0", exact, 0)
+	let lines = Lines(left to Text, "testExpected", kinds, "0", exact, List(Text))
 	mutable indented = List(Text) + "Run"
 	for lines + "testEqual0"
 		indented = indented + ("\t" + value)
 	MethodCodegen(values).Body(BodyParser(indented).Block(1, 1), declared)
-Lines(left Text, right Text, kinds Texts, slot Text, exact Boolean, depth Number) Texts
-	Plain.Lines("left", "right", ("Number", "Number"), "0", true, 0).Last is "let testEqual0 = left is right"
+Lines(left Text, right Text, kinds Texts, slot Text, exact Boolean, expanded Texts) Texts
+	Plain.Lines("left", "right", ("Number", "Number"), "0", true, List(Text)).Last is "let testEqual0 = left is right"
 	let same = List(Text) + ("let testEqual" + slot + " = " + left + " is " + right)
-	if depth > 8 or exact or (kinds.First is not kinds.Last)
+	if exact or (kinds.First is not kinds.Last) or (kinds.First is in expanded)
 		return same
 	if kinds.First is "Number"
 		return Numeric(left, right, slot)
 	let base = values.inference.types.BaseName(kinds.First)
 	if base is "List"
-		return Elements(left, right, kinds.First, slot, depth)
+		return Elements(left, right, kinds.First, slot, expanded + kinds.First)
 	if (values.inference.types.MembersOf(kinds.First).names.Length is 0) or (base is in Scalars)
 		return same
-	Fields(left, right, kinds.First, slot, depth)
+	Fields(left, right, kinds.First, slot, expanded + kinds.First)
 Numeric(left Text, right Text, slot Text) Texts
 	let scale = "testScale" + slot
 	let difference = "testDelta" + slot
@@ -51,7 +52,8 @@ Numeric(left Text, right Text, slot Text) Texts
 	let first = "let " + scale + " = " + maximum
 	let second = "let " + difference + " = (" + left + " - " + right + ").Absolute"
 	(first, second, "let testEqual" + slot + " = " + left + " is " + right + " or (" + close + ")")
-Elements(left Text, right Text, kind Text, slot Text, depth Number) Texts
+Elements(left Text, right Text, kind Text, slot Text, expanded Texts) Texts
+	Text.Combine(Plain.Elements("left", "right", Deep, "0", List(Text))).IndexOf("testDelta") > 0
 	let same = "testEqual" + slot
 	let child = slot + "x"
 	let item = values.inference.types.ElementType(kind)
@@ -60,16 +62,16 @@ Elements(left Text, right Text, kind Text, slot Text, depth Number) Texts
 	let first = "testLeft" + child
 	let second = "testRight" + child
 	lines = lines + ("\t\tlet " + first + " = " + left + "(index)", "\t\tlet " + second + " = " + right + "(index)")
-	for Lines(first, second, (item, item), child, false, depth + 1)
+	for Lines(first, second, (item, item), child, false, expanded)
 		lines = lines + ("\t\t" + value)
 	lines + ("\t\t" + same + " = " + same + " and testEqual" + child)
-Fields(left Text, right Text, kind Text, slot Text, depth Number) Texts
+Fields(left Text, right Text, kind Text, slot Text, expanded Texts) Texts
 	let members = values.inference.types.MembersOf(kind)
 	mutable lines = List(Text) + ("mutable testEqual" + slot + " = true")
 	for members.names
 		let child = slot + "x" + index
 		let type = members.types(index)
 		let step = values.inference.types.ParameterScope(kind).TypeOf(value + " step")
-		let nested = Lines(left + "." + value, right + "." + value, (type, type), child, step is not "", depth + 1)
+		let nested = Lines(left + "." + value, right + "." + value, (type, type), child, step is not "", expanded)
 		lines = lines + nested + ("testEqual" + slot + " = testEqual" + slot + " and testEqual" + child)
 	lines
