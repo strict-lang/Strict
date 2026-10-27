@@ -1,0 +1,6 @@
+has width Number
+has height Number
+Perimeter Number
+	2 * (width + height)
+Area Number
+	Doubler(width).Twice * height

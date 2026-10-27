@@ -269,5 +269,21 @@ def check_concurrent_builds():
 		assert not leftovers, "Replacement executables were left behind: " + str(leftovers)
 	print("Concurrent builds of one target take turns, a killed build releases its lock")
 
+def check_link_workers():
+	"""A program whose calls are found over several link rounds compiles the same with one worker and with all."""
+	source = root / "Examples/LinkChain/LinkChain.strict"
+	modules = []
+	for threads in ("1", ""):
+		for stale in [*source.parent.glob("*.strictbinary"), *source.parent.glob("*.nativecache")]:
+			stale.unlink()
+		environment = dict(os.environ, STRICT_THREADS=threads) if threads else os.environ
+		tested = subprocess.run([str(root / ("strict" + extension)), "test", str(source), "native"], cwd=root,
+			capture_output=True, text=True, timeout=200, env=environment)
+		assert tested.returncode == 0, tested.stdout + tested.stderr
+		modules.append(source.with_suffix(".test.mlir").read_text().rsplit("\n", 1)[0])
+	assert modules[0] == modules[1], "Linking with one worker emitted a different program"
+	print("Links found over several rounds compile the same with one worker and with all")
+
 check_parallel_refresh()
 check_concurrent_builds()
+check_link_workers()

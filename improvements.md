@@ -3,7 +3,6 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 
 ## Bugs
 - Nested `Process.RunTools` batches overwrite and reset the global child-thread share; make capacity ownership batch-local.
-- Verify linker convergence against all semantic work, not only signatures and the main method count (`LinkRound.IsSettled`).
 - Reproduce the reported `NeuralNetworks/Batch` CPU/GPU exact-comparison mismatch on the original GPU.
 - Ternary Bonsai 27B stalls at a simulated 10 GB only with a raw cuMemAlloc holder in another process, not with a torch holder.
 - Test comparisons of recursive types compare the repeated type with `is`, without numeric tolerance.
