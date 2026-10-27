@@ -1108,6 +1108,47 @@
   llvm.mlir.global internal thread_local @strict_stack_bottom(0 : i64) : i64
   llvm.mlir.global internal constant @strict_stack_overflow("StackOverflow\00") : !llvm.array<14 x i8>
   llvm.mlir.global internal constant @strict_recursive_constant("RecursiveConstant\00") : !llvm.array<18 x i8>
+  llvm.mlir.global internal thread_local @strict_constant_wait(0 : i64) : i64
+  // waits until the constant state at %set is ready, true when the threads owning it and the constants they wait
+  // for lead back to this thread (%wait, its owner token): none of them can ever finish
+  func.func private @strict_constant_blocked(%set: !llvm.ptr, %wait: !llvm.ptr) -> i1 {
+    %setAddress = llvm.ptrtoint %set : !llvm.ptr to i64
+    llvm.store %setAddress, %wait atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    %self = llvm.ptrtoint %wait : !llvm.ptr to i64
+    %none = arith.constant 0 : i64
+    %ready = arith.constant 2 : i64
+    %one = arith.constant 1 : i64
+    %longest = arith.constant 4096 : i64
+    %false = arith.constant false
+    %true = arith.constant true
+    cf.br ^spin
+  ^spin:
+    llvm.call @strict_pause() : () -> ()
+    %state = llvm.load %set atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %isReady = arith.cmpi eq, %state, %ready : i64
+    cf.cond_br %isReady, ^done(%false : i1), ^walk(%state, %none : i64, i64)
+  ^walk(%owner: i64, %steps: i64):
+    %isSelf = arith.cmpi eq, %owner, %self : i64
+    cf.cond_br %isSelf, ^done(%true : i1), ^follow
+  ^follow:
+    %isFree = arith.cmpi ule, %owner, %ready : i64
+    %isLong = arith.cmpi uge, %steps, %longest : i64
+    %stops = arith.ori %isFree, %isLong : i1
+    cf.cond_br %stops, ^spin, ^owned
+  ^owned:
+    %ownerWait = llvm.inttoptr %owner : i64 to !llvm.ptr
+    %waited = llvm.load %ownerWait atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %isWaiting = arith.cmpi ne, %waited, %none : i64
+    cf.cond_br %isWaiting, ^next, ^spin
+  ^next:
+    %waitedSet = llvm.inttoptr %waited : i64 to !llvm.ptr
+    %nextOwner = llvm.load %waitedSet atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %nextSteps = arith.addi %steps, %one : i64
+    cf.br ^walk(%nextOwner, %nextSteps : i64, i64)
+  ^done(%cycle: i1):
+    llvm.store %none, %wait atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    return %cycle : i1
+  }
   // a method entered with less than 1 MB of the main stack left returns a StackOverflow Error (the Strict VM after
   // 20000 nested calls), the stacks of other threads lie outside of it
   func.func private @strict_stack_short() -> i1 attributes {llvm.passthrough = ["alwaysinline"]} {

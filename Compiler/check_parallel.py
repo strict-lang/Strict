@@ -224,15 +224,16 @@ declaration = next(line for line in (root / "Compiler/MlirTexts.strict").read_te
 declarations = json.loads("[" + declaration.split(" = (", 1)[1][:-1] + "]")
 cached = (root / "Compiler/MlirCached.strict").read_text(encoding="utf-8").splitlines()
 pieces = [json.loads("[" + next(line for line in cached if line.startswith("constant " + name + " = ")).split(" = (", 1)[1][:-1] + "]") for name in ("Checked", "Stored")]
-cache_wrapper = '\n'.join(['  llvm.func @test_compute() -> f64',
-	'  llvm.mlir.global internal @test_cache(0.0 : f64) : f64',
-	'  llvm.mlir.global internal @test_set(0 : i64) : i64',
-	'  llvm.mlir.global internal thread_local @test_active(0 : i64) : i64',
-	'  func.func @test_cached() -> f64 {',
-	'    %cache = llvm.mlir.addressof @test_cache : !llvm.ptr',
-	'    %set = llvm.mlir.addressof @test_set : !llvm.ptr',
-	'    %active = llvm.mlir.addressof @test_active : !llvm.ptr', *pieces[0],
-	'    %computed = llvm.call @test_compute() : () -> f64', *pieces[1]])
+def cached(name, compute):
+	return [f'  llvm.func @{compute}() -> f64',
+		f'  llvm.mlir.global internal @{name}_cache(0.0 : f64) : f64',
+		f'  llvm.mlir.global internal @{name}_set(0 : i64) : i64',
+		f'  func.func @{name}() -> f64 {{',
+		f'    %cache = llvm.mlir.addressof @{name}_cache : !llvm.ptr',
+		f'    %set = llvm.mlir.addressof @{name}_set : !llvm.ptr', *pieces[0],
+		f'    %computed = llvm.call @{compute}() : () -> f64', *pieces[1]]
+cache_wrapper = '\n'.join(cached("test_cached", "test_compute") + cached("test_first", "test_first_compute")
+	+ cached("test_second", "test_second_compute"))
 module.write_text("module {\n  llvm.func @printf(!llvm.ptr, ...) -> i32\n" + "\n".join(declarations) + "\n" + runtime
 	+ (root / "Compiler/NativeRuntimeWindows.mlir").read_text(encoding="utf-8") + wrapper + cache_wrapper + "}\n", encoding="utf-8")
 driver = output / "driver.c"
@@ -263,6 +264,29 @@ static DWORD WINAPI cached_reader(void* unused) {
 	union { double value; uint64_t bits; } checked = { result };
 	return recursive ? (checked.bits >> 48) != 32762 : result != 7;
 }
+extern double test_first(void);
+extern double test_second(void);
+static atomic_int owners, first_computed, second_computed;
+static int is_error(double result) {
+	union { double value; uint64_t bits; } checked = { result };
+	return (checked.bits >> 48) == 32762;
+}
+static void both_owned(void) {
+	atomic_fetch_add(&owners, 1);
+	while (atomic_load(&owners) < 2) Sleep(1);
+}
+double test_first_compute(void) {
+	atomic_fetch_add(&first_computed, 1);
+	both_owned();
+	return test_second();
+}
+double test_second_compute(void) {
+	atomic_fetch_add(&second_computed, 1);
+	both_owned();
+	return test_first();
+}
+static DWORD WINAPI cycle_first(void* unused) { return is_error(test_first()); }
+static DWORD WINAPI cycle_second(void* unused) { return is_error(test_second()); }
 static DWORD caller;
 static HANDLE ready, published, retired;
 static atomic_int publishing, premature;
@@ -330,6 +354,20 @@ int main(int argc, char** argv) {
 		CloseHandle(cache_start);
 		printf("Constant computations: %d (expected 1)\\n", atomic_load(&computed));
 		return atomic_load(&computed) != 1;
+	}
+	if (argc > 1 && argv[1][0] == 'x') {
+		test_scan_invalidation(&argc);
+		HANDLE threads[2] = { CreateThread(0, 0, cycle_first, 0, 0, 0), CreateThread(0, 0, cycle_second, 0, 0, 0) };
+		if (WaitForMultipleObjects(2, threads, TRUE, 5000) != WAIT_OBJECT_0) {
+			printf("Constants needing each other on two threads still wait after 5 s\\n");
+			return 2;
+		}
+		DWORD errors[2];
+		GetExitCodeThread(threads[0], &errors[0]);
+		GetExitCodeThread(threads[1], &errors[1]);
+		printf("Constant cycle on two threads: %d errors (expected 2), computations %d and %d (expected 1)\\n",
+			(int)(errors[0] + errors[1]), atomic_load(&first_computed), atomic_load(&second_computed));
+		return errors[0] + errors[1] != 2 || atomic_load(&first_computed) != 1 || atomic_load(&second_computed) != 1;
 	}
 	if (argc > 1 && argv[1][0] == 'g') {
 		int64_t state = test_pool_gpu();
@@ -414,12 +452,12 @@ def run(name, arguments):
 	assert result.returncode == 0, result.stdout + result.stderr
 lowered = output / "pool.llvm.mlir"
 llvm = output / "pool.ll"
-run("mlir-opt", [module, "--symbol-privatize=exclude=test_parallel,test_pinned,test_carried,test_checked_collection,test_reused_counts,test_scan_invalidation,test_pool_gpu,test_cached", "--symbol-dce", "--convert-scf-to-cf",
+run("mlir-opt", [module, "--symbol-privatize=exclude=test_parallel,test_pinned,test_carried,test_checked_collection,test_reused_counts,test_scan_invalidation,test_pool_gpu,test_cached,test_first,test_second", "--symbol-dce", "--convert-scf-to-cf",
 	"--convert-arith-to-llvm", "--convert-func-to-llvm", "--convert-cf-to-llvm", "--reconcile-unrealized-casts", "-o", lowered])
 run("mlir-translate", ["--mlir-to-llvmir", lowered, "-o", llvm])
 executable = output / "check.exe"
 run("clang", [llvm, driver, "-O2", "-march=native", "-Wno-override-module", "-fuse-ld=lld", "-Wl,clang_rt.builtins-x86_64.lib", "-o", executable])
-for mode in ["j", "k", "gpu", "rsame", "rdifferent", "scan"]:
+for mode in ["j", "k", "xcycle", "gpu", "rsame", "rdifferent", "scan"]:
 	reused = subprocess.run([str(executable), mode], capture_output=True, text=True, timeout=15)
 	print(reused.stdout.strip(), flush=True)
 	assert reused.returncode == 0, reused.stdout + reused.stderr
