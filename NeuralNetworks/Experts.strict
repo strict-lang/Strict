@@ -96,7 +96,7 @@ Contracted(chosen Numbers, gated Numbers, size Number) Numbers
 	for chosen.Length * hidden
 		let expert = (index / hidden).Floor
 		Batch.Dot(downs(chosen(expert) * hidden + index % hidden), 0, gated, expert * size)
-Grouped(chosen Numbers, input Numbers) Numbers
+Grouped(chosen Numbers, input Numbers) Slow(Numbers)
 	Tiny.Grouped(Pairs, Twice) is Tiny.Contracted(Pairs, Tiny.Gated(Tiny.Expanded(Pairs, Twice), 4), 4)
 	let grouping = Grouping(chosen, router.weights.Length, used, Batch.Tile)
 	let starts = grouping.Starts

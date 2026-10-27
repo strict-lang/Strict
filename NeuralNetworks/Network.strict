@@ -68,7 +68,7 @@ Difference(output Numbers, target Numbers) Numbers
 	Single.Difference((1, 0.5), (0, 0.5)) is (1, 0)
 	for output
 		value - target(index)
-Learned(data Dataset, epochs Number) Network
+Learned(data Dataset, epochs Number) Slow(Network)
 	Network.Random((4, 3, 2)).Learned(Dataset.Pairs, 300).Accuracy(Dataset.Pairs) is 1
 	mutable trained = value
 	for epochs

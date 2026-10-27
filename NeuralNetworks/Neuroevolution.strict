@@ -20,7 +20,7 @@ Evolved(population List(Network), generations Number) Network
 	for generations
 		current = Next(current)
 	Best(current)
-Next(population List(Network)) List(Network)
+Next(population List(Network)) Slow(List(Network))
 	Neuroevolution.Next(Neuroevolution.Networks).Length is Population
 	mutable next = List(Network) + Best(population)
 	for Range(1, population.Length)

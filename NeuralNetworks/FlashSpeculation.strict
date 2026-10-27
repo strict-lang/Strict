@@ -6,13 +6,13 @@ has drafts = 2
 has steps = 0
 constant Prompted = FlashNext.Tiny.Steps((1, 2, 3), 0)
 constant Drafting = FlashSpeculation(Prompted, (1, 2, 3), Greedy.Largest(Prompted.Scored), FlashDrafter.Tiny)
-Generated(count Number) Numbers
+Generated(count Number) Slow(Numbers)
 	Drafting.Generated(6) is Generation(FlashNext.Tiny).Generated((1, 2, 3), 6)
 	mutable current = value
 	for as long as current.context.Length < context.Length + count
 		current = current.Advanced
 	Safetensors.Part(current.context, context.Length, count, 1)
-Advanced FlashSpeculation
+Advanced Slow(FlashSpeculation)
 	Drafting.Advanced.steps is 1
 	Drafting.Advanced.context.Length > 3
 	let primed = drafter.Primed(model, context + next)
@@ -25,7 +25,7 @@ Advanced FlashSpeculation
 	let truncated = accepted is draft.Length then verified else verified.Truncated(model, kept)
 	let remembered = Remembered(primed, truncated, kept, predictions(accepted))
 	FlashSpeculation(truncated, context + kept, predictions(accepted), remembered, drafts, steps + 1)
-Remembered(primed FlashDrafter, verified FlashNext, kept Numbers, following Number) FlashDrafter
+Remembered(primed FlashDrafter, verified FlashNext, kept Numbers, following Number) Slow(FlashDrafter)
 	Drafting.Advanced.drafter.block.attention.First.keys.Length is Drafting.Advanced.context.Length * 32
 	let tokens = Safetensors.Part(kept, 1, kept.Length - 1, 1) + following
 	primed.Extended(model, verified.streams, tokens, context.Length + 1)

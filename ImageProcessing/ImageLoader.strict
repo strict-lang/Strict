@@ -1,5 +1,5 @@
 has path Text
-Loaded Image
+Loaded Slow(Image)
 	ImageLoader("ImageProcessing/4x4.png").Loaded.Size is Size(4, 4)
 	ImageLoader("ImageProcessing/Digit.jpg").Loaded.Size is Size(28, 28)
 	if path.EndsWith(".jpg") or path.EndsWith(".jpeg")

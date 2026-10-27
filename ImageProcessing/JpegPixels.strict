@@ -6,7 +6,7 @@ constant Colored = JpegPixels.From(JpegDecoder.Colored)
 From(source JpegDecoder) JpegPixels
 	JpegPixels.From(JpegDecoder.Gray).blocks.Length is 1
 	JpegPixels(source, source.Blocks, source.Columns)
-Read(path Text) JpegPixels
+Read(path Text) Slow(JpegPixels)
 	(JpegPixels.Read("ImageProcessing/Digit.jpg").Plane(0).Sum - 25761).Absolute < 10
 	(JpegPixels.Read("ImageProcessing/Progressive.jpg").Plane(0).Sum - 70335).Absolute < 10
 	JpegPixels.Read("ImageProcessing/Progressive.jpg").Sample(0, 47, 0) is 70
@@ -27,7 +27,7 @@ Grays Numbers
 	Gray.Grays.First is 1 / 255
 	for Plane(0)
 		value / 255
-Colors List(ColorValue)
+Colors Slow(List(ColorValue))
 	Gray.Colors.First is ColorValue(1 / 255, 1 / 255, 1 / 255)
 	Colored.Colors.Last.Red > 0.9
 	let luma = Plane(0)

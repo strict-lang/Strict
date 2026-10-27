@@ -7,25 +7,23 @@ import tempfile
 root = Path(__file__).resolve().parent.parent
 command = str(root / ("strict.exe" if os.name == "nt" else "strict"))
 environment = dict(os.environ, STRICT_THREADS="8")
-environment.pop("STRICT_TESTS_PARALLEL", None)
-parallel = dict(environment, STRICT_TESTS_PARALLEL="1")
 with tempfile.TemporaryDirectory(prefix="TestPolicy", dir=root / "Examples") as temporary:
 	folder = Path(temporary)
 	work = folder / "TestWork.strict"
 	work.write_text('Pause Number\n\tlet started = Process.Elapsed\n'
-		'\tmutable count = 0\n\tfor as long as Process.Elapsed - started < 0.04\n'
+		'\tmutable count = 0\n\tfor as long as Process.Elapsed - started < 0.15\n'
 		'\t\tcount = count + 1\n\tcount > 0 then 1 else 0', encoding="utf-8")
 	source = folder / "OverBudget.strict"
 	source.write_text('Delay Number\n\tOverBudget.Delay is 1\n\tTestWork.Pause', encoding="utf-8")
 	result = subprocess.run([command, "test", str(source), "unit"], cwd=root, env=environment,
 		capture_output=True, text=True, timeout=10)
-	assert result.returncode != 0 and "TestDurationMustNotExceedTwentyMilliseconds" in result.stdout + result.stderr, (
+	assert result.returncode != 0 and "TestDurationMustNotExceedHundredMilliseconds" in result.stdout + result.stderr, (
 		"An over-budget VM unit test passed:\n" + result.stdout + result.stderr)
 	assert not source.with_suffix(".strictbinary").exists(), "Failed unit tests were cached as passed"
 	for arguments in [["build", str(source)], ["test", str(source), "unit", "native"]]:
 		checked = subprocess.run([command, *arguments], cwd=root, env=environment,
 			capture_output=True, text=True, timeout=90)
-		assert checked.returncode != 0 and "TestDurationMustNotExceedTwentyMilliseconds" in checked.stdout + checked.stderr, (
+		assert checked.returncode != 0 and "TestDurationMustNotExceedHundredMilliseconds" in checked.stdout + checked.stderr, (
 			str(arguments) + " accepted an over-budget unit test:\n" + checked.stdout + checked.stderr)
 
 	source = folder / "SharedBudget.strict"
@@ -33,7 +31,7 @@ with tempfile.TemporaryDirectory(prefix="TestPolicy", dir=root / "Examples") as 
 	for options in [["unit"], ["unit", "native"]]:
 		shared = subprocess.run([command, "test", str(source), *options], cwd=root, env=environment,
 			capture_output=True, text=True, timeout=90 if "native" in options else 10)
-		assert shared.returncode != 0 and "TestDurationMustNotExceedTwentyMilliseconds" in shared.stdout + shared.stderr, (
+		assert shared.returncode != 0 and "TestDurationMustNotExceedHundredMilliseconds" in shared.stdout + shared.stderr, (
 			"An over-budget shared fixture passed:\n" + shared.stdout + shared.stderr)
 
 	source = folder / "LazyFixture.strict"
@@ -47,7 +45,7 @@ with tempfile.TemporaryDirectory(prefix="TestPolicy", dir=root / "Examples") as 
 	source.write_text('Check Number\n\tconstant sample = TestWork.Pause\n\tsample is 1\n\t1', encoding="utf-8")
 	setup = subprocess.run([command, "test", str(source), "unit"], cwd=root, env=environment,
 		capture_output=True, text=True, timeout=10)
-	assert setup.returncode != 0 and "TestDurationMustNotExceedTwentyMilliseconds" in setup.stdout + setup.stderr, setup.stdout + setup.stderr
+	assert setup.returncode != 0 and "TestDurationMustNotExceedHundredMilliseconds" in setup.stdout + setup.stderr, setup.stdout + setup.stderr
 
 	source = folder / "Hangs.strict"
 	source.write_text('Spin Number\n\tHangs.Spin is 1\n\tmutable count = 0\n'
@@ -55,10 +53,10 @@ with tempfile.TemporaryDirectory(prefix="TestPolicy", dir=root / "Examples") as 
 	for options in [["unit"], ["unit", "native"]]:
 		hung = subprocess.run([command, "test", str(source), *options], cwd=root, env=environment,
 			capture_output=True, text=True, timeout=90 if "native" in options else 10)
-		assert hung.returncode != 0 and "TestDurationMustNotExceedTwentyMilliseconds" in hung.stdout + hung.stderr, hung.stdout + hung.stderr
+		assert hung.returncode != 0 and "TestDurationMustNotExceedHundredMilliseconds" in hung.stdout + hung.stderr, hung.stdout + hung.stderr
 	validated = subprocess.run([command, "check", str(folder)], cwd=root, env=environment,
 		capture_output=True, text=True, timeout=30)
-	assert validated.returncode != 0 and "TestDurationMustNotExceedTwentyMilliseconds" in validated.stdout, validated.stdout + validated.stderr
+	assert validated.returncode != 0 and "TestDurationMustNotExceedHundredMilliseconds" in validated.stdout, validated.stdout + validated.stderr
 
 	source = folder / "Policy.strict"
 	source.write_text('has logger\nconstant Fixture = Policy.Value + 1\nRun Number\n\tlogger.Log("application")\n\t0\n'
@@ -86,53 +84,30 @@ with tempfile.TemporaryDirectory(prefix="TestPolicy", dir=root / "Examples") as 
 			capture_output=True, text=True, timeout=90)
 		assert native.returncode == 0 and ("manual fixture" in native.stdout) == include_slow, native.stdout + native.stderr
 
-	package = folder / "Bytecode"
-	package.mkdir()
-	source = package / "ValueCodegen.strict"
-	def vm_budget(seconds):
-		source.write_text('Delay Number\n\tValueCodegen.Delay is 1\n\tlet started = Process.Elapsed\n'
-			'\tmutable count = 0\n\tfor as long as Process.Elapsed - started < ' + str(seconds) + '\n'
-			'\t\tcount = count + 1\n\tcount > 0 then 1 else 0', encoding="utf-8")
-		return subprocess.run([command, "test", str(source), "unit"], cwd=root, env=environment,
-			capture_output=True, text=True, timeout=10)
-	extended = vm_budget(0.04)
-	assert extended.returncode == 0, "A bounded VM self-test allowance is missing:\n" + extended.stdout + extended.stderr
-	native = subprocess.run([command, "test", str(source), "unit", "native"], cwd=root, env=environment,
-		capture_output=True, text=True, timeout=90)
-	assert native.returncode != 0 and "TestDurationMustNotExceedTwentyMilliseconds" in native.stdout + native.stderr, native.stdout + native.stderr
-	over_budget = vm_budget(0.15)
-	assert over_budget.returncode != 0 and "TestDurationMustNotExceedVmBudget" in over_budget.stdout + over_budget.stderr, over_budget.stdout + over_budget.stderr
-	source.write_text('Delay Number\n\tValueCodegen.Delay is 1\n\tmutable count = 0\n'
-		'\tfor as long as Process.Elapsed >= 0\n\t\tcount = count + 1\n\tcount', encoding="utf-8")
-	hung_vm = subprocess.run([command, "test", str(source), "unit"], cwd=root, env=environment,
-		capture_output=True, text=True, timeout=10)
-	assert hung_vm.returncode != 0 and "TestDurationMustNotExceedVmBudget" in hung_vm.stdout + hung_vm.stderr, hung_vm.stdout + hung_vm.stderr
-
-	shared_folder = folder / "Parallel"
-	shared_folder.mkdir()
-	(shared_folder / "Waiting.strict").write_text('Pause(seconds Number) Number\n\tlet started = Process.Elapsed\n'
-		'\tmutable count = 0\n\tfor as long as Process.Elapsed - started < seconds\n'
+	waiting = folder / "Waiting.strict"
+	waiting.write_text('Delay Number\n\tWaiting.Delay is 1\n\tlet started = Process.Elapsed\n'
+		'\tmutable count = 0\n\tfor as long as Process.Elapsed - started < 0.04\n'
 		'\t\tcount = count + 1\n\tcount > 0 then 1 else 0', encoding="utf-8")
-	def waiting(name, seconds):
-		(shared_folder / (name + ".strict")).write_text('Delay Number\n\t' + name + '.Delay is 1\n\tWaiting.Pause(' + str(seconds) + ')',
-			encoding="utf-8")
-	waiting("FirstWait", 0.04)
-	waiting("SecondWait", 0.04)
-	alone = subprocess.run([command, "test", str(shared_folder / "FirstWait.strict"), "unit"], cwd=root, env=environment,
-		capture_output=True, text=True, timeout=10)
-	assert alone.returncode != 0 and "TestDurationMustNotExceedTwentyMilliseconds" in alone.stdout + alone.stderr, alone.stdout + alone.stderr
 	for options in [["unit"], ["unit", "native"]]:
-		allowed = subprocess.run([command, "test", str(shared_folder / "FirstWait.strict"), *options], cwd=root, env=parallel,
+		allowed = subprocess.run([command, "test", str(waiting), *options], cwd=root, env=environment,
 			capture_output=True, text=True, timeout=90)
-		assert allowed.returncode == 0, "STRICT_TESTS_PARALLEL did not allow 50 ms:\n" + allowed.stdout + allowed.stderr
-	folder_run = subprocess.run([command, "test", str(shared_folder)], cwd=root, env=environment,
-		capture_output=True, text=True, timeout=30)
-	assert folder_run.returncode == 0, "Files tested in parallel did not get 50 ms:\n" + folder_run.stdout + folder_run.stderr
-	waiting("SecondWait", 0.07)
-	slow_parallel = subprocess.run([command, "test", str(shared_folder / "SecondWait.strict"), "unit"], cwd=root, env=parallel,
-		capture_output=True, text=True, timeout=10)
-	assert slow_parallel.returncode != 0 and "exceeded 50 ms" in slow_parallel.stdout + slow_parallel.stderr, (
-		slow_parallel.stdout + slow_parallel.stderr)
+		assert allowed.returncode == 0, "A 40 ms unit test failed the 100 ms limit:\n" + allowed.stdout + allowed.stderr
+	source = root / "Bytecode" / "PolicyProbe.strict"
+	try:
+		source.write_text(waiting.read_text(encoding="utf-8").replace("Waiting", "PolicyProbe").replace("0.04", "0.15"),
+			encoding="utf-8")
+		for options in [["unit"], ["unit", "native"]]:
+			skipped = subprocess.run([command, "test", str(source), *options], cwd=root, env=environment,
+				capture_output=True, text=True, timeout=90)
+			assert skipped.returncode == 0 and "Test passed" not in skipped.stdout, (
+				"An automatic run tested an internal package:\n" + skipped.stdout + skipped.stderr)
+		explicit = subprocess.run([command, "test", str(source)], cwd=root, env=environment,
+			capture_output=True, text=True, timeout=10)
+		assert explicit.returncode == 0 and "Test passed: PolicyProbe.Delay" in explicit.stdout, (
+			"An explicit run of an internal package was timed or skipped:\n" + explicit.stdout + explicit.stderr)
+	finally:
+		source.unlink(missing_ok=True)
+		source.with_suffix(".strictbinary").unlink(missing_ok=True)
 
 	source = folder / "Shares.strict"
 	tool, line = ("cmd", "/c echo %STRICT_THREADS%") if os.name == "nt" else ("sh", "-c 'echo $STRICT_THREADS'")
@@ -147,4 +122,4 @@ with tempfile.TemporaryDirectory(prefix="TestPolicy", dir=root / "Examples") as 
 	kept = subprocess.run([command, str(source)], cwd=root, env=environment, capture_output=True, text=True, timeout=10)
 	assert kept.stdout.count("threads 8") == 2, "STRICT_THREADS of the caller was not kept:\n" + kept.stdout + kept.stderr
 
-	print("Unit deadlines, native/build failures, Slow selection, transparent values, manual Run order and tool thread shares passed")
+	print("Unit deadlines, native/build failures, Slow selection, internal packages, transparent values, manual Run order and tool thread shares passed")

@@ -16,7 +16,7 @@ Indices(count Number) Numbers
 	LayerDropping(Logger).Indices(3) is (0, 1, 2)
 	for count
 		index
-Weakest(model Gpt2, tokenizer Gpt2Tokens, texts Texts) Number
+Weakest(model Gpt2, tokenizer Gpt2Tokens, texts Texts) Slow(Number)
 	LayerDropping(Logger).Weakest(Gpt2.Tiny, Gpt2Tokens.Tiny, ("ab ab")) is 0
 	mutable weakest = 0
 	mutable lowest = -1
@@ -25,7 +25,7 @@ Weakest(model Gpt2, tokenizer Gpt2Tokens, texts Texts) Number
 		weakest = (lowest < 0) or (loss < lowest) then index else weakest
 		lowest = (lowest < 0) or (loss < lowest) then loss else lowest
 	weakest
-Reported(model Gpt2, tokenizer Gpt2Tokens, texts List(Texts)) Text
+Reported(model Gpt2, tokenizer Gpt2Tokens, texts List(Texts)) Slow(Text)
 	LayerDropping(Logger).Reported(Gpt2.Tiny, Gpt2Tokens.Tiny, List(Texts) + ("ab ab")).StartsWith("English perplexity")
 	let reports = Perplexity(model).Reports(tokenizer, texts)
 	let evaluation = Evaluation(logger)

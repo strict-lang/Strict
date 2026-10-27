@@ -40,7 +40,7 @@ Reachable(known List(MethodEntry), methods List(MethodEntry)) List(MethodEntry)
 Included(line Text) Boolean
 	let header = HeaderTokens(Tokenizer(line).Tokens)
 	let matched = (selection is in ("", "*")) or (header.tokens(0) is selection)
-	matched and ((selection is not "") or (header.ReturnsSlow is false))
+	matched and ((selection is not "") or (TypeSource.IsSlow(types.fullName, header) is false))
 Method(start Number, block CodeBlock) Slow(CodeBlock)
 	Even.Method(0, Counter).instructions.Index(EvenFailed) > 0
 	Even.Method(0, Counter).instructions.Index(EvenPassed) > 0
@@ -49,7 +49,7 @@ Method(start Number, block CodeBlock) Slow(CodeBlock)
 	TestCodegen(Even.types, false, "Missing").Tests.instructions.Length is 3
 	let header = HeaderTokens(Tokenizer(types.lines(start)).Tokens)
 	let name = header.tokens(0)
-	let slow = block.Declare(" slow test", header.ReturnsSlow then "Slow" else "")
+	let slow = block.Declare(" slow test", TypeSource.IsSlow(types.fullName, header) then "Slow" else "")
 	mutable result = slow.Declare(CodeBlock.ErrorMarker, name)
 	for TestLines(types.Generator).Tests(BodyParser(types.lines).Method(start + 1), block)
 		result = MethodCodegen(types.Generator).Lined(Line(value, name, result.At(0)), result.instructions.Length, value.line)

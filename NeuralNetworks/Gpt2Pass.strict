@@ -12,7 +12,7 @@ constant Tiny = Gpt2Pass.Forwarded(Gpt2Block.Tiny, Rows(0) + Rows(1))
 constant Backwards = Gpt2Pass.Transposed(Gpt2Block.Weights, "h.0.")
 constant Gradient = (-0.5, -0.25, 0, 0.25, -0.5, -0.25, 0, 0.25, -0.5, -0.25, 0, 0.25, -0.5, -0.25, 0, 0.25, -0.5, -0.25, 0, 0.25, -0.5, -0.25, 0, 0.25)
 constant Zero = List(Number) + 0
-Forwarded(source Gpt2Block, start Numbers) Gpt2Pass
+Forwarded(source Gpt2Block, start Numbers) Slow(Gpt2Pass)
 	Tiny.Output(0).IsNearlyEqual(-4.932905037164028)
 	Tiny.Output(12).IsNearlyEqual(5.159402482792729)
 	let normedStart = Gpt2Block.Normalized(start, source.attentionGain, source.attentionBias)
@@ -24,7 +24,7 @@ Forwarded(source Gpt2Block, start Numbers) Gpt2Pass
 	let contracted = Batch(source.contraction.weights, source.contraction.biases).Sums(Gpt2Block.Gelu(hidden))
 	let output = Gpt2Block.Added(residual, contracted)
 	Gpt2Pass(source, start, normedStart, projections, attended, residual, normedResidual, hidden, output)
-Attended(numbers Numbers, width Number) Attention
+Attended(numbers Numbers, width Number) Slow(Attention)
 	Tiny.Attended(Tiny.combined, 12).queries.Length is 24
 	let stride = 3 * width
 	let queries = Batch.Columns(numbers, stride, 0, width)
@@ -37,10 +37,10 @@ Transposed(weights Safetensors, prefix Text) Gpt2Block
 	let projection = Flipped(weights, prefix + "attn.c_proj")
 	let expansion = Flipped(weights, prefix + "mlp.c_fc")
 	Gpt2Block(Zero, Zero, attention, projection, Zero, Zero, expansion, Flipped(weights, prefix + "mlp.c_proj"))
-Flipped(weights Safetensors, name Text) Layer
+Flipped(weights Safetensors, name Text) Slow(Layer)
 	Tiny.Flipped(Gpt2Block.Weights, "h.0.mlp.c_fc").weights.First.Length is 48
 	Layer(weights.Rows(name + ".weight"), Zero)
-Backward(gradient Numbers, transposed Gpt2Block) List(Numbers)
+Backward(gradient Numbers, transposed Gpt2Block) Slow(List(Numbers))
 	Tiny.Backward(Gradient, Backwards)(0)(0).IsNearlyEqual(-4.159665552472472)
 	Tiny.Backward(Gradient, Backwards)(1).Last.IsNearlyEqual(3.024086765129935)
 	Tiny.Backward(Gradient, Backwards)(3)(0).IsNearlyEqual(-0.08754558329563321)
@@ -51,7 +51,7 @@ Backward(gradient Numbers, transposed Gpt2Block) List(Numbers)
 	let mlp = Expanding(gradient, transposed)
 	let attention = Attending(mlp.First, transposed)
 	(attention(0), attention(1), attention(2), attention(3), attention(4), mlp(1), mlp(2), mlp(3), mlp(4))
-Expanding(gradient Numbers, transposed Gpt2Block) List(Numbers)
+Expanding(gradient Numbers, transposed Gpt2Block) Slow(List(Numbers))
 	Tiny.Expanding(Gradient, Backwards).Length is 5
 	let expandedGradient = Gelued(Batch(transposed.contraction.weights, Zero).Sums(gradient))
 	let secondGradient = Batch(transposed.expansion.weights, Zero).Sums(expandedGradient)

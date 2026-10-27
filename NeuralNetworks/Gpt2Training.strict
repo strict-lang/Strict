@@ -7,18 +7,18 @@ has step = 0
 has rate = 0.001
 constant Tiny = Gpt2Training.Loaded("NeuralNetworks/tinygpt2.safetensors", 32)
 constant Chosen = (1, 2, 3, 4)
-Loaded(path Text, bits Number) Gpt2Training
+Loaded(path Text, bits Number) Slow(Gpt2Training)
 	Tiny.columns.Length is 12
 	Tiny.firsts.Length is 10
 	let weights = Gpt2.Opened(path, bits)
 	let loaded = Gpt2.Loaded(path, bits)
 	let zeros = Moments.Start.Zeroed(loaded.Vectors)
 	Gpt2Training(loaded, Transposes(weights, loaded.blocks.Length), weights.Columns("wte.weight"), zeros, zeros)
-Transposes(weights Safetensors, count Number) List(Gpt2Block)
+Transposes(weights Safetensors, count Number) Slow(List(Gpt2Block))
 	Tiny.Transposes(Gpt2Block.Weights, 1).First.contraction.weights.Length is 48
 	for count
 		Gpt2Pass.Transposed(weights, "h." + index + ".")
-Loss(chosen Numbers) Number
+Loss(chosen Numbers) Slow(Number)
 	Tiny.Loss(Chosen).IsNearlyEqual(5.32793779522955)
 	let logits = Logits(Hidden(Passes(chosen), chosen))
 	let width = model.tokens.Length
@@ -28,7 +28,7 @@ Loss(chosen Numbers) Number
 	for chosen.Length - 1
 		loss = loss - logits(index * width + chosen(index + 1)) + largests(index) + totals(index).Logarithm
 	loss
-Passes(chosen Numbers) List(Gpt2Pass)
+Passes(chosen Numbers) Slow(List(Gpt2Pass))
 	Tiny.Passes(Chosen).Length is 1
 	mutable state = Embedded(chosen)
 	mutable passes = List(Mutable(Gpt2Pass))
@@ -37,13 +37,13 @@ Passes(chosen Numbers) List(Gpt2Pass)
 		passes.Add(pass)
 		state = pass.Output
 	passes
-Embedded(chosen Numbers) Numbers
+Embedded(chosen Numbers) Slow(Numbers)
 	Tiny.Embedded((1, 2))(13) is Tiny.model.tokens(2)(1) + Tiny.model.positions(1)(1)
 	let width = model.gain.Length
 	for chosen.Length * width
 		let token = (index / width).Floor
 		model.tokens(chosen(token))(index % width) + model.positions(token)(index % width)
-Hidden(passes List(Gpt2Pass), chosen Numbers) Numbers
+Hidden(passes List(Gpt2Pass), chosen Numbers) Slow(Numbers)
 	Tiny.Hidden(List(Gpt2Pass), (1, 2)) is Tiny.Embedded((1, 2))
 	passes.Length is 0 then Embedded(chosen) else passes.Last.Output
 Logits(hidden Numbers) Numbers
@@ -58,7 +58,7 @@ Errors(logits Numbers, chosen Numbers) Numbers
 		let row = (index / width).Floor
 		let share = (logits(index) - largests(row)).Exponential / totals(row)
 		row + 1 < chosen.Length then share - (index % width is chosen(row + 1) then 1 else 0) else 0
-Gradients(chosen Numbers) List(Numbers)
+Gradients(chosen Numbers) Slow(List(Numbers))
 	Tiny.Gradients(Chosen)(0).First.IsNearlyEqual(-0.19843020833636585 * 3)
 	Tiny.Gradients(Chosen)(2).Last.IsNearlyEqual(-0.06007311713118976 * 3)
 	Tiny.Gradients(Chosen)(7).First.IsNearlyEqual(0.017515594512004032 * 3)
@@ -84,7 +84,7 @@ Flattened(reversed List(List(Numbers))) List(Numbers)
 	Tiny.Flattened(List(List(Numbers))).Length is 0
 	for reversed.Length * 8
 		reversed(reversed.Length - 1 - (index / 8).Floor)(1 + index % 8)
-Trained(chosen Numbers) Gpt2Training
+Trained(chosen Numbers) Slow(Gpt2Training)
 	Tiny.Trained(Chosen).Trained(Chosen).Loss(Chosen) < Tiny.Loss(Chosen)
 	Tiny.Trained(Chosen).step is 1
 	let gradients = Gradients(chosen)

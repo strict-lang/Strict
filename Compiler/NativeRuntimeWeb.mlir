@@ -398,9 +398,6 @@
   func.func private @strict_guard() {
     return
   }
-  func.func private @strict_environment_put(%setting: !llvm.ptr) {
-    return
-  }
   func.func private @strict_file_size(%name: !llvm.ptr) -> i64 {
     %size = arith.constant 256 : i64
     %buffer = llvm.alloca %size x i8 : (i64) -> !llvm.ptr

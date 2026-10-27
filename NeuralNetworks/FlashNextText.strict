@@ -16,7 +16,7 @@ Run(folder Text, draft = "")
 	let finished = Process.Elapsed
 	logger.Log(Qwen3Text.Prompt + tokenizer.Decoded(generated))
 	logger.Log("Qwen3.8-Flash-Next loaded in " + (loaded - started).Round(1) + " s, " + Timed(loaded, prompted, finished))
-Continued(prefilled FlashNext, prompt Numbers, draft Text, count Number) Numbers
+Continued(prefilled FlashNext, prompt Numbers, draft Text, count Number) Slow(Numbers)
 	Probe.Continued(FlashNext.Tiny.Steps((1, 2), 0), (1, 2), "", 2) is (19, 13)
 	Probe.Continued(FlashSpeculation.Prompted, (1, 2, 3), Head, 3) is Generation(FlashNext.Tiny).Generated((1, 2, 3), 3)
 	if draft is ""

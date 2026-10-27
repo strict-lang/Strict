@@ -5,7 +5,7 @@ has inputs List(Numbers) = List(Numbers)
 constant None = Hybrid(List(DeltaBlock))
 constant Tiny = Hybrid(List(DeltaBlock) + DeltaBlock.Tiny)
 constant Single = Tiny.Prepared(Drafter.Rows(1))
-Loaded(model Gguf, first Number, count Number, zeros Numbers, basis Basis) Hybrid
+Loaded(model Gguf, first Number, count Number, zeros Numbers, basis Basis) Slow(Hybrid)
 	Hybrid.Loaded(Drafter.Model, 0, 3, DeltaBlock.Tiny.memory, Basis.None).layers.Length is 3
 	let sigmoid = model.Value("general.architecture") is "qwen4exp"
 	mutable loaded = List(Mutable(DeltaBlock))

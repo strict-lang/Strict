@@ -9,7 +9,7 @@ Run(path Text, count Number, drafts Number)
 	logger.Log(Timed(started, count))
 	let drafted = Safetensors.Part(started.Finished(count).context, prompt.Length, count, 1)
 	logger.Log(Gpt2Tokens.Loaded(Gguf(path)).Decoded(drafted))
-Timed(started Speculation, count Number) Text
+Timed(started Speculation, count Number) Slow(Text)
 	MtpProbe(Logger).Timed(Speculation.Drafting, 2).EndsWith("tokens per step")
 	let before = Process.Elapsed
 	let finished = started.Finished(count)

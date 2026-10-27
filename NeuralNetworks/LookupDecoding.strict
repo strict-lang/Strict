@@ -11,7 +11,7 @@ Run(path Text, count = 200, bits = 4)
 	for (1, 2, 4, 8, 16)
 		let verified = Verified(model.Prefilled(copying, 0), copying.Length, value)
 		logger.Log("verifying " + value + " tokens after " + copying.Length + ": " + verified + " ms")
-Verified(prefilled Qwen3, start Number, count Number) Number
+Verified(prefilled Qwen3, start Number, count Number) Slow(Number)
 	LookupDecoding(Logger).Verified(Qwen3.Tiny.Prefilled((1, 2), 0), 2, 2) > 0
 	let block = Safetensors.Part((1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2), 0, count, 1)
 	mutable current = prefilled
@@ -22,7 +22,7 @@ Verified(prefilled Qwen3, start Number, count Number) Number
 		current = current.Nexts.First >= 0 then current else prefilled
 		fastest = (Process.Elapsed - started).Clamp(0, fastest)
 	(fastest * 1000).Round(2)
-Compared(model Qwen3, prompt Numbers, count Number) Text
+Compared(model Qwen3, prompt Numbers, count Number) Slow(Text)
 	LookupDecoding(Logger).Compared(Qwen3.Tiny, (1, 2, 3), 6).StartsWith("same tokens")
 	let prefilled = model.Prefilled(prompt, 0)
 	let next = prefilled.Next

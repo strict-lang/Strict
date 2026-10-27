@@ -1,6 +1,6 @@
 has model Generic
 has sampling Sampling = Sampling.Plain
-Generated(prompt Numbers, count Number) Numbers
+Generated(prompt Numbers, count Number) Slow(Numbers)
 	Generation(Gpt2.Tiny).Generated((1, 2), 4) is (3, 2, 2, 3)
 	Generation(Qwen3.Tiny).Generated((1, 2, 3), 6) is (2, 1, 0, 4, 4, 4)
 	Generation(Qwen3.TinyMixture).Generated((1, 2, 3), 6) is (5, 2, 0, 3, 5, 3)
@@ -8,7 +8,7 @@ Generated(prompt Numbers, count Number) Numbers
 	for prompt
 		current = current.Step(value, index)
 	Generation(current).Continued(prompt.Length, count)
-Continued(position Number, count Number) Numbers
+Continued(position Number, count Number) Slow(Numbers)
 	Generation(Qwen3.Tiny.Step(1, 0).Step(2, 1).Step(3, 2)).Continued(3, 6) is (2, 1, 0, 4, 4, 4)
 	Generation(Qwen3.Tiny.Step(1, 0), Sampling.Warm).Continued(1, 4) is (4, 0, 0, 3)
 	mutable current = model

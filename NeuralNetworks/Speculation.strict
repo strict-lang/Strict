@@ -10,12 +10,12 @@ constant Prompted = Qwen3.TinyHybrid.Prefilled((1, 2, 3), 0)
 constant Verified = Prompted.Steps((5, 4, 1), Qwen3.Positions(3, 3), 1)
 constant Drafting = Speculation(Prompted, (1, 2, 3), Prompted.Next, 3, 0, Drafter.Tiny)
 constant Kept = Speculation(Prompted, (1, 2, 3), 5).Truncated(Verified, (5))
-Generated(count Number) Numbers
+Generated(count Number) Slow(Numbers)
 	Started.Generated(6) is Generation(Qwen3.Tiny).Generated((1, 2, 3), 6)
 	Started.Generated(1) is (2)
 	Drafting.Generated(6) is Generation(Qwen3.TinyHybrid).Generated((1, 2, 3), 6)
 	Safetensors.Part(Finished(count).context, context.Length, count, 1)
-Finished(count Number) Speculation
+Finished(count Number) Slow(Speculation)
 	Started.Finished(6).context.Length >= 9
 	mutable current = value
 	for as long as current.context.Length < context.Length + count
@@ -34,12 +34,12 @@ Advanced Speculation
 	let truncated = accepted is draft.Length then verified else Truncated(verified, kept)
 	let remembered = Remembered(verified, kept, predictions(accepted))
 	Speculation(truncated, context + kept, predictions(accepted), Adapted(draft.Length, accepted), steps + 1, remembered)
-Drafted Numbers
+Drafted Slow(Numbers)
 	Started.Drafted.Length is 0
 	Drafting.Drafted.Length is 3
 	let primed = drafter.Primed(model, context + next)
 	drafter.headNorm.Length is 0 then Lookup(context + next) else primed.Drafts(model, context.Length, drafts)
-Remembered(verified Qwen3, kept Numbers, following Number) Drafter
+Remembered(verified Qwen3, kept Numbers, following Number) Slow(Drafter)
 	Started.Remembered(Started.model, List(Number) + 2, 1).headNorm.Length is 0
 	Drafting.Remembered(Verified, (5, 4), 1).blocks.First.keys.Length is 20
 	if drafter.headNorm.Length is 0
@@ -48,7 +48,7 @@ Remembered(verified Qwen3, kept Numbers, following Number) Drafter
 	let tokens = Safetensors.Part(kept, 1, kept.Length - 1, 1) + following
 	let primed = drafter.Primed(model, context + next)
 	primed.Extended(model, rows, tokens, Qwen3.Positions(context.Length + 1, kept.Length))
-Adapted(drafted Number, accepted Number) Number
+Adapted(drafted Number, accepted Number) Slow(Number)
 	Started.Adapted(0, 0) is Started.drafts
 	Started.Adapted(15, 3) is 15
 	Started.Adapted(15, 0) is 7
@@ -83,7 +83,7 @@ IsMatch(tokens Numbers, start Number, length Number) Boolean
 		if tokens(start + index) is not tokens(last + index)
 			return false
 	true
-Truncated(verified Qwen3, kept Numbers) Qwen3
+Truncated(verified Qwen3, kept Numbers) Slow(Qwen3)
 	Speculation(Started, context = (1)).Truncated(Started.model, (5)).blocks.First.keys.Length is 2 * 4
 	Kept.Step(2, 4).Scored.Last.IsNearlyEqual(Prompted.Step(5, 3).Step(2, 4).Scored.Last)
 	Kept.hidden.Length is 8

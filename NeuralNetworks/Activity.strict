@@ -1,20 +1,20 @@
 has model Gpt2
 has sums List(Numbers) = List(Numbers)
 has count = 0
-Measured(tokenizer Gpt2Tokens, texts Texts) Activity
+Measured(tokenizer Gpt2Tokens, texts Texts) Slow(Activity)
 	Activity(Gpt2.Tiny).Measured(Gpt2Tokens.Tiny, ("ab ab", "ab")).sums.First.Length is 96
 	Activity(Gpt2.Tiny).Measured(Gpt2Tokens.Tiny, ("ab ab", "ab")).count is 3
 	mutable current = Activity(model, Zeros)
 	for texts
 		current = Activity(model, current.sums, current.count).Continued(tokenizer.Encoded(value))
 	current
-Continued(tokens Numbers) Activity
+Continued(tokens Numbers) Slow(Activity)
 	Activity(Gpt2.Tiny, Activity(Gpt2.Tiny).Zeros).Continued((1, 2)).count is 2
 	mutable current = value
 	for tokens
 		current = current.Step(value, index)
 	current
-Step(token Number, position Number) Activity
+Step(token Number, position Number) Slow(Activity)
 	Activity(Gpt2.Tiny, Activity(Gpt2.Tiny).Zeros).Step(1, 0).sums.Length is 1
 	mutable state = Gpt2Block.Added(model.tokens(token), model.positions(position))
 	mutable updated = List(Mutable(Gpt2Block))
@@ -27,11 +27,11 @@ Step(token Number, position Number) Activity
 		state = cached.Contracted(attended, activated)
 		updated.Add(cached)
 	Activity(Gpt2(model, blocks = updated, hidden = state), added, count + 1)
-Zeros List(Numbers)
+Zeros Slow(List(Numbers))
 	Activity(Gpt2.Tiny).Zeros.First.Length is 96
 	for model.blocks
 		Layer.Halves.Zeros(2 * value.expansion.biases.Length)
-Accumulated(previous Numbers, activated Numbers) Numbers
+Accumulated(previous Numbers, activated Numbers) Slow(Numbers)
 	Activity(Gpt2.Tiny).Accumulated((1, 0, 0, 3), (1, -2)) is (2, 4, 1, 1)
 	for previous
 		let activation = activated(index % activated.Length)

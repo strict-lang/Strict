@@ -8,7 +8,7 @@ Run
 	logger.Log("Gradient descent with momentum " + Xor.Error(Xor.Trained(network, Steps)))
 	logger.Log("RMSprop " + Xor.Error(Trained(Optimizer.Started(network, Optimizer.RmsProp)).network))
 	logger.Log("Adam " + Xor.Error(Trained(Optimizer.Started(network, Optimizer.Adam)).network))
-Trained(optimizer Optimizer) Optimizer
+Trained(optimizer Optimizer) Slow(Optimizer)
 	Xor.Error(OptimizerComparison.Trained(Optimizer.Started(Uneven, Optimizer.Adam)).network) < 0.1
 	mutable trained = optimizer
 	for Steps

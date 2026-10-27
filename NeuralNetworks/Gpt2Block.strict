@@ -13,7 +13,7 @@ constant Heads = 12
 constant Weights = Safetensors("NeuralNetworks/tinygpt2.safetensors")
 constant Tiny = Gpt2Block.Loaded(Weights, "h.0.")
 constant Embedded = Weights.Rows("wte.weight").First
-Loaded(weights Safetensors, prefix Text) Gpt2Block
+Loaded(weights Safetensors, prefix Text) Slow(Gpt2Block)
 	Tiny.attention.weights.Length is 36
 	Tiny.attention.weights.First.Length is 12
 	let combine = Dense(weights, prefix + "attn.c_attn")
@@ -23,10 +23,10 @@ Loaded(weights Safetensors, prefix Text) Gpt2Block
 	let expand = Dense(weights, prefix + "mlp.c_fc")
 	let contract = Dense(weights, prefix + "mlp.c_proj")
 	Gpt2Block(first(0), first(1), combine, project, second(0), second(1), expand, contract)
-Dense(weights Safetensors, name Text) Layer
+Dense(weights Safetensors, name Text) Slow(Layer)
 	Tiny.Dense(Weights, "h.0.mlp.c_fc").biases.Length is 48
 	Layer(weights.Columns(name + ".weight"), weights.Values(name + ".bias"))
-Cached(input Numbers) Gpt2Block
+Cached(input Numbers) Slow(Gpt2Block)
 	Tiny.Cached(Embedded).keys.Length is 12
 	Tiny.Cached(Embedded).Cached(Embedded).values.Length is 24
 	let combined = attention.Sums(Normalized(input, attentionGain, attentionBias))
@@ -34,7 +34,7 @@ Cached(input Numbers) Gpt2Block
 	let keyed = Safetensors.Part(combined, size, size, 1)
 	let valued = Safetensors.Part(combined, 2 * size, size, 1)
 	Gpt2Block(value, keys = keys + keyed, values = values + valued, queries = Safetensors.Part(combined, 0, size, 1))
-Output(input Numbers) Numbers
+Output(input Numbers) Slow(Numbers)
 	Tiny.Cached(Embedded).Output(Embedded).Length is 12
 	let attended = Attended(input)
 	Contracted(attended, Activated(attended))

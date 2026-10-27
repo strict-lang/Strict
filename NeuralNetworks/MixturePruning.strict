@@ -13,14 +13,14 @@ Run(path Text, used = 6, dropped = "", count = 100)
 	let evaluation = Evaluation(logger)
 	let reports = Perplexity(model).Reports(tokenizer, evaluation.Heldout(8))
 	logger.Log("English " + evaluation.Described(reports(0)) + ", Strict " + evaluation.Described(reports(1)))
-Using(model Qwen3, count Number) Qwen3
+Using(model Qwen3, count Number) Slow(Qwen3)
 	Pruning.Using(Qwen3.TinyMixture, 1).blocks.First.experts.used is 1
 	Pruning.Using(Qwen3.TinyMixture, 1).Step(1, 0).Scored.Length is 6
 	mutable blocks = List(Mutable(Qwen3Block))
 	for model.blocks
 		blocks.Add(Qwen3Block(value, experts = Experts(value.experts, used = count)))
 	Qwen3(model, blocks = blocks)
-Without(model Qwen3, dropped Numbers) Qwen3
+Without(model Qwen3, dropped Numbers) Slow(Qwen3)
 	Pruning.Without(Qwen3.TinyMixture, List(Number) + 0).blocks.Length is Qwen3.TinyMixture.blocks.Length - 1
 	mutable blocks = List(Mutable(Qwen3Block))
 	for model.blocks

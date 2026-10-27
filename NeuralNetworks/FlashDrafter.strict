@@ -10,7 +10,7 @@ constant Prepared = Tiny.Primed(Model, (1, 2, 5))
 constant Joining = Tiny.Joined(Model.source.Picked("token_embd.weight", (5, 6)), Model.streams)
 constant First = Tiny.Extended(Model, Safetensors.Part(Model.streams, 0, 256, 1), List(Number) + 2, 1)
 constant Halves = First.Extended(Model, Safetensors.Part(Model.streams, 256, 256, 1), List(Number) + 5, 2)
-Loaded(head Gguf) FlashDrafter
+Loaded(head Gguf) Slow(FlashDrafter)
 	Tiny.block.attention.Length is 1
 	Tiny.projection.weights.Length is 64
 	Tiny.mixer.norm.Length is 256
@@ -21,7 +21,7 @@ Loaded(head Gguf) FlashDrafter
 	let normed = (head.Values(prefix + "enorm.weight"), head.Values(prefix + "hnorm.weight"))
 	let drafting = FlashLayer.Loaded(head, layer)
 	FlashDrafter(drafting, normed(0), normed(1), projected, HyperStreams.Loaded(head, prefix + "hc_head"))
-Joined(embedded Numbers, hidden Numbers) Numbers
+Joined(embedded Numbers, hidden Numbers) Slow(Numbers)
 	Joining.Length is 1024
 	Joining(128) is Joining(0)
 	Joining(192) is not Joining(64)
@@ -32,14 +32,14 @@ Joined(embedded Numbers, hidden Numbers) Numbers
 		let row = (index / (2 * width)).Floor
 		let at = index % (2 * width)
 		at < width then entered((row / HyperStreams.Count).Floor * width + at) else grouped(row * width + at - width)
-Extended(model FlashNext, hidden Numbers, tokens Numbers, start Number) FlashDrafter
+Extended(model FlashNext, hidden Numbers, tokens Numbers, start Number) Slow(FlashDrafter)
 	Prepared.streams.Length is 512
 	Halves.streams(44).IsNearlyEqual(Prepared.streams(300), 0.000001)
 	let embedded = model.source.Picked("token_embd.weight", tokens)
 	let projected = Batch(projection.weights, projection.biases).Sums(Joined(embedded, hidden))
 	let forwarded = block.Forward(projected, model.rope.Rotations(Qwen3.Positions(start, tokens.Length)))
 	FlashDrafter(value, block = forwarded, streams = forwarded.streams)
-Primed(model FlashNext, sequence Numbers) FlashDrafter
+Primed(model FlashNext, sequence Numbers) Slow(FlashDrafter)
 	Prepared.block.attention.First.keys.Length is 64
 	Prepared.Primed(Model, (1, 2, 5)).block.attention.First.keys.Length is 64
 	if streams.Length > 0
@@ -47,13 +47,13 @@ Primed(model FlashNext, sequence Numbers) FlashDrafter
 	let count = model.streams.Length / mixer.norm.Length
 	let start = sequence.Length - count
 	Extended(model, model.streams, Safetensors.Part(sequence, start, count, 1), start)
-Last Numbers
+Last Slow(Numbers)
 	Prepared.Last is Safetensors.Part(Prepared.streams, 256, 256, 1)
 	Safetensors.Part(streams, streams.Length - mixer.norm.Length, mixer.norm.Length, 1)
-Next(model FlashNext) Number
+Next(model FlashNext) Slow(Number)
 	Prepared.Next(Model) >= 0
 	Greedy.Largest(Batch(model.outputs, List(Number) + 0).Sums(mixer.Mixed(Last)))
-Drafts(model FlashNext, position Number, count Number) Numbers
+Drafts(model FlashNext, position Number, count Number) Slow(Numbers)
 	Prepared.Drafts(Model, 2, 3).Length is 3
 	Prepared.Drafts(Model, 2, 1).First is Prepared.Drafts(Model, 2, 3).First
 	mutable current = value

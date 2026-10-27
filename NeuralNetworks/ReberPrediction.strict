@@ -4,7 +4,7 @@ constant Untrained = Gru.Random(7, 7)
 Run
 	logger.Log(Report("Reber grammar", Reber.Simple, Strings))
 	logger.Log(Report("Embedded Reber grammar", Reber.Embedded, Strings))
-Report(name Text, grammar Reber, strings Number) Text
+Report(name Text, grammar Reber, strings Number) Slow(Text)
 	ReberPrediction.Report("Reber", Reber.Simple, 5).StartsWith("Reber: trained on ")
 	let started = Process.Elapsed
 	let trained = Trained(Untrained, grammar, strings)

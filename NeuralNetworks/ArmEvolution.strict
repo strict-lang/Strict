@@ -3,7 +3,7 @@ constant Generations = 200
 Run
 	logger.Log(Report("Planar arm", Reach.Planar, Generations))
 	logger.Log(Report("Franka arm", Reach(Arm.Franka, (0.01, 0.7, 0.28)), Generations))
-Report(name Text, reach Reach, generations Number) Text
+Report(name Text, reach Reach, generations Number) Slow(Text)
 	ArmEvolution.Report("Planar arm", Reach.Planar, 1).StartsWith("Planar arm: joint angles (")
 	let started = Process.Elapsed
 	let best = reach.Evolved(reach.Arms, generations)

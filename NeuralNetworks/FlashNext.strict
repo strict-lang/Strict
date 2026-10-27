@@ -11,7 +11,7 @@ has tokens Numbers = List(Number)
 has streams Numbers = List(Number)
 constant Tiny = FlashNext.Loaded("NeuralNetworks/tinyqwen4exp.gguf", 32)
 constant Rewound = Tiny.Steps((1, 2, 3), 0).Truncated(Tiny, (1, 2))
-Loaded(path Text, bits = 8) FlashNext
+Loaded(path Text, bits = 8) Slow(FlashNext)
 	Tiny.layers.Length is 4
 	Tiny.pleLayer is 1
 	let model = Gguf(path, bits)
@@ -24,27 +24,27 @@ Loaded(path Text, bits = 8) FlashNext
 	let rotary = Rope(model, loaded(interval - 1).attention.First)
 	let mixed = HyperStreams.Loaded(model, "output_hc")
 	FlashNext(loaded, model, Ngrams.Loaded(model), mixer, ple, mixed, model.Rows("output.weight"), rotary, Silence(width))
-Layers(model Gguf, count Number) List(FlashLayer)
+Layers(model Gguf, count Number) Slow(List(FlashLayer))
 	Tiny.Layers(Tiny.source, 2).Length is 2
 	mutable loaded = List(Mutable(FlashLayer))
 	for count
 		loaded.Add(FlashLayer.Loaded(model, index))
 	loaded
-Rope(model Gguf, attending Qwen3Block) Qwen3
+Rope(model Gguf, attending Qwen3Block) Slow(Qwen3)
 	Tiny.rope.rotary is 16
 	let architecture = model.Value("general.architecture")
 	let theta = model.Value(architecture + ".rope.freq_base") to Number
 	let rotary = model.Value(architecture + ".rope.dimension_count") to Number
 	Qwen3(List(Qwen3Block) + attending, List(Numbers), List(Numbers), List(Number), theta, rotary = rotary)
-Silence(width Number) List(Numbers)
+Silence(width Number) Slow(List(Numbers))
 	Tiny.Silence(2) is ((0, 0), (0, 0), (0, 0), (0, 0), (0, 0), (0, 0), (0, 0), (0, 0), (0, 0), (0, 0))
 	for 10
 		Layer.Zeros(width)
-Step(token Number, position Number) FlashNext
+Step(token Number, position Number) Slow(FlashNext)
 	Tiny.Step(1, 0).Scored(0).IsNearlyEqual(-0.699458, 0.00001)
 	Tiny.Step(1, 0).Step(2, 1).Scored(0).IsNearlyEqual(-0.842374, 0.00001)
 	Steps(List(Number) + token, position)
-Steps(chosen Numbers, start Number) FlashNext
+Steps(chosen Numbers, start Number) Slow(FlashNext)
 	Tiny.Steps((1, 2), 0).Scored(0).IsNearlyEqual(-0.842374, 0.00001)
 	Tiny.Steps((1, 2, 3), 0).Scored(1).IsNearlyEqual(0.874213, 0.00001)
 	Tiny.Step(1, 0).Steps((2, 3), 1).Scored(1).IsNearlyEqual(0.874213, 0.00001)
@@ -57,12 +57,12 @@ Steps(chosen Numbers, start Number) FlashNext
 		stepped.Add(value.Forward(current.streams, rotation))
 		current = FlashNext(current, streams = stepped.Last.streams)
 	FlashNext(current, layers = stepped)
-Started(chosen Numbers) FlashNext
+Started(chosen Numbers) Slow(FlashNext)
 	Tiny.Started(List(Number) + 1).streams.Length is 256
 	Tiny.Started((1, 2)).streams.Length is 512
 	let embedded = source.Picked("token_embd.weight", chosen)
 	FlashNext(value, tokens = tokens + chosen, streams = head.Started(embedded, chosen.Length))
-Remembered(start Number) FlashNext
+Remembered(start Number) Slow(FlashNext)
 	Tiny.Step(1, 0).Remembered(0).history.Last.Length is 256
 	Tiny.Step(1, 0).Step(2, 1).Step(3, 2).Scored(1).IsNearlyEqual(0.874213, 0.00001)
 	let width = head.norm.Length
@@ -74,17 +74,17 @@ Remembered(start Number) FlashNext
 		kept = embedding.Shifted(kept, gated)
 		combined = combined + embedding.Combined(own, gated, kept)
 	FlashNext(value, history = kept, streams = combined)
-Scored Numbers
+Scored Slow(Numbers)
 	Tiny.Step(1, 0).Scored.Length is 32
 	Tiny.Step(1, 0).Scored(2).IsNearlyEqual(1.48686, 0.00001)
 	Generation(Tiny).Generated((1, 2), 2) is (19, 13)
 	let width = head.norm.Length
 	Batch(outputs, List(Number) + 0).Sums(head.Mixed(Safetensors.Part(streams, streams.Length - width, width, 1)))
-Nexts Numbers
+Nexts Slow(Numbers)
 	Tiny.Steps((1, 2), 0).Nexts.Last is 19
 	Tiny.Steps((1, 2), 0).Nexts.First is Greedy.Largest(Tiny.Step(1, 0).Scored)
 	Greedy.Rows(Batch(outputs, List(Number) + 0).Sums(head.Mixed(streams)), outputs.Length)
-Truncated(original FlashNext, kept Numbers) FlashNext
+Truncated(original FlashNext, kept Numbers) Slow(FlashNext)
 	Rewound.Step(5, 2).Scored(1).IsNearlyEqual(Tiny.Steps((1, 2, 5), 0).Scored(1), 0.00001)
 	let count = kept.Length
 	mutable truncated = List(Mutable(FlashLayer))

@@ -1,5 +1,6 @@
 has entry TypeEntry
 constant Sizing = TypeSource(TypeEntry("Strict/Math/Size", List(MemberEntry), List(MethodEntry)))
+constant InternalPackages = ("Compiler", "Runtime", "Bytecode", "Expressions")
 Root Text
 	TypeSource.Root is "."
 	let folder = Path(Process.Current.executable.Replace("\\", "/")).PathOnly.text
@@ -34,3 +35,10 @@ NativeFolder(path Text, root Text) Text
 	let file = entry.Name.IndexOf("/") < 0 then path else source
 	let parent = Path(file).PathOnly.text
 	(parent is "" then "." else parent) + "/native"
+IsSlow(fullName Text, header HeaderTokens) Boolean
+	TypeSource.IsSlow("Strict/Compiler/Even", HeaderTokens("Run", "Number"))
+	TypeSource.IsSlow("Strict/Even", HeaderTokens("Run", "Slow", "(", "Number", ")"))
+	TypeSource.IsSlow("Strict/Even", HeaderTokens("Run", "Number")) is false
+	TypeSource.IsSlow("Game/Compiler/Even", HeaderTokens("Run", "Number")) is false
+	let parts = fullName.Split("/")
+	header.ReturnsSlow or ((parts.Length > 2) and (parts(0) is "Strict") and (parts(1) is in InternalPackages))

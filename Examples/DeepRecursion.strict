@@ -1,19 +1,19 @@
 has number
-Down Number
+Down Slow(Number)
 	DeepRecursion(10000).Down is 0
 	number is 0 then 0 else DeepRecursion(number - 1).Down
-Endless Number
+Endless Slow(Number)
 	DeepRecursion(1).Endless is Error
 	DeepRecursion(number + 1).Endless
-TraceLines Number
+TraceLines Slow(Number)
 	DeepRecursion(1).TraceLines is 52
 	let failure = Ping
 	if failure is Error
 		return (failure to Text).Lines.Length
 	0
-Ping Number
+Ping Slow(Number)
 	DeepRecursion(1).Ping is Error
 	DeepRecursion(number + 1).Pong + 1
-Pong Number
+Pong Slow(Number)
 	DeepRecursion(1).Pong is Error
 	DeepRecursion(number + 1).Ping + 1

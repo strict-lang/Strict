@@ -6,7 +6,7 @@ constant Pair = Products((1, 2, 3, 4), (5, 6, 7, 8), (1, 2, 2, 2), (0, 0, 2, 1, 
 constant Random = Layer.Weights(2800)
 constant Tall = Products(Random, Random, (1, 70, 40, 70), (0, 0, 40, 1, 0, 0, 1, 40))
 constant Wide = Products(Random, Random, (1, 70, 40, 70), (0, 0, 40, 1, 0, 0, 70, 1))
-Multiplied Numbers
+Multiplied Slow(Numbers)
 	Pair.Multiplied is (19, 22, 43, 50)
 	Products(Pair.left, Pair.right, (1, 2, 2, 2), (0, 0, 1, 2, 0, 0, 2, 1)).Multiplied is (26, 30, 38, 44)
 	Products((1, 2), (3, 4), (2, 1, 1, 1), (0, 1, 0, 0, 0, 1, 0, 0)).Multiplied is (3, 8)

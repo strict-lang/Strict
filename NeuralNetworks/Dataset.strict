@@ -5,7 +5,7 @@ OneHot(label Number, classes Number) Numbers
 	Dataset.OneHot(1, 3) is (0, 1, 0)
 	for classes
 		index is label then 1 else 0
-Images(folder Text, classes Number) Dataset
+Images(folder Text, classes Number) Slow(Dataset)
 	Dataset.Images("NeuralNetworks/images", 2).inputs.Length is 2
 	Dataset.Images("NeuralNetworks/images", 1).inputs.First.Sum.IsNearlyEqual(83.99215686274508)
 	Dataset.Images("NeuralNetworks/images", 2).inputs.Last.Length is 784

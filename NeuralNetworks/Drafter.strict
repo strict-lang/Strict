@@ -10,7 +10,7 @@ constant Pair = Rows(1) + Rows(2)
 constant Tiny = Drafter.Loaded(Model, 2)
 constant Stepped = Qwen3.TinyHybrid.Step(1, 0)
 constant None = Drafter(List(Number), List(Number), Layer.None, List(Qwen3Block), List(Number))
-Loaded(model Gguf, heads Number) Drafter
+Loaded(model Gguf, heads Number) Slow(Drafter)
 	Tiny.projection.weights.Length is 8
 	Tiny.projection.weights.First.Length is 16
 	Tiny.blocks.First.heads is 2
@@ -22,7 +22,7 @@ Loaded(model Gguf, heads Number) Drafter
 	let normed = model.Values(prefix + "enorm.weight")
 	let headNormed = model.Values(prefix + "shared_head_norm.weight")
 	Drafter(normed, model.Values(prefix + "hnorm.weight"), joining, List(Qwen3Block) + block, headNormed)
-Extended(model Qwen3, rows Numbers, tokens Numbers, positions Numbers) Drafter
+Extended(model Qwen3, rows Numbers, tokens Numbers, positions Numbers) Slow(Drafter)
 	Tiny.Extended(Stepped, Stepped.hidden, List(Number) + 2, List(Number) + 1).hidden.Length is 8
 	Tiny.Extended(Stepped, Stepped.hidden + Stepped.hidden, (2, 3), (1, 2)).blocks.First.keys.Length is 8
 	Tiny.Extended(Stepped, Stepped.hidden + Stepped.hidden, (2, 3), (1, 2)).hidden.Length is 8
@@ -42,7 +42,7 @@ Joined(first Numbers, second Numbers) Numbers
 		let at = index % (2 * width)
 		let row = (index / (2 * width)).Floor * width
 		at < width then first(row + at) else second(row + at - width)
-Primed(model Qwen3, sequence Numbers) Drafter
+Primed(model Qwen3, sequence Numbers) Slow(Drafter)
 	Tiny.Primed(Stepped, (1, 2)).hidden.Length is 8
 	Tiny.Primed(Stepped, (1, 2)).Primed(Stepped, (1, 2, 3)).blocks.First.keys.Length is 4
 	Tiny.Primed(Qwen3.TinyHybrid.Prefilled((1, 2, 3), 0), (1, 2, 3, 4)).blocks.First.keys.Length is 12
@@ -51,7 +51,7 @@ Primed(model Qwen3, sequence Numbers) Drafter
 	let count = model.hidden.Length / embedNorm.Length
 	let start = sequence.Length - count
 	Extended(model, model.hidden, Safetensors.Part(sequence, start, count, 1), Qwen3.Positions(start, count))
-Drafts(model Qwen3, position Number, count Number) Numbers
+Drafts(model Qwen3, position Number, count Number) Slow(Numbers)
 	Tiny.Primed(Stepped, (1, 2)).Drafts(Stepped, 1, 3).Length is 3
 	Tiny.Primed(Stepped, (1, 2)).Drafts(Stepped, 1, 1).First is Tiny.Primed(Stepped, (1, 2)).Drafts(Stepped, 1, 3).First
 	mutable current = value
@@ -61,6 +61,6 @@ Drafts(model Qwen3, position Number, count Number) Numbers
 		drafts = drafts + drafted
 		current = index + 1 < count then current.Further(model, drafted, position + index + 1) else current
 	drafts
-Further(model Qwen3, tokens Numbers, position Number) Drafter
+Further(model Qwen3, tokens Numbers, position Number) Slow(Drafter)
 	Tiny.Primed(Stepped, (1, 2)).Further(Stepped, List(Number) + 3, 2).hidden.Length is 8
 	Extended(model, hidden, tokens, List(Number) + position)

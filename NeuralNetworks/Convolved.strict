@@ -7,7 +7,7 @@ constant Box = (1, 1, 1, 1, 1, 1, 1, 1, 1)
 constant Center = (0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0)
 constant Large = Convolved(Layer.Weights(480), Layer.Weights(64), Layer.Weights(11520), (3, 5, 32, 40, 1, 1))
 constant Doubling = Convolved(Layer.Weights(480), Layer.Weights(64), Layer.Weights(20480), (6, 10, 32, 40, 0, 2))
-Summed Numbers
+Summed Slow(Numbers)
 	Convolved(Square, (1, 0), Box, (2, 2, 1, 1, 0, 1)).Summed is (10, 10, 10, 10)
 	Convolved(Square, (1, 0), (0, 1, 0, 0, 0, 0, 0, 0, 0), (2, 2, 1, 1, 0, 1)).Summed is (0, 0, 1, 2)
 	Convolved(Square, (2, 1), (0, 0, 0, 0, 1, 0, 0, 0, 0), (2, 2, 1, 1, 1, 1)).Summed(1).IsNearlyEqual(4.966533)

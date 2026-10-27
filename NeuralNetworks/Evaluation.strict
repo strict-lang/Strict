@@ -12,10 +12,10 @@ Run(path Text)
 	let reports = isQwen then Perplexity(Qwen3.Loaded(path, 8)).Reports(tokenizer, texts) else gpt2
 	logger.Log(path + " English: " + Described(reports(0)))
 	logger.Log(path + " Strict: " + Described(reports(1)))
-Heldout(count Number) List(Texts)
+Heldout(count Number) Slow(List(Texts))
 	Evaluation(Logger).Heldout(1)(1).First.StartsWith("has number")
 	Texts(Downloaded(Corpus + "heldout.txt", Book), "To Sherlock Holmes", "Math", count)
-Calibration(count Number) List(Texts)
+Calibration(count Number) Slow(List(Texts))
 	Evaluation(Logger).Calibration(1)(0).First.StartsWith("It is a truth")
 	Texts(Downloaded(Corpus + "calibration.txt", Novel), "It is a truth", "Compiler", count)
 Downloaded(path Text, address Text) Text

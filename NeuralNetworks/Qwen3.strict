@@ -12,7 +12,7 @@ constant TinyMixture = Qwen3.Loaded("NeuralNetworks/tinyqwen3moe.gguf", 32)
 constant Prompted = Tiny.Prefilled((1, 2), 0)
 constant TinyHybrid = Qwen3.Loaded("NeuralNetworks/tinyqwen35.gguf", 32)
 constant TinyBasis = Qwen3.Loaded("NeuralNetworks/tinyqwen35basis.gguf", 32)
-Loaded(path Text, bits = 8) Qwen3
+Loaded(path Text, bits = 8) Slow(Qwen3)
 	Tiny.blocks.Length is 1
 	Tiny.theta is 1000000
 	TinyMixture.outputs is not TinyMixture.tokens
@@ -24,12 +24,12 @@ Loaded(path Text, bits = 8) Qwen3
 	let normed = model.Values("output_norm.weight")
 	let folding = Basis.Loaded(model)
 	Qwen3(Blocks(model, folding), embedding, output, normed, base, rotary = Rotary(model), basis = folding)
-Rotary(model Gguf) Number
+Rotary(model Gguf) Slow(Number)
 	Tiny.Rotary(Gguf("NeuralNetworks/tinyqwen3.gguf")) is 0
 	Tiny.Rotary(Gguf("NeuralNetworks/tinyqwen35.gguf")) is 2
 	let dimensions = model.Value(model.Value("general.architecture") + ".rope.dimension_count")
 	dimensions is "" then 0 else dimensions to Number
-Blocks(model Gguf, folding Basis) List(Qwen3Block)
+Blocks(model Gguf, folding Basis) Slow(List(Qwen3Block))
 	Tiny.Blocks(Gguf("NeuralNetworks/tinyqwen3.gguf"), Basis.None).First.heads is 2
 	TinyHybrid.blocks.First.hybrid.layers.Length is 3
 	let architecture = model.Value("general.architecture")
@@ -42,7 +42,7 @@ Blocks(model Gguf, folding Basis) List(Qwen3Block)
 	for layers / interval
 		let attention = Qwen3Block.Loaded(model, "blk." + (index * interval + interval - 1) + ".", heads, folding)
 		Qwen3Block(attention, hybrid = Hybrid.Loaded(model, index * interval, interval - 1, memory, folding))
-Rotations(positions Numbers) Numbers
+Rotations(positions Numbers) Slow(Numbers)
 	Tiny.Rotations(List(Number) + 0) is (1, 1, 1, 1, 0, 0, 0, 0)
 	Tiny.Rotations(List(Number) + 1)(4).IsNearlyEqual(-0.8414709848078965)
 	Tiny.Rotations((0, 1))(13).IsNearlyEqual(-0.0009999998333333417)
@@ -55,7 +55,7 @@ Rotations(positions Numbers) Numbers
 		let radians = pair < pairs then positions((index / (4 * half)).Floor) * theta ^ (-pair / pairs) else 0
 		let angle = Radians(radians) to Degrees
 		at < 2 * half then angle.Cos else (at < 3 * half then 0 - angle.Sin else angle.Sin)
-Step(token Number, position Number) Qwen3
+Step(token Number, position Number) Slow(Qwen3)
 	Tiny.Step(1, 0).Scored.First.IsNearlyEqual(2.664049302641475)
 	Tiny.Step(1, 0).Step(2, 1).Scored.Last.IsNearlyEqual(1.1076484232754447)
 	TinyMixture.Step(1, 0).Scored.First.IsNearlyEqual(0.9534001625146007, 0.000001)

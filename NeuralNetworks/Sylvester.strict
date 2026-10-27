@@ -5,7 +5,7 @@ constant Radix = 32
 constant Unflipped = List(Number) + 1
 constant Pattern = Sylvester(List(Number), Unflipped, 1024).Repeated(2048)
 constant Wide = Sylvester(Pattern, Unflipped, 1024)
-Rotated Numbers
+Rotated Slow(Numbers)
 	Sylvester((0, 1, 0, 0, 0, 0, 1, 0), Unflipped, 4).Rotated is (0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5)
 	Sylvester((0, 1, 0, 0), (1, -1), 4).Rotated is (-0.5, 0.5, -0.5, 0.5)
 	Sylvester(Wide.Rotated, Unflipped, 1024).Rotated(1500).IsNearlyEqual(Pattern(1500))

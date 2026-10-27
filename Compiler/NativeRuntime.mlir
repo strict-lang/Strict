@@ -128,42 +128,9 @@
   llvm.mlir.global internal @strict_test_deadline(0 : i64) : i64
   llvm.mlir.global internal @strict_test_place(0 : i64) : i64
   llvm.mlir.global internal @strict_test_watching(0 : i64) : i64
-  llvm.mlir.global internal constant @strict_test_timeout("Test failed: %s\0A  got: TestDurationMustNotExceedTwentyMilliseconds: unit test exceeded 20 ms; use Slow(ReturnType) for explicit functional tests\0A\00") : !llvm.array<146 x i8>
+  llvm.mlir.global internal constant @strict_test_timeout("Test failed: %s\0A  got: TestDurationMustNotExceedHundredMilliseconds: unit test exceeded 100 ms; use Slow(ReturnType) for explicit functional tests\0A\00") : !llvm.array<148 x i8>
   llvm.mlir.global internal constant @strict_test_unavailable("Test failed: %s\0A  got: TestBudgetWatchdogUnavailable: cannot enforce the unit-test deadline on this platform\0A\00") : !llvm.array<110 x i8>
-  llvm.mlir.global internal constant @strict_test_parallel_timeout("Test failed: %s\0A  got: TestDurationMustNotExceedTwentyMilliseconds: unit test exceeded 50 ms while tests ran in parallel (20 ms alone); use Slow(ReturnType) for explicit functional tests\0A\00") : !llvm.array<188 x i8>
-  llvm.mlir.global internal constant @strict_tests_parallel_name("STRICT_TESTS_PARALLEL\00") : !llvm.array<22 x i8>
-  llvm.mlir.global internal constant @strict_tests_parallel_setting("STRICT_TESTS_PARALLEL=1\00") : !llvm.array<24 x i8>
-  llvm.mlir.global internal constant @strict_tests_parallel_cleared("STRICT_TESTS_PARALLEL=\00") : !llvm.array<23 x i8>
-  func.func private @strict_tests_parallel_set() -> i1 {
-    %name = llvm.mlir.addressof @strict_tests_parallel_name : !llvm.ptr
-    %setting = llvm.call @getenv(%name) : (!llvm.ptr) -> !llvm.ptr
-    %unset = llvm.mlir.zero : !llvm.ptr
-    %isSet = llvm.icmp "ne" %setting, %unset : !llvm.ptr
-    cf.cond_br %isSet, ^value, ^done(%isSet : i1)
-  ^value:
-    %first = llvm.load %setting : !llvm.ptr -> i8
-    %end = arith.constant 0 : i8
-    %filled = arith.cmpi ne, %first, %end : i8
-    cf.br ^done(%filled : i1)
-  ^done(%result: i1):
-    return %result : i1
-  }
-  // 20 ms for a unit test, 50 ms while tests run in parallel: a parallel loop of this process (files of a build) or
-  // STRICT_TESTS_PARALLEL (processes started together by Process.RunTools, CI)
-  func.func private @strict_test_ordinary_limit() -> f64 {
-    %zero = arith.constant 0 : i64
-    %busySlot = llvm.mlir.addressof @strict_pool_busy : !llvm.ptr
-    %busy = llvm.load %busySlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
-    %isBusy = arith.cmpi ne, %busy, %zero : i64
-    %isSet = func.call @strict_tests_parallel_set() : () -> i1
-    %parallel = arith.ori %isBusy, %isSet : i1
-    %shared = arith.constant 0.05 : f64
-    %alone = arith.constant 0.02 : f64
-    %limit = arith.select %parallel, %shared, %alone : f64
-    return %limit : f64
-  }
-  llvm.mlir.global internal constant @strict_test_vm_timeout("Test failed: %s\0A  got: TestDurationMustNotExceedVmBudget: compiler VM self-test exceeded 100 ms; use Slow(ReturnType) for explicit integration tests\0A\00") : !llvm.array<150 x i8>
-  func.func private @strict_test_failed(%place: i64, %unavailable: i1, %limit: f64) {
+  func.func private @strict_test_failed(%place: i64, %unavailable: i1) {
     %zero = arith.constant 0 : i64
     %one64 = arith.constant 1 : i64
     %failingSlot = llvm.mlir.addressof @strict_test_failing : !llvm.ptr
@@ -177,22 +144,14 @@
     %name = llvm.inttoptr %place : i64 to !llvm.ptr
     %timeoutFormat = llvm.mlir.addressof @strict_test_timeout : !llvm.ptr
     %unavailableFormat = llvm.mlir.addressof @strict_test_unavailable : !llvm.ptr
-    %vmFormat = llvm.mlir.addressof @strict_test_vm_timeout : !llvm.ptr
-    %parallelFormat = llvm.mlir.addressof @strict_test_parallel_timeout : !llvm.ptr
-    %ordinary = arith.constant 0.03 : f64
-    %shared = arith.constant 0.06 : f64
-    %isParallel = arith.cmpf ogt, %limit, %ordinary : f64
-    %extended = arith.cmpf ogt, %limit, %shared : f64
-    %unitFormat = arith.select %isParallel, %parallelFormat, %timeoutFormat : !llvm.ptr
-    %timedFormat = arith.select %extended, %vmFormat, %unitFormat : !llvm.ptr
-    %format = arith.select %unavailable, %unavailableFormat, %timedFormat : !llvm.ptr
+    %format = arith.select %unavailable, %unavailableFormat, %timeoutFormat : !llvm.ptr
     %printed = llvm.call @printf(%format, %name) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr) -> i32
     func.call @strict_flush() : () -> ()
     func.call @strict_test_quit() : () -> ()
     return
   }
   func.func private @strict_testbudget_started(%self: f64, %place: f64, %isSlow: f64) -> f64 {
-    %limit = func.call @strict_test_ordinary_limit() : () -> f64
+    %limit = arith.constant 0.1 : f64
     %started = func.call @strict_test_begin(%self, %place, %isSlow, %limit) : (f64, f64, f64, f64) -> f64
     return %started : f64
   }
@@ -271,7 +230,7 @@
     cf.cond_br %spawned, ^remember, ^failed
   ^failed:
     %unavailable = arith.constant true
-    func.call @strict_test_failed(%nameBits, %unavailable, %limit) : (i64, i1, f64) -> ()
+    func.call @strict_test_failed(%nameBits, %unavailable) : (i64, i1) -> ()
     cf.br ^untimed
   ^remember:
     llvm.store %one, %watchingSlot : i64, !llvm.ptr
@@ -303,10 +262,7 @@
     %placeSlot = llvm.mlir.addressof @strict_test_place : !llvm.ptr
     %place = llvm.load %placeSlot : !llvm.ptr -> i64
     %unavailable = arith.constant false
-    %failedLimitSlot = llvm.mlir.addressof @strict_test_limit : !llvm.ptr
-    %failedLimitBits = llvm.load %failedLimitSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
-    %failedLimit = arith.bitcast %failedLimitBits : i64 to f64
-    func.call @strict_test_failed(%place, %unavailable, %failedLimit) : (i64, i1, f64) -> ()
+    func.call @strict_test_failed(%place, %unavailable) : (i64, i1) -> ()
     cf.br ^done
   ^done:
     %seconds = arith.subf %now, %started : f64
@@ -334,16 +290,13 @@
     cf.cond_br %over, ^claim, ^loop
   ^claim:
     %place = llvm.load %placeSlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
-    %failedLimitSlot = llvm.mlir.addressof @strict_test_limit : !llvm.ptr
-    %failedLimitBits = llvm.load %failedLimitSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
-    %failedLimit = arith.bitcast %failedLimitBits : i64 to f64
     %next = arith.addi %version, %one : i64
     %claimed = llvm.cmpxchg %versionSlot, %version, %next acq_rel acquire : !llvm.ptr, i64
     %same = llvm.extractvalue %claimed[1] : !llvm.struct<(i64, i1)>
     cf.cond_br %same, ^failed, ^loop
   ^failed:
     %unavailable = arith.constant false
-    func.call @strict_test_failed(%place, %unavailable, %failedLimit) : (i64, i1, f64) -> ()
+    func.call @strict_test_failed(%place, %unavailable) : (i64, i1) -> ()
     cf.br ^loop
   }
   llvm.mlir.global internal @strict_started(0.0 : f64) : f64
@@ -10010,29 +9963,10 @@
     %body = func.constant @strict_process_tools : (!llvm.ptr, i64, i64) -> f64
     %lines = arith.fptosi %count : f64 to i64
     func.call @strict_tool_share(%lines) : (i64) -> ()
-    %single = arith.constant 1 : i64
-    %several = arith.cmpi sgt, %lines, %single : i64
-    %inherited = func.call @strict_tests_parallel_set() : () -> i1
-    %unmarked = arith.constant true
-    %fresh = arith.xori %inherited, %unmarked : i1
-    %marking = arith.andi %several, %fresh : i1
-    cf.cond_br %marking, ^marked, ^started
-  ^marked:
-    // the processes started together test with the parallel budget, later ones alone again
-    %setting = llvm.mlir.addressof @strict_tests_parallel_setting : !llvm.ptr
-    func.call @strict_environment_put(%setting) : (!llvm.ptr) -> ()
-    cf.br ^started
-  ^started:
     %ran = func.call @strict_parallel(%body, %context, %lines) : ((!llvm.ptr, i64, i64) -> f64, !llvm.ptr, i64) -> f64
     %noShare = arith.constant 0 : i64
     %shareSlot = llvm.mlir.addressof @strict_tool_threads : !llvm.ptr
     llvm.store %noShare, %shareSlot : i64, !llvm.ptr
-    cf.cond_br %marking, ^cleared, ^finished
-  ^cleared:
-    %clearing = llvm.mlir.addressof @strict_tests_parallel_cleared : !llvm.ptr
-    func.call @strict_environment_put(%clearing) : (!llvm.ptr) -> ()
-    cf.br ^finished
-  ^finished:
     llvm.call @free(%context) : (!llvm.ptr) -> ()
     %filled = func.call @strict_list_filled(%results, %count) : (f64, f64) -> f64
     return %filled : f64

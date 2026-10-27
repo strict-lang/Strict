@@ -16,7 +16,7 @@ Evolved(population List(Numbers), generations Number) Numbers
 	for generations
 		current = Next(current)
 	Best(current)
-Next(population List(Numbers)) List(Numbers)
+Next(population List(Numbers)) Slow(List(Numbers))
 	Planar.Next(Planar.Arms).Length is Population
 	mutable next = List(Mutable(Numbers))
 	next.Add(Best(population))

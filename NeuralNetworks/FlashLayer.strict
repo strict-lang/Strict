@@ -13,7 +13,7 @@ constant Twice = HyperStreams.Embedded + HyperStreams.Embedded.Reverse
 constant Single = First.Forward(HyperStreams.Embedded, List(Number))
 constant Stepped = Single.Forward(HyperStreams.Embedded.Reverse, List(Number))
 constant Doubled = First.Forward(Twice, List(Number))
-Loaded(model Gguf, layer Number) FlashLayer
+Loaded(model Gguf, layer Number) Slow(FlashLayer)
 	First.linear.Length is 1
 	FlashLayer.Loaded(Flash, 3).attention.Length is 1
 	let prefix = "blk." + layer + "."
@@ -23,12 +23,12 @@ Loaded(model Gguf, layer Number) FlashLayer
 	let attentions = Attentions(model, prefix, routed)
 	let mapped = MappedExperts(routed, model, prefix)
 	FlashLayer(mixer, Linears(model, prefix, routed), attentions, feeder, mapped, Shared(model, prefix))
-Linears(model Gguf, prefix Text, routed Experts) List(DeltaBlock)
+Linears(model Gguf, prefix Text, routed Experts) Slow(List(DeltaBlock))
 	First.Linears(Flash, "blk.3.", First.experts.experts).Length is 0
 	if model.Shape(prefix + "ssm_a").Length is 0
 		return List(DeltaBlock)
 	List(DeltaBlock) + DeltaBlock(DeltaBlock.Mixing(model, prefix, Hybrid.Memory(model), routed), sigmoidGate = true)
-Attentions(model Gguf, prefix Text, routed Experts) List(Qwen3Block)
+Attentions(model Gguf, prefix Text, routed Experts) Slow(List(Qwen3Block))
 	First.Attentions(Flash, "blk.0.", First.experts.experts).Length is 0
 	if model.Shape(prefix + "attn_q.weight").Length is 0
 		return List(Qwen3Block)
@@ -39,7 +39,7 @@ Shared(model Gguf, prefix Text) List(Layer)
 	let gate = Layer(List(Numbers) + model.Values(prefix + "ffn_gate_inp_shexp.weight"), Layer.Unbiased)
 	let down = Qwen3Block.Dense(model, prefix, List(Text) + "ffn_down_shexp")
 	(Qwen3Block.Dense(model, prefix, ("ffn_gate_shexp", "ffn_up_shexp")), down, gate)
-Forward(input Numbers, rotation Numbers) FlashLayer
+Forward(input Numbers, rotation Numbers) Slow(FlashLayer)
 	First.Forward(HyperStreams.Embedded, List(Number)).streams(0).IsNearlyEqual(0.311525, 0.000001)
 	First.Forward(HyperStreams.Embedded, List(Number)).streams(5).IsNearlyEqual(-1.372745, 0.000001)
 	Doubled.streams(261).IsNearlyEqual(Stepped.streams(5), 0.000001)
@@ -59,10 +59,10 @@ Attended Numbers
 		let block = attention.First
 		return Batch(block.projection.weights, block.projection.biases).Sums(block.Merged(1))
 	Batch(linear.First.projection.weights, linear.First.projection.biases).Sums(linear.First.merged)
-Fed(mixed Numbers) Numbers
+Fed(mixed Numbers) Slow(Numbers)
 	First.Fed(First.feeding.Mixed(First.Forward(HyperStreams.Embedded, List(Number)).streams))(0) is not 0
 	Gpt2Block.Added(experts.Forward(mixed), experts.experts.Shared(shared, mixed))
-Truncated(original FlashLayer, count Number, length Number) FlashLayer
+Truncated(original FlashLayer, count Number, length Number) Slow(FlashLayer)
 	Doubled.Truncated(First, 1, 1).linear.First.memory is Single.linear.First.memory
 	if attention.Length > 0
 		let block = attention.First

@@ -1,4 +1,4 @@
-Kept(count Number) Text
+Kept(count Number) Slow(Text)
 	YoungCollections.Kept(3000000) is "item 1500000"
 	mutable kept = List(Text)
 	for count
