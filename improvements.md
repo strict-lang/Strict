@@ -2,7 +2,6 @@
 What to fix next, one short line each, bugs first. Remove a line once it is done, add what is found at the end. No history or measurements (those go into commit messages). Speed work: [performance.md](performance.md).
 
 ## Bugs
-- A failed host allocation shows up as `AccessViolation` instead of an out of memory Error.
 - Investigate `Process.RunTools` starting clang on pool threads exiting 127 once; failures now report tool and exit code.
 - Reproduce the reported `NeuralNetworks/Batch` CPU/GPU exact-comparison mismatch on the original GPU.
 - Why the check marking before a reclaim (`strict_rc_mark_all`) lost live objects with young collections (STRICT_RC_CHECK collects fully now).

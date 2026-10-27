@@ -351,7 +351,7 @@
     %one = arith.constant 1 : i64
     %stackBytes = arith.constant 65536 : i64
     %null = llvm.mlir.zero : !llvm.ptr
-    %stack = llvm.call @malloc(%stackBytes) : (i64) -> !llvm.ptr
+    %stack = func.call @strict_malloc(%stackBytes) : (i64) -> !llvm.ptr
     %alternate = llvm.alloca %one x !llvm.array<24 x i8> : (i64) -> !llvm.ptr
     llvm.store %stack, %alternate : !llvm.ptr, !llvm.ptr
     %stackFlags = llvm.getelementptr %alternate[16] : (!llvm.ptr) -> !llvm.ptr, i8
