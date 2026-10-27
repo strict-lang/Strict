@@ -1,0 +1,8 @@
+Started(place Text, isSlow Boolean) Number
+	if (isSlow is false) and (place.Length is 0)
+		return Error("Unit test must have a description")
+	Process.Elapsed
+Finished(started Number) Number
+	(Process.Elapsed - started) * 1000
+Extended(place Text) Number
+	place.Length > 0 then Process.Elapsed else Error("Unit test must have a description")

@@ -371,6 +371,21 @@
     %busInstalled = llvm.call @sigaction(%bus, %action, %null) : (i32, !llvm.ptr, !llvm.ptr) -> i32
     return
   }
+  func.func private @strict_file_size(%name: !llvm.ptr) -> i64 {
+    %size = arith.constant 256 : i64
+    %buffer = llvm.alloca %size x i8 : (i64) -> !llvm.ptr
+    %status = llvm.call @stat64(%name, %buffer) : (!llvm.ptr, !llvm.ptr) -> i32
+    %none = arith.constant 0 : i32
+    %failed = arith.cmpi ne, %status, %none : i32
+    %zero = arith.constant 0 : i64
+    cf.cond_br %failed, ^done(%zero : i64), ^size
+  ^size:
+    %sizeSlot = llvm.getelementptr %buffer[96] : (!llvm.ptr) -> !llvm.ptr, i8
+    %bytes = llvm.load %sizeSlot : !llvm.ptr -> i64
+    cf.br ^done(%bytes : i64)
+  ^done(%result: i64):
+    return %result : i64
+  }
   func.func private @strict_file_modified(%path: f64) -> f64 {
     %overriddenText = func.call @strict_overridden(%path) : (f64) -> f64
     %unsetText = arith.constant 0.0 : f64
@@ -640,6 +655,8 @@
     return %number : f64
   }
   llvm.func @sysconf(i32) -> i64
+  llvm.func @pthread_attr_init(!llvm.ptr) -> i32
+  llvm.func @pthread_attr_setstacksize(!llvm.ptr, i64) -> i32
   llvm.func @pthread_create(!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
   llvm.func @pthread_mutex_lock(!llvm.ptr) -> i32
   llvm.func @pthread_mutex_unlock(!llvm.ptr) -> i32
@@ -695,12 +712,17 @@
     %null = llvm.mlir.zero : !llvm.ptr
     %procedure = llvm.mlir.addressof @strict_pool_thread : !llvm.ptr
     %handle = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
+    %attributes = llvm.alloca %one x !llvm.array<8 x i64> : (i64) -> !llvm.ptr
+    %initialized = llvm.call @pthread_attr_init(%attributes) : (!llvm.ptr) -> i32
+    // 64 MB per worker like the main thread and Windows (the default is 512 KB)
+    %stackBytes = arith.constant 67108864 : i64
+    %sized = llvm.call @pthread_attr_setstacksize(%attributes, %stackBytes) : (!llvm.ptr, i64) -> i32
     cf.br ^check(%zero : i64)
   ^check(%index: i64):
     %more = arith.cmpi slt, %index, %workers : i64
     cf.cond_br %more, ^spawn, ^done
   ^spawn:
-    %created = llvm.call @pthread_create(%handle, %null, %procedure, %null) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    %created = llvm.call @pthread_create(%handle, %attributes, %procedure, %null) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
     %next = arith.addi %index, %one : i64
     cf.br ^check(%next : i64)
   ^done:
@@ -1631,4 +1653,39 @@
   ^c33:
     %f33 = llvm.mlir.addressof @strict_metal_cuStreamWaitEvent : !llvm.ptr
     llvm.return %f33 : !llvm.ptr
+  }
+
+  llvm.func @nanosleep(!llvm.ptr, !llvm.ptr) -> i32
+  func.func private @strict_test_pause() {
+    %two = arith.constant 2 : i64
+    %zero = arith.constant 0 : i64
+    %millisecond = arith.constant 1000000 : i64
+    %delay = llvm.alloca %two x i64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %delay : i64, !llvm.ptr
+    %fraction = llvm.getelementptr %delay[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %millisecond, %fraction : i64, !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %paused = llvm.call @nanosleep(%delay, %null) : (!llvm.ptr, !llvm.ptr) -> i32
+    return
+  }
+  llvm.func @strict_test_thread(%argument: !llvm.ptr) -> !llvm.ptr {
+    func.call @strict_test_watch() : () -> ()
+    %null = llvm.mlir.zero : !llvm.ptr
+    llvm.return %null : !llvm.ptr
+  }
+  func.func private @strict_test_spawn() -> i1 {
+    %zero = arith.constant 0 : i32
+    %one = arith.constant 1 : i64
+    %null = llvm.mlir.zero : !llvm.ptr
+    %procedure = llvm.mlir.addressof @strict_test_thread : !llvm.ptr
+    %handle = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
+    %created = llvm.call @pthread_create(%handle, %null, %procedure, %null) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    %spawned = arith.cmpi eq, %created, %zero : i32
+    return %spawned : i1
+  }
+
+  func.func private @strict_test_quit() {
+    %failure = arith.constant 1 : i32
+    llvm.call @_exit(%failure) : (i32) -> ()
+    return
   }

@@ -1,4 +1,4 @@
-"""Run from Strict: python Compiler/check_build.py. Builds must not execute tests."""
+"""Run from Strict: python Compiler/check_build.py. Builds gate on unit tests and cache passing results."""
 import subprocess
 import sys
 import tempfile
@@ -8,8 +8,8 @@ from pathlib import Path
 from datetime import datetime
 
 root = Path(__file__).resolve().parent.parent
-assert "@NativeGate_Built_" not in (root / "Compiler/Bootstrap.mlir").read_text(), \
-	"Bootstrap compiler still runs tests during builds"
+assert "@NativeCompiler_Checked_" in (root / "Compiler/Bootstrap.mlir").read_text(), \
+	"Bootstrap compiler bypasses the unit-test gate"
 extension = ".exe" if sys.platform == "win32" else ""
 with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as folder:
 	source = Path(folder) / "BuildCheck.strict"
@@ -37,6 +37,11 @@ with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as 
 	assert profile_build.returncode == 0, profile_build.stdout + profile_build.stderr
 	checked_profile(subprocess.run([str(profile.with_suffix(extension))], capture_output=True,
 		text=True, timeout=10))
+	built = run("build", str(source))
+	assert built.returncode != 0 and "Test failed:" in built.stdout, built.stdout + built.stderr
+	assert not source.with_suffix(extension).exists(), "Failed unit tests produced a program"
+	source.write_text("Run Number\n\t1 is 1\n\tBuildValue.Result", encoding="utf-8")
+	os.utime(source, (1700000000, 1700000000))
 	built = run("build", str(source))
 	assert built.returncode == 0, built.stdout + built.stderr
 	assert "Running Tool" not in built.stdout and "Compiling " not in built.stdout, built.stdout
@@ -71,7 +76,7 @@ with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as 
 	built = run("build", str(source))
 	assert built.returncode == 0, built.stdout + built.stderr
 	assert subprocess.run([str(executable)], timeout=10).returncode == 1, "Dependency change was skipped"
-	source.write_text("Run Number\n\t1 is 2\n\tBuildValue.Result + 1", encoding="utf-8")
+	source.write_text("Run Number\n\t1 is 1\n\tBuildValue.Result + 1", encoding="utf-8")
 	built = run("build", str(source), "small")
 	assert built.returncode == 0, built.stdout + built.stderr
 	assert subprocess.run([str(executable)], timeout=10).returncode == 2, "Source change was skipped"
@@ -90,16 +95,17 @@ with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as 
 	assert not source.with_suffix(".mlir").exists() and executable.stat().st_mtime_ns == modified, built.stdout
 	built = run("build", str(source), "fast", "small")
 	assert built.returncode != 0 and "Fast builds" in built.stdout, built.stdout + built.stderr
+	source.write_text("Run Number\n\t1 is 2\n\tBuildValue.Result + 1", encoding="utf-8")
 	tested = run("test", str(source))
 	assert tested.returncode == 1 and "Test failed:" in tested.stdout, tested.stdout + tested.stderr
 	tested = run("test", str(source), "native")
 	assert source.with_suffix(".test" + extension).exists(), tested.stdout + tested.stderr
 	assert tested.returncode == 1, tested.stdout + tested.stderr
-	print("Build skips tests; explicit VM and native tests still fail correctly")
+	print("Build gates on unit tests; explicit VM and native failures surface")
 	source = Path(folder) / "ReleaseCheck.strict"
 	base = (Path(folder) / "Built").as_posix()
 	release = (Path(folder) / "Release").as_posix()
-	source.write_text('has release Compiler/Release\nRun Number\n'
+	source.write_text('has release Compiler/Release\nRun Slow(Number)\n'
 		f'\tReleaseCheck(Release(Logger, "{base}")).Retained is true\n\t0\nRetained Boolean\n'
 		f'\tFile("{base + extension}").Write("built")\n'
 		f'\tlet result = release.Refreshed("{release}", "", ("{extension}"))\n'
@@ -114,14 +120,14 @@ with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as 
 	marker = Path(folder) / "Ran.exe"
 	source.write_text('Run Number\n\tTouched is true\n\t0\nTouched Boolean\n'
 		f'\tFile("{marker.as_posix()}").Write("tested")\n\ttrue', encoding="utf-8")
-	tested = run("test", str(source), "native")
+	tested = run("test", str(source), "native", "unit")
 	assert tested.returncode == 0 and marker.exists(), tested.stdout + tested.stderr
 	stamp = source.with_suffix(".test.nativecache")
 	assert stamp.exists(), "Native test result was not saved: " + tested.stdout + tested.stderr
 	before = stamp.read_text().splitlines()
 	marker.unlink()
 	source.with_suffix(".test.mlir").unlink()
-	tested = run("test", str(source), "native")
+	tested = run("test", str(source), "native", "unit")
 	assert tested.returncode == 0, tested.stdout + tested.stderr
 	after = stamp.read_text().splitlines()
 	changed = [before[index] for index in range(1, len(before), 2)

@@ -79,6 +79,7 @@ Text Text
 Slots Texts
 	Counter.Slots.Length is 15
 	outer.Text.Combine(MlirGroups.Norming.function.Slots).IndexOf("%memo11 = llvm.alloca") > 0
+	outer.Text.Combine(MlirCalls.Shapes.Slots).IndexOf("%handed1 = llvm.alloca") > 0
 	mutable lines = ("    %one = arith.constant 1 : i64", "    %zero = arith.constant 0.0 : f64")
 	lines = lines + "    %flag = llvm.alloca %one x i1 : (i64) -> !llvm.ptr"
 	for LoadReuse(method.instructions).RegisterCount
@@ -87,7 +88,7 @@ Slots Texts
 		lines = lines + Slot("%v_" + value)
 	for method.instructions
 		lines = value.kind is InstructionType.LoopBegin then lines + Slot("%loop" + index) else lines
-	lines + MlirGrouped(value, 0).Memos + MlirLines(value).Allocated + Entry
+	lines + MlirGrouped(value, 0).Memos + MlirHanded(value, 0).Slots + MlirLines(value).Allocated + Entry
 Entry Texts
 	Counter.Entry.Length is 4
 	"  ^stackChecked:" is in MlirGroups.Norming.function.Entry
@@ -135,4 +136,4 @@ Emitted(position Number) Texts
 	let lists = MlirLists(value, position)
 	let isList = (kind is in ListKinds) or lists.IsElementStore
 	let emitted = isCall then MlirCalls(value, position).Emitted else isList then lists.Emitted else statements.Emitted
-	emitted + MlirPacking(value, position).Repacked
+	MlirHanded(value, position).Wrapped(emitted + MlirPacking(value, position).Repacked)

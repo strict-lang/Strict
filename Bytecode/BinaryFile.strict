@@ -20,7 +20,7 @@ Packed(header Numbers, types List(TypeEntry), owners List(TypeEntry)) Bytes
 		Byte(value)
 Unpacked(bytes Bytes) List(ZipEntry)
 	Packing.Length is 2
-	Packing.First.content is (1, 0, 4)
+	Packing.First.content is (1, 0, 6)
 	mutable numbers = List(Mutable(Number))
 	for bytes
 		numbers.Add(value.number)
@@ -61,7 +61,7 @@ Referenced(entry ZipEntry) TypeEntry
 	Probe.Referenced(ZipEntry("Missing.reference", List(Number))).methods.Length is 0
 	let owner = Owned(entry.Name.Substring(0, entry.Name.Length - 10))
 	TypeReference(owner).Selected(ByteEncoder(entry.content).Integers)
-Data(path Text, ignored Texts = List(Text)) Texts
+Data(path Text, ignored Texts = List(Text)) Slow(Texts)
 	Probe.Data("Compiler/NativeBuild.strict") is ("Compiler/NativeRuntime.mlir")
 	Probe.Data("NeuralNetworks/Dataset.strict").Length is 2
 	mutable files = List(Mutable(Text))

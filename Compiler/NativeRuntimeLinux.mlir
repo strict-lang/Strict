@@ -12,9 +12,19 @@
     %none = arith.constant 0 : i64
     return %none, %none : i64, i64
   }
+  llvm.func @getpid() -> i32
+  llvm.func @gettid() -> i32
   // the main stack grows up to its limit (RLIMIT_STACK) below where it started, raised to 64 MB like on Windows and
   // macOS (8 MB is the usual default, the kernel keeps at least 128 MB free below the stack for growing)
   func.func private @strict_stack_lowest(%stack: !llvm.ptr) -> i64 {
+    %process = llvm.call @getpid() : () -> i32
+    %self = llvm.call @gettid() : () -> i32
+    %isMain = arith.cmpi eq, %process, %self : i32
+    cf.cond_br %isMain, ^main, ^worker
+  ^worker:
+    %workerLowest = func.call @strict_thread_stack_lowest(%stack) : (!llvm.ptr) -> i64
+    return %workerLowest : i64
+  ^main:
     %none = arith.constant 0 : i64
     %two = arith.constant 2 : i64
     %success = arith.constant 0 : i32

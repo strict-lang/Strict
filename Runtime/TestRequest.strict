@@ -1,0 +1,27 @@
+has rest Texts
+Options Texts
+	rest.Length > 2 then rest.Slice(2, rest.Length - 2) else List(Text)
+Option Text
+	for Options
+		if value is in ("unit", "native", "lines", "values", "trace", "-") and (value is not "unit")
+			return value
+	""
+Selection Text
+	TestRequest(("a.strict", ".", "unit")).Selection is ""
+	TestRequest(("a.strict", ".", "Merged")).Selection is "Merged"
+	if Directory.Exists(rest(0)) or ("unit" is in Options) or ("-" is in Options)
+		return ""
+	for Options
+		if value is not in ("native", "lines", "values", "trace")
+			return value
+	"*"
+Message Text
+	let methods = Options - "unit" - "native" - "lines" - "values" - "trace" - "-"
+	if methods.Length > 1
+		return "Only one test file or method can be selected"
+	if methods.Length is 0
+		return ""
+	if Directory.Exists(rest(0)) or ("unit" is in Options)
+		return "A functional test method requires one explicit file"
+	let names = TypeShape(File(rest(0)).ReadLines).MethodScope.names
+	methods.First is in names then "" else "MethodNotFound: " + methods.First + " in " + rest(0)

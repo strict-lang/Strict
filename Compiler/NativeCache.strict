@@ -3,11 +3,13 @@ has rest Texts
 IsEnabled Boolean
 	if (rest.Length < 2) or (File(rest(0)).Exists is false) or (File(rest(0)).Modified is 0)
 		return false
-	(NativeCompiler.Options(rest) - "small" - "fast" - "native").Length is 0
+	if (command is "test") and (TestRequest(rest).Selection is not "")
+		return false
+	(NativeCompiler.Options(rest) - "small" - "fast" - "native" - "unit").Length is 0
 CacheFile Text
 	Path(FileCompiler.Normalized(rest(0))).RemoveExtension.text + (command is "test" then ".test" else "") + ".nativecache"
 Key Text
-	"1\t" + Directory.Current + "\t" + command + "\t" + Text.Combine(rest, "\t")
+	"3\t" + Directory.Current + "\t" + command + "\t" + Text.Combine(rest, "\t")
 Output Text
 	let program = (command is "build") and NativeBuild.IsProgram(rest(0))
 	Toolchain(Platform.Current, rest(1)).Executable(NativeBuild.Output(rest(0), program))

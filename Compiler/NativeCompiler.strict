@@ -12,9 +12,17 @@ Run(arguments Texts) Number
 	failed
 Compiled(command Text, rest Texts, sources Texts = List(Text)) Number
 	if command is "build"
-		return Built(rest, sources)
-	let isCounting = (rest.Length > 2) and (rest(2) is "lines")
-	NativeBuild(logger, false).Compile(rest(0), rest(1), isCounting, isCounting is false, sources)
+		return Checked(rest, sources)
+	let request = TestRequest(rest)
+	if request.Message is not ""
+		logger.Log(request.Message)
+		return 2
+	let isCounting = request.Option is "lines"
+	let build = NativeBuild(logger, false, selection = request.Selection)
+	build.Compile(rest(0), rest(1), isCounting, isCounting is false, sources)
+Checked(rest Texts, sources Texts) Number
+	let failed = Execute(logger).Test(rest(0), rest(1), true)
+	failed is 0 then Built(rest, sources) else failed
 Built(rest Texts, sources Texts = List(Text)) Number
 	let options = Options(rest)
 	if ("fast" is in options) and ((options - "fast").Length > 0)

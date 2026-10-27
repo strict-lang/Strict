@@ -26,7 +26,7 @@ Looped(type TypeEntry, method MethodEntry) MethodEntry
 		instructions = instructions + replaced
 	if instructions.Length is method.instructions.Length
 		return method
-	MethodEntry(method.Name, method.parameters, method.returnType, Start + instructions, method.Slots)
+	MethodEntry(method.Name, method.parameters, method.declaredType, Start + instructions, method.Slots)
 IsTail(type TypeEntry, method MethodEntry, position Number) Boolean
 	Sample.IsTail(Counter, Counting, 1)
 	Sample.IsTail(Counter, Counting, 0) is false

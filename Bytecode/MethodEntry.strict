@@ -1,6 +1,6 @@
 has Name Text
 has parameters List(MemberEntry)
-has returnType Text
+has declaredType Text
 has instructions List(InstructionEntry)
 has Slots Number = 0
 constant PrintHi = InstructionEntry(InstructionType.Print, "Hi", (-1, 0), 3)
@@ -13,19 +13,24 @@ constant Logged = MethodEntry("Add", MemberEntry.LoggerMember, "Strict/Number", 
 constant Initializing = MethodEntry("from", List(MemberEntry), "Strict/A", (InstructionEntry.LoadNumber(0, 7), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "logger")))
 constant Branching = MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, 0), InstructionEntry.Return(0), InstructionEntry.Jump(InstructionType.JumpEnd, 0), InstructionEntry.Return(1)))
 constant HelloRun = MethodEntry("Run", List(MemberEntry), "None", (PrintHi, InstructionEntry.Return(0)))
+returnType Text
+	IsSlow then declaredType.Substring(5, declaredType.Length - 6) else declaredType
+IsSlow Boolean
+	declaredType.StartsWith("Slow(")
 Names(names BinaryNames) BinaryNames
+	MethodEntry("Run", List(MemberEntry), "Slow(Number)", List(InstructionEntry)).returnType is "Number"
 	HelloRun.Names(BinaryNames("a", "b")).names.Length is 5
 	MethodEntry("Add", MemberEntry.LoggerMember, "None", List(InstructionEntry)).Names(BinaryNames("a")).names.Length is 5
 	mutable result = names.With(Name)
 	for parameters
 		result = value.Names(result)
-	result = result.With(returnType)
+	result = result.With(declaredType)
 	for instructions
 		result = value.Names(result)
 	result
 Integers(names BinaryNames) Numbers
 	HelloRun.Integers(BinaryNames("Run", "None", "Hi")) is (0, 1, 0, 2, 7, 173, 1, 2, 2, 1, 0, 3, 4, 32, 0, 1, 0)
-	mutable integers = List(Number) + names.Index(Name) + names.Index(returnType) + parameters.Length
+	mutable integers = List(Number) + names.Index(Name) + names.Index(declaredType) + parameters.Length
 	for parameters
 		let member = value.Integers(names)
 		integers = integers + member.Length + member

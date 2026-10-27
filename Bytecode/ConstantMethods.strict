@@ -35,7 +35,7 @@ IsCall(node SyntaxNode, first SyntaxNode) Boolean
 	Growing.IsCall(SyntaxNode("MethodCall", "Count", SyntaxNode("Type", "Count")), SyntaxNode("Type", "Count")) is false
 	let isConstructor = (first.Kind is "Type") and (first.text is node.text)
 	(node.Kind is "Member") or (node.Kind is "MethodCall") and (isConstructor is false)
-Methods(types TypeCodegen, names Texts) List(MethodEntry)
+Methods(types TypeCodegen, names Texts) Slow(List(MethodEntry))
 	Growing.Methods(Counting, List(Text)).First.Name is "Started"
 	Growing.Methods(Counting, List(Text) + "Twice").Length is 0
 	let owner = types.Generator.target.TypeName
@@ -56,4 +56,4 @@ Method(types TypeCodegen, name Text, line Number) MethodEntry
 	mutable lined = List(Mutable(InstructionEntry))
 	for method.instructions
 		lined.Add(InstructionEntry(value.kind, value.texts, value.payload, line))
-	MethodEntry(method.Name, method.parameters, method.returnType, lined)
+	MethodEntry(method.Name, method.parameters, method.declaredType, lined)

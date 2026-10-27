@@ -17,7 +17,7 @@ Inlined List(TypeEntry)
 Methods(type TypeEntry) List(MethodEntry)
 	Sample.Methods(Caller).First.instructions(3).kind is InstructionType.IndexCall
 	for type.methods
-		MethodEntry(value.Name, value.parameters, value.returnType, Expanded(type, value.instructions, 3), value.Slots)
+		MethodEntry(value.Name, value.parameters, value.declaredType, Expanded(type, value.instructions, 3), value.Slots)
 Expanded(owner TypeEntry, instructions List(InstructionEntry), depth Number) List(InstructionEntry)
 	Sample.Expanded(Caller, Calling.instructions, 0) is Calling.instructions
 	Sample.Expanded(Caller, Calling.instructions, 1).Length is 6

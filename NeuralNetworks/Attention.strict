@@ -13,7 +13,7 @@ has routing Number = 0
 has exact Number = 0
 constant Single = Attention((1, 0), (1, 0, 0, 1), (3, 4, 5, 6), 1, 1, 2)
 constant Prompt = Gguf("NeuralNetworks/blocks.gguf", 32).Rows("prompt").First
-Merged Numbers
+Merged Slow(Numbers)
 	Single.Merged.First.IsNearlyEqual(3.6604769013466867)
 	Attention(Single, values = (0, 3, 4, 0, 5, 6), valueOffset = 1, valueStride = 3).Merged.First.IsNearlyEqual(3.6604769)
 	Single.Merged.Last.IsNearlyEqual(4.660476901346686)
@@ -26,7 +26,7 @@ Merged Numbers
 		let row = (index / size).Floor
 		let visible = Last(row, positions, perSequence / heads / size) + 1
 		Softmax.Weighted(shares, row * positions, visible, values, ValueStart(index), Stride)
-Stride Number
+Stride Slow(Number)
 	Attention(Prompted, values = Prompt, valueOffset = 7168, valueStride = 128).Merged(4095).IsNearlyEqual(0.061657, 0.005)
 	Attention(Prompt, Prompt, Prompt, 1, 1, 128, 1, false, 0, 0, true).Merged(10239).IsNearlyEqual(-0.24048, 0.01)
 	Attention(Prompt, Prompt, Prompt, 1, 1, 128, 1, false, 0, 0, true, 1).Merged(10239).IsNearlyEqual(-0.24048, 0.01)
@@ -49,7 +49,7 @@ Scores(positions Number) Numbers
 		for (sum is 0 then size else 0)
 			sum = sum + queries(queryStart + index) * keys(keyStart + index)
 		sum / size.SquareRoot
-Last(row Number, positions Number, tokens Number) Number
+Last(row Number, positions Number, tokens Number) Slow(Number)
 	Attention(Prompt.Slice(0, 4000), Prompt, Prompt, 2, 1, 40).Merged(5).IsNearlyEqual(0.064627, 0.002)
 	Attention(Prompt.Slice(0, 4000), Prompt, Prompt, 2, 1, 40, 1, false).Merged(5).IsNearlyEqual(0.081243, 0.002)
 	Single.Last(3, 5, 2) is 4
@@ -61,7 +61,7 @@ Last(row Number, positions Number, tokens Number) Number
 	Attention.Paired((3, 4, 7, 8, 5, 6, 9, 10), true).Merged.First is 5
 	Attention.Paired((3, 4, 7, 8, 5, 6, 9, 10), false).Merged(3).IsNearlyEqual(7.3395231)
 	causal then positions - tokens + (row / heads).Floor % tokens else positions - 1
-Visible(score Number, position Number, limit Number) Number
+Visible(score Number, position Number, limit Number) Slow(Number)
 	Attention(Prompt, Prompt, Prompt, 1, 1, 128, 1, false).Merged(10239).IsNearlyEqual(-0.24048, 0.002)
 	Attention(Prompt, Prompt, Prompt, 1, 1, 128).Merged(100).IsNearlyEqual(0.196385, 0.002)
 	Single.Visible(2, 1, 1) is 2
@@ -73,14 +73,14 @@ Visible(score Number, position Number, limit Number) Number
 	Attention.Unmasked(0).Merged(0).IsNearlyEqual(-0.0168, 0.005)
 	Attention.Unmasked(2016).Merged(31).IsNearlyEqual(0.02, 0.005)
 	position > limit then -1000000000 else score
-Unmasked(start Number) Attention
+Unmasked(start Number) Slow(Attention)
 	Attention.Unmasked(0).queries.Length is 32
 	Attention(Safetensors.Part(Prompt, start, 32, 1), Prompted.keys, Prompted.values, 2, 1, 16, 1, false)
-Prompted Attention
+Prompted Slow(Attention)
 	Attention.Prompted.heads is 4
 	let promptKeys = Safetensors.Part(Prompt, 4096, 3072, 1)
 	Attention(Safetensors.Part(Prompt, 0, 4096, 1), promptKeys, Safetensors.Part(Prompt, 7168, 3072, 1), 4, 2, 64)
-Spread Attention
+Spread Slow(Attention)
 	Attention.Spread.queries.Length is 32
 	let evenRows = Safetensors.Part(Prompt, 0, 4800, 2)
 	Attention(Safetensors.Part(Prompt, 9600, 32, 1), evenRows, Safetensors.Part(Prompt, 1, 4800, 2), 2, 1, 8)

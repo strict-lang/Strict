@@ -27,7 +27,7 @@ Names(types List(TypeEntry)) Texts
 		short.IndexOf("(") < 0 then short else short.Substring(0, short.IndexOf("("))
 Header Numbers
 	Mixed.Header.Last is 3
-	BinarySources(List(Text)).Header is (1, 0, 4)
+	BinarySources(List(Text)).Header is (1, 0, 6)
 	BinaryNames(sources).Integers + TypeEntry.FormatVersion + stamps
 Matches(stream Numbers, start Number) Boolean
 	Mixed.Matches((0, 1, 2, 3), 1)

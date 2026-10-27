@@ -54,8 +54,8 @@ MayFail(node SyntaxNode, block CodeBlock) Boolean
 		return ErrorScope(values).IsFallible(node.text, block) or values.IsMethodCall(node, block)
 	if node.Kind is "Binary"
 		return IsFailing(node, block)
-	if (node.Kind is "Call") and (node.text is in ("List", "Dictionary", "Mutable"))
-		return (node.text is "Mutable") and MayFail(node.children(0), block)
+	if (node.Kind is "Call") and (node.text is in ("List", "Dictionary", "Mutable", "Slow"))
+		return (node.text is in ("Mutable", "Slow")) and MayFail(node.children(0), block)
 	(node.Kind is in ("Call", "MethodCall", "Index")) or (node.Kind is "Member") and values.IsMethodCall(node, block)
 IsFailing(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsFailing(SyntaxNode("Binary", "+", (ValueCodegen.One, ValueCodegen.One)), CodeBlock.Empty) is false

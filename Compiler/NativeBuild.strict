@@ -5,6 +5,7 @@ has isWeb Boolean = false
 has isAndroid Boolean = false
 has isIOS Boolean = false
 has isSimulator Boolean = false
+has selection Text = ""
 constant Fast = " -O2"
 constant Quick = " -O0"
 constant Small = " -Os"
@@ -16,7 +17,7 @@ IsProgram(path Text) Boolean
 Compile(path Text, root Text, isCounting = false, isGating = false, sources Texts = List(Text)) Number
 	let isTesting = (isCounting or isGating) and ((isAndroid or isIOS) is false)
 	let isProgram = (isTesting is false) and IsProgram(path)
-	let module = NativeFolder(logger).Module(path, root, isCounting, isProgram, Target, sources)
+	let module = NativeFolder(logger, selection).Module(path, root, isCounting, isProgram, Target, sources)
 	if module.types.Length is 0
 		return 1
 	let base = Output(path, isProgram)
@@ -83,7 +84,7 @@ IsUnchanged(base Text, mlir Text, tools Toolchain) Boolean
 	if isCross or (previous.Exists is false) or (sources.IsCurrent(tools.Executable(base), inputs) is false)
 		return false
 	Text.Combine(previous.ReadLines, "\n") is mlir
-Rebuilt(base Text, mlir Text, tools Toolchain) Text
+Rebuilt(base Text, mlir Text, tools Toolchain) Slow(Text)
 	NativeBuild(Logger).Rebuilt("Compiler/output/Written", "x", Toolchain.OnWindows).StartsWith("mlir-opt failed")
 	if IsUnchanged(base, mlir, tools)
 		return "Built " + tools.Executable(base) + ", unchanged"
@@ -101,7 +102,7 @@ Ran(base Text, tools Toolchain, path Text, isCounting Boolean) Number
 		File(executable).Delete
 		File(base + ".mlir").Delete
 	result.exitCode
-Linked(base Text, tools Toolchain) Text
+Linked(base Text, tools Toolchain) Slow(Text)
 	NativeBuild.Linked("Compiler/output/missing", Toolchain.OnWindows).StartsWith("mlir-opt failed")
 	let executable = tools.Executable(base)
 	let isSwapped = (Platform.Current is Platform.Windows) and (tools.isWeb is false) and File(executable).Exists
@@ -141,7 +142,7 @@ Output(path Text, isProgram Boolean) Text
 	if Directory.Exists(path)
 		return source + "/Tests.test"
 	source.Substring(0, source.Length - 7) + (isProgram then "" else ".test")
-Mlir(program Text, root Text, platform Number) Text
+Mlir(program Text, root Text, platform Number) Slow(Text)
 	NativeBuild.Mlir("module {\n}", ".", Platform.Linux).Length > 100000
 	NativeBuild.Mlir("module {\n}", ".", Platform.MacOS).IndexOf("llvm.func @strict_opendir(") > 0
 	NativeBuild.Mlir("module {\n}", ".", Platform.Web).IndexOf("@strict_web(") > 0

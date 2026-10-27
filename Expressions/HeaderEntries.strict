@@ -3,6 +3,7 @@ constant Mutating = HeaderEntries(HeaderTokens(Tokenizer("Add(x Number) Mutable(
 constant Adding = HeaderEntries(HeaderTokens(Tokenizer("Add(x Number) Number").Tokens))
 constant Defaulting = HeaderEntries(HeaderTokens(Tokenizer("Add(x Number, y List(Text) = List(Text), z = Basis.None)").Tokens))
 Parameters Scope
+	HeaderEntries(HeaderTokens(Tokenizer("Merged Slow(Numbers)").Tokens)).Parameters.TypeOf("Merged slow") is "Slow"
 	Mutating.Parameters.TypeOf("Add mutable") is "Mutable"
 	Adding.Parameters.names is ("Add", "Add types", "Add required")
 	Defaulting.Parameters.TypeOf("Add z default") is "Basis . None"
@@ -12,7 +13,8 @@ Parameters Scope
 	let parameters = (Text.Combine(header.ParameterNames, ","), Text.Combine(header.ParameterTypes, ","), Required to Text)
 	let steps = Defaults(Steps(header.tokens).Entries(header))
 	let entries = Scope((name, name + " types", name + " required"), parameters).WithAll(steps.names, steps.types)
-	header.ReturnsMutable then entries.With(name + " mutable", "Mutable") else entries
+	let marked = header.ReturnsSlow then entries.With(name + " slow", "Slow") else entries
+	header.ReturnsMutable then marked.With(name + " mutable", "Mutable") else marked
 Required Number
 	HeaderEntries(HeaderTokens(Tokenizer("Add(x Number, y = 1, z Number with value > 0)").Tokens)).Required is 2
 	HeaderEntries(HeaderTokens(Tokenizer("Add(x Number, y Text = \"a\")").Tokens)).Required is 1

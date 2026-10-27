@@ -1,11 +1,12 @@
 has logger
+has selection Text = ""
 constant Adder = BinaryFile("./Examples/NativeAdd/Adder.strict")
 constant AdderFiles = SourceFiles(".").Of(Adder.source)
 Run(arguments Texts) Number
 	let failed = Failures(List(Text) + arguments(0), arguments(1), true)
 	if failed > 0
 		return failed
-	let types = Loaded(arguments(0), arguments(1))
+	let types = Loaded(arguments(0), arguments(1), false)
 	if HasRun(types.First) is false
 		logger.Log(Summary(0, arguments(0)))
 		return 0
@@ -13,13 +14,13 @@ Run(arguments Texts) Number
 	for Range(2, arguments.Length)
 		texts.Add(VmValue.OfText(arguments(value)))
 	Started(types, arguments(0)).Launch(types.First.Name, texts)
-Test(path Text, root Text) Number
+Test(path Text, root Text, isQuiet = false) Number
 	Execute(Logger).Test("Missing.strict", ".") is 1
 	if File(path).Exists and (Directory.Exists(path) is false)
-		return Failures(List(Text) + path, root, false)
+		return Failures(List(Text) + path, root, isQuiet)
 	Directory.Exists(path) then Folders(logger).Tested(path, root) else 1
 Failures(paths Texts, root Text, isQuiet Boolean) Number
-	let stale = Stale(paths)
+	let stale = selection is "" then Stale(paths) else paths
 	let files = stale.Length is 0 then List(Text) else SourceFiles(root).Of(FileCompiler.Normalized(stale.First))
 	let inference = ResolveCheck.Inference(files)
 	mutable failed = 0
@@ -67,16 +68,16 @@ Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInfer
 	let cache = BinaryFile(FileCompiler.Normalized(path))
 	let ignored = DataFiles.Ignored((Directory.Current, root))
 	let stamped = BinarySources(files + DataFiles(ignored).Selected(List(Text) + cache.source)).Stamped
-	let types = FileCompiler(logger, isQuiet).Built(path, root, true, files, inference)
+	let types = FileCompiler(logger, isQuiet, selection).Built(path, root, true, files, inference)
 	if types.Length is 0
 		return 1
 	let before = Process.FilesRead.Length
 	let failed = isTested then Tested(types, path) else 0
-	if (failed is 0) and (IsEdited(path) is false)
+	if (failed is 0) and (selection is "") and (IsEdited(path) is false)
 		let header = Completed(cache, root, files, stamped, before).Kept(types).Header
 		cache.Saved(cache.Packed(header, types, List(TypeEntry)))
 	failed
-Completed(cache BinaryFile, root Text, files Texts, stamped BinarySources, before Number) BinarySources
+Completed(cache BinaryFile, root Text, files Texts, stamped BinarySources, before Number) Slow(BinarySources)
 	Execute(Logger).Completed(Adder, ".", AdderFiles, BinarySources.Mixed, Process.FilesRead.Length).stamps is (1, 2, 3)
 	let read = Read(before)
 	let current = SourceFiles(root).Of(cache.source)
@@ -101,10 +102,11 @@ Tested(types List(TypeEntry), path Text) Number
 Loaded(path Text, root Text, withTests = true, sources Texts = List(Text)) List(TypeEntry)
 	let started = Process.Elapsed
 	let cache = BinaryFile(FileCompiler.Normalized(path))
-	let types = IsEdited(path) then List(TypeEntry) else cache.Current(cache.Unpacked(File(cache.Path).ReadBytes))
+	let bypass = IsEdited(path) or (selection is not "") or (withTests is false)
+	let types = bypass then List(TypeEntry) else cache.Current(cache.Unpacked(File(cache.Path).ReadBytes))
 	let status = types.Length > 0 then "hit" else "miss"
 	BuildProfile(logger).Reported("Bytecode cache " + status, started)
-	types.Length > 0 then types else FileCompiler(logger).Compiled(path, root, withTests, sources)
+	types.Length > 0 then types else FileCompiler(logger, false, selection).Compiled(path, root, withTests, sources)
 HasRun(type TypeEntry) Boolean
 	Execute.HasRun(TypeEntry.HelloLogger)
 	Execute.HasRun(TypeEntry("A", List(MemberEntry), List(MethodEntry))) is false
@@ -120,4 +122,5 @@ Started(types List(TypeEntry), path Text, isTracing = false) Machine
 	Execute(Logger).Started(List(TypeEntry) + TypeEntry.HelloLogger, "Examples/HelloLogger.strict").folder is "Examples"
 	Execute(Logger).Started(List(TypeEntry) + TypeEntry.HelloLogger, "A.strict", true).isTracing
 	let rewritten = TailCalls(Inliner(types).Inlined).Rewritten
-	Machine(Resolver(rewritten).Resolved, logger, List(VmValue), Path(path).PathOnly.text, isTracing).Prepared
+	let folder = Path(path).PathOnly.text
+	Machine(Resolver(rewritten).Resolved, logger, ConstantCache(List(VmValue)), folder, isTracing).Prepared
