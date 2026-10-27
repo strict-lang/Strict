@@ -1,4 +1,6 @@
 has call Invocation
+constant VmRuntime = ("Frame", "Machine", "Resolver", "Constants", "Accessor")
+constant VmFiles = ("Automatic", "Borrowing", "ConstantFolding", "ConversionCodegen", "BinaryFile", "ConstantMethods", "ErrorCodegen", "FileCompiler", "IndexCodegen", "ListCodegen", "LoopCodegen", "LoopHoisting", "MethodCodegen", "OperatorCodegen", "SelectorCodegen", "Specialization", "TestLines", "TypeCodegen", "TypeSums", "ValueCodegen", "ZipReader", "ZipWriter")
 Result VmValue
 	let arguments = call.Arguments
 	if call.MethodName is "Extended"
@@ -6,6 +8,18 @@ Result VmValue
 	if call.MethodName is "Started"
 		let place = arguments(0).text
 		let slow = arguments(1).IsTrue
-		let extended = (slow is false) and TestBudget.IsVmException(place)
+		let extended = (slow is false) and IsVmException(place)
 		return VmValue.OfNumber(extended then TestBudget.Extended(place) else TestBudget.Started(place, slow))
 	VmValue.OfNumber(TestBudget.Finished(arguments(0).number))
+IsVmException(place Text) Boolean
+	IsVmException("x in Expression at Bytecode/ValueCodegen.strict:line 18")
+	IsVmException("x in Expression at Examples/ValueCodegen.strict:line 18") is false
+	IsVmException("x at Bytecode/ValueCodegen.strict in Fake at Ordinary.strict:line 1") is false
+	let start = place.LastIndexOf(" at ") + 4
+	let end = place.LastIndexOf(":line ")
+	if (start < 4) or (end < start)
+		return false
+	let source = Path(place.Substring(start, end - start).Replace("\\", "/"))
+	let folder = Path(source.PathOnly.text).FileName.text
+	let name = source.FileName.RemoveExtension.text
+	(folder is "Bytecode") and (name is in VmFiles) or (folder is "Runtime") and (name is in VmRuntime)

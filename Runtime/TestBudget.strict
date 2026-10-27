@@ -1,4 +1,3 @@
-constant VmFiles = ("Automatic", "BinaryFile", "ConstantMethods", "FileCompiler", "IndexCodegen", "ListCodegen", "LoopCodegen", "LoopHoisting", "MethodCodegen", "OperatorCodegen", "SelectorCodegen", "Specialization", "TestLines", "TypeCodegen", "TypeSums", "ValueCodegen", "ZipReader")
 Started(place Text, isSlow Boolean) Number
 	if (isSlow is false) and (place.Length is 0)
 		return Error("Unit test must have a description")
@@ -7,14 +6,3 @@ Finished(started Number) Number
 	(Process.Elapsed - started) * 1000
 Extended(place Text) Number
 	place.Length > 0 then Process.Elapsed else Error("Unit test must have a description")
-IsVmException(place Text) Boolean
-	IsVmException("x in Expression at Bytecode/ValueCodegen.strict:line 18")
-	IsVmException("x in Expression at Examples/ValueCodegen.strict:line 18") is false
-	IsVmException("x at Bytecode/ValueCodegen.strict in Fake at Ordinary.strict:line 1") is false
-	let start = place.LastIndexOf(" at ") + 4
-	let end = place.LastIndexOf(":line ")
-	if (start < 4) or (end < start)
-		return false
-	let source = Path(place.Substring(start, end - start).Replace("\\", "/"))
-	let folder = Path(source.PathOnly.text).FileName.text
-	(folder is "Bytecode") and (source.FileName.RemoveExtension.text is in VmFiles)
