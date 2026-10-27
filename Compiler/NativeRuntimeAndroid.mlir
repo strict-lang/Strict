@@ -40,32 +40,8 @@
     %result = func.call @strict_bits(%name) : (!llvm.ptr) -> f64
     return %result : f64
   }
-  llvm.func @pthread_self() -> i64
-  llvm.func @pthread_getattr_np(i64, !llvm.ptr) -> i32
-  llvm.func @pthread_attr_getstack(!llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
-  llvm.func @pthread_attr_destroy(!llvm.ptr) -> i32
   func.func private @strict_stack_lowest(%stack: !llvm.ptr) -> i64 {
-    %one = arith.constant 1 : i64
-    %attributes = llvm.alloca %one x !llvm.array<64 x i8> : (i64) -> !llvm.ptr
-    %address = llvm.alloca %one x !llvm.ptr : (i64) -> !llvm.ptr
-    %size = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
-    %thread = llvm.call @pthread_self() : () -> i64
-    %got = llvm.call @pthread_getattr_np(%thread, %attributes) : (i64, !llvm.ptr) -> i32
-    %success = arith.constant 0 : i32
-    %failed = arith.cmpi ne, %got, %success : i32
-    cf.cond_br %failed, ^fail, ^read
-  ^read:
-    %read = llvm.call @pthread_attr_getstack(%attributes, %address, %size) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
-    %destroyed = llvm.call @pthread_attr_destroy(%attributes) : (!llvm.ptr) -> i32
-    %unreadable = arith.cmpi ne, %read, %success : i32
-    cf.cond_br %unreadable, ^fail, ^done
-  ^fail:
-    func.call @strict_gc_fail() : () -> ()
-    %fallback = llvm.ptrtoint %stack : !llvm.ptr to i64
-    return %fallback : i64
-  ^done:
-    %base = llvm.load %address : !llvm.ptr -> !llvm.ptr
-    %lowest = llvm.ptrtoint %base : !llvm.ptr to i64
+    %lowest = func.call @strict_thread_stack_lowest(%stack) : (!llvm.ptr) -> i64
     return %lowest : i64
   }
   func.func private @strict_gpu_library(%isAmd: i1) -> !llvm.ptr {

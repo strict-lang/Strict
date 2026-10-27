@@ -1,18 +1,38 @@
 has machine Machine
 constant Keeping = TypeEntry("Strict/Keeping", List(MemberEntry) + MemberEntry("Seven", "Strict/Number", List(InstructionEntry), true), List(MethodEntry) + MethodEntry("Seven", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 7), InstructionEntry.Return(0))))
 Computed Machine
-	Machine(Resolver(List(TypeEntry) + Keeping).Resolved).Prepared.prototypes.First.items.First.number is 7
-	mutable prototypes = machine.prototypes
+	Constants(Machine(Resolver(List(TypeEntry) + Keeping).Resolved).Prepared).Value(0, 0).number is 7
+	mutable created = List(Mutable(VmValue))
 	for machine.types
-		prototypes(index) = Filled(index, Machine(machine, prototypes = prototypes))
-	Machine(machine, prototypes = prototypes)
-Filled(route Number, current Machine) VmValue
-	Constants(Machine.Hello).Filled(0, Machine.Hello.Prepared).kind is "HelloLogger"
-	let type = current.types(route)
-	let prototype = current.prototypes(route)
+		created.Add(Filled(index))
+	Machine(machine, prototypes = ConstantCache(created))
+Filled(route Number) VmValue
+	Constants(Machine.Hello.Prepared).Filled(0).kind is "HelloLogger"
+	let type = machine.types(route)
+	let prototype = machine.prototypes.At(route)
 	mutable items = prototype.items
 	for type.methods
 		let slot = type.ConstantSlot(value)
 		if slot >= 0
-			items(slot) = current.Executed(route, value, Invocation(InstructionEntry.Return(0), List(VmValue), prototype))
+			items(slot) = VmValue("$Constant", route, slot to Text, List(VmValue) + VmValue.OfNumber(index))
 	VmValue(prototype.kind, prototype.number, prototype.text, items)
+Value(route Number, slot Number) VmValue
+	let prototype = machine.prototypes.At(route)
+	let found = prototype.items(slot)
+	if found.kind is "$Computing"
+		return VmValue.OfError("RecursiveConstant")
+	if found.kind is not "$Constant"
+		return found
+	Saved(route, slot, VmValue(found, kind = "$Computing"))
+	let method = machine.types(route).methods(found.items.First.number)
+	let call = Invocation(InstructionEntry.Return(0), List(VmValue), prototype)
+	Saved(route, slot, machine.Executed(route, method, call))
+Saved(route Number, slot Number, result VmValue) VmValue
+	let prototype = machine.prototypes.At(route)
+	let items = Storage(machine.types).Replaced(prototype.items, slot, result)
+	machine.prototypes.Stored(route, VmValue(prototype, items = items))
+	result
+Member(type TypeEntry, slot Number) VmValue
+	let route = Resolver(machine.types).Position(type)
+	let isPrepared = (route >= 0) and (route < machine.prototypes.entries.Length)
+	isPrepared then Value(route, slot) else Natives.Initial(type.members(slot))

@@ -96,7 +96,9 @@ ImplicitOwner(name Text, scope Scope) Text
 IsMember(type Text, name Text) Boolean
 	Plain.IsMember("Greeter", "text")
 	Plain.IsMember("Greeter", "Greet") is false
-	type is TypeName then shape.MemberScope.TypeOf(name) is not "" else types.MembersOf(type).TypeOf(name) is not ""
+	CallTarget(KnownTypes.Measured, Greeter, "Strict/C", List(Text)).IsMember("F", "Length") is false
+	let member = type is TypeName then shape.MemberScope.TypeOf(name) else types.MembersOf(type).TypeOf(name)
+	(member is not "") and ((member is not name) or (types.MethodsOf(member).TypeOf(name) is ""))
 InheritingMember(name Text) Text
 	CallTarget(NoTypes, TypeShape("has a A"), "Strict/C", List(Text)).InheritingMember("x") is "a"
 	Plain.InheritingMember("x") is ""

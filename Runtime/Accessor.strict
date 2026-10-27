@@ -80,7 +80,7 @@ Accessed(call Invocation) VmValue
 	if payload.Length <= at
 		return VmValue.None
 	if payload(at) is Computed
-		return machine.prototypes(payload(call.Resolution)).items(payload(at + 1))
+		return Constants(machine).Value(payload(call.Resolution), payload(at + 1))
 	mutable found = call.Instance
 	for (payload.Length - at) / 2
 		found = Step(found, payload(at + index * 2), payload(at + index * 2 + 1))

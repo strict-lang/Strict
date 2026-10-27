@@ -1,0 +1,11 @@
+has entries List(VmValue)
+At(index Number) VmValue
+	entries(index)
+Stored(index Number, element VmValue) Number
+	Error("ConstantCache writes require the native runtime: " + index + " " + element.kind)
+Hosted(call Invocation) VmValue
+	let cache = ConstantCache(call.Instance.Member(0).items)
+	let index = call.Arguments.First.number
+	if call.MethodName is "At"
+		return cache.At(index)
+	VmValue.OfNumber(cache.Stored(index, call.Arguments.Last))

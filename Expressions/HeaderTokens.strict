@@ -18,12 +18,15 @@ ImplicitType(nameIndex Number) Text
 ValueType(start Number) Text
 	HeaderTokens("constant", "a", "=", "(", "1", ",", "2", ")").ValueType(3) is "Numbers"
 	HeaderTokens("constant", "a", "=", "-", "1").ValueType(3) is "Number"
+	HeaderTokens(Tokenizer("constant a = IsWindows then \"x\" else \"\"").Tokens).ValueType(3) is "Text"
+	let isWhole = tokens(0) is in ("constant", "has")
+	let lowest = isWhole then SyntaxParser(tokens).LowestOperatorIndex(start, tokens.Length) else -1
+	if (lowest > 0) and (tokens(lowest) is "else")
+		return ValueType(lowest + 1)
 	let first = tokens(start)
 	if first is "("
 		return ValueType(start + 1) + "s"
-	if first is "-"
-		return "Number"
-	let kind = SyntaxParser(tokens).Leaf(first).Kind
+	let kind = first is "-" then "Number" else SyntaxParser(tokens).Leaf(first).Kind
 	kind is "Identifier" then first else kind
 MemberName Text
 	HeaderTokens("has", "Math", "/", "Size").MemberName is "Size"
@@ -38,7 +41,7 @@ TypeName(start Number) Text
 	if start + 2 >= tokens.Length or tokens(start + 1) is not in ("/", "(")
 		return tokens(start)
 	let inner = TypeName(start + 2)
-	if (tokens(start + 1) is "/") or (tokens(start) is "Mutable")
+	if (tokens(start + 1) is "/") or (tokens(start) is in ("Mutable", "Slow"))
 		return inner
 	let isList = (tokens(start) is "List") and inner.Lower is not inner
 	isList then inner + "s" else Arguments(start, inner)
@@ -52,6 +55,7 @@ Arguments(start Number, inner Text) Text
 	let isKept = (tokens(start) is not "Range") and (tokens(start + 3) is in (")", "("))
 	tokens(start) + (isKept then "(" + inner + ")" else "")
 ReturnType Text
+	HeaderTokens(Tokenizer("Merged Slow(Numbers)").Tokens).ReturnType is "Numbers"
 	HeaderTokens("Run", "Number").ReturnType is "Number"
 	HeaderTokens("Add", "(", "x", ")").ReturnType is "None"
 	HeaderTokens("Add", "(", "x", ")", "Mutable", "(", "List", ")").ReturnType is "List"
@@ -109,6 +113,11 @@ ReturnsMutable Boolean
 	HeaderTokens("Run", "Number").ReturnsMutable is false
 	constant start = ParametersEnd + 1
 	start < tokens.Length and (tokens(start) is "Mutable")
+ReturnsSlow Boolean
+	HeaderTokens(Tokenizer("Merged Slow(Numbers)").Tokens).ReturnsSlow
+	HeaderTokens("Run", "Number").ReturnsSlow is false
+	let start = ParametersEnd + 1
+	start < tokens.Length and (tokens(start) is "Slow")
 MutableParameters Texts
 	HeaderTokens(Tokenizer("Add(x, mutable list) Mutable(List)").Tokens).MutableParameters is ("list")
 	mutable names = List(Mutable(Text))

@@ -71,13 +71,13 @@ Specialized(codegen TypeCodegen, start Number, name Text) MethodEntry
 	let header = Header(codegen.lines(start), name)
 	let lines = codegen.lines.Slice(0, start) + header + codegen.lines.Slice(start + 1, codegen.lines.Length - start - 1)
 	let method = TypeCodegen(codegen.fullName, lines, codegen.inference, codegen.typeNames).Method(start)
-	MethodEntry(name, method.parameters, method.returnType, method.instructions)
+	MethodEntry(name, method.parameters, method.declaredType, method.instructions)
 Completed(codegen TypeCodegen, entry TypeEntry, targets Texts) TypeEntry
 	Plain.Completed(Coding, Unused, List(Text) + "Strict/Boxes/Using.Through(Wrapped(Halver))").methods.Length is 1
 	let prefix = codegen.fullName + "."
 	mutable names = List(Text)
 	for targets
 		let method = value.StartsWith(prefix) then value.Substring(prefix.Length, value.Length - prefix.Length) else ""
-		if (method.IndexOf("(") > 0) and (entry.Chosen(method, -1, "", List(Text)) < 0) and (method is not in names)
+		if (method is not "") and (entry.Chosen(method, -1, "", List(Text)) < 0) and (method is not in names)
 			names = names + method
-	names.Length is 0 then entry else TypeEntry(entry.Name, entry.members, entry.methods + Methods(codegen, names))
+	names.Length is 0 then entry else TypeEntry(entry.Name, entry.members, entry.methods + codegen.Methods(names))

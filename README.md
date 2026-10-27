@@ -47,8 +47,10 @@ The base types are the documentation: every method starts with tests showing how
 `strict` (`strict.exe` on Windows) is in this folder next to the base types, put it on the PATH. No .NET or other runtime is needed (the C# implementation that bootstrapped Strict is on the `dotnet` branch).
 ```
 strict Examples/Sum.strict 5 10 20        run on the Strict VM, arguments go to Run
-strict test Examples/Sum.strict           run the inline tests on the Strict VM (a folder: every file and package sub folder)
-strict build Examples/Sum.strict          build the native executable without running tests
+strict test Examples/Sum.strict           explicitly run this file, including Slow tests, on the VM
+strict test Examples/Sum.strict Run       explicitly run the tests of one method
+strict test Examples/Sum.strict unit      run only unit tests (a folder always runs only unit tests)
+strict build Examples/Sum.strict          pass cached or current unit tests, then build the executable
 strict build Examples/Sum.strict linux    also the Linux executable (on Windows through WSL)
 strict build Examples/Sum.strict web      .html, .js and .wasm for the browser (Emscripten, installed when missing)
 strict build Examples/Sum.strict android  arm64-v8a shared library and assets in Release/Android (Android NDK)
@@ -65,11 +67,11 @@ strict test Examples/Sum.strict values    run the tests on the Strict VM, then s
 strict update .                           copy or download the packages of a folder again
 strict version                            version and build time of this strict
 ```
-- `strict build` compiles without running tests, including compiler refreshes, web and library builds. A type without `Run` produces `Name.test.exe` without executing it. Use `strict test <file>` for VM tests or `strict test <file> native` to build and run native tests explicitly; `lines` also collects per-line timings. Native test failures and toolchain errors return a nonzero exit code; neither falls back to the VM. CI requests both builds and native tests.
+- `strict build` requires the file's unit tests to pass on the VM before native compilation, including compiler refreshes, web and library builds. Passed unchanged unit tests reuse their `.strictbinary`. A type without `Run` produces its unit-test executable. `strict test <file> native` explicitly runs that file's tests natively; `lines` also collects per-line timings. Test failures and toolchain errors fail the command.
 - Desktop builds and successful native tests keep a `.nativecache` dependency stamp. When sources, native headers/flags, content, compiler/tools and required outputs match, `strict` reports `Up to date` or `Tests up to date` and skips the compiler and test executable entirely. Build options are part of the key. Instrumented tests and cross-platform/library builds bypass this stamp. VM tests continue using their existing `.strictbinary` results.
 - `strict build` and `strict test ... lines` run `Compiler/NativeCompiler.exe`; when a file of `Compiler/`, `Bytecode/` or `Expressions/` or a `Compiler/NativeRuntime*.mlir` is newer than it (an edit or a pull), they build the compiler again first and note that in `Compiler/NativeCompiler.checked`: the runtime files are read by every build while the compiler logic is fixed in the executable, after a pull a compiler from before a change of both (the lanes of grouped GPU loops) wrote only half of the heads of `Qwen3Block.Rotated` on the GPU and Qwen3.8-Flash-Next decoded NaN.
 - Exit codes: 0 success, `test` returns the number of failed tests, `build` returns nonzero on a compilation or toolchain failure, 2 wrong usage or a missing file, an unhandled Error from `Run` exits with 1.
-- `strict check` prints each issue as `<File>.strict:line <N>: <Rule>: <detail>`.
+- `strict check` prints each issue as `<File>.strict:line <N>: <Rule>: <detail>`. It also runs unit tests after static validation succeeds; a failed unit test fails the check.
 - Files whose tests passed on the Strict VM get a `Name.strictbinary` (bytecode of all used types), while it is up to date `strict test` reports them as passed right away and running and building reuse it. Passing native tests write none, `strict test` still runs them on the VM.
 - Types are looked up in the current folder (and its sub folders in a project), next to `strict` (base types and packages like `Math`), in the projects next to the current one, then in GitHub repositories linked in the project's README and github.com/strict-lang (copied into the project with a `.origin` file).
 - Errors before anything runs: `TypeNotFound`, `ParsingFailed`, `NameNotFound`, `MethodNotFound`, each with file and line. At runtime an Error prints its name and the stack trace back to the `.strict` source (at most the first 40 and last 10 lines), a call nested too deep returns `StackOverflow`.
@@ -271,3 +273,16 @@ Remove Text
 
 ## History
 The idea for my (Benjamin Nitschke, CEO of Delta Engine) own programming language started in the 1990s after reading "Gödel, Escher, Bach" by Douglas R. Hofstadter. A first iteration in 2008-2010 worked but was dropped for Lua. This repository started 2020-06-16 for editor plugins and new parsing ideas based on the [old Strict sdk](https://github.com/strict-lang/sdk), with some help from employees in 2020-2022 until the parent project ran out of funding. Since mid 2025 I am working on it again in the evenings and on weekends, towards the original goal: a base layer language computers can actually understand and build on, the way DNA and proteins are the building blocks of life.
+
+
+## Unit and functional tests
+
+Unmarked inline tests normally have a hard 20 ms wall-time limit on the VM and in native test executables, including their leading local test setup. Named compiler/runtime self-test files listed in Runtime/HostedBudget.strict have a bounded 100 ms VM allowance; they stay automatic, and their native tests retain 20 ms. Exceeding it fails with `TestDurationMustNotExceedTwentyMilliseconds`, the expression and clickable source location. A runtime watchdog also stops non-returning or blocked unit tests. Timer setup, compilation and result formatting are outside the measured test body. Shared constants initialize on first use inside that budget, once per VM execution; unused fixture getters do no work. Tests that do file/model/application integration belong to explicitly requested functional runs.
+
+Declare a method's return as `Slow(T)` to make its inline tests functional. Like `Mutable(T)`, ordinary callers use `T`; the declared wrapper remains available as metadata. `Slow(3)` behaves as a Number and `Slow((1, 2))` as Numbers. An unmarked test may call a Slow algorithm with a small fixture, but still has to finish within its unit budget. Slow is a cost hint for eligible parallel loops, including calls to marked methods; existing purity/GPU safety rules still apply.
+
+Automatic builds, checks, folder/package tests, VS Code typing checks and value tracing exclude Slow tests and their unreachable fixture initializers. Explicit `strict test File.strict` includes them, and `strict test File.strict Method` selects one method. Adding `native` or `lines` retains that selection. An explicit file run (`strict File.strict`) first runs its inline tests, including Slow tests, then its Run method if present. Functional tests can run a game/model or leave an application open for its caller; only one explicit file or method is selected per invocation. A folder always means unit tests. VS Code bulk runs exclude manual methods; explicitly selecting one file or method runs its functional tests sequentially and remains cancellable without an automatic process timeout.
+
+Only successful automatic unit runs write the reusable `.strictbinary` result. Explicit functional runs are executed again when requested and do not overwrite that unit result. Old bytecode/native build stamps are invalidated for this policy. Test-runner bytecode includes only the methods and constant getters reachable from selected tests; an unused model fixture cannot run merely because its source is in the file.
+
+`python Runtime/check_tests.py` covers VM/native deadlines, build failure, local setup, transparent Slow values, automatic fixture exclusion, explicit selection and test-before-Run ordering. Runtime/README.md describes the VM and Compiler/README.md the build pipeline.

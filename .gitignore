@@ -193,3 +193,5 @@ NeuralNetworks/qwen3/
 /Examples/CacheProbe
 /Examples/BuildCheck69w0auym
 *.py
+
+!Runtime/check_tests.py

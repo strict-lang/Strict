@@ -412,6 +412,29 @@
     %guaranteed = llvm.call @SetThreadStackGuarantee(%reserve) : (!llvm.ptr) -> i32
     return
   }
+  func.func private @strict_file_size(%name: !llvm.ptr) -> i64 {
+    %dataSize = arith.constant 40 : i64
+    %data = llvm.alloca %dataSize x i8 : (i64) -> !llvm.ptr
+    %standard = arith.constant 0 : i32
+    %found = llvm.call @GetFileAttributesExA(%name, %standard, %data) : (!llvm.ptr, i32, !llvm.ptr) -> i32
+    %none = arith.constant 0 : i32
+    %missing = arith.cmpi eq, %found, %none : i32
+    %zero = arith.constant 0 : i64
+    cf.cond_br %missing, ^done(%zero : i64), ^size
+  ^size:
+    %highSlot = llvm.getelementptr %data[28] : (!llvm.ptr) -> !llvm.ptr, i8
+    %high = llvm.load %highSlot {alignment = 4 : i64} : !llvm.ptr -> i32
+    %lowSlot = llvm.getelementptr %data[32] : (!llvm.ptr) -> !llvm.ptr, i8
+    %low = llvm.load %lowSlot {alignment = 4 : i64} : !llvm.ptr -> i32
+    %upper = arith.extui %high : i32 to i64
+    %lower = arith.extui %low : i32 to i64
+    %shift = arith.constant 32 : i64
+    %shifted = arith.shli %upper, %shift : i64
+    %bytes = arith.ori %shifted, %lower : i64
+    cf.br ^done(%bytes : i64)
+  ^done(%result: i64):
+    return %result : i64
+  }
   func.func private @strict_file_modified(%path: f64) -> f64 {
     %overriddenText = func.call @strict_overridden(%path) : (f64) -> f64
     %unsetText = arith.constant 0.0 : f64
@@ -814,3 +837,37 @@
   }
   llvm.mlir.global internal constant @strict_gpu_ptx_ending(".ptx\00") : !llvm.array<5 x i8>
   llvm.mlir.global internal constant @strict_gpu_older_ending(".older.ptx\00") : !llvm.array<11 x i8>
+
+  llvm.func @Sleep(i32)
+  func.func private @strict_test_pause() {
+    %wait = arith.constant 1 : i32
+    llvm.call @Sleep(%wait) : (i32) -> ()
+    return
+  }
+  llvm.func @strict_test_thread(%argument: !llvm.ptr) -> i32 {
+    func.call @strict_test_watch() : () -> ()
+    %zero = arith.constant 0 : i32
+    llvm.return %zero : i32
+  }
+  func.func private @strict_test_spawn() -> i1 {
+    %null = llvm.mlir.zero : !llvm.ptr
+    %procedure = llvm.mlir.addressof @strict_test_thread : !llvm.ptr
+    %stack = arith.constant 0 : i64
+    %flags = arith.constant 0 : i32
+    %thread = llvm.call @CreateThread(%null, %stack, %procedure, %null, %flags, %null) : (!llvm.ptr, i64, !llvm.ptr, !llvm.ptr, i32, !llvm.ptr) -> !llvm.ptr
+    %created = llvm.icmp "ne" %thread, %null : !llvm.ptr
+    cf.cond_br %created, ^close, ^done
+  ^close:
+    %closed = llvm.call @CloseHandle(%thread) : (!llvm.ptr) -> i32
+    cf.br ^done
+  ^done:
+    return %created : i1
+  }
+
+  func.func private @strict_test_quit() {
+    %current = arith.constant -1 : i64
+    %process = llvm.inttoptr %current : i64 to !llvm.ptr
+    %failure = arith.constant 1 : i32
+    %killed = llvm.call @TerminateProcess(%process, %failure) : (!llvm.ptr, i32) -> i32
+    return
+  }

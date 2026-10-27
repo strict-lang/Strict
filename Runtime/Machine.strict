@@ -1,6 +1,6 @@
 has types List(TypeEntry)
 has logger
-has prototypes List(VmValue) = List(VmValue)
+has prototypes ConstantCache = ConstantCache(List(VmValue))
 has folder Text = ""
 has isTracing = false
 has sources Dictionary(Text, Text) = Dictionary(Text, Text)
@@ -41,14 +41,14 @@ Tested(typeName Text) Number
 	let instance = Natives(types).Fresh(main)
 	Execute(tests, Bound(main, instance, tests, List(VmValue), instance), main.Name).number
 Prepared Machine
-	Hello.Prepared.prototypes.First.kind is "HelloLogger"
+	Hello.Prepared.prototypes.entries.First.kind is "HelloLogger"
 	Hello.Prepared.sources("HelloLogger") is "HelloLogger.strict"
 	mutable created = List(Mutable(VmValue))
 	mutable located = Dictionary(Text, Text)
 	for types
 		created.Add(Natives(types).Fresh(value))
 		located(value.Name) = TypeSource(value).Located(folder)
-	Constants(Machine(types, logger, created, folder, isTracing, located)).Computed
+	Constants(Machine(types, logger, ConstantCache(created), folder, isTracing, located)).Computed
 Bound(type TypeEntry, instance VmValue, method MethodEntry, arguments List(VmValue), prototype VmValue) List(VmValue)
 	Hello.Bound(Doubler, VmValue.OfNumber(2), Doubler.methods.First, List(VmValue), VmValue.None).First.number is 2
 	Hello.Bound(Doubler, VmValue.None, Defaulted, List(VmValue), VmValue.None).Last.number is 7
@@ -96,7 +96,7 @@ MemberValue(owner TypeEntry, instance VmValue, index Number) VmValue
 	Hello.MemberValue(Paired, VmValue("Strict/Pair(Number)", 0, "", (VmValue.None, VmValue.OfNumber(2))), 1).number is 2
 	let member = owner.members(index)
 	if member.IsConstant
-		return Natives(types).Initial(member)
+		return Constants(value).Member(owner, index)
 	if owner.Name is instance.kind
 		return instance.Member(index)
 	Ownership(owner, instance.kind) > 0 then instance.Member(index) else instance.As(member.typeName)
@@ -136,7 +136,7 @@ Call(call Invocation) VmValue
 Executed(route Number, method MethodEntry, call Invocation) VmValue
 	Pairing.Executed(0, Resolver.Doubling.Methods(Paired).First, Invocation.AddCall).items.First.number is 7
 	let type = types(route)
-	let prototype = route < prototypes.Length then prototypes(route) else Natives(types).Fresh(type)
+	let prototype = route < prototypes.entries.Length then prototypes.At(route) else Natives(types).Fresh(type)
 	let isInitializer = method.Name is "from" then type.IsStruct and method.IsInitializer(type.Changing) else false
 	if isInitializer is false
 		return Execute(method, Bound(type, call.Instance, method, call.Arguments, prototype), type.Name, call.Depth)

@@ -1,6 +1,6 @@
 has function MlirFunction
 has position Number
-constant Never = ("Library", "TextReader", "TextWriter", "BytesReader", "BytesWriter")
+constant Never = ("Library", "TextReader", "TextWriter", "BytesReader", "BytesWriter", "ConstantCache")
 constant Branches = (InstructionType.Jump, InstructionType.JumpIfTrue, InstructionType.JumpIfFalse, InstructionType.JumpIfNotZero)
 constant Unsafe = (InstructionType.Set, InstructionType.Print)
 constant Writes = (InstructionType.InvokeWriteToList, InstructionType.InvokeWriteToTable, InstructionType.InvokeRemove)
@@ -12,6 +12,7 @@ constant Making = MlirFunction(MlirLayout.Wrapping.function.types, MlirLayout.De
 constant Checking = MethodEntry("Validated", List(MemberEntry), "Strict/Math/Pairing", (InstructionEntry.LoadText(0, "a"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "number"), InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)), InstructionEntry.Return(2)))
 constant Reading = MlirPurity(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, MlirCost.Reading), 2)
 constant Filtering = MlirPurity(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, MlirParallel.Filtered), 2)
+constant Caching = MlirPurity(MlirFunction(Reading.function, method = MethodEntry("Cached", List(MemberEntry), "Strict/Number", InstructionEntry.Invoke(0, ("Strict/Runtime/ConstantCache", "Stored", "Strict/Number"), (1, 2), 0))), 0)
 IsSafe(inspected MlirFunction, at Number, depth Number) Boolean
 	Doubling.IsSafe(Doubling.function, 4, 0)
 	Randomizing.IsSafe(Randomizing.function, 4, 0) is false
@@ -75,6 +76,7 @@ IsPureCall(inspected MlirFunction, at Number, depth Number) Boolean
 		return true
 	IsKnown(callees.First, inspected, depth)
 IsAllowed(inspected MlirFunction, at Number, callees List(MlirFunction)) Boolean
+	Caching.IsAllowed(Caching.function, 0, List(MlirFunction)) is false
 	Randomizing.IsAllowed(Randomizing.function, 4, List(MlirFunction)) is false
 	Reading.IsAllowed(Reading.function, 4, List(MlirFunction))
 	let decoder = PayloadDecoder(inspected.method.instructions(at))

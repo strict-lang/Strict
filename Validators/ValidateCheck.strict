@@ -4,7 +4,8 @@ Run(folder Text, root Text) Number
 	for ResolveCheck.Tree(folder)
 		issues = issues + Checked(value, root)
 	logger.Log("Validation issues: " + issues)
-	issues
+	let failed = issues is 0 then Folders(logger).Tested(folder, root) else 0
+	issues + failed
 Checked(folder Text, root Text) Number
 	let files = Directory.Files(folder, "*.strict")
 	let mutations = Mutations(files + ResolveCheck(logger).AllFiles(root))

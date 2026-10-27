@@ -23,7 +23,7 @@ Methods(type TypeEntry) List(MethodEntry)
 	for type.methods
 		let names = Slots(type, value)
 		let scratch = names.Length + LoadReuse(value.instructions).RegisterCount
-		MethodEntry(value.Name, value.parameters, value.returnType, Instructions(value, names, scratch), scratch + 1)
+		MethodEntry(value.Name, value.parameters, value.declaredType, Instructions(value, names, scratch), scratch + 1)
 Instructions(method MethodEntry, names Texts, scratch Number) List(InstructionEntry)
 	Doubling.Instructions(MethodEntry.GoRun, Specials, 7).First.payload.Length is 10
 	Doubling.Instructions(Machine.Doubler.methods.First, Specials, 8).Last.Target is Frame.ResultSlot

@@ -39,12 +39,11 @@ Program(module MlirModule, base Text, root Text, build NativeBuild) Text
 	let program = build.Device(text, base, root)
 	Reported("GPU preparation", before)
 	program
-Entry(main TypeCodegen, withTests Boolean, isQuiet Boolean) TypeEntry
+Entry(main TypeCodegen, withTests Boolean, isQuiet Boolean, selection = "") TypeEntry
 	let started = Process.Elapsed
-	let entry = main.Entry
-	let methods = withTests then entry.methods + TestCodegen(main, isQuiet).Tests else entry.methods
-	Reported("Frontend / main codegen (" + methods.Length + " methods)", started)
-	TypeEntry(entry.Name, entry.members, methods)
+	let entry = withTests then TestCodegen(main, isQuiet, selection).Entry else main.Entry
+	Reported("Frontend / main codegen (" + entry.methods.Length + " methods)", started)
+	entry
 Linked(linker Linker, entry TypeEntry) List(TypeEntry)
 	let started = Process.Elapsed
 	let linked = linker.Linked(entry, List(Text), 20)

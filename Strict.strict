@@ -14,7 +14,7 @@ Run(arguments Texts) Number
 		return Tool(command, rest)
 	if command is "test"
 		return Tested(rest)
-	command is "build" then Native(command, rest) else Execute(logger).Run(rest)
+	command is "build" then Native(command, rest) else Execute(logger, "*").Run(rest)
 Message(command Text, rest Texts) Text
 	Strict.Message("version", List(Text)).StartsWith(Version + " 20")
 	Strict.Message("help", List(Text)).StartsWith("strict <file> [arguments]  run")
@@ -29,13 +29,17 @@ Message(command Text, rest Texts) Text
 	(command is in ("check", "update")) or isFolder or File(rest(0)).Exists then "" else rest(0) + " not found"
 Tested(rest Texts) Number
 	Strict.Tested(("Missing.strict", ".")) is 1
-	let option = rest.Length > 2 then rest(2) else ""
+	let request = TestRequest(rest)
+	if request.Message is not ""
+		logger.Log(request.Message)
+		return 2
+	let option = request.Option
 	if option is "-"
 		File(FileCompiler.Normalized(rest(0))).InMemory(Process.Input)
 	if option is in ("values", "trace")
-		let trace = ValueTrace(logger)
+		let trace = ValueTrace(logger, request.Selection)
 		return option is "values" then trace.Run(rest(0), rest(1)) else trace.Traced(rest(0), rest(1))
-	option is in ("lines", "native") then Native("test", rest) else Execute(logger).Test(rest(0), rest(1))
+	option is in ("lines", "native") then Native("test", rest) else Execute(logger, request.Selection).Test(rest(0), rest(1))
 Rooted(arguments Texts) Texts
 	Strict.Rooted(List(Text) + "a.strict") is ("a.strict", ".")
 	Strict.Rooted(("a.strict", ".")) is ("a.strict", ".")
@@ -87,7 +91,7 @@ Refreshed(compiler Text, rest Texts) Number
 Checked(compiler Text) Text
 	Strict.Checked("Compiler/NativeCompiler.exe") is "Compiler/NativeCompiler.checked"
 	Path(compiler).RemoveExtension.text + ".checked"
-CompilerSources(root Text) Texts
+CompilerSources(root Text) Slow(Texts)
 	Strict.CompilerSources(".").Length > 100
 	"./Compiler/NativeRuntime.mlir" is in Strict.CompilerSources(".")
 	"./Bytecode/TestCodegen.strict" is in Strict.CompilerSources(".")
@@ -111,7 +115,7 @@ Arguments(command Text, rest Texts) Text
 		text = text + " \"" + value + "\""
 	text
 Extension = Platform.Current is Platform.Windows then ".exe" else ""
-Format(path Text) Number
+Format(path Text) Slow(Number)
 	Strict.Format("Examples/HelloLogger.strict") is 0
 	let lines = RoundTrip(logger).Tabbed(File(path).ReadLines)
 	let broken = FileCompiler.Unparsable(lines)
