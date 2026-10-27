@@ -3,7 +3,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 
 ## Bugs
 - Reproduce the reported `NeuralNetworks/Batch` CPU/GPU exact-comparison mismatch on the original GPU.
-- Ternary Bonsai 27B stalls at a simulated 10 GB only with a raw cuMemAlloc holder in another process, not with a torch holder.
+- Ternary Bonsai 27B at a simulated 10 GB stalled once more (first run after a cold build), 12 later runs did not: [improvements-models.md](improvements-models.md).
 - Test comparisons of recursive types compare the repeated type with `is`, without numeric tolerance.
 
 ## Next
