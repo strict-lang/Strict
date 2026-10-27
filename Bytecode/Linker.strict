@@ -25,7 +25,7 @@ Linked(entries List(TypeEntry), signatures Texts, depth Number) Slow(List(TypeEn
 	let phase = "Frontend / link pass (" + next.entries.Length + " types, complete " + complete + ")"
 	BuildProfile(Logger).Reported(phase, started)
 	complete then next.entries else Linked(next.entries, next.signatures, depth - 1)
-Next(entries List(TypeEntry), signatures Texts) LinkRound
+Next(entries List(TypeEntry), signatures Texts) Slow(LinkRound)
 	Sample.Next(Go, List(Text)).entries.Length is 1
 	Hello.Next(TypeEntry.HelloLogger, List(Text)).signatures is ("Strict/Logger:")
 	Hello.Next(LinkRound.Forwarding, List(Text) + "Strict/W:Code").entries.First.methods.Length is 2
@@ -34,7 +34,7 @@ Next(entries List(TypeEntry), signatures Texts) LinkRound
 	let targets = invoked + round.Forwarded(invoked)
 	let signed = Signatures(Linkable(BaseTypes(entries, targets), signatures), targets)
 	LinkRound(value, (List(TypeEntry) + Completed(round.entries, targets).First) + round.Entries(signed), signed)
-Completed(entries List(TypeEntry), targets Texts) List(TypeEntry)
+Completed(entries List(TypeEntry), targets Texts) Slow(List(TypeEntry))
 	Sample.Completed(Go, List(Text)).Length is 1
 	Sample.Completed((Go, Counted), List(Text))(1) is Counted
 	let automatic = Automatic(main.lines, TypeEntry.ShortName(main.fullName), Instantiation(main.inference.types))

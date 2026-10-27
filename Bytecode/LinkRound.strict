@@ -50,7 +50,7 @@ Indices Dictionary(Text, Number)
 		if value.Changing.Length is 1
 			indices(value.Name.IndexOf("/") < 0 then local else value.Name) = index
 	indices
-Unconverged Text
+Unconverged Slow(Text)
 	Greeting.Unconverged is "LinkingDidNotConverge: HelloLogger still links Strict/Logger:"
 	let pending = linker.Next(entries, signatures).signatures - signatures
 	"LinkingDidNotConverge: " + TypeEntry.ShortName(linker.main.fullName) + " still links " + Text.Combine(pending, " ")
