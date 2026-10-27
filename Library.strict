@@ -1,6 +1,6 @@
 has path Text
 Call(symbol Text, arguments Numbers) Number
-	Library("missing.dll").Call("Add", (0, 1, 2)) is not 3
+	Library("missing.dll").Call("Add", (0, 1, 2)) is Error
 	Error(path + " " + symbol + " needs the native runtime for " + arguments.Length + " numbers")
 TextSlot(text Text) Number
 	Library("missing.dll").TextSlot("a") is not 3

@@ -10,6 +10,7 @@ constant Iterating = TypeCodegen("Strict/Size", ("has Width Number", "for Iterat
 constant Grid = TypeCodegen("Strict/Size", ("has Width Number", "has Height Number", "for Iterator(Vector2)", "\tfor Height", "\t\tfor Width", "\t\t\tVector2(index, outer.index)"), NoTypes, List(Text))
 constant Created = TypeCodegen("Strict/C", ("has a Number", "from(b Number)", "\ta = b"), NoTypes, List(Text))
 constant Vectors = TypeCodegen("Strict/C", List(Text), TypeInference(KnownTypes(List(Text) + "Vector2", List(Scope) + Scope(List(Text) + "numbers", List(Text) + "Numbers"), List(Scope) + KnownTypes.NoMembers, List(Scope) + KnownTypes.NoMembers), List(Scope) + KnownTypes.NoMembers), List(Text))
+constant Texted = TypeCodegen("Strict/Digit", ("has a Number", "to Text", "\t\"c\""), NoTypes, List(Text))
 constant Leveled = TypeCodegen("Strict/L", ("has level = Fast", "constant Fast = \"a\""), NoTypes, List(Text))
 constant Rebuilt = SyntaxParser(Tokenizer("Greeter(Greeter(\"a\"), text = \"b\")").Tokens).Parse
 Entry Slow(TypeEntry)
@@ -71,10 +72,14 @@ Initial(node SyntaxNode) List(InstructionEntry)
 	List(InstructionEntry) + InstructionEntry.Set(load.texts, MethodCodegen.LoadedValue(load))
 Methods(names Texts) List(MethodEntry)
 	Limit.Methods(List(Text)).First.instructions.Length is 2
+	Texted.Methods(("to Text")).Length is 1
 	mutable methods = List(Mutable(MethodEntry))
 	for lines
-		if TypeShape(lines).IsMethodHeader(value) and ((names.Length is 0) or (Tokenizer(value).Tokens.First is in names))
-			methods.Add(Method(index))
+		if TypeShape(lines).IsMethodHeader(value)
+			let tokens = Tokenizer(value).Tokens
+			let converted = tokens.First is "to" then "to " + HeaderTokens(tokens).ReturnType else tokens.First
+			if (names.Length is 0) or (tokens.First is in names) or (converted is in names)
+				methods.Add(Method(index))
 	methods + ConstantMethods(inference).Methods(value, names) + Specialization(Generator).Methods(value, names)
 Method(start Number) Slow(MethodEntry)
 	(Hello.Method(1).returnType, Created.Method(1).returnType) is ("None", "Strict/C")
