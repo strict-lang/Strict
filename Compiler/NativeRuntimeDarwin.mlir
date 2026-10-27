@@ -645,6 +645,7 @@
   llvm.func @pthread_mutex_unlock(!llvm.ptr) -> i32
   llvm.func @pthread_cond_wait(!llvm.ptr, !llvm.ptr) -> i32
   llvm.func @pthread_cond_broadcast(!llvm.ptr) -> i32
+  llvm.func @pthread_cond_signal(!llvm.ptr) -> i32
   // PTHREAD_MUTEX_INITIALIZER and PTHREAD_COND_INITIALIZER start with their signature on Darwin
   llvm.mlir.global internal @strict_pool_lock(dense<[850045863, 0, 0, 0, 0, 0, 0, 0]> : tensor<8xi64>) : !llvm.array<8 x i64>
   llvm.mlir.global internal @strict_pool_signal(dense<[1018212795, 0, 0, 0, 0, 0, 0, 0]> : tensor<8xi64>) : !llvm.array<8 x i64>
@@ -726,19 +727,34 @@
     %unlocked = llvm.call @pthread_mutex_unlock(%lock) : (!llvm.ptr) -> i32
     llvm.return
   }
-  llvm.func @strict_pool_wake() {
+  // wakes as many sleeping workers as the job has chunks for besides the caller's: waking all 95 for a job of 4 items
+  // cost the caller about 0.3 ms, they all took the lock again before the next job could wake anyone
+  llvm.func @strict_pool_wake(%helpers: i64) {
     %lock = llvm.mlir.addressof @strict_pool_lock : !llvm.ptr
     %signal = llvm.mlir.addressof @strict_pool_signal : !llvm.ptr
     %sleepersSlot = llvm.mlir.addressof @strict_pool_sleepers : !llvm.ptr
     %zero = llvm.mlir.constant(0 : i64) : i64
+    %one = llvm.mlir.constant(1 : i64) : i64
     %sleepers = llvm.load %sleepersSlot atomic seq_cst {alignment = 8 : i64} : !llvm.ptr -> i64
     %anyone = llvm.icmp "ne" %sleepers, %zero : i64
-    llvm.cond_br %anyone, ^wake, ^leave
+    %needed = llvm.icmp "sgt" %helpers, %zero : i64
+    %waking = llvm.and %anyone, %needed : i1
+    llvm.cond_br %waking, ^wake, ^leave
   ^wake:
     %locked = llvm.call @pthread_mutex_lock(%lock) : (!llvm.ptr) -> i32
     %unlocked = llvm.call @pthread_mutex_unlock(%lock) : (!llvm.ptr) -> i32
-    %woken = llvm.call @pthread_cond_broadcast(%signal) : (!llvm.ptr) -> i32
+    %everyone = llvm.icmp "sge" %helpers, %sleepers : i64
+    llvm.cond_br %everyone, ^all, ^some(%zero : i64)
+  ^all:
+    %broadcasted = llvm.call @pthread_cond_broadcast(%signal) : (!llvm.ptr) -> i32
     llvm.return
+  ^some(%woken: i64):
+    %more = llvm.icmp "slt" %woken, %helpers : i64
+    llvm.cond_br %more, ^single, ^leave
+  ^single:
+    %signaled = llvm.call @pthread_cond_signal(%signal) : (!llvm.ptr) -> i32
+    %next = llvm.add %woken, %one : i64
+    llvm.br ^some(%next : i64)
   ^leave:
     llvm.return
   }

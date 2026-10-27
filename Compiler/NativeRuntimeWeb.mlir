@@ -483,7 +483,7 @@
   llvm.func @strict_pool_sleep(%seen: i64) {
     llvm.return
   }
-  llvm.func @strict_pool_wake() {
+  llvm.func @strict_pool_wake(%helpers: i64) {
     llvm.return
   }
   func.func private @strict_gpu_spawn() -> i1 {

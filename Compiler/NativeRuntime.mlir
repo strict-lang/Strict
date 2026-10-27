@@ -1078,7 +1078,12 @@
     func.call @strict_gc_lanes_carried() : () -> ()
     llvm.store %one, %busySlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     llvm.store %job, %jobSlot atomic seq_cst {alignment = 8 : i64} : i64, !llvm.ptr
-    llvm.call @strict_pool_wake() : () -> ()
+    %lastPart = arith.subi %chunk, %one : i64
+    %rounded = arith.addi %remaining, %lastPart : i64
+    %chunks = arith.divsi %rounded, %chunk : i64
+    %others = arith.subi %chunks, %one : i64
+    %helpers = arith.minsi %others, %workers : i64
+    llvm.call @strict_pool_wake(%helpers) : (i64) -> ()
     llvm.call @strict_pool_run(%job) : (i64) -> ()
     cf.br ^wait
   ^wait:

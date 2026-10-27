@@ -565,7 +565,8 @@
     %closedThread = llvm.call @CloseHandle(%thread) : (!llvm.ptr) -> i32
     return %exitNumber : f64
   }
-  // Process.RunTools starts several at once: a child must not inherit the output files of another one
+  // Process.RunTools starts several at once: a child must not inherit the output files of another one, an SRW lock lets
+  // the threads waiting for it sleep while CreateProcessA takes milliseconds (spinning cost a core per waiting thread)
   llvm.mlir.global internal @strict_process_lock(0 : i64) : i64
   func.func private @strict_process_execute(%path: f64, %arguments: f64) -> f64 {
     %count = arith.constant 1 : i64
@@ -586,7 +587,7 @@
     %outputPath = func.call @strict_temp_file() : () -> f64
     %errorPath = func.call @strict_temp_file() : () -> f64
     %lock = llvm.mlir.addressof @strict_process_lock : !llvm.ptr
-    llvm.call @strict_spin_lock(%lock) : (!llvm.ptr) -> ()
+    llvm.call @AcquireSRWLockExclusive(%lock) : (!llvm.ptr) -> ()
     %output = func.call @strict_inherited_file(%outputPath) : (f64) -> !llvm.ptr
     %error = func.call @strict_inherited_file(%errorPath) : (f64) -> !llvm.ptr
     %startup = llvm.call @calloc(%count, %startupSize) : (i64, i64) -> !llvm.ptr
@@ -606,7 +607,7 @@
     %started = llvm.call @CreateProcessA(%null, %commandText, %null, %null, %inherit, %noFlags, %null, %null, %startup, %information) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
     %closedOutput = llvm.call @CloseHandle(%output) : (!llvm.ptr) -> i32
     %closedError = llvm.call @CloseHandle(%error) : (!llvm.ptr) -> i32
-    llvm.call @strict_spin_unlock(%lock) : (!llvm.ptr) -> ()
+    llvm.call @ReleaseSRWLockExclusive(%lock) : (!llvm.ptr) -> ()
     %failed = arith.cmpi eq, %started, %noFlags : i32
     cf.cond_br %failed, ^notStarted, ^running
   ^notStarted:
@@ -689,6 +690,7 @@
   llvm.func @ReleaseSRWLockExclusive(!llvm.ptr)
   llvm.func @SleepConditionVariableSRW(!llvm.ptr, !llvm.ptr, i32, i32) -> i32
   llvm.func @WakeAllConditionVariable(!llvm.ptr)
+  llvm.func @WakeConditionVariable(!llvm.ptr)
   llvm.mlir.global internal @strict_pool_lock(0 : i64) : i64
   llvm.mlir.global internal @strict_pool_signal(0 : i64) : i64
   llvm.func @strict_pool_thread(%argument: !llvm.ptr) -> i32 {
@@ -783,19 +785,34 @@
     llvm.call @ReleaseSRWLockExclusive(%lock) : (!llvm.ptr) -> ()
     llvm.return
   }
-  llvm.func @strict_pool_wake() {
+  // wakes as many sleeping workers as the job has chunks for besides the caller's: waking all 95 for a job of 4 items
+  // cost the caller about 0.3 ms, they all took the lock again before the next job could wake anyone
+  llvm.func @strict_pool_wake(%helpers: i64) {
     %lock = llvm.mlir.addressof @strict_pool_lock : !llvm.ptr
     %signal = llvm.mlir.addressof @strict_pool_signal : !llvm.ptr
     %sleepersSlot = llvm.mlir.addressof @strict_pool_sleepers : !llvm.ptr
     %zero = llvm.mlir.constant(0 : i64) : i64
+    %one = llvm.mlir.constant(1 : i64) : i64
     %sleepers = llvm.load %sleepersSlot atomic seq_cst {alignment = 8 : i64} : !llvm.ptr -> i64
     %anyone = llvm.icmp "ne" %sleepers, %zero : i64
-    llvm.cond_br %anyone, ^wake, ^leave
+    %needed = llvm.icmp "sgt" %helpers, %zero : i64
+    %waking = llvm.and %anyone, %needed : i1
+    llvm.cond_br %waking, ^wake, ^leave
   ^wake:
     llvm.call @AcquireSRWLockExclusive(%lock) : (!llvm.ptr) -> ()
     llvm.call @ReleaseSRWLockExclusive(%lock) : (!llvm.ptr) -> ()
+    %everyone = llvm.icmp "sge" %helpers, %sleepers : i64
+    llvm.cond_br %everyone, ^all, ^some(%zero : i64)
+  ^all:
     llvm.call @WakeAllConditionVariable(%signal) : (!llvm.ptr) -> ()
     llvm.return
+  ^some(%woken: i64):
+    %more = llvm.icmp "slt" %woken, %helpers : i64
+    llvm.cond_br %more, ^single, ^leave
+  ^single:
+    llvm.call @WakeConditionVariable(%signal) : (!llvm.ptr) -> ()
+    %next = llvm.add %woken, %one : i64
+    llvm.br ^some(%next : i64)
   ^leave:
     llvm.return
   }

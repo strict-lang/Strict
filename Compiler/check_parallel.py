@@ -1,4 +1,4 @@
-"""Run from Strict: python Compiler/check_parallel.py (Windows pool publication and retention regressions)."""
+"""Run from Strict: python Compiler/check_parallel.py (Windows pool publication, retention and small job regressions)."""
 from pathlib import Path
 import os
 import shutil
@@ -160,6 +160,25 @@ static double body(void* context, int64_t from, int64_t to) {
 	return 0;
 }
 int main(int argc, char** argv) {
+	if (argc > 1 && argv[1][0] == 'w') {
+		_putenv_s("STRICT_THREADS", "64");
+		published = CreateEventA(0, TRUE, TRUE, 0);
+		int idle = 0;
+		test_parallel(body, &idle, 64);
+		LARGE_INTEGER frequency, started, ended;
+		QueryPerformanceFrequency(&frequency);
+		double spent = 0;
+		for (int job = 0; job < 1000; job++) {
+			QueryPerformanceCounter(&started);
+			do QueryPerformanceCounter(&ended); while ((ended.QuadPart - started.QuadPart) * 10000 < 3 * frequency.QuadPart);
+			QueryPerformanceCounter(&started);
+			test_parallel(body, &idle, 4);
+			QueryPerformanceCounter(&ended);
+			spent += (double)(ended.QuadPart - started.QuadPart) / frequency.QuadPart;
+		}
+		printf("Job of 4 items while 63 workers sleep: %.1f us\\n", spent * 1000);
+		return spent * 1000 > 50;
+	}
 	if (argc > 1) {
 		_putenv_s("STRICT_THREADS", "1");
 		int64_t carried = test_carried(&argc);
@@ -201,3 +220,6 @@ print(result.stdout.strip())
 carried = subprocess.run([str(executable), "carried"], capture_output=True, text=True, timeout=15)
 print(carried.stdout.strip())
 assert carried.returncode == 0, carried.stdout + carried.stderr
+woken = subprocess.run([str(executable), "wake"], capture_output=True, text=True, timeout=15)
+print(woken.stdout.strip())
+assert woken.returncode == 0, woken.stdout + woken.stderr
