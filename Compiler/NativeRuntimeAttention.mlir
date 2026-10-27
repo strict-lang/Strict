@@ -2811,8 +2811,8 @@
     return %last : i32
   }
   // strict_device_attention_softmax of two tiles at once (from first and from second, the last visible positions of
-  // the lower and upper rows in each)
-  func.func private @strict_device_bytes_softmax(%scores: vector<16xf32>, %others: vector<16xf32>, %state: vector<4xf32>, %first: i32, %second: i32, %lowerLast: i32, %upperLast: i32, %lowerOtherLast: i32, %upperOtherLast: i32, %quad: i32) -> (vector<16xf32>, vector<16xf32>, vector<4xf32>, f32, f32) attributes {llvm.passthrough = ["alwaysinline"]} {
+  // the lower and upper rows in each), last the largest share of each row
+  func.func private @strict_device_bytes_softmax(%scores: vector<16xf32>, %others: vector<16xf32>, %state: vector<4xf32>, %first: i32, %second: i32, %lowerLast: i32, %upperLast: i32, %lowerOtherLast: i32, %upperOtherLast: i32, %quad: i32) -> (vector<16xf32>, vector<16xf32>, vector<4xf32>, f32, f32, f32, f32) attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
     %lowerFirst = func.call @strict_device_attention_largest(%scores, %c0, %first, %quad, %lowerLast) : (vector<16xf32>, i32, i32, i32, i32) -> f32
@@ -2827,7 +2827,11 @@
     %lowerBoth = arith.addf %lowerTotal, %lowerOther : f32
     %upperBoth = arith.addf %upperTotal, %upperOther : f32
     %newState = func.call @strict_device_attention_summed(%state, %newLower, %newUpper, %lowerScale, %upperScale, %lowerBoth, %upperBoth) : (vector<4xf32>, f32, f32, f32, f32, f32, f32) -> vector<4xf32>
-    return %shared, %otherShared, %newState, %lowerScale, %upperScale : vector<16xf32>, vector<16xf32>, vector<4xf32>, f32, f32
+    %lowerBelow = arith.subf %lowerLargest, %newLower : f32
+    %upperBelow = arith.subf %upperLargest, %newUpper : f32
+    %lowerShare = func.call @strict_device_binary_power(%lowerBelow) : (f32) -> f32
+    %upperShare = func.call @strict_device_binary_power(%upperBelow) : (f32) -> f32
+    return %shared, %otherShared, %newState, %lowerScale, %upperScale, %lowerShare, %upperShare : vector<16xf32>, vector<16xf32>, vector<4xf32>, f32, f32, f32, f32
   }
   // the largest of part over the 4 lanes of a row
   func.func private @strict_device_bytes_quad_largest(%part: f32) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
@@ -3700,15 +3704,15 @@
     cf.cond_br %wholeStep, ^whole, ^masked
   ^whole:
     %unmasked = llvm.mlir.constant(2147483647 : i32) : i32
-    %wholeShares, %wholeOthers, %wholeState, %wholeLower, %wholeUpper = func.call @strict_device_bytes_softmax(%scores, %others, %state, %first, %second, %unmasked, %unmasked, %unmasked, %unmasked, %quad) : (vector<16xf32>, vector<16xf32>, vector<4xf32>, i32, i32, i32, i32, i32, i32, i32) -> (vector<16xf32>, vector<16xf32>, vector<4xf32>, f32, f32)
-    cf.br ^weigh(%wholeShares, %wholeOthers, %wholeState, %wholeLower, %wholeUpper : vector<16xf32>, vector<16xf32>, vector<4xf32>, f32, f32)
+    %wholeShares, %wholeOthers, %wholeState, %wholeLower, %wholeUpper, %wholeLowerShare, %wholeUpperShare = func.call @strict_device_bytes_softmax(%scores, %others, %state, %first, %second, %unmasked, %unmasked, %unmasked, %unmasked, %quad) : (vector<16xf32>, vector<16xf32>, vector<4xf32>, i32, i32, i32, i32, i32, i32, i32) -> (vector<16xf32>, vector<16xf32>, vector<4xf32>, f32, f32, f32, f32)
+    cf.br ^weigh(%wholeShares, %wholeOthers, %wholeState, %wholeLower, %wholeUpper, %wholeLowerShare, %wholeUpperShare : vector<16xf32>, vector<16xf32>, vector<4xf32>, f32, f32, f32, f32)
   ^masked:
-    %maskedShares, %maskedOthers, %maskedState, %maskedLower, %maskedUpper = func.call @strict_device_bytes_softmax(%scores, %others, %state, %first, %second, %lowerFirstLast, %upperFirstLast, %lowerSecondLast, %upperSecondLast, %quad) : (vector<16xf32>, vector<16xf32>, vector<4xf32>, i32, i32, i32, i32, i32, i32, i32) -> (vector<16xf32>, vector<16xf32>, vector<4xf32>, f32, f32)
-    cf.br ^weigh(%maskedShares, %maskedOthers, %maskedState, %maskedLower, %maskedUpper : vector<16xf32>, vector<16xf32>, vector<4xf32>, f32, f32)
-  ^weigh(%shares: vector<16xf32>, %otherShares: vector<16xf32>, %newState: vector<4xf32>, %lowerScale: f32, %upperScale: f32):
+    %maskedShares, %maskedOthers, %maskedState, %maskedLower, %maskedUpper, %maskedLowerShare, %maskedUpperShare = func.call @strict_device_bytes_softmax(%scores, %others, %state, %first, %second, %lowerFirstLast, %upperFirstLast, %lowerSecondLast, %upperSecondLast, %quad) : (vector<16xf32>, vector<16xf32>, vector<4xf32>, i32, i32, i32, i32, i32, i32, i32) -> (vector<16xf32>, vector<16xf32>, vector<4xf32>, f32, f32, f32, f32)
+    cf.br ^weigh(%maskedShares, %maskedOthers, %maskedState, %maskedLower, %maskedUpper, %maskedLowerShare, %maskedUpperShare : vector<16xf32>, vector<16xf32>, vector<4xf32>, f32, f32, f32, f32)
+  ^weigh(%shares: vector<16xf32>, %otherShares: vector<16xf32>, %newState: vector<4xf32>, %lowerScale: f32, %upperScale: f32, %lowerShare: f32, %upperShare: f32):
     cf.cond_br %dense, ^denseWeigh, ^bytesWeigh
   ^denseWeigh:
-    %denseWeighted = func.call @strict_device_dense_weighted(%shares, %otherShares, %outputs, %lowerScale, %upperScale, %valueTile, %otherValueTile, %lane) : (vector<16xf32>, vector<16xf32>, vector<64xf32>, f32, f32, !llvm.ptr<3>, !llvm.ptr<3>, i32) -> vector<64xf32>
+    %denseWeighted = func.call @strict_device_dense_weighted(%shares, %otherShares, %outputs, %lowerScale, %upperScale, %lowerShare, %upperShare, %valueTile, %otherValueTile, %lane) : (vector<16xf32>, vector<16xf32>, vector<64xf32>, f32, f32, f32, f32, !llvm.ptr<3>, !llvm.ptr<3>, i32) -> vector<64xf32>
     cf.br ^step(%stepFollowing, %denseWeighted, %newState : i32, vector<64xf32>, vector<4xf32>)
   ^bytesWeigh:
     %weighted = func.call @strict_device_bytes_weighted(%shares, %otherShares, %outputs, %lowerScale, %upperScale, %valueTile, %otherValueTile, %lane) : (vector<16xf32>, vector<16xf32>, vector<64xf32>, f32, f32, !llvm.ptr<3>, !llvm.ptr<3>, i32) -> vector<64xf32>
@@ -3950,35 +3954,6 @@
   ^done:
     return
   }
-  // the largest of the shares of a row (row 0 the lower: slots 4j and 4j + 1, row 2 the upper: 4j + 2 and 4j + 3) in
-  // two tiles
-  func.func private @strict_device_dense_largest(%shares: vector<16xf32>, %others: vector<16xf32>, %row: i32) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
-    %c0 = llvm.mlir.constant(0 : i32) : i32
-    %c1 = llvm.mlir.constant(1 : i32) : i32
-    %c2 = llvm.mlir.constant(2 : i32) : i32
-    %c4 = llvm.mlir.constant(4 : i32) : i32
-    %zero = arith.constant 0.0 : f32
-    cf.br ^slot(%c0, %zero : i32, f32)
-  ^slot(%block: i32, %largest: f32):
-    %more = arith.cmpi slt, %block, %c4 : i32
-    cf.cond_br %more, ^body, ^done
-  ^body:
-    %blockSlot = arith.shli %block, %c2 : i32
-    %slot = arith.addi %blockSlot, %row : i32
-    %slotNext = arith.addi %slot, %c1 : i32
-    %share = llvm.extractelement %shares[%slot : i32] : vector<16xf32>
-    %shareNext = llvm.extractelement %shares[%slotNext : i32] : vector<16xf32>
-    %other = llvm.extractelement %others[%slot : i32] : vector<16xf32>
-    %otherNext = llvm.extractelement %others[%slotNext : i32] : vector<16xf32>
-    %larger = arith.maxnumf %largest, %share : f32
-    %largerNext = arith.maxnumf %larger, %shareNext : f32
-    %largerOther = arith.maxnumf %largerNext, %other : f32
-    %largerBoth = arith.maxnumf %largerOther, %otherNext : f32
-    %following = arith.addi %block, %c1 : i32
-    llvm.br ^slot(%following, %largerBoth : i32, f32) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
-  ^done:
-    return %largest : f32
-  }
   // the 4 sums at slot (2 numbers of the lower row, then of the upper row) with the products of an m16n8k32
   func.func private @strict_device_dense_folded(%sums: vector<64xf32>, %slot: i32, %products: !llvm.struct<(i32, i32, i32, i32)>, %lowerUnit: f32, %upperUnit: f32, %lowerScale: f32, %upperScale: f32, %lowerOffset: f32, %upperOffset: f32) -> vector<64xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
     %c1 = llvm.mlir.constant(1 : i32) : i32
@@ -3999,8 +3974,9 @@
   }
   // strict_device_bytes_weighted for the values of strict_device_values_transposed: the outputs of the two rows of a lane
   // (numbers 8j + 2 * (lane % 4) and the next of every 8, lower then upper row) shrunk by their scales plus the shares
-  // of two tiles as 8 bits per row times the values, an ldmatrix of 16 numbers and 4 m16n8k32 per 16 numbers
-  func.func private @strict_device_dense_weighted(%shares: vector<16xf32>, %others: vector<16xf32>, %outputs: vector<64xf32>, %lowerScale: f32, %upperScale: f32, %valueTile: !llvm.ptr<3>, %otherTile: !llvm.ptr<3>, %lane: i32) -> vector<64xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
+  // of two tiles as 8 bits per row (up to the largest share of the row) times the values, an ldmatrix of 16 numbers and
+  // 4 m16n8k32 per 16 numbers
+  func.func private @strict_device_dense_weighted(%shares: vector<16xf32>, %others: vector<16xf32>, %outputs: vector<64xf32>, %lowerScale: f32, %upperScale: f32, %lowerRow: f32, %upperRow: f32, %valueTile: !llvm.ptr<3>, %otherTile: !llvm.ptr<3>, %lane: i32) -> vector<64xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -4011,16 +3987,12 @@
     %c8 = llvm.mlir.constant(8 : i32) : i32
     %c10 = llvm.mlir.constant(10 : i32) : i32
     %bias = llvm.mlir.constant(1262485504 : i32) : i32
-    %most = arith.constant 127.0 : f32
+    %step = arith.constant 0.007874016 : f32
     %unbias = arith.constant -12582912.0 : f32
-    %lowerLargest = func.call @strict_device_dense_largest(%shares, %others, %c0) : (vector<16xf32>, vector<16xf32>, i32) -> f32
-    %upperLargest = func.call @strict_device_dense_largest(%shares, %others, %c2) : (vector<16xf32>, vector<16xf32>, i32) -> f32
-    %lowerRow = func.call @strict_device_bytes_quad_largest(%lowerLargest) : (f32) -> f32
-    %upperRow = func.call @strict_device_bytes_quad_largest(%upperLargest) : (f32) -> f32
     %lowerFactor = func.call @strict_device_attention_inverse(%lowerRow) : (f32) -> f32
     %upperFactor = func.call @strict_device_attention_inverse(%upperRow) : (f32) -> f32
-    %lowerUnit = arith.divf %lowerRow, %most : f32
-    %upperUnit = arith.divf %upperRow, %most : f32
+    %lowerUnit = arith.mulf %lowerRow, %step : f32
+    %upperUnit = arith.mulf %upperRow, %step : f32
     %lowerOffset = arith.mulf %lowerUnit, %unbias : f32
     %upperOffset = arith.mulf %upperUnit, %unbias : f32
     %a0 = func.call @strict_device_bytes_operand(%shares, %c0, %lowerFactor) : (vector<16xf32>, i32, f32) -> i32
