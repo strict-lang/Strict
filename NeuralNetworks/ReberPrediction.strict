@@ -18,7 +18,7 @@ Trained(network Gru, grammar Reber, count Number) Slow(Gru)
 		let steps = grammar.Walk
 		trained = trained.Trained(grammar.Inputs(steps), grammar.Targets(steps), 0.1)
 	trained
-Correct(network Gru, grammar Reber, count Number) Number
+Correct(network Gru, grammar Reber, count Number) Slow(Number)
 	ReberPrediction.Correct(Untrained, Reber.Simple, 3) <= 3
 	mutable correct = 0
 	for count
