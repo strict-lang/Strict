@@ -10,11 +10,10 @@ constant Doubling = MlirCost(MlirParallel.Doubling.function, 2)
 constant Filtering = MlirCost(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, MlirParallel.Filtered), 2)
 constant SlowLoop = MlirCost(MlirFunction(Doubling.function, method = MethodEntry(Doubling.function.method, declaredType = "Slow(Numbers)")), 2)
 Threshold Number
-	SlowLoop.Threshold is 2500
+	SlowLoop.Threshold is Doubling.Threshold
 	Doubling.Threshold is 6250
 	Filtering.Threshold is 8334
-	let work = function.method.IsSlow then Outside else Work
-	let count = (work / Iteration).Ceiling
+	let count = (Work / Iteration).Ceiling
 	count < 2 then 2 else count
 Iteration Number
 	Doubling.Iteration is 8
@@ -41,6 +40,4 @@ Called(inspected MlirFunction, at Number, depth Number) Number
 	let callees = MlirModule(inspected.types, "").Called(inspected, at)
 	if callees.Length is 0
 		return Native
-	if callees.First.method.IsSlow
-		return Outside
 	depth >= 4 then Native else 2 + Sum(callees.First, 0, callees.First.method.instructions.Length, depth + 1)
