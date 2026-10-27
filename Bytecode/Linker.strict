@@ -28,11 +28,12 @@ Linked(entries List(TypeEntry), signatures Texts, depth Number) List(TypeEntry)
 Next(entries List(TypeEntry), signatures Texts) LinkRound
 	Sample.Next(Go, List(Text)).entries.Length is 1
 	Hello.Next(TypeEntry.HelloLogger, List(Text)).signatures is ("Strict/Logger:")
+	Hello.Next(LinkRound.Forwarding, List(Text) + "Strict/W:Code").entries.First.methods.Length is 2
 	let invoked = Targets(entries)
 	let round = LinkRound(value, Completed(entries, invoked), signatures)
 	let targets = invoked + round.Forwarded(invoked)
 	let signed = Signatures(Linkable(BaseTypes(entries, targets), signatures), targets)
-	LinkRound(value, (List(TypeEntry) + round.entries.First) + round.Entries(signed), signed)
+	LinkRound(value, (List(TypeEntry) + Completed(round.entries, targets).First) + round.Entries(signed), signed)
 Completed(entries List(TypeEntry), targets Texts) List(TypeEntry)
 	Sample.Completed(Go, List(Text)).Length is 1
 	Sample.Completed((Go, Counted), List(Text))(1) is Counted
@@ -58,9 +59,10 @@ IsLinkable(type Text) Boolean
 	source.Exists and ((type.IndexOf("(") is -1) or (TypeShape(source.ReadLines).IsTrait is false))
 Signatures(types Texts, targets Texts) Texts
 	Sample.Signatures(("Strict/B"), ("Strict/B.Go")) is ("Strict/B:Go")
-	Sample.Signatures(("Strict/B"), ("Strict/B.Go", "Strict/B.Add")) is ("Strict/B:Add,Go")
+	Sample.Signatures(("Strict/B"), ("Strict/B.Go", "Strict/B.Add")) is ("Strict/B:Add;Go")
+	Sample.Signatures(("Strict/B"), ("Strict/B.Go", "Strict/B.F(A, B)")) is ("Strict/B:F(A, B);Go")
 	for types
-		value + ":" + Text.Combine(UsedMethods(targets, value).Sorted, ",")
+		value + ":" + Text.Combine(UsedMethods(targets, value).Sorted, ";")
 LinkedType(type Text, methods Texts) TypeEntry
 	Sample.LinkedType("Strict/Logger", List(Text)).Name is "Strict/Logger"
 	Sample.LinkedType("Strict/Bytecode/Crc", List(Text)).Name is "Crc"

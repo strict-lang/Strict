@@ -12,7 +12,6 @@ What to fix next, one short line each, bugs first. Remove a line once it is atte
 - `File.Length` on the VM returns the collection length, not the file's byte count (release verification uses `ReadBytes.Length` for now).
 - `strict test Compiler/Toolchain.strict` exited 127 without a message once among 16 parallel VM tests, in `PartsCompiled` (`Process.RunTools` starting clang on pool threads).
 - `strict test Compiler/ToolRunner.strict native` fails with `unsupported: text of List(IsWindow)` in `$Tests`; conditional constants infer the wrong type (also fails without timing changes).
-- A method named like a base type is not what a bare name means inside its own loops: in `Bytecode/Signature`, `Signature(value).Type is Type` compared with the base type `Type` (silently false) instead of calling the method; report the ambiguity. Also inside `MlirModule.Emitted`'s loop `List(Text)` called `MlirModule.Text` on the VM, and natively `outer.Text.Combine` compiled to a call of `MlirModule.Text` first (endless module emission once a whole function was emitted, the VM was right).
 - Qwen3Benchmark native compilation intermittently exits with heap corruption after GPU preparation; keep the failing cold-build log and investigate in the compiler/runtime session.
 - GPU launches are not guarded on pool threads: `MlirSafety` keeps methods with GPU-able loops out of parallel loops; the runtime should run such loops on the CPU while the pool is busy.
 - Pool threads on Linux and macOS keep the default pthread stack (8 MB, 512 KB on macOS) and their stack guard takes the main thread's bound from `strict_stack_lowest`: a deep loop body crashes instead of returning StackOverflow (Windows reserves 64 MB per worker and asks `GetCurrentThreadStackLimits`).
@@ -31,6 +30,9 @@ What to fix next, one short line each, bugs first. Remove a line once it is atte
 - WebWars generated SceneAtlas/LevelAtlas constructors dominate emission; reduce large constant/record-list lowering work without changing atlas data.
 - Build dependency inventory and frontend discovery repeat broad package scans; share/narrow inventory before optimizing small shape-loading costs.
 - MlirCost sums expensive alternative call paths and overestimates tiny loops; calibrate branch-sensitive work estimates against private frame initialization before relaxing thresholds further.
+- Linker forwarding is not transitive (Angle to Degrees to Number never asks Number for Floor) and also forwards for single-member base types and Logger, which emission's `TypeEntry.Wrapped` never does.
+- Syntax validation (`FileCompiler.Parsed`) reads and parses every source serially; run it like name validation (FileCompiler has 16 methods, the syntax checks need a type of their own).
+- Small builds lower and translate the whole runtime every time; cache it as bitcode (keep the 16 split parts, one clang part is slower even for Sum).
 
 ## Waiting
 - Base library: Number `Sign`, `Wrap`, `ArcTangent2` and inverse trigonometry, Text to Numbers, fixed decimal text, `Truncated`.

@@ -9,6 +9,7 @@ constant InOnes = SyntaxNode("Binary", "is in", (One, ValueCodegen.Ones))
 constant Choose = SyntaxNode("Binary", "else", (SyntaxNode("Binary", "then", (NoNode, One)), One))
 constant Narrowing = SyntaxParser(Tokenizer("x is Error then x.Name else \"\"").Tokens).Parse
 constant Mismatched = SyntaxParser(Tokenizer("Dictionary(A, B) is Dictionary(B, A)").Tokens).Parse
+constant Hiding = OperatorCodegen(ValueCodegen(ValueCodegen.NoTypes, Scope(List(Text) + "B", List(Text) + "Text"), CallTarget(CallTarget.NoTypes, TypeShape(("has text", "B Text", "\ttext")), "Strict/Examples/Hiding", List(Text))))
 constant Comparisons = ("is", "is not", "<", ">", "xor", ">=", "<=")
 constant ComparisonOffsets = (0, 1, 2, 3, 1, 2, 3)
 Operation(node SyntaxNode, block CodeBlock) CodeBlock
@@ -59,14 +60,20 @@ Decided(node SyntaxNode, block CodeBlock) Text
 	Plain.Decided(Mismatched, CodeBlock.Empty) is "false"
 	Plain.Decided(SyntaxNode("Binary", "is not", (One, SyntaxNode("Identifier", "B"))), CodeBlock.Empty) is "true"
 	Plain.Decided(SyntaxNode("Binary", "is", (One, One)), CodeBlock.Empty) is ""
+	Hiding.Decided(SyntaxNode("Binary", "is", (One, SyntaxNode("Identifier", "B"))), CodeBlock.Empty) is ""
 	if node.text is not in ("is", "is not")
 		return ""
 	let wanted = node.children.Last
-	let isType = values.IsTypeName(wanted, block) and (wanted.text is not "Error")
+	let isType = IsTypeTest(wanted, block)
 	if (isType is false) and (IsMismatched(node, block) is false)
 		return ""
 	let matches = isType and Matches(values.TypeOf(node.children(0), block), wanted.text)
 	(matches is (node.text is "is")) to Text
+IsTypeTest(wanted SyntaxNode, block CodeBlock) Boolean
+	Plain.IsTypeTest(SyntaxNode("Identifier", "B"), CodeBlock.Empty)
+	Hiding.IsTypeTest(SyntaxNode("Identifier", "B"), CodeBlock.Empty) is false
+	let isHiding = values.IsMethodCall(wanted, block) or (wanted.text is "Error")
+	values.IsTypeName(wanted, block) and (isHiding is false)
 IsMismatched(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsMismatched(Mismatched, CodeBlock.Empty)
 	Plain.IsMismatched(SyntaxNode("Binary", "is", (One, One)), CodeBlock.Empty) is false

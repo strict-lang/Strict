@@ -6,6 +6,8 @@ Passing(candidates Texts) Texts
 	if candidates.Length is 0
 		return List(Text)
 	let types = Prepared(candidates)
+	if types.Length is 0
+		return List(Text)
 	mutable passed = List(Mutable(Text))
 	for candidates
 		let changed = Changed(types, index)

@@ -3,9 +3,10 @@ Type Text
 	Signature("Strict/Logger:Log").Type is "Strict/Logger"
 	text.Substring(0, text.IndexOf(":"))
 Names Texts
-	Signature("Strict/Logger:Log,Write").Names is ("Log", "Write")
+	Signature("Strict/Logger:Log;Write").Names is ("Log", "Write")
+	Signature("Strict/B:F(A, B);Go").Names is ("F(A, B)", "Go")
 	Signature("Strict/Logger:").Names.Length is 0
-	text.Substring(text.IndexOf(":") + 1, text.Length - text.IndexOf(":") - 1).Split(",") - ""
+	text.Substring(text.IndexOf(":") + 1, text.Length - text.IndexOf(":") - 1).Split(";") - ""
 Earlier(signatures Texts) Number
 	Signature("Strict/Logger:Log").Earlier(("Strict/A:", "Strict/Logger:")) is 1
 	Signature("Strict/Logger:Log").Earlier(List(Text) + "Strict/A:") is -1
