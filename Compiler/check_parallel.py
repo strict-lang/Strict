@@ -212,6 +212,31 @@ wrapper = '''
   llvm.func @test_claiming(i64)
   llvm.func @test_publishing(i64)
   llvm.func @test_retired(i64)
+  llvm.mlir.global internal constant @test_shell("cmd\00") : !llvm.array<4 x i8>
+  func.func @test_tools(%lines: !llvm.ptr, %count: i64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %start = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %total = arith.sitofp %count : i64 to f64
+    %list = func.call @strict_list_new(%total, %total) : (f64, f64) -> f64
+    cf.br ^next(%start : i64)
+  ^next(%index: i64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^fill, ^run
+  ^fill:
+    %slot = llvm.getelementptr %lines[%index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.ptr
+    %line = llvm.load %slot : !llvm.ptr -> !llvm.ptr
+    %text = func.call @strict_bits(%line) : (!llvm.ptr) -> f64
+    %at = arith.sitofp %index : i64 to f64
+    %stored = func.call @strict_list_set(%list, %at, %text) : (f64, f64, f64) -> f64
+    %following = arith.addi %index, %one : i64
+    cf.br ^next(%following : i64)
+  ^run:
+    %shellText = llvm.mlir.addressof @test_shell : !llvm.ptr
+    %shell = func.call @strict_bits(%shellText) : (!llvm.ptr) -> f64
+    %results = func.call @strict_process_runtools(%zero, %shell, %list) : (f64, f64, f64) -> f64
+    return %results : f64
+  }
   func.func @test_parallel(%body: !llvm.ptr, %context: !llvm.ptr, %count: i64) -> f64 {
     %callable = builtin.unrealized_conversion_cast %body : !llvm.ptr to (!llvm.ptr, i64, i64) -> f64
     %result = func.call @strict_parallel(%callable, %context, %count) : ((!llvm.ptr, i64, i64) -> f64, !llvm.ptr, i64) -> f64
@@ -287,6 +312,14 @@ double test_second_compute(void) {
 }
 static DWORD WINAPI cycle_first(void* unused) { return is_error(test_first()); }
 static DWORD WINAPI cycle_second(void* unused) { return is_error(test_second()); }
+extern double test_tools(char** lines, int64_t count);
+static char* slow_lines[4];
+static char* quick_lines[2];
+static double batches(void* context, int64_t from, int64_t to) {
+	for (int64_t index = from; index < to && index < 2; index++)
+		test_tools(index == 0 ? slow_lines : quick_lines, index == 0 ? 4 : 2);
+	return 0;
+}
 static DWORD caller;
 static HANDLE ready, published, retired;
 static atomic_int publishing, premature;
@@ -368,6 +401,21 @@ int main(int argc, char** argv) {
 		printf("Constant cycle on two threads: %d errors (expected 2), computations %d and %d (expected 1)\\n",
 			(int)(errors[0] + errors[1]), atomic_load(&first_computed), atomic_load(&second_computed));
 		return errors[0] + errors[1] != 2 || atomic_load(&first_computed) != 1 || atomic_load(&second_computed) != 1;
+	}
+	if (argc > 2 && argv[1][0] == 't') {
+		test_scan_invalidation(&argc);
+		for (int index = 0; index < 4; index++) {
+			slow_lines[index] = malloc(512);
+			snprintf(slow_lines[index], 512, "/c ping -n 2 127.0.0.1 >nul & (echo %%STRICT_THREADS%%)> %s/slow%d.txt", argv[2], index);
+		}
+		for (int index = 0; index < 2; index++) {
+			quick_lines[index] = malloc(512);
+			snprintf(quick_lines[index], 512, "/c (echo %%STRICT_THREADS%%)> %s/quick%d.txt", argv[2], index);
+		}
+		published = CreateEventA(0, TRUE, TRUE, 0);
+		int idle = 0;
+		test_parallel(batches, &idle, 3);
+		return 0;
 	}
 	if (argc > 1 && argv[1][0] == 'g') {
 		int64_t state = test_pool_gpu();
@@ -452,7 +500,7 @@ def run(name, arguments):
 	assert result.returncode == 0, result.stdout + result.stderr
 lowered = output / "pool.llvm.mlir"
 llvm = output / "pool.ll"
-run("mlir-opt", [module, "--symbol-privatize=exclude=test_parallel,test_pinned,test_carried,test_checked_collection,test_reused_counts,test_scan_invalidation,test_pool_gpu,test_cached,test_first,test_second", "--symbol-dce", "--convert-scf-to-cf",
+run("mlir-opt", [module, "--symbol-privatize=exclude=test_parallel,test_pinned,test_carried,test_checked_collection,test_reused_counts,test_scan_invalidation,test_pool_gpu,test_cached,test_first,test_second,test_tools", "--symbol-dce", "--convert-scf-to-cf",
 	"--convert-arith-to-llvm", "--convert-func-to-llvm", "--convert-cf-to-llvm", "--reconcile-unrealized-casts", "-o", lowered])
 run("mlir-translate", ["--mlir-to-llvmir", lowered, "-o", llvm])
 executable = output / "check.exe"
@@ -461,6 +509,21 @@ for mode in ["j", "k", "xcycle", "gpu", "rsame", "rdifferent", "scan"]:
 	reused = subprocess.run([str(executable), mode], capture_output=True, text=True, timeout=15)
 	print(reused.stdout.strip(), flush=True)
 	assert reused.returncode == 0, reused.stdout + reused.stderr
+def tool_shares(environment):
+	shares = output / "ToolShares"
+	shutil.rmtree(shares, ignore_errors=True)
+	shares.mkdir()
+	batched = subprocess.run([str(executable), "tools", shares.as_posix()], capture_output=True, text=True, timeout=30,
+		env=environment)
+	assert batched.returncode == 0, batched.stdout + batched.stderr
+	return {name: [(shares / f"{name}{index}.txt").read_text().strip() for index in range(count)]
+		for name, count in (("slow", 4), ("quick", 2))}
+received = tool_shares(os.environ)
+print("STRICT_THREADS of a slow batch of 4 and a quick batch of 2 run together: " + str(received), flush=True)
+assert all(len(set(values)) == 1 and values[0].isdigit() for values in received.values()), \
+	"A tool batch finishing changed the thread share of another one"
+explicit = tool_shares(dict(os.environ, STRICT_THREADS="7"))
+assert all(value == "7" for values in explicit.values() for value in values), "Explicit STRICT_THREADS was replaced: " + str(explicit)
 result = subprocess.run([str(executable)], capture_output=True, text=True, timeout=15)
 assert result.returncode == 0, result.stdout + result.stderr
 print(result.stdout.strip())
