@@ -13,7 +13,7 @@ constant Tiny = NgramEmbedding(Keys, Values, Norm, Ones, Norm, Kernel + Kernel +
 constant Zero = Layer.Zeros(8)
 constant Silence = (Zero, Zero, Zero, Zero, Zero, Zero, Zero, Zero, Zero, Zero)
 constant Sample = Tiny.Gated(HyperStreams.Streams, (3, 1))
-Loaded(model Gguf, prefix Text) NgramEmbedding
+Loaded(model Gguf, prefix Text) Slow(NgramEmbedding)
 	NgramEmbedding.Loaded(HyperStreams.Flash, "blk.1.").conv.Length is 256
 	NgramEmbedding.Loaded(HyperStreams.Flash, "blk.1.").keyProjection.weights.Length is 256
 	let keyed = Layer(model.Rows(prefix + "ple_key.weight"), Layer.Unbiased)

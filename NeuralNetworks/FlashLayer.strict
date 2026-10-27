@@ -34,7 +34,7 @@ Attentions(model Gguf, prefix Text, routed Experts) Slow(List(Qwen3Block))
 		return List(Qwen3Block)
 	let heads = model.Value(model.Value("general.architecture") + ".attention.head_count") to Number
 	List(Qwen3Block) + Qwen3Block.Attending(model, prefix, heads, routed)
-Shared(model Gguf, prefix Text) List(Layer)
+Shared(model Gguf, prefix Text) Slow(List(Layer))
 	First.shared.Last.weights.First.Length is 64
 	let gate = Layer(List(Numbers) + model.Values(prefix + "ffn_gate_inp_shexp.weight"), Layer.Unbiased)
 	let down = Qwen3Block.Dense(model, prefix, List(Text) + "ffn_down_shexp")

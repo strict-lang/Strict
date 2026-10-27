@@ -64,7 +64,7 @@ Located(component Number, column Number, row Number, columns Number) Number
 	let vertical = Factor(component, false)
 	let mcu = (row / vertical).Floor * columns + (column / horizontal).Floor
 	mcu * plan.Length + plan.Index(component) + (row % vertical) * horizontal + column % horizontal
-Blocks List(Numbers)
+Blocks Slow(List(Numbers))
 	Gray.Blocks.Length is 1
 	Colored.Blocks.Length is 6
 	let decoder = value

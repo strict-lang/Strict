@@ -11,7 +11,7 @@ constant Tiny = HyperStreams((1, 2, 1, 1, 0.5, 1, 1, 2), Down, Up, Inject)
 constant Streams = (1, 2, 3, 4, 0, 1, 2, 0)
 constant Flash = Gguf("NeuralNetworks/tinyqwen4exp.gguf")
 constant Embedded = Tiny.Started(Flash.Picked("token_embd.weight", List(Number) + 1))
-Loaded(model Gguf, prefix Text) HyperStreams
+Loaded(model Gguf, prefix Text) Slow(HyperStreams)
 	HyperStreams.Loaded(Flash, "blk.0.hc_attn").Mixed(Embedded)(0).IsNearlyEqual(0.170274, 0.000001)
 	HyperStreams.Loaded(Flash, "blk.0.hc_attn").Mixed(Embedded)(5).IsNearlyEqual(-0.291299, 0.000001)
 	HyperStreams.Loaded(Flash, "output_hc").inject.weights.Length is 0

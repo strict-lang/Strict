@@ -20,7 +20,7 @@ Shape(name Text) Numbers
 	Tiny.Shape("m") is (2, 3)
 	Tiny.Shape("missing").Length is 0
 	GgufFile.Shape(path, name)
-Values(name Text) Numbers
+Values(name Text) Slow(Numbers)
 	(Tiny.Values("v"), Split.Values("v")) is ((0.5, -1.5, 2.25), (0.5, -1.5, 2.25))
 	(Tiny.Values("h"), Tiny.Values("b")) is ((1, 2, 3, 4, 5, 6), (1, 2, 3, 4, 5, 6))
 	Tiny.Values("missing") is Error
@@ -33,7 +33,7 @@ Values(name Text) Numbers
 	Quants.Values("pq2_0") is Quants.Values("ptq1_0")
 	(Quants.Values("q2_0")(64), Quants.Values("q2_0")(65), Quants.Values("q2_0").Last) is (-1.5, 1.5, 3)
 	GgufFile.Values(path, name)
-Rows(name Text) List(Numbers)
+Rows(name Text) Slow(List(Numbers))
 	Tiny.Rows("m") is ((1, 2, 3), (4, 5, 6))
 	Split.Rows("r6") is Tiny.Rows("r6")
 	Gguf("NeuralNetworks/tiny.gguf", 16).Rows("h") is ((1, 2, 3), (4, 5, 6))

@@ -36,7 +36,7 @@ Grouped(bases Numbers, count Number, input Numbers) Slow(Numbers)
 	let width = weights.First.Length
 	for count * input.Length / width
 		Dot(weights(bases((index / count / Tile).Floor) + index % count), 0, input, (index / count).Floor * width)
-Gated(input Numbers) Numbers
+Gated(input Numbers) Slow(Numbers)
 	Gates.Gated((1, 1, 2, 0))(1).IsNearlyEqual(2.1931757)
 	Gates.Gated((1, 1, 2, 0))(2).IsNearlyEqual(7.0463766)
 	Wholes.Gated(Tokens)(0).IsNearlyEqual(Wholes.Sums(Tokens)(0) * Wholes.Sums(Tokens)(2), 40)

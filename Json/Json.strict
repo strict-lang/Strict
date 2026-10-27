@@ -3,7 +3,7 @@ constant Bones = Json("{ \"bones\": [ { \"name\": \"root\" }, { \"name\": \"Body
 constant Escaped = Json(" \"a\\\"b\\nc\\u0041\" ")
 constant Spaces = (" ", "\t", "\n", "\r")
 constant Ends = (",", "}", "]", " ", "\t", "\n", "\r")
-Read(path Text) Json
+Read(path Text) Slow(Json)
 	Json.Read("Json/BatSkeleton.json").get("skeleton").get("width") to Number is 205.28
 	Json.Read("Json/BatSkeleton.json").get("bones").Elements(2).get("parent") to Text is "Bat_Bone"
 	Json(Text.Combine(File(path).ReadLines, "\n"))

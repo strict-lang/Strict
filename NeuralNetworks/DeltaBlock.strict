@@ -13,7 +13,7 @@ has merged Numbers = List(Number)
 has sigmoidGate Boolean = false
 has rates Layer = Layer.None
 constant Tiny = DeltaBlock.Loaded(Drafter.Model, "blk.0.", Layer.Zeros(16), Basis.None)
-Loaded(model Gguf, prefix Text, zeros Numbers, basis Basis) DeltaBlock
+Loaded(model Gguf, prefix Text, zeros Numbers, basis Basis) Slow(DeltaBlock)
 	Tiny.inputs.weights.Length is 32
 	let mixing = Mixing(model, prefix, zeros, Experts(Qwen3Block.FeedForward(model, prefix), basis = basis))
 	let normed = model.Values(prefix + "attn_norm.weight")
@@ -24,7 +24,7 @@ Loaded(model Gguf, prefix Text, zeros Numbers, basis Basis) DeltaBlock
 	let rated = isApart then Layer(mixing.inputs.weights.Slice(mixed, rating), Layer.Unbiased) else Layer.None
 	let after = model.Values(prefix + "post_attention_norm.weight")
 	DeltaBlock(mixing, attentionNorm = normed, mlpNorm = after, inputs = kept, rates = rated)
-Mixing(model Gguf, prefix Text, zeros Numbers, feedForward Experts) DeltaBlock
+Mixing(model Gguf, prefix Text, zeros Numbers, feedForward Experts) Slow(DeltaBlock)
 	DeltaBlock.Mixing(Drafter.Model, "blk.0.", Layer.Zeros(16), Tiny.experts).attentionNorm.Length is 0
 	let combined = Qwen3Block.Dense(model, prefix, ("attn_qkv", "attn_gate", "ssm_beta", "ssm_alpha"))
 	let taps = model.Values(prefix + "ssm_conv1d.weight")

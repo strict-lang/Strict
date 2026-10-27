@@ -16,7 +16,7 @@ Validate ValidationIssues
 			let statements = BodyParser(shape.lines).Method(index + 1).Statements
 			issues = issues + UsageRules(header, statements, shape.MemberScope.names, mutations, index + 1).Issues
 	MemberIssues + ConstantIssues + issues
-MemberIssues ValidationIssues
+MemberIssues Slow(ValidationIssues)
 	Sample.MemberIssues.Length is 1
 	Sample.MemberIssues.First.Line is 1
 	Sample.MemberIssues.First to Text is "UnusedMemberMustBeRemoved: unused, capitalize it when other types use it"

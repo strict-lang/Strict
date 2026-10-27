@@ -9,7 +9,7 @@ Run
 	logger.Log("Error before training " + Error(untrained) + ", after " + Error(network) + " in " + milliseconds + " ms")
 	for Inputs
 		logger.Log(value to Text + " gives " + network.Predict(value).First)
-Trained(network Network, steps Number) Network
+Trained(network Network, steps Number) Slow(Network)
 	Xor.Error(Xor.Trained(Network.Pair, 200)) < Xor.Error(Network.Pair)
 	mutable trained = network
 	for steps

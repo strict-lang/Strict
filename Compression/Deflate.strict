@@ -22,7 +22,7 @@ Adler Numbers
 		low = (low + value) % 65521
 		high = (high + low) % 65521
 	((high / 256).Floor, high % 256, (low / 256).Floor, low % 256)
-Zlib Numbers
+Zlib Slow(Numbers)
 	Inflate(Inflate.Part(Deflate(Repeated).Zlib, 2, Deflate(Repeated).Zlib.Length - 2)).Inflated is Repeated
 	Inflate(Inflate.Part(Deflate(List(Number)).Zlib, 2, 4)).Inflated.Length is 0
 	(List(Number) + 120 + 1) + Packed(Codes) + Adler
@@ -97,7 +97,7 @@ Packed(codes Numbers) Numbers
 			accumulator = (accumulator / 256).Floor
 		count = count % 8
 	count > 0 then packed + accumulator else packed
-Heads Numbers
+Heads Slow(Numbers)
 	Deflate(Repeated).Heads.Length is 32768
 	for 32768
 		0

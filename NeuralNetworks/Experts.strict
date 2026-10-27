@@ -13,7 +13,7 @@ constant Gating = Tiny.Gated(Tiny.Expanded((1, 3), Probe), 4)
 constant Pairs = (1, 3, 0, 1)
 constant Twice = Probe + Probe.Reverse
 constant Sharing = Single.expansions + Single.contractions + Layer(List(Numbers) + Probe.Reverse, Layer.Unbiased)
-Loaded(model Gguf, prefix Text) Experts
+Loaded(model Gguf, prefix Text) Slow(Experts)
 	Tiny.expansions.Length is 4
 	Tiny.expansions.First.weights.Length is 8
 	Tiny.used is 2
@@ -22,7 +22,7 @@ Loaded(model Gguf, prefix Text) Experts
 	let joined = Flattened(Joined(model, prefix, count))
 	let contracting = model.Rows(prefix + "ffn_down_exps.weight")
 	Experts(routed.router, Stacked(joined, count), Stacked(contracting, count), routed.used, joined, contracting)
-Routed(model Gguf, prefix Text) Experts
+Routed(model Gguf, prefix Text) Slow(Experts)
 	Experts.Routed(Model, "blk.0.").router is Tiny.router
 	Experts.Routed(Model, "blk.0.").expansions.Length is 0
 	let architecture = model.Value("general.architecture")

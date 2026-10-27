@@ -3,7 +3,7 @@ has model Gguf
 has prefix Text
 constant Mixture = MappedExperts.Loaded(Gguf("NeuralNetworks/experts.gguf"), "blk.0.")
 constant Small = Mixture.model.Values("blk.0.ffn_gate_inp.weight").Slice(0, 256) * 0.02
-Loaded(gguf Gguf, layer Text) MappedExperts
+Loaded(gguf Gguf, layer Text) Slow(MappedExperts)
 	Mixture.experts.used is 2
 	Mixture.prefix is "blk.0."
 	MappedExperts(Experts.Routed(gguf, layer), gguf, layer)

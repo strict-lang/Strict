@@ -5,7 +5,7 @@ constant Header = 1229472850
 constant End = 1229278788
 Save(image Image)
 	File(path).Write(Bytes(image))
-Bytes(image Image) Bytes
+Bytes(image Image) Slow(Bytes)
 	ImageSaver("").Bytes(Image.Blank(Size(1, 1))).Length is 68
 	ImageSaver("").Bytes(Image.Blank(Size(16, 16))).Length < 200
 	let header = Big32(image.Size.Width) + Big32(image.Size.Height) + (8, 6, 0, 0, 0)
@@ -13,7 +13,7 @@ Bytes(image Image) Bytes
 	let numbers = Signature + Chunk(Header, header) + Chunk(Png.ImageData, data) + Chunk(End, List(Number))
 	for numbers
 		Byte(value)
-Data(image Image) Numbers
+Data(image Image) Slow(Numbers)
 	ImageSaver("", false).Data(Image.Blank(Size(16, 16))).Length is 1051
 	let deflate = Deflate(Scanlines(image))
 	compressed then deflate.Zlib else deflate.Stored

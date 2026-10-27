@@ -18,7 +18,7 @@ Rotated Slow(Numbers)
 		for radix
 			sum = sum + Sign(digit, index) * first(start + index * Radix)
 		sum / radix.SquareRoot
-Stage(input Numbers, flipping Numbers, step Number) Numbers
+Stage(input Numbers, flipping Numbers, step Number) Slow(Numbers)
 	Sylvester(List(Number), Unflipped, 64).Stage((0, 1) + Layer.Zeros(62), Unflipped, 1)(3).IsNearlyEqual(-0.176777)
 	Sylvester(List(Number), Unflipped, 8).Stage((1, 0, 0, 0, 0, 0, 0, 0), Unflipped, 1).Last.IsNearlyEqual(0.353553)
 	let radix = (size / step).Clamp(1, Radix)

@@ -6,7 +6,7 @@ constant None = Basis(List(Numbers))
 constant Model = Gguf("NeuralNetworks/tinyqwen35basis.gguf", 32)
 constant Tiny = Basis.Loaded(Model)
 constant Probe = (1, -2, 3, 0.5, 4, 0, -1, 2)
-Loaded(model Gguf) Basis
+Loaded(model Gguf) Slow(Basis)
 	Tiny.block is 4
 	Tiny.grouped is true
 	Basis.Loaded(Gguf("NeuralNetworks/tinyqwen35.gguf")) is None

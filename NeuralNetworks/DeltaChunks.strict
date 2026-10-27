@@ -25,7 +25,7 @@ Read DeltaChunks
 		outputs = outputs + prepared.Outputs(fresh, state, index * chunk)
 		state = prepared.Remembered(fresh, state, index * chunk)
 	DeltaChunks(prepared, memory = state, reads = outputs)
-Stepped(block DeltaBlock) DeltaChunks
+Stepped(block DeltaBlock) Slow(DeltaChunks)
 	DeltaChunks(4, 2, 2, 16, 1, Layer.Zeros(16), Layer.Zeros(8)).Stepped(DeltaBlock.Tiny).reads is Layer.Zeros(8)
 	let updated = DeltaBlock(block, memory = block.Updated(keyed, decayed, block.Read(keyed, 0, 1), 0))
 	DeltaChunks(value, memory = updated.memory, reads = updated.Read(keyed, 0, 0))

@@ -1,7 +1,7 @@
 has logger
 constant Corpus = "NeuralNetworks/corpus/"
-constant Book = "https://www.gutenberg.org/cache/epub/1661/pg1661.txt"
-constant Novel = "https://www.gutenberg.org/cache/epub/1342/pg1342.txt"
+constant Book = "https://gutenberg.pglaf.org/1/6/6/1661/1661-0.txt"
+constant Novel = "https://gutenberg.pglaf.org/1/3/4/1342/1342-0.txt"
 constant Width = 1500
 Run(path Text)
 	let texts = Heldout(8)

@@ -37,7 +37,7 @@ Next Slow(Number)
 Scored Slow(Numbers)
 	Tiny.Step(1, 0).Scored.Length is 5
 	Logits(Gpt2Block.Normalized(hidden, gain, bias))
-Logits(normed Numbers) Numbers
+Logits(normed Numbers) Slow(Numbers)
 	Tiny.Logits((1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)).Length is 5
 	for tokens
 		Layer.Summed(value, normed)

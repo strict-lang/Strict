@@ -11,7 +11,7 @@ Report(name Text, grammar Reber, strings Number) Slow(Text)
 	let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
 	let correct = Correct(trained, grammar, 100)
 	name + ": trained on " + strings + " strings in " + milliseconds + " ms, " + correct + " of 100 new strings right"
-Trained(network Gru, grammar Reber, count Number) Gru
+Trained(network Gru, grammar Reber, count Number) Slow(Gru)
 	ReberPrediction.Trained(Untrained, Reber.Simple, 1).output.weights.Length is 7
 	mutable trained = network
 	for count

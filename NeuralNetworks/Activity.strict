@@ -36,7 +36,7 @@ Accumulated(previous Numbers, activated Numbers) Slow(Numbers)
 	for previous
 		let activation = activated(index % activated.Length)
 		value + (index < activated.Length then activation * activation else activation)
-Means(block Number) Numbers
+Means(block Number) Slow(Numbers)
 	Activity(Gpt2.Tiny, List(Numbers) + (0, 0, 2, 4), 2).Means(0) is (1, 2)
 	let neurons = sums(block).Length / 2
 	for neurons

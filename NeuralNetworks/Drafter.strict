@@ -34,7 +34,7 @@ Extended(model Qwen3, rows Numbers, tokens Numbers, positions Numbers) Slow(Draf
 	let kept = List(Qwen3Block) + Qwen3Block(cached, queries = List(Number), hybrid = Hybrid.None)
 	let output = cached.Output(projected, 1)
 	Drafter(value, blocks = kept, hidden = Safetensors.Part(output, output.Length - width, width, 1))
-Joined(first Numbers, second Numbers) Numbers
+Joined(first Numbers, second Numbers) Slow(Numbers)
 	Tiny.Joined((1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8), Layer.Zeros(16))(8) is 0
 	Tiny.Joined((1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8), Layer.Zeros(16))(16) is 1
 	let width = embedNorm.Length

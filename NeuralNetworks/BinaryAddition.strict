@@ -37,7 +37,7 @@ Decoded(bits List(Numbers)) Number
 Added(network Recurrent, first Number, second Number) Number
 	BinaryAddition.Added(Recurrent.Random(2, 1), 1, 2) < 256
 	Decoded(network.Predicted(Pairs(first, second)))
-Correct(network Recurrent, count Number) Number
+Correct(network Recurrent, count Number) Slow(Number)
 	BinaryAddition.Correct(Recurrent.Random(2, 1), 3) <= 3
 	mutable correct = 0
 	for count

@@ -49,7 +49,7 @@ Quantized(name Text) List(Numbers)
 	Bytes.Quantized("a").First(1) is -63
 	Bytes.Quantized("a")(2).First is 2
 	TensorFile.Quantized(path, Entry(name + ".weight"), Entry(name + ".weight_scale"))
-Tuned(name Text, downs Numbers, ups Numbers, scales Numbers) List(Numbers)
+Tuned(name Text, downs Numbers, ups Numbers, scales Numbers) Slow(List(Numbers))
 	Bytes.Tuned("a", List(Number), List(Number), List(Number)) is Bytes.Quantized("a")
 	Bytes.Tuned("a", Second, (1, 0, 0, 0), List(Number) + 0.5)(2) is Bytes.Quantized("a")(2)
 	Bytes.Tuned("a", Second, (1, 0, 0, 0), List(Number) + 0.5)(0)(5).IsNearlyEqual(Exact(0)(5) + Second(5) / 2, 1)

@@ -1,5 +1,5 @@
 has logger
-Copied(times Number) Number
+Copied(times Number) Slow(Number)
 	LargeCollections.Copied(2) is 2 * 67108865
 	let large = Doubled("ab", 25)
 	mutable length = 0

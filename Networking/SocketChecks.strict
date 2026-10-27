@@ -1,4 +1,4 @@
-Failures Number
+Failures Slow(Number)
 	Socket.Send(0, List(Number)) is Error("InvalidSocket")
 	Socket.Receive(0, 1) is Error("InvalidSocket")
 	Socket.Close(0) is 0

@@ -61,7 +61,7 @@ Chunk(count Number) Number
 	let interval = decoder.jpeg.Interval(start)
 	let size = Components.Length is 1 then 1 else count * decoder.plan.Length / decoder.Total
 	interval is 0 then count else interval * size
-Scanned(coefficients List(Numbers)) List(Numbers)
+Scanned(coefficients List(Numbers)) Slow(List(Numbers))
 	Gray.Scanned(JpegDecoder.Gray.Zeros).First.First is -24
 	Colored.Scanned(JpegDecoder.Colored.Zeros).Last.First is -2
 	let order = Order
