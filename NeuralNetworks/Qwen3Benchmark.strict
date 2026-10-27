@@ -12,7 +12,7 @@ Run(path Text, bits Number, count Number, repeats = 1, batch = 1, cacheBits = 32
 	let first = prefilled.Next
 	let durations = Durations(batch is 1 then prefilled else prefilled.Copies(batch), first, prompt.Length, count, batch)
 	logger.Log(Report(prompt.Length, prefill, durations, batch) + ", loaded in " + (loaded - started).Round(1) + " s")
-Fastest(model Qwen3, prompt Numbers) Number
+Fastest(model Qwen3, prompt Numbers) Slow(Number)
 	Qwen3Benchmark(Logger).Fastest(Qwen3.Tiny, (1, 2)) > 0
 	mutable fastest = 1000000
 	for 3
@@ -21,7 +21,7 @@ Fastest(model Qwen3, prompt Numbers) Number
 		let milliseconds = (Process.Elapsed - before) * 1000 / prompt.Length
 		fastest = (first >= 0) and (milliseconds < fastest) then milliseconds else fastest
 	fastest
-Sampled(model Qwen3, position Number, count Number, temperature Number) Numbers
+Sampled(model Qwen3, position Number, count Number, temperature Number) Slow(Numbers)
 	Qwen3Benchmark(Logger).Sampled(Qwen3.Tiny.Step(1, 0), 1, 2, 1).Length is 2
 	let started = Process.Elapsed
 	let tokens = Generation(model, Sampling(temperature, 40, 0.95, PseudoRandom.Seeded(1))).Continued(position, count)
@@ -33,7 +33,7 @@ Repeated(tokens Numbers, repeats Number) Numbers
 	Qwen3Benchmark(Logger).Repeated((1, 2), 2) is (1, 2, 1, 2)
 	for tokens.Length * repeats
 		tokens(index % tokens.Length)
-Durations(model Qwen3, token Number, start Number, count Number, batch Number) Numbers
+Durations(model Qwen3, token Number, start Number, count Number, batch Number) Slow(Numbers)
 	Qwen3Benchmark(Logger).Durations(Qwen3.Tiny.Step(1, 0), 0, 1, 2, 1).Length is 2
 	Qwen3Benchmark(Logger).Durations(Qwen3.Tiny.Step(1, 0).Copies(2), 0, 1, 2, 2).Length is 2
 	mutable current = model
