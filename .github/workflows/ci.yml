@@ -51,6 +51,8 @@ jobs:
           echo "$PWD/Tools/LLVM-23.1.3-Linux-X64/bin" >> "$GITHUB_PATH"
           sh Compiler/bootstrap.sh
       - name: Tests on the Strict VM, one process per file on all cores
+        env:
+          STRICT_TESTS_PARALLEL: 1
         run: |
           for folder in $FOLDERS; do ls "$folder"/*.strict; done | awk -v part="${PART%/*}" -v parts="${PART#*/}" '(NR - 1) % parts == part' > files.txt
           xargs -P "$(nproc)" -I {} sh -c './strict test "$1" > "$1.log" 2>&1 || { grep -v "^Test passed" "$1.log"; exit 1; }' _ {} < files.txt
@@ -98,6 +100,8 @@ jobs:
         shell: cmd
         run: Compiler\Bootstrap.cmd
       - name: Tests on the Strict VM, one process per file on all cores
+        env:
+          STRICT_TESTS_PARALLEL: 1
         run: |
           for folder in $FOLDERS; do ls "$folder"/*.strict; done > files.txt
           xargs -P "$(nproc)" -I {} sh -c './strict.exe test "$1" > "$1.log" 2>&1 || { grep -v "^Test passed" "$1.log"; exit 1; }' _ {} < files.txt

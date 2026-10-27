@@ -327,6 +327,11 @@
   ^crash:
     llvm.return
   }
+  func.func private @strict_environment_put(%setting: !llvm.ptr) {
+    %put = llvm.call @putenv(%setting) : (!llvm.ptr) -> i32
+    return
+  }
+  llvm.func @putenv(!llvm.ptr) -> i32
   func.func private @strict_file_size(%name: !llvm.ptr) -> i64 {
     %size = arith.constant 256 : i64
     %buffer = llvm.alloca %size x i8 : (i64) -> !llvm.ptr

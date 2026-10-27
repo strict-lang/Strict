@@ -412,6 +412,11 @@
     %guaranteed = llvm.call @SetThreadStackGuarantee(%reserve) : (!llvm.ptr) -> i32
     return
   }
+  func.func private @strict_environment_put(%setting: !llvm.ptr) {
+    %put = llvm.call @_putenv(%setting) : (!llvm.ptr) -> i32
+    return
+  }
+  llvm.func @_putenv(!llvm.ptr) -> i32
   func.func private @strict_file_size(%name: !llvm.ptr) -> i64 {
     %dataSize = arith.constant 40 : i64
     %data = llvm.alloca %dataSize x i8 : (i64) -> !llvm.ptr
