@@ -163,3 +163,18 @@ with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as 
 	assert 'func.call @strict_file_joined(' in source.with_suffix('.test.mlir').read_text(), \
 		"Whole-file reads still allocate a list of lines before joining it"
 	print("Whole-file read fusion preserves LF, CRLF, BOM, Unicode and empty files")
+
+def check_parallel_refresh():
+	"""Builds started together after a compiler change rebuild NativeCompiler once, the others wait for it."""
+	os.utime(root / "Compiler/NativeCompiler.strict")
+	programs = ["Examples/HelloLogger.strict", "Examples/FizzBuzz.strict", "Examples/Fibonacci.strict"]
+	started = [subprocess.Popen([str(root / ("strict" + extension)), "build", program], cwd=root,
+		stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True) for program in programs]
+	outputs = [process.communicate(timeout=280)[0] for process in started]
+	logs = "\n----\n".join(outputs)
+	assert all(process.returncode == 0 for process in started), "A parallel build failed:\n" + logs
+	assert sum("building it again first" in output for output in outputs) == 1, "Not exactly one rebuild:\n" + logs
+	assert not (root / "Compiler/NativeCompiler.building").exists(), "The rebuild lock was left behind"
+	print("Parallel builds after a compiler change rebuild NativeCompiler once")
+
+check_parallel_refresh()

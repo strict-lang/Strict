@@ -521,6 +521,10 @@
   llvm.mlir.global internal constant @strict_gpu_ptx_ending(".ptx\00") : !llvm.array<5 x i8>
   llvm.mlir.global internal constant @strict_gpu_older_ending(".older.ptx\00") : !llvm.array<11 x i8>
 
+  func.func private @strict_process_wait(%self: f64, %seconds: f64) -> f64 {
+    %none = arith.constant 0.0 : f64
+    return %none : f64
+  }
   func.func private @strict_test_pause() {
     return
   }

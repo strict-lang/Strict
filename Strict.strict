@@ -1,6 +1,7 @@
 has logger
 constant Version = "1.0"
 constant Commands = ("build", "test", "check", "update", "format", "suggest")
+constant MaxWait = 300
 constant Informing = ("version", "--version", "help", "--help")
 constant Help = ("strict <file> [arguments]  run the Run method on the Strict VM, the fastest, everything stays in memory", "strict build <file>        compile a native executable without running tests (Name.test without Run)", "strict build <file> linux  also the Linux executable (on Windows through WSL)", "strict build <file> web  build Name.html, .js and .wasm for the browser (Emscripten in Tools/emsdk)", "strict build <file> android  build an arm64-v8a shared library and stage Release/Android (Android NDK)", "strict build <file> ios    build an arm64 iOS static archive and stage Release/iOS (native packages need Xcode)", "strict build <file> small  optimize for size instead of speed (-Os), combines with linux", "strict build <file> fast   native desktop build with unoptimized host code, reuses native/GPU caches", "strict build <file> library  build a shared library of its public methods and a C# binding", "strict test <file>         run the inline tests of every method on the Strict VM", "strict test <file> native  build and run its native tests explicitly", "strict test <file> -       test the source read from standard input as <file>, nothing is written", "strict test <file> lines   run them natively and print how often and how long each line ran (a folder: one build)", "strict test <file> values  run them on the Strict VM and print how often each line ran and the value it set", "strict check <folder>      validate the .strict files: type rules, unused members, limits", "strict format <file>       print the file in its canonical form, each method body as the parser reads it", "strict update <folder>     refresh the packages copied into the folder (.origin) from their clone or GitHub", "strict version             show the version number and when this strict executable was built", "strict suggest <file> <method>  print bodies passing its tests; add - to read unsaved source")
 Run(arguments Texts) Number
@@ -33,13 +34,13 @@ Tested(rest Texts) Number
 	if request.Message is not ""
 		logger.Log(request.Message)
 		return 2
-	let option = request.Option
-	if option is "-"
+	if request.Option is "-"
 		File(FileCompiler.Normalized(rest(0))).InMemory(Process.Input)
-	if option is in ("values", "trace")
+	if request.Option is in ("values", "trace")
 		let trace = ValueTrace(logger, request.Selection)
-		return option is "values" then trace.Run(rest(0), rest(1)) else trace.Traced(rest(0), rest(1))
-	option is in ("lines", "native") then Native("test", rest) else Execute(logger, request.Selection).Test(rest(0), rest(1))
+		return request.Option is "values" then trace.Run(rest(0), rest(1)) else trace.Traced(rest(0), rest(1))
+	let execute = Execute(logger, request.Selection)
+	request.Option is in ("lines", "native") then Native("test", rest) else execute.Test(rest(0), rest(1))
 Rooted(arguments Texts) Texts
 	Strict.Rooted(List(Text) + "a.strict") is ("a.strict", ".")
 	Strict.Rooted(("a.strict", ".")) is ("a.strict", ".")
@@ -80,14 +81,27 @@ Started(command Text, rest Texts, path Text) Number
 	Process(path).Started(Arguments(command, rest))
 Refreshed(compiler Text, rest Texts) Number
 	Strict(Logger).Refreshed("Missing.exe", ("Compiler/NativeCompiler.strict", ".")) is 0
-	let source = TypeSource.Root + "/Compiler/NativeCompiler.strict"
 	if rest(0).Replace("\\", "/").EndsWith("Compiler/NativeCompiler.strict") or IsCompiled(compiler, TypeSource.Root)
 		return 0
+	let lock = Path(compiler).RemoveExtension.text + ".building"
+	Directory.Create(lock) is false then Waited(compiler, lock) else Rebuilt(compiler, lock)
+Rebuilt(compiler Text, lock Text) Number
+	let source = TypeSource.Root + "/Compiler/NativeCompiler.strict"
 	logger.Log(compiler + " is older than the compiler sources, building it again first")
 	let built = Process(compiler).Started(Arguments("build", (source, TypeSource.Root)))
 	if built is 0
 		File(Checked(compiler)).Write("built from the compiler sources newer than " + compiler)
+	Directory.Delete(lock)
 	built
+Waited(compiler Text, lock Text) Slow(Number)
+	Strict(Logger).Waited("Missing.exe", "Missing.building") is 1
+	let started = Process.Elapsed
+	for as long as Directory.Exists(lock) and (Process.Elapsed - started < MaxWait)
+		Process.Wait(0.1)
+	if IsCompiled(compiler, TypeSource.Root)
+		return 0
+	logger.Log(compiler + " was not built by the other strict (" + lock + "), remove it if no build is running")
+	1
 Checked(compiler Text) Text
 	Strict.Checked("Compiler/NativeCompiler.exe") is "Compiler/NativeCompiler.checked"
 	Path(compiler).RemoveExtension.text + ".checked"

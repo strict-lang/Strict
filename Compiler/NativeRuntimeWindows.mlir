@@ -847,6 +847,15 @@
   llvm.mlir.global internal constant @strict_gpu_older_ending(".older.ptx\00") : !llvm.array<11 x i8>
 
   llvm.func @Sleep(i32)
+  // Process.Wait: blocks this thread for the given seconds
+  func.func private @strict_process_wait(%self: f64, %seconds: f64) -> f64 {
+    %thousand = arith.constant 1000.0 : f64
+    %milliseconds = arith.mulf %seconds, %thousand : f64
+    %wait = arith.fptosi %milliseconds : f64 to i32
+    llvm.call @Sleep(%wait) : (i32) -> ()
+    %none = arith.constant 0.0 : f64
+    return %none : f64
+  }
   func.func private @strict_test_pause() {
     %wait = arith.constant 1 : i32
     llvm.call @Sleep(%wait) : (i32) -> ()
