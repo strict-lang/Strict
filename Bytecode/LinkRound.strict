@@ -3,11 +3,11 @@ has entries List(TypeEntry)
 has signatures Texts
 constant Single = LinkRound(Linker.Sample, List(TypeEntry) + Linker.Go, List(Text))
 constant Twice = LinkRound(Linker.Sample, (Linker.Go, Linker.Go), List(Text) + "Strict/Logger:")
-Entries(signed Texts) List(TypeEntry)
+Entries(signed Texts) Slow(List(TypeEntry))
 	Single.Entries(List(Text) + "Strict/Logger:").First.Name is "Strict/Logger"
 	for signed
 		Fresh(value)
-Fresh(signature Text) TypeEntry
+Fresh(signature Text) Slow(TypeEntry)
 	Single.Fresh("Strict/Logger:").Name is "Strict/Logger"
 	Twice.Fresh("Strict/Logger:Log").methods.Length is 2
 	let known = signatures.Index(signature)

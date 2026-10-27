@@ -19,8 +19,8 @@ Helper(typeName Text, name Text, count Number) Text
 	MlirNatives(Texts, 1).Helper("Strict/Compiler/BuildProfile", "Detailed", 0) is "strict_buildprofile_detailed"
 	let kind = TypeEntry.ShortName(typeName)
 	let isList = kind.StartsWith("List(") or kind.StartsWith("Dictionary(")
-	if (name is in ("Length", "Count")) and (count is 0)
-		return kind is "Text" then "strict_text_length" else isList then "strict_list_length" else ""
+	if (name is in ("Length", "Count")) and (count is 0) and ((kind is "Text") or isList)
+		return kind is "Text" then "strict_text_length" else "strict_list_length"
 	isList then CollectionHelper(kind, name, count) else ValueHelper(kind, name, count)
 ValueHelper(kind Text, name Text, count Number) Text
 	MlirNatives(Texts, 1).ValueHelper("Boolean", "not", 0) is "strict_not"
@@ -103,6 +103,7 @@ TextHelper(name Text) Text
 	MlirNatives(Texts, 1).TypeHelper("File", "WriteLines") is "strict_file_writelines"
 	MlirNatives(Texts, 1).TypeHelper("File", "Modified") is "strict_file_modified"
 	MlirNatives(Texts, 1).TypeHelper("GpuMemory", "Released") is "strict_gpu_trim_unused"
+	MlirNatives(Texts, 1).Helper("Strict/File", "Length", 0) is "strict_file_length"
 	MlirNatives(Texts, 1).TextHelper("Upper") is "strict_text_upper"
 	MlirNatives(Texts, 1).TextHelper("Split") is ""
 	MlirNatives(Texts, 1).TextHelper("Combine") is "strict_text_combine"

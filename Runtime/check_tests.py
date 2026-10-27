@@ -84,4 +84,21 @@ with tempfile.TemporaryDirectory(prefix="TestPolicy", dir=root / "Examples") as 
 			capture_output=True, text=True, timeout=90)
 		assert native.returncode == 0 and ("manual fixture" in native.stdout) == include_slow, native.stdout + native.stderr
 
+	package = folder / "Bytecode"
+	package.mkdir()
+	source = package / "ValueCodegen.strict"
+	def vm_budget(seconds):
+		source.write_text('Delay Number\n\tValueCodegen.Delay is 1\n\tlet started = Process.Elapsed\n'
+			'\tmutable count = 0\n\tfor as long as Process.Elapsed - started < ' + str(seconds) + '\n'
+			'\t\tcount = count + 1\n\tcount > 0 then 1 else 0', encoding="utf-8")
+		return subprocess.run([command, "test", str(source), "unit"], cwd=root, env=environment,
+			capture_output=True, text=True, timeout=10)
+	extended = vm_budget(0.04)
+	assert extended.returncode == 0, "A bounded VM self-test allowance is missing:\n" + extended.stdout + extended.stderr
+	native = subprocess.run([command, "test", str(source), "unit", "native"], cwd=root, env=environment,
+		capture_output=True, text=True, timeout=90)
+	assert native.returncode != 0 and "TestDurationMustNotExceedTwentyMilliseconds" in native.stdout + native.stderr, native.stdout + native.stderr
+	over_budget = vm_budget(0.15)
+	assert over_budget.returncode != 0 and "TestDurationMustNotExceedVmBudget" in over_budget.stdout + over_budget.stderr, over_budget.stdout + over_budget.stderr
+
 	print("Unit deadlines, native/build failures, Slow selection, transparent values and manual Run order passed")

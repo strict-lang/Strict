@@ -394,6 +394,21 @@
   func.func private @strict_guard() {
     return
   }
+  func.func private @strict_file_size(%name: !llvm.ptr) -> i64 {
+    %size = arith.constant 256 : i64
+    %buffer = llvm.alloca %size x i8 : (i64) -> !llvm.ptr
+    %status = llvm.call @stat(%name, %buffer) : (!llvm.ptr, !llvm.ptr) -> i32
+    %none = arith.constant 0 : i32
+    %failed = arith.cmpi ne, %status, %none : i32
+    %zero = arith.constant 0 : i64
+    cf.cond_br %failed, ^done(%zero : i64), ^size
+  ^size:
+    %sizeSlot = llvm.getelementptr %buffer[24] : (!llvm.ptr) -> !llvm.ptr, i8
+    %bytes = llvm.load %sizeSlot : !llvm.ptr -> i64
+    cf.br ^done(%bytes : i64)
+  ^done(%result: i64):
+    return %result : i64
+  }
   func.func private @strict_file_modified(%path: f64) -> f64 {
     %overriddenText = func.call @strict_overridden(%path) : (f64) -> f64
     %unsetText = arith.constant 0.0 : f64

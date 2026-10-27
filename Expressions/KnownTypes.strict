@@ -6,6 +6,8 @@ has positions Dictionary(Text, Number) = Dictionary(Text, Number)
 constant NoMembers = Scope(List(Text), List(Text))
 constant CountMembers = Scope(("number", "unused"), ("Number", "Unused"))
 constant CountMethods = Scope(("Increment", "Twice"), ("Count", "Count"))
+constant Lengths = (Scope(("Length"), ("Length")), NoMembers)
+constant Measured = KnownTypes(("F", "Length"), Lengths, (NoMembers, Scope(("Length"), ("Number"))), (NoMembers, NoMembers))
 constant CountParameters = Scope(("Increment", "Increment mutable", "Twice", "Twice", "Twice types"), ("", "Mutable", "times,offset", "times", "Number"))
 constant SampleParameters = (CountParameters, NoMembers)
 constant Sample = KnownTypes(("Count", "Text"), (CountMembers, NoMembers), (CountMethods, NoMembers), SampleParameters)
@@ -78,6 +80,7 @@ ElementType(typeName Text) Text
 	IsPlural(typeName) then typeName.Substring(0, typeName.Length - 1) else keyed is "" then "Unknown" else keyed
 MemberType(instanceType Text, name Text) Text
 	Sample.MemberType("Count", "Increment") is "Count"
+	Measured.MemberType("F", "Length") is "Number"
 	Sample.MemberType("Unknown", "Length") is "Unknown"
 	Sample.MemberType("outer", "Count") is "Count"
 	Sample.MemberType("List(Text, Number)", "Key") is "Text"
@@ -108,11 +111,11 @@ ValueOf(typeName Text) Text
 DeclaredType(typeName Text, name Text, depth Number) Text
 	Sample.DeclaredType("Count", "number", 0) is "Number"
 	let typeMembers = MembersOf(typeName)
-	if typeMembers.TypeOf(name) is not ""
-		return typeMembers.TypeOf(name)
-	let methodType = MethodsOf(typeName).TypeOf(name)
-	if methodType is not "" or (depth is 0)
-		return methodType
+	let member = typeMembers.TypeOf(name)
+	if (member is not "") and ((member is not name) or (MethodsOf(member).TypeOf(name) is ""))
+		return member
+	if (MethodsOf(typeName).TypeOf(name) is not "") or (depth is 0)
+		return MethodsOf(typeName).TypeOf(name)
 	for typeMembers.types
 		let type = MemberMethodType(value, name, depth - 1)
 		if type is not ""

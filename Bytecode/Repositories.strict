@@ -52,7 +52,7 @@ Fetched(repository Text, type Text) Text
 	File(local + "/.origin").Write(List(Text) + "https://github.com/" + repository + "/tree/HEAD/" + folder)
 	logger.Log("Downloaded " + local + " from https://github.com/" + repository)
 	Provided(local, type)
-Copied(folder Text, type Text) Text
+Copied(folder Text, type Text) Slow(Text)
 	Repositories(Logger, "artifacts").Copied("Examples/NativeAdd", "Adder") is "artifacts/NativeAdd"
 	let local = target + "/" + Path(folder).FileName.text
 	for BinaryFile(folder).Contained(folder)

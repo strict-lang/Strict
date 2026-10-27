@@ -1,7 +1,7 @@
 has root Text
 constant Imaging = List(Text) + "./ImageProcessing/Png.strict"
 constant Typo = ("constant Limit = 3", "has numbr", "has counts Numbers", "Add(other Number, most = Limit) Other", "	other")
-Of(path Text) Texts
+Of(path Text) Slow(Texts)
 	SourceFiles(".").Of("./Missing/A.strict").Length is Directory.Files(".", "*.strict").Length
 	mutable files = List(Mutable(Text))
 	let project = File("./Any.strict").Exists then List(Text) else ResolveCheck.Tree(".")
@@ -11,7 +11,7 @@ Of(path Text) Texts
 	let closed = Closed(Added(files, Directory.Files(root, "*.strict")), Added(Added(local, List(Text) + path), files), 9)
 	let lines = File(path).Exists then File(path).ReadLines else List(Text)
 	TypeChoice(lines).Chosen(closed, path)
-Closed(found Texts, sources Texts, depth Number) Texts
+Closed(found Texts, sources Texts, depth Number) Slow(Texts)
 	Directory.Files("./Compression", "*.strict").First is in SourceFiles(".").Closed(List(Text), Imaging, 0)
 	mutable missing = List(Mutable(Text))
 	for sources

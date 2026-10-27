@@ -1,6 +1,11 @@
 has call Invocation
 Result VmValue
 	let arguments = call.Arguments
+	if call.MethodName is "Extended"
+		return VmValue.OfNumber(TestBudget.Extended(arguments(0).text))
 	if call.MethodName is "Started"
-		return VmValue.OfNumber(TestBudget.Started(arguments(0).text, arguments(1).IsTrue))
+		let place = arguments(0).text
+		let slow = arguments(1).IsTrue
+		let extended = (slow is false) and TestBudget.IsVmException(place)
+		return VmValue.OfNumber(extended then TestBudget.Extended(place) else TestBudget.Started(place, slow))
 	VmValue.OfNumber(TestBudget.Finished(arguments(0).number))

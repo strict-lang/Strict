@@ -19,6 +19,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is atte
 - Linker.Linked exhausts 20 passes with complete false during NativeCompiler self-build; a diagnostic reaches the current convergence check on pass 21: verify closure and convergence instead of silently accepting the depth limit.
 
 - A bare zero-argument method used as a constant initializer is re-evaluated: `constant Shared = Created` logs three calls across three reads, while `constant Shared = Type.Created` is cached; recognize the implicit call in ConstantMethods.
+- `strict build Strict.strict` fails `Strict.Message("help")` with TestDurationMustNotExceedTwentyMilliseconds while the 209 types test in parallel (0.3 ms alone, passes with STRICT_THREADS=1); `MlirFunction` `Counter.Text` and ToolRunner's `Echo.ExecuteAll` exceed 20 ms on the VM even alone.
 
 ## Next
 - GPU speed and memory (attention, 16 bit lists, memory budget, loading, generated loops): [improvements-gpu.md](improvements-gpu.md).

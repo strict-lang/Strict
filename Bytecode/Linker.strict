@@ -13,7 +13,7 @@ constant Parameters = TypeEntry("Strict/Bytecode/MethodEntry", List(MemberEntry)
 constant DictionaryCode = MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Invoke(0, ("Strict/Dictionary(Number, Text)", "Code", "Strict/Text"), List(Number), -1))
 constant Wrappers = (TypeEntry.CharacterEntry, TypeEntry("Strict/Dictionary(Text)", MemberEntry.NumbersMember, List(MethodEntry)))
 constant Natives = ("to", "not", "and", "or", "xor", "Exists", "ReadLines")
-Linked(entries List(TypeEntry), signatures Texts, depth Number) List(TypeEntry)
+Linked(entries List(TypeEntry), signatures Texts, depth Number) Slow(List(TypeEntry))
 	Hello.Linked(TypeEntry.HelloLogger, List(Text), 3).Length is 5
 	Sample.Linked(Iterating, List(Text), 3).Length is 1
 	if depth is 0
@@ -42,7 +42,7 @@ Signatures(types Texts, targets Texts) Texts
 	Sample.Signatures(("Strict/B"), ("Strict/B.Go")) is ("Strict/B:Go")
 	for types
 		value + ":" + Text.Combine(UsedMethods(targets, value), ",")
-LinkedType(type Text, methods Texts) TypeEntry
+LinkedType(type Text, methods Texts) Slow(TypeEntry)
 	Sample.LinkedType("Strict/Logger", List(Text)).Name is "Strict/Logger"
 	Sample.LinkedType("Strict/Bytecode/Crc", List(Text)).Name is "Crc"
 	let source = Fusion(File(SourcePath(type)).ReadLines, Path(SourcePath(type)).PathOnly.text).Fused
