@@ -10,12 +10,12 @@ Run(arguments Texts) Number
 	let failed = BuildProfile(logger).Compiled(cache)
 	BuildProfile(logger).Reported("Build total", started)
 	failed
-Compiled(command Text, rest Texts) Number
+Compiled(command Text, rest Texts, sources Texts = List(Text)) Number
 	if command is "build"
-		return Built(rest)
+		return Built(rest, sources)
 	let isCounting = (rest.Length > 2) and (rest(2) is "lines")
-	NativeBuild(logger, false).Compile(rest(0), rest(1), isCounting, isCounting is false)
-Built(rest Texts) Number
+	NativeBuild(logger, false).Compile(rest(0), rest(1), isCounting, isCounting is false, sources)
+Built(rest Texts, sources Texts = List(Text)) Number
 	let options = Options(rest)
 	if ("fast" is in options) and ((options - "fast").Length > 0)
 		logger.Log("Fast builds support only the native desktop target and cannot combine with other build options")
@@ -25,7 +25,7 @@ Built(rest Texts) Number
 	if IsMixed(options)
 		logger.Log("Mobile target cannot be combined with another platform")
 		return 1
-	Configured(options, Level(rest)).Compile(rest(0), rest(1))
+	Configured(options, Level(rest)).Compile(rest(0), rest(1), false, false, sources)
 IsMixed(options Texts) Boolean
 	NativeCompiler.IsMixed(("android", "ios"))
 	NativeCompiler.IsMixed(("ios", "web"))

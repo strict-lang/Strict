@@ -34,9 +34,8 @@ Saved(inputs Texts) Boolean
 	if (IsEnabled is false) or (Matches(inputs) is false)
 		return false
 	Written(Text.Combine((List(Text) + Key) + inputs + Snapshot(Outputs.Unique), "\n"))
-Inputs Texts
+Inputs(sources Texts) Texts
 	let source = FileCompiler.Normalized(rest(0))
-	let sources = SourceFiles(rest(1)).Of(source)
 	let runtimes = Directory.Files(rest(1) + "/Compiler", "NativeRuntime*.mlir")
 	let extension = Toolchain(Platform.Current, rest(1)).Extension
 	let tools = (rest(1) + "/strict" + extension, rest(1) + "/Compiler/NativeCompiler" + extension) - Output - Output.Lower

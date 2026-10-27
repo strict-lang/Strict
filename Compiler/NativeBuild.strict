@@ -13,10 +13,10 @@ IsProgram(path Text) Boolean
 	NativeBuild.IsProgram("Examples/Sum.strict")
 	NativeBuild.IsProgram("Character.strict") is false
 	"Run" is in TypeShape(File(path).ReadLines).MethodScope.names
-Compile(path Text, root Text, isCounting = false, isGating = false) Number
+Compile(path Text, root Text, isCounting = false, isGating = false, sources Texts = List(Text)) Number
 	let isTesting = (isCounting or isGating) and ((isAndroid or isIOS) is false)
 	let isProgram = (isTesting is false) and IsProgram(path)
-	let module = NativeFolder(logger).Module(path, root, isCounting, isProgram, Target)
+	let module = NativeFolder(logger).Module(path, root, isCounting, isProgram, Target, sources)
 	if module.types.Length is 0
 		return 1
 	let base = Output(path, isProgram)

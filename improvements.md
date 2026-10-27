@@ -28,11 +28,11 @@ What to fix next, one short line each, bugs first. Remove a line once it is atte
 - 20 ms test budget: move integration/model tests and FileCompiler.Parsed, NativeFolder.Counted and Execute.Completed into explicit slow suites with their assertions, then enforce the budget.
 - Native File.Exists opens and closes each file before checking its directory bit; use platform metadata and measure lookup-heavy linker work.
 - WebWars generated SceneAtlas/LevelAtlas constructors dominate emission; reduce large constant/record-list lowering work without changing atlas data.
-- Build dependency inventory and frontend discovery repeat broad package scans; share/narrow inventory before optimizing small shape-loading costs.
 - MlirCost sums expensive alternative call paths and overestimates tiny loops; calibrate branch-sensitive work estimates against private frame initialization before relaxing thresholds further.
 - Linker forwarding is not transitive (Angle to Degrees to Number never asks Number for Floor) and also forwards for single-member base types and Logger, which emission's `TypeEntry.Wrapped` never does.
 - Syntax validation (`FileCompiler.Parsed`) reads and parses every source serially; run it like name validation (FileCompiler has 16 methods, the syntax checks need a type of their own).
 - Small builds lower and translate the whole runtime every time; cache it as bitcode (keep the 16 split parts, one clang part is slower even for Sum).
+- Source discovery inventories whole packages for every build, also for small programs; narrow it to the files the source can reach.
 
 ## Waiting
 - Base library: Number `Sign`, `Wrap`, `ArcTangent2` and inverse trigonometry, Text to Numbers, fixed decimal text, `Truncated`.

@@ -13,18 +13,21 @@ Current(cache NativeCache, phase = "Compiler build cache") Boolean
 	let current = cache.IsCurrent
 	Reported(phase + (current then " hit" else " miss"), started)
 	current
-Inputs(cache NativeCache) Texts
+Inputs(cache NativeCache, files Texts) Texts
 	let started = Process.Elapsed
-	let paths = cache.Inputs.Unique
+	let paths = cache.Inputs(files).Unique
 	Reported("Dependency inventory (" + paths.Length + " inputs)", started)
 	let before = Process.Elapsed
 	let inputs = cache.Snapshot(paths)
 	Reported("Dependency snapshot", before)
 	inputs
 Compiled(cache NativeCache) Number
-	let inputs = cache.IsEnabled then Inputs(cache) else List(Text)
 	let started = Process.Elapsed
-	let result = NativeCompiler(logger).Compiled(cache.command, cache.rest)
+	let files = cache.IsEnabled then SourceFiles(cache.rest(1)).Of(FileCompiler.Normalized(cache.rest(0))) else List(Text)
+	if files.Length > 0
+		Reported("Frontend / source discovery (" + files.Length + " files)", started)
+	let inputs = cache.IsEnabled then Inputs(cache, files) else List(Text)
+	let result = NativeCompiler(logger).Compiled(cache.command, cache.rest, files)
 	Reported("Total compilation", started)
 	if result is 0
 		let before = Process.Elapsed
