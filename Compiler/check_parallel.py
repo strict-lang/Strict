@@ -204,6 +204,8 @@ wrapper = '''
     func.call @strict_rc_mark_all() : () -> ()
     %young = arith.constant false
     func.call @strict_gc_run(%young) : (i1) -> ()
+    %full = arith.constant true
+    func.call @strict_gc_run(%full) : (i1) -> ()
     %holderWord = llvm.ptrtoint %holder : !llvm.ptr to i64
     return %holderWord : i64
   }
@@ -391,4 +393,4 @@ assert awaited.returncode == 0, awaited.stdout + awaited.stderr
 checked = subprocess.run([str(executable), "checked"], capture_output=True, text=True, timeout=15)
 print("Collection after a reference count check marking: " + checked.stdout.strip())
 assert checked.returncode == 0 and "Reference counts checked: 0 too low" in checked.stdout, (
-	"The collection after a check marking was young or counted a pinned target:\n" + checked.stdout + checked.stderr)
+	"The full collection after a check marking and a young collection counted a pinned target:\n" + checked.stdout + checked.stderr)
