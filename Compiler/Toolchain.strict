@@ -98,11 +98,9 @@ Built(base Text, executable Text, level Text) Text
 Inputs(base Text, level Text) Text
 	OnLinux.Inputs("Compiler/output/missing", "") is "\"Compiler/output/missing.ll\""
 	let isDivided = (platform is Platform.Windows) and (File(base + ".ll").Exists is false)
-	if (isDivided is false) and ((platform is not Platform.Windows) or (level is NativeBuild.Quick))
+	if isDivided is false
 		return Quoted(base + ".ll") + (platform is Platform.Windows then Direct else "")
-	let splitting = "-j " + Parts + " " + Quoted(base + ".ll") + " -o " + Quoted(base + "-")
-	let split = isDivided then ProcessResult(0, "", "") else ToolRunner(Located("llvm-split")).Execute(splitting)
-	if split.Failed or (PartsCompiled(base, level) is false)
+	if PartsCompiled(base, level) is false
 		return Quoted(base + ".ll")
 	mutable parts = ""
 	for Parts
@@ -140,9 +138,8 @@ WslPath(path Text) Text
 	slashed.IndexOf(":") is 1 then drive + slashed.Substring(2, slashed.Length - 2) else slashed
 Lowered(base Text, kept = "", parts = 1) Text
 	OnWindows.Lowered("Compiler/output/missing").StartsWith("mlir-opt failed")
-	let lines = parts > 1 then File(base + ".mlir").ReadLines else List(Text)
-	if lines.Length > 100000
-		return MlirSplit(lines).Lowered(base, Toolchain(platform, root, natives, isWeb))
+	if (parts > 1) and File(base + ".mlir").Exists
+		return MlirSplit(File(base + ".mlir").ReadLines).Lowered(base, Toolchain(platform, root, natives, isWeb))
 	let privatized = kept is "" then "" else " --symbol-privatize=exclude=" + kept
 	let lowering = Quoted(base + ".mlir") + privatized + MlirSplit.Passes + " -o " + Quoted(base + ".llvm.mlir")
 	let lowered = ToolRunner(Located("mlir-opt")).Execute(lowering)
