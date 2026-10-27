@@ -1107,6 +1107,7 @@
   }
   llvm.mlir.global internal thread_local @strict_stack_bottom(0 : i64) : i64
   llvm.mlir.global internal constant @strict_stack_overflow("StackOverflow\00") : !llvm.array<14 x i8>
+  llvm.mlir.global internal constant @strict_recursive_constant("RecursiveConstant\00") : !llvm.array<18 x i8>
   // a method entered with less than 1 MB of the main stack left returns a StackOverflow Error (the Strict VM after
   // 20000 nested calls), the stacks of other threads lie outside of it
   func.func private @strict_stack_short() -> i1 attributes {llvm.passthrough = ["alwaysinline"]} {

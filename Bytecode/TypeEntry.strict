@@ -2,7 +2,7 @@ has Name Text
 has members List(MemberEntry)
 has methods List(MethodEntry)
 constant Numbers = TypeEntry("Strict/List(Number)", (MemberEntry("iterator", "Strict/Iterator", List(InstructionEntry), false), MemberEntry("elements", "Strict/List(Number)", List(InstructionEntry), false)), List(MethodEntry))
-constant FormatVersion = 6
+constant FormatVersion = 7
 constant HelloLogger = TypeEntry("HelloLogger", MemberEntry.LoggerMember, MethodEntry.HelloRun)
 constant CharacterEntry = TypeEntry("Strict/Character", List(MemberEntry) + MemberEntry("number", "Strict/Number", List(InstructionEntry), false), List(MethodEntry))
 constant Rounded = TypeEntry("Strict/Float8", CharacterEntry.members, List(MethodEntry) + MethodEntry("from", CharacterEntry.members, "Strict/Float8", List(InstructionEntry)))

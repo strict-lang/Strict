@@ -20,7 +20,7 @@ Packed(header Numbers, types List(TypeEntry), owners List(TypeEntry)) Bytes
 		Byte(value)
 Unpacked(bytes Bytes) List(ZipEntry)
 	Packing.Length is 2
-	Packing.First.content is (1, 0, 6)
+	Packing.First.content is (1, 0, 7)
 	mutable numbers = List(Mutable(Number))
 	for bytes
 		numbers.Add(value.number)
@@ -31,7 +31,7 @@ IsFresh(entries List(ZipEntry)) Boolean
 	if IsCurrent(entries) is false
 		return false
 	for entries
-		if value.Name.EndsWith(".reference") and (Owned(value.Name.Substring(0, value.Name.Length - 10)).Name is "")
+		if value.Name.EndsWith(".reference") and (Referenced(value).Name is "")
 			return false
 	true
 Current(entries List(ZipEntry)) List(TypeEntry)
@@ -98,7 +98,7 @@ Owned(name Text) TypeEntry
 	let entries = isOwnable then owner.Unpacked(File(owner.Path).ReadBytes) else List(ZipEntry)
 	let first = entries.Length > 1 then entries(1).Name else ""
 	let unknown = TypeEntry("", List(MemberEntry), List(MethodEntry))
-	first is name + ".bytecode" then EntryDecoder.Of(entries(1).content).Type else unknown
+	(first is name + ".bytecode") and owner.IsCurrent(entries) then EntryDecoder.Of(entries(1).content).Type else unknown
 Entry(type TypeEntry, owners List(TypeEntry)) ZipEntry
 	Probe.Entry(TypeEntry.HelloLogger, List(TypeEntry)).Name is "HelloLogger.bytecode"
 	Probe.Entry(TypeEntry.HelloLogger, List(TypeEntry) + TypeEntry.HelloLogger).Name is "HelloLogger.reference"

@@ -222,8 +222,19 @@ module = output / "pool.mlir"
 declaration = next(line for line in (root / "Compiler/MlirTexts.strict").read_text(encoding="utf-8").splitlines()
 	if line.startswith("constant Declarations = "))
 declarations = json.loads("[" + declaration.split(" = (", 1)[1][:-1] + "]")
+cached = (root / "Compiler/MlirCached.strict").read_text(encoding="utf-8").splitlines()
+pieces = [json.loads("[" + next(line for line in cached if line.startswith("constant " + name + " = ")).split(" = (", 1)[1][:-1] + "]") for name in ("Checked", "Stored")]
+cache_wrapper = '\n'.join(['  llvm.func @test_compute() -> f64',
+	'  llvm.mlir.global internal @test_cache(0.0 : f64) : f64',
+	'  llvm.mlir.global internal @test_set(0 : i64) : i64',
+	'  llvm.mlir.global internal thread_local @test_active(0 : i64) : i64',
+	'  func.func @test_cached() -> f64 {',
+	'    %cache = llvm.mlir.addressof @test_cache : !llvm.ptr',
+	'    %set = llvm.mlir.addressof @test_set : !llvm.ptr',
+	'    %active = llvm.mlir.addressof @test_active : !llvm.ptr', *pieces[0],
+	'    %computed = llvm.call @test_compute() : () -> f64', *pieces[1]])
 module.write_text("module {\n  llvm.func @printf(!llvm.ptr, ...) -> i32\n" + "\n".join(declarations) + "\n" + runtime
-	+ (root / "Compiler/NativeRuntimeWindows.mlir").read_text(encoding="utf-8") + wrapper + "}\n", encoding="utf-8")
+	+ (root / "Compiler/NativeRuntimeWindows.mlir").read_text(encoding="utf-8") + wrapper + cache_wrapper + "}\n", encoding="utf-8")
 driver = output / "driver.c"
 driver.write_text('''#include <windows.h>
 #include <stdint.h>
@@ -236,6 +247,22 @@ extern int64_t test_checked_collection(void* stack);
 extern int64_t test_reused_counts(void* stack, _Bool same);
 extern int64_t test_scan_invalidation(void* stack);
 extern int64_t test_pool_gpu(void);
+extern double test_cached(void);
+static atomic_int computed;
+static int recursive;
+static HANDLE cache_start;
+double test_compute(void) {
+	atomic_fetch_add(&computed, 1);
+	Sleep(20);
+	if (recursive && atomic_load(&computed) == 1) return test_cached();
+	return 7;
+}
+static DWORD WINAPI cached_reader(void* unused) {
+	WaitForSingleObject(cache_start, INFINITE);
+	double result = test_cached();
+	union { double value; uint64_t bits; } checked = { result };
+	return recursive ? (checked.bits >> 48) != 32762 : result != 7;
+}
 static DWORD caller;
 static HANDLE ready, published, retired;
 static atomic_int publishing, premature;
@@ -286,6 +313,24 @@ static double body(void* context, int64_t from, int64_t to) {
 	return 0;
 }
 int main(int argc, char** argv) {
+	if (argc > 1 && (argv[1][0] == 'k' || argv[1][0] == 'j')) {
+		recursive = argv[1][0] == 'j';
+		if (recursive) test_scan_invalidation(&argc);
+		HANDLE readers[16];
+		cache_start = CreateEventA(0, TRUE, FALSE, 0);
+		for (int index = 0; index < 16; index++) readers[index] = CreateThread(0, 0, cached_reader, 0, 0, 0);
+		SetEvent(cache_start);
+		if (WaitForMultipleObjects(16, readers, TRUE, 5000) != WAIT_OBJECT_0) return 2;
+		for (int index = 0; index < 16; index++) {
+			DWORD code;
+			GetExitCodeThread(readers[index], &code);
+			if (code != 0) return 3;
+			CloseHandle(readers[index]);
+		}
+		CloseHandle(cache_start);
+		printf("Constant computations: %d (expected 1)\\n", atomic_load(&computed));
+		return atomic_load(&computed) != 1;
+	}
 	if (argc > 1 && argv[1][0] == 'g') {
 		int64_t state = test_pool_gpu();
 		printf("GPU check state after pool launch: %lld (expected -1)\\n", (long long)state);
@@ -369,12 +414,12 @@ def run(name, arguments):
 	assert result.returncode == 0, result.stdout + result.stderr
 lowered = output / "pool.llvm.mlir"
 llvm = output / "pool.ll"
-run("mlir-opt", [module, "--symbol-privatize=exclude=test_parallel,test_pinned,test_carried,test_checked_collection,test_reused_counts,test_scan_invalidation,test_pool_gpu", "--symbol-dce", "--convert-scf-to-cf",
+run("mlir-opt", [module, "--symbol-privatize=exclude=test_parallel,test_pinned,test_carried,test_checked_collection,test_reused_counts,test_scan_invalidation,test_pool_gpu,test_cached", "--symbol-dce", "--convert-scf-to-cf",
 	"--convert-arith-to-llvm", "--convert-func-to-llvm", "--convert-cf-to-llvm", "--reconcile-unrealized-casts", "-o", lowered])
 run("mlir-translate", ["--mlir-to-llvmir", lowered, "-o", llvm])
 executable = output / "check.exe"
 run("clang", [llvm, driver, "-O2", "-march=native", "-Wno-override-module", "-fuse-ld=lld", "-Wl,clang_rt.builtins-x86_64.lib", "-o", executable])
-for mode in ["gpu", "rsame", "rdifferent", "scan"]:
+for mode in ["j", "k", "gpu", "rsame", "rdifferent", "scan"]:
 	reused = subprocess.run([str(executable), mode], capture_output=True, text=True, timeout=15)
 	print(reused.stdout.strip(), flush=True)
 	assert reused.returncode == 0, reused.stdout + reused.stderr

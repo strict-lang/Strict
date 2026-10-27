@@ -1,6 +1,5 @@
 has function MlirFunction
 has position Number
-constant Never = ("Library", "TextReader", "TextWriter", "BytesReader", "BytesWriter", "ConstantCache")
 constant Branches = (InstructionType.Jump, InstructionType.JumpIfTrue, InstructionType.JumpIfFalse, InstructionType.JumpIfNotZero)
 constant Unsafe = (InstructionType.Set, InstructionType.Print)
 constant Writes = (InstructionType.InvokeWriteToList, InstructionType.InvokeWriteToTable, InstructionType.InvokeRemove)
@@ -13,6 +12,7 @@ constant Checking = MethodEntry("Validated", List(MemberEntry), "Strict/Math/Pai
 constant Reading = MlirPurity(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, MlirCost.Reading), 2)
 constant Filtering = MlirPurity(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, MlirParallel.Filtered), 2)
 constant Caching = MlirPurity(MlirFunction(Reading.function, method = MethodEntry("Cached", List(MemberEntry), "Strict/Number", InstructionEntry.Invoke(0, ("Strict/Runtime/ConstantCache", "Stored", "Strict/Number"), (1, 2), 0))), 0)
+constant Writing = MlirFunction(Reading.function, method = MethodEntry("Writing", List(MemberEntry), "None", InstructionEntry.Invoke(0, ("Strict/File", "Write", "None", "text"), (1), 0)))
 IsSafe(inspected MlirFunction, at Number, depth Number) Boolean
 	Doubling.IsSafe(Doubling.function, 4, 0)
 	Randomizing.IsSafe(Randomizing.function, 4, 0) is false
@@ -73,16 +73,45 @@ IsPureCall(inspected MlirFunction, at Number, depth Number) Boolean
 	let callees = MlirModule(inspected.types, "").Called(inspected, at)
 	if IsAllowed(inspected, at, callees) is false
 		return false
-	if (callees.Length is 0) or MlirDeviceCalls(inspected, at, inspected).IsRounding(inspected.method.instructions(at))
-		return true
+	if callees.Length is 0
+		return IsIntrinsic(inspected, at)
 	IsKnown(callees.First, inspected, depth)
 IsAllowed(inspected MlirFunction, at Number, callees List(MlirFunction)) Boolean
 	Caching.IsAllowed(Caching.function, 0, List(MlirFunction)) is false
 	Randomizing.IsAllowed(Randomizing.function, 4, List(MlirFunction)) is false
 	Reading.IsAllowed(Reading.function, 4, List(MlirFunction))
+	Reading.IsAllowed(Writing, 0, List(MlirFunction)) is false
+	Doubling.IsExternalSafe("File", "Write") is false
+	Doubling.IsExternalSafe("Directory", "Delete") is false
+	Doubling.IsExternalSafe("Process", "RunTools") is false
 	let decoder = PayloadDecoder(inspected.method.instructions(at))
-	let isNever = (TypeEntry.ShortName(decoder.Text(1)) is in Never) or (decoder.Text(2) is "Random")
+	let isNever = IsExternalSafe(TypeEntry.ShortName(decoder.Text(1)), decoder.Text(2)) is false
 	(isNever is false) and ((callees.Length is 0) or (MlirForeign(callees.First).IsForeign is false))
+IsExternalSafe(kind Text, method Text) Boolean
+	Doubling.IsExternalSafe("File", "ReadLines")
+	Doubling.IsExternalSafe("File", "from")
+	if kind is "File"
+		return method is in ("from", "Exists", "Modified", "Length", "ReadLines", "ReadBytes")
+	if kind is "Directory"
+		return method is in ("from", "Files", "Directories", "Exists", "Current")
+	if kind is "Process"
+		return method is in ("from", "Elapsed", "OperatingSystem", "Find", "Current", "FilesRead")
+	if kind + "." + method is in Hosted.Methods
+		return (kind is in ("Number", "Degrees", "Ratio", "Vector2")) and (method is not "Random")
+	constant Never = ("Library", "TextReader", "TextWriter", "BytesReader", "BytesWriter", "ConstantCache", "GpuMemory")
+	(kind is not in Never) and (method is not "Random")
+IsIntrinsic(inspected MlirFunction, at Number) Boolean
+	Doubling.IsIntrinsic(Making, 1)
+	Reading.IsIntrinsic(Reading.function, 4)
+	Doubling.IsIntrinsic(MlirTexts.Joined, 7)
+	let entry = inspected.method.instructions(at)
+	let decoder = PayloadDecoder(entry)
+	let type = inspected.TypeOf(decoder.Text(1))
+	let isConstructor = (decoder.Text(2) is "from") and (type.members.Length > 0)
+	let helper = MlirCalls(inspected, at).NativeHelper(entry, decoder)
+	if MlirTexts(inspected, at).IsConversion
+		return true
+	isConstructor or (helper is not "")
 IsKnown(callee MlirFunction, inspected MlirFunction, depth Number) Boolean
 	Doubling.IsKnown(MlirFunction(Doubling.function.types, MlirParallel.Rows, MlirParallel.Twice), Doubling.function, 0)
 	if callee.Symbol is in inspected.safeCalls
@@ -92,8 +121,7 @@ IsPureMethod(callee MlirFunction, depth Number) Boolean
 	Doubling.IsPureMethod(MlirFunction(Doubling.function.types, MlirParallel.Rows, MlirParallel.Twice), 1)
 	Doubling.IsPureMethod(MlirFunction(Doubling.function.types, MlirParallel.Rows, Checking), 1)
 	Doubling.IsPureMethod(MlirFunction(Doubling.function.types, MlirParallel.Rows, MlirParallel.Doubled), 1)
-	if callee.method.Name is "Validated"
-		return true
+	Reading.IsPureMethod(MlirFunction(Writing, method = MethodEntry(Writing.method, Name = "Validated")), 1) is false
 	for callee.method.instructions
 		if IsSafe(callee, index, depth) is false
 			return false

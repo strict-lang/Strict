@@ -1,6 +1,7 @@
 has owner TypeEntry
 constant Logged = TypeReference(TypeEntry.HelloLogger)
 constant Memberless = TypeReference(TypeEntry("HelloLogger", MemberEntry.LoggerMember, List(MethodEntry)))
+constant Changed = TypeReference(TypeEntry(TypeEntry.HelloLogger, methods = MethodEntry(MethodEntry.HelloRun, instructions = (InstructionEntry(InstructionType.Print, "Ho", (-1, 0), 3), InstructionEntry.Return(0)))))
 Covers(needed TypeEntry) Boolean
 	Logged.Covers(TypeEntry.HelloLogger)
 	Logged.Covers(TypeEntry.Converting) is false
@@ -12,13 +13,31 @@ Covers(needed TypeEntry) Boolean
 			return false
 	true
 Selection(needed TypeEntry) Numbers
-	Logged.Selection(TypeEntry.HelloLogger) is List(Number) + 0
+	Logged.Selection(TypeEntry.HelloLogger).Last is 0
+	mutable selection = Stamp
 	for needed.methods
-		owner.methods.Index(value)
+		selection = selection + owner.methods.Index(value)
+	selection
 Selected(selection Numbers) TypeEntry
 	Logged.Selected(List(Number)).methods.Length is 0
-	Logged.Selected(List(Number) + 0) is TypeEntry.HelloLogger
+	Logged.Selected(Logged.Selection(TypeEntry.HelloLogger)) is TypeEntry.HelloLogger
+	Changed.owner.Bytes.Length is Logged.owner.Bytes.Length
+	Changed.Selected(Logged.Selection(TypeEntry.HelloLogger)).Name is ""
+	let unknown = TypeEntry("", List(MemberEntry), List(MethodEntry))
+	if IsValid(selection) is false
+		return unknown
 	mutable methods = List(Mutable(MethodEntry))
-	for selection
+	for selection.Slice(2, selection.Length - 2)
 		methods.Add(owner.methods(value))
 	TypeEntry(owner.Name, owner.members, methods)
+Stamp Numbers
+	let bytes = owner.Bytes
+	(bytes.Length, Crc(bytes).Value)
+IsValid(selection Numbers) Boolean
+	Logged.IsValid(Logged.Selection(TypeEntry.HelloLogger) + 999) is false
+	if (selection.Length < 2) or (selection.Slice(0, 2) is not Stamp)
+		return false
+	for selection.Slice(2, selection.Length - 2)
+		if (value < 0) or (value >= owner.methods.Length) or (value.Floor is not value)
+			return false
+	true
