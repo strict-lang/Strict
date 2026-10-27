@@ -1089,6 +1089,13 @@
     llvm.store %youngLimit, %youngLimitSlot : i64, !llvm.ptr
     cf.br ^done
   ^done:
+    // STRICT_RC_CHECK collects fully only: its marking before a reclaim clears the marks young collections keep for old
+    // objects, with young collections the compiler self-build then lost live objects (crashed in MlirModule.Callees)
+    %checkedLimitSlot = llvm.mlir.addressof @strict_gc_young_limit : !llvm.ptr
+    %limitBefore = llvm.load %checkedLimitSlot : !llvm.ptr -> i64
+    %noYoungLimit = arith.constant 0 : i64
+    %checkedLimit = arith.select %checks, %noYoungLimit, %limitBefore : i64
+    llvm.store %checkedLimit, %checkedLimitSlot : i64, !llvm.ptr
     return
   }
   llvm.mlir.global internal thread_local @strict_stack_bottom(0 : i64) : i64
@@ -4133,6 +4140,15 @@
     %referrerShown = llvm.call @printf(%referrerFormat, %index, %objectPointer, %bytes, %first, %second, %third) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, i64, !llvm.ptr, i64, i64, i64, i64) -> i32
     cf.br ^loop(%next : i64)
   ^counting:
+    // references to a pinned object were stored uncounted in a pool job, the collector frees it
+    %targetFlags = func.call @strict_rc_flags(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %targetFlagByte = llvm.load %targetFlags : !llvm.ptr -> i8
+    %pinFlag = arith.constant 32 : i8
+    %targetPin = arith.andi %targetFlagByte, %pinFlag : i8
+    %unflagged = arith.constant 0 : i8
+    %isPinnedTarget = arith.cmpi ne, %targetPin, %unflagged : i8
+    cf.cond_br %isPinnedTarget, ^loop(%next : i64), ^countable
+  ^countable:
     %counter = func.call @strict_rc_counter(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
     %old = llvm.load %counter : !llvm.ptr -> i32
     %new = arith.addi %old, %step : i32

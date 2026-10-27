@@ -101,6 +101,21 @@ wrapper = '''
     %zero = arith.constant 0.0 : f64
     return %zero : f64
   }
+  func.func @test_checked_collection(%stack: !llvm.ptr) -> i64 {
+    func.call @strict_gc_init(%stack) : (!llvm.ptr) -> ()
+    %size = arith.constant 48 : i64
+    %holder = func.call @strict_alloc(%size) : (i64) -> !llvm.ptr
+    %target = func.call @strict_alloc(%size) : (i64) -> !llvm.ptr
+    %targetWord = llvm.ptrtoint %target : !llvm.ptr to i64
+    %slot = llvm.getelementptr %holder[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %targetWord, %slot : i64, !llvm.ptr
+    func.call @strict_rc_pin(%targetWord) : (i64) -> ()
+    func.call @strict_rc_mark_all() : () -> ()
+    %young = arith.constant false
+    func.call @strict_gc_run(%young) : (i1) -> ()
+    %holderWord = llvm.ptrtoint %holder : !llvm.ptr to i64
+    return %holderWord : i64
+  }
   llvm.func @test_claiming(i64)
   llvm.func @test_publishing(i64)
   llvm.func @test_retired(i64)
@@ -124,6 +139,7 @@ driver.write_text('''#include <windows.h>
 #include <stdlib.h>
 extern int64_t test_pinned(void* stack);
 extern int64_t test_carried(void* stack);
+extern int64_t test_checked_collection(void* stack);
 static DWORD caller;
 static HANDLE ready, published, retired;
 static atomic_int publishing, premature;
@@ -193,6 +209,11 @@ int main(int argc, char** argv) {
 		printf("Job of 4 items while 63 workers sleep: %.1f us\\n", spent * 1000);
 		return spent * 1000 > 50;
 	}
+	if (argc > 1 && argv[1][0] == 'c') {
+		_putenv_s("STRICT_RC_CHECK", "1");
+		volatile int64_t holder = test_checked_collection(&argc);
+		return holder == 0;
+	}
 	if (argc > 1 && argv[1][0] == 'a') {
 		_putenv_s("STRICT_THREADS", "2");
 		published = CreateEventA(0, TRUE, TRUE, 0);
@@ -237,7 +258,7 @@ def run(name, arguments):
 	assert result.returncode == 0, result.stdout + result.stderr
 lowered = output / "pool.llvm.mlir"
 llvm = output / "pool.ll"
-run("mlir-opt", [module, "--symbol-privatize=exclude=test_parallel,test_pinned,test_carried", "--symbol-dce", "--convert-scf-to-cf",
+run("mlir-opt", [module, "--symbol-privatize=exclude=test_parallel,test_pinned,test_carried,test_checked_collection", "--symbol-dce", "--convert-scf-to-cf",
 	"--convert-arith-to-llvm", "--convert-func-to-llvm", "--convert-cf-to-llvm", "--reconcile-unrealized-casts", "-o", lowered])
 run("mlir-translate", ["--mlir-to-llvmir", lowered, "-o", llvm])
 executable = output / "check.exe"
@@ -254,3 +275,7 @@ assert woken.returncode == 0, woken.stdout + woken.stderr
 awaited = subprocess.run([str(executable), "await"], capture_output=True, text=True, timeout=15)
 print(awaited.stdout.strip())
 assert awaited.returncode == 0, awaited.stdout + awaited.stderr
+checked = subprocess.run([str(executable), "checked"], capture_output=True, text=True, timeout=15)
+print("Collection after a reference count check marking: " + checked.stdout.strip())
+assert checked.returncode == 0 and "Reference counts checked: 0 too low" in checked.stdout, (
+	"The collection after a check marking was young or counted a pinned target:\n" + checked.stdout + checked.stderr)
