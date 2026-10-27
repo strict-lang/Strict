@@ -1,0 +1,130 @@
+Escape(real Number, imaginary Number, limit Number) Number
+	Escape(0, 0, 64) is 0
+	Escape(-1, 0, 64) is 0
+	Escape(1, 0, 64) is 3
+	Escape(2, 0, 64) is 2
+	Escape(-2, 0, 64) is 0
+	Escape(0, 1, 64) is 0
+	if Interior(real, imaginary)
+		return 0
+	Iterated(real, imaginary, limit)
+Interior(real Number, imaginary Number) Boolean
+	Interior(0, 0)
+	Interior(-1, 0)
+	Interior(0.3, 0) is false
+	Interior(-1.25, 0) is false
+	let vertical = imaginary * imaginary
+	let shifted = real - 0.25
+	let radius = shifted * shifted + vertical
+	let cardioid = radius * (radius + shifted) < 0.25 * vertical - 0.00000000000001
+	cardioid or (real + 1) * (real + 1) + vertical < 0.0625 - 0.00000000000001
+Iterated(real Number, imaginary Number, limit Number) Number
+	mutable horizontal = 0
+	mutable vertical = 0
+	mutable squared = 0
+	mutable height = 0
+	for limit
+		vertical = 2 * horizontal * vertical + imaginary
+		horizontal = squared - height + real
+		squared = horizontal * horizontal
+		height = vertical * vertical
+		if squared + height > 4
+			return index + 1
+	0
+Extended(real DoubleDouble, imaginary DoubleDouble, limit Number) Number
+	Extended(DoubleDouble(1), DoubleDouble(0), 64) is 3
+	Extended(DoubleDouble(-1), DoubleDouble(0), 64) is 0
+	Extended(DoubleDouble(-0.75), DoubleDouble(0.1), 64) is 33
+	if Interior(real.high, imaginary.high)
+		return 0
+	WideIterations(real, imaginary, limit)
+WideIterations(real DoubleDouble, imaginary DoubleDouble, limit Number) Number
+	mutable horizontal = DoubleDouble(0)
+	mutable vertical = DoubleDouble(0)
+	mutable squared = DoubleDouble(0)
+	mutable height = DoubleDouble(0)
+	for limit
+		vertical = horizontal * vertical * DoubleDouble(2) + imaginary
+		horizontal = squared - height + real
+		squared = horizontal * horizontal
+		height = vertical * vertical
+		if Beyond(squared + height)
+			return index + 1
+	0
+Reference(real DoubleDouble, imaginary DoubleDouble, limit Number) Numbers
+	Reference(DoubleDouble(1), DoubleDouble(0), 8).Length is 8
+	mutable horizontal = DoubleDouble(0)
+	mutable vertical = DoubleDouble(0)
+	mutable orbit = (0, 0)
+	for limit
+		let squared = horizontal * horizontal - vertical * vertical
+		vertical = horizontal * vertical * DoubleDouble(2) + imaginary
+		horizontal = squared + real
+		orbit = orbit + horizontal.high + vertical.high
+		if Beyond(horizontal * horizontal + vertical * vertical)
+			return orbit
+	orbit
+Perturbed(orbit Numbers, horizontal Number, vertical Number, limit Number) Number
+	Perturbed(Reference(DoubleDouble(1), DoubleDouble(0), 8), 0, 0, 8) is 3
+	Perturbed(Reference(DoubleDouble(1), DoubleDouble(0), 8), -1, 0, 8) is -1
+	mutable real = 0
+	mutable imaginary = 0
+	for orbit.Length / 2 - 1
+		let next = DeltaReal(orbit, index, real, imaginary, horizontal)
+		imaginary = DeltaImaginary(orbit, index, real, imaginary, vertical)
+		real = next
+		let status = OrbitStatus(orbit, index + 1, real, imaginary)
+		if status is not 0
+			return status > 0 then index + 1 else -1
+	orbit.Length / 2 - 1 >= limit then 0 else -1
+OrbitStatus(orbit Numbers, position Number, horizontal Number, vertical Number) Number
+	let anchor = orbit(position * 2)
+	let height = orbit(position * 2 + 1)
+	let real = anchor + horizontal
+	let imaginary = height + vertical
+	let squared = real * real + imaginary * imaginary
+	if squared > 4
+		return 1
+	squared < 0.000001 * (anchor * anchor + height * height) then -1 else 0
+DeltaReal(orbit Numbers, position Number, real Number, imaginary Number, offset Number) Number
+	let anchor = orbit(position * 2)
+	let height = orbit(position * 2 + 1)
+	real * (2 * anchor + real) - imaginary * (2 * height + imaginary) + offset
+DeltaImaginary(orbit Numbers, position Number, real Number, imaginary Number, offset Number) Number
+	2 * (orbit(position * 2) * imaginary + orbit(position * 2 + 1) * real + real * imaginary) + offset
+Enclosed(orbit Numbers, radius Number, limit Number) Boolean
+	Enclosed((0, 0, 0, 0, 0, 0), 0.01, 2)
+	Enclosed((0, 0, 2, 0), 0.01, 1) is false
+	Enclosed(Reference(DoubleDouble(-0.75), DoubleDouble(0.1), 32), 0.0000001, 32)
+	Enclosed(Reference(DoubleDouble(-0.75), DoubleDouble(0.1), 64), 0.0000001, 64) is false
+	Enclosed(Reference(DoubleDouble(0), DoubleDouble(0), 32), 0.75, 32) is false
+	if orbit.Length < (limit + 1) * 2
+		return false
+	DiskEnclosed(orbit, radius, limit)
+DiskEnclosed(orbit Numbers, radius Number, limit Number) Boolean
+	mutable real = 0
+	mutable imaginary = 0
+	mutable error = 0
+	for limit
+		let next = 2 * (orbit(index * 2) * real - orbit(index * 2 + 1) * imaginary) + radius
+		error = DiskError(orbit, index, real, imaginary, error)
+		imaginary = 2 * (orbit(index * 2) * imaginary + orbit(index * 2 + 1) * real)
+		real = next
+		if OrbitMagnitude(orbit, index + 1) + Magnitude(real, imaginary) + error >= 2
+			return false
+	true
+DiskError(orbit Numbers, position Number, real Number, imaginary Number, previous Number) Number
+	let bound = Magnitude(real, imaginary)
+	let factor = 2 * OrbitMagnitude(orbit, position) + 2 * bound + previous
+	let error = factor * previous + bound * bound
+	error * 1.000000000000001 + bound * 0.000000000000001 + 0.00000000000000000000000000001
+Magnitude(real Number, imaginary Number) Number
+	(real * real + imaginary * imaginary).SquareRoot * 1.000000000000001
+OrbitMagnitude(orbit Numbers, position Number) Number
+	let real = orbit(position * 2)
+	let imaginary = orbit(position * 2 + 1)
+	(real * real + imaginary * imaginary).SquareRoot + 0.000000000000001
+Beyond(squared DoubleDouble) Boolean
+	Beyond(DoubleDouble(4, 0.000000000000000000000000000001))
+	Beyond(DoubleDouble(4, -0.000000000000000000000000000001)) is false
+	squared.high >= 4 and (squared.high > 4 or squared.low > 0)
