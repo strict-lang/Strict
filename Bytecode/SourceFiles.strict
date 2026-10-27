@@ -1,24 +1,45 @@
 has root Text
 constant Imaging = List(Text) + "./ImageProcessing/Png.strict"
-constant Typo = ("constant Limit = 3", "has numbr", "has counts Numbers", "Add(other Number, most = Limit) Other", "	other")
-Of(path Text) Slow(Texts)
+constant Plain = SourceFiles(".")
+constant Compressed = Directory.Files("./Compression", "*.strict")
+Of(path Text, others Texts = List(Text)) Slow(Texts)
 	SourceFiles(".").Of("./Missing/A.strict").Length is Directory.Files(".", "*.strict").Length
-	mutable files = List(Mutable(Text))
-	let project = File("./Any.strict").Exists then List(Text) else ResolveCheck.Tree(".")
-	for Folders(Added(project, List(Text) + Path(path).PathOnly.text), 3)
-		files = files + Directory.Files(value, "*.strict")
-	let local = Directory.Files(Path(path).PathOnly.text, "*.strict")
-	let closed = Closed(Added(files, Directory.Files(root, "*.strict")), Added(Added(local, List(Text) + path), files), 9)
+	"./Math/Size.strict" is in SourceFiles(".").Of("./Math/Vector2.strict", List(Text) + "Math/Size.strict")
+	mutable start = List(Mutable(Text))
+	for Added(List(Text) + path, others)
+		if File(value).Exists
+			start = Added(start, List(Text) + FileCompiler.Normalized(value))
+	let base = Directory.Files(root, "*.strict")
+	let reached = Reached(Added(Indexed(start), base), start, base, 64)
 	let lines = File(path).Exists then File(path).ReadLines else List(Text)
-	TypeChoice(lines).Chosen(closed, path)
-Closed(found Texts, sources Texts, depth Number) Slow(Texts)
-	Directory.Files("./Compression", "*.strict").First is in SourceFiles(".").Closed(List(Text), Imaging, 0)
-	mutable missing = List(Mutable(Text))
-	for sources
-		missing = Added(missing, Missing(File(value).ReadLines, found))
-	let nearby = Nearby(missing)
-	let added = Added(found, nearby)
-	(depth is 0) or (added.Length is found.Length) then added else Closed(added, nearby, depth - 1)
+	TypeChoice(lines).Chosen(reached, path)
+Indexed(paths Texts) Texts
+	"./Math/Size.strict" is in SourceFiles(".").Indexed(List(Text) + "./Math/Vector2.strict")
+	let project = File("./Any.strict").Exists then List(Text) else ResolveCheck.Tree(".")
+	mutable local = List(Mutable(Text))
+	for paths
+		local = Added(local, List(Text) + Path(value).PathOnly.text)
+	mutable files = List(Mutable(Text))
+	for project.Length > 0 then Added(project, local) else Folders(local, 3)
+		files = files + Directory.Files(value, "*.strict")
+	files
+Reached(known Texts, frontier Texts, reached Texts, depth Number) Slow(Texts)
+	SourceFiles(".").Reached(Imaging, Imaging, List(Text), 0) is Imaging
+	"./Compression/Inflate.strict" is in Plain.Reached(Compressed, Imaging, List(Text), 9)
+	let all = Added(reached, frontier)
+	if (depth is 0) or (frontier.Length is 0)
+		return all
+	mutable mentioned = List(Mutable(Text))
+	for frontier
+		mentioned = Added(mentioned, Mentions(File(value).ReadLines).Types)
+	let indexed = Added(known, Nearby(Mentions.Unmatched(mentioned, known)))
+	Reached(indexed, Matching(mentioned, indexed) - all, all, depth - 1)
+Matching(names Texts, files Texts) Texts
+	SourceFiles(".").Matching(("Vector2s", "Missing"), Imaging + "./Math/Vector2.strict") is ("./Math/Vector2.strict")
+	for files
+		let name = Path(value.Replace("\\", "/")).FileName.RemoveExtension.text
+		if (name is in names) or ((name + "s") is in names)
+			value
 Folders(folders Texts, depth Number) Texts
 	SourceFiles(".").Folders(List(Text) + "./Missing", 2).Length is 1
 	mutable result = folders
@@ -57,44 +78,6 @@ Package(name Text) Text
 	if (name is "Strict") or Directory.Exists("./" + name)
 		return name is "Strict" then "" else "./" + name
 	Directory.Exists(root + "/" + name) then root + "/" + name else ""
-Missing(lines Texts, files Texts) Texts
-	SourceFiles(".").Missing(Typo, Directory.Files(".", "*.strict")) is ("Numbr")
-	SourceFiles(".").Missing(("Run", "\tVectr2(1, 2)"), Directory.Files(".", "*.strict")) is ("Vectr2")
-	mutable known = List(Mutable(Text)) + "None" + "Other"
-	for files
-		known.Add(Path(value.Replace("\\", "/")).FileName.RemoveExtension.text)
-	for lines
-		if value.StartsWith("constant ")
-			let tokens = Tokenizer(value).Tokens
-			known.Add(tokens(1))
-	for Declared(TypeShape(lines)) + TypeShape(lines).UsedTypes
-		if IsKnown(value, known) is false
-			value
-IsKnown(name Text, known Texts) Boolean
-	SourceFiles(".").IsKnown("Numbers", List(Text) + "Number")
-	SourceFiles(".").IsKnown("Numbr", List(Text) + "Number") is false
-	SourceFiles(".").IsKnown("Numberss", List(Text) + "Number")
-	if name is in known
-		return true
-	(name.Substring(name.Length - 1, 1) is "s") and IsKnown(name.Substring(0, name.Length - 1), known)
-Declared(shape Expressions/TypeShape) Texts
-	SourceFiles(".").Declared(TypeShape(Typo)) is ("Numbr", "Numbers", "Other", "Number", "Limit")
-	let calls = shape.CallScope(List(Text))
-	mutable types = shape.MemberScope.types + Returned(shape)
-	for calls.names
-		if value.LastIndexOf(" types") > 0
-			types = types + calls.types(index).Split(",")
-	mutable result = List(Mutable(Text))
-	for types
-		let name = value.IndexOf("(") > 0 then value.Substring(0, value.IndexOf("(")) else value
-		if (name is not "") and (name.IndexOf(")") < 0) and (name.IndexOf(" ") < 0) and (name is not in result)
-			result.Add(name)
-	result
-Returned(shape Expressions/TypeShape) Texts
-	SourceFiles(".").Returned(TypeShape(("constant Pair = (1, 2)", "Add(other) Number", "	other"))) is ("Number")
-	for shape.lines
-		if shape.IsMethodHeader(value) and (shape.IsComputed(value) is false)
-			HeaderTokens(Tokenizer(value).Tokens).ReturnType
 Nearby(types Texts) Texts
 	SourceFiles(".").Nearby(List(Text) + "Vector2").Length is Directory.Files("./Math", "*.strict").Length
 	mutable files = List(Mutable(Text))

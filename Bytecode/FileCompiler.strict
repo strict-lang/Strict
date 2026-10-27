@@ -14,7 +14,7 @@ Compiled(path Text, root Text, withTests Boolean, known Texts = List(Text)) List
 	Built(path, root, withTests, files, inference)
 Built(path Text, root Text, withTests Boolean, files Texts, inference TypeInference) List(TypeEntry)
 	let source = Normalized(path)
-	let missing = SourceFiles(root).Missing(File(source).ReadLines, files)
+	let missing = Mentions(File(source).ReadLines).Missing(files)
 	if missing.Length > 0
 		return Located(source, root, withTests, missing.First)
 	if (Parsed(List(Text) + source) is false) or (Resolved(source, inference) is false)

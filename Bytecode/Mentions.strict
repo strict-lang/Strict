@@ -1,0 +1,80 @@
+has lines Texts
+constant Typo = Mentions(("constant Limit = 3", "has numbr", "has counts Numbers", "Add(other Number, most = Limit) Other", "	other"))
+constant Units = Mentions(("has units List(Unit)", "has logger", "Scored(model Shape, count = 2) Number", "\tCounted(model).Area"))
+Types Texts
+	Units.Types is ("List", "Unit", "Shape", "Number", "Counted", "Units", "Logger")
+	let shape = TypeShape(lines)
+	let own = shape.MemberScope.names + shape.MethodScope.names
+	mutable tokens = List(Mutable(Text))
+	for lines
+		let tokenized = Tokenizer(value.Trim).Tokens
+		tokens = tokens + shape.Capitalized(tokenized) + Outer(tokenized)
+	for (tokens + Typed(shape)).Unique
+		if value is not in own
+			value
+Typed(shape Expressions/TypeShape) Texts
+	Units.Typed(TypeShape(Units.lines)) is ("Units", "Logger", "Shape", "Number")
+	mutable types = shape.MemberScope.types
+	for lines
+		if shape.IsMethodHeader(value)
+			types = types + HeaderTokens(Tokenizer(value).Tokens).ParameterTypes
+	mutable typed = List(Mutable(Text))
+	for types
+		typed = typed + shape.Capitalized(Tokenizer(value).Tokens)
+	typed
+Outer(tokens Texts) Texts
+	Mentions.Outer(("outer", ".", "Key", ".", "F")) is ("Key")
+	for tokens
+		if (index > 1) and (tokens(index - 1) is ".") and (tokens(index - 2) is "outer")
+			value
+Missing(files Texts) Texts
+	Typo.Missing(Directory.Files(".", "*.strict")) is ("Numbr")
+	Mentions(("Run", "\tVectr2(1, 2)")).Missing(Directory.Files(".", "*.strict")) is ("Vectr2")
+	Unknown(Names(files))
+Unknown(names Texts) Texts
+	Typo.Unknown(List(Text) + "Number") is ("Numbr", "Other")
+	mutable known = List(Mutable(Text))
+	for lines
+		if value.StartsWith("constant ")
+			known.Add(Tokenizer(value).Tokens(1))
+	let all = names + known
+	for Declared(TypeShape(lines)) + TypeShape(lines).UsedTypes
+		if IsKnown(value, all) is false
+			value
+Unmatched(names Texts, files Texts) Texts
+	Mentions.Unmatched(("Vector2s", "Missing"), List(Text) + "./Math/Vector2.strict") is ("Missing")
+	let known = Names(files)
+	for names
+		if IsKnown(value, known) is false
+			value
+Names(files Texts) Texts
+	Mentions.Names(("./Math/Vector2.strict", "Math\\Size.strict")) is ("None", "Other", "Vector2", "Size")
+	mutable known = List(Mutable(Text)) + "None" + "Other"
+	for files
+		known.Add(Path(value.Replace("\\", "/")).FileName.RemoveExtension.text)
+	known
+IsKnown(name Text, known Texts) Boolean
+	Mentions.IsKnown("Numbers", List(Text) + "Number")
+	Mentions.IsKnown("Numbr", List(Text) + "Number") is false
+	Mentions.IsKnown("Numberss", List(Text) + "Number")
+	if name is in known
+		return true
+	(name.Substring(name.Length - 1, 1) is "s") and IsKnown(name.Substring(0, name.Length - 1), known)
+Declared(shape Expressions/TypeShape) Texts
+	Mentions.Declared(TypeShape(Typo.lines)) is ("Numbr", "Numbers", "Other", "Number")
+	let calls = shape.CallScope(List(Text))
+	mutable types = shape.MemberScope.types + Returned(shape)
+	for calls.names
+		if value.LastIndexOf(" types") > 0
+			types = types + calls.types(index).Split(",")
+	mutable result = List(Mutable(Text))
+	for types
+		let name = value.IndexOf("(") > 0 then value.Substring(0, value.IndexOf("(")) else value
+		if (name is not "") and (name.IndexOf(")") < 0) and (name.IndexOf(" ") < 0) and (name is not in result)
+			result.Add(name)
+	result
+Returned(shape Expressions/TypeShape) Texts
+	Mentions.Returned(TypeShape(("constant Pair = (1, 2)", "Add(other) Number", "	other"))) is ("Number")
+	for shape.lines
+		if shape.IsMethodHeader(value) and (shape.IsComputed(value) is false)
+			HeaderTokens(Tokenizer(value).Tokens).ReturnType

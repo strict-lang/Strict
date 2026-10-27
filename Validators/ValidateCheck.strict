@@ -12,7 +12,8 @@ Checked(folder Text, root Text) Number
 	let isBase = folder.Replace("\\", "/").Replace("/.", "") is root
 	let duplicates = Duplicates.Of(files + Directory.Files(root, "*.strict"))
 	let shared = DroppedResults.Shared(duplicates, mutations)
-	let inference = ResolveCheck(logger).Inference(files.Length is 0 then files else SourceFiles(root).Of(files.First))
+	let reached = files.Length is 0 then files else SourceFiles(root).Of(files.First, files)
+	let inference = ResolveCheck(logger).Inference(reached)
 	Counts(files, mutations, isBase, shared, duplicates, inference).Sum
 Counts(files Texts, mutations Texts, isBase Boolean, shared Texts, duplicates Duplicates, inference Expressions/TypeInference) Numbers
 	for files
