@@ -19,3 +19,5 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 ## Waiting
 - Base library: Number `Sign`, `Wrap`, `ArcTangent2` and inverse trigonometry, Text to Numbers, fixed decimal text, `Truncated`.
 - Later: Qwen3-Coder-Next 80B-A3B and Qwen3-Coder-30B with all experts, image blur on the GPU, Apple Silicon, AMD GPUs, batched training ideas.
+
+- Combined `strict test Math native` emits duplicate `Number_$Tests_0` symbols; individual Math native tests pass.

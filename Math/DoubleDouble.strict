@@ -1,0 +1,30 @@
+has high Number
+has low Number = 0
++(other) DoubleDouble
+	(DoubleDouble(10000000000000000) + DoubleDouble(1)).low is 1
+	(DoubleDouble(1, 0.00000000000000001) + DoubleDouble(-1)).high * 100000000000000000 is 1
+	let sum = high + other.high
+	let moved = sum - high
+	let error = (high - (sum - moved)) + (other.high - moved) + low + other.low
+	Normalized(sum, error)
+-(other) DoubleDouble
+	(DoubleDouble(10000000000000000, 1) - DoubleDouble(10000000000000000)).high is 1
+	value + DoubleDouble(0 - other.high, 0 - other.low)
+*(other) DoubleDouble
+	(DoubleDouble(1, 0.00000000000000001) * DoubleDouble(2)).low * 100000000000000000 is 2
+	let product = high * other.high
+	let left = Split(high)
+	let right = Split(other.high)
+	let error = ((left.high * right.high - product) + left.high * right.low + left.low * right.high) + left.low * right.low
+	Normalized(product, error + high * other.low + low * other.high + low * other.low)
+Normalized(head Number, tail Number) DoubleDouble
+	Normalized(1, 1).high is 2
+	Normalized(1, 10000000000000000).low is 1
+	let sum = head + tail
+	let moved = sum - head
+	DoubleDouble(sum, (head - (sum - moved)) + (tail - moved))
+Split(number Number) DoubleDouble
+	Split(1.00000001).low > 0
+	let scaled = 134217729 * number
+	let head = scaled - (scaled - number)
+	DoubleDouble(head, number - head)
