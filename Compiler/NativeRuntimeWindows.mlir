@@ -75,7 +75,6 @@
   llvm.func @GetFileAttributesA(!llvm.ptr) -> i32
   llvm.func @CreateDirectoryA(!llvm.ptr, !llvm.ptr) -> i32
   llvm.func @getenv(!llvm.ptr) -> !llvm.ptr
-  llvm.func @calloc(i64, i64) -> !llvm.ptr
   llvm.func @SearchPathA(!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, !llvm.ptr, !llvm.ptr) -> i32
   llvm.func @GetTempPathA(i32, !llvm.ptr) -> i32
   llvm.func @GetTempFileNameA(!llvm.ptr, !llvm.ptr, i32, !llvm.ptr) -> i32
@@ -531,7 +530,10 @@
     %size = arith.constant 24 : i64
     %length = arith.constant 24 : i32
     %inherit = arith.constant 1 : i32
-    %attributes = llvm.call @calloc(%count, %size) : (i64, i64) -> !llvm.ptr
+    %attributeWords = arith.constant 3 : i64
+    %attributes = llvm.alloca %attributeWords x i64 : (i64) -> !llvm.ptr
+    %attributesZero = arith.constant 0 : i32
+    %attributesCleared = llvm.call @memset(%attributes, %attributesZero, %size) : (!llvm.ptr, i32, i64) -> !llvm.ptr
     llvm.store %length, %attributes : i32, !llvm.ptr
     %inheritSlot = llvm.getelementptr %attributes[16] : (!llvm.ptr) -> !llvm.ptr, i8
     llvm.store %inherit, %inheritSlot : i32, !llvm.ptr
@@ -563,9 +565,13 @@
     %quoted = func.call @strict_text_concat(%quote, %path) : (f64, f64) -> f64
     %program = func.call @strict_text_concat(%quoted, %quoteSpace) : (f64, f64) -> f64
     %command = func.call @strict_text_concat(%program, %arguments) : (f64, f64) -> f64
-    %startup = llvm.call @calloc(%count, %startupSize) : (i64, i64) -> !llvm.ptr
+    %startupWords = arith.constant 13 : i64
+    %startup = llvm.alloca %startupWords x i64 : (i64) -> !llvm.ptr
+    %startupZero = arith.constant 0 : i32
+    %startupCleared = llvm.call @memset(%startup, %startupZero, %startupSize) : (!llvm.ptr, i32, i64) -> !llvm.ptr
     llvm.store %startupLength, %startup : i32, !llvm.ptr
-    %information = llvm.call @calloc(%count, %informationSize) : (i64, i64) -> !llvm.ptr
+    %informationWords = arith.constant 3 : i64
+    %information = llvm.alloca %informationWords x i64 : (i64) -> !llvm.ptr
     %commandText = func.call @strict_ptr(%command) : (f64) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     func.call @strict_flush() : () -> ()
@@ -580,7 +586,7 @@
     %threadSlot = llvm.getelementptr %information[8] : (!llvm.ptr) -> !llvm.ptr, i8
     %thread = llvm.load %threadSlot : !llvm.ptr -> !llvm.ptr
     %waited = llvm.call @WaitForSingleObject(%process, %infinite) : (!llvm.ptr, i32) -> i32
-    %codeSlot = llvm.call @calloc(%count, %codeSize) : (i64, i64) -> !llvm.ptr
+    %codeSlot = llvm.alloca %count x i32 : (i64) -> !llvm.ptr
     %gotCode = llvm.call @GetExitCodeProcess(%process, %codeSlot) : (!llvm.ptr, !llvm.ptr) -> i32
     %exitCode = llvm.load %codeSlot : !llvm.ptr -> i32
     %exitNumber = arith.sitofp %exitCode : i32 to f64
@@ -631,7 +637,10 @@
     llvm.call @AcquireSRWLockExclusive(%lock) : (!llvm.ptr) -> ()
     %output = func.call @strict_inherited_file(%outputPath) : (f64) -> !llvm.ptr
     %error = func.call @strict_inherited_file(%errorPath) : (f64) -> !llvm.ptr
-    %startup = llvm.call @calloc(%count, %startupSize) : (i64, i64) -> !llvm.ptr
+    %startupWords = arith.constant 13 : i64
+    %startup = llvm.alloca %startupWords x i64 : (i64) -> !llvm.ptr
+    %startupZero = arith.constant 0 : i32
+    %startupCleared = llvm.call @memset(%startup, %startupZero, %startupSize) : (!llvm.ptr, i32, i64) -> !llvm.ptr
     llvm.store %startupLength, %startup : i32, !llvm.ptr
     %flagsSlot = llvm.getelementptr %startup[60] : (!llvm.ptr) -> !llvm.ptr, i8
     llvm.store %useHandles, %flagsSlot : i32, !llvm.ptr
@@ -642,7 +651,8 @@
     llvm.store %output, %outputSlot : !llvm.ptr, !llvm.ptr
     %errorSlot = llvm.getelementptr %startup[96] : (!llvm.ptr) -> !llvm.ptr, i8
     llvm.store %error, %errorSlot : !llvm.ptr, !llvm.ptr
-    %information = llvm.call @calloc(%count, %informationSize) : (i64, i64) -> !llvm.ptr
+    %informationWords = arith.constant 3 : i64
+    %information = llvm.alloca %informationWords x i64 : (i64) -> !llvm.ptr
     %commandText = func.call @strict_ptr(%command) : (f64) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     func.call @strict_tool_environment(%toolShare, %toolShareValue) : (i64, !llvm.ptr) -> ()
@@ -679,7 +689,7 @@
     %timeoutCode = arith.constant 124.0 : f64
     cf.br ^collect(%timeoutCode : f64)
   ^exited:
-    %codeSlot = llvm.call @calloc(%count, %count) : (i64, i64) -> !llvm.ptr
+    %codeSlot = llvm.alloca %count x i32 : (i64) -> !llvm.ptr
     %gotCode = llvm.call @GetExitCodeProcess(%process, %codeSlot) : (!llvm.ptr, !llvm.ptr) -> i32
     %exitCode = llvm.load %codeSlot : !llvm.ptr -> i32
     %exitNumber = arith.uitofp %exitCode : i32 to f64
