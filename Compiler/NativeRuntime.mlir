@@ -11512,7 +11512,14 @@
     %followingValue = arith.addi %quantizeIndex, %one : i64
     cf.cond_br %isDotted, ^quantizeOne, ^quantize(%followingValue, %followingSlot : i64, i64)
   ^quantizeOne:
-    func.call @strict_gpu_quantized(%ptx, %quantizedView) : (!llvm.ptr, !llvm.ptr) -> ()
+    %transposedSettings = llvm.mlir.addressof @strict_gpu_transposed : !llvm.ptr
+    %transposedNumber = llvm.load %transposedSettings : !llvm.ptr -> i64
+    %transposedRowSlot = llvm.getelementptr %transposedSettings[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %transposedRow = llvm.load %transposedRowSlot : !llvm.ptr -> i64
+    %quantizedNumber = arith.addi %quantizeIndex, %one : i64
+    %transposedHere = arith.cmpi eq, %transposedNumber, %quantizedNumber : i64
+    %transposedWidth = arith.select %transposedHere, %transposedRow, %none : i64
+    func.call @strict_gpu_quantized(%ptx, %quantizedView, %transposedWidth) : (!llvm.ptr, !llvm.ptr, i64) -> ()
     cf.br ^quantize(%followingValue, %followingSlot : i64, i64)
   ^chooseKernel:
     func.call @strict_gpu_rotated_slots(%slots, %slotIndex) : (!llvm.ptr, i64) -> ()
@@ -11590,7 +11597,11 @@
     %byteLanes = arith.constant -96 : i64
     %bytesBlock = arith.constant 128 : i64
     %byteAttention = arith.cmpi eq, %lanes, %byteLanes : i64
-    %threads = arith.select %byteAttention, %bytesBlock, %tiledThreads : i64
+    %bytesThreads = arith.select %byteAttention, %bytesBlock, %tiledThreads : i64
+    %denseLanes = arith.constant -112 : i64
+    %denseBlock = arith.constant 256 : i64
+    %denseAttention = arith.cmpi eq, %lanes, %denseLanes : i64
+    %threads = arith.select %denseAttention, %denseBlock, %bytesThreads : i64
     cf.cond_br %missing, ^release, ^chosen
   ^chosen:
     %unpackedResult = arith.cmpi eq, %packed, %none : i64
@@ -14011,6 +14022,11 @@
   // the width of the tokens strict_gpu_tokens quantizes with one scale per token (rows with one scale each), 0 for a
   // scale per 32 numbers
   llvm.mlir.global internal @strict_gpu_quantize_width(0 : i64) : i64
+  // the value (its index plus 1, 0 for none) strict_gpu_quantized transposes per number for strict_device_dense_attention
+  // and the width of its rows
+  llvm.mlir.global internal @strict_gpu_transposed(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  llvm.mlir.global internal constant @strict_gpu_transposed_name("strict_device_values_transposed\00") : !llvm.array<32 x i8>
+  llvm.mlir.global internal @strict_gpu_transposed_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   // device address, size and next offset of the 8 bit numbers made for dot products, one stream runs everything in order
   // so a quantization only overwrites bytes of dot products that ran already, it grows to 4 times a list that needs more
   // than a quarter (the inputs of a long prompt)
@@ -14091,8 +14107,9 @@
     return %threads : i64
   }
   // 32 bit or bfloat16 numbers on the GPU only read by dot products with rows become 8 bit numbers (a scale per 32) in
-  // the scratch block, dp4a multiplies 4 of them with 4 packed numbers of a row at once
-  func.func private @strict_gpu_quantized(%ptx: !llvm.ptr, %view: !llvm.ptr) {
+  // the scratch block, dp4a multiplies 4 of them with 4 packed numbers of a row at once; rows of transposed numbers
+  // (above 0) become strict_device_values_transposed's numbers per number
+  func.func private @strict_gpu_quantized(%ptx: !llvm.ptr, %view: !llvm.ptr, %transposed: i64) {
     %none = arith.constant 0 : i64
     %two = arith.constant 2 : i64
     %five = arith.constant 5 : i64
@@ -14116,7 +14133,17 @@
   ^room:
     %blocks = arith.shrui %length, %five : i64
     %scaleBytes = arith.shli %blocks, %two : i64
-    %needed = arith.addi %length, %scaleBytes : i64
+    %blockNeeded = arith.addi %length, %scaleBytes : i64
+    %isTransposed = arith.cmpi sgt, %transposed, %none : i64
+    %rowWidth = arith.select %isTransposed, %transposed, %thirtyTwo : i64
+    %rowPositions = arith.divui %length, %rowWidth : i64
+    %rowPositionsUp = arith.addi %rowPositions, %thirtyOne : i64
+    %positionMask = arith.constant -32 : i64
+    %paddedPositions = arith.andi %rowPositionsUp, %positionMask : i64
+    %transposedBytes = arith.muli %rowWidth, %paddedPositions : i64
+    %numberScales = arith.shli %rowWidth, %two : i64
+    %transposedNeeded = arith.addi %transposedBytes, %numberScales : i64
+    %needed = arith.select %isTransposed, %transposedNeeded, %blockNeeded : i64
     %spare = arith.constant 255 : i64
     %roundedUp = arith.addi %needed, %spare : i64
     %alignMask = arith.constant -256 : i64
@@ -14180,7 +14207,22 @@
     %rotatedTokens = arith.andi %perToken, %isRotated : i1
     %groupedTokens = arith.andi %wholeGroups, %fitsBlock : i1
     %fusing = arith.andi %rotatedTokens, %groupedTokens : i1
+    cf.cond_br %isTransposed, ^transpose, ^tokens
+  ^tokens:
     cf.cond_br %fusing, ^fuse, ^unfused
+  ^transpose:
+    %transposedName = llvm.mlir.addressof @strict_gpu_transposed_name : !llvm.ptr
+    %transposedSlot = llvm.mlir.addressof @strict_gpu_transposed_slot : !llvm.ptr
+    %transposing = func.call @strict_gpu_function(%ptx, %transposedName, %transposedSlot) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %noTransposing = llvm.mlir.zero : !llvm.ptr
+    %transposingMissing = llvm.icmp "eq" %transposing, %noTransposing : !llvm.ptr
+    cf.cond_br %transposingMissing, ^done, ^transposeLaunch
+  ^transposeLaunch:
+    %numberGroups = arith.shrui %rowWidth, %five : i64
+    %groupThreads = arith.constant 256 : i64
+    %transposeTotal = arith.muli %numberGroups, %groupThreads : i64
+    %transposedLaunched = func.call @strict_gpu_quantize_launch(%transposing, %device, %length, %rowWidth, %target, %bits, %transposeTotal, %groupThreads) : (!llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> i1
+    cf.cond_br %transposedLaunched, ^swap, ^done
   ^fuse:
     %fusedName = llvm.mlir.addressof @strict_gpu_hadamard_tokens_name : !llvm.ptr
     %fusedSlot = llvm.mlir.addressof @strict_gpu_hadamard_tokens_slot : !llvm.ptr
@@ -14561,10 +14603,13 @@
     cf.cond_br %attending, ^attention, ^bytes
   ^bytes:
     %bytesLanes = arith.constant 96 : i64
+    %denseLanes = arith.constant 112 : i64
     %bytesAttending = arith.cmpi eq, %perWarp, %bytesLanes : i64
-    cf.cond_br %bytesAttending, ^bytesAttention, ^done(%chosenEights : i64)
+    %denseAttending = arith.cmpi eq, %perWarp, %denseLanes : i64
+    %anyBytes = arith.ori %bytesAttending, %denseAttending : i1
+    cf.cond_br %anyBytes, ^bytesAttention, ^done(%chosenEights : i64)
   ^bytesAttention:
-    %bytesThreads = func.call @strict_gpu_bytes_threads(%values) : (!llvm.ptr) -> i64
+    %bytesThreads = func.call @strict_gpu_bytes_threads(%values, %denseAttending) : (!llvm.ptr, i1) -> i64
     cf.br ^done(%bytesThreads : i64)
   ^attention:
     %attentionThreads = func.call @strict_gpu_attention_threads(%count, %values) : (i64, !llvm.ptr) -> i64
@@ -14661,11 +14706,20 @@
   llvm.mlir.global internal @strict_gpu_attention_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   llvm.mlir.global internal constant @strict_gpu_bytes_name("strict_device_bytes_attention\00strict_device_bytes_attentions\00") : !llvm.array<61 x i8>
   llvm.mlir.global internal @strict_gpu_bytes_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
-  // strict_device_bytes_attention takes a block of 128 threads per sequence, head and 64 tokens
-  func.func private @strict_gpu_bytes_threads(%values: !llvm.ptr) -> i64 {
-    %six = arith.constant 6 : i64
-    %seven = arith.constant 7 : i64
-    %spare = arith.constant 63 : i64
+  llvm.mlir.global internal constant @strict_gpu_dense_name("strict_device_dense_attention\00strict_device_dense_attentions\00") : !llvm.array<61 x i8>
+  llvm.mlir.global internal @strict_gpu_dense_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  // strict_device_bytes_attention takes a block of 128 threads per sequence, head and 64 tokens,
+  // strict_device_dense_attention (dense) one of 256 threads per 128 tokens
+  func.func private @strict_gpu_bytes_threads(%values: !llvm.ptr, %dense: i1) -> i64 {
+    %blockShift = arith.constant 6 : i64
+    %denseShift = arith.constant 7 : i64
+    %blockThreadShift = arith.constant 7 : i64
+    %denseThreadShift = arith.constant 8 : i64
+    %blockSpare = arith.constant 63 : i64
+    %denseSpare = arith.constant 127 : i64
+    %tokenShift = arith.select %dense, %denseShift, %blockShift : i64
+    %threadShift = arith.select %dense, %denseThreadShift, %blockThreadShift : i64
+    %tokenSpare = arith.select %dense, %denseSpare, %blockSpare : i64
     %headsSlot = llvm.getelementptr %values[3] : (!llvm.ptr) -> !llvm.ptr, f64
     %headsNumber = llvm.load %headsSlot : !llvm.ptr -> f64
     %sizeSlot = llvm.getelementptr %values[5] : (!llvm.ptr) -> !llvm.ptr, f64
@@ -14681,11 +14735,11 @@
     %headsSize = arith.muli %heads, %size : i64
     %sequenceQueries = arith.muli %headsSize, %sequences : i64
     %tokens = arith.divui %queriesTotal, %sequenceQueries : i64
-    %tokensUp = arith.addi %tokens, %spare : i64
-    %tokenBlocks = arith.shrui %tokensUp, %six : i64
+    %tokensUp = arith.addi %tokens, %tokenSpare : i64
+    %tokenBlocks = arith.shrui %tokensUp, %tokenShift : i64
     %sequenceHeads = arith.muli %heads, %sequences : i64
     %blocks = arith.muli %sequenceHeads, %tokenBlocks : i64
-    %threads = arith.shli %blocks, %seven : i64
+    %threads = arith.shli %blocks, %threadShift : i64
     return %threads : i64
   }
   func.func private @strict_gpu_attention_view(%valueLength: f64, %positions: i64, %width: i64, %offsetNumber: f64, %strideNumber: f64) -> i1 {
@@ -14877,10 +14931,23 @@
     %bytesDots = arith.select %bytesWanted, %bothBits, %dots : i64
     %bytesName = llvm.mlir.addressof @strict_gpu_bytes_name : !llvm.ptr
     %bytesSlot = llvm.mlir.addressof @strict_gpu_bytes_slot : !llvm.ptr
-    %chosenName = llvm.select %bytesWanted, %bytesName, %name : i1, !llvm.ptr
-    %chosenSlot = llvm.select %bytesWanted, %bytesSlot, %slot : i1, !llvm.ptr
+    %denseName = llvm.mlir.addressof @strict_gpu_dense_name : !llvm.ptr
+    %denseSlot = llvm.mlir.addressof @strict_gpu_dense_slot : !llvm.ptr
+    %denseTrue = arith.constant true
+    %notRouting = arith.xori %routingWanted, %denseTrue : i1
+    %denseRows = arith.constant 31 : i64
+    %denseRest = arith.andi %positionSize, %denseRows : i64
+    %denseGroups = arith.cmpi eq, %denseRest, %none : i64
+    %denseShaped = arith.andi %bytesWanted, %denseGroups : i1
+    %denseWanted = arith.andi %denseShaped, %notRouting : i1
+    %bytesOrName = llvm.select %bytesWanted, %bytesName, %name : i1, !llvm.ptr
+    %bytesOrSlot = llvm.select %bytesWanted, %bytesSlot, %slot : i1, !llvm.ptr
+    %chosenName = llvm.select %denseWanted, %denseName, %bytesOrName : i1, !llvm.ptr
+    %chosenSlot = llvm.select %denseWanted, %denseSlot, %bytesOrSlot : i1, !llvm.ptr
     %byteLanes = arith.constant -96 : i64
-    %chosenLanes = arith.select %bytesWanted, %byteLanes, %lanes : i64
+    %denseLanes = arith.constant -112 : i64
+    %bytesOrLanes = arith.select %bytesWanted, %byteLanes, %lanes : i64
+    %chosenLanes = arith.select %denseWanted, %denseLanes, %bytesOrLanes : i64
     %routedBytes = arith.andi %routingWanted, %bytesWanted : i1
     cf.cond_br %routedBytes, ^pooling, ^attending
   ^pooling:
@@ -14900,8 +14967,15 @@
   ^attending:
     %widthSlot = llvm.mlir.addressof @strict_gpu_quantize_width : !llvm.ptr
     llvm.store %keyWidth, %widthSlot : i64, !llvm.ptr
+    %transposedSettings = llvm.mlir.addressof @strict_gpu_transposed : !llvm.ptr
+    %transposedRowSlot = llvm.getelementptr %transposedSettings[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %valuesNumber = arith.constant 3 : i64
+    %transposedNumber = arith.select %denseWanted, %valuesNumber, %none : i64
+    llvm.store %transposedNumber, %transposedSettings : i64, !llvm.ptr
+    llvm.store %positionSize, %transposedRowSlot : i64, !llvm.ptr
     %result = func.call @strict_gpu_run(%ptx, %chosenName, %chosenSlot, %queryCount, %zero, %none, %valuesSlots, %thirteen, %listsMask, %none, %bytesDots, %chosenLanes, %none, %integers, %noGuards1) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
     llvm.store %none, %widthSlot : i64, !llvm.ptr
+    llvm.store %none, %transposedSettings : i64, !llvm.ptr
     return %result : f64
   ^unable:
     return %zero : f64
