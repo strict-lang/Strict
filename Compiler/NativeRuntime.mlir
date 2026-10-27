@@ -198,6 +198,36 @@
     %started = func.call @strict_test_begin(%self, %place, %slow, %limit) : (f64, f64, f64, f64) -> f64
     return %started : f64
   }
+  // a timed test starts without the garbage of what ran before it (compiling 209 types left 171 MB: a 50 ms full
+  // collection in the first test), so a collection half due runs before the deadline is armed, not while a pool runs
+  func.func private @strict_test_collected() {
+    %two = arith.constant 2 : i64
+    %zero = arith.constant 0 : i64
+    %busy = func.call @strict_rc_busy() : () -> i1
+    cf.cond_br %busy, ^done, ^check
+  ^check:
+    %allocatedSlot = llvm.mlir.addressof @strict_gc_allocated : !llvm.ptr
+    %allocated = llvm.load %allocatedSlot : !llvm.ptr -> i64
+    %thresholdSlot = llvm.mlir.addressof @strict_gc_threshold : !llvm.ptr
+    %threshold = llvm.load %thresholdSlot : !llvm.ptr -> i64
+    %allocatedTwice = arith.muli %allocated, %two : i64
+    %fullSoon = arith.cmpi ugt, %allocatedTwice, %threshold : i64
+    %youngSlot = llvm.mlir.addressof @strict_gc_young : !llvm.ptr
+    %young = llvm.load %youngSlot : !llvm.ptr -> i64
+    %limitSlot = llvm.mlir.addressof @strict_gc_young_limit : !llvm.ptr
+    %limit = llvm.load %limitSlot : !llvm.ptr -> i64
+    %youngTwice = arith.muli %young, %two : i64
+    %crowded = arith.cmpi ugt, %youngTwice, %limit : i64
+    %enabled = arith.cmpi ne, %limit, %zero : i64
+    %youngSoon = arith.andi %crowded, %enabled : i1
+    %soon = arith.ori %fullSoon, %youngSoon : i1
+    cf.cond_br %soon, ^collect, ^done
+  ^collect:
+    func.call @strict_gc_run(%fullSoon) : (i1) -> ()
+    cf.br ^done
+  ^done:
+    return
+  }
   func.func private @strict_test_begin(%self: f64, %place: f64, %isSlow: f64, %limit: f64) -> f64 {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -227,6 +257,7 @@
     %slow = arith.cmpf une, %isSlow, %zeroFloat : f64
     cf.cond_br %slow, ^untimed, ^watch
   ^watch:
+    func.call @strict_test_collected() : () -> ()
     %watchingSlot = llvm.mlir.addressof @strict_test_watching : !llvm.ptr
     %watching = llvm.load %watchingSlot : !llvm.ptr -> i64
     %active = arith.cmpi ne, %watching, %zero : i64
