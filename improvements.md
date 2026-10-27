@@ -10,12 +10,14 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - `Process.RunTools` starting clang on pool threads exited 127 without a message once (Toolchain `PartsCompiled`).
 - GPU launches are not guarded on pool threads (`MlirSafety` keeps GPU loops out of parallel loops instead of running them on the CPU).
 - Native `NeuralNetworks/Batch` fails 3 tests since c06d0649: the left side is now exact while the right side runs on the GPU.
-- `STRICT_RC_CHECK=1` self-builds of NativeCompiler report counts too low for the last 25-30 elements of one large list, and the check's marking before a reclaim lost live objects with young collections (it collects fully now).
+- Stale list slots past `used` break counts: `strict_list_push` skips counting when the slot already holds the same bits (meant for prewired flat lists) and releases any other stale value, but `strict_list_into` reuse sets `used` to 0 and leaves stale bits that may be uncounted (stores inside pool jobs pin instead of count) or point at a freed and reallocated address. `STRICT_RC_CHECK=1` self-builds show it: the last ~40 of 2673 pushes of one list end at count 0. Fix: reuse releases and clears the stale slots of other allocations (keeping flat prewiring), or push trusts only inline flat elements and never releases stale slots.
+- Why the check marking before a reclaim (`strict_rc_mark_all`) lost live objects with young collections (STRICT_RC_CHECK collects fully now).
 - Ternary Bonsai 27B stalls at a simulated 10 GB only with a raw cuMemAlloc holder in another process, not with a torch holder.
 - Test comparisons expand records and lists only through eight nested types, deeper types compare without numeric tolerance.
 - `Linker` forwarding is not transitive (Angle to Degrees to Number never asks Number for Floor).
 
 ## Next
+- `strict_testbudget_extended` (runtime) is unused by current code, remove it with the next seed regeneration.
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).
 - Game engine (iOS, Android, one game loop, multiplayer, Spine, platform services): [improvements-engine.md](improvements-engine.md).
 - CI runs few native builds: add more while each job stays under 10 minutes.
