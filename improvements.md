@@ -10,7 +10,6 @@ What to fix next, one short line each, bugs first. Remove a line once it is atte
 - Parallel `strict build`s after a compiler change all rebuild `Compiler/NativeCompiler` at once and fail linking (`NativeCompiler.res` missing): one build rebuilds, the others wait for it.
 - A failed host allocation shows up as `AccessViolation` instead of an out of memory Error (H3 with 40 GB committed by other programs).
 - `strict test Compiler/Toolchain.strict` exited 127 without a message once among 16 parallel VM tests, in `PartsCompiled` (`Process.RunTools` starting clang on pool threads).
-- Qwen3Benchmark native compilation intermittently exits with heap corruption after GPU preparation; keep the failing cold-build log and investigate in the compiler/runtime session.
 - GPU launches are not guarded on pool threads: `MlirSafety` keeps methods with GPU-able loops out of parallel loops; the runtime should run such loops on the CPU while the pool is busy.
 - Speed up boxed numeric VM allocation/dispatch for explicit Attention prompt tests (Runtime/README.md).
 - Native `NeuralNetworks/Batch` fails 3 tests since c06d0649 (passed at f38592f7): `Fours.Grouped(...)(3) is Fours.Sums(Tokens)(11)`, `Fours.Grouped((0, 8), 8, Long)(523)` and `Wholes.Gated(Tokens)(0)`, whose left side now comes out exact (`Wholes.Gated(Tokens)(0)` 7579.69 like the VM instead of the GPU's 7916.48) while the right side runs on the GPU; H3Video still runs the GPU kernels.
@@ -18,6 +17,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is atte
 
 - A bare zero-argument method used as a constant initializer is re-evaluated: `constant Shared = Created` logs three calls across three reads, while `constant Shared = Type.Created` is cached; recognize the implicit call in ConstantMethods.
 - `strict build Strict.strict` fails `Strict.Message("help")` with TestDurationMustNotExceedTwentyMilliseconds while the 209 types test in parallel (0.3 ms alone, passes with STRICT_THREADS=1); `MlirFunction` `Counter.Text` and ToolRunner's `Echo.ExecuteAll` exceed 20 ms on the VM even alone.
+- Qwen3Benchmark native builds sometimes exited with heap corruption after GPU preparation, not again in nine cold and warm builds since the Windows process start fix: keep the log when it does.
 
 ## Next
 - GPU speed and memory (attention, 16 bit lists, memory budget, loading, generated loops): [improvements-gpu.md](improvements-gpu.md).
@@ -32,7 +32,6 @@ What to fix next, one short line each, bugs first. Remove a line once it is atte
 - MlirCost sums expensive alternative call paths and overestimates tiny loops; calibrate branch-sensitive work estimates against private frame initialization before relaxing thresholds further.
 - Linker forwarding is not transitive (Angle to Degrees to Number never asks Number for Floor) and also forwards for single-member base types and Logger, which emission's `TypeEntry.Wrapped` never does.
 - Syntax validation (`FileCompiler.Parsed`) reads and parses every source serially; run it like name validation (FileCompiler has 16 methods, the syntax checks need a type of their own).
-- Small builds lower and translate the whole runtime every time; cache it as bitcode (keep the 16 split parts, one clang part is slower even for Sum).
 - Source discovery inventories whole packages for every build, also for small programs; narrow it to the files the source can reach.
 
 ## Waiting
