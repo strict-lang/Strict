@@ -60,7 +60,8 @@ Fit(name Text, count Number, target Text, names Texts) Number
 	Logged.Fit("Add", 1, "None", List(Text) + "other") is 2
 	GoRun.Fit("Go", 0, "None", List(Text)) is 0
 	Logged.Fit("Add", -1, "None", List(Text)) is 1
-	let isReturning = name is not "to" or (TypeEntry.ShortName(target) is TypeEntry.ShortName(returnType))
+	let isAnyReturn = (name is not "to") or (target is "")
+	let isReturning = isAnyReturn or (TypeEntry.ShortName(target) is TypeEntry.ShortName(returnType))
 	if (Name is not name) or (isReturning is false)
 		return 0
 	if count < 0

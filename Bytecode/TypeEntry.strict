@@ -34,6 +34,7 @@ Bytes Numbers
 Chosen(name Text, count Number, returnType Text, names Texts) Number
 	HelloLogger.Chosen("Run", 0, "None", List(Text)) is 0
 	HelloLogger.Chosen("Missing", 0, "None", List(Text)) is -1
+	Converting.Chosen("to", -1, "", List(Text)) is 0
 	mutable chosen = -1
 	mutable best = 0
 	for methods
