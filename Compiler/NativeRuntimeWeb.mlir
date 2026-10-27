@@ -226,7 +226,10 @@
     %mode = arith.constant 511 : i32
     %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
     %created = llvm.call @mkdir(%name, %mode) : (!llvm.ptr, i32) -> i32
-    return %zero : f64
+    %success = arith.constant 0 : i32
+    %made = arith.cmpi eq, %created, %success : i32
+    %result = func.call @strict_directory_created(%made, %path) : (i1, f64) -> f64
+    return %result : f64
   }
   func.func private @strict_path_join(%path: f64, %name: f64) -> f64 {
     %separatorText = llvm.mlir.addressof @strict_separator_path : !llvm.ptr
@@ -395,6 +398,9 @@
   func.func private @strict_guard() {
     return
   }
+  func.func private @strict_environment_put(%setting: !llvm.ptr) {
+    return
+  }
   func.func private @strict_file_size(%name: !llvm.ptr) -> i64 {
     %size = arith.constant 256 : i64
     %buffer = llvm.alloca %size x i8 : (i64) -> !llvm.ptr
@@ -522,6 +528,10 @@
   llvm.mlir.global internal constant @strict_gpu_ptx_ending(".ptx\00") : !llvm.array<5 x i8>
   llvm.mlir.global internal constant @strict_gpu_older_ending(".older.ptx\00") : !llvm.array<11 x i8>
 
+  func.func private @strict_process_wait(%self: f64, %seconds: f64) -> f64 {
+    %none = arith.constant 0.0 : f64
+    return %none : f64
+  }
   func.func private @strict_test_pause() {
     return
   }

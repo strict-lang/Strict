@@ -128,7 +128,10 @@
     %mode = arith.constant 511 : i32
     %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
     %created = llvm.call @mkdir(%name, %mode) : (!llvm.ptr, i32) -> i32
-    return %zero : f64
+    %success = arith.constant 0 : i32
+    %made = arith.cmpi eq, %created, %success : i32
+    %result = func.call @strict_directory_created(%made, %path) : (i1, f64) -> f64
+    return %result : f64
   }
   func.func private @strict_path_join(%path: f64, %name: f64) -> f64 {
     %separatorText = llvm.mlir.addressof @strict_separator_path : !llvm.ptr
@@ -371,6 +374,11 @@
     %busInstalled = llvm.call @sigaction(%bus, %action, %null) : (i32, !llvm.ptr, !llvm.ptr) -> i32
     return
   }
+  func.func private @strict_environment_put(%setting: !llvm.ptr) {
+    %put = llvm.call @putenv(%setting) : (!llvm.ptr) -> i32
+    return
+  }
+  llvm.func @putenv(!llvm.ptr) -> i32
   func.func private @strict_file_size(%name: !llvm.ptr) -> i64 {
     %size = arith.constant 256 : i64
     %buffer = llvm.alloca %size x i8 : (i64) -> !llvm.ptr
@@ -1724,6 +1732,24 @@
   }
 
   llvm.func @nanosleep(!llvm.ptr, !llvm.ptr) -> i32
+  // Process.Wait: blocks this thread for the given seconds
+  func.func private @strict_process_wait(%self: f64, %seconds: f64) -> f64 {
+    %two = arith.constant 2 : i64
+    %billion = arith.constant 1.0e9 : f64
+    %delay = llvm.alloca %two x i64 : (i64) -> !llvm.ptr
+    %whole = arith.fptosi %seconds : f64 to i64
+    llvm.store %whole, %delay : i64, !llvm.ptr
+    %wholeSeconds = arith.sitofp %whole : i64 to f64
+    %rest = arith.subf %seconds, %wholeSeconds : f64
+    %restNanoseconds = arith.mulf %rest, %billion : f64
+    %nanoseconds = arith.fptosi %restNanoseconds : f64 to i64
+    %fraction = llvm.getelementptr %delay[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %nanoseconds, %fraction : i64, !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %paused = llvm.call @nanosleep(%delay, %null) : (!llvm.ptr, !llvm.ptr) -> i32
+    %none = arith.constant 0.0 : f64
+    return %none : f64
+  }
   func.func private @strict_test_pause() {
     %two = arith.constant 2 : i64
     %zero = arith.constant 0 : i64

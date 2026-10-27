@@ -65,7 +65,8 @@ Icon Text
 		return own
 	File(folder).Exists then folder else TypeSource.Root + "/Strict.ico"
 Refreshed(release Text, content Text, endings Texts) Number
-	Directory.Create(Path(release).PathOnly.text)
+	let parent = Path(release).PathOnly.text
+	Directory.Create(parent)
 	Directory.Create(release)
 	for endings
 		let built = base + value

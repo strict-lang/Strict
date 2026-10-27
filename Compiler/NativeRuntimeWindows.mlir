@@ -129,7 +129,10 @@
     %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     %created = llvm.call @CreateDirectoryA(%name, %null) : (!llvm.ptr, !llvm.ptr) -> i32
-    return %zero : f64
+    %failure = arith.constant 0 : i32
+    %made = arith.cmpi ne, %created, %failure : i32
+    %result = func.call @strict_directory_created(%made, %path) : (i1, f64) -> f64
+    return %result : f64
   }
   func.func private @strict_path_join(%path: f64, %name: f64) -> f64 {
     %separatorText = llvm.mlir.addressof @strict_separator_path : !llvm.ptr
@@ -411,6 +414,11 @@
     %guaranteed = llvm.call @SetThreadStackGuarantee(%reserve) : (!llvm.ptr) -> i32
     return
   }
+  func.func private @strict_environment_put(%setting: !llvm.ptr) {
+    %put = llvm.call @_putenv(%setting) : (!llvm.ptr) -> i32
+    return
+  }
+  llvm.func @_putenv(!llvm.ptr) -> i32
   func.func private @strict_file_size(%name: !llvm.ptr) -> i64 {
     %dataSize = arith.constant 40 : i64
     %data = llvm.alloca %dataSize x i8 : (i64) -> !llvm.ptr
@@ -930,6 +938,15 @@
   llvm.mlir.global internal constant @strict_gpu_older_ending(".older.ptx\00") : !llvm.array<11 x i8>
 
   llvm.func @Sleep(i32)
+  // Process.Wait: blocks this thread for the given seconds
+  func.func private @strict_process_wait(%self: f64, %seconds: f64) -> f64 {
+    %thousand = arith.constant 1000.0 : f64
+    %milliseconds = arith.mulf %seconds, %thousand : f64
+    %wait = arith.fptosi %milliseconds : f64 to i32
+    llvm.call @Sleep(%wait) : (i32) -> ()
+    %none = arith.constant 0.0 : f64
+    return %none : f64
+  }
   func.func private @strict_test_pause() {
     %wait = arith.constant 1 : i32
     llvm.call @Sleep(%wait) : (i32) -> ()

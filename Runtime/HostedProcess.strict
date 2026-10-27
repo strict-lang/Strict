@@ -7,6 +7,9 @@ Result VmValue
 		return call.MethodName is in ("At", "Stored") then ConstantCache.Hosted(call) else HostedBudget(call).Result
 	if call.MethodName is "Started"
 		return VmValue.OfNumber(Process(call.Instance.Member(0).text).Started(call.Arguments.First.text))
+	if call.MethodName is "Wait"
+		Process.Wait(call.Arguments.First.number)
+		return VmValue.None
 	if call.MethodName is "RunTools"
 		return Ran(Process.RunTools(call.Arguments.First.text, Hosted(call).TextsOf(call.Arguments.Last)))
 	Hosted(call).Processed

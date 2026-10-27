@@ -7,6 +7,8 @@ import tempfile
 root = Path(__file__).resolve().parent.parent
 command = str(root / ("strict.exe" if os.name == "nt" else "strict"))
 environment = dict(os.environ, STRICT_THREADS="8")
+environment.pop("STRICT_TESTS_PARALLEL", None)
+parallel = dict(environment, STRICT_TESTS_PARALLEL="1")
 with tempfile.TemporaryDirectory(prefix="TestPolicy", dir=root / "Examples") as temporary:
 	folder = Path(temporary)
 	work = folder / "TestWork.strict"
@@ -105,6 +107,32 @@ with tempfile.TemporaryDirectory(prefix="TestPolicy", dir=root / "Examples") as 
 	hung_vm = subprocess.run([command, "test", str(source), "unit"], cwd=root, env=environment,
 		capture_output=True, text=True, timeout=10)
 	assert hung_vm.returncode != 0 and "TestDurationMustNotExceedVmBudget" in hung_vm.stdout + hung_vm.stderr, hung_vm.stdout + hung_vm.stderr
+
+	shared_folder = folder / "Parallel"
+	shared_folder.mkdir()
+	(shared_folder / "Waiting.strict").write_text('Pause(seconds Number) Number\n\tlet started = Process.Elapsed\n'
+		'\tmutable count = 0\n\tfor as long as Process.Elapsed - started < seconds\n'
+		'\t\tcount = count + 1\n\tcount > 0 then 1 else 0', encoding="utf-8")
+	def waiting(name, seconds):
+		(shared_folder / (name + ".strict")).write_text('Delay Number\n\t' + name + '.Delay is 1\n\tWaiting.Pause(' + str(seconds) + ')',
+			encoding="utf-8")
+	waiting("FirstWait", 0.04)
+	waiting("SecondWait", 0.04)
+	alone = subprocess.run([command, "test", str(shared_folder / "FirstWait.strict"), "unit"], cwd=root, env=environment,
+		capture_output=True, text=True, timeout=10)
+	assert alone.returncode != 0 and "TestDurationMustNotExceedTwentyMilliseconds" in alone.stdout + alone.stderr, alone.stdout + alone.stderr
+	for options in [["unit"], ["unit", "native"]]:
+		allowed = subprocess.run([command, "test", str(shared_folder / "FirstWait.strict"), *options], cwd=root, env=parallel,
+			capture_output=True, text=True, timeout=90)
+		assert allowed.returncode == 0, "STRICT_TESTS_PARALLEL did not allow 50 ms:\n" + allowed.stdout + allowed.stderr
+	folder_run = subprocess.run([command, "test", str(shared_folder)], cwd=root, env=environment,
+		capture_output=True, text=True, timeout=30)
+	assert folder_run.returncode == 0, "Files tested in parallel did not get 50 ms:\n" + folder_run.stdout + folder_run.stderr
+	waiting("SecondWait", 0.07)
+	slow_parallel = subprocess.run([command, "test", str(shared_folder / "SecondWait.strict"), "unit"], cwd=root, env=parallel,
+		capture_output=True, text=True, timeout=10)
+	assert slow_parallel.returncode != 0 and "exceeded 50 ms" in slow_parallel.stdout + slow_parallel.stderr, (
+		slow_parallel.stdout + slow_parallel.stderr)
 
 	source = folder / "Shares.strict"
 	tool, line = ("cmd", "/c echo %STRICT_THREADS%") if os.name == "nt" else ("sh", "-c 'echo $STRICT_THREADS'")

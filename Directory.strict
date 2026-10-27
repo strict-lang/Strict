@@ -4,7 +4,7 @@ Directories(path) Texts
 Exists(path) Boolean
 Current Text
 Files(path, pattern = "") Texts
-Create(path)
+Create(path) Boolean
 Delete(path Text) Boolean
 	Directory.Delete("Missing/Deleted")
 	let isWindows = Process.OperatingSystem is "Windows"
