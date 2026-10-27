@@ -7,4 +7,4 @@ skeleton("skeleton").get("width") to Number is 205.28
 skeleton("bones").Elements(2).get("parent") to Text is "Bat_Bone"
 ```
 
-Every call scans the text again, so keep the Json of a nested value instead of asking the root repeatedly. Walking all 495 values of `BatSkeleton.json` (4 KB) takes 0.11 s on the Strict VM, nesting is limited by the stack. `BatSkeleton.json` is the Spine skeleton of the TinyBat sample of DeltaEngine.
+Every call scans the text again, so keep the Json of a nested value instead of asking the root repeatedly. Nesting is limited by the stack. `BatSkeleton.json` is the Spine skeleton of the TinyBat sample of DeltaEngine.

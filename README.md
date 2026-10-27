@@ -10,20 +10,19 @@
 
 Strict is a small programming language that AI can write, read and change as reliably as people can. Every type is one file, every method starts with its own tests, values are immutable and there is exactly one way to solve each problem, so generated code is checked by `strict check` and its tests within seconds instead of being reviewed line by line.
 
-Large language models write code by imitation and their output still has to be verified by someone. Strict is meant as the DNA of a program: a compact, exact and fast low level layer whose rules a computer can fully understand, verify and evolve. The long term goal is a higher level language on top of it in which computers design and write whole programs, generating, testing and discarding millions of lines in real time.
+Strict is meant as the DNA of a program: a compact, exact and fast low level layer whose rules a computer can fully understand, verify and evolve. The long term goal is a higher level language on top of it in which computers design and write whole programs, generating, testing and discarding millions of lines in real time.
 
 What Strict does today:
 - **Self-hosted**: parser, type inference, validators, the Strict VM and the native code generator (MLIR and LLVM) are written in Strict, `strict` builds itself.
 - **Instant feedback**: `strict test` runs the inline tests on the Strict VM in memory, the VS Code extension shows passing lines and the values of each line while you type.
 - **Native speed**: SIMD, loops spread over all CPU cores, NVIDIA GPU kernels (tensor cores, no CUDA toolkit needed), AMD GPUs through HIP, Metal on macOS (experimental), WebAssembly for the browser.
-- **Real workloads**: GPT-2 and Qwen3 inference (Qwen3-8B, Qwen3-Coder-30B-A3B, Qwen3.8 27B) with the transformer logic written in Strict, image processing, neural network training, the DeltaEngine and SoulCraft games, C and C# libraries with generated bindings.
+- **Real workloads**: GPT-2 and Qwen3 inference with the transformer logic written in Strict, image processing, neural network training, the DeltaEngine and SoulCraft games, C and C# libraries with generated bindings.
 
-Latest performance results, docs (Getting Started, Language Guide, Cheat Sheet) and the blog: https://strict-lang.org
+Performance results, docs (Getting Started, Language Guide, Cheat Sheet) and the blog: https://strict-lang.org
 
 ![Strict Layers](https://strict-lang.org/img/StrictLayers.svg?sanitize=true)
 
 # Strict library
-
 This repository is the compiler, the runtime and the standard library in one. Any folder containing `.strict` files is a package. The root folder holds the types with special language treatment, imported by default everywhere:
 - Boolean, Number, Text, Character, Byte
 - List (`Sorted`, `Merged`, `Slice`, `Insert`, `Unique`, `Average`, `Median`, `Shuffled`, ...), Dictionary, Range
@@ -57,6 +56,7 @@ strict build Examples/Sum.strict android  arm64-v8a shared library and assets in
 strict build Examples/Sum.strict ios      arm64 iOS static archive and assets in Release/iOS (native packages need Xcode)
 strict build Examples/Sum.strict ios simulator  the same for the iOS Simulator of this Mac
 strict build Examples/Sum.strict small    optimized for size instead of speed
+strict build Examples/Sum.strict fast     unoptimized host code for quicker builds
 strict build Policy.strict library        Policy.dll (.so, .dylib) exporting the public methods for C and C#, plus Policy.cs
 strict build Games/App/App.strict         a windowed program goes into Games/App/Release with its Content (macOS: a signed .app)
 strict check Examples                     validate a folder (type rules, unused members, limits)
@@ -67,20 +67,24 @@ strict test Examples/Sum.strict values    run the tests on the Strict VM, then s
 strict update .                           copy or download the packages of a folder again
 strict version                            version and build time of this strict
 ```
-- `strict build` requires the file's unit tests to pass on the VM before native compilation, including compiler refreshes, web and library builds. Passed unchanged unit tests reuse their `.strictbinary`. A type without `Run` produces its unit-test executable. `strict test <file> native` explicitly runs that file's tests natively; `lines` also collects per-line timings. Test failures and toolchain errors fail the command.
-- Desktop builds and successful native tests keep a `.nativecache` dependency stamp. When sources, native headers/flags, content, compiler/tools and required outputs match, `strict` reports `Up to date` or `Tests up to date` and skips the compiler and test executable entirely. Build options are part of the key. Instrumented tests and cross-platform/library builds bypass this stamp. VM tests continue using their existing `.strictbinary` results.
-- `strict build` and `strict test ... lines` run `Compiler/NativeCompiler.exe`; when a file of `Compiler/`, `Bytecode/` or `Expressions/` or a `Compiler/NativeRuntime*.mlir` is newer than it (an edit or a pull), they build the compiler again first and note that in `Compiler/NativeCompiler.checked`: the runtime files are read by every build while the compiler logic is fixed in the executable, after a pull a compiler from before a change of both (the lanes of grouped GPU loops) wrote only half of the heads of `Qwen3Block.Rotated` on the GPU and Qwen3.8-Flash-Next decoded NaN.
+- `strict build` needs the file's unit tests to pass on the VM first, a type without `Run` produces its unit-test executable. Test failures and toolchain errors fail the command.
+- Files whose tests passed on the VM get a `Name.strictbinary` (bytecode of all used types): while it is up to date `strict test` reports them as passed right away and running and building reuse it. Desktop builds and native tests keep a `.nativecache` stamp and print `Up to date` when nothing changed.
+- `strict build` and `strict test ... lines` run `Compiler/NativeCompiler.exe`. When a file of `Compiler/`, `Bytecode/` or `Expressions/` or a `Compiler/NativeRuntime*.mlir` is newer than it, they build the compiler again first.
 - Exit codes: 0 success, `test` returns the number of failed tests, `build` returns nonzero on a compilation or toolchain failure, 2 wrong usage or a missing file, an unhandled Error from `Run` exits with 1.
-- `strict check` prints each issue as `<File>.strict:line <N>: <Rule>: <detail>`. It also runs unit tests after static validation succeeds; a failed unit test fails the check.
-- Files whose tests passed on the Strict VM get a `Name.strictbinary` (bytecode of all used types), while it is up to date `strict test` reports them as passed right away and running and building reuse it. Passing native tests write none, `strict test` still runs them on the VM.
+- `strict check` prints each issue as `<File>.strict:line <N>: <Rule>: <detail>`, then runs the unit tests.
 - Types are looked up in the current folder (and its sub folders in a project), next to `strict` (base types and packages like `Math`), in the projects next to the current one, then in GitHub repositories linked in the project's README and github.com/strict-lang (copied into the project with a `.origin` file).
 - Errors before anything runs: `TypeNotFound`, `ParsingFailed`, `NameNotFound`, `MethodNotFound`, each with file and line. At runtime an Error prints its name and the stack trace back to the `.strict` source (at most the first 40 and last 10 lines), a call nested too deep returns `StackOverflow`.
 
-Needed tools: `mlir-opt`, `mlir-translate`, `clang`, `opt` and `llc` of LLVM 22 (on Windows the msys2 ucrt64 `mlir` package and the LLVM release). When they are missing `strict` says so and installs them (Windows: winget and pacman, Linux: the LLVM release into `Tools/`, macOS: conda-forge with micromamba into `Tools/`).
+Needed tools: `mlir-opt`, `mlir-translate`, `clang`, `opt` and `llc` of LLVM 22 (on Windows the msys2 ucrt64 `mlir` package and the LLVM release). When they are missing `strict` installs them (Windows: winget and pacman, Linux: the LLVM release into `Tools/`, macOS: conda-forge with micromamba into `Tools/`). A build reruns a crashed external tool once (`ToolRunner.Retried`).
 
-External tools crash now and then on valid input (mlir-opt's parallel verifier with an access violation, nsys tracing CUDA graphs, ncu replaying several metrics of one kernel). A build reruns a crashed tool once (`ToolRunner.Retried`); when a build, test or profile still fails without a message, run it again once before investigating, and report a crash that comes back on the same input to that project with the input file.
+Bootstrap a fresh checkout from the checked-in seed with `Compiler\Bootstrap.cmd` (Windows) or `sh Compiler/bootstrap.sh` (Linux and macOS): it builds `Compiler/NativeCompiler` from the seed, which then builds `strict`. After changing the compiler rebuild both, `strict build Compiler/NativeCompiler.strict` then `strict build Strict.strict`; building twice gives identical output.
 
-`strict` runs, tests and checks on the Strict VM and hands `build` and `test ... lines` to `Compiler/NativeCompiler` (`.exe` on Windows), the native compiler next to it. Bootstrap a fresh checkout from the checked-in seed with `Compiler\Bootstrap.cmd` (Windows) or `sh Compiler/bootstrap.sh` (Linux and macOS): it builds `Compiler/NativeCompiler` from the seed, which then builds `strict`. After changing the compiler rebuild both, `strict build Compiler/NativeCompiler.strict` then `strict build Strict.strict`; building twice gives identical output.
+## Unit and functional tests
+Unmarked inline tests are unit tests: each should take under 10 ms, the hard limit is 100 ms on the VM and natively (slow CI machines, parallel runs), including its leading local setup. Exceeding it fails with `TestDurationMustNotExceedHundredMilliseconds`, the expression and its source location; a watchdog stops tests that never return. Shared constants initialize on first use, once per run. The tests of the internal packages `Compiler`, `Runtime`, `Bytecode` and `Expressions` count as Slow: builds skip them, CI and explicit runs test them.
+
+Declare a method's return as `Slow(T)` to make its tests functional (file, model or application integration). Like `Mutable(T)`, callers use `T`: `Slow(3)` behaves as a Number. An unmarked test may call a Slow method with a small fixture but still has to fit its budget.
+
+Builds, checks, folder tests, VS Code typing checks and value tracing skip Slow tests and the fixtures only they use. `strict test File.strict` includes them, `strict test File.strict Method` selects one method, `native` or `lines` keep that selection. `strict File.strict` runs all its tests, Slow included, then `Run`. Only automatic unit runs write `.strictbinary`, explicit functional runs execute every time. See `Runtime/README.md` for the VM and `Compiler/README.md` for the build pipeline.
 
 ## Rules worth knowing
 - Limits: 120 characters per line, 13 lines per method (header and tests included), 4 parameters, 16 methods, 15 members, nesting depth 5, names 2-50 characters. Files in a `Generated` folder get 10 times as much.
@@ -112,18 +116,9 @@ External tools crash now and then on valid input (mlir-opt's parallel verifier w
 | `Runtime` | The Strict VM running those instructions (`strict <file>` and `strict test`) |
 | `Compiler` | Instructions to MLIR, the runtime in `NativeRuntime*.mlir`, GPU kernels, mlir-opt, mlir-translate and clang |
 
-Details in the README of each package. Performance results of a package go into its README, the latest overall numbers are on https://strict-lang.org.
+Details are in the README of each package. Open work is in [improvements.md](improvements.md) in priority order, open performance work in [performance.md](performance.md).
 
-## Open work
-See [improvements.md](improvements.md), in priority order.
-
-### Key design decisions
-1. **Immutable expression tree**: static analysis only, no runtime state sneaks in.
-2. **Validation before execution**: catch the trivial stuff early, let the VM handle the hard parts.
-3. **One-time tests**: tests live where the code lives, run once, then disappear from the bytecode.
-4. **Strict rules first, then hardware speed**: exactly one way to solve each problem, then performance and parallelism as close to the hardware as possible (CPU, GPU, NPU, distributed). Immutable values reuse memory in place instead of copying.
-
-Only code that is actually called is parsed, validated, tested and executed, so millions of generated lines can be checked and discarded almost immediately.
+Design decisions: an immutable expression tree (static analysis only), validation before execution, tests that live with the code and disappear from the bytecode, strict rules first and then hardware speed. Only code that is actually called is parsed, validated, tested and executed, so millions of generated lines can be checked and discarded almost immediately.
 
 ## Examples (from Number.strict, Text.strict and List.strict)
 ```
@@ -201,7 +196,7 @@ if operation is
 	"multiply" then value * value
 ```
 
-# for
+## for
 `for` is the only loop. It iterates anything that implements Iterator (List, Number, Range, Enum, Dictionary, ...). `value` is the current element, `index` its position and `outer` the value outside the loop. Loops whose body only calculates run in parallel on the CPU cores or on the GPU automatically.
 ```
 	for (1, 2, 3)
@@ -237,52 +232,12 @@ in(key Generic) Boolean
 	for keysAndValues
 		value.Key is key
 ```
-```
-GetElementsText Text
-	(1, 3).GetElementsText is "1, 3"
-	for elements
-		(index is 0 then "" else ", ") + value
-```
-```
-Count(searchFor Generic) Number
-	("Hi", "Hello", "Hi").Count("Hi") is 2
-	for elements
-		if value is searchFor
-			1
-```
-Filter, map and reduce like a pipe in functional languages (the even numbers up to 9 times 10, summed):
+Filter, map and reduce like a pipe in functional languages (the even numbers up to 9 times 10, summed), in C# `Enumerable.Range(0, 10).Where(n => n % 2 == 0).Select(n => n * 10).Sum()`:
 ```
 for Range(0, 10)
 	if value % 2 is 0
 		value * 10
-```
-The same in C#: `Enumerable.Range(0, 10).Where(n => n % 2 == 0).Select(n => n * 10).Sum()`.
-
-From `Examples/RemoveParentheses.strict`:
-```
-Remove Text
-	RemoveParentheses("example(unwanted thing)example").Remove is "exampleexample"
-	mutable parentheses = 0
-	for text
-		if value is
-			"(" then parentheses.Increase
-			")" then parentheses.Decrease
-			else if parentheses is 0
-				value
-```
+```More in `Examples/RemoveParentheses.strict` and the other examples.
 
 ## History
-The idea for my (Benjamin Nitschke, CEO of Delta Engine) own programming language started in the 1990s after reading "Gödel, Escher, Bach" by Douglas R. Hofstadter. A first iteration in 2008-2010 worked but was dropped for Lua. This repository started 2020-06-16 for editor plugins and new parsing ideas based on the [old Strict sdk](https://github.com/strict-lang/sdk), with some help from employees in 2020-2022 until the parent project ran out of funding. Since mid 2025 I am working on it again in the evenings and on weekends, towards the original goal: a base layer language computers can actually understand and build on, the way DNA and proteins are the building blocks of life.
-
-
-## Unit and functional tests
-
-Unmarked inline tests normally have a hard 20 ms wall-time limit on the VM and in native test executables (50 ms while tests run in parallel: a parallel loop of the process, files started together by `Process.RunTools` such as `strict test <folder>`, or `STRICT_TESTS_PARALLEL=1` as in CI), including their leading local test setup. Named compiler/runtime self-test files listed in Runtime/HostedBudget.strict have a bounded 100 ms VM allowance; they stay automatic, and their native tests retain 20 ms. Exceeding it fails with `TestDurationMustNotExceedTwentyMilliseconds`, the expression and clickable source location. A runtime watchdog also stops non-returning or blocked unit tests. Timer setup, compilation and result formatting are outside the measured test body. Shared constants initialize on first use inside that budget, once per VM execution; unused fixture getters do no work. Tests that do file/model/application integration belong to explicitly requested functional runs.
-
-Declare a method's return as `Slow(T)` to make its inline tests functional. Like `Mutable(T)`, ordinary callers use `T`; the declared wrapper remains available as metadata. `Slow(3)` behaves as a Number and `Slow((1, 2))` as Numbers. An unmarked test may call a Slow algorithm with a small fixture, but still has to finish within its unit budget. Slow is a cost hint for eligible parallel loops, including calls to marked methods; existing purity/GPU safety rules still apply.
-
-Automatic builds, checks, folder/package tests, VS Code typing checks and value tracing exclude Slow tests and their unreachable fixture initializers. Explicit `strict test File.strict` includes them, and `strict test File.strict Method` selects one method. Adding `native` or `lines` retains that selection. An explicit file run (`strict File.strict`) first runs its inline tests, including Slow tests, then its Run method if present. Functional tests can run a game/model or leave an application open for its caller; only one explicit file or method is selected per invocation. A folder always means unit tests. VS Code bulk runs exclude manual methods; explicitly selecting one file or method runs its functional tests sequentially and remains cancellable without an automatic process timeout.
-
-Only successful automatic unit runs write the reusable `.strictbinary` result. Explicit functional runs are executed again when requested and do not overwrite that unit result. Old bytecode/native build stamps are invalidated for this policy. Test-runner bytecode includes only the methods and constant getters reachable from selected tests; an unused model fixture cannot run merely because its source is in the file.
-
-`python Runtime/check_tests.py` covers VM/native deadlines, build failure, local setup, transparent Slow values, automatic fixture exclusion, explicit selection and test-before-Run ordering. Runtime/README.md describes the VM and Compiler/README.md the build pipeline.
+The idea (Benjamin Nitschke, Delta Engine) goes back to the 1990s and "Gödel, Escher, Bach" by Douglas R. Hofstadter. This repository started 2020-06-16 based on the [old Strict sdk](https://github.com/strict-lang/sdk), since mid 2025 it works towards the original goal: a base layer language computers can actually understand and build on, the way DNA and proteins are the building blocks of life.

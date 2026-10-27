@@ -1,5 +1,5 @@
 # Model improvements
-Details for the model line of [improvements.md](improvements.md), results go into NeuralNetworks/README.md. Remove what is done, add new findings at the end of their section, bugs go into improvements.md.
+Details for the model line of [improvements.md](improvements.md). Remove what is done, add new findings at the end of their section, bugs go into improvements.md.
 
 ## Ternary Bonsai 27B
 `C:/code/Models/Bonsai`, 12.7-18 ms per token on the RTX 4090 (Prism's llama.cpp ~11); per token (ncu) the products take ~8.7 ms, the quantize kernels ~0.6. Left:

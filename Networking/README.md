@@ -19,7 +19,5 @@ a server listens on a port and accepts, both send and receive bytes.
 Windows uses winsock2, Linux and MacOS the BSD sockets, so the same program
 runs on all of them. The native code is in `native/Socket.c`, the checks in
 `SocketChecks.strict` open a server and a client on the loopback interface and
-send bytes between them. Each check gets its own OS-assigned port and closes its sockets
-on connection, acceptance and exchange failure. Windows initializes Winsock once with
-`InitOnceExecuteOnce`. After building SocketChecks, `python Networking/check_sockets.py`
-runs 16 copies concurrently while the former fixed port 34567 is occupied.
+send bytes between them on OS-assigned ports. After building SocketChecks,
+`python Networking/check_sockets.py` runs 16 copies of it at once.
