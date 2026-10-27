@@ -6267,15 +6267,30 @@
     %count = arith.fptosi %used : f64 to i64
     return %count : i64
   }
-  // one buffer per thread, a fast loop has at most one packed source; rows of 4 or 6 bits decode to floats
+  // one buffer per thread for the first and one for the second packed source of a fast loop, rows of 4 or 6 bits
+  // decode to floats
   llvm.mlir.global internal thread_local @strict_float_buffer(0 : i64) : i64
   llvm.mlir.global internal thread_local @strict_float_capacity(0 : i64) : i64
+  llvm.mlir.global internal thread_local @strict_second_float_buffer(0 : i64) : i64
+  llvm.mlir.global internal thread_local @strict_second_float_capacity(0 : i64) : i64
   func.func private @strict_list_floats(%list: f64) -> !llvm.ptr {
     %holder = func.call @strict_list_holder(%list) : (f64) -> !llvm.ptr
     %floats = func.call @strict_holder_floats(%holder) : (!llvm.ptr) -> !llvm.ptr
     return %floats : !llvm.ptr
   }
   func.func private @strict_holder_floats(%holder: !llvm.ptr) -> !llvm.ptr {
+    %bufferSlot = llvm.mlir.addressof @strict_float_buffer : !llvm.ptr
+    %capacitySlot = llvm.mlir.addressof @strict_float_capacity : !llvm.ptr
+    %floats = func.call @strict_holder_decoded(%holder, %bufferSlot, %capacitySlot) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    return %floats : !llvm.ptr
+  }
+  func.func private @strict_holder_second_floats(%holder: !llvm.ptr) -> !llvm.ptr {
+    %bufferSlot = llvm.mlir.addressof @strict_second_float_buffer : !llvm.ptr
+    %capacitySlot = llvm.mlir.addressof @strict_second_float_capacity : !llvm.ptr
+    %floats = func.call @strict_holder_decoded(%holder, %bufferSlot, %capacitySlot) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    return %floats : !llvm.ptr
+  }
+  func.func private @strict_holder_decoded(%holder: !llvm.ptr, %bufferSlot: !llvm.ptr, %capacitySlot: !llvm.ptr) -> !llvm.ptr {
     %eight = arith.constant 8 : i64
     %spare = arith.constant 255 : i64
     %four = arith.constant 4 : i64
@@ -6285,8 +6300,6 @@
     %rounded = arith.addi %count, %spare : i64
     %blocks = arith.shrui %rounded, %eight : i64
     %floats = arith.shli %blocks, %eight : i64
-    %bufferSlot = llvm.mlir.addressof @strict_float_buffer : !llvm.ptr
-    %capacitySlot = llvm.mlir.addressof @strict_float_capacity : !llvm.ptr
     %capacity = llvm.load %capacitySlot : !llvm.ptr -> i64
     %enough = arith.cmpi sge, %capacity, %floats : i64
     cf.cond_br %enough, ^ready, ^grow

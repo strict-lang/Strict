@@ -8,6 +8,7 @@ constant Halving = MlirWidths(MlirFastLoop.Halving.function, 2)
 constant Quartering = MlirWidths(MlirFastLoop.Quartering.function, 2)
 constant Sixes = MlirWidths(MlirFunction(Doubler.types, Doubler.type, Doubler.method, List(Number), 2, "numbers 6"), 2)
 constant Fours = MlirWidths(MlirFunction(Doubler.types, Doubler.type, Doubler.method, List(Number), 2, "numbers 4"), 2)
+constant Paired = MlirWidths(MlirFunction(Fours.function, Packing = "for 4 numbers 6"), 2)
 constant Singles = MlirWidths(MlirFastLoop.Halving.function, 2, "f32")
 constant Narrowing = MlirWidths(MlirFastLoop.Doubling.function, 2, "f32")
 constant Scaling = MlirWidths(MlirFastLoop.Quartering.function, 2, "f32")
@@ -74,12 +75,19 @@ Pointed(result Text, list Text, source Text, plain Text) Texts
 	Doubling.Pointed("%h", "%l", "numbers", "strict_list_start").First.IndexOf("@strict_list_start(%l)") > 0
 	Fours.Pointed("%h", "%l", "numbers", "strict_list_start").Last.IndexOf("@strict_holder_floats(%f2k_numbers)") > 0
 	Sixes.Pointed("%h", "%l", "numbers", "strict_list_start").Last.IndexOf("@strict_holder_floats(%f2k_numbers)") > 0
+	Paired.Pointed("%h", "%l", "numbers", "strict_list_start").Last.IndexOf("@strict_holder_second_floats(") > 0
 	let holder = "(%f" + position + "k_" + source + ") : (!llvm.ptr) -> !llvm.ptr"
-	let packed = Width(source) is in ("6", "4") then "strict_holder_floats" else "strict_holder_data"
-	let called = Element(source) is "f64" then plain + "(" + list + ")" + MlirFastLoop.Items else packed + holder
+	let called = Element(source) is "f64" then plain + "(" + list + ")" + MlirFastLoop.Items else Decoder(source) + holder
 	let pointed = "    " + result + " = func.call @" + called
 	let scales = "    " + result + "s = func.call @strict_holder_scales" + holder
 	Element(source) is "i8" then (pointed, scales) else List(Text) + pointed
+Decoder(source Text) Text
+	Fours.Decoder("numbers") is "strict_holder_floats"
+	Paired.Decoder("numbers") is "strict_holder_second_floats"
+	Quartering.Decoder("numbers") is "strict_holder_data"
+	let isSecond = function.Packing.Split(" ").Index(source) > 0
+	let floats = isSecond then "strict_holder_second_floats" else "strict_holder_floats"
+	Width(source) is in ("6", "4") then floats else "strict_holder_data"
 Temp(suffix Text) Text
 	Doubling.Temp("ki") is "%t2ki"
 	MlirFastLoop(function, position).Temp(suffix)
