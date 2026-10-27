@@ -1427,12 +1427,13 @@
     %eight = arith.constant 8 : i64
     %tagged = arith.shli %owner, %eight : i64
     %small = arith.ori %tagged, %expected : i64
-    %isMine = arith.cmpi eq, %entry, %small : i64
+    %isTagged = arith.cmpi eq, %entry, %small : i64
     %kindMask = arith.constant 255 : i64
     %kind = arith.andi %entry, %kindMask : i64
     %isSmall = arith.cmpi eq, %kind, %expected : i64
     %lane = func.call @strict_gc_lane_index() : () -> i64
     %isOwnLane = arith.cmpi ne, %lane, %zero : i64
+    %isMine = arith.andi %isTagged, %isOwnLane : i1
     %isCarried = arith.andi %isSmall, %isOwnLane : i1
     cf.cond_br %isMine, ^mine, ^carried
   ^carried:

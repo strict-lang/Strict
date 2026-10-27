@@ -43,7 +43,7 @@ wrapper = '''
     func.call @strict_gc_init(%stack) : (!llvm.ptr) -> ()
     %size = arith.constant 48 : i64
     %before = func.call @strict_alloc(%size) : (i64) -> !llvm.ptr
-    %slots = arith.constant 4 : i64
+    %slots = arith.constant 5 : i64
     %context = llvm.alloca %slots x i64 : (i64) -> !llvm.ptr
     %beforeAddress = llvm.ptrtoint %before : !llvm.ptr to i64
     llvm.store %beforeAddress, %context : i64, !llvm.ptr
@@ -64,7 +64,12 @@ wrapper = '''
     %mineBit = arith.muli %mine, %two : i64
     %oldBit = arith.muli %old, %four : i64
     %partial = arith.addi %adjacent, %mineBit : i64
-    %result = arith.addi %partial, %oldBit : i64
+    %withOld = arith.addi %partial, %oldBit : i64
+    %sharedSlot = llvm.getelementptr %context[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    %shared = llvm.load %sharedSlot : !llvm.ptr -> i64
+    %eight = arith.constant 8 : i64
+    %sharedBit = arith.muli %shared, %eight : i64
+    %result = arith.addi %withOld, %sharedBit : i64
     return %result : i64
   }
   func.func private @test_carried_body(%context: !llvm.ptr, %from: i64, %to: i64) -> f64 {
@@ -82,6 +87,17 @@ wrapper = '''
     %oldNumber = arith.extui %old : i1 to i64
     %oldSlot = llvm.getelementptr %context[3] : (!llvm.ptr) -> !llvm.ptr, i64
     llvm.store %oldNumber, %oldSlot : i64, !llvm.ptr
+    %laneSlot = llvm.mlir.addressof @strict_gc_lane : !llvm.ptr
+    %ownLane = llvm.load %laneSlot : !llvm.ptr -> i64
+    %sharedLane = arith.constant 0 : i64
+    llvm.store %sharedLane, %laneSlot : i64, !llvm.ptr
+    %sharedObject = func.call @strict_alloc(%size) : (i64) -> !llvm.ptr
+    %sharedAddress = llvm.ptrtoint %sharedObject : !llvm.ptr to i64
+    %sharedMine = func.call @strict_gc_mine(%sharedAddress) : (i64) -> i1
+    llvm.store %ownLane, %laneSlot : i64, !llvm.ptr
+    %sharedNumber = arith.extui %sharedMine : i1 to i64
+    %sharedSlot = llvm.getelementptr %context[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %sharedNumber, %sharedSlot : i64, !llvm.ptr
     %zero = arith.constant 0.0 : f64
     return %zero : f64
   }
@@ -147,7 +163,7 @@ int main(int argc, char** argv) {
 	if (argc > 1) {
 		_putenv_s("STRICT_THREADS", "1");
 		int64_t carried = test_carried(&argc);
-		printf("Lane span carried into a pool job: %lld (3: kept, the job's new object is its own, the older one not)", (long long)carried);
+		printf("Lane span carried into a pool job: %lld (3: kept, the job's new object is its own, the older one and one of the shared lane 0 not)", (long long)carried);
 		return carried != 3;
 	}
 	_putenv_s("STRICT_THREADS", "2");
