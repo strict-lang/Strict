@@ -1,7 +1,7 @@
 # Strict.Compiler
 Builds native executables. `NativeBuild` behind `strict build` turns the instructions of all used types into MLIR (`MlirModule`, one `MlirFunction` per method with `MlirStatements`, `MlirCalls`, `MlirLoops` and friends; `MlirKernel` and `MlirFastLoop` add a copy without per element checks to simple loops over lists, which LLVM vectorizes). It adds the runtime written directly in MLIR (`NativeRuntime.mlir` for texts, lists, files, processes and the garbage collector, `NativeRuntimeWindows.mlir` or `NativeRuntimeLinux.mlir` for the platform) and runs mlir-opt, mlir-translate and clang (`Toolchain`, `ToolRunner`). mlir-opt first drops every private function nothing calls (`--symbol-dce`), for the host and the GPU module alike.
 
-`NativeCompiler.strict` is the native compiler `strict` hands its builds to (`Process.Started`, output appears right away), so the front end `strict` stays small and builds of other programs do not rebuild it. `Bootstrap.mlir` is the seed, `NativeCompiler` compiled by itself (stages 2 and 3 identical): `Bootstrap.cmd` (Windows) and `bootstrap.sh` (Linux and macOS) build `NativeCompiler` from it, which then builds `strict`.
+`NativeCompiler.strict` is the native compiler `strict` hands its builds to (`Process.Started`, output appears right away), so the front end `strict` stays small and builds of other programs do not rebuild it. `Bootstrap.mlir` is the seed, `NativeCompiler` compiled by itself (stages 2 and 3 identical): `Bootstrap.cmd` (Windows) and `bootstrap.sh` (Linux and macOS) build `NativeCompiler` from it, which then builds `strict`. A build holds `<source>.lock` (`File.Locked`, the operating system releases it when the process ends, also after a crash or kill), another build of the same target waits for it up to 300 s.
 
 ## Building
 - Builds first require passing VM unit tests, reusing unchanged passing results; Slow tests only run when asked for. Program and library emission omit test bytecode.
@@ -12,7 +12,7 @@ Builds native executables. `NativeBuild` behind `strict build` turns the instruc
 - The GPU module of a successful build is kept as `Name.kernels.mlir` next to `Name.ptx` (`PtxCache`): when emitted input, target flags, exported symbols and LLVM tools match, the PTX is reused. Shared runtime PTX lives in `Tools/PtxCache`, published from a private staging directory so parallel builds never read partial results.
 - Host modules over 100,000 lines are cut into 16 parts by `MlirSplit`: each part keeps its own functions, declares the others and the globals (defined in part 0), runs mlir-opt and mlir-translate in parallel, then goes through clang and ThinLTO. `fast` builds keep one module.
 - Release packaging keeps the build executable and publishes a checked copy, so repeated game builds reuse it.
-- `python Compiler/check_build.py` checks build and test skipping, cache invalidation, Release staging and GPU cache reuse.
+- `python Compiler/check_build.py` checks build and test skipping, cache invalidation, Release staging, GPU cache reuse and that builds of one target take turns on its lock.
 
 Steps taking at least 3 seconds print their time. `STRICT_BUILD_PROFILE=1` prints every stage (cache hits, linking passes, emission substeps, GPU batches, external tools, packaging) without changing the output. Parent stages include their children, batches report all concurrent jobs together.
 ```powershell

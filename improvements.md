@@ -2,7 +2,6 @@
 What to fix next, one short line each, bugs first. Remove a line once it is done, add what is found at the end. No history or measurements (those go into commit messages). Speed work: [performance.md](performance.md).
 
 ## Bugs
-- Concurrent builds of one target share intermediates and replacement executable names; isolate artifacts or lock each target.
 - Nested `Process.RunTools` batches overwrite and reset the global child-thread share; make capacity ownership batch-local.
 - Verify linker convergence against all semantic work, not only signatures and the main method count (`LinkRound.IsSettled`).
 - Detect cross-thread constant dependency cycles; per-thread `RecursiveConstant` detection cannot break mutual initialization waits.

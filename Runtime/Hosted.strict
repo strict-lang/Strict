@@ -12,7 +12,7 @@ constant Logging = Invocation(InstructionEntry.Invoke(1, ("Strict/Number", "Loga
 constant Sine = Invocation(InstructionEntry.Invoke(1, ("Strict/Math/Degrees", "Sin", "Strict/Math/Ratio"), List(Number), 0), List(VmValue), VmValue.OfNumber(90))
 constant Aiming = Invocation(InstructionEntry.Invoke(1, ("Strict/Math/Vector2", "Atan", "Strict/Number"), List(Number), 0), List(VmValue), VmValue("Strict/Math/Vector2", 0, "", (VmValue.OfNumber(1), VmValue.OfNumber(0))))
 constant Deleting = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "Delete", "None"), List(Number), 0), List(VmValue), VmValue("Strict/File", 0, "", List(VmValue) + VmValue.OfText("Runtime/missing")))
-constant Methods = ("File.ReadLines", "File.Exists", "File.Write", "File.Delete", "File.Rename", "File.ReadBytes", "File.WriteLines", "File.WriteBytes", "File.Modified", "File.Length", "Directory.Files", "Directory.Directories", "Directory.Exists", "Directory.Create", "Directory.Current", "File.InMemory", "Process.Input", "Process.InputLine", "Process.Find", "Process.RunTool", "Process.RunTools", "Process.Started", "Process.OperatingSystem", "Process.Current", "Process.Built", "Process.Elapsed", "Process.Wait", "Process.FilesRead", "Time.Now", "Number.Logarithm", "Number.Random", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan", "Vector2.Atan", "Library.Call", "Library.TextSlot", "Library.NumbersSlot", "Library.TextResult", "Library.NumbersResult", "Library.Failure", "BuildProfile.Detailed", "TestBudget.Started", "TestBudget.Finished", "ConstantCache.At", "ConstantCache.Stored")
+constant Methods = ("File.ReadLines", "File.Exists", "File.Write", "File.Delete", "File.Rename", "File.ReadBytes", "File.WriteLines", "File.WriteBytes", "File.Modified", "File.Length", "File.Locked", "Directory.Files", "Directory.Directories", "Directory.Exists", "Directory.Create", "Directory.Current", "File.InMemory", "Process.Input", "Process.InputLine", "Process.Find", "Process.RunTool", "Process.RunTools", "Process.Started", "Process.OperatingSystem", "Process.Current", "Process.Built", "Process.Elapsed", "Process.Wait", "Process.FilesRead", "Time.Now", "Number.Logarithm", "Number.Random", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan", "Vector2.Atan", "Library.Call", "Library.TextSlot", "Library.NumbersSlot", "Library.TextResult", "Library.NumbersResult", "Library.Failure", "BuildProfile.Detailed", "TestBudget.Started", "TestBudget.Finished", "ConstantCache.At", "ConstantCache.Stored")
 IsHosted Boolean
 	Hosted(SystemCall).IsHosted
 	Hosted(Invocation.AddCall).IsHosted is false
@@ -75,6 +75,9 @@ Answered(path Text) VmValue
 	Hosted(Probing).Answered(".").IsTrue is false
 	Hosted(Dating).Answered("Any.strict").number > 1.7e9
 	File("Any.strict").Length is File("Any.strict").ReadBytes.Length
+	File("Runtime/Answered.lock").Locked and (File("Runtime/Answered.lock").Locked is false)
+	if call.MethodName is "Locked"
+		return VmValue.OfBoolean(File(path).Locked)
 	if call.MethodName is in ("Modified", "Length")
 		return VmValue.OfNumber(call.MethodName is "Modified" then File(path).Modified else File(path).Length)
 	let exists = call.TypeName is "Strict/Directory" then Directory.Exists(path) else File(path).Exists

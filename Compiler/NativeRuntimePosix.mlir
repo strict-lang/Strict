@@ -297,6 +297,21 @@
     %mixed = arith.xori %now, %address : i64
     return %mixed : i64
   }
+  llvm.func @open(!llvm.ptr, i32, ...) -> i32
+  llvm.func @flock(i32, i32) -> i32
+  // holds an exclusive lock on the file until this process ends
+  func.func private @strict_file_locked(%path: f64) -> f64 {
+    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %flags = arith.constant 524354 : i32
+    %mode = arith.constant 420 : i32
+    %descriptor = llvm.call @open(%name, %flags, %mode) vararg(!llvm.func<i32 (ptr, i32, ...)>) : (!llvm.ptr, i32, i32) -> i32
+    %exclusive = arith.constant 6 : i32
+    %locked = llvm.call @flock(%descriptor, %exclusive) : (i32, i32) -> i32
+    %none = arith.constant 0 : i32
+    %held = arith.cmpi eq, %locked, %none : i32
+    %result = arith.uitofp %held : i1 to f64
+    return %result : f64
+  }
   func.func private @strict_file_rename(%path: f64, %newPath: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
