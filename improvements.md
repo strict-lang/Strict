@@ -8,7 +8,6 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - DeltaEngine: ArenaWars fails natively (unsupported member `Ratio.number` in `ParticleEffect.Turned`), the WebWars (`Updated`, line 55) and TinyBat (`Drawn`, line 64) VM unit tests take over 100 ms.
 
 ## Next
-- Measure native constant-wrapper emission and ready-path overhead.
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).
 - Game engine (iOS, Android, one game loop, multiplayer, Spine, platform services): [improvements-engine.md](improvements-engine.md).
 - CI runs few native builds: add more while each job stays under 10 minutes.

@@ -2,15 +2,18 @@ has callee MethodEntry
 constant Accessors = ("X", "Y", "Z", "W")
 constant Listing = InlineRules(Inliner.First)
 constant Placeholder = MethodEntry("Cos", List(MemberEntry), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "value"), InstructionEntry.Return(0)))
+constant Cached = TypeEntry("Strict/List(Number)", (Inliner.Elements, MemberEntry("X", "Strict/Number", List(InstructionEntry), true)), List(MethodEntry) + Inliner.First)
 constant Constant = MethodEntry("Built", List(MemberEntry), "Strict/Text", (InstructionEntry.LoadText(0, ""), InstructionEntry.Return(0)))
 Fits(owner TypeEntry, type TypeEntry, call InstructionEntry) Boolean
 	Listing.Fits(Inliner.Caller, Inliner.Listed, Inliner.Calling.instructions(1))
 	Listing.Fits(Inliner.Caller, Inliner.Caller, Inliner.Calling.instructions(1)) is false
+	Listing.Fits(Inliner.Caller, Cached, Inliner.Calling.instructions(1)) is false
 	let isOwn = IsOwn(call)
 	let own = isOwn and (type.Name is owner.Name) and IsContained(MemberNames(owner))
 	let member = Wrapped(type)
 	let wrapped = (isOwn is false) and (member is not "") and (HasOwnCall is false) and IsContained((member, "value"))
-	(own or wrapped) and IsSmall and IsComputed and IsReplaceable(type) and IsReturningComputed
+	let isCached = type.ConstantSlot(callee) >= 0
+	(own or wrapped) and (isCached is false) and IsSmall and IsComputed and IsReplaceable(type) and IsReturningComputed
 IsOwn(call InstructionEntry) Boolean
 	Listing.IsOwn(Inliner.Calling.instructions(1)) is false
 	Listing.IsOwn(Inliner.Again.instructions.First)

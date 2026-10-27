@@ -54,9 +54,11 @@ Linked(linker Linker, entry TypeEntry) List(TypeEntry)
 	linked
 Parsed(compiler FileCompiler, sources Texts) Boolean
 	let started = Process.Elapsed
-	let parsed = compiler.Parsed(sources)
+	let problems = compiler.Problems(sources) - ""
 	Reported("Frontend / syntax validation (" + sources.Length + " files)", started)
-	parsed
+	if problems.Length > 0
+		logger.Log(problems.First)
+	problems.Length is 0
 Issues(compiler FileCompiler, sources Texts, inference TypeInference) List(Texts)
 	let started = Process.Elapsed
 	let issues = compiler.Issues(sources, inference)

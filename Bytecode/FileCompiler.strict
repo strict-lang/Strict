@@ -17,7 +17,7 @@ Built(path Text, root Text, withTests Boolean, files Texts, inference TypeInfere
 	let missing = Mentions(File(source).ReadLines).Missing(files)
 	if missing.Length > 0
 		return Located(source, root, withTests, missing.First)
-	if (Parsed(List(Text) + source) is false) or (Resolved(source, inference) is false)
+	if (BuildProfile(logger).Parsed(value, List(Text) + source) is false) or (Resolved(source, inference) is false)
 		return List(TypeEntry)
 	let fused = Fusion(File(source).ReadLines, Path(source).PathOnly.text).Fused
 	let main = TypeCodegen(FullName(source, root), fused, inference, FullNames(files, root))
@@ -59,13 +59,6 @@ Located(path Text, root Text, withTests Boolean, type Text) List(TypeEntry)
 			return Compiled(path, root, withTests)
 	logger.Log("TypeNotFound: " + type + " used in " + path + ":" + LineOf(File(path).ReadLines, type) + Tips)
 	List(TypeEntry)
-Parsed(files Texts) Slow(Boolean)
-	FileCompiler.Parsed(("./Number.strict", "./Text.strict"))
-	for Problems(files)
-		if value is not ""
-			logger.Log(value)
-			return false
-	true
 Problems(files Texts) Slow(Texts)
 	FileCompiler.Problems(("./Number.strict", "./Text.strict")) is ("", "")
 	for files
