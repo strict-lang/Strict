@@ -2,6 +2,7 @@ has tokens Texts
 has ids Dictionary(Text, Number)
 has ranks Dictionary(Number, Number)
 has isQwen Boolean = false
+has specials Dictionary(Text, Number) = Dictionary(Text, Number)
 constant Tiny = Gpt2Tokens.Parsed("{\"a\": 0, \"b\": 1, \"\\u0120\": 2, \"ab\": 3, \"\\u0120ab\": 4}", ("#version: 0.2", "a b", "Ġ ab"))
 Parsed(vocabulary Text, merges Texts) Gpt2Tokens
 	Tiny.tokens is ("a", "b", " ", "ab", " ab")
@@ -23,33 +24,32 @@ Loaded(model Gguf) Gpt2Tokens
 	Gpt2Tokens(raw, known, ranked, model.Value("tokenizer.ggml.pre") is "qwen2")
 Folder(folder Text) Gpt2Tokens
 	Gpt2Tokens.Folder("NeuralNetworks/missing").tokens.Length is 0
-	Gpt2Tokens.Parsed(File(folder + "/vocab.json").ReadLines.First, File(folder + "/merges.txt").ReadLines)
+	Gpt2Tokens.Folder("NeuralNetworks/tinytokens").tokens is ("a", "b", " ", "ab", " ab")
+	Gpt2Tokens.Folder("NeuralNetworks/tinytokens").Encoded("<s>ab ab") is (5, 3, 4)
+	Gpt2Tokens.Folder("NeuralNetworks/tinytokens").isQwen
+	let vocabulary = Text.Combine(File(folder + "/vocab.json").ReadLines, "\n")
+	let parsed = Gpt2Tokens.Parsed(vocabulary, File(folder + "/merges.txt").ReadLines)
+	let config = folder + "/tokenizer_config.json"
+	if File(config).Exists is false
+		return parsed
+	let settings = Json.Read(config)
+	let isQwen = settings.get("tokenizer_class") to Text is "Qwen2Tokenizer"
+	Gpt2Tokens(parsed, isQwen = isQwen, specials = Specials(settings.get("added_tokens_decoder")))
 Vocabulary(json Text) Texts
 	Vocabulary("{\"\\\"\": 0, \"\\\\\": 1, \"\\u0120a\": 2}") is ("\"", "\\", " a")
+	Vocabulary("{\n  \"a\": 0,\n  \"b\": 1\n}") is ("a", "b")
 	mutable parsed = List(Mutable(Text))
-	mutable start = 2
+	mutable start = json.IndexOf("\"") + 1
 	mutable ending = json.IndexOf("\": 0", start)
 	for as long as ending >= 0
 		parsed.Add(Unescaped(json.Substring(start, ending - start)))
-		start = ending + ("\": " + (parsed.Length - 1) + ", \"").Length
+		start = json.IndexOf("\"", ending + ("\": " + (parsed.Length - 1)).Length) + 1
 		ending = json.IndexOf("\": " + parsed.Length, start)
 	parsed
 Unescaped(key Text) Text
 	Unescaped("\\u0120a\\\"") is " a\""
-	mutable raw = ""
-	mutable position = 0
-	for as long as position < key.Length
-		let isCode = key.StartsWith("\\u", position)
-		let skipped = (isCode is false) and (key(position) is "\\") then 1 else 0
-		let code = isCode then Unmapped(Hexadecimal(key.Substring(position + 2, 4))) else key(position + skipped).number
-		raw = raw + Character(code)
-		position = position + (isCode then 6 else 1 + skipped)
-	raw
-Hexadecimal(digits Text) Number
-	Hexadecimal("0120") is 288
-	Hexadecimal("ff") is 255
-	for digits
-		"0123456789abcdef".IndexOf(value to Text) * 16 ^ (digits.Length - 1 - index)
+	Unescaped("Ġa") is " a"
+	Raw(Json("\"" + key + "\"") to Text)
 Unmapped(code Number) Number
 	Unmapped(97) is 97
 	Unmapped(288) is 32
@@ -86,10 +86,33 @@ Decoded(tokenIds Numbers) Text
 		tokens(value)
 Encoded(text Text) Numbers
 	Tiny.Encoded(" ab a") is (4, 2, 0)
+	Gpt2Tokens(Tiny, specials = Dictionary(("<s>", 5))).Encoded("ab<s> ab") is (3, 5, 4)
+	let special = Special(text)
+	if special is not ""
+		let at = text.IndexOf(special)
+		let rest = text.Substring(at + special.Length, text.Length - at - special.Length)
+		return (Encoded(text.Substring(0, at)) + specials(special)) + Encoded(rest)
 	mutable encoded = List(Mutable(Number))
 	for TokenSplitter(isQwen).Words(text)
 		encoded = encoded + Merged(value)
 	encoded
+Special(text Text) Text
+	Gpt2Tokens(Tiny, specials = Dictionary(("<s>", 5), ("</s>", 6))).Special("a</s><s>") is "</s>"
+	Tiny.Special("a<s>") is ""
+	mutable earliest = ""
+	mutable at = text.Length
+	for specials
+		let found = text.IndexOf(value.Key)
+		if (found >= 0) and ((found < at) or ((found is at) and (value.Key.Length > earliest.Length)))
+			earliest = value.Key
+			at = found
+	earliest
+Specials(added Json) Dictionary(Text, Number)
+	Gpt2Tokens.Specials(Json("{\"5\": {\"content\": \"<s>\"}}"))("<s>") is 5
+	mutable found = Dictionary(Text, Number)
+	for added.Keys
+		found(added.get(value).get("content") to Text) = value to Number
+	found
 Merged(word Text) Numbers
 	Tiny.Merged(" ab") is (4)
 	Tiny.Merged("ba") is (1, 0)

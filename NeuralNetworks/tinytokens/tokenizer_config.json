@@ -1,0 +1,9 @@
+{
+  "tokenizer_class": "Qwen2Tokenizer",
+  "added_tokens_decoder": {
+    "5": {
+      "content": "<s>",
+      "special": true
+    }
+  }
+}
