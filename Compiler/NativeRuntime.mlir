@@ -10424,10 +10424,13 @@
     %empty = func.call @strict_list_empty() : () -> f64
     return %empty : f64
   }
+  // packed bytes (a GPU result, 9) go into the file as they are, other lists through one buffer: a call per byte wrote the
+  // 148 MB of frames of a 5 s H3 video in 7 s
   func.func private @strict_file_writebytes(%path: f64, %bytes: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %start = arith.constant 0 : i64
     %step = arith.constant 1 : i64
+    %byteFormat = arith.constant 9 : i64
     %file = func.call @strict_file_create(%path) : (f64) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     %failed = llvm.icmp "eq" %file, %null : !llvm.ptr
@@ -10436,20 +10439,35 @@
     %lengthNumber = func.call @strict_list_length(%bytes) : (f64) -> f64
     %count = arith.fptosi %lengthNumber : f64 to i64
     %hasItems = arith.cmpi sgt, %count, %start : i64
-    cf.cond_br %hasItems, ^items, ^close
+    cf.cond_br %hasItems, ^format, ^close
+  ^format:
+    %packed = func.call @strict_list_packed(%bytes) : (f64) -> i64
+    %isPacked = arith.cmpi eq, %packed, %byteFormat : i64
+    cf.cond_br %isPacked, ^packed, ^items
+  ^packed:
+    %data = func.call @strict_list_data(%bytes) : (f64) -> !llvm.ptr
+    %stored = llvm.call @fwrite(%data, %step, %count, %file) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i64
+    cf.br ^close
   ^items:
     %items = func.call @strict_list_items(%bytes) : (f64) -> !llvm.ptr
+    %buffer = func.call @strict_malloc(%count) : (i64) -> !llvm.ptr
     cf.br ^copy(%start : i64)
   ^copy(%index: i64):
     %more = arith.cmpi slt, %index, %count : i64
-    cf.cond_br %more, ^byte, ^close
+    cf.cond_br %more, ^byte, ^flush
   ^byte:
     %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     %number = llvm.load %slot : !llvm.ptr -> f64
-    %byte = arith.fptosi %number : f64 to i32
-    %put = llvm.call @fputc(%byte, %file) : (i32, !llvm.ptr) -> i32
+    %whole = arith.fptosi %number : f64 to i32
+    %byte = arith.trunci %whole : i32 to i8
+    %target = llvm.getelementptr %buffer[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %byte, %target : i8, !llvm.ptr
     %next = arith.addi %index, %step : i64
     cf.br ^copy(%next : i64)
+  ^flush:
+    %written = llvm.call @fwrite(%buffer, %step, %count, %file) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i64
+    llvm.call @free(%buffer) : (!llvm.ptr) -> ()
+    cf.br ^close
   ^close:
     %closed = llvm.call @fclose(%file) : (!llvm.ptr) -> i32
     cf.br ^done

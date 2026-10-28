@@ -11,6 +11,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).
 - Game engine (iOS, Android, one game loop, Spine, platform services): [improvements-engine.md](improvements-engine.md).
 - Nightly CI: build and run every program's Run once a day (games and long running apps for a few frames); work too slow for a Slow test (rebuilding all content, big models) belongs in a Run, not in tests.
+- `File.ReadBytes` reads a byte per call into a list of doubles (fgetc, 148 MB took about 7 s to write that way): read into packed bytes
 
 ## Waiting
 - Base library: Number `Sign`, `Wrap`, `ArcTangent2` and inverse trigonometry, Text to Numbers, fixed decimal text, `Truncated`.
