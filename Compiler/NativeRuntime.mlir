@@ -3423,8 +3423,10 @@
     func.call @strict_rc_range(%object, %bytes, %container) : (!llvm.ptr, i64, i64) -> ()
     return
   }
-  // stores value into the heap slot and moves one count from the object of the old value to the one of the new value
+  // stores value into the heap slot and moves one count from the object of the old value to the one of the new value;
+  // the slot can be in an old object (a loop reusing its dead object in place), so its card is marked like a write
   func.func private @strict_rc_put(%slot: !llvm.ptr, %value: f64) {
+    func.call @strict_gc_card(%slot) : (!llvm.ptr) -> ()
     %busy = func.call @strict_rc_busy() : () -> i1
     cf.cond_br %busy, ^pinned, ^counted
   ^counted:

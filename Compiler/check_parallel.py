@@ -468,6 +468,32 @@ wrapper = '''
     func.call @strict_gc_release() : () -> ()
     return
   }
+  // a store into an object a collection kept, as reusing a dead object of a loop in place does it, marks its card
+  func.func @test_put_card(%stack: !llvm.ptr) -> i64 {
+    func.call @strict_gc_init(%stack) : (!llvm.ptr) -> ()
+    %size = arith.constant 24 : i64
+    %kept = func.call @strict_alloc(%size) : (i64) -> !llvm.ptr
+    %full = arith.constant true
+    func.call @strict_gc_run(%full) : (i1) -> ()
+    %textSize = arith.constant 32 : i64
+    %young = func.call @strict_alloc_text(%textSize) : (i64) -> !llvm.ptr
+    %youngBits = func.call @strict_bits(%young) : (!llvm.ptr) -> f64
+    %slot = llvm.getelementptr %kept[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    func.call @strict_rc_put(%slot, %youngBits) : (!llvm.ptr, f64) -> ()
+    %address = llvm.ptrtoint %slot : !llvm.ptr to i64
+    %baseSlot = llvm.mlir.addressof @strict_gc_base : !llvm.ptr
+    %base = llvm.load %baseSlot : !llvm.ptr -> i64
+    %offset = arith.subi %address, %base : i64
+    %nine = arith.constant 9 : i64
+    %index = arith.shrui %offset, %nine : i64
+    %cardsSlot = llvm.mlir.addressof @strict_gc_cards : !llvm.ptr
+    %cardsBits = llvm.load %cardsSlot : !llvm.ptr -> i64
+    %cards = llvm.inttoptr %cardsBits : i64 to !llvm.ptr
+    %card = llvm.getelementptr %cards[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %state = llvm.load %card : !llvm.ptr -> i8
+    %result = arith.extui %state : i8 to i64
+    return %result : i64
+  }
   func.func @test_checked_collection(%stack: !llvm.ptr) -> i64 {
     func.call @strict_gc_init(%stack) : (!llvm.ptr) -> ()
     %size = arith.constant 48 : i64
@@ -547,6 +573,7 @@ driver.write_text('''#include <windows.h>
 extern int64_t test_swept(void* stack);
 extern int64_t test_owned(void* stack);
 extern int64_t test_copies(void* stack);
+extern int64_t test_put_card(void* stack);
 extern int64_t test_job_garbage(void* stack);
 extern void test_released(void);
 static size_t working_set(void) {
@@ -668,6 +695,11 @@ int main(int argc, char** argv) {
 		size_t after = working_set();
 		printf("Working set before waiting for a tool after a job left 400 MB of garbage: %zu MB, then %zu MB\\n", before >> 20, after >> 20);
 		return before > after + (200 << 20) ? 0 : 1;
+	}
+	if (argc > 1 && argv[1][0] == 'u') {
+		int64_t card = test_put_card(&argc);
+		printf("Card of a slot an in-place update wrote into a kept object: %lld (expected 1)\\n", (long long)card);
+		return card == 1 ? 0 : 1;
 	}
 	if (argc > 1 && argv[1][0] == 'b') {
 		int64_t bytes = test_copies(&argc);
@@ -823,12 +855,12 @@ def run(name, arguments):
 	assert result.returncode == 0, result.stdout + result.stderr
 lowered = output / "pool.llvm.mlir"
 llvm = output / "pool.ll"
-run("mlir-opt", [module, "--symbol-privatize=exclude=test_swept,test_owned,test_copies,test_job_garbage,test_released,test_parallel,test_pinned,test_carried,test_checked_collection,test_reused_counts,test_scan_invalidation,test_pool_gpu,test_cached,test_first,test_second,test_tools,test_literal,test_published", "--symbol-dce", "--convert-scf-to-cf",
+run("mlir-opt", [module, "--symbol-privatize=exclude=test_put_card,test_swept,test_owned,test_copies,test_job_garbage,test_released,test_parallel,test_pinned,test_carried,test_checked_collection,test_reused_counts,test_scan_invalidation,test_pool_gpu,test_cached,test_first,test_second,test_tools,test_literal,test_published", "--symbol-dce", "--convert-scf-to-cf",
 	"--convert-arith-to-llvm", "--convert-func-to-llvm", "--convert-cf-to-llvm", "--reconcile-unrealized-casts", "-o", lowered])
 run("mlir-translate", ["--mlir-to-llvmir", lowered, "-o", llvm])
 executable = output / "check.exe"
 run("clang", [llvm, driver, "-O2", "-march=native", "-Wno-override-module", "-fuse-ld=lld", "-Wl,clang_rt.builtins-x86_64.lib", "-o", executable])
-for mode in ["memory", "owned", "big", "freed", "published", "literal", "j", "k", "xcycle", "gpu", "rsame", "rdifferent", "scan"]:
+for mode in ["updated", "memory", "owned", "big", "freed", "published", "literal", "j", "k", "xcycle", "gpu", "rsame", "rdifferent", "scan"]:
 	reused = subprocess.run([str(executable), mode], capture_output=True, text=True, timeout=15)
 	print(reused.stdout.strip(), flush=True)
 	assert reused.returncode == 0, reused.stdout + reused.stderr
