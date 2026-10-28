@@ -11,7 +11,7 @@ constant Listed = ("  {", "    \"full_name\": \"strict-lang/Strict\",", "    \"f
 Downloaded(type Text) Text
 	for Clones
 		let local = SourceFiles(value).SubfolderWith(value, type)
-		if local is not ""
+		if (local is not "") and (IsHere(value) is false)
 			return Copied(local, type)
 	if Directory.Exists(Development + "/strict-lang")
 		return ""
@@ -20,6 +20,10 @@ Downloaded(type Text) Text
 		if folder is not ""
 			return folder
 	""
+IsHere(folder Text) Boolean
+	Repositories.IsHere(Directory.Current)
+	Repositories.IsHere("C:/Missing") is false
+	folder.Replace("\\", "/").Lower is Directory.Current.Replace("\\", "/").Lower
 Clones Texts
 	(Repositories.Clones.Length > 0) is Directory.Exists(Repositories.Development + "/strict-lang")
 	let file = File(target + "/README.md")

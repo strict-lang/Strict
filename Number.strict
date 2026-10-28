@@ -1,5 +1,5 @@
 has iterator
-constant Epsilon = 0.00001
+constant Epsilon = 0.0000001
 constant E = 2.718281828459045
 constant Pi = 3.141592653589793
 constant Phi = 1.618033988749895
@@ -71,9 +71,16 @@ Absolute Number
 	-1.Absolute is 1
 	1.Absolute is 1
 	value < 0 then 0 - value else value
-IsNearlyEqual(other, difference = Epsilon) Boolean
+IsNearlyEqual(other, difference = 0) Boolean
 	2.30000001.IsNearlyEqual(2.3)
-	(value - other).Absolute < difference
+	1.000001.IsNearlyEqual(1) is false
+	(0.1 + 0.2).IsNearlyEqual(0.3)
+	(1 / 0).IsNearlyEqual(1 / 0)
+	(1 / 0).IsNearlyEqual(5) is false
+	34.9.IsNearlyEqual(34.943, 0.5)
+	let delta = (value - other).Absolute
+	let scale = value.Absolute > other.Absolute then value.Absolute else other.Absolute
+	(value is other) or ((delta < 1 / 0) and ((delta <= difference) or (delta <= Epsilon * (1 + scale))))
 Clamp(minimum = 0, maximum = 1) Number
 	1.7.Clamp(0.5, 1.5) is 1.5
 	0.3.Clamp is 0.3

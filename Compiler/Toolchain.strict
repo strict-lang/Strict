@@ -5,7 +5,8 @@ has isWeb Boolean = false
 constant Needed = ("mlir-opt", "mlir-translate", "clang", "opt", "llc")
 constant WindowsFolders = ("C:/Program Files/LLVM/bin/", "C:/msys64/ucrt64/bin/")
 constant LinuxRelease = "LLVM-23.1.3-Linux-X64"
-constant Optimized = " -march=native -Wno-override-module"
+constant Optimized = " -march=native -Wno-override-module -O2"
+constant Optimization = " -O2"
 constant Parts = 16
 constant Direct = " -fuse-ld=lld -Wl,clang_rt.builtins-x86_64.lib"
 constant Thin = " -x none -flto=thin -Wl,/opt:lldltojobs=all -Wl,/mllvm:-mcpu=native" + Direct
@@ -82,48 +83,48 @@ Installing(missing Texts) Text
 	let where = isWindows then " in a new window" else " in the background (" + root + "/Tools/install.log)"
 	let problem = started.Failed then ", could not start it: " + started.error else ""
 	Text.Combine(missing, ", ") + " not found, installing them with " + script + where + problem
-Built(base Text, executable Text, level Text) Text
-	OnWindows.Built("Compiler/output/missing", "missing.exe", NativeBuild.Fast).StartsWith("mlir-opt failed")
-	let lowered = BuildProfile(Logger).Lowered(value, base, level)
+Built(base Text, executable Text) Text
+	OnWindows.Built("Compiler/output/missing", "missing.exe").StartsWith("mlir-opt failed")
+	let lowered = BuildProfile(Logger).Lowered(value, base)
 	if lowered is not ""
 		return lowered
 	let system = platform is Platform.Windows then " -Wl,-Brepro -Wl,/STACK:67108864" else MacOSTools.Linked(platform)
-	let files = NativeSources(natives).Objects(platform, root, level is NativeBuild.Quick then NativeBuild.Fast else level)
+	let files = NativeSources(natives).Objects(platform, root)
 	let resource = files.StartsWith("clang") then files else NativeSources(natives).Resource(base, platform, root)
 	if resource.StartsWith("llvm-rc failed") or resource.StartsWith("clang failed")
 		return resource
-	let linking = Inputs(base, level) + files + resource + " -o " + Quoted(executable) + Optimized + level + system
+	let linking = Inputs(base) + files + resource + " -o " + Quoted(executable) + Optimized + system
 	let linked = ToolRunner(Located("clang")).Execute(linking, "Linking")
 	linked.Failed then "clang failed: " + linked.error + linked.Output else "Built " + executable
-Inputs(base Text, level Text) Text
-	OnLinux.Inputs("Compiler/output/missing", "") is "\"Compiler/output/missing.ll\""
+Inputs(base Text) Text
+	OnLinux.Inputs("Compiler/output/missing") is "\"Compiler/output/missing.ll\""
 	let isDivided = (platform is Platform.Windows) and (File(base + ".ll").Exists is false)
 	if isDivided is false
 		return Quoted(base + ".ll") + (platform is Platform.Windows then Direct else "")
-	if PartsCompiled(base, level) is false
+	if PartsCompiled(base) is false
 		return Quoted(base + ".ll")
 	mutable parts = ""
 	for Parts
 		parts = parts + " " + Quoted(base + "-" + value + ".o")
 	parts + Thin + " -Wno-unused-command-line-argument"
-PartsCompiled(base Text, level Text) Boolean
-	OnWindows.PartsCompiled("Compiler/output/missing", "") is false
+PartsCompiled(base Text) Boolean
+	OnWindows.PartsCompiled("Compiler/output/missing") is false
 	mutable compiling = List(Mutable(Text))
 	for Parts
 		let part = base + "-" + value
-		compiling.Add("-c -flto=thin -x ir " + Quoted(part) + " -o " + Quoted(part + ".o") + Optimized + level)
+		compiling.Add("-c -flto=thin -x ir " + Quoted(part) + " -o " + Quoted(part + ".o") + Optimized)
 	for ToolRunner(Located("clang")).ExecuteAll(compiling, "Host clang (" + Parts + " jobs)")
 		if value.Failed
 			Logger.Log("clang failed (exit " + value.exitCode + "): " + value.Output + value.error)
 			return false
 	true
-CrossBuilt(base Text, level Text) Text
-	OnWindows.CrossBuilt("Compiler/output/missing", NativeBuild.Fast).StartsWith("mlir-opt failed")
+CrossBuilt(base Text) Text
+	OnWindows.CrossBuilt("Compiler/output/missing").StartsWith("mlir-opt failed")
 	let lowered = Lowered(base + ".linux")
 	if lowered is not ""
 		return lowered
 	constant target = " --target=x86_64-unknown-linux-gnu -mf16c -c -Wno-override-module"
-	let compiling = Quoted(base + ".linux.ll") + " -o " + Quoted(base + ".linux.o") + target + level
+	let compiling = Quoted(base + ".linux.ll") + " -o " + Quoted(base + ".linux.o") + target + Optimization
 	let compiled = ToolRunner(Located("clang")).Execute(compiling)
 	if compiled.Failed
 		return "clang failed: " + compiled.error

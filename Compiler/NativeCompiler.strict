@@ -39,15 +39,12 @@ Checked(rest Texts, sources Texts) Number
 	failed is 0 then Built(rest, sources) else failed
 Built(rest Texts, sources Texts = List(Text)) Number
 	let options = Options(rest)
-	if ("fast" is in options) and ((options - "fast").Length > 0)
-		logger.Log("Fast builds support only the native desktop target and cannot combine with other build options")
-		return 1
 	if (rest.Length > 2) and (rest(2) is "library")
 		return LibraryBuild(logger).Built(rest(0), rest(1))
 	if IsMixed(options)
 		logger.Log("Mobile target cannot be combined with another platform")
 		return 1
-	Configured(options, Level(rest)).Compile(rest(0), rest(1), false, false, sources)
+	Configured(options).Compile(rest(0), rest(1), false, false, sources)
 IsMixed(options Texts) Boolean
 	NativeCompiler.IsMixed(("android", "ios"))
 	NativeCompiler.IsMixed(("ios", "web"))
@@ -55,19 +52,12 @@ IsMixed(options Texts) Boolean
 	let isMobile = ("android" is in options) or ("ios" is in options)
 	let isDesktop = ("web" is in options) or ("linux" is in options)
 	(("android" is in options) and ("ios" is in options)) or (isMobile and isDesktop)
-Configured(options Texts, level Text) NativeBuild
-	NativeCompiler(Logger).Configured(("ios", "simulator"), NativeBuild.Fast).Target is Platform.IOSSimulator
-	NativeCompiler(Logger).Configured(("linux", "web"), NativeBuild.Fast).isCrossing is false
+Configured(options Texts) NativeBuild
+	NativeCompiler(Logger).Configured(("ios", "simulator")).Target is Platform.IOSSimulator
+	NativeCompiler(Logger).Configured(("linux", "web")).isCrossing is false
 	let isWeb = "web" is in options
 	let isCrossing = ("linux" is in options) and (isWeb is false)
-	NativeBuild(logger, isCrossing, level, isWeb, "android" is in options, "ios" is in options, "simulator" is in options)
-Level(rest Texts) Text
-	NativeCompiler.Level(("a.strict", ".", "linux", "small")) is NativeBuild.Small
-	NativeCompiler.Level(("a.strict", ".")) is NativeBuild.Fast
-	NativeCompiler.Level(("a.strict", ".", "fast")) is " -O0"
-	if "fast" is in Options(rest)
-		return NativeBuild.Quick
-	"small" is in Options(rest) then NativeBuild.Small else NativeBuild.Fast
+	NativeBuild(logger, isCrossing, isWeb, "android" is in options, "ios" is in options, "simulator" is in options)
 Replaced(executable Text, target Text) Boolean
 	let old = executable.Replace(".exe", ".old.exe")
 	File(executable).Rename(old)

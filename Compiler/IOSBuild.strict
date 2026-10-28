@@ -8,7 +8,7 @@ Architecture Text
 	let machine = isSimulator and (Platform.Architecture is "X64") then "x86_64" else "arm64"
 	let target = machine + "-apple-ios15.0" + (isSimulator then "-simulator" else "")
 	let vectors = machine is "x86_64" then " -march=x86-64-v2" else ""
-	" --target=" + target + vectors + " -fPIC -Wno-override-module"
+	" --target=" + target + vectors + " -fPIC -Wno-override-module" + Toolchain.Optimization
 SdkName Text
 	Simulator.SdkName is "iphonesimulator"
 	isSimulator then "iphonesimulator" else "iphoneos"
@@ -21,19 +21,19 @@ Sdk Text
 		return ""
 	let result = ToolRunner("xcrun").Execute("--sdk " + SdkName + " --show-sdk-path")
 	result.Failed then "" else result.Output.Trim
-Compiled(base Text, level Text) Text
-	IOSBuild(Toolchain.OnWindows).Compiled("Compiler/output/missing", "").StartsWith("mlir-opt failed")
+Compiled(base Text) Text
+	IOSBuild(Toolchain.OnWindows).Compiled("Compiler/output/missing").StartsWith("mlir-opt failed")
 	let lowered = tools.Lowered(base)
 	if lowered is not ""
 		return lowered
 	let arguments = "-c " + tools.Quoted(base + ".ll") + " -o " + tools.Quoted(base + ".ios.o")
-	let compiled = ToolRunner(tools.Located("clang")).Execute(arguments + Architecture + level)
+	let compiled = ToolRunner(tools.Located("clang")).Execute(arguments + Architecture)
 	compiled.Failed then "iOS clang failed: " + compiled.error + compiled.Output else ""
-Objects(base Text, level Text, sdk Text) Texts
-	IOSBuild(Toolchain.OnWindows).Objects("Compiler/output/missing", "", "") is List(Text)
+Objects(base Text, sdk Text) Texts
+	IOSBuild(Toolchain.OnWindows).Objects("Compiler/output/missing", "") is List(Text)
 	let sources = NativeSources(tools.natives)
 	let tokens = sources.Flags(Platform.IOS, tools.root).Split(" ")
-	let options = Architecture + level + " -isysroot " + tools.Quoted(sdk) + sources.Options(tokens, false)
+	let options = Architecture + " -isysroot " + tools.Quoted(sdk) + sources.Options(tokens, false)
 	let flags = options + " -I" + tools.Quoted(tools.root + "/Compiler")
 	mutable objects = List(Mutable(Text))
 	for sources.Files + sources.Sources(tokens)
@@ -46,15 +46,15 @@ Object(source Text, target Text, flags Text) Text
 	let arguments = "--sdk " + SdkName + " clang -c " + tools.Quoted(source) + " -o " + tools.Quoted(target) + flags
 	let compiled = ToolRunner("xcrun").Execute(arguments)
 	compiled.Failed then "iOS clang failed: " + compiled.error + compiled.Output else target
-Linked(base Text, level Text) Text
-	IOSBuild(Toolchain.OnWindows).Linked("Compiler/output/missing", "").StartsWith("mlir-opt failed")
-	let compiled = Compiled(base, level)
+Linked(base Text) Text
+	IOSBuild(Toolchain.OnWindows).Linked("Compiler/output/missing").StartsWith("mlir-opt failed")
+	let compiled = Compiled(base)
 	if compiled is not ""
 		return compiled
 	let sdk = Sdk
 	if (tools.natives.Length > 0) and (sdk is "")
 		return "iOS native packages require macOS with full Xcode: xcrun --sdk " + SdkName + " --show-sdk-path"
-	let objects = Objects(base, level, sdk)
+	let objects = Objects(base, sdk)
 	if (objects.Length > 0) and objects.First.StartsWith("iOS clang failed")
 		return objects.First
 	Archived(base, objects)

@@ -1,46 +1,125 @@
   // the input of `Convolved.Summed` normed with the scales and shifts of affine (swish when asked) or the weights as they
-  // are (normed 0), one number per thread, stored as bfloat16 for strict_device_convolution
+  // are (normed 0), 4 numbers per thread (one vector load of bfloat16 or 32 bit floats when aligned), stored as bfloat16
+  // for strict_device_convolution
   func.func private @strict_device_convolution_normed_run(%count: i64, %result: !llvm.ptr, %results: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %affine: !llvm.ptr, %affineCount: i64, %affineBits: i64, %channels: f64, %swish: f64, %normed: f64) attributes {llvm.passthrough = ["alwaysinline"]} {
-    %false = arith.constant false
-    %one = arith.constant 1.0 : f64
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %four = arith.constant 4 : i64
+    %seven = arith.constant 7 : i64
+    %fifteen = arith.constant 15 : i64
+    %brainBits = arith.constant 17 : i64
+    %singleBits = arith.constant 32 : i64
+    %doubleBits = arith.constant 64 : i64
     %perBlock = arith.constant 256 : i64
+    %unit = arith.constant 1.0 : f64
     %thread32 = func.call @strict_device_thread_index() : () -> i32
     %block32 = func.call @strict_device_block_index() : () -> i32
     %thread = arith.extui %thread32 : i32 to i64
     %block = arith.extui %block32 : i32 to i64
     %blockStart = arith.muli %block, %perBlock : i64
-    %index = arith.addi %blockStart, %thread : i64
-    %inside = arith.cmpi slt, %index, %count : i64
+    %quad = arith.addi %blockStart, %thread : i64
+    %first = arith.muli %quad, %four : i64
+    %inside = arith.cmpi slt, %first, %count : i64
     cf.cond_br %inside, ^read, ^done
   ^read:
-    %number = func.call @strict_device_products_number(%values, %valuesCount, %valuesBits, %index, %false) : (!llvm.ptr, i64, i64, i64, i1) -> f32
-    %isNormed = arith.cmpf oeq, %normed, %one : f64
-    cf.cond_br %isNormed, ^norm, ^store(%number : f32)
+    %end = arith.addi %first, %four : i64
+    %whole = arith.cmpi sle, %end, %count : i64
+    %address = llvm.ptrtoint %values : !llvm.ptr to i64
+    %isBrain = arith.cmpi eq, %valuesBits, %brainBits : i64
+    %isSingle = arith.cmpi eq, %valuesBits, %singleBits : i64
+    %alignMask = arith.select %isBrain, %seven, %fifteen : i64
+    %misaligned = arith.andi %address, %alignMask : i64
+    %aligned = arith.cmpi eq, %misaligned, %none : i64
+    %vectorFormat = arith.ori %isBrain, %isSingle : i1
+    %vectorShape = arith.andi %whole, %aligned : i1
+    %vectored = arith.andi %vectorFormat, %vectorShape : i1
+    cf.cond_br %vectored, ^vector, ^singles
+  ^vector:
+    cf.cond_br %isBrain, ^brains, ^floats
+  ^brains:
+    %brainSlot = llvm.getelementptr %values[%first] : (!llvm.ptr, i64) -> !llvm.ptr, bf16
+    %brainQuad = llvm.load %brainSlot invariant {alignment = 8 : i64} : !llvm.ptr -> vector<4xbf16>
+    %fromBrains = arith.extf %brainQuad : vector<4xbf16> to vector<4xf32>
+    cf.br ^numbers(%fromBrains : vector<4xf32>)
+  ^floats:
+    %floatSlot = llvm.getelementptr %values[%first] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %floatQuad = llvm.load %floatSlot invariant {alignment = 16 : i64} : !llvm.ptr -> vector<4xf32>
+    cf.br ^numbers(%floatQuad : vector<4xf32>)
+  ^singles:
+    %singleQuad = func.call @strict_device_convolution_four(%values, %valuesCount, %valuesBits, %first, %count) : (!llvm.ptr, i64, i64, i64, i64) -> vector<4xf32>
+    cf.br ^numbers(%singleQuad : vector<4xf32>)
+  ^numbers(%numbers: vector<4xf32>):
+    %isNormed = arith.cmpf oeq, %normed, %unit : f64
+    cf.cond_br %isNormed, ^norm, ^store(%numbers : vector<4xf32>)
   ^norm:
     %channelCount = arith.fptosi %channels : f64 to i64
-    %channel = arith.remui %index, %channelCount : i64
+    %channel = arith.remui %first, %channelCount : i64
     %shiftAt = arith.addi %channel, %channelCount : i64
-    %scale = func.call @strict_device_products_number(%affine, %affineCount, %affineBits, %channel, %false) : (!llvm.ptr, i64, i64, i64, i1) -> f32
-    %shift = func.call @strict_device_products_number(%affine, %affineCount, %affineBits, %shiftAt, %false) : (!llvm.ptr, i64, i64, i64, i1) -> f32
-    %scaled = arith.mulf %number, %scale : f32
-    %shifted = arith.addf %scaled, %shift : f32
-    %isSwish = arith.cmpf oeq, %swish, %one : f64
-    cf.cond_br %isSwish, ^swished, ^store(%shifted : f32)
+    %affineEnd = arith.addi %channel, %four : i64
+    %scales = func.call @strict_device_convolution_four(%affine, %affineCount, %affineBits, %channel, %affineEnd) : (!llvm.ptr, i64, i64, i64, i64) -> vector<4xf32>
+    %shiftEnd = arith.addi %shiftAt, %four : i64
+    %shifts = func.call @strict_device_convolution_four(%affine, %affineCount, %affineBits, %shiftAt, %shiftEnd) : (!llvm.ptr, i64, i64, i64, i64) -> vector<4xf32>
+    %scaled = arith.mulf %numbers, %scales : vector<4xf32>
+    %shifted = arith.addf %scaled, %shifts : vector<4xf32>
+    %isSwish = arith.cmpf oeq, %swish, %unit : f64
+    cf.cond_br %isSwish, ^swished, ^store(%shifted : vector<4xf32>)
   ^swished:
-    %unit = arith.constant 1.0 : f32
-    %factor = arith.constant -1.44269504 : f32
-    %exponent = arith.mulf %shifted, %factor : f32
-    %power = llvm.call_intrinsic "llvm.exp2.f32"(%exponent) : (f32) -> f32
-    %below = arith.addf %unit, %power : f32
-    %activated = arith.divf %shifted, %below fastmath<afn, arcp> : f32
-    cf.br ^store(%activated : f32)
-  ^store(%stored: f32):
-    %doubleBits = arith.constant 64 : i64
-    %wide = arith.cmpi eq, %results, %doubleBits : i64
-    func.call @strict_device_result(%result, %index, %stored, %wide, %results) : (!llvm.ptr, i64, f32, i1, i64) -> ()
+    %units = arith.constant dense<1.0> : vector<4xf32>
+    %factors = arith.constant dense<-1.44269504> : vector<4xf32>
+    %exponents = arith.mulf %shifted, %factors : vector<4xf32>
+    %powers = llvm.call_intrinsic "llvm.exp2.v4f32"(%exponents) : (vector<4xf32>) -> vector<4xf32>
+    %below = arith.addf %units, %powers : vector<4xf32>
+    %activated = arith.divf %shifted, %below fastmath<afn, arcp> : vector<4xf32>
+    cf.br ^store(%activated : vector<4xf32>)
+  ^store(%stored: vector<4xf32>):
+    %brainResult = arith.cmpi eq, %results, %brainBits : i64
+    %resultAddress = llvm.ptrtoint %result : !llvm.ptr to i64
+    %resultRest = arith.andi %resultAddress, %seven : i64
+    %resultAligned = arith.cmpi eq, %resultRest, %none : i64
+    %resultFits = arith.andi %brainResult, %resultAligned : i1
+    %storesQuad = arith.andi %resultFits, %whole : i1
+    cf.cond_br %storesQuad, ^quadStore, ^oneByOne(%none : i64)
+  ^quadStore:
+    %brainsOut = arith.truncf %stored : vector<4xf32> to vector<4xbf16>
+    %outSlot = llvm.getelementptr %result[%first] : (!llvm.ptr, i64) -> !llvm.ptr, bf16
+    llvm.store %brainsOut, %outSlot {alignment = 8 : i64} : vector<4xbf16>, !llvm.ptr
     cf.br ^done
+  ^oneByOne(%index: i64):
+    %more = arith.cmpi slt, %index, %four : i64
+    %at = arith.addi %first, %index : i64
+    %atInside = arith.cmpi slt, %at, %count : i64
+    %storing = arith.andi %more, %atInside : i1
+    cf.cond_br %storing, ^storeOne, ^done
+  ^storeOne:
+    %slot = arith.trunci %index : i64 to i32
+    %number = llvm.extractelement %stored[%slot : i32] : vector<4xf32>
+    %wide = arith.cmpi eq, %results, %doubleBits : i64
+    func.call @strict_device_result(%result, %at, %number, %wide, %results) : (!llvm.ptr, i64, f32, i1, i64) -> ()
+    %next = arith.addi %index, %one : i64
+    cf.br ^oneByOne(%next : i64)
   ^done:
     return
+  }
+  // 4 numbers of data from first in any format, zeros from end on
+  func.func private @strict_device_convolution_four(%data: !llvm.ptr, %count: i64, %bits: i64, %first: i64, %end: i64) -> vector<4xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %four = arith.constant 4 : i64
+    %empty = llvm.mlir.undef : vector<4xf32>
+    cf.br ^number(%none, %empty : i64, vector<4xf32>)
+  ^number(%index: i64, %numbers: vector<4xf32>):
+    %more = arith.cmpi slt, %index, %four : i64
+    cf.cond_br %more, ^read, ^done
+  ^read:
+    %at = arith.addi %first, %index : i64
+    %outside = arith.cmpi sge, %at, %end : i64
+    %number = func.call @strict_device_products_number(%data, %count, %bits, %at, %outside) : (!llvm.ptr, i64, i64, i64, i1) -> f32
+    %slot = arith.trunci %index : i64 to i32
+    %withNumber = llvm.insertelement %number, %numbers[%slot : i32] : vector<4xf32>
+    %next = arith.addi %index, %one : i64
+    llvm.br ^number(%next, %withNumber : i64, vector<4xf32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+  ^done:
+    return %numbers : vector<4xf32>
   }
   llvm.func @strict_device_convolution_normed(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %affine: !llvm.ptr, %affineCount: i64, %affineBits: i64, %channels: f64, %swish: f64, %normed: f64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>} {
     %results = llvm.mlir.constant(64 : i64) : i64

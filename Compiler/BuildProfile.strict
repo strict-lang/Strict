@@ -89,9 +89,9 @@ Packaged(build NativeBuild, base Text, program Text, built Number, tools Toolcha
 	let result = Release(logger, base).Packaged(program, built, tools.isWeb, build.isCrossing, build.Target)
 	Reported("Packaging", started)
 	result
-Lowered(tools Toolchain, base Text, level Text) Text
+Lowered(tools Toolchain, base Text) Text
 	let started = Process.Elapsed
-	let parts = (tools.platform is Platform.Windows) and (level is not NativeBuild.Quick) then Toolchain.Parts else 1
+	let parts = tools.platform is Platform.Windows then Toolchain.Parts else 1
 	let lowered = tools.Lowered(base, "", parts)
 	Reported("Host lowering and translation", started)
 	lowered

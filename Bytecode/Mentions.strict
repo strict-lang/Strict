@@ -3,14 +3,16 @@ constant Typo = Mentions(("constant Limit = 3", "has numbr", "has counts Numbers
 constant Units = Mentions(("has units List(Unit)", "has logger", "Scored(model Shape, count = 2) Number", "\tCounted(model).Area"))
 Types Texts
 	Units.Types is ("List", "Unit", "Shape", "Number", "Counted", "Units", "Logger")
+	Mentions(("has Instruction", "has Registers")).Types is ("Instruction", "Registers")
 	let shape = TypeShape(lines)
 	let own = shape.MemberScope.names + shape.MethodScope.names
 	mutable tokens = List(Mutable(Text))
 	for lines
 		let tokenized = Tokenizer(value.Trim).Tokens
 		tokens = tokens + shape.Capitalized(tokenized) + Outer(tokenized)
-	for (tokens + Typed(shape)).Unique
-		if value is not in own
+	let typed = Typed(shape)
+	for (tokens + typed).Unique
+		if (value is in typed) or (value is not in own)
 			value
 Typed(shape Expressions/TypeShape) Texts
 	Units.Typed(TypeShape(Units.lines)) is ("Units", "Logger", "Shape", "Number")

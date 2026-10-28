@@ -8,7 +8,7 @@ Lines(left Text, right Text, kinds Texts, slot Text, exact Boolean, expanded Tex
 	if exact or (kinds.First is not kinds.Last)
 		return same
 	if kinds.First is "Number"
-		return Numeric(left, right, slot)
+		return List(Text) + ("let testEqual" + slot + " = " + left + ".IsNearlyEqual(" + right + ")")
 	if kinds.First is in expanded
 		return Repeated(left, right, kinds.First, slot)
 	if types.BaseName(kinds.First) is "List"
@@ -16,23 +16,14 @@ Lines(left Text, right Text, kinds Texts, slot Text, exact Boolean, expanded Tex
 	IsRecord(kinds.First) then Fields(left, right, kinds.First, slot, expanded + kinds.First) else same
 Repeated(left Text, right Text, kind Text, slot Text) Texts
 	Plain.Repeated("left", "right", "Number", "0") is ("let testEqual0 = left is right")
-	let compared = IsRecord(kind) then left + ".IsClose(" + right + ")" else left + " is " + right
+	let compared = IsRecord(kind) then left + ".IsNearlyEqual(" + right + ")" else left + " is " + right
 	List(Text) + ("let testEqual" + slot + " = " + compared)
 IsRecord(kind Text) Boolean
 	Plain.IsRecord("Number") is false
 	let base = types.BaseName(kind)
 	(types.MembersOf(kind).names.Length > 0) and (base is not in Scalars) and (base is not "List")
-Numeric(left Text, right Text, slot Text) Texts
-	let scale = "testScale" + slot
-	let difference = "testDelta" + slot
-	let maximum = left + ".Absolute > " + right + ".Absolute then " + left + ".Absolute else " + right + ".Absolute"
-	let bound = "0.0000001 * (1 + " + scale + ")"
-	let close = difference + " < 1 / 0 and " + difference + " <= " + bound
-	let first = "let " + scale + " = " + maximum
-	let second = "let " + difference + " = (" + left + " - " + right + ").Absolute"
-	(first, second, "let testEqual" + slot + " = " + left + " is " + right + " or (" + close + ")")
 Elements(left Text, right Text, kind Text, slot Text, expanded Texts) Texts
-	Text.Combine(Plain.Elements("left", "right", Deep, "0", List(Text))).IndexOf("testDelta") > 0
+	Text.Combine(Plain.Elements("left", "right", Deep, "0", List(Text))).IndexOf("IsNearlyEqual") > 0
 	let same = "testEqual" + slot
 	let child = slot + "x"
 	let item = types.ElementType(kind)

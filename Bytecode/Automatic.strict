@@ -1,7 +1,7 @@
 has lines Texts
 has instance Text
 has instantiation Expressions/Instantiation
-constant Generating = ("Members", "Code", "to HashCode", "Validated", "IsClose")
+constant Generating = ("Members", "Code", "to HashCode", "Validated", "IsNearlyEqual")
 constant Names = Generating.Slice(0, 4)
 constant Wanted = ("Strict/HelloLogger.Run", "Strict/HelloLogger.Members")
 constant Greeter = Automatic(TypeCodegen.Hello.lines, "HelloLogger", Instantiation.Pairing)
@@ -29,14 +29,14 @@ Generated(name Text) Texts
 		return List(Text) + "Members Variables" + Described
 	if name is in ("to HashCode", "Code")
 		return name is "Code" then (List(Text) + "Code Text" + Coded) else (List(Text) + "to HashCode" + Hashed)
-	if name is "IsClose"
+	if name is "IsNearlyEqual"
 		return Closed
 	List(Text) + ("Validated " + instance) + "\tvalue"
 Closed Texts
-	Point.Closed.First is "IsClose(other Point) Boolean"
+	Point.Closed.First is "IsNearlyEqual(other Point) Boolean"
 	Point.Closed.Last is "\ttestEqual0"
-	Point.Lines(List(Text) + "IsClose").Index("IsClose(other Point) Boolean") is 6
-	mutable closed = List(Text) + ("IsClose(other " + instance + ") Boolean")
+	Point.Lines(List(Text) + "IsNearlyEqual").Index("IsNearlyEqual(other Point) Boolean") is 6
+	mutable closed = List(Text) + ("IsNearlyEqual(other " + instance + ") Boolean")
 	for Closeness(instantiation.types).Fields("", "other", instance, "0", List(Text) + instance)
 		closed = closed + ("\t" + value)
 	closed + "\ttestEqual0"
