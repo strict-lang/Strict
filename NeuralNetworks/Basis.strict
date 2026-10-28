@@ -2,6 +2,7 @@ has signs List(Numbers)
 has block Number = 1024
 has grouped Boolean = false
 has folded Texts = List(Text)
+has convrot Number = 0
 constant None = Basis(List(Numbers))
 constant Model = Gguf("NeuralNetworks/tinyqwen35basis.gguf", 32)
 constant Tiny = Basis.Loaded(Model)
@@ -39,6 +40,9 @@ Rotated(input Numbers, width Number) Numbers
 	None.Rotated((1, 2), 2) is (1, 2)
 	Tiny.Rotated((0, 1, 0, 0, 0, 0, 0, 0), 8).Length is 8
 	Tiny.Restored(Tiny.Rotated(Probe + Probe, 8), 8) is Probe + Probe
+	Basis(None, convrot = 4).Rotated((1, 0, 0, 0, 0, 2, 0, 0), 8) is (0.5, 0.5, 0.5, -0.5, 1, 1, -1, 1)
+	if convrot > 0
+		return Convrot(input, convrot).Rotated
 	signs.Length is 0 then input else Sylvester(input, Signs(width), block).Rotated
 Sums(weights List(Numbers), biases Numbers, input Numbers) Numbers
 	None.Sums(List(Numbers) + Probe, Layer.Unbiased, Probe) is List(Number) + 35.25
@@ -46,6 +50,9 @@ Sums(weights List(Numbers), biases Numbers, input Numbers) Numbers
 	Batch(weights, biases).Sums(Rotated(input, weights.First.Length))
 Restored(input Numbers, width Number) Numbers
 	None.Restored((1, 2), 2) is (1, 2)
+	Basis(None, convrot = 4).Restored(Basis(None, convrot = 4).Rotated(Probe, 8), 8) is Probe
+	if convrot > 0
+		return Convrot(input, convrot).Rotated
 	signs.Length is 0 then input else Flipped(Sylvester(input, Sylvester.Unflipped, block).Rotated, Signs(width))
 Flipped(input Numbers, flips Numbers) Numbers
 	None.Flipped((1, 2, 3, 4), (1, -1)) is (1, -2, 3, -4)

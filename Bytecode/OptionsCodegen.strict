@@ -1,0 +1,114 @@
+has automatic Automatic
+has folder Text
+constant Settings = OptionsCodegen(Automatic(("has prompt = \"prompt.txt\"", "has kind = InstructionType.Add", "has count = 1", "has loras = List(Text)", "has jsonOutput = false"), "Settings", Instantiation.Pairing), "Examples")
+constant Single = OptionsCodegen(Automatic(List(Text) + "has count = 1", "One", Instantiation.Pairing), "Examples")
+Lines(names Texts) Texts
+	Settings.Lines(List(Text)).Length is 0
+	Settings.Lines(("Parsed", "Usage")).Length is 5
+	Settings.Lines(List(Text) + "Usage").First is "Usage Text"
+	let parsed = automatic.IsWanted("Parsed", names) then Parsed else List(Text)
+	parsed + (automatic.IsWanted("Usage", names) then Usage else List(Text))
+Completed(main TypeCodegen, entry TypeEntry, targets Texts) TypeEntry
+	Settings.Completed(TypeCodegen.Hello, TypeEntry.HelloLogger, List(Text)) is TypeEntry.HelloLogger
+	let prefix = main.fullName + "."
+	let wanted = ((prefix + "Parsed") is in targets) or ((prefix + "Usage") is in targets)
+	if wanted is false
+		return entry
+	let names = (entry.Chosen("Parsed", -1, "Parsed", List(Text)) < 0 then List(Text) + "Parsed" else List(Text))
+	let missing = names + (entry.Chosen("Usage", -1, "Usage", List(Text)) < 0 then List(Text) + "Usage" else List(Text))
+	automatic.Appended(main, entry, automatic.lines + Lines(missing))
+Parsed Texts
+	Settings.Parsed.First is "Parsed(arguments Texts) Settings"
+	Settings.Parsed(1).EndsWith("\"loras\", \"jsonOutput\")).Checked")
+	Settings.Parsed.Last.StartsWith("\tSettings(line.Option(\"prompt\", \"prompt.txt\"), line.Chosen(\"kind\", ")
+	", 302), InstructionType.Add), line.Numeric(\"count\", 1), " is in Settings.Parsed.Last
+	Settings.Parsed.Last.EndsWith("line.Repeated(\"loras\", List(Text)), line.Flag(\"jsonOutput\", false))")
+	Single.Parsed(1) is "\tlet line = CommandLine(arguments, List(Text) + \"count\").Checked"
+	let line = "\tlet line = CommandLine(arguments, " + Listed + ").Checked"
+	let built = "\t" + automatic.instance + "(" + Text.Combine(Arguments, ", ") + ")"
+	(List(Text) + ("Parsed(arguments Texts) " + automatic.instance) + line) + built
+Usage Texts
+	Settings.Usage.Last.StartsWith("\tCommandLine(List(Text), (\"prompt\", \"kind\", ")
+	Settings.Usage.Last.EndsWith("1 to Text, Text.Combine(List(Text), \" \"), false to Text), List(Text))")
+	Single.Usage.Last is "\tCommandLine(List(Text), List(Text) + \"count\").Usage(List(Text) + 1 to Text, List(Text))"
+	let help = Text.Combine(automatic.lines, "\n").IndexOf("constant Help =") >= 0 then "Help" else "List(Text)"
+	let shown = Joined(Shown, "Text")
+	(List(Text) + "Usage Text") + ("\tCommandLine(List(Text), " + Listed + ").Usage(" + shown + ", " + help + ")")
+Listed Text
+	Single.Listed is "List(Text) + \"count\""
+	Joined(Quoted(Names), "Text")
+Names Texts
+	Settings.Names is ("prompt", "kind", "count", "loras", "jsonOutput")
+	for automatic.Stored
+		automatic.Header(value).MemberName
+Arguments Texts
+	Settings.Arguments(2) is "line.Numeric(\"count\", 1)"
+	for automatic.Stored
+		Argument(automatic.Header(value).MemberName, Kind(value), Default(value))
+Argument(name Text, type Text, default Text) Text
+	Settings.Argument("prompt", "Text", "\"a\"") is "line.Option(\"prompt\", \"a\")"
+	Settings.Argument("logger", "Logger", "logger") is "logger"
+	let at = ("Number", "Text", "Boolean", "Texts").Index(type)
+	if at >= 0
+		return "line." + ("Numeric", "Option", "Flag", "Repeated")(at) + "(\"" + name + "\", " + default + ")"
+	let constants = Constants(type)
+	if constants.names.Length is 0
+		return default
+	let choices = Joined(Quoted(constants.names), "Text") + ", " + Joined(constants.types, "Number")
+	"line.Chosen(\"" + name + "\", " + choices + ", " + default + ")"
+Shown Texts
+	Settings.Shown.First is "\"prompt.txt\""
+	Settings.Shown(3) is "Text.Combine(List(Text), \" \")"
+	Settings.Shown.Last is "false to Text"
+	for automatic.Stored
+		Displayed(Default(value), Kind(value))
+Displayed(default Text, type Text) Text
+	Settings.Displayed("1", "Number") is "1 to Text"
+	Settings.Displayed("InstructionType.Add", "InstructionType").EndsWith("|jumpbackifnonzero)\"")
+	if type is in ("Text", "Texts")
+		return type is "Text" then default else "Text.Combine(" + default + ", \" \")"
+	let constants = Constants(type)
+	if constants.names.Length is 0
+		return default + " to Text"
+	let lowered = constants.names
+	let chosen = Joined(Quoted(lowered), "Text") + "(" + Joined(constants.types, "Number") + ".Index(" + default + "))"
+	chosen + " + \" (" + Text.Combine(lowered, "|") + ")\""
+Kind(line Text) Text
+	Settings.Kind("has loras = List(Text)") is "Texts"
+	Settings.Kind("has count = 1") is "Number"
+	let type = automatic.MemberType(line)
+	(type is "List") and line.EndsWith("List(Text)") then "Texts" else type
+Default(line Text) Text
+	Settings.Default("has count = 1") is "1"
+	Settings.Default("has count Number") is "count"
+	let at = line.IndexOf(" = ")
+	at < 0 then automatic.Header(line).MemberName else line.Substring(at + 3, line.Length - at - 3)
+Constants(type Text) Scope
+	Settings.Constants("InstructionType").names.First is "set"
+	Settings.Constants("InstructionType").names(6) is "greaterthan"
+	Settings.Constants("InstructionType").types(1) is "1"
+	Settings.Constants("Missing").names.Length is 0
+	let path = folder + "/" + type + ".strict"
+	let lines = File(path).Exists then File(path).ReadLines else List(Text)
+	if Enumerated(lines) is false
+		return Scope(List(Text), List(Text))
+	let scope = TypeShape(lines).ConstantScope
+	Scope(Text.Combine(scope.names, "|").Lower.Split("|"), scope.types)
+Enumerated(lines Texts) Boolean
+	Settings.Enumerated(("constant A", "constant B"))
+	Settings.Enumerated(("constant A", "has b")) is false
+	Settings.Enumerated(("constant A", ""))
+	for lines
+		if (value is not "") and (value.StartsWith("constant ") is false)
+			return false
+	lines.Length > 0
+Quoted(texts Texts) Texts
+	Settings.Quoted(("a", "b")) is ("\"a\"", "\"b\"")
+	for texts
+		"\"" + value + "\""
+Joined(expressions Texts, type Text) Text
+	Settings.Joined(("a", "b"), "Text") is "(a, b)"
+	Settings.Joined(List(Text) + "1", "Number") is "List(Number) + 1"
+	if expressions.Length is 1
+		return "List(" + type + ") + " + expressions.First
+	"(" + Text.Combine(expressions, ", ") + ")"

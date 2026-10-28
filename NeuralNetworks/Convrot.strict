@@ -1,0 +1,29 @@
+has values Numbers
+has group Number = 256
+constant Unit = Convrot((1, 0, 0, 0), 4)
+constant Sixteen = Convrot((3, -1, 2, 0, 5, 1, -4, 2, 0, 1, 7, -2, 1, 3, -1, 6), 16)
+Rotated Numbers
+	Unit.Rotated is (0.5, 0.5, 0.5, -0.5)
+	Convrot((List(Number) + 1) + Layer.Zeros(15), 16).Rotated(3) is -0.25
+	Convrot(Convrot(Sixteen.Rotated, 16).Rotated, 16).Rotated is Sixteen.Rotated
+	Convrot(Sixteen.Rotated, 16).Rotated is Sixteen.values
+	let first = Stage(values, 1)
+	let second = group > 4 then Stage(first, 4) else first
+	let third = group > 16 then Stage(second, 16) else second
+	group > 64 then Stage(third, 64) else third
+Applied(rotated Boolean) Numbers
+	Unit.Applied(true) is Unit.Rotated
+	Unit.Applied(false) is Unit.values
+	rotated then Rotated else values
+Stage(input Numbers, step Number) Numbers
+	Unit.Stage((1, 0, 0, 0), 1) is (0.5, 0.5, 0.5, -0.5)
+	Unit.Stage((0, 0, 0, 1, 1, 0, 0, 0), 2) is (0.5, 0.5, -0.5, 0.5, 0.5, -0.5, 0.5, 0.5)
+	for input.Length
+		Butterfly(input, index, step)
+Butterfly(input Numbers, at Number, step Number) Number
+	Unit.Butterfly((1, 0, 0, 0), 3, 1) is -0.5
+	let digit = (at / step).Floor % 4
+	let first = (at / (4 * step)).Floor * 4 * step + at % step
+	let low = input(first) * (digit is 3 then -0.5 else 0.5) + input(first + step) * (digit is 2 then -0.5 else 0.5)
+	let high = input(first + 2 * step) * (digit is 1 then -0.5 else 0.5)
+	low + high + input(first + 3 * step) * (digit is 0 then -0.5 else 0.5)
