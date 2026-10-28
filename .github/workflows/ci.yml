@@ -72,7 +72,9 @@ jobs:
         if: env.NATIVE != ''
         run: |
           for folder in $NATIVE; do
+            echo "$folder"; started=$SECONDS
             ./strict test "$folder" native > native.log 2>&1 || { code=$?; grep -v "^Test passed" native.log; echo "::error::native tests of $folder failed with exit code $code"; exit 1; }
+            echo "  passed in $((SECONDS - started)) s"
           done
   windows:
     runs-on: windows-latest
@@ -122,5 +124,7 @@ jobs:
       - name: Unit and Slow tests built natively, one test executable per folder
         run: |
           for folder in $NATIVE; do
+            echo "$folder"; started=$SECONDS
             ./strict.exe test "$folder" native > native.log 2>&1 || { code=$?; grep -v "^Test passed" native.log; echo "::error::native tests of $folder failed with exit code $code"; exit 1; }
+            echo "  passed in $((SECONDS - started)) s"
           done
