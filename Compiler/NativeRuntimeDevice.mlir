@@ -2514,17 +2514,18 @@
     llvm.return
   }
   // strict_gpu_tuned: a block of 256 threads per 16 packed rows of 8 bit numbers (rows, one every stride bytes, the scales
-  // per 32 at scaleOffset) adds ups (rank numbers per row, scaled) times downs (rank x width) to every row whose flag is
-  // not 0, then requantizes it to its largest magnitude / 127 with stochastic rounding like TensorFile_Tuned. A thread sums
+  // per 32 at scaleOffset) adds ups (rank numbers per row, bfloat16 for upBits 17, times the scale of their rank part) times
+  // downs (rank x width) to every row with an update not 0, then requantizes it to its largest magnitude / 127 with
+  // stochastic rounding like TensorFile_Tuned. A thread sums
   // the 16 rows of its columns at once, so downs are read once per 16 rows (the ups of the rows by rank part in shared)
   llvm.mlir.global internal @strict_device_tuned_ups() {addr_space = 3 : i32, alignment = 64 : i64} : !llvm.array<8192 x f32>
   // the scales, flags and largest magnitudes of the 16 rows, then the largest of every warp (8 times 16)
   llvm.mlir.global internal @strict_device_tuned_rows() {addr_space = 3 : i32, alignment = 64 : i64} : !llvm.array<176 x f32>
-  llvm.func @strict_device_tuned(%bytes: !llvm.ptr, %stride: i64, %scaleOffset: i64, %downs: !llvm.ptr, %ups: !llvm.ptr, %flags: !llvm.ptr, %width: i64, %rank: i64, %seed: i64, %height: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>, nvvm.minctasm = 2 : i32} {
-    func.call @strict_device_tuned_run(%bytes, %stride, %scaleOffset, %downs, %ups, %flags, %width, %rank, %seed, %height) : (!llvm.ptr, i64, i64, !llvm.ptr, !llvm.ptr, !llvm.ptr, i64, i64, i64, i64) -> ()
+  llvm.func @strict_device_tuned(%bytes: !llvm.ptr, %stride: i64, %scaleOffset: i64, %downs: !llvm.ptr, %ups: !llvm.ptr, %upBits: i64, %rankScales: !llvm.ptr, %width: i64, %rank: i64, %seed: i64, %height: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>, nvvm.minctasm = 2 : i32} {
+    func.call @strict_device_tuned_run(%bytes, %stride, %scaleOffset, %downs, %ups, %upBits, %rankScales, %width, %rank, %seed, %height) : (!llvm.ptr, i64, i64, !llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, i64, i64, i64) -> ()
     llvm.return
   }
-  func.func private @strict_device_tuned_run(%bytes: !llvm.ptr, %stride: i64, %scaleOffset: i64, %downs: !llvm.ptr, %ups: !llvm.ptr, %flags: !llvm.ptr, %width: i64, %rank: i64, %seed: i64, %height: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_tuned_run(%bytes: !llvm.ptr, %stride: i64, %scaleOffset: i64, %downs: !llvm.ptr, %ups: !llvm.ptr, %upBits: i64, %rankScales: !llvm.ptr, %width: i64, %rank: i64, %seed: i64, %height: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = arith.constant 0 : i32
     %c5 = arith.constant 5 : i32
     %c31 = arith.constant 31 : i32
@@ -2559,9 +2560,11 @@
     %rowStart = arith.muli %row, %rank : i64
     %upAt = arith.addi %rowStart, %part : i64
     %safeAt = arith.select %isRow, %upAt, %none : i64
-    %upSlot = llvm.getelementptr %ups[%safeAt] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    %up = llvm.load %upSlot : !llvm.ptr -> f32
-    %kept = arith.select %isRow, %up, %zero : f32
+    %up = func.call @strict_device_tuned_up(%ups, %upBits, %safeAt) : (!llvm.ptr, i64, i64) -> f32
+    %partScaleSlot = llvm.getelementptr %rankScales[%part] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %partScale = llvm.load %partScaleSlot : !llvm.ptr -> f32
+    %scaledUp = arith.mulf %up, %partScale : f32
+    %kept = arith.select %isRow, %scaledUp, %zero : f32
     %partStart = arith.muli %part, %sixteen : i64
     %sharedAt = arith.addi %partStart, %index : i64
     %sharedSlot = llvm.getelementptr %transposed[%sharedAt] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
@@ -2569,6 +2572,7 @@
     %atNext = arith.addi %at, %threads : i64
     cf.br ^load(%atNext : i64)
   ^rowLoad:
+    func.call @strict_device_barrier() : () -> ()
     %isRowThread = arith.cmpi slt, %thread64, %sixteen : i64
     cf.cond_br %isRowThread, ^rowValues, ^loaded
   ^rowValues:
@@ -2577,8 +2581,7 @@
     %safeRow = arith.select %ownInside, %ownRow, %first : i64
     %ownStart = arith.muli %safeRow, %stride : i64
     %scale = func.call @strict_device_tuned_scale(%bytes, %ownStart, %scaleOffset) : (!llvm.ptr, i64, i64) -> f32
-    %flagSlot = llvm.getelementptr %flags[%safeRow] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    %flag = llvm.load %flagSlot : !llvm.ptr -> f32
+    %flag = func.call @strict_device_tuned_flag(%thread64, %rank) : (i64, i64) -> f32
     %ownScale = arith.select %ownInside, %scale, %zero : f32
     %ownFlag = arith.select %ownInside, %flag, %zero : f32
     %scaleSlot = llvm.getelementptr %shared[%thread64] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
@@ -2697,6 +2700,48 @@
     %inserted = llvm.insertelement %number, %undefined[%c0 : i32] : vector<16xi64>
     %splat = llvm.shufflevector %inserted, %undefined [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] : vector<16xi64>
     return %splat : vector<16xi64>
+  }
+  // a number of the ups at at, a bfloat16 for bits 17, else a 32 bit float
+  func.func private @strict_device_tuned_up(%ups: !llvm.ptr, %bits: i64, %at: i64) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %brainBits = arith.constant 17 : i64
+    %sixteen = arith.constant 16 : i32
+    %isBrain = arith.cmpi eq, %bits, %brainBits : i64
+    cf.cond_br %isBrain, ^brain, ^single
+  ^brain:
+    %brainSlot = llvm.getelementptr %ups[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i16
+    %brain = llvm.load %brainSlot : !llvm.ptr -> i16
+    %widened = arith.extui %brain : i16 to i32
+    %shifted = arith.shli %widened, %sixteen : i32
+    %fromBrain = arith.bitcast %shifted : i32 to f32
+    return %fromBrain : f32
+  ^single:
+    %singleSlot = llvm.getelementptr %ups[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %single = llvm.load %singleSlot : !llvm.ptr -> f32
+    return %single : f32
+  }
+  // 1 when one of the scaled ups of row index (in shared memory) is not 0
+  func.func private @strict_device_tuned_flag(%index: i64, %rank: i64) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %sixteen = arith.constant 16 : i64
+    %zero = arith.constant 0.0 : f32
+    %unit = arith.constant 1.0 : f32
+    %transposed = llvm.mlir.addressof @strict_device_tuned_ups : !llvm.ptr<3>
+    cf.br ^part(%none, %zero : i64, f32)
+  ^part(%part: i64, %flag: f32):
+    %more = arith.cmpi slt, %part, %rank : i64
+    cf.cond_br %more, ^body, ^done
+  ^body:
+    %partStart = arith.muli %part, %sixteen : i64
+    %at = arith.addi %partStart, %index : i64
+    %slot = llvm.getelementptr %transposed[%at] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
+    %scaled = llvm.load %slot : !llvm.ptr<3> -> f32
+    %isSet = arith.cmpf une, %scaled, %zero : f32
+    %flagNext = arith.select %isSet, %unit, %flag : f32
+    %partNext = arith.addi %part, %one : i64
+    cf.br ^part(%partNext, %flagNext : i64, f32)
+  ^done:
+    return %flag : f32
   }
   // the updates of the 16 rows at column: the sums of their ups (in shared memory) times the column of downs
   func.func private @strict_device_tuned_sums(%downs: !llvm.ptr, %column: i64, %width: i64, %rank: i64) -> vector<16xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
