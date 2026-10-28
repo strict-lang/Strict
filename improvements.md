@@ -4,10 +4,11 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 ## Bugs
 - Building Compiler as one native test executable retains excessive memory during frontend linking; CI tests its files separately.
 - Ternary Bonsai 27B at a simulated 10 GB stalled once more (first run after a cold build), 12 later runs did not: [improvements-models.md](improvements-models.md).
+- A folder test whose package native library is out of date builds it in every test child at once (`NativeSources.Library`, one clang call of all sources), the children race on the rename and leave `<library>.<random>.dll` behind: build it once under a lock like `PtxCache.Waited`.
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).
-- Game engine (iOS, Android, one game loop, multiplayer, Spine, platform services): [improvements-engine.md](improvements-engine.md).
+- Game engine (iOS, Android, one game loop, Spine, platform services): [improvements-engine.md](improvements-engine.md).
 - Nightly CI: build and run every program's Run once a day (games and long running apps for a few frames); work too slow for a Slow test (rebuilding all content, big models) belongs in a Run, not in tests.
 
 ## Waiting
