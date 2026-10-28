@@ -68,7 +68,7 @@ Ended Texts
 	let loaded = values.Line("k", "llvm.load " + counter + " : !llvm.ptr -> i64")
 	let added = statements.Operation("w", "arith.addi", "k", "o")
 	let stored = "    llvm.store " + statements.Temp("w") + ", " + counter + " : i64, !llvm.ptr"
-	let jumped = ("    cf.br ^loop" + begin, "  ^loop" + begin + "exit:")
+	let jumped = MlirLoops(statements.function, statements.position).Back(begin) + ("  ^loop" + begin + "exit:")
 	(loaded, values.Line("o", "arith.constant 1 : i64"), added, stored) + jumped + Restored(begin)
 Restored(begin Number) Texts
 	End.Restored(6).Length is 2
