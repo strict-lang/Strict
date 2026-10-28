@@ -38,7 +38,8 @@ Completed(entries List(TypeEntry), targets Texts) Slow(List(TypeEntry))
 	Sample.Completed(Go, List(Text)).Length is 1
 	Sample.Completed((Go, Counted), List(Text))(1) is Counted
 	let automatic = Automatic(main.lines, TypeEntry.ShortName(main.fullName), Instantiation(main.inference.types))
-	let completed = automatic.Completed(main, entries.First, targets)
+	let options = OptionsCodegen(automatic, Path(SourcePath(main.fullName)).PathOnly.text)
+	let completed = options.Completed(main, automatic.Completed(main, entries.First, targets), targets)
 	let first = Specialization(main.Generator).Completed(main, completed, targets)
 	(List(TypeEntry) + first) + entries.Slice(1, entries.Length - 1)
 Linkable(types Texts, signatures Texts) Texts
@@ -66,8 +67,10 @@ Signatures(types Texts, targets Texts) Texts
 LinkedType(type Text, methods Texts) Slow(TypeEntry)
 	Sample.LinkedType("Strict/Logger", List(Text)).Name is "Strict/Logger"
 	Sample.LinkedType("Strict/Bytecode/Crc", List(Text)).Name is "Crc"
-	let source = Fusion(File(SourcePath(type)).ReadLines, Path(SourcePath(type)).PathOnly.text).Fused
-	let automatic = Automatic(source, TypeEntry.ShortName(type), Instantiation(main.inference.types)).Lines(methods)
+	let folder = Path(SourcePath(type)).PathOnly.text
+	let source = Fusion(File(SourcePath(type)).ReadLines, folder).Fused
+	let generator = Automatic(source, TypeEntry.ShortName(type), Instantiation(main.inference.types))
+	let automatic = generator.Lines(methods) + OptionsCodegen(generator, folder).Lines(methods)
 	let averaged = MemberAverage(type, main.inference.types).Replaced(automatic)
 	let entry = TypeCodegen(type, averaged, main.inference, main.typeNames).Selected(methods)
 	let isLocal = Path(type).PathOnly.text is Path(main.fullName).PathOnly.text

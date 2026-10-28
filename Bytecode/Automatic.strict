@@ -123,9 +123,9 @@ Completed(main TypeCodegen, entry TypeEntry, targets Texts) TypeEntry
 	Greeter.Completed(TypeCodegen.Hello, TypeEntry.HelloLogger, List(Text)) is TypeEntry.HelloLogger
 	Greeter.Completed(TypeCodegen.Hello, TypeEntry.HelloLogger, Wanted).methods.Last.Name is "Members"
 	let missing = Missing(entry, targets, main.fullName)
-	if missing.Length is 0
-		return entry
-	let all = Lines(missing)
+	missing.Length is 0 then entry else Appended(main, entry, Lines(missing))
+Appended(main TypeCodegen, entry TypeEntry, all Texts) TypeEntry
+	Greeter.Appended(TypeCodegen.Hello, TypeEntry.HelloLogger, Greeter.lines) is TypeEntry.HelloLogger
 	let codegen = TypeCodegen(main.fullName, all, main.inference, main.typeNames)
 	mutable methods = entry.methods
 	for Range(lines.Length, all.Length)

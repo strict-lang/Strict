@@ -102,7 +102,7 @@ ResolvedType(instanceType Text, name Text, depth Number) Text
 	if (type.IndexOf("(") > 0) and (BaseName(type) is BaseName(instanceType))
 		return Instantiation(value).Substituted(instanceType, type)
 	let isInherited = (MembersOf(instanceType).TypeOf(name) is "") and (MethodsOf(instanceType).TypeOf(name) is "")
-	let isOwn = type is in ("List", BaseName(instanceType))
+	let isOwn = (type is in ("List", BaseName(instanceType))) or (isInherited and (MethodsOf("Any").TypeOf(name) is "Any"))
 	isOwn or isInherited and (type is ValueOf(instanceType)) then instanceType else type
 ValueOf(typeName Text) Text
 	Sample.ValueOf("Text") is ""

@@ -4,5 +4,7 @@ to Text
 Code Text
 to HashCode
 Members Variables
+Parsed(arguments Texts) Any
+Usage Text
 is(other) Boolean
 IsNearlyEqual(other) Boolean
