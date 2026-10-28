@@ -4,7 +4,6 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 ## Bugs
 - Ternary Bonsai 27B at a simulated 10 GB stalled once more (first run after a cold build), 12 later runs did not: [improvements-models.md](improvements-models.md).
 - VM unit tests over 100 ms also alone: `FlashLayer.Cached` (line 51), `Gpt2Pass.Attending` (line 65) and `Examples/Countdown.Counted` (30000 recursive calls).
-- The VM got slower on `RoundTrip.Body`'s Packed test (78 ms on 2026-10-27 evening, 102 ms on 10-28, now Slow); not the constant getters (inlining them again: 120-128 ms).
 - Native test builds of `Compiler/DeviceBuild` and `Compiler/MlirDevice` failed once with "could not write ...test.ptx" while 8 builds ran in parallel (not reproduced alone or as a pair; PtxCache.Saved).
 
 ## Next
