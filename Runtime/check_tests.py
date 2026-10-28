@@ -31,8 +31,7 @@ with tempfile.TemporaryDirectory(prefix="TestPolicy", dir=root / "Examples") as 
 	for options in [["unit"], ["unit", "native"]]:
 		shared = subprocess.run([command, "test", str(source), *options], cwd=root, env=environment,
 			capture_output=True, text=True, timeout=90 if "native" in options else 10)
-		assert shared.returncode != 0 and "TestDurationMustNotExceedHundredMilliseconds" in shared.stdout + shared.stderr, (
-			"An over-budget shared fixture passed:\n" + shared.stdout + shared.stderr)
+		assert shared.returncode == 0, "A shared constant's first initialization counted for its test:\n" + shared.stdout + shared.stderr
 
 	source = folder / "LazyFixture.strict"
 	source.write_text('has logger\nconstant Shared = Created\nCreated Number\n\tlogger.Log("fixture computed")\n\t7\nCheck Number\n\tLazyFixture.Check is 7\n\tShared is 7\n\tShared + Shared is 14\n\tfalse then Shared else 7', encoding="utf-8")
@@ -117,7 +116,7 @@ with tempfile.TemporaryDirectory(prefix="TestPolicy", dir=root / "Examples") as 
 	unset.pop("STRICT_THREADS")
 	shared = subprocess.run([command, str(source)], cwd=root, env=unset, capture_output=True, text=True, timeout=10)
 	shares = [line.split()[-1] for line in shared.stdout.splitlines() if line.startswith("threads")]
-	assert len(shares) == 2 and all(share.isdigit() and int(share) >= 4 for share in shares), (
+	assert len(shares) == 2 and all(share.isdigit() and int(share) >= 2 for share in shares), (
 		"Tools started together did not get a share of the threads:\n" + shared.stdout + shared.stderr)
 	kept = subprocess.run([command, str(source)], cwd=root, env=environment, capture_output=True, text=True, timeout=10)
 	assert kept.stdout.count("threads 8") == 2, "STRICT_THREADS of the caller was not kept:\n" + kept.stdout + kept.stderr

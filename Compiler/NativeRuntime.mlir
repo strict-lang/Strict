@@ -10183,13 +10183,13 @@
     return %result : f64
   }
   // tools started together share the pool: unless STRICT_THREADS is set every child that reads it (the strict test of
-  // each file of a folder) gets the threads divided by how many run at once, at least 4, not a pool as big as this one;
+  // each file of a folder) gets the threads divided by how many run at once, at least 2, not a pool as big as this one;
   // each batch has its own share, the thread starting one of its tools holds it while it does
   llvm.mlir.global internal thread_local @strict_tool_threads(0 : i64) : i64
   func.func private @strict_tool_share(%tools: i64) -> i64 {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
-    %least = arith.constant 4 : i64
+    %least = arith.constant 2 : i64
     %name = llvm.mlir.addressof @strict_threads_name : !llvm.ptr
     %setting = llvm.call @getenv(%name) : (!llvm.ptr) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
