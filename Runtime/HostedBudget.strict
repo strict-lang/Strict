@@ -3,4 +3,8 @@ Result VmValue
 	let arguments = call.Arguments
 	if call.MethodName is "Started"
 		return VmValue.OfNumber(TestBudget.Started(arguments(0).text, arguments(1).IsTrue))
+	if call.MethodName is "Entered"
+		return VmValue.OfNumber(TestBudget.Entered)
+	if call.MethodName is "Left"
+		return VmValue.OfNumber(TestBudget.Left(arguments(0).number))
 	VmValue.OfNumber(TestBudget.Finished(arguments(0).number))

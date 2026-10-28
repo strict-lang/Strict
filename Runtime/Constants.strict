@@ -26,7 +26,12 @@ Value(route Number, slot Number) VmValue
 	Saved(route, slot, VmValue(found, kind = "$Computing"))
 	let method = machine.types(route).methods(found.items.First.number)
 	let call = Invocation(InstructionEntry.Return(0), List(VmValue), prototype)
-	Saved(route, slot, machine.Executed(route, method, call))
+	Saved(route, slot, Computed(route, method, call))
+Computed(route Number, method MethodEntry, call Invocation) VmValue
+	let entered = TestBudget.Entered
+	let computed = machine.Executed(route, method, call)
+	TestBudget.Left(entered)
+	computed
 Saved(route Number, slot Number, result VmValue) VmValue
 	let prototype = machine.prototypes.At(route)
 	let items = Storage(machine.types).Replaced(prototype.items, slot, result)

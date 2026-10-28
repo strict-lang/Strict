@@ -198,9 +198,15 @@
     %limitSlot = llvm.mlir.addressof @strict_test_limit : !llvm.ptr
     %limitBits = llvm.load %limitSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
     %budget = arith.bitcast %limitBits : i64 to f64
-    %previousStart = arith.subf %previousUntil, %budget : f64
+    %previousShifted = arith.subf %previousUntil, %budget : f64
+    %reusedShiftSlot = llvm.mlir.addressof @strict_test_shift : !llvm.ptr
+    %reusedShift = llvm.load %reusedShiftSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> f64
+    %previousStart = arith.subf %previousShifted, %reusedShift : f64
     return %previousStart : f64
   ^fresh:
+    %noShift = arith.constant 0.0 : f64
+    %shiftSlot = llvm.mlir.addressof @strict_test_shift : !llvm.ptr
+    llvm.store %noShift, %shiftSlot atomic release {alignment = 8 : i64} : f64, !llvm.ptr
     %freshLimitSlot = llvm.mlir.addressof @strict_test_limit : !llvm.ptr
     %freshLimit = arith.bitcast %limit : f64 to i64
     llvm.store %freshLimit, %freshLimitSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
@@ -259,10 +265,75 @@
     func.call @strict_test_failed(%place, %unavailable) : (i64, i1) -> ()
     cf.br ^done
   ^done:
-    %seconds = arith.subf %now, %started : f64
+    %shiftSlot = llvm.mlir.addressof @strict_test_shift : !llvm.ptr
+    %shift = llvm.load %shiftSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> f64
+    %passed = arith.subf %now, %started : f64
+    %seconds = arith.subf %passed, %shift : f64
     %thousand = arith.constant 1000.0 : f64
     %elapsed = arith.mulf %seconds, %thousand : f64
     return %elapsed : f64
+  }
+  // a shared constant initializes on first use, once per run: its time does not count for the test that first used
+  // it (the outermost of nested constants measures, the deadline is held off while it computes and then moves later)
+  llvm.mlir.global internal thread_local @strict_test_constants(0 : i64) : i64
+  llvm.mlir.global internal @strict_test_shift(0.0 : f64) : f64
+  func.func private @strict_testbudget_entered(%self: f64) -> f64 {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %depthSlot = llvm.mlir.addressof @strict_test_constants : !llvm.ptr
+    %depth = llvm.load %depthSlot : !llvm.ptr -> i64
+    %deeper = arith.addi %depth, %one : i64
+    llvm.store %deeper, %depthSlot : i64, !llvm.ptr
+    %outermost = arith.cmpi eq, %depth, %zero : i64
+    cf.cond_br %outermost, ^measure, ^nested
+  ^nested:
+    %none = arith.constant -1.0 : f64
+    return %none : f64
+  ^measure:
+    %held = arith.constant 1000000.0 : f64
+    func.call @strict_test_extended(%held) : (f64) -> ()
+    %now = func.call @strict_clock() : () -> f64
+    return %now : f64
+  }
+  func.func private @strict_testbudget_left(%self: f64, %entered: f64) -> f64 {
+    %one = arith.constant 1 : i64
+    %zero = arith.constant 0.0 : f64
+    %depthSlot = llvm.mlir.addressof @strict_test_constants : !llvm.ptr
+    %depth = llvm.load %depthSlot : !llvm.ptr -> i64
+    %shallower = arith.subi %depth, %one : i64
+    llvm.store %shallower, %depthSlot : i64, !llvm.ptr
+    %measured = arith.cmpf oge, %entered, %zero : f64
+    cf.cond_br %measured, ^shift, ^nested
+  ^nested:
+    return %zero : f64
+  ^shift:
+    %now = func.call @strict_clock() : () -> f64
+    %seconds = arith.subf %now, %entered : f64
+    %held = arith.constant 1000000.0 : f64
+    %moved = arith.subf %seconds, %held : f64
+    func.call @strict_test_extended(%moved) : (f64) -> ()
+    %shiftSlot = llvm.mlir.addressof @strict_test_shift : !llvm.ptr
+    %old = llvm.atomicrmw fadd %shiftSlot, %seconds acq_rel : !llvm.ptr, f64
+    return %seconds : f64
+  }
+  // moves the deadline of the running timed test by seconds, nothing when no test is timed
+  func.func private @strict_test_extended(%seconds: f64) {
+    %zero = arith.constant 0 : i64
+    %deadlineSlot = llvm.mlir.addressof @strict_test_deadline : !llvm.ptr
+    cf.br ^read
+  ^read:
+    %bits = llvm.load %deadlineSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %armed = arith.cmpi ne, %bits, %zero : i64
+    cf.cond_br %armed, ^move, ^done
+  ^move:
+    %until = arith.bitcast %bits : i64 to f64
+    %later = arith.addf %until, %seconds : f64
+    %laterBits = arith.bitcast %later : f64 to i64
+    %swapped = llvm.cmpxchg %deadlineSlot, %bits, %laterBits acq_rel acquire : !llvm.ptr, i64
+    %moved = llvm.extractvalue %swapped[1] : !llvm.struct<(i64, i1)>
+    cf.cond_br %moved, ^done, ^read
+  ^done:
+    return
   }
   func.func private @strict_test_watch() {
     %zero = arith.constant 0 : i64
