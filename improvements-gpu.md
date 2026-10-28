@@ -14,7 +14,7 @@ ComfyUI's comfy_kitchen `int8_attention` (`qk_int_sv_i8_attn_kernel`: Q and K ro
 A GPU loop of a method returning `BFloat16s` stores bfloat16, never by size alone (bfloat16 everywhere made long Qwen3.8 prompts decode NaN). Left:
 - bf16 QK attention beyond the 128 wide QKV path
 - attention, product and hadamard results are 32 bit
-- joining lists of different formats goes through the host
+- joining lists of different formats on the GPU goes through the host (64 bit doubles of a loop reading no list and 32 bit floats, a host list after 64 bit doubles there): convert on the device
 - LLVM 23 PTX of strict_device_whole(s) is ~3 % slower than LLVM 22's
 
 ## Memory budget
@@ -28,6 +28,7 @@ H3 DiT steps (21.7 GB of weights, 37 of 50 blocks resident, the rest streamed) t
 - GPU-only lists can't be spilled, so H3 activations kept across the 50 streamed blocks (Spectrum feature anchors) take every byte from the weights: spillable activations or an explicit move to the host
 - H3's ~98 full collections per step come from strict_gpu_obtain before each 128 and 512 MB activation block (18-28 ms each in strict_gc_mark_range, 40 % of the main thread); collecting less was slower (blocks from the driver evict streamed weights), so make the mark cheaper (skip lists without references)
 - a reference in a local (`let moss = Loaded(model)`) still stays in a callee-saved register or spill slot of a live frame after its last use, the conservative stack scan keeps it alive; call results passed straight on to another call are handed over through a cleared volatile slot (`MlirHanded`)
+- NVFP4 matrices (H3's Qwen3-VL 32B text encoder, `TensorFile_Fours`) load as 8 bit rows: 27 GB instead of 15.7 GB, so they don't fit the 4090 whole and stream; 4 bit e2m1 rows with their 8 bit float block scales on the GPU would fit
 
 ## Loading
 The 21 GB H3 DiT loads in 10-12 s (ComfyUI 4-7 s), mostly page faults of the copy into fresh memory, and its first step uploads all of it (10.1-10.6 instead of 3.7 s), now 4.3 s on a 3080 since file matrices of 64 MB (since then 4 MB) and more are locked in place as their own spill. Next: 8 bit rows gathered straight from the mapped file.
@@ -39,7 +40,7 @@ The first run after a runtime change waits 28.5 s for the driver to compile the 
 ## Generated loops
 Instruction bound on the RTX 3080 (120-330 instructions per number). Left:
 - a loop reading a member of an object parameter (`layout.width` in StrictComfy `H3Final.Unpatched`), a type constant or `.Length` of a list parameter (`H3Vae.Finished`) stays on the CPU: pass loop invariant members as numbers
-- list `+` with a GPU-resident left list downloads it and uploads the joined list (StrictComfy `H3Decoder.Embedded` and `Rotations`, about 8 s of the H3 VAE decode): join on the device
+- `.Round` keeps a loop on the CPU (StrictComfy `H3Frames.Bytes` over 148M frame numbers, `(value * 255 + 0.5).Floor` runs on the GPU): a device Round
 - bounds, reduction and tail checks remain: extend the four wide loads (`MlirBatched`) and fuse memory passes
 - an index with a denominator other than 1 (`size / 2` inlined in MossBlock.Rotated) divides in 64 bits at every read (82 instead of 66 us): shift power of two denominators
 
