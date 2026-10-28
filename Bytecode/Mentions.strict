@@ -8,18 +8,20 @@ Types Texts
 	let own = shape.MemberScope.names + shape.MethodScope.names
 	mutable tokens = List(Mutable(Text))
 	for lines
-		let tokenized = Tokenizer(value.Trim).Tokens
-		tokens = tokens + shape.Capitalized(tokenized) + Outer(tokenized)
+		tokens = tokens + shape.Capitalized(Tokenizer(value.Trim).Tokens)
 	let typed = Typed(shape)
 	for (tokens + typed).Unique
 		if (value is in typed) or (value is not in own)
 			value
 Typed(shape Expressions/TypeShape) Texts
 	Units.Typed(TypeShape(Units.lines)) is ("Units", "Logger", "Shape", "Number")
+	Mentions(("Size Size", "\touter.Size(1, 2)")).Types is ("Size")
 	mutable types = shape.MemberScope.types
 	for lines
 		if shape.IsMethodHeader(value)
 			types = types + HeaderTokens(Tokenizer(value).Tokens).ParameterTypes
+		if value.IndexOf("outer.") >= 0
+			types = types + Outer(Tokenizer(value.Trim).Tokens)
 	mutable typed = List(Mutable(Text))
 	for types
 		typed = typed + shape.Capitalized(Tokenizer(value).Tokens)
