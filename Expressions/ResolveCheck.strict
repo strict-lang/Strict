@@ -18,7 +18,8 @@ Unresolved(path Text, inference TypeInference) Texts
 	let check = FileCheck(inference, known)
 	let issues = check.Unimplemented(path, lines) + DefaultCheck(inference).Unsupported(path, lines)
 	let ambiguous = TypeChoice(lines).Ambiguous(inference.types.names, path)
-	issues + Constraint.Where(path, lines) + ambiguous + Found(check, bodies, lines, path)
+	let overloaded = Overloads(inference.types).Ambiguities(path, lines)
+	issues + Constraint.Where(path, lines) + ambiguous + overloaded + Found(check, bodies, lines, path)
 Found(check FileCheck, bodies MethodBodies, lines Texts, path Text) Texts
 	ResolveCheck.Found(FileCheck(Counting, List(Text)), Joining, Joined, "A.strict").First.EndsWith("A.strict:2")
 	for bodies.Statements

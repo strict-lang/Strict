@@ -11,6 +11,7 @@ constant Picking = Overloads(Picker)
 constant Mixing = SyntaxParser(Tokenizer("p.Mixed((1, 2))").Tokens).Parse
 constant Choosing = SyntaxParser(Tokenizer("p.Chosen((\"a\", \"b\"))").Tokens).Parse
 constant LabelsMember = SyntaxNode("Member", "Labels", LabelsCall)
+constant Valued = ("Value(name Text, default Number) Text", "\tname", "Value(name Text, default Text) Text", "\tname")
 Chosen(owner Text, method Text, argumentTypes Texts) Number
 	Scaling.Chosen("Scaler", "Scaled", List(Text) + "Text") is 0
 	Scaling.Chosen("Scaler", "Scaled", List(Text) + "Number") is 1
@@ -94,3 +95,17 @@ Specialized(type Text, declared Texts, arguments Texts) Text
 		return type
 	let element = declared(at) is "Generics" then types.ElementType(arguments(at)) else arguments(at)
 	type is "Generics" then Instantiation(types).Plural(element) else element
+Ambiguities(path Text, lines Texts) Texts
+	Scaling.Ambiguities("A", Valued) is ("OverloadsNeedDifferentParameterNames: Value(name, default) in A:3 like line 1")
+	Scaling.Ambiguities("A", ("to Text", "\t\"a\"", "to Number", "\t1")).Length is 0
+	let signatures = Signatures(lines)
+	for signatures
+		if (value is not "") and (signatures.Index(value) < index)
+			let first = signatures.Index(value) + 1
+			"OverloadsNeedDifferentParameterNames: " + value + " in " + path + ":" + (index + 1) + " like line " + first
+Signatures(lines Texts) Texts
+	Scaling.Signatures(Valued) is ("Value(name, default)", "", "Value(name, default)", "")
+	let shape = TypeShape(lines)
+	for lines
+		let name = shape.IsMethodHeader(value) then Tokenizer(value).Tokens.First else "to"
+		name is "to" then "" else name + "(" + Text.Combine(HeaderTokens(Tokenizer(value).Tokens).ParameterNames, ", ") + ")"
