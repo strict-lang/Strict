@@ -3,6 +3,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 
 ## Bugs
 - Ternary Bonsai 27B at a simulated 10 GB stalled once more (first run after a cold build), 12 later runs did not: [improvements-models.md](improvements-models.md).
+- A native program looping `for 42` over Moss layers with an inner `for` over 6 linear names (H3Lora.Stacked, Convrot.Rotated, TensorFile.Tuned, timings summed into mutables) fails with TensorNotFound at layer 0 (the Entry of the linear empty, one variant also found no LoRA, so a LoRA can be dropped silently); `for 1` or one more logger.Log in the inner loop pass: C:/Users/Benja/AppData/Local/Temp/claude/C--code-GitHub-strict-lang-StrictComfy/c8cc3516-b276-4c26-8866-f9137e998608/scratchpad/NestedValueBug.strict (run in ../StrictComfy with the Moss model and dmd_turbo_lora), small repros pass.
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).
