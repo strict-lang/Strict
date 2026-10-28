@@ -137,7 +137,6 @@ ipch/
 /.dotnet-home
 *.strictbinary
 *.nativecache
-*.built
 Compiler/NativeCompiler.checked
 *.exe
 *.wasm

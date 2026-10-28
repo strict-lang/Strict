@@ -33,8 +33,8 @@ Waited(target Text, inputs Texts, options Text) Slow(Text)
 	for as long as Process.Elapsed - started < Strict.MaxWait
 		if sources.IsCompiled(target, inputs, options)
 			return "Built " + target
-		if sources.IsCurrent(target + ".built", inputs)
-			return Located(target, Text.Combine(File(target + ".built").ReadLines, "\n"))
+		if sources.IsCurrent(target + ".built.nativecache", inputs)
+			return Located(target, Text.Combine(File(target + ".built.nativecache").ReadLines, "\n"))
 		if lock.Locked
 			return ""
 		Process.Wait(0.1)
@@ -43,7 +43,7 @@ Finished(result ProcessResult, output Text, target Text, options Text) Text
 	Adding.Finished(ProcessResult(1, "", "no"), "Compiler/output/Cut.1.o", "Compiler/output/Cut.o", "") is Failing
 	let failure = "clang failed for " + target + ": " + result.error
 	let built = result.Failed then failure else "Built " + sources.Placed(output, target)
-	File(target + ".built").Write(built)
+	File(target + ".built.nativecache").Write(built)
 	if built is "Built " + target
 		File(target + ".nativecache").Write(options)
 	built
