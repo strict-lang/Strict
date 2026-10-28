@@ -1,6 +1,7 @@
 has logger
 has base Text
 constant Opening = "= func.call @" + "Window_Open("
+constant Sidecars = (".ptx", ".older.ptx", ".runtime.ptx", ".runtime.older.ptx", ".hsaco", ".metal")
 AndroidPackaged Number
 	let release = Parent + "/Release/Android"
 	if Content(Parent + "/Release/Content") < 0
@@ -96,8 +97,6 @@ Sidecar(release Text) Number
 			File(release + "/" + Named(sidecar)).Write(File(sidecar).ReadBytes)
 			copied = copied + 1
 	copied
-Sidecars Texts
-	(".ptx", ".older.ptx", ".runtime.ptx", ".runtime.older.ptx", ".hsaco", ".metal")
 Mirrored(target Text) Number
 	if target is not ""
 		let shared = Parent + "/Release/Content"
@@ -119,7 +118,7 @@ Content(target Text) Number
 Copied(source Text, target Text) Number
 	if Directory.Exists(source) is false
 		return 0
-	Directory.Create(target)
+	Created(target)
 	mutable copied = 0
 	for Directory.Files(source)
 		let copy = target + "/" + Named(value)
@@ -129,6 +128,12 @@ Copied(source Text, target Text) Number
 	for Directory.Directories(source)
 		copied = copied + Copied(value, target + "/" + Named(value))
 	copied
+Created(path Text) Boolean
+	Release(Logger, "Missing/App").Created("artifacts/Release/Content") or Directory.Exists("artifacts/Release/Content")
+	let parent = Path(path).PathOnly.text
+	if (parent is not "") and (Directory.Exists(parent) is false)
+		Created(parent)
+	Directory.Create(path)
 Removed(source Text, target Text) Number
 	Release(Logger, "Missing/App").Removed("Missing/Content", "Missing/Release/Content") is 0
 	if Directory.Exists(source) is false

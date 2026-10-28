@@ -12,7 +12,7 @@ Downloaded(type Text) Text
 	for Clones
 		let local = SourceFiles(value).SubfolderWith(value, type)
 		if (local is not "") and (IsHere(value) is false)
-			return Copied(local, type)
+			return Directory.Exists(target + "/" + Path(local).FileName.text) then "" else Copied(local, type)
 	if Directory.Exists(Development + "/strict-lang")
 		return ""
 	for Candidates

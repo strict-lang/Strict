@@ -22,8 +22,11 @@ Compared(left SyntaxNode, right SyntaxNode, block CodeBlock, exact Boolean) Code
 	let generated = values.Expression(right, block).Stored("testExpected").At(block.register)
 	let declared = generated.Declare("testExpected", values.TypeOf(right, block))
 	let kinds = (values.TypeOf(left, block), values.TypeOf(right, block))
-	let lines = Closeness(values.inference.types).Lines(left to Text, "testExpected", kinds, "0", exact, List(Text))
-	mutable indented = List(Text) + "Run"
-	for lines + "testEqual0"
-		indented = indented + ("\t" + value)
-	MethodCodegen(values).Body(BodyParser(indented).Block(1, 1), declared)
+	let lines = Closeness(values.inference.types).Lines(left to Text, "testExpected", kinds, "1", exact, List(Text))
+	MethodCodegen(values).Body(BodyParser(Shortcut(left to Text, lines)).Block(1, 1), declared)
+Shortcut(left Text, lines Texts) Texts
+	TestComparison(ValueCodegen.Plain).Shortcut("x", List(Text) + "let testEqual1 = x")(2) is "\tif testEqual0 is false"
+	mutable indented = ("Run", "\tmutable testEqual0 = " + left + " is testExpected", "\tif testEqual0 is false")
+	for lines + "testEqual0 = testEqual1"
+		indented = indented + ("\t\t" + value)
+	indented + "\ttestEqual0"

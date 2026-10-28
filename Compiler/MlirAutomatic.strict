@@ -95,9 +95,12 @@ ElementConversion(kind Text) Text
 	Sample.ElementConversion("List(Logger)") is "skip"
 	Sample.ElementConversion("List(Shape)") is "strict_automatic_list_Shape"
 	Sample.ElementConversion("List(List(Text))") is "strict_list_text_lists_text"
+	MlirAutomatic(MlirPairs.Sample.function).ElementConversion("List(Pairing)") is "strict_list_text_two"
 	let inner = Conversion(MlirLayout(function).Represented(MlirKinds(function).ElementKind(kind)))
 	if inner is in ("strict_list_text_text", "strict_list_text_number")
 		return inner.Replace("strict_list_text_", "strict_list_text_lists_")
+	if inner is "strict_two_text"
+		return "strict_list_text_two"
 	inner.StartsWith("strict_automatic_") then inner.Replace("strict_automatic_", "strict_automatic_list_") else "skip"
 Conversion(kind Text) Text
 	Sample.Conversion("Text") is ""

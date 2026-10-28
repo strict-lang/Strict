@@ -92,7 +92,7 @@ Outputs Texts
 	let base = NativeBuild.Output(rest(0), (command is "build") and NativeBuild.IsProgram(rest(0)))
 	let release = Release(Logger, base)
 	mutable files = List(Text) + Output
-	for Release(Logger, base).Sidecars
+	for Release.Sidecars
 		if File(base + value).Exists
 			files = files + (base + value)
 	for (release.Parent + "/Release", release.Parent + "/Release/" + Platform.NameOf(Platform.Current))
