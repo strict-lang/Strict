@@ -20,8 +20,6 @@ Sums(input Numbers) Slow(Numbers)
 	Fours.Sums(Prompt)(637).IsNearlyEqual(5.001, 0.5)
 	Sixes.Sums(Prompt)(500).IsNearlyEqual(-3.413, 0.2)
 	Threes.Sums(Tokens)(255).IsNearlyEqual(-1.549, 0.2)
-	Batch(Blocks.Rows("four") + Blocks.Rows("eight"), Layer.Unbiased).Sums(Long)(2259).IsNearlyEqual(Eights.Sums(Long)(1123), 0.1)
-	Batch(Blocks.Rows("eight") + Blocks.Rows("four"), Layer.Unbiased).Sums(Long)(2259).IsNearlyEqual(Fours.Sums(Long)(1123), 0.5)
 	let width = weights.First.Length
 	if input.Length is width
 		return Layer(weights, biases).Sums(input)
@@ -35,6 +33,8 @@ Grouped(bases Numbers, count Number, input Numbers) Slow(Numbers)
 	Fours.Grouped((0, 8), 8, Long)(83).IsNearlyEqual(Fours.Sums(Long)(163), 0.5)
 	Fours.Grouped((0, 8), 8, Long)(523).IsNearlyEqual(Fours.Sums(Long)(1051), 0.5)
 	Threes.Grouped((0, 0), 16, Long)(1277).IsNearlyEqual(3.704, 0.2)
+	Batch(Fours.weights + Eights.weights, Layer.Unbiased).Sums(Long)(2259).IsNearlyEqual(Eights.Sums(Long)(1123), 0.1)
+	Batch(Eights.weights + Fours.weights, Layer.Unbiased).Sums(Long)(2259).IsNearlyEqual(Fours.Sums(Long)(1123), 0.5)
 	let width = weights.First.Length
 	for count * input.Length / width
 		Dot(weights(bases((index / count / Tile).Floor) + index % count), 0, input, (index / count).Floor * width)
