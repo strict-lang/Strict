@@ -5,4 +5,4 @@ Run
 	logger.Log(ExpressionParser("let x = 1").ParseLine)
 	logger.Log(ExpressionParser("return 1").ParseLine)
 	logger.Log(ExpressionParser("true").ParseLine)
-	logger.Log(ShuntingYard("a + b * c").Postfix.Length)
+	logger.Log(ShuntingYard("a + b * c").Postfix.Length to Text)

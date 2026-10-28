@@ -121,17 +121,17 @@ BinaryType(node SyntaxNode, scope Scope, current Scope) Text
 	node.Precedence < 11 then "Boolean" else ArithmeticType(node, scope, current)
 ArithmeticType(node SyntaxNode, scope Scope, current Scope) Text
 	NoInference.ArithmeticType(SyntaxParser(Tokenizer("2 * 3").Tokens).Parse, NoShape, NoShape) is "Number"
+	NoInference.ArithmeticType(SyntaxParser(Tokenizer("2 + \"a\"").Tokens).Parse, NoShape, NoShape) is "Text"
 	let left = TypeOf(node.children(0), scope, current)
 	mutable arguments = List(Mutable(Text))
 	for Range(1, node.children.Length)
 		arguments.Add(TypeOf(node.children(value), scope, current))
-	if (node.text is "+") and (left is "Number") and types.IsPlural(arguments(0))
-		return arguments(0)
+	let isJoined = (node.text is "+") and (left is "Number") and (arguments(0) is "Text" or types.IsPlural(arguments(0)))
 	let ordinal = Overloads(types).Chosen(left, node.text, arguments)
 	let declared = types.MethodsOf(left).TypeAt(node.text, ordinal)
 	let overloaded = declared is in ("List", types.BaseName(left)) then left else declared
 	let operatorType = ordinal < 0 then types.MemberType(left, node.text) else overloaded
-	operatorType is "Unknown" then left else operatorType
+	isJoined then arguments(0) else (operatorType is "Unknown" then left else operatorType)
 ConditionalType(node SyntaxNode, scope Scope, current Scope) Text
 	NoInference.ConditionalType(SyntaxNode("Binary", "then", (NoNode, NoNode)), NoShape, NoShape) is "y"
 	if node.text is "then"

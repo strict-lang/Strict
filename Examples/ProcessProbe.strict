@@ -4,6 +4,6 @@ Run
 	logger.Log(nasm)
 	logger.Log(nasm.IsAvailable)
 	constant where = Process.RunTool("where", "cmd")
-	logger.Log(where.exitCode)
+	logger.Log(where.exitCode to Text)
 	logger.Log(where.Succeeded)
 	logger.Log(Directory.Exists("."))

@@ -3,7 +3,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 
 ## Bugs
 - Ternary Bonsai 27B at a simulated 10 GB stalled once more (first run after a cold build), 12 later runs did not: [improvements-models.md](improvements-models.md).
-- A Number for a Text parameter is not reported and stays a Number (`Show(text Text)` returns 2 for `Show(count)`, `is "2"` fails); `ArgumentTypes.Mismatch` compares user types, a Text for a user type or a Number, no other base types.
+- A Boolean for a Number or Text parameter is not reported (`Twice(true)` computes with 1, `Show(true)` stays a Boolean), `ArgumentTypes.IsTextMismatch` only knows Number and Text.
 - `Members` natively has no values (`()` for every InitialValue), the VM has them.
 - A GPU loop reads outside its list once a flat list passes 2^24 numbers (StrictComfy `H3Vae.Canvas` with `size` hoisted: a tiny 16x16 latent window of 19.4M numbers fails, 12x12 of 10.4M matches the CPU): index arithmetic must stay exact. A copy of Canvas with 19.35M synthetic tile numbers matches the CPU on master (2026-10-28), StrictComfy's exact failing code is needed.
 - A `List(Numbers)` of GPU lists (one list per tile in `H3Vae.Canvas`) reads 0 on the GPU without an error. 4 tiles computed on the GPU read through `tiles(t)(i)` in a GPU loop are right on master (2026-10-28), StrictComfy's exact failing code is needed.
