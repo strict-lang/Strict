@@ -1,10 +1,8 @@
 has logger
 constant Batch = 128
-Tested(folder Text, root Text) Number
+Tested(folder Text, root Text, isRecursive = true) Number
 	Folders(Logger).Tested("Missing", ".") is 0
-	mutable files = List(Text)
-	for ResolveCheck.Tree(folder)
-		files = files + Directory.Files(value, "*.strict")
+	let files = NativeFolder(logger, isRecursive = isRecursive).Files(folder)
 	Ran(Commands("test", files, root))
 Commands(command Text, paths Texts, root Text) Texts
 	Folders(Logger).Commands("test", List(Text) + "a.strict", ".") is ("test \"a.strict\" \".\" unit")

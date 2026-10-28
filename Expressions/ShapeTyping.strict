@@ -11,7 +11,7 @@ Typed(shape TypeShape, scope Scope, typeName Text) Scope
 	mutable result = scope
 	for shape.lines
 		let tokens = Tokenizer(value).Tokens
-		if value.StartsWith("constant ") and ((value.IndexOf(".") > 0) or (value.IndexOf("(") > 0))
+		if value.StartsWith("constant ")
 			result = Refined(result, tokens(1), ChainType(tokens, typeName, result))
 		else if shape.IsComputed(value)
 			result = result.With(tokens(0), ComputedType(tokens, typeName, result))
@@ -42,7 +42,7 @@ ChainType(tokens Texts, typeName Text, known Scope) Text
 	if (tokens.Length < 4) or (tokens(2) is not "=")
 		return ""
 	let node = SyntaxParser(tokens).ParseRange(3, tokens.Length)
-	if node.Kind is "Call"
+	if node.Kind is in ("Call", "Identifier")
 		return inference.types.MethodsOf(typeName).TypeOf(node.text)
 	let isInferred = node.Kind is in ("MethodCall", "Member", "Binary", "List")
 	isInferred then Inferred(node, typeName, known) else ""

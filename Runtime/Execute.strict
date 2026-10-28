@@ -1,5 +1,6 @@
 has logger
 has selection Text = ""
+has isRecursive Boolean = true
 constant Adder = BinaryFile("./Examples/NativeAdd/Adder.strict")
 constant AdderFiles = SourceFiles(".").Of(Adder.source)
 Run(arguments Texts) Number
@@ -18,7 +19,7 @@ Test(path Text, root Text, isQuiet = false) Number
 	Execute(Logger).Test("Missing.strict", ".") is 1
 	if File(path).Exists and (Directory.Exists(path) is false)
 		return Failures(List(Text) + path, root, isQuiet)
-	Directory.Exists(path) then Folders(logger).Tested(path, root) else 1
+	Directory.Exists(path) then Folders(logger).Tested(path, root, isRecursive) else 1
 Failures(paths Texts, root Text, isQuiet Boolean) Number
 	let stale = selection is "" then Stale(paths) else paths
 	let files = stale.Length is 0 then List(Text) else SourceFiles(root).Of(FileCompiler.Normalized(stale.First), stale)

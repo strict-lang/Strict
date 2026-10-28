@@ -62,6 +62,7 @@ strict build Games/App/App.strict         a windowed program goes into Games/App
 strict check Examples                     validate a folder (type rules, unused members, limits)
 strict format Examples/Sum.strict         print the file in its canonical form
 strict test Examples/Sum.strict native    build and run the tests natively
+strict test . native --no-recursive       build and run only the root types' tests
 strict test Examples/Sum.strict lines     run the tests natively, then show how often and how long each line ran
 strict test Examples/Sum.strict values    run the tests on the Strict VM, then show the values each line produced
 strict update .                           copy or download the packages of a folder again

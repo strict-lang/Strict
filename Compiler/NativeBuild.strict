@@ -5,6 +5,7 @@ has isAndroid Boolean = false
 has isIOS Boolean = false
 has isSimulator Boolean = false
 has selection Text = ""
+has isRecursive Boolean = true
 constant Broken = "module {\n  func.func private @A() -> f64 {\n    return %missing : f64\n  }\n}"
 constant Intermediates = (".ios.o", ".ios.new.a", ".android.o", ".llvm.mlir", ".ll", ".res", ".gpu.mlir", ".gpu.llvm.mlir", ".gpu.ll", ".sm_75.ptx", ".sm_80.ptx", ".amd.mlir", ".amd.llvm.mlir", ".amd.ll", ".amd.bc", ".linux.mlir", ".linux.llvm.mlir", ".linux.ll", ".linux.o", ".pre.js", ".o", ".gpu.opt.ll", ".runtime.gpu.mlir", ".runtime.gpu.llvm.mlir", ".runtime.gpu.ll", ".runtime.sm_75.ptx", ".runtime.sm_80.ptx")
 IsProgram(path Text) Boolean
@@ -14,14 +15,14 @@ IsProgram(path Text) Boolean
 Compile(path Text, root Text, isCounting = false, isGating = false, sources Texts = List(Text)) Number
 	let isTesting = (isCounting or isGating) and ((isAndroid or isIOS) is false)
 	let isProgram = (isTesting is false) and IsProgram(path)
-	let module = NativeFolder(logger, selection).Module(path, root, isCounting, isProgram, Target, sources)
+	let module = NativeFolder(logger, selection, isRecursive).Module(path, root, isCounting, isProgram, Target, sources)
 	if module.types.Length is 0
 		return 1
 	let base = Output(path, isProgram)
 	let program = BuildProfile(logger).Program(module, base, root, value)
 	if program is ""
 		return 1
-	let natives = NativeFolder(logger).Natives(path, root, module.types)
+	let natives = NativeFolder(logger, isRecursive = isRecursive).Natives(path, root, module.types)
 	let built = Build(base, program, Toolchain(Platform.Current, root, natives, isWeb), isCounting)
 	isTesting and (built is 0) then Ran(base, Toolchain(Platform.Current, root), path, isCounting) else built
 Device(program Text, base Text, root Text) Text

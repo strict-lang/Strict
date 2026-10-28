@@ -13,7 +13,7 @@ jobs:
         include:
           - name: base
             units: Compression Validators Examples ImageProcessing MachineLearning Math Networking Json Xml Binary
-            native: Compression Validators Examples ImageProcessing MachineLearning Math/*.strict Networking Json Xml Binary
+            native: Compression Validators Examples ImageProcessing MachineLearning Math Networking Json Xml Binary
           - name: internal
             native: Bytecode Runtime Expressions
           - name: neural
@@ -25,11 +25,15 @@ jobs:
           - name: compiler 2
             files: Compiler
             part: 1/2
+          - name: root
+            native: .
+            options: --no-recursive
     env:
       UNITS: ${{ matrix.units }}
       FILES: ${{ matrix.files }}
       NATIVE: ${{ matrix.native }}
       PART: ${{ matrix.part }}
+      OPTIONS: ${{ matrix.options }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache/restore@v4
@@ -63,17 +67,19 @@ jobs:
             ./strict test "$folder" > "$folder/unit.log" 2>&1 || { grep -v "^Test passed" "$folder/unit.log"; failed=1; }
           done
           exit $failed
-      - name: All tests of each file on the Strict VM, one process per file on all cores
+      - name: All tests of each file on the Strict VM and natively, one process per file on all cores
         if: env.FILES != ''
+        env:
+          STRICT_THREADS: 2
         run: |
           for folder in $FILES; do ls "$folder"/*.strict; done | awk -v part="${PART%/*}" -v parts="${PART#*/}" '(NR - 1) % parts == part' > files.txt
-          xargs -P "$(nproc)" -I {} sh -c './strict test "$1" > "$1.log" 2>&1 || { grep -v "^Test passed" "$1.log"; exit 1; }' _ {} < files.txt
+          xargs -P "$(nproc)" -I {} sh -c 'for mode in vm native; do option=""; [ "$mode" = native ] && option=native; ./strict test "$1" $option > "$1.$mode.log" 2>&1 || { grep -v "^Test passed" "$1.$mode.log"; exit 1; }; done' _ {} < files.txt
       - name: Unit and Slow tests built natively, one test executable per folder
         if: env.NATIVE != ''
         run: |
           for folder in $NATIVE; do
             echo "$folder"; started=$SECONDS
-            ./strict test "$folder" native > native.log 2>&1 || { code=$?; grep -v "^Test passed" native.log; echo "::error::native tests of $folder failed with exit code $code"; exit 1; }
+            ./strict test "$folder" native $OPTIONS > native.log 2>&1 || { code=$?; grep -v "^Test passed" native.log; echo "::error::native tests of $folder failed with exit code $code"; exit 1; }
             echo "  passed in $((SECONDS - started)) s"
           done
   windows:
@@ -81,7 +87,7 @@ jobs:
     timeout-minutes: 10
     env:
       UNITS: Compression Validators Examples Math Networking Json Xml Binary
-      NATIVE: Compression Validators Examples Json Xml Binary Runtime Expressions
+      NATIVE: Compression Validators Examples Math Json Xml Binary Runtime Expressions
     defaults:
       run:
         shell: bash

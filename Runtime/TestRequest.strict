@@ -7,17 +7,19 @@ Option Text
 			return value
 	""
 Selection Text
+	TestRequest((".", ".", "native", "--no-recursive")).Selection is "*"
 	TestRequest(("a.strict", ".", "unit")).Selection is ""
 	TestRequest(("a.strict", ".", "Merged")).Selection is "Merged"
 	TestRequest(("Math", ".", "native")).Selection is "*"
 	if (Directory.Exists(rest(0)) and ("native" is not in Options)) or ("unit" is in Options) or ("-" is in Options)
 		return ""
 	for Options
-		if value is not in ("native", "lines", "values", "trace")
+		if value is not in ("native", "lines", "values", "trace", "--no-recursive")
 			return value
 	"*"
 Message Text
-	let methods = Options - "unit" - "native" - "lines" - "values" - "trace" - "-"
+	TestRequest((".", ".", "native", "--no-recursive")).Message is ""
+	let methods = Options - "unit" - "native" - "lines" - "values" - "trace" - "-" - "--no-recursive"
 	if methods.Length > 1
 		return "Only one test file or method can be selected"
 	if methods.Length is 0

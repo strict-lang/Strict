@@ -32,7 +32,8 @@ Compiled(command Text, rest Texts, sources Texts = List(Text)) Number
 		logger.Log(request.Message)
 		return 2
 	let isCounting = request.Option is "lines"
-	let build = NativeBuild(logger, false, selection = request.Selection)
+	let isRecursive = "--no-recursive" is not in request.Options
+	let build = NativeBuild(logger, false, selection = request.Selection, isRecursive = isRecursive)
 	build.Compile(rest(0), rest(1), isCounting, isCounting is false, sources)
 Checked(rest Texts, sources Texts) Number
 	let failed = Execute(logger).Test(rest(0), rest(1), true)

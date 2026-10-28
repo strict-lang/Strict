@@ -1,5 +1,6 @@
 has logger
 has selection Text = ""
+has isRecursive Boolean = true
 constant Counting = TypeEntry("Strict/A", List(MemberEntry), List(MethodEntry) + MethodEntry.CountingLoop)
 constant Initializing = TypeEntry("Strict/A", List(MemberEntry), List(MethodEntry) + MethodEntry.Initializing)
 constant Hellos = ("Examples/HelloLogger.strict", "Examples/HelloLogger.strict")
@@ -42,13 +43,14 @@ Paths(path Text) Texts
 	Directory.Exists(path) then Files(path) else List(Text) + path
 Files(folder Text) Texts
 	NativeFolder.Files("Math").Length > 5
+	NativeFolder(Logger, isRecursive = false).Files(".") is Directory.Files(".", "*.strict")
 	mutable files = List(Mutable(Text))
-	for ResolveCheck.Tree(folder)
+	for isRecursive then ResolveCheck.Tree(folder) else List(Text) + folder
 		files = files + Directory.Files(value, "*.strict")
 	files
 Collected(path Text, root Text) List(TypeEntry)
 	NativeFolder(Logger).Collected("Examples/NativeAdd/native", ".").Length is 0
-	let folders = Directory.Exists(path) then ResolveCheck.Tree(path) else List(Text) + path
+	let folders = Directory.Exists(path) and isRecursive then ResolveCheck.Tree(path) else List(Text) + path
 	mutable mains = List(Mutable(TypeEntry))
 	mutable used = List(Mutable(TypeEntry))
 	for folders
