@@ -1,0 +1,40 @@
+has firstNorm Numbers
+has firstShift Numbers
+has attention Batch
+has projection Batch
+has secondNorm Numbers
+has secondShift Numbers
+has expansion Batch
+has contraction Batch
+has heads Number
+constant Tiny = QwenVisionBlock.Loaded(QwenVision.Model, "blocks.0.", 2)
+Loaded(file Safetensors, prefix Text, headCount Number) QwenVisionBlock
+	Tiny.attention.weights.Length is 96
+	let combining = Batch(file.Rows(prefix + "attn.qkv.weight"), file.Values(prefix + "attn.qkv.bias"))
+	let projecting = Batch(file.Rows(prefix + "attn.proj.weight"), file.Values(prefix + "attn.proj.bias"))
+	let expanding = Batch(file.Rows(prefix + "mlp.linear_fc1.weight"), file.Values(prefix + "mlp.linear_fc1.bias"))
+	let contracting = Batch(file.Rows(prefix + "mlp.linear_fc2.weight"), file.Values(prefix + "mlp.linear_fc2.bias"))
+	let first = (file.Values(prefix + "norm1.weight"), file.Values(prefix + "norm1.bias"))
+	let second = (file.Values(prefix + "norm2.weight"), file.Values(prefix + "norm2.bias"))
+	QwenVisionBlock(first(0), first(1), combining, projecting, second(0), second(1), expanding, contracting, headCount)
+Forward(patches Numbers, rotations Numbers) Slow(Numbers)
+	Tiny.Forward(QwenVision.Reference.Values("reference.embedded"), QwenVision.Tiny.Rotations((4, 6))).Length is 768
+	let width = firstNorm.Length
+	let combined = attention.Sums(Gpt2Block.Normalized(patches, firstNorm, firstShift, 0.000001))
+	let queries = Rotated(Batch.Columns(combined, 3 * width, 0, width), rotations, width / heads)
+	let keys = Rotated(Batch.Columns(combined, 3 * width, width, width), rotations, width / heads)
+	let values = Batch.Columns(combined, 3 * width, 2 * width, width)
+	let merged = Attention(queries, keys, values, heads, heads, width / heads, causal = false).Merged
+	let attended = Gpt2Block.Added(patches, projection.Sums(merged))
+	let normed = Gpt2Block.Normalized(attended, secondNorm, secondShift, 0.000001)
+	Gpt2Block.Added(attended, contraction.Sums(Gpt2Block.Gelu(expansion.Sums(normed))))
+Rotated(values Numbers, rotations Numbers, size Number) Numbers
+	Tiny.Rotated((1, 2, 3, 4), (1, 1, 1, 1, 0, 0, 0, 0), 4) is (1, 2, 3, 4)
+	Tiny.Rotated((1, 2, 3, 4), (0, 0, 0, 0, 1, 1, 1, 1), 4) is (-3, -4, 1, 2)
+	let width = values.Length / (rotations.Length / 2 / size)
+	for values
+		let at = index % size
+		let start = (index / width).Floor * 2 * size
+		let half = size / 2
+		let turned = at < half then 0 - values(index + half) else values(index - half)
+		value * rotations(start + at) + turned * rotations(start + size + at)

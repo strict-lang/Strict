@@ -1,0 +1,133 @@
+has embedding Batch
+has table Numbers
+has blocks List(QwenVisionBlock)
+has merger QwenVisionMerger
+has deepstacks List(QwenVisionMerger)
+has indexes Numbers
+has patchSize Number
+constant Model = Safetensors("NeuralNetworks/tinyqwenvision.safetensors", 32, "visual.")
+constant Reference = Safetensors("NeuralNetworks/tinyqwenvision.safetensors", 32)
+constant Tiny = QwenVision.Loaded(Model, 2, (0, 1, 2))
+constant Image = QwenVision.Reference.Values("reference.image")
+constant Outputs = QwenVision.Tiny.Encoded(QwenVision.Image, 32, 48)
+constant Pixels = QwenVision.Tiny.Patched(QwenVision.Tiny.Resized(QwenVision.Image, 32, 48, (4, 6)), (4, 6))
+Loaded(file Safetensors, heads Number, layers Numbers) Slow(QwenVision)
+	Tiny.patchSize is 16
+	Tiny.deepstacks.Length is 3
+	let rows = Split(file.Values("patch_embed.proj.weight"), file.Shape("patch_embed.proj.weight").First)
+	let embedded = Batch(rows, file.Values("patch_embed.proj.bias"))
+	let loaded = Blocks(file, heads)
+	let mergers = Mergers(file, layers.Length)
+	let size = (rows.First.Length / 6).SquareRoot
+	let positions = file.Values("pos_embed.weight")
+	QwenVision(embedded, positions, loaded, QwenVisionMerger.Loaded(file, "merger."), mergers, layers, size)
+Blocks(file Safetensors, heads Number) Slow(List(QwenVisionBlock))
+	Tiny.Blocks(Model, 2).Length is 3
+	mutable count = 0
+	for as long as file.Entry("blocks." + count + ".norm1.weight") is not ""
+		count = count + 1
+	for count
+		QwenVisionBlock.Loaded(file, "blocks." + index + ".", heads)
+Mergers(file Safetensors, count Number) List(QwenVisionMerger)
+	Tiny.Mergers(Model, 2).Last.norm.Length is 128
+	for count
+		QwenVisionMerger.Loaded(file, "deepstack_merger_list." + index + ".")
+Split(values Numbers, count Number) List(Numbers)
+	Tiny.Split((1, 2, 3, 4), 2) is ((1, 2), (3, 4))
+	for count
+		values.Slice(index * values.Length / count, values.Length / count)
+Encoded(image Numbers, height Number, width Number) Slow(List(Numbers))
+	Outputs.First(5).IsNearlyEqual(Reference.Values("reference.merged")(5), 0.001)
+	Outputs.Last(100).IsNearlyEqual(Reference.Values("reference.deepstack")(868), 0.001)
+	let grid = Grid(height, width)
+	let rotations = Rotations(grid)
+	let pixels = Patched(Resized(image, height, width, grid), grid)
+	mutable patches = Gpt2Block.Added(embedding.Sums(pixels), Interpolated(grid))
+	mutable features = List(Numbers)
+	for blocks
+		patches = value.Forward(patches, rotations)
+		if index is in indexes
+			features = features + deepstacks(indexes.Index(index)).Merged(patches)
+	(List(Numbers) + merger.Merged(patches)) + features
+Grid(height Number, width Number) Numbers
+	(Tiny.Grid(32, 48), Tiny.Grid(64, 72)) is ((4, 6), (4, 4))
+	let factor = 2 * patchSize
+	let rows = Rounded(height / factor) * factor
+	let columns = Rounded(width / factor) * factor
+	if rows * columns > 12845056
+		let shrink = (height * width / 12845056).SquareRoot
+		let shrunk = ((height / shrink / factor).Floor * factor, (width / shrink / factor).Floor * factor)
+		return ((factor, shrunk(0)).Maximum / patchSize, (factor, shrunk(1)).Maximum / patchSize)
+	if rows * columns < 3136
+		let grow = (3136 / (height * width)).SquareRoot
+		return ((height * grow / factor).Ceiling * 2, (width * grow / factor).Ceiling * 2)
+	(rows / patchSize, columns / patchSize)
+Rounded(number Number) Number
+	(Tiny.Rounded(22.5), Tiny.Rounded(23.5), Tiny.Rounded(2.6)) is (22, 24, 3)
+	let floor = number.Floor
+	number - floor is 0.5 then (floor % 2 is 0 then floor else floor + 1) else number.Round
+Resized(image Numbers, height Number, width Number, grid Numbers) Slow(Numbers)
+	Tiny.Resized((1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12), 2, 2, (1, 1)).Length is 768
+	let rows = grid(0) * patchSize
+	let columns = grid(1) * patchSize
+	if rows is height and columns is width
+		return image
+	for 3 * rows * columns
+		let row = Source((index / columns).Floor % rows, height, rows)
+		let column = Source(index % columns, width, columns)
+		Blended(image, (index / (rows * columns)).Floor * height * width, 1, row, column, height, width)
+Source(target Number, size Number, count Number) Number
+	(Tiny.Source(0, 2, 4), Tiny.Source(3, 2, 4)) is (0, 1.25)
+	let source = (target + 0.5) * size / count - 0.5
+	source < 0 then 0 else source
+Blended(values Numbers, start Number, step Number, row Number, column Number, height Number, width Number) Number
+	Tiny.Blended((1, 2, 3, 4), 0, 1, 0.5, 0.5, 2, 2) is 2.5
+	let top = row.Floor
+	let left = column.Floor
+	let bottom = top + 1 < height then top + 1 else top
+	let right = left + 1 < width then left + 1 else left
+	let fraction = column - left
+	let first = start + top * width * step
+	let second = start + bottom * width * step
+	let upper = (1 - fraction) * values(first + left * step) + fraction * values(first + right * step)
+	let lower = (1 - fraction) * values(second + left * step) + fraction * values(second + right * step)
+	(1 - row + top) * upper + (row - top) * lower
+Patched(pixels Numbers, grid Numbers) Slow(Numbers)
+	Pixels(100).IsNearlyEqual(Reference.Values("reference.pixels")(100), 0.0001)
+	Pixels(30000).IsNearlyEqual(Reference.Values("reference.pixels")(30000), 0.0001)
+	let size = 6 * patchSize * patchSize
+	for grid(0) * grid(1) * size
+		let patch = (index / size).Floor
+		let inner = index % size
+		let row = Row(patch, grid(1)) * patchSize + (inner % (patchSize * patchSize) / patchSize).Floor
+		let column = Column(patch, grid(1)) * patchSize + inner % patchSize
+		let channel = (inner / (2 * patchSize * patchSize)).Floor
+		2 * pixels((channel * grid(0) * patchSize + row) * grid(1) * patchSize + column) - 1
+Row(patch Number, columns Number) Number
+	(Tiny.Row(5, 4), Tiny.Row(10, 4)) is (0, 3)
+	((patch / 4).Floor / (columns / 2)).Floor * 2 + ((patch % 4) / 2).Floor
+Column(patch Number, columns Number) Number
+	(Tiny.Column(5, 4), Tiny.Column(10, 4)) is (3, 0)
+	((patch / 4).Floor % (columns / 2)) * 2 + patch % 2
+Interpolated(grid Numbers) Slow(Numbers)
+	Tiny.Interpolated((4, 6)).Length is 768
+	let hidden = embedding.biases.Length
+	let side = (table.Length / hidden).SquareRoot
+	for grid(0) * grid(1) * hidden
+		let patch = (index / hidden).Floor
+		let row = Located(Row(patch, grid(1)), grid(0), side)
+		Blended(table, index % hidden, hidden, row, Located(Column(patch, grid(1)), grid(1), side), side, side)
+Located(position Number, count Number, side Number) Number
+	(Tiny.Located(0, 1, 4), Tiny.Located(2, 3, 4), Tiny.Located(1, 4, 4)) is (0, 3, 1)
+	let step = count is 1 then 0 else (side - 1) / (count - 1)
+	position < count / 2 then position * step else side - 1 - (count - 1 - position) * step
+Rotations(grid Numbers) Slow(Numbers)
+	Tiny.Rotations((2, 2))(0) is 1
+	Tiny.Rotations((2, 2)).Length is 128
+	let size = embedding.biases.Length / blocks.First.heads
+	for grid(0) * grid(1) * 2 * size
+		let patch = (index / (2 * size)).Floor
+		let slot = index % size % (size / 2)
+		let position = slot < size / 4 then Row(patch, grid(1)) else Column(patch, grid(1))
+		let angle = Radians(position * 10000 ^ (0 - 2 * (slot % (size / 4)) / (size / 2))) to Degrees
+		index % (2 * size) < size then angle.Cos else angle.Sin

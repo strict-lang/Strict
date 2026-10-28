@@ -61,14 +61,14 @@ Changed(vectors List(Numbers), first Number) Gpt2Block
 	let contract = Layer(contraction.weights, vectors(first + 7))
 	let second = (vectors(first + 4), vectors(first + 5))
 	Gpt2Block(vectors(first), vectors(first + 1), combine, project, second(0), second(1), expand, contract)
-Normalized(input Numbers, gain Numbers, bias Numbers) Numbers
+Normalized(input Numbers, gain Numbers, bias Numbers, epsilon = 0.00001) Numbers
 	Tiny.Normalized((1, 2, 3), (1, 1, 1), (0, 0, 1)).First.IsNearlyEqual(-1.2247356859083902)
 	Tiny.Normalized((1, 2, 3), (1, 1, 1), (0, 0, 1)).Last.IsNearlyEqual(2.2247356859083902)
 	let size = gain.Length
 	let centered = Centered(input, size)
 	for centered.Length
 		let first = (index / size).Floor * size
-		let scale = Normalization.Scale(Normalization.Squared(centered, first, size), size, 0.00001)
+		let scale = Normalization.Scale(Normalization.Squared(centered, first, size), size, epsilon)
 		gain(index % size) * centered(index) * scale + bias(index % size)
 Centered(input Numbers, size Number) Numbers
 	Tiny.Centered((1, 2, 4, 8), 2) is (-0.5, 0.5, -2, 2)

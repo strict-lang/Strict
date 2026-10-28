@@ -1,0 +1,27 @@
+has norm Numbers
+has shift Numbers
+has expansion Batch
+has projection Batch
+constant Tiny = QwenVisionMerger.Loaded(QwenVision.Model, "merger.")
+Loaded(file Safetensors, prefix Text) QwenVisionMerger
+	Tiny.norm.Length is 32
+	Tiny.projection.weights.Length is 64
+	let expanding = Batch(file.Rows(prefix + "linear_fc1.weight"), file.Values(prefix + "linear_fc1.bias"))
+	let projecting = Batch(file.Rows(prefix + "linear_fc2.weight"), file.Values(prefix + "linear_fc2.bias"))
+	QwenVisionMerger(file.Values(prefix + "norm.weight"), file.Values(prefix + "norm.bias"), expanding, projecting)
+Merged(patches Numbers) Slow(Numbers)
+	Tiny.Merged(QwenVision.Reference.Values("reference.embedded")).Length is 6 * 64
+	projection.Sums(Gelu(expansion.Sums(Gpt2Block.Normalized(patches, norm, shift, 0.000001))))
+Gelu(values Numbers) Numbers
+	Tiny.Gelu((1, -2))(0).IsNearlyEqual(0.841345, 0.000001)
+	Tiny.Gelu((1, -2))(1).IsNearlyEqual(-0.0455003, 0.000001)
+	for values
+		0.5 * value * (1 + Erf(value / 2.SquareRoot))
+Erf(number Number) Number
+	Tiny.Erf(0).IsNearlyEqual(0, 0.0000002)
+	Tiny.Erf(-0.5).IsNearlyEqual(-0.5204999, 0.0000002)
+	let distance = 1 / (1 + 0.3275911 * number.Absolute)
+	let fourth = (1.061405429 * distance - 1.453152027) * distance + 1.421413741
+	let second = (fourth * distance - 0.284496736) * distance + 0.254829592
+	let magnitude = 1 - second * distance * (0 - number * number).Exponential
+	number < 0 then 0 - magnitude else magnitude

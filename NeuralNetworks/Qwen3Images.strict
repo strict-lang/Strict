@@ -1,0 +1,34 @@
+has model Qwen3
+has vision QwenVision
+constant Language = QwenSafetensors(Safetensors("NeuralNetworks/tinyqwen3vl.safetensors", 32, "model."), 16, 0, 0)
+constant Tiny = Qwen3Images(Qwen3Images.Language.Loaded(5000000), QwenVision.Tiny)
+constant Prompted = Qwen3Images.Tiny.Prefilled((1, 2), QwenVision.Image, 32, 48, (3, 4, 5))
+Prefilled(before Numbers, image Numbers, height Number, width Number, after Numbers) Slow(Qwen3)
+	Prompted.hidden(0).IsNearlyEqual(-6.42568, 0.05)
+	Prompted.hidden(150).IsNearlyEqual(-2.22829, 0.05)
+	Prompted.hidden(300).IsNearlyEqual(-4.96717, 0.05)
+	Prompted.hidden(700).IsNearlyEqual(-2.18944, 0.05)
+	let features = vision.Encoded(image, height, width)
+	let grid = vision.Grid(height, width)
+	let size = model.norm.Length
+	let embedded = Restored(before) + features.First + Restored(after)
+	let span = (before.Length, features.First.Length / size)
+	let rotation = Rotation(span, grid(1) / 2, after.Length)
+	model.Forwarded(embedded, rotation, 1, features.Slice(1, features.Length - 1), span)
+Rotation(span Numbers, columns Number, following Number) Slow(Numbers)
+	Tiny.Rotation((2, 6), 3, 3).Length is 11 * 32
+	let heights = Axis(1, span, columns, following)
+	model.Rotations(Axis(0, span, columns, following), heights, Axis(2, span, columns, following))
+Restored(tokens Numbers) Numbers
+	Tiny.Restored((1, 2)).Length is 128
+	model.basis.Restored(model.Embedded(tokens), model.norm.Length)
+Axis(axis Number, span Numbers, columns Number, following Number) Numbers
+	Tiny.Axis(0, (2, 6), 3, 3) is (0, 1, 2, 2, 2, 2, 2, 2, 5, 6, 7)
+	Tiny.Axis(1, (2, 6), 3, 3) is (0, 1, 2, 2, 2, 3, 3, 3, 5, 6, 7)
+	Tiny.Axis(2, (2, 6), 3, 3) is (0, 1, 2, 3, 4, 2, 3, 4, 5, 6, 7)
+	let end = span(0) + span(1)
+	let longest = (span(1) / columns, columns).Maximum
+	for end + following
+		let inside = index - span(0)
+		let placed = axis is 1 then (inside / columns).Floor else (axis is 2 then inside % columns else 0)
+		index < span(0) then index else (index < end then span(0) + placed else index - span(1) + longest)

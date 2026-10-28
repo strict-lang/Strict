@@ -42,6 +42,7 @@ Instruction bound on the RTX 3080 (120-330 instructions per number). Left:
 - `.Round` keeps a loop on the CPU (StrictComfy `H3Frames.Bytes` over 148M frame numbers, `(value * 255 + 0.5).Floor` runs on the GPU): a device Round
 - bounds, reduction and tail checks remain: extend the four wide loads (`MlirBatched`) and fuse memory passes
 - an index with a denominator other than 1 (`size / 2` inlined in MossBlock.Rotated) divides in 64 bits at every read (82 instead of 66 us): shift power of two denominators
+- without STRICT_GPU=all StrictComfy's H3 VAE encode of a PNG frame (64 bit pixels of a CPU loop) takes 12.5 instead of 0.7 s: its convolutions miss strict_gpu_convolution
 
 ## MOSS
 Warm 720x1280 VAE decode on a 3080 0.27-0.28 s like ComfyUI's 0.27 s since `strict_device_convolutions` copies bfloat16 stages asynchronously (50-58 instead of 19-24 TFLOPS). Left: the bfloat16 input and weights each convolution writes first (a list as big as its input, freed by the collector), stages of 64 channels or 3 buffers once the shared memory allows it, PNG encoding 0.28 against 0.08 s, cold loading (`../StrictComfy/Performance.md`).

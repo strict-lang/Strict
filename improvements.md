@@ -4,6 +4,8 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 ## Bugs
 - Ternary Bonsai 27B at a simulated 10 GB stalled once more (first run after a cold build), 12 later runs did not: [improvements-models.md](improvements-models.md).
 - `Members` natively has no values (`()` for every InitialValue), the VM has them.
+- `let outer = ...` inside a `for` is silently replaced by the loop's `outer` keyword (the value outside the loop, StrictComfy's variable always read 0): a keyword as a variable name must be a validation issue (CannotUseKeywordsAsName).
+- H3 image to video with `--image` and `--last_image` puts only the first image into the Qwen3-VL context (`Qwen3Images.Prefilled` takes one image, ComfyUI tokenizes both).
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).
