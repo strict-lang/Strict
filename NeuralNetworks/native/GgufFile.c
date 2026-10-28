@@ -189,8 +189,7 @@ static void Switched(const Model* model)
 }
 
 static _Thread_local strict_numbers *shape, *numbers, *outputs, *picked;
-static _Thread_local double* resultRows;
-static _Thread_local unsigned char *resultStorage, *staged;
+static _Thread_local unsigned char* staged;
 static _Thread_local uint64_t stagedBytes;
 
 static void ThreadReleased(void)
@@ -207,8 +206,6 @@ static void ThreadReleased(void)
 	free(numbers);
 	free(outputs);
 	free(picked);
-	free(resultRows);
-	free(resultStorage);
 	free(staged);
 }
 
@@ -609,26 +606,26 @@ STRICT_EXPORT double GgufFile_Values(double self, double path, double name)
    bits keep their numbers: their scales are halves, so strict_quantized finds the same scales and bytes again. */
 /* The blocks of one row of a Q4_K, Q6_K, PTQ1_0 or PQ2_0 matrix as a packed row of 4, 6 or 3 bits: Q4_K and PTQ1_0
    blocks stay as they are, Q6_K blocks give their half scale d to the end of the row, PQ2_0 blocks become PTQ1_0 blocks. */
-static void Repacked(const unsigned char* blocks, uint32_t type, uint64_t bits, uint64_t width, strict_packed* packed)
+static void Repacked(const unsigned char* blocks, uint32_t type, uint64_t bits, uint64_t width, unsigned char* data)
 {
 	uint64_t count = width / 256;
 	if (bits == 4 || type == PTQ1_0)
-		memcpy(packed->data, blocks, strict_packed_data(width, bits));
+		memcpy(data, blocks, strict_packed_data(width, bits));
 	for (uint64_t block = 0; bits == 6 && block < count; block++)
 	{
-		memcpy(packed->data + block * 208, blocks + block * 210, 208);
-		memcpy(packed->data + count * 208 + block * 2, blocks + block * 210 + 208, 2);
+		memcpy(data + block * 208, blocks + block * 210, 208);
+		memcpy(data + count * 208 + block * 2, blocks + block * 210 + 208, 2);
 	}
 	for (uint64_t group = 0; type == PQ2_0 && group < width / 128; group++)
 	{
 		unsigned char codes[128];
 		Codes(type, blocks + group * 34, codes);
-		Trits(codes, TernaryHalf(type, blocks + group * 34), packed->data + group * 28);
+		Trits(codes, TernaryHalf(type, blocks + group * 34), data + group * 28);
 	}
 }
 
 enum { RowChunk = 16 };
-typedef struct { const unsigned char* raw; const float* floats; unsigned char* storage; double* rows; uint64_t size, width, height, kept; uint32_t type; } Packing;
+typedef struct { const unsigned char* raw; const float* floats; unsigned char* data; uint64_t stride, width, height, kept; uint32_t type; } Packing;
 
 /* RowChunk rows of the packing from item on: blocks repacked, floats quantized to 8 or kept as 16 or 32 bits. */
 static void Packed(void* context, uint64_t item)
@@ -637,21 +634,18 @@ static void Packed(void* context, uint64_t item)
 	uint64_t width = packing->width, kept = packing->kept;
 	for (uint64_t row = item * RowChunk; row < (item + 1) * RowChunk && row < packing->height; row++)
 	{
-		strict_packed* packed = (strict_packed*)(packing->storage + row * packing->size);
+		unsigned char* data = packing->data + row * packing->stride;
 		const float* floats = packing->floats ? packing->floats + row * width : 0;
-		packed->count = (double)width;
-		packed->bits = (double)kept;
 		uint64_t rowBytes = width / BlockNumbers(packing->type) * BlockBytes(packing->type);
 		if (packing->raw)
-			Repacked(packing->raw + row * rowBytes, packing->type, kept, width, packed);
+			Repacked(packing->raw + row * rowBytes, packing->type, kept, width, data);
 		else if (kept == 8)
-			strict_quantized(packed, floats, width, 1);
+			strict_quantized(data, floats, width, 1);
 		for (uint64_t column = 0; floats && kept != 8 && column < width; column++)
 			if (kept == 16)
-				((uint16_t*)packed->data)[column] = strict_half(floats[column]);
+				((uint16_t*)data)[column] = strict_half(floats[column]);
 			else
-				((float*)packed->data)[column] = floats[column];
-		packing->rows[1 + row] = strict_packed_result(packed);
+				((float*)data)[column] = floats[column];
 	}
 }
 
@@ -674,17 +668,15 @@ STRICT_EXPORT double GgufFile_Rows(double self, double path, double name, double
 	float* floats = tensor && !isBlocked ? Floats(tensor, width * height, &failure) : 0;
 	if (!floats && !raw)
 		return strict_fail(failure);
-	uint64_t size = (sizeof(strict_packed) + strict_packed_bytes(width, kept) + 7) / 8 * 8;
-	free(resultRows);
-	free(resultStorage);
-	resultRows = malloc((1 + height) * sizeof(double));
-	resultStorage = malloc(height * size + 1);
-	resultRows[0] = (double)height;
-	Packing packing = { raw, floats, resultStorage, resultRows, size, width, height, kept, type };
-	Parallel(Packed, &packing, (height + RowChunk - 1) / RowChunk);
+	unsigned char* data = 0;
+	uint64_t stride = 0;
+	double result = strict_rows(height, width, (double)kept, &data, &stride);
+	Packing packing = { raw, floats, data, stride, width, height, kept, type };
+	if (data)
+		Parallel(Packed, &packing, (height + RowChunk - 1) / RowChunk);
 	free(floats);
 	free(raw);
-	return strict_numbers_result((strict_numbers*)resultRows);
+	return result;
 }
 
 /* ggml's tables (ggml-cpu.c fills them in ggml_cpu_init) and the functions of ggml.c its quantization code refers to:

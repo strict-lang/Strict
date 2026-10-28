@@ -44,17 +44,23 @@ Rows(name Text) List(Numbers)
 	Safetensors("NeuralNetworks/tinyhalves.safetensors", 16).Rows("a") is ((1, 2, 3), (4, 5, 6))
 	Safetensors("NeuralNetworks/tiny.safetensors", 8).Rows("a").First.First.IsNearlyEqual(0.992126)
 	TensorFile.Rows(path, Entry(name), bits)
-Quantized(name Text) List(Numbers)
+Quantized(name Text, tokenBits = 8) List(Numbers)
 	Bytes.Quantized("a").Length is 4
 	Bytes.Quantized("a").First(1) is -63
 	Bytes.Quantized("a")(2).First is 2
-	TensorFile.Quantized(path, Entry(name + ".weight"), Entry(name + ".weight_scale"))
+	Bytes.Quantized("a", 32) is Bytes.Quantized("a")
+	TensorFile.Quantized(path, Entry(name + ".weight"), Entry(name + ".weight_scale"), tokenBits)
 Tuned(name Text, downs Numbers, ups Numbers, scales Numbers) Slow(List(Numbers))
 	Bytes.Tuned("a", List(Number), List(Number), List(Number)) is Bytes.Quantized("a")
 	Bytes.Tuned("a", Second, (1, 0, 0, 0), List(Number) + 0.5)(2) is Bytes.Quantized("a")(2)
 	Bytes.Tuned("a", Second, (1, 0, 0, 0), List(Number) + 0.5)(0)(5).IsNearlyEqual(Exact(0)(5) + Second(5) / 2, 1)
 	Bytes.Tuned("a", Firsts, (0, 1, 0, 0, 0, 0, 0, 1), (0.5, 0.25))(3)(7).IsNearlyEqual(Exact(3)(7) + Second(7) / 4, 1)
 	Bytes.Tuned("a", (1, 2), (1, 0, 0, 0), List(Number) + 1) is Error
+	if scales.Length is 0
+		return Quantized(name)
+	let merged = GpuMemory.Tuned(Quantized(name), downs, ups, scales)
+	if merged.Length > 0
+		return merged
 	TensorFile.Tuned(path, Entry(name + ".weight"), Entry(name + ".weight_scale"), downs + ups + scales)
 Written(name Text, numbers Numbers) Number
 	Safetensors("NeuralNetworks/written.tmp").Written("x", (1.5, -2, 3)) is 3

@@ -2221,10 +2221,42 @@
     %reduced = func.call @strict_device_lanes_sums(%total, %lane, %lanes) : (f32, i64, i64) -> f32
     return %reduced : f32
   }
+  // the 8 bit code of a number scaled to the 127 steps of its scale, with residual the code of what that code leaves of
+  // it in steps of 1 / 254 (the second pass of strict_gpu_tokens for rows that keep their tokens)
+  func.func private @strict_device_code(%scaled: f32, %residual: i1) -> i8 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %rounded = func.call @strict_device_rounded(%scaled) : (f32) -> i32
+    %whole = arith.sitofp %rounded : i32 to f32
+    %left = arith.subf %scaled, %whole : f32
+    %steps = arith.constant 254.0 : f32
+    %finer = arith.mulf %left, %steps : f32
+    %fine = func.call @strict_device_rounded(%finer) : (f32) -> i32
+    %code = arith.select %residual, %fine, %rounded : i32
+    %byte = arith.trunci %code : i32 to i8
+    return %byte : i8
+  }
+  // the scale of the codes of strict_device_code
+  func.func private @strict_device_code_scale(%scale: f32, %residual: i1) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %steps = arith.constant 254.0 : f32
+    %finer = arith.divf %scale, %steps : f32
+    %chosen = arith.select %residual, %finer, %scale : f32
+    return %chosen : f32
+  }
+  // whether the bits of a quantize kernel ask for residual codes (1024 added, strict_gpu_quantized) and the format of
+  // its source numbers
+  func.func private @strict_device_code_format(%bits: i64) -> (i1, i64) attributes {llvm.passthrough = ["alwaysinline"]} {
+    %flag = arith.constant 1024 : i64
+    %formats = arith.constant 1023 : i64
+    %none = arith.constant 0 : i64
+    %flagged = arith.andi %bits, %flag : i64
+    %residual = arith.cmpi ne, %flagged, %none : i64
+    %format = arith.andi %bits, %formats : i64
+    return %residual, %format : i1, i64
+  }
   // 32 or 16 bit numbers (bits as in strict_device_floats) to 8 bit numbers with a scale per 32 (a warp shares the
   // largest magnitude), the numbers that dot products with packed rows read through dp4a; width is not used, the
   // parameters are those of strict_device_quantize_tokens
   func.func private @strict_device_quantize_run(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
+    %residual, %format = func.call @strict_device_code_format(%bits) : (i64) -> (i1, i64)
     %thread = func.call @strict_device_thread_index() : () -> i32
     %block = func.call @strict_device_block_index() : () -> i32
     %blockSize = func.call @strict_device_block_size() : () -> i32
@@ -2234,18 +2266,18 @@
     %inside = arith.cmpi slt, %at, %count : i64
     cf.cond_br %inside, ^body, ^exit
   ^body:
-    %value = func.call @strict_device_floats(%source, %bits, %at) : (!llvm.ptr, i64, i64) -> f32
+    %value = func.call @strict_device_floats(%source, %format, %at) : (!llvm.ptr, i64, i64) -> f32
     %magnitude = llvm.call_intrinsic "llvm.fabs.f32"(%value) : (f32) -> f32
     %largest = func.call @strict_device_largest(%magnitude) : (f32) -> f32
     %most = arith.constant 127.0 : f32
     %zero = arith.constant 0.0 : f32
-    %scale = arith.divf %largest, %most : f32
+    %largestScale = arith.divf %largest, %most : f32
+    %scale = func.call @strict_device_code_scale(%largestScale, %residual) : (f32, i1) -> f32
     %isEmpty = arith.cmpf oeq, %largest, %zero : f32
     %inverse = arith.divf %most, %largest : f32
     %factor = arith.select %isEmpty, %zero, %inverse : f32
     %scaled = arith.mulf %value, %factor : f32
-    %rounded = func.call @strict_device_rounded(%scaled) : (f32) -> i32
-    %byte = arith.trunci %rounded : i32 to i8
+    %byte = func.call @strict_device_code(%scaled, %residual) : (f32, i1) -> i8
     %byteSlot = llvm.getelementptr %target[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     llvm.store %byte, %byteSlot : i8, !llvm.ptr
     %thirtyOne = arith.constant 31 : i64
@@ -2301,6 +2333,7 @@
   // ComfyUI's int8 layers) for strict_device_eights
   llvm.mlir.global internal @strict_device_quantize_largest() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<8 x f32>
   func.func private @strict_device_quantize_tokens_run(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
+    %residual, %format = func.call @strict_device_code_format(%bits) : (i64) -> (i1, i64)
     %c0 = arith.constant 0 : i32
     %c1 = arith.constant 1 : i32
     %c5 = arith.constant 5 : i32
@@ -2321,7 +2354,7 @@
     cf.cond_br %moreFound, ^findBody, ^reduce
   ^findBody:
     %valueAt = arith.addi %start, %at : i64
-    %value = func.call @strict_device_floats(%source, %bits, %valueAt) : (!llvm.ptr, i64, i64) -> f32
+    %value = func.call @strict_device_floats(%source, %format, %valueAt) : (!llvm.ptr, i64, i64) -> f32
     %magnitude = llvm.call_intrinsic "llvm.fabs.f32"(%value) : (f32) -> f32
     %larger = arith.maxnumf %largest, %magnitude : f32
     %atNext = arith.addi %at, %threads : i64
@@ -2352,7 +2385,8 @@
     %otherNext = arith.addi %other, %c1 : i32
     cf.br ^gather(%otherNext, %gatheredNext : i32, f32)
   ^scaled:
-    %scale = arith.divf %gathered, %most : f32
+    %largestScale = arith.divf %gathered, %most : f32
+    %scale = func.call @strict_device_code_scale(%largestScale, %residual) : (f32, i1) -> f32
     %isEmpty = arith.cmpf oeq, %gathered, %zero : f32
     %inverse = arith.divf %most, %gathered : f32
     %factor = arith.select %isEmpty, %zero, %inverse : f32
@@ -2363,10 +2397,9 @@
     cf.cond_br %moreWritten, ^writeBody, ^scales
   ^writeBody:
     %writtenAt = arith.addi %start, %writeAt : i64
-    %written = func.call @strict_device_floats(%source, %bits, %writtenAt) : (!llvm.ptr, i64, i64) -> f32
+    %written = func.call @strict_device_floats(%source, %format, %writtenAt) : (!llvm.ptr, i64, i64) -> f32
     %multiplied = arith.mulf %written, %factor : f32
-    %rounded = func.call @strict_device_rounded(%multiplied) : (f32) -> i32
-    %byte = arith.trunci %rounded : i32 to i8
+    %byte = func.call @strict_device_code(%multiplied, %residual) : (f32, i1) -> i8
     %byteSlot = llvm.getelementptr %bytes[%writeAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     llvm.store %byte, %byteSlot : i8, !llvm.ptr
     %writeNext = arith.addi %writeAt, %threads : i64
@@ -2390,6 +2423,7 @@
   }
   // strict_device_quantize_tokens_run of tokens of at most 1024 numbers, a warp per token
   func.func private @strict_device_quantize_rows_run(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
+    %residual, %format = func.call @strict_device_code_format(%bits) : (i64) -> (i1, i64)
     %c3 = arith.constant 3 : i32
     %c5 = arith.constant 5 : i32
     %c31 = arith.constant 31 : i32
@@ -2416,14 +2450,15 @@
     cf.cond_br %moreFound, ^findBody, ^scaled
   ^findBody:
     %valueAt = arith.addi %start, %at : i64
-    %value = func.call @strict_device_floats(%source, %bits, %valueAt) : (!llvm.ptr, i64, i64) -> f32
+    %value = func.call @strict_device_floats(%source, %format, %valueAt) : (!llvm.ptr, i64, i64) -> f32
     %magnitude = llvm.call_intrinsic "llvm.fabs.f32"(%value) : (f32) -> f32
     %larger = arith.maxnumf %largest, %magnitude : f32
     %atNext = arith.addi %at, %lanes : i64
     cf.br ^find(%atNext, %larger : i64, f32)
   ^scaled:
     %rowLargest = func.call @strict_device_largest(%largest) : (f32) -> f32
-    %scale = arith.divf %rowLargest, %most : f32
+    %largestScale = arith.divf %rowLargest, %most : f32
+    %scale = func.call @strict_device_code_scale(%largestScale, %residual) : (f32, i1) -> f32
     %isEmpty = arith.cmpf oeq, %rowLargest, %zero : f32
     %inverse = arith.divf %most, %rowLargest : f32
     %factor = arith.select %isEmpty, %zero, %inverse : f32
@@ -2434,10 +2469,9 @@
     cf.cond_br %moreWritten, ^writeBody, ^scales
   ^writeBody:
     %writtenAt = arith.addi %start, %writeAt : i64
-    %written = func.call @strict_device_floats(%source, %bits, %writtenAt) : (!llvm.ptr, i64, i64) -> f32
+    %written = func.call @strict_device_floats(%source, %format, %writtenAt) : (!llvm.ptr, i64, i64) -> f32
     %multiplied = arith.mulf %written, %factor : f32
-    %rounded = func.call @strict_device_rounded(%multiplied) : (f32) -> i32
-    %byte = arith.trunci %rounded : i32 to i8
+    %byte = func.call @strict_device_code(%multiplied, %residual) : (f32, i1) -> i8
     %byteSlot = llvm.getelementptr %bytes[%writeAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     llvm.store %byte, %byteSlot : i8, !llvm.ptr
     %writeNext = arith.addi %writeAt, %lanes : i64
@@ -2478,6 +2512,310 @@
   ^other:
     func.call @strict_device_quantize_tokens_run(%source, %count, %width, %target, %bits) : (!llvm.ptr, i64, i64, !llvm.ptr, i64) -> ()
     llvm.return
+  }
+  // strict_gpu_tuned: a block of 256 threads per 4 packed rows of 8 bit numbers (rows, one every stride bytes, the scales
+  // per 32 at scaleOffset) adds ups (rank numbers per row, scaled) times downs (rank x width) to every row whose flag is
+  // not 0, then requantizes it to its largest magnitude / 127 with stochastic rounding like TensorFile_Tuned
+  llvm.mlir.global internal @strict_device_tuned_ups() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<2048 x f32>
+  llvm.mlir.global internal @strict_device_tuned_largest() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<32 x f32>
+  llvm.func @strict_device_tuned(%bytes: !llvm.ptr, %stride: i64, %scaleOffset: i64, %downs: !llvm.ptr, %ups: !llvm.ptr, %flags: !llvm.ptr, %width: i64, %rank: i64, %seed: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>} {
+    func.call @strict_device_tuned_run(%bytes, %stride, %scaleOffset, %downs, %ups, %flags, %width, %rank, %seed) : (!llvm.ptr, i64, i64, !llvm.ptr, !llvm.ptr, !llvm.ptr, i64, i64, i64) -> ()
+    llvm.return
+  }
+  func.func private @strict_device_tuned_run(%bytes: !llvm.ptr, %stride: i64, %scaleOffset: i64, %downs: !llvm.ptr, %ups: !llvm.ptr, %flags: !llvm.ptr, %width: i64, %rank: i64, %seed: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
+    %c0 = arith.constant 0 : i32
+    %c5 = arith.constant 5 : i32
+    %c31 = arith.constant 31 : i32
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %three = arith.constant 3 : i64
+    %four = arith.constant 4 : i64
+    %threads = arith.constant 256 : i64
+    %zero = arith.constant 0.0 : f32
+    %most = arith.constant 127.0 : f32
+    %thread = func.call @strict_device_thread_index() : () -> i32
+    %block = func.call @strict_device_block_index() : () -> i32
+    %thread64 = arith.extui %thread : i32 to i64
+    %block64 = arith.extui %block : i32 to i64
+    %first = arith.muli %block64, %four : i64
+    %shared = llvm.mlir.addressof @strict_device_tuned_ups : !llvm.ptr<3>
+    %upCount = arith.muli %rank, %four : i64
+    %upStart = arith.muli %first, %rank : i64
+    cf.br ^load(%thread64 : i64)
+  ^load(%at: i64):
+    %moreUps = arith.cmpi slt, %at, %upCount : i64
+    cf.cond_br %moreUps, ^loadBody, ^loaded
+  ^loadBody:
+    %upAt = arith.addi %upStart, %at : i64
+    %upSlot = llvm.getelementptr %ups[%upAt] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %up = llvm.load %upSlot : !llvm.ptr -> f32
+    %sharedSlot = llvm.getelementptr %shared[%at] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
+    llvm.store %up, %sharedSlot : f32, !llvm.ptr<3>
+    %atNext = arith.addi %at, %threads : i64
+    cf.br ^load(%atNext : i64)
+  ^loaded:
+    func.call @strict_device_barrier() : () -> ()
+    %second = arith.addi %first, %one : i64
+    %third = arith.addi %first, %two : i64
+    %fourth = arith.addi %first, %three : i64
+    %row0 = arith.muli %first, %stride : i64
+    %row1 = arith.muli %second, %stride : i64
+    %row2 = arith.muli %third, %stride : i64
+    %row3 = arith.muli %fourth, %stride : i64
+    %scale0 = func.call @strict_device_tuned_scale(%bytes, %row0, %scaleOffset) : (!llvm.ptr, i64, i64) -> f32
+    %scale1 = func.call @strict_device_tuned_scale(%bytes, %row1, %scaleOffset) : (!llvm.ptr, i64, i64) -> f32
+    %scale2 = func.call @strict_device_tuned_scale(%bytes, %row2, %scaleOffset) : (!llvm.ptr, i64, i64) -> f32
+    %scale3 = func.call @strict_device_tuned_scale(%bytes, %row3, %scaleOffset) : (!llvm.ptr, i64, i64) -> f32
+    cf.br ^measure(%thread64, %zero, %zero, %zero, %zero : i64, f32, f32, f32, f32)
+  ^measure(%column: i64, %m0: f32, %m1: f32, %m2: f32, %m3: f32):
+    %moreColumns = arith.cmpi slt, %column, %width : i64
+    cf.cond_br %moreColumns, ^measureBody, ^reduce
+  ^measureBody:
+    %sums:4 = func.call @strict_device_tuned_sums(%downs, %column, %width, %rank) : (!llvm.ptr, i64, i64, i64) -> (f32, f32, f32, f32)
+    %v0 = func.call @strict_device_tuned_value(%bytes, %row0, %column, %scale0, %sums#0) : (!llvm.ptr, i64, i64, f32, f32) -> f32
+    %v1 = func.call @strict_device_tuned_value(%bytes, %row1, %column, %scale1, %sums#1) : (!llvm.ptr, i64, i64, f32, f32) -> f32
+    %v2 = func.call @strict_device_tuned_value(%bytes, %row2, %column, %scale2, %sums#2) : (!llvm.ptr, i64, i64, f32, f32) -> f32
+    %v3 = func.call @strict_device_tuned_value(%bytes, %row3, %column, %scale3, %sums#3) : (!llvm.ptr, i64, i64, f32, f32) -> f32
+    %n0 = llvm.call_intrinsic "llvm.fabs.f32"(%v0) : (f32) -> f32
+    %n1 = llvm.call_intrinsic "llvm.fabs.f32"(%v1) : (f32) -> f32
+    %n2 = llvm.call_intrinsic "llvm.fabs.f32"(%v2) : (f32) -> f32
+    %n3 = llvm.call_intrinsic "llvm.fabs.f32"(%v3) : (f32) -> f32
+    %m0Next = arith.maxnumf %m0, %n0 : f32
+    %m1Next = arith.maxnumf %m1, %n1 : f32
+    %m2Next = arith.maxnumf %m2, %n2 : f32
+    %m3Next = arith.maxnumf %m3, %n3 : f32
+    %columnNext = arith.addi %column, %threads : i64
+    cf.br ^measure(%columnNext, %m0Next, %m1Next, %m2Next, %m3Next : i64, f32, f32, f32, f32)
+  ^reduce:
+    %w0 = func.call @strict_device_largest(%m0) : (f32) -> f32
+    %w1 = func.call @strict_device_largest(%m1) : (f32) -> f32
+    %w2 = func.call @strict_device_largest(%m2) : (f32) -> f32
+    %w3 = func.call @strict_device_largest(%m3) : (f32) -> f32
+    %warp = arith.shrui %thread, %c5 : i32
+    %lane = arith.andi %thread, %c31 : i32
+    %isFirst = arith.cmpi eq, %lane, %c0 : i32
+    %warp64 = arith.extui %warp : i32 to i64
+    %warpStart = arith.muli %warp64, %four : i64
+    cf.cond_br %isFirst, ^share, ^shared
+  ^share:
+    func.call @strict_device_tuned_shared(%warpStart, %w0, %w1, %w2, %w3) : (i64, f32, f32, f32, f32) -> ()
+    cf.br ^shared
+  ^shared:
+    func.call @strict_device_barrier() : () -> ()
+    %largest0 = func.call @strict_device_tuned_gathered(%none) : (i64) -> f32
+    %largest1 = func.call @strict_device_tuned_gathered(%one) : (i64) -> f32
+    %largest2 = func.call @strict_device_tuned_gathered(%two) : (i64) -> f32
+    %largest3 = func.call @strict_device_tuned_gathered(%three) : (i64) -> f32
+    %flag0 = func.call @strict_device_tuned_float(%flags, %first) : (!llvm.ptr, i64) -> f32
+    %flag1 = func.call @strict_device_tuned_float(%flags, %second) : (!llvm.ptr, i64) -> f32
+    %flag2 = func.call @strict_device_tuned_float(%flags, %third) : (!llvm.ptr, i64) -> f32
+    %flag3 = func.call @strict_device_tuned_float(%flags, %fourth) : (!llvm.ptr, i64) -> f32
+    cf.br ^write(%thread64 : i64)
+  ^write(%at2: i64):
+    %moreWritten = arith.cmpi slt, %at2, %width : i64
+    cf.cond_br %moreWritten, ^writeBody, ^scales
+  ^writeBody:
+    %again:4 = func.call @strict_device_tuned_sums(%downs, %at2, %width, %rank) : (!llvm.ptr, i64, i64, i64) -> (f32, f32, f32, f32)
+    %u0 = func.call @strict_device_tuned_value(%bytes, %row0, %at2, %scale0, %again#0) : (!llvm.ptr, i64, i64, f32, f32) -> f32
+    %u1 = func.call @strict_device_tuned_value(%bytes, %row1, %at2, %scale1, %again#1) : (!llvm.ptr, i64, i64, f32, f32) -> f32
+    %u2 = func.call @strict_device_tuned_value(%bytes, %row2, %at2, %scale2, %again#2) : (!llvm.ptr, i64, i64, f32, f32) -> f32
+    %u3 = func.call @strict_device_tuned_value(%bytes, %row3, %at2, %scale3, %again#3) : (!llvm.ptr, i64, i64, f32, f32) -> f32
+    func.call @strict_device_tuned_store(%bytes, %row0, %at2, %u0, %largest0, %flag0, %seed) : (!llvm.ptr, i64, i64, f32, f32, f32, i64) -> ()
+    func.call @strict_device_tuned_store(%bytes, %row1, %at2, %u1, %largest1, %flag1, %seed) : (!llvm.ptr, i64, i64, f32, f32, f32, i64) -> ()
+    func.call @strict_device_tuned_store(%bytes, %row2, %at2, %u2, %largest2, %flag2, %seed) : (!llvm.ptr, i64, i64, f32, f32, f32, i64) -> ()
+    func.call @strict_device_tuned_store(%bytes, %row3, %at2, %u3, %largest3, %flag3, %seed) : (!llvm.ptr, i64, i64, f32, f32, f32, i64) -> ()
+    %at2Next = arith.addi %at2, %threads : i64
+    cf.br ^write(%at2Next : i64)
+  ^scales:
+    %isLeader = arith.cmpi eq, %thread, %c0 : i32
+    cf.cond_br %isLeader, ^rescale, ^done
+  ^rescale:
+    func.call @strict_device_tuned_rescaled(%bytes, %row0, %scaleOffset, %width, %largest0, %flag0) : (!llvm.ptr, i64, i64, i64, f32, f32) -> ()
+    func.call @strict_device_tuned_rescaled(%bytes, %row1, %scaleOffset, %width, %largest1, %flag1) : (!llvm.ptr, i64, i64, i64, f32, f32) -> ()
+    func.call @strict_device_tuned_rescaled(%bytes, %row2, %scaleOffset, %width, %largest2, %flag2) : (!llvm.ptr, i64, i64, i64, f32, f32) -> ()
+    func.call @strict_device_tuned_rescaled(%bytes, %row3, %scaleOffset, %width, %largest3, %flag3) : (!llvm.ptr, i64, i64, i64, f32, f32) -> ()
+    cf.br ^done
+  ^done:
+    return
+  }
+  func.func private @strict_device_tuned_float(%numbers: !llvm.ptr, %at: i64) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %slot = llvm.getelementptr %numbers[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %number = llvm.load %slot : !llvm.ptr -> f32
+    return %number : f32
+  }
+  // the updates of the 4 rows at column: the sums of ups (in shared memory) times the column of downs
+  func.func private @strict_device_tuned_sums(%downs: !llvm.ptr, %column: i64, %width: i64, %rank: i64) -> (f32, f32, f32, f32) attributes {llvm.passthrough = ["alwaysinline"]} {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %zero = arith.constant 0.0 : f32
+    %shared = llvm.mlir.addressof @strict_device_tuned_ups : !llvm.ptr<3>
+    %twice = arith.addi %rank, %rank : i64
+    %thrice = arith.addi %twice, %rank : i64
+    cf.br ^sum(%none, %zero, %zero, %zero, %zero : i64, f32, f32, f32, f32)
+  ^sum(%part: i64, %a0: f32, %a1: f32, %a2: f32, %a3: f32):
+    %more = arith.cmpi slt, %part, %rank : i64
+    cf.cond_br %more, ^body, ^done
+  ^body:
+    %downStart = arith.muli %part, %width : i64
+    %downAt = arith.addi %downStart, %column : i64
+    %downSlot = llvm.getelementptr %downs[%downAt] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %down = llvm.load %downSlot : !llvm.ptr -> f32
+    %at1 = arith.addi %rank, %part : i64
+    %at2 = arith.addi %twice, %part : i64
+    %at3 = arith.addi %thrice, %part : i64
+    %slot0 = llvm.getelementptr %shared[%part] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
+    %slot1 = llvm.getelementptr %shared[%at1] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
+    %slot2 = llvm.getelementptr %shared[%at2] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
+    %slot3 = llvm.getelementptr %shared[%at3] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
+    %up0 = llvm.load %slot0 : !llvm.ptr<3> -> f32
+    %up1 = llvm.load %slot1 : !llvm.ptr<3> -> f32
+    %up2 = llvm.load %slot2 : !llvm.ptr<3> -> f32
+    %up3 = llvm.load %slot3 : !llvm.ptr<3> -> f32
+    %b0 = llvm.call_intrinsic "llvm.fma.f32"(%up0, %down, %a0) : (f32, f32, f32) -> f32
+    %b1 = llvm.call_intrinsic "llvm.fma.f32"(%up1, %down, %a1) : (f32, f32, f32) -> f32
+    %b2 = llvm.call_intrinsic "llvm.fma.f32"(%up2, %down, %a2) : (f32, f32, f32) -> f32
+    %b3 = llvm.call_intrinsic "llvm.fma.f32"(%up3, %down, %a3) : (f32, f32, f32) -> f32
+    %next = arith.addi %part, %one : i64
+    cf.br ^sum(%next, %b0, %b1, %b2, %b3 : i64, f32, f32, f32, f32)
+  ^done:
+    return %a0, %a1, %a2, %a3 : f32, f32, f32, f32
+  }
+  // the number of the row starting at start at column plus its update
+  func.func private @strict_device_tuned_value(%bytes: !llvm.ptr, %start: i64, %column: i64, %scale: f32, %added: f32) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %at = arith.addi %start, %column : i64
+    %slot = llvm.getelementptr %bytes[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %byte = llvm.load %slot : !llvm.ptr -> i8
+    %number = arith.sitofp %byte : i8 to f32
+    %value = llvm.call_intrinsic "llvm.fma.f32"(%number, %scale, %added) : (f32, f32, f32) -> f32
+    return %value : f32
+  }
+  func.func private @strict_device_tuned_shared(%start: i64, %w0: f32, %w1: f32, %w2: f32, %w3: f32) attributes {llvm.passthrough = ["alwaysinline"]} {
+    %largest = llvm.mlir.addressof @strict_device_tuned_largest : !llvm.ptr<3>
+    %slot0 = llvm.getelementptr %largest[%start] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
+    %slot1 = llvm.getelementptr %slot0[1] : (!llvm.ptr<3>) -> !llvm.ptr<3>, f32
+    %slot2 = llvm.getelementptr %slot0[2] : (!llvm.ptr<3>) -> !llvm.ptr<3>, f32
+    %slot3 = llvm.getelementptr %slot0[3] : (!llvm.ptr<3>) -> !llvm.ptr<3>, f32
+    llvm.store %w0, %slot0 : f32, !llvm.ptr<3>
+    llvm.store %w1, %slot1 : f32, !llvm.ptr<3>
+    llvm.store %w2, %slot2 : f32, !llvm.ptr<3>
+    llvm.store %w3, %slot3 : f32, !llvm.ptr<3>
+    return
+  }
+  // the largest magnitude of row (0 to 3) over the 8 warps
+  func.func private @strict_device_tuned_gathered(%row: i64) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %four = arith.constant 4 : i64
+    %warps = arith.constant 8 : i64
+    %zero = arith.constant 0.0 : f32
+    %largest = llvm.mlir.addressof @strict_device_tuned_largest : !llvm.ptr<3>
+    cf.br ^gather(%none, %zero : i64, f32)
+  ^gather(%warp: i64, %gathered: f32):
+    %more = arith.cmpi slt, %warp, %warps : i64
+    cf.cond_br %more, ^body, ^done
+  ^body:
+    %start = arith.muli %warp, %four : i64
+    %at = arith.addi %start, %row : i64
+    %slot = llvm.getelementptr %largest[%at] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
+    %other = llvm.load %slot : !llvm.ptr<3> -> f32
+    %larger = arith.maxnumf %gathered, %other : f32
+    %next = arith.addi %warp, %one : i64
+    cf.br ^gather(%next, %larger : i64, f32)
+  ^done:
+    return %gathered : f32
+  }
+  // value requantized to 127 / largest with stochastic rounding into the byte at start plus column (only flagged rows)
+  func.func private @strict_device_tuned_store(%bytes: !llvm.ptr, %start: i64, %column: i64, %value: f32, %largest: f32, %flag: f32, %seed: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
+    %zero = arith.constant 0.0 : f32
+    %one = arith.constant 1.0 : f32
+    %most = arith.constant 127.0 : f32
+    %least = arith.constant -127.0 : f32
+    %isFlagged = arith.cmpf une, %flag, %zero : f32
+    cf.cond_br %isFlagged, ^store, ^done
+  ^store:
+    %isEmpty = arith.cmpf oeq, %largest, %zero : f32
+    %inverse = arith.divf %most, %largest : f32
+    %factor = arith.select %isEmpty, %zero, %inverse : f32
+    %scaled = arith.mulf %value, %factor : f32
+    %lower = llvm.call_intrinsic "llvm.floor.f32"(%scaled) : (f32) -> f32
+    %at = arith.addi %start, %column : i64
+    %uniform = func.call @strict_device_uniform(%seed, %at) : (i64, i64) -> f32
+    %fraction = arith.subf %scaled, %lower : f32
+    %isUp = arith.cmpf ogt, %fraction, %uniform : f32
+    %step = arith.select %isUp, %one, %zero : f32
+    %rounded = arith.addf %lower, %step : f32
+    %capped = arith.minnumf %rounded, %most : f32
+    %clamped = arith.maxnumf %capped, %least : f32
+    %whole = arith.fptosi %clamped : f32 to i32
+    %byte = arith.trunci %whole : i32 to i8
+    %slot = llvm.getelementptr %bytes[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %byte, %slot : i8, !llvm.ptr
+    cf.br ^done
+  ^done:
+    return
+  }
+  // the scale of the row starting at start (its first scale per 32)
+  func.func private @strict_device_tuned_scale(%bytes: !llvm.ptr, %start: i64, %scaleOffset: i64) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %at = arith.addi %start, %scaleOffset : i64
+    %slot = llvm.getelementptr %bytes[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %scale = llvm.load %slot : !llvm.ptr -> f32
+    return %scale : f32
+  }
+  // the new scale of a flagged row into every one of its scales per 32
+  func.func private @strict_device_tuned_rescaled(%bytes: !llvm.ptr, %start: i64, %scaleOffset: i64, %width: i64, %largest: f32, %flag: f32) attributes {llvm.passthrough = ["alwaysinline"]} {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %five = arith.constant 5 : i64
+    %thirtyOne = arith.constant 31 : i64
+    %zero = arith.constant 0.0 : f32
+    %most = arith.constant 127.0 : f32
+    %isFlagged = arith.cmpf une, %flag, %zero : f32
+    cf.cond_br %isFlagged, ^store, ^done
+  ^store:
+    %scale = arith.divf %largest, %most : f32
+    %at = arith.addi %start, %scaleOffset : i64
+    %scales = llvm.getelementptr %bytes[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %widened = arith.addi %width, %thirtyOne : i64
+    %parts = arith.shrui %widened, %five : i64
+    cf.br ^part(%none : i64)
+  ^part(%part: i64):
+    %more = arith.cmpi slt, %part, %parts : i64
+    cf.cond_br %more, ^partBody, ^done
+  ^partBody:
+    %slot = llvm.getelementptr %scales[%part] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    llvm.store %scale, %slot : f32, !llvm.ptr
+    %next = arith.addi %part, %one : i64
+    cf.br ^part(%next : i64)
+  ^done:
+    return
+  }
+  // a number in [0, 1) for place in the stream of seed (splitmix64, like Uniform in TensorFile.c)
+  func.func private @strict_device_uniform(%seed: i64, %place: i64) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %one = arith.constant 1 : i64
+    %golden = arith.constant -7046029254386353131 : i64
+    %first = arith.constant -4658895280553007687 : i64
+    %second = arith.constant -7723592293110705685 : i64
+    %c27 = arith.constant 27 : i64
+    %c30 = arith.constant 30 : i64
+    %c31 = arith.constant 31 : i64
+    %c40 = arith.constant 40 : i64
+    %unit = arith.constant 16777216.0 : f32
+    %counted = arith.addi %place, %one : i64
+    %stepped = arith.muli %counted, %golden : i64
+    %mixed = arith.addi %seed, %stepped : i64
+    %shifted1 = arith.shrui %mixed, %c30 : i64
+    %xored1 = arith.xori %mixed, %shifted1 : i64
+    %mixed1 = arith.muli %xored1, %first : i64
+    %shifted2 = arith.shrui %mixed1, %c27 : i64
+    %xored2 = arith.xori %mixed1, %shifted2 : i64
+    %mixed2 = arith.muli %xored2, %second : i64
+    %shifted3 = arith.shrui %mixed2, %c31 : i64
+    %xored3 = arith.xori %mixed2, %shifted3 : i64
+    %bits = arith.shrui %xored3, %c40 : i64
+    %number = arith.uitofp %bits : i64 to f32
+    %uniform = arith.divf %number, %unit : f32
+    return %uniform : f32
   }
   func.func private @strict_device_largest(%value: f32) -> f32 {
     %sixteen = arith.constant 16 : i32

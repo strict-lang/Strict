@@ -2,8 +2,8 @@ has logger
 Run
 	constant nasm = Process.Find("nasm")
 	logger.Log(nasm)
-	logger.Log(nasm.IsAvailable)
+	logger.Log(nasm.IsAvailable to Text)
 	constant where = Process.RunTool("where", "cmd")
-	logger.Log(where.exitCode)
-	logger.Log(where.Succeeded)
-	logger.Log(Directory.Exists("."))
+	logger.Log(where.exitCode to Text)
+	logger.Log(where.Succeeded to Text)
+	logger.Log(Directory.Exists(".") to Text)

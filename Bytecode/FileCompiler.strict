@@ -14,10 +14,11 @@ Compiled(path Text, root Text, withTests Boolean, known Texts = List(Text)) List
 	Built(path, root, withTests, files, inference)
 Built(path Text, root Text, withTests Boolean, files Texts, inference TypeInference) List(TypeEntry)
 	let source = Normalized(path)
-	let missing = Mentions(File(source).ReadLines).Missing(files)
+	let isParsed = BuildProfile(logger).Parsed(value, List(Text) + source)
+	let missing = isParsed then Mentions(File(source).ReadLines).Missing(files) else List(Text)
 	if missing.Length > 0
 		return Located(source, root, withTests, missing.First)
-	if (BuildProfile(logger).Parsed(value, List(Text) + source) is false) or (Resolved(source, inference) is false)
+	if (isParsed is false) or (Resolved(source, inference) is false)
 		return List(TypeEntry)
 	let fused = Fusion(File(source).ReadLines, Path(source).PathOnly.text).Fused
 	let main = TypeCodegen(FullName(source, root), fused, inference, FullNames(files, root))
@@ -70,11 +71,12 @@ Unparsable(lines Texts) Number
 	FileCompiler.Unparsable(("Run", "	logger.Log(1 + 2)")) is -1
 	FileCompiler.Unparsable(("Run", "\t", "\t1")) is 1
 	FileCompiler.Unparsable(("Run", "\t1 is 1", "", "\t1")) is 2
+	FileCompiler.Unparsable(("has width = 1", "constant Help = (\"first", "- second\")")) is 1
 	for lines
-		if value.StartsWith("	") then IsParsed(value.Trim) is false else Declaration.IsUnspaced(value)
-			return index
 		let next = index + 1 < lines.Length then lines(index + 1) else ""
-		if (value.Trim is "") and (value.StartsWith("\t") or next.StartsWith("\t"))
+		let isEmpty = (value.Trim is "") and (value.StartsWith("\t") or next.StartsWith("\t"))
+		let isBroken = value.StartsWith("	") then IsParsed(value.Trim) is false else Declaration.IsUnspaced(value)
+		if isEmpty or isBroken or Tokenizer(value).HasOpenText
 			return index
 	-1
 IsParsed(line Text) Boolean

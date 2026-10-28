@@ -70,3 +70,8 @@ AssignmentIndex Number
 		if (depth is 0) and (value is "=")
 			assignment = index
 	assignment
+Problem(line Text) Text
+	StatementParser.Problem("constant Help = (\"first") is "TextMustEndOnItsLine: constant Help = (\"first"
+	if line.IndexOf(" = for ") > 0
+		return ForProblem + line + ForHint
+	(Tokenizer(line).HasOpenText then "TextMustEndOnItsLine: " else "ParsingFailed: ") + line

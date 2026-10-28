@@ -118,6 +118,20 @@ static const char* Described(const char* entry, Tensor* tensor)
 	return 0;
 }
 
+/* Widens count numbers in the format of tensor at source to floats at target, which may start at or before source as
+   long as the numbers end together (every number is read before a float overwrites it). */
+static void Widened(const unsigned char* source, const Tensor* tensor, float* target, uint64_t count)
+{
+	if (tensor->bytes == 4)
+		memmove(target, source, count * sizeof(float));
+	for (uint64_t index = 0; tensor->bytes == 2 && tensor->isBrain && index < count; index++)
+		target[index] = strict_brain_float((uint16_t)(source[2 * index] | source[2 * index + 1] << 8));
+	for (uint64_t index = 0; tensor->bytes == 2 && !tensor->isBrain && index < count; index++)
+		target[index] = strict_half_float((uint16_t)(source[2 * index] | source[2 * index + 1] << 8));
+	for (uint64_t index = 0; tensor->bytes == 1 && index < count; index++)
+		target[index] = tensor->isSigned ? (float)(int8_t)source[index] : (float)source[index];
+}
+
 /* Reads the numbers of a tensor as 32 bit floats, 0 and the failure if it can't. */
 static float* Read(double path, const Tensor* tensor, const char** failure)
 {
@@ -135,8 +149,9 @@ static float* Read(double path, const Tensor* tensor, const char** failure)
 		*failure = "TensorTooLarge";
 		return 0;
 	}
+	unsigned char* numbers = (unsigned char*)floats + count * (sizeof(float) - tensor->bytes);
 	strict_seek(file, (int64_t)(8 + length + tensor->start), SEEK_SET);
-	size_t read = fread(floats, (size_t)tensor->bytes, count, file);
+	size_t read = fread(numbers, (size_t)tensor->bytes, count, file);
 	fclose(file);
 	if (read != count)
 	{
@@ -144,40 +159,105 @@ static float* Read(double path, const Tensor* tensor, const char** failure)
 		*failure = "TensorFileDataTruncated";
 		return 0;
 	}
-	/* 8 and 16 bit numbers fill the start, widened from the last one down so none is overwritten before it is read */
-	const uint16_t* halves = (const uint16_t*)floats;
-	const unsigned char* bytes = (const unsigned char*)floats;
-	for (uint64_t index = count; tensor->bytes == 2 && index-- > 0;)
-		floats[index] = tensor->isBrain ? strict_brain_float(halves[index]) : strict_half_float(halves[index]);
-	for (uint64_t index = count; tensor->bytes == 1 && index-- > 0;)
-		floats[index] = tensor->isSigned ? (float)(int8_t)bytes[index] : (float)bytes[index];
+	Widened(numbers, tensor, floats, count);
 	return floats;
 }
 
+static void ThreadReleased(void)
+{
+	free(header);
+	free(floatStorage);
+}
+
+/* Packs count floats (stride apart) into the numbers at data with bits 32, 16 (rounded to halves) or 8
+   (strict_quantized). */
+static void Packed(unsigned char* data, const float* first, uint64_t count, uint64_t stride, double bits)
+{
+	if (bits == 8)
+		strict_quantized(data, first, count, stride);
+	for (uint64_t column = 0; bits != 8 && column < count; column++)
+		if (bits == 16)
+			((uint16_t*)data)[column] = strict_half(first[column * stride]);
+		else
+			((float*)data)[column] = first[column * stride];
+}
+
+enum { ChunkRows = 64 };
+typedef struct { Opening file; const Tensor* tensor; uint64_t start; unsigned char* data; uint64_t stride; double bits;
+	int isStored; const float* scales; atomic_int failed; } Placing;
+
+/* Reads the rows of one chunk at once into a buffer and copies them to their place, converted unless stored, 8 bit rows
+   with a scale each get it for all their 32 numbers. */
+static void PlacedChunk(void* context, uint64_t chunk)
+{
+	Placing* placing = context;
+	const Tensor* tensor = placing->tensor;
+	uint64_t rowBytes = tensor->width * tensor->bytes, first = chunk * ChunkRows;
+	uint64_t count = tensor->height - first < ChunkRows ? tensor->height - first : ChunkRows;
+	unsigned char* buffer = malloc(count * rowBytes + 1);
+	float* floats = placing->isStored ? 0 : malloc(tensor->width * sizeof(float) + 1);
+	int isRead = buffer && (placing->isStored || floats) &&
+		ReadFrom(placing->file, placing->start + first * rowBytes, buffer, count * rowBytes);
+	if (!isRead)
+		atomic_store(&placing->failed, 1);
+	for (uint64_t row = first; isRead && row < first + count; row++)
+	{
+		unsigned char* target = placing->data + row * placing->stride;
+		const unsigned char* source = buffer + (row - first) * rowBytes;
+		if (floats)
+		{
+			Widened(source, tensor, floats, tensor->width);
+			Packed(target, floats, tensor->width, 1, placing->bits);
+		}
+		else
+			memcpy(target, source, rowBytes);
+		float* parts = (float*)(target + strict_packed_data(tensor->width, 8));
+		for (uint64_t part = 0; placing->scales && part < (tensor->width + 31) / 32; part++)
+			parts[part] = placing->scales[row];
+	}
+	free(floats);
+	free(buffer);
+}
+
+/* Reads the rows of tensor straight to data (stride bytes apart) with bits, as they are in the file when stored, in
+   chunks on all threads, the failure or 0. */
+static const char* Placed(double path, const Tensor* tensor, unsigned char* data, uint64_t stride, double bits,
+	int isStored, const float* scales)
+{
+	uint64_t length = 0, fileSize = 0;
+	FILE* file = Opened(strict_text(path), &length);
+	if (!file)
+		return "TensorFileNotReadable";
+	fclose(file);
+	Placing placing = { OpenedFile(strict_text(path), &fileSize), tensor, 8 + length + tensor->start, data, stride, bits,
+		isStored, scales };
+	if (!placing.file)
+		return "TensorFileNotReadable";
+	Parallel(PlacedChunk, &placing, (tensor->height + ChunkRows - 1) / ChunkRows);
+	Closed(placing.file);
+	return atomic_load(&placing.failed) ? "TensorFileDataTruncated" : 0;
+}
+
 /* The numbers of the tensor that entry describes: 32 bit floats for float tensors when bits is 32 (exact, the GPU keeps
-   them as they are), doubles otherwise. */
+   them as they are, read in chunks on all threads), doubles otherwise. */
 STRICT_EXPORT double TensorFile_Floats(double self, double path, double entry, double bits)
 {
 	if (!ThreadReady())
 		return strict_fail("NativeThreadStateFailed");
-	const char* failure = 0;
-	Tensor tensor;
-	failure = Described(strict_text(entry), &tensor);
+	Tensor tensor = { 0 };
+	const char* failure = Described(strict_text(entry), &tensor);
+	uint64_t total = tensor.height * tensor.width;
+	if (!failure && bits == 32 && tensor.bytes > 1)
+	{
+		unsigned char* data = 0;
+		double result = strict_packed_numbers(total, 32, &data);
+		failure = !data ? "TensorTooLarge" : Placed(path, &tensor, data, tensor.width * sizeof(float), 32, tensor.bytes == 4, 0);
+		return failure ? strict_fail(failure) : result;
+	}
 	float* floats = failure ? 0 : Read(path, &tensor, &failure);
 	if (!floats)
 		return strict_fail(failure);
-	uint64_t total = tensor.height * tensor.width;
 	free(floatStorage);
-	if (bits == 32 && tensor.bytes > 1)
-	{
-		floatStorage = malloc(sizeof(strict_packed) + total * sizeof(float));
-		strict_packed* packed = (strict_packed*)floatStorage;
-		packed->count = (double)total;
-		packed->bits = 32;
-		memcpy(packed->data, floats, total * sizeof(float));
-		free(floats);
-		return strict_packed_result(packed);
-	}
 	strict_numbers* numbers = malloc(sizeof(strict_numbers) + total * sizeof(double));
 	floatStorage = (unsigned char*)numbers;
 	numbers->count = (double)total;
@@ -185,76 +265,6 @@ STRICT_EXPORT double TensorFile_Floats(double self, double path, double entry, d
 		numbers->items[index] = floats[index];
 	free(floats);
 	return strict_numbers_result(numbers);
-}
-
-/* The result of the last matrix call (the caller copies it right away): the row count, then every row as a packed list
-   in storage, which is kept for the next call (fresh memory costs a page fault per 4 KB, 0.4 ms per MB). */
-static _Thread_local double* rows = 0;
-static _Thread_local unsigned char* storage = 0;
-static _Thread_local uint64_t capacity = 0;
-
-static void ThreadReleased(void)
-{
-	free(header);
-	free(floatStorage);
-	free(rows);
-	free(storage);
-}
-
-/* Room for height rows of size bytes each, 0 if there is not enough memory. */
-static int Allocated(uint64_t height, uint64_t size)
-{
-	free(rows);
-	rows = malloc((1 + height) * sizeof(double));
-	if (height * size + 1 > capacity)
-	{
-		free(storage);
-		storage = malloc(height * size + 1);
-		capacity = storage ? height * size + 1 : 0;
-	}
-	if (rows)
-		rows[0] = (double)height;
-	return rows && storage;
-}
-
-enum { ChunkRows = 64 };
-typedef struct { Opening file; uint64_t start, width, rowBytes, size, height; double bits; unsigned char* storage; double* rows; atomic_int failed; } Placing;
-
-/* Reads the rows of one chunk at once into a buffer and copies them into their packed rows. */
-static void PlacedChunk(void* context, uint64_t chunk)
-{
-	Placing* placing = context;
-	uint64_t first = chunk * ChunkRows, count = placing->height - first < ChunkRows ? placing->height - first : ChunkRows;
-	unsigned char* buffer = malloc(count * placing->rowBytes + 1);
-	if (!buffer || !ReadFrom(placing->file, placing->start + first * placing->rowBytes, buffer, count * placing->rowBytes))
-		atomic_store(&placing->failed, 1);
-	for (uint64_t row = first; buffer && row < first + count; row++)
-	{
-		strict_packed* packed = (strict_packed*)(placing->storage + row * placing->size);
-		packed->count = (double)placing->width;
-		packed->bits = placing->bits;
-		memcpy(packed->data, buffer + (row - first) * placing->rowBytes, placing->rowBytes);
-		placing->rows[1 + row] = strict_packed_result(packed);
-	}
-	free(buffer);
-}
-
-/* Reads the rows of tensor as they are in the file straight into the packed rows (size bytes apart) with bits, in
-   chunks on all threads, the failure or 0. */
-static const char* Placed(double path, const Tensor* tensor, uint64_t size, double bits)
-{
-	uint64_t length = 0, fileSize = 0;
-	FILE* file = Opened(strict_text(path), &length);
-	if (!file)
-		return "TensorFileNotReadable";
-	fclose(file);
-	Placing placing = { OpenedFile(strict_text(path), &fileSize), 8 + length + tensor->start, tensor->width,
-		tensor->width * tensor->bytes, size, tensor->height, bits, storage, rows };
-	if (!placing.file)
-		return "TensorFileNotReadable";
-	Parallel(PlacedChunk, &placing, (tensor->height + ChunkRows - 1) / ChunkRows);
-	Closed(placing.file);
-	return atomic_load(&placing.failed) ? "TensorFileDataTruncated" : 0;
 }
 
 /* The rows (or the columns when transposed) of the matrix that entry describes, each as numbers with bits 32 (exact for
@@ -269,32 +279,19 @@ static double Matrix(double path, double entry, double bits, int transposed)
 		return strict_fail(failure);
 	if (tensor.rank != 2 || (bits != 8 && bits != 16 && bits != 32))
 		return strict_fail("OnlyMatricesOf8Or16Or32BitsAreSupported");
-	uint64_t height = tensor.height, width = tensor.width;
+	uint64_t height = tensor.height, width = tensor.width, stride = 0;
 	uint64_t outer = transposed ? width : height, inner = transposed ? height : width;
-	uint64_t size = (sizeof(strict_packed) + strict_packed_bytes(inner, (uint64_t)bits) + 7) / 8 * 8;
-	int isStored = !transposed && !tensor.isBrain && bits > 8 && tensor.bytes * 8 == bits;
-	float* floats = isStored ? 0 : Read(path, &tensor, &failure);
+	int isStored = !tensor.isBrain && bits > 8 && tensor.bytes * 8 == bits;
+	float* floats = transposed ? Read(path, &tensor, &failure) : 0;
 	if (failure)
 		return strict_fail(failure);
-	failure = !Allocated(outer, size) ? "TensorTooLarge" : isStored ? Placed(path, &tensor, size, bits) : 0;
+	unsigned char* data = 0;
+	double result = strict_rows(outer, inner, bits, &data, &stride);
+	failure = !data ? "TensorTooLarge" : transposed ? 0 : Placed(path, &tensor, data, stride, bits, isStored, 0);
 	for (uint64_t row = 0; floats && !failure && row < outer; row++)
-	{
-		strict_packed* packed = (strict_packed*)(storage + row * size);
-		const float* first = transposed ? floats + row : floats + row * width;
-		uint64_t stride = transposed ? width : 1;
-		packed->count = (double)inner;
-		packed->bits = bits;
-		if (bits == 8)
-			strict_quantized(packed, first, inner, stride);
-		for (uint64_t column = 0; bits != 8 && column < inner; column++)
-			if (bits == 16)
-				((uint16_t*)packed->data)[column] = strict_half(first[column * stride]);
-			else
-				((float*)packed->data)[column] = first[column * stride];
-		rows[1 + row] = strict_packed_result(packed);
-	}
+		Packed(data + row * stride, floats + row, inner, width, bits);
 	free(floats);
-	return failure ? strict_fail(failure) : strict_numbers_result((strict_numbers*)rows);
+	return failure ? strict_fail(failure) : result;
 }
 
 STRICT_EXPORT double TensorFile_Rows(double self, double path, double entry, double bits)
@@ -307,34 +304,38 @@ STRICT_EXPORT double TensorFile_Columns(double self, double path, double entry, 
 	return Matrix(path, entry, bits, 1);
 }
 
-/* The rows of an I8 matrix with one F32 scale per row (comfy_quant int8 rows, convrot keeps them rotated), read straight
-   into 8 bit rows whose per-32 scales all are the scale of their row, so every number is exact. */
-STRICT_EXPORT double TensorFile_Quantized(double self, double path, double entry, double scales)
+/* The rows of an I8 matrix (tensor from entry) with one F32 scale per row (comfy_quant int8 rows, convrot keeps them
+   rotated), read straight into 8 bit rows (bits, plus STRICT_KEPT_TOKENS) at data, stride bytes apart, whose per-32
+   scales all are the scale of their row, so every number is exact: the result. */
+static double QuantizedRows(double path, double entry, double scales, double bits, Tensor* tensor, unsigned char** data,
+	uint64_t* stride)
 {
-	if (!ThreadReady())
-		return strict_fail("NativeThreadStateFailed");
-	Tensor tensor, scaled;
-	const char* failure = Described(strict_text(entry), &tensor);
+	Tensor scaled;
+	const char* failure = Described(strict_text(entry), tensor);
 	if (!failure)
 		failure = Described(strict_text(scales), &scaled);
-	if (!failure && (!tensor.isSigned || tensor.rank != 2 || scaled.bytes != 4 || scaled.height * scaled.width != tensor.height))
+	if (!failure && (!tensor->isSigned || tensor->rank != 2 || scaled.bytes != 4 || scaled.height * scaled.width != tensor->height))
 		failure = "OnlyI8MatricesWithAnF32ScalePerRowAreSupported";
 	float* factors = failure ? 0 : Read(path, &scaled, &failure);
 	if (!factors)
 		return strict_fail(failure);
-	uint64_t width = tensor.width, size = (sizeof(strict_packed) + strict_packed_bytes(width, 8) + 7) / 8 * 8;
-	failure = Allocated(tensor.height, size) ? Placed(path, &tensor, size, 8) : "TensorTooLarge";
-	for (uint64_t row = 0; !failure && row < tensor.height; row++)
-	{
-		float* parts = (float*)(storage + row * size + sizeof(strict_packed) + strict_packed_data(width, 8));
-		for (uint64_t part = 0; part < (width + 31) / 32; part++)
-			parts[part] = factors[row];
-	}
+	double result = strict_rows(tensor->height, tensor->width, bits, data, stride);
+	failure = !*data ? "TensorTooLarge" : Placed(path, tensor, *data, *stride, bits, 1, factors);
 	free(factors);
-	return failure ? strict_fail(failure) : strict_numbers_result((strict_numbers*)rows);
+	return failure ? strict_fail(failure) : result;
 }
 
-typedef struct { float* downs; float* ups; uint64_t width, rank, size, height, seed; unsigned char* storage; } Tuning;
+STRICT_EXPORT double TensorFile_Quantized(double self, double path, double entry, double scales, double tokenBits)
+{
+	if (!ThreadReady())
+		return strict_fail("NativeThreadStateFailed");
+	Tensor tensor;
+	unsigned char* data = 0;
+	uint64_t stride = 0;
+	return QuantizedRows(path, entry, scales, tokenBits > 8 ? 8 + STRICT_KEPT_TOKENS : 8, &tensor, &data, &stride);
+}
+
+typedef struct { float* downs; float* ups; uint64_t width, rank, stride, height, seed; unsigned char* data; } Tuning;
 enum { TileRows = 8, BlockColumns = 128 };
 
 /* A number in [0, 1) for place in the stream of seed (splitmix64). */
@@ -351,9 +352,8 @@ static float Uniform(uint64_t seed, uint64_t place)
 static void Requantized(const Tuning* tuning, uint64_t row, const float* values)
 {
 	uint64_t width = tuning->width;
-	strict_packed* packed = (strict_packed*)(tuning->storage + row * tuning->size);
-	signed char* numbers = (signed char*)packed->data;
-	float* parts = (float*)(packed->data + strict_packed_data(width, 8)), largest = 0;
+	signed char* numbers = (signed char*)(tuning->data + row * tuning->stride);
+	float* parts = (float*)((unsigned char*)numbers + strict_packed_data(width, 8)), largest = 0;
 	for (uint64_t column = 0; column < width; column++)
 		largest = fabsf(values[column]) > largest ? fabsf(values[column]) : largest;
 	float scale = largest / 127;
@@ -387,9 +387,9 @@ static void TunedChunk(void* context, uint64_t chunk)
 				isTuned |= up[part] != 0;
 			if (!isTuned)
 				continue;
-			strict_packed* packed = (strict_packed*)(tuning->storage + row * tuning->size);
-			const signed char* numbers = (const signed char*)packed->data;
-			float scale = ((float*)(packed->data + strict_packed_data(width, 8)))[0], *target = values + count * width;
+			const signed char* numbers = (const signed char*)(tuning->data + row * tuning->stride);
+			float scale = ((const float*)((const unsigned char*)numbers + strict_packed_data(width, 8)))[0];
+			float* target = values + count * width;
 			for (uint64_t column = 0; column < width; column++)
 				target[column] = numbers[column] * scale;
 			tuned[count++] = row;
@@ -418,16 +418,21 @@ static void TunedChunk(void* context, uint64_t chunk)
    of convrot rows), the ups (rows x rank) and one scale per rank; rows without an update stay as they are in the file. */
 STRICT_EXPORT double TensorFile_Tuned(double self, double path, double entry, double scales, double factors)
 {
-	double quantized = TensorFile_Quantized(self, path, entry, scales);
+	if (!ThreadReady())
+		return strict_fail("NativeThreadStateFailed");
+	Tensor tensor;
+	unsigned char* data = 0;
+	uint64_t stride = 0;
+	double quantized = QuantizedRows(path, entry, scales, 8, &tensor, &data, &stride);
 	const strict_numbers* given = strict_numbers_of(factors);
 	if (strict_bits(quantized) >> 48 == 0x7FFC || given->count == 0)
 		return quantized;
-	uint64_t height = (uint64_t)rows[0], width = (uint64_t)((strict_packed*)storage)->count;
+	uint64_t height = tensor.height, width = tensor.width;
 	uint64_t rank = (uint64_t)given->count / (width + height + 1);
 	if (rank == 0 || rank * (width + height + 1) != (uint64_t)given->count)
 		return strict_fail("TunedFactorsDoNotFitTheMatrix");
-	Tuning tuning = { malloc(rank * width * sizeof(float)), malloc(rank * height * sizeof(float)), width, rank,
-		(sizeof(strict_packed) + strict_packed_bytes(width, 8) + 7) / 8 * 8, height, 1469598103934665603ull, storage };
+	Tuning tuning = { malloc(rank * width * sizeof(float)), malloc(rank * height * sizeof(float)), width, rank, stride,
+		height, 1469598103934665603ull, data };
 	if (!tuning.downs || !tuning.ups)
 	{
 		free(tuning.downs);

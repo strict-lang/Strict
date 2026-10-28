@@ -29,7 +29,7 @@ Built(type TypeEntry) Text
 	if Directory.Exists(native) is false
 		return MlirForeign(MlirFunction(types, type, Method(type))).Unimplemented
 	let entered = TestBudget.Entered
-	let library = NativeSources(List(Text) + native).Library(Platform.Current, TypeSource.Root)
+	let library = NativeLibrary(NativeSources(List(Text) + native)).Built(Platform.Current, TypeSource.Root)
 	TestBudget.Left(entered)
 	library
 IsForeign(type TypeEntry) Boolean

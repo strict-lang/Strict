@@ -13,4 +13,4 @@ Doubled(text Text, times Number) Text
 		doubled = doubled + doubled
 	doubled
 Run
-	logger.Log(Copied(1100))
+	logger.Log(Copied(1100) to Text)

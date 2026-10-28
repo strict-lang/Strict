@@ -1,0 +1,65 @@
+has sources NativeSources
+constant Adding = NativeLibrary(NativeSources.Adding)
+constant Failing = "clang failed for Compiler/output/Cut.o: no"
+Built(platform Number, root Text) Text
+	Adding.Built(Platform.Current, ".").StartsWith("Built Examples/NativeAdd/native/NativeAdd.")
+	let folder = sources.folders.First
+	let base = folder + "/" + Path(Path(folder).PathOnly.text).FileName.text
+	let library = base + Platform.LibraryExtension(platform)
+	let shared = platform is Platform.Windows then "-shared -O2 -DSTRICT_LIBRARY" else "-shared -fPIC -O2 -DSTRICT_LIBRARY"
+	let previous = Waited(library, sources.Files + sources.Inputs(platform, root), shared)
+	if previous is not ""
+		return previous
+	let output = base + "." + 999999.Random.Floor + Platform.LibraryExtension(platform)
+	let clang = Toolchain(platform, root).Located("clang")
+	let result = ToolRunner(clang).Execute(shared + sources.Arguments(platform, root) + " -o \"" + output + "\"")
+	Finished(result, output, library, shared)
+Object(source Text, platform Number, root Text, options Text) Text
+	Adding.Object("Examples/NativeAdd/native/Adder.c", Platform.Current, ".", "") is "Examples/NativeAdd/native/Adder.o"
+	let target = Path(source).RemoveExtension.text + ".o"
+	let previous = Waited(target, sources.Inputs(platform, root) + source, options)
+	let built = previous is "" then Compiled(source, platform, root, options) else previous
+	built.StartsWith("Built ") then built.Substring(6, built.Length - 6) else built
+Compiled(source Text, platform Number, root Text, options Text) Text
+	Adding.Compiled("Compiler/output/No.c", Platform.Current, ".", "").StartsWith("clang failed for Compiler/output/No.o")
+	let output = Path(source).RemoveExtension.text + "." + 999999.Random.Floor + ".o"
+	let compile = "-c \"" + source + "\" -I\"" + root + "/Compiler\"" + options + Toolchain.Optimized
+	let compiled = ToolRunner(Toolchain(platform, root).Located("clang")).Execute(compile + " -o \"" + output + "\"")
+	Finished(compiled, output, Path(source).RemoveExtension.text + ".o", options)
+Waited(target Text, inputs Texts, options Text) Slow(Text)
+	Adding.Waited("Compiler/output/Missing.dll", List(Text), "") is ""
+	let lock = File(target + "." + Newest(inputs) + ".lock")
+	let started = Process.Elapsed
+	for as long as Process.Elapsed - started < Strict.MaxWait
+		if sources.IsCompiled(target, inputs, options)
+			return "Built " + target
+		if sources.IsCurrent(target + ".built.nativecache", inputs)
+			return Located(target, Text.Combine(File(target + ".built.nativecache").ReadLines, "\n"))
+		if lock.Locked
+			return ""
+		Process.Wait(0.1)
+	""
+Finished(result ProcessResult, output Text, target Text, options Text) Text
+	Adding.Finished(ProcessResult(1, "", "no"), "Compiler/output/Cut.1.o", "Compiler/output/Cut.o", "") is Failing
+	let failure = "clang failed for " + target + ": " + result.error
+	let built = result.Failed then failure else "Built " + sources.Placed(output, target)
+	File(target + ".built.nativecache").Write(built)
+	if built is "Built " + target
+		File(target + ".nativecache").Write(options)
+	built
+Located(target Text, recorded Text) Text
+	Adding.Located("a/b.dll", "Built c/b.1.dll") is "Built a/b.1.dll"
+	Adding.Located("b.dll", "Built c/b.dll") is "Built b.dll"
+	Adding.Located("a/b.dll", "clang failed") is "clang failed"
+	if recorded.StartsWith("Built ") is false
+		return recorded
+	let folder = Path(target).PathOnly.text
+	"Built " + (folder is "" then "" else folder + "/") + Path(recorded.Substring(6, recorded.Length - 6)).FileName.text
+Newest(inputs Texts) Number
+	Adding.Newest(List(Text) + "Compiler/strict.h") is File("Compiler/strict.h").Modified
+	Adding.Newest(List(Text) + "Compiler/Missing.h") is 0
+	mutable newest = 0
+	for inputs
+		if File(value).Exists and (File(value).Modified > newest)
+			newest = File(value).Modified
+	newest

@@ -97,8 +97,11 @@ TypeHelper(kind Text, name Text) Text
 	if (kind is "ConstantCache") and (name is in ("At", "Stored"))
 		return name is "At" then "strict_list_get" else "strict_list_set"
 	if kind + "." + name is not in Hosted.Methods
-		return kind is "GpuMemory" then ("strict_gpu_" + (name is "Released" then "trim_unused" else "evict_all")) else ""
+		return kind is "GpuMemory" then GpuHelper(name) else ""
 	"strict_" + kind.Lower + "_" + (name is "ReadLines" then "read_lines" else name.Lower)
+GpuHelper(name Text) Text
+	MlirNatives(Texts, 1).GpuHelper("Tuned") is "strict_gpu_tuned"
+	"strict_gpu_" + (name is "Released" then "trim_unused" else (name is "Evicted" then "evict_all" else name.Lower))
 TextHelper(name Text) Text
 	MlirNatives(Texts, 1).TypeHelper("File", "WriteLines") is "strict_file_writelines"
 	MlirNatives(Texts, 1).TypeHelper("File", "Modified") is "strict_file_modified"

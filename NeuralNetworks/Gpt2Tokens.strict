@@ -49,7 +49,7 @@ Vocabulary(json Text) Texts
 Unescaped(key Text) Text
 	Unescaped("\\u0120a\\\"") is " a\""
 	Unescaped("Ġa") is " a"
-	Raw(Json("\"" + key + "\"") to Text)
+	Raw((key.IndexOf("\\") < 0) then key else Json("\"" + key + "\"") to Text)
 Unmapped(code Number) Number
 	Unmapped(97) is 97
 	Unmapped(288) is 32

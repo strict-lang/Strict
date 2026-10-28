@@ -72,6 +72,8 @@ LoopScope(statement SyntaxNode, scope Scope) Scope
 Element(iterated Text) Text
 	MethodBodies("Demo", Sample, NoInference).Element("Dictionary(Text, Number)") is "List(Text, Number)"
 	MethodBodies("Demo", Sample, NoInference).Element("Dictionary(Text, Text)") is "Texts"
+	if inference.Enumerated(iterated).Length > 0
+		return iterated
 	let isDictionary = iterated.StartsWith("Dictionary(")
 	isDictionary then Item(iterated.Substring(11, iterated.Length - 12)) else inference.types.ElementType(iterated)
 Item(arguments Text) Text

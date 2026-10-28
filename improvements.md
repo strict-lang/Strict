@@ -3,12 +3,9 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 
 ## Bugs
 - Ternary Bonsai 27B at a simulated 10 GB stalled once more (first run after a cold build), 12 later runs did not: [improvements-models.md](improvements-models.md).
-- A folder test whose package native library is out of date builds it in every test child at once (`NativeSources.Library`, one clang call of all sources), the children race on the rename and leave `<library>.<random>.dll` behind: build it once under a lock like `PtxCache.Waited`.
-- A method without parameters named like a type leaks into other types: a `Window Number` method in DeltaEngine `Graphics3D/Route3D.strict` made `Window.Size(app.handle)` in `Games/RacingGame/RacingGame.strict` (which uses a Route3D) fail with `MethodNotFound: Number.Size, local Window hides the type Window` on the VM and natively.
-- A native program looping `for 42` over Moss layers with an inner `for` over 6 linear names (H3Lora.Stacked, Convrot.Rotated, TensorFile.Tuned, timings summed into mutables) fails with TensorNotFound at layer 0 (the Entry of the linear empty, one variant also found no LoRA, so a LoRA can be dropped silently); `for 1` or one more logger.Log in the inner loop pass: C:/Users/Benja/AppData/Local/Temp/claude/C--code-GitHub-strict-lang-StrictComfy/c8cc3516-b276-4c26-8866-f9137e998608/scratchpad/NestedValueBug.strict (run in ../StrictComfy with the Moss model and dmd_turbo_lora), small repros pass.
-- `for Shade` over an enum (a type of only constants) fails with NotIterable, the README says it gives its constants.
 - `Members` natively has no values (`()` for every InitialValue), the VM has them.
-- A text literal broken over two lines reports TypeNotFound for `-` at line 3 of the file instead of the line it is on.
+- A GPU loop reads outside its list once a flat list passes 2^24 numbers (StrictComfy `H3Vae.Canvas` with `size` hoisted: a tiny 16x16 latent window of 19.4M numbers fails, 12x12 of 10.4M matches the CPU): index arithmetic must stay exact. A copy of Canvas with 19.35M synthetic tile numbers matches the CPU on master (2026-10-28), StrictComfy's exact failing code is needed.
+- A `List(Numbers)` of GPU lists (one list per tile in `H3Vae.Canvas`) reads 0 on the GPU without an error. 4 tiles computed on the GPU read through `tiles(t)(i)` in a GPU loop are right on master (2026-10-28), StrictComfy's exact failing code is needed.
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).

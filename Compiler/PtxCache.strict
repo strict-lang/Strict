@@ -1,6 +1,10 @@
 has base Text
 constant Sample = PtxCache("Compiler/output/Kept")
 constant Metal = DeviceBuild(Toolchain(Platform.MacOS, "."))
+constant Empty = "  llvm.mlir.global internal constant @strict_gpu_ptx(\"\\00\") : !llvm.array<1 x i8>\n}"
+Unlaunched(program Text) Text
+	Sample.Unlaunched("module {\n}") is "module {\n" + Empty
+	program.Substring(0, program.LastIndexOf("}")) + Empty
 Previous(device Text, isTiling Boolean) Texts
 	PtxCache("Compiler/output/missing").Previous("module {\n}", false).Length is 0
 	Sample.Remembered("module {\n\n}", ("// new", "// old")) is ("// new", "// old")
