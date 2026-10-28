@@ -1,14 +1,11 @@
 has logger
 has isCrossing Boolean = true
-has level Text = Fast
 has isWeb Boolean = false
 has isAndroid Boolean = false
 has isIOS Boolean = false
 has isSimulator Boolean = false
 has selection Text = ""
-constant Fast = " -O2"
-constant Quick = " -O0"
-constant Small = " -Os"
+constant Broken = "module {\n  func.func private @A() -> f64 {\n    return %missing : f64\n  }\n}"
 constant Intermediates = (".ios.o", ".ios.new.a", ".android.o", ".llvm.mlir", ".ll", ".res", ".gpu.mlir", ".gpu.llvm.mlir", ".gpu.ll", ".sm_75.ptx", ".sm_80.ptx", ".amd.mlir", ".amd.llvm.mlir", ".amd.ll", ".amd.bc", ".linux.mlir", ".linux.llvm.mlir", ".linux.ll", ".linux.o", ".pre.js", ".o", ".gpu.opt.ll", ".runtime.gpu.mlir", ".runtime.gpu.llvm.mlir", ".runtime.gpu.ll", ".runtime.sm_75.ptx", ".runtime.sm_80.ptx")
 IsProgram(path Text) Boolean
 	NativeBuild.IsProgram("Examples/Sum.strict")
@@ -60,7 +57,7 @@ Build(base Text, program Text, tools Toolchain, isCounting = false) Number
 	if missing.Length > 0
 		logger.Log(tools.Installing(missing))
 		return 1
-	let mlir = BuildProfile(logger).Runtime(program, tools.root, Target) + "\n// " + level.Trim
+	let mlir = BuildProfile(logger).Runtime(program, tools.root, Target)
 	let built = Rebuilt(base, mlir, tools)
 	logger.Log(built)
 	if built.StartsWith("Built ") is false
@@ -85,13 +82,13 @@ IsUnchanged(base Text, mlir Text, tools Toolchain) Boolean
 		return false
 	Text.Combine(previous.ReadLines, "\n") is mlir
 Rebuilt(base Text, mlir Text, tools Toolchain) Slow(Text)
-	NativeBuild(Logger).Rebuilt("Compiler/output/Written", "x", Toolchain.OnWindows).StartsWith("mlir-opt failed")
+	NativeBuild(Logger).Rebuilt("Compiler/output/Written", Broken, Toolchain.OnWindows).StartsWith("mlir-opt failed")
 	if IsUnchanged(base, mlir, tools)
 		return "Built " + tools.Executable(base) + ", unchanged"
 	File(base + ".mlir").Write(mlir)
 	if isIOS
-		return IOSBuild(tools, isSimulator).Linked(base, level)
-	isAndroid then AndroidBuild(tools).Linked(base, level) else Linked(base, tools)
+		return IOSBuild(tools, isSimulator).Linked(base)
+	isAndroid then AndroidBuild(tools).Linked(base) else Linked(base, tools)
 Ran(base Text, tools Toolchain, path Text, isCounting Boolean) Number
 	let executable = tools.Executable(base)
 	let result = ToolRunner(executable).Cleaned(Process.RunTool(executable, ""))
@@ -107,7 +104,7 @@ Linked(base Text, tools Toolchain) Slow(Text)
 	let executable = tools.Executable(base)
 	let isSwapped = (Platform.Current is Platform.Windows) and (tools.isWeb is false) and File(executable).Exists
 	let target = isSwapped then executable.Replace(".exe", ".new.exe") else executable
-	let built = tools.isWeb then WebBuild(tools).Linked(base, target, level) else tools.Built(base, target, level)
+	let built = tools.isWeb then WebBuild(tools).Linked(base, target) else tools.Built(base, target)
 	if isSwapped and built.StartsWith("Built ")
 		let old = executable.Replace(".exe", ".old.exe")
 		File(executable).Rename(old)
@@ -121,7 +118,7 @@ CrossBuild(base Text, program Text, tools Toolchain, isCounting Boolean) Number
 	if (Target is not Platform.Windows) or isCounting or (isCrossing is false)
 		return 0
 	File(base + ".linux.mlir").Write(Mlir(program, tools.root, Platform.Linux))
-	let crossed = tools.CrossBuilt(base, level)
+	let crossed = tools.CrossBuilt(base)
 	logger.Log(crossed)
 	crossed.StartsWith("Built ") or crossed.StartsWith("Linux build skipped") then 0 else 1
 Removed(base Text) Boolean

@@ -123,24 +123,12 @@ with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as 
 	assert built.returncode == 0, built.stdout + built.stderr
 	assert subprocess.run([str(executable)], timeout=10).returncode == 1, "Dependency change was skipped"
 	source.write_text("Run Number\n\t1 is 1\n\tBuildValue.Result + 1", encoding="utf-8")
-	built = run("build", str(source), "small")
+	built = run("build", str(source))
 	assert built.returncode == 0, built.stdout + built.stderr
 	assert subprocess.run([str(executable)], timeout=10).returncode == 2, "Source change was skipped"
-	assert source.with_suffix(".mlir").read_text().endswith("// -Os"), "Changed build options were skipped"
 	executable.unlink()
-	built = run("build", str(source), "small")
+	built = run("build", str(source))
 	assert built.returncode == 0 and executable.exists(), "Missing executable was not rebuilt: " + built.stdout
-	built = run("build", str(source), "fast")
-	assert built.returncode == 0, built.stdout + built.stderr
-	assert source.with_suffix(".mlir").read_text().endswith("// -O0"), "Fast build still optimizes host code"
-	assert subprocess.run([str(executable)], timeout=10).returncode == 2
-	modified = executable.stat().st_mtime_ns
-	source.with_suffix(".mlir").unlink()
-	built = run("build", str(source), "fast")
-	assert built.returncode == 0, built.stdout + built.stderr
-	assert not source.with_suffix(".mlir").exists() and executable.stat().st_mtime_ns == modified, built.stdout
-	built = run("build", str(source), "fast", "small")
-	assert built.returncode != 0 and "Fast builds" in built.stdout, built.stdout + built.stderr
 	source.write_text("Run Number\n\t1 is 2\n\tBuildValue.Result + 1", encoding="utf-8")
 	tested = run("test", str(source))
 	assert tested.returncode == 1 and "Test failed:" in tested.stdout, tested.stdout + tested.stderr
@@ -249,22 +237,22 @@ def check_concurrent_builds():
 			assert process.returncode == 0, output
 		first = started()
 		holding(first)
-		second = waiting("small")
+		second = waiting()
 		finished(first)
 		finished(second)
-		assert source.with_suffix(".mlir").read_text().endswith("// -Os"), "The waiting build did not build last"
 		assert subprocess.run([str(executable)], timeout=10).returncode == 3
 		lock.unlink(missing_ok=True)
+		source.write_text("Run Number\n\t1 is 1\n\t4", encoding="utf-8")
 		killed = started()
 		holding(killed)
-		recovering = waiting("fast")
+		recovering = waiting()
 		if sys.platform == "win32":
 			subprocess.run(["taskkill", "/T", "/F", "/PID", str(killed.pid)], capture_output=True)
 		else:
 			os.killpg(killed.pid, 9)
 		killed.wait(timeout=10)
 		finished(recovering)
-		assert subprocess.run([str(executable)], timeout=10).returncode == 3
+		assert subprocess.run([str(executable)], timeout=10).returncode == 4
 		leftovers = [path.name for path in Path(folder).iterdir() if path.name.endswith((".new.exe", ".old.exe"))]
 		assert not leftovers, "Replacement executables were left behind: " + str(leftovers)
 	print("Concurrent builds of one target take turns, a killed build releases its lock")

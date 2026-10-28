@@ -5,10 +5,10 @@ constant OneCallerInlining = " --one-caller-inline-max-function-size=1000"
 constant Features = " --enable-bulk-memory --enable-sign-ext --enable-nontrapping-float-to-int --enable-mutable-globals"
 constant Passes = " --strip-debug --strip-producers --skip-pass=coalesce-locals" + OneCallerInlining + Features
 constant Sizes = ("malloc", "calloc", "realloc", "memcpy", "memset", "strlen", "strncmp", "strftime", "fread", "fwrite", "fseek", "ftell", "strtol", "snprintf")
-Linked(base Text, executable Text, level Text) Text
+Linked(base Text, executable Text) Text
 	(Options.IndexOf("--closure 1") >= 0) and (Options.IndexOf("--profiling-funcs") is -1)
-	Missing.Linked("Compiler/output/missing", "missing.html", "").StartsWith("mlir-opt failed")
-	let compiled = Compiled(base, level)
+	Missing.Linked("Compiler/output/missing", "missing.html").StartsWith("mlir-opt failed")
+	let compiled = Compiled(base)
 	if compiled is not ""
 		return compiled
 	let folder = Release(Logger, base).Parent
@@ -17,19 +17,19 @@ Linked(base Text, executable Text, level Text) Text
 	let runtime = " --js-library " + tools.Quoted(tools.root + "/Compiler/WebRuntime.js")
 	let inputs = tools.Quoted(base + ".o") + sources + Mirrored(folder, base) + page + runtime
 	let linked = ToolRunner(tools.Located("emcc")).Execute(inputs + " -o " + tools.Quoted(executable) + Options + " -O1")
-	linked.Failed then "emcc failed: " + linked.error else Optimized(executable, level)
-Compiled(base Text, level Text) Text
-	Missing.Compiled("Compiler/output/missing", "").StartsWith("mlir-opt failed")
+	linked.Failed then "emcc failed: " + linked.error else Optimized(executable)
+Compiled(base Text) Text
+	Missing.Compiled("Compiler/output/missing").StartsWith("mlir-opt failed")
 	let lowered = tools.Lowered(base)
 	if lowered is not ""
 		return lowered
-	let output = " -o " + tools.Quoted(base + ".o") + " -Wno-override-module"
-	let compiled = ToolRunner(tools.Located("emcc")).Execute("-c " + tools.Quoted(base + ".ll") + output + level)
+	let output = " -o " + tools.Quoted(base + ".o") + " -Wno-override-module" + Toolchain.Optimization
+	let compiled = ToolRunner(tools.Located("emcc")).Execute("-c " + tools.Quoted(base + ".ll") + output)
 	compiled.Failed then "emcc failed: " + compiled.error else ""
-Optimized(executable Text, level Text) Text
-	Missing.Optimized("Compiler/output/missing.html", " -O2").StartsWith("wasm-opt failed")
+Optimized(executable Text) Text
+	Missing.Optimized("Compiler/output/missing.html").StartsWith("wasm-opt failed")
 	let wasm = tools.Quoted(executable.Replace(".html", ".wasm"))
-	let optimizing = wasm + level + Passes + " -o " + wasm
+	let optimizing = wasm + Toolchain.Optimization + Passes + " -o " + wasm
 	let optimized = ToolRunner(tools.Located("wasm-opt")).Execute(optimizing)
 	optimized.Failed then "wasm-opt failed: " + optimized.error else "Built " + executable
 Sized(mlir Text) Text

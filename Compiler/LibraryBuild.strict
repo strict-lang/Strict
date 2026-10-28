@@ -21,7 +21,7 @@ Linked(base Text, tools Toolchain, library MlirLibrary) Text
 	if lowered is not ""
 		return lowered
 	let target = Toolchain.Quoted(Target(base, Platform.Current))
-	let linking = tools.Quoted(base + ".ll") + " -o " + target + Toolchain.Optimized + NativeBuild.Fast + Shared(library)
+	let linking = tools.Quoted(base + ".ll") + " -o " + target + Toolchain.Optimized + Shared(library)
 	let linked = ToolRunner(tools.Located("clang")).Execute(linking)
 	linked.Failed then "clang failed: " + linked.error else ""
 Target(base Text, platform Number) Text
