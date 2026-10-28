@@ -15842,7 +15842,7 @@
     %blocksSlot = llvm.mlir.addressof @strict_gpu_blocks_slot : !llvm.ptr
     %shortName = llvm.select %long, %blocksName, %tokensName : i1, !llvm.ptr
     %shortSlot = llvm.select %long, %blocksSlot, %tokensSlot : i1, !llvm.ptr
-    %tiled = func.call @strict_gpu_tiled(%rows, %input, %tokens, %width) : (f64, f64, f64, f64) -> i1
+    %tiled = func.call @strict_gpu_tiled(%rows, %input, %tokens, %width, %bases) : (f64, f64, f64, f64, f64) -> i1
     %tilesName = llvm.mlir.addressof @strict_gpu_tiles_name : !llvm.ptr
     %tilesSlot = llvm.mlir.addressof @strict_gpu_tiles_slot : !llvm.ptr
     %tileLanes = arith.constant -512 : i64
@@ -15928,12 +15928,105 @@
   ^done(%tokenWidth: i64):
     return %tokenWidth : i64
   }
+  // strict_gpu_row_scan once per matrix while its rows stay on the GPU at one address: rows only unpack later (to 64
+  // bits, which no tile reads), so the scan of resident rows gives their uploaded formats or refuses, 0 on pool threads
+  llvm.mlir.global internal @strict_gpu_row_memo(dense<0> : tensor<12288xi64>) : !llvm.array<12288 x i64>
+  func.func private @strict_gpu_row_formats(%rows: f64, %based: i1) -> (i1, i64) {
+    %none = arith.constant 0 : i64
+    %false = arith.constant false
+    %busy = func.call @strict_rc_busy() : () -> i1
+    cf.cond_br %busy, ^done(%false, %none : i1, i64), ^host
+  ^host:
+    %two = arith.constant 2 : i64
+    %three = arith.constant 3 : i64
+    %four = arith.constant 4 : i64
+    %view = llvm.alloca %three x i64 : (i64) -> !llvm.ptr
+    llvm.store %none, %view : i64, !llvm.ptr
+    %length = func.call @strict_list_length(%rows) : (f64) -> f64
+    %count = arith.fptosi %length : f64 to i64
+    %resident = func.call @strict_gpu_cached(%rows, %two, %count, %view) : (f64, i64, i64, !llvm.ptr) -> i1
+    %device = llvm.load %view : !llvm.ptr -> i64
+    %listBits = arith.bitcast %rows : f64 to i64
+    %basedBit = arith.extui %based : i1 to i64
+    %key = arith.ori %listBits, %basedBit : i64
+    %golden = arith.constant -7046029254386353131 : i64
+    %shifted = arith.shrui %listBits, %four : i64
+    %mixed = arith.muli %shifted, %golden : i64
+    %topShift = arith.constant 52 : i64
+    %index = arith.shrui %mixed, %topShift : i64
+    %offset = arith.muli %index, %three : i64
+    %memo = llvm.mlir.addressof @strict_gpu_row_memo : !llvm.ptr
+    %entry = llvm.getelementptr %memo[0, %offset] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<12288 x i64>
+    %deviceSlot = llvm.getelementptr %entry[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %summarySlot = llvm.getelementptr %entry[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %storedKey = llvm.load %entry : !llvm.ptr -> i64
+    %storedDevice = llvm.load %deviceSlot : !llvm.ptr -> i64
+    %sameKey = arith.cmpi eq, %storedKey, %key : i64
+    %sameDevice = arith.cmpi eq, %storedDevice, %device : i64
+    %same = arith.andi %sameKey, %sameDevice : i1
+    %hit = arith.andi %resident, %same : i1
+    %mixedFlag = arith.constant -9223372036854775808 : i64
+    cf.cond_br %hit, ^remembered, ^scan
+  ^remembered:
+    %summary = llvm.load %summarySlot : !llvm.ptr -> i64
+    %flag = arith.andi %summary, %mixedFlag : i64
+    %rememberedUniform = arith.cmpi eq, %flag, %none : i64
+    %rememberedMask = arith.xori %summary, %flag : i64
+    cf.br ^done(%rememberedUniform, %rememberedMask : i1, i64)
+  ^scan:
+    %uniform, %mask = func.call @strict_gpu_row_scan(%rows, %based) : (f64, i1) -> (i1, i64)
+    cf.cond_br %resident, ^remember, ^done(%uniform, %mask : i1, i64)
+  ^remember:
+    %flagged = arith.ori %mask, %mixedFlag : i64
+    %stored = arith.select %uniform, %mask, %flagged : i64
+    llvm.store %key, %entry : i64, !llvm.ptr
+    llvm.store %device, %deviceSlot : i64, !llvm.ptr
+    llvm.store %stored, %summarySlot : i64, !llvm.ptr
+    cf.br ^done(%uniform, %mask : i1, i64)
+  ^done(%result: i1, %formats: i64):
+    return %result, %formats : i1, i64
+  }
+  // whether the rows of every tile of 128 rows have one format (all rows when based, its tiles start anywhere) and a mask
+  // with bit format % 64 of every row: strict_device_tiles and strict_device_eights read a tile in its first row's format
+  func.func private @strict_gpu_row_scan(%rows: f64, %based: i1) -> (i1, i64) {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %sixtyThree = arith.constant 63 : i64
+    %tileSpare = arith.constant 127 : i64
+    %true = arith.constant true
+    %false = arith.constant false
+    %unbased = arith.xori %based, %true : i1
+    %length = func.call @strict_list_length(%rows) : (f64) -> f64
+    %count = arith.fptosi %length : f64 to i64
+    %items = func.call @strict_list_items(%rows) : (f64) -> !llvm.ptr
+    cf.br ^next(%none, %none, %none : i64, i64, i64)
+  ^next(%index: i64, %tileBits: i64, %mask: i64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^row, ^done(%true, %mask : i1, i64)
+  ^row:
+    %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %row = llvm.load %slot : !llvm.ptr -> f64
+    %bits = func.call @strict_gpu_bits(%row) : (f64) -> i64
+    %tileOffset = arith.andi %index, %tileSpare : i64
+    %isTileStart = arith.cmpi eq, %tileOffset, %none : i64
+    %isFirst = arith.cmpi eq, %index, %none : i64
+    %startsTile = arith.andi %isTileStart, %unbased : i1
+    %starts = arith.ori %isFirst, %startsTile : i1
+    %expected = arith.select %starts, %bits, %tileBits : i64
+    %same = arith.cmpi eq, %bits, %expected : i64
+    %shift = arith.andi %bits, %sixtyThree : i64
+    %bit = arith.shli %one, %shift : i64
+    %withBit = arith.ori %mask, %bit : i64
+    %following = arith.addi %index, %one : i64
+    cf.cond_br %same, ^next(%following, %expected, %withBit : i64, i64, i64), ^done(%false, %withBit : i1, i64)
+  ^done(%uniform: i1, %formats: i64):
+    return %uniform, %formats : i1, i64
+  }
   // strict_device_tiles fits 64 tokens or more with Q4_K or Q6_K rows (or 3 bit rows of whole blocks of 256 numbers)
-  // whose 32 or 16 bit tokens become 8 bit numbers (width a multiple of 32)
-  func.func private @strict_gpu_tiled(%rows: f64, %input: f64, %tokens: f64, %width: f64) -> i1 {
+  // whose 32 or 16 bit tokens become 8 bit numbers (width a multiple of 32), one format per tile (strict_gpu_row_formats)
+  func.func private @strict_gpu_tiled(%rows: f64, %input: f64, %tokens: f64, %width: f64, %bases: f64) -> i1 {
     %false = arith.constant false
     %none = arith.constant 0 : i64
-    %four = arith.constant 4 : i64
     %thirtyOne = arith.constant 31 : i64
     %enough = arith.constant 64.0 : f64
     %zero = arith.constant 0.0 : f64
@@ -15946,19 +16039,20 @@
     %wanted = arith.andi %longEnabled, %aligned : i1
     cf.cond_br %wanted, ^row, ^done(%false : i1)
   ^row:
-    %first = func.call @strict_list_get(%rows, %zero) : (f64, f64) -> f64
-    %bits = func.call @strict_list_packed(%first) : (f64) -> i64
-    %six = arith.constant 6 : i64
-    %isFourBits = arith.cmpi eq, %bits, %four : i64
-    %isSixBits = arith.cmpi eq, %bits, %six : i64
-    %three = arith.constant 3 : i64
+    %basesBits = arith.bitcast %bases : f64 to i64
+    %based = arith.cmpi ne, %basesBits, %none : i64
+    %uniform, %formats = func.call @strict_gpu_row_formats(%rows, %based) : (f64, i1) -> (i1, i64)
+    %fourOrSix = arith.constant 80 : i64
+    %withThree = arith.constant 88 : i64
     %blockSpare = arith.constant 255 : i64
-    %isThreeBits = arith.cmpi eq, %bits, %three : i64
     %blockRest = arith.andi %wholeWidth, %blockSpare : i64
     %wholeBlocks = arith.cmpi eq, %blockRest, %none : i64
-    %isThree = arith.andi %isThreeBits, %wholeBlocks : i1
-    %isFour = arith.ori %isFourBits, %isSixBits : i1
-    %isTiled = arith.ori %isFour, %isThree : i1
+    %supported = arith.select %wholeBlocks, %withThree, %fourOrSix : i64
+    %unsupported = arith.constant -1 : i64
+    %others = arith.xori %supported, %unsupported : i64
+    %otherFormats = arith.andi %formats, %others : i64
+    %onlySupported = arith.cmpi eq, %otherFormats, %none : i64
+    %isTiled = arith.andi %uniform, %onlySupported : i1
     %inputBits = func.call @strict_gpu_bits(%input) : (f64) -> i64
     %isSingle = func.call @strict_gpu_floats(%inputBits) : (i64) -> i1
     %fits = arith.andi %isTiled, %isSingle : i1
@@ -15966,7 +16060,7 @@
   ^done(%tiled: i1):
     return %tiled : i1
   }
-  // strict_device_eights fits 64 tokens or more with 8 bit rows whose 32 or 16 bit tokens become 8 bit numbers (width a
+  // strict_device_eights fits 64 tokens or more with only 8 bit rows whose 32 or 16 bit tokens become 8 bit numbers (width a
   // multiple of 64) unless the rows of the tokens start at bases
   func.func private @strict_gpu_eights(%rows: f64, %input: f64, %tokens: f64, %width: f64, %bases: f64) -> i1 {
     %false = arith.constant false
@@ -15986,10 +16080,10 @@
     %wanted = arith.andi %longEnabled, %unbasedAligned : i1
     cf.cond_br %wanted, ^row, ^done(%false : i1)
   ^row:
-    %first = func.call @strict_list_get(%rows, %zero) : (f64, f64) -> f64
-    %bits = func.call @strict_list_packed(%first) : (f64) -> i64
-    %eight = arith.constant 8 : i64
-    %isEight = arith.cmpi eq, %bits, %eight : i64
+    %unbasedRows = arith.constant false
+    %uniform, %formats = func.call @strict_gpu_row_formats(%rows, %unbasedRows) : (f64, i1) -> (i1, i64)
+    %onlyEights = arith.constant 256 : i64
+    %isEight = arith.cmpi eq, %formats, %onlyEights : i64
     %inputBits = func.call @strict_gpu_bits(%input) : (f64) -> i64
     %isSingle = func.call @strict_gpu_floats(%inputBits) : (i64) -> i1
     %fits = arith.andi %isEight, %isSingle : i1
