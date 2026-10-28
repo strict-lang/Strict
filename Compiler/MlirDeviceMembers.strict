@@ -57,6 +57,14 @@ Passable(at Number) List(MlirFunction)
 	let isOwn = MlirDeviceCalls(function, at, function).Register(function.method.instructions(at)) < 0
 	let isPlain = (callees.Length is not 1) or (MlirDeviceMembers(callees.First).Names.Length is 0)
 	isOwn or isPlain then callees else List(MlirFunction)
+IsNativeCall(at Number) Boolean
+	MlirDeviceMembers(MlirGpuCheck.Floored).IsNativeCall(1)
+	let entry = function.method.instructions(at)
+	let isFrom = entry.texts(1) is "from"
+	let isNumbered = MlirLayout(function).Represented(TypeEntry.ShortName(entry.texts(0))) is in MlirGpuCheck.Values
+	let isRounding = MlirDeviceCalls(function, at, function).IsRounding(entry)
+	let isOwn = isFrom and (isRounding is false) and (MlirModule(function.types, "").Called(function, at).Length > 0)
+	(entry.texts(1) is in MlirDeviceCalls.Natives) and ((isFrom is false) or (isNumbered and (isOwn is false)))
 Calling(first Number, limit Number, known Texts) Texts
 	Heading.Calling(3, 7, List(Text)) is ("heads", "weights")
 	Heading.Calling(3, 7, ("heads", "weights")).Length is 0

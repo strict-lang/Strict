@@ -123,15 +123,8 @@ IsCall(inspected MlirFunction, at Number, depth Number) Boolean
 		return MlirDeviceStatements(inspected, at).IsList(instance)
 	let callees = MlirDeviceMembers(inspected).Passable(at)
 	let fits = (callees.Length is 1) and (callees.First.method.parameters.Length is entry.payload(5 + entry.payload(3)))
-	IsNumbered(inspected, instance) and (depth < 3) and (IsNative(inspected, at) or (fits and IsDeviceMethod(callees, depth + 1)))
-IsNative(inspected MlirFunction, at Number) Boolean
-	Layering.IsNative(Floored, 1)
-	let entry = inspected.method.instructions(at)
-	let isFrom = entry.texts(1) is "from"
-	let isWrapping = isFrom and (IsNumbered(inspected, TypeEntry.ShortName(entry.texts(0))) is false)
-	let isRounding = MlirDeviceCalls(inspected, at, inspected).IsRounding(entry)
-	let isConstructed = isFrom and (isRounding is false) and (MlirModule(inspected.types, "").Called(inspected, at).Length > 0)
-	(entry.texts(1) is in MlirDeviceCalls.Natives) and (isWrapping is false) and (isConstructed is false)
+	let isNative = MlirDeviceMembers(inspected).IsNativeCall(at)
+	IsNumbered(inspected, instance) and (depth < 3) and (isNative or (fits and IsDeviceMethod(callees, depth + 1)))
 Instance(inspected MlirFunction, at Number) Text
 	Layering.Instance(Floored, 1) is "Number"
 	let register = MlirDeviceCalls(inspected, at, inspected).Register(inspected.method.instructions(at))
