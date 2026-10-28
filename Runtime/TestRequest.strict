@@ -9,7 +9,8 @@ Option Text
 Selection Text
 	TestRequest(("a.strict", ".", "unit")).Selection is ""
 	TestRequest(("a.strict", ".", "Merged")).Selection is "Merged"
-	if Directory.Exists(rest(0)) or ("unit" is in Options) or ("-" is in Options)
+	TestRequest(("Math", ".", "native")).Selection is "*"
+	if (Directory.Exists(rest(0)) and ("native" is not in Options)) or ("unit" is in Options) or ("-" is in Options)
 		return ""
 	for Options
 		if value is not in ("native", "lines", "values", "trace")

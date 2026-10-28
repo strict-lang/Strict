@@ -80,10 +80,10 @@ Typed(path Text, root Text, files Texts, inference TypeInference) List(TypeEntry
 	NativeFolder(Logger).Typed("Missing.strict", ".", List(Text), ResolveCheck.Counting).Length is 0
 	if File(path).Exists is false
 		return List(TypeEntry)
-	let isFresh = Execute(logger).Stale(List(Text) + path).Length is 0
+	let isFresh = (selection is "") and (Execute(logger).Stale(List(Text) + path).Length is 0)
 	if isFresh
 		return Execute(logger).Loaded(path, root)
-	let types = FileCompiler(logger).Built(path, root, true, files, inference)
+	let types = FileCompiler(logger, false, selection).Built(path, root, true, files, inference)
 	if types.Length is 0
 		logger.Log("CompilationFailed: " + path)
 	types

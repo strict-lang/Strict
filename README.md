@@ -48,7 +48,7 @@ The base types are the documentation: every method starts with tests showing how
 strict Examples/Sum.strict 5 10 20        run on the Strict VM, arguments go to Run
 strict test Examples/Sum.strict           explicitly run this file, including Slow tests, on the VM
 strict test Examples/Sum.strict Run       explicitly run the tests of one method
-strict test Examples/Sum.strict unit      run only unit tests (a folder always runs only unit tests)
+strict test Examples/Sum.strict unit      run only unit tests (a folder on the VM too)
 strict build Examples/Sum.strict          pass cached or current unit tests, then build the executable
 strict build Examples/Sum.strict linux    also the Linux executable (on Windows through WSL)
 strict build Examples/Sum.strict web      .html, .js and .wasm for the browser (Emscripten, installed when missing)
@@ -84,7 +84,7 @@ Unmarked inline tests are unit tests: each should take under 10 ms, the hard lim
 
 Declare a method's return as `Slow(T)` to make its tests functional (file, model or application integration). Like `Mutable(T)`, callers use `T`: `Slow(3)` behaves as a Number. An unmarked test may call a Slow method with a small fixture but still has to fit its budget.
 
-Builds, checks, folder tests, VS Code typing checks and value tracing skip Slow tests and the fixtures only they use. `strict test File.strict` includes them, `strict test File.strict Method` selects one method, `native` or `lines` keep that selection. `strict File.strict` runs all its tests, Slow included, then `Run`. Only automatic unit runs write `.strictbinary`, explicit functional runs execute every time. See `Runtime/README.md` for the VM and `Compiler/README.md` for the build pipeline.
+Builds, checks, folder tests on the VM, VS Code typing checks and value tracing skip Slow tests and the fixtures only they use. `strict test File.strict` and `strict test Folder native` include them, `strict test File.strict Method` selects one method, `native` or `lines` keep that selection. `strict File.strict` runs all its tests, Slow included, then `Run`. Only automatic unit runs write `.strictbinary`, explicit functional runs execute every time. See `Runtime/README.md` for the VM and `Compiler/README.md` for the build pipeline.
 
 ## Rules worth knowing
 - Limits: 120 characters per line, 13 lines per method (header and tests included), 4 parameters, 16 methods, 15 members, nesting depth 5, names 2-50 characters. Files in a `Generated` folder get 10 times as much.
