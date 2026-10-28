@@ -129,8 +129,13 @@ IsBaseMismatch(argument Text, parameter Text) Boolean
 	Sizing.IsBaseMismatch("Text", "Number")
 	Sizing.IsBaseMismatch("Number", "Text")
 	Sizing.IsBaseMismatch("Boolean", "Number")
+	Sizing.IsBaseMismatch("Numbers", "Number")
 	let types = inference.types
 	let hasMembers = types.IsKnown(parameter) and (types.MembersOf(parameter).names.Length > 0)
 	let isComposite = hasMembers and (TypeEntry.IsBaseName(parameter) is false)
-	let isScalar = (argument is not parameter) and ((argument, parameter) - ("Boolean", "Number", "Text")).Length is 0
+	let isScalar = IsScalar(parameter) and (argument is not parameter) and (IsScalar(argument) or types.IsPlural(argument))
 	isScalar or (argument is "Text") and isComposite and (types.ValueOf(parameter) is not "Text")
+IsScalar(type Text) Boolean
+	Sizing.IsScalar("Boolean")
+	Sizing.IsScalar("Count") is false
+	type is in ("Boolean", "Number", "Text")
