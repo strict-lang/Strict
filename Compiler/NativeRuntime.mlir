@@ -14513,6 +14513,9 @@
   llvm.mlir.global internal @strict_gpu_dp4a_state(0 : i64) : i64
   // 1 while strict_gpu_tokens runs the dot products of rows that keep their tokens (strict_gpu_rows_kept)
   llvm.mlir.global internal @strict_gpu_tokens_kept(0 : i64) : i64
+  // the pass of strict_gpu_tokens for rows that keep their tokens, both with 32 bit sums: 1 for the codes of the
+  // tokens, 2 for the codes of what they leave of each number (strict_gpu_quantized, strict_device_code), else 0
+  llvm.mlir.global internal @strict_gpu_tokens_pass(0 : i64) : i64
   // STRICT_DP4A=0 keeps the 32 bit numbers of dot products with rows, rows that keep their tokens do so on their own
   func.func private @strict_gpu_dp4a() -> i1 {
     %none = arith.constant 0 : i64
@@ -14607,6 +14610,13 @@
     %bitsSlot = llvm.getelementptr %view[2] : (!llvm.ptr) -> !llvm.ptr, i64
     %bits = llvm.load %bitsSlot : !llvm.ptr -> i64
     %isSingle = func.call @strict_gpu_floats(%bits) : (i64) -> i1
+    %passSlot = llvm.mlir.addressof @strict_gpu_tokens_pass : !llvm.ptr
+    %pass = llvm.load %passSlot : !llvm.ptr -> i64
+    %lowPass = arith.constant 2 : i64
+    %isLow = arith.cmpi eq, %pass, %lowPass : i64
+    %residualFlag = arith.constant 1024 : i64
+    %residualBits = arith.select %isLow, %residualFlag, %none : i64
+    %codedBits = arith.ori %bits, %residualBits : i64
     %rest = arith.andi %length, %thirtyOne : i64
     %whole = arith.cmpi eq, %rest, %none : i64
     %some = arith.cmpi sge, %length, %thirtyTwo : i64
@@ -14720,7 +14730,7 @@
     %fuseThreads = func.call @strict_gpu_hadamard_threads(%tokenWidth) : (i64) -> i64
     %fuseTokens = arith.divui %length, %tokenWidth : i64
     %fuseTotal = arith.muli %fuseTokens, %fuseThreads : i64
-    %fuseDone = func.call @strict_gpu_quantize_launch(%fused, %source, %length, %tokenWidth, %target, %bits, %fuseTotal, %fuseThreads) : (!llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> i1
+    %fuseDone = func.call @strict_gpu_quantize_launch(%fused, %source, %length, %tokenWidth, %target, %codedBits, %fuseTotal, %fuseThreads) : (!llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> i1
     cf.cond_br %fuseDone, ^swap, ^unfused
   ^unfused:
     func.call @strict_gpu_rotated(%device) : (i64) -> ()
@@ -14743,7 +14753,7 @@
     %tokenCount = arith.divui %length, %safeWidth : i64
     %tokenThreads = arith.muli %tokenCount, %rowThreads : i64
     %launchThreads = arith.select %perToken, %tokenThreads, %length : i64
-    %quantized = func.call @strict_gpu_quantize_launch(%function, %device, %length, %tokenWidth, %target, %bits, %launchThreads, %threads) : (!llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> i1
+    %quantized = func.call @strict_gpu_quantize_launch(%function, %device, %length, %tokenWidth, %target, %codedBits, %launchThreads, %threads) : (!llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> i1
     cf.cond_br %quantized, ^swap, ^done
   ^swap:
     llvm.store %target, %view : i64, !llvm.ptr
@@ -16505,13 +16515,66 @@
   // biases is 0.0, the rows of token t start at bases(t / 64) unless bases is 0.0 (`Batch.Grouped`), 0.0 when the GPU
   // can not
   func.func private @strict_gpu_tokens(%ptx: !llvm.ptr, %count: i64, %rows: f64, %input: f64, %width: f64, %rowCount: f64, %bases: f64, %biases: f64, %gated: f64) -> f64 {
+    %none = arith.constant 0 : i64
+    %zero = arith.constant 0.0 : f64
     %keptSlot = llvm.mlir.addressof @strict_gpu_tokens_kept : !llvm.ptr
     %before = llvm.load %keptSlot : !llvm.ptr -> i64
     %kept = func.call @strict_gpu_rows_kept(%rows) : (f64) -> i64
+    %split = func.call @strict_gpu_tokens_split(%kept, %count, %rows, %input, %width, %rowCount, %bases, %gated) : (i64, i64, f64, f64, f64, f64, f64, f64) -> i1
+    cf.cond_br %split, ^high, ^plain
+  ^high:
+    llvm.store %none, %keptSlot : i64, !llvm.ptr
+    %passSlot = llvm.mlir.addressof @strict_gpu_tokens_pass : !llvm.ptr
+    %one = arith.constant 1 : i64
+    llvm.store %one, %passSlot : i64, !llvm.ptr
+    %high = func.call @strict_gpu_tokens_run(%ptx, %count, %rows, %input, %width, %rowCount, %bases, %biases, %zero) : (!llvm.ptr, i64, f64, f64, f64, f64, f64, f64, f64) -> f64
+    %hasHigh = arith.cmpf une, %high, %zero : f64
+    cf.cond_br %hasHigh, ^low, ^unsplit
+  ^low:
+    %two = arith.constant 2 : i64
+    llvm.store %two, %passSlot : i64, !llvm.ptr
+    %both = func.call @strict_gpu_tokens_run(%ptx, %count, %rows, %input, %width, %rowCount, %bases, %high, %zero) : (!llvm.ptr, i64, f64, f64, f64, f64, f64, f64, f64) -> f64
+    llvm.store %none, %passSlot : i64, !llvm.ptr
+    %hasBoth = arith.cmpf une, %both, %zero : f64
+    cf.cond_br %hasBoth, ^done(%both : f64), ^plain
+  ^unsplit:
+    llvm.store %none, %passSlot : i64, !llvm.ptr
+    cf.br ^plain
+  ^plain:
     llvm.store %kept, %keptSlot : i64, !llvm.ptr
     %result = func.call @strict_gpu_tokens_run(%ptx, %count, %rows, %input, %width, %rowCount, %bases, %biases, %gated) : (!llvm.ptr, i64, f64, f64, f64, f64, f64, f64, f64) -> f64
+    cf.br ^done(%result : f64)
+  ^done(%returned: f64):
     llvm.store %before, %keptSlot : i64, !llvm.ptr
-    return %result : f64
+    return %returned : f64
+  }
+  // true when rows that keep their tokens (kept) and an ungated call can take the 8 bit path twice instead of 32 bit
+  // tokens: the codes of the tokens, then the codes of what is left of them (a 1 / 254 step) with the first sums as
+  // biases, about 15 bits of each token relative to its largest number
+  func.func private @strict_gpu_tokens_split(%kept: i64, %count: i64, %rows: f64, %input: f64, %width: f64, %rowCount: f64, %bases: f64, %gated: f64) -> i1 {
+    %none = arith.constant 0 : i64
+    %zero = arith.constant 0.0 : f64
+    %oneRow = arith.constant 1.0 : f64
+    %isKept = arith.cmpi ne, %kept, %none : i64
+    %ungated = arith.cmpf oeq, %gated, %zero : f64
+    %transposedSettings = llvm.mlir.addressof @strict_gpu_transposed : !llvm.ptr
+    %transposed = llvm.load %transposedSettings : !llvm.ptr -> i64
+    %untransposed = arith.cmpi eq, %transposed, %none : i64
+    %keptUngated = arith.andi %isKept, %ungated : i1
+    %possible = arith.andi %keptUngated, %untransposed : i1
+    cf.cond_br %possible, ^check, ^done(%possible : i1)
+  ^check:
+    %keptSlot = llvm.mlir.addressof @strict_gpu_tokens_kept : !llvm.ptr
+    %saved = llvm.load %keptSlot : !llvm.ptr -> i64
+    llvm.store %none, %keptSlot : i64, !llvm.ptr
+    %rowsAtLeast = arith.maximumf %rowCount, %oneRow : f64
+    %countNumber = arith.sitofp %count : i64 to f64
+    %tokens = arith.divf %countNumber, %rowsAtLeast : f64
+    %eights = func.call @strict_gpu_eights(%rows, %input, %tokens, %width, %bases) : (f64, f64, f64, f64, f64) -> i1
+    llvm.store %saved, %keptSlot : i64, !llvm.ptr
+    cf.br ^done(%eights : i1)
+  ^done(%splitting: i1):
+    return %splitting : i1
   }
   // 1 when the first of rows keeps its tokens (packed rows of Safetensors.Quantized(name, tokenBits) above 8 bits)
   func.func private @strict_gpu_rows_kept(%rows: f64) -> i64 {
@@ -16596,7 +16659,11 @@
     %integers = arith.constant -1 : i64
     %halves = arith.constant 17 : i64
     %wholeChosen = arith.andi %eights, %wholeRows : i1
-    %resultPacked = arith.select %wholeChosen, %halves, %integers : i64
+    %splitSlot = llvm.mlir.addressof @strict_gpu_tokens_pass : !llvm.ptr
+    %splitPass = llvm.load %splitSlot : !llvm.ptr -> i64
+    %unsplit = arith.cmpi eq, %splitPass, %none : i64
+    %halvesChosen = arith.andi %wholeChosen, %unsplit : i1
+    %resultPacked = arith.select %halvesChosen, %halves, %integers : i64
     %isGated = arith.cmpf one, %gated, %zero : f64
     %notWhole = arith.xori %wholeChosen, %true : i1
     %ungatable = arith.andi %isGated, %notWhole : i1

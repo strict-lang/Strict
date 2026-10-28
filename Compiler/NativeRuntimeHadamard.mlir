@@ -281,62 +281,54 @@
     return %largest : f32
   }
   // the 8 numbers of a lane times factor rounded to 8 bit numbers at at + 32 j of target
-  func.func private @strict_device_hadamard_codes(%target: !llvm.ptr, %at: i64, %numbers: vector<8xf32>, %factor: f32) attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_hadamard_codes(%target: !llvm.ptr, %at: i64, %numbers: vector<8xf32>, %factor: f32, %residual: i1) attributes {llvm.passthrough = ["alwaysinline"]} {
     %bytes = llvm.getelementptr %target[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %i0 = arith.constant 0 : i32
     %n0 = llvm.extractelement %numbers[%i0 : i32] : vector<8xf32>
     %scaled0 = arith.mulf %n0, %factor : f32
-    %rounded0 = func.call @strict_device_rounded(%scaled0) : (f32) -> i32
-    %byte0 = arith.trunci %rounded0 : i32 to i8
+    %byte0 = func.call @strict_device_code(%scaled0, %residual) : (f32, i1) -> i8
     %byteSlot0 = llvm.getelementptr %bytes[0] : (!llvm.ptr) -> !llvm.ptr, i8
     llvm.store %byte0, %byteSlot0 : i8, !llvm.ptr
     %i1 = arith.constant 1 : i32
     %n1 = llvm.extractelement %numbers[%i1 : i32] : vector<8xf32>
     %scaled1 = arith.mulf %n1, %factor : f32
-    %rounded1 = func.call @strict_device_rounded(%scaled1) : (f32) -> i32
-    %byte1 = arith.trunci %rounded1 : i32 to i8
+    %byte1 = func.call @strict_device_code(%scaled1, %residual) : (f32, i1) -> i8
     %byteSlot1 = llvm.getelementptr %bytes[32] : (!llvm.ptr) -> !llvm.ptr, i8
     llvm.store %byte1, %byteSlot1 : i8, !llvm.ptr
     %i2 = arith.constant 2 : i32
     %n2 = llvm.extractelement %numbers[%i2 : i32] : vector<8xf32>
     %scaled2 = arith.mulf %n2, %factor : f32
-    %rounded2 = func.call @strict_device_rounded(%scaled2) : (f32) -> i32
-    %byte2 = arith.trunci %rounded2 : i32 to i8
+    %byte2 = func.call @strict_device_code(%scaled2, %residual) : (f32, i1) -> i8
     %byteSlot2 = llvm.getelementptr %bytes[64] : (!llvm.ptr) -> !llvm.ptr, i8
     llvm.store %byte2, %byteSlot2 : i8, !llvm.ptr
     %i3 = arith.constant 3 : i32
     %n3 = llvm.extractelement %numbers[%i3 : i32] : vector<8xf32>
     %scaled3 = arith.mulf %n3, %factor : f32
-    %rounded3 = func.call @strict_device_rounded(%scaled3) : (f32) -> i32
-    %byte3 = arith.trunci %rounded3 : i32 to i8
+    %byte3 = func.call @strict_device_code(%scaled3, %residual) : (f32, i1) -> i8
     %byteSlot3 = llvm.getelementptr %bytes[96] : (!llvm.ptr) -> !llvm.ptr, i8
     llvm.store %byte3, %byteSlot3 : i8, !llvm.ptr
     %i4 = arith.constant 4 : i32
     %n4 = llvm.extractelement %numbers[%i4 : i32] : vector<8xf32>
     %scaled4 = arith.mulf %n4, %factor : f32
-    %rounded4 = func.call @strict_device_rounded(%scaled4) : (f32) -> i32
-    %byte4 = arith.trunci %rounded4 : i32 to i8
+    %byte4 = func.call @strict_device_code(%scaled4, %residual) : (f32, i1) -> i8
     %byteSlot4 = llvm.getelementptr %bytes[128] : (!llvm.ptr) -> !llvm.ptr, i8
     llvm.store %byte4, %byteSlot4 : i8, !llvm.ptr
     %i5 = arith.constant 5 : i32
     %n5 = llvm.extractelement %numbers[%i5 : i32] : vector<8xf32>
     %scaled5 = arith.mulf %n5, %factor : f32
-    %rounded5 = func.call @strict_device_rounded(%scaled5) : (f32) -> i32
-    %byte5 = arith.trunci %rounded5 : i32 to i8
+    %byte5 = func.call @strict_device_code(%scaled5, %residual) : (f32, i1) -> i8
     %byteSlot5 = llvm.getelementptr %bytes[160] : (!llvm.ptr) -> !llvm.ptr, i8
     llvm.store %byte5, %byteSlot5 : i8, !llvm.ptr
     %i6 = arith.constant 6 : i32
     %n6 = llvm.extractelement %numbers[%i6 : i32] : vector<8xf32>
     %scaled6 = arith.mulf %n6, %factor : f32
-    %rounded6 = func.call @strict_device_rounded(%scaled6) : (f32) -> i32
-    %byte6 = arith.trunci %rounded6 : i32 to i8
+    %byte6 = func.call @strict_device_code(%scaled6, %residual) : (f32, i1) -> i8
     %byteSlot6 = llvm.getelementptr %bytes[192] : (!llvm.ptr) -> !llvm.ptr, i8
     llvm.store %byte6, %byteSlot6 : i8, !llvm.ptr
     %i7 = arith.constant 7 : i32
     %n7 = llvm.extractelement %numbers[%i7 : i32] : vector<8xf32>
     %scaled7 = arith.mulf %n7, %factor : f32
-    %rounded7 = func.call @strict_device_rounded(%scaled7) : (f32) -> i32
-    %byte7 = arith.trunci %rounded7 : i32 to i8
+    %byte7 = func.call @strict_device_code(%scaled7, %residual) : (f32, i1) -> i8
     %byteSlot7 = llvm.getelementptr %bytes[224] : (!llvm.ptr) -> !llvm.ptr, i8
     llvm.store %byte7, %byteSlot7 : i8, !llvm.ptr
     return
@@ -345,6 +337,7 @@
   // ones: a block per token (width a multiple of 256 up to 16384, strict_gpu_hadamard_threads), a warp per group of 256
   // numbers (strict_device_hadamard_group) and a second one warps groups later when there are more groups than warps
   func.func private @strict_device_hadamard_tokens_run(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
+    %residual, %format = func.call @strict_device_code_format(%bits) : (i64) -> (i1, i64)
     %c0 = arith.constant 0 : i32
     %c5 = arith.constant 5 : i32
     %c31 = arith.constant 31 : i32
@@ -370,7 +363,7 @@
     %groups = arith.shrui %width, %eight : i64
     %firstOffset = arith.shli %warp64, %eight : i64
     %firstAt = arith.addi %laneStart, %firstOffset : i64
-    %first = func.call @strict_device_hadamard_group(%source, %bits, %firstAt, %lane) : (!llvm.ptr, i64, i64, i32) -> vector<8xf32>
+    %first = func.call @strict_device_hadamard_group(%source, %format, %firstAt, %lane) : (!llvm.ptr, i64, i64, i32) -> vector<8xf32>
     %firstLargest = func.call @strict_device_hadamard_magnitude(%first) : (vector<8xf32>) -> f32
     %secondGroup = arith.addi %warp64, %warps : i64
     %hasSecond = arith.cmpi ult, %secondGroup, %groups : i64
@@ -378,7 +371,7 @@
     %secondAt = arith.addi %laneStart, %secondOffset : i64
     cf.cond_br %hasSecond, ^second, ^largest(%first, %firstLargest : vector<8xf32>, f32)
   ^second:
-    %second = func.call @strict_device_hadamard_group(%source, %bits, %secondAt, %lane) : (!llvm.ptr, i64, i64, i32) -> vector<8xf32>
+    %second = func.call @strict_device_hadamard_group(%source, %format, %secondAt, %lane) : (!llvm.ptr, i64, i64, i32) -> vector<8xf32>
     %secondLargest = func.call @strict_device_hadamard_magnitude(%second) : (vector<8xf32>) -> f32
     %bothLargest = arith.maxnumf %firstLargest, %secondLargest : f32
     cf.br ^largest(%second, %bothLargest : vector<8xf32>, f32)
@@ -404,14 +397,15 @@
     %indexNext = arith.addi %index, %one : i64
     cf.br ^gather(%indexNext, %gatheredNext : i64, f32)
   ^scaled:
-    %scale = arith.divf %gathered, %most : f32
+    %largestScale = arith.divf %gathered, %most : f32
+    %scale = func.call @strict_device_code_scale(%largestScale, %residual) : (f32, i1) -> f32
     %isEmpty = arith.cmpf oeq, %gathered, %zero : f32
     %inverse = arith.divf %most, %gathered : f32
     %factor = arith.select %isEmpty, %zero, %inverse : f32
-    func.call @strict_device_hadamard_codes(%target, %firstAt, %first, %factor) : (!llvm.ptr, i64, vector<8xf32>, f32) -> ()
+    func.call @strict_device_hadamard_codes(%target, %firstAt, %first, %factor, %residual) : (!llvm.ptr, i64, vector<8xf32>, f32, i1) -> ()
     cf.cond_br %hasSecond, ^secondCodes, ^scales
   ^secondCodes:
-    func.call @strict_device_hadamard_codes(%target, %secondAt, %other, %factor) : (!llvm.ptr, i64, vector<8xf32>, f32) -> ()
+    func.call @strict_device_hadamard_codes(%target, %secondAt, %other, %factor, %residual) : (!llvm.ptr, i64, vector<8xf32>, f32, i1) -> ()
     cf.br ^scales
   ^scales:
     %parts = arith.shrui %width, %five : i64
