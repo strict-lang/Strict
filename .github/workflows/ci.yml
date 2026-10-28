@@ -13,7 +13,7 @@ jobs:
         include:
           - name: base
             units: Compression Validators Examples ImageProcessing MachineLearning Math Networking Json Xml Binary
-            native: Compression Validators Examples ImageProcessing MachineLearning Math Networking Json Xml Binary
+            native: Compression Validators Examples ImageProcessing MachineLearning Math/*.strict Networking Json Xml Binary
           - name: internal
             native: Bytecode Runtime Expressions
           - name: neural
@@ -81,7 +81,7 @@ jobs:
     timeout-minutes: 10
     env:
       UNITS: Compression Validators Examples Math Networking Json Xml Binary
-      NATIVE: Compression Validators Examples Math Json Xml Binary Runtime Expressions
+      NATIVE: Compression Validators Examples Json Xml Binary Runtime Expressions
     defaults:
       run:
         shell: bash

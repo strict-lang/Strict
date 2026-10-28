@@ -4,6 +4,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 ## Bugs
 - Ternary Bonsai 27B at a simulated 10 GB stalled once more (first run after a cold build), 12 later runs did not: [improvements-models.md](improvements-models.md).
 - `constant Shared = Created` with `Created` a method of the same type is typed `Created` (HeaderTokens.ValueType takes the identifier as the type), its test's `Code` call then fails linking with `UnresolvedLink: Strict/Created.Code` (Runtime/check_tests.py, LazyFixture).
+- Native builds take far more memory than their output: the tests of Math/Matrix.strict (2 MB of MLIR, one test runner of 12848 lines) peak at 7.7 GB in NativeCompiler's function body emission, the Math folder at 20 GB (16 GB CI runners die, Windows swaps for 6 min), so CI tests Math file by file. Emitting in batches of 16 functions did not lower it.
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).
