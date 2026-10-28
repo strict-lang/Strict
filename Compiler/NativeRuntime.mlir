@@ -688,7 +688,7 @@
     %stillUneven = arith.ori %uneven, %differs : i1
     cf.br ^measure(%next, %longer, %chosenFirst, %stillUneven : i64, i64, i64, i1)
   ^allocate:
-    %imageSmallest = arith.constant 67108864 : i64
+    %imageSmallest = arith.constant 4194304 : i64
     %isLarge = arith.cmpi uge, %total, %imageSmallest : i64
     %isEven = arith.cmpi eq, %uneven, %noUneven : i1
     %isImage = arith.andi %isLarge, %isEven : i1
@@ -829,7 +829,7 @@
     %padded = arith.addi %bytes, %fifteen : i64
     %rowStride = arith.andi %padded, %alignMask : i64
     %total = arith.muli %count, %rowStride : i64
-    %imageSmallest = arith.constant 67108864 : i64
+    %imageSmallest = arith.constant 4194304 : i64
     %isImage = arith.cmpi uge, %total, %imageSmallest : i64
     %imageTable = arith.addi %count, %eight : i64
     %imageSpare = arith.constant 127 : i64

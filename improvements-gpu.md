@@ -29,9 +29,9 @@ H3 DiT steps (21.7 GB of weights, 37 of 50 blocks resident, the rest streamed) t
 - a reference in a local (`let moss = Loaded(model)`) still stays in a callee-saved register or spill slot of a live frame after its last use, the conservative stack scan keeps it alive; call results passed straight on to another call are handed over through a cleared volatile slot (`MlirHanded`)
 
 ## Loading
-The 21 GB H3 DiT loads in 10-12 s (ComfyUI 4-7 s), mostly page faults of the copy into fresh memory, and its first step uploads all of it (10.1-10.6 instead of 3.7 s), now 4.3 s on a 3080 since file matrices of 64 MB and more are locked in place as their own spill. Next: 8 bit rows gathered straight from the mapped file.
+The 21 GB H3 DiT loads in 10-12 s (ComfyUI 4-7 s), mostly page faults of the copy into fresh memory, and its first step uploads all of it (10.1-10.6 instead of 3.7 s), now 4.3 s on a 3080 since file matrices of 64 MB (since then 4 MB) and more are locked in place as their own spill. Next: 8 bit rows gathered straight from the mapped file.
 LoRAs merge on the CPU at load (`TensorFile_Tuned`, stochastic requantization like ComfyUI): Moss with its rank 128 DMD turbo LoRA (applied for 8 steps or fewer) loads in 23 s instead of 2.4 s, 8 to 32 threads hardly matter, the native code has no AVX2. Merge on the GPU instead: the low rank update and the requantization of the uploaded 8 bit rows (StrictComfy `H3Lora.Merged`, also H3).
-Matrices below 64 MB (Moss) still go up through the staging buffer and no native test reaches the 64 MB path of `strict_packed_rows` (only H3 against ComfyUI): a test with a big matrix, then a lower threshold if locking pays off there.
+No native test reaches the locked path of `strict_packed_rows` and `strict_rows` (matrices of 4 MB and more, only MossImage and H3 against ComfyUI): a test with a big matrix.
 
 The first run of a new build waits for the driver to compile the 20 MB runtime PTX on one thread (MossImage: 114 s); `ptxas -arch=sm_89 --split-compile 0` takes 43 s: write a cubin for the local GPU at build time and load it before the PTX, and split the largest functions (strict_device_whole_run, wholes, whole, eights_scaled: 41-63k PTX lines each).
 
