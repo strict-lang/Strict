@@ -10,7 +10,8 @@ Rotated Numbers
 	let first = Stage(values, 1)
 	let second = group > 4 then Stage(first, 4) else first
 	let third = group > 16 then Stage(second, 16) else second
-	group > 64 then Stage(third, 64) else third
+	for values.Length
+		group > 64 then Butterfly(third, index, 64) else third(index)
 Applied(rotated Boolean) Numbers
 	Unit.Applied(true) is Unit.Rotated
 	Unit.Applied(false) is Unit.values

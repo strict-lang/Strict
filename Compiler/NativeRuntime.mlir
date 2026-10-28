@@ -15521,19 +15521,22 @@
     return %zero : f64
   }
   // `Convrot.Rotated` (the 4 radix-4 butterflies of every group of 256 values) as one kernel, a block per group, 0.0
-  // when the length is no multiple of 256 or the GPU can not; of 32 or 16 bit numbers on the GPU it waits
-  // (strict_gpu_rotations, in their format)
-  func.func private @strict_gpu_hadamard(%ptx: !llvm.ptr, %values: f64) -> f64 {
+  // when the group is not 256, the length is no multiple of it or the GPU can not; of 32 or 16 bit numbers on the GPU
+  // it waits (strict_gpu_rotations, in their format)
+  func.func private @strict_gpu_hadamard(%ptx: !llvm.ptr, %values: f64, %size: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %group = arith.constant 255 : i64
+    %quarterKilo = arith.constant 256.0 : f64
     %length = func.call @strict_list_length(%values) : (f64) -> f64
     %count = arith.fptosi %length : f64 to i64
     %rest = arith.andi %count, %group : i64
     %whole = arith.cmpi eq, %rest, %none : i64
     %some = arith.cmpi sgt, %count, %none : i64
-    %fits = arith.andi %whole, %some : i1
+    %isGroup = arith.cmpf oeq, %size, %quarterKilo : f64
+    %sized = arith.andi %whole, %isGroup : i1
+    %fits = arith.andi %sized, %some : i1
     %name = llvm.mlir.addressof @strict_gpu_hadamard_name : !llvm.ptr
     %slot = llvm.mlir.addressof @strict_gpu_hadamard_slot : !llvm.ptr
     cf.cond_br %fits, ^resident, ^unable
