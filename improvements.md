@@ -3,7 +3,6 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 
 ## Bugs
 - Ternary Bonsai 27B at a simulated 10 GB stalled once more (first run after a cold build), 12 later runs did not: [improvements-models.md](improvements-models.md).
-- Native test builds of `Compiler/DeviceBuild` and `Compiler/MlirDevice` failed once with "could not write ...test.ptx" while 8 builds ran in parallel (not reproduced alone or as a pair; PtxCache.Saved).
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).
