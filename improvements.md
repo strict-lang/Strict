@@ -3,7 +3,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 
 ## Bugs
 - Ternary Bonsai 27B at a simulated 10 GB stalled once more (first run after a cold build), 12 later runs did not: [improvements-models.md](improvements-models.md).
-- A constructor argument of the wrong type is not reported: `Holder(value).count` with `has count Number` inside `for ("a", "bc")` gives 97bc2 on the VM, `NativeLibrary(value)` with the Text value of a loop instead of the NativeSources (`outer`) crashed the native compiler with AccessViolation.
+- An argument of a base type for a parameter of another base type is not reported: `Holder(value).count` with `has count Number` inside `for ("a", "bc")` gives 97bc2 on the VM, a Number for a Text parameter stays a Number (`is "2"` fails). `ArgumentTypes.Mismatch` only compares user types and a Text for a user type.
 - `Members` natively has no values (`()` for every InitialValue), the VM has them.
 - A GPU loop reads outside its list once a flat list passes 2^24 numbers (StrictComfy `H3Vae.Canvas` with `size` hoisted: a tiny 16x16 latent window of 19.4M numbers fails, 12x12 of 10.4M matches the CPU): index arithmetic must stay exact. A copy of Canvas with 19.35M synthetic tile numbers matches the CPU on master (2026-10-28), StrictComfy's exact failing code is needed.
 - A `List(Numbers)` of GPU lists (one list per tile in `H3Vae.Canvas`) reads 0 on the GPU without an error. 4 tiles computed on the GPU read through `tiles(t)(i)` in a GPU loop are right on master (2026-10-28), StrictComfy's exact failing code is needed.

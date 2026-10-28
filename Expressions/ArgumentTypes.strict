@@ -101,8 +101,17 @@ Mismatch(argument Text, parameter Text) Boolean
 	Sizing.Mismatch("Number", "Area") is false
 	Sizing.Mismatch("Area", "Area") is false
 	Generics.Mismatch("Range", "Generic") is false
+	Sizing.Mismatch("Text", "Size")
 	let types = inference.types
 	let isUser = (TypeEntry.IsBaseName(argument) or TypeEntry.IsBaseName(parameter) or (parameter is "Generic")) is false
 	let isKnown = types.IsKnown(argument) and types.IsKnown(parameter)
-	let isChecked = isUser and isKnown and (types.MembersOf(parameter).names.Length > 0)
-	isChecked and (argument is not parameter) and (parameter is not in types.MembersOf(argument).types)
+	let isChecked = isUser and isKnown and (types.MembersOf(parameter).names.Length > 0) and (argument is not parameter)
+	IsTextMismatch(argument, parameter) or isChecked and (parameter is not in types.MembersOf(argument).types)
+IsTextMismatch(argument Text, parameter Text) Boolean
+	Sizing.IsTextMismatch("Text", "Count")
+	Sizing.IsTextMismatch("Number", "Size") is false
+	Sizing.IsTextMismatch("Text", "Text") is false
+	let types = inference.types
+	let hasMembers = types.IsKnown(parameter) and (types.MembersOf(parameter).names.Length > 0)
+	let isComposite = hasMembers and (TypeEntry.IsBaseName(parameter) is false)
+	(argument is "Text") and isComposite and (types.ValueOf(parameter) is not "Text")
