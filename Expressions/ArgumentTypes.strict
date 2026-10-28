@@ -111,7 +111,8 @@ IsTextMismatch(argument Text, parameter Text) Boolean
 	Sizing.IsTextMismatch("Text", "Count")
 	Sizing.IsTextMismatch("Number", "Size") is false
 	Sizing.IsTextMismatch("Text", "Text") is false
+	Sizing.IsTextMismatch("Text", "Number")
 	let types = inference.types
 	let hasMembers = types.IsKnown(parameter) and (types.MembersOf(parameter).names.Length > 0)
 	let isComposite = hasMembers and (TypeEntry.IsBaseName(parameter) is false)
-	(argument is "Text") and isComposite and (types.ValueOf(parameter) is not "Text")
+	(argument is "Text") and ((parameter is "Number") or isComposite and (types.ValueOf(parameter) is not "Text"))
