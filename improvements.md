@@ -6,7 +6,6 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - A folder test whose package native library is out of date builds it in every test child at once (`NativeSources.Library`, one clang call of all sources), the children race on the rename and leave `<library>.<random>.dll` behind: build it once under a lock like `PtxCache.Waited`.
 - A method without parameters named like a type leaks into other types: a `Window Number` method in DeltaEngine `Graphics3D/Route3D.strict` made `Window.Size(app.handle)` in `Games/RacingGame/RacingGame.strict` (which uses a Route3D) fail with `MethodNotFound: Number.Size, local Window hides the type Window` on the VM and natively.
 - `Members` natively has no values (`()` for every InitialValue), the VM has them.
-- A text literal broken over two lines reports TypeNotFound for `-` at line 3 of the file instead of the line it is on.
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).

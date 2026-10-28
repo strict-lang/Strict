@@ -19,7 +19,7 @@ TokenLength(start Number) Number
 	Tokenizer("1.5)").TokenLength(0) is 3
 	let character = line.Substring(start, 1)
 	if character is "\""
-		return TextEnd(start + 1) - start + 1
+		return (TextEnd(start + 1) + 1).Clamp(0, line.Length) - start
 	if IsWordCharacter(character)
 		return WordLength(start)
 	if start + 1 < line.Length and (line.Substring(start, 2) is in ("<=", ">="))
@@ -28,13 +28,23 @@ TokenLength(start Number) Number
 TextEnd(position Number) Number
 	Tokenizer("\"a\"").TextEnd(1) is 2
 	Tokenizer("\"\\\"\"").TextEnd(1) is 3
+	Tokenizer("\"a").TextEnd(1) is 2
 	mutable escaped = false
 	for Range(position, line.Length)
 		let character = line.Substring(value, 1)
 		if (not escaped) and (character is "\"")
 			return value
 		escaped = (not escaped) and (character is "\\")
-	line.Length - 1
+	line.Length
+HasOpenText Boolean
+	Tokenizer("x + \"a").HasOpenText
+	Tokenizer("(\"a\", \"b\")").HasOpenText is false
+	Tokenizer("\"a\\\"").HasOpenText
+	Tokenizer("a").HasOpenText is false
+	if line.IndexOf("\"") < 0
+		return false
+	let last = Tokens.Last
+	last.StartsWith("\"") and (TextEnd(line.LastIndexOf(last) + 1) is line.Length)
 WordLength(start Number) Number
 	Tokenizer("abc d").WordLength(0) is 3
 	Tokenizer("12.5").WordLength(0) is 4

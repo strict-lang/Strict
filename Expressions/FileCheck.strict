@@ -156,9 +156,7 @@ Problem(lines Texts, broken Number) Text
 	Counting.Problem(("Run", "	let a = for 3"), 1).StartsWith("ForWithBodyOnlyAsMethodResult: let a = for 3, ")
 	Counting.Problem(("has number", "Run", "	1", "", "	2"), 3) is "EmptyLineInsideMethod: Run"
 	if lines(broken).Trim is not ""
-		let isFor = lines(broken).IndexOf(" = for ") > 0
-		let hint = isFor then StatementParser.ForHint else ""
-		return (isFor then StatementParser.ForProblem else "ParsingFailed: ") + lines(broken).Trim + hint
+		return StatementParser.Problem(lines(broken).Trim)
 	mutable header = 0
 	for Range(0, broken)
 		if lines(value).StartsWith("	") is false
