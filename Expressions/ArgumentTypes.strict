@@ -121,16 +121,16 @@ Mismatch(argument Text, parameter Text) Boolean
 	let isUser = (TypeEntry.IsBaseName(argument) or TypeEntry.IsBaseName(parameter) or (parameter is "Generic")) is false
 	let isKnown = types.IsKnown(argument) and types.IsKnown(parameter)
 	let isChecked = isUser and isKnown and (types.MembersOf(parameter).names.Length > 0) and (argument is not parameter)
-	IsTextMismatch(argument, parameter) or isChecked and (parameter is not in types.MembersOf(argument).types)
-IsTextMismatch(argument Text, parameter Text) Boolean
-	Sizing.IsTextMismatch("Text", "Count")
-	Sizing.IsTextMismatch("Number", "Size") is false
-	Sizing.IsTextMismatch("Text", "Text") is false
-	Sizing.IsTextMismatch("Text", "Number")
-	Sizing.IsTextMismatch("Number", "Text")
+	IsBaseMismatch(argument, parameter) or isChecked and (parameter is not in types.MembersOf(argument).types)
+IsBaseMismatch(argument Text, parameter Text) Boolean
+	Sizing.IsBaseMismatch("Text", "Count")
+	Sizing.IsBaseMismatch("Number", "Size") is false
+	Sizing.IsBaseMismatch("Text", "Text") is false
+	Sizing.IsBaseMismatch("Text", "Number")
+	Sizing.IsBaseMismatch("Number", "Text")
+	Sizing.IsBaseMismatch("Boolean", "Number")
 	let types = inference.types
 	let hasMembers = types.IsKnown(parameter) and (types.MembersOf(parameter).names.Length > 0)
 	let isComposite = hasMembers and (TypeEntry.IsBaseName(parameter) is false)
-	let isNumberText = (argument is "Number") and (parameter is "Text")
-	let isTextNumber = (argument is "Text") and (parameter is "Number")
-	isNumberText or isTextNumber or (argument is "Text") and isComposite and (types.ValueOf(parameter) is not "Text")
+	let isScalar = (argument is not parameter) and ((argument, parameter) - ("Boolean", "Number", "Text")).Length is 0
+	isScalar or (argument is "Text") and isComposite and (types.ValueOf(parameter) is not "Text")
