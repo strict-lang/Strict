@@ -6,11 +6,12 @@ constant Hellos = ("Examples/HelloLogger.strict", "Examples/HelloLogger.strict")
 constant Other = TypeEntry("Strict/B", List(MemberEntry), List(MethodEntry))
 Module(path Text, root Text, isCounting Boolean, isProgram Boolean, platform = -1, sources Texts = List(Text)) Slow(MlirModule)
 	NativeFolder(Logger).Module("Examples/HelloLogger.strict", ".", false, true).entryName is "Run"
+	NativeFolder(Logger).Module("Examples/NativeAdd", ".", false, false).types.First.Name.EndsWith("Adder")
 	let started = Process.Elapsed
 	let paths = Paths(path)
-	let folders = Directory.Exists(path) then ResolveCheck.Tree(path) else List(Text) + path
 	let execute = Execute(logger, selection)
-	let types = isCounting then Collected(folders, root) else execute.Loaded(path, root, isProgram is false, sources)
+	let isCollected = isCounting or Directory.Exists(path)
+	let types = isCollected then Collected(path, root) else execute.Loaded(path, root, isProgram is false, sources)
 	let counted = isCounting then CountedFiles(paths, root) else List(Text)
 	let symbol = platform is Platform.IOS then "strict_main" else "main"
 	let inlined = BuildProfile(logger).Inlined(types)
@@ -45,8 +46,9 @@ Files(folder Text) Texts
 	for ResolveCheck.Tree(folder)
 		files = files + Directory.Files(value, "*.strict")
 	files
-Collected(folders Texts, root Text) List(TypeEntry)
-	NativeFolder(Logger).Collected(List(Text) + "Examples/NativeAdd/native", ".").Length is 0
+Collected(path Text, root Text) List(TypeEntry)
+	NativeFolder(Logger).Collected("Examples/NativeAdd/native", ".").Length is 0
+	let folders = Directory.Exists(path) then ResolveCheck.Tree(path) else List(Text) + path
 	mutable mains = List(Mutable(TypeEntry))
 	mutable used = List(Mutable(TypeEntry))
 	for folders
@@ -63,7 +65,7 @@ Leading(types List(TypeEntry), count Number) List(TypeEntry)
 		types(value)
 Counted(paths Texts, root Text) Slow(List(TypeEntry))
 	NativeFolder(Logger).Counted(Hellos, ".")(1).Name is "HelloLogger"
-	let files = SourceFiles(root).Of(FileCompiler.Normalized(paths.First))
+	let files = SourceFiles(root).Of(FileCompiler.Normalized(paths.First), paths)
 	let inference = ResolveCheck.Inference(files)
 	mutable mains = List(Mutable(TypeEntry))
 	mutable used = List(Mutable(TypeEntry))
@@ -79,7 +81,12 @@ Typed(path Text, root Text, files Texts, inference TypeInference) List(TypeEntry
 	if File(path).Exists is false
 		return List(TypeEntry)
 	let isFresh = Execute(logger).Stale(List(Text) + path).Length is 0
-	isFresh then Execute(logger).Loaded(path, root) else FileCompiler(logger).Built(path, root, true, files, inference)
+	if isFresh
+		return Execute(logger).Loaded(path, root)
+	let types = FileCompiler(logger).Built(path, root, true, files, inference)
+	if types.Length is 0
+		logger.Log("CompilationFailed: " + path)
+	types
 Merged(known List(TypeEntry), added List(TypeEntry)) List(TypeEntry)
 	NativeFolder.Merged(List(TypeEntry) + Counting, (Initializing, Counting)).First.methods.Length is 2
 	NativeFolder.Merged(List(TypeEntry) + Counting, List(TypeEntry) + Other).Length is 2
