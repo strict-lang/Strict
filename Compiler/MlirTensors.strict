@@ -2,7 +2,7 @@ has function MlirFunction
 constant Kinds = ("Attention", "Products", "Hadamard", "Convolution", "Sylvester")
 constant Attentions = ("queries", "keys", "values", "heads", "groups", "size", "sequences", "causal", "valueOffset", "valueStride", "quantized", "routing", "exact")
 constant Productions = ("left", "right", "shape", "strides")
-constant Hadamards = List(Text) + "values"
+constant Hadamards = ("values", "group")
 constant Sylvesters = ("values", "flips", "size")
 constant Convolutions = ("values", "affine", "weights", "shape")
 constant Merging = MethodEntry("Merged", List(MemberEntry), "Strict/List(Number)", (InstructionEntry.Invoke(0, ("Strict/Softmax", "Shares", "Strict/List(Number)"), List(Number), -1), InstructionEntry.Invoke(1, ("Strict/Softmax", "Weighted", "Strict/Number"), List(Number), -1), MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "queries"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 3)))
@@ -67,7 +67,7 @@ Called(kind Text) Texts
 	let call = "    %tensored = func.call " + Marker(kind) + arguments + ") : (" + types + ") -> f64"
 	("    %tensorPtx = llvm.mlir.addressof @strict_gpu_ptx : !llvm.ptr", call) + Ending
 Members(kind Text) Texts
-	Attending.Members("Hadamard").First is "values"
+	Attending.Members("Hadamard") is ("values", "group")
 	Attending.Members("Products").Length is 4
 	Attending.Members("Convolution").Last is "shape"
 	Attending.Members("Sylvester") is Sylvesters

@@ -1,0 +1,7 @@
+has width = 720
+has height = 1280
+constant Help = ("width in pixels", "height in pixels")
+Pixels Number
+	Resolution.Parsed(("--width", "16", "--height", "32")).Pixels is 512
+	Resolution.Parsed(List(Text)).Pixels is 921600
+	width * height
