@@ -255,6 +255,80 @@ wrapper = '''
     %zero = arith.constant 0.0 : f64
     return %zero : f64
   }
+  func.func @test_swept(%stack: !llvm.ptr) -> i64 {
+    func.call @strict_gc_init(%stack) : (!llvm.ptr) -> ()
+    %keptSize = arith.constant 65536 : i64
+    %kept = func.call @strict_alloc(%keptSize) : (i64) -> !llvm.ptr
+    %answer = arith.constant 42 : i64
+    llvm.store volatile %answer, %kept : i64, !llvm.ptr
+    %roundSlot = llvm.getelementptr %kept[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %body = func.constant @test_garbage : (!llvm.ptr, i64, i64) -> f64
+    %count = arith.constant 8192 : i64
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %rounds = arith.constant 8 : i64
+    %full = arith.constant true
+    cf.br ^loop(%zero : i64)
+  ^loop(%round: i64):
+    %more = arith.cmpi ult, %round, %rounds : i64
+    cf.cond_br %more, ^work, ^done
+  ^work:
+    llvm.store volatile %round, %roundSlot : i64, !llvm.ptr
+    %result = func.call @strict_parallel(%body, %kept, %count) : ((!llvm.ptr, i64, i64) -> f64, !llvm.ptr, i64) -> f64
+    func.call @strict_gc_run(%full) : (i1) -> ()
+    %next = arith.addi %round, %one : i64
+    cf.br ^loop(%next : i64)
+  ^done:
+    %topSlot = llvm.mlir.addressof @strict_gc_top : !llvm.ptr
+    %top = llvm.load %topSlot : !llvm.ptr -> i64
+    %baseSlot = llvm.mlir.addressof @strict_gc_base : !llvm.ptr
+    %base = llvm.load %baseSlot : !llvm.ptr -> i64
+    %bytes = arith.subi %top, %base : i64
+    %stored = llvm.load volatile %kept : !llvm.ptr -> i64
+    %preserved = arith.cmpi eq, %stored, %answer : i64
+    %firstSlot = llvm.getelementptr %kept[7] : (!llvm.ptr) -> !llvm.ptr, i64
+    %first = llvm.load volatile %firstSlot : !llvm.ptr -> !llvm.ptr
+    %firstIndex = llvm.load volatile %first : !llvm.ptr -> i64
+    %expectedIndex = arith.constant 320 : i64
+    %survived = arith.cmpi eq, %firstIndex, %expectedIndex : i64
+    %intact = arith.andi %preserved, %survived : i1
+    %checked = arith.select %intact, %bytes, %zero : i64
+    return %checked : i64
+  }
+  // every 64th object stays referenced from the context, so after a collection most pages hold garbage and one object
+  func.func private @test_garbage(%context: !llvm.ptr, %from: i64, %to: i64) -> f64 {
+    %size = arith.constant 1024 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %perRound = arith.constant 128 : i64
+    %spacing = arith.constant 64 : i64
+    %none = arith.constant 0 : i64
+    %zero = arith.constant 0.0 : f64
+    %roundSlot = llvm.getelementptr %context[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %round = llvm.load volatile %roundSlot : !llvm.ptr -> i64
+    %roundStart = arith.muli %round, %perRound : i64
+    %keptStart = arith.addi %roundStart, %two : i64
+    cf.br ^loop(%from : i64)
+  ^loop(%index: i64):
+    %more = arith.cmpi ult, %index, %to : i64
+    cf.cond_br %more, ^allocate, ^done
+  ^allocate:
+    %object = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
+    llvm.store volatile %index, %object : i64, !llvm.ptr
+    %next = arith.addi %index, %one : i64
+    %rest = arith.remui %index, %spacing : i64
+    %isKept = arith.cmpi eq, %rest, %none : i64
+    cf.cond_br %isKept, ^keep, ^loop(%next : i64)
+  ^keep:
+    %position = arith.divui %index, %spacing : i64
+    %entry = arith.addi %keptStart, %position : i64
+    %slot = llvm.getelementptr %context[%entry] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.ptr
+    llvm.store volatile %object, %slot : !llvm.ptr, !llvm.ptr
+    func.call @strict_gc_written(%slot) : (!llvm.ptr) -> ()
+    cf.br ^loop(%next : i64)
+  ^done:
+    return %zero : f64
+  }
   func.func @test_checked_collection(%stack: !llvm.ptr) -> i64 {
     func.call @strict_gc_init(%stack) : (!llvm.ptr) -> ()
     %size = arith.constant 48 : i64
@@ -330,6 +404,7 @@ driver.write_text('''#include <windows.h>
 #include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
+extern int64_t test_swept(void* stack);
 extern int64_t test_pinned(void* stack);
 extern int64_t test_carried(void* stack);
 extern int64_t test_checked_collection(void* stack);
@@ -436,6 +511,12 @@ static double body(void* context, int64_t from, int64_t to) {
 	return 0;
 }
 int main(int argc, char** argv) {
+	if (argc > 1 && argv[1][0] == 'm') {
+		published = CreateEventA(0, TRUE, TRUE, 0);
+		int64_t bytes = test_swept(&argc);
+		printf("Repeated pool garbage around kept objects: %lld heap bytes\\n", (long long)bytes);
+		return bytes > 0 && bytes < (32 << 20) ? 0 : 1;
+	}
 	if (argc > 1 && (argv[1][0] == 'k' || argv[1][0] == 'j' || argv[1][0] == 'l')) {
 		recursive = argv[1][0] == 'j';
 		literal = argv[1][0] == 'l';
@@ -573,12 +654,12 @@ def run(name, arguments):
 	assert result.returncode == 0, result.stdout + result.stderr
 lowered = output / "pool.llvm.mlir"
 llvm = output / "pool.ll"
-run("mlir-opt", [module, "--symbol-privatize=exclude=test_parallel,test_pinned,test_carried,test_checked_collection,test_reused_counts,test_scan_invalidation,test_pool_gpu,test_cached,test_first,test_second,test_tools,test_literal,test_published", "--symbol-dce", "--convert-scf-to-cf",
+run("mlir-opt", [module, "--symbol-privatize=exclude=test_swept,test_parallel,test_pinned,test_carried,test_checked_collection,test_reused_counts,test_scan_invalidation,test_pool_gpu,test_cached,test_first,test_second,test_tools,test_literal,test_published", "--symbol-dce", "--convert-scf-to-cf",
 	"--convert-arith-to-llvm", "--convert-func-to-llvm", "--convert-cf-to-llvm", "--reconcile-unrealized-casts", "-o", lowered])
 run("mlir-translate", ["--mlir-to-llvmir", lowered, "-o", llvm])
 executable = output / "check.exe"
 run("clang", [llvm, driver, "-O2", "-march=native", "-Wno-override-module", "-fuse-ld=lld", "-Wl,clang_rt.builtins-x86_64.lib", "-o", executable])
-for mode in ["published", "literal", "j", "k", "xcycle", "gpu", "rsame", "rdifferent", "scan"]:
+for mode in ["memory", "published", "literal", "j", "k", "xcycle", "gpu", "rsame", "rdifferent", "scan"]:
 	reused = subprocess.run([str(executable), mode], capture_output=True, text=True, timeout=15)
 	print(reused.stdout.strip(), flush=True)
 	assert reused.returncode == 0, reused.stdout + reused.stderr

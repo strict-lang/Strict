@@ -74,6 +74,8 @@
   llvm.mlir.global internal @strict_gc_lanes_taken(0 : i64) : i64
   llvm.mlir.global internal thread_local @strict_gc_lane(-1 : i64) : i64
   llvm.mlir.global internal @strict_gc_spans(dense<0> : tensor<64xi64>) : !llvm.array<64 x i64>
+  // the free spans of the pages each lane swept itself in pool jobs (64 classes per lane), dropped by every collection
+  llvm.mlir.global internal @strict_gc_lane_spans(dense<0> : tensor<32768xi64>) : !llvm.array<32768 x i64>
   llvm.mlir.global internal @strict_gc_pages(dense<0> : tensor<64xi64>) : !llvm.array<64 x i64>
   llvm.mlir.global internal @strict_gc_sweeps(dense<0> : tensor<64xi64>) : !llvm.array<64 x i64>
   llvm.mlir.global internal @strict_gc_fulls(dense<0> : tensor<64xi64>) : !llvm.array<64 x i64>
@@ -1750,6 +1752,27 @@
     %copied = llvm.call @memcpy(%carried, %lanes, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     return
   }
+  // a span the lane takes in the job is carried from its start: lists made there still grow in place
+  func.func private @strict_gc_carry(%class: i64) {
+    %startLane = func.call @strict_gc_lane_slot(%class) : (i64) -> !llvm.ptr
+    %start = llvm.load %startLane : !llvm.ptr -> i64
+    %endLaneEntry = arith.constant 64 : i64
+    %endLaneClass = arith.addi %class, %endLaneEntry : i64
+    %endLane = func.call @strict_gc_lane_slot(%endLaneClass) : (i64) -> !llvm.ptr
+    %end = llvm.load %endLane : !llvm.ptr -> i64
+    %lane = func.call @strict_gc_lane_index() : () -> i64
+    %stride = arith.constant 128 : i64
+    %row = arith.muli %lane, %stride : i64
+    %startEntry = arith.addi %row, %class : i64
+    %endOffset = arith.constant 64 : i64
+    %endEntry = arith.addi %startEntry, %endOffset : i64
+    %carried = llvm.mlir.addressof @strict_gc_carried : !llvm.ptr
+    %startSlot = llvm.getelementptr %carried[%startEntry] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    llvm.store %start, %startSlot : i64, !llvm.ptr
+    %endSlot = llvm.getelementptr %carried[%endEntry] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    llvm.store %end, %endSlot : i64, !llvm.ptr
+    return
+  }
   // the tag of pages this thread takes: 0 outside of pool jobs, else the job and the lane
   func.func private @strict_gc_owner() -> i64 {
     %insideSlot = llvm.mlir.addressof @strict_pool_inside : !llvm.ptr
@@ -2024,24 +2047,35 @@
   }
   func.func private @strict_gc_next_span(%class: i64) {
     %zero = arith.constant 0 : i64
-    %clear = arith.constant 0 : i32
     %due = func.call @strict_gc_due() : () -> i1
     %spans = llvm.mlir.addressof @strict_gc_spans : !llvm.ptr
     %spanSlot = llvm.getelementptr %spans[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<64 x i64>
-    %sweeps = llvm.mlir.addressof @strict_gc_sweeps : !llvm.ptr
-    %sweepSlot = llvm.getelementptr %sweeps[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<64 x i64>
-    // while the pool runs a whole fresh page per refill: swept runs are small and every refill takes the lock
-    %busy = func.call @strict_rc_busy() : () -> i1
-    cf.cond_br %busy, ^fresh, ^unbusy
-  ^unbusy:
     cf.cond_br %due, ^collect, ^search
   ^collect:
     func.call @strict_gc_collect() : () -> ()
     cf.br ^search
   ^search:
+    %bytes = func.call @strict_gc_pop_span(%class, %spanSlot) : (i64, !llvm.ptr) -> i64
+    %found = arith.cmpi ne, %bytes, %zero : i64
+    cf.cond_br %found, ^count, ^sweep
+  ^count:
+    func.call @strict_gc_add(%bytes) : (i64) -> ()
+    return
+  ^sweep:
+    %swept = func.call @strict_gc_sweep_next(%class, %spanSlot) : (i64, !llvm.ptr) -> i64
+    %waited = arith.cmpi sge, %swept, %zero : i64
+    cf.cond_br %waited, ^search, ^fresh
+  ^fresh:
+    func.call @strict_gc_new_small_page(%class) : (i64) -> ()
+    cf.br ^search
+  }
+  // moves the first span at spanSlot into this lane and returns its bytes, 0 when there is none
+  func.func private @strict_gc_pop_span(%class: i64, %spanSlot: !llvm.ptr) -> i64 {
+    %zero = arith.constant 0 : i64
+    %clear = arith.constant 0 : i32
     %span = llvm.load %spanSlot : !llvm.ptr -> i64
     %hasSpan = arith.cmpi ne, %span, %zero : i64
-    cf.cond_br %hasSpan, ^pop, ^sweep
+    cf.cond_br %hasSpan, ^pop, ^none
   ^pop:
     %startPointer = llvm.inttoptr %span : i64 to !llvm.ptr
     %link = llvm.load %startPointer : !llvm.ptr -> i64
@@ -2059,26 +2093,30 @@
     %endSlotClass = arith.addi %class, %endSlotOffset : i64
     %endSlot = func.call @strict_gc_lane_slot(%endSlotClass) : (i64) -> !llvm.ptr
     llvm.store %spanEnd, %endSlot : i64, !llvm.ptr
-    func.call @strict_gc_add(%bytes) : (i64) -> ()
-    return
-  ^sweep:
+    return %bytes : i64
+  ^none:
+    return %zero : i64
+  }
+  // sweeps the next page waiting for class, its free spans go to spanSlot: their bytes, -1 when no page waits
+  func.func private @strict_gc_sweep_next(%class: i64, %spanSlot: !llvm.ptr) -> i64 {
+    %zero = arith.constant 0 : i64
+    %sweeps = llvm.mlir.addressof @strict_gc_sweeps : !llvm.ptr
+    %sweepSlot = llvm.getelementptr %sweeps[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<64 x i64>
     %page = llvm.load %sweepSlot : !llvm.ptr -> i64
     %hasPage = arith.cmpi ne, %page, %zero : i64
-    cf.cond_br %hasPage, ^sweepPage, ^fresh
-  ^sweepPage:
+    cf.cond_br %hasPage, ^sweep, ^none
+  ^sweep:
     %pagePointer = llvm.inttoptr %page : i64 to !llvm.ptr
     %nextSlot = llvm.getelementptr %pagePointer[3] : (!llvm.ptr) -> !llvm.ptr, i64
     %nextPage = llvm.load %nextSlot : !llvm.ptr -> i64
     llvm.store %nextPage, %sweepSlot : i64, !llvm.ptr
-    func.call @strict_gc_sweep_page(%page, %class) : (i64, i64) -> ()
-    cf.br ^search
-  ^fresh:
-    func.call @strict_gc_new_small_page(%class) : (i64) -> ()
-    cf.br ^search
+    %free = func.call @strict_gc_sweep_page(%page, %class, %spanSlot) : (i64, i64, !llvm.ptr) -> i64
+    return %free : i64
+  ^none:
+    %missing = arith.constant -1 : i64
+    return %missing : i64
   }
-  func.func private @strict_gc_add_span(%class: i64, %start: i64, %end: i64) {
-    %spans = llvm.mlir.addressof @strict_gc_spans : !llvm.ptr
-    %spanSlot = llvm.getelementptr %spans[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<64 x i64>
+  func.func private @strict_gc_add_span(%spanSlot: !llvm.ptr, %start: i64, %end: i64) {
     %head = llvm.load %spanSlot : !llvm.ptr -> i64
     %link = func.call @strict_gc_link(%head) : (i64) -> i64
     %endLink = func.call @strict_gc_link(%end) : (i64) -> i64
@@ -2089,7 +2127,7 @@
     llvm.store %start, %spanSlot : i64, !llvm.ptr
     return
   }
-  func.func private @strict_gc_add_run(%page: i64, %first: i64, %objectSize: i64, %class: i64, %from: i64, %to: i64) {
+  func.func private @strict_gc_add_run(%page: i64, %first: i64, %objectSize: i64, %spanSlot: !llvm.ptr, %from: i64, %to: i64) {
     %fromOffset = arith.muli %from, %objectSize : i64
     %toOffset = arith.muli %to, %objectSize : i64
     %pageFirst = arith.addi %page, %first : i64
@@ -2099,7 +2137,7 @@
     %runBytes = arith.subi %end, %start : i64
     %clearRun = arith.constant 0 : i32
     %runCleared = llvm.call @memset(%runPointer, %clearRun, %runBytes) : (!llvm.ptr, i32, i64) -> !llvm.ptr
-    func.call @strict_gc_add_span(%class, %start, %end) : (i64, i64, i64) -> ()
+    func.call @strict_gc_add_span(%spanSlot, %start, %end) : (!llvm.ptr, i64, i64) -> ()
     %pagePointer = llvm.inttoptr %page : i64 to !llvm.ptr
     %countsSlot = llvm.getelementptr %pagePointer[6] : (!llvm.ptr) -> !llvm.ptr, i64
     %counts = llvm.load %countsSlot : !llvm.ptr -> i64
@@ -2202,7 +2240,8 @@
   ^done:
     return
   }
-  func.func private @strict_gc_sweep_page(%page: i64, %class: i64) {
+  // returns the bytes of the free spans it added at spanSlot, 0 when the page went to the pool or is full
+  func.func private @strict_gc_sweep_page(%page: i64, %class: i64, %spanSlot: !llvm.ptr) -> i64 {
     %zero = arith.constant 0 : i64
     %pendingPage = llvm.inttoptr %page : i64 to !llvm.ptr
     %pendingSlot = llvm.getelementptr %pendingPage[7] : (!llvm.ptr) -> !llvm.ptr, i64
@@ -2218,8 +2257,6 @@
     %firstSlot = llvm.getelementptr %pagePointer[2] : (!llvm.ptr) -> !llvm.ptr, i64
     %first = llvm.load %firstSlot : !llvm.ptr -> i64
     %marks = llvm.getelementptr %pagePointer[64] : (!llvm.ptr) -> !llvm.ptr, i8
-    %spans = llvm.mlir.addressof @strict_gc_spans : !llvm.ptr
-    %spanSlot = llvm.getelementptr %spans[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<64 x i64>
     %savedHead = llvm.load %spanSlot : !llvm.ptr -> i64
     cf.br ^scan(%zero, %none, %zero : i64, i64, i64)
   ^scan(%index: i64, %runStart: i64, %live: i64):
@@ -2248,7 +2285,7 @@
     %moreLive = arith.addi %live, %one : i64
     cf.cond_br %hasNoRun, ^scan(%nextIndex, %none, %moreLive : i64, i64, i64), ^closeRun
   ^closeRun:
-    func.call @strict_gc_add_run(%page, %first, %objectSize, %class, %runStart, %index) : (i64, i64, i64, i64, i64, i64) -> ()
+    func.call @strict_gc_add_run(%page, %first, %objectSize, %spanSlot, %runStart, %index) : (i64, i64, i64, !llvm.ptr, i64, i64) -> ()
     cf.br ^scan(%nextIndex, %none, %moreLive : i64, i64, i64)
   ^finish:
     %hasOpenRun = arith.cmpi ne, %runStart, %none : i64
@@ -2257,21 +2294,23 @@
   ^release:
     llvm.store %savedHead, %spanSlot : i64, !llvm.ptr
     func.call @strict_gc_release_page(%page) : (i64) -> ()
-    return
+    return %zero : i64
   ^closeLast:
     cf.cond_br %hasOpenRun, ^addLast, ^keep
   ^addLast:
-    func.call @strict_gc_add_run(%page, %first, %objectSize, %class, %runStart, %count) : (i64, i64, i64, i64, i64, i64) -> ()
+    func.call @strict_gc_add_run(%page, %first, %objectSize, %spanSlot, %runStart, %count) : (i64, i64, i64, !llvm.ptr, i64, i64) -> ()
     cf.br ^keep
   ^keep:
     %isFull = arith.cmpi eq, %live, %count : i64
     cf.cond_br %isFull, ^full, ^partial
   ^full:
     func.call @strict_gc_keep_full(%page, %class) : (i64, i64) -> ()
-    return
+    return %zero : i64
   ^partial:
     func.call @strict_gc_keep_page(%page, %class) : (i64, i64) -> ()
-    return
+    %freeObjects = arith.subi %count, %live : i64
+    %free = arith.muli %freeObjects, %objectSize : i64
+    return %free : i64
   }
   func.func private @strict_gc_page_kind(%page: i64, %kind: i64) {
     %shift = arith.constant 16 : i64
@@ -2305,7 +2344,9 @@
     %freshSlot = llvm.mlir.addressof @strict_gc_fresh : !llvm.ptr
     %fresh = llvm.load %freshSlot : !llvm.ptr -> i64
     %span:2 = func.call @strict_gc_small_page(%page, %class, %fresh) : (i64, i64, i64) -> (i64, i64)
-    func.call @strict_gc_add_span(%class, %span#0, %span#1) : (i64, i64, i64) -> ()
+    %spans = llvm.mlir.addressof @strict_gc_spans : !llvm.ptr
+    %spanSlot = llvm.getelementptr %spans[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<64 x i64>
+    func.call @strict_gc_add_span(%spanSlot, %span#0, %span#1) : (!llvm.ptr, i64, i64) -> ()
     return
   }
   // sets up a taken page for objects of class and returns where they start and end (fresh pages are zero already);
@@ -2364,9 +2405,21 @@
     %objectsCleared = llvm.call @memset(%objectsPointer, %clearObjects, %objectsLength) : (!llvm.ptr, i32, i64) -> !llvm.ptr
     return %start, %end : i64, i64
   }
-  // while the pool runs a lane takes a whole page and counts it under the collector lock, it is set up after that
+  // while the pool runs a lane allocates from the spans of pages it swept itself and takes the collector lock only to
+  // sweep the next waiting page (pages that kept a few objects are filled again) or else to take a whole page
   func.func private @strict_gc_refill_busy(%class: i64) {
+    %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
+    %lane = func.call @strict_gc_lane_index() : () -> i64
+    %classCount = arith.constant 64 : i64
+    %row = arith.muli %lane, %classCount : i64
+    %entry = arith.addi %row, %class : i64
+    %laneSpans = llvm.mlir.addressof @strict_gc_lane_spans : !llvm.ptr
+    %spanSlot = llvm.getelementptr %laneSpans[%entry] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %popped = func.call @strict_gc_pop_span(%class, %spanSlot) : (i64, !llvm.ptr) -> i64
+    %hasSpan = arith.cmpi ne, %popped, %zero : i64
+    cf.cond_br %hasSpan, ^carry, ^locked
+  ^locked:
     %objects:2 = func.call @strict_gc_page_objects(%class) : (i64) -> (i64, i64)
     %bytes = arith.muli %objects#0, %objects#1 : i64
     llvm.call @strict_gc_lock() : () -> ()
@@ -2375,10 +2428,28 @@
     %allocatedSlot = llvm.mlir.addressof @strict_rc_allocated : !llvm.ptr
     %allocated = llvm.load %allocatedSlot : !llvm.ptr -> i64
     %isDue = arith.cmpi uge, %allocated, %limit : i64
-    cf.cond_br %isDue, ^reclaim, ^take
+    cf.cond_br %isDue, ^reclaim, ^sweep
   ^reclaim:
     func.call @strict_rc_reclaim() : () -> ()
-    cf.br ^take
+    cf.br ^sweep
+  ^sweep:
+    %swept = func.call @strict_gc_sweep_next(%class, %spanSlot) : (i64, !llvm.ptr) -> i64
+    %hasFree = arith.cmpi sgt, %swept, %zero : i64
+    cf.cond_br %hasFree, ^reuse, ^next
+  ^next:
+    %waited = arith.cmpi eq, %swept, %zero : i64
+    cf.cond_br %waited, ^sweep, ^take
+  ^reuse:
+    func.call @strict_gc_add(%swept) : (i64) -> ()
+    %countedFree = llvm.load %allocatedSlot : !llvm.ptr -> i64
+    %moreFree = arith.addi %countedFree, %swept : i64
+    llvm.store %moreFree, %allocatedSlot : i64, !llvm.ptr
+    llvm.call @strict_gc_unlock() : () -> ()
+    %reused = func.call @strict_gc_pop_span(%class, %spanSlot) : (i64, !llvm.ptr) -> i64
+    cf.br ^carry
+  ^carry:
+    func.call @strict_gc_carry(%class) : (i64) -> ()
+    return
   ^take:
     %page = func.call @strict_gc_take_pages(%one) : (i64) -> i64
     %freshSlot = llvm.mlir.addressof @strict_gc_fresh : !llvm.ptr
@@ -4145,24 +4216,17 @@
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %classCount = arith.constant 64 : i64
-    %sweeps = llvm.mlir.addressof @strict_gc_sweeps : !llvm.ptr
+    %spans = llvm.mlir.addressof @strict_gc_spans : !llvm.ptr
     cf.br ^class(%zero : i64)
   ^class(%class: i64):
     %more = arith.cmpi ult, %class, %classCount : i64
     cf.cond_br %more, ^page, ^done
   ^page:
-    %sweepSlot = llvm.getelementptr %sweeps[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<64 x i64>
-    %page = llvm.load %sweepSlot : !llvm.ptr -> i64
-    %hasPage = arith.cmpi ne, %page, %zero : i64
+    %spanSlot = llvm.getelementptr %spans[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<64 x i64>
+    %swept = func.call @strict_gc_sweep_next(%class, %spanSlot) : (i64, !llvm.ptr) -> i64
+    %waited = arith.cmpi sge, %swept, %zero : i64
     %nextClass = arith.addi %class, %one : i64
-    cf.cond_br %hasPage, ^sweep, ^class(%nextClass : i64)
-  ^sweep:
-    %pagePointer = llvm.inttoptr %page : i64 to !llvm.ptr
-    %nextSlot = llvm.getelementptr %pagePointer[3] : (!llvm.ptr) -> !llvm.ptr, i64
-    %nextPage = llvm.load %nextSlot : !llvm.ptr -> i64
-    llvm.store %nextPage, %sweepSlot : i64, !llvm.ptr
-    func.call @strict_gc_sweep_page(%page, %class) : (i64, i64) -> ()
-    cf.br ^page
+    cf.cond_br %waited, ^page, ^class(%nextClass : i64)
   ^done:
     return
   }
@@ -4947,6 +5011,9 @@
     %lanesBytes = arith.constant 524288 : i64
     %noByte = arith.constant 0 : i32
     %clearedLanes = llvm.call @memset(%lanes, %noByte, %lanesBytes) : (!llvm.ptr, i32, i64) -> !llvm.ptr
+    %laneSpans = llvm.mlir.addressof @strict_gc_lane_spans : !llvm.ptr
+    %laneSpansBytes = arith.constant 262144 : i64
+    %clearedSpans = llvm.call @memset(%laneSpans, %noByte, %laneSpansBytes) : (!llvm.ptr, i32, i64) -> !llvm.ptr
     func.call @strict_rc_collected() : () -> ()
     %markedSlot = llvm.mlir.addressof @strict_gc_marked : !llvm.ptr
     llvm.store %zero, %markedSlot : i64, !llvm.ptr
