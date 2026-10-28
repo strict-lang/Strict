@@ -33,12 +33,16 @@ NotIterable(scoped ScopedStatement, current Scope) Text
 	if (loop.Kind is not "For") or (loop.HasValue is false) or (loop.text is "for as long as")
 		return ""
 	let type = inference.TypeOf(loop.children(0), scoped.scope, current)
-	let element = inference.types.ElementType(type)
-	let iterated = inference.types.ElementType(inference.types.MethodsOf(type).TypeOf("for"))
-	if (element is not "Unknown") or (iterated is not "Unknown") or (type is in ("Unknown", "Generic", "Generics"))
+	if IsIterable(type) or (type is in ("Unknown", "Generic", "Generics"))
 		return ""
 	let hint = type is "Boolean" then ", use for as long as " + loop.children(0) else ""
 	"NotIterable: " + loop.children(0) + " is a " + type + hint
+IsIterable(type Text) Boolean
+	Counting.IsIterable("Text")
+	Counting.IsIterable("Boolean") is false
+	let element = inference.types.ElementType(type)
+	let iterated = inference.types.ElementType(inference.types.MethodsOf(type).TypeOf("for"))
+	(element is not "Unknown") or (iterated is not "Unknown") or (inference.Enumerated(type).Length > 0)
 UnknownMethods(node SyntaxNode, scope Scope, current Scope) Texts
 	Counting.UnknownMethods(MissingCall.statement, Counted, KnownTypes.NoMembers) is ("MethodNotFound: Count.Missing")
 	mutable unknown = UnknownMembers(node)
