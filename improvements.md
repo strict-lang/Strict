@@ -9,7 +9,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).
 - Game engine (iOS, Android, one game loop, multiplayer, Spine, platform services): [improvements-engine.md](improvements-engine.md).
-- CI runs few native builds: add more while each job stays under 10 minutes.
+- CI natively: the Compiler folder (2743 tests, 171 s here, too long next to a bootstrap) and Math as one folder (emission memory above); the root types are in no CI job (a folder test of `.` takes the whole repository).
 - Nightly CI: build and run every program's Run once a day (games and long running apps for a few frames); work too slow for a Slow test (rebuilding all content, big models) belongs in a Run, not in tests.
 
 ## Waiting
