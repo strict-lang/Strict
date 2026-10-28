@@ -15592,7 +15592,7 @@
     return %zero : f64
   }
   // values (normed with affine and swished when normed is 1, as they are when 0) as a bfloat16 list on the GPU for
-  // strict_device_convolution, 0 when that is not possible
+  // strict_device_convolution (a thread per 4 numbers), 0 when that is not possible
   func.func private @strict_gpu_convolution_normed(%ptx: !llvm.ptr, %values: f64, %affine: f64, %channels: f64, %swish: f64, %normed: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
@@ -15614,7 +15614,8 @@
     %slot = llvm.mlir.addressof @strict_gpu_convolution_normed_slot : !llvm.ptr
     %listsMask = arith.constant 3 : i64
     %brainPacked = arith.constant 17 : i64
-    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %count, %zero, %none, %slots, %slotCount, %listsMask, %none, %none, %one, %none, %brainPacked, %none) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
+    %quarters = arith.constant -4 : i64
+    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %count, %zero, %none, %slots, %slotCount, %listsMask, %none, %none, %one, %quarters, %brainPacked, %none) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
     return %result : f64
   }
   llvm.mlir.global internal constant @strict_gpu_convolution_normed_name("strict_device_convolution_normed\00strict_device_convolution_normeds\00") : !llvm.array<67 x i8>
