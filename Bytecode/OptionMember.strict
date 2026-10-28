@@ -1,0 +1,83 @@
+has options OptionsCodegen
+has line Text
+constant Count = OptionMember(OptionsCodegen.Settings, "has count = 1")
+constant Kind = OptionMember(OptionsCodegen.Settings, "has kind = InstructionType.Add")
+constant Sized = OptionMember(OptionsCodegen.Rendering, "has resolution Resolution")
+Name Text
+	Count.Name is "count"
+	options.automatic.Header(line).MemberName
+Type Text
+	OptionMember(OptionsCodegen.Settings, "has loras = List(Text)").Type is "Texts"
+	Count.Type is "Number"
+	let type = options.automatic.MemberType(line)
+	(type is "List") and line.EndsWith("List(Text)") then "Texts" else type
+Default Text
+	Count.Default is "1"
+	Sized.Default is "resolution"
+	let at = line.IndexOf(" = ")
+	at < 0 then Name else line.Substring(at + 3, line.Length - at - 3)
+Source Texts
+	Kind.Source.First is "constant Set"
+	Count.Source.Length is 0
+	let path = options.folder + "/" + Type + ".strict"
+	let isBase = Type is in ("Number", "Text", "Boolean", "Texts")
+	isBase or (File(path).Exists is false) then List(Text) else File(path).ReadLines
+IsEnumerated Boolean
+	Kind.IsEnumerated
+	Count.IsEnumerated is false
+	Sized.IsEnumerated is false
+	let source = Source
+	for source
+		if (value is not "") and (value.StartsWith("constant ") is false)
+			return false
+	source.Length > 0
+IsNested Boolean
+	Sized.IsNested
+	Kind.IsNested is false
+	(Source.Length > 0) and (IsEnumerated is false)
+Choices Scope
+	Kind.Choices.names(6) is "greaterthan"
+	Kind.Choices.types(1) is "1"
+	let scope = TypeShape(Source).ConstantScope
+	Scope(Text.Combine(scope.names, "|").Lower.Split("|"), scope.types)
+Nested OptionsCodegen
+	Sized.Nested.Names is ("width", "height")
+	OptionsCodegen(Automatic(Source, Type, options.automatic.instantiation), options.folder)
+Names Texts
+	Sized.Names is ("width", "height")
+	Count.Names is ("count")
+	IsNested then Nested.Names else List(Text) + Name
+Argument Text
+	Count.Argument is "line.Numeric(\"count\", 1)"
+	Sized.Argument is "Resolution(line.Numeric(\"width\", 720), line.Numeric(\"height\", 1280))"
+	Kind.Argument.StartsWith("line.Chosen(\"kind\", (\"set\", \"add\", ")
+	if IsNested
+		return Type + "(" + Text.Combine(Nested.Arguments, ", ") + ")"
+	let at = ("Number", "Text", "Boolean", "Texts").Index(Type)
+	if at >= 0
+		return "line." + ("Numeric", "Option", "Flag", "Repeated")(at) + "(\"" + Name + "\", " + Default + ")"
+	if IsEnumerated is false
+		return Default
+	let choices = options.Joined(options.Quoted(Choices.names), "Text") + ", " + options.Joined(Choices.types, "Number")
+	"line.Chosen(\"" + Name + "\", " + choices + ", " + Default + ")"
+Shown Texts
+	Count.Shown is ("1 to Text")
+	Sized.Shown is ("720 to Text", "1280 to Text")
+	IsNested then Nested.Shown else List(Text) + Displayed
+Displayed Text
+	Count.Displayed is "1 to Text"
+	Kind.Displayed.EndsWith("|jumpbackifnonzero)\"")
+	if Type is in ("Text", "Texts")
+		return Type is "Text" then Default else "Text.Combine(" + Default + ", \" \")"
+	if IsEnumerated is false
+		return Default + " to Text"
+	let names = Choices.names
+	let chosen = options.Joined(options.Quoted(names), "Text") + "(" + options.Joined(Choices.types, "Number")
+	chosen + ".Index(" + Default + ")) + \" (" + Text.Combine(names, "|") + ")\""
+Described(help Text, at Number) Texts
+	Count.Described("Help", 2) is ("Help(2)")
+	Count.Described("", 0) is ("\"\"")
+	Sized.Described("", 0) is ("Resolution.Help(0)", "Resolution.Help(1)")
+	if IsNested
+		return Nested.Descriptions(Type + ".")
+	List(Text) + (help is "" then "\"\"" else help + "(" + at + ")")

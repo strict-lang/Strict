@@ -1,0 +1,8 @@
+has resolution Resolution
+has samples = 4
+constant Help = ("samples per pixel")
+Work Number
+	Rendering.Parsed(("--samples", "2", "--width", "16", "--height", "16")).Work is 512
+	Rendering.Parsed(List(Text)).Usage.StartsWith("--width 720  width in pixels\n--height 1280  height in pixels\n")
+	Rendering.Parsed(List(Text)).Usage.EndsWith("\n--samples 4  samples per pixel")
+	resolution.Pixels * samples
