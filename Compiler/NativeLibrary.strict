@@ -1,34 +1,51 @@
 has sources NativeSources
 constant Adding = NativeLibrary(NativeSources.Adding)
+constant Failing = "clang failed for Compiler/output/Cut.o: no"
 Built(platform Number, root Text) Text
 	Adding.Built(Platform.Current, ".").StartsWith("Built Examples/NativeAdd/native/NativeAdd.")
 	let folder = sources.folders.First
 	let base = folder + "/" + Path(Path(folder).PathOnly.text).FileName.text
 	let library = base + Platform.LibraryExtension(platform)
-	let previous = Waited(library, sources.Files + sources.Inputs(platform, root))
+	let shared = platform is Platform.Windows then "-shared -O2 -DSTRICT_LIBRARY" else "-shared -fPIC -O2 -DSTRICT_LIBRARY"
+	let previous = Waited(library, sources.Files + sources.Inputs(platform, root), shared)
 	if previous is not ""
 		return previous
 	let output = base + "." + 999999.Random.Floor + Platform.LibraryExtension(platform)
-	let shared = platform is Platform.Windows then "-shared -O2 -DSTRICT_LIBRARY" else "-shared -fPIC -O2 -DSTRICT_LIBRARY"
 	let clang = Toolchain(platform, root).Located("clang")
 	let result = ToolRunner(clang).Execute(shared + sources.Arguments(platform, root) + " -o \"" + output + "\"")
-	Recorded(library, (result.Failed then "clang failed: " + result.error else "Built " + sources.Placed(output, library)))
-Waited(library Text, inputs Texts) Slow(Text)
-	Adding.Waited("Compiler/output/Missing.dll", List(Text)) is ""
-	let lock = File(library + "." + Newest(inputs) + ".lock")
+	Finished(result, output, library, shared)
+Object(source Text, platform Number, root Text, options Text) Text
+	Adding.Object("Examples/NativeAdd/native/Adder.c", Platform.Current, ".", "") is "Examples/NativeAdd/native/Adder.o"
+	let target = Path(source).RemoveExtension.text + ".o"
+	let previous = Waited(target, sources.Inputs(platform, root) + source, options)
+	let built = previous is "" then Compiled(source, platform, root, options) else previous
+	built.StartsWith("Built ") then built.Substring(6, built.Length - 6) else built
+Compiled(source Text, platform Number, root Text, options Text) Text
+	Adding.Compiled("Compiler/output/No.c", Platform.Current, ".", "").StartsWith("clang failed for Compiler/output/No.o")
+	let output = Path(source).RemoveExtension.text + "." + 999999.Random.Floor + ".o"
+	let compile = "-c \"" + source + "\" -I\"" + root + "/Compiler\"" + options + Toolchain.Optimized
+	let compiled = ToolRunner(Toolchain(platform, root).Located("clang")).Execute(compile + " -o \"" + output + "\"")
+	Finished(compiled, output, Path(source).RemoveExtension.text + ".o", options)
+Waited(target Text, inputs Texts, options Text) Slow(Text)
+	Adding.Waited("Compiler/output/Missing.dll", List(Text), "") is ""
+	let lock = File(target + "." + Newest(inputs) + ".lock")
 	let started = Process.Elapsed
 	for as long as Process.Elapsed - started < Strict.MaxWait
-		if sources.IsCurrent(library, inputs)
-			return "Built " + library
-		if sources.IsCurrent(library + ".built", inputs)
-			return Text.Combine(File(library + ".built").ReadLines, "\n")
+		if sources.IsCompiled(target, inputs, options)
+			return "Built " + target
+		if sources.IsCurrent(target + ".built", inputs)
+			return Text.Combine(File(target + ".built").ReadLines, "\n")
 		if lock.Locked
 			return ""
 		Process.Wait(0.1)
 	""
-Recorded(library Text, built Text) Text
-	Adding.Recorded("Compiler/output/Recorded.dll", "Built Recorded.dll") is "Built Recorded.dll"
-	File(library + ".built").Write(built)
+Finished(result ProcessResult, output Text, target Text, options Text) Text
+	Adding.Finished(ProcessResult(1, "", "no"), "Compiler/output/Cut.1.o", "Compiler/output/Cut.o", "") is Failing
+	let failure = "clang failed for " + target + ": " + result.error
+	let built = result.Failed then failure else "Built " + sources.Placed(output, target)
+	File(target + ".built").Write(built)
+	if built is "Built " + target
+		File(target + ".nativecache").Write(options)
 	built
 Newest(inputs Texts) Number
 	Adding.Newest(List(Text) + "Compiler/strict.h") is File("Compiler/strict.h").Modified

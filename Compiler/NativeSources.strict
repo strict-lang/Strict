@@ -46,7 +46,7 @@ Objects(platform Number, root Text) Text
 	let tokens = Flags(platform, root).Split(" ")
 	mutable arguments = ""
 	for Files + Sources(tokens)
-		let object = Object(value, platform, root, Options(tokens, false))
+		let object = NativeLibrary(outer).Object(value, platform, root, Options(tokens, false))
 		if object.StartsWith("clang failed")
 			return object
 		arguments = arguments + " \"" + object + "\""
@@ -71,19 +71,6 @@ Options(tokens Texts, isLinking Boolean) Text
 		if (value is not "") and (IsSource(value) is false) and (isLinked is isLinking)
 			options = options + " " + value
 	options
-Object(source Text, platform Number, root Text, options Text) Text
-	Adding.Object("Examples/NativeAdd/native/Adder.c", Platform.Current, ".", "") is "Examples/NativeAdd/native/Adder.o"
-	let target = Path(source).RemoveExtension.text + ".o"
-	if IsCompiled(target, Inputs(platform, root) + source, options)
-		return target
-	let building = Path(source).RemoveExtension.text + "." + 999999.Random.Floor + ".o"
-	let compile = "-c \"" + source + "\" -I\"" + root + "/Compiler\"" + options + Toolchain.Optimized
-	let compiled = ToolRunner(Toolchain(platform, root).Located("clang")).Execute(compile + " -o \"" + building + "\"")
-	if compiled.Failed
-		return "clang failed for " + source + ": " + compiled.error
-	let placed = Placed(building, target)
-	File(placed + ".nativecache").Write(options)
-	placed
 IsCompiled(target Text, inputs Texts, options Text) Boolean
 	let flags = File(target + ".nativecache")
 	flags.Exists and (Text.Combine(flags.ReadLines, "\n") is options) and IsCurrent(target, inputs)
