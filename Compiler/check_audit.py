@@ -124,10 +124,12 @@ def values(folder):
 	source.write_text('''has logger
 constant Stored = Made(4)
 Run Number
-	let values = for 1024
-		Checked(index)
+	let values = Results(1024)
 	logger.Log(values.Sum)
 	values.Sum is 1024 then 0 else 1
+Results(count Number) Numbers
+	for count
+		Checked(index)
 Checked(index Number) Number
 	let literal = (1, 2, 3)
 	let pair = CachePair(1, 2)
@@ -145,7 +147,7 @@ Mapped(numbers Numbers) Numbers
 	print(run([str(root / "strict.exe"), "build", str(source)]).strip(), flush=True)
 	module = source.with_suffix(".mlir").read_text(encoding="utf-8")
 	assert "func.call @strict_cache_claim(" in module and "func.call @strict_cache_publish(" in module
-	assert "@ValueCheck_Checked_1_loop" in module, "Cold cache check did not exercise parallel emission"
+	assert "@ValueCheck_Results_1_loop" in module, "Cold cache check did not exercise parallel emission"
 	executable = source.with_suffix(".exe")
 	for threads in ("1", "4"):
 		result = subprocess.run([str(executable)], cwd=root, capture_output=True, text=True, timeout=15,

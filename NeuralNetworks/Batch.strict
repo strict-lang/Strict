@@ -20,6 +20,8 @@ Sums(input Numbers) Slow(Numbers)
 	Fours.Sums(Prompt)(637).IsNearlyEqual(5.001, 0.5)
 	Sixes.Sums(Prompt)(500).IsNearlyEqual(-3.413, 0.2)
 	Threes.Sums(Tokens)(255).IsNearlyEqual(-1.549, 0.2)
+	Batch(Blocks.Rows("four") + Blocks.Rows("eight"), Layer.Unbiased).Sums(Long)(2259).IsNearlyEqual(Eights.Sums(Long)(1123), 0.1)
+	Batch(Blocks.Rows("eight") + Blocks.Rows("four"), Layer.Unbiased).Sums(Long)(2259).IsNearlyEqual(Fours.Sums(Long)(1123), 0.5)
 	let width = weights.First.Length
 	if input.Length is width
 		return Layer(weights, biases).Sums(input)
