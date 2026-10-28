@@ -26,13 +26,13 @@ Compile(path Text, root Text, isCounting = false, isGating = false, sources Text
 	let built = Build(base, program, Toolchain(Platform.Current, root, natives, isWeb), isCounting)
 	isTesting and (built is 0) then Ran(base, Toolchain(Platform.Current, root), path, isCounting) else built
 Device(program Text, base Text, root Text) Text
-	NativeBuild.Device("module {\n}", "A", ".") is "module {\n}"
+	NativeBuild.Device("module {\n}", "A", ".") is "module {\n" + PtxCache.Empty
 	let at = Unsupported(program)
 	if at is not -1
 		return Failed("Native compilation failed, " + program.Substring(at, program.Length - at).Lines.First)
 	let marker = program.IndexOf("\n" + MlirGpu.Marker)
 	if marker < 0
-		return program
+		return PtxCache(base).Unlaunched(program)
 	let gpu = DeviceBuild(Toolchain(Platform.Current, root))
 	let device = program.Substring(marker + 1, program.Length - marker - 1)
 	let kernels = (isAndroid or isIOS) then List(Text) else gpu.Built(base, device, MlirTensors.Attending.Used(program))

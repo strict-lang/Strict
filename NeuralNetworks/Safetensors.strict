@@ -55,6 +55,11 @@ Tuned(name Text, downs Numbers, ups Numbers, scales Numbers) Slow(List(Numbers))
 	Bytes.Tuned("a", Second, (1, 0, 0, 0), List(Number) + 0.5)(0)(5).IsNearlyEqual(Exact(0)(5) + Second(5) / 2, 1)
 	Bytes.Tuned("a", Firsts, (0, 1, 0, 0, 0, 0, 0, 1), (0.5, 0.25))(3)(7).IsNearlyEqual(Exact(3)(7) + Second(7) / 4, 1)
 	Bytes.Tuned("a", (1, 2), (1, 0, 0, 0), List(Number) + 1) is Error
+	if scales.Length is 0
+		return Quantized(name)
+	let merged = GpuMemory.Tuned(Quantized(name), downs, ups, scales)
+	if merged.Length > 0
+		return merged
 	TensorFile.Tuned(path, Entry(name + ".weight"), Entry(name + ".weight_scale"), downs + ups + scales)
 Written(name Text, numbers Numbers) Number
 	Safetensors("NeuralNetworks/written.tmp").Written("x", (1.5, -2, 3)) is 3

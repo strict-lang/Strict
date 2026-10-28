@@ -4,3 +4,7 @@ Released Number
 Evicted Number
 	GpuMemory.Evicted >= 0
 	0
+Tuned(rows List(Numbers), downs Numbers, ups Numbers, scales Numbers) List(Numbers)
+	GpuMemory.Tuned(Safetensors.Bytes.Quantized("a"), List(Number), List(Number), List(Number)).Length is 4
+	GpuMemory.Tuned(Safetensors.Bytes.Quantized("a"), (1, 0), (1, 0), List(Number) + 1).Length is 0
+	(downs.Length is 0) and (ups.Length is 0) and (scales.Length is 0) then rows else List(Numbers)
