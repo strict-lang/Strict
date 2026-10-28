@@ -1,5 +1,5 @@
 has iterator
-constant Epsilon = 0.0000001
+constant Epsilon = 0.00001
 constant E = 2.718281828459045
 constant Pi = 3.141592653589793
 constant Phi = 1.618033988749895
@@ -73,7 +73,7 @@ Absolute Number
 	value < 0 then 0 - value else value
 IsNearlyEqual(other, difference = 0) Boolean
 	2.30000001.IsNearlyEqual(2.3)
-	1.000001.IsNearlyEqual(1) is false
+	1.0001.IsNearlyEqual(1) is false
 	(0.1 + 0.2).IsNearlyEqual(0.3)
 	(1 / 0).IsNearlyEqual(1 / 0)
 	(1 / 0).IsNearlyEqual(5) is false
