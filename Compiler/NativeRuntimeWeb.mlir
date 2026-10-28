@@ -190,6 +190,25 @@
   llvm.func @localtime(!llvm.ptr) -> !llvm.ptr
   llvm.mlir.global internal constant @strict_separator_path("/\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @strict_any_file("*\00") : !llvm.array<2 x i8>
+  llvm.func @access(!llvm.ptr, i32) -> i32
+  // whether a file (no directory) is at name, without opening it
+  func.func private @strict_file_present(%name: !llvm.ptr) -> i1 {
+    %false = arith.constant false
+    %existing = arith.constant 0 : i32
+    %checked = llvm.call @access(%name, %existing) : (!llvm.ptr, i32) -> i32
+    %found = arith.cmpi eq, %checked, %existing : i32
+    cf.cond_br %found, ^kind, ^done(%false : i1)
+  ^kind:
+    %directory = llvm.call @opendir(%name) : (!llvm.ptr) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %isDirectory = llvm.icmp "ne" %directory, %null : !llvm.ptr
+    cf.cond_br %isDirectory, ^close, ^done(%found : i1)
+  ^close:
+    %closed = llvm.call @closedir(%directory) : (!llvm.ptr) -> i32
+    cf.br ^done(%false : i1)
+  ^done(%present: i1):
+    return %present : i1
+  }
   func.func private @strict_directory_exists(%self: f64, %path: f64) -> f64 {
     %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
     %directory = llvm.call @opendir(%name) : (!llvm.ptr) -> !llvm.ptr

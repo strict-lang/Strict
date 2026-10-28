@@ -76,6 +76,7 @@ Answered(path Text) VmValue
 	Hosted(Dating).Answered("Any.strict").number > 1.7e9
 	File("Any.strict").Length is File("Any.strict").ReadBytes.Length
 	File("Runtime/Answered.lock").Locked and (File("Runtime/Answered.lock").Locked is false)
+	File("Runtime/Held.lock").Locked and File("Runtime/Held.lock").Exists
 	if call.MethodName is "Locked"
 		return VmValue.OfBoolean(File(path).Locked)
 	if call.MethodName is in ("Modified", "Length")

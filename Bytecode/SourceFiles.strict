@@ -102,8 +102,9 @@ PackageWith(type Text, projects Text) Text
 	""
 SubfolderWith(parent Text, type Text) Text
 	SourceFiles(".").SubfolderWith(".", "Vector2") is "./Math"
+	SourceFiles(".").SubfolderWith(".", "Vector2s") is "./Math"
 	for Directory.Directories(parent)
 		let folder = parent + "/" + Path(value.Replace("\\", "/")).FileName.text
 		if File(folder + "/" + type + ".strict").Exists
 			return folder
-	""
+	type.EndsWith("s") then SubfolderWith(parent, type.Substring(0, type.Length - 1)) else ""

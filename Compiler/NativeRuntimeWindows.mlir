@@ -91,6 +91,18 @@
   llvm.func @_localtime64(!llvm.ptr) -> !llvm.ptr
   llvm.mlir.global internal constant @strict_separator_path("/\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @strict_any_file("*\00") : !llvm.array<2 x i8>
+  // whether a file (no directory) is at name, without opening it (a file held by File.Locked opens for nobody else)
+  func.func private @strict_file_present(%name: !llvm.ptr) -> i1 {
+    %invalid = arith.constant -1 : i32
+    %directoryFlag = arith.constant 16 : i32
+    %none = arith.constant 0 : i32
+    %attributes = llvm.call @GetFileAttributesA(%name) : (!llvm.ptr) -> i32
+    %found = arith.cmpi ne, %attributes, %invalid : i32
+    %masked = arith.andi %attributes, %directoryFlag : i32
+    %isFile = arith.cmpi eq, %masked, %none : i32
+    %present = arith.andi %found, %isFile : i1
+    return %present : i1
+  }
   func.func private @strict_directory_exists(%self: f64, %path: f64) -> f64 {
     %invalid = arith.constant -1 : i32
     %directoryFlag = arith.constant 16 : i32
