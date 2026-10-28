@@ -14,6 +14,7 @@ constant FlagStored = ("    %flag = arith.fptosi %value : f64 to i32", "    llvm
 constant Finished = ("    %ok = arith.constant 0 : i32", "    return %ok : i32", "  }")
 Text Text
 	Policy.Text.StartsWith("module {")
+	Policy.Text.EndsWith("}")
 	Policy.Text.IndexOf("  func.func @Policy_Start(") > 0
 	let module = MlirModule(types, Exported.First.Name)
 	mutable roots = List(Mutable(MlirFunction))
@@ -23,7 +24,7 @@ Text Text
 		wrappers = wrappers + Wrapper(value)
 	let functions = module.Reachable(roots, roots)
 	let lines = module.Declared(functions, functions) + MlirGlobals(functions).Lines + wrappers + "}"
-	outer.Text.Combine(lines + MlirGpu.Module(functions), "\n")
+	outer.Text.Combine((lines + MlirGpu.Module(functions)) - "", "\n")
 Exported List(MethodEntry)
 	Policy.Exported is List(MethodEntry) + Start
 	for types.First.methods
