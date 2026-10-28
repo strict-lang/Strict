@@ -438,6 +438,36 @@ wrapper = '''
     %bytes = arith.subi %top, %heapBase : i64
     return %bytes : i64
   }
+  // a pool job leaves 400 MB of garbage and nothing collects it until the next allocation
+  func.func @test_job_garbage(%stack: !llvm.ptr) -> i64 {
+    func.call @strict_gc_init(%stack) : (!llvm.ptr) -> ()
+    %body = func.constant @test_waste : (!llvm.ptr, i64, i64) -> f64
+    %context = llvm.mlir.zero : !llvm.ptr
+    %count = arith.constant 409600 : i64
+    %done = func.call @strict_parallel(%body, %context, %count) : ((!llvm.ptr, i64, i64) -> f64, !llvm.ptr, i64) -> f64
+    %zero = arith.constant 0 : i64
+    return %zero : i64
+  }
+  func.func private @test_waste(%context: !llvm.ptr, %from: i64, %to: i64) -> f64 {
+    %size = arith.constant 1024 : i64
+    %one = arith.constant 1 : i64
+    %zero = arith.constant 0.0 : f64
+    cf.br ^loop(%from : i64)
+  ^loop(%index: i64):
+    %more = arith.cmpi ult, %index, %to : i64
+    cf.cond_br %more, ^allocate, ^done
+  ^allocate:
+    %object = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
+    llvm.store volatile %index, %object : i64, !llvm.ptr
+    %next = arith.addi %index, %one : i64
+    cf.br ^loop(%next : i64)
+  ^done:
+    return %zero : f64
+  }
+  func.func @test_released() {
+    func.call @strict_gc_release() : () -> ()
+    return
+  }
   func.func @test_checked_collection(%stack: !llvm.ptr) -> i64 {
     func.call @strict_gc_init(%stack) : (!llvm.ptr) -> ()
     %size = arith.constant 48 : i64
@@ -513,9 +543,17 @@ driver.write_text('''#include <windows.h>
 #include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <psapi.h>
 extern int64_t test_swept(void* stack);
 extern int64_t test_owned(void* stack);
 extern int64_t test_copies(void* stack);
+extern int64_t test_job_garbage(void* stack);
+extern void test_released(void);
+static size_t working_set(void) {
+	PROCESS_MEMORY_COUNTERS counters = { sizeof(counters) };
+	K32GetProcessMemoryInfo(GetCurrentProcess(), &counters, sizeof(counters));
+	return counters.WorkingSetSize;
+}
 extern int64_t test_pinned(void* stack);
 extern int64_t test_carried(void* stack);
 extern int64_t test_checked_collection(void* stack);
@@ -622,6 +660,15 @@ static double body(void* context, int64_t from, int64_t to) {
 	return 0;
 }
 int main(int argc, char** argv) {
+	if (argc > 1 && argv[1][0] == 'f') {
+		published = CreateEventA(0, TRUE, TRUE, 0);
+		test_job_garbage(&argc);
+		size_t before = working_set();
+		test_released();
+		size_t after = working_set();
+		printf("Working set before waiting for a tool after a job left 400 MB of garbage: %zu MB, then %zu MB\\n", before >> 20, after >> 20);
+		return before > after + (200 << 20) ? 0 : 1;
+	}
 	if (argc > 1 && argv[1][0] == 'b') {
 		int64_t bytes = test_copies(&argc);
 		printf("40 copies of a 16 MB text next to 32 MB kept: %lld heap bytes\\n", (long long)bytes);
@@ -776,12 +823,12 @@ def run(name, arguments):
 	assert result.returncode == 0, result.stdout + result.stderr
 lowered = output / "pool.llvm.mlir"
 llvm = output / "pool.ll"
-run("mlir-opt", [module, "--symbol-privatize=exclude=test_swept,test_owned,test_copies,test_parallel,test_pinned,test_carried,test_checked_collection,test_reused_counts,test_scan_invalidation,test_pool_gpu,test_cached,test_first,test_second,test_tools,test_literal,test_published", "--symbol-dce", "--convert-scf-to-cf",
+run("mlir-opt", [module, "--symbol-privatize=exclude=test_swept,test_owned,test_copies,test_job_garbage,test_released,test_parallel,test_pinned,test_carried,test_checked_collection,test_reused_counts,test_scan_invalidation,test_pool_gpu,test_cached,test_first,test_second,test_tools,test_literal,test_published", "--symbol-dce", "--convert-scf-to-cf",
 	"--convert-arith-to-llvm", "--convert-func-to-llvm", "--convert-cf-to-llvm", "--reconcile-unrealized-casts", "-o", lowered])
 run("mlir-translate", ["--mlir-to-llvmir", lowered, "-o", llvm])
 executable = output / "check.exe"
 run("clang", [llvm, driver, "-O2", "-march=native", "-Wno-override-module", "-fuse-ld=lld", "-Wl,clang_rt.builtins-x86_64.lib", "-o", executable])
-for mode in ["memory", "owned", "big", "published", "literal", "j", "k", "xcycle", "gpu", "rsame", "rdifferent", "scan"]:
+for mode in ["memory", "owned", "big", "freed", "published", "literal", "j", "k", "xcycle", "gpu", "rsame", "rdifferent", "scan"]:
 	reused = subprocess.run([str(executable), mode], capture_output=True, text=True, timeout=15)
 	print(reused.stdout.strip(), flush=True)
 	assert reused.returncode == 0, reused.stdout + reused.stderr

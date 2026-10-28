@@ -4245,8 +4245,9 @@
   ^done:
     return
   }
-  // STRICT_RC_CHECK sweeps all pages right after a collection, so no later check meets unswept garbage
-  func.func private @strict_rc_sweep_all() {
+  // sweeps every waiting page: STRICT_RC_CHECK right after a collection, so no later check meets unswept garbage, and
+  // strict_gc_release to give the pages that got empty back
+  func.func private @strict_gc_sweep_all() {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %classCount = arith.constant 64 : i64
@@ -4261,6 +4262,30 @@
     %waited = arith.cmpi sge, %swept, %zero : i64
     %nextClass = arith.addi %class, %one : i64
     cf.cond_br %waited, ^page, ^class(%nextClass : i64)
+  ^done:
+    return
+  }
+  // before waiting for a batch of other processes (16 mlir-opt take 2.4 GB) when at least as much was allocated since
+  // the last full collection as it kept and 64 MB: collect, sweep every page and give the free pages back except 64 MB
+  func.func private @strict_gc_release() {
+    %busy = func.call @strict_rc_busy() : () -> i1
+    cf.cond_br %busy, ^done, ^check
+  ^check:
+    %allocatedSlot = llvm.mlir.addressof @strict_gc_allocated : !llvm.ptr
+    %allocated = llvm.load %allocatedSlot : !llvm.ptr -> i64
+    %keptSlot = llvm.mlir.addressof @strict_gc_kept : !llvm.ptr
+    %kept = llvm.load %keptSlot : !llvm.ptr -> i64
+    %least = arith.constant 67108864 : i64
+    %enough = arith.maxui %kept, %least : i64
+    %worth = arith.cmpi ugt, %allocated, %enough : i64
+    cf.cond_br %worth, ^release, ^done
+  ^release:
+    %full = arith.constant true
+    func.call @strict_gc_run(%full) : (i1) -> ()
+    func.call @strict_gc_sweep_all() : () -> ()
+    %keep = arith.constant 1024 : i64
+    func.call @strict_gc_trim_pool(%keep) : (i64) -> ()
+    cf.br ^done
   ^done:
     return
   }
@@ -5090,7 +5115,7 @@
     func.call @strict_gc_sweep_large() : () -> ()
     cf.cond_br %isChecking, ^sweepAll, ^swepts
   ^sweepAll:
-    func.call @strict_rc_sweep_all() : () -> ()
+    func.call @strict_gc_sweep_all() : () -> ()
     cf.br ^swepts
   ^swepts:
     %youngSlot = llvm.mlir.addressof @strict_gc_young : !llvm.ptr
@@ -10315,6 +10340,7 @@
   }
   // Process.RunTools: the pool runs the tool for every argument line at the same time, the results keep their order
   func.func private @strict_process_runtools(%self: f64, %name: f64, %arguments: f64) -> f64 {
+    func.call @strict_gc_release() : () -> ()
     %zero = arith.constant 0.0 : f64
     %size = arith.constant 40 : i64
     %count = func.call @strict_list_length(%arguments) : (f64) -> f64
