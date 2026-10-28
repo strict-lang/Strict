@@ -264,7 +264,7 @@ pool.append(release[0])
 trim=re.search(r'  func.func private @strict_gpu_trim\(.*?\n  \}',source,re.S)
 if trim:
 	pool.append(trim[0])
-for name in ['strict_gpu_blocks','strict_gpu_chunk','strict_gpu_lent','strict_gpu_spilled_bytes']:
+for name in ['strict_gpu_blocks','strict_gpu_chunk','strict_gpu_lent','strict_gpu_spilled_bytes','strict_gpu_hosted_bytes']:
 	pool.append(re.search(r'  llvm.mlir.global internal @'+name+r'[^\n]*',source)[0])
 pool.append('''
   llvm.mlir.global internal @strict_gc_young_limit(0 : i64) : i64

@@ -52,8 +52,18 @@ Shared(device Text, isTiling Boolean, builder DeviceBuild) Texts
 	Directory.Create(builder.tools.root + "/Tools")
 	Directory.Create(folder)
 	let cache = PtxCache(folder + "/" + HashCode(key).number + "/module")
-	let previous = cache.Previous(key, isTiling)
+	let previous = cache.Waited(key, isTiling)
 	previous.Length > 0 then Remembered(key, previous) else SharedBuild(cache, device, isTiling, builder)
+Waited(key Text, isTiling Boolean) Slow(Texts)
+	PtxCache("Compiler/output/Unbuilt/module").Waited("module {\n}", false).Length is 0
+	let lock = File(Path(base).PathOnly.text + ".lock")
+	let started = Process.Elapsed
+	for as long as Process.Elapsed - started < Strict.MaxWait
+		let previous = Previous(key, isTiling)
+		if (previous.Length > 0) or lock.Locked
+			return previous.Length > 0 then previous else Previous(key, isTiling)
+		Process.Wait(0.1)
+	List(Text)
 SharedBuild(cache PtxCache, device Text, isTiling Boolean, builder DeviceBuild) Texts
 	let temporary = Path(cache.base).PathOnly.text + "." + 1000000000.Random.Floor
 	Directory.Create(temporary)
@@ -70,6 +80,11 @@ Discarded(stage PtxCache)
 	for (".ptx", ".older.ptx", ".kernels.mlir")
 		File(stage.base + value).Delete
 	Directory.Delete(Path(stage.base).PathOnly.text)
+IsWritten(ptx Texts, ending Text) Boolean
+	Sample.IsWritten(("// new", "// old"), ".ptx")
+	Sample.IsWritten(("// other", "// old"), ".ptx") is false
+	let older = ptx.Length > 1 then ptx.Last else ""
+	File(base + ending).Exists and (Read(ending) is ptx.First) and (Read(".older" + ending) is older)
 Written(ptx Texts, ending Text) Boolean
 	Saved(ending, ptx.First) and Saved(".older" + ending, ptx.Length > 1 then ptx.Last else "")
 Saved(ending Text, text Text) Boolean

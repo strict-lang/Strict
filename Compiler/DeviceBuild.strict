@@ -140,7 +140,7 @@ Embedded(host Text, ptx Texts, base Text) Text
 	if ptx.First.StartsWith("//") is false
 		return "GPU kernels failed: " + ptx.First
 	let ending = tools.platform is Platform.MacOS then ".metal" else ".ptx"
-	let written = PtxCache(base).Written(ptx, ending)
+	let written = PtxCache(base).IsWritten(ptx, ending) or PtxCache(base).Written(ptx, ending)
 	written then Referenced(host, base, ptx.First) else "GPU kernels failed: could not write " + base + ending
 Referenced(host Text, base Text, newer Text) Text
 	Missing.Referenced("module {\n}", "A", "// a").EndsWith("hash:A\\001446433\\00\") : !llvm.array<15 x i8>\n}")
