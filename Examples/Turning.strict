@@ -1,0 +1,4 @@
+Cosine(degrees Number) Number
+	Turning.Cosine(0) is 1
+	Turning.Cosine(180) is -1
+	Degrees(degrees).Cos.number

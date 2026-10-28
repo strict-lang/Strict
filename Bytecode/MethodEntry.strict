@@ -75,6 +75,12 @@ SignatureTypes Texts
 	for parameters
 		types.Add(value.typeName)
 	types
+Returned Texts
+	Converting.Returned is ("Strict/Text")
+	HelloRun.Returned.Length is 0
+	for instructions
+		if value.kind is InstructionType.Invoke
+			value.texts(2)
 Invoked Texts
 	GoRun.Invoked is ("Strict/B.Go")
 	HelloRun.Invoked.Length is 0
