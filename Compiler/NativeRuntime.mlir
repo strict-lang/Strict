@@ -55,6 +55,11 @@
   llvm.mlir.global internal @strict_gc_allocated(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_threshold(16777216 : i64) : i64
   llvm.mlir.global internal @strict_gc_marked(0 : i64) : i64
+  // what the last full collection marked (at least its minimum), the big objects young ones marked since (their marks
+  // stay until the next full one) and the ones the current collection marked
+  llvm.mlir.global internal @strict_gc_kept(16777216 : i64) : i64
+  llvm.mlir.global internal @strict_gc_promoted(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_marked_large(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_pool(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_pooled(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_spare(0 : i64) : i64
@@ -1932,15 +1937,26 @@
     llvm.store %grown, %youngSlot : i64, !llvm.ptr
     return
   }
-  // a full collection is due when 8 times the bytes live after the last one were allocated since, a young one after
+  // a full collection is due when 8 times the bytes live after the last one were allocated since or young ones marked
+  // more big objects than it kept (a big text copied over and over keeps every copy a young one saw), a young one after
   // the young limit (64 MB, STRICT_YOUNG sets it in MB, 0 has none)
-  func.func private @strict_gc_due() -> i1 {
-    %none = arith.constant 0 : i64
+  func.func private @strict_gc_full_due() -> i1 {
     %allocatedSlot = llvm.mlir.addressof @strict_gc_allocated : !llvm.ptr
     %allocated = llvm.load %allocatedSlot : !llvm.ptr -> i64
     %thresholdSlot = llvm.mlir.addressof @strict_gc_threshold : !llvm.ptr
     %threshold = llvm.load %thresholdSlot : !llvm.ptr -> i64
-    %full = arith.cmpi ugt, %allocated, %threshold : i64
+    %spent = arith.cmpi ugt, %allocated, %threshold : i64
+    %promotedSlot = llvm.mlir.addressof @strict_gc_promoted : !llvm.ptr
+    %promoted = llvm.load %promotedSlot : !llvm.ptr -> i64
+    %keptSlot = llvm.mlir.addressof @strict_gc_kept : !llvm.ptr
+    %kept = llvm.load %keptSlot : !llvm.ptr -> i64
+    %grown = arith.cmpi ugt, %promoted, %kept : i64
+    %full = arith.ori %spent, %grown : i1
+    return %full : i1
+  }
+  func.func private @strict_gc_due() -> i1 {
+    %none = arith.constant 0 : i64
+    %full = func.call @strict_gc_full_due() : () -> i1
     %youngSlot = llvm.mlir.addressof @strict_gc_young : !llvm.ptr
     %young = llvm.load %youngSlot : !llvm.ptr -> i64
     %limitSlot = llvm.mlir.addressof @strict_gc_young_limit : !llvm.ptr
@@ -2863,6 +2879,10 @@
   ^setLarge:
     %one = arith.constant 1 : i64
     llvm.store %one, %located#0 : i64, !llvm.ptr
+    %markedLargeSlot = llvm.mlir.addressof @strict_gc_marked_large : !llvm.ptr
+    %markedLarge = llvm.load %markedLargeSlot : !llvm.ptr -> i64
+    %moreLarge = arith.addi %markedLarge, %located#2 : i64
+    llvm.store %moreLarge, %markedLargeSlot : i64, !llvm.ptr
     cf.br ^counted(%located#1, %largeEnd : i64, i64)
   ^counted(%start: i64, %end: i64):
     func.call @strict_gc_add_marked(%located#2) : (i64) -> ()
@@ -4964,11 +4984,7 @@
     return
   }
   func.func private @strict_gc_collect() {
-    %allocatedSlot = llvm.mlir.addressof @strict_gc_allocated : !llvm.ptr
-    %allocated = llvm.load %allocatedSlot : !llvm.ptr -> i64
-    %thresholdSlot = llvm.mlir.addressof @strict_gc_threshold : !llvm.ptr
-    %threshold = llvm.load %thresholdSlot : !llvm.ptr -> i64
-    %full = arith.cmpi ugt, %allocated, %threshold : i64
+    %full = func.call @strict_gc_full_due() : () -> i1
     func.call @strict_gc_run(%full) : (i1) -> ()
     return
   }
@@ -5031,6 +5047,8 @@
     func.call @strict_rc_collected() : () -> ()
     %markedSlot = llvm.mlir.addressof @strict_gc_marked : !llvm.ptr
     llvm.store %zero, %markedSlot : i64, !llvm.ptr
+    %markedLargeSlot = llvm.mlir.addressof @strict_gc_marked_large : !llvm.ptr
+    llvm.store %zero, %markedLargeSlot : i64, !llvm.ptr
     %from = llvm.ptrtoint %stackPointer : !llvm.ptr to i64
     %stackSlot = llvm.mlir.addressof @strict_gc_stack : !llvm.ptr
     %stackBase = llvm.load %stackSlot : !llvm.ptr -> i64
@@ -5077,7 +5095,14 @@
   ^swepts:
     %youngSlot = llvm.mlir.addressof @strict_gc_young : !llvm.ptr
     llvm.store %zero, %youngSlot : i64, !llvm.ptr
-    cf.cond_br %full, ^threshold, ^done
+    %promotedSlot = llvm.mlir.addressof @strict_gc_promoted : !llvm.ptr
+    cf.cond_br %full, ^threshold, ^promote
+  ^promote:
+    %promoted = llvm.load %promotedSlot : !llvm.ptr -> i64
+    %survived = llvm.load %markedLargeSlot : !llvm.ptr -> i64
+    %morePromoted = arith.addi %promoted, %survived : i64
+    llvm.store %morePromoted, %promotedSlot : i64, !llvm.ptr
+    cf.br ^done
   ^threshold:
     %marked = llvm.load %markedSlot : !llvm.ptr -> i64
     %twice = arith.addi %marked, %marked : i64
@@ -5091,6 +5116,10 @@
     %threshold = arith.select %isSmall, %smallest, %doubled : i64
     %thresholdSlot = llvm.mlir.addressof @strict_gc_threshold : !llvm.ptr
     llvm.store %threshold, %thresholdSlot : i64, !llvm.ptr
+    %kept = arith.maxui %marked, %smallest : i64
+    %keptSlot = llvm.mlir.addressof @strict_gc_kept : !llvm.ptr
+    llvm.store %kept, %keptSlot : i64, !llvm.ptr
+    llvm.store %zero, %promotedSlot : i64, !llvm.ptr
     %poolMinimum = arith.constant 1024 : i64
     %pageShift = arith.constant 16 : i64
     %thresholdPages = arith.shrui %threshold, %pageShift : i64

@@ -405,6 +405,39 @@ wrapper = '''
   ^done:
     return %zero : f64
   }
+  // every copy of a big text is alive at the young collection the next one starts, then only kept by its mark
+  func.func @test_copies(%stack: !llvm.ptr) -> i64 {
+    func.call @strict_gc_init(%stack) : (!llvm.ptr) -> ()
+    %youngLimit = arith.constant 8388608 : i64
+    %limitSlot = llvm.mlir.addressof @strict_gc_young_limit : !llvm.ptr
+    llvm.store %youngLimit, %limitSlot : i64, !llvm.ptr
+    %baseSize = arith.constant 33554432 : i64
+    %base = func.call @strict_alloc_text(%baseSize) : (i64) -> !llvm.ptr
+    %copySize = arith.constant 16777216 : i64
+    %one = arith.constant 1 : i64
+    %zero = arith.constant 0 : i64
+    %copies = arith.constant 40 : i64
+    %newest = llvm.alloca %one x !llvm.ptr : (i64) -> !llvm.ptr
+    %first = func.call @strict_alloc_text(%copySize) : (i64) -> !llvm.ptr
+    llvm.store volatile %first, %newest : !llvm.ptr, !llvm.ptr
+    cf.br ^copy(%zero : i64)
+  ^copy(%index: i64):
+    %more = arith.cmpi ult, %index, %copies : i64
+    cf.cond_br %more, ^next, ^done
+  ^next:
+    %copy = func.call @strict_alloc_text(%copySize) : (i64) -> !llvm.ptr
+    llvm.store volatile %copy, %newest : !llvm.ptr, !llvm.ptr
+    %following = arith.addi %index, %one : i64
+    cf.br ^copy(%following : i64)
+  ^done:
+    llvm.store volatile %zero, %base : i64, !llvm.ptr
+    %topSlot = llvm.mlir.addressof @strict_gc_top : !llvm.ptr
+    %top = llvm.load %topSlot : !llvm.ptr -> i64
+    %baseSlot = llvm.mlir.addressof @strict_gc_base : !llvm.ptr
+    %heapBase = llvm.load %baseSlot : !llvm.ptr -> i64
+    %bytes = arith.subi %top, %heapBase : i64
+    return %bytes : i64
+  }
   func.func @test_checked_collection(%stack: !llvm.ptr) -> i64 {
     func.call @strict_gc_init(%stack) : (!llvm.ptr) -> ()
     %size = arith.constant 48 : i64
@@ -482,6 +515,7 @@ driver.write_text('''#include <windows.h>
 #include <stdlib.h>
 extern int64_t test_swept(void* stack);
 extern int64_t test_owned(void* stack);
+extern int64_t test_copies(void* stack);
 extern int64_t test_pinned(void* stack);
 extern int64_t test_carried(void* stack);
 extern int64_t test_checked_collection(void* stack);
@@ -588,6 +622,11 @@ static double body(void* context, int64_t from, int64_t to) {
 	return 0;
 }
 int main(int argc, char** argv) {
+	if (argc > 1 && argv[1][0] == 'b') {
+		int64_t bytes = test_copies(&argc);
+		printf("40 copies of a 16 MB text next to 32 MB kept: %lld heap bytes\\n", (long long)bytes);
+		return bytes > 0 && bytes < (200 << 20) ? 0 : 1;
+	}
 	if (argc > 1 && argv[1][0] == 'o') {
 		published = CreateEventA(0, TRUE, TRUE, 0);
 		int64_t lost = test_owned(&argc);
@@ -737,12 +776,12 @@ def run(name, arguments):
 	assert result.returncode == 0, result.stdout + result.stderr
 lowered = output / "pool.llvm.mlir"
 llvm = output / "pool.ll"
-run("mlir-opt", [module, "--symbol-privatize=exclude=test_swept,test_owned,test_parallel,test_pinned,test_carried,test_checked_collection,test_reused_counts,test_scan_invalidation,test_pool_gpu,test_cached,test_first,test_second,test_tools,test_literal,test_published", "--symbol-dce", "--convert-scf-to-cf",
+run("mlir-opt", [module, "--symbol-privatize=exclude=test_swept,test_owned,test_copies,test_parallel,test_pinned,test_carried,test_checked_collection,test_reused_counts,test_scan_invalidation,test_pool_gpu,test_cached,test_first,test_second,test_tools,test_literal,test_published", "--symbol-dce", "--convert-scf-to-cf",
 	"--convert-arith-to-llvm", "--convert-func-to-llvm", "--convert-cf-to-llvm", "--reconcile-unrealized-casts", "-o", lowered])
 run("mlir-translate", ["--mlir-to-llvmir", lowered, "-o", llvm])
 executable = output / "check.exe"
 run("clang", [llvm, driver, "-O2", "-march=native", "-Wno-override-module", "-fuse-ld=lld", "-Wl,clang_rt.builtins-x86_64.lib", "-o", executable])
-for mode in ["memory", "owned", "published", "literal", "j", "k", "xcycle", "gpu", "rsame", "rdifferent", "scan"]:
+for mode in ["memory", "owned", "big", "published", "literal", "j", "k", "xcycle", "gpu", "rsame", "rdifferent", "scan"]:
 	reused = subprocess.run([str(executable), mode], capture_output=True, text=True, timeout=15)
 	print(reused.stdout.strip(), flush=True)
 	assert reused.returncode == 0, reused.stdout + reused.stderr
