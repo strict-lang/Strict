@@ -2,7 +2,8 @@ import os,subprocess,sys,tempfile
 from pathlib import Path
 # a table a GPU loop computes from numbers alone and only GPU loops read stays on the GPU: no download, no upload again;
 # one needing a 64 bit Power (not on the GPU) is computed on the CPU right away instead of failing there first; Bytes
-# stay too, also when the method of the GPU loop reading them hoists them for its CPU loop
+# stay too, also when the method of the GPU loop reading them hoists them for its CPU loop; a host list joined after
+# 32 bit floats on the GPU moves up instead of both going to the host, also 32 bit floats the CPU read
 root=Path(__file__).resolve().parent.parent
 folder=Path(tempfile.mkdtemp(prefix='strict-residency-'))
 program='''has logger
@@ -31,10 +32,14 @@ Run
 	let summed = Folded(Squares(8192))
 	let mixed = Mixed(Codes(16000), Table(16384))
 	let read = Table(1000)
+	let joined = Folded(Mixed(Codes(49152), Table(49152)) + (7, 0, 0, 0))
 	logger.Log("folded " + folded.Length + " " + folded(1))
 	logger.Log("summed " + summed.Length + " " + summed(1))
 	logger.Log("mixed " + mixed.Length + " " + mixed(1))
 	logger.Log("read " + read.Length + " " + read(3))
+	logger.Log("joined " + joined.Length + " " + joined(3072))
+	let packed = Folded(Mixed(Codes(24576), Table(24576)) + mixed)
+	logger.Log("packed " + packed.Length + " " + packed(1536))
 '''
 (folder/'GpuResidency.strict').write_bytes(program.replace('\n','\r\n').encode('utf-8'))
 built=subprocess.run([str(root/'strict.exe'),'build','GpuResidency.strict'],cwd=folder,capture_output=True,text=True)
@@ -43,10 +48,12 @@ environment=dict(os.environ,STRICT_GPU='all',STRICT_GPU_DOWNLOADS='1')
 ran=subprocess.run([str(folder/'GpuResidency.exe')],cwd=folder,capture_output=True,text=True,env=environment)
 print(ran.stdout,flush=True)
 assert ran.returncode==0,ran.stderr[-2000:]
-assert 'folded 4096 2.5' in ran.stdout and 'summed 2048 5' in ran.stdout and 'mixed 4000 2.5' in ran.stdout and 'read 1000 1.375' in ran.stdout,'wrong result'
+assert 'folded 4096 2.5' in ran.stdout and 'summed 2048 5' in ran.stdout and 'mixed 4000 2.5' in ran.stdout and 'read 1000 1.375' in ran.stdout and 'joined 3073 8' in ran.stdout and 'packed 2536 2' in ran.stdout,'wrong result'
 assert 'Strict GPU download of 4096 numbers' in ran.stdout,'the downloaded result was not named, STRICT_GPU_DOWNLOADS broken'
 assert 'Strict GPU download of 1000 numbers in 64 bits' in ran.stdout,'the table the CPU reads did not stay on the GPU until then'
 assert 'Strict GPU download of 16384 numbers' not in ran.stdout,'the table went from the GPU to the host and back'
 assert 'Strict GPU download of 8192 numbers' not in ran.stdout,'the squares failed on the GPU first and came back'
 assert 'Strict GPU download of 16000 numbers' not in ran.stdout,'the bytes went from the GPU to the host before a GPU loop read them'
+assert 'Strict GPU download of 12288 numbers' not in ran.stdout,'the GPU list joined with a host list went to the host'
+assert 'Strict GPU download of 6144 numbers' not in ran.stdout,'the GPU list joined with read 32 bit floats went to the host'
 print('A list computed on the GPU from numbers alone stays there until the CPU reads it')

@@ -7561,13 +7561,37 @@
     %added = func.call @strict_list_add(%list, %element) : (f64, f64) -> f64
     return %added : f64
   }
-  // two lists computed on the GPU are joined there, an empty list before one is just that list
+  // two lists computed on the GPU are joined there, an empty list before one is just that list; a host list after 32 bit
+  // floats on the GPU moves there too (one Embedded tile of the H3 video VAE went down and up again for 8192 registers)
   func.func private @strict_list_concat(%left: f64, %right: f64) -> f64 {
     %none = arith.constant 0 : i64
     %zero = arith.constant 0.0 : f64
+    %floats = arith.constant 32 : i64
     %rightDevice = func.call @strict_gpu_device(%right) : (f64) -> i64
     %rightResides = arith.cmpi ne, %rightDevice, %none : i64
-    cf.cond_br %rightResides, ^device, ^host
+    cf.cond_br %rightResides, ^device, ^hostRight
+  ^hostRight:
+    %leftHome = func.call @strict_gpu_device(%left) : (f64) -> i64
+    %leftAlone = arith.cmpi ne, %leftHome, %none : i64
+    cf.cond_br %leftAlone, ^leftFormat, ^host
+  ^leftFormat:
+    %aloneFormat = func.call @strict_gpu_format(%left) : (f64) -> i64
+    %aloneFloats = arith.cmpi eq, %aloneFormat, %floats : i64
+    cf.cond_br %aloneFloats, ^rightSize, ^host
+  ^rightSize:
+    %rightLength = func.call @strict_list_length(%right) : (f64) -> f64
+    %rightEmpty = arith.cmpf oeq, %rightLength, %zero : f64
+    cf.cond_br %rightEmpty, ^left, ^lift
+  ^left:
+    return %left : f64
+  ^lift:
+    %lifted = func.call @strict_gpu_moved(%right) : (f64) -> f64
+    %isLifted = arith.cmpf une, %lifted, %zero : f64
+    cf.cond_br %isLifted, ^liftedJoin, ^host
+  ^liftedJoin:
+    %paired = func.call @strict_gpu_concat(%left, %lifted) : (f64, f64) -> f64
+    %isPaired = arith.cmpf une, %paired, %zero : f64
+    cf.cond_br %isPaired, ^done(%paired : f64), ^host
   ^device:
     %leftLength = func.call @strict_list_length(%left) : (f64) -> f64
     %isEmpty = arith.cmpf oeq, %leftLength, %zero : f64
@@ -13852,16 +13876,20 @@
   // appends in place when the left list is the newest version of its block and the block has room, otherwise both go
   // into a block of twice the size, so a list growing one step at a time (a cache of keys) copies rarely
   // a host list of doubles appended with a list on the GPU moves there as 32 bit floats (like every result there), so the
-  // append and the next loops stay on the GPU instead of downloading the new part and uploading everything again
+  // append and the next loops stay on the GPU instead of downloading the new part and uploading everything again, a host
+  // list of packed 32 bit floats (loaded from a file) goes up as it is
   func.func private @strict_gpu_moved(%list: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %four = arith.constant 4 : i64
+    %thirtyTwo = arith.constant 32 : i64
     %sixtyFour = arith.constant 64 : i64
     %bits = func.call @strict_gpu_bits(%list) : (f64) -> i64
     %isPlain = arith.cmpi eq, %bits, %sixtyFour : i64
-    cf.cond_br %isPlain, ^plain, ^failed
+    %isSingle = arith.cmpi eq, %bits, %thirtyTwo : i64
+    %isMovable = arith.ori %isPlain, %isSingle : i1
+    cf.cond_br %isMovable, ^plain, ^failed
   ^plain:
     %lengthNumber = func.call @strict_list_length(%list) : (f64) -> f64
     %length = arith.fptosi %lengthNumber : f64 to i64
@@ -13870,7 +13898,14 @@
     %class = func.call @strict_gpu_class(%doubled) : (i64) -> i64
     %block = func.call @strict_gpu_obtain(%class) : (i64) -> i64
     %hasBlock = arith.cmpi ne, %block, %none : i64
-    cf.cond_br %hasBlock, ^convert, ^failed
+    cf.cond_br %hasBlock, ^obtained, ^failed
+  ^obtained:
+    cf.cond_br %isSingle, ^single, ^convert
+  ^single:
+    %data = func.call @strict_gpu_host(%list) : (f64) -> !llvm.ptr
+    func.call @strict_gpu_replay() : () -> ()
+    %sent = func.call @strict_gpu_put_async(%block, %data, %bytes) : (i64, !llvm.ptr, i64) -> i1
+    cf.cond_br %sent, ^moved, ^returned
   ^convert:
     %floats = func.call @strict_malloc(%bytes) : (i64) -> !llvm.ptr
     %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr

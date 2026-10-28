@@ -14,7 +14,7 @@ ComfyUI's comfy_kitchen `int8_attention` (`qk_int_sv_i8_attn_kernel`: Q and K ro
 A GPU loop of a method returning `BFloat16s` stores bfloat16, never by size alone (bfloat16 everywhere made long Qwen3.8 prompts decode NaN). Left:
 - bf16 QK attention beyond the 128 wide QKV path
 - attention, product and hadamard results are 32 bit
-- joining lists of different formats goes through the host
+- joining lists of different formats on the GPU goes through the host (64 bit doubles of a loop reading no list and 32 bit floats, a host list after 64 bit doubles there): convert on the device
 - LLVM 23 PTX of strict_device_whole(s) is ~3 % slower than LLVM 22's
 
 ## Memory budget
@@ -39,7 +39,7 @@ The first run of a new build waits for the driver to compile the 20 MB runtime P
 ## Generated loops
 Instruction bound on the RTX 3080 (120-330 instructions per number). Left:
 - a loop reading a member of an object parameter (`layout.width` in StrictComfy `H3Final.Unpatched`), a type constant or `.Length` of a list parameter (`H3Vae.Finished`) stays on the CPU: pass loop invariant members as numbers
-- list `+` with a GPU-resident left list downloads it and uploads the joined list (StrictComfy `H3Decoder.Embedded` and `Rotations`, about 8 s of the H3 VAE decode): join on the device
+- `.Round` keeps a loop on the CPU (StrictComfy `H3Frames.Bytes` over 148M frame numbers, `(value * 255 + 0.5).Floor` runs on the GPU): a device Round
 - bounds, reduction and tail checks remain: extend the four wide loads (`MlirBatched`) and fuse memory passes
 - an index with a denominator other than 1 (`size / 2` inlined in MossBlock.Rotated) divides in 64 bits at every read (82 instead of 66 us): shift power of two denominators
 
