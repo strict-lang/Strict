@@ -28,7 +28,10 @@ Built(type TypeEntry) Text
 	let native = Folder(type)
 	if Directory.Exists(native) is false
 		return MlirForeign(MlirFunction(types, type, Method(type))).Unimplemented
-	NativeSources(List(Text) + native).Library(Platform.Current, TypeSource.Root)
+	let entered = TestBudget.Entered
+	let library = NativeSources(List(Text) + native).Library(Platform.Current, TypeSource.Root)
+	TestBudget.Left(entered)
+	library
 IsForeign(type TypeEntry) Boolean
 	Adding.IsForeign(Adder)
 	Adding.IsForeign(TypeEntry("Strict/Shape", List(MemberEntry), List(MethodEntry))) is false
