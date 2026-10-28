@@ -309,7 +309,7 @@ STRICT_EXPORT double TensorFile_Columns(double self, double path, double entry, 
 
 /* The rows of an I8 matrix with one F32 scale per row (comfy_quant int8 rows, convrot keeps them rotated), read straight
    into 8 bit rows whose per-32 scales all are the scale of their row, so every number is exact. */
-STRICT_EXPORT double TensorFile_Quantized(double self, double path, double entry, double scales)
+STRICT_EXPORT double TensorFile_Quantized(double self, double path, double entry, double scales, double tokenBits)
 {
 	if (!ThreadReady())
 		return strict_fail("NativeThreadStateFailed");
@@ -323,7 +323,8 @@ STRICT_EXPORT double TensorFile_Quantized(double self, double path, double entry
 	if (!factors)
 		return strict_fail(failure);
 	uint64_t width = tensor.width, size = (sizeof(strict_packed) + strict_packed_bytes(width, 8) + 7) / 8 * 8;
-	failure = Allocated(tensor.height, size) ? Placed(path, &tensor, size, 8) : "TensorTooLarge";
+	double marked = tokenBits > 8 ? 8 + STRICT_KEPT_TOKENS : 8;
+	failure = Allocated(tensor.height, size) ? Placed(path, &tensor, size, marked) : "TensorTooLarge";
 	for (uint64_t row = 0; !failure && row < tensor.height; row++)
 	{
 		float* parts = (float*)(storage + row * size + sizeof(strict_packed) + strict_packed_data(width, 8));
@@ -418,7 +419,7 @@ static void TunedChunk(void* context, uint64_t chunk)
    of convrot rows), the ups (rows x rank) and one scale per rank; rows without an update stay as they are in the file. */
 STRICT_EXPORT double TensorFile_Tuned(double self, double path, double entry, double scales, double factors)
 {
-	double quantized = TensorFile_Quantized(self, path, entry, scales);
+	double quantized = TensorFile_Quantized(self, path, entry, scales, 8);
 	const strict_numbers* given = strict_numbers_of(factors);
 	if (strict_bits(quantized) >> 48 == 0x7FFC || given->count == 0)
 		return quantized;
