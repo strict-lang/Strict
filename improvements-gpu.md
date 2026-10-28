@@ -37,7 +37,8 @@ The first run of a new build waits for the driver to compile the 20 MB runtime P
 
 ## Generated loops
 Instruction bound on the RTX 3080 (120-330 instructions per number). Left:
-- a loop reading a member of an object parameter (`layout.width` in StrictComfy `H3Final.Unpatched`) stays on the CPU: pass loop invariant members as numbers
+- a loop reading a member of an object parameter (`layout.width` in StrictComfy `H3Final.Unpatched`), a type constant or `.Length` of a list parameter (`H3Vae.Finished`) stays on the CPU: pass loop invariant members as numbers
+- list `+` with a GPU-resident left list downloads it and uploads the joined list (StrictComfy `H3Decoder.Embedded` and `Rotations`, about 8 s of the H3 VAE decode): join on the device
 - bounds, reduction and tail checks remain: extend the four wide loads (`MlirBatched`) and fuse memory passes
 - an index with a denominator other than 1 (`size / 2` inlined in MossBlock.Rotated) divides in 64 bits at every read (82 instead of 66 us): shift power of two denominators
 
