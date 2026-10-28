@@ -31,6 +31,7 @@ section = runtime[start:end].replace("  ^check:\n", "  ^check:\n    llvm.call @t
 section = section.replace("  ^leave:\n", "  ^leave:\n    llvm.call @test_retired(%job) : (i64) -> ()\n", 1)
 runtime = runtime[:start] + section + runtime[end:]
 wrapper = '''
+  llvm.mlir.global internal constant @strict_gpu_ptx("\\00") : !llvm.array<1 x i8>
   func.func @test_published(%stack: !llvm.ptr) -> i64 {
     func.call @strict_gc_init(%stack) : (!llvm.ptr) -> ()
     %one = arith.constant 1 : i64
