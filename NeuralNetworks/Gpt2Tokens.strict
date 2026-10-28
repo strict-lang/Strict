@@ -38,13 +38,15 @@ Folder(folder Text) Gpt2Tokens
 Vocabulary(json Text) Texts
 	Vocabulary("{\"\\\"\": 0, \"\\\\\": 1, \"\\u0120a\": 2}") is ("\"", "\\", " a")
 	Vocabulary("{\n  \"a\": 0,\n  \"b\": 1\n}") is ("a", "b")
+	Vocabulary("{\"a\":0,\"b\":1}") is ("a", "b")
 	mutable parsed = List(Mutable(Text))
+	let colon = json.IndexOf("\": 0") >= 0 then "\": " else "\":"
 	mutable start = json.IndexOf("\"") + 1
-	mutable ending = json.IndexOf("\": 0", start)
+	mutable ending = json.IndexOf(colon + 0, start)
 	for as long as ending >= 0
 		parsed.Add(Unescaped(json.Substring(start, ending - start)))
-		start = json.IndexOf("\"", ending + ("\": " + (parsed.Length - 1)).Length) + 1
-		ending = json.IndexOf("\": " + parsed.Length, start)
+		start = json.IndexOf("\"", ending + (colon + (parsed.Length - 1)).Length) + 1
+		ending = json.IndexOf(colon + parsed.Length, start)
 	parsed
 Unescaped(key Text) Text
 	Unescaped("\\u0120a\\\"") is " a\""

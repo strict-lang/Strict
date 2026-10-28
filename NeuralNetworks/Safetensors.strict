@@ -4,6 +4,8 @@ has prefix Text = ""
 constant Tiny = Safetensors("NeuralNetworks/tiny.safetensors")
 constant Halves = Safetensors("NeuralNetworks/tinyhalves.safetensors")
 constant Bytes = Safetensors("NeuralNetworks/tinyint8.safetensors")
+constant Fours = Safetensors("NeuralNetworks/tinyfours.safetensors")
+constant Single = "\"x\":{\"dtype\":\"F32\",\"shape\":[2],\"data_offsets\":[0,8]}"
 constant Second = Safetensors.Bytes.Part(Safetensors.Bytes.Values("a.weight"), 64, 64, 1)
 constant Exact = Safetensors.Bytes.Quantized("a")
 constant Firsts = Safetensors.Bytes.Part(Safetensors.Bytes.Values("a.weight"), 0, 128, 1)
@@ -49,7 +51,14 @@ Quantized(name Text, tokenBits = 8) List(Numbers)
 	Bytes.Quantized("a").First(1) is -63
 	Bytes.Quantized("a")(2).First is 2
 	Bytes.Quantized("a", 32) is Bytes.Quantized("a")
-	TensorFile.Quantized(path, Entry(name + ".weight"), Entry(name + ".weight_scale"), tokenBits)
+	Fours.Quantized("a")(33)(17).IsNearlyEqual(0.175519, 0.00001)
+	Fours.Quantized("a")(130)(70).IsNearlyEqual(3.259026, 0.00001)
+	let weight = Entry(name + ".weight")
+	let scales = Entry(name + ".weight_scale")
+	let scale = Entry(name + ".weight_scale_2")
+	if scale is ""
+		return TensorFile.Quantized(path, weight, scales, tokenBits)
+	TensorFile.Fours(path, weight, scales, scale, Entry(name + ".pre_quant_scale"), tokenBits)
 Tuned(name Text, downs Numbers, ups Numbers, scales Numbers) Slow(List(Numbers))
 	Bytes.Tuned("a", List(Number), List(Number), List(Number)) is Bytes.Quantized("a")
 	Bytes.Tuned("a", Second, (1, 0, 0, 0), List(Number) + 0.5)(2) is Bytes.Quantized("a")(2)
@@ -67,7 +76,33 @@ Written(name Text, numbers Numbers) Number
 	Safetensors("NeuralNetworks/written.tmp").Values("x") is (1.5, -2, 3)
 	Safetensors("NeuralNetworks/written.tmp").Shape("x")(0) is 3
 	Safetensors("NeuralNetworks/missing/written.tmp").Written("x", (1, 2)) is Error
-	TensorFile.Written(path, prefix + name, numbers)
+	Written(List(Text) + name, List(Numbers) + numbers)
+Written(names Texts, lists List(Numbers)) Number
+	Safetensors("NeuralNetworks/writtenpair.tmp").Written(("x", "y"), ((1.5, -2), List(Number) + 3)) is 3
+	Safetensors("NeuralNetworks/writtenpair.tmp").Values("x") is (1.5, -2)
+	Safetensors("NeuralNetworks/writtenpair.tmp").Values("y") is (3)
+	Safetensors("NeuralNetworks/writtenpair.tmp").Shape("y")(0) is 1
+	TensorFile.Written(path, Header(names, lists), Combined(lists))
+Header(names Texts, lists List(Numbers)) Text
+	Tiny.Header(List(Text) + "x", List(Numbers) + (1, 2)) is "{" + Single + "}"
+	Tiny.Header(("x", "y"), ((1, 2), List(Number) + 3)).EndsWith("\"shape\":[1],\"data_offsets\":[8,12]}}")
+	"{" + Text.Combine(Entries(names, Counts(lists)), ",") + "}"
+Entries(names Texts, counts Numbers) Texts
+	Tiny.Entries(List(Text) + "x", List(Number) + 2) is List(Text) + Single
+	for names
+		let start = 4 * counts.Slice(0, index).Sum
+		let offsets = "[" + start + "," + (start + 4 * counts(index)) + "]"
+		"\"" + prefix + value + "\":{\"dtype\":\"F32\",\"shape\":[" + counts(index) + "],\"data_offsets\":" + offsets + "}"
+Counts(lists List(Numbers)) Numbers
+	Tiny.Counts(((1, 2), List(Number) + 3)) is (2, 1)
+	for lists
+		value.Length
+Combined(lists List(Numbers)) Numbers
+	Tiny.Combined(((1, 2), List(Number) + 3)) is (1, 2, 3)
+	mutable combined = List(Number)
+	for lists
+		combined = combined + value
+	combined
 Columns(name Text) List(Numbers)
 	Tiny.Columns("a") is ((1, 4), (2, 5), (3, 6))
 	Halves.Columns("a") is ((1, 4), (2, 5), (3, 6))

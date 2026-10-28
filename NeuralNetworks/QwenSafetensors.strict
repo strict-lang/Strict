@@ -1,18 +1,23 @@
 has file Safetensors
 has rotary Number
 has group Number = 256
+has normOffset Number = 1
 constant Tiny = QwenSafetensors(Safetensors("NeuralNetworks/tinyqwen35.safetensors", 32, "model.language_model."), 2, 4)
 constant Opened = QwenSafetensors.Tiny.Loaded(10000)
 constant Expected = Qwen3.TinyHybrid.Prefilled((1, 2, 3), 0).hidden
 constant Linear = "layers.0.linear_attn."
+constant Plain = QwenSafetensors(Safetensors("NeuralNetworks/tinyqwen3vl.safetensors", 32, "model."), 16, 0, 0)
 Loaded(theta Number) Slow(Qwen3)
 	Opened.blocks.Length is 1
 	Opened.blocks.First.hybrid.layers.Length is 3
 	Opened.Prefilled((1, 2, 3), 0).hidden(0).IsNearlyEqual(Expected(0), 0.3)
 	Opened.Prefilled((1, 2, 3), 0).hidden(20).IsNearlyEqual(Expected(20), 0.3)
+	Plain.Loaded(5000000).Prefilled((1, 2, 3), 0).hidden(0).IsNearlyEqual(-6.434468, 0.02)
+	Plain.Loaded(5000000).Prefilled((1, 2, 3), 0).hidden(100).IsNearlyEqual(2.307147, 0.02)
 	let basis = Basis(Basis.None, grouped = true, convrot = group)
 	let embedded = file.Quantized("embed_tokens")
-	Qwen3(Blocks(basis), embedded, List(Numbers), Norm("norm.weight"), theta, rotary = rotary, basis = basis)
+	let normed = file.Entry("norm.weight") is "" then Layer.Zeros(embedded.First.Length) else Norm("norm.weight")
+	Qwen3(Blocks(basis), embedded, List(Numbers), normed, theta, rotary = rotary, basis = basis)
 Blocks(basis Basis) Slow(List(Qwen3Block))
 	Tiny.Blocks(Basis.None).First.heads is 2
 	mutable blocks = List(Mutable(Qwen3Block))
@@ -34,8 +39,8 @@ Layers Number
 Attending(layer Text, basis Basis) Slow(Qwen3Block)
 	Tiny.Attending("layers.3.", Basis.None).queryNorm.Length is 4
 	let size = file.Shape(layer + "self_attn.q_norm.weight").First
-	let rows = HeadRows(size, rotary, file.Shape(layer + "self_attn.q_proj.weight").First / size / 2)
 	let projected = Layer(file.Quantized(layer + "self_attn.o_proj", 32), Layer.Unbiased)
+	let rows = HeadRows(size, rotary, projected.weights.First.Length / size)
 	let queryNorm = rows.Norm(Norm(layer + "self_attn.q_norm.weight"))
 	let keyNorm = rows.Norm(Norm(layer + "self_attn.k_norm.weight"))
 	let normed = Norm(layer + "input_layernorm.weight")
@@ -100,7 +105,7 @@ FeedForward(layer Text, basis Basis) Slow(Experts)
 Norm(name Text) Numbers
 	Tiny.Norm("norm.weight").Length is 8
 	for file.Values(name)
-		value + 1
+		value + normOffset
 Decays(logarithms Numbers) Numbers
 	Tiny.Decays(List(Number) + 0) is List(Number) + -1
 	for logarithms
