@@ -8,7 +8,6 @@ Open speed work, one short line each, measurements go into commit messages. GPU 
 - Native C files of packages compile one after another and all providers compile once any is needed.
 - Cold GPU builds spend most time on the shared runtime PTX for both sm_75 and sm_80.
 - WebWars' generated SceneAtlas/LevelAtlas constructors dominate its emission.
-- Native `File.Exists` opens and closes each file before checking its directory bit.
 - `MlirCost` sums expensive alternative call paths and overestimates tiny loops.
 - Collector lane refill (`strict_gc_small` taking the collector lock) contends at high thread counts.
 - `BinaryData.Read` keeps one Number per byte: a packed byte list for large assets.

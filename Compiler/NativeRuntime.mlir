@@ -9808,20 +9808,9 @@
     return %present : f64
   ^disk:
     %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
-    %mode = llvm.mlir.addressof @strict_read_mode : !llvm.ptr
-    %file = llvm.call @fopen(%name, %mode) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
-    %null = llvm.mlir.zero : !llvm.ptr
-    %missing = llvm.icmp "eq" %file, %null : !llvm.ptr
-    cf.cond_br %missing, ^absent, ^present
-  ^present:
-    %closed = llvm.call @fclose(%file) : (!llvm.ptr) -> i32
-    %directory = func.call @strict_directory_exists(%zero, %path) : (f64, f64) -> f64
-    %isDirectory = arith.cmpf one, %directory, %zero : f64
-    %one = arith.constant 1.0 : f64
-    %result = arith.select %isDirectory, %zero, %one : f64
+    %isFile = func.call @strict_file_present(%name) : (!llvm.ptr) -> i1
+    %result = func.call @strict_boolean(%isFile) : (i1) -> f64
     return %result : f64
-  ^absent:
-    return %zero : f64
   }
   llvm.mlir.global internal @strict_read_paths(0 : i64) : i64
   llvm.mlir.global internal @strict_read_count(0 : i64) : i64
