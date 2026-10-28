@@ -8591,6 +8591,11 @@
     %text = func.call @strict_list_text_mapped(%list, %converter) : (f64, (f64) -> f64) -> f64
     return %text : f64
   }
+  func.func private @strict_list_text_two(%list: f64) -> f64 {
+    %converter = func.constant @strict_two_text : (f64) -> f64
+    %text = func.call @strict_list_text_mapped(%list, %converter) : (f64, (f64) -> f64) -> f64
+    return %text : f64
+  }
   func.func private @strict_flat_text(%flat: f64) -> f64 {
     %list = func.call @strict_flat_list(%flat) : (f64) -> f64
     %text = func.call @strict_list_text_number(%list) : (f64) -> f64
