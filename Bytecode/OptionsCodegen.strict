@@ -8,6 +8,15 @@ Lines(names Texts) Texts
 	Settings.Lines(List(Text) + "Usage").First is "Usage Text"
 	let parsed = automatic.IsWanted("Parsed", names) then Parsed else List(Text)
 	parsed + (automatic.IsWanted("Usage", names) then Usage else List(Text))
+Completed(main TypeCodegen, entry TypeEntry, targets Texts) TypeEntry
+	Settings.Completed(TypeCodegen.Hello, TypeEntry.HelloLogger, List(Text)) is TypeEntry.HelloLogger
+	let prefix = main.fullName + "."
+	let wanted = ((prefix + "Parsed") is in targets) or ((prefix + "Usage") is in targets)
+	if wanted is false
+		return entry
+	let names = (entry.Chosen("Parsed", -1, "Parsed", List(Text)) < 0 then List(Text) + "Parsed" else List(Text))
+	let missing = names + (entry.Chosen("Usage", -1, "Usage", List(Text)) < 0 then List(Text) + "Usage" else List(Text))
+	automatic.Appended(main, entry, automatic.lines + Lines(missing))
 Parsed Texts
 	Settings.Parsed.First is "Parsed(arguments Texts) Settings"
 	Settings.Parsed(1).EndsWith("\"loras\", \"jsonOutput\")).Checked")
@@ -45,7 +54,7 @@ Argument(name Text, type Text, default Text) Text
 	let constants = Constants(type)
 	if constants.names.Length is 0
 		return default
-	let choices = Joined(Quoted(Lowered(constants.names)), "Text") + ", " + Joined(constants.types, "Number")
+	let choices = Joined(Quoted(constants.names), "Text") + ", " + Joined(constants.types, "Number")
 	"line.Chosen(\"" + name + "\", " + choices + ", " + default + ")"
 Shown Texts
 	Settings.Shown.First is "\"prompt.txt\""
@@ -61,7 +70,7 @@ Displayed(default Text, type Text) Text
 	let constants = Constants(type)
 	if constants.names.Length is 0
 		return default + " to Text"
-	let lowered = Lowered(constants.names)
+	let lowered = constants.names
 	let chosen = Joined(Quoted(lowered), "Text") + "(" + Joined(constants.types, "Number") + ".Index(" + default + "))"
 	chosen + " + \" (" + Text.Combine(lowered, "|") + ")\""
 Kind(line Text) Text
@@ -75,12 +84,16 @@ Default(line Text) Text
 	let at = line.IndexOf(" = ")
 	at < 0 then automatic.Header(line).MemberName else line.Substring(at + 3, line.Length - at - 3)
 Constants(type Text) Scope
-	Settings.Constants("InstructionType").names.First is "Set"
+	Settings.Constants("InstructionType").names.First is "set"
+	Settings.Constants("InstructionType").names(6) is "greaterthan"
 	Settings.Constants("InstructionType").types(1) is "1"
 	Settings.Constants("Missing").names.Length is 0
 	let path = folder + "/" + type + ".strict"
 	let lines = File(path).Exists then File(path).ReadLines else List(Text)
-	Enumerated(lines) then TypeShape(lines).ConstantScope else Scope(List(Text), List(Text))
+	if Enumerated(lines) is false
+		return Scope(List(Text), List(Text))
+	let scope = TypeShape(lines).ConstantScope
+	Scope(Text.Combine(scope.names, "|").Lower.Split("|"), scope.types)
 Enumerated(lines Texts) Boolean
 	Settings.Enumerated(("constant A", "constant B"))
 	Settings.Enumerated(("constant A", "has b")) is false
@@ -89,10 +102,6 @@ Enumerated(lines Texts) Boolean
 		if (value is not "") and (value.StartsWith("constant ") is false)
 			return false
 	lines.Length > 0
-Lowered(texts Texts) Texts
-	Settings.Lowered(("Set", "LessThan")) is ("set", "lessthan")
-	for texts
-		value.Lower
 Quoted(texts Texts) Texts
 	Settings.Quoted(("a", "b")) is ("\"a\"", "\"b\"")
 	for texts

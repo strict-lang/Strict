@@ -51,10 +51,11 @@ Chosen(name Text, choices Texts, values Numbers, default Number) Number
 Spelled(name Text) Text
 	CommandLine.Spelled("jsonOutput") is "--json_output"
 	CommandLine.Spelled("count") is "--count"
+	CommandLine.Spelled("JsonOutput") is "--json_output"
 	mutable spelled = "--"
 	for name
 		let letter = value to Text
-		spelled = spelled + (letter.Lower is letter then letter else "_" + letter.Lower)
+		spelled = spelled + ((letter.Lower is letter) or (index is 0) then letter.Lower else "_" + letter.Lower)
 	spelled
 Usage(defaults Texts, descriptions Texts) Text
 	Flags.Usage(("1", "false"), ("Outputs", "")) is "--count 1  Outputs\n--json_output false"
