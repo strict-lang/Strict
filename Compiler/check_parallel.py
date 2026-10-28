@@ -329,6 +329,82 @@ wrapper = '''
   ^done:
     return %zero : f64
   }
+  func.func @test_owned(%stack: !llvm.ptr) -> i64 {
+    func.call @strict_gc_init(%stack) : (!llvm.ptr) -> ()
+    %keptSize = arith.constant 65536 : i64
+    %kept = func.call @strict_alloc(%keptSize) : (i64) -> !llvm.ptr
+    %roundSlot = llvm.getelementptr %kept[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %garbage = func.constant @test_garbage : (!llvm.ptr, i64, i64) -> f64
+    %count = arith.constant 8192 : i64
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %full = arith.constant true
+    llvm.store volatile %zero, %roundSlot : i64, !llvm.ptr
+    %first = func.call @strict_parallel(%garbage, %kept, %count) : ((!llvm.ptr, i64, i64) -> f64, !llvm.ptr, i64) -> f64
+    func.call @strict_gc_run(%full) : (i1) -> ()
+    llvm.store volatile %one, %roundSlot : i64, !llvm.ptr
+    %second = func.call @strict_parallel(%garbage, %kept, %count) : ((!llvm.ptr, i64, i64) -> f64, !llvm.ptr, i64) -> f64
+    func.call @strict_gc_run(%full) : (i1) -> ()
+    %lostSize = arith.constant 16 : i64
+    %lost = func.call @strict_malloc(%lostSize) : (i64) -> !llvm.ptr
+    llvm.store %zero, %lost : i64, !llvm.ptr
+    %keptSlot = llvm.getelementptr %lost[1] : (!llvm.ptr) -> !llvm.ptr, !llvm.ptr
+    llvm.store %kept, %keptSlot : !llvm.ptr, !llvm.ptr
+    %body = func.constant @test_ownership : (!llvm.ptr, i64, i64) -> f64
+    %items = arith.constant 64 : i64
+    %owned = func.call @strict_parallel(%body, %lost, %items) : ((!llvm.ptr, i64, i64) -> f64, !llvm.ptr, i64) -> f64
+    %lostCount = llvm.load %lost : !llvm.ptr -> i64
+    return %lostCount : i64
+  }
+  // the first object of every item stays its own while 200 more fill the spans of pages swept in this job after it,
+  // the objects the collections kept on those pages never become its own
+  func.func private @test_ownership(%context: !llvm.ptr, %from: i64, %to: i64) -> f64 {
+    %size = arith.constant 1024 : i64
+    %one = arith.constant 1 : i64
+    %none = arith.constant 0 : i64
+    %others = arith.constant 200 : i64
+    %zero = arith.constant 0.0 : f64
+    cf.br ^item(%from : i64)
+  ^item(%index: i64):
+    %more = arith.cmpi ult, %index, %to : i64
+    cf.cond_br %more, ^first, ^done
+  ^first:
+    %object = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
+    cf.br ^fill(%none : i64)
+  ^fill(%filled: i64):
+    %moreFill = arith.cmpi ult, %filled, %others : i64
+    cf.cond_br %moreFill, ^other, ^check
+  ^other:
+    %other = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
+    %nextFill = arith.addi %filled, %one : i64
+    cf.br ^fill(%nextFill : i64)
+  ^check:
+    %address = llvm.ptrtoint %object : !llvm.ptr to i64
+    %mine = func.call @strict_gc_mine(%address) : (i64) -> i1
+    %next = arith.addi %index, %one : i64
+    %keptSlot = llvm.getelementptr %context[1] : (!llvm.ptr) -> !llvm.ptr, !llvm.ptr
+    %kept = llvm.load %keptSlot : !llvm.ptr -> !llvm.ptr
+    %firstKept = arith.constant 2 : i64
+    %keptEnd = arith.constant 258 : i64
+    cf.cond_br %mine, ^claims(%firstKept : i64), ^lost
+  ^lost:
+    %previous = llvm.atomicrmw add %context, %one monotonic : !llvm.ptr, i64
+    cf.br ^claims(%firstKept : i64)
+  ^claims(%entry: i64):
+    %moreKept = arith.cmpi ult, %entry, %keptEnd : i64
+    cf.cond_br %moreKept, ^claim, ^item(%next : i64)
+  ^claim:
+    %slot = llvm.getelementptr %kept[%entry] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %keptAddress = llvm.load volatile %slot : !llvm.ptr -> i64
+    %claimed = func.call @strict_gc_mine(%keptAddress) : (i64) -> i1
+    %nextEntry = arith.addi %entry, %one : i64
+    cf.cond_br %claimed, ^wrong, ^claims(%nextEntry : i64)
+  ^wrong:
+    %counted = llvm.atomicrmw add %context, %one monotonic : !llvm.ptr, i64
+    cf.br ^claims(%nextEntry : i64)
+  ^done:
+    return %zero : f64
+  }
   func.func @test_checked_collection(%stack: !llvm.ptr) -> i64 {
     func.call @strict_gc_init(%stack) : (!llvm.ptr) -> ()
     %size = arith.constant 48 : i64
@@ -405,6 +481,7 @@ driver.write_text('''#include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
 extern int64_t test_swept(void* stack);
+extern int64_t test_owned(void* stack);
 extern int64_t test_pinned(void* stack);
 extern int64_t test_carried(void* stack);
 extern int64_t test_checked_collection(void* stack);
@@ -511,6 +588,12 @@ static double body(void* context, int64_t from, int64_t to) {
 	return 0;
 }
 int main(int argc, char** argv) {
+	if (argc > 1 && argv[1][0] == 'o') {
+		published = CreateEventA(0, TRUE, TRUE, 0);
+		int64_t lost = test_owned(&argc);
+		printf("Objects a job made on pages it swept that it lost, and kept ones it claims there: %lld (expected 0)\\n", (long long)lost);
+		return lost == 0 ? 0 : 1;
+	}
 	if (argc > 1 && argv[1][0] == 'm') {
 		published = CreateEventA(0, TRUE, TRUE, 0);
 		int64_t bytes = test_swept(&argc);
@@ -654,12 +737,12 @@ def run(name, arguments):
 	assert result.returncode == 0, result.stdout + result.stderr
 lowered = output / "pool.llvm.mlir"
 llvm = output / "pool.ll"
-run("mlir-opt", [module, "--symbol-privatize=exclude=test_swept,test_parallel,test_pinned,test_carried,test_checked_collection,test_reused_counts,test_scan_invalidation,test_pool_gpu,test_cached,test_first,test_second,test_tools,test_literal,test_published", "--symbol-dce", "--convert-scf-to-cf",
+run("mlir-opt", [module, "--symbol-privatize=exclude=test_swept,test_owned,test_parallel,test_pinned,test_carried,test_checked_collection,test_reused_counts,test_scan_invalidation,test_pool_gpu,test_cached,test_first,test_second,test_tools,test_literal,test_published", "--symbol-dce", "--convert-scf-to-cf",
 	"--convert-arith-to-llvm", "--convert-func-to-llvm", "--convert-cf-to-llvm", "--reconcile-unrealized-casts", "-o", lowered])
 run("mlir-translate", ["--mlir-to-llvmir", lowered, "-o", llvm])
 executable = output / "check.exe"
 run("clang", [llvm, driver, "-O2", "-march=native", "-Wno-override-module", "-fuse-ld=lld", "-Wl,clang_rt.builtins-x86_64.lib", "-o", executable])
-for mode in ["memory", "published", "literal", "j", "k", "xcycle", "gpu", "rsame", "rdifferent", "scan"]:
+for mode in ["memory", "owned", "published", "literal", "j", "k", "xcycle", "gpu", "rsame", "rdifferent", "scan"]:
 	reused = subprocess.run([str(executable), mode], capture_output=True, text=True, timeout=15)
 	print(reused.stdout.strip(), flush=True)
 	assert reused.returncode == 0, reused.stdout + reused.stderr

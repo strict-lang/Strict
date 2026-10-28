@@ -1786,8 +1786,9 @@
     %tag = arith.select %isInside, %owner, %zero : i64
     return %tag : i64
   }
-  // true when address lies on a small page this thread took in its current pool job or in what its lane allocated
-  // since the job started from a span it carried into the job, and not published through a constant
+  // true when address lies on a small page this thread took or swept in its current pool job or in what its lane
+  // allocated since the job started from a span it carried into the job, not published through a constant and not
+  // marked: a page swept in the job still holds what the last collection kept
   func.func private @strict_gc_mine(%address: i64) -> i1 {
     %zero = arith.constant 0 : i64
     %no = arith.constant false
@@ -1848,8 +1849,10 @@
     cf.cond_br %inSpan, ^mine, ^none
   ^mine:
     %shared = func.call @strict_gc_shared(%address) : (i64) -> i1
+    %marked = func.call @strict_gc_is_marked(%address) : (i64) -> i1
+    %older = arith.ori %shared, %marked : i1
     %yes = arith.constant true
-    %private = arith.xori %shared, %yes : i1
+    %private = arith.xori %older, %yes : i1
     return %private : i1
   ^none:
     return %no : i1
@@ -2390,11 +2393,7 @@
     %reciprocal = arith.divui %scaled, %objects#0 : i64
     %reciprocalSlot = llvm.getelementptr %pagePointer[5] : (!llvm.ptr) -> !llvm.ptr, i64
     llvm.store %reciprocal, %reciprocalSlot : i64, !llvm.ptr
-    %owner = func.call @strict_gc_owner() : () -> i64
-    %eight = arith.constant 8 : i64
-    %ownerBits = arith.shli %owner, %eight : i64
-    %ownedSmall = arith.ori %ownerBits, %one : i64
-    func.call @strict_gc_page_kind(%page, %ownedSmall) : (i64, i64) -> ()
+    func.call @strict_gc_own(%page) : (i64) -> ()
     func.call @strict_gc_keep_page(%page, %class) : (i64, i64) -> ()
     %objectBytes = arith.muli %objects#1, %objects#0 : i64
     %start = arith.addi %page, %first : i64
@@ -2404,6 +2403,16 @@
     %objectsLength = arith.select %isFresh, %zero, %objectBytes : i64
     %objectsCleared = llvm.call @memset(%objectsPointer, %clearObjects, %objectsLength) : (!llvm.ptr, i32, i64) -> !llvm.ptr
     return %start, %end : i64, i64
+  }
+  // tags a small page with the pool job and lane taking it (strict_gc_mine)
+  func.func private @strict_gc_own(%page: i64) {
+    %one = arith.constant 1 : i64
+    %eight = arith.constant 8 : i64
+    %owner = func.call @strict_gc_owner() : () -> i64
+    %ownerBits = arith.shli %owner, %eight : i64
+    %ownedSmall = arith.ori %ownerBits, %one : i64
+    func.call @strict_gc_page_kind(%page, %ownedSmall) : (i64, i64) -> ()
+    return
   }
   // while the pool runs a lane allocates from the spans of pages it swept itself and takes the collector lock only to
   // sweep the next waiting page (pages that kept a few objects are filled again) or else to take a whole page
@@ -2446,6 +2455,11 @@
     llvm.store %moreFree, %allocatedSlot : i64, !llvm.ptr
     llvm.call @strict_gc_unlock() : () -> ()
     %reused = func.call @strict_gc_pop_span(%class, %spanSlot) : (i64, !llvm.ptr) -> i64
+    %sweptSlot = func.call @strict_gc_lane_slot(%class) : (i64) -> !llvm.ptr
+    %sweptSpan = llvm.load %sweptSlot : !llvm.ptr -> i64
+    %pageMask = arith.constant -65536 : i64
+    %sweptPage = arith.andi %sweptSpan, %pageMask : i64
+    func.call @strict_gc_own(%sweptPage) : (i64) -> ()
     cf.br ^carry
   ^carry:
     func.call @strict_gc_carry(%class) : (i64) -> ()
