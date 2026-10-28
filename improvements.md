@@ -5,8 +5,8 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - Ternary Bonsai 27B at a simulated 10 GB stalled once more (first run after a cold build), 12 later runs did not: [improvements-models.md](improvements-models.md).
 - Parallel native builds compile an out of date package object in every build at once (`NativeSources.Object`) and leave `<source>.<random>.o` behind (23 in DeltaEngine `Content/native`): wait like `NativeLibrary.Waited`.
 - `Members` natively has no values (`()` for every InitialValue), the VM has them.
-- A GPU loop reads outside its list once a flat list passes 2^24 numbers (StrictComfy `H3Vae.Canvas` with `size` hoisted: a tiny 16x16 latent window of 19.4M numbers fails, 12x12 of 10.4M matches the CPU): index arithmetic must stay exact.
-- A `List(Numbers)` of GPU lists (one list per tile in `H3Vae.Canvas`) reads 0 on the GPU without an error.
+- A GPU loop reads outside its list once a flat list passes 2^24 numbers (StrictComfy `H3Vae.Canvas` with `size` hoisted: a tiny 16x16 latent window of 19.4M numbers fails, 12x12 of 10.4M matches the CPU): index arithmetic must stay exact. A copy of Canvas with 19.35M synthetic tile numbers matches the CPU on master (2026-10-28), StrictComfy's exact failing code is needed.
+- A `List(Numbers)` of GPU lists (one list per tile in `H3Vae.Canvas`) reads 0 on the GPU without an error. 4 tiles computed on the GPU read through `tiles(t)(i)` in a GPU loop are right on master (2026-10-28), StrictComfy's exact failing code is needed.
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).
