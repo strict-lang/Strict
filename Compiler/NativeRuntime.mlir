@@ -16550,7 +16550,7 @@
   }
   // true when rows that keep their tokens (kept) and an ungated call can take the 8 bit path twice instead of 32 bit
   // tokens: the codes of the tokens, then the codes of what is left of them (a 1 / 254 step) with the first sums as
-  // biases, about 15 bits of each token relative to its largest number
+  // biases, about 15 bits of each token relative to its largest number, from 16 tokens on (other 8 bit rows from 64)
   func.func private @strict_gpu_tokens_split(%kept: i64, %count: i64, %rows: f64, %input: f64, %width: f64, %rowCount: f64, %bases: f64, %gated: f64) -> i1 {
     %none = arith.constant 0 : i64
     %zero = arith.constant 0.0 : f64
@@ -16570,7 +16570,11 @@
     %rowsAtLeast = arith.maximumf %rowCount, %oneRow : f64
     %countNumber = arith.sitofp %count : i64 to f64
     %tokens = arith.divf %countNumber, %rowsAtLeast : f64
+    %passSlot = llvm.mlir.addressof @strict_gpu_tokens_pass : !llvm.ptr
+    %firstPass = arith.constant 1 : i64
+    llvm.store %firstPass, %passSlot : i64, !llvm.ptr
     %eights = func.call @strict_gpu_eights(%rows, %input, %tokens, %width, %bases) : (f64, f64, f64, f64, f64) -> i1
+    llvm.store %none, %passSlot : i64, !llvm.ptr
     llvm.store %saved, %keptSlot : i64, !llvm.ptr
     cf.br ^done(%eights : i1)
   ^done(%splitting: i1):
@@ -16857,7 +16861,12 @@
     %sixtyThree = arith.constant 63 : i64
     %enough = arith.constant 64.0 : f64
     %zero = arith.constant 0.0 : f64
-    %isLong = arith.cmpf oge, %tokens, %enough : f64
+    %passSlot = llvm.mlir.addressof @strict_gpu_tokens_pass : !llvm.ptr
+    %pass = llvm.load %passSlot : !llvm.ptr -> i64
+    %isSplit = arith.cmpi ne, %pass, %none : i64
+    %fewest = arith.constant 16.0 : f64
+    %least = arith.select %isSplit, %fewest, %enough : f64
+    %isLong = arith.cmpf oge, %tokens, %least : f64
     %enabled = func.call @strict_gpu_dp4a() : () -> i1
     %basesBits = arith.bitcast %bases : f64 to i64
     %unbased = arith.cmpi eq, %basesBits, %none : i64
