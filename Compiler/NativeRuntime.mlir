@@ -16522,8 +16522,8 @@
   // width pixels of channels numbers divided by factor, the affine scale and shift and swish applied on load, zeros
   // around) with weights (outputs rows of 9 taps of channels numbers; with a factor of 2 the image is doubled and the
   // weights are the 2x2 taps of each of the 4 output parities), shape is height, width, channels, outputs, swish (1 or 0)
-  // and factor (1 or 2); 0.0 when
-  // the GPU can not (channels not a multiple of 32 or above 512, lists of other lengths), then the method itself runs
+  // and factor (1 or 2), channels not a multiple of 32 are padded with zeros to the next one; 0.0 when the GPU can not
+  // (lists of other lengths), then the method itself runs
   func.func private @strict_gpu_convolution(%ptx: !llvm.ptr, %values: f64, %affine: f64, %weights: f64, %shape: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
@@ -16535,6 +16535,7 @@
     %eight = arith.constant 8 : i64
     %nine = arith.constant 9 : i64
     %thirtyOne = arith.constant 31 : i64
+    %allBits = arith.constant -1 : i64
     %six = arith.constant 6 : i64
     %slotCount = arith.constant 9 : i64
     %sixNumber = arith.constant 6.0 : f64
@@ -16608,17 +16609,15 @@
     %valuesFit = arith.cmpi eq, %valuesHas, %valuesCount : i64
     %affineFit = arith.cmpi eq, %affineHas, %affineCount : i64
     %weightsFit = arith.cmpi eq, %weightsHas, %weightsCount : i64
-    %channelRest = arith.andi %channels, %thirtyOne : i64
-    %whole = arith.cmpi eq, %channelRest, %none : i64
-    %mostChannels = arith.constant 512 : i64
-    %positive = arith.cmpi sgt, %channels, %none : i64
-    %notTooMany = arith.cmpi sle, %channels, %mostChannels : i64
-    %someChannels = arith.andi %positive, %notTooMany : i1
+    %channelsUp = arith.addi %channels, %thirtyOne : i64
+    %channelMask = arith.xori %thirtyOne, %allBits : i64
+    %padded = arith.andi %channelsUp, %channelMask : i64
+    %paddedNumber = arith.sitofp %padded : i64 to f64
+    %someChannels = arith.cmpi sgt, %channels, %none : i64
     %some = arith.cmpi sgt, %count, %none : i64
     %listsFit = arith.andi %valuesFit, %affineFit : i1
     %allFit = arith.andi %listsFit, %weightsFit : i1
-    %wholeSome = arith.andi %whole, %someChannels : i1
-    %countFit = arith.andi %wholeSome, %some : i1
+    %countFit = arith.andi %someChannels, %some : i1
     %sized = arith.andi %allFit, %countFit : i1
     %fits = arith.andi %sized, %factorFits : i1
     cf.cond_br %fits, ^run, ^unable
@@ -16626,8 +16625,8 @@
     %swishSlot = llvm.getelementptr %slots[7] : (!llvm.ptr) -> !llvm.ptr, f64
     %swish = llvm.load %swishSlot : !llvm.ptr -> f64
     %unit = arith.constant 1.0 : f64
-    %normed = func.call @strict_gpu_convolution_normed(%ptx, %values, %affine, %channelsNumber, %swish, %unit) : (!llvm.ptr, f64, f64, f64, f64, f64) -> f64
-    %halves = func.call @strict_gpu_convolution_normed(%ptx, %weights, %affine, %channelsNumber, %zero, %zero) : (!llvm.ptr, f64, f64, f64, f64, f64) -> f64
+    %normed = func.call @strict_gpu_convolution_normed(%ptx, %values, %affine, %channelsNumber, %swish, %unit, %paddedNumber) : (!llvm.ptr, f64, f64, f64, f64, f64, f64) -> f64
+    %halves = func.call @strict_gpu_convolution_normed(%ptx, %weights, %affine, %channelsNumber, %zero, %zero, %paddedNumber) : (!llvm.ptr, f64, f64, f64, f64, f64, f64) -> f64
     %normedMade = arith.cmpf one, %normed, %zero : f64
     %halvesMade = arith.cmpf one, %halves, %zero : f64
     %bothMade = arith.andi %normedMade, %halvesMade : i1
@@ -16643,7 +16642,7 @@
     %shapeWidth = llvm.getelementptr %convolved[3] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %widthNumber, %shapeWidth : f64, !llvm.ptr
     %shapeChannels = llvm.getelementptr %convolved[4] : (!llvm.ptr) -> !llvm.ptr, f64
-    llvm.store %channelsNumber, %shapeChannels : f64, !llvm.ptr
+    llvm.store %paddedNumber, %shapeChannels : f64, !llvm.ptr
     %shapeOutputs = llvm.getelementptr %convolved[5] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %outputsNumber, %shapeOutputs : f64, !llvm.ptr
     %shapeFactor = llvm.getelementptr %convolved[6] : (!llvm.ptr) -> !llvm.ptr, f64
@@ -16660,14 +16659,17 @@
     return %zero : f64
   }
   // values (normed with affine and swished when normed is 1, as they are when 0) as a bfloat16 list on the GPU for
-  // strict_device_convolution (a thread per 4 numbers), 0 when that is not possible
-  func.func private @strict_gpu_convolution_normed(%ptx: !llvm.ptr, %values: f64, %affine: f64, %channels: f64, %swish: f64, %normed: f64) -> f64 {
+  // strict_device_convolution (a thread per 4 numbers), every channels numbers padded with zeros to padded, 0 when that
+  // is not possible
+  func.func private @strict_gpu_convolution_normed(%ptx: !llvm.ptr, %values: f64, %affine: f64, %channels: f64, %swish: f64, %normed: f64, %padded: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
-    %slotCount = arith.constant 5 : i64
+    %slotCount = arith.constant 6 : i64
     %length = func.call @strict_list_length(%values) : (f64) -> f64
-    %count = arith.fptosi %length : f64 to i64
+    %rows = arith.divf %length, %channels : f64
+    %paddedLength = arith.mulf %rows, %padded : f64
+    %count = arith.fptosi %paddedLength : f64 to i64
     %slots = llvm.alloca %slotCount x f64 : (i64) -> !llvm.ptr
     llvm.store %values, %slots : f64, !llvm.ptr
     %affineSlot = llvm.getelementptr %slots[1] : (!llvm.ptr) -> !llvm.ptr, f64
@@ -16678,6 +16680,8 @@
     llvm.store %swish, %swishSlot : f64, !llvm.ptr
     %normedSlot = llvm.getelementptr %slots[4] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %normed, %normedSlot : f64, !llvm.ptr
+    %paddedSlot = llvm.getelementptr %slots[5] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %padded, %paddedSlot : f64, !llvm.ptr
     %name = llvm.mlir.addressof @strict_gpu_convolution_normed_name : !llvm.ptr
     %slot = llvm.mlir.addressof @strict_gpu_convolution_normed_slot : !llvm.ptr
     %listsMask = arith.constant 3 : i64

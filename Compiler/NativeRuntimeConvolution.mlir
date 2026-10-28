@@ -1,7 +1,7 @@
   // the input of `Convolved.Summed` normed with the scales and shifts of affine (swish when asked) or the weights as they
   // are (normed 0), 4 numbers per thread (one vector load of bfloat16 or 32 bit floats when aligned), stored as bfloat16
-  // for strict_device_convolution
-  func.func private @strict_device_convolution_normed_run(%count: i64, %result: !llvm.ptr, %results: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %affine: !llvm.ptr, %affineCount: i64, %affineBits: i64, %channels: f64, %swish: f64, %normed: f64) attributes {llvm.passthrough = ["alwaysinline"]} {
+  // for strict_device_convolution, every channels numbers followed by zeros up to padded (a multiple of 32)
+  func.func private @strict_device_convolution_normed_run(%count: i64, %result: !llvm.ptr, %results: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %affine: !llvm.ptr, %affineCount: i64, %affineBits: i64, %channels: f64, %swish: f64, %normed: f64, %padded: f64) attributes {llvm.passthrough = ["alwaysinline"]} {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %four = arith.constant 4 : i64
@@ -24,6 +24,19 @@
   ^read:
     %end = arith.addi %first, %four : i64
     %whole = arith.cmpi sle, %end, %count : i64
+    %channelCount = arith.fptosi %channels : f64 to i64
+    %paddedCount = arith.fptosi %padded : f64 to i64
+    %isPadded = arith.cmpi ne, %paddedCount, %channelCount : i64
+    cf.cond_br %isPadded, ^padded, ^exact
+  ^padded:
+    %row = arith.divui %first, %paddedCount : i64
+    %rowStart = arith.muli %row, %channelCount : i64
+    %column = arith.remui %first, %paddedCount : i64
+    %source = arith.addi %rowStart, %column : i64
+    %rowEnd = arith.addi %rowStart, %channelCount : i64
+    %paddedQuad = func.call @strict_device_convolution_four(%values, %valuesCount, %valuesBits, %source, %rowEnd) : (!llvm.ptr, i64, i64, i64, i64) -> vector<4xf32>
+    cf.br ^numbers(%paddedQuad : vector<4xf32>)
+  ^exact:
     %address = llvm.ptrtoint %values : !llvm.ptr to i64
     %isBrain = arith.cmpi eq, %valuesBits, %brainBits : i64
     %isSingle = arith.cmpi eq, %valuesBits, %singleBits : i64
@@ -52,12 +65,10 @@
     %isNormed = arith.cmpf oeq, %normed, %unit : f64
     cf.cond_br %isNormed, ^norm, ^store(%numbers : vector<4xf32>)
   ^norm:
-    %channelCount = arith.fptosi %channels : f64 to i64
-    %channel = arith.remui %first, %channelCount : i64
+    %channel = arith.remui %first, %paddedCount : i64
     %shiftAt = arith.addi %channel, %channelCount : i64
-    %affineEnd = arith.addi %channel, %four : i64
-    %scales = func.call @strict_device_convolution_four(%affine, %affineCount, %affineBits, %channel, %affineEnd) : (!llvm.ptr, i64, i64, i64, i64) -> vector<4xf32>
-    %shiftEnd = arith.addi %shiftAt, %four : i64
+    %scales = func.call @strict_device_convolution_four(%affine, %affineCount, %affineBits, %channel, %channelCount) : (!llvm.ptr, i64, i64, i64, i64) -> vector<4xf32>
+    %shiftEnd = arith.addi %channelCount, %channelCount : i64
     %shifts = func.call @strict_device_convolution_four(%affine, %affineCount, %affineBits, %shiftAt, %shiftEnd) : (!llvm.ptr, i64, i64, i64, i64) -> vector<4xf32>
     %scaled = arith.mulf %numbers, %scales : vector<4xf32>
     %shifted = arith.addf %scaled, %shifts : vector<4xf32>
@@ -121,13 +132,13 @@
   ^done:
     return %numbers : vector<4xf32>
   }
-  llvm.func @strict_device_convolution_normed(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %affine: !llvm.ptr, %affineCount: i64, %affineBits: i64, %channels: f64, %swish: f64, %normed: f64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>} {
+  llvm.func @strict_device_convolution_normed(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %affine: !llvm.ptr, %affineCount: i64, %affineBits: i64, %channels: f64, %swish: f64, %normed: f64, %padded: f64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>} {
     %results = llvm.mlir.constant(64 : i64) : i64
-    func.call @strict_device_convolution_normed_run(%count, %result, %results, %values, %valuesCount, %valuesBits, %affine, %affineCount, %affineBits, %channels, %swish, %normed) : (i64, !llvm.ptr, i64, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, f64, f64, f64) -> ()
+    func.call @strict_device_convolution_normed_run(%count, %result, %results, %values, %valuesCount, %valuesBits, %affine, %affineCount, %affineBits, %channels, %swish, %normed, %padded) : (i64, !llvm.ptr, i64, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, f64, f64, f64, f64) -> ()
     llvm.return
   }
-  llvm.func @strict_device_convolution_normeds(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %affine: !llvm.ptr, %affineCount: i64, %affineBits: i64, %channels: f64, %swish: f64, %normed: f64, %results: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>} {
-    func.call @strict_device_convolution_normed_run(%count, %result, %results, %values, %valuesCount, %valuesBits, %affine, %affineCount, %affineBits, %channels, %swish, %normed) : (i64, !llvm.ptr, i64, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, f64, f64, f64) -> ()
+  llvm.func @strict_device_convolution_normeds(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %affine: !llvm.ptr, %affineCount: i64, %affineBits: i64, %channels: f64, %swish: f64, %normed: f64, %padded: f64, %results: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>} {
+    func.call @strict_device_convolution_normed_run(%count, %result, %results, %values, %valuesCount, %valuesBits, %affine, %affineCount, %affineBits, %channels, %swish, %normed, %padded) : (i64, !llvm.ptr, i64, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, f64, f64, f64, f64) -> ()
     llvm.return
   }
   // 8 numbers of data from at into 16 bytes of shared memory as bfloat16 (zeros when not valid): copied without waiting
