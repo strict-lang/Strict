@@ -558,6 +558,14 @@
   llvm.func @system(!llvm.ptr) -> i32
   // runs a program with the console of this one (its output appears right away) and returns its exit code
   func.func private @strict_process_started(%path: f64, %arguments: f64) -> f64 {
+    %pathLength = func.call @strict_text_length(%path) : (f64) -> f64
+    %noLength = arith.constant 0.0 : f64
+    %isMissing = arith.cmpf oeq, %pathLength, %noLength : f64
+    cf.cond_br %isMissing, ^missing, ^start
+  ^missing:
+    %notFound = arith.constant 127.0 : f64
+    return %notFound : f64
+  ^start:
     %eight = arith.constant 8 : i32
     %byte = arith.constant 255 : i32
     %signals = arith.constant 127 : i32
