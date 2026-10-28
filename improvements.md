@@ -3,7 +3,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 
 ## Bugs
 - Ternary Bonsai 27B at a simulated 10 GB stalled once more (first run after a cold build), 12 later runs did not: [improvements-models.md](improvements-models.md).
-- A folder test whose package native library is out of date builds it in every test child at once (`NativeSources.Library`, one clang call of all sources), the children race on the rename and leave `<library>.<random>.dll` behind: build it once under a lock like `PtxCache.Waited`.
+- Parallel native builds compile an out of date package object in every build at once (`NativeSources.Object`) and leave `<source>.<random>.o` behind (23 in DeltaEngine `Content/native`): wait like `NativeLibrary.Waited`.
 - `Members` natively has no values (`()` for every InitialValue), the VM has them.
 
 ## Next

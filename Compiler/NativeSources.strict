@@ -91,18 +91,6 @@ Inputs(platform Number, root Text) Texts
 	Adding.Inputs(Platform.Windows, ".").Last is "Examples/NativeAdd/native/Windows.flags"
 	let flags = folders.First + "/" + Platform.NameOf(platform) + ".flags"
 	Directory.Files(folders.First, "*.h") + (root + "/Compiler/strict.h") + flags
-Library(platform Number, root Text) Text
-	Adding.Library(Platform.Current, ".").StartsWith("Built Examples/NativeAdd/native/NativeAdd.")
-	let folder = folders.First
-	let base = folder + "/" + Path(Path(folder).PathOnly.text).FileName.text
-	let extension = Platform.LibraryExtension(platform)
-	if IsCurrent(base + extension, Files + Inputs(platform, root))
-		return "Built " + base + extension
-	let building = base + "." + 999999.Random.Floor + extension
-	let shared = platform is Platform.Windows then "-shared -O2 -DSTRICT_LIBRARY" else "-shared -fPIC -O2 -DSTRICT_LIBRARY"
-	let clang = Toolchain(platform, root).Located("clang")
-	let result = ToolRunner(clang).Execute(shared + Arguments(platform, root) + " -o \"" + building + "\"")
-	result.Failed then "clang failed: " + result.error else "Built " + Placed(building, base + extension)
 Placed(building Text, library Text) Text
 	Adding.Placed("Examples/NativeAdd/native/Missing.1.dll", Iconed + ".dll") is Iconed + ".dll"
 	File(building).Rename(library)

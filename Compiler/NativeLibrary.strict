@@ -1,0 +1,40 @@
+has sources NativeSources
+constant Adding = NativeLibrary(NativeSources.Adding)
+Built(platform Number, root Text) Text
+	Adding.Built(Platform.Current, ".").StartsWith("Built Examples/NativeAdd/native/NativeAdd.")
+	let folder = sources.folders.First
+	let base = folder + "/" + Path(Path(folder).PathOnly.text).FileName.text
+	let library = base + Platform.LibraryExtension(platform)
+	let previous = Waited(library, sources.Files + sources.Inputs(platform, root))
+	if previous is not ""
+		return previous
+	let output = base + "." + 999999.Random.Floor + Platform.LibraryExtension(platform)
+	let shared = platform is Platform.Windows then "-shared -O2 -DSTRICT_LIBRARY" else "-shared -fPIC -O2 -DSTRICT_LIBRARY"
+	let clang = Toolchain(platform, root).Located("clang")
+	let result = ToolRunner(clang).Execute(shared + sources.Arguments(platform, root) + " -o \"" + output + "\"")
+	Recorded(library, (result.Failed then "clang failed: " + result.error else "Built " + sources.Placed(output, library)))
+Waited(library Text, inputs Texts) Slow(Text)
+	Adding.Waited("Compiler/output/Missing.dll", List(Text)) is ""
+	let lock = File(library + "." + Newest(inputs) + ".lock")
+	let started = Process.Elapsed
+	for as long as Process.Elapsed - started < Strict.MaxWait
+		if sources.IsCurrent(library, inputs)
+			return "Built " + library
+		if sources.IsCurrent(library + ".built", inputs)
+			return Text.Combine(File(library + ".built").ReadLines, "\n")
+		if lock.Locked
+			return ""
+		Process.Wait(0.1)
+	""
+Recorded(library Text, built Text) Text
+	Adding.Recorded("Compiler/output/Recorded.dll", "Built Recorded.dll") is "Built Recorded.dll"
+	File(library + ".built").Write(built)
+	built
+Newest(inputs Texts) Number
+	Adding.Newest(List(Text) + "Compiler/strict.h") is File("Compiler/strict.h").Modified
+	Adding.Newest(List(Text) + "Compiler/Missing.h") is 0
+	mutable newest = 0
+	for inputs
+		if File(value).Exists and (File(value).Modified > newest)
+			newest = File(value).Modified
+	newest
