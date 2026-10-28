@@ -538,6 +538,25 @@
     return %copied : f64
   }
   func.func private @strict_foreign_numbers(%result: f64) -> f64 {
+    %isPlaced = func.call @strict_foreign_placed(%result) : (f64) -> i1
+    cf.cond_br %isPlaced, ^placed, ^checked
+  ^placed:
+    %view = func.call @strict_ptr(%result) : (f64) -> !llvm.ptr
+    %placedCount = llvm.load %view : !llvm.ptr -> f64
+    %holder = llvm.getelementptr %view[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %capacitySlot = llvm.getelementptr %holder[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %capacity = llvm.load %capacitySlot : !llvm.ptr -> f64
+    %placedFormat = arith.negf %capacity : f64
+    %placedBits = arith.fptosi %placedFormat : f64 to i64
+    %placedElements = arith.fptosi %placedCount : f64 to i64
+    %quantizedBits = arith.constant 8 : i64
+    %isQuantized = arith.cmpi sle, %placedBits, %quantizedBits : i64
+    %noFloats = arith.constant 0 : i64
+    %floats = arith.select %isQuantized, %noFloats, %placedElements : i64
+    %numbers = func.call @strict_list_data(%result) : (f64) -> !llvm.ptr
+    func.call @strict_packed_canonical(%numbers, %floats, %placedBits) : (!llvm.ptr, i64, i64) -> ()
+    return %result : f64
+  ^checked:
     %failed = func.call @strict_foreign_failed(%result) : (f64) -> i1
     cf.cond_br %failed, ^fail, ^copy
   ^fail:
@@ -763,6 +782,96 @@
   ^done:
     return %zero : f64
   }
+  // the list of strict_rows or strict_packed_numbers until the result of the native that asked for it is taken
+  llvm.mlir.global internal thread_local @strict_foreign_pending(0 : i64) : i64
+  // true when result is the list a native filled (strict_rows, strict_packed_numbers), which needs no copy
+  func.func private @strict_foreign_placed(%result: f64) -> i1 {
+    %pendingSlot = llvm.mlir.addressof @strict_foreign_pending : !llvm.ptr
+    %pending = llvm.load %pendingSlot : !llvm.ptr -> i64
+    %nothing = arith.constant 0 : i64
+    llvm.store %nothing, %pendingSlot : i64, !llvm.ptr
+    %resultWord = arith.bitcast %result : f64 to i64
+    %isPending = arith.cmpi ne, %pending, %nothing : i64
+    %isResult = arith.cmpi eq, %resultWord, %pending : i64
+    %isPlaced = arith.andi %isPending, %isResult : i1
+    return %isPlaced : i1
+  }
+  // a packed list of count numbers with bits whose numbers a native writes to data before it returns the list, which
+  // strict_foreign_numbers takes as it is (strict.h strict_packed_numbers)
+  func.func @strict_packed_numbers(%count: i64, %bits: f64, %data: !llvm.ptr) -> f64 {
+    %markedBits = arith.fptosi %bits : f64 to i64
+    %formatMask = arith.constant 255 : i64
+    %wholeBits = arith.andi %markedBits, %formatMask : i64
+    %list = func.call @strict_packed_new(%count, %wholeBits) : (i64, i64) -> f64
+    %numbers = func.call @strict_list_data(%list) : (f64) -> !llvm.ptr
+    llvm.store %numbers, %data : !llvm.ptr, !llvm.ptr
+    %pendingSlot = llvm.mlir.addressof @strict_foreign_pending : !llvm.ptr
+    %listBits = arith.bitcast %list : f64 to i64
+    llvm.store %listBits, %pendingSlot : i64, !llvm.ptr
+    return %list : f64
+  }
+  // room for count rows of elements numbers with bits (plus STRICT_KEPT_TOKENS, strict.h strict_rows) laid out like the
+  // block of strict_packed_rows: a native writes the numbers of each row at data + row * stride and returns the list,
+  // which strict_foreign_rows takes as it is instead of copying the rows
+  func.func @strict_rows(%count: i64, %elements: i64, %bits: f64, %data: !llvm.ptr, %stride: !llvm.ptr) -> f64 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %eight = arith.constant 8 : i64
+    %zero = arith.constant 0.0 : f64
+    %viewBytes = arith.constant 64 : i64
+    %markedBits = arith.fptosi %bits : f64 to i64
+    %formatMask = arith.constant 255 : i64
+    %wholeBits = arith.andi %markedBits, %formatMask : i64
+    %kept = arith.shrui %markedBits, %eight : i64
+    %bytes = func.call @strict_packed_bytes(%elements, %wholeBits) : (i64, i64) -> i64
+    %fifteen = arith.constant 15 : i64
+    %alignMask = arith.constant -16 : i64
+    %padded = arith.addi %bytes, %fifteen : i64
+    %rowStride = arith.andi %padded, %alignMask : i64
+    %total = arith.muli %count, %rowStride : i64
+    %imageSmallest = arith.constant 67108864 : i64
+    %isImage = arith.cmpi uge, %total, %imageSmallest : i64
+    %imageTable = arith.addi %count, %eight : i64
+    %imageSpare = arith.constant 127 : i64
+    %imageMask = arith.constant -128 : i64
+    %imagePadded = arith.addi %imageTable, %imageSpare : i64
+    %tableHeader = arith.andi %imagePadded, %imageMask : i64
+    %header = arith.select %isImage, %tableHeader, %none : i64
+    %views = arith.muli %count, %viewBytes : i64
+    %rowsAndViews = arith.addi %total, %views : i64
+    %blockSize = arith.addi %header, %rowsAndViews : i64
+    %block = func.call @strict_alloc_text(%blockSize) : (i64) -> !llvm.ptr
+    %rows = llvm.getelementptr %block[%header] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %countNumber = arith.sitofp %count : i64 to f64
+    %list = func.call @strict_list_new(%countNumber, %countNumber) : (f64, f64) -> f64
+    %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    cf.br ^place(%none : i64)
+  ^place(%index: i64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^row, ^placed
+  ^row:
+    %offset = arith.muli %index, %rowStride : i64
+    %rowData = llvm.getelementptr %rows[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %viewOffset = arith.muli %index, %viewBytes : i64
+    %viewStart = arith.addi %total, %viewOffset : i64
+    %view = llvm.getelementptr %rows[%viewStart] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %dataBits = func.call @strict_bits(%rowData) : (!llvm.ptr) -> f64
+    %row = func.call @strict_packed_placed(%view, %elements, %wholeBits, %dataBits, %zero, %kept) : (!llvm.ptr, i64, i64, f64, f64, i64) -> f64
+    %target = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.store %row, %target : f64, !llvm.ptr
+    func.call @strict_gc_written(%target) : (!llvm.ptr) -> ()
+    %next = arith.addi %index, %one : i64
+    cf.br ^place(%next : i64)
+  ^placed:
+    %imageBytes = arith.addi %header, %total : i64
+    func.call @strict_gpu_hosting(%list, %count, %block, %imageBytes, %isImage) : (f64, i64, !llvm.ptr, i64, i1) -> ()
+    llvm.store %rows, %data : !llvm.ptr, !llvm.ptr
+    llvm.store %rowStride, %stride : i64, !llvm.ptr
+    %pendingSlot = llvm.mlir.addressof @strict_foreign_pending : !llvm.ptr
+    %listBits = arith.bitcast %list : f64 to i64
+    llvm.store %listBits, %pendingSlot : i64, !llvm.ptr
+    return %list : f64
+  }
   func.func private @strict_packed_new(%elements: i64, %wholeBits: i64) -> f64 {
     %bytes = func.call @strict_packed_bytes(%elements, %wholeBits) : (i64, i64) -> i64
     %data = func.call @strict_alloc_text(%bytes) : (i64) -> !llvm.ptr
@@ -939,6 +1048,11 @@
     return
   }
   func.func private @strict_foreign_rows(%result: f64) -> f64 {
+    %isPlaced = func.call @strict_foreign_placed(%result) : (f64) -> i1
+    cf.cond_br %isPlaced, ^placed, ^checked
+  ^placed:
+    return %result : f64
+  ^checked:
     %failed = func.call @strict_foreign_failed(%result) : (f64) -> i1
     cf.cond_br %failed, ^fail, ^rows
   ^fail:

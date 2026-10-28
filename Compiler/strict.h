@@ -43,13 +43,12 @@ static inline uint64_t strict_packed_bytes(uint64_t count, uint64_t bits)
 	return bits == 8 ? data + (count + 31) / 32 * 4 : bits == 6 ? data + ((count + 255) / 256 * 2 + 3) / 4 * 4 :
 		bits == 4 || bits == 3 ? data : count * bits / 8;
 }
-/* Packs count floats (stride apart) into 8 bits, the scale of 32 numbers is their largest magnitude / 127. */
-static inline void strict_quantized(strict_packed* packed, const float* values, uint64_t count, uint64_t stride)
+/* Packs count floats (stride apart) into the 8 bit numbers at data, the scale of 32 numbers is their largest magnitude
+   / 127. */
+static inline void strict_quantized(unsigned char* data, const float* values, uint64_t count, uint64_t stride)
 {
-	int8_t* bytes = (int8_t*)packed->data;
-	float* scales = (float*)(packed->data + (count + 3) / 4 * 4);
-	packed->count = (double)count;
-	packed->bits = 8;
+	int8_t* bytes = (int8_t*)data;
+	float* scales = (float*)(data + (count + 3) / 4 * 4);
 	for (uint64_t first = 0; first < count; first += 32)
 	{
 		uint64_t end = first + 32 < count ? first + 32 : count;
@@ -103,4 +102,56 @@ static inline float strict_brain_float(uint16_t brain)
 }
 /* Returns an Error with this name, the name must live as long as the program. */
 static inline double strict_fail(const char* name) { return strict_value(0x7FFC000000000000ull | (uint64_t)(uintptr_t)name); }
+/* Room for count rows of elements numbers with bits (plus STRICT_KEPT_TOKENS) as a List(Numbers) result: the caller
+   writes the packed numbers of each row at data + row * stride, then returns the result (data is 0 when there is not
+   enough memory). A native build places them where the runtime keeps its rows, a library for the VM in one buffer it
+   keeps until the next call. */
+#ifdef STRICT_LIBRARY
+#include <stdlib.h>
+static inline double strict_rows(uint64_t count, uint64_t elements, double bits, unsigned char** data, uint64_t* stride)
+{
+	static _Thread_local double* rows;
+	static _Thread_local unsigned char* storage;
+	static _Thread_local uint64_t capacity;
+	uint64_t size = (sizeof(strict_packed) + strict_packed_bytes(elements, (uint64_t)bits & 255) + 15) / 16 * 16;
+	free(rows);
+	rows = malloc((1 + count) * sizeof(double));
+	if (count * size + 1 > capacity)
+	{
+		free(storage);
+		storage = malloc(count * size + 1);
+		capacity = storage ? count * size + 1 : 0;
+	}
+	*data = 0;
+	if (!rows || !storage)
+		return strict_fail("NotEnoughMemory");
+	rows[0] = (double)count;
+	for (uint64_t row = 0; row < count; row++)
+	{
+		strict_packed* packed = (strict_packed*)(storage + row * size);
+		packed->count = (double)elements;
+		packed->bits = bits;
+		rows[1 + row] = strict_packed_result(packed);
+	}
+	*data = storage + sizeof(strict_packed);
+	*stride = size;
+	return strict_numbers_result((strict_numbers*)rows);
+}
+/* Room for count numbers with bits as a Numbers result like strict_rows, the caller writes them to data. */
+static inline double strict_packed_numbers(uint64_t count, double bits, unsigned char** data)
+{
+	static _Thread_local strict_packed* packed;
+	free(packed);
+	packed = malloc(sizeof(strict_packed) + strict_packed_bytes(count, (uint64_t)bits & 255) + 1);
+	*data = packed ? packed->data : 0;
+	if (!packed)
+		return strict_fail("NotEnoughMemory");
+	packed->count = (double)count;
+	packed->bits = bits;
+	return strict_packed_result(packed);
+}
+#else
+double strict_rows(uint64_t count, uint64_t elements, double bits, unsigned char** data, uint64_t* stride);
+double strict_packed_numbers(uint64_t count, double bits, unsigned char** data);
+#endif
 #endif

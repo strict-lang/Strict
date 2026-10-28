@@ -645,7 +645,7 @@ static void Packed(void* context, uint64_t item)
 		if (packing->raw)
 			Repacked(packing->raw + row * rowBytes, packing->type, kept, width, packed);
 		else if (kept == 8)
-			strict_quantized(packed, floats, width, 1);
+			strict_quantized(packed->data, floats, width, 1);
 		for (uint64_t column = 0; floats && kept != 8 && column < width; column++)
 			if (kept == 16)
 				((uint16_t*)packed->data)[column] = strict_half(floats[column]);
