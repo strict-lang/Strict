@@ -14257,8 +14257,12 @@
     cf.cond_br %missing, ^done, ^launch
   ^launch:
     %threads = arith.constant 256 : i64
+    %warpThreads = arith.constant 32 : i64
+    %warpWidth = arith.constant 1024 : i64
+    %isNarrow = arith.cmpi sle, %safeWidth, %warpWidth : i64
+    %rowThreads = arith.select %isNarrow, %warpThreads, %threads : i64
     %tokenCount = arith.divui %length, %safeWidth : i64
-    %tokenThreads = arith.muli %tokenCount, %threads : i64
+    %tokenThreads = arith.muli %tokenCount, %rowThreads : i64
     %launchThreads = arith.select %perToken, %tokenThreads, %length : i64
     %quantized = func.call @strict_gpu_quantize_launch(%function, %device, %length, %tokenWidth, %target, %bits, %launchThreads, %threads) : (!llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> i1
     cf.cond_br %quantized, ^swap, ^done
