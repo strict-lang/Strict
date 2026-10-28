@@ -68,6 +68,17 @@ Level(rest Texts) Text
 	if "fast" is in Options(rest)
 		return NativeBuild.Quick
 	"small" is in Options(rest) then NativeBuild.Small else NativeBuild.Fast
+Replaced(executable Text, target Text) Boolean
+	let old = executable.Replace(".exe", ".old.exe")
+	File(executable).Rename(old)
+	if File(executable).Exists
+		return false
+	File(target).Rename(executable)
+	if File(target).Exists
+		File(old).Rename(executable)
+		return false
+	File(old).Delete
+	File(executable).Exists
 Options(rest Texts) Texts
 	NativeCompiler.Options(("a.strict", ".", "linux")) is ("linux")
 	rest.Length > 2 then rest.Slice(2, rest.Length - 2) else List(Text)

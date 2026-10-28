@@ -12,19 +12,19 @@ constant Reading = TypeEntry("A", List(MemberEntry) + MemberEntry("b", "Strict/L
 constant Parameters = TypeEntry("Strict/Bytecode/MethodEntry", List(MemberEntry) + MemberEntry("parameters", "Strict/List(MemberEntry)", List(InstructionEntry), false), List(MethodEntry))
 constant DictionaryCode = MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Invoke(0, ("Strict/Dictionary(Number, Text)", "Code", "Strict/Text"), List(Number), -1))
 constant Natives = ("to", "not", "and", "or", "xor", "Exists", "ReadLines")
-constant Passes = 50
-Linked(entries List(TypeEntry), signatures Texts, depth Number) Slow(List(TypeEntry))
-	Hello.Linked(TypeEntry.HelloLogger, List(Text), Passes).Length is 15
-	Sample.Linked(Iterating, List(Text), Passes).Length is 1
-	if depth is 0
-		Logger.Log(LinkRound(value, entries, signatures).Unconverged)
-		return List(TypeEntry)
-	let started = Process.Elapsed
-	let next = Next(entries, signatures)
-	let complete = LinkRound(value, entries, signatures).IsSettled(next)
-	let phase = "Frontend / link pass (" + next.entries.Length + " types, complete " + complete + ")"
-	BuildProfile(Logger).Reported(phase, started)
-	complete then next.entries else Linked(next.entries, next.signatures, depth - 1)
+Linked(entries List(TypeEntry), signatures Texts) Slow(List(TypeEntry))
+	Sample.Linked(Go, List(Text)).Length is 0
+	mutable round = LinkRound(value, entries, signatures)
+	for as long as true
+		let started = Process.Elapsed
+		let next = Next(round.entries, round.signatures)
+		let complete = round.IsSettled(next)
+		let phase = "Frontend / link pass (" + next.entries.Length + " types, complete " + complete + ")"
+		BuildProfile(Logger).Reported(phase, started)
+		if complete
+			return next.Checked
+		round = next
+	List(TypeEntry)
 Next(entries List(TypeEntry), signatures Texts) Slow(LinkRound)
 	Sample.Next(Go, List(Text)).entries.Length is 1
 	Hello.Next(TypeEntry.HelloLogger, List(Text)).signatures is ("Strict/Logger:")

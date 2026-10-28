@@ -4,16 +4,26 @@ import os
 import shutil
 import subprocess
 import json
+import re
 
 root = Path(__file__).resolve().parent.parent
 assert os.name == "nt", "This check uses Windows events to force the pool interleaving"
 output = root / "Compiler/output/ParallelCheck"
 output.mkdir(exist_ok=True)
 runtime = (root / "Compiler/NativeRuntime.mlir").read_text(encoding="utf-8")
+for name in ("strict_parallel_from", "strict_pool_run"):
+	body = re.search(r"  (?:func.func private|llvm.func) @" + name + r"\(.*?\n  }", runtime, re.S).group()
+	for line in body.splitlines():
+		if re.search(r"llvm\.(?:load|store).*%(?:countSlot|chunkSlot)\b", line):
+			assert "atomic" in line, "Pool metadata can overlap an old generation: " + line
+pin = runtime.split("func.func private @strict_rc_pin(", 1)[1].split("\n  }", 1)[0]
+assert re.search(r"llvm.load %flags atomic", pin), "Shared pin flags need an atomic read"
 start = runtime.index("  func.func private @strict_parallel_from(")
 end = runtime.index("  func.func private @strict_pool_started()", start)
-section = runtime[start:end].replace("    llvm.store %count, %countSlot : i64, !llvm.ptr",
-	"    llvm.store %count, %countSlot : i64, !llvm.ptr\n    llvm.call @test_publishing(%count) : (i64) -> ()")
+published_count = "    llvm.store %count, %countSlot atomic monotonic {alignment = 8 : i64} : i64, !llvm.ptr"
+assert published_count in runtime[start:end]
+section = runtime[start:end].replace(published_count,
+	published_count + "\n    llvm.call @test_publishing(%count) : (i64) -> ()")
 runtime = runtime[:start] + section + runtime[end:]
 start = runtime.index("  llvm.func @strict_pool_run(")
 end = runtime.index("  llvm.func @strict_pool_chunk_run(", start)
@@ -21,6 +31,59 @@ section = runtime[start:end].replace("  ^check:\n", "  ^check:\n    llvm.call @t
 section = section.replace("  ^leave:\n", "  ^leave:\n    llvm.call @test_retired(%job) : (i64) -> ()\n", 1)
 runtime = runtime[:start] + section + runtime[end:]
 wrapper = '''
+  func.func @test_published(%stack: !llvm.ptr) -> i64 {
+    func.call @strict_gc_init(%stack) : (!llvm.ptr) -> ()
+    %one = arith.constant 1 : i64
+    %zero = arith.constant 0 : i64
+    %inside = llvm.mlir.addressof @strict_pool_inside : !llvm.ptr
+    llvm.store %one, %inside : i64, !llvm.ptr
+    %capacity = arith.constant 4.0 : f64
+    %none = arith.constant 0.0 : f64
+    %list = func.call @strict_list_new(%capacity, %none) : (f64, f64) -> f64
+    %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
+    %slot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %holderBits = llvm.load %slot : !llvm.ptr -> i64
+    %before = func.call @strict_gc_mine(%holderBits) : (i64) -> i1
+    %size = arith.constant 16 : i64
+    %record = func.call @strict_alloc(%size) : (i64) -> !llvm.ptr
+    llvm.store %list, %record : f64, !llvm.ptr
+    %recordBits = func.call @strict_bits(%record) : (!llvm.ptr) -> f64
+    %cycle = llvm.getelementptr %record[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %recordBits, %cycle : f64, !llvm.ptr
+    func.call @strict_pin(%recordBits) : (f64) -> ()
+    %after = func.call @strict_gc_mine(%holderBits) : (i64) -> i1
+    %notAfter = arith.xori %after, %before : i1
+    %correct = arith.andi %before, %notAfter : i1
+    %appended = func.call @strict_list_add(%list, %capacity) : (f64, f64) -> f64
+    %reused = func.call @strict_list_into(%list, %capacity, %none) : (f64, f64, f64) -> f64
+    %reusedView = func.call @strict_ptr(%reused) : (f64) -> !llvm.ptr
+    %reusedSlot = llvm.getelementptr %reusedView[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %reusedHolder = llvm.load %reusedSlot : !llvm.ptr -> i64
+    %copied = arith.cmpi ne, %reusedHolder, %holderBits : i64
+    %pushed = func.call @strict_list_push(%reused, %capacity) : (f64, f64) -> f64
+    %holder = llvm.inttoptr %holderBits : i64 to !llvm.ptr
+    %usedSlot = llvm.getelementptr %holder[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %used = llvm.load %usedSlot : !llvm.ptr -> f64
+    %unchanged = arith.cmpf oeq, %used, %none : f64
+    %preserved = arith.andi %correct, %unchanged : i1
+    %safe = arith.andi %preserved, %copied : i1
+    %result = arith.extui %safe : i1 to i64
+    llvm.store %zero, %inside : i64, !llvm.ptr
+    return %result : i64
+  }
+  llvm.mlir.global internal @test_literal_cache(0 : i64) : i64
+  func.func @test_literal() -> f64 {
+    %cache = llvm.mlir.addressof @test_literal_cache : !llvm.ptr
+    %claimed = func.call @strict_cache_claim(%cache) : (!llvm.ptr) -> i1
+    cf.cond_br %claimed, ^build, ^ready
+  ^build:
+    %computed = llvm.call @test_compute() : () -> f64
+    func.call @strict_cache_publish(%cache, %computed) : (!llvm.ptr, f64) -> ()
+    return %computed : f64
+  ^ready:
+    %value = llvm.load %cache : !llvm.ptr -> f64
+    return %value : f64
+  }
   func.func @test_pool_gpu() -> i64 {
     %inside = llvm.mlir.addressof @strict_pool_inside : !llvm.ptr
     %one = arith.constant 1 : i64
@@ -274,8 +337,11 @@ extern int64_t test_reused_counts(void* stack, _Bool same);
 extern int64_t test_scan_invalidation(void* stack);
 extern int64_t test_pool_gpu(void);
 extern double test_cached(void);
+extern double test_literal(void);
+extern int64_t test_published(void* stack);
 static atomic_int computed;
 static int recursive;
+static int literal;
 static HANDLE cache_start;
 double test_compute(void) {
 	atomic_fetch_add(&computed, 1);
@@ -285,7 +351,7 @@ double test_compute(void) {
 }
 static DWORD WINAPI cached_reader(void* unused) {
 	WaitForSingleObject(cache_start, INFINITE);
-	double result = test_cached();
+	double result = literal ? test_literal() : test_cached();
 	union { double value; uint64_t bits; } checked = { result };
 	return recursive ? (checked.bits >> 48) != 32762 : result != 7;
 }
@@ -370,8 +436,9 @@ static double body(void* context, int64_t from, int64_t to) {
 	return 0;
 }
 int main(int argc, char** argv) {
-	if (argc > 1 && (argv[1][0] == 'k' || argv[1][0] == 'j')) {
+	if (argc > 1 && (argv[1][0] == 'k' || argv[1][0] == 'j' || argv[1][0] == 'l')) {
 		recursive = argv[1][0] == 'j';
+		literal = argv[1][0] == 'l';
 		if (recursive) test_scan_invalidation(&argc);
 		HANDLE readers[16];
 		cache_start = CreateEventA(0, TRUE, FALSE, 0);
@@ -387,6 +454,12 @@ int main(int argc, char** argv) {
 		CloseHandle(cache_start);
 		printf("Constant computations: %d (expected 1)\\n", atomic_load(&computed));
 		return atomic_load(&computed) != 1;
+	}
+	if (argc > 1 && argv[1][0] == 'p') {
+		_putenv_s("STRICT_THREADS", "1");
+		int64_t revoked = test_published(&argc);
+		printf("Nested published holder lost private ownership: %lld (expected 1)\\n", (long long)revoked);
+		return revoked != 1;
 	}
 	if (argc > 1 && argv[1][0] == 'x') {
 		test_scan_invalidation(&argc);
@@ -500,12 +573,12 @@ def run(name, arguments):
 	assert result.returncode == 0, result.stdout + result.stderr
 lowered = output / "pool.llvm.mlir"
 llvm = output / "pool.ll"
-run("mlir-opt", [module, "--symbol-privatize=exclude=test_parallel,test_pinned,test_carried,test_checked_collection,test_reused_counts,test_scan_invalidation,test_pool_gpu,test_cached,test_first,test_second,test_tools", "--symbol-dce", "--convert-scf-to-cf",
+run("mlir-opt", [module, "--symbol-privatize=exclude=test_parallel,test_pinned,test_carried,test_checked_collection,test_reused_counts,test_scan_invalidation,test_pool_gpu,test_cached,test_first,test_second,test_tools,test_literal,test_published", "--symbol-dce", "--convert-scf-to-cf",
 	"--convert-arith-to-llvm", "--convert-func-to-llvm", "--convert-cf-to-llvm", "--reconcile-unrealized-casts", "-o", lowered])
 run("mlir-translate", ["--mlir-to-llvmir", lowered, "-o", llvm])
 executable = output / "check.exe"
 run("clang", [llvm, driver, "-O2", "-march=native", "-Wno-override-module", "-fuse-ld=lld", "-Wl,clang_rt.builtins-x86_64.lib", "-o", executable])
-for mode in ["j", "k", "xcycle", "gpu", "rsame", "rdifferent", "scan"]:
+for mode in ["published", "literal", "j", "k", "xcycle", "gpu", "rsame", "rdifferent", "scan"]:
 	reused = subprocess.run([str(executable), mode], capture_output=True, text=True, timeout=15)
 	print(reused.stdout.strip(), flush=True)
 	assert reused.returncode == 0, reused.stdout + reused.stderr

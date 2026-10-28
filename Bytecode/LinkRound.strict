@@ -8,6 +8,7 @@ constant Forwarding = (TypeEntry("HelloLogger", MemberEntry.LoggerMember, Method
 constant Wrapping = LinkRound(Linker.Sample, (Linker.Go, TypeEntry.CharacterEntry, TypeEntry("Strict/Dictionary(Text)", MemberEntry.NumbersMember, List(MethodEntry))), ("Strict/Character:Floor", "Strict/Dictionary(Text):in"))
 constant Chained = LinkRound(Linker.Sample, (Linker.Go, TypeEntry("Strict/Angle", List(MemberEntry) + MemberEntry("degrees", "Strict/Degrees", List(InstructionEntry), false), List(MethodEntry)), TypeEntry("Strict/Degrees", List(MemberEntry) + MemberEntry("number", "Strict/Number", List(InstructionEntry), false), List(MethodEntry))), ("Strict/Angle:Floor", "Strict/Degrees:Floor"))
 constant Cycled = LinkRound(Linker.Sample, Chained.entries.Slice(0, 2) + TypeEntry("Strict/Degrees", List(MemberEntry) + MemberEntry("angle", "Strict/Angle", List(InstructionEntry), false), List(MethodEntry)), Chained.signatures)
+constant Writing = LinkRound(Linker.Sample, List(TypeEntry) + TypeEntry(Linker.Go, methods = MethodEntry(Linker.Go.methods.First, instructions = InstructionEntry.Invoke(0, ("Strict/File", "Write", "None"), List(Number), -1))), List(Text))
 Entries(signed Texts) Slow(List(TypeEntry))
 	Single.Entries(List(Text) + "Strict/Logger:").First.Name is "Strict/Logger"
 	for signed
@@ -55,15 +56,44 @@ Indices Dictionary(Text, Number)
 	Wrapping.Indices("Strict/Character") is 1
 	Wrapping.Indices.Length is 2
 	mutable indices = Dictionary(Text, Number)
+	let names = TypeNames
+	for entries
+		if value.Changing.Length is 1
+			indices(names(index)) = index
+	indices
+TypeNames Texts
 	for entries
 		let local = Path(linker.main.fullName).PathOnly.text + "/" + value.Name
-		if value.Changing.Length is 1
-			indices(value.Name.IndexOf("/") < 0 then local else value.Name) = index
-	indices
-Unconverged Slow(Text)
-	Greeting.Unconverged is "LinkingDidNotConverge: HelloLogger still links Strict/Logger:"
-	let pending = linker.Next(entries, signatures).signatures - signatures
-	"LinkingDidNotConverge: " + TypeEntry.ShortName(linker.main.fullName) + " still links " + Text.Combine(pending, " ")
+		value.Name.IndexOf("/") < 0 then local else value.Name
+Checked List(TypeEntry)
+	Linker.Hello.Linked(TypeEntry.HelloLogger, List(Text)).Length is 15
+	Linker.Sample.Linked(Linker.Iterating, List(Text)).Length is 1
+	let missing = Unresolved
+	if missing.Length > 0
+		Logger.Log("UnresolvedLink: " + missing.First)
+		return List(TypeEntry)
+	entries
+Unresolved Texts
+	Writing.Unresolved.Length is 0
+	mutable positions = Dictionary(Text, Number)
+	for TypeNames
+		positions(value) = index
+	for linker.Targets(entries).Unique
+		if Missing(value, List(Text), positions)
+			value
+Missing(target Text, seen Texts, positions Dictionary(Text, Number)) Boolean
+	let type = target.Substring(0, target.LastIndexOf("."))
+	let method = target.Substring(type.Length + 1, target.Length - type.Length - 1)
+	let hosted = TypeEntry.ShortName(type) + "." + method is in Hosted.Methods
+	if (method is in ("from", "in", "Index")) or hosted or linker.IsNative(type, method)
+		return false
+	if (type is not in positions) or (target is in seen)
+		return true
+	let entry = entries(positions(type))
+	let converted = method.StartsWith("to ") then method.Split(" ") else (method, "")
+	let found = entry.Chosen(converted.First, -1, converted.Last, List(Text)) >= 0
+	let next = entry.Changing.Length is 1 then entry.Changing.First.typeName + "." + method else ""
+	(found is false) and ((next is "") or Missing(next, seen + target, positions))
 IsSettled(next LinkRound) Boolean
 	Single.IsSettled(Single)
 	Single.IsSettled(Twice) is false

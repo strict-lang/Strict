@@ -305,12 +305,23 @@
     %flags = arith.constant 524354 : i32
     %mode = arith.constant 420 : i32
     %descriptor = llvm.call @open(%name, %flags, %mode) vararg(!llvm.func<i32 (ptr, i32, ...)>) : (!llvm.ptr, i32, i32) -> i32
+    %none = arith.constant 0 : i32
+    %opened = arith.cmpi sge, %descriptor, %none : i32
+    cf.cond_br %opened, ^lock, ^failed
+  ^lock:
     %exclusive = arith.constant 6 : i32
     %locked = llvm.call @flock(%descriptor, %exclusive) : (i32, i32) -> i32
-    %none = arith.constant 0 : i32
     %held = arith.cmpi eq, %locked, %none : i32
-    %result = arith.uitofp %held : i1 to f64
-    return %result : f64
+    cf.cond_br %held, ^held, ^close
+  ^close:
+    %closed = llvm.call @close(%descriptor) : (i32) -> i32
+    cf.br ^failed
+  ^failed:
+    %no = arith.constant 0.0 : f64
+    return %no : f64
+  ^held:
+    %yes = arith.constant 1.0 : f64
+    return %yes : f64
   }
   func.func private @strict_file_rename(%path: f64, %newPath: f64) -> f64 {
     %zero = arith.constant 0.0 : f64

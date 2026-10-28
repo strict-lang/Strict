@@ -10,7 +10,7 @@ Of(path Text, others Texts = List(Text)) Slow(Texts)
 		if File(value).Exists
 			start = Added(start, List(Text) + FileCompiler.Normalized(value))
 	let base = Directory.Files(root, "*.strict")
-	let reached = Reached(Added(Indexed(start), base), start, base, 64)
+	let reached = Reached(Added(Indexed(start), base), start, base)
 	let lines = File(path).Exists then File(path).ReadLines else List(Text)
 	TypeChoice(lines).Chosen(reached, path)
 Indexed(paths Texts) Texts
@@ -23,18 +23,21 @@ Indexed(paths Texts) Texts
 	for project.Length > 0 then Added(project, local) else Folders(local, 3)
 		files = files + Directory.Files(value, "*.strict")
 	files
-Reached(known Texts, frontier Texts, reached Texts, depth Number) Slow(Texts)
-	SourceFiles(".").Reached(Imaging, Imaging, List(Text), 0) is Imaging
-	"./Compression/Inflate.strict" is in Plain.Reached(Compressed, Imaging, List(Text), 9)
-	let all = Added(reached, frontier)
-	if (depth is 0) or (frontier.Length is 0)
-		return all
-	mutable mentioned = List(Mutable(Text))
-	for frontier
-		mentioned = Added(mentioned, Mentions(File(value).ReadLines).Types)
-	let indexed = Added(known, Nearby(Mentions.Unmatched(mentioned, known)))
-	Reached(indexed, Matching(mentioned, indexed) - all, all, depth - 1)
+Reached(known Texts, frontier Texts, reached Texts) Slow(Texts)
+	"./Compression/Inflate.strict" is in Plain.Reached(Compressed, Imaging, List(Text))
+	mutable all = reached
+	mutable pending = frontier
+	mutable indexed = known
+	for as long as pending.Length > 0
+		all = Added(all, pending)
+		mutable mentioned = List(Mutable(Text))
+		for pending
+			mentioned = Added(mentioned, Mentions(File(value).ReadLines).Types)
+		indexed = Added(indexed, Nearby(Mentions.Unmatched(mentioned, indexed)))
+		pending = Matching(mentioned, indexed) - all
+	all
 Matching(names Texts, files Texts) Texts
+	SourceFiles(".").Reached(Imaging, List(Text), Imaging) is Imaging
 	SourceFiles(".").Matching(("Vector2s", "Missing"), Imaging + "./Math/Vector2.strict") is ("./Math/Vector2.strict")
 	for files
 		let name = Path(value.Replace("\\", "/")).FileName.RemoveExtension.text

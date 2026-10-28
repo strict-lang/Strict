@@ -1166,6 +1166,36 @@
     %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
     return %error : f64
   }
+  func.func private @strict_cache_claim(%cache: !llvm.ptr) -> i1 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %yes = arith.constant true
+    %no = arith.constant false
+    cf.br ^read
+  ^read:
+    %value = llvm.load %cache atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %empty = arith.cmpi eq, %value, %zero : i64
+    cf.cond_br %empty, ^claim, ^check
+  ^claim:
+    %pair = llvm.cmpxchg %cache, %zero, %one acq_rel acquire : !llvm.ptr, i64
+    %won = llvm.extractvalue %pair[1] : !llvm.struct<(i64, i1)>
+    cf.cond_br %won, ^owned, ^read
+  ^check:
+    %waiting = arith.cmpi eq, %value, %one : i64
+    cf.cond_br %waiting, ^pause, ^ready
+  ^pause:
+    llvm.call @strict_pause() : () -> ()
+    cf.br ^read
+  ^owned:
+    return %yes : i1
+  ^ready:
+    return %no : i1
+  }
+  func.func private @strict_cache_publish(%cache: !llvm.ptr, %value: f64) attributes {llvm.passthrough = ["alwaysinline"]} {
+    %bits = arith.bitcast %value : f64 to i64
+    llvm.store %bits, %cache atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    return
+  }
   func.func private @strict_gc_fail() {
     %message = llvm.mlir.addressof @strict_gc_out_of_memory : !llvm.ptr
     %printed = llvm.call @printf(%message) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr) -> i32
@@ -1300,7 +1330,7 @@
     %contextSlot = llvm.mlir.addressof @strict_pool_context : !llvm.ptr
     llvm.store %contextBits, %contextSlot : i64, !llvm.ptr
     %countSlot = llvm.mlir.addressof @strict_pool_count : !llvm.ptr
-    llvm.store %count, %countSlot : i64, !llvm.ptr
+    llvm.store %count, %countSlot atomic monotonic {alignment = 8 : i64} : i64, !llvm.ptr
     %threads = arith.addi %workers, %one : i64
     %four = arith.constant 4 : i64
     %pieces = arith.muli %threads, %four : i64
@@ -1308,7 +1338,7 @@
     %share = arith.divsi %remaining, %pieces : i64
     %chunk = arith.maxsi %share, %one : i64
     %chunkSlot = llvm.mlir.addressof @strict_pool_chunk : !llvm.ptr
-    llvm.store %chunk, %chunkSlot : i64, !llvm.ptr
+    llvm.store %chunk, %chunkSlot atomic monotonic {alignment = 8 : i64} : i64, !llvm.ptr
     %doneSlot = llvm.mlir.addressof @strict_pool_done : !llvm.ptr
     llvm.store %from, %doneSlot : i64, !llvm.ptr
     %failureSlot = llvm.mlir.addressof @strict_pool_failure : !llvm.ptr
@@ -1379,11 +1409,11 @@
     llvm.cond_br %isCurrent, ^check, ^leave
   ^check:
     %start = llvm.and %packed, %mask : i64
-    %count = llvm.load %countSlot : !llvm.ptr -> i64
+    %count = llvm.load %countSlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
     %more = llvm.icmp "slt" %start, %count : i64
     llvm.cond_br %more, ^try, ^leave
   ^try:
-    %chunk = llvm.load %chunkSlot : !llvm.ptr -> i64
+    %chunk = llvm.load %chunkSlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
     %proposed = llvm.add %start, %chunk : i64
     %over = llvm.icmp "sgt" %proposed, %count : i64
     %end = llvm.select %over, %count, %proposed : i1, i64
@@ -1412,7 +1442,7 @@
     %openOwner = llvm.lshr %open, %shift : i64
     %stillCurrent = llvm.icmp "eq" %openOwner, %tag : i64
     %index = llvm.and %open, %mask : i64
-    %total = llvm.load %countSlot : !llvm.ptr -> i64
+    %total = llvm.load %countSlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
     %remaining = llvm.icmp "slt" %index, %total : i64
     %closable = llvm.and %stillCurrent, %remaining : i1
     llvm.cond_br %closable, ^skip, ^leave
@@ -1558,7 +1588,7 @@
     cf.cond_br %found, ^check, ^done
   ^check:
     %flags = func.call @strict_rc_flags(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
-    %flagByte = llvm.load %flags : !llvm.ptr -> i8
+    %flagByte = llvm.load %flags atomic monotonic {alignment = 1 : i64} : !llvm.ptr -> i8
     %pinnedFlag = arith.constant 32 : i8
     %pinned = arith.andi %flagByte, %pinnedFlag : i8
     %noFlags = arith.constant 0 : i8
@@ -1663,7 +1693,7 @@
     return %tag : i64
   }
   // true when address lies on a small page this thread took in its current pool job or in what its lane allocated
-  // since the job started from a span it carried into the job: nobody else can see it yet
+  // since the job started from a span it carried into the job, and not published through a constant
   func.func private @strict_gc_mine(%address: i64) -> i1 {
     %zero = arith.constant 0 : i64
     %no = arith.constant false
@@ -1721,10 +1751,12 @@
     %fromStart = arith.cmpi uge, %address, %start : i64
     %beforeEnd = arith.cmpi ult, %address, %end : i64
     %inSpan = arith.andi %fromStart, %beforeEnd : i1
-    return %inSpan : i1
+    cf.cond_br %inSpan, ^mine, ^none
   ^mine:
+    %shared = func.call @strict_gc_shared(%address) : (i64) -> i1
     %yes = arith.constant true
-    return %yes : i1
+    %private = arith.xori %shared, %yes : i1
+    return %private : i1
   ^none:
     return %no : i1
   }
@@ -2781,7 +2813,7 @@
   ^done:
     return %referenced : i64
   }
-  func.func private @strict_gc_drain() {
+  func.func private @strict_gc_drain(%publishing: i1) {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %two = arith.constant 2 : i64
@@ -2803,6 +2835,11 @@
     %sizeEntry = llvm.getelementptr %entry[1] : (!llvm.ptr) -> !llvm.ptr, i64
     %size = llvm.load %sizeEntry : !llvm.ptr -> i64
     %end = arith.addi %object, %size : i64
+    cf.cond_br %publishing, ^publish, ^mark
+  ^publish:
+    func.call @strict_gc_publish_range(%object, %end) : (i64, i64) -> ()
+    cf.br ^loop
+  ^mark:
     %referenced = func.call @strict_gc_mark_range(%object, %end) : (i64, i64) -> i64
     %smallLimit = arith.constant 16384 : i64
     %isLarge = arith.cmpi ugt, %size, %smallLimit : i64
@@ -3752,7 +3789,8 @@
     func.call @strict_gc_mark_range(%pinnedStart, %pinnedEnd) : (i64, i64) -> i64
     %spilled:2 = func.call @strict_registers_spilled() : () -> (i64, i64)
     func.call @strict_gc_mark_range(%spilled#0, %spilled#1) : (i64, i64) -> i64
-    func.call @strict_gc_drain() : () -> ()
+    %publishing = arith.constant false
+    func.call @strict_gc_drain(%publishing) : (i1) -> ()
     return
   }
   func.func private @strict_rc_reachable(%object: i64, %markSlot: !llvm.ptr, %size: i64) -> i1 {
@@ -4665,6 +4703,60 @@
   }
   llvm.mlir.global internal @strict_gc_pinned(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_pinned_count(0 : i64) : i64
+  func.func private @strict_gc_shared(%word: i64) -> i1 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %located:5 = func.call @strict_gc_locate(%word) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %found = llvm.icmp "ne" %located#0, %unset : !llvm.ptr
+    cf.cond_br %found, ^flag, ^none
+  ^flag:
+    %flags = func.call @strict_rc_flags(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %value = llvm.load %flags atomic monotonic {alignment = 1 : i64} : !llvm.ptr -> i8
+    %sharedFlag = arith.constant -128 : i8
+    %shared = arith.andi %value, %sharedFlag : i8
+    %noFlags = arith.constant 0 : i8
+    %result = arith.cmpi ne, %shared, %noFlags : i8
+    return %result : i1
+  ^none:
+    %no = arith.constant false
+    return %no : i1
+  }
+  func.func private @strict_gc_publish(%word: i64) {
+    %target = func.call @strict_rc_target(%word) : (i64) -> i64
+    %located:5 = func.call @strict_gc_locate(%target) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %found = llvm.icmp "ne" %located#0, %unset : !llvm.ptr
+    cf.cond_br %found, ^flag, ^done
+  ^flag:
+    %flags = func.call @strict_rc_flags(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %sharedFlag = arith.constant -128 : i8
+    %pinnedShared = arith.constant -96 : i8
+    %old = llvm.atomicrmw _or %flags, %pinnedShared monotonic : !llvm.ptr, i8
+    %shared = arith.andi %old, %sharedFlag : i8
+    %noFlags = arith.constant 0 : i8
+    %fresh = arith.cmpi eq, %shared, %noFlags : i8
+    %scan = arith.andi %fresh, %located#4 : i1
+    cf.cond_br %scan, ^scan, ^done
+  ^scan:
+    func.call @strict_gc_push(%located#1, %located#2) : (i64, i64) -> ()
+    cf.br ^done
+  ^done:
+    return
+  }
+  func.func private @strict_gc_publish_range(%from: i64, %to: i64) {
+    %eight = arith.constant 8 : i64
+    cf.br ^loop(%from : i64)
+  ^loop(%address: i64):
+    %more = arith.cmpi ult, %address, %to : i64
+    cf.cond_br %more, ^word, ^done
+  ^word:
+    %slot = llvm.inttoptr %address : i64 to !llvm.ptr
+    %word = llvm.load %slot : !llvm.ptr -> i64
+    func.call @strict_gc_publish(%word) : (i64) -> ()
+    %next = arith.addi %address, %eight : i64
+    cf.br ^loop(%next : i64)
+  ^done:
+    return
+  }
   func.func private @strict_pin(%value: f64) {
     %busy = func.call @strict_rc_busy() : () -> i1
     cf.cond_br %busy, ^locked, ^alone
@@ -4701,10 +4793,12 @@
     cf.cond_br %found, ^flag, ^done
   ^flag:
     %flags = func.call @strict_rc_flags(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
-    %flagByte = llvm.load %flags : !llvm.ptr -> i8
     %pinnedFlag = arith.constant 32 : i8
-    %withPinned = arith.ori %flagByte, %pinnedFlag : i8
-    llvm.store %withPinned, %flags : i8, !llvm.ptr
+    %previous = llvm.atomicrmw _or %flags, %pinnedFlag monotonic : !llvm.ptr, i8
+    %word = arith.bitcast %value : f64 to i64
+    func.call @strict_gc_publish(%word) : (i64) -> ()
+    %publishing = arith.constant true
+    func.call @strict_gc_drain(%publishing) : (i1) -> ()
     cf.br ^done
   ^done:
     return
@@ -4801,7 +4895,8 @@
     func.call @strict_gc_mark_range(%pinnedStart, %pinnedEnd) : (i64, i64) -> i64
     %spilled:2 = func.call @strict_registers_spilled() : () -> (i64, i64)
     func.call @strict_gc_mark_range(%spilled#0, %spilled#1) : (i64, i64) -> i64
-    func.call @strict_gc_drain() : () -> ()
+    %publishing = arith.constant false
+    func.call @strict_gc_drain(%publishing) : (i1) -> ()
     func.call @strict_rc_survived() : () -> ()
     %checkingSlot = llvm.mlir.addressof @strict_rc_checking : !llvm.ptr
     %checking = llvm.load %checkingSlot : !llvm.ptr -> i64
@@ -6925,7 +7020,10 @@
     %unknown = llvm.mlir.zero : !llvm.ptr
     %found = llvm.icmp "ne" %located#0, %unknown : !llvm.ptr
     %usable = arith.andi %found, %isGrowable : i1
-    cf.cond_br %usable, ^counted, ^fresh
+    cf.cond_br %usable, ^private, ^fresh
+  ^private:
+    %shared = func.call @strict_gc_shared(%holderAddress) : (i64) -> i1
+    cf.cond_br %shared, ^fresh, ^counted
   ^counted:
     %counter = func.call @strict_rc_counter(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
     %count = llvm.load %counter : !llvm.ptr -> i32
@@ -7027,7 +7125,10 @@
     %unknown = llvm.mlir.zero : !llvm.ptr
     %found = llvm.icmp "ne" %located#0, %unknown : !llvm.ptr
     %located2 = arith.andi %found, %newest : i1
-    cf.cond_br %located2, ^counted, ^copy
+    cf.cond_br %located2, ^private, ^copy
+  ^private:
+    %shared = func.call @strict_gc_shared(%holderAddress) : (i64) -> i1
+    cf.cond_br %shared, ^copy, ^counted
   ^counted:
     %counter = func.call @strict_rc_counter(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
     %count = llvm.load %counter : !llvm.ptr -> i32
@@ -8119,7 +8220,11 @@
     %zero = arith.constant 0.0 : f64
     %slot = llvm.mlir.addressof @strict_flat_destination : !llvm.ptr
     %unset = arith.cmpf oeq, %old, %zero : f64
-    cf.cond_br %unset, ^none, ^check
+    cf.cond_br %unset, ^none, ^private
+  ^private:
+    %bits = arith.bitcast %old : f64 to i64
+    %shared = func.call @strict_gc_shared(%bits) : (i64) -> i1
+    cf.cond_br %shared, ^none, ^check
   ^check:
     %block = func.call @strict_ptr(%old) : (f64) -> !llvm.ptr
     %single = llvm.load %block : !llvm.ptr -> f32
@@ -8137,7 +8242,11 @@
   llvm.mlir.global internal thread_local @strict_struct_destination(0.0 : f64) : f64
   func.func private @strict_struct_destine(%old: f64) attributes {llvm.passthrough = ["alwaysinline"]} {
     %slot = llvm.mlir.addressof @strict_struct_destination : !llvm.ptr
-    llvm.store %old, %slot : f64, !llvm.ptr
+    %bits = arith.bitcast %old : f64 to i64
+    %shared = func.call @strict_gc_shared(%bits) : (i64) -> i1
+    %zero = arith.constant 0.0 : f64
+    %chosen = arith.select %shared, %zero, %old : f64
+    llvm.store %chosen, %slot : f64, !llvm.ptr
     return
   }
   // the old element of a list slot about to be overwritten is the destination when only the list holds it
@@ -8203,7 +8312,10 @@
     %bits = arith.bitcast %element : f64 to i64
     %target = func.call @strict_rc_target(%bits) : (i64) -> i64
     %isTarget = arith.cmpi ne, %target, %none : i64
-    cf.cond_br %isTarget, ^list, ^done
+    cf.cond_br %isTarget, ^private, ^done
+  ^private:
+    %shared = func.call @strict_gc_shared(%target) : (i64) -> i1
+    cf.cond_br %shared, ^done, ^list
   ^list:
     %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
     %holderSlot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
@@ -8274,7 +8386,10 @@
     %found = llvm.icmp "ne" %located#0, %unknown : !llvm.ptr
     %isStart = arith.cmpi eq, %located#1, %object : i64
     %usable = arith.andi %found, %isStart : i1
-    cf.cond_br %usable, ^counted, ^done
+    cf.cond_br %usable, ^private, ^done
+  ^private:
+    %shared = func.call @strict_gc_shared(%object) : (i64) -> i1
+    cf.cond_br %shared, ^done, ^counted
   ^counted:
     %counter = func.call @strict_rc_counter(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
     %count = llvm.load %counter : !llvm.ptr -> i32
