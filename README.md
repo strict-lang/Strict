@@ -148,7 +148,7 @@ Members are defined at the top of a type file. A type is composed of its members
 
 A member of type `Generic` makes a type generic, one type argument per `Generic` member: `Couple("a", 2)` with `has first Generic` and `has second Generic` is a `Couple(Text, Number)`. Methods are compiled per instance, so a call on a `Generic` member reaches the concrete type (`Examples/Couple.strict`, `Examples/Holder.strict`).
 
-Any is the basis of every type and gives each one `from`, `to Type`, `to Text`, `to HashCode`, `is(other)` and `Members`. Some base types are tiny:
+Any is the basis of every type and gives each one `from`, `to Type`, `to Text`, `to HashCode`, `is(other)` and `Members`. An options type (members with defaults) gets `Parsed(arguments)` and `Usage` generated: `MossOptions.Parsed(arguments)` reads `--json_output` for `jsonOutput`, numbers, texts, repeated `Texts`, flags and the constant names of an enum member in lower case (`CommandLine.strict`), `Usage` lists every option with its default and the `Help` constant. Some base types are tiny:
 ```
 has number
 from(text)

@@ -9,6 +9,7 @@ constant Rounded = TypeEntry("Strict/Float8", CharacterEntry.members, List(Metho
 constant Scaling = TypeEntry("Strict/Vector", List(MemberEntry), (MethodEntry("*", List(MemberEntry) + MemberEntry("other", "Strict/Vector", List(InstructionEntry), false), "Strict/Number", List(InstructionEntry)), MethodEntry("*", List(MemberEntry) + MemberEntry("scale", "Strict/Number", List(InstructionEntry), false), "Strict/Vector", List(InstructionEntry))))
 constant Initialized = TypeEntry("A", List(MemberEntry) + MemberEntry("B", "C", MethodEntry.GoRun.instructions, true), List(MethodEntry))
 constant Kept = TypeEntry("A", List(MemberEntry) + MemberEntry("B", "C", List(InstructionEntry), true), List(MethodEntry) + MethodEntry("B", List(MemberEntry), "C", List(InstructionEntry)))
+constant Lighting = MemberEntry("Light", "Strict/Number", List(InstructionEntry), true)
 constant ToNumber = MethodEntry("to", List(MemberEntry), "Strict/Number", List(InstructionEntry))
 constant Converting = TypeEntry("Strict/Digit", List(MemberEntry), (ToNumber, MethodEntry("to", List(MemberEntry) + MemberEntry.SevenMember, "Strict/Text", List(InstructionEntry))))
 Names BinaryNames
@@ -72,11 +73,15 @@ ShortName(typeName Text) Text
 Wrapped Text
 	HelloLogger.Wrapped is "Logger"
 	Converting.Wrapped is ""
+	TypeEntry("Strict/Shade", List(MemberEntry) + Lighting, List(MethodEntry)).Wrapped is "Number"
 	let short = ShortName(Name)
 	if IsBaseName(short) or (short is in ("Logger", "File"))
 		return ""
 	let changing = Changing
-	changing.Length is 1 then ShortName(changing.First.typeName) else ""
+	let numbered = (members.Length > 0) and (members.First.typeName is "Strict/Number") and (methods.Length is 0)
+	if changing.Length is 1
+		return ShortName(changing.First.typeName)
+	numbered and (changing.Length is 0) then "Number" else ""
 IsStruct Boolean
 	HelloLogger.IsStruct is false
 	CharacterEntry.IsStruct is false

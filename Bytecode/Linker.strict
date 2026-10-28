@@ -66,8 +66,10 @@ Signatures(types Texts, targets Texts) Texts
 LinkedType(type Text, methods Texts) Slow(TypeEntry)
 	Sample.LinkedType("Strict/Logger", List(Text)).Name is "Strict/Logger"
 	Sample.LinkedType("Strict/Bytecode/Crc", List(Text)).Name is "Crc"
-	let source = Fusion(File(SourcePath(type)).ReadLines, Path(SourcePath(type)).PathOnly.text).Fused
-	let automatic = Automatic(source, TypeEntry.ShortName(type), Instantiation(main.inference.types)).Lines(methods)
+	let folder = Path(SourcePath(type)).PathOnly.text
+	let source = Fusion(File(SourcePath(type)).ReadLines, folder).Fused
+	let generator = Automatic(source, TypeEntry.ShortName(type), Instantiation(main.inference.types))
+	let automatic = generator.Lines(methods) + OptionsCodegen(generator, folder).Lines(methods)
 	let averaged = MemberAverage(type, main.inference.types).Replaced(automatic)
 	let entry = TypeCodegen(type, averaged, main.inference, main.typeNames).Selected(methods)
 	let isLocal = Path(type).PathOnly.text is Path(main.fullName).PathOnly.text
