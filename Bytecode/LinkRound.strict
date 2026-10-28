@@ -8,6 +8,8 @@ constant Forwarding = (TypeEntry("HelloLogger", MemberEntry.LoggerMember, Method
 constant Wrapping = LinkRound(Linker.Sample, (Linker.Go, TypeEntry.CharacterEntry, TypeEntry("Strict/Dictionary(Text)", MemberEntry.NumbersMember, List(MethodEntry))), ("Strict/Character:Floor", "Strict/Dictionary(Text):in"))
 constant Chained = LinkRound(Linker.Sample, (Linker.Go, TypeEntry("Strict/Angle", List(MemberEntry) + MemberEntry("degrees", "Strict/Degrees", List(InstructionEntry), false), List(MethodEntry)), TypeEntry("Strict/Degrees", List(MemberEntry) + MemberEntry("number", "Strict/Number", List(InstructionEntry), false), List(MethodEntry))), ("Strict/Angle:Floor", "Strict/Degrees:Floor"))
 constant Cycled = LinkRound(Linker.Sample, Chained.entries.Slice(0, 2) + TypeEntry("Strict/Degrees", List(MemberEntry) + MemberEntry("angle", "Strict/Angle", List(InstructionEntry), false), List(MethodEntry)), Chained.signatures)
+constant Point = TypeEntry("Strict/Point", (MemberEntry("x", "Strict/Number", List(InstructionEntry), false), MemberEntry("y", "Strict/Number", List(InstructionEntry), false)), List(MethodEntry))
+constant Texting = LinkRound(Linker.Sample, (TypeEntry(Linker.Go, methods = MethodEntry(Linker.Go.methods.First, instructions = InstructionEntry.Invoke(0, ("Strict/Point", "to", "Strict/Text"), List(Number), -1))), Point), List(Text))
 constant Writing = LinkRound(Linker.Sample, List(TypeEntry) + TypeEntry(Linker.Go, methods = MethodEntry(Linker.Go.methods.First, instructions = InstructionEntry.Invoke(0, ("Strict/File", "Write", "None"), List(Number), -1))), List(Text))
 Entries(signed Texts) Slow(List(TypeEntry))
 	Single.Entries(List(Text) + "Strict/Logger:").First.Name is "Strict/Logger"
@@ -75,6 +77,7 @@ Checked List(TypeEntry)
 	entries
 Unresolved Texts
 	Writing.Unresolved.Length is 0
+	Texting.Unresolved.Length is 0
 	mutable positions = Dictionary(Text, Number)
 	for TypeNames
 		positions(value) = index
@@ -85,7 +88,7 @@ Missing(target Text, seen Texts, positions Dictionary(Text, Number)) Boolean
 	let type = target.Substring(0, target.LastIndexOf("."))
 	let method = target.Substring(type.Length + 1, target.Length - type.Length - 1)
 	let hosted = TypeEntry.ShortName(type) + "." + method is in Hosted.Methods
-	if (method is in ("from", "in", "Index")) or hosted or linker.IsNative(type, method)
+	if (method is in ("from", "in", "Index", "to", "to Text", "to Type")) or hosted or linker.IsNative(type, method)
 		return false
 	if (type is not in positions) or (target is in seen)
 		return true
