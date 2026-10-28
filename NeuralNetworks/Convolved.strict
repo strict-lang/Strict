@@ -10,7 +10,7 @@ constant Doubling = Convolved(Layer.Weights(480), Layer.Weights(64), Layer.Weigh
 Summed Slow(Numbers)
 	Convolved(Square, (1, 0), Box, (2, 2, 1, 1, 0, 1)).Summed is (10, 10, 10, 10)
 	Convolved(Square, (1, 0), (0, 1, 0, 0, 0, 0, 0, 0, 0), (2, 2, 1, 1, 0, 1)).Summed is (0, 0, 1, 2)
-	Convolved(Square, (2, 1), (0, 0, 0, 0, 1, 0, 0, 0, 0), (2, 2, 1, 1, 1, 1)).Summed(1).IsNearlyEqual(4.966533)
+	Convolved(Square, (2, 1), (0, 0, 0, 0, 1, 0, 0, 0, 0), (2, 2, 1, 1, 1, 1)).Summed(1).IsNearlyEqual(4.96653575)
 	Convolved((1, 2, 3, 4), (1, 1, 0, 0), Box + Box, (1, 2, 2, 1, 0, 1)).Summed is (10, 10)
 	Convolved(Square, (1, 0), Center, (4, 4, 1, 1, 0, 2)).Summed(6) is 2
 	Large.Summed(599).IsNearlyEqual(Large.Tapped(14, 39), 0.0001)

@@ -73,7 +73,7 @@ Interleaved(cache Numbers, count Number) Numbers
 	for cache.Length * count
 		cache((index / (count * stride)).Floor * stride + index % stride)
 Rotated(input Numbers, start Number, count Number, weights Numbers, rotation Numbers) Numbers
-	Tiny.Rotated((3, 4, 0, 1), 0, 4, (1, 2), (1, 1, -1, 1)).First.IsNearlyEqual(-1.414214)
+	Tiny.Rotated((3, 4, 0, 1), 0, 4, (1, 2), (1, 1, -1, 1)).First.IsNearlyEqual(-1.41421351)
 	let size = weights.Length
 	let scales = HeadScales(input, start, count, size, rotation.Length)
 	for count
@@ -86,7 +86,7 @@ Rotated(input Numbers, start Number, count Number, weights Numbers, rotation Num
 		let other = input(first + partner) * weights(partner) * rotation((token * 2 + 1) * size + within)
 		(own + other) * scales(head)
 HeadScales(input Numbers, start Number, count Number, size Number, rotations Number) Numbers
-	Tiny.HeadScales((3, 4, 0, 1), 0, 4, 2, 4)(1).IsNearlyEqual(1.414213)
+	Tiny.HeadScales((3, 4, 0, 1), 0, 4, 2, 4)(1).IsNearlyEqual(1.41421215)
 	for count / size
 		let token = (index * rotations / count / 2).Floor
 		let first = token * Gap(input, count, size, rotations) + start + index * size
@@ -107,7 +107,7 @@ Normalized(input Numbers, start Number, count Number, weights Numbers) Numbers
 	for count
 		part(index) * weights(index % size) * scales((index / size).Floor)
 Scales(input Numbers, size Number, epsilon Number) Numbers
-	Tiny.Scales((3, 4, 0, 1), 2, Epsilon)(1).IsNearlyEqual(1.414213)
+	Tiny.Scales((3, 4, 0, 1), 2, Epsilon)(1).IsNearlyEqual(1.41421215)
 	for input.Length / size
 		Normalization.Scale(Normalization.Squared(input, index * size, size), size, epsilon)
 Output(input Numbers, sequences Number) Numbers

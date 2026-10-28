@@ -28,7 +28,7 @@ Started(embedding Numbers, tokens = 1) Numbers
 	for embedding.Length * Count
 		embedding((index / width / Count).Floor * width + index % width)
 Normalized(streams Numbers) Numbers
-	Tiny.Normalized(Streams)(1).IsNearlyEqual(2.529821)
+	Tiny.Normalized(Streams)(1).IsNearlyEqual(2.52982162)
 	Tiny.Normalized(Streams)(6).IsNearlyEqual(1.414213)
 	Tiny.Normalized(Streams + Streams)(14).IsNearlyEqual(1.414213)
 	let width = norm.Length / Count
@@ -36,9 +36,9 @@ Normalized(streams Numbers) Numbers
 	for streams
 		value * norm(index % norm.Length) * scales((index / width).Floor)
 Mixed(streams Numbers) Numbers
-	Tiny.Mixed(Streams).First.IsNearlyEqual(0.515501)
-	Tiny.Mixed(Streams).Last.IsNearlyEqual(0.659311)
-	Tiny.Mixed(Streams + Streams)(3).IsNearlyEqual(0.659311)
+	Tiny.Mixed(Streams).First.IsNearlyEqual(0.515501359)
+	Tiny.Mixed(Streams).Last.IsNearlyEqual(0.659311495)
+	Tiny.Mixed(Streams + Streams)(3).IsNearlyEqual(0.659311495)
 	let normalized = Normalized(streams)
 	let gates = Batch(up.weights, up.biases).Sums(Squashed(Batch(down.weights, down.biases).Sums(normalized)))
 	for streams.Length / Count
@@ -55,7 +55,7 @@ Gated(normalized Numbers, gates Numbers, position Number, width Number) Number
 		sum = sum + normalized(first + index * width) * Activation.Sigmoid.Output(gates(first + index * width))
 	sum / Count
 Injected(streams Numbers) Numbers
-	Tiny.Injected(Streams)(1).IsNearlyEqual(2.529821)
+	Tiny.Injected(Streams)(1).IsNearlyEqual(2.52982162)
 	Tiny.Injected(Streams)(2).IsNearlyEqual(1.414212)
 	Tiny.Injected(Streams + Streams)(6).IsNearlyEqual(1.414212)
 	Batch(inject.weights, inject.biases).Sums(Normalized(streams))

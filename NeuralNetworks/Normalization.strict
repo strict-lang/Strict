@@ -10,10 +10,10 @@ Normed Numbers
 	for centered
 		value * scales((index / gain.Length).Floor)
 Scales(centered Numbers) Numbers
-	Sample.Scales((1, -1, 0, 2, -2, 0)).Last.IsNearlyEqual(0.612372)
+	Sample.Scales((1, -1, 0, 2, -2, 0)).Last.IsNearlyEqual(0.612371288)
 	Qwen3Block.Scales(centered, gain.Length, 0.00001)
 Scale(sum Number, size Number, epsilon Number) Number
-	Sample.Scale(1, 2, 0.000001).IsNearlyEqual(1.414213)
+	Sample.Scale(1, 2, 0.000001).IsNearlyEqual(1.41421215)
 	1 / (sum / size + epsilon).SquareRoot
 Squared(numbers Numbers, first Number, size Number) Number
 	Sample.Squared((3, 4, 0, 1), 2, 2) is 1

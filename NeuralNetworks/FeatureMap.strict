@@ -23,7 +23,7 @@ Applied(affine Numbers, swish Boolean) FeatureMap
 	FeatureMap((1, 2), 1, 2, (0, 0)).Applied((2, 1, 0.5, 0), false) is FeatureMap((2.5, 2), 1, 2, (0, 0))
 	FeatureMap(Activations(affine, swish), width, channels, Layer.Zeros(channels))
 Activations(affine Numbers, swish Boolean) Numbers
-	Square.Activations((2, 1), true)(1).IsNearlyEqual(4.9665330)
+	Square.Activations((2, 1), true)(1).IsNearlyEqual(4.96653575)
 	for values
 		Activated(value, affine(index % channels), affine(channels + index % channels), swish)
 Completed Numbers

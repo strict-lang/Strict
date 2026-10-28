@@ -15,8 +15,8 @@ constant Rates = (-0.1, -0.5, 0.5, 0.25, -0.2, -0.05, 0.75, 1, -1, -0.3, 0.3, 0.
 constant Probe = DeltaChunks(2, 1, 2, 2, 3, Keys, Rates, (0.1, 0.2, 0.3, 0.4, -0.2, 0, 0.5, 1))
 Read DeltaChunks
 	Probe.Read.reads(9).IsNearlyEqual(-0.076604)
-	Probe.Read.memory(7).IsNearlyEqual(0.71862)
-	DeltaChunks(Probe, chunk = 4).Read.reads(4).IsNearlyEqual(0.383253)
+	Probe.Read.memory(7).IsNearlyEqual(0.718619566)
+	DeltaChunks(Probe, chunk = 4).Read.reads(4).IsNearlyEqual(0.38325276)
 	let prepared = Prepared
 	mutable state = memory
 	mutable outputs = List(Number)
@@ -55,7 +55,7 @@ Logs Numbers
 			sum = sum + decayed(2 * (start + index) * heads + head)
 		sum
 Decay(token Number, other Number, head Number) Number
-	Probe.Prepared.Decay(1, 0, 0).IsNearlyEqual(0.818731)
+	Probe.Prepared.Decay(1, 0, 0).IsNearlyEqual(0.818730753)
 	(logs(token * heads + head) - logs(other * heads + head)).Exponential
 Paired(part Number) Numbers
 	Probe.Prepared.Paired(1)(2).IsNearlyEqual(0.589486)
@@ -92,8 +92,8 @@ Multiplied(left Numbers, right Numbers, kept Number) Numbers
 			sum = sum + left(row * chunk + index) * right((base + index) * chunk + column)
 		sum
 Corrected(inverse Numbers) Numbers
-	Probe.Prepared.corrected(14).IsNearlyEqual(0.284474)
-	Probe.Prepared.corrected(36).IsNearlyEqual(0.491239)
+	Probe.Prepared.corrected(14).IsNearlyEqual(0.284474197)
+	Probe.Prepared.corrected(36).IsNearlyEqual(0.491238452)
 	let values = heads * tokens * size
 	for 4 * values
 		let row = (index / size).Floor % (heads * tokens)
@@ -126,7 +126,7 @@ Fresh(state Numbers, first Number) Numbers
 		let row = (index / (length * size)).Floor * tokens + first + ((index / size).Floor % length)
 		corrected((2 * heads * tokens + row) * size + (index % size)) - value
 Outputs(fresh Numbers, state Numbers, first Number) Numbers
-	Probe.Prepared.Outputs(Probe.Prepared.Fresh(Probe.memory, 0), Probe.memory, 0)(5).IsNearlyEqual(-0.269071)
+	Probe.Prepared.Outputs(Probe.Prepared.Fresh(Probe.memory, 0), Probe.memory, 0)(5).IsNearlyEqual(-0.26907064)
 	let length = Length(first)
 	let stride = tokens * size
 	let shape = (heads, length, size, size)
