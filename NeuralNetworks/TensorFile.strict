@@ -2,6 +2,6 @@ Header(path Text) Text
 Floats(path Text, entry Text, bits Number) Numbers
 Rows(path Text, entry Text, bits Number) List(Numbers)
 Columns(path Text, entry Text, bits Number) List(Numbers)
-Quantized(path Text, entry Text, scales Text) List(Numbers)
+Quantized(path Text, entry Text, scales Text, tokenBits Number) List(Numbers)
 Tuned(path Text, entry Text, scales Text, factors Numbers) List(Numbers)
 Written(path Text, entry Text, numbers Numbers) Number

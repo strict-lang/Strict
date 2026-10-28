@@ -44,11 +44,12 @@ Rows(name Text) List(Numbers)
 	Safetensors("NeuralNetworks/tinyhalves.safetensors", 16).Rows("a") is ((1, 2, 3), (4, 5, 6))
 	Safetensors("NeuralNetworks/tiny.safetensors", 8).Rows("a").First.First.IsNearlyEqual(0.992126)
 	TensorFile.Rows(path, Entry(name), bits)
-Quantized(name Text) List(Numbers)
+Quantized(name Text, tokenBits = 8) List(Numbers)
 	Bytes.Quantized("a").Length is 4
 	Bytes.Quantized("a").First(1) is -63
 	Bytes.Quantized("a")(2).First is 2
-	TensorFile.Quantized(path, Entry(name + ".weight"), Entry(name + ".weight_scale"))
+	Bytes.Quantized("a", 32) is Bytes.Quantized("a")
+	TensorFile.Quantized(path, Entry(name + ".weight"), Entry(name + ".weight_scale"), tokenBits)
 Tuned(name Text, downs Numbers, ups Numbers, scales Numbers) Slow(List(Numbers))
 	Bytes.Tuned("a", List(Number), List(Number), List(Number)) is Bytes.Quantized("a")
 	Bytes.Tuned("a", Second, (1, 0, 0, 0), List(Number) + 0.5)(2) is Bytes.Quantized("a")(2)

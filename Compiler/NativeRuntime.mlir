@@ -592,8 +592,19 @@
     %bitsSlot = llvm.getelementptr %packed[1] : (!llvm.ptr) -> !llvm.ptr, f64
     %bits = llvm.load %bitsSlot : !llvm.ptr -> f64
     %elements = arith.fptosi %count : f64 to i64
-    %wholeBits = arith.fptosi %bits : f64 to i64
+    %markedBits = arith.fptosi %bits : f64 to i64
+    %formatMask = arith.constant 255 : i64
+    %wholeBits = arith.andi %markedBits, %formatMask : i64
     return %elements, %wholeBits : i64, i64
+  }
+  // 1 when a foreign packed row keeps its tokens (bits plus STRICT_KEPT_TOKENS, strict.h), its view says so after
+  func.func private @strict_packed_kept(%packed: !llvm.ptr) -> i64 {
+    %bitsSlot = llvm.getelementptr %packed[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %bits = llvm.load %bitsSlot : !llvm.ptr -> f64
+    %markedBits = arith.fptosi %bits : f64 to i64
+    %eight = arith.constant 8 : i64
+    %kept = arith.shrui %markedBits, %eight : i64
+    return %kept : i64
   }
   // the bytes of the numbers of a foreign packed list rounded up to 16
   func.func private @strict_packed_stride(%packed: !llvm.ptr) -> i64 {
@@ -624,7 +635,7 @@
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %eight = arith.constant 8 : i64
-    %viewBytes = arith.constant 56 : i64
+    %viewBytes = arith.constant 64 : i64
     %tagShift = arith.constant 48 : i64
     %packedTag = arith.constant 32761 : i64
     %hasRows = arith.cmpi sgt, %count, %none : i64
@@ -714,7 +725,7 @@
   // can't run meanwhile, strict_packed_rows marks the written items afterwards
   func.func private @strict_packed_placing(%context: !llvm.ptr, %start: i64, %end: i64) -> f64 {
     %one = arith.constant 1 : i64
-    %viewBytes = arith.constant 56 : i64
+    %viewBytes = arith.constant 64 : i64
     %zero = arith.constant 0.0 : f64
     %flat = llvm.load %context : !llvm.ptr -> !llvm.ptr
     %blockSlot = llvm.getelementptr %context[1] : (!llvm.ptr) -> !llvm.ptr, !llvm.ptr
@@ -743,7 +754,8 @@
     %viewStart = arith.addi %total, %viewOffset : i64
     %view = llvm.getelementptr %block[%viewStart] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %dataBits = func.call @strict_bits(%data) : (!llvm.ptr) -> f64
-    %row = func.call @strict_packed_placed(%view, %shape#0, %shape#1, %dataBits, %zero) : (!llvm.ptr, i64, i64, f64, f64) -> f64
+    %kept = func.call @strict_packed_kept(%source) : (!llvm.ptr) -> i64
+    %row = func.call @strict_packed_placed(%view, %shape#0, %shape#1, %dataBits, %zero, %kept) : (!llvm.ptr, i64, i64, f64, f64, i64) -> f64
     %target = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     llvm.store %row, %target : f64, !llvm.ptr
     %next = arith.addi %index, %one : i64
@@ -762,15 +774,16 @@
   // a packed list keeps its data in holder[3], a list computed on the GPU its device address in holder[4] (writes of
   // growable lists), its data is 0 until the CPU reads it (strict_list_data downloads it then)
   func.func private @strict_packed_view(%elements: i64, %wholeBits: i64, %dataBits: f64, %device: f64) -> f64 {
-    %blockSize = arith.constant 56 : i64
+    %blockSize = arith.constant 64 : i64
     %view = func.call @strict_alloc(%blockSize) : (i64) -> !llvm.ptr
-    %result = func.call @strict_packed_placed(%view, %elements, %wholeBits, %dataBits, %device) : (!llvm.ptr, i64, i64, f64, f64) -> f64
+    %notKept = arith.constant 0 : i64
+    %result = func.call @strict_packed_placed(%view, %elements, %wholeBits, %dataBits, %device, %notKept) : (!llvm.ptr, i64, i64, f64, f64, i64) -> f64
     %dataSlot = llvm.getelementptr %view[5] : (!llvm.ptr) -> !llvm.ptr, f64
     func.call @strict_rc_written(%dataSlot) : (!llvm.ptr) -> ()
     return %result : f64
   }
-  // the 56 bytes of a packed list view at view, its holder 16 bytes in
-  func.func private @strict_packed_placed(%view: !llvm.ptr, %elements: i64, %wholeBits: i64, %dataBits: f64, %device: f64) -> f64 {
+  // the 64 bytes of a packed list view at view, its holder 16 bytes in, word 7 says whether it keeps its tokens
+  func.func private @strict_packed_placed(%view: !llvm.ptr, %elements: i64, %wholeBits: i64, %dataBits: f64, %device: f64, %kept: i64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %count = arith.sitofp %elements : i64 to f64
     %bits = arith.sitofp %wholeBits : i64 to f64
@@ -789,6 +802,8 @@
     %holderBits = func.call @strict_bits(%holder) : (!llvm.ptr) -> f64
     %viewHolder = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %holderBits, %viewHolder : f64, !llvm.ptr
+    %keptSlot = llvm.getelementptr %view[7] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %kept, %keptSlot : i64, !llvm.ptr
     %result = func.call @strict_bits(%view) : (!llvm.ptr) -> f64
     return %result : f64
   }
@@ -6552,6 +6567,20 @@
     %holder = func.call @strict_list_holder(%list) : (f64) -> !llvm.ptr
     %bits = func.call @strict_holder_packed(%holder) : (!llvm.ptr) -> i64
     return %bits : i64
+  }
+  // 1 when list is a packed row whose dot products keep their tokens (word 7 of its view, strict_packed_placed)
+  func.func private @strict_list_kept(%list: f64) -> i64 {
+    %none = arith.constant 0 : i64
+    %packed = func.call @strict_list_packed(%list) : (f64) -> i64
+    %isPacked = arith.cmpi ne, %packed, %none : i64
+    cf.cond_br %isPacked, ^view, ^done(%none : i64)
+  ^view:
+    %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
+    %keptSlot = llvm.getelementptr %view[7] : (!llvm.ptr) -> !llvm.ptr, i64
+    %kept = llvm.load %keptSlot : !llvm.ptr -> i64
+    cf.br ^done(%kept : i64)
+  ^done(%result: i64):
+    return %result : i64
   }
   // the holder of a list once, a fast loop reads the packed data of the holder it chose its width by, another thread
   // can unpack the list meanwhile (strict_list_restore gives the list a new holder, the old one stays until it ends)
@@ -14368,7 +14397,9 @@
   llvm.mlir.global internal @strict_gpu_scratch(dense<0> : tensor<3xi64>) : !llvm.array<3 x i64>
   llvm.mlir.global internal constant @strict_gpu_dp4a_switch("STRICT_DP4A\00") : !llvm.array<12 x i8>
   llvm.mlir.global internal @strict_gpu_dp4a_state(0 : i64) : i64
-  // STRICT_DP4A=0 keeps the 32 bit numbers of dot products with rows
+  // 1 while strict_gpu_tokens runs the dot products of rows that keep their tokens (strict_gpu_rows_kept)
+  llvm.mlir.global internal @strict_gpu_tokens_kept(0 : i64) : i64
+  // STRICT_DP4A=0 keeps the 32 bit numbers of dot products with rows, rows that keep their tokens do so on their own
   func.func private @strict_gpu_dp4a() -> i1 {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -14393,7 +14424,11 @@
     llvm.store %decided, %stateSlot : i64, !llvm.ptr
     cf.br ^known(%decided : i64)
   ^known(%known: i64):
-    %enabled = arith.cmpi eq, %known, %one : i64
+    %switched = arith.cmpi eq, %known, %one : i64
+    %keptSlot = llvm.mlir.addressof @strict_gpu_tokens_kept : !llvm.ptr
+    %kept = llvm.load %keptSlot : !llvm.ptr -> i64
+    %quantizing = arith.cmpi eq, %kept, %none : i64
+    %enabled = arith.andi %switched, %quantizing : i1
     return %enabled : i1
   }
   // launches strict_device_quantize, its _tokens or strict_device_hadamard_tokens, all take the source, its count and
@@ -16024,6 +16059,29 @@
   // biases is 0.0, the rows of token t start at bases(t / 64) unless bases is 0.0 (`Batch.Grouped`), 0.0 when the GPU
   // can not
   func.func private @strict_gpu_tokens(%ptx: !llvm.ptr, %count: i64, %rows: f64, %input: f64, %width: f64, %rowCount: f64, %bases: f64, %biases: f64, %gated: f64) -> f64 {
+    %keptSlot = llvm.mlir.addressof @strict_gpu_tokens_kept : !llvm.ptr
+    %before = llvm.load %keptSlot : !llvm.ptr -> i64
+    %kept = func.call @strict_gpu_rows_kept(%rows) : (f64) -> i64
+    llvm.store %kept, %keptSlot : i64, !llvm.ptr
+    %result = func.call @strict_gpu_tokens_run(%ptx, %count, %rows, %input, %width, %rowCount, %bases, %biases, %gated) : (!llvm.ptr, i64, f64, f64, f64, f64, f64, f64, f64) -> f64
+    llvm.store %before, %keptSlot : i64, !llvm.ptr
+    return %result : f64
+  }
+  // 1 when the first of rows keeps its tokens (packed rows of Safetensors.Quantized(name, tokenBits) above 8 bits)
+  func.func private @strict_gpu_rows_kept(%rows: f64) -> i64 {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %length = func.call @strict_list_length(%rows) : (f64) -> f64
+    %hasRows = arith.cmpf ogt, %length, %zero : f64
+    cf.cond_br %hasRows, ^first, ^done(%none : i64)
+  ^first:
+    %first = func.call @strict_list_get(%rows, %zero) : (f64, f64) -> f64
+    %kept = func.call @strict_list_kept(%first) : (f64) -> i64
+    cf.br ^done(%kept : i64)
+  ^done(%result: i64):
+    return %result : i64
+  }
+  func.func private @strict_gpu_tokens_run(%ptx: !llvm.ptr, %count: i64, %rows: f64, %input: f64, %width: f64, %rowCount: f64, %bases: f64, %biases: f64, %gated: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
