@@ -40,8 +40,8 @@ IsReference Boolean
 	let represented = MlirLayout(function).Represented(MlirKinds(function).WrittenKind(position))
 	(represented is not "Number") and (represented is not "Boolean")
 Wrapped(emitted Texts) Texts
-	Built.Wrapped(List(Text)).Last is "    llvm.store volatile %t1h, %handed1 : f64, !llvm.ptr"
-	Area.Wrapped(List(Text)).First is "    %t2h1 = llvm.load volatile %handed1 : !llvm.ptr -> f64"
+	Built.Wrapped(List(Text)).Last is "    llvm.store volatile %t1hand, %handed1 : f64, !llvm.ptr"
+	Area.Wrapped(List(Text)).First is "    %t2hand1 = llvm.load volatile %handed1 : !llvm.ptr -> f64"
 	Area.Wrapped(List(Text)).Last is "    llvm.store volatile %zero, %handed1 : f64, !llvm.ptr"
 	mutable reloads = List(Mutable(Text))
 	mutable clears = List(Mutable(Text))
@@ -59,8 +59,8 @@ Writers Numbers
 			writers.Add(writer)
 	writers
 Reloaded(writer Number) Texts
-	Area.Reloaded(1).Last is "    llvm.store %t2h1, %r1 : f64, !llvm.ptr"
-	let reloaded = "%t" + position + "h" + writer
+	Area.Reloaded(1).Last is "    llvm.store %t2hand1, %r1 : f64, !llvm.ptr"
+	let reloaded = "%t" + position + "hand" + writer
 	let loaded = "    " + reloaded + " = llvm.load volatile %handed" + writer + " : !llvm.ptr -> f64"
 	(loaded, function.Store(reloaded, "%r" + function.method.instructions(writer).payload(0)))
 Slots Texts
@@ -71,9 +71,9 @@ Slots Texts
 			lines = lines + function.Slot("%handed" + index)
 	lines
 Kept Texts
-	Built.Kept.First is "    %t1h = llvm.load %r1 : !llvm.ptr -> f64"
+	Built.Kept.First is "    %t1hand = llvm.load %r1 : !llvm.ptr -> f64"
 	if Reader < 0
 		return List(Text)
-	let kept = "%t" + position + "h"
+	let kept = "%t" + position + "hand"
 	let register = "%r" + function.method.instructions(position).payload(0)
 	(function.Load(kept, register), "    llvm.store volatile " + kept + ", %handed" + position + Stored)

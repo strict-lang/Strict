@@ -4,7 +4,10 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 ## Bugs
 - Ternary Bonsai 27B at a simulated 10 GB stalled once more (first run after a cold build), 12 later runs did not: [improvements-models.md](improvements-models.md).
 - `strict_gpu_tiled` and `strict_gpu_eights` read a tile's rows in its first row's format (a row unpacked elsewhere gives wrong numbers); checking every row hangs `strict_device_blocks` on mixed rows with 8 bit input.
-- DeltaEngine: the WebWars (`Updated`, line 55) and TinyBat (`Drawn`, line 64) VM unit tests take over 100 ms.
+- VM unit tests over 100 ms also alone: `FlashLayer.Cached` (line 51), `Gpt2Pass.Attending` (line 65) and `Examples/Countdown.Counted` (30000 recursive calls).
+- The VM got slower on `RoundTrip.Body`'s Packed test (78 ms on 2026-10-27 evening, 102 ms on 10-28, now Slow); not the constant getters (inlining them again: 120-128 ms).
+- Native test builds of `Compiler/DeviceBuild` and `Compiler/MlirDevice` failed once with "could not write ...test.ptx" while 8 builds ran in parallel (not reproduced alone or as a pair; PtxCache.Saved).
+- `NeuralNetworks/BFloat16` native tests: the GPU kernel module compares texts (`strict_text_equal`) on f32 values, mlir-opt rejects it (also at 575e1743).
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).
