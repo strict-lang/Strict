@@ -3144,9 +3144,8 @@
   }
   // the integer sums of a warp times the scales of their row and token into the result, rows and tokens past the last
   // are left out: the scales and biases of the 8 rows and 16 tokens of a lane come from strict_device_whole_scales,
-  // then one of the unrolled stores of strict_device_eights_stores runs, the one for the format and for a tile inside
-  // the result without checks
-  func.func private @strict_device_eights_scaled(%sums: vector<128xi32>, %result: !llvm.ptr, %wide: i1, %brain: i1, %rowFirst: i64, %rowLast: i64, %tokenFirst: i64, %tokenLast: i64, %rows: i64, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64, %warp: i32, %warpRow: i32, %warpToken: i32, %lane: i32, %half: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
+  // strict_device_eights_staged writes them
+  func.func private @strict_device_eights_scaled(%sums: vector<128xi32>, %result: !llvm.ptr, %wide: i1, %brain: i1, %rowFirst: i64, %tokenFirst: i64, %tokenLast: i64, %rows: i64, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64, %warp: i32, %warpRow: i32, %warpToken: i32, %lane: i32, %half: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -3207,64 +3206,26 @@
     llvm.br ^tokenScale(%tokenIndexNext, %withTokenScale : i32, vector<16xf32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
   ^writes:
     %true = arith.constant true
-    %false = arith.constant false
-    %tileRowsLeft = arith.constant 255 : i64
-    %tileTokensLeft = arith.constant 127 : i64
-    %tileRowLast = arith.addi %rowFirst, %tileRowsLeft : i64
-    %tileTokenLast = arith.addi %tokenFirst, %tileTokensLeft : i64
-    %rowsInside = arith.cmpi sle, %tileRowLast, %rowLast : i64
-    %tokensInside = arith.cmpi sle, %tileTokenLast, %tokenLast : i64
-    %inside = arith.andi %rowsInside, %tokensInside : i1
-    %three = arith.constant 3 : i64
     %fifteen = arith.constant 15 : i64
-    %rowsRest = arith.andi %rows, %three : i64
-    %rowsAligned = arith.cmpi eq, %rowsRest, %none : i64
     %resultBits = llvm.ptrtoint %result : !llvm.ptr to i64
     %resultRest = arith.andi %resultBits, %fifteen : i64
     %resultAligned = arith.cmpi eq, %resultRest, %none : i64
     %narrow = arith.xori %wide, %true : i1
-    %narrowRows = arith.andi %narrow, %rowsInside : i1
-    %bothAligned = arith.andi %rowsAligned, %resultAligned : i1
-    %stageable = arith.andi %narrowRows, %bothAligned : i1
-    %staging = arith.andi %stageable, %rowWise : i1
+    %narrowRows = arith.andi %narrow, %rowWise : i1
+    %vectors = arith.andi %narrowRows, %resultAligned : i1
+    %rowBiased = arith.andi %hasBiases, %rowWise : i1
+    %elementBiases = arith.select %rowWise, %none, %biasesCount : i64
     %gated = arith.cmpi ne, %half, %none : i64
-    %stagedOrGated = arith.ori %staging, %gated : i1
-    cf.cond_br %stagedOrGated, ^stagedWrites, ^unstaged
-  ^stagedWrites:
-    func.call @strict_device_eights_staged(%sums, %rowScales, %biasValues, %tokenScales, %hasBiases, %result, %brain, %rows, %rowFirst, %tokenFirst, %tokenLast, %warp, %warpRow, %warpToken, %lane, %gated) : (vector<128xi32>, vector<8xf32>, vector<8xf32>, vector<16xf32>, i1, !llvm.ptr, i1, i64, i64, i64, i64, i32, i32, i32, i32, i1) -> ()
-    cf.br ^done
-  ^unstaged:
-    cf.cond_br %rowWise, ^rowWiseWrites, ^anyWrites
-  ^rowWiseWrites:
-    cf.cond_br %inside, ^insideWrites, ^edgeWrites
-  ^insideWrites:
-    cf.cond_br %wide, ^insideWide, ^insideSingle
-  ^insideWide:
-    func.call @strict_device_eights_stores(%sums, %rowScales, %biasValues, %tokenScales, %hasBiases, %true, %false, %result, %true, %brain, %rowFirst, %rowLast, %tokenFirst, %tokenLast, %rows, %biases, %biasesCount, %biasesBits, %laneRow, %laneToken) : (vector<128xi32>, vector<8xf32>, vector<8xf32>, vector<16xf32>, i1, i1, i1, !llvm.ptr, i1, i1, i64, i64, i64, i64, i64, !llvm.ptr, i64, i64, i32, i32) -> ()
-    cf.br ^done
-  ^insideSingle:
-    func.call @strict_device_eights_stores(%sums, %rowScales, %biasValues, %tokenScales, %hasBiases, %true, %false, %result, %false, %brain, %rowFirst, %rowLast, %tokenFirst, %tokenLast, %rows, %biases, %biasesCount, %biasesBits, %laneRow, %laneToken) : (vector<128xi32>, vector<8xf32>, vector<8xf32>, vector<16xf32>, i1, i1, i1, !llvm.ptr, i1, i1, i64, i64, i64, i64, i64, !llvm.ptr, i64, i64, i32, i32) -> ()
-    cf.br ^done
-  ^edgeWrites:
-    cf.cond_br %wide, ^edgeWide, ^edgeSingle
-  ^edgeWide:
-    func.call @strict_device_eights_stores(%sums, %rowScales, %biasValues, %tokenScales, %hasBiases, %true, %true, %result, %true, %brain, %rowFirst, %rowLast, %tokenFirst, %tokenLast, %rows, %biases, %biasesCount, %biasesBits, %laneRow, %laneToken) : (vector<128xi32>, vector<8xf32>, vector<8xf32>, vector<16xf32>, i1, i1, i1, !llvm.ptr, i1, i1, i64, i64, i64, i64, i64, !llvm.ptr, i64, i64, i32, i32) -> ()
-    cf.br ^done
-  ^edgeSingle:
-    func.call @strict_device_eights_stores(%sums, %rowScales, %biasValues, %tokenScales, %hasBiases, %true, %true, %result, %false, %brain, %rowFirst, %rowLast, %tokenFirst, %tokenLast, %rows, %biases, %biasesCount, %biasesBits, %laneRow, %laneToken) : (vector<128xi32>, vector<8xf32>, vector<8xf32>, vector<16xf32>, i1, i1, i1, !llvm.ptr, i1, i1, i64, i64, i64, i64, i64, !llvm.ptr, i64, i64, i32, i32) -> ()
-    cf.br ^done
-  ^anyWrites:
-    func.call @strict_device_eights_stores(%sums, %rowScales, %biasValues, %tokenScales, %hasBiases, %false, %true, %result, %wide, %brain, %rowFirst, %rowLast, %tokenFirst, %tokenLast, %rows, %biases, %biasesCount, %biasesBits, %laneRow, %laneToken) : (vector<128xi32>, vector<8xf32>, vector<8xf32>, vector<16xf32>, i1, i1, i1, !llvm.ptr, i1, i1, i64, i64, i64, i64, i64, !llvm.ptr, i64, i64, i32, i32) -> ()
-    cf.br ^done
-  ^done:
+    func.call @strict_device_eights_staged(%sums, %rowScales, %biasValues, %tokenScales, %rowBiased, %vectors, %result, %wide, %brain, %rows, %rowFirst, %tokenFirst, %tokenLast, %warp, %warpRow, %warpToken, %lane, %gated, %biases, %elementBiases, %biasesBits) : (vector<128xi32>, vector<8xf32>, vector<8xf32>, vector<16xf32>, i1, i1, !llvm.ptr, i1, i1, i64, i64, i64, i64, i32, i32, i32, i32, i1, !llvm.ptr, i64, i64) -> ()
     return
   }
-  // the scaled sums of a warp (as floats plus the bias of their row) written through 9216 bytes of shared memory per
-  // warp in two rounds of 32 rows: the numbers of a round lie at token * 36 + row (36 apart so the lanes of a store use
-  // distinct banks), then 8 lanes write the 128 bytes of the 32 rows of a token with 16 byte stores, tokens past the
-  // last are left out (the rows of the tile all are inside the result, rows a multiple of 4); gated, one round writes the
-  // SiLU of each gate row (the first 32 of a warp) times its up row (32 further), rows past the last are left out
-  func.func private @strict_device_eights_staged(%sums: vector<128xi32>, %rowScales: vector<8xf32>, %biasValues: vector<8xf32>, %tokenScales: vector<16xf32>, %hasBiases: i1, %result: !llvm.ptr, %brain: i1, %rows: i64, %rowFirst: i64, %tokenFirst: i64, %tokenLast: i64, %warp: i32, %warpRow: i32, %warpToken: i32, %lane: i32, %gated: i1) attributes {llvm.passthrough = ["alwaysinline"]} {
+  // the scaled sums of a warp (as floats plus the bias of their row when rowBiased) written through 9216 bytes of
+  // shared memory per warp in two rounds of 32 rows: the numbers of a round lie at token * 36 + row (36 apart so the
+  // lanes of a store use distinct banks), then 8 lanes write the 4 rows of a token each, with one 16 byte store when
+  // vectors (32 bit floats or bfloat16 into an aligned result) and 4 rows fit, otherwise number by number
+  // (strict_device_tokens_store: doubles when wide, elementBiases of their own), rows and tokens past the last are left
+  // out; gated, one round writes the SiLU of each gate row (the first 32 of a warp) times its up row (32 further)
+  func.func private @strict_device_eights_staged(%sums: vector<128xi32>, %rowScales: vector<8xf32>, %biasValues: vector<8xf32>, %tokenScales: vector<16xf32>, %rowBiased: i1, %vectors: i1, %result: !llvm.ptr, %wide: i1, %brain: i1, %rows: i64, %rowFirst: i64, %tokenFirst: i64, %tokenLast: i64, %warp: i32, %warpRow: i32, %warpToken: i32, %lane: i32, %gated: i1, %biases: !llvm.ptr, %elementBiases: i64, %biasesBits: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -3329,7 +3290,7 @@
     %value = arith.mulf %integerFloat, %bothScales : f32
     %slotBias = llvm.extractelement %biasValues[%rowScaleIndex : i32] : vector<8xf32>
     %biasedValue = arith.addf %value, %slotBias : f32
-    %final = arith.select %hasBiases, %biasedValue, %value : f32
+    %final = arith.select %rowBiased, %biasedValue, %value : f32
     %upSlot = arith.addi %slot, %c64 : i32
     %upInteger = llvm.extractelement %sums[%upSlot : i32] : vector<128xi32>
     %upFloat = arith.sitofp %upInteger : i32 to f32
@@ -3381,8 +3342,6 @@
     %tokenUsed = arith.cmpi sle, %token, %tokenLast : i64
     cf.cond_br %tokenUsed, ^store, ^partNext
   ^store:
-    %readSlot = func.call @strict_device_eights_shared(%readSlotAt) : (i32) -> !llvm.ptr<3>
-    %numbers = llvm.load %readSlot {alignment = 16 : i64} : !llvm.ptr<3> -> vector<4xf32>
     %tokenStart = arith.muli %token, %rows : i64
     %resultIndex = arith.addi %tokenStart, %row : i64
     %four64 = arith.constant 4 : i64
@@ -3392,7 +3351,8 @@
     %rowsRest = arith.andi %rows, %three64 : i64
     %zero64 = arith.constant 0 : i64
     %rowsAligned = arith.cmpi eq, %rowsRest, %zero64 : i64
-    %wholeStore = arith.andi %rowsFit, %rowsAligned : i1
+    %rowsWhole = arith.andi %rowsFit, %rowsAligned : i1
+    %wholeStore = arith.andi %rowsWhole, %vectors : i1
     cf.cond_br %wholeStore, ^vectorStore, ^edgeStore(%c0 : i32)
   ^edgeStore(%edgeAt: i32):
     %moreElements = arith.cmpi slt, %edgeAt, %c4 : i32
@@ -3401,22 +3361,21 @@
     %element64 = arith.extui %edgeAt : i32 to i64
     %elementRow = arith.addi %row, %element64 : i64
     %elementInside = arith.cmpi slt, %elementRow, %rows : i64
-    %elementNext = arith.addi %edgeAt, %c1 : i32
-    cf.cond_br %elementInside, ^edgeWrite, ^edgeStore(%elementNext : i32)
+    cf.cond_br %elementInside, ^edgeWrite, ^edgeNext
   ^edgeWrite:
-    %edgeNumber = llvm.extractelement %numbers[%edgeAt : i32] : vector<4xf32>
+    %elementBytes = arith.shli %edgeAt, %c2 : i32
+    %elementSlotAt = arith.addi %readSlotAt, %elementBytes : i32
+    %elementSlot = func.call @strict_device_eights_shared(%elementSlotAt) : (i32) -> !llvm.ptr<3>
+    %edgeNumber = llvm.load %elementSlot : !llvm.ptr<3> -> f32
     %edgeIndex = arith.addi %resultIndex, %element64 : i64
-    cf.cond_br %brain, ^edgeBrain, ^edgeFloat
-  ^edgeBrain:
-    %edgeBrainNumber = arith.truncf %edgeNumber : f32 to bf16
-    %edgeBrainSlot = llvm.getelementptr %result[%edgeIndex] : (!llvm.ptr, i64) -> !llvm.ptr, bf16
-    llvm.store %edgeBrainNumber, %edgeBrainSlot : bf16, !llvm.ptr
-    cf.br ^edgeStore(%elementNext : i32)
-  ^edgeFloat:
-    %edgeFloatSlot = llvm.getelementptr %result[%edgeIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    llvm.store %edgeNumber, %edgeFloatSlot : f32, !llvm.ptr
-    cf.br ^edgeStore(%elementNext : i32)
+    func.call @strict_device_tokens_store(%result, %wide, %brain, %edgeIndex, %edgeNumber, %elementRow, %rows, %biases, %elementBiases, %biasesBits) : (!llvm.ptr, i1, i1, i64, f32, i64, i64, !llvm.ptr, i64, i64) -> ()
+    cf.br ^edgeNext
+  ^edgeNext:
+    %elementNext = arith.addi %edgeAt, %c1 : i32
+    llvm.br ^edgeStore(%elementNext : i32) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<disable = true>>}
   ^vectorStore:
+    %readSlot = func.call @strict_device_eights_shared(%readSlotAt) : (i32) -> !llvm.ptr<3>
+    %numbers = llvm.load %readSlot {alignment = 16 : i64} : !llvm.ptr<3> -> vector<4xf32>
     cf.cond_br %brain, ^brainStore, ^floatStore
   ^brainStore:
     %brains = arith.truncf %numbers : vector<4xf32> to vector<4xbf16>
@@ -3434,76 +3393,6 @@
     func.call @strict_device_barrier() : () -> ()
     %roundFollowing = arith.addi %round, %c1 : i32
     llvm.br ^round(%roundFollowing : i32) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
-  ^done:
-    return
-  }
-  // the 128 stores of strict_device_eights_scaled, called with constant rowWise, guarded and wide so each case is its
-  // own unrolled code: plus the bias of the row when rowWise (strict_device_tokens_store otherwise), guarded leaves out
-  // rows and tokens past the last, wide writes doubles
-  func.func private @strict_device_eights_stores(%sums: vector<128xi32>, %rowScales: vector<8xf32>, %biasValues: vector<8xf32>, %tokenScales: vector<16xf32>, %hasBiases: i1, %rowWise: i1, %guarded: i1, %result: !llvm.ptr, %wide: i1, %brain: i1, %rowFirst: i64, %rowLast: i64, %tokenFirst: i64, %tokenLast: i64, %rows: i64, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64, %laneRow: i32, %laneToken: i32) attributes {llvm.passthrough = ["alwaysinline"]} {
-    %c0 = llvm.mlir.constant(0 : i32) : i32
-    %c1 = llvm.mlir.constant(1 : i32) : i32
-    %c2 = llvm.mlir.constant(2 : i32) : i32
-    %c3 = llvm.mlir.constant(3 : i32) : i32
-    %c4 = llvm.mlir.constant(4 : i32) : i32
-    %c5 = llvm.mlir.constant(5 : i32) : i32
-    %c7 = llvm.mlir.constant(7 : i32) : i32
-    %c128 = llvm.mlir.constant(128 : i32) : i32
-    %true = arith.constant true
-    cf.br ^write(%c0 : i32)
-  ^write(%slot: i32):
-    %moreSlots = arith.cmpi slt, %slot, %c128 : i32
-    cf.cond_br %moreSlots, ^writeBody, ^done
-  ^writeBody:
-    %slotRowTile = arith.shrui %slot, %c5 : i32
-    %slotPair = arith.shrui %slot, %c2 : i32
-    %slotTokenTile = arith.andi %slotPair, %c7 : i32
-    %element = arith.andi %slot, %c3 : i32
-    %lowerHalf = arith.shrui %element, %c1 : i32
-    %oddToken = arith.andi %element, %c1 : i32
-    %rowTileStart = arith.shli %slotRowTile, %c1 : i32
-    %rowScaleIndex = arith.addi %rowTileStart, %lowerHalf : i32
-    %tokenTileStart = arith.shli %slotTokenTile, %c1 : i32
-    %tokenScaleIndex = arith.addi %tokenTileStart, %oddToken : i32
-    %slotRows = arith.shli %slotRowTile, %c4 : i32
-    %slotLowerRows = arith.shli %lowerHalf, %c3 : i32
-    %slotTileRow = arith.addi %laneRow, %slotRows : i32
-    %rowLocal = arith.addi %slotTileRow, %slotLowerRows : i32
-    %slotTokens = arith.shli %slotTokenTile, %c3 : i32
-    %slotTileToken = arith.addi %laneToken, %slotTokens : i32
-    %tokenLocal = arith.addi %slotTileToken, %oddToken : i32
-    %rowLocal64 = arith.extui %rowLocal : i32 to i64
-    %tokenLocal64 = arith.extui %tokenLocal : i32 to i64
-    %row = arith.addi %rowFirst, %rowLocal64 : i64
-    %token = arith.addi %tokenFirst, %tokenLocal64 : i64
-    %rowUsed = arith.cmpi sle, %row, %rowLast : i64
-    %tokenUsed = arith.cmpi sle, %token, %tokenLast : i64
-    %used = arith.andi %rowUsed, %tokenUsed : i1
-    %writing = arith.select %guarded, %used, %true : i1
-    cf.cond_br %writing, ^store, ^writeNext
-  ^store:
-    %integer = llvm.extractelement %sums[%slot : i32] : vector<128xi32>
-    %integerFloat = arith.sitofp %integer : i32 to f32
-    %slotRowScale = llvm.extractelement %rowScales[%rowScaleIndex : i32] : vector<8xf32>
-    %slotTokenScale = llvm.extractelement %tokenScales[%tokenScaleIndex : i32] : vector<16xf32>
-    %bothScales = arith.mulf %slotRowScale, %slotTokenScale : f32
-    %value = arith.mulf %integerFloat, %bothScales : f32
-    %tokenStart = arith.muli %token, %rows : i64
-    %resultIndex = arith.addi %tokenStart, %row : i64
-    cf.cond_br %rowWise, ^rowWiseStore, ^anyStore
-  ^rowWiseStore:
-    %slotBias = llvm.extractelement %biasValues[%rowScaleIndex : i32] : vector<8xf32>
-    %biasedValue = arith.addf %value, %slotBias : f32
-    %final = arith.select %hasBiases, %biasedValue, %value : f32
-    %resultBits = func.call @strict_device_result_bits(%brain) : (i1) -> i64
-    func.call @strict_device_result(%result, %resultIndex, %final, %wide, %resultBits) : (!llvm.ptr, i64, f32, i1, i64) -> ()
-    cf.br ^writeNext
-  ^anyStore:
-    func.call @strict_device_tokens_store(%result, %wide, %brain, %resultIndex, %value, %row, %rows, %biases, %biasesCount, %biasesBits) : (!llvm.ptr, i1, i1, i64, f32, i64, i64, !llvm.ptr, i64, i64) -> ()
-    cf.br ^writeNext
-  ^writeNext:
-    %slotNext = arith.addi %slot, %c1 : i32
-    llvm.br ^write(%slotNext : i32) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
   ^done:
     return
   }
@@ -3837,7 +3726,7 @@
     %warpTokens = arith.shli %warpTokenIndex, %c6 : i32
     %bias = func.call @strict_device_whole_fetch(%rowFirst, %rowLast, %rows, %biases, %biasesCount, %biasesBits, %thread) : (i64, i64, i64, !llvm.ptr, i64, i64, i32) -> f32
     %sums = func.call @strict_device_eights_pipelined(%firstData, %stride, %rowFirst, %rowLast, %columns, %input, %width, %tokenFirst, %tokenLast, %thread, %warpRow, %warpTokens, %lane, %inputScales, %bias, %half) : (!llvm.ptr, i64, i64, i64, i64, !llvm.ptr, i64, i64, i64, i32, i32, i32, i32, !llvm.ptr, f32, i64) -> vector<128xi32>
-    func.call @strict_device_eights_scaled(%sums, %result, %wide, %brain, %rowFirst, %rowLast, %tokenFirst, %tokenLast, %rows, %biases, %biasesCount, %biasesBits, %warp, %warpRow, %warpTokens, %lane, %half) : (vector<128xi32>, !llvm.ptr, i1, i1, i64, i64, i64, i64, i64, !llvm.ptr, i64, i64, i32, i32, i32, i32, i64) -> ()
+    func.call @strict_device_eights_scaled(%sums, %result, %wide, %brain, %rowFirst, %tokenFirst, %tokenLast, %rows, %biases, %biasesCount, %biasesBits, %warp, %warpRow, %warpTokens, %lane, %half) : (vector<128xi32>, !llvm.ptr, i1, i1, i64, i64, i64, i64, !llvm.ptr, i64, i64, i32, i32, i32, i32, i64) -> ()
     cf.br ^exit
   ^halves:
     %halfWarpRowIndex = arith.andi %warp, %c1 : i32

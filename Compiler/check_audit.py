@@ -98,8 +98,8 @@ def discovery(folder):
 			f"has next Hop{index + 1}" if index < 69 else "has number", encoding="utf-8")
 	source = folder / "DiscoveryCheck.strict"
 	source.write_text('has logger\nRun\n'
-		f'\tlogger.Log("./{(folder / "Hop69.strict").relative_to(root).as_posix()}" is in '
-		f'SourceFiles(".").Of("{(folder / "Hop0.strict").as_posix()}"))', encoding="utf-8")
+		f'\tlogger.Log(("./{(folder / "Hop69.strict").relative_to(root).as_posix()}" is in '
+		f'SourceFiles(".").Of("{(folder / "Hop0.strict").as_posix()}")) to Text)', encoding="utf-8")
 	result = run([str(root / "strict.exe"), str(source)])
 	assert result.strip() == "true", "Source discovery truncated a finite dependency chain: " + result
 	print("Source discovery reaches all 70 dependency edges", flush=True)
@@ -111,7 +111,7 @@ def linking(folder):
 			(f"Chain{index + 1}.Result" if index < 69 else "7"), encoding="utf-8")
 	source = folder / "LinkCheck.strict"
 	source.write_text('has logger\nRun\n'
-		f'\tlogger.Log(FileCompiler(Logger).Compiled("{(folder / "Chain0.strict").as_posix()}", ".", false).Length >= 70)',
+		f'\tlogger.Log((FileCompiler(Logger).Compiled("{(folder / "Chain0.strict").as_posix()}", ".", false).Length >= 70) to Text)',
 		encoding="utf-8")
 	result = run([str(root / "strict.exe"), str(source)])
 	assert result.strip().endswith("true"), "Linking failed to close a finite dependency chain: " + result
@@ -125,7 +125,7 @@ def values(folder):
 constant Stored = Made(4)
 Run Number
 	let values = Results(1024)
-	logger.Log(values.Sum)
+	logger.Log(values.Sum to Text)
 	values.Sum is 1024 then 0 else 1
 Results(count Number) Numbers
 	for count

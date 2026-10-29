@@ -10582,10 +10582,10 @@
   llvm.mlir.global internal @strict_gpu_setting(0 : i64) : i64
   llvm.mlir.global internal @strict_gpu_calls(dense<0> : tensor<34xi64>) : !llvm.array<34 x i64>
   llvm.mlir.global internal @strict_gpu_handles(dense<0> : tensor<4xi64>) : !llvm.array<4 x i64>
-  llvm.mlir.global internal constant @strict_gpu_names("cuInit\00cuDeviceGet\00cuDevicePrimaryCtxRetain\00cuCtxSetCurrent\00cuModuleLoadData\00cuModuleGetFunction\00cuMemAlloc_v2\00cuMemFree_v2\00cuMemcpyHtoD_v2\00cuMemcpyDtoH_v2\00cuLaunchKernel\00cuCtxSynchronize\00cuMemAllocHost_v2\00cuMemFreeHost\00cuMemcpyHtoDAsync_v2\00cuMemcpyDtoDAsync_v2\00cuStreamCreate\00cuStreamBeginCapture_v2\00cuStreamEndCapture\00cuGraphInstantiateWithFlags\00cuGraphExecUpdate_v2\00cuGraphLaunch\00cuGraphDestroy\00cuGraphExecDestroy\00cuMemGetInfo_v2\00cuStreamQuery\00cuEventCreate\00cuEventRecord\00cuEventSynchronize\00cuMemcpyDtoHAsync_v2\00cuStreamSynchronize\00cuFuncSetAttribute\00cuDeviceGetAttribute\00cuStreamWaitEvent\00") : !llvm.array<593 x i8>
+  llvm.mlir.global internal constant @strict_gpu_names("cuInit\00cuDeviceGet\00cuDevicePrimaryCtxRetain\00cuCtxSetCurrent\00cuModuleLoadDataEx\00cuModuleGetFunction\00cuMemAlloc_v2\00cuMemFree_v2\00cuMemcpyHtoD_v2\00cuMemcpyDtoH_v2\00cuLaunchKernel\00cuCtxSynchronize\00cuMemAllocHost_v2\00cuMemFreeHost\00cuMemcpyHtoDAsync_v2\00cuMemcpyDtoDAsync_v2\00cuStreamCreate\00cuStreamBeginCapture_v2\00cuStreamEndCapture\00cuGraphInstantiateWithFlags\00cuGraphExecUpdate_v2\00cuGraphLaunch\00cuGraphDestroy\00cuGraphExecDestroy\00cuMemGetInfo_v2\00cuStreamQuery\00cuEventCreate\00cuEventRecord\00cuEventSynchronize\00cuMemcpyDtoHAsync_v2\00cuStreamSynchronize\00cuFuncSetAttribute\00cuDeviceGetAttribute\00cuStreamWaitEvent\00") : !llvm.array<595 x i8>
   // AMD GPUs through HIP when there is no NVIDIA driver, its functions mirror the CUDA driver ones in the same order
   // (hipCtxSynchronize is not supported and hipMemAllocHost fails on the Windows driver, their replacements work)
-  llvm.mlir.global internal constant @strict_gpu_amd_names("hipInit\00hipDeviceGet\00hipDevicePrimaryCtxRetain\00hipCtxSetCurrent\00hipModuleLoadData\00hipModuleGetFunction\00hipMalloc\00hipFree\00hipMemcpyHtoD\00hipMemcpyDtoH\00hipModuleLaunchKernel\00hipDeviceSynchronize\00hipMallocHost\00hipHostFree\00hipMemcpyHtoDAsync\00hipMemcpyDtoDAsync\00hipStreamCreateWithFlags\00hipStreamBeginCapture\00hipStreamEndCapture\00hipGraphInstantiateWithFlags\00hipGraphExecUpdate\00hipGraphLaunch\00hipGraphDestroy\00hipGraphExecDestroy\00hipMemGetInfo\00hipStreamQuery\00hipEventCreateWithFlags\00hipEventRecord\00hipEventSynchronize\00hipMemcpyDtoHAsync\00hipStreamSynchronize\00hipFuncSetAttribute\00hipDeviceGetAttribute\00hipStreamWaitEvent\00") : !llvm.array<611 x i8>
+  llvm.mlir.global internal constant @strict_gpu_amd_names("hipInit\00hipDeviceGet\00hipDevicePrimaryCtxRetain\00hipCtxSetCurrent\00hipModuleLoadDataEx\00hipModuleGetFunction\00hipMalloc\00hipFree\00hipMemcpyHtoD\00hipMemcpyDtoH\00hipModuleLaunchKernel\00hipDeviceSynchronize\00hipMallocHost\00hipHostFree\00hipMemcpyHtoDAsync\00hipMemcpyDtoDAsync\00hipStreamCreateWithFlags\00hipStreamBeginCapture\00hipStreamEndCapture\00hipGraphInstantiateWithFlags\00hipGraphExecUpdate\00hipGraphLaunch\00hipGraphDestroy\00hipGraphExecDestroy\00hipMemGetInfo\00hipStreamQuery\00hipEventCreateWithFlags\00hipEventRecord\00hipEventSynchronize\00hipMemcpyDtoHAsync\00hipStreamSynchronize\00hipFuncSetAttribute\00hipDeviceGetAttribute\00hipStreamWaitEvent\00") : !llvm.array<613 x i8>
   llvm.mlir.global internal @strict_gpu_amd(0 : i64) : i64
   llvm.mlir.global internal constant @strict_gpu_switch("STRICT_GPU\00") : !llvm.array<11 x i8>
   func.func private @strict_gpu_ready() -> i1 {
@@ -11311,7 +11311,7 @@
     %loadData = func.call @strict_gpu_call(%loadIndex) : (i64) -> !llvm.ptr
     %code = func.call @strict_gpu_text(%ptx) : (!llvm.ptr) -> !llvm.ptr
     %started = func.call @strict_clock() : () -> f64
-    %loaded = llvm.call %loadData(%moduleSlot, %code) : !llvm.ptr, (!llvm.ptr, !llvm.ptr) -> i32
+    %loaded = func.call @strict_gpu_loaded(%loadData, %moduleSlot, %code) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
     %loadFailed = arith.cmpi ne, %loaded, %zero32 : i32
     %isAmd = func.call @strict_gpu_is_amd() : () -> i1
     %amdFailed = arith.andi %loadFailed, %isAmd : i1
@@ -11328,7 +11328,7 @@
     %noOlder = arith.cmpi eq, %olderFirst, %nothing8 : i8
     cf.cond_br %noOlder, ^failed, ^loadOlder
   ^loadOlder:
-    %olderLoaded = llvm.call %loadData(%moduleSlot, %olderPtx) : !llvm.ptr, (!llvm.ptr, !llvm.ptr) -> i32
+    %olderLoaded = func.call @strict_gpu_loaded(%loadData, %moduleSlot, %olderPtx) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
     %olderFailed = arith.cmpi ne, %olderLoaded, %zero32 : i32
     %olderSlot = llvm.mlir.addressof @strict_gpu_older : !llvm.ptr
     llvm.store %one, %olderSlot : i64, !llvm.ptr
@@ -11343,6 +11343,23 @@
     %unloaded = llvm.mlir.addressof @strict_gpu_unloaded_text : !llvm.ptr
     func.call @strict_gpu_required(%unloaded) : (!llvm.ptr) -> ()
     return %zero : i64
+  }
+  // the module of code with the driver compiling PTX on all cores (CU_JIT_SPLIT_COMPILE 0: the 11 MB of a MossImage
+  // build in 3.8 instead of 20.5 s), HIP takes no options
+  func.func private @strict_gpu_loaded(%loadData: !llvm.ptr, %moduleSlot: !llvm.ptr, %code: !llvm.ptr) -> i32 {
+    %one = arith.constant 1 : i64
+    %none = arith.constant 0 : i32
+    %oneOption = arith.constant 1 : i32
+    %splitCompile = arith.constant 34 : i32
+    %allCores = llvm.mlir.zero : !llvm.ptr
+    %options = llvm.alloca %one x i32 : (i64) -> !llvm.ptr
+    %values = llvm.alloca %one x !llvm.ptr : (i64) -> !llvm.ptr
+    llvm.store %splitCompile, %options : i32, !llvm.ptr
+    llvm.store %allCores, %values : !llvm.ptr, !llvm.ptr
+    %isAmd = func.call @strict_gpu_is_amd() : () -> i1
+    %optionCount = arith.select %isAmd, %none, %oneOption : i32
+    %loaded = llvm.call %loadData(%moduleSlot, %code, %optionCount, %options, %values) : !llvm.ptr, (!llvm.ptr, !llvm.ptr, i32, !llvm.ptr, !llvm.ptr) -> i32
+    return %loaded : i32
   }
   // a module load over a second is the driver compiling its PTX (the first run of a new build or runtime), said with the
   // seconds so the wait is not mistaken for the program being slow
@@ -11391,7 +11408,7 @@
   ^load:
     %moduleSlot = llvm.mlir.addressof @strict_gpu_runtime : !llvm.ptr
     %started = func.call @strict_clock() : () -> f64
-    %loaded = llvm.call %loadData(%moduleSlot, %chosen) : !llvm.ptr, (!llvm.ptr, !llvm.ptr) -> i32
+    %loaded = func.call @strict_gpu_loaded(%loadData, %moduleSlot, %chosen) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
     %failed = arith.cmpi ne, %loaded, %zero32 : i32
     cf.cond_br %failed, ^failed, ^compiled
   ^compiled:

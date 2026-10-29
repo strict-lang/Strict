@@ -15,7 +15,7 @@ Run
 	let tokens = file.Values("tokens")
 	let plain = Batch(file.Quantized("w"), Layer.Unbiased).Sums(tokens)
 	let kept = Batch(file.Quantized("w", 32), Layer.Unbiased).Sums(tokens)
-	logger.Log(Safetensors("plain.safetensors").Written("sums", plain) + Safetensors("kept.out.safetensors").Written("sums", kept))
+	logger.Log((Safetensors("plain.safetensors").Written("sums", plain) + Safetensors("kept.out.safetensors").Written("sums", kept)) to Text)
 '''
 rows, width = 64, 256
 generator = numpy.random.default_rng(7)
