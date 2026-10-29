@@ -13,4 +13,6 @@ Open speed work, one short line each, measurements go into commit messages. GPU 
 - All native providers compile once any of them is needed.
 - Reachability, safety and globals/text assembly of MLIR emission run serially.
 - A native library call copies every Numbers argument into new doubles (`strict_list_flat`, 1.2 GB for 148.6M numbers, unpacking packed lists first).
-- A `for` whose body drops items (an `if` without `else` as last line, like DeltaEngine `EffectSystem.Living`) runs on one thread: DeltaEngine Games/ParticleStress advances its 1 million particles single threaded.
+- A list of a type made only of numbers but with several members (DeltaEngine `Particle`: 12 numbers in 7 components) is a list of objects, not a flat list: advancing a particle allocates 3 objects and writes 7 reference counts, Unity's particle system is 5 times faster at 1 million particles.
+- Young collections trace every live young object, so a large young live set (1 million particles rebuilt every tick) makes them cost half of each tick (`STRICT_YOUNG=0` halves it): grow the young limit with the bytes that survive.
+- A `for` that drops items collects objects in parallel, but numbers and flat elements stay on one thread (any bit pattern is a number, so no hole marker): keep a bitmap of the kept slots instead.

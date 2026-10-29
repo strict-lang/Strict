@@ -17,12 +17,12 @@ IsSafe(inspected MlirFunction, at Number, depth Number) Boolean
 	Doubling.IsSafe(Doubling.function, 4, 0)
 	Randomizing.IsSafe(Randomizing.function, 4, 0) is false
 	Clamping.IsSafe(Clamping.function, 6, 0)
-	Filtering.IsSafe(Filtering.function, 7, 0) is false
+	Filtering.IsSafe(Filtering.function, 7, 0)
 	let entry = inspected.method.instructions(at)
 	if entry.kind is InstructionType.Invoke
 		return IsPureCall(inspected, at, depth)
 	if entry.kind is in Writes
-		return depth > 0 then IsOwned(inspected, entry) else IsCollected(at)
+		return depth > 0 then IsOwned(inspected, entry) else entry.texts(0) is "forResult"
 	let isLeaving = (depth is 0) and ((entry.kind is InstructionType.Return) or (entry.kind is in Branches))
 	(isLeaving is false) and IsPlain(inspected, at, depth) and ((depth > 0) or IsLocal(entry))
 IsCollected(at Number) Boolean

@@ -7242,6 +7242,63 @@
     llvm.store %length, %usedSlot : f64, !llvm.ptr
     return %list : f64
   }
+  // a parallel loop that drops items (its result is a list of objects) first fills every slot with the hole NaN, tag
+  // 0x7FFD is used by no value and objects are pointers, each iteration then stores the item it keeps at its index
+  func.func private @strict_list_holes(%list: f64, %length: f64) {
+    %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
+    %holderSlot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %holderBits = llvm.load %holderSlot : !llvm.ptr -> f64
+    %holder = func.call @strict_ptr(%holderBits) : (f64) -> !llvm.ptr
+    %itemsBits = llvm.load %holder : !llvm.ptr -> f64
+    %items = func.call @strict_ptr(%itemsBits) : (f64) -> !llvm.ptr
+    %hole = arith.constant 0x7FFD000000000000 : f64
+    %count = arith.fptosi %length : f64 to i64
+    %start = arith.constant 0 : i64
+    %step = arith.constant 1 : i64
+    cf.br ^fill(%start : i64)
+  ^fill(%index: i64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^store, ^done
+  ^store:
+    %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.store %hole, %slot : f64, !llvm.ptr
+    %next = arith.addi %index, %step : i64
+    cf.br ^fill(%next : i64)
+  ^done:
+    return
+  }
+  // moves the items such a loop kept to the front in their order and returns how many there are
+  func.func private @strict_list_compacted(%list: f64, %length: f64) -> f64 {
+    %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
+    %holderSlot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %holderBits = llvm.load %holderSlot : !llvm.ptr -> f64
+    %holder = func.call @strict_ptr(%holderBits) : (f64) -> !llvm.ptr
+    %itemsBits = llvm.load %holder : !llvm.ptr -> f64
+    %items = func.call @strict_ptr(%itemsBits) : (f64) -> !llvm.ptr
+    %hole = arith.constant 0x7FFD000000000000 : i64
+    %count = arith.fptosi %length : f64 to i64
+    %start = arith.constant 0 : i64
+    %step = arith.constant 1 : i64
+    cf.br ^scan(%start, %start : i64, i64)
+  ^scan(%index: i64, %kept: i64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^check, ^done
+  ^check:
+    %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %item = llvm.load %slot : !llvm.ptr -> f64
+    %itemBits = arith.bitcast %item : f64 to i64
+    %isHole = arith.cmpi eq, %itemBits, %hole : i64
+    %next = arith.addi %index, %step : i64
+    cf.cond_br %isHole, ^scan(%next, %kept : i64, i64), ^keep
+  ^keep:
+    %target = llvm.getelementptr %items[%kept] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.store %item, %target : f64, !llvm.ptr
+    %grown = arith.addi %kept, %step : i64
+    cf.br ^scan(%next, %grown : i64, i64)
+  ^done:
+    %result = arith.sitofp %kept : i64 to f64
+    return %result : f64
+  }
   // a new list for a collecting loop, a flat list when its elements are flat blocks of count numbers
   func.func private @strict_list_created(%capacity: f64, %count: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %zero = arith.constant 0.0 : f64

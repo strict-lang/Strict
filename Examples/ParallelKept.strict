@@ -1,0 +1,11 @@
+has words Texts
+Odd Texts
+	ParallelKept(ParallelKept.Numbered(10000)).Odd.Length is 5000
+	ParallelKept(ParallelKept.Numbered(10000)).Odd(4999) is "9999"
+	for words
+		if index % 2 is 1
+			value
+Numbered(count Number) Texts
+	ParallelKept.Numbered(3) is ("0", "1", "2")
+	for count
+		index to Text

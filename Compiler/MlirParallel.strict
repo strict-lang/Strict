@@ -25,7 +25,7 @@ IsParallel Boolean
 	for Range(position + 1, function.method.LoopEndOf(position))
 		if MlirPurity(function, position).IsSafe(function, value, 0) is false
 			return false
-	true
+	MlirFiltering(function, position).IsFilteringValues is false
 Snapshot Texts
 	Doubling.Snapshot is ("%p0", "%p1", "%r0", "%r1", "%r2", "%v_index", "%v_value", "%v_numbers", "%v_forResult")
 	mutable names = List(Mutable(Text))
@@ -50,7 +50,7 @@ Forked Texts
 	let enough = "    " + Temp("pb") + " = arith.cmpi sge, " + Temp("pn") + ", " + Temp("pt") + " : i64"
 	let label = "^loop" + position
 	let branch = "    cf.cond_br " + Temp("pb") + ", " + label + "parallel, " + label + "serial"
-	let packed = MlirBytes(function, position).Created(Temp("pk"))
+	let packed = MlirBytes(function, position).Created(Temp("pk")) + MlirFiltering(function, position).Holed
 	(count, threshold, enough, branch, "  " + label + "parallel:") + packed + Context + Joined + ("  " + label + "serial:")
 Context Texts
 	Doubling.Context.Last is "    func.call @strict_rc_object(%t2pc, %t2ps) : (!llvm.ptr, i64) -> ()"
@@ -78,10 +78,10 @@ Joined Texts
 	let operands = "(" + Temp("pf") + ", " + Temp("pc") + ", " + Temp("pn") + ") : (" + Shape + ", !llvm.ptr, i64) -> f64"
 	let failed = "    " + Temp("pe") + " = func.call @strict_is_failure(" + Temp("pr") + ") : (f64) -> i1"
 	let branch = "    cf.cond_br " + Temp("pe") + ", ^loop" + position + "failed, ^loop" + position + "filled"
-	let filled = MlirMemory(function, position).Called(Temp("pz"), Filler, (Temp("pl"), Temp("n")))
 	let label = "  ^loop" + position
 	let returned = (label + "failed:", "    return " + Temp("pr") + " : f64", label + "filled:")
 	let called = (List(Text) + body) + MlirKernelLaunch(function, position).Ran(operands) + (failed, branch)
+	let filled = MlirFiltering(function, position).Filled(Filler)
 	called + returned + function.Load(Temp("pl"), "%v_forResult") + filled + ("    cf.br ^loop" + position + "exit")
 Outlined Texts
 	Doubling.Outlined.First is "  func.func private @Rows_Doubled_1_loop2" + Signature

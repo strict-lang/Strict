@@ -1,0 +1,44 @@
+has function MlirFunction
+has position Number
+constant Kept = MethodEntry("Kept", List(MemberEntry) + MemberEntry("names", "Strict/List(Text)", List(InstructionEntry), false), "Strict/List(Text)", (MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Text)", (0, 6, -1, 0)), "forResult"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "names"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.LoadText(2, ""), InstructionEntry.Binary(InstructionType.NotEqual, (1, 2)), InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, 0), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.JumpEnd, 0), InstructionEntry.Jump(InstructionType.LoopEnd, 7)))
+constant Keeping = MlirFiltering(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, Kept), 2)
+constant Filtering = MlirFiltering(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, MlirParallel.Filtered), 2)
+constant Doubling = MlirFiltering(MlirParallel.Doubling.function, 2)
+IsFiltering Boolean
+	Keeping.IsFiltering
+	Filtering.IsFiltering
+	Doubling.IsFiltering is false
+	for Range(position + 1, function.method.LoopEndOf(position))
+		let entry = function.method.instructions(value)
+		let isResult = (entry.kind is InstructionType.InvokeWriteToList) and (entry.texts(0) is "forResult")
+		if isResult and (MlirPurity(function, position).IsCollected(value) is false)
+			return true
+	false
+IsFilteringValues Boolean
+	Filtering.IsFilteringValues
+	Keeping.IsFilteringValues is false
+	Doubling.IsFilteringValues is false
+	MlirParallel(Keeping.function, 2).IsParallel
+	let kinds = MlirKinds(function)
+	let flats = MlirFlats(function, position).Count(kinds.ElementKind(kinds.VariableKind(position, "forResult")))
+	IsFiltering and ((MlirParallel(function, position).Filler is not "strict_list_filled") or (flats > 0))
+Holed Texts
+	Keeping.Holed.Last is "    func.call @strict_list_holes(%t2ph, %t2n) : (f64, f64) -> ()"
+	Doubling.Holed.Length is 0
+	if IsFiltering is false
+		return List(Text)
+	let parallel = MlirParallel(function, position)
+	let list = parallel.Temp("ph")
+	let holes = "    func.call @strict_list_holes(" + list + ", " + parallel.Temp("n") + ") : (f64, f64) -> ()"
+	(List(Text) + function.Load(list, "%v_forResult")) + holes
+Filled(filler Text) Texts
+	Doubling.Filled("strict_list_filled_numbers").Last.EndsWith("_numbers(%t2pl, %t2n) : (f64, f64) -> f64")
+	Keeping.Filled("strict_list_filled").Last.EndsWith("@strict_list_filled(%t2pl, %t2pq) : (f64, f64) -> f64")
+	let parallel = MlirParallel(function, position)
+	let list = parallel.Temp("pl")
+	let length = IsFiltering then parallel.Temp("pq") else parallel.Temp("n")
+	let filled = MlirMemory(function, position).Called(parallel.Temp("pz"), filler, (list, length))
+	if IsFiltering is false
+		return List(Text) + filled
+	let compacted = " = func.call @strict_list_compacted(" + list + ", " + parallel.Temp("n") + ") : (f64, f64) -> f64"
+	(List(Text) + ("    " + length + compacted)) + filled
