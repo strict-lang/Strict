@@ -2,33 +2,83 @@ has model Qwen3
 has vision QwenVision
 constant Language = QwenSafetensors(Safetensors("NeuralNetworks/tinyqwen3vl.safetensors", 32, "model."), 16, 0, 0)
 constant Tiny = Qwen3Images(Qwen3Images.Language.Loaded(5000000), QwenVision.Tiny)
-constant Prompted = Qwen3Images.Tiny.Prefilled((1, 2), QwenVision.Image, 32, 48, (3, 4, 5))
-Prefilled(before Numbers, image Numbers, height Number, width Number, after Numbers) Slow(Qwen3)
+constant Prompted = Qwen3Images.Tiny.Prefilled(((1, 2), (3, 4, 5)), List(Numbers) + QwenVision.Image, 32, 48)
+constant Twice = Qwen3Images.Tiny.Prefilled(((1, 2), (6, 7), (3, 4, 5)), (QwenVision.Image, QwenVision.Image), 32, 48)
+Prefilled(texts List(Numbers), images List(Numbers), height Number, width Number) Slow(Qwen3)
 	Prompted.hidden(0).IsNearlyEqual(-6.42568, 0.05)
 	Prompted.hidden(150).IsNearlyEqual(-2.22829, 0.05)
 	Prompted.hidden(300).IsNearlyEqual(-4.96717, 0.05)
 	Prompted.hidden(700).IsNearlyEqual(-2.18944, 0.05)
-	let features = vision.Encoded(image, height, width)
-	let grid = vision.Grid(height, width)
-	let size = model.norm.Length
-	let embedded = Restored(before) + features.First + Restored(after)
-	let span = (before.Length, features.First.Length / size)
-	let rotation = Rotation(span, grid(1) / 2, after.Length)
-	model.Forwarded(embedded, rotation, 1, features.Slice(1, features.Length - 1), span)
-Rotation(span Numbers, columns Number, following Number) Slow(Numbers)
-	Tiny.Rotation((2, 6), 3, 3).Length is 11 * 32
-	let heights = Axis(1, span, columns, following)
-	model.Rotations(Axis(0, span, columns, following), heights, Axis(2, span, columns, following))
+	Twice.hidden(700).IsNearlyEqual(-11.63847, 0.05)
+	Twice.hidden(1100).IsNearlyEqual(0.35246, 0.05)
+	Twice.hidden(1200).IsNearlyEqual(-0.01126, 0.05)
+	let encoded = Encoded(images, height, width)
+	let lengths = Lengths(texts)
+	let size = encoded.First.First.Length / model.norm.Length
+	let rotation = Rotation(lengths, size, vision.Grid(height, width)(1) / 2)
+	model.Forwarded(Embedded(texts, encoded), rotation, 1, Stacks(encoded), Rows(lengths, size))
+Encoded(images List(Numbers), height Number, width Number) Slow(List(List(Numbers)))
+	Tiny.Encoded(List(Numbers) + QwenVision.Image, 32, 48).First.Length is 4
+	mutable encoded = List(Mutable(List(Numbers)))
+	for images
+		encoded.Add(vision.Encoded(value, height, width))
+	encoded
+Lengths(texts List(Numbers)) Numbers
+	Tiny.Lengths(((1, 2), (3, 4, 5))) is (2, 3)
+	for texts
+		value.Length
+Embedded(texts List(Numbers), encoded List(List(Numbers))) Numbers
+	Tiny.Embedded(((1, 2), (3, 4), (5, 6)), (((7, 8), (0, 0)), ((9, 10), (0, 0)))).Length is 388
+	mutable embedded = List(Number)
+	for texts
+		embedded = embedded + Restored(value)
+		if index < encoded.Length
+			embedded = embedded + encoded(index).First
+	embedded
+Stacks(encoded List(List(Numbers))) List(Numbers)
+	Tiny.Stacks((((1, 2), (3, 4)), ((5, 6), (7, 8)))) is List(Numbers) + (3, 4, 7, 8)
+	for encoded.First.Length - 1
+		Joined(encoded, index + 1)
+Joined(encoded List(List(Numbers)), layer Number) Numbers
+	Tiny.Joined((((1, 2), (3, 4)), ((5, 6), (7, 8))), 1) is (3, 4, 7, 8)
+	mutable joined = List(Number)
+	for encoded
+		joined = joined + value(layer)
+	joined
+Rows(lengths Numbers, size Number) Numbers
+	Tiny.Rows((1, 1, 1), 2) is (-1, 0, 1, -1, 2, 3, -1)
+	mutable rows = List(Number)
+	for lengths
+		rows = rows + Counted(-1, value, 0)
+		if index < lengths.Length - 1
+			rows = rows + Counted(index * size, size, 1)
+	rows
+Rotation(lengths Numbers, size Number, columns Number) Slow(Numbers)
+	Tiny.Rotation((2, 3), 6, 3).Length is 11 * 32
+	let heights = Axis(1, lengths, size, columns)
+	model.Rotations(Axis(0, lengths, size, columns), heights, Axis(2, lengths, size, columns))
 Restored(tokens Numbers) Numbers
 	Tiny.Restored((1, 2)).Length is 128
 	model.basis.Restored(model.Embedded(tokens), model.norm.Length)
-Axis(axis Number, span Numbers, columns Number, following Number) Numbers
-	Tiny.Axis(0, (2, 6), 3, 3) is (0, 1, 2, 2, 2, 2, 2, 2, 5, 6, 7)
-	Tiny.Axis(1, (2, 6), 3, 3) is (0, 1, 2, 2, 2, 3, 3, 3, 5, 6, 7)
-	Tiny.Axis(2, (2, 6), 3, 3) is (0, 1, 2, 3, 4, 2, 3, 4, 5, 6, 7)
-	let end = span(0) + span(1)
-	let longest = (span(1) / columns, columns).Maximum
-	for end + following
-		let inside = index - span(0)
-		let placed = axis is 1 then (inside / columns).Floor else (axis is 2 then inside % columns else 0)
-		index < span(0) then index else (index < end then span(0) + placed else index - span(1) + longest)
+Axis(axis Number, lengths Numbers, size Number, columns Number) Numbers
+	Tiny.Axis(0, (2, 3), 6, 3) is (0, 1, 2, 2, 2, 2, 2, 2, 5, 6, 7)
+	Tiny.Axis(1, (2, 3), 6, 3) is (0, 1, 2, 2, 2, 3, 3, 3, 5, 6, 7)
+	Tiny.Axis(2, (2, 2, 3), 6, 3) is (0, 1, 2, 3, 4, 2, 3, 4, 5, 6, 7, 8, 9, 7, 8, 9, 10, 11, 12)
+	mutable next = 0
+	mutable positions = List(Number)
+	for lengths
+		positions = positions + Counted(next, value, 1)
+		next = next + value
+		if index < lengths.Length - 1
+			positions = positions + Spread(axis, next, size, columns)
+			next = next + (size / columns, columns).Maximum
+	positions
+Spread(axis Number, start Number, size Number, columns Number) Numbers
+	(Tiny.Spread(0, 2, 4, 2), Tiny.Spread(1, 2, 4, 2)) is ((2, 2, 2, 2), (2, 2, 3, 3))
+	Tiny.Spread(2, 2, 4, 2) is (2, 3, 2, 3)
+	for size
+		start + (axis is 1 then (index / columns).Floor else (axis is 2 then index % columns else 0))
+Counted(start Number, count Number, step Number) Numbers
+	(Tiny.Counted(5, 3, 1), Tiny.Counted(-1, 2, 0)) is ((5, 6, 7), (-1, -1))
+	for count
+		start + index * step

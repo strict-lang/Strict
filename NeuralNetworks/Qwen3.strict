@@ -87,8 +87,8 @@ Steps(chosen Numbers, positions Numbers, sequences Number) Qwen3
 	Tiny.Steps(List(Number) + 1, List(Number) + 0, 1).hidden.Length is 8
 	Prompted.Copies(2).Steps((3, 4), (2, 2), 2).hidden.Length is 16
 	Forwarded(basis.Restored(Embedded(chosen), norm.Length), Rotations(positions), sequences, List(Numbers), List(Number))
-Forwarded(input Numbers, rotation Numbers, sequences Number, deepstack List(Numbers), span Numbers) Qwen3
-	Tiny.Forwarded(Tiny.Embedded((1, 2)), Tiny.Rotations((0, 1)), 1, List(Numbers), (0, 0)).hidden is Prompted.hidden
+Forwarded(input Numbers, rotation Numbers, sequences Number, deepstack List(Numbers), rows Numbers) Qwen3
+	Tiny.Forwarded(Tiny.Embedded((1, 2)), Tiny.Rotations((0, 1)), 1, List(Numbers), List(Number)).hidden is Prompted.hidden
 	mutable current = input
 	mutable updated = List(Mutable(Qwen3Block))
 	for blocks
@@ -96,16 +96,15 @@ Forwarded(input Numbers, rotation Numbers, sequences Number, deepstack List(Numb
 		let cached = Qwen3Block(value, hybrid = prepared).Cached(prepared.entered, rotation, cacheBits)
 		current = cached.Output(prepared.entered, sequences)
 		if index < deepstack.Length
-			current = Stacked(current, deepstack(index), span)
+			current = Stacked(current, deepstack(index), rows)
 		updated.Add(Qwen3Block(cached, queries = List(Number), hybrid = Hybrid(prepared.layers, inputs = prepared.inputs)))
 	Qwen3(value, blocks = updated, hidden = current)
-Stacked(numbers Numbers, features Numbers, span Numbers) Numbers
-	Qwen3(Tiny, norm = (1, 1)).Stacked((1, 2, 3, 4, 5, 6), (10, 20), (1, 1)) is (1, 2, 13, 24, 5, 6)
+Stacked(numbers Numbers, features Numbers, rows Numbers) Numbers
+	Qwen3(Tiny, norm = (1, 1)).Stacked((1, 2, 3, 4, 5, 6), (10, 20), (-1, 0, -1)) is (1, 2, 13, 24, 5, 6)
 	let width = norm.Length
 	for numbers
-		let token = (index / width).Floor
-		let inside = token >= span(0) and token < span(0) + span(1)
-		inside then value + features((token - span(0)) * width + index % width) else value
+		let row = rows((index / width).Floor)
+		row < 0 then value else value + features(row * width + index % width)
 Placed(pair Number, row Number, positions Numbers, heights Numbers, widths Numbers) Number
 	(Tiny.Placed(1, 0, (5), (6), (7)), Tiny.Placed(2, 0, (5), (6), (7)), Tiny.Placed(3, 0, (5), (6), (7))) is (6, 7, 5)
 	(Tiny.Placed(1, 0, (5), List(Number), List(Number)), Tiny.Placed(61, 0, (5), (6), (7))) is (5, 5)
