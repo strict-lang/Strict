@@ -4,7 +4,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 ## Bugs
 - Ternary Bonsai 27B at a simulated 10 GB stalled once more (first run after a cold build), 12 later runs did not: [improvements-models.md](improvements-models.md).
 - H3 image to video with `--image` and `--last_image` puts only the first image into the Qwen3-VL context (`Qwen3Images.Prefilled` takes one image, ComfyUI tokenizes both).
-- Natively a `Generic` value carries no type (numbers and pointers are plain f64, instances have no header): `to Text` of `Members.First.InitialValue` is `()` (the VM says 3), a type tag per instance or member type dispatch is needed.
+- MossImage (StrictComfy, best, 2 images, seed 7) gives another first image in 2 of 12 runs on a quiet machine (39.7 and 44.5 dB from the usual one, after a cold load StrictComfy saw 35.4 dB), the second image stays identical unless another process holds 1 GB of the GPU (then it differs too, 45.6 dB, with sampling 7.1 instead of 3.1 s from streaming): numbers depend on residency or timing, the kernel mix is the same (42 `strict_device_wholes` in every first image), no float atomics; 6 runs with STRICT_GRAPHS=0 were all identical.
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).

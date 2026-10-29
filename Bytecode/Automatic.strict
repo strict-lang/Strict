@@ -65,14 +65,15 @@ IsWanted(name Text, names Texts) Boolean
 	let shape = TypeShape(lines)
 	(shape.IsTrait is false) or (shape.ParameterScope.names.Length is 0)
 Described Text
-	Point.Described.StartsWith("\tList(Variable) + Variable(\"X\", \"Number\" to Type, X) + ")
-	Point.Described.EndsWith(" + Variable(\"Y\", \"Number\" to Type, Y, true)")
-	Paired.Described.EndsWith(" + Variable(\"second\", \"Number\" to Type, second)")
+	Point.Described.StartsWith("\tList(Variable) + Variable(\"X\", \"Number\" to Type, X to Text) + ")
+	Point.Described.EndsWith(" + Variable(\"Y\", \"Number\" to Type, Y to Text, true)")
+	Paired.Described.EndsWith(" + Variable(\"second\", \"Number\" to Type, second to Text)")
 	mutable result = "\tList(Variable)"
 	for Stored
 		let name = Header(value).MemberName
 		let flag = value.StartsWith("mutable ") then ", true" else ""
-		result = result + " + Variable(\"" + name + "\", \"" + MemberType(value) + "\" to Type, " + name + flag + ")"
+		let type = MemberType(value)
+		result = result + " + Variable(\"" + name + "\", \"" + type + "\" to Type, " + name + " to Text" + flag + ")"
 	result
 MemberType(line Text) Text
 	Point.MemberType("mutable Y Number") is "Number"

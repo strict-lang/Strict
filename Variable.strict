@@ -1,6 +1,6 @@
 has Name
 has Type
-has InitialValue Generic or None
+has InitialValue = ""
 has IsMutable = false
 has IsConstant = false
 to Text
