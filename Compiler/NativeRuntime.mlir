@@ -11310,6 +11310,7 @@
     %loadIndex = arith.constant 4 : i64
     %loadData = func.call @strict_gpu_call(%loadIndex) : (i64) -> !llvm.ptr
     %code = func.call @strict_gpu_text(%ptx) : (!llvm.ptr) -> !llvm.ptr
+    %started = func.call @strict_clock() : () -> f64
     %loaded = llvm.call %loadData(%moduleSlot, %code) : !llvm.ptr, (!llvm.ptr, !llvm.ptr) -> i32
     %loadFailed = arith.cmpi ne, %loaded, %zero32 : i32
     %isAmd = func.call @strict_gpu_is_amd() : () -> i1
@@ -11333,6 +11334,8 @@
     llvm.store %one, %olderSlot : i64, !llvm.ptr
     cf.cond_br %olderFailed, ^failed, ^loaded
   ^loaded:
+    %compiledText = llvm.mlir.addressof @strict_gpu_compiled_text : !llvm.ptr
+    func.call @strict_gpu_compiled(%started, %compiledText) : (f64, !llvm.ptr) -> ()
     func.call @strict_gpu_runtime_load(%loadData) : (!llvm.ptr) -> ()
     %newModule = llvm.load %moduleSlot : !llvm.ptr -> i64
     return %newModule : i64
@@ -11340,6 +11343,23 @@
     %unloaded = llvm.mlir.addressof @strict_gpu_unloaded_text : !llvm.ptr
     func.call @strict_gpu_required(%unloaded) : (!llvm.ptr) -> ()
     return %zero : i64
+  }
+  // a module load over a second is the driver compiling its PTX (the first run of a new build or runtime), said with the
+  // seconds so the wait is not mistaken for the program being slow
+  llvm.mlir.global internal constant @strict_gpu_compiled_text("The driver compiled the GPU kernels of this build in %.1f s, it caches them for the next runs\0A\00") : !llvm.array<95 x i8>
+  llvm.mlir.global internal constant @strict_gpu_runtime_compiled_text("The driver compiled the GPU kernels of the Strict runtime in %.1f s, it caches them for the next runs\0A\00") : !llvm.array<103 x i8>
+  func.func private @strict_gpu_compiled(%started: f64, %format: !llvm.ptr) {
+    %now = func.call @strict_clock() : () -> f64
+    %spent = arith.subf %now, %started : f64
+    %second = arith.constant 1.0 : f64
+    %isCompiled = arith.cmpf ogt, %spent, %second : f64
+    cf.cond_br %isCompiled, ^said, ^done
+  ^said:
+    %printed = llvm.call @printf(%format, %spent) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, f64) -> i32
+    func.call @strict_flush() : () -> ()
+    cf.br ^done
+  ^done:
+    return
   }
   // the runtime kernels as their own module after the program (the newer or older PTX like the program), the same
   // text for every program built with the same runtime, so the driver's JIT cache keeps it; 0 without runtime code
@@ -11370,9 +11390,14 @@
     cf.cond_br %isEmpty, ^done, ^load
   ^load:
     %moduleSlot = llvm.mlir.addressof @strict_gpu_runtime : !llvm.ptr
+    %started = func.call @strict_clock() : () -> f64
     %loaded = llvm.call %loadData(%moduleSlot, %chosen) : !llvm.ptr, (!llvm.ptr, !llvm.ptr) -> i32
     %failed = arith.cmpi ne, %loaded, %zero32 : i32
-    cf.cond_br %failed, ^failed, ^done
+    cf.cond_br %failed, ^failed, ^compiled
+  ^compiled:
+    %compiledText = llvm.mlir.addressof @strict_gpu_runtime_compiled_text : !llvm.ptr
+    func.call @strict_gpu_compiled(%started, %compiledText) : (f64, !llvm.ptr) -> ()
+    cf.br ^done
   ^failed:
     llvm.store %zero, %moduleSlot : i64, !llvm.ptr
     %unloaded = llvm.mlir.addressof @strict_gpu_unloaded_text : !llvm.ptr
