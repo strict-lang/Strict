@@ -7,7 +7,6 @@ Open speed work, one short line each, measurements go into commit messages. GPU 
 - Release packaging runs a game's ContentBuild.strict on the VM (SoulCraft 7.7 s, natively 1 s plus a cached 0.6 s build): build it natively and run the executable (`Release` has 16 methods).
 - Build speed: under 10 s hard limit, 2-3 s target (LogoApp, Blocks and Breakout 3.6-4 s): a build with tests runs the frontend twice (test gate, then native), lowering and the thin LTO link are the largest phases left.
 - Cold GPU builds spend most time on the shared runtime PTX for both sm_75 and sm_80.
-- WebWars' generated SceneAtlas/LevelAtlas constructors dominate its emission: function bodies take 4.5 s on all cores (795 functions), the longest one sets the time.
 - `MlirCost` sums expensive alternative call paths and overestimates tiny loops.
 - Collector lane refill (`strict_gc_small` taking the collector lock) contends at high thread counts.
 - Trees as pools with 32 bit backward offsets ([Goose](https://github.com/aardappel/goose)): count SyntaxNode allocations of `strict build Strict.strict` first.
