@@ -13,3 +13,4 @@ Open speed work, one short line each, measurements go into commit messages. GPU 
 - All native providers compile once any of them is needed.
 - Reachability, safety and globals/text assembly of MLIR emission run serially.
 - A native library call copies every Numbers argument into new doubles (`strict_list_flat`, 1.2 GB for 148.6M numbers, unpacking packed lists first).
+- A `for` whose body drops items (an `if` without `else` as last line, like DeltaEngine `EffectSystem.Living`) runs on one thread: DeltaEngine Games/ParticleStress advances its 1 million particles single threaded.
