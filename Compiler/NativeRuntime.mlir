@@ -12660,6 +12660,25 @@
   ^done(%result: f64):
     return %result : f64
   }
+  // `GpuMemory.Finished`: waits for the GPU work queued so far (a graph being captured is launched first) without a
+  // collection or trim, 0 also without a GPU (it is not opened for this)
+  func.func private @strict_gpu_finished(%self: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %one = arith.constant 1 : i64
+    %stateSlot = llvm.mlir.addressof @strict_gpu_state : !llvm.ptr
+    %state = llvm.load %stateSlot : !llvm.ptr -> i64
+    %isReady = arith.cmpi eq, %state, %one : i64
+    cf.cond_br %isReady, ^current, ^done
+  ^current:
+    %made = func.call @strict_gpu_current() : () -> i1
+    cf.cond_br %made, ^drain, ^done
+  ^drain:
+    func.call @strict_gpu_replay() : () -> ()
+    func.call @strict_gpu_synchronize() : () -> ()
+    cf.br ^done
+  ^done:
+    return %zero : f64
+  }
   // free unused large pool blocks, draining queued launches once and only when a block is freed
   func.func private @strict_gpu_trim(%needed: i64, %initial: i64, %waiting: i1) -> i64 {
     %none = arith.constant 0 : i64
