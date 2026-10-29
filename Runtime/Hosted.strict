@@ -17,7 +17,8 @@ IsHosted Boolean
 	Hosted(SystemCall).IsHosted
 	Hosted(Invocation.AddCall).IsHosted is false
 	"Process.InputLine" is in Hosted.Methods
-	TypeEntry.ShortName(call.TypeName) + "." + call.MethodName is in Methods
+	Hosted(HostedJson.Getting).IsHosted
+	(TypeEntry.ShortName(call.TypeName) + "." + call.MethodName is in Methods) or HostedJson(call).IsHosted
 Result VmValue
 	Hosted(SystemCall).Result.text is in ("Windows", "Linux", "MacOS", "Unknown")
 	Hosted(Existing).Result.IsTrue
@@ -28,7 +29,7 @@ Result VmValue
 	if type is in ("Process", "Library", "BuildProfile", "TestBudget", "ConstantCache")
 		return type is "Library" then Foreign(call, List(TypeEntry)).Hosted else HostedProcess(call).Result
 	if type is not in ("File", "Directory")
-		return type is "Time" then VmValue.OfNumber(Time.Now) else Measured
+		return type is "Time" then VmValue.OfNumber(Time.Now) else type is "Json" then HostedJson(call).Result else Measured
 	call.MethodName is in ("ReadLines", "ReadBytes", "Files", "Directories") then Entries else Stored
 Read(name Text) Text
 	Hosted(SystemCall).Read("Current") is Directory.Current

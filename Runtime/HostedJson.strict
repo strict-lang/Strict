@@ -1,0 +1,27 @@
+has call Invocation
+constant Names = ("get", "Elements", "Values", "Keys")
+constant Bones = VmValue.OfText("{ \"bones\": [1, 2.5], \"name\": \"root\" }")
+constant Getting = Invocation(InstructionEntry.Invoke(1, ("Strict/Json/Json", "get", "Strict/Json/Json", "key"), 0, 0), List(VmValue) + VmValue.OfText("bones"), Bones)
+constant Listing = Invocation(InstructionEntry.Invoke(1, ("Strict/Json/Json", "Keys", "Strict/List(Text)"), List(Number), 0), List(VmValue), Bones)
+constant Valued = Invocation(InstructionEntry.Invoke(1, ("Strict/Json/Json", "Values", "Strict/List(Number)"), List(Number), 0), List(VmValue), VmValue.OfText("[1, 2.5]"))
+IsHosted Boolean
+	HostedJson(Getting).IsHosted
+	HostedJson(Invocation.AddCall).IsHosted is false
+	(call.TypeName is "Strict/Json/Json") and (call.MethodName is in Names)
+Result VmValue
+	HostedJson(Getting).Result.text is "[1, 2.5]"
+	HostedJson(Listing).Result.items.Last.text is "name"
+	HostedJson(Valued).Result.items.Last.number is 2.5
+	let json = Json(call.Instance.text)
+	if call.MethodName is "get"
+		return VmValue.OfText(json(call.Arguments.First.text).text)
+	if call.MethodName is in ("Keys", "Elements")
+		return Hosted(call).Values(call.MethodName is "Keys" then json.Keys else Texts(json.Elements))
+	mutable values = List(Mutable(VmValue))
+	for json.Values
+		values.Add(VmValue.OfNumber(value))
+	VmValue.OfList(values)
+Texts(elements Jsons) Texts
+	HostedJson(Getting).Texts(Json("[1, [2]]").Elements) is ("1", "[2]")
+	for elements
+		value.text
