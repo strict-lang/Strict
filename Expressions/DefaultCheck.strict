@@ -1,10 +1,12 @@
 has inference TypeInference
 constant Counting = DefaultCheck(TypeInference(KnownTypes.Sample, (Scope(("Limit", "Started"), ("3", "Count(1, 2)")), KnownTypes.NoMembers)))
 constant Keywords = ("has", "constant", "let", "mutable", "if", "else", "for", "with", "return", "is", "in", "to", "and", "or", "xor", "not", "from", "then")
+constant LoopVariables = ("value", "index", "outer")
 constant Moving = List(Text) + "M(from Number) Number"
 constant Countdown = ("Run Number", "\tmutable index = 3", "\tfor as long as index > 0", "\t\tindex", "\tindex")
 constant Missed = List(Text) + "has c Count = Count.Missing"
 constant Sized = List(Text) + "has size Count = Count(1, 2)"
+constant Outside = ("Run", "\tfor 2", "\t\tlet outer = 1")
 constant Shifting = ("Shifted(index Number) Numbers", "\tfor 2", "\t\tindex")
 Unsupported(path Text, lines Texts) Texts
 	Counting.Unsupported("A.strict", Moving).First is "CannotUseKeywordsAsName: from in A.strict:1"
@@ -14,10 +16,11 @@ Unsupported(path Text, lines Texts) Texts
 	Defaults(path, lines) + Keyworded(path, lines) + LoopNames(path, lines) + LoopParameters(path, lines)
 LoopNames(path Text, lines Texts) Texts
 	Counting.LoopNames("A.strict", Moving).Length is 0
+	Counting.LoopNames("A.strict", Outside).First is "LoopNameMustNotBeDeclared: outer in A.strict:3"
 	for lines
 		let tokens = Tokenizer(value.Trim).Tokens
 		let isDeclared = value.StartsWith("\t") and (tokens.Length > 1) and (tokens(0) is in ("let", "mutable", "constant"))
-		if isDeclared and (tokens(1) is in ("value", "index")) and HasLoop(lines, index)
+		if isDeclared and (tokens(1) is in LoopVariables) and HasLoop(lines, index)
 			"LoopNameMustNotBeDeclared: " + tokens(1) + " in " + path + ":" + (index + 1)
 HasLoop(lines Texts, position Number) Boolean
 	DefaultCheck.HasLoop(Countdown, 1)
@@ -49,7 +52,7 @@ LoopParameters(path Text, lines Texts) Texts
 		let line = index + 1
 		if TypeShape(lines).IsMethodHeader(value) and HasLoop(lines, index)
 			for HeaderTokens(Tokenizer(value).Tokens).ParameterNames
-				if value is in ("value", "index")
+				if value is in LoopVariables
 					issues.Add("LoopNameMustNotBeDeclared: " + value + " in " + path + ":" + line)
 	issues
 Defaults(path Text, lines Texts) Texts

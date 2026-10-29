@@ -26,7 +26,7 @@ NameIssues(line Text, name Text, isMethod Boolean, number Number) ValidationIssu
 		issues.Add(ValidationIssue("ListPrefixIsNotAllowedUseImplementationTypeNameInPlural", name, number))
 	if IsMisnamedConstant(line, name)
 		issues.Add(ValidationIssue("ConstantNameMustNotBeATypeOrMethodName", name, number))
-	if (name is in ("value", "index")) and DefaultCheck.HasLoop(lines, number - 1)
+	if (name is in DefaultCheck.LoopVariables) and DefaultCheck.HasLoop(lines, number - 1)
 		issues.Add(ValidationIssue("LoopNameMustNotBeDeclared", name, number))
 	issues
 IsListPrefixed(line Text, name Text) Boolean
