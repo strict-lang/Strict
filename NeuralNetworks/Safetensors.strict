@@ -95,6 +95,8 @@ Counts(lists List(Numbers)) Numbers
 		value.Length
 Combined(lists List(Numbers)) Numbers
 	Tiny.Combined(((1, 2), List(Number) + 3)) is (1, 2, 3)
+	if lists.Length is 1
+		return lists.First
 	mutable combined = List(Number)
 	for lists
 		combined = combined + value

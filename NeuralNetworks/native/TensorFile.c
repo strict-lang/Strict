@@ -614,18 +614,23 @@ STRICT_EXPORT double TensorFile_Written(double self, double path, double header,
 	unsigned char size[8];
 	for (int index = 0; index < 8; index++)
 		size[index] = (unsigned char)((length + (8 - length % 8) % 8) >> (8 * index));
-	float* floats = malloc(count * sizeof(float) + 1);
+	enum { chunk = 1 << 20 };
+	float* floats = malloc(chunk * sizeof(float));
 	FILE* file = floats ? fopen(strict_text(path), "wb") : 0;
 	if (!file)
 	{
 		free(floats);
 		return strict_fail("TensorFileNotWritable");
 	}
-	for (uint64_t index = 0; index < count; index++)
-		floats[index] = (float)given->items[index];
 	int complete = fwrite(size, 1, 8, file) == 8 && fwrite(strict_text(header), 1, length, file) == length &&
-		fwrite(spaces, 1, (8 - length % 8) % 8, file) == (8 - length % 8) % 8 &&
-		fwrite(floats, sizeof(float), count, file) == count;
+		fwrite(spaces, 1, (8 - length % 8) % 8, file) == (8 - length % 8) % 8;
+	for (uint64_t start = 0; complete && start < count; start += chunk)
+	{
+		uint64_t part = count - start < chunk ? count - start : chunk;
+		for (uint64_t index = 0; index < part; index++)
+			floats[index] = (float)given->items[start + index];
+		complete = fwrite(floats, sizeof(float), part, file) == part;
+	}
 	complete = fclose(file) == 0 && complete;
 	free(floats);
 	return complete ? (double)count : strict_fail("TensorFileNotWritable");
