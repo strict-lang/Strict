@@ -29,7 +29,7 @@ Next(entries List(TypeEntry), signatures Texts) Slow(LinkRound)
 	Sample.Next(Go, List(Text)).entries.Length is 1
 	Hello.Next(TypeEntry.HelloLogger, List(Text)).signatures is ("Strict/Logger:")
 	Hello.Next(LinkRound.Forwarding, List(Text) + "Strict/W:Code").entries.First.methods.Length is 2
-	let invoked = Targets(entries)
+	let invoked = Targets(entries).Unique
 	let round = LinkRound(value, Completed(entries, invoked), signatures)
 	let targets = invoked + round.Forwarded(invoked)
 	let signed = Signatures(Linkable(BaseTypes(entries, targets), signatures), targets)
