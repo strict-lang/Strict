@@ -23,8 +23,8 @@ Text Text
 		roots.Add(MlirFunction(types, types.First, value))
 		wrappers = wrappers + Wrapper(value)
 	let functions = module.Reachable(roots, roots)
-	let lines = module.Declared(functions, functions) + MlirGlobals(functions).Lines + wrappers + "}"
-	outer.Text.Combine((lines + MlirGpu.Module(functions)) - "", "\n")
+	let declared = module.Declared(functions, functions, MlirRecursion(functions, module.entries).Edges)
+	outer.Text.Combine((declared + MlirGlobals(functions).Lines + wrappers + "}" + MlirGpu.Module(functions)) - "", "\n")
 Exported List(MethodEntry)
 	Policy.Exported is List(MethodEntry) + Start
 	for types.First.methods

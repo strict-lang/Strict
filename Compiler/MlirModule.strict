@@ -17,18 +17,23 @@ Text Text
 	let started = Process.Elapsed
 	let reachable = Functions
 	BuildProfile(Logger).Reported("Emission / reachability (" + reachable.Length + " functions)", started)
-	let before = Process.Elapsed
-	let functions = MlirSafety(reachable, MlirRecursion(reachable, entries).Edges).Marked
-	BuildProfile(Logger).Reported("Emission / safety", before)
+	let edges = MlirRecursion(reachable, entries).Edges
+	let functions = Safe(reachable, edges)
 	if functions.First.method.instructions.Length is 0
 		return "unsupported: no " + entryName + " method without parameters in " + types.First.Name
 	let counted = countedFiles.Length is 0 then functions else MlirLines.Counted(functions, Mains, countedFiles)
-	Combined(Declared(counted, functions), functions, counted)
-Declared(texts List(MlirFunction), functions List(MlirFunction)) Texts
-	Counters.Declared(Counters.Functions, Counters.Functions).First is "module {"
+	Combined(Declared(counted, functions, edges), functions, counted)
+Safe(reachable List(MlirFunction), edges List(Numbers)) List(MlirFunction)
+	Counters.Safe(Counters.Functions, List(Numbers) + List(Number)).Length is 1
+	let started = Process.Elapsed
+	let functions = MlirSafety(reachable, edges).Marked
+	BuildProfile(Logger).Reported("Emission / safety", started)
+	functions
+Declared(texts List(MlirFunction), functions List(MlirFunction), edges List(Numbers)) Texts
+	Counters.Declared(Counters.Functions, Counters.Functions, List(Numbers) + List(Number)).First is "module {"
 	MlirRecursion.Looped.Text.IndexOf("^stackChecked") > MlirRecursion.Looped.Text.IndexOf("@Looped_Again_0(")
 	let started = Process.Elapsed
-	let recursive = MlirRecursion(functions, entries).Recursive
+	let recursive = MlirRecursion(functions, entries).Recursive(edges)
 	BuildProfile(Logger).Reported("Emission / recursion", started)
 	let lines = ("module {", "  llvm.func @printf(!llvm.ptr, ...) -> i32") + MlirTexts.Declarations
 	let emitted = BuildProfile(Logger).Emitted(value, texts, functions, recursive)

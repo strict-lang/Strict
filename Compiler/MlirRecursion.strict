@@ -5,10 +5,9 @@ constant Starting = MethodEntry("Run", List(MemberEntry), "Strict/Number", (Inst
 constant Looped = MlirModule(List(TypeEntry) + TypeEntry("Strict/Looped", List(MemberEntry), (Starting, Again)), "Run")
 constant StackChecked = ("    %stackShort = func.call @strict_stack_short() : () -> i1", "    cf.cond_br %stackShort, ^stackOverflowed, ^stackChecked", "  ^stackOverflowed:", "    %stackOverflow = func.call @strict_stack_overflowed() : () -> f64", "    return %stackOverflow : f64", "  ^stackChecked:")
 constant Looping = MlirRecursion(Looped.Functions, 1)
-Recursive Texts
-	Looping.Recursive is ("Looped_Again_0")
-	MlirRecursion(MlirModule.Counters.Functions, 1).Recursive.Length is 0
-	let edges = Edges
+Recursive(edges List(Numbers)) Texts
+	Looping.Recursive(Looping.Edges) is ("Looped_Again_0")
+	MlirRecursion(MlirModule.Counters.Functions, 1).Recursive(List(Numbers) + List(Number)).Length is 0
 	let order = Order(edges)
 	for functions
 		if IsBack(edges(index), order.Index(index), order)
