@@ -424,6 +424,28 @@
     %bytes = arith.constant 65536 : i32
     llvm.store %bytes, %reserve : i32, !llvm.ptr
     %guaranteed = llvm.call @SetThreadStackGuarantee(%reserve) : (!llvm.ptr) -> i32
+    func.call @strict_unthrottled() : () -> ()
+    return
+  }
+  llvm.func @GetCurrentProcess() -> !llvm.ptr
+  llvm.func @SetProcessInformation(!llvm.ptr, i32, !llvm.ptr, i32) -> i32
+  // execution speed throttling (EcoQoS) off: started from a background console Windows ran the program on its efficiency
+  // cores (MossImage loaded Moss in 6.1-7.4 instead of 3.2-3.3 s)
+  func.func private @strict_unthrottled() {
+    %three = arith.constant 3 : i64
+    %throttling = llvm.alloca %three x i32 : (i64) -> !llvm.ptr
+    %version = arith.constant 1 : i32
+    %executionSpeed = arith.constant 1 : i32
+    %off = arith.constant 0 : i32
+    llvm.store %version, %throttling : i32, !llvm.ptr
+    %controlSlot = llvm.getelementptr %throttling[1] : (!llvm.ptr) -> !llvm.ptr, i32
+    llvm.store %executionSpeed, %controlSlot : i32, !llvm.ptr
+    %stateSlot = llvm.getelementptr %throttling[2] : (!llvm.ptr) -> !llvm.ptr, i32
+    llvm.store %off, %stateSlot : i32, !llvm.ptr
+    %process = llvm.call @GetCurrentProcess() : () -> !llvm.ptr
+    %powerThrottling = arith.constant 4 : i32
+    %bytes = arith.constant 12 : i32
+    %unthrottled = llvm.call @SetProcessInformation(%process, %powerThrottling, %throttling, %bytes) : (!llvm.ptr, i32, !llvm.ptr, i32) -> i32
     return
   }
   func.func private @strict_file_size(%name: !llvm.ptr) -> i64 {
