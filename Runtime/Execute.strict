@@ -67,8 +67,7 @@ Kept(path Text, root Text) Number
 	Verified(path, root, true, files, ResolveCheck.Inference(files), false)
 Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInference, isTested = true) Number
 	let cache = BinaryFile(FileCompiler.Normalized(path))
-	let ignored = DataFiles.Ignored((Directory.Current, root))
-	let stamped = BinarySources(files + DataFiles(ignored).Selected(List(Text) + cache.source)).Stamped
+	let stamped = BinarySources(files + DataFiles.Of((Directory.Current, root), List(Text) + cache.source)).Stamped
 	let types = FileCompiler(logger, isQuiet, selection).Built(path, root, true, files, inference)
 	if types.Length is 0
 		return 1
@@ -83,8 +82,7 @@ Completed(cache BinaryFile, root Text, files Texts, stamped BinarySources, befor
 	let read = Read(before)
 	let current = SourceFiles(root).Of(cache.source)
 	let isSame = (current.Length is files.Length) and (read.Length is 0)
-	let ignored = isSame then List(Text) else DataFiles.Ignored((Directory.Current, root))
-	let data = isSame then List(Text) else DataFiles(ignored).Selected(List(Text) + cache.source)
+	let data = isSame then List(Text) else DataFiles.Of((Directory.Current, root), List(Text) + cache.source)
 	isSame then stamped else BinarySources(current + data + read).Stamped
 Read(before Number) Texts
 	Execute(Logger).Read(Process.FilesRead.Length).Length is 0

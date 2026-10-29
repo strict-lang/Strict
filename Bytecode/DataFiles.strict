@@ -17,10 +17,23 @@ Excluded(path Text) Boolean
 Found(name Text) Texts
 	if BinaryFile("").IsInput(name) and File(name).Exists
 		return List(Text) + name
-	let outside = (name.IndexOf(":") >= 0) or name.StartsWith("..") or name.StartsWith("/")
-	if outside or (Directory.Exists(name) is false) or Excluded(name) or (name is in (".", "./"))
+	if (IsFolder(name) is false) or Excluded(name)
 		return List(Text)
 	Directory.Files(name, "*.strict").Length is 0 then BinaryFile("").Contained(name, ignored) else List(Text)
+IsFolder(name Text) Boolean
+	DataFiles.IsFolder("Bytecode")
+	DataFiles.IsFolder("../Strict") is false
+	DataFiles.IsFolder("./") is false
+	DataFiles.IsFolder("Missing") is false
+	let outside = (name.IndexOf(":") >= 0) or name.StartsWith("..") or name.StartsWith("/")
+	(outside is false) and (name is not in (".", "./")) and Directory.Exists(name)
+Of(roots Texts, sources Texts) Texts
+	DataFiles.Of(List(Text) + ".", List(Text)).Length is 0
+	for sources
+		for References(value)
+			if IsFolder(value)
+				return DataFiles(Ignored(roots)).Selected(sources)
+	DataFiles(List(Text)).Selected(sources)
 Ignored(roots Texts) Texts
 	mutable paths = List(Mutable(Text))
 	mutable repositories = List(Text)
