@@ -7,13 +7,20 @@
 #include "strict.h"
 #include "Parallel.h"
 #include "ThreadState.h"
-static _Thread_local char* header;
+static _Thread_local char* entry;
 static _Thread_local unsigned char* floatStorage;
 #ifdef _WIN32
 #define strict_seek _fseeki64
 #else
+#include <sys/stat.h>
 #define strict_seek fseeko
 #endif
+/* The headers of the files read last, each kept while its file has the same size and modification time: every tensor
+   lookup read the whole header again (60-130 KB for a LoRA of Moss, about 5 lookups per merged linear). */
+enum { HeaderCount = 8 };
+typedef struct { char* path; uint64_t size, modified; char* text; } Header;
+static _Thread_local Header headers[HeaderCount];
+static _Thread_local int nextHeader;
 
 /* Opens a .safetensors file and reads the length of its JSON header (8 bytes little endian). */
 static FILE* Opened(const char* path, uint64_t* headerLength)
@@ -33,26 +40,101 @@ static FILE* Opened(const char* path, uint64_t* headerLength)
 	return file;
 }
 
-STRICT_EXPORT double TensorFile_Header(double self, double path)
+/* The size and modification time of the file at path, 0 when it can't be read. */
+static int Stamped(const char* path, uint64_t* size, uint64_t* modified)
 {
-	if (!ThreadReady())
-		return strict_fail("NativeThreadStateFailed");
-	uint64_t length = 0;
-	FILE* file = Opened(strict_text(path), &length);
+#ifdef _WIN32
+	WIN32_FILE_ATTRIBUTE_DATA data;
+	if (!GetFileAttributesExA(path, GetFileExInfoStandard, &data))
+		return 0;
+	*size = ((uint64_t)data.nFileSizeHigh << 32) | data.nFileSizeLow;
+	*modified = ((uint64_t)data.ftLastWriteTime.dwHighDateTime << 32) | data.ftLastWriteTime.dwLowDateTime;
+#else
+	struct stat status;
+	if (stat(path, &status))
+		return 0;
+	*size = (uint64_t)status.st_size;
+	*modified = (uint64_t)status.st_mtime;
+#endif
+	return 1;
+}
+
+/* The JSON header of the .safetensors file at path from headers or read into them, 0 when it can't be read. */
+static const char* HeaderOf(const char* path, const char** failure)
+{
+	uint64_t size = 0, modified = 0, length = 0;
+	*failure = "TensorFileNotReadable";
+	if (!Stamped(path, &size, &modified))
+		return 0;
+	for (int index = 0; index < HeaderCount; index++)
+		if (headers[index].path && !strcmp(headers[index].path, path) && headers[index].size == size &&
+			headers[index].modified == modified)
+			return headers[index].text;
+	FILE* file = Opened(path, &length);
 	if (!file || length > 100000000)
 	{
 		if (file)
 			fclose(file);
-		return strict_fail("TensorFileNotReadable");
+		return 0;
 	}
-	free(header);
-	header = malloc(length + 1);
-	size_t read = fread(header, 1, length, file);
+	char* text = malloc(length + 1);
+	size_t read = text ? fread(text, 1, length, file) : 0;
 	fclose(file);
 	if (read != length)
-		return strict_fail("TensorFileHeaderTruncated");
-	header[length] = 0;
-	return strict_text_result(header);
+	{
+		free(text);
+		*failure = "TensorFileHeaderTruncated";
+		return 0;
+	}
+	text[length] = 0;
+	Header* slot = &headers[nextHeader];
+	nextHeader = (nextHeader + 1) % HeaderCount;
+	free(slot->path);
+	free(slot->text);
+	size_t pathLength = strlen(path) + 1;
+	slot->path = malloc(pathLength);
+	memcpy(slot->path, path, pathLength);
+	slot->size = size;
+	slot->modified = modified;
+	slot->text = text;
+	return text;
+}
+
+STRICT_EXPORT double TensorFile_Header(double self, double path)
+{
+	if (!ThreadReady())
+		return strict_fail("NativeThreadStateFailed");
+	const char* failure = 0;
+	const char* text = HeaderOf(strict_text(path), &failure);
+	return text ? strict_text_result(text) : strict_fail(failure);
+}
+
+/* The entry of the tensor name in the header of the file at path ("dtype":"F32","shape":[3],"data_offsets":[0,12]),
+   empty when the header has none. */
+STRICT_EXPORT double TensorFile_Entry(double self, double path, double name)
+{
+	if (!ThreadReady())
+		return strict_fail("NativeThreadStateFailed");
+	const char* failure = 0;
+	const char* text = HeaderOf(strict_text(path), &failure);
+	if (!text)
+		return strict_fail(failure);
+	const char* wanted = strict_text(name);
+	size_t nameLength = strlen(wanted);
+	char* key = malloc(nameLength + 5);
+	key[0] = '"';
+	memcpy(key + 1, wanted, nameLength);
+	memcpy(key + 1 + nameLength, "\":{", 4);
+	const char* found = strstr(text, key);
+	free(key);
+	const char* open = found ? found + nameLength + 4 : "";
+	const char* close = strchr(open, '}');
+	size_t entryLength = close ? (size_t)(close - open) : strlen(open);
+	free(entry);
+	entry = malloc(entryLength + 1);
+	memcpy(entry, open, entryLength);
+	entry[entryLength] = 0;
+	return strict_text_result(entry);
 }
 
 /* A tensor as its header entry describes it: "dtype":"F16","shape":[2,3],"data_offsets":[24,36]. */
@@ -175,7 +257,12 @@ static float* Read(double path, const Tensor* tensor, const char** failure)
 
 static void ThreadReleased(void)
 {
-	free(header);
+	for (int index = 0; index < HeaderCount; index++)
+	{
+		free(headers[index].path);
+		free(headers[index].text);
+	}
+	free(entry);
 	free(floatStorage);
 }
 

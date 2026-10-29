@@ -36,14 +36,15 @@ def expected(numbers,width):
 	factor=np.float32(127)/largest
 	codes=np.rint(tokens*factor[:,None]).astype(np.int8).reshape(-1)
 	return codes,np.repeat(largest/np.float32(127),width//32)
-def quantized(numbers,width,threads):
+def quantized(numbers,width,threads,bits=32,shift=0):
 	count=numbers.size
 	source=ctypes.c_uint64();target=ctypes.c_uint64()
-	checked(cuda.cuMemAlloc_v2(ctypes.byref(source),ctypes.c_size_t(count*4)))
+	checked(cuda.cuMemAlloc_v2(ctypes.byref(source),ctypes.c_size_t(numbers.nbytes+16)))
 	checked(cuda.cuMemAlloc_v2(ctypes.byref(target),ctypes.c_size_t(count+count//8)))
 	checked(cuda.cuMemsetD8_v2(target,0,ctypes.c_size_t(count+count//8)))
-	checked(cuda.cuMemcpyHtoD_v2(source,ctypes.c_void_p(numbers.ctypes.data),ctypes.c_size_t(count*4)))
-	values=[source,ctypes.c_uint64(count),ctypes.c_uint64(width),target,ctypes.c_uint64(32)]
+	shifted=ctypes.c_uint64(source.value+shift)
+	checked(cuda.cuMemcpyHtoD_v2(shifted,ctypes.c_void_p(numbers.ctypes.data),ctypes.c_size_t(numbers.nbytes)))
+	values=[shifted,ctypes.c_uint64(count),ctypes.c_uint64(width),target,ctypes.c_uint64(bits)]
 	arguments=(ctypes.c_void_p*5)(*[ctypes.addressof(value) for value in values])
 	checked(cuda.cuLaunchKernel(kernel,count//width,1,1,threads,1,1,0,None,arguments,None))
 	checked(cuda.cuCtxSynchronize())
@@ -51,13 +52,20 @@ def quantized(numbers,width,threads):
 	checked(cuda.cuMemcpyDtoH_v2(ctypes.c_void_p(result.ctypes.data),target,ctypes.c_size_t(result.size)))
 	checked(cuda.cuMemFree_v2(source));checked(cuda.cuMemFree_v2(target))
 	return result[:count].view(np.int8),result[count:].view(np.float32)
+def brains(numbers):
+	words=numbers.view(np.uint32)
+	rounded=(words+np.uint32(32767)+((words>>np.uint32(16))&np.uint32(1)))>>np.uint32(16)
+	return rounded.astype(np.uint16)
 generator=np.random.default_rng(7)
-for width,threads in [(5376,672),(14336,896)]:
+# 32 bit floats in 16 byte loads, 4 bytes after an alignment one at a time, bfloat16 in 16 byte loads
+for width,threads,bits,shift in [(5376,672,32,0),(14336,896,32,0),(5376,672,32,4),(14336,896,17,0)]:
 	numbers=generator.standard_normal(3*width).astype(np.float32)
-	codes,scales=quantized(numbers,width,threads)
-	wantedCodes,wantedScales=expected(numbers,width)
-	assert np.array_equal(codes,wantedCodes),('codes of tokens of '+str(width),int((codes!=wantedCodes).sum()))
-	assert np.array_equal(scales,wantedScales),('scales of tokens of '+str(width),int((scales!=wantedScales).sum()))
-	print('strict_device_hadamard_tokens of 3 tokens of',width,'with',threads,'threads matches numpy',flush=True)
+	words=brains(numbers) if bits==17 else numbers
+	exact=(words.astype(np.uint32)<<np.uint32(16)).view(np.float32) if bits==17 else numbers
+	codes,scales=quantized(words,width,threads,bits,shift)
+	wantedCodes,wantedScales=expected(exact,width)
+	assert np.array_equal(codes,wantedCodes),('codes of tokens of '+str(width),bits,shift,int((codes!=wantedCodes).sum()))
+	assert np.array_equal(scales,wantedScales),('scales of tokens of '+str(width),bits,shift,int((scales!=wantedScales).sum()))
+	print('strict_device_hadamard_tokens of 3 tokens of',width,'in',bits,'bits',shift,'bytes after an alignment with',threads,'threads matches numpy',flush=True)
 checked(cuda.cuCtxDestroy_v2(context))
 temporary.cleanup()
