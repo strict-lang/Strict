@@ -33,7 +33,7 @@ with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as 
 	trait.write_text('has logger\nRun Number\n\tlet first = ServiceHolder(ServiceValue(7)).Result + Read(ServiceOther(7))\n'
 		'\tlet second = ServiceHolder(ServiceOther(7)).Result + Read(ServiceValue(7))\n'
 		'\tlet result = first + second + ServiceHolder(ServiceValue(7)).service.Result\n'
-		'\tlogger.Log(result)\n\tresult\n'
+		'\tlogger.Log(result to Text)\n\tresult\n'
 		'Read(service Service) Number\n\tservice.Result\n', encoding="utf-8")
 	trait_build = run("build", str(trait))
 	assert trait_build.returncode == 0, trait_build.stdout + trait_build.stderr
@@ -56,7 +56,7 @@ with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as 
 	print("Locked build intermediates report cleanup failure", flush=True)
 	nested = Path(folder) / "NestedGpu.strict"
 	nested.write_text('has numbers Numbers\nhas logger\nRun Number\n'
-		'\tlet result = NestedGpu(Counted(256), logger).Totals(8192).Sum\n\tlogger.Log(result)\n\t0\n'
+		'\tlet result = NestedGpu(Counted(256), logger).Totals(8192).Sum\n\tlogger.Log(result to Text)\n\t0\n'
 		'Totals(count Number) Numbers\n\tfor count\n\t\tSquared.Sum + index\n'
 		'Squared Numbers\n\tfor numbers\n\t\tvalue * value\n'
 		'Counted(count Number) Numbers\n\tfor count\n\t\tindex', encoding="utf-8")

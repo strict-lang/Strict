@@ -1,5 +1,5 @@
   // a number of a list at at as a 32 bit float, 0 when outside is set (at is not read then)
-  func.func private @strict_device_products_number(%data: !llvm.ptr, %count: i64, %bits: i64, %at: i64, %outside: i1) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_products_number(%data: !llvm.ptr, %count: i64, %bits: i64, %at: i64, %outside: i1) -> f32 attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %none = arith.constant 0 : i64
     %zero = arith.constant 0.0 : f32
     %safe = arith.select %outside, %none, %at : i64
@@ -8,7 +8,7 @@
     return %chosen : f32
   }
   // two 32 bit floats as the 16 bit pair of an mma operand
-  func.func private @strict_device_products_pair(%first: f32, %second: f32) -> vector<2xf16> attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_products_pair(%first: f32, %second: f32) -> vector<2xf16> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %firstHalf = arith.truncf %first : f32 to f16
@@ -19,7 +19,7 @@
     return %pair : vector<2xf16>
   }
   // one output at row and column of a batch into the result unless it is past the edges
-  func.func private @strict_device_products_written(%result: !llvm.ptr, %results: i64, %value: f32, %batch: i64, %row: i64, %column: i64, %rows: i64, %columns: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_products_written(%result: !llvm.ptr, %results: i64, %value: f32, %batch: i64, %row: i64, %column: i64, %rows: i64, %columns: i64) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %doubleBits = arith.constant 64 : i64
     %wide = arith.cmpi eq, %results, %doubleBits : i64
     %rowInside = arith.cmpi slt, %row, %rows : i64
@@ -45,7 +45,7 @@
   }
   // `Products.Multiplied` on the 16 bit tensor cores: a warp computes 16 rows by 8 columns of one batch, the numbers of
   // left and right read at their strides 8 along inner at a time (zeros past the edges), sums in 32 bit floats
-  func.func private @strict_device_products_run(%result: !llvm.ptr, %results: i64, %left: !llvm.ptr, %leftCount: i64, %leftBits: i64, %right: !llvm.ptr, %rightCount: i64, %rightBits: i64, %shape: vector<4xf64>, %strides: vector<8xf64>) {
+  func.func private @strict_device_products_run(%result: !llvm.ptr, %results: i64, %left: !llvm.ptr, %leftCount: i64, %leftBits: i64, %right: !llvm.ptr, %rightCount: i64, %rightBits: i64, %shape: vector<4xf64>, %strides: vector<8xf64>) attributes {llvm.linkage = #llvm.linkage<internal>} {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %two = arith.constant 2 : i64
@@ -243,7 +243,7 @@
   llvm.mlir.global internal @strict_device_product_rights() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<20480 x i8>
   // 4 numbers of a list from at, step apart, as 16 bit floats: the first valid of them and zeros after, one vector load
   // of 32 bit floats when fast and all 4 are valid
-  func.func private @strict_device_product_quad(%data: !llvm.ptr, %count: i64, %bits: i64, %at: i64, %step: i64, %valid: i64, %fast: i1) -> vector<4xf16> attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_product_quad(%data: !llvm.ptr, %count: i64, %bits: i64, %at: i64, %step: i64, %valid: i64, %fast: i1) -> vector<4xf16> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %two = arith.constant 2 : i64
@@ -293,7 +293,7 @@
   }
   // the 16 numbers a thread copies of 128 rows (or columns) from first by the 32 numbers of step along inner of one
   // operand (zeros past rows and inner): 4 times 4 numbers next to each other along inner, along the rows when byRows
-  func.func private @strict_device_product_fetch(%data: !llvm.ptr, %count: i64, %bits: i64, %base: i64, %rowStride: i64, %innerStride: i64, %rows: i64, %first: i64, %inner: i64, %step: i64, %thread: i32, %byRows: i1, %fast: i1) -> vector<16xf16> attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_product_fetch(%data: !llvm.ptr, %count: i64, %bits: i64, %base: i64, %rowStride: i64, %innerStride: i64, %rows: i64, %first: i64, %inner: i64, %step: i64, %thread: i32, %byRows: i1, %fast: i1) -> vector<16xf16> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %two = arith.constant 2 : i64
@@ -362,7 +362,7 @@
   }
   // the numbers strict_device_product_fetch loaded into stage buffer (0 or 1) of array: row by row with 80 bytes each,
   // 4 numbers along inner at once, one by one when they lie along the rows
-  func.func private @strict_device_product_put(%halves: vector<16xf16>, %array: !llvm.ptr<3>, %buffer: i32, %thread: i32, %byRows: i1) attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_product_put(%halves: vector<16xf16>, %array: !llvm.ptr<3>, %buffer: i32, %thread: i32, %byRows: i1) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -437,7 +437,7 @@
   }
   // m16n8k16 of 16 bit floats, or of bfloat16 when brain (natively from sm_80 on, before and on AMD converted to 16 bit
   // floats first)
-  func.func private @strict_device_product_dot(%a0: vector<2xf16>, %a1: vector<2xf16>, %a2: vector<2xf16>, %a3: vector<2xf16>, %b0: vector<2xf16>, %b1: vector<2xf16>, %c0: f32, %c1: f32, %c2: f32, %c3: f32, %brain: i1) -> !llvm.struct<(f32, f32, f32, f32)> attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_product_dot(%a0: vector<2xf16>, %a1: vector<2xf16>, %a2: vector<2xf16>, %a3: vector<2xf16>, %b0: vector<2xf16>, %b1: vector<2xf16>, %c0: f32, %c1: f32, %c2: f32, %c3: f32, %brain: i1) -> !llvm.struct<(f32, f32, f32, f32)> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %arch = func.call @strict_device_arch() : () -> i32
     %c800 = arith.constant 800 : i32
     %isWide = arith.cmpi sge, %arch, %c800 : i32
@@ -457,7 +457,7 @@
     return %halves : !llvm.struct<(f32, f32, f32, f32)>
   }
   // the two numbers of a pair as 16 bit floats, from bfloat16 bits when brain
-  func.func private @strict_device_product_halves(%pair: vector<2xf16>, %brain: i1) -> vector<2xf16> attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_product_halves(%pair: vector<2xf16>, %brain: i1) -> vector<2xf16> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %brains = llvm.bitcast %pair : vector<2xf16> to vector<2xbf16>
     %wide = arith.extf %brains : vector<2xbf16> to vector<2xf32>
     %narrow = arith.truncf %wide : vector<2xf32> to vector<2xf16>
@@ -466,7 +466,7 @@
   }
   // the 4 sums from slot plus the 16 x 8 by 8 products of 16 numbers along inner (a: rows g and g + 8 of numbers 0 to 7,
   // then of 8 to 15, b: 0 to 7 and 8 to 15 of column g)
-  func.func private @strict_device_product_mma(%sums: vector<64xf32>, %slot: i32, %a0: i32, %a1: i32, %a2: i32, %a3: i32, %b0: i32, %b1: i32, %brain: i1) -> vector<64xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_product_mma(%sums: vector<64xf32>, %slot: i32, %a0: i32, %a1: i32, %a2: i32, %a3: i32, %b0: i32, %b1: i32, %brain: i1) -> vector<64xf32> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
     %c3 = llvm.mlir.constant(3 : i32) : i32
@@ -497,7 +497,7 @@
   // 16 numbers along inner (half 0 or 1 of a stage) of stage buffer for the 64 rows and 32 columns of a warp: an
   // ldmatrix.x4 per 16 rows and per 16 columns, 16 mma; sums holds the 4 results (rows g and g + 8 of the lane by columns
   // 2 * (lane % 4) and the next) of the 4 x 4 tiles of 16 rows by 8 columns, row tile first
-  func.func private @strict_device_product_half(%sums: vector<64xf32>, %buffer: i32, %half: i32, %warpRow: i32, %warpColumn: i32, %lane: i32, %brain: i1) -> vector<64xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_product_half(%sums: vector<64xf32>, %buffer: i32, %half: i32, %warpRow: i32, %warpColumn: i32, %lane: i32, %brain: i1) -> vector<64xf32> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -590,7 +590,7 @@
   }
   // true when the numbers of an operand can be read as 32 bit floats 4 at a time: their stride along inner is 1 (along
   // the rows when byRows), the other stride, the start and the data are aligned to 4 numbers
-  func.func private @strict_device_product_fast(%data: !llvm.ptr, %bits: i64, %base: i64, %rowStride: i64, %innerStride: i64, %byRows: i1) -> i1 attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_product_fast(%data: !llvm.ptr, %bits: i64, %base: i64, %rowStride: i64, %innerStride: i64, %byRows: i1) -> i1 attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %three = arith.constant 3 : i64
@@ -617,7 +617,7 @@
     return %fast : i1
   }
   // 4 aligned vector<2xi32> loads (4 bfloat16 numbers each) along inner without conversion so global loads overlap with mma
-  func.func private @strict_device_product_load_brains(%data: !llvm.ptr, %base: i64, %rowStride: i64, %rows: i64, %first: i64, %step: i64, %thread: i32) -> vector<8xi32> attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_product_load_brains(%data: !llvm.ptr, %base: i64, %rowStride: i64, %rows: i64, %first: i64, %step: i64, %thread: i32) -> vector<8xi32> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %none = arith.constant 0 : i64
     %two = arith.constant 2 : i64
     %three = arith.constant 3 : i64
@@ -667,7 +667,7 @@
     return %all : vector<8xi32>
   }
   // converts raw bfloat16 vector<8xi32> into 4 masked vector<4xf16> quads and stores them into stage buffer of array
-  func.func private @strict_device_product_put_brains(%raw: vector<8xi32>, %rows: i64, %first: i64, %array: !llvm.ptr<3>, %buffer: i32, %thread: i32) attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_product_put_brains(%raw: vector<8xi32>, %rows: i64, %first: i64, %array: !llvm.ptr<3>, %buffer: i32, %thread: i32) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %c3 = llvm.mlir.constant(3 : i32) : i32
     %c7 = llvm.mlir.constant(7 : i32) : i32
     %c80 = llvm.mlir.constant(80 : i32) : i32
@@ -733,7 +733,7 @@
     return
   }
   // 4 back-to-back aligned vector loads (bfloat16 or f32) along inner in a single basic block
-  func.func private @strict_device_product_fetch_fast(%data: !llvm.ptr, %bits: i64, %base: i64, %rowStride: i64, %rows: i64, %first: i64, %step: i64, %thread: i32) -> vector<16xf16> attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_product_fetch_fast(%data: !llvm.ptr, %bits: i64, %base: i64, %rowStride: i64, %rows: i64, %first: i64, %step: i64, %thread: i32) -> vector<16xf16> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %none = arith.constant 0 : i64
     %two = arith.constant 2 : i64
     %three = arith.constant 3 : i64
@@ -817,7 +817,7 @@
   }
   // the block computes the tile batch, rows from rowFirst and columns from columnFirst over all stages of 32 numbers
   // along inner (the next stage loaded into registers while one computes), each warp its 64 rows by 32 columns
-  func.func private @strict_device_product_stages(%left: !llvm.ptr, %leftCount: i64, %leftBits: i64, %leftBase: i64, %leftRow: i64, %leftInner: i64, %right: !llvm.ptr, %rightCount: i64, %rightBits: i64, %rightBase: i64, %rightColumn: i64, %rightInner: i64, %rows: i64, %columns: i64, %inner: i64, %rowFirst: i64, %columnFirst: i64, %thread: i32) -> vector<64xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_product_stages(%left: !llvm.ptr, %leftCount: i64, %leftBits: i64, %leftBase: i64, %leftRow: i64, %leftInner: i64, %right: !llvm.ptr, %rightCount: i64, %rightBits: i64, %rightBase: i64, %rightColumn: i64, %rightInner: i64, %rows: i64, %columns: i64, %inner: i64, %rowFirst: i64, %columnFirst: i64, %thread: i32) -> vector<64xf32> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %halvesOnly = arith.constant false
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
@@ -957,7 +957,7 @@
   }
   // a block of 256 threads per tile of 128 rows by 128 columns of a batch, the column tiles of the same rows next to each
   // other (they read the same rows of left)
-  func.func private @strict_device_product_tiles_run(%result: !llvm.ptr, %results: i64, %left: !llvm.ptr, %leftCount: i64, %leftBits: i64, %right: !llvm.ptr, %rightCount: i64, %rightBits: i64, %shape: vector<4xf64>, %strides: vector<8xf64>) attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_product_tiles_run(%result: !llvm.ptr, %results: i64, %left: !llvm.ptr, %leftCount: i64, %leftBits: i64, %right: !llvm.ptr, %rightCount: i64, %rightBits: i64, %shape: vector<4xf64>, %strides: vector<8xf64>) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32

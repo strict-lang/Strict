@@ -1168,8 +1168,9 @@
     %result = llvm.call @strict_metal_succeeded() : () -> i32
     llvm.return %result : i32
   }
-  // compiles the Metal source (without fast math, Strict keeps NaN and infinity), keeps a copy for the parameter counts
-  llvm.func @strict_metal_cuModuleLoadData(%module: !llvm.ptr, %image: !llvm.ptr) -> i32 {
+  // compiles the Metal source (without fast math, Strict keeps NaN and infinity), keeps a copy for the parameter
+  // counts, CUDA's JIT options are ignored
+  llvm.func @strict_metal_cuModuleLoadDataEx(%module: !llvm.ptr, %image: !llvm.ptr, %optionCount: i32, %options: !llvm.ptr, %values: !llvm.ptr) -> i32 {
     %success = llvm.mlir.constant(0 : i32) : i32
     %invalid = llvm.mlir.constant(200 : i32) : i32
     %one = llvm.mlir.constant(1 : i64) : i64
@@ -1687,7 +1688,7 @@
     %f3 = llvm.mlir.addressof @strict_metal_cuCtxSetCurrent : !llvm.ptr
     llvm.return %f3 : !llvm.ptr
   ^c4:
-    %f4 = llvm.mlir.addressof @strict_metal_cuModuleLoadData : !llvm.ptr
+    %f4 = llvm.mlir.addressof @strict_metal_cuModuleLoadDataEx : !llvm.ptr
     llvm.return %f4 : !llvm.ptr
   ^c5:
     %f5 = llvm.mlir.addressof @strict_metal_cuModuleGetFunction : !llvm.ptr

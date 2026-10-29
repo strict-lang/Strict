@@ -2,7 +2,7 @@
   llvm.mlir.global internal @strict_device_hadamard_numbers() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<256 x f32>
   // one radix-4 butterfly of the 256 numbers of a block at step (1, 4, 16, 64) for its thread: the sum of the 4 numbers
   // of its quad halved, the one at 3 - digit negated, like `Convrot.Butterfly`
-  func.func private @strict_device_hadamard_stage(%value: f32, %thread: i64, %step: i64) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_hadamard_stage(%value: f32, %thread: i64, %step: i64) -> f32 attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %c3 = arith.constant 3 : i64
     %shared = llvm.mlir.addressof @strict_device_hadamard_numbers : !llvm.ptr<3>
     %own = llvm.getelementptr %shared[%thread] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
@@ -18,7 +18,7 @@
     return %sum : f32
   }
   // the quad from first at step in shared memory through strict_device_hadamard_sum
-  func.func private @strict_device_hadamard_quad(%shared: !llvm.ptr<3>, %first: i64, %step: i64, %partner: i64) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_hadamard_quad(%shared: !llvm.ptr<3>, %first: i64, %step: i64, %partner: i64) -> f32 attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %at1 = arith.addi %first, %step : i64
     %at2 = arith.addi %at1, %step : i64
     %at3 = arith.addi %at2, %step : i64
@@ -34,7 +34,7 @@
     return %sum : f32
   }
   // ((x0 s0 + x1 s1) + x2 s2) + x3 s3 of a quad, s is -0.5 at partner and 0.5 elsewhere
-  func.func private @strict_device_hadamard_sum(%x0: f32, %x1: f32, %x2: f32, %x3: f32, %partner: i64) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_hadamard_sum(%x0: f32, %x1: f32, %x2: f32, %x3: f32, %partner: i64) -> f32 attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %c0 = arith.constant 0 : i64
     %c1 = arith.constant 1 : i64
     %c2 = arith.constant 2 : i64
@@ -61,7 +61,7 @@
   // `Convrot.Rotated`: a block of 256 threads per group of 256 numbers (count a multiple of 256), each thread one number
   // through the 4 radix-4 butterflies in shared memory, written as doubles when wide (to the host), else in the format
   // results (32 or 17, strict_device_stored)
-  func.func private @strict_device_hadamard_run(%count: i64, %result: !llvm.ptr, %wide: i1, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %results: i64) {
+  func.func private @strict_device_hadamard_run(%count: i64, %result: !llvm.ptr, %wide: i1, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %results: i64) attributes {llvm.linkage = #llvm.linkage<internal>} {
     %c1 = arith.constant 1 : i64
     %c4 = arith.constant 4 : i64
     %c16 = arith.constant 16 : i64
@@ -98,7 +98,7 @@
   }
   // the quad number of a lane whose digit is at shift of its lane number, the lanes xor 1, 2 and 3 times 1 << shift hold
   // the other numbers of the quad (steps 1 and 4 of strict_device_hadamard_tokens)
-  func.func private @strict_device_hadamard_lanes(%value: f32, %lane: i32, %shift: i32) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_hadamard_lanes(%value: f32, %lane: i32, %shift: i32) -> f32 attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %c1 = arith.constant 1 : i32
     %c2 = arith.constant 2 : i32
     %c3 = arith.constant 3 : i32
@@ -123,7 +123,7 @@
     %sum = func.call @strict_device_hadamard_sum(%x0, %x1, %x2, %x3, %partner) : (f32, f32, f32, f32, i64) -> f32
     return %sum : f32
   }
-  func.func private @strict_device_hadamard_pick(%index: i32, %v0: f32, %v1: f32, %v2: f32, %v3: f32) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_hadamard_pick(%index: i32, %v0: f32, %v1: f32, %v2: f32, %v3: f32) -> f32 attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %c1 = arith.constant 1 : i32
     %c2 = arith.constant 2 : i32
     %odd = arith.andi %index, %c1 : i32
@@ -136,7 +136,7 @@
   }
   // the quad number at step 16 of the even or odd j (isOdd 0 or 1) of a lane from its even and odd numbers and those of
   // the lane 16 apart (high is bit 4 of the lane)
-  func.func private @strict_device_hadamard_pair(%even: f32, %odd: f32, %otherEven: f32, %otherOdd: f32, %high: i1, %isOdd: i64) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_hadamard_pair(%even: f32, %odd: f32, %otherEven: f32, %otherOdd: f32, %high: i1, %isOdd: i64) -> f32 attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %one = arith.constant 1 : i64
     %three = arith.constant 3 : i64
     %x0 = arith.select %high, %otherEven, %even : f32
@@ -154,7 +154,7 @@
   llvm.mlir.global internal @strict_device_hadamard_largest() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<32 x f32>
   // the 8 numbers of a lane of strict_device_hadamard_tokens rotated through the 4 radix-4 butterflies of its group of
   // 256 (lane holds number at + 32 j, j 0 to 7), steps 1 and 4 over lanes, 16 over lanes and j, 64 over j
-  func.func private @strict_device_hadamard_group(%source: !llvm.ptr, %bits: i64, %at: i64, %lane: i32) -> vector<8xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_hadamard_group(%source: !llvm.ptr, %bits: i64, %at: i64, %lane: i32) -> vector<8xf32> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %c0 = arith.constant 0 : i32
     %c2 = arith.constant 2 : i32
     %c16 = arith.constant 16 : i32
@@ -246,7 +246,7 @@
     return %v7 : vector<8xf32>
   }
   // the largest magnitude of the 8 numbers of a lane
-  func.func private @strict_device_hadamard_magnitude(%numbers: vector<8xf32>) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_hadamard_magnitude(%numbers: vector<8xf32>) -> f32 attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %i0 = arith.constant 0 : i32
     %n0 = llvm.extractelement %numbers[%i0 : i32] : vector<8xf32>
     %m0 = llvm.call_intrinsic "llvm.fabs.f32"(%n0) : (f32) -> f32
@@ -281,7 +281,7 @@
     return %largest : f32
   }
   // the 8 numbers of a lane times factor rounded to 8 bit numbers at at + 32 j of target
-  func.func private @strict_device_hadamard_codes(%target: !llvm.ptr, %at: i64, %numbers: vector<8xf32>, %factor: f32, %residual: i1) attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_hadamard_codes(%target: !llvm.ptr, %at: i64, %numbers: vector<8xf32>, %factor: f32, %residual: i1) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %bytes = llvm.getelementptr %target[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %i0 = arith.constant 0 : i32
     %n0 = llvm.extractelement %numbers[%i0 : i32] : vector<8xf32>
@@ -336,7 +336,7 @@
   // strict_device_quantize_tokens of `Convrot.Rotated` of 32 or 16 bit source numbers (bits) without writing the rotated
   // ones: a block per token (width a multiple of 256 up to 16384, strict_gpu_hadamard_threads), a warp per group of 256
   // numbers (strict_device_hadamard_group) and a second one warps groups later when there are more groups than warps
-  func.func private @strict_device_hadamard_tokens_run(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_hadamard_tokens_run(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %residual, %format = func.call @strict_device_code_format(%bits) : (i64) -> (i1, i64)
     %c0 = arith.constant 0 : i32
     %c5 = arith.constant 5 : i32

@@ -5,7 +5,7 @@
   // them 256 apart: the butterflies of bits 8 and 9 in registers and of bits 0 to 4 across the warp, one exchange
   // through shared memory, bits 5 and 6 in registers and 7 across the warp, scaled by 1 / sqrt(size) and written as
   // doubles when wide (to the host), else in the format results
-  func.func private @strict_device_sylvester_run(%count: i64, %result: !llvm.ptr, %wide: i1, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %flips: !llvm.ptr, %flipsCount: i64, %flipsBits: i64, %size: f64, %results: i64) {
+  func.func private @strict_device_sylvester_run(%count: i64, %result: !llvm.ptr, %wide: i1, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %flips: !llvm.ptr, %flipsCount: i64, %flipsBits: i64, %size: f64, %results: i64) attributes {llvm.linkage = #llvm.linkage<internal>} {
     %c1 = arith.constant 1 : i64
     %c4 = arith.constant 4 : i64
     %c5 = arith.constant 5 : i64
@@ -112,7 +112,7 @@
     return
   }
   // the flipped number at, 0 after count
-  func.func private @strict_device_sylvester_flipped(%values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %flips: !llvm.ptr, %flipsCount: i64, %flipsBits: i64, %count: i64, %at: i64) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_sylvester_flipped(%values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %flips: !llvm.ptr, %flipsCount: i64, %flipsBits: i64, %count: i64, %at: i64) -> f32 attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %zero = arith.constant 0.0 : f32
     %inside = arith.cmpi slt, %at, %count : i64
     cf.cond_br %inside, ^load, ^outside
@@ -129,7 +129,7 @@
     return %zero : f32
   }
   // the sum and difference of a butterfly when active, else both unchanged
-  func.func private @strict_device_sylvester_pair(%low: f32, %high: f32, %active: i1) -> (f32, f32) attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_sylvester_pair(%low: f32, %high: f32, %active: i1) -> (f32, f32) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %sum = arith.addf %low, %high : f32
     %difference = arith.subf %low, %high : f32
     %first = arith.select %active, %sum, %low : f32
@@ -138,7 +138,7 @@
   }
   // the butterfly with the lane differing in the bit offset when active (the sum in the lower lane, the difference in
   // the higher), every lane of the warp calls it
-  func.func private @strict_device_sylvester_swap(%value: f32, %lane: i32, %offset: i32, %active: i1) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_sylvester_swap(%value: f32, %lane: i32, %offset: i32, %active: i1) -> f32 attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %zero = arith.constant 0 : i32
     %bits = arith.bitcast %value : f32 to i32
     %otherBits = func.call @strict_device_swap(%bits, %offset) : (i32, i32) -> i32
@@ -152,7 +152,7 @@
     return %chosen : f32
   }
   // the shared slot of position, 16 numbers skipped after every 128
-  func.func private @strict_device_sylvester_slot(%shared: !llvm.ptr<3>, %position: i64) -> !llvm.ptr<3> attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_sylvester_slot(%shared: !llvm.ptr<3>, %position: i64) -> !llvm.ptr<3> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %seven = arith.constant 7 : i64
     %four = arith.constant 4 : i64
     %row = arith.shrui %position, %seven : i64
@@ -161,18 +161,18 @@
     %slot = llvm.getelementptr %shared[%padded] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
     return %slot : !llvm.ptr<3>
   }
-  func.func private @strict_device_sylvester_store(%shared: !llvm.ptr<3>, %position: i64, %value: f32) attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_sylvester_store(%shared: !llvm.ptr<3>, %position: i64, %value: f32) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %slot = func.call @strict_device_sylvester_slot(%shared, %position) : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>
     llvm.store %value, %slot : f32, !llvm.ptr<3>
     return
   }
-  func.func private @strict_device_sylvester_load(%shared: !llvm.ptr<3>, %position: i64) -> f32 attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_sylvester_load(%shared: !llvm.ptr<3>, %position: i64) -> f32 attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %slot = func.call @strict_device_sylvester_slot(%shared, %position) : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>
     %value = llvm.load %slot : !llvm.ptr<3> -> f32
     return %value : f32
   }
   // the scaled number at target unless it is after count
-  func.func private @strict_device_sylvester_write(%result: !llvm.ptr, %target: i64, %value: f32, %factor: f32, %count: i64, %wide: i1, %results: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_sylvester_write(%result: !llvm.ptr, %target: i64, %value: f32, %factor: f32, %count: i64, %wide: i1, %results: i64) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %inside = arith.cmpi slt, %target, %count : i64
     cf.cond_br %inside, ^write, ^done
   ^write:
