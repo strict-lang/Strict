@@ -52,14 +52,14 @@ ParameterScope Scope
 	TypeShape("Add(first Number, second) Number", "\tfirst").ParameterScope.TypeOf("Add types") is "Number,Second"
 	TypeShape("Add(first Number) Mutable(Number)", "\tfirst").ParameterScope.TypeOf("Add mutable") is "Mutable"
 	TypeShape("has price Number with Step 0.01").ParameterScope.TypeOf("price step") is "0.01"
-	mutable scope = Scope(List(Text), List(Text))
+	let methods = MethodScope
+	mutable scope = IsContract then Scope(List(Text) + " trait", List(Text) + "true") else Scope(List(Text), List(Text))
 	for lines
 		if IsMethodHeader(value)
-			let entries = HeaderEntries(HeaderTokens(Tokenizer(value).Tokens), MethodScope).Parameters
+			let entries = HeaderEntries(HeaderTokens(Tokenizer(value).Tokens), methods).Parameters
 			scope = scope.WithAll(entries.names, entries.types)
 	let steps = Steps(List(Text)).Members(lines)
-	let result = scope.WithAll(steps.names, steps.types)
-	IsContract then result.With(" trait", "true") else result
+	scope.WithAll(steps.names, steps.types)
 UsesGenerics Boolean
 	TypeShape("has value Generic").UsesGenerics
 	TypeShape("has value Generic or None").UsesGenerics is false
