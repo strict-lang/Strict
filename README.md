@@ -43,7 +43,7 @@ if Parent is None
 The base types are the documentation: every method starts with tests showing how to use it. Tests are `is` comparisons (`==` elsewhere, `=` assigns), every expression must be true or execution stops with an Error.
 
 ## Command line
-`strict` (`strict.exe` on Windows) is in this folder next to the base types, put it on the PATH. No .NET or other runtime is needed (the C# implementation that bootstrapped Strict is on the `dotnet` branch).
+`strict` (`strict.exe` on Windows) is in this folder next to the base types, put it on the PATH. No .NET or other runtime is needed (the C# implementation that bootstrapped Strict is commit [4e4fc3da](https://github.com/strict-lang/Strict/tree/4e4fc3da6da3075da38dc3bd2f683ef27e34b26c) in the history).
 ```
 strict Examples/Sum.strict 5 10 20        run on the Strict VM, arguments go to Run
 strict test Examples/Sum.strict           explicitly run this file, including Slow tests, on the VM
