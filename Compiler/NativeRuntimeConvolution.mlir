@@ -1,7 +1,7 @@
   // the input of `Convolved.Summed` normed with the scales and shifts of affine (swish when asked) or the weights as they
   // are (normed 0), 4 numbers per thread (one vector load of bfloat16 or 32 bit floats when aligned), stored as bfloat16
   // for strict_device_convolution, every channels numbers followed by zeros up to padded (a multiple of 32)
-  func.func private @strict_device_convolution_normed_run(%count: i64, %result: !llvm.ptr, %results: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %affine: !llvm.ptr, %affineCount: i64, %affineBits: i64, %channels: f64, %swish: f64, %normed: f64, %padded: f64) attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_convolution_normed_run(%count: i64, %result: !llvm.ptr, %results: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %affine: !llvm.ptr, %affineCount: i64, %affineBits: i64, %channels: f64, %swish: f64, %normed: f64, %padded: f64) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %four = arith.constant 4 : i64
@@ -112,7 +112,7 @@
     return
   }
   // 4 numbers of data from first in any format, zeros from end on
-  func.func private @strict_device_convolution_four(%data: !llvm.ptr, %count: i64, %bits: i64, %first: i64, %end: i64) -> vector<4xf32> attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_convolution_four(%data: !llvm.ptr, %count: i64, %bits: i64, %first: i64, %end: i64) -> vector<4xf32> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %four = arith.constant 4 : i64
@@ -143,7 +143,7 @@
   }
   // 8 numbers of data from at into 16 bytes of shared memory as bfloat16 (zeros when not valid): copied without waiting
   // from a bfloat16 list, read and converted from other formats
-  func.func private @strict_device_convolution_eight(%shared: !llvm.ptr<3>, %data: !llvm.ptr, %count: i64, %bits: i64, %at: i64, %valid: i1) attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_convolution_eight(%shared: !llvm.ptr<3>, %data: !llvm.ptr, %count: i64, %bits: i64, %at: i64, %valid: i1) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %brainBits = arith.constant 17 : i64
     %isBrain = arith.cmpi eq, %bits, %brainBits : i64
     cf.cond_br %isBrain, ^copy, ^convert
@@ -180,7 +180,7 @@
   // bytes at a time without waiting: 8 channels of the 2 pixels of a thread at the pixel the tap shifts to (row and column
   // - 1 to + 1, for the 2 x 2 taps of a doubled image - 1 to 0 plus the parity of the output, zeros outside of the image)
   // and 8 numbers of the weight rows of its 2 outputs (zeros past the last), 80 bytes per row like strict_device_product_put
-  func.func private @strict_device_convolution_copies(%values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %weights: !llvm.ptr, %weightsCount: i64, %weightsBits: i64, %buffer: i32, %stage: i64, %channels: i64, %side: i32, %rowParity: i32, %columnParity: i32, %height: i32, %width: i32, %pixelRows: vector<2xi32>, %pixelColumns: vector<2xi32>, %weightRows: vector<2xi64>, %weightInside: vector<2xi1>, %thread: i32) attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_convolution_copies(%values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %weights: !llvm.ptr, %weightsCount: i64, %weightsBits: i64, %buffer: i32, %stage: i64, %channels: i64, %side: i32, %rowParity: i32, %columnParity: i32, %height: i32, %width: i32, %pixelRows: vector<2xi32>, %pixelColumns: vector<2xi32>, %weightRows: vector<2xi64>, %weightInside: vector<2xi1>, %thread: i32) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -256,7 +256,7 @@
   // (bfloat16 on the GPU): a block of 8 warps takes 128 pixels by 128 outputs over the taps in stages of 32 numbers (the stage of a tap
   // never crosses into the next), copied a stage ahead into the other buffer while the bfloat16 tensor cores multiply
   // this one; the output tiles of the same pixels lie next to each other
-  func.func private @strict_device_convolution_run(%result: !llvm.ptr, %results: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %weights: !llvm.ptr, %weightsCount: i64, %weightsBits: i64, %height: i64, %width: i64, %channels: i64, %outputs: i64, %factor: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_convolution_run(%result: !llvm.ptr, %results: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %weights: !llvm.ptr, %weightsCount: i64, %weightsBits: i64, %height: i64, %width: i64, %channels: i64, %outputs: i64, %factor: i64) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -433,7 +433,7 @@
     func.call @strict_device_convolution_shaped(%result, %results, %values, %valuesCount, %valuesBits, %weights, %weightsCount, %weightsBits, %height, %width, %channels, %outputs, %factor) : (!llvm.ptr, i64, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, f64, f64, f64, f64, f64) -> ()
     llvm.return
   }
-  func.func private @strict_device_convolution_shaped(%result: !llvm.ptr, %results: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %weights: !llvm.ptr, %weightsCount: i64, %weightsBits: i64, %height: f64, %width: f64, %channels: f64, %outputs: f64, %factor: f64) attributes {llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_convolution_shaped(%result: !llvm.ptr, %results: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %weights: !llvm.ptr, %weightsCount: i64, %weightsBits: i64, %height: f64, %width: f64, %channels: f64, %outputs: f64, %factor: f64) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %heightNumber = arith.fptosi %height : f64 to i64
     %widthNumber = arith.fptosi %width : f64 to i64
     %channelsNumber = arith.fptosi %channels : f64 to i64
