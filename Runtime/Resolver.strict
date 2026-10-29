@@ -143,9 +143,8 @@ Placed(entry InstructionEntry, method MethodEntry, position Number, scratch Numb
 	Doubling.Placed(MethodEntry.CountingLoop.instructions(1), MethodEntry.CountingLoop, 1, 9).payload is (1, 0)
 	let isJump = (entry.kind is InstructionType.JumpToIdIfFalse) or (entry.kind is InstructionType.JumpToIdIfTrue)
 	let isFailing = (entry.kind is InstructionType.CheckError) and (entry.texts.Length > 0)
-	let ended = InstructionEntry.Jump(InstructionType.JumpEnd, isFailing then PayloadDecoder(entry).SevenBit(1) else 0)
-	let target = isJump then method.JumpEndOf(entry) else method.JumpEndOf(ended)
-	let jumped = isJump or isFailing then entry.payload + target else entry.payload
+	let ended = isFailing then InstructionEntry.Jump(InstructionType.JumpEnd, PayloadDecoder(entry).SevenBit(1)) else entry
+	let jumped = isJump or isFailing then entry.payload + method.JumpEndOf(ended) else entry.payload
 	let looped = entry.kind is InstructionType.LoopEnd then jumped + method.LoopBeginOf(position) else jumped
 	InstructionEntry(entry.kind, entry.texts, looped, entry.line, Destination(entry, scratch))
 Destination(entry InstructionEntry, scratch Number) Number

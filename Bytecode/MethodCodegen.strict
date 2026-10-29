@@ -43,10 +43,11 @@ Lined(block CodeBlock, start Number, line Number) CodeBlock
 	Plain.Lined(CodeBlock.Empty.Load(InstructionEntry.LoadNumber(0, 1)), 0, 5).instructions.First.line is 5
 	if line is 0
 		return block
-	mutable lined = List(Mutable(InstructionEntry))
-	for block.instructions
-		let isUnlined = (index >= start) and (value.line is 0)
-		lined.Add(isUnlined then InstructionEntry(value.kind, value.texts, value.payload, line) else value)
+	mutable lined = block.instructions
+	for Range(start, lined.Length)
+		let entry = lined(value)
+		if entry.line is 0
+			lined(value) = InstructionEntry(entry.kind, entry.texts, entry.payload, line)
 	CodeBlock(lined, block.register, block.nextId, block.scope)
 HasElse(body SyntaxNode, position Number) Boolean
 	Plain.HasElse(ElseBody, 0)
