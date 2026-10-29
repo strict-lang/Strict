@@ -6,7 +6,7 @@ constant CountRun = MethodEntry("Run", List(MemberEntry), "None", CountCall)
 constant Counted = TypeEntry("A", List(MemberEntry), List(MethodEntry) + CountRun)
 constant ForNumbers = MethodEntry("for", List(MemberEntry), "Strict/Iterator(Number)", List(InstructionEntry))
 constant Iterating = TypeEntry("A", List(MemberEntry), List(MethodEntry) + ForNumbers)
-constant Sample = Linker(".", TypeCodegen("Strict/Bytecode/FileCompiler", List(Text), ValueCodegen.NoTypes, List(Text)))
+constant Sample = Linker(".", TypeCodegen("Strict/Bytecode/FileCompiler", List(Text), ValueCodegen.NoTypes, List(Text) + "Strict/Bytecode/MemberEntry"))
 constant Hello = Linker(".", TypeCodegen.Hello)
 constant Reading = TypeEntry("A", List(MemberEntry) + MemberEntry("b", "Strict/List(Byte)", List(InstructionEntry), false), List(MethodEntry))
 constant Parameters = TypeEntry("Strict/Bytecode/MethodEntry", List(MemberEntry) + MemberEntry("parameters", "Strict/List(MemberEntry)", List(InstructionEntry), false), List(MethodEntry))
@@ -141,7 +141,7 @@ Qualified(element Text, package Text) Text
 	Sample.Qualified("MemberEntry", "Strict/Bytecode") is "Strict/Bytecode/MemberEntry"
 	Sample.Qualified("Logger", "Strict/Bytecode") is "Strict/Logger"
 	let nearby = package + "/" + element
-	File(SourcePath(nearby)).Exists then nearby else "Strict/" + element
+	nearby is in main.typeNames then nearby else "Strict/" + element
 Targets(entries List(TypeEntry)) Texts
 	Sample.Targets(Go) is ("Strict/B.Go")
 	Sample.Targets(Counted) is ("Strict/Range.Count")
