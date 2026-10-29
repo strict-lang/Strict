@@ -2,7 +2,7 @@
 What to fix next, one short line each, bugs first. Remove a line once it is done, add what is found at the end. No history or measurements (those go into commit messages). Speed work: [performance.md](performance.md).
 
 ## Bugs
-- Ternary Bonsai 27B at a simulated 10 GB stalled once more (first run after a cold build), 12 later runs did not: [improvements-models.md](improvements-models.md).
+- The GPU budget ignores other programs on Windows: WDDM's `cuMemGetInfo` reported 22.7 of 24 GB free while another process held 12.5 GB, so Strict grew to its full peak and Windows paged the other process's memory to RAM, slow tokens until done (this was the Ternary Bonsai "10 GB stall", on the first run under every fresh holder).
 - A pure loop over GPU heavy calls forks onto CPU threads (MlirCost's threshold is 2 for a costly body): `Qwen3Images.Encoded` of 2 images ran its vision towers in workers and did not finish in 4.5 min, sequential takes 16 s more than one image.
 - MossImage (StrictComfy, best, 2 images, seed 7) gives another first image in 2 of 12 runs on a quiet machine (39.7 and 44.5 dB from the usual one, after a cold load StrictComfy saw 35.4 dB), the second image stays identical unless another process holds 1 GB of the GPU (then it differs too, 45.6 dB, with sampling 7.1 instead of 3.1 s from streaming): numbers depend on residency or timing, the kernel mix is the same (42 `strict_device_wholes` in every first image), no float atomics; 6 runs with STRICT_GRAPHS=0 were all identical.
 
