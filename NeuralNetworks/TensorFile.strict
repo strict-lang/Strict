@@ -1,4 +1,5 @@
 Header(path Text) Text
+Entry(path Text, name Text) Text
 Floats(path Text, entry Text, bits Number) Numbers
 Rows(path Text, entry Text, bits Number) List(Numbers)
 Columns(path Text, entry Text, bits Number) List(Numbers)

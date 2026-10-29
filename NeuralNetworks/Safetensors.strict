@@ -13,13 +13,7 @@ Entry(name Text) Text
 	Tiny.Entry("b") is "\"dtype\":\"F32\",\"shape\":[3],\"data_offsets\":[24,36]"
 	Tiny.Entry("missing") is ""
 	Safetensors("NeuralNetworks/tiny.safetensors", 32, "a").Entry("") is Tiny.Entry("a")
-	let header = TensorFile.Header(path)
-	let key = "\"" + prefix + name + "\":{"
-	let start = header.IndexOf(key)
-	if start < 0
-		return ""
-	let open = start + key.Length
-	header.Substring(open, header.IndexOf("}", open) - open)
+	TensorFile.Entry(path, prefix + name)
 Bracketed(entry Text, key Text) Numbers
 	Tiny.Bracketed(Tiny.Entry("a"), "shape") is (2, 3)
 	Tiny.Bracketed(Tiny.Entry("b"), "data_offsets") is (24, 36)
@@ -82,6 +76,8 @@ Written(names Texts, lists List(Numbers)) Number
 	Safetensors("NeuralNetworks/writtenpair.tmp").Values("x") is (1.5, -2)
 	Safetensors("NeuralNetworks/writtenpair.tmp").Values("y") is (3)
 	Safetensors("NeuralNetworks/writtenpair.tmp").Shape("y")(0) is 1
+	Safetensors("NeuralNetworks/writtenpair.tmp").Written(List(Text) + "x", List(Numbers) + (7, 8, 9)) is 3
+	Safetensors("NeuralNetworks/writtenpair.tmp").Values("x") is (7, 8, 9)
 	TensorFile.Written(path, Header(names, lists), Combined(lists))
 Header(names Texts, lists List(Numbers)) Text
 	Tiny.Header(List(Text) + "x", List(Numbers) + (1, 2)) is "{" + Single + "}"
