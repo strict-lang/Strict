@@ -5,10 +5,7 @@ constant GraySample = Png((137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72,
 constant PaletteSample = Png((137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 4, 0, 0, 0, 2, 1, 3, 0, 0, 0, 69, 102, 239, 32, 0, 0, 0, 6, 80, 76, 84, 69, 0, 0, 0, 255, 255, 255, 165, 217, 159, 221, 0, 0, 0, 12, 73, 68, 65, 84, 120, 218, 99, 72, 96, 152, 0, 0, 1, 180, 0, 241, 102, 13, 212, 149, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130))
 Read(path Text) Png
 	Png.Read("ImageProcessing/4x4.png").Width is 4
-	mutable numbers = List(Mutable(Number))
-	for File(path).ReadBytes
-		numbers.Add(value.number)
-	Png(numbers)
+	Png(File(path).ReadBytes)
 Width Number
 	GraySample.Width is 3
 	Number32(16)

@@ -10374,9 +10374,11 @@
   ^done:
     return %zero : f64
   }
+  // the bytes of a file as Bytes (format 9) in one read, a call per byte into 8 byte numbers took 7 s for 148 MB
   func.func private @strict_file_readbytes(%path: f64) -> f64 {
     %start = arith.constant 0 : i64
-    %step = arith.constant 1 : i64
+    %one = arith.constant 1 : i64
+    %byteFormat = arith.constant 9 : i64
     %ending = arith.constant 2 : i32
     %beginning = arith.constant 0 : i32
     %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
@@ -10390,28 +10392,20 @@
     %toEnd = llvm.call @fseek(%file, %start, %ending) : (!llvm.ptr, i64, i32) -> i32
     %told = llvm.call @ftell(%file) : (!llvm.ptr) -> i64
     %toStart = llvm.call @fseek(%file, %start, %beginning) : (!llvm.ptr, i64, i32) -> i32
-    %known = arith.cmpi sge, %told, %start : i64
-    %size = arith.select %known, %told, %start : i64
-    %length = arith.sitofp %size : i64 to f64
-    %bytes = func.call @strict_list_new(%length, %length) : (f64, f64) -> f64
-    %items = func.call @strict_list_items(%bytes) : (f64) -> !llvm.ptr
-    cf.br ^copy(%start : i64)
-  ^copy(%index: i64):
-    %more = arith.cmpi slt, %index, %size : i64
-    cf.cond_br %more, ^byte, ^done
-  ^byte:
-    %read = llvm.call @fgetc(%file) : (!llvm.ptr) -> i32
-    %number = arith.sitofp %read : i32 to f64
-    %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
-    llvm.store %number, %slot : f64, !llvm.ptr
-    %next = arith.addi %index, %step : i64
-    cf.br ^copy(%next : i64)
-  ^done:
-    %closed = llvm.call @fclose(%file) : (!llvm.ptr) -> i32
+    %known = arith.cmpi sgt, %told, %start : i64
+    cf.cond_br %known, ^fill, ^empty
+  ^fill:
+    %bytes = func.call @strict_packed_new(%told, %byteFormat) : (i64, i64) -> f64
+    %data = func.call @strict_list_data(%bytes) : (f64) -> !llvm.ptr
+    %count = llvm.call @fread(%data, %one, %told, %file) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i64
+    %filled = llvm.call @fclose(%file) : (!llvm.ptr) -> i32
     return %bytes : f64
+  ^empty:
+    %closed = llvm.call @fclose(%file) : (!llvm.ptr) -> i32
+    cf.br ^absent
   ^absent:
-    %empty = func.call @strict_list_empty() : () -> f64
-    return %empty : f64
+    %none = func.call @strict_list_empty() : () -> f64
+    return %none : f64
   }
   // packed bytes (a GPU result, 9) go into the file as they are, other lists through one buffer: a call per byte wrote the
   // 148 MB of frames of a 5 s H3 video in 7 s

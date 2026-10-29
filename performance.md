@@ -10,6 +10,5 @@ Open speed work, one short line each, measurements go into commit messages. GPU 
 - WebWars' generated SceneAtlas/LevelAtlas constructors dominate its emission.
 - `MlirCost` sums expensive alternative call paths and overestimates tiny loops.
 - Collector lane refill (`strict_gc_small` taking the collector lock) contends at high thread counts.
-- `BinaryData.Read` keeps one Number per byte: a packed byte list for large assets.
 - Trees as pools with 32 bit backward offsets ([Goose](https://github.com/aardappel/goose)): count SyntaxNode allocations of `strict build Strict.strict` first.
 - After emission the whole module text is copied about 8 times: `NativeBuild.Device` searches `"\n" + mlir`, `NativeBuild.Mlir` chains `+`, `MlirSplit` reads the written file back.

@@ -4,10 +4,7 @@ Read(path Text) BinaryData
 	BinaryData.Read("Content/Missing.bin") is Error
 	if File(path).Exists is false
 		return Error("FileNotFound")
-	mutable numbers = List(Mutable(Number))
-	for File(path).ReadBytes
-		numbers.Add(value.number)
-	BinaryData(numbers)
+	BinaryData(File(path).ReadBytes)
 UInt32(at Number) Number
 	Sample.UInt32(4) is 2147680255
 	bytes(at) + bytes(at + 1) * 256 + bytes(at + 2) * 65536 + bytes(at + 3) * 16777216

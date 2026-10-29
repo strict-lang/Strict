@@ -3,14 +3,13 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 
 ## Bugs
 - Ternary Bonsai 27B at a simulated 10 GB stalled once more (first run after a cold build), 12 later runs did not: [improvements-models.md](improvements-models.md).
-- `Members` natively has no values (`()` for every InitialValue), the VM has them.
 - H3 image to video with `--image` and `--last_image` puts only the first image into the Qwen3-VL context (`Qwen3Images.Prefilled` takes one image, ComfyUI tokenizes both).
+- Natively a `Generic` value carries no type (numbers and pointers are plain f64, instances have no header): `to Text` of `Members.First.InitialValue` is `()` (the VM says 3), a type tag per instance or member type dispatch is needed.
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).
 - Game engine (iOS, Android, one game loop, Spine, platform services): [improvements-engine.md](improvements-engine.md).
 - Nightly CI: build and run every program's Run once a day (games and long running apps for a few frames); work too slow for a Slow test (rebuilding all content, big models) belongs in a Run, not in tests.
-- `File.ReadBytes` reads a byte per call into a list of doubles (fgetc, 148 MB took about 7 s to write that way): read into packed bytes
 
 ## Waiting
 - Base library: Number `Sign`, `Wrap`, `ArcTangent2` and inverse trigonometry, Text to Numbers, fixed decimal text, `Truncated`.
