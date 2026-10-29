@@ -44,12 +44,12 @@ Objects(platform Number, root Text) Text
 	if folders.Length is 0
 		return ""
 	let tokens = Flags(platform, root).Split(" ")
+	let library = NativeLibrary(value)
 	mutable arguments = ""
-	for Files + Sources(tokens)
-		let object = NativeLibrary(outer).Object(value, platform, root, Options(tokens, false))
-		if object.StartsWith("clang failed")
-			return object
-		arguments = arguments + " \"" + object + "\""
+	for library.Objects(Files + Sources(tokens), platform, root, Options(tokens, false))
+		if value.StartsWith("clang failed")
+			return value
+		arguments = arguments + " \"" + value + "\""
 	arguments + Options(tokens, true)
 Sources(tokens Texts) Texts
 	Adding.Sources(("-DX", "a/b.c", "-lgdi32")) is ("a/b.c")

@@ -1,6 +1,7 @@
 has sources NativeSources
 constant Adding = NativeLibrary(NativeSources.Adding)
 constant Failing = "clang failed for Compiler/output/Cut.o: no"
+constant NoObject = "clang failed for Compiler/output/No.o"
 Built(platform Number, root Text) Text
 	Adding.Built(Platform.Current, ".").StartsWith("Built Examples/NativeAdd/native/NativeAdd.")
 	let folder = sources.folders.First
@@ -14,18 +15,32 @@ Built(platform Number, root Text) Text
 	let clang = Toolchain(platform, root).Located("clang")
 	let result = ToolRunner(clang).Execute(shared + sources.Arguments(platform, root) + " -o \"" + output + "\"")
 	Finished(result, output, library, shared)
-Object(source Text, platform Number, root Text, options Text) Text
-	Adding.Object("Examples/NativeAdd/native/Adder.c", Platform.Current, ".", "") is "Examples/NativeAdd/native/Adder.o"
-	let target = Path(source).RemoveExtension.text + ".o"
-	let previous = Waited(target, sources.Inputs(platform, root) + source, options)
-	let built = previous is "" then Compiled(source, platform, root, options) else previous
-	built.StartsWith("Built ") then built.Substring(6, built.Length - 6) else built
-Compiled(source Text, platform Number, root Text, options Text) Text
-	Adding.Compiled("Compiler/output/No.c", Platform.Current, ".", "").StartsWith("clang failed for Compiler/output/No.o")
-	let output = Path(source).RemoveExtension.text + "." + 999999.Random.Floor + ".o"
-	let compile = "-c \"" + source + "\" -I\"" + root + "/Compiler\"" + options + Toolchain.Optimized
-	let compiled = ToolRunner(Toolchain(platform, root).Located("clang")).Execute(compile + " -o \"" + output + "\"")
-	Finished(compiled, output, Path(source).RemoveExtension.text + ".o", options)
+Objects(files Texts, platform Number, root Text, options Text) Slow(Texts)
+	Adding.Objects(NativeSources.Adding.Files, Platform.Current, ".", "") is ("Examples/NativeAdd/native/Adder.o")
+	mutable missing = List(Mutable(Text))
+	mutable previous = List(Mutable(Text))
+	for files
+		let waited = Waited(Path(value).RemoveExtension.text + ".o", sources.Inputs(platform, root) + value, options)
+		previous.Add(waited)
+		if waited is ""
+			missing.Add(value)
+	let compiled = Compiled(missing, platform, root, options)
+	for previous
+		let built = value is "" then compiled(missing.Index(files(index))) else value
+		built.StartsWith("Built ") then built.Substring(6, built.Length - 6) else built
+Compiled(files Texts, platform Number, root Text, options Text) Slow(Texts)
+	Adding.Compiled(List(Text) + "Compiler/output/No.c", Platform.Current, ".", "").First.StartsWith(NoObject)
+	if files.Length is 0
+		return List(Text)
+	let suffix = "." + 999999.Random.Floor + ".o"
+	let flags = " -I\"" + root + "/Compiler\"" + options + Toolchain.Optimized
+	for ToolRunner(Toolchain(platform, root).Located("clang")).ExecuteAll(Commands(files, suffix, flags))
+		let base = Path(files(index)).RemoveExtension.text
+		Finished(value, base + suffix, base + ".o", options)
+Commands(files Texts, suffix Text, flags Text) Texts
+	Adding.Commands(List(Text) + "a/b.c", ".1.o", " -O2") is ("-c \"a/b.c\" -O2 -o \"a/b.1.o\"")
+	for files
+		"-c \"" + value + "\"" + flags + " -o \"" + Path(value).RemoveExtension.text + suffix + "\""
 Waited(target Text, inputs Texts, options Text) Slow(Text)
 	Adding.Waited("Compiler/output/Missing.dll", List(Text), "") is ""
 	let lock = File(target + "." + Newest(inputs) + ".lock")
