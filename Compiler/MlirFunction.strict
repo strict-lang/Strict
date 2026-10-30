@@ -36,17 +36,16 @@ Parameters Texts
 	names
 VariableNames Texts
 	Counter.VariableNames is ("index", "value")
+	let declared = (("index", "value") + Parameters) + MlirInstances(value, 0).StoredNames(type)
+	((declared + Named).Unique - "#this") - ""
+Named Texts
+	MlirFunction(Counter.types, Counter.type, MlirParallel.Doubled).Named(1) is "numbers"
+	MlirFunction(Counter.types, Counter.type, MlirParallel.Doubled).Named(2) is ""
 	constant loaded = (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable)
 	constant written = (InstructionType.InvokeWriteToList, InstructionType.IndexCall)
-	mutable names = ("index", "value")
-	for Parameters + MlirInstances(value, 0).StoredNames(type)
-		names = value is in names then names else names + value
 	for method.instructions
-		if ((value.kind is in loaded) or (value.kind is in written)) and value.texts(0).IndexOf("(") < 0
-			names = value.texts(0) is in names then names else names + value.texts(0)
-		if value.kind is InstructionType.StoreConstantToVariable
-			names = value.texts.Last is in names then names else names + value.texts.Last
-	names - "#this"
+		let isNamed = ((value.kind is in loaded) or (value.kind is in written)) and value.texts(0).IndexOf("(") < 0
+		value.kind is InstructionType.StoreConstantToVariable then value.texts.Last else (isNamed then value.texts(0) else "")
 TypeOf(name Text) TypeEntry
 	Counter.TypeOf("Strict/Other").members.Length is 0
 	name is in typeIndex then types(typeIndex(name)) else Natives(types).TypeOf(name)

@@ -103,7 +103,7 @@ Items Texts
 Outered Texts
 	Counting.Outered.Length is 0
 	Nested.Outered.Last is "    llvm.store %t0y, %v_outer : f64, !llvm.ptr"
-	let names = function.VariableNames
+	let names = function.Named
 	mutable lines = List(Mutable(Text))
 	if "outer" is in names
 		lines = lines + function.Load(Temp("z"), "%v_outer") + function.Store(Temp("y"), "%v_outer")
@@ -132,7 +132,7 @@ Presized Texts
 	(List(Text) + capacity) + created + function.Store(Temp("r"), "%v_forResult")
 Restored(begin Number) Texts
 	MlirLoops(Nested.function, 2).Restored(0) is List(Text) + "    llvm.store %t0z, %v_outer : f64, !llvm.ptr"
-	let names = function.VariableNames
+	let names = function.Named
 	mutable lines = List(Mutable(Text))
 	if "outer" is in names
 		lines = lines + function.Store("%t" + begin + "z", "%v_outer")
