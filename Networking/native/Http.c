@@ -31,13 +31,11 @@ static double failed(const char* format, ...)
 	return strict_fail(name);
 }
 
-#ifndef _WIN32
 static int valid_url(const char* url)
 {
 	size_t scheme = strncmp(url, "https://", 8) == 0 ? 8 : strncmp(url, "http://", 7) == 0 ? 7 : 0;
 	return scheme && url[scheme] && url[scheme] != '/' && url[scheme] != '?' && url[scheme] != ':';
 }
-#endif
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -68,12 +66,10 @@ EM_JS(char*, http_requested, (const char* method, const char* url, const char* b
 	}
 });
 
-STRICT_EXPORT double Http_Requested(double self, double method, double url, double body, double headerLines,
-	double seconds, double maximum)
+static double requested(const char* method, const char* url, const char* body, const char* lines, double seconds,
+	double maximum)
 {
-	if (!valid_url(text_of(url)))
-		return strict_fail("InvalidHttpUrl");
-	char* text = http_requested(text_of(method), text_of(url), text_of(body), text_of(headerLines));
+	char* text = http_requested(method, url, body, lines);
 	if (!text)
 		return strict_fail("NotEnoughMemory");
 	if (text[0] == '!')
@@ -308,20 +304,20 @@ static int windows_parsed(windows_request* request, const char* url)
 	return 1;
 }
 
-STRICT_EXPORT double Http_Requested(double self, double method, double url, double body, double headerLines,
-	double seconds, double maximum)
+static double requested(const char* method, const char* url, const char* body, const char* lines, double seconds,
+	double maximum)
 {
 	windows_request request = { 0 };
 	collected headers = { 0 }, content = { 0 };
 	headers.maximum = content.maximum = (size_t)maximum;
 	DWORD status = 0;
-	double result = windows_parsed(&request, text_of(url)) ? 0 : strict_fail("InvalidHttpUrl");
-	request.verb = wide(text_of(method));
-	request.lines = header_lines(text_of(headerLines));
+	double result = windows_parsed(&request, url) ? 0 : strict_fail("InvalidHttpUrl");
+	request.verb = wide(method);
+	request.lines = header_lines(lines);
 	if (strict_bits(result) == 0 && (!request.verb || !request.lines))
 		result = strict_fail("InvalidHttpText");
 	if (strict_bits(result) == 0)
-		result = windows_sent(&request, text_of(body), (DWORD)(seconds * 1000), &status, &headers, &content);
+		result = windows_sent(&request, body, (DWORD)(seconds * 1000), &status, &headers, &content);
 	if (strict_bits(result) == 0)
 		result = responded((long)status, &headers, &content);
 	if (request.request)
@@ -461,30 +457,158 @@ static double curl_sent(void* handle, const char* method, const char* body, long
 		failed("HttpFailed (curl error %d: %s)", code, curl.easy_strerror(code));
 }
 
-STRICT_EXPORT double Http_Requested(double self, double method, double url, double body, double headerLines,
-	double seconds, double maximum)
+static double requested(const char* method, const char* url, const char* body, const char* lines, double seconds,
+	double maximum)
 {
-	if (!valid_url(text_of(url)))
-		return strict_fail("InvalidHttpUrl");
 	pthread_once(&curl_once, curl_loaded);
 	void* handle = curl.ready ? curl.easy_init() : NULL;
 	if (!handle)
 		return strict_fail("HttpFailed (libcurl.so.4 or libcurl.4.dylib not found)");
 	collected headers = { 0 }, content = { 0 };
 	headers.maximum = content.maximum = (size_t)maximum;
-	curl_slist* lines = curl_lines(text_of(headerLines));
-	curl.easy_setopt(handle, CURLOPT_URL, text_of(url));
-	curl.easy_setopt(handle, CURLOPT_HTTPHEADER, lines);
-	double result = curl_sent(handle, text_of(method), text_of(body), (long)seconds, &headers, &content);
+	curl_slist* list = curl_lines(lines);
+	curl.easy_setopt(handle, CURLOPT_URL, url);
+	curl.easy_setopt(handle, CURLOPT_HTTPHEADER, list);
+	double result = curl_sent(handle, method, body, (long)seconds, &headers, &content);
 	long status = 0;
 	if (strict_bits(result) == 0)
 		result = curl.easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &status) == 0 ?
 			responded(status, &headers, &content) : strict_fail("HttpFailed (curl_easy_getinfo)");
 	curl.easy_cleanup(handle);
-	curl.slist_free_all(lines);
+	curl.slist_free_all(list);
 	free(headers.data);
 	free(content.data);
 	return result;
 }
 #endif
 #endif
+
+STRICT_EXPORT double Http_Requested(double self, double method, double url, double body, double headerLines,
+	double seconds, double maximum)
+{
+	return valid_url(text_of(url)) ? requested(text_of(method), text_of(url), text_of(body), text_of(headerLines),
+		seconds, maximum) : strict_fail("InvalidHttpUrl");
+}
+
+/* Started requests run on threads of their own (on the web right away, it has no threads), Polled gives "0\n\n" while
+   one runs and its result once. A request number is its slot plus 64 times the slot's earlier uses, an old number never
+   gets the response of a newer request. */
+#define REQUESTS 64
+static struct
+{
+	char *method, *url, *body, *lines, *text;
+	double seconds, maximum, result;
+	uint64_t uses;
+	int state;
+} requests[REQUESTS];
+
+#ifdef _WIN32
+static SRWLOCK guard = SRWLOCK_INIT;
+static void locked(void) { AcquireSRWLockExclusive(&guard); }
+static void unlocked(void) { ReleaseSRWLockExclusive(&guard); }
+#elif !defined(__EMSCRIPTEN__)
+static pthread_mutex_t guard = PTHREAD_MUTEX_INITIALIZER;
+static void locked(void) { pthread_mutex_lock(&guard); }
+static void unlocked(void) { pthread_mutex_unlock(&guard); }
+#else
+static void locked(void) {}
+static void unlocked(void) {}
+#endif
+
+static void released(size_t slot)
+{
+	free(requests[slot].method);
+	free(requests[slot].url);
+	free(requests[slot].body);
+	free(requests[slot].lines);
+}
+
+static void worked(size_t slot)
+{
+	free(returned);
+	returned = NULL;
+	double result = requested(requests[slot].method, requests[slot].url, requests[slot].body, requests[slot].lines,
+		requests[slot].seconds, requests[slot].maximum);
+	released(slot);
+	locked();
+	requests[slot].result = result;
+	requests[slot].text = returned;
+	requests[slot].state = 2;
+	unlocked();
+	returned = NULL;
+}
+
+#ifdef _WIN32
+static DWORD WINAPI working(void* slot) { worked((size_t)slot); return 0; }
+static int thread_started(size_t slot)
+{
+	HANDLE thread = CreateThread(0, 0, working, (void*)slot, 0, 0);
+	if (!thread)
+		return 0;
+	CloseHandle(thread);
+	return 1;
+}
+#elif !defined(__EMSCRIPTEN__)
+static void* working(void* slot) { worked((size_t)slot); return 0; }
+static int thread_started(size_t slot)
+{
+	pthread_t thread;
+	if (pthread_create(&thread, 0, working, (void*)slot) != 0)
+		return 0;
+	pthread_detach(thread);
+	return 1;
+}
+#else
+static int thread_started(size_t slot) { worked(slot); return 1; }
+#endif
+
+STRICT_EXPORT double Http_Started(double self, double method, double url, double body, double headerLines,
+	double seconds, double maximum)
+{
+	if (!valid_url(text_of(url)))
+		return strict_fail("InvalidHttpUrl");
+	locked();
+	size_t slot = 0;
+	while (slot < REQUESTS && requests[slot].state)
+		slot++;
+	if (slot < REQUESTS)
+		requests[slot].state = 1;
+	unlocked();
+	if (slot == REQUESTS)
+		return strict_fail("TooManyHttpRequests");
+	requests[slot].method = strdup(text_of(method));
+	requests[slot].url = strdup(text_of(url));
+	requests[slot].body = strdup(text_of(body));
+	requests[slot].lines = strdup(text_of(headerLines));
+	requests[slot].seconds = seconds;
+	requests[slot].maximum = maximum;
+	double number = (double)(requests[slot].uses * REQUESTS + slot + 1);
+	int copied = requests[slot].method && requests[slot].url && requests[slot].body && requests[slot].lines;
+	if (copied && thread_started(slot))
+		return number;
+	released(slot);
+	locked();
+	requests[slot].state = 0;
+	unlocked();
+	return strict_fail(copied ? "HttpFailed (no thread for the request)" : "NotEnoughMemory");
+}
+
+STRICT_EXPORT double Http_Polled(double self, double request)
+{
+	uint64_t number = request >= 1 && request < 1e15 ? (uint64_t)request : 0;
+	size_t slot = number ? (size_t)((number - 1) % REQUESTS) : 0;
+	locked();
+	int state = number && (double)number == request && requests[slot].uses == (number - 1) / REQUESTS ?
+		requests[slot].state : 0;
+	double result = state == 0 ? strict_fail("InvalidHttpRequest") : state == 1 ? strict_text_result("0\n\n") :
+		requests[slot].result;
+	if (state == 2)
+	{
+		free(returned);
+		returned = requests[slot].text;
+		requests[slot].state = 0;
+		requests[slot].uses++;
+	}
+	unlocked();
+	return result;
+}

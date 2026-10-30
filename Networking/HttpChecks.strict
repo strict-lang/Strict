@@ -10,4 +10,11 @@ Signatures Number
 Online Slow(Number)
 	Http.Send("GET", "https://api.binance.com/api/v3/time").status is 200
 	Http.Send("GET", "https://api.binance.com/api/v3/time").body.StartsWith("{\"serverTime\":")
+	Awaited(Http.Started("GET", "https://api.binance.com/api/v3/time")).body.StartsWith("{\"serverTime\":")
 	0
+Awaited(request Number) HttpResponse
+	mutable response = Http.Received(request)
+	for as long as response.status is 0
+		Process.Wait(0.01)
+		response = Http.Received(request)
+	response

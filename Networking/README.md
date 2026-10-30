@@ -10,6 +10,11 @@ programs of the repository.
   Errors are `InvalidHttpUrl` (only http and https), `HttpResponseTooLarge` and
   `HttpFailed (...)` with what the platform reported, like
   `HttpFailed (Windows error 12007 in WinHttpSendRequest)` for an unknown host.
+- `Http.Started(...)` with the same arguments: the number of a request that runs
+  on its own thread while a game or a tool goes on (on the web right away).
+  `Http.Received(number)` is its response, status 0 while it runs, and once it
+  gave the response or Error the number is `InvalidHttpRequest`. 64 requests
+  run at most at once (`TooManyHttpRequests`).
 - `Hmac.Sha256(secret, message)`: the HMAC-SHA256 of the message as lowercase
   hex, the signature of APIs like Binance, in portable C (`native/Hmac.c`).
 

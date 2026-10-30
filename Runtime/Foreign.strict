@@ -2,6 +2,7 @@ has call Invocation
 has types List(TypeEntry)
 has folder Text = ""
 constant Add = MethodEntry("Add", (MemberEntry("left", "Strict/Number", List(InstructionEntry), false), MemberEntry("right", "Strict/Number", List(InstructionEntry), false)), "Strict/Number", List(InstructionEntry))
+constant Defaulted = MethodEntry("Add", Add.parameters + MemberEntry.SevenMember, "Strict/Number", List(InstructionEntry))
 constant Adder = TypeEntry("Strict/Examples/NativeAdd/Adder", List(MemberEntry), List(MethodEntry) + Add)
 constant Adding = Foreign(Invocation(InstructionEntry.Invoke(3, ("Strict/Examples/NativeAdd/Adder", "Add", "Strict/Number", "left", "right"), (0, 0), -1), (VmValue.OfNumber(1), VmValue.OfNumber(2)), VmValue.None), List(TypeEntry) + Adder)
 constant Shorter = TypeEntry("Adder", List(MemberEntry), List(MethodEntry))
@@ -48,11 +49,13 @@ Method(type TypeEntry) MethodEntry
 Arguments(library Library, method MethodEntry) Numbers
 	Adding.Arguments(Library("missing.dll"), Add) is (0, 1, 2)
 	Counting.Arguments(Library("missing.dll"), MlirForeign.Next) is (7)
+	Adding.Arguments(Library("missing.dll"), Defaulted) is (0, 1, 2, 7)
 	mutable arguments = List(Number) + (call.entry.payload(call.Flag) is 1 then call.Instance.number else 0)
-	for call.Arguments
-		let kind = method.parameters(index).typeName
-		let number = kind.EndsWith("Text") then library.TextSlot(value.text) else value.number
-		arguments = arguments + (MlirForeign.IsNumbers(kind) then library.NumbersSlot(Numbers(value.items)) else number)
+	for method.parameters
+		let given = index < call.Arguments.Length then call.Arguments(index) else Natives(types).Initial(value)
+		let kind = value.typeName
+		let number = kind.EndsWith("Text") then library.TextSlot(given.text) else given.number
+		arguments = arguments + (MlirForeign.IsNumbers(kind) then library.NumbersSlot(Numbers(given.items)) else number)
 	arguments
 Converted(library Library, returnType Text, bits Number) VmValue
 	Adding.Converted(Library("missing.dll"), "Strict/Number", 3).number is 3
