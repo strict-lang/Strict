@@ -33,7 +33,7 @@ HeaderScope(header HeaderTokens, members Scope) Scope
 		types.Add(value is "Other" then typeName else (value is "Generic" then argument else value))
 	let concrete = Instantiation(inference.types).Members(typeName, members)
 	mutable scope = concrete.With("value", InstanceType).With("self type", typeName).WithAll(header.ParameterNames, types)
-	for header.MutableParameters
+	for header.MutableParameters + Changes(shape.lines).Members
 		scope = scope.With(value + " mutable", "mutable")
 	scope
 InstanceType Text

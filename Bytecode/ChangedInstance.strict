@@ -1,0 +1,58 @@
+has values ValueCodegen
+has method Text
+constant Name = "changed_instance"
+constant Ticking = TypeCodegen("Strict/Ticker", ("mutable count Number", "has step Number = 1", "Next Number", "\tcount = count + step", "\tcount", "Size Number", "\tstep"), ValueCodegen.NoTypes, List(Text))
+constant Tickers = KnownTypes(List(Text) + "Ticker", List(Scope) + Scope(List(Text) + "count", List(Text) + "Number"), List(Scope) + Scope(List(Text) + "Next", List(Text) + "Number"), List(Scope) + Scope(("Next", "Next types", "Next changes"), ("", "", "changes")))
+constant Ticked = ChangedInstance(ValueCodegen(TypeInference(Tickers, List(Scope) + KnownTypes.NoMembers), KnownTypes.NoMembers, CallTarget.Plain), "Next")
+constant Calling = SyntaxNode("Member", "Next", SyntaxNode("Identifier", "ticker"))
+constant Holding = CodeBlock.Empty.Declare("ticker", "Ticker")
+constant Mutables = Holding.Declare("ticker mutable", "mutable")
+Kept(code CodeBlock) CodeBlock
+	Ticking.Method(2).instructions.Last.kind is InstructionType.Return
+	Ticking.Method(2).instructions(Ticking.Method(2).instructions.Length - 2).texts is (Name)
+	Ticking.Method(5).instructions.Length is 2
+	if (method is "from") or (method is not in Changes(values.target.shape.lines).Methods)
+		return code
+	let built = Built(code)
+	mutable instructions = List(Mutable(InstructionEntry))
+	for code.instructions
+		if value.kind is InstructionType.Return
+			instructions = instructions + built.instructions
+		instructions.Add(value)
+	CodeBlock(instructions, built.register, built.nextId, code.scope)
+Called(node SyntaxNode, call SyntaxNode, block CodeBlock) CodeBlock
+	Ticked.Called(Calling, Calling, Holding).instructions.First.kind is InstructionType.Invoke
+	StoredBack(call, values.Invoke(call, block, -1, values.TypeOf(node, block)), block)
+Unpacked(invoked CodeBlock) CodeBlock
+	ChangedInstance(Ticking.Generator, "Next").Unpacked(CodeBlock.Empty.At(1)).instructions.Last.texts is ("#this")
+	ChangedInstance(Ticking.Generator, "Size").Unpacked(CodeBlock.Empty.At(1)).instructions.Length is 0
+	if method is not in Changes(values.target.shape.lines).Methods
+		return invoked
+	let changed = invoked.register
+	let owner = values.target.TypeName
+	mutable unpacked = invoked
+	for values.target.shape.MemberScope.names
+		let read = InstructionEntry(InstructionType.FieldLoad, (value, owner), (changed + 1, changed, -1, -2))
+		unpacked = unpacked.Add(read).Add(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, changed + 1, value))
+	unpacked.Add(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, changed, "#this"))
+Built(code CodeBlock) CodeBlock
+	ChangedInstance(Ticking.Generator, "Next").Built(CodeBlock.Empty).instructions.Last.texts is (Name)
+	mutable members = List(Mutable(SyntaxNode))
+	for values.target.shape.MemberScope.names
+		members.Add(SyntaxNode("Identifier", value))
+	let instance = SyntaxNode("Call", TypeEntry.ShortName(values.target.TypeName), members)
+	let start = CodeBlock(List(InstructionEntry), code.register, code.nextId, code.scope)
+	let stored = values.Expression(instance, start).Stored(Name)
+	CodeBlock(stored.instructions, stored.register, stored.nextId, code.scope)
+StoredBack(call SyntaxNode, invoked CodeBlock, block CodeBlock) CodeBlock
+	Ticked.StoredBack(Calling, Holding.At(1), Mutables).instructions.First.payload is (1, -1)
+	Ticked.StoredBack(Calling, Holding.At(1), Holding).instructions.Length is 0
+	if call.Kind is in ("Identifier", "Call")
+		return Unpacked(invoked)
+	let target = call.children(0)
+	if (target.Kind is not "Identifier") or (block.scope.TypeOf(target.text + " mutable") is "")
+		return invoked
+	let type = values.TypeOf(target, block)
+	if values.inference.types.ParameterScope(type).TypeOf(method + " changes") is ""
+		return invoked
+	invoked.Add(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, invoked.register, target.text))

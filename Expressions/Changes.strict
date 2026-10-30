@@ -1,0 +1,49 @@
+has lines Texts
+constant Ticking = Changes(("mutable count Number", "has step Number = 1", "Next Number", "\tcount = count + step", "\tcount", "Twice Number", "\tNext + Next", "Size Number", "\tstep"))
+Members Texts
+	Ticking.Members is ("count")
+	for lines
+		if value.StartsWith("mutable ")
+			Tokenizer(value).Tokens(1)
+Methods Texts
+	Ticking.Methods is ("Next", "Twice")
+	Changes(("has count Number", "Next Number", "\tcount")).Methods.Length is 0
+	let members = Members
+	mutable changing = List(Text)
+	mutable found = members.Length is 0 then List(Text) else Found(members, changing)
+	for as long as found.Length > changing.Length
+		changing = found
+		found = Found(members, changing)
+	changing
+Found(members Texts, changing Texts) Texts
+	Ticking.Found(("count"), List(Text)) is ("Next")
+	Ticking.Found(("count"), ("Next")) is ("Next", "Twice")
+	let shape = TypeShape(lines)
+	mutable method = ""
+	mutable result = List(Mutable(Text))
+	for lines
+		if shape.IsMethodHeader(value)
+			method = Tokenizer(value).Tokens.First
+		else if value.StartsWith("\t") and (method is not in result)
+			if IsChanging(Tokenizer(value.TrimStart).Tokens, members, changing)
+				result.Add(method)
+	result
+IsChanging(tokens Texts, members Texts, changing Texts) Boolean
+	Ticking.IsChanging(("count", "=", "1"), ("count"), List(Text))
+	Ticking.IsChanging(("count", "+", "1"), ("count"), List(Text)) is false
+	Ticking.IsChanging(("Next", "+", "Next"), List(Text), ("Next"))
+	Ticking.IsChanging(("a", ".", "Next"), List(Text), ("Next")) is false
+	Ticking.IsChanging(("random", ".", "Get"), ("random"), List(Text))
+	if (tokens.First is in members) and ("=" is in tokens)
+		return true
+	for tokens
+		let isOwnCall = (value is in changing) and ((index is 0) or (tokens(index - 1) is not "."))
+		if isOwnCall or (value is in members) and (index + 1 < tokens.Length) and (tokens(index + 1) is ".")
+			return true
+	false
+Added(scope Scope) Scope
+	Ticking.Added(KnownTypes.NoMembers).TypeOf("Twice changes") is "changes"
+	mutable added = scope
+	for Methods
+		added = added.With(value + " changes", "changes")
+	added

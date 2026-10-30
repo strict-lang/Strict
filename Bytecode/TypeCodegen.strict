@@ -92,7 +92,7 @@ Method(start Number) Slow(MethodEntry)
 	let returnType = Declared(header)
 	let body = TestLines(generator).Guarded(BodyParser(lines).Method(start + 1), header, start + 1, scope)
 	let code = MethodCodegen(generator).Generate(body, scope, BodyType(header))
-	let optimized = LoadReuse(code.instructions).Optimized
+	let optimized = LoadReuse(ChangedInstance(generator, header.tokens(0)).Kept(code).instructions).Optimized
 	MethodEntry(header.tokens(0), Parameters(header), returnType, optimized)
 Declared(header HeaderTokens) Text
 	let result = header.tokens(0) is "from" then Generator.target.TypeName else Concrete(Returned(header))

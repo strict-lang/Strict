@@ -5,7 +5,7 @@ Lines Texts
 	mutable lines = List(Mutable(Text))
 	for functions
 		lines = lines + Function(value)
-	lines + MlirDefaults(functions.First).Globals
+	lines + MlirDefaults(functions.First).Globals + MlirChanged.Declarations(functions)
 Function(function MlirFunction) Texts
 	Counted.Function(MlirCalls.Shapes).Length is 3
 	Counted.Function(MlirCalls.Shapes).First.IndexOf("(\"Shape.Run\\00Shape.strict\\00\")") > 0

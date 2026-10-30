@@ -22,8 +22,8 @@ Finished(arguments List(VmValue)) List(VmValue)
 		if position >= instructions.Length
 			return slots
 		let entry = instructions(position)
-		let target = entry.Target
-		slots(target) = Value(entry, position, slots)
+		slots(entry.Target) = Value(entry, position, slots)
+		slots = entry.kind is InstructionType.Invoke then Unpacked(slots, entry.Target) else slots
 		position = entry.kind < InstructionType.Return then position + 1 else Next(entry, position, slots)
 	slots
 Value(entry InstructionEntry, position Number, slots List(VmValue)) VmValue
@@ -136,10 +136,21 @@ Other(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	if (entry.kind is InstructionType.LoopBegin) or (entry.kind is InstructionType.LoopEnd)
 		return Looped(entry, slots, position)
 	if entry.kind is InstructionType.Return
-		return slots(entry.payload(0))
+		let result = slots(entry.payload(0))
+		return entry.payload.Length is 1 then result else VmValue.OfChanging(result, slots(entry.payload(1)))
 	if entry.kind is InstructionType.CheckError
 		return ErrorCheck(entry).Value(slots(entry.payload(0)), slots(entry.Target), value, position)
 	entry.kind is InstructionType.FieldLoad then machine.Field(entry, slots(entry.payload(1))) else Changed(entry, slots)
+Unpacked(slots List(VmValue), target Number) List(VmValue)
+	Twice.Unpacked(Listed, 0) is Listed
+	Twice.Unpacked((VmValue.OfChanging(VmValue.OfNumber(1), VmValue.OfNumber(2)), VmValue.None), 0)(1).number is 2
+	let result = slots(target)
+	if result.kind is not "Changing"
+		return slots
+	mutable unpacked = slots
+	unpacked(target) = result.items(0)
+	unpacked(target + 1) = result.items(1)
+	unpacked
 Changed(entry InstructionEntry, slots List(VmValue)) VmValue
 	Twice.Changed(InstructionEntry(InstructionType.InvokeWriteToList, "list", (8, 7)), Listed).Length is 3
 	Twice.Changed(InstructionEntry.Jump(InstructionType.JumpEnd, 0), Listed).kind is "None"

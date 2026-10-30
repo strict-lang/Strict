@@ -14,9 +14,16 @@ KindOf(position Number, register Number) Text
 	Graded.KindOf(6, 4) is "Number"
 	Graded.KindOf(0, 7) is "Number"
 	MlirKinds(MlirPacking.Listing.function).KindOf(1, 0) is "List(Number)"
+	MlirKinds(MlirChanged.Taking.function).KindOf(1, 1) is "Ticker"
 	let writer = Writer(position, register)
+	if (writer >= 0) and IsChanged(function.method.instructions(writer), register)
+		return TypeEntry.ShortName(function.method.instructions(writer).texts(0))
 	let written = writer < 0 then "Number" else WrittenKind(writer)
 	writer < 0 then written else MlirPacking(function, writer).Kind(written)
+IsChanged(entry InstructionEntry, register Number) Boolean
+	Graded.IsChanged(MlirChanged.Calls.instructions.First, 1)
+	Graded.IsChanged(MlirChanged.Calls.instructions.First, 0) is false
+	(entry.kind is InstructionType.Invoke) and (entry.payload(0) + 1 is register)
 WrittenKind(writer Number) Text
 	Graded.WrittenKind(3) is "Boolean"
 	Graded.WrittenKind(6) is "Shape"
@@ -53,7 +60,8 @@ Writer(position Number, register Number) Number
 	let reuse = LoadReuse(function.method.instructions)
 	for position
 		let at = position - 1 - index
-		if reuse.Written(function.method.instructions(at)) is register
+		let entry = function.method.instructions(at)
+		if (reuse.Written(entry) is register) or IsChanged(entry, register)
 			return at
 	-1
 VariableKind(position Number, name Text) Text

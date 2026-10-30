@@ -46,7 +46,7 @@ VariableNames Texts
 			names = value.texts(0) is in names then names else names + value.texts(0)
 		if value.kind is InstructionType.StoreConstantToVariable
 			names = value.texts.Last is in names then names else names + value.texts.Last
-	names
+	names - "#this"
 TypeOf(name Text) TypeEntry
 	Counter.TypeOf("Strict/Other").members.Length is 0
 	name is in typeIndex then types(typeIndex(name)) else Natives(types).TypeOf(name)
@@ -136,4 +136,4 @@ Emitted(position Number) Texts
 	let lists = MlirLists(value, position)
 	let isList = (kind is in ListKinds) or lists.IsElementStore
 	let emitted = isCall then MlirCalls(value, position).Emitted else isList then lists.Emitted else statements.Emitted
-	MlirHanded(value, position).Wrapped(emitted + MlirPacking(value, position).Repacked)
+	MlirHanded(value, position).Wrapped(MlirChanged(value, position).With(emitted) + MlirPacking(value, position).Repacked)

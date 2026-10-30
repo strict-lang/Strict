@@ -1,0 +1,51 @@
+has function MlirFunction
+has position Number
+constant Declared = "  llvm.mlir.global internal thread_local @strict_changed(0.0 : f64) : f64"
+constant Next = MethodEntry("Next", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 1), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "changed_instance"), InstructionEntry.Return(0)))
+constant Ticker = TypeEntry("Strict/Ticker", List(MemberEntry) + MemberEntry("count", "Strict/Number", List(InstructionEntry), false), List(MethodEntry) + Next)
+constant Calls = MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.Invoke(0, ("Strict/Ticker", "Next", "Strict/Number"), List(Number), -1), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "ticker")))
+constant Caller = TypeEntry("Strict/User", List(MemberEntry), List(MethodEntry) + Calls)
+constant Taking = MlirChanged(MlirFunction((Ticker, Caller), Caller, Calls), 0)
+constant Keeping = MlirChanged(MlirFunction((Ticker, Caller), Ticker, Next), 2)
+Kept Texts
+	Keeping.Kept.Last is "    llvm.store %t2chv, %t2cha : f64, !llvm.ptr"
+	MlirChanged(Taking.function, 1).Kept.Length is 0
+	if IsChanging(function.method) is false
+		return List(Text)
+	let loaded = "    " + Temp("chv") + " = llvm.load %v_" + ChangedInstance.Name + " : !llvm.ptr -> f64"
+	(loaded, Address, "    llvm.store " + Temp("chv") + ", " + Temp("cha") + " : f64, !llvm.ptr")
+Taken Texts
+	Taking.Taken.Last is "    llvm.store %t0chv, %r1 : f64, !llvm.ptr"
+	MlirChanged(Taking.function, 1).Taken.Length is 0
+	let entry = function.method.instructions(position)
+	if entry.kind is not InstructionType.Invoke
+		return List(Text)
+	let inliner = Inliner(function.types)
+	let type = inliner.TypeOf(entry.texts(0))
+	if (type.Name is "") or (IsChanging(inliner.Callee(type, entry)) is false)
+		return List(Text)
+	let loaded = "    " + Temp("chv") + " = llvm.load " + Temp("cha") + " : !llvm.ptr -> f64"
+	(Address, loaded, "    llvm.store " + Temp("chv") + ", %r" + (entry.payload(0) + 1) + " : f64, !llvm.ptr")
+With(emitted Texts) Texts
+	Taking.With(List(Text) + "a").Length is 4
+	emitted + Taken
+IsChanging(method MethodEntry) Boolean
+	Keeping.IsChanging(Next)
+	Keeping.IsChanging(Calls) is false
+	for method.instructions
+		if (value.kind is InstructionType.StoreRegisterToVariable) and (value.texts(0) is ChangedInstance.Name)
+			return true
+	false
+Declarations(functions List(MlirFunction)) Texts
+	Keeping.Declarations(List(MlirFunction) + Keeping.function) is (Declared)
+	Keeping.Declarations(List(MlirFunction) + Taking.function).Length is 0
+	for functions
+		if IsChanging(value.method)
+			return List(Text) + Declared
+	List(Text)
+Address Text
+	Keeping.Address is "    %t2cha = llvm.mlir.addressof @strict_changed : !llvm.ptr"
+	"    " + Temp("cha") + " = llvm.mlir.addressof @strict_changed : !llvm.ptr"
+Temp(suffix Text) Text
+	Keeping.Temp("chv") is "%t2chv"
+	"%t" + position + suffix

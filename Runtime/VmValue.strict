@@ -21,6 +21,9 @@ OfBoolean(condition Boolean) VmValue
 OfList(elements List(VmValue)) VmValue
 	OfList(OfNumber(1), OfNumber(2)).items.Length is 2
 	VmValue("List", 0, "", elements)
+OfChanging(result VmValue, instance VmValue) VmValue
+	OfChanging(OfNumber(1), OfNumber(2)).items(1).number is 2
+	VmValue("Changing", 0, "", (result, instance))
 OfError(name Text) VmValue
 	OfError("Missing").items.First.text is "Missing"
 	VmValue("Strict/Error", 0, "", (OfText(name), OfList(List(VmValue))))

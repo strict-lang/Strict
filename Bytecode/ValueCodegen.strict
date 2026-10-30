@@ -30,7 +30,7 @@ Variable(node SyntaxNode, block CodeBlock) CodeBlock
 	if isFree and owner is not ""
 		return InstanceCall(SyntaxNode("Member", node.text, SyntaxNode("Identifier", owner)), block)
 	if IsMethodCall(node, block) or isFree and (node.text is "Error")
-		return Invoke(node, block, -1, TypeOf(node, block))
+		return ChangedInstance(value, node.text).Called(node, node, block)
 	if isFree and (inference.types.IsPlural(node.text) or IsTypeName(node, block))
 		return TypeValue(node, block)
 	block.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, node.text))
@@ -86,7 +86,7 @@ InstanceCall(node SyntaxNode, block CodeBlock) CodeBlock
 		return Field(node.text, TypeOf(node.children(0), block), instance, instance.Result)
 	let method = node.Kind is "Not" then "not" else "to"
 	let call = node.Kind is in ("Binary", "Not") then SyntaxNode("Member", method, node.children(0)) else node
-	Invoke(call, instance, instance.Result, TypeOf(node, block))
+	ChangedInstance(value, call.text).StoredBack(call, Invoke(call, instance, instance.Result, TypeOf(node, block)), block)
 Field(member Text, owner Text, block CodeBlock, instance Number) CodeBlock
 	Plain.InstanceCall(GreeterText, CodeBlock.Empty).instructions(2).texts is ("text", "Greeter")
 	block.Load(InstructionEntry(InstructionType.FieldLoad, (member, owner), (block.register, instance, -1, -2)))
@@ -108,7 +108,7 @@ Replacing(node SyntaxNode, block CodeBlock) CodeBlock
 	let replaced = ConversionCodegen(value).Replaced(node)
 	let instance = node.children.Length > 0 then node.children(0) else node
 	if (replaced is node) or (instance.Kind is "Identifier")
-		return ErrorCodegen(value).Validated(node, block, Invoke(replaced, block, -1, TypeOf(node, block)))
+		return ErrorCodegen(value).Validated(node, block, ChangedInstance(value, node.text).Called(node, replaced, block))
 	let name = "replaced" + block.nextId
 	let stored = Expression(instance, block).Stored(name).At(block.register).Declare(name, TypeOf(instance, block))
 	mutable children = node.children

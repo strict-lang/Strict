@@ -5,7 +5,7 @@ constant Built = (Empty, InstructionEntry.Named(InstructionType.LoadVariableToRe
 constant Moving = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", Built + InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "moved") + InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "inline3_elements") + InstructionEntry.Return(1)))
 constant Copying = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", Built + InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "moved") + InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "kept")))
 constant Owner = MlirOwned(Moving, 2)
-constant Temporaries = ("index", "value", "outer", "forResult")
+constant Temporaries = ("index", "value", "outer", "forResult", "changed_instance", "#this")
 constant Named = (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable)
 constant Making = InstructionEntry.Invoke(2, ("Strict/Outer", "from", "Strict/Outer", "shape", "size"), (0, 1), -1)
 constant Rebuilding = (InstructionEntry.LoadNumber(0, 1), InstructionEntry.LoadNumber(1, 2), Making, InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 2, "moved"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "moved"), InstructionEntry(InstructionType.FieldLoad, "shape", (4, 3, -1)), InstructionEntry.LoadNumber(5, 7), InstructionEntry.Invoke(6, ("Strict/Outer", "from", "Strict/Outer", "shape", "size"), (4, 5), -1), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 6, "moved"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 7, "moved"), InstructionEntry.Return(7))
@@ -101,7 +101,7 @@ IsLeaked(at Number, register Number) Boolean
 Stored(entry InstructionEntry) Texts
 	Owner.Stored(Built(2)).Index("    func.call @strict_rc_dead(%t2o, %t2) : (f64, f64) -> ()") is 6
 	MlirOwned(Copying, 4).Stored(Copying.method.instructions(4)).Length is 2
-	let slot = "%v_" + entry.texts(0)
+	let slot = entry.texts(0) is "#this" then "%instance" else "%v_" + entry.texts(0)
 	let copied = function.Copied("%r" + entry.payload(0), slot, "%t" + position)
 	if IsOwned(entry.texts(0)) is false
 		return copied

@@ -58,8 +58,8 @@ ParameterScope Scope
 		if IsMethodHeader(value)
 			let entries = HeaderEntries(HeaderTokens(Tokenizer(value).Tokens), methods).Parameters
 			scope = scope.WithAll(entries.names, entries.types)
-	let steps = Steps(List(Text)).Members(lines)
-	scope.WithAll(steps.names, steps.types)
+	let added = Changes(lines).Added(Steps(List(Text)).Members(lines))
+	scope.WithAll(added.names, added.types)
 UsesGenerics Boolean
 	TypeShape("has value Generic").UsesGenerics
 	TypeShape("has value Generic or None").UsesGenerics is false

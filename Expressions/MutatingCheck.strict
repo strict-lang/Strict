@@ -7,9 +7,19 @@ constant Added = SyntaxNode("Binary", "+", (SyntaxNode("Identifier", "a"), Synta
 constant Values = ("Binary", "Number", "Text", "List")
 constant Unchecked = ("None", "Error", "Boolean", "Unknown", "")
 constant Immutable = ScopedStatement(Increment, Counted, 0)
+constant Tickers = KnownTypes(List(Text) + "Ticker", List(Scope) + Scope(List(Text) + "count", List(Text) + "Number"), List(Scope) + Scope(List(Text) + "Next", List(Text) + "Number"), List(Scope) + Scope(("Next", "Next changes"), ("", "changes")))
+constant Ticked = MutatingCheck(TypeInference(Tickers, TypeInference.Limits))
+constant Ticking = SyntaxNode("Member", "Next", SyntaxNode("Identifier", "ticker"))
+constant Holding = Scope(List(Text) + "ticker", List(Text) + "Ticker")
+constant Typed = SyntaxNode("Member", "Next", SyntaxNode("Identifier", "Ticker"))
+constant Mutables = Holding.With("ticker mutable", "mutable")
 Issue(scoped ScopedStatement, current Scope) Text
 	Counting.Issue(Immutable, Counted).StartsWith("MutatingCallNeedsMutableVariable: a.Increment")
 	Counting.Issue(ScopedStatement(Increment, Counted.With("a mutable", "mutable"), 0), Counted) is ""
+	let changing = Changing(scoped.statement, scoped.scope, current)
+	changing is "" then Mutated(scoped, current) else changing
+Mutated(scoped ScopedStatement, current Scope) Text
+	Counting.Mutated(Immutable, Counted).StartsWith("MutatingCallNeedsMutableVariable: a.Increment")
 	let statement = scoped.statement
 	if (scoped.scope.TypeOf(" dropped") is "") or (IsMutating(statement, scoped.scope, current) is false)
 		return Unused(scoped, current)
@@ -18,6 +28,29 @@ Issue(scoped ScopedStatement, current Scope) Text
 		return ""
 	let call = target + "." + statement.text
 	"MutatingCallNeedsMutableVariable: " + call + " has no effect, use a mutable variable or assign the result"
+Changing(node SyntaxNode, scope Scope, current Scope) Text
+	Ticked.Changing(Ticking, Holding, Holding).StartsWith("ChangingCallNeedsMutableVariable: ticker.Next")
+	Ticked.Changing(Ticking, Mutables, Holding) is ""
+	Ticked.Changing(SyntaxNode("Binary", "+", (Ticking, Ticking)), Holding, Holding) is not ""
+	if IsChangingCall(node, scope, current)
+		let target = node.children(0).text
+		return "ChangingCallNeedsMutableVariable: " + target + "." + node.text + " changes " + target + ", declare it mutable"
+	for node.children
+		let found = Changing(value, scope, current)
+		if found is not ""
+			return found
+	""
+IsChangingCall(node SyntaxNode, scope Scope, current Scope) Boolean
+	Ticked.IsChangingCall(Ticking, Holding, Holding)
+	Ticked.IsChangingCall(Typed, KnownTypes.NoMembers, Holding) is false
+	let isMember = node.Kind is in ("MethodCall", "Member")
+	if (isMember is false) or (node.children.Length is 0) or (node.children(0).Kind is not "Identifier")
+		return false
+	let target = node.children(0).text
+	if (scope.TypeOf(target + " mutable") is not "") or (scope.TypeOf(target) is "") and inference.types.IsKnown(target)
+		return false
+	let type = inference.TypeOf(node.children(0), scope, current)
+	inference.types.ParameterScope(type).TypeOf(node.text + " changes") is not ""
 Unused(scoped ScopedStatement, current Scope) Text
 	Counting.Unused(ScopedStatement(Added, Counted, 0), Counted).StartsWith("UnusedValueMustBeRemoved: a + a is")
 	Counting.Unused(ScopedStatement(Added, Counted.With(" dropped", ""), 0), Counted) is ""
