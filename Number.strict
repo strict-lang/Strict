@@ -86,6 +86,35 @@ Clamp(minimum = 0, maximum = 1) Number
 	0.3.Clamp is 0.3
 	-0.8.Clamp(-0.5, 0.5) is -0.5
 	value > maximum then maximum else value < minimum then minimum else value
+Sign Number
+	(0 - 3).Sign is -1
+	0.Sign is 0
+	2.5.Sign is 1
+	value > 0 then 1 else value < 0 then -1 else 0
+Truncated Number
+	2.7.Truncated is 2
+	(0 - 2.7).Truncated is -2
+	value < 0 then Ceiling else Floor
+Wrap(minimum Number, maximum Number) Number
+	370.Wrap(0, 360) is 10
+	(0 - 10).Wrap(0, 360) is 350
+	360.Wrap(0, 360) is 0
+	190.Wrap(-180, 180) is -170
+	let range = maximum - minimum
+	let offset = (value - minimum) % range
+	minimum + (offset < 0 then offset + range else offset)
+Fixed(decimals Number) Text
+	3.14159.Fixed(2) is "3.14"
+	3.1.Fixed(2) is "3.10"
+	2.Fixed(1) is "2.0"
+	(0 - 2.25).Fixed(1) is "-2.2"
+	5.4.Fixed(0) is "5"
+	mutable text = Round(decimals) to Text
+	if decimals > 0 and text.IndexOf(".") < 0
+		text = text + "."
+	for decimals - (text.Length - text.IndexOf(".") - 1)
+		text = text + "0"
+	text
 Lerp(other, percentage Number) Number
 	1.Lerp(3, 0) is 1
 	0.Lerp(1, 0.2) is 0.2
