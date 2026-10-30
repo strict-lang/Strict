@@ -70,8 +70,7 @@ Corrected(state JpegState, end Number) JpegState
 	mutable position = state.position
 	for Range(state.next, end)
 		if coefficients(value) is not 0
-			let sign = coefficients(value) > 0 then 1 else -1
-			coefficients(value) = coefficients(value) + stream.Bit(position) * sign * 2 ^ band(3)
+			coefficients(value) = coefficients(value) + stream.Bit(position) * coefficients(value).Sign * 2 ^ band(3)
 			position = position + 1
 	JpegState(coefficients, position, state.run, end, state.predictions)
 Placed(state JpegState, target Number, number Number) JpegState
