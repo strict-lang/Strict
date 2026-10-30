@@ -2,7 +2,7 @@
 What to fix next, one short line each, bugs first. Remove a line once it is done, add what is found at the end. No history or measurements (those go into commit messages). Speed work: [performance.md](performance.md).
 
 ## Bugs
-- None known.
+- `Compiler/MlirWholeTypes` fails 4 tests (Halving.Part(0) gives "iiii-" instead of "iiii", Settled, Initial, Step), also with the committed sources of 51b1ac23 (a cached .strictbinary hid it).
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).
