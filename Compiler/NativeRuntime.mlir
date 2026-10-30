@@ -11300,8 +11300,11 @@
     %none = arith.constant 0 : i64
     %share = func.call @strict_gpu_share(%count) : (i64) -> i64
     %brainBits = arith.constant 17 : i64
-    %isBrain = arith.cmpi eq, %packed, %brainBits : i64
-    %sharedPacked = arith.select %isBrain, %none, %packed : i64
+    %formatMask = arith.constant 255 : i64
+    %format = arith.andi %packed, %formatMask : i64
+    %isBrain = arith.cmpi eq, %format, %brainBits : i64
+    %workBits = arith.subi %packed, %format : i64
+    %sharedPacked = arith.select %isBrain, %workBits, %packed : i64
     %hasShare = arith.cmpi sgt, %share, %none : i64
     cf.cond_br %hasShare, ^gpu, ^cpu(%none : i64)
   ^gpu:
@@ -12447,7 +12450,7 @@
   ^done:
     return
   }
-  func.func private @strict_gpu_run(%ptx: !llvm.ptr, %name: !llvm.ptr, %slot: !llvm.ptr, %count: i64, %source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64, %rows: i64, %dots: i64, %lanes: i64, %group: i64, %packed: i64, %guards: i64) -> f64 {
+  func.func private @strict_gpu_run(%ptx: !llvm.ptr, %name: !llvm.ptr, %slot: !llvm.ptr, %count: i64, %source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64, %rows: i64, %dots: i64, %lanes: i64, %group: i64, %packedFormat: i64, %guards: i64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %busy = func.call @strict_rc_busy() : () -> i1
     cf.cond_br %busy, ^worker, ^host
@@ -12461,6 +12464,15 @@
     return %shaded : f64
   ^device:
     %none = arith.constant 0 : i64
+    // the low byte is the result format, a loop reading a member with value.Bits is 32 (MlirDoubles.Format 32) runs
+    // the 32 bit kernel, the rest the log2 of its work per element (MlirCost.Shift) for the GPU minimum
+    %formatMask = arith.constant 255 : i64
+    %eightShift = arith.constant 8 : i64
+    %format = arith.andi %packedFormat, %formatMask : i64
+    %workShift = arith.shrui %packedFormat, %eightShift : i64
+    %singleFormat = arith.constant 32 : i64
+    %isSingleFormat = arith.cmpi eq, %format, %singleFormat : i64
+    %packed = arith.select %isSingleFormat, %none, %format : i64
     %one = arith.constant 1 : i64
     %activeFrameSlot = llvm.mlir.addressof @strict_gpu_active : !llvm.ptr
     %previousActiveFrame = llvm.load %activeFrameSlot : !llvm.ptr -> i64
@@ -12476,7 +12488,8 @@
     %tiny = func.call @strict_gpu_tiny(%count, %unlisted) : (i64, i1) -> i1
     cf.cond_br %tiny, ^failed, ^measure
   ^measure:
-    %sourceWork = func.call @strict_gpu_work(%count, %source, %kind) : (i64, f64, i64) -> i64
+    %elementWork = func.call @strict_gpu_work(%count, %source, %kind) : (i64, f64, i64) -> i64
+    %sourceWork = arith.shli %elementWork, %workShift : i64
     %rowsWork = func.call @strict_gpu_rows_work(%count, %values, %rows) : (i64, !llvm.ptr, i64) -> i64
     %work = arith.maxui %sourceWork, %rowsWork : i64
     %minimum = func.call @strict_gpu_threshold() : () -> i64
@@ -12640,7 +12653,8 @@
     // other double kernels send theirs to the host after checking they ran, a wrong index or a missing 64 bit function
     // falls back to the CPU loop (and its error)
     %narrowed = llvm.load %narrowSlot : !llvm.ptr -> i64
-    %narrowSingle = arith.cmpi ne, %narrowed, %none : i64
+    %narrowFound = arith.cmpi ne, %narrowed, %none : i64
+    %narrowSingle = arith.ori %narrowFound, %isSingleFormat : i1
     func.call @strict_gpu_singles(%ptx, %narrowSingle, %values, %valueCount, %mask, %rows, %slots) : (!llvm.ptr, i1, !llvm.ptr, i64, i64, i64, !llvm.ptr) -> ()
     func.call @strict_gpu_exacts(%values, %valueCount, %mask, %slots, %slotIndex) : (!llvm.ptr, i64, i64, !llvm.ptr, i64) -> ()
     // a kernel with an exact copy (MlirGuards) runs it when its guarded numbers are whole and its guarded lists 32 or 16 bit

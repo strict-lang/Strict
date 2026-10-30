@@ -53,5 +53,16 @@ Format Number
 	Tabling.Format is 64
 	Squaring.Format is 0
 	MlirDoubles(MlirLayout.Halves, 2).Format is 17
+	MlirDoubles(WgslShader.Scaled.function, 2).Format is 32
 	let packed = MlirLayout(function).Packed(position)
+	if (packed is 0) and IsSingle
+		return 32
 	(packed is 0) and Kept then 64 else packed
+IsSingle Boolean
+	MlirDoubles(WgslShader.Scaled.function, 2).IsSingle
+	Tabling.IsSingle is false
+	let free = MlirGpuCheck(function, position).Free
+	for function.type.members
+		if (value.Bits is 32) and (value.Name is in free)
+			return true
+	false

@@ -24,13 +24,7 @@ IsShaded Boolean
 	let collection = MlirLoops(function, position).Collection
 	let isPlain = (collection is in ("", "List(Number)")) and (MlirLayout(function).Packed(position) is 0)
 	let isKernel = MlirWholeKernel(function, position).IsKernel
-	if (isPlain is false) or isKernel or (MlirGpuCheck(function, position).IsGpu is false)
-		return false
-	let free = MlirGpuCheck(function, position).Free
-	for function.type.members
-		if (value.Bits is 32) and (value.Name is in free)
-			return true
-	false
+	isPlain and (isKernel is false) and MlirGpuCheck(function, position).IsGpu and MlirDoubles(function, position).IsSingle
 Functions Texts
 	Doubling.Functions.First is "fn s_Rows_Twice_1(instance: f32, p0: f32) -> f32 {"
 	mutable symbols = List(Text)

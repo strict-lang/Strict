@@ -56,3 +56,9 @@ Called(inspected MlirFunction, at Number, depth Number) Number
 	if callees.Length is 0
 		return Native
 	depth >= 4 then Native else 2 + Sum(callees.First, 0, callees.First.method.instructions.Length, depth + 1)
+Shift Number
+	Doubling.Shift is 0
+	MlirCost(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, Reading), 2).Shift is 11
+	let relative = Iteration / Doubling.Iteration
+	let shift = relative < 2 then 0 else (relative.Logarithm / 2.Logarithm).Floor
+	shift > 16 then 16 else shift
