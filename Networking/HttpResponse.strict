@@ -1,0 +1,3 @@
+has status Number
+has headers Text
+has body Text

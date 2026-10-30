@@ -1,0 +1,13 @@
+constant Fox = "The quick brown fox jumps over the lazy dog"
+constant LongKey = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+constant Order = "symbol=BTCUSDT&side=BUY&timestamp=1730260000000"
+Signatures Number
+	Hmac.Sha256("key", Fox) is "f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8"
+	Hmac.Sha256("", "") is "b613679a0814d9ec772f95d778c35fc5ff1697c493715653c6c712144292c5ad"
+	Hmac.Sha256(LongKey, Order) is "9de0df3d6e3c6337bd5eef4be68141f85d566f877d14027f3c9850d6f6f9f6f1"
+	Hmac.Sha256("schlüssel", "Käse 中文") is "ef17733d8da28a154716597217ec5f1f15eea044c9494600fd112d825850536b"
+	0
+Online Slow(Number)
+	Http.Send("GET", "https://api.binance.com/api/v3/time").status is 200
+	Http.Send("GET", "https://api.binance.com/api/v3/time").body.StartsWith("{\"serverTime\":")
+	0

@@ -1,0 +1,12 @@
+Send(method Text, url Text, body Text = "", headers Text = "", seconds Number = 15, maximum Number = 67108864) HttpResponse
+	Http.Send("GET", "ftp://example.com") is Error("InvalidHttpUrl")
+	Http.Send("GET", "https://") is Error("InvalidHttpUrl")
+	Response(Requested(method, url, body, headers, seconds, maximum))
+Requested(method Text, url Text, body Text, headers Text, seconds Number, maximum Number) Text
+Response(raw Text) HttpResponse
+	Http.Response("200\n\nbody") is HttpResponse(200, "", "body")
+	Http.Response("404\nA: b\nC: d\n\n{}") is HttpResponse(404, "A: b\nC: d", "{}")
+	let lineEnd = raw.IndexOf("\n")
+	let headEnd = raw.IndexOf("\n\n")
+	let headers = headEnd > lineEnd then raw.Substring(lineEnd + 1, headEnd - lineEnd - 1) else ""
+	HttpResponse(raw.Substring(0, lineEnd) to Number, headers, raw.Substring(headEnd + 2, raw.Length - headEnd - 2))

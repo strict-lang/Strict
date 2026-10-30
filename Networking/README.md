@@ -1,7 +1,27 @@
 # Strict.Networking
 
-TCP/IP sockets for the programs of the repository: a client connects to a host,
-a server listens on a port and accepts, both send and receive bytes.
+HTTP and HTTPS requests, HMAC-SHA256 signatures and TCP/IP sockets for the
+programs of the repository.
+
+- `Http.Send(method, url, body, headers, seconds, maximum)`: the `HttpResponse`
+  (`status`, `headers` and `body`) of a request, any status is a response.
+  `headers` are "Name: value" lines, `body` and `headers` default to empty,
+  `seconds` (15) limits each step, `maximum` (64 MB) the bytes of the response.
+  Errors are `InvalidHttpUrl` (only http and https), `HttpResponseTooLarge` and
+  `HttpFailed (...)` with what the platform reported, like
+  `HttpFailed (Windows error 12007 in WinHttpSendRequest)` for an unknown host.
+- `Hmac.Sha256(secret, message)`: the HMAC-SHA256 of the message as lowercase
+  hex, the signature of APIs like Binance, in portable C (`native/Hmac.c`).
+
+Windows uses WinHTTP (TLS 1.2 and 1.3, the system proxy), Linux and macOS load
+libcurl when first used (no headers needed to build), the web a synchronous
+XMLHttpRequest. The OS or curl checks the certificates. Bodies are texts, their
+UTF-8 bytes pass through unchanged. `Http.strict` tests the url checks and the
+response format offline, `HttpChecks.strict` the signatures and (Slow) a request
+to api.binance.com.
+
+TCP/IP sockets: a client connects to a host, a server listens on a port and
+accepts, both send and receive bytes.
 
 - `Socket.Connect(host, port)`: the socket of a client, or an Error such as
   `HostNotFound` or `ConnectionFailed`.
