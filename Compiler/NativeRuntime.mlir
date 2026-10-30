@@ -8977,9 +8977,9 @@
     llvm.store %chosen, %slot : f64, !llvm.ptr
     return
   }
-  // a list a collecting loop of number structs (MlirEmbedded) fills: room for capacity items (holes until written)
-  // and as many blocks of slots numbers after them, the element of an iteration is built in its own block
-  // (strict_struct_destine_block)
+  // a list a collecting loop of number structs (MlirEmbedded) fills: room for capacity items and as many blocks of
+  // slots numbers after them, the element of an iteration is built in its own block (strict_struct_destine_block);
+  // the loop writes every item (or a hole, strict_list_holes) before anything reads them
   func.func private @strict_record_list_new(%capacity: f64, %slots: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %eight = arith.constant 8.0 : f64
@@ -8987,7 +8987,6 @@
     %bytesFloat = arith.mulf %capacity, %perBlock : f64
     %bytes = arith.fptosi %bytesFloat : f64 to i64
     %list = func.call @strict_list_reserved(%capacity, %zero, %bytes) : (f64, f64, i64) -> f64
-    func.call @strict_list_holes(%list, %capacity) : (f64, f64) -> ()
     return %list : f64
   }
   // the block of the element at index of such a list is the destination the next method building a struct takes
