@@ -70,7 +70,7 @@ Started Texts
 	let item = MlirLoops(function, position).Collection is "" then "f32(at)" else "numbers[" + source + " + at]"
 	("v_index = f32(at);", "v_value = " + item + ";")
 Scripts(functions List(MlirFunction)) Text
-	WgslShader.Scripts(List(MlirFunction) + Scaled.function).StartsWith(Marker + "\n(Module[\"strictShaders\"] ||= {})")
+	WgslShader.Scripts(List(MlirFunction) + Scaled.function).StartsWith(Marker + "\n;(Module[\"strictShaders\"] ||= {})")
 	WgslShader.Scripts(List(MlirFunction) + Doubling.function) is ""
 	mutable lines = List(Text)
 	for functions
@@ -94,7 +94,7 @@ Shaded(inspected MlirFunction) Texts
 			let source = shader.Source.Replace("\n", "\\n")
 			let name = "[\"" + MlirDevice(inspected, index).Name + "\"] = "
 			let singles = " (Module[\"strictSingles\"] ||= {})" + name + shader.Singles + ";"
-			source is "" then "" else "(Module[\"strictShaders\"] ||= {})" + name + "\"" + source + "\";" + singles
+			source is "" then "" else ";(Module[\"strictShaders\"] ||= {})" + name + "\"" + source + "\";" + singles
 Singles Text
 	Scaled.Singles is "[0]"
 	Doubling.Singles is "[]"
