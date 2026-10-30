@@ -81,7 +81,7 @@ Slots Texts
 	outer.Text.Combine(MlirGroups.Norming.function.Slots).IndexOf("%memo11 = llvm.alloca") > 0
 	outer.Text.Combine(MlirCalls.Shapes.Slots).IndexOf("%handed1 = llvm.alloca") > 0
 	mutable lines = ("    %one = arith.constant 1 : i64", "    %zero = arith.constant 0.0 : f64")
-	lines = lines + "    %flag = llvm.alloca %one x i1 : (i64) -> !llvm.ptr"
+	lines = lines + "    %flag = llvm.alloca %one x i1 : (i64) -> !llvm.ptr" + MlirEmbedded(value).Stacks
 	for LoadReuse(method.instructions).RegisterCount
 		lines = lines + Slot("%r" + index)
 	for VariableNames

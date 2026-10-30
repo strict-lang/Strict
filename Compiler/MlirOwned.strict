@@ -131,7 +131,7 @@ Target(entry InstructionEntry, owner TypeEntry) Text
 	let isOwned = isStored and isBuilt then IsOwned(next.texts(0)) else false
 	isOwned then next.texts(0) else ""
 Rewritten(entry InstructionEntry, owner TypeEntry, name Text) Texts
-	Rebuilt.Rewritten(Rebuilding(7), MlirInstances.Outer, "moved").Last.IndexOf("(%t7r1, %t7ra1)") > 0
+	Rebuilt.Rewritten(Rebuilding(7), MlirInstances.Outer, "moved").Last is "    llvm.store %t7ra1, %t7r1 : f64, !llvm.ptr"
 	let countPosition = 5 + entry.payload(3)
 	let names = Invocation(entry, List(VmValue), VmValue.None).ParameterNames
 	mutable lines = List(Text)
@@ -142,10 +142,13 @@ Rewritten(entry InstructionEntry, owner TypeEntry, name Text) Texts
 			lines = lines + Put(owner, value, register)
 	lines
 Put(owner TypeEntry, member MemberEntry, register Number) Texts
-	Rebuilt.Put(MlirInstances.Outer, MlirInstances.Outer.members.Last, 5).Last.IndexOf("(%t7r1, %t7ra1)") > 0
+	Rebuilt.Put(MlirInstances.Outer, MlirInstances.Outer.members.Last, 5).Last.StartsWith("    llvm.store %t7ra1, %t7r1")
+	Rebuilt.Put(MlirFunction.Shape, MlirFunction.Shape.members.First, 5).Last.StartsWith("    llvm.store %t7ra0, %t7r0")
 	let offset = MlirEmbedded(function).Offset(owner, member.Name)
-	if MlirEmbedded(function).IsInline(owner, member) is false
+	if MlirEmbedded(function).IsNumbers(owner.Name) is false
 		return Placed(Putting, offset, register)
+	if MlirEmbedded(function).IsInline(owner, member) is false
+		return Placed(Putting.Slice(0, 2) + "    llvm.store %t#ra$, %t#r$ : f64, !llvm.ptr", offset, register)
 	let source = "%t" + position + "ra" + offset
 	let target = "%t" + position + "r" + offset
 	Placed(Putting.Slice(0, 2), offset, register) + MlirEmbedded(function).Copied(source, target, member.typeName)

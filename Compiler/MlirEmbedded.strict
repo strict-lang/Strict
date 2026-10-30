@@ -7,6 +7,9 @@ constant Making = Boxing.instructions(3)
 constant Building = MlirInstances(Boxer, 3)
 constant Weight = Boxed.members.Last
 constant Reading = Boxing.instructions(5)
+constant Wrapping = MethodEntry("Wrapped", List(MemberEntry) + MlirStructs.Sizing, "Strict/Outer", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "size"), MlirStructs.Calling, InstructionEntry.Invoke(2, ("Strict/Outer", "from", "Strict/Outer", "shape", "size"), (1, 0), -1), InstructionEntry.Return(2)))
+constant Wrapper = MlirEmbedded(MlirFunction(List(TypeEntry) + MlirStructs.Maker + MlirInstances.Outer, MlirInstances.Outer, Wrapping))
+constant Stacking = MlirStructs(Wrapper.function, 1)
 constant Initializing = MlirLayout(MlirFunction(Boxer.types, Boxed, MethodEntry("from", List(MemberEntry), "Strict/Boxed", (InstructionEntry.LoadNumber(0, 1), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "weight")))))
 IsNumbers(typeName Text) Boolean
 	Sample.IsNumbers("Strict/Shape")
@@ -57,6 +60,55 @@ IsInline(owner TypeEntry, member MemberEntry) Boolean
 	Sample.IsInline(Boxed, Boxed.members.Last) is false
 	Text.Combine(Initializing.Returned(2)).IndexOf("@memcpy(") > 0
 	IsNumbers(owner.Name) and IsNumbers(member.typeName)
+Listed(element Text, result Text, capacity Text) Texts
+	Sample.Listed("Strict/Boxed", "%r", "%a").Last.StartsWith("    %r = func.call @strict_record_list_new(%a, %rc)")
+	Text.Combine(MlirListDestined(MlirStructs.Collector.function, 2).Created("%r", "%a")).IndexOf("_record_list_new(") > 0
+	let counted = "    " + result + "c = arith.constant " + Slots(element) + ".0 : f64"
+	let call = " = func.call @strict_record_list_new(" + capacity + ", " + result + "c) : (f64, f64) -> f64"
+	(counted, "    " + result + call)
+StackSlots(at Number) Number
+	Wrapper.StackSlots(1) is 1
+	Wrapper.StackSlots(2) is 0
+	MlirEmbedded(MlirStructs.Forwarder.function).StackSlots(1) is 0
+	let entry = function.method.instructions(at)
+	if (entry.kind is not InstructionType.Invoke) or (IsCopied(at, entry.payload(0)) is false)
+		return 0
+	let callees = MlirModule(function.types, "").Called(function, at)
+	let returned = callees.Length > 0 then callees.First.method.returnType else ""
+	let isConsumed = callees.Length > 0 then MlirStructs(callees.First, 0).Consumes(1) else false
+	isConsumed and IsNumbers(returned) then Slots(returned) else 0
+IsCopied(at Number, register Number) Boolean
+	Wrapper.IsCopied(1, 1)
+	Wrapper.IsCopied(0, 0) is false
+	let membered = MlirMembered(function, at)
+	let built = membered.Rebuilding(register)
+	if (built < 0) or (membered.Reader(at, register) is not built)
+		return false
+	let owner = function.TypeOf(TypeEntry.ShortName(function.method.instructions(built).texts(0)))
+	let slot = membered.Slot(built, register)
+	if slot < 0
+		return false
+	IsInline(owner, MlirInstances(function, 0).Stored(owner)(slot)) and (membered.Reader(built, register) < 0)
+Stacks Texts
+	Wrapper.Stacks.Last is "    %stack1 = llvm.alloca %stack1n x f64 : (i64) -> !llvm.ptr"
+	MlirEmbedded(MlirStructs.Forwarder.function).Stacks.Length is 0
+	Text.Combine(Wrapper.function.Slots).IndexOf("%stack1 = llvm.alloca") > 0
+	mutable lines = List(Text)
+	for function.method.instructions
+		let slots = StackSlots(index)
+		if slots > 0
+			let name = "%stack" + index
+			let counted = "    " + name + "n = arith.constant " + slots + " : i64"
+			lines = lines + (counted, "    " + name + " = llvm.alloca " + name + "n x f64 : (i64) -> !llvm.ptr")
+	lines
+Stacked(at Number, compiled Texts) Texts
+	Wrapper.Stacked(1, List(Text) + "call")(1) is Stacking.Destine("sd")
+	Wrapper.Stacked(2, List(Text) + "call") is ("call")
+	Text.Combine(Stacking.Collected(MlirStructs.Calling, List(Text) + "call", "Shape")).IndexOf("(%t1sd)") > 0
+	if StackSlots(at) is 0
+		return compiled
+	let bits = "    %t" + at + "sd = func.call @strict_bits(%stack" + at + ") : (!llvm.ptr) -> f64"
+	(bits, MlirStructs(function, at).Destine("sd")) + compiled
 Read(memory MlirMemory, owner TypeEntry, member MemberEntry, base Text, suffix Text) Texts
 	Sample.Read(MlirMemory.Sample, Boxed, Boxed.members.Last, "%b", "m").First.IndexOf("%b[2]") > 0
 	Sample.Read(MlirMemory.Sample, Boxed, Boxed.members.First, "%b", "m").Last.IndexOf("@strict_bits(") > 0
