@@ -57,6 +57,12 @@ IsInline(owner TypeEntry, member MemberEntry) Boolean
 	Sample.IsInline(Boxed, Boxed.members.Last) is false
 	Text.Combine(Initializing.Returned(2)).IndexOf("@memcpy(") > 0
 	IsNumbers(owner.Name) and IsNumbers(member.typeName)
+Listed(element Text, result Text, capacity Text) Texts
+	Sample.Listed("Strict/Boxed", "%r", "%a").Last.StartsWith("    %r = func.call @strict_record_list_new(%a, %rc)")
+	Text.Combine(MlirListDestined(MlirStructs.Collector.function, 2).Created("%r", "%a")).IndexOf("_record_list_new(") > 0
+	let counted = "    " + result + "c = arith.constant " + Slots(element) + ".0 : f64"
+	let call = " = func.call @strict_record_list_new(" + capacity + ", " + result + "c) : (f64, f64) -> f64"
+	(counted, "    " + result + call)
 Read(memory MlirMemory, owner TypeEntry, member MemberEntry, base Text, suffix Text) Texts
 	Sample.Read(MlirMemory.Sample, Boxed, Boxed.members.Last, "%b", "m").First.IndexOf("%b[2]") > 0
 	Sample.Read(MlirMemory.Sample, Boxed, Boxed.members.First, "%b", "m").Last.IndexOf("@strict_bits(") > 0

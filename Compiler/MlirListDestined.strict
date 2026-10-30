@@ -53,9 +53,10 @@ Created(result Text, capacity Text) Texts
 	Copied.Created("%r", "%a").Last.IndexOf("@strict_list_created(%a, %rc)") > 0
 	Copied.Created("%r", "%a").First is "    %rc = arith.constant 0.0 : f64"
 	Lined.Created("%r", "%a").First is "    %rc = arith.constant 3.0 : f64"
-	let kinds = MlirKinds(function)
-	let count = MlirFlats(function, position).Count(kinds.ElementKind(kinds.VariableKind(position, "forResult")))
-	let counted = "    " + result + "c = arith.constant " + count + ".0 : f64"
+	let element = MlirKinds(function).ElementKind(MlirKinds(function).VariableKind(position, "forResult"))
+	if MlirEmbedded(function).IsNumbers(element)
+		return MlirEmbedded(function).Listed(element, result, capacity)
+	let counted = "    " + result + "c = arith.constant " + MlirFlats(function, position).Count(element) + ".0 : f64"
 	let into = "@strict_list_into(%listDestination, " + capacity + ", " + result + "c) : (f64, f64, f64)"
 	let created = "@strict_list_created(" + capacity + ", " + result + "c) : (f64, f64)"
 	let call = IsDestined and (ResultLoop is position) then into else created

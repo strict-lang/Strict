@@ -10,6 +10,8 @@ constant Forwarder = MlirStructs(MlirFunction(List(TypeEntry) + Maker, Maker, Fo
 constant Items = MemberEntry("items", "Strict/List(Strict/Shape)", List(InstructionEntry), false)
 constant Filling = MethodEntry("Filled", (Items, Sizing), "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "size"), Calling, InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "items(0)"), InstructionEntry.Return(1)))
 constant Filler = MlirStructs(MlirFunction(List(TypeEntry) + Maker, Maker, Filling), 1)
+constant Collecting = MethodEntry("Collected", List(MemberEntry) + Sizing, "Strict/List(Strict/Shape)", (MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Strict/Shape)", (0, 6, -1, 0)), "forResult"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "size"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "size"), Calling, InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "made"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "made"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 2, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 6)))
+constant Collector = MlirStructs(MlirFunction(List(TypeEntry) + Maker, Maker, Collecting), 4)
 constant Taking = ("    %structDestinationGlobal = llvm.mlir.addressof @strict_struct_destination : !llvm.ptr", "    %structDestinationValue = llvm.load %structDestinationGlobal : !llvm.ptr -> f64", "    llvm.store %zero, %structDestinationGlobal : f64, !llvm.ptr", "    %structDestination = llvm.alloca %one x f64 : (i64) -> !llvm.ptr", "    llvm.store %structDestinationValue, %structDestination : f64, !llvm.ptr")
 Consumes(depth Number) Boolean
 	Made.Consumes(0)
@@ -77,7 +79,7 @@ Destined(entry InstructionEntry, next InstructionEntry, compiled Texts) Texts
 Element(entry InstructionEntry, next InstructionEntry, compiled Texts, returned Text) Texts
 	Made.Element(Calling, Making.instructions(2), List(Text) + "call", "Shape") is ("call")
 	if IsTarget(entry, next, returned) is false
-		return compiled
+		return Collected(entry, compiled, returned)
 	let parts = PayloadDecoder(next).ElementParts
 	let isNumber = "0123456789".IndexOf(parts(1).Substring(0, 1)) is not -1
 	let temp = "%t" + position + "s"
@@ -85,6 +87,38 @@ Element(entry InstructionEntry, next InstructionEntry, compiled Texts, returned 
 	let index = isNumber then literal else function.Load(temp + "i", "%v_" + parts(1))
 	let destined = "    func.call @strict_struct_destine_element(" + temp + "l, " + temp + "i) : (f64, f64) -> ()"
 	(function.Load(temp + "l", "%v_" + parts(0)), index, destined) + compiled
+Collected(entry InstructionEntry, compiled Texts, returned Text) Texts
+	Text.Combine(Collector.Collected(Calling, List(Text) + "call", "Shape")).IndexOf("_block(%t4kl, %t4ki, %t4kn)") > 0
+	Made.Collected(Calling, List(Text) + "call", "Shape") is ("call")
+	let embedded = MlirEmbedded(function)
+	if (embedded.IsNumbers(returned) is false) or (IsKept(entry) is false)
+		return compiled
+	let temp = "%t" + position + "k"
+	let size = "    " + temp + "n = arith.constant " + embedded.Slots(returned) + ".0 : f64"
+	let arguments = temp + "l, " + temp + "i, " + temp + "n) : (f64, f64, f64) -> ()"
+	let destined = "    func.call @strict_struct_destine_block(" + arguments
+	(function.Load(temp + "l", "%v_forResult"), function.Load(temp + "i", "%v_index"), size, destined) + compiled
+IsKept(entry InstructionEntry) Boolean
+	Collector.IsKept(Calling)
+	Made.IsKept(Calling) is false
+	let steps = function.method.instructions
+	let next = MlirDestined(function, position).Next(entry)
+	let isStored = (next.kind is InstructionType.StoreRegisterToVariable) and (next.payload(0) is entry.payload(0))
+	let stored = isStored then next.texts(0) else ""
+	for Range(position + 1, steps.Length)
+		if steps(value).kind is in (InstructionType.LoopBegin, InstructionType.LoopEnd)
+			return false
+		if (steps(value).kind is InstructionType.InvokeWriteToList) and (steps(value).texts(0) is "forResult")
+			return IsWritten(value, stored)
+	false
+IsWritten(at Number, stored Text) Boolean
+	Collector.IsWritten(7, "made")
+	Collector.IsWritten(7, "other") is false
+	let writer = MlirKinds(function).Writer(at, function.method.instructions(at).payload(0))
+	if writer < 0
+		return false
+	let step = function.method.instructions(writer)
+	(writer is position) or ((step.kind is InstructionType.LoadVariableToRegister) and (step.texts(0) is stored))
 Destine(suffix Text) Text
 	Made.Destine("sd") is "    func.call @strict_struct_destine(%t1sd) : (f64) -> ()"
 	"    func.call @strict_struct_destine(%t" + position + suffix + ") : (f64) -> ()"
