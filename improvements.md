@@ -3,7 +3,6 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 
 ## Bugs
 - A pure loop over GPU heavy calls forks onto CPU threads (MlirCost's threshold is 2 for a costly body): `Qwen3Images.Encoded` of 2 images ran its vision towers in workers and did not finish in 4.5 min, sequential takes 16 s more than one image.
-- WebWars and ArenaWars do not build natively: `Native compilation failed, unsupported: text of List(cell) in WebWarsTerrain_Navigation_0` (`ArenaLevel_Navigation_2` in ArenaWars), both build their navigation with DeltaEngine's `Graphs/NavigationMap.FromGrid` (DeltaEngine 3a4ef02 with Strict 0da462d8, SoulCraft builds).
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).

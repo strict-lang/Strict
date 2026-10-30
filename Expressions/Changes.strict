@@ -12,6 +12,7 @@ Methods Texts
 	Ticking.Methods is ("Next", "Twice")
 	Reading.Methods is ("Next", "Twice", "Size")
 	Changes(("has count Number", "Next Number", "\tcount"), true).Methods.Length is 0
+	Changes(("has count Number = 1", "Sum(items Numbers) Number", "\tfor items", "\t\tvalue"), true).Methods.Length is 0
 	let members = isReading and (IsDefaulted is false) then List(Text) else Members
 	mutable changing = List(Text)
 	mutable found = members.Length is 0 then List(Text) else Found(members, changing)
@@ -36,16 +37,34 @@ Found(members Texts, changing Texts) Texts
 		if shape.IsMethodHeader(value)
 			method = Tokenizer(value).Tokens.First
 		else if value.StartsWith("\t") and (method is not in result)
-			if IsChanging(Tokenizer(value.TrimStart).Tokens, members, changing)
+			if IsChanging(Tokens(index), members, changing)
 				result.Add(method)
 	result
+Tokens(at Number) Texts
+	Reading.Tokens(3) is ("count", "=", "count", "+", "step")
+	Changes(("Sum Number", "\tfor 3", "\t\tvalue + 1"), true).Tokens(2) is ("+", "1")
+	let tokens = Tokenizer(lines(at).TrimStart).Tokens
+	isReading and ("value" is in tokens) and IsLooped(at) then tokens - "value" else tokens
+IsLooped(at Number) Boolean
+	Changes(("Sum Number", "\tfor 3", "\t\tvalue")).IsLooped(2)
+	Changes(("Sum Number", "\tfor as long as true", "\t\tvalue")).IsLooped(2) is false
+	Changes(("Sum Number", "\tfor 3", "\t\t1", "\tvalue")).IsLooped(3) is false
+	mutable within = lines(at).Length - lines(at).TrimStart.Length
+	for at
+		let line = lines(at - 1 - index)
+		let depth = line.Length - line.TrimStart.Length
+		if depth < within
+			if depth is 0 or line.TrimStart.StartsWith("for ")
+				return depth > 0 and (line.TrimStart.StartsWith("for as long as ") is false)
+			within = depth
+	false
 IsChanging(tokens Texts, members Texts, changing Texts) Boolean
 	Ticking.IsChanging(("count", "=", "1"), ("count"), List(Text))
 	Ticking.IsChanging(("count", "+", "1"), ("count"), List(Text)) is false
 	Ticking.IsChanging(("Next", "+", "Next"), List(Text), ("Next"))
 	Ticking.IsChanging(("a", ".", "Next"), List(Text), ("Next")) is false
 	Ticking.IsChanging(("random", ".", "Get"), ("random"), List(Text))
-	if (tokens.First is in members) and ("=" is in tokens)
+	if (tokens.Length > 0) and (tokens.First is in members) and ("=" is in tokens)
 		return true
 	for tokens
 		if IsUsed(tokens, index, members, changing)
