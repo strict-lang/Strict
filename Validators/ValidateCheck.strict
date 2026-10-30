@@ -38,13 +38,16 @@ Logged(path Text, found List(ValidationIssue)) Number
 Mutations(files Texts) Texts
 	mutable mutations = List(Mutable(Text))
 	for files
-		mutations = mutations + FileMutations(TypeShape(File(value).ReadLines))
+		mutations = mutations + FileMutations(TypeShape(File(value).ReadLines), ResolveCheck.TypeName(value))
 	mutations
-FileMutations(shape Expressions/TypeShape) Texts
+FileMutations(shape Expressions/TypeShape, typeName Text = "") Texts
 	FileMutations(TypeShape("Add(element Number) Mutable(List)", "\telement")) is ("Add")
 	FileMutations(TypeShape("mutable count Number", "Next Number", "\tcount = count + 1")) is ("Next")
+	FileMutations(TypeShape("mutable count Number", "Next Number", "\tcount = count + 1"), "Ticker") is ("Next", "Ticker")
 	mutable mutations = List(Mutable(Text))
 	for shape.lines
 		if shape.IsMethodHeader(value) and HeaderTokens(Tokenizer(value).Tokens).ReturnsMutable
 			mutations.Add(Tokenizer(value).Tokens.First)
-	mutations + Changes(shape.lines).Methods
+	let changing = Changes(shape.lines).Methods
+	let owner = (changing.Length is 0) or (typeName is "") then List(Text) else List(Text) + typeName
+	mutations + changing + owner

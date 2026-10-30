@@ -6,6 +6,7 @@ has line Number = 0
 constant Shadowing = UsageRules(HeaderTokens(Tokenizer("Run(value Number)").Tokens), BodyParser("Run(value Number)", "\tlet value = Count(1)", "\tvalue").Block(1, 1).Statements, List(Text), List(Text))
 constant Looping = UsageRules(HeaderTokens(Tokenizer("Run(index Number)").Tokens), BodyParser("Run(index Number)", "\tfor 3", "\t\tindex", "\t1").Block(1, 1).Statements, List(Text), List(Text))
 constant ElementStore = BodyParser("Run", "	list(index) = 5").Block(1, 1).children(0)
+constant Lending = UsageRules(HeaderTokens(Tokenizer("Run").Tokens), BodyParser("Run", "	mutable ticker = Ticker(0)", "	Twice(ticker)").Block(1, 1).Statements, List(Text), List(Text) + "Ticker")
 Sample UsageRules
 	Sample.statements.Length is 4
 	constant lines = ("Run(count, mutable list)", "\tlet aa = 5", "\tmutable bb = 0", "\tlist.Add(1)", "\tcount + bb")
@@ -39,12 +40,32 @@ HidingIssues(declaration SyntaxNode, name Text) ValidationIssues
 	issues
 KindIssues(declaration SyntaxNode, name Text) ValidationIssues
 	Sample.KindIssues(Sample.statements(0), "aa").First.ruleName is "UseConstantHere"
+	Lending.KindIssues(Lending.statements(0), "ticker").Length is 0
 	mutable issues = List(Mutable(ValidationIssue))
-	if declaration.text.StartsWith("mutable ") and (not IsChanged(name))
+	if declaration.text.StartsWith("mutable ") and (not IsChanged(name)) and (IsLent(declaration, name) is false)
 		issues.Add(ValidationIssue("VariableDeclaredAsMutableButValueNeverChanged", name, declaration.line))
 	if declaration.text.StartsWith("let ") and declaration.children(0).IsLiteral
 		issues.Add(ValidationIssue("UseConstantHere", name, declaration.line))
 	issues
+IsLent(declaration SyntaxNode, name Text) Boolean
+	Lending.IsLent(Lending.statements(0), "ticker")
+	Sample.IsLent(Sample.statements(1), "bb") is false
+	let initial = declaration.children(0)
+	if (initial.Kind is not "Call") or (initial.text is not in mutations)
+		return false
+	for statements
+		if Passes(value, name)
+			return true
+	false
+Passes(node SyntaxNode, name Text) Boolean
+	Lending.Passes(Lending.statements(1), "ticker")
+	Lending.Passes(Lending.statements(0), "ticker") is false
+	let first = node.Kind is "Call" then 0 else 1
+	for node.children
+		let isArgument = (node.Kind is in ("Call", "MethodCall")) and (index >= first)
+		if isArgument and (value.Kind is "Identifier") and (value.text is name) or Passes(value, name)
+			return true
+	false
 ParameterIssues ValidationIssues
 	Sample.ParameterIssues.Length is 2
 	Shadowing.ParameterIssues.First.ruleName is "ParameterHidesMemberUseDifferentName"

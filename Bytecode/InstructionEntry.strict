@@ -4,6 +4,7 @@ has payload Numbers
 has line Number = 0
 has Target Number = -1
 constant ReturnLined = InstructionEntry(InstructionType.Return, List(Text), List(Number) + 3, 7)
+constant HolderFrom = InstructionEntry.Invoke(1, ("Strict/Holder", "from", "Strict/Holder", "counter"), 0, -1)
 Names(names BinaryNames) BinaryNames
 	InstructionEntry(InstructionType.Print, "Hi", (-1, 0)).Names(BinaryNames("a", "b")).names.Length is 3
 	mutable result = names

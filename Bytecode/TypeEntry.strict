@@ -6,6 +6,7 @@ constant FormatVersion = 7
 constant HelloLogger = TypeEntry("HelloLogger", MemberEntry.LoggerMember, MethodEntry.HelloRun)
 constant CharacterEntry = TypeEntry("Strict/Character", List(MemberEntry) + MemberEntry("number", "Strict/Number", List(InstructionEntry), false), List(MethodEntry))
 constant Rounded = TypeEntry("Strict/Float8", CharacterEntry.members, List(MethodEntry) + MethodEntry("from", CharacterEntry.members, "Strict/Float8", List(InstructionEntry)))
+constant Holding = (TypeEntry("Strict/Ticker", List(MemberEntry) + MemberEntry("count", "Strict/Number", List(InstructionEntry), false), List(MethodEntry)), TypeEntry("Strict/Holder", CharacterEntry.members, List(MethodEntry) + MethodEntry("from", List(MemberEntry) + MemberEntry("counter", "Strict/Ticker", List(InstructionEntry), false), "Strict/Holder", (InstructionEntry.LoadNumber(0, 1), InstructionEntry.Return(0)))))
 constant Scaling = TypeEntry("Strict/Vector", List(MemberEntry), (MethodEntry("*", List(MemberEntry) + MemberEntry("other", "Strict/Vector", List(InstructionEntry), false), "Strict/Number", List(InstructionEntry)), MethodEntry("*", List(MemberEntry) + MemberEntry("scale", "Strict/Number", List(InstructionEntry), false), "Strict/Vector", List(InstructionEntry))))
 constant Initialized = TypeEntry("A", List(MemberEntry) + MemberEntry("B", "C", MethodEntry.GoRun.instructions, true), List(MethodEntry))
 constant Kept = TypeEntry("A", List(MemberEntry) + MemberEntry("B", "C", List(InstructionEntry), true), List(MethodEntry) + MethodEntry("B", List(MemberEntry), "C", List(InstructionEntry)))
@@ -93,17 +94,6 @@ Changing List(MemberEntry)
 	for members
 		if value.IsConstant is false
 			value
-HasMemberFrom Boolean
-	Rounded.HasMemberFrom
-	CharacterEntry.HasMemberFrom is false
-	let changing = Changing
-	if changing.Length is not 1
-		return false
-	for methods
-		if (value.Name is "from") and (value.parameters.Length is 1)
-			if value.parameters.First.typeName is changing.First.typeName
-				return true
-	false
 IsBaseName(short Text) Boolean
 	HelloLogger.IsBaseName("Character")
 	HelloLogger.IsBaseName("List(Text)")
