@@ -10,15 +10,15 @@ constant Framing = TypeEntry("Strict/Math/Frame", List(MemberEntry), List(Method
 constant Missing = VmValue("Strict/Library", 0, "", List(VmValue) + VmValue.OfText("missing.dll"))
 constant Calling = Foreign(Invocation(InstructionEntry.Invoke(2, ("Strict/Library", "Call", "Strict/Number", "symbol", "arguments"), (0, 0), 0), (VmValue.OfText("Add"), VmValue.OfList(VmValue.OfNumber(0))), Missing), List(TypeEntry))
 constant Counter = TypeEntry(MlirForeign.Counter.Name, MlirForeign.Counter.members, List(MethodEntry) + MlirForeign.Next)
+constant Framed = Foreign(Invocation(InstructionEntry.Invoke(3, ("Strict/Math/Frame", "Add", "Strict/Number", "left", "right"), (0, 0), -1), (VmValue.OfNumber(1), VmValue.OfNumber(2)), VmValue.None), List(TypeEntry) + Framing)
 constant Counting = Foreign(Invocation(InstructionEntry.Invoke(1, (Counter.Name, "Next", "Strict/Number"), List(Number), 0), List(VmValue), VmValue.OfNumber(7).As(Counter.Name)), List(TypeEntry) + Counter)
 Called VmValue
-	Foreign(Invocation.AddCall, List(TypeEntry)).Called.text is "Unsupported native call T.Add"
+	Foreign(Invocation.AddCall, List(TypeEntry)).Called.items.First.text is "Unsupported native call T.Add"
+	Framed.Called.items.First.text.StartsWith("TraitHasNoImplementation")
 	let type = Natives(types).TypeOf(call.TypeName)
-	if IsForeign(type) is false
-		return VmValue("Error", 0, "Unsupported native call " + call.TypeName + "." + call.MethodName, List(VmValue))
-	let built = Built(type)
+	let built = IsForeign(type) then Built(type) else "Unsupported native call " + call.TypeName + "." + call.MethodName
 	if built.StartsWith("Built ") is false
-		return VmValue("Error", 0, built, List(VmValue))
+		return VmValue.OfError(built)
 	let library = Library(built.Substring(6, built.Length - 6))
 	let method = Method(type)
 	let bits = library.Call(type.JustName + "_" + call.MethodName, Arguments(library, method))
