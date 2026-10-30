@@ -33,12 +33,8 @@ Holed Texts
 	(List(Text) + function.Load(list, "%v_forResult")) + holes
 Filled(filler Text) Texts
 	Doubling.Filled("strict_list_filled_numbers").Last.EndsWith("_numbers(%t2pl, %t2n) : (f64, f64) -> f64")
-	Keeping.Filled("strict_list_filled").Last.EndsWith("@strict_list_filled(%t2pl, %t2pq) : (f64, f64) -> f64")
+	Keeping.Filled("strict_list_filled").Last.EndsWith("@strict_list_filtered(%t2pl, %t2n) : (f64, f64) -> f64")
 	let parallel = MlirParallel(function, position)
-	let list = parallel.Temp("pl")
-	let length = IsFiltering then parallel.Temp("pq") else parallel.Temp("n")
-	let filled = MlirMemory(function, position).Called(parallel.Temp("pz"), filler, (list, length))
-	if IsFiltering is false
-		return List(Text) + filled
-	let compacted = " = func.call @strict_list_compacted(" + list + ", " + parallel.Temp("n") + ") : (f64, f64) -> f64"
-	(List(Text) + ("    " + length + compacted)) + filled
+	let finisher = IsFiltering then "strict_list_filtered" else filler
+	let arguments = (parallel.Temp("pl"), parallel.Temp("n"))
+	List(Text) + MlirMemory(function, position).Called(parallel.Temp("pz"), finisher, arguments)
