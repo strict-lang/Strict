@@ -199,6 +199,65 @@
   ^done(%result: f64):
     return %result : f64
   }
+  // newest write time of the folder, its subfolders and files: one listing per folder, no call per file
+  func.func private @strict_directory_modified(%self: f64, %path: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %size = arith.constant 320 : i64
+    %invalidHandle = arith.constant -1 : i64
+    %directoryFlag = arith.constant 16 : i32
+    %none = arith.constant 0 : i32
+    %end = arith.constant 0 : i8
+    %epoch = arith.constant 116444736000000000 : i64
+    %perSecond = arith.constant 1.0e7 : f64
+    %anyText = llvm.mlir.addressof @strict_any_file : !llvm.ptr
+    %any = func.call @strict_bits(%anyText) : (!llvm.ptr) -> f64
+    %search = func.call @strict_path_join(%path, %any) : (f64, f64) -> f64
+    %searchText = func.call @strict_ptr(%search) : (f64) -> !llvm.ptr
+    %data = llvm.alloca %size x i8 : (i64) -> !llvm.ptr
+    %handle = llvm.call @FindFirstFileA(%searchText, %data) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %handleValue = llvm.ptrtoint %handle : !llvm.ptr to i64
+    %failed = arith.cmpi eq, %handleValue, %invalidHandle : i64
+    cf.cond_br %failed, ^done(%zero : f64), ^entry(%zero : f64)
+  ^entry(%newest: f64):
+    %attributes = llvm.load %data : !llvm.ptr -> i32
+    %masked = arith.andi %attributes, %directoryFlag : i32
+    %isDirectory = arith.cmpi ne, %masked, %none : i32
+    %fileName = llvm.getelementptr %data[44] : (!llvm.ptr) -> !llvm.ptr, i8
+    %isDotName = func.call @strict_is_dot_name(%fileName) : (!llvm.ptr) -> i1
+    %secondSlot = llvm.getelementptr %fileName[1] : (!llvm.ptr) -> !llvm.ptr, i8
+    %second = llvm.load %secondSlot : !llvm.ptr -> i8
+    %isShort = arith.cmpi eq, %second, %end : i8
+    %isSelf = arith.andi %isDotName, %isShort : i1
+    %isNamed = arith.xori %isDotName, %isDirectory : i1
+    %isChild = arith.andi %isDirectory, %isNamed : i1
+    %writeSlot = llvm.getelementptr %data[20] : (!llvm.ptr) -> !llvm.ptr, i8
+    %fileTime = llvm.load %writeSlot {alignment = 4 : i64} : !llvm.ptr -> i64
+    %since = arith.subi %fileTime, %epoch : i64
+    %ticks = arith.sitofp %since : i64 to f64
+    %seconds = arith.divf %ticks, %perSecond : f64
+    %isParent = arith.xori %isDotName, %isSelf : i1
+    %own = arith.select %isParent, %zero, %seconds : f64
+    %later = arith.maximumf %newest, %own : f64
+    cf.cond_br %isChild, ^nested(%later : f64), ^next(%later : f64)
+  ^nested(%before: f64):
+    %nameBits = func.call @strict_bits(%fileName) : (!llvm.ptr) -> f64
+    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
+    %copied = func.call @strict_text_concat(%nameBits, %empty) : (f64, f64) -> f64
+    %full = func.call @strict_path_join(%path, %copied) : (f64, f64) -> f64
+    %inner = func.call @strict_directory_modified(%self, %full) : (f64, f64) -> f64
+    %deeper = arith.maximumf %before, %inner : f64
+    cf.br ^next(%deeper : f64)
+  ^next(%current: f64):
+    %more = llvm.call @FindNextFileA(%handle, %data) : (!llvm.ptr, !llvm.ptr) -> i32
+    %hasMore = arith.cmpi ne, %more, %none : i32
+    cf.cond_br %hasMore, ^entry(%current : f64), ^close(%current : f64)
+  ^close(%all: f64):
+    %closed = llvm.call @FindClose(%handle) : (!llvm.ptr) -> i32
+    cf.br ^done(%all : f64)
+  ^done(%result: f64):
+    return %result : f64
+  }
   func.func private @strict_directory_directories(%self: f64, %path: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %four = arith.constant 4.0 : f64
