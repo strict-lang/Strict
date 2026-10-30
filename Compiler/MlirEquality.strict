@@ -133,24 +133,28 @@ Functions Texts
 	lines
 Function(type TypeEntry) Texts
 	MlirEquality(Same, 0).Function(MlirFunction.Shape).First.StartsWith("  func.func private @strict_equal_Shape(")
+	Text.Combine(MlirEquality(MlirEmbedded.Boxer, 0).Function(MlirEmbedded.Boxed)).IndexOf("%pa[2]") > 0
+	Text.Combine(MlirEquality(MlirEmbedded.Boxer, 0).Function(MlirEmbedded.Boxed)).IndexOf("@strict_bits(%t0a0)") > 0
 	let stored = MlirInstances(function, 0).Stored(type)
 	let name = Symbol(TypeEntry.ShortName(type.Name))
 	let header = "  func.func private @strict_equal_" + name + "(%a: f64, %b: f64) -> f64 {"
 	mutable lines = List(Text) + header + Prologue
 	for stored
-		lines = lines + Member(value, index)
+		lines = lines + Member(type, value, index)
 	lines + ("  ^m" + stored.Length + ":") + Epilogue
-Member(member MemberEntry, slot Number) Texts
-	MlirEquality(Same, 0).Member(MlirFunction.Shape.members.First, 0).Length is 8
+Member(owner TypeEntry, member MemberEntry, slot Number) Texts
+	MlirEquality(Same, 0).Member(MlirFunction.Shape, MlirFunction.Shape.members.First, 0).Length is 8
 	let memory = MlirMemory(function, 0)
-	let loads = memory.Loaded("%pa", slot, "a" + slot) + memory.Loaded("%pb", slot, "b" + slot)
+	let embedded = MlirEmbedded(function)
+	let first = embedded.Read(memory, owner, member, "%pa", "a" + slot)
+	let second = embedded.Read(memory, owner, member, "%pb", "b" + slot)
 	let left = memory.Temp("a" + slot + "v")
 	let right = memory.Temp("b" + slot + "v")
 	let kind = MlirLayout(function).Represented(TypeEntry.ShortName(member.typeName))
 	let compared = Call(kind, "%e" + slot, left, right)
 	let check = "    %s" + slot + " = arith.cmpf one, %e" + slot + ", %zero : f64"
 	let next = "    cf.cond_br %s" + slot + ", ^m" + (slot + 1) + ", ^different"
-	List(Text) + ("  ^m" + slot + ":") + loads + compared + check + next
+	List(Text) + ("  ^m" + slot + ":") + first + second + compared + check + next
 Temp(suffix Text) Text
 	MlirEquality(Same, 2).Temp("q") is "%t2q"
 	"%t" + position + suffix

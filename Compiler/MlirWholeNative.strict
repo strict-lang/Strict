@@ -103,8 +103,7 @@ Member(entry InstructionEntry) Texts
 	let stored = statements.Store("c", kind, entry.payload(0))
 	if field is not ""
 		return MlirWholeValues(statements.position).Loaded(statements.Temp("c"), field, kind, kind) + stored
-	let owner = statements.function.TypeOf(entry.texts(1))
-	let slot = MlirInstances(statements.function, 0).StoredNames(owner).Index(entry.texts(0))
+	let slot = MlirWholeFields(statements.function).SlotOf(entry.texts(1), entry.texts(0))
 	let read = MlirWholeFields(statements.function).Field(statements.Temp("a"), slot, statements.Temp("m"), kind)
 	statements.Load("a", entry.payload(1), "o") + read + statements.Store("m" + kind, kind, entry.payload(0))
 Constant(entry InstructionEntry) Texts

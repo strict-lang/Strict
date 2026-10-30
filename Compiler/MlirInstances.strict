@@ -30,7 +30,7 @@ Constructed(entry InstructionEntry, typeName Text) Texts
 		return function.Copied("%r" + entry.payload(5 + entry.payload(3) + 1), "%r" + entry.payload(0), Temp("o"))
 	let owner = function.TypeOf(typeName)
 	let memory = MlirMemory(function, position)
-	mutable lines = memory.Allocated(Stored(owner).Length, "o")
+	mutable lines = memory.Allocated(MlirEmbedded(function).Slots(typeName), "o")
 	for Stored(owner)
 		lines = lines + MemberValue(entry, owner, value, index)
 	let built = lines + memory.Boxed(Temp("op"), "o", typeName) + function.Store(Temp("of"), "%r" + entry.payload(0))
@@ -38,13 +38,13 @@ Constructed(entry InstructionEntry, typeName Text) Texts
 MemberValue(entry InstructionEntry, owner TypeEntry, member MemberEntry, slot Number) Texts
 	MlirInstances(Shapes, 1).MemberValue(Built, Shapes.type, Shapes.type.members.First, 0).Length is 4
 	let names = Invocation(entry, List(VmValue), VmValue.None).ParameterNames
-	let argument = names.Index(member.Name)
-	let chosen = argument < 0 then slot else argument
+	let chosen = names.Index(member.Name) < 0 then slot else names.Index(member.Name)
 	let countPosition = 5 + entry.payload(3)
-	let target = MlirMemory(function, position).Slot(Temp("op"), slot, "s" + slot)
+	let offset = MlirEmbedded(function).Offset(owner, member.Name)
+	let target = MlirMemory(function, position).Slot(Temp("op"), offset, "s" + slot)
 	if chosen < entry.payload(countPosition)
 		let source = function.Load(Temp("a" + slot), "%r" + entry.payload(countPosition + 1 + chosen))
-		return (target, source, function.Store(Temp("a" + slot), Temp("s" + slot)), Counting.Replace("%s", Temp("s" + slot)))
+		return (target, source) + MlirEmbedded(function).Placed(owner, member, Temp("a" + slot), Temp("s" + slot))
 	let written = MlirTyped.Pointer.Written(Temp("s" + slot))
 	List(Text) + target + Default(owner, member, Temp("s" + slot), "d" + slot) + written
 Default(owner TypeEntry, member MemberEntry, slot Text, suffix Text) Texts
@@ -53,7 +53,11 @@ Default(owner TypeEntry, member MemberEntry, slot Text, suffix Text) Texts
 	let initial = Natives(function.types).Initial(member)
 	if MlirFlats(function, position).Kind(member.typeName) is not ""
 		return MlirFlats(function, position).Defaulted(member.typeName, initial, slot, suffix)
-	MlirStatements(function, position).Literal(initial, slot, suffix, named)
+	let written = MlirStatements(function, position).Literal(initial, slot, suffix, named)
+	if MlirEmbedded(function).IsInline(owner, member) is false
+		return written
+	let loaded = function.Load(Temp(suffix + "v"), slot)
+	written + loaded + MlirEmbedded(function).Copied(Temp(suffix + "v"), slot, member.typeName)
 Fresh(type TypeEntry, target Text, prefix Text, creating Texts) Texts
 	MlirInstances(Shapes, 0).Fresh(MlirFunction.Shape, "%self", "", List(Text)).Length is 8
 	MlirInstances(MlirLayout.Wrapping.function, 0).Fresh(MlirLayout.Degrees, "%self", "", List(Text)).Length is 2
@@ -62,17 +66,17 @@ Fresh(type TypeEntry, target Text, prefix Text, creating Texts) Texts
 	if MlirLayout(function).IsStruct(type.Name) is false
 		return stored.Length is 0 then unset else Default(type, stored.First, target, prefix + "d")
 	let memory = MlirMemory(function, position)
-	mutable lines = memory.Allocated(stored.Length, prefix + "o")
-	for stored
-		let initialized = Initialized(type, value, Temp(prefix + "s" + index), prefix + index, creating + type.Name)
-		lines = lines + memory.Slot(Temp(prefix + "op"), index, prefix + "s" + index) + initialized
+	let allocated = memory.Allocated(MlirEmbedded(function).Slots(type.Name), prefix + "o")
+	let lines = allocated + MlirEmbedded(function).Inlined(value, type, Temp(prefix + "op"), prefix, creating)
 	lines + memory.Bits(Temp(prefix + "op"), prefix + "o") + function.Store(Temp(prefix + "of"), target)
 Initialized(owner TypeEntry, member MemberEntry, slot Text, prefix Text, creating Texts) Texts
-	MlirInstances(Nesting, 0).Initialized(Outer, Outer.members.First, "%s", "0", List(Text)).Length is 9
+	MlirInstances(Nesting, 0).Initialized(Outer, Outer.members.First, "%s", "0", List(Text)).Length < 5
 	MlirInstances(Nesting, 0).Initialized(Outer, Outer.members.First, "%s", "0", ("Strict/Shape")).Last is Written
 	let memberType = function.TypeOf(member.typeName)
 	let isNested = MlirLayout(function).IsStruct(member.typeName) and (memberType.members.Length > 0)
 	let isFresh = isNested and (member.initial.Length is 0) and (memberType.Name is not in creating)
+	if isFresh and MlirEmbedded(function).IsInline(owner, member)
+		return MlirEmbedded(function).Inlined(value, memberType, slot, prefix + "_", creating)
 	let fresh = isFresh then Fresh(memberType, slot, prefix + "_", creating) else List(Text)
 	(isFresh then fresh else Default(owner, member, slot, prefix + "d")) + MlirTyped.Pointer.Written(slot)
 Field(entry InstructionEntry) Texts
@@ -87,7 +91,11 @@ Field(entry InstructionEntry) Texts
 		return List(Text) + MlirStatements(function, position).Unsupported("member " + kind + "." + entry.texts(0))
 	let memory = MlirMemory(function, position)
 	let loaded = List(Text) + function.Load(Temp("i"), "%r" + entry.payload(1)) + memory.Pointer(Temp("i"), "i")
-	loaded + memory.Loaded(Temp("ip"), slot, "m") + function.Store(Temp("mv"), "%r" + entry.payload(0))
+	loaded + Member(memory, function.TypeOf(kind), slot) + function.Store(Temp("mv"), "%r" + entry.payload(0))
+Member(memory MlirMemory, owner TypeEntry, slot Number) Texts
+	Text.Combine(MlirInstances(MlirEmbedded.Boxer, 4).Field(MlirEmbedded.Boxing.instructions(4))).IndexOf("%t4ip[2]") > 0
+	Text.Combine(MlirInstances(MlirEmbedded.Boxer, 5).Field(MlirEmbedded.Reading)).IndexOf("@strict_bits(%t5m)") > 0
+	MlirEmbedded(function).Read(memory, owner, Stored(owner)(slot), Temp("ip"), "m")
 Unpacked Texts
 	MlirInstances(Looping, 0).Unpacked.Length is 10
 	MlirInstances(Looping, 0).Unpacked.Last is "  ^unpacked:"
@@ -98,7 +106,7 @@ Unpacked Texts
 	mutable lines = List(Text) + function.Load("%self", "%instance") + SelfGuard + memory.Pointer("%self", "self")
 	for Stored(function.type)
 		if value.Name is not in function.method.ParameterNames
-			let loaded = memory.Loaded(memory.Temp("selfp"), index, "u" + index)
+			let loaded = MlirEmbedded(function).Read(memory, function.type, value, memory.Temp("selfp"), "u" + index)
 			lines = lines + loaded + function.Store(memory.Temp("u" + index + "v"), "%v_" + value.Name)
 	lines + ("    cf.br ^unpacked", "  ^unpacked:")
 ErrorName(entry InstructionEntry) Texts

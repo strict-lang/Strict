@@ -37,6 +37,10 @@ Slot(base Text, index Number, suffix Text) Text
 Loaded(base Text, index Number, suffix Text) Texts
 	Sample.Loaded("%b", 0, "m").Last is "    %t3mv = llvm.load %t3m : !llvm.ptr -> f64"
 	(Slot(base, index, suffix), function.Load(Temp(suffix + "v"), Temp(suffix)))
+Addressed(base Text, index Number, suffix Text) Texts
+	Sample.Addressed("%b", 1, "m").Last is "    %t3mv = func.call @strict_bits(%t3m) : (!llvm.ptr) -> f64"
+	let bits = " = func.call @strict_bits(" + Temp(suffix) + ") : (!llvm.ptr) -> f64"
+	(Slot(base, index, suffix), "    " + Temp(suffix + "v") + bits)
 Called(result Text, name Text, operands Texts) Text
 	Sample.Called("%r", "add", ("%a", "%b")) is "    %r = func.call @add(%a, %b) : (f64, f64) -> f64"
 	let types = Text.Combine(MlirCalls(function, position).ArgumentTypes(operands.Length), ", ")

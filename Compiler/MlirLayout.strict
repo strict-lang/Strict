@@ -77,16 +77,18 @@ Returned(position Number) Texts
 	if IsInitializer is false
 		return List(Text) + "    return %zero : f64"
 	let memory = MlirMemory(function, position)
-	mutable lines = memory.Allocated(MlirInstances(function, 0).Stored(function.type).Length, "n")
+	mutable lines = memory.Allocated(MlirEmbedded(function).Slots(function.type.Name), "n")
 	for MlirInstances(function, 0).Stored(function.type)
-		let copied = Copied(value, memory.Temp("v" + index), memory.Temp("n" + index))
-		lines = lines + memory.Slot(memory.Temp("np"), index, "n" + index) + copied
+		let slot = memory.Slot(memory.Temp("np"), MlirEmbedded(function).Offset(function.type, value.Name), "n" + index)
+		lines = lines + slot + Copied(value, memory.Temp("v" + index), memory.Temp("n" + index))
 	lines = lines + MlirMemory.Counted.Replace("%p", memory.Temp("np")).Replace("%z", memory.Temp("nz"))
 	lines + memory.Bits(memory.Temp("np"), "n") + ("    return " + memory.Temp("nf") + " : f64")
 Copied(member MemberEntry, temp Text, slot Text) Texts
 	Wrapping.Copied(Byting.members.First, "%v", "%n").Length is 2
 	Wrapping.Copied(Red, "%v", "%n")(1) is "    %vb = func.call @strict_byte(%v) : (f64) -> f64"
 	let loaded = function.Load(temp, "%v_" + member.Name)
+	if MlirEmbedded(function).IsInline(function.type, member)
+		return List(Text) + loaded + MlirEmbedded(function).Copied(temp, slot, member.typeName)
 	if IsByte(member.typeName) is false
 		return (loaded, function.Store(temp, slot))
 	(loaded, "    " + temp + "b = func.call @strict_byte(" + temp + ") : (f64) -> f64", function.Store(temp + "b", slot))

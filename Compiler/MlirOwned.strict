@@ -139,8 +139,16 @@ Rewritten(entry InstructionEntry, owner TypeEntry, name Text) Texts
 		let chosen = names.Index(value.Name) < 0 then index else names.Index(value.Name)
 		let register = entry.payload(countPosition + 1 + chosen)
 		if IsKept(register, value.Name, name) is false
-			lines = lines + Placed(Putting, index, register)
+			lines = lines + Put(owner, value, register)
 	lines
+Put(owner TypeEntry, member MemberEntry, register Number) Texts
+	Rebuilt.Put(MlirInstances.Outer, MlirInstances.Outer.members.Last, 5).Last.IndexOf("(%t7r1, %t7ra1)") > 0
+	let offset = MlirEmbedded(function).Offset(owner, member.Name)
+	if MlirEmbedded(function).IsInline(owner, member) is false
+		return Placed(Putting, offset, register)
+	let source = "%t" + position + "ra" + offset
+	let target = "%t" + position + "r" + offset
+	Placed(Putting.Slice(0, 2), offset, register) + MlirEmbedded(function).Copied(source, target, member.typeName)
 Placed(lines Texts, slot Number, register Number) Texts
 	Rebuilt.Placed(Putting, 1, 5)(1) is "    %t7ra1 = llvm.load %r5 : !llvm.ptr -> f64"
 	for lines

@@ -1,0 +1,90 @@
+has function MlirFunction
+constant Boxed = TypeEntry("Strict/Boxed", (MemberEntry("outer", "Strict/Outer", List(InstructionEntry), false), MemberEntry("weight", "Strict/Number", List(InstructionEntry), false)), List(MethodEntry))
+constant Boxing = MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 3), InstructionEntry.Invoke(1, ("Strict/Shape", "from", "Strict/Shape", "width"), 0, -1), InstructionEntry.Invoke(2, ("Strict/Outer", "from", "Strict/Outer", "shape", "size"), (1, 0), -1), InstructionEntry.Invoke(3, ("Strict/Boxed", "from", "Strict/Boxed", "outer", "weight"), (2, 0), -1), InstructionEntry(InstructionType.FieldLoad, "weight", (4, 3, -1)), InstructionEntry(InstructionType.FieldLoad, "outer", (5, 3, -1))))
+constant Boxer = MlirFunction(List(TypeEntry) + MlirFunction.Shape + MlirInstances.Outer + Boxed, Boxed, Boxing)
+constant Sample = MlirEmbedded(Boxer)
+constant Making = Boxing.instructions(3)
+constant Building = MlirInstances(Boxer, 3)
+constant Weight = Boxed.members.Last
+constant Reading = Boxing.instructions(5)
+constant Initializing = MlirLayout(MlirFunction(Boxer.types, Boxed, MethodEntry("from", List(MemberEntry), "Strict/Boxed", (InstructionEntry.LoadNumber(0, 1), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "weight")))))
+IsNumbers(typeName Text) Boolean
+	Sample.IsNumbers("Strict/Shape")
+	Sample.IsNumbers("Strict/Boxed")
+	Sample.IsNumbers("Number") is false
+	Sample.IsNumbers("Strict/Missing") is false
+	IsNested(typeName, 0)
+IsNested(typeName Text, depth Number) Boolean
+	Sample.IsNested("Strict/Outer", 0)
+	Sample.IsNested("Strict/Outer", 9) is false
+	let layout = MlirLayout(function)
+	if (depth > 8) or (layout.IsStruct(typeName) is false)
+		return false
+	let stored = MlirInstances(function, 0).Stored(function.TypeOf(TypeEntry.ShortName(typeName)))
+	for stored
+		let isNumber = layout.Represented(TypeEntry.ShortName(value.typeName)) is in ("Number", "Pair")
+		if (isNumber is false) and (IsNested(value.typeName, depth + 1) is false)
+			return false
+	stored.Length > 0
+Slots(typeName Text) Number
+	Sample.Slots("Strict/Shape") is 1
+	Sample.Slots("Strict/Outer") is 2
+	Sample.Slots("Strict/Boxed") is 3
+	Text.Combine(Building.Constructed(Making, "Strict/Boxed")).IndexOf("constant 24 : i64") > 0
+	Text.Combine(Initializing.Returned(2)).IndexOf("constant 24 : i64") > 0
+	let owner = function.TypeOf(TypeEntry.ShortName(typeName))
+	mutable count = 0
+	for MlirInstances(function, 0).Stored(owner)
+		count = count + Width(owner, value)
+	count
+Offset(owner TypeEntry, name Text) Number
+	Sample.Offset(Boxed, "outer") is 0
+	Sample.Offset(Boxed, "weight") is 2
+	Sample.Offset(Boxed, "missing") is -1
+	Building.MemberValue(Making, Boxed, Weight, 1)(0).IndexOf("%t3op[2]") > 0
+	mutable offset = 0
+	for MlirInstances(function, 0).Stored(owner)
+		if value.Name is name
+			return offset
+		offset = offset + Width(owner, value)
+	-1
+Width(owner TypeEntry, member MemberEntry) Number
+	Sample.Width(Boxed, Boxed.members.First) is 2
+	Sample.Width(MlirInstances.Outer, MlirInstances.Outer.members.Last) is 1
+	IsInline(owner, member) then Slots(member.typeName) else 1
+IsInline(owner TypeEntry, member MemberEntry) Boolean
+	Sample.IsInline(Boxed, Boxed.members.First)
+	Sample.IsInline(Boxed, Boxed.members.Last) is false
+	Text.Combine(Initializing.Returned(2)).IndexOf("@memcpy(") > 0
+	IsNumbers(owner.Name) and IsNumbers(member.typeName)
+Read(memory MlirMemory, owner TypeEntry, member MemberEntry, base Text, suffix Text) Texts
+	Sample.Read(MlirMemory.Sample, Boxed, Boxed.members.Last, "%b", "m").First.IndexOf("%b[2]") > 0
+	Sample.Read(MlirMemory.Sample, Boxed, Boxed.members.First, "%b", "m").Last.IndexOf("@strict_bits(") > 0
+	Text.Combine(MlirInstances(Boxer, 0).Unpacked).IndexOf("%t-1selfp[2]") > 0
+	Text.Combine(MlirAutomatic(Boxer).Function(Boxed)).IndexOf("%p[2]") > 0
+	let offset = Offset(owner, member.Name)
+	IsInline(owner, member) then memory.Addressed(base, offset, suffix) else memory.Loaded(base, offset, suffix)
+Copied(source Text, destination Text, typeName Text) Texts
+	Sample.Copied("%a", "%s", "Strict/Outer")(1) is "    %an = arith.constant 16 : i64"
+	Sample.Copied("%a", "%s", "Strict/Outer").Last.StartsWith("    %am = llvm.call @memcpy(%s, %ap, %an) : (!llvm.ptr")
+	let pointer = "    " + source + "p = func.call @strict_ptr(" + source + ") : (f64) -> !llvm.ptr"
+	let bytes = "    " + source + "n = arith.constant " + Slots(typeName) * 8 + " : i64"
+	let copy = " = llvm.call @memcpy(" + destination + ", " + source + "p, " + source + "n)"
+	(pointer, bytes, "    " + source + "m" + copy + " : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr")
+Placed(owner TypeEntry, member MemberEntry, source Text, slot Text) Texts
+	Sample.Placed(Boxed, Boxed.members.First, "%a", "%s").Last.IndexOf("@memcpy(%s, %ap, %an)") > 0
+	Sample.Placed(Boxed, Boxed.members.Last, "%a", "%s").Last is MlirInstances.Counting.Replace("%s", "%s")
+	Text.Combine(MlirOwned(Boxer, 7).Put(Boxed, Boxed.members.First, 2)).IndexOf("@memcpy(%t7r0") > 0
+	let counted = (function.Store(source, slot), MlirInstances.Counting.Replace("%s", slot))
+	IsInline(owner, member) then Copied(source, slot, member.typeName) else counted
+Inlined(instances MlirInstances, type TypeEntry, base Text, prefix Text, creating Texts) Texts
+	Text.Combine(Sample.Inlined(MlirInstances(Boxer, 0), Boxed, "%b", "x", List(Text))).IndexOf("%b[2]") > 0
+	Text.Combine(Sample.Inlined(MlirInstances(Boxer, 0), Boxed, "%b", "x", List(Text))).IndexOf("@strict_alloc(") is -1
+	let memory = MlirMemory(function, instances.position)
+	mutable lines = List(Text)
+	for instances.Stored(type)
+		let slot = prefix + "s" + index
+		let address = memory.Slot(base, Offset(type, value.Name), slot)
+		let initialized = instances.Initialized(type, value, memory.Temp(slot), prefix + index, creating + type.Name)
+		lines = lines + address + initialized
+	lines

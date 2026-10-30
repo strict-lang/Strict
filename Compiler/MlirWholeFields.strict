@@ -24,7 +24,8 @@ Fields(input Number) Texts
 	lines
 SlotOf(owner Text, member Text) Number
 	Sized.SlotOf("Strict/Grid", "cells") is 1
-	MlirInstances(function, 0).StoredNames(function.TypeOf(TypeEntry.ShortName(owner))).Index(member)
+	MlirWholeFields(MlirEmbedded.Boxer).SlotOf("Strict/Boxed", "weight") is 2
+	MlirEmbedded(function).Offset(function.TypeOf(TypeEntry.ShortName(owner)), member)
 Slot(name Text, kind Text, isSelf Boolean) Texts
 	Fits.Slot("width", "i", true).Length is 0
 	Sized.Slot("grid_cells", "d", false).First.StartsWith("    %v_grid_cells = llvm.alloca %one x !llvm.ptr")
