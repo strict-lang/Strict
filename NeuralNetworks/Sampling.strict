@@ -3,9 +3,9 @@ has topK Number
 has topP Number
 has random PseudoRandom
 has token Number = -1
-constant Plain = Sampling(0, 0, 1, PseudoRandom.Seeded(1))
-constant Warm = Sampling(1, 0, 1, PseudoRandom.Seeded(5))
-constant Paired = Sampling(1, 2, 1, PseudoRandom.Seeded(3))
+constant Plain = Sampling(0, 0, 1, PseudoRandom(1))
+constant Warm = Sampling(1, 0, 1, PseudoRandom(5))
+constant Paired = Sampling(1, 2, 1, PseudoRandom(3))
 constant Chunk = 128
 Drawn(logits Numbers) Sampling
 	Plain.Drawn((1, 3, 2)).token is 1
@@ -16,8 +16,9 @@ Drawn(logits Numbers) Sampling
 	let maxima = Greedy.Maxima(Greedy.Best(logits, Chunk, logits.Length))
 	let bound = (topK is 0) or (topK >= maxima.Length) then maxima.Minimum else Threshold(maxima, topK)
 	let chunks = Selected(maxima, bound)
-	let state = random.Next
-	Sampling(value, random = state, token = Picked(Gathered(logits, chunks), chunks, bound, state.Get(0, 1)))
+	mutable state = random
+	let picked = state.Get(0, 1)
+	Sampling(value, random = state, token = Picked(Gathered(logits, chunks), chunks, bound, picked))
 Draws(logits Numbers, count Number) Numbers
 	Warm.Draws((0, 0.6931), 60).Sum.IsNearlyEqual(40, 5)
 	mutable current = value
@@ -42,7 +43,7 @@ Gathered(logits Numbers, chunks Numbers) Numbers
 	for chunks.Length * Chunk - (short > 0 then short else 0)
 		logits(chunks((index / Chunk).Floor) * Chunk + index % Chunk)
 Picked(candidates Numbers, chunks Numbers, bound Number, uniform Number) Number
-	Sampling(1, 0, 0.3, PseudoRandom.Seeded(5)).Picked((2, 3, 2.9), List(Number) + 0, 2, 0.1) is 1
+	Sampling(1, 0, 0.3, PseudoRandom(5)).Picked((2, 3, 2.9), List(Number) + 0, 2, 0.1) is 1
 	Warm.Picked((0, 0, 0, 1), List(Number) + 2, 0, 0.99) is 259
 	let lowest = topK > 0 then bound else candidates.Minimum
 	let positions = Selected(candidates, lowest)
@@ -62,7 +63,7 @@ Threshold(numbers Numbers, count Number) Number
 		limit = Below(numbers, limit)
 	limit
 Nucleus(candidates Numbers, largest Number, limit Number) Number
-	Sampling(1, 0, 0.3, PseudoRandom.Seeded(5)).Nucleus((2, 3, 2.9), 3, 2) is 3
+	Sampling(1, 0, 0.3, PseudoRandom(5)).Nucleus((2, 3, 2.9), 3, 2) is 3
 	let wanted = topP * Mass(candidates, largest, limit)
 	mutable cut = largest
 	for candidates

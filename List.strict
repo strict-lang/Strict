@@ -218,17 +218,17 @@ IndexOfMinimum Number
 			best = index
 	best
 Pick(random PseudoRandom) Generic
-	(10, 20, 30).Pick(PseudoRandom.Seeded(1).Next) is 20
-	elements(random.Uint % elements.Length)
+	(10, 20, 30).Pick(PseudoRandom(1)) is 20
+	mutable generator = random
+	elements(generator.Next % elements.Length)
 Shuffled(random PseudoRandom) List
-	(1, 2, 3, 4).Shuffled(PseudoRandom.Seeded(1).Next) is (3, 2, 4, 1)
-	(1, 2, 3, 4).Shuffled(PseudoRandom.Seeded(1).Next).Sum is 10
-	List(Number).Shuffled(PseudoRandom.Seeded(1)) is List(Number)
+	(1, 2, 3, 4).Shuffled(PseudoRandom(1)) is (3, 2, 1, 4)
+	(1, 2, 3, 4).Shuffled(PseudoRandom(1)).Sum is 10
+	List(Number).Shuffled(PseudoRandom(1)) is List(Number)
 	mutable shuffled = elements
 	mutable generator = random
 	for Range(0, (elements.Length - 1).Clamp(0, elements.Length))
-		generator = generator.Next
-		let other = value + generator.Uint % (elements.Length - value)
+		let other = value + generator.Next % (elements.Length - value)
 		let kept = shuffled(value)
 		shuffled(value) = shuffled(other)
 		shuffled(other) = kept

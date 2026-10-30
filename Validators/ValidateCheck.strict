@@ -42,8 +42,9 @@ Mutations(files Texts) Texts
 	mutations
 FileMutations(shape Expressions/TypeShape) Texts
 	FileMutations(TypeShape("Add(element Number) Mutable(List)", "\telement")) is ("Add")
+	FileMutations(TypeShape("mutable count Number", "Next Number", "\tcount = count + 1")) is ("Next")
 	mutable mutations = List(Mutable(Text))
 	for shape.lines
 		if shape.IsMethodHeader(value) and HeaderTokens(Tokenizer(value).Tokens).ReturnsMutable
 			mutations.Add(Tokenizer(value).Tokens.First)
-	mutations
+	mutations + Changes(shape.lines).Methods

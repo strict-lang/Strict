@@ -43,11 +43,12 @@ Changing(node SyntaxNode, scope Scope, current Scope) Text
 IsChangingCall(node SyntaxNode, scope Scope, current Scope) Boolean
 	Ticked.IsChangingCall(Ticking, Holding, Holding)
 	Ticked.IsChangingCall(Typed, KnownTypes.NoMembers, Holding) is false
+	Ticked.IsChangingCall(Ticking, KnownTypes.NoMembers, Holding) is false
 	let isMember = node.Kind is in ("MethodCall", "Member")
 	if (isMember is false) or (node.children.Length is 0) or (node.children(0).Kind is not "Identifier")
 		return false
 	let target = node.children(0).text
-	if (scope.TypeOf(target + " mutable") is not "") or (scope.TypeOf(target) is "") and inference.types.IsKnown(target)
+	if (scope.TypeOf(target + " mutable") is not "") or (scope.TypeOf(target) is "")
 		return false
 	let type = inference.TypeOf(node.children(0), scope, current)
 	inference.types.ParameterScope(type).TypeOf(node.text + " changes") is not ""

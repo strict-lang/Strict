@@ -24,7 +24,7 @@ Fastest(model Qwen3, prompt Numbers) Slow(Number)
 Sampled(model Qwen3, position Number, count Number, temperature Number) Slow(Numbers)
 	Qwen3Benchmark(Logger).Sampled(Qwen3.Tiny.Step(1, 0), 1, 2, 1).Length is 2
 	let started = Process.Elapsed
-	let tokens = Generation(model, Sampling(temperature, 40, 0.95, PseudoRandom.Seeded(1))).Continued(position, count)
+	let tokens = Generation(model, Sampling(temperature, 40, 0.95, PseudoRandom(1))).Continued(position, count)
 	let milliseconds = ((Process.Elapsed - started) * 1000 / count).Round(2)
 	if temperature > 0
 		logger.Log("sampled " + count + " tokens at temperature " + temperature + " in " + milliseconds + " ms per token")
