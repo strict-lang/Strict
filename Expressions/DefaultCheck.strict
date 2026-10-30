@@ -13,7 +13,15 @@ Unsupported(path Text, lines Texts) Texts
 	Counting.Unsupported("A.strict", Countdown).First is "LoopNameMustNotBeDeclared: index in A.strict:2"
 	Counting.Unsupported("A.strict", Missed).First is "ConstantNotFound: Count.Missing in A.strict:1"
 	Counting.Unsupported("A.strict", Shifting).First is "LoopNameMustNotBeDeclared: index in A.strict:1"
-	Defaults(path, lines) + Keyworded(path, lines) + LoopNames(path, lines) + LoopParameters(path, lines)
+	let named = LoopNames(path, lines) + LoopParameters(path, lines) + ValueMembers(path, lines)
+	Defaults(path, lines) + Keyworded(path, lines) + named
+ValueMembers(path Text, lines Texts) Texts
+	Counting.ValueMembers("A", List(Text) + "has value Number").First.StartsWith("MemberMustNotBeNamedValue: value in A:1")
+	Counting.ValueMembers("A.strict", Sized).Length is 0
+	let shape = TypeShape(lines)
+	for lines
+		if shape.IsMemberLine(value) and (HeaderTokens(Tokenizer(value).Tokens).MemberName is "value")
+			"MemberMustNotBeNamedValue: value in " + path + ":" + (index + 1) + ", value is the instance in every method"
 LoopNames(path Text, lines Texts) Texts
 	Counting.LoopNames("A.strict", Moving).Length is 0
 	Counting.LoopNames("A.strict", Outside).First is "LoopNameMustNotBeDeclared: outer in A.strict:3"

@@ -151,6 +151,11 @@ Initial(member MemberEntry) VmValue
 		return member.typeName is "Strict/Text" then VmValue.OfText("") else VmValue.OfBoolean(false)
 	let isList = member.typeName.StartsWith("Strict/List") or member.typeName.StartsWith("Strict/Dictionary")
 	isList then VmValue.OfList(List(VmValue)) else VmValue.None
+IsMemberCall(call Invocation, type TypeEntry, chosen MethodEntry) Boolean
+	Natives(TypeEntry.Holding).IsMemberCall(Invocation.Coding, TypeEntry.Rounded, TypeEntry.Rounded.methods.First) is false
+	let parameter = TypeOf(chosen.parameters.Length is 1 then chosen.parameters.First.typeName else "")
+	let kind = parameter.Wrapped is "" then TypeEntry.ShortName(parameter.Name) else parameter.Wrapped
+	call.IsWrapping(type) and (kind is not TypeEntry.ShortName(type.Changing.First.typeName))
 TypeOf(name Text) TypeEntry
 	Shapes.TypeOf("Strict/Shape").members.Length is 2
 	Shapes.TypeOf("Strict/Other").members.Length is 0

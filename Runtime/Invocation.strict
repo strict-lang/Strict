@@ -10,6 +10,7 @@ constant AddCall = Invocation(InstructionEntry.Invoke(2, ("T", "Add", "Strict/Nu
 constant Parsing = Invocation(InstructionEntry.Invoke(1, ("Strict/Text", "to", "Strict/Number"), List(Number), 0), List(VmValue), VmValue.OfText("5"))
 constant Uppered = Invocation(InstructionEntry.Invoke(1, ("Strict/Text", "Upper", "Strict/Text"), List(Number), 0), List(VmValue), VmValue.OfText("ab"))
 constant Coding = Invocation(InstructionEntry.Invoke(1, ("Strict/Character", "from", "Strict/Character", "text"), 0, -1), List(VmValue) + VmValue.OfNumber(65), VmValue.None)
+constant Held = Invocation(InstructionEntry.HolderFrom, List(VmValue) + VmValue.OfNumber(5), VmValue.None)
 constant Failing = TypeEntry("Strict/Failing", List(MemberEntry), List(MethodEntry) + MethodEntry("Fail", List(MemberEntry), "Strict/Number", (InstructionEntry(InstructionType.IndexCall, "list", (0, 0, 6)), InstructionEntry.Return(0))))
 TypeName Text
 	AddCall.TypeName is "T"
@@ -36,8 +37,7 @@ IsNativeConversion Boolean
 IsMemberValue(type TypeEntry) Boolean
 	Coding.IsMemberValue(TypeEntry.CharacterEntry)
 	Parsing.IsMemberValue(TypeEntry.CharacterEntry) is false
-	Coding.IsMemberValue(TypeEntry.Rounded) is false
-	if (IsWrapping(type) is false) or type.HasMemberFrom
+	if IsWrapping(type) is false
 		return false
 	let kind = TypeEntry.ShortName(Arguments.First.kind)
 	let member = TypeEntry.ShortName(type.Changing.First.typeName)

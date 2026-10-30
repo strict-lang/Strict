@@ -62,6 +62,7 @@ Target(call Invocation) Numbers
 Called(call Invocation) Numbers
 	Doubling.Called(Twice) is (0, 0, 0)
 	Doubling.Called(Invocation.AddCall) is (Native, 0, 0)
+	Resolver(TypeEntry.Holding).Called(Invocation.Held) is (1, 0, 0)
 	let name = call.MethodName
 	let own = Natives(types).TypeOf(call.TypeName)
 	let isMissing = (own.Chosen(name, call.Count, call.ReturnType, call.ParameterNames) < 0) and (name is not "from")
@@ -69,7 +70,7 @@ Called(call Invocation) Numbers
 	let method = type.Chosen(name, call.Count, call.ReturnType, call.ParameterNames)
 	if (method < 0) or call.IsNativeConversion or (type.methods(method).instructions.Length is 0)
 		return (Native, 0, 0)
-	(Position(type), method, call.IsWrapping(type) then 1 else 0)
+	(Position(type), method, Natives(types).IsMemberCall(call, type, type.methods(method)) then 1 else 0)
 Position(type TypeEntry) Number
 	Doubling.Position(Machine.Doubler) is 0
 	Doubling.Position(TypeEntry.HelloLogger) is -1

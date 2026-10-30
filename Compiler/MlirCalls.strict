@@ -2,14 +2,14 @@ has function MlirFunction
 has position Number
 constant NewShape = InstructionEntry.Invoke(1, ("Strict/Shape", "from", "Strict/Shape", "width"), 0, -1)
 constant Area = InstructionEntry.Invoke(2, ("Strict/Shape", "Area", "Strict/Number"), List(Number), 1)
-constant AreaMethod = MethodEntry("Area", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 2), InstructionEntry.Return(0)))
-constant AreaShape = TypeEntry("Strict/Shape", MlirFunction.Shape.members, List(MethodEntry) + AreaMethod)
+constant AreaShape = TypeEntry("Strict/Shape", MlirFunction.Shape.members, List(MethodEntry) + MethodEntry("Area", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 2), InstructionEntry.Return(0))))
 constant Shapes = MlirFunction(List(TypeEntry) + AreaShape, AreaShape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 3), NewShape, Area, InstructionEntry.PrintValue("Hi ", 0, false))))
 constant FromText = MethodEntry("from", MemberEntry("text", "Strict/Text", List(InstructionEntry), false), "Strict/Hash", (InstructionEntry.LoadNumber(0, 3), InstructionEntry.Return(0)))
 constant Hash = TypeEntry("Strict/Hash", MemberEntry("number", "Strict/Number", List(InstructionEntry), false), List(MethodEntry) + FromText)
 constant Defaulted = MethodEntry("from", MemberEntry("text", "Strict/Text", InstructionEntry.Set(List(Text), InstructionEntry.NumberValue(2)), false), "Strict/Hash", FromText.instructions)
 constant Hashed = InstructionEntry.Invoke(1, ("Strict/Hash", "from", "Strict/Hash", "text"), 0, -1)
 constant Hashes = MlirFunction(List(TypeEntry) + Hash, Hash, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "abc"), Hashed)))
+constant Holding = MlirFunction(TypeEntry.Holding, TypeEntry.Holding(1), MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 5), InstructionEntry.HolderFrom)))
 constant CounterType = TypeEntry(MlirForeign.Counter.Name, MlirForeign.Counter.members, List(MethodEntry) + MlirForeign.Started)
 constant NewCounter = InstructionEntry.Invoke(2, (CounterType.Name, "from", CounterType.Name, "left", "right"), (0, 1), -1)
 constant Counters = MlirCalls(MlirFunction(List(TypeEntry) + CounterType, CounterType, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 10), InstructionEntry.LoadNumber(1, 5), NewCounter))), 2)
@@ -39,7 +39,7 @@ Created(entry InstructionEntry, decoder PayloadDecoder) Texts
 	let instances = MlirInstances(function, position)
 	let target = "%r" + entry.payload(0)
 	let isForeign = MlirForeign(MlirFunction(function.types, type, custom, typeIndex = function.typeIndex)).IsForeign
-	if ((custom.instructions.Length is 0) and (isForeign is false)) or IsMemberValue(entry, type)
+	if ((custom.instructions.Length is 0) and (isForeign is false)) or IsMemberValue(entry, type, custom)
 		return Shared(MlirPairs(function, position).Constructed(entry, decoder.Text(1), instances), target)
 	instances.Fresh(type, target, "f", List(Text)) + Compiled(entry, decoder, type, count)
 Shared(constructed Texts, target Text) Texts
@@ -50,17 +50,19 @@ Shared(constructed Texts, target Text) Texts
 	let isFlat = MlirFlats(function, position).Count(function.method.instructions(position).texts(0)) > 0
 	let pin = isFlat then "strict_flat_pin" else "strict_pin"
 	MlirLists(function, position).Cached(constructed, Temp("of"), pin) + function.Store(Temp("r"), target)
-IsMemberValue(entry InstructionEntry, type TypeEntry) Boolean
-	MlirCalls(Hashes, 1).IsMemberValue(Hashed, Hash) is false
+IsMemberValue(entry InstructionEntry, type TypeEntry, chosen MethodEntry) Boolean
+	MlirCalls(Hashes, 1).IsMemberValue(Hashed, Hash, FromText) is false
+	MlirCalls(Holding, 1).IsMemberValue(InstructionEntry.HolderFrom, Holding.type, Holding.type.methods.First) is false
 	let layout = MlirLayout(function)
 	let members = type.Changing
 	let countPosition = 5 + entry.payload(3)
-	if (members.Length is not 1) or (entry.payload(countPosition) is not 1) or type.HasMemberFrom
+	if (members.Length is not 1) or (entry.payload(countPosition) is not 1) or (chosen.parameters.Length is not 1)
 		return false
-	let kinds = MlirKinds(function)
-	let argument = kinds.KindOf(position, entry.payload(countPosition + 1))
-	let isSame = argument is TypeEntry.ShortName(type.Name)
-	isSame or (layout.Represented(argument) is layout.Represented(TypeEntry.ShortName(members.First.typeName)))
+	let member = layout.Represented(TypeEntry.ShortName(members.First.typeName))
+	if layout.Represented(TypeEntry.ShortName(chosen.parameters.First.typeName)) is member
+		return false
+	let argument = MlirKinds(function).KindOf(position, entry.payload(countPosition + 1))
+	(argument is TypeEntry.ShortName(type.Name)) or (layout.Represented(argument) is member)
 Invoked(entry InstructionEntry, decoder PayloadDecoder) Texts
 	MlirCalls(Shapes, 2).Invoked(Area, PayloadDecoder(Area)).Last is "    llvm.store %t2tr, %r2 : f64, !llvm.ptr"
 	Text.Combine(MlirCalls(MlirGroups.Norming.function, 11).Emitted).IndexOf("^t11kept") > 0
