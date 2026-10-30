@@ -27,14 +27,22 @@ Methods(type TypeEntry) List(MethodEntry)
 Instructions(method MethodEntry, names Texts, scratch Number) List(InstructionEntry)
 	Doubling.Instructions(MethodEntry.GoRun, Specials, 7).First.payload.Length is 10
 	Doubling.Instructions(Machine.Doubler.methods.First, Specials, 8).Last.Target is Frame.ResultSlot
-	let changed = names.Index(ChangedInstance.Name)
+	let changed = Changed(method, names)
 	for method.instructions
 		let resolved = value.kind is InstructionType.Invoke then Targeted(value) else Slotted(value, names)
 		let placed = Placed(LoadReuse(List(InstructionEntry)).Rebased(resolved, names.Length), method, index, scratch)
-		(value.kind is InstructionType.Return) and (changed >= 0) then Returning(placed, changed) else placed
-Returning(entry InstructionEntry, changed Number) InstructionEntry
-	Doubling.Returning(InstructionEntry.Return(8), 7).payload is (8, 7)
-	InstructionEntry(entry.kind, entry.texts, entry.payload + changed, entry.line, entry.Target)
+		let isChanged = (value.kind is InstructionType.Return) and (changed.Length > 0)
+		isChanged then InstructionEntry(placed, payload = placed.payload + changed) else placed
+Changed(method MethodEntry, names Texts) Numbers
+	Doubling.Changed(MethodEntry.GoRun, Specials).Length is 0
+	Doubling.Changed(MethodEntry.GoRun, List(Text) + ChangedInstance.Name) is (0)
+	mutable slots = List(Mutable(Number)) + names.Index(ChangedInstance.Name)
+	mutable isChanged = slots.First >= 0
+	for method.parameters
+		let slot = names.Index("changed_" + index)
+		slots.Add(slot)
+		isChanged = isChanged or (slot >= 0)
+	isChanged then slots else List(Number)
 Targeted(entry InstructionEntry) InstructionEntry
 	Doubling.Targeted(Twice.entry).payload is (0, -1, -2, 0, -3, 0, 0, 0, 0, 0)
 	Doubling.Targeted(InstructionEntry(InstructionType.Invoke, Twice.entry.texts, Twice.entry.payload, 9)).line is 9

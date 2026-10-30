@@ -21,14 +21,14 @@ Signature(name Text, type Text, returnType Text, argumentTypes Texts) Texts
 	if type is not TypeName
 		return OtherSignature(name, type, returnType, argumentTypes)
 	if (name is TypeName) or TypeName.StartsWith(name + "(")
-		return (fullName, "from", TypeName) + FromNames(TypeName)
+		return (fullName, "from", TypeName) + FromNames(TypeName, argumentTypes)
 	(fullName, name, FullName(returnType)) + Chosen(name, argumentTypes).ParameterNames
 OtherSignature(name Text, type Text, returnType Text, argumentTypes Texts) Texts
 	Plain.OtherSignature("C", "C", "C", List(Text)) is ("Strict/C", "from", "C")
 	Plain.OtherSignature("C", "C(Number)", "C(Number)", List(Text) + "Number") is ("Strict/C(Number)", "from", "C(Number)")
 	Plain.OtherSignature("Length", "Text", "Number", List(Text)) is ("Strict/Text", "Length", "Strict/Number")
 	if (name is type) or type.StartsWith(name + "(")
-		return (FullName(type), "from", type) + FromNames(type)
+		return (FullName(type), "from", type) + FromNames(type, argumentTypes)
 	(FullName(type), name, FullName(returnType)) + Declared(type, name, argumentTypes, "")
 ParameterTypes(name Text, type Text, argumentTypes Texts) Texts
 	Plain.ParameterTypes("Greeter", "Greeter", List(Text)) is ("Text")
@@ -43,11 +43,12 @@ ParameterTypes(name Text, type Text, argumentTypes Texts) Texts
 		return declared
 	for FromNames(type)
 		(type is TypeName then shape.MemberScope else types.MembersOf(type)).TypeOf(value)
-FromNames(type Text) Texts
+FromNames(type Text, argumentTypes Texts = List(Text)) Texts
 	Plain.FromNames("Greeter") is ("text")
 	Ranges.FromNames("Range") is ("Start", "ExclusiveEnd")
 	if types.IsKnown(types.BaseName(type))
-		return types.ParametersOf(type, "from", -1)
+		let counted = argumentTypes.Length is 0 then types.ParametersOf(type, "from", -1) else List(Text)
+		return argumentTypes.Length is 0 then counted else Declared(type, "from", argumentTypes, "")
 	type is TypeName then shape.MemberScope.names else List(Text)
 Chosen(name Text, argumentTypes Texts) HeaderTokens
 	Overloaded.Chosen("Members", List(Text) + "Number").ParameterNames is ("lines")

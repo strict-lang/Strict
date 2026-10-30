@@ -49,7 +49,7 @@ Hex(number Number) Text
 Returned(entry InstructionEntry) Texts
 	MlirStatements(Copy.function, 2).Returned(InstructionEntry.Return(0)).Last is "    return %t2 : f64"
 	if MlirLayout(function).IsInitializer
-		return MlirLayout(function).Returned(position)
+		return MlirChanged(function, position).Kept + MlirLayout(function).Returned(position)
 	let returned = (function.Load(Temp(""), "%r" + entry.payload(0)), "    return " + Temp("") + " : f64")
 	MlirChanged(function, position).Kept + returned
 Jumped(entry InstructionEntry) Texts

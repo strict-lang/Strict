@@ -7,6 +7,8 @@ constant NoScopes = (NoScope, NoScope)
 constant NoInference = TypeInference(KnownTypes(("A", "B"), NoScopes, NoScopes, NoScopes), NoScopes)
 constant Sample = TypeShape("has a Number", "Run", "\tlet b = a", "\tb")
 constant AddOther = HeaderTokens("Add", "(", "other", ")")
+constant Picking = HeaderTokens(Tokenizer("Pick(random Ticker, count Number)").Tokens)
+constant Ticking = TypeInference(MutatingCheck.Tickers, TypeInference.Limits)
 constant Adding = MethodBodies("Demo", Sample, NoInference).HeaderScope(AddOther, NoScope)
 constant Constanted = MethodBodies("Demo", TypeShape("has a Number", "constant Twice = a * 2"), NoInference).Statements.Last
 constant CheckedA = BodyParser("Run", "\tif a is Error", "\t\ta").Block(1, 1).children(0)
@@ -33,7 +35,7 @@ HeaderScope(header HeaderTokens, members Scope) Scope
 		types.Add(value is "Other" then typeName else (value is "Generic" then argument else value))
 	let concrete = Instantiation(inference.types).Members(typeName, members)
 	mutable scope = concrete.With("value", InstanceType).With("self type", typeName).WithAll(header.ParameterNames, types)
-	for header.MutableParameters + Changes(shape.lines).Members
+	for header.MutableParameters + Changes(shape.lines).Members + RefParameters(header)
 		scope = scope.With(value + " mutable", "mutable")
 	scope
 InstanceType Text
@@ -129,3 +131,10 @@ IsSelector(statement SyntaxNode) Boolean
 		return false
 	let condition = statement.children(0)
 	(condition.Kind is "Binary") and (condition.children(1).Kind is "Missing")
+RefParameters(header HeaderTokens) Texts
+	MethodBodies("Demo", Sample, Ticking).RefParameters(Picking) is ("random")
+	MethodBodies("Demo", Sample, NoInference).RefParameters(AddOther).Length is 0
+	let types = header.ParameterTypes
+	for header.ParameterNames
+		if Changes.HasChanges(inference.types.ParameterScope(types(index)))
+			value

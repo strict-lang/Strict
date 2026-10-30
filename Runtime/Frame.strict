@@ -22,8 +22,8 @@ Finished(arguments List(VmValue)) List(VmValue)
 		let entry = method.instructions(position)
 		slots(entry.Target) = Value(entry, position, slots)
 		if (entry.kind is InstructionType.Invoke) and (slots(entry.Target).kind is "Changing")
-			slots(entry.Target + 1) = slots(entry.Target).items(1)
-			slots(entry.Target) = slots(entry.Target).items(0)
+			for slots(entry.Target).items
+				slots(entry.Target + index) = value
 		position = entry.kind < InstructionType.Return then position + 1 else Next(entry, position, slots)
 	slots
 Value(entry InstructionEntry, position Number, slots List(VmValue)) VmValue
@@ -129,6 +129,13 @@ Ending(entry InstructionEntry, slots List(VmValue)) VmValue
 	Twice.Ending(InstructionEntry.LoopBegin(6, 8), Listed).number is 5
 	Twice.Ending(InstructionEntry.LoopBegin(6, -1), Listed).kind is "None"
 	entry.payload(1) is 1 then slots(entry.payload(2)) else VmValue.None
+Paired(entry InstructionEntry, slots List(VmValue)) VmValue
+	Twice.Paired(InstructionEntry(InstructionType.Return, List(Text), (8, -1, 6)), Listed).items(2).number is 1
+	Twice.Paired(InstructionEntry(InstructionType.Return, List(Text), (8, -1, 6)), Listed).items(1).kind is "None"
+	mutable items = List(Mutable(VmValue))
+	for entry.payload
+		items.Add(value < 0 then VmValue.None else slots(value))
+	VmValue("Changing", 0, "", items)
 Other(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	Twice.Other(InstructionEntry.Return(8), Listed, 0).number is 5
 	if entry.kind is InstructionType.Invoke
@@ -137,7 +144,7 @@ Other(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 		return Looped(entry, slots, position)
 	if entry.kind is InstructionType.Return
 		let result = slots(entry.payload(0))
-		return entry.payload.Length is 1 then result else VmValue.OfChanging(result, slots(entry.payload(1)))
+		return entry.payload.Length is 1 then result else Paired(entry, slots)
 	if entry.kind is InstructionType.CheckError
 		return ErrorCheck(entry).Value(slots(entry.payload(0)), slots(entry.Target), value, position)
 	entry.kind is InstructionType.FieldLoad then machine.Field(entry, slots(entry.payload(1))) else Changed(entry, slots)

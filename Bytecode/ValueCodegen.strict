@@ -86,7 +86,7 @@ InstanceCall(node SyntaxNode, block CodeBlock) CodeBlock
 		return Field(node.text, TypeOf(node.children(0), block), instance, instance.Result)
 	let method = node.Kind is "Not" then "not" else "to"
 	let call = node.Kind is in ("Binary", "Not") then SyntaxNode("Member", method, node.children(0)) else node
-	ChangedInstance(value, call.text).StoredBack(call, Invoke(call, instance, instance.Result, TypeOf(node, block)), block)
+	ChangedInstance(value, call.text).Back(call, Invoke(call, instance, instance.Result, TypeOf(node, block)), block)
 Field(member Text, owner Text, block CodeBlock, instance Number) CodeBlock
 	Plain.InstanceCall(GreeterText, CodeBlock.Empty).instructions(2).texts is ("text", "Greeter")
 	block.Load(InstructionEntry(InstructionType.FieldLoad, (member, owner), (block.register, instance, -1, -2)))

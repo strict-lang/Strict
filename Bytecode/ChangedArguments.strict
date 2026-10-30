@@ -1,0 +1,39 @@
+has values ValueCodegen
+has method Text
+constant Store = InstructionType.StoreRegisterToVariable
+constant Painters = KnownTypes(("Ticker", "Painter"), (Scope(List(Text) + "count", List(Text) + "Number"), KnownTypes.NoMembers), (Scope(List(Text) + "Next", List(Text) + "Number"), Scope(List(Text) + "Paint", List(Text) + "Number")), (Scope(("Next", "Next changes"), ("", "changes")), Scope(("Paint", "Paint types"), ("count,ticker", "Number,Ticker"))))
+constant Painting = ChangedArguments(ValueCodegen(TypeInference(Painters, (KnownTypes.NoMembers, KnownTypes.NoMembers)), KnownTypes.NoMembers, CallTarget.Plain), "Paint")
+constant Paint = SyntaxNode("Member", "Paint", (SyntaxNode("Identifier", "painter"), ValueCodegen.One, SyntaxNode("Identifier", "ticker")))
+constant Holding = CodeBlock.Empty.Declare("painter", "Painter").Declare("ticker", "Ticker").Declare("ticker mutable", "mutable")
+Positions(type Text, name Text) Numbers
+	Painting.Positions("Painter", "Paint") is (1)
+	Painting.Positions("Ticker", "Next").Length is 0
+	let types = values.inference.types.ParameterScope(type).TypeOf(name + " types")
+	for types.Split(",")
+		if (value is not "") and Changes.HasChanges(values.inference.types.ParameterScope(value.Trim))
+			index
+Owner(call SyntaxNode, block CodeBlock) Text
+	Painting.Owner(Paint, Holding) is "Painter"
+	if values.ArgumentStart(call) > 0
+		return values.TypeOf(call.children(0), block)
+	values.inference.types.IsKnown(call.text) then call.text else values.target.TypeName
+Stored(block CodeBlock) CodeBlock
+	Painting.Stored(CodeBlock.Empty).instructions.Length is 0
+	let header = values.target.Header(method)
+	let bodies = MethodBodies(TypeEntry.ShortName(values.target.TypeName), values.target.shape, values.inference)
+	mutable stored = block
+	for bodies.RefParameters(header)
+		let loaded = stored.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, stored.register, value))
+		stored = loaded.Stored("changed_" + header.ParameterNames.Index(value))
+	stored
+StoredBack(call SyntaxNode, invoked CodeBlock, block CodeBlock) CodeBlock
+	Painting.StoredBack(Paint, Holding.At(1), Holding).instructions.First.payload is (3, -1)
+	Painting.StoredBack(Paint, Holding.At(1), CodeBlock.Empty.Declare("ticker", "Ticker")).instructions.Length is 0
+	let start = values.ArgumentStart(call)
+	let isConstructed = (start is 0) and values.inference.types.IsKnown(call.text)
+	mutable stored = invoked
+	for Positions(TypeEntry.ShortName(Owner(call, block)), isConstructed then "from" else method)
+		let argument = start + value < call.children.Length then call.children(start + value) else call
+		if (argument.Kind is "Identifier") and (block.scope.TypeOf(argument.text + " mutable") is not "")
+			stored = stored.Add(InstructionEntry.Named(Store, invoked.Result + 2 + value, argument.text))
+	stored

@@ -2,6 +2,13 @@ has Red Number with value >= 0 and value <= 1
 has Green Number with value >= 0 and value <= 1
 has Blue Number with value >= 0 and value <= 1
 has Alpha = 1 with value >= 0 and value <= 1
+from(random PseudoRandom)
+	ColorValue(PseudoRandom(1)).Red is 0.6281627197153109
+	ColorValue(PseudoRandom(1)).Blue is 0.7029481529244463
+	ColorValue(PseudoRandom(1)).Alpha is 1
+	Red = random.Get(0, 1)
+	Green = random.Get(0, 1)
+	Blue = random.Get(0, 1)
 to Color
 	ColorValue(0.5, 0, 0) to Color is Color(127, 0, 0, 255)
 	Color(Red * 255, Green * 255, Blue * 255, Alpha * 255)

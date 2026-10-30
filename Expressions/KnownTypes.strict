@@ -54,6 +54,9 @@ ParametersOf(typeName Text, method Text, arguments Number) Texts
 	for scope.names
 		if (value is method) and (ParameterNames(scope.types(index)).Length is arguments)
 			return ParameterNames(scope.types(index))
+	for scope.names
+		if (value is method) and (arguments > 0) and (ParameterNames(scope.types(index)).Length > arguments)
+			return ParameterNames(scope.types(index))
 	ParameterNames(scope.TypeOf(method))
 ParameterScope(typeName Text) Scope
 	Sample.ParameterScope("Count").TypeOf("Twice types") is "Number"

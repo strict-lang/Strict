@@ -106,7 +106,9 @@ Builds, checks, folder tests on the VM, VS Code typing checks and value tracing 
 - An Error is handled where it shows up (returned, kept in a variable or checked with `is Error`), any other use returns it to the caller with one more stack trace line. See `Examples/ErrorHandling.strict`.
 - A call of a method returning `Mutable(...)` as a statement (`numbers.Add(5)`) changes the `mutable` variable it is called on.
 - A method assigning a `mutable` member changes the instance it is called on, which has to be a `mutable` variable or member: `mutable ticker = Ticker(0)`, then `ticker.Next` twice gives 1 and 2 (`ChangingCallNeedsMutableVariable` otherwise).
-- A type name is its default instance (members with their defaults): `Bag.Count` called from another type calls Count on `Bag`, constants and methods using no members need no instance.
+- A parameter whose type has changing methods is a reference: `ColorValue(random)` with `mutable random = PseudoRandom(7)` advances `random` itself (its `from(random PseudoRandom)` calls `random.Get(0, 1)` three times), a value that is no mutable variable is passed as a copy.
+- A type name is its default instance (members with their defaults), a new one every time: `Bag.Count` called from another type calls Count on a new `Bag`, `Ticker.Next` gives 1 each time (keep a `mutable ticker = Ticker` to continue), constants and methods using no members need no instance.
+- A custom `from` keeps the constructor of the members when their counts differ: `ColorValue(random)` and `ColorValue(0.5, 0, 0)`.
 - Values never change: `list + element` gives a new list. The runtime reuses the old memory in place since the old version is not used anymore (using it again forces a copy, that is bad code).
 
 ## How it is built (from low to high level)

@@ -90,7 +90,7 @@ CallScope(generics Texts) Scope
 	for MemberScope.types
 		if (value is not in generics) and ((value is "Generic") or (value.IndexOf("Generic") is -1))
 			names.Add(MemberScope.names(index))
-	"from" is in scope.names then scope else scope.With("from", Text.Combine(names, ","))
+	Defaults(lines).Constructors(scope, names, MemberScope)
 MethodScope Scope
 	TypeShape("constant Limit = 3", "Add(other Number) Number", "\tother").MethodScope.TypeOf("Add") is "Number"
 	TypeShape("constant Limit = 3", "Add(other Number) Number", "\tother").MethodScope.TypeOf("Limit") is "Number"

@@ -1,4 +1,6 @@
 has lines Texts
+constant Paired = Scope(("a", "b"), ("N", "M"))
+constant Custom = Scope(List(Text) + "from", List(Text) + "c")
 Added(scope Scope) Scope
 	Defaults(("has a Number", "has b Number = 0", "constant C = 3")).Added(KnownTypes.NoMembers).names is ("b default")
 	Defaults(List(Text) + "mutable count = 2 with value > 0").Added(KnownTypes.NoMembers).TypeOf("count default") is "2"
@@ -11,3 +13,16 @@ Added(scope Scope) Scope
 			names.Add(HeaderTokens(Tokenizer(value).Tokens).MemberName + " default")
 			values.Add(value.Substring(start + 3, end - start - 3))
 	scope.WithAll(names, values)
+Constructors(scope Scope, names Texts, members Scope) Scope
+	Defaults(List(Text)).Constructors(Custom, ("a", "b"), Paired).TypeOf("from") is "c"
+	Defaults(List(Text)).Constructors(Custom, ("a", "b"), Paired).TypeAt("from types", 0) is "N,M"
+	Defaults(List(Text)).Constructors(KnownTypes.NoMembers, ("a", "b"), Paired).TypeOf("from") is "a,b"
+	if "from" is not in scope.names
+		return scope.With("from", Text.Combine(names, ","))
+	if (names.Length is 0) or (scope.TypeOf("from").Split(",").Length is names.Length)
+		return scope
+	mutable types = List(Mutable(Text))
+	for names
+		types.Add(members.TypeOf(value))
+	let built = Scope(("from", "from types"), (Text.Combine(names, ","), Text.Combine(types, ",")))
+	built.WithAll(scope.names, scope.types)

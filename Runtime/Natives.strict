@@ -136,7 +136,9 @@ Constructed(type TypeEntry, finished List(VmValue)) VmValue
 	mutable values = List(Mutable(VmValue))
 	for type.members
 		values.Add(Rounding(Rounding.Single.Bits(value, natives)).Of(finished(Frame.MembersSlot + index)))
-	VmValue(type.Name, 0, "", values)
+	let built = VmValue(type.Name, 0, "", values)
+	let changed = result.kind is "Changing" then result.items.Slice(1, result.items.Length - 1) else List(VmValue)
+	changed.Length is 0 then built else VmValue(result, items = (List(VmValue) + built) + changed)
 Initial(member MemberEntry) VmValue
 	Shapes.Initial(Width).number is 0
 	Shapes.Initial(MemberEntry.SevenMember).number is 7

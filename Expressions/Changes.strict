@@ -67,3 +67,10 @@ Added(scope Scope) Scope
 	for Methods
 		added = added.With(value + suffix, suffix.Trim)
 	added
+HasChanges(scope Scope) Boolean
+	Ticking.HasChanges(Ticking.Added(KnownTypes.NoMembers))
+	Ticking.HasChanges(KnownTypes.NoMembers) is false
+	for scope.types
+		if value is "changes"
+			return true
+	false
