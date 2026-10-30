@@ -26,9 +26,12 @@ Remembered(device Text, ptx Texts) Texts
 	File("Compiler/output/Failed.kernels.mlir").Exists is false
 	PtxCache("Compiler/output/Written").Remembered("module {\n}", ("// new", "// old")) is ("// new", "// old")
 	PtxCache("Compiler/output/Written").Read(".older.ptx") is "// old"
+	PtxCache("Compiler/output/Unkeyed").Remembered("", List(Text) + "// new") is List(Text) + "// new"
+	File("Compiler/output/Unkeyed.kernels.mlir").Exists is false
 	if ptx.First.StartsWith("//") is false
 		return ptx
-	Written(ptx, ".ptx") and Saved(".kernels.mlir", device) then ptx else List(Text) + ("GPU cache write failed: " + base)
+	let isKeyed = (device is "") or Saved(".kernels.mlir", device)
+	Written(ptx, ".ptx") and isKeyed then ptx else List(Text) + ("GPU cache write failed: " + base)
 Built(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Texts
 	PtxCache("Compiler/output/Invalid").Built("x", false, DeviceBuild.Missing, "").First.StartsWith("mlir-opt failed")
 	PtxCache("Compiler/output/Metal").Built("module {\n}", false, Metal, "").Length is 1
@@ -57,7 +60,7 @@ Shared(device Text, isTiling Boolean, builder DeviceBuild) Texts
 	Directory.Create(folder)
 	let cache = PtxCache(folder + "/" + HashCode(key).number + "/module")
 	let previous = cache.Waited(key, isTiling)
-	previous.Length > 0 then Remembered(key, previous) else SharedBuild(cache, device, isTiling, builder)
+	previous.Length > 0 then Remembered("", previous) else SharedBuild(cache, device, isTiling, builder)
 Waited(key Text, isTiling Boolean) Slow(Texts)
 	PtxCache("Compiler/output/Unbuilt/module").Waited("module {\n}", false).Length is 0
 	let lock = File(Path(base).PathOnly.text + ".lock")
@@ -76,7 +79,7 @@ SharedBuild(cache PtxCache, device Text, isTiling Boolean, builder DeviceBuild) 
 	NativeBuild(Logger).Removed(stage.base)
 	if ptx.First.StartsWith("//")
 		File(temporary).Rename(Path(cache.base).PathOnly.text)
-	let result = Remembered(Fingerprint(device, isTiling, builder, ""), ptx)
+	let result = Remembered("", ptx)
 	if Directory.Exists(temporary)
 		Discarded(stage)
 	result
@@ -88,9 +91,16 @@ IsWritten(ptx Texts, ending Text) Boolean
 	Sample.IsWritten(("// new", "// old"), ".ptx")
 	Sample.IsWritten(("// other", "// old"), ".ptx") is false
 	let older = ptx.Length > 1 then ptx.Last else ""
-	File(base + ending).Exists and (Read(ending) is ptx.First) and (Read(".older" + ending) is older)
+	let isOlder = older is "" then File(base + ".older" + ending).Exists is false else Read(".older" + ending) is older
+	File(base + ending).Exists and (Read(ending) is ptx.First) and isOlder
 Written(ptx Texts, ending Text) Boolean
-	Saved(ending, ptx.First) and Saved(".older" + ending, ptx.Length > 1 then ptx.Last else "")
+	PtxCache("Compiler/output/Single").Written(List(Text) + "// only", ".ptx")
+	File("Compiler/output/Single.older.ptx").Exists is false
+	PtxCache("Compiler/output/Single").IsWritten(List(Text) + "// only", ".ptx")
+	let older = ptx.Length > 1 then ptx.Last else ""
+	if older is ""
+		File(base + ".older" + ending).Delete
+	Saved(ending, ptx.First) and ((older is "") or Saved(".older" + ending, older))
 Saved(ending Text, text Text) Boolean
 	let path = base + ending
 	let temporary = path + "." + 1000000000.Random.Floor + ".tmp"

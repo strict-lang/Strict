@@ -27,19 +27,23 @@ Compile(path Text, root Text, isCounting = false, isGating = false, sources Text
 	isTesting and (built is 0) then Ran(base, Toolchain(Platform.Current, root), path, isCounting) else built
 Device(program Text, base Text, root Text) Text
 	NativeBuild.Device("module {\n}", "A", ".") is "module {\n" + PtxCache.Empty
+	NativeBuild(Logger, isWeb = true).Device("module {\n" + MlirGpu.Marker + "\n  x\n}", "Web", ".").Length > 0
 	let at = Unsupported(program)
 	if at is not -1
-		return Failed("Native compilation failed, " + program.Substring(at, program.Length - at).Lines.First)
+		return Checked("Native compilation failed, " + program.Substring(at, program.Length - at).Lines.First)
 	let marker = program.IndexOf("\n" + MlirGpu.Marker)
 	if marker < 0
 		return PtxCache(base).Unlaunched(program)
 	let gpu = DeviceBuild(Toolchain(Platform.Current, root))
 	let device = program.Substring(marker + 1, program.Length - marker - 1)
-	let kernels = (isAndroid or isIOS) then List(Text) else gpu.Built(base, device, MlirTensors.Attending.Used(program))
-	let embedded = gpu.Embedded(program.Substring(0, marker), kernels, base)
-	embedded.StartsWith("GPU kernels failed") then Failed(embedded) else embedded
-Failed(message Text) Text
-	logger.Log(message)
+	let ptx = Target is Platform.Current then gpu.Built(base, device, MlirTensors.Attending.Used(program)) else List(Text)
+	Checked(gpu.Embedded(program.Substring(0, marker), ptx, base))
+Checked(built Text) Text
+	NativeBuild(Logger).Checked("module") is "module"
+	NativeBuild(Logger).Checked("GPU kernels failed: x") is ""
+	if (built.StartsWith("GPU kernels failed") or built.StartsWith("Native compilation failed")) is false
+		return built
+	logger.Log(built)
 	""
 Natives(path Text, root Text, types List(TypeEntry)) Texts
 	NativeBuild.Natives("Examples/NativeAdd/NativeAdd.strict", ".", List(TypeEntry)).Length is 0

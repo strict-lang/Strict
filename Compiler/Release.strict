@@ -90,6 +90,10 @@ Placed(source Text, target Text) Boolean
 	isPlaced
 Sidecar(release Text) Number
 	Release(Logger, "Missing/App").Sidecar("Missing/Release") is 0
+	PtxCache("Compiler/output/Sided").Written(List(Text) + "// a", ".ptx")
+	Release(Logger, "Compiler/output/Sided").Sidecar("Compiler/output/Release/Web") is 0
+	if Path(release).FileName.text is "Web"
+		return 0
 	mutable copied = 0
 	for Sidecars
 		let sidecar = base + value
