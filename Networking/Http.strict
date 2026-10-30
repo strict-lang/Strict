@@ -1,3 +1,4 @@
+constant FormHeader = "Content-Type: application/x-www-form-urlencoded"
 Send(method Text, url Text, body Text = "", headers Text = "", seconds Number = 15, maximum Number = 67108864) HttpResponse
 	Http.Send("GET", "ftp://example.com") is Error("InvalidHttpUrl")
 	Http.Send("GET", "https://") is Error("InvalidHttpUrl")
