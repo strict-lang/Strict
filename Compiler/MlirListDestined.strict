@@ -105,14 +105,11 @@ Collected(at Number) Boolean
 	Lined.Collected(9)
 	Checked.Collected(9)
 	Lined.Collected(8) is false
-	let steps = function.method.instructions
-	let next = MlirDestined(function, at).Next(steps(at))
-	let isValidated = next.kind is InstructionType.Invoke then next.texts(1) is "Validated" else false
-	let validatedAt = steps(at + 1) is next then at + 1 else at + 2
-	let written = isValidated then MlirDestined(function, validatedAt).Next(next) else next
-	let source = isValidated then next.payload(0) else steps(at).payload(0)
+	let checkedAt = MlirDestined(function, at).CheckedAt
+	let checked = function.method.instructions(checkedAt)
+	let written = MlirDestined(function, checkedAt).Next(checked)
 	let isWrite = written.kind is InstructionType.InvokeWriteToList
-	isWrite and (Text.Combine(written.texts) is "forResult") and (written.payload(0) is source)
+	isWrite and (Text.Combine(written.texts) is "forResult") and (written.payload(0) is checked.payload(0))
 Iterated Text
 	Copied.Iterated is "items"
 	let steps = function.method.instructions

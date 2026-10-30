@@ -74,6 +74,16 @@ Next(entry InstructionEntry) InstructionEntry
 	let following = position + 1 < steps.Length then steps(position + 1) else entry
 	let isChecked = (following.kind is InstructionType.CheckError) and (position + 2 < steps.Length)
 	isChecked then steps(position + 2) else following
+CheckedAt Number
+	MlirDestined(MlirListDestined.Checked.function, 9).CheckedAt is 10
+	MlirDestined(MlirListDestined.Lined.function, 9).CheckedAt is 9
+	MlirDestined(MlirStructs.Checker.function, 1).CheckedAt is 2
+	let steps = function.method.instructions
+	let next = Next(steps(position))
+	let isValidated = next.kind is InstructionType.Invoke then next.texts(1) is "Validated" else false
+	if (isValidated is false) or (next.payload.Last is not steps(position).payload(0))
+		return position
+	steps(position + 1) is next then position + 1 else position + 2
 Stored(entry InstructionEntry, next InstructionEntry, compiled Texts) Texts
 	Caller.Stored(Calling(2), Calling(3), List(Text) + "call")(1).EndsWith("@strict_flat_destine(%t2dold) : (f64) -> ()")
 	Caller.Stored(Calling(2), Calling(5), List(Text) + "call") is ("call")

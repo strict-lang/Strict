@@ -14,6 +14,5 @@ Open speed work, one short line each, measurements go into commit messages. GPU 
 - All native providers compile once any of them is needed.
 - Reachability, safety and globals/text assembly of MLIR emission run serially.
 - A native library call copies every Numbers argument into new doubles (`strict_list_flat`, 1.2 GB for 148.6M numbers, unpacking packed lists first).
-- Advancing a DeltaEngine `Particle` still allocates the Renderable and Lifetime its methods return before they are copied into its block (`Lifetime.Advanced` validates its result, so it builds into no destination): Unity's particle system is 1.8 times faster from 100 thousand particles on.
-- Young collections trace every live young object: 1 million particles rebuilt every tick spend a seventh of each tick in them (`STRICT_YOUNG=0`), grow the young limit with the bytes that survive.
+- ParticleStress at 1 million particles spends 10 of its 14 ms per tick outside the parallel loop (Unity's particle system 9.5 ms): the collection every tick (4.4 ms), counting the references of the list to its own blocks (3.1 ms), allocating and clearing the list (1.9 ms) and compacting it (0.7 ms); the loop itself is bound by memory (80 bytes per particle read and written every tick).
 - A `for` that drops items collects objects in parallel, but numbers and flat elements stay on one thread (any bit pattern is a number, so no hole marker): keep a bitmap of the kept slots instead.
