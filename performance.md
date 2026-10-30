@@ -9,7 +9,7 @@ Open speed work, one short line each, measurements go into commit messages. GPU 
 - `MlirCost` sums expensive alternative call paths and overestimates tiny loops: a loop called again is probed on the caller once its last fork took under 1 ms, a loop run once still forks.
 - Collector lane refill (`strict_gc_small` taking the collector lock) contends at high thread counts.
 - Trees as pools with 32 bit backward offsets ([Goose](https://github.com/aardappel/goose)): count SyntaxNode allocations of `strict build Strict.strict` first.
-- After emission the whole module text is copied about 8 times: `NativeBuild.Device` searches `"\n" + mlir`, `NativeBuild.Mlir` chains `+`, `MlirSplit` reads the written file back.
+- GPU preparation takes 0.5-0.6 s of every build with kernels also when nothing changed (`DeviceBuild.Built`: `PtxCache` reads the runtime PTX and hashes the kernel text with `HashCode` per character), `MlirSplit` still reads the just written module back.
 - All native providers compile once any of them is needed.
 - Reachability, safety and globals/text assembly of MLIR emission run serially.
 - A native library call copies every Numbers argument into new doubles (`strict_list_flat`, 1.2 GB for 148.6M numbers, unpacking packed lists first).
