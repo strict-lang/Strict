@@ -106,7 +106,9 @@ RegisterCount Number
 	mutable most = 0
 	for instructions
 		let written = Written(value)
-		most = written + 1 > most then written + 1 else most
+		let isCall = value.kind is InstructionType.Invoke
+		let reach = isCall then written + 2 + value.payload(5 + value.payload(3)) else written + 1
+		most = reach > most then reach else most
 		for Reads(value)
 			most = value + 1 > most then value + 1 else most
 	most

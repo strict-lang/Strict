@@ -136,7 +136,7 @@ Looped(node SyntaxNode, block CodeBlock) CodeBlock
 Replaced(call SyntaxNode) SyntaxNode
 	Plain.Replaced(Repainted) to Text is "Greeter(pixels.text)"
 	Plain.Replaced(NewColor) is NewColor
-	let names = values.target.FromNames(call.text)
+	let names = values.target.FromNames(call.text, List(Text) + call.text)
 	if (call.children.Length < 2) or (call.children(1).Kind is not "Reassignment") or (names.Length is 0)
 		return call
 	mutable arguments = List(Mutable(SyntaxNode))

@@ -46,10 +46,13 @@ ParameterTypes(name Text, type Text, argumentTypes Texts) Texts
 FromNames(type Text, argumentTypes Texts = List(Text)) Texts
 	Plain.FromNames("Greeter") is ("text")
 	Ranges.FromNames("Range") is ("Start", "ExclusiveEnd")
-	if types.IsKnown(types.BaseName(type))
-		let counted = argumentTypes.Length is 0 then types.ParametersOf(type, "from", -1) else List(Text)
-		return argumentTypes.Length is 0 then counted else Declared(type, "from", argumentTypes, "")
-	type is TypeName then shape.MemberScope.names else List(Text)
+	Plain.FromNames("Greeter", List(Text) + "Greeter") is ("text")
+	if types.IsKnown(types.BaseName(type)) is false
+		return type is TypeName then shape.MemberScope.names else List(Text)
+	if argumentTypes.Length is 0
+		return types.ParametersOf(type, "from", -1)
+	let isCopy = types.BaseName(argumentTypes.First) is types.BaseName(type)
+	isCopy then types.MembersOf(type).names else Declared(type, "from", argumentTypes, "")
 Chosen(name Text, argumentTypes Texts) HeaderTokens
 	Overloaded.Chosen("Members", List(Text) + "Number").ParameterNames is ("lines")
 	Overloaded.Chosen("Members", List(Text)).ParameterNames.Length is 0
