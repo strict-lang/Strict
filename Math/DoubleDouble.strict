@@ -28,3 +28,20 @@ Split(number Number) DoubleDouble
 	let scaled = 134217729 * number
 	let head = scaled - (scaled - number)
 	DoubleDouble(head, number - head)
+Whole Number
+	DoubleDouble(2, -0.000000000000000001).Whole is 1
+	DoubleDouble(2.5).Whole is 2
+	let floor = high.Floor
+	floor is high and low < 0 then floor - 1 else floor
+Decimals(count Number) Text
+	DoubleDouble(1, 0.00000000000000001).Decimals(17) is "1.00000000000000001"
+	let negative = high < 0 or (high is 0 and low < 0)
+	let magnitude = negative then DoubleDouble(0 - high, 0 - low) else value
+	mutable rest = magnitude - DoubleDouble(magnitude.Whole)
+	mutable digits = (negative then "-" else "") + magnitude.Whole + "."
+	for count
+		rest = rest * DoubleDouble(10)
+		let digit = rest.Whole
+		digits = digits + digit
+		rest = rest - DoubleDouble(digit)
+	digits

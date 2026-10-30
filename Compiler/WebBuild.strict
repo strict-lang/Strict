@@ -13,7 +13,7 @@ Linked(base Text, executable Text) Text
 		return compiled
 	let folder = Release(Logger, base).Parent
 	let sources = NativeSources(tools.natives).Arguments(Platform.Web, tools.root) + Preloaded(folder + "/Content")
-	let page = " --shell-file " + tools.Quoted(tools.root + "/Compiler/WebShell.html")
+	let page = " --shell-file " + tools.Quoted(Shell(base))
 	let runtime = " --js-library " + tools.Quoted(tools.root + "/Compiler/WebRuntime.js")
 	let inputs = tools.Quoted(base + ".o") + sources + Mirrored(folder, base) + Scripted(base) + page + runtime
 	let linked = ToolRunner(tools.Located("emcc")).Execute(inputs + " -o " + tools.Quoted(executable) + Options + " -O1")
@@ -72,6 +72,9 @@ Shaded(program Text, base Text, isWritten Boolean) Text
 	if isWritten
 		File(base + ".shaders.js").Write(program.Substring(start, program.Length - start))
 	program.Substring(0, marker)
+Shell(base Text) Text
+	Missing.Shell("Compiler/output/missing") is "C:/s/Compiler/WebShell.html"
+	File(base + ".shell.html").Exists then base + ".shell.html" else tools.root + "/Compiler/WebShell.html"
 Scripted(base Text) Text
 	Missing.Scripted("Compiler/output/missing") is ""
 	File(base + ".shaders.js").Exists then " --pre-js \"" + base + ".shaders.js\"" else ""

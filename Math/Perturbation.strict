@@ -1,0 +1,59 @@
+has orbit Numbers with value.Bits is 32
+has re Number with value.Bits is 32
+has im Number with value.Bits is 32
+has left Number with value.Bits is 32
+has top Number with value.Bits is 32
+has step Number with value.Bits is 32
+has limit Number with value.Bits is 32
+constant Seahorse = Mandelbrot.Reference(DoubleDouble(-0.75), DoubleDouble(0.1), 64)
+constant Inside = Perturbation(Seahorse, -0.75, 0.1, 0, 0, 0.001, 64)
+constant Outside = Perturbation(Mandelbrot.Reference(DoubleDouble(1), DoubleDouble(0), 64), 1, 0, 0, 0, 0.001, 64)
+Strip(first Number, count Number, width Number) Numbers
+	Inside.Strip(0, 4, 2) is (34, 0, 33, 35)
+	Inside.Rebased(1.75, -0.1) is 3
+	for count
+		let position = first + index
+		Pixel(left + (position % width + 0.5) * step, top - ((position / width).Floor + 0.5) * step)
+Pixel(horizontal Number, vertical Number) Number
+	Outside.Pixel(-1.5, 0) is 0
+	Perturbation(Outside, step = 0.000001).Pixel(-1.5, 0) is 0
+	let coarse = step > 0.00001 and Mandelbrot.Interior(re + horizontal, im + vertical)
+	coarse then 0 else Rebased(horizontal, vertical)
+Rebased(horizontal Number, vertical Number) Number
+	Outside.Rebased(-1.75, 0.1) is 33
+	mutable real = 0
+	mutable imaginary = 0
+	mutable position = 0
+	for limit
+		let next = Real(position, real, imaginary, horizontal)
+		imaginary = Imaginary(position, real, imaginary, vertical)
+		real = next
+		position = Moved(position, real, imaginary)
+		if position >= orbit.Length
+			return index + 1
+	0
+Moved(position Number, real Number, imaginary Number) Number
+	Inside.Moved(0, 0, 0) is 1
+	Inside.Moved(-3, 0, 0) is 1
+	Outside.Moved(2, 0, 0) is Outside.orbit.Length
+	let next = position < 0 then 1 else position + 1
+	let full = orbit(next * 2) + real
+	let height = orbit(next * 2 + 1) + imaginary
+	let squared = full * full + height * height
+	if squared > 4
+		return orbit.Length
+	squared < real * real + imaginary * imaginary or next * 2 + 2 >= orbit.Length then -1 - next else next
+Real(position Number, real Number, imaginary Number, offset Number) Number
+	Inside.Real(0, 0, 0, 0.5) is 0.5
+	let shift = position < 0 then -2 - position * 2 else 0
+	let anchor = position < 0 then 0 else position * 2
+	let x = real + orbit(shift)
+	let y = imaginary + orbit(shift + 1)
+	x * (2 * orbit(anchor) + x) - y * (2 * orbit(anchor + 1) + y) + offset
+Imaginary(position Number, real Number, imaginary Number, offset Number) Number
+	Inside.Imaginary(0, 0, 0, 0.5) is 0.5
+	let shift = position < 0 then -2 - position * 2 else 0
+	let anchor = position < 0 then 0 else position * 2
+	let x = real + orbit(shift)
+	let y = imaginary + orbit(shift + 1)
+	2 * (orbit(anchor) * y + orbit(anchor + 1) * x + x * y) + offset
