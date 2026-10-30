@@ -1,19 +1,21 @@
 has names Texts
 has types Texts
+has positions Dictionary(Text, Number) = Dictionary(Text, Number)
+has indexed Number = 0
 With(name Text, type Text) Scope
 	Scope(("a", "b"), ("A", "B")).With("c", "C").TypeOf("c") is "C"
-	Scope(names + name, types + type)
+	Scope(names + name, types + type, positions, indexed)
 WithAll(otherNames Texts, otherTypes Texts) Scope
 	Scope(("a", "b"), ("A", "B")).WithAll(("c", "d"), ("C", "D")).TypeOf("d") is "D"
-	Scope(names + otherNames, types + otherTypes)
+	Scope(names + otherNames, types + otherTypes, positions, indexed)
 TypeOf(name Text) Text
 	Scope(("a", "b"), ("A", "B")).TypeOf("b") is "B"
 	Scope(("a", "b"), ("A", "B")).TypeOf("c") is ""
 	Scope(("a", "a"), ("A", "B")).TypeOf("a") is "B"
-	for Range(0, names.Length).Reverse
+	for Range(indexed, names.Length).Reverse
 		if names(value) is name
 			return types(value)
-	""
+	name is in positions then types(positions(name)) else ""
 Has(name Text, type Text) Boolean
 	Scope(("to", "to"), ("A", "B")).Has("to", "A")
 	Scope(("to", "to"), ("A", "B")).Has("to", "C") is false
@@ -36,3 +38,12 @@ TypeAt(name Text, ordinal Number) Text
 			if found is ordinal
 				return types(index)
 	""
+Indexed Scope
+	Scope(("a", "b", "a"), ("A", "B", "C")).Indexed.indexed is 3
+	Scope(("a", "b", "a"), ("A", "B", "C")).Indexed.TypeOf("a") is "C"
+	Scope(("a", "b"), ("A", "B")).Indexed.With("a", "D").TypeOf("a") is "D"
+	Scope(("a", "b"), ("A", "B")).Indexed.WithAll(("c", "d"), ("C", "D")).TypeOf("b") is "B"
+	mutable named = Dictionary(Text, Number)
+	for names
+		named(value) = index
+	Scope(names, types, named, names.Length)

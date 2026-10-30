@@ -7,4 +7,4 @@ skeleton("skeleton").get("width") to Number is 205.28
 skeleton("bones").Elements(2).get("parent") to Text is "Bat_Bone"
 ```
 
-Every call scans the text again, so keep the Json of a nested value instead of asking the root repeatedly. Nesting is limited by the stack. `BatSkeleton.json` is the Spine skeleton of the TinyBat sample of DeltaEngine.
+Every call scans the text again, so keep the Json of a nested value instead of asking the root repeatedly. The Strict VM runs `get`, `Keys`, `Elements` and `Values` as compiled code (Runtime/HostedJson), a content file reads as fast as natively. Nesting is limited by the stack. `BatSkeleton.json` is the Spine skeleton of the TinyBat sample of DeltaEngine.

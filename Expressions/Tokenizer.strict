@@ -5,36 +5,35 @@ Tokens Texts
 	Tokenizer("\"hi there\" + 1.5").Tokens is ("\"hi there\"", "+", "1.5")
 	Tokenizer("a >= -1").Tokens is ("a", ">=", "-", "1")
 	mutable tokens = List(Mutable(Text))
-	mutable nextStart = 0
-	for line.Length
-		if index >= nextStart and line.Substring(index, 1) is not " "
-			let length = TokenLength(index)
-			tokens.Add(line.Substring(index, length))
-			nextStart = index + length
+	mutable position = 0
+	for as long as position < line.Length
+		let length = line.characters(position).number is 32 then 0 else TokenLength(position)
+		if length > 0
+			tokens.Add(line.Substring(position, length))
+		position = position + (length is 0 then 1 else length)
 	tokens
 TokenLength(start Number) Number
 	Tokenizer("ab+1").TokenLength(0) is 2
 	Tokenizer("\"x y\"").TokenLength(0) is 5
 	Tokenizer("a<=b").TokenLength(1) is 2
 	Tokenizer("1.5)").TokenLength(0) is 3
-	let character = line.Substring(start, 1)
-	if character is "\""
+	let code = line.characters(start).number
+	if code is 34
 		return (TextEnd(start + 1) + 1).Clamp(0, line.Length) - start
-	if IsWordCharacter(character)
+	if IsWordCode(code)
 		return WordLength(start)
-	if start + 1 < line.Length and (line.Substring(start, 2) is in ("<=", ">="))
-		return 2
-	1
+	let isCompared = ((code is 60) or (code is 62)) and (start + 1 < line.Length)
+	isCompared and (line.characters(start + 1).number is 61) then 2 else 1
 TextEnd(position Number) Number
 	Tokenizer("\"a\"").TextEnd(1) is 2
 	Tokenizer("\"\\\"\"").TextEnd(1) is 3
 	Tokenizer("\"a").TextEnd(1) is 2
 	mutable escaped = false
 	for Range(position, line.Length)
-		let character = line.Substring(value, 1)
-		if (not escaped) and (character is "\"")
+		let code = line.characters(value).number
+		if (not escaped) and (code is 34)
 			return value
-		escaped = (not escaped) and (character is "\\")
+		escaped = (not escaped) and (code is 92)
 	line.Length
 HasOpenText Boolean
 	Tokenizer("x + \"a").HasOpenText
@@ -61,14 +60,15 @@ WordLength(start Number) Number
 IsDecimalPoint(position Number) Boolean
 	Tokenizer("1.5").IsDecimalPoint(1)
 	Tokenizer("a2.b").IsDecimalPoint(2) is false
-	if position + 1 >= line.Length or (not IsDigit(line.Substring(position + 1, 1)))
+	if position + 1 >= line.Length or (not IsDigitCode(line.characters(position + 1).number))
 		return false
-	IsDigit(line.Substring(position - 1, 1))
+	IsDigitCode(line.characters(position - 1).number)
 IsExponentSign(start Number, position Number) Boolean
 	Tokenizer("1e-5").IsExponentSign(0, 2)
 	Tokenizer("e-5").IsExponentSign(0, 1) is false
-	let isExponent = (position > start) and (line.Substring(position - 1, 1) is "e") and IsDigit(line.Substring(start, 1))
-	isExponent and (position + 1 < line.Length) and IsDigit(line.Substring(position + 1, 1))
+	let isExponent = (position > start) and (line.characters(position - 1).number is 101)
+	let isNumber = isExponent and IsDigitCode(line.characters(start).number)
+	isNumber and (position + 1 < line.Length) and IsDigitCode(line.characters(position + 1).number)
 IsWordCharacter(character Text) Boolean
 	IsWordCharacter("a")
 	IsWordCharacter("7")
@@ -85,6 +85,12 @@ IsDigit(character Text) Boolean
 	IsDigit("7")
 	IsDigit("a") is false
 	"0123456789".IndexOf(character) is not -1
+IsDigitCode(code Number) Boolean
+	IsDigitCode(48)
+	IsDigitCode(57)
+	IsDigitCode(58) is false
+	IsDigitCode(47) is false
+	(code >= 48) and (code <= 57)
 IsGrouped Boolean
 	Tokenizer("value.None is ()").IsGrouped is false
 	Tokenizer("(a + b) * c").IsGrouped

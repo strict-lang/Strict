@@ -10,7 +10,7 @@ Typed(shape TypeShape, scope Scope, typeName Text) Scope
 	Counting.Typed(Twice, KnownTypes.NoMembers, "Count").TypeOf("Twice") is "Number"
 	mutable result = scope
 	for shape.lines
-		let tokens = Tokenizer(value).Tokens
+		let tokens = value.StartsWith("\t") then List(Text) else Tokenizer(value).Tokens
 		if value.StartsWith("constant ")
 			result = Refined(result, tokens(1), ChainType(tokens, typeName, result))
 		else if shape.IsComputed(value)

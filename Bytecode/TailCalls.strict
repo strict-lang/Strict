@@ -31,13 +31,14 @@ IsTail(type TypeEntry, method MethodEntry, position Number) Boolean
 	Sample.IsTail(Counter, Counting, 1)
 	Sample.IsTail(Counter, Counting, 0) is false
 	let call = method.instructions(position)
-	if (call.kind is not InstructionType.Invoke) or IsLooped(method, position)
+	if call.kind is not InstructionType.Invoke
 		return false
 	let count = 5 + call.payload(3)
 	let isOwn = TypeEntry.ShortName(call.texts(0)) is TypeEntry.ShortName(type.Name)
 	let arguments = call.payload(count)
 	let isCounted = (arguments is method.parameters.Length) and (call.payload(count + 1 + arguments) is 0)
-	let isSame = isOwn and isCounted and (Inliner(types).Callee(type, call) is method)
+	let isOwnCall = isOwn and isCounted and (IsLooped(method, position) is false)
+	let isSame = isOwnCall and (Inliner(types).Callee(type, call) is method)
 	isSame and Returns(method.instructions, call.payload(0), position + 1)
 IsLooped(method MethodEntry, position Number) Boolean
 	Sample.IsLooped(MethodEntry.CountingLoop, 1)

@@ -43,10 +43,8 @@ Declared(texts List(MlirFunction), functions List(MlirFunction), edges List(Numb
 	result
 Emitted(texts List(MlirFunction), functions List(MlirFunction), recursive Texts) Texts
 	Counters.Emitted(Counters.Functions, Counters.Functions, List(Text)).First.IndexOf("@Counter_Run_0(") > 0
-	mutable emitted = List(Text)
 	for texts
-		emitted = emitted + Emission(value, functions, recursive)
-	emitted
+		Emission(value, functions, recursive)
 Emission(function MlirFunction, functions List(MlirFunction), recursive Texts) Text
 	Counters.Emission(MlirWhole.Row.function, NoFunctions, List(Text)).IndexOf("alwaysinline") > 0
 	let emitted = MlirFunction(function, IsRecursive = function.Symbol is in recursive).Text

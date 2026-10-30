@@ -26,9 +26,10 @@ Members(lines Texts) Scope
 	mutable names = List(Mutable(Text))
 	mutable types = List(Mutable(Text))
 	for lines
-		let line = Tokenizer(value).Tokens
-		let step = TypeShape(lines).IsMemberLine(value) then Steps(line).Of(1) else ""
-		if step is not ""
-			names.Add(HeaderTokens(line).MemberName + " step")
-			types.Add(step)
+		if TypeShape(lines).IsMemberLine(value) and (value.IndexOf("Step") > 0)
+			let line = Tokenizer(value).Tokens
+			let step = Steps(line).Of(1)
+			if step is not ""
+				names.Add(HeaderTokens(line).MemberName + " step")
+				types.Add(step)
 	Scope(names, types)
