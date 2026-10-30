@@ -27,7 +27,7 @@ IsParallel Boolean
 			return false
 	MlirFiltering(function, position).IsFilteringValues is false
 Snapshot Texts
-	Doubling.Snapshot is ("%p0", "%p1", "%r0", "%r1", "%r2", "%v_index", "%v_value", "%v_numbers", "%v_forResult")
+	Doubling.Snapshot is ("%p0", "%p1", "%r0", "%r1", "%r2", "%r3", "%r4", "%v_index", "%v_value", "%v_numbers", "%v_forResult")
 	mutable names = List(Mutable(Text))
 	for function.Parameters
 		names.Add("%p" + index)
@@ -137,7 +137,13 @@ Body Texts
 	for Range(position + 1, function.method.LoopEndOf(position))
 		let entry = function.method.instructions(value)
 		let isCollect = (entry.kind is InstructionType.InvokeWriteToList) and (entry.texts(0) is "forResult")
-		let emitted = isCollect then MlirFastLoop(function, position).Emitted(value) else function.Emitted(value)
+		let emitted = isCollect then Collected(value) else function.Emitted(value)
 		lines = lines + function.Label(value) + emitted
 	let end = function.method.LoopEndOf(position)
 	end < function.method.instructions.Length then lines + function.Label(end) else lines
+Collected(at Number) Texts
+	MlirParallel(MlirFiltering.Keeping.function, 2).Collected(7).Last is "    func.call @strict_rc_written(%t7p) : (!llvm.ptr) -> ()"
+	Doubling.Collected(5).Length is 3
+	let stored = MlirFastLoop(function, position).Emitted(at)
+	let written = "    func.call @strict_rc_written(%t" + at + "p) : (!llvm.ptr) -> ()"
+	Filler is "strict_list_filled" then stored + written else stored
