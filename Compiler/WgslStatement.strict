@@ -1,0 +1,102 @@
+has function MlirFunction
+has at Number
+constant Twice = MlirDeviceStatements.Twice
+constant Doubled = MlirDeviceStatements.Doubled
+constant Absolute = MlirGpuCheck.Absolute
+constant Summed = MlirDeviceStatements.Summed
+constant Arithmetic = (" + ", " - ", " * ", " / ", " % ")
+constant Comparisons = (" == ", " != ", " < ", " > ")
+Lines Texts
+	WgslStatement(Doubled, 3).Lines is ("r1 = v_value;")
+	WgslStatement(Twice, 1).Lines is ("r1 = f32(2);")
+	WgslStatement(Doubled, 5).Lines is ("output[at] = r2;")
+	let entry = function.method.instructions(at)
+	if entry.kind < InstructionType.IndexCall
+		return Moved(entry)
+	if entry.kind is InstructionType.IndexCall
+		return Indexed(entry)
+	if entry.kind < InstructionType.BinaryOperatorsSeparator
+		return Calculated(entry)
+	let isLoop = entry.kind is in (InstructionType.LoopBegin, InstructionType.LoopEnd)
+	entry.kind is InstructionType.Invoke then Called(entry) else isLoop then Looped(entry) else Finished(entry)
+Moved(entry InstructionEntry) Texts
+	WgslStatement(Twice, 0).Moved(Twice.method.instructions(0)) is ("r0 = v_number;")
+	if entry.kind is InstructionType.LoadVariableToRegister
+		return Copied("v_" + entry.texts(0), "r" + entry.payload(0), entry.texts(0))
+	if entry.kind is InstructionType.StoreRegisterToVariable
+		return Copied("r" + entry.payload(0), "v_" + entry.texts(0), entry.texts(0))
+	let isLoad = entry.kind is InstructionType.LoadConstantToRegister
+	let target = isLoad then "r" + entry.payload(0) else "v_" + entry.texts.Last
+	List(Text) + (target + " = " + Literal(PayloadDecoder(entry).Value(isLoad then 1 else 0).number) + ";")
+Copied(source Text, target Text, name Text) Texts
+	WgslStatement(Summed, 5).Copied("v_input", "r3", "input") is ("r3l = v_inputl;")
+	let isList = MlirDeviceStatements(function, at).IsList(MlirKinds(function).VariableKind(at + 1, name))
+	List(Text) + (isList then target + "l = " + source + "l;" else target + " = " + source + ";")
+Literal(number Number) Text
+	WgslStatement(Twice, 1).Literal(-0.5) is "f32(-0.5)"
+	WgslStatement(Twice, 1).Literal(0.00000000000001) is "f32(1e-14)"
+	"f32(" + number + ")"
+Calculated(entry InstructionEntry) Texts
+	WgslStatement(Twice, 2).Calculated(Twice.method.instructions(2)) is ("r2 = r0 * r1;")
+	WgslStatement(Absolute, 2).Calculated(Absolute.method.instructions(2)) is ("flag = r0 < r1;")
+	let left = "r" + entry.payload(1)
+	let right = "r" + entry.payload(2)
+	let target = entry.payload(0) is 3 then "r" + entry.payload(3) else ""
+	if entry.kind is InstructionType.Power
+		return List(Text) + (target + " = strict_power(" + left + ", " + right + ");")
+	if entry.kind < InstructionType.ArithmeticSeparator
+		return List(Text) + (target + " = " + left + Arithmetic(entry.kind - InstructionType.Add) + right + ";")
+	let compared = "flag = " + left + Comparisons(entry.kind - InstructionType.Equal) + right + ";"
+	target is "" then List(Text) + compared else (compared, target + " = select(0.0, 1.0, flag);")
+Indexed(entry InstructionEntry) Texts
+	WgslStatement(Summed, 6).Indexed(Summed.method.instructions(6)).First.StartsWith("let k6 = u32(max(r")
+	let list = "v_" + entry.texts(0) + "l"
+	let index = "r" + entry.payload(1)
+	let target = "r" + entry.payload(0)
+	let position = "k" + at
+	let inside = "if (" + index + " >= 0.0 && " + position + " < " + list + ".y) { "
+	let read = inside + target + " = numbers[" + list + ".x + " + position + "]; }"
+	("let " + position + " = u32(max(" + index + ", 0.0));", read, "else { failed[0] = 1u; " + target + " = 0.0; }")
+Called(entry InstructionEntry) Texts
+	WgslStatement(Doubled, 4).Called(Doubled.method.instructions(4)) is ("r2 = s_Rows_Twice_1(0.0, r1);")
+	WgslStatement(MlirGpuCheck.Floored, 1).Called(MlirGpuCheck.Flooring) is ("r1 = floor(r0);")
+	let register = MlirDeviceCalls(function, at, function).Register(entry)
+	if entry.texts(1) is in ("Floor", "Length")
+		return List(Text) + Native(entry, "r" + register)
+	let callees = MlirModule(function.types, "").Called(function, at)
+	if (callees.Length is not 1) or (entry.texts(1) is in MlirDeviceCalls.Natives)
+		return List(Text) + ("unsupported: " + entry.texts(1))
+	let called = WgslFunction(callees.First)
+	let instance = register < 0 then "0.0" else "r" + register
+	List(Text) + ("r" + entry.payload(0) + " = " + called.Name + "(" + instance + called.Arguments(entry) + ");")
+Native(entry InstructionEntry, instance Text) Text
+	WgslStatement(Doubled, 4).Native(MlirGpuCheck.Flooring, "r0") is "r1 = floor(r0);"
+	let native = entry.texts(1) is "Floor" then "floor(" + instance + ")" else "f32(" + instance + "l.y)"
+	"r" + entry.payload(0) + " = " + native + ";"
+Looped(entry InstructionEntry) Texts
+	WgslStatement(Summed, 11).Looped(Summed.method.instructions(11)) is ("}", "v_index = s2i;", "v_value = s2v;")
+	if entry.kind is InstructionType.LoopBegin
+		return Begun("r" + entry.payload(0), entry)
+	let begin = function.method.LoopBeginOf(at)
+	("}", "v_index = s" + begin + "i;", "v_value = s" + begin + "v;")
+Begun(register Text, entry InstructionEntry) Texts
+	WgslStatement(Summed, 2).Begun("r0", Summed.method.instructions(2)).Last.StartsWith("v_value = ")
+	let isList = MlirDeviceStatements(function, at).IsList(MlirKinds(function).KindOf(at, entry.payload(0)))
+	let counter = "k" + at
+	let saved = ("let e" + at + " = " + register + "l;", "let s" + at + "i = v_index;", "let s" + at + "v = v_value;")
+	let count = "let c" + at + " = " + (isList then "e" + at + ".y;" else "u32(max(" + register + ", 0.0));")
+	let item = isList then "numbers[e" + at + ".x + " + counter + "]" else "f32(" + counter + ")"
+	let loop = "for (var " + counter + " = 0u; " + counter + " < c" + at + "; " + counter + "++) {"
+	saved + count + loop + ("v_index = f32(" + counter + ");") + ("v_value = " + item + ";")
+Finished(entry InstructionEntry) Texts
+	WgslStatement(Twice, 3).Finished(Twice.method.instructions(3)) is ("return r2;")
+	WgslStatement(Absolute, 3).Finished(Absolute.method.instructions(3)) is ("if (flag) {")
+	WgslStatement(Absolute, 11).Finished(Absolute.method.instructions(11)) is ("if (!flag) {")
+	WgslStatement(Absolute, 10).Finished(Absolute.method.instructions(10)) is ("}")
+	if entry.kind is InstructionType.CheckError
+		return List(Text)
+	if entry.kind is in (InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)
+		return List(Text) + (entry.kind is InstructionType.JumpToIdIfFalse then "if (flag) {" else "if (!flag) {")
+	let register = "r" + entry.payload(0)
+	let line = entry.kind is InstructionType.Return then "return " + register + ";" else "output[at] = " + register + ";"
+	List(Text) + (entry.kind is InstructionType.JumpEnd then "}" else line)

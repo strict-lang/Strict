@@ -39,7 +39,7 @@ Program(module MlirModule, base Text, root Text, build NativeBuild) Text
 	let text = module.Text
 	Reported("MLIR emission", started)
 	let before = Process.Elapsed
-	let program = build.Device(text, base, root)
+	let program = build.Device(WebBuild.Shaded(text, base, build.isWeb), base, root)
 	Reported("GPU preparation", before)
 	program
 Entry(main TypeCodegen, withTests Boolean, isQuiet Boolean, selection = "") TypeEntry

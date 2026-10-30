@@ -60,7 +60,7 @@ Combined(lines Texts, functions List(MlirFunction), counted List(MlirFunction)) 
 	let main = MlirEntry(counted.First, Others(counted), entrySymbol).Main
 	let host = outer.Text.Combine(lines + MlirGlobals(functions).Lines + table + main + "}", "\n")
 	BuildProfile(Logger).Reported("Emission / globals and assembly", before)
-	device is "" then host else host + "\n" + device
+	outer.Text.Combine((host, device, WgslShader.Scripts(functions)) - "", "\n")
 Functions List(MlirFunction)
 	Counters.Functions.Length is 1
 	Pair.Functions.Length is 2

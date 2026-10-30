@@ -15,7 +15,7 @@ Linked(base Text, executable Text) Text
 	let sources = NativeSources(tools.natives).Arguments(Platform.Web, tools.root) + Preloaded(folder + "/Content")
 	let page = " --shell-file " + tools.Quoted(tools.root + "/Compiler/WebShell.html")
 	let runtime = " --js-library " + tools.Quoted(tools.root + "/Compiler/WebRuntime.js")
-	let inputs = tools.Quoted(base + ".o") + sources + Mirrored(folder, base) + page + runtime
+	let inputs = tools.Quoted(base + ".o") + sources + Mirrored(folder, base) + Scripted(base) + page + runtime
 	let linked = ToolRunner(tools.Located("emcc")).Execute(inputs + " -o " + tools.Quoted(executable) + Options + " -O1")
 	linked.Failed then "emcc failed: " + linked.error else Optimized(executable)
 Compiled(base Text) Text
@@ -61,6 +61,20 @@ Mirrored(folder Text, base Text) Text
 	let linked = "FS.symlink(\"/Content\", \"" + path + "/Content\")"
 	File(base + ".pre.js").Write("(Module.preRun ||= []).push(() => { FS.mkdirTree(\"" + path + "\"); " + linked + " })")
 	" --pre-js \"" + base + ".pre.js\""
+Shaded(program Text, base Text, isWritten Boolean) Text
+	WebBuild.Shaded("module {\n}", "Compiler/output/Unshaded", true) is "module {\n}"
+	WebBuild.Shaded("module {\n}\n" + WgslShader.Marker + "\nx", "Compiler/output/Shaded", true) is "module {\n}"
+	Missing.Scripted("Compiler/output/Shaded") is " --pre-js \"Compiler/output/Shaded.shaders.js\""
+	let marker = program.IndexOf("\n" + WgslShader.Marker + "\n")
+	if marker < 0
+		return program
+	let start = marker + WgslShader.Marker.Length + 2
+	if isWritten
+		File(base + ".shaders.js").Write(program.Substring(start, program.Length - start))
+	program.Substring(0, marker)
+Scripted(base Text) Text
+	Missing.Scripted("Compiler/output/missing") is ""
+	File(base + ".shaders.js").Exists then " --pre-js \"" + base + ".shaders.js\"" else ""
 InstallLines Texts
 	Missing.InstallLines.Last is "C:/s/Tools/emsdk/emsdk activate latest"
 	let folder = tools.root + "/Tools/emsdk"

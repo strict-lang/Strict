@@ -1,0 +1,55 @@
+has function MlirFunction
+constant Twice = WgslFunction(MlirDeviceStatements.Twice)
+constant Summing = WgslFunction(MlirDeviceStatements.Summed)
+Name Text
+	Twice.Name is "s_Rows_Twice_1"
+	"s_" + function.Symbol
+Lines Texts
+	Twice.Lines.First is "fn s_Rows_Twice_1(instance: f32, p0: f32) -> f32 {"
+	Twice.Lines.Last is "}"
+	"v_number = p0;" is in Twice.Lines
+	let header = "fn " + Name + "(instance: f32" + Parameters + ") -> f32 {"
+	mutable entry = List(Text) + "v_value = instance;"
+	for function.method.parameters
+		entry = entry + ("v_" + value.Name + (IsList(index) then "l" else "") + " = p" + index + ";")
+	(List(Text) + header) + Declarations + entry + Members + Statements(0, function.method.instructions.Length) + "}"
+Parameters Text
+	Summing.Parameters is ", p0: vec2<u32>, p1: vec2<u32>"
+	mutable text = ""
+	for function.method.parameters
+		text = text + ", p" + index + (IsList(index) then ": vec2<u32>" else ": f32")
+	text
+IsList(parameter Number) Boolean
+	Summing.IsList(1)
+	Twice.IsList(0) is false
+	let kind = TypeEntry.ShortName(function.method.parameters(parameter).typeName)
+	MlirDeviceStatements(function, 0).IsList(kind)
+Arguments(entry InstructionEntry) Text
+	Twice.Arguments(MlirDeviceStatements.Call) is ", r1"
+	let countPosition = 5 + entry.payload(3)
+	mutable text = ""
+	for entry.payload(countPosition)
+		let register = "r" + entry.payload(countPosition + 1 + index)
+		text = text + ", " + (IsList(index) then register + "l" else register)
+	text
+Declarations Texts
+	Twice.Declarations.First is "var flag = false;"
+	"var v_numberl: vec2<u32>;" is in Twice.Declarations
+	mutable lines = List(Text) + "var flag = false;"
+	for LoadReuse(function.method.instructions).RegisterCount
+		lines = lines + ("var r" + index + ": f32;") + ("var r" + index + "l: vec2<u32>;")
+	for function.VariableNames
+		lines = lines + ("var v_" + value + ": f32;") + ("var v_" + value + "l: vec2<u32>;")
+	lines
+Members Texts
+	WgslFunction(MlirDeviceMembers.Head).Members is ("v_heads = m_heads;", "v_weightsl = m_weightsl;")
+	Twice.Members.Length is 0
+	for MlirDeviceMembers(function).Names
+		let isList = MlirDeviceStatements(function, 0).IsList(MlirKinds(function).VariableKind(0, value))
+		isList then "v_" + value + "l = m_" + value + "l;" else "v_" + value + " = m_" + value + ";"
+Statements(first Number, limit Number) Texts
+	Twice.Statements(2, 4) is ("r2 = r0 * r1;", "return r2;")
+	mutable lines = List(Text)
+	for Range(first, limit)
+		lines = lines + WgslStatement(function, value).Lines
+	lines

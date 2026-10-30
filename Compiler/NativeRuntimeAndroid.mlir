@@ -44,6 +44,11 @@
     %lowest = func.call @strict_thread_stack_lowest(%stack) : (!llvm.ptr) -> i64
     return %lowest : i64
   }
+  // the web runs kernels as WebGPU shaders (NativeRuntimeWeb.mlir), everywhere else the device code takes them
+  func.func private @strict_gpu_shaded(%name: !llvm.ptr, %count: i64, %source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64) -> f64 {
+    %none = arith.constant 0.0 : f64
+    return %none : f64
+  }
   func.func private @strict_gpu_library(%isAmd: i1) -> !llvm.ptr {
     %null = llvm.mlir.zero : !llvm.ptr
     llvm.return %null : !llvm.ptr

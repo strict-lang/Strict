@@ -1026,6 +1026,11 @@
   }
   llvm.mlir.global internal constant @strict_gpu_driver("nvcuda.dll\00") : !llvm.array<11 x i8>
   llvm.mlir.global internal constant @strict_gpu_amd_driver("amdhip64.dll\00") : !llvm.array<13 x i8>
+  // the web runs kernels as WebGPU shaders (NativeRuntimeWeb.mlir), everywhere else the device code takes them
+  func.func private @strict_gpu_shaded(%name: !llvm.ptr, %count: i64, %source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64) -> f64 {
+    %none = arith.constant 0.0 : f64
+    return %none : f64
+  }
   func.func private @strict_gpu_library(%isAmd: i1) -> !llvm.ptr {
     %nvidia = llvm.mlir.addressof @strict_gpu_driver : !llvm.ptr
     %amd = llvm.mlir.addressof @strict_gpu_amd_driver : !llvm.ptr

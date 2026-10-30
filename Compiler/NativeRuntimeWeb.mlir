@@ -546,6 +546,78 @@
     %none = arith.constant false
     return %none : i1
   }
+  // a kernel with a WGSL shader (WgslShader) runs on WebGPU: each value is a (number, -1) or (items address, length)
+  // pair, the loop source is the last one, strict_webgpu fills the result list or returns 0 to run it on the CPU
+  llvm.func @strict_webgpu_ready(!llvm.ptr) -> i32
+  llvm.func @strict_webgpu(!llvm.ptr, i32, !llvm.ptr, i32, !llvm.ptr) -> i32
+  func.func private @strict_gpu_shaded(%name: !llvm.ptr, %count: i64, %source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %ready = llvm.call @strict_webgpu_ready(%name) : (!llvm.ptr) -> i32
+    %unready = arith.constant 0 : i32
+    %isReady = arith.cmpi ne, %ready, %unready : i32
+    %isPlain = arith.cmpi ule, %kind, %one : i64
+    %usable = arith.andi %isReady, %isPlain : i1
+    cf.cond_br %usable, ^table, ^skip
+  ^skip:
+    return %zero : f64
+  ^table:
+    %slots = arith.addi %valueCount, %one : i64
+    %entries = arith.muli %slots, %two : i64
+    %table = llvm.alloca %entries x f64 : (i64) -> !llvm.ptr
+    cf.br ^slot(%none : i64)
+  ^slot(%at: i64):
+    %more = arith.cmpi slt, %at, %valueCount : i64
+    cf.cond_br %more, ^value, ^sourced
+  ^value:
+    %valueSlot = llvm.getelementptr %values[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %value = llvm.load %valueSlot : !llvm.ptr -> f64
+    %bit = arith.shli %one, %at : i64
+    %masked = arith.andi %mask, %bit : i64
+    %isList = arith.cmpi ne, %masked, %none : i64
+    %entry = arith.muli %at, %two : i64
+    func.call @strict_gpu_shaded_slot(%table, %entry, %value, %isList) : (!llvm.ptr, i64, f64, i1) -> ()
+    %next = arith.addi %at, %one : i64
+    cf.br ^slot(%next : i64)
+  ^sourced:
+    %sourceEntry = arith.muli %valueCount, %two : i64
+    %isSourceList = arith.cmpi eq, %kind, %one : i64
+    func.call @strict_gpu_shaded_slot(%table, %sourceEntry, %source, %isSourceList) : (!llvm.ptr, i64, f64, i1) -> ()
+    %length = arith.sitofp %count : i64 to f64
+    %result = func.call @strict_list_new(%length, %length) : (f64, f64) -> f64
+    %items = func.call @strict_list_items(%result) : (f64) -> !llvm.ptr
+    %count32 = arith.trunci %count : i64 to i32
+    %slots32 = arith.trunci %slots : i64 to i32
+    %ran = llvm.call @strict_webgpu(%name, %count32, %table, %slots32, %items) : (!llvm.ptr, i32, !llvm.ptr, i32, !llvm.ptr) -> i32
+    %eight = arith.constant 8 : i64
+    %bytes = arith.muli %count, %eight : i64
+    func.call @strict_gc_written_range(%items, %bytes) : (!llvm.ptr, i64) -> ()
+    %isRan = arith.cmpi ne, %ran, %unready : i32
+    %chosen = arith.select %isRan, %result, %zero : f64
+    return %chosen : f64
+  }
+  func.func private @strict_gpu_shaded_slot(%table: !llvm.ptr, %entry: i64, %value: f64, %isList: i1) {
+    %one = arith.constant 1 : i64
+    %number = llvm.getelementptr %table[%entry] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %secondEntry = arith.addi %entry, %one : i64
+    %second = llvm.getelementptr %table[%secondEntry] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    cf.cond_br %isList, ^list, ^plain
+  ^plain:
+    %unlisted = arith.constant -1.0 : f64
+    llvm.store %value, %number : f64, !llvm.ptr
+    llvm.store %unlisted, %second : f64, !llvm.ptr
+    return
+  ^list:
+    %length = func.call @strict_list_length(%value) : (f64) -> f64
+    %items = func.call @strict_list_items(%value) : (f64) -> !llvm.ptr
+    %address = llvm.ptrtoint %items : !llvm.ptr to i64
+    %addressNumber = arith.uitofp %address : i64 to f64
+    llvm.store %addressNumber, %number : f64, !llvm.ptr
+    llvm.store %length, %second : f64, !llvm.ptr
+    return
+  }
   func.func private @strict_gpu_library(%isAmd: i1) -> !llvm.ptr {
     %null = llvm.mlir.zero : !llvm.ptr
     return %null : !llvm.ptr

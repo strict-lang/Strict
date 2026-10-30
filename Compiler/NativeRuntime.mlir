@@ -12427,6 +12427,12 @@
   ^worker:
     return %zero : f64
   ^host:
+    %shaded = func.call @strict_gpu_shaded(%name, %count, %source, %kind, %values, %valueCount, %mask) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64) -> f64
+    %isShaded = arith.cmpf one, %shaded, %zero : f64
+    cf.cond_br %isShaded, ^shadedDone, ^device
+  ^shadedDone:
+    return %shaded : f64
+  ^device:
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %activeFrameSlot = llvm.mlir.addressof @strict_gpu_active : !llvm.ptr

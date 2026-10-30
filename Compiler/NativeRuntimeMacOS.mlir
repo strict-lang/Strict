@@ -1,6 +1,11 @@
   llvm.mlir.global internal constant @strict_heap_bytes(68719476736 : i64) : i64
   llvm.mlir.global internal constant @strict_macos("MacOS\00") : !llvm.array<6 x i8>
   llvm.mlir.global internal constant @strict_temp_template("/tmp/strictXXXXXX\00") : !llvm.array<18 x i8>
+  // the web runs kernels as WebGPU shaders (NativeRuntimeWeb.mlir), everywhere else the device code takes them
+  func.func private @strict_gpu_shaded(%name: !llvm.ptr, %count: i64, %source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64) -> f64 {
+    %none = arith.constant 0.0 : f64
+    return %none : f64
+  }
   func.func private @strict_gpu_library(%isAmd: i1) -> !llvm.ptr {
     %null = llvm.mlir.zero : !llvm.ptr
     cf.cond_br %isAmd, ^failed, ^open

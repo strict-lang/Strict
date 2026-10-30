@@ -1,0 +1,106 @@
+has function MlirFunction
+has position Number
+constant Lines = ("has scale Number with value.Bits is 32", "Scaled(count Number) Numbers", "\tfor count", "\t\tindex * scale")
+constant Scaling = TypeCodegen("Strict/Scaling", Lines, ValueCodegen.NoTypes, List(Text)).Entry
+constant Scaled = WgslShader(MlirFunction(List(TypeEntry) + Scaling, Scaling, Scaling.methods.First), 2)
+constant Doubling = WgslShader(MlirParallel.Doubling.function, 2)
+constant Marker = "// web shaders"
+constant Bindings = ("@group(0) @binding(0) var<storage, read_write> output: array<f32>;", "@group(0) @binding(1) var<storage, read> numbers: array<f32>;", "@group(0) @binding(2) var<storage, read> places: array<u32>;", "@group(0) @binding(3) var<storage, read_write> failed: array<u32>;")
+constant Power = ("fn strict_power(base: f32, exponent: f32) -> f32 {", "let size = pow(abs(base), exponent);", "let isOdd = abs(exponent % 2.0) == 1.0;", "return select(select(size, -size, base < 0.0 && isOdd), 1.0, exponent == 0.0);", "}")
+constant Entry = ("@compute @workgroup_size(64)", "fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {", "let at = id.x + id.y * groups.x * 64u;")
+Source Text
+	Scaled.Source.StartsWith(Bindings.First)
+	Doubling.Source is ""
+	if IsShaded is false
+		return ""
+	let lines = Bindings + Power + Globals + Functions + Main
+	for lines
+		if value.StartsWith("unsupported")
+			return ""
+	Text.Combine(lines, "\n")
+IsShaded Boolean
+	Scaled.IsShaded
+	Doubling.IsShaded is false
+	let collection = MlirLoops(function, position).Collection
+	let isPlain = (collection is in ("", "List(Number)")) and (MlirLayout(function).Packed(position) is 0)
+	let isKernel = MlirWholeKernel(function, position).IsKernel
+	if (isPlain is false) or isKernel or (MlirGpuCheck(function, position).IsGpu is false)
+		return false
+	let free = MlirGpuCheck(function, position).Free
+	for function.type.members
+		if (value.Bits is 32) and (value.Name is in free)
+			return true
+	false
+Functions Texts
+	Doubling.Functions.First is "fn s_Rows_Twice_1(instance: f32, p0: f32) -> f32 {"
+	mutable symbols = List(Text)
+	mutable lines = List(Text)
+	for MlirGpu.Devices(function, position + 1, function.method.LoopEndOf(position), 0)
+		if (value.Symbol is not in symbols) and (value.method.Name is not in ("Floor", "Length"))
+			symbols = symbols + value.Symbol
+			lines = lines + WgslFunction(value).Lines
+	lines
+Main Texts
+	Scaled.Main.First is "@compute @workgroup_size(64)"
+	"if (at >= places[4]) { return; }" is in Scaled.Main
+	"output[at] = r3;" is in Scaled.Main
+	let count = "if (at >= places[" + (MlirGpuCheck(function, position).Free.Length + 1) * 2 + "]) { return; }"
+	let body = WgslFunction(function).Statements(position + 1, function.method.LoopEndOf(position))
+	(Entry + count + WgslFunction(function).Declarations + Loaded + Started + body) + "}"
+Loaded Texts
+	Scaled.Loaded is ("m_scale = numbers[places[0]];", "v_scale = m_scale;")
+	mutable lines = List(Text)
+	for MlirGpuCheck(function, position).Free
+		let place = "places[" + index * 2 + "]"
+		let pair = "l = vec2<u32>(" + place + ", places[" + (index * 2 + 1) + "]);"
+		let suffix = MlirDevice(function, position).IsList(value) then "l" else ""
+		let loaded = "m_" + value + (suffix is "l" then pair else " = numbers[" + place + "];")
+		lines = lines + loaded + ("v_" + value + suffix + " = m_" + value + suffix + ";")
+	lines
+Globals Texts
+	WgslShader(MlirGpuCheck.Heading.function, 2).Globals.Last is "var<private> m_weightsl: vec2<u32>;"
+	mutable lines = List(Text)
+	for MlirGpuCheck(function, position).Free
+		lines = lines + ("var<private> m_" + value + ": f32;") + ("var<private> m_" + value + "l: vec2<u32>;")
+	lines
+Started Texts
+	Scaled.Started is ("v_index = f32(at);", "v_value = f32(at);")
+	Doubling.Started.Last is "v_value = numbers[places[0] + at];"
+	let source = "places[" + MlirGpuCheck(function, position).Free.Length * 2 + "]"
+	let item = MlirLoops(function, position).Collection is "" then "f32(at)" else "numbers[" + source + " + at]"
+	("v_index = f32(at);", "v_value = " + item + ";")
+Scripts(functions List(MlirFunction)) Text
+	WgslShader.Scripts(List(MlirFunction) + Scaled.function).StartsWith(Marker + "\n(Module[\"strictShaders\"] ||= {})")
+	WgslShader.Scripts(List(MlirFunction) + Doubling.function) is ""
+	mutable lines = List(Text)
+	for functions
+		if IsSingle(value.type)
+			lines = lines + Shaded(value)
+	lines = lines - ""
+	lines.Length is 0 then "" else Marker + "\n" + Text.Combine(lines, "\n")
+IsSingle(type TypeEntry) Boolean
+	WgslShader.IsSingle(Scaling)
+	WgslShader.IsSingle(Doubling.function.type) is false
+	for type.members
+		if value.Bits is 32
+			return true
+	false
+Shaded(inspected MlirFunction) Texts
+	WgslShader.Shaded(Scaled.function).First.IndexOf("[\"Scaling_Scaled_1_gpu2\"] = \"@group(0)") > 0
+	WgslShader.Shaded(Scaled.function).First.EndsWith("strictSingles\"] ||= {})[\"Scaling_Scaled_1_gpu2\"] = [0];")
+	for inspected.method.instructions
+		if value.kind is InstructionType.LoopBegin
+			let shader = WgslShader(inspected, index)
+			let source = shader.Source.Replace("\n", "\\n")
+			let name = "[\"" + MlirDevice(inspected, index).Name + "\"] = "
+			let singles = " (Module[\"strictSingles\"] ||= {})" + name + shader.Singles + ";"
+			source is "" then "" else "(Module[\"strictShaders\"] ||= {})" + name + "\"" + source + "\";" + singles
+Singles Text
+	Scaled.Singles is "[0]"
+	Doubling.Singles is "[]"
+	let free = MlirGpuCheck(function, position).Free
+	mutable singles = List(Text)
+	for function.type.members
+		if (value.Bits is 32) and (value.Name is in free)
+			singles = singles + (free.Index(value.Name) to Text)
+	"[" + Text.Combine(singles, ", ") + "]"
