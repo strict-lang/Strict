@@ -1,5 +1,6 @@
 has bits Number
 constant Single = Rounding(32)
+constant Counter = TypeEntry("Strict/Counter", List(MemberEntry) + MemberEntry("count", "Strict/Number", InstructionEntry(InstructionType.Set, List(Text), (1, 7, 0)), false), List(MethodEntry))
 Of(original VmValue) VmValue
 	Single.Of(VmValue.OfNumber(0.1)).number is 0.10000000149011612
 	Single.Of(VmValue.OfList(VmValue.OfNumber(0.1), VmValue.OfNumber(1))).items.First.number is 0.10000000149011612
@@ -27,8 +28,9 @@ Bits(member MemberEntry, natives Natives) Number
 Wrapped(type TypeEntry, call Invocation) VmValue
 	Single.Wrapped(Natives.Single, Natives.NewSingle).number is 0.10000000149011612
 	Single.Wrapped(Natives.Degree, Natives.NewDegree).number is 3
+	Single.Wrapped(Counter, Invocation(Natives.NewDegree.entry, List(VmValue), VmValue.None)).number is 7
 	if call.Arguments.Length is 0
-		return VmValue.None
+		return type.members.Length is 0 then VmValue.None else Natives(List(TypeEntry) + type).Initial(type.members.First)
 	let memberBits = type.members.Length is 0 then 64 else type.members.First.Bits
 	Rounding(memberBits).Of(call.Arguments.First).As(call.TypeName)
 Members(type TypeEntry, call Invocation, natives Natives) List(VmValue)

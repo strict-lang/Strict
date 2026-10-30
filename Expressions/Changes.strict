@@ -1,20 +1,31 @@
 has lines Texts
-constant Ticking = Changes(("mutable count Number", "has step Number = 1", "Next Number", "\tcount = count + step", "\tcount", "Twice Number", "\tNext + Next", "Size Number", "\tstep"))
+has isReading Boolean = false
+constant Ticking = Changes(("mutable count Number", "has step Number = 1", "Next Number", "\tcount = count + step", "\tcount", "Twice Number", "\tNext + Next", "Size Number", "\tstep", "Half(number Number) Number", "\tnumber / 2"))
+constant Reading = Changes(Ticking.lines, true)
 Members Texts
 	Ticking.Members is ("count")
+	Reading.Members is ("count", "step")
 	for lines
-		if value.StartsWith("mutable ")
+		if value.StartsWith("mutable ") or isReading and value.StartsWith("has ")
 			Tokenizer(value).Tokens(1)
 Methods Texts
 	Ticking.Methods is ("Next", "Twice")
-	Changes(("has count Number", "Next Number", "\tcount")).Methods.Length is 0
-	let members = Members
+	Reading.Methods is ("Next", "Twice", "Size")
+	Changes(("has count Number", "Next Number", "\tcount"), true).Methods.Length is 0
+	let members = isReading and (IsDefaulted is false) then List(Text) else Members
 	mutable changing = List(Text)
 	mutable found = members.Length is 0 then List(Text) else Found(members, changing)
 	for as long as found.Length > changing.Length
 		changing = found
 		found = Found(members, changing)
 	changing
+IsDefaulted Boolean
+	Reading.IsDefaulted
+	Changes(List(Text) + "has count Number").IsDefaulted is false
+	for lines
+		if TypeShape(lines).IsMemberLine(value) and (value.StartsWith("constant ") is false) and (value.IndexOf(" = ") > 0)
+			return true
+	false
 Found(members Texts, changing Texts) Texts
 	Ticking.Found(("count"), List(Text)) is ("Next")
 	Ticking.Found(("count"), ("Next")) is ("Next", "Twice")
@@ -37,13 +48,22 @@ IsChanging(tokens Texts, members Texts, changing Texts) Boolean
 	if (tokens.First is in members) and ("=" is in tokens)
 		return true
 	for tokens
-		let isOwnCall = (value is in changing) and ((index is 0) or (tokens(index - 1) is not "."))
-		if isOwnCall or (value is in members) and (index + 1 < tokens.Length) and (tokens(index + 1) is ".")
+		if IsUsed(tokens, index, members, changing)
 			return true
 	false
+IsUsed(tokens Texts, at Number, members Texts, changing Texts) Boolean
+	Ticking.IsUsed(("a", ".", "random", ".", "Get"), 2, ("random"), List(Text)) is false
+	Reading.IsUsed(List(Text) + "step", 0, List(Text) + "step", List(Text))
+	let token = tokens(at)
+	if (at > 0) and (tokens(at - 1) is ".")
+		return false
+	let isCalled = (token is in members) and (at + 1 < tokens.Length) and (tokens(at + 1) is ".")
+	(token is in changing) or isCalled or isReading and ((token is in members) or (token is "value"))
 Added(scope Scope) Scope
 	Ticking.Added(KnownTypes.NoMembers).TypeOf("Twice changes") is "changes"
+	Reading.Added(KnownTypes.NoMembers).TypeOf("Size reads") is "reads"
+	let suffix = isReading then " reads" else " changes"
 	mutable added = scope
 	for Methods
-		added = added.With(value + " changes", "changes")
+		added = added.With(value + suffix, suffix.Trim)
 	added

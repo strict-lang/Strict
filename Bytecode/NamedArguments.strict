@@ -48,7 +48,8 @@ Last(call SyntaxNode, names Texts) Number
 	Curved.Last(SyntaxParser(Tokenizer("Part(1)").Tokens).Parse, ("buffer", "light", "mask")) is 2
 	mutable last = -1
 	for names
-		if IsComputed(call.text, value)
+		let isDefaulted = (call.children.Length is 0) and (last is index - 1) and (Fallback(call.text, value) is not "")
+		if IsComputed(call.text, value) or isDefaulted
 			last = index
 	for call.children
 		let given = value.Kind is "Missing" then -1 else index

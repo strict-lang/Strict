@@ -105,6 +105,8 @@ Builds, checks, folder tests on the VM, VS Code typing checks and value tracing 
 - `constant` for values computed from constants, `let` for everything else that doesn't change, `mutable` only when a value really changes.
 - An Error is handled where it shows up (returned, kept in a variable or checked with `is Error`), any other use returns it to the caller with one more stack trace line. See `Examples/ErrorHandling.strict`.
 - A call of a method returning `Mutable(...)` as a statement (`numbers.Add(5)`) changes the `mutable` variable it is called on.
+- A method assigning a `mutable` member changes the instance it is called on, which has to be a `mutable` variable or member: `mutable ticker = Ticker(0)`, then `ticker.Next` twice gives 1 and 2 (`ChangingCallNeedsMutableVariable` otherwise).
+- A type name is its default instance (members with their defaults): `Bag.Count` called from another type calls Count on `Bag`, constants and methods using no members need no instance.
 - Values never change: `list + element` gives a new list. The runtime reuses the old memory in place since the old version is not used anymore (using it again forces a copy, that is bad code).
 
 ## How it is built (from low to high level)

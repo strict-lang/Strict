@@ -1,0 +1,27 @@
+has values ValueCodegen
+constant Bags = KnownTypes(("Bag", "Plain"), (Scope(List(Text) + "items", List(Text) + "Texts"), KnownTypes.NoMembers), (Scope(List(Text) + "Count", List(Text) + "Number"), KnownTypes.NoMembers), (Scope(("items default", "Count reads"), ("(\"a\")", "reads")), KnownTypes.NoMembers))
+constant Bagged = DefaultInstance(ValueCodegen(TypeInference(Bags, (KnownTypes.NoMembers, KnownTypes.NoMembers)), KnownTypes.NoMembers, CallTarget.Plain))
+constant Counting = SyntaxNode("Member", "Count", SyntaxNode("Identifier", "Bag"))
+constant Plainly = SyntaxNode("Member", "Count", SyntaxNode("Identifier", "Plain"))
+Called(node SyntaxNode, block CodeBlock) CodeBlock
+	Bagged.Called(Counting, CodeBlock.Empty).instructions.First.texts(1) is "from"
+	let instanced = Instanced(node, block)
+	let arranged = NamedArguments(values).Arranged(node, block)
+	instanced is node then values.Replacing(arranged, block) else values.InstanceCall(instanced, block)
+Instanced(node SyntaxNode, block CodeBlock) SyntaxNode
+	Bagged.Instanced(Counting, CodeBlock.Empty).children(0).Kind is "Call"
+	Bagged.Instanced(Plainly, CodeBlock.Empty).children(0).Kind is "Identifier"
+	Bagged.Instanced(Counting, CodeBlock.Empty.Declare("Bag", "Number")) is Counting
+	if (node.Kind is not in ("Member", "MethodCall")) or (node.children.Length is 0)
+		return node
+	let instance = node.children(0)
+	let isOwn = instance.text is TypeEntry.ShortName(values.target.TypeName)
+	if isOwn or (values.IsTypeName(instance, block) is false) or (IsReading(instance.text, node.text) is false)
+		return node
+	mutable children = node.children
+	children(0) = SyntaxNode("Call", instance.text, List(SyntaxNode), node.line)
+	SyntaxNode(node.Kind, node.text, children, node.line)
+IsReading(type Text, method Text) Boolean
+	Bagged.IsReading("Bag", "Count")
+	Bagged.IsReading("Plain", "Count") is false
+	values.inference.types.ParameterScope(type).TypeOf(method + " reads") is not ""

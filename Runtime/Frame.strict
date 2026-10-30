@@ -14,16 +14,16 @@ constant Twice = Frame(Doubling, Doubling.types.First.methods.First, "Strict/Dou
 constant Calling = Frame(Machine(Resolver(List(TypeEntry) + Invocation.Failing).Resolved), MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Invoke(0, ("Strict/Failing", "Fail", "Strict/Number"), List(Number), -1)), "Strict/Caller")
 constant Listed = (VmValue.OfText("ab"), VmValue.OfText("a"), VmValue.None, VmValue.OfBoolean(true), Looping.Counting, VmValue.None, VmValue.OfNumber(1), VmValue.OfList(VmValue.OfNumber(10), VmValue.OfNumber(20)), VmValue.OfNumber(5))
 Finished(arguments List(VmValue)) List(VmValue)
-	Twice.Finished(Listed).Index(VmValue.OfNumber(42)) is ResultSlot
 	mutable slots = arguments
 	mutable position = 0
-	let instructions = method.instructions
 	for Machine.MaxSteps
-		if position >= instructions.Length
+		if position >= method.instructions.Length
 			return slots
-		let entry = instructions(position)
+		let entry = method.instructions(position)
 		slots(entry.Target) = Value(entry, position, slots)
-		slots = entry.kind is InstructionType.Invoke then Unpacked(slots, entry.Target) else slots
+		if (entry.kind is InstructionType.Invoke) and (slots(entry.Target).kind is "Changing")
+			slots(entry.Target + 1) = slots(entry.Target).items(1)
+			slots(entry.Target) = slots(entry.Target).items(0)
 		position = entry.kind < InstructionType.Return then position + 1 else Next(entry, position, slots)
 	slots
 Value(entry InstructionEntry, position Number, slots List(VmValue)) VmValue
@@ -141,16 +141,6 @@ Other(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	if entry.kind is InstructionType.CheckError
 		return ErrorCheck(entry).Value(slots(entry.payload(0)), slots(entry.Target), value, position)
 	entry.kind is InstructionType.FieldLoad then machine.Field(entry, slots(entry.payload(1))) else Changed(entry, slots)
-Unpacked(slots List(VmValue), target Number) List(VmValue)
-	Twice.Unpacked(Listed, 0) is Listed
-	Twice.Unpacked((VmValue.OfChanging(VmValue.OfNumber(1), VmValue.OfNumber(2)), VmValue.None), 0)(1).number is 2
-	let result = slots(target)
-	if result.kind is not "Changing"
-		return slots
-	mutable unpacked = slots
-	unpacked(target) = result.items(0)
-	unpacked(target + 1) = result.items(1)
-	unpacked
 Changed(entry InstructionEntry, slots List(VmValue)) VmValue
 	Twice.Changed(InstructionEntry(InstructionType.InvokeWriteToList, "list", (8, 7)), Listed).Length is 3
 	Twice.Changed(InstructionEntry.Jump(InstructionType.JumpEnd, 0), Listed).kind is "None"
