@@ -34,7 +34,7 @@ Device(program Text, base Text, root Text) Text
 	let marker = program.IndexOf("\n" + MlirGpu.Marker)
 	if marker < 0
 		return PtxCache(base).Unlaunched(program)
-	let gpu = DeviceBuild(Toolchain(Platform.Current, root))
+	let gpu = DeviceBuild(Toolchain(Platform.Current, root), base.EndsWith(".test") is false)
 	let device = program.Substring(marker + 1, program.Length - marker - 1)
 	let ptx = Target is Platform.Current then gpu.Built(base, device, MlirTensors.Attending.Used(program)) else List(Text)
 	Checked(gpu.Embedded(program.Substring(0, marker), ptx, base))

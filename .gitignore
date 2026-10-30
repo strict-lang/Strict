@@ -141,6 +141,7 @@ Compiler/NativeCompiler.checked
 *.exe
 *.wasm
 *.ptx
+*.fatbin
 *.metal
 !Compiler/MetalPrelude.metal
 *.hsaco

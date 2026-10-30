@@ -11639,9 +11639,14 @@
   }
   // the PTX of a program lives next to its executable (Name.ptx, Name.older.ptx for older GPUs), the generated code
   // only names it ("hash:Name\0hash\0"), the first launch reads both into "newer\0older\0", programs without GPU skip it;
-  // the runtime kernels (Name.runtime.ptx, Name.runtime.older.ptx, DeviceBuild.Shared) go the same way into the runtime code
+  // the runtime kernels (Name.runtime.ptx, Name.runtime.older.ptx, DeviceBuild.Shared) go the same way into the runtime code;
+  // the cubins a program build ships (Name.fatbin, Name.runtime.fatbin, DeviceBuild.Fatbin) are read with them
   llvm.mlir.global internal @strict_gpu_code(0 : i64) : i64
   llvm.mlir.global internal @strict_gpu_runtime_code(0 : i64) : i64
+  llvm.mlir.global internal @strict_gpu_binary(0 : i64) : i64
+  llvm.mlir.global internal @strict_gpu_runtime_binary(0 : i64) : i64
+  llvm.mlir.global internal constant @strict_gpu_binary_ending(".fatbin\00") : !llvm.array<8 x i8>
+  llvm.mlir.global internal constant @strict_gpu_runtime_binary_ending(".runtime.fatbin\00") : !llvm.array<16 x i8>
   llvm.mlir.global internal constant @strict_gpu_runtime_ending(".runtime.ptx\00") : !llvm.array<13 x i8>
   llvm.mlir.global internal constant @strict_gpu_runtime_older_ending(".runtime.older.ptx\00") : !llvm.array<19 x i8>
   llvm.mlir.global internal constant @strict_gpu_amd_ending(".hsaco\00") : !llvm.array<7 x i8>
@@ -11693,7 +11698,61 @@
     %buffer = func.call @strict_gpu_paired(%newer, %older) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %bufferBits = llvm.ptrtoint %buffer : !llvm.ptr to i64
     llvm.store %bufferBits, %codeSlot : i64, !llvm.ptr
+    %binaryEnding = llvm.mlir.addressof @strict_gpu_binary_ending : !llvm.ptr
+    %binary = func.call @strict_gpu_beside(%stem, %binaryEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %binaryBits = llvm.ptrtoint %binary : !llvm.ptr to i64
+    %binarySlot = llvm.mlir.addressof @strict_gpu_binary : !llvm.ptr
+    llvm.store %binaryBits, %binarySlot : i64, !llvm.ptr
+    %runtimeBinaryEnding = llvm.mlir.addressof @strict_gpu_runtime_binary_ending : !llvm.ptr
+    %runtimeBinary = func.call @strict_gpu_beside(%stem, %runtimeBinaryEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %runtimeBinaryBits = llvm.ptrtoint %runtimeBinary : !llvm.ptr to i64
+    %runtimeBinarySlot = llvm.mlir.addressof @strict_gpu_runtime_binary : !llvm.ptr
+    llvm.store %runtimeBinaryBits, %runtimeBinarySlot : i64, !llvm.ptr
     return %buffer : !llvm.ptr
+  }
+  // the module of the cubins in a binary slot (one fatbin for sm_75, sm_80, sm_86 and sm_89, the driver picks the one for
+  // the GPU), false without a shipped fatbin or when the driver rejects it (another GPU or an older driver), then the
+  // PTX is loaded; the sm_75 cubin comes from the older PTX, so a GPU before Ampere runs the older kernels
+  func.func private @strict_gpu_binary_loaded(%loadData: !llvm.ptr, %moduleSlot: !llvm.ptr, %binarySlot: !llvm.ptr) -> i1 {
+    %zero = arith.constant 0 : i64
+    %zero32 = arith.constant 0 : i32
+    %one = arith.constant 1 : i64
+    %false = arith.constant false
+    %bits = llvm.load %binarySlot : !llvm.ptr -> i64
+    %isRead = arith.cmpi ne, %bits, %zero : i64
+    cf.cond_br %isRead, ^read, ^skipped
+  ^read:
+    %binary = llvm.inttoptr %bits : i64 to !llvm.ptr
+    %first = llvm.load %binary : !llvm.ptr -> i8
+    %nothing = arith.constant 0 : i8
+    %isEmpty = arith.cmpi eq, %first, %nothing : i8
+    cf.cond_br %isEmpty, ^skipped, ^load
+  ^load:
+    %loaded = func.call @strict_gpu_loaded(%loadData, %moduleSlot, %binary) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    %isLoaded = arith.cmpi eq, %loaded, %zero32 : i32
+    cf.cond_br %isLoaded, ^older, ^skipped
+  ^older:
+    %deviceSlot = llvm.alloca %one x i32 : (i64) -> !llvm.ptr
+    %majorSlot = llvm.alloca %one x i32 : (i64) -> !llvm.ptr
+    llvm.store %zero32, %majorSlot : i32, !llvm.ptr
+    %deviceGetIndex = arith.constant 1 : i64
+    %deviceGet = func.call @strict_gpu_call(%deviceGetIndex) : (i64) -> !llvm.ptr
+    %found = llvm.call %deviceGet(%deviceSlot, %zero32) : !llvm.ptr, (!llvm.ptr, i32) -> i32
+    %device = llvm.load %deviceSlot : !llvm.ptr -> i32
+    %attributeIndex = arith.constant 32 : i64
+    %getAttribute = func.call @strict_gpu_call(%attributeIndex) : (i64) -> !llvm.ptr
+    %computeMajor = arith.constant 75 : i32
+    %queried = llvm.call %getAttribute(%majorSlot, %computeMajor, %device) : !llvm.ptr, (!llvm.ptr, i32, i32) -> i32
+    %major = llvm.load %majorSlot : !llvm.ptr -> i32
+    %ampere = arith.constant 8 : i32
+    %isOlder = arith.cmpi slt, %major, %ampere : i32
+    %older = arith.extui %isOlder : i1 to i64
+    %olderSlot = llvm.mlir.addressof @strict_gpu_older : !llvm.ptr
+    llvm.store %older, %olderSlot : i64, !llvm.ptr
+    %true = arith.constant true
+    return %true : i1
+  ^skipped:
+    return %false : i1
   }
   // "first\0second\0" in one allocation, the two texts are freed
   func.func private @strict_gpu_paired(%first: !llvm.ptr, %second: !llvm.ptr) -> !llvm.ptr {
@@ -11938,6 +11997,13 @@
     %loadData = func.call @strict_gpu_call(%loadIndex) : (i64) -> !llvm.ptr
     %code = func.call @strict_gpu_text(%ptx) : (!llvm.ptr) -> !llvm.ptr
     %started = func.call @strict_clock() : () -> f64
+    %binarySlot = llvm.mlir.addressof @strict_gpu_binary : !llvm.ptr
+    %fromBinary = func.call @strict_gpu_binary_loaded(%loadData, %moduleSlot, %binarySlot) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> i1
+    cf.cond_br %fromBinary, ^loaded, ^ptx
+  ^ptx:
+    // the runtime cubins only go with the program's, its PTX picks newer or older kernels on its own
+    %runtimeBinarySlot = llvm.mlir.addressof @strict_gpu_runtime_binary : !llvm.ptr
+    llvm.store %zero, %runtimeBinarySlot : i64, !llvm.ptr
     %loaded = func.call @strict_gpu_loaded(%loadData, %moduleSlot, %code) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
     %loadFailed = arith.cmpi ne, %loaded, %zero32 : i32
     %isAmd = func.call @strict_gpu_is_amd() : () -> i1
@@ -12034,6 +12100,10 @@
     cf.cond_br %isEmpty, ^done, ^load
   ^load:
     %moduleSlot = llvm.mlir.addressof @strict_gpu_runtime : !llvm.ptr
+    %binarySlot = llvm.mlir.addressof @strict_gpu_runtime_binary : !llvm.ptr
+    %fromBinary = func.call @strict_gpu_binary_loaded(%loadData, %moduleSlot, %binarySlot) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> i1
+    cf.cond_br %fromBinary, ^done, ^ptx
+  ^ptx:
     %started = func.call @strict_clock() : () -> f64
     %loaded = func.call @strict_gpu_loaded(%loadData, %moduleSlot, %chosen) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
     %failed = arith.cmpi ne, %loaded, %zero32 : i32

@@ -30,7 +30,6 @@ Details for the GPU line of [improvements.md](improvements.md), one short line e
 ## Loading
 - 8 bit rows gathered straight from the mapped file (the 21 GB H3 DiT loads in 10-12 s, ComfyUI 4-7)
 - no native test reaches the locked path of `strict_packed_rows` and `strict_rows` (matrices of 4 MB and more): a test with a big matrix
-- releases should ship cubins for sm_75, sm_80, sm_86 and sm_89 and load the one for the GPU before the PTX (the driver compiles MossImage's PTX 4 + 12-14 s on a first run)
 
 ## Generated loops
 - a loop reading a member of an object parameter, a type constant or `.Length` of a list parameter stays on the CPU: pass loop invariant members as numbers
