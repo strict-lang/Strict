@@ -9,6 +9,7 @@ Contains(point Vector2) Boolean
 	Rectangle(Vector2(2, 3), 4, 6).Contains(Vector2(0, 0))
 	Rectangle(Vector2(2, 3), 4, 6).Contains(Vector2(4, 6))
 	Rectangle(Vector2(2, 3), 4, 6).Contains(Vector2(5, 3)) is false
+	Rectangle(Vector2(0, 0), 0.1, 1).Contains(Vector2(0.05000000074505806, 0))
 	point.X >= Left and point.X <= Right and point.Y >= Bottom and point.Y <= Top
 Intersects(other) Boolean
 	Rectangle(Vector2(0, 0), 6, 2).Intersects(Rectangle(Vector2(0, 0), 2, 6))

@@ -63,6 +63,18 @@ Argument(entry InstructionEntry, name Text, fallback Number) Text
 	Sample.Argument(Sized, "Other", 0) is "%r0"
 	let named = Invocation(entry, List(VmValue), VmValue.None).ParameterNames.Index(name)
 	"%r" + entry.payload(5 + entry.payload(3) + 1 + (named < 0 then fallback else named))
+Rounded(member MemberEntry, register Number, loaded Text) Texts
+	Turns.Rounded(Turning.members.First, 0, "%a").Last is "    %a = func.call @strict_single(%aw) : (f64) -> f64"
+	Turns.Rounded(Sizing.members.First, 0, "%a").Last.IndexOf("@strict_single(%aw)") > 0
+	constant wide = MemberEntry("width", "Strict/Number", List(InstructionEntry), false)
+	Turns.Rounded(wide, 0, "%a") is ("    %a = llvm.load %r0 : !llvm.ptr -> f64")
+	constant singles = MemberEntry("orbit", "Strict/List(Number)", List(InstructionEntry), false, 32)
+	Turns.Rounded(singles, 0, "%a").Last.IndexOf("@strict_list_single(%aw)") > 0
+	let kind = MlirLayout(function).Represented(TypeEntry.ShortName(member.typeName))
+	if (member.Bits is not 32) or (kind is not in ("Number", "List(Number)"))
+		return List(Text) + function.Load(loaded, "%r" + register)
+	let call = " = func.call " + (kind is "Number" then "@strict_single(" else "@strict_list_single(")
+	(function.Load(loaded + "w", "%r" + register), "    " + loaded + call + loaded + "w) : (f64) -> f64")
 Aliased(entry InstructionEntry, kind Text) Texts
 	Sample.Aliased(Heights, "Sizing")(1) is "    %t2hv = func.call @strict_two_y(%t2hp) : (f64) -> f64"
 	Listed.Aliased(Listing, "Pairing")(1) is "    %t2hv = func.call @strict_two_list(%t2hp) : (f64) -> f64"

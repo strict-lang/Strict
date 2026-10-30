@@ -2,7 +2,7 @@
 What to fix next, one short line each, bugs first. Remove a line once it is done, add what is found at the end. No history or measurements (those go into commit messages). Speed work: [performance.md](performance.md).
 
 ## Bugs
-- Native code keeps the 64 bit value of a member with `value.Bits is 32` (`Perturbation(..., -0.0005, ...)`), the VM rounds it on construction (`Rounding.Members`); WebGPU rounds such inputs itself.
+- None known.
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).

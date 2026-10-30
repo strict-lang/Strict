@@ -9458,6 +9458,33 @@
     %result = arith.select %isTagged, %number, %rounded : f64
     return %result : f64
   }
+  // a list member with value.Bits is 32 keeps its numbers as 32 bit floats like on the VM (Rounding.Of), in a copy
+  func.func private @strict_list_single(%list: f64) -> f64 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %eight = arith.constant 8 : i64
+    %length = func.call @strict_list_length(%list) : (f64) -> f64
+    %count = arith.fptosi %length : f64 to i64
+    %result = func.call @strict_list_new(%length, %length) : (f64, f64) -> f64
+    %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    %target = func.call @strict_list_items(%result) : (f64) -> !llvm.ptr
+    cf.br ^next(%none : i64)
+  ^next(%at: i64):
+    %more = arith.cmpi slt, %at, %count : i64
+    cf.cond_br %more, ^round, ^done
+  ^round:
+    %itemSlot = llvm.getelementptr %items[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %item = llvm.load %itemSlot : !llvm.ptr -> f64
+    %rounded = func.call @strict_single(%item) : (f64) -> f64
+    %targetSlot = llvm.getelementptr %target[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.store %rounded, %targetSlot : f64, !llvm.ptr
+    %next = arith.addi %at, %one : i64
+    cf.br ^next(%next : i64)
+  ^done:
+    %bytes = arith.muli %count, %eight : i64
+    func.call @strict_gc_written_range(%target, %bytes) : (!llvm.ptr, i64) -> ()
+    return %result : f64
+  }
   // a Byte keeps the whole part of a number like a C cast (0.5 * 255 is 127), Errors keep their tag
   func.func private @strict_byte(%number: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %whole = llvm.intr.trunc(%number) : (f64) -> f64
