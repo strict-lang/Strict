@@ -216,6 +216,10 @@
   ^done(%result: f64):
     return %result : f64
   }
+  func.func private @strict_directory_modified(%self: f64, %path: f64) -> f64 {
+    %newest = func.call @strict_directory_newest(%path) : (f64) -> f64
+    return %newest : f64
+  }
   func.func private @strict_directory_directories(%self: f64, %path: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %four = arith.constant 4.0 : f64
@@ -1189,17 +1193,17 @@
     %optionsClassName = llvm.mlir.addressof @strict_metal_n_options : !llvm.ptr
     %optionsClass = llvm.call @strict_metal_class(%optionsClassName) : (!llvm.ptr) -> !llvm.ptr
     %newName = llvm.mlir.addressof @strict_metal_s_new : !llvm.ptr
-    %options = llvm.call @strict_metal_message(%optionsClass, %newName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %compileOptions = llvm.call @strict_metal_message(%optionsClass, %newName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %send = llvm.call @strict_metal_pointer(%zero) : (i64) -> !llvm.ptr
     %fastName = llvm.mlir.addressof @strict_metal_s_setFastMathEnabled : !llvm.ptr
     %fast = llvm.call @strict_metal_selector(%fastName) : (!llvm.ptr) -> !llvm.ptr
-    llvm.call %send(%options, %fast, %nothing) : !llvm.ptr, (!llvm.ptr, !llvm.ptr, i8) -> ()
+    llvm.call %send(%compileOptions, %fast, %nothing) : !llvm.ptr, (!llvm.ptr, !llvm.ptr, i8) -> ()
     %errorSlot = llvm.alloca %one x !llvm.ptr : (i64) -> !llvm.ptr
     llvm.store %null, %errorSlot : !llvm.ptr, !llvm.ptr
     %device = llvm.call @strict_metal_pointer(%five) : (i64) -> !llvm.ptr
     %compileName = llvm.mlir.addressof @strict_metal_s_newLibraryWithSource_options_error : !llvm.ptr
     %compile = llvm.call @strict_metal_selector(%compileName) : (!llvm.ptr) -> !llvm.ptr
-    %library = llvm.call %send(%device, %compile, %source, %options, %errorSlot) : !llvm.ptr, (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %library = llvm.call %send(%device, %compile, %source, %compileOptions, %errorSlot) : !llvm.ptr, (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %failed = llvm.icmp "eq" %library, %null : !llvm.ptr
     llvm.cond_br %failed, ^report, ^keep
   ^report:

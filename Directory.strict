@@ -4,6 +4,7 @@ Directories(path) Texts
 Exists(path) Boolean
 Current Text
 Files(path, pattern = "") Texts
+Modified(path) Number
 Create(path) Boolean
 Delete(path Text) Boolean
 	Directory.Delete("Missing/Deleted")

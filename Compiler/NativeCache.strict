@@ -43,7 +43,7 @@ Inputs(sources Texts) Texts
 	let tools = (rest(1) + "/strict" + extension, rest(1) + "/Compiler/NativeCompiler" + extension) - Output - Output.Lower
 	let content = Path(source).PathOnly.text + "/Content"
 	let inputs = sources + runtimes + tools + NativeInputs(Folders(sources)) + Data(sources)
-	inputs + BinaryFile(source).Contained(content) + (content + "/**")
+	inputs + (content + "/**")
 Folders(sources Texts) Texts
 	mutable folders = List(Text)
 	for sources
@@ -75,9 +75,9 @@ Snapshot(paths Texts) Texts
 		lines = lines + value + Value(value)
 	lines
 Value(path Text) Text
+	NativeCache("build", ("Math/Vector3.strict", ".")).Value("Math/**") is "" + Directory.Modified("Math")
 	if path.EndsWith("/**")
-		let folder = path.Substring(0, path.Length - 3)
-		return Text.Combine(BinaryFile(rest(0)).Contained(folder).Sorted, "\t")
+		return "" + Directory.Modified(path.Substring(0, path.Length - 3))
 	if path.EndsWith("/")
 		return Text.Combine(Directory.Directories(path).Sorted, "\t")
 	if path.EndsWith("/*") is false
@@ -95,7 +95,7 @@ Outputs Texts
 		if File(base + value).Exists
 			files = files + (base + value)
 	for (release.Parent + "/Release", release.Parent + "/Release/" + Platform.NameOf(Platform.Current))
-		files = files + BinaryFile(rest(0)).Contained(value + "/Content")
+		files = files + (value + "/Content/**")
 		let target = value + "/" + Path(Output).FileName.text
 		if File(target).Exists
 			files = files + target

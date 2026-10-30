@@ -315,6 +315,10 @@
   ^done(%result: f64):
     return %result : f64
   }
+  func.func private @strict_directory_modified(%self: f64, %path: f64) -> f64 {
+    %newest = func.call @strict_directory_newest(%path) : (f64) -> f64
+    return %newest : f64
+  }
   func.func private @strict_directory_directories(%self: f64, %path: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %four = arith.constant 4.0 : f64

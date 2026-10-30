@@ -5890,6 +5890,45 @@
     %result = arith.andi %startsWithDot, %isDotted : i1
     return %result : i1
   }
+  // newest modification time of a folder, its subfolders and files (Windows lists the times with the names instead)
+  func.func private @strict_directory_newest(%path: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %isFile = arith.constant false
+    %isFolder = arith.constant true
+    %own = func.call @strict_file_modified(%path) : (f64) -> f64
+    %files = func.call @strict_directory_files(%zero, %path, %zero) : (f64, f64, f64) -> f64
+    %filed = func.call @strict_newest_in(%files, %own, %isFile) : (f64, f64, i1) -> f64
+    %folders = func.call @strict_directory_directories(%zero, %path) : (f64, f64) -> f64
+    %newest = func.call @strict_newest_in(%folders, %filed, %isFolder) : (f64, f64, i1) -> f64
+    return %newest : f64
+  }
+  func.func private @strict_newest_in(%paths: f64, %start: f64, %isFolder: i1) -> f64 {
+    %length = func.call @strict_list_length(%paths) : (f64) -> f64
+    %count = arith.fptosi %length : f64 to i64
+    %first = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    cf.br ^check(%first, %start : i64, f64)
+  ^check(%index: i64, %newest: f64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^item(%index, %newest : i64, f64), ^done(%newest : f64)
+  ^item(%at: i64, %before: f64):
+    %items = func.call @strict_list_items(%paths) : (f64) -> !llvm.ptr
+    %slot = llvm.getelementptr %items[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %path = llvm.load %slot : !llvm.ptr -> f64
+    cf.cond_br %isFolder, ^folder(%path : f64), ^file(%path : f64)
+  ^folder(%folder: f64):
+    %nested = func.call @strict_directory_newest(%folder) : (f64) -> f64
+    cf.br ^compared(%nested : f64)
+  ^file(%file: f64):
+    %modified = func.call @strict_file_modified(%file) : (f64) -> f64
+    cf.br ^compared(%modified : f64)
+  ^compared(%time: f64):
+    %later = arith.maximumf %before, %time : f64
+    %following = arith.addi %at, %one : i64
+    cf.br ^check(%following, %later : i64, f64)
+  ^done(%result: f64):
+    return %result : f64
+  }
   func.func private @strict_list_empty() -> f64 {
     %view = llvm.mlir.addressof @strict_empty_view : !llvm.ptr
     %result = func.call @strict_bits(%view) : (!llvm.ptr) -> f64

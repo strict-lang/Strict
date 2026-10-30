@@ -1,0 +1,26 @@
+has call Invocation
+constant Logging = Invocation(InstructionEntry.Invoke(1, ("Strict/Number", "Logarithm", "Strict/Number"), List(Number), 0), List(VmValue), VmValue.OfNumber(1))
+constant Sine = Invocation(InstructionEntry.Invoke(1, ("Strict/Math/Degrees", "Sin", "Strict/Math/Ratio"), List(Number), 0), List(VmValue), VmValue.OfNumber(90))
+constant Aiming = Invocation(InstructionEntry.Invoke(1, ("Strict/Math/Vector2", "Atan", "Strict/Number"), List(Number), 0), List(VmValue), VmValue("Strict/Math/Vector2", 0, "", (VmValue.OfNumber(1), VmValue.OfNumber(0))))
+Measured VmValue
+	HostedMath(Sine).Measured.number is 1
+	HostedMath(Logging).Measured.number is 0
+	HostedMath(Aiming).Measured.number is 90
+	let type = TypeEntry.ShortName(call.TypeName)
+	let number = call.Instance.number
+	if type is in ("Number", "Time")
+		return VmValue.OfNumber(type is "Time" then Time.Now else Numbered(number))
+	if type is "Degrees"
+		return VmValue.OfNumber(Turned(Degrees(number)).number)
+	if type is "Vector2"
+		return VmValue.OfNumber(Vector2(call.Instance.items.First.number, call.Instance.items.Last.number).Atan.number)
+	VmValue.OfNumber(Inverted(Ratio(number)).number)
+Numbered(number Number) Number
+	HostedMath(Logging).Numbered(1) is 0
+	call.MethodName is "Logarithm" then number.Logarithm else number.Random
+Turned(angle Math/Degrees) Math/Ratio
+	HostedMath(Sine).Turned(Degrees(90)).number is 1
+	call.MethodName is "Sin" then angle.Sin else call.MethodName is "Cos" then angle.Cos else angle.Tan
+Inverted(ratio Math/Ratio) Math/Degrees
+	HostedMath(Sine).Inverted(Ratio(1)).number is 45
+	call.MethodName is "Asin" then ratio.Asin else call.MethodName is "Acos" then ratio.Acos else ratio.Atan
