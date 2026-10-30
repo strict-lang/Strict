@@ -8,7 +8,7 @@ constant Byting = MlirWholeTypes(MlirFunction(Halving.function.types, MlirFuncti
 constant Shadowed = MlirWholeTypes(MlirFunction(MlirArguments.Called.types, MlirArguments.Halves, MethodEntry("Run", List(MemberEntry), "Strict/Number", MlirArguments.Calls.Slice(0, 3) + InstructionEntry.Binary(InstructionType.Add, (2, 0, 3)) + InstructionEntry.Binary(InstructionType.Divide, (0, 1, 2)) + InstructionEntry.Return(3))))
 constant Reused = MlirWholeTypes(MlirFunction(MlirArguments.Called.types, MlirArguments.Halves, MethodEntry("Run", List(MemberEntry), "Strict/Number", MlirArguments.Calls.Slice(0, 4) + InstructionEntry.Binary(InstructionType.Divide, (0, 1, 2)) + InstructionEntry.Return(3))))
 Part(number Number) Text
-	Halving.Part(0) is "iiii"
+	Halving.Part(0) is "iiii-"
 	Halving.Part(2) is "iiiii"
 	Row.Part(0).IndexOf("x") is -1
 	Row.Part(1).Substring(Row.function.VariableNames.Index("pixels"), 1) is "p"
@@ -22,7 +22,7 @@ Returned Text
 			return "f"
 	"i"
 Settled Text
-	Halving.Settled.StartsWith("iiii|")
+	Halving.Settled.StartsWith("iiii-|")
 	mutable combined = Initial
 	for 64
 		let next = Step(combined)
@@ -31,7 +31,7 @@ Settled Text
 		combined = next
 	combined
 Initial Text
-	Halving.Initial.StartsWith("----|")
+	Halving.Initial.StartsWith("-----|")
 	mutable registers = ""
 	for LoadReuse(function.method.instructions).RegisterCount
 		registers = registers + "-"
@@ -44,7 +44,7 @@ Initial Text
 		variables = variables + (parameter >= 0 then kinds(parameter) else other)
 	registers + "|" + variables + "|"
 Step(combined Text) Text
-	Halving.Step(Halving.Initial).StartsWith("iiii|")
+	Halving.Step(Halving.Initial).StartsWith("iiii-|")
 	mutable registers = combined.Split("|")(0)
 	mutable variables = combined.Split("|")(1)
 	mutable naturals = ""
