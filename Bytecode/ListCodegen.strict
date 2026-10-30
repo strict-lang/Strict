@@ -11,16 +11,23 @@ constant BranchCopy = BodyParser("Run", "\tmutable other = (1, 2)", "\tlet saved
 constant Iterated = ListCodegen(LoopCodegen.Iterating.methods.values)
 constant Colored = ListCodegen(ConversionCodegen.Colored.values)
 constant AddColor = SyntaxNode("MethodCall", "Add", (ConversionCodegen.Pixels, ConversionCodegen.NewColor))
+constant Counted = ListCodegen(ValueCodegen(TypeInference(KnownTypes.Sample, TypeInference.Limits), KnownTypes.NoMembers, CallTarget.Plain))
+constant Limits = SyntaxNode("List", "", (SyntaxNode("Member", "Limit", SyntaxNode("Identifier", "Count")), ValueCodegen.One))
 Of(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Of(ValueCodegen.Ones, CodeBlock.Empty).instructions.Length is 1
-	node.IsLiteral then Constant(node, block) else Built(node, block)
+	Counted.Of(Limits, CodeBlock.Empty).instructions(0).payload is (0, 6, -1, 2, 1, 3, 1, 1)
+	SyntaxNode("List", "", Literals(node)).IsLiteral then Constant(node, block) else Built(node, block)
+Literals(node SyntaxNode) List(SyntaxNode)
+	Counted.Literals(Limits).First.text is "3"
+	for node.children
+		ConstantFolding(values.target.TypeName, values.inference).Folded(value)
 Constant(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Constant(ValueCodegen.Ones, CodeBlock.Empty).instructions(0).payload is (0, 6, -1, 2, 1, 1, 1, 1)
 	Plain.Constant(SyntaxNode("List", "", ValueCodegen.Hi), CodeBlock.Empty).instructions(0).texts.Last is "Hi"
 	mutable texts = List(Mutable(Text))
 	texts.Add(values.target.FullName(values.TypeOf(node, block)))
 	mutable content = List(Number) + block.register + 6 + -1 + node.children.Length
-	for node.children
+	for Literals(node)
 		if value.Kind is "Text"
 			texts.Add(value.Unquoted)
 		let number = value.Kind is "Number" then value.text to Number else 0
