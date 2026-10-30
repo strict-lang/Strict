@@ -10,7 +10,7 @@ constant Dating = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "Modifie
 constant Probing = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "Exists", "Strict/Boolean"), List(Number), 0), List(VmValue), VmValue.OfText("."))
 constant Timing = Invocation(InstructionEntry.Invoke(0, ("Strict/Process", "Elapsed", "Strict/Number"), List(Number), -1), List(VmValue), VmValue.None)
 constant Deleting = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "Delete", "None"), List(Number), 0), List(VmValue), VmValue("Strict/File", 0, "", List(VmValue) + VmValue.OfText("Runtime/missing")))
-constant Methods = ("File.ReadLines", "File.Exists", "File.Write", "File.Delete", "File.Rename", "File.ReadBytes", "File.WriteLines", "File.WriteBytes", "File.Modified", "File.Length", "File.Locked", "Directory.Files", "Directory.Directories", "Directory.Modified", "Directory.Exists", "Directory.Create", "Directory.Current", "File.InMemory", "Process.Input", "Process.InputLine", "Process.Find", "Process.RunTool", "Process.RunTools", "Process.Started", "Process.OperatingSystem", "Process.Current", "Process.Built", "Process.Elapsed", "Process.Wait", "Process.FilesRead", "Time.Now", "Number.Logarithm", "Number.Random", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan", "Vector2.Atan", "Library.Call", "Library.TextSlot", "Library.NumbersSlot", "Library.TextResult", "Library.NumbersResult", "Library.Failure", "BuildProfile.Detailed", "TestBudget.Started", "TestBudget.Finished", "TestBudget.Entered", "TestBudget.Left", "ConstantCache.At", "ConstantCache.Stored")
+constant Methods = ("File.ReadLines", "File.Exists", "File.Write", "File.Delete", "File.Rename", "File.ReadBytes", "File.WriteLines", "File.WriteBytes", "File.Modified", "File.Length", "File.Locked", "Directory.Files", "Directory.Directories", "Directory.Modified", "Directory.Exists", "Directory.Create", "Directory.Current", "File.InMemory", "Process.Input", "Process.InputLine", "Process.Find", "Process.RunTool", "Process.RunTools", "Process.Started", "Process.OperatingSystem", "Process.Current", "Process.Built", "Process.Elapsed", "Process.Executed", "Process.Wait", "Process.FilesRead", "Time.Now", "Number.Logarithm", "Number.Random", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan", "Vector2.Atan", "Library.Call", "Library.TextSlot", "Library.NumbersSlot", "Library.TextResult", "Library.NumbersResult", "Library.Failure", "BuildProfile.Detailed", "TestBudget.Started", "TestBudget.Finished", "TestBudget.Entered", "TestBudget.Left", "ConstantCache.At", "ConstantCache.Stored")
 IsHosted Boolean
 	Hosted(SystemCall).IsHosted
 	Hosted(Invocation.AddCall).IsHosted is false
@@ -39,8 +39,8 @@ Processed VmValue
 	let name = call.MethodName
 	if name is "Detailed"
 		return VmValue.OfBoolean(BuildProfile.Detailed)
-	if name is in ("Elapsed", "FilesRead")
-		return name is "Elapsed" then VmValue.OfNumber(Process.Elapsed) else Values(Process.FilesRead)
+	if name is in ("Elapsed", "FilesRead", "Executed")
+		return name is "Elapsed" then VmValue.OfNumber(Process.Elapsed) else Listed(name)
 	if name is in ("OperatingSystem", "Built")
 		return VmValue.OfText(name is "Built" then Process(call.Instance.Member(0).text).Built else Process.OperatingSystem)
 	let first = name is "Current" then Process.Current.executable else call.Arguments.First.text
@@ -97,6 +97,14 @@ Entries Slow(VmValue)
 		return ByteValues(File(path).ReadBytes)
 	let pattern = call.Arguments.Length > 1 then call.Arguments.Last.text else ""
 	Values(call.MethodName is "Files" then Directory.Files(path, pattern) else Directory.Directories(path))
+Listed(name Text) VmValue
+	Hosted(SystemCall).Listed("Executed").items.Length is 5
+	if name is "FilesRead"
+		return Values(Process.FilesRead)
+	mutable values = List(Mutable(VmValue))
+	for Process.Executed
+		values.Add(VmValue.OfNumber(value))
+	VmValue.OfList(values)
 Values(texts Texts) VmValue
 	Hosted(Listing).Values(("a", "b")).Length is 2
 	mutable values = List(Mutable(VmValue))

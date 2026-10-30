@@ -379,6 +379,60 @@
     %elapsed = arith.subf %now, %started : f64
     return %elapsed : f64
   }
+  // Process.Executed counts once a program asked for it (strict_executed_on): loops and elements of parallel loops on
+  // the CPU (0, 1) and of GPU kernels (2, 3), with a relaxed add and no clock so counting costs nothing measurable
+  llvm.mlir.global internal @strict_executed(dense<0> : tensor<4xi64>) : !llvm.array<4 x i64>
+  llvm.mlir.global internal @strict_executed_on(0 : i64) : i64
+  func.func private @strict_executed_add(%offset: i64, %elements: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
+    %one = arith.constant 1 : i64
+    %table = llvm.mlir.addressof @strict_executed : !llvm.ptr
+    %loopSlot = llvm.getelementptr %table[0, %offset] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<4 x i64>
+    %elementOffset = arith.addi %offset, %one : i64
+    %elementSlot = llvm.getelementptr %table[0, %elementOffset] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<4 x i64>
+    %loops = llvm.load %loopSlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
+    %moreLoops = arith.addi %loops, %one : i64
+    llvm.store %moreLoops, %loopSlot atomic monotonic {alignment = 8 : i64} : i64, !llvm.ptr
+    %counted = llvm.load %elementSlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
+    %moreElements = arith.addi %counted, %elements : i64
+    llvm.store %moreElements, %elementSlot atomic monotonic {alignment = 8 : i64} : i64, !llvm.ptr
+    return
+  }
+  func.func private @strict_executed_wanted() -> i1 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %onSlot = llvm.mlir.addressof @strict_executed_on : !llvm.ptr
+    %on = llvm.load %onSlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
+    %none = arith.constant 0 : i64
+    %wanted = arith.cmpi ne, %on, %none : i64
+    return %wanted : i1
+  }
+  // Process.Executed: threads, loops and elements of parallel loops on the CPU and of GPU kernels, each since the
+  // previous call (the first one starts counting)
+  func.func private @strict_process_executed(%self: f64) -> f64 {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %four = arith.constant 4 : i64
+    %onSlot = llvm.mlir.addressof @strict_executed_on : !llvm.ptr
+    llvm.store %one, %onSlot atomic monotonic {alignment = 8 : i64} : i64, !llvm.ptr
+    %workersSlot = llvm.mlir.addressof @strict_pool_workers : !llvm.ptr
+    %workers = llvm.load %workersSlot : !llvm.ptr -> i64
+    %threads = arith.addi %workers, %one : i64
+    %threadCount = arith.sitofp %threads : i64 to f64
+    %empty = func.call @strict_list_empty() : () -> f64
+    %first = func.call @strict_list_add(%empty, %threadCount) : (f64, f64) -> f64
+    %table = llvm.mlir.addressof @strict_executed : !llvm.ptr
+    cf.br ^loop(%zero, %first : i64, f64)
+  ^loop(%index: i64, %built: f64):
+    %more = arith.cmpi slt, %index, %four : i64
+    cf.cond_br %more, ^body, ^done
+  ^body:
+    %slot = llvm.getelementptr %table[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<4 x i64>
+    %taken = llvm.atomicrmw xchg %slot, %zero monotonic : !llvm.ptr, i64
+    %amount = arith.sitofp %taken : i64 to f64
+    %added = func.call @strict_list_add(%built, %amount) : (f64, f64) -> f64
+    %next = arith.addi %index, %one : i64
+    cf.br ^loop(%next, %added : i64, f64)
+  ^done:
+    return %built : f64
+  }
   llvm.mlir.global internal constant @strict_line_format("Line %s executed %.0f times in %.2f ms (self %.2f ms)\0A\00") : !llvm.array<55 x i8>
   llvm.mlir.global internal @strict_line_callees(0.0 : f64) : f64
   func.func private @strict_line_enter(%state: !llvm.ptr) {
@@ -1490,7 +1544,24 @@
     %result = func.call @strict_parallel_from(%body, %context, %zero, %count) : ((!llvm.ptr, i64, i64) -> f64, !llvm.ptr, i64, i64) -> f64
     return %result : f64
   }
+  // a loop forked from a thread outside the pool is counted for Process.Executed, nested ones run inside a counted one
   func.func private @strict_parallel_from(%body: (!llvm.ptr, i64, i64) -> f64, %context: !llvm.ptr, %from: i64, %count: i64) -> f64 {
+    %zero = arith.constant 0 : i64
+    %wanted = func.call @strict_executed_wanted() : () -> i1
+    %busySlot = llvm.mlir.addressof @strict_pool_busy : !llvm.ptr
+    %busy = llvm.load %busySlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
+    %outside = arith.cmpi eq, %busy, %zero : i64
+    %counted = arith.andi %wanted, %outside : i1
+    %result = func.call @strict_parallel_forked(%body, %context, %from, %count) : ((!llvm.ptr, i64, i64) -> f64, !llvm.ptr, i64, i64) -> f64
+    cf.cond_br %counted, ^counted, ^done
+  ^counted:
+    %elements = arith.subi %count, %from : i64
+    func.call @strict_executed_add(%zero, %elements) : (i64, i64) -> ()
+    cf.br ^done
+  ^done:
+    return %result : f64
+  }
+  func.func private @strict_parallel_forked(%body: (!llvm.ptr, i64, i64) -> f64, %context: !llvm.ptr, %from: i64, %count: i64) -> f64 {
     %function = builtin.unrealized_conversion_cast %body : (!llvm.ptr, i64, i64) -> f64 to !llvm.ptr
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -12450,7 +12521,23 @@
   ^done:
     return
   }
+  // a kernel that ran (a result, not 0 for "run it on the CPU") is counted for Process.Executed
   func.func private @strict_gpu_run(%ptx: !llvm.ptr, %name: !llvm.ptr, %slot: !llvm.ptr, %count: i64, %source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64, %rows: i64, %dots: i64, %lanes: i64, %group: i64, %packedFormat: i64, %guards: i64) -> f64 {
+    %result = func.call @strict_gpu_dispatched(%ptx, %name, %slot, %count, %source, %kind, %values, %valueCount, %mask, %rows, %dots, %lanes, %group, %packedFormat, %guards) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
+    %wanted = func.call @strict_executed_wanted() : () -> i1
+    %bits = arith.bitcast %result : f64 to i64
+    %zero = arith.constant 0 : i64
+    %ran = arith.cmpi ne, %bits, %zero : i64
+    %counted = arith.andi %wanted, %ran : i1
+    cf.cond_br %counted, ^counted, ^done
+  ^counted:
+    %gpu = arith.constant 2 : i64
+    func.call @strict_executed_add(%gpu, %count) : (i64, i64) -> ()
+    cf.br ^done
+  ^done:
+    return %result : f64
+  }
+  func.func private @strict_gpu_dispatched(%ptx: !llvm.ptr, %name: !llvm.ptr, %slot: !llvm.ptr, %count: i64, %source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64, %rows: i64, %dots: i64, %lanes: i64, %group: i64, %packedFormat: i64, %guards: i64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %busy = func.call @strict_rc_busy() : () -> i1
     cf.cond_br %busy, ^worker, ^host
