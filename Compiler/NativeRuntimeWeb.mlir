@@ -315,6 +315,11 @@
   ^done(%result: f64):
     return %result : f64
   }
+  // only Windows needs more than the driver to know what other programs hold on the GPU
+  func.func private @strict_gpu_others_free() -> i64 {
+    %unknown = arith.constant -1 : i64
+    return %unknown : i64
+  }
   func.func private @strict_directory_modified(%self: f64, %path: f64) -> f64 {
     %newest = func.call @strict_directory_newest(%path) : (f64) -> f64
     return %newest : f64

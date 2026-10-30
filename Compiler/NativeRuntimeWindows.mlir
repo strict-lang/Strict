@@ -1037,6 +1037,68 @@
     %function = llvm.call @GetProcAddress(%library, %name) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     return %function : !llvm.ptr
   }
+  // WDDM's cuMemGetInfo ignores other programs (22.5 of 24 GB free while another process held 12 GB, Windows paged
+  // memory out instead of failing), NVML's free memory of the same device (by its PCI bus) counts them, all ones without
+  llvm.mlir.global internal constant @strict_nvml("nvml.dll\00") : !llvm.array<9 x i8>
+  llvm.mlir.global internal constant @strict_nvml_init("nvmlInit_v2\00") : !llvm.array<12 x i8>
+  llvm.mlir.global internal constant @strict_nvml_device("nvmlDeviceGetHandleByPciBusId_v2\00") : !llvm.array<33 x i8>
+  llvm.mlir.global internal constant @strict_nvml_memory("nvmlDeviceGetMemoryInfo\00") : !llvm.array<24 x i8>
+  llvm.mlir.global internal constant @strict_gpu_bus("cuDeviceGetPCIBusId\00") : !llvm.array<20 x i8>
+  func.func private @strict_gpu_others_free() -> i64 {
+    %unknown = arith.constant -1 : i64
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %isAmd = func.call @strict_gpu_is_amd() : () -> i1
+    cf.cond_br %isAmd, ^unknown, ^load
+  ^load:
+    %nvmlName = llvm.mlir.addressof @strict_nvml : !llvm.ptr
+    %nvml = llvm.call @LoadLibraryA(%nvmlName) : (!llvm.ptr) -> !llvm.ptr
+    %noNvml = llvm.icmp "eq" %nvml, %unset : !llvm.ptr
+    cf.cond_br %noNvml, ^unknown, ^resolve
+  ^resolve:
+    %initName = llvm.mlir.addressof @strict_nvml_init : !llvm.ptr
+    %init = llvm.call @GetProcAddress(%nvml, %initName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %deviceName = llvm.mlir.addressof @strict_nvml_device : !llvm.ptr
+    %device = llvm.call @GetProcAddress(%nvml, %deviceName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %memoryName = llvm.mlir.addressof @strict_nvml_memory : !llvm.ptr
+    %memory = llvm.call @GetProcAddress(%nvml, %memoryName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %cudaName = llvm.mlir.addressof @strict_gpu_driver : !llvm.ptr
+    %cuda = llvm.call @LoadLibraryA(%cudaName) : (!llvm.ptr) -> !llvm.ptr
+    %busName = llvm.mlir.addressof @strict_gpu_bus : !llvm.ptr
+    %bus = llvm.call @GetProcAddress(%cuda, %busName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %noInit = llvm.icmp "eq" %init, %unset : !llvm.ptr
+    %noDevice = llvm.icmp "eq" %device, %unset : !llvm.ptr
+    %noMemory = llvm.icmp "eq" %memory, %unset : !llvm.ptr
+    %noBus = llvm.icmp "eq" %bus, %unset : !llvm.ptr
+    %noNvmlCall = arith.ori %noInit, %noDevice : i1
+    %noCall = arith.ori %noMemory, %noBus : i1
+    %anyMissing = arith.ori %noNvmlCall, %noCall : i1
+    cf.cond_br %anyMissing, ^unknown, ^query
+  ^query:
+    %zero32 = arith.constant 0 : i32
+    %busLength = arith.constant 32 : i32
+    %one = arith.constant 1 : i64
+    %three = arith.constant 3 : i64
+    %busBytes = arith.constant 32 : i64
+    %initialized = llvm.call %init() : !llvm.ptr, () -> i32
+    %busText = llvm.alloca %busBytes x i8 : (i64) -> !llvm.ptr
+    %named = llvm.call %bus(%busText, %busLength, %zero32) : !llvm.ptr, (!llvm.ptr, i32, i32) -> i32
+    %handleSlot = llvm.alloca %one x !llvm.ptr : (i64) -> !llvm.ptr
+    %found = llvm.call %device(%busText, %handleSlot) : !llvm.ptr, (!llvm.ptr, !llvm.ptr) -> i32
+    %handle = llvm.load %handleSlot : !llvm.ptr -> !llvm.ptr
+    %sizes = llvm.alloca %three x i64 : (i64) -> !llvm.ptr
+    %read = llvm.call %memory(%handle, %sizes) : !llvm.ptr, (!llvm.ptr, !llvm.ptr) -> i32
+    %setUp = arith.ori %initialized, %named : i32
+    %asked = arith.ori %found, %read : i32
+    %statuses = arith.ori %setUp, %asked : i32
+    %failed = arith.cmpi ne, %statuses, %zero32 : i32
+    cf.cond_br %failed, ^unknown, ^free
+  ^free:
+    %freeSlot = llvm.getelementptr %sizes[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %free = llvm.load %freeSlot : !llvm.ptr -> i64
+    return %free : i64
+  ^unknown:
+    return %unknown : i64
+  }
   llvm.mlir.global internal constant @strict_gpu_ptx_ending(".ptx\00") : !llvm.array<5 x i8>
   llvm.mlir.global internal constant @strict_gpu_older_ending(".older.ptx\00") : !llvm.array<11 x i8>
 

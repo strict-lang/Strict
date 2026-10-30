@@ -2,7 +2,6 @@
 What to fix next, one short line each, bugs first. Remove a line once it is done, add what is found at the end. No history or measurements (those go into commit messages). Speed work: [performance.md](performance.md).
 
 ## Bugs
-- The GPU budget ignores other programs on Windows: WDDM's `cuMemGetInfo` reported 22.7 of 24 GB free while another process held 12.5 GB, so Strict grew to its full peak and Windows paged the other process's memory to RAM, slow tokens until done (this was the Ternary Bonsai "10 GB stall", on the first run under every fresh holder); next to ComfyUI the figure moved by 0.9 GB between starts. DXGI's QueryVideoMemoryInfo budget and its change notification give the real limit.
 - A pure loop over GPU heavy calls forks onto CPU threads (MlirCost's threshold is 2 for a costly body): `Qwen3Images.Encoded` of 2 images ran its vision towers in workers and did not finish in 4.5 min, sequential takes 16 s more than one image.
 - WebWars and ArenaWars do not build natively: `Native compilation failed, unsupported: text of List(cell) in WebWarsTerrain_Navigation_0` (`ArenaLevel_Navigation_2` in ArenaWars), both build their navigation with DeltaEngine's `Graphs/NavigationMap.FromGrid` (DeltaEngine 3a4ef02 with Strict 0da462d8, SoulCraft builds).
 

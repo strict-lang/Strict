@@ -13948,7 +13948,7 @@
     %free = arith.select %hasRoom, %room, %none : i64
     return %free : i64
   }
-  // the free memory the driver reports
+  // the free memory the driver reports, less what other programs hold when only the platform knows (Windows)
   func.func private @strict_gpu_driver_free() -> i64 {
     %none = arith.constant 0 : i64
     %two = arith.constant 2 : i64
@@ -13959,7 +13959,9 @@
     %totalSlot = llvm.getelementptr %sizes[1] : (!llvm.ptr) -> !llvm.ptr, i64
     %result = llvm.call %info(%sizes, %totalSlot) : !llvm.ptr, (!llvm.ptr, !llvm.ptr) -> i32
     %free = llvm.load %sizes : !llvm.ptr -> i64
-    return %free : i64
+    %others = func.call @strict_gpu_others_free() : () -> i64
+    %least = arith.minui %free, %others : i64
+    return %least : i64
   }
   func.func private @strict_gpu_give(%device: i64, %class: i64) {
     %none = arith.constant 0 : i64
