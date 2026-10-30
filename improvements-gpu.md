@@ -29,7 +29,6 @@ Details for the GPU line of [improvements.md](improvements.md), one short line e
 
 ## Loading
 - 8 bit rows gathered straight from the mapped file (the 21 GB H3 DiT loads in 10-12 s, ComfyUI 4-7)
-- the bfloat16 and 32 bit ups paths of `strict_device_tuned` give slightly different merged rows: the same arithmetic in both
 - no native test reaches the locked path of `strict_packed_rows` and `strict_rows` (matrices of 4 MB and more): a test with a big matrix
 - releases should ship cubins for sm_75, sm_80, sm_86 and sm_89 and load the one for the GPU before the PTX (the driver compiles MossImage's PTX 4 + 12-14 s on a first run)
 
@@ -41,4 +40,3 @@ Details for the GPU line of [improvements.md](improvements.md), one short line e
 - convolutions of 64 bit pixels from a CPU loop miss strict_gpu_convolution without STRICT_GPU=all (H3 VAE encode of a PNG frame 12.5 instead of 0.7 s)
 - each convolution writes bfloat16 copies of its input and weights first; stages of 64 channels or 3 buffers once shared memory allows it
 - PNG encoding takes 0.28 s for a 720x1280 image (ComfyUI 0.08)
-- prompts below 16 tokens multiply 32 bit tokens (Moss's text encoder, 0.3 s for 12 tokens)
