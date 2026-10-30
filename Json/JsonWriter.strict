@@ -1,0 +1,54 @@
+has text
+constant Object = JsonWriter("{}")
+constant Array = JsonWriter("[]")
+With(name Text, content Text) JsonWriter
+	Object.With("asset", "BTC").text is "{\"asset\":\"BTC\"}"
+	Object.With("a", "x").With("b", "y").text is "{\"a\":\"x\",\"b\":\"y\"}"
+	Added(Quoted(name) + ":" + Quoted(content))
+With(name Text, number Number) JsonWriter
+	Object.With("free", 1.5).With("locked", 0).text is "{\"free\":1.5,\"locked\":0}"
+	Added(Quoted(name) + ":" + number)
+With(name Text, flag Boolean) JsonWriter
+	Object.With("open", true).With("closed", false).text is "{\"open\":true,\"closed\":false}"
+	Added(Quoted(name) + ":" + (flag then "true" else "false"))
+With(name Text, nested JsonWriter) JsonWriter
+	Object.With("prices", Array.With(1).With(2)).text is "{\"prices\":[1,2]}"
+	Added(Quoted(name) + ":" + nested.text)
+With(content Text) JsonWriter
+	Array.With("a").With("b").text is "[\"a\",\"b\"]"
+	Added(Quoted(content))
+With(number Number) JsonWriter
+	Array.With(3).text is "[3]"
+	Added(number to Text)
+With(nested JsonWriter) JsonWriter
+	Array.With(Object.With("a", 1)).With(Array).text is "[{\"a\":1},[]]"
+	Added(nested.text)
+Quoted(content Text) Text
+	Object.Quoted("plain") is "\"plain\""
+	Object.Quoted("say \"hi\" \\ bye") is "\"say \\\"hi\\\" \\\\ bye\""
+	Object.Quoted("at\tline\r\n") is "\"at\\tline\\r\\n\""
+	Object.Quoted(Character(1) + Character(31)) is "\"\\u0001\\u001f\""
+	Object.Quoted(Character(8) + Character(12)) is "\"\\b\\f\""
+	Object.Quoted("Käse 中文") is "\"Käse 中文\""
+	Json(Object.Quoted("a\tb\"c")) to Text is "a\tb\"c"
+	mutable quoted = "\""
+	for content
+		quoted = quoted + Escaped(value)
+	quoted + "\""
+Added(entry Text) JsonWriter
+	Object.Added("\"a\":1").Added("\"b\":2").text is "{\"a\":1,\"b\":2}"
+	let separator = text.Length > 2 then "," else ""
+	JsonWriter(text.Substring(0, text.Length - 1) + separator + entry + text.Substring(text.Length - 1, 1))
+Escaped(character Character) Text
+	Object.Escaped(Character(9)) is "\\t"
+	Object.Escaped(Character(1)) is "\\u0001"
+	Object.Escaped(Character("\\")) is "\\\\"
+	if (character is "\"") or (character is "\\")
+		return "\\" + character
+	if character.number >= 32
+		return character to Text
+	let named = (8, 9, 10, 12, 13).Index(character.number)
+	if named >= 0
+		return "\\" + "btnfr".Substring(named, 1)
+	constant hex = "0123456789abcdef"
+	"\\u00" + hex.Substring((character.number / 16).Floor, 1) + hex.Substring(character.number % 16, 1)
