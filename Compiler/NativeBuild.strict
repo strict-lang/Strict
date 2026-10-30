@@ -81,6 +81,8 @@ IsUnchanged(base Text, mlir Text, tools Toolchain) Boolean
 	let isCross = isAndroid or isIOS or tools.isWeb
 	if isCross or (previous.Exists is false) or (sources.IsCurrent(tools.Executable(base), inputs) is false)
 		return false
+	if previous.Length is not mlir.Length
+		return false
 	Text.Combine(previous.ReadLines, "\n") is mlir
 Rebuilt(base Text, mlir Text, tools Toolchain) Slow(Text)
 	NativeBuild(Logger).Rebuilt("Compiler/output/Written", Broken, Toolchain.OnWindows).StartsWith("mlir-opt failed")
@@ -145,9 +147,11 @@ Mlir(program Text, root Text, platform Number) Slow(Text)
 	NativeBuild.Mlir("module {\n}", ".", Platform.Web).IndexOf("@strict_web(") > 0
 	NativeBuild.Mlir("module {\n}", ".", Platform.Web).IndexOf("@memset(!llvm.ptr, i32, i64)") is -1
 	let runtime = Text.Combine(File(root + "/Compiler/NativeRuntime.mlir").ReadLines, "\n")
-	let system = Platform.Runtime(platform, root)
-	let shared = program.Substring(0, program.Length - 1) + runtime
-	(platform is Platform.Web then WebBuild.Sized(shared) else shared) + "\n" + Text.Combine(system, "\n") + "\n}"
+	let system = Text.Combine(Platform.Runtime(platform, root), "\n")
+	let body = program.Substring(0, program.Length - 1)
+	if platform is Platform.Web
+		return WebBuild.Sized(body + runtime) + "\n" + system + "\n}"
+	Text.Combine((body, runtime, "\n", system, "\n}"), "")
 Unsupported(mlir Text) Number
 	NativeBuild.Unsupported("a\nunsupported: x") is 2
 	NativeBuild.Unsupported("unsupported: x") is 0
