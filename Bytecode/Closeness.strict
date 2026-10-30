@@ -2,26 +2,38 @@ has types Expressions/KnownTypes
 constant Scalars = ("Text", "Boolean", "Error", "ErrorWithValue", "Dictionary")
 constant Plain = Closeness(ValueCodegen.Plain.inference.types)
 constant Deep = "Numberssssssssss"
+constant Nested = Closeness(KnownTypes(("Outer", "Inner", "Counter", "Walker"), (Scope(List(Text) + "inner", List(Text) + "Inner"), Scope(List(Text) + "x", List(Text) + "Number"), Scope(List(Text) + "length", List(Text) + "Number"), Scope(List(Text) + "length", List(Text) + "Number")), (KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers, Scope(List(Text) + " trait", List(Text) + "true"), Scope(("in", "in types"), ("element", "Generic")))))
 Lines(left Text, right Text, kinds Texts, slot Text, exact Boolean, expanded Texts) Texts
 	Plain.Lines("left", "right", ("Number", "Number"), "0", true, List(Text)).Last is "let testEqual0 = left is right"
+	Nested.Lines("a", "b", ("Inner", "Inner"), "1", false, List(Text) + "Outer") is ("let testEqual1 = a.IsNearlyEqual(b)")
 	let same = List(Text) + ("let testEqual" + slot + " = " + left + " is " + right)
 	if exact or (kinds.First is not kinds.Last)
 		return same
 	if kinds.First is "Number"
 		return List(Text) + ("let testEqual" + slot + " = " + left + ".IsNearlyEqual(" + right + ")")
-	if kinds.First is in expanded
+	if IsCalled(kinds.First, expanded)
 		return Repeated(left, right, kinds.First, slot)
 	if types.BaseName(kinds.First) is "List"
 		return Elements(left, right, kinds.First, slot, expanded + kinds.First)
 	IsRecord(kinds.First) then Fields(left, right, kinds.First, slot, expanded + kinds.First) else same
+IsCalled(kind Text, expanded Texts) Boolean
+	Nested.IsCalled("Inner", List(Text) + "Outer")
+	Nested.IsCalled("Inner(Number)", List(Text) + "Outer") is false
+	Nested.IsCalled("Inner", List(Text)) is false
+	Nested.IsCalled("Walker", List(Text) + "Outer") is false
+	let isGeneric = (kind.IndexOf("(") >= 0) or ("Generic" is in types.ParameterScope(kind).types)
+	(kind is in expanded) or ((expanded.Length > 0) and IsRecord(kind) and (isGeneric is false))
 Repeated(left Text, right Text, kind Text, slot Text) Texts
 	Plain.Repeated("left", "right", "Number", "0") is ("let testEqual0 = left is right")
 	let compared = IsRecord(kind) then left + ".IsNearlyEqual(" + right + ")" else left + " is " + right
 	List(Text) + ("let testEqual" + slot + " = " + compared)
 IsRecord(kind Text) Boolean
 	Plain.IsRecord("Number") is false
+	Nested.IsRecord("Inner")
+	Nested.IsRecord("Counter") is false
 	let base = types.BaseName(kind)
-	(types.MembersOf(kind).names.Length > 0) and (base is not in Scalars) and (base is not "List")
+	let isTrait = types.ParameterScope(base).TypeOf(" trait") is "true"
+	(types.MembersOf(kind).names.Length > 0) and (base is not in Scalars) and (base is not "List") and (isTrait is false)
 Elements(left Text, right Text, kind Text, slot Text, expanded Texts) Texts
 	Text.Combine(Plain.Elements("left", "right", Deep, "0", List(Text))).IndexOf("IsNearlyEqual") > 0
 	let same = "testEqual" + slot
