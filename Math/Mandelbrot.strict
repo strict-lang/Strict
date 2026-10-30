@@ -44,6 +44,19 @@ Reference(real DoubleDouble, imaginary DoubleDouble, limit Number) Numbers
 		if Beyond(horizontal * horizontal + vertical * vertical)
 			return orbit
 	orbit
+Julia(real DoubleDouble, imaginary DoubleDouble, seed Numbers, limit Number) Numbers
+	Julia(DoubleDouble(0), DoubleDouble(0), (1, 0), 8) is Reference(DoubleDouble(1), DoubleDouble(0), 8)
+	mutable horizontal = real
+	mutable vertical = imaginary
+	mutable orbit = (real.high, imaginary.high)
+	for limit
+		let squared = horizontal * horizontal - vertical * vertical
+		vertical = horizontal * vertical * DoubleDouble(2) + DoubleDouble(seed(1))
+		horizontal = squared + DoubleDouble(seed(0))
+		orbit = orbit + horizontal.high + vertical.high
+		if Beyond(horizontal * horizontal + vertical * vertical)
+			return orbit
+	orbit
 Enclosed(orbit Numbers, radius Number, limit Number) Boolean
 	Enclosed((0, 0, 0, 0, 0, 0), 0.01, 2)
 	Enclosed((0, 0, 2, 0), 0.01, 1) is false
