@@ -2319,21 +2319,33 @@
   // sweeps the next page waiting for class, its free spans go to spanSlot: their bytes, -1 when no page waits
   func.func private @strict_gc_sweep_next(%class: i64, %spanSlot: !llvm.ptr) -> i64 {
     %zero = arith.constant 0 : i64
-    %sweeps = llvm.mlir.addressof @strict_gc_sweeps : !llvm.ptr
-    %sweepSlot = llvm.getelementptr %sweeps[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<64 x i64>
-    %page = llvm.load %sweepSlot : !llvm.ptr -> i64
+    %page = func.call @strict_gc_waiting(%class) : (i64) -> i64
     %hasPage = arith.cmpi ne, %page, %zero : i64
     cf.cond_br %hasPage, ^sweep, ^none
   ^sweep:
-    %pagePointer = llvm.inttoptr %page : i64 to !llvm.ptr
-    %nextSlot = llvm.getelementptr %pagePointer[3] : (!llvm.ptr) -> !llvm.ptr, i64
-    %nextPage = llvm.load %nextSlot : !llvm.ptr -> i64
-    llvm.store %nextPage, %sweepSlot : i64, !llvm.ptr
-    %free = func.call @strict_gc_sweep_page(%page, %class, %spanSlot) : (i64, i64, !llvm.ptr) -> i64
+    %locked = arith.constant false
+    %free = func.call @strict_gc_sweep_page(%page, %class, %spanSlot, %locked) : (i64, i64, !llvm.ptr, i1) -> i64
     return %free : i64
   ^none:
     %missing = arith.constant -1 : i64
     return %missing : i64
+  }
+  // takes the next page waiting to be swept for class off its list (collector lock held), 0 when none waits
+  func.func private @strict_gc_waiting(%class: i64) -> i64 {
+    %zero = arith.constant 0 : i64
+    %sweeps = llvm.mlir.addressof @strict_gc_sweeps : !llvm.ptr
+    %sweepSlot = llvm.getelementptr %sweeps[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<64 x i64>
+    %page = llvm.load %sweepSlot : !llvm.ptr -> i64
+    %hasPage = arith.cmpi ne, %page, %zero : i64
+    cf.cond_br %hasPage, ^take, ^none
+  ^take:
+    %pagePointer = llvm.inttoptr %page : i64 to !llvm.ptr
+    %nextSlot = llvm.getelementptr %pagePointer[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %nextPage = llvm.load %nextSlot : !llvm.ptr -> i64
+    llvm.store %nextPage, %sweepSlot : i64, !llvm.ptr
+    return %page : i64
+  ^none:
+    return %zero : i64
   }
   func.func private @strict_gc_add_span(%spanSlot: !llvm.ptr, %start: i64, %end: i64) {
     %head = llvm.load %spanSlot : !llvm.ptr -> i64
@@ -2414,6 +2426,22 @@
     llvm.store %page, %fullSlot : i64, !llvm.ptr
     return
   }
+  func.func private @strict_gc_lock_when(%needed: i1) {
+    cf.cond_br %needed, ^lock, ^done
+  ^lock:
+    llvm.call @strict_gc_lock() : () -> ()
+    cf.br ^done
+  ^done:
+    return
+  }
+  func.func private @strict_gc_unlock_when(%needed: i1) {
+    cf.cond_br %needed, ^unlock, ^done
+  ^unlock:
+    llvm.call @strict_gc_unlock() : () -> ()
+    cf.br ^done
+  ^done:
+    return
+  }
   func.func private @strict_gc_resweep(%class: i64) {
     %none = arith.constant 0 : i64
     %pages = llvm.mlir.addressof @strict_gc_pages : !llvm.ptr
@@ -2459,8 +2487,9 @@
   ^done:
     return
   }
-  // returns the bytes of the free spans it added at spanSlot, 0 when the page went to the pool or is full
-  func.func private @strict_gc_sweep_page(%page: i64, %class: i64, %spanSlot: !llvm.ptr) -> i64 {
+  // returns the bytes of the free spans it added at spanSlot, 0 when the page went to the pool or is full; an unlocked
+  // sweep (a pool lane sweeping a page it took off the list) takes the collector lock only for the shared page lists
+  func.func private @strict_gc_sweep_page(%page: i64, %class: i64, %spanSlot: !llvm.ptr, %unlocked: i1) -> i64 {
     %zero = arith.constant 0 : i64
     %pendingPage = llvm.inttoptr %page : i64 to !llvm.ptr
     %pendingSlot = llvm.getelementptr %pendingPage[7] : (!llvm.ptr) -> !llvm.ptr, i64
@@ -2512,7 +2541,9 @@
     cf.cond_br %isEmpty, ^release, ^closeLast
   ^release:
     llvm.store %savedHead, %spanSlot : i64, !llvm.ptr
+    func.call @strict_gc_lock_when(%unlocked) : (i1) -> ()
     func.call @strict_gc_release_page(%page) : (i64) -> ()
+    func.call @strict_gc_unlock_when(%unlocked) : (i1) -> ()
     return %zero : i64
   ^closeLast:
     cf.cond_br %hasOpenRun, ^addLast, ^keep
@@ -2523,7 +2554,9 @@
     %isFull = arith.cmpi eq, %live, %count : i64
     cf.cond_br %isFull, ^full, ^partial
   ^full:
+    func.call @strict_gc_lock_when(%unlocked) : (i1) -> ()
     func.call @strict_gc_keep_full(%page, %class) : (i64, i64) -> ()
+    func.call @strict_gc_unlock_when(%unlocked) : (i1) -> ()
     return %zero : i64
   ^partial:
     func.call @strict_gc_keep_page(%page, %class) : (i64, i64) -> ()
@@ -2631,7 +2664,8 @@
     return
   }
   // while the pool runs a lane allocates from the spans of pages it swept itself and takes the collector lock only to
-  // sweep the next waiting page (pages that kept a few objects are filled again) or else to take a whole page
+  // take the next waiting page off its list (swept after unlocking, pages that kept a few objects are filled again) or
+  // else to take a whole page
   func.func private @strict_gc_refill_busy(%class: i64) {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -2658,12 +2692,16 @@
     func.call @strict_rc_reclaim() : () -> ()
     cf.br ^sweep
   ^sweep:
-    %swept = func.call @strict_gc_sweep_next(%class, %spanSlot) : (i64, !llvm.ptr) -> i64
+    %waiting = func.call @strict_gc_waiting(%class) : (i64) -> i64
+    %hasWaiting = arith.cmpi ne, %waiting, %zero : i64
+    cf.cond_br %hasWaiting, ^unlocked, ^take
+  ^unlocked:
+    llvm.call @strict_gc_unlock() : () -> ()
+    %alone = arith.constant true
+    %swept = func.call @strict_gc_sweep_page(%waiting, %class, %spanSlot, %alone) : (i64, i64, !llvm.ptr, i1) -> i64
+    llvm.call @strict_gc_lock() : () -> ()
     %hasFree = arith.cmpi sgt, %swept, %zero : i64
-    cf.cond_br %hasFree, ^reuse, ^next
-  ^next:
-    %waited = arith.cmpi eq, %swept, %zero : i64
-    cf.cond_br %waited, ^sweep, ^take
+    cf.cond_br %hasFree, ^reuse, ^sweep
   ^reuse:
     func.call @strict_gc_add(%swept) : (i64) -> ()
     %countedFree = llvm.load %allocatedSlot : !llvm.ptr -> i64

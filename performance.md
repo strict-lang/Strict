@@ -7,7 +7,7 @@ Open speed work, one short line each, measurements go into commit messages. GPU 
 - Build speed: under 10 s hard limit, 2-3 s target (LogoApp, Blocks and Breakout 3.6-4 s): a build with tests runs the frontend twice (test gate, then native), lowering and the thin LTO link are the largest phases left.
 - Cold GPU builds spend most time on the shared runtime PTX for both sm_75 and sm_80.
 - `MlirCost` sums expensive alternative call paths and overestimates tiny loops: a loop called again is probed on the caller once its last fork took under 1 ms, a loop run once still forks.
-- Collector lane refill (`strict_gc_small` taking the collector lock) contends at high thread counts.
+- Collector lane refill: a lane still takes the collector lock for every waiting page it pops and every fresh page (`strict_gc_refill_busy`), one shared lock for 64 lanes.
 - Trees as pools with 32 bit backward offsets ([Goose](https://github.com/aardappel/goose)): count SyntaxNode allocations of `strict build Strict.strict` first.
 - GPU preparation takes 0.5-0.6 s of every build with kernels also when nothing changed (`DeviceBuild.Built`: `PtxCache` reads the runtime PTX and hashes the kernel text with `HashCode` per character), `MlirSplit` still reads the just written module back.
 - All native providers compile once any of them is needed.
