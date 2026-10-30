@@ -19,10 +19,8 @@ Prefilled(texts List(Numbers), images List(Numbers), height Number, width Number
 	model.Forwarded(Embedded(texts, encoded), rotation, 1, Stacks(encoded), Rows(lengths, size))
 Encoded(images List(Numbers), height Number, width Number) Slow(List(List(Numbers)))
 	Tiny.Encoded(List(Numbers) + QwenVision.Image, 32, 48).First.Length is 4
-	mutable encoded = List(Mutable(List(Numbers)))
 	for images
-		encoded.Add(vision.Encoded(value, height, width))
-	encoded
+		vision.Encoded(value, height, width)
 Lengths(texts List(Numbers)) Numbers
 	Tiny.Lengths(((1, 2), (3, 4, 5))) is (2, 3)
 	for texts

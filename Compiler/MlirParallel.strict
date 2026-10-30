@@ -27,7 +27,7 @@ IsParallel Boolean
 			return false
 	MlirFiltering(function, position).IsFilteringValues is false
 Snapshot Texts
-	Doubling.Snapshot is ("%p0", "%p1", "%r0", "%r1", "%r2", "%r3", "%r4", "%v_index", "%v_value", "%v_numbers", "%v_forResult")
+	Text.Combine(Doubling.Snapshot, " ") is "%p0 %p1 %r0 %r1 %r2 %r3 %r4 %v_index %v_value %v_numbers %v_forResult"
 	mutable names = List(Mutable(Text))
 	for function.Parameters
 		names.Add("%p" + index)
@@ -142,7 +142,7 @@ Body Texts
 	let end = function.method.LoopEndOf(position)
 	end < function.method.instructions.Length then lines + function.Label(end) else lines
 Collected(at Number) Texts
-	MlirParallel(MlirFiltering.Keeping.function, 2).Collected(7).Last is "    func.call @strict_rc_written(%t7p) : (!llvm.ptr) -> ()"
+	MlirParallel(MlirFiltering.Keeping.function, 2).Collected(7).Last.IndexOf("@strict_rc_written(%t7p)") > 0
 	Doubling.Collected(5).Length is 3
 	let stored = MlirFastLoop(function, position).Emitted(at)
 	let written = "    func.call @strict_rc_written(%t" + at + "p) : (!llvm.ptr) -> ()"

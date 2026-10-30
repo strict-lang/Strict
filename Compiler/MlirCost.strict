@@ -8,13 +8,28 @@ constant Work = 50000
 constant Reading = MethodEntry("Reading", MlirParallel.Randomized.parameters, "Strict/List(Number)", (MlirParallel.Randomized.instructions.Slice(0, 4) + InstructionEntry.Invoke(2, ("Strict/File", "Exists", "Strict/Boolean"), List(Number), 1)) + MlirParallel.Randomized.instructions.Slice(5, 2))
 constant Doubling = MlirCost(MlirParallel.Doubling.function, 2)
 constant Filtering = MlirCost(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, MlirParallel.Filtered), 2)
+constant Doubler = MethodEntry("Doubler", List(MemberEntry) + MemberEntry("rows", "Strict/List(List(Number))", List(InstructionEntry), false), "Strict/List(List(Number))", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "rows"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Invoke(2, ("Strict/Rows", "Doubled", "Strict/List(Number)", "numbers"), List(Number) + 1, -1), InstructionEntry.Named(InstructionType.InvokeWriteToList, 2, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 4)))
+constant Devices = MlirCost(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, Doubler), 2)
+constant Device = 4096
 constant SlowLoop = MlirCost(MlirFunction(Doubling.function, method = MethodEntry(Doubling.function.method, declaredType = "Slow(Numbers)")), 2)
 Threshold Number
 	SlowLoop.Threshold is Doubling.Threshold
 	Doubling.Threshold is 6250
 	Filtering.Threshold is 8334
+	Devices.Threshold is Device
 	let count = (Work / Iteration).Ceiling
-	count < 2 then 2 else count
+	let least = IsDevice(function, position + 1, function.method.LoopEndOf(position), 0) then Device else 2
+	count < least then least else count
+IsDevice(inspected MlirFunction, first Number, last Number, depth Number) Boolean
+	Devices.IsDevice(Devices.function, 3, 6, 0)
+	Doubling.IsDevice(Doubling.function, 3, 6, 0) is false
+	for Range(first, last)
+		if (inspected.method.instructions(value).kind is InstructionType.LoopBegin) and MlirGpuCheck(inspected, value).IsGpu
+			return true
+		let callees = depth < 4 then MlirModule(inspected.types, "").Called(inspected, value) else List(MlirFunction)
+		if (callees.Length > 0) and IsDevice(callees.First, 0, callees.First.method.instructions.Length, depth + 1)
+			return true
+	false
 Iteration Number
 	Doubling.Iteration is 8
 	MlirCost(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, Reading), 2).Iteration is 20002
