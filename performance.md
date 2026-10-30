@@ -14,5 +14,5 @@ Open speed work, one short line each, measurements go into commit messages. GPU 
 - All native providers compile once any of them is needed.
 - Reachability, safety and globals/text assembly of MLIR emission run serially.
 - A native library call copies every Numbers argument into new doubles (`strict_list_flat`, 1.2 GB for 148.6M numbers, unpacking packed lists first).
-- ParticleStress at 1 million particles spends 10 of its 14 ms per tick outside the parallel loop (Unity's particle system 9.5 ms): the collection every tick (4.4 ms), counting the references of the list to its own blocks (3.1 ms), allocating and clearing the list (1.9 ms) and compacting it (0.7 ms); the loop itself is bound by memory (80 bytes per particle read and written every tick).
+- ParticleStress at 1 million particles (10 ms per tick, Unity's particle system 9.5): the parallel loop takes 6.6 ms bound by memory (a new 80 byte block of f64 slots per particle every tick, 32 bit slots or building the next tick into the dead list of the last one would halve it), 2 ms are serial passes over the 8 MB of items (clearing, holes, compacting, the reference check of strict_list_filled).
 - A `for` that drops items collects objects in parallel, but numbers and flat elements stay on one thread (any bit pattern is a number, so no hole marker): keep a bitmap of the kept slots instead.

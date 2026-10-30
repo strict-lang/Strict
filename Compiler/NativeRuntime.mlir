@@ -3534,10 +3534,13 @@
   ^done:
     return %found : i1
   }
+  // references into the container itself (the items of a list pointing at its own blocks) are skipped before locating
   func.func private @strict_rc_words(%start: !llvm.ptr, %words: i64, %container: i64) {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %up = arith.constant 1 : i32
+    %located:5 = func.call @strict_gc_locate(%container) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %containerEnd = arith.addi %located#1, %located#2 : i64
     cf.br ^loop(%zero : i64)
   ^loop(%index: i64):
     %more = arith.cmpi ult, %index, %words : i64
@@ -3545,8 +3548,14 @@
   ^word:
     %slot = llvm.getelementptr %start[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i64
     %word = llvm.load %slot : !llvm.ptr -> i64
-    func.call @strict_rc_add(%word, %container, %up) : (i64, i64, i32) -> ()
+    %target = func.call @strict_rc_target(%word) : (i64) -> i64
+    %before = arith.cmpi ult, %target, %located#1 : i64
+    %after = arith.cmpi uge, %target, %containerEnd : i64
+    %outside = arith.ori %before, %after : i1
     %next = arith.addi %index, %one : i64
+    cf.cond_br %outside, ^add, ^loop(%next : i64)
+  ^add:
+    func.call @strict_rc_add(%word, %container, %up) : (i64, i64, i32) -> ()
     cf.br ^loop(%next : i64)
   ^done:
     return
@@ -7262,7 +7271,8 @@
     return %bits : f64
   }
   // compiled loops write their results straight into the items (parallel ones from other threads), so all cards
-  // of the filled items are marked here
+  // of the filled items are marked here; a list whose holder, items and their references all lie in its own
+  // allocation (items of record blocks) needs neither cards nor counts, a large one is not scanned at all then
   func.func private @strict_list_filled(%list: f64, %length: f64) -> f64 {
     %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
     llvm.store %length, %view : f64, !llvm.ptr
@@ -7276,8 +7286,64 @@
     %eight = arith.constant 8.0 : f64
     %bytesNumber = arith.mulf %length, %eight : f64
     %bytes = arith.fptosi %bytesNumber : f64 to i64
+    %object = llvm.ptrtoint %view : !llvm.ptr to i64
+    %located:5 = func.call @strict_gc_locate(%object) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %end = arith.addi %located#1, %located#2 : i64
+    %true = arith.constant true
+    %itemsAddress = llvm.ptrtoint %items : !llvm.ptr to i64
+    %words = arith.fptosi %length : f64 to i64
+    %holderOutside = func.call @strict_words_outside(%holderSlot, %located#1, %end) : (!llvm.ptr, i64, i64) -> i1
+    %holderInside = arith.xori %holderOutside, %true : i1
+    %itemsAfter = arith.cmpi uge, %itemsAddress, %located#1 : i64
+    %itemsBefore = arith.cmpi ult, %itemsAddress, %end : i64
+    %itemsInside = arith.andi %itemsAfter, %itemsBefore : i1
+    %contained = arith.andi %holderInside, %itemsInside : i1
+    cf.cond_br %contained, ^check, ^written
+  ^check:
+    %referring = func.call @strict_words_referring(%items, %words, %located#1, %end) : (!llvm.ptr, i64, i64, i64) -> i1
+    cf.cond_br %referring, ^written, ^own
+  ^written:
     func.call @strict_gc_written_range(%items, %bytes) : (!llvm.ptr, i64) -> ()
     return %list : f64
+  ^own:
+    cf.cond_br %located#3, ^unscanned, ^done
+  ^unscanned:
+    %scannedSlot = llvm.getelementptr %located#0[36] : (!llvm.ptr) -> !llvm.ptr, i8
+    %noWords = arith.constant 1 : i32
+    llvm.store %noWords, %scannedSlot : i32, !llvm.ptr
+    cf.br ^done
+  ^done:
+    return %list : f64
+  }
+  // true when the word at slot refers to an object outside [first, end)
+  func.func private @strict_words_outside(%slot: !llvm.ptr, %first: i64, %end: i64) -> i1 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %zero = arith.constant 0 : i64
+    %word = llvm.load %slot : !llvm.ptr -> i64
+    %target = func.call @strict_rc_target(%word) : (i64) -> i64
+    %isTarget = arith.cmpi ne, %target, %zero : i64
+    %before = arith.cmpi ult, %target, %first : i64
+    %after = arith.cmpi uge, %target, %end : i64
+    %outside = arith.ori %before, %after : i1
+    %referring = arith.andi %isTarget, %outside : i1
+    return %referring : i1
+  }
+  // true when one of the words at start refers to an object outside [first, end)
+  func.func private @strict_words_referring(%start: !llvm.ptr, %words: i64, %first: i64, %end: i64) -> i1 {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %no = arith.constant false
+    %yes = arith.constant true
+    cf.br ^loop(%zero : i64)
+  ^loop(%index: i64):
+    %more = arith.cmpi ult, %index, %words : i64
+    cf.cond_br %more, ^word, ^done(%no : i1)
+  ^word:
+    %slot = llvm.getelementptr %start[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %outside = func.call @strict_words_outside(%slot, %first, %end) : (!llvm.ptr, i64, i64) -> i1
+    %next = arith.addi %index, %one : i64
+    cf.cond_br %outside, ^done(%yes : i1), ^loop(%next : i64)
+  ^done(%result: i1):
+    return %result : i1
   }
   // a filled list of numbers holds no references and needs no cards
   func.func private @strict_list_filled_numbers(%list: f64, %length: f64) -> f64 {
@@ -18537,11 +18603,17 @@
     llvm.store %pool, %poolSlot : i64, !llvm.ptr
     return
   }
+  // a program that never opened the GPU has no entries, spills or residents: its collections skip the 65536 entries
   func.func private @strict_gpu_sweep(%full: i1) {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %entries = arith.constant 65536 : i64
-    cf.br ^next(%none : i64)
+    %stateSlot = llvm.mlir.addressof @strict_gpu_state : !llvm.ptr
+    %state = llvm.load %stateSlot : !llvm.ptr -> i64
+    %untried = arith.cmpi eq, %state, %none : i64
+    cf.cond_br %untried, ^skipped, ^next(%none : i64)
+  ^skipped:
+    return
   ^next(%index: i64):
     %more = arith.cmpi slt, %index, %entries : i64
     cf.cond_br %more, ^check, ^done
