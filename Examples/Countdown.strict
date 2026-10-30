@@ -1,5 +1,5 @@
 has logger
-Counted(number Number, total Number) Number
+Counted(number Number, total Number) Slow(Number)
 	Countdown.Counted(30000, 0) is 30000
 	number is 0 then total else Counted(number - 1, total + 1)
 Run

@@ -1,5 +1,5 @@
 has words Texts
-Odd Texts
+Odd Slow(Texts)
 	ParallelKept(ParallelKept.Numbered(10000)).Odd.Length is 5000
 	ParallelKept(ParallelKept.Numbered(10000)).Odd(4999) is "9999"
 	for words

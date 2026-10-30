@@ -1,5 +1,5 @@
 has state Numbers
-Seeded(seed Number) MersenneTwister
+Seeded(seed Number) Slow(MersenneTwister)
 	MersenneTwister.Seeded(5489).Uints(3) is (3499211612, 581869302, 3890346734)
 	MersenneTwister.Seeded(4294967338).Uints(1) is MersenneTwister.Seeded(42).Uints(1)
 	MersenneTwister.Seeded(-1) is Error("InvalidSeed")
@@ -13,7 +13,7 @@ Spread(previous Number) Number
 	MersenneTwister(List(Number)).Spread(1) is 1812433253
 	let mixed = previous xor (previous / 1073741824).Floor
 	(1812433253 * (mixed / 65536).Floor % 65536 * 65536 + 1812433253 * (mixed % 65536)) % 4294967296
-Uints(count Number) Numbers
+Uints(count Number) Slow(Numbers)
 	MersenneTwister.Seeded(42).Uints(700)(624) is 108880612
 	MersenneTwister.Seeded(42).Uints(700).Last is 4009078418
 	mutable raw = state
@@ -31,12 +31,12 @@ Tempered(number Number) Number
 	let second = first xor (first * 128 % 4294967296 and 2636928640)
 	let third = second xor (second * 32768 % 4294967296 and 4022730752)
 	third xor (third / 262144).Floor
-Normals(count Number) Numbers
+Normals(count Number) Slow(Numbers)
 	MersenneTwister.Seeded(42).Normals(16).First.IsNearlyEqual(1.9269153, 0.00001)
 	MersenneTwister.Seeded(42).Normals(20)(16).IsNearlyEqual(-0.3097268, 0.00001)
 	MersenneTwister.Seeded(42).Normals(20)(19).IsNearlyEqual(-0.6215954, 0.00001)
 	MersenneTwister.Seeded(7).Normals(16).Last.IsNearlyEqual(1.0901651, 0.00001)
-	MersenneTwister.Seeded(42).Normals(8) is Error("FewerThanSixteen")
+	MersenneTwister(List(Number)).Normals(8) is Error("FewerThanSixteen")
 	if count < 16
 		return Error("FewerThanSixteen")
 	let tail = count % 16 is 0 then count else count - 16
