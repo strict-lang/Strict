@@ -1521,7 +1521,7 @@
     llvm.store %zero, %busySlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     return %soloResult : f64
   ^choose:
-    // a loop whose last forked run took under a millisecond (keyed by its body) is probed on this thread first
+    // a loop whose forked run took under a millisecond (keyed by its body) is probed on this thread from then on
     %forkStarted = func.call @strict_clock() : () -> f64
     %bodyKey = llvm.ptrtoint %function : !llvm.ptr to i64
     %keyShift = arith.constant 4 : i64
@@ -1532,9 +1532,9 @@
     %cheapSlot = llvm.getelementptr %cheapTable[0, %keyIndex] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<4096 x i64>
     %remembered = llvm.load %cheapSlot : !llvm.ptr -> i64
     %isCheap = arith.cmpi eq, %remembered, %bodyKey : i64
-    cf.cond_br %isCheap, ^probe, ^shared(%from : i64)
+    cf.cond_br %isCheap, ^probe, ^shared(%from, %workers : i64, i64)
   ^probe:
-    // the caller runs growing chunks itself for 50 microseconds first: a cheap loop never wakes the pool
+    // the caller runs growing chunks itself for 10 microseconds first: a cheap loop never wakes the pool
     %probeJobSlot = llvm.mlir.addressof @strict_pool_job : !llvm.ptr
     %probeLast = llvm.load %probeJobSlot : !llvm.ptr -> i64
     %probeJob = arith.addi %probeLast, %one : i64
@@ -1559,19 +1559,29 @@
   ^timed(%next: i64, %last: i64):
     %probeNow = func.call @strict_clock() : () -> f64
     %spent = arith.subf %probeNow, %probeStarted : f64
-    %budget = arith.constant 5.0e-5 : f64
+    %budget = arith.constant 1.0e-5 : f64
     %overBudget = arith.cmpf ogt, %spent, %budget : f64
     %grown = arith.addi %last, %last : i64
-    cf.cond_br %overBudget, ^handoff(%next : i64), ^step(%next, %grown : i64, i64)
+    %doneCount = arith.subi %next, %from : i64
+    %doneFloat = arith.sitofp %doneCount : i64 to f64
+    %leftCount = arith.subi %count, %next : i64
+    %leftFloat = arith.sitofp %leftCount : i64 to f64
+    %perIteration = arith.divf %spent, %doneFloat : f64
+    %restTime = arith.mulf %perIteration, %leftFloat : f64
+    // only as many helpers as the measured rest keeps busy for 50 microseconds each wake up
+    %helperShare = arith.constant 5.0e-5 : f64
+    %wantedFloat = arith.divf %restTime, %helperShare : f64
+    %wanted = arith.fptosi %wantedFloat : f64 to i64
+    cf.cond_br %overBudget, ^handoff(%next, %wanted : i64, i64), ^step(%next, %grown : i64, i64)
   ^probed(%probeResult: f64):
     llvm.store %probeWasInside, %probeInsideSlot : i64, !llvm.ptr
     llvm.store %zero, %busySlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     return %probeResult : f64
-  ^handoff(%rest: i64):
+  ^handoff(%rest: i64, %helpersWanted: i64):
     llvm.store %probeWasInside, %probeInsideSlot : i64, !llvm.ptr
     llvm.store %zero, %busySlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
-    cf.br ^shared(%rest : i64)
-  ^shared(%start: i64):
+    cf.br ^shared(%rest, %helpersWanted : i64, i64)
+  ^shared(%start: i64, %helperLimit: i64):
     %jobSlot = llvm.mlir.addressof @strict_pool_job : !llvm.ptr
     %previous = llvm.load %jobSlot : !llvm.ptr -> i64
     %job = arith.addi %previous, %one : i64
@@ -1609,7 +1619,8 @@
     %rounded = arith.addi %remaining, %lastPart : i64
     %chunks = arith.divsi %rounded, %chunk : i64
     %others = arith.subi %chunks, %one : i64
-    %helpers = arith.minsi %others, %workers : i64
+    %possible = arith.minsi %others, %workers : i64
+    %helpers = arith.minsi %possible, %helperLimit : i64
     llvm.call @strict_pool_wake(%helpers) : (i64) -> ()
     llvm.call @strict_pool_run(%job) : (i64) -> ()
     cf.br ^wait(%zero : i64)
@@ -1635,8 +1646,8 @@
     %forkSpent = arith.subf %forkEnded, %forkStarted : f64
     %forkLimit = arith.constant 1.0e-3 : f64
     %quick = arith.cmpf olt, %forkSpent, %forkLimit : f64
-    %unprobed = arith.cmpi eq, %start, %from : i64
-    %markCheap = arith.andi %quick, %unprobed : i1
+    %probedFirst = arith.cmpi ne, %start, %from : i64
+    %markCheap = arith.ori %quick, %probedFirst : i1
     %marked = arith.select %markCheap, %bodyKey, %zero : i64
     llvm.store %marked, %cheapSlot : i64, !llvm.ptr
     %failureBits = llvm.load %failureSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64

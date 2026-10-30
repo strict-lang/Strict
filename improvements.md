@@ -8,6 +8,8 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - When the native library of a package fails to build, the VM returns clang's error text as the result of the native call instead of an Error (HttpChecks compared it with the expected HMAC digest).
 - Reading a field of an element of a big `Json` costs time and memory in proportion to the whole document: Rebalancing's warmup read `pair.Base` of `exchangeInfo` elements (239 KB) 128,000 times and peaked at 3 GB (OutOfMemory on an 8 GB server), copying each element into its own `Json(value to Text)` first made it cheap.
 - WebWars and ArenaWars do not build natively: `Native compilation failed, unsupported: text of List(cell) in WebWarsTerrain_Navigation_0` (`ArenaLevel_Navigation_2` in ArenaWars), both build their navigation with DeltaEngine's `Graphs/NavigationMap.FromGrid` (DeltaEngine 3a4ef02 with Strict 0da462d8, SoulCraft builds).
+- WebWars does not build natively: "unsupported: text of List(cell) in WebWarsTerrain_Navigation_0" (a variable name taken as the element type of a text conversion), its tests pass on the VM and WebWarsTerrain alone builds.
+- GPT-2 stays on the CPU by default on the 4090 (17 ms per token, 4.0 ms with STRICT_GPU=all): none of its loops reads 4M numbers and nothing is on the GPU yet, so strict_gpu_wanted never moves the weights there.
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).
