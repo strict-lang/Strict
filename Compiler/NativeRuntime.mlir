@@ -1460,6 +1460,7 @@
   llvm.mlir.global internal @strict_pool_done(dense<0> : tensor<8xi64>) {alignment = 64 : i64} : !llvm.array<8 x i64>
   llvm.mlir.global internal @strict_pool_failure(0 : i64) : i64
   llvm.mlir.global internal @strict_pool_sleepers(0 : i64) : i64
+  llvm.mlir.global internal @strict_pool_cheap(dense<0> : tensor<4096xi64>) : !llvm.array<4096 x i64>
   llvm.mlir.global internal @strict_gc_mutex(dense<0> : tensor<8xi64>) {alignment = 64 : i64} : !llvm.array<8 x i64>
   llvm.mlir.global internal constant @strict_build_profile_name("STRICT_BUILD_PROFILE\00") : !llvm.array<21 x i8>
   func.func private @strict_buildprofile_detailed(%self: f64) -> f64 {
@@ -1500,7 +1501,7 @@
   ^pool:
     %workers = func.call @strict_pool_started() : () -> i64
     %alone = arith.cmpi eq, %workers, %zero : i64
-    cf.cond_br %alone, ^solo, ^shared
+    cf.cond_br %alone, ^solo, ^choose
   ^serial:
     %serialResult = llvm.call %function(%context, %from, %count) : !llvm.ptr, (!llvm.ptr, i64, i64) -> f64
     return %serialResult : f64
@@ -1519,7 +1520,58 @@
     llvm.store %soloWasInside, %soloInsideSlot : i64, !llvm.ptr
     llvm.store %zero, %busySlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     return %soloResult : f64
-  ^shared:
+  ^choose:
+    // a loop whose last forked run took under a millisecond (keyed by its body) is probed on this thread first
+    %forkStarted = func.call @strict_clock() : () -> f64
+    %bodyKey = llvm.ptrtoint %function : !llvm.ptr to i64
+    %keyShift = arith.constant 4 : i64
+    %keyHigh = arith.shrui %bodyKey, %keyShift : i64
+    %keyMask = arith.constant 4095 : i64
+    %keyIndex = arith.andi %keyHigh, %keyMask : i64
+    %cheapTable = llvm.mlir.addressof @strict_pool_cheap : !llvm.ptr
+    %cheapSlot = llvm.getelementptr %cheapTable[0, %keyIndex] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<4096 x i64>
+    %remembered = llvm.load %cheapSlot : !llvm.ptr -> i64
+    %isCheap = arith.cmpi eq, %remembered, %bodyKey : i64
+    cf.cond_br %isCheap, ^probe, ^shared(%from : i64)
+  ^probe:
+    // the caller runs growing chunks itself for 50 microseconds first: a cheap loop never wakes the pool
+    %probeJobSlot = llvm.mlir.addressof @strict_pool_job : !llvm.ptr
+    %probeLast = llvm.load %probeJobSlot : !llvm.ptr -> i64
+    %probeJob = arith.addi %probeLast, %one : i64
+    llvm.store %probeJob, %probeJobSlot : i64, !llvm.ptr
+    func.call @strict_gc_lanes_carried() : () -> ()
+    llvm.store %one, %busySlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    %probeInsideSlot = llvm.mlir.addressof @strict_pool_inside : !llvm.ptr
+    %probeWasInside = llvm.load %probeInsideSlot : !llvm.ptr -> i64
+    llvm.store %probeJob, %probeInsideSlot : i64, !llvm.ptr
+    %probeStarted = func.call @strict_clock() : () -> f64
+    cf.br ^step(%from, %one : i64, i64)
+  ^step(%at: i64, %size: i64):
+    %left = arith.subi %count, %at : i64
+    %taken = arith.minsi %size, %left : i64
+    %end = arith.addi %at, %taken : i64
+    %stepResult = llvm.call %function(%context, %at, %end) : !llvm.ptr, (!llvm.ptr, i64, i64) -> f64
+    %stepBits = arith.bitcast %stepResult : f64 to i64
+    %stepFailed = arith.cmpi ne, %stepBits, %zero : i64
+    %complete = arith.cmpi sge, %end, %count : i64
+    %stop = arith.ori %stepFailed, %complete : i1
+    cf.cond_br %stop, ^probed(%stepResult : f64), ^timed(%end, %size : i64, i64)
+  ^timed(%next: i64, %last: i64):
+    %probeNow = func.call @strict_clock() : () -> f64
+    %spent = arith.subf %probeNow, %probeStarted : f64
+    %budget = arith.constant 5.0e-5 : f64
+    %overBudget = arith.cmpf ogt, %spent, %budget : f64
+    %grown = arith.addi %last, %last : i64
+    cf.cond_br %overBudget, ^handoff(%next : i64), ^step(%next, %grown : i64, i64)
+  ^probed(%probeResult: f64):
+    llvm.store %probeWasInside, %probeInsideSlot : i64, !llvm.ptr
+    llvm.store %zero, %busySlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    return %probeResult : f64
+  ^handoff(%rest: i64):
+    llvm.store %probeWasInside, %probeInsideSlot : i64, !llvm.ptr
+    llvm.store %zero, %busySlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    cf.br ^shared(%rest : i64)
+  ^shared(%start: i64):
     %jobSlot = llvm.mlir.addressof @strict_pool_job : !llvm.ptr
     %previous = llvm.load %jobSlot : !llvm.ptr -> i64
     %job = arith.addi %previous, %one : i64
@@ -1527,7 +1579,7 @@
     %tag = arith.andi %job, %mask : i64
     %shift = arith.constant 32 : i64
     %tagged = arith.shli %tag, %shift : i64
-    %first = arith.addi %tagged, %from : i64
+    %first = arith.addi %tagged, %start : i64
     %nextSlot = llvm.mlir.addressof @strict_pool_next : !llvm.ptr
     %invalidated = llvm.atomicrmw xchg %nextSlot, %first acq_rel : !llvm.ptr, i64
     %bodyBits = llvm.ptrtoint %function : !llvm.ptr to i64
@@ -1541,13 +1593,13 @@
     %threads = arith.addi %workers, %one : i64
     %four = arith.constant 4 : i64
     %pieces = arith.muli %threads, %four : i64
-    %remaining = arith.subi %count, %from : i64
+    %remaining = arith.subi %count, %start : i64
     %share = arith.divsi %remaining, %pieces : i64
     %chunk = arith.maxsi %share, %one : i64
     %chunkSlot = llvm.mlir.addressof @strict_pool_chunk : !llvm.ptr
     llvm.store %chunk, %chunkSlot atomic monotonic {alignment = 8 : i64} : i64, !llvm.ptr
     %doneSlot = llvm.mlir.addressof @strict_pool_done : !llvm.ptr
-    llvm.store %from, %doneSlot : i64, !llvm.ptr
+    llvm.store %start, %doneSlot : i64, !llvm.ptr
     %failureSlot = llvm.mlir.addressof @strict_pool_failure : !llvm.ptr
     llvm.store %zero, %failureSlot : i64, !llvm.ptr
     func.call @strict_gc_lanes_carried() : () -> ()
@@ -1579,6 +1631,14 @@
     cf.br ^finish
   ^finish:
     llvm.store %zero, %busySlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    %forkEnded = func.call @strict_clock() : () -> f64
+    %forkSpent = arith.subf %forkEnded, %forkStarted : f64
+    %forkLimit = arith.constant 1.0e-3 : f64
+    %quick = arith.cmpf olt, %forkSpent, %forkLimit : f64
+    %unprobed = arith.cmpi eq, %start, %from : i64
+    %markCheap = arith.andi %quick, %unprobed : i1
+    %marked = arith.select %markCheap, %bodyKey, %zero : i64
+    llvm.store %marked, %cheapSlot : i64, !llvm.ptr
     %failureBits = llvm.load %failureSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
     %failure = arith.bitcast %failureBits : i64 to f64
     return %failure : f64
