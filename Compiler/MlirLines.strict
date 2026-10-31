@@ -48,7 +48,13 @@ End Texts
 	MlirLines(Lined).End is List(Text) + Stop
 	Stop.IndexOf("@strict_line_leave(%linetable, %linestate)") > 0
 	MlirLines(Unlined).End.Length is 0
-	function.IsCounted then List(Text) + Stop else List(Text)
+	MlirLines(MlirChecks.Presenting).End is ("    func.call @strict_frame_ended() : () -> ()")
+	(function.IsCounted then List(Text) + Stop else List(Text)) + Framed
+Framed Texts
+	MlirLines(MlirChecks.Presenting).Framed is ("    func.call @strict_frame_ended() : () -> ()")
+	MlirLines(Unlined).Framed.Length is 0
+	let isFramed = function.type.IsRealtime and (function.method.Name is "Presented")
+	isFramed then List(Text) + "    func.call @strict_frame_ended() : () -> ()" else List(Text)
 Placed Texts
 	MlirLines(Lined).Placed is ("Shape.strict:2", "Shape.strict:3")
 	MlirLines(Lined, ("Strict/Shape"), ("Examples/Shape.strict")).Placed.First is "Examples/Shape.strict:2"

@@ -169,10 +169,8 @@
     %lowest = llvm.ptrtoint %end : !llvm.ptr to i64
     return %lowest : i64
   }
-  // committed memory is zero like on the other platforms, pages of the grown heap are not cleared again
+  // fresh memory of the browser is zero, reused pages are cleared where they are taken (strict_gc_take_pages)
   func.func private @strict_commit(%at: !llvm.ptr, %size: i64) {
-    %zero = arith.constant 0 : i32
-    %cleared = llvm.call @strict_c_memset(%at, %zero, %size) : (!llvm.ptr, i32, i64) -> !llvm.ptr
     return
   }
   func.func private @strict_decommit(%at: !llvm.ptr, %size: i64) {

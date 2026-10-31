@@ -48,10 +48,11 @@ Hex(number Number) Text
 	result
 Returned(entry InstructionEntry) Texts
 	MlirStatements(Copy.function, 2).Returned(InstructionEntry.Return(0)).Last is "    return %t2 : f64"
+	Text.Combine(MlirStatements(MlirChecks.Presenting, 2).Returned(InstructionEntry.Return(0))).IndexOf("frame_ended") > 0
 	if MlirLayout(function).IsInitializer
 		return MlirChanged(function, position).Kept + MlirLayout(function).Returned(position)
-	let returned = (function.Load(Temp(""), "%r" + entry.payload(0)), "    return " + Temp("") + " : f64")
-	MlirChanged(function, position).Kept + returned
+	let loaded = List(Text) + function.Load(Temp(""), "%r" + entry.payload(0))
+	MlirChanged(function, position).Kept + loaded + MlirLines(function).Framed + ("    return " + Temp("") + " : f64")
 Jumped(entry InstructionEntry) Texts
 	Copy.Jumped(InstructionEntry.Jump(InstructionType.JumpEnd, 0)).Length is 0
 	if entry.kind is InstructionType.JumpEnd

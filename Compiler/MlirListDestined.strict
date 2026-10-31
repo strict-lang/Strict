@@ -50,17 +50,22 @@ Sources Texts
 			value.Name
 Created(result Text, capacity Text) Texts
 	MlirListDestined(Copied.function, 2).Created("%r", "%a").Last.IndexOf("list_into(%listDestination, %a, %rc)") > 0
-	Copied.Created("%r", "%a").Last.IndexOf("@strict_list_created(%a, %rc)") > 0
+	Copied.Created("%r", "%a").Last.IndexOf("@strict_numbers_new(%a) : (f64) -> f64") > 0
+	Lined.Created("%r", "%a").Last.IndexOf("@strict_list_created(%a, %rc)") > 0
 	Copied.Created("%r", "%a").First is "    %rc = arith.constant 0.0 : f64"
 	Lined.Created("%r", "%a").First is "    %rc = arith.constant 3.0 : f64"
 	let element = MlirKinds(function).ElementKind(MlirKinds(function).VariableKind(position, "forResult"))
 	if MlirEmbedded(function).IsNumbers(element)
 		return MlirEmbedded(function).Listed(element, result, capacity)
 	let counted = "    " + result + "c = arith.constant " + MlirFlats(function, position).Count(element) + ".0 : f64"
-	let into = "@strict_list_into(%listDestination, " + capacity + ", " + result + "c) : (f64, f64, f64)"
-	let created = "@strict_list_created(" + capacity + ", " + result + "c) : (f64, f64)"
-	let call = IsDestined and (ResultLoop is position) then into else created
-	(counted, "    " + result + " = func.call " + call + " -> f64")
+	(counted, "    " + result + " = func.call " + Allocation(result, capacity, element) + " -> f64")
+Allocation(result Text, capacity Text, element Text) Text
+	Copied.Allocation("%r", "%a", "Number") is "@strict_numbers_new(%a) : (f64)"
+	Lined.Allocation("%r", "%a", "Tripling") is "@strict_list_created(%a, %rc) : (f64, f64)"
+	if IsDestined and (ResultLoop is position)
+		return "@strict_list_into(%listDestination, " + capacity + ", " + result + "c) : (f64, f64, f64)"
+	let numbers = "@strict_numbers_new(" + capacity + ") : (f64)"
+	element is "Number" then numbers else "@strict_list_created(" + capacity + ", " + result + "c) : (f64, f64)"
 IsElement(entry InstructionEntry) Boolean
 	Remade.IsElement(Remaking.instructions(4))
 	MlirListDestined(Remade.function, 3).IsElement(Remaking.instructions(4)) is false

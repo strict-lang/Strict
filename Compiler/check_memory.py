@@ -1,5 +1,6 @@
 """Run from Strict: python Compiler/check_memory.py. A failed host allocation ends with OutOfMemory (Windows only), a
-program dropping 52 MB lists while keeping 260 MB runs in the 1 GB heap of the web and iOS (natively and in node)."""
+program dropping 52 MB lists while keeping 260 MB runs in the 1 GB heap of the web and iOS (natively and in node), a
+Realtime type collects at the end of its frames (Presented)."""
 import ctypes
 import os
 import subprocess
@@ -69,4 +70,15 @@ with tempfile.TemporaryDirectory(prefix="MemoryCheck", dir=root / "Examples") as
 	node = next((root / "Tools" / "emsdk" / "node").glob("*/node.exe"))
 	ran = subprocess.run([str(node), str(script)], capture_output=True, text=True, timeout=60)
 	assert ran.returncode == 0 and "total 1924" in ran.stdout, (ran.returncode, ran.stdout[-300:])
+	ticker = built(folder, "FrameTicker", "has size Number\nhas frame Number = 0\nhas kept Numbers = List(Number)\n"
+		"has logger\nhas Realtime\nPresented FrameTicker\n\tFrameTicker(3).Presented.kept is (0, 1, 2)\n"
+		"\tFrameTicker(size, frame + 1, Filled(frame))\nFilled(seed Number) Numbers\n\tFrameTicker(2).Filled(1) is (1, 2)\n"
+		"\tfor size\n\t\tindex + seed\nRun\n\tmutable ticker = FrameTicker(5000000)\n\tfor 10\n"
+		"\t\tticker = ticker.Presented\n\tlogger.Log(\"frames \" + ticker.frame)")
+	ran = subprocess.run([str(ticker)], capture_output=True, text=True, timeout=60,
+		env=os.environ | {"STRICT_GC_LOG": "1", "STRICT_GPU": "0"})
+	collections = [line for line in ran.stdout.splitlines() if line.startswith("Collection: ")]
+	ended = [line.endswith(", frame end") for line in collections]
+	assert ran.returncode == 0 and True in ended and all(ended[ended.index(True):]) and ended.count(True) >= 9, \
+		ran.stdout[-500:]
 print("check_memory.py passed")

@@ -6,6 +6,7 @@ has Bits Number = 64
 has Count Number = 0
 constant SevenMember = MemberEntry("a", "b", InstructionEntry(InstructionType.Set, List(Text), (1, 7, 0)), true)
 constant LoggerMember = MemberEntry("logger", "Strict/Logger", List(InstructionEntry), false)
+constant RealtimeMember = MemberEntry("Realtime", "Strict/Realtime", List(InstructionEntry), false)
 constant NumbersMember = MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false)
 Limited(line Text) MemberEntry
 	NumbersMember.Limited("has numbers with Length is 3 and value.Bits is 32").Count is 3
