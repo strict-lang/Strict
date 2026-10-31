@@ -182,4 +182,18 @@ assert built.returncode==0,built.stdout[-2000:]+built.stderr[-2000:]
 ran=subprocess.run([str(folder/'OrbitGpu.exe')],cwd=folder,capture_output=True,text=True,env={key: value for key, value in os.environ.items() if key!='STRICT_GPU'})
 print(ran.stdout,flush=True)
 assert 'gpu kernels 1, 3 6 32' in ran.stdout,'a loop reading a List(Pair) and a Pair member, calling a method with Pair parameters, did not run as one GPU kernel'
+viewing='''has zoom Number
+has seed Pair = Pair.Zero
+has center Pair
+Zoomed(factor Number) Viewing
+	Viewing(2, Pair(1, 1), Pair(3, 4)).Zoomed(2) is Viewing(4, Pair(1, 1), Pair(3, 4))
+	Viewing(2, center = Pair(3, 4)).Zoomed(2) is Viewing(4, Pair.Zero, Pair(3, 4))
+	Viewing(zoom * factor, seed, center)
+'''
+(folder/'Pair.strict').write_bytes(pair.replace('has imaginary Number' + chr(10), 'has imaginary Number' + chr(10) + 'constant Zero = Pair(0, 0)' + chr(10)).replace(chr(10), chr(13) + chr(10)).encode('utf-8'))
+(folder/'Viewing.strict').write_bytes(viewing.replace(chr(10), chr(13) + chr(10)).encode('utf-8'))
+built=subprocess.run([str(root/'strict.exe'),'build','Viewing.strict'],cwd=folder,capture_output=True,text=True)
+assert built.returncode==0,built.stdout[-2000:]+built.stderr[-2000:]
+tested=subprocess.run([str(folder/'Viewing.test.exe')],cwd=folder,capture_output=True,text=True)
+assert tested.returncode==0,'a type with Pair members (one with a default) compared with is failed natively: '+tested.stdout[-2000:]
 print('A list computed on the GPU from numbers alone stays there until the CPU reads it')

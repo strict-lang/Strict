@@ -45,12 +45,12 @@ Methods(type TypeEntry) List(MethodEntry)
 	Sample.Methods(Caller).First.instructions(2).texts is ("lanes2_real")
 	for type.methods
 		let rewritten = Rewritten(type, value)
-		let parameters = LaneCalls(types).Divided(value.parameters)
+		let parameters = Members(type).Length > 0 then value.parameters else LaneCalls(types).Divided(value.parameters)
 		MethodEntry(value.Name, parameters, value.declaredType, rewritten.instructions, value.Slots)
 Rewritten(type TypeEntry, method MethodEntry) MethodEntry
 	Sample.Rewritten(Caller, MethodEntry.CountingLoop) is MethodEntry.CountingLoop
 	let calls = LaneCalls(types)
-	let fixed = calls.Laned(method.parameters) + (Members(type).Length > 0 then List(Text) else calls.Laned(type.members))
+	let fixed = Members(type).Length > 0 then List(Text) else calls.Laned(method.parameters) + calls.Laned(type.members)
 	let flow = LaneFlow(types, LaneFlow(types).Lists(type, method), fixed)
 	let variables = flow.Variables(method.instructions, List(Text), 4) + fixed
 	let base = LoadReuse(method.instructions).RegisterCount
