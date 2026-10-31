@@ -28,7 +28,7 @@ This repository is the compiler, the runtime and the standard library in one. An
 - List (`Sorted`, `Merged`, `Slice`, `Insert`, `Unique`, `Average`, `Median`, `Shuffled`, ...), Dictionary, Range
 - Error (with stack traces), Logger
 - Time, Duration, PseudoRandom (deterministic, seeded), MovingWindow, PriorityQueue
-- traits like Any (every type is Any), App, Generic, Mutable, File, Directory
+- traits like Any (every type is Any), App, Generic, Mutable, File, Directory, Realtime (a game: its Presented ends a frame, the collector cleans up then)
 
 More specific types live in packages like `Math`, `ImageProcessing`, `NeuralNetworks`, `MachineLearning`, `Compression`, `Json`, `Xml` and `Examples`, each with a short README. Strict is not a general purpose language: websites, databases or complex apps belong into external code, which Strict calls through native packages (C) or which calls Strict through generated libraries (C, C#).
 
@@ -71,6 +71,7 @@ strict version                            version and build time of this strict
 - `strict build` needs the file's unit tests to pass on the VM first, a type without `Run` produces its unit-test executable. Test failures and toolchain errors fail the command.
 - Files whose tests passed on the VM get a `Name.strictbinary` (bytecode of all used types): while it is up to date `strict test` reports them as passed right away and running and building reuse it. Desktop builds and native tests keep a `.nativecache` stamp and print `Up to date` when nothing changed.
 - `strict build` and `strict test ... lines` run `Compiler/NativeCompiler.exe`. When a file of `Compiler/`, `Bytecode/` or `Expressions/` or a `Compiler/NativeRuntime*.mlir` is newer than it, they build the compiler again first.
+- Icons: a program uses `Name.ico` next to it or `<Folder>/<Folder>.ico` (else `Strict.ico`) for its executable. Web builds copy that own icon into `Release/Web/favicon.ico` and link it in the page, without one the page links https://strict-lang.org/img/favicon.ico; a `<Name>.shell.html` with its own `rel="icon"` keeps it.
 - Exit codes: 0 success, `test` returns the number of failed tests, `build` returns nonzero on a compilation or toolchain failure, 2 wrong usage or a missing file, an unhandled Error from `Run` exits with 1.
 - `strict check` prints each issue as `<File>.strict:line <N>: <Rule>: <detail>`, then runs the unit tests.
 - Types are looked up in the current folder (and its sub folders in a project), next to `strict` (base types and packages like `Math`), in the projects next to the current one, then in GitHub repositories linked in the project's README and github.com/strict-lang (copied into the project with a `.origin` file).

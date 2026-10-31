@@ -133,6 +133,13 @@ Invoked Texts
 	for members
 		targets = targets + MethodEntry(value.Name, List(MemberEntry), value.typeName, value.initial).Invoked
 	targets
+IsRealtime Boolean
+	HelloLogger.IsRealtime is false
+	TypeEntry("Strict/Game", List(MemberEntry) + MemberEntry.RealtimeMember, List(MethodEntry)).IsRealtime
+	for members
+		if value.typeName is MemberEntry.RealtimeMember.typeName
+			return true
+	false
 Source Text
 	CharacterEntry.Source is "Character.strict"
 	let folder = Name.IndexOf("/") + 1

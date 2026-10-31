@@ -112,11 +112,14 @@ MemberCode(line Text) Text
 	MemberType(line).StartsWith("Dictionary(") then "(" + member + " to Text)" else member + ".Code"
 Stored Texts
 	Point.Stored is ("has X Number", "mutable Y Number")
+	Automatic(("has x Number", "has Counter"), "S", Instantiation(Closeness.Nested.types)).Stored is ("has x Number")
 	let shape = TypeShape(lines)
 	for lines
-		let isMember = shape.IsMemberLine(value) and (value.StartsWith("constant ") is false)
-		if isMember and (Header(value).DeclaredType(1) is not "Logger")
-			value
+		if shape.IsMemberLine(value) and (value.StartsWith("constant ") is false)
+			let type = Header(value).DeclaredType(1)
+			let isTrait = instantiation.types.ParameterScope(type).TypeOf(" trait") is "true"
+			if (type is not "Logger") and (isTrait is false)
+				value
 Header(line Text) HeaderTokens
 	Point.Header("has X Number").MemberName is "X"
 	HeaderTokens(Tokenizer(line).Tokens)
