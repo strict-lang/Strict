@@ -5,6 +5,11 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - `strict test Compiler/NativeBuild.strict native`: the compiler stops with IndexOutOfRange in MlirMembered.Slot (MlirEmbedded.IsCopied) emitting the test module.
 - `Compiler/check_gpu_cache.py`: mlir-opt rejects its cache-kind.mlir.
 - Routed attention (routing > 0) with strided values (valueOffset/valueStride) runs unrouted: `strict_gpu_attention` takes the routed 8 bit path only for packed values, so H3Block.Heads with V read from the combined list attends densely (6 s slower, 12.9 dB from the routed result), routing 0 is bit-identical; the per-token value quantization (`strict_device_quantize_rows_run`) and the pooled value means need strided rows, H3 keeps the copy until then.
+- `strict test Compiler native` and `strict test Runtime native` stop with the same MlirMembered.Slot IndexOutOfRange.
+- `strict test . native` (recursive, one build): InvalidCallArity "Path.$Tests calls ChangeExtension with 1 instead of 0" in MlirCalls.Defaults; the root types alone (`--no-recursive`) and every sub folder alone build.
+- GPU state leaks between tests of one native folder executable: `strict test NeuralNetworks native` fails Safetensors.Tuned (lines 58-60), FlashNext (48-50, 88) and FlashLayer (45), StrictComfy's `strict test . native` FluxDecoder, FluxResnet and Moss.Ran; each file alone and STRICT_GPU=0 pass (strict_device_tuned merges into the host rows in place).
+- StrictComfy's H3AudioBlock.Output test (line 20) fails natively on the GPU also alone, STRICT_GPU=0 and the VM pass, H3Snake and H3Conv alone pass.
+- A type used as one of its members as a constructor argument gives the wrong value: `Resolver(LinkRound.Single).types.Length` is 15 instead of 1 (its `entries`), SuggestionTests passes `.entries` explicitly.
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).
