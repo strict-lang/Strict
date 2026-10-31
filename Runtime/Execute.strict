@@ -67,32 +67,19 @@ Kept(path Text, root Text) Number
 	Verified(path, root, true, files, ResolveCheck.Inference(files), false)
 Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInference, isTested = true) Number
 	let cache = BinaryFile(FileCompiler.Normalized(path))
-	let stamped = BinarySources(files + DataFiles.Of((Directory.Current, root), List(Text) + cache.source)).Stamped
+	let stamped = BinarySources(files).Stamped
 	let types = FileCompiler(logger, isQuiet, selection).Built(path, root, true, files, inference).entries
 	if types.Length is 0
 		return 1
-	let before = Process.FilesRead.Length
 	let failed = isTested then Tested(types, path) else 0
 	if (failed is 0) and (selection is "") and (IsEdited(path) is false)
-		let header = Completed(cache, root, files, stamped, before).Kept(types).Header
+		let header = Completed(cache, root, files, stamped).Kept(types).Header
 		cache.Saved(cache.Packed(header, types, List(TypeEntry)))
 	failed
-Completed(cache BinaryFile, root Text, files Texts, stamped BinarySources, before Number) Slow(BinarySources)
-	Execute(Logger).Completed(Adder, ".", AdderFiles, BinarySources.Mixed, Process.FilesRead.Length).stamps is (1, 2, 3)
-	let read = Read(before)
+Completed(cache BinaryFile, root Text, files Texts, stamped BinarySources) Slow(BinarySources)
+	Execute(Logger).Completed(Adder, ".", AdderFiles, BinarySources.Mixed).stamps is (1, 2, 3)
 	let current = SourceFiles(root).Of(cache.source)
-	let isSame = (current.Length is files.Length) and (read.Length is 0)
-	let data = isSame then List(Text) else DataFiles.Of((Directory.Current, root), List(Text) + cache.source)
-	isSame then stamped else BinarySources(current + data + read).Stamped
-Read(before Number) Texts
-	Execute(Logger).Read(Process.FilesRead.Length).Length is 0
-	let read = Process.FilesRead
-	mutable found = List(Mutable(Text))
-	for Range(before, read.Length)
-		let path = read(value)
-		if BinaryFile(path).IsInput(path) and (path.EndsWith(".strict") is false) and (path is not in found)
-			found.Add(path)
-	found
+	current.Length is files.Length then stamped else BinarySources(current).Stamped
 Tested(types List(TypeEntry), path Text) Number
 	let failed = Started(types, path).Tested(types.First.Name)
 	if failed > 0
