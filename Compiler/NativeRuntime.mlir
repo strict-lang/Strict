@@ -14506,6 +14506,8 @@
     return
   }
   // the pinned word a loop on the GPU sets when it reads outside of a list, the host reads it after downloading
+  // read instead of the failure word when no kernel that can not fail ran yet (results of checked kernels only)
+  llvm.mlir.global internal @strict_gpu_no_failure(0 : i64) : i64
   func.func private @strict_gpu_failure_word() -> i64 {
     %none = arith.constant 0 : i64
     %slot = llvm.mlir.addressof @strict_gpu_failure : !llvm.ptr
@@ -14900,7 +14902,10 @@
     %copied = llvm.call @memcpy(%host, %bounce, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     %failureSlot = llvm.mlir.addressof @strict_gpu_failure : !llvm.ptr
     %word = llvm.load %failureSlot : !llvm.ptr -> i64
-    %pointer = llvm.inttoptr %word : i64 to !llvm.ptr
+    %hasWord = arith.cmpi ne, %word, %none : i64
+    %wordPointer = llvm.inttoptr %word : i64 to !llvm.ptr
+    %noFailure = llvm.mlir.addressof @strict_gpu_no_failure : !llvm.ptr
+    %pointer = arith.select %hasWord, %wordPointer, %noFailure : !llvm.ptr
     %failed = llvm.load %pointer : !llvm.ptr -> i64
     %isFailed = arith.cmpi ne, %failed, %none : i64
     %problem = arith.xori %got, %isFailed : i1

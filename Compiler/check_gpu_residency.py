@@ -129,4 +129,23 @@ assert built.returncode==0,built.stdout[-2000:]+built.stderr[-2000:]
 ran=subprocess.run([str(folder/'PairEscape.exe')],cwd=folder,capture_output=True,text=True,env={key: value for key, value in os.environ.items() if key!='STRICT_GPU'})
 print(ran.stdout,flush=True)
 assert 'gpu kernels 1, 64 3' in ran.stdout,'a loop with Pair values and a mutable Pair did not run as one GPU kernel'
+reading='''has logger
+Table(count Number) Numbers
+	SimpleRead(Logger).Table(2) is (0, 0.5)
+	for count
+		index / count
+Read(table Numbers, count Number) Numbers
+	SimpleRead(Logger).Read((1, 2), 3) is (2, 4, 2)
+	for count
+		table(index % table.Length) * 2
+Run
+	let read = Read(Table(1000), 2000000)
+	logger.Log("read " + read(0) + " " + read(1999999))
+'''
+(folder/'SimpleRead.strict').write_bytes(reading.replace('\n','\r\n').encode('utf-8'))
+built=subprocess.run([str(root/'strict.exe'),'build','SimpleRead.strict'],cwd=folder,capture_output=True,text=True)
+assert built.returncode==0,built.stdout[-2000:]+built.stderr[-2000:]
+ran=subprocess.run([str(folder/'SimpleRead.exe')],cwd=folder,capture_output=True,text=True,env={key: value for key, value in os.environ.items() if key!='STRICT_GPU'})
+print(ran.stdout,flush=True)
+assert 'read 0 1.998' in ran.stdout,'the result of a GPU loop reading a host list crashed or was wrong when the CPU read it'
 print('A list computed on the GPU from numbers alone stays there until the CPU reads it')
