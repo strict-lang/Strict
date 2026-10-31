@@ -15437,6 +15437,7 @@
   func.func private @strict_gpu_quantized(%ptx: !llvm.ptr, %view: !llvm.ptr, %transposed: i64) {
     %none = arith.constant 0 : i64
     %two = arith.constant 2 : i64
+    %three = arith.constant 3 : i64
     %four = arith.constant 4 : i64
     %five = arith.constant 5 : i64
     %eight = arith.constant 8 : i64
@@ -15485,8 +15486,8 @@
     %positionMask = arith.constant -32 : i64
     %paddedPositions = arith.andi %rowPositionsUp, %positionMask : i64
     %transposedBytes = arith.muli %rowWidth, %paddedPositions : i64
-    %numberScales = arith.shli %rowWidth, %two : i64
-    %transposedNeeded = arith.addi %transposedBytes, %numberScales : i64
+    %numberFactors = arith.shli %rowWidth, %three : i64
+    %transposedNeeded = arith.addi %transposedBytes, %numberFactors : i64
     %needed = arith.select %isTransposed, %transposedNeeded, %blockNeeded : i64
     %spare = arith.constant 255 : i64
     %roundedUp = arith.addi %needed, %spare : i64
