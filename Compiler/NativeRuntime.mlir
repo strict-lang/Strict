@@ -1282,13 +1282,33 @@
     %argumentsError = func.call @strict_error_named(%argumentsMessage) : (!llvm.ptr) -> f64
     return %argumentsError : f64
   }
+  llvm.mlir.global internal constant @strict_gc_heap_switch("STRICT_HEAP\00") : !llvm.array<12 x i8>
+  // STRICT_HEAP sets the collector heap in MB, a native run checks the 1 GB of the web and iOS
+  func.func private @strict_gc_heap_bytes() -> i64 {
+    %heapSlot = llvm.mlir.addressof @strict_heap_bytes : !llvm.ptr
+    %heapBytes = llvm.load %heapSlot : !llvm.ptr -> i64
+    %name = llvm.mlir.addressof @strict_gc_heap_switch : !llvm.ptr
+    %setting = llvm.call @getenv(%name) : (!llvm.ptr) -> !llvm.ptr
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %isUnset = llvm.icmp "eq" %setting, %unset : !llvm.ptr
+    cf.cond_br %isUnset, ^done(%heapBytes : i64), ^given
+  ^given:
+    %megabytes = llvm.call @atoll(%setting) : (!llvm.ptr) -> i64
+    %megabyteShift = arith.constant 20 : i64
+    %bytes = arith.shli %megabytes, %megabyteShift : i64
+    %none = arith.constant 0 : i64
+    %isNone = arith.cmpi sle, %bytes, %none : i64
+    %chosen = arith.select %isNone, %heapBytes, %bytes : i64
+    cf.br ^done(%chosen : i64)
+  ^done(%result: i64):
+    return %result : i64
+  }
   func.func private @strict_gc_init(%stack: !llvm.ptr) {
     func.call @strict_guard() : () -> ()
     %startedNow = func.call @strict_clock() : () -> f64
     %startedSlot = llvm.mlir.addressof @strict_started : !llvm.ptr
     llvm.store %startedNow, %startedSlot : f64, !llvm.ptr
-    %heapSlot = llvm.mlir.addressof @strict_heap_bytes : !llvm.ptr
-    %heapBytes = llvm.load %heapSlot : !llvm.ptr -> i64
+    %heapBytes = func.call @strict_gc_heap_bytes() : () -> i64
     %tableShift = arith.constant 13 : i64
     %cardShift = arith.constant 9 : i64
     %tableBytes = arith.shrui %heapBytes, %tableShift : i64
@@ -2807,17 +2827,20 @@
     llvm.store %span#1, %endSlot : i64, !llvm.ptr
     return
   }
+  // a big object the heap has no room for left runs a full collection first: old garbage (8 times the live bytes
+  // before one is due) does not fit into the 1 GB heap of the web and iOS
   func.func private @strict_gc_take_pages(%count: i64) -> i64 {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %pageSize = arith.constant 65536 : i64
     %clear = arith.constant 0 : i32
     %single = arith.cmpi eq, %count, %one : i64
+    %collected = arith.constant false
     %poolSlot = llvm.mlir.addressof @strict_gc_pool : !llvm.ptr
     %pooledSlot = llvm.mlir.addressof @strict_gc_pooled : !llvm.ptr
     %spareSlot = llvm.mlir.addressof @strict_gc_spare : !llvm.ptr
     %spareCountSlot = llvm.mlir.addressof @strict_gc_spare_count : !llvm.ptr
-    cf.cond_br %single, ^pool, ^runs
+    cf.cond_br %single, ^pool, ^runs(%collected : i1)
   ^pool:
     %pooled = llvm.load %poolSlot : !llvm.ptr -> i64
     %hasPooled = arith.cmpi ne, %pooled, %zero : i64
@@ -2837,7 +2860,7 @@
   ^spare:
     %spareCount = llvm.load %spareCountSlot : !llvm.ptr -> i64
     %hasSpare = arith.cmpi ne, %spareCount, %zero : i64
-    cf.cond_br %hasSpare, ^recommit, ^runs
+    cf.cond_br %hasSpare, ^recommit, ^runs(%collected : i1)
   ^recommit:
     %last = arith.subi %spareCount, %one : i64
     llvm.store %last, %spareCountSlot : i64, !llvm.ptr
@@ -2850,7 +2873,7 @@
     %spareFreshSlot = llvm.mlir.addressof @strict_gc_fresh : !llvm.ptr
     llvm.store %zero, %spareFreshSlot : i64, !llvm.ptr
     return %sparePage : i64
-  ^runs:
+  ^runs(%isCollected: i1):
     %reused = func.call @strict_gc_reuse_run(%count) : (i64) -> i64
     %found = arith.cmpi ne, %reused, %zero : i64
     cf.cond_br %found, ^reusing, ^grow
@@ -2869,7 +2892,16 @@
     %limitSlot = llvm.mlir.addressof @strict_gc_limit : !llvm.ptr
     %limit = llvm.load %limitSlot : !llvm.ptr -> i64
     %exceeds = arith.cmpi ugt, %newTop, %limit : i64
-    cf.cond_br %exceeds, ^fail, ^commit
+    cf.cond_br %exceeds, ^exhausted, ^commit
+  ^exhausted:
+    %isFirst = arith.cmpi eq, %isCollected, %collected : i1
+    %collecting = arith.cmpi ugt, %count, %one : i64
+    %retry = arith.andi %isFirst, %collecting : i1
+    cf.cond_br %retry, ^collect, ^fail
+  ^collect:
+    %full = arith.constant true
+    func.call @strict_gc_run(%full) : (i1) -> ()
+    cf.br ^runs(%full : i1)
   ^fail:
     func.call @strict_gc_fail() : () -> ()
     return %zero : i64

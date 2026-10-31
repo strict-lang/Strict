@@ -31,7 +31,7 @@ Source discovery drains its frontier; linking iterates until a pass asks no type
 - A type with one member is that member, small number types (`Vector3`) are one block of floats.
 - Values are rewritten in place where nobody can see the old one: the dying value of a local, a list mapped to the same type or a returned struct becomes the destination of the call or loop replacing it (`MlirOwned`, `MlirDestined`, `MlirListDestined`, `MlirStructs`). Lists append and write in place while they are the newest version.
 - Whole-file `Text.Combine(File(path).ReadLines, "\n")` lowers to one normalized text read (`MlirReadText`).
-- Memory: a conservative mark-sweep collector with a young generation plus reference counts that free large objects early, so a loop doing the same steps reuses the same memory. `STRICT_YOUNG`, `STRICT_RC=0` and `STRICT_RC_CHECK=1` tune and check it.
+- Memory: a conservative mark-sweep collector with a young generation plus reference counts that free large objects early, so a loop doing the same steps reuses the same memory. `STRICT_YOUNG`, `STRICT_HEAP` (heap MB, the web and iOS have 1024), `STRICT_RC=0` and `STRICT_RC_CHECK=1` tune and check it.
 
 ## Parallel loops
 A collecting `for` runs on a pool of CPU threads when `MlirSafety` finds nothing unsafe in everything it calls (Random, Library, readers and writers, foreign C, file writes, process execution, logging and writes to parameters or members; known read-only file operations are allowed) and the estimated work (`MlirCost`: instructions per iteration including called methods, inner loops 15 times, external calls 20,000) times the count reaches 50,000. Nested GPU loops use the CPU on pool threads. `STRICT_THREADS` sets the thread count.
