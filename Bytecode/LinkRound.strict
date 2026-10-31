@@ -17,7 +17,7 @@ Entries(signed Texts) Slow(List(TypeEntry))
 	Single.Entries(List(Text) + "Strict/Logger:").First.Name is "Strict/Logger"
 	Cached.Entries(List(Text) + "Strict/Logger:").First is Linker.Go
 	for signed
-		value is in linker.known then linker.known(value) else Fresh(value)
+		value is in linker.Known then linker.Known(value) else Fresh(value)
 Fresh(signature Text) Slow(TypeEntry)
 	Single.Fresh("Strict/Logger:").Name is "Strict/Logger"
 	Twice.Fresh("Strict/Logger:Log").methods.Length is 2

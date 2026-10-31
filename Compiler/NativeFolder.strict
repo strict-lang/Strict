@@ -68,18 +68,26 @@ Leading(types List(TypeEntry), count Number) List(TypeEntry)
 Counted(paths Texts, root Text) Slow(List(TypeEntry))
 	NativeFolder(Logger).Counted(Hellos, ".")(1).Name is "HelloLogger"
 	let files = SourceFiles(root).Of(FileCompiler.Normalized(paths.First), paths)
-	let inference = ResolveCheck.Inference(files)
+	let rounds = Rounds(paths, root, files, ResolveCheck.Inference(files))
+	if rounds.Length < paths.Length
+		return List(TypeEntry)
 	mutable mains = List(Mutable(TypeEntry))
 	mutable used = List(Mutable(TypeEntry))
+	for rounds
+		mains.Add(value.entries.First)
+		used = used + value.entries
+	Merged(mains, used)
+Rounds(paths Texts, root Text, files Texts, inference TypeInference) List(LinkRound)
+	NativeFolder(Logger).Rounds(List(Text) + "Missing.strict", ".", List(Text), ResolveCheck.Counting).Length is 0
+	mutable rounds = List(Mutable(LinkRound))
 	mutable known = Dictionary(Text, TypeEntry)
 	for paths
 		let linked = Typed(value, root, files, inference, known)
 		if linked.entries.Length is 0
-			return List(TypeEntry)
-		mains.Add(linked.entries.First)
-		used = used + linked.entries
+			return rounds
+		rounds.Add(linked)
 		known = linked.Known(known)
-	Merged(mains, used)
+	rounds
 Typed(path Text, root Text, files Texts, inference TypeInference, known Dictionary(Text, TypeEntry)) LinkRound
 	constant none = Dictionary(Text, TypeEntry)
 	NativeFolder(Logger).Typed("Missing.strict", ".", List(Text), ResolveCheck.Counting, none).entries.Length is 0
