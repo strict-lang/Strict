@@ -19,7 +19,7 @@ Details for the GPU line of [improvements.md](improvements.md), one short line e
 
 ## Memory
 - streamed weights are not overlapped with compute (H3 idles ~230 ms per step, ComfyUI 60): uploads ahead in a ring need a cheaper refill than walking the chain
-- size classes are powers of two up to 16 MB and four per octave above (strict_gpu_class_size, a free block up to twice the size is still lent): H3's pool and StrictComfy's 1120x1920 decode peak should be measured again, an earlier finer split churned activations through the driver
+- size classes are powers of two up to 16 MB and four per octave above (strict_gpu_class_size, a free block up to twice the size is still lent): StrictComfy's 1120x1920 decode is steady over 30 images (0.72 s instead of 1.0-1.1 s per image, peak 9.0 instead of 9.2-9.5 GB), H3's pool is not measured yet (an earlier finer split churned activations through the driver)
 - without spilled rows the trim before an own block runs at every block
 - full collections before big activation blocks (H3 ~98 per step, 18-28 ms each in strict_gc_mark_range): skip lists without references in the mark, or a sub-allocating pool
 - GPU-only lists can't be spilled, activations kept across streamed blocks take every byte from the weights
