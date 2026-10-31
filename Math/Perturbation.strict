@@ -6,11 +6,13 @@ has top Number with value.Bits is 32
 has step Number with value.Bits is 32
 has limit Number with value.Bits is 32
 has julia Number with value.Bits is 32
+has start Number with value.Bits is 32
 constant Seahorse = Mandelbrot.Reference(DoubleDouble(-0.75), DoubleDouble(0.1), 64)
-constant Inside = Perturbation(Seahorse, -0.75, 0.1, 0, 0, 0.001, 64, 0)
-constant Outside = Perturbation(Mandelbrot.Reference(DoubleDouble(1), DoubleDouble(0), 64), 1, 0, 0, 0, 0.001, 64, 0)
+constant Inside = Perturbation(Seahorse, -0.75, 0.1, 0, 0, 0.001, 64, 0, 0)
+constant Outside = Perturbation(Mandelbrot.Reference(DoubleDouble(1), DoubleDouble(0), 64), 1, 0, 0, 0, 0.001, 64, 0, 0)
 constant Rabbits = Mandelbrot.Julia(DoubleDouble(0), DoubleDouble(0), (-0.123, 0.745), 64)
-constant Rabbit = Perturbation(Rabbits, 0, 0, 0, 0, 0.01, 64, 1)
+constant Rabbit = Perturbation(Rabbits, 0, 0, 0, 0, 0.01, 64, 1, 0)
+constant Offset = Perturbation(Mandelbrot.Reference(DoubleDouble(-0.123), DoubleDouble(0.745), 64) + Mandelbrot.Julia(DoubleDouble(0.3), DoubleDouble(-0.2), (-0.123, 0.745), 64), 0.3, -0.2, 0, 0, 0.01, 64, 1, 65)
 Strip(first Number, count Number, width Number) Numbers
 	Inside.Strip(0, 4, 2) is (34, 0, 33, 35)
 	Inside.Rebased(1.75, -0.1) is 3
@@ -21,13 +23,14 @@ Pixel(horizontal Number, vertical Number) Number
 	Outside.Pixel(-1.5, 0) is 0
 	Perturbation(Outside, step = 0.000001).Pixel(-1.5, 0) is 0
 	(Rabbit.Pixel(-0.3, 0.4), Rabbit.Pixel(0.96, -0.58), Rabbit.Pixel(0.5, 0.6)) is (40, 45, 3)
+	(Offset.Pixel(-0.6, 0.6), Offset.Pixel(0.66, -0.38), Offset.Pixel(0.2, 0.8)) is (40, 45, 3)
 	let coarse = julia < 0.5 and step > 0.00001 and Mandelbrot.Interior(re + horizontal, im + vertical)
 	coarse then 0 else Rebased(horizontal, vertical)
 Rebased(horizontal Number, vertical Number) Number
 	Outside.Rebased(-1.75, 0.1) is 33
 	mutable real = julia * horizontal
 	mutable imaginary = julia * vertical
-	mutable position = 0
+	mutable position = start
 	for limit
 		let next = Real(position, real, imaginary, horizontal * (1 - julia))
 		imaginary = Imaginary(position, real, imaginary, vertical * (1 - julia))
@@ -46,7 +49,8 @@ Moved(position Number, real Number, imaginary Number) Number
 	let squared = full * full + height * height
 	if squared > 4
 		return orbit.Length
-	squared < real * real + imaginary * imaginary or next * 2 + 2 >= orbit.Length then -1 - next else next
+	let last = next < start then start else orbit.Length / 2
+	squared < real * real + imaginary * imaginary or next + 1 >= last then -1 - next else next
 Real(position Number, real Number, imaginary Number, offset Number) Number
 	Inside.Real(0, 0, 0, 0.5) is 0.5
 	let shift = position < 0 then -2 - position * 2 else 0
