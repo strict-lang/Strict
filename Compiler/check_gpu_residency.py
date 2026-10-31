@@ -149,18 +149,20 @@ ran=subprocess.run([str(folder/'SimpleRead.exe')],cwd=folder,capture_output=True
 print(ran.stdout,flush=True)
 assert 'read 0 1.998' in ran.stdout,'the result of a GPU loop reading a host list crashed or was wrong when the CPU read it'
 orbiting='''has orbit List(Pair)
+has shift Pair
 Escaped(count Number) Numbers
-	Orbiting((Pair(0, 0), Pair(0.5, 0.5))).Escaped(2) is (32, 3)
+	Orbiting((Pair(0, 0), Pair(0.5, 0.5)), Pair(-1.5, 0)).Escaped(2) is (32, 3)
 	for count
 		let reference = orbit(index % orbit.Length)
-		let c = Pair(index / count - 1.5, reference.imaginary)
-		mutable z = reference
-		mutable steps = 0
-		for 32
-			if z.SquaredLength < 4
-				z = z.Squared + c
-				steps = steps + 1
-		steps
+		Steps(reference, Pair(index / count, reference.imaginary) + shift)
+Steps(start Pair, c Pair) Number
+	Orbiting((Pair(0, 0)), Pair(0, 0)).Steps(Pair(0, 0), Pair(2, 0)) is 1
+	mutable z = start
+	for 32
+		if z.SquaredLength >= 4
+			return index
+		z = z.Squared + c
+	32
 '''
 orbits='''has logger
 Orbit(count Number) List(Pair)
@@ -169,7 +171,7 @@ Orbit(count Number) List(Pair)
 		Pair(index / count, 0.5 - index / count / 2)
 Run
 	let before = Process.Executed
-	let escaped = Orbiting(Orbit(1000)).Escaped(2000000)
+	let escaped = Orbiting(Orbit(1000), Pair(-1.5, 0)).Escaped(2000000)
 	let after = Process.Executed
 	logger.Log("gpu kernels " + (after(3) - before(3)) + ", " + escaped(0) + " " + escaped(1000000) + " " + escaped(1999999))
 '''
@@ -179,5 +181,5 @@ built=subprocess.run([str(root/'strict.exe'),'build','OrbitGpu.strict'],cwd=fold
 assert built.returncode==0,built.stdout[-2000:]+built.stderr[-2000:]
 ran=subprocess.run([str(folder/'OrbitGpu.exe')],cwd=folder,capture_output=True,text=True,env={key: value for key, value in os.environ.items() if key!='STRICT_GPU'})
 print(ran.stdout,flush=True)
-assert 'gpu kernels 1, 3 6 32' in ran.stdout,'a loop reading a List(Pair) member by index did not run as one GPU kernel'
+assert 'gpu kernels 1, 3 6 32' in ran.stdout,'a loop reading a List(Pair) and a Pair member, calling a method with Pair parameters, did not run as one GPU kernel'
 print('A list computed on the GPU from numbers alone stays there until the CPU reads it')

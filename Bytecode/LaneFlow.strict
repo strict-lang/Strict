@@ -1,5 +1,6 @@
 has types List(TypeEntry)
 has lists Texts = List(Text)
+has fixed Texts = List(Text)
 constant Sample = LaneFlow((StructLanes.Caller, StructLanes.Pair))
 constant Kept = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 2, "pair")
 constant Reloaded = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 5, "pair")
@@ -28,7 +29,7 @@ Scan(instructions List(InstructionEntry), candidates Texts) Texts
 			stores = stores + (value.texts(0) + " " + (type is "" then "-" else type))
 		if (value.kind is in Naming) and (value.texts.Length > 0)
 			stores = stores + (value.texts(0) + " -")
-		laned = Tracked(value, laned, candidates)
+		laned = Tracked(value, laned, candidates + fixed)
 	Agreed(stores)
 Agreed(stores Texts) Texts
 	Sample.Agreed(("a Pair", "b -", "a Pair", "c Pair", "c -")) is ("a Pair")
@@ -60,10 +61,13 @@ Produced(entry InstructionEntry, variables Texts) Text
 	Sample.Produced(Reloaded, ("pair Pair")) is "Pair"
 	Sample.Produced(StructLanes.Calling(4), List(Text)) is ""
 	LaneFlow(Sample.types, ("pairs Pair")).Produced(Picking, List(Text)) is "Pair"
+	LaneFlow(LaneCalls.Sample.types).Produced(LaneCalls.Offsets, List(Text)) is "Pair"
 	if IsBuilt(entry)
 		return TypeEntry.ShortName(entry.texts(0))
 	if entry.kind is InstructionType.IndexCall
 		return TypeEntry.ShortName(Typed(lists, entry.texts(0)))
+	if entry.kind is InstructionType.FieldLoad
+		return Typed(LaneCalls(types).Laned(Inliner(types).TypeOf(entry.texts(1)).members), entry.texts(0))
 	entry.kind is InstructionType.LoadVariableToRegister then Typed(variables, entry.texts(0)) else ""
 IsBuilt(entry InstructionEntry) Boolean
 	Sample.IsBuilt(StructLanes.Constructed)

@@ -52,7 +52,7 @@ Inlinable(owner TypeEntry, call InstructionEntry, next InstructionEntry) MethodE
 	let callee = type.Name is "" then NoMethod else Callee(type, call)
 	let rules = InlineRules(callee)
 	let isFitting = isChecked and (next.payload(0) is call.payload(0)) and rules.Fits(owner, type, call)
-	isFitting or (isSplitting and rules.IsLaned(type, call)) then callee else NoMethod
+	isFitting or (isSplitting and rules.IsLaned(type, call, IsReturning(callee))) then callee else NoMethod
 TypeOf(name Text) TypeEntry
 	Sample.TypeOf("Strict/List(Number)").methods.Length is 1
 	Sample.TypeOf("Strict/Missing").Name is ""
@@ -74,8 +74,13 @@ Splice(owner TypeEntry, callee MethodEntry, call InstructionEntry, base Number) 
 	let member = rules.IsOwn(call) then "" else rules.Wrapped(TypeOf(call.texts(0)))
 	let kept = rules.IsOwn(call) then rules.MemberNames(owner) + "value" else List(Text)
 	let type = TypeOf(call.texts(0))
-	let fields = isSplitting and rules.IsLaned(type, call) then StructLanes.Members(type) else List(Text)
+	let isLaned = isSplitting and rules.IsLaned(type, call, IsReturning(callee))
+	let fields = isLaned then StructLanes.Members(type) else List(Text)
 	InlineSplice(callee, call, base, member, kept, fields, base + LoadReuse(callee.instructions).RegisterCount)
+IsReturning(callee MethodEntry) Boolean
+	Splitting.IsReturning(StructLanes.Squared)
+	Splitting.IsReturning(First) is false
+	StructLanes.Members(TypeOf(callee.declaredType)).Length > 0
 Looped(instructions List(InstructionEntry)) List(InstructionEntry)
 	Sample.Looped(MethodEntry.CountingLoop.instructions) is MethodEntry.CountingLoop.instructions
 	let method = MethodEntry("", List(MemberEntry), "None", instructions)
@@ -83,4 +88,11 @@ Looped(instructions List(InstructionEntry)) List(InstructionEntry)
 		value.kind is InstructionType.LoopEnd then Ended(value, index - method.LoopBeginOf(index)) else value
 Ended(entry InstructionEntry, steps Number) InstructionEntry
 	Sample.Ended(InstructionEntry.Jump(InstructionType.LoopEnd, 2), 5).payload is (5)
-	InstructionEntry(entry.kind, entry.texts, InstructionEntry.Jump(entry.kind, steps).payload, entry.line)
+	Sample.Ended(InstructionEntry(InstructionType.LoopEnd, List(Text), (1, -1)), 5).payload is (5, -1)
+	mutable rest = List(Number)
+	mutable isSteps = true
+	for entry.payload
+		if isSteps is false
+			rest = rest + value
+		isSteps = isSteps and (value >= 128)
+	InstructionEntry(entry.kind, entry.texts, InstructionEntry.Jump(entry.kind, steps).payload + rest, entry.line)
