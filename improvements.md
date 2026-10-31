@@ -6,6 +6,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - `Compiler/check_gpu_cache.py`: mlir-opt rejects its cache-kind.mlir.
 - Routed attention (routing > 0) with strided values (valueOffset/valueStride) runs unrouted: `strict_gpu_attention` takes the routed 8 bit path only for packed values, so H3Block.Heads with V read from the combined list attends densely (6 s slower, 12.9 dB from the routed result), routing 0 is bit-identical; the per-token value quantization (`strict_device_quantize_rows_run`) and the pooled value means need strided rows, H3 keeps the copy until then.
 - `strict test NeuralNetworks native`: 8 tests fail at 42baa256 (FlashLayer.Forward, FlashNext.Steps and Truncated, Safetensors.Tuned).
+- A full heap while worker threads allocate (a parallel loop making texts) ends with OutOfMemory natively: the collector cannot run then (strict_gc_run defers while the pool is busy), seen with STRICT_HEAP=128.
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).
