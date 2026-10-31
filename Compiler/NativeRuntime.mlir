@@ -3299,7 +3299,9 @@
   // so are words outside the heap without a call (numbers: a full collection of Qwen3.8 scans 57 million words) and
   // numbers: only plain pointers and the NaN tags 32761-32767 (Errors, packed results) refer to objects, the low 48
   // bits of a number in a list of 50 million kept every other big list and its device copy alive; returns the end of
-  // the last word referring to an object (from when there is none)
+  // the last word referring to an object (from when there is none); a 4 byte word (wasm) into a big object past its
+  // first page counts only as the lower half of a boxed value (next word 0 or a tag): halves of numbers looked like
+  // references and kept a dozen dead 52 MB lists alive in the 1 GB web heap
   func.func private @strict_gc_mark_range(%from: i64, %to: i64) -> i64 {
     %none = arith.constant 0 : i64
     %wordSlot = llvm.mlir.addressof @strict_word_bytes : !llvm.ptr
@@ -3338,7 +3340,33 @@
     %notObject = arith.ori %outside, %isNumber : i1
     %refers = arith.select %notObject, %referenced, %next : i64
     %skipped = arith.ori %inside, %notObject : i1
-    cf.cond_br %skipped, ^loop(%next, %skipStart, %skipEnd, %refers : i64, i64, i64, i64), ^mark
+    cf.cond_br %skipped, ^loop(%next, %skipStart, %skipEnd, %refers : i64, i64, i64, i64), ^narrow
+  ^narrow:
+    %four = arith.constant 4 : i64
+    %isNarrow = arith.cmpi eq, %eight, %four : i64
+    cf.cond_br %isNarrow, ^interior, ^mark
+  ^interior:
+    %pageShift = arith.constant 16 : i64
+    %kindMask = arith.constant 255 : i64
+    %continued = arith.constant 3 : i64
+    %offset = arith.subi %word, %base : i64
+    %index = arith.shrui %offset, %pageShift : i64
+    %tableSlot = llvm.mlir.addressof @strict_gc_table : !llvm.ptr
+    %table = llvm.load %tableSlot : !llvm.ptr -> i64
+    %tablePointer = llvm.inttoptr %table : i64 to !llvm.ptr
+    %entrySlot = llvm.getelementptr %tablePointer[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %entry = llvm.load %entrySlot : !llvm.ptr -> i64
+    %kind = arith.andi %entry, %kindMask : i64
+    %isContinued = arith.cmpi eq, %kind, %continued : i64
+    %high = llvm.call @strict_word(%next) : (i64) -> i64
+    %highTag = arith.shrui %high, %pageShift : i64
+    %isZero = arith.cmpi eq, %high, %none : i64
+    %highOffset = arith.subi %highTag, %firstTag : i64
+    %isHighTagged = arith.cmpi ult, %highOffset, %tagCount : i64
+    %isBoxed = arith.ori %isZero, %isHighTagged : i1
+    %isHalf = arith.cmpi eq, %isBoxed, %false : i1
+    %stray = arith.andi %isContinued, %isHalf : i1
+    cf.cond_br %stray, ^loop(%next, %skipStart, %skipEnd, %referenced : i64, i64, i64, i64), ^mark
   ^mark:
     %range:2 = func.call @strict_gc_mark(%value) : (i64) -> (i64, i64)
     %isLarge = arith.cmpi ne, %range#1, %none : i64
