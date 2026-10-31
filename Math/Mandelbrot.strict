@@ -31,64 +31,43 @@ Iterated(real Number, imaginary Number, limit Number) Number
 		if squared + height > 4
 			return index + 1
 	0
-Reference(real DoubleDouble, imaginary DoubleDouble, limit Number) Numbers
-	Reference(DoubleDouble(1), DoubleDouble(0), 8).Length is 8
-	mutable horizontal = DoubleDouble(0)
-	mutable vertical = DoubleDouble(0)
-	mutable orbit = (0, 0)
+Orbit(start ComplexDoubleDouble, seed ComplexDoubleDouble, limit Number) Numbers
+	Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Of(Complex(1, 0)), 8) is (0, 0, 1, 0, 2, 0, 5, 0)
+	Orbit(ComplexDoubleDouble.Of(Complex(1, 0)), ComplexDoubleDouble.Zero, 2) is (1, 0, 1, 0, 1, 0)
+	mutable point = start
+	mutable orbit = (start.real.high, start.imaginary.high)
 	for limit
-		let squared = horizontal * horizontal - vertical * vertical
-		vertical = horizontal * vertical * DoubleDouble(2) + imaginary
-		horizontal = squared + real
-		orbit = orbit + horizontal.high + vertical.high
-		if Beyond(horizontal * horizontal + vertical * vertical)
-			return orbit
-	orbit
-Julia(real DoubleDouble, imaginary DoubleDouble, seed Numbers, limit Number) Numbers
-	Julia(DoubleDouble(0), DoubleDouble(0), (1, 0), 8) is Reference(DoubleDouble(1), DoubleDouble(0), 8)
-	mutable horizontal = real
-	mutable vertical = imaginary
-	mutable orbit = (real.high, imaginary.high)
-	for limit
-		let squared = horizontal * horizontal - vertical * vertical
-		vertical = horizontal * vertical * DoubleDouble(2) + DoubleDouble(seed(1))
-		horizontal = squared + DoubleDouble(seed(0))
-		orbit = orbit + horizontal.high + vertical.high
-		if Beyond(horizontal * horizontal + vertical * vertical)
+		point = point.Squared + seed
+		orbit = orbit + point.real.high + point.imaginary.high
+		if Beyond(point.SquaredLength)
 			return orbit
 	orbit
 Enclosed(orbit Numbers, radius Number, limit Number) Boolean
 	Enclosed((0, 0, 0, 0, 0, 0), 0.01, 2)
 	Enclosed((0, 0, 2, 0), 0.01, 1) is false
-	Enclosed(Reference(DoubleDouble(-0.75), DoubleDouble(0.1), 32), 0.0000001, 32)
-	Enclosed(Reference(DoubleDouble(-0.75), DoubleDouble(0.1), 64), 0.0000001, 64) is false
-	Enclosed(Reference(DoubleDouble(0), DoubleDouble(0), 32), 0.75, 32) is false
+	Enclosed(Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Of(Complex(-0.75, 0.1)), 32), 0.0000001, 32)
+	Enclosed(Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Of(Complex(-0.75, 0.1)), 64), 0.0000001, 64) is false
+	Enclosed(Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Zero, 32), 0.75, 32) is false
 	if orbit.Length < (limit + 1) * 2
 		return false
 	DiskEnclosed(orbit, radius, limit)
 DiskEnclosed(orbit Numbers, radius Number, limit Number) Boolean
-	mutable real = 0
-	mutable imaginary = 0
+	mutable offset = Complex.Zero
 	mutable error = 0
 	for limit
-		let next = 2 * (orbit(index * 2) * real - orbit(index * 2 + 1) * imaginary) + radius
-		error = DiskError(orbit, index, real, imaginary, error)
-		imaginary = 2 * (orbit(index * 2) * imaginary + orbit(index * 2 + 1) * real)
-		real = next
-		if OrbitMagnitude(orbit, index + 1) + Magnitude(real, imaginary) + error >= 2
+		error = DiskError(orbit, index, offset, error)
+		offset = Point(orbit, index) * offset * 2 + Complex(radius, 0)
+		if Point(orbit, index + 1).Length + 0.000000000000001 + offset.Length * 1.000000000000001 + error >= 2
 			return false
 	true
-DiskError(orbit Numbers, position Number, real Number, imaginary Number, previous Number) Number
-	let bound = Magnitude(real, imaginary)
-	let factor = 2 * OrbitMagnitude(orbit, position) + 2 * bound + previous
+DiskError(orbit Numbers, position Number, offset Complex, previous Number) Number
+	let bound = offset.Length * 1.000000000000001
+	let factor = 2 * (Point(orbit, position).Length + 0.000000000000001) + 2 * bound + previous
 	let error = factor * previous + bound * bound
 	error * 1.000000000000001 + bound * 0.000000000000001 + 0.00000000000000000000000000001
-Magnitude(real Number, imaginary Number) Number
-	(real * real + imaginary * imaginary).SquareRoot * 1.000000000000001
-OrbitMagnitude(orbit Numbers, position Number) Number
-	let real = orbit(position * 2)
-	let imaginary = orbit(position * 2 + 1)
-	(real * real + imaginary * imaginary).SquareRoot + 0.000000000000001
+Point(orbit Numbers, position Number) Complex
+	Point((1, 2, 3, 4), 1) is Complex(3, 4)
+	Complex(orbit(position * 2), orbit(position * 2 + 1))
 Beyond(squared DoubleDouble) Boolean
 	Beyond(DoubleDouble(4, 0.000000000000000000000000000001))
 	Beyond(DoubleDouble(4, -0.000000000000000000000000000001)) is false

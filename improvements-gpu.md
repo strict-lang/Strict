@@ -38,3 +38,4 @@ Details for the GPU line of [improvements.md](improvements.md), one short line e
 - convolutions of 64 bit pixels from a CPU loop miss strict_gpu_convolution without STRICT_GPU=all (H3 VAE encode of a PNG frame 12.5 instead of 0.7 s)
 - each convolution writes bfloat16 copies of its input and weights first; stages of 64 channels or 3 buffers once shared memory allows it
 - PNG encoding takes 0.28 s for a 720x1280 image (ComfyUI 0.08)
+- small number types (Vector2, Vector3, Size, Complex) as kernel values: only Number, Boolean and byte packed types pass (MlirGpuCheck.Values, MlirLanes.IsPacked), flatten them into 2-4 lanes, then Perturbation can take Complex

@@ -1,0 +1,31 @@
+has real DoubleDouble
+has imaginary DoubleDouble
+constant Zero = ComplexDoubleDouble(DoubleDouble(0), DoubleDouble(0))
+constant Sample = ComplexDoubleDouble(DoubleDouble(1), DoubleDouble(2))
++(other) ComplexDoubleDouble
+	(Sample + ComplexDoubleDouble(DoubleDouble(3), DoubleDouble(-1))).High is Complex(4, 1)
+	ComplexDoubleDouble(real + other.real, imaginary + other.imaginary)
+-(other) ComplexDoubleDouble
+	(Sample - ComplexDoubleDouble(DoubleDouble(3), DoubleDouble(-1))).High is Complex(-2, 3)
+	ComplexDoubleDouble(real - other.real, imaginary - other.imaginary)
+*(other) ComplexDoubleDouble
+	(Sample * ComplexDoubleDouble(DoubleDouble(3), DoubleDouble(-1))).High is Complex(5, 5)
+	ComplexDoubleDouble(real * other.real - imaginary * other.imaginary, real * other.imaginary + imaginary * other.real)
+Squared ComplexDoubleDouble
+	Sample.Squared.High is Complex(-3, 4)
+	ComplexDoubleDouble(real * real - imaginary * imaginary, real * imaginary * DoubleDouble(2))
+SquaredLength DoubleDouble
+	Sample.SquaredLength.high is 5
+	real * real + imaginary * imaginary
+Of(number Complex) ComplexDoubleDouble
+	ComplexDoubleDouble.Of(Complex(1, 2)).High is Complex(1, 2)
+	ComplexDoubleDouble(DoubleDouble(number.real), DoubleDouble(number.imaginary))
+High Complex
+	ComplexDoubleDouble(DoubleDouble(1, 0.00000000000000001), DoubleDouble(-2)).High is Complex(1, -2)
+	Complex(real.high, imaginary.high)
+Decimals(count Number) Text
+	ComplexDoubleDouble(DoubleDouble(1.5), DoubleDouble(-2)).Decimals(1) is "1.5 - 2.0i"
+	Sample.Decimals(2) is "1.00 + 2.00i"
+	let negative = imaginary.high < 0 or (imaginary.high is 0 and imaginary.low < 0)
+	let magnitude = negative then DoubleDouble(-imaginary.high, -imaginary.low) else imaginary
+	real.Decimals(count) + (negative then " - " else " + ") + magnitude.Decimals(count) + "i"

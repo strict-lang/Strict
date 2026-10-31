@@ -1,0 +1,28 @@
+has real Number
+has imaginary Number
+constant Zero = Complex(0, 0)
++(other) Complex
+	Complex(1, 2) + Complex(3, -1) is Complex(4, 1)
+	Complex(real + other.real, imaginary + other.imaginary)
+-(other) Complex
+	Complex(1, 2) - Complex(3, -1) is Complex(-2, 3)
+	Complex(real - other.real, imaginary - other.imaginary)
+*(other) Complex
+	Complex(1, 2) * Complex(3, -1) is Complex(5, 5)
+	Complex(real * other.real - imaginary * other.imaginary, real * other.imaginary + imaginary * other.real)
+*(scale Number) Complex
+	Complex(1, -2) * 3 is Complex(3, -6)
+	Complex(real * scale, imaginary * scale)
+Squared Complex
+	Complex(1, 2).Squared is Complex(-3, 4)
+	Complex(real * real - imaginary * imaginary, 2 * real * imaginary)
+SquaredLength Number
+	Complex(3, 4).SquaredLength is 25
+	real * real + imaginary * imaginary
+Length Number
+	Complex(3, -4).Length is 5
+	SquaredLength.SquareRoot
+to Text
+	Complex(1.5, -2) to Text is "1.5 - 2i"
+	Complex(-1, 0.25) to Text is "-1 + 0.25i"
+	(real to Text) + (imaginary < 0 then " - " + -imaginary else " + " + imaginary) + "i"

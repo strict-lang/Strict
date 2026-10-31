@@ -7,12 +7,12 @@ has step Number with value.Bits is 32
 has limit Number with value.Bits is 32
 has julia Number with value.Bits is 32
 has start Number with value.Bits is 32
-constant Seahorse = Mandelbrot.Reference(DoubleDouble(-0.75), DoubleDouble(0.1), 64)
+constant Seahorse = Mandelbrot.Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Of(Complex(-0.75, 0.1)), 64)
 constant Inside = Perturbation(Seahorse, -0.75, 0.1, 0, 0, 0.001, 64, 0, 0)
-constant Outside = Perturbation(Mandelbrot.Reference(DoubleDouble(1), DoubleDouble(0), 64), 1, 0, 0, 0, 0.001, 64, 0, 0)
-constant Rabbits = Mandelbrot.Julia(DoubleDouble(0), DoubleDouble(0), (-0.123, 0.745), 64)
+constant Outside = Perturbation(Mandelbrot.Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Of(Complex(1, 0)), 64), 1, 0, 0, 0, 0.001, 64, 0, 0)
+constant Rabbits = Mandelbrot.Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Of(Complex(-0.123, 0.745)), 64)
 constant Rabbit = Perturbation(Rabbits, 0, 0, 0, 0, 0.01, 64, 1, 0)
-constant Offset = Perturbation(Mandelbrot.Reference(DoubleDouble(-0.123), DoubleDouble(0.745), 64) + Mandelbrot.Julia(DoubleDouble(0.3), DoubleDouble(-0.2), (-0.123, 0.745), 64), 0.3, -0.2, 0, 0, 0.01, 64, 1, 65)
+constant Offset = Perturbation(Rabbits + Mandelbrot.Orbit(ComplexDoubleDouble.Of(Complex(0.3, -0.2)), ComplexDoubleDouble.Of(Complex(-0.123, 0.745)), 64), 0.3, -0.2, 0, 0, 0.01, 64, 1, 65)
 Strip(first Number, count Number, width Number) Numbers
 	Inside.Strip(0, 4, 2) is (34, 0, 33, 35)
 	Inside.Rebased(1.75, -0.1) is 3
