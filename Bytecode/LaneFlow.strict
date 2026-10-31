@@ -1,0 +1,81 @@
+has types List(TypeEntry)
+constant Sample = LaneFlow((StructLanes.Caller, StructLanes.Pair))
+constant Kept = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 2, "pair")
+constant Reloaded = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 5, "pair")
+constant Copying = (StructLanes.Constructed, Kept, Reloaded, InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 5, "copy"))
+constant Others = ("2 Strict/Other", "3 Strict/Pair")
+constant Naming = (InstructionType.StoreConstantToVariable, InstructionType.IndexCall, InstructionType.InvokeWriteToList, InstructionType.InvokeWriteToTable, InstructionType.InvokeRemove, InstructionType.CheckError)
+constant Checked = Copying + InstructionEntry(InstructionType.CheckError, List(Text) + "copy", (0, 5))
+constant Mixed = Copying + InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "copy")
+Variables(instructions List(InstructionEntry), candidates Texts, rounds Number) Texts
+	Sample.Variables(Copying, List(Text), 4) is ("pair Strict/Pair", "copy Strict/Pair")
+	Sample.Variables(Copying, List(Text), 0) is ("pair Strict/Pair")
+	Sample.Variables(Mixed, List(Text), 4) is ("pair Strict/Pair")
+	let found = Scan(instructions, candidates)
+	(found is candidates) or (rounds is 0) then found else Variables(instructions, found, rounds - 1)
+Scan(instructions List(InstructionEntry), candidates Texts) Texts
+	Sample.Scan(Copying, ("pair Strict/Pair")) is ("pair Strict/Pair", "copy Strict/Pair")
+	Sample.Scan(Checked, ("pair Strict/Pair")) is ("pair Strict/Pair")
+	mutable laned = List(Text)
+	mutable stores = List(Text)
+	for instructions
+		if value.kind is InstructionType.StoreRegisterToVariable
+			let type = Typed(laned, value.payload(0) to Text)
+			stores = stores + (value.texts(0) + " " + (type is "" then "-" else type))
+		if (value.kind is in Naming) and (value.texts.Length > 0)
+			stores = stores + (value.texts(0) + " -")
+		laned = Tracked(value, laned, candidates)
+	Agreed(stores)
+Agreed(stores Texts) Texts
+	Sample.Agreed(("a Strict/Pair", "b -", "a Strict/Pair", "c Strict/Pair", "c -")) is ("a Strict/Pair")
+	for stores
+		if (stores.Index(value) is index) and IsUniform(stores, value)
+			value
+IsUniform(stores Texts, entry Text) Boolean
+	Sample.IsUniform(("a Strict/Pair", "a -"), "a Strict/Pair") is false
+	Sample.IsUniform(("a Strict/Pair", "b -"), "a Strict/Pair")
+	if entry.EndsWith(" -")
+		return false
+	let prefix = entry.Substring(0, entry.IndexOf(" ") + 1)
+	for stores
+		if value.StartsWith(prefix) and (value is not entry)
+			return false
+	true
+Tracked(entry InstructionEntry, laned Texts, variables Texts) Texts
+	Sample.Tracked(StructLanes.Constructed, Others, List(Text)) is ("3 Strict/Pair", "2 Strict/Pair")
+	Sample.Tracked(Reloaded, List(Text), ("pair Strict/Pair")) is ("5 Strict/Pair")
+	Sample.Tracked(InstructionEntry.LoadNumber(3, 1), ("3 Strict/Pair"), List(Text)).Length is 0
+	let written = LoadReuse(List(InstructionEntry)).Written(entry)
+	if written < 0
+		return laned
+	let kept = Without(laned, written)
+	let type = Produced(entry, variables)
+	type is "" then kept else kept + (written + " " + type)
+Produced(entry InstructionEntry, variables Texts) Text
+	Sample.Produced(StructLanes.Constructed, List(Text)) is "Strict/Pair"
+	Sample.Produced(Reloaded, ("pair Strict/Pair")) is "Strict/Pair"
+	Sample.Produced(StructLanes.Calling(4), List(Text)) is ""
+	if IsBuilt(entry)
+		return entry.texts(0)
+	entry.kind is InstructionType.LoadVariableToRegister then Typed(variables, entry.texts(0)) else ""
+IsBuilt(entry InstructionEntry) Boolean
+	Sample.IsBuilt(StructLanes.Constructed)
+	Sample.IsBuilt(StructLanes.Calling(4)) is false
+	Sample.IsBuilt(StructLanes.Calling(0)) is false
+	if (entry.kind is not InstructionType.Invoke) or (entry.texts(1) is not "from")
+		return false
+	let reads = LoadReuse(List(InstructionEntry)).InvokeReads(entry)
+	let isPlain = reads.Length is entry.texts.Length - 3
+	isPlain and (StructLanes.Members(Inliner(types).TypeOf(entry.texts(0))).Length is reads.Length)
+Typed(entries Texts, name Text) Text
+	Sample.Typed(("pair Strict/Pair", "other Strict/Other"), "other") is "Strict/Other"
+	Sample.Typed(("pair Strict/Pair"), "pa") is ""
+	for entries
+		if value.StartsWith(name + " ")
+			return value.Substring(name.Length + 1, value.Length - name.Length - 1)
+	""
+Without(laned Texts, register Number) Texts
+	Sample.Without(("2 Strict/Pair", "3 Strict/Pair"), 2) is ("3 Strict/Pair")
+	for laned
+		if value.StartsWith(register + " ") is false
+			value

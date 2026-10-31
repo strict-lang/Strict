@@ -92,4 +92,41 @@ assert built.returncode==0,built.stdout[-2000:]+built.stderr[-2000:]
 ran=subprocess.run([str(folder/'SmallGpu.exe')],cwd=folder,capture_output=True,text=True,env={key: value for key, value in os.environ.items() if key!='STRICT_GPU'})
 print(ran.stdout,flush=True)
 assert 'gpu kernels 2, doubled 6, opened 2' in ran.stdout,'loops over more than 1 MB did not run on the open GPU'
+pair='''has real Number
+has imaginary Number
++(other) Pair
+	Pair(1, 2) + Pair(3, -1) is Pair(4, 1)
+	Pair(real + other.real, imaginary + other.imaginary)
+Squared Pair
+	Pair(1, 2).Squared is Pair(-3, 4)
+	Pair(real * real - imaginary * imaginary, 2 * real * imaginary)
+SquaredLength Number
+	Pair(3, 4).SquaredLength is 25
+	real * real + imaginary * imaginary
+'''
+escape='''has logger
+Escaped(count Number) Numbers
+	PairEscape(Logger).Escaped(2) is (3, 64)
+	for count
+		let c = Pair(index / count * 2 - 1.5, 0.5)
+		mutable z = Pair(0, 0)
+		mutable steps = 0
+		for 64
+			if z.SquaredLength < 4
+				z = z.Squared + c
+				steps = steps + 1
+		steps
+Run
+	let before = Process.Executed
+	let escaped = Escaped(2000000)
+	let after = Process.Executed
+	logger.Log("gpu kernels " + (after(3) - before(3)) + ", " + escaped(1000000) + " " + escaped(0))
+'''
+(folder/'Pair.strict').write_bytes(pair.replace('\n','\r\n').encode('utf-8'))
+(folder/'PairEscape.strict').write_bytes(escape.replace('\n','\r\n').encode('utf-8'))
+built=subprocess.run([str(root/'strict.exe'),'build','PairEscape.strict'],cwd=folder,capture_output=True,text=True)
+assert built.returncode==0,built.stdout[-2000:]+built.stderr[-2000:]
+ran=subprocess.run([str(folder/'PairEscape.exe')],cwd=folder,capture_output=True,text=True,env={key: value for key, value in os.environ.items() if key!='STRICT_GPU'})
+print(ran.stdout,flush=True)
+assert 'gpu kernels 1, 64 3' in ran.stdout,'a loop with Pair values and a mutable Pair did not run as one GPU kernel'
 print('A list computed on the GPU from numbers alone stays there until the CPU reads it')

@@ -86,3 +86,22 @@ IsReturningComputed Boolean
 		if (reuse.Written(value) is instructions.Last.payload(0)) and (value.kind is not InstructionType.CheckError)
 			isLoaded = value.kind is InstructionType.LoadVariableToRegister
 	isLoaded is false
+IsLaned(type TypeEntry, call InstructionEntry) Boolean
+	InlineRules(StructLanes.Squared).IsLaned(StructLanes.Pair, StructLanes.Calling(4))
+	InlineRules(StructLanes.Squared).IsLaned(StructLanes.Caller, StructLanes.Calling(4)) is false
+	InlineRules(StructLanes.Squared).IsLaned(StructLanes.Pair, StructLanes.Constructed) is false
+	let lanes = StructLanes.Members(type)
+	let isFitting = (lanes.Length > 0) and (IsOwn(call) is false) and (callee.instructions.Length < 40)
+	isFitting and IsContained(lanes) and IsStraight
+IsStraight Boolean
+	InlineRules(StructLanes.Squared).IsStraight
+	InlineRules(Inliner.Again).IsStraight is false
+	let instructions = callee.instructions
+	if (instructions.Length is 0) or (instructions.Last.kind is not InstructionType.Return)
+		return false
+	for instructions
+		let isOwnCall = (value.kind is InstructionType.Invoke) and IsOwn(value) and (value.texts(1) is not "from")
+		let isEarly = (value.kind is InstructionType.Return) and (index < instructions.Length - 1)
+		if isOwnCall or isEarly or (value.kind is not in Inliner.Kinds + InstructionType.FieldLoad)
+			return false
+	true

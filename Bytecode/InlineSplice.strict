@@ -3,7 +3,10 @@ has call InstructionEntry
 has base Number
 has member Text
 has kept Texts
+has fields Texts = List(Text)
+has scratch Number = -1
 constant Sample = InlineSplice(Inliner.First, Inliner.Calling.instructions(1), 2, "elements", List(Text))
+constant Squaring = InlineSplice(StructLanes.Squared, StructLanes.Calling(4), 5, "", List(Text), ("real", "imaginary"), 18)
 Spliced List(InstructionEntry)
 	Sample.Spliced.Length is 3
 	Sample.Spliced(2).texts.First is "inline2_elements"
@@ -24,7 +27,7 @@ Prologue List(InstructionEntry)
 	for callee.parameters
 		lines.Add(Stored(call.payload(reads(index)), value.Name))
 	if member is ""
-		return lines
+		return lines + Fielded(reads)
 	let instance = call.payload(reads.Last)
 	IsValued then lines + (Stored(instance, member), Stored(instance, "value")) else lines + Stored(instance, member)
 Moved(entry InstructionEntry, returned Number) InstructionEntry
@@ -54,3 +57,20 @@ IsValued Boolean
 		if (value.kind is InstructionType.LoadVariableToRegister) and (value.texts.First is "value")
 			return true
 	false
+Fielded(reads Numbers) List(InstructionEntry)
+	Squaring.Fielded((7)).Length is 4
+	Squaring.Fielded((7))(3).texts is ("inline5_imaginary")
+	Squaring.Spliced(4).texts is ("inline5_real")
+	Squaring.Spliced(5).payload is (3, 5, 5, 7)
+	Sample.Fielded((7)).Length is 0
+	if fields.Length is 0
+		return List(InstructionEntry)
+	mutable lines = List(Mutable(InstructionEntry))
+	for fields
+		lines = lines + (Field(value, call.payload(reads.Last)), Stored(scratch, value))
+	lines
+Field(name Text, instance Number) InstructionEntry
+	Squaring.Field("imaginary", 2).texts is ("imaginary", "Pair")
+	Squaring.Field("imaginary", 2).payload is (18, 2, -1, -2)
+	let owner = TypeEntry.ShortName(call.texts(0))
+	InstructionEntry(InstructionType.FieldLoad, (name, owner), (scratch, instance, -1, -2), call.line)
