@@ -1311,11 +1311,15 @@
     %heapBytes = func.call @strict_gc_heap_bytes() : () -> i64
     %tableShift = arith.constant 13 : i64
     %cardShift = arith.constant 9 : i64
-    %tableBytes = arith.shrui %heapBytes, %tableShift : i64
-    %cardBytes = arith.shrui %heapBytes, %cardShift : i64
     %pageSize = arith.constant 65536 : i64
     %pageRest = arith.constant 65535 : i64
     %pageMask = arith.constant -65536 : i64
+    %tableExact = arith.shrui %heapBytes, %tableShift : i64
+    %tableRounded = arith.addi %tableExact, %pageRest : i64
+    %tableBytes = arith.andi %tableRounded, %pageMask : i64
+    %cardExact = arith.shrui %heapBytes, %cardShift : i64
+    %cardRounded = arith.addi %cardExact, %pageRest : i64
+    %cardBytes = arith.andi %cardRounded, %pageMask : i64
     %tables = arith.addi %tableBytes, %cardBytes : i64
     %slack = arith.addi %tables, %pageSize : i64
     %total = arith.addi %heapBytes, %slack : i64
@@ -2834,8 +2838,8 @@
     llvm.store %span#1, %endSlot : i64, !llvm.ptr
     return
   }
-  // a big object the heap has no room for left runs a full collection first: old garbage (8 times the live bytes
-  // before one is due) does not fit into the 1 GB heap of the web and iOS
+  // a page the heap has no room for left runs a full collection first: old garbage (8 times the live bytes before one
+  // is due) does not fit into the 1 GB heap of the web and iOS, free single pages join the runs (strict_gc_pool_runs)
   func.func private @strict_gc_take_pages(%count: i64) -> i64 {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -2904,12 +2908,15 @@
     cf.cond_br %exceeds, ^exhausted, ^commit
   ^exhausted:
     %isFirst = arith.cmpi eq, %isCollected, %collected : i1
-    %collecting = arith.cmpi ugt, %count, %one : i64
-    %retry = arith.andi %isFirst, %collecting : i1
-    cf.cond_br %retry, ^collect, ^fail
+    cf.cond_br %isFirst, ^collect, ^fail
   ^collect:
+    %busy = func.call @strict_rc_busy() : () -> i1
+    cf.cond_br %busy, ^fail, ^collecting
+  ^collecting:
     %full = arith.constant true
     func.call @strict_gc_run(%full) : (i1) -> ()
+    func.call @strict_gc_sweep_all() : () -> ()
+    func.call @strict_gc_pool_runs() : () -> ()
     cf.br ^runs(%full : i1)
   ^fail:
     func.call @strict_gc_fail() : () -> ()
@@ -5223,6 +5230,47 @@
     llvm.store %pages, %storedPagesSlot : i64, !llvm.ptr
     %counted = arith.addi %count, %one : i64
     llvm.store %counted, %countSlot : i64, !llvm.ptr
+    return
+  }
+  // free single pages (the pool and the decommitted spares) become runs again, neighbours merge into room for a big
+  // object: small objects freed page after page, every big one needed new pages of the heap
+  func.func private @strict_gc_pool_runs() {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %poolSlot = llvm.mlir.addressof @strict_gc_pool : !llvm.ptr
+    %pooledSlot = llvm.mlir.addressof @strict_gc_pooled : !llvm.ptr
+    cf.br ^pooled
+  ^pooled:
+    %page = llvm.load %poolSlot : !llvm.ptr -> i64
+    %hasPage = arith.cmpi ne, %page, %zero : i64
+    cf.cond_br %hasPage, ^move, ^spares
+  ^move:
+    %pagePointer = llvm.inttoptr %page : i64 to !llvm.ptr
+    %next = llvm.load %pagePointer : !llvm.ptr -> i64
+    llvm.store %next, %poolSlot : i64, !llvm.ptr
+    %pooled = llvm.load %pooledSlot : !llvm.ptr -> i64
+    %fewer = arith.subi %pooled, %one : i64
+    llvm.store %fewer, %pooledSlot : i64, !llvm.ptr
+    func.call @strict_gc_free_run(%page, %one) : (i64, i64) -> ()
+    cf.br ^pooled
+  ^spares:
+    %spareSlot = llvm.mlir.addressof @strict_gc_spare : !llvm.ptr
+    %spare = llvm.load %spareSlot : !llvm.ptr -> i64
+    %sparePointer = llvm.inttoptr %spare : i64 to !llvm.ptr
+    %spareCountSlot = llvm.mlir.addressof @strict_gc_spare_count : !llvm.ptr
+    %spareCount = llvm.load %spareCountSlot : !llvm.ptr -> i64
+    llvm.store %zero, %spareCountSlot : i64, !llvm.ptr
+    cf.br ^spare(%zero : i64)
+  ^spare(%index: i64):
+    %more = arith.cmpi slt, %index, %spareCount : i64
+    cf.cond_br %more, ^moveSpare, ^done
+  ^moveSpare:
+    %entry = llvm.getelementptr %sparePointer[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %sparePage = llvm.load %entry : !llvm.ptr -> i64
+    func.call @strict_gc_free_run(%sparePage, %one) : (i64, i64) -> ()
+    %following = arith.addi %index, %one : i64
+    cf.br ^spare(%following : i64)
+  ^done:
     return
   }
   func.func private @strict_gc_reuse_run(%wanted: i64) -> i64 {
