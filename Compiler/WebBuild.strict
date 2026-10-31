@@ -31,7 +31,17 @@ Optimized(executable Text) Text
 	let wasm = tools.Quoted(executable.Replace(".html", ".wasm"))
 	let optimizing = wasm + Toolchain.Optimization + Passes + " -o " + wasm
 	let optimized = ToolRunner(tools.Located("wasm-opt")).Execute(optimizing)
-	optimized.Failed then "wasm-opt failed: " + optimized.error else "Built " + executable
+	optimized.Failed then "wasm-opt failed: " + optimized.error else Iconed(executable)
+Iconed(executable Text) Text
+	let page = Text.Combine(File(executable).ReadLines, "\n")
+	let own = Release(Logger, executable.Replace(".html", "")).Icon is not TypeSource.Root + "/Strict.ico"
+	File(executable).Write(Favicons(page, own then "favicon.ico" else "https://strict-lang.org/img/favicon.ico"))
+	"Built " + executable
+Favicons(page Text, icon Text) Text
+	Missing.Favicons("<head></head>", "a.ico") is "<head><link rel=\"icon\" href=\"a.ico\"></head>"
+	Missing.Favicons("<head><link rel=icon href=b.ico></head>", "a.ico") is "<head><link rel=icon href=b.ico></head>"
+	let linked = (page.IndexOf("rel=icon") >= 0) or (page.IndexOf("rel=\"icon\"") >= 0)
+	linked then page else page.Replace("</head>", "<link rel=\"icon\" href=\"" + icon + "\"></head>")
 Sized(mlir Text) Text
 	WebBuild.Sized("  llvm.func @malloc(i64) -> !llvm.ptr\n  llvm.call @malloc(%b)") is "  llvm.call @strict_c_malloc(%b)"
 	WebBuild.Sized("  llvm.func @free(!llvm.ptr)") is "  llvm.func @free(!llvm.ptr)"

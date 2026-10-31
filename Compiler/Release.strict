@@ -93,7 +93,7 @@ Sidecar(release Text) Number
 	PtxCache("Compiler/output/Sided").Written(List(Text) + "// a", ".ptx")
 	Release(Logger, "Compiler/output/Sided").Sidecar("Compiler/output/Release/Web") is 0
 	if Path(release).FileName.text is "Web"
-		return 0
+		return (Icon is not TypeSource.Root + "/Strict.ico") and Placed(Icon, release + "/favicon.ico") then 1 else 0
 	mutable copied = 0
 	for Sidecars
 		let sidecar = base + value
