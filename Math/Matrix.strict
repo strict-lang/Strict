@@ -13,7 +13,7 @@ Turned(direction Vector2) Matrix
 	let length = direction.Length
 	let cosine = length > 0 then direction.X / length else 1
 	let sine = length > 0 then direction.Y / length else 0
-	Matrix((cosine, sine, 0, 0, 0 - sine, cosine, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1))
+	Matrix((cosine, sine, 0, 0, -sine, cosine, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1))
 RotationZ(angle Degrees) Matrix
 	Matrix.RotationZ(Degrees(90)).Transformed(Vector3.UnitX).DistanceTo(Vector3.UnitY) < 0.000001
 	Turned(Vector2(angle.Cos, angle.Sin))
@@ -45,8 +45,8 @@ LookAt(eye Vector3, target Vector3, up Vector3) Matrix
 	let forward = (target - eye).Normalize
 	let side = forward.Cross(up).Normalize
 	let top = side.Cross(forward)
-	let rotation = (side.X, top.X, 0 - forward.X, 0, side.Y, top.Y, 0 - forward.Y, 0, side.Z, top.Z, 0 - forward.Z, 0)
-	Matrix(rotation + (0 - side * eye, 0 - top * eye, forward * eye, 1))
+	let rotation = (side.X, top.X, -forward.X, 0, side.Y, top.Y, -forward.Y, 0, side.Z, top.Z, -forward.Z, 0)
+	Matrix(rotation + (-(side * eye), -(top * eye), forward * eye, 1))
 Perspective(fieldOfView Degrees, aspect Number, near Number, far Number) Matrix
 	Matrix.Perspective(Degrees(90), 1, 1, 100).values(0).IsNearlyEqual(1)
 	Matrix.Perspective(Degrees(90), 1, 1, 100).Clip(Vector3(0, 0, -1)).Z.IsNearlyEqual(-1)
@@ -70,7 +70,7 @@ Inverse Matrix
 	let third = x.Cross(y) / determinant
 	let shift = Axis(3)
 	let rotation = (first.X, second.X, third.X, 0, first.Y, second.Y, third.Y, 0, first.Z, second.Z, third.Z, 0)
-	Matrix(rotation + (0 - first * shift, 0 - second * shift, 0 - third * shift, 1))
+	Matrix(rotation + (-(first * shift), -(second * shift), -(third * shift), 1))
 Unscaled Matrix
 	(Moved * Matrix.Scaling(2)).Unscaled is Moved
 	let x = Axis(0).Normalize.numbers + 0

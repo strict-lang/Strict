@@ -1,6 +1,6 @@
 has model Generic
 Measured(tokens Numbers) Slow(Number)
-	Perplexity(Gpt2.Tiny).Measured((1, 2)) is 0 - Perplexity(Gpt2.Tiny).LogShare(Gpt2.Tiny.Step(1, 0).Scored, 2)
+	Perplexity(Gpt2.Tiny).Measured((1, 2)) is -Perplexity(Gpt2.Tiny).LogShare(Gpt2.Tiny.Step(1, 0).Scored, 2)
 	Perplexity(Gpt2.Tiny).Measured((1, 2, 3)) > Perplexity(Gpt2.Tiny).Measured((1, 2))
 	mutable current = model
 	mutable total = 0

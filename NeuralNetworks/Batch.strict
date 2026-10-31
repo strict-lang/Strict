@@ -50,7 +50,7 @@ Gated(input Numbers) Slow(Numbers)
 	let half = weights.Length / 2
 	for half * input.Length / width
 		let gate = Dot(weights(index % half), 0, input, (index / half).Floor * width)
-		gate / (1 + (0 - gate).Exponential) * Dot(weights(index % half + half), 0, input, (index / half).Floor * width)
+		gate / (1 + (-gate).Exponential) * Dot(weights(index % half + half), 0, input, (index / half).Floor * width)
 Dot(row Numbers, first Number, input Numbers, start Number) Slow(Number)
 	Pair.Dot((1, 2), 0, (5, 1, 3), 1) is 7
 	Fours.Sums(Long)(1277).IsNearlyEqual(5.001, 0.5)

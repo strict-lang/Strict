@@ -15,7 +15,7 @@ Issues ValidationIssues
 	Limits(OnlyConstants.lines + OnlyConstants.lines + OnlyConstants.lines, false, 10).Issues.Length is 0
 	mutable issues = List(Mutable(ValidationIssue))
 	for lines
-		issues = issues + LineIssues(value, index)
+		issues = issues + LineIssues(value, index) + NegationIssues(value, index)
 	issues + MethodIssues + CountIssues
 LineIssues(line Text, number Number) ValidationIssues
 	Sample.LineIssues("\t\t\t\t\t\t1", 2).First.Line is 3
@@ -30,6 +30,35 @@ LineIssues(line Text, number Number) ValidationIssues
 	if line.StartsWith(" ")
 		issues.Add(ValidationIssue("ExtraWhitespacesFoundAtBeginningOfLine", "indent with tabs", number + 1))
 	issues
+NegationIssues(line Text, number Number) ValidationIssues
+	Sample.NegationIssues("\tlet a = 0 - b.Y", 0).First to Text is "ZeroMinusMustBeNegation: write -b.Y instead of 0 - b.Y"
+	Sample.NegationIssues("\tlet a = b - 0 - c", 0).Length is 0
+	Sample.NegationIssues("\tlet a = \"0 - b\"", 0).Length is 0
+	mutable issues = List(Mutable(ValidationIssue))
+	if "0 - " is in line
+		let tokens = Tokenizer(line.Trim).Tokens
+		for tokens.Length - 2
+			if IsZeroMinus(tokens, index)
+				let operand = Operand(tokens, index + 2)
+				let detail = "write -" + operand + " instead of 0 - " + operand
+				issues.Add(ValidationIssue("ZeroMinusMustBeNegation", detail, number + 1))
+	issues
+IsZeroMinus(tokens Texts, index Number) Boolean
+	Sample.IsZeroMinus(("a", "=", "0", "-", "b"), 2)
+	Sample.IsZeroMinus(("a", "-", "0", "-", "b"), 2) is false
+	Sample.IsZeroMinus(("10", "-", "b"), 0) is false
+	let before = index is 0 then "(" else tokens(index - 1)
+	let precedence = SyntaxNode("Binary", before).Precedence
+	let opening = before is in ("(", ",", "=", "not", "return", "if") or (precedence > 0 and precedence < 11)
+	tokens(index) is "0" and tokens(index + 1) is "-" and opening
+Operand(tokens Texts, start Number) Text
+	Sample.Operand(("b", ".", "Y", "*", "2"), 0) is "b.Y"
+	mutable text = tokens(start)
+	for tokens.Length - start - 1
+		if tokens(start + index + 1) is not "." and (text.EndsWith(".") is false)
+			return text
+		text = text + tokens(start + index + 1)
+	text
 MethodIssues ValidationIssues
 	Long.MethodIssues.First to Text is "MethodLengthMustNotExceedTwelve: Run"
 	Long.MethodIssues.First.Line is 1

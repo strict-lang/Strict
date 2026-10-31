@@ -47,7 +47,7 @@ TextsAt(start Number, count Number) Texts
 Payload(start Number, count Number) Numbers
 	EntryDecoder((4, 1, 0), List(Text)).Payload(0, 3) is (2, -1, 0)
 	for Range(start, start + count)
-		stream(value) % 2 is 0 then stream(value) / 2 else 0 - (stream(value) + 1) / 2
+		stream(value) % 2 is 0 then stream(value) / 2 else -(stream(value) + 1) / 2
 Members(start Number) List(MemberEntry)
 	EntryDecoder((1, 4, 0, 1, 1, 0), ("a", "b")).Members(0).First is MemberEntry("a", "b", List(InstructionEntry), true)
 	for Starts(start)

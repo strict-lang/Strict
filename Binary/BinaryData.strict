@@ -37,7 +37,7 @@ Float32(at Number) Number
 	if exponent is 255
 		return mantissa is 0 then (high >= 128 then -1 / 0 else 1 / 0) else 0 / 0
 	let magnitude = exponent is 0 then mantissa * 2 ^ -149 else (1 + mantissa / 8388608) * 2 ^ (exponent - 127)
-	high >= 128 then 0 - magnitude else magnitude
+	high >= 128 then -magnitude else magnitude
 Text(at Number) Text
 	Sample.Text(12) is "Hello"
 	mutable text = ""

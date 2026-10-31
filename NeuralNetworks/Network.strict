@@ -43,7 +43,7 @@ Trained(input Numbers, target Numbers, rate Number) Network
 	let activations = Activations(input)
 	Network(Updated(activations, Deltas(activations, target), rate))
 Updated(activations List(Numbers), deltas List(Numbers), rate Number) List(Layer)
-	Single.Updated(Halved, List(Numbers) + (List(Number) + 1), 0.5).First.biases is List(Number) + (0 - 0.5)
+	Single.Updated(Halved, List(Numbers) + (List(Number) + 1), 0.5).First.biases is List(Number) + -0.5
 	for layers
 		value.Updated(activations(index), deltas(index), rate)
 Deltas(activations List(Numbers), target Numbers) List(Numbers)

@@ -36,5 +36,5 @@ Rotated(values Numbers, rotations Numbers, size Number) Numbers
 		let at = index % size
 		let start = (index / width).Floor * 2 * size
 		let half = size / 2
-		let turned = at < half then 0 - values(index + half) else values(index - half)
+		let turned = at < half then -values(index + half) else values(index - half)
 		value * rotations(start + at) + turned * rotations(start + size + at)

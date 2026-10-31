@@ -109,7 +109,7 @@ Norm(name Text) Numbers
 Decays(logarithms Numbers) Numbers
 	Tiny.Decays(List(Number) + 0) is List(Number) + -1
 	for logarithms
-		0 - value.Exponential
+		-value.Exponential
 Tiled(values Numbers, size Number, keyHeads Number) Numbers
 	Tiny.Tiled((0, 1, 2, 3), 1, 2) is (0, 2, 1, 3)
 	let repeats = values.Length / size / keyHeads

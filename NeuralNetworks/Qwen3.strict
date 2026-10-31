@@ -55,7 +55,7 @@ Rotations(positions Numbers, heights = List(Number), widths = List(Number)) Slow
 		let pair = at % half
 		let position = Placed(pair, (index / (4 * half)).Floor, positions, heights, widths)
 		let angle = Radians(pair < pairs then position * theta ^ (-pair / pairs) else 0) to Degrees
-		at < 2 * half then angle.Cos else (at < 3 * half then 0 - angle.Sin else angle.Sin)
+		at < 2 * half then angle.Cos else (at < 3 * half then -angle.Sin else angle.Sin)
 Step(token Number, position Number) Slow(Qwen3)
 	Tiny.Step(1, 0).Scored.First.IsNearlyEqual(2.664049302641475)
 	Tiny.Step(1, 0).Step(2, 1).Scored.Last.IsNearlyEqual(1.1076484232754447)

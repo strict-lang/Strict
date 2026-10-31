@@ -23,5 +23,5 @@ Erf(number Number) Number
 	let distance = 1 / (1 + 0.3275911 * number.Absolute)
 	let fourth = (1.061405429 * distance - 1.453152027) * distance + 1.421413741
 	let second = (fourth * distance - 0.284496736) * distance + 0.254829592
-	let magnitude = 1 - second * distance * (0 - number * number).Exponential
-	number < 0 then 0 - magnitude else magnitude
+	let magnitude = 1 - second * distance * (-number * number).Exponential
+	number < 0 then -magnitude else magnitude

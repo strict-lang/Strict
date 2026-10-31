@@ -48,4 +48,4 @@ Linear(coords Numbers, target Number, at Number) Number
 		return 0
 	let spacing = coords.Last - coords(coords.Length - 2)
 	let ratio = spacing.Absolute < 0.000000000001 then 0 else (target - coords.Last) / spacing
-	at is coords.Length - 1 then 1 + ratio else 0 - ratio
+	at is coords.Length - 1 then 1 + ratio else -ratio

@@ -10,7 +10,7 @@ Activated(number Number, scale Number, shift Number, swish Boolean) Number
 	Square.Activated(2, 3, -5, false) is 1
 	Square.Activated(0.5, 2, 0, true).IsNearlyEqual(0.7310585786300049)
 	let normed = number * scale + shift
-	swish then normed / (1 + (0 - normed).Exponential) else normed
+	swish then normed / (1 + (-normed).Exponential) else normed
 Identity Numbers
 	Square.Identity is (1, 0)
 	FeatureMap((1, 2), 1, 2, (3, 4)).Identity is (1, 1, 3, 4)

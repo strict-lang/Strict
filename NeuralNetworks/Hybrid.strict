@@ -51,4 +51,4 @@ Gated(merged Numbers) Numbers
 	if gates.Length is 0
 		return merged
 	for merged
-		value / (1 + (0 - gates(index)).Exponential)
+		value / (1 + (-gates(index)).Exponential)

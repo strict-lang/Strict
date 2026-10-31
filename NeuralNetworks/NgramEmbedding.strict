@@ -31,8 +31,8 @@ Grouped(values Numbers, weights Numbers) Numbers
 	Tiny.Grouped(HyperStreams.Streams, Norm) is HyperStreams.Tiny.Normalized(HyperStreams.Streams)
 	HyperStreams(weights, HyperStreams.Down, HyperStreams.Up, HyperStreams.Inject).Normalized(values)
 Gates(keys Numbers, queries Numbers) Numbers
-	Tiny.Gates((1, 2, 0, 0, 1, 2, 0, 0), (3, 4, 3, 4, 0 - 3, 0 - 4, 0, 0))(0).IsNearlyEqual(0.9420751133972743)
-	Tiny.Gates((1, 2, 0, 0, 1, 2, 0, 0), (3, 4, 3, 4, 0 - 3, 0 - 4, 0, 0))(2).IsNearlyEqual(0.057924886602725566)
+	Tiny.Gates((1, 2, 0, 0, 1, 2, 0, 0), (3, 4, 3, 4, -3, -4, 0, 0))(0).IsNearlyEqual(0.9420751133972743)
+	Tiny.Gates((1, 2, 0, 0, 1, 2, 0, 0), (3, 4, 3, 4, -3, -4, 0, 0))(2).IsNearlyEqual(0.057924886602725566)
 	let width = keys.Length / HyperStreams.Count
 	for HyperStreams.Count
 		Ngrams.Flash.Gate(keys.Slice(index * width, width), queries.Slice(index * width, width))

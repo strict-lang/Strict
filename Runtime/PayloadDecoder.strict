@@ -44,7 +44,7 @@ Double(position Number) Number
 		mantissa = mantissa * 256 + entry.payload(position + 5 - index)
 	let fraction = exponent is 0 then mantissa / 2 ^ 52 else 1 + mantissa / 2 ^ 52
 	let magnitude = fraction * 2 ^ ((exponent is 0 then 1 else exponent) - 1023)
-	top < 128 then magnitude else 0 - magnitude
+	top < 128 then magnitude else -magnitude
 ElementParts Texts
 	PayloadDecoder(ElementStore).ElementParts is ("list", "index")
 	PayloadDecoder(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "list")).ElementParts.Length is 0

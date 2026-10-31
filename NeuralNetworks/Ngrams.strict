@@ -54,11 +54,11 @@ Rows(tokens Numbers, position Number) Numbers
 		Remainder(index < vocabularies.Length / 2 then pair else triple, value) + vocabularies.Slice(0, index).Sum
 Gate(key Numbers, query Numbers) Number
 	Flash.Gate((1, 2), (3, 4)).IsNearlyEqual(0.9420751133972743)
-	Flash.Gate((1, 2), (0 - 3, 0 - 4)).IsNearlyEqual(0.057924886602725566)
+	Flash.Gate((1, 2), (-3, -4)).IsNearlyEqual(0.057924886602725566)
 	Flash.Gate((0, 0), (3, 4)) is 0.5
 	let score = Batch.Dot(key, 0, query, 0) / key.Length.SquareRoot
 	let root = (score.Absolute < 0.000001 then 0.000001 else score.Absolute).SquareRoot
-	score is 0 then 0.5 else Activation.Sigmoid.Output(score < 0 then 0 - root else root)
+	score is 0 then 0.5 else Activation.Sigmoid.Output(score < 0 then -root else root)
 Convolved(taps List(Numbers), weights List(Numbers)) Numbers
 	Flash.Convolved(Window, ((0.5, 1, 1, 0.25), (1, 1, 1, 1)))(0).IsNearlyEqual(0.7310585786300049)
 	Flash.Convolved(Window, ((0.5, 1, 1, 0.25), (1, 1, 1, 1)))(1).IsNearlyEqual(1.7615941559557646)

@@ -73,7 +73,7 @@ Unit(lower Numbers) Numbers
 	Probe.Unit((0, 0, 0.5, 0))(2) is -0.5
 	Probe.Unit((0, 0, 0.5, 0))(3) is 1
 	for lower
-		(((index / chunk).Floor % tokens) % chunk) is index % chunk then 1 - value else 0 - value
+		(((index / chunk).Floor % tokens) % chunk) is index % chunk then 1 - value else -value
 Inverted(result Numbers, power Numbers, span Number) Numbers
 	Probe.Inverted((1, 2), (3, 4), 2) is (1, 2)
 	if (span >= chunk) or (span >= tokens)

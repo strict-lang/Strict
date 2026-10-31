@@ -129,5 +129,5 @@ Rotations(grid Numbers) Slow(Numbers)
 		let patch = (index / (2 * size)).Floor
 		let slot = index % size % (size / 2)
 		let position = slot < size / 4 then Row(patch, grid(1)) else Column(patch, grid(1))
-		let angle = Radians(position * 10000 ^ (0 - 2 * (slot % (size / 4)) / (size / 2))) to Degrees
+		let angle = Radians(position * 10000 ^ (-2 * (slot % (size / 4)) / (size / 2))) to Degrees
 		index % (2 * size) < size then angle.Cos else angle.Sin

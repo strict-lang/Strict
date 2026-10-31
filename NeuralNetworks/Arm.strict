@@ -20,12 +20,12 @@ Tilted(degrees Number) List(Numbers)
 	Planar.Tilted(90) is ((1, 0, 0), (0, 0, -1), (0, 1, 0))
 	let cosine = Degrees(degrees).Cos
 	let sine = Degrees(degrees).Sin
-	((1, 0, 0), (0, cosine, 0 - sine), (0, sine, cosine))
+	((1, 0, 0), (0, cosine, -sine), (0, sine, cosine))
 Turned(degrees Number) List(Numbers)
 	Planar.Turned(90) is ((0, -1, 0), (1, 0, 0), (0, 0, 1))
 	let cosine = Degrees(degrees).Cos
 	let sine = Degrees(degrees).Sin
-	((cosine, 0 - sine, 0), (sine, cosine, 0), (0, 0, 1))
+	((cosine, -sine, 0), (sine, cosine, 0), (0, 0, 1))
 Times(left List(Numbers), right List(Numbers)) List(Numbers)
 	Planar.Times(Planar.Turned(90), Planar.Turned(-90)) is Planar.Turned(0)
 	for left

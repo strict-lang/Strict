@@ -31,7 +31,7 @@ Constant(node SyntaxNode, block CodeBlock) CodeBlock
 		if value.Kind is "Text"
 			texts.Add(value.Unquoted)
 		let number = value.Kind is "Number" then value.text to Number else 0
-		let element = value.Kind is "Text" then (4, 0 - texts.Length) else InstructionEntry.NumberValue(number)
+		let element = value.Kind is "Text" then (4, -texts.Length) else InstructionEntry.NumberValue(number)
 		content = content + element
 	block.Load(InstructionEntry(InstructionType.LoadConstantToRegister, texts, content))
 Built(node SyntaxNode, block CodeBlock) CodeBlock

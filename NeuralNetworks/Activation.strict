@@ -13,12 +13,12 @@ Output(sum Number) Number
 	Softplus.Output(0) is 0.6931471805599453
 	Swish.Output(1).IsNearlyEqual(0.7310585786300049)
 	if value is
-		Tanh then 2 / (1 + (0 - 2 * sum).Exponential) - 1
+		Tanh then 2 / (1 + (-2 * sum).Exponential) - 1
 		Relu then (sum > 0 then sum else 0)
 		LeakyRelu then (sum > 0 then sum else 0.01 * sum)
 		Softplus then (1 + sum.Exponential).Logarithm
-		Swish then sum / (1 + (0 - sum).Exponential)
-		else 1 / (1 + (0 - sum).Exponential)
+		Swish then sum / (1 + (-sum).Exponential)
+		else 1 / (1 + (-sum).Exponential)
 Derivative(sum Number, output Number) Number
 	Sigmoid.Derivative(0, 0.5) is 0.25
 	Tanh.Derivative(0.5493061443340549, 0.5) is 0.75
@@ -29,7 +29,7 @@ Derivative(sum Number, output Number) Number
 		Tanh then 1 - output * output
 		Relu then (output > 0 then 1 else 0)
 		LeakyRelu then (output > 0 then 1 else 0.01)
-		Softplus then 1 - (0 - output).Exponential
+		Softplus then 1 - (-output).Exponential
 		Swish then Sigmoid.Output(sum) * (1 + sum * (1 - Sigmoid.Output(sum)))
 		else output * (1 - output)
 to Text

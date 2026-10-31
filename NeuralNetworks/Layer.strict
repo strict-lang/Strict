@@ -61,8 +61,8 @@ Back(deltas Numbers, input Number) Number
 	sum
 Updated(input Numbers, deltas Numbers, rate Number) Layer
 	Halves.Updated((1, 0), List(Number) + 1, 0.5).weights is List(Numbers) + (0, 0.5)
-	Halves.Updated((1, 0), List(Number) + 1, 0.5).biases is List(Number) + (0 - 0.5)
-	Halves.Updated((1, 0), List(Number) + 1, 0.5).Updated((1, 0), (0), 0.5).biases is List(Number) + (0 - 0.75)
+	Halves.Updated((1, 0), List(Number) + 1, 0.5).biases is List(Number) + -0.5
+	Halves.Updated((1, 0), List(Number) + 1, 0.5).Updated((1, 0), (0), 0.5).biases is List(Number) + -0.75
 	Layer(Moved(input, deltas, rate), Shifted(deltas, rate), activation, weights, biases)
 Moved(input Numbers, deltas Numbers, rate Number) List(Numbers)
 	Halves.Moved((1, 0), List(Number) + 1, 0.5) is List(Numbers) + (0, 0.5)
@@ -74,7 +74,7 @@ Row(row Numbers, previous Numbers, scaled Number, input Numbers) Numbers
 	for row
 		value - scaled * input(index) + Momentum * (value - previous(index))
 Shifted(deltas Numbers, rate Number) Numbers
-	Halves.Shifted(List(Number) + 1, 0.5) is List(Number) + (0 - 0.5)
+	Halves.Shifted(List(Number) + 1, 0.5) is List(Number) + -0.5
 	let previous = previousBiases.Length is 0 then biases else previousBiases
 	for biases
 		value - rate * deltas(index) + Momentum * (value - previous(index))

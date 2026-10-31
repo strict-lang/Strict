@@ -9,7 +9,7 @@ has low Number = 0
 	Normalized(sum, error)
 -(other) DoubleDouble
 	(DoubleDouble(10000000000000000, 1) - DoubleDouble(10000000000000000)).high is 1
-	value + DoubleDouble(0 - other.high, 0 - other.low)
+	value + DoubleDouble(-other.high, -other.low)
 *(other) DoubleDouble
 	(DoubleDouble(1, 0.00000000000000001) * DoubleDouble(2)).low * 100000000000000000 is 2
 	let product = high * other.high
@@ -44,7 +44,7 @@ Whole Number
 Decimals(count Number) Text
 	DoubleDouble(1, 0.00000000000000001).Decimals(17) is "1.00000000000000001"
 	let negative = high < 0 or (high is 0 and low < 0)
-	let magnitude = negative then DoubleDouble(0 - high, 0 - low) else value
+	let magnitude = negative then DoubleDouble(-high, -low) else value
 	mutable rest = magnitude - DoubleDouble(magnitude.Whole)
 	mutable digits = (negative then "-" else "") + magnitude.Whole + "."
 	for count
@@ -63,7 +63,7 @@ Parsed(text Text) DoubleDouble
 	let point = magnitude.IndexOf(".")
 	let whole = DoubleDouble((point < 0 then magnitude else magnitude.Substring(0, point)) to Number)
 	let parsed = point < 0 then whole else whole + Fraction(magnitude.Substring(point + 1, magnitude.Length - point - 1))
-	negative then DoubleDouble(0 - parsed.high, 0 - parsed.low) else parsed
+	negative then DoubleDouble(-parsed.high, -parsed.low) else parsed
 Fraction(digits Text) DoubleDouble
 	Fraction("25").high is 0.25
 	mutable scaled = DoubleDouble(0)

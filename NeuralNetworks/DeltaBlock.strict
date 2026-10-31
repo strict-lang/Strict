@@ -84,7 +84,7 @@ Convolved(combined Numbers, tokens Number) Numbers
 		let old = older + Tapped(combined, width, token - 2, channel) * convolution(4 * channel + 1)
 		let sum = old + Tapped(combined, width, token - 1, channel) * convolution(4 * channel + 2)
 		let all = sum + Tapped(combined, width, token, channel) * convolution(4 * channel + 3)
-		all / (1 + (0 - all).Exponential)
+		all / (1 + (-all).Exponential)
 Tapped(combined Numbers, width Number, token Number, channel Number) Number
 	Tiny.Tapped((1, 2, 3, 4), 2, 1, 0) is 3
 	Tiny.Tapped((1, 2, 3, 4), 2, -1, 0) is 0
@@ -118,7 +118,7 @@ Decayed(combined Numbers, tokens Number) Numbers
 		let rate = combined(start + betas + head)
 		let alpha = combined(start + betas + heads + head) + steps(head)
 		let decay = decays(head) * (1 + alpha.Exponential).Logarithm
-		index % (2 * heads) >= heads then 1 / (1 + (0 - rate).Exponential) else decay
+		index % (2 * heads) >= heads then 1 / (1 + (-rate).Exponential) else decay
 Updated(keyed Numbers, decayed Numbers, remembered Numbers, token Number) Numbers
 	Tiny.Updated(Layer.Zeros(16), (1, 1, 1, 1, 1, 1, 1, 1), Layer.Zeros(8), 0) is Layer.Zeros(16)
 	let size = norm.Length
@@ -155,7 +155,7 @@ Gated(raw Numbers, combined Numbers) Numbers
 	for raw
 		let gate = combined((index / values).Floor * width + convolution.Length / 4 + index % values)
 		let scaled = value * scales((index / size).Floor) * norm(index % size)
-		(sigmoidGate then scaled else scaled * gate) / (1 + (0 - gate).Exponential)
+		(sigmoidGate then scaled else scaled * gate) / (1 + (-gate).Exponential)
 Output(input Numbers) Numbers
 	Tiny.Cached(Tiny.Combined(Drafter.Rows(1))).Output(Drafter.Rows(1)).Length is 8
 	let grouped = experts.basis.Grouped(merged, norm.Length, KeyHeads, decays.Length)
