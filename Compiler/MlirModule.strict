@@ -47,7 +47,8 @@ Emitted(texts List(MlirFunction), functions List(MlirFunction), recursive Texts)
 		Emission(value, functions, recursive)
 Emission(function MlirFunction, functions List(MlirFunction), recursive Texts) Text
 	Counters.Emission(MlirWhole.Row.function, NoFunctions, List(Text)).IndexOf("alwaysinline") > 0
-	let emitted = MlirFunction(function, IsRecursive = function.Symbol is in recursive).Text
+	let text = MlirFunction(function, IsRecursive = function.Symbol is in recursive).Text
+	let emitted = MlirEntry.Optimized(function.method, text)
 	let whole = MlirWholeBody(function, functions).Lines
 	whole.Length is 0 then emitted else emitted + "\n" + outer.Text.Combine(whole, "\n")
 Combined(lines Texts, functions List(MlirFunction), counted List(MlirFunction)) Text

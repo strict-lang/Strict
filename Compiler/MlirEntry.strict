@@ -9,6 +9,8 @@ constant Unhandled = ("    %unhandled = func.call @strict_unhandled(%result) : (
 constant Finished = "    func.call @strict_rc_finished() : () -> ()"
 constant Exit = "    %exit = arith.select %unhandled, %failing, %code : i32"
 constant CollectorStart = ("    %stackBase = llvm.call_intrinsic \"llvm.addressofreturnaddress.p0\"() : () -> !llvm.ptr", "    func.call @strict_gc_init(%stackBase) : (!llvm.ptr) -> ()", "    func.call @strict_rc_counted() : () -> ()")
+constant Linked = " attributes {llvm.linkage = #llvm.linkage<internal>} {"
+constant Unoptimized = " attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = [\"optnone\", \"noinline\"]} {"
 Main Texts
 	Counted.Main.Length is 20
 	Counted.Main.Index("    func.call @strict_gc_init(%stackBase) : (!llvm.ptr) -> ()") is 2
@@ -89,3 +91,7 @@ Other(function MlirFunction, number Number) Texts
 	let sum = "    %total" + number + " = arith.addf " + previous + ", %result" + number + " : f64"
 	let loaded = "    " + self + " = llvm.load " + slot + " : !llvm.ptr -> f64"
 	List(Text) + ("    " + slot + " = llvm.alloca %one x f64 : (i64) -> !llvm.ptr") + fresh + (loaded, call, sum)
+Optimized(method MethodEntry, emitted Text) Text
+	MlirEntry.Optimized(MethodEntry(MethodEntry.CountingLoop, Name = TestCodegen.Runner), Linked) is Unoptimized
+	MlirEntry.Optimized(MethodEntry.CountingLoop, Linked) is Linked
+	method.Name is TestCodegen.Runner then emitted.Replace(Linked, Unoptimized) else emitted
