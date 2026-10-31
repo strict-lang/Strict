@@ -2,9 +2,9 @@
 Details for the GPU line of [improvements.md](improvements.md), one short line each, measurements go into commit messages. Diffusion models (Moss, H3) live in `../StrictComfy/`. Remove what is done, bugs go into improvements.md.
 
 ## Attention
-- `strict_device_dense_attention` is ~20 % slower than comfy_kitchen's `int8_attention` (softmax 296 against 154 instructions per step, the tensor pipe idles on the quarter rate MUFU): part of the exponentials as a polynomial on the fma pipe, or warps 4 to 7 half a step behind
+- `strict_device_dense_attention` keeps the 8 bit tensor pipe 53 % busy (Moss on the 3080, 1.26 ms per layer, 253 registers leave one block per SM; comfy_kitchen's `int8_attention` was ~20 % faster on the 4090 before warps 4 to 7 ran half a step behind): fewer softmax instructions (part of the exponentials as a polynomial on the fma pipe), or two blocks per SM
 - the row maximum on the integer sums (IMNMX) needs one key scale per lane and step instead of one per position
-- the 4 tile copies of a step sit in conditional blocks (long scoreboard stalls after them): branch-free copies
+- the 2 tile copies of a routed step sit in conditional blocks (long scoreboard stalls after them): branch-free copies like `strict_device_dense_issued`
 - the routing planner reads all pooled keys of a head in every block: moments once per head, the scores as a small product kernel
 - the Hadamard on Q and K
 - routing plans at most 1024 key blocks (65536 positions), longer prompts attend densely: plans in global memory

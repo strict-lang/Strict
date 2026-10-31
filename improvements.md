@@ -4,7 +4,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 ## Bugs
 - `strict test Compiler/NativeBuild.strict native`: the compiler stops with IndexOutOfRange in MlirMembered.Slot (MlirEmbedded.IsCopied) emitting the test module.
 - `Compiler/check_gpu_cache.py`: mlir-opt rejects its cache-kind.mlir.
-- Routed attention (routing > 0) ignores valueOffset/valueStride of strided values (dd496fb0): H3Block.Heads with V read from the combined list gives 12.9 dB against the copy and is 6 s slower, routing 0 is bit-identical; `Attention.Strided` only tests routing 0, H3 keeps the copy.
+- Routed attention (routing > 0) with strided values (valueOffset/valueStride) runs unrouted: `strict_gpu_attention` takes the routed 8 bit path only for packed values, so H3Block.Heads with V read from the combined list attends densely (6 s slower, 12.9 dB from the routed result), routing 0 is bit-identical; the per-token value quantization (`strict_device_quantize_rows_run`) and the pooled value means need strided rows, H3 keeps the copy until then.
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).
