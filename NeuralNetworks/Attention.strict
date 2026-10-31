@@ -30,6 +30,7 @@ Stride Slow(Number)
 	Attention(Prompted, values = Prompt, valueOffset = 7168, valueStride = 128).Merged(4095).IsNearlyEqual(0.061657, 0.005)
 	Attention(Prompt, Prompt, Prompt, 1, 1, 128, 1, false, 0, 0, true).Merged(10239).IsNearlyEqual(-0.24048, 0.01)
 	Attention(Prompt, Prompt, Prompt, 1, 1, 128, 1, false, 0, 0, true, 1).Merged(10239).IsNearlyEqual(-0.24048, 0.01)
+	Attention.Strided.Merged(9215).IsNearlyEqual(0.19528, 0.01)
 	valueStride is 0 then sequences * groups * size else valueStride
 ValueStart(at Number) Number
 	let row = (at / size).Floor
@@ -80,6 +81,10 @@ Prompted Slow(Attention)
 	Attention.Prompted.heads is 4
 	let promptKeys = Safetensors.Part(Prompt, 4096, 3072, 1)
 	Attention(Safetensors.Part(Prompt, 0, 4096, 1), promptKeys, Safetensors.Part(Prompt, 7168, 3072, 1), 4, 2, 64)
+Strided Slow(Attention)
+	Attention.Strided.valueOffset is 256
+	let rows = Safetensors.Part(Prompt, 0, 9216, 1)
+	Attention(rows, rows, Prompt, 1, 1, 128, 1, false, 256, 136, true)
 Spread Slow(Attention)
 	Attention.Spread.queries.Length is 32
 	let evenRows = Safetensors.Part(Prompt, 0, 4800, 2)

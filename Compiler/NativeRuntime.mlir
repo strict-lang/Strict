@@ -15335,9 +15335,9 @@
   // the width of the tokens strict_gpu_tokens quantizes with one scale per token (rows with one scale each), 0 for a
   // scale per 32 numbers
   llvm.mlir.global internal @strict_gpu_quantize_width(0 : i64) : i64
-  // the value (its index plus 1, 0 for none) strict_gpu_quantized transposes per number for strict_device_dense_attention
-  // and the width of its rows
-  llvm.mlir.global internal @strict_gpu_transposed(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  // the value (its index plus 1, 0 for none) strict_gpu_quantized transposes per number for strict_device_dense_attention,
+  // the width and count of its rows, where the first starts and how far apart they are in the list (0: width apart)
+  llvm.mlir.global internal @strict_gpu_transposed(dense<0> : tensor<5xi64>) : !llvm.array<5 x i64>
   llvm.mlir.global internal constant @strict_gpu_transposed_name("strict_device_values_transposed\00") : !llvm.array<32 x i8>
   llvm.mlir.global internal @strict_gpu_transposed_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   // device address, size and next offset of the 8 bit numbers made for dot products, one stream runs everything in order
@@ -15383,22 +15383,25 @@
     %enabled = arith.andi %switched, %quantizing : i1
     return %enabled : i1
   }
-  // launches strict_device_quantize, its _tokens or strict_device_hadamard_tokens, all take the source, its count and
-  // token width, the target and the format of the source
-  func.func private @strict_gpu_quantize_launch(%function: !llvm.ptr, %source: i64, %count: i64, %width: i64, %target: i64, %bits: i64, %total: i64, %threads: i64) -> i1 {
+  // launches strict_device_quantize, its _tokens, strict_device_hadamard_tokens or strict_device_values_transposed, all
+  // take the source, its count and token width, the target and the format of the source, the transposition also the
+  // stride of its rows
+  func.func private @strict_gpu_quantize_launch(%function: !llvm.ptr, %source: i64, %count: i64, %width: i64, %target: i64, %bits: i64, %total: i64, %threads: i64, %stride: i64) -> i1 {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %two = arith.constant 2 : i64
     %three = arith.constant 3 : i64
     %four = arith.constant 4 : i64
     %five = arith.constant 5 : i64
-    %arguments = llvm.alloca %five x i64 : (i64) -> !llvm.ptr
-    %parameters = llvm.alloca %five x !llvm.ptr : (i64) -> !llvm.ptr
+    %six = arith.constant 6 : i64
+    %arguments = llvm.alloca %six x i64 : (i64) -> !llvm.ptr
+    %parameters = llvm.alloca %six x !llvm.ptr : (i64) -> !llvm.ptr
     func.call @strict_gpu_argument(%arguments, %parameters, %none, %source) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
     func.call @strict_gpu_argument(%arguments, %parameters, %one, %count) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
     func.call @strict_gpu_argument(%arguments, %parameters, %two, %width) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
     func.call @strict_gpu_argument(%arguments, %parameters, %three, %target) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
     func.call @strict_gpu_argument(%arguments, %parameters, %four, %bits) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
+    func.call @strict_gpu_argument(%arguments, %parameters, %five, %stride) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
     %flushed = func.call @strict_gpu_flush() : () -> i1
     %launched = func.call @strict_gpu_launch(%function, %total, %threads, %parameters) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i1
     %started = arith.andi %flushed, %launched : i1
@@ -15434,6 +15437,7 @@
   func.func private @strict_gpu_quantized(%ptx: !llvm.ptr, %view: !llvm.ptr, %transposed: i64) {
     %none = arith.constant 0 : i64
     %two = arith.constant 2 : i64
+    %four = arith.constant 4 : i64
     %five = arith.constant 5 : i64
     %eight = arith.constant 8 : i64
     %thirtyOne = arith.constant 31 : i64
@@ -15465,7 +15469,18 @@
     %blockNeeded = arith.addi %length, %scaleBytes : i64
     %isTransposed = arith.cmpi sgt, %transposed, %none : i64
     %rowWidth = arith.select %isTransposed, %transposed, %thirtyTwo : i64
-    %rowPositions = arith.divui %length, %rowWidth : i64
+    %transposedSettings = llvm.mlir.addressof @strict_gpu_transposed : !llvm.ptr
+    %rowsSlot = llvm.getelementptr %transposedSettings[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %rowOffsetSlot = llvm.getelementptr %transposedSettings[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %rowStrideSlot = llvm.getelementptr %transposedSettings[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    %givenRows = llvm.load %rowsSlot : !llvm.ptr -> i64
+    %givenOffset = llvm.load %rowOffsetSlot : !llvm.ptr -> i64
+    %givenStride = llvm.load %rowStrideSlot : !llvm.ptr -> i64
+    %lengthRows = arith.divui %length, %rowWidth : i64
+    %rowPositions = arith.select %isTransposed, %givenRows, %lengthRows : i64
+    %rowOffset = arith.select %isTransposed, %givenOffset, %none : i64
+    %isStrided = arith.cmpi sgt, %givenStride, %none : i64
+    %rowStride = arith.select %isStrided, %givenStride, %rowWidth : i64
     %rowPositionsUp = arith.addi %rowPositions, %thirtyOne : i64
     %positionMask = arith.constant -32 : i64
     %paddedPositions = arith.andi %rowPositionsUp, %positionMask : i64
@@ -15550,7 +15565,12 @@
     %numberGroups = arith.shrui %rowWidth, %five : i64
     %groupThreads = arith.constant 256 : i64
     %transposeTotal = arith.muli %numberGroups, %groupThreads : i64
-    %transposedLaunched = func.call @strict_gpu_quantize_launch(%transposing, %device, %length, %rowWidth, %target, %bits, %transposeTotal, %groupThreads) : (!llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> i1
+    %isSingleRows = arith.cmpi eq, %bits, %thirtyTwo : i64
+    %numberBytes = arith.select %isSingleRows, %four, %two : i64
+    %offsetBytes = arith.muli %rowOffset, %numberBytes : i64
+    %rowsSource = arith.addi %device, %offsetBytes : i64
+    %rowsCount = arith.muli %rowPositions, %rowStride : i64
+    %transposedLaunched = func.call @strict_gpu_quantize_launch(%transposing, %rowsSource, %rowsCount, %rowWidth, %target, %bits, %transposeTotal, %groupThreads, %rowStride) : (!llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> i1
     cf.cond_br %transposedLaunched, ^swap, ^done
   ^fuse:
     %fusedName = llvm.mlir.addressof @strict_gpu_hadamard_tokens_name : !llvm.ptr
@@ -15565,7 +15585,7 @@
     %fuseThreads = func.call @strict_gpu_hadamard_threads(%tokenWidth) : (i64) -> i64
     %fuseTokens = arith.divui %length, %tokenWidth : i64
     %fuseTotal = arith.muli %fuseTokens, %fuseThreads : i64
-    %fuseDone = func.call @strict_gpu_quantize_launch(%fused, %source, %length, %tokenWidth, %target, %codedBits, %fuseTotal, %fuseThreads) : (!llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> i1
+    %fuseDone = func.call @strict_gpu_quantize_launch(%fused, %source, %length, %tokenWidth, %target, %codedBits, %fuseTotal, %fuseThreads, %none) : (!llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> i1
     cf.cond_br %fuseDone, ^swap, ^unfused
   ^unfused:
     func.call @strict_gpu_rotated(%device) : (i64) -> ()
@@ -15588,7 +15608,7 @@
     %tokenCount = arith.divui %length, %safeWidth : i64
     %tokenThreads = arith.muli %tokenCount, %rowThreads : i64
     %launchThreads = arith.select %perToken, %tokenThreads, %length : i64
-    %quantized = func.call @strict_gpu_quantize_launch(%function, %device, %length, %tokenWidth, %target, %codedBits, %launchThreads, %threads) : (!llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> i1
+    %quantized = func.call @strict_gpu_quantize_launch(%function, %device, %length, %tokenWidth, %target, %codedBits, %launchThreads, %threads, %none) : (!llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> i1
     cf.cond_br %quantized, ^swap, ^done
   ^swap:
     llvm.store %target, %view : i64, !llvm.ptr
@@ -16256,12 +16276,10 @@
     %noStride = arith.cmpf oeq, %valueStride, %zero : f64
     %packedValues = arith.andi %noOffset, %noStride : i1
     %floatLists = arith.andi %floatValues, %floatKeys : i1
-    %bytesLists = arith.andi %floatLists, %packedValues : i1
     %bytesOpen = arith.andi %routingOpen, %oneHeadGroups : i1
-    %bytesShaped = arith.andi %bytesOpen, %bytesLists : i1
-    %bytesWanted = arith.andi %bytesShaped, %dotting : i1
-    %bothBits = arith.constant 6 : i64
-    %bytesDots = arith.select %bytesWanted, %bothBits, %dots : i64
+    %bytesShaped = arith.andi %bytesOpen, %floatLists : i1
+    %bytesReady = arith.andi %bytesShaped, %dotting : i1
+    %bytesWanted = arith.andi %bytesReady, %packedValues : i1
     %bytesName = llvm.mlir.addressof @strict_gpu_bytes_name : !llvm.ptr
     %bytesSlot = llvm.mlir.addressof @strict_gpu_bytes_slot : !llvm.ptr
     %denseName = llvm.mlir.addressof @strict_gpu_dense_name : !llvm.ptr
@@ -16271,8 +16289,11 @@
     %denseRows = arith.constant 31 : i64
     %denseRest = arith.andi %positionSize, %denseRows : i64
     %denseGroups = arith.cmpi eq, %denseRest, %none : i64
-    %denseShaped = arith.andi %bytesWanted, %denseGroups : i1
+    %denseShaped = arith.andi %bytesReady, %denseGroups : i1
     %denseWanted = arith.andi %denseShaped, %notRouting : i1
+    %anyBytes = arith.ori %bytesWanted, %denseWanted : i1
+    %bothBits = arith.constant 6 : i64
+    %bytesDots = arith.select %anyBytes, %bothBits, %dots : i64
     %bytesOrName = llvm.select %bytesWanted, %bytesName, %name : i1, !llvm.ptr
     %bytesOrSlot = llvm.select %bytesWanted, %bytesSlot, %slot : i1, !llvm.ptr
     %chosenName = llvm.select %denseWanted, %denseName, %bytesOrName : i1, !llvm.ptr
@@ -16306,6 +16327,14 @@
     %transposedNumber = arith.select %denseWanted, %valuesNumber, %none : i64
     llvm.store %transposedNumber, %transposedSettings : i64, !llvm.ptr
     llvm.store %positionSize, %transposedRowSlot : i64, !llvm.ptr
+    %transposedRowsSlot = llvm.getelementptr %transposedSettings[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %transposedOffsetSlot = llvm.getelementptr %transposedSettings[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %transposedStrideSlot = llvm.getelementptr %transposedSettings[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    %valueStart = arith.fptosi %valueOffset : f64 to i64
+    %valueDistance = arith.fptosi %valueStride : f64 to i64
+    llvm.store %positions, %transposedRowsSlot : i64, !llvm.ptr
+    llvm.store %valueStart, %transposedOffsetSlot : i64, !llvm.ptr
+    llvm.store %valueDistance, %transposedStrideSlot : i64, !llvm.ptr
     %result = func.call @strict_gpu_run(%ptx, %chosenName, %chosenSlot, %queryCount, %zero, %none, %valuesSlots, %thirteen, %listsMask, %none, %bytesDots, %chosenLanes, %none, %integers, %noGuards1) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
     llvm.store %none, %widthSlot : i64, !llvm.ptr
     llvm.store %none, %transposedSettings : i64, !llvm.ptr
@@ -18446,7 +18475,7 @@
     %missing = llvm.icmp "eq" %function, %unset : !llvm.ptr
     cf.cond_br %missing, ^done(%false : i1), ^launch
   ^launch:
-    %launched = func.call @strict_gpu_quantize_launch(%function, %source, %count, %none, %target, %sixtyFour, %count, %threads) : (!llvm.ptr, i64, i64, i64, i64, i64, i64, i64) -> i1
+    %launched = func.call @strict_gpu_quantize_launch(%function, %source, %count, %none, %target, %sixtyFour, %count, %threads, %none) : (!llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> i1
     cf.br ^done(%launched : i1)
   ^done(%result: i1):
     return %result : i1

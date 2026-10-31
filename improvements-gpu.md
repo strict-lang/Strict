@@ -8,7 +8,6 @@ Details for the GPU line of [improvements.md](improvements.md), one short line e
 - the routing planner reads all pooled keys of a head in every block: moments once per head, the scores as a small product kernel
 - the Hadamard on Q and K
 - routing plans at most 1024 key blocks (65536 positions), longer prompts attend densely: plans in global memory
-- bfloat16 Q·K runs at half the GeForce tensor rate; 8 bit Q·K moves Moss images 22-24 dB: smooth K like SageAttention
 - head size 64 (H3 VAE decode) has no tensor core attention kernel
 
 ## 16 bit lists
