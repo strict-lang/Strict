@@ -11427,8 +11427,9 @@
     return %passed : f64
   }
   llvm.mlir.global internal @strict_gpu_state(0 : i64) : i64
-  // loops reading fewer than 4M numbers stay on the CPU unless STRICT_GPU=all (a launch costs about 130 us), lists already on the GPU run there
-  llvm.mlir.global internal @strict_gpu_minimum(4194304 : i64) : i64
+  // loops reading fewer than 1M numbers stay on the CPU unless STRICT_GPU=all (a launch costs about 130 us), lists already
+  // on the GPU run there and so do loops touching more than 1 MB once the GPU is open (strict_gpu_roomy)
+  llvm.mlir.global internal @strict_gpu_minimum(1048576 : i64) : i64
   llvm.mlir.global internal @strict_gpu_setting(0 : i64) : i64
   llvm.mlir.global internal @strict_gpu_calls(dense<0> : tensor<34xi64>) : !llvm.array<34 x i64>
   llvm.mlir.global internal @strict_gpu_handles(dense<0> : tensor<4xi64>) : !llvm.array<4 x i64>
@@ -12881,7 +12882,10 @@
   ^small:
     %never = arith.constant 9223372036854775807 : i64
     %disabled = arith.cmpi eq, %minimum, %never : i64
-    cf.cond_br %disabled, ^failed, ^near
+    cf.cond_br %disabled, ^failed, ^roomy
+  ^roomy:
+    %roomy = func.call @strict_gpu_roomy(%count, %kind, %mask) : (i64, i64, i64) -> i1
+    cf.cond_br %roomy, ^ready, ^near
   ^near:
     %nearShift = arith.constant 6 : i64
     %nearWork = arith.shli %work, %nearShift : i64
@@ -14704,6 +14708,26 @@
     %few = arith.cmpi slt, %count, %threshold : i64
     %tiny = arith.andi %few, %unlisted : i1
     return %tiny : i1
+  }
+  // a loop below the GPU minimum still runs there when the GPU is open already (no start for it) and its result and the
+  // lists it reads take more than 1 MB: memory bound loops are faster on the GPU, the next GPU loop reads the result there
+  func.func private @strict_gpu_roomy(%count: i64, %kind: i64, %mask: i64) -> i1 {
+    %one = arith.constant 1 : i64
+    %eight = arith.constant 8 : i64
+    %megabyte = arith.constant 1048576 : i64
+    %stateSlot = llvm.mlir.addressof @strict_gpu_state : !llvm.ptr
+    %state = llvm.load %stateSlot : !llvm.ptr -> i64
+    %open = arith.cmpi eq, %state, %one : i64
+    %listed = llvm.intr.ctpop(%mask) : (i64) -> i64
+    %isList = arith.cmpi eq, %kind, %one : i64
+    %sourced = arith.extui %isList : i1 to i64
+    %inputs = arith.addi %listed, %sourced : i64
+    %lists = arith.addi %inputs, %one : i64
+    %numbers = arith.muli %count, %lists : i64
+    %bytes = arith.muli %numbers, %eight : i64
+    %large = arith.cmpi ugt, %bytes, %megabyte : i64
+    %roomy = arith.andi %open, %large : i1
+    return %roomy : i1
   }
   // a loop of at least 256 elements tries the GPU, a smaller one too once lists live there (it may read one of them),
   // an empty one never (a launch without blocks fails a graph)

@@ -70,4 +70,26 @@ assert 'Strict GPU download of 16000 numbers' not in ran.stdout,'the bytes went 
 assert ran.stdout.count('Strict GPU download of 4194304 numbers') == 1,'a result of a loop reading lists went to the host before the next GPU loop'
 assert 'Strict GPU download of 12288 numbers' not in ran.stdout,'the GPU list joined with a host list went to the host'
 assert 'Strict GPU download of 6144 numbers' not in ran.stdout,'the GPU list joined with read 32 bit floats went to the host'
+small='''has logger
+Table(count Number) Numbers
+	SmallGpu(Logger).Table(2) is (1, 1.125)
+	for count
+		index / 8 + 1
+Doubled(table Numbers) Numbers
+	SmallGpu(Logger).Doubled((1, 2)) is (2, 4)
+	for table.Length
+		table(index) * 2
+Run
+	let opened = Table(2000000)
+	let before = Process.Executed
+	let doubled = Doubled(Table(200000))
+	let after = Process.Executed
+	logger.Log("gpu kernels " + (after(3) - before(3)) + ", doubled " + doubled(16) + ", opened " + opened(8))
+'''
+(folder/'SmallGpu.strict').write_bytes(small.replace('\n','\r\n').encode('utf-8'))
+built=subprocess.run([str(root/'strict.exe'),'build','SmallGpu.strict'],cwd=folder,capture_output=True,text=True)
+assert built.returncode==0,built.stdout[-2000:]+built.stderr[-2000:]
+ran=subprocess.run([str(folder/'SmallGpu.exe')],cwd=folder,capture_output=True,text=True,env={key: value for key, value in os.environ.items() if key!='STRICT_GPU'})
+print(ran.stdout,flush=True)
+assert 'gpu kernels 2, doubled 6, opened 2' in ran.stdout,'loops over more than 1 MB did not run on the open GPU'
 print('A list computed on the GPU from numbers alone stays there until the CPU reads it')

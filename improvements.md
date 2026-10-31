@@ -5,7 +5,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - `strict test Compiler/NativeBuild.strict native`: the compiler stops with IndexOutOfRange in MlirMembered.Slot (MlirEmbedded.IsCopied) emitting the test module.
 - `Compiler/check_gpu_cache.py`: mlir-opt rejects its cache-kind.mlir.
 - Routed attention (routing > 0) with strided values (valueOffset/valueStride) runs unrouted: `strict_gpu_attention` takes the routed 8 bit path only for packed values, so H3Block.Heads with V read from the combined list attends densely (6 s slower, 12.9 dB from the routed result), routing 0 is bit-identical; the per-token value quantization (`strict_device_quantize_rows_run`) and the pooled value means need strided rows, H3 keeps the copy until then.
-- `strict test NeuralNetworks native`: 8 tests fail at 42baa256 (FlashLayer.Forward, FlashNext.Steps and Truncated, Safetensors.Tuned).
+- `strict test NeuralNetworks native`: Safetensors.Tuned fails (3 tests); Speculation's Truncated (`Kept.Step(2, 4)`, line 88) fails only in the package run since the 1M GPU minimum, alone it passes with and without the GPU: it compares a run whose loops partly went to the GPU (lists earlier tests left there) with one that did not.
 - A full heap while worker threads allocate (a parallel loop making texts) ends with OutOfMemory natively: the collector cannot run then (strict_gc_run defers while the pool is busy), seen with STRICT_HEAP=128.
 
 ## Next
