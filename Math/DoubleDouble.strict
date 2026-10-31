@@ -17,6 +17,14 @@ has low Number = 0
 	let right = Split(other.high)
 	let error = ((left.high * right.high - product) + left.high * right.low + left.low * right.high) + left.low * right.low
 	Normalized(product, error + high * other.low + low * other.high + low * other.low)
+/(other) DoubleDouble
+	(DoubleDouble(1) / DoubleDouble(3) * DoubleDouble(3) - DoubleDouble(1)).high.Absolute < 0.0000000000000000000000000001
+	(DoubleDouble(10) / DoubleDouble(4)).high is 2.5
+	let first = high / other.high
+	let rest = value - other * DoubleDouble(first)
+	let second = rest.high / other.high
+	let remainder = rest - other * DoubleDouble(second)
+	Normalized(first, second + remainder.high / other.high)
 Normalized(head Number, tail Number) DoubleDouble
 	Normalized(1, 1).high is 2
 	Normalized(1, 10000000000000000).low is 1
@@ -45,3 +53,22 @@ Decimals(count Number) Text
 		digits = digits + digit
 		rest = rest - DoubleDouble(digit)
 	digits
+Parsed(text Text) DoubleDouble
+	DoubleDouble.Parsed("-2.5").high is -2.5
+	DoubleDouble.Parsed("3").high is 3
+	(DoubleDouble.Parsed("1.00000000000000001").low * 100000000000000000).Round is 1
+	DoubleDouble.Parsed("-1.770666019005456612345678912").Decimals(25) is "-1.7706660190054566123456789"
+	let negative = text.StartsWith("-")
+	let magnitude = negative then text.Substring(1, text.Length - 1) else text
+	let point = magnitude.IndexOf(".")
+	let whole = DoubleDouble((point < 0 then magnitude else magnitude.Substring(0, point)) to Number)
+	let parsed = point < 0 then whole else whole + Fraction(magnitude.Substring(point + 1, magnitude.Length - point - 1))
+	negative then DoubleDouble(0 - parsed.high, 0 - parsed.low) else parsed
+Fraction(digits Text) DoubleDouble
+	Fraction("25").high is 0.25
+	mutable scaled = DoubleDouble(0)
+	for (digits.Length / 8).Ceiling
+		let length = (digits.Length - index * 8).Clamp(0, 8)
+		scaled = scaled * DoubleDouble(10 ^ length) + DoubleDouble(digits.Substring(index * 8, length) to Number)
+	let power = DoubleDouble(10 ^ digits.Length.Clamp(0, 22)) * DoubleDouble(10 ^ (digits.Length - 22).Clamp(0, 22))
+	scaled / power
