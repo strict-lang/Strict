@@ -3875,7 +3875,7 @@
   llvm.mlir.global internal @strict_device_values_largest() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<288 x f32>
   // a block of strict_device_values_transposed: the largest magnitude of its 32 numbers over all positions (each warp
   // every 8th), then the 8 bit numbers of every 32 positions (each warp every 8th tile of them)
-  func.func private @strict_device_values_transposed_run(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_values_transposed_run(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64, %stride: i64) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c5 = llvm.mlir.constant(5 : i32) : i32
@@ -3892,7 +3892,8 @@
     %lane = arith.andi %thread, %c31 : i32
     %warp = arith.shrui %thread, %c5 : i32
     %width32 = arith.trunci %width : i64 to i32
-    %positions64 = arith.divui %count, %width : i64
+    %stride32 = arith.trunci %stride : i64 to i32
+    %positions64 = arith.divui %count, %stride : i64
     %positions = arith.trunci %positions64 : i64 to i32
     %positionsUp = arith.addi %positions, %c31 : i32
     %padded = arith.andi %positionsUp, %spareMask : i32
@@ -3905,7 +3906,7 @@
     %morePositions = arith.cmpi slt, %position, %positions : i32
     cf.cond_br %morePositions, ^largestBody, ^largestDone
   ^largestBody:
-    %value = func.call @strict_device_values_number(%source, %bits, %position, %positions, %width32, %number) : (!llvm.ptr, i64, i32, i32, i32, i32) -> f32
+    %value = func.call @strict_device_values_number(%source, %bits, %position, %positions, %stride32, %number) : (!llvm.ptr, i64, i32, i32, i32, i32) -> f32
     %magnitude = llvm.intr.fabs(%value) : (f32) -> f32
     %larger = arith.maxnumf %largest, %magnitude : f32
     %nextPosition = arith.addi %position, %c8 : i32
@@ -3958,8 +3959,8 @@
   ^tileBody:
     %first = arith.shli %tile, %c5 : i32
     %second = arith.addi %first, %c16 : i32
-    %low = func.call @strict_device_values_words(%source, %bits, %first, %positions, %width32, %number, %inverse) : (!llvm.ptr, i64, i32, i32, i32, i32, f32) -> vector<4xi32>
-    %high = func.call @strict_device_values_words(%source, %bits, %second, %positions, %width32, %number, %inverse) : (!llvm.ptr, i64, i32, i32, i32, i32, f32) -> vector<4xi32>
+    %low = func.call @strict_device_values_words(%source, %bits, %first, %positions, %stride32, %number, %inverse) : (!llvm.ptr, i64, i32, i32, i32, i32, f32) -> vector<4xi32>
+    %high = func.call @strict_device_values_words(%source, %bits, %second, %positions, %stride32, %number, %inverse) : (!llvm.ptr, i64, i32, i32, i32, i32, f32) -> vector<4xi32>
     %first64 = arith.extui %first : i32 to i64
     %at = arith.addi %rowStart, %first64 : i64
     %lowSlot = llvm.getelementptr %target[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
@@ -3971,20 +3972,20 @@
   ^done:
     return
   }
-  // values of 32 bit floats or bfloat16 (count / width positions of width numbers) as 8 bit numbers transposed for
-  // strict_device_dense_attention: per number its positions padded to 32, each 16 in the order of
-  // strict_device_values_words, then a 32 bit scale per number (its largest magnitude / 127); a block of 256 threads per
-  // 32 numbers
-  llvm.func @strict_device_values_transposed(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>} {
+  // values of 32 bit floats or bfloat16 (count / stride positions of width numbers, stride numbers apart) as 8 bit
+  // numbers transposed for strict_device_dense_attention: per number its positions padded to 32, each 16 in the order
+  // of strict_device_values_words, then a 32 bit scale per number (its largest magnitude / 127); a block of 256 threads
+  // per 32 numbers
+  llvm.func @strict_device_values_transposed(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64, %stride: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>} {
     %brainBits = arith.constant 17 : i64
     %singleBits = arith.constant 32 : i64
     %isBrain = arith.cmpi eq, %bits, %brainBits : i64
     cf.cond_br %isBrain, ^brain, ^single
   ^brain:
-    func.call @strict_device_values_transposed_run(%source, %count, %width, %target, %brainBits) : (!llvm.ptr, i64, i64, !llvm.ptr, i64) -> ()
+    func.call @strict_device_values_transposed_run(%source, %count, %width, %target, %brainBits, %stride) : (!llvm.ptr, i64, i64, !llvm.ptr, i64, i64) -> ()
     llvm.return
   ^single:
-    func.call @strict_device_values_transposed_run(%source, %count, %width, %target, %singleBits) : (!llvm.ptr, i64, i64, !llvm.ptr, i64) -> ()
+    func.call @strict_device_values_transposed_run(%source, %count, %width, %target, %singleBits, %stride) : (!llvm.ptr, i64, i64, !llvm.ptr, i64, i64) -> ()
     llvm.return
   }
   // the 32 positions from first of the 8 bit values of strict_device_values_transposed, a row of 32 bytes per number of

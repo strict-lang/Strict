@@ -8,7 +8,6 @@ Details for the GPU line of [improvements.md](improvements.md), one short line e
 - the routing planner reads all pooled keys of a head in every block: moments once per head, the scores as a small product kernel
 - the Hadamard on Q and K
 - routing plans at most 1024 key blocks (65536 positions), longer prompts attend densely: plans in global memory
-- bfloat16 Q·K runs at half the GeForce tensor rate; 8 bit Q·K moves Moss images 22-24 dB: smooth K like SageAttention
 - head size 64 (H3 VAE decode) has no tensor core attention kernel
 
 ## 16 bit lists
@@ -30,7 +29,6 @@ Details for the GPU line of [improvements.md](improvements.md), one short line e
 ## Loading
 - 8 bit rows gathered straight from the mapped file (the 21 GB H3 DiT loads in 10-12 s, ComfyUI 4-7)
 - no native test reaches the locked path of `strict_packed_rows` and `strict_rows` (matrices of 4 MB and more): a test with a big matrix
-- releases should ship cubins for sm_75, sm_80, sm_86 and sm_89 and load the one for the GPU before the PTX (the driver compiles MossImage's PTX 4 + 12-14 s on a first run)
 
 ## Generated loops
 - a loop reading a member of an object parameter, a type constant or `.Length` of a list parameter stays on the CPU: pass loop invariant members as numbers

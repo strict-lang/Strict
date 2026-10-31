@@ -60,7 +60,10 @@ Shared(device Text, isTiling Boolean, builder DeviceBuild) Texts
 	Directory.Create(folder)
 	let cache = PtxCache(folder + "/" + HashCode(key).number + "/module")
 	let previous = cache.Waited(key, isTiling)
-	previous.Length > 0 then Remembered("", previous) else SharedBuild(cache, device, isTiling, builder)
+	let ptx = previous.Length > 0 then Remembered("", previous) else SharedBuild(cache, device, isTiling, builder)
+	let isShipped = builder.isShipped and ptx.First.StartsWith("//")
+	let failed = isShipped then CubinBuild(builder.tools).Shipped(cache.base, base) else ""
+	failed is "" then ptx else List(Text) + failed
 Waited(key Text, isTiling Boolean) Slow(Texts)
 	PtxCache("Compiler/output/Unbuilt/module").Waited("module {\n}", false).Length is 0
 	let lock = File(Path(base).PathOnly.text + ".lock")

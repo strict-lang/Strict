@@ -1,4 +1,5 @@
 has tools Toolchain
+has isShipped Boolean = false
 constant Nvptx = "--target=nvptx64-nvidia-cuda -O3 -fno-slp-vectorize -S -Wno-override-module -Xclang -target-feature -Xclang +ptx78 -march="
 constant Amdgcn = "-mtriple=amdgcn-amd-amdhsa -O3"
 constant CodeObject = " -filetype=obj --amdhsa-code-object-version=4 -mcpu="
@@ -63,7 +64,7 @@ Shared(base Text, device Text, runtimes Texts, isTiling Boolean) Texts
 	Local.Shared(Doubled, Doubling, Without, false).First.IndexOf(" .entry strict_device_quantize(") > 0
 	Local.Shared(Doubled, Doubling, Without, false).First.IndexOf("Rows_Doubled") is -1
 	let header = device.Substring(0, device.IndexOf("\n  ") + 1) + (isTiling then MlirTokens.Marker + "\n}" else "}")
-	PtxCache(base + ".runtime").Shared(Combined(header, runtimes), isTiling, DeviceBuild(tools))
+	PtxCache(base + ".runtime").Shared(Combined(header, runtimes), isTiling, DeviceBuild(tools, isShipped))
 Hsaco(base Text, device Text, runtimes Texts) Text
 	DeviceBuild(Toolchain(Platform.MacOS, ".")).Hsaco(Kernels, "module {\n}", List(Text)) is ""
 	File(Kernels + ".hsaco").Exists is false
@@ -141,7 +142,8 @@ Embedded(host Text, ptx Texts, base Text) Text
 		return "GPU kernels failed: " + ptx.First
 	let ending = tools.platform is Platform.MacOS then ".metal" else ".ptx"
 	let written = PtxCache(base).IsWritten(ptx, ending) or PtxCache(base).Written(ptx, ending)
-	written then Referenced(host, base, ptx.First) else "GPU kernels failed: could not write " + base + ending
+	let failure = written then CubinBuild(tools, isShipped).Fatbin(base) else "could not write " + base + ending
+	failure is "" then Referenced(host, base, ptx.First) else "GPU kernels failed: " + failure
 Referenced(host Text, base Text, newer Text) Text
 	Missing.Referenced("module {\n}", "A", "// a").EndsWith("hash:A\\001446433\\00\") : !llvm.array<15 x i8>\n}")
 	Missing.Referenced("module {\n}", "A", "// abc").EndsWith("hash:A\\0026501\\00\") : !llvm.array<13 x i8>\n}")

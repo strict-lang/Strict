@@ -1,7 +1,7 @@
 has logger
 has base Text
 constant Opening = "= func.call @" + "Window_Open("
-constant Sidecars = (".ptx", ".older.ptx", ".runtime.ptx", ".runtime.older.ptx", ".hsaco", ".metal")
+constant Sidecars = (".ptx", ".older.ptx", ".runtime.ptx", ".runtime.older.ptx", ".fatbin", ".runtime.fatbin", ".hsaco", ".metal")
 AndroidPackaged Number
 	let release = Parent + "/Release/Android"
 	if Content(Parent + "/Release/Content") < 0

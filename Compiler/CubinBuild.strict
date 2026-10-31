@@ -1,0 +1,77 @@
+has tools Toolchain
+has isShipped Boolean = true
+constant Local = CubinBuild(Toolchain(Platform.Current, "."))
+constant Cubin = "Compiler/output/Cubin"
+constant Outdating = "Compiler/output/Outdated"
+constant Emptied = "Compiler/output/Emptied"
+constant Broken = "Compiler/output/Broken"
+constant Tiny = ".version 7.8\n.target sm_75\n.address_size 64\n.visible .entry tiny()\n{\n\tret;\n}"
+constant Architectures = ("sm_75", "sm_80", "sm_86", "sm_89")
+Fatbin(base Text) Text
+	Local.Fatbin("Compiler/output/missing") is ""
+	File("Compiler/output/missing.fatbin").Exists is false
+	PtxCache(Cubin).Written(List(Text) + Tiny, ".ptx")
+	Local.Fatbin(Cubin) is ""
+	File(Cubin + ".fatbin").Exists is (Local.tools.Located("ptxas") is not "")
+	let ptxas = Outdated(base) and isShipped then tools.Located("ptxas") else ""
+	if (ptxas is "") or (File(base + ".ptx").Exists is false)
+		return ""
+	let stem = base + "." + 1000000000.Random.Floor
+	let failures = Cubins(ptxas, base, stem)
+	let packed = Packed(stem, base)
+	failures.Length > 0 then failures.First else packed
+Outdated(base Text) Boolean
+	PtxCache(Outdating).Saved(".fatbin", "old")
+	PtxCache(Outdating).Saved(".ptx", "// newer")
+	CubinBuild(Local.tools, false).Fatbin(Outdating) is ""
+	File(Outdating + ".fatbin").Exists is false
+	let ptx = File(base + ".ptx")
+	let target = File(base + ".fatbin")
+	if ptx.Exists and target.Exists and (target.Modified > ptx.Modified)
+		return false
+	target.Delete
+	true
+Cubins(ptxas Text, base Text, stem Text) Texts
+	Local.Cubins("ptxas", "Compiler/output/missing", "Compiler/output/missing").First.StartsWith("ptxas failed")
+	PtxCache(Emptied).Saved(".ptx", Tiny) and PtxCache(Emptied).Saved(".older.ptx", "")
+	(Local.Cubins("ptxas", Emptied, Emptied).Length is 0) is (Local.tools.Located("ptxas") is not "")
+	constant splitting = " --split-compile 8 "
+	mutable arguments = List(Mutable(Text))
+	for Architectures
+		let source = (value is "sm_75") and (File(base + ".older.ptx").Length > 0) then ".older.ptx" else ".ptx"
+		let output = tools.Quoted(stem + "." + value + ".cubin")
+		arguments.Add("-arch=" + value + splitting + tools.Quoted(base + source) + " -o " + output)
+	for ToolRunner(ptxas).ExecuteAll(arguments, "GPU cubins " + Path(base).FileName.text)
+		if value.Failed
+			"ptxas failed: " + value.error
+Packed(stem Text, base Text) Text
+	Local.Packed("Compiler/output/missing", "Compiler/output/missing").StartsWith("fatbinary failed")
+	PtxCache(Broken).Saved(".ptx", Tiny) and PtxCache(Broken).Saved(".older.ptx", "broken")
+	Local.Fatbin(Broken).StartsWith("ptxas failed") or (Local.tools.Located("ptxas") is "")
+	Directory.Files("Compiler/output", "Broken.*.cubin").Length is 0
+	let arguments = "--compress-all --create=" + tools.Quoted(stem + ".fatbin") + Images(stem)
+	let packed = ToolRunner(tools.Located("fatbinary")).Execute(arguments)
+	for Architectures
+		File(stem + "." + value + ".cubin").Delete
+	if packed.Failed
+		return "fatbinary failed: " + packed.error
+	File(stem + ".fatbin").Rename(base + ".fatbin")
+	""
+Images(stem Text) Text
+	Local.Images("a").EndsWith(" --image3=kind=elf,sm=89,file=\"a.sm_89.cubin\"")
+	mutable images = ""
+	for Architectures
+		let cubin = tools.Quoted(stem + "." + value + ".cubin")
+		images = images + " --image3=kind=elf,sm=" + value.Substring(3, 2) + ",file=" + cubin
+	images
+Shipped(source Text, target Text) Text
+	PtxCache("Compiler/output/Shipped").Saved(".fatbin", "stale")
+	Local.Shipped("Compiler/output/missing", "Compiler/output/Shipped") is ""
+	File("Compiler/output/Shipped.fatbin").Exists is false
+	let failed = Fatbin(source)
+	let binary = File(source + ".fatbin")
+	if binary.Exists
+		File(target + ".fatbin").Write(binary.ReadBytes)
+	if binary.Exists is false
+		File(target + ".fatbin").Delete
+	failed
