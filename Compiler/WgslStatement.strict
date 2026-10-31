@@ -4,6 +4,7 @@ constant Twice = MlirDeviceStatements.Twice
 constant Doubled = MlirDeviceStatements.Doubled
 constant Absolute = MlirGpuCheck.Absolute
 constant Summed = MlirDeviceStatements.Summed
+constant Records = MlirDeviceRecords.Holding
 constant Arithmetic = (" + ", " - ", " * ", " / ", " % ")
 constant Comparisons = (" == ", " != ", " < ", " > ")
 Lines Texts
@@ -13,8 +14,8 @@ Lines Texts
 	let entry = function.method.instructions(at)
 	if entry.kind < InstructionType.IndexCall
 		return Moved(entry)
-	if entry.kind is InstructionType.IndexCall
-		return Indexed(entry)
+	if entry.kind is in (InstructionType.IndexCall, InstructionType.FieldLoad)
+		return entry.kind is InstructionType.IndexCall then Indexed(entry) else Fielded(entry)
 	if entry.kind < InstructionType.BinaryOperatorsSeparator
 		return Calculated(entry)
 	let isLoop = entry.kind is in (InstructionType.LoopBegin, InstructionType.LoopEnd)
@@ -50,6 +51,9 @@ Calculated(entry InstructionEntry) Texts
 	target is "" then List(Text) + compared else (compared, target + " = select(0.0, 1.0, flag);")
 Indexed(entry InstructionEntry) Texts
 	WgslStatement(Summed, 6).Indexed(Summed.method.instructions(6)).First.StartsWith("let k6 = u32(max(r")
+	let slots = MlirDeviceRecords(function, at).Slots(MlirKinds(function).VariableKind(at, entry.texts(0)))
+	if slots > 0
+		return Recorded(entry, slots)
 	let list = "v_" + entry.texts(0) + "l"
 	let index = "r" + entry.payload(1)
 	let target = "r" + entry.payload(0)
@@ -71,7 +75,10 @@ Called(entry InstructionEntry) Texts
 	List(Text) + ("r" + entry.payload(0) + " = " + called.Name + "(" + instance + called.Arguments(entry) + ");")
 Native(entry InstructionEntry, instance Text) Text
 	WgslStatement(Doubled, 4).Native(MlirGpuCheck.Flooring, "r0") is "r1 = floor(r0);"
-	let native = entry.texts(1) is "Floor" then "floor(" + instance + ")" else "f32(" + instance + "l.y)"
+	let register = MlirDeviceCalls(function, at, function).Register(entry)
+	let slots = MlirDeviceRecords(function, at).Slots(MlirKinds(function).KindOf(at, register))
+	let counted = slots > 0 then "f32(" + instance + "l.y / " + slots + "u)" else "f32(" + instance + "l.y)"
+	let native = entry.texts(1) is "Floor" then "floor(" + instance + ")" else counted
 	"r" + entry.payload(0) + " = " + native + ";"
 Looped(entry InstructionEntry) Texts
 	WgslStatement(Summed, 11).Looped(Summed.method.instructions(11)) is ("}", "v_index = s2i;", "v_value = s2v;")
@@ -100,3 +107,19 @@ Finished(entry InstructionEntry) Texts
 	let register = "r" + entry.payload(0)
 	let line = entry.kind is InstructionType.Return then "return " + register + ";" else "output[at] = " + register + ";"
 	List(Text) + (entry.kind is InstructionType.JumpEnd then "}" else line)
+Recorded(entry InstructionEntry, slots Number) Texts
+	WgslStatement(Records, 4).Recorded(LaneFlow.Picking, 2).First is "let k4 = u32(max(r1, 0.0)) * 2u;"
+	let position = "k" + at
+	let target = "r" + entry.payload(0)
+	let first = "let " + position + " = u32(max(r" + entry.payload(1) + ", 0.0)) * " + slots + "u;"
+	let read = "if (" + position + " < v_" + entry.texts(0) + "l.y) { " + target + " = f32(" + position + "); }"
+	(first, read, "else { failed[0] = 1u; " + target + " = 0.0; }")
+Fielded(entry InstructionEntry) Texts
+	WgslStatement(Records, 5).Fielded(MlirDeviceRecords.Field)(1).EndsWith("r3 = numbers[v_pairsl.x + k5]; }")
+	let list = "v_" + function.method.instructions(MlirKinds(function).Writer(at, entry.payload(1))).texts(0) + "l"
+	let member = StructLanes.Members(function.TypeOf(entry.texts(1))).Index(entry.texts(0))
+	let position = "k" + at
+	let target = "r" + entry.payload(0)
+	let read = "if (" + position + " < " + list + ".y) { " + target + " = numbers[" + list + ".x + " + position + "]; }"
+	let first = "let " + position + " = u32(r" + entry.payload(1) + ") + " + member + "u;"
+	(first, read, "else { failed[0] = 1u; " + target + " = 0.0; }")

@@ -84,7 +84,8 @@ IsList(name Text) Boolean
 	MlirDeviceMembers(Head).IsList("heads") is false
 	for function.type.members
 		if value.Name is name
-			return TypeEntry.ShortName(value.typeName) is in ("List(Number)", "Numbers")
+			let short = TypeEntry.ShortName(value.typeName)
+			return (short is in ("List(Number)", "Numbers")) or (MlirDeviceRecords(function, 0).Slots(short) > 0)
 	false
 Arguments(prefix Text, isNamed Boolean) Texts
 	MlirDeviceMembers(Head).Arguments("%m", false) is ("%m0", "%m1_d", "%m1_n", "%m1_b")

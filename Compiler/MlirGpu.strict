@@ -62,7 +62,9 @@ Value(at Number, name Text) Texts
 		return MlirKernelBody(function, position).Value(at, name)
 	let loaded = Temp("gv" + at)
 	let slot = "    " + Temp("gx" + at) + " = llvm.getelementptr " + Temp("ga") + "[" + at + Indexing
-	(function.Load(loaded, "%v_" + name), slot, function.Store(loaded, Temp("gx" + at)))
+	let flat = MlirDeviceRecords(function, position).Flattened(loaded, MlirKinds(function).VariableKind(position, name))
+	let stored = function.Store(flat.Length > 0 then loaded + "r" else loaded, Temp("gx" + at))
+	(List(Text) + function.Load(loaded, "%v_" + name) + slot) + flat + stored
 Counted(count Number, mask Number, rows Number, dots Number) Texts
 	Doubling.Counted(2, 3, 1, 2).Last is "    %t2gpf = arith.constant 0 : i64"
 	MlirGpu(MlirDoubles.Tabling.function, 2).Counted(0, 0, 0, 0).Last is "    %t2gpf = arith.constant 64 : i64"

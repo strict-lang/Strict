@@ -9434,6 +9434,36 @@
     %list = func.call @strict_list_reserved(%capacity, %zero, %bytes, %referring) : (f64, f64, i64, i1) -> f64
     return %list : f64
   }
+  // the numbers of a list of number structs one after another (slots per element), for GPU loops reading such a list
+  func.func private @strict_records_flat(%list: f64, %slots: f64) -> f64 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %eight = arith.constant 8 : i64
+    %countNumber = func.call @strict_list_length(%list) : (f64) -> f64
+    %count = arith.fptosi %countNumber : f64 to i64
+    %slotCount = arith.fptosi %slots : f64 to i64
+    %bytes = arith.muli %slotCount, %eight : i64
+    %total = arith.mulf %countNumber, %slots : f64
+    %flat = func.call @strict_numbers_new(%total) : (f64) -> f64
+    %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    %numbers = func.call @strict_list_items(%flat) : (f64) -> !llvm.ptr
+    cf.br ^element(%none : i64)
+  ^element(%index: i64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^copy, ^done
+  ^copy:
+    %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %bits = llvm.load %slot : !llvm.ptr -> f64
+    %element = func.call @strict_ptr(%bits) : (f64) -> !llvm.ptr
+    %start = arith.muli %index, %slotCount : i64
+    %target = llvm.getelementptr %numbers[%start] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %copied = llvm.call @memcpy(%target, %element, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %next = arith.addi %index, %one : i64
+    cf.br ^element(%next : i64)
+  ^done:
+    %filled = func.call @strict_list_filled(%flat, %total) : (f64, f64) -> f64
+    return %filled : f64
+  }
   // the block of the element at index of such a list is the destination the next method building a struct takes
   func.func private @strict_struct_destine_block(%list: f64, %index: f64, %slots: f64) {
     %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr

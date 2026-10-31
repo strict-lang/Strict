@@ -47,8 +47,8 @@ IsDevice(inspected MlirFunction, at Number, depth Number) Boolean
 	let entry = inspected.method.instructions(at)
 	if entry.kind is in Moves
 		return IsValued(inspected, at, depth)
-	if entry.kind is InstructionType.IndexCall
-		return IsList(inspected, at, entry.texts(0))
+	if entry.kind is in (InstructionType.IndexCall, InstructionType.FieldLoad)
+		return MlirDeviceRecords(inspected, at).IsRead(entry)
 	if entry.kind is InstructionType.Invoke
 		return IsCall(inspected, at, depth)
 	let isArithmetic = entry.kind < InstructionType.BinaryOperatorsSeparator

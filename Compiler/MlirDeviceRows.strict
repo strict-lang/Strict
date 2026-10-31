@@ -14,7 +14,7 @@ Emitted(entry InstructionEntry) Texts
 	Text.Combine(MlirDeviceRows(Picking, 4).Emitted(Lookup)).IndexOf("@strict_device_row(%d4d, %d4k)") > 0
 	MlirDeviceRows(Picking, 4).Emitted(Lookup).Last is "  ^d4done:"
 	if IsRows(MlirKinds(function).VariableKind(at, entry.texts(0))) is false
-		return MlirDeviceStatements(function, at).Indexed(entry)
+		return MlirDeviceRecords(function, at).Indexed(entry)
 	let list = "%v_" + entry.texts(0)
 	let position = MlirExact(function, at).Position("%r" + entry.payload(1), Temp("k"))
 	let called = " = func.call @strict_device_row(" + Temp("d") + ", " + Temp("k") + ")" + Types
@@ -41,10 +41,10 @@ Called(entry InstructionEntry) Texts
 		return MlirDeviceStatements(function, at).Called(entry)
 	let countPosition = 5 + entry.payload(3)
 	let instance = entry.payload(countPosition + 2 + entry.payload(countPosition))
-	let count = MlirTyped.Integer.Load(Temp("n"), "%r" + instance + "_n")
+	let count = MlirDeviceRecords(function, at).Counted("%r" + instance + "_n", MlirKinds(function).KindOf(at, instance))
 	let converted = "    " + Temp("") + " = arith.sitofp " + Temp("n") + " : i64 to " + function.Float
 	let exact = MlirExact(function, at).Set(Temp("n"), "%one", "%r" + entry.payload(0))
-	(count, converted, function.Store(Temp(""), "%r" + entry.payload(0))) + exact
+	(count + converted + function.Store(Temp(""), "%r" + entry.payload(0))) + exact
 Temp(suffix Text) Text
 	MlirDeviceRows(Picking, 4).Temp("w") is "%d4w"
 	"%d" + at + suffix

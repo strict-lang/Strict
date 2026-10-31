@@ -43,26 +43,26 @@ Split List(TypeEntry)
 Methods(type TypeEntry) List(MethodEntry)
 	Sample.Methods(Caller).First.instructions(2).texts is ("lanes2_real")
 	for type.methods
-		Rewritten(value)
-Rewritten(method MethodEntry) MethodEntry
-	Sample.Rewritten(MethodEntry.CountingLoop) is MethodEntry.CountingLoop
-	let flow = LaneFlow(types)
+		Rewritten(type, value)
+Rewritten(type TypeEntry, method MethodEntry) MethodEntry
+	Sample.Rewritten(Caller, MethodEntry.CountingLoop) is MethodEntry.CountingLoop
+	let flow = LaneFlow(types, LaneFlow(types).Lists(type, method))
 	let variables = flow.Variables(method.instructions, List(Text), 4)
 	let base = LoadReuse(method.instructions).RegisterCount
 	mutable laned = List(Text)
 	mutable result = List(InstructionEntry)
 	for method.instructions
-		result = result + Replaced(value, laned, variables, base)
+		result = result + Replaced(value, flow, laned, variables, base)
 		laned = flow.Tracked(value, laned, variables)
 	if result is method.instructions
 		return method
 	MethodEntry(method.Name, method.parameters, method.declaredType, Inliner(types).Looped(result), method.Slots)
-Replaced(entry InstructionEntry, laned Texts, variables Texts, base Number) List(InstructionEntry)
-	Sample.Replaced(Calling(3), ("2 Strict/Pair"), List(Text), 8).Length is 0
-	Sample.Replaced(Calling(4), ("2 Strict/Pair"), List(Text), 8).Last is Calling(4)
-	let flow = LaneFlow(types)
-	if flow.IsBuilt(entry)
-		return Built(entry)
+Replaced(entry InstructionEntry, flow LaneFlow, laned Texts, variables Texts, base Number) List(InstructionEntry)
+	Sample.Replaced(Calling(3), LaneFlow.Sample, ("2 Strict/Pair"), List(Text), 8).Length is 0
+	Sample.Replaced(Calling(4), LaneFlow.Sample, ("2 Strict/Pair"), List(Text), 8).Last is Calling(4)
+	let produced = flow.Produced(entry, List(Text))
+	if produced is not ""
+		return entry.kind is InstructionType.Invoke then Built(entry) else Spread(entry, produced, base)
 	let source = entry.kind is InstructionType.FieldLoad then 1 else 0
 	let laneType = entry.payload.Length > source then flow.Typed(laned, entry.payload(source) to Text) else ""
 	if (laneType is not "") and (entry.kind is in (InstructionType.FieldLoad, InstructionType.CheckError))
@@ -123,3 +123,14 @@ Named(kind Number, register Number, name Text, line Number) InstructionEntry
 Lane(owner Text, member Text) Text
 	StructLanes.Lane("lanes2", "real") is "lanes2_real"
 	owner + "_" + member
+Spread(entry InstructionEntry, type Text, base Number) List(InstructionEntry)
+	Sample.Spread(LaneFlow.Picking, "Strict/Pair", 8).Length is 5
+	Sample.Spread(LaneFlow.Picking, "Strict/Pair", 8)(1).payload is (8, 2, -1, -2)
+	Sample.Spread(LaneFlow.Picking, "Strict/Pair", 8)(4).texts is ("lanes2_imaginary")
+	let owner = TypeEntry.ShortName(type)
+	mutable lines = List(InstructionEntry) + entry
+	for Members(Inliner(types).TypeOf(type))
+		let field = InstructionEntry(InstructionType.FieldLoad, (value, owner), (base, entry.payload(0), -1, -2), entry.line)
+		let lane = Lane("lanes" + entry.payload(0), value)
+		lines = lines + (field, Named(InstructionType.StoreRegisterToVariable, base, lane, entry.line))
+	lines
