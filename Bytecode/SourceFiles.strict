@@ -5,14 +5,24 @@ constant Compressed = Directory.Files("./Compression", "*.strict")
 Of(path Text, others Texts = List(Text)) Slow(Texts)
 	SourceFiles(".").Of("./Missing/A.strict").Length is Directory.Files(".", "*.strict").Length
 	"./Math/Size.strict" is in SourceFiles(".").Of("./Math/Vector2.strict", List(Text) + "Math/Size.strict")
+	"./Math/Vector2.strict" is in SourceFiles(".").Of("./Math")
 	mutable start = List(Mutable(Text))
-	for Added(List(Text) + path, others)
+	for Added(List(Text) + path, others + Folder(path))
 		if File(value).Exists
 			start = Added(start, List(Text) + FileCompiler.Normalized(value))
 	let base = Directory.Files(root, "*.strict")
 	let reached = Reached(Added(Indexed(start), base), start, base)
 	let lines = File(path).Exists then File(path).ReadLines else List(Text)
 	TypeChoice(lines).Chosen(reached, path)
+Folder(path Text) Texts
+	Plain.Folder("./Math").Length > 10
+	Plain.Folder("./Math/Vector2.strict").Length is 0
+	if Directory.Exists(path) is false
+		return List(Text)
+	mutable files = List(Text)
+	for ResolveCheck.Tree(path)
+		files = files + Directory.Files(value, "*.strict")
+	files
 Indexed(paths Texts) Texts
 	"./Math/Size.strict" is in SourceFiles(".").Indexed(List(Text) + "./Math/Vector2.strict")
 	let project = File("./Any.strict").Exists then List(Text) else ResolveCheck.Tree(".")

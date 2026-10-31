@@ -1,8 +1,8 @@
 has linker Linker
 has entries List(TypeEntry)
 has signatures Texts
-constant Unlinked = LinkRound(Linker.Hello, List(TypeEntry), List(Text))
-constant Cached = LinkRound(Linker(".", TypeCodegen.Hello, Dictionary(("Strict/Logger:", Linker.Go))), List(TypeEntry), List(Text))
+has targeted List(Texts) = List(Texts)
+has used List(Texts) = List(Texts)
 constant Single = LinkRound(Linker.Sample, List(TypeEntry) + Linker.Go, List(Text))
 constant Twice = LinkRound(Linker.Sample, (Linker.Go, Linker.Go), List(Text) + "Strict/Logger:")
 constant Greeting = LinkRound(Linker.Hello, List(TypeEntry) + TypeEntry.HelloLogger, List(Text))
@@ -15,9 +15,10 @@ constant Texting = LinkRound(Linker.Sample, (TypeEntry(Linker.Go, methods = Meth
 constant Writing = LinkRound(Linker.Sample, List(TypeEntry) + TypeEntry(Linker.Go, methods = MethodEntry(Linker.Go.methods.First, instructions = InstructionEntry.Invoke(0, ("Strict/File", "Write", "None"), List(Number), -1))), List(Text))
 Entries(signed Texts) Slow(List(TypeEntry))
 	Single.Entries(List(Text) + "Strict/Logger:").First.Name is "Strict/Logger"
-	Cached.Entries(List(Text) + "Strict/Logger:").First is Linker.Go
+	constant cached = Linker(Linker.Hello, Known = Dictionary(("Strict/Logger:", Linker.Iterating)))
+	LinkRound(Single, linker = cached).Entries(List(Text) + "Strict/Logger:").First is Linker.Iterating
 	for signed
-		value is in linker.Known then linker.Known(value) else Fresh(value)
+		(value is not in signatures) and (value is in linker.Known) then linker.Known(value) else Fresh(value)
 Fresh(signature Text) Slow(TypeEntry)
 	Single.Fresh("Strict/Logger:").Name is "Strict/Logger"
 	Twice.Fresh("Strict/Logger:Log").methods.Length is 2
@@ -84,7 +85,7 @@ Unresolved Texts
 	mutable positions = Dictionary(Text, Number)
 	for TypeNames
 		positions(value) = index
-	for linker.Targets(entries).Unique
+	for Targets.Unique
 		if Missing(value, List(Text), positions)
 			value
 Missing(target Text, seen Texts, positions Dictionary(Text, Number)) Boolean
@@ -121,3 +122,31 @@ Known(known Dictionary(Text, TypeEntry)) Dictionary(Text, TypeEntry)
 		if value is not in result
 			result.Add(value, entries(index + 1))
 	result
+Targets Texts
+	Single.Targets is ("Strict/B.Go")
+	Single.Advanced(Single.entries, List(Text)).Targets is ("Strict/B.Go")
+	if targeted.Length is not entries.Length
+		return linker.Targets(entries)
+	mutable targets = List(Mutable(Text))
+	for targeted
+		targets = targets + value
+	targets
+UsedTypes Texts
+	LinkRound(Single, entries = List(TypeEntry) + Linker.Reading).UsedTypes is ("Strict/List(Byte)", "Strict/Byte")
+	if used.Length is not entries.Length
+		return linker.UsedTypes(entries)
+	mutable types = List(Mutable(Text))
+	for used
+		types = types + value
+	types
+Advanced(advanced List(TypeEntry), signed Texts) LinkRound
+	Twice.Advanced(Twice.entries, Twice.signatures).targeted is (List(Text) + "Strict/B.Go", List(Text) + "Strict/B.Go")
+	Twice.Advanced(Twice.entries, Twice.signatures).used.Length is 2
+	let isAligned = (targeted.Length is entries.Length) and (used.Length is entries.Length)
+	mutable targets = List(Mutable(Texts))
+	mutable types = List(Mutable(Texts))
+	for advanced
+		let known = (index is 0) or (isAligned is false) then -1 else signatures.Index(signed(index - 1))
+		targets.Add(known >= 0 then targeted(known + 1) else value.Invoked)
+		types.Add(known >= 0 then used(known + 1) else linker.UsedTypes(List(TypeEntry) + value))
+	LinkRound(linker, advanced, signed, targets, types)

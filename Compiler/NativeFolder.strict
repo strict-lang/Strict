@@ -92,10 +92,10 @@ Typed(path Text, root Text, files Texts, inference TypeInference, known Dictiona
 	constant none = Dictionary(Text, TypeEntry)
 	NativeFolder(Logger).Typed("Missing.strict", ".", List(Text), ResolveCheck.Counting, none).entries.Length is 0
 	if File(path).Exists is false
-		return LinkRound.Unlinked
+		return FileCompiler.Unlinked
 	let isFresh = (selection is "") and (Execute(logger).Stale(List(Text) + path).Length is 0)
 	if isFresh
-		return LinkRound.Unlinked.With(Execute(logger).Loaded(path, root))
+		return FileCompiler.Unlinked.With(Execute(logger).Loaded(path, root))
 	let linked = FileCompiler(logger, false, selection).Built(path, root, true, files, inference, known)
 	if linked.entries.Length is 0
 		logger.Log("CompilationFailed: " + path)

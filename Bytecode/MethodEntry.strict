@@ -83,15 +83,22 @@ InvokedTypes Texts
 			value.texts(2)
 Invoked Texts
 	GoRun.Invoked is ("Strict/B.Go")
+	Linker.DictionaryCode.Invoked is ("Strict/Dictionary(Number, Text).Code", "Strict/Text.Code")
 	HelloRun.Invoked.Length is 0
 	Converting.Invoked is ("Strict/Digit.to", "Strict/Digit.to Text")
 	mutable targets = List(Mutable(Text))
 	for instructions
 		if value.kind is InstructionType.Invoke
 			targets.Add(value.texts(0) + "." + value.texts(1))
-			if value.texts(1) is "to"
-				targets.Add(value.texts(0) + ".to " + TypeEntry.ShortName(value.texts(2)))
+			targets = targets + Implied(value)
 	targets
+Implied(entry InstructionEntry) Texts
+	GoRun.Implied(GoRun.instructions.First).Length is 0
+	Converting.Implied(Converting.instructions.Last) is ("Strict/Digit.to Text")
+	if entry.texts(1) is "to"
+		return List(Text) + (entry.texts(0) + ".to " + TypeEntry.ShortName(entry.texts(2)))
+	let isCode = entry.texts(0).StartsWith("Strict/Dictionary(") and (entry.texts(1) is "Code")
+	isCode then List(Text) + "Strict/Text.Code" else List(Text)
 LoopBeginOf(position Number) Number
 	CountingLoop.LoopBeginOf(1) is 0
 	mutable depth = 0

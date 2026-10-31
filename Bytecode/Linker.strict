@@ -18,7 +18,7 @@ Linked(entries List(TypeEntry), signatures Texts) Slow(LinkRound)
 	mutable round = LinkRound(value, entries, signatures)
 	for as long as true
 		let started = Process.Elapsed
-		let next = Next(round.entries, round.signatures)
+		let next = Next(round)
 		let complete = round.IsSettled(next)
 		let phase = "Frontend / link pass (" + next.entries.Length + " types, complete " + complete + ")"
 		BuildProfile(Logger).Reported(phase, started)
@@ -26,15 +26,16 @@ Linked(entries List(TypeEntry), signatures Texts) Slow(LinkRound)
 			return next.With(next.Checked)
 		round = next
 	round
-Next(entries List(TypeEntry), signatures Texts) Slow(LinkRound)
-	Sample.Next(Go, List(Text)).entries.Length is 1
-	Hello.Next(TypeEntry.HelloLogger, List(Text)).signatures is ("Strict/Logger:")
-	Hello.Next(LinkRound.Forwarding, List(Text) + "Strict/W:Code").entries.First.methods.Length is 2
-	let invoked = Targets(entries).Unique
-	let round = LinkRound(value, Completed(entries, invoked), signatures)
-	let targets = invoked + round.Forwarded(invoked)
-	let signed = Signatures(Linkable(BaseTypes(entries, targets), signatures), targets)
-	LinkRound(value, (List(TypeEntry) + Completed(round.entries, targets).First) + round.Entries(signed), signed)
+Next(round LinkRound) Slow(LinkRound)
+	Sample.Next(LinkRound.Single).entries.Length is 1
+	Hello.Next(LinkRound.Greeting).signatures is ("Strict/Logger:")
+	Hello.Next(LinkRound(Hello, LinkRound.Forwarding, List(Text) + "Strict/W:Code")).entries.First.methods.Length is 2
+	let invoked = round.Targets.Unique
+	let completed = LinkRound(round, entries = Completed(round.entries, invoked))
+	let targets = invoked + completed.Forwarded(invoked)
+	let signed = Signatures(Linkable(BaseTypes(round.UsedTypes, targets), round.signatures), targets)
+	let advanced = (List(TypeEntry) + Completed(completed.entries, targets).First) + completed.Entries(signed)
+	completed.Advanced(advanced, signed)
 Completed(entries List(TypeEntry), targets Texts) Slow(List(TypeEntry))
 	Sample.Completed(Go, List(Text)).Length is 1
 	Sample.Completed((Go, Counted), List(Text))(1) is Counted
@@ -76,12 +77,13 @@ LinkedType(type Text, methods Texts) Slow(TypeEntry)
 	let entry = TypeCodegen(type, averaged, main.inference, main.typeNames).Selected(methods)
 	let isLocal = Path(type).PathOnly.text is Path(main.fullName).PathOnly.text
 	isLocal then TypeEntry(Path(type).FileName.text, entry.members, entry.methods) else entry
-BaseTypes(entries List(TypeEntry), targets Texts) Texts
-	Sample.BaseTypes(Go, ("Strict/B.Go")) is ("Strict/B")
+BaseTypes(used Texts, targets Texts) Texts
+	Sample.BaseTypes(List(Text), ("Strict/B.Go")) is ("Strict/B")
+	Sample.BaseTypes(List(Text) + "Strict/C", ("Strict/B.Go")) is ("Strict/B", "Strict/C")
 	mutable types = List(Mutable(Text))
 	for targets
 		types.Add(value.Substring(0, value.LastIndexOf(".")))
-	let candidates = (types + UsedTypes(entries)).Unique
+	let candidates = (types + used).Unique
 	for candidates
 		if value is not main.fullName
 			value
@@ -151,7 +153,4 @@ Targets(entries List(TypeEntry)) Texts
 	mutable targets = List(Mutable(Text))
 	for entries
 		targets = targets + value.Invoked
-	for targets
-		if value.StartsWith("Strict/Dictionary(") and value.EndsWith(".Code")
-			return targets + "Strict/Text.Code"
 	targets

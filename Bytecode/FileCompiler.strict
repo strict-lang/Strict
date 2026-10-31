@@ -1,6 +1,7 @@
 has logger
 has isQuiet Boolean = false
 has selection Text = ""
+constant Unlinked = LinkRound(Linker.Hello, List(TypeEntry), List(Text))
 constant Logged = (Linker.Go, TypeEntry.HelloLogger)
 constant Tips = " is not in this folder, next to strict, in a GitHub repository linked in README.md or in github.com/strict-lang. Fix the typo, add its package to this folder or link its repository in README.md"
 Compiled(path Text, root Text, withTests Boolean, known Texts = List(Text)) List(TypeEntry)
@@ -17,9 +18,9 @@ Built(path Text, root Text, withTests Boolean, files Texts, inference TypeInfere
 	let isParsed = BuildProfile(logger).Parsed(value, List(Text) + source)
 	let missing = isParsed then Mentions(File(source).ReadLines).Missing(files) else List(Text)
 	if missing.Length > 0
-		return LinkRound.Unlinked.With(Located(source, root, withTests, missing.First))
+		return Unlinked.With(Located(source, root, withTests, missing.First))
 	if (isParsed is false) or (Resolved(source, inference, files) is false)
-		return LinkRound.Unlinked
+		return Unlinked
 	let fused = Fusion(File(source).ReadLines, Path(source).PathOnly.text).Fused
 	let main = TypeCodegen(FullName(source, root), fused, inference, FullNames(files, root))
 	let entry = BuildProfile(logger).Entry(main, withTests, isQuiet, selection)
