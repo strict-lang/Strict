@@ -47,10 +47,10 @@ Entry(main TypeCodegen, withTests Boolean, isQuiet Boolean, selection = "") Type
 	let entry = withTests then TestCodegen(main, isQuiet, selection).Entry else main.Entry
 	Reported("Frontend / main codegen (" + entry.methods.Length + " methods)", started)
 	entry
-Linked(linker Linker, entry TypeEntry) List(TypeEntry)
+Linked(linker Linker, entry TypeEntry) LinkRound
 	let started = Process.Elapsed
 	let linked = linker.Linked(entry, List(Text))
-	Reported("Frontend / dependency linking (" + linked.Length + " types)", started)
+	Reported("Frontend / dependency linking (" + linked.entries.Length + " types)", started)
 	linked
 Parsed(compiler FileCompiler, sources Texts) Boolean
 	let started = Process.Elapsed

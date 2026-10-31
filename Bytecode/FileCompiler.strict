@@ -11,20 +11,20 @@ Compiled(path Text, root Text, withTests Boolean, known Texts = List(Text)) List
 	let before = Process.Elapsed
 	let inference = ResolveCheck.Inference(files)
 	BuildProfile(logger).Reported("Frontend / type inference", before)
-	Built(path, root, withTests, files, inference)
-Built(path Text, root Text, withTests Boolean, files Texts, inference TypeInference) List(TypeEntry)
+	Built(path, root, withTests, files, inference).entries
+Built(path Text, root Text, withTests Boolean, files Texts, inference TypeInference, known = Dictionary(Text, TypeEntry)) LinkRound
 	let source = Normalized(path)
 	let isParsed = BuildProfile(logger).Parsed(value, List(Text) + source)
 	let missing = isParsed then Mentions(File(source).ReadLines).Missing(files) else List(Text)
 	if missing.Length > 0
-		return Located(source, root, withTests, missing.First)
+		return LinkRound.Unlinked.With(Located(source, root, withTests, missing.First))
 	if (isParsed is false) or (Resolved(source, inference, files) is false)
-		return List(TypeEntry)
+		return LinkRound.Unlinked
 	let fused = Fusion(File(source).ReadLines, Path(source).PathOnly.text).Fused
 	let main = TypeCodegen(FullName(source, root), fused, inference, FullNames(files, root))
 	let entry = BuildProfile(logger).Entry(main, withTests, isQuiet, selection)
-	let linker = Linker(root, main)
-	Checked(linker, BuildProfile(logger).Linked(linker, entry), source, inference)
+	let linked = BuildProfile(logger).Linked(Linker(root, main, known), entry)
+	linked.With(Checked(linked.linker, linked.entries, source, inference))
 Checked(linker Linker, linked List(TypeEntry), source Text, inference TypeInference) List(TypeEntry)
 	FileCompiler.Checked(Linker.Sample, List(TypeEntry) + Linker.Go, "./A.strict", ResolveCheck.Counting).Length is 1
 	let sources = Sources(linker, linked, source)

@@ -71,24 +71,27 @@ Counted(paths Texts, root Text) Slow(List(TypeEntry))
 	let inference = ResolveCheck.Inference(files)
 	mutable mains = List(Mutable(TypeEntry))
 	mutable used = List(Mutable(TypeEntry))
+	mutable known = Dictionary(Text, TypeEntry)
 	for paths
-		let types = Typed(value, root, files, inference)
-		if types.Length is 0
+		let linked = Typed(value, root, files, inference, known)
+		if linked.entries.Length is 0
 			return List(TypeEntry)
-		mains.Add(types.First)
-		used = used + types
+		mains.Add(linked.entries.First)
+		used = used + linked.entries
+		known = linked.Known(known)
 	Merged(mains, used)
-Typed(path Text, root Text, files Texts, inference TypeInference) List(TypeEntry)
-	NativeFolder(Logger).Typed("Missing.strict", ".", List(Text), ResolveCheck.Counting).Length is 0
+Typed(path Text, root Text, files Texts, inference TypeInference, known Dictionary(Text, TypeEntry)) LinkRound
+	constant none = Dictionary(Text, TypeEntry)
+	NativeFolder(Logger).Typed("Missing.strict", ".", List(Text), ResolveCheck.Counting, none).entries.Length is 0
 	if File(path).Exists is false
-		return List(TypeEntry)
+		return LinkRound.Unlinked
 	let isFresh = (selection is "") and (Execute(logger).Stale(List(Text) + path).Length is 0)
 	if isFresh
-		return Execute(logger).Loaded(path, root)
-	let types = FileCompiler(logger, false, selection).Built(path, root, true, files, inference)
-	if types.Length is 0
+		return LinkRound.Unlinked.With(Execute(logger).Loaded(path, root))
+	let linked = FileCompiler(logger, false, selection).Built(path, root, true, files, inference, known)
+	if linked.entries.Length is 0
 		logger.Log("CompilationFailed: " + path)
-	types
+	linked
 Merged(known List(TypeEntry), added List(TypeEntry)) List(TypeEntry)
 	NativeFolder.Merged(List(TypeEntry) + Counting, (Initializing, Counting)).First.methods.Length is 2
 	NativeFolder.Merged(List(TypeEntry) + Counting, List(TypeEntry) + Other).Length is 2

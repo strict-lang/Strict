@@ -68,7 +68,7 @@ Kept(path Text, root Text) Number
 Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInference, isTested = true) Number
 	let cache = BinaryFile(FileCompiler.Normalized(path))
 	let stamped = BinarySources(files + DataFiles.Of((Directory.Current, root), List(Text) + cache.source)).Stamped
-	let types = FileCompiler(logger, isQuiet, selection).Built(path, root, true, files, inference)
+	let types = FileCompiler(logger, isQuiet, selection).Built(path, root, true, files, inference).entries
 	if types.Length is 0
 		return 1
 	let before = Process.FilesRead.Length

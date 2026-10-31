@@ -1,5 +1,6 @@
 has root Text
 has main TypeCodegen
+has known Dictionary(Text, TypeEntry) = Dictionary(Text, TypeEntry)
 constant Go = TypeEntry("A", List(MemberEntry), MethodEntry.GoRun)
 constant CountCall = InstructionEntry.Invoke(0, ("Strict/Range", "Count", "Strict/Number"), List(Number), -1)
 constant CountRun = MethodEntry("Run", List(MemberEntry), "None", CountCall)
@@ -12,8 +13,9 @@ constant Reading = TypeEntry("A", List(MemberEntry) + MemberEntry("b", "Strict/L
 constant Parameters = TypeEntry("Strict/Bytecode/MethodEntry", List(MemberEntry) + MemberEntry("parameters", "Strict/List(MemberEntry)", List(InstructionEntry), false), List(MethodEntry))
 constant DictionaryCode = MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Invoke(0, ("Strict/Dictionary(Number, Text)", "Code", "Strict/Text"), List(Number), -1))
 constant Natives = ("to", "not", "and", "or", "xor", "Exists", "ReadLines")
-Linked(entries List(TypeEntry), signatures Texts) Slow(List(TypeEntry))
-	Sample.Linked(Go, List(Text)).Length is 0
+Linked(entries List(TypeEntry), signatures Texts) Slow(LinkRound)
+	Sample.Linked(Go, List(Text)).entries.Length is 0
+	Hello.Linked(TypeEntry.HelloLogger, List(Text)).signatures.Length is 14
 	mutable round = LinkRound(value, entries, signatures)
 	for as long as true
 		let started = Process.Elapsed
@@ -22,9 +24,9 @@ Linked(entries List(TypeEntry), signatures Texts) Slow(List(TypeEntry))
 		let phase = "Frontend / link pass (" + next.entries.Length + " types, complete " + complete + ")"
 		BuildProfile(Logger).Reported(phase, started)
 		if complete
-			return next.Checked
+			return next.With(next.Checked)
 		round = next
-	List(TypeEntry)
+	round
 Next(entries List(TypeEntry), signatures Texts) Slow(LinkRound)
 	Sample.Next(Go, List(Text)).entries.Length is 1
 	Hello.Next(TypeEntry.HelloLogger, List(Text)).signatures is ("Strict/Logger:")

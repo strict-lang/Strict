@@ -1,6 +1,8 @@
 has linker Linker
 has entries List(TypeEntry)
 has signatures Texts
+constant Unlinked = LinkRound(Linker.Hello, List(TypeEntry), List(Text))
+constant Cached = LinkRound(Linker(".", TypeCodegen.Hello, Dictionary(("Strict/Logger:", Linker.Go))), List(TypeEntry), List(Text))
 constant Single = LinkRound(Linker.Sample, List(TypeEntry) + Linker.Go, List(Text))
 constant Twice = LinkRound(Linker.Sample, (Linker.Go, Linker.Go), List(Text) + "Strict/Logger:")
 constant Greeting = LinkRound(Linker.Hello, List(TypeEntry) + TypeEntry.HelloLogger, List(Text))
@@ -13,8 +15,9 @@ constant Texting = LinkRound(Linker.Sample, (TypeEntry(Linker.Go, methods = Meth
 constant Writing = LinkRound(Linker.Sample, List(TypeEntry) + TypeEntry(Linker.Go, methods = MethodEntry(Linker.Go.methods.First, instructions = InstructionEntry.Invoke(0, ("Strict/File", "Write", "None"), List(Number), -1))), List(Text))
 Entries(signed Texts) Slow(List(TypeEntry))
 	Single.Entries(List(Text) + "Strict/Logger:").First.Name is "Strict/Logger"
+	Cached.Entries(List(Text) + "Strict/Logger:").First is Linker.Go
 	for signed
-		Fresh(value)
+		value is in linker.known then linker.known(value) else Fresh(value)
 Fresh(signature Text) Slow(TypeEntry)
 	Single.Fresh("Strict/Logger:").Name is "Strict/Logger"
 	Twice.Fresh("Strict/Logger:Log").methods.Length is 2
@@ -68,8 +71,8 @@ TypeNames Texts
 		let local = Path(linker.main.fullName).PathOnly.text + "/" + value.Name
 		value.Name.IndexOf("/") < 0 then local else value.Name
 Checked List(TypeEntry)
-	Linker.Hello.Linked(TypeEntry.HelloLogger, List(Text)).Length is 15
-	Linker.Sample.Linked(Linker.Iterating, List(Text)).Length is 1
+	Linker.Hello.Linked(TypeEntry.HelloLogger, List(Text)).entries.Length is 15
+	Linker.Sample.Linked(Linker.Iterating, List(Text)).entries.Length is 1
 	let missing = Unresolved
 	if missing.Length > 0
 		Logger.Log("UnresolvedLink: " + missing.First)
@@ -103,3 +106,18 @@ IsSettled(next LinkRound) Boolean
 	Single.IsSettled(LinkRound(Linker.Sample, List(TypeEntry) + TypeEntry.Converting, List(Text))) is false
 	let isSame = (next.signatures.Length is signatures.Length) and ((next.signatures - signatures).Length is 0)
 	isSame and (next.entries.First.methods.Length is entries.First.methods.Length)
+With(linked List(TypeEntry)) LinkRound
+	Single.With(List(TypeEntry)).entries.Length is 0
+	Twice.With(List(TypeEntry)).signatures is ("Strict/Logger:")
+	LinkRound(linker, linked, signatures)
+Known(known Dictionary(Text, TypeEntry)) Dictionary(Text, TypeEntry)
+	Twice.Known(Dictionary(Text, TypeEntry))("Strict/Logger:") is Linker.Go
+	Single.Known(Dictionary(Text, TypeEntry)).Length is 0
+	LinkRound(Linker.Sample, (Linker.Go, Linker.Go), List(Text)).Known(Dictionary(Text, TypeEntry)).Length is 0
+	if entries.Length is not signatures.Length + 1
+		return known
+	mutable result = known
+	for signatures
+		if value is not in result
+			result.Add(value, entries(index + 1))
+	result
