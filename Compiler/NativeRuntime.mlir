@@ -13034,7 +13034,8 @@
     // that (the last parameter, 64 for doubles); its doubles stay there too when the loop can not fail (packed 64 from
     // MlirDoubles: it reads no list and needs no 64 bit Power or Logarithm), the CPU downloads them when it reads them,
     // other double kernels send theirs to the host after checking they ran, a wrong index or a missing 64 bit function
-    // falls back to the CPU loop (and its error)
+    // falls back to the CPU loop (and its error); they are written into a resident block (with the flag after them)
+    // when one is free and stay on the GPU once the check passed (the next GPU loop reads them there, the CPU downloads them when it reads)
     %narrowed = llvm.load %narrowSlot : !llvm.ptr -> i64
     %narrowFound = arith.cmpi ne, %narrowed, %none : i64
     %narrowSingle = arith.ori %narrowFound, %isSingleFormat : i1
@@ -13161,25 +13162,39 @@
   ^outputs:
     %bytes = arith.muli %count, %eight : i64
     %withFlag = arith.addi %bytes, %eight : i64
-    %result = func.call @strict_gpu_temporary(%withFlag, %buffers) : (i64, !llvm.ptr) -> i64
     %failedBuffer = llvm.getelementptr %buffers[1] : (!llvm.ptr) -> !llvm.ptr, i64
-    %failedDevice = arith.addi %result, %bytes : i64
-    %allocated = arith.cmpi ne, %result, %none : i64
-    cf.cond_br %allocated, ^clearFlag, ^release
+    %ownClass = func.call @strict_gpu_class(%withFlag) : (i64) -> i64
+    %own = func.call @strict_gpu_obtain(%ownClass) : (i64) -> i64
+    %hasOwn = arith.cmpi ne, %own, %none : i64
+    cf.cond_br %hasOwn, ^owning, ^sharing
+  ^owning:
+    %ownFlag = arith.addi %own, %bytes : i64
+    cf.br ^placed(%own, %ownFlag : i64, i64)
+  ^sharing:
+    %shared = func.call @strict_gpu_temporary(%withFlag, %buffers) : (i64, !llvm.ptr) -> i64
+    %sharedFlag = arith.addi %shared, %bytes : i64
+    cf.br ^placed(%shared, %sharedFlag : i64, i64)
+  ^placed(%result: i64, %failedDevice: i64):
+    %resultPlaced = arith.cmpi ne, %result, %none : i64
+    %flagPlaced = arith.cmpi ne, %failedDevice, %none : i64
+    %allocated = arith.andi %resultPlaced, %flagPlaced : i1
+    cf.cond_br %allocated, ^clearFlag, ^outputsFailed
   ^clearFlag:
     %cleared = func.call @strict_gpu_stage(%failedDevice, %flag, %eight) : (i64, !llvm.ptr, i64) -> i1
-    cf.cond_br %cleared, ^fixed, ^release
+    cf.cond_br %cleared, ^fixed, ^outputsFailed
   ^fixed:
     %resultSlot = llvm.getelementptr %slots[1] : (!llvm.ptr) -> !llvm.ptr, i64
     llvm.store %result, %resultSlot : i64, !llvm.ptr
     %failedSlot = llvm.getelementptr %slots[2] : (!llvm.ptr) -> !llvm.ptr, i64
     llvm.store %failedDevice, %failedSlot : i64, !llvm.ptr
     %flushed = func.call @strict_gpu_flush() : () -> i1
-    cf.cond_br %flushed, ^start, ^release
+    cf.cond_br %flushed, ^start, ^outputsFailed
   ^start:
     %launched = func.call @strict_gpu_launch(%function, %threadTotal, %threads, %parameters) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i1
-    cf.cond_br %launched, ^fetch, ^release
+    cf.cond_br %launched, ^fetch, ^outputsFailed
   ^fetch:
+    cf.cond_br %hasOwn, ^check, ^owners
+  ^owners:
     %resultOwner = llvm.load %buffers : !llvm.ptr -> i64
     %flagOwner = llvm.load %failedBuffer : !llvm.ptr -> i64
     %owners = arith.ori %resultOwner, %flagOwner : i64
@@ -13195,7 +13210,21 @@
     %failedValue = llvm.load %flag : !llvm.ptr -> i64
     %passed = arith.cmpi eq, %failedValue, %none : i64
     %usable = arith.andi %checked, %passed : i1
-    cf.cond_br %usable, ^download, ^release
+    cf.cond_br %usable, ^usable, ^outputsFailed
+  ^usable:
+    cf.cond_br %hasOwn, ^residing, ^download
+  ^residing:
+    %ownSegment = func.call @strict_gpu_segment() : () -> i64
+    %ownList = func.call @strict_gpu_resident(%count, %own, %ownClass, %doubleBits) : (i64, i64, i64, i64) -> f64
+    func.call @strict_gpu_mark(%ownList, %count, %ownSegment) : (f64, i64, i64) -> ()
+    func.call @strict_gpu_settle(%buffers, %bufferCount) : (!llvm.ptr, i64) -> ()
+    llvm.store %previousActiveFrame, %activeFrameSlot : i64, !llvm.ptr
+    return %ownList : f64
+  ^outputsFailed:
+    cf.cond_br %hasOwn, ^giveOwn, ^release
+  ^giveOwn:
+    func.call @strict_gpu_give(%own, %ownClass) : (i64, i64) -> ()
+    cf.br ^release
   ^download:
     func.call @strict_gpu_downloaded(%count, %doubleBits) : (i64, i64) -> ()
     %list = func.call @strict_gpu_result(%count, %eight) : (i64, i64) -> f64
