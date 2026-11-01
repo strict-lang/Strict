@@ -91,7 +91,19 @@ addToLibrary({
 		encoder.copyBufferToBuffer(buffers[0], 0, copy, 0, count * 4);
 		encoder.copyBufferToBuffer(buffers[3], 0, copy, count * 4, 4);
 		device.queue.submit([encoder.finish()]);
-		await copy.mapAsync(1);
+		let isMapped = !navigator.userAgent.includes('Firefox');
+		const mapping = copy.mapAsync(1).finally(() => isMapped = true);
+		// Firefox maps only when it polls the device, every 100 ms or on a submit: empty submits make that 2 ms (Chrome
+		// is 3 ms slower with them).
+		while (!isMapped) {
+			device.queue.submit([]);
+			await new Promise((resolve) => {
+				const channel = new MessageChannel();
+				channel.port1.onmessage = resolve;
+				channel.port2.postMessage(0);
+			});
+		}
+		await mapping;
 		const mapped = copy.getMappedRange(), isFailed = new Uint32Array(mapped, count * 4, 1)[0] !== 0;
 		if (!isFailed)
 			HEAPF64.set(new Float32Array(mapped, 0, count), output >> 3);
