@@ -20,6 +20,16 @@ Kept(types List(TypeEntry)) BinarySources
 			kept = kept + value
 			marks = marks + stamps(index)
 	BinarySources(kept, marks)
+Typed(types List(TypeEntry), folder Text) BinarySources
+	Mixed.Typed(List(TypeEntry) + TypeSource.Sizing.entry, ".").sources.Last is "./Math/Size.strict"
+	Mixed.Typed(List(TypeEntry) + Listing, ".").sources.Length is 4
+	mutable added = List(Text)
+	for types
+		let file = FileCompiler.Normalized(TypeSource(value).Located(folder))
+		if File(file).Exists and (file is not in sources) and (file is not in added)
+			added = added + file
+	let found = BinarySources(added).Stamped
+	BinarySources(sources + found.sources, stamps + found.stamps)
 Names(types List(TypeEntry)) Texts
 	Mixed.Names(List(TypeEntry) + Listing) is ("List")
 	for types

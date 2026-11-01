@@ -73,7 +73,8 @@ Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInfer
 		return 1
 	let failed = isTested then Tested(types, path) else 0
 	if (failed is 0) and (selection is "") and (IsEdited(path) is false)
-		let header = Completed(cache, root, files, stamped).Kept(types).Header
+		let folder = Path(cache.source).PathOnly.text
+		let header = Completed(cache, root, files, stamped).Typed(types, folder).Kept(types).Header
 		cache.Saved(cache.Packed(header, types, List(TypeEntry)))
 	failed
 Completed(cache BinaryFile, root Text, files Texts, stamped BinarySources) Slow(BinarySources)
