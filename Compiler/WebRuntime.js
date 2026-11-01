@@ -109,6 +109,10 @@ addToLibrary({
 	$strictWebGpuRun__deps: ['$strictWebGpu', '$strictWebGpuPipeline', '$strictWebGpuDevice', '$strictWebGpuWritten'],
 	$strictWebGpuRun: async (name, count, inputs, output, bits) => {
 		const device = inputs && (strictWebGpu.device ||= await strictWebGpuDevice());
+		if (inputs && !device) {
+			console.warn('WebGPU has no adapter here, GPU loops and kernels run on the CPU');
+			strictWebGpu.failed = true;
+		}
 		if (!device)
 			return 0;
 		const pipeline = strictWebGpu.pipelines[name] ||= await strictWebGpuPipeline(device, Module['strictShaders'][name]);

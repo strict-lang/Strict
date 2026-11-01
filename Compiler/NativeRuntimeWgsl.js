@@ -1,6 +1,6 @@
 // WGSL runtime kernels, run on WebGPU by strict_webgpu_kernel (WebRuntime.js) for strict_gpu_shaded of kind 2: a list
 // value of the kernel is a part of numbers at places[2 * slot] with places[2 * slot + 1] numbers, a whole number value
-// is places[2 * slot + 1], places[2 * slots] is the count of outputs, one invocation per output.
+// is places[2 * slot + 1], places[2 * slots] is the count of outputs, one invocation per output if not said otherwise.
 const strictKernelBindings = `
 @group(0) @binding(0) var<storage, read_write> output: array<f32>;
 @group(0) @binding(1) var<storage, read> numbers: array<f32>;
@@ -59,4 +59,39 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) g
 		right += places[25];
 	}
 	output[at] = sum;
+}`;
+// Softmax.Shares: scores, width, a workgroup of 64 invocations per row (strict_gpu_softmax)
+Module['strictShaders']['strict_softmax'] = strictKernelBindings + `
+var<workgroup> partials: array<f32, 64>;
+fn reduced(own: f32, local: u32, isSum: bool) -> f32 {
+	partials[local] = own;
+	workgroupBarrier();
+	for (var half = 32u; half > 0u; half /= 2u) {
+		if (local < half) {
+			let other = partials[local + half];
+			partials[local] = select(max(partials[local], other), partials[local] + other, isSum);
+		}
+		workgroupBarrier();
+	}
+	let result = partials[0];
+	workgroupBarrier();
+	return result;
+}
+@compute @workgroup_size(64)
+fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) group: vec3<u32>,
+	@builtin(num_workgroups) groups: vec3<u32>) {
+	let width = places[3];
+	let rows = places[4] / width;
+	for (var row = group.x + group.y * groups.x; row < rows; row += groups.x * groups.y) {
+		let first = places[0] + row * width;
+		var largest = -0x1.fffffep+127f;
+		for (var column = local; column < width; column += 64u) { largest = max(largest, numbers[first + column]); }
+		largest = reduced(largest, local, false);
+		var total = 0.0;
+		for (var column = local; column < width; column += 64u) { total += exp(numbers[first + column] - largest); }
+		total = reduced(total, local, true);
+		for (var column = local; column < width; column += 64u) {
+			output[row * width + column] = exp(numbers[first + column] - largest) / total;
+		}
+	}
 }`;

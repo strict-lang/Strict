@@ -16803,6 +16803,39 @@
     %chosen = arith.select %negative, %minus, %last : i64
     return %chosen : i64
   }
+  llvm.mlir.global internal constant @strict_gpu_softmax_web("strict_softmax\00") : !llvm.array<15 x i8>
+  // `Softmax.Shares` of scores in rows of width numbers as 32 bit numbers on WebGPU (strict_softmax of
+  // NativeRuntimeWgsl.js), 0.0 elsewhere or for other lengths, then the method itself runs
+  func.func private @strict_gpu_softmax(%ptx: !llvm.ptr, %scores: f64, %width: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %length = func.call @strict_list_length(%scores) : (f64) -> f64
+    %count = arith.fptosi %length : f64 to i64
+    %columns = arith.fptosi %width : f64 to i64
+    %isWide = arith.cmpi sgt, %columns, %none : i64
+    %safeColumns = arith.select %isWide, %columns, %count : i64
+    %rows = arith.divsi %count, %safeColumns : i64
+    %rowsBack = arith.muli %rows, %safeColumns : i64
+    %isWhole = arith.cmpi eq, %rowsBack, %count : i64
+    %hasRows = arith.cmpi sgt, %rows, %none : i64
+    %isRowed = arith.andi %isWhole, %hasRows : i1
+    %fits = arith.andi %isRowed, %isWide : i1
+    cf.cond_br %fits, ^web, ^unable
+  ^web:
+    %slotCount = arith.constant 2 : i64
+    %slots = llvm.alloca %slotCount x f64 : (i64) -> !llvm.ptr
+    llvm.store %scores, %slots : f64, !llvm.ptr
+    %widthSlot = llvm.getelementptr %slots[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %width, %widthSlot : f64, !llvm.ptr
+    %webName = llvm.mlir.addressof @strict_gpu_softmax_web : !llvm.ptr
+    %kernelKind = arith.constant 2 : i64
+    %listMask = arith.constant 1 : i64
+    %singleBits = arith.constant 32.0 : f64
+    %webbed = func.call @strict_gpu_shaded(%webName, %count, %singleBits, %kernelKind, %slots, %slotCount, %listMask) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64) -> f64
+    return %webbed : f64
+  ^unable:
+    return %zero : f64
+  }
   // `Products.Multiplied` on the 16 bit tensor cores (strict_device_product_tiles from 64 rows and 32 columns on, else
   // strict_device_products): shape is batches, rows, inner and columns,
   // strides the start and the batch, row and inner strides of left, then of right with inner and column strides, 0.0
