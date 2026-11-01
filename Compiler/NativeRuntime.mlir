@@ -14945,6 +14945,7 @@
     %readable = arith.ori %resides, %uploaded : i1
     return %readable : i1
   }
+  // the device address of a list computed on the GPU (CUDA or HIP), 0 for host lists and WebGPU buffers (class 255)
   func.func private @strict_gpu_device(%list: f64) -> i64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
@@ -14964,7 +14965,11 @@
     %tagged = llvm.load %deviceSlot : !llvm.ptr -> i64
     %addressMask = arith.constant -256 : i64
     %device = arith.andi %tagged, %addressMask : i64
-    return %device : i64
+    %webClass = arith.constant 255 : i64
+    %class = arith.andi %tagged, %webClass : i64
+    %isWeb = arith.cmpi eq, %class, %webClass : i64
+    %native = arith.select %isWeb, %none, %device : i64
+    return %native : i64
   ^plain:
     return %none : i64
   }
