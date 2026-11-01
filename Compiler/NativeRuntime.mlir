@@ -16979,8 +16979,9 @@
   }
   // `GpuMemory.Tuned`: rows of 8 bit numbers with one scale each (TensorFile.Quantized) plus the low rank update of
   // TensorFile_Tuned (downs rank x width in the rotated space of the rows, ups height x rank, a scale per rank) merged
-  // by strict_device_tuned, the updated rows change in place; 0.0 when the GPU can not (no GPU, rows not all 8 bit of
-  // one width, a rank above 512, factors not 64, 32 or 16 bit or not fitting the rows)
+  // by strict_device_tuned, the updated rows change in place; 0.0 when the GPU can not (rows not all 8 bit of one width,
+  // a rank above 512, factors not 64, 32 or 16 bit or not fitting the rows, STRICT_GPU=0 or no GPU, checked in this order
+  // so a merge that can not run on the GPU never opens it)
   llvm.mlir.global internal constant @strict_gpu_tuned_name("strict_device_tuned\00") : !llvm.array<20 x i8>
   llvm.mlir.global internal @strict_gpu_tuned_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   func.func private @strict_gpu_tuned(%self: f64, %rows: f64, %downs: f64, %ups: f64, %scales: f64) -> f64 {
@@ -16996,10 +16997,7 @@
     %factorLength1 = arith.addf %scaleLength, %downLength : f64
     %factorLength = arith.addf %factorLength1, %upLength : f64
     %nothing = arith.cmpf oeq, %factorLength, %zero : f64
-    cf.cond_br %nothing, ^done, ^try
-  ^try:
-    %ready = func.call @strict_gpu_ready() : () -> i1
-    cf.cond_br %ready, ^sized, ^unable
+    cf.cond_br %nothing, ^done, ^sized
   ^sized:
     %heightNumber = func.call @strict_list_length(%rows) : (f64) -> f64
     %height = arith.fptosi %heightNumber : f64 to i64
@@ -17037,7 +17035,15 @@
     %bounded = arith.andi %shaped, %small : i1
     %eights = arith.andi %bounded, %isEight : i1
     %possible = arith.andi %eights, %readable : i1
-    cf.cond_br %possible, ^merge, ^unable
+    cf.cond_br %possible, ^try, ^unable
+  ^try:
+    %minimum = func.call @strict_gpu_threshold() : () -> i64
+    %never = arith.constant 9223372036854775807 : i64
+    %enabled = arith.cmpi ne, %minimum, %never : i64
+    cf.cond_br %enabled, ^open, ^unable
+  ^open:
+    %ready = func.call @strict_gpu_ready() : () -> i1
+    cf.cond_br %ready, ^merge, ^unable
   ^merge:
     %factors = llvm.alloca %eight x i64 : (i64) -> !llvm.ptr
     %factor0 = arith.bitcast %downs : f64 to i64
@@ -17168,7 +17174,8 @@
   // becomes their spill), strict_device_tuned merges that device copy in place with the downs and ups where they are on
   // the GPU (only the scales go up) or converted to 32 bit floats in pinned memory meanwhile, and the merged rows come back
   // into the host rows before this returns, so no host copy is ever stale; a failure forgets the device copy and the CPU
-  // merges instead
+  // merges instead. The factors are staged like the rows: the flush before the launch copies the whole staged range of the
+  // arena, a direct upload into it was overwritten with whatever the staging memory held there
   llvm.mlir.global internal @strict_gpu_tuned_bounced(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   func.func private @strict_gpu_tuned_cached(%rows: f64, %first: !llvm.ptr, %factors: !llvm.ptr, %height: i64, %width: i64, %rank: i64, %stride: i64, %seed: i64) -> i1 {
     %false = arith.constant false
@@ -17226,7 +17233,7 @@
     %allocated = arith.cmpi ne, %factorDevice, %none : i64
     cf.cond_br %allocated, ^put, ^failed
   ^put:
-    %put = func.call @strict_gpu_put_async(%factorDevice, %staging, %stagedBytes) : (i64, !llvm.ptr, i64) -> i1
+    %put = func.call @strict_gpu_stage(%factorDevice, %staging, %stagedBytes) : (i64, !llvm.ptr, i64) -> i1
     cf.cond_br %put, ^launch, ^failed
   ^launch:
     %downBytes = arith.muli %downCount, %four : i64
