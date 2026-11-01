@@ -22,6 +22,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - GPU sidecars: every program still keeps Name.kernels.mlir (the PTX cache key) and test executables their PTX next to the source, move them into Tools/PtxCache once it evicts old entries (up to 25 MB each, never cleaned today).
 - Realtime frames: a full collection at a frame end that takes longer than a few ms marks over several frame ends (incremental, the cards record what changed meanwhile).
 - f32 kernels: a GPU loop reading a `value.Bits is 32` member computes in f32 (WGSL on WebGPU, the 32 bit CUDA kernel natively); WGSL lacks Sin, Cos, Logarithm, `from` calls, Bytes results and rows.
+- MossImage in the browser (prompt in, encoder, Moss and VAE cached in OPFS, WebGPU like FractalZoomer), VAE decode first: a web build of anything using Safetensors fails compiling NeuralNetworks/native/GgufFile.c (`ggml-cpu/quants.h` missing for wasm); convolution, GroupNorm, attention and the int8/16 bit products are CUDA runtime kernels without WGSL versions (FluxDecoder's web build gets one shaded loop), the CPU fallback decodes far too slowly; then weights streamed from OPFS into GPU buffers (4 GB wasm memory, WebGPU can't read host memory).
 
 ## Waiting
 - Later: Qwen3-Coder-Next 80B-A3B and Qwen3-Coder-30B with all experts, image blur on the GPU, Apple Silicon, AMD GPUs, batched training ideas.
