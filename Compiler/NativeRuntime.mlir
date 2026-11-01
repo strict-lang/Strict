@@ -5991,6 +5991,14 @@
   ^done:
     return %failed : i1
   }
+  // adds the failure count of a test runner, an Error escaping it is reported and counts as one failure
+  func.func private @strict_failures(%total: f64, %result: f64) -> f64 {
+    %unhandled = func.call @strict_unhandled(%result) : (f64) -> i1
+    %one = arith.constant 1.0 : f64
+    %counted = arith.select %unhandled, %one, %result : f64
+    %sum = arith.addf %total, %counted : f64
+    return %sum : f64
+  }
   llvm.mlir.global internal constant @strict_trace_skipping("\09... (skipped \00") : !llvm.array<15 x i8>
   llvm.mlir.global internal constant @strict_trace_lines(" lines)\00") : !llvm.array<8 x i8>
   func.func private @strict_trace_text(%entry: f64) -> f64 {

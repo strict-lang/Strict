@@ -1,8 +1,8 @@
-has firstRegister Register
-has secondRegister Register
-Add Register
-	ExecuteOperation(Register(1, 0, 0), Register(2, 0, 0)).Add is Register(3, 0, 0)
-	firstRegister + secondRegister
-Subtract Register
-	ExecuteOperation(Register(3, 0, 0), Register(1, 0, 0)).Subtract is Register(2, 0, 0)
-	firstRegister - secondRegister
+has firstBank RegisterBank
+has secondBank RegisterBank
+Add RegisterBank
+	ExecuteOperation(RegisterBank(1, 0, 0), RegisterBank(2, 0, 0)).Add is RegisterBank(3, 0, 0)
+	firstBank + secondBank
+Subtract RegisterBank
+	ExecuteOperation(RegisterBank(3, 0, 0), RegisterBank(1, 0, 0)).Subtract is RegisterBank(2, 0, 0)
+	firstBank - secondBank

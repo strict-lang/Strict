@@ -1,0 +1,15 @@
+has RZero Number
+has ROne Number
+has RTwo Number
++(other RegisterBank) RegisterBank
+	RegisterBank(0, 1, 2) + RegisterBank(1, 2, 3) is RegisterBank(1, 3, 5)
+	RegisterBank(RZero + other.RZero, ROne + other.ROne, RTwo + other.RTwo)
+-(other RegisterBank) RegisterBank
+	RegisterBank(5, 5, 5) - RegisterBank(5, 5, 5) is RegisterBank(0, 0, 0)
+	RegisterBank(RZero - other.RZero, ROne - other.ROne, RTwo - other.RTwo)
+*(other RegisterBank) RegisterBank
+	RegisterBank(0, 1, 2) * RegisterBank(1, 2, 3) is RegisterBank(0, 2, 6)
+	RegisterBank(RZero * other.RZero, ROne * other.ROne, RTwo * other.RTwo)
+/(other RegisterBank) RegisterBank
+	RegisterBank(5, 5, 5) / RegisterBank(5, 5, 5) is RegisterBank(1, 1, 1)
+	RegisterBank(RZero / other.RZero, ROne / other.ROne, RTwo / other.RTwo)

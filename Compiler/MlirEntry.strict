@@ -15,7 +15,7 @@ Main Texts
 	Counted.Main.Length is 20
 	Counted.Main.Index("    func.call @strict_gc_init(%stackBase) : (!llvm.ptr) -> ()") is 2
 	Counted.Main(1).IndexOf("llvm.addressofreturnaddress.p0") > 0
-	Both.Main.Index("    %total1 = arith.addf %result, %result1 : f64") > 0
+	Both.Main.Index("    %total1 = func.call @strict_failures(%result, %result1) : (f64, f64) -> f64") > 0
 	constant self = "    %self = llvm.load %selfslot : !llvm.ptr -> f64"
 	let prepared = Header + MlirInstances(entry, 0).Fresh(entry.type, "%selfslot", "", List(Text)) + Arguments
 	let printed = entry.IsCounted then List(Text) + MlirLines.Print else List(Text)
@@ -82,13 +82,14 @@ AllArguments(kind Text, name Text) Text
 	"    " + name + " = func.call @strict_argument_" + elements + "(%argc, %argv) : (i32, !llvm.ptr) -> f64"
 Other(function MlirFunction, number Number) Texts
 	Both.Other(Counted.entry, 1).Index("    %result1 = func.call @Counter_Run_0(%self1) : (f64) -> f64") > 0
-	Both.Other(Counted.entry, 2).Last is "    %total2 = arith.addf %total1, %result2 : f64"
+	Both.Other(Counted.entry, 2).Last is "    %total2 = func.call @strict_failures(%total1, %result2) : (f64, f64) -> f64"
 	let slot = "%selfslot" + number
 	let self = "%self" + number
 	let previous = number is 1 then "%result" else "%total" + (number - 1)
 	let fresh = MlirInstances(function, 0).Fresh(function.type, slot, "e" + number + "_", List(Text))
 	let call = "    %result" + number + " = func.call @" + function.Symbol + "(" + self + ") : (f64) -> f64"
-	let sum = "    %total" + number + " = arith.addf " + previous + ", %result" + number + " : f64"
+	let operands = "(" + previous + ", %result" + number + ") : (f64, f64) -> f64"
+	let sum = "    %total" + number + " = func.call @strict_failures" + operands
 	let loaded = "    " + self + " = llvm.load " + slot + " : !llvm.ptr -> f64"
 	List(Text) + ("    " + slot + " = llvm.alloca %one x f64 : (i64) -> !llvm.ptr") + fresh + (loaded, call, sum)
 Optimized(method MethodEntry, emitted Text) Text
