@@ -18907,7 +18907,9 @@
     %widthSlot = llvm.getelementptr %staging[%widthAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %width = arith.trunci %storedBits : i64 to i8
     llvm.store %width, %widthSlot : i8, !llvm.ptr
-    %rowBytes = func.call @strict_packed_bytes(%columns, %storedBits) : (i64, i64) -> i64
+    %packedRowBytes = func.call @strict_packed_bytes(%columns, %storedBits) : (i64, i64) -> i64
+    %nibbleBytes = func.call @strict_gpu_nibbled_bytes(%columns) : (i64) -> i64
+    %rowBytes = arith.select %isFourRow, %nibbleBytes, %packedRowBytes : i64
     %rowOffset = arith.muli %rowIndex, %rowStride : i64
     %offset = arith.addi %header, %rowOffset : i64
     %destination = llvm.getelementptr %staging[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
@@ -18974,6 +18976,19 @@
     %pipelined = arith.xori %beforeAmpere, %true : i1
     %four = arith.andi %isFour, %pipelined : i1
     return %four : i1
+  }
+  // the bytes of a row of strict_gpu_nibbled: two numbers per byte and a scale per 32
+  func.func private @strict_gpu_nibbled_bytes(%columns: i64) -> i64 {
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %five = arith.constant 5 : i64
+    %thirtyOne = arith.constant 31 : i64
+    %pairs = arith.shrui %columns, %one : i64
+    %rounded = arith.addi %columns, %thirtyOne : i64
+    %parts = arith.shrui %rounded, %five : i64
+    %scaleBytes = arith.shli %parts, %two : i64
+    %bytes = arith.addi %pairs, %scaleBytes : i64
+    return %bytes : i64
   }
   // the 8 bit numbers of a row of 4 bit numbers (-8 to 7, Safetensors.Quantized(name, 4)) as two per byte at
   // destination, the lower nibble first like their tokens, followed by its scales per 32 (format 5 of a rows table, which
@@ -19076,7 +19091,11 @@
     %length = arith.fptosi %lengthNumber : f64 to i64
     %sameLength = arith.cmpi eq, %length, %columns : i64
     %bits = func.call @strict_gpu_bits(%row) : (f64) -> i64
-    %bytes = func.call @strict_packed_bytes(%columns, %bits) : (i64, i64) -> i64
+    %packedRowBytes = func.call @strict_packed_bytes(%columns, %bits) : (i64, i64) -> i64
+    %rowKept = func.call @strict_list_kept(%row) : (f64) -> i64
+    %isFourRow = func.call @strict_gpu_four_kept(%rowKept) : (i64) -> i1
+    %nibbleBytes = func.call @strict_gpu_nibbled_bytes(%columns) : (i64) -> i64
+    %bytes = arith.select %isFourRow, %nibbleBytes, %packedRowBytes : i64
     %wider = arith.maxui %stride, %bytes : i64
     %narrower = arith.minui %narrowest, %bits : i64
     %isWide = arith.cmpi eq, %bits, %sixtyFour : i64
