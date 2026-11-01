@@ -17,7 +17,7 @@ IsUsed Boolean
 	if (function.Group < 0) or (function.Guarded is not position) or (function.Float is not "f32")
 		return false
 	let check = MlirBatchCheck(function, position)
-	let collecting = MlirLoops(function, position).IsCollecting and (MlirLayout(function).Packed(position) is in (0, 17))
+	let collecting = MlirLoops(function, position).IsCollecting and check.IsFloat
 	let target = function.method.instructions(function.Group).payload(0)
 	let unchained = MlirFeeding(function, function.Group).IsFeeding(function.Group, target) is false
 	collecting and (check.Reads.Length > 0) and (check.Reads.First > function.Group) and unchained and check.IsSafe

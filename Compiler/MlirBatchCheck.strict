@@ -13,7 +13,11 @@ IsPlain Boolean
 	let loops = MlirLoops(function, position)
 	if (loops.Collection is not "") or (loops.IsCollecting is false) or (function.Group >= 0)
 		return false
-	(MlirGroups(function, position).Call < 0) and (MlirLayout(function).Packed(position) is in (0, 17))
+	(MlirGroups(function, position).Call < 0) and IsFloat
+IsFloat Boolean
+	MlirBatchCheck(MlirLayout.Singles, 2).IsFloat
+	MlirBatchCheck(MlirLayout.Eights, 2).IsFloat is false
+	MlirLayout(function).Packed(position) is in (0, 17, 32)
 Reads Numbers
 	mutable reads = List(Mutable(Number))
 	for Range(position + 1, function.method.LoopEndOf(position))

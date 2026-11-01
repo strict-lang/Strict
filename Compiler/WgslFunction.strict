@@ -43,11 +43,11 @@ Declarations Texts
 		lines = lines + ("var v_" + value + ": num;") + ("var v_" + value + "l: vec2<u32>;")
 	lines
 Members Texts
-	WgslFunction(MlirDeviceMembers.Head).Members is ("v_heads = m_heads;", "v_weightsl = m_weightsl;")
+	WgslFunction(MlirDeviceMembers.Head).Members is ("v_heads = n_of(m_heads);", "v_weightsl = m_weightsl;")
 	Twice.Members.Length is 0
 	for MlirDeviceMembers(function).Names
 		let isList = MlirDeviceStatements(function, 0).IsList(MlirKinds(function).VariableKind(0, value))
-		isList then "v_" + value + "l = m_" + value + "l;" else "v_" + value + " = m_" + value + ";"
+		isList then "v_" + value + "l = m_" + value + "l;" else "v_" + value + " = n_of(m_" + value + ");"
 Statements(first Number, limit Number) Texts
 	Twice.Statements(2, 4) is ("r2 = n_mul(r0, r1);", "return r2;")
 	mutable lines = List(Text)
