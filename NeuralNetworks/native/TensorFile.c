@@ -109,8 +109,33 @@ STRICT_EXPORT double TensorFile_Header(double self, double path)
 	return text ? strict_text_result(text) : strict_fail(failure);
 }
 
+/* Whether the header's _quantization_metadata names the layer of the weight name as ComfyUI's convrot_w4a4: its I8
+   rows hold two signed 4 bit numbers per byte, the lower nibble first. */
+static int IsNibbled(const char* header, const char* name)
+{
+	size_t length = strlen(name);
+	char* key = length > 7 && !strcmp(name + length - 7, ".weight") ? malloc(length + 40) : 0;
+	if (!key)
+		return 0;
+	snprintf(key, length + 40, "\\\"%.*s\\\": {\\\"format\\\": \\\"convrot_w4a4\\\"", (int)(length - 7), name);
+	int isFound = strstr(header, key) != 0;
+	free(key);
+	return isFound;
+}
+
+/* Rewrites the entry of an I8 matrix of nibbles (with room for a few more characters) as I4 with all its columns. */
+static void Nibbled(char* text)
+{
+	unsigned long long height = 0, width = 0, first = 0, last = 0;
+	const char* shape = strstr(text, "\"shape\":[");
+	const char* offsets = strstr(text, "\"data_offsets\":[");
+	if (strstr(text, "\"dtype\":\"I8\"") && shape && offsets && sscanf(shape, "\"shape\":[%llu,%llu]", &height, &width) == 2 &&
+		sscanf(offsets, "\"data_offsets\":[%llu,%llu]", &first, &last) == 2)
+		sprintf(text, "\"dtype\":\"I4\",\"shape\":[%llu,%llu],\"data_offsets\":[%llu,%llu]", height, 2 * width, first, last);
+}
+
 /* The entry of the tensor name in the header of the file at path ("dtype":"F32","shape":[3],"data_offsets":[0,12]),
-   empty when the header has none. */
+   empty when the header has none; convrot_w4a4 weights are I4 matrices (IsNibbled). */
 STRICT_EXPORT double TensorFile_Entry(double self, double path, double name)
 {
 	if (!ThreadReady())
@@ -131,14 +156,17 @@ STRICT_EXPORT double TensorFile_Entry(double self, double path, double name)
 	const char* close = strchr(open, '}');
 	size_t entryLength = close ? (size_t)(close - open) : strlen(open);
 	free(entry);
-	entry = malloc(entryLength + 1);
+	entry = malloc(entryLength + 64);
 	memcpy(entry, open, entryLength);
 	entry[entryLength] = 0;
+	if (IsNibbled(text, wanted))
+		Nibbled(entry);
 	return strict_text_result(entry);
 }
 
-/* A tensor as its header entry describes it: "dtype":"F16","shape":[2,3],"data_offsets":[24,36]. */
-typedef struct { uint64_t bytes, isBrain, isSigned, isEight, rank, height, width, start; } Tensor;
+/* A tensor as its header entry describes it: "dtype":"F16","shape":[2,3],"data_offsets":[24,36]. I4 rows hold two
+   numbers per byte (isNibbles, width counts the bytes). */
+typedef struct { uint64_t bytes, isBrain, isSigned, isEight, isNibbles, rank, height, width, start; } Tensor;
 
 /* Reads the numbers of a list like [2,3] at text into numbers (at most limit), their count or -1 when it is malformed. */
 static int Listed(const char* text, uint64_t* numbers, int limit)
@@ -168,7 +196,8 @@ static const char* Described(const char* entry, Tensor* tensor)
 		return "TensorNotFound";
 	type += 9;
 	tensor->isBrain = strncmp(type, "BF16\"", 5) == 0;
-	tensor->isSigned = strncmp(type, "I8\"", 3) == 0;
+	tensor->isNibbles = strncmp(type, "I4\"", 3) == 0;
+	tensor->isSigned = strncmp(type, "I8\"", 3) == 0 || tensor->isNibbles;
 	tensor->isEight = strncmp(type, "F8_E4M3\"", 8) == 0;
 	tensor->bytes = strncmp(type, "F32\"", 4) == 0 ? 4 : strncmp(type, "F16\"", 4) == 0 || tensor->isBrain ? 2 :
 		tensor->isSigned || tensor->isEight || strncmp(type, "U8\"", 3) == 0 ? 1 : 0;
@@ -195,6 +224,9 @@ static const char* Described(const char* entry, Tensor* tensor)
 		else if (*dimension != ']')
 			return "TensorShapeMalformed";
 	}
+	if (tensor->isNibbles && (tensor->rank != 2 || tensor->width % 2))
+		return "TensorShapeMalformed";
+	tensor->width /= tensor->isNibbles ? 2 : 1;
 	tensor->start = range[0];
 	if (range[1] < range[0] || range[1] - range[0] != tensor->height * tensor->width * tensor->bytes)
 		return "TensorSizeMismatch";
@@ -228,6 +260,11 @@ static void Widened(const unsigned char* source, const Tensor* tensor, float* ta
 static float* Read(double path, const Tensor* tensor, const char** failure)
 {
 	uint64_t length = 0, count = tensor->height * tensor->width;
+	if (tensor->isNibbles)
+	{
+		*failure = "I4TensorsAreOnlyReadAsQuantizedRows";
+		return 0;
+	}
 	FILE* file = Opened(strict_text(path), &length);
 	if (!file)
 	{
@@ -308,7 +345,7 @@ static void PlacedChunk(void* context, uint64_t chunk)
 	const Tensor* tensor = placing->tensor;
 	uint64_t rowBytes = tensor->width * tensor->bytes, first = chunk * ChunkRows;
 	uint64_t count = tensor->height - first < ChunkRows ? tensor->height - first : ChunkRows;
-	uint64_t columns = placing->fours ? 2 * tensor->width : tensor->width;
+	uint64_t columns = placing->fours || tensor->isNibbles ? 2 * tensor->width : tensor->width;
 	unsigned char* buffer = malloc(count * rowBytes + 1);
 	float* floats = placing->isStored ? 0 : malloc(columns * sizeof(float) + 1);
 	int isRead = buffer && (placing->isStored || floats) &&
@@ -325,10 +362,12 @@ static void PlacedChunk(void* context, uint64_t chunk)
 			Widened(source, tensor, floats, tensor->width);
 		if (floats)
 			Packed(target, floats, columns, 1, placing->bits);
-		else
+		for (uint64_t column = 0; !floats && tensor->isNibbles && column < columns; column++)
+			target[column] = (unsigned char)((int8_t)(source[column / 2] << (column % 2 ? 0 : 4)) >> 4);
+		if (!floats && !tensor->isNibbles)
 			memcpy(target, source, rowBytes);
-		float* parts = (float*)(target + strict_packed_data(tensor->width, 8));
-		for (uint64_t part = 0; placing->scales && part < (tensor->width + 31) / 32; part++)
+		float* parts = (float*)(target + strict_packed_data(columns, 8));
+		for (uint64_t part = 0; placing->scales && part < (columns + 31) / 32; part++)
 			parts[part] = placing->scales[row];
 	}
 	free(floats);
@@ -395,6 +434,8 @@ static double Matrix(double path, double entry, double bits, int transposed)
 		return strict_fail(failure);
 	if (tensor.rank != 2 || (bits != 8 && bits != 16 && bits != 32))
 		return strict_fail("OnlyMatricesOf8Or16Or32BitsAreSupported");
+	if (tensor.isNibbles)
+		return strict_fail("I4TensorsAreOnlyReadAsQuantizedRows");
 	uint64_t height = tensor.height, width = tensor.width, stride = 0;
 	uint64_t outer = transposed ? width : height, inner = transposed ? height : width;
 	int isStored = !tensor.isBrain && bits > 8 && tensor.bytes * 8 == bits;
@@ -435,7 +476,7 @@ static double QuantizedRows(double path, double entry, double scales, double bit
 	float* factors = failure ? 0 : Read(path, &scaled, &failure);
 	if (!factors)
 		return strict_fail(failure);
-	double result = strict_rows(tensor->height, tensor->width, bits, data, stride);
+	double result = strict_rows(tensor->height, tensor->width * (tensor->isNibbles ? 2 : 1), bits, data, stride);
 	failure = !*data ? "TensorTooLarge" : Placed(path, tensor, *data, *stride, bits, 1, factors, 0);
 	free(factors);
 	return failure ? strict_fail(failure) : result;
@@ -579,7 +620,7 @@ STRICT_EXPORT double TensorFile_Tuned(double self, double path, double entry, do
 	const strict_numbers* given = strict_numbers_of(factors);
 	if (strict_bits(quantized) >> 48 == 0x7FFC || given->count == 0)
 		return quantized;
-	uint64_t height = tensor.height, width = tensor.width;
+	uint64_t height = tensor.height, width = tensor.width * (tensor.isNibbles ? 2 : 1);
 	uint64_t rank = (uint64_t)given->count / (width + height + 1);
 	if (rank == 0 || rank * (width + height + 1) != (uint64_t)given->count)
 		return strict_fail("TunedFactorsDoNotFitTheMatrix");

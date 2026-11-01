@@ -8,7 +8,7 @@ Neural networks written in Strict, from single neurons to large language models,
 - Evolution instead of gradients: `Weasel`, `Neuroevolution` (XOR weights) and `ArmEvolution`, a genetic algorithm (`Reach`) for the joint angles of an `Arm` (Denavit-Hartenberg chains like the Franka Emika Panda).
 
 ## Model files
-- `Safetensors` reads `.safetensors` files (F32, F16, BF16 and I8 tensors through `TensorFile` in `native/`), `Written` writes numbers as a new file Strict, PyTorch and numpy read back, `Tuned` merges LoRAs into int8 rows at load like ComfyUI.
+- `Safetensors` reads `.safetensors` files (F32, F16, BF16 and I8 tensors through `TensorFile` in `native/`, the int4 weights of ComfyUI's `convrot_w4a4` layers as I4 matrices that `Quantized` unpacks to int8 rows), `Written` writes numbers as a new file Strict, PyTorch and numpy read back, `Tuned` merges LoRAs into int8 rows at load like ComfyUI.
 - `Gguf` reads llama.cpp's GGUF files through `GgufFile` (F32, F16, BF16, Q8_0, Q5_1, Q4_K, Q5_K, Q6_K, IQ4_NL, Q2_0, PQ2_0 and PTQ1_0, blocks decode to floats exactly like ggml). `Gguf(path, bits)` keeps rows as 32, 16 or 8 bit numbers; with 4 it keeps Q4_K and Q6_K blocks and the ternary PTQ1_0 blocks as they are (`strict.h` describes the packed formats), which the GPU multiplies directly.
 - `Float8` (E4M3) and `BFloat16` are the number formats of this package: a GPU loop of a method returning `BFloat16s` stores bfloat16 (from 2^20 numbers on), meant for results only int8 or 16 bit tensor core kernels read.
 
