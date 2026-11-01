@@ -3,7 +3,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 
 ## Bugs
 - Routed attention (routing > 0) with strided values (valueOffset/valueStride) runs unrouted: `strict_gpu_attention` takes the routed 8 bit path only for packed values, so H3Block.Heads with V read from the combined list attends densely (6 s slower, 12.9 dB from the routed result), routing 0 is bit-identical; the per-token value quantization (`strict_device_quantize_rows_run`) and the pooled value means need strided rows, H3 keeps the copy until then.
-- Native test results depend on the path a loop takes: it runs on the GPU when its lists are already there or it touches more than 1 MB once the GPU is open, so in a folder run the tests before decide, and GPU results miss the tolerances measured on the CPU (Speculation.Truncated, StrictComfy's FluxDecoder, FluxResnet, H3AudioBlock.Output and Moss.Ran; with `STRICT_GPU=all` also Convolved, DeltaChunks, FlashLayer and FlashNext): tolerances that hold on both paths, or the GPU precision those models need.
+- Wrong values from lists the GPU computed: with `STRICT_GPU=all` StrictComfy's H3Lora.Swapped gets garbage for the swapped halves of (1, 2, 3, 4) (line 58) and DeltaChunks' `Probe.Read.reads(9)` is 0 (line 17), and the first NeuralNetworks folder run after a build once generated a token that is not a whole number in Speculation's Generated (line 16, reruns pass); CPU-only runs pass, so a host read probably gets a list before its newest data came back from the GPU.
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).
