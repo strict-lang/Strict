@@ -17871,6 +17871,7 @@
   llvm.mlir.global internal @strict_gpu_convolution_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   // the WGSL kernel of NativeRuntimeWgsl.js, run on WebGPU by strict_gpu_shaded of kind 2 (0.0 on other platforms)
   llvm.mlir.global internal constant @strict_gpu_convolution_web("strict_convolution\00") : !llvm.array<19 x i8>
+  llvm.mlir.global internal constant @strict_gpu_normed_web("strict_normed\00") : !llvm.array<14 x i8>
   // `Convolved.Summed` on the 16 bit tensor cores (strict_device_convolution): a 3x3 convolution of values (height by
   // width pixels of channels numbers divided by factor, the affine scale and shift and swish applied on load, zeros
   // around) with weights (outputs rows of 9 taps of channels numbers; with a factor of 2 the image is doubled and the
@@ -17975,11 +17976,35 @@
     %fits = arith.andi %sized, %factorFits : i1
     cf.cond_br %fits, ^web, ^unable
   ^web:
-    %webName = llvm.mlir.addressof @strict_gpu_convolution_web : !llvm.ptr
     %kernelKind = arith.constant 2 : i64
-    %listMask = arith.constant 7 : i64
     %kernelFormat = arith.constant 17 : i64
-    %webbed = func.call @strict_gpu_shaded(%webName, %count, %zero, %kernelKind, %slots, %slotCount, %listMask, %kernelFormat) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
+    %normedCount = arith.constant 4 : i64
+    %normedSlots = llvm.alloca %normedCount x f64 : (i64) -> !llvm.ptr
+    llvm.store %values, %normedSlots : f64, !llvm.ptr
+    %normedAffine = llvm.getelementptr %normedSlots[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %affine, %normedAffine : f64, !llvm.ptr
+    %normedChannels = llvm.getelementptr %normedSlots[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %channelsNumber, %normedChannels : f64, !llvm.ptr
+    %swished = llvm.getelementptr %slots[7] : (!llvm.ptr) -> !llvm.ptr, f64
+    %swishing = llvm.load %swished : !llvm.ptr -> f64
+    %normedSwish = llvm.getelementptr %normedSlots[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %swishing, %normedSwish : f64, !llvm.ptr
+    %normedName = llvm.mlir.addressof @strict_gpu_normed_web : !llvm.ptr
+    %normedMask = arith.constant 3 : i64
+    %webNormed = func.call @strict_gpu_shaded(%normedName, %valuesCount, %zero, %kernelKind, %normedSlots, %normedCount, %normedMask, %kernelFormat) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
+    %isWebNormed = arith.cmpf one, %webNormed, %zero : f64
+    %webSlots = llvm.alloca %slotCount x f64 : (i64) -> !llvm.ptr
+    %slotBytes = arith.muli %slotCount, %eight : i64
+    %slotsCopied = llvm.call @memcpy(%webSlots, %slots, %slotBytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %webValues = arith.select %isWebNormed, %webNormed, %values : f64
+    llvm.store %webValues, %webSlots : f64, !llvm.ptr
+    %normedMark = arith.constant 2.0 : f64
+    %webSwish = arith.select %isWebNormed, %normedMark, %swishing : f64
+    %webSwishSlot = llvm.getelementptr %webSlots[7] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %webSwish, %webSwishSlot : f64, !llvm.ptr
+    %webName = llvm.mlir.addressof @strict_gpu_convolution_web : !llvm.ptr
+    %listMask = arith.constant 7 : i64
+    %webbed = func.call @strict_gpu_shaded(%webName, %count, %zero, %kernelKind, %webSlots, %slotCount, %listMask, %kernelFormat) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
     %isWebbed = arith.cmpf one, %webbed, %zero : f64
     cf.cond_br %isWebbed, ^webDone, ^run
   ^webDone:
