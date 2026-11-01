@@ -38,8 +38,8 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 	let parityRow = parity / factor;
 	let parityColumn = parity % factor;
 	let weights = places[4] + parity * outputs * taps;
-	let ownPixel = local % 16u;
-	let ownOutput = local / 16u;
+	let ownPixel = local / 16u;
+	let ownOutput = local % 16u;
 	let ownTap = local % 16u;
 	let firstItem = local / 16u;
 	var sums = mat4x4<f32>();
