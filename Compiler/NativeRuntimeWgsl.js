@@ -99,11 +99,11 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 }`;
 // the tiles (one workgroup each) and how many of them go into one submit, about 4 billion multiplications each: 11 to
 // 35 ms for the convolution, well below the 200 ms the desktop takes (it lagged behind a products dispatch of 1 s)
-Module['strictKernelGroups'] = { strict_convolution: (places) => {
+(Module['strictKernelGroups'] ||= {})['strict_convolution'] = (places) => {
 	const factor = places[17], taps = (4 - factor) * (4 - factor) * places[11];
 	const pixels = places[7] / factor * (places[9] / factor);
 	return [factor * factor * Math.ceil(pixels / 128) * Math.ceil(places[13] / 128), Math.floor(2 ** 32 / (16384 * taps)) || 1];
-} };
+};
 // Products.Multiplied: left, right, batches, rows, inner, columns, then the start, batch, row and inner strides of left
 // and the start, batch, inner and column strides of right (strict_gpu_products): a workgroup of 256 invocations per
 // tile of 128 rows and 128 columns of one batch (8 by 8 sums each), the inner numbers 16 at a time in workgroup memory
