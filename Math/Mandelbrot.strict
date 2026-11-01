@@ -31,43 +31,41 @@ Iterated(real Number, imaginary Number, limit Number) Number
 		if squared + height > 4
 			return index + 1
 	0
-Orbit(start ComplexDoubleDouble, seed ComplexDoubleDouble, limit Number) Numbers
-	Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Of(Complex(1, 0)), 8) is (0, 0, 1, 0, 2, 0, 5, 0)
-	Orbit(ComplexDoubleDouble.Of(Complex(1, 0)), ComplexDoubleDouble.Zero, 2) is (1, 0, 1, 0, 1, 0)
+Orbit(start ComplexDoubleDouble, seed ComplexDoubleDouble, limit Number) List(Complex)
+	Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Of(Complex(1, 0)), 8).Length is 4
+	Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Of(Complex(1, 0)), 8).Last is Complex(5, 0)
+	Orbit(ComplexDoubleDouble.Of(Complex(1, 0)), ComplexDoubleDouble.Zero, 2).Length is 3
 	mutable point = start
-	mutable orbit = (start.real.high, start.imaginary.high)
+	mutable orbit = List(Complex) + start.High
 	for limit
 		point = point.Squared + seed
-		orbit = orbit + point.real.high + point.imaginary.high
+		orbit = orbit + point.High
 		if Beyond(point.SquaredLength)
 			return orbit
 	orbit
-Enclosed(orbit Numbers, radius Number, limit Number) Boolean
-	Enclosed((0, 0, 0, 0, 0, 0), 0.01, 2)
-	Enclosed((0, 0, 2, 0), 0.01, 1) is false
+Enclosed(orbit List(Complex), radius Number, limit Number) Boolean
+	Enclosed((Complex.Zero, Complex.Zero, Complex.Zero), 0.01, 2)
+	Enclosed((Complex.Zero, Complex(2, 0)), 0.01, 1) is false
 	Enclosed(Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Of(Complex(-0.75, 0.1)), 32), 0.0000001, 32)
 	Enclosed(Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Of(Complex(-0.75, 0.1)), 64), 0.0000001, 64) is false
 	Enclosed(Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Zero, 32), 0.75, 32) is false
-	if orbit.Length < (limit + 1) * 2
+	if orbit.Length < limit + 1
 		return false
 	DiskEnclosed(orbit, radius, limit)
-DiskEnclosed(orbit Numbers, radius Number, limit Number) Boolean
+DiskEnclosed(orbit List(Complex), radius Number, limit Number) Boolean
 	mutable offset = Complex.Zero
 	mutable error = 0
 	for limit
 		error = DiskError(orbit, index, offset, error)
-		offset = Point(orbit, index) * offset * 2 + Complex(radius, 0)
-		if Point(orbit, index + 1).Length + 0.000000000000001 + offset.Length * 1.000000000000001 + error >= 2
+		offset = orbit(index) * offset * 2 + Complex(radius, 0)
+		if orbit(index + 1).Length + 0.000000000000001 + offset.Length * 1.000000000000001 + error >= 2
 			return false
 	true
-DiskError(orbit Numbers, position Number, offset Complex, previous Number) Number
+DiskError(orbit List(Complex), position Number, offset Complex, previous Number) Number
 	let bound = offset.Length * 1.000000000000001
-	let factor = 2 * (Point(orbit, position).Length + 0.000000000000001) + 2 * bound + previous
+	let factor = 2 * (orbit(position).Length + 0.000000000000001) + 2 * bound + previous
 	let error = factor * previous + bound * bound
 	error * 1.000000000000001 + bound * 0.000000000000001 + 0.00000000000000000000000000001
-Point(orbit Numbers, position Number) Complex
-	Point((1, 2, 3, 4), 1) is Complex(3, 4)
-	Complex(orbit(position * 2), orbit(position * 2 + 1))
 Beyond(squared DoubleDouble) Boolean
 	Beyond(DoubleDouble(4, 0.000000000000000000000000000001))
 	Beyond(DoubleDouble(4, -0.000000000000000000000000000001)) is false

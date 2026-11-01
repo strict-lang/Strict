@@ -1,6 +1,5 @@
-has orbit Numbers with value.Bits is 32
-has re Number with value.Bits is 32
-has im Number with value.Bits is 32
+has orbit List(Complex) with value.Bits is 32
+has center Complex with value.Bits is 32
 has left Number with value.Bits is 32
 has top Number with value.Bits is 32
 has step Number with value.Bits is 32
@@ -8,60 +7,48 @@ has limit Number with value.Bits is 32
 has julia Number with value.Bits is 32
 has start Number with value.Bits is 32
 constant Seahorse = Mandelbrot.Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Of(Complex(-0.75, 0.1)), 64)
-constant Inside = Perturbation(Seahorse, -0.75, 0.1, 0, 0, 0.001, 64, 0, 0)
-constant Outside = Perturbation(Mandelbrot.Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Of(Complex(1, 0)), 64), 1, 0, 0, 0, 0.001, 64, 0, 0)
+constant Inside = Perturbation(Seahorse, Complex(-0.75, 0.1), 0, 0, 0.001, 64, 0, 0)
+constant Outside = Perturbation(Mandelbrot.Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Of(Complex(1, 0)), 64), Complex(1, 0), 0, 0, 0.001, 64, 0, 0)
 constant Rabbits = Mandelbrot.Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Of(Complex(-0.123, 0.745)), 64)
-constant Rabbit = Perturbation(Rabbits, 0, 0, 0, 0, 0.01, 64, 1, 0)
-constant Offset = Perturbation(Rabbits + Mandelbrot.Orbit(ComplexDoubleDouble.Of(Complex(0.3, -0.2)), ComplexDoubleDouble.Of(Complex(-0.123, 0.745)), 64), 0.3, -0.2, 0, 0, 0.01, 64, 1, 65)
+constant Rabbit = Perturbation(Rabbits, Complex.Zero, 0, 0, 0.01, 64, 1, 0)
+constant Offset = Perturbation(Rabbits + Mandelbrot.Orbit(ComplexDoubleDouble.Of(Complex(0.3, -0.2)), ComplexDoubleDouble.Of(Complex(-0.123, 0.745)), 64), Complex(0.3, -0.2), 0, 0, 0.01, 64, 1, 65)
 Strip(first Number, count Number, width Number) Numbers
 	Inside.Strip(0, 4, 2) is (34, 0, 33, 35)
-	Inside.Rebased(1.75, -0.1) is 3
+	Inside.Rebased(Complex(1.75, -0.1)) is 3
 	for count
 		let position = first + index
-		Pixel(left + (position % width + 0.5) * step, top - ((position / width).Floor + 0.5) * step)
-Pixel(horizontal Number, vertical Number) Number
-	Outside.Pixel(-1.5, 0) is 0
-	Perturbation(Outside, step = 0.000001).Pixel(-1.5, 0) is 0
-	(Rabbit.Pixel(-0.3, 0.4), Rabbit.Pixel(0.96, -0.58), Rabbit.Pixel(0.5, 0.6)) is (40, 45, 3)
-	(Offset.Pixel(-0.6, 0.6), Offset.Pixel(0.66, -0.38), Offset.Pixel(0.2, 0.8)) is (40, 45, 3)
-	let coarse = julia < 0.5 and step > 0.00001 and Mandelbrot.Interior(re + horizontal, im + vertical)
-	coarse then 0 else Rebased(horizontal, vertical)
-Rebased(horizontal Number, vertical Number) Number
-	Outside.Rebased(-1.75, 0.1) is 33
-	mutable real = julia * horizontal
-	mutable imaginary = julia * vertical
+		Pixel(Complex(left + (position % width + 0.5) * step, top - ((position / width).Floor + 0.5) * step))
+Pixel(offset Complex) Number
+	Outside.Pixel(Complex(-1.5, 0)) is 0
+	Perturbation(Outside, step = 0.000001).Pixel(Complex(-1.5, 0)) is 0
+	(Rabbit.Pixel(Complex(-0.3, 0.4)), Rabbit.Pixel(Complex(0.96, -0.58)), Rabbit.Pixel(Complex(0.5, 0.6))) is (40, 45, 3)
+	(Offset.Pixel(Complex(-0.6, 0.6)), Offset.Pixel(Complex(0.66, -0.38)), Offset.Pixel(Complex(0.2, 0.8))) is (40, 45, 3)
+	let point = center + offset
+	let coarse = julia < 0.5 and step > 0.00001 and Mandelbrot.Interior(point.real, point.imaginary)
+	coarse then 0 else Rebased(offset)
+Rebased(offset Complex) Number
+	Outside.Rebased(Complex(-1.75, 0.1)) is 33
+	mutable delta = offset * julia
 	mutable position = start
 	for limit
-		let next = Real(position, real, imaginary, horizontal * (1 - julia))
-		imaginary = Imaginary(position, real, imaginary, vertical * (1 - julia))
-		real = next
-		position = Moved(position, real, imaginary)
+		delta = Next(position, delta, offset * (1 - julia))
+		position = Moved(position, delta)
 		if position >= orbit.Length
 			return index + 1
 	0
-Moved(position Number, real Number, imaginary Number) Number
-	Inside.Moved(0, 0, 0) is 1
-	Inside.Moved(-3, 0, 0) is 1
-	Outside.Moved(2, 0, 0) is Outside.orbit.Length
+Moved(position Number, delta Complex) Number
+	Inside.Moved(0, Complex.Zero) is 1
+	Inside.Moved(-3, Complex.Zero) is 1
+	Outside.Moved(2, Complex.Zero) is Outside.orbit.Length
 	let next = position < 0 then 1 else position + 1
-	let full = orbit(next * 2) + real
-	let height = orbit(next * 2 + 1) + imaginary
-	let squared = full * full + height * height
+	let squared = (orbit(next) + delta).SquaredLength
 	if squared > 4
 		return orbit.Length
-	let last = next < start then start else orbit.Length / 2
-	squared < real * real + imaginary * imaginary or next + 1 >= last then -1 - next else next
-Real(position Number, real Number, imaginary Number, offset Number) Number
-	Inside.Real(0, 0, 0, 0.5) is 0.5
-	let shift = position < 0 then -2 - position * 2 else 0
-	let anchor = position < 0 then 0 else position * 2
-	let x = real + orbit(shift) - orbit(0)
-	let y = imaginary + orbit(shift + 1) - orbit(1)
-	x * (2 * orbit(anchor) + x) - y * (2 * orbit(anchor + 1) + y) + offset
-Imaginary(position Number, real Number, imaginary Number, offset Number) Number
-	Inside.Imaginary(0, 0, 0, 0.5) is 0.5
-	let shift = position < 0 then -2 - position * 2 else 0
-	let anchor = position < 0 then 0 else position * 2
-	let x = real + orbit(shift) - orbit(0)
-	let y = imaginary + orbit(shift + 1) - orbit(1)
-	2 * (orbit(anchor) * y + orbit(anchor + 1) * x + x * y) + offset
+	let last = next < start then start else orbit.Length
+	squared < delta.SquaredLength or next + 1 >= last then -1 - next else next
+Next(position Number, delta Complex, added Complex) Complex
+	Inside.Next(0, Complex.Zero, Complex(0.5, 0.5)) is Complex(0.5, 0.5)
+	let rebased = position < 0
+	let shifted = rebased then delta + orbit(-1 - position) - orbit(0) else delta
+	let anchor = rebased then orbit(0) else orbit(position)
+	anchor * shifted * 2 + shifted.Squared + added

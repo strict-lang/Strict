@@ -19,7 +19,6 @@ Details for the GPU line of [improvements.md](improvements.md), one short line e
 
 ## Memory
 - streamed weights are not overlapped with compute (H3 idles ~230 ms per step, ComfyUI 60): uploads ahead in a ring need a cheaper refill than walking the chain
-- power of two size classes leave ~1.9 GB of H3's pool unused, finer classes churned activations through the driver
 - without spilled rows the trim before an own block runs at every block
 - full collections before big activation blocks (H3 ~98 per step, 18-28 ms each in strict_gc_mark_range): skip lists without references in the mark, or a sub-allocating pool
 - GPU-only lists can't be spilled, activations kept across streamed blocks take every byte from the weights
@@ -38,4 +37,4 @@ Details for the GPU line of [improvements.md](improvements.md), one short line e
 - convolutions of 64 bit pixels from a CPU loop miss strict_gpu_convolution without STRICT_GPU=all (H3 VAE encode of a PNG frame 12.5 instead of 0.7 s)
 - each convolution writes bfloat16 copies of its input and weights first; stages of 64 channels or 3 buffers once shared memory allows it
 - PNG encoding takes 0.28 s for a 720x1280 image (ComfyUI 0.08)
-- small number types (Vector2, Vector3, Size, Complex) as kernel values: only Number, Boolean and byte packed types pass (MlirGpuCheck.Values, MlirLanes.IsPacked), flatten them into 2-4 lanes, then Perturbation can take Complex
+- small number types as kernel values: values, parameters and members of types with 2-4 Number members (Complex) and lists of them read by index work (StructLanes, LaneCalls, MlirDeviceRecords), still on the CPU: a `for` over a List(Complex), a List(Complex) result, a method returning a Complex that has a loop or an early return, the 32 bit types (Vector2, Vector3, Size); a flattened list goes up again for every launch; a `to Text` reached only through text conversion is not emitted unless something calls it (why lane inlining skips `to`)

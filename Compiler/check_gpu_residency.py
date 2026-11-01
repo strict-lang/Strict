@@ -92,4 +92,108 @@ assert built.returncode==0,built.stdout[-2000:]+built.stderr[-2000:]
 ran=subprocess.run([str(folder/'SmallGpu.exe')],cwd=folder,capture_output=True,text=True,env={key: value for key, value in os.environ.items() if key!='STRICT_GPU'})
 print(ran.stdout,flush=True)
 assert 'gpu kernels 2, doubled 6, opened 2' in ran.stdout,'loops over more than 1 MB did not run on the open GPU'
+pair='''has real Number
+has imaginary Number
++(other) Pair
+	Pair(1, 2) + Pair(3, -1) is Pair(4, 1)
+	Pair(real + other.real, imaginary + other.imaginary)
+Squared Pair
+	Pair(1, 2).Squared is Pair(-3, 4)
+	Pair(real * real - imaginary * imaginary, 2 * real * imaginary)
+SquaredLength Number
+	Pair(3, 4).SquaredLength is 25
+	real * real + imaginary * imaginary
+'''
+escape='''has logger
+Escaped(count Number) Numbers
+	PairEscape(Logger).Escaped(2) is (3, 64)
+	for count
+		let c = Pair(index / count * 2 - 1.5, 0.5)
+		mutable z = Pair(0, 0)
+		mutable steps = 0
+		for 64
+			if z.SquaredLength < 4
+				z = z.Squared + c
+				steps = steps + 1
+		steps
+Run
+	let before = Process.Executed
+	let escaped = Escaped(2000000)
+	let after = Process.Executed
+	logger.Log("gpu kernels " + (after(3) - before(3)) + ", " + escaped(1000000) + " " + escaped(0))
+'''
+(folder/'Pair.strict').write_bytes(pair.replace('\n','\r\n').encode('utf-8'))
+(folder/'PairEscape.strict').write_bytes(escape.replace('\n','\r\n').encode('utf-8'))
+built=subprocess.run([str(root/'strict.exe'),'build','PairEscape.strict'],cwd=folder,capture_output=True,text=True)
+assert built.returncode==0,built.stdout[-2000:]+built.stderr[-2000:]
+ran=subprocess.run([str(folder/'PairEscape.exe')],cwd=folder,capture_output=True,text=True,env={key: value for key, value in os.environ.items() if key!='STRICT_GPU'})
+print(ran.stdout,flush=True)
+assert 'gpu kernels 1, 64 3' in ran.stdout,'a loop with Pair values and a mutable Pair did not run as one GPU kernel'
+reading='''has logger
+Table(count Number) Numbers
+	SimpleRead(Logger).Table(2) is (0, 0.5)
+	for count
+		index / count
+Read(table Numbers, count Number) Numbers
+	SimpleRead(Logger).Read((1, 2), 3) is (2, 4, 2)
+	for count
+		table(index % table.Length) * 2
+Run
+	let read = Read(Table(1000), 2000000)
+	logger.Log("read " + read(0) + " " + read(1999999))
+'''
+(folder/'SimpleRead.strict').write_bytes(reading.replace('\n','\r\n').encode('utf-8'))
+built=subprocess.run([str(root/'strict.exe'),'build','SimpleRead.strict'],cwd=folder,capture_output=True,text=True)
+assert built.returncode==0,built.stdout[-2000:]+built.stderr[-2000:]
+ran=subprocess.run([str(folder/'SimpleRead.exe')],cwd=folder,capture_output=True,text=True,env={key: value for key, value in os.environ.items() if key!='STRICT_GPU'})
+print(ran.stdout,flush=True)
+assert 'read 0 1.998' in ran.stdout,'the result of a GPU loop reading a host list crashed or was wrong when the CPU read it'
+orbiting='''has orbit List(Pair)
+has shift Pair
+Escaped(count Number) Numbers
+	Orbiting((Pair(0, 0), Pair(0.5, 0.5)), Pair(-1.5, 0)).Escaped(2) is (32, 3)
+	for count
+		let reference = orbit(index % orbit.Length)
+		Steps(reference, Pair(index / count, reference.imaginary) + shift)
+Steps(start Pair, c Pair) Number
+	Orbiting((Pair(0, 0)), Pair(0, 0)).Steps(Pair(0, 0), Pair(2, 0)) is 1
+	mutable z = start
+	for 32
+		if z.SquaredLength >= 4
+			return index
+		z = z.Squared + c
+	32
+'''
+orbits='''has logger
+Orbit(count Number) List(Pair)
+	OrbitGpu(Logger).Orbit(2) is (Pair(0, 0.5), Pair(0.5, 0.25))
+	for count
+		Pair(index / count, 0.5 - index / count / 2)
+Run
+	let before = Process.Executed
+	let escaped = Orbiting(Orbit(1000), Pair(-1.5, 0)).Escaped(2000000)
+	let after = Process.Executed
+	logger.Log("gpu kernels " + (after(3) - before(3)) + ", " + escaped(0) + " " + escaped(1000000) + " " + escaped(1999999))
+'''
+(folder/'Orbiting.strict').write_bytes(orbiting.replace('\n','\r\n').encode('utf-8'))
+(folder/'OrbitGpu.strict').write_bytes(orbits.replace('\n','\r\n').encode('utf-8'))
+built=subprocess.run([str(root/'strict.exe'),'build','OrbitGpu.strict'],cwd=folder,capture_output=True,text=True)
+assert built.returncode==0,built.stdout[-2000:]+built.stderr[-2000:]
+ran=subprocess.run([str(folder/'OrbitGpu.exe')],cwd=folder,capture_output=True,text=True,env={key: value for key, value in os.environ.items() if key!='STRICT_GPU'})
+print(ran.stdout,flush=True)
+assert 'gpu kernels 1, 3 6 32' in ran.stdout,'a loop reading a List(Pair) and a Pair member, calling a method with Pair parameters, did not run as one GPU kernel'
+viewing='''has zoom Number
+has seed Pair = Pair.Zero
+has center Pair
+Zoomed(factor Number) Viewing
+	Viewing(2, Pair(1, 1), Pair(3, 4)).Zoomed(2) is Viewing(4, Pair(1, 1), Pair(3, 4))
+	Viewing(2, center = Pair(3, 4)).Zoomed(2) is Viewing(4, Pair.Zero, Pair(3, 4))
+	Viewing(zoom * factor, seed, center)
+'''
+(folder/'Pair.strict').write_bytes(pair.replace('has imaginary Number' + chr(10), 'has imaginary Number' + chr(10) + 'constant Zero = Pair(0, 0)' + chr(10)).replace(chr(10), chr(13) + chr(10)).encode('utf-8'))
+(folder/'Viewing.strict').write_bytes(viewing.replace(chr(10), chr(13) + chr(10)).encode('utf-8'))
+built=subprocess.run([str(root/'strict.exe'),'build','Viewing.strict'],cwd=folder,capture_output=True,text=True)
+assert built.returncode==0,built.stdout[-2000:]+built.stderr[-2000:]
+tested=subprocess.run([str(folder/'Viewing.test.exe')],cwd=folder,capture_output=True,text=True)
+assert tested.returncode==0,'a type with Pair members (one with a default) compared with is failed natively: '+tested.stdout[-2000:]
 print('A list computed on the GPU from numbers alone stays there until the CPU reads it')

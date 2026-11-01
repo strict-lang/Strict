@@ -56,7 +56,7 @@ Copied(source Text, target Text, name Text) Texts
 IsList(kind Text) Boolean
 	Reading.IsList("Numbers")
 	Reading.IsList("Number") is false
-	MlirLayout(function).Represented(kind) is "List(Number)"
+	(MlirLayout(function).Represented(kind) is "List(Number)") or (MlirDeviceRecords(function, at).Slots(kind) > 0)
 Indexed(entry InstructionEntry) Texts
 	Text.Combine(Reading.Indexed(Lookup)).IndexOf("@strict_device_element(%d6d, %d6b, %d6k, %d6n)") > 0
 	Reading.Indexed(Lookup)(4).StartsWith("    llvm.store %d6y, %r")
@@ -123,6 +123,8 @@ Finished(entry InstructionEntry) Texts
 	MlirDeviceStatements(Absolute.function, 3).Finished(Absolute.function.method.instructions(3)).Length is 2
 	if entry.kind is InstructionType.CheckError
 		return List(Text)
+	if entry.kind is InstructionType.FieldLoad
+		return MlirDeviceRecords(function, at).Fielded(entry)
 	if entry.kind is in (InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue, InstructionType.JumpEnd)
 		return MlirStatements(function, at).Jumped(entry)
 	entry.kind is InstructionType.Return then Returned("%r" + entry.payload(0)) else Collected(entry)

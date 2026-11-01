@@ -1,0 +1,134 @@
+has types List(TypeEntry)
+constant Real = MemberEntry("real", "Strict/Number", List(InstructionEntry), false)
+constant Imaginary = MemberEntry("imaginary", "Strict/Number", List(InstructionEntry), false)
+constant Made = InstructionEntry.Invoke(12, ("Strict/Pair", "from", "Pair", "real", "imaginary"), (6, 11), -1)
+constant Squared = MethodEntry("Squared", List(MemberEntry), "Strict/Pair", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "real"), InstructionEntry.Binary(InstructionType.Multiply, (0, 0, 2)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "imaginary"), InstructionEntry.Binary(InstructionType.Multiply, (3, 3, 5)), InstructionEntry.Binary(InstructionType.Subtract, (2, 5, 6)), InstructionEntry.LoadNumber(7, 2), InstructionEntry.Binary(InstructionType.Multiply, (7, 0, 9)), InstructionEntry.Binary(InstructionType.Multiply, (9, 3, 11)), Made, InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 12), InstructionEntry.Return(12)))
+constant Pair = TypeEntry("Strict/Pair", (Real, Imaginary), List(MethodEntry) + Squared)
+constant Constructed = InstructionEntry.Invoke(2, ("Strict/Pair", "from", "Pair", "real", "imaginary"), (0, 1), -1)
+constant Calling = (InstructionEntry.LoadNumber(0, 3), InstructionEntry.LoadNumber(1, 2), Constructed, InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 2), InstructionEntry.Invoke(3, ("Strict/Pair", "Squared", "Strict/Pair"), List(Number), 2), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 3), InstructionEntry(InstructionType.FieldLoad, ("real", "Pair"), (4, 3, -1, -2)), InstructionEntry.Return(4))
+constant Caller = TypeEntry("Strict/Caller", List(MemberEntry), List(MethodEntry) + MethodEntry("Run", List(MemberEntry), "Strict/Number", Calling))
+constant Sample = StructLanes((Caller, Pair))
+constant Halves = TypeEntry("Strict/Halves", (Real, MemberEntry("half", "Strict/Number", List(InstructionEntry), false, 32)), List(MethodEntry))
+constant Custom = TypeEntry("Strict/Custom", (Real, Imaginary), List(MethodEntry) + MethodEntry("from", List(MemberEntry), "Strict/Custom", List(InstructionEntry)))
+constant Kept = TypeEntry("Strict/Kept", (Real, MemberEntry("Zero", "Strict/Kept", List(InstructionEntry), true)), List(MethodEntry))
+constant Splitting = StructLanes(Inliner((Caller, Pair), true).Inlined)
+Members(type TypeEntry) Texts
+	StructLanes.Members(Pair) is ("real", "imaginary")
+	StructLanes.Members(Caller).Length is 0
+	StructLanes.Members(Kept).Length is 0
+	StructLanes.Members(Halves).Length is 0
+	StructLanes.Members(Custom).Length is 0
+	for type.methods
+		if value.Name is in ("from", "Validated")
+			return List(Text)
+	let fields = Fields(type)
+	(fields.Length < 2) or (fields.Length > 4) or ("" is in fields) then List(Text) else fields
+Fields(type TypeEntry) Texts
+	StructLanes.Fields(Pair) is ("real", "imaginary")
+	StructLanes.Fields(Kept) is ("real")
+	for type.members
+		if value.IsConstant is false
+			IsLane(value) then value.Name else ""
+IsLane(member MemberEntry) Boolean
+	StructLanes.IsLane(Real)
+	StructLanes.IsLane(MemberEntry("half", "Strict/Number", List(InstructionEntry), false, 32)) is false
+	StructLanes.IsLane(MemberEntry("named", "Strict/Text", List(InstructionEntry), false)) is false
+	(member.typeName is "Strict/Number") and (member.Bits is 64) and (member.initial.Length is 0)
+Split List(TypeEntry)
+	Sample.Split.First.methods.First.instructions.Length is 11
+	Splitting.Split.First.methods.First.instructions.Length is 20
+	Splitting.Split.First.methods.First.instructions(18).texts is ("lanes3_real")
+	for types
+		let members = Members(value).Length > 0 then value.members else LaneCalls(types).Divided(value.members)
+		TypeEntry(value.Name, members, Methods(value))
+Methods(type TypeEntry) List(MethodEntry)
+	Sample.Methods(Caller).First.instructions(2).texts is ("lanes2_real")
+	for type.methods
+		let rewritten = Rewritten(type, value)
+		let parameters = Members(type).Length > 0 then value.parameters else LaneCalls(types).Divided(value.parameters)
+		MethodEntry(value.Name, parameters, value.declaredType, rewritten.instructions, value.Slots)
+Rewritten(type TypeEntry, method MethodEntry) MethodEntry
+	Sample.Rewritten(Caller, MethodEntry.CountingLoop) is MethodEntry.CountingLoop
+	let calls = LaneCalls(types)
+	let fixed = Members(type).Length > 0 then List(Text) else calls.Laned(method.parameters) + calls.Laned(type.members)
+	let flow = LaneFlow(types, LaneFlow(types).Lists(type, method), fixed)
+	let variables = flow.Variables(method.instructions, List(Text), 4) + fixed
+	let base = LoadReuse(method.instructions).RegisterCount
+	mutable laned = List(Text)
+	mutable result = List(InstructionEntry)
+	for method.instructions
+		result = result + Replaced(value, flow, laned, variables, base)
+		laned = flow.Tracked(value, laned, variables)
+	MethodEntry(method.Name, method.parameters, method.declaredType, Inliner(types).Looped(result), method.Slots)
+Replaced(entry InstructionEntry, flow LaneFlow, laned Texts, variables Texts, base Number) List(InstructionEntry)
+	Sample.Replaced(Calling(3), LaneFlow.Sample, ("2 Strict/Pair"), List(Text), 8).Length is 0
+	Sample.Replaced(Calling(4), LaneFlow.Sample, ("2 Strict/Pair"), List(Text), 8).Last is Calling(4)
+	let produced = flow.Produced(entry, List(Text))
+	if produced is not ""
+		return entry.kind is InstructionType.Invoke then Built(entry) else LaneCalls(types).Spread(entry, produced, base)
+	let isMoved = entry.kind is in (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable)
+	let variable = isMoved then flow.Typed(variables, entry.texts(0)) else ""
+	variable is "" then Other(entry, flow, laned, base) else Copied(entry, variable, base)
+Other(entry InstructionEntry, flow LaneFlow, laned Texts, base Number) List(InstructionEntry)
+	Sample.Other(Calling(6), LaneFlow.Sample, ("3 Pair"), 8).First.texts is ("lanes3_real")
+	StructLanes(LaneCalls.Sample.types).Other(LaneCalls.Shift, LaneFlow.Sample, ("4 Pair"), 9).Length is 3
+	Sample.Other(Calling(4), LaneFlow.Sample, ("2 Pair"), 8).Last is Calling(4)
+	let source = entry.kind is InstructionType.FieldLoad then 1 else 0
+	let laneType = entry.payload.Length > source then flow.Typed(laned, entry.payload(source) to Text) else ""
+	if (laneType is not "") and (entry.kind is in (InstructionType.FieldLoad, InstructionType.CheckError))
+		return Forwarded(entry)
+	let calls = LaneCalls(types)
+	calls.Signature(entry).Length > 0 then calls.Called(entry, laned, base) else Materialized(entry, laned, base) + entry
+Forwarded(entry InstructionEntry) List(InstructionEntry)
+	Sample.Forwarded(Calling(6)).First.texts is ("lanes3_real")
+	Sample.Forwarded(Calling(6)).First.payload is (4, -1)
+	Sample.Forwarded(Calling(3)).Length is 0
+	if entry.kind is InstructionType.CheckError
+		return List(InstructionEntry)
+	let lane = Lane("lanes" + entry.payload(1), entry.texts(0))
+	List(InstructionEntry) + Named(InstructionType.LoadVariableToRegister, entry.payload(0), lane, entry.line)
+Built(entry InstructionEntry) List(InstructionEntry)
+	Sample.Built(Constructed).Last.texts is ("lanes2_imaginary")
+	Sample.Built(Constructed).Last.payload is (1, -1)
+	for LoadReuse(List(InstructionEntry)).InvokeReads(entry)
+		let lane = Lane("lanes" + entry.payload(0), entry.texts(3 + index))
+		Named(InstructionType.StoreRegisterToVariable, entry.payload(value), lane, entry.line)
+Copied(entry InstructionEntry, type Text, base Number) List(InstructionEntry)
+	Sample.Copied(LaneFlow.Kept, "Strict/Pair", 8)(1).texts is ("pair_real")
+	Sample.Copied(LaneFlow.Reloaded, "Strict/Pair", 8)(1).texts is ("lanes5_real")
+	let register = "lanes" + entry.payload(0)
+	let isStored = entry.kind is InstructionType.StoreRegisterToVariable
+	Moves(isStored then register else entry.texts(0), isStored then entry.texts(0) else register, type, base, entry.line)
+Moves(source Text, target Text, type Text, base Number, line Number) List(InstructionEntry)
+	Sample.Moves("a", "b", "Strict/Pair", 8, 0).Length is 4
+	Sample.Moves("a", "b", "Strict/Pair", 8, 0)(3).texts is ("b_imaginary")
+	mutable lines = List(InstructionEntry)
+	for Members(Inliner(types).TypeOf(type))
+		let loaded = Named(InstructionType.LoadVariableToRegister, base, Lane(source, value), line)
+		lines = lines + (loaded, Named(InstructionType.StoreRegisterToVariable, base, Lane(target, value), line))
+	lines
+Materialized(entry InstructionEntry, laned Texts, base Number) List(InstructionEntry)
+	Sample.Materialized(Calling(4), ("2 Strict/Pair"), 8).Last.payload is (2, -1, -2, 2, -4, -5, -3, 2, 8, 9, 0)
+	Sample.Materialized(Calling(7), List(Text), 8).Length is 0
+	mutable lines = List(InstructionEntry)
+	for LoadReuse(List(InstructionEntry)).Reads(entry)
+		let type = LaneFlow(types).Typed(laned, value to Text)
+		if type is not ""
+			lines = lines + Rebuilt(value, type, base, entry.line)
+	lines
+Rebuilt(register Number, type Text, base Number, line Number) List(InstructionEntry)
+	Sample.Rebuilt(2, "Strict/Pair", 8, 0)(1).texts is ("lanes2_imaginary")
+	let members = Members(Inliner(types).TypeOf(type))
+	mutable lines = List(InstructionEntry)
+	mutable arguments = List(Number)
+	for members
+		lines = lines + Named(InstructionType.LoadVariableToRegister, base + index, Lane("lanes" + register, value), line)
+		arguments = arguments + (base + index)
+	let made = InstructionEntry.Invoke(register, (type, "from", TypeEntry.ShortName(type)) + members, arguments, -1)
+	lines + InstructionEntry(made.kind, made.texts, made.payload, line)
+Named(kind Number, register Number, name Text, line Number) InstructionEntry
+	StructLanes.Named(InstructionType.LoadVariableToRegister, 2, "a", 7).line is 7
+	InstructionEntry(kind, List(Text) + name, (register, -1), line)
+Lane(owner Text, member Text) Text
+	StructLanes.Lane("lanes2", "real") is "lanes2_real"
+	owner + "_" + member

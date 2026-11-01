@@ -1,0 +1,121 @@
+has types List(TypeEntry)
+constant Offset = MemberEntry("offset", "Strict/Pair", List(InstructionEntry), false, 32)
+constant Counted = MemberEntry("count", "Strict/Number", List(InstructionEntry), false)
+constant Shifting = MethodEntry("Shifted", (Offset, Counted), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "offset"), InstructionEntry(InstructionType.FieldLoad, ("real", "Pair"), (1, 0, -1, -2)), InstructionEntry.Return(1)))
+constant Drawer = TypeEntry("Strict/Drawer", (Offset, Counted), List(MethodEntry) + Shifting)
+constant Shift = InstructionEntry.Invoke(5, ("Strict/Drawer", "Shifted", "Strict/Number", "offset", "count"), (4, 3), -1)
+constant Made = InstructionEntry.Invoke(6, ("Strict/Drawer", "from", "Strict/Drawer", "offset", "count"), (4, 3), -1)
+constant Offsets = InstructionEntry(InstructionType.FieldLoad, ("offset", "Drawer"), (3, 2, -1, -2))
+constant Sample = LaneCalls((StructLanes.Pair, Drawer))
+Laned(members List(MemberEntry)) Texts
+	Sample.Laned(Drawer.members) is ("offset Pair")
+	Sample.Laned(StructLanes.Pair.members).Length is 0
+	for members
+		if Lanes(value).Length > 0
+			value.Name + " " + TypeEntry.ShortName(value.typeName)
+Lanes(member MemberEntry) Texts
+	Sample.Lanes(Offset) is ("real", "imaginary")
+	Sample.Lanes(Counted).Length is 0
+	Sample.Lanes(MemberEntry("seed", "Strict/Pair", List(InstructionEntry) + StructLanes.Constructed, false)).Length is 0
+	let isPlain = member.IsConstant or (member.initial.Length > 0)
+	isPlain then List(Text) else StructLanes.Members(Inliner(types).TypeOf(member.typeName))
+Divided(members List(MemberEntry)) List(MemberEntry)
+	Sample.Divided(Drawer.members).Length is 3
+	Sample.Divided(Drawer.members)(1).Name is "offset_imaginary"
+	Sample.Divided(Drawer.members)(1).Bits is 32
+	mutable result = List(MemberEntry)
+	for members
+		let member = value
+		let lanes = Lanes(member)
+		result = lanes.Length is 0 then result + member else result + Split(member, lanes)
+	result
+Split(member MemberEntry, lanes Texts) List(MemberEntry)
+	Sample.Split(Offset, ("real", "imaginary")).First.Name is "offset_real"
+	for lanes
+		MemberEntry(StructLanes.Lane(member.Name, value), "Strict/Number", List(InstructionEntry), false, member.Bits)
+Signature(call InstructionEntry) Texts
+	Sample.Signature(Shift) is ("offset Pair")
+	Sample.Signature(Made) is ("offset Pair")
+	Sample.Signature(StructLanes.Constructed).Length is 0
+	Sample.Signature(StructLanes.Calling(4)).Length is 0
+	if call.kind is not InstructionType.Invoke
+		return List(Text)
+	let type = Inliner(types).TypeOf(call.texts(0))
+	if call.texts(1) is "from"
+		return StructLanes.Members(type).Length > 0 then List(Text) else Laned(type.members)
+	let callee = Inliner(types).Callee(type, call)
+	let isOwn = (StructLanes.Members(type).Length > 0) or (callee.instructions.Length is 0)
+	isOwn then List(Text) else Laned(callee.parameters)
+Width(call InstructionEntry, position Number) Number
+	Sample.Width(Shift, 0) is 2
+	Sample.Width(Shift, 1) is 0
+	let type = LaneFlow(types).Typed(Signature(call), call.texts(3 + position))
+	type is "" then 0 else StructLanes.Members(Inliner(types).TypeOf(type)).Length
+Called(call InstructionEntry, laned Texts, base Number) List(InstructionEntry)
+	Sample.Called(Shift, ("4 Pair"), 9).Length is 3
+	Sample.Called(Shift, ("4 Pair"), 9).First.texts is ("lanes4_real")
+	Sample.Called(Shift, List(Text), 9).First.texts is ("real", "Pair")
+	Sample.Called(Shift, ("4 Pair"), 9).Last.texts(4) is "offset_imaginary"
+	Sample.Called(Shift, ("4 Pair"), 9).Last.payload is (5, -1, -2, 3, -4, -5, -6, -3, 3, 9, 10, 3, 0)
+	let reads = LoadReuse(List(InstructionEntry)).InvokeReads(call)
+	let instance = reads.Length > call.texts.Length - 3 then call.payload(reads.Last) else -1
+	let names = (call.texts(0), call.texts(1), call.texts(2)) + Names(call)
+	let made = InstructionEntry.Invoke(call.payload(0), names, Registers(call, base), instance)
+	Loads(call, laned, base) + InstructionEntry(made.kind, made.texts, made.payload, call.line)
+Names(call InstructionEntry) Texts
+	Sample.Names(Made) is ("offset_real", "offset_imaginary", "count")
+	mutable names = List(Text)
+	for Range(3, call.texts.Length)
+		let name = call.texts(value)
+		let type = LaneFlow(types).Typed(Signature(call), name)
+		names = type is "" then names + name else names + Prefixed(name, StructLanes.Members(Inliner(types).TypeOf(type)))
+	names
+Prefixed(name Text, lanes Texts) Texts
+	Sample.Prefixed("a", ("x", "y")) is ("a_x", "a_y")
+	for lanes
+		StructLanes.Lane(name, value)
+Registers(call InstructionEntry, base Number) Numbers
+	Sample.Registers(Shift, 9) is (9, 10, 3)
+	let reads = LoadReuse(List(InstructionEntry)).InvokeReads(call)
+	mutable registers = List(Number)
+	mutable next = base
+	for Range(0, call.texts.Length - 3)
+		let width = Width(call, value)
+		registers = width is 0 then registers + call.payload(reads(value)) else registers + Sequence(next, width)
+		next = next + width
+	registers
+Sequence(start Number, count Number) Numbers
+	Sample.Sequence(9, 2) is (9, 10)
+	for count
+		start + index
+Loads(call InstructionEntry, laned Texts, base Number) List(InstructionEntry)
+	Sample.Loads(Shift, ("4 Pair"), 9)(1).payload is (10, -1)
+	Sample.Loads(Shift, List(Text), 9)(1).payload is (10, 4, -1, -2)
+	let reads = LoadReuse(List(InstructionEntry)).InvokeReads(call)
+	mutable lines = List(InstructionEntry)
+	for Range(0, call.texts.Length - 3)
+		let register = call.payload(reads(value))
+		let type = LaneFlow(types).Typed(Signature(call), call.texts(3 + value))
+		if type is not ""
+			let isLaned = LaneFlow(types).Typed(laned, register to Text) is not ""
+			lines = lines + Read(register, type, isLaned, base + lines.Length, call.line)
+	lines
+Read(register Number, type Text, isLaned Boolean, base Number, line Number) List(InstructionEntry)
+	Sample.Read(4, "Pair", true, 9, 0)(1).texts is ("lanes4_imaginary")
+	Sample.Read(4, "Pair", false, 9, 0)(1).texts is ("imaginary", "Pair")
+	for StructLanes.Members(Inliner(types).TypeOf(type))
+		let field = InstructionEntry(InstructionType.FieldLoad, (value, type), (base + index, register, -1, -2), line)
+		let lane = StructLanes.Lane("lanes" + register, value)
+		isLaned then StructLanes.Named(InstructionType.LoadVariableToRegister, base + index, lane, line) else field
+Spread(entry InstructionEntry, type Text, base Number) List(InstructionEntry)
+	Sample.Spread(Offsets, "Pair", 8).First.texts is ("offset_real", "Drawer")
+	let isField = entry.kind is InstructionType.FieldLoad
+	let owner = TypeEntry.ShortName(type)
+	mutable lines = isField then List(InstructionEntry) else List(InstructionEntry) + entry
+	for StructLanes.Members(Inliner(types).TypeOf(type))
+		let read = isField then (StructLanes.Lane(entry.texts(0), value), entry.texts(1)) else (value, owner)
+		let source = entry.payload(isField then 1 else 0)
+		let field = InstructionEntry(InstructionType.FieldLoad, read, (base, source, -1, -2), entry.line)
+		let lane = StructLanes.Lane("lanes" + entry.payload(0), value)
+		lines = lines + (field, StructLanes.Named(InstructionType.StoreRegisterToVariable, base, lane, entry.line))
+	lines

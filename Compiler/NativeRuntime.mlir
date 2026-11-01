@@ -9434,6 +9434,36 @@
     %list = func.call @strict_list_reserved(%capacity, %zero, %bytes, %referring) : (f64, f64, i64, i1) -> f64
     return %list : f64
   }
+  // the numbers of a list of number structs one after another (slots per element), for GPU loops reading such a list
+  func.func private @strict_records_flat(%list: f64, %slots: f64) -> f64 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %eight = arith.constant 8 : i64
+    %countNumber = func.call @strict_list_length(%list) : (f64) -> f64
+    %count = arith.fptosi %countNumber : f64 to i64
+    %slotCount = arith.fptosi %slots : f64 to i64
+    %bytes = arith.muli %slotCount, %eight : i64
+    %total = arith.mulf %countNumber, %slots : f64
+    %flat = func.call @strict_numbers_new(%total) : (f64) -> f64
+    %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    %numbers = func.call @strict_list_items(%flat) : (f64) -> !llvm.ptr
+    cf.br ^element(%none : i64)
+  ^element(%index: i64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^copy, ^done
+  ^copy:
+    %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %bits = llvm.load %slot : !llvm.ptr -> f64
+    %element = func.call @strict_ptr(%bits) : (f64) -> !llvm.ptr
+    %start = arith.muli %index, %slotCount : i64
+    %target = llvm.getelementptr %numbers[%start] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %copied = llvm.call @memcpy(%target, %element, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %next = arith.addi %index, %one : i64
+    cf.br ^element(%next : i64)
+  ^done:
+    %filled = func.call @strict_list_filled(%flat, %total) : (f64, f64) -> f64
+    return %filled : f64
+  }
   // the block of the element at index of such a list is the destination the next method building a struct takes
   func.func private @strict_struct_destine_block(%list: f64, %index: f64, %slots: f64) {
     %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
@@ -13246,13 +13276,14 @@
     llvm.store %previousActiveFrame, %activeFrameSlot : i64, !llvm.ptr
     return %zero : f64
   }
-  // device memory for lists computed on the GPU: blocks of 256 << class bytes from 64 MB chunks, a free block goes on
+  // device memory for lists computed on the GPU: blocks of strict_gpu_class_size bytes (256 << class up to 16 MB, then four
+  // classes per octave, a 1.1 GB feature map takes 1.25 GB instead of 2 GB) from 64 MB chunks, a free block goes on
   // the stack of its class; when a class has none, the lists no count and no stack word refers to give theirs back
   // first (strict_rc_reclaim: the activations of the last layer), then a young collection frees unreachable lists once
   // 256 MB were taken since the last collection, a full one once more than half of the free device memory (at least
   // 1 GB) was cut from chunks since the last full collection, the free memory is measured with every new chunk
   // chunks are never returned and the rest of a chunk too small for the next block is lost
-  llvm.mlir.global internal @strict_gpu_blocks(dense<0> : tensor<144xi64>) : !llvm.array<144 x i64>
+  llvm.mlir.global internal @strict_gpu_blocks(dense<0> : tensor<192xi64>) : !llvm.array<192 x i64>
   llvm.mlir.global internal @strict_gpu_chunk(dense<0> : tensor<6xi64>) : !llvm.array<6 x i64>
   llvm.mlir.global internal @strict_gpu_residing(dense<0> : tensor<3xi64>) : !llvm.array<3 x i64>
   llvm.mlir.global internal @strict_gpu_failure(0 : i64) : i64
@@ -13262,21 +13293,48 @@
   func.func private @strict_gpu_class(%bytes: i64) -> i64 {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
-    %smallest = arith.constant 256 : i64
-    cf.br ^check(%none, %smallest : i64, i64)
-  ^check(%class: i64, %size: i64):
+    %largest = arith.constant 63 : i64
+    cf.br ^check(%none : i64)
+  ^check(%class: i64):
+    %size = func.call @strict_gpu_class_size(%class) : (i64) -> i64
     %fits = arith.cmpi uge, %size, %bytes : i64
+    %last = arith.cmpi uge, %class, %largest : i64
+    %found = arith.ori %fits, %last : i1
     %next = arith.addi %class, %one : i64
-    %doubled = arith.shli %size, %one : i64
-    cf.cond_br %fits, ^done, ^check(%next, %doubled : i64, i64)
+    cf.cond_br %found, ^done, ^check(%next : i64)
   ^done:
     return %class : i64
+  }
+  // 256 << class bytes up to class 16 (16 MB), then 1.25, 1.5, 1.75 and 2 times the octave below: big blocks waste at
+  // most 25% instead of up to half of a power of two (class 63 is 56 GB, the class fits the 6 bits of a tagged block)
+  func.func private @strict_gpu_class_size(%class: i64) -> i64 {
+    %smallest = arith.constant 256 : i64
+    %sixteen = arith.constant 16 : i64
+    %seventeen = arith.constant 17 : i64
+    %two = arith.constant 2 : i64
+    %three = arith.constant 3 : i64
+    %five = arith.constant 5 : i64
+    %octave = arith.constant 16777216 : i64
+    %isSmall = arith.cmpi sle, %class, %sixteen : i64
+    cf.cond_br %isSmall, ^small, ^large
+  ^small:
+    %size = arith.shli %smallest, %class : i64
+    return %size : i64
+  ^large:
+    %step = arith.subi %class, %seventeen : i64
+    %octaves = arith.shrui %step, %two : i64
+    %quarter = arith.andi %step, %three : i64
+    %base = arith.shli %octave, %octaves : i64
+    %quarters = arith.addi %quarter, %five : i64
+    %scaled = arith.muli %base, %quarters : i64
+    %large = arith.shrui %scaled, %two : i64
+    return %large : i64
   }
   func.func private @strict_gpu_stack(%class: i64) -> !llvm.ptr {
     %three = arith.constant 3 : i64
     %blocks = llvm.mlir.addressof @strict_gpu_blocks : !llvm.ptr
     %offset = arith.muli %class, %three : i64
-    %stack = llvm.getelementptr %blocks[0, %offset] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<144 x i64>
+    %stack = llvm.getelementptr %blocks[0, %offset] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<192 x i64>
     return %stack : !llvm.ptr
   }
   func.func private @strict_gpu_obtain(%class: i64) -> i64 {
@@ -13294,8 +13352,7 @@
     %topSlot = llvm.getelementptr %items[%top] : (!llvm.ptr, i64) -> !llvm.ptr, i64
     %device = llvm.load %topSlot : !llvm.ptr -> i64
     llvm.store %top, %countSlot : i64, !llvm.ptr
-    %smallestBlock = arith.constant 256 : i64
-    %blockSize = arith.shli %smallestBlock, %class : i64
+    %blockSize = func.call @strict_gpu_class_size(%class) : (i64) -> i64
     func.call @strict_gpu_obtained(%blockSize) : (i64) -> ()
     return %device : i64
   ^fresh:
@@ -13331,8 +13388,7 @@
     %again = func.call @strict_gpu_obtain(%class) : (i64) -> i64
     return %again : i64
   ^carve:
-    %smallest = arith.constant 256 : i64
-    %size = arith.shli %smallest, %class : i64
+    %size = func.call @strict_gpu_class_size(%class) : (i64) -> i64
     // blocks of 16 MB and more are allocations of their own (a driver allocation took 0.8 ms next to Qwen3.8, its 4 MB
     // DeltaNet states come from chunks), so a big block neither ends the 64 MB chunk smaller ones
     // are cut from nor stays in the pool when an allocation runs out of memory (strict_gpu_starved gives them back, the
@@ -13433,18 +13489,23 @@
   // blocks of 16 MB and more handed out for a smaller class while memory is short: count, then device and real class
   // of each, so giving one back puts it on the stack of its real class
   llvm.mlir.global internal @strict_gpu_lent(dense<0> : tensor<129xi64>) : !llvm.array<129 x i64>
-  // a free block of one of the next two larger classes for class, 0 when there is none
+  // a free block of one of the next two larger classes for class (four above 16 MB, up to twice the size like before the
+  // classes per octave), 0 when there is none
   func.func private @strict_gpu_lend(%class: i64) -> i64 {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %two = arith.constant 2 : i64
-    %largest = arith.constant 47 : i64
+    %largest = arith.constant 63 : i64
     %most = arith.constant 64 : i64
     %lent = llvm.mlir.addressof @strict_gpu_lent : !llvm.ptr
     %lentCount = llvm.load %lent : !llvm.ptr -> i64
     %room = arith.cmpi slt, %lentCount, %most : i64
+    %four = arith.constant 4 : i64
+    %sixteen = arith.constant 16 : i64
     %first = arith.addi %class, %one : i64
-    %last = arith.addi %class, %two : i64
+    %isLarge = arith.cmpi sge, %class, %sixteen : i64
+    %range = arith.select %isLarge, %four, %two : i64
+    %last = arith.addi %class, %range : i64
     %highest = arith.minsi %last, %largest : i64
     cf.cond_br %room, ^check(%first : i64), ^none
   ^check(%larger: i64):
@@ -13465,8 +13526,7 @@
     %device = llvm.load %topSlot : !llvm.ptr -> i64
     llvm.store %top, %countSlot : i64, !llvm.ptr
     %stored = func.call @strict_gpu_pair_put(%lent, %most, %device, %larger) : (!llvm.ptr, i64, i64, i64) -> i1
-    %smallestBlock = arith.constant 256 : i64
-    %blockSize = arith.shli %smallestBlock, %larger : i64
+    %blockSize = func.call @strict_gpu_class_size(%larger) : (i64) -> i64
     func.call @strict_gpu_obtained(%blockSize) : (i64) -> ()
     return %device : i64
   ^none:
@@ -13679,9 +13739,8 @@
   func.func private @strict_gpu_trim(%needed: i64, %initial: i64, %waiting: i1) -> i64 {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
-    %smallest = arith.constant 256 : i64
     %firstOwn = arith.constant 16 : i64
-    %largest = arith.constant 47 : i64
+    %largest = arith.constant 63 : i64
     %notWaiting = arith.constant false
     cf.br ^class(%largest, %initial, %waiting : i64, i64, i1)
   ^class(%class: i64, %released: i64, %wait: i1):
@@ -13709,7 +13768,7 @@
     %device = llvm.load %topSlot : !llvm.ptr -> i64
     llvm.store %top, %countSlot : i64, !llvm.ptr
     func.call @strict_gpu_free(%device) : (i64) -> ()
-    %size = arith.shli %smallest, %class : i64
+    %size = func.call @strict_gpu_class_size(%class) : (i64) -> i64
     %freed = arith.addi %released, %size : i64
     cf.br ^class(%class, %freed, %notWaiting : i64, i64, i1)
   ^next:
@@ -14507,6 +14566,8 @@
     return
   }
   // the pinned word a loop on the GPU sets when it reads outside of a list, the host reads it after downloading
+  // read instead of the failure word when no kernel that can not fail ran yet (results of checked kernels only)
+  llvm.mlir.global internal @strict_gpu_no_failure(0 : i64) : i64
   func.func private @strict_gpu_failure_word() -> i64 {
     %none = arith.constant 0 : i64
     %slot = llvm.mlir.addressof @strict_gpu_failure : !llvm.ptr
@@ -14906,7 +14967,9 @@
     // the first launch allocates the failure word: a list uploaded before any loop ran on the GPU cannot have failed
     cf.cond_br %hasWord, ^flag(%word : i64), ^checked(%unflagged : i1)
   ^flag(%flagWord: i64):
-    %pointer = llvm.inttoptr %flagWord : i64 to !llvm.ptr
+    %wordPointer = llvm.inttoptr %word : i64 to !llvm.ptr
+    %noFailure = llvm.mlir.addressof @strict_gpu_no_failure : !llvm.ptr
+    %pointer = arith.select %hasWord, %wordPointer, %noFailure : !llvm.ptr
     %failed = llvm.load %pointer : !llvm.ptr -> i64
     %flagged = arith.cmpi ne, %failed, %none : i64
     cf.br ^checked(%flagged : i1)
@@ -15028,7 +15091,6 @@
     %zero = arith.constant 0.0 : f64
     %one = arith.constant 1 : i64
     %four = arith.constant 4 : i64
-    %smallest = arith.constant 256 : i64
     %classMask = arith.constant 63 : i64
     %addressMask = arith.constant -256 : i64
     %leftNumber = func.call @strict_list_length(%left) : (f64) -> f64
@@ -15065,7 +15127,7 @@
     func.call @strict_gpu_rotated(%leftDevice) : (i64) -> ()
     func.call @strict_gpu_rotated(%rightDevice) : (i64) -> ()
     %class = arith.andi %tagged, %classMask : i64
-    %capacity = arith.shli %smallest, %class : i64
+    %capacity = func.call @strict_gpu_class_size(%class) : (i64) -> i64
     %newest = arith.cmpf oeq, %leftNumber, %used : f64
     %fits = arith.cmpi ule, %bytes, %capacity : i64
     %inPlace = arith.andi %newest, %fits : i1
@@ -15808,8 +15870,7 @@
   ^replace:
     %oldClass = func.call @strict_gpu_class(%capacity) : (i64) -> i64
     func.call @strict_gpu_give(%start, %oldClass) : (i64, i64) -> ()
-    %smallestBlock = arith.constant 256 : i64
-    %grownSize = arith.shli %smallestBlock, %grownClass : i64
+    %grownSize = func.call @strict_gpu_class_size(%grownClass) : (i64) -> i64
     llvm.store %grown, %scratch : i64, !llvm.ptr
     llvm.store %grownSize, %capacitySlot : i64, !llvm.ptr
     llvm.store %none, %nextSlot : i64, !llvm.ptr
