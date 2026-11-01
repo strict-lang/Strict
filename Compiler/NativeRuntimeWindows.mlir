@@ -1049,6 +1049,87 @@
   llvm.mlir.global internal constant @strict_nvml_device("nvmlDeviceGetHandleByPciBusId_v2\00") : !llvm.array<33 x i8>
   llvm.mlir.global internal constant @strict_nvml_memory("nvmlDeviceGetMemoryInfo\00") : !llvm.array<24 x i8>
   llvm.mlir.global internal constant @strict_gpu_bus("cuDeviceGetPCIBusId\00") : !llvm.array<20 x i8>
+  llvm.func @WriteFile(!llvm.ptr, !llvm.ptr, i32, !llvm.ptr, !llvm.ptr) -> i32
+  llvm.func @ReadFile(!llvm.ptr, !llvm.ptr, i32, !llvm.ptr, !llvm.ptr) -> i32
+  llvm.func @GetCurrentProcessId() -> i32
+  llvm.mlir.global internal constant @strict_gpu_lock_file("StrictGpu.lock\00") : !llvm.array<15 x i8>
+  llvm.mlir.global internal constant @strict_gpu_lock_owner(" pid %d\00") : !llvm.array<8 x i8>
+  // the GPU lock (strict_gpu_lock_take) is StrictGpu.lock in the temporary folder, only its holder writes it (others may
+  // read the executable and process id in it) and Windows deletes it when it is closed or the holder ends; 0 when another
+  // process holds it, its path is in buffer then
+  func.func private @strict_gpu_lock_try(%buffer: !llvm.ptr) -> i64 {
+    %none = arith.constant 0 : i64
+    %pathSize = arith.constant 260 : i32
+    %length = llvm.call @GetTempPathA(%pathSize, %buffer) : (i32, !llvm.ptr) -> i32
+    %length64 = arith.extui %length : i32 to i64
+    %end = llvm.getelementptr %buffer[%length64] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %name = llvm.mlir.addressof @strict_gpu_lock_file : !llvm.ptr
+    %nameBytes = arith.constant 15 : i64
+    "llvm.intr.memcpy"(%end, %name, %nameBytes) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
+    %access = arith.constant 1073807360 : i32
+    %shareRead = arith.constant 1 : i32
+    %always = arith.constant 4 : i32
+    %deleting = arith.constant 67108992 : i32
+    %null = llvm.mlir.zero : !llvm.ptr
+    %handle = llvm.call @CreateFileA(%buffer, %access, %shareRead, %null, %always, %deleting, %null) : (!llvm.ptr, i32, i32, !llvm.ptr, i32, i32, !llvm.ptr) -> !llvm.ptr
+    %address = llvm.ptrtoint %handle : !llvm.ptr to i64
+    %invalid = arith.constant -1 : i64
+    %isHeld = arith.cmpi ne, %address, %invalid : i64
+    cf.cond_br %isHeld, ^owned, ^busy
+  ^busy:
+    return %none : i64
+  ^owned:
+    %text = llvm.getelementptr %buffer[300] : (!llvm.ptr) -> !llvm.ptr, i8
+    %exeSize = arith.constant 260 : i32
+    %exeLength = llvm.call @GetModuleFileNameA(%null, %text, %exeSize) : (!llvm.ptr, !llvm.ptr, i32) -> i32
+    %exeLength64 = arith.extui %exeLength : i32 to i64
+    %textEnd = llvm.getelementptr %text[%exeLength64] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %process = llvm.call @GetCurrentProcessId() : () -> i32
+    %owner = llvm.mlir.addressof @strict_gpu_lock_owner : !llvm.ptr
+    %room = arith.constant 40 : i64
+    %ownerLength = llvm.call @strict_print_integer(%textEnd, %room, %owner, %process) : (!llvm.ptr, i64, !llvm.ptr, i32) -> i32
+    %total = arith.addi %exeLength, %ownerLength : i32
+    %one = arith.constant 1 : i64
+    %countSlot = llvm.alloca %one x i32 : (i64) -> !llvm.ptr
+    %written = llvm.call @WriteFile(%handle, %text, %total, %countSlot, %null) : (!llvm.ptr, !llvm.ptr, i32, !llvm.ptr, !llvm.ptr) -> i32
+    return %address : i64
+  }
+  // the holder of the GPU lock at the path in buffer, empty when it can not be read
+  func.func private @strict_gpu_lock_holder(%buffer: !llvm.ptr) -> !llvm.ptr {
+    %end = arith.constant 0 : i8
+    %text = llvm.getelementptr %buffer[300] : (!llvm.ptr) -> !llvm.ptr, i8
+    llvm.store %end, %text : i8, !llvm.ptr
+    %reading = arith.constant -2147483648 : i32
+    %shareAll = arith.constant 7 : i32
+    %existing = arith.constant 3 : i32
+    %normal = arith.constant 128 : i32
+    %null = llvm.mlir.zero : !llvm.ptr
+    %reader = llvm.call @CreateFileA(%buffer, %reading, %shareAll, %null, %existing, %normal, %null) : (!llvm.ptr, i32, i32, !llvm.ptr, i32, i32, !llvm.ptr) -> !llvm.ptr
+    %address = llvm.ptrtoint %reader : !llvm.ptr to i64
+    %invalid = arith.constant -1 : i64
+    %isOpen = arith.cmpi ne, %address, %invalid : i64
+    cf.cond_br %isOpen, ^read, ^done
+  ^read:
+    %one = arith.constant 1 : i64
+    %countSlot = llvm.alloca %one x i32 : (i64) -> !llvm.ptr
+    %zero = arith.constant 0 : i32
+    llvm.store %zero, %countSlot : i32, !llvm.ptr
+    %most = arith.constant 299 : i32
+    %read = llvm.call @ReadFile(%reader, %text, %most, %countSlot, %null) : (!llvm.ptr, !llvm.ptr, i32, !llvm.ptr, !llvm.ptr) -> i32
+    %count = llvm.load %countSlot : !llvm.ptr -> i32
+    %count64 = arith.extui %count : i32 to i64
+    %textEnd = llvm.getelementptr %text[%count64] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %end, %textEnd : i8, !llvm.ptr
+    %closed = llvm.call @CloseHandle(%reader) : (!llvm.ptr) -> i32
+    cf.br ^done
+  ^done:
+    return %text : !llvm.ptr
+  }
+  func.func private @strict_gpu_lock_give(%handle: i64) {
+    %file = llvm.inttoptr %handle : i64 to !llvm.ptr
+    %closed = llvm.call @CloseHandle(%file) : (!llvm.ptr) -> i32
+    return
+  }
   func.func private @strict_gpu_others_free() -> i64 {
     %unknown = arith.constant -1 : i64
     %unset = llvm.mlir.zero : !llvm.ptr

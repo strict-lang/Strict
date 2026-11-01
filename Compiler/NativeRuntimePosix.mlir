@@ -206,6 +206,94 @@
     return %result : f64
   }
   // only Windows needs more than the driver to know what other programs hold on the GPU
+  llvm.func @getpid() -> i32
+  llvm.func @read(i32, !llvm.ptr, i64) -> i64
+  llvm.func @ftruncate(i32, i64) -> i32
+  llvm.mlir.global internal constant @strict_gpu_lock_path("/tmp/StrictGpu.lock\00") : !llvm.array<20 x i8>
+  llvm.mlir.global internal constant @strict_gpu_lock_executable("/proc/self/exe\00") : !llvm.array<15 x i8>
+  llvm.mlir.global internal constant @strict_gpu_lock_owner(" pid %d\00") : !llvm.array<8 x i8>
+  // the GPU lock (strict_gpu_lock_take) is a flock on /tmp/StrictGpu.lock, its holder writes its executable and process
+  // id into it, the descriptor + 1 is the handle (closed by the system when the holder ends); 0 when another process
+  // holds it, -1 when the file can not be opened (no lock then)
+  func.func private @strict_gpu_lock_try(%buffer: !llvm.ptr) -> i64 {
+    %none = arith.constant 0 : i64
+    %unlocked = arith.constant -1 : i64
+    %path = llvm.mlir.addressof @strict_gpu_lock_path : !llvm.ptr
+    %flags = arith.constant 524354 : i32
+    %mode = arith.constant 438 : i32
+    %descriptor = llvm.call @open(%path, %flags, %mode) vararg(!llvm.func<i32 (ptr, i32, ...)>) : (!llvm.ptr, i32, i32) -> i32
+    %zero = arith.constant 0 : i32
+    %opened = arith.cmpi sge, %descriptor, %zero : i32
+    cf.cond_br %opened, ^lock, ^failed
+  ^failed:
+    return %unlocked : i64
+  ^lock:
+    %exclusive = arith.constant 6 : i32
+    %locked = llvm.call @flock(%descriptor, %exclusive) : (i32, i32) -> i32
+    %isHeld = arith.cmpi eq, %locked, %zero : i32
+    cf.cond_br %isHeld, ^owned, ^busy
+  ^busy:
+    %closed = llvm.call @close(%descriptor) : (i32) -> i32
+    return %none : i64
+  ^owned:
+    %emptied = llvm.call @ftruncate(%descriptor, %none) : (i32, i64) -> i32
+    %text = llvm.getelementptr %buffer[300] : (!llvm.ptr) -> !llvm.ptr, i8
+    %executable = llvm.mlir.addressof @strict_gpu_lock_executable : !llvm.ptr
+    %exeSize = arith.constant 260 : i64
+    %linked = llvm.call @readlink(%executable, %text, %exeSize) : (!llvm.ptr, !llvm.ptr, i64) -> i64
+    %isLinked = arith.cmpi sgt, %linked, %none : i64
+    %exeLength = arith.select %isLinked, %linked, %none : i64
+    %textEnd = llvm.getelementptr %text[%exeLength] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %process = llvm.call @getpid() : () -> i32
+    %owner = llvm.mlir.addressof @strict_gpu_lock_owner : !llvm.ptr
+    %room = arith.constant 40 : i64
+    %ownerLength = llvm.call @strict_print_integer(%textEnd, %room, %owner, %process) : (!llvm.ptr, i64, !llvm.ptr, i32) -> i32
+    %ownerLength64 = arith.extsi %ownerLength : i32 to i64
+    %total = arith.addi %exeLength, %ownerLength64 : i64
+    %written = llvm.call @write(%descriptor, %text, %total) : (i32, !llvm.ptr, i64) -> i64
+    %wide = arith.extsi %descriptor : i32 to i64
+    %one = arith.constant 1 : i64
+    %handle = arith.addi %wide, %one : i64
+    return %handle : i64
+  }
+  // the holder of the GPU lock, empty when it can not be read
+  func.func private @strict_gpu_lock_holder(%buffer: !llvm.ptr) -> !llvm.ptr {
+    %end = arith.constant 0 : i8
+    %text = llvm.getelementptr %buffer[300] : (!llvm.ptr) -> !llvm.ptr, i8
+    llvm.store %end, %text : i8, !llvm.ptr
+    %path = llvm.mlir.addressof @strict_gpu_lock_path : !llvm.ptr
+    %reading = arith.constant 524288 : i32
+    %mode = arith.constant 0 : i32
+    %descriptor = llvm.call @open(%path, %reading, %mode) vararg(!llvm.func<i32 (ptr, i32, ...)>) : (!llvm.ptr, i32, i32) -> i32
+    %zero = arith.constant 0 : i32
+    %opened = arith.cmpi sge, %descriptor, %zero : i32
+    cf.cond_br %opened, ^read, ^done
+  ^read:
+    %most = arith.constant 299 : i64
+    %count = llvm.call @read(%descriptor, %text, %most) : (i32, !llvm.ptr, i64) -> i64
+    %none = arith.constant 0 : i64
+    %isRead = arith.cmpi sgt, %count, %none : i64
+    %length = arith.select %isRead, %count, %none : i64
+    %textEnd = llvm.getelementptr %text[%length] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %end, %textEnd : i8, !llvm.ptr
+    %closed = llvm.call @close(%descriptor) : (i32) -> i32
+    cf.br ^done
+  ^done:
+    return %text : !llvm.ptr
+  }
+  func.func private @strict_gpu_lock_give(%handle: i64) {
+    %none = arith.constant 0 : i64
+    %isOpen = arith.cmpi sgt, %handle, %none : i64
+    cf.cond_br %isOpen, ^close, ^done
+  ^close:
+    %one = arith.constant 1 : i64
+    %wide = arith.subi %handle, %one : i64
+    %descriptor = arith.trunci %wide : i64 to i32
+    %closed = llvm.call @close(%descriptor) : (i32) -> i32
+    cf.br ^done
+  ^done:
+    return
+  }
   func.func private @strict_gpu_others_free() -> i64 {
     %unknown = arith.constant -1 : i64
     return %unknown : i64

@@ -12447,6 +12447,81 @@
     %added = arith.addi %held, %bytes : i64
     %changed = arith.subi %added, %old : i64
     llvm.store %changed, %heldSlot : i64, !llvm.ptr
+    func.call @strict_gpu_lock_check() : () -> ()
+    cf.br ^done
+  ^done:
+    return
+  }
+  // a process whose GPU memory would go past 2 GB takes the machine wide GPU lock first (two big models on one GPU page
+  // into shared memory and stall the whole computer), smaller ones run beside it; it is given back below 1 GB or at the
+  // end of the process, the budget is measured again once it is taken (the other process gave its memory back)
+  llvm.mlir.global internal @strict_gpu_lock_handle(0 : i64) : i64
+  llvm.mlir.global internal constant @strict_gpu_lock_waiting("Waiting for the GPU: %s holds it\0A\00") : !llvm.array<34 x i8>
+  func.func private @strict_gpu_lock_ensure(%bytes: i64) {
+    %none = arith.constant 0 : i64
+    %slot = llvm.mlir.addressof @strict_gpu_lock_handle : !llvm.ptr
+    %handle = llvm.load %slot : !llvm.ptr -> i64
+    %budget = llvm.mlir.addressof @strict_gpu_budget : !llvm.ptr
+    %heldSlot = llvm.getelementptr %budget[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %held = llvm.load %heldSlot : !llvm.ptr -> i64
+    %after = arith.addi %held, %bytes : i64
+    %limit = arith.constant 2147483648 : i64
+    %isBig = arith.cmpi ugt, %after, %limit : i64
+    %isFree = arith.cmpi eq, %handle, %none : i64
+    %needed = arith.andi %isBig, %isFree : i1
+    cf.cond_br %needed, ^take, ^done
+  ^take:
+    %taken = func.call @strict_gpu_lock_take() : () -> i64
+    llvm.store %taken, %slot : i64, !llvm.ptr
+    llvm.store %none, %budget : i64, !llvm.ptr
+    cf.br ^done
+  ^done:
+    return
+  }
+  // tries the GPU lock every 0.2 s (strict_gpu_lock_try of the platform), says once who holds it
+  func.func private @strict_gpu_lock_take() -> i64 {
+    %none = arith.constant 0 : i64
+    %size = arith.constant 600 : i64
+    %false = arith.constant false
+    %true = arith.constant true
+    %buffer = llvm.alloca %size x i8 : (i64) -> !llvm.ptr
+    cf.br ^try(%false : i1)
+  ^try(%said: i1):
+    %handle = func.call @strict_gpu_lock_try(%buffer) : (!llvm.ptr) -> i64
+    %isHeld = arith.cmpi ne, %handle, %none : i64
+    cf.cond_br %isHeld, ^held, ^busy
+  ^held:
+    return %handle : i64
+  ^busy:
+    cf.cond_br %said, ^wait, ^say
+  ^say:
+    %holder = func.call @strict_gpu_lock_holder(%buffer) : (!llvm.ptr) -> !llvm.ptr
+    %format = llvm.mlir.addressof @strict_gpu_lock_waiting : !llvm.ptr
+    %printed = llvm.call @printf(%format, %holder) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr) -> i32
+    %all = llvm.mlir.zero : !llvm.ptr
+    %flushed = llvm.call @fflush(%all) : (!llvm.ptr) -> i32
+    cf.br ^wait
+  ^wait:
+    %self = arith.constant 0.0 : f64
+    %pause = arith.constant 0.2 : f64
+    %waited = func.call @strict_process_wait(%self, %pause) : (f64, f64) -> f64
+    cf.br ^try(%true : i1)
+  }
+  func.func private @strict_gpu_lock_check() {
+    %none = arith.constant 0 : i64
+    %slot = llvm.mlir.addressof @strict_gpu_lock_handle : !llvm.ptr
+    %handle = llvm.load %slot : !llvm.ptr -> i64
+    %budget = llvm.mlir.addressof @strict_gpu_budget : !llvm.ptr
+    %heldSlot = llvm.getelementptr %budget[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %held = llvm.load %heldSlot : !llvm.ptr -> i64
+    %limit = arith.constant 1073741824 : i64
+    %isSmall = arith.cmpi ult, %held, %limit : i64
+    %isHeld = arith.cmpi ne, %handle, %none : i64
+    %given = arith.andi %isSmall, %isHeld : i1
+    cf.cond_br %given, ^give, ^done
+  ^give:
+    func.call @strict_gpu_lock_give(%handle) : (i64) -> ()
+    llvm.store %none, %slot : i64, !llvm.ptr
     cf.br ^done
   ^done:
     return
@@ -12455,6 +12530,7 @@
     %zero = arith.constant 0 : i64
     %zero32 = arith.constant 0 : i32
     %one = arith.constant 1 : i64
+    func.call @strict_gpu_lock_ensure(%bytes) : (i64) -> ()
     %free = func.call @strict_gpu_free_memory() : () -> i64
     %reserve = arith.constant 268435456 : i64
     %needed = arith.addi %bytes, %reserve : i64

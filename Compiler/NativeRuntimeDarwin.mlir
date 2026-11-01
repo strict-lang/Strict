@@ -217,6 +217,17 @@
     return %result : f64
   }
   // only Windows needs more than the driver to know what other programs hold on the GPU
+  // no CUDA here, the GPU lock (strict_gpu_lock_take) is always free
+  func.func private @strict_gpu_lock_try(%buffer: !llvm.ptr) -> i64 {
+    %free = arith.constant -1 : i64
+    return %free : i64
+  }
+  func.func private @strict_gpu_lock_holder(%buffer: !llvm.ptr) -> !llvm.ptr {
+    return %buffer : !llvm.ptr
+  }
+  func.func private @strict_gpu_lock_give(%handle: i64) {
+    return
+  }
   func.func private @strict_gpu_others_free() -> i64 {
     %unknown = arith.constant -1 : i64
     return %unknown : i64
