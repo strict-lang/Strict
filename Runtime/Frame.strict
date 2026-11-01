@@ -88,8 +88,6 @@ Invoked(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	let call = Called(entry, slots)
 	let accessed = Accessor(machine).Accessed(call)
 	let result = accessed.kind is "None" then machine.Call(call) else accessed
-	if result.kind is "Error"
-		machine.Logged(result.text)
 	result.kind is in VmValue.ErrorKinds then Traced(result, position) else result
 Called(entry InstructionEntry, slots List(VmValue)) Invocation
 	Twice.Called(Invocation.AddCall.entry, (VmValue.OfNumber(3), VmValue.OfNumber(4))).Instance.number is 4

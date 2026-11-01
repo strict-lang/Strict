@@ -34,7 +34,7 @@ Widths Texts
 	let width = "    %ww = arith.fptosi " + Width + " : f64 to i64"
 	(width, "    %wwz = arith.constant 0 : i64", "    %wwp = arith.cmpi sgt, %ww, %wwz : i64")
 Input(read Number) Texts
-	Blurring.Input(0).First is "    %t8wl0a = llvm.getelementptr %context[10] : (!llvm.ptr) -> !llvm.ptr, f64"
+	Blurring.Input(0).First is "    %t8wl0a = llvm.getelementptr %context[13] : (!llvm.ptr) -> !llvm.ptr, f64"
 	let call = MlirWholeCall(function, Kernel.Call)
 	let kind = MlirWholeFunction(Kernel.Callee).Kinds(read)
 	let name = call.Temp("wl" + read)

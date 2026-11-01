@@ -44,7 +44,7 @@ with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as 
 	cleanup = Path(folder) / "CleanupCheck.strict"
 	locked_base = (Path(folder) / "Locked").as_posix()
 	cleanup.write_text('has build Compiler/NativeBuild\nRun Number\n'
-		f'\tNativeBuild(Logger).Removed("{locked_base}") then 0 else 1', encoding="utf-8")
+		f'\tIntermediates(Logger).Removed("{locked_base}") then 0 else 1', encoding="utf-8")
 	with open(locked_base + ".ll", "wb") as locked:
 		cleaned = run(str(cleanup))
 		assert "Could not remove build intermediate: " + locked_base + ".ll" in cleaned.stdout, cleaned.stdout + cleaned.stderr

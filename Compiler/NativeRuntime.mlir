@@ -10658,8 +10658,9 @@
     llvm.store %narrow, %pointer : i8, !llvm.ptr
     return %copy : f64
   }
-  llvm.mlir.global internal constant @strict_read_mode("rb\00") : !llvm.array<3 x i8>
-  llvm.mlir.global internal constant @strict_write_mode("wb\00") : !llvm.array<3 x i8>
+  // N: a child started meanwhile (Process.RunTools) does not inherit the file on Windows, other C libraries ignore it
+  llvm.mlir.global internal constant @strict_read_mode("rbN\00") : !llvm.array<4 x i8>
+  llvm.mlir.global internal constant @strict_write_mode("wbN\00") : !llvm.array<4 x i8>
   // bytes of the file or of the text it was overridden with (File.InMemory), 0 when it is missing
   func.func private @strict_file_length(%path: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
@@ -11877,7 +11878,7 @@
   llvm.mlir.global internal constant @strict_gpu_runtime_ending(".runtime.ptx\00") : !llvm.array<13 x i8>
   llvm.mlir.global internal constant @strict_gpu_runtime_older_ending(".runtime.older.ptx\00") : !llvm.array<19 x i8>
   llvm.mlir.global internal constant @strict_gpu_amd_ending(".hsaco\00") : !llvm.array<7 x i8>
-  llvm.mlir.global internal constant @strict_gpu_reading("rb\00") : !llvm.array<3 x i8>
+  llvm.mlir.global internal constant @strict_gpu_reading("rbN\00") : !llvm.array<4 x i8>
   func.func private @strict_gpu_text(%ptx: !llvm.ptr) -> !llvm.ptr {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -14900,9 +14901,16 @@
     %copied = llvm.call @memcpy(%host, %bounce, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     %failureSlot = llvm.mlir.addressof @strict_gpu_failure : !llvm.ptr
     %word = llvm.load %failureSlot : !llvm.ptr -> i64
-    %pointer = llvm.inttoptr %word : i64 to !llvm.ptr
+    %hasWord = arith.cmpi ne, %word, %none : i64
+    %unflagged = arith.constant false
+    // the first launch allocates the failure word: a list uploaded before any loop ran on the GPU cannot have failed
+    cf.cond_br %hasWord, ^flag(%word : i64), ^checked(%unflagged : i1)
+  ^flag(%flagWord: i64):
+    %pointer = llvm.inttoptr %flagWord : i64 to !llvm.ptr
     %failed = llvm.load %pointer : !llvm.ptr -> i64
-    %isFailed = arith.cmpi ne, %failed, %none : i64
+    %flagged = arith.cmpi ne, %failed, %none : i64
+    cf.br ^checked(%flagged : i1)
+  ^checked(%isFailed: i1):
     %problem = arith.xori %got, %isFailed : i1
     %fine = arith.andi %got, %problem : i1
     cf.cond_br %fine, ^store, ^fail

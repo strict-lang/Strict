@@ -14,7 +14,7 @@ Exported(library MlirLibrary, base Text, root Text) Number
 	if error is not ""
 		return 1
 	File(base + ".cs").Write(CSharpBinding(library, File(base + ".strict").ReadLines).Lines)
-	NativeBuild(logger).Removed(base)
+	Intermediates(logger).Removed(base)
 	0
 Linked(base Text, tools Toolchain, library MlirLibrary) Text
 	let lowered = tools.Lowered(base)

@@ -1,0 +1,23 @@
+has logger
+constant Endings = (".ios.o", ".ios.new.a", ".android.o", ".llvm.mlir", ".ll", ".res", ".gpu.mlir", ".gpu.llvm.mlir", ".gpu.ll", ".sm_75.ptx", ".sm_80.ptx", ".amd.mlir", ".amd.llvm.mlir", ".amd.ll", ".amd.bc", ".linux.mlir", ".linux.llvm.mlir", ".linux.ll", ".linux.o", ".pre.js", ".shaders.js", ".o", ".gpu.opt.ll", ".runtime.gpu.mlir", ".runtime.gpu.llvm.mlir", ".runtime.gpu.ll", ".runtime.sm_75.ptx", ".runtime.sm_80.ptx")
+Removed(base Text) Boolean
+	Intermediates(Logger).Removed("Compiler/output/missing")
+	mutable files = Directory.Files(Path(base).PathOnly.text, Path(base).FileName.text + ".ios-*.o")
+	for Endings
+		files = files + (base + value)
+	for Toolchain.Parts
+		let part = base + "-" + value
+		files = files + (part, part + ".o", part + ".mlir", part + ".llvm.mlir")
+	for files
+		if Deleted(value) is false
+			logger.Log("Could not remove build intermediate: " + value + " (another program still held it after 5 s)")
+			return false
+	true
+Deleted(path Text) Boolean
+	Intermediates(Logger).Deleted("Compiler/output/missing")
+	let started = Process.Elapsed
+	for as long as File(path).Exists and (Process.Elapsed - started < 5)
+		File(path).Delete
+		if File(path).Exists
+			Process.Wait(0.1)
+	File(path).Exists is false

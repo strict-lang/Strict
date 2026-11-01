@@ -27,6 +27,8 @@ Locked(target Text) Slow(Boolean)
 Compiled(command Text, rest Texts, sources Texts = List(Text)) Number
 	if command is "build"
 		return Checked(rest, sources)
+	if command is "linked"
+		return NativeChunks(logger, rest(2)).Saved(rest(0), rest(1), rest.Slice(3, rest.Length - 3))
 	let request = TestRequest(rest)
 	if request.Message is not ""
 		logger.Log(request.Message)
@@ -73,3 +75,12 @@ Replaced(executable Text, target Text) Boolean
 Options(rest Texts) Texts
 	NativeCompiler.Options(("a.strict", ".", "linux")) is ("linux")
 	rest.Length > 2 then rest.Slice(2, rest.Length - 2) else List(Text)
+Executable(root Text) Text
+	NativeCompiler.Executable(".") is "./Compiler/NativeCompiler" + Toolchain(Platform.Current, ".").Extension
+	root + "/Compiler/NativeCompiler" + Toolchain(Platform.Current, root).Extension
+Arguments(command Text, rest Texts) Text
+	NativeCompiler.Arguments("build", ("a b.strict", ".")) is "build \"a b.strict\" \".\""
+	mutable text = command
+	for rest
+		text = text + " \"" + value + "\""
+	text

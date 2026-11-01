@@ -1,0 +1,60 @@
+has logger
+has selection Text = ""
+constant Size = 8
+constant Saving = "Compiler/output/Hellos.strictbinary"
+constant Unsaved = "Compiler/output/Unsaved.strictbinary"
+constant Single = NativeChunks.Of(List(Text) + "Missing.strict", true)
+Of(folders Texts, isParallel Boolean) List(Texts)
+	NativeChunks.Of(("Examples/Sum.strict", "Examples/HelloLogger.strict"), true).Length is 2
+	NativeChunks.Of(List(Text) + "Math", false).Length is 1
+	NativeChunks.Of(List(Text) + "Math", true).First.Length is 8
+	mutable chunks = List(Mutable(Texts))
+	for folders
+		let paths = Directory.Exists(value) then Directory.Files(value, "*.strict") else List(Text) + value
+		let size = isParallel then Size else paths.Length
+		for Range(0, paths.Length is 0 then 0 else ((paths.Length + size - 1) / size).Floor)
+			chunks.Add(paths.Slice(value * size, (paths.Length - value * size).Clamp(0, size)))
+	chunks
+Compiled(chunks List(Texts), root Text, base Text) List(List(TypeEntry))
+	NativeChunks(Logger, "*").Compiled(List(Texts), ".", "Compiler/output/Compiled").Length is 0
+	let loaded = Loaded(Prepared(chunks, root, base), chunks)
+	for chunks
+		loaded(index).Length > 0 then loaded(index) else NativeFolder(logger, selection, false).Counted(value, root)
+Chunked(base Text, index Number) Text
+	NativeChunks.Chunked("./Math/Tests.test", 2) is "./Math/Tests.test-2.strictbinary"
+	base + "-" + index + ".strictbinary"
+Prepared(chunks List(Texts), root Text, base Text) Texts
+	NativeChunks(Logger).Prepared(Single, ".", "Compiler/output/Prepared") is ("")
+	if chunks.Length is 1
+		return List(Text) + ""
+	mutable commands = List(Mutable(Text))
+	for chunks
+		File(Chunked(base, index)).Delete
+		commands.Add(NativeCompiler.Arguments("linked", (Chunked(base, index), root, selection) + value))
+	for ToolRunner(NativeCompiler.Executable(root)).ExecuteAll(commands, "Frontend / chunks (" + chunks.Length + " jobs)")
+		Chunked(base, index)
+Saved(output Text, root Text, paths Texts) Number
+	NativeChunks(Logger, "*").Saved(Unsaved, ".", List(Text) + "Missing.strict") is 1
+	let counted = NativeFolder(logger, selection, false).Counted(paths, root)
+	if counted.Length < paths.Length
+		return 1
+	File(output).Write(BinaryFile(output).Packed(List(Number), counted, List(TypeEntry)))
+	0
+Loaded(outputs Texts, chunks List(Texts)) List(List(TypeEntry))
+	NativeChunks.Loaded(List(Text) + Unsaved, Single).First.Length is 0
+	let decoded = Decodings(outputs, chunks)
+	for outputs
+		File(value).Delete
+	decoded
+Decodings(outputs Texts, chunks List(Texts)) List(List(TypeEntry))
+	NativeChunks.Decodings(List(Text) + "", Single).Length is 1
+	for outputs
+		Decoded(value, chunks(index).Length)
+Decoded(output Text, count Number) List(TypeEntry)
+	NativeChunks.Decoded(Unsaved, 1).Length is 0
+	NativeChunks(Logger, "*").Saved(Saving, ".", NativeFolder.Hellos) is 0
+	NativeChunks.Decoded(Saving, 2)(1).Name is "Strict/Examples/HelloLogger"
+	if File(output).Exists is false
+		return List(TypeEntry)
+	let types = BinaryFile(output).Types(BinaryFile(output).Unpacked(File(output).ReadBytes))
+	types.Length < count then List(TypeEntry) else types

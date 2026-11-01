@@ -67,7 +67,7 @@ Updated(updater Bytecode/Repositories, folder Text) Number
 	0
 Native(command Text, rest Texts, compiler = "") Number
 	Strict(Logger).Native("test", List(Text), "Missing.exe") is 2
-	let path = compiler is "" then TypeSource.Root + "/Compiler/NativeCompiler" + Extension else compiler
+	let path = compiler is "" then NativeCompiler.Executable(TypeSource.Root) else compiler
 	if File(path).Exists is false
 		logger.Log(path + " not found, build it with Compiler/Bootstrap.cmd or sh Compiler/bootstrap.sh")
 		return 2
@@ -78,7 +78,7 @@ Started(command Text, rest Texts, path Text) Number
 	if BuildProfile(logger).Current(cache, "CLI build cache")
 		logger.Log(cache.Message)
 		return 0
-	Process(path).Started(Arguments(command, rest))
+	Process(path).Started(NativeCompiler.Arguments(command, rest))
 Refreshed(compiler Text, rest Texts) Number
 	Strict(Logger).Refreshed("Missing.exe", ("Compiler/NativeCompiler.strict", ".")) is 0
 	if rest(0).Replace("\\", "/").EndsWith("Compiler/NativeCompiler.strict") or IsCompiled(compiler, TypeSource.Root)
@@ -88,7 +88,7 @@ Refreshed(compiler Text, rest Texts) Number
 Rebuilt(compiler Text, lock Text) Number
 	let source = TypeSource.Root + "/Compiler/NativeCompiler.strict"
 	logger.Log(compiler + " is older than the compiler sources, building it again first")
-	let built = Process(compiler).Started(Arguments("build", (source, TypeSource.Root)))
+	let built = Process(compiler).Started(NativeCompiler.Arguments("build", (source, TypeSource.Root)))
 	if built is 0
 		File(Checked(compiler)).Write("built from the compiler sources newer than " + compiler)
 	Directory.Delete(lock)
@@ -122,13 +122,6 @@ IsCompiled(compiler Text, root Text) Boolean
 	let sources = CompilerSources(root)
 	let builds = NativeSources(List(Text))
 	builds.IsCurrent(compiler, sources) or builds.IsCurrent(Checked(compiler), sources)
-Arguments(command Text, rest Texts) Text
-	Strict.Arguments("build", ("a b.strict", ".")) is "build \"a b.strict\" \".\""
-	mutable text = command
-	for rest
-		text = text + " \"" + value + "\""
-	text
-Extension = Platform.Current is Platform.Windows then ".exe" else ""
 Format(path Text) Slow(Number)
 	Strict.Format("Examples/HelloLogger.strict") is 0
 	let lines = RoundTrip(logger).Tabbed(File(path).ReadLines)
