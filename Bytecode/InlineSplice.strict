@@ -8,6 +8,7 @@ has scratch Number = -1
 constant Sample = InlineSplice(Inliner.First, Inliner.Calling.instructions(1), 2, "elements", List(Text))
 constant Jumps = (InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue, InstructionType.JumpEnd)
 constant Squaring = InlineSplice(StructLanes.Squared, StructLanes.Calling(4), 5, "", List(Text), ("real", "imaginary"), 18)
+constant Owning = InlineSplice(StructLanes.Squared, InstructionEntry.Invoke(4, ("Strict/Pair", "Squared", "Strict/Pair"), List(Number), -1), 5, "", ("real", "imaginary", "value"), ("real", "imaginary"), 18)
 Spliced List(InstructionEntry)
 	Sample.Spliced.Length is 3
 	Sample.Spliced(2).texts.First is "inline2_elements"
@@ -23,6 +24,7 @@ Prefix Text
 Prologue List(InstructionEntry)
 	Sample.Prologue.Length is 1
 	Sample.Prologue.First.texts.First is "inline2_elements"
+	Owning.Prologue.Length is 0
 	let reads = LoadReuse(List(InstructionEntry)).InvokeReads(call)
 	mutable lines = List(Mutable(InstructionEntry))
 	for callee.parameters
@@ -66,7 +68,7 @@ Fielded(reads Numbers) List(InstructionEntry)
 	Squaring.Spliced(4).texts is ("inline5_real")
 	Squaring.Spliced(5).payload is (3, 5, 5, 7)
 	Sample.Fielded((7)).Length is 0
-	if fields.Length is 0
+	if (fields.Length is 0) or InlineRules(callee).IsOwn(call)
 		return List(InstructionEntry)
 	mutable lines = List(Mutable(InstructionEntry))
 	for fields
