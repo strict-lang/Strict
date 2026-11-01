@@ -1,9 +1,10 @@
 has types List(TypeEntry)
 constant Offset = MemberEntry("offset", "Strict/Pair", List(InstructionEntry), false, 32)
-constant Counted = MemberEntry("count", "Strict/Number", List(InstructionEntry), false)
+constant Counted = MemberEntry("count", "Strict/Number", List(InstructionEntry) + InstructionEntry.Set(List(Text), (1, 7)), false)
 constant Shifting = MethodEntry("Shifted", (Offset, Counted), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "offset"), InstructionEntry(InstructionType.FieldLoad, ("real", "Pair"), (1, 0, -1, -2)), InstructionEntry.Return(1)))
 constant Drawer = TypeEntry("Strict/Drawer", (Offset, Counted), List(MethodEntry) + Shifting)
 constant Shift = InstructionEntry.Invoke(5, ("Strict/Drawer", "Shifted", "Strict/Number", "offset", "count"), (4, 3), -1)
+constant Defaulted = InstructionEntry.Invoke(5, ("Strict/Drawer", "Shifted", "Strict/Number", "offset", "count"), List(Number) + 4, 2)
 constant Made = InstructionEntry.Invoke(6, ("Strict/Drawer", "from", "Strict/Drawer", "offset", "count"), (4, 3), -1)
 constant Offsets = InstructionEntry(InstructionType.FieldLoad, ("offset", "Drawer"), (3, 2, -1, -2))
 constant Sample = LaneCalls((StructLanes.Pair, Drawer))
@@ -57,11 +58,15 @@ Called(call InstructionEntry, laned Texts, base Number) List(InstructionEntry)
 	Sample.Called(Shift, List(Text), 9).First.texts is ("real", "Pair")
 	Sample.Called(Shift, ("4 Pair"), 9).Last.texts(4) is "offset_imaginary"
 	Sample.Called(Shift, ("4 Pair"), 9).Last.payload is (5, -1, -2, 3, -4, -5, -6, -3, 3, 9, 10, 3, 0)
+	Sample.Called(Defaulted, ("4 Pair"), 9).Last.payload is (5, -1, -2, 3, -4, -5, -6, -3, 2, 9, 10, 1, 2)
 	let reads = LoadReuse(List(InstructionEntry)).InvokeReads(call)
-	let instance = reads.Length > call.texts.Length - 3 then call.payload(reads.Last) else -1
+	let instance = reads.Length > Given(call) then call.payload(reads.Last) else -1
 	let names = (call.texts(0), call.texts(1), call.texts(2)) + Names(call)
 	let made = InstructionEntry.Invoke(call.payload(0), names, Registers(call, base), instance)
 	Loads(call, laned, base) + InstructionEntry(made.kind, made.texts, made.payload, call.line)
+Given(call InstructionEntry) Number
+	Sample.Given(Defaulted) is 1
+	call.payload(5 + call.payload(3))
 Names(call InstructionEntry) Texts
 	Sample.Names(Made) is ("offset_real", "offset_imaginary", "count")
 	mutable names = List(Text)
@@ -79,7 +84,7 @@ Registers(call InstructionEntry, base Number) Numbers
 	let reads = LoadReuse(List(InstructionEntry)).InvokeReads(call)
 	mutable registers = List(Number)
 	mutable next = base
-	for Range(0, call.texts.Length - 3)
+	for Given(call)
 		let width = Width(call, value)
 		registers = width is 0 then registers + call.payload(reads(value)) else registers + Sequence(next, width)
 		next = next + width
@@ -93,7 +98,7 @@ Loads(call InstructionEntry, laned Texts, base Number) List(InstructionEntry)
 	Sample.Loads(Shift, List(Text), 9)(1).payload is (10, 4, -1, -2)
 	let reads = LoadReuse(List(InstructionEntry)).InvokeReads(call)
 	mutable lines = List(InstructionEntry)
-	for Range(0, call.texts.Length - 3)
+	for Given(call)
 		let register = call.payload(reads(value))
 		let type = LaneFlow(types).Typed(Signature(call), call.texts(3 + value))
 		if type is not ""
