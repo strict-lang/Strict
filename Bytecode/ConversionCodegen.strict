@@ -64,9 +64,12 @@ Bracketed(node SyntaxNode, block CodeBlock) SyntaxNode
 Changed(node SyntaxNode, converter Text, type Text, block CodeBlock) SyntaxNode
 	Plain.Changed(ValueCodegen.One, "to", "Text", CodeBlock.Empty).text is "to"
 	Plain.Changed(ValueCodegen.One, "", "Text", CodeBlock.Empty) is ValueCodegen.One
+	Stepped.Changed(SyntaxNode("Call", "Step"), "", "Number", CodeBlock.Empty).Kind is "Call"
 	if converter is "to"
 		return SyntaxNode("Binary", "to", (node, SyntaxNode("Identifier", type)))
-	converter is "from" then SyntaxNode("Call", type, node) else Held(node, type, block)
+	if converter is "from"
+		return SyntaxNode("Call", type, node)
+	values.inference.types.ValueOf(values.TypeOf(node, block)) is type then node else Held(node, type, block)
 Typed(node SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Typed(HelperType, CodeBlock.Empty) to Text is "Type(\"Helper\", \"Strict/Examples\")"
 	Plain.Typed(ValueCodegen.ToText, CodeBlock.Empty) is ValueCodegen.ToText
