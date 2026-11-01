@@ -479,9 +479,92 @@
   ^done:
     return
   }
-  // strict_device_quantize_tokens of `Convrot.Rotated` of 32 or 16 bit source numbers (bits) without writing the rotated
-  // ones: a block per token (width a multiple of 256 up to 16384, strict_gpu_hadamard_threads), a warp per group of 256
-  // numbers (strict_device_hadamard_group) and a second one warps groups later when there are more groups than warps
+  // the 8 numbers of a lane of a group of 256 numbers from groupStart as 4 bit numbers with a scale per 128 of them (a
+  // lane holds 4 numbers of each, its first 4 numbers are in the first 128, strict_device_hadamard_group)
+  func.func private @strict_device_hadamard_groups(%target: !llvm.ptr, %count: i64, %groupStart: i64, %at: i64, %numbers: vector<8xf32>, %lane: i32, %residual: i1) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+    %one = arith.constant 1 : i64
+    %five = arith.constant 5 : i64
+    %c4 = arith.constant 4 : i32
+    %c8 = arith.constant 8 : i32
+    %zero = arith.constant 0.0 : f32
+    %unit = arith.constant 1.0 : f32
+    %most = arith.constant 7.0 : f32
+    %noScaled = arith.constant dense<0.0> : vector<8xf32>
+    %i0 = arith.constant 0 : i32
+    %n0 = llvm.extractelement %numbers[%i0 : i32] : vector<8xf32>
+    %m0 = llvm.call_intrinsic "llvm.fabs.f32"(%n0) : (f32) -> f32
+    %i1 = arith.constant 1 : i32
+    %n1 = llvm.extractelement %numbers[%i1 : i32] : vector<8xf32>
+    %m1 = llvm.call_intrinsic "llvm.fabs.f32"(%n1) : (f32) -> f32
+    %i2 = arith.constant 2 : i32
+    %n2 = llvm.extractelement %numbers[%i2 : i32] : vector<8xf32>
+    %m2 = llvm.call_intrinsic "llvm.fabs.f32"(%n2) : (f32) -> f32
+    %i3 = arith.constant 3 : i32
+    %n3 = llvm.extractelement %numbers[%i3 : i32] : vector<8xf32>
+    %m3 = llvm.call_intrinsic "llvm.fabs.f32"(%n3) : (f32) -> f32
+    %i4 = arith.constant 4 : i32
+    %n4 = llvm.extractelement %numbers[%i4 : i32] : vector<8xf32>
+    %m4 = llvm.call_intrinsic "llvm.fabs.f32"(%n4) : (f32) -> f32
+    %i5 = arith.constant 5 : i32
+    %n5 = llvm.extractelement %numbers[%i5 : i32] : vector<8xf32>
+    %m5 = llvm.call_intrinsic "llvm.fabs.f32"(%n5) : (f32) -> f32
+    %i6 = arith.constant 6 : i32
+    %n6 = llvm.extractelement %numbers[%i6 : i32] : vector<8xf32>
+    %m6 = llvm.call_intrinsic "llvm.fabs.f32"(%n6) : (f32) -> f32
+    %i7 = arith.constant 7 : i32
+    %n7 = llvm.extractelement %numbers[%i7 : i32] : vector<8xf32>
+    %m7 = llvm.call_intrinsic "llvm.fabs.f32"(%n7) : (f32) -> f32
+    %low0 = arith.maxnumf %m0, %m1 : f32
+    %high0 = arith.maxnumf %m2, %m3 : f32
+    %laneLargest0 = arith.maxnumf %low0, %high0 : f32
+    %largest0 = func.call @strict_device_largest(%laneLargest0) : (f32) -> f32
+    %largestScale0 = arith.divf %largest0, %most : f32
+    %scale0 = func.call @strict_device_code_scale(%largestScale0, %residual) : (f32, i1) -> f32
+    %isEmpty0 = arith.cmpf oeq, %largest0, %zero : f32
+    %inverse0 = arith.divf %most, %largest0 : f32
+    %factor0 = arith.select %isEmpty0, %zero, %inverse0 : f32
+    %low1 = arith.maxnumf %m4, %m5 : f32
+    %high1 = arith.maxnumf %m6, %m7 : f32
+    %laneLargest1 = arith.maxnumf %low1, %high1 : f32
+    %largest1 = func.call @strict_device_largest(%laneLargest1) : (f32) -> f32
+    %largestScale1 = arith.divf %largest1, %most : f32
+    %scale1 = func.call @strict_device_code_scale(%largestScale1, %residual) : (f32, i1) -> f32
+    %isEmpty1 = arith.cmpf oeq, %largest1, %zero : f32
+    %inverse1 = arith.divf %most, %largest1 : f32
+    %factor1 = arith.select %isEmpty1, %zero, %inverse1 : f32
+    %scaled0 = arith.mulf %n0, %factor0 : f32
+    %with0 = llvm.insertelement %scaled0, %noScaled[%i0 : i32] : vector<8xf32>
+    %scaled1 = arith.mulf %n1, %factor0 : f32
+    %with1 = llvm.insertelement %scaled1, %with0[%i1 : i32] : vector<8xf32>
+    %scaled2 = arith.mulf %n2, %factor0 : f32
+    %with2 = llvm.insertelement %scaled2, %with1[%i2 : i32] : vector<8xf32>
+    %scaled3 = arith.mulf %n3, %factor0 : f32
+    %with3 = llvm.insertelement %scaled3, %with2[%i3 : i32] : vector<8xf32>
+    %scaled4 = arith.mulf %n4, %factor1 : f32
+    %with4 = llvm.insertelement %scaled4, %with3[%i4 : i32] : vector<8xf32>
+    %scaled5 = arith.mulf %n5, %factor1 : f32
+    %with5 = llvm.insertelement %scaled5, %with4[%i5 : i32] : vector<8xf32>
+    %scaled6 = arith.mulf %n6, %factor1 : f32
+    %with6 = llvm.insertelement %scaled6, %with5[%i6 : i32] : vector<8xf32>
+    %scaled7 = arith.mulf %n7, %factor1 : f32
+    %with7 = llvm.insertelement %scaled7, %with6[%i7 : i32] : vector<8xf32>
+    func.call @strict_device_hadamard_nibbles(%target, %at, %with7, %unit, %residual, %lane) : (!llvm.ptr, i64, vector<8xf32>, f32, i1, i32) -> ()
+    %isWriting = arith.cmpi ult, %lane, %c8 : i32
+    cf.cond_br %isWriting, ^scale, ^done
+  ^scale:
+    %isSecond = arith.cmpi uge, %lane, %c4 : i32
+    %laneScale = arith.select %isSecond, %scale1, %scale0 : f32
+    %dataBytes = arith.shrui %count, %one : i64
+    %scaleStart = llvm.getelementptr %target[%dataBytes] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %groupParts = arith.shrui %groupStart, %five : i64
+    %lane64 = arith.extui %lane : i32 to i64
+    %part = arith.addi %groupParts, %lane64 : i64
+    %scaleSlot = llvm.getelementptr %scaleStart[%part] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    llvm.store %laneScale, %scaleSlot : f32, !llvm.ptr
+    cf.br ^done
+  ^done:
+    return
+  }
   func.func private @strict_device_hadamard_tokens_run(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %residual, %format = func.call @strict_device_code_format(%bits) : (i64) -> (i1, i64)
     %fourFlag = arith.constant 2048 : i64
@@ -496,9 +579,7 @@
     %five = arith.constant 5 : i64
     %eight = arith.constant 8 : i64
     %zero = arith.constant 0.0 : f32
-    %eightMost = arith.constant 127.0 : f32
-    %fourMost = arith.constant 7.0 : f32
-    %most = arith.select %four, %fourMost, %eightMost : f32
+    %most = arith.constant 127.0 : f32
     %thread = func.call @strict_device_thread_index() : () -> i32
     %block = func.call @strict_device_block_index() : () -> i32
     %blockWidth = func.call @strict_device_block_size() : () -> i32
@@ -535,6 +616,14 @@
     %bothLargest = arith.maxnumf %firstLargest, %secondLargest : f32
     cf.br ^largest(%second, %bothLargest : vector<8xf32>, f32)
   ^largest(%other: vector<8xf32>, %largest: f32):
+    cf.cond_br %four, ^groupsFirst, ^plainLargest
+  ^groupsFirst:
+    func.call @strict_device_hadamard_groups(%target, %count, %firstStart, %firstAt, %first, %lane, %residual) : (!llvm.ptr, i64, i64, i64, vector<8xf32>, i32, i1) -> ()
+    cf.cond_br %hasSecond, ^groupsSecond, ^exit
+  ^groupsSecond:
+    func.call @strict_device_hadamard_groups(%target, %count, %secondStart, %secondAt, %other, %lane, %residual) : (!llvm.ptr, i64, i64, i64, vector<8xf32>, i32, i1) -> ()
+    cf.br ^exit
+  ^plainLargest:
     %warpLargest = func.call @strict_device_largest(%largest) : (f32) -> f32
     %shared = llvm.mlir.addressof @strict_device_hadamard_largest : !llvm.ptr<3>
     %isFirst = arith.cmpi eq, %lane, %c0 : i32
@@ -561,14 +650,6 @@
     %isEmpty = arith.cmpf oeq, %gathered, %zero : f32
     %inverse = arith.divf %most, %gathered : f32
     %factor = arith.select %isEmpty, %zero, %inverse : f32
-    cf.cond_br %four, ^firstNibbles, ^firstCodes
-  ^firstNibbles:
-    func.call @strict_device_hadamard_nibbles(%target, %firstAt, %first, %factor, %residual, %lane) : (!llvm.ptr, i64, vector<8xf32>, f32, i1, i32) -> ()
-    cf.cond_br %hasSecond, ^secondNibbles, ^scales
-  ^secondNibbles:
-    func.call @strict_device_hadamard_nibbles(%target, %secondAt, %other, %factor, %residual, %lane) : (!llvm.ptr, i64, vector<8xf32>, f32, i1, i32) -> ()
-    cf.br ^scales
-  ^firstCodes:
     func.call @strict_device_hadamard_codes(%target, %firstAt, %first, %factor, %residual) : (!llvm.ptr, i64, vector<8xf32>, f32, i1) -> ()
     cf.cond_br %hasSecond, ^secondCodes, ^scales
   ^secondCodes:
@@ -579,9 +660,7 @@
     %isScaling = arith.cmpi slt, %thread64, %parts : i64
     cf.cond_br %isScaling, ^scale, ^exit
   ^scale:
-    %fourBit = arith.extui %four : i1 to i64
-    %dataBytes = arith.shrui %count, %fourBit : i64
-    %scales = llvm.getelementptr %target[%dataBytes] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %scales = llvm.getelementptr %target[%count] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %tokenParts = arith.shrui %start, %five : i64
     %part = arith.addi %tokenParts, %thread64 : i64
     %scaleSlot = llvm.getelementptr %scales[%part] : (!llvm.ptr, i64) -> !llvm.ptr, f32

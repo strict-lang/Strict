@@ -12765,7 +12765,7 @@
     %isDense = func.call @strict_gpu_is_kernel(%denseSlot, %functionBits) : (!llvm.ptr, i64) -> i1
     %denseShared = arith.constant 75776 : i32
     %eightsShared = arith.constant 45056 : i32
-    %wholeShared = arith.constant 73728 : i32
+    %wholeShared = arith.constant 75264 : i32
     %isAmd = func.call @strict_gpu_is_amd() : () -> i1
     %wholeWanted = arith.select %isAmd, %eightsShared, %wholeShared : i32
     %otherShared = arith.select %isTiles, %tileShared, %zero32 : i32
@@ -17960,7 +17960,8 @@
     %keptSlot = llvm.mlir.addressof @strict_gpu_tokens_kept : !llvm.ptr
     %before = llvm.load %keptSlot : !llvm.ptr -> i64
     %rowsKept = func.call @strict_gpu_rows_kept(%rows) : (f64) -> i64
-    %fourRows = func.call @strict_gpu_four_kept(%rowsKept) : (i64) -> i1
+    %fourWidth = arith.fptosi %width : f64 to i64
+    %fourRows = func.call @strict_gpu_four_kept(%rowsKept, %fourWidth) : (i64, i64) -> i1
     %kept = arith.select %fourRows, %none, %rowsKept : i64
     %split = func.call @strict_gpu_tokens_split(%kept, %count, %rows, %input, %width, %rowCount, %bases, %gated) : (i64, i64, f64, f64, f64, f64, f64, f64) -> i1
     cf.cond_br %split, ^high, ^plain
@@ -18079,7 +18080,8 @@
     %tileLanes = arith.constant -512 : i64
     %eightsFound = func.call @strict_gpu_eights(%rows, %input, %tokens, %width, %bases) : (f64, f64, f64, f64, f64) -> i1
     %rowsKept = func.call @strict_gpu_rows_kept(%rows) : (f64) -> i64
-    %fourKind = func.call @strict_gpu_four_kept(%rowsKept) : (i64) -> i1
+    %fourWidth = arith.fptosi %width : f64 to i64
+    %fourKind = func.call @strict_gpu_four_kept(%rowsKept, %fourWidth) : (i64, i64) -> i1
     %unbased = arith.cmpf oeq, %bases, %zero : f64
     %fourRows = arith.andi %fourKind, %unbased : i1
     %eights = arith.ori %eightsFound, %fourRows : i1
@@ -18899,7 +18901,7 @@
     %packedBits = arith.select %repacking, %narrowest, %rowBits : i64
     %rowKept = func.call @strict_list_kept(%gathered) : (f64) -> i64
     %nibbledKept = arith.constant 3 : i64
-    %isFourRow = func.call @strict_gpu_four_kept(%rowKept) : (i64) -> i1
+    %isFourRow = func.call @strict_gpu_four_kept(%rowKept, %columns) : (i64, i64) -> i1
     %isNibbled = arith.cmpi eq, %rowKept, %nibbledKept : i64
     %fourFormat = arith.constant 5 : i64
     %storedBits = arith.select %isFourRow, %fourFormat, %packedBits : i64
@@ -18961,13 +18963,17 @@
     return %zero : f64
   }
   // whether rows with kept (strict_list_kept: 2 for 4 bit numbers, 3 once their host copy holds two per byte) go up and
-  // multiply as 4 bit numbers: only strict_device_whole does, from sm_80 on and not on AMD, other GPUs take them as the
-  // 8 bit rows they are
-  func.func private @strict_gpu_four_kept(%kept: i64) -> i1 {
+  // multiply as 4 bit numbers: only strict_device_whole does, from sm_80 on and not on AMD, for rows of a multiple of 128
+  // numbers (a scale per 128 numbers of their tokens), other GPUs and rows take them as the 8 bit rows they are
+  func.func private @strict_gpu_four_kept(%kept: i64, %columns: i64) -> i1 {
     %none = arith.constant 0 : i64
     %two = arith.constant 2 : i64
     %true = arith.constant true
-    %isFour = arith.cmpi uge, %kept, %two : i64
+    %groupRest = arith.constant 127 : i64
+    %rest = arith.andi %columns, %groupRest : i64
+    %isGrouped = arith.cmpi eq, %rest, %none : i64
+    %isFourKept = arith.cmpi uge, %kept, %two : i64
+    %isFour = arith.andi %isFourKept, %isGrouped : i1
     %olderSlot = llvm.mlir.addressof @strict_gpu_older : !llvm.ptr
     %older = llvm.load %olderSlot : !llvm.ptr -> i64
     %isOlder = arith.cmpi ne, %older, %none : i64
@@ -19093,7 +19099,7 @@
     %bits = func.call @strict_gpu_bits(%row) : (f64) -> i64
     %packedRowBytes = func.call @strict_packed_bytes(%columns, %bits) : (i64, i64) -> i64
     %rowKept = func.call @strict_list_kept(%row) : (f64) -> i64
-    %isFourRow = func.call @strict_gpu_four_kept(%rowKept) : (i64) -> i1
+    %isFourRow = func.call @strict_gpu_four_kept(%rowKept, %columns) : (i64, i64) -> i1
     %nibbleBytes = func.call @strict_gpu_nibbled_bytes(%columns) : (i64) -> i64
     %bytes = arith.select %isFourRow, %nibbleBytes, %packedRowBytes : i64
     %wider = arith.maxui %stride, %bytes : i64

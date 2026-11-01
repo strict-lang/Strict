@@ -2364,6 +2364,95 @@
     func.call @strict_device_quantize_run(%source, %count, %width, %target, %bits) : (!llvm.ptr, i64, i64, !llvm.ptr, i64) -> ()
     llvm.return
   }
+  // the 4 bit numbers of the token of width numbers from start (two per byte at target + start / 2, the lower nibble
+  // first) with a scale per 64 numbers (both of its parts of 32 at target + count / 2), a thread per group from first,
+  // step threads apart, like the activations of ComfyUI's convrot_w4a4
+  func.func private @strict_device_quantize_groups(%source: !llvm.ptr, %format: i64, %count: i64, %width: i64, %target: !llvm.ptr, %start: i64, %first: i64, %step: i64, %residual: i1) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %five = arith.constant 5 : i64
+    %six = arith.constant 6 : i64
+    %sixtyFour = arith.constant 64 : i64
+    %thirtyTwo = arith.constant 32 : i64
+    %zero = arith.constant 0.0 : f32
+    %most = arith.constant 7.0 : f32
+    %fourShift = arith.constant 4 : i8
+    %nibbleMask = arith.constant 15 : i8
+    %seven = arith.constant 7 : i64
+    %groups = arith.shrui %width, %seven : i64
+    %dataBytes = arith.shrui %count, %one : i64
+    %scales = llvm.getelementptr %target[%dataBytes] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %tokenParts = arith.shrui %start, %five : i64
+    %pairStart = arith.shrui %start, %one : i64
+    %pairs = llvm.getelementptr %target[%pairStart] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    cf.br ^group(%first : i64)
+  ^group(%group: i64):
+    %moreGroups = arith.cmpi slt, %group, %groups : i64
+    cf.cond_br %moreGroups, ^find, ^exit
+  ^find:
+    %oneTwentyEight = arith.constant 128 : i64
+    %groupStart = arith.muli %group, %oneTwentyEight : i64
+    %groupAt = arith.addi %start, %groupStart : i64
+    cf.br ^largest(%none, %zero : i64, f32)
+  ^largest(%at: i64, %largest: f32):
+    %moreNumbers = arith.cmpi slt, %at, %oneTwentyEight : i64
+    cf.cond_br %moreNumbers, ^largestBody, ^scaled
+  ^largestBody:
+    %valueAt = arith.addi %groupAt, %at : i64
+    %value = func.call @strict_device_floats(%source, %format, %valueAt) : (!llvm.ptr, i64, i64) -> f32
+    %magnitude = llvm.call_intrinsic "llvm.fabs.f32"(%value) : (f32) -> f32
+    %larger = arith.maxnumf %largest, %magnitude : f32
+    %atNext = arith.addi %at, %one : i64
+    cf.br ^largest(%atNext, %larger : i64, f32)
+  ^scaled:
+    %largestScale = arith.divf %largest, %most : f32
+    %scale = func.call @strict_device_code_scale(%largestScale, %residual) : (f32, i1) -> f32
+    %isEmpty = arith.cmpf oeq, %largest, %zero : f32
+    %inverse = arith.divf %most, %largest : f32
+    %factor = arith.select %isEmpty, %zero, %inverse : f32
+    %pairFirst = arith.shrui %groupStart, %one : i64
+    cf.br ^pair(%none : i64)
+  ^pair(%pair: i64):
+    %morePairs = arith.cmpi slt, %pair, %sixtyFour : i64
+    cf.cond_br %morePairs, ^pairBody, ^scale
+  ^pairBody:
+    %evenOffset = arith.shli %pair, %one : i64
+    %evenIndex = arith.addi %groupAt, %evenOffset : i64
+    %oddIndex = arith.addi %evenIndex, %one : i64
+    %even = func.call @strict_device_floats(%source, %format, %evenIndex) : (!llvm.ptr, i64, i64) -> f32
+    %odd = func.call @strict_device_floats(%source, %format, %oddIndex) : (!llvm.ptr, i64, i64) -> f32
+    %evenScaled = arith.mulf %even, %factor : f32
+    %oddScaled = arith.mulf %odd, %factor : f32
+    %evenCode = func.call @strict_device_code(%evenScaled, %residual) : (f32, i1) -> i8
+    %oddCode = func.call @strict_device_code(%oddScaled, %residual) : (f32, i1) -> i8
+    %evenNibble = arith.andi %evenCode, %nibbleMask : i8
+    %oddNibble = arith.shli %oddCode, %fourShift : i8
+    %byte = arith.ori %evenNibble, %oddNibble : i8
+    %byteAt = arith.addi %pairFirst, %pair : i64
+    %byteSlot = llvm.getelementptr %pairs[%byteAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %byte, %byteSlot : i8, !llvm.ptr
+    %pairNext = arith.addi %pair, %one : i64
+    cf.br ^pair(%pairNext : i64)
+  ^scale:
+    %groupParts = arith.shli %group, %two : i64
+    %firstPart = arith.addi %tokenParts, %groupParts : i64
+    %secondPart = arith.addi %firstPart, %one : i64
+    %firstSlot = llvm.getelementptr %scales[%firstPart] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %secondSlot = llvm.getelementptr %scales[%secondPart] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    llvm.store %scale, %firstSlot : f32, !llvm.ptr
+    llvm.store %scale, %secondSlot : f32, !llvm.ptr
+    %thirdPart = arith.addi %secondPart, %one : i64
+    %fourthPart = arith.addi %thirdPart, %one : i64
+    %thirdSlot = llvm.getelementptr %scales[%thirdPart] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %fourthSlot = llvm.getelementptr %scales[%fourthPart] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    llvm.store %scale, %thirdSlot : f32, !llvm.ptr
+    llvm.store %scale, %fourthSlot : f32, !llvm.ptr
+    %groupNext = arith.addi %group, %step : i64
+    cf.br ^group(%groupNext : i64)
+  ^exit:
+    return
+  }
   // 32 or 16 bit numbers to 8 bit numbers with one scale per token of width numbers (a block of 256 threads per token, a
   // warp per token of at most 1024 numbers, its scales per 32 all are the scale of the token, like the activations of
   // ComfyUI's int8 layers) for strict_device_eights
@@ -2382,14 +2471,17 @@
     %five = arith.constant 5 : i64
     %threads = arith.constant 256 : i64
     %zero = arith.constant 0.0 : f32
-    %eightMost = arith.constant 127.0 : f32
-    %fourMost = arith.constant 7.0 : f32
-    %most = arith.select %four, %fourMost, %eightMost : f32
+    %most = arith.constant 127.0 : f32
     %thread = func.call @strict_device_thread_index() : () -> i32
     %block = func.call @strict_device_block_index() : () -> i32
     %thread64 = arith.extui %thread : i32 to i64
     %token = arith.extui %block : i32 to i64
     %start = arith.muli %token, %width : i64
+    cf.cond_br %four, ^groups, ^plain
+  ^groups:
+    func.call @strict_device_quantize_groups(%source, %format, %count, %width, %target, %start, %thread64, %threads, %residual) : (!llvm.ptr, i64, i64, i64, !llvm.ptr, i64, i64, i64, i1) -> ()
+    cf.br ^exit
+  ^plain:
     cf.br ^find(%thread64, %zero : i64, f32)
   ^find(%at: i64, %largest: f32):
     %moreFound = arith.cmpi slt, %at, %width : i64
@@ -2433,33 +2525,7 @@
     %inverse = arith.divf %most, %gathered : f32
     %factor = arith.select %isEmpty, %zero, %inverse : f32
     %bytes = llvm.getelementptr %target[%start] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %one = arith.constant 1 : i64
-    %fourShift = arith.constant 4 : i8
-    %nibbleMask = arith.constant 15 : i8
-    %pairStart = arith.shrui %start, %one : i64
-    %pairs = llvm.getelementptr %target[%pairStart] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %pairCount = arith.shrui %width, %one : i64
-    cf.cond_br %four, ^pair(%thread64 : i64), ^write(%thread64 : i64)
-  ^pair(%pairAt: i64):
-    %morePairs = arith.cmpi slt, %pairAt, %pairCount : i64
-    cf.cond_br %morePairs, ^pairBody, ^scales
-  ^pairBody:
-    %evenAt = arith.shli %pairAt, %one : i64
-    %evenIndex = arith.addi %start, %evenAt : i64
-    %oddIndex = arith.addi %evenIndex, %one : i64
-    %even = func.call @strict_device_floats(%source, %format, %evenIndex) : (!llvm.ptr, i64, i64) -> f32
-    %odd = func.call @strict_device_floats(%source, %format, %oddIndex) : (!llvm.ptr, i64, i64) -> f32
-    %evenScaled = arith.mulf %even, %factor : f32
-    %oddScaled = arith.mulf %odd, %factor : f32
-    %evenCode = func.call @strict_device_code(%evenScaled, %residual) : (f32, i1) -> i8
-    %oddCode = func.call @strict_device_code(%oddScaled, %residual) : (f32, i1) -> i8
-    %evenNibble = arith.andi %evenCode, %nibbleMask : i8
-    %oddNibble = arith.shli %oddCode, %fourShift : i8
-    %pairByte = arith.ori %evenNibble, %oddNibble : i8
-    %pairSlot = llvm.getelementptr %pairs[%pairAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    llvm.store %pairByte, %pairSlot : i8, !llvm.ptr
-    %pairNext = arith.addi %pairAt, %threads : i64
-    cf.br ^pair(%pairNext : i64)
+    cf.br ^write(%thread64 : i64)
   ^write(%writeAt: i64):
     %moreWritten = arith.cmpi slt, %writeAt, %width : i64
     cf.cond_br %moreWritten, ^writeBody, ^scales
@@ -2473,9 +2539,7 @@
     %writeNext = arith.addi %writeAt, %threads : i64
     cf.br ^write(%writeNext : i64)
   ^scales:
-    %countBytes = arith.extui %four : i1 to i64
-    %dataBytes = arith.shrui %count, %countBytes : i64
-    %scaleStart = llvm.getelementptr %target[%dataBytes] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %scaleStart = llvm.getelementptr %target[%count] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %tokenParts = arith.shrui %start, %five : i64
     %parts = arith.shrui %width, %five : i64
     cf.br ^scale(%thread64 : i64)
@@ -2504,9 +2568,7 @@
     %five = arith.constant 5 : i64
     %lanes = arith.constant 32 : i64
     %zero = arith.constant 0.0 : f32
-    %eightMost = arith.constant 127.0 : f32
-    %fourMost = arith.constant 7.0 : f32
-    %most = arith.select %four, %fourMost, %eightMost : f32
+    %most = arith.constant 127.0 : f32
     %thread = func.call @strict_device_thread_index() : () -> i32
     %block = func.call @strict_device_block_index() : () -> i32
     %warp = arith.shrui %thread, %c5 : i32
@@ -2520,6 +2582,11 @@
     cf.cond_br %inside, ^start, ^exit
   ^start:
     %start = arith.muli %row64, %width : i64
+    cf.cond_br %four, ^groups, ^plain
+  ^groups:
+    func.call @strict_device_quantize_groups(%source, %format, %count, %width, %target, %start, %lane64, %lanes, %residual) : (!llvm.ptr, i64, i64, i64, !llvm.ptr, i64, i64, i64, i1) -> ()
+    cf.br ^exit
+  ^plain:
     cf.br ^find(%lane64, %zero : i64, f32)
   ^find(%at: i64, %largest: f32):
     %moreFound = arith.cmpi slt, %at, %width : i64
@@ -2539,33 +2606,7 @@
     %inverse = arith.divf %most, %rowLargest : f32
     %factor = arith.select %isEmpty, %zero, %inverse : f32
     %bytes = llvm.getelementptr %target[%start] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %one = arith.constant 1 : i64
-    %fourShift = arith.constant 4 : i8
-    %nibbleMask = arith.constant 15 : i8
-    %pairStart = arith.shrui %start, %one : i64
-    %pairs = llvm.getelementptr %target[%pairStart] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %pairCount = arith.shrui %width, %one : i64
-    cf.cond_br %four, ^pair(%lane64 : i64), ^write(%lane64 : i64)
-  ^pair(%pairAt: i64):
-    %morePairs = arith.cmpi slt, %pairAt, %pairCount : i64
-    cf.cond_br %morePairs, ^pairBody, ^scales
-  ^pairBody:
-    %evenAt = arith.shli %pairAt, %one : i64
-    %evenIndex = arith.addi %start, %evenAt : i64
-    %oddIndex = arith.addi %evenIndex, %one : i64
-    %even = func.call @strict_device_floats(%source, %format, %evenIndex) : (!llvm.ptr, i64, i64) -> f32
-    %odd = func.call @strict_device_floats(%source, %format, %oddIndex) : (!llvm.ptr, i64, i64) -> f32
-    %evenScaled = arith.mulf %even, %factor : f32
-    %oddScaled = arith.mulf %odd, %factor : f32
-    %evenCode = func.call @strict_device_code(%evenScaled, %residual) : (f32, i1) -> i8
-    %oddCode = func.call @strict_device_code(%oddScaled, %residual) : (f32, i1) -> i8
-    %evenNibble = arith.andi %evenCode, %nibbleMask : i8
-    %oddNibble = arith.shli %oddCode, %fourShift : i8
-    %pairByte = arith.ori %evenNibble, %oddNibble : i8
-    %pairSlot = llvm.getelementptr %pairs[%pairAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    llvm.store %pairByte, %pairSlot : i8, !llvm.ptr
-    %pairNext = arith.addi %pairAt, %lanes : i64
-    cf.br ^pair(%pairNext : i64)
+    cf.br ^write(%lane64 : i64)
   ^write(%writeAt: i64):
     %moreWritten = arith.cmpi slt, %writeAt, %width : i64
     cf.cond_br %moreWritten, ^writeBody, ^scales
@@ -2579,9 +2620,7 @@
     %writeNext = arith.addi %writeAt, %lanes : i64
     cf.br ^write(%writeNext : i64)
   ^scales:
-    %countBytes = arith.extui %four : i1 to i64
-    %dataBytes = arith.shrui %count, %countBytes : i64
-    %scaleStart = llvm.getelementptr %target[%dataBytes] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %scaleStart = llvm.getelementptr %target[%count] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %tokenParts = arith.shrui %start, %five : i64
     %parts = arith.shrui %width, %five : i64
     %isScaling = arith.cmpi slt, %lane64, %parts : i64
