@@ -121,7 +121,7 @@ Execute(method MethodEntry, locals List(VmValue), owner Text, depth = 0) VmValue
 	let slots = isTracing then TracedFrame(frame).Finished(locals) else frame.Finished(locals)
 	slots(Frame.ResultSlot)
 Call(call Invocation) VmValue
-	Machine(List(TypeEntry) + Doubler).Call(Invocation.AddCall).kind is "Error"
+	Machine(List(TypeEntry) + Doubler).Call(Invocation.AddCall).kind is "Strict/Error"
 	Hello.Call(Invocation.Uppered).text is "AB"
 	let at = call.Resolution
 	let entry = call.entry.payload.Length > at then call.entry else Resolver(types).Targeted(call.entry)

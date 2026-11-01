@@ -30,12 +30,24 @@ Converted(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
 	Colored.Converted(ValueCodegen.Ones, "ColorValue", CodeBlock.Empty).text is "ColorValue"
 	Kinded.Converted(SyntaxNode("Call", "Kind"), "Text", CodeBlock.Empty).text is "to"
 	if values.inference.types.IsPlural(type)
-		return Elements(node, type, block)
+		return Elements(Held(node, type, block), type, block)
 	let isConstructed = values.inference.types.IsKnown(type) and (type is not in TypeInference.Primitives)
 	if (node.Kind is "List") and isConstructed and (type is not "List")
 		return SyntaxNode("Call", type, node.children)
 	let converter = values.inference.Converter(values.TypeOf(node, block), type)
-	(type is "Text") and (converter is "") then Bracketed(node, block) else Changed(node, converter, type)
+	(type is "Text") and (converter is "") then Bracketed(node, block) else Changed(node, converter, type, block)
+Held(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
+	Colored.Held(NewColor, "Byte", CodeBlock.Empty).text is "Red"
+	Colored.Held(NewColor, "ColorValue", CodeBlock.Empty) is NewColor
+	let types = values.inference.types
+	let source = values.TypeOf(node, block)
+	let index = types.MembersOf(source).types.Index(type)
+	let isConverted = values.inference.Converter(source, type) is not ""
+	if (index < 0) or isConverted or (type is in ("Text", "Generic", "Generics", "Any")) or types.IsPlural(source)
+		return node
+	let traitMethods = types.MethodsOf(type).names
+	let isImplemented = (traitMethods.Length > 0) and ((traitMethods - types.MethodsOf(source).names).Length is 0)
+	isImplemented then node else SyntaxNode("Member", types.MembersOf(source).names(index), List(SyntaxNode) + node)
 Bracketed(node SyntaxNode, block CodeBlock) SyntaxNode
 	Stepped.Bracketed(SyntaxNode("Call", "Step"), CodeBlock.Empty).text is "+"
 	Plain.Bracketed(ValueCodegen.One, CodeBlock.Empty) is ValueCodegen.One
@@ -49,12 +61,12 @@ Bracketed(node SyntaxNode, block CodeBlock) SyntaxNode
 	let member = SyntaxNode("Member", members.names(0), List(SyntaxNode) + node)
 	let closed = SyntaxNode("Binary", "+", (member, SyntaxNode("Text", "\")\"")))
 	SyntaxNode("Binary", "+", (SyntaxNode("Text", "\"(\""), closed))
-Changed(node SyntaxNode, converter Text, type Text) SyntaxNode
-	Plain.Changed(ValueCodegen.One, "to", "Text").text is "to"
-	Plain.Changed(ValueCodegen.One, "", "Text") is ValueCodegen.One
+Changed(node SyntaxNode, converter Text, type Text, block CodeBlock) SyntaxNode
+	Plain.Changed(ValueCodegen.One, "to", "Text", CodeBlock.Empty).text is "to"
+	Plain.Changed(ValueCodegen.One, "", "Text", CodeBlock.Empty) is ValueCodegen.One
 	if converter is "to"
 		return SyntaxNode("Binary", "to", (node, SyntaxNode("Identifier", type)))
-	converter is "from" then SyntaxNode("Call", type, node) else node
+	converter is "from" then SyntaxNode("Call", type, node) else Held(node, type, block)
 Typed(node SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Typed(HelperType, CodeBlock.Empty) to Text is "Type(\"Helper\", \"Strict/Examples\")"
 	Plain.Typed(ValueCodegen.ToText, CodeBlock.Empty) is ValueCodegen.ToText

@@ -4,6 +4,7 @@
 !*/
 !LICENSE
 *.test
+**/*.test-[0-9]*
 # User-specific files and cache folders
 *.rsuser
 *.suo

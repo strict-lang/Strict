@@ -11,6 +11,7 @@ Builds native executables. `NativeBuild` behind `strict build` turns the instruc
 - Native C objects are reused only when their `.o.nativecache` sidecar matches sources, headers and compile options.
 - The GPU module of a successful build is kept as `Name.kernels.mlir` next to `Name.ptx` (`PtxCache`): when emitted input, target flags, exported symbols and LLVM tools match, the PTX is reused. Shared runtime PTX lives in `Tools/PtxCache`, published from a private staging directory so parallel builds never read partial results.
 - Windows host modules are cut into 16 parts by `MlirSplit`: each part keeps its own functions, declares the others and the globals (defined in part 0), runs mlir-opt and mlir-translate in parallel, then goes through clang and ThinLTO.
+- Folder builds compile their files in chunks of 8 at once (`NativeChunks.Prepared`): each `NativeCompiler linked` process writes the types of its chunk as `Tests.test-<chunk>.strictbinary`, the build merges them in file order and compiles a chunk itself when its process failed (that reports the errors).
 - Release packaging keeps the build executable and publishes a checked copy, so repeated game builds reuse it.
 - `python Compiler/check_build.py` checks build and test skipping, cache invalidation, Release staging, GPU cache reuse and that builds of one target take turns on its lock.
 

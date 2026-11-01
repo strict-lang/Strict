@@ -4,6 +4,7 @@ constant Mover = TypeEntry("Strict/Mover", (MemberEntry("position", "Strict/Math
 constant Building = InstructionEntry.Invoke(0, ("Strict/Mover", "from", "Mover", "position", "velocity"), (10, 11), -1)
 constant Moving = (Building, InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "entity"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "entity"), InstructionEntry(InstructionType.FieldLoad, "position", (2, 1, -1)), InstructionEntry.Invoke(3, ("Strict/Math/Tripling", "Made", "Strict/Math/Tripling"), List(Number), 2), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "entity"), InstructionEntry(InstructionType.FieldLoad, "velocity", (5, 4, -1)), InstructionEntry.Invoke(6, ("Strict/Mover", "from", "Mover", "position", "velocity"), (3, 5), -1), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 6, "entity"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 7, "entity"), InstructionEntry.Return(7))
 constant Moved = MlirMembered(MlirFunction((MlirDestined.Maker, MlirFlats.Summing, Mover), Mover, MethodEntry("Run", List(MemberEntry), "None", Moving)), 4)
+constant Defaulted = MlirMembered(MlirFunction(Moved.function.types, Mover, MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Invoke(0, ("Strict/Mover", "from", "Mover"), List(Number), -1))), 0)
 Destined(entry InstructionEntry, compiled Texts) Texts
 	Moved.Destined(Moving(4), List(Text) + "call")(2).IndexOf("@strict_flat_destine_member(%t4mo, %t4ms)") > 0
 	MlirMembered(Moved.function, 7).Destined(Moving(7), List(Text) + "call") is ("call")
@@ -33,12 +34,14 @@ Rebuilding(register Number) Number
 Slot(at Number, register Number) Number
 	Moved.Slot(7, 3) is 0
 	Moved.Slot(7, 5) is 1
+	Defaulted.Slot(0, 0) is -1
 	let entry = function.method.instructions(at)
 	let countPosition = 5 + entry.payload(3)
 	let names = Invocation(entry, List(VmValue), VmValue.None).ParameterNames
 	for MlirInstances(function, 0).Stored(function.TypeOf(TypeEntry.ShortName(entry.texts(0))))
 		let chosen = names.Index(value.Name) < 0 then index else names.Index(value.Name)
-		if entry.payload(countPosition + 1 + chosen) is register
+		let isPassed = chosen < entry.payload(countPosition)
+		if isPassed then entry.payload(countPosition + 1 + chosen) is register else false
 			return index
 	-1
 Target(at Number, slot Number) Text

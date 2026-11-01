@@ -120,6 +120,10 @@ __HELPERS__
     llvm.store %value, %total : i64, !llvm.ptr
     llvm.return %zero : i32
   }
+  func.func private @strict_gpu_others_free() -> i64 {
+    %unknown = arith.constant -1 : i64
+    return %unknown : i64
+  }
   func.func private @strict_gpu_call(%index: i64) -> !llvm.ptr {
     %alloc = llvm.mlir.addressof @testAlloc : !llvm.ptr
     %release = llvm.mlir.addressof @testRelease : !llvm.ptr
