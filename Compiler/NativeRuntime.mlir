@@ -15092,7 +15092,6 @@
     %none = arith.constant 0 : i64
     %zero = arith.constant 0.0 : f64
     %one = arith.constant 1 : i64
-    %four = arith.constant 4 : i64
     %classMask = arith.constant 63 : i64
     %addressMask = arith.constant -256 : i64
     %leftNumber = func.call @strict_list_length(%left) : (f64) -> f64
@@ -15103,16 +15102,10 @@
     %leftFormat = func.call @strict_gpu_format(%left) : (f64) -> i64
     %rightFormat = func.call @strict_gpu_format(%right) : (f64) -> i64
     %sameFormat = arith.cmpi eq, %leftFormat, %rightFormat : i64
-    %float8Format = arith.constant 7 : i64
-    %isFloat8 = arith.cmpi eq, %leftFormat, %float8Format : i64
-    %byteFormat = arith.constant 9 : i64
-    %isBytes = arith.cmpi eq, %leftFormat, %byteFormat : i64
-    %isByteWide = arith.ori %isFloat8, %isBytes : i1
-    %brainFormat = arith.constant 17 : i64
-    %isBrain = arith.cmpi eq, %leftFormat, %brainFormat : i64
-    %two = arith.constant 2 : i64
-    %wordWidth = arith.select %isBrain, %two, %four : i64
-    %width = arith.select %isByteWide, %one, %wordWidth : i64
+    // bytes per number: 8 for doubles, 4 for floats and lanes (33), 2 for halves and bfloat16 (17), 1 for Float8 and bytes
+    %eight = arith.constant 8 : i64
+    %formatBytes = arith.divui %leftFormat, %eight : i64
+    %width = arith.maxui %formatBytes, %one : i64
     %bytes = arith.muli %total, %width : i64
     %leftBytes = arith.muli %leftCount, %width : i64
     %rightBytes = arith.muli %rightCount, %width : i64
@@ -15137,6 +15130,9 @@
   ^formatted:
     cf.cond_br %inPlace, ^append, ^copy
   ^append:
+    %graph = llvm.mlir.addressof @strict_gpu_graph : !llvm.ptr
+    %capturingSlot = llvm.getelementptr %graph[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %capturing = llvm.load %capturingSlot : !llvm.ptr -> i64
     %end = arith.addi %leftDevice, %leftBytes : i64
     %appended = func.call @strict_gpu_copy(%end, %rightDevice, %rightBytes) : (i64, i64, i64) -> i1
     cf.cond_br %appended, ^extend, ^failed
@@ -15152,8 +15148,12 @@
     llvm.store %holderBits, %longerHolder : f64, !llvm.ptr
     func.call @strict_rc_written(%longerHolder) : (!llvm.ptr) -> ()
     %longerList = func.call @strict_bits(%longer) : (!llvm.ptr) -> f64
+    // a copy outside a capture ran on the stream after the event of the segment launched last: segment 0 has no event,
+    // so a download of the joined list waits for the stream instead of reading it before the copy
     %appendSegment = func.call @strict_gpu_segment() : () -> i64
-    func.call @strict_gpu_mark(%longerList, %leftCount, %appendSegment) : (f64, i64, i64) -> ()
+    %captured = arith.cmpi ne, %capturing, %none : i64
+    %copySegment = arith.select %captured, %appendSegment, %none : i64
+    func.call @strict_gpu_mark(%longerList, %leftCount, %copySegment) : (f64, i64, i64) -> ()
     return %longerList : f64
   ^copy:
     %doubled = arith.shli %bytes, %one : i64
