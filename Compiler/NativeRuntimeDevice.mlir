@@ -249,6 +249,42 @@
     %rounded = func.call @strict_device_float8_number(%byte) : (i8) -> f32
     return %rounded : f32
   }
+  // the even and the odd numbers of the 8 nibbles of word as signed bytes (each nibble flipped by 8, lifted by 120 and
+  // flipped by 128 is itself minus 8 when it was 8 or more: two's complement without a carry between the bytes)
+  func.func private @strict_device_nibbles(%word: i32) -> (i32, i32) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+    %c4 = llvm.mlir.constant(4 : i32) : i32
+    %mask = llvm.mlir.constant(252645135 : i32) : i32
+    %flip = llvm.mlir.constant(134744072 : i32) : i32
+    %lift = llvm.mlir.constant(2021161080 : i32) : i32
+    %sign = llvm.mlir.constant(-2139062144 : i32) : i32
+    %low = arith.andi %word, %mask : i32
+    %shifted = arith.shrui %word, %c4 : i32
+    %high = arith.andi %shifted, %mask : i32
+    %lowFlipped = arith.xori %low, %flip : i32
+    %lowLifted = arith.addi %lowFlipped, %lift : i32
+    %lowSigned = arith.xori %lowLifted, %sign : i32
+    %highFlipped = arith.xori %high, %flip : i32
+    %highLifted = arith.addi %highFlipped, %lift : i32
+    %highSigned = arith.xori %highLifted, %sign : i32
+    return %lowSigned, %highSigned : i32, i32
+  }
+  // strict_device_mma64 as two strict_device_mma16 of the even and of the odd nibbles widened to bytes: a and b pair the
+  // same numbers either way, only the order of the sum changes
+  func.func private @strict_device_mma64_bytes(%a0: i32, %a1: i32, %a2: i32, %a3: i32, %b0: i32, %b1: i32, %c0: i32, %c1: i32, %c2: i32, %c3: i32) -> !llvm.struct<(i32, i32, i32, i32)> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+    %a0Low, %a0High = func.call @strict_device_nibbles(%a0) : (i32) -> (i32, i32)
+    %a1Low, %a1High = func.call @strict_device_nibbles(%a1) : (i32) -> (i32, i32)
+    %a2Low, %a2High = func.call @strict_device_nibbles(%a2) : (i32) -> (i32, i32)
+    %a3Low, %a3High = func.call @strict_device_nibbles(%a3) : (i32) -> (i32, i32)
+    %b0Low, %b0High = func.call @strict_device_nibbles(%b0) : (i32) -> (i32, i32)
+    %b1Low, %b1High = func.call @strict_device_nibbles(%b1) : (i32) -> (i32, i32)
+    %lows = func.call @strict_device_mma16(%a0Low, %a1Low, %a2Low, %a3Low, %b0Low, %b1Low, %c0, %c1, %c2, %c3) : (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> !llvm.struct<(i32, i32, i32, i32)>
+    %low0 = llvm.extractvalue %lows[0] : !llvm.struct<(i32, i32, i32, i32)>
+    %low1 = llvm.extractvalue %lows[1] : !llvm.struct<(i32, i32, i32, i32)>
+    %low2 = llvm.extractvalue %lows[2] : !llvm.struct<(i32, i32, i32, i32)>
+    %low3 = llvm.extractvalue %lows[3] : !llvm.struct<(i32, i32, i32, i32)>
+    %both = func.call @strict_device_mma16(%a0High, %a1High, %a2High, %a3High, %b0High, %b1High, %low0, %low1, %low2, %low3) : (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> !llvm.struct<(i32, i32, i32, i32)>
+    return %both : !llvm.struct<(i32, i32, i32, i32)>
+  }
   // mirrors strict_packed_data of the host runtime: the bytes of the numbers, after them come the scales
   func.func private @strict_device_data(%count: i64, %bits: i64) -> i64 attributes {llvm.linkage = #llvm.linkage<internal>} {
     %three = arith.constant 3 : i64
@@ -2334,6 +2370,10 @@
   llvm.mlir.global internal @strict_device_quantize_largest() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<8 x f32>
   func.func private @strict_device_quantize_tokens_run(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %residual, %format = func.call @strict_device_code_format(%bits) : (i64) -> (i1, i64)
+    %fourFlag = arith.constant 2048 : i64
+    %fourFlagged = arith.andi %bits, %fourFlag : i64
+    %noFlag = arith.constant 0 : i64
+    %four = arith.cmpi ne, %fourFlagged, %noFlag : i64
     %c0 = arith.constant 0 : i32
     %c1 = arith.constant 1 : i32
     %c5 = arith.constant 5 : i32
@@ -2342,7 +2382,9 @@
     %five = arith.constant 5 : i64
     %threads = arith.constant 256 : i64
     %zero = arith.constant 0.0 : f32
-    %most = arith.constant 127.0 : f32
+    %eightMost = arith.constant 127.0 : f32
+    %fourMost = arith.constant 7.0 : f32
+    %most = arith.select %four, %fourMost, %eightMost : f32
     %thread = func.call @strict_device_thread_index() : () -> i32
     %block = func.call @strict_device_block_index() : () -> i32
     %thread64 = arith.extui %thread : i32 to i64
@@ -2391,7 +2433,33 @@
     %inverse = arith.divf %most, %gathered : f32
     %factor = arith.select %isEmpty, %zero, %inverse : f32
     %bytes = llvm.getelementptr %target[%start] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    cf.br ^write(%thread64 : i64)
+    %one = arith.constant 1 : i64
+    %fourShift = arith.constant 4 : i8
+    %nibbleMask = arith.constant 15 : i8
+    %pairStart = arith.shrui %start, %one : i64
+    %pairs = llvm.getelementptr %target[%pairStart] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %pairCount = arith.shrui %width, %one : i64
+    cf.cond_br %four, ^pair(%thread64 : i64), ^write(%thread64 : i64)
+  ^pair(%pairAt: i64):
+    %morePairs = arith.cmpi slt, %pairAt, %pairCount : i64
+    cf.cond_br %morePairs, ^pairBody, ^scales
+  ^pairBody:
+    %evenAt = arith.shli %pairAt, %one : i64
+    %evenIndex = arith.addi %start, %evenAt : i64
+    %oddIndex = arith.addi %evenIndex, %one : i64
+    %even = func.call @strict_device_floats(%source, %format, %evenIndex) : (!llvm.ptr, i64, i64) -> f32
+    %odd = func.call @strict_device_floats(%source, %format, %oddIndex) : (!llvm.ptr, i64, i64) -> f32
+    %evenScaled = arith.mulf %even, %factor : f32
+    %oddScaled = arith.mulf %odd, %factor : f32
+    %evenCode = func.call @strict_device_code(%evenScaled, %residual) : (f32, i1) -> i8
+    %oddCode = func.call @strict_device_code(%oddScaled, %residual) : (f32, i1) -> i8
+    %evenNibble = arith.andi %evenCode, %nibbleMask : i8
+    %oddNibble = arith.shli %oddCode, %fourShift : i8
+    %pairByte = arith.ori %evenNibble, %oddNibble : i8
+    %pairSlot = llvm.getelementptr %pairs[%pairAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %pairByte, %pairSlot : i8, !llvm.ptr
+    %pairNext = arith.addi %pairAt, %threads : i64
+    cf.br ^pair(%pairNext : i64)
   ^write(%writeAt: i64):
     %moreWritten = arith.cmpi slt, %writeAt, %width : i64
     cf.cond_br %moreWritten, ^writeBody, ^scales
@@ -2405,7 +2473,9 @@
     %writeNext = arith.addi %writeAt, %threads : i64
     cf.br ^write(%writeNext : i64)
   ^scales:
-    %scaleStart = llvm.getelementptr %target[%count] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %countBytes = arith.extui %four : i1 to i64
+    %dataBytes = arith.shrui %count, %countBytes : i64
+    %scaleStart = llvm.getelementptr %target[%dataBytes] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %tokenParts = arith.shrui %start, %five : i64
     %parts = arith.shrui %width, %five : i64
     cf.br ^scale(%thread64 : i64)
@@ -2424,13 +2494,19 @@
   // strict_device_quantize_tokens_run of tokens of at most 1024 numbers, a warp per token
   func.func private @strict_device_quantize_rows_run(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %residual, %format = func.call @strict_device_code_format(%bits) : (i64) -> (i1, i64)
+    %fourFlag = arith.constant 2048 : i64
+    %fourFlagged = arith.andi %bits, %fourFlag : i64
+    %noFlag = arith.constant 0 : i64
+    %four = arith.cmpi ne, %fourFlagged, %noFlag : i64
     %c3 = arith.constant 3 : i32
     %c5 = arith.constant 5 : i32
     %c31 = arith.constant 31 : i32
     %five = arith.constant 5 : i64
     %lanes = arith.constant 32 : i64
     %zero = arith.constant 0.0 : f32
-    %most = arith.constant 127.0 : f32
+    %eightMost = arith.constant 127.0 : f32
+    %fourMost = arith.constant 7.0 : f32
+    %most = arith.select %four, %fourMost, %eightMost : f32
     %thread = func.call @strict_device_thread_index() : () -> i32
     %block = func.call @strict_device_block_index() : () -> i32
     %warp = arith.shrui %thread, %c5 : i32
@@ -2463,7 +2539,33 @@
     %inverse = arith.divf %most, %rowLargest : f32
     %factor = arith.select %isEmpty, %zero, %inverse : f32
     %bytes = llvm.getelementptr %target[%start] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    cf.br ^write(%lane64 : i64)
+    %one = arith.constant 1 : i64
+    %fourShift = arith.constant 4 : i8
+    %nibbleMask = arith.constant 15 : i8
+    %pairStart = arith.shrui %start, %one : i64
+    %pairs = llvm.getelementptr %target[%pairStart] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %pairCount = arith.shrui %width, %one : i64
+    cf.cond_br %four, ^pair(%lane64 : i64), ^write(%lane64 : i64)
+  ^pair(%pairAt: i64):
+    %morePairs = arith.cmpi slt, %pairAt, %pairCount : i64
+    cf.cond_br %morePairs, ^pairBody, ^scales
+  ^pairBody:
+    %evenAt = arith.shli %pairAt, %one : i64
+    %evenIndex = arith.addi %start, %evenAt : i64
+    %oddIndex = arith.addi %evenIndex, %one : i64
+    %even = func.call @strict_device_floats(%source, %format, %evenIndex) : (!llvm.ptr, i64, i64) -> f32
+    %odd = func.call @strict_device_floats(%source, %format, %oddIndex) : (!llvm.ptr, i64, i64) -> f32
+    %evenScaled = arith.mulf %even, %factor : f32
+    %oddScaled = arith.mulf %odd, %factor : f32
+    %evenCode = func.call @strict_device_code(%evenScaled, %residual) : (f32, i1) -> i8
+    %oddCode = func.call @strict_device_code(%oddScaled, %residual) : (f32, i1) -> i8
+    %evenNibble = arith.andi %evenCode, %nibbleMask : i8
+    %oddNibble = arith.shli %oddCode, %fourShift : i8
+    %pairByte = arith.ori %evenNibble, %oddNibble : i8
+    %pairSlot = llvm.getelementptr %pairs[%pairAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %pairByte, %pairSlot : i8, !llvm.ptr
+    %pairNext = arith.addi %pairAt, %lanes : i64
+    cf.br ^pair(%pairNext : i64)
   ^write(%writeAt: i64):
     %moreWritten = arith.cmpi slt, %writeAt, %width : i64
     cf.cond_br %moreWritten, ^writeBody, ^scales
@@ -2477,7 +2579,9 @@
     %writeNext = arith.addi %writeAt, %lanes : i64
     cf.br ^write(%writeNext : i64)
   ^scales:
-    %scaleStart = llvm.getelementptr %target[%count] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %countBytes = arith.extui %four : i1 to i64
+    %dataBytes = arith.shrui %count, %countBytes : i64
+    %scaleStart = llvm.getelementptr %target[%dataBytes] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %tokenParts = arith.shrui %start, %five : i64
     %parts = arith.shrui %width, %five : i64
     %isScaling = arith.cmpi slt, %lane64, %parts : i64

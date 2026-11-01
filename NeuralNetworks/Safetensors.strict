@@ -7,6 +7,7 @@ constant Bytes = Safetensors("NeuralNetworks/tinyint8.safetensors")
 constant Fours = Safetensors("NeuralNetworks/tinyfours.safetensors")
 constant Nibbles = Safetensors("NeuralNetworks/tinyint4.safetensors")
 constant Lifted = Layer.Zeros(63) + 1
+constant Lifting = Safetensors.Nibbles.Tuned("b", Safetensors.Lifted, (1, 0, 0, 0), (1))
 constant Single = "\"x\":{\"dtype\":\"F32\",\"shape\":[2],\"data_offsets\":[0,8]}"
 constant Second = Safetensors.Bytes.Part(Safetensors.Bytes.Values("a.weight"), 64, 64, 1)
 constant Exact = Safetensors.Bytes.Quantized("a")
@@ -17,7 +18,9 @@ Entry(name Text) Text
 	Safetensors("NeuralNetworks/tiny.safetensors", 32, "a").Entry("") is Tiny.Entry("a")
 	Nibbles.Entry("a.weight") is "\"dtype\":\"I4\",\"shape\":[4,64],\"data_offsets\":[0,128]"
 	Nibbles.Quantized("a") is Nibbles.Quantized("b")
-	Nibbles.Tuned("a", Lifted, (1, 0, 0, 0), (1))(0)(63).IsNearlyEqual(Nibbles.Tuned("b", Lifted, (1, 0, 0, 0), (1))(0)(63), 0.05)
+	Nibbles.Quantized("a", 4) is Nibbles.Quantized("a")
+	Nibbles.Quantized("b", 4) is Error
+	Nibbles.Tuned("a", Lifted, (1, 0, 0, 0), (1))(0)(63).IsNearlyEqual(Lifting(0)(63), 0.05)
 	TensorFile.Entry(path, prefix + name)
 Bracketed(entry Text, key Text) Numbers
 	Tiny.Bracketed(Tiny.Entry("a"), "shape") is (2, 3)

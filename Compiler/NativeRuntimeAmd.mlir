@@ -104,6 +104,10 @@
     return %halves : !llvm.struct<(i32, i32, i32, i32)>
   }
   // m16n8k32: rows g and g + 8 (a0, a1) of k 0 to 15 (b0) and then of k 16 to 31 (a2, a3 with b1)
+  func.func private @strict_device_mma64(%a0: i32, %a1: i32, %a2: i32, %a3: i32, %b0: i32, %b1: i32, %c0: i32, %c1: i32, %c2: i32, %c3: i32) -> !llvm.struct<(i32, i32, i32, i32)> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+    %bytes = func.call @strict_device_mma64_bytes(%a0, %a1, %a2, %a3, %b0, %b1, %c0, %c1, %c2, %c3) : (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> !llvm.struct<(i32, i32, i32, i32)>
+    return %bytes : !llvm.struct<(i32, i32, i32, i32)>
+  }
   func.func private @strict_device_mma16(%a0: i32, %a1: i32, %a2: i32, %a3: i32, %b0: i32, %b1: i32, %c0: i32, %c1: i32, %c2: i32, %c3: i32) -> !llvm.struct<(i32, i32, i32, i32)> attributes {llvm.linkage = #llvm.linkage<internal>} {
     %upper = func.call @strict_device_mma8(%a0, %b0, %c0, %c1) : (i32, i32, i32, i32) -> !llvm.struct<(i32, i32)>
     %upper0 = llvm.extractvalue %upper[0] : !llvm.struct<(i32, i32)>

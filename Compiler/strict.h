@@ -32,6 +32,9 @@ typedef struct { double count; double bits; unsigned char data[]; } strict_packe
 static inline double strict_packed_result(const strict_packed* packed) { return strict_value(0x7FF9000000000000ull | (uint64_t)(uintptr_t)packed); }
 /* Added to the bits of a packed row: dot products with it on the GPU keep their tokens unquantized. */
 #define STRICT_KEPT_TOKENS 256
+/* Added to the bits of a packed 8 bit row of 4 bit numbers (-8 to 7): dot products with it on the GPU make their tokens
+   4 bit numbers too and multiply both on the 4 bit tensor cores (the GPU copy holds two numbers per byte). */
+#define STRICT_FOUR_TOKENS 512
 static inline uint64_t strict_packed_data(uint64_t count, uint64_t bits)
 {
 	return bits == 4 ? (count + 255) / 256 * 144 : bits == 6 ? (count + 255) / 256 * 208 : bits == 3 ? (count + 127) / 128 * 28 :

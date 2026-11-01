@@ -18,6 +18,7 @@ Details for the GPU line of [improvements.md](improvements.md), one short line e
 - compiled loops index in 64 bits: 32 bit index math where the counts fit
 
 ## Memory
+- 4 bit rows (`Safetensors.Quantized(name, 4)`) keep the int8 row stride on the GPU (no VRAM saved yet), `Batch.Sums` multiplies them as 4 bit numbers (`Batch.Gated` goes the same way untested, `Batch.Grouped` and `GpuMemory.Tuned` must not get them: the GPU copy holds two numbers per byte), a host copy packed in place (kept 3) is no longer readable on the CPU
 - streamed weights are not overlapped with compute (H3 idles ~230 ms per step, ComfyUI 60): uploads ahead in a ring need a cheaper refill than walking the chain
 - without spilled rows the trim before an own block runs at every block
 - full collections before big activation blocks (H3 ~98 per step, 18-28 ms each in strict_gc_mark_range): skip lists without references in the mark, or a sub-allocating pool
