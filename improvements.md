@@ -3,7 +3,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 
 ## Bugs
 - Routed attention (routing > 0) with strided values (valueOffset/valueStride) runs unrouted: `strict_gpu_attention` takes the routed 8 bit path only for packed values, so H3Block.Heads with V read from the combined list attends densely (6 s slower, 12.9 dB from the routed result), routing 0 is bit-identical; the per-token value quantization (`strict_device_quantize_rows_run`) and the pooled value means need strided rows, H3 keeps the copy until then.
-- GPU state leaks between tests of one native folder executable: `strict test NeuralNetworks native` fails Safetensors.Tuned (lines 58-60) and Speculation's Truncated (line 88), StrictComfy's `strict test . native` FluxDecoder, FluxResnet, Moss.Ran and H3AudioBlock.Output (2.7 ms there instead of 314 ms alone); each file alone and STRICT_GPU=0 pass.
+- Native test results depend on the path a loop takes: it runs on the GPU when its lists are already there or it touches more than 1 MB once the GPU is open, so in a folder run the tests before decide, and GPU results miss the tolerances measured on the CPU (Speculation.Truncated, StrictComfy's FluxDecoder, FluxResnet, H3AudioBlock.Output and Moss.Ran; with `STRICT_GPU=all` also Convolved, DeltaChunks, FlashLayer and FlashNext): tolerances that hold on both paths, or the GPU precision those models need.
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).

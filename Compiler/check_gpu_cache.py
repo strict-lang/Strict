@@ -260,7 +260,7 @@ __HELPERS__
   }
 '''
 pool=[]
-for name in ['strict_gpu_stack','strict_gpu_obtain','strict_gpu_lend','strict_gpu_lent_class','strict_gpu_pair_put','strict_gpu_pair_taken','strict_gpu_obtained']:
+for name in ['strict_gpu_stack','strict_gpu_obtain','strict_gpu_lend','strict_gpu_lent_class','strict_gpu_pair_put','strict_gpu_pair_taken','strict_gpu_obtained','strict_gpu_class_size']:
 	pool.append(re.search(r'  func.func private @'+name+r'\(.*?\n  \}',source,re.S)[0])
 release=re.search(r'  func.func private @strict_gpu_trim_unused\(.*?\n  \}',source,re.S)
 assert release, 'Missing explicit phase-boundary release of unused GPU pool buffers'
@@ -408,7 +408,7 @@ assert log[0]==(3,999,333) and ahead[3]==device+2,'The first use of rows that we
 print('Native row-cache and nested input lifetime contracts passed')
 
 pools.pool_address.restype=ctypes.c_void_p
-blocks=(ctypes.c_int64*144).from_address(pools.pool_address())
+blocks=(ctypes.c_int64*192).from_address(pools.pool_address())
 pools.pool_take.argtypes=[ctypes.c_int64];pools.pool_take.restype=ctypes.c_int64
 pools.pool_real.argtypes=[ctypes.c_int64,ctypes.c_int64];pools.pool_real.restype=ctypes.c_int64
 first=(ctypes.c_int64*1)(123);second=(ctypes.c_int64*1)(456)
@@ -423,26 +423,26 @@ pools.pool_stats.restype=ctypes.c_void_p
 counters=(ctypes.c_int64*3).from_address(pools.pool_stats())
 assert counters[1]==0,'An empty pool must not flush GPU work'
 small=(ctypes.c_int64*1)(256<<20);large=(ctypes.c_int64*1)(512<<20)
-blocks[20*3]=ctypes.addressof(small);blocks[20*3+1]=1;blocks[20*3+2]=1
-blocks[21*3]=ctypes.addressof(large);blocks[21*3+1]=1;blocks[21*3+2]=1
+blocks[32*3]=ctypes.addressof(small);blocks[32*3+1]=1;blocks[32*3+2]=1
+blocks[36*3]=ctypes.addressof(large);blocks[36*3+1]=1;blocks[36*3+2]=1
 pools.pool_take(16)
 assert counters[0]==768<<20,'Unused large pool blocks must go before an allocation exhausts VRAM headroom'
 assert counters[1]==1,'Freeing several pool blocks must drain queued GPU work only once'
-assert blocks[20*3+1]==0 and blocks[21*3+1]==0,'Trimmed blocks must leave their free lists'
+assert blocks[32*3+1]==0 and blocks[36*3+1]==0,'Trimmed blocks must leave their free lists'
 pools.pool_spilled.restype=ctypes.c_void_p
 spilled=(ctypes.c_int64*1).from_address(pools.pool_spilled())
-spilled[0]=1;blocks[20*3+1]=1;blocks[21*3+1]=1;counters[0]=0
+spilled[0]=1;blocks[32*3+1]=1;blocks[36*3+1]=1;counters[0]=0
 pools.pool_take(16)
-assert counters[0]==0 and blocks[20*3+1]==1 and blocks[21*3+1]==1,'With streamed rows spilled an allocation evicts those (strict_gpu_starved) instead of trimming pool blocks the next layers allocate again'
-spilled[0]=0;blocks[20*3+1]=0
+assert counters[0]==0 and blocks[32*3+1]==1 and blocks[36*3+1]==1,'With streamed rows spilled an allocation evicts those (strict_gpu_starved) instead of trimming pool blocks the next layers allocate again'
+spilled[0]=0;blocks[32*3+1]=0
 print('GPU pool borrows correctly and trims unused large buffers before allocating under pressure')
 firstPhase=(ctypes.c_int64*1)(64<<20);secondPhase=(ctypes.c_int64*1)(512<<20)
-blocks[18*3]=ctypes.addressof(firstPhase);blocks[18*3+1]=1;blocks[18*3+2]=1
-blocks[21*3]=ctypes.addressof(secondPhase);blocks[21*3+1]=1;blocks[21*3+2]=1
+blocks[24*3]=ctypes.addressof(firstPhase);blocks[24*3+1]=1;blocks[24*3+2]=1
+blocks[36*3]=ctypes.addressof(secondPhase);blocks[36*3+1]=1;blocks[36*3+2]=1
 live=list(cache[:24]);collected=counters[2];waited=counters[1]
 pools.pool_clear.restype=ctypes.c_double
 assert pools.pool_clear()==576<<20,'An explicit workload boundary releases every unused large pool block'
-assert blocks[18*3+1]==0 and blocks[21*3+1]==0,'Released blocks must leave the free lists'
+assert blocks[24*3+1]==0 and blocks[36*3+1]==0,'Released blocks must leave the free lists'
 assert counters[2]==collected+1 and counters[1]==waited+1,'Collect once and drain once for a release'
 assert list(cache[:24])==live,'Live tensor cache entries must remain intact'
 assert pools.pool_clear()==0 and counters[1]==waited+1,'An empty pool must not drain work'

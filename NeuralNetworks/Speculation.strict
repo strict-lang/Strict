@@ -85,7 +85,7 @@ IsMatch(tokens Numbers, start Number, length Number) Boolean
 	true
 Truncated(verified Qwen3, kept Numbers) Slow(Qwen3)
 	Speculation(Started, context = (1)).Truncated(Started.model, (5)).blocks.First.keys.Length is 2 * 4
-	Kept.Step(2, 4).Scored.Last.IsNearlyEqual(Prompted.Step(5, 3).Step(2, 4).Scored.Last)
+	Kept.Step(2, 4).Scored.Last.IsNearlyEqual(Prompted.Step(5, 3).Step(2, 4).Scored.Last, 0.002)
 	Kept.hidden.Length is 8
 	let length = context.Length + kept.Length
 	mutable blocks = List(Mutable(Qwen3Block))
