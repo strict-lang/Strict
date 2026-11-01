@@ -1,6 +1,7 @@
-  // the heap the collector reserves (its page table and cards are an 8192th and a 512th of it), a pause while spinning
+  // the heap the collector reserves (its page table and cards are an 8192th and a 512th of it), 3.5 GB of the 4 GB of
+  // wasm32, the browser commits what it uses (strict_commit); a pause while spinning
   // (no threads in the browser), fresh memory of the browser is zero
-  llvm.mlir.global internal constant @strict_heap_bytes(1073741824 : i64) : i64
+  llvm.mlir.global internal constant @strict_heap_bytes(3758096384 : i64) : i64
   llvm.func @strict_pause() attributes {passthrough = ["alwaysinline"]} {
     llvm.return
   }
@@ -152,15 +153,108 @@
   llvm.func @strict_crash_log(%text: !llvm.ptr) {
     llvm.return
   }
+  // the collector takes the address space 256 MB above the start of malloc (strict_reserve) and the browser's memory
+  // grows as it commits pages (strict_commit), malloc stays below it: its sbrk replaces emscripten's (sbrk.c, these four
+  // functions), which grows into memory the collector already grew past
+  llvm.mlir.global internal @strict_malloc_end(0 : i32) : i32
+  llvm.mlir.global internal @strict_sbrk(0 : i32) : i32
+  llvm.mlir.global external @__heap_base() : i8
+  llvm.func @emscripten_resize_heap(i32) -> i32
+  llvm.func @emscripten_get_heap_size() -> i32
+  llvm.func @emscripten_get_sbrk_ptr() -> !llvm.ptr {
+    %slot = llvm.mlir.addressof @strict_sbrk : !llvm.ptr
+    %value = llvm.load %slot : !llvm.ptr -> i32
+    %unset = llvm.mlir.constant(0 : i32) : i32
+    %isUnset = llvm.icmp "eq" %value, %unset : i32
+    llvm.cond_br %isUnset, ^set, ^done
+  ^set:
+    %base = llvm.mlir.addressof @__heap_base : !llvm.ptr
+    %baseBits = llvm.ptrtoint %base : !llvm.ptr to i32
+    llvm.store %baseBits, %slot : i32, !llvm.ptr
+    llvm.br ^done
+  ^done:
+    llvm.return %slot : !llvm.ptr
+  }
+  llvm.func @_sbrk64(%increment: i64) -> !llvm.ptr {
+    %slot = llvm.call @emscripten_get_sbrk_ptr() : () -> !llvm.ptr
+    %old = llvm.load %slot : !llvm.ptr -> i32
+    %oldWide = llvm.zext %old : i32 to i64
+    %rest = llvm.mlir.constant(15 : i64) : i64
+    %mask = llvm.mlir.constant(-16 : i64) : i64
+    %padded = llvm.add %increment, %rest : i64
+    %aligned = llvm.and %padded, %mask : i64
+    %new = llvm.add %oldWide, %aligned : i64
+    %endSlot = llvm.mlir.addressof @strict_malloc_end : !llvm.ptr
+    %end = llvm.load %endSlot : !llvm.ptr -> i32
+    %endWide = llvm.zext %end : i32 to i64
+    %none = llvm.mlir.constant(0 : i64) : i64
+    %isLimited = llvm.icmp "ne" %endWide, %none : i64
+    %isPast = llvm.icmp "ugt" %new, %endWide : i64
+    %isOver = llvm.and %isLimited, %isPast : i1
+    %largest = llvm.mlir.constant(4294901760 : i64) : i64
+    %isOutside = llvm.icmp "ugt" %new, %largest : i64
+    %isRefused = llvm.or %isOver, %isOutside : i1
+    llvm.cond_br %isRefused, ^fail, ^sized
+  ^sized:
+    %heap = llvm.call @emscripten_get_heap_size() : () -> i32
+    %heapWide = llvm.zext %heap : i32 to i64
+    %isGrowing = llvm.icmp "ugt" %new, %heapWide : i64
+    %narrow = llvm.trunc %new : i64 to i32
+    llvm.cond_br %isGrowing, ^grow, ^taken
+  ^grow:
+    %grown = llvm.call @emscripten_resize_heap(%narrow) : (i32) -> i32
+    %failed = llvm.mlir.constant(0 : i32) : i32
+    %isGrown = llvm.icmp "ne" %grown, %failed : i32
+    llvm.cond_br %isGrown, ^taken, ^fail
+  ^taken:
+    llvm.store %narrow, %slot : i32, !llvm.ptr
+    %previous = llvm.inttoptr %oldWide : i64 to !llvm.ptr
+    llvm.return %previous : !llvm.ptr
+  ^fail:
+    %minusOne = llvm.mlir.constant(-1 : i32) : i32
+    %failure = llvm.inttoptr %minusOne : i32 to !llvm.ptr
+    llvm.return %failure : !llvm.ptr
+  }
+  llvm.func @sbrk(%increment: i32) -> !llvm.ptr {
+    %wide = llvm.zext %increment : i32 to i64
+    %result = llvm.call @_sbrk64(%wide) : (i64) -> !llvm.ptr
+    llvm.return %result : !llvm.ptr
+  }
+  llvm.func @brk(%target: !llvm.ptr) -> i32 {
+    %nothing = llvm.mlir.constant(0 : i32) : i32
+    %last = llvm.call @sbrk(%nothing) : (i32) -> !llvm.ptr
+    %lastBits = llvm.ptrtoint %last : !llvm.ptr to i32
+    %targetBits = llvm.ptrtoint %target : !llvm.ptr to i32
+    %increment = llvm.sub %targetBits, %lastBits : i32
+    %moved = llvm.call @sbrk(%increment) : (i32) -> !llvm.ptr
+    %minusOne = llvm.mlir.constant(-1 : i32) : i32
+    %failure = llvm.inttoptr %minusOne : i32 to !llvm.ptr
+    %isFailed = llvm.icmp "eq" %moved, %failure : !llvm.ptr
+    %result = llvm.select %isFailed, %minusOne, %nothing : i1, i32
+    llvm.return %result : i32
+  }
   func.func private @strict_reserve(%size: i64) -> !llvm.ptr {
-    %null = llvm.mlir.zero : !llvm.ptr
-    %reserved = llvm.call @strict_c_malloc(%size) : (i64) -> !llvm.ptr
-    %failed = llvm.icmp "eq" %reserved, %null : !llvm.ptr
-    cf.cond_br %failed, ^fail, ^done
+    %slot = llvm.call @emscripten_get_sbrk_ptr() : () -> !llvm.ptr
+    %brk = llvm.load %slot : !llvm.ptr -> i32
+    %brkWide = arith.extui %brk : i32 to i64
+    %mallocBytes = arith.constant 268435456 : i64
+    %pageRest = arith.constant 65535 : i64
+    %pageMask = arith.constant -65536 : i64
+    %spaced = arith.addi %brkWide, %mallocBytes : i64
+    %padded = arith.addi %spaced, %pageRest : i64
+    %start = arith.andi %padded, %pageMask : i64
+    %end = arith.addi %start, %size : i64
+    %largest = arith.constant 4294901760 : i64
+    %fits = arith.cmpi ule, %end, %largest : i64
+    cf.cond_br %fits, ^done, ^fail
   ^fail:
     func.call @strict_gc_fail() : () -> ()
     cf.br ^done
   ^done:
+    %startNarrow = arith.trunci %start : i64 to i32
+    %endSlot = llvm.mlir.addressof @strict_malloc_end : !llvm.ptr
+    llvm.store %startNarrow, %endSlot : i32, !llvm.ptr
+    %reserved = llvm.inttoptr %start : i64 to !llvm.ptr
     return %reserved : !llvm.ptr
   }
   llvm.func @emscripten_stack_get_end() -> !llvm.ptr
@@ -169,8 +263,25 @@
     %lowest = llvm.ptrtoint %end : !llvm.ptr to i64
     return %lowest : i64
   }
-  // fresh memory of the browser is zero, reused pages are cleared where they are taken (strict_gc_take_pages)
+  // fresh memory of the browser is zero, reused pages are cleared where they are taken (strict_gc_take_pages): the
+  // memory grows up to the end of what the collector commits
   func.func private @strict_commit(%at: !llvm.ptr, %size: i64) {
+    %start = llvm.ptrtoint %at : !llvm.ptr to i64
+    %end = arith.addi %start, %size : i64
+    %heap = llvm.call @emscripten_get_heap_size() : () -> i32
+    %heapWide = arith.extui %heap : i32 to i64
+    %isGrowing = arith.cmpi ugt, %end, %heapWide : i64
+    cf.cond_br %isGrowing, ^grow, ^done
+  ^grow:
+    %narrow = arith.trunci %end : i64 to i32
+    %grown = llvm.call @emscripten_resize_heap(%narrow) : (i32) -> i32
+    %failed = arith.constant 0 : i32
+    %isGrown = arith.cmpi ne, %grown, %failed : i32
+    cf.cond_br %isGrown, ^done, ^fail
+  ^fail:
+    func.call @strict_gc_fail() : () -> ()
+    cf.br ^done
+  ^done:
     return
   }
   func.func private @strict_decommit(%at: !llvm.ptr, %size: i64) {

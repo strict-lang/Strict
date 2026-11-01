@@ -1283,7 +1283,7 @@
     return %argumentsError : f64
   }
   llvm.mlir.global internal constant @strict_gc_heap_switch("STRICT_HEAP\00") : !llvm.array<12 x i8>
-  // STRICT_HEAP sets the collector heap in MB, a native run checks the 1 GB of the web and iOS
+  // STRICT_HEAP sets the collector heap in MB, a native run checks the 1 GB of iOS
   func.func private @strict_gc_heap_bytes() -> i64 {
     %heapSlot = llvm.mlir.addressof @strict_heap_bytes : !llvm.ptr
     %heapBytes = llvm.load %heapSlot : !llvm.ptr -> i64
