@@ -52,12 +52,13 @@ addToLibrary({
 					return null;
 			}
 		}
-		return { numbers, places };
+		return { size: numbers.length, written: [[0, numbers]], places };
 	},
 	// a runtime kernel (NativeRuntimeWgsl.js) takes every value rounded to 32 bit floats (a whole number also exactly as
 	// the second place of its slot): lists of 64 bit, 32 bit or bfloat16 (bits 17) numbers, other formats run on the CPU;
-	// a kept kernel result (bits 255, its address the buffer) is copied into place on the GPU
-	$strictWebGpuKernelInputs__deps: ['$strictWebGpu'],
+	// a kept kernel result (bits 255, its address the buffer) is copied into place on the GPU; only the other values are
+	// written (the buffer of all of them starts as zeros), a 944 MB placeholder of a resident map took seconds
+	$strictWebGpuKernelInputs__deps: ['$strictWebGpu', '$strictWebGpuWidened'],
 	$strictWebGpuKernelInputs: (count, table, slots) => {
 		const entries = HEAPF64.slice(table / 8, table / 8 + slots * 3);
 		const places = new Uint32Array(slots * 2 + 1), parts = [], copies = [];
@@ -70,8 +71,7 @@ addToLibrary({
 			const part = length < 0 ? [address] : resident ? { length, isResident: true }
 				: bits === 64 ? HEAPF64.subarray(address / 8, address / 8 + length)
 				: bits === 32 ? HEAPF32.subarray(address / 4, address / 4 + length)
-				: bits === 17 ? new Float32Array(Uint32Array.from(HEAPU16.subarray(address / 2, address / 2 + length),
-					(half) => half << 16).buffer) : null;
+				: bits === 17 ? strictWebGpuWidened(HEAPU16.subarray(address / 2, address / 2 + length)) : null;
 			if (!part)
 				return null;
 			places[slot * 2] = total;
@@ -80,9 +80,17 @@ addToLibrary({
 			total += part.length;
 		}
 		places[slots * 2] = count;
-		const numbers = new Float32Array(Math.max(total, 1));
-		parts.forEach((part, slot) => part.isResident || numbers.set(part, places[slot * 2]));
-		return { numbers, places, copies };
+		const written = [];
+		parts.forEach((part, slot) => part.isResident || written.push([places[slot * 2],
+			part instanceof Float32Array ? part : Float32Array.from(part)]));
+		return { size: total, written, places, copies };
+	},
+	// bfloat16 numbers as 32 bit floats
+	$strictWebGpuWidened: (halves) => {
+		const words = new Uint32Array(halves.length);
+		for (let index = 0; index < halves.length; index++)
+			words[index] = halves[index] << 16;
+		return new Float32Array(words.buffer);
 	},
 	$strictWebGpuPipeline: (device, code) => {
 		const storage = (binding, type) => ({ binding, visibility: 4, buffer: { type } });
@@ -125,10 +133,10 @@ addToLibrary({
 		const written = 128 | 8, read = 128 | 4;
 		device.pushErrorScope('out-of-memory');
 		const buffer = (size, flags) => device.createBuffer({ size: Math.max(size, 4), usage: flags });
-		const buffers = [buffer(count * 4, read), buffer(inputs.numbers.byteLength, written),
+		const buffers = [buffer(count * 4, read), buffer(inputs.size * 4, written),
 			buffer(inputs.places.byteLength, written), buffer(4, read | 8)];
 		const copy = output && buffer(count * 4 + 4, 1 | 8);
-		device.queue.writeBuffer(buffers[1], 0, inputs.numbers);
+		inputs.written.forEach(([offset, part]) => device.queue.writeBuffer(buffers[1], offset * 4, part));
 		device.queue.writeBuffer(buffers[2], 0, inputs.places);
 		device.queue.writeBuffer(buffers[3], 0, new Uint32Array(1));
 		if (inputs.copies && inputs.copies.length) {
