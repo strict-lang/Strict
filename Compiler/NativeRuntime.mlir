@@ -14963,17 +14963,11 @@
     %failureSlot = llvm.mlir.addressof @strict_gpu_failure : !llvm.ptr
     %word = llvm.load %failureSlot : !llvm.ptr -> i64
     %hasWord = arith.cmpi ne, %word, %none : i64
-    %unflagged = arith.constant false
-    // the first launch allocates the failure word: a list uploaded before any loop ran on the GPU cannot have failed
-    cf.cond_br %hasWord, ^flag(%word : i64), ^checked(%unflagged : i1)
-  ^flag(%flagWord: i64):
     %wordPointer = llvm.inttoptr %word : i64 to !llvm.ptr
     %noFailure = llvm.mlir.addressof @strict_gpu_no_failure : !llvm.ptr
     %pointer = arith.select %hasWord, %wordPointer, %noFailure : !llvm.ptr
     %failed = llvm.load %pointer : !llvm.ptr -> i64
-    %flagged = arith.cmpi ne, %failed, %none : i64
-    cf.br ^checked(%flagged : i1)
-  ^checked(%isFailed: i1):
+    %isFailed = arith.cmpi ne, %failed, %none : i64
     %problem = arith.xori %got, %isFailed : i1
     %fine = arith.andi %got, %problem : i1
     cf.cond_br %fine, ^store, ^fail
