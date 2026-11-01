@@ -80,7 +80,7 @@ addToLibrary({
 	},
 	$strictWebGpuPipeline: (device, code) => {
 		const storage = (binding, type) => ({ binding, visibility: 4, buffer: { type } });
-		const types = ['storage', 'read-only-storage', 'read-only-storage', 'storage'];
+		const types = ['storage', 'read-only-storage', 'read-only-storage', 'storage', 'uniform'];
 		const group = device.createBindGroupLayout({ entries: types.map((type, binding) => storage(binding, type)) });
 		const layout = device.createPipelineLayout({ bindGroupLayouts: [group] });
 		const module = device.createShaderModule({ code });
@@ -124,13 +124,22 @@ addToLibrary({
 		device.queue.writeBuffer(buffers[1], 0, inputs.numbers);
 		device.queue.writeBuffer(buffers[2], 0, inputs.places);
 		device.queue.writeBuffer(buffers[3], 0, new Uint32Array(1));
-		const entries = buffers.map((buffer, binding) => ({ binding, resource: { buffer } }));
-		const encoder = device.createCommandEncoder(), pass = encoder.beginComputePass();
-		pass.setPipeline(pipeline);
-		pass.setBindGroup(0, device.createBindGroup({ layout: pipeline.getBindGroupLayout(0), entries }));
-		const groups = Math.ceil(count / 64), wide = Math.min(groups, 65535);
-		pass.dispatchWorkgroups(wide, Math.ceil(groups / wide));
-		pass.end();
+		const grouped = (Module['strictKernelGroups'] || {})[name], groups = Math.ceil(count / 64);
+		const [tiles, part] = grouped ? grouped(inputs.places) : [groups, groups];
+		// each submit is its own GPU packet, Windows resets the device when one runs for 2 s
+		for (let first = 0; first < tiles; first += part) {
+			const firstGroup = buffer(16, 64 | 8), size = Math.min(part, tiles - first), wide = Math.min(size, 65535);
+			device.queue.writeBuffer(firstGroup, 0, new Uint32Array([first]));
+			buffers.push(firstGroup);
+			const entries = buffers.slice(0, 4).concat(firstGroup).map((buffer, binding) => ({ binding, resource: { buffer } }));
+			const encoder = device.createCommandEncoder(), pass = encoder.beginComputePass();
+			pass.setPipeline(pipeline);
+			pass.setBindGroup(0, device.createBindGroup({ layout: pipeline.getBindGroupLayout(0), entries }));
+			pass.dispatchWorkgroups(wide, Math.ceil(size / wide));
+			pass.end();
+			device.queue.submit([encoder.finish()]);
+		}
+		const encoder = device.createCommandEncoder();
 		encoder.copyBufferToBuffer(buffers[0], 0, copy, 0, count * 4);
 		encoder.copyBufferToBuffer(buffers[3], 0, copy, count * 4, 4);
 		device.queue.submit([encoder.finish()]);

@@ -1,45 +1,102 @@
 // WGSL runtime kernels, run on WebGPU by strict_webgpu_kernel (WebRuntime.js) for strict_gpu_shaded of kind 2: a list
 // value of the kernel is a part of numbers at places[2 * slot] with places[2 * slot + 1] numbers, a whole number value
-// is places[2 * slot + 1], places[2 * slots] is the count of outputs, one invocation per output if not said otherwise.
+// is places[2 * slot + 1], places[2 * slots] is the count of outputs, one invocation per output if not said otherwise,
+// firstGroup is the first workgroup of a submit of strictKernelGroups.
 const strictKernelBindings = `
 @group(0) @binding(0) var<storage, read_write> output: array<f32>;
 @group(0) @binding(1) var<storage, read> numbers: array<f32>;
 @group(0) @binding(2) var<storage, read> places: array<u32>;
 @group(0) @binding(3) var<storage, read_write> failed: array<u32>;
+@group(0) @binding(4) var<uniform> firstGroup: u32;
 `;
-// Convolved.Summed: values, affine, weights, height, width, channels, outputs, swish, factor (strict_gpu_convolution)
+// Convolved.Summed: values, affine, weights, height, width, channels, outputs, swish, factor (strict_gpu_convolution),
+// a workgroup per tile of 64 pixels of one parity and 64 outputs, the taps 16 at a time in workgroup memory
 (Module['strictShaders'] ||= {})['strict_convolution'] = strictKernelBindings + `
+var<workgroup> tapped: array<vec4<f32>, 256>;
+var<workgroup> weighted: array<vec4<f32>, 256>;
 @compute @workgroup_size(64)
-fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {
-	let at = id.x + id.y * groups.x * 64u;
-	if (at >= places[18]) { return; }
+fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) group: vec3<u32>) {
 	let width = places[9];
 	let channels = places[11];
 	let outputs = places[13];
 	let swish = places[15] == 1u;
 	let factor = places[17];
-	let pixel = at / outputs;
-	let row = pixel / width;
-	let column = pixel % width;
 	let side = 4u - factor;
-	let parity = select(0u, (row % 2u) * 2u + column % 2u, factor == 2u);
-	let first = places[4] + (parity * outputs + at % outputs) * side * side * channels;
-	let inputHeight = i32(places[7] / factor);
-	let inputWidth = i32(width / factor);
-	var sum = 0.0;
-	for (var tap = 0u; tap < side * side; tap++) {
-		let sourceRow = i32(row / factor + tap / side + row % factor) - 1;
-		let sourceColumn = i32(column / factor + tap % side + column % factor) - 1;
-		if (sourceRow < 0 || sourceColumn < 0 || sourceRow >= inputHeight || sourceColumn >= inputWidth) { continue; }
-		let source = places[0] + u32(sourceRow * inputWidth + sourceColumn) * channels;
-		let weight = first + tap * channels;
-		for (var channel = 0u; channel < channels; channel++) {
-			let normed = numbers[source + channel] * numbers[places[2] + channel] + numbers[places[2] + channels + channel];
-			sum += select(normed, normed / (1.0 + exp(-normed)), swish) * numbers[weight + channel];
+	let taps = side * side * channels;
+	let inputHeight = places[7] / factor;
+	let inputWidth = width / factor;
+	let pixels = inputHeight * inputWidth;
+	let pixelTiles = (pixels + 63u) / 64u;
+	let outputTiles = (outputs + 63u) / 64u;
+	let tile = firstGroup + group.x;
+	if (tile >= factor * factor * pixelTiles * outputTiles) { return; }
+	let parity = tile / (pixelTiles * outputTiles);
+	let pixelStart = tile / outputTiles % pixelTiles * 64u;
+	let outputStart = tile % outputTiles * 64u;
+	let parityRow = parity / factor;
+	let parityColumn = parity % factor;
+	let weights = places[4] + parity * outputs * taps;
+	let ownPixel = local % 8u;
+	let ownOutput = local / 8u;
+	var sums = mat4x4<f32>();
+	var moreOutputSums = mat4x4<f32>();
+	var morePixelSums = mat4x4<f32>();
+	var moreSums = mat4x4<f32>();
+	for (var start = 0u; start < taps; start += 16u) {
+		for (var load = 0u; load < 16u; load++) {
+			let element = local + load * 64u;
+			let tap = start + element % 16u;
+			let item = element / 16u;
+			let slot = element % 16u * 64u + item;
+			let pixel = pixelStart + item;
+			var value = 0.0;
+			if (tap < taps && pixel < pixels) {
+				let position = tap / channels;
+				let channel = tap % channels;
+				let sourceRow = i32(pixel / inputWidth + position / side + parityRow) - 1;
+				let sourceColumn = i32(pixel % inputWidth + position % side + parityColumn) - 1;
+				if (sourceRow >= 0 && sourceColumn >= 0 && sourceRow < i32(inputHeight) && sourceColumn < i32(inputWidth)) {
+					let source = places[0] + u32(sourceRow * i32(inputWidth) + sourceColumn) * channels + channel;
+					let normed = numbers[source] * numbers[places[2] + channel] + numbers[places[2] + channels + channel];
+					value = select(normed, normed / (1.0 + exp(-normed)), swish);
+				}
+			}
+			tapped[slot / 4u][slot % 4u] = value;
+			let produced = outputStart + item;
+			var weight = 0.0;
+			if (tap < taps && produced < outputs) { weight = numbers[weights + produced * taps + tap]; }
+			weighted[slot / 4u][slot % 4u] = weight;
+		}
+		workgroupBarrier();
+		for (var tap = 0u; tap < 16u; tap++) {
+			let ins = tapped[tap * 16u + ownPixel * 2u];
+			let moreIns = tapped[tap * 16u + ownPixel * 2u + 1u];
+			let outs = weighted[tap * 16u + ownOutput * 2u];
+			let moreOuts = weighted[tap * 16u + ownOutput * 2u + 1u];
+			sums += mat4x4<f32>(ins * outs.x, ins * outs.y, ins * outs.z, ins * outs.w);
+			moreOutputSums += mat4x4<f32>(ins * moreOuts.x, ins * moreOuts.y, ins * moreOuts.z, ins * moreOuts.w);
+			morePixelSums += mat4x4<f32>(moreIns * outs.x, moreIns * outs.y, moreIns * outs.z, moreIns * outs.w);
+			moreSums += mat4x4<f32>(moreIns * moreOuts.x, moreIns * moreOuts.y, moreIns * moreOuts.z, moreIns * moreOuts.w);
+		}
+		workgroupBarrier();
+	}
+	var blocks = array<mat4x4<f32>, 4>(sums, moreOutputSums, morePixelSums, moreSums);
+	for (var row = 0u; row < 8u; row++) {
+		let pixel = pixelStart + ownPixel * 8u + row;
+		if (pixel >= pixels) { continue; }
+		let placed = ((pixel / inputWidth * factor + parityRow) * width + pixel % inputWidth * factor + parityColumn) * outputs;
+		for (var column = 0u; column < 8u; column++) {
+			let produced = outputStart + ownOutput * 8u + column;
+			if (produced < outputs) { output[placed + produced] = blocks[row / 4u * 2u + column / 4u][column % 4u][row % 4u]; }
 		}
 	}
-	output[at] = sum;
 }`;
+// the tiles (one workgroup each) and how many of them go into one submit, about 4 billion multiplications each
+Module['strictKernelGroups'] = { strict_convolution: (places) => {
+	const factor = places[17], taps = (4 - factor) * (4 - factor) * places[11];
+	const pixels = places[7] / factor * (places[9] / factor);
+	return [factor * factor * Math.ceil(pixels / 64) * Math.ceil(places[13] / 64), Math.floor(2 ** 32 / (4096 * taps)) || 1];
+} };
 // Products.Multiplied: left, right, batches, rows, inner, columns, then the start, batch, row and inner strides of left
 // and the start, batch, inner and column strides of right (strict_gpu_products)
 Module['strictShaders']['strict_products'] = strictKernelBindings + `

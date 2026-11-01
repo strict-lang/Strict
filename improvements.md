@@ -4,6 +4,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 ## Bugs
 - Native Safetensors test `Nibbles.Tuned(...)` (line 21, in Entry) exceeds the 100 ms test budget every run (also before the rank above 512 GPU merge), passes on the VM.
 - Routed attention (routing > 0) with strided values (valueOffset/valueStride) runs unrouted: `strict_gpu_attention` takes the routed 8 bit path only for packed values, so H3Block.Heads with V read from the combined list attends densely (6 s slower, 12.9 dB from the routed result), routing 0 is bit-identical; the per-token value quantization (`strict_device_quantize_rows_run`) and the pooled value means need strided rows, H3 keeps the copy until then.
+- A Run program that makes its own type with a logger and a `with value.Bits is 32` member crashes natively (AccessViolation): `has logger`, `has scale Number with value.Bits is 32`, Run `WebScaled(logger, 3).Scaled(1000000)`; without the constraint it runs, a test `Scaling(3).Scaled(4)` passes natively.
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).
@@ -13,7 +14,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - GPU sidecars: every program still keeps Name.kernels.mlir (the PTX cache key) and test executables their PTX next to the source, move them into Tools/PtxCache once it evicts old entries (up to 25 MB each, never cleaned today).
 - Realtime frames: a full collection at a frame end that takes longer than a few ms marks over several frame ends (incremental, the cards record what changed meanwhile).
 - f32 kernels: a GPU loop reading a `value.Bits is 32` member computes in f32 (WGSL on WebGPU, the 32 bit CUDA kernel natively); WGSL lacks Sin, Cos, Logarithm, `from` calls, Bytes results and rows.
-- MossImage in the browser (prompt in, encoder, Moss and VAE cached in OPFS, WebGPU like FractalZoomer), VAE decode first: Convolved.Summed, Products.Multiplied and Softmax.Shares run as WGSL kernels (Compiler/NativeRuntimeWgsl.js), the 720x1280 decode still fails: the 1 GB web heap runs out (3 GB got through the attention), the naive convolution at 320x180x512 lost the device (Windows GPU timeout or memory), every kernel copies its lists through wasm memory; next tiled kernels, results kept in GPU buffers, OPFS for the big models.
+- MossImage in the browser (prompt in, encoder, Moss and VAE cached in OPFS, WebGPU like FractalZoomer), VAE decode first: Convolved.Summed, Products.Multiplied and Softmax.Shares run as WGSL kernels (Compiler/NativeRuntimeWgsl.js), the 720x1280 decode still fails: the 1 GB web heap runs out (3 GB got through the attention), every kernel copies its lists through wasm memory; next results kept in GPU buffers, faster convolutions (f16, larger tiles), OPFS for the big models.
 - Native symbols, register kinds and helpers use the short type name, so one executable cannot hold two packages' types of the same name: qualify the symbols of a type whose short name is taken.
 
 ## Waiting
