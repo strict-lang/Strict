@@ -97,32 +97,83 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 		}
 	}
 }`;
-// the tiles (one workgroup each) and how many of them go into one submit, about 4 billion multiplications each
+// the tiles (one workgroup each) and how many of them go into one submit, about 4 billion multiplications each: 11 to
+// 35 ms for the convolution, well below the 200 ms the desktop takes (it lagged behind a products dispatch of 1 s)
 Module['strictKernelGroups'] = { strict_convolution: (places) => {
 	const factor = places[17], taps = (4 - factor) * (4 - factor) * places[11];
 	const pixels = places[7] / factor * (places[9] / factor);
 	return [factor * factor * Math.ceil(pixels / 128) * Math.ceil(places[13] / 128), Math.floor(2 ** 32 / (16384 * taps)) || 1];
 } };
 // Products.Multiplied: left, right, batches, rows, inner, columns, then the start, batch, row and inner strides of left
-// and the start, batch, inner and column strides of right (strict_gpu_products)
+// and the start, batch, inner and column strides of right (strict_gpu_products): a workgroup of 256 invocations per
+// tile of 128 rows and 128 columns of one batch (8 by 8 sums each), the inner numbers 16 at a time in workgroup memory
 Module['strictShaders']['strict_products'] = strictKernelBindings + `
-@compute @workgroup_size(64)
-fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {
-	let at = id.x + id.y * groups.x * 64u;
-	if (at >= places[28]) { return; }
+var<workgroup> lefts: array<vec4<f32>, 512>;
+var<workgroup> rights: array<vec4<f32>, 512>;
+@compute @workgroup_size(256)
+fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) group: vec3<u32>) {
 	let rows = places[7];
+	let inner = places[9];
 	let columns = places[11];
-	let batch = at / (rows * columns);
-	var left = places[0] + places[13] + batch * places[15] + (at / columns) % rows * places[17];
-	var right = places[2] + places[21] + batch * places[23] + at % columns * places[27];
-	var sum = 0.0;
-	for (var index = 0u; index < places[9]; index++) {
-		sum += numbers[left] * numbers[right];
-		left += places[19];
-		right += places[25];
+	let rowTiles = (rows + 127u) / 128u;
+	let columnTiles = (columns + 127u) / 128u;
+	let tile = firstGroup + group.x;
+	if (tile >= places[5] * rowTiles * columnTiles) { return; }
+	let batch = tile / (rowTiles * columnTiles);
+	let rowStart = tile / columnTiles % rowTiles * 128u;
+	let columnStart = tile % columnTiles * 128u;
+	let leftBase = places[0] + places[13] + batch * places[15];
+	let rightBase = places[2] + places[21] + batch * places[23];
+	let ownRow = local / 16u;
+	let ownColumn = local % 16u;
+	let ownInner = local % 16u;
+	let firstItem = local / 16u;
+	var sums = mat4x4<f32>();
+	var moreColumnSums = mat4x4<f32>();
+	var moreRowSums = mat4x4<f32>();
+	var moreSums = mat4x4<f32>();
+	for (var start = 0u; start < inner; start += 16u) {
+		let step = start + ownInner;
+		for (var load = 0u; load < 8u; load++) {
+			let item = firstItem + load * 16u;
+			let slot = ownInner * 128u + item;
+			let row = rowStart + item;
+			var left = 0.0;
+			if (step < inner && row < rows) { left = numbers[leftBase + row * places[17] + step * places[19]]; }
+			lefts[slot / 4u][slot % 4u] = left;
+			let column = columnStart + item;
+			var right = 0.0;
+			if (step < inner && column < columns) { right = numbers[rightBase + step * places[25] + column * places[27]]; }
+			rights[slot / 4u][slot % 4u] = right;
+		}
+		workgroupBarrier();
+		for (var at = 0u; at < 16u; at++) {
+			let ins = lefts[at * 32u + ownRow * 2u];
+			let moreIns = lefts[at * 32u + ownRow * 2u + 1u];
+			let outs = rights[at * 32u + ownColumn * 2u];
+			let moreOuts = rights[at * 32u + ownColumn * 2u + 1u];
+			sums += mat4x4<f32>(ins * outs.x, ins * outs.y, ins * outs.z, ins * outs.w);
+			moreColumnSums += mat4x4<f32>(ins * moreOuts.x, ins * moreOuts.y, ins * moreOuts.z, ins * moreOuts.w);
+			moreRowSums += mat4x4<f32>(moreIns * outs.x, moreIns * outs.y, moreIns * outs.z, moreIns * outs.w);
+			moreSums += mat4x4<f32>(moreIns * moreOuts.x, moreIns * moreOuts.y, moreIns * moreOuts.z, moreIns * moreOuts.w);
+		}
+		workgroupBarrier();
 	}
-	output[at] = sum;
+	var blocks = array<mat4x4<f32>, 4>(sums, moreColumnSums, moreRowSums, moreSums);
+	for (var row = 0u; row < 8u; row++) {
+		let produced = rowStart + ownRow * 8u + row;
+		if (produced >= rows) { continue; }
+		let placed = (batch * rows + produced) * columns;
+		for (var column = 0u; column < 8u; column++) {
+			let placedColumn = columnStart + ownColumn * 8u + column;
+			if (placedColumn < columns) { output[placed + placedColumn] = blocks[row / 4u * 2u + column / 4u][column % 4u][row % 4u]; }
+		}
+	}
 }`;
+Module['strictKernelGroups']['strict_products'] = (places) => {
+	const tiles = places[5] * Math.ceil(places[7] / 128) * Math.ceil(places[11] / 128);
+	return [tiles, Math.floor(2 ** 32 / (16384 * places[9])) || 1];
+};
 // Softmax.Shares: scores, width, a workgroup of 64 invocations per row (strict_gpu_softmax)
 Module['strictShaders']['strict_softmax'] = strictKernelBindings + `
 var<workgroup> partials: array<f32, 64>;
