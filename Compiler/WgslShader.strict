@@ -79,13 +79,13 @@ Scripts(functions List(MlirFunction)) Text
 	lines = lines - ""
 	lines.Length is 0 then "" else Marker + "\n" + Text.Combine(lines, "\n")
 Shaded(inspected MlirFunction) Texts
-	WgslShader.Shaded(Scaled.function).First.IndexOf("[\"Scaling_Scaled_1_gpu2\"] = \"@group(0)") > 0
-	WgslShader.Shaded(Scaled.function).First.EndsWith("strictSingles\"] ||= {})[\"Scaling_Scaled_1_gpu2\"] = [0];")
+	WgslShader.Shaded(Scaled.function).First.IndexOf("[\"Scaling_Scaled_1_gpu2s\"] = \"@group(0)") > 0
+	WgslShader.Shaded(Scaled.function).First.EndsWith("strictSingles\"] ||= {})[\"Scaling_Scaled_1_gpu2s\"] = [0];")
 	for inspected.method.instructions
 		if value.kind is InstructionType.LoopBegin
 			let shader = WgslShader(inspected, index)
 			let source = shader.Source.Replace("\n", "\\n")
-			let name = "[\"" + MlirDevice(inspected, index).Name + "\"] = "
+			let name = "[\"" + MlirDevice(inspected, index).Name + "s\"] = "
 			let singles = " (Module[\"strictSingles\"] ||= {})" + name + shader.Singles + ";"
 			source is "" then "" else ";(Module[\"strictShaders\"] ||= {})" + name + "\"" + source + "\";" + singles
 Singles Text
