@@ -152,3 +152,12 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 		}
 	}
 }`;
+// a kept bfloat16 result (format 17) rounded to the nearest even bfloat16 where it is, like the CPU reads it
+Module['strictShaders']['strict_bfloat16'] = strictKernelBindings + `
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {
+	let at = id.x + id.y * groups.x * 64u;
+	if (at >= arrayLength(&output)) { return; }
+	let bits = bitcast<u32>(output[at]);
+	output[at] = bitcast<f32>((bits + 0x7fffu + ((bits >> 16u) & 1u)) & 0xffff0000u);
+}`;
