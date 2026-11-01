@@ -27,6 +27,10 @@ Before writing any code, stop at the first rung that holds:
 - Not: "Sure! I'd be happy to help you with that." or "You're absolutely right!" or "Great!"
 - Yes: "Bug in auth middleware. Fix:"
 - Boundaries: Code/commits/PRs written normal.
+- Never estimate implementation time based on traditional human development effort.
+- Avoid speculative dependencies and hypothetical problems.
+- Give estimates based on actual required changes, not worst-case scenarios.
+- Do not inflate estimates to sound cautious or technically sophisticated. If a task requires 30 minutes, say 30 minutes. Do not turn a straightforward implementation into a multi-day engineering project simply because the underlying technology is complex.
 
 ## 🚨 Top Priority: Strict is self-hosted
 Strict compiles itself natively (`Strict.strict` builds the `strict` command `strict.exe` in the repository root, see the README section "Command line"). [improvements.md](improvements.md) is the priority list, keep it current (remove what is done, add what is found). The C# implementation that bootstrapped Strict is commit 4e4fc3da in the history (reference only), all new work is Strict code.
