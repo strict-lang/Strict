@@ -14644,6 +14644,13 @@
     %isSet = arith.cmpi ne, %device, %none : i64
     cf.cond_br %isSet, ^push, ^done
   ^push:
+    %webClass = arith.constant 255 : i64
+    %isWeb = arith.cmpi eq, %class, %webClass : i64
+    cf.cond_br %isWeb, ^web, ^native
+  ^web:
+    func.call @strict_gpu_web_give(%device) : (i64) -> ()
+    return
+  ^native:
     %real = func.call @strict_gpu_lent_class(%device, %class) : (i64, i64) -> i64
     %kept = func.call @strict_gpu_given(%device, %real) : (i64, i64) -> i1
     cf.cond_br %kept, ^done, ^stacked
@@ -15019,7 +15026,8 @@
   ^done:
     return
   }
-  // the first read on the CPU waits for the GPU and copies the numbers into the host block of the list
+  // the first read on the CPU waits for the GPU and copies the numbers into the host block of the list (a WebGPU buffer
+  // of class 255 through strict_gpu_web_get)
   func.func private @strict_gpu_download(%holder: !llvm.ptr) -> !llvm.ptr {
     %none = arith.constant 0 : i64
     %zero = arith.constant 0.0 : f64
@@ -15044,6 +15052,14 @@
     %fetching = arith.andi %stillMissing, %hasDevice : i1
     cf.cond_br %fetching, ^fetch, ^present
   ^fetch:
+    %webClass = arith.constant 255 : i64
+    %class = arith.andi %tagged, %webClass : i64
+    %isWeb = arith.cmpi eq, %class, %webClass : i64
+    cf.cond_br %isWeb, ^web, ^native
+  ^web:
+    %webHost = func.call @strict_gpu_web_get(%holder, %device) : (!llvm.ptr, i64) -> !llvm.ptr
+    cf.cond_br %shared, ^unlock(%webHost : !llvm.ptr), ^done(%webHost : !llvm.ptr)
+  ^native:
     func.call @strict_gpu_rotated(%device) : (i64) -> ()
     %usedSlot = llvm.getelementptr %holder[1] : (!llvm.ptr) -> !llvm.ptr, f64
     %used = llvm.load %usedSlot : !llvm.ptr -> f64

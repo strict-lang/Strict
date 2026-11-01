@@ -49,6 +49,14 @@
     %none = arith.constant 0.0 : f64
     return %none : f64
   }
+  // lists of class 255 live in WebGPU buffers (NativeRuntimeWeb.mlir), there are none here
+  func.func private @strict_gpu_web_get(%holder: !llvm.ptr, %device: i64) -> !llvm.ptr {
+    %none = llvm.mlir.zero : !llvm.ptr
+    return %none : !llvm.ptr
+  }
+  func.func private @strict_gpu_web_give(%device: i64) {
+    return
+  }
   func.func private @strict_gpu_library(%isAmd: i1) -> !llvm.ptr {
     %null = llvm.mlir.zero : !llvm.ptr
     llvm.return %null : !llvm.ptr

@@ -23,7 +23,7 @@ addToLibrary({
 // list read or a shader error runs the loop on the CPU.
 // Closure knows no GPUBufferUsage: storage 128, copy destination 8, copy source 4, map read 1, compute stage 4.
 addToLibrary({
-	$strictWebGpu: { device: null, failed: false, pipelines: {} },
+	$strictWebGpu: { device: null, failed: false, pipelines: {}, buffers: {}, next: 1, grown: 0 },
 	strict_webgpu_ready__deps: ['$strictWebGpu', '$UTF8ToString'],
 	strict_webgpu_ready: (name) => {
 		const shaders = Module['strictShaders'], key = UTF8ToString(name);
@@ -55,14 +55,20 @@ addToLibrary({
 		return { numbers, places };
 	},
 	// a runtime kernel (NativeRuntimeWgsl.js) takes every value rounded to 32 bit floats (a whole number also exactly as
-	// the second place of its slot): lists of 64 bit, 32 bit or bfloat16 (bits 17) numbers, other formats run on the CPU
+	// the second place of its slot): lists of 64 bit, 32 bit or bfloat16 (bits 17) numbers, other formats run on the CPU;
+	// a kept kernel result (bits 255, its address the buffer) is copied into place on the GPU
+	$strictWebGpuKernelInputs__deps: ['$strictWebGpu'],
 	$strictWebGpuKernelInputs: (count, table, slots) => {
 		const entries = HEAPF64.slice(table / 8, table / 8 + slots * 3);
-		const places = new Uint32Array(slots * 2 + 1), parts = [];
+		const places = new Uint32Array(slots * 2 + 1), parts = [], copies = [];
 		let total = 0;
 		for (let slot = 0; slot < slots; slot++) {
 			const address = entries[slot * 3], length = entries[slot * 3 + 1], bits = entries[slot * 3 + 2];
-			const part = length < 0 ? [address] : bits === 64 ? HEAPF64.subarray(address / 8, address / 8 + length)
+			const resident = bits === 255 && strictWebGpu.buffers[address];
+			if (resident)
+				copies.push([resident, total, length]);
+			const part = length < 0 ? [address] : resident ? { length, isResident: true }
+				: bits === 64 ? HEAPF64.subarray(address / 8, address / 8 + length)
 				: bits === 32 ? HEAPF32.subarray(address / 4, address / 4 + length)
 				: bits === 17 ? new Float32Array(Uint32Array.from(HEAPU16.subarray(address / 2, address / 2 + length),
 					(half) => half << 16).buffer) : null;
@@ -75,8 +81,8 @@ addToLibrary({
 		}
 		places[slots * 2] = count;
 		const numbers = new Float32Array(Math.max(total, 1));
-		parts.forEach((part, slot) => numbers.set(part, places[slot * 2]));
-		return { numbers, places };
+		parts.forEach((part, slot) => part.isResident || numbers.set(part, places[slot * 2]));
+		return { numbers, places, copies };
 	},
 	$strictWebGpuPipeline: (device, code) => {
 		const storage = (binding, type) => ({ binding, visibility: 4, buffer: { type } });
@@ -117,13 +123,20 @@ addToLibrary({
 			return 0;
 		const pipeline = strictWebGpu.pipelines[name] ||= await strictWebGpuPipeline(device, Module['strictShaders'][name]);
 		const written = 128 | 8, read = 128 | 4;
+		device.pushErrorScope('out-of-memory');
 		const buffer = (size, flags) => device.createBuffer({ size: Math.max(size, 4), usage: flags });
 		const buffers = [buffer(count * 4, read), buffer(inputs.numbers.byteLength, written),
 			buffer(inputs.places.byteLength, written), buffer(4, read | 8)];
-		const copy = buffer(count * 4 + 4, 1 | 8);
+		const copy = output && buffer(count * 4 + 4, 1 | 8);
 		device.queue.writeBuffer(buffers[1], 0, inputs.numbers);
 		device.queue.writeBuffer(buffers[2], 0, inputs.places);
 		device.queue.writeBuffer(buffers[3], 0, new Uint32Array(1));
+		if (inputs.copies && inputs.copies.length) {
+			const copying = device.createCommandEncoder();
+			for (const [source, offset, length] of inputs.copies)
+				copying.copyBufferToBuffer(source, 0, buffers[1], offset * 4, length * 4);
+			device.queue.submit([copying.finish()]);
+		}
 		const grouped = (Module['strictKernelGroups'] || {})[name], groups = Math.ceil(count / 64);
 		const [tiles, part] = grouped ? grouped(inputs.places) : [groups, groups];
 		// each submit is its own GPU packet, Windows resets the device when one runs for 2 s
@@ -139,6 +152,18 @@ addToLibrary({
 			pass.end();
 			device.queue.submit([encoder.finish()]);
 		}
+		if (!output) {
+			buffers.slice(1).forEach((used) => used.destroy());
+			const error = await device.popErrorScope();
+			if (error) {
+				buffers[0].destroy();
+				throw error.message;
+			}
+			strictWebGpu.buffers[strictWebGpu.next] = buffers[0];
+			strictWebGpu.grown += count * 4;
+			return strictWebGpu.next++;
+		}
+		device.popErrorScope();
 		const encoder = device.createCommandEncoder();
 		encoder.copyBufferToBuffer(buffers[0], 0, copy, 0, count * 4);
 		encoder.copyBufferToBuffer(buffers[3], 0, copy, count * 4, 4);
@@ -178,6 +203,39 @@ addToLibrary({
 		strictWebGpuStarted(name, count, (key) => strictWebGpuInputs(key, count, table >>> 0, slots), output >>> 0, 64),
 	strict_webgpu_kernel__deps: ['$strictWebGpuStarted', '$strictWebGpuKernelInputs'],
 	strict_webgpu_kernel__async: true,
-	strict_webgpu_kernel: (name, count, table, slots, output, bits) =>
-		strictWebGpuStarted(name, count, () => strictWebGpuKernelInputs(count, table >>> 0, slots), output >>> 0, bits),
+	strict_webgpu_kernel: (name, count, table, slots, bits) =>
+		strictWebGpuStarted(name, count, () => strictWebGpuKernelInputs(count, table >>> 0, slots), 0, bits),
+	// the numbers of a kept kernel result (strict_gpu_web_get) as bits into target, 0 when the buffer is gone
+	strict_webgpu_download__deps: ['$strictWebGpu', '$strictWebGpuWritten', '$Asyncify'],
+	strict_webgpu_download__async: true,
+	strict_webgpu_download: (handle, target, count, bits) => Asyncify.handleSleep((wakeUp) => {
+		const source = strictWebGpu.buffers[handle], device = strictWebGpu.device;
+		if (!source)
+			return wakeUp(0);
+		const copy = device.createBuffer({ size: Math.max(count * 4, 4), usage: 1 | 8 });
+		const encoder = device.createCommandEncoder();
+		encoder.copyBufferToBuffer(source, 0, copy, 0, count * 4);
+		device.queue.submit([encoder.finish()]);
+		copy.mapAsync(1).then(() => {
+			strictWebGpuWritten(new Float32Array(copy.getMappedRange(), 0, count), target >>> 0, bits);
+			copy.destroy();
+			wakeUp(1);
+		}, (error) => {
+			console.error('WebGPU result could not be read: ' + error);
+			wakeUp(0);
+		});
+	}),
+	strict_webgpu_release__deps: ['$strictWebGpu'],
+	strict_webgpu_release: (handle) => {
+		strictWebGpu.buffers[handle]?.destroy();
+		delete strictWebGpu.buffers[handle];
+	},
+	// 1 once kept results took 1 GB since the last time, the collector then gives back the buffers of dead lists
+	strict_webgpu_crowded__deps: ['$strictWebGpu'],
+	strict_webgpu_crowded: () => {
+		const isCrowded = strictWebGpu.grown > 1073741824;
+		if (isCrowded)
+			strictWebGpu.grown = 0;
+		return isCrowded ? 1 : 0;
+	},
 });

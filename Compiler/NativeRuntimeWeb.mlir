@@ -561,7 +561,6 @@
   // each value is (number, -1, 0) or (data address, length, bits of its numbers) for strict_webgpu_kernel
   llvm.func @strict_webgpu_ready(!llvm.ptr) -> i32
   llvm.func @strict_webgpu(!llvm.ptr, i32, !llvm.ptr, i32, !llvm.ptr) -> i32
-  llvm.func @strict_webgpu_kernel(!llvm.ptr, i32, !llvm.ptr, i32, !llvm.ptr, i32) -> i32
   func.func private @strict_gpu_shaded(%name: !llvm.ptr, %count: i64, %source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
@@ -638,13 +637,27 @@
     llvm.store %length, %second : f64, !llvm.ptr
     return
   }
-  // the count numbers (of bits) of the runtime kernel name of NativeRuntimeWgsl.js from values (lists where mask has
-  // their bit), 0.0 when WebGPU fails
+  // the count numbers (of bits 17 or 32) of the runtime kernel name of NativeRuntimeWgsl.js from values (lists where
+  // mask has their bit) as a list that stays in a WebGPU buffer (class 255, strict_gpu_web_get reads it on the first
+  // CPU read), 0.0 when WebGPU fails; a list value already in a WebGPU buffer is copied there on the GPU; after 1 GB of
+  // results a full collection gives back the buffers of dead lists first
+  llvm.func @strict_webgpu_kernel(!llvm.ptr, i32, !llvm.ptr, i32, i32) -> i32
+  llvm.func @strict_webgpu_crowded() -> i32
   func.func private @strict_gpu_kernel(%name: !llvm.ptr, %count: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64, %bits: i64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %three = arith.constant 3 : i64
+    %eight = arith.constant 8 : i64
+    %unused = arith.constant 0 : i32
+    %crowded = llvm.call @strict_webgpu_crowded() : () -> i32
+    %isCrowded = arith.cmpi ne, %crowded, %unused : i32
+    cf.cond_br %isCrowded, ^collect, ^table
+  ^collect:
+    %full = arith.constant true
+    func.call @strict_gc_run(%full) : (i1) -> ()
+    cf.br ^table
+  ^table:
     %entries = arith.muli %valueCount, %three : i64
     %table = llvm.alloca %entries x f64 : (i64) -> !llvm.ptr
     cf.br ^slot(%none : i64)
@@ -671,38 +684,118 @@
     cf.br ^slot(%next : i64)
   ^list:
     %listLength = func.call @strict_list_length(%value) : (f64) -> f64
+    llvm.store %listLength, %length : f64, !llvm.ptr
+    %handle = func.call @strict_gpu_web_handle(%value) : (f64) -> i64
+    %isResident = arith.cmpi ne, %handle, %none : i64
+    cf.cond_br %isResident, ^resident, ^hosted
+  ^resident:
+    %handleNumber = arith.sitofp %handle : i64 to f64
+    %bufferFormat = arith.constant 255.0 : f64
+    llvm.store %handleNumber, %number : f64, !llvm.ptr
+    llvm.store %bufferFormat, %format : f64, !llvm.ptr
+    cf.br ^slot(%next : i64)
+  ^hosted:
     %host = func.call @strict_gpu_host(%value) : (f64) -> !llvm.ptr
     %address = llvm.ptrtoint %host : !llvm.ptr to i64
     %addressNumber = arith.uitofp %address : i64 to f64
     %valueBits = func.call @strict_gpu_bits(%value) : (f64) -> i64
     %bitsNumber = arith.sitofp %valueBits : i64 to f64
     llvm.store %addressNumber, %number : f64, !llvm.ptr
-    llvm.store %listLength, %length : f64, !llvm.ptr
     llvm.store %bitsNumber, %format : f64, !llvm.ptr
     cf.br ^slot(%next : i64)
   ^filled:
-    %sixtyFour = arith.constant 64 : i64
-    %isPlain = arith.cmpi eq, %bits, %sixtyFour : i64
-    cf.cond_br %isPlain, ^plainResult, ^packedResult
-  ^plainResult:
-    %countNumber = arith.sitofp %count : i64 to f64
-    %plain = func.call @strict_list_new(%countNumber, %countNumber) : (f64, f64) -> f64
-    cf.br ^run(%plain : f64)
-  ^packedResult:
-    %packed = func.call @strict_packed_new(%count, %bits) : (i64, i64) -> f64
-    cf.br ^run(%packed : f64)
-  ^run(%result: f64):
-    %items = func.call @strict_gpu_host(%result) : (f64) -> !llvm.ptr
     %count32 = arith.trunci %count : i64 to i32
     %valueCount32 = arith.trunci %valueCount : i64 to i32
     %bits32 = arith.trunci %bits : i64 to i32
-    %ran = llvm.call @strict_webgpu_kernel(%name, %count32, %table, %valueCount32, %items, %bits32) : (!llvm.ptr, i32, !llvm.ptr, i32, !llvm.ptr, i32) -> i32
-    %bytes = func.call @strict_packed_bytes(%count, %bits) : (i64, i64) -> i64
-    func.call @strict_gc_written_range(%items, %bytes) : (!llvm.ptr, i64) -> ()
+    %made = llvm.call @strict_webgpu_kernel(%name, %count32, %table, %valueCount32, %bits32) : (!llvm.ptr, i32, !llvm.ptr, i32, i32) -> i32
+    %isMade = arith.cmpi ne, %made, %unused : i32
+    cf.cond_br %isMade, ^resides, ^failed
+  ^resides:
+    %buffer = arith.extui %made : i32 to i64
+    %device = arith.shli %buffer, %eight : i64
+    %webClass = arith.constant 255 : i64
+    %result = func.call @strict_gpu_resident(%count, %device, %webClass, %bits) : (i64, i64, i64, i64) -> f64
+    return %result : f64
+  ^failed:
+    return %zero : f64
+  }
+  // the WebGPU buffer of a list computed by a runtime kernel and not read on the CPU yet, 0 for any other list
+  func.func private @strict_gpu_web_handle(%list: f64) -> i64 {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %eight = arith.constant 8 : i64
+    %webClass = arith.constant 255 : i64
+    %sixtyFour = arith.constant 64 : i64
+    %bits = func.call @strict_gpu_bits(%list) : (f64) -> i64
+    %isPacked = arith.cmpi ne, %bits, %sixtyFour : i64
+    cf.cond_br %isPacked, ^packed, ^other
+  ^packed:
+    %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
+    %holderSlot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %holderBits = llvm.load %holderSlot : !llvm.ptr -> f64
+    %holder = func.call @strict_ptr(%holderBits) : (f64) -> !llvm.ptr
+    %dataSlot = llvm.getelementptr %holder[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %dataBits = llvm.load %dataSlot : !llvm.ptr -> f64
+    %deviceSlot = llvm.getelementptr %holder[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    %tagged = llvm.load %deviceSlot : !llvm.ptr -> i64
+    %class = arith.andi %tagged, %webClass : i64
+    %isWeb = arith.cmpi eq, %class, %webClass : i64
+    %isMissing = arith.cmpf oeq, %dataBits, %zero : f64
+    %isResident = arith.andi %isWeb, %isMissing : i1
+    %handle = arith.shrui %tagged, %eight : i64
+    %result = arith.select %isResident, %handle, %none : i64
+    return %result : i64
+  ^other:
+    return %none : i64
+  }
+  llvm.mlir.global internal constant @strict_gpu_web_unread("Error: a result of the GPU could not be read back (WebGPU)\0A\00") : !llvm.array<60 x i8>
+  llvm.func @strict_webgpu_download(i32, !llvm.ptr, i32, i32) -> i32
+  llvm.func @strict_webgpu_release(i32)
+  // the numbers of the WebGPU buffer of device in a new host block of the list holder, stops the program when the
+  // buffer can not be read (lost device)
+  func.func private @strict_gpu_web_get(%holder: !llvm.ptr, %device: i64) -> !llvm.ptr {
+    %none = arith.constant 0 : i64
+    %eight = arith.constant 8 : i64
+    %usedSlot = llvm.getelementptr %holder[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %used = llvm.load %usedSlot : !llvm.ptr -> f64
+    %count = arith.fptosi %used : f64 to i64
+    %formatSlot = llvm.getelementptr %holder[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %negativeFormat = llvm.load %formatSlot : !llvm.ptr -> f64
+    %formatNumber = arith.negf %negativeFormat : f64
+    %format = arith.fptosi %formatNumber : f64 to i64
+    %bytes = func.call @strict_packed_bytes(%count, %format) : (i64, i64) -> i64
+    %size = arith.maxui %bytes, %eight : i64
+    %host = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
+    %handle = arith.shrui %device, %eight : i64
+    %handle32 = arith.trunci %handle : i64 to i32
+    %count32 = arith.trunci %count : i64 to i32
+    %format32 = arith.trunci %format : i64 to i32
+    %got = llvm.call @strict_webgpu_download(%handle32, %host, %count32, %format32) : (i32, !llvm.ptr, i32, i32) -> i32
     %failed = arith.constant 0 : i32
-    %isRan = arith.cmpi ne, %ran, %failed : i32
-    %chosen = arith.select %isRan, %result, %zero : f64
-    return %chosen : f64
+    %isGot = arith.cmpi ne, %got, %failed : i32
+    cf.cond_br %isGot, ^store, ^fail
+  ^store:
+    func.call @strict_gc_written_range(%host, %bytes) : (!llvm.ptr, i64) -> ()
+    %hostBits = func.call @strict_bits(%host) : (!llvm.ptr) -> f64
+    %dataSlot = llvm.getelementptr %holder[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %hostBits, %dataSlot : f64, !llvm.ptr
+    func.call @strict_gc_written(%dataSlot) : (!llvm.ptr) -> ()
+    return %host : !llvm.ptr
+  ^fail:
+    %message = llvm.mlir.addressof @strict_gpu_web_unread : !llvm.ptr
+    %printed = llvm.call @printf(%message) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr) -> i32
+    %code = arith.constant 1 : i32
+    llvm.call @exit(%code) : (i32) -> ()
+    %nothing = llvm.mlir.zero : !llvm.ptr
+    return %nothing : !llvm.ptr
+  }
+  // a list in a WebGPU buffer is gone: so is the buffer
+  func.func private @strict_gpu_web_give(%device: i64) {
+    %eight = arith.constant 8 : i64
+    %handle = arith.shrui %device, %eight : i64
+    %handle32 = arith.trunci %handle : i64 to i32
+    llvm.call @strict_webgpu_release(%handle32) : (i32) -> ()
+    return
   }
   func.func private @strict_gpu_library(%isAmd: i1) -> !llvm.ptr {
     %null = llvm.mlir.zero : !llvm.ptr
