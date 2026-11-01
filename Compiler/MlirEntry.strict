@@ -5,6 +5,8 @@ constant Counted = MlirEntry(MlirModule.Counters.Functions.First)
 constant Frames = MemberEntry("frames", "Strict/Number", List(InstructionEntry) + InstructionEntry.Set(List(Text), (1, 7)), false)
 constant Both = MlirEntry(Counted.entry, List(MlirFunction) + Counted.entry)
 constant Framed = MlirEntry(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + Frames, "Strict/Number", List(InstructionEntry) + InstructionEntry.Return(0))))
+constant Folders = TypeCodegen("Strict/Folders", ("Run(folder = \"Content\") Number", "\t0"), ValueCodegen.NoTypes, List(Text)).Entry
+constant Foldered = MlirEntry(MlirFunction(List(TypeEntry) + Folders, Folders, Folders.methods.First))
 constant Unhandled = ("    %unhandled = func.call @strict_unhandled(%result) : (f64) -> i1", "    %failing = arith.constant 1 : i32")
 constant Finished = "    func.call @strict_rc_finished() : () -> ()"
 constant Exit = "    %exit = arith.select %unhandled, %failing, %code : i32"
@@ -49,17 +51,21 @@ EntryCall Text
 Arguments Texts
 	Counted.Arguments.Length is 0
 	Framed.Arguments.Last is "    %arg0 = arith.select %arg0has, %arg0given, %arg0default : f64"
+	Foldered.Arguments.Last is "    %arg0 = arith.select %arg0has, %arg0given, %arg0default : f64"
 	mutable lines = List(Mutable(Text))
 	for entry.method.parameters
 		let kind = TypeEntry.ShortName(value.typeName)
-		let isDefaulted = (value.initial.Length > 0) and (kind is in ("Number", "Boolean"))
+		let isDefaulted = (value.initial.Length > 0) and (kind is in ("Number", "Boolean", "Text"))
 		let name = "%arg" + index + (isDefaulted then "given" else "")
 		lines = lines + Argument(kind, index, name) + (isDefaulted then Defaulted(value, index) else List(Text))
 	lines
 Defaulted(parameter MemberEntry, index Number) Texts
 	Framed.Defaulted(Frames, 0).First is "    %arg0slot = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
+	Text.Combine(Foldered.Defaulted(Folders.methods.First.parameters.First, 0)).IndexOf(" @dp0 ") > 0
 	let slot = "%arg" + index + "slot"
-	let stored = MlirStatements(entry, 0).Literal(Natives(entry.types).Initial(parameter), slot, "d" + index)
+	let initial = Natives(entry.types).Initial(parameter)
+	let named = initial.kind is "Text" then MlirDefaults(entry).ParameterName(initial.text) else ""
+	let stored = MlirStatements(entry, 0).Literal(initial, slot, "d" + index, named)
 	let given = "    %arg" + index + "has = arith.cmpi sgt, %argc, %argindex" + index + " : i32"
 	let operands = "%arg" + index + "has, %arg" + index + "given, %arg" + index + "default : f64"
 	let allocated = "    " + slot + " = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
