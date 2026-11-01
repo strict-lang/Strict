@@ -5,7 +5,8 @@ from pathlib import Path
 # stay too, also when the method of the GPU loop reading them hoists them for its CPU loop; a host list joined after
 # 32 bit floats on the GPU moves up instead of both going to the host, also 32 bit floats the CPU read; bytes the GPU
 # computed go into a file as they are; the doubles of a loop reading lists stay there once its run is checked (in a
-# block of their own, results in the arena still come back with the flag)
+# block of their own, results in the arena still come back with the flag); two lists of doubles the GPU computed are
+# joined there with 8 bytes per number (H3Lora.Swapped got (3, 1, 0, 0) for the halves of (1, 2, 3, 4) with STRICT_GPU=all)
 root=Path(__file__).resolve().parent.parent
 folder=Path(tempfile.mkdtemp(prefix='strict-residency-'))
 program='''has logger
@@ -52,6 +53,8 @@ Run
 	logger.Log("averaged " + averaged.Length + " " + averaged(8))
 	let packed = Folded(Mixed(Codes(24576), Table(24576)) + mixed)
 	logger.Log("packed " + packed.Length + " " + packed(1536) + ", written " + Written("codes.bin"))
+	let swapped = Table(8).Slice(4, 4) + Table(8).Slice(0, 4)
+	logger.Log("swapped " + swapped.Length + " " + swapped(1) + " " + swapped(4))
 '''
 (folder/'GpuResidency.strict').write_bytes(program.replace('\n','\r\n').encode('utf-8'))
 built=subprocess.run([str(root/'strict.exe'),'build','GpuResidency.strict'],cwd=folder,capture_output=True,text=True)
@@ -61,6 +64,7 @@ ran=subprocess.run([str(folder/'GpuResidency.exe')],cwd=folder,capture_output=Tr
 print(ran.stdout,flush=True)
 assert ran.returncode==0,ran.stderr[-2000:]
 assert 'folded 4096 2.5' in ran.stdout and 'summed 2048 5' in ran.stdout and 'mixed 4000 2.5' in ran.stdout and 'read 1000 1.375' in ran.stdout and 'joined 3073 8' in ran.stdout and 'averaged 4194304 2' in ran.stdout and 'packed 2536 2, written 20000' in ran.stdout,'wrong result'
+assert 'swapped 8 1.625 1' in ran.stdout,'two lists of doubles the GPU computed lost half of their numbers when joined there'
 assert (folder/'codes.bin').read_bytes()==bytes(index%200 for index in range(20000)),'the bytes the GPU computed went into the file wrong'
 assert 'Strict GPU download of 4096 numbers' in ran.stdout,'the downloaded result was not named, STRICT_GPU_DOWNLOADS broken'
 assert 'Strict GPU download of 1000 numbers in 64 bits' in ran.stdout,'the table the CPU reads did not stay on the GPU until then'

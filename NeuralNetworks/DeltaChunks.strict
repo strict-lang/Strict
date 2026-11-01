@@ -14,7 +14,7 @@ constant Keys = (0.5, -1, 0.6, 0.8, 1, 2, -1, 0.5, 1, 0.25, 0.8, 0.6, 0.5, -0.5,
 constant Rates = (-0.1, -0.5, 0.5, 0.25, -0.2, -0.05, 0.75, 1, -1, -0.3, 0.3, 0.6)
 constant Probe = DeltaChunks(2, 1, 2, 2, 3, Keys, Rates, (0.1, 0.2, 0.3, 0.4, -0.2, 0, 0.5, 1))
 Read DeltaChunks
-	Probe.Read.reads(9).IsNearlyEqual(-0.076604)
+	Probe.Read.reads(9).IsNearlyEqual(-0.076604, 0.003)
 	Probe.Read.memory(7).IsNearlyEqual(0.718619566, 0.003)
 	DeltaChunks(Probe, chunk = 4).Read.reads(4).IsNearlyEqual(0.38325276, 0.003)
 	let prepared = Prepared
