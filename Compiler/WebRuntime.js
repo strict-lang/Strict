@@ -23,7 +23,7 @@ addToLibrary({
 // list read or a shader error runs the loop on the CPU.
 // Closure knows no GPUBufferUsage: storage 128, copy destination 8, copy source 4, map read 1, compute stage 4.
 addToLibrary({
-	$strictWebGpu: { device: null, failed: false, pipelines: {}, buffers: {}, next: 1, grown: 0 },
+	$strictWebGpu: { device: null, failed: false, pipelines: {}, buffers: {}, failures: {}, next: 1, grown: 0 },
 	strict_webgpu_ready__deps: ['$strictWebGpu', '$UTF8ToString'],
 	strict_webgpu_ready: (name) => {
 		const shaders = Module['strictShaders'], key = UTF8ToString(name);
@@ -153,13 +153,14 @@ addToLibrary({
 			device.queue.submit([encoder.finish()]);
 		}
 		if (!output) {
-			buffers.slice(1).forEach((used) => used.destroy());
+			buffers.forEach((used, at) => at === 0 || at === 3 || used.destroy());
 			const error = await device.popErrorScope();
 			if (error) {
 				buffers[0].destroy();
 				throw error.message;
 			}
 			strictWebGpu.buffers[strictWebGpu.next] = buffers[0];
+			strictWebGpu.failures[strictWebGpu.next] = buffers[3];
 			strictWebGpu.grown += count * 4;
 			return strictWebGpu.next++;
 		}
@@ -205,21 +206,24 @@ addToLibrary({
 	strict_webgpu_kernel__async: true,
 	strict_webgpu_kernel: (name, count, table, slots, bits) =>
 		strictWebGpuStarted(name, count, () => strictWebGpuKernelInputs(count, table >>> 0, slots), 0, bits),
-	// the numbers of a kept kernel result (strict_gpu_web_get) as bits into target, 0 when the buffer is gone
+	// the numbers of a kept kernel result (strict_gpu_web_get) as bits into target: 1, 2 when its loop read outside of a
+	// list, 0 when the buffer is gone
 	strict_webgpu_download__deps: ['$strictWebGpu', '$strictWebGpuWritten', '$Asyncify'],
 	strict_webgpu_download__async: true,
 	strict_webgpu_download: (handle, target, count, bits) => Asyncify.handleSleep((wakeUp) => {
 		const source = strictWebGpu.buffers[handle], device = strictWebGpu.device;
 		if (!source)
 			return wakeUp(0);
-		const copy = device.createBuffer({ size: Math.max(count * 4, 4), usage: 1 | 8 });
+		const copy = device.createBuffer({ size: count * 4 + 4, usage: 1 | 8 });
 		const encoder = device.createCommandEncoder();
 		encoder.copyBufferToBuffer(source, 0, copy, 0, count * 4);
+		encoder.copyBufferToBuffer(strictWebGpu.failures[handle], 0, copy, count * 4, 4);
 		device.queue.submit([encoder.finish()]);
 		copy.mapAsync(1).then(() => {
-			strictWebGpuWritten(new Float32Array(copy.getMappedRange(), 0, count), target >>> 0, bits);
+			const mapped = copy.getMappedRange(), isOutside = new Uint32Array(mapped, count * 4, 1)[0] !== 0;
+			strictWebGpuWritten(new Float32Array(mapped, 0, count), target >>> 0, bits);
 			copy.destroy();
-			wakeUp(1);
+			wakeUp(isOutside ? 2 : 1);
 		}, (error) => {
 			console.error('WebGPU result could not be read: ' + error);
 			wakeUp(0);
@@ -228,6 +232,8 @@ addToLibrary({
 	strict_webgpu_release__deps: ['$strictWebGpu'],
 	strict_webgpu_release: (handle) => {
 		strictWebGpu.buffers[handle]?.destroy();
+		strictWebGpu.failures[handle]?.destroy();
+		delete strictWebGpu.failures[handle];
 		delete strictWebGpu.buffers[handle];
 	},
 	// 1 once kept results took 1 GB since the last time, the collector then gives back the buffers of dead lists

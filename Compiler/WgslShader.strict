@@ -4,6 +4,8 @@ constant Lines = ("has scale Number with value.Bits is 32", "Scaled(count Number
 constant Scaling = TypeCodegen("Strict/Scaling", Lines, ValueCodegen.NoTypes, List(Text)).Entry
 constant Scaled = WgslShader(MlirFunction(List(TypeEntry) + Scaling, Scaling, Scaling.methods.First), 2)
 constant Doubling = WgslShader(MlirParallel.Doubling.function, 2)
+constant Halving = TypeCodegen("Strict/Halving", ("has numbers Numbers", "Halved BFloat16s", "\tfor numbers", "\t\tvalue / 2"), ValueCodegen.NoTypes, List(Text)).Entry
+constant Halved = WgslShader(MlirFunction(List(TypeEntry) + Halving, Halving, Halving.methods.First), 2)
 constant Marker = "// web shaders"
 constant Bindings = ("@group(0) @binding(0) var<storage, read_write> output: array<f32>;", "@group(0) @binding(1) var<storage, read> numbers: array<f32>;", "@group(0) @binding(2) var<storage, read> places: array<u32>;", "@group(0) @binding(3) var<storage, read_write> failed: array<u32>;")
 constant Numbers = ("struct num { f: f32, i: i32, w: bool, d: bool }", "fn n_float(f: f32) -> num { return num(f, 0, false, false); }", "fn n_int(i: i32) -> num { return num(f32(i), i, true, true); }", "fn n_of(f: f32) -> num { let w = fract(f) == 0.0 && abs(f) < 16777216.0; return num(f, i32(f), w, w); }", "fn n_add(a: num, b: num) -> num { if (a.w && b.w) { return n_int(a.i + b.i); } return n_float(a.f + b.f); }", "fn n_sub(a: num, b: num) -> num { if (a.w && b.w) { return n_int(a.i - b.i); } return n_float(a.f - b.f); }", "fn n_mul(a: num, b: num) -> num { if (a.w && b.w) { return n_int(a.i * b.i); } return n_float(a.f * b.f); }", "fn n_mod(a: num, b: num) -> num { if (a.w && b.w && b.i != 0) { return n_int(a.i % b.i); } return n_float(a.f % b.f); }", "fn n_div(a: num, b: num) -> num {", "if (!(a.w && b.w && b.i != 0)) { return n_float(a.f / b.f); }", "let q = a.i / b.i;", "let r = a.i % b.i;", "if (r == 0) { return n_int(q); }", "return num(a.f / b.f, select(q, q - 1, (r < 0) != (b.i < 0)), false, true);", "}", "fn n_floor(a: num) -> num { if (a.d) { return n_int(a.i); } return n_of(floor(a.f)); }", "fn n_index(a: num) -> u32 { return select(u32(max(a.f, 0.0)), u32(max(a.i, 0)), a.w); }", "fn n_equal(a: num, b: num) -> bool { if (a.w && b.w) { return a.i == b.i; } return a.f == b.f; }", "fn n_unequal(a: num, b: num) -> bool { return !n_equal(a, b); }", "fn n_less(a: num, b: num) -> bool { if (a.w && b.w) { return a.i < b.i; } return a.f < b.f; }", "fn n_more(a: num, b: num) -> bool { if (a.w && b.w) { return a.i > b.i; } return a.f > b.f; }", "fn n_power(base: num, exponent: num) -> num {", "let size = pow(abs(base.f), exponent.f);", "let isOdd = abs(exponent.f % 2.0) == 1.0;", "return n_float(select(select(size, -size, base.f < 0.0 && isOdd), 1.0, exponent.f == 0.0));", "}")
@@ -22,10 +24,11 @@ Source Text
 IsShaded Boolean
 	Scaled.IsShaded
 	Doubling.IsShaded is false
+	Halved.IsShaded
 	let collection = MlirLoops(function, position).Collection
-	let isPlain = (collection is in ("", "List(Number)")) and (MlirLayout(function).Packed(position) is 0)
+	let isNarrow = MlirDoubles(function, position).Format is in (17, 32)
 	let isKernel = MlirWholeKernel(function, position).IsKernel
-	isPlain and (isKernel is false) and MlirGpuCheck(function, position).IsGpu and MlirDoubles(function, position).IsSingle
+	(collection is in ("", "List(Number)")) and isNarrow and (isKernel is false) and MlirGpuCheck(function, position).IsGpu
 Functions Texts
 	Doubling.Functions.First is "fn s_Rows_Twice_1(instance: num, p0: num) -> num {"
 	mutable symbols = List(Text)
@@ -69,19 +72,12 @@ Started Texts
 Scripts(functions List(MlirFunction)) Text
 	WgslShader.Scripts(List(MlirFunction) + Scaled.function).StartsWith(Marker + "\n;(Module[\"strictShaders\"] ||= {})")
 	WgslShader.Scripts(List(MlirFunction) + Doubling.function) is ""
+	WgslShader.Scripts(List(MlirFunction) + Halved.function).IndexOf("Halving_Halved_") > 0
 	mutable lines = List(Text)
 	for functions
-		if IsSingle(value.type)
-			lines = lines + Shaded(value)
+		lines = lines + Shaded(value)
 	lines = lines - ""
 	lines.Length is 0 then "" else Marker + "\n" + Text.Combine(lines, "\n")
-IsSingle(type TypeEntry) Boolean
-	WgslShader.IsSingle(Scaling)
-	WgslShader.IsSingle(Doubling.function.type) is false
-	for type.members
-		if value.Bits is 32
-			return true
-	false
 Shaded(inspected MlirFunction) Texts
 	WgslShader.Shaded(Scaled.function).First.IndexOf("[\"Scaling_Scaled_1_gpu2\"] = \"@group(0)") > 0
 	WgslShader.Shaded(Scaled.function).First.EndsWith("strictSingles\"] ||= {})[\"Scaling_Scaled_1_gpu2\"] = [0];")

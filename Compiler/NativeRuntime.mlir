@@ -12978,7 +12978,9 @@
   ^worker:
     return %zero : f64
   ^host:
-    %shaded = func.call @strict_gpu_shaded(%name, %count, %source, %kind, %values, %valueCount, %mask) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64) -> f64
+    %shadedMask = arith.constant 255 : i64
+    %shadedFormat = arith.andi %packedFormat, %shadedMask : i64
+    %shaded = func.call @strict_gpu_shaded(%name, %count, %source, %kind, %values, %valueCount, %mask, %shadedFormat) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
     %isShaded = arith.cmpf one, %shaded, %zero : f64
     cf.cond_br %isShaded, ^shadedDone, ^device
   ^shadedDone:
@@ -16873,8 +16875,8 @@
     %webName = llvm.mlir.addressof @strict_gpu_softmax_web : !llvm.ptr
     %kernelKind = arith.constant 2 : i64
     %listMask = arith.constant 1 : i64
-    %singleBits = arith.constant 32.0 : f64
-    %webbed = func.call @strict_gpu_shaded(%webName, %count, %singleBits, %kernelKind, %slots, %slotCount, %listMask) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64) -> f64
+    %kernelFormat = arith.constant 32 : i64
+    %webbed = func.call @strict_gpu_shaded(%webName, %count, %zero, %kernelKind, %slots, %slotCount, %listMask, %kernelFormat) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
     return %webbed : f64
   ^unable:
     return %zero : f64
@@ -16978,8 +16980,8 @@
     %webName = llvm.mlir.addressof @strict_gpu_products_web : !llvm.ptr
     %kernelKind = arith.constant 2 : i64
     %listMask = arith.constant 3 : i64
-    %singleBits = arith.constant 32.0 : f64
-    %webbed = func.call @strict_gpu_shaded(%webName, %count, %singleBits, %kernelKind, %slots, %fourteen, %listMask) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64) -> f64
+    %kernelFormat = arith.constant 32 : i64
+    %webbed = func.call @strict_gpu_shaded(%webName, %count, %zero, %kernelKind, %slots, %fourteen, %listMask, %kernelFormat) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
     %isWebbed = arith.cmpf one, %webbed, %zero : f64
     cf.cond_br %isWebbed, ^webDone, ^run
   ^webDone:
@@ -17976,8 +17978,8 @@
     %webName = llvm.mlir.addressof @strict_gpu_convolution_web : !llvm.ptr
     %kernelKind = arith.constant 2 : i64
     %listMask = arith.constant 7 : i64
-    %brainBits = arith.constant 17.0 : f64
-    %webbed = func.call @strict_gpu_shaded(%webName, %count, %brainBits, %kernelKind, %slots, %slotCount, %listMask) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64) -> f64
+    %kernelFormat = arith.constant 17 : i64
+    %webbed = func.call @strict_gpu_shaded(%webName, %count, %zero, %kernelKind, %slots, %slotCount, %listMask, %kernelFormat) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
     %isWebbed = arith.cmpf one, %webbed, %zero : f64
     cf.cond_br %isWebbed, ^webDone, ^run
   ^webDone:
