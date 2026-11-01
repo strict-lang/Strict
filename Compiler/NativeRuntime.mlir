@@ -12765,7 +12765,7 @@
     %isDense = func.call @strict_gpu_is_kernel(%denseSlot, %functionBits) : (!llvm.ptr, i64) -> i1
     %denseShared = arith.constant 75776 : i32
     %eightsShared = arith.constant 45056 : i32
-    %wholeShared = arith.constant 75264 : i32
+    %wholeShared = arith.constant 73728 : i32
     %isAmd = func.call @strict_gpu_is_amd() : () -> i1
     %wholeWanted = arith.select %isAmd, %eightsShared, %wholeShared : i32
     %otherShared = arith.select %isTiles, %tileShared, %zero32 : i32
@@ -15686,9 +15686,6 @@
   // the width of the tokens strict_gpu_tokens quantizes with one scale per token (rows with one scale each), 0 for a
   // scale per 32 numbers
   llvm.mlir.global internal @strict_gpu_quantize_width(0 : i64) : i64
-  // 1 while strict_gpu_tokens runs rows of 4 bit numbers (Safetensors.Quantized(name, 4)): their tokens become 4 bit
-  // numbers too, two per byte, for the 4 bit products of strict_device_whole
-  llvm.mlir.global internal @strict_gpu_quantize_four(0 : i64) : i64
   // the value (its index plus 1, 0 for none) strict_gpu_quantized transposes per number for strict_device_dense_attention,
   // the width and count of its rows, where the first starts and how far apart they are in the list (0: width apart)
   llvm.mlir.global internal @strict_gpu_transposed(dense<0> : tensor<5xi64>) : !llvm.array<5 x i64>
@@ -15810,13 +15807,7 @@
     %isLow = arith.cmpi eq, %pass, %lowPass : i64
     %residualFlag = arith.constant 1024 : i64
     %residualBits = arith.select %isLow, %residualFlag, %none : i64
-    %residualCoded = arith.ori %bits, %residualBits : i64
-    %quantizeFourSlot = llvm.mlir.addressof @strict_gpu_quantize_four : !llvm.ptr
-    %quantizeFourWord = llvm.load %quantizeFourSlot : !llvm.ptr -> i64
-    %quantizeFour = arith.cmpi ne, %quantizeFourWord, %none : i64
-    %fourFlag = arith.constant 2048 : i64
-    %fourCoded = arith.select %quantizeFour, %fourFlag, %none : i64
-    %codedBits = arith.ori %residualCoded, %fourCoded : i64
+    %codedBits = arith.ori %bits, %residualBits : i64
     %rest = arith.andi %length, %thirtyOne : i64
     %whole = arith.cmpi eq, %rest, %none : i64
     %some = arith.cmpi sge, %length, %thirtyTwo : i64
@@ -15972,8 +15963,7 @@
     cf.cond_br %quantized, ^swap, ^done
   ^swap:
     llvm.store %target, %view : i64, !llvm.ptr
-    %quantizedBits = arith.select %quantizeFour, %four, %eight : i64
-    llvm.store %quantizedBits, %bitsSlot : i64, !llvm.ptr
+    llvm.store %eight, %bitsSlot : i64, !llvm.ptr
     cf.br ^done
   ^done:
     return
@@ -17959,10 +17949,7 @@
     %zero = arith.constant 0.0 : f64
     %keptSlot = llvm.mlir.addressof @strict_gpu_tokens_kept : !llvm.ptr
     %before = llvm.load %keptSlot : !llvm.ptr -> i64
-    %rowsKept = func.call @strict_gpu_rows_kept(%rows) : (f64) -> i64
-    %fourWidth = arith.fptosi %width : f64 to i64
-    %fourRows = func.call @strict_gpu_four_kept(%rowsKept, %fourWidth) : (i64, i64) -> i1
-    %kept = arith.select %fourRows, %none, %rowsKept : i64
+    %kept = func.call @strict_gpu_rows_kept(%rows) : (f64) -> i64
     %split = func.call @strict_gpu_tokens_split(%kept, %count, %rows, %input, %width, %rowCount, %bases, %gated) : (i64, i64, f64, f64, f64, f64, f64, f64) -> i1
     cf.cond_br %split, ^high, ^plain
   ^high:
@@ -18078,19 +18065,11 @@
     %tilesName = llvm.mlir.addressof @strict_gpu_tiles_name : !llvm.ptr
     %tilesSlot = llvm.mlir.addressof @strict_gpu_tiles_slot : !llvm.ptr
     %tileLanes = arith.constant -512 : i64
-    %eightsFound = func.call @strict_gpu_eights(%rows, %input, %tokens, %width, %bases) : (f64, f64, f64, f64, f64) -> i1
-    %rowsKept = func.call @strict_gpu_rows_kept(%rows) : (f64) -> i64
-    %fourWidth = arith.fptosi %width : f64 to i64
-    %fourKind = func.call @strict_gpu_four_kept(%rowsKept, %fourWidth) : (i64, i64) -> i1
-    %unbased = arith.cmpf oeq, %bases, %zero : f64
-    %fourRows = arith.andi %fourKind, %unbased : i1
-    %eights = arith.ori %eightsFound, %fourRows : i1
+    %eights = func.call @strict_gpu_eights(%rows, %input, %tokens, %width, %bases) : (f64, f64, f64, f64, f64) -> i1
     %eightsName = llvm.mlir.addressof @strict_gpu_eights_name : !llvm.ptr
     %eightsSlot = llvm.mlir.addressof @strict_gpu_eights_slot : !llvm.ptr
     %eightLanes = arith.constant -256 : i64
-    %tokenWidthFound = func.call @strict_gpu_token_width(%rows, %width, %eights) : (f64, f64, i1) -> i64
-    %widthWhole = arith.fptosi %width : f64 to i64
-    %tokenWidth = arith.select %fourRows, %widthWhole, %tokenWidthFound : i64
+    %tokenWidth = func.call @strict_gpu_token_width(%rows, %width, %eights) : (f64, f64, i1) -> i64
     %oneScale = arith.cmpi ne, %tokenWidth, %none : i64
     %olderSlot = llvm.mlir.addressof @strict_gpu_older : !llvm.ptr
     %older = llvm.load %olderSlot : !llvm.ptr -> i64
@@ -18150,13 +18129,9 @@
     %runLanes = arith.select %isGated, %gatedLanes, %lanes : i64
     %tokenWidthSlot = llvm.mlir.addressof @strict_gpu_quantize_width : !llvm.ptr
     llvm.store %tokenWidth, %tokenWidthSlot : i64, !llvm.ptr
-    %quantizeFourSlot = llvm.mlir.addressof @strict_gpu_quantize_four : !llvm.ptr
-    %fourWord = arith.extui %fourRows : i1 to i64
-    llvm.store %fourWord, %quantizeFourSlot : i64, !llvm.ptr
     %noGuards5 = arith.constant 0 : i64
     %result = func.call @strict_gpu_run(%ptx, %runName, %runSlot, %count, %zero, %none, %values, %six, %listsMask, %one, %two, %runLanes, %none, %resultPacked, %noGuards5) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
     llvm.store %none, %tokenWidthSlot : i64, !llvm.ptr
-    llvm.store %none, %quantizeFourSlot : i64, !llvm.ptr
     return %result : f64
   }
   // the tokens of strict_device_whole are quantized with one scale per token (width) when the first row has one scale,
@@ -18898,45 +18873,16 @@
     %rowBits = func.call @strict_gpu_bits(%gathered) : (f64) -> i64
     %isWideRow = arith.cmpi eq, %rowBits, %sixtyFour : i64
     %repacking = arith.andi %narrowed, %isWideRow : i1
-    %packedBits = arith.select %repacking, %narrowest, %rowBits : i64
-    %rowKept = func.call @strict_list_kept(%gathered) : (f64) -> i64
-    %nibbledKept = arith.constant 3 : i64
-    %isFourRow = func.call @strict_gpu_four_kept(%rowKept, %columns) : (i64, i64) -> i1
-    %isNibbled = arith.cmpi eq, %rowKept, %nibbledKept : i64
-    %fourFormat = arith.constant 5 : i64
-    %storedBits = arith.select %isFourRow, %fourFormat, %packedBits : i64
+    %storedBits = arith.select %repacking, %narrowest, %rowBits : i64
     %widthAt = arith.addi %rowIndex, %eight : i64
     %widthSlot = llvm.getelementptr %staging[%widthAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %width = arith.trunci %storedBits : i64 to i8
     llvm.store %width, %widthSlot : i8, !llvm.ptr
-    %packedRowBytes = func.call @strict_packed_bytes(%columns, %storedBits) : (i64, i64) -> i64
-    %nibbleBytes = func.call @strict_gpu_nibbled_bytes(%columns) : (i64) -> i64
-    %rowBytes = arith.select %isFourRow, %nibbleBytes, %packedRowBytes : i64
+    %rowBytes = func.call @strict_packed_bytes(%columns, %storedBits) : (i64, i64) -> i64
     %rowOffset = arith.muli %rowIndex, %rowStride : i64
     %offset = arith.addi %header, %rowOffset : i64
     %destination = llvm.getelementptr %staging[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %rowData = func.call @strict_gpu_host(%gathered) : (f64) -> !llvm.ptr
-    cf.cond_br %isFourRow, ^four, ^unnibbled
-  ^four:
-    %fourInPlace = llvm.icmp "eq" %destination, %rowData : !llvm.ptr
-    cf.cond_br %isNibbled, ^nibbledCopy, ^nibbles
-  ^nibbles:
-    func.call @strict_gpu_nibbled(%rowData, %columns, %destination) : (!llvm.ptr, i64, !llvm.ptr) -> ()
-    cf.cond_br %fourInPlace, ^markNibbled, ^fourDone
-  ^markNibbled:
-    %rowView = func.call @strict_ptr(%gathered) : (f64) -> !llvm.ptr
-    %rowKeptSlot = llvm.getelementptr %rowView[7] : (!llvm.ptr) -> !llvm.ptr, i64
-    llvm.store %nibbledKept, %rowKeptSlot : i64, !llvm.ptr
-    cf.br ^fourDone
-  ^nibbledCopy:
-    cf.cond_br %fourInPlace, ^fourDone, ^nibbledMove
-  ^nibbledMove:
-    %nibbledCopied = llvm.call @memcpy(%destination, %rowData, %rowBytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
-    cf.br ^fourDone
-  ^fourDone:
-    %fourNext = arith.addi %rowIndex, %one : i64
-    cf.br ^row(%fourNext, %uniformRows : i64, i1)
-  ^unnibbled:
     cf.cond_br %repacking, ^repack, ^copyRow
   ^repack:
     %repacked = func.call @strict_gpu_repacked(%rowData, %columns, %narrowest, %destination) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i1
@@ -18949,7 +18895,7 @@
     cf.br ^gathered
   ^gathered:
     %nextRow = arith.addi %rowIndex, %one : i64
-    %uniformRow = func.call @strict_gpu_uniform(%destination, %columns, %packedBits) : (!llvm.ptr, i64, i64) -> i1
+    %uniformRow = func.call @strict_gpu_uniform(%destination, %columns, %storedBits) : (!llvm.ptr, i64, i64) -> i1
     %stillUniform = arith.andi %uniformRows, %uniformRow : i1
     cf.br ^row(%nextRow, %stillUniform : i64, i1)
   ^done:
@@ -18961,92 +18907,6 @@
     cf.br ^finished
   ^finished:
     return %zero : f64
-  }
-  // whether rows with kept (strict_list_kept: 2 for 4 bit numbers, 3 once their host copy holds two per byte) go up and
-  // multiply as 4 bit numbers: only strict_device_whole does, from sm_80 on and not on AMD, for rows of a multiple of 128
-  // numbers (a scale per 128 numbers of their tokens), other GPUs and rows take them as the 8 bit rows they are
-  func.func private @strict_gpu_four_kept(%kept: i64, %columns: i64) -> i1 {
-    %none = arith.constant 0 : i64
-    %two = arith.constant 2 : i64
-    %true = arith.constant true
-    %groupRest = arith.constant 127 : i64
-    %rest = arith.andi %columns, %groupRest : i64
-    %isGrouped = arith.cmpi eq, %rest, %none : i64
-    %isFourKept = arith.cmpi uge, %kept, %two : i64
-    %isFour = arith.andi %isFourKept, %isGrouped : i1
-    %olderSlot = llvm.mlir.addressof @strict_gpu_older : !llvm.ptr
-    %older = llvm.load %olderSlot : !llvm.ptr -> i64
-    %isOlder = arith.cmpi ne, %older, %none : i64
-    %isAmd = func.call @strict_gpu_is_amd() : () -> i1
-    %beforeAmpere = arith.ori %isOlder, %isAmd : i1
-    %pipelined = arith.xori %beforeAmpere, %true : i1
-    %four = arith.andi %isFour, %pipelined : i1
-    return %four : i1
-  }
-  // the bytes of a row of strict_gpu_nibbled: two numbers per byte and a scale per 32
-  func.func private @strict_gpu_nibbled_bytes(%columns: i64) -> i64 {
-    %one = arith.constant 1 : i64
-    %two = arith.constant 2 : i64
-    %five = arith.constant 5 : i64
-    %thirtyOne = arith.constant 31 : i64
-    %pairs = arith.shrui %columns, %one : i64
-    %rounded = arith.addi %columns, %thirtyOne : i64
-    %parts = arith.shrui %rounded, %five : i64
-    %scaleBytes = arith.shli %parts, %two : i64
-    %bytes = arith.addi %pairs, %scaleBytes : i64
-    return %bytes : i64
-  }
-  // the 8 bit numbers of a row of 4 bit numbers (-8 to 7, Safetensors.Quantized(name, 4)) as two per byte at
-  // destination, the lower nibble first like their tokens, followed by its scales per 32 (format 5 of a rows table, which
-  // only strict_device_whole reads)
-  func.func private @strict_gpu_nibbled(%source: !llvm.ptr, %columns: i64, %destination: !llvm.ptr) {
-    %none = arith.constant 0 : i64
-    %one = arith.constant 1 : i64
-    %two = arith.constant 2 : i64
-    %three = arith.constant 3 : i64
-    %five = arith.constant 5 : i64
-    %eight = arith.constant 8 : i64
-    %thirtyOne = arith.constant 31 : i64
-    %fourShift = arith.constant 4 : i8
-    %nibbleMask = arith.constant 15 : i8
-    %pairs = arith.shrui %columns, %one : i64
-    cf.br ^pair(%none : i64)
-  ^pair(%pair: i64):
-    %more = arith.cmpi slt, %pair, %pairs : i64
-    cf.cond_br %more, ^pairBody, ^scales
-  ^pairBody:
-    %evenAt = arith.shli %pair, %one : i64
-    %oddAt = arith.addi %evenAt, %one : i64
-    %evenSlot = llvm.getelementptr %source[%evenAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %oddSlot = llvm.getelementptr %source[%oddAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %even = llvm.load %evenSlot : !llvm.ptr -> i8
-    %odd = llvm.load %oddSlot : !llvm.ptr -> i8
-    %evenNibble = arith.andi %even, %nibbleMask : i8
-    %oddNibble = arith.shli %odd, %fourShift : i8
-    %byte = arith.ori %evenNibble, %oddNibble : i8
-    %target = llvm.getelementptr %destination[%pair] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    llvm.store %byte, %target : i8, !llvm.ptr
-    %next = arith.addi %pair, %one : i64
-    cf.br ^pair(%next : i64)
-  ^scales:
-    %data = func.call @strict_packed_data(%columns, %eight) : (i64, i64) -> i64
-    %scaleSource = llvm.getelementptr %source[%data] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %scaleTarget = llvm.getelementptr %destination[%pairs] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %rounded = arith.addi %columns, %thirtyOne : i64
-    %parts = arith.shrui %rounded, %five : i64
-    cf.br ^scale(%none : i64)
-  ^scale(%part: i64):
-    %moreParts = arith.cmpi slt, %part, %parts : i64
-    cf.cond_br %moreParts, ^scaleBody, ^done
-  ^scaleBody:
-    %fromSlot = llvm.getelementptr %scaleSource[%part] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    %toSlot = llvm.getelementptr %scaleTarget[%part] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    %scale = llvm.load %fromSlot : !llvm.ptr -> f32
-    llvm.store %scale, %toSlot : f32, !llvm.ptr
-    %partNext = arith.addi %part, %one : i64
-    cf.br ^scale(%partNext : i64)
-  ^done:
-    return
   }
   // the rows of a matrix go up behind a header: the row stride (i64) and one byte per row with its width (64 for doubles),
   // padded to 16 bytes like the stride, so rows start aligned for vector loads, every row keeps its own format (Qwen3
@@ -19097,11 +18957,7 @@
     %length = arith.fptosi %lengthNumber : f64 to i64
     %sameLength = arith.cmpi eq, %length, %columns : i64
     %bits = func.call @strict_gpu_bits(%row) : (f64) -> i64
-    %packedRowBytes = func.call @strict_packed_bytes(%columns, %bits) : (i64, i64) -> i64
-    %rowKept = func.call @strict_list_kept(%row) : (f64) -> i64
-    %isFourRow = func.call @strict_gpu_four_kept(%rowKept, %columns) : (i64, i64) -> i1
-    %nibbleBytes = func.call @strict_gpu_nibbled_bytes(%columns) : (i64) -> i64
-    %bytes = arith.select %isFourRow, %nibbleBytes, %packedRowBytes : i64
+    %bytes = func.call @strict_packed_bytes(%columns, %bits) : (i64, i64) -> i64
     %wider = arith.maxui %stride, %bytes : i64
     %narrower = arith.minui %narrowest, %bits : i64
     %isWide = arith.cmpi eq, %bits, %sixtyFour : i64

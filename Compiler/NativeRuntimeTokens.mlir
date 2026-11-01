@@ -2827,7 +2827,7 @@
   // the copies of stage (64 columns) into buffer of strict_device_eights_pipelined, zeros past the last stage (no branch
   // in the main loop), one group: a thread copies 16 bytes of 4 rows and of 2 tokens (those after the last repeat the
   // last), 64 bytes per row or token with part p (16 bytes) at p xor bits 1 and 2 of the row, the rows at buffer * 24576
-  func.func private @strict_device_eights_copies(%firstData: !llvm.ptr, %stride: i64, %rowFirst: i64, %rowLast: i64, %input: !llvm.ptr, %width: i64, %tokenFirst: i64, %tokenLast: i64, %stage: i64, %stages: i64, %buffer: i32, %thread: i32, %half: i64, %inputScales: !llvm.ptr, %numbers: i64, %nibbles: i1) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_eights_copies(%firstData: !llvm.ptr, %stride: i64, %rowFirst: i64, %rowLast: i64, %input: !llvm.ptr, %width: i64, %tokenFirst: i64, %tokenLast: i64, %stage: i64, %stages: i64, %buffer: i32, %thread: i32, %half: i64) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -2891,16 +2891,11 @@
     %atNext = arith.addi %tokenAt, %c4096 : i32
     llvm.br ^token(%partNext, %localNext, %atNext : i32, i64, i32) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
   ^commit:
-    cf.cond_br %nibbles, ^groupScales, ^committed
-  ^groupScales:
-    func.call @strict_device_fours_copy(%inputScales, %numbers, %tokenFirst, %tokenLast, %copiedStage, %buffer, %thread) : (!llvm.ptr, i64, i64, i64, i64, i32, i32) -> ()
-    cf.br ^committed
-  ^committed:
     func.call @strict_device_copies_commit() : () -> ()
     return
   }
-  // the integer sums at slot to slot + 3 plus the mma.m16n8k32 of a and b (the mma.m16n8k64 of 4 bit numbers when four)
-  func.func private @strict_device_eights_integers(%sums: vector<128xi32>, %slot: i32, %a0: i32, %a1: i32, %a2: i32, %a3: i32, %b0: i32, %b1: i32, %four: i1) -> vector<128xi32> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+  // the integer sums at slot to slot + 3 plus the mma.m16n8k32 of a and b
+  func.func private @strict_device_eights_integers(%sums: vector<128xi32>, %slot: i32, %a0: i32, %a1: i32, %a2: i32, %a3: i32, %b0: i32, %b1: i32) -> vector<128xi32> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
     %c3 = llvm.mlir.constant(3 : i32) : i32
@@ -2911,14 +2906,7 @@
     %old1 = llvm.extractelement %sums[%slot1 : i32] : vector<128xi32>
     %old2 = llvm.extractelement %sums[%slot2 : i32] : vector<128xi32>
     %old3 = llvm.extractelement %sums[%slot3 : i32] : vector<128xi32>
-    cf.cond_br %four, ^nibbles, ^bytes
-  ^nibbles:
-    %fours = func.call @strict_device_mma64(%a0, %a1, %a2, %a3, %b0, %b1, %old0, %old1, %old2, %old3) : (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> !llvm.struct<(i32, i32, i32, i32)>
-    cf.br ^added(%fours : !llvm.struct<(i32, i32, i32, i32)>)
-  ^bytes:
-    %eights = func.call @strict_device_mma16(%a0, %a1, %a2, %a3, %b0, %b1, %old0, %old1, %old2, %old3) : (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> !llvm.struct<(i32, i32, i32, i32)>
-    cf.br ^added(%eights : !llvm.struct<(i32, i32, i32, i32)>)
-  ^added(%dot: !llvm.struct<(i32, i32, i32, i32)>):
+    %dot = func.call @strict_device_mma16(%a0, %a1, %a2, %a3, %b0, %b1, %old0, %old1, %old2, %old3) : (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> !llvm.struct<(i32, i32, i32, i32)>
     %new0 = llvm.extractvalue %dot[0] : !llvm.struct<(i32, i32, i32, i32)>
     %new1 = llvm.extractvalue %dot[1] : !llvm.struct<(i32, i32, i32, i32)>
     %new2 = llvm.extractvalue %dot[2] : !llvm.struct<(i32, i32, i32, i32)>
@@ -3005,7 +2993,7 @@
   }
   // the integer sums plus the 32 mma.m16n8k32 of the operands of strict_device_eights_fragments: slot (m * 8 + n) * 4 of
   // sums holds rows g and g + 8 of row tile m by tokens 2 * (lane % 4) and the next of token tile n (8 tokens)
-  func.func private @strict_device_eights_multiplied(%sums: vector<128xi32>, %operands: vector<32xi32>, %four: i1) -> vector<128xi32> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_eights_multiplied(%sums: vector<128xi32>, %operands: vector<32xi32>) -> vector<128xi32> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -3040,7 +3028,7 @@
     %b1 = llvm.extractelement %operands[%highOperand : i32] : vector<32xi32>
     %tokenSlots = arith.shli %tokenTileIndex, %c2 : i32
     %slot = arith.addi %tileSlots, %tokenSlots : i32
-    %added = func.call @strict_device_eights_integers(%tokenSums, %slot, %a0, %a1, %a2, %a3, %b0, %b1, %four) : (vector<128xi32>, i32, i32, i32, i32, i32, i32, i32, i1) -> vector<128xi32>
+    %added = func.call @strict_device_eights_integers(%tokenSums, %slot, %a0, %a1, %a2, %a3, %b0, %b1) : (vector<128xi32>, i32, i32, i32, i32, i32, i32, i32) -> vector<128xi32>
     %tokenTileNext = arith.addi %tokenTileIndex, %c1 : i32
     llvm.br ^tokenTile(%tokenTileNext, %added : i32, vector<128xi32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
   ^rowTileNext:
@@ -3049,170 +3037,10 @@
   ^done:
     return %rowSums : vector<128xi32>
   }
-  // the 4 bit products of a stage of 128 numbers (both subs, two mma.m16n8k64 per tile) added up as integers, scaled by
-  // the scale of their token for the stage (strict_device_fours_scales: tokens 2 * (lane % 4) and the next of each token
-  // tile, one per 128 numbers, a scale per token over all numbers smeared the images) and added to sums as floats (bits)
-  func.func private @strict_device_fours_stage(%sums: vector<128xi32>, %first: vector<32xi32>, %second: vector<32xi32>, %scales: vector<16xf32>) -> vector<128xi32> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
-    %c0 = llvm.mlir.constant(0 : i32) : i32
-    %c1 = llvm.mlir.constant(1 : i32) : i32
-    %c2 = llvm.mlir.constant(2 : i32) : i32
-    %c3 = llvm.mlir.constant(3 : i32) : i32
-    %c4 = llvm.mlir.constant(4 : i32) : i32
-    %c5 = llvm.mlir.constant(5 : i32) : i32
-    %c8 = llvm.mlir.constant(8 : i32) : i32
-    %c16 = llvm.mlir.constant(16 : i32) : i32
-    %zero = llvm.mlir.constant(0 : i32) : i32
-    cf.br ^rowTile(%c0, %sums : i32, vector<128xi32>)
-  ^rowTile(%rowTileIndex: i32, %rowSums: vector<128xi32>):
-    %moreTiles = arith.cmpi slt, %rowTileIndex, %c4 : i32
-    cf.cond_br %moreTiles, ^rowTileBody, ^done
-  ^rowTileBody:
-    %tileOperands = arith.shli %rowTileIndex, %c2 : i32
-    %a0At = arith.addi %tileOperands, %c16 : i32
-    %a1At = arith.addi %a0At, %c1 : i32
-    %a2At = arith.addi %a0At, %c2 : i32
-    %a3At = arith.addi %a0At, %c3 : i32
-    %a0 = llvm.extractelement %first[%a0At : i32] : vector<32xi32>
-    %a1 = llvm.extractelement %first[%a1At : i32] : vector<32xi32>
-    %a2 = llvm.extractelement %first[%a2At : i32] : vector<32xi32>
-    %a3 = llvm.extractelement %first[%a3At : i32] : vector<32xi32>
-    %s0 = llvm.extractelement %second[%a0At : i32] : vector<32xi32>
-    %s1 = llvm.extractelement %second[%a1At : i32] : vector<32xi32>
-    %s2 = llvm.extractelement %second[%a2At : i32] : vector<32xi32>
-    %s3 = llvm.extractelement %second[%a3At : i32] : vector<32xi32>
-    %tileSlots = arith.shli %rowTileIndex, %c5 : i32
-    cf.br ^tokenTile(%c0, %rowSums : i32, vector<128xi32>)
-  ^tokenTile(%tokenTileIndex: i32, %tokenSums: vector<128xi32>):
-    %moreTokenTiles = arith.cmpi slt, %tokenTileIndex, %c8 : i32
-    cf.cond_br %moreTokenTiles, ^tokenTileBody, ^rowTileNext
-  ^tokenTileBody:
-    %lowOperand = arith.shli %tokenTileIndex, %c1 : i32
-    %highOperand = arith.addi %lowOperand, %c1 : i32
-    %b0 = llvm.extractelement %first[%lowOperand : i32] : vector<32xi32>
-    %b1 = llvm.extractelement %first[%highOperand : i32] : vector<32xi32>
-    %t0 = llvm.extractelement %second[%lowOperand : i32] : vector<32xi32>
-    %t1 = llvm.extractelement %second[%highOperand : i32] : vector<32xi32>
-    %firstDot = func.call @strict_device_mma64(%a0, %a1, %a2, %a3, %b0, %b1, %zero, %zero, %zero, %zero) : (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> !llvm.struct<(i32, i32, i32, i32)>
-    %f0 = llvm.extractvalue %firstDot[0] : !llvm.struct<(i32, i32, i32, i32)>
-    %f1 = llvm.extractvalue %firstDot[1] : !llvm.struct<(i32, i32, i32, i32)>
-    %f2 = llvm.extractvalue %firstDot[2] : !llvm.struct<(i32, i32, i32, i32)>
-    %f3 = llvm.extractvalue %firstDot[3] : !llvm.struct<(i32, i32, i32, i32)>
-    %dot = func.call @strict_device_mma64(%s0, %s1, %s2, %s3, %t0, %t1, %f0, %f1, %f2, %f3) : (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> !llvm.struct<(i32, i32, i32, i32)>
-    %evenScale = llvm.extractelement %scales[%lowOperand : i32] : vector<16xf32>
-    %oddScale = llvm.extractelement %scales[%highOperand : i32] : vector<16xf32>
-    %tokenSlots = arith.shli %tokenTileIndex, %c2 : i32
-    %slot = arith.addi %tileSlots, %tokenSlots : i32
-    %added0 = func.call @strict_device_fours_added(%tokenSums, %slot, %dot, %c0, %evenScale) : (vector<128xi32>, i32, !llvm.struct<(i32, i32, i32, i32)>, i32, f32) -> vector<128xi32>
-    %added1 = func.call @strict_device_fours_added(%added0, %slot, %dot, %c1, %oddScale) : (vector<128xi32>, i32, !llvm.struct<(i32, i32, i32, i32)>, i32, f32) -> vector<128xi32>
-    %added2 = func.call @strict_device_fours_added(%added1, %slot, %dot, %c2, %evenScale) : (vector<128xi32>, i32, !llvm.struct<(i32, i32, i32, i32)>, i32, f32) -> vector<128xi32>
-    %added3 = func.call @strict_device_fours_added(%added2, %slot, %dot, %c3, %oddScale) : (vector<128xi32>, i32, !llvm.struct<(i32, i32, i32, i32)>, i32, f32) -> vector<128xi32>
-    %tokenTileNext = arith.addi %tokenTileIndex, %c1 : i32
-    llvm.br ^tokenTile(%tokenTileNext, %added3 : i32, vector<128xi32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
-  ^rowTileNext:
-    %rowTileNext = arith.addi %rowTileIndex, %c1 : i32
-    llvm.br ^rowTile(%rowTileNext, %tokenSums : i32, vector<128xi32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
-  ^done:
-    return %rowSums : vector<128xi32>
-  }
-  // the float (as bits) at slot + element of sums plus element of dot times scale
-  func.func private @strict_device_fours_added(%sums: vector<128xi32>, %slot: i32, %dot: !llvm.struct<(i32, i32, i32, i32)>, %element: i32, %scale: f32) -> vector<128xi32> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
-    %c0 = llvm.mlir.constant(0 : i32) : i32
-    %c1 = llvm.mlir.constant(1 : i32) : i32
-    %c2 = llvm.mlir.constant(2 : i32) : i32
-    %d0 = llvm.extractvalue %dot[0] : !llvm.struct<(i32, i32, i32, i32)>
-    %d1 = llvm.extractvalue %dot[1] : !llvm.struct<(i32, i32, i32, i32)>
-    %d2 = llvm.extractvalue %dot[2] : !llvm.struct<(i32, i32, i32, i32)>
-    %d3 = llvm.extractvalue %dot[3] : !llvm.struct<(i32, i32, i32, i32)>
-    %isOne = arith.cmpi eq, %element, %c1 : i32
-    %isTwo = arith.cmpi eq, %element, %c2 : i32
-    %isFirst = arith.cmpi eq, %element, %c0 : i32
-    %highPair = arith.select %isTwo, %d2, %d3 : i32
-    %lowPair = arith.select %isFirst, %d0, %d1 : i32
-    %isLow = arith.cmpi ult, %element, %c2 : i32
-    %integer = arith.select %isLow, %lowPair, %highPair : i32
-    %at = arith.addi %slot, %element : i32
-    %oldBits = llvm.extractelement %sums[%at : i32] : vector<128xi32>
-    %old = arith.bitcast %oldBits : i32 to f32
-    %product = arith.sitofp %integer : i32 to f32
-    %sum = llvm.intr.fma(%product, %scale, %old) : (f32, f32, f32) -> f32
-    %sumBits = arith.bitcast %sum : f32 to i32
-    %with = llvm.insertelement %sumBits, %sums[%at : i32] : vector<128xi32>
-    return %with : vector<128xi32>
-  }
-  // the scales of the 16 tokens of a lane (tokens 2 * (lane % 4) and the next of each of the 8 token tiles of the warp)
-  // for the stage in buffer, copied with it by strict_device_fours_copy behind the stage buffers
-  func.func private @strict_device_fours_scales(%buffer: i32, %warpToken: i32, %lane: i32) -> vector<16xf32> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
-    %c0 = llvm.mlir.constant(0 : i32) : i32
-    %c1 = llvm.mlir.constant(1 : i32) : i32
-    %c2 = llvm.mlir.constant(2 : i32) : i32
-    %c3 = llvm.mlir.constant(3 : i32) : i32
-    %c8 = llvm.mlir.constant(8 : i32) : i32
-    %c16 = llvm.mlir.constant(16 : i32) : i32
-    %c512 = llvm.mlir.constant(512 : i32) : i32
-    %c73728 = llvm.mlir.constant(73728 : i32) : i32
-    %bufferBytes = arith.muli %buffer, %c512 : i32
-    %bufferStart = arith.addi %c73728, %bufferBytes : i32
-    %quad = arith.andi %lane, %c3 : i32
-    %pairStart = arith.shli %quad, %c1 : i32
-    %laneTokens = arith.addi %warpToken, %pairStart : i32
-    %noScales = arith.constant dense<0.0> : vector<16xf32>
-    cf.br ^scale(%c0, %noScales : i32, vector<16xf32>)
-  ^scale(%index: i32, %scales: vector<16xf32>):
-    %more = arith.cmpi slt, %index, %c16 : i32
-    cf.cond_br %more, ^body, ^done
-  ^body:
-    %tile = arith.shrui %index, %c1 : i32
-    %odd = arith.andi %index, %c1 : i32
-    %tileTokens = arith.muli %tile, %c8 : i32
-    %inWarp = arith.addi %tileTokens, %odd : i32
-    %token = arith.addi %laneTokens, %inWarp : i32
-    %entryBytes = arith.shli %token, %c2 : i32
-    %at = arith.addi %bufferStart, %entryBytes : i32
-    %slot = func.call @strict_device_eights_shared(%at) : (i32) -> !llvm.ptr<3>
-    %scale = llvm.load %slot : !llvm.ptr<3> -> f32
-    %with = llvm.insertelement %scale, %scales[%index : i32] : vector<16xf32>
-    %next = arith.addi %index, %c1 : i32
-    llvm.br ^scale(%next, %with : i32, vector<16xf32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
-  ^done:
-    return %scales : vector<16xf32>
-  }
-  // the scale of token thread of the tile for stage (those after the last repeat the last, 128 numbers per scale) into
-  // the scales of buffer (strict_device_fours_scales), copied with the stage
-  func.func private @strict_device_fours_copy(%inputScales: !llvm.ptr, %numbers: i64, %tokenFirst: i64, %tokenLast: i64, %stage: i64, %buffer: i32, %thread: i32) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
-    %c1 = llvm.mlir.constant(1 : i32) : i32
-    %c2 = llvm.mlir.constant(2 : i32) : i32
-    %c128 = llvm.mlir.constant(128 : i32) : i32
-    %c512 = llvm.mlir.constant(512 : i32) : i32
-    %two = arith.constant 2 : i64
-    %c73728 = llvm.mlir.constant(73728 : i32) : i32
-    %one = arith.constant 1 : i64
-    %five = arith.constant 5 : i64
-    %thread64 = arith.extui %thread : i32 to i64
-    %own = arith.addi %tokenFirst, %thread64 : i64
-    %token = arith.minsi %own, %tokenLast : i64
-    %parts = arith.shrui %numbers, %five : i64
-    %tokenParts = arith.muli %token, %parts : i64
-    %groupParts = arith.shli %stage, %two : i64
-    %scaleAt = arith.addi %tokenParts, %groupParts : i64
-    %source = llvm.getelementptr %inputScales[%scaleAt] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    %bufferBytes = arith.muli %buffer, %c512 : i32
-    %bufferStart = arith.addi %c73728, %bufferBytes : i32
-    %threadBytes = arith.shli %thread, %c2 : i32
-    %at = arith.addi %bufferStart, %threadBytes : i32
-    %slot = func.call @strict_device_eights_shared(%at) : (i32) -> !llvm.ptr<3>
-    %isToken = arith.cmpi ult, %thread, %c128 : i32
-    cf.cond_br %isToken, ^copy, ^done
-  ^copy:
-    func.call @strict_device_copy_word(%slot, %source) : (!llvm.ptr<3>, !llvm.ptr) -> ()
-    cf.br ^done
-  ^done:
-    return
-  }
   // the integer sums of the 64 rows by 64 tokens of a warp over all columns of rows with one scale: 3 buffers of 64
   // columns in turn, the copies of the next 2 stages are on their way while one computes; the operands of the first
-  // half of the next stage are loaded before the second half computes, so the barrier between stages does not stall;
-  // four: rows and tokens hold two 4 bit numbers per byte, a stage of 64 bytes is 128 of them
-  func.func private @strict_device_eights_pipelined(%firstData: !llvm.ptr, %stride: i64, %rowFirst: i64, %rowLast: i64, %columns: i64, %input: !llvm.ptr, %width: i64, %tokenFirst: i64, %tokenLast: i64, %thread: i32, %warpRow: i32, %warpToken: i32, %lane: i32, %inputScales: !llvm.ptr, %bias: f32, %half: i64, %four: i1) -> vector<128xi32> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+  // half of the next stage are loaded before the second half computes, so the barrier between stages does not stall
+  func.func private @strict_device_eights_pipelined(%firstData: !llvm.ptr, %stride: i64, %rowFirst: i64, %rowLast: i64, %columns: i64, %input: !llvm.ptr, %width: i64, %tokenFirst: i64, %tokenLast: i64, %thread: i32, %warpRow: i32, %warpToken: i32, %lane: i32, %inputScales: !llvm.ptr, %bias: f32, %half: i64) -> vector<128xi32> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -3223,17 +3051,14 @@
     %three = arith.constant 3 : i64
     %six = arith.constant 6 : i64
     %zeros = arith.constant dense<0> : vector<128xi32>
-    %fourBit = arith.extui %four : i1 to i64
-    %bytes = arith.shrui %columns, %fourBit : i64
-    %tokenBytes = arith.shrui %width, %fourBit : i64
-    %stages = arith.shrui %bytes, %six : i64
-    func.call @strict_device_whole_scales_copy(%firstData, %stride, %bytes, %inputScales, %width, %rowFirst, %rowLast, %tokenFirst, %tokenLast, %thread, %half, %four) : (!llvm.ptr, i64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i32, i64, i1) -> ()
-    func.call @strict_device_eights_copies(%firstData, %stride, %rowFirst, %rowLast, %input, %tokenBytes, %tokenFirst, %tokenLast, %none, %stages, %c0, %thread, %half, %inputScales, %width, %four) : (!llvm.ptr, i64, i64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i32, i32, i64, !llvm.ptr, i64, i1) -> ()
-    func.call @strict_device_eights_copies(%firstData, %stride, %rowFirst, %rowLast, %input, %tokenBytes, %tokenFirst, %tokenLast, %one, %stages, %c1, %thread, %half, %inputScales, %width, %four) : (!llvm.ptr, i64, i64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i32, i32, i64, !llvm.ptr, i64, i1) -> ()
+    %stages = arith.shrui %columns, %six : i64
+    func.call @strict_device_whole_scales_copy(%firstData, %stride, %columns, %inputScales, %width, %rowFirst, %rowLast, %tokenFirst, %tokenLast, %thread, %half) : (!llvm.ptr, i64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i32, i64) -> ()
+    func.call @strict_device_eights_copies(%firstData, %stride, %rowFirst, %rowLast, %input, %width, %tokenFirst, %tokenLast, %none, %stages, %c0, %thread, %half) : (!llvm.ptr, i64, i64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i32, i32, i64) -> ()
+    func.call @strict_device_eights_copies(%firstData, %stride, %rowFirst, %rowLast, %input, %width, %tokenFirst, %tokenLast, %one, %stages, %c1, %thread, %half) : (!llvm.ptr, i64, i64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i32, i32, i64) -> ()
     func.call @strict_device_copies_wait() : () -> ()
     func.call @strict_device_whole_put(%bias, %thread) : (f32, i32) -> ()
     func.call @strict_device_barrier() : () -> ()
-    func.call @strict_device_eights_copies(%firstData, %stride, %rowFirst, %rowLast, %input, %tokenBytes, %tokenFirst, %tokenLast, %two, %stages, %c2, %thread, %half, %inputScales, %width, %four) : (!llvm.ptr, i64, i64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i32, i32, i64, !llvm.ptr, i64, i1) -> ()
+    func.call @strict_device_eights_copies(%firstData, %stride, %rowFirst, %rowLast, %input, %width, %tokenFirst, %tokenLast, %two, %stages, %c2, %thread, %half) : (!llvm.ptr, i64, i64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i32, i32, i64) -> ()
     %firstOperands = func.call @strict_device_eights_fragments(%c0, %c0, %warpRow, %warpToken, %lane) : (i32, i32, i32, i32, i32) -> vector<32xi32>
     cf.br ^stage(%none, %c0, %zeros, %firstOperands : i64, i32, vector<128xi32>, vector<32xi32>)
   ^stage(%stage: i64, %buffer: i32, %sums: vector<128xi32>, %operands: vector<32xi32>):
@@ -3241,28 +3066,16 @@
     cf.cond_br %moreStages, ^compute, ^done
   ^compute:
     %secondOperands = func.call @strict_device_eights_fragments(%buffer, %c1, %warpRow, %warpToken, %lane) : (i32, i32, i32, i32, i32) -> vector<32xi32>
-    %stageScales = func.call @strict_device_fours_scales(%buffer, %warpToken, %lane) : (i32, i32, i32) -> vector<16xf32>
-    cf.cond_br %four, ^firstDone(%sums : vector<128xi32>), ^firstEights
-  ^firstEights:
-    %firstEights = func.call @strict_device_eights_multiplied(%sums, %operands, %four) : (vector<128xi32>, vector<32xi32>, i1) -> vector<128xi32>
-    cf.br ^firstDone(%firstEights : vector<128xi32>)
-  ^firstDone(%firstSub: vector<128xi32>):
+    %firstSub = func.call @strict_device_eights_multiplied(%sums, %operands) : (vector<128xi32>, vector<32xi32>) -> vector<128xi32>
     func.call @strict_device_copies_wait() : () -> ()
     func.call @strict_device_barrier() : () -> ()
     %ahead = arith.addi %stage, %three : i64
-    func.call @strict_device_eights_copies(%firstData, %stride, %rowFirst, %rowLast, %input, %tokenBytes, %tokenFirst, %tokenLast, %ahead, %stages, %buffer, %thread, %half, %inputScales, %width, %four) : (!llvm.ptr, i64, i64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i32, i32, i64, !llvm.ptr, i64, i1) -> ()
+    func.call @strict_device_eights_copies(%firstData, %stride, %rowFirst, %rowLast, %input, %width, %tokenFirst, %tokenLast, %ahead, %stages, %buffer, %thread, %half) : (!llvm.ptr, i64, i64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i32, i32, i64) -> ()
     %bufferFollowing = arith.addi %buffer, %c1 : i32
     %bufferWraps = arith.cmpi eq, %bufferFollowing, %c3 : i32
     %bufferNext = arith.select %bufferWraps, %c0, %bufferFollowing : i32
     %nextOperands = func.call @strict_device_eights_fragments(%bufferNext, %c0, %warpRow, %warpToken, %lane) : (i32, i32, i32, i32, i32) -> vector<32xi32>
-    cf.cond_br %four, ^secondFours, ^secondEights
-  ^secondFours:
-    %secondFours = func.call @strict_device_fours_stage(%firstSub, %operands, %secondOperands, %stageScales) : (vector<128xi32>, vector<32xi32>, vector<32xi32>, vector<16xf32>) -> vector<128xi32>
-    cf.br ^secondDone(%secondFours : vector<128xi32>)
-  ^secondEights:
-    %secondEights = func.call @strict_device_eights_multiplied(%firstSub, %secondOperands, %four) : (vector<128xi32>, vector<32xi32>, i1) -> vector<128xi32>
-    cf.br ^secondDone(%secondEights : vector<128xi32>)
-  ^secondDone(%bothSubs: vector<128xi32>):
+    %bothSubs = func.call @strict_device_eights_multiplied(%firstSub, %secondOperands) : (vector<128xi32>, vector<32xi32>) -> vector<128xi32>
     %stageNext = arith.addi %stage, %one : i64
     cf.br ^stage(%stageNext, %bufferNext, %bothSubs, %nextOperands : i64, i32, vector<128xi32>, vector<32xi32>)
   ^done:
@@ -3279,7 +3092,7 @@
   // the scale of row thread and of token thread of the tile (those after the last repeat the last) copied into
   // strict_device_whole_scales with the first stage, the bias of row thread read into a register for
   // strict_device_whole_put
-  func.func private @strict_device_whole_scales_copy(%firstData: !llvm.ptr, %stride: i64, %columns: i64, %inputScales: !llvm.ptr, %width: i64, %rowFirst: i64, %rowLast: i64, %tokenFirst: i64, %tokenLast: i64, %thread: i32, %half: i64, %four: i1) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_whole_scales_copy(%firstData: !llvm.ptr, %stride: i64, %columns: i64, %inputScales: !llvm.ptr, %width: i64, %rowFirst: i64, %rowLast: i64, %tokenFirst: i64, %tokenLast: i64, %thread: i32, %half: i64) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %c128 = llvm.mlir.constant(128 : i32) : i32
     %c512 = llvm.mlir.constant(512 : i32) : i32
     %five = arith.constant 5 : i64
@@ -3301,12 +3114,6 @@
     %tokenScaleSource = llvm.getelementptr %inputScales[%tokenIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f32
     %tokenAt = arith.addi %thread, %c512 : i32
     %tokenSlot = llvm.getelementptr %scales[%tokenAt] : (!llvm.ptr<3>, i32) -> !llvm.ptr<3>, f32
-    cf.cond_br %four, ^unscaled, ^copied
-  ^unscaled:
-    %unit = arith.constant 1.0 : f32
-    llvm.store %unit, %tokenSlot : f32, !llvm.ptr<3>
-    cf.br ^done
-  ^copied:
     func.call @strict_device_copy_word(%tokenSlot, %tokenScaleSource) : (!llvm.ptr<3>, !llvm.ptr) -> ()
     cf.br ^done
   ^done:
@@ -3338,7 +3145,7 @@
   // the integer sums of a warp times the scales of their row and token into the result, rows and tokens past the last
   // are left out: the scales and biases of the 8 rows and 16 tokens of a lane come from strict_device_whole_scales,
   // strict_device_eights_staged writes them
-  func.func private @strict_device_eights_scaled(%sums: vector<128xi32>, %result: !llvm.ptr, %wide: i1, %brain: i1, %rowFirst: i64, %tokenFirst: i64, %tokenLast: i64, %rows: i64, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64, %warp: i32, %warpRow: i32, %warpToken: i32, %lane: i32, %half: i64, %four: i1) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_eights_scaled(%sums: vector<128xi32>, %result: !llvm.ptr, %wide: i1, %brain: i1, %rowFirst: i64, %tokenFirst: i64, %tokenLast: i64, %rows: i64, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64, %warp: i32, %warpRow: i32, %warpToken: i32, %lane: i32, %half: i64) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -3409,7 +3216,7 @@
     %rowBiased = arith.andi %hasBiases, %rowWise : i1
     %elementBiases = arith.select %rowWise, %none, %biasesCount : i64
     %gated = arith.cmpi ne, %half, %none : i64
-    func.call @strict_device_eights_staged(%sums, %rowScales, %biasValues, %tokenScales, %rowBiased, %vectors, %result, %wide, %brain, %rows, %rowFirst, %tokenFirst, %tokenLast, %warp, %warpRow, %warpToken, %lane, %gated, %biases, %elementBiases, %biasesBits, %four) : (vector<128xi32>, vector<8xf32>, vector<8xf32>, vector<16xf32>, i1, i1, !llvm.ptr, i1, i1, i64, i64, i64, i64, i32, i32, i32, i32, i1, !llvm.ptr, i64, i64, i1) -> ()
+    func.call @strict_device_eights_staged(%sums, %rowScales, %biasValues, %tokenScales, %rowBiased, %vectors, %result, %wide, %brain, %rows, %rowFirst, %tokenFirst, %tokenLast, %warp, %warpRow, %warpToken, %lane, %gated, %biases, %elementBiases, %biasesBits) : (vector<128xi32>, vector<8xf32>, vector<8xf32>, vector<16xf32>, i1, i1, !llvm.ptr, i1, i1, i64, i64, i64, i64, i32, i32, i32, i32, i1, !llvm.ptr, i64, i64) -> ()
     return
   }
   // the scaled sums of a warp (as floats plus the bias of their row when rowBiased) written through 9216 bytes of
@@ -3418,7 +3225,7 @@
   // vectors (32 bit floats or bfloat16 into an aligned result) and 4 rows fit, otherwise number by number
   // (strict_device_tokens_store: doubles when wide, elementBiases of their own), rows and tokens past the last are left
   // out; gated, one round writes the SiLU of each gate row (the first 32 of a warp) times its up row (32 further)
-  func.func private @strict_device_eights_staged(%sums: vector<128xi32>, %rowScales: vector<8xf32>, %biasValues: vector<8xf32>, %tokenScales: vector<16xf32>, %rowBiased: i1, %vectors: i1, %result: !llvm.ptr, %wide: i1, %brain: i1, %rows: i64, %rowFirst: i64, %tokenFirst: i64, %tokenLast: i64, %warp: i32, %warpRow: i32, %warpToken: i32, %lane: i32, %gated: i1, %biases: !llvm.ptr, %elementBiases: i64, %biasesBits: i64, %four: i1) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_eights_staged(%sums: vector<128xi32>, %rowScales: vector<8xf32>, %biasValues: vector<8xf32>, %tokenScales: vector<16xf32>, %rowBiased: i1, %vectors: i1, %result: !llvm.ptr, %wide: i1, %brain: i1, %rows: i64, %rowFirst: i64, %tokenFirst: i64, %tokenLast: i64, %warp: i32, %warpRow: i32, %warpToken: i32, %lane: i32, %gated: i1, %biases: !llvm.ptr, %elementBiases: i64, %biasesBits: i64) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -3476,9 +3283,7 @@
     %tokenTileStart = arith.shli %slotTokenTile, %c1 : i32
     %tokenScaleIndex = arith.addi %tokenTileStart, %oddToken : i32
     %integer = llvm.extractelement %sums[%slot : i32] : vector<128xi32>
-    %integerConverted = arith.sitofp %integer : i32 to f32
-    %integerBits = arith.bitcast %integer : i32 to f32
-    %integerFloat = arith.select %four, %integerBits, %integerConverted : f32
+    %integerFloat = arith.sitofp %integer : i32 to f32
     %slotRowScale = llvm.extractelement %rowScales[%rowScaleIndex : i32] : vector<8xf32>
     %slotTokenScale = llvm.extractelement %tokenScales[%tokenScaleIndex : i32] : vector<16xf32>
     %bothScales = arith.mulf %slotRowScale, %slotTokenScale : f32
@@ -3488,9 +3293,7 @@
     %final = arith.select %rowBiased, %biasedValue, %value : f32
     %upSlot = arith.addi %slot, %c64 : i32
     %upInteger = llvm.extractelement %sums[%upSlot : i32] : vector<128xi32>
-    %upConverted = arith.sitofp %upInteger : i32 to f32
-    %upBits = arith.bitcast %upInteger : i32 to f32
-    %upFloat = arith.select %four, %upBits, %upConverted : f32
+    %upFloat = arith.sitofp %upInteger : i32 to f32
     %upScaleIndex = arith.addi %rowScaleIndex, %c4 : i32
     %upRowScale = llvm.extractelement %rowScales[%upScaleIndex : i32] : vector<8xf32>
     %upScales = arith.mulf %upRowScale, %slotTokenScale : f32
@@ -3845,8 +3648,7 @@
     %tokenTile = arith.divui %inGroup, %groupRows : i64
     return %rowTile, %tokenTile : i64, i64
   }
-  // the dot of row r and token t becomes number t * rows + r of the result; 4 bit tokens (inputBits 4, two per byte like the
-  // rows of their table) take the pipelined 4 bit products or none
+  // the dot of row r and token t becomes number t * rows + r of the result
   func.func private @strict_device_whole_run(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %rowsData: !llvm.ptr, %columns: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %widthNumber: f64, %rowsNumber: f64, %wide: i1, %brain: i1, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64, %checkedWhole: i1, %gated: i1) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
@@ -3883,10 +3685,7 @@
     %tokenFirst = arith.shli %tokenTile, %seven : i64
     %rowLast = arith.subi %rows, %one : i64
     %tokenLast = arith.subi %tokens, %one : i64
-    %isEight = arith.cmpi eq, %inputBits, %eight : i64
-    %fourBits = arith.constant 4 : i64
-    %four = arith.cmpi eq, %inputBits, %fourBits : i64
-    %isQuantized = arith.ori %isEight, %four : i1
+    %isQuantized = arith.cmpi eq, %inputBits, %eight : i64
     %widthRest = arith.andi %width, %sixtyThree : i64
     %widthAligned = arith.cmpi eq, %widthRest, %none : i64
     %sameWidth = arith.cmpi eq, %columns, %width : i64
@@ -3900,9 +3699,7 @@
     llvm.store %one, %failed : i64, !llvm.ptr
     cf.br ^exit
   ^start:
-    %fourBit = arith.extui %four : i1 to i64
-    %inputBytes = arith.shrui %inputCount, %fourBit : i64
-    %scalesOffset = func.call @strict_device_data(%inputBytes, %eight) : (i64, i64) -> i64
+    %scalesOffset = func.call @strict_device_data(%inputCount, %eight) : (i64, i64) -> i64
     %inputScales = llvm.getelementptr %input[%scalesOffset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %firstData, %rowBits, %rowTotal = func.call @strict_device_row(%rowsData, %rowFirst) : (!llvm.ptr, i64) -> (!llvm.ptr, i64, i64)
     %rowsWord = llvm.load %rowsData : !llvm.ptr -> i64
@@ -3920,8 +3717,7 @@
     %arch = func.call @strict_device_arch() : () -> i32
     %isAsync = arith.cmpi sge, %arch, %c800 : i32
     %pipelining = arith.andi %whole, %isAsync : i1
-    %onlyPipelined = arith.ori %checkedWhole, %four : i1
-    cf.cond_br %onlyPipelined, ^checked, ^compatible
+    cf.cond_br %checkedWhole, ^checked, ^compatible
   ^checked:
     cf.cond_br %pipelining, ^pipelined, ^unusable
   ^compatible:
@@ -3929,17 +3725,8 @@
   ^pipelined:
     %warpTokens = arith.shli %warpTokenIndex, %c6 : i32
     %bias = func.call @strict_device_whole_fetch(%rowFirst, %rowLast, %rows, %biases, %biasesCount, %biasesBits, %thread) : (i64, i64, i64, !llvm.ptr, i64, i64, i32) -> f32
-    %fourConstant = arith.constant true
-    %eightConstant = arith.constant false
-    cf.cond_br %four, ^fourStages, ^eightStages
-  ^fourStages:
-    %fourSums = func.call @strict_device_eights_pipelined(%firstData, %stride, %rowFirst, %rowLast, %columns, %input, %width, %tokenFirst, %tokenLast, %thread, %warpRow, %warpTokens, %lane, %inputScales, %bias, %half, %fourConstant) : (!llvm.ptr, i64, i64, i64, i64, !llvm.ptr, i64, i64, i64, i32, i32, i32, i32, !llvm.ptr, f32, i64, i1) -> vector<128xi32>
-    cf.br ^summed(%fourSums : vector<128xi32>)
-  ^eightStages:
-    %eightSums = func.call @strict_device_eights_pipelined(%firstData, %stride, %rowFirst, %rowLast, %columns, %input, %width, %tokenFirst, %tokenLast, %thread, %warpRow, %warpTokens, %lane, %inputScales, %bias, %half, %eightConstant) : (!llvm.ptr, i64, i64, i64, i64, !llvm.ptr, i64, i64, i64, i32, i32, i32, i32, !llvm.ptr, f32, i64, i1) -> vector<128xi32>
-    cf.br ^summed(%eightSums : vector<128xi32>)
-  ^summed(%sums: vector<128xi32>):
-    func.call @strict_device_eights_scaled(%sums, %result, %wide, %brain, %rowFirst, %tokenFirst, %tokenLast, %rows, %biases, %biasesCount, %biasesBits, %warp, %warpRow, %warpTokens, %lane, %half, %four) : (vector<128xi32>, !llvm.ptr, i1, i1, i64, i64, i64, i64, !llvm.ptr, i64, i64, i32, i32, i32, i32, i64, i1) -> ()
+    %sums = func.call @strict_device_eights_pipelined(%firstData, %stride, %rowFirst, %rowLast, %columns, %input, %width, %tokenFirst, %tokenLast, %thread, %warpRow, %warpTokens, %lane, %inputScales, %bias, %half) : (!llvm.ptr, i64, i64, i64, i64, !llvm.ptr, i64, i64, i64, i32, i32, i32, i32, !llvm.ptr, f32, i64) -> vector<128xi32>
+    func.call @strict_device_eights_scaled(%sums, %result, %wide, %brain, %rowFirst, %tokenFirst, %tokenLast, %rows, %biases, %biasesCount, %biasesBits, %warp, %warpRow, %warpTokens, %lane, %half) : (vector<128xi32>, !llvm.ptr, i1, i1, i64, i64, i64, i64, !llvm.ptr, i64, i64, i32, i32, i32, i32, i64) -> ()
     cf.br ^exit
   ^halves:
     %halfWarpRowIndex = arith.andi %warp, %c1 : i32

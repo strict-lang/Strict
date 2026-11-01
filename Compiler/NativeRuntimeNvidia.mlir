@@ -94,20 +94,6 @@
     %with3 = llvm.insertvalue %d3, %with2[3] : !llvm.struct<(i32, i32, i32, i32)>
     return %with3 : !llvm.struct<(i32, i32, i32, i32)>
   }
-  // 4 bit products of 16 x 64 by 64 x 8 (8 numbers per word, the first in the lowest nibble, like ComfyUI's convrot_w4a4):
-  // one m16n8k64 from sm_80 on, before strict_device_mma64_bytes
-  func.func private @strict_device_mma64(%a0: i32, %a1: i32, %a2: i32, %a3: i32, %b0: i32, %b1: i32, %c0: i32, %c1: i32, %c2: i32, %c3: i32) -> !llvm.struct<(i32, i32, i32, i32)> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
-    %arch = func.call @strict_device_arch() : () -> i32
-    %c800 = arith.constant 800 : i32
-    %isWide = arith.cmpi sge, %arch, %c800 : i32
-    cf.cond_br %isWide, ^wide, ^narrow
-  ^wide:
-    %d = llvm.call_intrinsic "llvm.nvvm.mma.m16n8k64.row.col.s4"(%a0, %a1, %a2, %a3, %b0, %b1, %c0, %c1, %c2, %c3) : (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> !llvm.struct<(i32, i32, i32, i32)>
-    return %d : !llvm.struct<(i32, i32, i32, i32)>
-  ^narrow:
-    %bytes = func.call @strict_device_mma64_bytes(%a0, %a1, %a2, %a3, %b0, %b1, %c0, %c1, %c2, %c3) : (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> !llvm.struct<(i32, i32, i32, i32)>
-    return %bytes : !llvm.struct<(i32, i32, i32, i32)>
-  }
   // strict_device_mma16 of unsigned 8 bit a (0 to 255): one m16n8k32 from sm_80 on, before strict_device_mma16_halves
   func.func private @strict_device_mma16_unsigned(%a0: i32, %a1: i32, %a2: i32, %a3: i32, %b0: i32, %b1: i32, %c0: i32, %c1: i32, %c2: i32, %c3: i32) -> !llvm.struct<(i32, i32, i32, i32)> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %arch = func.call @strict_device_arch() : () -> i32

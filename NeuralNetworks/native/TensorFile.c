@@ -473,8 +473,6 @@ static double QuantizedRows(double path, double entry, double scales, double bit
 		failure = Described(strict_text(scales), &scaled);
 	if (!failure && (!tensor->isSigned || tensor->rank != 2 || scaled.bytes != 4 || scaled.height * scaled.width != tensor->height))
 		failure = "OnlyI8MatricesWithAnF32ScalePerRowAreSupported";
-	if (!failure && ((uint64_t)bits & STRICT_FOUR_TOKENS) && !tensor->isNibbles)
-		failure = "FourBitTokensNeedI4Rows";
 	float* factors = failure ? 0 : Read(path, &scaled, &failure);
 	if (!factors)
 		return strict_fail(failure);
@@ -491,8 +489,7 @@ STRICT_EXPORT double TensorFile_Quantized(double self, double path, double entry
 	Tensor tensor;
 	unsigned char* data = 0;
 	uint64_t stride = 0;
-	double bits = tokenBits > 8 ? 8 + STRICT_KEPT_TOKENS : tokenBits == 4 ? 8 + STRICT_FOUR_TOKENS : 8;
-	return QuantizedRows(path, entry, scales, bits, &tensor, &data, &stride);
+	return QuantizedRows(path, entry, scales, tokenBits > 8 ? 8 + STRICT_KEPT_TOKENS : 8, &tensor, &data, &stride);
 }
 
 /* The rows of an NVFP4 matrix (U8 entry of two numbers per byte, F8_E4M3 block scales, the F32 scale and the optional
