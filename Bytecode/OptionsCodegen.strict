@@ -1,6 +1,6 @@
 has automatic Automatic
 has folder Text
-constant Settings = OptionsCodegen(Automatic(("has prompt = \"prompt.txt\"", "has kind = InstructionType.Add", "has count = 1", "has loras = List(Text)", "has jsonOutput = false"), "Settings", Instantiation.Pairing), "Examples")
+constant Settings = OptionsCodegen(Automatic(("has prompt = \"prompt.txt\"", "has kind = Opcode.Add", "has count = 1", "has loras = List(Text)", "has jsonOutput = false"), "Settings", Instantiation.Pairing), "Examples")
 constant Single = OptionsCodegen(Automatic(List(Text) + "has count = 1", "One", Instantiation.Pairing), "Examples")
 constant Rendering = OptionsCodegen(Automatic(File("Examples/Rendering.strict").ReadLines, "Rendering", Instantiation.Pairing), "Examples")
 Lines(names Texts) Texts

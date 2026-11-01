@@ -1,7 +1,7 @@
 has options OptionsCodegen
 has line Text
 constant Count = OptionMember(OptionsCodegen.Settings, "has count = 1")
-constant Kind = OptionMember(OptionsCodegen.Settings, "has kind = InstructionType.Add")
+constant Kind = OptionMember(OptionsCodegen.Settings, "has kind = Opcode.Add")
 constant Sized = OptionMember(OptionsCodegen.Rendering, "has resolution Resolution")
 Name Text
 	Count.Name is "count"

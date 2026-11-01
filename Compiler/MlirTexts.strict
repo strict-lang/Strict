@@ -54,7 +54,11 @@ Converted(entry InstructionEntry) Texts
 	target is in ("Text", "Character") then Textual(instance, target, result) else copied
 Textual(instance Number, target Text, result Text) Texts
 	MlirTexts(Joined, 7).Textual(1, "Text", "%r3").Length is 4
-	let text = TextBits(instance, "v")
+	Text.Combine(MlirTexts(Joined, 7).Textual(0, "Text", "%r3")).IndexOf("@strict_converted(%t7v, %t7vxc)") > 0
+	let isText = Printable(MlirKinds(function).KindOf(position, instance)) is "Text"
+	let loaded = function.Load(Temp("v"), "%r" + instance)
+	let checked = MlirMemory(function, position).Converting(Temp("vx"), "strict_text_itself", Temp("v"))
+	let text = isText then List(Text) + loaded + checked else TextBits(instance, "v")
 	let first = MlirMemory(function, position).Called(Temp("vc"), "strict_text_at", (Temp("vx"), "%zero"))
 	target is "Text" then text + function.Store(Temp("vx"), result) else text + first + function.Store(Temp("vc"), result)
 Elements(instance Number, target Text, result Text) Texts
