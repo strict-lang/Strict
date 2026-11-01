@@ -932,6 +932,49 @@
     llvm.call @strict_webgpu_release(%handle32) : (i32) -> ()
     return
   }
+  // a list in a WebGPU buffer after another one (or after an empty list) joined in a new buffer on the GPU, 0.0 for
+  // any other pair (strict_list_concat joins those on the host): FluxAttention appends 13 chunks of results this way
+  llvm.func @strict_webgpu_joined(i32, i32) -> i32
+  func.func private @strict_gpu_web_joined(%left: f64, %right: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %eight = arith.constant 8 : i64
+    %rightHandle = func.call @strict_gpu_web_handle(%right) : (f64) -> i64
+    %isRightKept = arith.cmpi ne, %rightHandle, %none : i64
+    cf.cond_br %isRightKept, ^left, ^other
+  ^left:
+    %leftLength = func.call @strict_list_length(%left) : (f64) -> f64
+    %isEmpty = arith.cmpf oeq, %leftLength, %zero : f64
+    cf.cond_br %isEmpty, ^right, ^both
+  ^right:
+    return %right : f64
+  ^both:
+    %leftHandle = func.call @strict_gpu_web_handle(%left) : (f64) -> i64
+    %leftBits = func.call @strict_gpu_bits(%left) : (f64) -> i64
+    %rightBits = func.call @strict_gpu_bits(%right) : (f64) -> i64
+    %isLeftKept = arith.cmpi ne, %leftHandle, %none : i64
+    %isSameFormat = arith.cmpi eq, %leftBits, %rightBits : i64
+    %isJoinable = arith.andi %isLeftKept, %isSameFormat : i1
+    cf.cond_br %isJoinable, ^join, ^other
+  ^join:
+    %leftHandle32 = arith.trunci %leftHandle : i64 to i32
+    %rightHandle32 = arith.trunci %rightHandle : i64 to i32
+    %joined = llvm.call @strict_webgpu_joined(%leftHandle32, %rightHandle32) : (i32, i32) -> i32
+    %failed = arith.constant 0 : i32
+    %isJoined = arith.cmpi ne, %joined, %failed : i32
+    cf.cond_br %isJoined, ^resides, ^other
+  ^resides:
+    %rightLength = func.call @strict_list_length(%right) : (f64) -> f64
+    %total = arith.addf %leftLength, %rightLength : f64
+    %count = arith.fptosi %total : f64 to i64
+    %buffer = arith.extui %joined : i32 to i64
+    %device = arith.shli %buffer, %eight : i64
+    %webClass = arith.constant 255 : i64
+    %result = func.call @strict_gpu_resident(%count, %device, %webClass, %leftBits) : (i64, i64, i64, i64) -> f64
+    return %result : f64
+  ^other:
+    return %zero : f64
+  }
   func.func private @strict_gpu_library(%isAmd: i1) -> !llvm.ptr {
     %null = llvm.mlir.zero : !llvm.ptr
     return %null : !llvm.ptr

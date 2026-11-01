@@ -8366,12 +8366,17 @@
     %added = func.call @strict_list_add(%list, %element) : (f64, f64) -> f64
     return %added : f64
   }
-  // two lists computed on the GPU are joined there, an empty list before one is just that list; a host list after 32 bit
+  // two lists computed on the GPU are joined there (WebGPU buffers by strict_gpu_web_joined), an empty list before one is
+  // just that list; a host list after 32 bit
   // floats on the GPU moves there too (one Embedded tile of the H3 video VAE went down and up again for 8192 registers)
   func.func private @strict_list_concat(%left: f64, %right: f64) -> f64 {
     %none = arith.constant 0 : i64
     %zero = arith.constant 0.0 : f64
     %floats = arith.constant 32 : i64
+    %webJoined = func.call @strict_gpu_web_joined(%left, %right) : (f64, f64) -> f64
+    %isWebJoined = arith.cmpf une, %webJoined, %zero : f64
+    cf.cond_br %isWebJoined, ^done(%webJoined : f64), ^native
+  ^native:
     %rightDevice = func.call @strict_gpu_device(%right) : (f64) -> i64
     %rightResides = arith.cmpi ne, %rightDevice, %none : i64
     cf.cond_br %rightResides, ^device, ^hostRight

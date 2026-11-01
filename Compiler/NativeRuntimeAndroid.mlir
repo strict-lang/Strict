@@ -57,6 +57,11 @@
   func.func private @strict_gpu_web_give(%device: i64) {
     return
   }
+  // two lists in WebGPU buffers joined there (NativeRuntimeWeb.mlir), 0.0 here
+  func.func private @strict_gpu_web_joined(%left: f64, %right: f64) -> f64 {
+    %none = arith.constant 0.0 : f64
+    return %none : f64
+  }
   func.func private @strict_gpu_library(%isAmd: i1) -> !llvm.ptr {
     %null = llvm.mlir.zero : !llvm.ptr
     llvm.return %null : !llvm.ptr

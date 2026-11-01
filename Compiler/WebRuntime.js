@@ -244,6 +244,23 @@ addToLibrary({
 			wakeUp(0);
 		});
 	}),
+	// a new kept result of the numbers of the left one and then of the right one (strict_gpu_web_joined), 0 on failure
+	strict_webgpu_joined__deps: ['$strictWebGpu'],
+	strict_webgpu_joined: (left, right) => {
+		const first = strictWebGpu.buffers[left], second = strictWebGpu.buffers[right], device = strictWebGpu.device;
+		if (!first || !second)
+			return 0;
+		const joined = device.createBuffer({ size: first.size + second.size, usage: 128 | 8 | 4 });
+		const failures = device.createBuffer({ size: 4, usage: 128 | 8 | 4 });
+		const encoder = device.createCommandEncoder();
+		encoder.copyBufferToBuffer(first, 0, joined, 0, first.size);
+		encoder.copyBufferToBuffer(second, 0, joined, first.size, second.size);
+		device.queue.submit([encoder.finish()]);
+		strictWebGpu.buffers[strictWebGpu.next] = joined;
+		strictWebGpu.failures[strictWebGpu.next] = failures;
+		strictWebGpu.grown += joined.size;
+		return strictWebGpu.next++;
+	},
 	strict_webgpu_release__deps: ['$strictWebGpu'],
 	strict_webgpu_release: (handle) => {
 		strictWebGpu.buffers[handle]?.destroy();
