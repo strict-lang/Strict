@@ -13785,8 +13785,9 @@
     %result = arith.uitofp %released : i64 to f64
     return %result : f64
   }
-  // strict_gpu_trim_unused, then the device copies of live lists are evicted too (all but the 16 used last, their host
-  // copies stay and their next use uploads them again): what a resident program gives back to other programs between jobs
+  // strict_gpu_trim_unused, then the device copies of live lists are evicted too (all but the ones of prepared launches,
+  // their host copies stay and their next use uploads them again): what a resident program gives back to other programs
+  // between jobs, a process below 1 GB then gives back the GPU lock too (strict_gpu_lock_check)
   func.func private @strict_gpu_evict_all(%self: f64) -> f64 {
     %released = func.call @strict_gpu_trim_unused(%self) : (f64) -> f64
     %present = func.call @strict_gpu_present() : () -> i1
@@ -13794,7 +13795,8 @@
   ^evict:
     %everything = arith.constant 1099511627776 : i64
     %anyKind = arith.constant false
-    %evicted = func.call @strict_gpu_evicted(%everything, %anyKind) : (i64, i1) -> i1
+    %noneKept = arith.constant -1 : i64
+    %evicted = func.call @strict_gpu_evicted(%everything, %anyKind, %noneKept) : (i64, i1, i64) -> i1
     %freed = func.call @strict_gpu_trim_unused(%self) : (f64) -> f64
     cf.br ^done(%freed : f64)
   ^done(%result: f64):
@@ -13870,7 +13872,8 @@
     func.call @strict_gpu_synchronize() : () -> ()
     %spared = func.call @strict_gpu_unspared() : () -> i64
     %spilledOnly = arith.constant true
-    %restored = func.call @strict_gpu_evicted(%needed, %spilledOnly) : (i64, i1) -> i1
+    %lastUses = arith.constant 16 : i64
+    %restored = func.call @strict_gpu_evicted(%needed, %spilledOnly, %lastUses) : (i64, i1, i64) -> i1
     cf.cond_br %restored, ^enough, ^trim
   ^trim:
     %notWaiting = arith.constant false
@@ -13883,7 +13886,8 @@
   ^evict:
     %missing = arith.subi %needed, %released : i64
     %anyRows = arith.constant false
-    %evicted = func.call @strict_gpu_evicted(%missing, %anyRows) : (i64, i1) -> i1
+    %rowUses = arith.constant 16 : i64
+    %evicted = func.call @strict_gpu_evicted(%missing, %anyRows, %rowUses) : (i64, i1, i64) -> i1
     %either = arith.ori %any, %evicted : i1
     cf.cond_br %either, ^enough, ^cold
   ^cold:
@@ -13899,11 +13903,10 @@
   // prepared launches (they need them): weights used in turn every step (more blocks than fit) keep all but the ones streamed
   // through the same memory, evicting the least recently used would evict the next block every time; rows with a pinned
   // copy go first (only them when spilledOnly), so the streamed ones stay the same; true when one went (the list uploads
-  // again at its next use)
-  func.func private @strict_gpu_evicted(%needed: i64, %spilledOnly: i1) -> i1 {
+  // again at its next use); a window of -1 keeps none of the last uses (GpuMemory.Evicted between jobs)
+  func.func private @strict_gpu_evicted(%needed: i64, %spilledOnly: i1, %window: i64) -> i1 {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
-    %window = arith.constant 16 : i64
     %entries = arith.constant 65536 : i64
     %false = arith.constant false
     %true = arith.constant true
