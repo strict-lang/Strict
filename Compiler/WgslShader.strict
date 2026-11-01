@@ -6,14 +6,15 @@ constant Scaled = WgslShader(MlirFunction(List(TypeEntry) + Scaling, Scaling, Sc
 constant Doubling = WgslShader(MlirParallel.Doubling.function, 2)
 constant Marker = "// web shaders"
 constant Bindings = ("@group(0) @binding(0) var<storage, read_write> output: array<f32>;", "@group(0) @binding(1) var<storage, read> numbers: array<f32>;", "@group(0) @binding(2) var<storage, read> places: array<u32>;", "@group(0) @binding(3) var<storage, read_write> failed: array<u32>;")
-constant Power = ("fn strict_power(base: f32, exponent: f32) -> f32 {", "let size = pow(abs(base), exponent);", "let isOdd = abs(exponent % 2.0) == 1.0;", "return select(select(size, -size, base < 0.0 && isOdd), 1.0, exponent == 0.0);", "}")
+constant Numbers = ("struct num { f: f32, i: i32, w: bool, d: bool }", "fn n_float(f: f32) -> num { return num(f, 0, false, false); }", "fn n_int(i: i32) -> num { return num(f32(i), i, true, true); }", "fn n_of(f: f32) -> num { let w = fract(f) == 0.0 && abs(f) < 16777216.0; return num(f, i32(f), w, w); }", "fn n_add(a: num, b: num) -> num { if (a.w && b.w) { return n_int(a.i + b.i); } return n_float(a.f + b.f); }", "fn n_sub(a: num, b: num) -> num { if (a.w && b.w) { return n_int(a.i - b.i); } return n_float(a.f - b.f); }", "fn n_mul(a: num, b: num) -> num { if (a.w && b.w) { return n_int(a.i * b.i); } return n_float(a.f * b.f); }", "fn n_mod(a: num, b: num) -> num { if (a.w && b.w && b.i != 0) { return n_int(a.i % b.i); } return n_float(a.f % b.f); }", "fn n_div(a: num, b: num) -> num {", "if (!(a.w && b.w && b.i != 0)) { return n_float(a.f / b.f); }", "let q = a.i / b.i;", "let r = a.i % b.i;", "if (r == 0) { return n_int(q); }", "return num(a.f / b.f, select(q, q - 1, (r < 0) != (b.i < 0)), false, true);", "}", "fn n_floor(a: num) -> num { if (a.d) { return n_int(a.i); } return n_of(floor(a.f)); }", "fn n_index(a: num) -> u32 { return select(u32(max(a.f, 0.0)), u32(max(a.i, 0)), a.w); }", "fn n_equal(a: num, b: num) -> bool { if (a.w && b.w) { return a.i == b.i; } return a.f == b.f; }", "fn n_unequal(a: num, b: num) -> bool { return !n_equal(a, b); }", "fn n_less(a: num, b: num) -> bool { if (a.w && b.w) { return a.i < b.i; } return a.f < b.f; }", "fn n_more(a: num, b: num) -> bool { if (a.w && b.w) { return a.i > b.i; } return a.f > b.f; }", "fn n_power(base: num, exponent: num) -> num {", "let size = pow(abs(base.f), exponent.f);", "let isOdd = abs(exponent.f % 2.0) == 1.0;", "return n_float(select(select(size, -size, base.f < 0.0 && isOdd), 1.0, exponent.f == 0.0));", "}")
 constant Entry = ("@compute @workgroup_size(64)", "fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {", "let at = id.x + id.y * groups.x * 64u;")
 Source Text
 	Scaled.Source.StartsWith(Bindings.First)
+	Scaled.Source.IndexOf("struct num {") > 0
 	Doubling.Source is ""
 	if IsShaded is false
 		return ""
-	let lines = Bindings + Power + Globals + Functions + Main
+	let lines = Bindings + Numbers + Globals + Functions + Main
 	for lines
 		if value.StartsWith("unsupported")
 			return ""
@@ -26,7 +27,7 @@ IsShaded Boolean
 	let isKernel = MlirWholeKernel(function, position).IsKernel
 	isPlain and (isKernel is false) and MlirGpuCheck(function, position).IsGpu and MlirDoubles(function, position).IsSingle
 Functions Texts
-	Doubling.Functions.First is "fn s_Rows_Twice_1(instance: f32, p0: f32) -> f32 {"
+	Doubling.Functions.First is "fn s_Rows_Twice_1(instance: num, p0: num) -> num {"
 	mutable symbols = List(Text)
 	mutable lines = List(Text)
 	for MlirGpu.Devices(function, position + 1, function.method.LoopEndOf(position), 0)
@@ -37,19 +38,20 @@ Functions Texts
 Main Texts
 	Scaled.Main.First is "@compute @workgroup_size(64)"
 	"if (at >= places[4]) { return; }" is in Scaled.Main
-	"output[at] = r3;" is in Scaled.Main
+	"output[at] = r3.f;" is in Scaled.Main
 	let count = "if (at >= places[" + (MlirGpuCheck(function, position).Free.Length + 1) * 2 + "]) { return; }"
 	let body = WgslFunction(function).Statements(position + 1, function.method.LoopEndOf(position))
 	(Entry + count + WgslFunction(function).Declarations + Loaded + Started + body) + "}"
 Loaded Texts
-	Scaled.Loaded is ("m_scale = numbers[places[0]];", "v_scale = m_scale;")
+	Scaled.Loaded is ("m_scale = numbers[places[0]];", "v_scale = n_of(m_scale);")
 	mutable lines = List(Text)
 	for MlirGpuCheck(function, position).Free
 		let place = "places[" + index * 2 + "]"
 		let pair = "l = vec2<u32>(" + place + ", places[" + (index * 2 + 1) + "]);"
 		let suffix = MlirDevice(function, position).IsList(value) then "l" else ""
 		let loaded = "m_" + value + (suffix is "l" then pair else " = numbers[" + place + "];")
-		lines = lines + loaded + ("v_" + value + suffix + " = m_" + value + suffix + ";")
+		let converted = suffix is "l" then "m_" + value + "l" else "n_of(m_" + value + ")"
+		lines = lines + loaded + ("v_" + value + suffix + " = " + converted + ";")
 	lines
 Globals Texts
 	WgslShader(MlirGpuCheck.Heading.function, 2).Globals.Last is "var<private> m_weightsl: vec2<u32>;"
@@ -58,11 +60,12 @@ Globals Texts
 		lines = lines + ("var<private> m_" + value + ": f32;") + ("var<private> m_" + value + "l: vec2<u32>;")
 	lines
 Started Texts
-	Scaled.Started is ("v_index = f32(at);", "v_value = f32(at);")
-	Doubling.Started.Last is "v_value = numbers[places[0] + at];"
+	Scaled.Started is ("v_index = n_int(i32(at));", "v_value = n_int(i32(at));")
+	Doubling.Started.Last is "v_value = n_of(numbers[places[0] + at]);"
 	let source = "places[" + MlirGpuCheck(function, position).Free.Length * 2 + "]"
-	let item = MlirLoops(function, position).Collection is "" then "f32(at)" else "numbers[" + source + " + at]"
-	("v_index = f32(at);", "v_value = " + item + ";")
+	let isCounted = MlirLoops(function, position).Collection is ""
+	let item = isCounted then "n_int(i32(at))" else "n_of(numbers[" + source + " + at])"
+	("v_index = n_int(i32(at));", "v_value = " + item + ";")
 Scripts(functions List(MlirFunction)) Text
 	WgslShader.Scripts(List(MlirFunction) + Scaled.function).StartsWith(Marker + "\n;(Module[\"strictShaders\"] ||= {})")
 	WgslShader.Scripts(List(MlirFunction) + Doubling.function) is ""
