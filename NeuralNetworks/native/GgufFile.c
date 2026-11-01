@@ -625,21 +625,29 @@ static void Repacked(const unsigned char* blocks, uint32_t type, uint64_t bits, 
 }
 
 enum { RowChunk = 16 };
-typedef struct { const unsigned char* raw; const float* floats; unsigned char* data; uint64_t stride, width, height, kept; uint32_t type; } Packing;
+typedef struct { const unsigned char* raw; int isBlocked; unsigned char* data; uint64_t stride, width, height, kept;
+	uint32_t type; atomic_int failed; } Packing;
 
-/* RowChunk rows of the packing from item on: blocks repacked, floats quantized to 8 or kept as 16 or 32 bits. */
+/* RowChunk rows of the packing from item on: blocks repacked, other rows decoded here (on every thread, a whole tensor
+   decoded first took 0.14 s for a Q5_K query matrix of Qwen3.5 9B) and quantized to 8 or kept as 16 or 32 bits. */
 static void Packed(void* context, uint64_t item)
 {
-	const Packing* packing = context;
-	uint64_t width = packing->width, kept = packing->kept;
-	for (uint64_t row = item * RowChunk; row < (item + 1) * RowChunk && row < packing->height; row++)
+	Packing* packing = context;
+	uint64_t width = packing->width, kept = packing->kept, blockNumbers = BlockNumbers(packing->type);
+	uint64_t blockBytes = BlockBytes(packing->type), rowBytes = width / blockNumbers * blockBytes;
+	float* floats = packing->isBlocked ? 0 : malloc(width * sizeof(float) + 1);
+	if (!packing->isBlocked && !floats)
+		atomic_store(&packing->failed, 1);
+	for (uint64_t row = item * RowChunk; (packing->isBlocked || floats) && row < (item + 1) * RowChunk &&
+		row < packing->height; row++)
 	{
 		unsigned char* data = packing->data + row * packing->stride;
-		const float* floats = packing->floats ? packing->floats + row * width : 0;
-		uint64_t rowBytes = width / BlockNumbers(packing->type) * BlockBytes(packing->type);
-		if (packing->raw)
-			Repacked(packing->raw + row * rowBytes, packing->type, kept, width, data);
-		else if (kept == 8)
+		const unsigned char* blocks = packing->raw + row * rowBytes;
+		if (packing->isBlocked)
+			Repacked(blocks, packing->type, kept, width, data);
+		for (uint64_t block = 0; floats && block < width / blockNumbers; block++)
+			Decoded(packing->type, blocks + block * blockBytes, floats + block * blockNumbers);
+		if (floats && kept == 8)
 			strict_quantized(data, floats, width, 1);
 		for (uint64_t column = 0; floats && kept != 8 && column < width; column++)
 			if (kept == 16)
@@ -647,6 +655,7 @@ static void Packed(void* context, uint64_t item)
 			else
 				((float*)data)[column] = floats[column];
 	}
+	free(floats);
 }
 
 /* Rows of 32, 16 or 8 bits, 4 keeps Q4_K, Q6_K and the ternary PTQ1_0 and PQ2_0 matrices in 4, 6 and 3 bits (PQ2_0 with a
@@ -662,21 +671,19 @@ STRICT_EXPORT double GgufFile_Rows(double self, double path, double name, double
 	uint32_t type = tensor ? tensor->type : F32;
 	uint64_t kept = bits != 4 ? (uint64_t)bits : type == Q4_K ? 4 : type == Q6_K ? 6 : type == PTQ1_0 || type == PQ2_0 ? 3 : 8;
 	int isBlocked = kept == 4 || kept == 6 || kept == 3;
-	unsigned char* raw = tensor && isBlocked ? Blocks(tensor, width * height, &failure) : 0;
+	unsigned char* raw = tensor ? Blocks(tensor, width * height, &failure) : 0;
 	if (raw && type == PQ2_0 && !IsTernary(raw, width * height / 128))
-		free(raw), raw = 0, kept = 8, isBlocked = 0;
-	float* floats = tensor && !isBlocked ? Floats(tensor, width * height, &failure) : 0;
-	if (!floats && !raw)
+		kept = 8, isBlocked = 0;
+	if (!raw)
 		return strict_fail(failure);
 	unsigned char* data = 0;
 	uint64_t stride = 0;
 	double result = strict_rows(height, width, (double)kept, &data, &stride);
-	Packing packing = { raw, floats, data, stride, width, height, kept, type };
+	Packing packing = { raw, isBlocked, data, stride, width, height, kept, type };
 	if (data)
 		Parallel(Packed, &packing, (height + RowChunk - 1) / RowChunk);
-	free(floats);
 	free(raw);
-	return result;
+	return atomic_load(&packing.failed) ? strict_fail("TensorTooLarge") : result;
 }
 
 /* ggml's tables (ggml-cpu.c fills them in ggml_cpu_init) and the functions of ggml.c its quantization code refers to:
