@@ -32,7 +32,7 @@ addToLibrary({
 	},
 	$strictWebGpuInputs: (name, count, table, slots) => {
 		const singles = Module['strictSingles'][name];
-		const entries = HEAPF64.slice(table >> 3, (table >> 3) + slots * 2);
+		const entries = HEAPF64.slice(table / 8, table / 8 + slots * 2);
 		const places = new Uint32Array(slots * 2 + 1);
 		let total = 0;
 		for (let slot = 0; slot < slots; slot++) {
@@ -54,6 +54,30 @@ addToLibrary({
 		}
 		return { numbers, places };
 	},
+	// a runtime kernel (NativeRuntimeWgsl.js) takes every value rounded to 32 bit floats (a whole number also exactly as
+	// the second place of its slot): lists of 64 bit, 32 bit or bfloat16 (bits 17) numbers, other formats run on the CPU
+	$strictWebGpuKernelInputs: (count, table, slots) => {
+		const entries = HEAPF64.slice(table / 8, table / 8 + slots * 3);
+		const places = new Uint32Array(slots * 2 + 1), parts = [];
+		let total = 0;
+		for (let slot = 0; slot < slots; slot++) {
+			const address = entries[slot * 3], length = entries[slot * 3 + 1], bits = entries[slot * 3 + 2];
+			const part = length < 0 ? [address] : bits === 64 ? HEAPF64.subarray(address / 8, address / 8 + length)
+				: bits === 32 ? HEAPF32.subarray(address / 4, address / 4 + length)
+				: bits === 17 ? new Float32Array(Uint32Array.from(HEAPU16.subarray(address / 2, address / 2 + length),
+					(half) => half << 16).buffer) : null;
+			if (!part)
+				return null;
+			places[slot * 2] = total;
+			places[slot * 2 + 1] = length < 0 ? (Number.isInteger(address) && address >= 0 ? address : 0) : part.length;
+			parts.push(part);
+			total += part.length;
+		}
+		places[slots * 2] = count;
+		const numbers = new Float32Array(Math.max(total, 1));
+		parts.forEach((part, slot) => numbers.set(part, places[slot * 2]));
+		return { numbers, places };
+	},
 	$strictWebGpuPipeline: (device, code) => {
 		const storage = (binding, type) => ({ binding, visibility: 4, buffer: { type } });
 		const types = ['storage', 'read-only-storage', 'read-only-storage', 'storage'];
@@ -64,11 +88,26 @@ addToLibrary({
 	},
 	$strictWebGpuDevice: async () => {
 		const adapter = await navigator.gpu.requestAdapter();
-		return adapter && await adapter.requestDevice();
+		const limits = adapter && adapter.limits;
+		const requiredLimits = limits && { maxStorageBufferBindingSize: limits.maxStorageBufferBindingSize,
+			maxBufferSize: limits.maxBufferSize };
+		return adapter && await adapter.requestDevice({ requiredLimits });
 	},
-	$strictWebGpuRun__deps: ['$strictWebGpu', '$strictWebGpuInputs', '$strictWebGpuPipeline', '$strictWebGpuDevice'],
-	$strictWebGpuRun: async (name, count, table, slots, output) => {
-		const inputs = strictWebGpuInputs(name, count, table, slots);
+	// numbers into the data at output as 64 bit, 32 bit or bfloat16 (bits 17, rounded to the nearest even) numbers
+	$strictWebGpuWritten: (numbers, output, bits) => {
+		if (bits === 64)
+			HEAPF64.set(numbers, output / 8);
+		else if (bits === 32)
+			HEAPF32.set(numbers, output / 4);
+		else {
+			const words = new Uint32Array(numbers.buffer, numbers.byteOffset, numbers.length);
+			const halves = HEAPU16.subarray(output / 2, output / 2 + numbers.length);
+			for (let index = 0; index < words.length; index++)
+				halves[index] = (words[index] + 0x7fff + ((words[index] >>> 16) & 1)) >>> 16;
+		}
+	},
+	$strictWebGpuRun__deps: ['$strictWebGpu', '$strictWebGpuPipeline', '$strictWebGpuDevice', '$strictWebGpuWritten'],
+	$strictWebGpuRun: async (name, count, inputs, output, bits) => {
 		const device = inputs && (strictWebGpu.device ||= await strictWebGpuDevice());
 		if (!device)
 			return 0;
@@ -106,19 +145,26 @@ addToLibrary({
 		await mapping;
 		const mapped = copy.getMappedRange(), isFailed = new Uint32Array(mapped, count * 4, 1)[0] !== 0;
 		if (!isFailed)
-			HEAPF64.set(new Float32Array(mapped, 0, count), output >> 3);
+			strictWebGpuWritten(new Float32Array(mapped, 0, count), output, bits);
 		copy.unmap();
 		buffers.concat(copy).forEach((used) => used.destroy());
 		return isFailed ? 0 : 1;
 	},
-	strict_webgpu__deps: ['$strictWebGpu', '$strictWebGpuRun', '$UTF8ToString', '$Asyncify'],
-	strict_webgpu__async: true,
-	strict_webgpu: (name, count, table, slots, output) => Asyncify.handleSleep((wakeUp) => {
+	$strictWebGpuStarted__deps: ['$strictWebGpu', '$strictWebGpuRun', '$UTF8ToString', '$Asyncify'],
+	$strictWebGpuStarted: (name, count, inputs, output, bits) => Asyncify.handleSleep((wakeUp) => {
 		const key = UTF8ToString(name);
-		strictWebGpuRun(key, count, table, slots, output).then(wakeUp, (error) => {
+		strictWebGpuRun(key, count, inputs(key), output, bits).then(wakeUp, (error) => {
 			console.error('WebGPU kernel ' + key + ' runs on the CPU: ' + error);
 			strictWebGpu.pipelines[key] = null;
 			wakeUp(0);
 		});
 	}),
+	strict_webgpu__deps: ['$strictWebGpuStarted', '$strictWebGpuInputs'],
+	strict_webgpu__async: true,
+	strict_webgpu: (name, count, table, slots, output) =>
+		strictWebGpuStarted(name, count, (key) => strictWebGpuInputs(key, count, table >>> 0, slots), output >>> 0, 64),
+	strict_webgpu_kernel__deps: ['$strictWebGpuStarted', '$strictWebGpuKernelInputs'],
+	strict_webgpu_kernel__async: true,
+	strict_webgpu_kernel: (name, count, table, slots, output, bits) =>
+		strictWebGpuStarted(name, count, () => strictWebGpuKernelInputs(count, table >>> 0, slots), output >>> 0, bits),
 });

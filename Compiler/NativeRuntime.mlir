@@ -16724,6 +16724,7 @@
   // strict_device_products): shape is batches, rows, inner and columns,
   // strides the start and the batch, row and inner strides of left, then of right with inner and column strides, 0.0
   // when the GPU can not (shape or strides of other lengths, reads outside the lists), then the method itself runs
+  llvm.mlir.global internal constant @strict_gpu_products_web("strict_products\00") : !llvm.array<16 x i8>
   func.func private @strict_gpu_products(%ptx: !llvm.ptr, %left: f64, %right: f64, %shape: f64, %strides: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
@@ -16813,7 +16814,17 @@
     %rightFits = arith.andi %rightFrom, %rightInside : i1
     %bothFit = arith.andi %leftFits, %rightFits : i1
     %fits = arith.andi %sized, %bothFit : i1
-    cf.cond_br %fits, ^run, ^unable
+    cf.cond_br %fits, ^web, ^unable
+  ^web:
+    %webName = llvm.mlir.addressof @strict_gpu_products_web : !llvm.ptr
+    %kernelKind = arith.constant 2 : i64
+    %listMask = arith.constant 3 : i64
+    %singleBits = arith.constant 32.0 : f64
+    %webbed = func.call @strict_gpu_shaded(%webName, %count, %singleBits, %kernelKind, %slots, %fourteen, %listMask) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64) -> f64
+    %isWebbed = arith.cmpf one, %webbed, %zero : f64
+    cf.cond_br %isWebbed, ^webDone, ^run
+  ^webDone:
+    return %webbed : f64
   ^run:
     %sixteen = arith.constant 16 : i64
     %eight = arith.constant 8 : i64
@@ -17697,6 +17708,8 @@
   }
   llvm.mlir.global internal constant @strict_gpu_convolution_name("strict_device_convolution\00strict_device_convolutions\00") : !llvm.array<53 x i8>
   llvm.mlir.global internal @strict_gpu_convolution_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  // the WGSL kernel of NativeRuntimeWgsl.js, run on WebGPU by strict_gpu_shaded of kind 2 (0.0 on other platforms)
+  llvm.mlir.global internal constant @strict_gpu_convolution_web("strict_convolution\00") : !llvm.array<19 x i8>
   // `Convolved.Summed` on the 16 bit tensor cores (strict_device_convolution): a 3x3 convolution of values (height by
   // width pixels of channels numbers divided by factor, the affine scale and shift and swish applied on load, zeros
   // around) with weights (outputs rows of 9 taps of channels numbers; with a factor of 2 the image is doubled and the
@@ -17799,7 +17812,17 @@
     %countFit = arith.andi %someChannels, %some : i1
     %sized = arith.andi %allFit, %countFit : i1
     %fits = arith.andi %sized, %factorFits : i1
-    cf.cond_br %fits, ^run, ^unable
+    cf.cond_br %fits, ^web, ^unable
+  ^web:
+    %webName = llvm.mlir.addressof @strict_gpu_convolution_web : !llvm.ptr
+    %kernelKind = arith.constant 2 : i64
+    %listMask = arith.constant 7 : i64
+    %brainBits = arith.constant 17.0 : f64
+    %webbed = func.call @strict_gpu_shaded(%webName, %count, %brainBits, %kernelKind, %slots, %slotCount, %listMask) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64) -> f64
+    %isWebbed = arith.cmpf one, %webbed, %zero : f64
+    cf.cond_br %isWebbed, ^webDone, ^run
+  ^webDone:
+    return %webbed : f64
   ^run:
     %swishSlot = llvm.getelementptr %slots[7] : (!llvm.ptr) -> !llvm.ptr, f64
     %swish = llvm.load %swishSlot : !llvm.ptr -> f64
