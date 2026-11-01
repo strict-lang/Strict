@@ -37,7 +37,7 @@ Completed Numbers
 Runs Number
 	Square.Runs is 1
 	(values.Length / channels / 1024).Ceiling
-Partials(groups Number, centers Numbers, squared Boolean) Numbers
+Partials(groups Number, centers Numbers, squared Boolean) Float32s
 	FeatureMap((1, 2, 3, 6), 1, 2, (0, 0)).Partials(2, (0, 0), false) is (4, 8)
 	FeatureMap((1, 2, 3, 6), 1, 2, (0, 0)).Partials(2, (2, 4), true) is (2, 8)
 	let size = channels / groups
