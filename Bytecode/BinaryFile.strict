@@ -3,8 +3,9 @@ constant Probe = BinaryFile("./Bytecode/Probe.strict")
 constant Packing = Probe.Unpacked(Probe.Packed(BinarySources(List(Text)).Header, List(TypeEntry) + TypeEntry.HelloLogger, List(TypeEntry)))
 constant Outdated = Probe.Unpacked(Probe.Packed(BinaryNames(List(Text) + "./Any.strict").Integers + TypeEntry.FormatVersion + 5, List(TypeEntry) + TypeEntry.HelloLogger, List(TypeEntry)))
 Path Text
-	Probe.Path is "./Bytecode/Probe.strictbinary"
-	source.Substring(0, source.Length - 7) + ".strictbinary"
+	Probe.Path is "./Bytecode/obj/Probe.strictbinary"
+	let intermediate = BuildOutput.Intermediate(source)
+	intermediate.Substring(0, intermediate.Length - 7) + ".strictbinary"
 Saved(bytes Bytes) Boolean
 	Probe.Saved(Probe.Packed((1, 2), List(TypeEntry), List(TypeEntry)))
 	let temporary = Path + "." + 1000000000.Random.Floor + ".tmp"

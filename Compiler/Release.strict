@@ -19,32 +19,31 @@ IOSPackaged Number
 	if Content(Parent + "/Release/Content") < 0
 		return 1
 	let release = Parent + "/Release/iOS"
-	Refreshed(release, release + "/Content", (".ios.a", ".simulator.a"))
+	Refreshed(release, release + "/Content", base, (".ios.a", ".simulator.a"))
 Packaged(program Text, built Number, isWeb = false, isCrossing = false, platform = -1) Number
 	Release(Logger, "Examples/Sum").Packaged("module {\n}", 0) is 0
 	Release(Logger, "Examples/Sum").Packaged("module {\n}", 2) is 2
 	Release(Logger, "Missing/App.test").Packaged(Opening, 0) is 0
 	if (platform is in (Platform.Android, Platform.IOS, Platform.IOSSimulator)) and (built is 0)
 		return Platform.IsIOS(platform) then IOSPackaged else AndroidPackaged
-	let isWindowed = program.IndexOf(Opening) >= 0
-	if (built is not 0) or base.EndsWith(".test") or (isWindowed is false)
+	if (built is not 0) or base.EndsWith(".test")
 		return built
 	if isWeb
-		return IsDemo then built else Refreshed(Parent + "/Release/Web", "", (".html", ".js", ".wasm", ".data"))
-	NativePackaged(isCrossing)
+		return Refreshed(Parent + "/Release/Web", "", base, List(Text))
+	program.IndexOf(Opening) >= 0 then NativePackaged(isCrossing) else built
 NativePackaged(isCrossing Boolean) Number
 	if Content(Parent + "/Release/Content") < 0
 		return 1
 	let ending = Platform.Current is Platform.Windows then ".exe" else ""
 	if IsDemo
-		return Refreshed(Parent + "/Release", "", List(Text) + ending)
+		return Refreshed(Parent + "/Release", "", BuildOutput.Delivered(base), List(Text) + ending)
 	if Platform.Current is Platform.MacOS
 		return MacOSBundle(logger, base).Released
 	let folder = Parent + "/Release/" + Platform.NameOf(Platform.Current)
-	let result = Refreshed(folder, folder + "/Content", List(Text) + ending)
-	let isCrossed = isCrossing and (Platform.Current is Platform.Windows) and File(base).Exists
+	let result = Refreshed(folder, folder + "/Content", BuildOutput.Delivered(base), List(Text) + ending)
 	let linux = Parent + "/Release/Linux"
-	(result is 0) and isCrossed then Refreshed(linux, linux + "/Content", List(Text) + "") else result
+	let isCrossed = isCrossing and (Platform.Current is Platform.Windows) and File(linux + "/" + Named(base)).Exists
+	(result is 0) and isCrossed then Refreshed(linux, linux + "/Content", base, List(Text)) else result
 IsDemo Boolean
 	Release(Logger, TypeSource.Root + "/Examples/NativeAdd/AtlasDemo").IsDemo
 	Release(Logger, "Missing/AtlasDemo").IsDemo is false
@@ -54,23 +53,26 @@ IsDemo Boolean
 Parent Text
 	Release(Logger, "Missing/App").Parent is "Missing"
 	Release(Logger, "App").Parent is "."
+	Release(Logger, "./Missing/obj/App.test").Parent is "./Missing"
 	let parent = Path(base).PathOnly.text
-	parent is "" then "." else parent
+	let source = parent.EndsWith("/obj") then parent.Substring(0, parent.Length - 4) else parent
+	(source is "") or (source is "obj") then "." else source
 Icon Text
 	Release(Logger, "Examples/NativeAdd/NativeAdd").Icon is "Examples/NativeAdd/NativeAdd.ico"
 	Release(Logger, "Examples/NativeAdd/Adder").Icon is "Examples/NativeAdd/NativeAdd.ico"
 	Release(Logger, "Missing/App").Icon is TypeSource.Root + "/Strict.ico"
-	let own = base + ".ico"
+	Release(Logger, "Examples/NativeAdd/obj/NativeAdd").Icon is "Examples/NativeAdd/NativeAdd.ico"
+	let own = BuildOutput.Delivered(base) + ".ico"
 	let folder = Parent + "/" + Path(Parent).FileName.text + ".ico"
 	if File(own).Exists
 		return own
 	File(folder).Exists then folder else TypeSource.Root + "/Strict.ico"
-Refreshed(release Text, content Text, endings Texts) Number
+Refreshed(release Text, content Text, stem Text, endings Texts) Number
 	let parent = Path(release).PathOnly.text
 	Directory.Create(parent)
 	Directory.Create(release)
 	for endings
-		let built = base + value
+		let built = stem + value
 		if File(built).Exists
 			if Placed(built, release + "/" + Named(built)) is false
 				logger.Log("Release could not replace " + release + "/" + Named(built) + ", is it still running?")
@@ -135,6 +137,9 @@ Copied(source Text, target Text) Number
 	copied
 Created(path Text) Boolean
 	Release(Logger, "Missing/App").Created("artifacts/Release/Content") or Directory.Exists("artifacts/Release/Content")
+	Release(Logger, "Missing/App").Created("")
+	if (path is "") or Directory.Exists(path)
+		return true
 	let parent = Path(path).PathOnly.text
 	if (parent is not "") and (Directory.Exists(parent) is false)
 		Created(parent)

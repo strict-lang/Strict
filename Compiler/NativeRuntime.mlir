@@ -12045,7 +12045,7 @@
   // the generated code names the PTX with the hash it was built with ("hash:Name\0hash\0", HashCode % 9999991), a
   // missing PTX or one of another program or version stops instead of running wrong kernels or all on the CPU,
   // "file:Name" of older compilers like the bootstrap seed is not checked
-  llvm.mlir.global internal constant @strict_gpu_missing_text("Error: %s%s next to %s is missing or empty, build the program again with strict build\0A\00") : !llvm.array<87 x i8>
+  llvm.mlir.global internal constant @strict_gpu_missing_text("Error: %s%s next to %s (or in obj/ there) is missing or empty, build the program again with strict build\0A\00") : !llvm.array<106 x i8>
   llvm.mlir.global internal constant @strict_gpu_mismatch_text("Error: %s%s next to %s was built for another program or version, build the program again with strict build\0A\00") : !llvm.array<108 x i8>
   func.func private @strict_gpu_matched(%ptx: !llvm.ptr, %ending: !llvm.ptr, %code: !llvm.ptr, %runtime: !llvm.ptr) {
     %zero = arith.constant 0 : i64
@@ -12145,7 +12145,9 @@
     %path = llvm.inttoptr %bits : i64 to !llvm.ptr
     return %path : !llvm.ptr
   }
-  // the whole file stem + ending in the folder of the executable as text, an empty text when it cannot be read
+  llvm.mlir.global internal constant @strict_gpu_beside_obj("obj/\00") : !llvm.array<5 x i8>
+  // the whole file stem + ending in the folder of the executable (or its obj folder, where a program build keeps it) as
+  // text, an empty text when it cannot be read
   func.func private @strict_gpu_beside(%stem: !llvm.ptr, %ending: !llvm.ptr) -> !llvm.ptr {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -12166,25 +12168,19 @@
     %isSeparator = arith.ori %isSlash, %isBackslash : i1
     cf.cond_br %isSeparator, ^folder(%at : i64), ^find(%before : i64)
   ^folder(%folderLength: i64):
-    %stemLength = llvm.call @strlen(%stem) : (!llvm.ptr) -> i64
-    %endingLength = llvm.call @strlen(%ending) : (!llvm.ptr) -> i64
-    %named = arith.addi %folderLength, %stemLength : i64
-    %pathLength = arith.addi %named, %endingLength : i64
-    %pathSize = arith.addi %pathLength, %one : i64
-    %path = func.call @strict_malloc(%pathSize) : (i64) -> !llvm.ptr
-    %folderCopied = llvm.call @memcpy(%path, %executable, %folderLength) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
-    %stemTarget = llvm.getelementptr %path[%folderLength] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %stemCopied = llvm.call @memcpy(%stemTarget, %stem, %stemLength) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
-    %endingTarget = llvm.getelementptr %path[%named] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %endingCopied = llvm.call @memcpy(%endingTarget, %ending, %endingLength) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
-    %pathEnd = llvm.getelementptr %path[%pathLength] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %terminator = arith.constant 0 : i8
-    llvm.store %terminator, %pathEnd : i8, !llvm.ptr
-    %mode = llvm.mlir.addressof @strict_gpu_reading : !llvm.ptr
-    %file = llvm.call @fopen(%path, %mode) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %unset = llvm.mlir.zero : !llvm.ptr
-    %isMissing = llvm.icmp "eq" %file, %unset : !llvm.ptr
-    cf.cond_br %isMissing, ^empty, ^read
+    %beside = arith.constant 0 : i64
+    %besideFile = func.call @strict_gpu_file_opened(%executable, %folderLength, %beside, %stem, %ending) : (!llvm.ptr, i64, i64, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %isBesideMissing = llvm.icmp "eq" %besideFile, %unset : !llvm.ptr
+    cf.cond_br %isBesideMissing, ^obj, ^found(%besideFile : !llvm.ptr)
+  ^obj:
+    %objLength = arith.constant 4 : i64
+    %objFile = func.call @strict_gpu_file_opened(%executable, %folderLength, %objLength, %stem, %ending) : (!llvm.ptr, i64, i64, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %isMissing = llvm.icmp "eq" %objFile, %unset : !llvm.ptr
+    cf.cond_br %isMissing, ^empty, ^found(%objFile : !llvm.ptr)
+  ^found(%file: !llvm.ptr):
+    cf.br ^read
   ^empty:
     %nothing = func.call @strict_malloc(%one) : (i64) -> !llvm.ptr
     llvm.store %terminator, %nothing : i8, !llvm.ptr
@@ -12202,6 +12198,32 @@
     %end = llvm.getelementptr %buffer[%got] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     llvm.store %terminator, %end : i8, !llvm.ptr
     return %buffer : !llvm.ptr
+  }
+  // the file the first folderLength characters of path, objLength characters of "obj/", stem and ending name, opened for
+  // reading, null when it is missing
+  func.func private @strict_gpu_file_opened(%path: !llvm.ptr, %folderLength: i64, %objLength: i64, %stem: !llvm.ptr, %ending: !llvm.ptr) -> !llvm.ptr {
+    %one = arith.constant 1 : i64
+    %stemLength = llvm.call @strlen(%stem) : (!llvm.ptr) -> i64
+    %endingLength = llvm.call @strlen(%ending) : (!llvm.ptr) -> i64
+    %folderEnd = arith.addi %folderLength, %objLength : i64
+    %named = arith.addi %folderEnd, %stemLength : i64
+    %fullLength = arith.addi %named, %endingLength : i64
+    %fullSize = arith.addi %fullLength, %one : i64
+    %full = func.call @strict_malloc(%fullSize) : (i64) -> !llvm.ptr
+    %folderCopied = llvm.call @memcpy(%full, %path, %folderLength) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %objTarget = llvm.getelementptr %full[%folderLength] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %obj = llvm.mlir.addressof @strict_gpu_beside_obj : !llvm.ptr
+    %objCopied = llvm.call @memcpy(%objTarget, %obj, %objLength) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %stemTarget = llvm.getelementptr %full[%folderEnd] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %stemCopied = llvm.call @memcpy(%stemTarget, %stem, %stemLength) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %endingTarget = llvm.getelementptr %full[%named] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %endingCopied = llvm.call @memcpy(%endingTarget, %ending, %endingLength) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %fullEnd = llvm.getelementptr %full[%fullLength] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %terminator = arith.constant 0 : i8
+    llvm.store %terminator, %fullEnd : i8, !llvm.ptr
+    %mode = llvm.mlir.addressof @strict_gpu_reading : !llvm.ptr
+    %file = llvm.call @fopen(%full, %mode) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    return %file : !llvm.ptr
   }
   func.func private @strict_gpu_function(%ptx: !llvm.ptr, %name: !llvm.ptr, %slot: !llvm.ptr) -> !llvm.ptr {
     %zero = arith.constant 0 : i64

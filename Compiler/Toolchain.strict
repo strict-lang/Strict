@@ -34,13 +34,15 @@ Extension Text
 	OnLinux.Extension is ""
 	platform is Platform.Windows then ".exe" else ""
 Executable(base Text) Text
-	OnWindows.Executable("./Strict") is "./strict.exe"
-	OnLinux.Executable("./Examples/ProcessImage") is "./Examples/ProcessImage"
-	Toolchain(OnWindows, isWeb = true).Executable("./Examples/HelloLogger") is "./Examples/HelloLogger.html"
+	OnWindows.Executable("./obj/Strict") is "./strict.exe"
+	OnWindows.Executable("./Math/obj/Tests.test") is "./Math/obj/Tests.test.exe"
+	OnLinux.Executable("./Examples/obj/ProcessImage") is "./Examples/ProcessImage"
+	Toolchain(OnWindows, isWeb = true).Executable("./A/obj/B") is "./A/Release/Web/B.html"
 	if isWeb
-		return base + ".html"
-	let isCommand = Path(base).FileName.text is "Strict"
-	(isCommand then base.Substring(0, base.Length - 6) + "strict" else base) + Extension
+		return BuildOutput.Released(base, "Web") + ".html"
+	let program = BuildOutput.Delivered(base)
+	let isCommand = Path(program).FileName.text is "Strict"
+	(isCommand then program.Substring(0, program.Length - 6) + "strict" else program) + Extension
 Missing(names Texts) Texts
 	OnLinux.Missing(("noSuchStrictTool")) is ("noSuchStrictTool")
 	for names
@@ -128,7 +130,7 @@ CrossBuilt(base Text) Text
 	let compiled = ToolRunner(Located("clang")).Execute(compiling)
 	if compiled.Failed
 		return "clang failed: " + compiled.error
-	let program = Toolchain(Platform.Linux, root).Executable(base)
+	let program = BuildOutput.Released(base, "Linux")
 	NativeSources(natives).LinuxLinked(base, program, root)
 WslPath(path Text) Text
 	OnWindows.WslPath("C:/code/A") is "/mnt/c/code/A"

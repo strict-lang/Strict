@@ -1,0 +1,23 @@
+Intermediate(path Text) Text
+	BuildOutput.Intermediate("Examples\Sum.strict") is "./Examples/obj/Sum.strict"
+	BuildOutput.Intermediate("C:/s/A") is "C:/s/obj/A"
+	let normalized = FileCompiler.Normalized(path)
+	let slash = normalized.LastIndexOf("/")
+	normalized.Substring(0, slash) + "/obj" + normalized.Substring(slash, normalized.Length - slash)
+Delivered(base Text) Text
+	BuildOutput.Delivered("./Examples/obj/Sum") is "./Examples/Sum"
+	BuildOutput.Delivered("./obj/Strict") is "./Strict"
+	BuildOutput.Delivered("./Math/obj/Tests.test") is "./Math/obj/Tests.test"
+	BuildOutput.Delivered("Compiler/output/Sum") is "Compiler/output/Sum"
+	let slash = base.LastIndexOf("/")
+	let isProgram = (base.EndsWith(".test") is false) and (slash >= 4)
+	let isObj = isProgram and (base.Substring(slash - 4, 4) is "/obj")
+	isObj then base.Substring(0, slash - 4) + base.Substring(slash, base.Length - slash) else base
+Released(base Text, platformName Text) Text
+	BuildOutput.Released("./Examples/obj/Sum", "Linux") is "./Examples/Release/Linux/Sum"
+	BuildOutput.Released("./Math/obj/Tests.test", "Linux") is "./Math/obj/Tests.test"
+	if base.EndsWith(".test")
+		return base
+	let program = Delivered(base)
+	let slash = program.LastIndexOf("/")
+	program.Substring(0, slash) + "/Release/" + platformName + program.Substring(slash, program.Length - slash)

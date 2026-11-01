@@ -19,7 +19,7 @@ with tempfile.TemporaryDirectory(prefix="TestPolicy", dir=root / "Examples") as 
 		capture_output=True, text=True, timeout=10)
 	assert result.returncode != 0 and "TestDurationMustNotExceedHundredMilliseconds" in result.stdout + result.stderr, (
 		"An over-budget VM unit test passed:\n" + result.stdout + result.stderr)
-	assert not source.with_suffix(".strictbinary").exists(), "Failed unit tests were cached as passed"
+	assert not (source.parent / "obj" / (source.stem + ".strictbinary")).exists(), "Failed unit tests were cached as passed"
 	for arguments in [["build", str(source)], ["test", str(source), "unit", "native"]]:
 		checked = subprocess.run([command, *arguments], cwd=root, env=environment,
 			capture_output=True, text=True, timeout=90)
@@ -106,7 +106,7 @@ with tempfile.TemporaryDirectory(prefix="TestPolicy", dir=root / "Examples") as 
 			"An explicit run of an internal package was timed or skipped:\n" + explicit.stdout + explicit.stderr)
 	finally:
 		source.unlink(missing_ok=True)
-		source.with_suffix(".strictbinary").unlink(missing_ok=True)
+		(source.parent / "obj" / (source.stem + ".strictbinary")).unlink(missing_ok=True)
 
 	source = folder / "Shares.strict"
 	tool, line = ("cmd", "/c echo %STRICT_THREADS%") if os.name == "nt" else ("sh", "-c 'echo $STRICT_THREADS'")

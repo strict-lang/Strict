@@ -13,7 +13,7 @@ Run(arguments Texts) Number
 	BuildProfile(logger).Reported("Build total", started)
 	failed
 Locked(target Text) Slow(Boolean)
-	let lock = File(FileCompiler.Normalized(target) + ".lock")
+	let lock = File(Lock(target))
 	if lock.Locked
 		return true
 	logger.Log("Waiting for the other build of " + target)
@@ -24,6 +24,11 @@ Locked(target Text) Slow(Boolean)
 			return true
 	logger.Log("The other build of " + target + " did not finish within " + Strict.MaxWait + " seconds")
 	false
+Lock(target Text) Text
+	NativeCompiler.Lock("Examples/Sum.strict") is "./Examples/obj/Sum.strict.lock"
+	let path = BuildOutput.Intermediate(target) + ".lock"
+	Directory.Create(Path(path).PathOnly.text)
+	path
 Compiled(command Text, rest Texts, sources Texts = List(Text)) Number
 	if command is "build"
 		return Checked(rest, sources)

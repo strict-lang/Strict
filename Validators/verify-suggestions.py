@@ -23,7 +23,7 @@ with tempfile.TemporaryDirectory(prefix='strict-native-suggest-') as folder:
 		assert not any('Bogus.' in body or '.Epsilon' in body or '.Pi' in body for body in bodies), bodies
 		assert all(line.startswith('Suggestion: ') for line in run.stdout.splitlines()), run.stdout
 		assert file.read_text() == source
-		assert not list(Path(folder).glob('*.strictbinary'))
+		assert not list((Path(folder) / 'obj').glob('*.strictbinary'))
 		print(f'{name}.{method}: {bodies} ({(time.perf_counter()-started)*1000:.0f} ms)')
 	source = cases[1][2] + 'Doubled Number\n\tTemperature(2).Doubled is 5\n\tcelsius * 2\n' + \
 		'Other Number\n\tTemperature(2).Other is 2\n'
@@ -42,7 +42,7 @@ with tempfile.TemporaryDirectory(prefix='strict-native-suggest-') as folder:
 	run = subprocess.run([str(root / 'strict.exe'), 'suggest', 'Wrapper.strict', root.as_posix(), 'Clamped'],
 		cwd=folder, text=True, capture_output=True, timeout=15)
 	assert run.returncode == 0 and not run.stdout.strip(), run.stdout + run.stderr
-	assert not list(Path(folder).glob('*.strictbinary'))
+	assert not list((Path(folder) / 'obj').glob('*.strictbinary'))
 	print('Recursive dispatcher: no passing suggestions')
 	Path(folder, 'Dual.strict').write_text('has number\nPick(other Number) Number\n'
 		'\tDual(2).Pick(3) is 5\n\tnumber + other\nPick Number\n'

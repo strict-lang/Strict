@@ -145,7 +145,7 @@ Mapped(numbers Numbers) Numbers
 		value + 1
 ''', encoding="utf-8")
 	print(run([str(root / "strict.exe"), "build", str(source)]).strip(), flush=True)
-	module = source.with_suffix(".mlir").read_text(encoding="utf-8")
+	module = (source.parent / "obj" / (source.stem + ".mlir")).read_text(encoding="utf-8")
 	assert "func.call @strict_cache_claim(" in module and "func.call @strict_cache_publish(" in module
 	assert "@ValueCheck_Results_1_loop" in module, "Cold cache check did not exercise parallel emission"
 	executable = source.with_suffix(".exe")

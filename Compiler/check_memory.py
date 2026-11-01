@@ -43,7 +43,7 @@ def built(folder, name, code, platform=""):
 	result = subprocess.run([str(root / "strict.exe"), "build", str(source)] + ([platform] if platform else []),
 		cwd=root, capture_output=True, text=True, timeout=270)
 	assert result.returncode == 0, result.stdout + result.stderr
-	return source.with_suffix(".js" if platform else ".exe")
+	return source.parent / "Release" / "Web" / (name + ".js") if platform else source.with_suffix(".exe")
 
 
 filled = "has logger\nFilled(count Number, offset Number) Numbers\n\tFilled(2, 1) is (1, 2)\n\tfor count\n\t\tindex + offset\n"

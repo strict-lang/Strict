@@ -11,8 +11,8 @@ IsEnabled Boolean
 		return false
 	(NativeCompiler.Options(rest) - "native" - "unit").Length is 0
 CacheFile Text
-	NativeCache("test", ("Math", ".", "native")).CacheFile is "./Math/Tests.test.nativecache"
-	NativeCache("build", ("Examples/Sum.strict", ".")).CacheFile is "./Examples/Sum.nativecache"
+	NativeCache("test", ("Math", ".", "native")).CacheFile is "./Math/obj/Tests.test.nativecache"
+	NativeCache("build", ("Examples/Sum.strict", ".")).CacheFile is "./Examples/obj/Sum.nativecache"
 	NativeBuild.Output(rest(0), (command is "build") and NativeBuild.IsProgram(rest(0))) + ".nativecache"
 Key Text
 	"3\t" + Directory.Current + "\t" + command + "\t" + Text.Combine(rest, "\t")

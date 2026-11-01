@@ -33,11 +33,13 @@ Released Number
 	MacOSBundle(Logger, "Compiler/output/App").Released is 1
 	Directory.Exists("Compiler/output/Release/MacOS/App.app/Contents/Resources")
 	let app = Contents.Substring(0, Contents.Length - 9)
-	let folder = Release(logger, base).Parent + "/Release"
-	for (Release(logger, base).Parent, folder, folder + "/MacOS", app, Contents, Contents + "/Resources")
+	let release = Release(logger, base)
+	let folder = release.Parent + "/Release"
+	for (release.Parent, folder, folder + "/MacOS", app, Contents, Contents + "/Resources")
 		Directory.Create(value)
-	let refreshed = Release(logger, base).Refreshed(Contents + "/MacOS", Contents + "/Resources/Content", List(Text) + "")
-	refreshed is not 0 then refreshed else Completed(Release(logger, base).Icon)
+	let program = BuildOutput.Delivered(base)
+	let refreshed = release.Refreshed(Contents + "/MacOS", Contents + "/Resources/Content", program, List(Text) + "")
+	refreshed is not 0 then refreshed else Completed(release.Icon)
 Completed(icon Text) Number
 	MacOSBundle(Logger, "Missing/App").Completed("Missing.ico") is 1
 	if File(Contents + "/MacOS/" + Name).Exists is false
