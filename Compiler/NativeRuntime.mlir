@@ -16980,7 +16980,7 @@
   // `GpuMemory.Tuned`: rows of 8 bit numbers with one scale each (TensorFile.Quantized) plus the low rank update of
   // TensorFile_Tuned (downs rank x width in the rotated space of the rows, ups height x rank, a scale per rank) merged
   // by strict_device_tuned, the updated rows change in place; 0.0 when the GPU can not (rows not all 8 bit of one width,
-  // a rank above 512, factors not 64, 32 or 16 bit or not fitting the rows, STRICT_GPU=0 or no GPU, checked in this order
+  // factors not 64, 32 or 16 bit or not fitting the rows, STRICT_GPU=0 or no GPU, checked in this order
   // so a merge that can not run on the GPU never opens it)
   llvm.mlir.global internal constant @strict_gpu_tuned_name("strict_device_tuned\00") : !llvm.array<20 x i8>
   llvm.mlir.global internal @strict_gpu_tuned_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
@@ -16990,7 +16990,6 @@
     %one = arith.constant 1 : i64
     %three = arith.constant 3 : i64
     %eight = arith.constant 8 : i64
-    %limit = arith.constant 512 : i64
     %scaleLength = func.call @strict_list_length(%scales) : (f64) -> f64
     %downLength = func.call @strict_list_length(%downs) : (f64) -> f64
     %upLength = func.call @strict_list_length(%ups) : (f64) -> f64
@@ -17021,7 +17020,6 @@
     %fittingUps = arith.cmpi eq, %expectedUps, %upCount : i64
     %exact = arith.andi %fittingDowns, %fittingUps : i1
     %ranked = arith.cmpi sgt, %rank, %none : i64
-    %small = arith.cmpi sle, %rank, %limit : i64
     %isEight = arith.cmpi eq, %rowBits, %eight : i64
     %downBits = func.call @strict_gpu_bits(%downs) : (f64) -> i64
     %upBits = func.call @strict_gpu_bits(%ups) : (f64) -> i64
@@ -17032,8 +17030,7 @@
     %factorsReadable = arith.andi %downsReadable, %upsReadable : i1
     %readable = arith.andi %factorsReadable, %scalesReadable : i1
     %shaped = arith.andi %exact, %ranked : i1
-    %bounded = arith.andi %shaped, %small : i1
-    %eights = arith.andi %bounded, %isEight : i1
+    %eights = arith.andi %shaped, %isEight : i1
     %possible = arith.andi %eights, %readable : i1
     cf.cond_br %possible, ^try, ^unable
   ^try:

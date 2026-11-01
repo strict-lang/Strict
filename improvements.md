@@ -2,6 +2,7 @@
 What to fix next, one short line each, bugs first. Remove a line once it is done, add what is found at the end. No history or measurements (those go into commit messages). Speed work: [performance.md](performance.md).
 
 ## Bugs
+- Native Safetensors test `Nibbles.Tuned(...)` (line 21, in Entry) exceeds the 100 ms test budget every run (also before the rank above 512 GPU merge), passes on the VM.
 - Routed attention (routing > 0) with strided values (valueOffset/valueStride) runs unrouted: `strict_gpu_attention` takes the routed 8 bit path only for packed values, so H3Block.Heads with V read from the combined list attends densely (6 s slower, 12.9 dB from the routed result), routing 0 is bit-identical; the per-token value quantization (`strict_device_quantize_rows_run`) and the pooled value means need strided rows, H3 keeps the copy until then.
 
 ## Next
@@ -12,7 +13,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - GPU sidecars: every program still keeps Name.kernels.mlir (the PTX cache key) and test executables their PTX next to the source, move them into Tools/PtxCache once it evicts old entries (up to 25 MB each, never cleaned today).
 - Realtime frames: a full collection at a frame end that takes longer than a few ms marks over several frame ends (incremental, the cards record what changed meanwhile).
 - f32 kernels: a GPU loop reading a `value.Bits is 32` member computes in f32 (WGSL on WebGPU, the 32 bit CUDA kernel natively); WGSL lacks Sin, Cos, Logarithm, `from` calls, Bytes results and rows.
-- MossImage in the browser (prompt in, encoder, Moss and VAE cached in OPFS, WebGPU like FractalZoomer), VAE decode first: a web build of anything using Safetensors fails compiling NeuralNetworks/native/GgufFile.c (`ggml-cpu/quants.h` missing for wasm); convolution, GroupNorm, attention and the int8/16 bit products are CUDA runtime kernels without WGSL versions (FluxDecoder's web build gets one shaded loop), the CPU fallback decodes far too slowly; then weights streamed from OPFS into GPU buffers (4 GB wasm memory, WebGPU can't read host memory).
+- MossImage in the browser (prompt in, encoder, Moss and VAE cached in OPFS, WebGPU like FractalZoomer), VAE decode first: the web build runs until the first file read (TensorFileNotReadable, no files on the web yet: Emscripten preloaded Content first, OPFS for the big models); convolution, GroupNorm, attention and the int8/16 bit products are CUDA runtime kernels without WGSL versions (FluxDecoder's web build gets one shaded loop), the CPU fallback decodes far too slowly; then weights streamed from OPFS into GPU buffers (4 GB wasm memory, WebGPU can't read host memory).
 - Native symbols, register kinds and helpers use the short type name, so one executable cannot hold two packages' types of the same name: qualify the symbols of a type whose short name is taken.
 
 ## Waiting
