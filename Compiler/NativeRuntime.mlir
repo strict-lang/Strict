@@ -13787,11 +13787,15 @@
   }
   // strict_gpu_trim_unused, then the device copies of live lists are evicted too (all but the ones of prepared launches,
   // their host copies stay and their next use uploads them again): what a resident program gives back to other programs
-  // between jobs, a process below 1 GB then gives back the GPU lock too (strict_gpu_lock_check)
+  // between jobs, a process below 1 GB then gives back the GPU lock too (strict_gpu_lock_check); whenever the GPU is open,
+  // also right after a load that only uploaded (no list lives on the GPU as a result yet)
   func.func private @strict_gpu_evict_all(%self: f64) -> f64 {
     %released = func.call @strict_gpu_trim_unused(%self) : (f64) -> f64
-    %present = func.call @strict_gpu_present() : () -> i1
-    cf.cond_br %present, ^evict, ^done(%released : f64)
+    %one = arith.constant 1 : i64
+    %stateSlot = llvm.mlir.addressof @strict_gpu_state : !llvm.ptr
+    %state = llvm.load %stateSlot : !llvm.ptr -> i64
+    %isOpen = arith.cmpi eq, %state, %one : i64
+    cf.cond_br %isOpen, ^evict, ^done(%released : f64)
   ^evict:
     %everything = arith.constant 1099511627776 : i64
     %anyKind = arith.constant false
