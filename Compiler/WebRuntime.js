@@ -152,14 +152,14 @@ addToLibrary({
 			device.queue.submit([copying.finish()]);
 		}
 		const grouped = (Module['strictKernelGroups'] || {})[name], groups = Math.ceil(count / 64);
-		const [tiles, part] = grouped ? grouped(inputs.places) : [groups, groups];
+		const [tiles, part, splits = 1] = grouped ? grouped(inputs.places) : [groups, groups];
 		// each submit is its own GPU packet, Windows resets the device when one runs for 2 s
-		const dispatched = (used, tiles, part) => {
+		const dispatched = (used, tiles, part, bound = buffers.slice(0, 4)) => {
 			for (let first = 0; first < tiles; first += part) {
-				const firstGroup = buffer(16, 64 | 8), size = Math.min(part, tiles - first), wide = Math.min(size, 65535);
-				device.queue.writeBuffer(firstGroup, 0, new Uint32Array([first]));
-				buffers.push(firstGroup);
-				const entries = buffers.slice(0, 4).concat(firstGroup).map((buffer, binding) => ({ binding, resource: { buffer } }));
+				const work = buffer(16, 64 | 8), size = Math.min(part, tiles - first), wide = Math.min(size, 65535);
+				device.queue.writeBuffer(work, 0, new Uint32Array([first, splits]));
+				buffers.push(work);
+				const entries = bound.concat(work).map((buffer, binding) => ({ binding, resource: { buffer } }));
 				const encoder = device.createCommandEncoder(), pass = encoder.beginComputePass();
 				pass.setPipeline(used);
 				pass.setBindGroup(0, device.createBindGroup({ layout: used.getBindGroupLayout(0), entries }));
@@ -168,7 +168,14 @@ addToLibrary({
 				device.queue.submit([encoder.finish()]);
 			}
 		};
-		dispatched(pipeline, tiles, part);
+		if (splits > 1) {
+			const parts = buffer(count * splits * 4, 128);
+			dispatched(pipeline, tiles, part, [parts].concat(buffers.slice(1, 4)));
+			dispatched(strictWebGpu.pipelines['strict_splits'] ||= await strictWebGpuPipeline(device,
+				Module['strictShaders']['strict_splits']), groups, groups, [buffers[0], parts, buffers[2], buffers[3]]);
+			buffers.push(parts);
+		} else
+			dispatched(pipeline, tiles, part);
 		// more than 1 GB of inputs and results queued ahead of the GPU waits for the oldest kernel (2 GB or no limit made
 		// 720x1280 Flux decodes vary from 3 to 6 s, 512 MB was slower)
 		const queued = (inputs.size + count) * 4;
