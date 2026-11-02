@@ -5,16 +5,17 @@ constant Unsafe = (InstructionType.Set, InstructionType.Print)
 constant Writes = (InstructionType.InvokeWriteToList, InstructionType.InvokeWriteToTable, InstructionType.InvokeRemove)
 constant Doubling = MlirPurity(MlirParallel.Doubling.function, 2)
 constant Randomizing = MlirPurity(MlirParallel.Randomizing.function, 2)
-constant Clamped = MethodEntry("Clamped", List(MemberEntry) + MlirLists.Items, "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.LoadNumber(2, 0), InstructionEntry.Binary(InstructionType.GreaterThan, (1, 2)), InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, 0), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "value"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 3, "conditional0"), InstructionEntry.LoadBoolean(4, true), InstructionEntry.Binary(InstructionType.Equal, (4, 4)), InstructionEntry.Jump(InstructionType.JumpEnd, 0), InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, 1), InstructionEntry.LoadNumber(5, 0), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 5, "conditional0"), InstructionEntry.Jump(InstructionType.JumpEnd, 1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "conditional0"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 6, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 16)))
-constant Clamping = MlirPurity(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, Clamped), 2)
+constant Clamping = MlirPurity(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, MethodEntry("Clamped", List(MemberEntry) + MlirLists.Items, "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.LoadNumber(2, 0), InstructionEntry.Binary(InstructionType.GreaterThan, (1, 2)), InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, 0), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "value"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 3, "conditional0"), InstructionEntry.LoadBoolean(4, true), InstructionEntry.Binary(InstructionType.Equal, (4, 4)), InstructionEntry.Jump(InstructionType.JumpEnd, 0), InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, 1), InstructionEntry.LoadNumber(5, 0), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 5, "conditional0"), InstructionEntry.Jump(InstructionType.JumpEnd, 1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "conditional0"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 6, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 16)))), 2)
 constant Making = MlirFunction(MlirLayout.Wrapping.function.types, MlirLayout.Degrees, MethodEntry("Made", List(MemberEntry), "Strict/Degrees", (InstructionEntry.LoadNumber(0, 1), MlirDeviceCalls.Making, InstructionEntry.Return(1))))
 constant Checking = MethodEntry("Validated", List(MemberEntry), "Strict/Math/Pairing", (InstructionEntry.LoadText(0, "a"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "number"), InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)), InstructionEntry.Return(2)))
 constant Reading = MlirPurity(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, MlirCost.Reading), 2)
 constant Filtering = MlirPurity(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, MlirParallel.Filtered), 2)
 constant Caching = MlirPurity(MlirFunction(Reading.function, method = MethodEntry("Cached", List(MemberEntry), "Strict/Number", InstructionEntry.Invoke(0, ("Strict/Runtime/ConstantCache", "Stored", "Strict/Number"), (1, 2), 0))), 0)
 constant Writing = MlirFunction(Reading.function, method = MethodEntry("Writing", List(MemberEntry), "None", InstructionEntry.Invoke(0, ("Strict/File", "Write", "None", "text"), (1), 0)))
+constant Pairing = MlirPurity(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, MethodEntry("Paired", List(MemberEntry) + MlirLists.Items, "Strict/List(List(Number))", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Number)", (0, 6, -1, 0)), "listResult1"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "listResult1"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "listResult1"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 2, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 6)))), 2)
 IsSafe(inspected MlirFunction, at Number, depth Number) Boolean
 	Doubling.IsSafe(Doubling.function, 4, 0)
+	Pairing.IsSafe(Pairing.function, 5, 0)
 	Randomizing.IsSafe(Randomizing.function, 4, 0) is false
 	Clamping.IsSafe(Clamping.function, 6, 0)
 	Filtering.IsSafe(Filtering.function, 7, 0)
@@ -22,7 +23,7 @@ IsSafe(inspected MlirFunction, at Number, depth Number) Boolean
 	if entry.kind is InstructionType.Invoke
 		return IsPureCall(inspected, at, depth)
 	if entry.kind is in Writes
-		return depth > 0 then IsOwned(inspected, entry) else entry.texts(0) is "forResult"
+		return depth > 0 then IsOwned(inspected, entry) else IsWritable(entry.texts(0))
 	let isLeaving = (depth is 0) and ((entry.kind is InstructionType.Return) or (entry.kind is in Branches))
 	(isLeaving is false) and IsPlain(inspected, at, depth) and ((depth > 0) or IsLocal(entry))
 IsCollected(at Number) Boolean
@@ -64,6 +65,10 @@ IsLocal(entry InstructionEntry) Boolean
 		if ((index <= position) or (index >= end)) and (name is in value.texts)
 			return false
 	name is not in function.Parameters
+IsWritable(name Text) Boolean
+	Pairing.IsWritable("listResult1")
+	Pairing.IsWritable("numbers") is false
+	(name is "forResult") or IsLocal(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, name))
 IsPureCall(inspected MlirFunction, at Number, depth Number) Boolean
 	Doubling.IsPureCall(Doubling.function, 4, 0)
 	Randomizing.IsPureCall(Randomizing.function, 4, 0) is false
