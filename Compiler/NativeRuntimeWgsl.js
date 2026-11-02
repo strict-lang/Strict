@@ -350,10 +350,10 @@ Module['strictKernelGroups']['strict_eights'] = (places) => {
 // positions at a time (one each), keeps the largest score and the sum of each row (online softmax) and adds the
 // weighted values of 2 numbers of all 16 rows per invocation, no scores are stored
 Module['strictShaders']['strict_attention'] = strictKernelBindings + `
-var<workgroup> asked: array<f32, 2048>;
-var<workgroup> scored: array<f32, 1024>;
+var<workgroup> asked: array<vec4<f32>, 512>;
+var<workgroup> scored: array<vec4<f32>, 256>;
 var<workgroup> largests: array<f32, 16>;
-var<workgroup> rescales: array<f32, 16>;
+var<workgroup> rescales: array<vec4<f32>, 4>;
 var<workgroup> totals: array<f32, 16>;
 @compute @workgroup_size(64)
 fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) group: vec3<u32>,
@@ -375,10 +375,11 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 	let firstToken = block / heads % tokenBlocks * 16u;
 	let keyGroup = sequence * keyGroups + head * keyGroups / heads;
 	for (var at = local; at < 16u * size; at += 64u) {
-		let token = firstToken + at / size;
+		let row = at / size;
+		let token = firstToken + row;
 		var query = 0.0;
 		if (token < tokens) { query = n_item(places[0], ((sequence * tokens + token) * heads + head) * size + at % size); }
-		asked[at] = query / sqrt(f32(size));
+		asked[at % size * 4u + row / 4u][row % 4u] = query / sqrt(f32(size));
 	}
 	if (local < 16u) {
 		largests[local] = -3.0e38;
@@ -386,63 +387,89 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 	}
 	let lastToken = min(firstToken + 15u, tokens - 1u);
 	let visible = select(positions, positions - tokens + lastToken + 1u, causal);
-	var sums: array<f32, 32>;
+	let lasts = vec4<u32>(0u, 1u, 2u, 3u) + firstToken + select(positions - 1u - firstToken, positions - tokens, causal);
+	var firstLow = vec4<f32>();
+	var secondLow = vec4<f32>();
+	var thirdLow = vec4<f32>();
+	var fourthLow = vec4<f32>();
+	var firstHigh = vec4<f32>();
+	var secondHigh = vec4<f32>();
+	var thirdHigh = vec4<f32>();
+	var fourthHigh = vec4<f32>();
 	for (var start = 0u; start < visible; start += 64u) {
 		workgroupBarrier();
 		let position = start + local;
-		var scores: array<f32, 16>;
+		var firstScores = vec4<f32>();
+		var secondScores = vec4<f32>();
+		var thirdScores = vec4<f32>();
+		var fourthScores = vec4<f32>();
 		if (position < visible) {
 			let keyStart = (position * sequences * keyGroups + keyGroup) * size;
 			for (var at = 0u; at < size; at++) {
-				let key = n_item(places[2], keyStart + at);
-				for (var row = 0u; row < 16u; row++) { scores[row] = fma(asked[row * size + at], key, scores[row]); }
+				let key = vec4<f32>(n_item(places[2], keyStart + at));
+				firstScores = fma(asked[at * 4u], key, firstScores);
+				secondScores = fma(asked[at * 4u + 1u], key, secondScores);
+				thirdScores = fma(asked[at * 4u + 2u], key, thirdScores);
+				fourthScores = fma(asked[at * 4u + 3u], key, fourthScores);
 			}
 		}
-		for (var row = 0u; row < 16u; row++) {
-			let token = firstToken + row;
-			let last = select(positions - 1u, positions - tokens + token, causal);
-			scored[row * 64u + local] = select(-3.0e38, scores[row], position < visible && position <= last);
-		}
+		let hidden = vec4<f32>(-3.0e38);
+		scored[local * 4u] = select(hidden, firstScores, vec4<u32>(position) <= lasts);
+		scored[local * 4u + 1u] = select(hidden, secondScores, vec4<u32>(position) <= lasts + 4u);
+		scored[local * 4u + 2u] = select(hidden, thirdScores, vec4<u32>(position) <= lasts + 8u);
+		scored[local * 4u + 3u] = select(hidden, fourthScores, vec4<u32>(position) <= lasts + 12u);
 		workgroupBarrier();
 		if (local < 16u) {
+			let quad = local / 4u;
+			let lane = local % 4u;
 			var largest = largests[local];
-			for (var at = 0u; at < 64u; at++) { largest = max(largest, scored[local * 64u + at]); }
+			for (var at = 0u; at < 64u; at++) { largest = max(largest, scored[at * 4u + quad][lane]); }
 			var total = 0.0;
 			for (var at = 0u; at < 64u; at++) {
-				let share = select(exp(scored[local * 64u + at] - largest), 0.0, scored[local * 64u + at] < -1.0e38);
-				scored[local * 64u + at] = share;
+				let score = scored[at * 4u + quad][lane];
+				let share = select(exp(score - largest), 0.0, score < -1.0e38);
+				scored[at * 4u + quad][lane] = share;
 				total += share;
 			}
 			let rescale = exp(largests[local] - largest);
-			rescales[local] = rescale;
+			rescales[quad][lane] = rescale;
 			totals[local] = totals[local] * rescale + total;
 			largests[local] = largest;
 		}
 		workgroupBarrier();
-		for (var row = 0u; row < 16u; row++) {
-			sums[row * 2u] *= rescales[row];
-			sums[row * 2u + 1u] *= rescales[row];
-		}
+		firstLow *= rescales[0];
+		secondLow *= rescales[1];
+		thirdLow *= rescales[2];
+		fourthLow *= rescales[3];
+		firstHigh *= rescales[0];
+		secondHigh *= rescales[1];
+		thirdHigh *= rescales[2];
+		fourthHigh *= rescales[3];
 		let count = min(64u, visible - start);
 		for (var at = 0u; at < count; at++) {
 			let valueStart = valueOffset + keyGroup * size + (start + at) * valueStride;
-			let first = select(0.0, n_item(places[4], valueStart + local), local < size);
-			let second = select(0.0, n_item(places[4], valueStart + local + 64u), local + 64u < size);
-			for (var row = 0u; row < 16u; row++) {
-				let share = scored[row * 64u + at];
-				sums[row * 2u] = fma(share, first, sums[row * 2u]);
-				sums[row * 2u + 1u] = fma(share, second, sums[row * 2u + 1u]);
-			}
+			let low = vec4<f32>(select(0.0, n_item(places[4], valueStart + local), local < size));
+			let high = vec4<f32>(select(0.0, n_item(places[4], valueStart + local + 64u), local + 64u < size));
+			firstLow = fma(scored[at * 4u], low, firstLow);
+			secondLow = fma(scored[at * 4u + 1u], low, secondLow);
+			thirdLow = fma(scored[at * 4u + 2u], low, thirdLow);
+			fourthLow = fma(scored[at * 4u + 3u], low, fourthLow);
+			firstHigh = fma(scored[at * 4u], high, firstHigh);
+			secondHigh = fma(scored[at * 4u + 1u], high, secondHigh);
+			thirdHigh = fma(scored[at * 4u + 2u], high, thirdHigh);
+			fourthHigh = fma(scored[at * 4u + 3u], high, fourthHigh);
 		}
 	}
 	workgroupBarrier();
+	let lows = mat4x4<f32>(firstLow, secondLow, thirdLow, fourthLow);
+	let highs = mat4x4<f32>(firstHigh, secondHigh, thirdHigh, fourthHigh);
 	for (var row = 0u; row < 16u; row++) {
 		let token = firstToken + row;
 		if (token >= tokens) { break; }
 		let placed = ((sequence * tokens + token) * heads + head) * size;
 		let total = totals[row];
-		if (local < size) { output[placed + local] = sums[row * 2u] / total; }
-		if (local + 64u < size) { output[placed + local + 64u] = sums[row * 2u + 1u] / total; }
+		if (local < size) { output[placed + local] = lows[row / 4u][row % 4u] / total; }
+		if (local + 64u < size) { output[placed + local + 64u] = highs[row / 4u][row % 4u] / total; }
 	}
 }`;
 // the blocks of 16 tokens of strict_attention, about 4 billion multiplications in a submit
