@@ -18453,7 +18453,8 @@
   // bfloat16 results), rows of 32, 16 or bfloat16 floats strict_products with the rows as its right side (32 bit results) and
   // strict_biased for biases; the block of all rows (each padded to 16 bytes) is uploaded once and kept like a device copy
   // of the rows (kind 5, 6 for 8 bit rows of 4 bit codes, 7 for 32, 8 for 16 bit floats and 9 for bfloat16, given back with them, rows read from a URL on the
-  // web are only there, strict_rows_web, rows joined from such are gathered on the GPU), a view of it is the kernel value
+  // web are only there, strict_rows_web, rows joined from such are gathered on the GPU once and kept as kind 10, 11 for
+  // 4 bit codes, in the layout of the file: codes only, the scales after all rows), a view of it is the kernel value
   func.func private @strict_gpu_tokens_web(%count: i64, %rows: f64, %input: f64, %width: f64, %rowCount: f64, %bases: f64, %biases: f64, %gated: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
@@ -18544,6 +18545,18 @@
     %isHosted = arith.cmpf une, %firstDataBits, %zero : f64
     cf.cond_br %isHosted, ^hostedUpload, ^joined
   ^joined:
+    %fileEightsKind = arith.constant 10 : i64
+    %fileNibblesKind = arith.constant 11 : i64
+    %fileEightWords = arith.divui %columns, %four : i64
+    %fileNibbleWords = arith.divui %columns, %eight : i64
+    %fileEightTotal = arith.muli %rowTotal, %fileEightWords : i64
+    %fileNibbleTotal = arith.muli %rowTotal, %fileNibbleWords : i64
+    %isFileEights = func.call @strict_gpu_cached(%rows, %fileEightsKind, %fileEightTotal, %copy) : (f64, i64, i64, !llvm.ptr) -> i1
+    cf.cond_br %isFileEights, ^kept(%fileEightTotal, %fileEightWords, %none : i64, i64, i64), ^fileNibbles
+  ^fileNibbles:
+    %isFileNibbles = func.call @strict_gpu_cached(%rows, %fileNibblesKind, %fileNibbleTotal, %copy) : (f64, i64, i64, !llvm.ptr) -> i1
+    cf.cond_br %isFileNibbles, ^kept(%fileNibbleTotal, %fileNibbleWords, %one : i64, i64, i64), ^gathering
+  ^gathering:
     %shape = llvm.alloca %two x i32 : (i64) -> !llvm.ptr
     %joinedHandle = func.call @strict_gpu_web_gathered(%items, %rowTotal, %shape) : (!llvm.ptr, i64, !llvm.ptr) -> i64
     %isJoined = arith.cmpi ne, %joinedHandle, %none : i64
@@ -18555,7 +18568,7 @@
     %joinedNibbles32 = llvm.load %joinedNibblesSlot : !llvm.ptr -> i32
     %joinedNibbles = arith.extui %joinedNibbles32 : i32 to i64
     %joinedWords = arith.muli %rowTotal, %joinedStride : i64
-    %joinedKind = arith.addi %webKind, %joinedNibbles : i64
+    %joinedKind = arith.addi %fileEightsKind, %joinedNibbles : i64
     cf.br ^remember(%joinedHandle, %joinedWords, %joinedStride, %joinedNibbles, %joinedKind : i64, i64, i64, i64, i64)
   ^hostedUpload:
     %firstData = func.call @strict_list_data(%firstRow) : (f64) -> !llvm.ptr
