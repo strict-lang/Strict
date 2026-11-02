@@ -17146,7 +17146,8 @@
   }
   // `Convrot.Rotated` (the 4 radix-4 butterflies of every group of 256 values) as one kernel, a block per group, 0.0
   // when the group is not 256, the length is no multiple of it or the GPU can not; of 32 or 16 bit numbers on the GPU
-  // it waits (strict_gpu_rotations, in their format)
+  // it waits (strict_gpu_rotations, in their format); on WebGPU strict_hadamard of NativeRuntimeWgsl.js
+  llvm.mlir.global internal constant @strict_gpu_hadamard_web("strict_hadamard\00") : !llvm.array<16 x i8>
   func.func private @strict_gpu_hadamard(%ptx: !llvm.ptr, %values: f64, %size: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
@@ -17163,7 +17164,18 @@
     %fits = arith.andi %sized, %some : i1
     %name = llvm.mlir.addressof @strict_gpu_hadamard_name : !llvm.ptr
     %slot = llvm.mlir.addressof @strict_gpu_hadamard_slot : !llvm.ptr
-    cf.cond_br %fits, ^resident, ^unable
+    cf.cond_br %fits, ^web, ^unable
+  ^web:
+    %webSlots = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
+    llvm.store %values, %webSlots : f64, !llvm.ptr
+    %webName = llvm.mlir.addressof @strict_gpu_hadamard_web : !llvm.ptr
+    %kernelKind = arith.constant 2 : i64
+    %brainResult = arith.constant 17 : i64
+    %webbed = func.call @strict_gpu_shaded(%webName, %count, %zero, %kernelKind, %webSlots, %one, %one, %brainResult) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
+    %isWebbed = arith.cmpf one, %webbed, %zero : f64
+    cf.cond_br %isWebbed, ^webDone, ^resident
+  ^webDone:
+    return %webbed : f64
   ^resident:
     %device = func.call @strict_gpu_device(%values) : (f64) -> i64
     %resides = arith.cmpi ne, %device, %none : i64

@@ -574,6 +574,32 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) g
 	let normed = n_item(places[0], at) * n_item(places[2], channel) + n_item(places[2], places[5] + channel);
 	output[at] = select(select(normed, max(normed, 0.0), places[7] == 2u), normed / (1.0 + exp(-normed)), places[7] == 5u);
 }`;
+// Convrot.Rotated (strict_gpu_hadamard): values; a workgroup of 64 invocations per group of 256 values runs the 4
+// radix-4 butterflies (steps 1, 4, 16, 64, a butterfly of 4 values each) in workgroup memory, 32 bit floats in between
+Module['strictShaders']['strict_hadamard'] = strictKernelBindings + `
+var<workgroup> rotated: array<f32, 256>;
+@compute @workgroup_size(64)
+fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) group: vec3<u32>,
+	@builtin(num_workgroups) groups: vec3<u32>) {
+	let offset = (work.x + group.x + group.y * groups.x) * 256u;
+	if (offset >= places[2]) { return; }
+	for (var at = local; at < 256u; at += 64u) { rotated[at] = n_item(places[0], offset + at); }
+	workgroupBarrier();
+	for (var step = 1u; step < 256u; step *= 4u) {
+		let start = local / step * 4u * step + local % step;
+		let first = rotated[start];
+		let second = rotated[start + step];
+		let third = rotated[start + 2u * step];
+		let fourth = rotated[start + 3u * step];
+		rotated[start] = 0.5 * (first + second + third - fourth);
+		rotated[start + step] = 0.5 * (first + second - third + fourth);
+		rotated[start + 2u * step] = 0.5 * (first - second + third + fourth);
+		rotated[start + 3u * step] = 0.5 * (second + third + fourth - first);
+		workgroupBarrier();
+	}
+	for (var at = local; at < 256u; at += 64u) { output[offset + at] = rotated[at]; }
+}`;
+Module['strictKernelGroups']['strict_hadamard'] = (places) => [places[2] / 256, places[2] / 256];
 // the numbers of the list at places[0] (places[1] of them) and then of the one at places[2] as 32 bit floats (lists of
 // different formats joined on the GPU, strict_gpu_web_mixed): left, right
 Module['strictShaders']['strict_joined'] = strictKernelBindings + `
