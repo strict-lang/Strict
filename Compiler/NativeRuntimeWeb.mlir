@@ -988,8 +988,8 @@
   }
   // count 8 bit rows of elements numbers (bits, plus STRICT_KEPT_TOKENS) whose block (strict_rows layout, the codes as 4
   // bit halves of bytes when nibbles is 1) is only in the WebGPU buffer handle (TensorFile reading a URL): views without
-  // data, the buffer kept like an uploaded row block of the rows (kind 5, 6 for nibbles, strict_gpu_tokens_web), given
-  // back with them; reading the rows on the CPU stops the program
+  // data whose block stays with the page (its views can outlive this list in lists joined from them, Moss's query, key
+  // and value rows), strict_gpu_tokens_web finds it by their addresses; reading the rows on the CPU stops the program
   llvm.func @strict_webgpu_rows_views(!llvm.ptr, i32, i32, i32, i32)
   func.func @strict_rows_web(%count: i64, %elements: i64, %bits: f64, %handle: i64, %nibbles: i64) -> f64 {
     %none = arith.constant 0 : i64
@@ -1036,20 +1036,6 @@
     %next = arith.addi %index, %one : i64
     cf.br ^place(%next : i64)
   ^placed:
-    %three = arith.constant 3 : i64
-    %copy = llvm.alloca %three x i64 : (i64) -> !llvm.ptr
-    %total = arith.muli %count, %rowStride : i64
-    %words = arith.divui %total, %four : i64
-    %webClass = arith.constant 255 : i64
-    %shifted = arith.shli %handle, %eight : i64
-    %tagged = arith.ori %shifted, %webClass : i64
-    %floatFormat = arith.constant 32 : i64
-    func.call @strict_gpu_view(%copy, %tagged, %words, %floatFormat) : (!llvm.ptr, i64, i64, i64) -> ()
-    %eightsKind = arith.constant 5 : i64
-    %webKind = arith.addi %eightsKind, %nibbles : i64
-    %webPool = arith.constant 256 : i64
-    func.call @strict_gpu_remember(%list, %webKind, %words, %copy, %webPool) : (f64, i64, i64, !llvm.ptr, i64) -> ()
-    func.call @strict_rc_device(%list) : (f64) -> ()
     %count32 = arith.trunci %count : i64 to i32
     %handle32 = arith.trunci %handle : i64 to i32
     %stride32 = arith.trunci %rowStride : i64 to i32

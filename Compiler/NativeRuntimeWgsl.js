@@ -492,6 +492,14 @@ Module['strictKernelGroups']['strict_attention'] = (places) => {
 	const positions = places[3] / places[9] / places[11] / places[13];
 	return [blocks, Math.max(Math.floor(2 ** 32 / (32 * positions * places[11])), 1)];
 };
+// Batch.Sums of 32 bit rows (strict_gpu_tokens_web): sums of strict_products, biases: every sum plus its bias
+Module['strictShaders']['strict_biased'] = strictKernelBindings + `
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {
+	let at = id.x + id.y * groups.x * 64u;
+	if (at >= places[4]) { return; }
+	output[at] = n_item(places[0], at) + n_item(places[2], at % places[3]);
+}`;
 // Softmax.Shares: scores, width, a workgroup of 64 invocations per row (strict_gpu_softmax)
 Module['strictShaders']['strict_softmax'] = strictKernelBindings + `
 var<workgroup> partials: array<f32, 64>;

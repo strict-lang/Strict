@@ -18246,15 +18246,21 @@
   }
   llvm.mlir.global internal constant @strict_gpu_quantized_web("strict_quantized\00") : !llvm.array<17 x i8>
   llvm.mlir.global internal constant @strict_gpu_eights_web("strict_eights\00") : !llvm.array<14 x i8>
-  // `Batch.Sums` of 8 bit rows (strict_rows: codes, then a 32 bit scale per 32 columns, each row padded to
-  // 16 bytes) without bases or gates on WebGPU: strict_quantized makes 8 bit codes and a scale of every token, strict_eights the
-  // dot products of 4 codes at a time as bfloat16 results, 0.0 when the rows or the platform can not (native platforms
-  // run strict_gpu_tokens on); the row block is uploaded once and kept like a device copy of the rows (kind 5, given back
-  // with them, rows read from a URL on the web are only there, strict_rows_web), a view of it passes it to the kernel
+  llvm.mlir.global internal constant @strict_gpu_biased_web("strict_biased\00") : !llvm.array<14 x i8>
+  // `Batch.Sums` without bases or gates on WebGPU, 0.0 when the rows or the platform can not (native platforms run
+  // strict_gpu_tokens on): rows of 8 bit codes (strict_rows: codes, then a 32 bit scale per 32 columns) take
+  // strict_quantized (8 bit codes and a scale of every token) and strict_eights (dot products of 4 codes at a time,
+  // bfloat16 results), rows of 32 bit floats strict_products with the rows as its right side (32 bit results) and
+  // strict_biased for biases; the block of all rows (each padded to 16 bytes) is uploaded once and kept like a device copy
+  // of the rows (kind 5, 6 for 8 bit rows of 4 bit codes, 7 for floats, given back with them, rows read from a URL on the
+  // web are only there, strict_rows_web, rows joined from such are gathered on the GPU), a view of it is the kernel value
   func.func private @strict_gpu_tokens_web(%count: i64, %rows: f64, %input: f64, %width: f64, %rowCount: f64, %bases: f64, %biases: f64, %gated: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %four = arith.constant 4 : i64
+    %eight = arith.constant 8 : i64
     %false = arith.constant false
     %true = arith.constant true
     %unbased = arith.cmpf oeq, %bases, %zero : f64
@@ -18264,15 +18270,19 @@
   ^formats:
     %formats:2 = func.call @strict_gpu_row_formats(%rows, %false) : (f64, i1) -> (i1, i64)
     %eightsMask = arith.constant 256 : i64
+    %floatsMask = arith.constant 4294967296 : i64
     %isEights = arith.cmpi eq, %formats#1, %eightsMask : i64
+    %isFloats = arith.cmpi eq, %formats#1, %floatsMask : i64
+    %isKnown = arith.ori %isEights, %isFloats : i1
     %columns = arith.fptosi %width : f64 to i64
     %thirtyTwo = arith.constant 32 : i64
     %columnsRest = arith.remui %columns, %thirtyTwo : i64
     %isAligned = arith.cmpi eq, %columnsRest, %none : i64
+    %isShaped = arith.ori %isAligned, %isFloats : i1
     %rowTotal = arith.fptosi %rowCount : f64 to i64
     %hasRows = arith.cmpi sgt, %rowTotal, %none : i64
-    %isShaped = arith.andi %isAligned, %hasRows : i1
-    %fits = arith.andi %isEights, %isShaped : i1
+    %isSized = arith.andi %isShaped, %hasRows : i1
+    %fits = arith.andi %isKnown, %isSized : i1
     cf.cond_br %fits, ^rows, ^unable
   ^rows:
     %items = func.call @strict_list_items(%rows) : (f64) -> !llvm.ptr
@@ -18280,38 +18290,24 @@
     %lastIndex = arith.subi %rowTotal, %one : i64
     %lastSlot = llvm.getelementptr %items[%lastIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     %lastRow = llvm.load %lastSlot : !llvm.ptr -> f64
-    %eight = arith.constant 8 : i64
-    %rowBytes = func.call @strict_packed_bytes(%columns, %eight) : (i64, i64) -> i64
+    %eightBytes = func.call @strict_packed_bytes(%columns, %eight) : (i64, i64) -> i64
+    %floatBytes = arith.muli %columns, %four : i64
+    %rowBytes = arith.select %isFloats, %floatBytes, %eightBytes : i64
     %fifteen = arith.constant 15 : i64
     %paddedBytes = arith.addi %rowBytes, %fifteen : i64
     %sixteenMask = arith.constant -16 : i64
     %stride = arith.andi %paddedBytes, %sixteenMask : i64
-    cf.br ^quantize
-  ^quantize:
-    %kind = arith.constant 2 : i64
-    %floatFormat = arith.constant 32 : i64
-    %four = arith.constant 4 : i64
-    %tokens = arith.divui %count, %rowTotal : i64
-    %words = arith.divui %columns, %four : i64
-    %tokenWords = arith.muli %tokens, %words : i64
-    %quantizedCount = arith.addi %tokenWords, %tokens : i64
-    %two = arith.constant 2 : i64
-    %quantizeSlots = llvm.alloca %two x f64 : (i64) -> !llvm.ptr
-    llvm.store %input, %quantizeSlots : f64, !llvm.ptr
-    %widthSlot = llvm.getelementptr %quantizeSlots[1] : (!llvm.ptr) -> !llvm.ptr, f64
-    llvm.store %width, %widthSlot : f64, !llvm.ptr
-    %quantizeName = llvm.mlir.addressof @strict_gpu_quantized_web : !llvm.ptr
-    %quantized = func.call @strict_gpu_shaded(%quantizeName, %quantizedCount, %zero, %kind, %quantizeSlots, %two, %one, %floatFormat) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
-    %isQuantized = arith.cmpf une, %quantized, %zero : f64
-    cf.cond_br %isQuantized, ^dots, ^unable
-  ^dots:
     %strideWords = arith.divui %stride, %four : i64
     %blockWords = arith.muli %rowTotal, %strideWords : i64
     %three = arith.constant 3 : i64
     %copy = llvm.alloca %three x i64 : (i64) -> !llvm.ptr
-    %webKind = arith.constant 5 : i64
+    %eightsKind = arith.constant 5 : i64
+    %floatsKind = arith.constant 7 : i64
+    %webKind = arith.select %isFloats, %floatsKind, %eightsKind : i64
     %isCached = func.call @strict_gpu_cached(%rows, %webKind, %blockWords, %copy) : (f64, i64, i64, !llvm.ptr) -> i1
-    cf.cond_br %isCached, ^kept(%blockWords, %strideWords, %none : i64, i64, i64), ^nibbles
+    cf.cond_br %isCached, ^kept(%blockWords, %strideWords, %none : i64, i64, i64), ^nibbled
+  ^nibbled:
+    cf.cond_br %isFloats, ^upload, ^nibbles
   ^nibbles:
     %thirtyOne = arith.constant 31 : i64
     %halfBytes = arith.divui %columns, %two : i64
@@ -18336,8 +18332,7 @@
     %isHosted = arith.cmpf une, %firstDataBits, %zero : f64
     cf.cond_br %isHosted, ^hostedUpload, ^joined
   ^joined:
-    %two32 = arith.constant 2 : i64
-    %shape = llvm.alloca %two32 x i32 : (i64) -> !llvm.ptr
+    %shape = llvm.alloca %two x i32 : (i64) -> !llvm.ptr
     %joinedHandle = func.call @strict_gpu_web_gathered(%items, %rowTotal, %shape) : (!llvm.ptr, i64, !llvm.ptr) -> i64
     %isJoined = arith.cmpi ne, %joinedHandle, %none : i64
     cf.cond_br %isJoined, ^rememberJoined, ^unable
@@ -18348,16 +18343,8 @@
     %joinedNibbles32 = llvm.load %joinedNibblesSlot : !llvm.ptr -> i32
     %joinedNibbles = arith.extui %joinedNibbles32 : i32 to i64
     %joinedWords = arith.muli %rowTotal, %joinedStride : i64
-    %joinedClass = arith.constant 255 : i64
-    %joinedShift = arith.constant 8 : i64
-    %joinedShifted = arith.shli %joinedHandle, %joinedShift : i64
-    %joinedTagged = arith.ori %joinedShifted, %joinedClass : i64
-    func.call @strict_gpu_view(%copy, %joinedTagged, %joinedWords, %floatFormat) : (!llvm.ptr, i64, i64, i64) -> ()
     %joinedKind = arith.addi %webKind, %joinedNibbles : i64
-    %joinedPool = arith.constant 256 : i64
-    func.call @strict_gpu_remember(%rows, %joinedKind, %joinedWords, %copy, %joinedPool) : (f64, i64, i64, !llvm.ptr, i64) -> ()
-    func.call @strict_rc_device(%rows) : (f64) -> ()
-    cf.br ^kept(%joinedWords, %joinedStride, %joinedNibbles : i64, i64, i64)
+    cf.br ^remember(%joinedHandle, %joinedWords, %joinedStride, %joinedNibbles, %joinedKind : i64, i64, i64, i64, i64)
   ^hostedUpload:
     %firstData = func.call @strict_list_data(%firstRow) : (f64) -> !llvm.ptr
     %lastData = func.call @strict_list_data(%lastRow) : (f64) -> !llvm.ptr
@@ -18375,54 +18362,120 @@
   ^uploadFrom(%source: !llvm.ptr):
     %uploaded = func.call @strict_gpu_web_uploaded(%source, %blockWords, %none) : (!llvm.ptr, i64, i64) -> i64
     %isUploaded = arith.cmpi ne, %uploaded, %none : i64
-    cf.cond_br %isUploaded, ^remember, ^hosted
-  ^remember:
+    cf.cond_br %isUploaded, ^remember(%uploaded, %blockWords, %strideWords, %none, %webKind : i64, i64, i64, i64, i64), ^hosted
+  ^remember(%handle: i64, %handleWords: i64, %handleStride: i64, %handleNibbles: i64, %handleKind: i64):
     %webClass = arith.constant 255 : i64
-    %eightBits = arith.constant 8 : i64
-    %shiftedHandle = arith.shli %uploaded, %eightBits : i64
+    %shiftedHandle = arith.shli %handle, %eight : i64
     %taggedHandle = arith.ori %shiftedHandle, %webClass : i64
-    func.call @strict_gpu_view(%copy, %taggedHandle, %blockWords, %floatFormat) : (!llvm.ptr, i64, i64, i64) -> ()
+    %floatFormat = arith.constant 32 : i64
+    func.call @strict_gpu_view(%copy, %taggedHandle, %handleWords, %floatFormat) : (!llvm.ptr, i64, i64, i64) -> ()
     %webPool = arith.constant 256 : i64
-    func.call @strict_gpu_remember(%rows, %webKind, %blockWords, %copy, %webPool) : (f64, i64, i64, !llvm.ptr, i64) -> ()
+    func.call @strict_gpu_remember(%rows, %handleKind, %handleWords, %copy, %webPool) : (f64, i64, i64, !llvm.ptr, i64) -> ()
     func.call @strict_rc_device(%rows) : (f64) -> ()
-    cf.br ^kept(%blockWords, %strideWords, %none : i64, i64, i64)
+    cf.br ^kept(%handleWords, %handleStride, %handleNibbles : i64, i64, i64)
   ^kept(%keptWords: i64, %keptStride: i64, %keptNibbles: i64):
     %keptDevice = llvm.load %copy : !llvm.ptr -> i64
     %keptBits = arith.bitcast %keptDevice : i64 to f64
-    %keptBlock = func.call @strict_packed_view(%keptWords, %floatFormat, %zero, %keptBits) : (i64, i64, f64, f64) -> f64
+    %keptFormat = arith.constant 32 : i64
+    %keptBlock = func.call @strict_packed_view(%keptWords, %keptFormat, %zero, %keptBits) : (i64, i64, f64, f64) -> f64
     cf.br ^block(%keptBlock, %true, %keptStride, %keptNibbles : f64, i1, i64, i64)
   ^hosted:
     %dataBits = func.call @strict_bits(%source) : (!llvm.ptr) -> f64
-    %hostedBlock = func.call @strict_packed_view(%blockWords, %floatFormat, %dataBits, %zero) : (i64, i64, f64, f64) -> f64
+    %hostedFormat = arith.constant 32 : i64
+    %hostedBlock = func.call @strict_packed_view(%blockWords, %hostedFormat, %dataBits, %zero) : (i64, i64, f64, f64) -> f64
     cf.br ^block(%hostedBlock, %false, %strideWords, %none : f64, i1, i64, i64)
   ^block(%block: f64, %isBorrowed: i1, %blockStride: i64, %blockNibbles: i64):
+    %kind = arith.constant 2 : i64
+    %tokens = arith.divui %count, %rowTotal : i64
+    %tokensNumber = arith.uitofp %tokens : i64 to f64
+    %strideNumber = arith.uitofp %blockStride : i64 to f64
+    cf.cond_br %isFloats, ^products, ^quantize
+  ^products:
+    %fourteen = arith.constant 14 : i64
+    %productSlots = llvm.alloca %fourteen x f64 : (i64) -> !llvm.ptr
+    %oneNumber = arith.constant 1.0 : f64
+    llvm.store %input, %productSlots : f64, !llvm.ptr
+    %rightSlot = llvm.getelementptr %productSlots[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %block, %rightSlot : f64, !llvm.ptr
+    %batchesSlot = llvm.getelementptr %productSlots[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %oneNumber, %batchesSlot : f64, !llvm.ptr
+    %leftRowsSlot = llvm.getelementptr %productSlots[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %tokensNumber, %leftRowsSlot : f64, !llvm.ptr
+    %innerSlot = llvm.getelementptr %productSlots[4] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %width, %innerSlot : f64, !llvm.ptr
+    %outputsSlot = llvm.getelementptr %productSlots[5] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %rowCount, %outputsSlot : f64, !llvm.ptr
+    %leftStartSlot = llvm.getelementptr %productSlots[6] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %zero, %leftStartSlot : f64, !llvm.ptr
+    %leftBatchSlot = llvm.getelementptr %productSlots[7] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %zero, %leftBatchSlot : f64, !llvm.ptr
+    %leftRowSlot = llvm.getelementptr %productSlots[8] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %width, %leftRowSlot : f64, !llvm.ptr
+    %leftInnerSlot = llvm.getelementptr %productSlots[9] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %oneNumber, %leftInnerSlot : f64, !llvm.ptr
+    %rightStartSlot = llvm.getelementptr %productSlots[10] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %zero, %rightStartSlot : f64, !llvm.ptr
+    %rightBatchSlot = llvm.getelementptr %productSlots[11] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %zero, %rightBatchSlot : f64, !llvm.ptr
+    %rightInnerSlot = llvm.getelementptr %productSlots[12] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %oneNumber, %rightInnerSlot : f64, !llvm.ptr
+    %rightColumnSlot = llvm.getelementptr %productSlots[13] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %strideNumber, %rightColumnSlot : f64, !llvm.ptr
+    %productsName = llvm.mlir.addressof @strict_gpu_products_web : !llvm.ptr
+    %floatsFormat = arith.constant 32 : i64
+    %products = func.call @strict_gpu_shaded(%productsName, %count, %zero, %kind, %productSlots, %fourteen, %three, %floatsFormat) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
+    %hasBiases = arith.cmpf une, %biases, %zero : f64
+    %isMultiplied = arith.cmpf une, %products, %zero : f64
+    %needsBiases = arith.andi %hasBiases, %isMultiplied : i1
+    cf.cond_br %needsBiases, ^biased, ^summed(%products : f64)
+  ^biased:
+    %biasSlots = llvm.alloca %two x f64 : (i64) -> !llvm.ptr
+    llvm.store %products, %biasSlots : f64, !llvm.ptr
+    %biasesSlot = llvm.getelementptr %biasSlots[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %biases, %biasesSlot : f64, !llvm.ptr
+    %biasedName = llvm.mlir.addressof @strict_gpu_biased_web : !llvm.ptr
+    %biased = func.call @strict_gpu_shaded(%biasedName, %count, %zero, %kind, %biasSlots, %two, %three, %floatsFormat) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
+    cf.br ^summed(%biased : f64)
+  ^quantize:
+    %quantizeFormat = arith.constant 32 : i64
+    %words = arith.divui %columns, %four : i64
+    %tokenWords = arith.muli %tokens, %words : i64
+    %quantizedCount = arith.addi %tokenWords, %tokens : i64
+    %quantizeSlots = llvm.alloca %two x f64 : (i64) -> !llvm.ptr
+    llvm.store %input, %quantizeSlots : f64, !llvm.ptr
+    %widthSlot = llvm.getelementptr %quantizeSlots[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %width, %widthSlot : f64, !llvm.ptr
+    %quantizeName = llvm.mlir.addressof @strict_gpu_quantized_web : !llvm.ptr
+    %quantized = func.call @strict_gpu_shaded(%quantizeName, %quantizedCount, %zero, %kind, %quantizeSlots, %two, %one, %quantizeFormat) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
+    %isQuantized = arith.cmpf une, %quantized, %zero : f64
+    cf.cond_br %isQuantized, ^dots, ^summed(%zero : f64)
+  ^dots:
     %eightSlots = arith.constant 8 : i64
     %dotSlots = llvm.alloca %eightSlots x f64 : (i64) -> !llvm.ptr
     llvm.store %block, %dotSlots : f64, !llvm.ptr
     %quantizedSlot = llvm.getelementptr %dotSlots[1] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %quantized, %quantizedSlot : f64, !llvm.ptr
-    %biasesSlot = llvm.getelementptr %dotSlots[2] : (!llvm.ptr) -> !llvm.ptr, f64
-    llvm.store %biases, %biasesSlot : f64, !llvm.ptr
+    %dotBiasesSlot = llvm.getelementptr %dotSlots[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %biases, %dotBiasesSlot : f64, !llvm.ptr
     %columnsSlot = llvm.getelementptr %dotSlots[3] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %width, %columnsSlot : f64, !llvm.ptr
     %rowsSlot = llvm.getelementptr %dotSlots[4] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %rowCount, %rowsSlot : f64, !llvm.ptr
-    %strideNumber = arith.uitofp %blockStride : i64 to f64
     %strideSlot = llvm.getelementptr %dotSlots[5] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %strideNumber, %strideSlot : f64, !llvm.ptr
-    %tokensNumber = arith.uitofp %tokens : i64 to f64
     %tokensSlot = llvm.getelementptr %dotSlots[6] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %tokensNumber, %tokensSlot : f64, !llvm.ptr
     %nibblesNumber = arith.uitofp %blockNibbles : i64 to f64
     %nibblesSlot = llvm.getelementptr %dotSlots[7] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %nibblesNumber, %nibblesSlot : f64, !llvm.ptr
-    %hasBiases = arith.cmpf une, %biases, %zero : f64
+    %dotBiases = arith.cmpf une, %biases, %zero : f64
     %threeLists = arith.constant 7 : i64
-    %twoLists = arith.constant 3 : i64
-    %dotMask = arith.select %hasBiases, %threeLists, %twoLists : i64
+    %dotMask = arith.select %dotBiases, %threeLists, %three : i64
     %eightsName = llvm.mlir.addressof @strict_gpu_eights_web : !llvm.ptr
     %halvesFormat = arith.constant 17 : i64
-    %summed = func.call @strict_gpu_shaded(%eightsName, %count, %zero, %kind, %dotSlots, %eightSlots, %dotMask, %halvesFormat) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
+    %dotted = func.call @strict_gpu_shaded(%eightsName, %count, %zero, %kind, %dotSlots, %eightSlots, %dotMask, %halvesFormat) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
+    cf.br ^summed(%dotted : f64)
+  ^summed(%summed: f64):
     cf.cond_br %isBorrowed, ^returned, ^done(%summed : f64)
   ^returned:
     %blockView = func.call @strict_ptr(%block) : (f64) -> !llvm.ptr
