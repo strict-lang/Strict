@@ -57,27 +57,30 @@ addToLibrary({
 	},
 	// a runtime kernel (NativeRuntimeWgsl.js) takes every value rounded to 32 bit floats (a whole number also exactly as
 	// the second place of its slot): lists of 64 bit, 32 bit or bfloat16 (bits 17) numbers, other formats run on the CPU;
-	// a kept kernel result (bits 255, its address the buffer) is copied into place on the GPU (bfloat16 halves as they are,
-	// their place gets the top bit, n_item); only the other values are
+	// a kept kernel result (bits 255, its address the buffer) is bound as it is (the first 4, n_item) or copied into place
+	// on the GPU (bfloat16 halves as they are, their place gets the top bit); only the other values are
 	// written (the buffer of all of them starts as zeros), a 944 MB placeholder of a resident map took seconds
 	$strictWebGpuKernelInputs__deps: ['$strictWebGpu', '$strictWebGpuWidened'],
 	$strictWebGpuKernelInputs: (count, table, slots) => {
 		const entries = HEAPF64.slice(table / 8, table / 8 + slots * 3);
-		const places = new Uint32Array(slots * 2 + 1), parts = [], copies = [];
+		const places = new Uint32Array(slots * 2 + 1), parts = [], copies = [], bound = [];
 		let total = 0;
 		for (let slot = 0; slot < slots; slot++) {
 			const address = entries[slot * 3], length = entries[slot * 3 + 1], bits = entries[slot * 3 + 2];
 			const resident = bits === 255 && strictWebGpu.buffers[address];
 			const isHalved = resident && address in strictWebGpu.halves, words = isHalved ? Math.ceil(length / 2) : length;
-			if (resident)
+			const isBound = resident && bound.length < 4;
+			if (isBound)
+				bound.push(resident);
+			else if (resident)
 				copies.push([resident, total, words]);
-			const part = length < 0 ? [address] : resident ? { length: words, isResident: true }
+			const part = length < 0 ? [address] : resident ? { length: isBound ? 0 : words, isResident: true }
 				: bits === 64 ? HEAPF64.subarray(address / 8, address / 8 + length)
 				: bits === 32 ? HEAPF32.subarray(address / 4, address / 4 + length)
 				: bits === 17 ? strictWebGpuWidened(HEAPU16.subarray(address / 2, address / 2 + length)) : null;
 			if (!part)
 				return null;
-			places[slot * 2] = isHalved ? total + 0x80000000 : total;
+			places[slot * 2] = (isBound ? bound.length * 0x10000000 : total) + (isHalved ? 0x80000000 : 0);
 			places[slot * 2 + 1] = length < 0 ? (Number.isInteger(address) && address >= 0 ? address : 0) : resident ? length
 				: part.length;
 			parts.push(part);
@@ -87,7 +90,7 @@ addToLibrary({
 		const written = [];
 		parts.forEach((part, slot) => part.isResident || written.push([places[slot * 2],
 			part instanceof Float32Array ? part : Float32Array.from(part)]));
-		return { size: total, written, places, copies };
+		return { size: total, written, places, copies, bound };
 	},
 	// bfloat16 numbers as 32 bit floats
 	$strictWebGpuWidened: (halves) => {
@@ -98,7 +101,8 @@ addToLibrary({
 	},
 	$strictWebGpuPipeline: (device, code) => {
 		const storage = (binding, type) => ({ binding, visibility: 4, buffer: { type } });
-		const types = ['storage', 'read-only-storage', 'read-only-storage', 'storage', 'uniform'];
+		const types = ['storage', 'read-only-storage', 'read-only-storage', 'storage', 'uniform', 'read-only-storage',
+			'read-only-storage', 'read-only-storage', 'read-only-storage'];
 		const group = device.createBindGroupLayout({ entries: types.map((type, binding) => storage(binding, type)) });
 		const layout = device.createPipelineLayout({ bindGroupLayouts: [group] });
 		const module = device.createShaderModule({ code: Module['strictItem'] + code });
@@ -151,12 +155,14 @@ addToLibrary({
 		const grouped = (Module['strictKernelGroups'] || {})[name], groups = Math.ceil(count / 64);
 		const [tiles, part, splits = 1] = grouped ? grouped(inputs.places) : [groups, groups];
 		// each submit is its own GPU packet, Windows resets the device when one runs for 2 s
+		const lists = [0, 1, 2, 3].map((at) => (inputs.bound || [])[at] ||
+			(strictWebGpu.empty ||= device.createBuffer({ size: 4, usage: 128 })));
 		const dispatched = (used, tiles, part, bound = buffers.slice(0, 4)) => {
 			for (let first = 0; first < tiles; first += part) {
 				const work = buffer(16, 64 | 8), size = Math.min(part, tiles - first), wide = Math.min(size, 65535);
 				device.queue.writeBuffer(work, 0, new Uint32Array([first, splits]));
 				buffers.push(work);
-				const entries = bound.concat(work).map((buffer, binding) => ({ binding, resource: { buffer } }));
+				const entries = bound.concat(work, lists).map((buffer, binding) => ({ binding, resource: { buffer } }));
 				const encoder = device.createCommandEncoder(), pass = encoder.beginComputePass();
 				pass.setPipeline(used);
 				pass.setBindGroup(0, device.createBindGroup({ layout: used.getBindGroupLayout(0), entries }));
@@ -167,10 +173,12 @@ addToLibrary({
 		};
 		const runtimePipeline = async (key) => strictWebGpu.pipelines[key] ||=
 			await strictWebGpuPipeline(device, Module['strictShaders'][key]);
-		const copying = device.createCommandEncoder();
-		for (const [source, offset, length] of inputs.copies || [])
-			copying.copyBufferToBuffer(source, 0, buffers[1], offset * 4, length * 4);
-		device.queue.submit([copying.finish()]);
+		if (inputs.copies && inputs.copies.length) {
+			const copying = device.createCommandEncoder();
+			for (const [source, offset, length] of inputs.copies)
+				copying.copyBufferToBuffer(source, 0, buffers[1], offset * 4, length * 4);
+			device.queue.submit([copying.finish()]);
+		}
 		if (splits > 1) {
 			const parts = buffer(count * splits * 4, 128);
 			dispatched(pipeline, tiles, part, [parts].concat(buffers.slice(1, 4)));

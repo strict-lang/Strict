@@ -2,12 +2,27 @@
 // value of the kernel is a part of numbers at places[2 * slot] with places[2 * slot + 1] numbers, a whole number value
 // is places[2 * slot + 1], places[2 * slots] is the count of outputs, one invocation per output if not said otherwise,
 // work.x is the first workgroup of a submit of strictKernelGroups, work.y the count of parts an inner sum is split in.
-// Lists are read with n_item: a list of bfloat16 halves (two in each 32 bits, strict_packed) has the top bit of its place
-// set; every shader starts with it (strictWebGpuPipeline), also the generated ones.
+// Lists are read with n_item: bits 28 to 30 of a place say which binding holds the list (0 numbers, 1 to 4 a kept result
+// bound as it is), the top bit that it holds bfloat16 halves (two in each 32 bits, strict_packed); every shader starts
+// with it (strictWebGpuPipeline), also the generated ones.
 Module['strictItem'] = `
+@group(0) @binding(5) var<storage, read> lists1: array<f32>;
+@group(0) @binding(6) var<storage, read> lists2: array<f32>;
+@group(0) @binding(7) var<storage, read> lists3: array<f32>;
+@group(0) @binding(8) var<storage, read> lists4: array<f32>;
+fn n_number(place: u32, at: u32) -> f32 {
+	let index = (place & 0x0fffffffu) + at;
+	switch ((place >> 28u) & 7u) {
+		case 1u: { return lists1[index]; }
+		case 2u: { return lists2[index]; }
+		case 3u: { return lists3[index]; }
+		case 4u: { return lists4[index]; }
+		default: { return numbers[index]; }
+	}
+}
 fn n_item(place: u32, at: u32) -> f32 {
-	if (place < 0x80000000u) { return numbers[place + at]; }
-	let pair = bitcast<u32>(numbers[place - 0x80000000u + at / 2u]);
+	if (place < 0x80000000u) { return n_number(place, at); }
+	let pair = bitcast<u32>(n_number(place & 0x7fffffffu, at / 2u));
 	return bitcast<f32>(select(pair << 16u, pair & 0xffff0000u, (at & 1u) == 1u));
 }
 `;
