@@ -238,14 +238,33 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 		}
 	}
 }`;
-// a kept bfloat16 result (format 17) rounded to the nearest even bfloat16 where it is, like the CPU reads it
-Module['strictShaders']['strict_bfloat16'] = strictKernelBindings + `
+// a kept bfloat16 result (format 17) rounded to the nearest even bfloat16 like the CPU reads it, two in each 32 bits
+Module['strictShaders']['strict_packed'] = `
+@group(0) @binding(0) var<storage, read_write> output: array<u32>;
+@group(0) @binding(1) var<storage, read> numbers: array<f32>;
+fn rounded(number: f32) -> u32 {
+	let bits = bitcast<u32>(number);
+	return (bits + 0x7fffu + ((bits >> 16u) & 1u)) >> 16u;
+}
 @compute @workgroup_size(64)
 fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {
 	let at = id.x + id.y * groups.x * 64u;
-	if (at >= arrayLength(&output)) { return; }
-	let bits = bitcast<u32>(output[at]);
-	output[at] = bitcast<f32>((bits + 0x7fffu + ((bits >> 16u) & 1u)) & 0xffff0000u);
+	let count = arrayLength(&numbers);
+	if (at * 2u >= count) { return; }
+	let second = select(0u, rounded(numbers[min(at * 2u + 1u, count - 1u)]) << 16u, at * 2u + 1u < count);
+	output[at] = rounded(numbers[at * 2u]) | second;
+}`;
+// the numbers of bfloat16 halves (strict_packed) as 32 bit floats at places[0] of output, places[1] of them
+Module['strictShaders']['strict_widened'] = `
+@group(0) @binding(0) var<storage, read_write> output: array<f32>;
+@group(0) @binding(1) var<storage, read> numbers: array<u32>;
+@group(0) @binding(2) var<storage, read> places: array<u32>;
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {
+	let at = id.x + id.y * groups.x * 64u;
+	if (at >= places[1]) { return; }
+	let pair = numbers[at / 2u];
+	output[places[0] + at] = bitcast<f32>(select(pair << 16u, pair & 0xffff0000u, at % 2u == 1u));
 }`;
 // the values of a convolution normed with affine and swished when swish is 1 once (strict_gpu_convolution), not in
 // each of its tiles: values, affine, channels, swish

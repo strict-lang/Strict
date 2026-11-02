@@ -24,7 +24,7 @@ addToLibrary({
 // Closure knows no GPUBufferUsage: storage 128, copy destination 8, copy source 4, map read 1, compute stage 4.
 addToLibrary({
 	$strictWebGpu: { device: null, failed: false, pipelines: {}, buffers: {}, failures: {}, next: 1, grown: 0, queued: 0, done: [],
-		inputs: {} },
+		inputs: {}, halves: {} },
 	strict_webgpu_ready__deps: ['$strictWebGpu', '$UTF8ToString'],
 	strict_webgpu_ready: (name) => {
 		const shaders = Module['strictShaders'], key = UTF8ToString(name);
@@ -57,7 +57,8 @@ addToLibrary({
 	},
 	// a runtime kernel (NativeRuntimeWgsl.js) takes every value rounded to 32 bit floats (a whole number also exactly as
 	// the second place of its slot): lists of 64 bit, 32 bit or bfloat16 (bits 17) numbers, other formats run on the CPU;
-	// a kept kernel result (bits 255, its address the buffer) is copied into place on the GPU; only the other values are
+	// a kept kernel result (bits 255, its address the buffer) is copied (widened when it holds bfloat16 halves) into place
+	// on the GPU; only the other values are
 	// written (the buffer of all of them starts as zeros), a 944 MB placeholder of a resident map took seconds
 	$strictWebGpuKernelInputs__deps: ['$strictWebGpu', '$strictWebGpuWidened'],
 	$strictWebGpuKernelInputs: (count, table, slots) => {
@@ -68,7 +69,7 @@ addToLibrary({
 			const address = entries[slot * 3], length = entries[slot * 3 + 1], bits = entries[slot * 3 + 2];
 			const resident = bits === 255 && strictWebGpu.buffers[address];
 			if (resident)
-				copies.push([resident, total, length]);
+				copies.push([resident, total, length, address in strictWebGpu.halves]);
 			const part = length < 0 ? [address] : resident ? { length, isResident: true }
 				: bits === 64 ? HEAPF64.subarray(address / 8, address / 8 + length)
 				: bits === 32 ? HEAPF32.subarray(address / 4, address / 4 + length)
@@ -145,12 +146,6 @@ addToLibrary({
 		inputs.written.forEach(([offset, part]) => device.queue.writeBuffer(buffers[1], offset * 4, part));
 		device.queue.writeBuffer(buffers[2], 0, inputs.places);
 		device.queue.writeBuffer(buffers[3], 0, new Uint32Array(1));
-		if (inputs.copies && inputs.copies.length) {
-			const copying = device.createCommandEncoder();
-			for (const [source, offset, length] of inputs.copies)
-				copying.copyBufferToBuffer(source, 0, buffers[1], offset * 4, length * 4);
-			device.queue.submit([copying.finish()]);
-		}
 		const grouped = (Module['strictKernelGroups'] || {})[name], groups = Math.ceil(count / 64);
 		const [tiles, part, splits = 1] = grouped ? grouped(inputs.places) : [groups, groups];
 		// each submit is its own GPU packet, Windows resets the device when one runs for 2 s
@@ -168,11 +163,25 @@ addToLibrary({
 				device.queue.submit([encoder.finish()]);
 			}
 		};
+		const runtimePipeline = async (key) => strictWebGpu.pipelines[key] ||=
+			await strictWebGpuPipeline(device, Module['strictShaders'][key]);
+		const copying = device.createCommandEncoder();
+		for (const [source, offset, length, isHalved] of inputs.copies || [])
+			if (!isHalved)
+				copying.copyBufferToBuffer(source, 0, buffers[1], offset * 4, length * 4);
+		device.queue.submit([copying.finish()]);
+		for (const [source, offset, length, isHalved] of inputs.copies || [])
+			if (isHalved) {
+				const placed = buffer(8, written);
+				device.queue.writeBuffer(placed, 0, new Uint32Array([offset, length]));
+				buffers.push(placed);
+				const blocks = Math.ceil(length / 64);
+				dispatched(await runtimePipeline('strict_widened'), blocks, blocks, [buffers[1], source, placed, buffers[3]]);
+			}
 		if (splits > 1) {
 			const parts = buffer(count * splits * 4, 128);
 			dispatched(pipeline, tiles, part, [parts].concat(buffers.slice(1, 4)));
-			dispatched(strictWebGpu.pipelines['strict_splits'] ||= await strictWebGpuPipeline(device,
-				Module['strictShaders']['strict_splits']), groups, groups, [buffers[0], parts, buffers[2], buffers[3]]);
+			dispatched(await runtimePipeline('strict_splits'), groups, groups, [buffers[0], parts, buffers[2], buffers[3]]);
 			buffers.push(parts);
 		} else
 			dispatched(pipeline, tiles, part);
@@ -187,25 +196,31 @@ addToLibrary({
 		while (strictWebGpu.queued > 1073741824)
 			await strictWebGpu.done[0];
 		if (!output) {
-			// a kept bfloat16 result is rounded like the CPU reads it, the next kernel then reads the same numbers
-			if (bits === 17)
-				dispatched(strictWebGpu.pipelines['strict_bfloat16'] ||=
-					await strictWebGpuPipeline(device, Module['strictShaders']['strict_bfloat16']), groups, groups);
-			buffers.forEach((used, at) => at === 0 || at === 3 || (at === 1 && isPooled) || used.destroy());
+			// a kept bfloat16 result is rounded like the CPU reads it and kept as halves, two in each 32 bits
+			const halved = bits === 17 && buffer(Math.ceil(count / 2) * 4, read);
+			if (halved) {
+				const pairs = Math.ceil(count / 128);
+				dispatched(await runtimePipeline('strict_packed'), pairs, pairs, [halved, buffers[0], buffers[2], buffers[3]]);
+			}
+			const kept = halved || buffers[0];
+			buffers.forEach((used, at) => (at === 0 && !halved) || at === 3 || (at === 1 && isPooled) || used.destroy());
 			const handle = strictWebGpu.next++;
-			strictWebGpu.buffers[handle] = buffers[0];
+			strictWebGpu.buffers[handle] = kept;
 			strictWebGpu.failures[handle] = buffers[3];
-			strictWebGpu.grown += count * 4;
+			if (halved)
+				strictWebGpu.halves[handle] = count;
+			strictWebGpu.grown += kept.size;
 			// not awaited: Chrome answers it once the GPU ran the kernel, every kept result would wait for the GPU
 			device.popErrorScope().then((error) => {
 				if (!error)
 					return;
 				console.error('WebGPU kernel ' + name + ' result is lost: ' + error.message);
-				buffers[0].destroy();
+				kept.destroy();
 				buffers[3].destroy();
 				delete strictWebGpu.inputs[rounded];
 				delete strictWebGpu.buffers[handle];
 				delete strictWebGpu.failures[handle];
+				delete strictWebGpu.halves[handle];
 			});
 			return handle;
 		}
@@ -253,20 +268,22 @@ addToLibrary({
 		strictWebGpuStarted(name, count, () => strictWebGpuKernelInputs(count, table >>> 0, slots), 0, bits),
 	// the numbers of a kept kernel result (strict_gpu_web_get) as bits into target: 1, 2 when its loop read outside of a
 	// list, 0 when the buffer is gone
-	strict_webgpu_download__deps: ['$strictWebGpu', '$strictWebGpuWritten', '$Asyncify'],
+	strict_webgpu_download__deps: ['$strictWebGpu', '$strictWebGpuWritten', '$strictWebGpuWidened', '$Asyncify'],
 	strict_webgpu_download__async: true,
 	strict_webgpu_download: (handle, target, count, bits) => Asyncify.handleSleep((wakeUp) => {
 		const source = strictWebGpu.buffers[handle], device = strictWebGpu.device;
 		if (!source)
 			return wakeUp(0);
-		const copy = device.createBuffer({ size: count * 4 + 4, usage: 1 | 8 });
+		const isHalved = handle in strictWebGpu.halves, bytes = isHalved ? Math.ceil(count / 2) * 4 : count * 4;
+		const copy = device.createBuffer({ size: bytes + 4, usage: 1 | 8 });
 		const encoder = device.createCommandEncoder();
-		encoder.copyBufferToBuffer(source, 0, copy, 0, count * 4);
-		encoder.copyBufferToBuffer(strictWebGpu.failures[handle], 0, copy, count * 4, 4);
+		encoder.copyBufferToBuffer(source, 0, copy, 0, bytes);
+		encoder.copyBufferToBuffer(strictWebGpu.failures[handle], 0, copy, bytes, 4);
 		device.queue.submit([encoder.finish()]);
 		copy.mapAsync(1).then(() => {
-			const mapped = copy.getMappedRange(), isOutside = new Uint32Array(mapped, count * 4, 1)[0] !== 0;
-			strictWebGpuWritten(new Float32Array(mapped, 0, count), target >>> 0, bits);
+			const mapped = copy.getMappedRange(), isOutside = new Uint32Array(mapped, bytes, 1)[0] !== 0;
+			strictWebGpuWritten(isHalved ? strictWebGpuWidened(new Uint16Array(mapped, 0, count))
+				: new Float32Array(mapped, 0, count), target >>> 0, bits);
 			copy.destroy();
 			wakeUp(isOutside ? 2 : 1);
 		}, (error) => {
@@ -274,11 +291,14 @@ addToLibrary({
 			wakeUp(0);
 		});
 	}),
-	// a new kept result of the numbers of the left one and then of the right one (strict_gpu_web_joined), 0 on failure
+	// a new kept result of the numbers of the left one and then of the right one (strict_gpu_web_joined), 0 on failure or
+	// when the halves of both would not line up (the host then joins them)
 	strict_webgpu_joined__deps: ['$strictWebGpu'],
 	strict_webgpu_joined: (left, right) => {
 		const first = strictWebGpu.buffers[left], second = strictWebGpu.buffers[right], device = strictWebGpu.device;
-		if (!first || !second)
+		const firstHalves = strictWebGpu.halves[left], secondHalves = strictWebGpu.halves[right];
+		if (!first || !second || (firstHalves === undefined) !== (secondHalves === undefined) ||
+			(firstHalves !== undefined && (firstHalves === 0 || firstHalves % 2 !== 0)))
 			return 0;
 		const joined = device.createBuffer({ size: first.size + second.size, usage: 128 | 8 | 4 });
 		const failures = device.createBuffer({ size: 4, usage: 128 | 8 | 4 });
@@ -288,6 +308,8 @@ addToLibrary({
 		device.queue.submit([encoder.finish()]);
 		strictWebGpu.buffers[strictWebGpu.next] = joined;
 		strictWebGpu.failures[strictWebGpu.next] = failures;
+		if (firstHalves !== undefined)
+			strictWebGpu.halves[strictWebGpu.next] = firstHalves + secondHalves;
 		strictWebGpu.grown += joined.size;
 		return strictWebGpu.next++;
 	},
@@ -297,6 +319,7 @@ addToLibrary({
 		strictWebGpu.failures[handle]?.destroy();
 		delete strictWebGpu.failures[handle];
 		delete strictWebGpu.buffers[handle];
+		delete strictWebGpu.halves[handle];
 	},
 	// 1 once kept results took 1 GB since the last time, the collector then gives back the buffers of dead lists
 	strict_webgpu_crowded__deps: ['$strictWebGpu'],
