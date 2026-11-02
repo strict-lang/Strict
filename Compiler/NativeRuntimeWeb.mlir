@@ -1072,6 +1072,27 @@
   // then it is copied into a new text
   llvm.func @strict_webinput_length() -> i32
   llvm.func @strict_webinput_copy(!llvm.ptr, i32)
+  // true when the first of rows has no numbers on the host: it is only in a WebGPU buffer (strict_rows_web)
+  func.func private @strict_web_rows_only(%rows: f64) -> i1 {
+    %zero = arith.constant 0.0 : f64
+    %no = arith.constant false
+    %length = func.call @strict_list_length(%rows) : (f64) -> f64
+    %some = arith.cmpf ogt, %length, %zero : f64
+    cf.cond_br %some, ^first, ^none
+  ^first:
+    %items = func.call @strict_list_items(%rows) : (f64) -> !llvm.ptr
+    %row = llvm.load %items : !llvm.ptr -> f64
+    %view = func.call @strict_ptr(%row) : (f64) -> !llvm.ptr
+    %holderSlot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %holderBits = llvm.load %holderSlot : !llvm.ptr -> f64
+    %holder = func.call @strict_ptr(%holderBits) : (f64) -> !llvm.ptr
+    %dataSlot = llvm.getelementptr %holder[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %data = llvm.load %dataSlot : !llvm.ptr -> f64
+    %unhosted = arith.cmpf oeq, %data, %zero : f64
+    return %unhosted : i1
+  ^none:
+    return %no : i1
+  }
   func.func private @strict_web_input_line() -> f64 {
     %length32 = llvm.call @strict_webinput_length() : () -> i32
     %length = arith.extui %length32 : i32 to i64

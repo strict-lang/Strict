@@ -18398,20 +18398,29 @@
   ^done(%resultName: !llvm.ptr, %resultSlot: !llvm.ptr):
     return %resultName, %resultSlot : !llvm.ptr, !llvm.ptr
   }
+  llvm.mlir.global internal constant @strict_rows_only_error("RowsOnlyOnTheGpu\00") : !llvm.array<17 x i8>
   // the dot products of `Batch.Sums` for several tokens (strict_device_blocks, 64 or more with 8 bit tokens and Q4_K or Q6_K
   // rows strict_device_tiles, with 8 bit rows strict_device_eights, strict_device_whole when the first has one scale from
   // sm_80 on, up to 4 tokens strict_device_tokens): every row with the numbers of every token (token t at
   // t * width of input), row r and token t at t * rows + r of the result plus biases(index % biases.Length) unless
   // biases is 0.0, the rows of token t start at bases(t / 64) unless bases is 0.0 (`Batch.Grouped`), 0.0 when the GPU
-  // can not
+  // can not, the Error RowsOnlyOnTheGpu when the rows have no numbers on the host either (read from a URL on the web)
   func.func private @strict_gpu_tokens(%ptx: !llvm.ptr, %count: i64, %rows: f64, %input: f64, %width: f64, %rowCount: f64, %bases: f64, %biases: f64, %gated: f64) -> f64 {
     %none = arith.constant 0 : i64
     %zero = arith.constant 0.0 : f64
     %webbed = func.call @strict_gpu_tokens_web(%count, %rows, %input, %width, %rowCount, %bases, %biases, %gated) : (i64, f64, f64, f64, f64, f64, f64, f64) -> f64
     %isWebbed = arith.cmpf une, %webbed, %zero : f64
-    cf.cond_br %isWebbed, ^webDone, ^native
+    cf.cond_br %isWebbed, ^webDone, ^hostable
   ^webDone:
     return %webbed : f64
+  ^hostable:
+    %rowsOnly = func.call @strict_web_rows_only(%rows) : (f64) -> i1
+    cf.cond_br %rowsOnly, ^gpuOnly, ^native
+  ^gpuOnly:
+    %onlyName = llvm.mlir.addressof @strict_rows_only_error : !llvm.ptr
+    %onlyBits = func.call @strict_bits(%onlyName) : (!llvm.ptr) -> f64
+    %onlyError = func.call @strict_error_text(%onlyBits) : (f64) -> f64
+    return %onlyError : f64
   ^native:
     %keptSlot = llvm.mlir.addressof @strict_gpu_tokens_kept : !llvm.ptr
     %before = llvm.load %keptSlot : !llvm.ptr -> i64

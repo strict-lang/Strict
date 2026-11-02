@@ -26,6 +26,11 @@
   }
   // two lists in WebGPU buffers joined there (NativeRuntimeWeb.mlir), 0.0 here
   // the next line the page hands in on the web (NativeRuntimeWeb.mlir), 0.0 here: Process.InputLine reads the standard input
+  // rows only in a WebGPU buffer (strict_rows_web), never here
+  func.func private @strict_web_rows_only(%rows: f64) -> i1 {
+    %no = arith.constant false
+    return %no : i1
+  }
   func.func private @strict_web_input_line() -> f64 {
     %none = arith.constant 0.0 : f64
     return %none : f64
