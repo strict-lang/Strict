@@ -18,9 +18,28 @@ static _Thread_local unsigned char* floatStorage;
 /* The headers of the files read last, each kept while its file has the same size and modification time: every tensor
    lookup read the whole header again (60-130 KB for a LoRA of Moss, about 5 lookups per merged linear). */
 enum { HeaderCount = 8 };
-typedef struct { char* path; uint64_t size, modified; char* text; } Header;
+typedef struct { char* path; uint64_t size, modified, length; char* text; } Header;
 static _Thread_local Header headers[HeaderCount];
 static _Thread_local int nextHeader;
+
+#ifdef __EMSCRIPTEN__
+/* A file that is not in the package of a web build is read from the server the page came from, with range requests
+   (WebRuntime.js), 8 bit rows go straight to WebGPU (strict_rows_web). */
+int strict_webfile_read(const char* url, double offset, double bytes, void* target);
+int strict_webfile_rows(const char* url, double offset, double rows, double rowBytes, double codesBytes, double stride,
+	double columns, const float* scales);
+double strict_rows_web(uint64_t count, uint64_t elements, double bits, int64_t handle, int64_t nibbles);
+static int IsRemote(const char* path)
+{
+	FILE* file = fopen(path, "rb");
+	if (file)
+		fclose(file);
+	return !file;
+}
+#else
+static int IsRemote(const char* path) { return 0; }
+static int strict_webfile_read(const char* url, double offset, double bytes, void* target) { return 0; }
+#endif
 
 /* Opens a .safetensors file and reads the length of its JSON header (8 bytes little endian). */
 static FILE* Opened(const char* path, uint64_t* headerLength)
@@ -82,27 +101,56 @@ static void Compacted(char* text, uint64_t length)
 }
 
 /* The JSON header of the .safetensors file at path from headers or read into them, 0 when it can't be read. */
+/* The JSON header of a file read from the server of the page (IsRemote), length bytes, 0 when it can't be read. */
+static char* RemoteHeader(const char* path, uint64_t* length)
+{
+	unsigned char size[8];
+	if (!strict_webfile_read(path, 0, 8, size))
+		return 0;
+	*length = 0;
+	for (int index = 7; index >= 0; index--)
+		*length = *length * 256 + size[index];
+	char* text = *length <= 100000000 ? malloc(*length + 1) : 0;
+	if (text && !strict_webfile_read(path, 8, (double)*length, text))
+	{
+		free(text);
+		return 0;
+	}
+	return text;
+}
+
 static const char* HeaderOf(const char* path, const char** failure)
 {
 	uint64_t size = 0, modified = 0, length = 0;
 	*failure = "TensorFileNotReadable";
-	if (!Stamped(path, &size, &modified))
+	int isRemote = IsRemote(path);
+	if (!isRemote && !Stamped(path, &size, &modified))
 		return 0;
 	for (int index = 0; index < HeaderCount; index++)
 		if (headers[index].path && !strcmp(headers[index].path, path) && headers[index].size == size &&
 			headers[index].modified == modified)
 			return headers[index].text;
-	FILE* file = Opened(path, &length);
-	if (!file || length > 100000000)
+	char* text = 0;
+	size_t read = 0;
+	if (isRemote)
 	{
-		if (file)
-			fclose(file);
-		return 0;
+		text = RemoteHeader(path, &length);
+		read = text ? length : 0;
 	}
-	char* text = malloc(length + 1);
-	size_t read = text ? fread(text, 1, length, file) : 0;
-	fclose(file);
-	if (read != length)
+	else
+	{
+		FILE* file = Opened(path, &length);
+		if (!file || length > 100000000)
+		{
+			if (file)
+				fclose(file);
+			return 0;
+		}
+		text = malloc(length + 1);
+		read = text ? fread(text, 1, length, file) : 0;
+		fclose(file);
+	}
+	if (!text || read != length)
 	{
 		free(text);
 		*failure = "TensorFileHeaderTruncated";
@@ -118,8 +166,20 @@ static const char* HeaderOf(const char* path, const char** failure)
 	memcpy(slot->path, path, pathLength);
 	slot->size = size;
 	slot->modified = modified;
+	slot->length = length;
 	slot->text = text;
 	return text;
+}
+
+/* Where the tensor data of the file at path starts (after its header), 0 when it can't be read. */
+static uint64_t DataStart(const char* path)
+{
+	const char* failure = 0;
+	const char* text = HeaderOf(path, &failure);
+	for (int index = 0; text && index < HeaderCount; index++)
+		if (headers[index].text == text)
+			return 8 + headers[index].length;
+	return 0;
 }
 
 STRICT_EXPORT double TensorFile_Header(double self, double path)
@@ -287,8 +347,10 @@ static float* Read(double path, const Tensor* tensor, const char** failure)
 		*failure = "I4TensorsAreOnlyReadAsQuantizedRows";
 		return 0;
 	}
-	FILE* file = Opened(strict_text(path), &length);
-	if (!file)
+	int isRemote = IsRemote(strict_text(path));
+	FILE* file = isRemote ? 0 : Opened(strict_text(path), &length);
+	uint64_t start = isRemote ? DataStart(strict_text(path)) : 8 + length;
+	if (!file && !start)
 	{
 		*failure = "TensorFileNotReadable";
 		return 0;
@@ -296,14 +358,22 @@ static float* Read(double path, const Tensor* tensor, const char** failure)
 	float* floats = malloc(count * sizeof(float) + 1);
 	if (!floats)
 	{
-		fclose(file);
+		if (file)
+			fclose(file);
 		*failure = "TensorTooLarge";
 		return 0;
 	}
 	unsigned char* numbers = (unsigned char*)floats + count * (sizeof(float) - tensor->bytes);
-	strict_seek(file, (int64_t)(8 + length + tensor->start), SEEK_SET);
-	size_t read = fread(numbers, (size_t)tensor->bytes, count, file);
-	fclose(file);
+	size_t read = 0;
+	if (file)
+	{
+		strict_seek(file, (int64_t)(start + tensor->start), SEEK_SET);
+		read = fread(numbers, (size_t)tensor->bytes, count, file);
+		fclose(file);
+	}
+	else
+		read = strict_webfile_read(strict_text(path), (double)(start + tensor->start), (double)(count * tensor->bytes),
+			numbers) ? count : 0;
 	if (read != count)
 	{
 		free(floats);
@@ -357,7 +427,7 @@ static void Unpacked(const Fours* fours, uint64_t row, const unsigned char* sour
 
 enum { ChunkRows = 64 };
 typedef struct { Opening file; const Tensor* tensor; uint64_t start; unsigned char* data; uint64_t stride; double bits;
-	int isStored; const float* scales; const Fours* fours; atomic_int failed; } Placing;
+	int isStored; const float* scales; const Fours* fours; atomic_int failed; const unsigned char* read; } Placing;
 
 /* Reads the rows of one chunk at once into a buffer and copies them to their place, converted unless stored, 8 bit rows
    with a scale each get it for all their 32 numbers. */
@@ -370,8 +440,9 @@ static void PlacedChunk(void* context, uint64_t chunk)
 	uint64_t columns = placing->fours || tensor->isNibbles ? 2 * tensor->width : tensor->width;
 	unsigned char* buffer = malloc(count * rowBytes + 1);
 	float* floats = placing->isStored ? 0 : malloc(columns * sizeof(float) + 1);
-	int isRead = buffer && (placing->isStored || floats) &&
-		ReadFrom(placing->file, placing->start + first * rowBytes, buffer, count * rowBytes);
+	int isRead = buffer && (placing->isStored || floats) && (placing->read ?
+		memcpy(buffer, placing->read + first * rowBytes, count * rowBytes) != 0 :
+		ReadFrom(placing->file, placing->start + first * rowBytes, buffer, count * rowBytes));
 	if (!isRead)
 		atomic_store(&placing->failed, 1);
 	for (uint64_t row = first; isRead && row < first + count; row++)
@@ -402,6 +473,19 @@ static const char* Placed(double path, const Tensor* tensor, unsigned char* data
 	int isStored, const float* scales, const Fours* fours)
 {
 	uint64_t length = 0, fileSize = 0;
+	if (IsRemote(strict_text(path)))
+	{
+		uint64_t start = DataStart(strict_text(path)), bytes = tensor->height * tensor->width * tensor->bytes;
+		unsigned char* read = start ? malloc(bytes + 1) : 0;
+		Placing placing = { 0, tensor, 0, data, stride, bits, isStored, scales, fours };
+		placing.read = read;
+		if (read && strict_webfile_read(strict_text(path), (double)(start + tensor->start), (double)bytes, read))
+			Parallel(PlacedChunk, &placing, (tensor->height + ChunkRows - 1) / ChunkRows);
+		else
+			atomic_store(&placing.failed, 1);
+		free(read);
+		return atomic_load(&placing.failed) ? "TensorFileDataTruncated" : 0;
+	}
 	FILE* file = Opened(strict_text(path), &length);
 	if (!file)
 		return "TensorFileNotReadable";
@@ -498,6 +582,19 @@ static double QuantizedRows(double path, double entry, double scales, double bit
 	float* factors = failure ? 0 : Read(path, &scaled, &failure);
 	if (!factors)
 		return strict_fail(failure);
+#ifdef __EMSCRIPTEN__
+	if (IsRemote(strict_text(path)))
+	{
+		uint64_t columns = tensor->width * (tensor->isNibbles ? 2 : 1);
+		uint64_t codes = tensor->isNibbles ? tensor->width : strict_packed_data(columns, 8);
+		uint64_t stride = (codes + 4 * ((columns + 31) / 32) + 15) / 16 * 16;
+		int handle = strict_webfile_rows(strict_text(path), (double)(DataStart(strict_text(path)) + tensor->start),
+			(double)tensor->height, (double)tensor->width, (double)codes, (double)stride, (double)columns, factors);
+		free(factors);
+		return handle ? strict_rows_web(tensor->height, columns, bits, handle, tensor->isNibbles) :
+			strict_fail("TensorFileDataTruncated");
+	}
+#endif
 	double result = strict_rows(tensor->height, tensor->width * (tensor->isNibbles ? 2 : 1), bits, data, stride);
 	failure = !*data ? "TensorTooLarge" : Placed(path, tensor, *data, *stride, bits, 1, factors, 0);
 	free(factors);

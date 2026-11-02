@@ -986,6 +986,108 @@
   ^none:
     return %none : i64
   }
+  // count 8 bit rows of elements numbers (bits, plus STRICT_KEPT_TOKENS) whose block (strict_rows layout, the codes as 4
+  // bit halves of bytes when nibbles is 1) is only in the WebGPU buffer handle (TensorFile reading a URL): views without
+  // data, the buffer kept like an uploaded row block of the rows (kind 5, 6 for nibbles, strict_gpu_tokens_web), given
+  // back with them; reading the rows on the CPU stops the program
+  llvm.func @strict_webgpu_rows_views(!llvm.ptr, i32, i32, i32, i32)
+  func.func @strict_rows_web(%count: i64, %elements: i64, %bits: f64, %handle: i64, %nibbles: i64) -> f64 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %four = arith.constant 4 : i64
+    %eight = arith.constant 8 : i64
+    %zero = arith.constant 0.0 : f64
+    %viewBytes = arith.constant 64 : i64
+    %markedBits = arith.fptosi %bits : f64 to i64
+    %formatMask = arith.constant 255 : i64
+    %wholeBits = arith.andi %markedBits, %formatMask : i64
+    %kept = arith.shrui %markedBits, %eight : i64
+    %eightBytes = func.call @strict_packed_bytes(%elements, %wholeBits) : (i64, i64) -> i64
+    %two = arith.constant 2 : i64
+    %thirtyOne = arith.constant 31 : i64
+    %thirtyTwo = arith.constant 32 : i64
+    %halfBytes = arith.divui %elements, %two : i64
+    %partsRounded = arith.addi %elements, %thirtyOne : i64
+    %parts = arith.divui %partsRounded, %thirtyTwo : i64
+    %scaleBytes = arith.muli %parts, %four : i64
+    %nibbleBytes = arith.addi %halfBytes, %scaleBytes : i64
+    %isNibbles = arith.cmpi ne, %nibbles, %none : i64
+    %bytes = arith.select %isNibbles, %nibbleBytes, %eightBytes : i64
+    %fifteen = arith.constant 15 : i64
+    %alignMask = arith.constant -16 : i64
+    %padded = arith.addi %bytes, %fifteen : i64
+    %rowStride = arith.andi %padded, %alignMask : i64
+    %views = arith.muli %count, %viewBytes : i64
+    %block = func.call @strict_alloc_text(%views) : (i64) -> !llvm.ptr
+    %countNumber = arith.sitofp %count : i64 to f64
+    %list = func.call @strict_list_new(%countNumber, %countNumber) : (f64, f64) -> f64
+    %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    cf.br ^place(%none : i64)
+  ^place(%index: i64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^row, ^placed
+  ^row:
+    %viewOffset = arith.muli %index, %viewBytes : i64
+    %view = llvm.getelementptr %block[%viewOffset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %row = func.call @strict_packed_placed(%view, %elements, %wholeBits, %zero, %zero, %kept) : (!llvm.ptr, i64, i64, f64, f64, i64) -> f64
+    %target = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.store %row, %target : f64, !llvm.ptr
+    func.call @strict_gc_written(%target) : (!llvm.ptr) -> ()
+    %next = arith.addi %index, %one : i64
+    cf.br ^place(%next : i64)
+  ^placed:
+    %three = arith.constant 3 : i64
+    %copy = llvm.alloca %three x i64 : (i64) -> !llvm.ptr
+    %total = arith.muli %count, %rowStride : i64
+    %words = arith.divui %total, %four : i64
+    %webClass = arith.constant 255 : i64
+    %shifted = arith.shli %handle, %eight : i64
+    %tagged = arith.ori %shifted, %webClass : i64
+    %floatFormat = arith.constant 32 : i64
+    func.call @strict_gpu_view(%copy, %tagged, %words, %floatFormat) : (!llvm.ptr, i64, i64, i64) -> ()
+    %eightsKind = arith.constant 5 : i64
+    %webKind = arith.addi %eightsKind, %nibbles : i64
+    %webPool = arith.constant 256 : i64
+    func.call @strict_gpu_remember(%list, %webKind, %words, %copy, %webPool) : (f64, i64, i64, !llvm.ptr, i64) -> ()
+    func.call @strict_rc_device(%list) : (f64) -> ()
+    %count32 = arith.trunci %count : i64 to i32
+    %handle32 = arith.trunci %handle : i64 to i32
+    %stride32 = arith.trunci %rowStride : i64 to i32
+    %nibbles32 = arith.trunci %nibbles : i64 to i32
+    llvm.call @strict_webgpu_rows_views(%block, %count32, %handle32, %stride32, %nibbles32) : (!llvm.ptr, i32, i32, i32, i32) -> ()
+    %pendingSlot = llvm.mlir.addressof @strict_foreign_pending : !llvm.ptr
+    %listBits = arith.bitcast %list : f64 to i64
+    llvm.store %listBits, %pendingSlot : i64, !llvm.ptr
+    return %list : f64
+  }
+  // the count rows of items (views of strict_rows_web, rows joined from several matrices like Moss's query, key and
+  // value rows) copied into a new WebGPU buffer on the GPU, its handle (0 when a row is in no buffer or the rows differ),
+  // the stride in words and 1 for 4 bit codes at shape
+  llvm.func @strict_webgpu_gathered(!llvm.ptr, i32, !llvm.ptr) -> i32
+  func.func private @strict_gpu_web_gathered(%items: !llvm.ptr, %count: i64, %shape: !llvm.ptr) -> i64 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %views = llvm.alloca %count x i32 : (i64) -> !llvm.ptr
+    cf.br ^next(%none : i64)
+  ^next(%row: i64):
+    %more = arith.cmpi slt, %row, %count : i64
+    cf.cond_br %more, ^view, ^gather
+  ^view:
+    %slot = llvm.getelementptr %items[%row] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %value = llvm.load %slot : !llvm.ptr -> f64
+    %view = func.call @strict_ptr(%value) : (f64) -> !llvm.ptr
+    %address = llvm.ptrtoint %view : !llvm.ptr to i64
+    %address32 = arith.trunci %address : i64 to i32
+    %target = llvm.getelementptr %views[%row] : (!llvm.ptr, i64) -> !llvm.ptr, i32
+    llvm.store %address32, %target : i32, !llvm.ptr
+    %following = arith.addi %row, %one : i64
+    cf.br ^next(%following : i64)
+  ^gather:
+    %count32 = arith.trunci %count : i64 to i32
+    %made = llvm.call @strict_webgpu_gathered(%views, %count32, %shape) : (!llvm.ptr, i32, !llvm.ptr) -> i32
+    %handle = arith.extui %made : i32 to i64
+    return %handle : i64
+  }
   // a list in a WebGPU buffer is gone: so is the buffer
   func.func private @strict_gpu_web_give(%device: i64) {
     %eight = arith.constant 8 : i64

@@ -94,6 +94,11 @@
   func.func private @strict_gpu_web_give(%device: i64) {
     return
   }
+  // 8 bit rows that only are in WebGPU buffers joined in a new one (NativeRuntimeWeb.mlir), 0 here
+  func.func private @strict_gpu_web_gathered(%items: !llvm.ptr, %count: i64, %shape: !llvm.ptr) -> i64 {
+    %none = arith.constant 0 : i64
+    return %none : i64
+  }
   // a WebGPU buffer of the words at data (NativeRuntimeWeb.mlir), 0 here
   func.func private @strict_gpu_web_uploaded(%data: !llvm.ptr, %words: i64, %halves: i64) -> i64 {
     %none = arith.constant 0 : i64

@@ -263,14 +263,19 @@ Module['strictKernelGroups']['strict_quantized'] = (places) => {
 	return [tokens, tokens];
 };
 // Batch.Sums of 8 bit rows (strict_gpu_tokens_web): rows (codes, then a scale per 32 columns, stride words a row), codes
-// and scales of the tokens (strict_quantized), biases, columns, rows, stride, tokens: a workgroup of 256 invocations per
-// tile of 64 rows and 64 tokens (rows ownRow + 16 * i and tokens ownToken + 16 * j of it each), the codes of 32 columns
+// and scales of the tokens (strict_quantized), biases, columns, rows, stride, tokens, nibbles (codes as 4 bit halves of
+// bytes, unpacked to 8 bit codes as they are staged): a workgroup of 256 invocations per tile of 64 rows and 64 tokens
+// (rows ownRow + 16 * i and tokens ownToken + 16 * j of it each), the codes of 32 columns
 // of both in workgroup memory at a time (word by word, so neighbors read neighboring rows), dot products of 4 codes
 // summed as whole numbers per 32 columns and scaled by their row
 Module['strictShaders']['strict_eights'] = strictKernelBindings + `
 var<workgroup> rowCodes: array<u32, 512>;
 var<workgroup> tokenCodes: array<u32, 512>;
 var<workgroup> rowScales: array<f32, 64>;
+fn unpacked(halves: u32) -> u32 {
+	let bits = i32(halves);
+	return pack4xI8(vec4<i32>((bits << 28u) >> 28u, (bits << 24u) >> 28u, (bits << 20u) >> 28u, (bits << 16u) >> 28u));
+}
 fn dotted(codes: u32, tokens: vec4<u32>) -> vec4<i32> {
 	return vec4<i32>(dot4I8Packed(codes, tokens.x), dot4I8Packed(codes, tokens.y), dot4I8Packed(codes, tokens.z),
 		dot4I8Packed(codes, tokens.w));
@@ -282,7 +287,9 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 	let rows = places[9];
 	let stride = places[11];
 	let tokens = places[13];
+	let nibbles = places[15] == 1u;
 	let words = columns / 4u;
+	let rowWords = select(words, words / 2u, nibbles);
 	let rowTiles = (rows + 63u) / 64u;
 	let tile = work.x + group.x + group.y * groups.x;
 	if (tile >= rowTiles * ((tokens + 63u) / 64u)) { return; }
@@ -299,12 +306,19 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 			let row = rowStart + at / 8u;
 			let token = tokenStart + at / 8u;
 			let placed = at % 8u * 64u + at / 8u;
-			rowCodes[placed] = select(0u, bitcast<u32>(n_item(places[0], row * stride + block * 8u + at % 8u)), row < rows);
+			let word = block * 8u + at % 8u;
+			var codes = 0u;
+			if (row < rows && nibbles) {
+				codes = unpacked((bitcast<u32>(n_item(places[0], row * stride + word / 2u)) >> (word % 2u * 16u)) & 0xffffu);
+			} else if (row < rows) {
+				codes = bitcast<u32>(n_item(places[0], row * stride + word));
+			}
+			rowCodes[placed] = codes;
 			tokenCodes[placed] = select(0u, bitcast<u32>(n_item(places[2], token * words + block * 8u + at % 8u)),
 				token < tokens);
 		}
 		if (local < 64u) {
-			rowScales[local] = select(0.0, n_item(places[0], (rowStart + local) * stride + words + block), rowStart + local < rows);
+			rowScales[local] = select(0.0, n_item(places[0], (rowStart + local) * stride + rowWords + block), rowStart + local < rows);
 		}
 		workgroupBarrier();
 		var firstWholes = vec4<i32>();
