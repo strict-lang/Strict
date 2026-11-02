@@ -18361,7 +18361,9 @@
     %isGathered = arith.cmpi ne, %gatheredAddress, %none : i64
     cf.cond_br %isGathered, ^uploadFrom(%gathered : !llvm.ptr), ^unable
   ^uploadFrom(%source: !llvm.ptr):
-    %uploaded = func.call @strict_gpu_web_uploaded(%source, %blockWords, %none) : (!llvm.ptr, i64, i64) -> i64
+    %narrowed = arith.constant -1 : i64
+    %uploadMode = arith.select %isFloats, %narrowed, %none : i64
+    %uploaded = func.call @strict_gpu_web_uploaded(%source, %blockWords, %uploadMode) : (!llvm.ptr, i64, i64) -> i64
     %isUploaded = arith.cmpi ne, %uploaded, %none : i64
     cf.cond_br %isUploaded, ^remember(%uploaded, %blockWords, %strideWords, %none, %webKind : i64, i64, i64, i64, i64), ^hosted
   ^remember(%handle: i64, %handleWords: i64, %handleStride: i64, %handleNibbles: i64, %handleKind: i64):

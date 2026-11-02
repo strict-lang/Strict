@@ -562,3 +562,28 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) g
 	let normed = n_item(places[0], at) * n_item(places[2], channel) + n_item(places[2], places[5] + channel);
 	output[at] = select(normed, normed / (1.0 + exp(-normed)), places[7] == 1u);
 }`;
+// a file a program writes in the browser (not the package loaded before it runs) is offered as a download on the page
+// when it is closed, images are shown too
+(Module['preRun'] ||= []).push(() => {
+	const closed = FS.close;
+	FS.close = (stream) => {
+		const path = stream.path, isWritten = (stream.flags & 3) !== 0 && path && !path.startsWith('/dev/');
+		const result = closed(stream);
+		if (isWritten && runtimeInitialized && typeof document !== 'undefined') {
+			const data = FS.readFile(path), name = path.split('/').pop();
+			const link = document.createElement('a'), url = URL.createObjectURL(new Blob([data]));
+			link.href = url;
+			link.download = name;
+			link.textContent = 'Download ' + name;
+			document.body.append(link);
+			if (/\.(png|jpe?g|webp|gif)$/i.test(name)) {
+				const image = document.createElement('img');
+				image.src = url;
+				image.style.maxWidth = '100%';
+				document.body.append(image);
+			}
+			console.log('Saved ' + name + ' (' + data.length + ' bytes), offered as a download');
+		}
+		return result;
+	};
+});

@@ -316,13 +316,31 @@ addToLibrary({
 		strictWebGpu.grown += joined.size;
 		return strictWebGpu.next++;
 	},
-	// a new kept buffer of the words at address as they are, of halves bfloat16 numbers when not 0 (strict_gpu_web_uploaded),
-	// 0 before the first kernel made the device; a list that changed its length later runs its kernel on the CPU
+	// a new kept buffer of the words at address as they are, of halves bfloat16 numbers when above 0, of 32 bit floats
+	// kept as bfloat16 halves when -1 and every one is an exact bfloat16 number (Moss's BF16 weights read as 32 bit rows,
+	// strict_gpu_web_uploaded), 0 before the first kernel made the device; a list that changed its length later runs its
+	// kernel on the CPU
 	strict_webgpu_uploaded__deps: ['$strictWebGpu'],
 	strict_webgpu_uploaded: (address, words, halves) => {
 		const device = strictWebGpu.device;
 		if (!device)
 			return 0;
+		const floats = halves === -1 && HEAPU32.subarray(address >>> 2, (address >>> 2) + words);
+		if (floats && floats.every((word) => (word & 0xffff) === 0)) {
+			const narrowed = new Uint16Array(Math.ceil(words / 2) * 2);
+			for (let at = 0; at < words; at++)
+				narrowed[at] = floats[at] >>> 16;
+			const kept = device.createBuffer({ size: narrowed.byteLength, usage: 128 | 8 | 4 });
+			device.queue.writeBuffer(kept, 0, narrowed);
+			const handle = strictWebGpu.next++;
+			strictWebGpu.buffers[handle] = kept;
+			strictWebGpu.failures[handle] = device.createBuffer({ size: 4, usage: 128 | 8 | 4 });
+			strictWebGpu.halves[handle] = words;
+			strictWebGpu.uploads[handle] = words;
+			strictWebGpu.grown += kept.size;
+			return handle;
+		}
+		halves = Math.max(halves, 0);
 		const uploaded = device.createBuffer({ size: Math.max(words * 4, 4), usage: 128 | 8 | 4 });
 		device.queue.writeBuffer(uploaded, 0, HEAPU8, address >>> 0, words * 4);
 		const handle = strictWebGpu.next++;
