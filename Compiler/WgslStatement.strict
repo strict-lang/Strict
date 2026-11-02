@@ -67,8 +67,9 @@ Indexed(entry InstructionEntry) Texts
 Called(entry InstructionEntry) Texts
 	WgslStatement(Doubled, 4).Called(Doubled.method.instructions(4)) is ("r2 = s_Rows_Twice_1(n_int(0), r1);")
 	WgslStatement(MlirGpuCheck.Floored, 1).Called(MlirGpuCheck.Flooring) is ("r1 = n_floor(r0);")
+	WgslStatement(Doubled, 4).Called(MlirDeviceCalls.Making) is ("r1 = r0;")
 	let register = MlirDeviceCalls(function, at, function).Register(entry)
-	if entry.texts(1) is in ("Floor", "Length")
+	if IsNative(entry)
 		return List(Text) + Native(entry, "r" + register)
 	let callees = MlirModule(function.types, "").Called(function, at)
 	if (callees.Length is not 1) or (entry.texts(1) is in MlirDeviceCalls.Natives)
@@ -76,12 +77,24 @@ Called(entry InstructionEntry) Texts
 	let called = WgslFunction(callees.First)
 	let instance = register < 0 then "n_int(0)" else "r" + register
 	List(Text) + ("r" + entry.payload(0) + " = " + called.Name + "(" + instance + called.Arguments(entry) + ");")
+IsNative(entry InstructionEntry) Boolean
+	WgslStatement(Doubled, 4).IsNative(MlirDeviceCalls.Making)
+	WgslStatement(Doubled, 4).IsNative(MlirDeviceCalls.Rounding) is false
+	let name = entry.texts(1)
+	let isMade = (name is "from") and (MlirDeviceCalls(function, at, function).IsRounding(entry) is false)
+	(name is in ("Floor", "Length")) or (name is in MlirDeviceCalls.Approximations) or isMade
 Native(entry InstructionEntry, instance Text) Text
 	WgslStatement(Doubled, 4).Native(MlirGpuCheck.Flooring, "r0") is "r1 = n_floor(r0);"
+	WgslStatement(Doubled, 4).Native(MlirDeviceCalls.Logarithmic, "r0") is "r1 = n_Logarithm(r0);"
+	WgslStatement(Doubled, 4).Native(MlirDeviceCalls.Sining, "r0") is "r1 = n_Sin(r0);"
 	let register = MlirDeviceCalls(function, at, function).Register(entry)
 	let slots = MlirDeviceRecords(function, at).Slots(MlirKinds(function).KindOf(at, register))
 	let counted = slots > 0 then "n_int(i32(" + instance + "l.y / " + slots + "u))" else "n_int(i32(" + instance + "l.y))"
-	let native = entry.texts(1) is "Floor" then "n_floor(" + instance + ")" else counted
+	let name = entry.texts(1)
+	let argument = "r" + entry.payload(6 + entry.payload(3))
+	let made = name is "from" then argument else "n_" + name + "(" + instance + ")"
+	let called = name is "Floor" then "n_floor(" + instance + ")" else made
+	let native = name is "Length" then counted else called
 	"r" + entry.payload(0) + " = " + native + ";"
 Looped(entry InstructionEntry) Texts
 	WgslStatement(Summed, 11).Looped(Summed.method.instructions(11)) is ("}", "v_index = s2i;", "v_value = s2v;")
