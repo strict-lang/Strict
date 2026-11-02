@@ -427,8 +427,8 @@ static void Unpacked(const Fours* fours, uint64_t row, const unsigned char* sour
 
 enum { ChunkRows = 64 };
 typedef struct { Opening file; const Tensor* tensor; uint64_t start; unsigned char* data; uint64_t stride; double bits;
-	int isStored; const float* scales; const Fours* fours; atomic_int failed; const unsigned char* read; uint64_t first; }
-	Placing;
+	int isStored; const float* scales; const Fours* fours; atomic_int failed; const unsigned char* read; uint64_t first;
+	uint64_t last; } Placing;
 
 /* Reads the rows of one chunk at once into a buffer and copies them to their place, converted unless stored, 8 bit rows
    with a scale each get it for all their 32 numbers. */
@@ -437,7 +437,8 @@ static void PlacedChunk(void* context, uint64_t chunk)
 	Placing* placing = context;
 	const Tensor* tensor = placing->tensor;
 	uint64_t rowBytes = tensor->width * tensor->bytes, first = placing->first + chunk * ChunkRows;
-	uint64_t count = tensor->height - first < ChunkRows ? tensor->height - first : ChunkRows;
+	uint64_t end = placing->last ? placing->last : tensor->height;
+	uint64_t count = end - first < ChunkRows ? end - first : ChunkRows;
 	uint64_t columns = placing->fours || tensor->isNibbles ? 2 * tensor->width : tensor->width;
 	unsigned char* buffer = malloc(count * rowBytes + 1);
 	float* floats = placing->isStored ? 0 : malloc(columns * sizeof(float) + 1);
@@ -477,7 +478,7 @@ static const char* Placed(double path, const Tensor* tensor, unsigned char* data
 	if (IsRemote(strict_text(path)))
 	{
 		uint64_t start = DataStart(strict_text(path)), rowBytes = tensor->width * tensor->bytes;
-		uint64_t slab = (67108864 / (rowBytes * ChunkRows) + 1) * ChunkRows;
+		uint64_t slab = 67108864 / rowBytes > 1 ? 67108864 / rowBytes : 1;
 		unsigned char* read = start ? malloc(slab * rowBytes + 1) : 0;
 		Placing placing = { 0, tensor, 0, data, stride, bits, isStored, scales, fours };
 		placing.read = read;
@@ -486,6 +487,7 @@ static const char* Placed(double path, const Tensor* tensor, unsigned char* data
 		{
 			uint64_t count = tensor->height - first < slab ? tensor->height - first : slab;
 			placing.first = first;
+			placing.last = first + count;
 			if (strict_webfile_read(strict_text(path), (double)(start + tensor->start + first * rowBytes),
 				(double)(count * rowBytes), read))
 				Parallel(PlacedChunk, &placing, (count + ChunkRows - 1) / ChunkRows);
