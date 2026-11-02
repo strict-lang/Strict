@@ -392,21 +392,27 @@ addToLibrary({
 		strictWebGpu.views.push({ first: address >>> 0, last: (address >>> 0) + count * 64, handle, stride, nibbles }),
 	// the rows whose view addresses are at views as a kept WebGPU buffer, its handle and the stride in words and nibbles
 	// flag at shape, 0 when a row is in no buffer or rows differ: all rows of one block in order borrow its buffer (given
-	// back without destroying it), rows joined from several matrices are copied into a new one on the GPU
+	// back without destroying it), rows joined from several matrices are copied into a new one on the GPU, one copy per
+	// run of rows that follow each other in one block (Moss's query, key and value rows took 1.5 s row by row)
 	strict_webgpu_gathered__deps: ['$strictWebGpu'],
 	strict_webgpu_gathered: (views, count, shape) => {
-		const device = strictWebGpu.device, rows = [];
+		const device = strictWebGpu.device, runs = [];
+		let block = null;
 		for (let row = 0; row < count; row++) {
 			const address = HEAPU32[(views >>> 2) + row];
-			const block = strictWebGpu.views.findLast((placed) => address >= placed.first && address < placed.last);
-			const first = rows.length ? rows[0].block : block;
+			if (!block || address < block.first || address >= block.last)
+				block = strictWebGpu.views.findLast((placed) => address >= placed.first && address < placed.last);
+			const first = runs.length ? runs[0].block : block, last = runs[runs.length - 1];
 			if (!device || !block || block.stride !== first.stride || block.nibbles !== first.nibbles)
 				return 0;
-			rows.push({ block, row: (address - block.first) / 64 });
+			const index = (address - block.first) / 64;
+			if (last && last.block === block && last.row + last.count === index)
+				last.count++;
+			else
+				runs.push({ block, row: index, at: row, count: 1 });
 		}
-		const stride = rows[0].block.stride, source = rows[0].block;
-		const isWhole = count === (source.last - source.first) / 64 && rows.every(({ block, row }, at) => block === source &&
-			row === at);
+		const stride = runs[0].block.stride, source = runs[0].block;
+		const isWhole = runs.length === 1 && runs[0].row === 0 && count === (source.last - source.first) / 64;
 		const handle = strictWebGpu.next++;
 		if (isWhole) {
 			strictWebGpu.buffers[handle] = strictWebGpu.buffers[source.handle];
@@ -414,8 +420,8 @@ addToLibrary({
 		} else {
 			const joined = device.createBuffer({ size: count * stride, usage: 128 | 8 | 4 });
 			const encoder = device.createCommandEncoder();
-			rows.forEach(({ block, row }, at) => encoder.copyBufferToBuffer(strictWebGpu.buffers[block.handle], row * stride,
-				joined, at * stride, stride));
+			runs.forEach((run) => encoder.copyBufferToBuffer(strictWebGpu.buffers[run.block.handle], run.row * stride, joined,
+				run.at * stride, run.count * stride));
 			device.queue.submit([encoder.finish()]);
 			strictWebGpu.buffers[handle] = joined;
 			strictWebGpu.grown += joined.size;
@@ -423,7 +429,7 @@ addToLibrary({
 		strictWebGpu.failures[handle] = device.createBuffer({ size: 4, usage: 128 | 8 | 4 });
 		strictWebGpu.uploads[handle] = count * stride / 4;
 		HEAP32[shape >>> 2] = stride / 4;
-		HEAP32[(shape >>> 2) + 1] = rows[0].block.nibbles;
+		HEAP32[(shape >>> 2) + 1] = source.nibbles;
 		return handle;
 	},
 	strict_webgpu_release__deps: ['$strictWebGpu'],
