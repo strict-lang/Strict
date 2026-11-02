@@ -1,6 +1,6 @@
 @echo off
 rem Builds NativeCompiler.exe from Bootstrap.mlir without any Strict binary and with it strict.exe in the Strict folder,
-rem needs mlir-opt, mlir-translate and clang
+rem needs mlir-opt, mlir-translate and clang; the seed has no GPU code, so its compiler runs on the CPU
 setlocal
 cd /d "%~dp0"
 set "PATH=%PATH%;C:\msys64\ucrt64\bin;C:\Program Files\LLVM\bin"
@@ -10,5 +10,6 @@ mlir-opt NativeCompiler.mlir %PASSES% -o NativeCompiler.llvm.mlir || exit /b 1
 mlir-translate --mlir-to-llvmir NativeCompiler.llvm.mlir -o NativeCompiler.ll || exit /b 1
 clang NativeCompiler.ll -o NativeCompiler.exe -O2 -march=native -Wno-override-module -Wl,-Brepro -Wl,/STACK:67108864 || exit /b 1
 cd ..
+set "STRICT_GPU=0"
 Compiler\NativeCompiler.exe build Strict.strict . || exit /b 1
 echo Built %~dp0NativeCompiler.exe and %~dp0..\strict.exe

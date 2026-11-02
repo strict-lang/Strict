@@ -16,12 +16,12 @@ Inverse(coefficients Numbers) Numbers
 Rows(values Numbers) Numbers
 	Idct.Rows(Flat).Last is 0
 	Idct.Rows(Flat).First is 2.828427124746192
-	for 64
-		Dot(values, (index / 8).Floor * 8, 1, index % 8)
+	for y, x in 8, 8
+		Dot(values, y * 8, 1, x)
 Columns(values Numbers) Numbers
 	Idct.Columns(Flat).First is 2.828427124746192
-	for 64
-		Dot(values, index % 8, 8, (index / 8).Floor)
+	for y, x in 8, 8
+		Dot(values, x, 8, y)
 Dot(values Numbers, start Number, stride Number, position Number) Number
 	Idct.Dot(Flat, 0, 1, 7) is 2.828427124746192
 	mutable sum = 0

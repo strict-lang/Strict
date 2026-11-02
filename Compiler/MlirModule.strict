@@ -102,12 +102,11 @@ Reachable(known List(MlirFunction), fresh List(MlirFunction)) List(MlirFunction)
 	Counters.Reachable(Counters.Functions, Counters.Functions).Length is 1
 	mutable symbols = Symbols(known)
 	mutable found = List(Mutable(MlirFunction))
-	for fresh
-		for Callees(value)
-			let symbol = value.Symbol
-			if symbol is not in symbols
-				found.Add(value)
-				symbols = symbols + symbol
+	for function, callee in fresh, Callees(function)
+		let symbol = callee.Symbol
+		if symbol is not in symbols
+			found.Add(callee)
+			symbols = symbols + symbol
 	found.Length is 0 then known else Reachable(known + found, found)
 Symbols(functions List(MlirFunction)) Texts
 	Counters.Symbols(Counters.Functions) is ("Counter_Run_0")

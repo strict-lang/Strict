@@ -23,10 +23,9 @@ Natives(path Text, root Text, types List(TypeEntry)) Slow(Texts)
 	NativeFolder(Logger).Natives("Examples", ".", List(TypeEntry) + Foreign.Adder) is ("Examples/NativeAdd/native")
 	let paths = Paths(path)
 	mutable folders = List(Mutable(Text))
-	for paths
-		for NativeBuild(logger).Natives(value, root, types)
-			if value is not in folders
-				folders.Add(value)
+	for folder, native in paths, NativeBuild(logger).Natives(folder, root, types)
+		if native is not in folders
+			folders.Add(native)
 	folders
 IsNative(type TypeEntry, types List(TypeEntry)) Boolean
 	NativeFolder.IsNative(Foreign.Adder, List(TypeEntry) + Foreign.Adder)

@@ -50,10 +50,9 @@ Members(input Number) Texts
 	let isSelf = input >= function.method.parameters.Length
 	let name = isSelf then "" else function.method.parameters(input).Name
 	mutable names = List(Mutable(Text))
-	for function.method.instructions
-		for Used(index, name, isSelf)
-			if value is not in names
-				names.Add(value)
+	for position, member in function.method.instructions.Length, Used(position, name, isSelf)
+		if member is not in names
+			names.Add(member)
 	names
 Used(at Number, name Text, isSelf Boolean) Texts
 	Sized.Used(1, "grid", false) is ("cells")

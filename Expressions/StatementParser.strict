@@ -1,6 +1,10 @@
 has tokens Texts
 constant ForProblem = "ForWithBodyOnlyAsMethodResult: "
 constant ForHint = ", a for with a body can only be the last line of a method, move it into one"
+constant SingleHint = ", a single iterator is value: for list instead of for x in list"
+constant MatchHint = ", name each iterator once: for y, x in Height, Width or for width, height in sizes"
+constant Mismatched = StatementParser(Tokenizer("for a, b, c in x, y").Tokens)
+constant Unlisted = StatementParser(Tokenizer("for a, b in").Tokens)
 Syntax SyntaxParser
 	StatementParser("a", "b").Syntax.tokens.Length is 2
 	SyntaxParser(tokens)
@@ -20,6 +24,7 @@ ParseStatement SyntaxNode
 Keyword(first Text) SyntaxNode
 	StatementParser(Tokenizer("for as long as a").Tokens).Keyword("for").text is "for as long as"
 	StatementParser("return").Keyword("return").Kind is "Return"
+	StatementParser(Tokenizer("for y, x in Range(0, 2), 3").Tokens).Keyword("for") to Text is "for y, x in Range(0, 2), 3"
 	if first is "else"
 		return ParseElse
 	if tokens.Length is 1
@@ -27,7 +32,59 @@ Keyword(first Text) SyntaxNode
 	let isWhile = (first is "for") and (tokens.Length > 4) and (tokens(1) is "as") and (tokens(3) is "as")
 	if isWhile and (tokens(2) is "long")
 		return SyntaxNode("For", "for as long as", Rest(4))
-	SyntaxNode(first.Capitalize, "", Rest(1))
+	(first is "for") and IsNamed then Named else SyntaxNode(first.Capitalize, "", Rest(1))
+IsNamed Boolean
+	StatementParser(Tokenizer("for y, x in 2, 3").Tokens).IsNamed
+	StatementParser(Tokenizer("for x in list").Tokens).IsNamed
+	StatementParser(Tokenizer("for list").Tokens).IsNamed is false
+	StatementParser(Tokenizer("for a, b").Tokens).IsNamed is false
+	(tokens.Length > 3) and (tokens(0) is "for") and (tokens(2) is in (",", "in")) and ("in" is in tokens)
+Named SyntaxNode
+	StatementParser(Tokenizer("for y, x in Range(0, 2), 3").Tokens).Named.children.Length is 2
+	StatementParser(Tokenizer("for a, b in ((1, 2), (3, 4))").Tokens).Named.children.Length is 1
+	StatementParser(Tokenizer("for x in list").Tokens).Named to Text is "SingleIteratorMustNotBeNamed: x" + SingleHint
+	Mismatched.Named to Text is "IteratorNamesMustMatchIterators: a, b, c" + MatchHint
+	let iterables = Parts(tokens.Index("in") + 1, tokens.Length)
+	let problem = NamedProblem(iterables.Length)
+	if problem is not ""
+		return SyntaxNode("Invalid", problem)
+	SyntaxNode("For", "for " + Text.Combine(IteratorNames) + " in", iterables)
+NamedProblem(count Number) Text
+	Mismatched.NamedProblem(2) is "IteratorNamesMustMatchIterators: a, b, c" + MatchHint
+	Unlisted.NamedProblem(0) is "IteratorNamesMustMatchIterators: a, b" + MatchHint
+	StatementParser(Tokenizer("for 1, b in x").Tokens).NamedProblem(1) is "IteratorNameMustStartLowercase: 1"
+	StatementParser(Tokenizer("for a, b in x").Tokens).NamedProblem(1) is ""
+	if IteratorNames.Length < 2
+		return "SingleIteratorMustNotBeNamed: " + Text.Combine(IteratorNames) + SingleHint
+	if Unnamed is not ""
+		return "IteratorNameMustStartLowercase: " + Unnamed
+	let mismatch = "IteratorNamesMustMatchIterators: " + Text.Combine(IteratorNames) + MatchHint
+	(count is 1) or (count is IteratorNames.Length) then "" else mismatch
+Unnamed Text
+	StatementParser(Tokenizer("for a, B in x").Tokens).Unnamed is "B"
+	StatementParser(Tokenizer("for a, (b) in x").Tokens).Unnamed is "("
+	StatementParser(Tokenizer("for a, b in x").Tokens).Unnamed is ""
+	for IteratorNames
+		let first = value.Substring(0, 1)
+		if (first.Lower is not first) or (first.Upper is first)
+			return value
+	""
+IteratorNames Texts
+	StatementParser(Tokenizer("for y, x in 2, 3").Tokens).IteratorNames is ("y", "x")
+	StatementParser(Tokenizer("for y, x in").Tokens).IteratorNames is ("y", "x")
+	tokens.Slice(1, tokens.Index("in") - 1) - ","
+Parts(start Number, end Number) SyntaxNodes
+	StatementParser(Tokenizer("for y, x in Range(0, 2), 3").Tokens).Parts(5, 13).Last to Text is "3"
+	StatementParser(Tokenizer("f(a, b = (1, 2))").Tokens).Parts(2, 12).Length is 2
+	mutable parts = List(Mutable(SyntaxNode))
+	mutable segment = start
+	mutable depth = 0
+	for Range(start, end)
+		depth = depth + Syntax.BracketDelta(tokens(value))
+		if ((depth is 0) and (tokens(value) is ",")) or (depth < 0)
+			parts.Add(Syntax.ParseRange(segment, value))
+			segment = value + 1
+	segment < end then parts + Syntax.ParseRange(segment, end) else parts
 Rest(start Number) SyntaxNodes
 	StatementParser("return", "1").Rest(1).Length is 1
 	Syntax.Single(Syntax.ParseRange(start, tokens.Length))
@@ -51,15 +108,7 @@ ParseAssignmentOrExpression SyntaxNode
 	SyntaxNode("Reassignment", "", (Syntax.ParseRange(0, assignment), assigned))
 Signature(assignment Number) SyntaxNode
 	StatementParser(Tokenizer("f(a, b = (1, 2)) = a").Tokens).Signature(12) to Text is "f(a, b = (1, 2))"
-	mutable parameters = List(Mutable(SyntaxNode))
-	mutable start = 2
-	mutable depth = 0
-	for Range(2, assignment)
-		depth = depth + Syntax.BracketDelta(tokens(value))
-		if ((depth is 0) and (tokens(value) is ",")) or (depth < 0)
-			parameters.Add(Syntax.ParseRange(start, value))
-			start = value + 1
-	SyntaxNode("Call", tokens(0), parameters)
+	SyntaxNode("Call", tokens(0), Parts(2, assignment))
 AssignmentIndex Number
 	StatementParser("a", "=", "1").AssignmentIndex is 1
 	StatementParser("f", "(", "a", ")").AssignmentIndex is -1
@@ -72,6 +121,10 @@ AssignmentIndex Number
 	assignment
 Problem(line Text) Text
 	StatementParser.Problem("constant Help = (\"first") is "TextMustEndOnItsLine: constant Help = (\"first"
+	StatementParser.Problem("for x in list") is "SingleIteratorMustNotBeNamed: x" + SingleHint
 	if line.IndexOf(" = for ") > 0
 		return ForProblem + line + ForHint
+	let statement = StatementParser(Tokenizer(line).Tokens).ParseStatement
+	if statement.Kind is "Invalid"
+		return statement.text
 	(Tokenizer(line).HasOpenText then "TextMustEndOnItsLine: " else "ParsingFailed: ") + line

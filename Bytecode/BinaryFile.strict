@@ -66,10 +66,9 @@ Data(path Text, ignored Texts = List(Text)) Slow(Texts)
 	Probe.Data("Compiler/NativeBuild.strict") is ("Compiler/NativeRuntime.mlir")
 	Probe.Data("NeuralNetworks/Dataset.strict").Length is 2
 	mutable files = List(Mutable(Text))
-	for DataFiles.References(path).Unique
-		for Found(value, ignored)
-			if (value is not in files) and (value.EndsWith(".strict") is false)
-				files.Add(value)
+	for reference, found in DataFiles.References(path).Unique, Found(reference, ignored)
+		if (found is not in files) and (found.EndsWith(".strict") is false)
+			files.Add(found)
 	files
 Found(name Text, ignored Texts = List(Text)) Texts
 	Probe.Found("Compiler/NativeRuntime.mlir") is List(Text) + "Compiler/NativeRuntime.mlir"

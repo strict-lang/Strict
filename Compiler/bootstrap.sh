@@ -1,5 +1,6 @@
 #!/bin/sh
 # Builds NativeCompiler from Bootstrap.mlir without any Strict binary and with it strict in the Strict folder, needs mlir-opt, mlir-translate and clang
+# The seed has no GPU code, so its compiler runs on the CPU
 set -e
 cd "$(dirname "$0")"
 platform=Linux
@@ -14,5 +15,5 @@ mlir-opt NativeCompiler.$platform.mlir $passes -o NativeCompiler.$platform.llvm.
 mlir-translate --mlir-to-llvmir NativeCompiler.$platform.llvm.mlir -o NativeCompiler.$platform.ll
 clang NativeCompiler.$platform.ll -o NativeCompiler -O2 -march=native -Wno-override-module $linked
 cd ..
-./Compiler/NativeCompiler build Strict.strict .
+STRICT_GPU=0 ./Compiler/NativeCompiler build Strict.strict .
 echo "Built $(pwd)/Compiler/NativeCompiler and $(pwd)/strict"

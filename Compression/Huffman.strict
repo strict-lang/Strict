@@ -14,10 +14,9 @@ Sorted(lengths Numbers) Numbers
 	Sample.Sorted((2, 1, 3, 3)) is (1, 0, 2, 3)
 	Sample.Sorted((0, 2, 0, 1)) is (3, 1)
 	mutable sorted = List(Mutable(Number))
-	for Range(1, 16)
-		for lengths
-			if value is outer
-				sorted.Add(index)
+	for length, symbolLength in Range(1, 16), lengths
+		if symbolLength is length
+			sorted.Add(index)
 	sorted
 Decoded(stream Inflate, position Number) Symbol
 	Sample.Decoded(Inflate(List(Number) + 6), 1) is Symbol(2, 3)
