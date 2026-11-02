@@ -23,13 +23,14 @@ Summed(other Numbers) BFloat16s
 	Square.Summed((1, 1, 1, 1)) is (2, 3, 4, 5)
 	for values
 		value + other(index)
-Applied(affine Numbers, swish Boolean) FeatureMap
-	FeatureMap((1, 2), 1, 2, (0, 0)).Applied((2, 1, 0.5, 0), false) is FeatureMap((2.5, 2), 1, 2, (0, 0))
-	FeatureMap(Activations(affine, swish), width, channels, Layer.Zeros(channels))
-Activations(affine Numbers, swish Boolean) Numbers
-	Square.Activations((2, 1), true)(1).IsNearlyEqual(4.96653575)
+Applied(affine Numbers, activation Activation) FeatureMap
+	FeatureMap((1, 2), 1, 2, (0, 0)).Applied((2, 1, 0.5, 0), Activation.Linear) is FeatureMap((2.5, 2), 1, 2, (0, 0))
+	FeatureMap(Activations(affine, activation.kind), width, channels, Layer.Zeros(channels))
+Activations(affine Numbers, activation Number) Numbers
+	Square.Activations((2, 1), Activation.Swish.kind)(1).IsNearlyEqual(4.96653575)
+	Square.Activations((1, -2), Activation.Relu.kind) is (0, 0, 1, 2)
 	for values
-		Activated(value, affine(index % channels), affine(channels + index % channels), swish)
+		Activation(activation).Output(value * affine(index % channels) + affine(channels + index % channels))
 Completed Numbers
 	FeatureMap((1, 2, 3, 4), 1, 2, (1, -1)).Completed is (2, 1, 4, 3)
 	for values
