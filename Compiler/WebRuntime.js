@@ -364,11 +364,41 @@ addToLibrary({
 	})),
 	// the 16 MB blocks of files read with HTTP range requests (TensorFile reading a file that is not in the package),
 	// the last 48 are kept until 5 s after the last read (fewer had Moss fetch a third of its file twice), with the
-	// total size of each file from its first answer and the last block read of it
-	$strictWebFile: { blocks: new Map(), sizes: {}, lasts: {}, timer: 0 },
+	// total size of each file from its first answer, the last block read of it and the bytes downloaded of it
+	$strictWebFile: { blocks: new Map(), sizes: {}, lasts: {}, read: {}, folders: {}, timer: 0, writer: null },
+	// the folder in the origin private file system keeping the downloaded blocks of the file at source (one file per
+	// block and its size), null without one
+	$strictWebFileFolder__deps: ['$strictWebFile'],
+	$strictWebFileFolder: (source) => strictWebFile.folders[source] ||= (async () => {
+		const root = await navigator['storage']['getDirectory']();
+		const files = await root['getDirectoryHandle']('strict-files', { 'create': true });
+		return await files['getDirectoryHandle'](encodeURIComponent(source), { 'create': true });
+	})().catch(() => null),
+	// the bytes of the file name in folder, null when it is not there
+	$strictWebFileStored: async (folder, name) => {
+		const handle = await folder['getFileHandle'](name).catch(() => null);
+		return handle && new Uint8Array(await (await handle['getFile']())['arrayBuffer']());
+	},
+	// writes a copy of bytes as the file name in the folder of source, in a worker with a synchronous access handle
+	// (writing from the page, which copies through a swap file, made the first load of Moss 20 instead of 6 s)
+	$strictWebFileStore__deps: ['$strictWebFile'],
+	$strictWebFileStore: (source, name, bytes) => {
+		const writing = 'onmessage = async (event) => { try { const [folderName, name, bytes] = event.data; ' +
+			'let folder = await (await navigator.storage.getDirectory()).getDirectoryHandle("strict-files", { create: true }); ' +
+			'folder = await folder.getDirectoryHandle(folderName, { create: true }); ' +
+			'const handle = await (await folder.getFileHandle(name, { create: true })).createSyncAccessHandle(); ' +
+			'handle.truncate(0); handle.write(bytes, { at: 0 }); handle.flush(); handle.close(); } catch {} };';
+		strictWebFile.writer ||= new Worker(URL.createObjectURL(new Blob([writing], { type: 'text/javascript' })));
+		const copy = bytes.slice();
+		strictWebFile.writer.postMessage([encodeURIComponent(source), name, copy], [copy.buffer]);
+	},
 	// the promise of the bytes of block index of the file at url, rejected when the server does not answer a range; a
-	// request failing on the way is sent up to 3 times (bursts of parallel requests failed now and then)
-	$strictWebFileBlock__deps: ['$strictWebFile'],
+	// request failing on the way is sent up to 3 times (bursts of parallel requests failed now and then); a file name
+	// the page maps to a URL in Module.strictFiles ({ 'taef2.safetensors': 'https://huggingface.co/...' }) is read from
+	// there, its blocks are kept in the origin private file system and read from it on the next visit (one of another
+	// length than the file size says is read again), every block
+	// downloaded prints "Downloading name: 16 of 98 MB" (bytes read so far, kept ones too) for the page's progress bar
+	$strictWebFileBlock__deps: ['$strictWebFile', '$strictWebFileFolder', '$strictWebFileStored', '$strictWebFileStore'],
 	$strictWebFileBlock: (url, index) => {
 		const cache = strictWebFile, key = url + ' ' + index;
 		let block = cache.blocks.get(key);
@@ -376,12 +406,33 @@ addToLibrary({
 			cache.blocks.delete(key);
 		else {
 			block = (async () => {
+				const mapped = (Module['strictFiles'] || {})[url], source = mapped || url;
+				const folder = mapped && await strictWebFileFolder(source);
+				const stored = folder && await strictWebFileStored(folder, String(index)).catch(() => null);
+				const size = stored && !cache.sizes[url] && await strictWebFileStored(folder, 'size').catch(() => null);
+				const total = cache.sizes[url] || (size ? Number(new TextDecoder().decode(size)) : 0);
+				if (stored && stored.length === Math.min(16777216, total - index * 16777216)) {
+					cache.sizes[url] ||= total;
+					(cache.read[url] ||= new Map()).set(index, stored.length);
+					return stored;
+				}
 				const first = index * 16777216, range = { headers: { Range: 'bytes=' + first + '-' + (first + 16777215) } };
-				const response = await fetch(url, range).catch(() => fetch(url, range)).catch(() => fetch(url, range));
+				const response = await fetch(source, range).catch(() => fetch(source, range)).catch(() => fetch(source, range));
 				if (response.status !== 206)
-					throw url + ' answered ' + response.status + ' to a range request';
+					throw source + ' answered ' + response.status + ' to a range request';
 				cache.sizes[url] = Number((response.headers.get('Content-Range') || '').split('/')[1]) || cache.sizes[url];
-				return new Uint8Array(await response.arrayBuffer());
+				const bytes = new Uint8Array(await response.arrayBuffer());
+				if (folder && !cache.read[url])
+					strictWebFileStore(source, 'size', new TextEncoder().encode(String(cache.sizes[url])));
+				if (folder)
+					strictWebFileStore(source, String(index), bytes);
+				if (mapped) {
+					const read = (cache.read[url] ||= new Map()).set(index, bytes.length);
+					const got = [...read.values()].reduce((sum, length) => sum + length, 0);
+					out('Downloading ' + url + ': ' + Math.round(got / 1048576) + ' of ' +
+						Math.round(cache.sizes[url] / 1048576) + ' MB');
+				}
+				return bytes;
 			})();
 			block.catch(() => cache.blocks.delete(key));
 			if (cache.blocks.size >= 48)
