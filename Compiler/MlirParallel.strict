@@ -71,7 +71,7 @@ Filler Text
 	let isPlain = (kind is "List(Number)") or MlirBytes(function, position).IsCollected
 	isPlain then "strict_list_filled_numbers" else "strict_list_filled"
 Joined Texts
-	Doubling.Joined.Last is "    cf.br ^loop2exit"
+	Doubling.Joined.Slice(Doubling.Joined.Length - 2, 2) is (Doubling.Released, "    cf.br ^loop2exit")
 	let child = MlirWholeChild(function, position)
 	let symbol = child.IsWhole then child.Symbol else function.Symbol + "_loop" + position
 	let body = "    " + Temp("pf") + " = func.constant @" + symbol + " : " + Shape
@@ -81,8 +81,11 @@ Joined Texts
 	let label = "  ^loop" + position
 	let returned = (label + "failed:", "    return " + Temp("pr") + " : f64", label + "filled:")
 	let called = (List(Text) + body) + MlirKernelLaunch(function, position).Ran(operands) + (failed, branch)
-	let filled = MlirFiltering(function, position).Filled(Filler)
+	let filled = MlirFiltering(function, position).Filled(Filler) + Released
 	called + returned + function.Load(Temp("pl"), "%v_forResult") + filled + ("    cf.br ^loop" + position + "exit")
+Released Text
+	Doubling.Released is "    func.call @strict_rc_unobject(%t2pc, %t2ps) : (!llvm.ptr, i64) -> ()"
+	MlirMemory.Counted.Replace("_object(%p, %z)", "_unobject(" + Temp("pc") + ", " + Temp("ps") + ")")
 Outlined Texts
 	Doubling.Outlined.First is "  func.func private @Rows_Doubled_1_loop2" + Signature
 	Randomizing.Outlined.Length is 0

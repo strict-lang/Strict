@@ -3830,6 +3830,18 @@
     func.call @strict_rc_pins(%object, %bytes) : (!llvm.ptr, i64) -> ()
     return
   }
+  // a dead object counted by strict_rc_object (the context of a parallel loop, MlirParallel) gives its counts back:
+  // the list a parallel loop filled kept a count of 1 from it and was never freed as the dying old value of a local
+  func.func private @strict_rc_unobject(%object: !llvm.ptr, %bytes: i64) {
+    %busy = func.call @strict_rc_busy() : () -> i1
+    cf.cond_br %busy, ^done, ^released
+  ^released:
+    %address = llvm.ptrtoint %object : !llvm.ptr to i64
+    func.call @strict_rc_release(%address, %bytes) : (i64, i64) -> ()
+    return
+  ^done:
+    return
+  }
   func.func private @strict_rc_object_now(%object: !llvm.ptr, %bytes: i64) {
     %container = llvm.ptrtoint %object : !llvm.ptr to i64
     func.call @strict_rc_range(%object, %bytes, %container) : (!llvm.ptr, i64, i64) -> ()
@@ -4254,7 +4266,10 @@
     cf.cond_br %isSame, ^done, ^check
   ^check:
     %unshared = func.call @strict_rc_unshared(%old) : (f64) -> i1
-    cf.cond_br %unshared, ^dispose, ^done
+    cf.cond_br %unshared, ^dispose, ^large
+  ^large:
+    func.call @strict_rc_dead_large(%object, %kept) : (i64, i64) -> ()
+    cf.br ^done
   ^dispose:
     %located:5 = func.call @strict_gc_locate(%object) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
     %counter = func.call @strict_rc_counter(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
@@ -4265,6 +4280,65 @@
     return
   }
 
+  // a dying old value in one large block (a long list) no heap object counts, not entered, pinned, shared or on the
+  // GPU gives its pages back at once: copies of it left in dead locals and stack slots then find no object (on the web
+  // Asyncify saves every local with whatever it held last, they kept replaced lists alive); not when the new value
+  // or its holder is in the block (a destined loop refilled it, strict_list_into)
+  func.func private @strict_rc_dead_large(%object: i64, %new: i64) {
+    %zero = arith.constant 0 : i64
+    %zeroCount = arith.constant 0 : i32
+    %noFlags = arith.constant 0 : i8
+    %heldFlags = arith.constant -16 : i8
+    %holdsFlag = arith.constant 4 : i8
+    %headerBytes = arith.constant 64 : i64
+    %enabledSlot = llvm.mlir.addressof @strict_rc_enabled : !llvm.ptr
+    %enabled = llvm.load %enabledSlot : !llvm.ptr -> i64
+    %isEnabled = arith.cmpi ne, %enabled, %zero : i64
+    cf.cond_br %isEnabled, ^locate, ^done
+  ^locate:
+    %located:5 = func.call @strict_gc_locate(%object) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %isStart = arith.cmpi eq, %located#1, %object : i64
+    %isLargeStart = arith.andi %located#3, %isStart : i1
+    cf.cond_br %isLargeStart, ^outside, ^done
+  ^outside:
+    %end = arith.addi %object, %located#2 : i64
+    %hasNew = arith.cmpi ne, %new, %zero : i64
+    cf.cond_br %hasNew, ^holder, ^counted
+  ^holder:
+    %newPointer = llvm.inttoptr %new : i64 to !llvm.ptr
+    %holderSlot = llvm.getelementptr %newPointer[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %holderBits = llvm.load %holderSlot : !llvm.ptr -> i64
+    %address = arith.constant 281474976710655 : i64
+    %holder = arith.andi %holderBits, %address : i64
+    %newInside = func.call @strict_gc_within(%new, %object, %end) : (i64, i64, i64) -> i1
+    %holderInside = func.call @strict_gc_within(%holder, %object, %end) : (i64, i64, i64) -> i1
+    %isReused = arith.ori %newInside, %holderInside : i1
+    cf.cond_br %isReused, ^done, ^counted
+  ^counted:
+    %counter = func.call @strict_rc_counter(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %count = llvm.load %counter : !llvm.ptr -> i32
+    %flags = func.call @strict_rc_flags(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %flagByte = llvm.load %flags : !llvm.ptr -> i8
+    %held = arith.andi %flagByte, %heldFlags : i8
+    %isCounted = arith.cmpi ne, %count, %zeroCount : i32
+    %isHeld = arith.cmpi ne, %held, %noFlags : i8
+    %kept = arith.ori %isCounted, %isHeld : i1
+    cf.cond_br %kept, ^done, ^references
+  ^references:
+    %holds = arith.andi %flagByte, %holdsFlag : i8
+    %hasReferences = arith.cmpi ne, %holds, %noFlags : i8
+    cf.cond_br %hasReferences, ^release, ^free
+  ^release:
+    func.call @strict_rc_release(%object, %located#2) : (i64, i64) -> ()
+    cf.br ^free
+  ^free:
+    func.call @strict_rc_forget_device(%object) : (i64) -> ()
+    %header = arith.subi %object, %headerBytes : i64
+    func.call @strict_gc_free_large(%header) : (i64) -> ()
+    cf.br ^done
+  ^done:
+    return
+  }
   // true for a small object no heap object counts, not pinned, not free and not on the GPU: a local proven to be
   // its only holder (MlirOwned) may free it or write into it
   func.func private @strict_rc_unshared(%value: f64) -> i1 {
@@ -5377,6 +5451,18 @@
   ^free:
     %following = llvm.load %nextSlot : !llvm.ptr -> i64
     llvm.store %following, %link : i64, !llvm.ptr
+    func.call @strict_gc_large_freed(%current) : (i64) -> ()
+    cf.br ^visit(%link : !llvm.ptr)
+  ^done:
+    return
+  }
+  // the pages of the large object at header, already out of the list of large objects, become a free run: words
+  // still pointing into them find no object
+  func.func private @strict_gc_large_freed(%header: i64) {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %pageSize = arith.constant 65536 : i64
+    %headerPointer = llvm.inttoptr %header : i64 to !llvm.ptr
     %pagesSlot = llvm.getelementptr %headerPointer[1] : (!llvm.ptr) -> !llvm.ptr, i64
     %pages = llvm.load %pagesSlot : !llvm.ptr -> i64
     cf.br ^release(%zero : i64)
@@ -5385,13 +5471,39 @@
     cf.cond_br %more, ^releaseOne, ^freed
   ^releaseOne:
     %pageOffset = arith.muli %index, %pageSize : i64
-    %pageAddress = arith.addi %current, %pageOffset : i64
+    %pageAddress = arith.addi %header, %pageOffset : i64
     func.call @strict_gc_page_kind(%pageAddress, %zero) : (i64, i64) -> ()
     %nextIndex = arith.addi %index, %one : i64
     cf.br ^release(%nextIndex : i64)
   ^freed:
-    func.call @strict_gc_free_run(%current, %pages) : (i64, i64) -> ()
-    cf.br ^visit(%link : !llvm.ptr)
+    func.call @strict_gc_free_run(%header, %pages) : (i64, i64) -> ()
+    return
+  }
+  func.func private @strict_gc_within(%address: i64, %start: i64, %end: i64) -> i1 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %above = arith.cmpi uge, %address, %start : i64
+    %below = arith.cmpi ult, %address, %end : i64
+    %within = arith.andi %above, %below : i1
+    return %within : i1
+  }
+  // the large object at header leaves the list of large objects and gives its pages back now
+  func.func private @strict_gc_free_large(%header: i64) {
+    %zero = arith.constant 0 : i64
+    %largeSlot = llvm.mlir.addressof @strict_gc_large : !llvm.ptr
+    cf.br ^visit(%largeSlot : !llvm.ptr)
+  ^visit(%link: !llvm.ptr):
+    %current = llvm.load %link : !llvm.ptr -> i64
+    %end = arith.cmpi eq, %current, %zero : i64
+    cf.cond_br %end, ^done, ^check
+  ^check:
+    %headerPointer = llvm.inttoptr %current : i64 to !llvm.ptr
+    %nextSlot = llvm.getelementptr %headerPointer[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %isTarget = arith.cmpi eq, %current, %header : i64
+    cf.cond_br %isTarget, ^free, ^visit(%nextSlot : !llvm.ptr)
+  ^free:
+    %following = llvm.load %nextSlot : !llvm.ptr -> i64
+    llvm.store %following, %link : i64, !llvm.ptr
+    func.call @strict_gc_large_freed(%current) : (i64) -> ()
+    return
   ^done:
     return
   }
