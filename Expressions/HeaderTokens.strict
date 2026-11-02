@@ -2,6 +2,7 @@ has tokens Texts
 DeclaredType(nameIndex Number) Text
 	HeaderTokens("has", "texts").DeclaredType(1) is "Texts"
 	HeaderTokens("has", "count", "=", "0").DeclaredType(1) is "Number"
+	HeaderTokens(Tokenizer("has numbers = List(Number)").Tokens).DeclaredType(1) is "Numbers"
 	HeaderTokens("has", "ops", "Bytecode", "/", "InstructionList").DeclaredType(1) is "InstructionList"
 	let next = nameIndex + 1
 	if next < tokens.Length and (tokens(next) is "/")
@@ -27,7 +28,7 @@ ValueType(start Number) Text
 	if first is "("
 		return ValueType(start + 1) + "s"
 	let kind = first is "-" then "Number" else SyntaxParser(tokens).Leaf(first).Kind
-	kind is "Identifier" then first else kind
+	kind is "Identifier" then (first is in ("List", "Dictionary") then TypeName(start) else first) else kind
 MemberName Text
 	HeaderTokens("has", "Math", "/", "Size").MemberName is "Size"
 	HeaderTokens("has", "count", "Number").MemberName is "count"

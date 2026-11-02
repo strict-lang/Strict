@@ -8,6 +8,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - `Validators/verify-suggestions.py` fails at its recursive dispatcher case: `strict suggest Wrapper.strict` prints the TestDurationMustNotExceedHundredMilliseconds failure of `Wrapper(Dispatcher(1)).Clamped` instead of nothing.
 - `let outer = Iterated(lines(at))` in a method without a loop compiles, but every later `outer` reads the instance (a type of one member: the member) instead of the variable; LoopNameMustNotBeDeclared only reports it in methods with a `for`.
 - A `Name.ptx` left next to an executable by a build from before obj/ (Strict.ptx next to strict.exe, ImageProcessing/BenchBlur.ptx) wins over the current obj/Name.ptx: the rebuilt program stops with "was built for another program or version"; skip or delete a stale sidecar instead.
+- `"abc".Reverse` gives `(", c, b, a, ")` on the VM (the code with its quotes reversed as a list), natively `undefined symbol: Text_Reverse`; it should give "cba" (or be rejected), a `for text` loop or `Text.Combine(characters.Reverse, "")` works (Ben).
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).
@@ -21,7 +22,9 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - Release builds: platform builds into Release/<Platform> are optimized without debug checks, logging or per-call checks (the web runtime already is), plain `strict build`, test executables and the VM keep them; native needs a release flag on `strict build` for local benchmarks.
 - Native symbols, register kinds and helpers use the short type name, so one executable cannot hold two packages' types of the same name: qualify the symbols of a type whose short name is taken.
 - Named iterators over counts (`for row, column in rows, width`) as one flat loop of rows * width with the names from the index (parallel, GPU kernel), then the `(index / n).Floor` and `index % n` loops of NeuralNetworks, Math/Matrix and the image decoders can name their iterators without losing their kernels.
+- Parallel dedup by key (Ben): a `for` that keeps the first element per computed key (Dictionary or distinct by key) in parallel; Ben's program search keeps 2 of 128 cores busy because its observational equivalence dedup is a sequential loop over a mutable Dictionary.
 
 ## Waiting
 - Later: Qwen3-Coder-Next 80B-A3B and Qwen3-Coder-30B with all experts, image blur on the GPU, Apple Silicon, AMD GPUs, batched training ideas.
+- Later for Ben's long-term memory: an embedded persistent key-value store (LMDB-like, memory mapped, hash keys to blobs) usable on the VM and natively, once skill and evidence files get too many.
 

@@ -14,8 +14,9 @@ Located(folder Text) Text
 	TypeSource(TypeEntry("Strict/Examples/Sum", List(MemberEntry), List(MethodEntry))).Located("") is "Examples/Sum.strict"
 	let open = entry.Source.IndexOf("(")
 	let file = open < 0 then entry.Source else entry.Source.Substring(0, open) + ".strict"
-	let local = (folder.StartsWith("./") then folder.Substring(2, folder.Length - 2) else folder) + "/" + file
-	if (folder is not "") and File(local).Exists
+	let relative = folder.StartsWith("./") then folder.Substring(2, folder.Length - 2) else folder
+	let local = folder is "" then file else relative + "/" + file
+	if File(local).Exists
 		return local
 	(Root is ".") or (File(Root + "/" + file).Exists is false) then file else Root + "/" + file
 Location(methodName Text) Text
