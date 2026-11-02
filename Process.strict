@@ -30,6 +30,9 @@ Wait(seconds Number)
 Elapsed Number
 	Process.Elapsed > 0
 	0
+MemoryUsed Number
+	Process.MemoryUsed > 1000000
+	0
 Executed Numbers
 	Process.Executed.Length is 5
 	Process.Executed(0) >= 1

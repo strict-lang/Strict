@@ -863,6 +863,41 @@
     %bytes = arith.maxsi %product, %zero : i64
     return %bytes : i64
   }
+  llvm.mlir.global internal constant @strict_statm_path("/proc/self/statm\00") : !llvm.array<17 x i8>
+  llvm.mlir.global internal constant @strict_statm_format("%*s %ld\00") : !llvm.array<8 x i8>
+  llvm.func @sscanf(!llvm.ptr, !llvm.ptr, ...) -> i32
+  // Process.MemoryUsed: the resident set, the second number of /proc/self/statm in pages, 0 when unknown
+  func.func private @strict_process_memoryused(%self: f64) -> f64 {
+    %zero = arith.constant 0 : i64
+    %zero32 = arith.constant 0 : i32
+    %one = arith.constant 1 : i64
+    %buffer = llvm.alloca %one x !llvm.array<64 x i8> : (i64) -> !llvm.ptr
+    %pages = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %pages : i64, !llvm.ptr
+    %path = llvm.mlir.addressof @strict_statm_path : !llvm.ptr
+    %descriptor = llvm.call @open(%path, %zero32) vararg(!llvm.func<i32 (ptr, i32, ...)>) : (!llvm.ptr, i32) -> i32
+    %opened = arith.cmpi sge, %descriptor, %zero32 : i32
+    cf.cond_br %opened, ^read, ^done
+  ^read:
+    %limit = arith.constant 63 : i64
+    %count = llvm.call @read(%descriptor, %buffer, %limit) : (i32, !llvm.ptr, i64) -> i64
+    %closed = llvm.call @close(%descriptor) : (i32) -> i32
+    %length = arith.maxsi %count, %zero : i64
+    %end = llvm.getelementptr %buffer[%length] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %terminator = arith.constant 0 : i8
+    llvm.store %terminator, %end : i8, !llvm.ptr
+    %format = llvm.mlir.addressof @strict_statm_format : !llvm.ptr
+    %scanned = llvm.call @sscanf(%buffer, %format, %pages) vararg(!llvm.func<i32 (ptr, ptr, ...)>) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    cf.br ^done
+  ^done:
+    %resident = llvm.load %pages : !llvm.ptr -> i64
+    %sizeSlot = llvm.mlir.addressof @strict_page_size : !llvm.ptr
+    %sizeName = llvm.load %sizeSlot : !llvm.ptr -> i32
+    %size = llvm.call @sysconf(%sizeName) : (i32) -> i64
+    %product = arith.muli %resident, %size : i64
+    %bytes = arith.uitofp %product : i64 to f64
+    return %bytes : f64
+  }
   func.func private @strict_pool_spawn() -> i64 {
     %onlineSlot = llvm.mlir.addressof @strict_online : !llvm.ptr
     %online = llvm.load %onlineSlot : !llvm.ptr -> i32

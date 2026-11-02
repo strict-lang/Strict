@@ -800,6 +800,26 @@
     %bytes = arith.maxsi %product, %zero : i64
     return %bytes : i64
   }
+  llvm.func @mach_task_self() -> i32
+  llvm.func @task_info(i32, i32, !llvm.ptr, !llvm.ptr) -> i32
+  // Process.MemoryUsed: resident_size at byte 8 of mach_task_basic_info (flavor 20, 12 words), 0 when unknown
+  func.func private @strict_process_memoryused(%self: f64) -> f64 {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %six = arith.constant 6 : i64
+    %information = llvm.alloca %six x i64 : (i64) -> !llvm.ptr
+    %residentSlot = llvm.getelementptr %information[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %zero, %residentSlot : i64, !llvm.ptr
+    %countSlot = llvm.alloca %one x i32 : (i64) -> !llvm.ptr
+    %words = arith.constant 12 : i32
+    llvm.store %words, %countSlot : i32, !llvm.ptr
+    %task = llvm.call @mach_task_self() : () -> i32
+    %flavor = arith.constant 20 : i32
+    %read = llvm.call @task_info(%task, %flavor, %information, %countSlot) : (i32, i32, !llvm.ptr, !llvm.ptr) -> i32
+    %resident = llvm.load %residentSlot : !llvm.ptr -> i64
+    %bytes = arith.uitofp %resident : i64 to f64
+    return %bytes : f64
+  }
   func.func private @strict_pool_spawn() -> i64 {
     %online = arith.constant 58 : i32
     %processors = llvm.call @sysconf(%online) : (i32) -> i64

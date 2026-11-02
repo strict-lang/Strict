@@ -33,11 +33,12 @@ Details for the GPU line of [improvements.md](improvements.md), one short line e
 - strict_convolution runs at ~6 TFLOPS on a 3080 (30 peak): not limited by workgroup bank conflicts, index divisions, register prefetch or the rolled inner loop (unrolled it was 6 % faster in a decode, products slower, shaders compiled longer)
 
 ## Generated loops
-- a loop reading a member of an object parameter, a type constant or `.Length` of a list parameter stays on the CPU: pass loop invariant members as numbers
+- a loop reading a member of an object parameter, a type constant or `.Length` of a list parameter stays on the CPU without a warning (`activation is Activation.Swish.kind` in FeatureMap.Activated kept Convolved_Summed off the GPU, a taef2 decode took 2300 s of CPU): pass loop invariant members as numbers, or warn
 - `.Round` keeps a loop on the CPU: a device Round
 - bounds, reduction and tail checks remain: extend the four wide loads (`MlirBatched`) and fuse memory passes
 - an index divided by a power of two (`size / 2`) divides in 64 bits at every read: shift
 - convolutions of 64 bit pixels from a CPU loop miss strict_gpu_convolution without STRICT_GPU=all (H3 VAE encode of a PNG frame 12.5 instead of 0.7 s)
+- `strict_device_convolution_normed` (Convolved.Summed through MlirTensors on CUDA) knows only swish 1 or 0 in shape(4): before Convolution.Applied takes an Activation, the kernel needs every Activation kind, other kinds are silently ignored on the GPU today
 - each convolution writes bfloat16 copies of its input and weights first; stages of 64 channels or 3 buffers once shared memory allows it
 - PNG encoding takes 0.28 s for a 720x1280 image (ComfyUI 0.08)
 - small number types as kernel values: values, parameters and members of types with 2-4 Number members (Complex) and lists of them read by index work (StructLanes, LaneCalls, MlirDeviceRecords), still on the CPU: a `for` over a List(Complex), a List(Complex) result, a method returning a Complex that has a loop or an early return, the 32 bit types (Vector2, Vector3, Size); a flattened list goes up again for every launch; a `to Text` reached only through text conversion is not emitted unless something calls it (why lane inlining skips `to`)

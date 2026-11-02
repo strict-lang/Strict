@@ -95,7 +95,7 @@ IsExternalSafe(kind Text, method Text) Boolean
 	if kind is "Directory"
 		return method is in ("from", "Files", "Directories", "Exists", "Current", "Modified")
 	if kind is "Process"
-		return method is in ("from", "Elapsed", "OperatingSystem", "Find", "Current", "FilesRead")
+		return method is in ("from", "Elapsed", "MemoryUsed", "OperatingSystem", "Find", "Current", "FilesRead")
 	if kind + "." + method is in Hosted.Methods
 		return (kind is in ("Number", "Degrees", "Ratio", "Vector2")) and (method is not "Random")
 	constant Never = ("Library", "TextReader", "TextWriter", "BytesReader", "BytesWriter", "ConstantCache", "GpuMemory")
