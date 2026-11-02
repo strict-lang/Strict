@@ -25,6 +25,25 @@ addToLibrary({
 addToLibrary({
 	$strictWebGpu: { device: null, failed: false, pipelines: {}, buffers: {}, failures: {}, next: 1, grown: 0, queued: 0, done: [],
 		inputs: {}, halves: {}, uploads: {}, views: [], borrowed: {}, sixteens: {}, compiling: {} },
+	// lines the page hands in with Module.strictInput(text) for Process.InputLine, which waits for the next one ("" when the
+	// page has no more)
+	$strictInput: { lines: [], current: '', waiting: null },
+	$strictInput__postset: "Module['strictInput'] = (text) => { strictInput.lines.push(String(text)); " +
+		"const waiting = strictInput.waiting; strictInput.waiting = null; if (waiting) waiting(); };",
+	strict_webinput_length__deps: ['$strictInput', '$Asyncify', '$lengthBytesUTF8'],
+	strict_webinput_length__async: true,
+	strict_webinput_length: () => Asyncify.handleSleep((wakeUp) => {
+		const taken = () => {
+			strictInput.current = strictInput.lines.shift();
+			wakeUp(lengthBytesUTF8(strictInput.current));
+		};
+		if (strictInput.lines.length)
+			taken();
+		else
+			strictInput.waiting = taken;
+	}),
+	strict_webinput_copy__deps: ['$strictInput', '$stringToUTF8'],
+	strict_webinput_copy: (target, size) => stringToUTF8(strictInput.current, target, size),
 	strict_webgpu_ready__deps: ['$strictWebGpu', '$UTF8ToString'],
 	strict_webgpu_ready: (name) => {
 		const shaders = Module['strictShaders'], key = UTF8ToString(name);

@@ -1050,6 +1050,11 @@
     return %none : i64
   }
   // two lists in WebGPU buffers joined there (NativeRuntimeWeb.mlir), 0.0 here
+  // the next line the page hands in on the web (NativeRuntimeWeb.mlir), 0.0 here: Process.InputLine reads the standard input
+  func.func private @strict_web_input_line() -> f64 {
+    %none = arith.constant 0.0 : f64
+    return %none : f64
+  }
   func.func private @strict_gpu_web_joined(%left: f64, %right: f64) -> f64 {
     %none = arith.constant 0.0 : f64
     return %none : f64

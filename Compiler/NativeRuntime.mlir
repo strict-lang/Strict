@@ -11007,8 +11007,16 @@
     %result = func.call @strict_stream_text(%file) : (!llvm.ptr) -> f64
     return %result : f64
   }
-  // the next line of the standard input without its line break (\n or \r\n), "" at the end of the input
+  // the next line of the standard input without its line break (\n or \r\n), "" at the end of the input; on the web the
+  // next line the page hands in (strict_web_input_line)
   func.func private @strict_process_inputline(%self: f64) -> f64 {
+    %webLine = func.call @strict_web_input_line() : () -> f64
+    %noLine = arith.constant 0.0 : f64
+    %isWeb = arith.cmpf une, %webLine, %noLine : f64
+    cf.cond_br %isWeb, ^web, ^standard
+  ^web:
+    return %webLine : f64
+  ^standard:
     %file = func.call @strict_input() : () -> !llvm.ptr
     %initial = arith.constant 256 : i64
     %start = arith.constant 0 : i64

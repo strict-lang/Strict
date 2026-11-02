@@ -1064,6 +1064,21 @@
   // other formats by strict_gpu_web_mixed, 0.0 for any other pair (strict_list_concat joins those on the host):
   // FluxAttention appends 13 chunks of results this way
   llvm.func @strict_webgpu_joined(i32, i32) -> i32
+  // the next line the page hands in with Module.strictInput(text) (WebRuntime.js), waits for it: its length in bytes,
+  // then it is copied into a new text
+  llvm.func @strict_webinput_length() -> i32
+  llvm.func @strict_webinput_copy(!llvm.ptr, i32)
+  func.func private @strict_web_input_line() -> f64 {
+    %length32 = llvm.call @strict_webinput_length() : () -> i32
+    %length = arith.extui %length32 : i32 to i64
+    %one = arith.constant 1 : i64
+    %size = arith.addi %length, %one : i64
+    %buffer = func.call @strict_malloc(%size) : (i64) -> !llvm.ptr
+    %size32 = arith.trunci %size : i64 to i32
+    llvm.call @strict_webinput_copy(%buffer, %size32) : (!llvm.ptr, i32) -> ()
+    %text = func.call @strict_bits(%buffer) : (!llvm.ptr) -> f64
+    return %text : f64
+  }
   func.func private @strict_gpu_web_joined(%left: f64, %right: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
