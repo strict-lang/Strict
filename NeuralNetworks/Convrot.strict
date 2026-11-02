@@ -2,7 +2,7 @@ has values Numbers
 has group Number = 256
 constant Unit = Convrot((1, 0, 0, 0), 4)
 constant Sixteen = Convrot((3, -1, 2, 0, 5, 1, -4, 2, 0, 1, 7, -2, 1, 3, -1, 6), 16)
-Rotated Numbers
+Rotated BFloat16s
 	Unit.Rotated is (0.5, 0.5, 0.5, -0.5)
 	Convrot((List(Number) + 1) + Layer.Zeros(15), 16).Rotated(3) is -0.25
 	Convrot(Convrot(Sixteen.Rotated, 16).Rotated, 16).Rotated is Sixteen.Rotated
@@ -16,7 +16,7 @@ Applied(rotated Boolean) Numbers
 	Unit.Applied(true) is Unit.Rotated
 	Unit.Applied(false) is Unit.values
 	rotated then Rotated else values
-Stage(input Numbers, step Number) Numbers
+Stage(input Numbers, step Number) BFloat16s
 	Unit.Stage((1, 0, 0, 0), 1) is (0.5, 0.5, 0.5, -0.5)
 	Unit.Stage((0, 0, 0, 1, 1, 0, 0, 0), 2) is (0.5, 0.5, -0.5, 0.5, 0.5, -0.5, 0.5, 0.5)
 	for input.Length
