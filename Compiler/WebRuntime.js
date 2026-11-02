@@ -24,7 +24,8 @@ addToLibrary({
 // Closure knows no GPUBufferUsage: storage 128, copy destination 8, copy source 4, map read 1, compute stage 4.
 addToLibrary({
 	$strictWebGpu: { device: null, failed: false, pipelines: {}, buffers: {}, failures: {}, next: 1, grown: 0, queued: 0, done: [],
-		inputs: {}, halves: {}, uploads: {}, views: [], borrowed: {}, sixteens: {}, compiling: {} },
+		inputs: {}, halves: {}, uploads: {}, views: [], borrowed: {}, lent: {}, dropped: {}, sixteens: {},
+		compiling: {} },
 	// lines the page hands in with Module.strictInput(text) for Process.InputLine, which waits for the next one ("" when the
 	// page has no more)
 	$strictInput: { lines: [], current: '', waiting: null },
@@ -441,6 +442,7 @@ addToLibrary({
 			device.queue.writeBuffer(uploaded, codes, HEAPF32, scales >>> 2, rows);
 			const handle = strictWebGpu.next++;
 			strictWebGpu.buffers[handle] = uploaded;
+			strictWebGpu.grown += uploaded.size;
 			strictWebGpu.failures[handle] = device.createBuffer({ size: 4, usage: 128 | 8 | 4 });
 			strictWebGpu.uploads[handle] = rows * stride / 4;
 			return handle;
@@ -455,9 +457,10 @@ addToLibrary({
 	strict_webgpu_rows_views: (address, count, handle, stride, nibbles) =>
 		strictWebGpu.views.push({ first: address >>> 0, last: (address >>> 0) + count * 64, handle, stride, nibbles }),
 	// the rows whose view addresses are at views as a kept WebGPU buffer, its handle and the stride in words and nibbles
-	// flag at shape, 0 when a row is in no buffer or rows differ: all rows of one block in order borrow its buffer (given
-	// back without destroying it), rows joined from several matrices are copied into a new one on the GPU, one copy per
-	// run of rows that follow each other in one block (Moss's query, key and value rows took 1.5 s row by row)
+	// flag at shape, 0 when a row is in no buffer or rows differ: all rows of one block in order borrow its buffer (it is
+	// destroyed when neither the rows nor any borrower is left), rows joined from several matrices are copied into a new
+	// one on the GPU, one copy per run of rows that follow each other in one block (Moss's query, key and value rows took
+	// 1.5 s row by row)
 	strict_webgpu_gathered__deps: ['$strictWebGpu'],
 	strict_webgpu_gathered: (views, count, shape) => {
 		const device = strictWebGpu.device, runs = [];
@@ -481,7 +484,8 @@ addToLibrary({
 		const handle = strictWebGpu.next++;
 		if (isWhole) {
 			strictWebGpu.buffers[handle] = strictWebGpu.buffers[source.handle];
-			strictWebGpu.borrowed[handle] = true;
+			strictWebGpu.borrowed[handle] = source.handle;
+			strictWebGpu.lent[source.handle] = (strictWebGpu.lent[source.handle] || 0) + 1;
 		} else {
 			const joined = device.createBuffer({ size: count * stride + count * 4, usage: 128 | 8 | 4 });
 			const encoder = device.createCommandEncoder();
@@ -503,8 +507,15 @@ addToLibrary({
 	},
 	strict_webgpu_release__deps: ['$strictWebGpu'],
 	strict_webgpu_release: (handle) => {
-		if (!strictWebGpu.borrowed[handle])
+		const lender = strictWebGpu.borrowed[handle], lent = strictWebGpu.lent, dropped = strictWebGpu.dropped;
+		if (lender && !--lent[lender] && dropped[lender]) {
+			dropped[lender].destroy();
+			delete dropped[lender];
+		} else if (!lender && lent[handle])
+			dropped[handle] = strictWebGpu.buffers[handle];
+		else if (!lender)
 			strictWebGpu.buffers[handle]?.destroy();
+		strictWebGpu.views = strictWebGpu.views.filter((placed) => placed.handle !== handle);
 		delete strictWebGpu.borrowed[handle];
 		strictWebGpu.failures[handle]?.destroy();
 		delete strictWebGpu.failures[handle];

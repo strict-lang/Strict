@@ -976,9 +976,9 @@
   }
   // count 8 bit rows of elements numbers (bits, plus STRICT_KEPT_TOKENS) whose block (the codes of each row as in the
   // file, 4 bit halves of bytes when nibbles is 1, then a 32 bit scale per row) is only in the WebGPU buffer handle
-  // (TensorFile reading a URL): views without
-  // data whose block stays with the page (its views can outlive this list in lists joined from them, Moss's query, key
-  // and value rows), strict_gpu_tokens_web finds it by their addresses; reading the rows on the CPU stops the program
+  // (TensorFile reading a URL): views without data in one block, strict_gpu_tokens_web finds the buffer by their
+  // addresses, it is given back once no view is left (its views can outlive this list in lists joined from them, Moss's
+  // query, key and value rows); reading the rows on the CPU stops the program
   llvm.func @strict_webgpu_rows_views(!llvm.ptr, i32, i32, i32, i32)
   func.func @strict_rows_web(%count: i64, %elements: i64, %bits: f64, %handle: i64, %nibbles: i64) -> f64 {
     %none = arith.constant 0 : i64
@@ -1019,6 +1019,10 @@
     %stride32 = arith.trunci %rowStride : i64 to i32
     %nibbles32 = arith.trunci %nibbles : i64 to i32
     llvm.call @strict_webgpu_rows_views(%block, %count32, %handle32, %stride32, %nibbles32) : (!llvm.ptr, i32, i32, i32, i32) -> ()
+    %blockAddress = llvm.ptrtoint %block : !llvm.ptr to i64
+    %device = arith.shli %handle, %eight : i64
+    %webClass = arith.constant 255 : i64
+    func.call @strict_gpu_reside(%blockAddress, %device, %webClass) : (i64, i64, i64) -> ()
     %pendingSlot = llvm.mlir.addressof @strict_foreign_pending : !llvm.ptr
     %listBits = arith.bitcast %list : f64 to i64
     llvm.store %listBits, %pendingSlot : i64, !llvm.ptr

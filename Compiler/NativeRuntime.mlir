@@ -14781,6 +14781,15 @@
     %deviceBits = arith.bitcast %tagged : i64 to f64
     %list = func.call @strict_packed_view(%count, %bits, %zero, %deviceBits) : (i64, i64, f64, f64) -> f64
     func.call @strict_rc_device(%list) : (f64) -> ()
+    %listBits = arith.bitcast %list : f64 to i64
+    func.call @strict_gpu_reside(%listBits, %device, %class) : (i64, i64, i64) -> ()
+    return %list : f64
+  }
+  // the device block of class goes back (strict_gpu_give) in the first collection that finds object unmarked
+  func.func private @strict_gpu_reside(%object: i64, %device: i64, %class: i64) {
+    %one = arith.constant 1 : i64
+    %three = arith.constant 3 : i64
+    %eight = arith.constant 8 : i64
     %residing = llvm.mlir.addressof @strict_gpu_residing : !llvm.ptr
     %usedSlot = llvm.getelementptr %residing[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<3 x i64>
     %used = llvm.load %usedSlot : !llvm.ptr -> i64
@@ -14806,15 +14815,14 @@
     %entries = llvm.inttoptr %entriesBits : i64 to !llvm.ptr
     %offset = arith.muli %used, %three : i64
     %entry = llvm.getelementptr %entries[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i64
-    %listBits = arith.bitcast %list : f64 to i64
-    llvm.store %listBits, %entry : i64, !llvm.ptr
+    llvm.store %object, %entry : i64, !llvm.ptr
     %deviceSlot = llvm.getelementptr %entry[1] : (!llvm.ptr) -> !llvm.ptr, i64
     llvm.store %device, %deviceSlot : i64, !llvm.ptr
     %classSlot = llvm.getelementptr %entry[2] : (!llvm.ptr) -> !llvm.ptr, i64
     llvm.store %class, %classSlot : i64, !llvm.ptr
     %more = arith.addi %used, %one : i64
     llvm.store %more, %usedSlot : i64, !llvm.ptr
-    return %list : f64
+    return
   }
   func.func private @strict_gpu_sweep_residents(%full: i1) {
     %none = arith.constant 0 : i64
