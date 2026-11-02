@@ -376,7 +376,8 @@ addToLibrary({
 	// the 16 MB blocks of files read with HTTP range requests (TensorFile reading a file that is not in the package),
 	// the last 48 are kept until 5 s after the last read (fewer had Moss fetch a third of its file twice), with the
 	// total size of each file from its first answer, the last block read of it and the bytes downloaded of it
-	$strictWebFile: { blocks: new Map(), sizes: {}, lasts: {}, read: {}, folders: {}, timer: 0, writer: null },
+	$strictWebFile: { blocks: new Map(), sizes: {}, lasts: {}, read: {}, folders: {}, timer: 0, writer: null,
+		pending: new Map(), recent: new Map(), prefetched: {} },
 	// the folder in the origin private file system keeping the downloaded blocks of the file at source (one file per
 	// block and its size), null without one
 	$strictWebFileFolder__deps: ['$strictWebFile'],
@@ -398,10 +399,68 @@ addToLibrary({
 			'let folder = await (await navigator.storage.getDirectory()).getDirectoryHandle("strict-files", { create: true }); ' +
 			'folder = await folder.getDirectoryHandle(folderName, { create: true }); ' +
 			'const handle = await (await folder.getFileHandle(name, { create: true })).createSyncAccessHandle(); ' +
-			'handle.truncate(0); handle.write(bytes, { at: 0 }); handle.flush(); handle.close(); } catch {} };';
-		strictWebFile.writer ||= new Worker(URL.createObjectURL(new Blob([writing], { type: 'text/javascript' })));
+			'handle.truncate(0); handle.write(bytes, { at: 0 }); handle.flush(); handle.close(); } catch {} ' +
+			'postMessage([folderName, name]); };';
+		if (!strictWebFile.writer) {
+			strictWebFile.writer = new Worker(URL.createObjectURL(new Blob([writing], { type: 'text/javascript' })));
+			strictWebFile.writer.onmessage = (event) => strictWebFile.recent.delete(event.data[0] + ' ' + event.data[1]);
+		}
 		const copy = bytes.slice();
 		strictWebFile.writer.postMessage([encodeURIComponent(source), name, copy], [copy.buffer]);
+	},
+	// downloads block index of the file at url (from source), keeps it in the origin private file system when the page
+	// maps it (a block stays in recent until written) and prints the download progress; one request per block at a time
+	$strictWebFileFetched__deps: ['$strictWebFile', '$strictWebFileStore'],
+	$strictWebFileFetched: (url, source, index, isKept) => {
+		const cache = strictWebFile, key = url + ' ' + index, pending = cache.pending.get(key);
+		if (pending)
+			return pending;
+		const fetched = (async () => {
+			const first = index * 16777216, range = { headers: { Range: 'bytes=' + first + '-' + (first + 16777215) },
+				cache: isKept ? 'no-store' : 'default' };
+			const response = await fetch(source, range).catch(() => fetch(source, range)).catch(() => fetch(source, range));
+			if (response.status !== 206)
+				throw source + ' answered ' + response.status + ' to a range request';
+			cache.sizes[url] = Number((response.headers.get('Content-Range') || '').split('/')[1]) || cache.sizes[url];
+			const bytes = new Uint8Array(await response.arrayBuffer());
+			if (isKept) {
+				if (!cache.read[url])
+					strictWebFileStore(source, 'size', new TextEncoder().encode(String(cache.sizes[url])));
+				cache.recent.set(encodeURIComponent(source) + ' ' + index, bytes);
+				strictWebFileStore(source, String(index), bytes);
+				const read = (cache.read[url] ||= new Map()).set(index, bytes.length);
+				const got = [...read.values()].reduce((sum, length) => sum + length, 0);
+				out('Downloading ' + url + ': ' + Math.round(got / 1048576) + ' of ' +
+					Math.round(cache.sizes[url] / 1048576) + ' MB');
+			}
+			return bytes;
+		})().finally(() => cache.pending.delete(key));
+		cache.pending.set(key, fetched);
+		return fetched;
+	},
+	// every block of a mapped file not kept yet is downloaded in the background, 8 at a time (one request at a time
+	// gave 15, 8 gave 63 MB/s from Hugging Face, more failed), the first time one of its blocks has to be downloaded
+	$strictWebFilePrefetch__deps: ['$strictWebFile', '$strictWebFileFetched'],
+	$strictWebFilePrefetch: (url, source, folder) => {
+		const cache = strictWebFile;
+		if (cache.prefetched[url] || !cache.sizes[url])
+			return;
+		cache.prefetched[url] = true;
+		const blocks = Math.ceil(cache.sizes[url] / 16777216);
+		let next = 0;
+		const kept = async (index) => {
+			const handle = await folder['getFileHandle'](String(index)).catch(() => null);
+			return handle && (await handle['getFile']())['size'] === Math.min(16777216, cache.sizes[url] - index * 16777216);
+		};
+		const worker = async () => {
+			while (next < blocks) {
+				const index = next++;
+				if (!cache.pending.has(url + ' ' + index) && !cache.read[url]?.has(index) && !await kept(index))
+					await strictWebFileFetched(url, source, index, true).catch(() => {});
+			}
+		};
+		for (let count = 0; count < 8; count++)
+			worker();
 	},
 	// the promise of the bytes of block index of the file at url, rejected when the server does not answer a range; a
 	// request failing on the way is sent up to 3 times (bursts of parallel requests failed now and then); a file name
@@ -410,7 +469,8 @@ addToLibrary({
 	// origin private file system and read from it on the next visit (one of another
 	// length than the file size says is read again), every block
 	// downloaded prints "Downloading name: 16 of 98 MB" (bytes read so far, kept ones too) for the page's progress bar
-	$strictWebFileBlock__deps: ['$strictWebFile', '$strictWebFileFolder', '$strictWebFileStored', '$strictWebFileStore'],
+	$strictWebFileBlock__deps: ['$strictWebFile', '$strictWebFileFolder', '$strictWebFileStored', '$strictWebFileFetched',
+		'$strictWebFilePrefetch'],
 	$strictWebFileBlock: (url, index) => {
 		const cache = strictWebFile, key = url + ' ' + index;
 		let block = cache.blocks.get(key);
@@ -420,6 +480,9 @@ addToLibrary({
 			block = (async () => {
 				const mapped = (Module['strictFiles'] || {})[url], source = mapped || url;
 				const folder = mapped && await strictWebFileFolder(source);
+				const recent = folder && cache.recent.get(encodeURIComponent(source) + ' ' + index);
+				if (recent)
+					return recent;
 				const stored = folder && await strictWebFileStored(folder, String(index)).catch(() => null);
 				const size = stored && !cache.sizes[url] && await strictWebFileStored(folder, 'size').catch(() => null);
 				const total = cache.sizes[url] || (size ? Number(new TextDecoder().decode(size)) : 0);
@@ -428,23 +491,9 @@ addToLibrary({
 					(cache.read[url] ||= new Map()).set(index, stored.length);
 					return stored;
 				}
-				const first = index * 16777216, range = { headers: { Range: 'bytes=' + first + '-' + (first + 16777215) },
-					cache: mapped ? 'no-store' : 'default' };
-				const response = await fetch(source, range).catch(() => fetch(source, range)).catch(() => fetch(source, range));
-				if (response.status !== 206)
-					throw source + ' answered ' + response.status + ' to a range request';
-				cache.sizes[url] = Number((response.headers.get('Content-Range') || '').split('/')[1]) || cache.sizes[url];
-				const bytes = new Uint8Array(await response.arrayBuffer());
-				if (folder && !cache.read[url])
-					strictWebFileStore(source, 'size', new TextEncoder().encode(String(cache.sizes[url])));
+				const bytes = await strictWebFileFetched(url, source, index, !!folder);
 				if (folder)
-					strictWebFileStore(source, String(index), bytes);
-				if (mapped) {
-					const read = (cache.read[url] ||= new Map()).set(index, bytes.length);
-					const got = [...read.values()].reduce((sum, length) => sum + length, 0);
-					out('Downloading ' + url + ': ' + Math.round(got / 1048576) + ' of ' +
-						Math.round(cache.sizes[url] / 1048576) + ' MB');
-				}
+					strictWebFilePrefetch(url, source, folder);
 				return bytes;
 			})();
 			block.catch(() => cache.blocks.delete(key));
@@ -464,7 +513,8 @@ addToLibrary({
 		const last = Math.floor((offset + bytes - 1) / size), blocks = [];
 		for (let index = first; index <= last; index++)
 			blocks.push(strictWebFileBlock(url, index));
-		const previous = cache.lasts[url] ?? -9, ahead = first >= previous - 1 && first <= previous + 2 ? 8 : 0;
+		const isNear = first >= (cache.lasts[url] ?? -9) - 1 && first <= (cache.lasts[url] ?? -9) + 2;
+		const ahead = isNear && !cache.prefetched[url] ? 8 : 0;
 		cache.lasts[url] = last;
 		for (let next = last + 1; next <= last + ahead && next * size < (cache.sizes[url] || 0); next++)
 			strictWebFileBlock(url, next).catch(() => {});
