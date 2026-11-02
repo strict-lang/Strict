@@ -6,6 +6,8 @@ constant Counter = TypeEntry("Strict/Counting", List(MemberEntry), List(MethodEn
 constant Kept = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "conditional0")
 constant Branched = (Again, Kept, InstructionEntry(InstructionType.JumpEnd, List(Text), List(Number)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "conditional0"), InstructionEntry.Return(2))
 constant Sample = TailCalls(List(TypeEntry) + Counter)
+constant Itself = MethodEntry("Count", List(MemberEntry), "Strict/Number", (InstructionEntry.Invoke(1, ("Strict/Counting", "Count", "Strict/Number"), List(Number), -1), InstructionEntry.Return(1)))
+constant Constant = TypeEntry("Strict/Counting", List(MemberEntry) + MemberEntry("Count", "Strict/Number", List(InstructionEntry), true), List(MethodEntry) + Itself)
 constant TailId = 1000000
 constant Start = InstructionEntry.Jump(InstructionType.JumpEnd, TailId)
 constant Restart = InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, TailId)
@@ -20,6 +22,7 @@ Methods(type TypeEntry) List(MethodEntry)
 Looped(type TypeEntry, method MethodEntry) MethodEntry
 	Sample.Looped(Counter, Counting).instructions.First is Start
 	Sample.Looped(Counter, MethodEntry.CountingLoop) is MethodEntry.CountingLoop
+	TailCalls(List(TypeEntry) + Constant).Looped(Constant, Itself) is Itself
 	mutable instructions = List(Mutable(InstructionEntry))
 	for method.instructions
 		let replaced = IsTail(type, method, index) then Jumped(method, value) else List(InstructionEntry) + value
@@ -34,7 +37,7 @@ IsTail(type TypeEntry, method MethodEntry, position Number) Boolean
 	if call.kind is not InstructionType.Invoke
 		return false
 	let count = 5 + call.payload(3)
-	let isOwn = TypeEntry.ShortName(call.texts(0)) is TypeEntry.ShortName(type.Name)
+	let isOwn = (TypeEntry.ShortName(call.texts(0)) is TypeEntry.ShortName(type.Name)) and (type.ConstantSlot(method) < 0)
 	let arguments = call.payload(count)
 	let isCounted = (arguments is method.parameters.Length) and (call.payload(count + 1 + arguments) is 0)
 	let isOwnCall = isOwn and isCounted and (IsLooped(method, position) is false)

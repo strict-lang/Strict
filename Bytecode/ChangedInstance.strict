@@ -7,6 +7,7 @@ constant Ticked = ChangedInstance(ValueCodegen(TypeInference(Tickers, List(Scope
 constant Calling = SyntaxNode("Member", "Next", SyntaxNode("Identifier", "ticker"))
 constant Holding = CodeBlock.Empty.Declare("ticker", "Ticker")
 constant Mutables = Holding.Declare("ticker mutable", "mutable")
+constant OwnNext = SyntaxNode("Call", "Next")
 Kept(code CodeBlock) CodeBlock
 	Ticking.Method(2).instructions.Last.kind is InstructionType.Return
 	Ticking.Method(2).instructions(Ticking.Method(2).instructions.Length - 2).texts is (Name)
@@ -22,7 +23,10 @@ Kept(code CodeBlock) CodeBlock
 	CodeBlock(instructions, built.register, built.nextId, code.scope)
 Called(node SyntaxNode, call SyntaxNode, block CodeBlock) CodeBlock
 	Ticked.Called(Calling, Calling, Holding).instructions.First.kind is InstructionType.Invoke
-	Back(call, values.Invoke(call, block, -1, values.TypeOf(node, block)), block)
+	ChangedInstance(Ticking.Generator, "Next").Called(OwnNext, OwnNext, CodeBlock.Empty).instructions(4).texts is ("#this")
+	let isOwn = (call.Kind is in ("Identifier", "Call")) and (method is in Changes(values.target.shape.lines).Methods)
+	let current = isOwn then values.Expression(Instance, block).Stored("#this") else block
+	Back(call, values.Invoke(call, current, -1, values.TypeOf(node, block)), current)
 Back(call SyntaxNode, invoked CodeBlock, block CodeBlock) CodeBlock
 	Ticked.Back(Calling, Holding.At(1), Mutables).instructions.Length is 1
 	ChangedArguments(values, method).StoredBack(call, StoredBack(call, invoked, block), block)

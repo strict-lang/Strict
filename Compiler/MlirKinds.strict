@@ -9,6 +9,8 @@ constant Lettered = MlirKinds(MlirFunction(List(TypeEntry) + TypeEntry.Character
 constant Indexed = InstructionEntry(InstructionType.IndexCall, "letters", (7, 4, -1))
 constant Looped = (InstructionEntry.LoopBegin(4, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 8, "value"), InstructionEntry(InstructionType.LoopEnd, List(Text), (1)))
 constant Graded = MlirKinds(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "A"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "letter"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "letter"), Passed, InstructionEntry.Binary(InstructionType.Add, (1, 0, 3)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "width"), NewShape, Width, Indexed) + Looped)))
+constant Shapes = MemberEntry("shapes", "Strict/List(Shape)", List(InstructionEntry), false)
+constant Paired = MlirKinds(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + Shapes, "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "shapes"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "outer"), InstructionEntry(InstructionType.LoopEnd, List(Text), (2)), InstructionEntry(InstructionType.LoopEnd, List(Text), (4))))))
 KindOf(position Number, register Number) Text
 	Graded.KindOf(1, 0) is "Text"
 	Graded.KindOf(6, 4) is "Number"
@@ -93,10 +95,11 @@ DeclaredKind(position Number, name Text) Text
 	Graded.DeclaredKind(0, "width") is "Number"
 	Graded.DeclaredKind(0, "value") is "Shape"
 	Graded.DeclaredKind(11, "value") is "Number"
+	Paired.DeclaredKind(3, "outer") is "Shape"
 	let parameter = MembersKind(function.method.parameters, name)
 	if parameter is not ""
 		return parameter
-	if name is in ("value", "characters", "elements")
+	if name is in ("value", "outer", "characters", "elements")
 		return OwnValueKind(position, name)
 	let member = MembersKind(function.type.members, name)
 	let own = TypeEntry.ShortName(function.type.Name)
@@ -105,8 +108,8 @@ OwnValueKind(position Number, name Text) Text
 	Graded.OwnValueKind(0, "value") is "Shape"
 	Graded.OwnValueKind(11, "value") is "Number"
 	let own = TypeEntry.ShortName(function.type.Name)
-	if name is "value"
-		let looped = LoopValueKind(position)
+	if name is in ("value", "outer")
+		let looped = LoopValueKind(name is "value" then position else function.method.LoopBeginOf(position))
 		return looped is "" then own else looped
 	if (own is "Text") or own.StartsWith("List(")
 		return own
