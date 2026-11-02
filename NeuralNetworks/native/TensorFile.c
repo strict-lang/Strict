@@ -581,7 +581,7 @@ STRICT_EXPORT double TensorFile_Columns(double self, double path, double entry, 
    rotated), read straight into 8 bit rows (bits, plus STRICT_KEPT_TOKENS) at data, stride bytes apart, whose per-32
    scales all are the scale of their row, so every number is exact: the result. */
 static double QuantizedRows(double path, double entry, double scales, double bits, Tensor* tensor, unsigned char** data,
-	uint64_t* stride, int isHosted)
+	uint64_t* stride, int isHosted, uint64_t first, uint64_t count)
 {
 	Tensor scaled;
 	const char* failure = Described(strict_text(entry), tensor);
@@ -604,8 +604,12 @@ static double QuantizedRows(double path, double entry, double scales, double bit
 			strict_fail("TensorFileDataTruncated");
 	}
 #endif
-	double result = strict_rows(tensor->height, tensor->width * (tensor->isNibbles ? 2 : 1), bits, data, stride);
-	failure = !*data ? "TensorTooLarge" : Placed(path, tensor, *data, *stride, bits, 1, factors, 0);
+	Tensor part = *tensor;
+	uint64_t rows = first >= tensor->height ? 0 : tensor->height - first;
+	part.height = count && count < rows ? count : rows;
+	part.start = tensor->start + first * tensor->width * tensor->bytes;
+	double result = strict_rows(part.height, tensor->width * (tensor->isNibbles ? 2 : 1), bits, data, stride);
+	failure = !*data ? "TensorTooLarge" : Placed(path, &part, *data, *stride, bits, 1, factors + first, 0);
 	free(factors);
 	return failure ? strict_fail(failure) : result;
 }
@@ -617,19 +621,21 @@ STRICT_EXPORT double TensorFile_Quantized(double self, double path, double entry
 	Tensor tensor;
 	unsigned char* data = 0;
 	uint64_t stride = 0;
-	return QuantizedRows(path, entry, scales, tokenBits > 8 ? 8 + STRICT_KEPT_TOKENS : 8, &tensor, &data, &stride, 0);
+	return QuantizedRows(path, entry, scales, tokenBits > 8 ? 8 + STRICT_KEPT_TOKENS : 8, &tensor, &data, &stride, 0, 0, 0);
 }
 
-/* The rows of TensorFile_Quantized kept on the host also when the file is read from a URL on the web (there the rows
-   are otherwise only in a WebGPU buffer): for rows the program reads itself, like an embedding table. */
-STRICT_EXPORT double TensorFile_Hosted(double self, double path, double entry, double scales)
+/* count rows from first of TensorFile_Quantized kept on the host also when the file is read from a URL on the web
+   (there the rows are otherwise only in a WebGPU buffer): for rows the program reads itself, like an embedding table,
+   in parts, as words on the wasm stack that are no references kept a 1 GB block of it alive. */
+STRICT_EXPORT double TensorFile_HostedPart(double self, double path, double entry, double scales, double first,
+	double count)
 {
 	if (!ThreadReady())
 		return strict_fail("NativeThreadStateFailed");
 	Tensor tensor;
 	unsigned char* data = 0;
 	uint64_t stride = 0;
-	return QuantizedRows(path, entry, scales, 8, &tensor, &data, &stride, 1);
+	return QuantizedRows(path, entry, scales, 8, &tensor, &data, &stride, 1, (uint64_t)first, (uint64_t)count);
 }
 
 /* The rows of an NVFP4 matrix (U8 entry of two numbers per byte, F8_E4M3 block scales, the F32 scale and the optional
@@ -756,7 +762,7 @@ STRICT_EXPORT double TensorFile_Tuned(double self, double path, double entry, do
 	Tensor tensor;
 	unsigned char* data = 0;
 	uint64_t stride = 0;
-	double quantized = QuantizedRows(path, entry, scales, 8, &tensor, &data, &stride, 1);
+	double quantized = QuantizedRows(path, entry, scales, 8, &tensor, &data, &stride, 1, 0, 0);
 	const strict_numbers* given = strict_numbers_of(factors);
 	if (strict_bits(quantized) >> 48 == 0x7FFC || given->count == 0)
 		return quantized;
