@@ -264,21 +264,16 @@ Module['strictKernelGroups']['strict_quantized'] = (places) => {
 };
 // Batch.Sums of 8 bit rows (strict_gpu_tokens_web): rows (codes, then a scale per 32 columns, stride words a row), codes
 // and scales of the tokens (strict_quantized), biases, columns, rows, stride, tokens: a workgroup of 256 invocations per
-// tile of 64 rows and 64 tokens (4 by 4 each), the codes of 32 columns of both in workgroup memory at a time, dot
-// products of 4 codes summed as whole numbers per 32 columns and scaled by their row
+// tile of 64 rows and 64 tokens (rows ownRow + 16 * i and tokens ownToken + 16 * j of it each), the codes of 32 columns
+// of both in workgroup memory at a time (word by word, so neighbors read neighboring rows), dot products of 4 codes
+// summed as whole numbers per 32 columns and scaled by their row
 Module['strictShaders']['strict_eights'] = strictKernelBindings + `
 var<workgroup> rowCodes: array<u32, 512>;
 var<workgroup> tokenCodes: array<u32, 512>;
 var<workgroup> rowScales: array<f32, 64>;
-fn dotted(row: u32, token: u32) -> vec4<f32> {
-	var wholes = vec4<i32>();
-	for (var word = 0u; word < 8u; word++) {
-		let codes = rowCodes[row * 8u + word];
-		wholes += vec4<i32>(dot4I8Packed(codes, tokenCodes[token * 8u + word]), dot4I8Packed(codes,
-			tokenCodes[(token + 1u) * 8u + word]), dot4I8Packed(codes, tokenCodes[(token + 2u) * 8u + word]),
-			dot4I8Packed(codes, tokenCodes[(token + 3u) * 8u + word]));
-	}
-	return vec4<f32>(wholes) * rowScales[row];
+fn dotted(codes: u32, tokens: vec4<u32>) -> vec4<i32> {
+	return vec4<i32>(dot4I8Packed(codes, tokens.x), dot4I8Packed(codes, tokens.y), dot4I8Packed(codes, tokens.z),
+		dot4I8Packed(codes, tokens.w));
 }
 @compute @workgroup_size(256)
 fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) group: vec3<u32>,
@@ -293,8 +288,8 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 	if (tile >= rowTiles * ((tokens + 63u) / 64u)) { return; }
 	let rowStart = tile % rowTiles * 64u;
 	let tokenStart = tile / rowTiles * 64u;
-	let ownRow = local % 16u * 4u;
-	let ownToken = local / 16u * 4u;
+	let ownRow = local % 16u;
+	let ownToken = local / 16u;
 	var first = vec4<f32>();
 	var second = vec4<f32>();
 	var third = vec4<f32>();
@@ -303,27 +298,42 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 		for (var at = local; at < 512u; at += 256u) {
 			let row = rowStart + at / 8u;
 			let token = tokenStart + at / 8u;
-			rowCodes[at] = select(0u, bitcast<u32>(n_item(places[0], row * stride + block * 8u + at % 8u)), row < rows);
-			tokenCodes[at] = select(0u, bitcast<u32>(n_item(places[2], token * words + block * 8u + at % 8u)), token < tokens);
+			let placed = at % 8u * 64u + at / 8u;
+			rowCodes[placed] = select(0u, bitcast<u32>(n_item(places[0], row * stride + block * 8u + at % 8u)), row < rows);
+			tokenCodes[placed] = select(0u, bitcast<u32>(n_item(places[2], token * words + block * 8u + at % 8u)),
+				token < tokens);
 		}
 		if (local < 64u) {
 			rowScales[local] = select(0.0, n_item(places[0], (rowStart + local) * stride + words + block), rowStart + local < rows);
 		}
 		workgroupBarrier();
-		first += dotted(ownRow, ownToken);
-		second += dotted(ownRow + 1u, ownToken);
-		third += dotted(ownRow + 2u, ownToken);
-		fourth += dotted(ownRow + 3u, ownToken);
+		var firstWholes = vec4<i32>();
+		var secondWholes = vec4<i32>();
+		var thirdWholes = vec4<i32>();
+		var fourthWholes = vec4<i32>();
+		for (var word = 0u; word < 8u; word++) {
+			let base = word * 64u;
+			let tokenWords = vec4<u32>(tokenCodes[base + ownToken], tokenCodes[base + ownToken + 16u],
+				tokenCodes[base + ownToken + 32u], tokenCodes[base + ownToken + 48u]);
+			firstWholes += dotted(rowCodes[base + ownRow], tokenWords);
+			secondWholes += dotted(rowCodes[base + ownRow + 16u], tokenWords);
+			thirdWholes += dotted(rowCodes[base + ownRow + 32u], tokenWords);
+			fourthWholes += dotted(rowCodes[base + ownRow + 48u], tokenWords);
+		}
+		first += vec4<f32>(firstWholes) * rowScales[ownRow];
+		second += vec4<f32>(secondWholes) * rowScales[ownRow + 16u];
+		third += vec4<f32>(thirdWholes) * rowScales[ownRow + 32u];
+		fourth += vec4<f32>(fourthWholes) * rowScales[ownRow + 48u];
 		workgroupBarrier();
 	}
 	let biases = places[5];
 	let sums = mat4x4<f32>(first, second, third, fourth);
 	for (var token = 0u; token < 4u; token++) {
-		let placedToken = tokenStart + ownToken + token;
+		let placedToken = tokenStart + ownToken + token * 16u;
 		if (placedToken >= tokens) { break; }
 		let scale = n_item(places[2], tokens * words + placedToken);
 		for (var row = 0u; row < 4u; row++) {
-			let placedRow = rowStart + ownRow + row;
+			let placedRow = rowStart + ownRow + row * 16u;
 			let at = placedToken * rows + placedRow;
 			let bias = select(0.0, n_item(places[4], at % max(biases, 1u)), biases > 0u);
 			if (placedRow < rows) { output[at] = sums[row][token] * scale + bias; }
