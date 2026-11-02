@@ -24,7 +24,7 @@ addToLibrary({
 // Closure knows no GPUBufferUsage: storage 128, copy destination 8, copy source 4, map read 1, compute stage 4.
 addToLibrary({
 	$strictWebGpu: { device: null, failed: false, pipelines: {}, buffers: {}, failures: {}, next: 1, grown: 0, queued: 0, done: [],
-		inputs: {}, halves: {}, uploads: {}, views: [], borrowed: {}, sixteens: {} },
+		inputs: {}, halves: {}, uploads: {}, views: [], borrowed: {}, sixteens: {}, compiling: {} },
 	strict_webgpu_ready__deps: ['$strictWebGpu', '$UTF8ToString'],
 	strict_webgpu_ready: (name) => {
 		const shaders = Module['strictShaders'], key = UTF8ToString(name);
@@ -94,6 +94,9 @@ addToLibrary({
 			throw error.message;
 		return pipeline;
 	},
+	// the device, every shader starts compiling on it right away (while a model loads): compiled on first use the
+	// pipelines of Moss's first step took 2.5 s
+	$strictWebGpuDevice__deps: ['$strictWebGpu', '$strictWebGpuPipeline'],
 	$strictWebGpuDevice: async () => {
 		const adapter = await navigator.gpu.requestAdapter();
 		const limits = adapter && adapter.limits;
@@ -103,6 +106,11 @@ addToLibrary({
 		// any other error of WebGPU stops the program, results that were never computed must not be read
 		device?.addEventListener('uncapturederror', (event) => abort('WebGPU error: ' + event.error.message));
 		device?.lost.then((info) => abort('WebGPU device lost: ' + info.message));
+		for (const key in device && Module['strictShaders'] || {}) {
+			const compiled = strictWebGpuPipeline(device, Module['strictShaders'][key]);
+			compiled.catch(() => {});
+			strictWebGpu.compiling[key] = compiled;
+		}
 		return device;
 	},
 	// numbers into the data at output as 64 bit, 32 bit or bfloat16 (bits 17, rounded to the nearest even) numbers
@@ -127,7 +135,8 @@ addToLibrary({
 		}
 		if (!device)
 			return 0;
-		const pipeline = strictWebGpu.pipelines[name] ||= await strictWebGpuPipeline(device, Module['strictShaders'][name]);
+		const pipeline = strictWebGpu.pipelines[name] ||= await (strictWebGpu.compiling[name] ||
+			strictWebGpuPipeline(device, Module['strictShaders'][name]));
 		const written = 128 | 8, read = 128 | 4;
 		const buffer = (size, flags) => device.createBuffer({ size: Math.max(size, 4), usage: flags });
 		// one input buffer per power of two size is reused, the queue writes it only after earlier kernels read it (a new
@@ -164,7 +173,7 @@ addToLibrary({
 			}
 		};
 		const runtimePipeline = async (key) => strictWebGpu.pipelines[key] ||=
-			await strictWebGpuPipeline(device, Module['strictShaders'][key]);
+			await (strictWebGpu.compiling[key] || strictWebGpuPipeline(device, Module['strictShaders'][key]));
 		if (inputs.copies && inputs.copies.length) {
 			const copying = device.createCommandEncoder();
 			for (const [source, offset, length] of inputs.copies)
