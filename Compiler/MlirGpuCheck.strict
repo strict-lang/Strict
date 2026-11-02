@@ -36,6 +36,7 @@ IsDeviceBody Boolean
 	Doubling.IsDeviceBody
 	Randomizing.IsDeviceBody is false
 	MlirGpuCheck(GpuSamples.Gathering, 2).IsDeviceBody is false
+	MlirGpuCheck(GpuSamples.Weighting, 2).IsDeviceBody is false
 	for Range(position + 1, function.method.LoopEndOf(position))
 		if IsDevice(function, value, 0) is false
 			return false
@@ -45,9 +46,9 @@ IsDevice(inspected MlirFunction, at Number, depth Number) Boolean
 	Randomizing.IsDevice(Randomizing.function, 4, 0) is false
 	Doubling.IsDevice(MlirFunction(Powered.types, Powered.type, GpuSamples.Sined), 1, 0)
 	let entry = inspected.method.instructions(at)
-	if entry.kind is in Moves
+	if (entry.kind is in Moves) or (entry.kind is InstructionType.IndexCall)
 		return IsValued(inspected, at, depth)
-	if entry.kind is in (InstructionType.IndexCall, InstructionType.FieldLoad)
+	if entry.kind is InstructionType.FieldLoad
 		return MlirDeviceRecords(inspected, at).IsRead(entry)
 	if entry.kind is InstructionType.Invoke
 		return IsCall(inspected, at, depth)
