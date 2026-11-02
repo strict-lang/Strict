@@ -53,6 +53,7 @@ Calculated(entry InstructionEntry) Texts
 	target is "" then List(Text) + compared else (compared, target + " = select(n_int(0), n_int(1), flag);")
 Indexed(entry InstructionEntry) Texts
 	WgslStatement(Summed, 6).Indexed(Summed.method.instructions(6)).First.StartsWith("let k6 = n_index(r")
+	WgslStatement(Summed, 6).Indexed(Summed.method.instructions(6))(1).IndexOf(" = n_of(n_item(v_") > 0
 	let slots = MlirDeviceRecords(function, at).Slots(MlirKinds(function).VariableKind(at, entry.texts(0)))
 	if slots > 0
 		return Recorded(entry, slots)
@@ -61,7 +62,7 @@ Indexed(entry InstructionEntry) Texts
 	let target = "r" + entry.payload(0)
 	let position = "k" + at
 	let inside = "if (" + index + ".f >= 0.0 && " + position + " < " + list + ".y) { "
-	let read = inside + target + " = n_of(numbers[" + list + ".x + " + position + "]); }"
+	let read = inside + target + " = n_of(n_item(" + list + ".x, " + position + ")); }"
 	("let " + position + " = n_index(" + index + ");", read, "else { failed[0] = 1u; " + target + " = n_int(0); }")
 Called(entry InstructionEntry) Texts
 	WgslStatement(Doubled, 4).Called(Doubled.method.instructions(4)) is ("r2 = s_Rows_Twice_1(n_int(0), r1);")
@@ -94,7 +95,7 @@ Begun(register Text, entry InstructionEntry) Texts
 	let counter = "k" + at
 	let saved = ("let e" + at + " = " + register + "l;", "let s" + at + "i = v_index;", "let s" + at + "v = v_value;")
 	let count = "let c" + at + " = " + (isList then "e" + at + ".y;" else "n_index(" + register + ");")
-	let item = isList then "n_of(numbers[e" + at + ".x + " + counter + "])" else "n_int(i32(" + counter + "))"
+	let item = isList then "n_of(n_item(e" + at + ".x, " + counter + "))" else "n_int(i32(" + counter + "))"
 	let loop = "for (var " + counter + " = 0u; " + counter + " < c" + at + "; " + counter + "++) {"
 	saved + count + loop + ("v_index = n_int(i32(" + counter + "));") + ("v_value = " + item + ";")
 Finished(entry InstructionEntry) Texts
@@ -117,12 +118,12 @@ Recorded(entry InstructionEntry, slots Number) Texts
 	let read = "if (" + position + " < v_" + entry.texts(0) + "l.y) { " + target + " = n_int(i32(" + position + ")); }"
 	(first, read, "else { failed[0] = 1u; " + target + " = n_int(0); }")
 Fielded(entry InstructionEntry) Texts
-	WgslStatement(Records, 5).Fielded(MlirDeviceRecords.Field)(1).EndsWith("r3 = n_of(numbers[v_pairsl.x + k5]); }")
+	WgslStatement(Records, 5).Fielded(MlirDeviceRecords.Field)(1).EndsWith("r3 = n_of(n_item(v_pairsl.x, k5)); }")
 	let list = "v_" + function.method.instructions(MlirKinds(function).Writer(at, entry.payload(1))).texts(0) + "l"
 	let member = StructLanes.Members(function.TypeOf(entry.texts(1))).Index(entry.texts(0))
 	let position = "k" + at
 	let target = "r" + entry.payload(0)
-	let item = "n_of(numbers[" + list + ".x + " + position + "])"
+	let item = "n_of(n_item(" + list + ".x, " + position + "))"
 	let read = "if (" + position + " < " + list + ".y) { " + target + " = " + item + "; }"
 	let first = "let " + position + " = n_index(r" + entry.payload(1) + ") + " + member + "u;"
 	(first, read, "else { failed[0] = 1u; " + target + " = n_int(0); }")

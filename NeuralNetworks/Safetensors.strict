@@ -38,6 +38,7 @@ Values(name Text) Numbers
 	Bytes.Values("a.weight").Length is 256
 	Bytes.Values("a.weight")(1) is -126
 	Bytes.Values("a.comfy_quant")(0) is 123
+	Safetensors("NeuralNetworks/tinyspaced.safetensors").Values("a") is (1.5, -2)
 	TensorFile.Floats(path, Entry(name), bits)
 Rows(name Text) List(Numbers)
 	Tiny.Rows("a") is ((1, 2, 3), (4, 5, 6))

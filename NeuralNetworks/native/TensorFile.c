@@ -59,6 +59,28 @@ static int Stamped(const char* path, uint64_t* size, uint64_t* modified)
 	return 1;
 }
 
+/* Removes the whitespace outside of strings from the JSON text of length (writers like Python's json.dumps put spaces
+   after , and :), all lookups then find "name":{ and "shape":[2,3]. */
+static void Compacted(char* text, uint64_t length)
+{
+	uint64_t kept = 0;
+	int isString = 0, isEscaped = 0;
+	for (uint64_t index = 0; index < length; index++)
+	{
+		char character = text[index];
+		if (!isString && (character == ' ' || character == '\t' || character == '\r' || character == '\n'))
+			continue;
+		if (isEscaped)
+			isEscaped = 0;
+		else if (isString && character == '\\')
+			isEscaped = 1;
+		else if (character == '"')
+			isString = !isString;
+		text[kept++] = character;
+	}
+	text[kept] = 0;
+}
+
 /* The JSON header of the .safetensors file at path from headers or read into them, 0 when it can't be read. */
 static const char* HeaderOf(const char* path, const char** failure)
 {
@@ -86,7 +108,7 @@ static const char* HeaderOf(const char* path, const char** failure)
 		*failure = "TensorFileHeaderTruncated";
 		return 0;
 	}
-	text[length] = 0;
+	Compacted(text, length);
 	Header* slot = &headers[nextHeader];
 	nextHeader = (nextHeader + 1) % HeaderCount;
 	free(slot->path);

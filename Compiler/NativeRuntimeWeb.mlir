@@ -668,7 +668,8 @@
   }
   // a kernel with a WGSL shader (WgslShader) runs on WebGPU: each value is a (number, -1) or (items address, length)
   // pair, the loop source is the last one, strict_webgpu fills the result list or returns 0 to run it on the CPU; a
-  // loop with a result format of 17 (bfloat16) or 32 bits goes through strict_gpu_kernel like kind 2, a runtime kernel
+  // loop with a result format of 17 (bfloat16) or 32 bits goes through strict_gpu_kernel like kind 2 (generated loops by
+  // the second name of their table, the 32 bit one, the first is empty when a 64 bit kernel failed), a runtime kernel
   // of NativeRuntimeWgsl.js: each value is (number, -1, 0) or (data address, length, bits of its numbers)
   llvm.func @strict_webgpu_ready(!llvm.ptr) -> i32
   llvm.func @strict_webgpu(!llvm.ptr, i32, !llvm.ptr, i32, !llvm.ptr) -> i32
@@ -677,7 +678,12 @@
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %two = arith.constant 2 : i64
-    %ready = llvm.call @strict_webgpu_ready(%name) : (!llvm.ptr) -> i32
+    %nameLength = llvm.call @strict_c_strlen(%name) : (!llvm.ptr) -> i64
+    %afterName = arith.addi %nameLength, %one : i64
+    %singleName = llvm.getelementptr %name[%afterName] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %isGenerated = arith.cmpi ule, %kind, %one : i64
+    %shaderName = arith.select %isGenerated, %singleName, %name : !llvm.ptr
+    %ready = llvm.call @strict_webgpu_ready(%shaderName) : (!llvm.ptr) -> i32
     %unready = arith.constant 0 : i32
     %isReady = arith.cmpi ne, %ready, %unready : i32
     %isPlain = arith.cmpi ule, %kind, %one : i64
@@ -704,7 +710,7 @@
     %sourceBit = arith.shli %one, %valueCount : i64
     %withSource = arith.ori %mask, %sourceBit : i64
     %narrowMask = arith.select %isNarrowList, %withSource, %mask : i64
-    %narrowResult = func.call @strict_gpu_kernel(%name, %count, %sourced, %narrowSlots, %narrowMask, %format) : (!llvm.ptr, i64, !llvm.ptr, i64, i64, i64) -> f64
+    %narrowResult = func.call @strict_gpu_kernel(%shaderName, %count, %sourced, %narrowSlots, %narrowMask, %format) : (!llvm.ptr, i64, !llvm.ptr, i64, i64, i64) -> f64
     return %narrowResult : f64
   ^other:
     cf.cond_br %kernelUsable, ^kernel, ^skip
@@ -740,7 +746,7 @@
     %items = func.call @strict_list_items(%result) : (f64) -> !llvm.ptr
     %count32 = arith.trunci %count : i64 to i32
     %slots32 = arith.trunci %slots : i64 to i32
-    %ran = llvm.call @strict_webgpu(%name, %count32, %table, %slots32, %items) : (!llvm.ptr, i32, !llvm.ptr, i32, !llvm.ptr) -> i32
+    %ran = llvm.call @strict_webgpu(%shaderName, %count32, %table, %slots32, %items) : (!llvm.ptr, i32, !llvm.ptr, i32, !llvm.ptr) -> i32
     %eight = arith.constant 8 : i64
     %bytes = arith.muli %count, %eight : i64
     func.call @strict_gc_written_range(%items, %bytes) : (!llvm.ptr, i64) -> ()
@@ -850,9 +856,10 @@
   ^failed:
     return %zero : f64
   }
-  // the WebGPU buffer of a list computed by a runtime kernel and not read on the CPU yet, 0 for any other list
+  // the WebGPU buffer of a list computed on the GPU, also after the CPU read it (like native device copies: the lists
+  // are not changed, FluxAttention's Products read the downloaded mixed values 13 times again from the host), 0 for any
+  // other list
   func.func private @strict_gpu_web_handle(%list: f64) -> i64 {
-    %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
     %eight = arith.constant 8 : i64
     %webClass = arith.constant 255 : i64
@@ -865,16 +872,12 @@
     %holderSlot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
     %holderBits = llvm.load %holderSlot : !llvm.ptr -> f64
     %holder = func.call @strict_ptr(%holderBits) : (f64) -> !llvm.ptr
-    %dataSlot = llvm.getelementptr %holder[3] : (!llvm.ptr) -> !llvm.ptr, f64
-    %dataBits = llvm.load %dataSlot : !llvm.ptr -> f64
     %deviceSlot = llvm.getelementptr %holder[4] : (!llvm.ptr) -> !llvm.ptr, i64
     %tagged = llvm.load %deviceSlot : !llvm.ptr -> i64
     %class = arith.andi %tagged, %webClass : i64
     %isWeb = arith.cmpi eq, %class, %webClass : i64
-    %isMissing = arith.cmpf oeq, %dataBits, %zero : f64
-    %isResident = arith.andi %isWeb, %isMissing : i1
     %handle = arith.shrui %tagged, %eight : i64
-    %result = arith.select %isResident, %handle, %none : i64
+    %result = arith.select %isWeb, %handle, %none : i64
     return %result : i64
   ^other:
     return %none : i64

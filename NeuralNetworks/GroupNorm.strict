@@ -4,48 +4,37 @@ has groups Number
 constant Epsilon = 0.000001
 constant Pair = GroupNorm((1, 1), (0, 0), 2)
 constant Column = FeatureMap((1, 2, 3, 6), 1, 2, (0, 0))
-Affine(map FeatureMap) Numbers
+Affine(map FeatureMap) Float32s
 	Pair.Affine(Column)(1).IsNearlyEqual(0.5)
 	Pair.Affine(Column)(3).IsNearlyEqual(-2)
 	GroupNorm((1, 1), (0, 0), 1).Affine(Column)(0).IsNearlyEqual(1 / 3.5.SquareRoot)
 	GroupNorm((2, 1), (0.5, 0), 2).Affine(FeatureMap(Column.values, 1, 2, (1, 0)))(2).IsNearlyEqual(-3.499998)
 	let means = Means(map)
 	Scaled(means, Variances(map, means), map.offsets)
-Scaled(means Numbers, variances Numbers, offsets Numbers) Numbers
+Scaled(means Numbers, variances Numbers, offsets Numbers) Float32s
 	Pair.Scaled((2, 4), (1, 4), (0, 0))(3).IsNearlyEqual(-2)
 	for 2 * offsets.Length
 		let channel = index % offsets.Length
 		let group = (channel / (offsets.Length / groups)).Floor
 		let scale = weights(channel) / (variances(group) + Epsilon).SquareRoot
 		index < offsets.Length then scale else biases(channel) + (offsets(channel) - means(group)) * scale
-Means(map FeatureMap) Numbers
+Means(map FeatureMap) Float32s
 	Pair.Means(Column) is (2, 4)
 	Pair.Means(FeatureMap(Column.values, 1, 2, (1, 0))) is (3, 4)
-	let count = map.values.Length / groups
-	for Grouped(Totals(map.Partials(groups, Layer.Zeros(groups), false), map.Runs))
-		value / count
-Variances(map FeatureMap, means Numbers) Numbers
+	Averages(map.Partials(groups, Layer.Zeros(groups), false), map.Runs, map.values.Length / groups)
+Variances(map FeatureMap, means Numbers) Float32s
 	Pair.Variances(Column, (2, 4)) is (1, 4)
 	GroupNorm((1, 1), (0, 0), 1).Variances(Column, List(Number) + 3) is List(Number) + 3.5
-	let count = map.values.Length / groups
-	for Grouped(Totals(map.Partials(groups, means, true), map.Runs))
-		value / count
-Totals(partials Numbers, rows Number) Numbers
-	Pair.Totals((1, 2, 3, 6), 2) is (4, 8)
-	let width = partials.Length / rows
-	for width
-		let channel = index
-		mutable sum = 0
-		for rows
-			sum = sum + partials(index * width + channel)
-		sum
-Grouped(totals Numbers) Numbers
-	Pair.Grouped((1, 2)) is (1, 2)
-	GroupNorm((1, 1), (0, 0), 1).Grouped((1, 2)) is List(Number) + 3
-	let size = totals.Length / groups
+	Averages(map.Partials(groups, means, true), map.Runs, map.values.Length / groups)
+Averages(partials Numbers, rows Number, count Number) Float32s
+	Pair.Averages((1, 2, 3, 6), 2, 2) is (2, 4)
+	GroupNorm((1, 1), (0, 0), 1).Averages((1, 2, 3, 6), 2, 4) is List(Number) + 3
+	let size = partials.Length / rows / groups
 	for groups
 		let group = index
 		mutable sum = 0
-		for size
-			sum = sum + totals(group * size + index)
-		sum
+		for rows
+			let start = index * size * groups + group * size
+			for size
+				sum = sum + partials(start + index)
+		sum / count
