@@ -5,6 +5,7 @@ constant Doubled = MlirDeviceStatements.Doubled
 constant Absolute = MlirGpuCheck.Absolute
 constant Summed = MlirDeviceStatements.Summed
 constant Records = MlirDeviceRecords.Holding
+constant Less = InstructionEntry.Binary(InstructionType.LessThan, (0, 1, 2))
 constant Arithmetic = ("n_add(", "n_sub(", "n_mul(", "n_div(", "n_mod(")
 constant Comparisons = ("n_equal(", "n_unequal(", "n_less(", "n_more(")
 Lines Texts
@@ -42,6 +43,7 @@ Literal(number Number) Text
 Calculated(entry InstructionEntry) Texts
 	WgslStatement(Twice, 2).Calculated(Twice.method.instructions(2)) is ("r2 = n_mul(r0, r1);")
 	WgslStatement(Absolute, 2).Calculated(Absolute.method.instructions(2)) is ("flag = n_less(r0, r1);")
+	WgslStatement(Twice, 2).Calculated(Less)(1) is "r2 = n_int(select(0, 1, flag));"
 	let left = "r" + entry.payload(1)
 	let right = "r" + entry.payload(2)
 	let target = entry.payload(0) is 3 then "r" + entry.payload(3) else ""
@@ -50,7 +52,7 @@ Calculated(entry InstructionEntry) Texts
 	if entry.kind < InstructionType.ArithmeticSeparator
 		return List(Text) + (target + " = " + Arithmetic(entry.kind - InstructionType.Add) + left + ", " + right + ");")
 	let compared = "flag = " + Comparisons(entry.kind - InstructionType.Equal) + left + ", " + right + ");"
-	target is "" then List(Text) + compared else (compared, target + " = select(n_int(0), n_int(1), flag);")
+	target is "" then List(Text) + compared else (compared, target + " = n_int(select(0, 1, flag));")
 Indexed(entry InstructionEntry) Texts
 	WgslStatement(Summed, 6).Indexed(Summed.method.instructions(6)).First.StartsWith("let k6 = n_index(r")
 	WgslStatement(Summed, 6).Indexed(Summed.method.instructions(6))(1).IndexOf(" = n_of(n_item(v_") > 0
