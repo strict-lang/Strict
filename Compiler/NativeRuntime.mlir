@@ -18200,12 +18200,14 @@
   // `Batch.Sums` of 8 bit rows in one block (strict_rows: codes, then a 32 bit scale per 32 columns, each row padded to
   // 16 bytes) without bases or gates on WebGPU: strict_quantized makes 8 bit codes and a scale of every token, strict_eights the
   // dot products of 4 codes at a time as bfloat16 results, 0.0 when the rows or the platform can not (native platforms
-  // run strict_gpu_tokens on)
+  // run strict_gpu_tokens on); the row block is uploaded once and kept like a device copy of the rows (kind 5, given back
+  // with them), a view of it passes it to the kernel
   func.func private @strict_gpu_tokens_web(%count: i64, %rows: f64, %input: f64, %width: f64, %rowCount: f64, %bases: f64, %biases: f64, %gated: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %false = arith.constant false
+    %true = arith.constant true
     %unbased = arith.cmpf oeq, %bases, %zero : f64
     %ungated = arith.cmpf oeq, %gated, %zero : f64
     %isPlain = arith.andi %unbased, %ungated : i1
@@ -18263,8 +18265,35 @@
   ^dots:
     %strideWords = arith.divui %stride, %four : i64
     %blockWords = arith.muli %rowTotal, %strideWords : i64
+    %three = arith.constant 3 : i64
+    %copy = llvm.alloca %three x i64 : (i64) -> !llvm.ptr
+    %webKind = arith.constant 5 : i64
+    %isCached = func.call @strict_gpu_cached(%rows, %webKind, %blockWords, %copy) : (f64, i64, i64, !llvm.ptr) -> i1
+    cf.cond_br %isCached, ^kept, ^upload
+  ^upload:
+    %uploaded = func.call @strict_gpu_web_uploaded(%firstData, %blockWords) : (!llvm.ptr, i64) -> i64
+    %isUploaded = arith.cmpi ne, %uploaded, %none : i64
+    cf.cond_br %isUploaded, ^remember, ^hosted
+  ^remember:
+    %webClass = arith.constant 255 : i64
+    %eightBits = arith.constant 8 : i64
+    %shiftedHandle = arith.shli %uploaded, %eightBits : i64
+    %taggedHandle = arith.ori %shiftedHandle, %webClass : i64
+    func.call @strict_gpu_view(%copy, %taggedHandle, %blockWords, %floatFormat) : (!llvm.ptr, i64, i64, i64) -> ()
+    %webPool = arith.constant 256 : i64
+    func.call @strict_gpu_remember(%rows, %webKind, %blockWords, %copy, %webPool) : (f64, i64, i64, !llvm.ptr, i64) -> ()
+    func.call @strict_rc_device(%rows) : (f64) -> ()
+    cf.br ^kept
+  ^kept:
+    %keptDevice = llvm.load %copy : !llvm.ptr -> i64
+    %keptBits = arith.bitcast %keptDevice : i64 to f64
+    %keptBlock = func.call @strict_packed_view(%blockWords, %floatFormat, %zero, %keptBits) : (i64, i64, f64, f64) -> f64
+    cf.br ^block(%keptBlock, %true : f64, i1)
+  ^hosted:
     %dataBits = func.call @strict_bits(%firstData) : (!llvm.ptr) -> f64
-    %block = func.call @strict_packed_view(%blockWords, %floatFormat, %dataBits, %zero) : (i64, i64, f64, f64) -> f64
+    %hostedBlock = func.call @strict_packed_view(%blockWords, %floatFormat, %dataBits, %zero) : (i64, i64, f64, f64) -> f64
+    cf.br ^block(%hostedBlock, %false : f64, i1)
+  ^block(%block: f64, %isBorrowed: i1):
     %seven = arith.constant 7 : i64
     %dotSlots = llvm.alloca %seven x f64 : (i64) -> !llvm.ptr
     llvm.store %block, %dotSlots : f64, !llvm.ptr
@@ -18289,7 +18318,15 @@
     %eightsName = llvm.mlir.addressof @strict_gpu_eights_web : !llvm.ptr
     %halvesFormat = arith.constant 17 : i64
     %summed = func.call @strict_gpu_shaded(%eightsName, %count, %zero, %kind, %dotSlots, %seven, %dotMask, %halvesFormat) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
-    return %summed : f64
+    cf.cond_br %isBorrowed, ^returned, ^done(%summed : f64)
+  ^returned:
+    %blockView = func.call @strict_ptr(%block) : (f64) -> !llvm.ptr
+    %blockHolder = llvm.getelementptr %blockView[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %blockDevice = llvm.getelementptr %blockHolder[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %none, %blockDevice : i64, !llvm.ptr
+    cf.br ^done(%summed : f64)
+  ^done(%result: f64):
+    return %result : f64
   ^unable:
     return %zero : f64
   }

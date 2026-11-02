@@ -57,6 +57,11 @@
   func.func private @strict_gpu_web_give(%device: i64) {
     return
   }
+  // a WebGPU buffer of the words at data (NativeRuntimeWeb.mlir), 0 here
+  func.func private @strict_gpu_web_uploaded(%data: !llvm.ptr, %words: i64) -> i64 {
+    %none = arith.constant 0 : i64
+    return %none : i64
+  }
   // two lists in WebGPU buffers joined there (NativeRuntimeWeb.mlir), 0.0 here
   func.func private @strict_gpu_web_joined(%left: f64, %right: f64) -> f64 {
     %none = arith.constant 0.0 : f64

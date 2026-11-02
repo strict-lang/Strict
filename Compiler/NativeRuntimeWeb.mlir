@@ -927,6 +927,14 @@
     %nothing = llvm.mlir.zero : !llvm.ptr
     return %nothing : !llvm.ptr
   }
+  // the handle of a new WebGPU buffer with the words at data as they are, 0 before the first kernel made the device
+  llvm.func @strict_webgpu_uploaded(!llvm.ptr, i32) -> i32
+  func.func private @strict_gpu_web_uploaded(%data: !llvm.ptr, %words: i64) -> i64 {
+    %words32 = arith.trunci %words : i64 to i32
+    %made = llvm.call @strict_webgpu_uploaded(%data, %words32) : (!llvm.ptr, i32) -> i32
+    %handle = arith.extui %made : i32 to i64
+    return %handle : i64
+  }
   // a list in a WebGPU buffer is gone: so is the buffer
   func.func private @strict_gpu_web_give(%device: i64) {
     %eight = arith.constant 8 : i64

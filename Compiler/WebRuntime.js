@@ -314,6 +314,21 @@ addToLibrary({
 		strictWebGpu.grown += joined.size;
 		return strictWebGpu.next++;
 	},
+	// a new kept buffer of the words at address as they are (strict_gpu_web_uploaded), 0 before the first kernel made the
+	// device
+	strict_webgpu_uploaded__deps: ['$strictWebGpu'],
+	strict_webgpu_uploaded: (address, words) => {
+		const device = strictWebGpu.device;
+		if (!device)
+			return 0;
+		const uploaded = device.createBuffer({ size: Math.max(words * 4, 4), usage: 128 | 8 | 4 });
+		device.queue.writeBuffer(uploaded, 0, HEAPU8, address >>> 0, words * 4);
+		const handle = strictWebGpu.next++;
+		strictWebGpu.buffers[handle] = uploaded;
+		strictWebGpu.failures[handle] = device.createBuffer({ size: 4, usage: 128 | 8 | 4 });
+		strictWebGpu.grown += uploaded.size;
+		return handle;
+	},
 	strict_webgpu_release__deps: ['$strictWebGpu'],
 	strict_webgpu_release: (handle) => {
 		strictWebGpu.buffers[handle]?.destroy();
