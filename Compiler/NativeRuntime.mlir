@@ -18158,6 +18158,12 @@
   func.func private @strict_gpu_tokens(%ptx: !llvm.ptr, %count: i64, %rows: f64, %input: f64, %width: f64, %rowCount: f64, %bases: f64, %biases: f64, %gated: f64) -> f64 {
     %none = arith.constant 0 : i64
     %zero = arith.constant 0.0 : f64
+    %webbed = func.call @strict_gpu_tokens_web(%count, %rows, %input, %width, %rowCount, %bases, %biases, %gated) : (i64, f64, f64, f64, f64, f64, f64, f64) -> f64
+    %isWebbed = arith.cmpf une, %webbed, %zero : f64
+    cf.cond_br %isWebbed, ^webDone, ^native
+  ^webDone:
+    return %webbed : f64
+  ^native:
     %keptSlot = llvm.mlir.addressof @strict_gpu_tokens_kept : !llvm.ptr
     %before = llvm.load %keptSlot : !llvm.ptr -> i64
     %kept = func.call @strict_gpu_rows_kept(%rows) : (f64) -> i64
@@ -18188,6 +18194,104 @@
   ^done(%returned: f64):
     llvm.store %before, %keptSlot : i64, !llvm.ptr
     return %returned : f64
+  }
+  llvm.mlir.global internal constant @strict_gpu_quantized_web("strict_quantized\00") : !llvm.array<17 x i8>
+  llvm.mlir.global internal constant @strict_gpu_eights_web("strict_eights\00") : !llvm.array<14 x i8>
+  // `Batch.Sums` of 8 bit rows in one block (strict_rows: codes, then a 32 bit scale per 32 columns, each row padded to
+  // 16 bytes) without bases or gates on WebGPU: strict_quantized makes 8 bit codes and a scale of every token, strict_eights the
+  // dot products of 4 codes at a time as bfloat16 results, 0.0 when the rows or the platform can not (native platforms
+  // run strict_gpu_tokens on)
+  func.func private @strict_gpu_tokens_web(%count: i64, %rows: f64, %input: f64, %width: f64, %rowCount: f64, %bases: f64, %biases: f64, %gated: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %false = arith.constant false
+    %unbased = arith.cmpf oeq, %bases, %zero : f64
+    %ungated = arith.cmpf oeq, %gated, %zero : f64
+    %isPlain = arith.andi %unbased, %ungated : i1
+    cf.cond_br %isPlain, ^formats, ^unable
+  ^formats:
+    %formats:2 = func.call @strict_gpu_row_formats(%rows, %false) : (f64, i1) -> (i1, i64)
+    %eightsMask = arith.constant 256 : i64
+    %isEights = arith.cmpi eq, %formats#1, %eightsMask : i64
+    %columns = arith.fptosi %width : f64 to i64
+    %thirtyTwo = arith.constant 32 : i64
+    %columnsRest = arith.remui %columns, %thirtyTwo : i64
+    %isAligned = arith.cmpi eq, %columnsRest, %none : i64
+    %rowTotal = arith.fptosi %rowCount : f64 to i64
+    %hasRows = arith.cmpi sgt, %rowTotal, %none : i64
+    %isShaped = arith.andi %isAligned, %hasRows : i1
+    %fits = arith.andi %isEights, %isShaped : i1
+    cf.cond_br %fits, ^rows, ^unable
+  ^rows:
+    %items = func.call @strict_list_items(%rows) : (f64) -> !llvm.ptr
+    %firstRow = llvm.load %items : !llvm.ptr -> f64
+    %lastIndex = arith.subi %rowTotal, %one : i64
+    %lastSlot = llvm.getelementptr %items[%lastIndex] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %lastRow = llvm.load %lastSlot : !llvm.ptr -> f64
+    %firstData = func.call @strict_list_data(%firstRow) : (f64) -> !llvm.ptr
+    %lastData = func.call @strict_list_data(%lastRow) : (f64) -> !llvm.ptr
+    %eight = arith.constant 8 : i64
+    %rowBytes = func.call @strict_packed_bytes(%columns, %eight) : (i64, i64) -> i64
+    %fifteen = arith.constant 15 : i64
+    %paddedBytes = arith.addi %rowBytes, %fifteen : i64
+    %sixteenMask = arith.constant -16 : i64
+    %stride = arith.andi %paddedBytes, %sixteenMask : i64
+    %firstAddress = llvm.ptrtoint %firstData : !llvm.ptr to i64
+    %lastAddress = llvm.ptrtoint %lastData : !llvm.ptr to i64
+    %span = arith.subi %lastAddress, %firstAddress : i64
+    %expected = arith.muli %lastIndex, %stride : i64
+    %isBlock = arith.cmpi eq, %span, %expected : i64
+    cf.cond_br %isBlock, ^quantize, ^unable
+  ^quantize:
+    %kind = arith.constant 2 : i64
+    %floatFormat = arith.constant 32 : i64
+    %four = arith.constant 4 : i64
+    %tokens = arith.divui %count, %rowTotal : i64
+    %words = arith.divui %columns, %four : i64
+    %tokenWords = arith.muli %tokens, %words : i64
+    %quantizedCount = arith.addi %tokenWords, %tokens : i64
+    %two = arith.constant 2 : i64
+    %quantizeSlots = llvm.alloca %two x f64 : (i64) -> !llvm.ptr
+    llvm.store %input, %quantizeSlots : f64, !llvm.ptr
+    %widthSlot = llvm.getelementptr %quantizeSlots[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %width, %widthSlot : f64, !llvm.ptr
+    %quantizeName = llvm.mlir.addressof @strict_gpu_quantized_web : !llvm.ptr
+    %quantized = func.call @strict_gpu_shaded(%quantizeName, %quantizedCount, %zero, %kind, %quantizeSlots, %two, %one, %floatFormat) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
+    %isQuantized = arith.cmpf une, %quantized, %zero : f64
+    cf.cond_br %isQuantized, ^dots, ^unable
+  ^dots:
+    %strideWords = arith.divui %stride, %four : i64
+    %blockWords = arith.muli %rowTotal, %strideWords : i64
+    %dataBits = func.call @strict_bits(%firstData) : (!llvm.ptr) -> f64
+    %block = func.call @strict_packed_view(%blockWords, %floatFormat, %dataBits, %zero) : (i64, i64, f64, f64) -> f64
+    %seven = arith.constant 7 : i64
+    %dotSlots = llvm.alloca %seven x f64 : (i64) -> !llvm.ptr
+    llvm.store %block, %dotSlots : f64, !llvm.ptr
+    %quantizedSlot = llvm.getelementptr %dotSlots[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %quantized, %quantizedSlot : f64, !llvm.ptr
+    %biasesSlot = llvm.getelementptr %dotSlots[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %biases, %biasesSlot : f64, !llvm.ptr
+    %columnsSlot = llvm.getelementptr %dotSlots[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %width, %columnsSlot : f64, !llvm.ptr
+    %rowsSlot = llvm.getelementptr %dotSlots[4] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %rowCount, %rowsSlot : f64, !llvm.ptr
+    %strideNumber = arith.uitofp %strideWords : i64 to f64
+    %strideSlot = llvm.getelementptr %dotSlots[5] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %strideNumber, %strideSlot : f64, !llvm.ptr
+    %tokensNumber = arith.uitofp %tokens : i64 to f64
+    %tokensSlot = llvm.getelementptr %dotSlots[6] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %tokensNumber, %tokensSlot : f64, !llvm.ptr
+    %hasBiases = arith.cmpf une, %biases, %zero : f64
+    %threeLists = arith.constant 7 : i64
+    %twoLists = arith.constant 3 : i64
+    %dotMask = arith.select %hasBiases, %threeLists, %twoLists : i64
+    %eightsName = llvm.mlir.addressof @strict_gpu_eights_web : !llvm.ptr
+    %halvesFormat = arith.constant 17 : i64
+    %summed = func.call @strict_gpu_shaded(%eightsName, %count, %zero, %kind, %dotSlots, %seven, %dotMask, %halvesFormat) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
+    return %summed : f64
+  ^unable:
+    return %zero : f64
   }
   // true when rows that keep their tokens (kept) and an ungated call can take the 8 bit path twice instead of 32 bit
   // tokens: the codes of the tokens, then the codes of what is left of them (a 1 / 254 step) with the first sums as

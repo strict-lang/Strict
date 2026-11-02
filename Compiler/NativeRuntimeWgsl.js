@@ -227,6 +227,70 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 	for (var split = 0u; split < work.y; split++) { sum += numbers[split * count + at]; }
 	output[at] = sum;
 }`;
+// Batch.Sums tokens as 8 bit codes (strict_gpu_tokens_web): input, width; a workgroup of 64 invocations per token writes
+// its codes 4 to a word (127 / its largest absolute number, rounded to the nearest even) and after all words the scales
+Module['strictShaders']['strict_quantized'] = strictKernelBindings + `
+var<workgroup> largests: array<f32, 64>;
+@compute @workgroup_size(64)
+fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) group: vec3<u32>,
+	@builtin(num_workgroups) groups: vec3<u32>) {
+	let width = places[3];
+	let tokens = places[1] / width;
+	let token = work.x + group.x + group.y * groups.x;
+	if (token >= tokens) { return; }
+	let first = token * width;
+	var largest = 0.0;
+	for (var column = local; column < width; column += 64u) { largest = max(largest, abs(n_item(places[0], first + column))); }
+	largests[local] = largest;
+	workgroupBarrier();
+	for (var step = 32u; step > 0u; step /= 2u) {
+		if (local < step) { largests[local] = max(largests[local], largests[local + step]); }
+		workgroupBarrier();
+	}
+	let most = largests[0];
+	let inverse = select(127.0 / most, 0.0, most == 0.0);
+	let words = width / 4u;
+	for (var word = local; word < words; word += 64u) {
+		let at = first + word * 4u;
+		let numbers = vec4<f32>(n_item(places[0], at), n_item(places[0], at + 1u), n_item(places[0], at + 2u),
+			n_item(places[0], at + 3u));
+		output[token * words + word] = bitcast<f32>(pack4xI8(vec4<i32>(round(numbers * inverse))));
+	}
+	if (local == 0u) { output[tokens * words + token] = most / 127.0; }
+}`;
+Module['strictKernelGroups']['strict_quantized'] = (places) => {
+	const tokens = places[1] / places[3];
+	return [tokens, tokens];
+};
+// Batch.Sums of 8 bit rows (strict_gpu_tokens_web): rows (codes, then a scale per 32 columns, stride words a row), codes
+// and scales of the tokens (strict_quantized), biases, columns, rows, stride, tokens: the sums of 4 codes at a time
+Module['strictShaders']['strict_eights'] = strictKernelBindings + `
+@compute @workgroup_size(64)
+fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) group: vec3<u32>,
+	@builtin(num_workgroups) groups: vec3<u32>) {
+	let columns = places[7];
+	let rows = places[9];
+	let stride = places[11];
+	let tokens = places[13];
+	let at = (work.x + group.x + group.y * groups.x) * 64u + local;
+	if (at >= tokens * rows) { return; }
+	let token = at / rows;
+	let row = at % rows;
+	let words = columns / 4u;
+	var sum = 0.0;
+	for (var block = 0u; block < columns / 32u; block++) {
+		var whole = 0i;
+		for (var word = 0u; word < 8u; word++) {
+			let rowWord = bitcast<u32>(n_item(places[0], row * stride + block * 8u + word));
+			let tokenWord = bitcast<u32>(n_item(places[2], token * words + block * 8u + word));
+			whole += dot4I8Packed(rowWord, tokenWord);
+		}
+		sum += f32(whole) * n_item(places[0], row * stride + words + block);
+	}
+	let biases = places[5];
+	let bias = select(0.0, n_item(places[4], at % max(biases, 1u)), biases > 0u);
+	output[at] = sum * n_item(places[2], tokens * words + token) + bias;
+}`;
 // Softmax.Shares: scores, width, a workgroup of 64 invocations per row (strict_gpu_softmax)
 Module['strictShaders']['strict_softmax'] = strictKernelBindings + `
 var<workgroup> partials: array<f32, 64>;
