@@ -4,7 +4,7 @@ constant Angle = TypeEntry("Strict/Angle", (MemberEntry("degrees", "Strict/Degre
 constant Byting = TypeEntry("Strict/Byte", (MemberEntry("number", "Strict/Number", List(InstructionEntry), false, 8), MemberEntry("Max", "Strict/Number", List(InstructionEntry), true)), List(MethodEntry))
 constant Red = MemberEntry("red", "Strict/Byte", List(InstructionEntry), false)
 constant Storing = " : (!llvm.ptr, i64, f32, i64) -> ()"
-constant Wrapping = MlirLayout(MlirFunction(List(TypeEntry) + MlirFunction.Shape + Degrees + Angle + Byting, Degrees, MethodEntry.CountingLoop))
+constant Wrapping = MlirLayout(MlirFunction(List(TypeEntry) + MlirFunction.Shape + Degrees + Angle + Byting + TypeEntry("Strict/Scaled", (MemberEntry.LoggerMember, MemberEntry("scale", "Strict/Number", List(InstructionEntry), false, 32)), List(MethodEntry)), Degrees, MethodEntry.CountingLoop))
 constant Widened = (InstructionEntry.LoadNumber(0, 2), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "width"), InstructionEntry.Return(0))
 constant Packing = MlirLayout(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("from", List(MemberEntry), "Strict/Shape", Widened)))
 constant LoggerField = InstructionEntry(InstructionType.FieldLoad, "logger", (2, 1, -1))
@@ -24,8 +24,10 @@ IsStruct(typeName Text) Boolean
 	Wrapping.IsStruct("Shape")
 	Wrapping.IsStruct("Strict/Degrees") is false
 	Wrapping.IsStruct("List(Number)") is false
+	Wrapping.IsStruct("Scaled") is false
 	let isStruct = function.TypeOf(TypeEntry.ShortName(typeName)).IsStruct
-	let isPacked = MlirCouples(function, 0).IsCoupled(typeName) or MlirLanes(function, 0).IsPacked(typeName)
+	let couples = MlirCouples(function, 0)
+	let isPacked = couples.IsCoupled(typeName) or couples.IsSingle(typeName) or MlirLanes(function, 0).IsPacked(typeName)
 	isStruct and (isPacked is false)
 Represented(kind Text) Text
 	Wrapping.Represented("Angle") is "Number"

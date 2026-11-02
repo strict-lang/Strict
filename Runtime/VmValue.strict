@@ -52,9 +52,10 @@ As(typeName Text) VmValue
 	OfNumber(98).As("Strict/Character").text is "b"
 	OfText("ab").As("Strict/List(Character)").text is "ab"
 	OfText("ab").As("Strict/Number").text is "ab"
-	if (kind is not "Number") and (kind is not "Text")
-		return value
+	OfList(OfText("c"), OfText("b")).As("Strict/Text").text is "cb"
 	let target = TypeEntry.ShortName(typeName)
+	if (kind is "List") and (target is "Text")
+		return OfText(Concatenated)
 	if (kind is "Number") and (target is "Character")
 		return OfText(Character(number) to Text)
 	(kind is "Text") and (target is "Number") and (text.Length is 1) then OfNumber(Character(text).number) else value
@@ -87,6 +88,12 @@ Joined Text
 	for Range(1, items.Length)
 		result = result + ", " + items(value) to Text
 	result + ")"
+Concatenated Text
+	OfList(OfText("a"), OfText("b")).Concatenated is "ab"
+	mutable result = ""
+	for items
+		result = result + value.text
+	result
 Automatic Text
 	VmValue("Strict/Process", 0, "", List(VmValue) + OfText("a") + None).Automatic is "(a)"
 	Failed.Automatic is "Error: x\n\tat B.C in B.strict:line 7"

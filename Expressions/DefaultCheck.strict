@@ -25,11 +25,17 @@ ValueMembers(path Text, lines Texts) Texts
 LoopNames(path Text, lines Texts) Texts
 	Counting.LoopNames("A.strict", Moving).Length is 0
 	Counting.LoopNames("A.strict", Outside).First is "LoopNameMustNotBeDeclared: outer in A.strict:3"
+	Counting.LoopNames("A.strict", ("Run", "\tlet outer = 1")).First is "LoopNameMustNotBeDeclared: outer in A.strict:2"
 	for lines
 		let tokens = Tokenizer(value.Trim).Tokens
 		let isDeclared = value.StartsWith("\t") and (tokens.Length > 1) and (tokens(0) is in ("let", "mutable", "constant"))
-		if isDeclared and (tokens(1) is in LoopVariables) and HasLoop(lines, index)
+		if isDeclared and IsLoopName(tokens(1), lines, index)
 			"LoopNameMustNotBeDeclared: " + tokens(1) + " in " + path + ":" + (index + 1)
+IsLoopName(name Text, lines Texts, position Number) Boolean
+	DefaultCheck.IsLoopName("outer", ("Run", "\tlet outer = 1"), 1)
+	DefaultCheck.IsLoopName("value", ("Twice(value Number) Number", "\tvalue * 2"), 0) is false
+	DefaultCheck.IsLoopName("index", Countdown, 1)
+	(name is in LoopVariables) and ((name is "outer") or HasLoop(lines, position))
 HasLoop(lines Texts, position Number) Boolean
 	DefaultCheck.HasLoop(Countdown, 1)
 	DefaultCheck.HasLoop(("Twice(value Number) Number", "\tvalue * 2"), 1) is false
