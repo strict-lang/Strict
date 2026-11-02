@@ -291,6 +291,110 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 	let bias = select(0.0, n_item(places[4], at % max(biases, 1u)), biases > 0u);
 	output[at] = sum * n_item(places[2], tokens * words + token) + bias;
 }`;
+// Attention.Merged (strict_gpu_attention_web): queries, keys, values, heads, groups, size (up to 128), sequences,
+// causal, value offset, value stride; a workgroup of 64 invocations per 16 tokens of one head and sequence scores 64
+// positions at a time (one each), keeps the largest score and the sum of each row (online softmax) and adds the
+// weighted values of 2 numbers of all 16 rows per invocation, no scores are stored
+Module['strictShaders']['strict_attention'] = strictKernelBindings + `
+var<workgroup> asked: array<f32, 2048>;
+var<workgroup> scored: array<f32, 1024>;
+var<workgroup> largests: array<f32, 16>;
+var<workgroup> rescales: array<f32, 16>;
+var<workgroup> totals: array<f32, 16>;
+@compute @workgroup_size(64)
+fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) group: vec3<u32>,
+	@builtin(num_workgroups) groups: vec3<u32>) {
+	let heads = places[7];
+	let keyGroups = places[9];
+	let size = places[11];
+	let sequences = places[13];
+	let causal = places[15] == 1u;
+	let valueOffset = places[17];
+	let valueStride = select(places[19], sequences * keyGroups * size, places[19] == 0u);
+	let tokens = places[1] / heads / size / sequences;
+	let positions = places[3] / keyGroups / size / sequences;
+	let tokenBlocks = (tokens + 15u) / 16u;
+	let block = work.x + group.x + group.y * groups.x;
+	if (block >= sequences * tokenBlocks * heads) { return; }
+	let head = block % heads;
+	let sequence = block / heads / tokenBlocks;
+	let firstToken = block / heads % tokenBlocks * 16u;
+	let keyGroup = sequence * keyGroups + head * keyGroups / heads;
+	for (var at = local; at < 16u * size; at += 64u) {
+		let token = firstToken + at / size;
+		var query = 0.0;
+		if (token < tokens) { query = n_item(places[0], ((sequence * tokens + token) * heads + head) * size + at % size); }
+		asked[at] = query / sqrt(f32(size));
+	}
+	if (local < 16u) {
+		largests[local] = -3.0e38;
+		totals[local] = 0.0;
+	}
+	let lastToken = min(firstToken + 15u, tokens - 1u);
+	let visible = select(positions, positions - tokens + lastToken + 1u, causal);
+	var sums: array<f32, 32>;
+	for (var start = 0u; start < visible; start += 64u) {
+		workgroupBarrier();
+		let position = start + local;
+		var scores: array<f32, 16>;
+		if (position < visible) {
+			let keyStart = (position * sequences * keyGroups + keyGroup) * size;
+			for (var at = 0u; at < size; at++) {
+				let key = n_item(places[2], keyStart + at);
+				for (var row = 0u; row < 16u; row++) { scores[row] = fma(asked[row * size + at], key, scores[row]); }
+			}
+		}
+		for (var row = 0u; row < 16u; row++) {
+			let token = firstToken + row;
+			let last = select(positions - 1u, positions - tokens + token, causal);
+			scored[row * 64u + local] = select(-3.0e38, scores[row], position < visible && position <= last);
+		}
+		workgroupBarrier();
+		if (local < 16u) {
+			var largest = largests[local];
+			for (var at = 0u; at < 64u; at++) { largest = max(largest, scored[local * 64u + at]); }
+			var total = 0.0;
+			for (var at = 0u; at < 64u; at++) {
+				let share = select(exp(scored[local * 64u + at] - largest), 0.0, scored[local * 64u + at] < -1.0e38);
+				scored[local * 64u + at] = share;
+				total += share;
+			}
+			let rescale = exp(largests[local] - largest);
+			rescales[local] = rescale;
+			totals[local] = totals[local] * rescale + total;
+			largests[local] = largest;
+		}
+		workgroupBarrier();
+		for (var row = 0u; row < 16u; row++) {
+			sums[row * 2u] *= rescales[row];
+			sums[row * 2u + 1u] *= rescales[row];
+		}
+		let count = min(64u, visible - start);
+		for (var at = 0u; at < count; at++) {
+			let valueStart = valueOffset + keyGroup * size + (start + at) * valueStride;
+			let first = select(0.0, n_item(places[4], valueStart + local), local < size);
+			let second = select(0.0, n_item(places[4], valueStart + local + 64u), local + 64u < size);
+			for (var row = 0u; row < 16u; row++) {
+				let share = scored[row * 64u + at];
+				sums[row * 2u] = fma(share, first, sums[row * 2u]);
+				sums[row * 2u + 1u] = fma(share, second, sums[row * 2u + 1u]);
+			}
+		}
+	}
+	workgroupBarrier();
+	for (var row = 0u; row < 16u; row++) {
+		let token = firstToken + row;
+		if (token >= tokens) { break; }
+		let placed = ((sequence * tokens + token) * heads + head) * size;
+		let total = totals[row];
+		if (local < size) { output[placed + local] = sums[row * 2u] / total; }
+		if (local + 64u < size) { output[placed + local + 64u] = sums[row * 2u + 1u] / total; }
+	}
+}`;
+Module['strictKernelGroups']['strict_attention'] = (places) => {
+	const tokens = places[1] / places[7] / places[11] / places[13], blocks = places[13] * Math.ceil(tokens / 16) * places[7];
+	return [blocks, blocks];
+};
 // Softmax.Shares: scores, width, a workgroup of 64 invocations per row (strict_gpu_softmax)
 Module['strictShaders']['strict_softmax'] = strictKernelBindings + `
 var<workgroup> partials: array<f32, 64>;

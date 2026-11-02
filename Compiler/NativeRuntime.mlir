@@ -16624,6 +16624,49 @@
   ^unable:
     return %false : i1
   }
+  llvm.mlir.global internal constant @strict_gpu_attention_web_name("strict_attention\00") : !llvm.array<17 x i8>
+  // `Attention.Merged` on WebGPU (strict_attention, head sizes up to 128, quantized keys and routing compute exactly
+  // there) as bfloat16 results, 0.0 when the platform can not (native platforms run strict_gpu_attention on)
+  func.func private @strict_gpu_attention_web(%queries: f64, %keys: f64, %values: f64, %heads: f64, %groups: f64, %size: f64, %sequences: f64, %causal: f64, %valueOffset: f64, %valueStride: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %largest = arith.constant 128.0 : f64
+    %isSmall = arith.cmpf ole, %size, %largest : f64
+    %isSized = arith.cmpf ogt, %size, %zero : f64
+    %fits = arith.andi %isSmall, %isSized : i1
+    cf.cond_br %fits, ^run, ^unable
+  ^run:
+    %ten = arith.constant 10 : i64
+    %slots = llvm.alloca %ten x f64 : (i64) -> !llvm.ptr
+    llvm.store %queries, %slots : f64, !llvm.ptr
+    %keysSlot = llvm.getelementptr %slots[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %keys, %keysSlot : f64, !llvm.ptr
+    %valuesSlot = llvm.getelementptr %slots[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %values, %valuesSlot : f64, !llvm.ptr
+    %headsSlot = llvm.getelementptr %slots[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %heads, %headsSlot : f64, !llvm.ptr
+    %groupsSlot = llvm.getelementptr %slots[4] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %groups, %groupsSlot : f64, !llvm.ptr
+    %sizeSlot = llvm.getelementptr %slots[5] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %size, %sizeSlot : f64, !llvm.ptr
+    %sequencesSlot = llvm.getelementptr %slots[6] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %sequences, %sequencesSlot : f64, !llvm.ptr
+    %causalSlot = llvm.getelementptr %slots[7] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %causal, %causalSlot : f64, !llvm.ptr
+    %offsetSlot = llvm.getelementptr %slots[8] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %valueOffset, %offsetSlot : f64, !llvm.ptr
+    %strideSlot = llvm.getelementptr %slots[9] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %valueStride, %strideSlot : f64, !llvm.ptr
+    %length = func.call @strict_list_length(%queries) : (f64) -> f64
+    %count = arith.fptosi %length : f64 to i64
+    %name = llvm.mlir.addressof @strict_gpu_attention_web_name : !llvm.ptr
+    %kind = arith.constant 2 : i64
+    %lists = arith.constant 7 : i64
+    %halves = arith.constant 17 : i64
+    %merged = func.call @strict_gpu_shaded(%name, %count, %zero, %kind, %slots, %ten, %lists, %halves) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
+    return %merged : f64
+  ^unable:
+    return %zero : f64
+  }
   // `Attention.Merged` on the 16 bit tensor cores (strict_device_attention): queries, keys and values like there, 0.0
   // when the GPU can not, then the method itself runs (head size not a multiple of 8 or above 128, more than 16 heads
   // per group of keys, lists that do not match)
@@ -16636,6 +16679,12 @@
   // mask and packed values those become 8 bit numbers too and strict_device_bytes_attention runs
   func.func private @strict_gpu_attention(%ptx: !llvm.ptr, %queries: f64, %keys: f64, %values: f64, %heads: f64, %groups: f64, %size: f64, %sequences: f64, %causal: f64, %valueOffset: f64, %valueStride: f64, %quantized: f64, %routing: f64, %exact: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
+    %webbed = func.call @strict_gpu_attention_web(%queries, %keys, %values, %heads, %groups, %size, %sequences, %causal, %valueOffset, %valueStride) : (f64, f64, f64, f64, f64, f64, f64, f64, f64, f64) -> f64
+    %isWebbed = arith.cmpf une, %webbed, %zero : f64
+    cf.cond_br %isWebbed, ^webDone, ^native
+  ^webDone:
+    return %webbed : f64
+  ^native:
     %none = arith.constant 0 : i64
     %seven = arith.constant 7 : i64
     %ten = arith.constant 10 : i64
