@@ -71,19 +71,18 @@ static inline void strict_quantized(unsigned char* data, const float* values, ui
 static inline uint16_t strict_half(float number)
 {
 	union { float number; uint32_t bits; } slot = { number };
-	uint32_t sign = (slot.bits >> 16) & 0x8000, exponent = (slot.bits >> 23) & 0xFF, mantissa = slot.bits & 0x7FFFFF;
-	int biased = (int)exponent - 112;
-	if (exponent == 0xFF)
-		return (uint16_t)(sign | 0x7C00 | (mantissa ? 0x200 : 0));
-	if (biased >= 31)
-		return (uint16_t)(sign | 0x7C00);
-	if (biased < -10)
-		return (uint16_t)sign;
-	uint32_t shift = biased > 0 ? 13 : (uint32_t)(14 - biased);
-	uint32_t significand = biased > 0 ? mantissa : mantissa | 0x800000;
-	uint32_t half = (biased > 0 ? (uint32_t)biased << 10 : 0) | (significand >> shift);
-	uint32_t rest = significand & ((1u << shift) - 1), middle = 1u << (shift - 1);
-	return (uint16_t)(sign | (half + (rest > middle || (rest == middle && (half & 1)))));
+	uint32_t sign = slot.bits & 0x80000000u, magnitude = slot.bits ^ sign, half;
+	if (magnitude >= 0x47800000u)
+		half = magnitude > 0x7F800000u ? 0x7E00 : 0x7C00;
+	else if (magnitude < 0x38800000u)
+	{
+		union { uint32_t bits; float number; } small = { magnitude };
+		small.number += 0.5f;
+		half = small.bits - 0x3F000000u;
+	}
+	else
+		half = (magnitude + 0xC8000FFFu + ((magnitude >> 13) & 1)) >> 13;
+	return (uint16_t)(half | sign >> 16);
 }
 /* The 32 bit float of a 16 bit float (IEEE half) and of a bfloat16 (the upper half of a 32 bit float). */
 static inline float strict_half_float(uint16_t half)
