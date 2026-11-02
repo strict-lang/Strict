@@ -111,6 +111,11 @@
     %no = arith.constant false
     return %no : i1
   }
+  // a file the page maps to a URL (Module.strictFiles), only on the web
+  func.func private @strict_web_file_mapped(%name: !llvm.ptr) -> i1 {
+    %no = arith.constant false
+    return %no : i1
+  }
   func.func private @strict_web_input_line() -> f64 {
     %none = arith.constant 0.0 : f64
     return %none : f64

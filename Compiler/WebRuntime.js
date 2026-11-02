@@ -475,6 +475,8 @@ addToLibrary({
 		clearTimeout(cache.timer);
 		cache.timer = setTimeout(() => cache.blocks.clear(), 5000);
 	},
+	strict_webfile_mapped__deps: ['$UTF8ToString'],
+	strict_webfile_mapped: (name) => (Module['strictFiles'] || {})[UTF8ToString(name)] ? 1 : 0,
 	strict_webfile_read__deps: ['$strictWebFileRange', '$UTF8ToString', '$Asyncify'],
 	strict_webfile_read__async: true,
 	strict_webfile_read: (url, offset, bytes, target) => Asyncify.handleSleep((wakeUp) => {

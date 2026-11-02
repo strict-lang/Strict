@@ -1093,6 +1093,14 @@
   ^none:
     return %no : i1
   }
+  // true when the page maps name to a URL in Module.strictFiles (WebRuntime.js): it exists without being fetched
+  llvm.func @strict_webfile_mapped(!llvm.ptr) -> i32
+  func.func private @strict_web_file_mapped(%name: !llvm.ptr) -> i1 {
+    %mapped = llvm.call @strict_webfile_mapped(%name) : (!llvm.ptr) -> i32
+    %none = arith.constant 0 : i32
+    %isMapped = arith.cmpi ne, %mapped, %none : i32
+    return %isMapped : i1
+  }
   func.func private @strict_web_input_line() -> f64 {
     %length32 = llvm.call @strict_webinput_length() : () -> i32
     %length = arith.extui %length32 : i32 to i64

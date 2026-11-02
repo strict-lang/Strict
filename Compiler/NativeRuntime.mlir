@@ -10893,7 +10893,9 @@
   ^disk:
     %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
     %isFile = func.call @strict_file_present(%name) : (!llvm.ptr) -> i1
-    %result = func.call @strict_boolean(%isFile) : (i1) -> f64
+    %isMapped = func.call @strict_web_file_mapped(%name) : (!llvm.ptr) -> i1
+    %exists = arith.ori %isFile, %isMapped : i1
+    %result = func.call @strict_boolean(%exists) : (i1) -> f64
     return %result : f64
   }
   llvm.mlir.global internal @strict_read_paths(0 : i64) : i64
