@@ -4072,6 +4072,7 @@
     return
   }
   func.func private @strict_rc_roots(%seen: i1) {
+    %spilled:2 = func.call @strict_registers_spilled() : () -> (i64, i64)
     %eight = arith.constant 8 : i64
     %sixteen = arith.constant 16 : i64
     llvm.call @llvm.eh.unwind.init() : () -> ()
@@ -4088,7 +4089,6 @@
     %pinnedBytes = arith.muli %pinnedCount, %eight : i64
     %pinnedEnd = arith.addi %pinnedStart, %pinnedBytes : i64
     func.call @strict_rc_seen_range(%pinnedStart, %pinnedEnd, %seen) : (i64, i64, i1) -> ()
-    %spilled:2 = func.call @strict_registers_spilled() : () -> (i64, i64)
     func.call @strict_rc_seen_range(%spilled#0, %spilled#1, %seen) : (i64, i64, i1) -> ()
     return
   }
@@ -4348,6 +4348,7 @@
     return %hits : i64
   }
   func.func private @strict_rc_mark_all() {
+    %spilled:2 = func.call @strict_registers_spilled() : () -> (i64, i64)
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %classCount = arith.constant 64 : i64
@@ -4377,7 +4378,6 @@
     %pinnedBytes = arith.muli %pinnedCount, %eight : i64
     %pinnedEnd = arith.addi %pinnedStart, %pinnedBytes : i64
     func.call @strict_gc_mark_range(%pinnedStart, %pinnedEnd) : (i64, i64) -> i64
-    %spilled:2 = func.call @strict_registers_spilled() : () -> (i64, i64)
     func.call @strict_gc_mark_range(%spilled#0, %spilled#1) : (i64, i64) -> i64
     %publishing = arith.constant false
     func.call @strict_gc_drain(%publishing) : (i1) -> ()
@@ -5589,7 +5589,8 @@
     return
   }
   // marks stay set (sticky): a young collection marks from the roots and the marked cards and stops at marked (old)
-  // objects, so it only frees objects allocated since the last collection, a full collection clears all marks first
+  // objects, so it only frees objects allocated since the last collection, a full collection clears all marks first;
+  // the spilled registers are copied first (on wasm the locals of this frame kept the last large object of a loop)
   func.func private @strict_gc_run(%requested: i1) {
     %zero = arith.constant 0 : i64
     %busySlot = llvm.mlir.addressof @strict_pool_busy : !llvm.ptr
@@ -5599,6 +5600,7 @@
   ^deferred:
     return
   ^collect:
+    %spilled:2 = func.call @strict_registers_spilled() : () -> (i64, i64)
     %startedAt = func.call @strict_clock() : () -> f64
     %measuredSlot = llvm.mlir.addressof @strict_measured_text : !llvm.ptr
     llvm.store %zero, %measuredSlot : i64, !llvm.ptr
@@ -5664,7 +5666,6 @@
     %pinnedBytes = arith.muli %pinnedCount, %wordBytes : i64
     %pinnedEnd = arith.addi %pinnedStart, %pinnedBytes : i64
     func.call @strict_gc_mark_range(%pinnedStart, %pinnedEnd) : (i64, i64) -> i64
-    %spilled:2 = func.call @strict_registers_spilled() : () -> (i64, i64)
     func.call @strict_gc_mark_range(%spilled#0, %spilled#1) : (i64, i64) -> i64
     %publishing = arith.constant false
     func.call @strict_gc_drain(%publishing) : (i1) -> ()
