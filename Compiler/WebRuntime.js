@@ -23,7 +23,7 @@ addToLibrary({
 // list read or a shader error runs the loop on the CPU.
 // Closure knows no GPUBufferUsage: storage 128, copy destination 8, copy source 4, map read 1, compute stage 4.
 addToLibrary({
-	$strictWebGpu: { device: null, failed: false, pipelines: {}, buffers: {}, failures: {}, next: 1, grown: 0 },
+	$strictWebGpu: { device: null, failed: false, pipelines: {}, buffers: {}, failures: {}, next: 1, grown: 0, queued: 0, done: [] },
 	strict_webgpu_ready__deps: ['$strictWebGpu', '$UTF8ToString'],
 	strict_webgpu_ready: (name) => {
 		const shaders = Module['strictShaders'], key = UTF8ToString(name);
@@ -163,21 +163,36 @@ addToLibrary({
 			}
 		};
 		dispatched(pipeline, tiles, part);
+		// inputs of kernels the GPU did not run yet stay in video memory, above 2 GB of them waits for the oldest
+		const queued = (inputs.size + count) * 4;
+		strictWebGpu.queued += queued;
+		strictWebGpu.done.push(device.queue.onSubmittedWorkDone().then(() => {
+			strictWebGpu.queued -= queued;
+			strictWebGpu.done.shift();
+		}));
+		while (strictWebGpu.queued > 2147483648)
+			await strictWebGpu.done[0];
 		if (!output) {
 			// a kept bfloat16 result is rounded like the CPU reads it, the next kernel then reads the same numbers
 			if (bits === 17)
 				dispatched(strictWebGpu.pipelines['strict_bfloat16'] ||=
 					await strictWebGpuPipeline(device, Module['strictShaders']['strict_bfloat16']), groups, groups);
 			buffers.forEach((used, at) => at === 0 || at === 3 || used.destroy());
-			const error = await device.popErrorScope();
-			if (error) {
-				buffers[0].destroy();
-				throw error.message;
-			}
-			strictWebGpu.buffers[strictWebGpu.next] = buffers[0];
-			strictWebGpu.failures[strictWebGpu.next] = buffers[3];
+			const handle = strictWebGpu.next++;
+			strictWebGpu.buffers[handle] = buffers[0];
+			strictWebGpu.failures[handle] = buffers[3];
 			strictWebGpu.grown += count * 4;
-			return strictWebGpu.next++;
+			// not awaited: Chrome answers it once the GPU ran the kernel, every kept result would wait for the GPU
+			device.popErrorScope().then((error) => {
+				if (!error)
+					return;
+				console.error('WebGPU kernel ' + name + ' result is lost: ' + error.message);
+				buffers[0].destroy();
+				buffers[3].destroy();
+				delete strictWebGpu.buffers[handle];
+				delete strictWebGpu.failures[handle];
+			});
+			return handle;
 		}
 		device.popErrorScope();
 		const encoder = device.createCommandEncoder();
