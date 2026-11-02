@@ -2,6 +2,7 @@
 What to fix next, one short line each, bugs first. Remove a line once it is done, add what is found at the end. No history or measurements (those go into commit messages). Speed work: [performance.md](performance.md).
 
 ## Bugs
+- Generated WGSL loops compute whole numbers as 32 bit integers and overflow silently above 2^31 (native uses 64 bits): Qwen3Block.HeadScales multiplied 10.5 million by 256 and an index by 439808 at 480x848 and read wrong rows on WebGPU only (reordered in 14b1f46d); detect the overflow (fall back or fail the loop) instead of wrong numbers.
 - Native Safetensors test `Nibbles.Tuned(...)` (line 21, in Entry) exceeds the 100 ms test budget every run (also before the rank above 512 GPU merge), passes on the VM.
 - Routed attention (routing > 0) with strided values (valueOffset/valueStride) runs unrouted: `strict_gpu_attention` takes the routed 8 bit path only for packed values, so H3Block.Heads with V read from the combined list attends densely (6 s slower, 12.9 dB from the routed result), routing 0 is bit-identical; the per-token value quantization (`strict_device_quantize_rows_run`) and the pooled value means need strided rows, H3 keeps the copy until then.
 - A Run program that makes its own type with a logger and a `with value.Bits is 32` member crashes natively (AccessViolation): `has logger`, `has scale Number with value.Bits is 32`, Run `WebScaled(logger, 3).Scaled(1000000)`; without the constraint it runs, a test `Scaling(3).Scaled(4)` passes natively.
