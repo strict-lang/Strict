@@ -1,4 +1,5 @@
 #include "strict.h"
+#include <limits.h>
 #include <math.h>
 #include <stdlib.h>
 #ifdef _WIN32
@@ -34,11 +35,37 @@ static double Written(const char* path, BYTE* bytes, int width, int height, int 
 	free(wide);
 	return status ? strict_fail("JpegWriteFailed") : 1;
 }
+#elif defined(__EMSCRIPTEN__)
+#include <emscripten.h>
+
+/* the browser's own encoder writes the file, the page then offers it as a download (NativeRuntimeWgsl.js) */
+EM_JS_DEPS(jpeg, "$FS,$UTF8ToString");
+EM_ASYNC_JS(int, jpeg_encoded, (const char* path, unsigned char* bytes, int width, int height, double quality), {
+	try
+	{
+		var canvas = new OffscreenCanvas(width, height);
+		var colors = new Uint8ClampedArray(HEAPU8.subarray(bytes >>> 0, (bytes >>> 0) + width * height * 4));
+		canvas.getContext("2d").putImageData(new ImageData(colors, width, height), 0, 0);
+		var blob = await canvas.convertToBlob({ "type": "image/jpeg", "quality": quality / 100 });
+		FS.writeFile(UTF8ToString(path), new Uint8Array(await blob.arrayBuffer()));
+		return 1;
+	}
+	catch (error)
+	{
+		console.error("Saving " + UTF8ToString(path) + " failed: " + error);
+		return 0;
+	}
+});
+
+static double Written(const char* path, unsigned char* bytes, int width, int height, int stride, unsigned long quality)
+{
+	return jpeg_encoded(path, bytes, width, height, (double)quality) ? 1 : strict_fail("JpegWriteFailed");
+}
 #endif
 
 STRICT_EXPORT double ImageCodec_SaveJpeg(double self, double path, double pixels, double width, double quality)
 {
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__EMSCRIPTEN__)
 	const strict_numbers* values = strict_numbers_of(pixels);
 	if (!isfinite(width) || width < 1 || width > (INT_MAX - 3) / 3 || floor(width) != width ||
 		!isfinite(quality) || quality < 0 || quality > 100 || floor(quality) != quality)
@@ -46,22 +73,28 @@ STRICT_EXPORT double ImageCodec_SaveJpeg(double self, double path, double pixels
 	double height = values->count / (width * 3);
 	if (!isfinite(height) || height < 1 || height > INT_MAX || floor(height) != height)
 		return strict_fail("JpegInvalidPixelCount");
+#ifdef _WIN32
+	size_t channels = 3;
 	size_t stride = ((size_t)width * 3 + 3) & ~(size_t)3;
+#else
+	size_t channels = 4;
+	size_t stride = (size_t)width * 4;
+#endif
 	if (stride > SIZE_MAX / (size_t)height) return strict_fail("JpegImageTooLarge");
-	BYTE* bytes = calloc((size_t)height, stride);
+	unsigned char* bytes = calloc((size_t)height, stride);
 	if (!bytes) return strict_fail("JpegOutOfMemory");
 	for (size_t row = 0; row < (size_t)height; row++)
 		for (size_t column = 0; column < (size_t)width; column++)
-			for (size_t channel = 0; channel < 3; channel++)
+			for (size_t channel = 0; channel < channels; channel++)
 			{
-				double value = values->items[(row * (size_t)width + column) * 3 + channel];
-				bytes[row * stride + column * 3 + 2 - channel] =
-					!(value > 0) ? 0 : value >= 1 ? 255 : (BYTE)(value * 255 + 0.5);
+				double value = channel == 3 ? 1 : values->items[(row * (size_t)width + column) * 3 + channel];
+				bytes[row * stride + column * channels + (channels == 3 ? 2 - channel : channel)] =
+					!(value > 0) ? 0 : value >= 1 ? 255 : (unsigned char)(value * 255 + 0.5);
 			}
-	double result = Written(strict_text(path), bytes, (int)width, (int)height, (int)stride, (ULONG)quality);
+	double result = Written(strict_text(path), bytes, (int)width, (int)height, (int)stride, (unsigned long)quality);
 	free(bytes);
 	return result;
 #else
-	return strict_fail("JpegRequiresWindows");
+	return strict_fail("JpegRequiresWindowsOrWeb");
 #endif
 }

@@ -564,8 +564,10 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) g
 	output[at] = select(normed, normed / (1.0 + exp(-normed)), places[7] == 1u);
 }`;
 // a file a program writes in the browser (not the package loaded before it runs) is offered as a download on the page
-// when it is closed, images are shown too
-(Module['preRun'] ||= []).push(() => {
+// when it is closed, images are shown too; a program using no files has no FS
+(Module['preRun'] ||= []).push(/** @suppress {undefinedVars} */ () => {
+	if (typeof FS === 'undefined')
+		return;
 	const closed = FS.close;
 	FS.close = (stream) => {
 		const path = stream.path, isWritten = (stream.flags & 3) !== 0 && path && !path.startsWith('/dev/');
