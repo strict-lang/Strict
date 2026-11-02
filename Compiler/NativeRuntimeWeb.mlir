@@ -824,18 +824,23 @@
     llvm.store %listLength, %length : f64, !llvm.ptr
     %handle = func.call @strict_gpu_web_handle(%value) : (f64) -> i64
     %isResident = arith.cmpi ne, %handle, %none : i64
-    cf.cond_br %isResident, ^resident, ^hosted
-  ^resident:
-    %handleNumber = arith.sitofp %handle : i64 to f64
+    cf.cond_br %isResident, ^resident(%handle : i64), ^hosted
+  ^resident(%residentHandle: i64):
+    %handleNumber = arith.sitofp %residentHandle : i64 to f64
     %bufferFormat = arith.constant 255.0 : f64
     llvm.store %handleNumber, %number : f64, !llvm.ptr
     llvm.store %bufferFormat, %format : f64, !llvm.ptr
     cf.br ^slot(%next : i64)
   ^hosted:
+    %valueBits = func.call @strict_gpu_bits(%value) : (f64) -> i64
+    %listCount = arith.fptosi %listLength : f64 to i64
+    %kept = func.call @strict_gpu_web_kept(%value, %listCount, %valueBits) : (f64, i64, i64) -> i64
+    %isKept = arith.cmpi ne, %kept, %none : i64
+    cf.cond_br %isKept, ^resident(%kept : i64), ^copied
+  ^copied:
     %host = func.call @strict_gpu_host(%value) : (f64) -> !llvm.ptr
     %address = llvm.ptrtoint %host : !llvm.ptr to i64
     %addressNumber = arith.uitofp %address : i64 to f64
-    %valueBits = func.call @strict_gpu_bits(%value) : (f64) -> i64
     %bitsNumber = arith.sitofp %valueBits : i64 to f64
     llvm.store %addressNumber, %number : f64, !llvm.ptr
     llvm.store %bitsNumber, %format : f64, !llvm.ptr
@@ -927,13 +932,59 @@
     %nothing = llvm.mlir.zero : !llvm.ptr
     return %nothing : !llvm.ptr
   }
-  // the handle of a new WebGPU buffer with the words at data as they are, 0 before the first kernel made the device
-  llvm.func @strict_webgpu_uploaded(!llvm.ptr, i32) -> i32
-  func.func private @strict_gpu_web_uploaded(%data: !llvm.ptr, %words: i64) -> i64 {
+  // the handle of a new WebGPU buffer with the words at data as they are (halves bfloat16 numbers in them when not 0),
+  // 0 before the first kernel made the device
+  llvm.func @strict_webgpu_uploaded(!llvm.ptr, i32, i32) -> i32
+  func.func private @strict_gpu_web_uploaded(%data: !llvm.ptr, %words: i64, %halves: i64) -> i64 {
     %words32 = arith.trunci %words : i64 to i32
-    %made = llvm.call @strict_webgpu_uploaded(%data, %words32) : (!llvm.ptr, i32) -> i32
+    %halves32 = arith.trunci %halves : i64 to i32
+    %made = llvm.call @strict_webgpu_uploaded(%data, %words32, %halves32) : (!llvm.ptr, i32, i32) -> i32
     %handle = arith.extui %made : i32 to i64
     return %handle : i64
+  }
+  // a packed host list of bfloat16 or 32 bit numbers (bits) with at least 4096 of them uploaded once as a kernel value
+  // and kept in its holder like a downloaded result (the rotations and modulation all blocks of a Moss step read), its
+  // handle, 0 for other lists or when WebGPU can not
+  func.func private @strict_gpu_web_kept(%list: f64, %count: i64, %bits: i64) -> i64 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %eight = arith.constant 8 : i64
+    %webClass = arith.constant 255 : i64
+    %halvesBits = arith.constant 17 : i64
+    %floatBits = arith.constant 32 : i64
+    %isHalves = arith.cmpi eq, %bits, %halvesBits : i64
+    %isFloats = arith.cmpi eq, %bits, %floatBits : i64
+    %isNarrow = arith.ori %isHalves, %isFloats : i1
+    %least = arith.constant 4096 : i64
+    %isLong = arith.cmpi sge, %count, %least : i64
+    %isKept = arith.andi %isNarrow, %isLong : i1
+    cf.cond_br %isKept, ^holder, ^none
+  ^holder:
+    %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
+    %holderSlot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %holderBits = llvm.load %holderSlot : !llvm.ptr -> f64
+    %holder = func.call @strict_ptr(%holderBits) : (f64) -> !llvm.ptr
+    %deviceSlot = llvm.getelementptr %holder[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    %tagged = llvm.load %deviceSlot : !llvm.ptr -> i64
+    %isFree = arith.cmpi eq, %tagged, %none : i64
+    cf.cond_br %isFree, ^upload, ^none
+  ^upload:
+    %host = func.call @strict_gpu_host(%list) : (f64) -> !llvm.ptr
+    %pairs = arith.addi %count, %one : i64
+    %halfWords = arith.divui %pairs, %two : i64
+    %words = arith.select %isHalves, %halfWords, %count : i64
+    %halves = arith.select %isHalves, %count, %none : i64
+    %handle = func.call @strict_gpu_web_uploaded(%host, %words, %halves) : (!llvm.ptr, i64, i64) -> i64
+    %isUploaded = arith.cmpi ne, %handle, %none : i64
+    cf.cond_br %isUploaded, ^keep, ^none
+  ^keep:
+    %shifted = arith.shli %handle, %eight : i64
+    %device = arith.ori %shifted, %webClass : i64
+    llvm.store %device, %deviceSlot : i64, !llvm.ptr
+    return %handle : i64
+  ^none:
+    return %none : i64
   }
   // a list in a WebGPU buffer is gone: so is the buffer
   func.func private @strict_gpu_web_give(%device: i64) {

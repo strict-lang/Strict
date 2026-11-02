@@ -18327,7 +18327,7 @@
     %isGathered = arith.cmpi ne, %gatheredAddress, %none : i64
     cf.cond_br %isGathered, ^uploadFrom(%gathered : !llvm.ptr), ^unable
   ^uploadFrom(%source: !llvm.ptr):
-    %uploaded = func.call @strict_gpu_web_uploaded(%source, %blockWords) : (!llvm.ptr, i64) -> i64
+    %uploaded = func.call @strict_gpu_web_uploaded(%source, %blockWords, %none) : (!llvm.ptr, i64, i64) -> i64
     %isUploaded = arith.cmpi ne, %uploaded, %none : i64
     cf.cond_br %isUploaded, ^remember, ^hosted
   ^remember:

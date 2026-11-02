@@ -95,7 +95,7 @@
     return
   }
   // a WebGPU buffer of the words at data (NativeRuntimeWeb.mlir), 0 here
-  func.func private @strict_gpu_web_uploaded(%data: !llvm.ptr, %words: i64) -> i64 {
+  func.func private @strict_gpu_web_uploaded(%data: !llvm.ptr, %words: i64, %halves: i64) -> i64 {
     %none = arith.constant 0 : i64
     return %none : i64
   }

@@ -24,7 +24,7 @@ addToLibrary({
 // Closure knows no GPUBufferUsage: storage 128, copy destination 8, copy source 4, map read 1, compute stage 4.
 addToLibrary({
 	$strictWebGpu: { device: null, failed: false, pipelines: {}, buffers: {}, failures: {}, next: 1, grown: 0, queued: 0, done: [],
-		inputs: {}, halves: {} },
+		inputs: {}, halves: {}, uploads: {} },
 	strict_webgpu_ready__deps: ['$strictWebGpu', '$UTF8ToString'],
 	strict_webgpu_ready: (name) => {
 		const shaders = Module['strictShaders'], key = UTF8ToString(name);
@@ -68,6 +68,8 @@ addToLibrary({
 		for (let slot = 0; slot < slots; slot++) {
 			const address = entries[slot * 3], length = entries[slot * 3 + 1], bits = entries[slot * 3 + 2];
 			const resident = bits === 255 && strictWebGpu.buffers[address];
+			if (resident && address in strictWebGpu.uploads && strictWebGpu.uploads[address] !== length)
+				return null;
 			const isHalved = resident && address in strictWebGpu.halves, words = isHalved ? Math.ceil(length / 2) : length;
 			const isBound = resident && bound.length < 4;
 			if (isBound)
@@ -314,10 +316,10 @@ addToLibrary({
 		strictWebGpu.grown += joined.size;
 		return strictWebGpu.next++;
 	},
-	// a new kept buffer of the words at address as they are (strict_gpu_web_uploaded), 0 before the first kernel made the
-	// device
+	// a new kept buffer of the words at address as they are, of halves bfloat16 numbers when not 0 (strict_gpu_web_uploaded),
+	// 0 before the first kernel made the device; a list that changed its length later runs its kernel on the CPU
 	strict_webgpu_uploaded__deps: ['$strictWebGpu'],
-	strict_webgpu_uploaded: (address, words) => {
+	strict_webgpu_uploaded: (address, words, halves) => {
 		const device = strictWebGpu.device;
 		if (!device)
 			return 0;
@@ -326,6 +328,9 @@ addToLibrary({
 		const handle = strictWebGpu.next++;
 		strictWebGpu.buffers[handle] = uploaded;
 		strictWebGpu.failures[handle] = device.createBuffer({ size: 4, usage: 128 | 8 | 4 });
+		if (halves)
+			strictWebGpu.halves[handle] = halves;
+		strictWebGpu.uploads[handle] = halves || words;
 		strictWebGpu.grown += uploaded.size;
 		return handle;
 	},
@@ -336,6 +341,7 @@ addToLibrary({
 		delete strictWebGpu.failures[handle];
 		delete strictWebGpu.buffers[handle];
 		delete strictWebGpu.halves[handle];
+		delete strictWebGpu.uploads[handle];
 	},
 	// 1 once kept results took 1 GB since the last time, the collector then gives back the buffers of dead lists
 	strict_webgpu_crowded__deps: ['$strictWebGpu'],
