@@ -12151,8 +12151,9 @@
     return %path : !llvm.ptr
   }
   llvm.mlir.global internal constant @strict_gpu_beside_obj("obj/\00") : !llvm.array<5 x i8>
-  // the whole file stem + ending in the folder of the executable (or its obj folder, where a program build keeps it) as
-  // text, an empty text when it cannot be read
+  // the whole file stem + ending in the obj folder of the executable (where a program build keeps it, so it wins over a
+  // stale file left beside the executable by an older build) or else beside it (shipped builds), as text, an empty text
+  // when it cannot be read
   func.func private @strict_gpu_beside(%stem: !llvm.ptr, %ending: !llvm.ptr) -> !llvm.ptr {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -12175,15 +12176,15 @@
   ^folder(%folderLength: i64):
     %terminator = arith.constant 0 : i8
     %unset = llvm.mlir.zero : !llvm.ptr
-    %beside = arith.constant 0 : i64
-    %besideFile = func.call @strict_gpu_file_opened(%executable, %folderLength, %beside, %stem, %ending) : (!llvm.ptr, i64, i64, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
-    %isBesideMissing = llvm.icmp "eq" %besideFile, %unset : !llvm.ptr
-    cf.cond_br %isBesideMissing, ^obj, ^found(%besideFile : !llvm.ptr)
-  ^obj:
     %objLength = arith.constant 4 : i64
     %objFile = func.call @strict_gpu_file_opened(%executable, %folderLength, %objLength, %stem, %ending) : (!llvm.ptr, i64, i64, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
-    %isMissing = llvm.icmp "eq" %objFile, %unset : !llvm.ptr
-    cf.cond_br %isMissing, ^empty, ^found(%objFile : !llvm.ptr)
+    %isObjMissing = llvm.icmp "eq" %objFile, %unset : !llvm.ptr
+    cf.cond_br %isObjMissing, ^beside, ^found(%objFile : !llvm.ptr)
+  ^beside:
+    %besideLength = arith.constant 0 : i64
+    %besideFile = func.call @strict_gpu_file_opened(%executable, %folderLength, %besideLength, %stem, %ending) : (!llvm.ptr, i64, i64, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %isMissing = llvm.icmp "eq" %besideFile, %unset : !llvm.ptr
+    cf.cond_br %isMissing, ^empty, ^found(%besideFile : !llvm.ptr)
   ^found(%file: !llvm.ptr):
     cf.br ^read
   ^empty:

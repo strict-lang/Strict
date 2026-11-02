@@ -82,6 +82,9 @@ Fewest(instance Text, name Text) Number
 UnknownMembers(call SyntaxNode) Texts
 	Counting.UnknownMembers(SyntaxParser(Tokenizer("Count(c, number = 2)").Tokens).Parse).Length is 0
 	Counting.UnknownMembers(SyntaxParser(Tokenizer("Count(c, size = 2)").Tokens).Parse) is ("MemberNotFound: Count.size")
+	Counting.UnknownMembers(SyntaxParser(Tokenizer("c in cs").Tokens).Parse) is ("InMustFollowIs: write c is in cs")
+	if (call.Kind is "Binary") and (call.text is "in")
+		return List(Text) + ("InMustFollowIs: write " + call.children(0) + " is in " + call.children(1))
 	let members = inference.types.MembersOf(call.text).names
 	for call.children
 		if (call.Kind is "Call") and (value.Kind is "Reassignment") and (value.children(0).text is not in members)

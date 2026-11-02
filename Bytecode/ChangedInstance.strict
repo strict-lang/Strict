@@ -8,6 +8,7 @@ constant Calling = SyntaxNode("Member", "Next", SyntaxNode("Identifier", "ticker
 constant Holding = CodeBlock.Empty.Declare("ticker", "Ticker")
 constant Mutables = Holding.Declare("ticker mutable", "mutable")
 constant OwnNext = SyntaxNode("Call", "Next")
+constant Returning = CodeBlock(List(InstructionEntry) + InstructionEntry.Return(5), 1, 0, CodeBlock.Empty.scope)
 Kept(code CodeBlock) CodeBlock
 	Ticking.Method(2).instructions.Last.kind is InstructionType.Return
 	Ticking.Method(2).instructions(Ticking.Method(2).instructions.Length - 2).texts is (Name)
@@ -45,10 +46,19 @@ Unpacked(invoked CodeBlock) CodeBlock
 Built(code CodeBlock) CodeBlock
 	ChangedInstance(Ticking.Generator, "Next").Built(CodeBlock.Empty).instructions.Last.texts is (Name)
 	ChangedInstance(Ticking.Generator, "Size").Built(CodeBlock.Empty).instructions.Length is 0
-	let start = CodeBlock(List(InstructionEntry), code.register, code.nextId, code.scope)
+	ChangedInstance(Ticking.Generator, "Next").Built(Returning).instructions.First.payload(0) is 6
+	let start = CodeBlock(List(InstructionEntry), Free(code), code.nextId, code.scope)
 	let isChanging = (method is not "from") and (method is in Changes(values.target.shape.lines).Methods)
 	let instanced = isChanging then values.Expression(Instance, start).Stored(Name) else start
 	ChangedArguments(values, method).Stored(instanced)
+Free(code CodeBlock) Number
+	ChangedInstance.Free(Returning) is 6
+	ChangedInstance.Free(CodeBlock.Empty) is 0
+	mutable free = code.register
+	for code.instructions
+		if (value.kind is InstructionType.Return) and (value.payload(0) >= free)
+			free = value.payload(0) + 1
+	free
 Instance SyntaxNode
 	ChangedInstance(Ticking.Generator, "Next").Instance.children.Length is 2
 	mutable members = List(Mutable(SyntaxNode))
