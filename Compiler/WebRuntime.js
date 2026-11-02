@@ -24,7 +24,7 @@ addToLibrary({
 // Closure knows no GPUBufferUsage: storage 128, copy destination 8, copy source 4, map read 1, compute stage 4.
 addToLibrary({
 	$strictWebGpu: { device: null, failed: false, pipelines: {}, buffers: {}, failures: {}, next: 1, grown: 0, queued: 0, done: [],
-		inputs: {}, halves: {}, uploads: {}, views: [], borrowed: {} },
+		inputs: {}, halves: {}, uploads: {}, views: [], borrowed: {}, sixteens: {} },
 	strict_webgpu_ready__deps: ['$strictWebGpu', '$UTF8ToString'],
 	strict_webgpu_ready: (name) => {
 		const shaders = Module['strictShaders'], key = UTF8ToString(name);
@@ -82,7 +82,9 @@ addToLibrary({
 				: bits === 17 ? strictWebGpuWidened(HEAPU16.subarray(address / 2, address / 2 + length)) : null;
 			if (!part)
 				return null;
-			places[slot * 2] = (isBound ? bound.length * 0x10000000 : total) + (isHalved ? 0x80000000 : 0);
+			const isSixteen = isHalved && address in strictWebGpu.sixteens;
+			places[slot * 2] = (isBound ? bound.length * 0x10000000 : total) + (isHalved ? 0x80000000 : 0) +
+				(isSixteen ? 0x08000000 : 0);
 			places[slot * 2 + 1] = length < 0 ? (Number.isInteger(address) && address >= 0 ? address : 0) : resident ? length
 				: part.length;
 			parts.push(part);
@@ -320,9 +322,10 @@ addToLibrary({
 	// kept as bfloat16 halves when -1 and every one is an exact bfloat16 number (Moss's BF16 weights read as 32 bit rows,
 	// strict_gpu_web_uploaded), 0 before the first kernel made the device; a list that changed its length later runs its
 	// kernel on the CPU
-	strict_webgpu_uploaded__deps: ['$strictWebGpu'],
-	strict_webgpu_uploaded: (address, words, halves) => {
-		const device = strictWebGpu.device;
+	strict_webgpu_uploaded__deps: ['$strictWebGpu', '$strictWebGpuDevice', '$Asyncify'],
+	strict_webgpu_uploaded__async: true,
+	strict_webgpu_uploaded: (address, words, halves) => Asyncify.handleSleep((wakeUp) => (async () => {
+		const device = strictWebGpu.device ||= await strictWebGpuDevice();
 		if (!device)
 			return 0;
 		const floats = halves === -1 && HEAPU32.subarray(address >>> 2, (address >>> 2) + words);
@@ -340,7 +343,8 @@ addToLibrary({
 			strictWebGpu.grown += kept.size;
 			return handle;
 		}
-		halves = Math.max(halves, 0);
+		const isSixteen = halves === -2;
+		halves = isSixteen ? words * 2 : Math.max(halves, 0);
 		const uploaded = device.createBuffer({ size: Math.max(words * 4, 4), usage: 128 | 8 | 4 });
 		device.queue.writeBuffer(uploaded, 0, HEAPU8, address >>> 0, words * 4);
 		const handle = strictWebGpu.next++;
@@ -349,9 +353,14 @@ addToLibrary({
 		if (halves)
 			strictWebGpu.halves[handle] = halves;
 		strictWebGpu.uploads[handle] = halves || words;
+		if (isSixteen)
+			strictWebGpu.sixteens[handle] = true;
 		strictWebGpu.grown += uploaded.size;
 		return handle;
-	},
+	})().then(wakeUp, (error) => {
+		console.error('Uploading to WebGPU failed: ' + error);
+		wakeUp(0);
+	})),
 	// bytes of the file at url from offset into target with an HTTP range request (TensorFile reading a file that is not
 	// in the package), 1 or 0 when the server does not answer it as a range
 	$strictWebFileRange: async (url, offset, bytes) => {
@@ -453,6 +462,7 @@ addToLibrary({
 		delete strictWebGpu.buffers[handle];
 		delete strictWebGpu.halves[handle];
 		delete strictWebGpu.uploads[handle];
+		delete strictWebGpu.sixteens[handle];
 	},
 	// 1 once kept results took 1 GB since the last time, the collector then gives back the buffers of dead lists
 	strict_webgpu_crowded__deps: ['$strictWebGpu'],
