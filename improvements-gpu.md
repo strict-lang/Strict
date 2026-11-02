@@ -31,7 +31,7 @@ Details for the GPU line of [improvements.md](improvements.md), one short line e
 
 ## WebGPU
 - strict_convolution runs at ~6 TFLOPS on a 3080 (30 peak): not limited by workgroup bank conflicts, index divisions, register prefetch or the rolled inner loop (unrolled it was 6 % faster in a decode, products slower, shaders compiled longer)
-- every kernel copies its resident inputs into one combined input buffer: bind lists directly once the kernels address them per binding
+- generated WGSL loops compute every number as a `num` struct tracking exact integers, plain float sums pay for it: FeatureMap.Partials (1024 pixels summed per invocation) is ~10 % of a Flux VAE decode's GPU time, keep values that are never indices as f32
 
 ## Generated loops
 - a loop reading a member of an object parameter, a type constant or `.Length` of a list parameter stays on the CPU: pass loop invariant members as numbers
