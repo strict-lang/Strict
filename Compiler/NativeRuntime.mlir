@@ -17949,9 +17949,9 @@
   // `Convolved.Summed` on the 16 bit tensor cores (strict_device_convolution): a 3x3 convolution of values (height by
   // width pixels of channels numbers divided by factor, the affine scale and shift and swish applied on load, zeros
   // around) with weights (outputs rows of 9 taps of channels numbers; with a factor of 2 the image is doubled and the
-  // weights are the 2x2 taps of each of the 4 output parities), shape is height, width, channels, outputs, swish (1 or 0)
-  // and factor (1 or 2), channels not a multiple of 32 are padded with zeros to the next one; 0.0 when the GPU can not
-  // (lists of other lengths), then the method itself runs
+  // weights are the 2x2 taps of each of the 4 output parities), shape is height, width, channels, outputs, the kind of
+  // the Activation (Linear, Swish or Relu) and factor (1 or 2), channels not a multiple of 32 are padded with zeros to the
+  // next one; 0.0 when the GPU can not (lists of other lengths, other activations), then the method itself runs
   func.func private @strict_gpu_convolution(%ptx: !llvm.ptr, %values: f64, %affine: f64, %weights: f64, %shape: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
@@ -18047,7 +18047,18 @@
     %allFit = arith.andi %listsFit, %weightsFit : i1
     %countFit = arith.andi %someChannels, %some : i1
     %sized = arith.andi %allFit, %countFit : i1
-    %fits = arith.andi %sized, %factorFits : i1
+    %kindSlot = llvm.getelementptr %slots[7] : (!llvm.ptr) -> !llvm.ptr, f64
+    %kind = llvm.load %kindSlot : !llvm.ptr -> f64
+    %reluKind = arith.constant 2.0 : f64
+    %swishKind = arith.constant 5.0 : f64
+    %linearKind = arith.constant 6.0 : f64
+    %isRelu = arith.cmpf oeq, %kind, %reluKind : f64
+    %isSwish = arith.cmpf oeq, %kind, %swishKind : f64
+    %isLinear = arith.cmpf oeq, %kind, %linearKind : f64
+    %reluOrSwish = arith.ori %isRelu, %isSwish : i1
+    %isKnownKind = arith.ori %reluOrSwish, %isLinear : i1
+    %shapeFits = arith.andi %sized, %factorFits : i1
+    %fits = arith.andi %shapeFits, %isKnownKind : i1
     cf.cond_br %fits, ^web, ^unable
   ^web:
     %kernelKind = arith.constant 2 : i64
@@ -18072,7 +18083,7 @@
     %slotsCopied = llvm.call @memcpy(%webSlots, %slots, %slotBytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     %webValues = arith.select %isWebNormed, %webNormed, %values : f64
     llvm.store %webValues, %webSlots : f64, !llvm.ptr
-    %normedMark = arith.constant 2.0 : f64
+    %normedMark = arith.constant 255.0 : f64
     %webSwish = arith.select %isWebNormed, %normedMark, %swishing : f64
     %webSwishSlot = llvm.getelementptr %webSlots[7] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %webSwish, %webSwishSlot : f64, !llvm.ptr

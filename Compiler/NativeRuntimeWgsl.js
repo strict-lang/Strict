@@ -43,7 +43,8 @@ fn summed(sums: mat4x4<f32>, ins: vec4<f32>, outs: vec4<f32>) -> mat4x4<f32> {
 `;
 // Convolved.Summed: values, affine, weights, height, width, channels, outputs, swish, factor (strict_gpu_convolution),
 // a workgroup of 256 invocations per tile of 128 pixels of one parity and 128 outputs (8 by 8 sums each), the taps 16
-// at a time in workgroup memory; values normed by strict_normed first come with swish 2
+// at a time in workgroup memory; swish is the Activation kind of the normed values (5 swish, 2 relu, 6 linear), values
+// normed by strict_normed first come with 255
 (Module['strictShaders'] ||= {})['strict_convolution'] = strictKernelBindings + strictSummed + `
 var<workgroup> tapped: array<vec4<f32>, 512>;
 var<workgroup> weighted: array<vec4<f32>, 512>;
@@ -52,8 +53,8 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 	let width = places[9];
 	let channels = places[11];
 	let outputs = places[13];
-	let swish = places[15] == 1u;
-	let isNormed = places[15] == 2u;
+	let activation = places[15];
+	let isNormed = activation == 255u;
 	let factor = places[17];
 	let side = 4u - factor;
 	let taps = side * side * channels;
@@ -96,7 +97,7 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 				value = n_item(places[0], u32(sourceRow * i32(inputWidth) + sourceColumn) * channels + channel);
 				if (!isNormed) {
 					let normed = value * n_item(places[2], channel) + n_item(places[2], channels + channel);
-					value = select(normed, normed / (1.0 + exp(-normed)), swish);
+					value = select(select(normed, max(normed, 0.0), activation == 2u), normed / (1.0 + exp(-normed)), activation == 5u);
 				}
 			}
 			tapped[slot / 4u][slot % 4u] = value;
@@ -552,8 +553,8 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) g
 	let second = select(0u, rounded(numbers[min(at * 2u + 1u, count - 1u)]) << 16u, at * 2u + 1u < count);
 	output[at] = rounded(numbers[at * 2u]) | second;
 }`;
-// the values of a convolution normed with affine and swished when swish is 1 once (strict_gpu_convolution), not in
-// each of its tiles: values, affine, channels, swish
+// the values of a convolution normed with affine and activated once (strict_gpu_convolution), not in each of its
+// tiles: values, affine, channels, Activation kind (5 swish, 2 relu, 6 linear)
 Module['strictShaders']['strict_normed'] = strictKernelBindings + `
 @compute @workgroup_size(64)
 fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {
@@ -561,7 +562,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) g
 	if (at >= places[8]) { return; }
 	let channel = at % places[5];
 	let normed = n_item(places[0], at) * n_item(places[2], channel) + n_item(places[2], places[5] + channel);
-	output[at] = select(normed, normed / (1.0 + exp(-normed)), places[7] == 1u);
+	output[at] = select(select(normed, max(normed, 0.0), places[7] == 2u), normed / (1.0 + exp(-normed)), places[7] == 5u);
 }`;
 // the numbers of the list at places[0] (places[1] of them) and then of the one at places[2] as 32 bit floats (lists of
 // different formats joined on the GPU, strict_gpu_web_mixed): left, right
