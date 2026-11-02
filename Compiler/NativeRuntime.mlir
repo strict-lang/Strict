@@ -6498,7 +6498,11 @@
     %quantizedCapacity = arith.constant -8.0 : f64
     %isQuantized = arith.cmpf oeq, %capacity, %quantizedCapacity : f64
     %data = func.call @strict_list_data(%list) : (f64) -> !llvm.ptr
-    %copy = func.call @strict_list_new(%length, %length) : (f64, f64) -> f64
+    // only numbers: the collector does not scan the items of a large copy (unpacked rows of Moss's bfloat16 layers
+    // made each full collection scan 742 MB in the browser)
+    %noExtra = arith.constant 0 : i64
+    %onlyNumbers = arith.constant true
+    %copy = func.call @strict_list_reserved(%length, %length, %noExtra, %onlyNumbers) : (f64, f64, i64, i1) -> f64
     %copyView = func.call @strict_ptr(%copy) : (f64) -> !llvm.ptr
     %copyHolderSlot = llvm.getelementptr %copyView[1] : (!llvm.ptr) -> !llvm.ptr, f64
     %copyHolderBits = llvm.load %copyHolderSlot : !llvm.ptr -> f64
@@ -7040,10 +7044,25 @@
     %number = arith.uitofp %byte : i8 to f64
     return %number : f64
   ^wider:
-    // 4 byte lanes (format 33, a Color) are read where they are too
+    // 4 byte lanes (format 33, a Color) and bfloat16 numbers (17, unpacking quadrupled Moss's rows read on the CPU
+    // into lists the collector scans) are read where they are too
     %laneFormat = arith.constant 33 : i64
     %isLanes = arith.cmpi eq, %packed, %laneFormat : i64
-    cf.cond_br %isLanes, ^lane, ^items
+    %brainFormat = arith.constant 17 : i64
+    %isBrains = arith.cmpi eq, %packed, %brainFormat : i64
+    cf.cond_br %isLanes, ^lane, ^brainOrItems
+  ^brainOrItems:
+    cf.cond_br %isBrains, ^brain, ^items
+  ^brain:
+    %brainData = func.call @strict_list_data(%list) : (f64) -> !llvm.ptr
+    %brainSlot = llvm.getelementptr %brainData[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i16
+    %brainHalf = llvm.load %brainSlot : !llvm.ptr -> i16
+    %brainWord = arith.extui %brainHalf : i16 to i32
+    %halfShift = arith.constant 16 : i32
+    %brainBits = arith.shli %brainWord, %halfShift : i32
+    %brainSingle = arith.bitcast %brainBits : i32 to f32
+    %brainNumber = arith.extf %brainSingle : f32 to f64
+    return %brainNumber : f64
   ^lane:
     %laneData = func.call @strict_list_data(%list) : (f64) -> !llvm.ptr
     %laneSlot = llvm.getelementptr %laneData[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i32
