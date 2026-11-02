@@ -64,10 +64,10 @@ Globals Texts
 	lines
 Started Texts
 	Scaled.Started is ("v_index = n_int(i32(at));", "v_value = n_int(i32(at));")
-	Doubling.Started.Last is "v_value = n_of(numbers[places[0] + at]);"
+	Doubling.Started.Last is "v_value = n_of(n_item(places[0], at));"
 	let source = "places[" + MlirGpuCheck(function, position).Free.Length * 2 + "]"
 	let isCounted = MlirLoops(function, position).Collection is ""
-	let item = isCounted then "n_int(i32(at))" else "n_of(numbers[" + source + " + at])"
+	let item = isCounted then "n_int(i32(at))" else "n_of(n_item(" + source + ", at))"
 	("v_index = n_int(i32(at));", "v_value = " + item + ";")
 Scripts(functions List(MlirFunction)) Text
 	WgslShader.Scripts(List(MlirFunction) + Scaled.function).StartsWith(Marker + "\n;(Module[\"strictShaders\"] ||= {})")

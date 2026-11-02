@@ -2,6 +2,15 @@
 // value of the kernel is a part of numbers at places[2 * slot] with places[2 * slot + 1] numbers, a whole number value
 // is places[2 * slot + 1], places[2 * slots] is the count of outputs, one invocation per output if not said otherwise,
 // work.x is the first workgroup of a submit of strictKernelGroups, work.y the count of parts an inner sum is split in.
+// Lists are read with n_item: a list of bfloat16 halves (two in each 32 bits, strict_packed) has the top bit of its place
+// set; every shader starts with it (strictWebGpuPipeline), also the generated ones.
+Module['strictItem'] = `
+fn n_item(place: u32, at: u32) -> f32 {
+	if (place < 0x80000000u) { return numbers[place + at]; }
+	let pair = bitcast<u32>(numbers[place - 0x80000000u + at / 2u]);
+	return bitcast<f32>(select(pair << 16u, pair & 0xffff0000u, (at & 1u) == 1u));
+}
+`;
 const strictKernelBindings = `
 @group(0) @binding(0) var<storage, read_write> output: array<f32>;
 @group(0) @binding(1) var<storage, read> numbers: array<f32>;
@@ -44,7 +53,7 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 	let outputStart = tile % outputTiles * 128u;
 	let parityRow = parity / factor;
 	let parityColumn = parity % factor;
-	let weights = places[4] + parity * outputs * taps;
+	let weights = parity * outputs * taps;
 	let ownPixel = local / 16u;
 	let ownOutput = local % 16u;
 	let ownTap = local % 16u;
@@ -68,16 +77,16 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 			let sourceColumn = i32(pixel % inputWidth) + tapColumn;
 			let isInside = sourceRow >= 0 && sourceColumn >= 0 && sourceRow < i32(inputHeight) && sourceColumn < i32(inputWidth);
 			if (tap < taps && pixel < pixels && isInside) {
-				value = numbers[places[0] + u32(sourceRow * i32(inputWidth) + sourceColumn) * channels + channel];
+				value = n_item(places[0], u32(sourceRow * i32(inputWidth) + sourceColumn) * channels + channel);
 				if (!isNormed) {
-					let normed = value * numbers[places[2] + channel] + numbers[places[2] + channels + channel];
+					let normed = value * n_item(places[2], channel) + n_item(places[2], channels + channel);
 					value = select(normed, normed / (1.0 + exp(-normed)), swish);
 				}
 			}
 			tapped[slot / 4u][slot % 4u] = value;
 			let produced = outputStart + item;
 			var weight = 0.0;
-			if (tap < taps && produced < outputs) { weight = numbers[weights + produced * taps + tap]; }
+			if (tap < taps && produced < outputs) { weight = n_item(places[4], weights + produced * taps + tap); }
 			weighted[slot / 4u][slot % 4u] = weight;
 		}
 		workgroupBarrier();
@@ -136,8 +145,8 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 	let batch = tile / (rowTiles * columnTiles);
 	let rowStart = tile / columnTiles % rowTiles * 128u;
 	let columnStart = tile % columnTiles * 128u;
-	let leftBase = places[0] + places[13] + batch * places[15];
-	let rightBase = places[2] + places[21] + batch * places[23];
+	let leftBase = places[13] + batch * places[15];
+	let rightBase = places[21] + batch * places[23];
 	let ownRow = local / 16u;
 	let ownColumn = local % 16u;
 	let ownInner = local % 16u;
@@ -153,11 +162,11 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 			let slot = ownInner * 128u + item;
 			let row = rowStart + item;
 			var left = 0.0;
-			if (step < last && row < rows) { left = numbers[leftBase + row * places[17] + step * places[19]]; }
+			if (step < last && row < rows) { left = n_item(places[0], leftBase + row * places[17] + step * places[19]); }
 			lefts[slot / 4u][slot % 4u] = left;
 			let column = columnStart + item;
 			var right = 0.0;
-			if (step < last && column < columns) { right = numbers[rightBase + step * places[25] + column * places[27]]; }
+			if (step < last && column < columns) { right = n_item(places[2], rightBase + step * places[25] + column * places[27]); }
 			rights[slot / 4u][slot % 4u] = right;
 		}
 		workgroupBarrier();
@@ -226,15 +235,15 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 	let width = places[3];
 	let rows = places[4] / width;
 	for (var row = group.x + group.y * groups.x; row < rows; row += groups.x * groups.y) {
-		let first = places[0] + row * width;
+		let first = row * width;
 		var largest = -0x1.fffffep+127f;
-		for (var column = local; column < width; column += 64u) { largest = max(largest, numbers[first + column]); }
+		for (var column = local; column < width; column += 64u) { largest = max(largest, n_item(places[0], first + column)); }
 		largest = reduced(largest, local, false);
 		var total = 0.0;
-		for (var column = local; column < width; column += 64u) { total += exp(numbers[first + column] - largest); }
+		for (var column = local; column < width; column += 64u) { total += exp(n_item(places[0], first + column) - largest); }
 		total = reduced(total, local, true);
 		for (var column = local; column < width; column += 64u) {
-			output[row * width + column] = exp(numbers[first + column] - largest) / total;
+			output[row * width + column] = exp(n_item(places[0], first + column) - largest) / total;
 		}
 	}
 }`;
@@ -254,18 +263,6 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) g
 	let second = select(0u, rounded(numbers[min(at * 2u + 1u, count - 1u)]) << 16u, at * 2u + 1u < count);
 	output[at] = rounded(numbers[at * 2u]) | second;
 }`;
-// the numbers of bfloat16 halves (strict_packed) as 32 bit floats at places[0] of output, places[1] of them
-Module['strictShaders']['strict_widened'] = `
-@group(0) @binding(0) var<storage, read_write> output: array<f32>;
-@group(0) @binding(1) var<storage, read> numbers: array<u32>;
-@group(0) @binding(2) var<storage, read> places: array<u32>;
-@compute @workgroup_size(64)
-fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {
-	let at = id.x + id.y * groups.x * 64u;
-	if (at >= places[1]) { return; }
-	let pair = numbers[at / 2u];
-	output[places[0] + at] = bitcast<f32>(select(pair << 16u, pair & 0xffff0000u, at % 2u == 1u));
-}`;
 // the values of a convolution normed with affine and swished when swish is 1 once (strict_gpu_convolution), not in
 // each of its tiles: values, affine, channels, swish
 Module['strictShaders']['strict_normed'] = strictKernelBindings + `
@@ -274,6 +271,6 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) g
 	let at = id.x + id.y * groups.x * 64u;
 	if (at >= places[8]) { return; }
 	let channel = at % places[5];
-	let normed = numbers[places[0] + at] * numbers[places[2] + channel] + numbers[places[2] + places[5] + channel];
+	let normed = n_item(places[0], at) * n_item(places[2], channel) + n_item(places[2], places[5] + channel);
 	output[at] = select(normed, normed / (1.0 + exp(-normed)), places[7] == 1u);
 }`;
