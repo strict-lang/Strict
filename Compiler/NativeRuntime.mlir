@@ -18197,7 +18197,7 @@
   }
   llvm.mlir.global internal constant @strict_gpu_quantized_web("strict_quantized\00") : !llvm.array<17 x i8>
   llvm.mlir.global internal constant @strict_gpu_eights_web("strict_eights\00") : !llvm.array<14 x i8>
-  // `Batch.Sums` of 8 bit rows in one block (strict_rows: codes, then a 32 bit scale per 32 columns, each row padded to
+  // `Batch.Sums` of 8 bit rows (strict_rows: codes, then a 32 bit scale per 32 columns, each row padded to
   // 16 bytes) without bases or gates on WebGPU: strict_quantized makes 8 bit codes and a scale of every token, strict_eights the
   // dot products of 4 codes at a time as bfloat16 results, 0.0 when the rows or the platform can not (native platforms
   // run strict_gpu_tokens on); the row block is uploaded once and kept like a device copy of the rows (kind 5, given back
@@ -18244,7 +18244,7 @@
     %span = arith.subi %lastAddress, %firstAddress : i64
     %expected = arith.muli %lastIndex, %stride : i64
     %isBlock = arith.cmpi eq, %span, %expected : i64
-    cf.cond_br %isBlock, ^quantize, ^unable
+    cf.br ^quantize
   ^quantize:
     %kind = arith.constant 2 : i64
     %floatFormat = arith.constant 32 : i64
@@ -18271,7 +18271,14 @@
     %isCached = func.call @strict_gpu_cached(%rows, %webKind, %blockWords, %copy) : (f64, i64, i64, !llvm.ptr) -> i1
     cf.cond_br %isCached, ^kept, ^upload
   ^upload:
-    %uploaded = func.call @strict_gpu_web_uploaded(%firstData, %blockWords) : (!llvm.ptr, i64) -> i64
+    cf.cond_br %isBlock, ^uploadFrom(%firstData : !llvm.ptr), ^gather
+  ^gather:
+    %gathered = func.call @strict_gpu_rows_gathered(%items, %rowTotal, %columns, %stride, %rowBytes) : (!llvm.ptr, i64, i64, i64, i64) -> !llvm.ptr
+    %gatheredAddress = llvm.ptrtoint %gathered : !llvm.ptr to i64
+    %isGathered = arith.cmpi ne, %gatheredAddress, %none : i64
+    cf.cond_br %isGathered, ^uploadFrom(%gathered : !llvm.ptr), ^unable
+  ^uploadFrom(%source: !llvm.ptr):
+    %uploaded = func.call @strict_gpu_web_uploaded(%source, %blockWords) : (!llvm.ptr, i64) -> i64
     %isUploaded = arith.cmpi ne, %uploaded, %none : i64
     cf.cond_br %isUploaded, ^remember, ^hosted
   ^remember:
@@ -18290,7 +18297,7 @@
     %keptBlock = func.call @strict_packed_view(%blockWords, %floatFormat, %zero, %keptBits) : (i64, i64, f64, f64) -> f64
     cf.br ^block(%keptBlock, %true : f64, i1)
   ^hosted:
-    %dataBits = func.call @strict_bits(%firstData) : (!llvm.ptr) -> f64
+    %dataBits = func.call @strict_bits(%source) : (!llvm.ptr) -> f64
     %hostedBlock = func.call @strict_packed_view(%blockWords, %floatFormat, %dataBits, %zero) : (i64, i64, f64, f64) -> f64
     cf.br ^block(%hostedBlock, %false : f64, i1)
   ^block(%block: f64, %isBorrowed: i1):
@@ -18329,6 +18336,37 @@
     return %result : f64
   ^unable:
     return %zero : f64
+  }
+  // the 8 bit rows of items in one new block, each at row * stride (rows joined from several matrices like the query,
+  // key and value rows of an attention), null when a row has another count of columns
+  func.func private @strict_gpu_rows_gathered(%items: !llvm.ptr, %rowTotal: i64, %columns: i64, %stride: i64, %rowBytes: i64) -> !llvm.ptr {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %bytes = arith.muli %rowTotal, %stride : i64
+    %block = func.call @strict_alloc_text(%bytes) : (i64) -> !llvm.ptr
+    cf.br ^next(%none : i64)
+  ^next(%row: i64):
+    %more = arith.cmpi slt, %row, %rowTotal : i64
+    cf.cond_br %more, ^check, ^done
+  ^check:
+    %slot = llvm.getelementptr %items[%row] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %value = llvm.load %slot : !llvm.ptr -> f64
+    %lengthNumber = func.call @strict_list_length(%value) : (f64) -> f64
+    %length = arith.fptosi %lengthNumber : f64 to i64
+    %isSame = arith.cmpi eq, %length, %columns : i64
+    cf.cond_br %isSame, ^copy, ^different
+  ^copy:
+    %data = func.call @strict_list_data(%value) : (f64) -> !llvm.ptr
+    %offset = arith.muli %row, %stride : i64
+    %target = llvm.getelementptr %block[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %copied = llvm.call @memcpy(%target, %data, %rowBytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %following = arith.addi %row, %one : i64
+    cf.br ^next(%following : i64)
+  ^different:
+    %nothing = llvm.mlir.zero : !llvm.ptr
+    return %nothing : !llvm.ptr
+  ^done:
+    return %block : !llvm.ptr
   }
   // true when rows that keep their tokens (kept) and an ungated call can take the 8 bit path twice instead of 32 bit
   // tokens: the codes of the tokens, then the codes of what is left of them (a 1 / 254 step) with the first sums as
