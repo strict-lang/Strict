@@ -9,10 +9,17 @@ const strictKernelBindings = `
 @group(0) @binding(3) var<storage, read_write> failed: array<u32>;
 @group(0) @binding(4) var<uniform> work: vec2<u32>;
 `;
+// the 4 by 4 sums plus the products of ins and outs: fma, as Dawn's DXC compiles a * b + c strictly as two operations
+const strictSummed = `
+fn summed(sums: mat4x4<f32>, ins: vec4<f32>, outs: vec4<f32>) -> mat4x4<f32> {
+	return mat4x4<f32>(fma(ins, vec4<f32>(outs.x), sums[0]), fma(ins, vec4<f32>(outs.y), sums[1]),
+		fma(ins, vec4<f32>(outs.z), sums[2]), fma(ins, vec4<f32>(outs.w), sums[3]));
+}
+`;
 // Convolved.Summed: values, affine, weights, height, width, channels, outputs, swish, factor (strict_gpu_convolution),
 // a workgroup of 256 invocations per tile of 128 pixels of one parity and 128 outputs (8 by 8 sums each), the taps 16
 // at a time in workgroup memory; values normed by strict_normed first come with swish 2
-(Module['strictShaders'] ||= {})['strict_convolution'] = strictKernelBindings + `
+(Module['strictShaders'] ||= {})['strict_convolution'] = strictKernelBindings + strictSummed + `
 var<workgroup> tapped: array<vec4<f32>, 512>;
 var<workgroup> weighted: array<vec4<f32>, 512>;
 @compute @workgroup_size(256)
@@ -79,10 +86,10 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 			let moreIns = tapped[at * 32u + ownPixel * 2u + 1u];
 			let outs = weighted[at * 32u + ownOutput * 2u];
 			let moreOuts = weighted[at * 32u + ownOutput * 2u + 1u];
-			sums += mat4x4<f32>(ins * outs.x, ins * outs.y, ins * outs.z, ins * outs.w);
-			moreOutputSums += mat4x4<f32>(ins * moreOuts.x, ins * moreOuts.y, ins * moreOuts.z, ins * moreOuts.w);
-			morePixelSums += mat4x4<f32>(moreIns * outs.x, moreIns * outs.y, moreIns * outs.z, moreIns * outs.w);
-			moreSums += mat4x4<f32>(moreIns * moreOuts.x, moreIns * moreOuts.y, moreIns * moreOuts.z, moreIns * moreOuts.w);
+			sums = summed(sums, ins, outs);
+			moreOutputSums = summed(moreOutputSums, ins, moreOuts);
+			morePixelSums = summed(morePixelSums, moreIns, outs);
+			moreSums = summed(moreSums, moreIns, moreOuts);
 		}
 		workgroupBarrier();
 	}
@@ -109,7 +116,7 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 // and the start, batch, inner and column strides of right (strict_gpu_products): a workgroup of 256 invocations per
 // tile of 128 rows and 128 columns of one batch (8 by 8 sums each), the inner numbers 16 at a time in workgroup memory;
 // with work.y splits each tile sums a part of the inner numbers into its own copy of the outputs (strict_splits)
-Module['strictShaders']['strict_products'] = strictKernelBindings + `
+Module['strictShaders']['strict_products'] = strictKernelBindings + strictSummed + `
 var<workgroup> lefts: array<vec4<f32>, 512>;
 var<workgroup> rights: array<vec4<f32>, 512>;
 @compute @workgroup_size(256)
@@ -159,10 +166,10 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 			let moreIns = lefts[at * 32u + ownRow * 2u + 1u];
 			let outs = rights[at * 32u + ownColumn * 2u];
 			let moreOuts = rights[at * 32u + ownColumn * 2u + 1u];
-			sums += mat4x4<f32>(ins * outs.x, ins * outs.y, ins * outs.z, ins * outs.w);
-			moreColumnSums += mat4x4<f32>(ins * moreOuts.x, ins * moreOuts.y, ins * moreOuts.z, ins * moreOuts.w);
-			moreRowSums += mat4x4<f32>(moreIns * outs.x, moreIns * outs.y, moreIns * outs.z, moreIns * outs.w);
-			moreSums += mat4x4<f32>(moreIns * moreOuts.x, moreIns * moreOuts.y, moreIns * moreOuts.z, moreIns * moreOuts.w);
+			sums = summed(sums, ins, outs);
+			moreColumnSums = summed(moreColumnSums, ins, moreOuts);
+			moreRowSums = summed(moreRowSums, moreIns, outs);
+			moreSums = summed(moreSums, moreIns, moreOuts);
 		}
 		workgroupBarrier();
 	}
