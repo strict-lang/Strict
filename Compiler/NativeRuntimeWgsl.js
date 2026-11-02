@@ -362,14 +362,17 @@ Module['strictKernelGroups']['strict_eights'] = (places) => {
 };
 // Attention.Merged (strict_gpu_attention_web): queries, keys, values, heads, groups, size (up to 128), sequences,
 // causal, value offset, value stride; a workgroup of 64 invocations per 16 tokens of one head and sequence scores 64
-// positions at a time (one each), keeps the largest score and the sum of each row (online softmax) and adds the
-// weighted values of 2 numbers of all 16 rows per invocation, no scores are stored
+// positions at a time (one each), keeps the largest score and the sum of each row (online softmax, 4 invocations per
+// row with 16 of the positions each) and adds the weighted values of 2 numbers of all 16 rows per invocation, no scores
+// are stored
 Module['strictShaders']['strict_attention'] = strictKernelBindings + `
 var<workgroup> asked: array<vec4<f32>, 512>;
 var<workgroup> scored: array<vec4<f32>, 256>;
 var<workgroup> largests: array<f32, 16>;
 var<workgroup> rescales: array<vec4<f32>, 4>;
 var<workgroup> totals: array<f32, 16>;
+var<workgroup> maxima: array<f32, 64>;
+var<workgroup> partials: array<f32, 64>;
 @compute @workgroup_size(64)
 fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) group: vec3<u32>,
 	@builtin(num_workgroups) groups: vec3<u32>) {
@@ -434,22 +437,30 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 		scored[local * 4u + 2u] = select(hidden, thirdScores, vec4<u32>(position) <= lasts + 8u);
 		scored[local * 4u + 3u] = select(hidden, fourthScores, vec4<u32>(position) <= lasts + 12u);
 		workgroupBarrier();
-		if (local < 16u) {
-			let quad = local / 4u;
-			let lane = local % 4u;
-			var largest = largests[local];
-			for (var at = 0u; at < 64u; at++) { largest = max(largest, scored[at * 4u + quad][lane]); }
-			var total = 0.0;
-			for (var at = 0u; at < 64u; at++) {
-				let score = scored[at * 4u + quad][lane];
-				let share = select(exp(score - largest), 0.0, score < -1.0e38);
-				scored[at * 4u + quad][lane] = share;
-				total += share;
-			}
-			let rescale = exp(largests[local] - largest);
+		let row = local / 4u;
+		let quad = row / 4u;
+		let lane = row % 4u;
+		let begin = local % 4u * 16u;
+		var largest = largests[row];
+		for (var at = begin; at < begin + 16u; at++) { largest = max(largest, scored[at * 4u + quad][lane]); }
+		maxima[local] = largest;
+		workgroupBarrier();
+		largest = max(max(maxima[row * 4u], maxima[row * 4u + 1u]), max(maxima[row * 4u + 2u], maxima[row * 4u + 3u]));
+		var total = 0.0;
+		for (var at = begin; at < begin + 16u; at++) {
+			let score = scored[at * 4u + quad][lane];
+			let share = select(exp(score - largest), 0.0, score < -1.0e38);
+			scored[at * 4u + quad][lane] = share;
+			total += share;
+		}
+		partials[local] = total;
+		workgroupBarrier();
+		if (begin == 0u) {
+			let rescale = exp(largests[row] - largest);
 			rescales[quad][lane] = rescale;
-			totals[local] = totals[local] * rescale + total;
-			largests[local] = largest;
+			totals[row] = totals[row] * rescale + partials[local] + partials[local + 1u] + partials[local + 2u] +
+				partials[local + 3u];
+			largests[row] = largest;
 		}
 		workgroupBarrier();
 		firstLow *= rescales[0];
