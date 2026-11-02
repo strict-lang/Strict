@@ -29,6 +29,10 @@ Details for the GPU line of [improvements.md](improvements.md), one short line e
 - 8 bit rows gathered straight from the mapped file (the 21 GB H3 DiT loads in 10-12 s, ComfyUI 4-7)
 - no native test reaches the locked path of `strict_packed_rows` and `strict_rows` (matrices of 4 MB and more): a test with a big matrix
 
+## WebGPU
+- Dawn's DXC keeps constant-count loops rolled (the 16 step inner loop of strict_convolution and strict_products) and splits vec4 workgroup reads into scalar loads, the convolution runs at ~6 TFLOPS on a 3080: unroll such loops where WGSL is emitted, not by hand
+- every kernel copies its resident inputs into one combined input buffer: bind lists directly once the kernels address them per binding
+
 ## Generated loops
 - a loop reading a member of an object parameter, a type constant or `.Length` of a list parameter stays on the CPU: pass loop invariant members as numbers
 - `.Round` keeps a loop on the CPU: a device Round
