@@ -642,3 +642,38 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) g
 		return result;
 	};
 });
+// files the page maps to URLs in Module.strictFiles that are read whole (any but .safetensors and .gguf, which are read
+// in ranges) are in the file system of the program before it starts, folders of their names created: kept in the origin
+// private file system after the first download, so File and Directory find them like files of the package
+(Module['preRun'] ||= []).push(/** @suppress {undefinedVars} */ () => {
+	const files = Module['strictFiles'] || {};
+	const names = Object.keys(files).filter((name) => !/\.(safetensors|gguf)$/i.test(name));
+	if (typeof FS === 'undefined' || !names.length)
+		return;
+	const kept = async (url) => {
+		const root = await navigator['storage']['getDirectory']();
+		const folder = await (await root['getDirectoryHandle']('strict-files', { 'create': true }))
+			['getDirectoryHandle'](encodeURIComponent(url), { 'create': true });
+		const stored = await folder['getFileHandle']('whole').catch(() => null);
+		if (stored)
+			return new Uint8Array(await (await stored['getFile']())['arrayBuffer']());
+		const response = await fetch(url);
+		if (!response.ok)
+			throw url + ' answered ' + response.status;
+		const bytes = new Uint8Array(await response.arrayBuffer());
+		const writable = await (await folder['getFileHandle']('whole', { 'create': true }))['createWritable']();
+		await writable['write'](bytes);
+		await writable['close']();
+		return bytes;
+	};
+	const fetched = (url) => kept(url).catch(() => fetch(url).then((response) => response.ok ? response.arrayBuffer() :
+		Promise.reject(url + ' answered ' + response.status)).then((buffer) => new Uint8Array(buffer)));
+	addRunDependency('strictFiles');
+	Promise.all(names.map((name) => fetched(files[name]).then((bytes) => {
+		const folder = name.substring(0, name.lastIndexOf('/'));
+		if (folder)
+			FS.mkdirTree(folder);
+		FS.writeFile(name, bytes);
+	}))).catch((error) => console.error('Reading a file of Module.strictFiles failed: ' + error))
+		.finally(() => removeRunDependency('strictFiles'));
+});
