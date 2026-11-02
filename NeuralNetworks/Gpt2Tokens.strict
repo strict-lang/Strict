@@ -15,13 +15,22 @@ Parsed(vocabulary Text, merges Texts) Gpt2Tokens
 Loaded(model Gguf) Gpt2Tokens
 	Gpt2Tokens.Loaded(Gguf("NeuralNetworks/tiny.gguf")).Encoded("ab c") is (4, 5)
 	Gpt2Tokens.Loaded(Gguf("NeuralNetworks/tiny.gguf")).isQwen
+	Gpt2Tokens.Loaded(Gguf("NeuralNetworks/tinyqwen4exp.gguf")).isQwen
+	Gpt2Tokens.Loaded(Gguf("NeuralNetworks/tinyqwen4exp.gguf")).Encoded("ab<pad>") is (27, 31)
 	mutable raw = List(Mutable(Text))
 	mutable known = Dictionary(Text, Number)
 	for model.Value("tokenizer.ggml.tokens").Lines
 		raw.Add(Raw(value))
 		known(raw.Last) = index
 	let ranked = Ranked(model.Value("tokenizer.ggml.merges").Lines, known)
-	Gpt2Tokens(raw, known, ranked, model.Value("tokenizer.ggml.pre") is "qwen2")
+	Gpt2Tokens(raw, known, ranked, model.Value("tokenizer.ggml.pre") is in ("qwen2", "qwen35"), Controls(model, raw))
+Controls(model Gguf, names Texts) Dictionary(Text, Number)
+	Gpt2Tokens.Controls(Gguf.Tiny, Tiny.tokens).Length is 0
+	mutable found = Dictionary(Text, Number)
+	for model.Value("tokenizer.ggml.token_type").Lines
+		if value is in ("3", "4")
+			found(names(index)) = index
+	found
 Folder(folder Text) Gpt2Tokens
 	Gpt2Tokens.Folder("NeuralNetworks/missing").tokens.Length is 0
 	Gpt2Tokens.Folder("NeuralNetworks/tinytokens").tokens is ("a", "b", " ", "ab", " ab")

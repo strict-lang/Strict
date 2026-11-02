@@ -5,6 +5,8 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - Native Safetensors test `Nibbles.Tuned(...)` (line 21, in Entry) exceeds the 100 ms test budget every run (also before the rank above 512 GPU merge), passes on the VM.
 - Routed attention (routing > 0) with strided values (valueOffset/valueStride) runs unrouted: `strict_gpu_attention` takes the routed 8 bit path only for packed values, so H3Block.Heads with V read from the combined list attends densely (6 s slower, 12.9 dB from the routed result), routing 0 is bit-identical; the per-token value quantization (`strict_device_quantize_rows_run`) and the pooled value means need strided rows, H3 keeps the copy until then.
 - `"abc".Reverse` (a List method returning the list, called on a Text) gives `(", c, b, a, ")` on the VM and `undefined symbol: Text_Reverse` natively (Ben). `Text(text.characters.Reverse)` works on the VM, natively a Text's `characters` is the Text handle itself: `Length` works on it, Reverse, First and `Text.Combine` of it see an empty list. Decide one native List(Character) representation, then forward such calls to `characters` in ValueCodegen and convert back with `Text(...)`.
+- GPU memory grows while generating on the Qwen3.8 models (Bonsai 6.9 to 15.3 GB, Brilliance 17.2 to 22 GB), Qwen3-8B stays flat (Ben, not investigated).
+- Two greedy runs of Qwen3-Coder-30B-A3B on the same prompt give different outputs (Ben, not investigated: atomics or reduction order in the expert path?).
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).
