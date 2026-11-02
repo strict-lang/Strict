@@ -6,6 +6,7 @@ constant Halves = Safetensors("NeuralNetworks/tinyhalves.safetensors")
 constant Bytes = Safetensors("NeuralNetworks/tinyint8.safetensors")
 constant Fours = Safetensors("NeuralNetworks/tinyfours.safetensors")
 constant Nibbles = Safetensors("NeuralNetworks/tinyint4.safetensors")
+constant Vision = "NeuralNetworks/tinyqwenvision.safetensors"
 constant Lifted = Layer.Zeros(63) + 1
 constant Lifting = Safetensors.Nibbles.Tuned("b", Safetensors.Lifted, (1, 0, 0, 0), (1))
 constant Single = "\"x\":{\"dtype\":\"F32\",\"shape\":[2],\"data_offsets\":[0,8]}"
@@ -46,6 +47,8 @@ Rows(name Text) List(Numbers)
 	Safetensors("NeuralNetworks/tiny.safetensors", 16).Rows("a") is ((1, 2, 3), (4, 5, 6))
 	Safetensors("NeuralNetworks/tinyhalves.safetensors", 16).Rows("a") is ((1, 2, 3), (4, 5, 6))
 	Safetensors("NeuralNetworks/tiny.safetensors", 8).Rows("a").First.First.IsNearlyEqual(0.992126)
+	Safetensors("NeuralNetworks/tiny.safetensors", 17).Rows("a") is ((1, 2, 3), (4, 5, 6))
+	Safetensors(Vision, 17).Rows("visual.pos_embed.weight")(9) is Safetensors(Vision).Rows("visual.pos_embed.weight")(9)
 	TensorFile.Rows(path, Entry(name), bits)
 Quantized(name Text, tokenBits = 8) List(Numbers)
 	Bytes.Quantized("a").Length is 4

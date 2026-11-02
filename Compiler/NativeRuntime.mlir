@@ -18251,9 +18251,9 @@
   // `Batch.Sums` without bases or gates on WebGPU, 0.0 when the rows or the platform can not (native platforms run
   // strict_gpu_tokens on): rows of 8 bit codes (strict_rows: codes, then a 32 bit scale per 32 columns) take
   // strict_quantized (8 bit codes and a scale of every token) and strict_eights (dot products of 4 codes at a time,
-  // bfloat16 results), rows of 32 or 16 bit floats strict_products with the rows as its right side (32 bit results) and
+  // bfloat16 results), rows of 32, 16 or bfloat16 floats strict_products with the rows as its right side (32 bit results) and
   // strict_biased for biases; the block of all rows (each padded to 16 bytes) is uploaded once and kept like a device copy
-  // of the rows (kind 5, 6 for 8 bit rows of 4 bit codes, 7 for 32 and 8 for 16 bit floats, given back with them, rows read from a URL on the
+  // of the rows (kind 5, 6 for 8 bit rows of 4 bit codes, 7 for 32, 8 for 16 bit floats and 9 for bfloat16, given back with them, rows read from a URL on the
   // web are only there, strict_rows_web, rows joined from such are gathered on the GPU), a view of it is the kernel value
   func.func private @strict_gpu_tokens_web(%count: i64, %rows: f64, %input: f64, %width: f64, %rowCount: f64, %bases: f64, %biases: f64, %gated: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
@@ -18275,8 +18275,11 @@
     %halfFloatsMask = arith.constant 65536 : i64
     %isEights = arith.cmpi eq, %formats#1, %eightsMask : i64
     %isWide = arith.cmpi eq, %formats#1, %floatsMask : i64
+    %brainsMask = arith.constant 131072 : i64
     %isSixteen = arith.cmpi eq, %formats#1, %halfFloatsMask : i64
-    %isFloats = arith.ori %isWide, %isSixteen : i1
+    %isBrains = arith.cmpi eq, %formats#1, %brainsMask : i64
+    %isHalves = arith.ori %isSixteen, %isBrains : i1
+    %isFloats = arith.ori %isWide, %isHalves : i1
     %isKnown = arith.ori %isEights, %isFloats : i1
     %columns = arith.fptosi %width : f64 to i64
     %thirtyTwo = arith.constant 32 : i64
@@ -18297,7 +18300,7 @@
     %eightBytes = func.call @strict_packed_bytes(%columns, %eight) : (i64, i64) -> i64
     %wideBytes = arith.muli %columns, %four : i64
     %halfBytesOfRow = arith.muli %columns, %two : i64
-    %floatBytes = arith.select %isSixteen, %halfBytesOfRow, %wideBytes : i64
+    %floatBytes = arith.select %isHalves, %halfBytesOfRow, %wideBytes : i64
     %rowBytes = arith.select %isFloats, %floatBytes, %eightBytes : i64
     %fifteen = arith.constant 15 : i64
     %paddedBytes = arith.addi %rowBytes, %fifteen : i64
@@ -18310,7 +18313,9 @@
     %eightsKind = arith.constant 5 : i64
     %wideKind = arith.constant 7 : i64
     %sixteenKind = arith.constant 8 : i64
-    %floatsKind = arith.select %isSixteen, %sixteenKind, %wideKind : i64
+    %brainsKind = arith.constant 9 : i64
+    %halvesKind = arith.select %isSixteen, %sixteenKind, %brainsKind : i64
+    %floatsKind = arith.select %isHalves, %halvesKind, %wideKind : i64
     %webKind = arith.select %isFloats, %floatsKind, %eightsKind : i64
     %isCached = func.call @strict_gpu_cached(%rows, %webKind, %blockWords, %copy) : (f64, i64, i64, !llvm.ptr) -> i1
     cf.cond_br %isCached, ^kept(%blockWords, %strideWords, %none : i64, i64, i64), ^nibbled
@@ -18370,7 +18375,9 @@
   ^uploadFrom(%source: !llvm.ptr):
     %narrowed = arith.constant -1 : i64
     %halfFloats = arith.constant -2 : i64
-    %floatsMode = arith.select %isSixteen, %halfFloats, %narrowed : i64
+    %brainHalves = arith.muli %blockWords, %two : i64
+    %halvesMode = arith.select %isSixteen, %halfFloats, %brainHalves : i64
+    %floatsMode = arith.select %isHalves, %halvesMode, %narrowed : i64
     %uploadMode = arith.select %isFloats, %floatsMode, %none : i64
     %uploaded = func.call @strict_gpu_web_uploaded(%source, %blockWords, %uploadMode) : (!llvm.ptr, i64, i64) -> i64
     %isUploaded = arith.cmpi ne, %uploaded, %none : i64
@@ -18390,11 +18397,11 @@
     %keptBits = arith.bitcast %keptDevice : i64 to f64
     %keptFormat = arith.constant 32 : i64
     %keptHalves = arith.muli %keptWords, %two : i64
-    %keptLength = arith.select %isSixteen, %keptHalves, %keptWords : i64
+    %keptLength = arith.select %isHalves, %keptHalves, %keptWords : i64
     %keptBlock = func.call @strict_packed_view(%keptLength, %keptFormat, %zero, %keptBits) : (i64, i64, f64, f64) -> f64
     cf.br ^block(%keptBlock, %true, %keptStride, %keptNibbles : f64, i1, i64, i64)
   ^hosted:
-    cf.cond_br %isSixteen, ^unable, ^hostedWords
+    cf.cond_br %isHalves, ^unable, ^hostedWords
   ^hostedWords:
     %dataBits = func.call @strict_bits(%source) : (!llvm.ptr) -> f64
     %hostedFormat = arith.constant 32 : i64
@@ -18405,7 +18412,7 @@
     %tokens = arith.divui %count, %rowTotal : i64
     %tokensNumber = arith.uitofp %tokens : i64 to f64
     %blockStrideHalves = arith.muli %blockStride, %two : i64
-    %blockElements = arith.select %isSixteen, %blockStrideHalves, %blockStride : i64
+    %blockElements = arith.select %isHalves, %blockStrideHalves, %blockStride : i64
     %strideNumber = arith.uitofp %blockElements : i64 to f64
     cf.cond_br %isFloats, ^products, ^quantize
   ^products:

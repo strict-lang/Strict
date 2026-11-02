@@ -84,6 +84,14 @@ static inline uint16_t strict_half(float number)
 		half = (magnitude + 0xC8000FFFu + ((magnitude >> 13) & 1)) >> 13;
 	return (uint16_t)(half | sign >> 16);
 }
+/* The nearest bfloat16 (ties to even, a NaN stays a quiet NaN) of a 32 bit float. */
+static inline uint16_t strict_brain(float number)
+{
+	union { float number; uint32_t bits; } slot = { number };
+	if ((slot.bits & 0x7FFFFFFFu) > 0x7F800000u)
+		return (uint16_t)(slot.bits >> 16 | 0x40);
+	return (uint16_t)((slot.bits + 0x7FFFu + (slot.bits >> 16 & 1)) >> 16);
+}
 /* The 32 bit float of a 16 bit float (IEEE half) and of a bfloat16 (the upper half of a 32 bit float). */
 static inline float strict_half_float(uint16_t half)
 {

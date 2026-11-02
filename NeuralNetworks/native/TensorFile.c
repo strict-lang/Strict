@@ -395,15 +395,15 @@ static void ThreadReleased(void)
 	free(floatStorage);
 }
 
-/* Packs count floats (stride apart) into the numbers at data with bits 32, 16 (rounded to halves) or 8
-   (strict_quantized). */
+/* Packs count floats (stride apart) into the numbers at data with bits 32, 17 (rounded to bfloat16), 16 (rounded to
+   halves) or 8 (strict_quantized). */
 static void Packed(unsigned char* data, const float* first, uint64_t count, uint64_t stride, double bits)
 {
 	if (bits == 8)
 		strict_quantized(data, first, count, stride);
 	for (uint64_t column = 0; bits != 8 && column < count; column++)
-		if (bits == 16)
-			((uint16_t*)data)[column] = strict_half(first[column * stride]);
+		if (bits == 16 || bits == 17)
+			((uint16_t*)data)[column] = bits == 16 ? strict_half(first[column * stride]) : strict_brain(first[column * stride]);
 		else
 			((float*)data)[column] = first[column * stride];
 }
@@ -529,7 +529,8 @@ STRICT_EXPORT double TensorFile_Floats(double self, double path, double entry, d
 }
 
 /* The rows (or the columns when transposed) of the matrix that entry describes, each as numbers with bits 32 (exact for
-   32 and 16 bit tensors), 16 (rounded to halves, F16 rows are read as they are) or 8 (quantized, strict_quantized). */
+   32 and 16 bit tensors), 17 (rounded to bfloat16, BF16 rows are read as they are), 16 (rounded to halves, F16 rows are
+   read as they are) or 8 (quantized, strict_quantized). */
 static double Matrix(double path, double entry, double bits, int transposed)
 {
 	if (!ThreadReady())
@@ -538,13 +539,13 @@ static double Matrix(double path, double entry, double bits, int transposed)
 	const char* failure = Described(strict_text(entry), &tensor);
 	if (failure)
 		return strict_fail(failure);
-	if (tensor.rank != 2 || (bits != 8 && bits != 16 && bits != 32))
-		return strict_fail("OnlyMatricesOf8Or16Or32BitsAreSupported");
+	if (tensor.rank != 2 || (bits != 8 && bits != 16 && bits != 17 && bits != 32))
+		return strict_fail("OnlyMatricesOf8Or16Or17Or32BitsAreSupported");
 	if (tensor.isNibbles)
 		return strict_fail("I4TensorsAreOnlyReadAsQuantizedRows");
 	uint64_t height = tensor.height, width = tensor.width, stride = 0;
 	uint64_t outer = transposed ? width : height, inner = transposed ? height : width;
-	int isStored = !tensor.isBrain && bits > 8 && tensor.bytes * 8 == bits;
+	int isStored = bits == 17 ? tensor.isBrain : !tensor.isBrain && bits > 8 && tensor.bytes * 8 == bits;
 	float* floats = transposed ? Read(path, &tensor, &failure) : 0;
 	if (failure)
 		return strict_fail(failure);
