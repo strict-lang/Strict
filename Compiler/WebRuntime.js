@@ -99,21 +99,31 @@ addToLibrary({
 			words[index] = halves[index] << 16;
 		return new Float32Array(words.buffer);
 	},
-	$strictWebGpuPipeline: (device, code) => {
+	// a shader that does not compile rejects (its loop runs on the CPU), checked once per pipeline
+	$strictWebGpuPipeline: async (device, code) => {
 		const storage = (binding, type) => ({ binding, visibility: 4, buffer: { type } });
 		const types = ['storage', 'read-only-storage', 'read-only-storage', 'storage', 'uniform', 'read-only-storage',
 			'read-only-storage', 'read-only-storage', 'read-only-storage'];
 		const group = device.createBindGroupLayout({ entries: types.map((type, binding) => storage(binding, type)) });
 		const layout = device.createPipelineLayout({ bindGroupLayouts: [group] });
+		device.pushErrorScope('validation');
 		const module = device.createShaderModule({ code: Module['strictItem'] + code });
-		return device.createComputePipelineAsync({ layout, compute: { module, entryPoint: 'main' } });
+		const pipeline = device.createComputePipelineAsync({ layout, compute: { module, entryPoint: 'main' } });
+		const error = await device.popErrorScope();
+		if (error)
+			throw error.message;
+		return pipeline;
 	},
 	$strictWebGpuDevice: async () => {
 		const adapter = await navigator.gpu.requestAdapter();
 		const limits = adapter && adapter.limits;
 		const requiredLimits = limits && { maxStorageBufferBindingSize: limits.maxStorageBufferBindingSize,
 			maxBufferSize: limits.maxBufferSize };
-		return adapter && await adapter.requestDevice({ requiredLimits });
+		const device = adapter && await adapter.requestDevice({ requiredLimits });
+		// any other error of WebGPU stops the program, results that were never computed must not be read
+		device?.addEventListener('uncapturederror', (event) => abort('WebGPU error: ' + event.error.message));
+		device?.lost.then((info) => abort('WebGPU device lost: ' + info.message));
+		return device;
 	},
 	// numbers into the data at output as 64 bit, 32 bit or bfloat16 (bits 17, rounded to the nearest even) numbers
 	$strictWebGpuWritten: (numbers, output, bits) => {
@@ -139,7 +149,6 @@ addToLibrary({
 			return 0;
 		const pipeline = strictWebGpu.pipelines[name] ||= await strictWebGpuPipeline(device, Module['strictShaders'][name]);
 		const written = 128 | 8, read = 128 | 4;
-		device.pushErrorScope('out-of-memory');
 		const buffer = (size, flags) => device.createBuffer({ size: Math.max(size, 4), usage: flags });
 		// one input buffer per power of two size is reused, the queue writes it only after earlier kernels read it (a new
 		// one per kernel was cleared first and stayed in video memory until the GPU ran the kernel)
@@ -147,7 +156,11 @@ addToLibrary({
 		const input = rounded > device.limits.maxStorageBufferBindingSize ? buffer(inputs.size * 4, written)
 			: strictWebGpu.inputs[rounded] ||= buffer(rounded, written);
 		const isPooled = input === strictWebGpu.inputs[rounded];
-		const buffers = [buffer(count * 4, read), input, buffer(inputs.places.byteLength, written), buffer(4, read | 8)];
+		// places and work are reused like the inputs, the queue writes them only after earlier kernels read them
+		if (!strictWebGpu.places || strictWebGpu.places.size < inputs.places.byteLength)
+			strictWebGpu.places = buffer(Math.max(inputs.places.byteLength, 256), written);
+		const work = strictWebGpu.work ||= buffer(16, 64 | 8);
+		const buffers = [buffer(count * 4, read), input, strictWebGpu.places, buffer(4, read | 8)];
 		const copy = output && buffer(count * 4 + 4, 1 | 8);
 		inputs.written.forEach(([offset, part]) => device.queue.writeBuffer(buffers[1], offset * 4, part));
 		device.queue.writeBuffer(buffers[2], 0, inputs.places);
@@ -159,9 +172,8 @@ addToLibrary({
 			(strictWebGpu.empty ||= device.createBuffer({ size: 4, usage: 128 })));
 		const dispatched = (used, tiles, part, bound = buffers.slice(0, 4)) => {
 			for (let first = 0; first < tiles; first += part) {
-				const work = buffer(16, 64 | 8), size = Math.min(part, tiles - first), wide = Math.min(size, 65535);
+				const size = Math.min(part, tiles - first), wide = Math.min(size, 65535);
 				device.queue.writeBuffer(work, 0, new Uint32Array([first, splits]));
-				buffers.push(work);
 				const entries = bound.concat(work, lists).map((buffer, binding) => ({ binding, resource: { buffer } }));
 				const encoder = device.createCommandEncoder(), pass = encoder.beginComputePass();
 				pass.setPipeline(used);
@@ -204,28 +216,16 @@ addToLibrary({
 				dispatched(await runtimePipeline('strict_packed'), pairs, pairs, [halved, buffers[0], buffers[2], buffers[3]]);
 			}
 			const kept = halved || buffers[0];
-			buffers.forEach((used, at) => (at === 0 && !halved) || at === 3 || (at === 1 && isPooled) || used.destroy());
+			buffers.forEach((used, at) => (at === 0 && !halved) || at === 2 || at === 3 || (at === 1 && isPooled) ||
+				used.destroy());
 			const handle = strictWebGpu.next++;
 			strictWebGpu.buffers[handle] = kept;
 			strictWebGpu.failures[handle] = buffers[3];
 			if (halved)
 				strictWebGpu.halves[handle] = count;
 			strictWebGpu.grown += kept.size;
-			// not awaited: Chrome answers it once the GPU ran the kernel, every kept result would wait for the GPU
-			device.popErrorScope().then((error) => {
-				if (!error)
-					return;
-				console.error('WebGPU kernel ' + name + ' result is lost: ' + error.message);
-				kept.destroy();
-				buffers[3].destroy();
-				delete strictWebGpu.inputs[rounded];
-				delete strictWebGpu.buffers[handle];
-				delete strictWebGpu.failures[handle];
-				delete strictWebGpu.halves[handle];
-			});
 			return handle;
 		}
-		device.popErrorScope();
 		const encoder = device.createCommandEncoder();
 		encoder.copyBufferToBuffer(buffers[0], 0, copy, 0, count * 4);
 		encoder.copyBufferToBuffer(buffers[3], 0, copy, count * 4, 4);
@@ -247,7 +247,7 @@ addToLibrary({
 		if (!isFailed)
 			strictWebGpuWritten(new Float32Array(mapped, 0, count), output, bits);
 		copy.unmap();
-		buffers.concat(copy).forEach((used, at) => (at === 1 && isPooled) || used.destroy());
+		buffers.concat(copy).forEach((used, at) => (at === 1 && isPooled) || at === 2 || used.destroy());
 		return isFailed ? 0 : 1;
 	},
 	$strictWebGpuStarted__deps: ['$strictWebGpu', '$strictWebGpuRun', '$UTF8ToString', '$Asyncify'],
