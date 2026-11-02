@@ -23,7 +23,8 @@ addToLibrary({
 // list read or a shader error runs the loop on the CPU.
 // Closure knows no GPUBufferUsage: storage 128, copy destination 8, copy source 4, map read 1, compute stage 4.
 addToLibrary({
-	$strictWebGpu: { device: null, failed: false, pipelines: {}, buffers: {}, failures: {}, next: 1, grown: 0, queued: 0, done: [] },
+	$strictWebGpu: { device: null, failed: false, pipelines: {}, buffers: {}, failures: {}, next: 1, grown: 0, queued: 0, done: [],
+		inputs: {} },
 	strict_webgpu_ready__deps: ['$strictWebGpu', '$UTF8ToString'],
 	strict_webgpu_ready: (name) => {
 		const shaders = Module['strictShaders'], key = UTF8ToString(name);
@@ -133,8 +134,13 @@ addToLibrary({
 		const written = 128 | 8, read = 128 | 4;
 		device.pushErrorScope('out-of-memory');
 		const buffer = (size, flags) => device.createBuffer({ size: Math.max(size, 4), usage: flags });
-		const buffers = [buffer(count * 4, read), buffer(inputs.size * 4, written),
-			buffer(inputs.places.byteLength, written), buffer(4, read | 8)];
+		// one input buffer per power of two size is reused, the queue writes it only after earlier kernels read it (a new
+		// one per kernel was cleared first and stayed in video memory until the GPU ran the kernel)
+		const rounded = 2 ** Math.ceil(Math.log2(Math.max(inputs.size * 4, 4)));
+		const input = rounded > device.limits.maxStorageBufferBindingSize ? buffer(inputs.size * 4, written)
+			: strictWebGpu.inputs[rounded] ||= buffer(rounded, written);
+		const isPooled = input === strictWebGpu.inputs[rounded];
+		const buffers = [buffer(count * 4, read), input, buffer(inputs.places.byteLength, written), buffer(4, read | 8)];
 		const copy = output && buffer(count * 4 + 4, 1 | 8);
 		inputs.written.forEach(([offset, part]) => device.queue.writeBuffer(buffers[1], offset * 4, part));
 		device.queue.writeBuffer(buffers[2], 0, inputs.places);
@@ -163,21 +169,22 @@ addToLibrary({
 			}
 		};
 		dispatched(pipeline, tiles, part);
-		// inputs of kernels the GPU did not run yet stay in video memory, above 2 GB of them waits for the oldest
+		// more than 1 GB of inputs and results queued ahead of the GPU waits for the oldest kernel (2 GB or no limit made
+		// 720x1280 Flux decodes vary from 3 to 6 s, 512 MB was slower)
 		const queued = (inputs.size + count) * 4;
 		strictWebGpu.queued += queued;
 		strictWebGpu.done.push(device.queue.onSubmittedWorkDone().then(() => {
 			strictWebGpu.queued -= queued;
 			strictWebGpu.done.shift();
 		}));
-		while (strictWebGpu.queued > 2147483648)
+		while (strictWebGpu.queued > 1073741824)
 			await strictWebGpu.done[0];
 		if (!output) {
 			// a kept bfloat16 result is rounded like the CPU reads it, the next kernel then reads the same numbers
 			if (bits === 17)
 				dispatched(strictWebGpu.pipelines['strict_bfloat16'] ||=
 					await strictWebGpuPipeline(device, Module['strictShaders']['strict_bfloat16']), groups, groups);
-			buffers.forEach((used, at) => at === 0 || at === 3 || used.destroy());
+			buffers.forEach((used, at) => at === 0 || at === 3 || (at === 1 && isPooled) || used.destroy());
 			const handle = strictWebGpu.next++;
 			strictWebGpu.buffers[handle] = buffers[0];
 			strictWebGpu.failures[handle] = buffers[3];
@@ -189,6 +196,7 @@ addToLibrary({
 				console.error('WebGPU kernel ' + name + ' result is lost: ' + error.message);
 				buffers[0].destroy();
 				buffers[3].destroy();
+				delete strictWebGpu.inputs[rounded];
 				delete strictWebGpu.buffers[handle];
 				delete strictWebGpu.failures[handle];
 			});
@@ -216,7 +224,7 @@ addToLibrary({
 		if (!isFailed)
 			strictWebGpuWritten(new Float32Array(mapped, 0, count), output, bits);
 		copy.unmap();
-		buffers.concat(copy).forEach((used) => used.destroy());
+		buffers.concat(copy).forEach((used, at) => (at === 1 && isPooled) || used.destroy());
 		return isFailed ? 0 : 1;
 	},
 	$strictWebGpuStarted__deps: ['$strictWebGpu', '$strictWebGpuRun', '$UTF8ToString', '$Asyncify'],
