@@ -563,6 +563,19 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) g
 	let normed = n_item(places[0], at) * n_item(places[2], channel) + n_item(places[2], places[5] + channel);
 	output[at] = select(normed, normed / (1.0 + exp(-normed)), places[7] == 1u);
 }`;
+// the numbers of the list at places[0] (places[1] of them) and then of the one at places[2] as 32 bit floats (lists of
+// different formats joined on the GPU, strict_gpu_web_mixed): left, right
+Module['strictShaders']['strict_joined'] = strictKernelBindings + `
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {
+	let at = id.x + id.y * groups.x * 64u;
+	if (at >= places[4]) { return; }
+	if (at < places[1]) {
+		output[at] = n_item(places[0], at);
+	} else {
+		output[at] = n_item(places[2], at - places[1]);
+	}
+}`;
 // a file a program writes in the browser (not the package loaded before it runs) is offered as a download on the page
 // when it is closed, images are shown too; a program using no files has no FS
 (Module['preRun'] ||= []).push(/** @suppress {undefinedVars} */ () => {

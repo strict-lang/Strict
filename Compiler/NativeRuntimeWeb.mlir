@@ -666,13 +666,12 @@
     %none = arith.constant false
     return %none : i1
   }
-  // a kernel with a WGSL shader (WgslShader) runs on WebGPU: each value is a (number, -1) or (items address, length)
-  // pair, the loop source is the last one, strict_webgpu fills the result list or returns 0 to run it on the CPU; a
-  // loop with a result format of 17 (bfloat16) or 32 bits goes through strict_gpu_kernel like kind 2 (generated loops by
-  // the second name of their table, the 32 bit one, the first is empty when a 64 bit kernel failed), a runtime kernel
-  // of NativeRuntimeWgsl.js: each value is (number, -1, 0) or (data address, length, bits of its numbers)
+  // a loop with a WGSL shader (WgslShader) runs on WebGPU through strict_gpu_kernel like kind 2 (generated loops by the
+  // second name of their table, the 32 bit one, the first is empty when a 64 bit kernel failed) when its result format
+  // is 17 (bfloat16) or 32 bits, or when one of the lists of a loop of numbers is narrow (strict_gpu_shaded_format),
+  // else it runs on the CPU (0); a runtime kernel of NativeRuntimeWgsl.js: each value is (number, -1, 0) or (data
+  // address, length, bits of its numbers)
   llvm.func @strict_webgpu_ready(!llvm.ptr) -> i32
-  llvm.func @strict_webgpu(!llvm.ptr, i32, !llvm.ptr, i32, !llvm.ptr) -> i32
   func.func private @strict_gpu_shaded(%name: !llvm.ptr, %count: i64, %source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64, %format: i64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
@@ -697,7 +696,10 @@
     %isBrain = arith.cmpi eq, %format, %brainFormat : i64
     %isSingle = arith.cmpi eq, %format, %singleFormat : i64
     %isNarrow = arith.ori %isBrain, %isSingle : i1
-    cf.cond_br %isNarrow, ^narrow, ^table
+    %widened = func.call @strict_gpu_shaded_format(%source, %kind, %values, %valueCount, %mask) : (f64, i64, !llvm.ptr, i64, i64) -> i64
+    %chosen = arith.select %isNarrow, %format, %widened : i64
+    %isChosen = arith.cmpi ne, %chosen, %none : i64
+    cf.cond_br %isChosen, ^narrow, ^skip
   ^narrow:
     %slotBytes = arith.constant 8 : i64
     %narrowSlots = arith.addi %valueCount, %one : i64
@@ -710,7 +712,7 @@
     %sourceBit = arith.shli %one, %valueCount : i64
     %withSource = arith.ori %mask, %sourceBit : i64
     %narrowMask = arith.select %isNarrowList, %withSource, %mask : i64
-    %narrowResult = func.call @strict_gpu_kernel(%shaderName, %count, %sourced, %narrowSlots, %narrowMask, %format) : (!llvm.ptr, i64, !llvm.ptr, i64, i64, i64) -> f64
+    %narrowResult = func.call @strict_gpu_kernel(%shaderName, %count, %sourced, %narrowSlots, %narrowMask, %chosen) : (!llvm.ptr, i64, !llvm.ptr, i64, i64, i64) -> f64
     return %narrowResult : f64
   ^other:
     cf.cond_br %kernelUsable, ^kernel, ^skip
@@ -719,60 +721,45 @@
     return %kernelResult : f64
   ^skip:
     return %zero : f64
-  ^table:
-    %slots = arith.addi %valueCount, %one : i64
-    %entries = arith.muli %slots, %two : i64
-    %table = llvm.alloca %entries x f64 : (i64) -> !llvm.ptr
-    cf.br ^slot(%none : i64)
-  ^slot(%at: i64):
+  }
+  // the format a loop of numbers runs its 32 bit shader in, like the native 32 bit kernel: 32 when one of its lists
+  // holds narrow numbers (also in a WebGPU buffer), 17 when all of them hold bfloat16, else 0 (it runs on the CPU)
+  func.func private @strict_gpu_shaded_format(%source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64) -> i64 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %brainBits = arith.constant 17 : i64
+    %singleBits = arith.constant 32 : i64
+    %sixtyFour = arith.constant 64 : i64
+    %true = arith.constant true
+    %false = arith.constant false
+    %isListSource = arith.cmpi eq, %kind, %one : i64
+    cf.cond_br %isListSource, ^sourced, ^next(%none, %false, %true : i64, i1, i1)
+  ^sourced:
+    %sourceBits = func.call @strict_gpu_bits(%source) : (f64) -> i64
+    %sourceNarrow = arith.cmpi ult, %sourceBits, %sixtyFour : i64
+    %sourceBrain = arith.cmpi eq, %sourceBits, %brainBits : i64
+    cf.br ^next(%none, %sourceNarrow, %sourceBrain : i64, i1, i1)
+  ^next(%at: i64, %narrow: i1, %brains: i1):
     %more = arith.cmpi slt, %at, %valueCount : i64
-    cf.cond_br %more, ^value, ^sourced
+    cf.cond_br %more, ^value, ^chosen
   ^value:
+    %shifted = arith.shrui %mask, %at : i64
+    %isList = arith.trunci %shifted : i64 to i1
+    %after = arith.addi %at, %one : i64
+    cf.cond_br %isList, ^list, ^next(%after, %narrow, %brains : i64, i1, i1)
+  ^list:
     %valueSlot = llvm.getelementptr %values[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     %value = llvm.load %valueSlot : !llvm.ptr -> f64
-    %bit = arith.shli %one, %at : i64
-    %masked = arith.andi %mask, %bit : i64
-    %isList = arith.cmpi ne, %masked, %none : i64
-    %entry = arith.muli %at, %two : i64
-    func.call @strict_gpu_shaded_slot(%table, %entry, %value, %isList) : (!llvm.ptr, i64, f64, i1) -> ()
-    %next = arith.addi %at, %one : i64
-    cf.br ^slot(%next : i64)
-  ^sourced:
-    %sourceEntry = arith.muli %valueCount, %two : i64
-    %isSourceList = arith.cmpi eq, %kind, %one : i64
-    func.call @strict_gpu_shaded_slot(%table, %sourceEntry, %source, %isSourceList) : (!llvm.ptr, i64, f64, i1) -> ()
-    %length = arith.sitofp %count : i64 to f64
-    %result = func.call @strict_list_new(%length, %length) : (f64, f64) -> f64
-    %items = func.call @strict_list_items(%result) : (f64) -> !llvm.ptr
-    %count32 = arith.trunci %count : i64 to i32
-    %slots32 = arith.trunci %slots : i64 to i32
-    %ran = llvm.call @strict_webgpu(%shaderName, %count32, %table, %slots32, %items) : (!llvm.ptr, i32, !llvm.ptr, i32, !llvm.ptr) -> i32
-    %eight = arith.constant 8 : i64
-    %bytes = arith.muli %count, %eight : i64
-    func.call @strict_gc_written_range(%items, %bytes) : (!llvm.ptr, i64) -> ()
-    %isRan = arith.cmpi ne, %ran, %unready : i32
-    %chosen = arith.select %isRan, %result, %zero : f64
-    return %chosen : f64
-  }
-  func.func private @strict_gpu_shaded_slot(%table: !llvm.ptr, %entry: i64, %value: f64, %isList: i1) {
-    %one = arith.constant 1 : i64
-    %number = llvm.getelementptr %table[%entry] : (!llvm.ptr, i64) -> !llvm.ptr, f64
-    %secondEntry = arith.addi %entry, %one : i64
-    %second = llvm.getelementptr %table[%secondEntry] : (!llvm.ptr, i64) -> !llvm.ptr, f64
-    cf.cond_br %isList, ^list, ^plain
-  ^plain:
-    %unlisted = arith.constant -1.0 : f64
-    llvm.store %value, %number : f64, !llvm.ptr
-    llvm.store %unlisted, %second : f64, !llvm.ptr
-    return
-  ^list:
-    %length = func.call @strict_list_length(%value) : (f64) -> f64
-    %items = func.call @strict_list_items(%value) : (f64) -> !llvm.ptr
-    %address = llvm.ptrtoint %items : !llvm.ptr to i64
-    %addressNumber = arith.uitofp %address : i64 to f64
-    llvm.store %addressNumber, %number : f64, !llvm.ptr
-    llvm.store %length, %second : f64, !llvm.ptr
-    return
+    %bits = func.call @strict_gpu_bits(%value) : (f64) -> i64
+    %isNarrowList = arith.cmpi ult, %bits, %sixtyFour : i64
+    %isBrainList = arith.cmpi eq, %bits, %brainBits : i64
+    %anyNarrow = arith.ori %narrow, %isNarrowList : i1
+    %allBrains = arith.andi %brains, %isBrainList : i1
+    cf.br ^next(%after, %anyNarrow, %allBrains : i64, i1, i1)
+  ^chosen:
+    %narrowFormat = arith.select %brains, %brainBits, %singleBits : i64
+    %format = arith.select %narrow, %narrowFormat, %none : i64
+    return %format : i64
   }
   // the count numbers (of bits 17 or 32) of the runtime kernel name of NativeRuntimeWgsl.js from values (lists where
   // mask has their bit) as a list that stays in a WebGPU buffer (class 255, strict_gpu_web_get reads it on the first
@@ -1083,8 +1070,9 @@
     llvm.call @strict_webgpu_release(%handle32) : (i32) -> ()
     return
   }
-  // a list in a WebGPU buffer after another one (or after an empty list) joined in a new buffer on the GPU, 0.0 for
-  // any other pair (strict_list_concat joins those on the host): FluxAttention appends 13 chunks of results this way
+  // a list in a WebGPU buffer after another one (or after an empty list) joined in a new buffer on the GPU, lists of
+  // other formats by strict_gpu_web_mixed, 0.0 for any other pair (strict_list_concat joins those on the host):
+  // FluxAttention appends 13 chunks of results this way
   llvm.func @strict_webgpu_joined(i32, i32) -> i32
   func.func private @strict_gpu_web_joined(%left: f64, %right: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
@@ -1106,7 +1094,7 @@
     %isLeftKept = arith.cmpi ne, %leftHandle, %none : i64
     %isSameFormat = arith.cmpi eq, %leftBits, %rightBits : i64
     %isJoinable = arith.andi %isLeftKept, %isSameFormat : i1
-    cf.cond_br %isJoinable, ^join, ^other
+    cf.cond_br %isJoinable, ^join, ^mixed
   ^join:
     %leftHandle32 = arith.trunci %leftHandle : i64 to i32
     %rightHandle32 = arith.trunci %rightHandle : i64 to i32
@@ -1123,6 +1111,50 @@
     %webClass = arith.constant 255 : i64
     %result = func.call @strict_gpu_resident(%count, %device, %webClass, %leftBits) : (i64, i64, i64, i64) -> f64
     return %result : f64
+  ^mixed:
+    %mixed = func.call @strict_gpu_web_mixed(%left, %right) : (f64, f64) -> f64
+    return %mixed : f64
+  ^other:
+    return %zero : f64
+  }
+  // two lists of 32 bit or bfloat16 numbers, one of them in a WebGPU buffer, joined into 32 bit floats on the GPU
+  // (strict_joined: Moss's 32 bit image tokens and bfloat16 text tokens), 0.0 for any other pair
+  llvm.mlir.global internal constant @strict_gpu_joined_web("strict_joined\00") : !llvm.array<14 x i8>
+  func.func private @strict_gpu_web_mixed(%left: f64, %right: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %brainBits = arith.constant 17 : i64
+    %singleBits = arith.constant 32 : i64
+    %leftHandle = func.call @strict_gpu_web_handle(%left) : (f64) -> i64
+    %rightHandle = func.call @strict_gpu_web_handle(%right) : (f64) -> i64
+    %handles = arith.ori %leftHandle, %rightHandle : i64
+    %anyKept = arith.cmpi ne, %handles, %none : i64
+    %leftBits = func.call @strict_gpu_bits(%left) : (f64) -> i64
+    %rightBits = func.call @strict_gpu_bits(%right) : (f64) -> i64
+    %leftBrain = arith.cmpi eq, %leftBits, %brainBits : i64
+    %leftSingle = arith.cmpi eq, %leftBits, %singleBits : i64
+    %rightBrain = arith.cmpi eq, %rightBits, %brainBits : i64
+    %rightSingle = arith.cmpi eq, %rightBits, %singleBits : i64
+    %leftNarrow = arith.ori %leftBrain, %leftSingle : i1
+    %rightNarrow = arith.ori %rightBrain, %rightSingle : i1
+    %narrow = arith.andi %leftNarrow, %rightNarrow : i1
+    %usable = arith.andi %anyKept, %narrow : i1
+    cf.cond_br %usable, ^join, ^other
+  ^join:
+    %two = arith.constant 2 : i64
+    %values = llvm.alloca %two x f64 : (i64) -> !llvm.ptr
+    llvm.store %left, %values : f64, !llvm.ptr
+    %rightSlot = llvm.getelementptr %values[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %right, %rightSlot : f64, !llvm.ptr
+    %leftLength = func.call @strict_list_length(%left) : (f64) -> f64
+    %rightLength = func.call @strict_list_length(%right) : (f64) -> f64
+    %total = arith.addf %leftLength, %rightLength : f64
+    %count = arith.fptosi %total : f64 to i64
+    %name = llvm.mlir.addressof @strict_gpu_joined_web : !llvm.ptr
+    %kernelKind = arith.constant 2 : i64
+    %bothLists = arith.constant 3 : i64
+    %joined = func.call @strict_gpu_shaded(%name, %count, %zero, %kernelKind, %values, %two, %bothLists, %singleBits) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
+    return %joined : f64
   ^other:
     return %zero : f64
   }

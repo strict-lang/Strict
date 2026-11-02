@@ -31,30 +31,6 @@ addToLibrary({
 		const usable = shaders && shaders[key] && strictWebGpu.pipelines[key] !== null;
 		return usable && navigator.gpu && !strictWebGpu.failed ? 1 : 0;
 	},
-	$strictWebGpuInputs: (name, count, table, slots) => {
-		const singles = Module['strictSingles'][name];
-		const entries = HEAPF64.slice(table / 8, table / 8 + slots * 2);
-		const places = new Uint32Array(slots * 2 + 1);
-		let total = 0;
-		for (let slot = 0; slot < slots; slot++) {
-			places[slot * 2] = total;
-			places[slot * 2 + 1] = entries[slot * 2 + 1] < 0 ? 1 : entries[slot * 2 + 1];
-			total += places[slot * 2 + 1];
-		}
-		places[slots * 2] = count;
-		const numbers = new Float32Array(Math.max(total, 1));
-		for (let slot = 0; slot < slots; slot++) {
-			const isList = entries[slot * 2 + 1] >= 0, source = isList ? entries[slot * 2] / 8 : 0;
-			const isSingle = singles.includes(slot);
-			for (let item = 0; item < places[slot * 2 + 1]; item++) {
-				const value = isList ? HEAPF64[source + item] : entries[slot * 2];
-				numbers[places[slot * 2] + item] = value;
-				if (numbers[places[slot * 2] + item] !== value && value === value && !isSingle)
-					return null;
-			}
-		}
-		return { size: numbers.length, written: [[0, numbers]], places };
-	},
 	// a runtime kernel (NativeRuntimeWgsl.js) takes every value rounded to 32 bit floats (a whole number also exactly as
 	// the second place of its slot): lists of 64 bit, 32 bit or bfloat16 (bits 17) numbers, other formats run on the CPU;
 	// a kept kernel result (bits 255, its address the buffer) is bound as it is (the first 4, n_item) or copied into place
@@ -263,10 +239,6 @@ addToLibrary({
 			wakeUp(0);
 		});
 	}),
-	strict_webgpu__deps: ['$strictWebGpuStarted', '$strictWebGpuInputs'],
-	strict_webgpu__async: true,
-	strict_webgpu: (name, count, table, slots, output) =>
-		strictWebGpuStarted(name, count, (key) => strictWebGpuInputs(key, count, table >>> 0, slots), output >>> 0, 64),
 	strict_webgpu_kernel__deps: ['$strictWebGpuStarted', '$strictWebGpuKernelInputs'],
 	strict_webgpu_kernel__async: true,
 	strict_webgpu_kernel: (name, count, table, slots, bits) =>
@@ -362,9 +334,11 @@ addToLibrary({
 		wakeUp(0);
 	})),
 	// bytes of the file at url from offset into target with an HTTP range request (TensorFile reading a file that is not
-	// in the package), 1 or 0 when the server does not answer it as a range
+	// in the package), 1 or 0 when the server does not answer it as a range; a request failing on the way is sent up to
+	// 3 times (a burst of parallel requests of Moss's layers failed now and then)
 	$strictWebFileRange: async (url, offset, bytes) => {
-		const response = await fetch(url, { headers: { Range: 'bytes=' + offset + '-' + (offset + bytes - 1) } });
+		const range = { headers: { Range: 'bytes=' + offset + '-' + (offset + bytes - 1) } };
+		const response = await fetch(url, range).catch(() => fetch(url, range)).catch(() => fetch(url, range));
 		if (response.status !== 206)
 			throw url + ' answered ' + response.status + ' to a range request';
 		return new Uint8Array(await response.arrayBuffer());

@@ -13,7 +13,7 @@ constant Entry = ("@compute @workgroup_size(64)", "fn main(@builtin(global_invoc
 Source Text
 	Scaled.Source.StartsWith(Bindings.First)
 	Scaled.Source.IndexOf("struct num {") > 0
-	Doubling.Source is ""
+	Doubling.Source.StartsWith(Bindings.First)
 	if IsShaded is false
 		return ""
 	let lines = Bindings + Numbers + Globals + Functions + Main
@@ -23,12 +23,13 @@ Source Text
 	Text.Combine(lines, "\n")
 IsShaded Boolean
 	Scaled.IsShaded
-	Doubling.IsShaded is false
+	Doubling.IsShaded
+	WgslShader(MlirGpu.Randomizing.function, 2).IsShaded is false
 	Halved.IsShaded
 	let collection = MlirLoops(function, position).Collection
-	let isNarrow = MlirDoubles(function, position).Format is in (17, 32)
+	let isFloats = MlirDoubles(function, position).Format is in (0, 17, 32)
 	let isKernel = MlirWholeKernel(function, position).IsKernel
-	(collection is in ("", "List(Number)")) and isNarrow and (isKernel is false) and MlirGpuCheck(function, position).IsGpu
+	(collection is in ("", "List(Number)")) and isFloats and (isKernel is false) and MlirGpuCheck(function, position).IsGpu
 Functions Texts
 	Doubling.Functions.First is "fn s_Rows_Twice_1(instance: num, p0: num) -> num {"
 	mutable symbols = List(Text)
@@ -71,7 +72,8 @@ Started Texts
 	("v_index = n_int(i32(at));", "v_value = " + item + ";")
 Scripts(functions List(MlirFunction)) Text
 	WgslShader.Scripts(List(MlirFunction) + Scaled.function).StartsWith(Marker + "\n;(Module[\"strictShaders\"] ||= {})")
-	WgslShader.Scripts(List(MlirFunction) + Doubling.function) is ""
+	WgslShader.Scripts(List(MlirFunction) + Doubling.function).IndexOf("Rows_Doubled_1_gpu2s") > 0
+	WgslShader.Scripts(List(MlirFunction) + MlirGpu.Randomizing.function) is ""
 	WgslShader.Scripts(List(MlirFunction) + Halved.function).IndexOf("Halving_Halved_") > 0
 	mutable lines = List(Text)
 	for functions
