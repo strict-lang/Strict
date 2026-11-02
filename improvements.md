@@ -9,6 +9,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - Native `to Text` of a Float32 fails to compile ("unsupported: text of Float32"), every type should get Any's `to Text`.
 - `ImageCodec.SaveJpeg` only works on Windows and the web (`JpegRequiresWindowsOrWeb` on Linux, macOS, Android, iOS): a baseline JPEG encoder in Strict next to ImageSaver's PNG would cover every platform.
 - GPU memory grows while generating on the Qwen3.8 models (Bonsai 6.9 to 15.3 GB, Brilliance 17.2 to 22 GB), Qwen3-8B stays flat (Ben, not investigated).
+- Lists of numbers made by generic list paths (`strict_list_add` growing `raw = raw + ...` in MersenneTwister.Uints, `strict_list_new` of other loops) are scanned by the collector: on wasm the halves of their numbers look like references and keep dead big lists alive while they live; they should be scanned only up to their items like `strict_numbers_new` lists.
 - Two greedy runs of Qwen3-Coder-30B-A3B on the same prompt give different outputs (Ben, not investigated: atomics or reduction order in the expert path?).
 
 ## Next

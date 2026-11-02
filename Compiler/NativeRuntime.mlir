@@ -8176,7 +8176,36 @@
     llvm.store %old, %slot : f64, !llvm.ptr
     return
   }
+  // the list a collecting loop fills in place of its destination, a new one when that is still used elsewhere
   func.func private @strict_list_into(%destination: f64, %capacity: f64, %flatCount: f64) -> f64 {
+    %reused = func.call @strict_list_reused(%destination, %flatCount) : (f64, f64) -> f64
+    %bits = arith.bitcast %reused : f64 to i64
+    %none = arith.constant 0 : i64
+    %isReused = arith.cmpi ne, %bits, %none : i64
+    cf.cond_br %isReused, ^reused, ^fresh
+  ^reused:
+    return %reused : f64
+  ^fresh:
+    %created = func.call @strict_list_created(%capacity, %flatCount) : (f64, f64) -> f64
+    return %created : f64
+  }
+  // like strict_list_into for a loop of numbers: a new list is only scanned up to its items (halves of numbers on
+  // wasm looked like references and kept old images alive)
+  func.func private @strict_numbers_into(%destination: f64, %capacity: f64) -> f64 {
+    %plain = arith.constant 0.0 : f64
+    %reused = func.call @strict_list_reused(%destination, %plain) : (f64, f64) -> f64
+    %bits = arith.bitcast %reused : f64 to i64
+    %none = arith.constant 0 : i64
+    %isReused = arith.cmpi ne, %bits, %none : i64
+    cf.cond_br %isReused, ^reused, ^fresh
+  ^reused:
+    return %reused : f64
+  ^fresh:
+    %created = func.call @strict_numbers_new(%capacity) : (f64) -> f64
+    return %created : f64
+  }
+  // destination emptied for a collecting loop when nothing else uses it, 0.0 otherwise
+  func.func private @strict_list_reused(%destination: f64, %flatCount: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %zeroCount = arith.constant 0 : i32
     %one = arith.constant 1 : i32
@@ -8220,8 +8249,7 @@
     %result = func.call @strict_bits(%refilled) : (!llvm.ptr) -> f64
     return %result : f64
   ^fresh:
-    %created = func.call @strict_list_created(%capacity, %flatCount) : (f64, f64) -> f64
-    return %created : f64
+    return %zero : f64
   }
   func.func private @strict_list_cleared(%holder: !llvm.ptr, %capacity: f64, %flatCount: f64) {
     %zero = arith.constant 0 : i64
