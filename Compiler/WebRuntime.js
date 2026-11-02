@@ -361,11 +361,12 @@ addToLibrary({
 		cache.blocks.set(key, block);
 		return block;
 	},
-	// bytes of the file at url from offset out of its blocks, the 8 blocks after them are requested too when the read
-	// starts at or right after the one before (not after a jump): Moss asks for one tensor after the other, which kept
-	// too few requests in flight (one stream gave 200 MB/s, it loaded in 15 s), and its file holds layer 10 after 1
+	// bytes of the file at url from offset out of its blocks, each piece of a block given to place with its position
+	// in the read, the 8 blocks after them are requested too when the read starts at or right after the one before (not
+	// after a jump): Moss asks for one tensor after the other, which kept too few requests in flight (one stream gave
+	// 200 MB/s, it loaded in 15 s), and its file holds layer 10 after 1
 	$strictWebFileRange__deps: ['$strictWebFile', '$strictWebFileBlock'],
-	$strictWebFileRange: async (url, offset, bytes) => {
+	$strictWebFileRange: async (url, offset, bytes, place) => {
 		const size = 16777216, cache = strictWebFile, first = Math.floor(offset / size);
 		const last = Math.floor((offset + bytes - 1) / size), blocks = [];
 		for (let index = first; index <= last; index++)
@@ -374,22 +375,19 @@ addToLibrary({
 		cache.lasts[url] = last;
 		for (let next = last + 1; next <= last + ahead && next * size < (cache.sizes[url] || 0); next++)
 			strictWebFileBlock(url, next).catch(() => {});
-		const read = new Uint8Array(bytes);
 		for (let index = first; index <= last; index++) {
 			const block = await blocks[index - first], start = index * size;
 			const from = Math.max(offset, start), to = Math.min(offset + bytes, start + block.length);
 			if (to > from)
-				read.set(block.subarray(from - start, to - start), from - offset);
+				place(block.subarray(from - start, to - start), from - offset);
 		}
 		clearTimeout(cache.timer);
 		cache.timer = setTimeout(() => cache.blocks.clear(), 5000);
-		return read;
 	},
 	strict_webfile_read__deps: ['$strictWebFileRange', '$UTF8ToString', '$Asyncify'],
 	strict_webfile_read__async: true,
 	strict_webfile_read: (url, offset, bytes, target) => Asyncify.handleSleep((wakeUp) => {
-		strictWebFileRange(UTF8ToString(url), offset, bytes).then((read) => {
-			HEAPU8.set(read, target >>> 0);
+		strictWebFileRange(UTF8ToString(url), offset, bytes, (piece, at) => HEAPU8.set(piece, (target >>> 0) + at)).then(() => {
 			wakeUp(1);
 		}, (error) => {
 			console.error('Reading ' + UTF8ToString(url) + ' failed: ' + error);
@@ -407,15 +405,20 @@ addToLibrary({
 			const device = strictWebGpu.device ||= await strictWebGpuDevice();
 			const uploaded = device.createBuffer({ size: Math.max(rows * stride, 4), usage: 128 | 8 | 4 });
 			const parts = Math.ceil(columns / 32), chunk = Math.max(1, Math.floor(67108864 / rowBytes)), reads = [];
-			for (let first = 0; first < rows; first += chunk)
-				reads.push(strictWebFileRange(path, offset + first * rowBytes, Math.min(chunk, rows - first) * rowBytes));
 			for (let first = 0; first < rows; first += chunk) {
-				const count = Math.min(chunk, rows - first);
-				const read = await reads[first / chunk];
-				const placed = new Uint8Array(count * stride);
-				for (let row = 0; row < count; row++) {
-					placed.set(read.subarray(row * rowBytes, (row + 1) * rowBytes), row * stride);
-					new Float32Array(placed.buffer, row * stride + codesBytes, parts).fill(HEAPF32[(scales >>> 2) + first + row]);
+				const count = Math.min(chunk, rows - first), placed = new Uint8Array(count * stride);
+				reads.push(strictWebFileRange(path, offset + first * rowBytes, count * rowBytes, (piece, at) => {
+					for (let row = Math.floor(at / rowBytes); row < count && row * rowBytes < at + piece.length; row++) {
+						const from = Math.max(at, row * rowBytes), to = Math.min(at + piece.length, (row + 1) * rowBytes);
+						placed.set(piece.subarray(from - at, to - at), row * stride + from - row * rowBytes);
+					}
+				}).then(() => placed));
+			}
+			for (let first = 0; first < rows; first += chunk) {
+				const placed = await reads[first / chunk], floats = new Float32Array(placed.buffer);
+				for (let row = 0; row < Math.min(chunk, rows - first); row++) {
+					const at = (row * stride + codesBytes) / 4;
+					floats.fill(HEAPF32[(scales >>> 2) + first + row], at, at + parts);
 				}
 				device.queue.writeBuffer(uploaded, first * stride, placed);
 			}
