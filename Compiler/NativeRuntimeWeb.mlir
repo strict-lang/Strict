@@ -974,8 +974,9 @@
   ^none:
     return %none : i64
   }
-  // count 8 bit rows of elements numbers (bits, plus STRICT_KEPT_TOKENS) whose block (strict_rows layout, the codes as 4
-  // bit halves of bytes when nibbles is 1) is only in the WebGPU buffer handle (TensorFile reading a URL): views without
+  // count 8 bit rows of elements numbers (bits, plus STRICT_KEPT_TOKENS) whose block (the codes of each row as in the
+  // file, 4 bit halves of bytes when nibbles is 1, then a 32 bit scale per row) is only in the WebGPU buffer handle
+  // (TensorFile reading a URL): views without
   // data whose block stays with the page (its views can outlive this list in lists joined from them, Moss's query, key
   // and value rows), strict_gpu_tokens_web finds it by their addresses; reading the rows on the CPU stops the program
   llvm.func @strict_webgpu_rows_views(!llvm.ptr, i32, i32, i32, i32)
@@ -990,21 +991,10 @@
     %formatMask = arith.constant 255 : i64
     %wholeBits = arith.andi %markedBits, %formatMask : i64
     %kept = arith.shrui %markedBits, %eight : i64
-    %eightBytes = func.call @strict_packed_bytes(%elements, %wholeBits) : (i64, i64) -> i64
     %two = arith.constant 2 : i64
-    %thirtyOne = arith.constant 31 : i64
-    %thirtyTwo = arith.constant 32 : i64
     %halfBytes = arith.divui %elements, %two : i64
-    %partsRounded = arith.addi %elements, %thirtyOne : i64
-    %parts = arith.divui %partsRounded, %thirtyTwo : i64
-    %scaleBytes = arith.muli %parts, %four : i64
-    %nibbleBytes = arith.addi %halfBytes, %scaleBytes : i64
     %isNibbles = arith.cmpi ne, %nibbles, %none : i64
-    %bytes = arith.select %isNibbles, %nibbleBytes, %eightBytes : i64
-    %fifteen = arith.constant 15 : i64
-    %alignMask = arith.constant -16 : i64
-    %padded = arith.addi %bytes, %fifteen : i64
-    %rowStride = arith.andi %padded, %alignMask : i64
+    %rowStride = arith.select %isNibbles, %halfBytes, %elements : i64
     %views = arith.muli %count, %viewBytes : i64
     %block = func.call @strict_alloc_text(%views) : (i64) -> !llvm.ptr
     %countNumber = arith.sitofp %count : i64 to f64

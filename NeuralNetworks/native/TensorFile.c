@@ -588,9 +588,8 @@ static double QuantizedRows(double path, double entry, double scales, double bit
 	{
 		uint64_t columns = tensor->width * (tensor->isNibbles ? 2 : 1);
 		uint64_t codes = tensor->isNibbles ? tensor->width : strict_packed_data(columns, 8);
-		uint64_t stride = (codes + 4 * ((columns + 31) / 32) + 15) / 16 * 16;
 		int handle = strict_webfile_rows(strict_text(path), (double)(DataStart(strict_text(path)) + tensor->start),
-			(double)tensor->height, (double)tensor->width, (double)codes, (double)stride, (double)columns, factors);
+			(double)tensor->height, (double)tensor->width, (double)codes, (double)codes, (double)columns, factors);
 		free(factors);
 		return handle ? strict_rows_web(tensor->height, columns, bits, handle, tensor->isNibbles) :
 			strict_fail("TensorFileDataTruncated");

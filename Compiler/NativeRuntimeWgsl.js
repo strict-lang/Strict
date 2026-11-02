@@ -269,7 +269,7 @@ Module['strictKernelGroups']['strict_quantized'] = (places) => {
 // bytes, unpacked to 8 bit codes as they are staged): a workgroup of 256 invocations per tile of 64 rows and 64 tokens
 // (4 neighboring rows and 4 neighboring tokens of it each, read as one vec4 each per word), the codes of 32 columns of
 // both in workgroup memory at a time (word by word), dot products of 4 codes summed as whole numbers per 32 columns and
-// scaled by their row
+// scaled by their row (rows of only their codes, read from a URL, have one scale each after the codes of all rows)
 Module['strictShaders']['strict_eights'] = strictKernelBindings + `
 var<workgroup> rowCodes: array<vec4<u32>, 128>;
 var<workgroup> tokenCodes: array<vec4<u32>, 128>;
@@ -320,7 +320,9 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 				at % 8u)), token < tokens);
 		}
 		if (local < 64u) {
-			rowScales[local] = select(0.0, n_item(places[0], (rowStart + local) * stride + rowWords + block), rowStart + local < rows);
+			let row = rowStart + local;
+			let scaled = select(row * stride + rowWords + block, rows * stride + row, stride == rowWords);
+			rowScales[local] = select(0.0, n_item(places[0], scaled), row < rows);
 		}
 		workgroupBarrier();
 		var firstWholes = vec4<i32>();

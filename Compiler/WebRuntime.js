@@ -403,34 +403,23 @@ addToLibrary({
 			wakeUp(0);
 		});
 	}),
-	// the 8 bit rows of a matrix at offset of the file at url straight into a new kept WebGPU buffer in the layout of
-	// strict_rows (rowBytes codes a row in the file, each row at row * stride with its scale from scales for every 32 of
-	// its columns after codesBytes, 4 bit codes stay two in a byte), read in parts of about 64 MB: its handle, 0 on failure
+	// the 8 bit rows of a matrix at offset of the file at url straight into a new kept WebGPU buffer: the codes of the rows
+	// as they are in the file (rowBytes a row, 4 bit codes stay two in a byte), written from the read blocks without a
+	// copy, then the 32 bit scale of every row from scales (strict_eights reads that layout when a row is only its codes):
+	// its handle, 0 on failure
 	strict_webfile_rows__deps: ['$strictWebGpu', '$strictWebGpuDevice', '$strictWebFileRange', '$UTF8ToString', '$Asyncify'],
 	strict_webfile_rows__async: true,
 	strict_webfile_rows: (url, offset, rows, rowBytes, codesBytes, stride, columns, scales) => Asyncify.handleSleep((wakeUp) => {
 		const path = UTF8ToString(url);
 		(async () => {
 			const device = strictWebGpu.device ||= await strictWebGpuDevice();
-			const uploaded = device.createBuffer({ size: Math.max(rows * stride, 4), usage: 128 | 8 | 4 });
-			const parts = Math.ceil(columns / 32), chunk = Math.max(1, Math.floor(67108864 / rowBytes)), reads = [];
-			for (let first = 0; first < rows; first += chunk) {
-				const count = Math.min(chunk, rows - first), placed = new Uint8Array(count * stride);
-				reads.push(strictWebFileRange(path, offset + first * rowBytes, count * rowBytes, (piece, at) => {
-					for (let row = Math.floor(at / rowBytes); row < count && row * rowBytes < at + piece.length; row++) {
-						const from = Math.max(at, row * rowBytes), to = Math.min(at + piece.length, (row + 1) * rowBytes);
-						placed.set(piece.subarray(from - at, to - at), row * stride + from - row * rowBytes);
-					}
-				}).then(() => placed));
-			}
-			for (let first = 0; first < rows; first += chunk) {
-				const placed = await reads[first / chunk], floats = new Float32Array(placed.buffer);
-				for (let row = 0; row < Math.min(chunk, rows - first); row++) {
-					const at = (row * stride + codesBytes) / 4;
-					floats.fill(HEAPF32[(scales >>> 2) + first + row], at, at + parts);
-				}
-				device.queue.writeBuffer(uploaded, first * stride, placed);
-			}
+			const codes = rows * rowBytes, uploaded = device.createBuffer({ size: codes + rows * 4, usage: 128 | 8 | 4 });
+			const isAligned = offset % 4 === 0, whole = isAligned ? null : new Uint8Array(codes);
+			await strictWebFileRange(path, offset, codes, (piece, at) => isAligned ?
+				device.queue.writeBuffer(uploaded, at, piece) : whole.set(piece, at));
+			if (whole)
+				device.queue.writeBuffer(uploaded, 0, whole);
+			device.queue.writeBuffer(uploaded, codes, HEAPF32, scales >>> 2, rows);
 			const handle = strictWebGpu.next++;
 			strictWebGpu.buffers[handle] = uploaded;
 			strictWebGpu.failures[handle] = device.createBuffer({ size: 4, usage: 128 | 8 | 4 });
@@ -469,15 +458,20 @@ addToLibrary({
 		}
 		const stride = runs[0].block.stride, source = runs[0].block;
 		const isWhole = runs.length === 1 && runs[0].row === 0 && count === (source.last - source.first) / 64;
+		const scalesOf = (block) => (block.last - block.first) / 64 * stride;
 		const handle = strictWebGpu.next++;
 		if (isWhole) {
 			strictWebGpu.buffers[handle] = strictWebGpu.buffers[source.handle];
 			strictWebGpu.borrowed[handle] = true;
 		} else {
-			const joined = device.createBuffer({ size: count * stride, usage: 128 | 8 | 4 });
+			const joined = device.createBuffer({ size: count * stride + count * 4, usage: 128 | 8 | 4 });
 			const encoder = device.createCommandEncoder();
-			runs.forEach((run) => encoder.copyBufferToBuffer(strictWebGpu.buffers[run.block.handle], run.row * stride, joined,
-				run.at * stride, run.count * stride));
+			runs.forEach((run) => {
+				const buffer = strictWebGpu.buffers[run.block.handle];
+				encoder.copyBufferToBuffer(buffer, run.row * stride, joined, run.at * stride, run.count * stride);
+				encoder.copyBufferToBuffer(buffer, scalesOf(run.block) + run.row * 4, joined, count * stride + run.at * 4,
+					run.count * 4);
+			});
 			device.queue.submit([encoder.finish()]);
 			strictWebGpu.buffers[handle] = joined;
 			strictWebGpu.grown += joined.size;
