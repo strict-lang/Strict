@@ -895,6 +895,22 @@
     %bytes = arith.muli %kilobytes, %kilobyte : i64
     return %bytes : i64
   }
+  llvm.func @K32GetProcessMemoryInfo(!llvm.ptr, !llvm.ptr, i32) -> i32
+  // Process.MemoryUsed: the working set, WorkingSetSize at byte 16 of PROCESS_MEMORY_COUNTERS (72 bytes), 0 when unknown
+  func.func private @strict_process_memoryused(%self: f64) -> f64 {
+    %zero = arith.constant 0 : i64
+    %nine = arith.constant 9 : i64
+    %counters = llvm.alloca %nine x i64 : (i64) -> !llvm.ptr
+    %size = arith.constant 72 : i32
+    llvm.store %size, %counters : i32, !llvm.ptr
+    %workingSlot = llvm.getelementptr %counters[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %zero, %workingSlot : i64, !llvm.ptr
+    %process = llvm.call @GetCurrentProcess() : () -> !llvm.ptr
+    %read = llvm.call @K32GetProcessMemoryInfo(%process, %counters, %size) : (!llvm.ptr, !llvm.ptr, i32) -> i32
+    %working = llvm.load %workingSlot : !llvm.ptr -> i64
+    %bytes = arith.uitofp %working : i64 to f64
+    return %bytes : f64
+  }
   func.func private @strict_pool_spawn() -> i64 {
     %groups = arith.constant -1 : i16
     %processors = llvm.call @GetActiveProcessorCount(%groups) : (i16) -> i32

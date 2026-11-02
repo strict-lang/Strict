@@ -646,6 +646,12 @@
     %none = arith.constant 0 : i64
     return %none : i64
   }
+  // Process.MemoryUsed: bytes of the WebAssembly memory (the heap only grows, it is never given back)
+  func.func private @strict_process_memoryused(%self: f64) -> f64 {
+    %heap = llvm.call @emscripten_get_heap_size() : () -> i32
+    %bytes = arith.uitofp %heap : i32 to f64
+    return %bytes : f64
+  }
   func.func private @strict_pool_spawn() -> i64 {
     %none = arith.constant 0 : i64
     return %none : i64

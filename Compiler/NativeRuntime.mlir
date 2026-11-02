@@ -14006,6 +14006,14 @@
   ^done(%result: f64):
     return %result : f64
   }
+  // `GpuMemory.Held`: bytes of device memory this program allocated and still holds (pool blocks included), 0 without a GPU
+  func.func private @strict_gpu_held(%self: f64) -> f64 {
+    %budget = llvm.mlir.addressof @strict_gpu_budget : !llvm.ptr
+    %heldSlot = llvm.getelementptr %budget[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %held = llvm.load %heldSlot : !llvm.ptr -> i64
+    %bytes = arith.uitofp %held : i64 to f64
+    return %bytes : f64
+  }
   // `GpuMemory.Finished`: waits for the GPU work queued so far (a graph being captured is launched first) without a
   // collection or trim, 0 also without a GPU (it is not opened for this)
   func.func private @strict_gpu_finished(%self: f64) -> f64 {
