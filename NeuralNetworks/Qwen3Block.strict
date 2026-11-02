@@ -85,15 +85,15 @@ Rotated(input Numbers, start Number, count Number, weights Numbers, rotation Num
 		let own = input(first + within) * weights(within) * rotation(token * 2 * size + within)
 		let other = input(first + partner) * weights(partner) * rotation((token * 2 + 1) * size + within)
 		(own + other) * scales(head)
-HeadScales(input Numbers, start Number, count Number, size Number, rotations Number) Numbers
+HeadScales(input Numbers, start Number, count Number, size Number, rotations Number) Float32s
 	Tiny.HeadScales((3, 4, 0, 1), 0, 4, 2, 4)(1).IsNearlyEqual(1.41421215)
 	for count / size
-		let token = (index * rotations / count / 2).Floor
+		let token = (index / (count / rotations) / 2).Floor
 		let first = token * Gap(input, count, size, rotations) + start + index * size
 		Normalization.Scale(Normalization.Squared(input, first, size), size, Epsilon)
 Gap(input Numbers, count Number, size Number, rotations Number) Number
 	Tiny.Gap((1, 2, 3, 4, 5, 6), 2, 2, 4) is 4
-	(input.Length - count) * size * 2 / rotations
+	(input.Length - count) / rotations * size * 2
 Normalized(input Numbers, start Number, count Number, weights Numbers) Numbers
 	Tiny.Normalized((3, 4), 0, 2, (1, 2)).First.IsNearlyEqual(0.848528)
 	Tiny.Normalized((3, 4, 0, 1), 0, 4, (1, 2)).Last.IsNearlyEqual(2.828424)
@@ -106,7 +106,7 @@ Normalized(input Numbers, start Number, count Number, weights Numbers) Numbers
 	let scales = Scales(part, size, Epsilon)
 	for count
 		part(index) * weights(index % size) * scales((index / size).Floor)
-Scales(input Numbers, size Number, epsilon Number) Numbers
+Scales(input Numbers, size Number, epsilon Number) Float32s
 	Tiny.Scales((3, 4, 0, 1), 2, Epsilon)(1).IsNearlyEqual(1.41421215)
 	for input.Length / size
 		Normalization.Scale(Normalization.Squared(input, index * size, size), size, epsilon)
