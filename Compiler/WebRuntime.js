@@ -406,7 +406,8 @@ addToLibrary({
 	// the promise of the bytes of block index of the file at url, rejected when the server does not answer a range; a
 	// request failing on the way is sent up to 3 times (bursts of parallel requests failed now and then); a file name
 	// the page maps to a URL in Module.strictFiles ({ 'taef2.safetensors': 'https://huggingface.co/...' }) is read from
-	// there, its blocks are kept in the origin private file system and read from it on the next visit (one of another
+	// there (not into the HTTP cache of the browser, which kept a second copy of every block), its blocks are kept in the
+	// origin private file system and read from it on the next visit (one of another
 	// length than the file size says is read again), every block
 	// downloaded prints "Downloading name: 16 of 98 MB" (bytes read so far, kept ones too) for the page's progress bar
 	$strictWebFileBlock__deps: ['$strictWebFile', '$strictWebFileFolder', '$strictWebFileStored', '$strictWebFileStore'],
@@ -427,7 +428,8 @@ addToLibrary({
 					(cache.read[url] ||= new Map()).set(index, stored.length);
 					return stored;
 				}
-				const first = index * 16777216, range = { headers: { Range: 'bytes=' + first + '-' + (first + 16777215) } };
+				const first = index * 16777216, range = { headers: { Range: 'bytes=' + first + '-' + (first + 16777215) },
+					cache: mapped ? 'no-store' : 'default' };
 				const response = await fetch(source, range).catch(() => fetch(source, range)).catch(() => fetch(source, range));
 				if (response.status !== 206)
 					throw source + ' answered ' + response.status + ' to a range request';

@@ -657,7 +657,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) g
 		const stored = await folder['getFileHandle']('whole').catch(() => null);
 		if (stored)
 			return new Uint8Array(await (await stored['getFile']())['arrayBuffer']());
-		const response = await fetch(url);
+		const response = await fetch(url, { cache: 'no-store' });
 		if (!response.ok)
 			throw url + ' answered ' + response.status;
 		const bytes = new Uint8Array(await response.arrayBuffer());
@@ -666,7 +666,8 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) g
 		await writable['close']();
 		return bytes;
 	};
-	const fetched = (url) => kept(url).catch(() => fetch(url).then((response) => response.ok ? response.arrayBuffer() :
+	const fetched = (url) => kept(url).catch(() => fetch(url, { cache: 'no-store' }).then((response) => response.ok ?
+		response.arrayBuffer() :
 		Promise.reject(url + ' answered ' + response.status)).then((buffer) => new Uint8Array(buffer)));
 	addRunDependency('strictFiles');
 	Promise.all(names.map((name) => fetched(files[name]).then((bytes) => {
