@@ -333,15 +333,57 @@ addToLibrary({
 		console.error('Uploading to WebGPU failed: ' + error);
 		wakeUp(0);
 	})),
-	// bytes of the file at url from offset into target with an HTTP range request (TensorFile reading a file that is not
-	// in the package), 1 or 0 when the server does not answer it as a range; a request failing on the way is sent up to
-	// 3 times (a burst of parallel requests of Moss's layers failed now and then)
+	// the 16 MB blocks of files read with HTTP range requests (TensorFile reading a file that is not in the package),
+	// the last 48 are kept until 5 s after the last read (fewer had Moss fetch a third of its file twice), with the
+	// total size of each file from its first answer and the last block read of it
+	$strictWebFile: { blocks: new Map(), sizes: {}, lasts: {}, timer: 0 },
+	// the promise of the bytes of block index of the file at url, rejected when the server does not answer a range; a
+	// request failing on the way is sent up to 3 times (bursts of parallel requests failed now and then)
+	$strictWebFileBlock__deps: ['$strictWebFile'],
+	$strictWebFileBlock: (url, index) => {
+		const cache = strictWebFile, key = url + ' ' + index;
+		let block = cache.blocks.get(key);
+		if (block)
+			cache.blocks.delete(key);
+		else {
+			block = (async () => {
+				const first = index * 16777216, range = { headers: { Range: 'bytes=' + first + '-' + (first + 16777215) } };
+				const response = await fetch(url, range).catch(() => fetch(url, range)).catch(() => fetch(url, range));
+				if (response.status !== 206)
+					throw url + ' answered ' + response.status + ' to a range request';
+				cache.sizes[url] = Number((response.headers.get('Content-Range') || '').split('/')[1]) || cache.sizes[url];
+				return new Uint8Array(await response.arrayBuffer());
+			})();
+			block.catch(() => cache.blocks.delete(key));
+			if (cache.blocks.size >= 48)
+				cache.blocks.delete(cache.blocks.keys().next().value);
+		}
+		cache.blocks.set(key, block);
+		return block;
+	},
+	// bytes of the file at url from offset out of its blocks, the 8 blocks after them are requested too when the read
+	// starts at or right after the one before (not after a jump): Moss asks for one tensor after the other, which kept
+	// too few requests in flight (one stream gave 200 MB/s, it loaded in 15 s), and its file holds layer 10 after 1
+	$strictWebFileRange__deps: ['$strictWebFile', '$strictWebFileBlock'],
 	$strictWebFileRange: async (url, offset, bytes) => {
-		const range = { headers: { Range: 'bytes=' + offset + '-' + (offset + bytes - 1) } };
-		const response = await fetch(url, range).catch(() => fetch(url, range)).catch(() => fetch(url, range));
-		if (response.status !== 206)
-			throw url + ' answered ' + response.status + ' to a range request';
-		return new Uint8Array(await response.arrayBuffer());
+		const size = 16777216, cache = strictWebFile, first = Math.floor(offset / size);
+		const last = Math.floor((offset + bytes - 1) / size), blocks = [];
+		for (let index = first; index <= last; index++)
+			blocks.push(strictWebFileBlock(url, index));
+		const previous = cache.lasts[url] ?? -9, ahead = first >= previous - 1 && first <= previous + 2 ? 8 : 0;
+		cache.lasts[url] = last;
+		for (let next = last + 1; next <= last + ahead && next * size < (cache.sizes[url] || 0); next++)
+			strictWebFileBlock(url, next).catch(() => {});
+		const read = new Uint8Array(bytes);
+		for (let index = first; index <= last; index++) {
+			const block = await blocks[index - first], start = index * size;
+			const from = Math.max(offset, start), to = Math.min(offset + bytes, start + block.length);
+			if (to > from)
+				read.set(block.subarray(from - start, to - start), from - offset);
+		}
+		clearTimeout(cache.timer);
+		cache.timer = setTimeout(() => cache.blocks.clear(), 5000);
+		return read;
 	},
 	strict_webfile_read__deps: ['$strictWebFileRange', '$UTF8ToString', '$Asyncify'],
 	strict_webfile_read__async: true,
@@ -364,10 +406,12 @@ addToLibrary({
 		(async () => {
 			const device = strictWebGpu.device ||= await strictWebGpuDevice();
 			const uploaded = device.createBuffer({ size: Math.max(rows * stride, 4), usage: 128 | 8 | 4 });
-			const parts = Math.ceil(columns / 32), chunk = Math.max(1, Math.floor(67108864 / rowBytes));
+			const parts = Math.ceil(columns / 32), chunk = Math.max(1, Math.floor(67108864 / rowBytes)), reads = [];
+			for (let first = 0; first < rows; first += chunk)
+				reads.push(strictWebFileRange(path, offset + first * rowBytes, Math.min(chunk, rows - first) * rowBytes));
 			for (let first = 0; first < rows; first += chunk) {
 				const count = Math.min(chunk, rows - first);
-				const read = await strictWebFileRange(path, offset + first * rowBytes, count * rowBytes);
+				const read = await reads[first / chunk];
 				const placed = new Uint8Array(count * stride);
 				for (let row = 0; row < count; row++) {
 					placed.set(read.subarray(row * rowBytes, (row + 1) * rowBytes), row * stride);
