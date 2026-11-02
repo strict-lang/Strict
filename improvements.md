@@ -15,7 +15,8 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - GPU sidecars: every program still keeps obj/Name.kernels.mlir (the PTX cache key) and its PTX in obj/ next to the source, move them into Tools/PtxCache once it evicts old entries (up to 25 MB each, never cleaned today).
 - Realtime frames: a full collection at a frame end that takes longer than a few ms marks over several frame ends (incremental, the cards record what changed meanwhile).
 - f32 kernels: a GPU loop reading a `value.Bits is 32` member computes in f32 (WGSL on WebGPU, the 32 bit CUDA kernel natively); WGSL lacks Sin, Cos, Logarithm, `from` calls, Bytes results and rows.
-- MossImage in the browser (prompt in, encoder, Moss and VAE cached in OPFS, WebGPU like FractalZoomer), VAE decode first: Convolved.Summed, Products.Multiplied and Softmax.Shares run as WGSL kernels (Compiler/NativeRuntimeWgsl.js), the 720x1280 decode still fails: the 1 GB web heap runs out (3 GB got through the attention), every kernel copies its lists through wasm memory; next results kept in GPU buffers, faster convolutions (f16, larger tiles), OPFS for the big models.
+- MossImage in the browser (prompt in, encoder, Moss and VAE cached in OPFS, WebGPU like FractalZoomer): the VAE decode runs as WGSL kernels (Compiler/NativeRuntimeWgsl.js) with kept 16 bit maps; next Moss (an int8 GEMM with dot4I8Packed), the encoder, OPFS for the big models.
+- Release builds: platform builds into Release/<Platform> are optimized without debug checks, logging or per-call checks (the web runtime already is), plain `strict build`, test executables and the VM keep them; native needs a release flag on `strict build` for local benchmarks.
 - Native symbols, register kinds and helpers use the short type name, so one executable cannot hold two packages' types of the same name: qualify the symbols of a type whose short name is taken.
 
 ## Waiting
