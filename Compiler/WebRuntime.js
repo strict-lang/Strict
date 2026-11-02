@@ -379,9 +379,10 @@ addToLibrary({
 	$strictWebFile: { blocks: new Map(), sizes: {}, lasts: {}, read: {}, folders: {}, timer: 0, writer: null,
 		pending: new Map(), recent: new Map(), prefetched: {} },
 	// the folder in the origin private file system keeping the downloaded blocks of the file at source (one file per
-	// block and its size), null without one
+	// block and its size), null without one; the storage is asked to persist (else Chrome may evict it as best effort)
 	$strictWebFileFolder__deps: ['$strictWebFile'],
 	$strictWebFileFolder: (source) => strictWebFile.folders[source] ||= (async () => {
+		navigator['storage']['persist']?.().catch(() => {});
 		const root = await navigator['storage']['getDirectory']();
 		const files = await root['getDirectoryHandle']('strict-files', { 'create': true });
 		return await files['getDirectoryHandle'](encodeURIComponent(source), { 'create': true });
@@ -395,7 +396,7 @@ addToLibrary({
 	// (writing from the page, which copies through a swap file, made the first load of Moss 20 instead of 6 s)
 	$strictWebFileStore__deps: ['$strictWebFile'],
 	$strictWebFileStore: (source, name, bytes) => {
-		const writing = 'onmessage = async (event) => { try { const [folderName, name, bytes] = event.data; ' +
+		const writing = 'onmessage = async (event) => { const [folderName, name, bytes] = event.data; try { ' +
 			'let folder = await (await navigator.storage.getDirectory()).getDirectoryHandle("strict-files", { create: true }); ' +
 			'folder = await folder.getDirectoryHandle(folderName, { create: true }); ' +
 			'const handle = await (await folder.getFileHandle(name, { create: true })).createSyncAccessHandle(); ' +

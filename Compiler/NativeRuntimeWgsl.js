@@ -651,6 +651,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) g
 	if (typeof FS === 'undefined' || !names.length)
 		return;
 	const kept = async (url) => {
+		navigator['storage']['persist']?.().catch(() => {});
 		const root = await navigator['storage']['getDirectory']();
 		const folder = await (await root['getDirectoryHandle']('strict-files', { 'create': true }))
 			['getDirectoryHandle'](encodeURIComponent(url), { 'create': true });
