@@ -3,8 +3,8 @@
 // is places[2 * slot + 1], places[2 * slots] is the count of outputs, one invocation per output if not said otherwise,
 // work.x is the first workgroup of a submit of strictKernelGroups, work.y the count of parts an inner sum is split in.
 // Lists are read with n_item: bits 28 to 30 of a place say which binding holds the list (0 numbers, 1 to 4 a kept result
-// bound as it is), the top bit that it holds bfloat16 halves (two in each 32 bits, strict_packed); every shader starts
-// with it (strictWebGpuPipeline), also the generated ones.
+// bound as it is), the top bit that it holds bfloat16 halves (two in each 32 bits, strict_packed), with bit 27 IEEE 16
+// bit halves (Moss's dense rows); every shader starts with it (strictWebGpuPipeline), also the generated ones.
 Module['strictItem'] = `
 @group(0) @binding(5) var<storage, read> lists1: array<f32>;
 @group(0) @binding(6) var<storage, read> lists2: array<f32>;
@@ -22,7 +22,8 @@ fn n_number(place: u32, at: u32) -> f32 {
 }
 fn n_item(place: u32, at: u32) -> f32 {
 	if (place < 0x80000000u) { return n_number(place, at); }
-	let pair = bitcast<u32>(n_number(place & 0x7fffffffu, at / 2u));
+	let pair = bitcast<u32>(n_number(place & 0x77ffffffu, at / 2u));
+	if ((place & 0x08000000u) != 0u) { return unpack2x16float(pair)[at & 1u]; }
 	return bitcast<f32>(select(pair << 16u, pair & 0xffff0000u, (at & 1u) == 1u));
 }
 `;
@@ -42,7 +43,8 @@ fn summed(sums: mat4x4<f32>, ins: vec4<f32>, outs: vec4<f32>) -> mat4x4<f32> {
 `;
 // Convolved.Summed: values, affine, weights, height, width, channels, outputs, swish, factor (strict_gpu_convolution),
 // a workgroup of 256 invocations per tile of 128 pixels of one parity and 128 outputs (8 by 8 sums each), the taps 16
-// at a time in workgroup memory; values normed by strict_normed first come with swish 2
+// at a time in workgroup memory; swish is the Activation kind of the normed values (5 swish, 2 relu, 6 linear), values
+// normed by strict_normed first come with 255
 (Module['strictShaders'] ||= {})['strict_convolution'] = strictKernelBindings + strictSummed + `
 var<workgroup> tapped: array<vec4<f32>, 512>;
 var<workgroup> weighted: array<vec4<f32>, 512>;
@@ -51,8 +53,8 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 	let width = places[9];
 	let channels = places[11];
 	let outputs = places[13];
-	let swish = places[15] == 1u;
-	let isNormed = places[15] == 2u;
+	let activation = places[15];
+	let isNormed = activation == 255u;
 	let factor = places[17];
 	let side = 4u - factor;
 	let taps = side * side * channels;
@@ -95,7 +97,7 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 				value = n_item(places[0], u32(sourceRow * i32(inputWidth) + sourceColumn) * channels + channel);
 				if (!isNormed) {
 					let normed = value * n_item(places[2], channel) + n_item(places[2], channels + channel);
-					value = select(normed, normed / (1.0 + exp(-normed)), swish);
+					value = select(select(normed, max(normed, 0.0), activation == 2u), normed / (1.0 + exp(-normed)), activation == 5u);
 				}
 			}
 			tapped[slot / 4u][slot % 4u] = value;
@@ -263,22 +265,22 @@ Module['strictKernelGroups']['strict_quantized'] = (places) => {
 	return [tokens, tokens];
 };
 // Batch.Sums of 8 bit rows (strict_gpu_tokens_web): rows (codes, then a scale per 32 columns, stride words a row), codes
-// and scales of the tokens (strict_quantized), biases, columns, rows, stride, tokens: a workgroup of 256 invocations per
-// tile of 64 rows and 64 tokens (4 by 4 each), the codes of 32 columns of both in workgroup memory at a time, dot
-// products of 4 codes summed as whole numbers per 32 columns and scaled by their row
+// and scales of the tokens (strict_quantized), biases, columns, rows, stride, tokens, nibbles (codes as 4 bit halves of
+// bytes, unpacked to 8 bit codes as they are staged): a workgroup of 256 invocations per tile of 64 rows and 64 tokens
+// (4 neighboring rows and 4 neighboring tokens of it each, read as one vec4 each per word), the codes of 32 columns of
+// both in workgroup memory at a time (word by word), dot products of 4 codes summed as whole numbers per 32 columns and
+// scaled by their row (rows of only their codes, read from a URL, have one scale each after the codes of all rows)
 Module['strictShaders']['strict_eights'] = strictKernelBindings + `
-var<workgroup> rowCodes: array<u32, 512>;
-var<workgroup> tokenCodes: array<u32, 512>;
+var<workgroup> rowCodes: array<vec4<u32>, 128>;
+var<workgroup> tokenCodes: array<vec4<u32>, 128>;
 var<workgroup> rowScales: array<f32, 64>;
-fn dotted(row: u32, token: u32) -> vec4<f32> {
-	var wholes = vec4<i32>();
-	for (var word = 0u; word < 8u; word++) {
-		let codes = rowCodes[row * 8u + word];
-		wholes += vec4<i32>(dot4I8Packed(codes, tokenCodes[token * 8u + word]), dot4I8Packed(codes,
-			tokenCodes[(token + 1u) * 8u + word]), dot4I8Packed(codes, tokenCodes[(token + 2u) * 8u + word]),
-			dot4I8Packed(codes, tokenCodes[(token + 3u) * 8u + word]));
-	}
-	return vec4<f32>(wholes) * rowScales[row];
+fn unpacked(halves: u32) -> u32 {
+	let bits = i32(halves);
+	return pack4xI8(vec4<i32>((bits << 28u) >> 28u, (bits << 24u) >> 28u, (bits << 20u) >> 28u, (bits << 16u) >> 28u));
+}
+fn dotted(codes: u32, tokens: vec4<u32>) -> vec4<i32> {
+	return vec4<i32>(dot4I8Packed(codes, tokens.x), dot4I8Packed(codes, tokens.y), dot4I8Packed(codes, tokens.z),
+		dot4I8Packed(codes, tokens.w));
 }
 @compute @workgroup_size(256)
 fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) group: vec3<u32>,
@@ -287,14 +289,16 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 	let rows = places[9];
 	let stride = places[11];
 	let tokens = places[13];
+	let nibbles = places[15] == 1u;
 	let words = columns / 4u;
+	let rowWords = select(words, words / 2u, nibbles);
 	let rowTiles = (rows + 63u) / 64u;
 	let tile = work.x + group.x + group.y * groups.x;
 	if (tile >= rowTiles * ((tokens + 63u) / 64u)) { return; }
 	let rowStart = tile % rowTiles * 64u;
 	let tokenStart = tile / rowTiles * 64u;
-	let ownRow = local % 16u * 4u;
-	let ownToken = local / 16u * 4u;
+	let ownRow = local % 16u;
+	let ownToken = local / 16u;
 	var first = vec4<f32>();
 	var second = vec4<f32>();
 	var third = vec4<f32>();
@@ -303,27 +307,50 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 		for (var at = local; at < 512u; at += 256u) {
 			let row = rowStart + at / 8u;
 			let token = tokenStart + at / 8u;
-			rowCodes[at] = select(0u, bitcast<u32>(n_item(places[0], row * stride + block * 8u + at % 8u)), row < rows);
-			tokenCodes[at] = select(0u, bitcast<u32>(n_item(places[2], token * words + block * 8u + at % 8u)), token < tokens);
+			let placed = at % 8u * 64u + at / 8u;
+			let word = block * 8u + at % 8u;
+			var codes = 0u;
+			if (row < rows && nibbles) {
+				codes = unpacked((bitcast<u32>(n_item(places[0], row * stride + word / 2u)) >> (word % 2u * 16u)) & 0xffffu);
+			} else if (row < rows) {
+				codes = bitcast<u32>(n_item(places[0], row * stride + word));
+			}
+			rowCodes[placed / 4u][placed % 4u] = codes;
+			tokenCodes[placed / 4u][placed % 4u] = select(0u, bitcast<u32>(n_item(places[2], token * words + block * 8u +
+				at % 8u)), token < tokens);
 		}
 		if (local < 64u) {
-			rowScales[local] = select(0.0, n_item(places[0], (rowStart + local) * stride + words + block), rowStart + local < rows);
+			let row = rowStart + local;
+			let scaled = select(row * stride + rowWords + block, rows * stride + row, stride == rowWords);
+			rowScales[local] = select(0.0, n_item(places[0], scaled), row < rows);
 		}
 		workgroupBarrier();
-		first += dotted(ownRow, ownToken);
-		second += dotted(ownRow + 1u, ownToken);
-		third += dotted(ownRow + 2u, ownToken);
-		fourth += dotted(ownRow + 3u, ownToken);
+		var firstWholes = vec4<i32>();
+		var secondWholes = vec4<i32>();
+		var thirdWholes = vec4<i32>();
+		var fourthWholes = vec4<i32>();
+		for (var word = 0u; word < 8u; word++) {
+			let tokenWords = tokenCodes[word * 16u + ownToken];
+			let rowWords = rowCodes[word * 16u + ownRow];
+			firstWholes += dotted(rowWords.x, tokenWords);
+			secondWholes += dotted(rowWords.y, tokenWords);
+			thirdWholes += dotted(rowWords.z, tokenWords);
+			fourthWholes += dotted(rowWords.w, tokenWords);
+		}
+		first += vec4<f32>(firstWholes) * rowScales[ownRow * 4u];
+		second += vec4<f32>(secondWholes) * rowScales[ownRow * 4u + 1u];
+		third += vec4<f32>(thirdWholes) * rowScales[ownRow * 4u + 2u];
+		fourth += vec4<f32>(fourthWholes) * rowScales[ownRow * 4u + 3u];
 		workgroupBarrier();
 	}
 	let biases = places[5];
 	let sums = mat4x4<f32>(first, second, third, fourth);
 	for (var token = 0u; token < 4u; token++) {
-		let placedToken = tokenStart + ownToken + token;
+		let placedToken = tokenStart + ownToken * 4u + token;
 		if (placedToken >= tokens) { break; }
 		let scale = n_item(places[2], tokens * words + placedToken);
 		for (var row = 0u; row < 4u; row++) {
-			let placedRow = rowStart + ownRow + row;
+			let placedRow = rowStart + ownRow * 4u + row;
 			let at = placedToken * rows + placedRow;
 			let bias = select(0.0, n_item(places[4], at % max(biases, 1u)), biases > 0u);
 			if (placedRow < rows) { output[at] = sums[row][token] * scale + bias; }
@@ -337,14 +364,17 @@ Module['strictKernelGroups']['strict_eights'] = (places) => {
 };
 // Attention.Merged (strict_gpu_attention_web): queries, keys, values, heads, groups, size (up to 128), sequences,
 // causal, value offset, value stride; a workgroup of 64 invocations per 16 tokens of one head and sequence scores 64
-// positions at a time (one each), keeps the largest score and the sum of each row (online softmax) and adds the
-// weighted values of 2 numbers of all 16 rows per invocation, no scores are stored
+// positions at a time (one each), keeps the largest score and the sum of each row (online softmax, 4 invocations per
+// row with 16 of the positions each) and adds the weighted values of 2 numbers of all 16 rows per invocation, no scores
+// are stored
 Module['strictShaders']['strict_attention'] = strictKernelBindings + `
-var<workgroup> asked: array<f32, 2048>;
-var<workgroup> scored: array<f32, 1024>;
+var<workgroup> asked: array<vec4<f32>, 512>;
+var<workgroup> scored: array<vec4<f32>, 256>;
 var<workgroup> largests: array<f32, 16>;
-var<workgroup> rescales: array<f32, 16>;
+var<workgroup> rescales: array<vec4<f32>, 4>;
 var<workgroup> totals: array<f32, 16>;
+var<workgroup> maxima: array<f32, 64>;
+var<workgroup> partials: array<f32, 64>;
 @compute @workgroup_size(64)
 fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) group: vec3<u32>,
 	@builtin(num_workgroups) groups: vec3<u32>) {
@@ -365,10 +395,11 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 	let firstToken = block / heads % tokenBlocks * 16u;
 	let keyGroup = sequence * keyGroups + head * keyGroups / heads;
 	for (var at = local; at < 16u * size; at += 64u) {
-		let token = firstToken + at / size;
+		let row = at / size;
+		let token = firstToken + row;
 		var query = 0.0;
 		if (token < tokens) { query = n_item(places[0], ((sequence * tokens + token) * heads + head) * size + at % size); }
-		asked[at] = query / sqrt(f32(size));
+		asked[at % size * 4u + row / 4u][row % 4u] = query / sqrt(f32(size));
 	}
 	if (local < 16u) {
 		largests[local] = -3.0e38;
@@ -376,63 +407,97 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 	}
 	let lastToken = min(firstToken + 15u, tokens - 1u);
 	let visible = select(positions, positions - tokens + lastToken + 1u, causal);
-	var sums: array<f32, 32>;
+	let lasts = vec4<u32>(0u, 1u, 2u, 3u) + firstToken + select(positions - 1u - firstToken, positions - tokens, causal);
+	var firstLow = vec4<f32>();
+	var secondLow = vec4<f32>();
+	var thirdLow = vec4<f32>();
+	var fourthLow = vec4<f32>();
+	var firstHigh = vec4<f32>();
+	var secondHigh = vec4<f32>();
+	var thirdHigh = vec4<f32>();
+	var fourthHigh = vec4<f32>();
 	for (var start = 0u; start < visible; start += 64u) {
 		workgroupBarrier();
 		let position = start + local;
-		var scores: array<f32, 16>;
+		var firstScores = vec4<f32>();
+		var secondScores = vec4<f32>();
+		var thirdScores = vec4<f32>();
+		var fourthScores = vec4<f32>();
 		if (position < visible) {
 			let keyStart = (position * sequences * keyGroups + keyGroup) * size;
 			for (var at = 0u; at < size; at++) {
-				let key = n_item(places[2], keyStart + at);
-				for (var row = 0u; row < 16u; row++) { scores[row] = fma(asked[row * size + at], key, scores[row]); }
+				let key = vec4<f32>(n_item(places[2], keyStart + at));
+				firstScores = fma(asked[at * 4u], key, firstScores);
+				secondScores = fma(asked[at * 4u + 1u], key, secondScores);
+				thirdScores = fma(asked[at * 4u + 2u], key, thirdScores);
+				fourthScores = fma(asked[at * 4u + 3u], key, fourthScores);
 			}
 		}
-		for (var row = 0u; row < 16u; row++) {
-			let token = firstToken + row;
-			let last = select(positions - 1u, positions - tokens + token, causal);
-			scored[row * 64u + local] = select(-3.0e38, scores[row], position < visible && position <= last);
+		let hidden = vec4<f32>(-3.0e38);
+		scored[local * 4u] = select(hidden, firstScores, vec4<u32>(position) <= lasts);
+		scored[local * 4u + 1u] = select(hidden, secondScores, vec4<u32>(position) <= lasts + 4u);
+		scored[local * 4u + 2u] = select(hidden, thirdScores, vec4<u32>(position) <= lasts + 8u);
+		scored[local * 4u + 3u] = select(hidden, fourthScores, vec4<u32>(position) <= lasts + 12u);
+		workgroupBarrier();
+		let row = local / 4u;
+		let quad = row / 4u;
+		let lane = row % 4u;
+		let begin = local % 4u * 16u;
+		var largest = largests[row];
+		for (var at = begin; at < begin + 16u; at++) { largest = max(largest, scored[at * 4u + quad][lane]); }
+		maxima[local] = largest;
+		workgroupBarrier();
+		largest = max(max(maxima[row * 4u], maxima[row * 4u + 1u]), max(maxima[row * 4u + 2u], maxima[row * 4u + 3u]));
+		var total = 0.0;
+		for (var at = begin; at < begin + 16u; at++) {
+			let score = scored[at * 4u + quad][lane];
+			let share = select(exp(score - largest), 0.0, score < -1.0e38);
+			scored[at * 4u + quad][lane] = share;
+			total += share;
+		}
+		partials[local] = total;
+		workgroupBarrier();
+		if (begin == 0u) {
+			let rescale = exp(largests[row] - largest);
+			rescales[quad][lane] = rescale;
+			totals[row] = totals[row] * rescale + partials[local] + partials[local + 1u] + partials[local + 2u] +
+				partials[local + 3u];
+			largests[row] = largest;
 		}
 		workgroupBarrier();
-		if (local < 16u) {
-			var largest = largests[local];
-			for (var at = 0u; at < 64u; at++) { largest = max(largest, scored[local * 64u + at]); }
-			var total = 0.0;
-			for (var at = 0u; at < 64u; at++) {
-				let share = select(exp(scored[local * 64u + at] - largest), 0.0, scored[local * 64u + at] < -1.0e38);
-				scored[local * 64u + at] = share;
-				total += share;
-			}
-			let rescale = exp(largests[local] - largest);
-			rescales[local] = rescale;
-			totals[local] = totals[local] * rescale + total;
-			largests[local] = largest;
-		}
-		workgroupBarrier();
-		for (var row = 0u; row < 16u; row++) {
-			sums[row * 2u] *= rescales[row];
-			sums[row * 2u + 1u] *= rescales[row];
-		}
+		firstLow *= rescales[0];
+		secondLow *= rescales[1];
+		thirdLow *= rescales[2];
+		fourthLow *= rescales[3];
+		firstHigh *= rescales[0];
+		secondHigh *= rescales[1];
+		thirdHigh *= rescales[2];
+		fourthHigh *= rescales[3];
 		let count = min(64u, visible - start);
 		for (var at = 0u; at < count; at++) {
 			let valueStart = valueOffset + keyGroup * size + (start + at) * valueStride;
-			let first = select(0.0, n_item(places[4], valueStart + local), local < size);
-			let second = select(0.0, n_item(places[4], valueStart + local + 64u), local + 64u < size);
-			for (var row = 0u; row < 16u; row++) {
-				let share = scored[row * 64u + at];
-				sums[row * 2u] = fma(share, first, sums[row * 2u]);
-				sums[row * 2u + 1u] = fma(share, second, sums[row * 2u + 1u]);
-			}
+			let low = vec4<f32>(select(0.0, n_item(places[4], valueStart + local), local < size));
+			let high = vec4<f32>(select(0.0, n_item(places[4], valueStart + local + 64u), local + 64u < size));
+			firstLow = fma(scored[at * 4u], low, firstLow);
+			secondLow = fma(scored[at * 4u + 1u], low, secondLow);
+			thirdLow = fma(scored[at * 4u + 2u], low, thirdLow);
+			fourthLow = fma(scored[at * 4u + 3u], low, fourthLow);
+			firstHigh = fma(scored[at * 4u], high, firstHigh);
+			secondHigh = fma(scored[at * 4u + 1u], high, secondHigh);
+			thirdHigh = fma(scored[at * 4u + 2u], high, thirdHigh);
+			fourthHigh = fma(scored[at * 4u + 3u], high, fourthHigh);
 		}
 	}
 	workgroupBarrier();
+	let lows = mat4x4<f32>(firstLow, secondLow, thirdLow, fourthLow);
+	let highs = mat4x4<f32>(firstHigh, secondHigh, thirdHigh, fourthHigh);
 	for (var row = 0u; row < 16u; row++) {
 		let token = firstToken + row;
 		if (token >= tokens) { break; }
 		let placed = ((sequence * tokens + token) * heads + head) * size;
 		let total = totals[row];
-		if (local < size) { output[placed + local] = sums[row * 2u] / total; }
-		if (local + 64u < size) { output[placed + local + 64u] = sums[row * 2u + 1u] / total; }
+		if (local < size) { output[placed + local] = lows[row / 4u][row % 4u] / total; }
+		if (local + 64u < size) { output[placed + local + 64u] = highs[row / 4u][row % 4u] / total; }
 	}
 }`;
 // the blocks of 16 tokens of strict_attention, about 4 billion multiplications in a submit
@@ -441,6 +506,14 @@ Module['strictKernelGroups']['strict_attention'] = (places) => {
 	const positions = places[3] / places[9] / places[11] / places[13];
 	return [blocks, Math.max(Math.floor(2 ** 32 / (32 * positions * places[11])), 1)];
 };
+// Batch.Sums of 32 bit rows (strict_gpu_tokens_web): sums of strict_products, biases: every sum plus its bias
+Module['strictShaders']['strict_biased'] = strictKernelBindings + `
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {
+	let at = id.x + id.y * groups.x * 64u;
+	if (at >= places[4]) { return; }
+	output[at] = n_item(places[0], at) + n_item(places[2], at % places[3]);
+}`;
 // Softmax.Shares: scores, width, a workgroup of 64 invocations per row (strict_gpu_softmax)
 Module['strictShaders']['strict_softmax'] = strictKernelBindings + `
 var<workgroup> partials: array<f32, 64>;
@@ -492,8 +565,8 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) g
 	let second = select(0u, rounded(numbers[min(at * 2u + 1u, count - 1u)]) << 16u, at * 2u + 1u < count);
 	output[at] = rounded(numbers[at * 2u]) | second;
 }`;
-// the values of a convolution normed with affine and swished when swish is 1 once (strict_gpu_convolution), not in
-// each of its tiles: values, affine, channels, swish
+// the values of a convolution normed with affine and activated once (strict_gpu_convolution), not in each of its
+// tiles: values, affine, channels, Activation kind (5 swish, 2 relu, 6 linear)
 Module['strictShaders']['strict_normed'] = strictKernelBindings + `
 @compute @workgroup_size(64)
 fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {
@@ -501,5 +574,71 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) g
 	if (at >= places[8]) { return; }
 	let channel = at % places[5];
 	let normed = n_item(places[0], at) * n_item(places[2], channel) + n_item(places[2], places[5] + channel);
-	output[at] = select(normed, normed / (1.0 + exp(-normed)), places[7] == 1u);
+	output[at] = select(select(normed, max(normed, 0.0), places[7] == 2u), normed / (1.0 + exp(-normed)), places[7] == 5u);
 }`;
+// Convrot.Rotated (strict_gpu_hadamard): values; a workgroup of 64 invocations per group of 256 values runs the 4
+// radix-4 butterflies (steps 1, 4, 16, 64, a butterfly of 4 values each) in workgroup memory, 32 bit floats in between
+Module['strictShaders']['strict_hadamard'] = strictKernelBindings + `
+var<workgroup> rotated: array<f32, 256>;
+@compute @workgroup_size(64)
+fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) group: vec3<u32>,
+	@builtin(num_workgroups) groups: vec3<u32>) {
+	let offset = (work.x + group.x + group.y * groups.x) * 256u;
+	if (offset >= places[2]) { return; }
+	for (var at = local; at < 256u; at += 64u) { rotated[at] = n_item(places[0], offset + at); }
+	workgroupBarrier();
+	for (var step = 1u; step < 256u; step *= 4u) {
+		let start = local / step * 4u * step + local % step;
+		let first = rotated[start];
+		let second = rotated[start + step];
+		let third = rotated[start + 2u * step];
+		let fourth = rotated[start + 3u * step];
+		rotated[start] = 0.5 * (first + second + third - fourth);
+		rotated[start + step] = 0.5 * (first + second - third + fourth);
+		rotated[start + 2u * step] = 0.5 * (first - second + third + fourth);
+		rotated[start + 3u * step] = 0.5 * (second + third + fourth - first);
+		workgroupBarrier();
+	}
+	for (var at = local; at < 256u; at += 64u) { output[offset + at] = rotated[at]; }
+}`;
+Module['strictKernelGroups']['strict_hadamard'] = (places) => [places[2] / 256, places[2] / 256];
+// the numbers of the list at places[0] (places[1] of them) and then of the one at places[2] as 32 bit floats (lists of
+// different formats joined on the GPU, strict_gpu_web_mixed): left, right
+Module['strictShaders']['strict_joined'] = strictKernelBindings + `
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {
+	let at = id.x + id.y * groups.x * 64u;
+	if (at >= places[4]) { return; }
+	if (at < places[1]) {
+		output[at] = n_item(places[0], at);
+	} else {
+		output[at] = n_item(places[2], at - places[1]);
+	}
+}`;
+// a file a program writes in the browser (not the package loaded before it runs) is offered as a download on the page
+// when it is closed, images are shown too; a program using no files has no FS
+(Module['preRun'] ||= []).push(/** @suppress {undefinedVars} */ () => {
+	if (typeof FS === 'undefined')
+		return;
+	const closed = FS.close;
+	FS.close = (stream) => {
+		const path = stream.path, isWritten = (stream.flags & 3) !== 0 && path && !path.startsWith('/dev/');
+		const result = closed(stream);
+		if (isWritten && runtimeInitialized && typeof document !== 'undefined') {
+			const data = FS.readFile(path), name = path.split('/').pop();
+			const link = document.createElement('a'), url = URL.createObjectURL(new Blob([data]));
+			link.href = url;
+			link.download = name;
+			link.textContent = 'Download ' + name;
+			document.body.append(link);
+			if (/\.(png|jpe?g|webp|gif)$/i.test(name)) {
+				const image = document.createElement('img');
+				image.src = url;
+				image.style.maxWidth = '100%';
+				document.body.append(image);
+			}
+			console.log('Saved ' + name + ' (' + data.length + ' bytes), offered as a download');
+		}
+		return result;
+	};
+});

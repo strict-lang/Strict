@@ -672,13 +672,12 @@
     %none = arith.constant false
     return %none : i1
   }
-  // a kernel with a WGSL shader (WgslShader) runs on WebGPU: each value is a (number, -1) or (items address, length)
-  // pair, the loop source is the last one, strict_webgpu fills the result list or returns 0 to run it on the CPU; a
-  // loop with a result format of 17 (bfloat16) or 32 bits goes through strict_gpu_kernel like kind 2 (generated loops by
-  // the second name of their table, the 32 bit one, the first is empty when a 64 bit kernel failed), a runtime kernel
-  // of NativeRuntimeWgsl.js: each value is (number, -1, 0) or (data address, length, bits of its numbers)
+  // a loop with a WGSL shader (WgslShader) runs on WebGPU through strict_gpu_kernel like kind 2 (generated loops by the
+  // second name of their table, the 32 bit one, the first is empty when a 64 bit kernel failed) when its result format
+  // is 17 (bfloat16) or 32 bits, or when one of the lists of a loop of numbers is narrow (strict_gpu_shaded_format),
+  // else it runs on the CPU (0); a runtime kernel of NativeRuntimeWgsl.js: each value is (number, -1, 0) or (data
+  // address, length, bits of its numbers)
   llvm.func @strict_webgpu_ready(!llvm.ptr) -> i32
-  llvm.func @strict_webgpu(!llvm.ptr, i32, !llvm.ptr, i32, !llvm.ptr) -> i32
   func.func private @strict_gpu_shaded(%name: !llvm.ptr, %count: i64, %source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64, %format: i64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
@@ -703,7 +702,10 @@
     %isBrain = arith.cmpi eq, %format, %brainFormat : i64
     %isSingle = arith.cmpi eq, %format, %singleFormat : i64
     %isNarrow = arith.ori %isBrain, %isSingle : i1
-    cf.cond_br %isNarrow, ^narrow, ^table
+    %widened = func.call @strict_gpu_shaded_format(%source, %kind, %values, %valueCount, %mask) : (f64, i64, !llvm.ptr, i64, i64) -> i64
+    %chosen = arith.select %isNarrow, %format, %widened : i64
+    %isChosen = arith.cmpi ne, %chosen, %none : i64
+    cf.cond_br %isChosen, ^narrow, ^skip
   ^narrow:
     %slotBytes = arith.constant 8 : i64
     %narrowSlots = arith.addi %valueCount, %one : i64
@@ -716,7 +718,7 @@
     %sourceBit = arith.shli %one, %valueCount : i64
     %withSource = arith.ori %mask, %sourceBit : i64
     %narrowMask = arith.select %isNarrowList, %withSource, %mask : i64
-    %narrowResult = func.call @strict_gpu_kernel(%shaderName, %count, %sourced, %narrowSlots, %narrowMask, %format) : (!llvm.ptr, i64, !llvm.ptr, i64, i64, i64) -> f64
+    %narrowResult = func.call @strict_gpu_kernel(%shaderName, %count, %sourced, %narrowSlots, %narrowMask, %chosen) : (!llvm.ptr, i64, !llvm.ptr, i64, i64, i64) -> f64
     return %narrowResult : f64
   ^other:
     cf.cond_br %kernelUsable, ^kernel, ^skip
@@ -725,60 +727,45 @@
     return %kernelResult : f64
   ^skip:
     return %zero : f64
-  ^table:
-    %slots = arith.addi %valueCount, %one : i64
-    %entries = arith.muli %slots, %two : i64
-    %table = llvm.alloca %entries x f64 : (i64) -> !llvm.ptr
-    cf.br ^slot(%none : i64)
-  ^slot(%at: i64):
+  }
+  // the format a loop of numbers runs its 32 bit shader in, like the native 32 bit kernel: 32 when one of its lists
+  // holds narrow numbers (also in a WebGPU buffer), 17 when all of them hold bfloat16, else 0 (it runs on the CPU)
+  func.func private @strict_gpu_shaded_format(%source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64) -> i64 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %brainBits = arith.constant 17 : i64
+    %singleBits = arith.constant 32 : i64
+    %sixtyFour = arith.constant 64 : i64
+    %true = arith.constant true
+    %false = arith.constant false
+    %isListSource = arith.cmpi eq, %kind, %one : i64
+    cf.cond_br %isListSource, ^sourced, ^next(%none, %false, %true : i64, i1, i1)
+  ^sourced:
+    %sourceBits = func.call @strict_gpu_bits(%source) : (f64) -> i64
+    %sourceNarrow = arith.cmpi ult, %sourceBits, %sixtyFour : i64
+    %sourceBrain = arith.cmpi eq, %sourceBits, %brainBits : i64
+    cf.br ^next(%none, %sourceNarrow, %sourceBrain : i64, i1, i1)
+  ^next(%at: i64, %narrow: i1, %brains: i1):
     %more = arith.cmpi slt, %at, %valueCount : i64
-    cf.cond_br %more, ^value, ^sourced
+    cf.cond_br %more, ^value, ^chosen
   ^value:
+    %shifted = arith.shrui %mask, %at : i64
+    %isList = arith.trunci %shifted : i64 to i1
+    %after = arith.addi %at, %one : i64
+    cf.cond_br %isList, ^list, ^next(%after, %narrow, %brains : i64, i1, i1)
+  ^list:
     %valueSlot = llvm.getelementptr %values[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     %value = llvm.load %valueSlot : !llvm.ptr -> f64
-    %bit = arith.shli %one, %at : i64
-    %masked = arith.andi %mask, %bit : i64
-    %isList = arith.cmpi ne, %masked, %none : i64
-    %entry = arith.muli %at, %two : i64
-    func.call @strict_gpu_shaded_slot(%table, %entry, %value, %isList) : (!llvm.ptr, i64, f64, i1) -> ()
-    %next = arith.addi %at, %one : i64
-    cf.br ^slot(%next : i64)
-  ^sourced:
-    %sourceEntry = arith.muli %valueCount, %two : i64
-    %isSourceList = arith.cmpi eq, %kind, %one : i64
-    func.call @strict_gpu_shaded_slot(%table, %sourceEntry, %source, %isSourceList) : (!llvm.ptr, i64, f64, i1) -> ()
-    %length = arith.sitofp %count : i64 to f64
-    %result = func.call @strict_list_new(%length, %length) : (f64, f64) -> f64
-    %items = func.call @strict_list_items(%result) : (f64) -> !llvm.ptr
-    %count32 = arith.trunci %count : i64 to i32
-    %slots32 = arith.trunci %slots : i64 to i32
-    %ran = llvm.call @strict_webgpu(%shaderName, %count32, %table, %slots32, %items) : (!llvm.ptr, i32, !llvm.ptr, i32, !llvm.ptr) -> i32
-    %eight = arith.constant 8 : i64
-    %bytes = arith.muli %count, %eight : i64
-    func.call @strict_gc_written_range(%items, %bytes) : (!llvm.ptr, i64) -> ()
-    %isRan = arith.cmpi ne, %ran, %unready : i32
-    %chosen = arith.select %isRan, %result, %zero : f64
-    return %chosen : f64
-  }
-  func.func private @strict_gpu_shaded_slot(%table: !llvm.ptr, %entry: i64, %value: f64, %isList: i1) {
-    %one = arith.constant 1 : i64
-    %number = llvm.getelementptr %table[%entry] : (!llvm.ptr, i64) -> !llvm.ptr, f64
-    %secondEntry = arith.addi %entry, %one : i64
-    %second = llvm.getelementptr %table[%secondEntry] : (!llvm.ptr, i64) -> !llvm.ptr, f64
-    cf.cond_br %isList, ^list, ^plain
-  ^plain:
-    %unlisted = arith.constant -1.0 : f64
-    llvm.store %value, %number : f64, !llvm.ptr
-    llvm.store %unlisted, %second : f64, !llvm.ptr
-    return
-  ^list:
-    %length = func.call @strict_list_length(%value) : (f64) -> f64
-    %items = func.call @strict_list_items(%value) : (f64) -> !llvm.ptr
-    %address = llvm.ptrtoint %items : !llvm.ptr to i64
-    %addressNumber = arith.uitofp %address : i64 to f64
-    llvm.store %addressNumber, %number : f64, !llvm.ptr
-    llvm.store %length, %second : f64, !llvm.ptr
-    return
+    %bits = func.call @strict_gpu_bits(%value) : (f64) -> i64
+    %isNarrowList = arith.cmpi ult, %bits, %sixtyFour : i64
+    %isBrainList = arith.cmpi eq, %bits, %brainBits : i64
+    %anyNarrow = arith.ori %narrow, %isNarrowList : i1
+    %allBrains = arith.andi %brains, %isBrainList : i1
+    cf.br ^next(%after, %anyNarrow, %allBrains : i64, i1, i1)
+  ^chosen:
+    %narrowFormat = arith.select %brains, %brainBits, %singleBits : i64
+    %format = arith.select %narrow, %narrowFormat, %none : i64
+    return %format : i64
   }
   // the count numbers (of bits 17 or 32) of the runtime kernel name of NativeRuntimeWgsl.js from values (lists where
   // mask has their bit) as a list that stays in a WebGPU buffer (class 255, strict_gpu_web_get reads it on the first
@@ -830,18 +817,23 @@
     llvm.store %listLength, %length : f64, !llvm.ptr
     %handle = func.call @strict_gpu_web_handle(%value) : (f64) -> i64
     %isResident = arith.cmpi ne, %handle, %none : i64
-    cf.cond_br %isResident, ^resident, ^hosted
-  ^resident:
-    %handleNumber = arith.sitofp %handle : i64 to f64
+    cf.cond_br %isResident, ^resident(%handle : i64), ^hosted
+  ^resident(%residentHandle: i64):
+    %handleNumber = arith.sitofp %residentHandle : i64 to f64
     %bufferFormat = arith.constant 255.0 : f64
     llvm.store %handleNumber, %number : f64, !llvm.ptr
     llvm.store %bufferFormat, %format : f64, !llvm.ptr
     cf.br ^slot(%next : i64)
   ^hosted:
+    %valueBits = func.call @strict_gpu_bits(%value) : (f64) -> i64
+    %listCount = arith.fptosi %listLength : f64 to i64
+    %kept = func.call @strict_gpu_web_kept(%value, %listCount, %valueBits) : (f64, i64, i64) -> i64
+    %isKept = arith.cmpi ne, %kept, %none : i64
+    cf.cond_br %isKept, ^resident(%kept : i64), ^copied
+  ^copied:
     %host = func.call @strict_gpu_host(%value) : (f64) -> !llvm.ptr
     %address = llvm.ptrtoint %host : !llvm.ptr to i64
     %addressNumber = arith.uitofp %address : i64 to f64
-    %valueBits = func.call @strict_gpu_bits(%value) : (f64) -> i64
     %bitsNumber = arith.sitofp %valueBits : i64 to f64
     llvm.store %addressNumber, %number : f64, !llvm.ptr
     llvm.store %bitsNumber, %format : f64, !llvm.ptr
@@ -933,11 +925,136 @@
     %nothing = llvm.mlir.zero : !llvm.ptr
     return %nothing : !llvm.ptr
   }
-  // the handle of a new WebGPU buffer with the words at data as they are, 0 before the first kernel made the device
-  llvm.func @strict_webgpu_uploaded(!llvm.ptr, i32) -> i32
-  func.func private @strict_gpu_web_uploaded(%data: !llvm.ptr, %words: i64) -> i64 {
+  // the handle of a new WebGPU buffer with the words at data as they are (halves bfloat16 numbers in them when above 0,
+  // 32 bit floats kept as bfloat16 halves when all are exact bfloat16 numbers when -1), 0 before the first kernel made the
+  // device
+  llvm.func @strict_webgpu_uploaded(!llvm.ptr, i32, i32) -> i32
+  func.func private @strict_gpu_web_uploaded(%data: !llvm.ptr, %words: i64, %halves: i64) -> i64 {
     %words32 = arith.trunci %words : i64 to i32
-    %made = llvm.call @strict_webgpu_uploaded(%data, %words32) : (!llvm.ptr, i32) -> i32
+    %halves32 = arith.trunci %halves : i64 to i32
+    %made = llvm.call @strict_webgpu_uploaded(%data, %words32, %halves32) : (!llvm.ptr, i32, i32) -> i32
+    %handle = arith.extui %made : i32 to i64
+    return %handle : i64
+  }
+  // a packed host list of bfloat16 or 32 bit numbers (bits) with at least 4096 of them uploaded once as a kernel value
+  // and kept in its holder like a downloaded result (the rotations and modulation all blocks of a Moss step read), its
+  // handle, 0 for other lists or when WebGPU can not
+  func.func private @strict_gpu_web_kept(%list: f64, %count: i64, %bits: i64) -> i64 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %eight = arith.constant 8 : i64
+    %webClass = arith.constant 255 : i64
+    %halvesBits = arith.constant 17 : i64
+    %floatBits = arith.constant 32 : i64
+    %isHalves = arith.cmpi eq, %bits, %halvesBits : i64
+    %isFloats = arith.cmpi eq, %bits, %floatBits : i64
+    %isNarrow = arith.ori %isHalves, %isFloats : i1
+    %least = arith.constant 4096 : i64
+    %isLong = arith.cmpi sge, %count, %least : i64
+    %isKept = arith.andi %isNarrow, %isLong : i1
+    cf.cond_br %isKept, ^holder, ^none
+  ^holder:
+    %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
+    %holderSlot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %holderBits = llvm.load %holderSlot : !llvm.ptr -> f64
+    %holder = func.call @strict_ptr(%holderBits) : (f64) -> !llvm.ptr
+    %deviceSlot = llvm.getelementptr %holder[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    %tagged = llvm.load %deviceSlot : !llvm.ptr -> i64
+    %isFree = arith.cmpi eq, %tagged, %none : i64
+    cf.cond_br %isFree, ^upload, ^none
+  ^upload:
+    %host = func.call @strict_gpu_host(%list) : (f64) -> !llvm.ptr
+    %pairs = arith.addi %count, %one : i64
+    %halfWords = arith.divui %pairs, %two : i64
+    %words = arith.select %isHalves, %halfWords, %count : i64
+    %halves = arith.select %isHalves, %count, %none : i64
+    %handle = func.call @strict_gpu_web_uploaded(%host, %words, %halves) : (!llvm.ptr, i64, i64) -> i64
+    %isUploaded = arith.cmpi ne, %handle, %none : i64
+    cf.cond_br %isUploaded, ^keep, ^none
+  ^keep:
+    %shifted = arith.shli %handle, %eight : i64
+    %device = arith.ori %shifted, %webClass : i64
+    llvm.store %device, %deviceSlot : i64, !llvm.ptr
+    return %handle : i64
+  ^none:
+    return %none : i64
+  }
+  // count 8 bit rows of elements numbers (bits, plus STRICT_KEPT_TOKENS) whose block (the codes of each row as in the
+  // file, 4 bit halves of bytes when nibbles is 1, then a 32 bit scale per row) is only in the WebGPU buffer handle
+  // (TensorFile reading a URL): views without
+  // data whose block stays with the page (its views can outlive this list in lists joined from them, Moss's query, key
+  // and value rows), strict_gpu_tokens_web finds it by their addresses; reading the rows on the CPU stops the program
+  llvm.func @strict_webgpu_rows_views(!llvm.ptr, i32, i32, i32, i32)
+  func.func @strict_rows_web(%count: i64, %elements: i64, %bits: f64, %handle: i64, %nibbles: i64) -> f64 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %four = arith.constant 4 : i64
+    %eight = arith.constant 8 : i64
+    %zero = arith.constant 0.0 : f64
+    %viewBytes = arith.constant 64 : i64
+    %markedBits = arith.fptosi %bits : f64 to i64
+    %formatMask = arith.constant 255 : i64
+    %wholeBits = arith.andi %markedBits, %formatMask : i64
+    %kept = arith.shrui %markedBits, %eight : i64
+    %two = arith.constant 2 : i64
+    %halfBytes = arith.divui %elements, %two : i64
+    %isNibbles = arith.cmpi ne, %nibbles, %none : i64
+    %rowStride = arith.select %isNibbles, %halfBytes, %elements : i64
+    %views = arith.muli %count, %viewBytes : i64
+    %block = func.call @strict_alloc_text(%views) : (i64) -> !llvm.ptr
+    %countNumber = arith.sitofp %count : i64 to f64
+    %list = func.call @strict_list_new(%countNumber, %countNumber) : (f64, f64) -> f64
+    %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    cf.br ^place(%none : i64)
+  ^place(%index: i64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^row, ^placed
+  ^row:
+    %viewOffset = arith.muli %index, %viewBytes : i64
+    %view = llvm.getelementptr %block[%viewOffset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %row = func.call @strict_packed_placed(%view, %elements, %wholeBits, %zero, %zero, %kept) : (!llvm.ptr, i64, i64, f64, f64, i64) -> f64
+    %target = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.store %row, %target : f64, !llvm.ptr
+    func.call @strict_gc_written(%target) : (!llvm.ptr) -> ()
+    %next = arith.addi %index, %one : i64
+    cf.br ^place(%next : i64)
+  ^placed:
+    %count32 = arith.trunci %count : i64 to i32
+    %handle32 = arith.trunci %handle : i64 to i32
+    %stride32 = arith.trunci %rowStride : i64 to i32
+    %nibbles32 = arith.trunci %nibbles : i64 to i32
+    llvm.call @strict_webgpu_rows_views(%block, %count32, %handle32, %stride32, %nibbles32) : (!llvm.ptr, i32, i32, i32, i32) -> ()
+    %pendingSlot = llvm.mlir.addressof @strict_foreign_pending : !llvm.ptr
+    %listBits = arith.bitcast %list : f64 to i64
+    llvm.store %listBits, %pendingSlot : i64, !llvm.ptr
+    return %list : f64
+  }
+  // the count rows of items (views of strict_rows_web, rows joined from several matrices like Moss's query, key and
+  // value rows) copied into a new WebGPU buffer on the GPU, its handle (0 when a row is in no buffer or the rows differ),
+  // the stride in words and 1 for 4 bit codes at shape
+  llvm.func @strict_webgpu_gathered(!llvm.ptr, i32, !llvm.ptr) -> i32
+  func.func private @strict_gpu_web_gathered(%items: !llvm.ptr, %count: i64, %shape: !llvm.ptr) -> i64 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %views = llvm.alloca %count x i32 : (i64) -> !llvm.ptr
+    cf.br ^next(%none : i64)
+  ^next(%row: i64):
+    %more = arith.cmpi slt, %row, %count : i64
+    cf.cond_br %more, ^view, ^gather
+  ^view:
+    %slot = llvm.getelementptr %items[%row] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %value = llvm.load %slot : !llvm.ptr -> f64
+    %view = func.call @strict_ptr(%value) : (f64) -> !llvm.ptr
+    %address = llvm.ptrtoint %view : !llvm.ptr to i64
+    %address32 = arith.trunci %address : i64 to i32
+    %target = llvm.getelementptr %views[%row] : (!llvm.ptr, i64) -> !llvm.ptr, i32
+    llvm.store %address32, %target : i32, !llvm.ptr
+    %following = arith.addi %row, %one : i64
+    cf.br ^next(%following : i64)
+  ^gather:
+    %count32 = arith.trunci %count : i64 to i32
+    %made = llvm.call @strict_webgpu_gathered(%views, %count32, %shape) : (!llvm.ptr, i32, !llvm.ptr) -> i32
     %handle = arith.extui %made : i32 to i64
     return %handle : i64
   }
@@ -949,9 +1066,25 @@
     llvm.call @strict_webgpu_release(%handle32) : (i32) -> ()
     return
   }
-  // a list in a WebGPU buffer after another one (or after an empty list) joined in a new buffer on the GPU, 0.0 for
-  // any other pair (strict_list_concat joins those on the host): FluxAttention appends 13 chunks of results this way
+  // a list in a WebGPU buffer after another one (or after an empty list) joined in a new buffer on the GPU, lists of
+  // other formats by strict_gpu_web_mixed, 0.0 for any other pair (strict_list_concat joins those on the host):
+  // FluxAttention appends 13 chunks of results this way
   llvm.func @strict_webgpu_joined(i32, i32) -> i32
+  // the next line the page hands in with Module.strictInput(text) (WebRuntime.js), waits for it: its length in bytes,
+  // then it is copied into a new text
+  llvm.func @strict_webinput_length() -> i32
+  llvm.func @strict_webinput_copy(!llvm.ptr, i32)
+  func.func private @strict_web_input_line() -> f64 {
+    %length32 = llvm.call @strict_webinput_length() : () -> i32
+    %length = arith.extui %length32 : i32 to i64
+    %one = arith.constant 1 : i64
+    %size = arith.addi %length, %one : i64
+    %buffer = func.call @strict_malloc(%size) : (i64) -> !llvm.ptr
+    %size32 = arith.trunci %size : i64 to i32
+    llvm.call @strict_webinput_copy(%buffer, %size32) : (!llvm.ptr, i32) -> ()
+    %text = func.call @strict_bits(%buffer) : (!llvm.ptr) -> f64
+    return %text : f64
+  }
   func.func private @strict_gpu_web_joined(%left: f64, %right: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
@@ -972,7 +1105,7 @@
     %isLeftKept = arith.cmpi ne, %leftHandle, %none : i64
     %isSameFormat = arith.cmpi eq, %leftBits, %rightBits : i64
     %isJoinable = arith.andi %isLeftKept, %isSameFormat : i1
-    cf.cond_br %isJoinable, ^join, ^other
+    cf.cond_br %isJoinable, ^join, ^mixed
   ^join:
     %leftHandle32 = arith.trunci %leftHandle : i64 to i32
     %rightHandle32 = arith.trunci %rightHandle : i64 to i32
@@ -989,6 +1122,50 @@
     %webClass = arith.constant 255 : i64
     %result = func.call @strict_gpu_resident(%count, %device, %webClass, %leftBits) : (i64, i64, i64, i64) -> f64
     return %result : f64
+  ^mixed:
+    %mixed = func.call @strict_gpu_web_mixed(%left, %right) : (f64, f64) -> f64
+    return %mixed : f64
+  ^other:
+    return %zero : f64
+  }
+  // two lists of 32 bit or bfloat16 numbers, one of them in a WebGPU buffer, joined into 32 bit floats on the GPU
+  // (strict_joined: Moss's 32 bit image tokens and bfloat16 text tokens), 0.0 for any other pair
+  llvm.mlir.global internal constant @strict_gpu_joined_web("strict_joined\00") : !llvm.array<14 x i8>
+  func.func private @strict_gpu_web_mixed(%left: f64, %right: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %brainBits = arith.constant 17 : i64
+    %singleBits = arith.constant 32 : i64
+    %leftHandle = func.call @strict_gpu_web_handle(%left) : (f64) -> i64
+    %rightHandle = func.call @strict_gpu_web_handle(%right) : (f64) -> i64
+    %handles = arith.ori %leftHandle, %rightHandle : i64
+    %anyKept = arith.cmpi ne, %handles, %none : i64
+    %leftBits = func.call @strict_gpu_bits(%left) : (f64) -> i64
+    %rightBits = func.call @strict_gpu_bits(%right) : (f64) -> i64
+    %leftBrain = arith.cmpi eq, %leftBits, %brainBits : i64
+    %leftSingle = arith.cmpi eq, %leftBits, %singleBits : i64
+    %rightBrain = arith.cmpi eq, %rightBits, %brainBits : i64
+    %rightSingle = arith.cmpi eq, %rightBits, %singleBits : i64
+    %leftNarrow = arith.ori %leftBrain, %leftSingle : i1
+    %rightNarrow = arith.ori %rightBrain, %rightSingle : i1
+    %narrow = arith.andi %leftNarrow, %rightNarrow : i1
+    %usable = arith.andi %anyKept, %narrow : i1
+    cf.cond_br %usable, ^join, ^other
+  ^join:
+    %two = arith.constant 2 : i64
+    %values = llvm.alloca %two x f64 : (i64) -> !llvm.ptr
+    llvm.store %left, %values : f64, !llvm.ptr
+    %rightSlot = llvm.getelementptr %values[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %right, %rightSlot : f64, !llvm.ptr
+    %leftLength = func.call @strict_list_length(%left) : (f64) -> f64
+    %rightLength = func.call @strict_list_length(%right) : (f64) -> f64
+    %total = arith.addf %leftLength, %rightLength : f64
+    %count = arith.fptosi %total : f64 to i64
+    %name = llvm.mlir.addressof @strict_gpu_joined_web : !llvm.ptr
+    %kernelKind = arith.constant 2 : i64
+    %bothLists = arith.constant 3 : i64
+    %joined = func.call @strict_gpu_shaded(%name, %count, %zero, %kernelKind, %values, %two, %bothLists, %singleBits) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
+    return %joined : f64
   ^other:
     return %zero : f64
   }

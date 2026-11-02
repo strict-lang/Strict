@@ -3,6 +3,7 @@ has biases Numbers
 constant Center = Convolution((0, 0, 0, 0, 1, 0, 0, 0, 0), List(Number) + 0.5)
 constant Above = Convolution((0, 1, 0, 0, 0, 0, 0, 0, 0), List(Number) + 0.5)
 constant Box = Convolution((1, 1, 1, 1, 1, 1, 1, 1, 1), List(Number) + 0)
+constant Left = Convolution((0, 0, 0, 1, 0, 0, 0, 0, 0), Center.biases)
 constant Square = FeatureMap((1, 2, 3, 4), 2, 1, List(Number) + 0)
 Rearranged(values Numbers, inputs Number, side Number) Float32s
 	Center.Rearranged((0, 1, 0, 0, 0, 0, 0, 0, 0), 1, 3) is (0, 1, 0, 0, 0, 0, 0, 0, 0)
@@ -13,17 +14,18 @@ Rearranged(values Numbers, inputs Number, side Number) Float32s
 		let row = (rest / (side * inputs)).Floor
 		let column = (rest / inputs).Floor % side
 		values((((index / size).Floor * inputs + rest % inputs) * side + row) * side + column)
-Applied(map FeatureMap, affine Numbers, swish Boolean) FeatureMap
-	Center.Applied(Square, (1, 0), false) is FeatureMap((1, 2, 3, 4), 2, 1, List(Number) + 0.5)
-	Above.Applied(Square, (1, 0), false).values is (0, 0, 1, 2)
-	Convolution((0, 0, 0, 1, 0, 0, 0, 0, 0), Center.biases).Applied(Square, (1, 0), false).values is (0, 1, 0, 3)
-	let shape = (map.Height, map.width, map.channels, biases.Length, swish then 1 else 0, 1)
+Applied(map FeatureMap, affine Numbers, activation Activation) FeatureMap
+	Center.Applied(Square, (1, 0), Activation.Linear) is FeatureMap((1, 2, 3, 4), 2, 1, List(Number) + 0.5)
+	Above.Applied(Square, (1, 0), Activation.Linear).values is (0, 0, 1, 2)
+	Left.Applied(Square, (1, 0), Activation.Linear).values is (0, 1, 0, 3)
+	Center.Applied(Square, (1, -2), Activation.Relu).values is (0, 0, 1, 2)
+	let shape = (map.Height, map.width, map.channels, biases.Length, activation.kind, 1)
 	FeatureMap(Convolved(map.values, affine, weights, shape).Summed, map.width, biases.Length, biases)
 Doubled(map FeatureMap) FeatureMap
 	Convolution(Center.Folds, Center.biases).Doubled(Square).values is (1, 1, 2, 2, 1, 1, 2, 2, 3, 3, 4, 4, 3, 3, 4, 4)
 	Convolution(Above.Folds, Above.biases).Doubled(Square).values is (0, 0, 0, 0, 1, 1, 2, 2, 1, 1, 2, 2, 3, 3, 4, 4)
 	Convolution(Box.Folds, Box.biases).Doubled(Square).values(5) is 18
-	let shape = (2 * map.Height, 2 * map.width, map.channels, biases.Length, 0, 2)
+	let shape = (2 * map.Height, 2 * map.width, map.channels, biases.Length, Activation.Linear.kind, 2)
 	FeatureMap(Convolved(map.values, map.Identity, weights, shape).Summed, 2 * map.width, biases.Length, biases)
 Folds Float32s
 	Center.Folds is (0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0)

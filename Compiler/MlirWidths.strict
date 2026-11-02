@@ -46,17 +46,30 @@ Read(result Text, at Number) Texts
 	let shifted = "    " + Temp("k" + at) + " = arith.addi " + Temp("ki") + ", " + Temp("oi_" + source) + " : i64"
 	List(Text) + shifted + MlirWidths(function, position, float, "k" + at).Loaded(result, pointer, items, source)
 Widened(result Text, items Text, source Text) Texts
-	Halving.Widened("%x", "%h", "numbers") is ("    %x = arith.extf %xn : f16 to f64")
+	Halving.Widened("%x", "%h", "numbers").Last is "    %x = arith.select %f2brain_numbers, %xg, %xw : f64"
 	Sixes.Widened("%x", "%h", "numbers") is ("    %x = arith.extf %xn : f32 to f64")
 	Doubling.Widened("%x", "%h", "numbers").Length is 0
-	Singles.Widened("%x", "%h", "numbers") is ("    %x = arith.extf %xn : f16 to f32")
+	Singles.Widened("%x", "%h", "numbers").Last is "    %x = arith.select %f2brain_numbers, %xb, %xw : f32"
 	Narrowing.Widened("%x", "%h", "numbers") is ("    %x = arith.truncf %xn : f64 to f32")
 	let type = Element(source)
 	if type is float
 		return List(Text)
 	let operation = type is "f64" then " = arith.truncf " else " = arith.extf "
 	let converted = "    " + result + operation + result + "n : " + type + " to " + float
-	type is "i8" then Scaled(result, items) else List(Text) + converted
+	let other = type is "f16" then Halved(result, source) else List(Text) + converted
+	type is "i8" then Scaled(result, items) else other
+Halved(result Text, source Text) Texts
+	Halving.Halved("%x", "numbers")(4) is "    %xu = arith.shli %xe, %xc : i32"
+	Singles.Halved("%x", "numbers").Length is 7
+	let at = "    " + result
+	let half = at + "w = arith.extf " + result + "n : f16 to " + float
+	let bits = (at + "h = arith.bitcast " + result + "n : f16 to i16", at + "e = arith.extui " + result + "h : i16 to i32")
+	let shifted = (at + "c = arith.constant 16 : i32", at + "u = arith.shli " + result + "e, " + result + "c : i32")
+	let brain = at + "b = arith.bitcast " + result + "u : i32 to f32"
+	let widened = float is "f32" then List(Text) else List(Text) + (at + "g = arith.extf " + result + "b : f32 to f64")
+	let flag = "%f" + position + "brain_" + source
+	let picked = flag + ", " + result + (float is "f32" then "b, " else "g, ") + result + "w : " + float
+	(List(Text) + half + bits + shifted + brain + widened) + (at + " = arith.select " + picked)
 Scaled(result Text, items Text) Texts
 	Quartering.Scaled("%x", "%h").First is "    %xf = arith.constant 5 : i64"
 	Scaling.Scaled("%x", "%h").Last is "    %x = arith.mulf %xq, %xs : f32"

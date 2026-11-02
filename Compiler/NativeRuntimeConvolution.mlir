@@ -1,4 +1,5 @@
-  // the input of `Convolved.Summed` normed with the scales and shifts of affine (swish when asked) or the weights as they
+  // the input of `Convolved.Summed` normed with the scales and shifts of affine (activated by the Activation kind swish:
+  // 5 swish, 2 relu, 6 linear, strict_gpu_convolution runs no other) or the weights as they
   // are (normed 0), 4 numbers per thread (one vector load of bfloat16 or 32 bit floats when aligned), stored as bfloat16
   // for strict_device_convolution, every channels numbers followed by zeros up to padded (a multiple of 32)
   func.func private @strict_device_convolution_normed_run(%count: i64, %result: !llvm.ptr, %results: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %affine: !llvm.ptr, %affineCount: i64, %affineBits: i64, %channels: f64, %swish: f64, %normed: f64, %padded: f64) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
@@ -72,8 +73,16 @@
     %shifts = func.call @strict_device_convolution_four(%affine, %affineCount, %affineBits, %shiftAt, %shiftEnd) : (!llvm.ptr, i64, i64, i64, i64) -> vector<4xf32>
     %scaled = arith.mulf %numbers, %scales : vector<4xf32>
     %shifted = arith.addf %scaled, %shifts : vector<4xf32>
-    %isSwish = arith.cmpf oeq, %swish, %unit : f64
-    cf.cond_br %isSwish, ^swished, ^store(%shifted : vector<4xf32>)
+    %swishKind = arith.constant 5.0 : f64
+    %isSwish = arith.cmpf oeq, %swish, %swishKind : f64
+    cf.cond_br %isSwish, ^swished, ^rectifying
+  ^rectifying:
+    %reluKind = arith.constant 2.0 : f64
+    %isRelu = arith.cmpf oeq, %swish, %reluKind : f64
+    %zeros = arith.constant dense<0.0> : vector<4xf32>
+    %rectified = arith.maximumf %shifted, %zeros : vector<4xf32>
+    %activatedOrNot = arith.select %isRelu, %rectified, %shifted : vector<4xf32>
+    cf.br ^store(%activatedOrNot : vector<4xf32>)
   ^swished:
     %units = arith.constant dense<1.0> : vector<4xf32>
     %factors = arith.constant dense<-1.44269504> : vector<4xf32>
