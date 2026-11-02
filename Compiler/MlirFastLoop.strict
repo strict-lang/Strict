@@ -98,7 +98,7 @@ Exited Texts
 Emitted(at Number) Texts
 	Doubling.Emitted(4).First is "    %t4p = llvm.getelementptr %t2h_numbers[%t2ki] : (!llvm.ptr, i64) -> !llvm.ptr, f64"
 	Doubling.Emitted(7).Last is "    llvm.store %t7e, %t7p : f64, !llvm.ptr"
-	Halving.Emitted(4).Index("    %t4x = arith.extf %t4xn : f16 to f64") is 2
+	Halving.Emitted(4).Index("    %t4xw = arith.extf %t4xn : f16 to f64") is 2
 	Squaring.Emitted(7).First is "    %t2k7 = arith.addi %t2ki, %t2oi_input : i64"
 	let entry = function.method.instructions(at)
 	let pointer = "%t" + at + "p"

@@ -3,6 +3,7 @@ has position Number
 constant Letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHI"
 constant Widths = (16, 32, 8, 6, 4)
 constant SharedWidths = (16, 32, 8)
+constant Numbered = " = arith.constant "
 constant Summing = MlirPacked(MlirKernel.Summing.function, 1)
 constant Doubling = MlirPacked(MlirKernel.Doubling.function, 2)
 constant SecondCases = ("1024: ^ffloop1fast", "2048: ^fgloop1fast", "512: ^fhloop1fast", "384: ^filoop1fast", "256: ^fjloop1fast")
@@ -28,11 +29,21 @@ Keyed(name Text, index Number) Texts
 	let list = name is MlirFastLoop.Iterated then prefix + "v" else prefix + "l_" + name
 	let holder = prefix + "k_" + name
 	let held = "    " + holder + " = func.call @strict_list_holder(" + list + ") : (f64) -> !llvm.ptr"
-	let packed = "    " + prefix + "q" + index + " = func.call @strict_holder_packed(" + holder + ") : (!llvm.ptr) -> i64"
-	let shift = "    " + prefix + "m" + index + " = arith.constant " + 6 * index + " : i64"
-	let shifted = " = arith.shli " + prefix + "q" + index + ", " + prefix + "m" + index + " : i64"
-	let sum = " = arith.addi " + prefix + "s" + index + ", " + prefix + "w" + index + " : i64"
-	(held, packed, shift, "    " + prefix + "w" + index + shifted, "    " + prefix + "s" + (index + 1) + sum)
+	let at = "    " + prefix
+	let packed = at + "packed" + index + " = func.call @strict_holder_packed(" + holder + ") : (!llvm.ptr) -> i64"
+	let shift = at + "m" + index + " = arith.constant " + 6 * index + " : i64"
+	let shifted = at + "w" + index + " = arith.shli " + prefix + "q" + index + ", " + prefix + "m" + index + " : i64"
+	let sum = at + "s" + (index + 1) + " = arith.addi " + prefix + "s" + index + ", " + prefix + "w" + index + " : i64"
+	(held, packed) + Brained(name, index) + (shift, shifted, sum)
+Brained(name Text, index Number) Texts
+	Summing.Brained("numbers", 1)(1) is "    %f1brain_numbers = arith.cmpi eq, %f1packed1, %f1brainformat1 : i64"
+	let prefix = "%f" + position
+	let flag = prefix + "brain_" + name
+	let formats = (prefix + "brainformat" + index, prefix + "halfformat" + index)
+	let packed = prefix + "packed" + index
+	let compared = "    " + flag + " = arith.cmpi eq, " + packed + ", " + formats(0) + " : i64"
+	let chosen = "    " + prefix + "q" + index + " = arith.select " + flag + ", " + formats(1) + ", " + packed + " : i64"
+	("    " + formats(0) + Numbered + "17 : i64", compared, "    " + formats(1) + Numbered + "16 : i64", chosen)
 Case(source Number) Texts
 	Summing.Case(1) is SecondCases
 	for Widths
