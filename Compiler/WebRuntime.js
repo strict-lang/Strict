@@ -31,7 +31,7 @@ addToLibrary({
 	$strictInput: { lines: [], current: '', waiting: null },
 	$strictInput__postset: "Module['strictInput'] = (text) => { strictInput.lines.push(String(text)); " +
 		"const waiting = strictInput.waiting; strictInput.waiting = null; if (waiting) waiting(); };",
-	strict_webinput_length__deps: ['$strictInput', '$Asyncify', '$lengthBytesUTF8'],
+	strict_webinput_length__deps: ['$strictInput', '$Asyncify', '$lengthBytesUTF8', 'strict_webfile_upload'],
 	strict_webinput_length__async: true,
 	strict_webinput_length: () => Asyncify.handleSleep((wakeUp) => {
 		const taken = () => {
@@ -45,6 +45,17 @@ addToLibrary({
 	}),
 	strict_webinput_copy__deps: ['$strictInput', '$stringToUTF8'],
 	strict_webinput_copy: (target, size) => stringToUTF8(strictInput.current, target, size),
+	// a file the page hands in with Module.strictFile(name, arrayBuffer) (an upload: a LoRA, a workflow) is written into
+	// the file system of the program (folders of name created), which reads it like any other file; linked with
+	// Process.InputLine, which tells the program about it
+	strict_webfile_upload__deps: ['$FS'],
+	strict_webfile_upload__postset: "Module['strictFile'] = (name, buffer) => _strict_webfile_upload(name, buffer);",
+	strict_webfile_upload: (name, buffer) => {
+		const path = String(name), folder = path.substring(0, path.lastIndexOf('/'));
+		if (folder)
+			FS.mkdirTree(folder);
+		FS.writeFile(path, new Uint8Array(buffer));
+	},
 	strict_webgpu_ready__deps: ['$strictWebGpu', '$UTF8ToString'],
 	strict_webgpu_ready: (name) => {
 		const shaders = Module['strictShaders'], key = UTF8ToString(name);
