@@ -14903,6 +14903,8 @@
   // the device block of class goes back (strict_gpu_give) in the first collection that finds object unmarked
   func.func private @strict_gpu_reside(%object: i64, %device: i64, %class: i64) {
     %one = arith.constant 1 : i64
+    %touchedSlot = llvm.mlir.addressof @strict_gpu_touched : !llvm.ptr
+    llvm.store %one, %touchedSlot : i64, !llvm.ptr
     %three = arith.constant 3 : i64
     %eight = arith.constant 8 : i64
     %residing = llvm.mlir.addressof @strict_gpu_residing : !llvm.ptr
@@ -20262,6 +20264,8 @@
   func.func private @strict_gpu_remember(%list: f64, %kind: i64, %count: i64, %out: !llvm.ptr, %pool: i64) {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
+    %touchedSlot = llvm.mlir.addressof @strict_gpu_touched : !llvm.ptr
+    llvm.store %one, %touchedSlot : i64, !llvm.ptr
     %probes = arith.constant 16 : i64
     %latest = arith.constant 9223372036854775807 : i64
     %listBits = arith.bitcast %list : f64 to i64
@@ -20318,14 +20322,20 @@
     llvm.store %pool, %poolSlot : i64, !llvm.ptr
     return
   }
-  // a program that never opened the GPU has no entries, spills or residents: its collections skip the 65536 entries
+  // a program that never opened the GPU and never kept a list on it has no entries, spills or residents: its
+  // collections skip the 65536 entries (WebGPU keeps lists without opening the GPU: strict_gpu_touched)
+  llvm.mlir.global internal @strict_gpu_touched(0 : i64) : i64
   func.func private @strict_gpu_sweep(%full: i1) {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %entries = arith.constant 65536 : i64
     %stateSlot = llvm.mlir.addressof @strict_gpu_state : !llvm.ptr
     %state = llvm.load %stateSlot : !llvm.ptr -> i64
-    %untried = arith.cmpi eq, %state, %none : i64
+    %touchedSlot = llvm.mlir.addressof @strict_gpu_touched : !llvm.ptr
+    %touched = llvm.load %touchedSlot : !llvm.ptr -> i64
+    %unopened = arith.cmpi eq, %state, %none : i64
+    %untouched = arith.cmpi eq, %touched, %none : i64
+    %untried = arith.andi %unopened, %untouched : i1
     cf.cond_br %untried, ^skipped, ^next(%none : i64)
   ^skipped:
     return
