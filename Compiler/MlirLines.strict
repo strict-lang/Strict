@@ -76,21 +76,19 @@ Indexes(places Texts) Numbers
 Places(functions List(MlirFunction), names Texts, files Texts) Texts
 	MlirLines.Places((Lined, Unlined), ("Strict/Shape"), ("Shape.strict")) is ("Shape.strict:2", "Shape.strict:3")
 	mutable places = List(Mutable(Text))
-	for functions
-		for MlirLines(value, names, files).Placed
-			if value is not in places
-				places.Add(value)
+	for emitted, place in functions, MlirLines(emitted, names, files).Placed
+		if place is not in places
+			places.Add(place)
 	places
 Uncompiled(functions List(MlirFunction), mains List(TypeEntry)) List(MlirFunction)
 	MlirLines.Uncompiled(List(MlirFunction) + Lined, List(TypeEntry) + Shaped).Length is 1
 	MlirLines.Uncompiled(List(MlirFunction) + Lined, (Shaped, Shaped)).Length is 2
 	let symbols = MlirModule.Counters.Symbols(functions)
 	mutable uncompiled = List(Mutable(MlirFunction))
-	for mains
-		for value.methods
-			let candidate = MlirFunction(functions.First.types, outer, value)
-			if candidate.Symbol is not in symbols
-				uncompiled.Add(candidate)
+	for main, method in mains, main.methods
+		let candidate = MlirFunction(functions.First.types, main, method)
+		if candidate.Symbol is not in symbols
+			uncompiled.Add(candidate)
 	uncompiled
 Counted(functions List(MlirFunction), mains List(TypeEntry), files Texts) List(MlirFunction)
 	MlirLines.Counted(Shapes, List(TypeEntry) + MlirFunction.Shape, ("Shape.strict")).First.lineSlots is (0, 1)

@@ -20,7 +20,6 @@ Blurred(bitmap Bitmap) Colors
 		Neighbors(bitmap, index).Average
 Neighbors(bitmap Bitmap, pixel Number) Colors
 	BenchBlur.Neighbors(Bitmap.Tiny, 0).Length is 9
-	for Range(-Radius, Radius + 1)
-		for Range(-Radius, Radius + 1)
-			if bitmap.IsInside(pixel, value, outer)
-				bitmap.Colors(pixel + outer * bitmap.Size.Width + value)
+	for y, x in Range(-Radius, Radius + 1), Range(-Radius, Radius + 1)
+		if bitmap.IsInside(pixel, x, y)
+			bitmap.Colors(pixel + x + y * bitmap.Size.Width)

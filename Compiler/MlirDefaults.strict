@@ -40,9 +40,8 @@ ParameterGlobals Texts
 ParameterTexts Texts
 	Greets.ParameterTexts is ("Hi")
 	mutable texts = List(Mutable(Text))
-	for function.types
-		for value.methods
-			texts = Added(texts, value.parameters)
+	for type, method in function.types, type.methods
+		texts = Added(texts, method.parameters)
 	texts
 Added(texts Texts, parameters List(MemberEntry)) Texts
 	Greets.Added(List(Text), Greeting.methods.First.parameters) is ("Hi")

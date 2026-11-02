@@ -12,10 +12,9 @@ Read(inspected MlirFunction, depth Number) Texts
 	if (depth > 2) or (inspected.type.members.Length < 2)
 		return List(Text)
 	mutable names = Direct(inspected)
-	for inspected.method.instructions
-		for Inner(inspected, index, depth)
-			if value is not in names
-				names = names + value
+	for position, name in inspected.method.instructions.Length, Inner(inspected, position, depth)
+		if name is not in names
+			names = names + name
 	names
 Direct(inspected MlirFunction) Texts
 	Heading.Direct(Head) is ("heads", "weights")
@@ -69,10 +68,9 @@ Calling(first Number, limit Number, known Texts) Texts
 	Heading.Calling(3, 7, List(Text)) is ("heads", "weights")
 	Heading.Calling(3, 7, ("heads", "weights")).Length is 0
 	mutable names = List(Text)
-	for Range(first, limit)
-		for Inner(function, value, 0)
-			if (value is not in names) and (value is not in known)
-				names = names + value
+	for position, name in Range(first, limit), Inner(function, position, 0)
+		if (name is not in names) and (name is not in known)
+			names = names + name
 	names
 Typed(float Text) Texts
 	MlirDeviceMembers(Head).Typed("f64") is ("%m0: f64", "%m1_d: !llvm.ptr", "%m1_n: i64", "%m1_b: i64")

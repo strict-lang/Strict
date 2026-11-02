@@ -63,7 +63,14 @@ StatementText Text
 		return ChildText(0, 0) + " = " + ChildText(1, 0)
 	if (HasValue is false) or (Kind is not in keywordKinds)
 		return text
-	(text is "" then keywordTexts(keywordKinds.Index(Kind)) else text) + " " + ChildText(0, 0)
+	(text is "" then keywordTexts(keywordKinds.Index(Kind)) else text) + " " + ValuesText
+ValuesText Text
+	SyntaxNode("For", "for y, x in", (SyntaxNode("Number", "2"), SyntaxNode("Number", "3"))).ValuesText is "2, 3"
+	SyntaxNode("For", "", (SyntaxNode("Number", "2"), SyntaxNode("Body", ""))).ValuesText is "2"
+	SyntaxNode("Return", "", (SyntaxNode("Number", "1"), SyntaxNode("Number", "1"))).ValuesText is "1"
+	if Kind is not "For"
+		return ChildText(0, 0)
+	SyntaxNode("List", "", HasBody then children.Slice(0, children.Length - 1) else children).ArgumentsText(0)
 ChildText(childIndex Number, minimumPrecedence Number) Text
 	SyntaxNode("Not", "", (SyntaxNode("Identifier", "a"), SyntaxNode("Identifier", "a"))).ChildText(0, 15) is "a"
 	let child = children(childIndex)

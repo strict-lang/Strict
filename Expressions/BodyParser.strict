@@ -12,9 +12,10 @@ Block(start Number, depth Number) SyntaxNode
 Method(start Number) SyntaxNode
 	BodyParser(Positions).Method(1).Lines("\t") is Inlined
 	BodyParser("Area = Width * Height").Method(1).Lines("\t") is List(Text) + "\tWidth * Height"
+	BodyParser("Run", "\tfor y, x in height, width", "\t\ty + x").Method(1).Lines("\t").Last is "\t\t\touter + value"
 	if (start > 0) and TypeShape(lines).IsComputed(lines(start - 1))
 		return Computed(start - 1)
-	Definitions(lines).Inlined(Block(start, 1), start)
+	NamedIterators.Unrolled(Definitions(lines).Inlined(Block(start, 1), start))
 Computed(header Number) SyntaxNode
 	BodyParser("Next(add = 1) = add + 1").Computed(0).children.First to Text is "add + 1"
 	let tokens = Tokenizer(lines(header)).Tokens

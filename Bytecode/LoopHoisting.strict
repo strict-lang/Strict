@@ -13,10 +13,9 @@ Hoisted(body SyntaxNode, block CodeBlock) SyntaxNode
 	Hoisting.Hoisted(Shadowing, Bag).children(0) to Text is "let bagsValues = bags.values"
 	Hoisting.Hoisted(Shadowing, Bag).children.Length is 2
 	mutable statements = List(Mutable(SyntaxNode))
-	for body.children
-		for value.Kind is "For" then Lifted(value, block) else List(SyntaxNode) + value
-			if (value.Kind is not "Declaration") or (value is not in statements)
-				statements.Add(value)
+	for child, lifted in body.children, (child.Kind is "For" then Lifted(child, block) else List(SyntaxNode) + child)
+		if (lifted.Kind is not "Declaration") or (lifted is not in statements)
+			statements.Add(lifted)
 	SyntaxNode("Body", body.text, statements, body.line)
 Lifted(loop SyntaxNode, block CodeBlock) SyntaxNodes
 	Hoisting.Lifted(Looping.children(0), Bag).Length is 2

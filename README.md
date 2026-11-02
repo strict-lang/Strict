@@ -209,6 +209,12 @@ if operation is
 	for (1, 2, 3)
 		logger.Log(index + ": " + value)
 ```
+A single iterator is always `value`, two or more are named in one `for` instead of nesting loops: `for y, x in Height, Width` runs the loop of x for every y (each iterator can use the names before it: `for type, method in types, type.methods`), `for width, height in sizes` names the parts of each element.
+```
+	for y, x in Range(-Radius, Radius + 1), Range(-Radius, Radius + 1)
+		if bitmap.IsInside(pixel, x, y)
+			bitmap.Colors(pixel + x + y * bitmap.Size.Width)
+```
 `for 10` counts from 0 to 9, `for Range(2, 5)` gives 2, 3 and 4, iterating an enum (a type of only constants) gives its constants. `for as long as condition` repeats while the condition holds:
 ```
 GCD Number

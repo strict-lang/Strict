@@ -6,6 +6,8 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - Routed attention (routing > 0) with strided values (valueOffset/valueStride) runs unrouted: `strict_gpu_attention` takes the routed 8 bit path only for packed values, so H3Block.Heads with V read from the combined list attends densely (6 s slower, 12.9 dB from the routed result), routing 0 is bit-identical; the per-token value quantization (`strict_device_quantize_rows_run`) and the pooled value means need strided rows, H3 keeps the copy until then.
 - A Run program that makes its own type with a logger and a `with value.Bits is 32` member crashes natively (AccessViolation): `has logger`, `has scale Number with value.Bits is 32`, Run `WebScaled(logger, 3).Scaled(1000000)`; without the constraint it runs, a test `Scaling(3).Scaled(4)` passes natively.
 - `Validators/verify-suggestions.py` fails at its recursive dispatcher case: `strict suggest Wrapper.strict` prints the TestDurationMustNotExceedHundredMilliseconds failure of `Wrapper(Dispatcher(1)).Clamped` instead of nothing.
+- `let outer = Iterated(lines(at))` in a method without a loop compiles, but every later `outer` reads the instance (a type of one member: the member) instead of the variable; LoopNameMustNotBeDeclared only reports it in methods with a `for`.
+- A `Name.ptx` left next to an executable by a build from before obj/ (Strict.ptx next to strict.exe, ImageProcessing/BenchBlur.ptx) wins over the current obj/Name.ptx: the rebuilt program stops with "was built for another program or version"; skip or delete a stale sidecar instead.
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).
@@ -17,6 +19,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - f32 kernels: a GPU loop reading a `value.Bits is 32` member computes in f32 (WGSL on WebGPU, the 32 bit CUDA kernel natively); WGSL lacks Sin, Cos, Logarithm, `from` calls, Bytes results and rows.
 - MossImage in the browser (prompt in, encoder, Moss and VAE cached in OPFS, WebGPU like FractalZoomer), VAE decode first: Convolved.Summed, Products.Multiplied and Softmax.Shares run as WGSL kernels (Compiler/NativeRuntimeWgsl.js), the 720x1280 decode still fails: the 1 GB web heap runs out (3 GB got through the attention), every kernel copies its lists through wasm memory; next results kept in GPU buffers, faster convolutions (f16, larger tiles), OPFS for the big models.
 - Native symbols, register kinds and helpers use the short type name, so one executable cannot hold two packages' types of the same name: qualify the symbols of a type whose short name is taken.
+- Named iterators over counts (`for row, column in rows, width`) as one flat loop of rows * width with the names from the index (parallel, GPU kernel), then the `(index / n).Floor` and `index % n` loops of NeuralNetworks, Math/Matrix and the image decoders can name their iterators without losing their kernels.
 
 ## Waiting
 - Later: Qwen3-Coder-Next 80B-A3B and Qwen3-Coder-30B with all experts, image blur on the GPU, Apple Silicon, AMD GPUs, batched training ideas.

@@ -2,9 +2,8 @@ has Width Number with value > 0 and value.Bits is 32
 has Height Number with value > 0 and value.Bits is 32
 has iterator
 for Iterator(Vector2)
-	for Height
-		for Width
-			Vector2(index, outer.index)
+	for y, x in Height, Width
+		Vector2(x, y)
 in(element Vector2) Boolean
 	Vector2(1, 1) is in Size(2, 2)
 	Vector2(2, 0) is not in Size(2, 2)

@@ -1,6 +1,6 @@
 has lines Texts
 has folder = ""
-constant Sums = ("Sums(bitmap Bitmap, pixel Number) Number", "\tmutable sum = 0", "\tfor Range(-1, 2)", "\t\tfor Range(-1, 2)", "\t\t\tif bitmap.IsInside(pixel, value, outer)", "\t\t\t\tsum = sum + bitmap.Colors(pixel + outer * bitmap.Size.Width + value).Red", "\tsum")
+constant Sums = ("Sums(bitmap Bitmap, pixel Number) Number", "\tmutable sum = 0", "\tfor y, x in Range(-1, 2), Range(-1, 2)", "\t\tif bitmap.IsInside(pixel, x, y)", "\t\t\tsum = sum + bitmap.Colors(pixel + x + y * bitmap.Size.Width).Red", "\tsum")
 constant Blurring = Callees(Sums, "ImageProcessing")
 constant Inside = "\tcolumn >= 0 and column < Size.Width and row >= 0 and row < Size.Height"
 Lines(receiver Text, method Text, at Number) Texts
@@ -73,10 +73,10 @@ Depth(line Text) Number
 	Blurring.Depth("\t\tx") is 2
 	line.Length - line.TrimStart.Length
 BlockEnd(at Number) Number
-	Blurring.BlockEnd(2) is 6
-	Blurring.BlockEnd(4) is 6
-	Blurring.BlockEnd(6) is 7
-	Blurring.BlockEnd(0) is 7
+	Blurring.BlockEnd(2) is 5
+	Blurring.BlockEnd(4) is 5
+	Blurring.BlockEnd(5) is 6
+	Blurring.BlockEnd(0) is 6
 	for Range(at + 1, lines.Length)
 		if Depth(lines(value)) <= Depth(lines(at))
 			return value

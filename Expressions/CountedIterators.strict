@@ -1,0 +1,51 @@
+has names Texts
+has line Number = 0
+constant Grid = CountedIterators(("y", "x"))
+constant Eights = (SyntaxNode("Number", "8"), SyntaxNode("Number", "8"))
+constant Cubed = (SyntaxNode("Number", "2"), SyntaxNode("Number", "3"), SyntaxNode("Number", "4"))
+constant Dotting = BodyParser("Run", "\tfor y, x in 8, 8", "\t\tDot(values, y * 8, 1, x)").Block(1, 1).children(0).children.Last
+constant Indexing = BodyParser("Run", "\tindex").Block(1, 1)
+constant LoopVariables = NamedIterators(("value", "outer", "index"))
+constant Flat = ("\tlet y = (index / 8).Floor", "\tlet x = index % 8", "\tDot(values, y * 8, 1, x)")
+IsFlat(iterables SyntaxNodes, body SyntaxNode) Boolean
+	CountedIterators.IsFlat(Eights, Dotting)
+	CountedIterators.IsFlat((SyntaxNode("Number", "8"), SyntaxNode("Identifier", "width")), Dotting) is false
+	CountedIterators.IsFlat((SyntaxNode("Number", "2.5"), SyntaxNode("Number", "8")), Dotting) is false
+	CountedIterators.IsFlat(Eights, Indexing) is false
+	for iterables
+		if (value.Kind is not "Number") or (Count(value) < 0)
+			return false
+	LoopVariables.Mentions(body).Length is 0
+Count(literal SyntaxNode) Number
+	CountedIterators.Count(SyntaxNode("Number", "8")) is 8
+	CountedIterators.Count(SyntaxNode("Number", "2.5")) is -1
+	CountedIterators.Count(SyntaxNode("Number", "-3")) is -1
+	let count = literal.text to Number
+	(count >= 0) and (count % 1 is 0) and (count to Text is literal.text) then count else -1
+Flattened(iterables SyntaxNodes, body SyntaxNode) SyntaxNode
+	Grid.Flattened(Eights, Dotting).children(0) to Text is "64"
+	Grid.Flattened(Eights, Dotting).children.Last.Lines("\t") is Flat
+	let checked = NamedIterators(names, line).Renamed(body, 0)
+	let declarations = Declarations(iterables, NamedIterators(names, line).Mentions(checked))
+	let flat = SyntaxNode("Body", "", declarations + checked.children, body.line)
+	SyntaxNode("For", "", (SyntaxNode("Number", Product(iterables, 0) to Text), flat), line)
+Declarations(iterables SyntaxNodes, mentioned Texts) SyntaxNodes
+	Grid.Declarations(Eights, List(Text) + "x").First to Text is "let x = index % 8"
+	for names
+		if value is in mentioned
+			NamedIterators(names, line).Declared(value, SyntaxParser(Tokenizer(Strided(iterables, index)).Tokens).Parse)
+Strided(iterables SyntaxNodes, position Number) Text
+	Grid.Strided(Eights, 0) is "(index / 8).Floor"
+	Grid.Strided(Eights, 1) is "index % 8"
+	Grid.Strided(Cubed, 1) is "(index / 4).Floor % 3"
+	let stride = Product(iterables, position + 1)
+	let divided = stride is 1 then "index" else "(index / " + stride + ").Floor"
+	position is 0 then divided else divided + " % " + Count(iterables(position))
+Product(iterables SyntaxNodes, start Number) Number
+	CountedIterators.Product(Eights, 0) is 64
+	CountedIterators.Product(Cubed, 1) is 12
+	CountedIterators.Product(Eights, 2) is 1
+	mutable product = 1
+	for Range(start, iterables.Length)
+		product = product * Count(iterables(value))
+	product
