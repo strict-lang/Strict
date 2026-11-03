@@ -45,12 +45,12 @@ The base types are the documentation: every method starts with tests showing how
 ## Command line
 `strict` (`strict.exe` on Windows) is in this folder next to the base types, put it on the PATH. No .NET or other runtime is needed (the C# implementation that bootstrapped Strict is commit [4e4fc3da](https://github.com/strict-lang/Strict/tree/4e4fc3da6da3075da38dc3bd2f683ef27e34b26c) in the history).
 ```
-strict Examples/Sum.strict 5 10 20        run on the Strict VM, arguments go to Run
+strict Examples/Sum.strict 5 10 20        run Examples/Sum.exe with these arguments, built first when outdated (or `strict Sum` in Examples)
 strict test Examples/Sum.strict           explicitly run this file, including Slow tests, on the VM
 strict test Examples/Sum.strict Run       explicitly run the tests of one method
 strict test Examples/Sum.strict unit      run only unit tests (a folder on the VM too)
 strict build Examples/Sum.strict          pass cached or current unit tests, then build Examples/Sum.exe
-strict FractalZoomer web                  build FractalZoomer.strict of this folder like strict build, any platform option
+strict build FractalZoomer web            build FractalZoomer.strict of this folder for a platform (web, linux, windows, android, ios)
 strict build Examples/Sum.strict windows  also the executable in Release/Windows (Release/<Platform> on other systems)
 strict build Examples/Sum.strict linux    also the Linux executable in Release/Linux (on Windows through WSL)
 strict build Examples/Sum.strict web      .html, .js and .wasm for the browser in Release/Web (Emscripten, installed when missing)
@@ -70,7 +70,7 @@ strict test Examples/Sum.strict values    run the tests on the Strict VM, then s
 strict update .                           copy or download the packages of a folder again
 strict version                            version and build time of this strict
 ```
-- strict works from the project folder of its file (the nearest folder above with a `.git`), so `strict Name` in a game folder builds with the packages of its project. `strict build` needs the file's unit tests to pass on the VM first, a type without `Run` produces its unit-test executable. Test failures and toolchain errors fail the command.
+- `strict <file or Type> [arguments]` always runs the fastest way: a program runs its executable for this platform, built first when it is missing or older than its sources (the check of `strict build`), in the folder strict was started in; a type without `Run` runs its native tests (`.test.exe`), built first when outdated, and while they passed and nothing changed it reports them passed without running them again. Other platforms need `strict build <file or Type> <platform>`. strict works from the project folder of its file (the nearest folder above with a `.git`), so `strict Name` in a game folder builds with the packages of its project. `strict build` needs the file's unit tests to pass on the VM first, a type without `Run` produces its unit-test executable. Test failures and toolchain errors fail the command.
 - Build outputs: a console program builds next to its source (`Examples/Sum.exe`, Linux and macOS without extension), a windowed one also into `Release/<Platform>` with its Content, every platform build (`windows`, `linux`, `web`, `android`, `ios`) into `Release/<Platform>`, desktop ones with their GPU code (`.ptx`, `.fatbin`) next to the executable so the folder runs on another PC. Everything else a build or test run writes (`.strictbinary`, `.mlir`, `.ptx`, `.fatbin`, `.nativecache`, test executables, ...) goes into `obj/` next to the source; a program reads its GPU code from next to it or from that `obj/`.
 - Files whose tests passed on the VM get an `obj/Name.strictbinary` (bytecode of all used types): while it is up to date `strict test` reports them as passed right away and running and building reuse it. Desktop builds and native tests keep a `.nativecache` stamp and print `Up to date` when nothing changed.
 - `strict build` and `strict test ... lines` run `Compiler/NativeCompiler.exe`. When a file of `Compiler/`, `Bytecode/` or `Expressions/` or a `Compiler/NativeRuntime*.mlir` is newer than it, they build the compiler again first.
@@ -123,7 +123,7 @@ Builds, checks, folder tests on the VM, VS Code typing checks and value tracing 
 | `Expressions` | Tokenizer, syntax tree, statements, type shapes, known types and type inference over all packages |
 | `Validators` | Unused and never changed variables, constant folding, limits (`strict check`) |
 | `Bytecode` | Compiles a type into register based instructions, inlines constants, removes tests, links used types, the `.strictbinary` cache |
-| `Runtime` | The Strict VM running those instructions (`strict <file>` and `strict test`) |
+| `Runtime` | The Strict VM running those instructions (`strict test` and the VS Code extension) |
 | `Compiler` | Instructions to MLIR, the runtime in `NativeRuntime*.mlir`, GPU kernels, mlir-opt, mlir-translate and clang |
 
 Details are in the README of each package. Open work is in [improvements.md](improvements.md) in priority order, open performance work in [performance.md](performance.md).

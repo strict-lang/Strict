@@ -3,8 +3,9 @@ constant Version = "1.0"
 constant Commands = ("build", "test", "check", "update", "format", "suggest")
 constant MaxWait = 300
 constant Informing = ("version", "--version", "help", "--help")
-constant Help = ("strict <file> [arguments]  run the Run method on the Strict VM, the fastest, everything stays in memory", "strict <Type> [platform]   build and package the program Type.strict (strict build Type.strict [platform])", "strict build <file>        compile a native executable without running tests (Name.test without Run)", "strict build <file> linux  also the Linux executable (on Windows through WSL)", "strict build <file> web  build Name.html, .js and .wasm for the browser (Emscripten in Tools/emsdk)", "strict build <file> android  build an arm64-v8a shared library and stage Release/Android (Android NDK)", "strict build <file> ios    build an arm64 iOS static archive and stage Release/iOS (native packages need Xcode)", "strict build <file> library  build a shared library of its public methods and a C# binding", "strict test <file>         run the inline tests of every method on the Strict VM", "strict test <file> native  build and run its native tests explicitly", "strict test <folder> --no-recursive  test only files directly in folder", "strict test <file> -       test the source read from standard input as <file>, nothing is written", "strict test <file> lines   run them natively and print how often and how long each line ran (a folder: one build)", "strict test <file> values  run them on the Strict VM and print how often each line ran and the value it set", "strict check <folder>      validate the .strict files: type rules, unused members, limits", "strict format <file>       print the file in its canonical form, each method body as the parser reads it", "strict update <folder>     refresh the packages copied into the folder (.origin) from their clone or GitHub", "strict version             show the version number and when this strict executable was built", "strict suggest <file> <method>  print bodies passing its tests; add - to read unsaved source")
+constant Help = ("strict <file or Type> [arguments]  run the program natively (built first when outdated); a type without Run runs its native tests, not again while they passed and nothing changed", "strict build <file or Type>  compile a native executable without running tests (Name.test without Run)", "strict build <file> linux  also the Linux executable (on Windows through WSL)", "strict build <file> web  build Name.html, .js and .wasm for the browser (Emscripten in Tools/emsdk)", "strict build <file> android  build an arm64-v8a shared library and stage Release/Android (Android NDK)", "strict build <file> ios    build an arm64 iOS static archive and stage Release/iOS (native packages need Xcode)", "strict build <file> library  build a shared library of its public methods and a C# binding", "strict test <file>         run the inline tests of every method on the Strict VM", "strict test <file> native  build and run its native tests explicitly", "strict test <folder> --no-recursive  test only files directly in folder", "strict test <file> -       test the source read from standard input as <file>, nothing is written", "strict test <file> lines   run them natively and print how often and how long each line ran (a folder: one build)", "strict test <file> values  run them on the Strict VM and print how often each line ran and the value it set", "strict check <folder>      validate the .strict files: type rules, unused members, limits", "strict format <file>       print the file in its canonical form, each method body as the parser reads it", "strict update <folder>     refresh the packages copied into the folder (.origin) from their clone or GitHub", "strict version             show the version number and when this strict executable was built", "strict suggest <file> <method>  print bodies passing its tests; add - to read unsaved source")
 Run(arguments Texts) Number
+	let folder = Directory.Current
 	let given = Projected(arguments)
 	let command = given.Length > 0 then given(0) else "help"
 	let rest = Rooted(command is in Commands then Rest(given) else given)
@@ -14,12 +15,10 @@ Run(arguments Texts) Number
 		return command is in Informing then 0 else 2
 	if command is in ("check", "update", "format", "suggest")
 		return Tool(command, rest)
-	if command is "test"
-		return Tested(rest)
-	command is "build" then Native(command, rest) else Execute(logger, "*").Run(rest)
+	command is "test" then Tested(rest) else (command is "build" then Native(command, rest) else Launched(rest, folder))
 Message(command Text, rest Texts) Text
 	Strict.Message("version", List(Text)).StartsWith(Version + " 20")
-	Strict.Message("help", List(Text)).StartsWith("strict <file> [arguments]  run")
+	Strict.Message("help", List(Text)).StartsWith("strict <file or Type> [arguments]  run")
 	Strict.Message("test", ("a.strict", ".")) is "a.strict not found"
 	Strict.Message("test", ("Compiler", ".")) is ""
 	Strict.Message("check", ("Compiler", ".")) is ""
@@ -52,17 +51,31 @@ Rooted(arguments Texts) Texts
 	(List(Text) + arguments(0) + TypeSource.Root) + Rest(arguments)
 Projected(arguments Texts) Texts
 	Strict(Logger).Projected(("test", "Examples/Sum.strict")) is ("test", "Examples/Sum.strict")
-	Strict(Logger).Projected(("Examples/Sum", "web")) is ("build", "Examples/Sum.strict", "web")
-	let isNamed = (arguments.Length > 0) and (arguments(0) is not in Commands) and File(arguments(0) + ".strict").Exists
-	let given = isNamed then (List(Text) + "build" + (arguments(0) + ".strict")) + Rest(arguments) else arguments
-	let at = (given.Length > 0) and (given(0) is in Commands) then 1 else 0
-	let source = given.Length > at then given(at) else ""
+	Strict(Logger).Projected(("Examples/Sum", "5")) is ("Examples/Sum.strict", "5")
+	Strict(Logger).Projected(("build", "Examples/Sum", "web")) is ("build", "Examples/Sum.strict", "web")
+	let at = (arguments.Length > 0) and (arguments(0) is in Commands) then 1 else 0
+	let named = arguments.Length > at then arguments(at) else ""
+	let source = File(named + ".strict").Exists then named + ".strict" else named
 	let project = source.EndsWith(".strict") then TypeSource.Project(source) else ""
 	let full = TypeSource.Absolute(source)
-	if (project is "") or (Directory.Change(project) is false)
-		return given
-	for given
-		index is at then TypeSource.Relative(full) else value
+	let isMoved = (project is not "") and Directory.Change(project)
+	for arguments
+		index is at then (isMoved then TypeSource.Relative(full) else source) else value
+Joined(arguments Texts) Text
+	Strict.Joined(("a b", "c")) is " \"a b\" c"
+	mutable joined = ""
+	for arguments
+		joined = joined + " " + (value.IndexOf(" ") >= 0 then "\"" + value + "\"" else value)
+	joined
+Launched(rest Texts, folder Text) Number
+	if NativeBuild.IsProgram(rest(0)) is false
+		return Native("test", (rest(0), rest(1), "native"))
+	let built = Native("build", (rest(0), rest(1)))
+	let program = TypeSource.Absolute(Toolchain(Platform.Current, rest(1)).Executable(NativeBuild.Output(rest(0), true)))
+	if built is not 0
+		return built
+	Directory.Change(folder)
+	Process(program).Started(Joined(rest.Slice(2, rest.Length - 2)).Trim)
 Rest(arguments Texts) Texts
 	Strict.Rest(("test", "a", "b")) is ("a", "b")
 	for Range(1, arguments.Length)
