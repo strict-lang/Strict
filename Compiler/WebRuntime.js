@@ -27,7 +27,7 @@ addToLibrary({
 		halves: {}, uploads: {}, views: [], borrowed: {}, lent: {}, dropped: {}, sixteens: {}, compiling: {},
 		encoder: null, recorded: 0, fresh: 0, unused: [], staging: { current: null, full: [], free: [] }, pool: {},
 		pooled: new WeakSet(), pooledBytes: 0, pass: null, prelude: null, flags: new WeakSet(), flagsUsed: [], flagPool: [],
-		layout: null },
+		layout: null, lazy: {} },
 	// kernels and copies are recorded into one command encoder, submitted before the host reads a result or after 64
 	// dispatches (a submit per dispatch spent most of the time in Chrome's GPU process, Moss sampled 15 times slower than
 	// natively); a kernel's numbers, places and the work of each dispatch get their own part of a staging buffer, which is
@@ -383,25 +383,26 @@ addToLibrary({
 		return isFailed ? 0 : 1;
 	},
 	$strictWebGpuStarted__deps: ['$strictWebGpu', '$strictWebGpuRun', '$UTF8ToString', '$Asyncify'],
-	$strictWebGpuStarted: (name, count, inputs, output, bits) => Asyncify.handleSleep((wakeUp) => {
+	$strictWebGpuStarted: (name, count, inputs, output, bits, placed) => Asyncify.handleSleep((wakeUp) => {
 		const key = UTF8ToString(name);
-		strictWebGpuRun(key, count, inputs(key), output, bits).then(wakeUp, (error) => {
+		const running = (placed || Promise.resolve()).then(() => strictWebGpuRun(key, count, inputs(key), output, bits));
+		running.then(wakeUp, (error) => {
 			console.error('WebGPU kernel ' + key + ' runs on the CPU: ' + error);
 			strictWebGpu.pipelines[key] = null;
 			wakeUp(0);
 		});
 	}),
-	strict_webgpu_kernel__deps: ['$strictWebGpuStarted', '$strictWebGpuKernelInputs'],
+	strict_webgpu_kernel__deps: ['$strictWebGpuStarted', '$strictWebGpuKernelInputs', '$strictWebGpuPlacedInputs'],
 	strict_webgpu_kernel__async: true,
-	strict_webgpu_kernel: (name, count, table, slots, bits) =>
-		strictWebGpuStarted(name, count, () => strictWebGpuKernelInputs(count, table >>> 0, slots), 0, bits),
+	strict_webgpu_kernel: (name, count, table, slots, bits) => strictWebGpuStarted(name, count,
+		() => strictWebGpuKernelInputs(count, table >>> 0, slots), 0, bits, strictWebGpuPlacedInputs(table >>> 0, slots)),
 	// the numbers of a kept kernel result (strict_gpu_web_get) as bits into target: 1, 2 when its loop read outside of a
 	// list, 0 when the buffer is gone
 	strict_webgpu_download__deps: ['$strictWebGpu', '$strictWebGpuWritten', '$strictWebGpuWidened', '$strictWebGpuEncoder',
-		'$strictWebGpuFlush', '$Asyncify', '$strictWebGpuBuffer', '$strictWebGpuDestroyed'],
+		'$strictWebGpuFlush', '$Asyncify', '$strictWebGpuBuffer', '$strictWebGpuDestroyed', '$strictWebGpuPlaced'],
 	strict_webgpu_download__async: true,
-	strict_webgpu_download: (handle, target, count, bits) => Asyncify.handleSleep((wakeUp) => {
-		const source = strictWebGpu.buffers[handle], device = strictWebGpu.device;
+	strict_webgpu_download: (handle, target, count, bits) => Asyncify.handleSleep((wakeUp) =>
+		strictWebGpuPlaced(handle).then((source) => {
 		if (!source)
 			return wakeUp(0);
 		const isHalved = handle in strictWebGpu.halves, bytes = isHalved ? Math.ceil(count / 2) * 4 : count * 4;
@@ -420,7 +421,7 @@ addToLibrary({
 			console.error('WebGPU result could not be read: ' + error);
 			wakeUp(0);
 		});
-	}),
+	})),
 	// a new kept result of the numbers of the left one and then of the right one (strict_gpu_web_joined), 0 on failure or
 	// when the halves of both would not line up (the host then joins them)
 	strict_webgpu_joined__deps: ['$strictWebGpu', '$strictWebGpuEncoder', '$strictWebGpuFlag'],
@@ -655,24 +656,17 @@ addToLibrary({
 	// the 8 bit rows of a matrix at offset of the file at url straight into a new kept WebGPU buffer: the codes of the rows
 	// as they are in the file (rowBytes a row, 4 bit codes stay two in a byte), written from the read blocks without a
 	// copy, then the 32 bit scale of every row from scales (strict_eights reads that layout when a row is only its codes):
-	// its handle, 0 on failure
-	strict_webfile_rows__deps: ['$strictWebGpu', '$strictWebGpuDevice', '$strictWebFileRange', '$UTF8ToString', '$Asyncify',
-		'$strictWebGpuFlag'],
+	// its handle, 0 on failure; the buffer is made only when a kernel, a download or a whole borrow first uses the rows as
+	// they are (strictWebGpuPlaced), rows joined from several matrices are read into their joined buffer straight from the
+	// file: the 9B encoder held 3.3 GB of rows and 2.3 GB of joined copies at once and Firefox ran out of memory
+	strict_webfile_rows__deps: ['$strictWebGpu', '$strictWebGpuDevice', '$UTF8ToString', '$Asyncify', '$strictWebGpuFlag'],
 	strict_webfile_rows__async: true,
 	strict_webfile_rows: (url, offset, rows, rowBytes, codesBytes, stride, columns, scales) => Asyncify.handleSleep((wakeUp) => {
-		const path = UTF8ToString(url);
+		const path = UTF8ToString(url), copied = HEAPF32.slice(scales >>> 2, (scales >>> 2) + rows);
 		(async () => {
-			const device = strictWebGpu.device ||= await strictWebGpuDevice();
-			const codes = rows * rowBytes, uploaded = device.createBuffer({ size: codes + rows * 4, usage: 128 | 8 | 4 });
-			const isAligned = offset % 4 === 0, whole = isAligned ? null : new Uint8Array(codes);
-			await strictWebFileRange(path, offset, codes, (piece, at) => isAligned ?
-				device.queue.writeBuffer(uploaded, at, piece) : whole.set(piece, at));
-			if (whole)
-				device.queue.writeBuffer(uploaded, 0, whole);
-			device.queue.writeBuffer(uploaded, codes, HEAPF32, scales >>> 2, rows);
+			strictWebGpu.device ||= await strictWebGpuDevice();
 			const handle = strictWebGpu.next++;
-			strictWebGpu.buffers[handle] = uploaded;
-			strictWebGpu.grown += uploaded.size;
+			strictWebGpu.lazy[handle] = { path, offset, rows, rowBytes, scales: copied };
 			strictWebGpu.failures[handle] = strictWebGpuFlag();
 			strictWebGpu.uploads[handle] = rows * stride / 4;
 			return handle;
@@ -681,6 +675,46 @@ addToLibrary({
 			wakeUp(0);
 		});
 	}),
+	// bytes of the file at path from offset into buffer at, written from the read blocks without a copy when aligned
+	$strictWebGpuFilled__deps: ['$strictWebGpu', '$strictWebFileRange'],
+	$strictWebGpuFilled: async (buffer, at, path, offset, bytes) => {
+		const queue = strictWebGpu.device.queue, isAligned = offset % 4 === 0 && at % 4 === 0;
+		const whole = isAligned ? null : new Uint8Array(Math.ceil(bytes / 4) * 4);
+		await strictWebFileRange(path, offset, bytes, (piece, from) => isAligned ?
+			queue.writeBuffer(buffer, at + from, piece) : whole.set(piece, from));
+		if (whole)
+			queue.writeBuffer(buffer, at, whole);
+	},
+	// the buffer of a kept handle, rows of a file (strict_webfile_rows) are uploaded on their first use as they are, once
+	$strictWebGpuPlaced__deps: ['$strictWebGpu', '$strictWebGpuFilled'],
+	$strictWebGpuPlaced: (handle) => {
+		const lazy = strictWebGpu.lazy[handle];
+		if (!lazy)
+			return Promise.resolve(strictWebGpu.buffers[handle]);
+		return lazy.placing ||= (async () => {
+			const codes = lazy.rows * lazy.rowBytes;
+			const uploaded = strictWebGpu.device.createBuffer({ size: codes + lazy.rows * 4, usage: 128 | 8 | 4 });
+			await strictWebGpuFilled(uploaded, 0, lazy.path, lazy.offset, codes);
+			if (strictWebGpu.lazy[handle] !== lazy) {
+				uploaded.destroy();
+				return undefined;
+			}
+			strictWebGpu.device.queue.writeBuffer(uploaded, codes, lazy.scales);
+			delete strictWebGpu.lazy[handle];
+			strictWebGpu.buffers[handle] = uploaded;
+			strictWebGpu.grown += uploaded.size;
+			return uploaded;
+		})();
+	},
+	// the rows of files a kernel's table binds as kept handles, uploaded before its inputs are read
+	$strictWebGpuPlacedInputs__deps: ['$strictWebGpu', '$strictWebGpuPlaced'],
+	$strictWebGpuPlacedInputs: (table, slots) => {
+		const entries = HEAPF64.subarray(table / 8, table / 8 + slots * 3), waits = [];
+		for (let slot = 0; slot < slots; slot++)
+			if (entries[slot * 3 + 2] === 255 && entries[slot * 3] in strictWebGpu.lazy)
+				waits.push(strictWebGpuPlaced(entries[slot * 3]));
+		return Promise.all(waits);
+	},
 	// the views of count rows at address whose block is the WebGPU buffer handle (strict_rows_web): stride bytes a row, 4
 	// bit codes when nibbles is 1, so joined rows can be gathered from it
 	strict_webgpu_rows_views__deps: ['$strictWebGpu'],
@@ -689,10 +723,12 @@ addToLibrary({
 	// the rows whose view addresses are at views as a kept WebGPU buffer, its handle and the stride in words and nibbles
 	// flag at shape, 0 when a row is in no buffer or rows differ: all rows of one block in order borrow its buffer (it is
 	// destroyed when neither the rows nor any borrower is left), rows joined from several matrices are copied into a new
-	// one on the GPU, one copy per run of rows that follow each other in one block (Moss's query, key and value rows took
-	// 1.5 s row by row)
-	strict_webgpu_gathered__deps: ['$strictWebGpu', '$strictWebGpuEncoder', '$strictWebGpuFlag'],
-	strict_webgpu_gathered: (views, count, shape) => {
+	// one on the GPU or read from their file when their block is not uploaded, one copy per run of rows that follow each
+	// other in one block (Moss's query, key and value rows took 1.5 s row by row)
+	strict_webgpu_gathered__deps: ['$strictWebGpu', '$strictWebGpuEncoder', '$strictWebGpuFlag', '$Asyncify',
+		'$strictWebGpuPlaced', '$strictWebGpuFilled'],
+	strict_webgpu_gathered__async: true,
+	strict_webgpu_gathered: (views, count, shape) => Asyncify.handleSleep((wakeUp) => {
 		const device = strictWebGpu.device, runs = [];
 		let block = null;
 		for (let row = 0; row < count; row++) {
@@ -701,7 +737,7 @@ addToLibrary({
 				block = strictWebGpu.views.findLast((placed) => address >= placed.first && address < placed.last);
 			const first = runs.length ? runs[0].block : block, last = runs[runs.length - 1];
 			if (!device || !block || block.stride !== first.stride || block.nibbles !== first.nibbles)
-				return 0;
+				return wakeUp(0);
 			const index = (address - block.first) / 64;
 			if (last && last.block === block && last.row + last.count === index)
 				last.count++;
@@ -712,28 +748,39 @@ addToLibrary({
 		const isWhole = runs.length === 1 && runs[0].row === 0 && count === (source.last - source.first) / 64;
 		const scalesOf = (block) => (block.last - block.first) / 64 * stride;
 		const handle = strictWebGpu.next++;
-		if (isWhole) {
-			strictWebGpu.buffers[handle] = strictWebGpu.buffers[source.handle];
-			strictWebGpu.borrowed[handle] = source.handle;
-			strictWebGpu.lent[source.handle] = (strictWebGpu.lent[source.handle] || 0) + 1;
-		} else {
-			const joined = device.createBuffer({ size: count * stride + count * 4, usage: 128 | 8 | 4 });
-			const encoder = strictWebGpuEncoder();
-			runs.forEach((run) => {
-				const buffer = strictWebGpu.buffers[run.block.handle];
-				encoder.copyBufferToBuffer(buffer, run.row * stride, joined, run.at * stride, run.count * stride);
-				encoder.copyBufferToBuffer(buffer, scalesOf(run.block) + run.row * 4, joined, count * stride + run.at * 4,
-					run.count * 4);
-			});
-			strictWebGpu.buffers[handle] = joined;
-			strictWebGpu.grown += joined.size;
-		}
-		strictWebGpu.failures[handle] = strictWebGpuFlag();
-		strictWebGpu.uploads[handle] = count * stride / 4;
-		HEAP32[shape >>> 2] = stride / 4;
-		HEAP32[(shape >>> 2) + 1] = source.nibbles;
-		return handle;
-	},
+		(async () => {
+			if (isWhole) {
+				strictWebGpu.buffers[handle] = await strictWebGpuPlaced(source.handle);
+				strictWebGpu.borrowed[handle] = source.handle;
+				strictWebGpu.lent[source.handle] = (strictWebGpu.lent[source.handle] || 0) + 1;
+			} else {
+				const joined = device.createBuffer({ size: count * stride + count * 4, usage: 128 | 8 | 4 });
+				await Promise.all(runs.map(async (run) => {
+					const lazy = strictWebGpu.lazy[run.block.handle];
+					if (lazy) {
+						const from = lazy.offset + run.row * lazy.rowBytes;
+						await strictWebGpuFilled(joined, run.at * stride, lazy.path, from, run.count * lazy.rowBytes);
+						device.queue.writeBuffer(joined, count * stride + run.at * 4, lazy.scales, run.row, run.count);
+						return;
+					}
+					const buffer = strictWebGpu.buffers[run.block.handle], encoder = strictWebGpuEncoder();
+					encoder.copyBufferToBuffer(buffer, run.row * stride, joined, run.at * stride, run.count * stride);
+					encoder.copyBufferToBuffer(buffer, scalesOf(run.block) + run.row * 4, joined, count * stride + run.at * 4,
+						run.count * 4);
+				}));
+				strictWebGpu.buffers[handle] = joined;
+				strictWebGpu.grown += joined.size;
+			}
+			strictWebGpu.failures[handle] = strictWebGpuFlag();
+			strictWebGpu.uploads[handle] = count * stride / 4;
+			HEAP32[shape >>> 2] = stride / 4;
+			HEAP32[(shape >>> 2) + 1] = source.nibbles;
+			return handle;
+		})().then(wakeUp, (error) => {
+			console.error('Gathering rows on WebGPU failed: ' + error);
+			wakeUp(0);
+		});
+	}),
 	strict_webgpu_release__deps: ['$strictWebGpu', '$strictWebGpuDestroyed'],
 	strict_webgpu_release: (handle) => {
 		const lender = strictWebGpu.borrowed[handle], lent = strictWebGpu.lent, dropped = strictWebGpu.dropped;
@@ -748,6 +795,7 @@ addToLibrary({
 		delete strictWebGpu.borrowed[handle];
 		strictWebGpu.failures[handle] && strictWebGpuDestroyed(strictWebGpu.failures[handle]);
 		delete strictWebGpu.failures[handle];
+		delete strictWebGpu.lazy[handle];
 		delete strictWebGpu.buffers[handle];
 		delete strictWebGpu.halves[handle];
 		delete strictWebGpu.uploads[handle];
