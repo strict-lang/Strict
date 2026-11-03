@@ -24,8 +24,118 @@ addToLibrary({
 // Closure knows no GPUBufferUsage: storage 128, copy destination 8, copy source 4, map read 1, compute stage 4.
 addToLibrary({
 	$strictWebGpu: { device: null, failed: false, pipelines: {}, buffers: {}, failures: {}, next: 1, grown: 0, queued: 0, done: [],
-		inputs: {}, halves: {}, uploads: {}, views: [], borrowed: {}, lent: {}, dropped: {}, sixteens: {},
-		compiling: {} },
+		halves: {}, uploads: {}, views: [], borrowed: {}, lent: {}, dropped: {}, sixteens: {}, compiling: {},
+		encoder: null, recorded: 0, fresh: 0, unused: [], staging: { current: null, full: [], free: [] }, pool: {},
+		pooled: new WeakSet(), pooledBytes: 0, pass: null, prelude: null, flags: new WeakSet(), flagsUsed: [], flagPool: [],
+		layout: null },
+	// kernels and copies are recorded into one command encoder, submitted before the host reads a result or after 64
+	// dispatches (a submit per dispatch spent most of the time in Chrome's GPU process, Moss sampled 15 times slower than
+	// natively); a kernel's numbers, places and the work of each dispatch get their own part of a staging buffer, which is
+	// written again only after the GPU ran the commands of its submit, buffers are destroyed only after their submit
+	// consecutive kernels share one compute pass (each pass is a command of its own), any other command ends it
+	$strictWebGpuEncoder__deps: ['$strictWebGpu'],
+	$strictWebGpuEncoder: () => {
+		strictWebGpu.pass?.end();
+		strictWebGpu.pass = null;
+		return strictWebGpu.encoder ||= strictWebGpu.device.createCommandEncoder();
+	},
+	$strictWebGpuPass__deps: ['$strictWebGpu'],
+	$strictWebGpuPass: () => strictWebGpu.pass ||=
+		(strictWebGpu.encoder ||= strictWebGpu.device.createCommandEncoder()).beginComputePass(),
+	// a failure flag of a kernel, cleared by a command submitted before its batch (not between its kernels, that would end
+	// their pass): a flag given back during a batch is used again only from the next one on, so no kernel of the batch
+	// that set it runs after the clear
+	$strictWebGpuFlag__deps: ['$strictWebGpu'],
+	$strictWebGpuFlag: () => {
+		const reused = strictWebGpu.flagPool.pop();
+		if (reused) {
+			(strictWebGpu.prelude ||= strictWebGpu.device.createCommandEncoder()).clearBuffer(reused);
+			return reused;
+		}
+		const flag = strictWebGpu.device.createBuffer({ size: 4, usage: 128 | 4 | 8 });
+		strictWebGpu.flags.add(flag);
+		return flag;
+	},
+	$strictWebGpuFlush__deps: ['$strictWebGpu'],
+	$strictWebGpuFlush: () => {
+		const encoder = strictWebGpu.encoder, staging = strictWebGpu.staging, device = strictWebGpu.device;
+		if (!encoder)
+			return;
+		strictWebGpu.pass?.end();
+		strictWebGpu.pass = null;
+		strictWebGpu.encoder = null;
+		strictWebGpu.recorded = 0;
+		const used = staging.full.concat(staging.current || []), bytes = strictWebGpu.fresh;
+		used.forEach((staged) => staged.used && device.queue.writeBuffer(staged.buffer, 0, staged.mirror, 0, staged.used));
+		device.queue.submit(strictWebGpu.prelude ? [strictWebGpu.prelude.finish(), encoder.finish()] : [encoder.finish()]);
+		strictWebGpu.prelude = null;
+		strictWebGpu.flagPool.push(...strictWebGpu.flagsUsed);
+		strictWebGpu.flagsUsed = [];
+		strictWebGpu.unused.forEach((unused) => unused.destroy());
+		strictWebGpu.unused = [];
+		staging.full = [];
+		staging.current = null;
+		strictWebGpu.fresh = 0;
+		strictWebGpu.queued += bytes;
+		strictWebGpu.done.push(device.queue.onSubmittedWorkDone().then(() => {
+			strictWebGpu.queued -= bytes;
+			used.forEach((staged) => staging.free.push(Object.assign(staged, { used: 0 })));
+			strictWebGpu.done.shift();
+		}));
+	},
+	// a buffer of a kernel (strictWebGpuBuffer) goes back to its pool, the queue runs the commands in order, so the next
+	// kernel writes it only after earlier ones read it (up to 2 GB are kept: 512 MB still left Moss creating 1100 buffers a
+	// 480x848 step, 2 s instead of 1.5), others are destroyed now or, when commands
+	// still to be submitted might use them, after their submit
+	$strictWebGpuDestroyed__deps: ['$strictWebGpu'],
+	$strictWebGpuDestroyed: (buffer) => {
+		if (strictWebGpu.flags.has(buffer))
+			(strictWebGpu.encoder ? strictWebGpu.flagsUsed : strictWebGpu.flagPool).push(buffer);
+		else if (strictWebGpu.pooled.has(buffer) && strictWebGpu.pooledBytes + buffer.size <= 2147483648) {
+			(strictWebGpu.pool[buffer.size + ' ' + buffer.usage] ||= []).push(buffer);
+			strictWebGpu.pooledBytes += buffer.size;
+		} else if (strictWebGpu.encoder)
+			strictWebGpu.unused.push(buffer);
+		else
+			buffer.destroy();
+	},
+	$strictWebGpuBuffer__deps: ['$strictWebGpu'],
+	$strictWebGpuBuffer: (bytes, usage) => {
+		const size = Math.max(Math.ceil(bytes / 4) * 4, 4), free = strictWebGpu.pool[size + ' ' + usage];
+		if (free && free.length) {
+			strictWebGpu.pooledBytes -= size;
+			return free.pop();
+		}
+		const buffer = strictWebGpu.device.createBuffer({ size, usage });
+		strictWebGpu.pooled.add(buffer);
+		return buffer;
+	},
+	// the numbers of a typed array at offset bytes into staged, copied into its staging buffer at the next submit
+	$strictWebGpuStore__deps: ['$strictWebGpu'],
+	$strictWebGpuStore: (staged, offset, numbers) => staged.mirror ?
+		staged.mirror.set(new Uint8Array(numbers.buffer, numbers.byteOffset, numbers.byteLength), staged.offset + offset) :
+		strictWebGpu.device.queue.writeBuffer(staged.buffer, staged.offset + offset, numbers),
+	// bytes in a staging buffer of 64 MB (256 byte aligned for storage and uniform bindings) as a binding resource, more
+	// in a buffer of their own
+	$strictWebGpuStaged__deps: ['$strictWebGpu'],
+	$strictWebGpuStaged: (bytes) => {
+		const device = strictWebGpu.device, staging = strictWebGpu.staging, size = 67108864, usage = 128 | 64 | 8;
+		const aligned = Math.ceil(Math.max(bytes, 4) / 256) * 256;
+		if (aligned > size) {
+			const own = device.createBuffer({ size: aligned, usage });
+			strictWebGpu.unused.push(own);
+			return { buffer: own, offset: 0, size: aligned, mirror: null };
+		}
+		if (!staging.current || staging.current.used + aligned > size) {
+			if (staging.current)
+				staging.full.push(staging.current);
+			staging.current = staging.free.pop() ||
+				{ buffer: device.createBuffer({ size, usage }), mirror: new Uint8Array(size), used: 0 };
+		}
+		const offset = staging.current.used;
+		staging.current.used += aligned;
+		return { buffer: staging.current.buffer, offset, size: aligned, mirror: staging.current.mirror };
+	},
 	// lines the page hands in with Module.strictInput(text) for Process.InputLine, which waits for the next one ("" when the
 	// page has no more)
 	$strictInput: { lines: [], current: '', waiting: null },
@@ -111,11 +221,14 @@ addToLibrary({
 		return new Float32Array(words.buffer);
 	},
 	// a shader that does not compile rejects (its loop runs on the CPU), checked once per pipeline
+	$strictWebGpuPipeline__deps: ['$strictWebGpu'],
 	$strictWebGpuPipeline: async (device, code) => {
-		const storage = (binding, type) => ({ binding, visibility: 4, buffer: { type } });
+		const storage = (binding, type) => ({ binding, visibility: 4, buffer: { type, hasDynamicOffset: binding === 4 } });
 		const types = ['storage', 'read-only-storage', 'read-only-storage', 'storage', 'uniform', 'read-only-storage',
 			'read-only-storage', 'read-only-storage', 'read-only-storage'];
-		const group = device.createBindGroupLayout({ entries: types.map((type, binding) => storage(binding, type)) });
+		// one layout for all kernels, the work of each dispatch of a kernel is a dynamic offset into its bind group
+		const group = strictWebGpu.layout ||=
+			device.createBindGroupLayout({ entries: types.map((type, binding) => storage(binding, type)) });
 		const layout = device.createPipelineLayout({ bindGroupLayouts: [group] });
 		device.pushErrorScope('validation');
 		const module = device.createShaderModule({ code: Module['strictItem'] + code });
@@ -157,7 +270,9 @@ addToLibrary({
 				halves[index] = (words[index] + 0x7fff + ((words[index] >>> 16) & 1)) >>> 16;
 		}
 	},
-	$strictWebGpuRun__deps: ['$strictWebGpu', '$strictWebGpuPipeline', '$strictWebGpuDevice', '$strictWebGpuWritten'],
+	$strictWebGpuRun__deps: ['$strictWebGpu', '$strictWebGpuPipeline', '$strictWebGpuDevice', '$strictWebGpuWritten',
+		'$strictWebGpuEncoder', '$strictWebGpuFlush', '$strictWebGpuStaged', '$strictWebGpuDestroyed', '$strictWebGpuBuffer',
+		'$strictWebGpuStore', '$strictWebGpuPass', '$strictWebGpuFlag'],
 	$strictWebGpuRun: async (name, count, inputs, output, bits) => {
 		const device = inputs && (strictWebGpu.device ||= await strictWebGpuDevice());
 		if (inputs && !device) {
@@ -168,88 +283,74 @@ addToLibrary({
 			return 0;
 		const pipeline = strictWebGpu.pipelines[name] ||= await (strictWebGpu.compiling[name] ||
 			strictWebGpuPipeline(device, Module['strictShaders'][name]));
-		const written = 128 | 8, read = 128 | 4;
-		const buffer = (size, flags) => device.createBuffer({ size: Math.max(size, 4), usage: flags });
-		// one input buffer per power of two size is reused, the queue writes it only after earlier kernels read it (a new
-		// one per kernel was cleared first and stayed in video memory until the GPU ran the kernel)
-		const rounded = 2 ** Math.ceil(Math.log2(Math.max(inputs.size * 4, 4)));
-		const input = rounded > device.limits.maxStorageBufferBindingSize ? buffer(inputs.size * 4, written)
-			: strictWebGpu.inputs[rounded] ||= buffer(rounded, written);
-		const isPooled = input === strictWebGpu.inputs[rounded];
-		// places and work are reused like the inputs, the queue writes them only after earlier kernels read them
-		if (!strictWebGpu.places || strictWebGpu.places.size < inputs.places.byteLength)
-			strictWebGpu.places = buffer(Math.max(inputs.places.byteLength, 256), written);
-		const work = strictWebGpu.work ||= buffer(16, 64 | 8);
-		const buffers = [buffer(count * 4, read), input, strictWebGpu.places, buffer(4, read | 8)];
-		const copy = output && buffer(count * 4 + 4, 1 | 8);
-		inputs.written.forEach(([offset, part]) => device.queue.writeBuffer(buffers[1], offset * 4, part));
-		device.queue.writeBuffer(buffers[2], 0, inputs.places);
-		device.queue.writeBuffer(buffers[3], 0, new Uint32Array(1));
+		const read = 128 | 4;
+		const input = strictWebGpuStaged(inputs.size * 4), places = strictWebGpuStaged(inputs.places.byteLength);
+		inputs.written.forEach(([offset, part]) => strictWebGpuStore(input, offset * 4, part));
+		strictWebGpuStore(places, 0, inputs.places);
+		const results = strictWebGpuBuffer(count * 4, read), failures = strictWebGpuFlag();
+		const buffers = [{ buffer: results }, input, places, { buffer: failures }];
 		const grouped = (Module['strictKernelGroups'] || {})[name], groups = Math.ceil(count / 64);
 		const [tiles, part, splits = 1] = grouped ? grouped(inputs.places) : [groups, groups];
-		// each submit is its own GPU packet, Windows resets the device when one runs for 2 s
-		const lists = [0, 1, 2, 3].map((at) => (inputs.bound || [])[at] ||
-			(strictWebGpu.empty ||= device.createBuffer({ size: 4, usage: 128 })));
-		const dispatched = (used, tiles, part, bound = buffers.slice(0, 4)) => {
-			for (let first = 0; first < tiles; first += part) {
-				const size = Math.min(part, tiles - first), wide = Math.min(size, 65535);
-				device.queue.writeBuffer(work, 0, new Uint32Array([first, splits]));
-				const entries = bound.concat(work, lists).map((buffer, binding) => ({ binding, resource: { buffer } }));
-				const encoder = device.createCommandEncoder(), pass = encoder.beginComputePass();
-				pass.setPipeline(used);
-				pass.setBindGroup(0, device.createBindGroup({ layout: used.getBindGroupLayout(0), entries }));
+		const lists = [0, 1, 2, 3].map((at) => ({ buffer: (inputs.bound || [])[at] ||
+			(strictWebGpu.empty ||= device.createBuffer({ size: 4, usage: 128 })) }));
+		// a part of tiles is one dispatch, sized to stay short (Windows resets the device when a submit runs for 2 s)
+		const dispatched = (used, tiles, part, bound) => {
+			const parts = Math.ceil(tiles / part), work = strictWebGpuStaged(parts * 256);
+			for (let at = 0; at < parts; at++)
+				strictWebGpuStore(work, at * 256, new Uint32Array([at * part, splits]));
+			const worked = { buffer: work.buffer, offset: work.offset, size: 8 };
+			const entries = bound.concat(worked, lists).map((resource, binding) => ({ binding, resource }));
+			const group = device.createBindGroup({ layout: strictWebGpu.layout, entries }), pass = strictWebGpuPass();
+			pass.setPipeline(used);
+			for (let at = 0; at < parts; at++) {
+				const size = Math.min(part, tiles - at * part), wide = Math.min(size, 65535);
+				pass.setBindGroup(0, group, [at * 256]);
 				pass.dispatchWorkgroups(wide, Math.ceil(size / wide));
-				pass.end();
-				device.queue.submit([encoder.finish()]);
+				strictWebGpu.recorded++;
 			}
 		};
 		const runtimePipeline = async (key) => strictWebGpu.pipelines[key] ||=
 			await (strictWebGpu.compiling[key] || strictWebGpuPipeline(device, Module['strictShaders'][key]));
-		if (inputs.copies && inputs.copies.length) {
-			const copying = device.createCommandEncoder();
-			for (const [source, offset, length] of inputs.copies)
-				copying.copyBufferToBuffer(source, 0, buffers[1], offset * 4, length * 4);
-			device.queue.submit([copying.finish()]);
-		}
-		if (splits > 1) {
-			const parts = buffer(count * splits * 4, 128);
-			dispatched(pipeline, tiles, part, [parts].concat(buffers.slice(1, 4)));
-			dispatched(await runtimePipeline('strict_splits'), groups, groups, [buffers[0], parts, buffers[2], buffers[3]]);
-			buffers.push(parts);
+		const splitting = splits > 1 && await runtimePipeline('strict_splits');
+		const packing = !output && bits === 17 && await runtimePipeline('strict_packed');
+		for (const [source, offset, length] of inputs.copies || [])
+			strictWebGpuEncoder().copyBufferToBuffer(source, 0, input.buffer, input.offset + offset * 4, length * 4);
+		strictWebGpu.fresh += count * 4;
+		if (splitting) {
+			const parts = strictWebGpuBuffer(count * splits * 4, 128);
+			strictWebGpu.fresh += count * splits * 4;
+			dispatched(pipeline, tiles, part, [{ buffer: parts }].concat(buffers.slice(1, 4)));
+			dispatched(splitting, groups, groups, [buffers[0], { buffer: parts }, buffers[2], buffers[3]]);
+			strictWebGpuDestroyed(parts);
 		} else
-			dispatched(pipeline, tiles, part);
-		// more than 1 GB of inputs and results queued ahead of the GPU waits for the oldest kernel (2 GB or no limit made
-		// 720x1280 Flux decodes vary from 3 to 6 s, 512 MB was slower)
-		const queued = (inputs.size + count) * 4;
-		strictWebGpu.queued += queued;
-		strictWebGpu.done.push(device.queue.onSubmittedWorkDone().then(() => {
-			strictWebGpu.queued -= queued;
-			strictWebGpu.done.shift();
-		}));
-		while (strictWebGpu.queued > 1073741824)
-			await strictWebGpu.done[0];
+			dispatched(pipeline, tiles, part, buffers);
 		if (!output) {
 			// a kept bfloat16 result is rounded like the CPU reads it and kept as halves, two in each 32 bits
-			const halved = bits === 17 && buffer(Math.ceil(count / 2) * 4, read);
+			const halved = packing && strictWebGpuBuffer(Math.ceil(count / 2) * 4, read);
 			if (halved) {
 				const pairs = Math.ceil(count / 128);
-				dispatched(await runtimePipeline('strict_packed'), pairs, pairs, [halved, buffers[0], buffers[2], buffers[3]]);
+				dispatched(packing, pairs, pairs, [{ buffer: halved }, buffers[0], buffers[2], buffers[3]]);
+				strictWebGpuDestroyed(results);
 			}
-			const kept = halved || buffers[0];
-			buffers.forEach((used, at) => (at === 0 && !halved) || at === 2 || at === 3 || (at === 1 && isPooled) ||
-				used.destroy());
+			const kept = halved || results;
 			const handle = strictWebGpu.next++;
 			strictWebGpu.buffers[handle] = kept;
-			strictWebGpu.failures[handle] = buffers[3];
+			strictWebGpu.failures[handle] = failures;
 			if (halved)
 				strictWebGpu.halves[handle] = count;
 			strictWebGpu.grown += kept.size;
+			if (strictWebGpu.recorded >= 64)
+				strictWebGpuFlush();
+			// more than 1 GB of new results submitted ahead of the GPU waits for the oldest submit (2 GB or no limit made
+			// 720x1280 Flux decodes vary from 3 to 6 s, 512 MB was slower)
+			while (strictWebGpu.queued > 1073741824)
+				await strictWebGpu.done[0];
 			return handle;
 		}
-		const encoder = device.createCommandEncoder();
-		encoder.copyBufferToBuffer(buffers[0], 0, copy, 0, count * 4);
-		encoder.copyBufferToBuffer(buffers[3], 0, copy, count * 4, 4);
-		device.queue.submit([encoder.finish()]);
+		const copy = strictWebGpuBuffer(count * 4 + 4, 1 | 8), encoder = strictWebGpuEncoder();
+		encoder.copyBufferToBuffer(results, 0, copy, 0, count * 4);
+		encoder.copyBufferToBuffer(failures, 0, copy, count * 4, 4);
+		strictWebGpuFlush();
 		let isMapped = !navigator.userAgent.includes('Firefox');
 		const mapping = copy.mapAsync(1).finally(() => isMapped = true);
 		// Firefox maps only when it polls the device, every 100 ms or on a submit: empty submits make that 2 ms (Chrome
@@ -267,7 +368,7 @@ addToLibrary({
 		if (!isFailed)
 			strictWebGpuWritten(new Float32Array(mapped, 0, count), output, bits);
 		copy.unmap();
-		buffers.concat(copy).forEach((used, at) => (at === 1 && isPooled) || at === 2 || used.destroy());
+		[results, failures, copy].forEach(strictWebGpuDestroyed);
 		return isFailed ? 0 : 1;
 	},
 	$strictWebGpuStarted__deps: ['$strictWebGpu', '$strictWebGpuRun', '$UTF8ToString', '$Asyncify'],
@@ -285,23 +386,24 @@ addToLibrary({
 		strictWebGpuStarted(name, count, () => strictWebGpuKernelInputs(count, table >>> 0, slots), 0, bits),
 	// the numbers of a kept kernel result (strict_gpu_web_get) as bits into target: 1, 2 when its loop read outside of a
 	// list, 0 when the buffer is gone
-	strict_webgpu_download__deps: ['$strictWebGpu', '$strictWebGpuWritten', '$strictWebGpuWidened', '$Asyncify'],
+	strict_webgpu_download__deps: ['$strictWebGpu', '$strictWebGpuWritten', '$strictWebGpuWidened', '$strictWebGpuEncoder',
+		'$strictWebGpuFlush', '$Asyncify', '$strictWebGpuBuffer', '$strictWebGpuDestroyed'],
 	strict_webgpu_download__async: true,
 	strict_webgpu_download: (handle, target, count, bits) => Asyncify.handleSleep((wakeUp) => {
 		const source = strictWebGpu.buffers[handle], device = strictWebGpu.device;
 		if (!source)
 			return wakeUp(0);
 		const isHalved = handle in strictWebGpu.halves, bytes = isHalved ? Math.ceil(count / 2) * 4 : count * 4;
-		const copy = device.createBuffer({ size: bytes + 4, usage: 1 | 8 });
-		const encoder = device.createCommandEncoder();
+		const copy = strictWebGpuBuffer(bytes + 4, 1 | 8), encoder = strictWebGpuEncoder();
 		encoder.copyBufferToBuffer(source, 0, copy, 0, bytes);
 		encoder.copyBufferToBuffer(strictWebGpu.failures[handle], 0, copy, bytes, 4);
-		device.queue.submit([encoder.finish()]);
+		strictWebGpuFlush();
 		copy.mapAsync(1).then(() => {
 			const mapped = copy.getMappedRange(), isOutside = new Uint32Array(mapped, bytes, 1)[0] !== 0;
 			strictWebGpuWritten(isHalved ? strictWebGpuWidened(new Uint16Array(mapped, 0, count))
 				: new Float32Array(mapped, 0, count), target >>> 0, bits);
-			copy.destroy();
+			copy.unmap();
+			strictWebGpuDestroyed(copy);
 			wakeUp(isOutside ? 2 : 1);
 		}, (error) => {
 			console.error('WebGPU result could not be read: ' + error);
@@ -310,7 +412,7 @@ addToLibrary({
 	}),
 	// a new kept result of the numbers of the left one and then of the right one (strict_gpu_web_joined), 0 on failure or
 	// when the halves of both would not line up (the host then joins them)
-	strict_webgpu_joined__deps: ['$strictWebGpu'],
+	strict_webgpu_joined__deps: ['$strictWebGpu', '$strictWebGpuEncoder', '$strictWebGpuFlag'],
 	strict_webgpu_joined: (left, right) => {
 		const first = strictWebGpu.buffers[left], second = strictWebGpu.buffers[right], device = strictWebGpu.device;
 		const firstHalves = strictWebGpu.halves[left], secondHalves = strictWebGpu.halves[right];
@@ -318,11 +420,10 @@ addToLibrary({
 			(firstHalves !== undefined && (firstHalves === 0 || firstHalves % 2 !== 0)))
 			return 0;
 		const joined = device.createBuffer({ size: first.size + second.size, usage: 128 | 8 | 4 });
-		const failures = device.createBuffer({ size: 4, usage: 128 | 8 | 4 });
-		const encoder = device.createCommandEncoder();
+		const failures = strictWebGpuFlag();
+		const encoder = strictWebGpuEncoder();
 		encoder.copyBufferToBuffer(first, 0, joined, 0, first.size);
 		encoder.copyBufferToBuffer(second, 0, joined, first.size, second.size);
-		device.queue.submit([encoder.finish()]);
 		strictWebGpu.buffers[strictWebGpu.next] = joined;
 		strictWebGpu.failures[strictWebGpu.next] = failures;
 		if (firstHalves !== undefined)
@@ -334,7 +435,7 @@ addToLibrary({
 	// kept as bfloat16 halves when -1 and every one is an exact bfloat16 number (Moss's BF16 weights read as 32 bit rows,
 	// strict_gpu_web_uploaded), 0 before the first kernel made the device; a list that changed its length later runs its
 	// kernel on the CPU
-	strict_webgpu_uploaded__deps: ['$strictWebGpu', '$strictWebGpuDevice', '$Asyncify'],
+	strict_webgpu_uploaded__deps: ['$strictWebGpu', '$strictWebGpuDevice', '$Asyncify', '$strictWebGpuFlag'],
 	strict_webgpu_uploaded__async: true,
 	strict_webgpu_uploaded: (address, words, halves) => Asyncify.handleSleep((wakeUp) => (async () => {
 		const device = strictWebGpu.device ||= await strictWebGpuDevice();
@@ -349,7 +450,7 @@ addToLibrary({
 			device.queue.writeBuffer(kept, 0, narrowed);
 			const handle = strictWebGpu.next++;
 			strictWebGpu.buffers[handle] = kept;
-			strictWebGpu.failures[handle] = device.createBuffer({ size: 4, usage: 128 | 8 | 4 });
+			strictWebGpu.failures[handle] = strictWebGpuFlag();
 			strictWebGpu.halves[handle] = words;
 			strictWebGpu.uploads[handle] = words;
 			strictWebGpu.grown += kept.size;
@@ -361,7 +462,7 @@ addToLibrary({
 		device.queue.writeBuffer(uploaded, 0, HEAPU8, address >>> 0, words * 4);
 		const handle = strictWebGpu.next++;
 		strictWebGpu.buffers[handle] = uploaded;
-		strictWebGpu.failures[handle] = device.createBuffer({ size: 4, usage: 128 | 8 | 4 });
+		strictWebGpu.failures[handle] = strictWebGpuFlag();
 		if (halves)
 			strictWebGpu.halves[handle] = halves;
 		strictWebGpu.uploads[handle] = halves || words;
@@ -544,7 +645,8 @@ addToLibrary({
 	// as they are in the file (rowBytes a row, 4 bit codes stay two in a byte), written from the read blocks without a
 	// copy, then the 32 bit scale of every row from scales (strict_eights reads that layout when a row is only its codes):
 	// its handle, 0 on failure
-	strict_webfile_rows__deps: ['$strictWebGpu', '$strictWebGpuDevice', '$strictWebFileRange', '$UTF8ToString', '$Asyncify'],
+	strict_webfile_rows__deps: ['$strictWebGpu', '$strictWebGpuDevice', '$strictWebFileRange', '$UTF8ToString', '$Asyncify',
+		'$strictWebGpuFlag'],
 	strict_webfile_rows__async: true,
 	strict_webfile_rows: (url, offset, rows, rowBytes, codesBytes, stride, columns, scales) => Asyncify.handleSleep((wakeUp) => {
 		const path = UTF8ToString(url);
@@ -560,7 +662,7 @@ addToLibrary({
 			const handle = strictWebGpu.next++;
 			strictWebGpu.buffers[handle] = uploaded;
 			strictWebGpu.grown += uploaded.size;
-			strictWebGpu.failures[handle] = device.createBuffer({ size: 4, usage: 128 | 8 | 4 });
+			strictWebGpu.failures[handle] = strictWebGpuFlag();
 			strictWebGpu.uploads[handle] = rows * stride / 4;
 			return handle;
 		})().then(wakeUp, (error) => {
@@ -578,7 +680,7 @@ addToLibrary({
 	// destroyed when neither the rows nor any borrower is left), rows joined from several matrices are copied into a new
 	// one on the GPU, one copy per run of rows that follow each other in one block (Moss's query, key and value rows took
 	// 1.5 s row by row)
-	strict_webgpu_gathered__deps: ['$strictWebGpu'],
+	strict_webgpu_gathered__deps: ['$strictWebGpu', '$strictWebGpuEncoder', '$strictWebGpuFlag'],
 	strict_webgpu_gathered: (views, count, shape) => {
 		const device = strictWebGpu.device, runs = [];
 		let block = null;
@@ -605,36 +707,35 @@ addToLibrary({
 			strictWebGpu.lent[source.handle] = (strictWebGpu.lent[source.handle] || 0) + 1;
 		} else {
 			const joined = device.createBuffer({ size: count * stride + count * 4, usage: 128 | 8 | 4 });
-			const encoder = device.createCommandEncoder();
+			const encoder = strictWebGpuEncoder();
 			runs.forEach((run) => {
 				const buffer = strictWebGpu.buffers[run.block.handle];
 				encoder.copyBufferToBuffer(buffer, run.row * stride, joined, run.at * stride, run.count * stride);
 				encoder.copyBufferToBuffer(buffer, scalesOf(run.block) + run.row * 4, joined, count * stride + run.at * 4,
 					run.count * 4);
 			});
-			device.queue.submit([encoder.finish()]);
 			strictWebGpu.buffers[handle] = joined;
 			strictWebGpu.grown += joined.size;
 		}
-		strictWebGpu.failures[handle] = device.createBuffer({ size: 4, usage: 128 | 8 | 4 });
+		strictWebGpu.failures[handle] = strictWebGpuFlag();
 		strictWebGpu.uploads[handle] = count * stride / 4;
 		HEAP32[shape >>> 2] = stride / 4;
 		HEAP32[(shape >>> 2) + 1] = source.nibbles;
 		return handle;
 	},
-	strict_webgpu_release__deps: ['$strictWebGpu'],
+	strict_webgpu_release__deps: ['$strictWebGpu', '$strictWebGpuDestroyed'],
 	strict_webgpu_release: (handle) => {
 		const lender = strictWebGpu.borrowed[handle], lent = strictWebGpu.lent, dropped = strictWebGpu.dropped;
 		if (lender && !--lent[lender] && dropped[lender]) {
-			dropped[lender].destroy();
+			strictWebGpuDestroyed(dropped[lender]);
 			delete dropped[lender];
 		} else if (!lender && lent[handle])
 			dropped[handle] = strictWebGpu.buffers[handle];
 		else if (!lender)
-			strictWebGpu.buffers[handle]?.destroy();
+			strictWebGpu.buffers[handle] && strictWebGpuDestroyed(strictWebGpu.buffers[handle]);
 		strictWebGpu.views = strictWebGpu.views.filter((placed) => placed.handle !== handle);
 		delete strictWebGpu.borrowed[handle];
-		strictWebGpu.failures[handle]?.destroy();
+		strictWebGpu.failures[handle] && strictWebGpuDestroyed(strictWebGpu.failures[handle]);
 		delete strictWebGpu.failures[handle];
 		delete strictWebGpu.buffers[handle];
 		delete strictWebGpu.halves[handle];
