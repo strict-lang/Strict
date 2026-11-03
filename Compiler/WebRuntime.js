@@ -245,7 +245,7 @@ addToLibrary({
 		const adapter = await navigator.gpu.requestAdapter();
 		const limits = adapter && adapter.limits;
 		const requiredLimits = limits && { maxStorageBufferBindingSize: limits.maxStorageBufferBindingSize,
-			maxBufferSize: limits.maxBufferSize };
+			maxBufferSize: limits.maxBufferSize, maxComputeWorkgroupStorageSize: limits.maxComputeWorkgroupStorageSize };
 		const device = adapter && await adapter.requestDevice({ requiredLimits });
 		// any other error of WebGPU stops the program, results that were never computed must not be read
 		device?.addEventListener('uncapturederror', (event) => abort('WebGPU error: ' + event.error.message));
@@ -281,6 +281,16 @@ addToLibrary({
 		}
 		if (!device)
 			return 0;
+		// a kernel with a variant that needs 32 KB of workgroup memory (Module.strictLarger) takes it where the device has it
+		const larger = (Module['strictLarger'] || {})[name];
+		if (larger && strictWebGpu.pipelines[larger] !== null && device.limits.maxComputeWorkgroupStorageSize >= 32768)
+			try {
+				strictWebGpu.pipelines[larger] ||= await (strictWebGpu.compiling[larger] ||
+					strictWebGpuPipeline(device, Module['strictShaders'][larger]));
+				name = larger;
+			} catch {
+				strictWebGpu.pipelines[larger] = null;
+			}
 		const pipeline = strictWebGpu.pipelines[name] ||= await (strictWebGpu.compiling[name] ||
 			strictWebGpuPipeline(device, Module['strictShaders'][name]));
 		const read = 128 | 4;
