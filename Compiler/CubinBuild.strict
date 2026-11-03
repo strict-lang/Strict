@@ -6,7 +6,7 @@ constant Outdating = "Compiler/output/Outdated"
 constant Emptied = "Compiler/output/Emptied"
 constant Broken = "Compiler/output/Broken"
 constant Tiny = ".version 7.8\n.target sm_75\n.address_size 64\n.visible .entry tiny()\n{\n\tret;\n}"
-constant Architectures = ("sm_75", "sm_80", "sm_86", "sm_89", "sm_120")
+constant Architectures = ("sm_75", "sm_86", "sm_89", "sm_120")
 Fatbin(base Text) Text
 	Local.Fatbin("Compiler/output/missing") is ""
 	File("Compiler/output/missing.fatbin").Exists is false
