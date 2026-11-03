@@ -29,6 +29,27 @@ Relative(path Text) Text
 	let slashed = path.Replace("\\", "/")
 	let isInside = slashed.Lower.StartsWith(current.Lower)
 	isInside then "./" + slashed.Substring(current.Length, slashed.Length - current.Length) else path
+Absolute(path Text) Text
+	Sizing.Absolute("C:/a/b.strict") is "C:/a/b.strict"
+	Sizing.Absolute("./a.strict") is Directory.Current.Replace("\\", "/") + "/a.strict"
+	let slashed = path.Replace("\\", "/")
+	if (slashed.IndexOf(":") is 1) or slashed.StartsWith("/")
+		return slashed
+	let inside = slashed.StartsWith("./") then slashed.Substring(2, slashed.Length - 2) else slashed
+	Directory.Current.Replace("\\", "/") + "/" + inside
+Project(path Text) Text
+	Sizing.Project("Examples/Sum.strict") is ""
+	Directory.Create("Compiler/output/Projected") or Directory.Exists("Compiler/output/Projected")
+	Directory.Create("Compiler/output/Projected/.git") or Directory.Exists("Compiler/output/Projected/.git")
+	Sizing.Project("Compiler/output/Projected/A/B.strict") is Sizing.Absolute("Compiler/output/Projected")
+	mutable folder = Path(Absolute(path)).PathOnly.text
+	for as long as (folder.Length > 3) and (IsProject(folder) is false)
+		folder = Path(folder).PathOnly.text
+	IsProject(folder) and (folder.Lower is not Directory.Current.Replace("\\", "/").Lower) then folder else ""
+IsProject(folder Text) Boolean
+	Sizing.IsProject(".")
+	Sizing.IsProject("Examples") is false
+	Directory.Exists(folder + "/.git") or File(folder + "/.git").Exists
 NativeFolder(path Text, root Text) Text
 	TypeSource(TypeEntry("Gpu", List(MemberEntry), List(MethodEntry))).NativeFolder("Gpu.strict", ".") is "./native"
 	TypeSource(TypeEntry("Strict/P/T", List(MemberEntry), List(MethodEntry))).NativeFolder("A", "C:") is "C:/P/native"

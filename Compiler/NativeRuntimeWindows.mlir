@@ -146,6 +146,15 @@
     %result = func.call @strict_directory_created(%made, %path) : (i1, f64) -> f64
     return %result : f64
   }
+  llvm.func @SetCurrentDirectoryA(!llvm.ptr) -> i32
+  func.func private @strict_directory_change(%self: f64, %path: f64) -> f64 {
+    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %changed = llvm.call @SetCurrentDirectoryA(%name) : (!llvm.ptr) -> i32
+    %zero = arith.constant 0 : i32
+    %isChanged = arith.cmpi ne, %changed, %zero : i32
+    %result = func.call @strict_boolean(%isChanged) : (i1) -> f64
+    return %result : f64
+  }
   func.func private @strict_path_join(%path: f64, %name: f64) -> f64 {
     %separatorText = llvm.mlir.addressof @strict_separator_path : !llvm.ptr
     %separator = func.call @strict_bits(%separatorText) : (!llvm.ptr) -> f64

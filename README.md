@@ -50,6 +50,7 @@ strict test Examples/Sum.strict           explicitly run this file, including Sl
 strict test Examples/Sum.strict Run       explicitly run the tests of one method
 strict test Examples/Sum.strict unit      run only unit tests (a folder on the VM too)
 strict build Examples/Sum.strict          pass cached or current unit tests, then build Examples/Sum.exe
+strict FractalZoomer web                  build FractalZoomer.strict of this folder like strict build, any platform option
 strict build Examples/Sum.strict windows  also the executable in Release/Windows (Release/<Platform> on other systems)
 strict build Examples/Sum.strict linux    also the Linux executable in Release/Linux (on Windows through WSL)
 strict build Examples/Sum.strict web      .html, .js and .wasm for the browser in Release/Web (Emscripten, installed when missing)
@@ -69,7 +70,7 @@ strict test Examples/Sum.strict values    run the tests on the Strict VM, then s
 strict update .                           copy or download the packages of a folder again
 strict version                            version and build time of this strict
 ```
-- `strict build` needs the file's unit tests to pass on the VM first, a type without `Run` produces its unit-test executable. Test failures and toolchain errors fail the command.
+- strict works from the project folder of its file (the nearest folder above with a `.git`), so `strict Name` in a game folder builds with the packages of its project. `strict build` needs the file's unit tests to pass on the VM first, a type without `Run` produces its unit-test executable. Test failures and toolchain errors fail the command.
 - Build outputs: a console program builds next to its source (`Examples/Sum.exe`, Linux and macOS without extension), a windowed one also into `Release/<Platform>` with its Content, every platform build (`windows`, `linux`, `web`, `android`, `ios`) into `Release/<Platform>`, desktop ones with their GPU code (`.ptx`, `.fatbin`) next to the executable so the folder runs on another PC. Everything else a build or test run writes (`.strictbinary`, `.mlir`, `.ptx`, `.fatbin`, `.nativecache`, test executables, ...) goes into `obj/` next to the source; a program reads its GPU code from next to it or from that `obj/`.
 - Files whose tests passed on the VM get an `obj/Name.strictbinary` (bytecode of all used types): while it is up to date `strict test` reports them as passed right away and running and building reuse it. Desktop builds and native tests keep a `.nativecache` stamp and print `Up to date` when nothing changed.
 - `strict build` and `strict test ... lines` run `Compiler/NativeCompiler.exe`. When a file of `Compiler/`, `Bytecode/` or `Expressions/` or a `Compiler/NativeRuntime*.mlir` is newer than it, they build the compiler again first.

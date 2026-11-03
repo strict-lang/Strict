@@ -13,6 +13,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - Two greedy runs of Qwen3-Coder-30B-A3B on the same prompt give different outputs (Ben, not investigated: atomics or reduction order in the expert path?).
 - A GLSL shader that fails to compile in `Gpu.Program` is silently ignored: TorinsTowers with a broken WaterPlane fragment shader ran with exit 0 and no message; compile and link errors should stop with the info log and the .strict line.
 - A named argument that skips parameters with defaults fails in bytecode codegen with `UnsupportedOperator` (OperatorCodegen line 157 via ListCodegen.Argument): `Release.Packaged(program, 0, isReleased = true)` and `Bytes.Hosted("a", picked = (2))`, positional arguments work.
+- `Directory.Change` only works natively (strict.exe uses it to work from the project folder), on the VM it gives the Error DirectoryChangeNeedsNative: Runtime/Hosted calling it needs a stage A build and a regenerated Compiler/Bootstrap.mlir.
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).
