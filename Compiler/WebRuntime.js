@@ -27,7 +27,8 @@ addToLibrary({
 		halves: {}, uploads: {}, views: [], borrowed: {}, lent: {}, dropped: {}, sixteens: {}, compiling: {},
 		encoder: null, recorded: 0, fresh: 0, unused: [], staging: { current: null, full: [], free: [] }, pool: {},
 		pooled: new WeakSet(), pooledBytes: 0, pass: null, prelude: null, flags: new WeakSet(), flagsUsed: [], flagPool: [],
-		layout: null, lazy: {}, filed: {} },
+		layout: null, lazy: {}, filed: {},
+		poolLimit: 0 },
 	// kernels and copies are recorded into one command encoder, submitted before the host reads a result or after 64
 	// dispatches (a submit per dispatch spent most of the time in Chrome's GPU process, Moss sampled 15 times slower than
 	// natively); a kernel's numbers, places and the work of each dispatch get their own part of a staging buffer, which is
@@ -85,13 +86,15 @@ addToLibrary({
 	},
 	// a buffer of a kernel (strictWebGpuBuffer) goes back to its pool, the queue runs the commands in order, so the next
 	// kernel writes it only after earlier ones read it (up to 2 GB are kept: 512 MB still left Moss creating 1100 buffers a
-	// 480x848 step, 2 s instead of 1.5), others are destroyed now or, when commands
-	// still to be submitted might use them, after their submit
+	// 480x848 step, 2 s instead of 1.5; 256 MB on phones and tablets, whose GPU shares the memory: a Galaxy S25 Ultra
+	// killed the page at 5.7 GB), others are destroyed now or, when commands still to be submitted might use them, after
+	// their submit
 	$strictWebGpuDestroyed__deps: ['$strictWebGpu'],
 	$strictWebGpuDestroyed: (buffer) => {
 		if (strictWebGpu.flags.has(buffer))
 			(strictWebGpu.encoder ? strictWebGpu.flagsUsed : strictWebGpu.flagPool).push(buffer);
-		else if (strictWebGpu.pooled.has(buffer) && strictWebGpu.pooledBytes + buffer.size <= 2147483648) {
+		else if (strictWebGpu.pooled.has(buffer) && strictWebGpu.pooledBytes + buffer.size <= (strictWebGpu.poolLimit ||=
+			/Android|iPhone|iPad|Mobi/.test(navigator.userAgent) ? 268435456 : 2147483648)) {
 			(strictWebGpu.pool[buffer.size + ' ' + buffer.usage] ||= []).push(buffer);
 			strictWebGpu.pooledBytes += buffer.size;
 		} else if (strictWebGpu.encoder)
@@ -611,7 +614,8 @@ addToLibrary({
 				return bytes;
 			})();
 			block.catch(() => cache.blocks.delete(key));
-			if (cache.blocks.size >= 48)
+			// 12 blocks (192 MB) cover a read and the 8 after it, 48 held 768 MB a phone could not spare
+			if (cache.blocks.size >= 12)
 				cache.blocks.delete(cache.blocks.keys().next().value);
 		}
 		cache.blocks.set(key, block);
