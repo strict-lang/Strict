@@ -10,7 +10,7 @@ Run(arguments Texts) Number
 		BuildProfile(logger).Reported("Build total", started)
 		return 0
 	let failed = BuildProfile(logger).Compiled(cache)
-	BuildProfile(logger).Reported("Build total", started)
+	BuildProfile(logger).Reported(failed is 0 then "Build total" else "Build FAILED (" + failed + "), total", started)
 	failed
 Locked(target Text) Slow(Boolean)
 	let lock = File(Lock(target))
