@@ -108,6 +108,8 @@ Normalized(input Numbers, start Number, count Number, weights Numbers) Numbers
 		part(index) * weights(index % size) * scales((index / size).Floor)
 Scales(input Numbers, size Number, epsilon Number) Float32s
 	Tiny.Scales((3, 4, 0, 1), 2, Epsilon)(1).IsNearlyEqual(1.41421215)
+	if (Process.OperatingSystem is "Web") and (size % 32 is 0)
+		return Normalization.Chunked(input, size, epsilon, 32)
 	for input.Length / size
 		Normalization.Scale(Normalization.Squared(input, index * size, size), size, epsilon)
 Output(input Numbers, sequences Number) Numbers

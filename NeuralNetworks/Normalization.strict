@@ -21,6 +21,16 @@ Squared(numbers Numbers, first Number, size Number) Number
 	for size
 		sum = sum + numbers(first + index) * numbers(first + index)
 	sum
+Chunked(numbers Numbers, size Number, epsilon Number, parts Number) Float32s
+	Sample.Chunked((3, 4, 0, 1), 2, 0.000001, 2)(1).IsNearlyEqual(1.41421215)
+	Sample.Chunked((3, 4, 0, 1), 4, 0.000001, 2)(0).IsNearlyEqual(Sample.Scale(26, 4, 0.000001))
+	let partials = Partials(numbers, size / parts)
+	for numbers.Length / size
+		Scale(Gpt2Block.Mean(partials, index * parts, parts) * parts, size, epsilon)
+Partials(numbers Numbers, chunk Number) Float32s
+	Sample.Partials((3, 4, 0, 1), 1) is (9, 16, 0, 1)
+	for numbers.Length / chunk
+		Squared(numbers, index * chunk, chunk)
 Inputs(gradient Numbers) Numbers
 	Sample.Inputs(Gradient)(0).IsNearlyEqual(0.17753688616769236)
 	Sample.Inputs(Gradient)(5).IsNearlyEqual(-0.5715433200905821)
