@@ -3,10 +3,10 @@ constant Version = "1.0"
 constant Commands = ("build", "test", "check", "update", "format", "suggest")
 constant MaxWait = 300
 constant Informing = ("version", "--version", "help", "--help")
-constant Help = ("strict <file or Type> [arguments]  run the program natively (built first when outdated); a type without Run runs its native tests, not again while they passed and nothing changed", "strict build <file or Type>  compile a native executable without running tests (Name.test without Run)", "strict build <file> linux  also the Linux executable (on Windows through WSL)", "strict build <file> web  build Name.html, .js and .wasm for the browser (Emscripten in Tools/emsdk)", "strict build <file> android  build an arm64-v8a shared library and stage Release/Android (Android NDK)", "strict build <file> ios    build an arm64 iOS static archive and stage Release/iOS (native packages need Xcode)", "strict build <file> library  build a shared library of its public methods and a C# binding", "strict test <file>         run the inline tests of every method on the Strict VM", "strict test <file> native  build and run its native tests explicitly", "strict test <folder> --no-recursive  test only files directly in folder", "strict test <file> -       test the source read from standard input as <file>, nothing is written", "strict test <file> lines   run them natively and print how often and how long each line ran (a folder: one build)", "strict test <file> values  run them on the Strict VM and print how often each line ran and the value it set", "strict check <folder>      validate the .strict files: type rules, unused members, limits", "strict format <file>       print the file in its canonical form, each method body as the parser reads it", "strict update <folder>     refresh the packages copied into the folder (.origin) from their clone or GitHub", "strict version             show the version number and when this strict executable was built", "strict suggest <file> <method>  print bodies passing its tests; add - to read unsaved source")
+constant Help = ("strict <file or Type> [arguments]  run the program natively (built first when outdated); a type without Run runs its native tests, not again while they passed and nothing changed", "strict build <file or Type>  compile a native executable without running tests (Name.test without Run)", "strict build [platform]    build the program named like this folder (in FractalZoomer/: FractalZoomer.strict)", "strict build <file> linux  also the Linux executable (on Windows through WSL)", "strict build <file> web  build Name.html, .js and .wasm for the browser (Emscripten in Tools/emsdk)", "strict build <file> android  build an arm64-v8a shared library and stage Release/Android (Android NDK)", "strict build <file> ios    build an arm64 iOS static archive and stage Release/iOS (native packages need Xcode)", "strict build <file> library  build a shared library of its public methods and a C# binding", "strict test <file>         run the inline tests of every method on the Strict VM", "strict test <file> native  build and run its native tests explicitly", "strict test <folder> --no-recursive  test only files directly in folder", "strict test <file> -       test the source read from standard input as <file>, nothing is written", "strict test <file> lines   run them natively and print how often and how long each line ran (a folder: one build)", "strict test <file> values  run them on the Strict VM and print how often each line ran and the value it set", "strict check <folder>      validate the .strict files: type rules, unused members, limits", "strict format <file>       print the file in its canonical form, each method body as the parser reads it", "strict update <folder>     refresh the packages copied into the folder (.origin) from their clone or GitHub", "strict version             show the version number and when this strict executable was built", "strict suggest <file> <method>  print bodies passing its tests; add - to read unsaved source")
 Run(arguments Texts) Number
 	let folder = Directory.Current
-	let given = Projected(arguments)
+	let given = Projected(Mained(arguments))
 	let command = given.Length > 0 then given(0) else "help"
 	let rest = Rooted(command is in Commands then Rest(given) else given)
 	let message = Message(command, rest)
@@ -49,6 +49,17 @@ Rooted(arguments Texts) Texts
 	if (arguments.Length is 0) or ((arguments.Length > 1) and File(arguments(1) + "/Any.strict").Exists)
 		return arguments
 	(List(Text) + arguments(0) + TypeSource.Root) + Rest(arguments)
+Mained(arguments Texts) Texts
+	Strict.Mained(("build", "web")) is ("build", "Strict.strict", "web")
+	Strict.Mained(List(Text) + "build") is ("build", "Strict.strict")
+	Strict.Mained(("build", "Examples/Sum.strict")) is ("build", "Examples/Sum.strict")
+	Strict.Mained(("test", "Math")) is ("test", "Math")
+	if (arguments.Length is 0) or (arguments(0) is not "build")
+		return arguments
+	let main = Path(Directory.Current.Replace("\\", "/")).FileName.text + ".strict"
+	let given = arguments.Length > 1 then arguments(1) else ""
+	let isSource = (given is not "") and (File(given).Exists or File(given + ".strict").Exists or Directory.Exists(given))
+	isSource or (File(main).Exists is false) then arguments else (List(Text) + "build" + main) + Rest(arguments)
 Projected(arguments Texts) Texts
 	Strict(Logger).Projected(("test", "Examples/Sum.strict")) is ("test", "Examples/Sum.strict")
 	Strict(Logger).Projected(("Examples/Sum", "5")) is ("Examples/Sum.strict", "5")

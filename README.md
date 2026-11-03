@@ -50,7 +50,7 @@ strict test Examples/Sum.strict           explicitly run this file, including Sl
 strict test Examples/Sum.strict Run       explicitly run the tests of one method
 strict test Examples/Sum.strict unit      run only unit tests (a folder on the VM too)
 strict build Examples/Sum.strict          pass cached or current unit tests, then build Examples/Sum.exe
-strict build FractalZoomer web            build FractalZoomer.strict of this folder for a platform (web, linux, windows, android, ios)
+strict build FractalZoomer web            build FractalZoomer.strict for a platform (web, linux, windows, android, ios), in FractalZoomer/ also just strict build web
 strict build Examples/Sum.strict windows  also the executable in Release/Windows (Release/<Platform> on other systems)
 strict build Examples/Sum.strict linux    also the Linux executable in Release/Linux (on Windows through WSL)
 strict build Examples/Sum.strict web      .html, .js and .wasm for the browser in Release/Web (Emscripten, installed when missing)
