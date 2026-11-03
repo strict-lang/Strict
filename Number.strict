@@ -13,6 +13,7 @@ to Text
 	(-1 / 0) to Text is "-Infinity"
 	90025250 to Text is "90025250"
 	-1390025250 to Text is "-1390025250"
+	-999999999999999 to Text is "-999999999999999"
 	for digits
 		value to Character
 digits Numbers

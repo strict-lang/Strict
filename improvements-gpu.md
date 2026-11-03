@@ -33,6 +33,7 @@ Details for the GPU line of [improvements.md](improvements.md), one short line e
 - strict_convolution runs at ~6 TFLOPS on a 3080 (30 peak): not limited by workgroup bank conflicts, index divisions, register prefetch or the rolled inner loop (unrolled it was 6 % faster in a decode, products slower, shaders compiled longer)
 
 ## Generated loops
+- a `for` over candidates times examples whose body calls a method with an inner counted `for` and a mutable accumulator (a small opcode interpreter, Ben's candidate evaluation) gets no kernel and stays a CPU parallel loop (800000 evaluations in 3 ms there): kernels for such bodies, then batches big enough for the GPU
 - a loop reading a member of an object parameter, a type constant or `.Length` of a list parameter stays on the CPU without a warning (one in a kernel body kept Convolved_Summed off the GPU, a taef2 decode took 2300 s of CPU): pass loop invariant members as numbers, or warn
 - `.Round` keeps a loop on the CPU: a device Round
 - bounds, reduction and tail checks remain: extend the four wide loads (`MlirBatched`) and fuse memory passes

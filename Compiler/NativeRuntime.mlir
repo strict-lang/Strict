@@ -10285,6 +10285,52 @@
     %exactLimit = arith.constant 9007199254740992.0 : f64
     %isExact = arith.cmpf olt, %absolute, %exactLimit : f64
     %isWhole = arith.andi %isInteger, %isExact : i1
+    %digitLimit = arith.constant 1.0e15 : f64
+    %isShort = arith.cmpf olt, %absolute, %digitLimit : f64
+    %numberBits = arith.bitcast %number : f64 to i64
+    %negativeZeroBits = arith.constant -9223372036854775808 : i64
+    %isSigned = arith.cmpi ne, %numberBits, %negativeZeroBits : i64
+    %isShortWhole = arith.andi %isWhole, %isShort : i1
+    %isDigits = arith.andi %isShortWhole, %isSigned : i1
+    cf.cond_br %isDigits, ^whole, ^classify
+  // whole numbers below 1e15 print as their digits with %.15g too: written directly, no printf and strtod round trip
+  ^whole:
+    %wholeValue = arith.fptosi %number : f64 to i64
+    %noDigits = arith.constant 0 : i64
+    %isNegative = arith.cmpi slt, %wholeValue, %noDigits : i64
+    %negated = arith.subi %noDigits, %wholeValue : i64
+    %unsigned = arith.select %isNegative, %negated, %wholeValue : i64
+    %oneDigit = arith.constant 1 : i64
+    cf.br ^count(%unsigned, %oneDigit : i64, i64)
+  ^count(%rest: i64, %counted: i64):
+    %ten = arith.constant 10 : i64
+    %hasMore = arith.cmpi uge, %rest, %ten : i64
+    %shorter = arith.divui %rest, %ten : i64
+    %moreDigits = arith.addi %counted, %oneDigit : i64
+    cf.cond_br %hasMore, ^count(%shorter, %moreDigits : i64, i64), ^counted(%counted : i64)
+  ^counted(%digitCount: i64):
+    %signWidth = arith.extui %isNegative : i1 to i64
+    %textLength = arith.addi %digitCount, %signWidth : i64
+    %endSlot = llvm.getelementptr %buffer[%textLength] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %terminator = arith.constant 0 : i8
+    llvm.store %terminator, %endSlot : i8, !llvm.ptr
+    %minus = arith.constant 45 : i8
+    llvm.store %minus, %buffer : i8, !llvm.ptr
+    %lastAt = arith.subi %textLength, %oneDigit : i64
+    cf.br ^digit(%unsigned, %lastAt : i64, i64)
+  ^digit(%pending: i64, %at: i64):
+    %tenDigits = arith.constant 10 : i64
+    %digitValue = arith.remui %pending, %tenDigits : i64
+    %digitByte = arith.trunci %digitValue : i64 to i8
+    %zeroCharacter = arith.constant 48 : i8
+    %digitCharacter = arith.addi %digitByte, %zeroCharacter : i8
+    %digitSlot = llvm.getelementptr %buffer[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %digitCharacter, %digitSlot : i8, !llvm.ptr
+    %left = arith.divui %pending, %tenDigits : i64
+    %before = arith.subi %at, %oneDigit : i64
+    %isLeft = arith.cmpi ne, %left, %noDigits : i64
+    cf.cond_br %isLeft, ^digit(%left, %before : i64, i64), ^done
+  ^classify:
     %true = arith.constant true
     %isFraction = arith.xori %isWhole, %true : i1
     %isLargeFraction = arith.andi %isLarge, %isFraction : i1
