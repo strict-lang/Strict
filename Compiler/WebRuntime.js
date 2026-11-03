@@ -753,8 +753,8 @@ addToLibrary({
 		delete strictWebGpu.uploads[handle];
 		delete strictWebGpu.sixteens[handle];
 	},
-	// GpuMemory.Released and Evicted: the pooled buffers of finished kernels and the free failure flags are destroyed after
-	// the commands still to be submitted (Firefox ran out of memory loading Moss with the encoder's buffers pooled)
+	// GpuMemory.Released and Evicted destroy the pooled buffers of finished kernels and the free failure flags after the
+	// commands still to be submitted (Firefox ran out of memory loading Moss with the encoder's buffers pooled)
 	strict_webgpu_trimmed__deps: ['$strictWebGpu', '$strictWebGpuFlush'],
 	strict_webgpu_trimmed: () => {
 		strictWebGpuFlush();
