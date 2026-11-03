@@ -14101,6 +14101,7 @@
   }
   // explicit workload boundary: collect dead temporaries and release unused pool blocks, retaining live tensor copies
   func.func private @strict_gpu_trim_unused(%self: f64) -> f64 {
+    func.call @strict_gpu_web_trim() : () -> ()
     %full = arith.constant true
     func.call @strict_gc_run(%full) : (i1) -> ()
     %most = arith.constant 9223372036854775807 : i64

@@ -753,6 +753,16 @@ addToLibrary({
 		delete strictWebGpu.uploads[handle];
 		delete strictWebGpu.sixteens[handle];
 	},
+	// GpuMemory.Released and Evicted: the pooled buffers of finished kernels and the free failure flags are destroyed after
+	// the commands still to be submitted (Firefox ran out of memory loading Moss with the encoder's buffers pooled)
+	strict_webgpu_trimmed__deps: ['$strictWebGpu', '$strictWebGpuFlush'],
+	strict_webgpu_trimmed: () => {
+		strictWebGpuFlush();
+		Object.values(strictWebGpu.pool).flat().concat(strictWebGpu.flagPool).forEach((buffer) => buffer.destroy());
+		strictWebGpu.pool = {};
+		strictWebGpu.flagPool = [];
+		strictWebGpu.pooledBytes = 0;
+	},
 	// 1 once kept results took 1 GB since the last time, the collector then gives back the buffers of dead lists
 	strict_webgpu_crowded__deps: ['$strictWebGpu'],
 	strict_webgpu_crowded: () => {

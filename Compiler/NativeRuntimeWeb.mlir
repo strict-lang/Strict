@@ -1075,6 +1075,12 @@
     llvm.call @strict_webgpu_release(%handle32) : (i32) -> ()
     return
   }
+  // GpuMemory.Released and Evicted (strict_gpu_trim_unused) also destroy the WebGPU buffers kept for reuse
+  llvm.func @strict_webgpu_trimmed()
+  func.func private @strict_gpu_web_trim() {
+    llvm.call @strict_webgpu_trimmed() : () -> ()
+    return
+  }
   // a list in a WebGPU buffer after another one (or after an empty list) joined in a new buffer on the GPU, lists of
   // other formats by strict_gpu_web_mixed, 0.0 for any other pair (strict_list_concat joins those on the host):
   // FluxAttention appends 13 chunks of results this way
