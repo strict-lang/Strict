@@ -270,6 +270,29 @@ Module['strictKernelGroups']['strict_quantized'] = (places) => {
 // (4 neighboring rows and 4 neighboring tokens of it each, read as one vec4 each per word), the codes of 32 columns of
 // both in workgroup memory at a time (word by word), dot products of 4 codes summed as whole numbers per 32 columns and
 // scaled by their row (rows of only their codes, read from a URL, have one scale each after the codes of all rows)
+// the codes of a block of 32 columns of the rows and tokens of a tile and the scales of its rows into workgroup memory,
+// read with row and token (the rows and tokens bound as the first two lists are read from them directly, not through
+// n_item for every word)
+const strictEightsStaging = (row, token) => `		for (var at = local; at < 512u; at += 256u) {
+			let row = rowStart + at / 8u;
+			let token = tokenStart + at / 8u;
+			let placed = at % 8u * 64u + at / 8u;
+			let word = block * 8u + at % 8u;
+			var codes = 0u;
+			if (row < rows && nibbles) {
+				codes = unpacked((bitcast<u32>(${row('row * stride + word / 2u')}) >> (word % 2u * 16u)) & 0xffffu);
+			} else if (row < rows) {
+				codes = bitcast<u32>(${row('row * stride + word')});
+			}
+			rowCodes[placed / 4u][placed % 4u] = codes;
+			tokenCodes[placed / 4u][placed % 4u] = select(0u, bitcast<u32>(${token('token * words + block * 8u + at % 8u')}),
+				token < tokens);
+		}
+		if (local < 64u) {
+			let row = rowStart + local;
+			let scaled = select(row * stride + rowWords + block, rows * stride + row, stride == rowWords);
+			rowScales[local] = select(0.0, ${row('scaled')}, row < rows);
+		}`;
 Module['strictShaders']['strict_eights'] = strictKernelBindings + `
 var<workgroup> rowCodes: array<vec4<u32>, 128>;
 var<workgroup> tokenCodes: array<vec4<u32>, 128>;
@@ -303,26 +326,14 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 	var second = vec4<f32>();
 	var third = vec4<f32>();
 	var fourth = vec4<f32>();
+	let isBound = (places[0] & 0xf8000000u) == 0x10000000u && (places[2] & 0xf8000000u) == 0x20000000u;
+	let rowBase = places[0] & 0x0fffffffu;
+	let tokenBase = places[2] & 0x0fffffffu;
 	for (var block = 0u; block < columns / 32u; block++) {
-		for (var at = local; at < 512u; at += 256u) {
-			let row = rowStart + at / 8u;
-			let token = tokenStart + at / 8u;
-			let placed = at % 8u * 64u + at / 8u;
-			let word = block * 8u + at % 8u;
-			var codes = 0u;
-			if (row < rows && nibbles) {
-				codes = unpacked((bitcast<u32>(n_item(places[0], row * stride + word / 2u)) >> (word % 2u * 16u)) & 0xffffu);
-			} else if (row < rows) {
-				codes = bitcast<u32>(n_item(places[0], row * stride + word));
-			}
-			rowCodes[placed / 4u][placed % 4u] = codes;
-			tokenCodes[placed / 4u][placed % 4u] = select(0u, bitcast<u32>(n_item(places[2], token * words + block * 8u +
-				at % 8u)), token < tokens);
-		}
-		if (local < 64u) {
-			let row = rowStart + local;
-			let scaled = select(row * stride + rowWords + block, rows * stride + row, stride == rowWords);
-			rowScales[local] = select(0.0, n_item(places[0], scaled), row < rows);
+		if (isBound) {
+${strictEightsStaging((at) => `lists1[rowBase + ${at}]`, (at) => `lists2[tokenBase + ${at}]`)}
+		} else {
+${strictEightsStaging((at) => `n_item(places[0], ${at})`, (at) => `n_item(places[2], ${at})`)}
 		}
 		workgroupBarrier();
 		var firstWholes = vec4<i32>();
