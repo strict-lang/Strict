@@ -14116,6 +14116,7 @@
   // also right after a load that only uploaded (no list lives on the GPU as a result yet)
   func.func private @strict_gpu_evict_all(%self: f64) -> f64 {
     %released = func.call @strict_gpu_trim_unused(%self) : (f64) -> f64
+    func.call @strict_gpu_web_evict() : () -> ()
     %one = arith.constant 1 : i64
     %stateSlot = llvm.mlir.addressof @strict_gpu_state : !llvm.ptr
     %state = llvm.load %stateSlot : !llvm.ptr -> i64

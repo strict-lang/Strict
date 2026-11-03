@@ -1090,6 +1090,12 @@
     llvm.call @strict_webgpu_trimmed() : () -> ()
     return
   }
+  // GpuMemory.Evicted also gives back the WebGPU buffers of rows read from files, they are uploaded again when used
+  llvm.func @strict_webgpu_evicted()
+  func.func private @strict_gpu_web_evict() {
+    llvm.call @strict_webgpu_evicted() : () -> ()
+    return
+  }
   // a list in a WebGPU buffer after another one (or after an empty list) joined in a new buffer on the GPU, lists of
   // other formats by strict_gpu_web_mixed, 0.0 for any other pair (strict_list_concat joins those on the host):
   // FluxAttention appends 13 chunks of results this way
