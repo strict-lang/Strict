@@ -21,7 +21,7 @@ Sums(input Numbers) Slow(Numbers)
 	Sixes.Sums(Prompt)(500).IsNearlyEqual(-3.413, 0.2)
 	Threes.Sums(Tokens)(255).IsNearlyEqual(-1.549, 0.2)
 	let width = weights.First.Length
-	if input.Length is width
+	if (input.Length is width) and (Process.OperatingSystem is not "Web")
 		return Layer(weights, biases).Sums(input)
 	let rows = weights.Length
 	for rows * input.Length / width
