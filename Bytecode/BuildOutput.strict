@@ -21,3 +21,15 @@ Released(base Text, platformName Text) Text
 	let program = Delivered(base)
 	let slash = program.LastIndexOf("/")
 	program.Substring(0, slash) + "/Release/" + platformName + program.Substring(slash, program.Length - slash)
+Shipped(release Text, sidecar Text) Text
+	BuildOutput.Shipped("Compiler/output/Unshipped", "A/obj/B.ptx") is "Compiler/output/Unshipped/B.ptx"
+	BuildOutput.Shipped("Compiler/output/Unshipped", "A/obj/B.runtime.ptx").EndsWith("/Unshipped/shared.runtime.ptx")
+	let name = Path(sidecar).FileName.text
+	let at = name.IndexOf(".runtime.")
+	if at < 0
+		return release + "/" + name
+	let shared = release + "/shared" + name.Substring(at, name.Length - at)
+	let isShared = (File(shared).Exists is false) or (File(shared).ReadBytes is File(sidecar).ReadBytes)
+	if isShared
+		File(release + "/" + name).Delete
+	isShared then shared else release + "/" + name

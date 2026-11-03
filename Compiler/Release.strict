@@ -1,7 +1,7 @@
 has logger
 has base Text
 constant Opening = "= func.call @" + "Window_Open("
-constant Sidecars = (".ptx", ".older.ptx", ".runtime.ptx", ".runtime.older.ptx", ".fatbin", ".runtime.fatbin", ".hsaco", ".metal")
+constant Sidecars = (".ptx", ".runtime.ptx", ".fatbin", ".runtime.fatbin", ".hsaco", ".metal")
 AndroidPackaged Number
 	let release = Parent + "/Release/Android"
 	if Content(Parent + "/Release/Content") < 0
@@ -102,7 +102,7 @@ Sidecar(release Text) Number
 	for Sidecars
 		let sidecar = base + value
 		if File(sidecar).Exists and (File(sidecar).Length > 0)
-			File(release + "/" + Named(sidecar)).Write(File(sidecar).ReadBytes)
+			File(BuildOutput.Shipped(release, sidecar)).Write(File(sidecar).ReadBytes)
 			copied = copied + 1
 	copied
 Mirrored(target Text) Number

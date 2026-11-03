@@ -12252,7 +12252,7 @@
     %runtimeEnding = llvm.mlir.addressof @strict_gpu_runtime_ending : !llvm.ptr
     %runtimeOlderEnding = llvm.mlir.addressof @strict_gpu_runtime_older_ending : !llvm.ptr
     %newer = func.call @strict_gpu_beside(%stem, %newerEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
-    %runtime = func.call @strict_gpu_beside(%stem, %runtimeEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %runtime = func.call @strict_gpu_beside_shared(%stem, %runtimeEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     func.call @strict_gpu_matched(%ptx, %newerEnding, %newer, %runtime) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> ()
     %older = func.call @strict_gpu_beside(%stem, %olderEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %runtimeOlder = func.call @strict_gpu_beside(%stem, %runtimeOlderEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
@@ -12269,7 +12269,7 @@
     %binarySlot = llvm.mlir.addressof @strict_gpu_binary : !llvm.ptr
     llvm.store %binaryBits, %binarySlot : i64, !llvm.ptr
     %runtimeBinaryEnding = llvm.mlir.addressof @strict_gpu_runtime_binary_ending : !llvm.ptr
-    %runtimeBinary = func.call @strict_gpu_beside(%stem, %runtimeBinaryEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %runtimeBinary = func.call @strict_gpu_beside_shared(%stem, %runtimeBinaryEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %runtimeBinaryBits = llvm.ptrtoint %runtimeBinary : !llvm.ptr to i64
     %runtimeBinarySlot = llvm.mlir.addressof @strict_gpu_runtime_binary : !llvm.ptr
     llvm.store %runtimeBinaryBits, %runtimeBinarySlot : i64, !llvm.ptr
@@ -12445,6 +12445,22 @@
     return %path : !llvm.ptr
   }
   llvm.mlir.global internal constant @strict_gpu_beside_obj("obj/\00") : !llvm.array<5 x i8>
+  // the runtime kernels of a program (Name.runtime.ptx, Name.runtime.fatbin) or else the ones the programs of a release
+  // folder share (shared.runtime.ptx, BuildOutput.Shipped): MossImage and H3Video shipped the same 12.5 MB twice
+  llvm.mlir.global internal constant @strict_gpu_shared_stem("shared\00") : !llvm.array<7 x i8>
+  func.func private @strict_gpu_beside_shared(%stem: !llvm.ptr, %ending: !llvm.ptr) -> !llvm.ptr {
+    %own = func.call @strict_gpu_beside(%stem, %ending) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %first = llvm.load %own : !llvm.ptr -> i8
+    %terminator = arith.constant 0 : i8
+    %isMissing = arith.cmpi eq, %first, %terminator : i8
+    cf.cond_br %isMissing, ^shared, ^found
+  ^found:
+    return %own : !llvm.ptr
+  ^shared:
+    %sharedStem = llvm.mlir.addressof @strict_gpu_shared_stem : !llvm.ptr
+    %shared = func.call @strict_gpu_beside(%sharedStem, %ending) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    return %shared : !llvm.ptr
+  }
   // the whole file stem + ending in the obj folder of the executable (where a program build keeps it, so it wins over a
   // stale file left beside the executable by an older build) or else beside it (shipped builds), as text, an empty text
   // when it cannot be read
