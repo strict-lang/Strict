@@ -368,6 +368,13 @@ Module['strictKernelGroups']['strict_eights'] = (places) => {
 // row with 16 of the positions each) and adds the weighted values of 2 numbers of all 16 rows per invocation, no scores
 // are stored
 Module['strictShaders']['strict_attention'] = strictKernelBindings + `
+// the numbers at and at + 1 of a list, both from one 32 bit word when it holds 16 bit halves and at is even
+fn n_pair(place: u32, at: u32) -> vec2<f32> {
+	if (place < 0x80000000u || (at & 1u) == 1u) { return vec2<f32>(n_item(place, at), n_item(place, at + 1u)); }
+	let word = bitcast<u32>(n_number(place & 0x77ffffffu, at / 2u));
+	if ((place & 0x08000000u) != 0u) { return unpack2x16float(word); }
+	return vec2<f32>(bitcast<f32>(word << 16u), bitcast<f32>(word & 0xffff0000u));
+}
 var<workgroup> asked: array<vec4<f32>, 512>;
 var<workgroup> scored: array<vec4<f32>, 256>;
 var<workgroup> largests: array<f32, 16>;
@@ -423,16 +430,34 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 		var secondScores = vec4<f32>();
 		var thirdScores = vec4<f32>();
 		var fourthScores = vec4<f32>();
-		if (position < visible) {
-			let keyStart = (position * sequences * keyGroups + keyGroup) * size;
-			for (var at = 0u; at < size; at++) {
-				let key = vec4<f32>(n_item(places[2], keyStart + at));
+		for (var chunk = 0u; chunk < size; chunk += 16u) {
+			workgroupBarrier();
+			for (var part = 0u; part < 8u; part++) {
+				let element = part * 64u + local;
+				let row = element / 8u;
+				let dimension = element % 8u * 2u;
+				let keyPosition = start + row;
+				var pair = vec2<f32>();
+				if (keyPosition < visible && chunk + dimension < size) {
+					pair = n_pair(places[2], (keyPosition * sequences * keyGroups + keyGroup) * size + chunk + dimension);
+				}
+				let slot = dimension * 64u + (row ^ dimension);
+				scored[slot / 4u][slot % 4u] = pair.x;
+				let next = (dimension + 1u) * 64u + (row ^ (dimension + 1u));
+				scored[next / 4u][next % 4u] = pair.y;
+			}
+			workgroupBarrier();
+			for (var dimension = 0u; dimension < 16u; dimension++) {
+				let slot = dimension * 64u + (local ^ dimension);
+				let key = vec4<f32>(scored[slot / 4u][slot % 4u]);
+				let at = chunk + dimension;
 				firstScores = fma(asked[at * 4u], key, firstScores);
 				secondScores = fma(asked[at * 4u + 1u], key, secondScores);
 				thirdScores = fma(asked[at * 4u + 2u], key, thirdScores);
 				fourthScores = fma(asked[at * 4u + 3u], key, fourthScores);
 			}
 		}
+		workgroupBarrier();
 		let hidden = vec4<f32>(-3.0e38);
 		scored[local * 4u] = select(hidden, firstScores, vec4<u32>(position) <= lasts);
 		scored[local * 4u + 1u] = select(hidden, secondScores, vec4<u32>(position) <= lasts + 4u);
@@ -476,8 +501,10 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 		let count = min(64u, visible - start);
 		for (var at = 0u; at < count; at++) {
 			let valueStart = valueOffset + keyGroup * size + (start + at) * valueStride;
-			let low = vec4<f32>(select(0.0, n_item(places[4], valueStart + local), local < size));
-			let high = vec4<f32>(select(0.0, n_item(places[4], valueStart + local + 64u), local + 64u < size));
+			var pair = vec2<f32>();
+			if (local * 2u < size) { pair = n_pair(places[4], valueStart + local * 2u); }
+			let low = vec4<f32>(pair.x);
+			let high = vec4<f32>(select(0.0, pair.y, local * 2u + 1u < size));
 			firstLow = fma(scored[at * 4u], low, firstLow);
 			secondLow = fma(scored[at * 4u + 1u], low, secondLow);
 			thirdLow = fma(scored[at * 4u + 2u], low, thirdLow);
@@ -496,8 +523,8 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 		if (token >= tokens) { break; }
 		let placed = ((sequence * tokens + token) * heads + head) * size;
 		let total = totals[row];
-		if (local < size) { output[placed + local] = lows[row / 4u][row % 4u] / total; }
-		if (local + 64u < size) { output[placed + local + 64u] = highs[row / 4u][row % 4u] / total; }
+		if (local * 2u < size) { output[placed + local * 2u] = lows[row / 4u][row % 4u] / total; }
+		if (local * 2u + 1u < size) { output[placed + local * 2u + 1u] = highs[row / 4u][row % 4u] / total; }
 	}
 }`;
 // the blocks of 16 tokens of strict_attention, about 4 billion multiplications in a submit
