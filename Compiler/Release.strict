@@ -20,17 +20,19 @@ IOSPackaged Number
 		return 1
 	let release = Parent + "/Release/iOS"
 	Refreshed(release, release + "/Content", base, (".ios.a", ".simulator.a"))
-Packaged(program Text, built Number, isWeb = false, isCrossing = false, platform = -1) Number
+Packaged(program Text, built Number, isWeb = false, isCrossing = false, platform = -1, isReleased = false) Number
 	Release(Logger, "Examples/Sum").Packaged("module {\n}", 0) is 0
 	Release(Logger, "Examples/Sum").Packaged("module {\n}", 2) is 2
 	Release(Logger, "Missing/App.test").Packaged(Opening, 0) is 0
+	Release(Logger, "Compiler/output/Console").Packaged("module {\n}", 0, false, false, -1, true) is 0
+	Directory.Exists("Compiler/output/Release/" + Platform.NameOf(Platform.Current))
 	if (platform is in (Platform.Android, Platform.IOS, Platform.IOSSimulator)) and (built is 0)
 		return Platform.IsIOS(platform) then IOSPackaged else AndroidPackaged
 	if (built is not 0) or base.EndsWith(".test")
 		return built
 	if isWeb
 		return Refreshed(Parent + "/Release/Web", "", base, List(Text))
-	program.IndexOf(Opening) >= 0 then NativePackaged(isCrossing) else built
+	(program.IndexOf(Opening) >= 0) or isReleased or isCrossing then NativePackaged(isCrossing) else built
 NativePackaged(isCrossing Boolean) Number
 	if Content(Parent + "/Release/Content") < 0
 		return 1

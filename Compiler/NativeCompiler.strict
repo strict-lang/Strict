@@ -58,14 +58,16 @@ IsMixed(options Texts) Boolean
 	NativeCompiler.IsMixed(("ios", "web"))
 	NativeCompiler.IsMixed(("ios", "simulator")) is false
 	let isMobile = ("android" is in options) or ("ios" is in options)
-	let isDesktop = ("web" is in options) or ("linux" is in options)
+	let isDesktop = ("web" is in options) or ("linux" is in options) or ("windows" is in options)
 	(("android" is in options) and ("ios" is in options)) or (isMobile and isDesktop)
 Configured(options Texts) NativeBuild
 	NativeCompiler(Logger).Configured(("ios", "simulator")).Target is Platform.IOSSimulator
 	NativeCompiler(Logger).Configured(("linux", "web")).isCrossing is false
+	NativeCompiler(Logger).Configured(List(Text) + "windows").isReleased
 	let isWeb = "web" is in options
 	let isCrossing = ("linux" is in options) and (isWeb is false)
-	NativeBuild(logger, isCrossing, isWeb, "android" is in options, "ios" is in options, "simulator" is in options)
+	let configured = NativeBuild(logger, isCrossing, isWeb, "android" is in options, "ios" is in options)
+	NativeBuild(configured, isSimulator = "simulator" is in options, isReleased = "windows" is in options)
 Replaced(executable Text, target Text) Boolean
 	let old = executable.Replace(".exe", ".old.exe")
 	File(executable).Rename(old)

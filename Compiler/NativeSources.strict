@@ -109,14 +109,24 @@ Resource(base Text, platform Number, root Text) Text
 	File(base + ".rc").Delete
 	compiled.Failed then "llvm-rc failed: " + compiled.error else " \"" + base + ".res\""
 LinuxLinked(base Text, program Text, root Text) Text
-	Adding.LinuxLinked("Compiler/output/missing", "missing", ".").StartsWith("Linux build skipped")
+	Adding.LinuxLinked("Compiler/output/missing", "missing", ".").StartsWith("Linux build failed")
 	let tools = Toolchain(Platform.Windows, root)
 	mutable sources = folders.Length is 0 then "" else " -I" + tools.Quoted(tools.WslPath(root + "/Compiler"))
 	for Files
 		sources = sources + " " + tools.Quoted(tools.WslPath(value))
 	let gcc = folders.Length is 0 then "-e gcc -static " else "-e gcc "
 	let linkage = gcc + tools.Quoted(tools.WslPath(base + ".linux.o"))
-	let output = " -o " + tools.Quoted(tools.WslPath(program)) + " -lm -lpthread" + Flags(Platform.Linux, root)
+	let output = " -o " + tools.Quoted(tools.WslPath(program)) + " -lm -lpthread" + Wsl(Flags(Platform.Linux, root), tools)
 	Release(Logger, base).Created(Path(program).PathOnly.text)
 	let linked = ToolRunner("wsl").Execute(linkage + sources + output)
-	linked.Failed then "Linux build skipped (needs WSL with gcc): " + linked.error else "Built " + program + " for Linux"
+	linked.Failed then "Linux build failed (needs WSL with gcc): " + linked.error else "Built " + program + " for Linux"
+Wsl(flags Text, tools Toolchain) Text
+	Adding.Wsl(" -DX -IC:/s/a C:/s/b.c -lm", Toolchain.OnWindows) is " -DX -I\"/mnt/c/s/a\" \"/mnt/c/s/b.c\" -lm"
+	mutable converted = ""
+	for flags.Split(" ")
+		let isInclude = value.StartsWith("-I")
+		let path = isInclude then value.Substring(2, value.Length - 2) else value
+		let wsl = (isInclude then "-I" else "") + tools.Quoted(tools.WslPath(path))
+		if value is not ""
+			converted = converted + " " + (isInclude or IsSource(value) then wsl else value)
+	converted

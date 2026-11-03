@@ -6,6 +6,7 @@ has isIOS Boolean = false
 has isSimulator Boolean = false
 has selection Text = ""
 has isRecursive Boolean = true
+has isReleased Boolean = false
 constant Broken = "module {\n  func.func private @A() -> f64 {\n    return %missing : f64\n  }\n}"
 IsProgram(path Text) Boolean
 	NativeBuild.IsProgram("Examples/Sum.strict")
@@ -122,7 +123,7 @@ CrossBuild(base Text, program Text, tools Toolchain, isCounting Boolean) Number
 	File(base + ".linux.mlir").Write(Mlir(program, tools.root, Platform.Linux))
 	let crossed = tools.CrossBuilt(base)
 	logger.Log(crossed)
-	crossed.StartsWith("Built ") or crossed.StartsWith("Linux build skipped") then 0 else 1
+	crossed.StartsWith("Built ") then 0 else 1
 Output(path Text, isProgram Boolean) Text
 	NativeBuild.Output("Character.strict", false) is "./obj/Character.test"
 	NativeBuild.Output("C:/s/A.strict", true) is "C:/s/obj/A"

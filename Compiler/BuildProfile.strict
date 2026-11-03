@@ -86,7 +86,8 @@ Inlined(types List(TypeEntry)) List(TypeEntry)
 	inlined
 Packaged(build NativeBuild, base Text, program Text, built Number, tools Toolchain) Number
 	let started = Process.Elapsed
-	let result = Release(logger, base).Packaged(program, built, tools.isWeb, build.isCrossing, build.Target)
+	let release = Release(logger, base)
+	let result = release.Packaged(program, built, tools.isWeb, build.isCrossing, build.Target, build.isReleased)
 	Reported("Packaging", started)
 	result
 Lowered(tools Toolchain, base Text) Text

@@ -12,6 +12,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - Lists of numbers made by generic list paths (`strict_list_add` growing `raw = raw + ...` in MersenneTwister.Uints, `strict_list_new` of other loops) are scanned by the collector: on wasm the halves of their numbers look like references and keep dead big lists alive while they live; they should be scanned only up to their items like `strict_numbers_new` lists.
 - Two greedy runs of Qwen3-Coder-30B-A3B on the same prompt give different outputs (Ben, not investigated: atomics or reduction order in the expert path?).
 - A GLSL shader that fails to compile in `Gpu.Program` is silently ignored: TorinsTowers with a broken WaterPlane fragment shader ran with exit 0 and no message; compile and link errors should stop with the info log and the .strict line.
+- A named argument that skips parameters with defaults fails in bytecode codegen with `UnsupportedOperator` (OperatorCodegen line 157 via ListCodegen.Argument): `Release.Packaged(program, 0, isReleased = true)` and `Bytes.Hosted("a", picked = (2))`, positional arguments work.
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).
