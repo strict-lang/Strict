@@ -328,6 +328,12 @@
     %seconds = func.call @strict_clock_read(%realtime) : (i32) -> f64
     return %seconds : f64
   }
+  // seconds this thread ran on a core (CLOCK_THREAD_CPUTIME_ID), what a collection really cost while cores were shared
+  func.func private @strict_thread_seconds() -> f64 {
+    %threadClock = arith.constant 16 : i32
+    %seconds = func.call @strict_clock_read(%threadClock) : (i32) -> f64
+    return %seconds : f64
+  }
   func.func private @strict_clock_read(%clock: i32) -> f64 {
     %two = arith.constant 2 : i64
     %timespec = llvm.alloca %two x i64 : (i64) -> !llvm.ptr

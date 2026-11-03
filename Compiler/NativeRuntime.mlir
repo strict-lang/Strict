@@ -54,6 +54,9 @@
   llvm.mlir.global internal @strict_gc_stack(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_allocated(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_threshold(16777216 : i64) : i64
+  // bytes a program may allocate before a collection is due: 1/128 of the physical memory, at least 16 MB (the young limit
+  // and the smallest full threshold), so a busy program collects seldom instead of every 16 or 64 MB
+  llvm.mlir.global internal @strict_gc_budget(16777216 : i64) : i64
   llvm.mlir.global internal @strict_gc_marked(0 : i64) : i64
   // what the last full collection marked (at least its minimum), the big objects young ones marked since (their marks
   // stay until the next full one) and the ones the current collection marked
@@ -1367,7 +1370,17 @@
     %checks = arith.cmpi ne, %checkPointer, %noCheck : i64
     %usualThreshold = arith.constant 16777216 : i64
     %checkThreshold = arith.constant 1048576 : i64
-    %firstThreshold = arith.select %checks, %checkThreshold, %usualThreshold : i64
+    %hostBytes = func.call @strict_host_memory() : () -> i64
+    %budgetShift = arith.constant 7 : i64
+    %hostShare = arith.shrui %hostBytes, %budgetShift : i64
+    %budget = arith.maxui %hostShare, %usualThreshold : i64
+    %budgetSlot = llvm.mlir.addressof @strict_gc_budget : !llvm.ptr
+    llvm.store %budget, %budgetSlot : i64, !llvm.ptr
+    %usualYoung = arith.constant 67108864 : i64
+    %youngBudget = arith.maxui %budget, %usualYoung : i64
+    %youngBudgetSlot = llvm.mlir.addressof @strict_gc_young_limit : !llvm.ptr
+    llvm.store %youngBudget, %youngBudgetSlot : i64, !llvm.ptr
+    %firstThreshold = arith.select %checks, %checkThreshold, %budget : i64
     %firstThresholdSlot = llvm.mlir.addressof @strict_gc_threshold : !llvm.ptr
     llvm.store %firstThreshold, %firstThresholdSlot : i64, !llvm.ptr
     %youngName = llvm.mlir.addressof @strict_gc_young_switch : !llvm.ptr
@@ -5714,11 +5727,13 @@
   ^collect:
     %spilled:2 = func.call @strict_registers_spilled() : () -> (i64, i64)
     %startedAt = func.call @strict_clock() : () -> f64
+    %ranBefore = func.call @strict_thread_seconds() : () -> f64
     %measuredSlot = llvm.mlir.addressof @strict_measured_text : !llvm.ptr
     llvm.store %zero, %measuredSlot : i64, !llvm.ptr
     %one = arith.constant 1 : i64
     %classCount = arith.constant 64 : i64
-    %minimum = arith.constant 16777216 : i64
+    %minimumSlot = llvm.mlir.addressof @strict_gc_budget : !llvm.ptr
+    %minimum = llvm.load %minimumSlot : !llvm.ptr -> i64
     llvm.call @llvm.eh.unwind.init() : () -> ()
     %stackPointer = llvm.call_intrinsic "llvm.stacksave.p0"() : () -> !llvm.ptr
     %limitSlot = llvm.mlir.addressof @strict_gc_young_limit : !llvm.ptr
@@ -5847,6 +5862,69 @@
     cf.br ^done
   ^done:
     func.call @strict_gc_log(%full, %startedAt) : (i1, f64) -> ()
+    func.call @strict_gc_watch(%ranBefore) : (f64) -> ()
+    return
+  }
+  // collections may take at most a quarter of the time: more than 1.25 s of collecting in the last 5 seconds ends the
+  // program, it allocates too much and has to be fixed first (a single long collection stays below it); counted is the
+  // time the collecting thread ran (strict_thread_seconds), waiting for a core shared with other programs is not
+  llvm.mlir.global internal @strict_gc_seconds(dense<0.0> : tensor<5xf64>) : !llvm.array<5 x f64>
+  llvm.mlir.global internal @strict_gc_stamps(dense<-1> : tensor<5xi64>) : !llvm.array<5 x i64>
+  llvm.mlir.global internal constant @strict_gc_exceeded("GarbageCollectionExceedsQuarter: %.2f of the last 5 seconds were spent collecting garbage (at most 25 %%), allocate less in the loops of this program\0A\00") : !llvm.array<151 x i8>
+  func.func private @strict_gc_watch(%ranBefore: f64) {
+    %now = func.call @strict_clock() : () -> f64
+    %ran = func.call @strict_thread_seconds() : () -> f64
+    %spent = arith.subf %ran, %ranBefore : f64
+    %programSlot = llvm.mlir.addressof @strict_started : !llvm.ptr
+    %programStart = llvm.load %programSlot : !llvm.ptr -> f64
+    %running = arith.subf %now, %programStart : f64
+    %second = arith.fptosi %running : f64 to i64
+    %five = arith.constant 5 : i64
+    %slot = arith.remsi %second, %five : i64
+    %stamps = llvm.mlir.addressof @strict_gc_stamps : !llvm.ptr
+    %seconds = llvm.mlir.addressof @strict_gc_seconds : !llvm.ptr
+    %stampSlot = llvm.getelementptr %stamps[0, %slot] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<5 x i64>
+    %secondSlot = llvm.getelementptr %seconds[0, %slot] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<5 x f64>
+    %stamp = llvm.load %stampSlot : !llvm.ptr -> i64
+    %sameSecond = arith.cmpi eq, %stamp, %second : i64
+    %earlier = llvm.load %secondSlot : !llvm.ptr -> f64
+    %nothing = arith.constant 0.0 : f64
+    %kept = arith.select %sameSecond, %earlier, %nothing : f64
+    %added = arith.addf %kept, %spent : f64
+    llvm.store %added, %secondSlot : f64, !llvm.ptr
+    llvm.store %second, %stampSlot : i64, !llvm.ptr
+    %oldest = arith.subi %second, %five : i64
+    %first = arith.constant 0 : i64
+    cf.br ^sum(%first, %nothing : i64, f64)
+  ^sum(%index: i64, %total: f64):
+    %isDone = arith.cmpi eq, %index, %five : i64
+    cf.cond_br %isDone, ^check(%total : f64), ^add
+  ^add:
+    %bucketStampSlot = llvm.getelementptr %stamps[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<5 x i64>
+    %bucketSecondSlot = llvm.getelementptr %seconds[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<5 x f64>
+    %bucketStamp = llvm.load %bucketStampSlot : !llvm.ptr -> i64
+    %bucketSeconds = llvm.load %bucketSecondSlot : !llvm.ptr -> f64
+    %isRecent = arith.cmpi sgt, %bucketStamp, %oldest : i64
+    %counted = arith.select %isRecent, %bucketSeconds, %nothing : f64
+    %summed = arith.addf %total, %counted : f64
+    %one = arith.constant 1 : i64
+    %next = arith.addi %index, %one : i64
+    cf.br ^sum(%next, %summed : i64, f64)
+  ^check(%collecting: f64):
+    %window = arith.constant 5.0 : f64
+    %quarter = arith.constant 1.25 : f64
+    %isLong = arith.cmpf oge, %running, %window : f64
+    %isOver = arith.cmpf ogt, %collecting, %quarter : f64
+    %exceeded = arith.andi %isLong, %isOver : i1
+    cf.cond_br %exceeded, ^fail, ^done
+  ^fail:
+    %message = llvm.mlir.addressof @strict_gc_exceeded : !llvm.ptr
+    %printed = llvm.call @printf(%message, %collecting) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, f64) -> i32
+    llvm.call @strict_crash_log(%message) : (!llvm.ptr) -> ()
+    %code = arith.constant 1 : i32
+    llvm.call @exit(%code) : (i32) -> ()
+    cf.br ^done
+  ^done:
     return
   }
   func.func private @strict_ptr(%bits: f64) -> !llvm.ptr {

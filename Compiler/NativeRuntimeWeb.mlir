@@ -511,6 +511,11 @@
     %seconds = func.call @strict_clock_read(%realtime) : (i32) -> f64
     return %seconds : f64
   }
+  // no thread clock in the browser: the wall clock
+  func.func private @strict_thread_seconds() -> f64 {
+    %seconds = func.call @strict_clock() : () -> f64
+    return %seconds : f64
+  }
   func.func private @strict_clock_read(%clock: i32) -> f64 {
     %two = arith.constant 2 : i64
     %timespec = llvm.alloca %two x i64 : (i64) -> !llvm.ptr

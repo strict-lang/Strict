@@ -331,6 +331,25 @@
   llvm.func @_time64(!llvm.ptr) -> i64
   llvm.func @QueryPerformanceCounter(!llvm.ptr) -> i32
   llvm.func @QueryPerformanceFrequency(!llvm.ptr) -> i32
+  llvm.func @GetCurrentThread() -> !llvm.ptr
+  llvm.func @GetThreadTimes(!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+  // seconds this thread ran on a core (kernel and user time in 100 ns), what a collection really cost while cores were shared
+  func.func private @strict_thread_seconds() -> f64 {
+    %four = arith.constant 4 : i64
+    %times = llvm.alloca %four x i64 : (i64) -> !llvm.ptr
+    %thread = llvm.call @GetCurrentThread() : () -> !llvm.ptr
+    %exitSlot = llvm.getelementptr %times[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %kernelSlot = llvm.getelementptr %times[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %userSlot = llvm.getelementptr %times[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %read = llvm.call @GetThreadTimes(%thread, %times, %exitSlot, %kernelSlot, %userSlot) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    %kernel = llvm.load %kernelSlot : !llvm.ptr -> i64
+    %user = llvm.load %userSlot : !llvm.ptr -> i64
+    %ticks = arith.addi %kernel, %user : i64
+    %ticksFloat = arith.uitofp %ticks : i64 to f64
+    %perSecond = arith.constant 1.0e7 : f64
+    %seconds = arith.divf %ticksFloat, %perSecond : f64
+    return %seconds : f64
+  }
   func.func private @strict_clock() -> f64 {
     %one = arith.constant 1 : i64
     %counter = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
