@@ -7,17 +7,19 @@ constant Opened = QwenSafetensors.Tiny.Loaded(10000)
 constant Expected = Qwen3.TinyHybrid.Prefilled((1, 2, 3), 0).hidden
 constant Linear = "layers.0.linear_attn."
 constant Plain = QwenSafetensors(Safetensors("NeuralNetworks/tinyqwen3vl.safetensors", 32, "model."), 16, 0, 0)
-Loaded(theta Number) Slow(Qwen3)
+Loaded(theta Number, picked = List(Number)) Slow(Qwen3)
 	Opened.blocks.Length is 1
 	Opened.blocks.First.hybrid.layers.Length is 3
 	Opened.Prefilled((1, 2, 3), 0).hidden(0).IsNearlyEqual(Expected(0), 0.3)
 	Opened.Prefilled((1, 2, 3), 0).hidden(20).IsNearlyEqual(Expected(20), 0.3)
+	Tiny.Loaded(10000, (1, 2, 3)).Prefilled((1, 2, 3), 0).hidden is Opened.Prefilled((1, 2, 3), 0).hidden
+	Tiny.Loaded(10000, (1, 2, 3)).tokens(0).Length is 0
 	Plain.Loaded(5000000).Prefilled((1, 2, 3), 0).hidden(0).IsNearlyEqual(-6.434468, 0.02)
 	Plain.Loaded(5000000).Prefilled((1, 2, 3), 0).hidden(100).IsNearlyEqual(2.307147, 0.02)
 	let basis = Basis(Basis.None, grouped = true, convrot = group)
-	let embedded = file.Hosted("embed_tokens")
-	let normed = file.Entry("norm.weight") is "" then Layer.Zeros(embedded.First.Length) else Norm("norm.weight")
-	Qwen3(Blocks(basis), embedded, List(Numbers), normed, theta, rotary = rotary, basis = basis)
+	let width = file.Shape("embed_tokens.weight")(1)
+	let normed = file.Entry("norm.weight") is "" then Layer.Zeros(width) else Norm("norm.weight")
+	Qwen3(Blocks(basis), file.Hosted("embed_tokens", picked), List(Numbers), normed, theta, rotary = rotary, basis = basis)
 Blocks(basis Basis) Slow(List(Qwen3Block))
 	Tiny.Blocks(Basis.None).First.heads is 2
 	mutable blocks = List(Mutable(Qwen3Block))

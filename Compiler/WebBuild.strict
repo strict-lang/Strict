@@ -62,11 +62,25 @@ Declared(line Text) Text
 Preloaded(content Text) Text
 	Missing.Preloaded("Compiler/output/missing") is ""
 	Missing.Preloaded("Compiler") is " --preload-file \"Compiler@/Content\""
-	Directory.Exists(content) then " --preload-file \"" + content + "@/Content\"" else ""
+	Release(Logger, "Missing/App").Created("Compiler/output/EmptyApp/Content/Inner")
+	Missing.Preloaded("Compiler/output/EmptyApp/Content") is ""
+	HasFiles(content) then " --preload-file \"" + content + "@/Content\"" else ""
+HasFiles(folder Text) Boolean
+	Missing.HasFiles("Compiler")
+	Missing.HasFiles("Compiler/output/missing") is false
+	if Directory.Exists(folder) is false
+		return false
+	if Directory.Files(folder).Length > 0
+		return true
+	for Directory.Directories(folder)
+		if HasFiles(value)
+			return true
+	false
 Mirrored(folder Text, base Text) Text
 	Missing.Mirrored(".", "Compiler/output/missing") is ""
 	Missing.Mirrored("./Compiler", "Compiler/output/missing") is ""
-	if (folder is ".") or (Directory.Exists(folder + "/Content") is false)
+	Missing.Mirrored("./Compiler/output/EmptyApp", "Compiler/output/missing") is ""
+	if (folder is ".") or (HasFiles(folder + "/Content") is false)
 		return ""
 	let path = "/" + (folder.StartsWith("./") then folder.Substring(2, folder.Length - 2) else folder)
 	let linked = "FS.symlink(\"/Content\", \"" + path + "/Content\")"

@@ -63,14 +63,18 @@ Quantized(name Text, tokenBits = 8) List(Numbers)
 	if scale is ""
 		return TensorFile.Quantized(path, weight, scales, tokenBits)
 	TensorFile.Fours(path, weight, scales, scale, Entry(name + ".pre_quant_scale"), tokenBits)
-Hosted(name Text, part = 4096) List(Numbers)
+Hosted(name Text, picked = List(Number), part = 4096) List(Numbers)
 	Bytes.Hosted("a") is Bytes.Quantized("a")
-	Bytes.Hosted("a", 3)(3) is Bytes.Quantized("a")(3)
+	Bytes.Hosted("a", List(Number), 3)(3) is Bytes.Quantized("a")(3)
+	Bytes.Hosted("a", (2))(2) is Bytes.Quantized("a")(2)
+	Bytes.Hosted("a", (2))(1).Length is 0
 	let weight = Entry(name + ".weight")
 	let scales = Entry(name + ".weight_scale")
+	let size = picked.Length is 0 then part else 1
 	mutable rows = List(Mutable(Numbers))
-	for ((Shape(name + ".weight").First + part - 1) / part).Floor
-		rows = rows + TensorFile.HostedPart(path, weight, scales, index * part, part)
+	for ((Shape(name + ".weight").First + size - 1) / size).Floor
+		let isRead = (picked.Length is 0) or (index is in picked)
+		rows = rows + (isRead then TensorFile.HostedPart(path, weight, scales, index * size, size) else (List(Number)))
 	rows
 Tuned(name Text, downs Numbers, ups Numbers, scales Numbers) Slow(List(Numbers))
 	Batch.Wholes.Sums(Batch.Tokens) is Batch.Wholes.Sums(Batch.Tokens)
