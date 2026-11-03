@@ -12275,9 +12275,9 @@
     llvm.store %runtimeBinaryBits, %runtimeBinarySlot : i64, !llvm.ptr
     return %buffer : !llvm.ptr
   }
-  // the module of the cubins in a binary slot (one fatbin for sm_75, sm_80, sm_86 and sm_89, the driver picks the one for
-  // the GPU), false without a shipped fatbin or when the driver rejects it (another GPU or an older driver), then the
-  // PTX is loaded; the sm_75 cubin comes from the older PTX, so a GPU before Ampere runs the older kernels
+  // the module of the cubins in a binary slot (one fatbin for sm_75, sm_80, sm_86, sm_89 and sm_120, the driver picks
+  // the one for the GPU), false without a shipped fatbin or when the driver rejects it (another GPU, an older driver),
+  // then the PTX is loaded; the sm_75 cubin comes from the older PTX, so a GPU before Ampere runs the older kernels
   func.func private @strict_gpu_binary_loaded(%loadData: !llvm.ptr, %moduleSlot: !llvm.ptr, %binarySlot: !llvm.ptr) -> i1 {
     %zero = arith.constant 0 : i64
     %zero32 = arith.constant 0 : i32

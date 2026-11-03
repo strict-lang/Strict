@@ -45,8 +45,10 @@ Built(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Texts
 	let built = builder.Ptx(base, isTiling, kept)
 	isCached then Remembered(key, built) else built
 Fingerprint(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Text
+	PtxCache("Compiler/output/Keyed").Fingerprint("a", false, DeviceBuild.Local, "").IndexOf("sm_120") > 0
 	let tools = builder.tools
-	mutable key = device + "\n// " + DeviceBuild.Nvptx + " " + isTiling + " " + kept
+	let architectures = Text.Combine(CubinBuild.Architectures, " ")
+	mutable key = device + "\n// " + DeviceBuild.Nvptx + " " + isTiling + " " + kept + " " + architectures
 	for ("clang", "mlir-opt", "mlir-translate")
 		let path = Process.Find(tools.Located(value)).executable
 		key = key + "\n// " + path + " " + File(path).Modified

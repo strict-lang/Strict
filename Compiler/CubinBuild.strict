@@ -6,7 +6,7 @@ constant Outdating = "Compiler/output/Outdated"
 constant Emptied = "Compiler/output/Emptied"
 constant Broken = "Compiler/output/Broken"
 constant Tiny = ".version 7.8\n.target sm_75\n.address_size 64\n.visible .entry tiny()\n{\n\tret;\n}"
-constant Architectures = ("sm_75", "sm_80", "sm_86", "sm_89")
+constant Architectures = ("sm_75", "sm_80", "sm_86", "sm_89", "sm_120")
 Fatbin(base Text) Text
 	Local.Fatbin("Compiler/output/missing") is ""
 	File("Compiler/output/missing.fatbin").Exists is false
@@ -58,11 +58,11 @@ Packed(stem Text, base Text) Text
 	File(stem + ".fatbin").Rename(base + ".fatbin")
 	""
 Images(stem Text) Text
-	Local.Images("a").EndsWith(" --image3=kind=elf,sm=89,file=\"a.sm_89.cubin\"")
+	Local.Images("a").EndsWith(" --image3=kind=elf,sm=120,file=\"a.sm_120.cubin\"")
 	mutable images = ""
 	for Architectures
 		let cubin = tools.Quoted(stem + "." + value + ".cubin")
-		images = images + " --image3=kind=elf,sm=" + value.Substring(3, 2) + ",file=" + cubin
+		images = images + " --image3=kind=elf,sm=" + value.Substring(3, value.Length - 3) + ",file=" + cubin
 	images
 Shipped(source Text, target Text) Text
 	PtxCache("Compiler/output/Shipped").Saved(".fatbin", "stale")
