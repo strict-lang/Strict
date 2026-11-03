@@ -28,12 +28,32 @@ addToLibrary({
 		encoder: null, recorded: 0, fresh: 0, unused: [], staging: { current: null, full: [], free: [] }, pool: {},
 		pooled: new WeakSet(), pooledBytes: 0, pass: null, prelude: null, flags: new WeakSet(), flagsUsed: [], flagPool: [],
 		layout: null, lazy: {}, filed: {},
-		poolLimit: 0 },
+		poolLimit: 0, queueLimit: 0 },
 	// kernels and copies are recorded into one command encoder, submitted before the host reads a result or after 64
 	// dispatches (a submit per dispatch spent most of the time in Chrome's GPU process, Moss sampled 15 times slower than
 	// natively); a kernel's numbers, places and the work of each dispatch get their own part of a staging buffer, which is
 	// written again only after the GPU ran the commands of its submit, buffers are destroyed only after their submit
 	// consecutive kernels share one compute pass (each pass is a command of its own), any other command ends it
+	// phones and tablets, their GPU shares the memory with everything else
+	$strictWebGpuMobile: () => /Android|iPhone|iPad|Mobi/.test(navigator.userAgent),
+	// bytes ahead of the GPU (new results, buffers destroyed after their submit, staging buffers, uploads) a kernel waits
+	// for the oldest submit above: 1 GB (2 GB or no limit made 720x1280 Flux decodes vary from 3 to 6 s, 512 MB was
+	// slower), 256 MB on phones and tablets (a Galaxy S25 Ultra ran 3 GB ahead of its GPU, MossWeb's step 1 was killed)
+	$strictWebGpuLimit__deps: ['$strictWebGpu', '$strictWebGpuMobile'],
+	$strictWebGpuLimit: () => strictWebGpu.queueLimit ||= strictWebGpuMobile() ? 268435456 : 1073741824,
+	// bytes written to the queue count until the GPU did them, then it waits while more than the limit is ahead of it
+	$strictWebGpuThrottled__deps: ['$strictWebGpu', '$strictWebGpuLimit'],
+	$strictWebGpuThrottled: async (bytes) => {
+		if (bytes) {
+			strictWebGpu.queued += bytes;
+			strictWebGpu.done.push(strictWebGpu.device.queue.onSubmittedWorkDone().then(() => {
+				strictWebGpu.queued -= bytes;
+				strictWebGpu.done.shift();
+			}));
+		}
+		while (strictWebGpu.queued > strictWebGpuLimit() && strictWebGpu.done.length)
+			await strictWebGpu.done[0];
+	},
 	$strictWebGpuEncoder__deps: ['$strictWebGpu'],
 	$strictWebGpuEncoder: () => {
 		strictWebGpu.pass?.end();
@@ -66,13 +86,14 @@ addToLibrary({
 		strictWebGpu.pass = null;
 		strictWebGpu.encoder = null;
 		strictWebGpu.recorded = 0;
-		const used = staging.full.concat(staging.current || []), bytes = strictWebGpu.fresh;
+		const used = staging.full.concat(staging.current || []), destroyed = strictWebGpu.unused;
+		const bytes = strictWebGpu.fresh + destroyed.reduce((sum, buffer) => sum + buffer.size, 0) + used.length * 67108864;
 		used.forEach((staged) => staged.used && device.queue.writeBuffer(staged.buffer, 0, staged.mirror, 0, staged.used));
 		device.queue.submit(strictWebGpu.prelude ? [strictWebGpu.prelude.finish(), encoder.finish()] : [encoder.finish()]);
 		strictWebGpu.prelude = null;
 		strictWebGpu.flagPool.push(...strictWebGpu.flagsUsed);
 		strictWebGpu.flagsUsed = [];
-		strictWebGpu.unused.forEach((unused) => unused.destroy());
+		destroyed.forEach((unused) => unused.destroy());
 		strictWebGpu.unused = [];
 		staging.full = [];
 		staging.current = null;
@@ -89,12 +110,12 @@ addToLibrary({
 	// 480x848 step, 2 s instead of 1.5; 256 MB on phones and tablets, whose GPU shares the memory: a Galaxy S25 Ultra
 	// killed the page at 5.7 GB), others are destroyed now or, when commands still to be submitted might use them, after
 	// their submit
-	$strictWebGpuDestroyed__deps: ['$strictWebGpu'],
+	$strictWebGpuDestroyed__deps: ['$strictWebGpu', '$strictWebGpuMobile'],
 	$strictWebGpuDestroyed: (buffer) => {
 		if (strictWebGpu.flags.has(buffer))
 			(strictWebGpu.encoder ? strictWebGpu.flagsUsed : strictWebGpu.flagPool).push(buffer);
 		else if (strictWebGpu.pooled.has(buffer) && strictWebGpu.pooledBytes + buffer.size <= (strictWebGpu.poolLimit ||=
-			/Android|iPhone|iPad|Mobi/.test(navigator.userAgent) ? 268435456 : 2147483648)) {
+			strictWebGpuMobile() ? 268435456 : 2147483648)) {
 			(strictWebGpu.pool[buffer.size + ' ' + buffer.usage] ||= []).push(buffer);
 			strictWebGpu.pooledBytes += buffer.size;
 		} else if (strictWebGpu.encoder)
@@ -276,7 +297,7 @@ addToLibrary({
 	},
 	$strictWebGpuRun__deps: ['$strictWebGpu', '$strictWebGpuPipeline', '$strictWebGpuDevice', '$strictWebGpuWritten',
 		'$strictWebGpuEncoder', '$strictWebGpuFlush', '$strictWebGpuStaged', '$strictWebGpuDestroyed', '$strictWebGpuBuffer',
-		'$strictWebGpuStore', '$strictWebGpuPass', '$strictWebGpuFlag'],
+		'$strictWebGpuStore', '$strictWebGpuPass', '$strictWebGpuFlag', '$strictWebGpuLimit', '$strictWebGpuThrottled'],
 	$strictWebGpuRun: async (name, count, inputs, output, bits) => {
 		const device = inputs && (strictWebGpu.device ||= await strictWebGpuDevice());
 		if (inputs && !device) {
@@ -353,12 +374,9 @@ addToLibrary({
 			if (halved)
 				strictWebGpu.halves[handle] = count;
 			strictWebGpu.grown += kept.size;
-			if (strictWebGpu.recorded >= 64)
+			if (strictWebGpu.recorded >= 64 || strictWebGpu.fresh > strictWebGpuLimit() / 4)
 				strictWebGpuFlush();
-			// more than 1 GB of new results submitted ahead of the GPU waits for the oldest submit (2 GB or no limit made
-			// 720x1280 Flux decodes vary from 3 to 6 s, 512 MB was slower)
-			while (strictWebGpu.queued > 1073741824)
-				await strictWebGpu.done[0];
+			await strictWebGpuThrottled(0);
 			return handle;
 		}
 		const copy = strictWebGpuBuffer(count * 4 + 4, 1 | 8), encoder = strictWebGpuEncoder();
@@ -686,7 +704,7 @@ addToLibrary({
 		});
 	}),
 	// bytes of the file at path from offset into buffer at, written from the read blocks without a copy when aligned
-	$strictWebGpuFilled__deps: ['$strictWebGpu', '$strictWebFileRange'],
+	$strictWebGpuFilled__deps: ['$strictWebGpu', '$strictWebFileRange', '$strictWebGpuThrottled'],
 	$strictWebGpuFilled: async (buffer, at, path, offset, bytes) => {
 		const queue = strictWebGpu.device.queue, isAligned = offset % 4 === 0 && at % 4 === 0;
 		const whole = isAligned ? null : new Uint8Array(Math.ceil(bytes / 4) * 4);
@@ -694,6 +712,7 @@ addToLibrary({
 			queue.writeBuffer(buffer, at + from, piece) : whole.set(piece, from));
 		if (whole)
 			queue.writeBuffer(buffer, at, whole);
+		await strictWebGpuThrottled(bytes);
 	},
 	// the buffer of a kept handle: rows of a file (strict_webfile_rows), rows joined only from files and whole borrows of
 	// them get it on their first use, once, again after GpuMemory.Evicted gave it back (strict_webgpu_evicted)
