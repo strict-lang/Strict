@@ -149,7 +149,7 @@ Capitalized(tokens Texts) Texts
 	TypeShape("has a").Capitalized(("Number", ".", "Pi", "+", "x", "*", "Size")) is ("Number", "Size")
 	TypeShape("has a").Capitalized(("Shape", "(", "Basic", ",", "Id", "=", "1", ")")) is ("Shape", "Basic")
 	for tokens
-		let first = value.Substring(0, 1)
+		let first = value.characters(0)
 		let isNamed = (index > 0) and (tokens(index - 1) is ".") or (index + 1 < tokens.Length) and (tokens(index + 1) is "=")
 		if (first is first.Upper) and (first is not first.Lower) and (isNamed is false)
 			value
