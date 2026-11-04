@@ -265,24 +265,22 @@
   }
   // fresh memory of the browser is zero, reused pages are cleared where they are taken (strict_gc_take_pages): the
   // memory grows up to the end of what the collector commits
-  func.func private @strict_commit(%at: !llvm.ptr, %size: i64) {
+  func.func private @strict_committed(%at: !llvm.ptr, %size: i64) -> i1 {
     %start = llvm.ptrtoint %at : !llvm.ptr to i64
     %end = arith.addi %start, %size : i64
     %heap = llvm.call @emscripten_get_heap_size() : () -> i32
     %heapWide = arith.extui %heap : i32 to i64
     %isGrowing = arith.cmpi ugt, %end, %heapWide : i64
-    cf.cond_br %isGrowing, ^grow, ^done
+    %fits = arith.constant true
+    cf.cond_br %isGrowing, ^grow, ^done(%fits : i1)
   ^grow:
     %narrow = arith.trunci %end : i64 to i32
     %grown = llvm.call @emscripten_resize_heap(%narrow) : (i32) -> i32
     %failed = arith.constant 0 : i32
     %isGrown = arith.cmpi ne, %grown, %failed : i32
-    cf.cond_br %isGrown, ^done, ^fail
-  ^fail:
-    func.call @strict_gc_fail() : () -> ()
-    cf.br ^done
-  ^done:
-    return
+    cf.br ^done(%isGrown : i1)
+  ^done(%committed: i1):
+    return %committed : i1
   }
   func.func private @strict_decommit(%at: !llvm.ptr, %size: i64) {
     return

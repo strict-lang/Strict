@@ -15,7 +15,9 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - A GLSL shader that fails to compile in `Gpu.Program` is silently ignored: TorinsTowers with a broken WaterPlane fragment shader ran with exit 0 and no message; compile and link errors should stop with the info log and the .strict line.
 - A named argument that skips parameters with defaults fails in bytecode codegen with `UnsupportedOperator` (OperatorCodegen line 157 via ListCodegen.Argument): `Release.Packaged(program, 0, isReleased = true)` and `Bytes.Hosted("a", picked = (2))`, positional arguments work.
 - `Directory.Change` only works natively (strict.exe uses it to work from the project folder), on the VM it gives the Error DirectoryChangeNeedsNative: Runtime/Hosted calling it needs a stage A build and a regenerated Compiler/Bootstrap.mlir.
-- H3Video.exe on the command line with the 21 GB hybrid int8 model and a LoRA stopped with `Error: OutOfMemory` without a stack or the allocation that failed, right after the text encoder loaded (heap 28 GB of 64 GB, 36 GB RAM free); it should name what ran out.
+- `Error: OutOfMemory` has no .strict stack yet (it names the failed allocation and the heap since the commit retry).
+- A failed GPU or driver allocation crashes with AccessViolation instead of OutOfMemory: a program making GPU lists under a 2 GB commit limit (Windows job object) ends with AccessViolation at a 0 MB heap.
+- H3Video on the 4090: the full collection that frees the 27 GB text encoder takes 1.4-1.8 s (21 GB marked, 509 objects visited) and trips GarbageCollectionExceedsTenth; probably strict_gpu_sweep unlocking or freeing its pinned host memory (cuMemHostUnregister, cuMemFreeHost), not marking. Measure it there, then keep driver release time out of the collection time or release on another thread.
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).

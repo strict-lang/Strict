@@ -51,8 +51,9 @@
   }
   llvm.func @getrlimit(i32, !llvm.ptr) -> i32
   llvm.func @setrlimit(i32, !llvm.ptr) -> i32
-  func.func private @strict_commit(%at: !llvm.ptr, %size: i64) {
-    return
+  func.func private @strict_committed(%at: !llvm.ptr, %size: i64) -> i1 {
+    %committed = arith.constant true
+    return %committed : i1
   }
   func.func private @strict_decommit(%at: !llvm.ptr, %size: i64) {
     %dontNeed = arith.constant 4 : i32

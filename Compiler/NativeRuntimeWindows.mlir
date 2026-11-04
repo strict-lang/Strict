@@ -51,18 +51,13 @@
   ^done:
     return %reserved : !llvm.ptr
   }
-  func.func private @strict_commit(%at: !llvm.ptr, %size: i64) {
+  func.func private @strict_committed(%at: !llvm.ptr, %size: i64) -> i1 {
     %null = llvm.mlir.zero : !llvm.ptr
     %commit = arith.constant 4096 : i32
     %readWrite = arith.constant 4 : i32
     %committed = llvm.call @VirtualAlloc(%at, %size, %commit, %readWrite) : (!llvm.ptr, i64, i32, i32) -> !llvm.ptr
-    %failed = llvm.icmp "eq" %committed, %null : !llvm.ptr
-    cf.cond_br %failed, ^fail, ^done
-  ^fail:
-    func.call @strict_gc_fail() : () -> ()
-    cf.br ^done
-  ^done:
-    return
+    %isCommitted = llvm.icmp "ne" %committed, %null : !llvm.ptr
+    return %isCommitted : i1
   }
   func.func private @strict_decommit(%at: !llvm.ptr, %size: i64) {
     %decommit = arith.constant 16384 : i32

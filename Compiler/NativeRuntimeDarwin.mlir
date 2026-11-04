@@ -60,8 +60,9 @@
     %lowest = arith.subi %top, %size : i64
     return %lowest : i64
   }
-  func.func private @strict_commit(%at: !llvm.ptr, %size: i64) {
-    return
+  func.func private @strict_committed(%at: !llvm.ptr, %size: i64) -> i1 {
+    %committed = arith.constant true
+    return %committed : i1
   }
   // madvise does not zero pages on Darwin, mapping them again does
   func.func private @strict_decommit(%at: !llvm.ptr, %size: i64) {

@@ -57,6 +57,8 @@
   // bytes a program may allocate before a collection is due: 1/128 of the physical memory, at least 16 MB (the young limit
   // and the smallest full threshold), so a busy program collects seldom instead of every 16 or 64 MB
   llvm.mlir.global internal @strict_gc_budget(16777216 : i64) : i64
+  // half of the physical memory: a heap growing past it collects first (strict_gc_crowding) instead of paging
+  llvm.mlir.global internal @strict_gc_roomy(-1 : i64) : i64
   llvm.mlir.global internal @strict_gc_marked(0 : i64) : i64
   // what the last full collection marked (at least its minimum), the big objects young ones marked since (their marks
   // stay until the next full one) and the ones the current collection marked
@@ -1371,6 +1373,14 @@
     %usualThreshold = arith.constant 16777216 : i64
     %checkThreshold = arith.constant 1048576 : i64
     %hostBytes = func.call @strict_host_memory() : () -> i64
+    %unknownHost = arith.constant 0 : i64
+    %isUnknown = arith.cmpi eq, %hostBytes, %unknownHost : i64
+    %halfShift = arith.constant 1 : i64
+    %halfHost = arith.shrui %hostBytes, %halfShift : i64
+    %unlimited = arith.constant -1 : i64
+    %roomy = arith.select %isUnknown, %unlimited, %halfHost : i64
+    %roomySlot = llvm.mlir.addressof @strict_gc_roomy : !llvm.ptr
+    llvm.store %roomy, %roomySlot : i64, !llvm.ptr
     %budgetShift = arith.constant 7 : i64
     %hostShare = arith.shrui %hostBytes, %budgetShift : i64
     %budget = arith.maxui %hostShare, %usualThreshold : i64
@@ -1502,6 +1512,38 @@
     llvm.call @exit(%code) : (i32) -> ()
     return
   }
+  llvm.mlir.global internal constant @strict_gc_out_of_memory_what("Error: OutOfMemory, the program needed more memory than the system could give: %s of %lld MB with a %lld MB heap\0A\00") : !llvm.array<114 x i8>
+  llvm.mlir.global internal constant @strict_gc_commit_name("a commit\00") : !llvm.array<9 x i8>
+  llvm.mlir.global internal constant @strict_gc_malloc_name("an allocation outside the heap\00") : !llvm.array<31 x i8>
+  llvm.mlir.global internal constant @strict_gc_pages_name("heap pages after a full collection\00") : !llvm.array<35 x i8>
+  // OutOfMemory naming what the system did not give (what, bytes) and the heap the program had
+  func.func private @strict_gc_fail_bytes(%what: !llvm.ptr, %bytes: i64) {
+    %shift = arith.constant 20 : i64
+    %megabytes = arith.shrui %bytes, %shift : i64
+    %topSlot = llvm.mlir.addressof @strict_gc_top : !llvm.ptr
+    %top = llvm.load %topSlot : !llvm.ptr -> i64
+    %baseSlot = llvm.mlir.addressof @strict_gc_base : !llvm.ptr
+    %base = llvm.load %baseSlot : !llvm.ptr -> i64
+    %used = arith.subi %top, %base : i64
+    %heap = arith.shrui %used, %shift : i64
+    %format = llvm.mlir.addressof @strict_gc_out_of_memory_what : !llvm.ptr
+    %printed = llvm.call @printf(%format, %what, %megabytes, %heap) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr, i64, i64) -> i32
+    %message = llvm.mlir.addressof @strict_gc_out_of_memory : !llvm.ptr
+    llvm.call @strict_crash_log(%message) : (!llvm.ptr) -> ()
+    %code = arith.constant 1 : i32
+    llvm.call @exit(%code) : (i32) -> ()
+    return
+  }
+  func.func private @strict_commit(%at: !llvm.ptr, %size: i64) {
+    %committed = func.call @strict_committed(%at, %size) : (!llvm.ptr, i64) -> i1
+    cf.cond_br %committed, ^done, ^fail
+  ^fail:
+    %what = llvm.mlir.addressof @strict_gc_commit_name : !llvm.ptr
+    func.call @strict_gc_fail_bytes(%what, %size) : (!llvm.ptr, i64) -> ()
+    cf.br ^done
+  ^done:
+    return
+  }
   // the runtime allocates host memory only through these: nothing left ends the program with OutOfMemory
   func.func private @strict_malloc(%bytes: i64) -> !llvm.ptr {
     %block = llvm.call @malloc(%bytes) : (i64) -> !llvm.ptr
@@ -1521,7 +1563,8 @@
     %failed = arith.andi %missing, %asked : i1
     cf.cond_br %failed, ^fail, ^done
   ^fail:
-    func.call @strict_gc_fail() : () -> ()
+    %what = llvm.mlir.addressof @strict_gc_malloc_name : !llvm.ptr
+    func.call @strict_gc_fail_bytes(%what, %bytes) : (!llvm.ptr, i64) -> ()
     cf.br ^done
   ^done:
     return
@@ -2869,8 +2912,10 @@
     llvm.store %span#1, %endSlot : i64, !llvm.ptr
     return
   }
-  // a page the heap has no room for left runs a full collection first: old garbage (8 times the live bytes before one
-  // is due) does not fit into the 1 GB heap of the web and iOS, free single pages join the runs (strict_gc_pool_runs)
+  // a page the heap has no room for left, or the system can not commit, runs a full collection first and gives the
+  // free pages back: old garbage (8 times the live bytes before one is due) does not fit into the 1 GB heap of the web
+  // and iOS, and on Windows the commit fails long before the 64 GB heap is full (H3Video: 27 GB of a dead text encoder
+  // and 21 GB of H3 on a 64 GB PC), free single pages join the runs (strict_gc_pool_runs)
   func.func private @strict_gc_take_pages(%count: i64) -> i64 {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -2948,12 +2993,17 @@
     func.call @strict_gc_run(%full) : (i1) -> ()
     func.call @strict_gc_sweep_all() : () -> ()
     func.call @strict_gc_pool_runs() : () -> ()
+    %keptPages = arith.constant 1024 : i64
+    func.call @strict_gc_trim_pool(%keptPages) : (i64) -> ()
+    %keptRuns = arith.constant 67108864 : i64
+    func.call @strict_gc_trim_runs(%keptRuns) : (i64) -> ()
     cf.br ^runs(%full : i1)
   ^fail:
-    func.call @strict_gc_fail() : () -> ()
+    %what = llvm.mlir.addressof @strict_gc_pages_name : !llvm.ptr
+    %asked = arith.muli %count, %pageSize : i64
+    func.call @strict_gc_fail_bytes(%what, %asked) : (!llvm.ptr, i64) -> ()
     return %zero : i64
   ^commit:
-    llvm.store %newTop, %topSlot : i64, !llvm.ptr
     %committedSlot = llvm.mlir.addressof @strict_gc_committed : !llvm.ptr
     %committed = llvm.load %committedSlot : !llvm.ptr -> i64
     %needsCommit = arith.cmpi ugt, %newTop, %committed : i64
@@ -2967,7 +3017,17 @@
     %ending = arith.select %fitsLimit, %commitEnd, %limit : i64
     %commitBytes = arith.subi %ending, %committed : i64
     %committedPointer = llvm.inttoptr %committed : i64 to !llvm.ptr
-    func.call @strict_commit(%committedPointer, %commitBytes) : (!llvm.ptr, i64) -> ()
+    %crowding = func.call @strict_gc_crowding(%ending) : (i64) -> i1
+    %uncollected = arith.cmpi eq, %isCollected, %collected : i1
+    %inJob = func.call @strict_rc_busy() : () -> i1
+    %outsideJob = arith.cmpi eq, %inJob, %collected : i1
+    %crowdingFirst = arith.andi %crowding, %uncollected : i1
+    %collectFirst = arith.andi %crowdingFirst, %outsideJob : i1
+    cf.cond_br %collectFirst, ^exhausted, ^committing
+  ^committing:
+    %isCommitted = func.call @strict_committed(%committedPointer, %commitBytes) : (!llvm.ptr, i64) -> i1
+    cf.cond_br %isCommitted, ^cards, ^exhausted
+  ^cards:
     llvm.store %ending, %committedSlot : i64, !llvm.ptr
     %cardShift = arith.constant 9 : i64
     %cardsSlot = llvm.mlir.addressof @strict_gc_cards : !llvm.ptr
@@ -2984,9 +3044,33 @@
     func.call @strict_commit(%cardStartPointer, %cardCount) : (!llvm.ptr, i64) -> ()
     cf.br ^ready
   ^ready:
+    llvm.store %newTop, %topSlot : i64, !llvm.ptr
     %grownFreshSlot = llvm.mlir.addressof @strict_gc_fresh : !llvm.ptr
     llvm.store %one, %grownFreshSlot : i64, !llvm.ptr
     return %top : i64
+  }
+  // a heap committed up to ending past half of the physical memory collects first when at least the budget and an
+  // eighth of what the last full collection kept were allocated since: dead big objects (the 27 GB text encoder before
+  // H3 loads) are given back before the system pages, a big live heap collects only every eighth of its size
+  func.func private @strict_gc_crowding(%ending: i64) -> i1 {
+    %baseSlot = llvm.mlir.addressof @strict_gc_base : !llvm.ptr
+    %base = llvm.load %baseSlot : !llvm.ptr -> i64
+    %heap = arith.subi %ending, %base : i64
+    %roomySlot = llvm.mlir.addressof @strict_gc_roomy : !llvm.ptr
+    %roomy = llvm.load %roomySlot : !llvm.ptr -> i64
+    %beyond = arith.cmpi ugt, %heap, %roomy : i64
+    %allocatedSlot = llvm.mlir.addressof @strict_gc_allocated : !llvm.ptr
+    %allocated = llvm.load %allocatedSlot : !llvm.ptr -> i64
+    %budgetSlot = llvm.mlir.addressof @strict_gc_budget : !llvm.ptr
+    %budget = llvm.load %budgetSlot : !llvm.ptr -> i64
+    %keptSlot = llvm.mlir.addressof @strict_gc_kept : !llvm.ptr
+    %kept = llvm.load %keptSlot : !llvm.ptr -> i64
+    %eighthShift = arith.constant 3 : i64
+    %eighth = arith.shrui %kept, %eighthShift : i64
+    %step = arith.maxui %budget, %eighth : i64
+    %grown = arith.cmpi ugt, %allocated, %step : i64
+    %crowding = arith.andi %beyond, %grown : i1
+    return %crowding : i1
   }
   func.func private @strict_gc_release_page(%page: i64) {
     %zero = arith.constant 0 : i64
