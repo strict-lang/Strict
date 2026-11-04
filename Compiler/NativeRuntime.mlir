@@ -14097,7 +14097,9 @@
     %repeated = arith.andi %markedResiding, %ownRecent : i1
     %ownTrue = arith.constant true
     %notRepeated = arith.xori %repeated, %ownTrue : i1
-    %collecting = arith.andi %anyResiding, %notRepeated : i1
+    %mayCollect = func.call @strict_gpu_own_collectable() : () -> i1
+    %allowed = arith.andi %notRepeated, %mayCollect : i1
+    %collecting = arith.andi %anyResiding, %allowed : i1
     cf.cond_br %collecting, ^ownCollect(%markedResiding : i1), ^own
   ^ownCollect(%fully: i1):
     %collectStarted = func.call @strict_clock() : () -> f64
@@ -18147,7 +18149,10 @@
     return %resident : i64
   }
   // strict_device_tuned on the rows at device (one every stride bytes) with downs and scales as 32 bit floats and ups of
-  // upBits (32 or bfloat16 17) at their device addresses, waiting for it; false when the kernel is missing or did not run
+  // upBits (32 or bfloat16 17) at their device addresses, waiting for it; false when the kernel is missing or did not run.
+  // Two blocks per multiprocessor (at most one per 16 rows) take all rows, each keeps its updated numbers in a pooled
+  // scratch block (16 x width 32 bit floats per block, 88 MB for H3's widest rows of 5376 on a 3080) instead of
+  // computing them twice, without one (no memory) the kernel computes them again
   func.func private @strict_gpu_tuned_launched(%device: i64, %stride: i64, %downs: i64, %ups: i64, %upBits: i64, %scales: i64, %height: i64, %width: i64, %rank: i64, %seed: i64) -> i1 {
     %false = arith.constant false
     %none = arith.constant 0 : i64
@@ -18172,8 +18177,9 @@
     cf.cond_br %found, ^launch, ^missing
   ^launch:
     %scaleOffset = func.call @strict_packed_data(%width, %eight) : (i64, i64) -> i64
-    %arguments = llvm.alloca %eleven x i64 : (i64) -> !llvm.ptr
-    %parameters = llvm.alloca %eleven x !llvm.ptr : (i64) -> !llvm.ptr
+    %thirteen = arith.constant 13 : i64
+    %arguments = llvm.alloca %thirteen x i64 : (i64) -> !llvm.ptr
+    %parameters = llvm.alloca %thirteen x !llvm.ptr : (i64) -> !llvm.ptr
     func.call @strict_gpu_argument(%arguments, %parameters, %none, %device) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
     func.call @strict_gpu_argument(%arguments, %parameters, %one, %stride) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
     func.call @strict_gpu_argument(%arguments, %parameters, %two, %scaleOffset) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
@@ -18189,10 +18195,28 @@
     %spareRows = arith.constant 15 : i64
     %roundedHeight = arith.addi %height, %spareRows : i64
     %blocks = arith.divui %roundedHeight, %sixteenRows : i64
-    %launchThreads = arith.muli %blocks, %threads : i64
+    %handles = llvm.mlir.addressof @strict_gpu_handles : !llvm.ptr
+    %processorsSlot = llvm.getelementptr %handles[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %processors = llvm.load %processorsSlot : !llvm.ptr -> i64
+    %twice = arith.shli %processors, %one : i64
+    %unknown = arith.cmpi eq, %processors, %none : i64
+    %someBlocks = arith.constant 128 : i64
+    %resident = arith.select %unknown, %someBlocks, %twice : i64
+    %grid = arith.minui %blocks, %resident : i64
+    %gridRows = arith.muli %grid, %sixteenRows : i64
+    %gridNumbers = arith.muli %gridRows, %width : i64
+    %scratchBytes = arith.muli %gridNumbers, %four : i64
+    %scratchClass = func.call @strict_gpu_class(%scratchBytes) : (i64) -> i64
+    %scratch = func.call @strict_gpu_obtain(%scratchClass) : (i64) -> i64
+    %eleventh = arith.constant 11 : i64
+    func.call @strict_gpu_argument(%arguments, %parameters, %eleventh, %scratch) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
+    %twelfth = arith.constant 12 : i64
+    func.call @strict_gpu_argument(%arguments, %parameters, %twelfth, %grid) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
+    %launchThreads = arith.muli %grid, %threads : i64
     %flushed = func.call @strict_gpu_flush() : () -> i1
     %launched = func.call @strict_gpu_launch(%function, %launchThreads, %threads, %parameters) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i1
     func.call @strict_gpu_synchronize() : () -> ()
+    func.call @strict_gpu_give(%scratch, %scratchClass) : (i64, i64) -> ()
     %ran = arith.andi %flushed, %launched : i1
     return %ran : i1
   ^missing:
@@ -18258,7 +18282,8 @@
     cf.br ^upHost(%hostDownData : !llvm.ptr)
   ^upHost(%downData: !llvm.ptr):
     %upData = func.call @strict_gpu_host(%upList) : (f64) -> !llvm.ptr
-    %context = llvm.alloca %eight x i64 : (i64) -> !llvm.ptr
+    %nine = arith.constant 9 : i64
+    %context = llvm.alloca %nine x i64 : (i64) -> !llvm.ptr
     llvm.store %downData, %context : !llvm.ptr, !llvm.ptr
     %downBitsAt = llvm.getelementptr %context[1] : (!llvm.ptr) -> !llvm.ptr, i64
     llvm.store %downBits, %downBitsAt : i64, !llvm.ptr
@@ -18272,9 +18297,12 @@
     llvm.store %ups, %upsAt : !llvm.ptr, !llvm.ptr
     %widthAt = llvm.getelementptr %context[6] : (!llvm.ptr) -> !llvm.ptr, i64
     llvm.store %width, %widthAt : i64, !llvm.ptr
+    // downs already on the GPU are not converted, the ups still have rank numbers per row
     %downUnits = arith.select %downOnDevice, %none, %rank : i64
     %rankAt = llvm.getelementptr %context[7] : (!llvm.ptr) -> !llvm.ptr, i64
-    llvm.store %downUnits, %rankAt : i64, !llvm.ptr
+    llvm.store %rank, %rankAt : i64, !llvm.ptr
+    %downUnitsAt = llvm.getelementptr %context[8] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %downUnits, %downUnitsAt : i64, !llvm.ptr
     %units = arith.addi %downUnits, %height : i64
     %body = func.constant @strict_gpu_tuned_converting : (!llvm.ptr, i64, i64) -> f64
     %ran = func.call @strict_parallel(%body, %context, %units) : ((!llvm.ptr, i64, i64) -> f64, !llvm.ptr, i64) -> f64
@@ -18304,7 +18332,8 @@
   ^done:
     return
   }
-  // the units from start to end of strict_gpu_tuned_factors: below rank a row of downs, from there a row of ups
+  // the units from start to end of strict_gpu_tuned_factors: below its down rows (rank or none) a row of downs, from
+  // there a row of ups (rank numbers each)
   func.func private @strict_gpu_tuned_converting(%context: !llvm.ptr, %start: i64, %end: i64) -> f64 {
     %one = arith.constant 1 : i64
     %done = arith.constant 0.0 : f64
@@ -18323,14 +18352,16 @@
     %width = llvm.load %widthAt : !llvm.ptr -> i64
     %rankAt = llvm.getelementptr %context[7] : (!llvm.ptr) -> !llvm.ptr, i64
     %rank = llvm.load %rankAt : !llvm.ptr -> i64
+    %downUnitsAt = llvm.getelementptr %context[8] : (!llvm.ptr) -> !llvm.ptr, i64
+    %downUnits = llvm.load %downUnitsAt : !llvm.ptr -> i64
     cf.br ^next(%start : i64)
   ^next(%current: i64):
     %more = arith.cmpi slt, %current, %end : i64
     cf.cond_br %more, ^kind, ^finished
   ^kind:
     %following = arith.addi %current, %one : i64
-    %isDown = arith.cmpi slt, %current, %rank : i64
-    %row = arith.subi %current, %rank : i64
+    %isDown = arith.cmpi slt, %current, %downUnits : i64
+    %row = arith.subi %current, %downUnits : i64
     %downStart = arith.muli %current, %width : i64
     %upStart = arith.muli %row, %rank : i64
     %rowStart = arith.select %isDown, %downStart, %upStart : i64

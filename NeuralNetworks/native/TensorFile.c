@@ -462,12 +462,13 @@ static const float Nibbles[16] = { 0, 0.5f, 1, 1.5f, 2, 3, 4, 6, -0.0f, -0.5f, -
 /* The block scales stay the bytes of the file, each widened once for its 16 numbers. */
 static void Unpacked(const Fours* fours, uint64_t row, const unsigned char* source, float* target, uint64_t bytes)
 {
-	const float* rowBlocks = fours->blocks + (row / 128) * (fours->blockWidth / 4) * 512 + (row % 32) * 16 + (row % 128 / 32) * 4;
+	const unsigned char* rowBlocks = fours->blocks + (row / 128) * (fours->blockWidth / 4) * 512 + (row % 32) * 16 +
+		(row % 128 / 32) * 4;
 	const float* inputs = fours->inputs;
 	uint64_t blocks = bytes / 8;
 	for (uint64_t block = 0; block < blocks; block++)
 	{
-		float scale = rowBlocks[(block / 4) * 512 + (block & 3)] * fours->scale;
+		float scale = Eight(rowBlocks[(block / 4) * 512 + (block & 3)]) * fours->scale;
 		const unsigned char* blockSource = source + block * 8;
 		float* blockTarget = target + block * 16;
 		if (inputs)
@@ -490,13 +491,10 @@ static void Unpacked(const Fours* fours, uint64_t row, const unsigned char* sour
 	}
 	for (uint64_t column = blocks * 16; column < 2 * bytes; column++)
 	{
-		uint64_t block = start / 16, end = start + 16 < 2 * bytes ? start + 16 : 2 * bytes;
-		float scale = Eight(scales[(block / 4) * 512 + block % 4]) * fours->scale;
-		for (uint64_t column = start; column < end; column++)
-		{
-			unsigned char nibble = column % 2 ? source[column / 2] & 15 : source[column / 2] >> 4;
-			target[column] = Nibbles[nibble] * scale * (fours->inputs ? fours->inputs[column] : 1);
-		}
+		uint64_t block = column / 16;
+		float scale = Eight(rowBlocks[(block / 4) * 512 + (block & 3)]) * fours->scale;
+		unsigned char nibble = column % 2 ? source[column / 2] & 15 : source[column / 2] >> 4;
+		target[column] = Nibbles[nibble] * scale * (inputs ? inputs[column] : 1);
 	}
 }
 
@@ -767,7 +765,7 @@ STRICT_EXPORT double TensorFile_Fours(double self, double path, double entry, do
 		global.height * global.width != 1 || (hasInputs && factors.height * factors.width != 2 * tensor.width)))
 		failure = "OnlyNvfp4MatricesWithSwizzledBlockScalesAreSupported";
 	double started = ProfileNow();
-	float* blocks = failure ? 0 : Read(path, &blocked, &failure);
+	unsigned char* blocks = failure ? 0 : Loaded(path, &blocked, 1, &failure);
 	float* factor = blocks ? Read(path, &global, &failure) : 0;
 	float* columns = factor && hasInputs ? Read(path, &factors, &failure) : 0;
 	profileRead += ProfileNow() - started;
