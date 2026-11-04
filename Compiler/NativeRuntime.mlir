@@ -2009,11 +2009,28 @@
     llvm.store %zero, %slot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     llvm.return
   }
+  // small objects made (up to 16 KB, not counted in parallel lanes) and small objects a collection visited, the
+  // patterns of many tiny objects (strict_gc_watch)
+  llvm.mlir.global internal @strict_gc_small_made(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_small_visited(0 : i64) : i64
+  func.func private @strict_gc_counted(%slot: !llvm.ptr, %size: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
+    %smallest = arith.constant 16384 : i64
+    %isSmall = arith.cmpi ule, %size, %smallest : i64
+    %count = llvm.load %slot : !llvm.ptr -> i64
+    %one = arith.constant 1 : i64
+    %none = arith.constant 0 : i64
+    %added = arith.select %isSmall, %one, %none : i64
+    %more = arith.addi %count, %added : i64
+    llvm.store %more, %slot : i64, !llvm.ptr
+    return
+  }
   func.func private @strict_gc_allocate(%size: i64, %list: i64) -> !llvm.ptr {
     %zero = arith.constant 0 : i64
     %shared = func.call @strict_rc_busy() : () -> i1
+    %madeSlot = llvm.mlir.addressof @strict_gc_small_made : !llvm.ptr
     cf.cond_br %shared, ^locked, ^alone
   ^alone:
+    func.call @strict_gc_counted(%madeSlot, %size) : (!llvm.ptr, i64) -> ()
     %object = func.call @strict_gc_allocate_now(%size, %list) : (i64, i64) -> !llvm.ptr
     return %object : !llvm.ptr
   ^locked:
@@ -2025,6 +2042,7 @@
     return %ownObject : !llvm.ptr
   ^sharedLane:
     llvm.call @strict_gc_lock() : () -> ()
+    func.call @strict_gc_counted(%madeSlot, %size) : (!llvm.ptr, i64) -> ()
     %lockedObject = func.call @strict_gc_allocate_now(%size, %list) : (i64, i64) -> !llvm.ptr
     llvm.call @strict_gc_unlock() : () -> ()
     return %lockedObject : !llvm.ptr
@@ -3113,6 +3131,8 @@
     return %result : !llvm.ptr
   }
   func.func private @strict_gc_push(%object: i64, %size: i64) {
+    %visitedSlot = llvm.mlir.addressof @strict_gc_small_visited : !llvm.ptr
+    func.call @strict_gc_counted(%visitedSlot, %size) : (!llvm.ptr, i64) -> ()
     %one = arith.constant 1 : i64
     %two = arith.constant 2 : i64
     %zero = arith.constant 0 : i64
@@ -5640,6 +5660,7 @@
   }
   llvm.mlir.global internal constant @strict_gc_log_switch("STRICT_GC_LOG\00") : !llvm.array<14 x i8>
   llvm.mlir.global internal constant @strict_gc_log_format("Collection: %s, %.2f ms, %lld MB marked, %lld MB heap%s\0A\00") : !llvm.array<57 x i8>
+  llvm.mlir.global internal constant @strict_gc_log_counts("  %lld small objects made since the last collection, %lld visited\0A\00") : !llvm.array<67 x i8>
   llvm.mlir.global internal constant @strict_gc_log_young("young\00") : !llvm.array<6 x i8>
   llvm.mlir.global internal constant @strict_gc_log_full("full\00") : !llvm.array<5 x i8>
   llvm.mlir.global internal constant @strict_gc_log_ending(", frame end\00") : !llvm.array<12 x i8>
@@ -5709,6 +5730,12 @@
     %where = llvm.select %isEnding, %endingName, %withinName : i1, !llvm.ptr
     %format = llvm.mlir.addressof @strict_gc_log_format : !llvm.ptr
     %printed = llvm.call @printf(%format, %kind, %milliseconds, %markedMb, %usedMb, %where) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr, f64, i64, i64, !llvm.ptr) -> i32
+    %madeSlot = llvm.mlir.addressof @strict_gc_small_made : !llvm.ptr
+    %made = llvm.load %madeSlot : !llvm.ptr -> i64
+    %visitedSlot = llvm.mlir.addressof @strict_gc_small_visited : !llvm.ptr
+    %visited = llvm.load %visitedSlot : !llvm.ptr -> i64
+    %countsFormat = llvm.mlir.addressof @strict_gc_log_counts : !llvm.ptr
+    %counted = llvm.call @printf(%countsFormat, %made, %visited) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, i64, i64) -> i32
     cf.br ^done
   ^done:
     return
@@ -5863,25 +5890,25 @@
   ^done:
     func.call @strict_gc_log(%full, %startedAt) : (i1, f64) -> ()
     func.call @strict_gc_watch(%ranBefore) : (f64) -> ()
+    %resetMadeSlot = llvm.mlir.addressof @strict_gc_small_made : !llvm.ptr
+    %resetVisitedSlot = llvm.mlir.addressof @strict_gc_small_visited : !llvm.ptr
+    %resetNone = arith.constant 0 : i64
+    llvm.store %resetNone, %resetMadeSlot : i64, !llvm.ptr
+    llvm.store %resetNone, %resetVisitedSlot : i64, !llvm.ptr
     return
   }
-  // collections may take at most a quarter of the time: more than 1.25 s of collecting in the last 5 seconds ends the
+  // collections may take at most a tenth of the time: more than 0.5 s of collecting in the last 5 seconds ends the
   // program, it allocates too much and has to be fixed first (a single long collection stays below it); counted is the
   // time the collecting thread ran (strict_thread_seconds), waiting for a core shared with other programs is not
   llvm.mlir.global internal @strict_gc_seconds(dense<0.0> : tensor<5xf64>) : !llvm.array<5 x f64>
   llvm.mlir.global internal @strict_gc_stamps(dense<-1> : tensor<5xi64>) : !llvm.array<5 x i64>
-  llvm.mlir.global internal constant @strict_gc_exceeded("GarbageCollectionExceedsQuarter: %.2f of the last 5 seconds were spent collecting garbage (at most 25 %%), allocate less in the loops of this program\0A\00") : !llvm.array<151 x i8>
-  // release builds (strict build X windows or linux, NativeBuild.Released) set it to 0: a shipped program does not stop
+  llvm.mlir.global internal constant @strict_gc_exceeded("GarbageCollectionExceedsTenth: %.2f of the last 5 seconds were spent collecting garbage (at most 10 %%), allocate less in the loops of this program\0A\00") : !llvm.array<149 x i8>
+  // release builds (strict build X windows or linux, NativeBuild.Released) set it to 0: a shipped program does not stop,
+  // it warns once on the console instead
   llvm.mlir.global internal @strict_gc_watching(1 : i64) : i64
+  llvm.mlir.global internal @strict_gc_warned(0 : i64) : i64
+  llvm.mlir.global internal constant @strict_gc_warning("Warning: \00") : !llvm.array<10 x i8>
   func.func private @strict_gc_watch(%ranBefore: f64) {
-    %watchingSlot = llvm.mlir.addressof @strict_gc_watching : !llvm.ptr
-    %watching = llvm.load %watchingSlot : !llvm.ptr -> i64
-    %none = arith.constant 0 : i64
-    %isWatching = arith.cmpi ne, %watching, %none : i64
-    cf.cond_br %isWatching, ^watch, ^unwatched
-  ^unwatched:
-    return
-  ^watch:
     %now = func.call @strict_clock() : () -> f64
     %ran = func.call @strict_thread_seconds() : () -> f64
     %spent = arith.subf %ran, %ranBefore : f64
@@ -5922,17 +5949,35 @@
     cf.br ^sum(%next, %summed : i64, f64)
   ^check(%collecting: f64):
     %window = arith.constant 5.0 : f64
-    %quarter = arith.constant 1.25 : f64
+    %tenth = arith.constant 0.5 : f64
     %isLong = arith.cmpf oge, %running, %window : f64
-    %isOver = arith.cmpf ogt, %collecting, %quarter : f64
+    %isOver = arith.cmpf ogt, %collecting, %tenth : f64
     %exceeded = arith.andi %isLong, %isOver : i1
     cf.cond_br %exceeded, ^fail, ^done
   ^fail:
     %message = llvm.mlir.addressof @strict_gc_exceeded : !llvm.ptr
+    %watchingSlot = llvm.mlir.addressof @strict_gc_watching : !llvm.ptr
+    %watching = llvm.load %watchingSlot : !llvm.ptr -> i64
+    %none = arith.constant 0 : i64
+    %isWatching = arith.cmpi ne, %watching, %none : i64
+    cf.cond_br %isWatching, ^stop, ^warn
+  ^stop:
     %printed = llvm.call @printf(%message, %collecting) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, f64) -> i32
     llvm.call @strict_crash_log(%message) : (!llvm.ptr) -> ()
     %code = arith.constant 1 : i32
     llvm.call @exit(%code) : (i32) -> ()
+    cf.br ^done
+  ^warn:
+    %warnedSlot = llvm.mlir.addressof @strict_gc_warned : !llvm.ptr
+    %warned = llvm.load %warnedSlot : !llvm.ptr -> i64
+    %isWarned = arith.cmpi ne, %warned, %none : i64
+    cf.cond_br %isWarned, ^done, ^print
+  ^print:
+    %once = arith.constant 1 : i64
+    llvm.store %once, %warnedSlot : i64, !llvm.ptr
+    %prefix = llvm.mlir.addressof @strict_gc_warning : !llvm.ptr
+    %prefixed = llvm.call @printf(%prefix) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr) -> i32
+    %warning = llvm.call @printf(%message, %collecting) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, f64) -> i32
     cf.br ^done
   ^done:
     return
