@@ -18101,7 +18101,7 @@
     return %cachedMerged : i1
   ^separate:
     %staging = func.call @strict_malloc(%factorBytes) : (i64) -> !llvm.ptr
-    func.call @strict_gpu_tuned_factors(%factors, %staging, %height, %width, %rank, %false) : (!llvm.ptr, !llvm.ptr, i64, i64, i64, i1) -> ()
+    func.call @strict_gpu_tuned_factors(%factors, %staging, %height, %width, %rank, %false, %false) : (!llvm.ptr, !llvm.ptr, i64, i64, i64, i1, i1) -> ()
     %total = arith.addi %blockPadded, %factorBytes : i64
     %device = func.call @strict_gpu_alloc(%total) : (i64) -> i64
     %allocated = arith.cmpi ne, %device, %none : i64
@@ -18118,7 +18118,7 @@
     %upBytes = arith.muli %upCount, %four : i64
     %scaleStart = arith.addi %upStart, %upBytes : i64
     %singles = arith.constant 32 : i64
-    %ran = func.call @strict_gpu_tuned_launched(%device, %stride, %factorStart, %upStart, %singles, %scaleStart, %height, %width, %rank, %seed) : (i64, i64, i64, i64, i64, i64, i64, i64, i64, i64) -> i1
+    %ran = func.call @strict_gpu_tuned_launched(%device, %stride, %factorStart, %upStart, %singles, %scaleStart, %height, %width, %rank, %seed, %singles) : (i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64) -> i1
     cf.cond_br %ran, ^download, ^release(%false : i1)
   ^download:
     %got = func.call @strict_gpu_get(%first, %device, %blockBytes) : (!llvm.ptr, i64, i64) -> i1
@@ -18172,10 +18172,10 @@
     %downOnDevice = arith.cmpi ne, %downResident, %none : i64
     %upOnDevice = arith.cmpi ne, %upResident, %none : i64
     %isResident = arith.andi %downOnDevice, %upOnDevice : i1
-    %upAndScales = arith.addi %upCount, %rank : i64
-    %numberCount = arith.addi %downCount, %upAndScales : i64
-    %nonResidentCount = arith.select %downOnDevice, %upAndScales, %numberCount : i64
-    %stagedCount = arith.select %isResident, %rank, %nonResidentCount : i64
+    %stagedDowns = arith.select %downOnDevice, %none, %downCount : i64
+    %stagedUps = arith.select %upOnDevice, %none, %upCount : i64
+    %stagedFactors = arith.addi %stagedDowns, %stagedUps : i64
+    %stagedCount = arith.addi %stagedFactors, %rank : i64
     %stagedBytes = arith.muli %stagedCount, %four : i64
     %bounced = llvm.mlir.addressof @strict_gpu_tuned_bounced : !llvm.ptr
     %staging = func.call @strict_gpu_bounce(%bounced, %stagedBytes) : (!llvm.ptr, i64) -> !llvm.ptr
@@ -18190,7 +18190,7 @@
     func.call @strict_gpu_tuned_scales(%factors, %staging, %rank) : (!llvm.ptr, !llvm.ptr, i64) -> ()
     cf.br ^stage
   ^allFactors:
-    func.call @strict_gpu_tuned_factors(%factors, %staging, %height, %width, %rank, %downOnDevice) : (!llvm.ptr, !llvm.ptr, i64, i64, i64, i1) -> ()
+    func.call @strict_gpu_tuned_factors(%factors, %staging, %height, %width, %rank, %downOnDevice, %upOnDevice) : (!llvm.ptr, !llvm.ptr, i64, i64, i64, i1, i1) -> ()
     cf.br ^stage
   ^stage:
     %factorDevice = func.call @strict_gpu_temporary(%stagedBytes, %factorBuffer) : (i64, !llvm.ptr) -> i64
@@ -18200,16 +18200,17 @@
     %put = func.call @strict_gpu_stage(%factorDevice, %staging, %stagedBytes) : (i64, !llvm.ptr, i64) -> i1
     cf.cond_br %put, ^launch, ^failed
   ^launch:
-    %downBytes = arith.muli %downCount, %four : i64
-    %stagedDownBytes = arith.select %downOnDevice, %none, %downBytes : i64
+    %stagedDownBytes = arith.muli %stagedDowns, %four : i64
     %hostUps = arith.addi %factorDevice, %stagedDownBytes : i64
-    %upBytes = arith.muli %upCount, %four : i64
-    %hostScales = arith.addi %hostUps, %upBytes : i64
+    %stagedUpBytes = arith.muli %stagedUps, %four : i64
+    %scalesAt = arith.addi %hostUps, %stagedUpBytes : i64
     %downsAt = arith.select %downOnDevice, %downResident, %factorDevice : i64
-    %upsAt = arith.select %isResident, %upResident, %hostUps : i64
-    %upFormat = arith.select %isResident, %upBits, %singles : i64
-    %scalesAt = arith.select %isResident, %factorDevice, %hostScales : i64
-    %ran = func.call @strict_gpu_tuned_launched(%deviceRows, %stride, %downsAt, %upsAt, %upFormat, %scalesAt, %height, %width, %rank, %seed) : (i64, i64, i64, i64, i64, i64, i64, i64, i64, i64) -> i1
+    %upsAt = arith.select %upOnDevice, %upResident, %hostUps : i64
+    %upFormat = arith.select %upOnDevice, %upBits, %singles : i64
+    %downBitsSlot = llvm.getelementptr %factors[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %downBits = llvm.load %downBitsSlot : !llvm.ptr -> i64
+    %downFormat = arith.select %downOnDevice, %downBits, %singles : i64
+    %ran = func.call @strict_gpu_tuned_launched(%deviceRows, %stride, %downsAt, %upsAt, %upFormat, %scalesAt, %height, %width, %rank, %seed, %downFormat) : (i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64) -> i1
     cf.cond_br %ran, ^back, ^failed
   ^back:
     %packedBytes = func.call @strict_packed_bytes(%width, %eight) : (i64, i64) -> i64
@@ -18237,8 +18238,8 @@
   ^unable:
     return %false : i1
   }
-  // the device address of the factor list in the slots at of factors when it is on the GPU as 32 bit floats, or as
-  // bfloat16 for the ups (at 2), else 0; a waiting rotation into it (Convrot.Rotated) runs first
+  // the device address of the factor list in the slots at of factors when it is on the GPU as 32 bit floats or as
+  // bfloat16 (the rotated downs of Convrot.Rotated and the packed ups are), else 0; a waiting rotation into it runs first
   func.func private @strict_gpu_tuned_resident(%factors: !llvm.ptr, %at: i64) -> i64 {
     %none = arith.constant 0 : i64
     %two = arith.constant 2 : i64
@@ -18252,9 +18253,7 @@
     %device = func.call @strict_gpu_device(%list) : (f64) -> i64
     %isSingles = arith.cmpi eq, %bits, %singles : i64
     %isBrains = arith.cmpi eq, %bits, %brains : i64
-    %isUps = arith.cmpi eq, %at, %two : i64
-    %brainUps = arith.andi %isBrains, %isUps : i1
-    %readable = arith.ori %isSingles, %brainUps : i1
+    %readable = arith.ori %isSingles, %isBrains : i1
     %resident = arith.select %readable, %device, %none : i64
     func.call @strict_gpu_rotated(%resident) : (i64) -> ()
     return %resident : i64
@@ -18264,7 +18263,7 @@
   // Two blocks per multiprocessor (at most one per 16 rows) take all rows, each keeps its updated numbers in a pooled
   // scratch block (16 x width 32 bit floats per block, 88 MB for H3's widest rows of 5376 on a 3080) instead of
   // computing them twice, without one (no memory) the kernel computes them again
-  func.func private @strict_gpu_tuned_launched(%device: i64, %stride: i64, %downs: i64, %ups: i64, %upBits: i64, %scales: i64, %height: i64, %width: i64, %rank: i64, %seed: i64) -> i1 {
+  func.func private @strict_gpu_tuned_launched(%device: i64, %stride: i64, %downs: i64, %ups: i64, %upBits: i64, %scales: i64, %height: i64, %width: i64, %rank: i64, %seed: i64, %downBits: i64) -> i1 {
     %false = arith.constant false
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -18288,9 +18287,9 @@
     cf.cond_br %found, ^launch, ^missing
   ^launch:
     %scaleOffset = func.call @strict_packed_data(%width, %eight) : (i64, i64) -> i64
-    %thirteen = arith.constant 13 : i64
-    %arguments = llvm.alloca %thirteen x i64 : (i64) -> !llvm.ptr
-    %parameters = llvm.alloca %thirteen x !llvm.ptr : (i64) -> !llvm.ptr
+    %fourteen = arith.constant 14 : i64
+    %arguments = llvm.alloca %fourteen x i64 : (i64) -> !llvm.ptr
+    %parameters = llvm.alloca %fourteen x !llvm.ptr : (i64) -> !llvm.ptr
     func.call @strict_gpu_argument(%arguments, %parameters, %none, %device) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
     func.call @strict_gpu_argument(%arguments, %parameters, %one, %stride) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
     func.call @strict_gpu_argument(%arguments, %parameters, %two, %scaleOffset) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
@@ -18323,6 +18322,8 @@
     func.call @strict_gpu_argument(%arguments, %parameters, %eleventh, %scratch) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
     %twelfth = arith.constant 12 : i64
     func.call @strict_gpu_argument(%arguments, %parameters, %twelfth, %grid) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
+    %thirteenth = arith.constant 13 : i64
+    func.call @strict_gpu_argument(%arguments, %parameters, %thirteenth, %downBits) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
     %launchThreads = arith.muli %grid, %threads : i64
     %flushed = func.call @strict_gpu_flush() : () -> i1
     %launched = func.call @strict_gpu_launch(%function, %launchThreads, %threads, %parameters) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i1
@@ -18368,15 +18369,17 @@
     return %true : i1
   }
   // the downs, the ups and the scales of the factors as 32 bit floats one after another into staging, the rows of downs
-  // and of ups convert in parallel (lists on the GPU come down here once unless downOnDevice is true)
-  func.func private @strict_gpu_tuned_factors(%factors: !llvm.ptr, %staging: !llvm.ptr, %height: i64, %width: i64, %rank: i64, %downOnDevice: i1) {
+  // and of ups convert in parallel; downs or ups already on the GPU (the kernel reads them there) are left out, a list
+  // on the GPU otherwise comes down here once
+  func.func private @strict_gpu_tuned_factors(%factors: !llvm.ptr, %staging: !llvm.ptr, %height: i64, %width: i64, %rank: i64, %downOnDevice: i1, %upOnDevice: i1) {
     %none = arith.constant 0 : i64
     %eight = arith.constant 8 : i64
     %downCount = arith.muli %rank, %width : i64
     %stagedDownCount = arith.select %downOnDevice, %none, %downCount : i64
     %upCount = arith.muli %height, %rank : i64
+    %stagedUpCount = arith.select %upOnDevice, %none, %upCount : i64
     %ups = llvm.getelementptr %staging[%stagedDownCount] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    %scales = llvm.getelementptr %ups[%upCount] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %scales = llvm.getelementptr %ups[%stagedUpCount] : (!llvm.ptr, i64) -> !llvm.ptr, f32
     %downListBits = llvm.load %factors : !llvm.ptr -> i64
     %downList = arith.bitcast %downListBits : i64 to f64
     %downBitsSlot = llvm.getelementptr %factors[1] : (!llvm.ptr) -> !llvm.ptr, i64
@@ -18392,7 +18395,11 @@
     %hostDownData = func.call @strict_gpu_host(%downList) : (f64) -> !llvm.ptr
     cf.br ^upHost(%hostDownData : !llvm.ptr)
   ^upHost(%downData: !llvm.ptr):
-    %upData = func.call @strict_gpu_host(%upList) : (f64) -> !llvm.ptr
+    cf.cond_br %upOnDevice, ^prepared(%noData : !llvm.ptr), ^upDownload
+  ^upDownload:
+    %hostUpData = func.call @strict_gpu_host(%upList) : (f64) -> !llvm.ptr
+    cf.br ^prepared(%hostUpData : !llvm.ptr)
+  ^prepared(%upData: !llvm.ptr):
     %nine = arith.constant 9 : i64
     %context = llvm.alloca %nine x i64 : (i64) -> !llvm.ptr
     llvm.store %downData, %context : !llvm.ptr, !llvm.ptr
@@ -18414,7 +18421,8 @@
     llvm.store %rank, %rankAt : i64, !llvm.ptr
     %downUnitsAt = llvm.getelementptr %context[8] : (!llvm.ptr) -> !llvm.ptr, i64
     llvm.store %downUnits, %downUnitsAt : i64, !llvm.ptr
-    %units = arith.addi %downUnits, %height : i64
+    %upUnits = arith.select %upOnDevice, %none, %height : i64
+    %units = arith.addi %downUnits, %upUnits : i64
     %body = func.constant @strict_gpu_tuned_converting : (!llvm.ptr, i64, i64) -> f64
     %ran = func.call @strict_parallel(%body, %context, %units) : ((!llvm.ptr, i64, i64) -> f64, !llvm.ptr, i64) -> f64
     func.call @strict_gpu_tuned_scales(%factors, %scales, %rank) : (!llvm.ptr, !llvm.ptr, i64) -> ()
