@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <math.h>
 #include <string.h>
+#include <immintrin.h>
 #include "strict.h"
 /* Reading and converting rows is throughput work, its pool (one per file) takes every logical processor: on 8 threads of
    an i9-13900KF the NVFP4 rows of the H3 text encoder waited for unpacking and quantizing. */
@@ -12,6 +13,10 @@
 #include "ThreadState.h"
 static _Thread_local char* entry;
 static _Thread_local unsigned char* floatStorage;
+static _Thread_local unsigned char* chunkBuffer;
+static _Thread_local uint64_t chunkBufferCap;
+static _Thread_local float* chunkFloats;
+static _Thread_local uint64_t chunkFloatsCap;
 /* PROFILE (temporary) */
 static double ProfileNow(void)
 {
@@ -229,13 +234,18 @@ STRICT_EXPORT double TensorFile_Header(double self, double path)
    rows hold two signed 4 bit numbers per byte, the lower nibble first. */
 static int IsNibbled(const char* header, const char* name)
 {
+	if (!strstr(header, "convrot_w4a4"))
+		return 0;
 	size_t length = strlen(name);
-	char* key = length > 7 && !strcmp(name + length - 7, ".weight") ? malloc(length + 40) : 0;
+	char stackKey[256];
+	char* key = length > 7 && !strcmp(name + length - 7, ".weight") ?
+		(length + 40 <= sizeof(stackKey) ? stackKey : malloc(length + 40)) : 0;
 	if (!key)
 		return 0;
 	snprintf(key, length + 40, "\\\"%.*s\\\": {\\\"format\\\": \\\"convrot_w4a4\\\"", (int)(length - 7), name);
 	int isFound = strstr(header, key) != 0;
-	free(key);
+	if (key != stackKey)
+		free(key);
 	return isFound;
 }
 
@@ -262,12 +272,16 @@ STRICT_EXPORT double TensorFile_Entry(double self, double path, double name)
 		return strict_fail(failure);
 	const char* wanted = strict_text(name);
 	size_t nameLength = strlen(wanted);
-	char* key = malloc(nameLength + 5);
+	char stackKey[256];
+	char* key = nameLength + 5 <= sizeof(stackKey) ? stackKey : malloc(nameLength + 5);
+	if (!key)
+		return strict_fail("OutOfMemory");
 	key[0] = '"';
 	memcpy(key + 1, wanted, nameLength);
 	memcpy(key + 1 + nameLength, "\":{", 4);
 	const char* found = strstr(text, key);
-	free(key);
+	if (key != stackKey)
+		free(key);
 	const char* open = found ? found + nameLength + 4 : "";
 	const char* close = strchr(open, '}');
 	size_t entryLength = close ? (size_t)(close - open) : strlen(open);
@@ -349,14 +363,25 @@ static const char* Described(const char* entry, Tensor* tensor)
 	return 0;
 }
 
-/* An 8 bit float with 4 exponent bits (bias 7) and 3 mantissa bits, the block scales of NVFP4: put together as the bits
-   of a 32 bit float (exponent + 120), below exponent 1 the mantissa times 2^-9, exact like ldexpf, which took 6 of the
-   15 s that the 1.6 billion block scales of the H3 text encoder (Qwen3-VL 32B NVFP4) needed to load on one thread. */
-static float Eight(unsigned char bits)
+static float EightTable[256];
+static int EightTableReady = 0;
+static void EightTableInit(void)
 {
-	uint32_t exponent = (bits >> 3) & 15, mantissa = bits & 7;
-	union { uint32_t bits; float number; } slot = { (uint32_t)(bits & 128) << 24 | (exponent + 120) << 23 | mantissa << 20 };
-	return exponent ? slot.number : (bits & 128 ? -1.0f : 1.0f) * (float)mantissa * 0.001953125f;
+	if (EightTableReady)
+		return;
+	for (int i = 0; i < 256; i++)
+	{
+		unsigned char bits = (unsigned char)i;
+		uint32_t exponent = (bits >> 3) & 15, mantissa = bits & 7;
+		union { uint32_t bits; float number; } slot = { (uint32_t)(bits & 128) << 24 | (exponent + 120) << 23 | mantissa << 20 };
+		EightTable[i] = exponent ? slot.number : (bits & 128 ? -1.0f : 1.0f) * (float)mantissa * 0.001953125f;
+	}
+	EightTableReady = 1;
+}
+
+static inline float Eight(unsigned char bits)
+{
+	return EightTable[bits];
 }
 
 /* Widens count numbers in the format of tensor at source to floats at target, which may start at or before source as
@@ -364,14 +389,58 @@ static float Eight(unsigned char bits)
 static void Widened(const unsigned char* source, const Tensor* tensor, float* target, uint64_t count)
 {
 	if (tensor->bytes == 4)
+	{
 		memmove(target, source, count * sizeof(float));
+		return;
+	}
+#if defined(__AVX2__)
+	if (tensor->bytes == 2 && tensor->isBrain)
+	{
+		const uint16_t* src16 = (const uint16_t*)source;
+		uint64_t index = 0;
+		for (; index + 16 <= count; index += 16)
+		{
+			__m128i in0 = _mm_loadu_si128((const __m128i*)(src16 + index));
+			__m128i in1 = _mm_loadu_si128((const __m128i*)(src16 + index + 8));
+			__m256i s0 = _mm256_slli_epi32(_mm256_cvtepu16_epi32(in0), 16);
+			__m256i s1 = _mm256_slli_epi32(_mm256_cvtepu16_epi32(in1), 16);
+			_mm256_storeu_si256((__m256i*)(target + index), s0);
+			_mm256_storeu_si256((__m256i*)(target + index + 8), s1);
+		}
+		for (; index < count; index++)
+		{
+			union { uint32_t bits; float val; } u = { (uint32_t)src16[index] << 16 };
+			target[index] = u.val;
+		}
+		return;
+	}
+#endif
+#if defined(__F16C__) || defined(__AVX2__)
+	if (tensor->bytes == 2 && !tensor->isBrain)
+	{
+		uint64_t index = 0;
+		for (; index + 8 <= count; index += 8)
+		{
+			__m128i in = _mm_loadu_si128((const __m128i*)(source + 2 * index));
+			__m256 f = _mm256_cvtph_ps(in);
+			_mm256_storeu_ps(target + index, f);
+		}
+		for (; index < count; index++)
+			target[index] = strict_half_float((uint16_t)(source[2 * index] | source[2 * index + 1] << 8));
+		return;
+	}
+#endif
 	for (uint64_t index = 0; tensor->bytes == 2 && tensor->isBrain && index < count; index++)
-		target[index] = strict_brain_float((uint16_t)(source[2 * index] | source[2 * index + 1] << 8));
+	target[index] = strict_brain_float((uint16_t)(source[2 * index] | source[2 * index + 1] << 8));
 	for (uint64_t index = 0; tensor->bytes == 2 && !tensor->isBrain && index < count; index++)
-		target[index] = strict_half_float((uint16_t)(source[2 * index] | source[2 * index + 1] << 8));
-	for (uint64_t index = 0; tensor->bytes == 1 && index < count; index++)
-		target[index] = tensor->isEight ? Eight(source[index]) :
-			tensor->isSigned ? (float)(int8_t)source[index] : (float)source[index];
+	target[index] = strict_half_float((uint16_t)(source[2 * index] | source[2 * index + 1] << 8));
+	if (tensor->bytes == 1)
+	{
+		EightTableInit();
+		for (uint64_t index = 0; index < count; index++)
+			target[index] = tensor->isEight ? EightTable[source[index]] :
+				tensor->isSigned ? (float)(int8_t)source[index] : (float)source[index];
+	}
 }
 
 /* Reads the numbers of a tensor as they are in the file into a new block with room for widened bytes per number (the
@@ -439,6 +508,12 @@ static void ThreadReleased(void)
 	}
 	free(entry);
 	free(floatStorage);
+	free(chunkBuffer);
+	chunkBuffer = 0;
+	chunkBufferCap = 0;
+	free(chunkFloats);
+	chunkFloats = 0;
+	chunkFloatsCap = 0;
 }
 
 /* Packs count floats (stride apart) into the numbers at data with bits 32, 17 (rounded to bfloat16), 16 (rounded to
@@ -447,11 +522,14 @@ static void Packed(unsigned char* data, const float* first, uint64_t count, uint
 {
 	if (bits == 8)
 		strict_quantized(data, first, count, stride);
-	for (uint64_t column = 0; bits != 8 && column < count; column++)
-		if (bits == 16 || bits == 17)
-			((uint16_t*)data)[column] = bits == 16 ? strict_half(first[column * stride]) : strict_brain(first[column * stride]);
-		else
-			((float*)data)[column] = first[column * stride];
+	else if (bits == 32 && stride == 1)
+		memcpy(data, first, count * sizeof(float));
+	else
+		for (uint64_t column = 0; column < count; column++)
+			if (bits == 16 || bits == 17)
+				((uint16_t*)data)[column] = bits == 16 ? strict_half(first[column * stride]) : strict_brain(first[column * stride]);
+			else
+				((float*)data)[column] = first[column * stride];
 }
 
 /* NVFP4 rows: two 4 bit e2m1 numbers per byte (the first in the high nibble), each 16 scaled by its 8 bit float in the
@@ -513,8 +591,26 @@ static void PlacedChunk(void* context, uint64_t chunk)
 	uint64_t end = placing->last ? placing->last : tensor->height;
 	uint64_t count = end - first < ChunkRows ? end - first : ChunkRows;
 	uint64_t columns = placing->fours || tensor->isNibbles ? 2 * tensor->width : tensor->width;
-	unsigned char* buffer = malloc(count * rowBytes + 1);
-	float* floats = placing->isStored ? 0 : malloc(columns * sizeof(float) + 1);
+	uint64_t bufferNeeded = count * rowBytes + 1;
+	if (bufferNeeded > chunkBufferCap)
+	{
+		free(chunkBuffer);
+		chunkBuffer = malloc(bufferNeeded + 65536);
+		chunkBufferCap = bufferNeeded + 65536;
+	}
+	unsigned char* buffer = chunkBuffer;
+	float* floats = 0;
+	if (!placing->isStored)
+	{
+		uint64_t floatsNeeded = columns * sizeof(float) + 1;
+		if (floatsNeeded > chunkFloatsCap)
+		{
+			free(chunkFloats);
+		chunkFloats = malloc(floatsNeeded + 65536);
+			chunkFloatsCap = floatsNeeded + 65536;
+		}
+		floats = chunkFloats;
+	}
 	int isRead = buffer && (placing->isStored || floats) && (placing->read ?
 		memcpy(buffer, placing->read + (first - placing->first) * rowBytes, count * rowBytes) != 0 :
 		ReadFrom(placing->file, placing->start + first * rowBytes, buffer, count * rowBytes));
@@ -538,8 +634,6 @@ static void PlacedChunk(void* context, uint64_t chunk)
 		for (uint64_t part = 0; placing->scales && part < (columns + 31) / 32; part++)
 			parts[part] = placing->scales[row];
 	}
-	free(floats);
-	free(buffer);
 }
 
 /* Reads the rows of tensor straight to data (stride bytes apart) with bits, as they are in the file when stored, in
@@ -570,11 +664,16 @@ static const char* Placed(double path, const Tensor* tensor, unsigned char* data
 		free(read);
 		return atomic_load(&placing.failed) ? "TensorFileDataTruncated" : 0;
 	}
-	FILE* file = Opened(strict_text(path), &length);
-	if (!file)
-		return "TensorFileNotReadable";
-	fclose(file);
-	Placing placing = { OpenedFile(strict_text(path), &fileSize), tensor, 8 + length + tensor->start, data, stride, bits,
+	uint64_t start = DataStart(strict_text(path));
+	if (!start)
+	{
+		FILE* file = Opened(strict_text(path), &length);
+		if (!file)
+			return "TensorFileNotReadable";
+		fclose(file);
+		start = 8 + length;
+	}
+	Placing placing = { OpenedFile(strict_text(path), &fileSize), tensor, start + tensor->start, data, stride, bits,
 		isStored, scales, fours };
 	if (!placing.file)
 		return "TensorFileNotReadable";

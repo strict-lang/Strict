@@ -58,11 +58,18 @@ static inline void strict_quantized(unsigned char* data, const float* values, ui
 			float magnitude = values[index * stride] < 0 ? -values[index * stride] : values[index * stride];
 			largest = magnitude > largest ? magnitude : largest;
 		}
-		float scale = largest / 127;
-		scales[first / 32] = scale;
+		if (largest == 0)
+		{
+			scales[first / 32] = 0;
+			for (uint64_t index = first; index < end; index++)
+				bytes[index] = 0;
+			continue;
+		}
+		scales[first / 32] = largest * (1.0f / 127.0f);
+		float invScale = 127.0f / largest;
 		for (uint64_t index = first; index < end; index++)
 		{
-			float scaled = scale == 0 ? 0 : values[index * stride] / scale;
+			float scaled = values[index * stride] * invScale;
 			bytes[index] = (int8_t)(scaled < 0 ? scaled - 0.5f : scaled + 0.5f);
 		}
 	}
