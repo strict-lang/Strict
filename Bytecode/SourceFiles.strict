@@ -53,12 +53,12 @@ Matching(names Texts, files Texts) Texts
 		let name = Path(value.Replace("\\", "/")).FileName.RemoveExtension.text
 		if (name is in names) or ((name + "s") is in names)
 			value
-Folders(folders Texts, depth Number) Texts
+Folders(folders Texts, depth Number, scanned = 0) Texts
 	SourceFiles(".").Folders(List(Text) + "./Missing", 2).Length is 1
 	mutable result = folders
-	for folders
-		result = Added(result, Referenced(value))
-	(depth is 0) or (result.Length is folders.Length) then result else Folders(result, depth - 1)
+	for Range(scanned, folders.Length)
+		result = Added(result, Referenced(folders(value)))
+	(depth is 0) or (result.Length is folders.Length) then result else Folders(result, depth - 1, folders.Length)
 Added(folders Texts, more Texts) Texts
 	SourceFiles(".").Added(("a", "b"), ("b", "c")) is ("a", "b", "c")
 	mutable result = folders
