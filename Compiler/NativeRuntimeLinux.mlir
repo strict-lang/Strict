@@ -110,6 +110,11 @@
     %none = arith.constant 0 : i64
     return %none : i64
   }
+  // whether kernels run as WebGPU shaders (NativeRuntimeWeb.mlir), never here
+  func.func private @strict_gpu_webgpu() -> i1 {
+    %no = arith.constant false
+    return %no : i1
+  }
   // two lists in WebGPU buffers joined there (NativeRuntimeWeb.mlir), 0.0 here
   // the next line the page hands in on the web (NativeRuntimeWeb.mlir), 0.0 here: Process.InputLine reads the standard input
   // rows only in a WebGPU buffer (strict_rows_web), never here

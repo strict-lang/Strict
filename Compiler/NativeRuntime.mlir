@@ -13975,6 +13975,34 @@
   ^done(%found: i1, %foundMarked: i1):
     return %found, %foundMarked : i1, i1
   }
+  // when a collection for a block of 16 MB or more (strict_gpu_obtain short of memory, a list of its size class on the
+  // GPU) found none to reuse, the next one waits ten times as long as it took: the lists there mostly were alive, H3
+  // ran a full collection of its 24 GB heap for most of its blocks (126 in two 480x832 videos, 8.6 s of the second
+  // decode on a 3080 once) and ended with GarbageCollectionExceedsTenth on the 4090; an allocation that still fails
+  // collects in strict_gpu_starved. The end of the last one that found nothing and when the next may run
+  llvm.mlir.global internal @strict_gpu_own_wait(dense<0.0> : tensor<2xf64>) : !llvm.array<2 x f64>
+  func.func private @strict_gpu_own_collectable() -> i1 {
+    %wait = llvm.mlir.addressof @strict_gpu_own_wait : !llvm.ptr
+    %untilSlot = llvm.getelementptr %wait[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<2 x f64>
+    %until = llvm.load %untilSlot : !llvm.ptr -> f64
+    %now = func.call @strict_clock() : () -> f64
+    %due = arith.cmpf oge, %now, %until : f64
+    return %due : i1
+  }
+  func.func private @strict_gpu_own_collected(%started: f64, %reusable: i1) {
+    %zero = arith.constant 0.0 : f64
+    %ten = arith.constant 10.0 : f64
+    %wait = llvm.mlir.addressof @strict_gpu_own_wait : !llvm.ptr
+    %untilSlot = llvm.getelementptr %wait[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<2 x f64>
+    %ended = func.call @strict_clock() : () -> f64
+    %took = arith.subf %ended, %started : f64
+    %pause = arith.mulf %took, %ten : f64
+    %later = arith.addf %ended, %pause : f64
+    %until = arith.select %reusable, %zero, %later : f64
+    llvm.store %ended, %wait : f64, !llvm.ptr
+    llvm.store %until, %untilSlot : f64, !llvm.ptr
+    return
+  }
   func.func private @strict_gpu_obtain(%class: i64) -> i64 {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -14051,11 +14079,15 @@
     return %lent : i64
   ^ownCheck:
     %anyResiding, %markedResiding = func.call @strict_gpu_residing_class(%class) : (i64) -> (i1, i1)
-    cf.cond_br %anyResiding, ^ownCollect(%markedResiding : i1), ^own
+    %mayCollect = func.call @strict_gpu_own_collectable() : () -> i1
+    %collecting = arith.andi %anyResiding, %mayCollect : i1
+    cf.cond_br %collecting, ^ownCollect(%markedResiding : i1), ^own
   ^ownCollect(%fully: i1):
+    %collectStarted = func.call @strict_clock() : () -> f64
     func.call @strict_gc_run(%fully) : (i1) -> ()
     %collectedCount = llvm.load %countSlot : !llvm.ptr -> i64
     %reusable = arith.cmpi sgt, %collectedCount, %none : i64
+    func.call @strict_gpu_own_collected(%collectStarted, %reusable) : (f64, i1) -> ()
     cf.cond_br %reusable, ^again, ^ownRelend
   ^ownRelend:
     %collectedLent = func.call @strict_gpu_lend(%class) : (i64) -> i64
@@ -18853,10 +18885,14 @@
     %eight = arith.constant 8 : i64
     %false = arith.constant false
     %true = arith.constant true
+    // native platforms leave at once: rows joined from several matrices were gathered into a new zeroed block first and
+    // only then found no WebGPU, 6 of the 9.4 s the H3 text encoder (Qwen3-VL 32B) took to encode one prompt
+    %onWeb = func.call @strict_gpu_webgpu() : () -> i1
     %unbased = arith.cmpf oeq, %bases, %zero : f64
     %ungated = arith.cmpf oeq, %gated, %zero : f64
     %isPlain = arith.andi %unbased, %ungated : i1
-    cf.cond_br %isPlain, ^formats, ^unable
+    %isWebPlain = arith.andi %isPlain, %onWeb : i1
+    cf.cond_br %isWebPlain, ^formats, ^unable
   ^formats:
     %formats:2 = func.call @strict_gpu_row_formats(%rows, %false) : (f64, i1) -> (i1, i64)
     %eightsMask = arith.constant 256 : i64
@@ -20238,12 +20274,13 @@
     func.call @strict_gpu_unstaged_unless(%staging, %isHosted) : (!llvm.ptr, i1) -> ()
     return %false : i1
   }
-  // rows tables up to 256 MB are gathered in one pinned buffer: a fresh allocation for each faulted its pages in and the
+  // rows tables up to 512 MB are gathered in one pinned buffer: a fresh allocation for each faulted its pages in and the
   // driver copied it once more (Qwen3.8-Flash-Next 523 -> 488 ms per token, with 32 GPU expert slots 2974 -> 2738 ms;
-  // H3's first step, all 21.8 GB in tables of up to 165 MB, 14.4-14.9 -> 10.1-10.6 s)
+  // H3's first step, all 21.8 GB in tables of up to 165 MB, 14.4-14.9 -> 10.1-10.6 s), the joined gate and up rows of
+  // the H3 text encoder (Qwen3-VL 32B) are 295 MB, freeing each of them took a quarter of encoding a prompt
   llvm.mlir.global internal @strict_gpu_staged(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   func.func private @strict_gpu_staging(%bytes: i64) -> !llvm.ptr {
-    %most = arith.constant 268435456 : i64
+    %most = arith.constant 536870912 : i64
     %fits = arith.cmpi ule, %bytes, %most : i64
     cf.cond_br %fits, ^pinned, ^pageable
   ^pinned:

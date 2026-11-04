@@ -940,6 +940,11 @@
   // the handle of a new WebGPU buffer with the words at data as they are (halves bfloat16 numbers in them when above 0,
   // 32 bit floats kept as bfloat16 halves when all are exact bfloat16 numbers when -1), 0 before the first kernel made the
   // device
+  // kernels run as WebGPU shaders here, native platforms leave the WebGPU paths of NativeRuntime.mlir at once
+  func.func private @strict_gpu_webgpu() -> i1 {
+    %yes = arith.constant true
+    return %yes : i1
+  }
   llvm.func @strict_webgpu_uploaded(!llvm.ptr, i32, i32) -> i32
   func.func private @strict_gpu_web_uploaded(%data: !llvm.ptr, %words: i64, %halves: i64) -> i64 {
     %words32 = arith.trunci %words : i64 to i32

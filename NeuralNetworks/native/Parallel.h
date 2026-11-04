@@ -158,14 +158,19 @@ static int Started(void)
 }
 #endif
 
-/* Runs work for the items 0 to count on this thread and the pool's: STRICT_THREADS in all, else a quarter of the
-   logical processors (experts of Qwen3.8-Flash-Next on a Threadripper 3990X: 16 threads 47, 32 threads 40, 64 threads
-   58 and 128 threads 135 ms per token). */
+#ifndef PARALLEL_SHARE
+#define PARALLEL_SHARE 4
+#endif
+/* Runs work for the items 0 to count on this thread and the pool's: STRICT_THREADS in all, else the logical processors
+   divided by PARALLEL_SHARE, which a file sets before including this for its own pool, by default a quarter (experts of
+   Qwen3.8-Flash-Next on a Threadripper 3990X: 16 threads 47, 32 threads 40, 64 threads 58 and 128 threads 135 ms per
+   token). */
 static void Parallel(void (*work)(void*, uint64_t), void* context, uint64_t count)
 {
 	Locked(&poolDispatch);
 	const char* wanted = poolThreads ? 0 : getenv("STRICT_THREADS");
-	uint64_t threads = poolThreads ? 0 : wanted && atoi(wanted) > 0 ? (uint64_t)atoi(wanted) : Processors() / 4;
+	uint64_t threads = poolThreads ? 0 : wanted && atoi(wanted) > 0 ? (uint64_t)atoi(wanted) :
+		Processors() / PARALLEL_SHARE;
 	for (poolThreads = poolThreads ? poolThreads : 1; poolThreads < threads && Started(); )
 		poolThreads++;
 	poolWork = work;

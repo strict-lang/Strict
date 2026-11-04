@@ -5,6 +5,9 @@
 #include <math.h>
 #include <string.h>
 #include "strict.h"
+/* Reading and converting rows is throughput work, its pool (one per file) takes every logical processor: on 8 threads of
+   an i9-13900KF the NVFP4 rows of the H3 text encoder waited for unpacking and quantizing. */
+#define PARALLEL_SHARE 1
 #include "Parallel.h"
 #include "ThreadState.h"
 static _Thread_local char* entry;
@@ -315,12 +318,14 @@ static const char* Described(const char* entry, Tensor* tensor)
 	return 0;
 }
 
-/* An 8 bit float with 4 exponent bits (bias 7) and 3 mantissa bits, the block scales of NVFP4. */
+/* An 8 bit float with 4 exponent bits (bias 7) and 3 mantissa bits, the block scales of NVFP4: put together as the bits
+   of a 32 bit float (exponent + 120), below exponent 1 the mantissa times 2^-9, exact like ldexpf, which took 6 of the
+   15 s that the 1.6 billion block scales of the H3 text encoder (Qwen3-VL 32B NVFP4) needed to load on one thread. */
 static float Eight(unsigned char bits)
 {
-	int exponent = (bits >> 3) & 15, mantissa = bits & 7;
-	float magnitude = exponent ? ldexpf(1 + mantissa / 8.0f, exponent - 7) : ldexpf(mantissa / 8.0f, -6);
-	return bits & 128 ? -magnitude : magnitude;
+	uint32_t exponent = (bits >> 3) & 15, mantissa = bits & 7;
+	union { uint32_t bits; float number; } slot = { (uint32_t)(bits & 128) << 24 | (exponent + 120) << 23 | mantissa << 20 };
+	return exponent ? slot.number : (bits & 128 ? -1.0f : 1.0f) * (float)mantissa * 0.001953125f;
 }
 
 /* Widens count numbers in the format of tensor at source to floats at target, which may start at or before source as
@@ -338,8 +343,9 @@ static void Widened(const unsigned char* source, const Tensor* tensor, float* ta
 			tensor->isSigned ? (float)(int8_t)source[index] : (float)source[index];
 }
 
-/* Reads the numbers of a tensor as 32 bit floats, 0 and the failure if it can't. */
-static float* Read(double path, const Tensor* tensor, const char** failure)
+/* Reads the numbers of a tensor as they are in the file into a new block with room for widened bytes per number (the
+   numbers at its end), 0 and the failure if it can't. */
+static unsigned char* Loaded(double path, const Tensor* tensor, uint64_t widened, const char** failure)
 {
 	uint64_t length = 0, count = tensor->height * tensor->width;
 	if (tensor->isNibbles)
@@ -355,15 +361,15 @@ static float* Read(double path, const Tensor* tensor, const char** failure)
 		*failure = "TensorFileNotReadable";
 		return 0;
 	}
-	float* floats = malloc(count * sizeof(float) + 1);
-	if (!floats)
+	unsigned char* block = malloc(count * widened + 1);
+	if (!block)
 	{
 		if (file)
 			fclose(file);
 		*failure = "TensorTooLarge";
 		return 0;
 	}
-	unsigned char* numbers = (unsigned char*)floats + count * (sizeof(float) - tensor->bytes);
+	unsigned char* numbers = block + count * (widened - tensor->bytes);
 	size_t read = 0;
 	if (file)
 	{
@@ -376,11 +382,20 @@ static float* Read(double path, const Tensor* tensor, const char** failure)
 			numbers) ? count : 0;
 	if (read != count)
 	{
-		free(floats);
+		free(block);
 		*failure = "TensorFileDataTruncated";
 		return 0;
 	}
-	Widened(numbers, tensor, floats, count);
+	return block;
+}
+
+/* Reads the numbers of a tensor as 32 bit floats, 0 and the failure if it can't. */
+static float* Read(double path, const Tensor* tensor, const char** failure)
+{
+	float* floats = (float*)Loaded(path, tensor, sizeof(float), failure);
+	if (floats)
+		Widened((unsigned char*)floats + tensor->height * tensor->width * (sizeof(float) - tensor->bytes), tensor, floats,
+			tensor->height * tensor->width);
 	return floats;
 }
 
@@ -410,18 +425,23 @@ static void Packed(unsigned char* data, const float* first, uint64_t count, uint
 
 /* NVFP4 rows: two 4 bit e2m1 numbers per byte (the first in the high nibble), each 16 scaled by its 8 bit float in the
    swizzled cuBLAS layout of blocks (tiles of 128 rows by 4 scales), all by scale and each column by its input factor. */
-typedef struct { const float* blocks; uint64_t blockWidth; float scale; const float* inputs; } Fours;
+typedef struct { const unsigned char* blocks; uint64_t blockWidth; float scale; const float* inputs; } Fours;
 static const float Nibbles[16] = { 0, 0.5f, 1, 1.5f, 2, 3, 4, 6, -0.0f, -0.5f, -1, -1.5f, -2, -3, -4, -6 };
 
+/* The block scales stay the bytes of the file, each widened once for its 16 numbers. */
 static void Unpacked(const Fours* fours, uint64_t row, const unsigned char* source, float* target, uint64_t bytes)
 {
-	for (uint64_t column = 0; column < 2 * bytes; column++)
+	const unsigned char* scales = fours->blocks + (row / 128) * (fours->blockWidth / 4) * 512 + (row % 32) * 16 +
+		(row % 128 / 32) * 4;
+	for (uint64_t start = 0; start < 2 * bytes; start += 16)
 	{
-		uint64_t block = column / 16;
-		uint64_t tile = (row / 128) * (fours->blockWidth / 4) + block / 4;
-		float scale = fours->blocks[tile * 512 + (row % 32) * 16 + (row % 128 / 32) * 4 + block % 4] * fours->scale;
-		unsigned char nibble = column % 2 ? source[column / 2] & 15 : source[column / 2] >> 4;
-		target[column] = Nibbles[nibble] * scale * (fours->inputs ? fours->inputs[column] : 1);
+		uint64_t block = start / 16, end = start + 16 < 2 * bytes ? start + 16 : 2 * bytes;
+		float scale = Eight(scales[(block / 4) * 512 + block % 4]) * fours->scale;
+		for (uint64_t column = start; column < end; column++)
+		{
+			unsigned char nibble = column % 2 ? source[column / 2] & 15 : source[column / 2] >> 4;
+			target[column] = Nibbles[nibble] * scale * (fours->inputs ? fours->inputs[column] : 1);
+		}
 	}
 }
 
@@ -679,7 +699,7 @@ STRICT_EXPORT double TensorFile_Fours(double self, double path, double entry, do
 		blocked.height < (tensor.height + 127) / 128 * 128 || blocked.width < (tensor.width / 8 + 3) / 4 * 4 ||
 		global.height * global.width != 1 || (hasInputs && factors.height * factors.width != 2 * tensor.width)))
 		failure = "OnlyNvfp4MatricesWithSwizzledBlockScalesAreSupported";
-	float* blocks = failure ? 0 : Read(path, &blocked, &failure);
+	unsigned char* blocks = failure ? 0 : Loaded(path, &blocked, 1, &failure);
 	float* factor = blocks ? Read(path, &global, &failure) : 0;
 	float* columns = factor && hasInputs ? Read(path, &factors, &failure) : 0;
 	unsigned char* data = 0;
