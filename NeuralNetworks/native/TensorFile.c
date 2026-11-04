@@ -363,6 +363,7 @@ static const char* Described(const char* entry, Tensor* tensor)
 	return 0;
 }
 
+/* The 8 bit floats of NVFP4 block scales, Eight reads them: filled by EightTableInit before any use */
 static float EightTable[256];
 static int EightTableReady = 0;
 static void EightTableInit(void)
@@ -875,6 +876,9 @@ STRICT_EXPORT double TensorFile_Fours(double self, double path, double entry, do
 		&data, &stride);
 	profileRows += ProfileNow() - profiled;
 	Fours fours = { blocks, blocked.width, factor ? *factor : 0, columns };
+	/* the block scales stay bytes, Unpacked widens them with the table: nothing else may have filled it yet (all NVFP4
+	   weights of the text encoder were 0 when no 8 bit float was widened before) */
+	EightTableInit();
 	profiled = ProfileNow();
 	if (!failure)
 		failure = !data ? "TensorTooLarge" : Placed(path, &tensor, data, stride, 8, 0, 0, &fours);
@@ -1035,4 +1039,68 @@ STRICT_EXPORT double TensorFile_Written(double self, double path, double header,
 	complete = fclose(file) == 0 && complete;
 	free(floats);
 	return complete ? (double)count : strict_fail("TensorFileNotWritable");
+}
+
+/* Reads a whole file once on a thread of its own, 16 MB at a time, so its pages are in the file cache when a program
+   reads them later: H3Video's text encoder process reads H3 and its LoRAs (24 GB) once it loaded itself, while it
+   encodes on the GPU, and H3Video the VAEs while it samples. At normal priority and without the sequential scan hint:
+   both put the pages at the end of the standby list, the first ones dropped (a 28 GB encoder, its 16 GB file and H3 do
+   not fit into 64 GB together). The bytes it is going to read, 0 when it can not. */
+enum { PrefetchBytes = 16 << 20 };
+#ifdef _WIN32
+static DWORD WINAPI Prefetching(void* context)
+{
+	HANDLE file = context;
+	unsigned char* buffer = malloc(PrefetchBytes);
+	DWORD read = 0;
+	while (buffer && ReadFile(file, buffer, PrefetchBytes, &read, 0) && read > 0)
+		read = 0;
+	free(buffer);
+	CloseHandle(file);
+	return 0;
+}
+#elif !defined(__EMSCRIPTEN__)
+static void* Prefetching(void* context)
+{
+	int file = (int)(intptr_t)context;
+	unsigned char* buffer = malloc(PrefetchBytes);
+	while (buffer && read(file, buffer, PrefetchBytes) > 0)
+		;
+	free(buffer);
+	close(file);
+	return 0;
+}
+#endif
+
+STRICT_EXPORT double TensorFile_Prefetched(double self, double path)
+{
+#ifdef __EMSCRIPTEN__
+	return 0;
+#elif defined(_WIN32)
+	HANDLE file = CreateFileA(strict_text(path), GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+	if (file == INVALID_HANDLE_VALUE)
+		return 0;
+	LARGE_INTEGER size = { 0 };
+	HANDLE thread = GetFileSizeEx(file, &size) ? CreateThread(0, 0, Prefetching, file, 0, 0) : 0;
+	if (!thread)
+	{
+		CloseHandle(file);
+		return 0;
+	}
+	CloseHandle(thread);
+	return (double)size.QuadPart;
+#else
+	int file = open(strict_text(path), O_RDONLY);
+	off_t size = file < 0 ? 0 : lseek(file, 0, SEEK_END);
+	pthread_t thread;
+	if (file < 0 || size <= 0 || lseek(file, 0, SEEK_SET) != 0 ||
+		pthread_create(&thread, 0, Prefetching, (void*)(intptr_t)file) != 0)
+	{
+		if (file >= 0)
+			close(file);
+		return 0;
+	}
+	pthread_detach(thread);
+	return (double)size;
+#endif
 }
