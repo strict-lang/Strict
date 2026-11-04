@@ -1,4 +1,5 @@
 has tokens Texts
+constant Openers = ("(", ",", "not")
 Parse SyntaxNode
 	SyntaxParser(Tokenizer("a + b * c").Tokens).Parse to Text is "a + b * c"
 	SyntaxParser(Tokenizer("(a + b) * c").Tokens).Parse to Text is "(a + b) * c"
@@ -81,9 +82,9 @@ OperatorPrecedence(position Number, start Number) Number
 	SyntaxParser("a", "*", "-", "b").OperatorPrecedence(2, 0) is 0
 	if position is start
 		return LeadingPrecedence(position)
-	if SyntaxNode("Binary", tokens(position - 1)).Precedence > 0 or (tokens(position - 1) is in ("(", ",", "not"))
+	if Binding(tokens(position - 1)) > 0 or (tokens(position - 1) is in Openers)
 		return 0
-	SyntaxNode("Binary", OperatorText(position)).Precedence
+	Binding(OperatorText(position))
 LeadingPrecedence(position Number) Number
 	SyntaxParser("*", "a").LeadingPrecedence(0) is 13
 	SyntaxParser("-", "a").LeadingPrecedence(0) is 0
@@ -145,3 +146,8 @@ Arguments(open Number, end Number) SyntaxNodes
 			segmentStart = open + index + 1
 	arguments.Add(ParseRange(segmentStart, end - 1))
 	arguments
+Binding(operator Text) Number
+	SyntaxParser("a").Binding("is not") is 7
+	SyntaxParser("a").Binding("x") is 0
+	let at = SyntaxNode.operators.Index(operator)
+	at < 0 then 0 else SyntaxNode.precedences(at)
