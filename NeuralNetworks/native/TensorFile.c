@@ -579,6 +579,25 @@ STRICT_EXPORT double TensorFile_Columns(double self, double path, double entry, 
 	return Matrix(path, entry, bits, 1);
 }
 
+/* numbers as rows of width 32 bit floats in one block like the rows of a file (strict_rows): rows a loop builds are an
+   object each, H3's LoRA merged adaln rows (4.9 million of 8 numbers) made every collection visit them all */
+STRICT_EXPORT double TensorFile_Shaped(double self, double numbers, double width)
+{
+	const strict_numbers* given = strict_numbers_of(numbers);
+	uint64_t total = (uint64_t)given->count, columns = width >= 1 ? (uint64_t)width : 0;
+	if (columns == 0 || total % columns != 0)
+		return strict_fail("ShapedWidthDoesNotFitTheNumbers");
+	unsigned char* data = 0;
+	uint64_t stride = 0;
+	double result = strict_rows(total / columns, columns, 32, &data, &stride);
+	if (!data)
+		return strict_fail("TensorTooLarge");
+	for (uint64_t row = 0; row < total / columns; row++)
+		for (uint64_t column = 0; column < columns; column++)
+			((float*)(data + row * stride))[column] = (float)given->items[row * columns + column];
+	return result;
+}
+
 /* The rows of an I8 matrix (tensor from entry) with one F32 scale per row (comfy_quant int8 rows, convrot keeps them
    rotated), read straight into 8 bit rows (bits, plus STRICT_KEPT_TOKENS) at data, stride bytes apart, whose per-32
    scales all are the scale of their row, so every number is exact: the result. */

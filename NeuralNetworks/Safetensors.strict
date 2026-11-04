@@ -49,6 +49,7 @@ Rows(name Text) List(Numbers)
 	Safetensors("NeuralNetworks/tiny.safetensors", 8).Rows("a").First.First.IsNearlyEqual(0.992126)
 	Safetensors("NeuralNetworks/tiny.safetensors", 17).Rows("a") is ((1, 2, 3), (4, 5, 6))
 	Safetensors(Vision, 17).Rows("visual.pos_embed.weight")(9) is Safetensors(Vision).Rows("visual.pos_embed.weight")(9)
+	TensorFile.Shaped((1, 2, 3, 4, 5, 6), 3) is ((1, 2, 3), (4, 5, 6))
 	TensorFile.Rows(path, Entry(name), bits)
 Quantized(name Text, tokenBits = 8) List(Numbers)
 	Bytes.Quantized("a").Length is 4

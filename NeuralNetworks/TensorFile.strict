@@ -3,6 +3,7 @@ Entry(path Text, name Text) Text
 Floats(path Text, entry Text, bits Number) Numbers
 Rows(path Text, entry Text, bits Number) List(Numbers)
 Columns(path Text, entry Text, bits Number) List(Numbers)
+Shaped(numbers Numbers, width Number) List(Numbers)
 Quantized(path Text, entry Text, scales Text, tokenBits Number) List(Numbers)
 HostedPart(path Text, entry Text, scales Text, first Number, count Number) List(Numbers)
 Fours(path Text, entry Text, scales Text, scale Text, inputs Text, tokenBits Number) List(Numbers)
