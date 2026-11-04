@@ -14,7 +14,6 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - A GLSL shader that fails to compile in `Gpu.Program` is silently ignored: TorinsTowers with a broken WaterPlane fragment shader ran with exit 0 and no message; compile and link errors should stop with the info log and the .strict line.
 - A named argument that skips parameters with defaults fails in bytecode codegen with `UnsupportedOperator` (OperatorCodegen line 157 via ListCodegen.Argument): `Release.Packaged(program, 0, isReleased = true)` and `Bytes.Hosted("a", picked = (2))`, positional arguments work.
 - `Directory.Change` only works natively (strict.exe uses it to work from the project folder), on the VM it gives the Error DirectoryChangeNeedsNative: Runtime/Hosted calling it needs a stage A build and a regenerated Compiler/Bootstrap.mlir.
-- A model with a LoRA merged at load (Safetensors.Tuned: TensorFile.Quantized rows merged in place on the GPU) makes every full collection about 30 times slower: H3Video in resident mode with the 21 GB hybrid int8 model and FastH3_comfyui took 300 ms per full collection at 26 GB marked (10 ms without the LoRA) and 12 s more to load, 37 % of a job went to collecting. Profile one full collection to find what is scanned.
 - H3Video.exe on the command line with the 21 GB hybrid int8 model and a LoRA stopped with `Error: OutOfMemory` without a stack or the allocation that failed, right after the text encoder loaded (heap 28 GB of 64 GB, 36 GB RAM free); it should name what ran out.
 
 ## Next
