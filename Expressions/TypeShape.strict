@@ -137,19 +137,9 @@ UsedTypes Texts
 	mutable own = MemberScope.names + MethodScope.names
 	mutable used = List(Mutable(Text))
 	for lines
-		let tokens = Tokenizer(value.Trim).Tokens
-		if (tokens.Length > 1) and (tokens(0) is "constant")
-			own = own + tokens(1)
+		let trimmed = value.Trim
+		if trimmed.StartsWith("constant ")
+			own = own + Tokenizer(trimmed).Tokens(1)
 		else if value.StartsWith("\t") or IsComputed(value)
-			used = used + Capitalized(tokens)
-	for used
-		if (value is not in own) and (used.Index(value) is index)
-			value
-Capitalized(tokens Texts) Texts
-	TypeShape("has a").Capitalized(("Number", ".", "Pi", "+", "x", "*", "Size")) is ("Number", "Size")
-	TypeShape("has a").Capitalized(("Shape", "(", "Basic", ",", "Id", "=", "1", ")")) is ("Shape", "Basic")
-	for tokens
-		let first = value.characters(0)
-		let isNamed = (index > 0) and (tokens(index - 1) is ".") or (index + 1 < tokens.Length) and (tokens(index + 1) is "=")
-		if (first is first.Upper) and (first is not first.Lower) and (isNamed is false)
-			value
+			used = used + Tokenizer(trimmed).Names
+	used.Unique - own

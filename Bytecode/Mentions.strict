@@ -8,7 +8,7 @@ Types Texts
 	let own = shape.MemberScope.names + shape.MethodScope.names
 	mutable tokens = List(Mutable(Text))
 	for lines
-		tokens = tokens + shape.Capitalized(Tokenizer(value.Trim).Tokens)
+		tokens = tokens + Tokenizer(value.Trim).Names
 	let typed = Typed(shape)
 	for (tokens + typed).Unique
 		if (value is in typed) or (value is not in own)
@@ -24,7 +24,7 @@ Typed(shape Expressions/TypeShape) Texts
 			types = types + Outer(Tokenizer(value.Trim).Tokens)
 	mutable typed = List(Mutable(Text))
 	for types
-		typed = typed + shape.Capitalized(Tokenizer(value).Tokens)
+		typed = typed + Tokenizer(value).Names
 	typed
 Outer(tokens Texts) Texts
 	Mentions.Outer(("outer", ".", "Key", ".", "F")) is ("Key")

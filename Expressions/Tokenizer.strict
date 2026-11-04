@@ -102,3 +102,26 @@ IsGrouped Boolean
 		if (value is "(") and (index + 1 < tokens.Length) and (tokens(index + 1) is ")")
 			return false
 	true
+Names Texts
+	Tokenizer("Number.Pi + x * Size").Names is ("Number", "Size")
+	Tokenizer("\"Not A Name\" + Size >= Other").Names is ("Size", "Other")
+	mutable names = List(Mutable(Text))
+	mutable position = 0
+	mutable isAfterDot = false
+	for as long as position < line.Length
+		let length = line.characters(position).number is 32 then 0 else TokenLength(position)
+		if (length > 0) and (isAfterDot is false) and IsName(position, length)
+			names.Add(line.Substring(position, length))
+		isAfterDot = length is 0 then isAfterDot else (length is 1) and (line.characters(position).number is 46)
+		position = position + (length is 0 then 1 else length)
+	names
+IsName(start Number, length Number) Boolean
+	Tokenizer("Id = 1").IsName(0, 2) is false
+	Tokenizer("Id >= 1").IsName(0, 2)
+	Tokenizer("x").IsName(0, 1) is false
+	let first = line.characters(start)
+	mutable after = start + length
+	for as long as (after < line.Length) and (line.characters(after).number is 32)
+		after = after + 1
+	let isAssigned = (after < line.Length) and (line.characters(after).number is 61) and (TokenLength(after) is 1)
+	(first is first.Upper) and (first is not first.Lower) and (isAssigned is false)
