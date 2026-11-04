@@ -8,6 +8,7 @@ has selection Text = ""
 has isRecursive Boolean = true
 has isReleased Boolean = false
 constant Broken = "module {\n  func.func private @A() -> f64 {\n    return %missing : f64\n  }\n}"
+constant Watching = "llvm.mlir.global internal @strict_gc_watching(1 : i64)"
 IsProgram(path Text) Boolean
 	NativeBuild.IsProgram("Examples/Sum.strict")
 	NativeBuild.IsProgram("Character.strict") is false
@@ -62,7 +63,7 @@ Build(base Text, program Text, tools Toolchain, isCounting = false) Number
 	if missing.Length > 0
 		logger.Log(tools.Installing(missing))
 		return 1
-	let mlir = BuildProfile(logger).Runtime(program, tools.root, Target)
+	let mlir = Released(BuildProfile(logger).Runtime(program, tools.root, Target))
 	let built = Rebuilt(base, mlir, tools)
 	logger.Log(built)
 	if built.StartsWith("Built ") is false
@@ -120,7 +121,7 @@ CrossBuild(base Text, program Text, tools Toolchain, isCounting Boolean) Number
 	NativeBuild(Logger, false).CrossBuild("Compiler/output/missing", "module {}", Toolchain.OnWindows, false) is 0
 	if (Target is not Platform.Windows) or isCounting or (isCrossing is false)
 		return 0
-	File(base + ".linux.mlir").Write(Mlir(program, tools.root, Platform.Linux))
+	File(base + ".linux.mlir").Write(Released(Mlir(program, tools.root, Platform.Linux)))
 	let crossed = tools.CrossBuilt(base)
 	logger.Log(crossed)
 	crossed.StartsWith("Built ") then 0 else 1
@@ -148,3 +149,7 @@ Unsupported(mlir Text) Number
 	NativeBuild.Unsupported("unsupported: x") is 0
 	NativeBuild.Unsupported("@c(\"unsupported: x\")") is -1
 	("\n" + mlir).IndexOf("\nunsupported:")
+Released(mlir Text) Text
+	NativeBuild(Logger, false, isReleased = true).Released(Watching) is Watching.Replace("(1 : i64)", "(0 : i64)")
+	NativeBuild(Logger, false).Released(Watching) is Watching
+	isReleased or isCrossing then mlir.Replace(Watching, Watching.Replace("(1 : i64)", "(0 : i64)")) else mlir

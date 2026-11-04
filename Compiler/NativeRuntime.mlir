@@ -5871,7 +5871,17 @@
   llvm.mlir.global internal @strict_gc_seconds(dense<0.0> : tensor<5xf64>) : !llvm.array<5 x f64>
   llvm.mlir.global internal @strict_gc_stamps(dense<-1> : tensor<5xi64>) : !llvm.array<5 x i64>
   llvm.mlir.global internal constant @strict_gc_exceeded("GarbageCollectionExceedsQuarter: %.2f of the last 5 seconds were spent collecting garbage (at most 25 %%), allocate less in the loops of this program\0A\00") : !llvm.array<151 x i8>
+  // release builds (strict build X windows or linux, NativeBuild.Released) set it to 0: a shipped program does not stop
+  llvm.mlir.global internal @strict_gc_watching(1 : i64) : i64
   func.func private @strict_gc_watch(%ranBefore: f64) {
+    %watchingSlot = llvm.mlir.addressof @strict_gc_watching : !llvm.ptr
+    %watching = llvm.load %watchingSlot : !llvm.ptr -> i64
+    %none = arith.constant 0 : i64
+    %isWatching = arith.cmpi ne, %watching, %none : i64
+    cf.cond_br %isWatching, ^watch, ^unwatched
+  ^unwatched:
+    return
+  ^watch:
     %now = func.call @strict_clock() : () -> f64
     %ran = func.call @strict_thread_seconds() : () -> f64
     %spent = arith.subf %ran, %ranBefore : f64
