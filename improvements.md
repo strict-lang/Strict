@@ -36,6 +36,8 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - Named iterators over counts (`for row, column in rows, width`) as one flat loop of rows * width with the names from the index (parallel, GPU kernel), then the `(index / n).Floor` and `index % n` loops of NeuralNetworks, Math/Matrix and the image decoders can name their iterators without losing their kernels.
 - Parallel dedup by key (Ben): a `for` that keeps the first element per computed key (Dictionary or distinct by key) in parallel; Ben's program search keeps 2 of 128 cores busy because its observational equivalence dedup is a sequential loop over a mutable Dictionary.
 - NeuralNetworks on the GPU (Ben): a program using NeuralNetworks (models, image and video generation) should get GPU kernels for every loop that can run there, also those the size heuristics keep on the CPU today.
+- Loop branches in the compiler (Ben): peel the first or last iteration of a branch on `index is 0` or the last index (StrictComfy Euler.Sigmas and Offset, Text.Combine) and split loops on conditions that do not change in them (`range is 0` guards, mode flags like `isGray`); `strict check` only reports them in inner loops.
+- Branch probing in `strict check` (Ben): for a branch in an inner loop run the method's tests with only the then side and only the else side (SuggestionTests on the changed body); when one passes the branch is not needed or not tested, the issue says which side and how to fix it.
 
 ## Waiting
 - Later: Qwen3-Coder-Next 80B-A3B and Qwen3-Coder-30B with all experts, image blur on the GPU, Apple Silicon, AMD GPUs, batched training ideas.

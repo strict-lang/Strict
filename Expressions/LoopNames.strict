@@ -1,0 +1,55 @@
+has varying Texts
+has constants Texts
+constant Grid = BodyParser(("Run", "\tfor y, x in 3, 2", "\t\tlet z = Grow(y) + x")).Block(1, 1).children.First
+constant Steps = LoopNames(("value", "index", "row"), List(Text) + "Kilo")
+Of(loop SyntaxNode, known Texts, mutables Texts) LoopNames
+	LoopNames.Of(Grid, List(Text), List(Text) + "count").varying is ("value", "index", "y", "x", "count", "z", "y")
+	LoopNames(("value", "index") + Iterators(loop) + mutables + Names(loop.children.Last), known)
+IsInvariant(node SyntaxNode) Boolean
+	Steps.IsInvariant(StatementParser(Tokenizer("1000 / steps").Tokens).ParseStatement)
+	Steps.IsInvariant(StatementParser(Tokenizer("row * Kilo").Tokens).ParseStatement) is false
+	Steps.IsInvariant(StatementParser(Tokenizer("bits(2) + steps.Length").Tokens).ParseStatement)
+	if node.Kind is in ("Number", "Text", "Boolean")
+		return true
+	if node.Kind is "Identifier"
+		return (node.text is not in varying) and (IsLower(node.text) or (node.text is in constants))
+	if node.Kind is "Member"
+		return (node.children(0).Kind is not "Number") and IsInvariant(node.children(0))
+	let isIndexed = (node.Kind is "Call") and IsLower(node.text) and (node.text is not in varying)
+	(isIndexed or (node.Kind is in ("Binary", "Not", "Negate", "List"))) and IsAllInvariant(node.children)
+IsAllInvariant(nodes SyntaxNodes) Boolean
+	Steps.IsAllInvariant(List(SyntaxNode) + SyntaxNode("Identifier", "value")) is false
+	Steps.IsAllInvariant(List(SyntaxNode) + StatementParser(Tokenizer("1.Random").Tokens).ParseStatement) is false
+	Steps.IsAllInvariant(List(SyntaxNode) + StatementParser(Tokenizer("Process.Elapsed").Tokens).ParseStatement) is false
+	for nodes
+		if IsInvariant(value) is false
+			return false
+	true
+IsLower(name Text) Boolean
+	LoopNames.IsLower("steps")
+	LoopNames.IsLower("Steps") is false
+	name.Substring(0, 1).Lower is name.Substring(0, 1)
+HasName(node SyntaxNode) Boolean
+	LoopNames.HasName(SyntaxNode("Number", "1")) is false
+	if node.Kind is "Identifier"
+		return true
+	for node.children
+		if HasName(value)
+			return true
+	false
+Iterators(node SyntaxNode) Texts
+	LoopNames.Iterators(SyntaxNode("For", "for row, column in")) is ("row", "column")
+	let isNamed = node.text.StartsWith("for ") and node.text.EndsWith(" in")
+	isNamed then node.text.Substring(4, node.text.Length - 7).Split(", ") else List(Text)
+Names(node SyntaxNode) Texts
+	LoopNames.Names(SyntaxNode("Declaration", "let width", List(SyntaxNode) + SyntaxNode("Number", "1"))) is ("width")
+	let isChanged = node.Kind is in ("Reassignment", "MethodCall")
+	let changed = isChanged then List(Text) + Root(node.children(0)) else List(Text)
+	mutable names = node.Kind is "Declaration" then changed + node.text.Split(" ").Last else changed
+	let isCalled = (node.Kind is "Call") and (IsLower(node.text) is false)
+	for node.children
+		names = names + (isCalled and (value.Kind is "Identifier") then List(Text) + value.text else Names(value))
+	names
+Root(node SyntaxNode) Text
+	LoopNames.Root(SyntaxNode("Member", "Length", List(SyntaxNode) + SyntaxNode("Identifier", "list"))) is "list"
+	node.Kind is in ("Member", "MethodCall") then Root(node.children(0)) else node.text

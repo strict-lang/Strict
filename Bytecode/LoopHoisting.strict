@@ -5,6 +5,9 @@ constant Bag = CodeBlock.Empty.Declare("bag", "Bag")
 constant Looping = BodyParser("Run", "\tfor 3", "\t\tbag.values(index) * bag.values(0)").Block(1, 1)
 constant Twice = BodyParser("Run", "\tfor 3", "\t\tbag.values(index)", "\tfor 2", "\t\tbag.values(index)").Block(1, 1)
 constant Shadowing = BodyParser("Run", "\tfor 3", "\t\tlet bag = bags", "\t\tbag.values(0) + bags.values(1)").Block(1, 1)
+constant Scaling = BodyParser("Run", "\tfor 3", "\t\tindex * (1000 / steps)", "\t\tindex + values(0) * steps").Block(1, 1)
+constant Rows = BodyParser("Run", "\tfor 3", "\t\tlet row = index", "\t\tfor 2", "\t\t\trow * steps + index").Block(1, 1)
+constant Scaled = Hoisting.Invariant(Scaling.children(0), CodeBlock.Empty)
 Hoisted(body SyntaxNode, block CodeBlock) SyntaxNode
 	Hoisting.Hoisted(Looping, Bag).children(0) to Text is "let bagValues = bag.values"
 	Hoisting.Hoisted(Looping, Bag).children(1).children.Last.children(0) to Text is "bagValues(index) * bagValues(0)"
@@ -25,11 +28,64 @@ Lifted(loop SyntaxNode, block CodeBlock) SyntaxNodes
 		if (value.children(0).text is not in declared) and (value is not in reads)
 			reads.Add(value)
 	if reads.Length is 0
-		return List(SyntaxNode) + loop
+		return Invariant(loop, block)
 	mutable lifted = List(Mutable(SyntaxNode))
 	for reads
 		lifted.Add(SyntaxNode("Declaration", "let " + Name(value), List(SyntaxNode) + value))
-	lifted + Replaced(loop, reads)
+	lifted + Invariant(Replaced(loop, reads), block)
+Invariant(loop SyntaxNode, block CodeBlock) SyntaxNodes
+	Scaled.Length is 2
+	Scaled(0) to Text is "let invariant2x0 = 1000 / steps"
+	Scaled(1).children.Last.Lines("") is ("index * invariant2x0", "index + values(0) * steps")
+	Hoisting.Invariant(Rows.children(0), Bag).Last.children.Last.children(1) to Text is "let invariant4x0 = row * steps"
+	let names = LoopNames.Of(loop, Prefixed("constant "), Prefixed("mutable "))
+	let found = Found(loop.children.Last, names)
+	let body = Hoisted(Substituted(loop.children.Last, found, loop.line), block)
+	let nested = SyntaxNode("For", loop.text, loop.children.Slice(0, loop.children.Length - 1) + body, loop.line)
+	mutable declared = List(Mutable(SyntaxNode))
+	for found
+		declared.Add(SyntaxNode("Declaration", "let " + Invariable(loop.line, index), List(SyntaxNode) + value))
+	declared + nested
+Found(node SyntaxNode, names LoopNames) SyntaxNodes
+	Hoisting.Found(Scaling.children(0).children.Last, LoopNames.Steps).Length is 1
+	let isArithmetic = (node.Kind is "Binary") and (node.text is in ("+", "-", "*", "/", "%", "^"))
+	if isArithmetic and names.IsInvariant(node) and LoopNames.HasName(node) and IsSafe(node)
+		return List(SyntaxNode) + node
+	mutable found = List(Mutable(SyntaxNode))
+	for child, hoisted in node.children, Found(child, names)
+		if hoisted is not in found
+			found.Add(hoisted)
+	found
+IsSafe(node SyntaxNode) Boolean
+	Hoisting.IsSafe(SyntaxNode("Call", "values")) is false
+	Hoisting.IsSafe(SyntaxNode("Identifier", "outer")) is false
+	if node.Kind is in ("Number", "Text", "Boolean", "Identifier")
+		return node.text is not "outer"
+	if node.Kind is "Member"
+		return ((node.text is "Length") or LoopNames.IsLower(node.text)) and IsSafe(node.children(0))
+	if node.Kind is not in ("Binary", "Negate")
+		return false
+	for node.children
+		if IsSafe(value) is false
+			return false
+	true
+Substituted(node SyntaxNode, found SyntaxNodes, line Number) SyntaxNode
+	Hoisting.Substituted(MethodCodegen.One, List(SyntaxNode) + MethodCodegen.One, 2) to Text is "invariant2x0"
+	let at = found.Index(node)
+	if at >= 0
+		return SyntaxNode("Identifier", Invariable(line, at))
+	mutable children = List(Mutable(SyntaxNode))
+	for node.children
+		children.Add(Substituted(value, found, line))
+	SyntaxNode(node.Kind, node.text, children, node.line)
+Invariable(line Number, position Number) Text
+	Hoisting.Invariable(2, 0) is "invariant2x0"
+	"invariant" + line + "x" + position
+Prefixed(prefix Text) Texts
+	Hoisting.Prefixed("has ") is ("bags")
+	for values.target.shape.lines
+		if value.StartsWith(prefix)
+			value.Split(" ")(1)
 Reads(node SyntaxNode, block CodeBlock) SyntaxNodes
 	Hoisting.Reads(Looping.children(0), Bag).Length is 2
 	mutable found = List(Mutable(SyntaxNode))
