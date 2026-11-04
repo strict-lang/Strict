@@ -48,11 +48,8 @@ static void Profiled(const char* what, uint64_t height, uint64_t width, double s
 		(unsigned long long)width, started - profileStart, now - started, profileRows, profilePlaced, profileRead);
 	profileRows = profilePlaced = profileRead = 0;
 }
-#ifdef _WIN32
-#define strict_seek _fseeki64
-#else
+#ifndef _WIN32
 #include <sys/stat.h>
-#define strict_seek fseeko
 #endif
 /* The headers of the files read last, each kept while its file has the same size and modification time: every tensor
    lookup read the whole header again (60-130 KB for a LoRA of Moss, about 5 lookups per merged linear). */
@@ -430,16 +427,25 @@ static void Widened(const unsigned char* source, const Tensor* tensor, float* ta
 		return;
 	}
 #endif
-	for (uint64_t index = 0; tensor->bytes == 2 && tensor->isBrain && index < count; index++)
-	target[index] = strict_brain_float((uint16_t)(source[2 * index] | source[2 * index + 1] << 8));
-	for (uint64_t index = 0; tensor->bytes == 2 && !tensor->isBrain && index < count; index++)
-	target[index] = strict_half_float((uint16_t)(source[2 * index] | source[2 * index + 1] << 8));
-	if (tensor->bytes == 1)
+	/* a condition in the loop header keeps clang from vectorizing (10 times slower), so each loop has its own if */
+	if (tensor->bytes == 2 && tensor->isBrain)
+		for (uint64_t index = 0; index < count; index++)
+			target[index] = strict_brain_float((uint16_t)(source[2 * index] | source[2 * index + 1] << 8));
+	else if (tensor->bytes == 2)
+		for (uint64_t index = 0; index < count; index++)
+			target[index] = strict_half_float((uint16_t)(source[2 * index] | source[2 * index + 1] << 8));
+	else if (tensor->bytes == 1)
 	{
 		EightTableInit();
-		for (uint64_t index = 0; index < count; index++)
-			target[index] = tensor->isEight ? EightTable[source[index]] :
-				tensor->isSigned ? (float)(int8_t)source[index] : (float)source[index];
+		if (tensor->isEight)
+			for (uint64_t index = 0; index < count; index++)
+				target[index] = EightTable[source[index]];
+		else if (tensor->isSigned)
+			for (uint64_t index = 0; index < count; index++)
+				target[index] = (float)(int8_t)source[index];
+		else
+			for (uint64_t index = 0; index < count; index++)
+				target[index] = (float)source[index];
 	}
 }
 
@@ -473,9 +479,12 @@ static unsigned char* Loaded(double path, const Tensor* tensor, uint64_t widened
 	size_t read = 0;
 	if (file)
 	{
-		strict_seek(file, (int64_t)(start + tensor->start), SEEK_SET);
-		read = fread(numbers, (size_t)tensor->bytes, count, file);
 		fclose(file);
+		uint64_t size = 0;
+		Opening opening = OpenedFile(strict_text(path), &size);
+		read = opening && ReadParts(opening, start + tensor->start, numbers, count * tensor->bytes) ? count : 0;
+		if (opening)
+			Closed(opening);
 	}
 	else
 		read = strict_webfile_read(strict_text(path), (double)(start + tensor->start), (double)(count * tensor->bytes),
@@ -524,12 +533,15 @@ static void Packed(unsigned char* data, const float* first, uint64_t count, uint
 		strict_quantized(data, first, count, stride);
 	else if (bits == 32 && stride == 1)
 		memcpy(data, first, count * sizeof(float));
+	else if (bits == 16)
+		for (uint64_t column = 0; column < count; column++)
+			((uint16_t*)data)[column] = strict_half(first[column * stride]);
+	else if (bits == 17)
+		for (uint64_t column = 0; column < count; column++)
+			((uint16_t*)data)[column] = strict_brain(first[column * stride]);
 	else
 		for (uint64_t column = 0; column < count; column++)
-			if (bits == 16 || bits == 17)
-				((uint16_t*)data)[column] = bits == 16 ? strict_half(first[column * stride]) : strict_brain(first[column * stride]);
-			else
-				((float*)data)[column] = first[column * stride];
+			((float*)data)[column] = first[column * stride];
 }
 
 /* NVFP4 rows: two 4 bit e2m1 numbers per byte (the first in the high nibble), each 16 scaled by its 8 bit float in the
@@ -626,13 +638,16 @@ static void PlacedChunk(void* context, uint64_t chunk)
 			Widened(source, tensor, floats, tensor->width);
 		if (floats)
 			Packed(target, floats, columns, 1, placing->bits);
-		for (uint64_t column = 0; !floats && tensor->isNibbles && column < columns; column++)
-			target[column] = (unsigned char)((int8_t)(source[column / 2] << (column % 2 ? 0 : 4)) >> 4);
-		if (!floats && !tensor->isNibbles)
+		if (!floats && tensor->isNibbles)
+			for (uint64_t column = 0; column < columns; column++)
+				target[column] = (unsigned char)((int8_t)(source[column / 2] << (column % 2 ? 0 : 4)) >> 4);
+		else if (!floats)
 			memcpy(target, source, rowBytes);
 		float* parts = (float*)(target + strict_packed_data(columns, 8));
-		for (uint64_t part = 0; placing->scales && part < (columns + 31) / 32; part++)
-			parts[part] = placing->scales[row];
+		float scale = placing->scales ? placing->scales[row] : 0;
+		if (placing->scales)
+			for (uint64_t part = 0; part < (columns + 31) / 32; part++)
+				parts[part] = scale;
 	}
 }
 
@@ -995,8 +1010,9 @@ STRICT_EXPORT double TensorFile_Tuned(double self, double path, double entry, do
 	const double* ranked = given->items + rank * (width + height);
 	for (uint64_t index = 0; index < rank * width; index++)
 		tuning.downs[index] = (float)given->items[index];
-	for (uint64_t index = 0; index < rank * height; index++)
-		tuning.ups[index] = (float)(given->items[rank * width + index] * ranked[index % rank]);
+	for (uint64_t row = 0; row < height; row++)
+		for (uint64_t part = 0; part < rank; part++)
+			tuning.ups[row * rank + part] = (float)(given->items[rank * (width + row) + part] * ranked[part]);
 	for (const char* name = strict_text(entry); *name; name++)
 		tuning.seed = (tuning.seed ^ (unsigned char)*name) * 1099511628211ull;
 	Parallel(TunedChunk, &tuning, (height + ChunkRows - 1) / ChunkRows);

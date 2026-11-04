@@ -188,4 +188,22 @@ static void Parallel(void (*work)(void*, uint64_t), void* context, uint64_t coun
 		Awaited(&poolBusy, busy, &poolDone);
 	Unlocked(&poolDispatch);
 }
+
+typedef struct { Opening file; uint64_t offset; unsigned char* target; uint64_t bytes; atomic_int failed; } Reading;
+enum { ReadPart = 1 << 26 };
+static void PartRead(void* context, uint64_t item)
+{
+	Reading* reading = context;
+	uint64_t start = item * ReadPart, bytes = reading->bytes - start < ReadPart ? reading->bytes - start : ReadPart;
+	if (!ReadFrom(reading->file, reading->offset + start, reading->target + start, bytes))
+		atomic_store(&reading->failed, 1);
+}
+
+/* ReadFrom in parts of 64 MB on all threads: 2 GB from the file cache took 190 instead of 520 ms (one read). */
+static int ReadParts(Opening file, uint64_t offset, unsigned char* target, uint64_t bytes)
+{
+	Reading reading = { file, offset, target, bytes, 0 };
+	Parallel(PartRead, &reading, (bytes + ReadPart - 1) / ReadPart);
+	return !atomic_load(&reading.failed);
+}
 #endif

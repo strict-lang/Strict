@@ -399,6 +399,7 @@ static void DecodedQ4KOrQ5K(const unsigned char* block, int hasFifthBits, float*
 	float d = HalfAt(block), low = HalfAt(block + 2);
 	const unsigned char* high = block + 16;
 	const unsigned char* q = block + (hasFifthBits ? 48 : 16);
+	int fifthBits = hasFifthBits ? 3 : 0;
 	for (int first = 0; first < 256; first += 64, q += 32)
 	{
 		int scale, minimum;
@@ -408,7 +409,7 @@ static void DecodedQ4KOrQ5K(const unsigned char* block, int hasFifthBits, float*
 		float d2 = d * scale, m2 = low * minimum;
 		for (int index = 0; index < 32; index++)
 		{
-			int fifth = hasFifthBits ? high[index] >> (first / 32) : 0;
+			int fifth = high[index] >> (first / 32) & fifthBits;
 			y[first + index] = d1 * ((q[index] & 0xF) | (fifth & 1) << 4) - m1;
 			y[first + 32 + index] = d2 * ((q[index] >> 4) | (fifth & 2) << 3) - m2;
 		}
@@ -465,12 +466,15 @@ static const int TritStages[3][3] = { { 0, 16, 5 }, { 16, 8, 5 }, { 24, 2, 4 } }
 static void Codes(uint32_t type, const unsigned char* block, unsigned char* codes)
 {
 	static const uint8_t powers[5] = { 1, 3, 9, 27, 81 };
-	for (int index = 0; type != PTQ1_0 && index < (int)BlockNumbers(type); index++)
-		codes[index] = (block[2 + index / 4] >> index % 4 * 2) & 3;
-	for (int stage = 0, number = 0; type == PTQ1_0 && stage < 3; stage++)
-		for (int trit = 0; trit < TritStages[stage][2]; trit++)
-			for (int byte = 0; byte < TritStages[stage][1]; byte++)
-				codes[number++] = (unsigned char)((uint16_t)(uint8_t)(block[TritStages[stage][0] + byte] * powers[trit]) * 3 >> 8);
+	int count = (int)BlockNumbers(type);
+	if (type != PTQ1_0)
+		for (int index = 0; index < count; index++)
+			codes[index] = (block[2 + index / 4] >> index % 4 * 2) & 3;
+	else
+		for (int stage = 0, number = 0; stage < 3; stage++)
+			for (int trit = 0; trit < TritStages[stage][2]; trit++)
+				for (int byte = 0; byte < TritStages[stage][1]; byte++)
+					codes[number++] = (unsigned char)((uint16_t)(uint8_t)(block[TritStages[stage][0] + byte] * powers[trit]) * 3 >> 8);
 }
 /* The PTQ1_0 block of 128 codes below 3 and the half d: a byte holds the base 3 number of its trits (the first highest,
    a missing fifth 0) times 256 / 243 rounded up, like ggml's TQ1_0, so Codes finds them again. */
@@ -489,25 +493,23 @@ static void Trits(const unsigned char* codes, const unsigned char* half, unsigne
 /* Whether all codes of count PQ2_0 blocks are below 3 (no byte with both bits of a code set), so they fit PTQ1_0 blocks. */
 static int IsTernary(const unsigned char* blocks, uint64_t count)
 {
-	for (uint64_t at = 0; at < count * 34; at++)
-		if (at % 34 >= 2 && (blocks[at] & blocks[at] >> 1 & 0x55))
-			return 0;
-	return 1;
+	unsigned char both = 0;
+	for (uint64_t block = 0; block < count; block++)
+		for (int at = 2; at < 34; at++)
+			both |= blocks[block * 34 + at] & blocks[block * 34 + at] >> 1;
+	return !(both & 0x55);
 }
 static const unsigned char* TernaryHalf(uint32_t type, const unsigned char* block) { return type == PTQ1_0 ? block + 26 : block; }
 
-/* Decodes one block of the tensor's type into floats. */
-static void Decoded(uint32_t type, const unsigned char* block, float* y)
+/* Decodes one block of 32 or more numbers of the type into floats, scales read once (writes to y could change block). */
+static void DecodedBlock(uint32_t type, const unsigned char* block, float* y)
 {
-	if (type == F32)
-		memcpy(y, block, 4);
-	else if (type == F16)
-		*y = HalfAt(block);
-	else if (type == BF16)
-		*y = strict_brain_float((uint16_t)(block[0] | block[1] << 8));
-	else if (type == Q8_0)
+	if (type == Q8_0)
+	{
+		float d = HalfAt(block);
 		for (int index = 0; index < 32; index++)
-			y[index] = HalfAt(block) * (int8_t)block[2 + index];
+			y[index] = d * (int8_t)block[2 + index];
+	}
 	else if (type == Q5_1)
 		DecodedQ51(block, y);
 	else if (type == Q4_K || type == Q5_K)
@@ -518,11 +520,29 @@ static void Decoded(uint32_t type, const unsigned char* block, float* y)
 	{
 		unsigned char codes[128];
 		Codes(type, block, codes);
-		for (int index = 0; index < (int)BlockNumbers(type); index++)
-			y[index] = (codes[index] - 1) * HalfAt(TernaryHalf(type, block));
+		float d = HalfAt(TernaryHalf(type, block));
+		for (int index = 0, count = (int)BlockNumbers(type); index < count; index++)
+			y[index] = (codes[index] - 1) * d;
 	}
 	else
 		DecodedQ6K(block, y);
+}
+
+/* Decodes count numbers (whole blocks) of the type at blocks into floats, numbers of their own in one loop each. */
+static void Decoded(uint32_t type, const unsigned char* blocks, uint64_t count, float* y)
+{
+	uint64_t blockNumbers = BlockNumbers(type), blockBytes = BlockBytes(type);
+	if (type == F32)
+		memcpy(y, blocks, count * sizeof(float));
+	else if (type == F16)
+		for (uint64_t index = 0; index < count; index++)
+			y[index] = HalfAt(blocks + 2 * index);
+	else if (type == BF16)
+		for (uint64_t index = 0; index < count; index++)
+			y[index] = strict_brain_float((uint16_t)(blocks[2 * index] | blocks[2 * index + 1] << 8));
+	else
+		for (uint64_t block = 0; block < count / blockNumbers; block++)
+			DecodedBlock(type, blocks + block * blockBytes, y + block * blockNumbers);
 }
 
 static uint64_t Elements(const Tensor* tensor)
@@ -556,7 +576,7 @@ static unsigned char* Blocks(const Tensor* tensor, uint64_t count, const char** 
 		return 0;
 	}
 	unsigned char* raw = malloc(blocks * blockBytes + 1);
-	if (Covered(tensor) && ReadFrom(openings[tensor->shard], tensor->start + tensor->offset, raw, blocks * blockBytes))
+	if (raw && Covered(tensor) && ReadParts(openings[tensor->shard], tensor->start + tensor->offset, raw, blocks * blockBytes))
 		return raw;
 	free(raw);
 	*failure = "GgufTensorDataTruncated";
@@ -568,9 +588,8 @@ static float* Floats(const Tensor* tensor, uint64_t count, const char** failure)
 {
 	unsigned char* raw = Blocks(tensor, count, failure);
 	float* floats = raw ? malloc(count * sizeof(float) + 1) : 0;
-	uint64_t blockNumbers = BlockNumbers(tensor->type), blockBytes = BlockBytes(tensor->type);
-	for (uint64_t block = 0; floats && block < count / blockNumbers; block++)
-		Decoded(tensor->type, raw + block * blockBytes, floats + block * blockNumbers);
+	if (floats)
+		Decoded(tensor->type, raw, count, floats);
 	free(raw);
 	return floats;
 }
@@ -644,16 +663,18 @@ static void Packed(void* context, uint64_t item)
 		unsigned char* data = packing->data + row * packing->stride;
 		const unsigned char* blocks = packing->raw + row * rowBytes;
 		if (packing->isBlocked)
+		{
 			Repacked(blocks, packing->type, kept, width, data);
-		for (uint64_t block = 0; floats && block < width / blockNumbers; block++)
-			Decoded(packing->type, blocks + block * blockBytes, floats + block * blockNumbers);
-		if (floats && kept == 8)
+			continue;
+		}
+		Decoded(packing->type, blocks, width, floats);
+		if (kept == 8)
 			strict_quantized(data, floats, width, 1);
-		for (uint64_t column = 0; floats && kept != 8 && column < width; column++)
-			if (kept == 16)
+		else if (kept == 16)
+			for (uint64_t column = 0; column < width; column++)
 				((uint16_t*)data)[column] = strict_half(floats[column]);
-			else
-				((float*)data)[column] = floats[column];
+		else
+			memcpy(data, floats, width * sizeof(float));
 	}
 	free(floats);
 }
@@ -951,8 +972,8 @@ STRICT_EXPORT double GgufFile_Picked(double self, double path, double name, doub
 		return strict_fail(failure);
 	uint64_t count = (uint64_t)chosen->count, blockNumbers = BlockNumbers(type);
 	uint64_t rowBytes = width / blockNumbers * BlockBytes(type);
-	float decoded[256];
 	unsigned char* row = malloc(rowBytes + 1);
+	float* decoded = malloc(width * sizeof(float) + 1);
 	free(picked);
 	picked = malloc(sizeof(strict_numbers) + count * width * sizeof(double));
 	picked->count = (double)(count * width);
@@ -961,13 +982,11 @@ STRICT_EXPORT double GgufFile_Picked(double self, double path, double name, doub
 		uint64_t offset = tensor->start + tensor->offset + (uint64_t)chosen->items[index] * rowBytes;
 		if (!ReadFrom(openings[tensor->shard], offset, row, rowBytes))
 			memset(row, 0, rowBytes), failure = "GgufTensorDataTruncated";
-		for (uint64_t column = 0; column < width; column += blockNumbers)
-		{
-			Decoded(type, row + column / blockNumbers * BlockBytes(type), decoded);
-			for (uint64_t number = 0; number < blockNumbers; number++)
-				picked->items[index * width + column + number] = decoded[number];
-		}
+		Decoded(type, row, width, decoded);
+		for (uint64_t column = 0; column < width; column++)
+			picked->items[index * width + column] = decoded[column];
 	}
+	free(decoded);
 	free(row);
 	return failure ? strict_fail(failure) : strict_numbers_result(picked);
 }

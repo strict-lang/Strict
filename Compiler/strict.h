@@ -1,6 +1,9 @@
 #ifndef STRICT_H
 #define STRICT_H
 #include <stdint.h>
+#ifdef __AVX2__
+#include <immintrin.h>
+#endif
 #if defined(_WIN32) && defined(STRICT_LIBRARY)
 #define STRICT_EXPORT __declspec(dllexport)
 #elif defined(STRICT_LIBRARY)
@@ -44,12 +47,38 @@ static inline uint64_t strict_packed_bytes(uint64_t count, uint64_t bits)
 		bits == 4 || bits == 3 ? data : count * bits / 8;
 }
 /* Packs count floats (stride apart) into the 8 bit numbers at data, the scale of 32 numbers is their largest magnitude
-   / 127. */
+   / 127, numbers round half away from zero (adding the float below 0.5 before truncating). */
 static inline void strict_quantized(unsigned char* data, const float* values, uint64_t count, uint64_t stride)
 {
 	int8_t* bytes = (int8_t*)data;
 	float* scales = (float*)(data + (count + 3) / 4 * 4);
-	for (uint64_t first = 0; first < count; first += 32)
+	uint64_t first = 0;
+#ifdef __AVX2__
+	const __m256 sign = _mm256_set1_ps(-0.0f), half = _mm256_set1_ps(0.49999997f);
+	for (; stride == 1 && first + 32 <= count; first += 32)
+	{
+		__m256 parts[4], most = _mm256_setzero_ps();
+		for (int part = 0; part < 4; part++)
+		{
+			parts[part] = _mm256_loadu_ps(values + first + part * 8);
+			most = _mm256_max_ps(most, _mm256_andnot_ps(sign, parts[part]));
+		}
+		__m128 four = _mm_max_ps(_mm256_castps256_ps128(most), _mm256_extractf128_ps(most, 1));
+		four = _mm_max_ps(four, _mm_movehl_ps(four, four));
+		float largest = _mm_cvtss_f32(_mm_max_ss(four, _mm_movehdup_ps(four)));
+		scales[first / 32] = largest / 127;
+		__m256 inverse = _mm256_set1_ps(largest == 0 ? 0 : 127 / largest);
+		__m256i rounded[4];
+		for (int part = 0; part < 4; part++)
+			rounded[part] = _mm256_cvttps_epi32(_mm256_add_ps(_mm256_mul_ps(parts[part], inverse),
+				_mm256_or_ps(half, _mm256_and_ps(sign, parts[part]))));
+		__m256i packed = _mm256_packs_epi16(_mm256_packs_epi32(rounded[0], rounded[1]),
+			_mm256_packs_epi32(rounded[2], rounded[3]));
+		_mm256_storeu_si256((__m256i*)(bytes + first),
+			_mm256_permutevar8x32_epi32(packed, _mm256_setr_epi32(0, 4, 1, 5, 2, 6, 3, 7)));
+	}
+#endif
+	for (; first < count; first += 32)
 	{
 		uint64_t end = first + 32 < count ? first + 32 : count;
 		float largest = 0;
@@ -58,19 +87,12 @@ static inline void strict_quantized(unsigned char* data, const float* values, ui
 			float magnitude = values[index * stride] < 0 ? -values[index * stride] : values[index * stride];
 			largest = magnitude > largest ? magnitude : largest;
 		}
-		if (largest == 0)
-		{
-			scales[first / 32] = 0;
-			for (uint64_t index = first; index < end; index++)
-				bytes[index] = 0;
-			continue;
-		}
-		scales[first / 32] = largest * (1.0f / 127.0f);
-		float invScale = 127.0f / largest;
+		scales[first / 32] = largest / 127;
+		float inverse = largest == 0 ? 0 : 127 / largest;
 		for (uint64_t index = first; index < end; index++)
 		{
-			float scaled = values[index * stride] * invScale;
-			bytes[index] = (int8_t)(scaled < 0 ? scaled - 0.5f : scaled + 0.5f);
+			float scaled = values[index * stride] * inverse;
+			bytes[index] = (int8_t)(scaled + (scaled < 0 ? -0.49999997f : 0.49999997f));
 		}
 	}
 }
