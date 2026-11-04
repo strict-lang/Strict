@@ -83,6 +83,13 @@ Collected(block CodeBlock, aggregation Text) CodeBlock
 	let added = InstructionEntry.Binary(operation, (loaded.Result, block.Result, loaded.register))
 	loaded.Load(added).Stored("forResult")
 Loop(node SyntaxNode, block CodeBlock, aggregation Text) CodeBlock
+	Plain.Loop(LoopPeeling.Summing, LoopPeeling.Counted, "").instructions.Last.kind is InstructionType.LoopEnd
+	let peeling = LoopPeeling(methods, block)
+	let peeled = peeling.Peeled(node, aggregation)
+	if peeled.Kind is "Body"
+		return peeling.Emitted(peeled, LoopCodegen(methods), aggregation)
+	Unpeeled(node, block, aggregation)
+Unpeeled(node SyntaxNode, block CodeBlock, aggregation Text) CodeBlock
 	MethodCodegen.Plain.Generate(MethodCodegen.LoopBody, MethodCodegen.NoScope, "None").instructions.Length is 6
 	Plain.Loop(DoubledBody.children(0), CodeBlock.Empty, "list").instructions.Last.kind is InstructionType.LoopEnd
 	Plain.Loop(DoubledBody.children(0), CodeBlock.Empty, "list").instructions.Last.line is 2

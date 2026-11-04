@@ -71,22 +71,8 @@ IsGuarding(branches SyntaxNodes) Boolean
 	false
 Edge(node SyntaxNode) Text
 	Hoisting.Edge(SyntaxNode("Identifier", "index")) is ""
-	let isIndexed = (node.Kind is "Binary") and (node.text is "is") and (node.children(0) to Text is "index")
-	let other = isIndexed then node.children(1) to Text else ""
-	if isIndexed and (other is "0")
-		return "index is 0" + FirstHint
-	if isIndexed and (other is in Lasts)
-		return "index is " + other + LastHint
-	for node.children
-		if Edge(value) is not ""
-			return Edge(value)
-	""
-Lasts Texts
-	Edged.Lasts.Last is "steps"
-	let iterable = loop.children(0)
-	let named = iterable to Text
-	let isAdded = (iterable.Kind is "Binary") and (iterable.text is "+") and (iterable.children(1) to Text is "1")
-	let isRanged = (iterable.Kind is "Call") and (iterable.text is "Range") and (iterable.children.Length is 2)
-	let added = isAdded then List(Text) + (iterable.children(0) to Text) else List(Text)
-	let ranged = isRanged then List(Text) + (iterable.children(1) to Text + " - 1") else List(Text)
-	(named + " - 1", named + ".Length - 1") + ranged + added
+	let edges = LoopEdge(loop)
+	let edge = edges.Found(node)
+	if edge.Kind is "Missing"
+		return ""
+	edge to Text + (edges.IsFirst(edge) then FirstHint else LastHint)
