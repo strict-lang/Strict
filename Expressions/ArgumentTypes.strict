@@ -106,10 +106,22 @@ Arguments(call SyntaxNode, scope Scope, current Scope) Texts
 Mismatched(arguments Texts, types Texts) Number
 	Sizing.Mismatched(("Area", "Count"), ("Area", "Area")) is 1
 	Sizing.Mismatched(List(Text) + "Area", List(Text) + "Area") is -1
+	Sizing.Mismatched(("Text", "Text"), ("Sizes", "Text")) is 0
+	Sizing.Mismatched(("Text", "Text"), ("Texts", "Text")) is -1
 	for arguments
-		if (index < types.Length) and Mismatch(value, types(index))
+		if (index < types.Length) and (Mismatch(value, types(index)) or IsWrongElement(value, types(index)))
 			return index
 	-1
+IsWrongElement(argument Text, parameter Text) Boolean
+	Sizing.IsWrongElement("Text", "List(Size)")
+	Sizing.IsWrongElement("Text", "Sizes")
+	Sizing.IsWrongElement("Number", "Sizes") is false
+	Sizing.IsWrongElement("Text", "Texts") is false
+	Sizing.IsWrongElement("Sizes", "Sizes") is false
+	let isPlural = inference.types.IsPlural(parameter)
+	let listed = parameter.StartsWith("List(") then parameter.Substring(5, parameter.Length - 6) else ""
+	let element = isPlural then parameter.Substring(0, parameter.Length - 1) else listed
+	IsScalar(argument) and (element is not "") and Mismatch(argument, element)
 Mismatch(argument Text, parameter Text) Boolean
 	Sizing.Mismatch("Count", "Area")
 	Sizing.Mismatch("Area", "Size") is false
