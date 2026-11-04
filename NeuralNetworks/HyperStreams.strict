@@ -41,8 +41,9 @@ Mixed(streams Numbers) Numbers
 	Tiny.Mixed(Streams + Streams)(3).IsNearlyEqual(0.659311495)
 	let normalized = Normalized(streams)
 	let gates = Batch(up.weights, up.biases).Sums(Squashed(Batch(down.weights, down.biases).Sums(normalized)))
+	let width = norm.Length / Count
 	for streams.Length / Count
-		Gated(normalized, gates, index, norm.Length / Count)
+		Gated(normalized, gates, index, width)
 Squashed(sums Numbers) Numbers
 	Tiny.Squashed((4, 0)) is (Activation.Swish.Output(1), 0)
 	for sums

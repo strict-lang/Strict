@@ -9,9 +9,10 @@ Rearranged(values Numbers, inputs Number, side Number) Float32s
 	Center.Rearranged((0, 1, 0, 0, 0, 0, 0, 0, 0), 1, 3) is (0, 1, 0, 0, 0, 0, 0, 0, 0)
 	Center.Rearranged((0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0), 2, 3)(5) is 1
 	let size = side * side * inputs
+	let rowSize = side * inputs
 	for values.Length
 		let rest = index % size
-		let row = (rest / (side * inputs)).Floor
+		let row = (rest / rowSize).Floor
 		let column = (rest / inputs).Floor % side
 		values((((index / size).Floor * inputs + rest % inputs) * side + row) * side + column)
 Applied(map FeatureMap, affine Numbers, activation Activation) FeatureMap
@@ -58,6 +59,7 @@ Offsets(offsets Numbers) Numbers
 	for biases.Length
 		let output = index
 		mutable sum = biases(output)
+		let first = output * offsets.Length
 		for offsets
-			sum = sum + weights(output * offsets.Length + index) * value
+			sum = sum + weights(first + index) * value
 		sum

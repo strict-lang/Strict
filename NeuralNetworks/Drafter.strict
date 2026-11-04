@@ -38,9 +38,10 @@ Joined(first Numbers, second Numbers) Slow(Numbers)
 	Tiny.Joined((1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8), Layer.Zeros(16))(8) is 0
 	Tiny.Joined((1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8), Layer.Zeros(16))(16) is 1
 	let width = embedNorm.Length
+	let doubled = 2 * width
 	for first.Length * 2
-		let at = index % (2 * width)
-		let row = (index / (2 * width)).Floor * width
+		let at = index % doubled
+		let row = (index / doubled).Floor * width
 		at < width then first(row + at) else second(row + at - width)
 Primed(model Qwen3, sequence Numbers) Slow(Drafter)
 	Tiny.Primed(Stepped, (1, 2)).hidden.Length is 8

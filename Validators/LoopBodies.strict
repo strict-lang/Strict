@@ -1,0 +1,30 @@
+has lines Texts
+constant Sigmas = LoopBodies(("constant Kilo = 1000", "Sigmas(steps Number) Numbers", "\tfor 2", "\t\tfor steps + 1", "\t\t\tindex is steps then 0 else index / Kilo"))
+constant Grid = ("Run(rows Number, columns Number) Number", "\tfor rows", "\t\tlet row = value", "\t\tfor columns")
+Issues List(ValidationIssue)
+	(Sigmas.Issues.First.Line is 5) and (Sigmas.Issues.Length is 1)
+	LoopBodies(Grid + "\t\t\trow * columns + value").Issues.First.target.StartsWith("row * columns")
+	LoopBodies(("Run", "\tfor row, column in rows, columns", "\t\trow * columns + column")).Issues.Length is 0
+	let constants = Constants
+	mutable issues = List(Mutable(ValidationIssue))
+	for lines
+		if TypeShape(lines).IsMethodHeader(value)
+			let isShort = FileCheck.LastLine(lines, index) - index + 1 < 10
+			for Loops(BodyParser(lines).Block(index + 1, 1), false, constants, isShort)
+				issues = issues + value.Issues
+	issues
+Loops(node SyntaxNode, isNested Boolean, constants Texts, isShort Boolean) List(LoopBody)
+	Loops(BodyParser(("Run", "\tfor 3", "\t\tfor 2", "\t\t\tvalue")).Block(1, 1), false, List(Text), true).Last.isNested
+	Loops(BodyParser(("Run", "\tfor y, x in 3, 2", "\t\ty + x")).Block(1, 1), false, List(Text), true).First.isNested
+	mutable loops = List(Mutable(LoopBody))
+	for node.children
+		let isLoop = value.Kind is "For"
+		if isLoop
+			loops.Add(LoopBody(value, constants, isNested or (value.children.Length > 2), isShort))
+		loops = loops + Loops(value, isNested or isLoop, constants, isShort)
+	loops
+Constants Texts
+	Sigmas.Constants is ("Kilo")
+	for lines
+		if value.StartsWith("constant ")
+			value.Split(" ")(1)

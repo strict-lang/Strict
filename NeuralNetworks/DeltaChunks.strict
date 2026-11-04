@@ -122,9 +122,11 @@ Fresh(state Numbers, first Number) Numbers
 	let corrections = (heads * tokens + first) * size
 	let shape = (heads, length, size, size)
 	let product = Products(corrected, state, shape, (corrections, tokens * size, size, 1, 0, size * size, size, 1))
+	let block = length * size
+	let skipped = 2 * heads * tokens
 	for product.Multiplied
-		let row = (index / (length * size)).Floor * tokens + first + ((index / size).Floor % length)
-		corrected((2 * heads * tokens + row) * size + (index % size)) - value
+		let row = (index / block).Floor * tokens + first + ((index / size).Floor % length)
+		corrected((skipped + row) * size + (index % size)) - value
 Outputs(fresh Numbers, state Numbers, first Number) Numbers
 	Probe.Prepared.Outputs(Probe.Prepared.Fresh(Probe.memory, 0), Probe.memory, 0)(5).IsNearlyEqual(-0.26907064, 0.003)
 	let length = Length(first)
@@ -145,5 +147,7 @@ Remembered(fresh Numbers, state Numbers, first Number) Numbers
 	let keys = (3 * heads * tokens + first) * size
 	let shape = (heads, size, length, size)
 	let product = Products(corrected, fresh, shape, (keys, tokens * size, 1, size, 0, length * size, size, 1)).Multiplied
+	let logged = last * heads
+	let square = size * size
 	for state
-		value * logs(last * heads + (index / (size * size)).Floor).Exponential + product(index)
+		value * logs(logged + (index / square).Floor).Exponential + product(index)

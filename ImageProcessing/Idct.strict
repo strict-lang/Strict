@@ -25,6 +25,7 @@ Columns(values Numbers) Numbers
 Dot(values Numbers, start Number, stride Number, position Number) Number
 	Idct.Dot(Flat, 0, 1, 7) is 2.828427124746192
 	mutable sum = 0
+	let row = position * 8
 	for 8
-		sum = sum + Cosines(position * 8 + index) * values(start + index * stride)
+		sum = sum + Cosines(row + index) * values(start + index * stride)
 	sum

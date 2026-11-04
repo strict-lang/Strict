@@ -1,0 +1,137 @@
+has loop SyntaxNode
+has constants Texts
+has isNested Boolean = true
+has isShort Boolean = true
+constant Body = ("Run(steps Number, values Numbers, range Number, isGray Boolean) Number", "\tfor steps + 1")
+constant Edged = LoopBody(BodyParser(Body + "\t\tindex is steps then 0 else index / steps").Block(1, 1).children.First, List(Text))
+constant Hoisting = LoopBody(BodyParser(Body + "\t\tindex * (1000 / steps)").Block(1, 1).children.First, List(Text))
+constant Guarding = LoopBody(BodyParser(Body + "\t\trange is 0 then 0 else (value - steps) / range").Block(1, 1).children.First, List(Text))
+constant Plain = ("\t\tlet moded = isGray then value else value * 2", "\t\tlet random = 1.Random < 0.5 then 0 else value")
+constant Clean = LoopBody(BodyParser(Body + Plain + "\t\t\"Step \" + steps + \": \" + value * (steps - 1)").Block(1, 1).children.First, List(Text))
+constant FirstHint = " is only true in the first iteration: handle the first element before the loop and loop over the rest"
+constant LastHint = " is only true in the last iteration: loop over the other elements and add the last one after the loop"
+constant GuardHint = " does not change in the loop: check it once before the loop"
+constant InvariantHint = " does not change in the loop: compute it once with a let before the loop"
+Issues List(ValidationIssue)
+	Edged.Issues.First to Text is "LoopEdgeMustBeOutsideLoop: index is steps" + LastHint
+	Edged.Issues.First.Line is 3
+	Hoisting.Issues.First to Text is "LoopInvariantMustBeOutsideLoop: 1000 / steps" + InvariantHint
+	Guarding.Issues.First to Text is "LoopGuardMustBeOutsideLoop: range is 0" + GuardHint
+	Clean.Issues.Length is 0
+	LoopBody(Edged.loop, List(Text), false).Issues.Length is 0
+	LoopBody(Hoisting.loop, List(Text), true, false).Issues.Length is 0
+	Found(loop.children.Last, loop.line, ("value", "index") + Iterators(loop) + Names(loop.children.Last))
+Iterators(node SyntaxNode) Texts
+	Edged.Iterators(SyntaxNode("For", "for row, column in")) is ("row", "column")
+	let isNamed = node.text.StartsWith("for ") and node.text.EndsWith(" in")
+	isNamed then node.text.Substring(4, node.text.Length - 7).Split(", ") else List(Text)
+Found(node SyntaxNode, line Number, varying Texts) List(ValidationIssue)
+	Hoisting.Found(SyntaxNode("Identifier", "steps"), 1, List(Text)).Length is 0
+	let at = node.line > 0 then node.line else line
+	let own = Issue(node, at, varying)
+	if own.Length > 0
+		return own
+	mutable found = List(Mutable(ValidationIssue))
+	for node.Kind is "For" then List(SyntaxNode) else node.children
+		found = found + Found(value, at, varying)
+	found
+Issue(node SyntaxNode, at Number, varying Texts) List(ValidationIssue)
+	Hoisting.Issue(SyntaxNode("Number", "1"), 1, List(Text)).Length is 0
+	let isChoice = (node.Kind is "Binary") and (node.text is "else") and (node.children(0).text is "then")
+	if isChoice
+		let chosen = node.children(0)
+		return Conditional(chosen.children(0), (chosen.children(1), node.children(1)), at, varying)
+	if node.Kind is "If"
+		return Conditional(node.children(0), node.children.Last.children, at, varying)
+	let isArithmetic = (node.Kind is "Binary") and (node.text is in ("+", "-", "*", "/", "%", "^"))
+	let isNumeric = ((node to Text).IndexOf("\"") < 0) and IsCostly(node)
+	let isHoisted = isShort and isArithmetic and isNumeric and IsInvariant(node, varying) and HasName(node)
+	let issue = ValidationIssue("LoopInvariantMustBeOutsideLoop", node to Text + InvariantHint, at)
+	isHoisted then List(ValidationIssue) + issue else List(ValidationIssue)
+Conditional(condition SyntaxNode, branches SyntaxNodes, at Number, varying Texts) List(ValidationIssue)
+	Hoisting.Conditional(SyntaxNode("Identifier", "steps"), List(SyntaxNode), 1, List(Text)).Length is 0
+	if isNested is false
+		return List(ValidationIssue)
+	let edge = Edge(condition)
+	if edge is not ""
+		return List(ValidationIssue) + ValidationIssue("LoopEdgeMustBeOutsideLoop", edge, at)
+	let isWaiting = loop.text is "for as long as"
+	let isInvariant = (isWaiting is false) and IsInvariant(condition, varying) and HasName(condition)
+	let isGuard = isInvariant and IsGuarding(branches)
+	let issue = ValidationIssue("LoopGuardMustBeOutsideLoop", condition to Text + GuardHint, at)
+	isGuard then List(ValidationIssue) + issue else List(ValidationIssue)
+IsCostly(node SyntaxNode) Boolean
+	Hoisting.IsCostly(SyntaxNode("Binary", "/"))
+	Hoisting.IsCostly(SyntaxNode("Binary", "-", (SyntaxNode("Identifier", "steps"), SyntaxNode("Number", "1")))) is false
+	let first = node.children.Length > 0 then node.children.First.Kind else ""
+	let last = node.children.Length > 0 then node.children.Last.Kind else ""
+	(node.text is in ("*", "/", "%", "^")) or (first is "Binary") or (last is "Binary")
+IsGuarding(branches SyntaxNodes) Boolean
+	Hoisting.IsGuarding(List(SyntaxNode) + SyntaxNode("Number", "0"))
+	Hoisting.IsGuarding(List(SyntaxNode) + SyntaxNode("Identifier", "value")) is false
+	for branches
+		if value.Kind is in ("Number", "Text", "Boolean", "Return")
+			return true
+	false
+Edge(node SyntaxNode) Text
+	Hoisting.Edge(SyntaxNode("Identifier", "index")) is ""
+	let isIndexed = (node.Kind is "Binary") and (node.text is "is") and (node.children(0) to Text is "index")
+	let other = isIndexed then node.children(1) to Text else ""
+	if isIndexed and (other is "0")
+		return "index is 0" + FirstHint
+	if isIndexed and (other is in Lasts)
+		return "index is " + other + LastHint
+	for node.children
+		if Edge(value) is not ""
+			return Edge(value)
+	""
+Lasts Texts
+	Edged.Lasts.Last is "steps"
+	let iterable = loop.children(0)
+	let named = iterable to Text
+	let isAdded = (iterable.Kind is "Binary") and (iterable.text is "+") and (iterable.children(1) to Text is "1")
+	let isRanged = (iterable.Kind is "Call") and (iterable.text is "Range") and (iterable.children.Length is 2)
+	let added = isAdded then List(Text) + (iterable.children(0) to Text) else List(Text)
+	let ranged = isRanged then List(Text) + (iterable.children(1) to Text + " - 1") else List(Text)
+	(named + " - 1", named + ".Length - 1") + ranged + added
+IsInvariant(node SyntaxNode, varying Texts) Boolean
+	Hoisting.IsInvariant(SyntaxNode("Identifier", "steps"), List(Text))
+	Hoisting.IsInvariant(StatementParser(Tokenizer("1.Random").Tokens).ParseStatement, Edged.constants) is false
+	if node.Kind is in ("Number", "Text", "Boolean")
+		return true
+	if node.Kind is "Identifier"
+		return (node.text is not in varying) and (IsLower(node.text) or (node.text is in constants))
+	if node.Kind is "Member"
+		return (node.children(0).Kind is not "Number") and IsInvariant(node.children(0), varying)
+	let isIndexed = (node.Kind is "Call") and IsLower(node.text) and (node.text is not in varying)
+	let isOperation = node.Kind is in ("Binary", "Not", "Negate", "List")
+	(isIndexed or isOperation) and IsAllInvariant(node.children, varying)
+IsAllInvariant(nodes SyntaxNodes, varying Texts) Boolean
+	Hoisting.IsAllInvariant(List(SyntaxNode) + SyntaxNode("Identifier", "value"), ("value")) is false
+	for nodes
+		if IsInvariant(value, varying) is false
+			return false
+	true
+IsLower(name Text) Boolean
+	Hoisting.IsLower("steps")
+	Hoisting.IsLower("Steps") is false
+	name.Substring(0, 1).Lower is name.Substring(0, 1)
+HasName(node SyntaxNode) Boolean
+	Hoisting.HasName(SyntaxNode("Number", "1")) is false
+	if node.Kind is "Identifier"
+		return true
+	for node.children
+		if HasName(value)
+			return true
+	false
+Names(node SyntaxNode) Texts
+	Edged.Names(SyntaxNode("Declaration", "let width", List(SyntaxNode) + SyntaxNode("Number", "1"))) is ("width")
+	let isChanged = node.Kind is in ("Reassignment", "MethodCall")
+	let changed = isChanged then List(Text) + Root(node.children(0)) else List(Text)
+	mutable names = node.Kind is "Declaration" then changed + node.text.Split(" ").Last else changed
+	for node.children
+		names = names + Names(value)
+	names
+Root(node SyntaxNode) Text
+	Edged.Root(SyntaxNode("Member", "Length", List(SyntaxNode) + SyntaxNode("Identifier", "list"))) is "list"
+	node.Kind is in ("Member", "MethodCall") then Root(node.children(0)) else node.text

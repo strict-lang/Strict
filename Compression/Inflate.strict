@@ -102,8 +102,9 @@ Bits(position Number, count Number) Number
 	StoredSample.Bits(0, 3) is 1
 	StoredSample.Bits(8, 2) is 2
 	mutable result = 0
+	let last = position + count - 1
 	for count
-		result = result * 2 + Bit(position + count - 1 - index)
+		result = result * 2 + Bit(last - index)
 	result
 Bit(position Number) Number
 	StoredSample.Bit(0) is 1

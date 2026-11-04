@@ -6,10 +6,11 @@ Queries(scores Numbers) Numbers
 	Pair.Queries(Pair.Scored(Pair.Shares))(0) is 0
 	let size = attention.size
 	let positions = Positions
+	let stride = attention.heads * size
 	for attention.queries.Length
 		let row = (index / size).Floor
 		let start = index % size + (row % attention.heads) * size
-		Softmax.Weighted(scores, row * positions, positions, attention.keys, start, attention.heads * size) / size.SquareRoot
+		Softmax.Weighted(scores, row * positions, positions, attention.keys, start, stride) / size.SquareRoot
 Keys(scores Numbers) Numbers
 	Pair.Keys(Pair.Scored(Pair.Shares))(1).IsNearlyEqual(-0.2189580351631546)
 	Pair.Keys(Pair.Scored(Pair.Shares))(3).IsNearlyEqual(0.21895803516315468)
@@ -22,10 +23,12 @@ Transposed(shares Numbers, numbers Numbers) Numbers
 	Pair.Transposed((1, 0, 0.5, 0.5), (1, 2, 3, 4)) is (2.5, 4, 1.5, 2)
 	let width = attention.heads * attention.size
 	let positions = Positions
+	let stride = attention.heads * positions
+	let count = numbers.Length / width
 	for attention.keys.Length
 		let head = (index / attention.size).Floor % attention.heads
 		let start = head * positions + (index / width).Floor
-		Strided(shares, start, attention.heads * positions, numbers, index % width, width, numbers.Length / width)
+		Strided(shares, start, stride, numbers, index % width, width, count)
 Strided(left Numbers, leftStart Number, leftStride Number, right Numbers, rightStart Number, rightStride Number, count Number) Number
 	Pair.Strided((1, 9, 2), 0, 2, (3, 9, 4), 0, 2, 2) is 11
 	mutable sum = 0

@@ -93,8 +93,9 @@ Shifted(combined Numbers, tokens Number) Numbers
 	Hybrid.Single.Prepared(Drafter.Rows(2)).entered(0).IsNearlyEqual(1.773538, 0.00001)
 	Tiny.Shifted(Layer.Zeros(32), 1).Length is 48
 	let channels = convolution.Length / 4
+	let width = combined.Length / tokens
 	for 3 * channels
-		Tapped(combined, combined.Length / tokens, tokens - 3 + (index / channels).Floor, index % channels)
+		Tapped(combined, width, tokens - 3 + (index / channels).Floor, index % channels)
 Keyed(mixed Numbers) Numbers
 	Tiny.Keyed((3, 4, 0, 1, 6, 8, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0))(3).IsNearlyEqual(0.7071064)
 	Tiny.Keyed((3, 4, 0, 1, 6, 8, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0))(5).IsNearlyEqual(0.8)

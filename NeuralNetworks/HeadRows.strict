@@ -34,5 +34,6 @@ Gates(rows List(Numbers)) List(Numbers)
 	rows.Length is 2 * heads * size then Picked(rows, 1) else List(Numbers)
 Picked(rows List(Numbers), part Number) List(Numbers)
 	HeadRows(1, 1, 2).Picked(((1), (2), (3), (4)), 1) is ((2), (4))
+	let offset = part * size
 	for heads * size
-		rows((index / size).Floor * 2 * size + part * size + index % size)
+		rows((index / size).Floor * 2 * size + offset + index % size)

@@ -46,15 +46,19 @@ Brained(name Text, index Number) Texts
 	("    " + formats(0) + Numbered + "17 : i64", compared, "    " + formats(1) + Numbered + "16 : i64", chosen)
 Case(source Number) Texts
 	Summing.Case(1) is SecondCases
+	let scale = 64 ^ source
+	let first = Widths.Length * source
 	for Widths
-		Target(value * 64 ^ source, Widths.Length * source + index)
+		Target(value * scale, first + index)
 Shared(count Number) Texts
 	Summing.Shared(2) is ("1040: ^fkloop1fast", "2080: ^flloop1fast", "520: ^fmloop1fast")
 	Summing.Shared(1).Length is 0
 	if count < 2
 		return List(Text)
+	let scale = (64 ^ count - 1) / 63
+	let first = Widths.Length * count
 	for SharedWidths
-		Target(value * (64 ^ count - 1) / 63, Widths.Length * count + index)
+		Target(value * scale, first + index)
 Target(key Number, number Number) Text
 	Summing.Target(1040, 10) is "1040: ^fkloop1fast"
 	(key to Text) + ": ^f" + Letters.Substring(number, 1) + "loop" + position + "fast"
@@ -64,8 +68,9 @@ Cases(count Number) Texts
 	mutable cases = Shared(count)
 	for count
 		cases = cases + Case(index)
+	let first = Widths.Length * count + SharedWidths.Length
 	for Mixed(count)
-		cases = cases + Target(value, Widths.Length * count + SharedWidths.Length + index)
+		cases = cases + Target(value, first + index)
 	cases
 Mixed(count Number) Numbers
 	Summing.Mixed(2).Length is 22

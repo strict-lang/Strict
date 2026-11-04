@@ -74,10 +74,11 @@ Samples(lines Numbers) Numbers
 	PaletteSample.Samples((96, 144)) is (0, 1, 1, 0, 1, 0, 0, 1)
 	let depth = bytes(24)
 	let perRow = Width * Channels
+	let levels = 2 ^ depth
 	for Height * perRow
 		let bit = (index % perRow) * depth
 		let byte = lines((index / perRow).Floor * Stride + (bit / 8).Floor)
-		depth >= 8 then byte else (byte / 2 ^ (8 - depth - bit % 8)).Floor % 2 ^ depth
+		depth >= 8 then byte else (byte / 2 ^ (8 - depth - bit % 8)).Floor % levels
 Grays Numbers
 	GraySample.Grays.First is 10 / 255
 	PaletteSample.Grays is (0, 1, 1, 0, 1, 0, 0, 1)

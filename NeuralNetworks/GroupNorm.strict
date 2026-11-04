@@ -13,9 +13,10 @@ Affine(map FeatureMap) Float32s
 	Scaled(means, Variances(map, means), map.offsets)
 Scaled(means Numbers, variances Numbers, offsets Numbers) Float32s
 	Pair.Scaled((2, 4), (1, 4), (0, 0))(3).IsNearlyEqual(-2)
+	let perGroup = offsets.Length / groups
 	for 2 * offsets.Length
 		let channel = index % offsets.Length
-		let group = (channel / (offsets.Length / groups)).Floor
+		let group = (channel / perGroup).Floor
 		let scale = weights(channel) / (variances(group) + Epsilon).SquareRoot
 		index < offsets.Length then scale else biases(channel) + (offsets(channel) - means(group)) * scale
 Means(map FeatureMap) Float32s

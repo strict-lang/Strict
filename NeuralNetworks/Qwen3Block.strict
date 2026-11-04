@@ -70,8 +70,9 @@ Copies(count Number, bits Number) Qwen3Block
 Interleaved(cache Numbers, count Number) Numbers
 	Tiny.Interleaved((1, 2, 3, 4, 5, 6, 7, 8), 2) is (1, 2, 3, 4, 1, 2, 3, 4, 5, 6, 7, 8, 5, 6, 7, 8)
 	let stride = groups * queryNorm.Length
+	let block = count * stride
 	for cache.Length * count
-		cache((index / (count * stride)).Floor * stride + index % stride)
+		cache((index / block).Floor * stride + index % stride)
 Rotated(input Numbers, start Number, count Number, weights Numbers, rotation Numbers) Numbers
 	Tiny.Rotated((3, 4, 0, 1), 0, 4, (1, 2), (1, 1, -1, 1)).First.IsNearlyEqual(-1.41421351)
 	let size = weights.Length
@@ -87,8 +88,9 @@ Rotated(input Numbers, start Number, count Number, weights Numbers, rotation Num
 		(own + other) * scales(head)
 HeadScales(input Numbers, start Number, count Number, size Number, rotations Number) Float32s
 	Tiny.HeadScales((3, 4, 0, 1), 0, 4, 2, 4)(1).IsNearlyEqual(1.41421215)
+	let perRotation = count / rotations
 	for count / size
-		let token = (index / (count / rotations) / 2).Floor
+		let token = (index / perRotation / 2).Floor
 		let first = token * Gap(input, count, size, rotations) + start + index * size
 		Normalization.Scale(Normalization.Squared(input, first, size), size, Epsilon)
 Gap(input Numbers, count Number, size Number, rotations Number) Number

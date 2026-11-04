@@ -27,9 +27,9 @@ States(inputs List(Numbers)) List(Numbers)
 Next(previous Numbers, step Numbers) Numbers
 	Tiny.Next(Zero, One).First.IsNearlyEqual(0.5567699411459397)
 	let gates = Gates(previous, step)
-	let size = previous.Length
+	let candidates = 2 * previous.Length
 	for previous
-		value + gates(index) * (gates(2 * size + index) - value)
+		value + gates(index) * (gates(candidates + index) - value)
 Gates(previous Numbers, step Numbers) Numbers
 	Tiny.Gates(Zero, One).First.IsNearlyEqual(0.7310585786300049)
 	Tiny.Gates(Zero, One).Last.IsNearlyEqual(0.7615941559557649)
@@ -70,14 +70,14 @@ Step(step Numbers, previous Numbers, gradient Numbers) Numbers
 	updates + resets + candidates + Part(gates, size, size) * previous + earlier
 UpdateDeltas(gates Numbers, previous Numbers, gradient Numbers) Numbers
 	Tiny.UpdateDeltas((0.5, 0.5, 1), Zero, One) is List(Number) + 0.25
-	let size = previous.Length
+	let candidates = 2 * previous.Length
 	for gradient
-		value * (gates(2 * size + index) - previous(index)) * gates(index) * (1 - gates(index))
+		value * (gates(candidates + index) - previous(index)) * gates(index) * (1 - gates(index))
 CandidateDeltas(gates Numbers, gradient Numbers) Numbers
 	Tiny.CandidateDeltas(Halves, One) is List(Number) + 0.375
-	let size = gradient.Length
+	let candidates = 2 * gradient.Length
 	for gradient
-		value * gates(index) * (1 - gates(2 * size + index) * gates(2 * size + index))
+		value * gates(index) * (1 - gates(candidates + index) * gates(candidates + index))
 ResetDeltas(gates Numbers, previous Numbers, fromCandidate Numbers) Numbers
 	Tiny.ResetDeltas(Halves, List(Number) + 2, One) is List(Number) + 0.5
 	let size = previous.Length
