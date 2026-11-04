@@ -38,15 +38,15 @@ Arguments(platform Number, root Text) Text
 	for Files
 		arguments = arguments + " \"" + value + "\""
 	arguments + " -I\"" + root + "/Compiler\"" + Flags(platform, root)
-Objects(platform Number, root Text) Text
+Objects(platform Number, root Text, cpu = "native") Text
 	Adding.Objects(Platform.Current, ".").StartsWith(" \"Examples/NativeAdd/native/Adder.o\"")
 	NativeSources(List(Text)).Objects(Platform.Current, ".") is ""
 	if folders.Length is 0
 		return ""
 	let tokens = Flags(platform, root).Split(" ")
-	let library = NativeLibrary(value)
+	let options = Options(tokens, false) + (cpu is "native" then "" else " -march=" + cpu)
 	mutable arguments = ""
-	for library.Objects(Files + Sources(tokens), platform, root, Options(tokens, false))
+	for NativeLibrary(value).Objects(Files + Sources(tokens), platform, root, options)
 		if value.StartsWith("clang failed")
 			return value
 		arguments = arguments + " \"" + value + "\""

@@ -64,7 +64,7 @@ Build(base Text, program Text, tools Toolchain, isCounting = false) Number
 		logger.Log(tools.Installing(missing))
 		return 1
 	let mlir = Released(BuildProfile(logger).Runtime(program, tools.root, Target))
-	let built = Rebuilt(base, mlir, tools)
+	let built = Rebuilt(base, mlir, Toolchain(tools, cpu = isReleased then "x86-64-v3" else "native"))
 	logger.Log(built)
 	if built.StartsWith("Built ") is false
 		return 1
@@ -83,7 +83,7 @@ IsUnchanged(base Text, mlir Text, tools Toolchain) Boolean
 	let headers = tools.natives.Length is 0 then List(Text) else sources.Inputs(Platform.Current, tools.root)
 	let inputs = (base + ".mlir", Process.Current.executable, Release(logger, base).Icon) + sources.Files + headers
 	let previous = File(base + ".mlir")
-	let isCross = isAndroid or isIOS or tools.isWeb
+	let isCross = isAndroid or isIOS or tools.isWeb or (tools.cpu is not "native")
 	if isCross or (previous.Exists is false) or (sources.IsCurrent(tools.Executable(base), inputs) is false)
 		return false
 	if previous.Length is not mlir.Length

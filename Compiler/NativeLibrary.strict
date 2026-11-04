@@ -33,7 +33,7 @@ Compiled(files Texts, platform Number, root Text, options Text) Slow(Texts)
 	if files.Length is 0
 		return List(Text)
 	let suffix = "." + 999999.Random.Floor + ".o"
-	let flags = " -I\"" + root + "/Compiler\"" + options + Toolchain.Optimized
+	let flags = " -I\"" + root + "/Compiler\"" + Toolchain.Optimized + options
 	for ToolRunner(Toolchain(platform, root).Located("clang")).ExecuteAll(Commands(files, suffix, flags))
 		let base = Path(files(index)).RemoveExtension.text
 		Finished(value, base + suffix, base + ".o", options)
@@ -43,14 +43,14 @@ Commands(files Texts, suffix Text, flags Text) Texts
 		"-c \"" + value + "\"" + flags + " -o \"" + Path(value).RemoveExtension.text + suffix + "\""
 Waited(target Text, inputs Texts, options Text) Slow(Text)
 	Adding.Waited("Compiler/output/Missing.dll", List(Text), "") is ""
-	let lock = File(target + "." + Newest(inputs) + ".lock")
 	let started = Process.Elapsed
 	for as long as Process.Elapsed - started < Strict.MaxWait
 		if sources.IsCompiled(target, inputs, options)
 			return "Built " + target
-		if sources.IsCurrent(target + ".built.nativecache", inputs)
-			return Located(target, Text.Combine(File(target + ".built.nativecache").ReadLines, "\n"))
-		if lock.Locked
+		let recorded = Text.Combine(File(target + ".built.nativecache").ReadLines, "\n")
+		if recorded.StartsWith("clang failed") and sources.IsCurrent(target + ".built.nativecache", inputs)
+			return Located(target, recorded)
+		if File(target + "." + Newest(inputs) + ".lock").Locked
 			return ""
 		Process.Wait(0.1)
 	""

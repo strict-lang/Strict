@@ -16,11 +16,15 @@ Spread(previous Number) Number
 Uints(count Number) Slow(Numbers)
 	MersenneTwister.Seeded(42).Uints(700)(624) is 108880612
 	MersenneTwister.Seeded(42).Uints(700).Last is 4009078418
-	mutable raw = state
+	mutable raw = Padded(count)
 	for count
-		raw = raw + (raw(index + 397) xor Twisted(raw(index), raw(index + 1)))
+		raw(index + 624) = raw(index + 397) xor Twisted(raw(index), raw(index + 1))
 	for count
 		Tempered(raw(index + 624))
+Padded(count Number) Numbers
+	MersenneTwister((1, 2)).Padded(2) is (1, 2, 0, 0)
+	for state.Length + count
+		index < state.Length then state(index) else 0
 Twisted(first Number, second Number) Number
 	MersenneTwister(List(Number)).Twisted(0, 1) is 2567483615
 	let joined = (first and 2147483648) + (second and 2147483647)

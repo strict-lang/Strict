@@ -13934,6 +13934,47 @@
     %stack = llvm.getelementptr %blocks[0, %offset] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<192 x i64>
     return %stack : !llvm.ptr
   }
+  func.func private @strict_gpu_residing_class(%class: i64) -> (i1, i1) {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %three = arith.constant 3 : i64
+    %four = arith.constant 4 : i64
+    %sixteen = arith.constant 16 : i64
+    %largest = arith.constant 63 : i64
+    %false = arith.constant false
+    %true = arith.constant true
+    %isLarge = arith.cmpi sge, %class, %sixteen : i64
+    %range = arith.select %isLarge, %four, %two : i64
+    %last = arith.addi %class, %range : i64
+    %highest = arith.minsi %last, %largest : i64
+    %residing = llvm.mlir.addressof @strict_gpu_residing : !llvm.ptr
+    %usedSlot = llvm.getelementptr %residing[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<3 x i64>
+    %entriesBits = llvm.load %residing : !llvm.ptr -> i64
+    %entries = llvm.inttoptr %entriesBits : i64 to !llvm.ptr
+    %used = llvm.load %usedSlot : !llvm.ptr -> i64
+    cf.br ^check(%none, %false, %false : i64, i1, i1)
+  ^check(%index: i64, %any: i1, %anyMarked: i1):
+    %more = arith.cmpi slt, %index, %used : i64
+    cf.cond_br %more, ^inspect, ^done(%any, %anyMarked : i1, i1)
+  ^inspect:
+    %offset = arith.muli %index, %three : i64
+    %entry = llvm.getelementptr %entries[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %classSlot = llvm.getelementptr %entry[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %entryClass = llvm.load %classSlot : !llvm.ptr -> i64
+    %atLeast = arith.cmpi sge, %entryClass, %class : i64
+    %atMost = arith.cmpi sle, %entryClass, %highest : i64
+    %matches = arith.andi %atLeast, %atMost : i1
+    %next = arith.addi %index, %one : i64
+    cf.cond_br %matches, ^matched, ^check(%next, %any, %anyMarked : i64, i1, i1)
+  ^matched:
+    %listBits = llvm.load %entry : !llvm.ptr -> i64
+    %marked = func.call @strict_gc_is_marked(%listBits) : (i64) -> i1
+    %nowMarked = arith.ori %anyMarked, %marked : i1
+    cf.br ^check(%next, %true, %nowMarked : i64, i1, i1)
+  ^done(%found: i1, %foundMarked: i1):
+    return %found, %foundMarked : i1, i1
+  }
   func.func private @strict_gpu_obtain(%class: i64) -> i64 {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -14005,11 +14046,13 @@
   ^ownLend:
     %borrowed = func.call @strict_gpu_lend(%class) : (i64) -> i64
     %hasBorrowed = arith.cmpi ne, %borrowed, %none : i64
-    cf.cond_br %hasBorrowed, ^borrowed(%borrowed : i64), ^ownCollect
+    cf.cond_br %hasBorrowed, ^borrowed(%borrowed : i64), ^ownCheck
   ^borrowed(%lent: i64):
     return %lent : i64
-  ^ownCollect:
-    %fully = arith.constant true
+  ^ownCheck:
+    %anyResiding, %markedResiding = func.call @strict_gpu_residing_class(%class) : (i64) -> (i1, i1)
+    cf.cond_br %anyResiding, ^ownCollect(%markedResiding : i1), ^own
+  ^ownCollect(%fully: i1):
     func.call @strict_gc_run(%fully) : (i1) -> ()
     %collectedCount = llvm.load %countSlot : !llvm.ptr -> i64
     %reusable = arith.cmpi sgt, %collectedCount, %none : i64
@@ -14021,20 +14064,25 @@
   ^own:
     %freeForOwn = func.call @strict_gpu_free_memory() : () -> i64
     %trimNeeded = arith.cmpi ult, %freeForOwn, %ownNeeded : i64
-    // with streamed rows spilled the allocation evicts those first (strict_gpu_starved), trimming here gave back the
-    // blocks the next layers allocate again and waited for the GPU each time (H3: 285 times in its first step)
+    cf.cond_br %trimNeeded, ^shortOwn, ^allocateOwn
+  ^shortOwn:
+    %shortfall = arith.subi %ownNeeded, %freeForOwn : i64
+    // with streamed rows spilled evict those first instead of trimming pool blocks the next layers allocate again
     %spilledSlot = llvm.mlir.addressof @strict_gpu_spilled_bytes : !llvm.ptr
     %spilledCopies = llvm.load %spilledSlot : !llvm.ptr -> i64
     %hostedBytesSlot = llvm.mlir.addressof @strict_gpu_hosted_bytes : !llvm.ptr
     %hostedBytes = llvm.load %hostedBytesSlot : !llvm.ptr -> i64
     %spilled = arith.addi %spilledCopies, %hostedBytes : i64
     %noneSpilled = arith.cmpi eq, %spilled, %none : i64
-    %trimming = arith.andi %trimNeeded, %noneSpilled : i1
-    cf.cond_br %trimming, ^trimOwn, ^allocateOwn
-  ^trimOwn:
-    %shortfall = arith.subi %ownNeeded, %freeForOwn : i64
+    cf.cond_br %noneSpilled, ^trimOwn(%shortfall : i64), ^evictOwn(%shortfall : i64)
+  ^evictOwn(%evictShortfall: i64):
+    %spilledOnlyOwn = arith.constant true
+    %lastUsesOwn = arith.constant 16 : i64
+    %evictedOwn = func.call @strict_gpu_evicted(%evictShortfall, %spilledOnlyOwn, %lastUsesOwn) : (i64, i1, i64) -> i1
+    cf.br ^allocateOwn
+  ^trimOwn(%trimShortfall: i64):
     %waiting = arith.constant true
-    %trimmed = func.call @strict_gpu_trim(%shortfall, %none, %waiting) : (i64, i64, i1) -> i64
+    %trimmed = func.call @strict_gpu_trim(%trimShortfall, %none, %waiting) : (i64, i64, i1) -> i64
     cf.br ^allocateOwn
   ^allocateOwn:
     %owned = func.call @strict_gpu_alloc(%size) : (i64) -> i64
@@ -14390,19 +14438,24 @@
   ^done:
     return %released : i64
   }
-  // collect and drain first; release kept allocations and pinned rows, then unused pool blocks and cold host copies
+  // drain and evict pinned rows first; only run a full collection before trimming pool blocks and cold host copies
   func.func private @strict_gpu_starved(%needed: i64) -> i1 {
     %none = arith.constant 0 : i64
-    %full = arith.constant true
-    func.call @strict_gc_run(%full) : (i1) -> ()
+    func.call @strict_rc_reclaim() : () -> ()
     func.call @strict_gpu_replay() : () -> ()
     func.call @strict_gpu_synchronize() : () -> ()
-    %spared = func.call @strict_gpu_unspared() : () -> i64
+    %sparedFirst = func.call @strict_gpu_unspared() : () -> i64
     %spilledOnly = arith.constant true
     %lastUses = arith.constant 16 : i64
     %restored = func.call @strict_gpu_evicted(%needed, %spilledOnly, %lastUses) : (i64, i1, i64) -> i1
     cf.cond_br %restored, ^enough, ^trim
   ^trim:
+    %full = arith.constant true
+    func.call @strict_gc_run(%full) : (i1) -> ()
+    func.call @strict_gpu_replay() : () -> ()
+    func.call @strict_gpu_synchronize() : () -> ()
+    %sparedAfter = func.call @strict_gpu_unspared() : () -> i64
+    %spared = arith.addi %sparedFirst, %sparedAfter : i64
     %notWaiting = arith.constant false
     %trimmed = func.call @strict_gpu_trim(%needed, %spared, %notWaiting) : (i64, i64, i1) -> i64
     cf.br ^done(%trimmed : i64)
