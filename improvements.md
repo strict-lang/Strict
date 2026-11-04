@@ -20,6 +20,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - A `for` that makes a list and assigns elements of an outer mutable list it also reads runs in parallel natively and gives wrong numbers: MersenneTwister.Uints as one ring of 624 (`mutable ring = state`, `for count`, `let at = index % 624`, `ring(at) = ring((at + 397) % 624) xor Twisted(ring(at), ring((at + 1) % 624))`, `Tempered(ring(at))`) matches up to 228 numbers, then differs at changing places (2 of 300, 5 of 700, 51 of 5000); run such loops in order (it would be 10x faster than appending: 22 instead of 221 ms for 2.8 million).
 - Assigning an element of a mutable list in a list-making `for` that becomes a GPU kernel emits invalid MLIR (`llvm.store %compute_d13, %v_values(index)`, mlir-opt: expected ':'), the build fails with "GPU kernels failed": `mutable values = numbers`, `for numbers.Length`, `values(index) = values(index) * 2`, `values(index)`.
 - H3Video on the 4090: the full collection that frees the 27 GB text encoder takes 1.4-1.8 s (21 GB marked, 509 objects visited) and trips GarbageCollectionExceedsTenth; probably strict_gpu_sweep unlocking or freeing its pinned host memory (cuMemHostUnregister, cuMemFreeHost), not marking. Measure it there, then keep driver release time out of the collection time or release on another thread.
+- `strict test Compiler/NativeBuild.strict` stops with GarbageCollectionExceedsTenth in the Mlir tests (also run alone with `Mlir`): the VM collects too often while combining the runtime texts.
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).
@@ -34,6 +35,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - Native symbols, register kinds and helpers use the short type name, so one executable cannot hold two packages' types of the same name: qualify the symbols of a type whose short name is taken.
 - Named iterators over counts (`for row, column in rows, width`) as one flat loop of rows * width with the names from the index (parallel, GPU kernel), then the `(index / n).Floor` and `index % n` loops of NeuralNetworks, Math/Matrix and the image decoders can name their iterators without losing their kernels.
 - Parallel dedup by key (Ben): a `for` that keeps the first element per computed key (Dictionary or distinct by key) in parallel; Ben's program search keeps 2 of 128 cores busy because its observational equivalence dedup is a sequential loop over a mutable Dictionary.
+- NeuralNetworks on the GPU (Ben): a program using NeuralNetworks (models, image and video generation) should get GPU kernels for every loop that can run there, also those the size heuristics keep on the CPU today.
 
 ## Waiting
 - Later: Qwen3-Coder-Next 80B-A3B and Qwen3-Coder-30B with all experts, image blur on the GPU, Apple Silicon, AMD GPUs, batched training ideas.

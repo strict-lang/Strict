@@ -4,12 +4,13 @@ IsEnabled Boolean
 	NativeCache("test", ("Math", ".", "native")).IsEnabled
 	NativeCache("test", ("Math/Vector2.strict", ".", "native")).IsEnabled
 	NativeCache("test", ("Math/Vector2.strict", ".", "Length")).IsEnabled is false
+	NativeCache("build", ("Examples/Sum.strict", ".", "fast")).IsEnabled
 	if rest.Length < 2
 		return false
 	let isSource = Directory.Exists(rest(0)) or (File(rest(0)).Exists and (File(rest(0)).Modified is not 0))
 	if (isSource is false) or ((command is "test") and (TestRequest(rest).Selection is not in ("", "*")))
 		return false
-	(NativeCompiler.Options(rest) - "native" - "unit").Length is 0
+	(NativeCompiler.Options(rest) - "native" - "unit" - "fast").Length is 0
 CacheFile Text
 	NativeCache("test", ("Math", ".", "native")).CacheFile is "./Math/obj/Tests.test.nativecache"
 	NativeCache("build", ("Examples/Sum.strict", ".")).CacheFile is "./Examples/obj/Sum.nativecache"

@@ -1,4 +1,10 @@
 has logger
+constant Mixed = "Mobile target cannot be combined with another platform"
+constant Alone = "fast builds for this computer only, without a platform or other options"
+constant Model = " uses NeuralNetworks and runs on the GPU, build it without fast"
+constant Summing = List(Text) + "Examples/Sum.strict"
+constant Learning = ("Examples/Sum.strict", "NeuralNetworks/Batch.strict")
+constant Whole = "fast builds single programs, build a complete game with its Content without fast: "
 Run(arguments Texts) Number
 	let started = Process.Elapsed
 	let rest = arguments.Slice(1, arguments.Length - 1)
@@ -49,10 +55,38 @@ Built(rest Texts, sources Texts = List(Text)) Number
 	let options = Options(rest)
 	if (rest.Length > 2) and (rest(2) is "library")
 		return LibraryBuild(logger).Built(rest(0), rest(1))
-	if IsMixed(options)
-		logger.Log("Mobile target cannot be combined with another platform")
+	let problem = Problem(rest(0), options, sources)
+	if problem is not ""
+		logger.Log(problem)
 		return 1
 	Configured(options).Compile(rest(0), rest(1), false, false, sources)
+Problem(path Text, options Texts, sources Texts) Text
+	NativeCompiler(Logger).Problem("Examples/Sum.strict", List(Text) + "fast", Summing) is ""
+	NativeCompiler(Logger).Problem("Examples/Sum.strict", ("android", "ios"), Summing) is Mixed
+	NativeCompiler(Logger).Problem("Examples/Sum.strict", ("fast", "linux"), Summing) is Alone
+	NativeCompiler(Logger).Problem("Examples/Sum.strict", List(Text) + "fast", Learning) is "Examples/Sum.strict" + Model
+	NativeCompiler(Logger).Problem("Examples/Sum.strict", List(Text), Learning) is ""
+	let isFast = "fast" is in options
+	if IsMixed(options) or (isFast and (options.Length > 1))
+		return isFast then Alone else Mixed
+	if isFast and IsGame(path)
+		return Whole + path
+	isFast and IsLearning(sources) then path + Model else ""
+IsGame(path Text) Boolean
+	NativeCompiler.IsGame("Missing/App/App.strict") is false
+	Release(Logger, "Compiler/output/Game/obj/Demo").Created("Compiler/output/Game/Content")
+	NativeCompiler.IsGame("Compiler/output/Game/Game.strict")
+	NativeCompiler.IsGame("Compiler/output/Game/Demo.strict") is false
+	let folder = Path(path).PathOnly.text
+	let content = Directory.Exists(folder + "/Content") or File(folder + "/ContentBuild.strict").Exists
+	(Path(path).FileName.text is Path(folder).FileName.text + ".strict") and content
+IsLearning(sources Texts) Boolean
+	NativeCompiler.IsLearning(Learning)
+	NativeCompiler.IsLearning(Summing) is false
+	for sources
+		if ("/" + value).IndexOf("/NeuralNetworks/") >= 0
+			return true
+	false
 IsMixed(options Texts) Boolean
 	NativeCompiler.IsMixed(("android", "ios"))
 	NativeCompiler.IsMixed(("ios", "web"))
@@ -64,10 +98,12 @@ Configured(options Texts) NativeBuild
 	NativeCompiler(Logger).Configured(("ios", "simulator")).Target is Platform.IOSSimulator
 	NativeCompiler(Logger).Configured(("linux", "web")).isCrossing is false
 	NativeCompiler(Logger).Configured(List(Text) + "windows").isReleased
+	NativeCompiler(Logger).Configured(List(Text) + "fast").isFast
 	let isWeb = "web" is in options
 	let isCrossing = ("linux" is in options) and (isWeb is false)
 	let configured = NativeBuild(logger, isCrossing, isWeb, "android" is in options, "ios" is in options)
-	NativeBuild(configured, isSimulator = "simulator" is in options, isReleased = "windows" is in options)
+	let isFast = "fast" is in options
+	NativeBuild(configured, isSimulator = "simulator" is in options, isReleased = "windows" is in options, isFast = isFast)
 Replaced(executable Text, target Text) Boolean
 	let old = executable.Replace(".exe", ".old.exe")
 	File(executable).Rename(old)

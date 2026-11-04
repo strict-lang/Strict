@@ -4,7 +4,10 @@ constant Metal = DeviceBuild(Toolchain(Platform.MacOS, "."))
 constant Empty = "  llvm.mlir.global internal constant @strict_gpu_ptx(\"\\00\") : !llvm.array<1 x i8>\n}"
 Unlaunched(program Text) Text
 	Sample.Unlaunched("module {\n}") is "module {\n" + Empty
-	program.Substring(0, program.LastIndexOf("}")) + Empty
+	Sample.Unlaunched("module {\n}\n" + DeviceBuild.Doubling) is "module {\n" + Empty
+	let marker = program.IndexOf(MlirGpu.Marker)
+	let host = marker < 0 then program else program.Substring(0, marker)
+	host.Substring(0, host.LastIndexOf("}")) + Empty
 Previous(device Text, isTiling Boolean) Texts
 	PtxCache("Compiler/output/missing").Previous("module {\n}", false).Length is 0
 	Sample.Remembered("module {\n\n}", ("// new", "// old")) is ("// new", "// old")

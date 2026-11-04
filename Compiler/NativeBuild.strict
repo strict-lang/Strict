@@ -7,6 +7,7 @@ has isSimulator Boolean = false
 has selection Text = ""
 has isRecursive Boolean = true
 has isReleased Boolean = false
+has isFast Boolean = false
 constant Broken = "module {\n  func.func private @A() -> f64 {\n    return %missing : f64\n  }\n}"
 constant Watching = "llvm.mlir.global internal @strict_gc_watching(1 : i64)"
 IsProgram(path Text) Boolean
@@ -33,7 +34,7 @@ Device(program Text, base Text, root Text) Text
 	if at is not -1
 		return Checked("Native compilation failed, " + program.Substring(at, program.Length - at).Lines.First)
 	let marker = program.IndexOf("\n" + MlirGpu.Marker)
-	if marker < 0
+	if (marker < 0) or isFast
 		return PtxCache(base).Unlaunched(program)
 	let gpu = DeviceBuild(Toolchain(Platform.Current, root), base.EndsWith(".test") is false)
 	let device = program.Substring(marker + 1, program.Length - marker - 1)
@@ -69,8 +70,8 @@ Build(base Text, program Text, tools Toolchain, isCounting = false) Number
 	if built.StartsWith("Built ") is false
 		return 1
 	let crossed = CrossBuild(base, program, tools, isCounting)
-	let cleaned = Intermediates(logger).Removed(base)
-	BuildProfile(logger).Packaged(value, base, program, cleaned then crossed else 1, tools)
+	let result = Intermediates(logger).Removed(base) then crossed else 1
+	isFast then result else BuildProfile(logger).Packaged(value, base, program, result, tools)
 Target Number
 	NativeBuild(Logger, isIOS = true).Target is Platform.IOS
 	NativeBuild(Logger, isIOS = true, isSimulator = true).Target is Platform.IOSSimulator

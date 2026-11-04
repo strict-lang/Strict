@@ -57,8 +57,7 @@ strict build Examples/Sum.strict web      .html, .js and .wasm for the browser i
 strict build Examples/Sum.strict android  arm64-v8a shared library and assets in Release/Android (Android NDK)
 strict build Examples/Sum.strict ios      arm64 iOS static archive and assets in Release/iOS (native packages need Xcode)
 strict build Examples/Sum.strict ios simulator  the same for the iOS Simulator of this Mac
-strict build Examples/Sum.strict small    optimized for size instead of speed
-strict build Examples/Sum.strict fast     unoptimized host code for quicker builds
+strict build Examples/Sum.strict fast     quick build here: GPU loops run on the CPU, no Release (refused for NeuralNetworks and games)
 strict build Policy.strict library        Policy.dll (.so, .dylib) exporting the public methods for C and C#, plus Policy.cs
 strict build Games/App/App.strict         a windowed program goes into Games/App/Release with its Content (macOS: a signed .app)
 strict check Examples                     validate a folder (type rules, unused members, limits)
