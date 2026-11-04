@@ -12,6 +12,37 @@
 #include "ThreadState.h"
 static _Thread_local char* entry;
 static _Thread_local unsigned char* floatStorage;
+/* PROFILE (temporary) */
+static double ProfileNow(void)
+{
+#ifdef _WIN32
+	LARGE_INTEGER count, frequency;
+	QueryPerformanceCounter(&count);
+	QueryPerformanceFrequency(&frequency);
+	return (double)count.QuadPart * 1000.0 / (double)frequency.QuadPart;
+#else
+	return 0;
+#endif
+}
+static int ProfileOn(void)
+{
+	static int on = -1;
+	if (on < 0)
+		on = getenv("STRICT_LOAD_LOG") != 0;
+	return on;
+}
+static double profileStart, profileRows, profilePlaced, profileRead;
+static void Profiled(const char* what, uint64_t height, uint64_t width, double started)
+{
+	if (!ProfileOn())
+		return;
+	double now = ProfileNow();
+	if (!profileStart)
+		profileStart = started;
+	printf("load %s %llux%llu at %.1f took %.2f rows %.2f placed %.2f read %.2f\n", what, (unsigned long long)height,
+		(unsigned long long)width, started - profileStart, now - started, profileRows, profilePlaced, profileRead);
+	profileRows = profilePlaced = profileRead = 0;
+}
 #ifdef _WIN32
 #define strict_seek _fseeki64
 #else
@@ -431,9 +462,33 @@ static const float Nibbles[16] = { 0, 0.5f, 1, 1.5f, 2, 3, 4, 6, -0.0f, -0.5f, -
 /* The block scales stay the bytes of the file, each widened once for its 16 numbers. */
 static void Unpacked(const Fours* fours, uint64_t row, const unsigned char* source, float* target, uint64_t bytes)
 {
-	const unsigned char* scales = fours->blocks + (row / 128) * (fours->blockWidth / 4) * 512 + (row % 32) * 16 +
-		(row % 128 / 32) * 4;
-	for (uint64_t start = 0; start < 2 * bytes; start += 16)
+	const float* rowBlocks = fours->blocks + (row / 128) * (fours->blockWidth / 4) * 512 + (row % 32) * 16 + (row % 128 / 32) * 4;
+	const float* inputs = fours->inputs;
+	uint64_t blocks = bytes / 8;
+	for (uint64_t block = 0; block < blocks; block++)
+	{
+		float scale = rowBlocks[(block / 4) * 512 + (block & 3)] * fours->scale;
+		const unsigned char* blockSource = source + block * 8;
+		float* blockTarget = target + block * 16;
+		if (inputs)
+		{
+			const float* blockInputs = inputs + block * 16;
+			for (uint64_t byteIndex = 0; byteIndex < 8; byteIndex++)
+			{
+				unsigned char packed = blockSource[byteIndex];
+				blockTarget[byteIndex * 2] = Nibbles[packed >> 4] * scale * blockInputs[byteIndex * 2];
+				blockTarget[byteIndex * 2 + 1] = Nibbles[packed & 15] * scale * blockInputs[byteIndex * 2 + 1];
+			}
+		}
+		else
+			for (uint64_t byteIndex = 0; byteIndex < 8; byteIndex++)
+			{
+				unsigned char packed = blockSource[byteIndex];
+				blockTarget[byteIndex * 2] = Nibbles[packed >> 4] * scale;
+				blockTarget[byteIndex * 2 + 1] = Nibbles[packed & 15] * scale;
+			}
+	}
+	for (uint64_t column = blocks * 16; column < 2 * bytes; column++)
 	{
 		uint64_t block = start / 16, end = start + 16 < 2 * bytes ? start + 16 : 2 * bytes;
 		float scale = Eight(scales[(block / 4) * 512 + block % 4]) * fours->scale;
@@ -539,6 +594,7 @@ STRICT_EXPORT double TensorFile_Floats(double self, double path, double entry, d
 	Tensor tensor = { 0 };
 	const char* failure = Described(strict_text(entry), &tensor);
 	uint64_t total = tensor.height * tensor.width;
+	Profiled("floats", tensor.height, tensor.width, ProfileNow());
 	if (!failure && bits == 32 && tensor.bytes > 1)
 	{
 		unsigned char* data = 0;
@@ -591,7 +647,10 @@ static double Matrix(double path, double entry, double bits, int transposed)
 
 STRICT_EXPORT double TensorFile_Rows(double self, double path, double entry, double bits)
 {
-	return Matrix(path, entry, bits, 0);
+	double started = ProfileNow();
+	double result = Matrix(path, entry, bits, 0);
+	Profiled("rows", 0, 0, started);
+	return result;
 }
 
 STRICT_EXPORT double TensorFile_Columns(double self, double path, double entry, double bits)
@@ -649,8 +708,12 @@ static double QuantizedRows(double path, double entry, double scales, double bit
 	uint64_t rows = first >= tensor->height ? 0 : tensor->height - first;
 	part.height = count && count < rows ? count : rows;
 	part.start = tensor->start + first * tensor->width * tensor->bytes;
+	double profiled = ProfileNow();
 	double result = strict_rows(part.height, tensor->width * (tensor->isNibbles ? 2 : 1), bits, data, stride);
+	profileRows += ProfileNow() - profiled;
+	profiled = ProfileNow();
 	failure = !*data ? "TensorTooLarge" : Placed(path, &part, *data, *stride, bits, 1, factors + first, 0);
+	profilePlaced += ProfileNow() - profiled;
 	free(factors);
 	return failure ? strict_fail(failure) : result;
 }
@@ -662,7 +725,11 @@ STRICT_EXPORT double TensorFile_Quantized(double self, double path, double entry
 	Tensor tensor;
 	unsigned char* data = 0;
 	uint64_t stride = 0;
-	return QuantizedRows(path, entry, scales, tokenBits > 8 ? 8 + STRICT_KEPT_TOKENS : 8, &tensor, &data, &stride, 0, 0, 0);
+	double started = ProfileNow();
+	double result = QuantizedRows(path, entry, scales, tokenBits > 8 ? 8 + STRICT_KEPT_TOKENS : 8, &tensor, &data, &stride, 0, 0,
+		0);
+	Profiled("quantized", tensor.height, tensor.width, started);
+	return result;
 }
 
 /* count rows from first of TensorFile_Quantized kept on the host also when the file is read from a URL on the web
@@ -699,16 +766,23 @@ STRICT_EXPORT double TensorFile_Fours(double self, double path, double entry, do
 		blocked.height < (tensor.height + 127) / 128 * 128 || blocked.width < (tensor.width / 8 + 3) / 4 * 4 ||
 		global.height * global.width != 1 || (hasInputs && factors.height * factors.width != 2 * tensor.width)))
 		failure = "OnlyNvfp4MatricesWithSwizzledBlockScalesAreSupported";
-	unsigned char* blocks = failure ? 0 : Loaded(path, &blocked, 1, &failure);
+	double started = ProfileNow();
+	float* blocks = failure ? 0 : Read(path, &blocked, &failure);
 	float* factor = blocks ? Read(path, &global, &failure) : 0;
 	float* columns = factor && hasInputs ? Read(path, &factors, &failure) : 0;
+	profileRead += ProfileNow() - started;
 	unsigned char* data = 0;
 	uint64_t stride = 0;
+	double profiled = ProfileNow();
 	double result = failure ? 0 : strict_rows(tensor.height, 2 * tensor.width, tokenBits > 8 ? 8 + STRICT_KEPT_TOKENS : 8,
 		&data, &stride);
+	profileRows += ProfileNow() - profiled;
 	Fours fours = { blocks, blocked.width, factor ? *factor : 0, columns };
+	profiled = ProfileNow();
 	if (!failure)
 		failure = !data ? "TensorTooLarge" : Placed(path, &tensor, data, stride, 8, 0, 0, &fours);
+	profilePlaced += ProfileNow() - profiled;
+	Profiled("fours", tensor.height, tensor.width, started);
 	free(columns);
 	free(factor);
 	free(blocks);
@@ -803,8 +877,10 @@ STRICT_EXPORT double TensorFile_Tuned(double self, double path, double entry, do
 	Tensor tensor;
 	unsigned char* data = 0;
 	uint64_t stride = 0;
+	double started = ProfileNow();
 	double quantized = QuantizedRows(path, entry, scales, 8, &tensor, &data, &stride, 1, 0, 0);
 	const strict_numbers* given = strict_numbers_of(factors);
+	Profiled("tuned", tensor.height, tensor.width, started);
 	if (strict_bits(quantized) >> 48 == 0x7FFC || given->count == 0)
 		return quantized;
 	uint64_t height = tensor.height, width = tensor.width * (tensor.isNibbles ? 2 : 1);
