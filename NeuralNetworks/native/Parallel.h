@@ -30,10 +30,14 @@ static Opening OpenedFile(const char* path, uint64_t* size)
 static void Closed(Opening file) { CloseHandle(file); }
 
 /* Reads bytes at offset of the file into target, threads read at the same time, in parts of at most 1 GB. */
+static _Thread_local HANDLE ReadEvent;
+
 static int ReadFrom(Opening file, uint64_t offset, unsigned char* target, uint64_t bytes)
 {
 	int isRead = 1;
-	HANDLE event = CreateEventA(0, TRUE, FALSE, 0);
+	HANDLE event = ReadEvent;
+	if (!event)
+		event = ReadEvent = CreateEventA(0, TRUE, FALSE, 0);
 	for (uint64_t done = 0; isRead && done < bytes;)
 	{
 		DWORD part = bytes - done > 1073741824 ? 1073741824 : (DWORD)(bytes - done), read = 0;
@@ -45,7 +49,6 @@ static int ReadFrom(Opening file, uint64_t offset, unsigned char* target, uint64
 		isRead = isStarted && GetOverlappedResult(file, &overlapped, &read, TRUE) && read > 0;
 		done += read;
 	}
-	CloseHandle(event);
 	return isRead;
 }
 #else
