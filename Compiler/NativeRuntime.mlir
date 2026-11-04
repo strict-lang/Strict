@@ -4287,7 +4287,41 @@
 
   // the old value of a local that only ever holds fresh values and never leaks (MlirOwned) dies when it is
   // overwritten: without a count it is freed at once and its block is the next one allocated of its size
+  // STRICT_RC_DEAD=0 keeps replaced values for the collector (checks whether freeing them early changes results)
+  llvm.mlir.global internal constant @strict_rc_dead_switch("STRICT_RC_DEAD\00") : !llvm.array<15 x i8>
+  llvm.mlir.global internal @strict_rc_dead_mode(-1 : i64) : i64
+  func.func private @strict_rc_dead_enabled() -> i1 {
+    %modeSlot = llvm.mlir.addressof @strict_rc_dead_mode : !llvm.ptr
+    %mode = llvm.load %modeSlot : !llvm.ptr -> i64
+    %unknown = arith.constant -1 : i64
+    %isUnknown = arith.cmpi eq, %mode, %unknown : i64
+    cf.cond_br %isUnknown, ^read, ^known(%mode : i64)
+  ^read:
+    %name = llvm.mlir.addressof @strict_rc_dead_switch : !llvm.ptr
+    %setting = llvm.call @getenv(%name) : (!llvm.ptr) -> !llvm.ptr
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %isUnset = llvm.icmp "eq" %setting, %unset : !llvm.ptr
+    %one = arith.constant 1 : i64
+    cf.cond_br %isUnset, ^store(%one : i64), ^given
+  ^given:
+    %first = llvm.load %setting : !llvm.ptr -> i8
+    %zeroCharacter = arith.constant 48 : i8
+    %isOff = arith.cmpi eq, %first, %zeroCharacter : i8
+    %off = arith.constant 0 : i64
+    %chosen = arith.select %isOff, %off, %one : i64
+    cf.br ^store(%chosen : i64)
+  ^store(%value: i64):
+    llvm.store %value, %modeSlot : i64, !llvm.ptr
+    cf.br ^known(%value : i64)
+  ^known(%known: i64):
+    %none = arith.constant 0 : i64
+    %enabled = arith.cmpi ne, %known, %none : i64
+    return %enabled : i1
+  }
   func.func private @strict_rc_dead(%old: f64, %new: f64) {
+    %enabled = func.call @strict_rc_dead_enabled() : () -> i1
+    cf.cond_br %enabled, ^checked, ^done
+  ^checked:
     %busy = func.call @strict_rc_busy() : () -> i1
     cf.cond_br %busy, ^done, ^dying
   ^dying:
