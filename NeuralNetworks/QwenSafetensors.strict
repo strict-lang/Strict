@@ -2,6 +2,7 @@ has file Safetensors
 has rotary Number
 has group Number = 256
 has normOffset Number = 1
+has label = ""
 constant Tiny = QwenSafetensors(Safetensors("NeuralNetworks/tinyqwen35.safetensors", 32, "model.language_model."), 2, 4)
 constant Opened = QwenSafetensors.Tiny.Loaded(10000)
 constant Expected = Qwen3.TinyHybrid.Prefilled((1, 2, 3), 0).hidden
@@ -22,15 +23,18 @@ Loaded(theta Number, picked = List(Number)) Slow(Qwen3)
 	Qwen3(Blocks(basis), file.Hosted("embed_tokens", picked), List(Numbers), normed, theta, rotary = rotary, basis = basis)
 Blocks(basis Basis) Slow(List(Qwen3Block))
 	Tiny.Blocks(Basis.None).First.heads is 2
+	let layers = Layers
+	let completion = Completion(Logger, label, layers, Process.Elapsed)
 	mutable blocks = List(Mutable(Qwen3Block))
 	mutable deltas = List(Mutable(DeltaBlock))
-	for Layers
+	for layers
 		let layer = "layers." + index + "."
 		if file.Entry(layer + "self_attn.q_proj.weight") is ""
 			deltas.Add(Delta(layer, basis))
 		else
 			blocks.Add(Qwen3Block(Attending(layer, basis), hybrid = Hybrid(deltas)))
 			deltas = List(Mutable(DeltaBlock))
+		completion.Report(index + 1)
 	blocks
 Layers Number
 	Tiny.Layers is 4

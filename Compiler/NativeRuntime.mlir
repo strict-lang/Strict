@@ -11952,12 +11952,12 @@
   // on the GPU run there and so do loops touching more than 1 MB once the GPU is open (strict_gpu_roomy)
   llvm.mlir.global internal @strict_gpu_minimum(1048576 : i64) : i64
   llvm.mlir.global internal @strict_gpu_setting(0 : i64) : i64
-  llvm.mlir.global internal @strict_gpu_calls(dense<0> : tensor<34xi64>) : !llvm.array<34 x i64>
+  llvm.mlir.global internal @strict_gpu_calls(dense<0> : tensor<36xi64>) : !llvm.array<36 x i64>
   llvm.mlir.global internal @strict_gpu_handles(dense<0> : tensor<4xi64>) : !llvm.array<4 x i64>
-  llvm.mlir.global internal constant @strict_gpu_names("cuInit\00cuDeviceGet\00cuDevicePrimaryCtxRetain\00cuCtxSetCurrent\00cuModuleLoadDataEx\00cuModuleGetFunction\00cuMemAlloc_v2\00cuMemFree_v2\00cuMemcpyHtoD_v2\00cuMemcpyDtoH_v2\00cuLaunchKernel\00cuCtxSynchronize\00cuMemAllocHost_v2\00cuMemFreeHost\00cuMemcpyHtoDAsync_v2\00cuMemcpyDtoDAsync_v2\00cuStreamCreate\00cuStreamBeginCapture_v2\00cuStreamEndCapture\00cuGraphInstantiateWithFlags\00cuGraphExecUpdate_v2\00cuGraphLaunch\00cuGraphDestroy\00cuGraphExecDestroy\00cuMemGetInfo_v2\00cuStreamQuery\00cuEventCreate\00cuEventRecord\00cuEventSynchronize\00cuMemcpyDtoHAsync_v2\00cuStreamSynchronize\00cuFuncSetAttribute\00cuDeviceGetAttribute\00cuStreamWaitEvent\00") : !llvm.array<595 x i8>
+  llvm.mlir.global internal constant @strict_gpu_names("cuInit\00cuDeviceGet\00cuDevicePrimaryCtxRetain\00cuCtxSetCurrent\00cuModuleLoadDataEx\00cuModuleGetFunction\00cuMemAlloc_v2\00cuMemFree_v2\00cuMemcpyHtoD_v2\00cuMemcpyDtoH_v2\00cuLaunchKernel\00cuCtxSynchronize\00cuMemAllocHost_v2\00cuMemFreeHost\00cuMemcpyHtoDAsync_v2\00cuMemcpyDtoDAsync_v2\00cuStreamCreate\00cuStreamBeginCapture_v2\00cuStreamEndCapture\00cuGraphInstantiateWithFlags\00cuGraphExecUpdate_v2\00cuGraphLaunch\00cuGraphDestroy\00cuGraphExecDestroy\00cuMemGetInfo_v2\00cuStreamQuery\00cuEventCreate\00cuEventRecord\00cuEventSynchronize\00cuMemcpyDtoHAsync_v2\00cuStreamSynchronize\00cuFuncSetAttribute\00cuDeviceGetAttribute\00cuStreamWaitEvent\00cuEventQuery\00cuEventElapsedTime\00") : !llvm.array<627 x i8>
   // AMD GPUs through HIP when there is no NVIDIA driver, its functions mirror the CUDA driver ones in the same order
   // (hipCtxSynchronize is not supported and hipMemAllocHost fails on the Windows driver, their replacements work)
-  llvm.mlir.global internal constant @strict_gpu_amd_names("hipInit\00hipDeviceGet\00hipDevicePrimaryCtxRetain\00hipCtxSetCurrent\00hipModuleLoadDataEx\00hipModuleGetFunction\00hipMalloc\00hipFree\00hipMemcpyHtoD\00hipMemcpyDtoH\00hipModuleLaunchKernel\00hipDeviceSynchronize\00hipMallocHost\00hipHostFree\00hipMemcpyHtoDAsync\00hipMemcpyDtoDAsync\00hipStreamCreateWithFlags\00hipStreamBeginCapture\00hipStreamEndCapture\00hipGraphInstantiateWithFlags\00hipGraphExecUpdate\00hipGraphLaunch\00hipGraphDestroy\00hipGraphExecDestroy\00hipMemGetInfo\00hipStreamQuery\00hipEventCreateWithFlags\00hipEventRecord\00hipEventSynchronize\00hipMemcpyDtoHAsync\00hipStreamSynchronize\00hipFuncSetAttribute\00hipDeviceGetAttribute\00hipStreamWaitEvent\00") : !llvm.array<613 x i8>
+  llvm.mlir.global internal constant @strict_gpu_amd_names("hipInit\00hipDeviceGet\00hipDevicePrimaryCtxRetain\00hipCtxSetCurrent\00hipModuleLoadDataEx\00hipModuleGetFunction\00hipMalloc\00hipFree\00hipMemcpyHtoD\00hipMemcpyDtoH\00hipModuleLaunchKernel\00hipDeviceSynchronize\00hipMallocHost\00hipHostFree\00hipMemcpyHtoDAsync\00hipMemcpyDtoDAsync\00hipStreamCreateWithFlags\00hipStreamBeginCapture\00hipStreamEndCapture\00hipGraphInstantiateWithFlags\00hipGraphExecUpdate\00hipGraphLaunch\00hipGraphDestroy\00hipGraphExecDestroy\00hipMemGetInfo\00hipStreamQuery\00hipEventCreateWithFlags\00hipEventRecord\00hipEventSynchronize\00hipMemcpyDtoHAsync\00hipStreamSynchronize\00hipFuncSetAttribute\00hipDeviceGetAttribute\00hipStreamWaitEvent\00hipEventQuery\00hipEventElapsedTime\00") : !llvm.array<647 x i8>
   llvm.mlir.global internal @strict_gpu_amd(0 : i64) : i64
   llvm.mlir.global internal constant @strict_gpu_switch("STRICT_GPU\00") : !llvm.array<11 x i8>
   func.func private @strict_gpu_ready() -> i1 {
@@ -12262,7 +12262,7 @@
   func.func private @strict_gpu_resolve(%library: !llvm.ptr, %names: !llvm.ptr) -> i1 {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
-    %count = arith.constant 34 : i64
+    %count = arith.constant 36 : i64
     %calls = llvm.mlir.addressof @strict_gpu_calls : !llvm.ptr
     %unset = llvm.mlir.zero : !llvm.ptr
     %true = arith.constant true
@@ -12277,7 +12277,7 @@
     cf.cond_br %missing, ^failed, ^store
   ^store:
     %bits = llvm.ptrtoint %function : !llvm.ptr to i64
-    %slot = llvm.getelementptr %calls[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<34 x i64>
+    %slot = llvm.getelementptr %calls[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<36 x i64>
     llvm.store %bits, %slot : i64, !llvm.ptr
     %length = llvm.call @strlen(%name) : (!llvm.ptr) -> i64
     %skipped = arith.addi %length, %one : i64
@@ -12303,7 +12303,7 @@
     cf.br ^lookup
   ^lookup:
     %calls = llvm.mlir.addressof @strict_gpu_calls : !llvm.ptr
-    %slot = llvm.getelementptr %calls[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<34 x i64>
+    %slot = llvm.getelementptr %calls[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<36 x i64>
     %bits = llvm.load %slot : !llvm.ptr -> i64
     %function = llvm.inttoptr %bits : i64 to !llvm.ptr
     return %function : !llvm.ptr
@@ -14436,6 +14436,117 @@
     %held = llvm.load %heldSlot : !llvm.ptr -> i64
     %bytes = arith.uitofp %held : i64 to f64
     return %bytes : f64
+  }
+  // `GpuMemory.Stamped`: a stamp after the GPU work queued so far (captured launches are launched first, nothing
+  // waits), its number from 0 on, -1 without a GPU; `GpuMemory.Elapsed(first, last)` is the milliseconds the GPU took
+  // from stamp first to stamp last once last is done, -1 before that and -2 when it can not tell, it never waits
+  // either: steps show their real time while the next ones are queued (waiting for the GPU after every H3 step to log
+  // it left the GPU idle while the next one was queued). The count of stamps, then a ring of 256 events with timing
+  llvm.mlir.global internal @strict_gpu_stamps(dense<0> : tensor<257xi64>) : !llvm.array<257 x i64>
+  func.func private @strict_gpu_stamped(%self: f64) -> f64 {
+    %unmarked = arith.constant -1.0 : f64
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %stateSlot = llvm.mlir.addressof @strict_gpu_state : !llvm.ptr
+    %state = llvm.load %stateSlot : !llvm.ptr -> i64
+    %isReady = arith.cmpi eq, %state, %one : i64
+    cf.cond_br %isReady, ^current, ^unable
+  ^current:
+    %made = func.call @strict_gpu_current() : () -> i1
+    cf.cond_br %made, ^launch, ^unable
+  ^launch:
+    func.call @strict_gpu_replay() : () -> ()
+    %marks = llvm.mlir.addressof @strict_gpu_stamps : !llvm.ptr
+    %count = llvm.load %marks : !llvm.ptr -> i64
+    %slot = func.call @strict_gpu_stamp_slot(%count) : (i64) -> !llvm.ptr
+    %existing = llvm.load %slot : !llvm.ptr -> i64
+    %isNew = arith.cmpi eq, %existing, %none : i64
+    cf.cond_br %isNew, ^create, ^record
+  ^create:
+    %createIndex = arith.constant 26 : i64
+    %create = func.call @strict_gpu_call(%createIndex) : (i64) -> !llvm.ptr
+    %timed = arith.constant 0 : i32
+    %created = llvm.call %create(%slot, %timed) : !llvm.ptr, (!llvm.ptr, i32) -> i32
+    cf.br ^record
+  ^record:
+    %eventBits = llvm.load %slot : !llvm.ptr -> i64
+    %event = llvm.inttoptr %eventBits : i64 to !llvm.ptr
+    %handles = llvm.mlir.addressof @strict_gpu_handles : !llvm.ptr
+    %streamSlot = llvm.getelementptr %handles[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %streamBits = llvm.load %streamSlot : !llvm.ptr -> i64
+    %stream = llvm.inttoptr %streamBits : i64 to !llvm.ptr
+    %recordIndex = arith.constant 27 : i64
+    %record = func.call @strict_gpu_call(%recordIndex) : (i64) -> !llvm.ptr
+    %recorded = llvm.call %record(%event, %stream) : !llvm.ptr, (!llvm.ptr, !llvm.ptr) -> i32
+    %zero32 = arith.constant 0 : i32
+    %isRecorded = arith.cmpi eq, %recorded, %zero32 : i32
+    cf.cond_br %isRecorded, ^counted, ^unable
+  ^counted:
+    %next = arith.addi %count, %one : i64
+    llvm.store %next, %marks : i64, !llvm.ptr
+    %number = arith.sitofp %count : i64 to f64
+    return %number : f64
+  ^unable:
+    return %unmarked : f64
+  }
+  func.func private @strict_gpu_stamp_slot(%number: i64) -> !llvm.ptr {
+    %one = arith.constant 1 : i64
+    %ring = arith.constant 255 : i64
+    %marks = llvm.mlir.addressof @strict_gpu_stamps : !llvm.ptr
+    %wrapped = arith.andi %number, %ring : i64
+    %index = arith.addi %wrapped, %one : i64
+    %slot = llvm.getelementptr %marks[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<257 x i64>
+    return %slot : !llvm.ptr
+  }
+  func.func private @strict_gpu_elapsed(%self: f64, %from: f64, %to: f64) -> f64 {
+    %unknown = arith.constant -1.0 : f64
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %zero32 = arith.constant 0 : i32
+    %one = arith.constant 1 : i64
+    %fromValid = arith.cmpf oge, %from, %zero : f64
+    %toValid = arith.cmpf oge, %to, %zero : f64
+    %valid = arith.andi %fromValid, %toValid : i1
+    cf.cond_br %valid, ^events, ^unable
+  ^events:
+    %fromNumber = arith.fptosi %from : f64 to i64
+    %toNumber = arith.fptosi %to : f64 to i64
+    %marks = llvm.mlir.addressof @strict_gpu_stamps : !llvm.ptr
+    %count = llvm.load %marks : !llvm.ptr -> i64
+    %isMarked = arith.cmpi slt, %toNumber, %count : i64
+    cf.cond_br %isMarked, ^query(%fromNumber, %toNumber : i64, i64), ^unable
+  ^query(%first: i64, %last: i64):
+    %fromSlot = func.call @strict_gpu_stamp_slot(%first) : (i64) -> !llvm.ptr
+    %toSlot = func.call @strict_gpu_stamp_slot(%last) : (i64) -> !llvm.ptr
+    %fromBits = llvm.load %fromSlot : !llvm.ptr -> i64
+    %toBits = llvm.load %toSlot : !llvm.ptr -> i64
+    %fromEvent = llvm.inttoptr %fromBits : i64 to !llvm.ptr
+    %toEvent = llvm.inttoptr %toBits : i64 to !llvm.ptr
+    %queryIndex = arith.constant 34 : i64
+    %query = func.call @strict_gpu_call(%queryIndex) : (i64) -> !llvm.ptr
+    %status = llvm.call %query(%toEvent) : !llvm.ptr, (!llvm.ptr) -> i32
+    %isDone = arith.cmpi eq, %status, %zero32 : i32
+    cf.cond_br %isDone, ^measure(%fromEvent, %toEvent : !llvm.ptr, !llvm.ptr), ^pending(%status : i32)
+  ^pending(%result: i32):
+    %notReady = arith.constant 600 : i32
+    %isRunning = arith.cmpi eq, %result, %notReady : i32
+    cf.cond_br %isRunning, ^unable, ^failed
+  ^measure(%start: !llvm.ptr, %end: !llvm.ptr):
+    %elapsedIndex = arith.constant 35 : i64
+    %elapsedCall = func.call @strict_gpu_call(%elapsedIndex) : (i64) -> !llvm.ptr
+    %milliseconds = llvm.alloca %one x f32 : (i64) -> !llvm.ptr
+    %measured = llvm.call %elapsedCall(%milliseconds, %start, %end) : !llvm.ptr, (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    %isMeasured = arith.cmpi eq, %measured, %zero32 : i32
+    cf.cond_br %isMeasured, ^done, ^failed
+  ^done:
+    %value = llvm.load %milliseconds : !llvm.ptr -> f32
+    %wide = arith.extf %value : f32 to f64
+    return %wide : f64
+  ^unable:
+    return %unknown : f64
+  ^failed:
+    %broken = arith.constant -2.0 : f64
+    return %broken : f64
   }
   // `GpuMemory.Finished`: waits for the GPU work queued so far (a graph being captured is launched first) without a
   // collection or trim, 0 also without a GPU (it is not opened for this)

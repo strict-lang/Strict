@@ -7,6 +7,7 @@ has hidden Numbers = List(Number)
 has cacheBits Number = 32
 has rotary Number = 0
 has basis Basis = Basis.None
+has progress = ""
 constant Tiny = Qwen3.Loaded("NeuralNetworks/tinyqwen3.gguf", 32)
 constant TinyMixture = Qwen3.Loaded("NeuralNetworks/tinyqwen3moe.gguf", 32)
 constant Prompted = Tiny.Prefilled((1, 2), 0)
@@ -92,6 +93,7 @@ Forwarded(input Numbers, rotation Numbers, sequences Number, deepstack List(Numb
 	Tiny.Forwarded(Tiny.Embedded((1, 2)), Tiny.Rotations((0, 1)), 1, List(Numbers), List(Number)).hidden is Prompted.hidden
 	mutable current = input
 	mutable updated = List(Mutable(Qwen3Block))
+	let completion = Completion(Logger, progress, blocks.Length, Process.Elapsed)
 	for blocks
 		let prepared = value.hybrid.Prepared(current)
 		let cached = Qwen3Block(value, hybrid = prepared).Cached(prepared.entered, rotation, cacheBits)
@@ -99,6 +101,7 @@ Forwarded(input Numbers, rotation Numbers, sequences Number, deepstack List(Numb
 		if index < deepstack.Length
 			current = Stacked(current, deepstack(index), rows)
 		updated.Add(Qwen3Block(cached, queries = List(Number), hybrid = Hybrid(prepared.layers, inputs = prepared.inputs)))
+		completion.Report(index + 1)
 	Qwen3(value, blocks = updated, hidden = current)
 Stacked(numbers Numbers, features Numbers, rows Numbers) Numbers
 	Qwen3(Tiny, norm = (1, 1)).Stacked((1, 2, 3, 4, 5, 6), (10, 20), (-1, 0, -1)) is (1, 2, 13, 24, 5, 6)

@@ -10,6 +10,12 @@ Finished Number
 Held Number
 	GpuMemory.Held >= 0
 	0
+Stamped Number
+	GpuMemory.Stamped >= -1
+	-1
+Elapsed(first Number, last Number) Number
+	GpuMemory.Elapsed(-1, -1) is -1
+	-1
 Tuned(rows List(Numbers), downs Numbers, ups Numbers, scales Numbers) List(Numbers)
 	GpuMemory.Tuned(Safetensors.Bytes.Quantized("a"), List(Number), List(Number), List(Number)).Length is 4
 	GpuMemory.Tuned(Safetensors.Bytes.Quantized("a"), (1, 0), (1, 0), List(Number) + 1).Length is 0

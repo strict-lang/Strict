@@ -1,0 +1,20 @@
+has logger
+has label Text
+has total Number
+has started Number
+Message(done Number, elapsed Number) Text
+	Completion(Logger, "Loading", 4, 0).Message(1, 2.1) is "Loading 25% 2.1s/8.4s"
+	Completion(Logger, "Loading", 2, 0).Message(1, 4.5) is "Loading 50% 4.5s/9s"
+	Completion(Logger, "Loading", 8, 0).Message(3, 9) is ""
+	Completion(Logger, "Loading", 4, 0).Message(1, 0.5) is ""
+	Completion(Logger, "Loading", 4, 0).Message(4, 9) is ""
+	Completion(Logger, "", 4, 0).Message(1, 4) is ""
+	let quarter = (done * 4 / total).Floor
+	let crossed = quarter > ((done - 1) * 4 / total).Floor
+	let projected = elapsed * total / done
+	let shown = (label is not "") and crossed and (quarter < 4) and (projected >= 3)
+	shown then label + " " + quarter * 25 + "% " + elapsed.Round(1) + "s/" + projected.Round(1) + "s" else ""
+Report(done Number)
+	let message = Message(done, Process.Elapsed - started)
+	if message is not ""
+		logger.Log(message)
