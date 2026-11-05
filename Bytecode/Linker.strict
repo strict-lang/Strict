@@ -78,6 +78,8 @@ LinkedType(type Text, methods Texts) Slow(TypeEntry)
 	let isLocal = Path(type).PathOnly.text is Path(main.fullName).PathOnly.text
 	isLocal then TypeEntry(Path(type).FileName.text, entry.members, entry.methods) else entry
 BaseTypes(used Texts, targets Texts) Texts
+	Sample.BaseTypes(List(Text), ("Strict/Bytecode/FileCompiler.Go")) is List(Text)
+	Sample.UsedMethods(("Strict/C.Go"), "Strict/B") is List(Text)
 	Sample.BaseTypes(List(Text), ("Strict/B.Go")) is ("Strict/B")
 	Sample.BaseTypes(List(Text) + "Strict/C", ("Strict/B.Go")) is ("Strict/B", "Strict/C")
 	mutable types = List(Mutable(Text))
@@ -114,15 +116,23 @@ IsNative(type Text, method Text) Boolean
 	let isOwn = TypeEntry.IsBaseName(TypeEntry.ShortName(type)) or (SourceName(type) is in ("File", "Directory"))
 	(method.Split(" ").First is in Natives) and isOwn
 SourceName(type Text) Text
+	Sample.IsNative("Strict/List(Number)", "Length")
+	Sample.IsNative("Strict/File", "Count")
+	Sample.IsNative("Strict/Text", "Length")
+	Sample.IsNative("Strict/Text", "Count") is false
 	Sample.SourceName("Strict/List(Number)") is "List"
 	Sample.SourceName("Strict/Process") is "Process"
 	let name = type.Substring(7, type.Length - 7)
 	name.IndexOf("(") is -1 then name else name.Substring(0, name.IndexOf("("))
 SourcePath(type Text) Text
+	Sample.IsNative("Strict/File", "ReadLines")
+	Sample.IsNative("Strict/Directory", "Exists")
 	Sample.SourcePath("Strict/Process") is "./Process.strict"
 	let local = "./" + SourceName(type) + ".strict"
 	File(local).Exists then local else root + "/" + SourceName(type) + ".strict"
 UsedTypes(entries List(TypeEntry)) Texts
+	Sample.UsedTypes(TypeEntry("A", Parameters.members, List(MethodEntry))).Last is "Strict/Bytecode/MemberEntry"
+	Sample.UsedTypes(TypeEntry("Strict/X", Parameters.members, List(MethodEntry))).Last is "Strict/MemberEntry"
 	Sample.UsedTypes(Go) is List(Text)
 	Sample.UsedTypes(Reading) is ("Strict/List(Byte)", "Strict/Byte")
 	mutable types = List(Mutable(Text))
@@ -131,6 +141,7 @@ UsedTypes(entries List(TypeEntry)) Texts
 		types = types + Elements(value.UsedTypes.Unique, name.Substring(0, name.LastIndexOf("/")))
 	types
 Elements(types Texts, package Text) Texts
+	Sample.Elements(List(Text) + "Strict/Pair(Byte)", "Strict") is ("Strict/Pair(Byte)")
 	Sample.Elements(("Strict/List(Byte)", "Strict/Text"), "Strict") is ("Strict/List(Byte)", "Strict/Byte", "Strict/Text")
 	Sample.UsedTypes(Parameters) is ("Strict/List(MemberEntry)", "Strict/Bytecode/MemberEntry")
 	Sample.Elements(List(Text) + "Strict/List(Character)", "Strict") is ("Strict/List(Character)", "Strict/Character")
@@ -141,6 +152,7 @@ Elements(types Texts, package Text) Texts
 			result.Add(Qualified(value.Substring(12, value.Length - 13), package))
 	result
 Qualified(element Text, package Text) Text
+	Sample.Elements(List(Text) + "Strict/List(List(Byte))", "Strict") is ("Strict/List(List(Byte))")
 	Sample.Qualified("MemberEntry", "Strict/Bytecode") is "Strict/Bytecode/MemberEntry"
 	Sample.Qualified("Logger", "Strict/Bytecode") is "Strict/Logger"
 	let nearby = package + "/" + element
