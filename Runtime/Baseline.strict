@@ -1,9 +1,13 @@
 has mutants Mutants
+constant Reader = MethodEntry("Read", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Invoke(0, ("Strict/File", "ReadLines", "Strict/List(Text)"), List(Number), -1))
+constant Calling = MethodEntry("Call", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Invoke(0, ("Strict/T", "Read", "None"), List(Number), -1))
+constant Reading = List(TypeEntry) + TypeEntry("Strict/T", List(MemberEntry), (Calling, Reader))
 constant Libraries = Baseline(Mutants(Logger, "Library.strict"))
+constant Sampled = Baseline(Mutants.Sample)
 Kept(types List(TypeEntry)) List(MethodEntry)
 	Baseline(Mutants.Sample).Kept(Mutants.Doubled).Length is 0
 	Libraries.Kept(Execute(Logger).Loaded("Library.strict", ".")).Length is 0
-	let methods = IsBase(types.First) then List(MethodEntry) else mutants.Mutated(types.First)
+	let methods = IsBase(types.First) then List(MethodEntry) else Usable(types)
 	let tested = mutants.Tested(types, mutants.Runner(types.First), methods)
 	let limit = mutants.isWhole then 1 else 0.1
 	for methods
@@ -18,6 +22,34 @@ IsRun(tested List(TypeEntry), method MethodEntry, runner Text) Boolean
 	let replaced = mutants.Replaced(tested, List(MethodEntry) + method, failing)
 	let started = Execute(mutants.logger).Started(replaced, mutants.path)
 	Machine(started, deadline = Process.Elapsed + 1).Tested(tested.First.Name, runner) > 0
+Reaching(types List(TypeEntry)) Texts
+	Baseline(Mutants.Sample).Reaching(Reading) is ("Strict/T.Read", "Strict/T.Call")
+	mutable reaching = List(Mutable(Text))
+	mutable count = -1
+	for as long as count < reaching.Length
+		count = reaching.Length
+		for type, method in types, type.methods
+			let name = type.Name + "." + method.Name
+			if (name is not in reaching) and IsReaching(method, reaching)
+				reaching.Add(name)
+	reaching
+Usable(types List(TypeEntry)) List(MethodEntry)
+	Baseline(Mutants.Sample).Usable(Mutants.Doubled).Length is 0
+	let reaching = Reaching(types)
+	for mutants.Mutated(types.First)
+		let isInput = types.First.Name + "." + value.Name is in reaching
+		if isInput and (mutants.part is "")
+			mutants.logger.Log(mutants.path + ": " + value.Name + " is not mutated, it uses input")
+		if isInput is false
+			value
+IsReaching(method MethodEntry, reaching Texts) Boolean
+	Sampled.IsReaching(Reader, List(Text)) and (Sampled.IsReaching(Calling, List(Text)) is false)
+	Baseline(Mutants.Sample).IsReaching(Calling, List(Text) + "Strict/T.Read")
+	for method.instructions
+		if (value.kind is InstructionType.Invoke) and (value.texts.Length > 1)
+			if mutants.IsInput(value.texts(0)) or (value.texts(0) + "." + value.texts(1) is in reaching)
+				return true
+	false
 IsBase(type TypeEntry) Boolean
 	Baseline(Mutants.Sample).IsBase(TypeEntry(Machine.Doubler, Name = "Strict/Number"))
 	Baseline(Mutants.Sample).IsBase(TypeEntry(Machine.Doubler, Name = "Strict/Math/Size")) is false

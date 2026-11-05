@@ -1,7 +1,7 @@
 has path Text
 has isWhole Boolean = false
 constant Steps = 100000
-constant Version = 17
+constant Version = 18
 constant Accepting = Invocation(InstructionEntry.Invoke(0, ("Strict/Networking/Socket", "Accept", "Strict/Number"), List(Number), -1), List(VmValue), VmValue.None)
 constant Sample = MutationCache("Compiler/output/Cached.strict")
 Stamp Text
