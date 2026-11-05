@@ -13,8 +13,9 @@ Band Numbers
 	Gray.Band is (0, 63, 0, 0)
 	JpegScan(JpegDecoder.Read("ImageProcessing/Progressive.jpg"), 496).Band is (1, 63, 2, 1)
 	let position = start + 5 + decoder.jpeg.bytes(start + 4) * 2
-	let approximation = decoder.jpeg.bytes(position + 2)
-	(decoder.jpeg.bytes(position), decoder.jpeg.bytes(position + 1), (approximation / 16).Floor, approximation % 16)
+	let bytes = decoder.jpeg.bytes
+	let approximation = bytes(position + 2)
+	(bytes(position), bytes(position + 1), (approximation / JpegDecoder.Nibble).Floor, approximation % JpegDecoder.Nibble)
 Codes(kind Number) List(Huffman)
 	Gray.Codes(16).First.symbols is (0, 6, 9, 34, 53, 82)
 	Colored.Codes(0).Length is 3
@@ -22,7 +23,8 @@ Codes(kind Number) List(Huffman)
 	for decoder.samplings
 		let position = components.Index(index)
 		let selectors = position < 0 then 0 else decoder.jpeg.bytes(start + 6 + position * 2)
-		decoder.jpeg.Huffmans(kind + (kind is 0 then (selectors / 16).Floor else selectors % 16), start)
+		let table = kind is 0 then (selectors / JpegDecoder.Nibble).Floor else selectors % JpegDecoder.Nibble
+		decoder.jpeg.Huffmans(kind + table, start)
 Intervals List(Numbers)
 	Gray.Intervals.First is (184, 221, 201, 174, 9, 147)
 	JpegScan(JpegDecoder.Read("ImageProcessing/Progressive.jpg"), 291).Intervals.Length is 6
@@ -37,7 +39,8 @@ Intervals List(Numbers)
 	intervals
 Unit JpegUnit
 	Gray.Unit.band is (0, 63, 0, 0)
-	JpegUnit(Inflate(List(Number)), Codes(0), Codes(16), Band)
+	constant AcClass = 16
+	JpegUnit(Inflate(List(Number)), Codes(0), Codes(AcClass), Band)
 Order Numbers
 	Colored.Order is (0, 1, 2, 3, 4, 5)
 	JpegScan(JpegDecoder.Read("ImageProcessing/Progressive.jpg"), 291).Order is (0, 1, 6, 7, 12, 13, 2, 3, 8, 9, 14, 15)

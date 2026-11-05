@@ -2,29 +2,43 @@ has seconds = 0
 constant Moment = Time(1700000000)
 constant Units = ("year", "month", "day", "hour", "minute", "second")
 constant Sizes = (31536000, 2592000, 86400, 3600, 60, 1)
+constant DaysPerYear = 365
+constant YearsPerEra = 400
+constant DaysPerEra = 146097
+constant DaysBeforeEpoch = 719468
+constant FourYearDays = 1460
+constant CenturyDays = 36524
+constant MarchToJulyDays = 153
+constant ClockLength = 19
+constant HourStart = 11
+constant MinuteStart = 14
+constant SecondStart = 17
 Now Number
 	Time.Now > 1.7e9
 	0
 Day Number
 	Time.Day > 20000
-	(Now / 86400).Floor
+	(Now / Duration.Day.seconds).Floor
 Date Numbers
 	Moment.Date is (2023, 11, 14)
 	Time(0).Date is (1970, 1, 1)
 	Time(951782400).Date is (2000, 2, 29)
-	let shifted = (seconds / 86400).Floor + 719468
-	let era = (shifted / 146097).Floor
-	let dayOfEra = shifted - era * 146097
-	let corrected = dayOfEra - (dayOfEra / 1460).Floor + (dayOfEra / 36524).Floor - (dayOfEra / 146096).Floor
-	let yearOfEra = (corrected / 365).Floor
-	let dayOfYear = dayOfEra - (365 * yearOfEra + (yearOfEra / 4).Floor - (yearOfEra / 100).Floor)
-	let monthIndex = ((5 * dayOfYear + 2) / 153).Floor
+	let shifted = (seconds / Duration.Day.seconds).Floor + DaysBeforeEpoch
+	let era = (shifted / DaysPerEra).Floor
+	let dayOfEra = shifted - era * DaysPerEra
+	let leapDays = (dayOfEra / FourYearDays).Floor - (dayOfEra / CenturyDays).Floor + (dayOfEra / (DaysPerEra - 1)).Floor
+	let yearOfEra = ((dayOfEra - leapDays) / DaysPerYear).Floor
+	let dayOfYear = dayOfEra - (DaysPerYear * yearOfEra + (yearOfEra / 4).Floor - (yearOfEra / 100).Floor)
+	let monthIndex = ((5 * dayOfYear + 2) / MarchToJulyDays).Floor
 	let month = monthIndex < 10 then monthIndex + 3 else monthIndex - 9
-	(yearOfEra + era * 400 + (month <= 2 then 1 else 0), month, dayOfYear - ((153 * monthIndex + 2) / 5).Floor + 1)
+	(yearOfEra + era * YearsPerEra + (month <= 2 then 1 else 0), month, dayOfYear - MonthStart(monthIndex) + 1)
 Clock Numbers
 	Moment.Clock is (22, 13, 20)
-	let ofDay = seconds - (seconds / 86400).Floor * 86400
-	((ofDay / 3600).Floor, ((ofDay % 3600) / 60).Floor, ofDay % 60)
+	let day = Duration.Day.seconds
+	let hour = Duration.Hour.seconds
+	let minute = Duration.Minute.seconds
+	let ofDay = seconds - (seconds / day).Floor * day
+	((ofDay / hour).Floor, ((ofDay % hour) / minute).Floor, ofDay % minute)
 IsoDate Text
 	Moment.IsoDate is "2023-11-14"
 	let date = Date
@@ -51,19 +65,24 @@ Parse(text Text) Time
 	if (text.Length < 10) or (text.Substring(4, 1) is not "-") or (text.Substring(7, 1) is not "-")
 		return Error("InvalidTime")
 	let date = Days(text.Substring(0, 4) to Number, text.Substring(5, 2) to Number, text.Substring(8, 2) to Number)
-	let hasClock = text.Length >= 19
-	let hours = hasClock then text.Substring(11, 2) to Number else 0
-	let minutes = hasClock then text.Substring(14, 2) to Number else 0
-	Time(date * 86400 + hours * 3600 + minutes * 60 + (hasClock then text.Substring(17, 2) to Number else 0))
+	let hasClock = text.Length >= ClockLength
+	let hours = hasClock then text.Substring(HourStart, 2) to Number else 0
+	let minutes = hasClock then text.Substring(MinuteStart, 2) to Number else 0
+	let clock = hours * Duration.Hour.seconds + minutes * Duration.Minute.seconds
+	Time(date * Duration.Day.seconds + clock + (hasClock then text.Substring(SecondStart, 2) to Number else 0))
 Days(year Number, month Number, day Number) Number
 	Moment.Days(2023, 11, 14) is 19675
 	Moment.Days(1970, 1, 1) is 0
 	let shiftedYear = month <= 2 then year - 1 else year
-	let era = (shiftedYear / 400).Floor
-	let yearOfEra = shiftedYear - era * 400
-	let dayOfYear = ((153 * (month > 2 then month - 3 else month + 9) + 2) / 5).Floor + day - 1
-	let dayOfEra = yearOfEra * 365 + (yearOfEra / 4).Floor - (yearOfEra / 100).Floor + dayOfYear
-	era * 146097 + dayOfEra - 719468
+	let era = (shiftedYear / YearsPerEra).Floor
+	let yearOfEra = shiftedYear - era * YearsPerEra
+	let dayOfYear = MonthStart(month > 2 then month - 3 else month + 9) + day - 1
+	let dayOfEra = yearOfEra * DaysPerYear + (yearOfEra / 4).Floor - (yearOfEra / 100).Floor + dayOfYear
+	era * DaysPerEra + dayOfEra - DaysBeforeEpoch
+MonthStart(monthIndex Number) Number
+	Moment.MonthStart(0) is 0
+	Moment.MonthStart(11) is 337
+	((MarchToJulyDays * monthIndex + 2) / 5).Floor
 RoundUp(step Number) Time
 	Time(61).RoundUp(60) is Time(120)
 	Time(120).RoundUp(60) is Time(120)

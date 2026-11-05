@@ -1,6 +1,13 @@
 has bytes Numbers
 constant ImageData = 1229209940
 constant Palette = 1347179589
+constant ByteValues = 256
+constant KindOffset = 25
+constant DepthOffset = 24
+constant RedWeight = 299
+constant GreenWeight = 587
+constant BlueWeight = 114
+constant WeightScale = 255000
 constant GraySample = Png((137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 3, 0, 0, 0, 2, 8, 0, 0, 0, 0, 184, 31, 57, 198, 0, 0, 0, 16, 73, 68, 65, 84, 120, 218, 99, 228, 226, 226, 98, 145, 19, 145, 3, 0, 1, 116, 0, 116, 205, 241, 126, 133, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130))
 constant PaletteSample = Png((137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 4, 0, 0, 0, 2, 1, 3, 0, 0, 0, 69, 102, 239, 32, 0, 0, 0, 6, 80, 76, 84, 69, 0, 0, 0, 255, 255, 255, 165, 217, 159, 221, 0, 0, 0, 12, 73, 68, 65, 84, 120, 218, 99, 72, 96, 152, 0, 0, 1, 180, 0, 241, 102, 13, 212, 149, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130))
 constant Rgb = Png((0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 2, 8, 2))
@@ -12,29 +19,33 @@ Read(path Text) Png
 	Png(File(path).ReadBytes)
 Width Number
 	GraySample.Width is 3
-	Number32(16)
+	constant WidthOffset = 16
+	Number32(WidthOffset)
 Height Number
 	GraySample.Height is 2
-	Number32(20)
+	constant HeightOffset = 20
+	Number32(HeightOffset)
 Channels Number
 	GraySample.Channels is 1
 	(Rgb.Channels is 3) and (Rgba.Channels is 4) and (GrayAlpha16.Channels is 2)
-	let kind = bytes(25)
+	let kind = bytes(KindOffset)
 	kind is 2 then 3 else kind is 4 then 2 else kind is 6 then 4 else 1
 Stride Number
 	PaletteSample.Stride is 1
 	Rgb.Stride is 6
-	((Width * Channels * bytes(24) + 7) / 8).Floor
+	((Width * Channels * bytes(DepthOffset) + 7) / 8).Floor
 Step Number
 	GraySample.Step is 1
 	Rgb.Step is 3
-	let bytesPerPixel = (Channels * bytes(24) / 8).Floor
+	let bytesPerPixel = (Channels * bytes(DepthOffset) / 8).Floor
 	bytesPerPixel < 1 then 1 else bytesPerPixel
 Number32(position Number) Number
 	GraySample.Number32(8) is 13
-	((bytes(position) * 256 + bytes(position + 1)) * 256 + bytes(position + 2)) * 256 + bytes(position + 3)
+	let high = bytes(position) * ByteValues + bytes(position + 1)
+	(high * ByteValues + bytes(position + 2)) * ByteValues + bytes(position + 3)
 Chunk(type Number) Numbers
 	PaletteSample.Chunk(Palette) is (0, 0, 0, 255, 255, 255)
+	constant ChunkOverhead = 12
 	mutable data = List(Mutable(Number))
 	mutable position = 8
 	for bytes.Length
@@ -42,7 +53,7 @@ Chunk(type Number) Numbers
 			return data
 		if Number32(position + 4) is type
 			data = data + Inflate.Part(bytes, position + 8, Number32(position))
-		position = position + 12 + Number32(position)
+		position = position + ChunkOverhead + Number32(position)
 	data
 Raw Numbers
 	GraySample.Raw.Length is 8
@@ -65,12 +76,12 @@ Filtered(kind Number, filtered Number, left Number, up Number, corner Number) Nu
 	GraySample.Filtered(4, 5, 10, 20, 15) is 20
 	(GraySample.Filtered(2, 5, 10, 30, 15) is 35) and (GraySample.Filtered(3, 5, 10, 30, 15) is 25)
 	if kind is 1
-		return (filtered + left) % 256
+		return (filtered + left) % ByteValues
 	if kind is 2
-		return (filtered + up) % 256
+		return (filtered + up) % ByteValues
 	if kind is 3
-		return (filtered + ((left + up) / 2).Floor) % 256
-	kind is 4 then (filtered + Paeth(left, up, corner)) % 256 else filtered
+		return (filtered + ((left + up) / 2).Floor) % ByteValues
+	kind is 4 then (filtered + Paeth(left, up, corner)) % ByteValues else filtered
 Paeth(left Number, up Number, corner Number) Number
 	GraySample.Paeth(10, 20, 15) is 15
 	GraySample.Unfiltered((0, 5, 9, 0, 4, 252, 0, 0)) is (5, 9, 0, 1, 5, 0)
@@ -83,7 +94,7 @@ Samples(lines Numbers) Numbers
 	PaletteSample.Samples((96, 144)) is (0, 1, 1, 0, 1, 0, 0, 1)
 	Rgb.Samples((1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)) is (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
 	GrayAlpha16.Samples((200, 100, 50, 25)) is (200, 50)
-	let depth = bytes(24)
+	let depth = bytes(DepthOffset)
 	let perRow = Width * Channels
 	let levels = 2 ^ depth
 	for Height * perRow
@@ -97,6 +108,9 @@ Grays Numbers
 	let palette = Chunk(Palette)
 	for Width * Height
 		Gray(samples, palette, index)
+Luma(red Number, green Number, blue Number) Number
+	Rgb.Luma(10, 20, 30) is 18150 / 255000
+	(red * RedWeight + green * GreenWeight + blue * BlueWeight) / WeightScale
 Gray(samples Numbers, palette Numbers, pixel Number) Number
 	GraySample.Gray(List(Number) + 255, List(Number), 0) is 1
 	Rgba.Gray((0, 0, 0, 0, 10, 20, 30, 40), List(Number), 1) is 18150 / 255000
@@ -104,8 +118,8 @@ Gray(samples Numbers, palette Numbers, pixel Number) Number
 	(Gray2.Gray((3, 0), List(Number), 0) is 1) and (PaletteSample.Gray((1, 0), (0, 0, 0, 255, 0, 0), 0) is 76245 / 255000)
 	let channels = Channels
 	let first = samples(pixel * channels)
-	if bytes(25) is 3
-		return (palette(first * 3) * 299 + palette(first * 3 + 1) * 587 + palette(first * 3 + 2) * 114) / 255000
-	if (bytes(25) is 2) or (bytes(25) is 6)
-		return (first * 299 + samples(pixel * channels + 1) * 587 + samples(pixel * channels + 2) * 114) / 255000
-	first / (bytes(24) >= 8 then 255 else 2 ^ bytes(24) - 1)
+	if bytes(KindOffset) is 3
+		return Luma(palette(first * 3), palette(first * 3 + 1), palette(first * 3 + 2))
+	if (bytes(KindOffset) is 2) or (bytes(KindOffset) is 6)
+		return Luma(first, samples(pixel * channels + 1), samples(pixel * channels + 2))
+	first / (bytes(DepthOffset) >= 8 then Color.Limit else 2 ^ bytes(DepthOffset) - 1)

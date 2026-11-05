@@ -36,7 +36,7 @@ Spectral(state JpegState, component Number, start Number) JpegState
 	if state.run > 0
 		return Corrected(state.Advanced(state.position, state.run - 1).At(start), band(1) + 1)
 	mutable current = state.At(start)
-	for 64
+	for Idct.BlockSize
 		if current.next > band(1)
 			return current
 		current = Symbolized(current, component)
@@ -44,11 +44,12 @@ Spectral(state JpegState, component Number, start Number) JpegState
 Symbolized(state JpegState, component Number) JpegState
 	Gray.Symbolized(Gray.Predicted(Begin, 0).At(1), 0).coefficients(1) is -273
 	Gray.Symbolized(Gray.Predicted(Begin, 0).At(1), 0).position is 18
+	constant ZeroRunLength = 15
 	let symbol = acCodes(component).Decoded(stream, state.position)
-	let zeros = (symbol.number / 16).Floor
-	let size = symbol.number % 16
+	let zeros = (symbol.number / JpegDecoder.Nibble).Floor
+	let size = symbol.number % JpegDecoder.Nibble
 	let position = state.position + symbol.bits
-	if (size is 0) and (zeros < 15)
+	if (size is 0) and (zeros < ZeroRunLength)
 		return Corrected(state.Advanced(position + zeros, Run(position, zeros)), band(1) + 1)
 	let number = band(2) is 0 then Extended(Received(position, size), size) else size * (stream.Bit(position) * 2 - 1)
 	let target = Target(state.coefficients, state.next, zeros)

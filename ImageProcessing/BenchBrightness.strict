@@ -2,5 +2,5 @@ has logger
 Run
 	constant width = 1280 / 4
 	constant height = 720 / 4
-	let image = AdjustBrightness(0.25).Process(Image.Blank(Size(width, height)))
+	let image = AdjustBrightness(AdjustBrightness.Increase).Process(Image.Blank(Size(width, height)))
 	logger.Log("Brightness adjustment successful: " + image.Colors(width / 2, height / 2))

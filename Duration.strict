@@ -7,13 +7,13 @@ Milliseconds Number
 	seconds * 1000
 Minutes Number
 	Duration(90).Minutes is 1.5
-	seconds / 60
+	seconds / Minute.seconds
 Hours Number
 	Day.Hours is 24
-	seconds / 3600
+	seconds / Hour.seconds
 Days Number
 	Duration(43200).Days is 0.5
-	seconds / 86400
+	seconds / Day.seconds
 +(other Duration) Duration
 	Minute + Hour is Duration(3660)
 	Duration(seconds + other.seconds)

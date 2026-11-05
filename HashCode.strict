@@ -1,4 +1,6 @@
 has number
+constant Multiplier = 31
+constant UnsignedRange = 4294967296
 from(generic)
 	HashCode(5) is 5
 	HashCode("abc") is 96354
@@ -14,5 +16,5 @@ Combined(elements Generic) Number
 	HashCode((1, 2)).Combined((3, 4)) is 97
 	mutable hash = 0
 	for elements
-		hash = (hash * 31 + HashCode(value).number) % 4294967296
+		hash = (hash * Multiplier + HashCode(value).number) % UnsignedRange
 	hash

@@ -3,6 +3,12 @@ constant Epsilon = 0.00001
 constant E = 2.718281828459045
 constant Pi = 3.141592653589793
 constant Phi = 1.618033988749895
+constant ExactCountLimit = 2251799813685248
+constant RelativeTolerance = 0.0000000000000002
+constant IntegerBits = 53
+constant DoubleBits = 64
+constant SingleBits = 32
+constant SingleMantissaBits = 23
 Code Text
 	5.Code is "5"
 	2.5.Code is "2.5"
@@ -61,9 +67,9 @@ Counted(rounding Text) Number
 	12.1.Counted("Ceiling") is 13
 	12.999999999999998.Counted("Floor") is 13
 	1234567812345678.Counted("Even") is 1234567812345678
-	if Absolute > 2251799813685248
+	if Absolute > ExactCountLimit
 		return Error("DecimalOverflow")
-	let tolerance = Absolute * 0.0000000000000002 + 0.000000001
+	let tolerance = Absolute * RelativeTolerance + 0.000000001
 	let floor = (value + tolerance).Floor
 	let fraction = value - floor
 	let isEvenUp = (fraction > 0.5 + tolerance) or ((fraction - 0.5).Absolute <= tolerance) and ((floor % 2).Absolute is 1)
@@ -156,14 +162,14 @@ is(other) Boolean
 and(other) Number
 	(12 and 10) is 8
 	(-1 and 255) is 255
-	let left = value < 0 then value + 2 ^ 53 else value
-	let right = other < 0 then other + 2 ^ 53 else other
+	let left = value < 0 then value + 2 ^ IntegerBits else value
+	let right = other < 0 then other + 2 ^ IntegerBits else other
 	mutable result = 0
-	for 53
+	for IntegerBits
 		let bit = 2 ^ index
 		if ((left / bit).Floor % 2 is 1) and ((right / bit).Floor % 2 is 1)
 			result = result + bit
-	result >= 2 ^ 52 then result - 2 ^ 53 else result
+	result >= 2 ^ (IntegerBits - 1) then result - 2 ^ IntegerBits else result
 or(other) Number
 	(12 or 10) is 14
 	value + other - (value and other)
@@ -206,7 +212,7 @@ Logarithm Number
 	value
 Bits Number
 	5.Bits is 64
-	64
+	DoubleBits
 Rounded(bits Number) Number
 	0.1.Rounded(32) is 0.10000000149011612
 	0.1.Rounded(64) is 0.1
@@ -214,9 +220,9 @@ Rounded(bits Number) Number
 	16777217.Rounded(32) is 16777216
 	-0.1.Rounded(32) is -0.10000000149011612
 	3.Rounded(32) is 3
-	if (bits is not 32) or (IsFinite is false) or (value is 0)
+	if (bits is not SingleBits) or (IsFinite is false) or (value is 0)
 		return value
-	let step = 2 ^ ((Absolute.Logarithm / 2.Logarithm).Floor - 23)
+	let step = 2 ^ ((Absolute.Logarithm / 2.Logarithm).Floor - SingleMantissaBits)
 	(value / step).Counted("Even") * step
 Random Number
 	10.Random < 10

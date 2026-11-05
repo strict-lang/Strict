@@ -1,6 +1,8 @@
 has values Numbers with Length is 16 and value.Bits is 32
 constant Identity = Matrix((1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1))
 constant Moved = Translation(Vector3(1, 2, 3))
+constant Cells = 16
+constant LastColumn = 12
 constant Counting = Matrix((1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16))
 Translation(offset Vector3) Matrix
 	Matrix.Translation(Vector3(1, 2, 3)).Transformed(Vector3.Zero) is Vector3(1, 2, 3)
@@ -25,17 +27,17 @@ RotationZ(angle Degrees) Matrix
 	Matrix(Product(other))
 Product(other Matrix) Numbers
 	Identity.Product(Identity) is Identity.values
-	for 16
+	for Cells
 		Cell(index % 4, (index / 4).Floor, other)
 Cell(row Number, column Number, other Matrix) Number
 	Identity.Cell(1, 1, Identity) is 1
 	Counting.Cell(1, 2, Counting) is 356
 	let first = values(row) * other.values(column * 4) + values(4 + row) * other.values(column * 4 + 1)
-	first + values(8 + row) * other.values(column * 4 + 2) + values(12 + row) * other.values(column * 4 + 3)
+	first + values(8 + row) * other.values(column * 4 + 2) + values(LastColumn + row) * other.values(column * 4 + 3)
 Clip(point Vector3) Numbers
 	Moved.Clip(Vector3.One) is (2, 3, 4, 1)
 	for 4
-		values(index) * point.X + values(4 + index) * point.Y + values(8 + index) * point.Z + values(12 + index)
+		values(index) * point.X + values(4 + index) * point.Y + values(8 + index) * point.Z + values(LastColumn + index)
 Transformed(point Vector3) Vector3
 	Moved.Transformed(Vector3.One) is Vector3(2, 3, 4)
 	let clip = Clip(point)

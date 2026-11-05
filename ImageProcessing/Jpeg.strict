@@ -6,6 +6,9 @@ constant Scan = 218
 constant Tables = 219
 constant Codes = 196
 constant Restart = 221
+constant EndOfImage = 217
+constant Marker = 255
+constant Lengths = 16
 constant Gap = Jpeg((255, 216, 255, 196, 0, 2, 7, 255, 196, 0, 2))
 constant Ended = Jpeg((255, 216, 255, 196, 0, 2, 255, 217, 0, 2, 255, 196, 0, 2))
 Read(path Text) Jpeg
@@ -20,7 +23,7 @@ Height Number
 Number16(position Number) Number
 	Gray.Number16(4) is 16
 	Gray.Number16(0) is 65496
-	bytes(position) * 256 + bytes(position + 1)
+	bytes(position) * Png.ByteValues + bytes(position + 1)
 Segment(marker Number) Number
 	Gray.Segment(Scan) is 151
 	Gray.Segment(Restart) is -1
@@ -33,7 +36,7 @@ Segments(marker Number) Numbers
 	mutable found = List(Mutable(Number))
 	mutable position = 2
 	for bytes.Length
-		if (position + 3 >= bytes.Length) or (bytes(position + 1) is 217)
+		if (position + 3 >= bytes.Length) or (bytes(position + 1) is EndOfImage)
 			return found
 		if Kind(position) is marker
 			found.Add(position)
@@ -43,18 +46,21 @@ Segments(marker Number) Numbers
 Kind(position Number) Number
 	Gray.Kind(89) is Frame
 	Jpeg.Read("ImageProcessing/Progressive.jpg").Kind(158) is Frame
-	bytes(position + 1) is in (193, 194) then Frame else bytes(position + 1)
+	constant ProgressiveFrames = (193, 194)
+	bytes(position + 1) is in ProgressiveFrames then Frame else bytes(position + 1)
 Skipped(start Number) Number
 	Gray.Skipped(161) is 167
 	Jpeg((255, 0, 255, 208, 255, 217)).Skipped(0) is 4
 	for Range(start, bytes.Length - 1)
-		if (bytes(value) is 255) and (bytes(value + 1) is not 0) and (IsRestart(value) is false)
+		if (bytes(value) is Marker) and (bytes(value + 1) is not 0) and (IsRestart(value) is false)
 			return value
 	bytes.Length
 IsRestart(position Number) Boolean
 	Gray.IsRestart(167) is false
 	Jpeg((255, 208)).IsRestart(0)
-	(bytes(position + 1) >= 208) and (bytes(position + 1) <= 215)
+	constant FirstRestart = 208
+	constant LastRestart = 215
+	(bytes(position + 1) >= FirstRestart) and (bytes(position + 1) <= LastRestart)
 Entry(segment Number, info Number, isCodes Boolean) Number
 	Gray.Entry(124, 16, true) is 128
 	(Colored.Entry(89, 1, false) is 93) and (Colored.Entry(24, 1, false) is 93)
@@ -66,7 +72,7 @@ Entry(segment Number, info Number, isCodes Boolean) Number
 			return -1
 		if bytes(position) is info
 			return position
-		position = position + 1 + (isCodes then 16 + Inflate.Part(bytes, position + 1, 16).Sum else 64)
+		position = position + 1 + (isCodes then Lengths + Inflate.Part(bytes, position + 1, Lengths).Sum else Idct.BlockSize)
 	-1
 Quantization(id Number) Numbers
 	Colored.Quantization(1).Last is 20
@@ -75,7 +81,7 @@ Quantization(id Number) Numbers
 	for Segments(Tables)
 		let position = Entry(value, id, false)
 		if position >= 0
-			return Inflate.Part(bytes, position + 1, 64)
+			return Inflate.Part(bytes, position + 1, Idct.BlockSize)
 	List(Number)
 Huffmans(info Number, scan Number) Huffman
 	Gray.Huffmans(16, 151).symbols is (0, 6, 9, 34, 53, 82)
@@ -86,8 +92,8 @@ Huffmans(info Number, scan Number) Huffman
 	for Segments(Codes)
 		let position = Entry(value, info, true)
 		if (value < scan) and (position >= 0)
-			let counts = Inflate.Part(bytes, position + 1, 16)
-			found = Huffman(List(Number) + 0 + counts, Inflate.Part(bytes, position + 17, counts.Sum))
+			let counts = Inflate.Part(bytes, position + 1, Lengths)
+			found = Huffman(List(Number) + 0 + counts, Inflate.Part(bytes, position + 1 + Lengths, counts.Sum))
 	found
 Interval(scan Number) Number
 	Gray.Interval(151) is 0
@@ -105,11 +111,11 @@ Unstuffed(start Number) Inflation
 	mutable output = List(Mutable(Number))
 	mutable position = start
 	for bytes.Length - start
-		let next = position + 1 < bytes.Length then bytes(position + 1) else 217
-		if (bytes(position) is 255) and (next is not 0)
+		let next = position + 1 < bytes.Length then bytes(position + 1) else EndOfImage
+		if (bytes(position) is Marker) and (next is not 0)
 			return Inflation(output, position)
 		output.Add(Reversed(bytes(position)))
-		position = position + (bytes(position) is 255 then 2 else 1)
+		position = position + (bytes(position) is Marker then 2 else 1)
 	Inflation(output, bytes.Length - 2)
 Reversed(byte Number) Number
 	Gray.Reversed(1) is 128

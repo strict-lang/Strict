@@ -26,7 +26,7 @@ Sample(component Number, column Number, row Number) Number
 Grays Numbers
 	Gray.Grays.First is 1 / 255
 	for Plane(0)
-		value / 255
+		value / Color.Limit
 Colors Slow(List(ColorValue))
 	Gray.Colors.First is ColorValue(1 / 255, 1 / 255, 1 / 255)
 	Colored.Colors.Last.Red > 0.9
@@ -35,11 +35,16 @@ Colors Slow(List(ColorValue))
 	let blue = isGray then luma else Plane(1)
 	let red = isGray then luma else Plane(2)
 	for luma
-		isGray then Converted(value, 0, 0) else Converted(value, blue(index) - 128, red(index) - 128)
+		isGray then Converted(value, 0, 0) else Converted(value, blue(index) - Idct.LevelShift, red(index) - Idct.LevelShift)
 Converted(luma Number, blue Number, red Number) ColorValue
 	Colored.Converted(128, 0, 0) is ColorValue(128 / 255, 128 / 255, 128 / 255)
-	ColorValue(Clamped(luma + 1.402 * red), Clamped(luma - 0.344136 * blue - 0.714136 * red), Clamped(luma + 1.772 * blue))
+	constant RedFromCr = 1.402
+	constant GreenFromCb = 0.344136
+	constant GreenFromCr = 0.714136
+	constant BlueFromCb = 1.772
+	let green = luma - GreenFromCb * blue - GreenFromCr * red
+	ColorValue(Clamped(luma + RedFromCr * red), Clamped(green), Clamped(luma + BlueFromCb * blue))
 Clamped(component Number) Number
 	Colored.Clamped(300) is 1
 	Colored.Clamped(-5) is 0
-	component < 0 then 0 else component > 255 then 1 else component / 255
+	component < 0 then 0 else component > Color.Limit then 1 else component / Color.Limit

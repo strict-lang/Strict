@@ -30,8 +30,9 @@ Message(command Text, rest Texts) Text
 	Strict.Message("test", ("a.strict", ".")) is "a.strict not found"
 	Strict.Message("test", ("Compiler", ".")) is ""
 	Strict.Message("check", ("Compiler", ".")) is ""
+	constant DateAndMinuteLength = 16
 	if command is in ("version", "--version")
-		return Version + " " + Process.Current.Built.Substring(0, 16)
+		return Version + " " + Process.Current.Built.Substring(0, DateAndMinuteLength)
 	if (command is in Informing) or (rest.Length < 2)
 		return Text.Combine(Help, "\n")
 	let isFolder = (command is "test") and Directory.Exists(rest(0))

@@ -1,4 +1,5 @@
 has executable Text
+constant NotFoundExitCode = 127
 Find(name Text) Process
 	Process(name)
 IsAvailable Boolean
@@ -15,7 +16,7 @@ Started(arguments Text) Number
 RunTool(name Text, arguments Text) ProcessResult
 	let tool = Find(name)
 	if not tool.IsAvailable
-		return ProcessResult(127, "", "tool not found: " + name)
+		return ProcessResult(NotFoundExitCode, "", "tool not found: " + name)
 	tool.Run(arguments)
 RunTools(name Text, arguments Texts) List(ProcessResult)
 	Process.RunTools("missingStrictTool", ("a", "b")).Length is 2

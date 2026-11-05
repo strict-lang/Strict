@@ -40,7 +40,8 @@ Normalized(head Number, tail Number) DoubleDouble
 Split(number Number) DoubleDouble
 	Split(1.00000001).low > 0
 	Split(134217729) is DoubleDouble(134217728, 1)
-	let scaled = 134217729 * number
+	constant SplitFactor = 134217729
+	let scaled = SplitFactor * number
 	let head = scaled - (scaled - number)
 	DoubleDouble(head, number - head)
 Whole Number
@@ -88,5 +89,7 @@ Fraction(digits Text) DoubleDouble
 	for (digits.Length / 8).Ceiling
 		let length = (digits.Length - index * 8).Clamp(0, 8)
 		scaled = scaled * DoubleDouble(10 ^ length) + DoubleDouble(digits.Substring(index * 8, length) to Number)
-	let power = DoubleDouble(10 ^ digits.Length.Clamp(0, 22)) * DoubleDouble(10 ^ (digits.Length - 22).Clamp(0, 22))
+	constant ExactExponent = 22
+	let rest = (digits.Length - ExactExponent).Clamp(0, ExactExponent)
+	let power = DoubleDouble(10 ^ digits.Length.Clamp(0, ExactExponent)) * DoubleDouble(10 ^ rest)
 	scaled / power

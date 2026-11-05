@@ -4,11 +4,13 @@ has samplings Numbers
 has tables List(Numbers)
 constant Gray = JpegDecoder.From(Jpeg.Gray)
 constant Colored = JpegDecoder.From(Jpeg.Colored)
+constant Nibble = 16
 From(image Jpeg) JpegDecoder
 	JpegDecoder.From(Jpeg.Gray).plan is List(Number) + 0
 	JpegDecoder.From(Jpeg.Colored).samplings is (34, 17, 17)
+	constant SamplingOffset = 11
 	let count = image.bytes(image.Segment(Jpeg.Frame) + 9)
-	let factors = Component(image, count, 11)
+	let factors = Component(image, count, SamplingOffset)
 	JpegDecoder(image, Plan(factors), factors, Quantizations(image, count))
 Read(path Text) JpegDecoder
 	JpegDecoder.Read("ImageProcessing/Progressive.jpg").samplings is (34, 17, 17)
@@ -22,18 +24,19 @@ Plan(factors Numbers) Numbers
 	mutable order = List(Mutable(Number))
 	for factors
 		let component = index
-		for (value / 16).Floor * (value % 16)
+		for (value / Nibble).Floor * (value % Nibble)
 			order.Add(component)
 	order
 Quantizations(image Jpeg, count Number) List(Numbers)
 	JpegDecoder.Quantizations(Jpeg.Colored, 3).Last.Last is 20
-	for Component(image, count, 12)
+	constant TableOffset = 12
+	for Component(image, count, TableOffset)
 		image.Quantization(value)
 Factor(component Number, isHorizontal Boolean) Number
 	Colored.Factor(0, true) is 2
 	Colored.Factor(1, false) is 1
 	let sampling = samplings(component)
-	isHorizontal then (sampling / 16).Floor else sampling % 16
+	isHorizontal then (sampling / Nibble).Floor else sampling % Nibble
 Factors(isHorizontal Boolean) Numbers
 	Colored.Factors(true) is (2, 1, 1)
 	for samplings

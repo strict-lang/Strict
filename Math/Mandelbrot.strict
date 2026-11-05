@@ -1,3 +1,7 @@
+constant CardioidCenter = 0.25
+constant CardioidFactor = 0.25
+constant BulbRadiusSquared = 0.0625
+constant RoundingGrowth = 1.000000000000001
 Escape(real Number, imaginary Number, limit Number) Number
 	Escape(0, 0, 64) is 0
 	Escape(-1, 0, 64) is 0
@@ -17,10 +21,10 @@ Interior(real Number, imaginary Number) Boolean
 	Interior(0, 0.5) and Interior(-1.1, 0)
 	(Interior(0.4, 0.1) or Interior(0.25, 0) or Interior(-1, 0.3)) is false
 	let vertical = imaginary * imaginary
-	let shifted = real - 0.25
+	let shifted = real - CardioidCenter
 	let radius = shifted * shifted + vertical
-	let cardioid = radius * (radius + shifted) < 0.25 * vertical - 0.00000000000001
-	cardioid or (real + 1) * (real + 1) + vertical < 0.0625 - 0.00000000000001
+	let cardioid = radius * (radius + shifted) < CardioidFactor * vertical - 0.00000000000001
+	cardioid or (real + 1) * (real + 1) + vertical < BulbRadiusSquared - 0.00000000000001
 Iterated(real Number, imaginary Number, limit Number) Number
 	mutable horizontal = 0
 	mutable vertical = 0
@@ -63,16 +67,16 @@ DiskEnclosed(orbit List(Complex), radius Number, limit Number) Boolean
 	for limit
 		error = DiskError(orbit, index, offset, error)
 		offset = orbit(index) * offset * 2 + Complex(radius, 0)
-		if orbit(index + 1).Length + 0.000000000000001 + offset.Length * 1.000000000000001 + error >= 2
+		if orbit(index + 1).Length + 0.000000000000001 + offset.Length * RoundingGrowth + error >= 2
 			return false
 	true
 DiskError(orbit List(Complex), position Number, offset Complex, previous Number) Number
 	DiskError((Complex.Zero), 0, Complex(1, 0), 0) > 1.000000000000003
 	(DiskError((Complex.Zero), 0, Complex.Zero, 0) > 0) and (DiskError((Complex.Zero), 0, Complex.Zero, 1) > 1)
-	let bound = offset.Length * 1.000000000000001
+	let bound = offset.Length * RoundingGrowth
 	let factor = 2 * (orbit(position).Length + 0.000000000000001) + 2 * bound + previous
 	let error = factor * previous + bound * bound
-	error * 1.000000000000001 + bound * 0.000000000000001 + 0.00000000000000000000000000001
+	error * RoundingGrowth + bound * 0.000000000000001 + 0.00000000000000000000000000001
 Beyond(squared DoubleDouble) Boolean
 	Beyond(DoubleDouble(4, 0.000000000000000000000000000001))
 	Beyond(DoubleDouble(4, -0.000000000000000000000000000001)) is false
