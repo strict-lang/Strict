@@ -15,16 +15,21 @@ CheckFile(path Text) Number
 	mismatches
 CheckBody(lines Texts, start Number, path Text) Number
 	CheckBody(("Run", "\tif a + b * c", "\t\tlet x = (1, 2)"), 1, "test") is 0
+	CheckBody(("Run", "\tlet x=(1,2)"), 1, "test") is 1
 	mutable mismatches = 0
 	for BodyParser(lines).Block(start, 1).Lines("\t")
-		if value is not lines(start + index)
-			logger.Log(path + ": " + lines(start + index) + " => " + value)
+		let original = lines(start + index)
+		if value is not original
+			logger.Log(Mismatch(path, original, value))
 			mismatches = mismatches + 1
 	mismatches
+Mismatch(path Text, line Text, formatted Text) Text
+	RoundTrip.Mismatch("a", "b", "c") is "a: b => c"
+	path + ": " + line + " => " + formatted
 Formatted(lines Texts) Texts
 	RoundTrip.Formatted(("Run", "	let x=(1,2)")) is ("Run", "	let x = (1, 2)")
 	RoundTrip.Formatted(("has number ", "Twice Number", "	number*2")) is ("has number", "Twice Number", "	number * 2")
-	RoundTrip.Formatted(("Run", "\t1", "")) is ("Run", "\t1")
+	(RoundTrip.Formatted(("Run", "\t1", "")) is ("Run", "\t1")) and (RoundTrip.Formatted(("has x", "\t1")) is ("has x"))
 	let shape = TypeShape(lines)
 	let end = Ended(lines)
 	mutable formatted = List(Mutable(Text))
@@ -44,6 +49,7 @@ Ended(lines Texts) Number
 Body(lines Texts, start Number) Slow(Texts)
 	RoundTrip.Body(("Run", "\t(1,2)"), 1) is ("\t(1, 2)")
 	RoundTrip.Body(("Run", Packed), 1) is (Packed)
+	RoundTrip.Body(("Run", "\t1", Packed), 1) is ("\t1", Packed)
 	for BodyParser(lines).Block(start, 1).Lines("	")
 		value.Length > Limits.MaxCharacters then lines(start + index) else value
 Tabbed(lines Texts) Texts
@@ -67,10 +73,12 @@ Indented(line Text) Text
 	RoundTrip.Indented("    a") is "\ta"
 	RoundTrip.Indented("\t      b") is "\t\t\tb"
 	RoundTrip.Indented("a  b") is "a  b"
+	RoundTrip.Indented("   a") is "\ta"
+	RoundTrip.Indented(" a") is "\ta"
 	if line.StartsWith("\t")
-		return "\t" + Indented(line.Substring(1, line.Length - 1))
+		return "\t" + Indented(line.Substring(1, line.Length))
 	if line.StartsWith(" ") is false
 		return line
 	let wide = line.StartsWith("    ") then 4 else (line.StartsWith("   ") then 3 else 2)
 	let spaces = line.StartsWith("  ") then wide else 1
-	"\t" + Indented(line.Substring(spaces, line.Length - spaces))
+	"\t" + Indented(line.Substring(spaces, line.Length))

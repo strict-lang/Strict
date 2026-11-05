@@ -3,6 +3,8 @@ has bodies Texts
 constant Copy = ("Halve(number Number) Number", "\tHalve(4) is 2", "\tlet half = number / 2", "\thalf < 0 then 0 - half else half")
 constant Looping = ("Next(number Number) Number", "\tnumber + 1", "Evolved(start Number) Number", "\tlet current = Next(start)", "\tcurrent + current + 1")
 constant Evolving = Duplicates(List(Text) + "B.Evolved", List(Text) + "let current = Next(start)\ncurrent + current + 1\n")
+constant Asserting = ("One Boolean", "\tOne", "\t1 is 1", "Two Boolean", "\tTwo", "\tlet two = 2", "\ttwo is 2", "\t2 is two")
+constant Incrementing = Duplicates(List(Text) + "A.Next", List(Text) + "number + 1\n")
 constant Copies = Duplicates(("A.Halve", "B.Half"), ("let half = number / 2\nhalf < 0 then 0 - half else half\n", "x"))
 Of(files Texts) Duplicates
 	Duplicates.Of(List(Text) + "Validators/ValidationIssue.strict").owners is ("ValidationIssue.to")
@@ -26,6 +28,8 @@ Issues(path Text, lines Texts) List(ValidationIssue)
 Other(typeName Text, lines Texts, header Number) Text
 	Copies.Other("B", Copy, 0) is "A.Halve"
 	Evolving.Other("A", Looping, 2) is ""
+	Copies.Other("A", Copy, 0) is ""
+	Incrementing.Other("B", Looping, 0) is ""
 	let owner = typeName + "." + Tokenizer(lines(header)).Tokens.First
 	let body = Implementation(lines, header)
 	if (body.Length < 40) or CallsOwn(lines, body)
@@ -37,12 +41,16 @@ Other(typeName Text, lines Texts, header Number) Text
 CallsOwn(lines Texts, body Text) Boolean
 	Copies.CallsOwn(Looping, "let current = Next(start)")
 	Copies.CallsOwn(Looping, "start + 1") is false
+	Copies.CallsOwn(("has number Number", "Run", "\t1"), "has(1)") is false
+	Copies.CallsOwn(Looping, "Next is start") is false
 	for lines
 		if TypeShape(lines).IsMethodHeader(value) and (body.IndexOf(Tokenizer(value).Tokens.First + "(") >= 0)
 			return true
 	false
 Implementation(lines Texts, header Number) Text
 	Copies.Implementation(Copy, 0) is "let half = number / 2\nhalf < 0 then 0 - half else half\n"
+	Copies.Implementation(Asserting, 0) is "1 is 1\n"
+	Copies.Implementation(Asserting, 3) is "let two = 2\ntwo is 2\n2 is two\n"
 	let last = FileCheck.LastLine(lines, header)
 	mutable result = ""
 	for Range(header + 1, last + 1)
@@ -53,6 +61,8 @@ IsTest(line Text) Boolean
 	Copies.IsTest("Halve(4) is 2")
 	Copies.IsTest("let half = number / 2") is false
 	Copies.IsTest("Default.Valid")
+	Copies.IsTest("number is 2") and Copies.IsTest("number < 2") and Copies.IsTest("number > 2")
+	(Copies.IsTest("number + 1") is false) and (Copies.IsTest("if number is 2") is false)
 	let first = Tokenizer(line).Tokens.First
 	let isStatement = first is in ("let", "mutable", "constant", "if", "for", "return", "else")
 	let isComparing = (line.IndexOf(" is ") > 0) or (line.IndexOf(" < ") > 0) or (line.IndexOf(" > ") > 0)
