@@ -4,10 +4,20 @@ constant Measured = TypeShape("has Width Number", "Area Number", "\tconstant Big
 IsMemberLine(line Text) Boolean
 	TypeShape("has a").IsMemberLine("mutable count Number")
 	TypeShape("has a").IsMemberLine("Run") is false
+	TypeShape("Result Number").ParameterScope.TypeOf(" trait") is "true"
+	TypeShape("has a").ParameterScope.TypeOf(" trait") is ""
+	TypeShape("has a").ParameterScope.TypeOf("has required") is ""
+	TypeShape("has a Number", "has items Generics").CallScope(List(Text)).TypeOf("from") is "a"
+	TypeShape("has Width Number", "Area = Vector2(Width).Length").UsedTypes is ("Vector2")
 	line.StartsWith("has ") or line.StartsWith("mutable ") or line.StartsWith("constant ")
 IsMethodHeader(line Text) Boolean
 	TypeShape("has a").IsMethodHeader("Run Number")
 	TypeShape("has a").IsMethodHeader("\tlogger.Log(1)") is false
+	TypeShape("has a").IsMethodHeader("") is false
+	TypeShape("Get Generic", "\tvalue").IsGenericLine(0) is false
+	TypeShape("Get Generic", "Run", "\t1").IsGenericLine(0)
+	TypeShape("Run").IsGenericLine(0) is false
+	TypeShape("constant Names = (\"Generic\")").IsGenericLine(0) is false
 	if (line is "") or line.StartsWith("\t")
 		return false
 	not IsMemberLine(line)
@@ -16,6 +26,7 @@ IsComputed(line Text) Boolean
 	TypeShape("has a").IsComputed("Next(add = 1) = add")
 	TypeShape("has a").IsComputed("Add(other) Number") is false
 	TypeShape("has a").IsComputed("constant Limit = 3") is false
+	TypeShape("has a").IsComputed("\tNext(add) = add") is false
 	if IsMethodHeader(line) is false
 		return false
 	let tokens = Tokenizer(line).Tokens
@@ -35,6 +46,8 @@ IsContract Boolean
 	TypeShape("from(type)").IsContract is false
 	TypeShape("has Name").IsContract is false
 	TypeShape("has number", "constant Max = 255").IsContract is false
+	TypeShape("Run Number", "\t5").IsContract is false
+	TypeShape("has value Generic", "Length Number").IsContract is false
 	IsTrait and not UsesGenerics and ((MethodScope.names - ConstantScope.names - "from").Length > 0)
 MemberScope Scope
 	TypeShape("has count Number", "constant Limit = 3").MemberScope.TypeOf("count") is "Number"
@@ -65,12 +78,17 @@ UsesGenerics Boolean
 	TypeShape("has value Generic or None").UsesGenerics is false
 	TypeShape("for Iterator(Generic)", "in(element Generic) Boolean").UsesGenerics
 	TypeShape("constant Names = (\"Generic\")", "Run", "\tNames").UsesGenerics is false
+	TypeShape("has a", "has b", "has c", "has value Generic").UsesGenerics is false
 	for lines
 		if index < 3 and IsGenericLine(index)
 			return true
 	false
 IsGenericLine(position Number) Boolean
 	TypeShape("has count Number").IsGenericLine(0) is false
+	TypeShape("has value generic").IsGenericLine(0)
+	TypeShape("mutable value Generic or None").IsGenericLine(0) is false
+	TypeShape("has value Generic or List(Number)").IsGenericLine(0)
+	TypeShape("has items Generics with Length > 0").IsGenericLine(0)
 	let line = lines(position)
 	let mentions = line.IndexOf("Generic") is not -1 or line.IndexOf("generic") is not -1
 	if line.StartsWith("has ") or line.StartsWith("mutable ")
@@ -105,6 +123,8 @@ MethodScope Scope
 EnumValue(position Number) Number
 	TypeShape("constant A", "constant B = 10", "constant C").EnumValue(2) is 11
 	TypeShape("constant A").EnumValue(0) is 0
+	TypeShape("constant A", "constant B").EnumValue(1) is 1
+	TypeShape("constant A = Limit", "constant B").EnumValue(1) is 0
 	mutable next = 0
 	for position
 		let tokens = Tokenizer(lines(index)).Tokens
@@ -116,6 +136,7 @@ EnumValue(position Number) Number
 ConstantText(position Number) Text
 	TypeShape("constant A", "constant B = 10", "constant C").ConstantText(2) is "11"
 	TypeShape("constant Limit = 3 * 2").ConstantText(0) is "3 * 2"
+	TypeShape("has a", "has b = 5", "constant C").EnumValue(2) is 0
 	let tokens = Tokenizer(lines(position)).Tokens
 	if tokens.Length is 2
 		return EnumValue(position) to Text
@@ -124,6 +145,7 @@ ConstantText(position Number) Text
 ConstantScope Scope
 	TypeShape("constant A", "constant B = 10", "constant C").ConstantScope.TypeOf("C") is "11"
 	TypeShape("constant Limit = 3 * 2", "has a").ConstantScope.names.Length is 1
+	TypeShape("constant A = ").ConstantScope.names.Length is 0
 	mutable names = List(Mutable(Text))
 	mutable literals = List(Mutable(Text))
 	for lines
