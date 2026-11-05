@@ -39,6 +39,7 @@ IsAllowed(at Number, settled Text) Boolean
 	(MlirWholeTypes(function).Length(at) is not "") or MlirWholeFunction(function).IsAllowed(at, 0)
 Symbol Text
 	Brightening.Symbol is "Rows_Brightened_1_loop2_whole"
+	Text.Combine(Brightening.Lines).Length is 4466
 	function.Symbol + "_loop" + position + "_whole"
 Lines Texts
 	Brightening.Lines.First is "  func.func private @Rows_Brightened_1_loop2_whole" + MlirParallel.Signature
@@ -54,6 +55,7 @@ Lines Texts
 	(List(Text) + header) + allocated + Guarded + Fallback + Looped(parts(0), parts(1), parts(2)) + "  }"
 Fallback Texts
 	Brightening.Fallback.Last is "    return %wg : f64"
+	Text.Combine(Brightening.Fallback).Length is 132
 	let generic = "    %wg = func.call @" + function.Symbol + "_loop" + position + "(%context, %from, %to)"
 	("  ^generic:", generic + " : " + MlirParallel.Shape, "    return %wg : f64")
 Inputs Texts
@@ -68,6 +70,7 @@ Inputs Texts
 	names
 Guarded Texts
 	Brightening.Guarded.Last is "    cf.cond_br %t2whok, ^wholestart, ^generic"
+	(Text.Combine(Brightening.Guarded).Length is 1347) and (Text.Combine(Reading.Guarded).Length is 995)
 	let guard = MlirWholeGuard(function, position)
 	mutable lines = guard.Started
 	for Inputs
@@ -79,12 +82,14 @@ Guarded Texts
 	lines + Collections + joined + ("    cf.cond_br " + guard.Temp("whok") + ", ^wholestart, ^generic")
 Number(name Text, number Number) Texts
 	Brightening.Number("radius", 1).Last is "    llvm.store %wi1, %v_radius : i64, !llvm.ptr"
+	Text.Combine(Brightening.Number("radius", 1)).Length is 349
 	let guard = MlirWholeGuard(function, position)
 	let converted = MlirWholeValues(position).Converted("%wl" + number, "f", "i", "%wi" + number)
 	let checked = guard.Checked("%wl" + number, guard.Temp("wh" + number), guard.Temp("whlimit"))
 	checked + converted + ("    llvm.store %wi" + number + ", %v_" + name + " : i64, !llvm.ptr")
 Bytes(name Text, number Number) Texts
 	Brightening.Bytes("pixels", 0).Last is "    llvm.store %wn0i, %v_pixels_length : i64, !llvm.ptr"
+	Text.Combine(Brightening.Bytes("pixels", 0)).Length is 458
 	let pointer = "%wp" + number
 	let bytes = "    " + pointer + " = func.call @strict_list_bytes(%wl" + number + ") : (f64) -> !llvm.ptr"
 	let stored = "    llvm.store " + pointer + ", %v_" + name + " : !llvm.ptr, !llvm.ptr"
@@ -96,11 +101,14 @@ Bytes(name Text, number Number) Texts
 	(bytes, stored) + present + (length, converted, slot, counted)
 Loaded(name Text, slot Text) Texts
 	Brightening.Loaded("%x", "%v_pixels").Last is "    %x = llvm.load %xa : !llvm.ptr -> f64"
+	Text.Combine(Brightening.Loaded("%x", "%v_pixels")).Length is 116
 	let index = MlirParallel(function, position).Snapshot.Index(slot)
 	let address = "    " + name + "a = llvm.getelementptr %context[" + index + "]" + MlirParallel.Slot
 	(address, "    " + name + " = llvm.load " + name + "a : !llvm.ptr -> f64")
 Collections Texts
 	Brightening.Collections.Last.EndsWith("%t2wh1o = arith.cmpi ne, %t2wh1i, %t2whz : i64")
+	Text.Combine(Brightening.Collections).Length is 492
+	Text.Combine(Reading.Collections).Length is 189
 	let result = Result
 	if MlirLoops(function, position).Collection is ""
 		return result
@@ -108,9 +116,11 @@ Collections Texts
 	result + iterated + Items + MlirWholeGuard(function, position).Present("%witems", Inputs.Length)
 Result Texts
 	Brightening.Result.Last is "    %wout = func.call @strict_list_data(%wrl) : (f64) -> !llvm.ptr"
+	Text.Combine(Brightening.Result).Length is 190
 	Loaded("%wrl", "%v_forResult") + "    %wout = func.call @strict_list_data(%wrl) : (f64) -> !llvm.ptr"
 Looped(registers Text, variables Text, naturals Text) Texts
 	Text.Combine(Brightening.Looped(Types.Part(0), Types.Part(1), Types.Part(2))).IndexOf("@Rows_Twice_1_whole(") > 0
+	Text.Combine(Brightening.Looped(Types.Part(0), Types.Part(1), Types.Part(2))).Length is 1378
 	mutable lines = Started + Checked + Current(variables)
 	for Range(position + 1, function.method.LoopEndOf(position))
 		let statements = MlirWholeStatements(function, value, registers, variables, naturals)
@@ -119,6 +129,8 @@ Looped(registers Text, variables Text, naturals Text) Texts
 	lines + Next + Exit
 Current(variables Text) Texts
 	Brightening.Current(Types.Part(1)).Last is "    llvm.store %wv, %v_value : i64, !llvm.ptr"
+	Text.Combine(Brightening.Current(Types.Part(1))).Length is 257
+	Text.Combine(Reading.Current(MlirWholeTypes(Reading.function).Part(1))).Length is 92
 	let values = MlirWholeValues(position)
 	let index = values.Stored("%wk", "i", "%v_index", variables.Substring(function.VariableNames.Index("index"), 1))
 	let type = variables.Substring(function.VariableNames.Index("value"), 1)
@@ -137,6 +149,8 @@ Written(at Number, registers Text, naturals Text) Texts
 	loaded + Clamped(at) + (slot, stored)
 Clamped(at Number) Texts
 	Brightening.Clamped(6).Last is "    %t6b = arith.trunci %t6c : i64 to i8"
+	Text.Combine(Brightening.Clamped(6)).Length is 194
+	Text.Combine(Brightening.Written(6, Types.Part(0), Types.Part(2))).Length is 360
 	let values = MlirWholeValues(at)
 	let low = values.Line("l", "arith.maxsi %t" + at + "v, %t" + at + "z : i64")
 	let high = values.Line("c", "arith.minsi %t" + at + "l, %t" + at + "h : i64")
