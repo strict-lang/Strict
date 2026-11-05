@@ -1,5 +1,14 @@
 has raw Text
 constant Escaped = JsonText("a\\\"b\\u0041\\u00e9\\ud83d\\ude00\\n")
+constant HexDigits = "0123456789abcdef"
+constant HighSurrogate = 55296
+constant LowSurrogate = 56320
+constant SurrogateValues = 1024
+constant SupplementaryStart = 65536
+constant AsciiLimit = 128
+constant TwoByteLimit = 2048
+constant ContinuationMark = 128
+constant PayloadBase = 64
 constant Controls = ("\n", "\t", "\r", Character(8) to Text, Character(12) to Text)
 Unescaped Text
 	JsonText("plain").Unescaped is "plain"
@@ -16,7 +25,8 @@ Step(position Number) Number
 	Escaped.Step(2) is 2
 	Escaped.Step(5) is 6
 	Escaped.Step(17) is 12
-	raw.Substring(position, 1) is not "u" then 2 else IsPair(position) then 12 else 6
+	constant PairEscapeLength = 12
+	raw.Substring(position, 1) is not "u" then 2 else IsPair(position) then PairEscapeLength else 6
 Escape(position Number) Text
 	Escaped.Escape(2) is "\""
 	Escaped.Escape(29) is "\n"
@@ -24,30 +34,31 @@ Escape(position Number) Text
 	let code = raw.Substring(position, 1)
 	let high = Hex(position + 1)
 	if code is "u"
-		return Utf8(IsPair(position) then 65536 + (high - 55296) * 1024 + Hex(position + 7) - 56320 else high)
+		let offset = (high - HighSurrogate) * SurrogateValues - LowSurrogate
+		return Utf8(IsPair(position) then SupplementaryStart + offset + Hex(position + 7) else high)
 	let found = "ntrbf".IndexOf(code)
 	found < 0 then code else Controls(found)
 IsPair(position Number) Boolean
 	Escaped.IsPair(17)
 	Escaped.IsPair(11) is false
 	let high = Hex(position + 1)
-	(high >= 55296) and (high < 56320) and raw.StartsWith("\\u", position + 5)
+	(high >= HighSurrogate) and (high < LowSurrogate) and raw.StartsWith("\\u", position + 5)
 Hex(position Number) Number
 	Escaped.Hex(6) is 65
 	JsonText("D83d").Hex(0) is 55357
 	mutable number = 0
 	for Range(position, position + 4)
-		number = number * 16 + "0123456789abcdef".IndexOf(raw.Substring(value, 1).Lower)
+		number = number * HexDigits.Length + HexDigits.IndexOf(raw.Substring(value, 1).Lower)
 	number
 Utf8(code Number) Text
 	Escaped.Utf8(65) is "A"
 	Escaped.Utf8(233) is "é"
 	Escaped.Utf8(8364) is "€"
 	Escaped.Utf8(128512) is "😀"
-	if code < 128
+	if code < AsciiLimit
 		return Character(code) to Text
-	let count = code < 2048 then 2 else code < 65536 then 3 else 4
-	mutable text = Character((256 - 2 ^ (8 - count)) + (code / 64 ^ (count - 1)).Floor) to Text
+	let count = code < TwoByteLimit then 2 else code < SupplementaryStart then 3 else 4
+	mutable text = Character((Byte.Values - 2 ^ (8 - count)) + (code / PayloadBase ^ (count - 1)).Floor) to Text
 	for Range(1, count)
-		text = text + (Character(128 + (code / 64 ^ (count - 1 - value)).Floor % 64) to Text)
+		text = text + (Character(ContinuationMark + (code / PayloadBase ^ (count - 1 - value)).Floor % PayloadBase) to Text)
 	text

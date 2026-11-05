@@ -13,7 +13,7 @@ Run(path Text, root Text) Number
 	let lines = result.Output.Lines
 	for Plain(lines) + Valued(lines, Path(path).PathOnly.text)
 		logger.Log(value)
-	if (result.exitCode >= 0) and (result.exitCode < 128)
+	if (result.exitCode >= 0) and (result.exitCode < Folders.CrashExitCode)
 		logger.Log(Execute.Summary(result.exitCode, path))
 	result.exitCode
 Plain(lines Texts) Texts

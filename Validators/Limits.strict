@@ -6,6 +6,7 @@ constant MaxMethodLines = 13
 constant MaxMethods = 16
 constant MaxMembers = 15
 constant ExtraConstants = 2
+constant MinusPrecedence = SyntaxNode("Binary", "-").Precedence
 constant OnlyConstants = Limits(("constant A", "constant B", "constant C", "constant D", "constant E", "constant F", "constant G", "constant H", "constant I", "constant J", "constant K", "constant L", "constant M", "constant N", "constant O", "constant P"), false)
 constant Sample = Limits(("has number", "Run", "\t\t\t\t\t\t1", "  2"), false)
 constant Long = Limits(("Run", "\t1", "\t2", "\t3", "\t4", "\t5", "\t6", "\t7", "\t8", "\t9", "\t10", "\t11", "\t12", "\t13"), false)
@@ -72,7 +73,7 @@ IsZeroMinus(tokens Texts, index Number) Boolean
 	Sample.IsZeroMinus(("return", "0", "-", "b"), 1)
 	let before = index is 0 then "(" else tokens(index - 1)
 	let precedence = SyntaxNode("Binary", before).Precedence
-	let opening = before is in ("(", ",", "=", "not", "return", "if") or (precedence > 0 and precedence < 11)
+	let opening = before is in ("(", ",", "=", "not", "return", "if") or (precedence > 0 and precedence < MinusPrecedence)
 	tokens(index) is "0" and tokens(index + 1) is "-" and opening
 Operand(tokens Texts, start Number) Text
 	Sample.Operand(("b", ".", "Y", "*", "2"), 0) is "b.Y"
@@ -134,8 +135,9 @@ MemberLimit(methods Number, members Number) Number
 	OnlyConstants.MemberLimit(0, 3) is 17 and (Sample.MemberLimit(1, 1) is 15)
 	Sample.MemberLimit(0, 0) is 40
 	Twice.MemberLimit(0, 0) is 80 and Twice.MemberLimit(1, 0) is 30
+	constant OnlyConstantsLimit = 40
 	let extra = Count("constant ").Clamp(0, ExtraConstants)
-	((methods is 0) and (members is Count("constant ")) then 40 else MaxMembers + extra) * scale
+	((methods is 0) and (members is Count("constant ")) then OnlyConstantsLimit else MaxMembers + extra) * scale
 Count(start Text) Number
 	OnlyConstants.Count("constant ") is 16
 	Sample.Count("has ") is 1

@@ -108,11 +108,12 @@ Shown(result VmValue) Text
 	Lined.Shown(VmValue.OfList(VmValue.OfNumber(1), VmValue.OfNumber(2))) is "(1, 2)"
 	Lined.Shown(VmValue.OfList(List(VmValue))) is "()"
 	Lined.Shown(VmValue.OfText(Letters + Letters + Letters + "abcdef")).Length is 83
+	constant MaxShownLength = 80
 	let items = result.items
 	let elements = "(" + Text.Combine(Elements(items)) + (items.Length > 5 then ", ...)" else ")")
 	let isRecord = (result.items.Length > 0) and (result.kind is not in ("List", "Strict/Error"))
 	let code = result.kind is "List" then elements else isRecord then Named(result) else ValueCode(result).Code
-	code.Length > 80 then code.Substring(0, 80) + "..." else code
+	code.Length > MaxShownLength then code.Substring(0, MaxShownLength) + "..." else code
 Named(record VmValue) Text
 	Pairs.Named(VmValue("Strict/Pair", 0, "", (VmValue.None, VmValue.OfNumber(0)))) is "Pair(b = 0)"
 	Lined.Iteration(2, Started) is ("$Hit Strict/Doubler|4", "$Set Strict/Doubler|4|for|0")

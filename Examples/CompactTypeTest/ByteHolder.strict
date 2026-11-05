@@ -1,7 +1,7 @@
 has amount Byte
 has scale Byte
 from(numberHolder)
-	amount = numberHolder.amount * 255
-	scale = NumberHolder.scale * 255
+	amount = numberHolder.amount * Byte.Max
+	scale = NumberHolder.scale * Byte.Max
 to NumberHolder
 	NumberHolder(amount / scale)

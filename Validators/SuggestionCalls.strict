@@ -74,8 +74,9 @@ Stem(name Text) Text
 	let lower = name.Lower
 	lower.EndsWith("ed") then lower.Substring(0, lower.Length - 2) else lower
 Unique(candidates Texts) Texts
+	constant MaxSuggestions = 32
 	mutable found = List(Mutable(Text))
 	for candidates
-		if (value is not in found) and (found.Length < 32)
+		if (value is not in found) and (found.Length < MaxSuggestions)
 			found.Add(value)
 	found

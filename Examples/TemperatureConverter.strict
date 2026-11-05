@@ -1,13 +1,15 @@
 has celsius Number
 has logger
+constant FahrenheitFreezing = 32
+constant KelvinFreezing = 273.15
 ToFahrenheit Number
 	TemperatureConverter(100).ToFahrenheit is 212
 	TemperatureConverter(0).ToFahrenheit is 32
-	celsius * 9 / 5 + 32
+	celsius * 9 / 5 + FahrenheitFreezing
 ToKelvin Number
-	TemperatureConverter(100).ToKelvin is 373
-	TemperatureConverter(0).ToKelvin is 273
-	celsius + 273
+	TemperatureConverter(100).ToKelvin is 373.15
+	TemperatureConverter(0).ToKelvin is 273.15
+	celsius + KelvinFreezing
 Run
 	constant boiling = TemperatureConverter(100)
 	constant freezing = TemperatureConverter(0)

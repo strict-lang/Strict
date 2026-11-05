@@ -1,6 +1,7 @@
 has text
 constant Object = JsonWriter("{}")
 constant Array = JsonWriter("[]")
+constant FirstPrintable = 32
 With(name Text, content Text) JsonWriter
 	Object.With("asset", "BTC").text is "{\"asset\":\"BTC\"}"
 	Object.With("a", "x").With("b", "y").text is "{\"a\":\"x\",\"b\":\"y\"}"
@@ -45,10 +46,10 @@ Escaped(character Character) Text
 	Object.Escaped(Character("\\")) is "\\\\"
 	if (character is "\"") or (character is "\\")
 		return "\\" + character
-	if character.number >= 32
+	if character.number >= FirstPrintable
 		return character to Text
-	let named = (8, 9, 10, 12, 13).Index(character.number)
+	let named = JsonText.Controls.Index(character to Text)
 	if named >= 0
-		return "\\" + "btnfr".Substring(named, 1)
-	constant hex = "0123456789abcdef"
-	"\\u00" + hex.Substring((character.number / 16).Floor, 1) + hex.Substring(character.number % 16, 1)
+		return "\\" + "ntrbf".Substring(named, 1)
+	constant hex = JsonText.HexDigits
+	"\\u00" + hex.Substring((character.number / hex.Length).Floor, 1) + hex.Substring(character.number % hex.Length, 1)

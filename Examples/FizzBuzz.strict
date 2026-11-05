@@ -1,11 +1,12 @@
 has number
 has logger
+constant FizzBuzzDivisor = 15
 Classify Text
 	FizzBuzz(3).Classify is "Fizz"
 	FizzBuzz(5).Classify is "Buzz"
 	FizzBuzz(15).Classify is "FizzBuzz"
 	FizzBuzz(7).Classify is "7"
-	if number % 15 is 0
+	if number % FizzBuzzDivisor is 0
 		return "FizzBuzz"
 	if number % 3 is 0
 		return "Fizz"

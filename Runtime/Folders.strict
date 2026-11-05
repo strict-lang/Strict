@@ -1,5 +1,6 @@
 has logger
 constant Batch = 128
+constant CrashExitCode = 128
 Tested(folder Text, root Text, isRecursive = true, isMutating = false, isFull = false) Number
 	Folders(Logger).Tested("Missing", ".") is 0
 	let files = NativeFolder(logger, isRecursive = isRecursive).Files(folder)
@@ -55,4 +56,4 @@ Ran(arguments Texts) Number
 Failed(exitCode Number) Number
 	Folders.Failed(3) is 3
 	Folders.Failed(-1073741819) is 1
-	(exitCode >= 0) and (exitCode < 128) then exitCode else 1
+	(exitCode >= 0) and (exitCode < CrashExitCode) then exitCode else 1

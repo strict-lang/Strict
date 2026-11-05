@@ -1,24 +1,30 @@
 has score Number
 has logger
+constant MinimumA = 90
+constant MinimumB = 80
+constant MinimumPass = 60
 Letter Text
 	Grade(95).Letter is "A"
 	Grade(85).Letter is "B"
 	Grade(50).Letter is "F"
-	if score > 90
+	if score > MinimumA
 		return "A"
-	else if score > 80
+	else if score > MinimumB
 		return "B"
 	"F"
 Passed Boolean
 	Grade(95).Passed
 	Grade(50).Passed is false
-	if score > 60
+	if score > MinimumPass
 		return true
 	else
 		return false
 Run
-	logger.Log("95: " + Grade(95).Letter)
-	logger.Log("85: " + Grade(85).Letter)
-	logger.Log("50: " + Grade(50).Letter)
-	logger.Log("95 passed: " + Grade(95).Passed)
-	logger.Log("50 passed: " + Grade(50).Passed)
+	constant excellent = Grade(95)
+	constant good = Grade(85)
+	constant failing = Grade(50)
+	logger.Log("95: " + excellent.Letter)
+	logger.Log("85: " + good.Letter)
+	logger.Log("50: " + failing.Letter)
+	logger.Log("95 passed: " + excellent.Passed)
+	logger.Log("50 passed: " + failing.Passed)

@@ -33,7 +33,7 @@ Lines(types List(TypeEntry)) Texts
 	let methods = Baseline(value).Kept(types)
 	let rounds = Mutation.Rounds(methods)
 	let isStrict = Path(Process.Current.executable).FileName.text.Lower.StartsWith("strict")
-	if (part is "") and (rounds > 16) and isStrict
+	if (part is "") and (rounds > Mutation.SpawnAboveRounds) and isStrict
 		return Spawned(rounds)
 	let tested = Tested(types, Runner(types.First), methods)
 	mutable survivors = List(Mutable(Text))
@@ -49,14 +49,15 @@ Spawned(rounds Number) Texts
 		if line.IndexOf("MutationSurvived") >= 0
 			survivors.Add(line.Replace("\r", ""))
 	for results
-		let isCrashed = (value.exitCode < 0) or (value.exitCode >= 128) or (("\n" + value.Output).IndexOf("\nError: ") >= 0)
-		if isCrashed
+		let isCrashed = (value.exitCode < 0) or (value.exitCode >= Folders.CrashExitCode)
+		if isCrashed or (("\n" + value.Output).IndexOf("\nError: ") >= 0)
 			survivors.Add(path + ": MutationTestingFailed: a worker ended with exit code " + value.exitCode + Crashed)
 	survivors
 Commands(rounds Number) Texts
 	Sample.Commands(40).Length is 10
 	Mutants(Logger, "A.strict", 0.1, ".", "", true).Commands(4).Last.EndsWith(" mutations rounds:1/2")
-	let parts = (rounds / 4).Ceiling.Clamp(2, 16)
+	constant MaxWorkers = 16
+	let parts = (rounds / 4).Ceiling.Clamp(2, MaxWorkers)
 	let options = isWhole then " mutations rounds:" else " unit mutations rounds:"
 	for parts
 		"test \"" + path + "\" \"" + root + "\"" + options + index + "/" + parts

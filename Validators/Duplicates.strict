@@ -5,6 +5,7 @@ constant Looping = ("Next(number Number) Number", "\tnumber + 1", "Evolved(start
 constant Evolving = Duplicates(List(Text) + "B.Evolved", List(Text) + "let current = Next(start)\ncurrent + current + 1\n")
 constant Asserting = ("One Boolean", "\tOne", "\t1 is 1", "Two Boolean", "\tTwo", "\tlet two = 2", "\ttwo is 2", "\t2 is two")
 constant Incrementing = Duplicates(List(Text) + "A.Next", List(Text) + "number + 1\n")
+constant MinBodyLength = 40
 constant Copies = Duplicates(("A.Halve", "B.Half"), ("let half = number / 2\nhalf < 0 then 0 - half else half\n", "x"))
 Of(files Texts) Duplicates
 	Duplicates.Of(List(Text) + "Validators/ValidationIssue.strict").owners is ("ValidationIssue.to")
@@ -32,7 +33,7 @@ Other(typeName Text, lines Texts, header Number) Text
 	Incrementing.Other("B", Looping, 0) is ""
 	let owner = typeName + "." + Tokenizer(lines(header)).Tokens.First
 	let body = Implementation(lines, header)
-	if (body.Length < 40) or CallsOwn(lines, body)
+	if (body.Length < MinBodyLength) or CallsOwn(lines, body)
 		return ""
 	for bodies
 		if (value is body) and (owners(index) is not owner)
