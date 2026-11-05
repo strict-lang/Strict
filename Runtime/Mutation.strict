@@ -4,6 +4,14 @@ constant Greater = InstructionEntry.Binary(InstructionType.GreaterThan, (0, 1))
 constant Compared = Mutation(MethodEntry("Big", List(MemberEntry), "Strict/Boolean", (Greater, InstructionEntry.Return(0))))
 constant Comparisons = (InstructionType.Equal, InstructionType.NotEqual, InstructionType.LessThan, InstructionType.GreaterThan)
 constant Arithmetic = (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply, InstructionType.Divide)
+constant Stored = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "a")
+constant Storing = Mutation(MethodEntry(Machine.Doubler.methods.First, instructions = (Stored, Stored)))
+constant Logging = InstructionEntry.Invoke(0, ("T", "Log", "None"), List(Number), -1)
+constant Marking = InstructionEntry(InstructionType.LoadConstantToRegister, "1 is 1 in Twice at Doubler.strict:line 2", (0, 4, -1))
+constant Splitting = (InstructionEntry.LoadNumber(0, 0), Marking, InstructionEntry.LoadNumber(1, 1), InstructionEntry.Return(0))
+constant Splitter = Mutation(MethodEntry(Machine.Doubler.methods.First, instructions = Splitting))
+constant Returned = InstructionEntry.Return(0)
+constant Descriptions = ("the comparison always true", "the comparison always false", "returning the default value instead of the result")
 constant Defaults = ("Strict/Number", "Strict/Text", "Strict/Boolean")
 Candidates Numbers
 	Twice.Candidates is (13, 18)
@@ -15,13 +23,21 @@ Kinds(position Number) Numbers
 	let entry = method.instructions(position)
 	if IsCompared(position)
 		return (0, 1)
-	if (entry.kind is InstructionType.Return) and (position is method.instructions.Length - 1)
+	let isLast = position is method.instructions.Length - 1
+	if (entry.kind is InstructionType.Return) and isLast and (IsLiteral(position) is false)
 		return method.returnType is in Defaults then List(Number) + 2 else List(Number)
 	if (entry.kind is InstructionType.StoreRegisterToVariable) and IsStoredBefore(position)
 		return List(Number) + 3
 	if IsDropped(entry)
 		return List(Number) + 4
 	entry.kind is in Arithmetic then List(Number) + 5 else List(Number)
+IsLiteral(position Number) Boolean
+	Twice.IsLiteral(2) is false
+	Mutation(MethodEntry(Twice.method, instructions = (InstructionEntry.LoadNumber(0, 1), Returned))).IsLiteral(1)
+	Mutation(MethodEntry(Twice.method, instructions = (InstructionEntry.LoadNumber(1, 1), Returned))).IsLiteral(1) is false
+	let previous = position > 0 then method.instructions(position - 1) else method.instructions(position)
+	let register = method.instructions(position).payload(0)
+	(previous.kind is InstructionType.LoadConstantToRegister) and (previous.payload(0) is register)
 IsCompared(position Number) Boolean
 	Compared.IsCompared(0)
 	let isLast = position + 1 is method.instructions.Length
@@ -30,10 +46,15 @@ IsCompared(position Number) Boolean
 	(method.instructions(position).kind is in Comparisons) and (isLooping is false)
 IsDropped(entry InstructionEntry) Boolean
 	Twice.IsDropped(Twice.method.instructions(0)) is false
+	Twice.IsDropped(Logging)
+	Twice.IsDropped(InstructionEntry.Invoke(0, ("T", "Run", "N"), List(Number), -1)) is false
+	Twice.IsDropped(InstructionEntry(InstructionType.InvokeWriteToList, "list", (1, 0)))
 	let isCall = (entry.kind is InstructionType.Invoke) and (entry.texts.Length > 2) and (entry.texts(2) is "None")
 	isCall or (entry.kind is InstructionType.InvokeWriteToList)
 IsStoredBefore(position Number) Boolean
 	Twice.IsStoredBefore(1) is false
+	Storing.IsStoredBefore(1)
+	Storing.IsStoredBefore(0) is false
 	let name = method.instructions(position).texts
 	for Range(0, position)
 		let entry = method.instructions(value)
@@ -71,12 +92,12 @@ Swapped(kind Number) Number
 Described(code Number) Text
 	Twice.Described(18) is "returning the default value instead of the result"
 	Compared.Described(0) is "the comparison always true"
+	Twice.Described(13) is "with + and - or * and / swapped"
+	Storing.Described(11) is "without the assignment to a"
 	let kind = code % 8
 	let entry = method.instructions((code / 8).Floor)
-	if kind < 2
-		return kind is 0 then "the comparison always true" else "the comparison always false"
-	if kind is 2
-		return "returning the default value instead of the result"
+	if kind < 3
+		return Descriptions(kind)
 	if kind is 3
 		return "without the assignment to " + entry.texts.First
 	let call = entry.texts.Length > 1 then entry.texts(1) else "Add"
@@ -91,3 +112,26 @@ Lines Number
 	for method.instructions
 		last = value.line > last then value.line else last
 	last
+Split(name Text) List(InstructionEntry)
+	Splitter.Split("Twice").Length is 4
+	Splitter.Split("Other") is Splitting
+	let last = method.instructions.Length - 2
+	mutable kept = List(Mutable(InstructionEntry)) + method.instructions.First
+	mutable isKept = false
+	for method.instructions
+		let marked = Marked(value)
+		isKept = marked is "" then isKept else marked is name
+		if isKept and (index > 0) and (index < last)
+			kept.Add(value)
+	kept.Length is 1 then method.instructions else kept + method.instructions.Slice(last, 2)
+Marked(entry InstructionEntry) Text
+	Twice.Marked(Marking) is "Twice"
+	Twice.Marked(InstructionEntry.LoadNumber(0, 0)) is ""
+	let isText = (entry.kind is InstructionType.LoadConstantToRegister) and (entry.texts.Length > 0)
+	let text = isText then entry.texts(0) else ""
+	let at = text.LastIndexOf(" at ")
+	if (at < 0) or (text.Substring(at, text.Length - at).IndexOf(":line ") < 0)
+		return ""
+	let before = text.Substring(0, at)
+	let start = before.LastIndexOf(" in ")
+	start < 0 then "" else before.Substring(start + 4, at - start - 4)

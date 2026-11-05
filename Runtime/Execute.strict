@@ -2,6 +2,7 @@ has logger
 has selection Text = ""
 has isRecursive Boolean = true
 has isMutating Boolean = false
+has part Text = ""
 constant Adder = BinaryFile("./Examples/NativeAdd/Adder.strict")
 constant AdderFiles = SourceFiles(".").Of(Adder.source)
 Run(arguments Texts) Number
@@ -22,7 +23,7 @@ Test(path Text, root Text, isQuiet = false) Number
 		return Failures(List(Text) + path, root, isQuiet)
 	Directory.Exists(path) then Folders(logger).Tested(path, root, isRecursive, isMutating) else 1
 Failures(paths Texts, root Text, isQuiet Boolean) Number
-	let stale = (selection is "") and (isMutating is false) then Stale(paths) else paths
+	let stale = selection is "" then Stale(paths) else paths
 	let files = stale.Length is 0 then List(Text) else SourceFiles(root).Of(FileCompiler.Normalized(stale.First), stale)
 	let inference = ResolveCheck.Inference(files)
 	mutable failed = 0
@@ -72,7 +73,7 @@ Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInfer
 	let types = FileCompiler(logger, isQuiet, selection).Built(path, root, true, files, inference).entries
 	if types.Length is 0
 		return 1
-	let failed = isTested then Tested(types, path) else 0
+	let failed = isTested then Tested(types, path, root) else 0
 	if (failed is 0) and (selection is "") and (IsEdited(path) is false)
 		let folder = Path(cache.source).PathOnly.text
 		let header = Completed(cache, root, files, stamped).Typed(types, folder).Kept(types).Header
@@ -82,14 +83,15 @@ Completed(cache BinaryFile, root Text, files Texts, stamped BinarySources) Slow(
 	Execute(Logger).Completed(Adder, ".", AdderFiles, BinarySources.Mixed).stamps is (1, 2, 3)
 	let current = SourceFiles(root).Of(cache.source)
 	current.Length is files.Length then stamped else BinarySources(current).Stamped
-Tested(types List(TypeEntry), path Text) Number
+Tested(types List(TypeEntry), path Text, root Text) Number
 	let started = Process.Elapsed
 	let failed = Started(types, path).Tested(types.First.Name)
 	if failed > 0
 		logger.Log(Summary(failed, path))
 		return failed
-	let isFast = isMutating and (selection is "") and (Process.Elapsed - started < 0.1)
-	isFast then Mutants(logger, path).Survivors(types) else 0
+	let isFast = isMutating and (selection is in ("", "*")) and (Process.Elapsed - started < 0.1)
+	let mutants = Mutants(logger, path, (Process.Elapsed - started) * 10 + 0.01, root, part)
+	isFast then mutants.Survivors(types) else 0
 Loaded(path Text, root Text, withTests = true, sources Texts = List(Text)) List(TypeEntry)
 	let started = Process.Elapsed
 	let cache = BinaryFile(FileCompiler.Normalized(path))

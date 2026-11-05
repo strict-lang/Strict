@@ -34,10 +34,10 @@ Typed(parameters List(MemberEntry), arguments List(VmValue)) List(VmValue)
 		typed.Add(isNumber then VmValue.OfNumber(value.text to Number) else value)
 	let isListed = (parameters.Length is 1) and parameters.First.typeName.StartsWith("Strict/List(")
 	isListed then List(VmValue) + VmValue.OfList(typed) else typed
-Tested(typeName Text) Number
+Tested(typeName Text, runner Text = TestCodegen.Runner) Number
 	Hello.Tested("HelloLogger") is 0
 	let main = Natives(types).TypeOf(typeName)
-	let tests = main.Callee(TestCodegen.Runner, 0, "None", List(Text))
+	let tests = main.Callee(runner, 0, "None", List(Text))
 	let instance = Natives(types).Fresh(main)
 	Execute(tests, Bound(main, instance, tests, List(VmValue), instance), main.Name).number
 Prepared Machine
