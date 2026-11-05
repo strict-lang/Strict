@@ -20,6 +20,9 @@ IsDot Boolean
 	let kinds = function.method.LoopEndOf(at) is at + 15 then Offsets else Kinds
 	IsSequence(kinds) and (kinds.Length is 15 then IsOffsetShaped else IsShaped)
 IsSequence(kinds Numbers) Boolean
+	MlirDeviceDot(Summed, 11).IsSequence((Kinds(0), InstructionType.Return, Summed.method.instructions(0).kind)) is false
+	Summing.IsSequence(Kinds.Reverse) is false
+	Summing.IsSequence(List(Number) + InstructionType.LoadVariableToRegister) is false
 	Summing.IsSequence(Kinds)
 	Summing.IsSequence(Offsets) is false
 	let instructions = function.method.instructions
@@ -64,6 +67,9 @@ IsIndexed(load Number) Boolean
 	let isRead = instructions(load + 3).payload(1) is summed.payload(3)
 	isAdded and isRead and (loads.First.texts(0) is not "index") and (loads.Last.texts(0) is "index")
 IsCovered Boolean
+	MlirDeviceDot(Summed, 12).IsCovered is false
+	MlirDeviceDot(Summed, 0).IsCovered is false
+	MlirDeviceDot(MlirDeviceStatements.Summed, 5).IsCovered is false
 	MlirDeviceDot(Summed, 5).IsCovered
 	MlirDeviceDot(Summed, 11).IsCovered
 	MlirDeviceDot(Squaring.function, 17).IsCovered
@@ -84,6 +90,9 @@ Emitted Texts
 	let call = "    " + Temp("") + " = func.call @strict_device_dots(%failed, " + operands + Types
 	Parts("r", "%r" + function.method.instructions(at).payload(0)) + Parts("o", other) + call + Accumulated
 OffsetEmitted Texts
+	Squaring.OffsetEmitted(0) is "    %d2xd = llvm.load %v_input_d : !llvm.ptr -> !llvm.ptr"
+	Squaring.OffsetEmitted(3) is "    %d2yd = llvm.load %v_input_d : !llvm.ptr -> !llvm.ptr"
+	Squaring.OffsetEmitted(57).StartsWith("    %d2 = func.call @strict_device_offset_dots(%failed, %d2xd, %d2xb, %d2xn")
 	Squaring.OffsetEmitted.Last.StartsWith("    llvm.store %d2s1, %v_sum : f32, !llvm.ptr")
 	let instructions = function.method.instructions
 	let parts = Parts("x", "%v_" + instructions(at + 5).texts(0)) + Parts("y", "%v_" + instructions(at + 10).texts(0))
@@ -93,6 +102,9 @@ OffsetEmitted Texts
 	let call = "    " + Temp("") + " = func.call @strict_device_offset_dots(%failed, " + first + second + OffsetTypes
 	parts + counted + Whole("c", "%r" + instructions(at).payload(0)) + call + Accumulated
 SquaredEmitted Texts
+	Squaring.SquaredEmitted(0) is "    %d2xd = llvm.load %v_input_d : !llvm.ptr -> !llvm.ptr"
+	Squaring.SquaredEmitted(3) is "    %d2aif = llvm.load %v_start : !llvm.ptr -> f32"
+	Squaring.SquaredEmitted(20) is "    %d2cif = llvm.load %r0 : !llvm.ptr -> f32"
 	Squaring.SquaredEmitted.Last.StartsWith("    llvm.store %d2s1, %v_sum : f32, !llvm.ptr")
 	let instructions = function.method.instructions
 	let parts = Parts("x", "%v_" + instructions(at + 5).texts(0))
@@ -117,16 +129,28 @@ IsOperand(name Text) Boolean
 	let dot = MlirDeviceDot(MlirFunction(function, Float = "f32"), begin)
 	dot.IsDot then name is in dot.Operands else false
 Whole(letter Text, slot Text) Texts
+	Squaring.OffsetEmitted(6) is "    %d2aif = llvm.load %v_start : !llvm.ptr -> f32"
+	Squaring.OffsetEmitted(23) is "    %d2bif = llvm.load %v_start : !llvm.ptr -> f32"
+	Squaring.OffsetEmitted(40) is "    %d2cif = llvm.load %r0 : !llvm.ptr -> f32"
+	Squaring.OffsetEmitted(57).EndsWith("%d2xn, %d2ai, %d2yd, %d2yb, %d2yn, %d2bi, %d2ci" + Lanes + OffsetTypes)
+	Squaring.SquaredEmitted(37).StartsWith("    %d2 = func.call @strict_device_squares(%failed")
 	Squaring.Whole("a", "%v_start").Last is "  ^d2aiwhole(%d2ai: i64):"
 	MlirExact(function, at).Position(slot, Temp(letter + "i"))
 Accumulated Texts
+	Summing.Accumulated(1) is "    %d2s1 = arith.addf %d2s0, %d2 : f32"
 	Summing.Accumulated.First is "    %d2s0 = llvm.load %v_sum : !llvm.ptr -> f32"
 	let added = "    " + Temp("s1") + " = arith.addf " + Temp("s0") + ", " + Temp("") + " : f32"
 	(function.Load(Temp("s0"), "%v_" + Sum), added, function.Store(Temp("s1"), "%v_" + Sum))
 Sum Text
+	Summing.Emitted(0) is "    %d2rd = llvm.load %r0_d : !llvm.ptr -> !llvm.ptr"
+	Summing.Emitted(3) is "    %d2od = llvm.load %v_input_d : !llvm.ptr -> !llvm.ptr"
+	Summing.Emitted(6).StartsWith("    %d2 = func.call @strict_device_dots(")
+	Summing.Emitted(6).EndsWith("%d2od, %d2ob, %d2on, %lane, %lanes)" + Types)
 	Summing.Sum is "sum"
 	function.method.instructions(at + 1).texts(0)
 Parts(letter Text, list Text) Texts
+	Summing.Parts("r", "%r0")(1) is "    %d2rb = llvm.load %r0_b : !llvm.ptr -> i64"
+	Summing.Parts("r", "%r0").Last is "    %d2rn = llvm.load %r0_n : !llvm.ptr -> i64"
 	Summing.Parts("r", "%r0").First is "    %d2rd = llvm.load %r0_d : !llvm.ptr -> !llvm.ptr"
 	let data = MlirTyped.Pointer.Load(Temp(letter + "d"), list + "_d")
 	let bits = MlirTyped.Integer.Load(Temp(letter + "b"), list + "_b")
