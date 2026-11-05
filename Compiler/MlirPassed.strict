@@ -4,6 +4,9 @@ constant Wrapping = (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.L
 constant Wrapped = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Wrapped", (MlirLists.Items, MlirGuards.Offset), "Strict/List(Number)", Wrapping), Float = "f32", Guarded = 2)
 constant Wraps = MlirPassed(Wrapped, 5)
 constant Doubled = MlirPassed(MlirFunction(Wrapped, Float = "f64"), 2)
+constant Branched = ("    %qe = llvm.load %v_offset_e : !llvm.ptr -> i64", "    %qm = arith.cmpi eq, %b, %qe : i64", "    %qk = arith.constant 4294967296 : i64", "    %ql = arith.cmpi ult, %a, %qk : i64", "    %qp = arith.cmpi ne, %m_offset, %inexact : i64", "    %qa = arith.andi %qm, %ql : i1", "    %qb = arith.andi %qa, %qp : i1", "    cf.cond_br %qb, ^qfast, ^qslow", "  ^qfast:", "    %qx = arith.trunci %a : i64 to i32", "    %qw = arith.trunci %m_offset : i64 to i32", "    %qt:2 = arith.mului_extended %qx, %qw : i32", "    %qr = arith.subi %qx, %qt#1 : i32", "    %qo = arith.constant 32 : i64", "    %qn = arith.constant 40 : i64", "    %qf = arith.shrui %m_offset, %qo : i64", "    %qc = arith.trunci %qf : i64 to i8", "    %qy = arith.extui %qc : i8 to i32", "    %qu = arith.shrui %m_offset, %qn : i64", "    %qv = arith.trunci %qu : i64 to i32", "    %qg = arith.shrui %qr, %qy : i32", "    %qh = arith.addi %qt#1, %qg : i32", "    %qz = arith.shrui %qh, %qv : i32", "    %qq = arith.extui %qz : i32 to i64", "    cf.br ^qdivided(%qq : i64)", "  ^qslow:", "    %qs = arith.divsi %a, %b : i64", "    cf.br ^qdivided(%qs : i64)", "  ^qdivided(%q: i64):")
+constant Bounds = ("    %e_offset_a = arith.cmpi sge, %e_offset, %one : i64", "    llvm.intr.assume %e_offset_a : i1", "    %e_offset_l = arith.constant 2147483648 : i64", "    %e_offset_b = arith.cmpi sle, %e_offset, %e_offset_l : i64", "    llvm.intr.assume %e_offset_b : i1", "    %m_offset_a = arith.cmpi ne, %m_offset, %inexact : i64", "    llvm.intr.assume %m_offset_a : i1")
+constant Flagged = ("    %e_offset_s = arith.constant -9223372036854775808 : i64", "    %e_offset_w = arith.cmpi ne, %e_offset, %e_offset_s : i64", "    %e_offset_q = arith.extui %e_offset_w : i1 to i64", "    llvm.store %e_offset, %v_offset_e : i64, !llvm.ptr", "    llvm.store %e_offset_q, %v_offset_q : i64, !llvm.ptr")
 Header Text
 	MlirPassed(Wrapped, 2).Header is ", %results: i64, %e_offset: i64, %m_offset: i64) attributes {nvvm.kernel} {"
 	Doubled.Header is ", %results: i64) attributes {nvvm.kernel} {"
@@ -15,6 +18,7 @@ Header Text
 Given(name Text, slot Text) Texts
 	Wraps.Given("offset", "%v_offset")(1) is "    %e_offset_w = arith.cmpi ne, %e_offset, %e_offset_s : i64"
 	Doubled.Given("offset", "%v_offset").Length is 0
+	Wraps.Given("offset", "%v_offset") is Flagged
 	if function.Float is not "f32"
 		return List(Text)
 	let exact = "%e_" + name
@@ -39,6 +43,7 @@ Divided(numerator Text, divisor Text, slot Text, quotient Text) Texts
 	MlirPassed(Wrapped, 3).Divided("%a", "%b", "%r2", "%q") is ("    %q = arith.divsi %a, %b : i64")
 	Wraps.Divided("%a", "%b", "%r2", "%q").Last is "  ^qdivided(%q: i64):"
 	Wraps.Divided("%a", "%b", "%r2", "%q")(8) is "  ^qfast:"
+	Wraps.Divided("%a", "%b", "%r2", "%q") is Branched
 	let name = Candidate(slot)
 	let divided = " = arith.divsi " + numerator + ", " + divisor + " : i64"
 	if name is ""
@@ -84,9 +89,12 @@ Line(quotient Text, suffix Text, operation Text) Text
 	"    " + quotient + suffix + " = arith." + operation
 Label(temp Text) Text
 	Wraps.Label("%q") is "^q"
+	Wraps.Candidate("%r0") is ""
+	Wraps.Candidate("%r1") is ""
 	"^" + temp.Substring(1, temp.Length - 1)
 Joined(temp Text, result Text) Text
 	Wraps.Joined("%q", "%qs") is "    cf.br ^qdivided(%qs : i64)"
+	Wraps.Candidate("%v2") is ""
 	"    cf.br " + Label(temp) + "divided(" + result + " : i64)"
 Divisors Texts
 	MlirPassed(Wrapped, 2).Divisors is ("offset")
@@ -108,6 +116,7 @@ Assumed Texts
 	lines
 Bounded(name Text) Texts
 	MlirPassed(Wrapped, 2).Bounded("offset")(3) is "    %e_offset_b = arith.cmpi sle, %e_offset, %e_offset_l : i64"
+	MlirPassed(Wrapped, 2).Assumed is Bounds
 	let exact = "%e_" + name
 	let magic = "%m_" + name
 	let positive = (Line(exact, "_a", "cmpi sge, " + exact + ", %one : i64"), Assumption(exact + "_a"))
