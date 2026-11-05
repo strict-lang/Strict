@@ -59,6 +59,7 @@ HasOperator(type Text, operator Text) Boolean
 		return false
 	values.inference.types.MethodsOf(type).TypeOf(operator) is not ""
 IsComposite(node SyntaxNode, block CodeBlock) Boolean
+	Plain.IsComposite(SyntaxNode("Binary", "xor", (One, One)), CodeBlock.Empty)
 	Plain.Choice(Choose, CodeBlock.Empty).instructions.Last.texts is ("conditional0")
 	Plain.Contains(NotInOnes, CodeBlock.Empty).instructions is not Plain.Contains(InOnes, CodeBlock.Empty).instructions
 	Plain.Operation(SyntaxNode("Binary", "<", (One, One)), CodeBlock.Empty).Result is not 4
@@ -81,11 +82,17 @@ Decided(node SyntaxNode, block CodeBlock) Text
 	let matches = isType and Matches(values.TypeOf(node.children(0), block), wanted.text)
 	(matches is (node.text is "is")) to Text
 IsTypeTest(wanted SyntaxNode, block CodeBlock) Boolean
+	Plain.Composite(SyntaxNode("Binary", "and", (NoNode, NoNode)), CodeBlock.Empty.Declare("x", "Boolean")).nextId is 1
+	Plain.Composite(InOnes, CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
+	Plain.Decided(SyntaxNode("Binary", "<", (One, SyntaxNode("Identifier", "B"))), CodeBlock.Empty) is ""
+	Plain.Choice(Choose, CodeBlock.Empty).instructions(8).payload is (0)
+	Plain.Choice(Narrowing, CodeBlock.Empty.Declare("x", "Number")).scope.TypeOf("x") is "Number"
 	Plain.IsTypeTest(SyntaxNode("Identifier", "B"), CodeBlock.Empty)
 	Hiding.IsTypeTest(SyntaxNode("Identifier", "B"), CodeBlock.Empty) is false
 	let isHiding = values.IsMethodCall(wanted, block) or (wanted.text is "Error")
 	values.IsTypeName(wanted, block) and (isHiding is false)
 IsMismatched(node SyntaxNode, block CodeBlock) Boolean
+	Plain.Decided(SyntaxNode("", "is", (NoNode, Mismatched.children(1))), CodeBlock.Empty.Declare("x", "Dictionary")) is ""
 	Plain.IsMismatched(Mismatched, CodeBlock.Empty)
 	Plain.IsMismatched(SyntaxNode("Binary", "is", (One, One)), CodeBlock.Empty) is false
 	Hashes.IsMismatched(SyntaxParser(Tokenizer("Hash(1) is Hash(\"a\")").Tokens).Parse, CodeBlock.Empty) is false
@@ -132,6 +139,10 @@ Choice(node SyntaxNode, block CodeBlock) CodeBlock
 	let restored = isNarrowed then chosen.Declare(target, condition.scope.TypeOf(target)) else chosen
 	ErrorCodegen(values).Handled(node.children(1), restored).Joined(name, chosen.nextId - 1)
 Logical(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Logical(SyntaxNode("", "and", (One, One)), CodeBlock.Empty).instructions(4).kind < InstructionType.JumpToIdIfTrue
+	Plain.Logical(SyntaxNode("", "or", (One, One)), CodeBlock.Empty).instructions(4).kind is InstructionType.JumpToIdIfTrue
+	Plain.Choice(Choose, CodeBlock.Empty).instructions(12).payload is (1)
+	Plain.Compared(SyntaxNode("Identifier", "<"), CodeBlock.Empty.Declare("<", "Boolean")).instructions.Length is 3
 	Plain.Logical(SyntaxNode("Binary", "or", (One, One)), CodeBlock.Empty).instructions.Last.texts is ("logical0")
 	Plain.Logical(SyntaxNode("Binary", "or", (One, One)), CodeBlock.Empty).nextId is 1
 	let left = values.Expression(node.children(0), block)
@@ -139,6 +150,7 @@ Logical(node SyntaxNode, block CodeBlock) CodeBlock
 	let jump = node.text is "and" then InstructionType.JumpToIdIfFalse else InstructionType.JumpToIdIfTrue
 	values.Expression(node.children(1), left.Skipping(name, jump)).Joined(name, left.nextId)
 Contains(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Contains(SyntaxNode("", "is in", (One, NoNode)), CodeBlock.Empty.Declare("x", "Errors")).nextId is 1
 	Plain.Contains(InOnes, CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
 	let collection = node.children(1)
 	let isErrors = values.inference.types.ElementType(values.TypeOf(collection, block)) is in ErrorCodegen.ErrorTypes
