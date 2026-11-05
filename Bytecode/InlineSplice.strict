@@ -9,7 +9,9 @@ constant Sample = InlineSplice(Inliner.First, Inliner.Calling.instructions(1), 2
 constant Jumps = (InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue, InstructionType.JumpEnd)
 constant Squaring = InlineSplice(StructLanes.Squared, StructLanes.Calling(4), 5, "", List(Text), ("real", "imaginary"), 18)
 constant Owning = InlineSplice(StructLanes.Squared, InstructionEntry.Invoke(4, ("Strict/Pair", "Squared", "Strict/Pair"), List(Number), -1), 5, "", ("real", "imaginary", "value"), ("real", "imaginary"), 18)
+constant Valued = InlineSplice(MethodEntry("V", List(MemberEntry), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "value"), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 5), InstructionEntry.Return(0))), Inliner.Calling.instructions(1), 2, "elements", List(Text))
 Spliced List(InstructionEntry)
+	Valued.Spliced.Length is 4
 	Sample.Spliced.Length is 3
 	Sample.Spliced(2).texts.First is "inline2_elements"
 	let returned = callee.instructions.Last.payload(0) + base
@@ -25,6 +27,7 @@ Prologue List(InstructionEntry)
 	Sample.Prologue.Length is 1
 	Sample.Prologue.First.texts.First is "inline2_elements"
 	Owning.Prologue.Length is 0
+	Valued.Prologue.Length is 2 and (Valued.Prologue.Last.texts is ("inline2_value"))
 	let reads = LoadReuse(List(InstructionEntry)).InvokeReads(call)
 	mutable lines = List(Mutable(InstructionEntry))
 	for callee.parameters
@@ -37,6 +40,7 @@ Moved(entry InstructionEntry, returned Number) InstructionEntry
 	Sample.Moved(Inliner.First.instructions(1), 3).payload is (1, 2, -1)
 	Sample.Moved(Inliner.First.instructions(1), 3).line is Inliner.Calling.instructions(1).line
 	Sample.Moved(InstructionEntry.Jump(InstructionType.JumpEnd, 2), 3).payload is (186, 23)
+	Owning.Moved(StructLanes.Squared.instructions(0), 3).texts is ("real")
 	let rebased = LoadReuse(List(InstructionEntry)).Rebased(entry, base)
 	let isNamed = (entry.kind is in Inliner.Renamed) and (entry.texts.First is not in kept)
 	let texts = isNamed then List(Text) + (Prefix + entry.texts.First) else entry.texts
@@ -44,20 +48,24 @@ Moved(entry InstructionEntry, returned Number) InstructionEntry
 	InstructionEntry(entry.kind, texts, payload, call.line)
 Registered(entry InstructionEntry, source Number, target Number) Numbers
 	Sample.Registered(InstructionEntry.Return(5), 5, 9) is (9)
+	Sample.Registered(InstructionEntry.LoadNumber(0, 5), 5, 9) is (0, 1, 5)
 	let reuse = LoadReuse(List(InstructionEntry))
 	let positions = reuse.ReadPositions(entry) + reuse.WritePosition(entry)
 	for entry.payload
 		(index is in positions) and (value is source) then target else value
 IsChecked Boolean
 	Sample.IsChecked
+	Valued.IsChecked is false
 	let instructions = callee.instructions
 	let last = instructions.Length > 1 then instructions(instructions.Length - 2) else instructions.Last
 	(last.kind is InstructionType.CheckError) and (last.payload(0) is instructions.Last.payload(0))
 Stored(register Number, name Text) InstructionEntry
 	Sample.Stored(4, "a").line is Inliner.Calling.instructions(1).line
+	Sample.Stored(4, "a").texts is ("inline2_a") and (Sample.Stored(4, "a").payload is (4, -1))
 	InstructionEntry(Inliner.Store, List(Text) + (Prefix + name), (register, -1), call.line)
 IsValued Boolean
 	Sample.IsValued is false
+	Valued.IsValued
 	for callee.instructions
 		if (value.kind is InstructionType.LoadVariableToRegister) and (value.texts.First is "value")
 			return true
@@ -68,6 +76,7 @@ Fielded(reads Numbers) List(InstructionEntry)
 	Squaring.Spliced(4).texts is ("inline5_real")
 	Squaring.Spliced(5).payload is (3, 5, 5, 7)
 	Sample.Fielded((7)).Length is 0
+	Owning.Fielded((7)).Length is 0
 	if (fields.Length is 0) or InlineRules(callee).IsOwn(call)
 		return List(InstructionEntry)
 	mutable lines = List(Mutable(InstructionEntry))
