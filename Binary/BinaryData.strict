@@ -16,6 +16,7 @@ Int32(at Number) Number
 Int16(at Number) Number
 	Sample.Int16(4) is -1
 	Sample.Int16(6) is -32766
+	Sample.Int16(0) is 4
 	let unsigned = UInt16(at)
 	unsigned >= 32768 then unsigned - 65536 else unsigned
 UInt16(at Number) Number
@@ -26,10 +27,10 @@ Int8(at Number) Number
 	Sample.Int8(0) is 4
 	bytes(at) >= 128 then bytes(at) - 256 else bytes(at)
 Float32(at Number) Number
-	Sample.Float32(8) is 1.5
+	(Sample.Float32(8) is 1.5) and (BinaryData((1, 2, 3, 64)).Float32(0) is 2 + 197121 / 4194304)
 	Sample.Float32(18) is -1
-	Sample.Float32(0) is 4 * 2 ^ -149
-	BinaryData((0, 0, 128, 127)).Float32(0) is 1 / 0
+	(Sample.Float32(0) is 4 * 2 ^ -149) and (BinaryData((0, 0, 128, 255)).Float32(0) is -1 / 0)
+	(BinaryData((0, 0, 128, 127)).Float32(0) is 1 / 0) and (BinaryData((1, 0, 128, 127)).Float32(0) is not 1 / 0)
 	BinaryData((1, 0, 128, 127)).Float32(0).IsFinite is false
 	let high = bytes(at + 3)
 	let exponent = (high % 128) * 2 + (bytes(at + 2) / 128).Floor
@@ -46,7 +47,9 @@ Text(at Number) Text
 	text
 TextLength(at Number) Number
 	Sample.TextLength(12) is 5
+	BinaryData((0, 200, 3)).TextLength(1) is 456
 	bytes(at) >= 128 then bytes(at) % 128 + bytes(at + 1) * 128 else bytes(at)
 TextEnd(at Number) Number
 	Sample.TextEnd(12) is 18
+	BinaryData((0, 200, 3)).TextEnd(1) is 459
 	at + (bytes(at) >= 128 then 2 else 1) + TextLength(at)
