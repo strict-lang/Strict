@@ -40,6 +40,8 @@ Keyed(name Text, pairs VmValue, arguments List(VmValue)) VmValue
 		return name is "Remove" then pairs else VmValue.OfList(pairs.items + VmValue.OfList(arguments))
 	name is "Add" then VmValue.OfError("DuplicateKey") else Changed(name, pairs, found, arguments)
 Changed(name Text, pairs VmValue, position Number, arguments List(VmValue)) VmValue
+	Shapes.Initial(Byted.members(1)) is VmValue.None
+	Shapes.Initial(MemberEntry("flag", "Strict/Boolean", List(InstructionEntry), false)) is VmValue.FalseValue
 	Shapes.Changed("Remove", Pairs, 0, List(VmValue) + VmValue.OfNumber(1)).items.First.items.First.number is 2
 	Shapes.Changed("set", Pairs, 0, (VmValue.OfNumber(1), VmValue.OfNumber(5))).items.First.items.Last.number is 5
 	if name is "set"
@@ -76,6 +78,12 @@ Logical(name Text, left VmValue, call Invocation) VmValue
 		return VmValue.OfBoolean(isLeft is not isRight)
 	VmValue.OfBoolean(name is "and" then isLeft and isRight else isLeft or isRight)
 Bitwise(name Text, left Number, right Number) Number
+	Shapes.Logical("not", VmValue.FalseValue, NewShape) is VmValue.TrueValue
+	Shapes.Logical("and", VmValue.TrueValue, Invocation(NewShape.entry, (VmValue.TrueValue), Pairs)).IsTrue
+	Shapes.Logical("or", VmValue.FalseValue, Invocation(NewShape.entry, (VmValue.TrueValue), Pairs)).IsTrue
+	Shapes.Logical("or", VmValue.TrueValue, NewShape).IsTrue and Shapes.Logical("xor", VmValue.TrueValue, NewShape).IsTrue
+	Shapes.Logical("xor", VmValue.TrueValue, Invocation(NewShape.entry, (VmValue.TrueValue), Pairs)) is VmValue.FalseValue
+	Shapes.Logical("or", VmValue.OfNumber(8), Invocation(HostedMath.Logging.entry, NewShape.Arguments, Pairs)).number is 11
 	Shapes.Bitwise("xor", 12, 10) is 6
 	Shapes.Bitwise("and", 12, 10) is 8
 	Shapes.Bitwise("or", 12, 10) is 14
@@ -118,6 +126,9 @@ Edited(name Text, text Text) VmValue
 		return VmValue.OfText(text.Trim)
 	VmValue.OfText(name is "TrimStart" then text.TrimStart else text.TrimEnd)
 Constructed(call Invocation) VmValue
+	Shapes.Initial(MemberEntry("list", "Strict/List(Number)", List(InstructionEntry), false)).kind is "List"
+	Shapes.Constructed(Shape, Frame.Listed).items.Last is Frame.Listed(7)
+	Natives((TypeEntry("Strict/X/Shape", List(MemberEntry), List(MethodEntry)), Shape)).TypeOf("Strict/Shape") is Shape
 	Shapes.Constructed(NewShape).kind is "Strict/Shape"
 	Natives(List(TypeEntry) + Degree).Constructed(NewDegree).number is 3
 	Natives(List(TypeEntry) + Single).Constructed(NewSingle).number is 0.10000000149011612
@@ -127,6 +138,11 @@ Constructed(call Invocation) VmValue
 		return Rounding.Single.Wrapped(type, call)
 	VmValue(call.TypeName, 0, "", Rounding.Single.Members(type, call, value))
 Fresh(type TypeEntry) VmValue
+	Shapes.Keyed("in", Pairs, List(VmValue) + VmValue.OfNumber(2)) is VmValue.TrueValue
+	Shapes.Keyed("in", Pairs, List(VmValue) + VmValue.OfNumber(7)) is VmValue.FalseValue
+	Shapes.Keyed("get", Pairs, List(VmValue) + VmValue.OfNumber(7)) is VmValue.OfError("KeyNotFound")
+	Shapes.Keyed("Remove", Pairs, List(VmValue) + VmValue.OfNumber(7)) is Pairs
+	Shapes.Keyed("Add", Pairs, (VmValue.OfNumber(7), VmValue.OfNumber(8))).items.Last.items.Last.number is 8
 	Shapes.Fresh(Shape).items.First.number is 0
 	mutable values = List(Mutable(VmValue))
 	for type.members
@@ -159,6 +175,12 @@ Initial(member MemberEntry) VmValue
 	let isList = member.typeName.StartsWith("Strict/List") or member.typeName.StartsWith("Strict/Dictionary")
 	isList then VmValue.OfList(List(VmValue)) else VmValue.None
 IsMemberCall(call Invocation, type TypeEntry, chosen MethodEntry) Boolean
+	Shapes.Converted(VmValue.OfList(VmValue.OfNumber(1)), "Strict/List(Text)") is VmValue.OfList(VmValue.OfText("1"))
+	Shapes.Converted(VmValue.OfNumber(75), "Strict/Text").text is "75"
+	Shapes.Searched("Upper", "ab", List(VmValue)).text is "AB"
+	Shapes.Searched("StartsWith", "abc", List(VmValue) + VmValue.OfText("ab")) is VmValue.TrueValue
+	Shapes.Searched("IndexOf", "abab", (VmValue.OfText("a"), VmValue.OfNumber(1))).number is 2
+	Shapes.Searched("LastIndexOf", "abab", List(VmValue) + VmValue.OfText("b")).number is 3
 	Natives(TypeEntry.Holding).IsMemberCall(Invocation.Coding, TypeEntry.Rounded, TypeEntry.Rounded.methods.First) is false
 	Natives(TypeEntry.Holding).IsMemberCall(Invocation.Coding, TypeEntry.CharacterEntry, TypeEntry.ToNumber)
 	let parameter = TypeOf(chosen.parameters.Length is 1 then chosen.parameters.First.typeName else "")
