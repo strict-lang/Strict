@@ -47,13 +47,28 @@ Named Texts
 		let isNamed = ((value.kind is in loaded) or (value.kind is in written)) and value.texts(0).IndexOf("(") < 0
 		value.kind is InstructionType.StoreConstantToVariable then value.texts.Last else (isNamed then value.texts(0) else "")
 TypeOf(name Text) TypeEntry
+	MlirForeign.Adder.Symbol is "Adder_Add_foreign"
+	MlirFunction(Counter, method = MethodEntry(MlirForeign.Add, Name = "to")).Symbol is "Counter_to_2_Number"
+	Counter.Entry(0) is "    %instance = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
+	Counter.Entry(2) is "    llvm.store %p0, %instance : f64, !llvm.ptr"
+	Counter.Entry(3) is "    llvm.store %p0, %v_value : f64, !llvm.ptr"
+	"    %q_input = llvm.load %v_input : !llvm.ptr -> f64" is in MlirGroups.Norming.function.Entry
+	("  ^stackChecked:" is in MlirFunction(MlirGroups.Norming.function, IsRecursive = false).Entry) is false
 	Counter.TypeOf("Strict/Other").members.Length is 0
 	name is in typeIndex then types(typeIndex(name)) else Natives(types).TypeOf(name)
 Load(target Text, slot Text) Text
+	MlirFunction(Counter, method = MlirParallel.Doubled).Named(4) is ""
+	MlirFunction(Counter, method = MlirParallel.Doubled).Named(5) is "forResult"
+	MlirFunction(Counter, method = MlirFiltering.Kept).Named(0) is "forResult"
+	MlirForeign.Adder.Parameters is ("value", "left", "right")
+	MlirFunction(Counter, method = MlirParallel.Doubled).VariableNames is ("index", "value", "numbers", "forResult")
+	MlirInstances.Looping.VariableNames is ("index", "value", "width")
 	Counter.Load("%a", "%r0") is "    %a = llvm.load %r0 : !llvm.ptr -> f64"
 	MlirFunction(Counter, Float = "f32").Load("%a", "%r0") is "    %a = llvm.load %r0 : !llvm.ptr -> f32"
 	"    " + target + " = llvm.load " + slot + " : !llvm.ptr -> " + Float
 Store(stored Text, slot Text) Text
+	MlirFunction(Counter, Float = "f32").Store("%a", "%b") is "    llvm.store %a, %b : f32, !llvm.ptr"
+	MlirFunction(Counter, Float = "f32").Store("%a", "%v_b").StartsWith("    llvm.store %a, %v_b : f32, !llvm.ptr\n    %a")
 	Counter.Store("%a", "%r0") is "    llvm.store %a, %r0 : f64, !llvm.ptr"
 	MlirFunction(Counter, Float = "f32").Store("%a", "%r0").EndsWith("llvm.store %a_r0_q, %r0_q : i64, !llvm.ptr")
 	let line = "    llvm.store " + stored + ", " + slot + " : " + Float + ", !llvm.ptr"
@@ -61,6 +76,13 @@ Store(stored Text, slot Text) Text
 	let exact = MlirExact(value, 0).Converted(stored, Float, slot)
 	isNumber and (exact.Length > 0) then outer.Text.Combine((List(Text) + line) + exact, "\n") else line
 Copied(source Text, destination Text, temp Text) Texts
+	MlirFiltering.Filtering.function.Label(8) is ("    cf.br ^bb8", "  ^bb8:")
+	MlirFiltering.Filtering.function.Label(7) is ("  ^bb7:")
+	MlirFiltering.Filtering.function.Label(9) is List(Text)
+	MlirGpu.Checking.function.Label(6) is ("  ^bb6:")
+	MlirLines.Lined.Label(0) is List(Text)
+	MlirFiltering.Filtering.function.Emitted(5)(2) is "    %t5c = arith.cmpf ogt, %t5a, %t5b : f64"
+	MlirFiltering.Filtering.function.Emitted(7)(3) is "    llvm.store %t7n, %v_forResult : f64, !llvm.ptr"
 	Counter.Copied("%r0", "%v_a", "%t1").Length is 2
 	(Load(temp, source), Store(temp, destination))
 Text Text
@@ -100,6 +122,15 @@ Entry Texts
 	lines = lines + MlirDestined(value, 0).Prologue + MlirTails(value, 0).Restart
 	lines + MlirParameters(value).Hoisted + MlirInstances(value, 0).Unpacked + MlirInstances(value, 0).Constants
 Slot(name Text) Texts
+	Counter.Slot("%r0")(1) is "    llvm.store %zero, %r0 : f64, !llvm.ptr"
+	Counter.Slots(3) is "    %r0 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
+	Counter.Slots(5) is "    %v_index = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
+	Counter.Slots(9) is "    %loop0 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
+	"    %linecount = arith.constant 5 : i64" is in MlirLines.Lined.Slots
+	MlirLines.Lined.Body(0) is "    %line0 = arith.constant 4 : i64"
+	MlirLines.Lined.Body.Last is "    return %t2 : f64"
+	"  ^bb2:" is in MlirLines.Jumped.Body
+	MlirFunction(Counter, method = MlirForeign.Doubles).Body is ("    return %zero : f64")
 	Counter.Slot("%r0").Length is 2
 	("    " + name + " = llvm.alloca %one x f64 : (i64) -> !llvm.ptr", Store("%zero", name))
 Body Texts
