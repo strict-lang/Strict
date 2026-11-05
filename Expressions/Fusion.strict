@@ -53,6 +53,7 @@ Opening(line Text, closing Number) Number
 	-1
 Name(line Text, start Number) Text
 	Averaging.Name("\t(Ones(2)", 6) is "Ones"
+	Averaging.Name("x.Ones(2)", 6) is "Ones"
 	mutable begin = start
 	for start
 		let character = line.Substring(start - 1 - index, 1)
@@ -73,12 +74,16 @@ IsFusable(name Text) Boolean
 	last.StartsWith("\tfor") and lines(ending - 1).StartsWith("\t\t")
 Header(name Text) Number
 	Averaging.Header("Ones") is 2
+	Averaging.Header("On") is -1
+	Averaging.Header("Run") is 0
+	Averaging.Header("\tOnes") is -1
 	for lines
 		if TypeShape(lines).IsMethodHeader(value) and (value.StartsWith(name + "(") or value.StartsWith(name + " "))
 			return index
 	-1
 Ending(header Number) Number
 	Averaging.Ending(2) is 6
+	Averaging.Ending(0) is 2
 	for Range(header + 1, lines.Length)
 		if lines(value).StartsWith("\t") is false
 			return value
@@ -87,6 +92,8 @@ Element(header Text) Text
 	Averaging.Element("Ones(count Number) Numbers") is "Number"
 	Averaging.Element("Grays List(Color)") is "Color"
 	Averaging.Element("Run") is ""
+	Averaging.Element("Runs") is ""
+	Averaging.Element("Run Number") is ""
 	let returned = header.Substring(header.LastIndexOf(" ") + 1, header.Length - header.LastIndexOf(" ") - 1)
 	if returned.StartsWith("List(")
 		return returned.Substring(5, returned.Length - 6)

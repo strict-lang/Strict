@@ -2,6 +2,11 @@ has logger
 constant Counting = TypeInference(KnownTypes.Sample, (KnownTypes.NoMembers, KnownTypes.NoMembers))
 constant Joined = ("Names Texts", "\t\"a\" + \"b\"")
 constant Joining = MethodBodies("Demo", TypeShape(Joined), Counting)
+constant Missing = ("Names Texts", "\tmissing")
+constant Missed = MethodBodies("Demo", TypeShape(Missing), Counting)
+constant Writers = KnownTypes(("W", "V"), (KnownTypes.NoMembers, KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Scope(("Write", "Write", "Read", "Seek", "Seek", TypeShape.Constrained, TypeShape.Constrained), ("lines", "bytes", "", "", "", "a", "b")), Scope(("Go", "Go"), ("a", "b"))))
+constant OverloadShapes = (TypeShape("Write(lines Texts)"), TypeShape("Go Number", "\t1"))
+constant Writing = TypeShape("has W", "has V")
 Run(folder Text, root Text)
 	let inference = Inference(Directory.Files(folder, "*.strict") + AllFiles(root))
 	mutable unresolved = List(Mutable(Text))
@@ -22,6 +27,7 @@ Unresolved(path Text, inference TypeInference) Texts
 	issues + Constraint.Where(path, lines) + ambiguous + overloaded + Found(check, bodies, lines, path)
 Found(check FileCheck, bodies MethodBodies, lines Texts, path Text) Texts
 	ResolveCheck.Found(FileCheck(Counting, List(Text)), Joining, Joined, "A.strict").First.EndsWith("A.strict:2")
+	ResolveCheck.Found(FileCheck(Counting, List(Text)), Missed, Missing, "A").First.EndsWith("missing used in A:2")
 	for bodies.Statements
 		let found = check.Unknown(value, bodies.Methods)
 		let unknown = found is "" then ReturnTypes(check.inference).Issue(value, bodies.Methods, lines) else found
@@ -98,4 +104,5 @@ Generics(files Texts, shapes List(TypeShape)) Texts
 			TypeName(files(index))
 TypeName(path Text) Text
 	TypeName("Examples/Sum.strict") is "Sum"
+	ResolveCheck.Overloaded(Writers, OverloadShapes, Writing, Scope(("Seek"), ("x"))).names is ("Seek", "Write", "Write")
 	Path(path).FileName.RemoveExtension.text
