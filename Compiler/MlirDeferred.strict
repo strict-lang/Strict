@@ -76,7 +76,7 @@ Variant(width Text, letter Text) Texts
 	Renamed(List(Text) + ("  ^loop" + position + "packed:") + packed, letter)
 Renamed(lines Texts, letter Text) Texts
 	Doubling.Renamed(List(Text) + "    %t2m = arith.cmpi slt, %t2ki, %to : i64", "s").Last.EndsWith("%fs2ki, %to : i64")
-	Doubling.Renamed(List(Text) + "    func.call @z(%t2rv, %from, %to) : (f64, i64, i64) -> ()", "s").Last.IndexOf("%to)") > 0
+	Doubling.Renamed(List(Text) + "func.call @z(%t2rv, %from, %to) : (f64, i64, i64) -> ()", "s").Last.IndexOf("%to)") > 0
 	for MlirKernel(function, position).Renamed(lines, letter)
 		value.Replace("%f" + letter + "o ", "%to ").Replace("%f" + letter + "o)", "%to)")
 Copied(prefix Texts) Texts

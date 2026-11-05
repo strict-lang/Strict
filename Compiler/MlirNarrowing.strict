@@ -12,7 +12,7 @@ constant Marked = MlirNarrowing(MlirFunction(Few.function.types, MlirFunction.Sh
 constant Rule = "VectorLoopMustUse32BitNumbers"
 constant Advice = ", use Float32s or value.Bits is 32"
 constant PackedNames = ("Float32s", "BFloat16s", "Float8s", "Bytes")
-constant Formats = (32, 17, 7, 9)
+constant Formats = (MlirDoubles.Float32Format, MlirDoubles.BFloat16Format, 7, 9)
 Format(kind Text) Number
 	MlirNarrowing.Format("List(Float32)") is 32
 	MlirNarrowing.Format("Bytes") is 9
@@ -64,7 +64,7 @@ IsWide(name Text) Boolean
 	Floats.IsWide("numbers") is false
 	Texting.IsWide("numbers") is false
 	Marked.IsWide("numbers") is false
-	if (Bits(name) > 0) and (Bits(name) < 64)
+	if (Bits(name) > 0) and (Bits(name) < Number.DoubleBits)
 		return false
 	let kind = MlirKinds(function).VariableKind(position, name)
 	(MlirLayout(function).Represented(kind) is "List(Number)") and (Format(kind) is 0)
@@ -113,7 +113,7 @@ IsForced Boolean
 		let texts = function.method.instructions(value).texts
 		names = texts.Length > 0 then names + texts(0) else names
 	for names
-		if Bits(value) is 64
+		if Bits(value) is Number.DoubleBits
 			return true
 	false
 Bits(name Text) Number

@@ -5,6 +5,7 @@ constant Tabled = MethodEntry("Tabled", List(MemberEntry) + Count, "Strict/List(
 constant Squared = MethodEntry("Squared", Tabled.parameters, Tabled.returnType, Tabled.instructions.Slice(0, 5) + InstructionEntry.Binary(InstructionType.Power, (1, 2, 3)) + Tabled.instructions.Slice(6, 2))
 constant Tabling = MlirDoubles(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, Tabled), 2)
 constant Squaring = MlirDoubles(MlirFunction(Tabling.function.types, MlirParallel.Rows, Squared), 2)
+constant Float32Format = 32
 constant BFloat16Format = 17
 constant LanesFormat = 33
 Failing Boolean

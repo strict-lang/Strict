@@ -85,7 +85,7 @@ Usable(prefix Text, kind Text) Texts
 		return Coupled(prefix)
 	if kind is "d"
 		let packed = "    " + prefix + "k = func.call @strict_list_packed(" + prefix + "v) : (f64) -> i64"
-		let lanes = "    " + prefix + "l = arith.constant " + MlirBytes.Lanes + " : i64"
+		let lanes = "    " + prefix + "l = arith.constant " + MlirDoubles.LanesFormat + " : i64"
 		return (packed, lanes, "    " + prefix + "o = arith.cmpi eq, " + prefix + "k, " + prefix + "l : i64")
 	let address = "    " + prefix + "i = llvm.ptrtoint " + prefix + "p : !llvm.ptr to i64"
 	let present = (address, "    " + prefix + "o = arith.cmpi ne, " + prefix + "i, " + Temp("whz") + " : i64")

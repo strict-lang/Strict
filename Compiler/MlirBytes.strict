@@ -7,7 +7,6 @@ constant Collecting = MlirBytes(MlirFastLoop.Byting.function, 2)
 constant Doubling = MlirBytes(MlirFastLoop.Doubling.function, 2)
 constant Laning = MlirBytes(MlirLanes.Collecting, 2)
 constant Singling = MlirBytes(MlirFunction(List(TypeEntry), MlirFunction.Shape, MlirLayout.Singles.method), 2)
-constant Lanes = 33
 IsIterated Boolean
 	Iterating.IsIterated
 	Laning.IsIterated
@@ -15,23 +14,23 @@ IsIterated Boolean
 	Iterated > 0
 Iterated Number
 	Iterating.Iterated is 9
-	Laning.Iterated is Lanes
+	Laning.Iterated is MlirDoubles.LanesFormat
 	Doubling.Iterated is 0
 	let entry = function.method.instructions(position)
 	let kind = entry.payload(1) is 1 then "" else MlirKinds(function).KindOf(position, entry.payload(0))
 	if kind is in ("Bytes", "List(Byte)")
 		return 9
-	MlirLanes(function, 0).IsPacked(MlirKinds(function).ElementKind(kind)) then Lanes else 0
+	MlirLanes(function, 0).IsPacked(MlirKinds(function).ElementKind(kind)) then MlirDoubles.LanesFormat else 0
 Item Text
 	Iterating.Item is "byte"
 	Laning.Item is "lane"
-	Iterated is Lanes then "lane" else "byte"
+	Iterated is MlirDoubles.LanesFormat then "lane" else "byte"
 IsCollected Boolean
 	Collecting.IsCollected
 	Laning.IsCollected
 	Singling.IsCollected
 	Doubling.IsCollected is false
-	MlirLayout(function).Packed(position) is in (9, 32, Lanes)
+	MlirLayout(function).Packed(position) is in (9, MlirDoubles.Float32Format, MlirDoubles.LanesFormat)
 Itemizer Text
 	Collecting.Itemizer is "@strict_list_data"
 	Doubling.Itemizer is "@strict_list_items"
@@ -42,7 +41,7 @@ Width Text
 	Laning.Width is "i32"
 	Singling.Width is "f32"
 	let packed = MlirLayout(function).Packed(position)
-	IsCollected then ("i8", "f32", "i32")((9, 32, Lanes).Index(packed)) else "f64"
+	IsCollected then ("i8", "f32", "i32")((9, MlirDoubles.Float32Format, MlirDoubles.LanesFormat).Index(packed)) else "f64"
 Started(result Text, items Text) Texts
 	Collecting.Started("%r", "%i").Last is "    %i = func.call @strict_list_data(%r) : (f64) -> !llvm.ptr"
 	Doubling.Started("%t2r", "%i").Last is "    %i = func.call @strict_list_items(%t2r) : (f64) -> !llvm.ptr"

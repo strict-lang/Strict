@@ -11,7 +11,7 @@ Sourced Texts
 	if MlirTokens(function, position).Call >= 0
 		return (gpu.Temp("gb"), "1")
 	let collection = MlirLoops(function, position).Collection
-	let isPlain = (collection is "List(Number)") or (MlirBytes(function, position).Iterated is MlirBytes.Lanes)
+	let isPlain = (collection is "List(Number)") or (MlirBytes(function, position).Iterated is MlirDoubles.LanesFormat)
 	let number = collection is "" then "0" else isPlain then "1" else "2"
 	(collection is "" then gpu.Temp("b") else gpu.Temp("v"), number)
 Launched Texts
