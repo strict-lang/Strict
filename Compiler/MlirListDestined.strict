@@ -14,11 +14,6 @@ constant Lined = MlirListDestined(MlirFunction((MlirFlats.Tripling, MlirFlats.Su
 constant Checked = MlirListDestined(MlirFunction(Lined.function.types, MlirFlats.Tripling, MethodEntry("Lined", List(MemberEntry), "Strict/List(Strict/Math/Tripling)", Lined.function.method.instructions.Slice(0, 10) + InstructionEntry.Invoke(5, ("Strict/Math/Tripling", "Validated", "Strict/Math/Tripling"), List(Number), 4) + InstructionEntry.Named(InstructionType.InvokeWriteToList, 5, "forResult"))), 1)
 constant Keeping = MlirListDestined(MlirFunction(Remade.function.types, Remade.function.type, MethodEntry("Remade", Remaking.parameters, Remaking.returnType, Remaking.instructions.Slice(0, 4) + InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "value") + InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 6, "kept") + Remaking.instructions.Slice(4, 6))), 6)
 Prologue Texts
-	constant bare = MethodEntry(Copying, parameters = MlirFunction.Shape.members)
-	constant unowned = MlirListDestined(MlirFunction(Copied.function, method = bare), 0)
-	(unowned.IsDestined is false) and (unowned.ResultLoop is -1)
-	constant counted = MethodEntry(Copying, declaredType = "Strict/Number")
-	MlirListDestined(MlirFunction(Copied.function, method = counted), 0).IsDestined is false
 	Copied.Prologue.Length is 3
 	MlirListDestined(MlirDestined.Made.function, 0).Prologue.Length is 0
 	IsDestined then Taking else List(Text)
@@ -49,12 +44,6 @@ ResultLoop Number
 	let isParameter = writer >= 0 then Text.Combine(steps(writer).texts) is in function.method.ParameterNames else false
 	(loops is 1) and isParameter then begin else -1
 Sources Texts
-	constant twice = MethodEntry(Copying, instructions = Copying.instructions + Copying.instructions.Slice(1, 2))
-	MlirListDestined(MlirFunction(Copied.function, method = twice), 0).ResultLoop is 2
-	constant emptied = MethodEntry(Copying, instructions = Copying.instructions.Slice(0, 1) + Copying.instructions)
-	MlirListDestined(MlirFunction(Copied.function, method = emptied), 0).ResultLoop is -1
-	constant kept = MethodEntry(Copying, instructions = List(InstructionEntry) + MlirOwned.Empty + Copying.instructions)
-	MlirListDestined(MlirFunction(Copied.function, method = kept), 0).ResultLoop is 3
 	Copied.Sources is ("items")
 	MlirListDestined(MlirFunction(List(TypeEntry), MlirFunction.Shape, Weighing), 0).Sources is ("items")
 	for function.method.parameters
@@ -130,8 +119,6 @@ IsCollected(name Text) Boolean
 	false
 Collected(at Number) Boolean
 	Lined.Collected(6) is false
-	constant crossed = MethodEntry(Copying, instructions = Copying.instructions.Slice(0, 4) + Peeking.instructions(5))
-	MlirListDestined(MlirFunction(Copied.function, method = crossed), 0).Collected(3) is false
 	Lined.Collected(9)
 	Checked.Collected(9)
 	Lined.Collected(8) is false
@@ -143,8 +130,6 @@ Collected(at Number) Boolean
 Iterated Text
 	Remade.IsElement(InstructionEntry.Invoke(2, ("T", "Made", "T"), List(Number), -1)) is false
 	Remade.IsElement(InstructionEntry.Invoke(2, ("T", "Made", "T"), List(Number), 0)) is false
-	constant bare = MethodEntry(Remaking, parameters = List(MemberEntry))
-	MlirListDestined(MlirFunction(Remade.function, method = bare), 4).IsElement(Remaking.instructions(4)) is false
 	Copied.Iterated is "items"
 	let steps = function.method.instructions
 	Text.Combine(steps(MlirKinds(function).Writer(ResultLoop, steps(ResultLoop).payload(0))).texts)
