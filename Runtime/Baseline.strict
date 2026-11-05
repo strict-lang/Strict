@@ -4,6 +4,9 @@ constant Calling = MethodEntry("Call", List(MemberEntry), "None", List(Instructi
 constant Reading = List(TypeEntry) + TypeEntry("Strict/T", List(MemberEntry), (Calling, Reader))
 constant Libraries = Baseline(Mutants(Logger, "Library.strict"))
 constant Sampled = Baseline(Mutants.Sample)
+constant Rolled = InstructionEntry.Invoke(1, ("Strict/Number", "Random", "Strict/Number"), List(Number), 0)
+constant Splitting = (InstructionEntry.LoadNumber(0, 0), Mutation.Marking, Rolled, InstructionEntry.LoadNumber(1, 1), InstructionEntry.Return(0))
+constant Rolling = TypeEntry(Machine.Doubler, methods = (Mutants.Lined, MethodEntry(Mutants.Lined, Name = TestCodegen.Runner, instructions = Splitting)))
 Kept(types List(TypeEntry)) List(MethodEntry)
 	Baseline(Mutants.Sample).Kept(Mutants.Doubled).Length is 0
 	Libraries.Kept(Execute(Logger).Loaded("Library.strict", ".")).Length is 0
@@ -35,19 +38,25 @@ Reaching(types List(TypeEntry)) Texts
 	reaching
 Usable(types List(TypeEntry)) List(MethodEntry)
 	Baseline(Mutants.Sample).Usable(Mutants.Doubled).Length is 0
+	Sampled.Usable(List(TypeEntry) + TypeEntry(Machine.Doubler, methods = List(MethodEntry) + Mutants.Lined)).Length is 1
+	Sampled.Usable(List(TypeEntry) + Rolling).Length is 0
 	let reaching = Reaching(types)
+	let runner = mutants.Runner(types.First)
 	for mutants.Mutated(types.First)
-		let isInput = TypeEntry.ShortName(types.First.Name) + "." + value.Name is in reaching
+		let tests = MethodEntry(runner, instructions = Mutation(runner).Split(value.Name))
+		let isInput = (TypeEntry.ShortName(types.First.Name) + "." + value.Name is in reaching) or IsReaching(tests, reaching)
 		if isInput and (mutants.part is "")
-			mutants.logger.Log(mutants.path + ": " + value.Name + " is not mutated, it uses input")
+			mutants.logger.Log(mutants.path + ": " + value.Name + " is not mutated, it or its tests use input or Random")
 		if isInput is false
 			value
 IsReaching(method MethodEntry, reaching Texts) Boolean
 	Sampled.IsReaching(Reader, List(Text)) and (Sampled.IsReaching(Calling, List(Text)) is false)
 	Baseline(Mutants.Sample).IsReaching(Calling, List(Text) + "T.Read")
+	Sampled.IsReaching(MethodEntry(Reader, instructions = List(InstructionEntry) + Rolled), List(Text))
 	for method.instructions
 		if (value.kind is InstructionType.Invoke) and (value.texts.Length > 1)
-			if mutants.IsInput(value.texts(0)) or (TypeEntry.ShortName(value.texts(0)) + "." + value.texts(1) is in reaching)
+			let name = TypeEntry.ShortName(value.texts(0)) + "." + value.texts(1)
+			if mutants.IsInput(value.texts(0)) or (value.texts(1) is "Random") or (name is in reaching)
 				return true
 	false
 IsBase Boolean

@@ -2,7 +2,6 @@ has arm Arm
 has target Numbers
 constant Planar = Reach(Arm.Planar, (0.4, 0.5, 0))
 constant Franka = Reach(Arm.Franka, (0.01, 0.7, 0.28))
-constant Many = Reach(Arm(List(Numbers), Layer.Zeros(500), Dataset.Indices(500)), (0, 0))
 constant Population = 40
 constant MutationRate = 0.2
 Distance(angles Numbers) Number
@@ -33,7 +32,6 @@ Crossed(first Numbers, second Numbers) Numbers
 Mutated(angles Numbers) Numbers
 	Planar.Mutated((10, 20)).Length is 2
 	Planar.Mutated((180, 180)).First <= 180
-	Many.Mutated(Layer.Zeros(500)).Sum > 0
 	for angles
 		(1.Random < MutationRate then value + 10.Random - 5 else value).Clamp(arm.lowest(index), arm.highest(index))
 Tournament(population List(Numbers)) Numbers
@@ -43,6 +41,7 @@ Tournament(population List(Numbers)) Numbers
 	Distance(first) < Distance(second) then first else second
 Best(population List(Numbers)) Numbers
 	Planar.Best(((0, 0), (40, 40))) is (40, 40)
+	Planar.Best(((40, 40), (0, 0))) is (40, 40)
 	mutable best = population.First
 	for population
 		if Distance(value) < Distance(best)
