@@ -18,6 +18,7 @@ Issues ValidationIssues
 	Limits(("has number", "Run", "\t1"), false).Issues.Length is 0
 	Limits(Long.lines, false, 10).Issues.Length is 0
 	Limits(OnlyConstants.lines + OnlyConstants.lines + OnlyConstants.lines, false, 10).Issues.Length is 0
+	Methods.Issues.Length is 1
 	mutable issues = List(Mutable(ValidationIssue))
 	for lines
 		issues = issues + LineIssues(value, index) + NegationIssues(value, index)
@@ -26,14 +27,23 @@ LineIssues(line Text, number Number) ValidationIssues
 	Sample.LineIssues("\t\t\t\t\t\t1", 2).First.Line is 3 and Sample.LineIssues(Wide, 4) is (Indent)
 	Sample.LineIssues(" a", 0).First to Text is "ExtraWhitespacesFoundAtBeginningOfLine: indent with tabs"
 	Limits(Long.lines, false, 10).LineIssues(RoundTrip.Packed + RoundTrip.Packed, 0).Length is 0
-	mutable issues = List(Mutable(ValidationIssue))
-	let length = line.Length to Text + " > " + MaxCharacters * scale
-	if line.StartsWith("\t") and (line.Length > MaxCharacters * scale)
-		issues.Add(ValidationIssue("CharacterCountMustBeWithinLimit", length, number + 1))
+	Sample.LineIssues("\t\t\t\t\t\t1", 2).First to Text is "NestingMoreThanFiveLevelsIsNotAllowed: more than five levels"
+	Sample.LineIssues("\t\t\t\t\t\t" + Wide, 0).Length is 2
+	mutable issues = LengthIssues(line, number)
 	if line.StartsWith("\t\t\t\t\t\t")
 		issues.Add(ValidationIssue("NestingMoreThanFiveLevelsIsNotAllowed", "more than five levels", number + 1))
 	if line.StartsWith(" ")
 		issues.Add(ValidationIssue("ExtraWhitespacesFoundAtBeginningOfLine", "indent with tabs", number + 1))
+	issues
+LengthIssues(line Text, number Number) ValidationIssues
+	Sample.LengthIssues("\t1", 0).Length is 0 and Sample.LengthIssues(Wide, 0).Length is 0
+	Sample.LengthIssues("\t" + Wide, 2).First to Text is "CharacterCountMustBeWithinLimit: 251 > 120"
+	Sample.LengthIssues("\t" + Wide, 2).First.Line is 3
+	Limits(Long.lines, false, 10).LengthIssues("\t" + Wide, 0).Length is 0
+	mutable issues = List(Mutable(ValidationIssue))
+	let length = line.Length to Text + " > " + MaxCharacters * scale
+	if line.StartsWith("\t") and (line.Length > MaxCharacters * scale)
+		issues.Add(ValidationIssue("CharacterCountMustBeWithinLimit", length, number + 1))
 	issues
 NegationIssues(line Text, number Number) ValidationIssues
 	Sample.NegationIssues("\tlet a = 0 - b.Y", 0).First to Text is "ZeroMinusMustBeNegation: write -b.Y instead of 0 - b.Y"
@@ -75,29 +85,52 @@ Operand(tokens Texts, start Number) Text
 MethodIssues ValidationIssues
 	Twice.MethodIssues.Length is 0 and Long.MethodIssues.First to Text is "MethodLengthMustNotExceedTwelve: Run"
 	Limits(Long.lines + ("Run", "\t1") + Long.lines, false).MethodIssues is Lengthy and Long.MethodIssues.First.Line is 1
+	Limits(OnlyConstants.lines, false).MethodIssues.Length is 0
 	let shape = TypeShape(lines)
 	mutable issues = List(Mutable(ValidationIssue))
 	mutable start = -1
 	for lines.Length + 1
-		let isHeader = (index is lines.Length) or (lines(index).StartsWith("\t") is false)
-		if isHeader and (start >= 0) and (index - start > MaxMethodLines * scale)
+		if IsTooLong(start, index)
 			issues.Add(ValidationIssue("MethodLengthMustNotExceedTwelve", lines(start), start + 1))
-		if isHeader and (index < lines.Length) and shape.IsMethodHeader(lines(index))
-			start = index
+		start = Started(shape, start, index)
 	issues
+IsHeader(index Number) Boolean
+	Long.IsHeader(0) and Long.IsHeader(14)
+	Long.IsHeader(3) is false
+	(index is lines.Length) or (lines(index).StartsWith("\t") is false)
+IsTooLong(start Number, index Number) Boolean
+	Long.IsTooLong(0, 14)
+	Long.IsTooLong(0, 13) is false
+	Long.IsTooLong(-1, 14) is false
+	Long.IsTooLong(1, 14) is false
+	Twice.IsTooLong(0, 14) is false
+	Limits(Long.lines + Long.lines, false).IsTooLong(0, 15) is false
+	IsHeader(index) and (start >= 0) and (index - start > MaxMethodLines * scale)
+Started(shape TypeShape, start Number, index Number) Number
+	Long.Started(TypeShape(Long.lines), 5, 0) is 0
+	Long.Started(TypeShape(Long.lines), 5, 3) is 5
+	Long.Started(TypeShape(Long.lines), 5, 14) is 5
+	Sample.Started(TypeShape(Sample.lines), 5, 0) is 5
+	IsHeader(index) and (index < lines.Length) and shape.IsMethodHeader(lines(index)) then index else start
 CountIssues ValidationIssues
 	Limits(("has a Number", "has b Number"), false).CountIssues.Length is 0 and Methods.CountIssues.Length is 1
 	Limits(OnlyConstants.lines, false).CountIssues.Length is 0 and Limits(Methods.lines, true).CountIssues.Length is 0
+	Limits(OnlyConstants.lines + "Run", false).CountIssues.First to Text is "MemberCountShouldNotExceedLimit: 16 > 15"
+	Methods.CountIssues.First to Text is "MethodCountMustNotExceedLimit: 17 > 16"
+	Limits(Methods.lines, false, 2).CountIssues.Length is 0
 	let shape = TypeShape(lines)
 	mutable methods = 0
-	mutable members = 0
 	for lines
 		methods = methods + (shape.IsMethodHeader(value) then 1 else 0)
-		members = members + (value.StartsWith("has ") or value.StartsWith("constant ") then 1 else 0)
-	let methodCount = isBase then 0 else methods
-	let methodIssues = Counted("MethodCountMustNotExceedLimit", methodCount, MaxMethods * scale)
-	let memberLimit = ((methods is 0) and (members is Count("constant ")) then 40 else MaxMembers) * scale
-	methodIssues + Counted("MemberCountShouldNotExceedLimit", members, memberLimit)
+	let members = Count("has ") + Count("constant ")
+	let methodIssues = Counted("MethodCountMustNotExceedLimit", isBase then 0 else methods, MaxMethods * scale)
+	methodIssues + Counted("MemberCountShouldNotExceedLimit", members, MemberLimit(methods, members))
+MemberLimit(methods Number, members Number) Number
+	OnlyConstants.MemberLimit(0, 16) is 40 and OnlyConstants.MemberLimit(1, 16) is 15
+	OnlyConstants.MemberLimit(0, 3) is 15
+	Sample.MemberLimit(0, 0) is 40
+	Twice.MemberLimit(0, 0) is 80 and Twice.MemberLimit(1, 0) is 30
+	((methods is 0) and (members is Count("constant ")) then 40 else MaxMembers) * scale
 Count(start Text) Number
 	OnlyConstants.Count("constant ") is 16
 	Sample.Count("has ") is 1
@@ -116,5 +149,6 @@ Scale(path Text) Number
 	Limits.Scale("Games/Generated/Atlas.strict") is 10
 	Limits.Scale("Games\\Atlas.strict") is 1
 	Limits.Scale("Content/SheetCatalog.strict") is 2
-	let folder = Path(Path(path.Replace("\\", "/")).PathOnly.text).FileName.text
+	Limits.Scale("Games\\Generated\\Atlas.strict") is 10
+	let folder = Path(Path(path).PathOnly.text).FileName.text
 	folder is "Generated" then 10 else (folder is "Content" then 2 else 1)
