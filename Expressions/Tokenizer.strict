@@ -17,6 +17,7 @@ TokenLength(start Number) Number
 	Tokenizer("\"x y\"").TokenLength(0) is 5
 	Tokenizer("a<=b").TokenLength(1) is 2
 	Tokenizer("1.5)").TokenLength(0) is 3
+	Tokenizer("a>=b").TokenLength(1) is 2 and (Tokenizer("a<b").TokenLength(1) is 1)
 	let code = line.characters(start).number
 	if code is 34
 		return (TextEnd(start + 1) + 1).Clamp(0, line.Length) - start
@@ -28,6 +29,7 @@ TextEnd(position Number) Number
 	Tokenizer("\"a\"").TextEnd(1) is 2
 	Tokenizer("\"\\\"\"").TextEnd(1) is 3
 	Tokenizer("\"a").TextEnd(1) is 2
+	Tokenizer("\"\\\\\"").TextEnd(1) is 3
 	mutable escaped = false
 	for Range(position, line.Length)
 		let code = line.characters(value).number
@@ -40,6 +42,8 @@ HasOpenText Boolean
 	Tokenizer("(\"a\", \"b\")").HasOpenText is false
 	Tokenizer("\"a\\\"").HasOpenText
 	Tokenizer("a").HasOpenText is false
+	Tokenizer("x + \"a\"").HasOpenText is false
+	Tokenizer("").HasOpenText is false
 	if line.IndexOf("\"") < 0
 		return false
 	let last = Tokens.Last
@@ -60,12 +64,18 @@ WordLength(start Number) Number
 IsDecimalPoint(position Number) Boolean
 	Tokenizer("1.5").IsDecimalPoint(1)
 	Tokenizer("a2.b").IsDecimalPoint(2) is false
+	Tokenizer("1.").IsDecimalPoint(1) is false
+	Tokenizer("a.5").IsDecimalPoint(1) is false
 	if position + 1 >= line.Length or (not IsDigitCode(line.characters(position + 1).number))
 		return false
 	IsDigitCode(line.characters(position - 1).number)
 IsExponentSign(start Number, position Number) Boolean
 	Tokenizer("1e-5").IsExponentSign(0, 2)
 	Tokenizer("e-5").IsExponentSign(0, 1) is false
+	Tokenizer("1x-5").IsExponentSign(0, 2) is false
+	Tokenizer("1e-").IsExponentSign(0, 2) is false
+	Tokenizer("1e-x").IsExponentSign(0, 2) is false
+	Tokenizer("ae-5").IsExponentSign(0, 2) is false
 	let isExponent = (position > start) and (line.characters(position - 1).number is 101)
 	let isNumber = isExponent and IsDigitCode(line.characters(start).number)
 	isNumber and (position + 1 < line.Length) and IsDigitCode(line.characters(position + 1).number)
@@ -73,6 +83,7 @@ IsWordCharacter(character Text) Boolean
 	IsWordCharacter("a")
 	IsWordCharacter("7")
 	IsWordCharacter("(") is false
+	IsWordCharacter("ab") is false
 	(character.Length is 1) and IsWordCode(character.characters(0).number)
 IsWordCode(code Number) Boolean
 	IsWordCode(97)
@@ -80,16 +91,28 @@ IsWordCode(code Number) Boolean
 	IsWordCode(55)
 	IsWordCode(40) is false
 	IsWordCode(95) is false
+	IsWordCode(122) and IsWordCode(65) and IsWordCode(48)
+	IsWordCode(123) is false and (IsWordCode(96) is false) and (IsWordCode(91) is false)
+	IsWordCode(64) is false and (IsWordCode(58) is false) and (IsWordCode(47) is false)
 	(code >= 97) and (code <= 122) or (code >= 65) and (code <= 90) or (code >= 48) and (code <= 57)
 IsDigit(character Text) Boolean
 	IsDigit("7")
 	IsDigit("a") is false
+	Tokenizer("").Tokens.Length is 0 and (Tokenizer("").Names.Length is 0)
+	Tokenizer("a+=b").TokenLength(1) is 1 and (Tokenizer("=<").TokenLength(1) is 1)
+	Tokenizer("a \"x\"").TokenLength(2) is 3
+	Tokenizer("1+2").WordLength(0) is 1 and (Tokenizer("1e+5").WordLength(0) is 2)
+	Tokenizer("1-5").WordLength(0) is 1 and (Tokenizer("a bc").WordLength(2) is 2)
+	Tokenizer("a. Size").Names.Length is 0 and (Tokenizer("x + Size").Names is ("Size"))
 	"0123456789".IndexOf(character) is not -1
 IsDigitCode(code Number) Boolean
 	IsDigitCode(48)
 	IsDigitCode(57)
 	IsDigitCode(58) is false
 	IsDigitCode(47) is false
+	Tokenizer("Id ").IsName(0, 2) and (Tokenizer("Id  = 1").IsName(0, 2) is false)
+	Tokenizer("1").IsName(0, 1) is false and (Tokenizer("Id =").IsName(0, 2) is false)
+	Tokenizer("Id= 1").IsName(0, 2) is false
 	(code >= 48) and (code <= 57)
 IsGrouped Boolean
 	Tokenizer("value.None is ()").IsGrouped is false
