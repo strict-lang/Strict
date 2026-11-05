@@ -1,5 +1,0 @@
-has elements Texts
-has ValueTypeName Text
-to Text
-	DictionaryExpression(("a=1", "b=2"), "Number") to Text is "Dictionary(a=1, b=2)"
-	"Dictionary(" + Text.Combine(elements) + ")"

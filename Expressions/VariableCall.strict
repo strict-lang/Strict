@@ -1,8 +1,0 @@
-has variableName Text
-has VariableTypeName Text
-to Text
-	VariableCall("count", "Number") to Text is "count"
-	variableName
-Parse(name Text, typeName Text) VariableCall
-	Parse("count", "Number").variableName is "count"
-	VariableCall(name, typeName)

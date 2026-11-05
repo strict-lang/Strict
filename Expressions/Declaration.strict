@@ -1,39 +1,3 @@
-has variableName Text
-has VariableTypeName Text
-has initialValue Text
-has kind Text
-to Text
-	Declaration("count", "Number", "0", "let") to Text is "let count = 0"
-	Declaration("pi", "Number", "3.14", "constant") to Text is "constant pi = 3.14"
-	Declaration("total", "Number", "0", "mutable") to Text is "mutable total = 0"
-	if kind is "constant"
-		return "constant " + variableName + " = " + initialValue
-	if kind is "mutable"
-		return "mutable " + variableName + " = " + initialValue
-	"let " + variableName + " = " + initialValue
-Parse(text Text) Declaration
-	Parse("let count = 1").variableName is "count"
-	Parse("mutable total = 0").kind is "mutable"
-	Parse("let x") is Declaration("x", "Any", "", "let")
-	let declarationKind = ExtractKind(text)
-	let rest = text.Substring(declarationKind.Length + 1, text.Length - declarationKind.Length - 1)
-	let equalsIndex = rest.IndexOf(" = ")
-	if equalsIndex is -1
-		return Declaration(rest.Trim, "Any", "", declarationKind)
-	let name = rest.Substring(0, equalsIndex).Trim
-	let assigned = rest.Substring(equalsIndex + 3, rest.Length - equalsIndex - 3).Trim
-	Declaration(name, "Any", assigned, declarationKind)
-ExtractKind(text Text) Text
-	ExtractKind("constant x = 1") is "constant"
-	ExtractKind("x = 1") is "let"
-	Parse("let count = 1") is Declaration("count", "Any", "1", "let")
-	if text.StartsWith("constant ")
-		return "constant"
-	if text.StartsWith("mutable ")
-		return "mutable"
-	if text.StartsWith("let ")
-		return "let"
-	"let"
 IsUnspaced(line Text) Boolean
 	IsUnspaced("constant Value =\" a\"")
 	IsUnspaced("constant Value = \" a\"") is false

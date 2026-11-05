@@ -9,8 +9,7 @@ Name Text
 Type Text
 	OptionMember(OptionsCodegen.Settings, "has loras = List(Text)").Type is "Texts"
 	Count.Type is "Number"
-	let type = options.automatic.MemberType(line)
-	(type is "List") and line.EndsWith("List(Text)") then "Texts" else type
+	options.automatic.MemberType(line)
 Default Text
 	Count.Default is "1"
 	Sized.Default is "resolution"
