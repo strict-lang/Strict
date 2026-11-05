@@ -28,7 +28,7 @@ Survivors(types List(TypeEntry)) Number
 	survivors.Length
 Lines(types List(TypeEntry)) Texts
 	Sample.Lines(Doubled).Length is 0
-	let methods = Kept(types)
+	let methods = Baseline(value).Kept(types)
 	let rounds = Mutation.Rounds(methods)
 	let isStrict = Path(Process.Current.executable).FileName.text.Lower.StartsWith("strict")
 	if (part is "") and (rounds > 16) and isStrict
@@ -39,16 +39,6 @@ Lines(types List(TypeEntry)) Texts
 		if Mutation.IsMine(part, value)
 			survivors = survivors + Round(tested, methods, value)
 	survivors
-Kept(types List(TypeEntry)) List(MethodEntry)
-	Sample.Kept(Doubled).Length is 0
-	let methods = Mutated(types.First)
-	let started = Execute(logger).Started(Tested(types, Runner(types.First), methods), path)
-	let limit = isWhole then 1 else 0.1
-	for methods
-		let begun = Process.Elapsed
-		let failed = Machine(started, deadline = begun + limit).Tested(types.First.Name, TestCodegen.Runner + index)
-		if (failed is 0) and (Process.Elapsed - begun < limit)
-			value
 Spawned(rounds Number) Texts
 	Sample.Commands(4).Last is "test \"Examples/Fibonacci.strict\" \".\" unit mutations rounds:1/2"
 	mutable survivors = List(Mutable(Text))

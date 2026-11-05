@@ -48,6 +48,7 @@ Split(separator Text) Texts
 	"a,b".Split(",") is ("a", "b")
 	"abc".Split(",") is ("abc")
 	"a,,b,".Split(",") is ("a", "", "b", "")
+	"ab".Split("") is ("ab")
 	mutable parts = List(Mutable(Text))
 	mutable start = 0
 	mutable found = separator is "" then -1 else IndexOf(separator)
@@ -159,6 +160,7 @@ is(other) Boolean
 	"B" < "a"
 	"b" < "a" is false
 	"a" < "a" is false
+	"ab" < "a" is false
 	"" < "a"
 	for Length < other.Length then Length else other.Length
 		if characters(index) is not other.characters(index)

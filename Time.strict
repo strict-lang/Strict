@@ -71,6 +71,7 @@ RoundUp(step Number) Time
 IsWithin(start Time, end Time) Boolean
 	Moment.IsWithin(Time(0), Time(1800000000))
 	Moment.IsWithin(Time(0), Time(10)) is false
+	Moment.IsWithin(Time(1800000000), Time(1900000000)) is false
 	(seconds >= start.seconds) and (seconds <= end.seconds)
 Elapsed(current Time) Text
 	Moment.Elapsed(Time(1700000003)) is "just now"

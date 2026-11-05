@@ -10,6 +10,8 @@ Get(minimum Number, maximum Number) Number
 	PseudoRandom(1).Get(0, 10).Floor is 6
 	PseudoRandom(1).Get(5, 5) is 5
 	PseudoRandom(1).Get(10, 0) is Error("InvalidRange")
+	PseudoRandom(1).Get(10, 20) is 16.28162719715311
+	PseudoRandom(1).Get(0, 4294967296).Floor is 2697938337
 	if maximum < minimum
 		return Error("InvalidRange")
 	(Next + 1) * 0.0000000002328306435454494 * (maximum - minimum) + minimum
@@ -22,6 +24,7 @@ Skip(count Number) Number
 WeightedIndex(weights Numbers) Number
 	PseudoRandom(1).WeightedIndex((1, 0, 3)) is 2
 	PseudoRandom(1).WeightedIndex((3, 1)) is 0
+	PseudoRandom(1).WeightedIndex(List(Number)) is -1
 	let target = Get(0, weights.Sum)
 	mutable sum = 0
 	for weights

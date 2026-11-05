@@ -2,6 +2,8 @@ has executable Text
 Find(name Text) Process
 	Process(name)
 IsAvailable Boolean
+	Process("").IsAvailable is false
+	Process("strict").IsAvailable
 	if executable is ""
 		return false
 	true

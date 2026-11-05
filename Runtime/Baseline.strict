@@ -1,0 +1,20 @@
+has mutants Mutants
+constant Libraries = Baseline(Mutants(Logger, "Library.strict"))
+Kept(types List(TypeEntry)) List(MethodEntry)
+	Baseline(Mutants.Sample).Kept(Mutants.Doubled).Length is 0
+	Libraries.Kept(Execute(Logger).Loaded("Library.strict", ".")).Length is 0
+	let methods = mutants.Mutated(types.First)
+	let tested = mutants.Tested(types, mutants.Runner(types.First), methods)
+	let started = Execute(mutants.logger).Started(tested, mutants.path)
+	let limit = mutants.isWhole then 1 else 0.1
+	for methods
+		let begun = Process.Elapsed
+		let failed = Machine(started, deadline = begun + limit).Tested(types.First.Name, TestCodegen.Runner + index)
+		if (failed is 0) and (Process.Elapsed - begun < limit) and IsRun(tested, value, TestCodegen.Runner + index)
+			value
+IsRun(tested List(TypeEntry), method MethodEntry, runner Text) Boolean
+	Baseline(Mutants.Sample).IsRun(Mutants.Doubled, Mutants.Twice, TestCodegen.Runner) is false
+	let failing = List(MethodEntry) + MethodEntry(method, instructions = Invocation.Failing.methods.First.instructions)
+	let replaced = mutants.Replaced(tested, List(MethodEntry) + method, failing)
+	let started = Execute(mutants.logger).Started(replaced, mutants.path)
+	Machine(started, deadline = Process.Elapsed + 1).Tested(tested.First.Name, runner) > 0

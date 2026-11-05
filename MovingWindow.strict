@@ -10,6 +10,7 @@ Added(number Number) MovingWindow
 	Pair.Added(1).Added(3).Added(5).values is (5, 3)
 	Pair.Added(1).Added(3).Added(5).Added(7).Sum is 12
 	MovingWindow(3).Added(5).Added(1).Added(4).Added(2).Added(3).Added(0).Minimum is 0
+	MovingWindow(3).Added(2).Added(7).Added(4).Added(9).Added(6).Sum is 19
 	let removed = values.Length < capacity then 0 else values(added % capacity)
 	let kept = Stored(number)
 	let total = (added + 1) % capacity is 0 then kept.Sum else sum - removed + number
