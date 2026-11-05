@@ -40,6 +40,8 @@ NotIterable(scoped ScopedStatement, current Scope) Text
 IsIterable(type Text) Boolean
 	Counting.IsIterable("Text")
 	Counting.IsIterable("Boolean") is false
+	Counting.IsIterable("Count") is false
+	Counting.Unknown(ScopedStatement(SyntaxNode("Invalid", "Broken: x"), Counted, 0), Counted) is "Broken: x"
 	let element = inference.types.ElementType(type)
 	let iterated = inference.types.ElementType(inference.types.MethodsOf(type).TypeOf("for"))
 	(element is not "Unknown") or (iterated is not "Unknown") or (inference.Enumerated(type).Length > 0)
@@ -113,6 +115,9 @@ IsMissing(instance Text, name Text) Boolean
 	isChecked and (types.DeclaredType(instance, name, 3) is "") and (types.MemberType(instance, name) is "Unknown")
 ValueNames(scope Scope) Texts
 	FileCheck(NoInference, ("N", "R")).ValueNames(NoScope).Length is 0
+	Counting.ValueNames(Scope(List(Text) + "value", List(Text) + "Count")) is ("number", "unused", "Increment", "Twice")
+	Counting.IsMissing("Count", "number") is false
+	Counting.IsMissing("Text", "Missing")
 	if scope.TypeOf("value") is ""
 		return List(Text)
 	let valueScope = inference.types.ShapeScope(scope.TypeOf("value"))
