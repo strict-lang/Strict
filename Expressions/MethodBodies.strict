@@ -12,6 +12,7 @@ constant Ticking = TypeInference(MutatingCheck.Tickers, TypeInference.Limits)
 constant Adding = MethodBodies("Demo", Sample, NoInference).HeaderScope(AddOther, NoScope)
 constant Constanted = MethodBodies("Demo", TypeShape("has a Number", "constant Twice = a * 2"), NoInference).Statements.Last
 constant CheckedA = BodyParser("Run", "\tif a is Error", "\t\ta").Block(1, 1).children(0)
+constant Looped = MethodBodies("Demo", TypeShape("Run", "	mutable t = 1", "	for (1, 2)", "		t = 2", "	t"), NoInference).Statements
 Statements ScopedStatements
 	MethodBodies("Demo", Sample, NoInference).Statements.Length is 2
 	MethodBodies("Demo", Sample, NoInference).Statements.Last.line is 3
@@ -40,10 +41,22 @@ HeaderScope(header HeaderTokens, members Scope) Scope
 	scope
 InstanceType Text
 	MethodBodies("List", Sample, NoInference).InstanceType is "Generics"
+	Looped.Length is 4
+	Looped(0).scope.TypeOf(" dropped") is "dropped" and (Looped(3).scope.TypeOf(" dropped") is "")
+	Looped(2).scope.TypeOf(" dropped") is ""
+	(Looped(0).line, Looped(2).line) is (1, 3)
+	Looped(1).scope.TypeOf("t mutable") is "mutable"
+	Looped(2).scope.TypeOf("value") is "Number" and (Looped(2).scope.TypeOf("index") is "Number")
+	Looped(2).scope.TypeOf("outer") is "Demo"
 	Constanted.scope.TypeOf("self type") is "Demo"
 	typeName is "List" then "Generics" else typeName
 IteratedType Text
 	MethodBodies("Text", Sample, NoInference).IteratedType is "Characters"
+	MethodBodies("Demo", Sample, NoInference).Statements.Last.scope.TypeOf("b mutable") is ""
+	MethodBodies("Demo", TypeShape("has a Number", "constant Twice"), NoInference).Statements.Length is 0
+	MethodBodies("Demo", Sample, NoInference).StatementType(Looped(2)) is "Number"
+	MethodBodies("Demo", Sample, NoInference).StatementType(Looped(1)) is "Numbers"
+	MethodBodies("Demo", Sample, NoInference).StatementType(Looped(3)) is "Number"
 	typeName is "Text" then "Characters" else InstanceType
 Flatten(body SyntaxNode, outerScope Scope, start Number) ScopedStatements
 	MethodBodies("Demo", Sample, NoInference).Statements.Last.scope.TypeOf("b") is "Number"
@@ -60,6 +73,13 @@ Flatten(body SyntaxNode, outerScope Scope, start Number) ScopedStatements
 	statements
 Methods Scope
 	MethodBodies("Demo", Sample, NoInference).Methods.names.Length is 0
+	StatementType(ScopedStatement(SyntaxNode("Return", "return"), NoScope, 0)) is ""
+	StatementType(ScopedStatement(SyntaxNode("Else", "else"), NoScope, 0)) is ""
+	MethodBodies("Demo", Sample, NoInference).BlockType(SyntaxNode("For", "for"), NoScope) is "Demo"
+	BlockType(BodyParser("Run", "	if a is", "		1 then 2").Block(1, 1).children(0), NoScope) is "Number"
+	BlockType(BodyParser("Run", "	if a is", "		1 then 2", "		else \"x\"").Block(1, 1).children(0), NoScope) is "Text"
+	IsSelector(BodyParser("Run", "	if a is b", "		1").Block(1, 1).children(0)) is false
+	BlockType(BodyParser("Run", "	if a is b", "		1").Block(1, 1).children(0), NoScope) is ""
 	inference.types.MethodsOf(typeName)
 LoopScope(statement SyntaxNode, scope Scope) Scope
 	MethodBodies("Range", Sample, NoInference).LoopScope(SyntaxNode("For", "for"), NoScope).TypeOf("value") is "Number"
@@ -92,6 +112,9 @@ Item(arguments Text) Text
 Pair(type Text) Texts
 	MethodBodies.Pair("List(Text, Number)") is ("Text", "Number")
 	MethodBodies.Pair("List(List(Text, Number))").Length is 0
+	MethodBodies.Pair("Texts, Number").Length is 0
+	MethodBodies.Pair("List(Text)").Length is 0
+	MethodBodies.Pair("List(Text, List(Number))") is ("Text", "List(Number)")
 	let comma = type.IndexOf(", ")
 	let isPair = type.StartsWith("List(") and (comma > 0) and (type.Substring(5, comma - 5).IndexOf("(") < 0)
 	isPair then (type.Substring(5, comma - 5), type.Substring(comma + 2, type.Length - comma - 3)) else List(Text)
@@ -113,6 +136,11 @@ StatementType(scoped ScopedStatement) Text
 	let result = statement.Kind is in ("Declaration", "Return") then statement.children(0) else statement
 	inference.TypeOf(result, scoped.scope, Methods)
 Reassigned(statement SyntaxNode, scope Scope) Text
+	Adding.TypeOf("value") is "Demo"
+	Adding.names.Length is 5
+	MethodBodies("Demo", Sample, NoInference).HeaderScope(FromGeneric, NoScope).TypeOf("generic") is "Generic"
+	MethodBodies("Demo", Sample, NoInference).HeaderScope(Picking, NoScope).TypeOf("count") is "Number"
+	MethodBodies("Demo", Sample, Ticking).HeaderScope(Picking, NoScope).TypeOf("random mutable") is "mutable"
 	let target = inference.TypeOf(statement.children(0), scope, Methods)
 	inference.Assigned(target, inference.TypeOf(statement.children(1), scope, Methods))
 BlockType(statement SyntaxNode, scope Scope) Text

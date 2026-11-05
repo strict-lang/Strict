@@ -10,6 +10,7 @@ Name(node SyntaxNode, inference TypeInference, scope Scope, current Scope) Text
 	Pairing.Name(SyntaxNode("Call", "Text"), Inferring, KnownTypes.NoMembers, KnownTypes.NoMembers) is ""
 	Pairing.Name(SyntaxNode("Call", "Couple"), Inferring, KnownTypes.NoMembers, KnownTypes.NoMembers) is ""
 	Implicit.Name(Mixed, Inferring, KnownTypes.NoMembers, KnownTypes.NoMembers) is "Couple(Text, Number)"
+	Pairing.Name(Mixed, Inferring, KnownTypes.NoMembers, Scope(("Couple"), ("Text"))) is ""
 	let isType = types.IsKnown(node.text) and (current.TypeOf(node.text) is "") and (scope.TypeOf(node.text) is "")
 	let declared = isType then ConstructorTypes(node) else List(Text)
 	mutable arguments = List(Mutable(Text))
@@ -18,6 +19,14 @@ Name(node SyntaxNode, inference TypeInference, scope Scope, current Scope) Text
 			arguments.Add(inference.TypeOf(node.children(index), scope, current))
 	arguments.Length is 0 then "" else node.text + "(" + Text.Combine(arguments, ", ") + ")"
 ConstructorTypes(node SyntaxNode) Texts
+	Pairing.Filled("Strict/List(Number)", "Dictionary(Text, Generic)") is "Dictionary(Text, Number)"
+	Pairing.Filled("Strict/List(Number)", "Couple(Text, Generic, Number)") is "Couple(Text, Number, Number)"
+	Pairing.Filled("Strict/Number", "List(Generic)") is "List(Generic)"
+	Pairing.Argument("Couple(Text, Number)", "missing") is "Unknown"
+	Pairing.Position("Couple(Text, Number)", "first") is 0
+	Pairing.IsGeneric("Generics") and (Pairing.IsGeneric("Text") is false)
+	Pairing.Template(TypeShape("has first Text", "Swapped Couple", "	Couple(first)"), 1, "Couple") is ""
+	Pairing.Template(TypeShape("has first Generic", "Swapped Couple", "	first"), 1, "Couple") is ""
 	let explicit = types.ParametersOf(node.text, "from types", node.children.Length)
 	explicit.Length is node.children.Length then explicit else types.MembersOf(node.text).types
 Argument(instanceType Text, name Text) Text
@@ -85,6 +94,7 @@ Template(shape TypeShape, position Number, typeName Text) Text
 Substituted(instanceType Text, template Text) Text
 	Pairing.Substituted("Couple(Text, Number)", "Couple(second, first)") is "Couple(Number, Text)"
 	Pairing.Substituted("Couple(Text, Number)", "Couple(1, first)") is "Couple(Text, Number)"
+	Pairing.Substituted("Couple(Text, Number)", "Couple(first, second, first)") is "Couple(Text, Number)"
 	let members = types.MembersOf(instanceType)
 	mutable arguments = List(Mutable(Text))
 	for Arguments(template)
