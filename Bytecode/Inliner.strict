@@ -11,12 +11,26 @@ constant Sample = Inliner((Caller, Listed))
 constant Again = MethodEntry("Again", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Invoke(0, ("Strict/Caller", "Run", "Strict/Number"), List(Number), -1))
 constant Store = InstructionType.StoreRegisterToVariable
 constant Splitting = Inliner((StructLanes.Caller, StructLanes.Pair), true)
+constant Scaled = InstructionEntry.Invoke(0, ("", "*", "", "scale"), (0), 0)
 constant NoMethod = MethodEntry("", List(MemberEntry), "None", List(InstructionEntry))
 Inlined List(TypeEntry)
+	Calling.Name is "Run" and (Caller.Name is "Strict/Caller")
+	Calling.parameters is (MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false))
+	Calling.declaredType is "Strict/Number" and (Calling.instructions(0).texts is ("numbers"))
+	Calling.instructions(1).texts is ("Strict/List(Number)", "X", "Strict/Number")
+	Calling.instructions(2).payload is (1) and (First.instructions(2).payload is (1))
+	First.declaredType is "Strict/Number" and (Listed.members is (Elements))
+	Listed.Name is "Strict/List(Number)" and (First.instructions.Length is 4)
+	Again.Name is "Again" and (Again.declaredType is "None")
 	Sample.Inlined.First.methods.First.instructions.Length is 6
 	for types
 		TypeEntry(value.Name, value.members, Methods(value))
 Methods(type TypeEntry) List(MethodEntry)
+	Sample.Inlinable(Caller, Calling.instructions(1), InstructionEntry(Kinds(15), ("x"), (1))).Name is ""
+	Sample.Inlinable(Caller, Calling.instructions(1), StructLanes.Calling(5)).Name is ""
+	Inliner((Caller, StructLanes.Pair)).Inlinable(Caller, StructLanes.Calling(4), StructLanes.Calling(5)).Name is ""
+	Splitting.Inlinable(StructLanes.Caller, StructLanes.Constructed, StructLanes.Calling(3)).Name is ""
+	Sample.Expanded(Caller, Calling.instructions + Calling.instructions, 1)(9).texts.First is "inline5_elements"
 	Sample.Methods(Caller).First.instructions(3).kind is InstructionType.IndexCall
 	for type.methods
 		MethodEntry(value.Name, value.parameters, value.declaredType, Expanded(type, value.instructions, 3), value.Slots)
@@ -33,6 +47,9 @@ Expanded(owner TypeEntry, instructions List(InstructionEntry), depth Number) Lis
 		result = result + spliced
 	result.Length is instructions.Length then instructions else Expanded(owner, Looped(result), depth - 1)
 Reserved(callee MethodEntry, call InstructionEntry) Number
+	Splitting.Reserved(NoMethod, StructLanes.Calling(4)) is 0
+	Inliner((Caller, StructLanes.Pair)).Reserved(First, StructLanes.Calling(4)) is 2
+	Splitting.Reserved(First, Calling.instructions(1)) is 2
 	Splitting.Reserved(StructLanes.Squared, StructLanes.Calling(4)) is 17
 	Sample.Reserved(First, Calling.instructions(1)) is 2
 	Sample.Reserved(NoMethod, Calling.instructions(1)) is 0
@@ -54,6 +71,7 @@ Inlinable(owner TypeEntry, call InstructionEntry, next InstructionEntry) MethodE
 	let isFitting = isChecked and (next.payload(0) is call.payload(0)) and rules.Fits(owner, type, call)
 	isFitting or (isSplitting and rules.IsLaned(type, call, IsReturning(callee))) then callee else NoMethod
 TypeOf(name Text) TypeEntry
+	Sample.TypeOf("List(Number)").Name is "Strict/List(Number)" and (Sample.TypeOf("Caller").Name is "Strict/Caller")
 	Sample.TypeOf("Strict/List(Number)").methods.Length is 1
 	Sample.TypeOf("Strict/Missing").Name is ""
 	for types
@@ -61,6 +79,7 @@ TypeOf(name Text) TypeEntry
 			return value
 	TypeEntry("", List(MemberEntry), List(MethodEntry))
 Callee(type TypeEntry, call InstructionEntry) MethodEntry
+	Sample.Callee(TypeEntry.Scaling, Scaled).parameters(0).Name is "scale"
 	Sample.Callee(Listed, Calling.instructions(1)).Name is "X"
 	mutable names = List(Text)
 	for call.texts
@@ -68,6 +87,9 @@ Callee(type TypeEntry, call InstructionEntry) MethodEntry
 			names = names + value
 	type.Callee(call.texts(1), call.payload(5 + call.payload(3)), call.texts(2), names)
 Splice(owner TypeEntry, callee MethodEntry, call InstructionEntry, base Number) InlineSplice
+	Sample.Splice(Listed, First, InstructionEntry.Invoke(1, ("List(Number)", "", ""), List(Number), -1), 2).member is ""
+	Sample.Splice(Caller, Calling, Again.instructions.First, 2).kept is ("value")
+	Inliner(StructLanes.Sample.types).Splice(Caller, StructLanes.Squared, StructLanes.Calling(4), 5).fields.Length is 0
 	Sample.Splice(Caller, First, Calling.instructions(1), 2).member is "elements"
 	Splitting.Splice(StructLanes.Caller, StructLanes.Squared, StructLanes.Calling(4), 5).scratch is 21
 	let rules = InlineRules(callee)
@@ -78,15 +100,21 @@ Splice(owner TypeEntry, callee MethodEntry, call InstructionEntry, base Number) 
 	let fields = isLaned then StructLanes.Members(type) else List(Text)
 	InlineSplice(callee, call, base, member, kept, fields, base + LoadReuse(callee.instructions).RegisterCount)
 IsReturning(callee MethodEntry) Boolean
+	Splitting.Splice(StructLanes.Caller, StructLanes.Squared, StructLanes.Calling(4), 5).fields is ("real", "imaginary")
+	Splitting.Splice(Caller, First, StructLanes.Calling(4), 5).fields.Length is 0
+	Sample.Splice(Caller, First, Calling.instructions(1), 2).kept.Length is 0
 	Splitting.IsReturning(StructLanes.Squared)
 	Splitting.IsReturning(First) is false
 	StructLanes.Members(TypeOf(callee.declaredType)).Length > 0
 Looped(instructions List(InstructionEntry)) List(InstructionEntry)
+	Sample.Looped(Calling.instructions + MethodEntry.CountingLoop.instructions).Last.payload is (1)
+	Sample.Looped(Calling.instructions) is Calling.instructions
 	Sample.Looped(MethodEntry.CountingLoop.instructions) is MethodEntry.CountingLoop.instructions
 	let method = MethodEntry("", List(MemberEntry), "None", instructions)
 	for instructions
 		value.kind is InstructionType.LoopEnd then Ended(value, index - method.LoopBeginOf(index)) else value
 Ended(entry InstructionEntry, steps Number) InstructionEntry
+	Sample.Ended(InstructionEntry(InstructionType.LoopEnd, List(Text), (172, 2, 200, 7)), 5).payload is (5, 200, 7)
 	Sample.Ended(InstructionEntry.Jump(InstructionType.LoopEnd, 2), 5).payload is (5)
 	Sample.Ended(InstructionEntry(InstructionType.LoopEnd, List(Text), (1, -1)), 5).payload is (5, -1)
 	mutable rest = List(Number)
