@@ -18,13 +18,11 @@ Kinds(position Number) Numbers
 	MutationKinds(MutationFlow.Issued.method).Kinds(1) is (6)
 	MutationKinds(MutationFlow.Looped.method).Kinds(1).Length is 0
 	Placed.Kinds(0).Length is 0
-	MutationKinds(MutationFlow.Guarded.method).Kinds(0).Length is 0
 	let entry = method.instructions(position)
 	let isPlaced = (entry.line is 0) and (Mutation(method).Lines > 0)
 	let flow = MutationFlow(method)
 	let isIgnored = (entry.kind is in Writers) and flow.IsIgnored(flow.Target(entry), position)
-	let isLogging = (entry.kind is in Comparisons) and flow.IsGuardingLog(position)
-	isPlaced or isIgnored or isLogging then List(Number) else Possible(position)
+	isPlaced or isIgnored then List(Number) else Possible(position)
 Possible(position Number) Numbers
 	Twice.Possible(1) is (5) and (Compared.Possible(1) is (2)) and (Storing.Possible(1) is (3))
 	let entry = method.instructions(position)

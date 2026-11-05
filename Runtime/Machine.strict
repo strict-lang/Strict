@@ -163,5 +163,6 @@ Field(entry InstructionEntry, instance VmValue) VmValue
 	found
 Logged(message Text) VmValue
 	Hello.Logged("Hi").kind is "None"
-	logger.Log(message)
+	if message is not ""
+		logger.Log(message)
 	VmValue.None

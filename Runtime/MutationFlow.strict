@@ -6,7 +6,6 @@ constant Looped = MutationFlow(MethodEntry(Mutation.Twice.method, instructions =
 constant Stored = MutationFlow(MethodEntry(Mutation.Twice.method, instructions = (InstructionEntry.LoadText(0, "detail"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "text"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "text"), InstructionEntry.LoadText(1, "Rule"), InstructionEntry.Invoke(2, Issuing.texts, (1, 3), -1), InstructionEntry.Return(2))))
 constant Adding = InstructionEntry.Binary(InstructionType.Add, (0, 1, 2))
 constant Listing = MutationFlow(MethodEntry(Mutation.Twice.method, instructions = (InstructionEntry(InstructionType.InvokeWriteToList, "list", (1, 0)))))
-constant Guarded = MutationFlow(MethodEntry(Mutation.Twice.method, instructions = (InstructionEntry.Binary(InstructionType.Equal, (0, 1)), InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, 7), InstructionEntry.Print("x"), InstructionEntry.Jump(InstructionType.JumpEnd, 7), InstructionEntry.Return(0))))
 constant Joining = MutationFlow(MutationKinds.Joined.method)
 Target(entry InstructionEntry) Number
 	Listing.IsWritten(4, "\tlist.Add(1)") and (Listing.IsWritten(4, "\tYes") is false)
@@ -96,19 +95,6 @@ IsMessage(entry InstructionEntry, register Number) Boolean
 	let isLogged = (type is "Logger") and (entry.texts(1) is "Log") and (register is in arguments)
 	let isReported = (entry.texts(1) is "from") and (type.EndsWith("Error") or type.EndsWith("Issue"))
 	isLogged or (isReported and (register is in details))
-IsGuardingLog(position Number) Boolean
-	Guarded.IsGuardingLog(0) and (Twice.IsGuardingLog(0) is false)
-	let jump = method.instructions(position + 1)
-	if jump.kind is not in (InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)
-		return false
-	for Range(position + 2, method.instructions.Length)
-		let entry = method.instructions(index)
-		if (entry.kind is InstructionType.JumpEnd) and (entry.payload is jump.payload)
-			return true
-		let isMessage = (entry.kind is in MutationKinds.Writers) and IsIgnored(Target(entry), index)
-		if (entry.kind is not InstructionType.Print) and (isMessage is false)
-			return false
-	false
 IsWritten(code Number, source Text) Boolean
 	Joining.IsWritten(6, "\tlet x = \"a\"") and (Joining.IsWritten(6, "\tYes") is false)
 	Joining.IsWritten(21, "x + y") and (Joining.IsWritten(21, "x") is false) and Joining.IsWritten(7, "\tYes")

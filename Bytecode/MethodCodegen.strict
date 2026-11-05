@@ -138,8 +138,9 @@ Else(node SyntaxNode, block CodeBlock, hasElse Boolean) CodeBlock
 Log(argument SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Log(SyntaxNode("Text", "\"Hi\""), CodeBlock.Empty).instructions(0).texts is ("Hi")
 	Plain.Log(SyntaxNode("Number", "1"), CodeBlock.Empty).instructions.Length is 2
+	Plain.Log(SyntaxNode("Text", "\"\""), CodeBlock.Empty).instructions.Length is 0
 	if argument.Kind is "Text"
-		return block.Add(InstructionEntry.Print(argument.Unquoted))
+		return argument.Unquoted is "" then block else block.Add(InstructionEntry.Print(argument.Unquoted))
 	let hasPrefix = (argument.Kind is "Binary") and (argument.text is "+") and (argument.children(0).Kind is "Text")
 	let printed = ConversionCodegen(values).Converted(hasPrefix then argument.children(1) else argument, "Text", block)
 	let generated = values.Expression(printed, block)
