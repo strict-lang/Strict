@@ -8,6 +8,7 @@ constant Storing = Mutation(MethodEntry(Machine.Doubler.methods.First, instructi
 constant Marking = InstructionEntry(InstructionType.LoadConstantToRegister, "1 is 1 in Twice at Doubler.strict:line 2", (0, 4, -1))
 constant Splitting = (InstructionEntry.LoadNumber(0, 0), Marking, InstructionEntry.LoadNumber(1, 1), InstructionEntry.Return(0))
 constant Splitter = Mutation(MethodEntry(Machine.Doubler.methods.First, instructions = Splitting))
+constant Lined = Mutation(MethodEntry(Machine.Doubler.methods.First, instructions = (InstructionEntry(MutationKinds.Loaded, line = 3), MutationKinds.Loaded, InstructionEntry(MutationKinds.Loaded, line = 1))))
 constant Targeted = InstructionEntry.Binary(InstructionType.LessThan, (0, 1, 5))
 constant Forcing = (InstructionType.Equal, InstructionType.NotEqual)
 constant Operators = ("+", "-", "*", "/", "is", "is not", "<", ">")
@@ -22,6 +23,7 @@ IsMine(part Text, round Number) Boolean
 	round % (part.Substring(at + 1, part.Length - at - 1) to Number) is (part.Substring(0, at) to Number)
 Rounds(methods List(MethodEntry)) Number
 	Mutation.Rounds(List(MethodEntry) + Twice.method) is 2
+	Mutation.Rounds((Compared.method, Twice.method)) is 3
 	mutable rounds = 0
 	for methods
 		let count = Mutation(value).Candidates.Length
@@ -30,6 +32,7 @@ Rounds(methods List(MethodEntry)) Number
 Candidates Numbers
 	Twice.Candidates is (13, 18)
 	Compared.Candidates is (0, 1, 10)
+	(Twice.Mutant(18).instructions.Last is InstructionEntry.Return(1)) and (Twice.Mutant(13).instructions.Length is 3)
 	for position, kind in method.instructions.Length, MutationKinds(method).Kinds(position)
 		position * 8 + kind
 Mutant(code Number) MethodEntry
@@ -59,6 +62,9 @@ Changed(entry InstructionEntry, kind Number) InstructionEntry
 Forced(entry InstructionEntry, kind Number) InstructionEntry
 	Twice.Forced(Targeted, 1) is InstructionEntry.Binary(InstructionType.NotEqual, (0, 0, 5))
 	Twice.Forced(Greater, 0) is InstructionEntry.Binary(InstructionType.Equal, (0, 0))
+	Compared.Changed(MutationKinds.Loaded, 2) is InstructionEntry.LoadBoolean(1, false)
+	Compared.Changed(MutationKinds.Loaded, 3) is InstructionEntry.LoadNumber(1, 0)
+	Mutation(MethodEntry(Twice.method, declaredType = "Strict/Text")).Changed(Greater, 3) is Twice.Changed(Greater, 3)
 	let same = entry.payload.Slice(1, 1)
 	InstructionEntry.Binary(Forcing(kind), same + same + entry.payload.Slice(3, entry.payload.Length - 3))
 Swapped(kind Number) Number
@@ -81,6 +87,8 @@ Described(code Number) Text
 Replaced(kind Number, entry InstructionEntry, nth Text) Text
 	Twice.Replaced(5, Twice.method.instructions(1), "2nd ") is "the 2nd + with -"
 	Twice.Replaced(1, MutationKinds.Compared.method.instructions(0), "") is "the comparison > with false"
+	Compared.Replaced(2, Greater, "") is "the result with false"
+	Mutation(MethodEntry(Twice.method, declaredType = "Strict/Text")).Replaced(2, Greater, "") is "the result with \"\""
 	if kind < 2
 		return "the " + nth + "comparison " + Operator(entry.kind) + " with " + (kind is 0 then "true" else "false")
 	let empty = method.returnType is "Strict/Boolean" then "false" else "0"
@@ -92,9 +100,14 @@ Replaced(kind Number, entry InstructionEntry, nth Text) Text
 Operator(kind Number) Text
 	Twice.Operator(InstructionType.Divide) is "/"
 	Twice.Operator(InstructionType.LessThan) is "<"
+	Twice.Marked(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "x in Y at Z:line 2")) is ""
+	Twice.Marked(InstructionEntry.LoadText(0, "x at Z:line 2")) is ""
+	Twice.Marked(InstructionEntry.LoadText(0, "x in Y at Z")) is ""
 	Operators((Arithmetic + MutationKinds.Comparisons).Index(kind))
 Line(code Number) Number
 	Twice.Line(18) is 0
+	(Lined.Line(8) is 3) and (Lined.Line(16) is 1)
+	Mutation(MutationFlow.Issued.method).Described(20) is "removed the call from"
 	let at = method.instructions((code / 8).Floor).line
 	at is 0 then Lines else at
 Position(code Number) Text
@@ -113,6 +126,8 @@ Position(code Number) Text
 Source(lines Texts, line Number) Texts
 	Mutation.Source(("A", "\tB", "\tC", "D"), 2) is ("  1: A", "> 2: \tB", "  3: \tC")
 	Mutation.Source(("A", "B"), 2) is ("> 2: B")
+	Mutation.Source(("\tA", "B", "\tC", "\tD"), 2) is ("> 2: B", "  3: \tC", "  4: \tD")
+	Mutation.Source(("\tA", "\tB", "\tC", "D"), 3) is ("  1: \tA", "  2: \tB", "> 3: \tC")
 	mutable first = line - 1
 	for as long as (first > 0) and lines(first).StartsWith("\t")
 		first = first - 1
@@ -123,6 +138,7 @@ Source(lines Texts, line Number) Texts
 		(index + 1 is line then "> " else "  ") + (index + 1) + ": " + lines(index)
 Lines Number
 	Twice.Lines is 0
+	Lined.Lines is 3
 	mutable last = 0
 	for method.instructions
 		last = value.line > last then value.line else last
@@ -142,6 +158,7 @@ Split(name Text) List(InstructionEntry)
 Marked(entry InstructionEntry) Text
 	Twice.Marked(Marking) is "Twice"
 	Twice.Marked(InstructionEntry.LoadNumber(0, 0)) is ""
+	Twice.Marked(InstructionEntry.LoadText(0, "x in Y")) is ""
 	let isText = (entry.kind is InstructionType.LoadConstantToRegister) and (entry.texts.Length > 0)
 	let text = isText then entry.texts(0) else ""
 	let at = text.LastIndexOf(" at ")

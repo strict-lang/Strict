@@ -11,6 +11,7 @@ constant Named = MutationKinds(MethodEntry("Run", List(MemberEntry) + MemberEntr
 constant Loaded = InstructionEntry.LoadNumber(1, 1)
 constant Placed = MutationKinds(MethodEntry(Twice.method, instructions = (Loaded, InstructionEntry(Loaded, line = 2))))
 constant Joined = MutationKinds(MethodEntry(Mutation.Twice.method, instructions = (InstructionEntry.LoadText(0, "a"), InstructionEntry.LoadText(1, ""), InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)), InstructionEntry.Return(2))))
+constant Texted = MutationKinds(MethodEntry(Twice.method, instructions = (InstructionEntry.LoadText(0, "a"), Mutation.Stored)))
 Kinds(position Number) Numbers
 	Twice.Kinds(1) is (5)
 	MutationKinds(MutationFlow.Issued.method).Kinds(0).Length is 0
@@ -23,7 +24,7 @@ Kinds(position Number) Numbers
 	let isIgnored = (entry.kind is in Writers) and flow.IsIgnored(flow.Target(entry), position)
 	isPlaced or isIgnored then List(Number) else Possible(position)
 Possible(position Number) Numbers
-	Twice.Possible(1) is (5)
+	Twice.Possible(1) is (5) and (Compared.Possible(1) is (2)) and (Storing.Possible(1) is (3))
 	let entry = method.instructions(position)
 	if IsCompared(position)
 		return (0, 1)
@@ -58,6 +59,8 @@ IsText(register Number, position Number) Boolean
 IsTextual(entry InstructionEntry, at Number) Boolean
 	Twice.IsTextual(InstructionEntry.Invoke(0, ("T", "Name", "Strict/Text"), List(Number), -1), 0)
 	Twice.IsTextual(InstructionEntry.LoadNumber(0, 2), 0) is false
+	Twice.IsTextual(InstructionEntry.Invoke(0, ("T", "Name", "N"), List(Number), -1), 0) is false
+	Joined.IsTextual(Joined.method.instructions(2), 2)
 	Named.IsTextual(InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "name"), 0)
 	if entry.kind is InstructionType.LoadConstantToRegister
 		return entry.payload(1) is 4
@@ -68,7 +71,8 @@ IsTextual(entry InstructionEntry, at Number) Boolean
 	IsText(entry.payload(1), at) or IsText(entry.payload(2), at)
 IsTextVariable(name Text, at Number) Boolean
 	Storing.IsTextVariable("a", 1) is false
-	Named.IsTextVariable("name", 0)
+	Named.IsTextVariable("name", 0) and (Named.IsTextVariable("other", 0) is false)
+	Texted.IsTextVariable("a", 2) and (Texted.IsTextVariable("b", 2) is false)
 	for method.parameters
 		if value.Name is name
 			return value.typeName is "Strict/Text"
@@ -80,6 +84,8 @@ IsTextVariable(name Text, at Number) Boolean
 	false
 IsLiteral(position Number) Boolean
 	Twice.IsLiteral(2) is false
+	MutationKinds(MethodEntry(Twice.method, instructions = (Returned, Returned))).IsLiteral(1) is false
+	MutationKinds(MethodEntry(Twice.method, instructions = (Returned))).IsLiteral(0) is false
 	MutationKinds(MethodEntry(Twice.method, instructions = (InstructionEntry.LoadNumber(0, 1), Returned))).IsLiteral(1)
 	MutationKinds(MethodEntry(Twice.method, instructions = (Loaded, Returned))).IsLiteral(1) is false
 	let previous = position > 0 then method.instructions(position - 1) else method.instructions(position)
@@ -87,6 +93,7 @@ IsLiteral(position Number) Boolean
 	(previous.kind is InstructionType.LoadConstantToRegister) and (previous.payload(0) is register)
 IsCompared(position Number) Boolean
 	Compared.IsCompared(0)
+	Compared.IsCompared(1) is false
 	MutationKinds(Mutation.Compared.Mutant(0)).IsCompared(0) is false
 	let isLast = position + 1 is method.instructions.Length
 	let next = isLast then -1 else method.instructions(position + 1).kind
@@ -97,6 +104,8 @@ IsCompared(position Number) Boolean
 IsDropped(entry InstructionEntry) Boolean
 	Twice.IsDropped(Twice.method.instructions(0)) is false
 	Twice.IsDropped(Logging)
+	Twice.IsDropped(InstructionEntry(Logging, kind = InstructionType.Return)) is false
+	Twice.IsDropped(InstructionEntry.Invoke(0, ("T", "Run"), List(Number), -1)) is false
 	Twice.IsDropped(InstructionEntry.Invoke(0, ("T", "Run", "N"), List(Number), -1)) is false
 	Twice.IsDropped(InstructionEntry(InstructionType.InvokeWriteToList, "list", (1, 0)))
 	let isCall = (entry.kind is InstructionType.Invoke) and (entry.texts.Length > 2) and (entry.texts(2) is "None")

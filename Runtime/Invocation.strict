@@ -21,28 +21,43 @@ MethodName Text
 	PayloadDecoder(entry).Text(2)
 ReturnType Text
 	AddCall.ReturnType is "Strict/Number"
+	Invocation(StructLanes.Constructed, List(VmValue), VmValue.None).ReturnType is "Pair"
 	PayloadDecoder(entry).Text(4 + entry.payload(3))
 ParameterNames Texts
 	AddCall.ParameterNames is ("x")
 	PayloadDecoder(entry).Names
 Count Number
 	AddCall.Count is 1
+	(AddCall.Arguments.First.number is 3) and (Parsing.Instance.text is "5")
 	entry.payload(5 + entry.payload(3))
 IsNativeConversion Boolean
 	Parsing.IsNativeConversion
 	AddCall.IsNativeConversion is false
-	let source = TypeEntry.ShortName(TypeName)
+	IsConversion(TypeEntry.ShortName(TypeName), MethodName, ReturnType)
+IsConversion(source Text, method Text, target Text) Boolean
+	Parsing.IsConversion("Number", "to", "Strict/Text") and Parsing.IsConversion("Character", "to", "Strict/Text")
+	Parsing.IsConversion("Boolean", "to", "Strict/Text") and Parsing.IsConversion("Text", "to", "Strict/Text")
+	Parsing.IsConversion("List(Number)", "to", "Strict/Text") and Parsing.IsConversion("Text", "to", "Strict/Number")
+	Parsing.IsConversion("Color", "to", "Strict/Text") is false
+	Parsing.IsConversion("Text", "Upper", "Strict/Text") is false
+	Parsing.IsConversion("Number", "to", "Strict/Number") is false
+	Parsing.IsConversion("Text", "to", "Strict/Boolean") is false
 	let isBase = (source is in ("Number", "Character", "Boolean", "Text")) or source.StartsWith("List(")
-	let isTextual = (ReturnType is "Strict/Text") and isBase
-	(MethodName is "to") and (isTextual or ((ReturnType is "Strict/Number") and (source is "Text")))
+	let isTextual = (target is "Strict/Text") and isBase
+	(method is "to") and (isTextual or ((target is "Strict/Number") and (source is "Text")))
 IsMemberValue(type TypeEntry) Boolean
 	Coding.IsMemberValue(TypeEntry.CharacterEntry)
 	Parsing.IsMemberValue(TypeEntry.CharacterEntry) is false
 	if IsWrapping(type) is false
 		return false
 	let kind = TypeEntry.ShortName(Arguments.First.kind)
-	let member = TypeEntry.ShortName(type.Changing.First.typeName)
-	(kind is TypeEntry.ShortName(type.Name)) or (member is kind) or member.StartsWith(kind + "(")
+	IsMemberKind(kind, TypeEntry.ShortName(type.Name), TypeEntry.ShortName(type.Changing.First.typeName))
+IsMemberKind(kind Text, typeName Text, member Text) Boolean
+	Coding.IsMemberKind("Character", "Character", "Number") and Coding.IsMemberKind("Number", "Character", "Number")
+	Coding.IsMemberKind("List", "Character", "List(Number)")
+	Coding.IsMemberKind("Text", "Character", "Number") is false
+	Coding.IsMemberKind("List", "Character", "ListNumber") is false
+	(kind is typeName) or (member is kind) or member.StartsWith(kind + "(")
 Flag Number
 	AddCall.Flag is 8
 	6 + entry.payload(3) + Count
@@ -55,10 +70,13 @@ Resolution Number
 	flag + 1 + entry.payload(flag)
 IsResolved Boolean
 	AddCall.IsResolved is false
+	Invocation(AddCall.entry, List(VmValue), VmValue.None, 0, 4).IsResolved
 	entry.payload.Length > Resolution
 IsWrapping(type TypeEntry) Boolean
 	Coding.IsWrapping(TypeEntry.CharacterEntry)
 	AddCall.IsWrapping(TypeEntry.CharacterEntry) is false
+	Coding.IsWrapping(TypeEntry.Numbers) is false
+	Invocation(StructLanes.Constructed, List(VmValue), VmValue.None).IsWrapping(TypeEntry.CharacterEntry) is false
 	(MethodName is "from") and (type.Changing.Length is 1) and (Count is 1)
 Kept(traces List(VmValue), trace VmValue) List(VmValue)
 	AddCall.Kept(List(VmValue), VmValue.None).Length is 1

@@ -27,6 +27,7 @@ Typed(parameters List(MemberEntry), arguments List(VmValue)) List(VmValue)
 	Hello.Typed(List(MemberEntry) + Paired.members.Last, List(VmValue) + VmValue.OfText("5")).First.number is 5
 	Hello.Typed(List(MemberEntry) + MemberEntry.LoggerMember, List(VmValue) + VmValue.OfText("a")).First.text is "a"
 	Hello.Typed(List(MemberEntry) + MemberEntry.NumbersMember, List(VmValue) + VmValue.OfText("5")).First.items.Length is 1
+	Hello.Typed((MemberEntry.NumbersMember, Paired.members.Last), (VmValue.OfText("5"), VmValue.OfText("6"))).Length is 2
 	mutable typed = List(Mutable(VmValue))
 	for arguments
 		let parameter = index < parameters.Length then parameters(index) else parameters.Last
