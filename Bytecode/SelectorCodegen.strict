@@ -9,6 +9,7 @@ constant ACase = SyntaxNode("Binary", "then", (SyntaxNode("Identifier", "A"), On
 constant Picked = BodyParser("Pick Number", "\tif 2 is", "\t\t1 then 10", "\t\t2 then 20").Block(1, 1).children(0)
 Selected(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Selected(Picked, CodeBlock.Empty).instructions.Length is 14
+	Plain.Case(Typed, ACase, CodeBlock.Empty.Declare("x", "B")).instructions.Length is 0
 	mutable result = block
 	mutable isDecided = false
 	for node.children.Last.children
@@ -33,5 +34,6 @@ TypeCase(selector SyntaxNode, line SyntaxNode, block CodeBlock) Text
 	Plain.TypeCase(Typed, ACase, CodeBlock.Empty.Declare("x", "A")) is "true"
 	Plain.TypeCase(Typed, ACase, CodeBlock.Empty.Declare("x", "B")) is "false"
 	Plain.TypeCase(IsOne, SyntaxNode("Binary", "then", (One, One)), CodeBlock.Empty) is ""
+	Plain.TypeCase(Typed, SyntaxNode("ElseValue", "", ACase.children), CodeBlock.Empty.Declare("x", "B")) is ""
 	let comparison = SyntaxNode("Binary", selector.text, (selector.children(0), line.children(0)))
 	line.Kind is "ElseValue" then "" else OperatorCodegen(values).Decided(comparison, block)
