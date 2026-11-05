@@ -101,6 +101,8 @@ Collected(block CodeBlock, aggregation Text) CodeBlock
 	let added = InstructionEntry.Binary(operation, (loaded.Result, block.Result, loaded.register))
 	loaded.Load(added).Stored("forResult")
 Loop(node SyntaxNode, block CodeBlock, aggregation Text) CodeBlock
+	Plain.Begin(SyntaxNode("Call", "Range", ValueCodegen.Ones.children), CodeBlock.Empty).instructions.Length is 3
+	Plain.Begin(SyntaxNode("Call", "Range", ValueCodegen.Ones.children), CodeBlock.Empty).instructions(2).payload(1) is 1
 	Plain.Loop(LoopPeeling.Summing, LoopPeeling.Counted, "").instructions.Last.kind is InstructionType.LoopEnd
 	Plain.Loop(LoopPeeling.Summing, LoopPeeling.Counted, "").instructions.Length is 30
 	FileCompiler.Unoptimized.Loop(LoopPeeling.Summing, LoopPeeling.Counted, "").instructions.Length is 22

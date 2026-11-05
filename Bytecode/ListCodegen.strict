@@ -49,6 +49,8 @@ Constant(node SyntaxNode, block CodeBlock) CodeBlock
 		content = content + element
 	block.Load(InstructionEntry(InstructionType.LoadConstantToRegister, texts, content))
 Built(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Built(ValueCodegen.Ones, CodeBlock.Empty).instructions.Last.texts is ("listResult0")
+	Plain.Added(ValueCodegen.Edits(0), CodeBlock.Empty).instructions(1).kind is InstructionType.InvokeWriteToList
 	Plain.Built(SyntaxNode("List", "", (ValueCodegen.NoNode, ValueCodegen.One)), CodeBlock.Empty).instructions.Length is 6
 	let name = "listResult" + block.nextId
 	let type = values.target.FullName(values.TypeOf(node, block))
@@ -158,6 +160,8 @@ IsUsed(parent SyntaxNode, position Number, isUsed Boolean) Boolean
 	let instance = parent.text is in ("is in", "is not in") then 1 else 0
 	position is not instance or parent.Kind is not in ("Member", "Binary", "If", "ElseIf", "Reassignment")
 Argument(node SyntaxNode, position Number, parameters Texts, block CodeBlock) CodeBlock
+	ListCodegen(ValueCodegen.Plain, ("values")).IsUsed(SyntaxNode("Return", "", ValueCodegen.One), 0, false)
+	Plain.IsUsed(SyntaxNode("Return", "", ValueCodegen.Ones.children), 0, true)
 	Plain.Argument(ValueCodegen.NoNode, 0, List(Text) + "Numbers", Declared).instructions.Length is 4
 	Plain.Argument(ValueCodegen.NoNode, 0, List(Text) + "Number", Declared).instructions.Length is 1
 	Plain.Argument(ValueCodegen.NoNode, 1, List(Text), Declared).instructions.Length is 1
@@ -181,6 +185,8 @@ Grouped(node SyntaxNode, first Number, parameters Number) SyntaxNode
 	let grouped = SyntaxNode("List", "", arguments)
 	SyntaxNode(node.Kind, node.text, (first is 1 then (node.children(0), grouped) else List(SyntaxNode) + grouped))
 Empty(type Text, block CodeBlock) CodeBlock
+	Plain.IsUsed(SyntaxNode("MethodCall", "B", ValueCodegen.Ones.children), 1, true)
+	Plain.Disowned(BodyParser("Run", "\tvalues = List(Number)").Block(1, 1), Owned, false).Owns("values")
 	Plain.Empty("Numbers", CodeBlock.Empty).instructions(0).texts is ("Strict/List(Number)")
 	Plain.IsAppend(SyntaxNode("Declaration", "", Appending.children), Owned) is false
 	Plain.IsAppend(BodyParser("Run", "	x = x + 1").Block(1, 1).children(0), Owned.Declare("x", "Number")) is false
