@@ -9,9 +9,14 @@ constant Summing = BodyParser("Run", "\tfor 3", "\t\tsum = sum + (index is 0 the
 constant Shifted = Steps.Peeled(Sigmas, "list")
 constant Joined = Texted.Peeled(Joining, "sum")
 constant Summed = Steps.Peeled(Summing, "")
+constant Trailing = Texted.Peeled(BodyParser("Run", "\tfor texts", "\t\tindex is texts.Length - 1 then index else value + index").Block(1, 1).children(0), "")
+constant Indexed = Texted.Peeled(BodyParser("Run", "\tfor texts", "\t\tindex is 0 then index else value + index").Block(1, 1).children(0), "")
+constant Unpeeled = Texted.Peeled(BodyParser("Run", "\tfor separator", "\t\tindex is 0 then value else separator").Block(1, 1).children(0), "")
+constant Listed = LoopPeeling(MethodCodegen.Plain, Counted.Declare("ones", "List(Number)"))
 Peeled(loop SyntaxNode, aggregation Text) SyntaxNode
-	Shifted.Kind is "Body"
+	Shifted.Kind is "Body" and (Shifted.text is "peeled")
 	Steps.Peeled(Summing, "any").Kind is "For"
+	Unpeeled.Kind is "For"
 	let edges = LoopEdge(loop)
 	let edge = edges.Found(loop.children.Last)
 	let kind = Kind(loop)
@@ -25,6 +30,8 @@ Kind(loop SyntaxNode) Text
 	Steps.Kind(Sigmas) is "count"
 	Texted.Kind(Joining) is "list"
 	Steps.Kind(BodyParser("Run", "\tfor steps + Count(steps)", "\t\tindex").Block(1, 1).children(0)) is ""
+	Steps.Kind(BodyParser("Run", "\tfor width.Clamp(0, steps)", "\t\tindex").Block(1, 1).children(0)) is ""
+	Listed.Kind(BodyParser("Run", "\tfor ones", "\t\tvalue").Block(1, 1).children(0)) is "list"
 	let isSafe = LoopHoisting(methods.values).IsSafe(loop.children(0))
 	let isSingle = isSafe and (loop.children.Length is 2) and (loop.text.EndsWith(" in") is false)
 	let type = isSingle and (loop.text is not "for as long as") then methods.values.TypeOf(loop.children(0), block) else ""
@@ -35,6 +42,8 @@ Kind(loop SyntaxNode) Text
 Element(loop SyntaxNode, edge SyntaxNode, kind Text, isFirst Boolean) SyntaxNode
 	Shifted.children(1) to Text is "for Range((steps + 1 - 1).Clamp(0, steps + 1), (steps + 1).Clamp(0, steps + 1))"
 	Joined.children(0) to Text is "for texts.Slice(0, 1.Clamp(0, texts.Length))"
+	Summed.children(0) to Text is "for Range(0, 1.Clamp(0, 3))"
+	Trailing.children(1).children(0).children(1) to Text is "(texts.Length - 1).Clamp(0, texts.Length)"
 	let count = kind is "count" then loop.children(0) else Length(loop)
 	let one = Clamped(MethodCodegen.One, count)
 	let last = Clamped(SyntaxNode("Binary", "-", (count, MethodCodegen.One)), count)
@@ -46,6 +55,7 @@ Element(loop SyntaxNode, edge SyntaxNode, kind Text, isFirst Boolean) SyntaxNode
 Rest(loop SyntaxNode, edge SyntaxNode, kind Text, isFirst Boolean) SyntaxNode
 	Shifted.children(0) to Text is "for (steps + 1 - 1).Clamp(0, steps + 1)"
 	Joined.children(1) to Text is "for texts.Slice(1, (texts.Length - 1).Clamp(0, texts.Length))"
+	Summed.children(1) to Text is "for Range(1.Clamp(0, 3), 3.Clamp(0, 3))"
 	let count = kind is "count" then loop.children(0) else Length(loop)
 	let fewer = Clamped(SyntaxNode("Binary", "-", (count, MethodCodegen.One)), count)
 	let range = SyntaxNode("Call", "Range", (Clamped(MethodCodegen.One, count), Clamped(count, count)))
@@ -57,15 +67,35 @@ Rest(loop SyntaxNode, edge SyntaxNode, kind Text, isFirst Boolean) SyntaxNode
 	SyntaxNode("For", loop.text, (kind is "count" then counted else sliced, body), loop.line)
 Length(loop SyntaxNode) SyntaxNode
 	Texted.Length(Joining) to Text is "texts.Length"
+	Counted.scope.names is ("steps", "width", "sum") and (Counted.scope.types is ("Number", "Number", "Number"))
+	Texted.block.scope.names is ("texts", "separator") and (Texted.block.scope.types is ("Texts", "Text"))
+	Steps.Peeled(BodyParser("Run", "\tfor steps", "\t\twidth").Block(1, 1).children(0), "").Kind is "For"
+	Texted.Kind(BodyParser("Run", "\tfor item in texts", "\t\titem").Block(1, 1).children(0)) is ""
+	Steps.Kind(BodyParser("Run", "\tfor as long as steps", "\t\tindex").Block(1, 1).children(0)) is ""
+	Trailing.children(0) to Text is "for texts.Slice(0, (texts.Length - 1).Clamp(0, texts.Length))"
+	Steps.Substituted(SyntaxNode("Text", "index"), Zero, Sigmas, true) is SyntaxNode("Text", "index")
+	Listed.block.scope.names.Last is "ones" and (Listed.block.scope.types.Last is "List(Number)")
+	Trailing.children(0).children.Last.children(0) to Text is "value + index"
 	SyntaxNode("Member", "Length", List(SyntaxNode) + loop.children(0))
 Clamped(number SyntaxNode, count SyntaxNode) SyntaxNode
 	Steps.Clamped(MethodCodegen.One, SyntaxNode("Identifier", "steps")) to Text is "1.Clamp(0, steps)"
+	Steps.Simplified(StatementParser(Tokenizer("x then 1 else 2").Tokens).ParseStatement) to Text is "x then 1 else 2"
+	Steps.Simplified(StatementParser(Tokenizer("x is true").Tokens).ParseStatement) to Text is "x is true"
+	Steps.Simplified(StatementParser(Tokenizer("x > 1 and true").Tokens).ParseStatement) to Text is "x > 1"
+	Steps.Simplified(StatementParser(Tokenizer("x and y").Tokens).ParseStatement) to Text is "x and y"
+	Steps.Simplified(StatementParser(Tokenizer("false and x").Tokens).ParseStatement) to Text is "false"
+	Steps.Simplified(StatementParser(Tokenizer("false or x").Tokens).ParseStatement) to Text is "x"
+	Steps.Simplified(StatementParser(Tokenizer("true or x").Tokens).ParseStatement) to Text is "true"
 	SyntaxNode("MethodCall", "Clamp", (number, Zero, count))
 Zero SyntaxNode
 	Steps.Zero to Text is "0"
+	Steps.Simplified(StatementParser(Tokenizer("not false").Tokens).ParseStatement) is SyntaxNode("Boolean", "true")
+	Steps.Folded(SyntaxNode("Not", "not", List(SyntaxNode) + SyntaxNode("Identifier", "x"))).Kind is "Not"
 	SyntaxNode("Number", "0")
 Substituted(node SyntaxNode, at SyntaxNode, edge SyntaxNode, isEdge Boolean) SyntaxNode
 	Steps.Substituted(SyntaxNode("Identifier", "index"), MethodCodegen.One, Sigmas, true) to Text is "1"
+	Steps.Substituted(Shifted.children(0), Zero, Sigmas, true) is Shifted.children(0)
+	Steps.Substituted(SyntaxNode("Identifier", "width"), Zero, Sigmas, true) is SyntaxNode("Identifier", "width")
 	if node is edge
 		return SyntaxNode("Boolean", isEdge to Text)
 	if node.Kind is "Identifier" and (node.text is "index")
@@ -103,4 +133,7 @@ Emitted(peeled SyntaxNode, loops LoopCodegen, aggregation Text) CodeBlock
 	Shifted.children(0).children.Last.children(0) to Text is "width * index"
 	Joined.children(1).children.Last.children(0) to Text is "separator + value"
 	Summed.children(1).children.Last.children(0).children(1) to Text is "sum + index * width"
+	Indexed.children(0).children.Last.children(0) is SyntaxNode("Identifier", "index")
+	Trailing.children(1).children.Last.children(0) to Text is "texts.Length - 1"
+	Indexed.children(1).children.Last.children(0) to Text is "value + (index + 1)"
 	loops.Loop(peeled.children(1), loops.Loop(peeled.children(0), block, aggregation), aggregation)
