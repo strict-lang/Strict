@@ -12,7 +12,7 @@ constant Splitting = (InstructionEntry.LoadNumber(0, 0), Marking, InstructionEnt
 constant Splitter = Mutation(MethodEntry(Machine.Doubler.methods.First, instructions = Splitting))
 constant Returned = InstructionEntry.Return(0)
 constant Descriptions = ("the comparison always true", "the comparison always false", "returning the default value instead of the result")
-constant Defaults = ("Strict/Number", "Strict/Text", "Strict/Boolean")
+constant Temporary = InstructionEntry(Stored, texts = ("logical0"))
 IsMine(part Text, round Number) Boolean
 	Mutation.IsMine("", 3)
 	Mutation.IsMine("1/2", 3)
@@ -40,8 +40,8 @@ Kinds(position Number) Numbers
 		return (0, 1)
 	let isLast = position is method.instructions.Length - 1
 	if (entry.kind is InstructionType.Return) and isLast and (IsLiteral(position) is false)
-		return method.returnType is in Defaults then List(Number) + 2 else List(Number)
-	if (entry.kind is InstructionType.StoreRegisterToVariable) and IsStoredBefore(position)
+		return method.returnType is in ("Strict/Number", "Strict/Text", "Strict/Boolean") then (2) else List(Number)
+	if (entry.kind is InstructionType.StoreRegisterToVariable) and IsReassigned(position)
 		return List(Number) + 3
 	if IsDropped(entry)
 		return List(Number) + 4
@@ -69,11 +69,14 @@ IsDropped(entry InstructionEntry) Boolean
 	Twice.IsDropped(InstructionEntry(InstructionType.InvokeWriteToList, "list", (1, 0)))
 	let isCall = (entry.kind is InstructionType.Invoke) and (entry.texts.Length > 2) and (entry.texts(2) is "None")
 	isCall or (entry.kind is InstructionType.InvokeWriteToList)
-IsStoredBefore(position Number) Boolean
-	Twice.IsStoredBefore(1) is false
-	Storing.IsStoredBefore(1)
-	Storing.IsStoredBefore(0) is false
+IsReassigned(position Number) Boolean
+	Twice.IsReassigned(1) is false
+	Storing.IsReassigned(1)
+	Storing.IsReassigned(0) is false
+	Mutation(MethodEntry(Storing.method, instructions = (Temporary, Temporary))).IsReassigned(1) is false
 	let name = method.instructions(position).texts
+	if (name.Length > 0) and (name.First.StartsWith("conditional") or name.First.StartsWith("logical"))
+		return false
 	for Range(0, position)
 		let entry = method.instructions(value)
 		if (entry.kind is InstructionType.StoreRegisterToVariable) and (entry.texts is name)
