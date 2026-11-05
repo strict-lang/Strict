@@ -2289,6 +2289,40 @@
     %base = func.call @strict_device_token_base(%bases, %basesCount, %basesBits, %tokenFirst) : (!llvm.ptr, i64, i64, i64) -> i64
     %basedFirst = arith.addi %rowFirst, %base : i64
     %firstData, %rowBits, %firstTotal = func.call @strict_device_row(%rowsData, %basedFirst) : (!llvm.ptr, i64) -> (!llvm.ptr, i64, i64)
+    cf.switch %rowBits : i64, [
+      default: ^anyBits,
+      4: ^fourBits,
+      6: ^sixBits,
+      3: ^threeBits
+    ]
+  ^fourBits:
+    %fourRowBits = arith.constant 4 : i64
+    func.call @strict_device_tiles_staged(%result, %wide, %rowsData, %columns, %input, %inputScales, %width, %rows, %biases, %biasesCount, %biasesBits, %rowFirst, %rowLast, %tokenFirst, %tokenLast, %firstBlock, %blocks, %split, %splits, %tile, %thread, %warpRow, %warpToken, %laneRow, %quad, %firstData, %fourRowBits) : (!llvm.ptr, i1, !llvm.ptr, i64, !llvm.ptr, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i32, i32, i32, i32, i32, !llvm.ptr, i64) -> ()
+    cf.br ^exit
+  ^sixBits:
+    %sixRowBits = arith.constant 6 : i64
+    func.call @strict_device_tiles_staged(%result, %wide, %rowsData, %columns, %input, %inputScales, %width, %rows, %biases, %biasesCount, %biasesBits, %rowFirst, %rowLast, %tokenFirst, %tokenLast, %firstBlock, %blocks, %split, %splits, %tile, %thread, %warpRow, %warpToken, %laneRow, %quad, %firstData, %sixRowBits) : (!llvm.ptr, i1, !llvm.ptr, i64, !llvm.ptr, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i32, i32, i32, i32, i32, !llvm.ptr, i64) -> ()
+    cf.br ^exit
+  ^threeBits:
+    %threeRowBits = arith.constant 3 : i64
+    func.call @strict_device_tiles_staged(%result, %wide, %rowsData, %columns, %input, %inputScales, %width, %rows, %biases, %biasesCount, %biasesBits, %rowFirst, %rowLast, %tokenFirst, %tokenLast, %firstBlock, %blocks, %split, %splits, %tile, %thread, %warpRow, %warpToken, %laneRow, %quad, %firstData, %threeRowBits) : (!llvm.ptr, i1, !llvm.ptr, i64, !llvm.ptr, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i32, i32, i32, i32, i32, !llvm.ptr, i64) -> ()
+    cf.br ^exit
+  ^anyBits:
+    func.call @strict_device_tiles_staged(%result, %wide, %rowsData, %columns, %input, %inputScales, %width, %rows, %biases, %biasesCount, %biasesBits, %rowFirst, %rowLast, %tokenFirst, %tokenLast, %firstBlock, %blocks, %split, %splits, %tile, %thread, %warpRow, %warpToken, %laneRow, %quad, %firstData, %rowBits) : (!llvm.ptr, i1, !llvm.ptr, i64, !llvm.ptr, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i32, i32, i32, i32, i32, !llvm.ptr, i64) -> ()
+    cf.br ^exit
+  ^exit:
+    return
+  }
+  // the stages of strict_device_tiles_run with the bits of the rows known in each call, so the loop over the blocks of
+  // 256 columns has no branches on them
+  func.func private @strict_device_tiles_staged(%result: !llvm.ptr, %wide: i1, %rowsData: !llvm.ptr, %columns: i64, %input: !llvm.ptr, %inputScales: !llvm.ptr, %width: i64, %rows: i64, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64, %rowFirst: i64, %rowLast: i64, %tokenFirst: i64, %tokenLast: i64, %firstBlock: i64, %blocks: i64, %split: i64, %splits: i64, %tile: i64, %thread: i32, %warpRow: i32, %warpToken: i32, %laneRow: i32, %quad: i32, %firstData: !llvm.ptr, %rowBits: i64) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+    %brain = arith.constant false
+    %c0 = llvm.mlir.constant(0 : i32) : i32
+    %c1 = llvm.mlir.constant(1 : i32) : i32
+    %c8 = llvm.mlir.constant(8 : i32) : i32
+    %c16 = llvm.mlir.constant(16 : i32) : i32
+    %one = arith.constant 1 : i64
+    %zeros = arith.constant dense<0.0> : vector<16xf32>
     %rowsWord = llvm.load %rowsData : !llvm.ptr -> i64
     %lowHalf = arith.constant 2147483647 : i64
     %stride = arith.andi %rowsWord, %lowHalf : i64
