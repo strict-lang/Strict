@@ -136,27 +136,29 @@ STRICT_EXPORT double Socket_Send(double self, double socket, double bytes)
 {
 	if ((int)socket <= 0)
 		return strict_fail("InvalidSocket");
-	const strict_numbers* data = strict_numbers_of(bytes);
-	size_t count = (size_t)data->count;
+	size_t count = (size_t)strict_count(bytes);
 	if (count == 0)
 		return 0;
-	unsigned char* buffer = (unsigned char*)malloc(count);
+	int isBytes = strict_format(bytes) == 9;
+	unsigned char* buffer = isBytes ? (unsigned char*)strict_data(bytes) : (unsigned char*)malloc(count);
 	if (buffer == 0)
 		return strict_fail("OutOfMemory");
-	for (size_t index = 0; index < count; index++)
-		buffer[index] = (unsigned char)(int)data->items[index];
+	for (size_t index = 0; !isBytes && index < count; index++)
+		buffer[index] = (unsigned char)(int)strict_number(bytes, index);
 	size_t sent = 0;
 	while (sent < count)
 	{
 		int written = (int)send((int)socket, (const char*)buffer + sent, (int)(count - sent), 0);
 		if (written <= 0)
 		{
-			free(buffer);
+			if (!isBytes)
+				free(buffer);
 			return strict_fail("SendFailed");
 		}
 		sent += (size_t)written;
 	}
-	free(buffer);
+	if (!isBytes)
+		free(buffer);
 	return (double)sent;
 }
 

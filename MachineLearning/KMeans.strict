@@ -16,7 +16,7 @@ Nearest(sample Numbers) Number
 		if Distance(value, sample) < Distance(centers(best), sample)
 			best = index
 	best
-Distance(first Numbers, second Numbers) Number
+Distance(first Numbers with value.Bits is 32, second Numbers with value.Bits is 32) Number
 	Corners.Distance((0, 0), (1, 2)) is 5
 	mutable sum = 0
 	for first
