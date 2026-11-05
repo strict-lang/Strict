@@ -3,6 +3,7 @@ has selection Text = ""
 has isRecursive Boolean = true
 has isMutating Boolean = false
 has part Text = ""
+has isFull Boolean = false
 constant Adder = BinaryFile("./Examples/NativeAdd/Adder.strict")
 constant AdderFiles = SourceFiles(".").Of(Adder.source)
 Run(arguments Texts) Number
@@ -21,7 +22,7 @@ Test(path Text, root Text, isQuiet = false) Number
 	Execute(Logger).Test("Missing.strict", ".") is 1
 	if File(path).Exists and (Directory.Exists(path) is false)
 		return Failures(List(Text) + path, root, isQuiet)
-	Directory.Exists(path) then Folders(logger).Tested(path, root, isRecursive, isMutating) else 1
+	Directory.Exists(path) then Folders(logger).Tested(path, root, isRecursive, isMutating, isFull) else 1
 Failures(paths Texts, root Text, isQuiet Boolean) Number
 	let stale = selection is "" then Stale(paths) else paths
 	let files = stale.Length is 0 then List(Text) else SourceFiles(root).Of(FileCompiler.Normalized(stale.First), stale)
@@ -89,9 +90,11 @@ Tested(types List(TypeEntry), path Text, root Text) Number
 	if failed > 0
 		logger.Log(Summary(failed, path))
 		return failed
-	let isFast = isMutating and (selection is in ("", "*")) and (Process.Elapsed - started < 0.1)
-	let mutants = Mutants(logger, path, (Process.Elapsed - started) * 10 + 0.01, root, part)
-	isFast then mutants.Survivors(types) else 0
+	let isWhole = selection is "*"
+	let elapsed = Process.Elapsed - started
+	let seconds = isWhole or (elapsed < 0.1) then elapsed * 10 + 0.01 else 0
+	let mutants = Mutants(logger, path, seconds, root, part, isWhole)
+	isMutating and (selection is in ("", "*")) then mutants.Survivors(types) else 0
 Loaded(path Text, root Text, withTests = true, sources Texts = List(Text)) List(TypeEntry)
 	let started = Process.Elapsed
 	let cache = BinaryFile(FileCompiler.Normalized(path))

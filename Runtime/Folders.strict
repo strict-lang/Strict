@@ -1,15 +1,47 @@
 has logger
 constant Batch = 128
-Tested(folder Text, root Text, isRecursive = true, isMutating = false) Number
+Tested(folder Text, root Text, isRecursive = true, isMutating = false, isFull = false) Number
 	Folders(Logger).Tested("Missing", ".") is 0
 	let files = NativeFolder(logger, isRecursive = isRecursive).Files(folder)
-	Ran(Commands("test", files, root, isMutating))
-Commands(command Text, paths Texts, root Text, isMutating = false) Texts
+	Ran(Commands("test", files, root, isMutating, isFull))
+Commands(command Text, paths Texts, root Text, isMutating = false, isFull = false) Texts
 	Folders(Logger).Commands("test", List(Text) + "a.strict", ".") is ("test \"a.strict\" \".\" unit")
 	Folders(Logger).Commands("test", List(Text) + "a.strict", ".", true) is ("test \"a.strict\" \".\" unit mutations")
-	let options = (command is "test" then " unit" else "") + (isMutating then " mutations" else "")
+	Folders(Logger).Commands("test", List(Text) + "a.strict", ".", true, true) is ("test \"a.strict\" \".\" mutations")
+	let isUnit = (command is "test") and (isFull is false)
+	let options = (isUnit then " unit" else "") + (isMutating then " mutations" else "")
 	for paths
 		command + " \"" + value + "\" \"" + root + "\"" + options
+Cleaned(folder Text) Number
+	Folders(Logger).Cleaned("Missing") is 0
+	(Directory.Create("Compiler/output/Clean") or true) and (Directory.Create("Compiler/output/Clean/obj") or true)
+	Directory.Exists("Compiler/output/Clean/obj")
+	Folders(Logger).Cleaned("Compiler/output/Clean") is 0
+	Directory.Exists("Compiler/output/Clean/obj") is false
+	mutable removed = 0
+	for Directory.Directories(folder)
+		let name = Path(value).FileName.text
+		removed = removed + (name is "obj" then Removed(value) else (name is in (".git", "Tools") then 0 else Cleaned(value)))
+	removed
+IsKept(file Text) Boolean
+	Folders(Logger).IsKept("Compiler/obj/NativeCompiler.ptx")
+	Folders(Logger).IsKept("Compiler/obj/NativeCompiler.mlir") is false
+	Folders(Logger).IsKept("Compiler/obj/Missing.ptx") is false
+	let name = Path(file).FileName.text
+	let program = Path(Path(file).PathOnly.text).PathOnly.text + "/" + name.Split(".").First
+	let isDevice = ("." + name.Split(".").Last) is in (".ptx", ".fatbin", ".hsaco", ".metal")
+	isDevice and (File(program + ".exe").Exists or File(program).Exists)
+Removed(folder Text) Number
+	Folders(Logger).Removed("Missing") is 0
+	mutable removed = 0
+	for Directory.Files(folder)
+		if IsKept(value) is false
+			File(value).Delete
+			removed = removed + 1
+	for Directory.Directories(folder)
+		removed = removed + Removed(value)
+	Directory.Delete(folder)
+	removed
 Ran(arguments Texts) Number
 	Folders(Logger).Ran(List(Text)) is 0
 	mutable failed = 0

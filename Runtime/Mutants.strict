@@ -3,50 +3,71 @@ has path Text
 has seconds Number = 0.2
 has root Text = "."
 has part Text = ""
+has isWhole Boolean = false
 constant Starting = ("Strict/Runtime/TestBudget", "Started")
 constant Budget = InstructionEntry.Invoke(2, Starting + ("Strict/Number", "place", "isSlow"), (0, 1), -1)
 constant Budgeted = (InstructionEntry.LoadBoolean(1, false), Budget)
 constant Twice = Machine.Doubler.methods.First
 constant Doubled = List(TypeEntry) + Machine.Doubler
-constant Twiced = List(MethodEntry) + Twice
 constant Sample = Mutants(Logger, "Examples/Fibonacci.strict")
 constant Inputs = ("/File", "/Directory", "/Process", "/Logger", "/TextWriter", "/Time", "/Library", "/Http", "/Random")
-constant Steps = 100000
+constant Crashed = ", its rounds were not tested: run strict test on this file to see the error"
 constant Hint = " keeps all tests passing: add a test that fails without it or remove the code"
 Survivors(types List(TypeEntry)) Number
 	Sample.Survivors(Execute(Logger).Loaded("Examples/Fibonacci.strict", ".")) is 0
-	let methods = Mutated(types.First)
-	let rounds = Rounds(methods)
-	if (part is "") and (rounds > 16)
+	Mutants(Logger, "Compiler/output/Cached.strict", 0).Survivors(Doubled) is 0
+	let cache = MutationCache(path, isWhole)
+	let isCached = (part is "") and cache.IsCurrent
+	if (isCached is false) and (seconds is 0)
+		return 0
+	let survivors = isCached then cache.Survivors else Lines(types)
+	for survivors
+		logger.Log(value)
+	if (part is "") and (isCached is false)
+		cache.Saved(survivors)
+	survivors.Length
+Lines(types List(TypeEntry)) Texts
+	Sample.Lines(Doubled).Length is 0
+	let methods = Kept(types)
+	let rounds = Mutation.Rounds(methods)
+	let isStrict = Path(Process.Current.executable).FileName.text.Lower.StartsWith("strict")
+	if (part is "") and (rounds > 16) and isStrict
 		return Spawned(rounds)
 	let tested = Tested(types, Runner(types.First), methods)
-	mutable survived = 0
+	mutable survivors = List(Mutable(Text))
 	for Range(0, rounds)
-		if IsMine(value)
-			survived = survived + Round(tested, methods, value)
-	survived
-IsMine(round Number) Boolean
-	Sample.IsMine(3)
-	Mutants(Logger, "A.strict", 0.1, ".", "1/2").IsMine(3)
-	Mutants(Logger, "A.strict", 0.1, ".", "1/2").IsMine(2) is false
-	let at = part.IndexOf("/")
-	if at < 0
-		return true
-	round % (part.Substring(at + 1, part.Length - at - 1) to Number) is (part.Substring(0, at) to Number)
-Spawned(rounds Number) Number
+		if Mutation.IsMine(part, value)
+			survivors = survivors + Round(tested, methods, value)
+	survivors
+Kept(types List(TypeEntry)) List(MethodEntry)
+	Sample.Kept(Doubled).Length is 0
+	let methods = Mutated(types.First)
+	let started = Execute(logger).Started(Tested(types, Runner(types.First), methods), path)
+	let limit = isWhole then 1 else 0.1
+	for methods
+		let begun = Process.Elapsed
+		let failed = Machine(started, deadline = begun + limit).Tested(types.First.Name, TestCodegen.Runner + index)
+		if (failed is 0) and (Process.Elapsed - begun < limit)
+			value
+Spawned(rounds Number) Texts
 	Sample.Commands(4).Last is "test \"Examples/Fibonacci.strict\" \".\" unit mutations rounds:1/2"
-	mutable survived = 0
-	for Process.RunTools(Process.Current.executable, Commands(rounds))
-		for (value.Output + value.error).Replace("\r", "").Lines
-			if value.IndexOf("MutationSurvived") >= 0
-				logger.Log(value)
-		survived = survived + Folders.Failed(value.exitCode)
-	survived
+	mutable survivors = List(Mutable(Text))
+	let results = Process.RunTools(Process.Current.executable, Commands(rounds))
+	for result, line in results, result.Output.Lines
+		if line.IndexOf("MutationSurvived") >= 0
+			survivors.Add(line.Replace("\r", ""))
+	for results
+		let isCrashed = (value.exitCode < 0) or (value.exitCode >= 128) or (("\n" + value.Output).IndexOf("\nError: ") >= 0)
+		if isCrashed
+			survivors.Add(path + ": MutationTestingFailed: a worker ended with exit code " + value.exitCode + Crashed)
+	survivors
 Commands(rounds Number) Texts
 	Sample.Commands(40).Length is 10
+	Mutants(Logger, "A.strict", 0.1, ".", "", true).Commands(4).Last.EndsWith(" mutations rounds:1/2")
 	let parts = (rounds / 4).Ceiling.Clamp(2, 16)
+	let options = isWhole then " mutations rounds:" else " unit mutations rounds:"
 	for parts
-		"test \"" + path + "\" \"" + root + "\" unit mutations rounds:" + index + "/" + parts
+		"test \"" + path + "\" \"" + root + "\"" + options + index + "/" + parts
 Mutated(type TypeEntry) List(MethodEntry)
 	Sample.Mutated(Machine.Doubler).Length is 0
 	for type.methods
@@ -54,36 +75,34 @@ Mutated(type TypeEntry) List(MethodEntry)
 			value
 Runner(type TypeEntry) MethodEntry
 	Sample.Runner(Machine.Doubler) is Twice
+	Sample.Runner(TypeEntry(Machine.Doubler, methods = (Twice, MethodEntry(Twice, Name = "$Tests")))).Name is "$Tests"
 	for type.methods
 		if value.Name is TestCodegen.Runner
 			return value
 	type.methods.First
-Rounds(methods List(MethodEntry)) Number
-	Sample.Rounds(List(MethodEntry) + Twice) is 2
-	mutable rounds = 0
-	for methods
-		rounds = Mutation(value).Candidates.Length > rounds then Mutation(value).Candidates.Length else rounds
-	rounds
-Round(types List(TypeEntry), methods List(MethodEntry), round Number) Number
+Round(types List(TypeEntry), methods List(MethodEntry), round Number) Texts
 	let started = Execute(logger).Started(Replaced(types, methods, Changed(methods, round)), path)
-	mutable count = 0
+	mutable survivors = List(Mutable(Text))
 	for methods
 		let candidates = Mutation(value).Candidates
 		let machine = Machine(started, deadline = Process.Elapsed + seconds)
-		if (candidates.Length > round) and (machine.Tested(types.First.Name, TestCodegen.Runner + index) is 0)
-			Reported(value, candidates(round))
-			count = count + 1
-	count
+		let runner = TestCodegen.Runner + index
+		if (candidates.Length > round) and (machine.Tested(types.First.Name, runner) is 0)
+			let mutant = List(MethodEntry) + Mutation(value).Mutant(candidates(round))
+			let alone = Execute(logger).Started(Replaced(types, List(MethodEntry) + value, mutant), path)
+			if Machine(alone, deadline = Process.Elapsed + seconds).Tested(types.First.Name, runner) is 0
+				survivors.Add(Survivor(value, candidates(round)))
+	survivors
 Changed(methods List(MethodEntry), round Number) List(MethodEntry)
 	Sample.Changed(List(MethodEntry) + Twice, 0).First.instructions(1).kind is InstructionType.Subtract
+	Sample.Changed((Twice), 5).First is Twice
 	for methods
 		let candidates = Mutation(value).Candidates
 		candidates.Length > round then Mutation(value).Mutant(candidates(round)) else value
-Reported(method MethodEntry, code Number) Number
+Survivor(method MethodEntry, code Number) Text
+	Sample.Survivor(Twice, 13) is Sample.path + ":line 0: MutationSurvived: Twice with + and - or * and / swapped" + Hint
 	let mutation = Mutation(method)
-	let described = method.Name + " " + mutation.Described(code) + Hint
-	logger.Log(path + ":line " + mutation.Line(code) + ": MutationSurvived: " + described)
-	1
+	path + ":line " + mutation.Line(code) + ": MutationSurvived: " + method.Name + " " + mutation.Described(code) + Hint
 Tested(types List(TypeEntry), runner MethodEntry, methods List(MethodEntry)) List(TypeEntry)
 	Sample.Tested(List(TypeEntry) + Machine.Doubler, Twice, List(MethodEntry) + Twice).First.methods.Length is 2
 	mutable runners = List(Mutable(MethodEntry))
@@ -97,7 +116,8 @@ IsMutated(method MethodEntry) Boolean
 	Sample.IsMutated(Twice) is false
 	Sample.IsMutated(MethodEntry(Twice, Name = TestCodegen.Runner)) is false
 	let last = Mutation(method).Lines
-	if method.Name.StartsWith(TestCodegen.Runner) or method.IsSlow or (last is 0) or (last > File(path).ReadLines.Length)
+	let isSkipped = method.IsSlow and (isWhole is false)
+	if method.Name.StartsWith(TestCodegen.Runner) or isSkipped or (last is 0) or (last > File(path).ReadLines.Length)
 		return false
 	for method.instructions
 		if (value.kind is InstructionType.Invoke) and (value.texts.Length > 1) and IsInput(value.texts(0))
@@ -111,7 +131,7 @@ IsInput(type Text) Boolean
 			return true
 	false
 Replaced(types List(TypeEntry), methods List(MethodEntry), replacements List(MethodEntry)) List(TypeEntry)
-	Sample.Replaced(Doubled, Twiced, Sample.Changed(Twiced, 0)).First.methods.First is Mutation.Twice.Mutant(13)
+	Sample.Replaced(Doubled, (Twice), Sample.Changed((Twice), 0)).First.methods.First is Mutation.Twice.Mutant(13)
 	mutable changed = types
 	mutable replaced = List(Mutable(MethodEntry))
 	for types.First.methods

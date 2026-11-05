@@ -1,0 +1,28 @@
+has path Text
+has isWhole Boolean = false
+constant Steps = 100000
+constant Version = 2
+constant Sample = MutationCache("Compiler/output/Cached.strict")
+Stamp Text
+	Sample.Stamp.StartsWith("unit ")
+	Sample.Stamp.EndsWith(" " + Version)
+	MutationCache("Compiler/output/Cached.strict", true).Stamp.StartsWith("whole ")
+	let source = File(path).Exists then Text.Combine(File(path).ReadLines, "\n") else ""
+	(isWhole then "whole " else "unit ") + HashCode(source).number + " " + Version
+Location Text
+	Sample.Location.EndsWith("Cached.mutations")
+	BinaryFile(FileCompiler.Normalized(path)).Path.Replace(".strictbinary", ".mutations")
+IsCurrent Boolean
+	Sample.Saved(List(Text) + "line 1: MutationSurvived") and Sample.IsCurrent
+	MutationCache("Compiler/output/Cached.strict", true).IsCurrent is false
+	let lines = File(Location).Exists then File(Location).ReadLines else List(Text)
+	let whole = "whole " + Stamp.Substring(Stamp.IndexOf(" ") + 1, Stamp.Length - Stamp.IndexOf(" ") - 1)
+	(lines.Length > 0) and ((lines.First is Stamp) or (lines.First is whole))
+Survivors Texts
+	Sample.Saved(List(Text) + "line 1: MutationSurvived") and (Sample.Survivors is ("line 1: MutationSurvived"))
+	let lines = File(Location).ReadLines
+	lines.Slice(1, lines.Length - 1)
+Saved(survivors Texts) Boolean
+	Sample.Saved(List(Text))
+	File(Location).Write(Text.Combine(List(Text) + Stamp + survivors, "\n"))
+	File(Location).Exists

@@ -36,10 +36,12 @@ Typed(parameters List(MemberEntry), arguments List(VmValue)) List(VmValue)
 	isListed then List(VmValue) + VmValue.OfList(typed) else typed
 Tested(typeName Text, runner Text = TestCodegen.Runner) Number
 	Hello.Tested("HelloLogger") is 0
+	Machine(Hello, deadline = 0.001).Tested("HelloLogger") is 1
 	let main = Natives(types).TypeOf(typeName)
 	let tests = main.Callee(runner, 0, "None", List(Text))
 	let instance = Natives(types).Fresh(main)
-	Execute(tests, Bound(main, instance, tests, List(VmValue), instance), main.Name).number
+	let result = Execute(tests, Bound(main, instance, tests, List(VmValue), instance), main.Name)
+	result.kind is "Strict/Error" then 1 else result.number
 Prepared Machine
 	Hello.Prepared.prototypes.entries.First.kind is "HelloLogger"
 	Hello.Prepared.sources("HelloLogger") is "HelloLogger.strict"

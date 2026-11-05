@@ -13,6 +13,21 @@ constant Splitter = Mutation(MethodEntry(Machine.Doubler.methods.First, instruct
 constant Returned = InstructionEntry.Return(0)
 constant Descriptions = ("the comparison always true", "the comparison always false", "returning the default value instead of the result")
 constant Defaults = ("Strict/Number", "Strict/Text", "Strict/Boolean")
+IsMine(part Text, round Number) Boolean
+	Mutation.IsMine("", 3)
+	Mutation.IsMine("1/2", 3)
+	Mutation.IsMine("1/2", 2) is false
+	let at = part.IndexOf("/")
+	if at < 0
+		return true
+	round % (part.Substring(at + 1, part.Length - at - 1) to Number) is (part.Substring(0, at) to Number)
+Rounds(methods List(MethodEntry)) Number
+	Mutation.Rounds(List(MethodEntry) + Twice.method) is 2
+	mutable rounds = 0
+	for methods
+		let count = Mutation(value).Candidates.Length
+		rounds = count > rounds then count else rounds
+	rounds
 Candidates Numbers
 	Twice.Candidates is (13, 18)
 	Compared.Candidates is (0, 1, 10)
