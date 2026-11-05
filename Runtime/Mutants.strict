@@ -85,11 +85,11 @@ Round(types List(TypeEntry), methods List(MethodEntry), round Number) Texts
 	for methods
 		let candidates = Mutation(value).Candidates
 		let machine = Machine(started, deadline = Process.Elapsed + seconds)
-		let runner = TestCodegen.Runner + index
-		if (candidates.Length > round) and (machine.Tested(types.First.Name, runner) is 0)
+		let whole = TestCodegen.Runner + methods.Length
+		if (candidates.Length > round) and (machine.Tested(types.First.Name, TestCodegen.Runner + index) is 0)
 			let mutant = List(MethodEntry) + Mutation(value).Mutant(candidates(round))
 			let alone = Execute(logger).Started(Replaced(types, List(MethodEntry) + value, mutant), path)
-			if Machine(alone, deadline = Process.Elapsed + seconds).Tested(types.First.Name, runner) is 0
+			if Machine(alone, deadline = Process.Elapsed + seconds).Tested(types.First.Name, whole) is 0
 				survivors.Add(Survivor(value, candidates(round)))
 	survivors
 Changed(methods List(MethodEntry), round Number) List(MethodEntry)
@@ -103,11 +103,13 @@ Survivor(method MethodEntry, code Number) Text
 	let mutation = Mutation(method)
 	path + ":line " + mutation.Line(code) + ": MutationSurvived: " + method.Name + ": " + mutation.Described(code) + Hint
 Tested(types List(TypeEntry), runner MethodEntry, methods List(MethodEntry)) List(TypeEntry)
-	Sample.Tested(List(TypeEntry) + Machine.Doubler, Twice, List(MethodEntry) + Twice).First.methods.Length is 2
+	Sample.Tested(List(TypeEntry) + Machine.Doubler, Twice, List(MethodEntry) + Twice).First.methods.Length is 3
 	mutable runners = List(Mutable(MethodEntry))
 	for methods
 		let instructions = Silent(Mutation(runner).Split(value.Name))
 		runners.Add(MethodEntry(runner, Name = TestCodegen.Runner + index, instructions = instructions))
+	let whole = Silent(runner.instructions)
+	runners.Add(MethodEntry(runner, Name = TestCodegen.Runner + methods.Length, instructions = whole))
 	mutable changed = types
 	changed(0) = TypeEntry(types.First, methods = types.First.methods + runners)
 	changed

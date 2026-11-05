@@ -105,13 +105,13 @@ Matching(elements VmValue, others List(VmValue)) List(VmValue)
 		VmValue.OfText(value to Text)
 Zipped(kind Number, left VmValue, right VmValue) VmValue
 	Zipped(InstructionType.Multiply, OneTwo, OneTwo).items.Last.number is 4
+	Zipped(InstructionType.Multiply, VmValue.OfList(List(VmValue)), VmValue.OfNumber(0.5)).items.Length is 0
 	Zipped(InstructionType.Multiply, OneTwo, VmValue.OfList(List(VmValue) + VmValue.OfNumber(1))) is DimensionError
 	let others = right.kind is "List" then right.items else List(VmValue) + right
 	let spreads = (kind is InstructionType.Divide) or (right.kind is not "List")
-	let isSingle = (left.items.Length is 1) or (others.Length is 1)
-	if (left.items.Length is not others.Length) and ((spreads and isSingle) is false)
+	if (left.items.Length is not others.Length) and ((spreads and (1 is in (left.items.Length, others.Length))) is false)
 		return DimensionError
-	let length = left.items.Length > others.Length then left.items.Length else others.Length
+	let length = (left.items.Length is 0) or (left.items.Length > others.Length) then left.items.Length else others.Length
 	mutable results = List(Mutable(VmValue))
 	for length
 		results.Add(VmValue.OfNumber(Numeric(kind, Element(left.items, index).number, Element(others, index).number)))

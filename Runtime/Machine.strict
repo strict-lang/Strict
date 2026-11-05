@@ -128,11 +128,14 @@ Execute(method MethodEntry, locals List(VmValue), owner Text, depth = 0) VmValue
 Call(call Invocation) VmValue
 	Machine(List(TypeEntry) + Doubler).Call(Invocation.AddCall).kind is "Strict/Error"
 	Hello.Call(Invocation.Uppered).text is "AB"
+	(deadline > 0) and Hosted(call).IsChanging then VmValue.OfError("ChangeInMutationRun") else Routed(call)
+Routed(call Invocation) VmValue
+	Hello.Routed(Invocation.Uppered).text is "AB"
 	let at = call.Resolution
 	let entry = call.entry.payload.Length > at then call.entry else Resolver(types).Targeted(call.entry)
 	let route = entry.payload(at)
 	if route is Resolver.Hosting
-		return (deadline > 0) and Hosted(call).IsChanging then VmValue.OfError("ChangeInMutationRun") else Hosted(call).Result
+		return Hosted(call).Result
 	if route is Resolver.Searching
 		return Natives(types).Searched(call.MethodName, call.Instance.text, call.Arguments)
 	if (route < 0) or ((entry.payload(at + 2) is 1) and call.IsMemberValue(types(route)))
