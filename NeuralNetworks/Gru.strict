@@ -9,6 +9,8 @@ constant One = List(Number) + 1
 constant Pair = List(Numbers) + (1, 1)
 constant Halves = (0.5, 0.5, 0.5)
 constant Tiny = Gru(Layer(Pair, Zero), Layer(Pair, Zero), Layer(Pair, Zero, Activation.Tanh), Layer(List(Numbers) + One, Zero))
+constant Triple = ((1, 1, 1), (1, 1, 1))
+constant Wide = Gru(Layer(Triple, (0, 0)), Layer(Triple, (0, 0)), Layer(Triple, (0, 0), Activation.Tanh), Layer(List(Numbers) + (1, 1), Zero))
 Random(inputs Number, outputs Number) Gru
 	Gru.Random(7, 3).update.weights.First.Length is 7 + Hidden
 	Gru.Random(7, 3).output.weights.Length is 3
@@ -18,6 +20,7 @@ Random(inputs Number, outputs Number) Gru
 	let keeping = Layer(Layer.Halves.Rows(size, Hidden), Filled(Remembering))
 	Gru(keeping, Layer.Random(size, Hidden), tanh, Layer.Random(Hidden, outputs))
 States(inputs List(Numbers)) List(Numbers)
+	Tiny.States(List(Numbers) + One).First is Zero
 	Tiny.States(List(Numbers) + One).Last.First.IsNearlyEqual(0.5567699411459397)
 	mutable states = List(Mutable(Numbers))
 	states.Add(Layer.Halves.Zeros(update.biases.Length))
@@ -25,6 +28,8 @@ States(inputs List(Numbers)) List(Numbers)
 		states.Add(Next(states.Last, value))
 	states
 Next(previous Numbers, step Numbers) Numbers
+	Wide.Next((0, 0), One).Last.IsNearlyEqual(0.5567699411459397)
+	Tiny.Next(One, One).First.IsNearlyEqual(0.9599791836277165)
 	Tiny.Next(Zero, One).First.IsNearlyEqual(0.5567699411459397)
 	let gates = Gates(previous, step)
 	let candidates = 2 * previous.Length
@@ -58,6 +63,7 @@ HiddenDeltas(inputs List(Numbers), states List(Numbers), outputs List(Numbers)) 
 		deltas.Add(step)
 	deltas.Reverse
 Step(step Numbers, previous Numbers, gradient Numbers) Numbers
+	Tiny.Step(One, List(Number) + 2, One)(3).IsNearlyEqual(1.9051482536448667)
 	Tiny.Step(One, Zero, One).Length is 5
 	let size = previous.Length
 	let gates = Gates(previous, step)
@@ -69,26 +75,31 @@ Step(step Numbers, previous Numbers, gradient Numbers) Numbers
 	let earlier = PreviousDeltas(gates, gradient, fromCandidate, fromGates)
 	updates + resets + candidates + Part(gates, size, size) * previous + earlier
 UpdateDeltas(gates Numbers, previous Numbers, gradient Numbers) Numbers
+	Tiny.UpdateDeltas((0.5, 0.25, 0, 0, 1, 2), (0.5, 1), (2, 3)) is (0.25, 0.5625)
 	Tiny.UpdateDeltas((0.5, 0.5, 1), Zero, One) is List(Number) + 0.25
 	let candidates = 2 * previous.Length
 	for gradient
 		value * (gates(candidates + index) - previous(index)) * gates(index) * (1 - gates(index))
 CandidateDeltas(gates Numbers, gradient Numbers) Numbers
+	Tiny.CandidateDeltas((0.5, 0.25, 0, 0, 0.5, 0.2), (1, 2)) is (0.375, 0.48)
 	Tiny.CandidateDeltas(Halves, One) is List(Number) + 0.375
 	let candidates = 2 * gradient.Length
 	for gradient
 		value * gates(index) * (1 - gates(candidates + index) * gates(candidates + index))
 ResetDeltas(gates Numbers, previous Numbers, fromCandidate Numbers) Numbers
+	Tiny.ResetDeltas((0, 0, 0.5, 0.25), (2, 1), (1, 2)) is (0.5, 0.375)
 	Tiny.ResetDeltas(Halves, List(Number) + 2, One) is List(Number) + 0.5
 	let size = previous.Length
 	for previous
 		fromCandidate(index) * value * gates(size + index) * (1 - gates(size + index))
 PreviousDeltas(gates Numbers, gradient Numbers, fromCandidate Numbers, fromGates Numbers) Numbers
+	Tiny.PreviousDeltas((0.5, 0.25, 0.5, 0.75), (1, 2), (1, 2), (1, 2, 3, 4)) is (5, 9)
 	Tiny.PreviousDeltas(Halves, One, One, (1, 1)) is List(Number) + 3
 	let size = gradient.Length
 	for gradient
 		value * (1 - gates(index)) + fromCandidate(index) * gates(size + index) + fromGates(index) + fromGates(size + index)
 Filled(bias Number) Numbers
+	Tiny.HiddenDeltas(List(Numbers) + One + One, (Zero, One, One), (One, One)).Length is 2
 	Gru.Filled(1).Length is Hidden
 	for Hidden
 		bias
@@ -101,6 +112,7 @@ Part(values Numbers, start Number, count Number) Numbers
 	for Range(start, start + count)
 		values(value)
 Updated(step Numbers, previous Numbers, delta Numbers, outputDelta Numbers, state Numbers, rate Number) Gru
+	Wide.Updated(One, (0, 0), (0, 1, 2, 3, 4, 5, 6, 7, 8, 9), One, (0, 0), 1).candidate.weights.First is (-3, -23, -27)
 	Tiny.Updated(One, Zero, (1, 1, 1, 0, 1), One, One, 1).output.weights is List(Numbers) + Zero
 	let size = previous.Length
 	let joined = step + previous
