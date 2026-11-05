@@ -32,6 +32,8 @@ Block(state Inflation, kind Number) Inflation
 	Dynamic(state)
 Stored(state Inflation) Inflation
 	StoredSample.Stored(Inflation(List(Number), 3)).position is 56
+	StoredSample.Stored(Inflation((1, 2), 3)).output is (1, 2, 104, 105)
+	StoredSample.Stored(Inflation((1, 2), 3)).position is 56
 	let start = ((state.position + 7) / 8).Floor
 	mutable output = state.output
 	for bytes(start) + bytes(start + 1) * 256
@@ -48,6 +50,8 @@ Coded(state Inflation, literals Huffman, distances Huffman) Inflation
 	current
 Applied(state Inflation, symbol Number, distances Huffman) Inflation
 	StoredSample.Applied(Inflation(List(Number), 0), 65, Huffman.Sample).output is (65)
+	Inflate((0, 73)).Applied(Inflation((1, 2, 3, 4, 5, 6, 7), 8), 265, FixedDistanceCodes).position is 15
+	Inflate((0, 73)).Applied(Inflation((1, 2, 3, 4, 5, 6, 7), 8), 265, FixedDistanceCodes).output.Sum is 82
 	if symbol < 256
 		return Inflation(state.output + symbol, state.position)
 	let length = LengthBases(symbol - 257) + Bits(state.position, LengthBits(symbol - 257))
@@ -75,11 +79,14 @@ Dynamic(state Inflation) Inflation
 	Coded(Inflation(state.output, lengths.position), literals, distances)
 CodeLengths(position Number, count Number) Numbers
 	DynamicSample.CodeLengths(17, 4).Length is 19
+	DynamicSample.CodeLengths(17, 4) is (3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 3)
 	for 19
 		let order = Order.Index(index)
 		order < count then Bits(position + order * 3, 3) else 0
 Lengths(state Inflation, codes Huffman, count Number) Inflation
 	StoredSample.Lengths(Inflation((1, 2), 0), Huffman.Sample, 2).output is (1, 2)
+	StoredSample.Lengths(Inflation((1, 2), 0), Huffman.Sample, 4).output is (1, 2, 0, 1)
+	StoredSample.Lengths(Inflation((1, 2), 0), Huffman.Sample, 4).position is 3
 	mutable current = state
 	for count
 		if current.output.Length >= count
@@ -89,15 +96,20 @@ Lengths(state Inflation, codes Huffman, count Number) Inflation
 	current
 Repeated(state Inflation, symbol Number) Inflation
 	StoredSample.Repeated(Inflation((1, 2), 0), 16).output is (1, 2, 2, 2, 2, 2)
+	StoredSample.Repeated(Inflation((1, 2), 8), 17).position is 11
+	StoredSample.Repeated(Inflation((1, 2), 8), 18).position is 15
+	StoredSample.Repeated(Inflation((1, 2), 8), 18).output is (1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 	if symbol < 16
 		return Inflation(state.output + symbol, state.position)
 	let extra = symbol is 16 then 2 else symbol is 17 then 3 else 7
 	let times = Bits(state.position, extra) + (symbol is 18 then 11 else 3)
-	let repeated = symbol is 16 then state.output.Last else 0
-	mutable output = state.output
+	Inflation(Filled(state.output, symbol is 16 then state.output.Last else 0, times), state.position + extra)
+Filled(output Numbers, number Number, times Number) Numbers
+	StoredSample.Filled((1, 2), 7, 3) is (1, 2, 7, 7, 7)
+	mutable result = output
 	for times
-		output = output + repeated
-	Inflation(output, state.position + extra)
+		result = result + number
+	result
 Bits(position Number, count Number) Number
 	StoredSample.Bits(0, 3) is 1
 	StoredSample.Bits(8, 2) is 2
@@ -112,6 +124,7 @@ Bit(position Number) Number
 	(bytes((position / 8).Floor) and Powers(position % 8)) > 0 then 1 else 0
 FixedLengths Numbers
 	StoredSample.FixedLengths.Count(7) is 24
+	StoredSample.FixedLengths.Count(8) is 152
 	for 288
 		index < 144 then 8 else index < 256 then 9 else index < 280 then 7 else 8
 Part(numbers Numbers, start Number, count Number) Numbers
