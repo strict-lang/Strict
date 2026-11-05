@@ -20,6 +20,8 @@ Checked(node SyntaxNode, scope Scope, current Scope) Text
 	let operands = Operands(node) + ConstantAccess(node, scope, current)
 	operands is "" then Issue(node, scope, current) + OwnCall(node, scope, current) else operands
 ConstantAccess(node SyntaxNode, scope Scope, current Scope) Text
+	Sizing.ConstantAccess(SyntaxParser(Tokenizer("count.Grow").Tokens).Parse, Counted, Counted) is ""
+	Sizing.ConstantAccess(Limited, Counted, Counted).EndsWith(": Limit is read from an instance, write Count.Limit")
 	Sizing.ConstantAccess(Limited, Counted, Counted).StartsWith("ConstantNeedsTypeName")
 	Sizing.ConstantAccess(SyntaxParser(Tokenizer("Count.Limit").Tokens).Parse, Counted, Counted) is ""
 	let isMember = (node.Kind is in ("Member", "MethodCall")) and (node.children.Length > 0)
@@ -30,6 +32,10 @@ ConstantAccess(node SyntaxNode, scope Scope, current Scope) Text
 		return ""
 	"ConstantNeedsTypeName: " + node.text + " is read from an instance, write " + owner + "." + node.text
 Operands(node SyntaxNode) Text
+	Sizing.Operands(SyntaxParser(Tokenizer("1 > 0 or (count)").Tokens).Parse).EndsWith("remove the parentheses")
+	Sizing.Operands(SyntaxParser(Tokenizer("1 > 0 xor (count)").Tokens).Parse).EndsWith("remove the parentheses")
+	Sizing.Operands(SyntaxParser(Tokenizer("1 > 0 and (1, 2)").Tokens).Parse) is ""
+	Sizing.Operands(SyntaxParser(Tokenizer("1 > 0 and count.Limit").Tokens).Parse) is ""
 	Sizing.Operands(Listed).EndsWith("remove the parentheses")
 	Sizing.Operands(SyntaxParser(Tokenizer("(1 > 0) and (2 > 1)").Tokens).Parse) is ""
 	if (node.Kind is not "Binary") or (node.text is not in ("and", "or", "xor"))
@@ -58,6 +64,7 @@ OwnCall(call SyntaxNode, scope Scope, current Scope) Text
 	let isOwn = (call.Kind is "Call") and (current.TypeOf(call.text) is not "")
 	isOwn then Compared(call, scope.TypeOf("self type"), call.text, scope, current) else ""
 Copied(call SyntaxNode, scope Scope, current Scope) Text
+	Sizing.Copied(SyntaxParser(Tokenizer("Area(area, size)").Tokens).Parse, Counted, Counted) is ""
 	Sizing.Copied(SyntaxParser(Tokenizer("Area(area)").Tokens).Parse, Counted, Counted).EndsWith("use area itself")
 	Sizing.Copied(SyntaxParser(Tokenizer("Area(size)").Tokens).Parse, Counted, Counted) is ""
 	Sizing.Copied(SyntaxParser(Tokenizer("Number(5)").Tokens).Parse, Counted, Counted) is ""
@@ -92,6 +99,7 @@ Declared(instance Text, method Text) Texts
 	for parameters.TypeOf("from").Split(",")
 		inference.types.MembersOf(instance).TypeOf(value)
 Matched(arguments Texts, types Texts, instance Text, method Text) Number
+	Sizing.Matched(List(Text) + "Number", List(Text) + "Text", "Letter", "Grow") is 0
 	Sizing.Matched(List(Text) + "Number", List(Text) + "Text", "Letter", "from") is -1
 	Sizing.Matched(List(Text) + "Text", List(Text) + "Text", "Letter", "from") is -1
 	Sizing.Matched(List(Text) + "Text", List(Text) + "Size", "Count", "from") is 0
@@ -99,11 +107,18 @@ Matched(arguments Texts, types Texts, instance Text, method Text) Number
 	let isMember = (method is "from") and (members.Length > 0) and ((arguments - members).Length is 0)
 	isMember then -1 else Mismatched(arguments, types)
 Arguments(call SyntaxNode, scope Scope, current Scope) Texts
+	Sizing.Compared(Grown, "Count", "Missing", Counted, Counted) is ""
+	Sizing.IsBaseMismatch("Number", "Count") is false
+	Sizing.IsBaseMismatch("Text", "Xyz") is false
+	Sizing.IsBaseMismatch("Count", "Number") is false
+	Sizing.Mismatch("Size", "Size") is false
+	Sizing.Mismatch("Count", "Xyz") is false
 	Sizing.Arguments(SyntaxParser(Tokenizer("count.Grow(area)").Tokens).Parse, Counted, Counted) is ("Area")
 	let start = call.Kind is "MethodCall" then 1 else 0
 	for Range(start, call.children.Length)
 		inference.TypeOf(call.children(value), scope, current)
 Mismatched(arguments Texts, types Texts) Number
+	Sizing.Mismatched(("Area", "Count"), List(Text) + "Area") is -1
 	Sizing.Mismatched(("Area", "Count"), ("Area", "Area")) is 1
 	Sizing.Mismatched(List(Text) + "Area", List(Text) + "Area") is -1
 	Sizing.Mismatched(("Text", "Text"), ("Sizes", "Text")) is 0
@@ -113,6 +128,7 @@ Mismatched(arguments Texts, types Texts) Number
 			return index
 	-1
 IsWrongElement(argument Text, parameter Text) Boolean
+	Sizing.IsWrongElement("Text", "Pair(Size)") is false
 	Sizing.IsWrongElement("Text", "List(Size)")
 	Sizing.IsWrongElement("Text", "Sizes")
 	Sizing.IsWrongElement("Number", "Sizes") is false
