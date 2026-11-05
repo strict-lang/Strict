@@ -12,12 +12,14 @@ constant Loaded = InstructionEntry.LoadNumber(1, 1)
 constant Placed = MutationKinds(MethodEntry(Twice.method, instructions = (Loaded, InstructionEntry(Loaded, line = 2))))
 constant Joined = MutationKinds(MethodEntry(Mutation.Twice.method, instructions = (InstructionEntry.LoadText(0, "a"), InstructionEntry.LoadText(1, ""), InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)), InstructionEntry.Return(2))))
 constant Texted = MutationKinds(MethodEntry(Twice.method, instructions = (InstructionEntry.LoadText(0, "a"), Mutation.Stored)))
+constant Valuing = MutationKinds(MethodEntry(Twice.method, instructions = (Loaded, InstructionEntry.LoadText(0, "a"), InstructionEntry.Binary(InstructionType.Add, (1, 0, 2)), InstructionEntry.Binary(InstructionType.Add, (1, 1, 2)), InstructionEntry(InstructionType.Subtract, List(Text), (2, 0)), InstructionEntry(InstructionType.LoadConstantToRegister, "a", (3, 1, -1)), InstructionEntry(InstructionType.LoadConstantToRegister, List(Text), (3, 4, -1)), Mutation.Greater, MutationFlow.Looped.method.instructions(2), InstructionEntry(InstructionEntry.Binary(InstructionType.Add, (4, 1, 2)), line = 1), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 3, "conditional0"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 3, "conditional0"), Mutation.Stored, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "a"), Logging)))
 Kinds(position Number) Numbers
 	Twice.Kinds(1) is (5)
 	MutationKinds(MutationFlow.Issued.method).Kinds(0).Length is 0
 	MutationKinds(MutationFlow.Issued.method).Kinds(1) is (6)
 	MutationKinds(MutationFlow.Looped.method).Kinds(1).Length is 0
 	Placed.Kinds(0).Length is 0
+	Valuing.Kinds(9) is (5) and (Valuing.Kinds(14).Length is 0)
 	let entry = method.instructions(position)
 	let isPlaced = (entry.line is 0) and (Mutation(method).Lines > 0)
 	let flow = MutationFlow(method)
@@ -41,6 +43,8 @@ Valued(position Number) Numbers
 	Joined.Valued(0) is (6)
 	Joined.Valued(1).Length is 0
 	Joined.Valued(2).Length is 0
+	(Valuing.Valued(3) + Valuing.Valued(4) + Valuing.Valued(9)) is (5, 5, 5)
+	(Valuing.Valued(2) + Valuing.Valued(5) + Valuing.Valued(6)).Length is 0
 	let entry = method.instructions(position)
 	if (entry.kind is InstructionType.LoadConstantToRegister) and (entry.payload(1) is 4)
 		return (entry.texts.Length is 0) or (entry.texts.First is "") then List(Number) else (6)
@@ -50,6 +54,8 @@ IsText(register Number, position Number) Boolean
 	Joined.IsText(0, 2)
 	Joined.IsText(1, 2)
 	Twice.IsText(0, 1) is false
+	Valuing.IsTextual(MutationFlow.Adding, 2) and (Valuing.IsText(1, 2) is false)
+	Valuing.IsTextual(Valuing.method.instructions(2), 2)
 	for position
 		let at = position - 1 - index
 		let entry = method.instructions(at)
@@ -88,6 +94,9 @@ IsLiteral(position Number) Boolean
 	MutationKinds(MethodEntry(Twice.method, instructions = (Returned))).IsLiteral(0) is false
 	MutationKinds(MethodEntry(Twice.method, instructions = (InstructionEntry.LoadNumber(0, 1), Returned))).IsLiteral(1)
 	MutationKinds(MethodEntry(Twice.method, instructions = (Loaded, Returned))).IsLiteral(1) is false
+	Valuing.IsTextVariable("a", 15)
+	MutationKinds(MethodEntry(Twice.method, instructions = (Returned, Mutation.Splitting(0)))).IsLiteral(0) is false
+	Twice.IsTextual(InstructionEntry.Invoke(0, ("Strict/Text", "Run"), List(Number), -1), 0) is false
 	let previous = position > 0 then method.instructions(position - 1) else method.instructions(position)
 	let register = method.instructions(position).payload(0)
 	(previous.kind is InstructionType.LoadConstantToRegister) and (previous.payload(0) is register)
@@ -95,6 +104,9 @@ IsCompared(position Number) Boolean
 	Compared.IsCompared(0)
 	Compared.IsCompared(1) is false
 	MutationKinds(Mutation.Compared.Mutant(0)).IsCompared(0) is false
+	Compared.Possible(0) is (0, 1) and (Twice.Possible(2) is (2))
+	Valuing.IsCompared(7) is false and (Valuing.IsReassigned(11) is false) and (Valuing.IsReassigned(12) is false)
+	MutationKinds(MethodEntry(Twice.method, declaredType = "None")).Possible(2).Length is 0
 	let isLast = position + 1 is method.instructions.Length
 	let next = isLast then -1 else method.instructions(position + 1).kind
 	let isLooping = next is in (InstructionType.LoopBegin, InstructionType.LoopEnd)
@@ -108,6 +120,9 @@ IsDropped(entry InstructionEntry) Boolean
 	Twice.IsDropped(InstructionEntry.Invoke(0, ("T", "Run"), List(Number), -1)) is false
 	Twice.IsDropped(InstructionEntry.Invoke(0, ("T", "Run", "N"), List(Number), -1)) is false
 	Twice.IsDropped(InstructionEntry(InstructionType.InvokeWriteToList, "list", (1, 0)))
+	MutationKinds(MethodEntry(Twice.method, instructions = (Returned, Returned))).Possible(0).Length is 0
+	MutationKinds(MethodEntry(Twice.method, instructions = (Mutation.Splitting(0), Returned))).Possible(1).Length is 0
+	Valuing.Possible(12).Length is 0 and (Valuing.Possible(13).Length is 0) and (Valuing.Possible(14) is (4))
 	let isCall = (entry.kind is InstructionType.Invoke) and (entry.texts.Length > 2) and (entry.texts(2) is "None")
 	isCall or (entry.kind is InstructionType.InvokeWriteToList)
 IsReassigned(position Number) Boolean

@@ -62,6 +62,9 @@ Changed(entry InstructionEntry, kind Number) InstructionEntry
 Forced(entry InstructionEntry, kind Number) InstructionEntry
 	Twice.Forced(Targeted, 1) is InstructionEntry.Binary(InstructionType.NotEqual, (0, 0, 5))
 	Twice.Forced(Greater, 0) is InstructionEntry.Binary(InstructionType.Equal, (0, 0))
+	Mutation(MethodEntry(Twice.method, declaredType = "Strict/Text")).Changed(Greater, 2) is Twice.Changed(Greater, 6)
+	Twice.Changed(Greater, 6) is InstructionEntry.LoadText(2, "")
+	Twice.Changed(MutationKinds.Loaded, 2) is InstructionEntry.LoadNumber(1, 0)
 	Compared.Changed(MutationKinds.Loaded, 2) is InstructionEntry.LoadBoolean(1, false)
 	Compared.Changed(MutationKinds.Loaded, 3) is InstructionEntry.LoadNumber(1, 0)
 	Mutation(MethodEntry(Twice.method, declaredType = "Strict/Text")).Changed(Greater, 3) is Twice.Changed(Greater, 3)
@@ -69,6 +72,9 @@ Forced(entry InstructionEntry, kind Number) InstructionEntry
 	InstructionEntry.Binary(Forcing(kind), same + same + entry.payload.Slice(3, entry.payload.Length - 3))
 Swapped(kind Number) Number
 	Twice.Swapped(InstructionType.Multiply) is InstructionType.Divide
+	Twice.Swapped(InstructionType.Subtract) is InstructionType.Add
+	Mutation.Source(("	A", "B"), 1) is ("> 1: 	A")
+	Mutation.Source(("A", "B", "	C", "	D"), 4) is ("  2: B", "  3: 	C", "> 4: 	D")
 	let pair = kind is in (InstructionType.Add, InstructionType.Subtract) then 0 else 2
 	Arithmetic(Arithmetic.Index(kind) is pair then pair + 1 else pair)
 Described(code Number) Text
@@ -100,6 +106,7 @@ Replaced(kind Number, entry InstructionEntry, nth Text) Text
 Operator(kind Number) Text
 	Twice.Operator(InstructionType.Divide) is "/"
 	Twice.Operator(InstructionType.LessThan) is "<"
+	Twice.Marked(InstructionEntry.LoadText(0, "abcdef at Z:line 2")) is ""
 	Twice.Marked(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "x in Y at Z:line 2")) is ""
 	Twice.Marked(InstructionEntry.LoadText(0, "x at Z:line 2")) is ""
 	Twice.Marked(InstructionEntry.LoadText(0, "x in Y at Z")) is ""
@@ -107,6 +114,8 @@ Operator(kind Number) Text
 Line(code Number) Number
 	Twice.Line(18) is 0
 	(Lined.Line(8) is 3) and (Lined.Line(16) is 1)
+	Lined.Position(8) is ""
+	Mutation(MutationFlow.Listing.method).Described(4) is "removed the call Add"
 	Mutation(MutationFlow.Issued.method).Described(20) is "removed the call from"
 	let at = method.instructions((code / 8).Floor).line
 	at is 0 then Lines else at
@@ -139,6 +148,8 @@ Source(lines Texts, line Number) Texts
 Lines Number
 	Twice.Lines is 0
 	Lined.Lines is 3
+	Mutation(MethodEntry(Twice.method, instructions = Twice.method.instructions + Splitting)).Split("Twice").Length is 4
+	Mutation(MethodEntry(Twice.method, instructions = Splitting + Splitting)).Position(40) is "5th "
 	mutable last = 0
 	for method.instructions
 		last = value.line > last then value.line else last
