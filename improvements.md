@@ -22,6 +22,8 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - H3Video on the 4090: the full collection that frees the 27 GB text encoder takes 1.4-1.8 s (21 GB marked, 509 objects visited) and trips GarbageCollectionExceedsTenth; probably strict_gpu_sweep unlocking or freeing its pinned host memory (cuMemHostUnregister, cuMemFreeHost), not marking. Measure it there, then keep driver release time out of the collection time or release on another thread.
 - `strict test Compiler/NativeBuild.strict` and `Compiler/DeviceBuild.strict` stop with GarbageCollectionExceedsTenth (NativeBuild in the Mlir tests, DeviceBuild after Built line 57; each method alone passes): the VM collects too often while combining the runtime texts.
 - A list making `for` over a negative count (`for -1`) is empty on the VM but not natively (its Length differs), a summing loop over it is fine; LoopPeeling clamps its counts to 0 or more.
+- Qwen3Benchmark stops with GarbageCollectionExceedsTenth on long prompts (Qwen3-Coder 30B, repeats 137 or 200) in a plain build, release builds only warn.
+- MossImage: the same seed gives a different image than the build of 2026-11-04 11:41 and loading Moss with its LoRAs got slower (7.2 to about 9 s); not from the C loop changes of 31ed107f (reverting them gives the same image and time), find the commit and check it is intended.
 
 ## Next
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).
