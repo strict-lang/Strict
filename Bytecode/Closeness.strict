@@ -2,7 +2,9 @@ has types Expressions/KnownTypes
 constant Scalars = ("Text", "Boolean", "Error", "ErrorWithValue", "Dictionary")
 constant Plain = Closeness(ValueCodegen.Plain.inference.types)
 constant Deep = "Numberssssssssss"
-constant Nested = Closeness(KnownTypes(("Outer", "Inner", "Counter", "Walker"), (Scope(List(Text) + "inner", List(Text) + "Inner"), Scope(List(Text) + "x", List(Text) + "Number"), Scope(List(Text) + "length", List(Text) + "Number"), Scope(List(Text) + "length", List(Text) + "Number")), (KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers, Scope(List(Text) + " trait", List(Text) + "true"), Scope(("in", "in types"), ("element", "Generic")))))
+constant NumberElements = Plain.Elements("a", "b", "Numbers", "0", List(Text))
+constant Listed = Closeness(KnownTypes(("List", "Text"), (Scope(List(Text) + "x", List(Text) + "Number"), Scope(List(Text) + "x", List(Text) + "Number")), (KnownTypes.NoMembers, KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers)))
+constant Nested = Closeness(KnownTypes(("Outer", "Inner", "Counter", "Walker"), (Scope(List(Text) + "inner", List(Text) + "Inner"), Scope(List(Text) + "x", List(Text) + "Number"), Scope(List(Text) + "length", List(Text) + "Number"), Scope(List(Text) + "length", List(Text) + "Number")), (KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers), (KnownTypes.NoMembers, Scope(List(Text) + "x step", List(Text) + "1"), Scope(List(Text) + " trait", List(Text) + "true"), Scope(("in", "in types"), ("element", "Generic")))))
 Lines(left Text, right Text, kinds Texts, slot Text, exact Boolean, expanded Texts) Texts
 	Plain.Lines("left", "right", ("Number", "Number"), "0", true, List(Text)).Last is "let testEqual0 = left is right"
 	Nested.Lines("a", "b", ("Inner", "Inner"), "1", false, List(Text) + "Outer") is ("let testEqual1 = a.IsNearlyEqual(b)")
@@ -21,16 +23,33 @@ IsCalled(kind Text, expanded Texts) Boolean
 	Nested.IsCalled("Inner(Number)", List(Text) + "Outer") is false
 	Nested.IsCalled("Inner", List(Text)) is false
 	Nested.IsCalled("Walker", List(Text) + "Outer") is false
+	Nested.Fields("a", "b", "Inner", "0", List(Text))(0) is "mutable testEqual0 = true"
+	Nested.Fields("a", "b", "Inner", "0", List(Text))(1) is "let testEqual0x0 = a.x is b.x"
+	Nested.Fields("", "b", "Outer", "0", List(Text) + "Outer")(1) is "let testEqual0x0 = inner.IsNearlyEqual(b.inner)"
+	Nested.IsCalled("Number", List(Text) + "Number")
+	Nested.Lines("a", "b", ("Inners", "Inners"), "0", false, List(Text)).Length is 7
+	Nested.Lines("a", "b", ("Outer", "Outer"), "0", false, List(Text)).Length is 3
 	let isGeneric = (kind.IndexOf("(") >= 0) or ("Generic" is in types.ParameterScope(kind).types)
 	(kind is in expanded) or ((expanded.Length > 0) and IsRecord(kind) and (isGeneric is false))
 Repeated(left Text, right Text, kind Text, slot Text) Texts
 	Plain.Repeated("left", "right", "Number", "0") is ("let testEqual0 = left is right")
+	NumberElements.Length is 7 and (NumberElements(0) is "mutable testEqual0 = a.Length is b.Length")
+	NumberElements(1) is "if testEqual0" and (NumberElements(2) is "\tfor a.Length")
+	NumberElements(3) is "\t\tlet testLeft0x = a(index)" and (NumberElements(4) is "\t\tlet testRight0x = b(index)")
+	NumberElements(5) is "\t\tlet testEqual0x = testLeft0x.IsNearlyEqual(testRight0x)"
+	NumberElements(6) is "\t\ttestEqual0 = testEqual0 and testEqual0x"
+	Plain.Lines("a", "b", ("Number", "Text"), "0", false, List(Text)) is ("let testEqual0 = a is b")
+	Plain.Lines("a", "b", ("Number", "Number"), "0", false, List(Text)) is ("let testEqual0 = a.IsNearlyEqual(b)")
+	Plain.Lines("a", "b", ("Text", "Text"), "0", false, List(Text)) is ("let testEqual0 = a is b")
 	let compared = IsRecord(kind) then left + ".IsNearlyEqual(" + right + ")" else left + " is " + right
 	List(Text) + ("let testEqual" + slot + " = " + compared)
 IsRecord(kind Text) Boolean
 	Plain.IsRecord("Number") is false
 	Nested.IsRecord("Inner")
 	Nested.IsRecord("Counter") is false
+	Nested.Fields("a", "b", "Inner", "0", List(Text)).Last is "testEqual0 = testEqual0 and testEqual0x0"
+	Listed.IsRecord("List") is false and (Listed.IsRecord("Text") is false)
+	Nested.IsRecord("Walker")
 	let base = types.BaseName(kind)
 	let isTrait = types.ParameterScope(base).TypeOf(" trait") is "true"
 	(types.MembersOf(kind).names.Length > 0) and (base is not in Scalars) and (base is not "List") and (isTrait is false)
