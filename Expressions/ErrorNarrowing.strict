@@ -1,10 +1,16 @@
 has inference TypeInference
 constant Checked = SyntaxParser(Tokenizer("a is Error").Tokens).Parse
 constant Compared = SyntaxParser(Tokenizer("a is 5").Tokens).Parse
+constant Negated = SyntaxParser(Tokenizer("a is not Error").Tokens).Parse
+constant Literal = SyntaxParser(Tokenizer("5 is Error").Tokens).Parse
+constant Called = SyntaxNode("Call", "is", Checked.children)
 constant NumberA = Scope(List(Text) + "a", List(Text) + "Number")
 Narrowed(condition SyntaxNode, scope Scope, methods Scope) Scope
 	ErrorNarrowing(MethodBodies.NoInference).Narrowed(Checked, NumberA, NumberA).TypeOf("a") is "Error"
 	ErrorNarrowing(MethodBodies.NoInference).Narrowed(Compared, NumberA, NumberA).TypeOf("a") is "Number"
+	ErrorNarrowing(MethodBodies.NoInference).Narrowed(Negated, NumberA, NumberA).TypeOf("a") is "Number"
+	ErrorNarrowing(MethodBodies.NoInference).Narrowed(Literal, NumberA, NumberA) is NumberA
+	ErrorNarrowing(MethodBodies.NoInference).Narrowed(Called, NumberA, NumberA) is NumberA
 	let isBinary = (condition.Kind is "Binary") and (condition.text is "is")
 	let isChecked = isBinary and (condition.children(0).Kind is "Identifier")
 	let isError = isChecked and (inference.TypeOf(condition.children(1), scope, methods) is "Error")
