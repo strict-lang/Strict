@@ -7,9 +7,14 @@ constant Passing = SyntaxParser(Tokenizer("Through(w)").Tokens).Parse
 constant Coding = TypeCodegen("Strict/Boxes/Using", Using, TypeInference(Boxes, (KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers)), List(Text))
 constant Unused = TypeEntry("Strict/Boxes/Using", List(MemberEntry), List(MethodEntry))
 constant Halving = "Through(Wrapped(Halver))"
+constant Traits = KnownTypes(("Counter", "Many"), (Scope(List(Text) + "length", List(Text) + "Number"), Scope(List(Text) + "elements", List(Text) + "Generics")), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Scope(List(Text) + " trait", List(Text) + "true"), KnownTypes.NoMembers))
+constant Traited = Specialization(ValueCodegen(TypeInference(Traits, (KnownTypes.NoMembers, KnownTypes.NoMembers)), Scope(List(Text), List(Text)), CallTarget(Traits, TypeShape(Using), "Strict/Boxes/Using", List(Text))))
+constant Wrap = SyntaxParser(Tokenizer("Wrapped(w)").Tokens).Parse
 Signed(node SyntaxNode, owner Text, returnType Text, block CodeBlock) Texts
 	Plain.Signed(Passing, "Using", "Number", Wrapping)(1) is Halving
 	Plain.Signed(Passing, "Using", "Number", CodeBlock.Empty.Declare("w", "Wrapped"))(1) is "Through"
+	Plain.Signed(Passing, "Using", "Number", Wrapping) is ("Strict/Boxes/Using", Halving, "Strict/Number", "wrapped")
+	Plain.Signed(Wrap, "Wrapped", "Wrapped", Wrapping) is ("Strict/Wrapped", "from", "Wrapped")
 	let argumentTypes = ConversionCodegen(values).ArgumentTypes(node, owner, block)
 	let signature = values.target.Signature(node.text, owner, returnType, argumentTypes)
 	let parameters = values.target.ParameterTypes(node.text, owner, argumentTypes)
@@ -29,20 +34,33 @@ Name(node SyntaxNode, parameters Texts, owner Text, block CodeBlock) Text
 			actuals = actuals + actual
 	actuals.Length is 0 then node.text else node.text + "(" + Text.Combine(arguments) + ")"
 Arguments(node SyntaxNode, block CodeBlock) Texts
+	Plain.Start(("Through(wrapped Wrapped) Number", "	1", "Through(other Number) Number", "	2"), "Through(Number)") is 0
+	Plain.Specialized(Coding, 1, Halving).instructions.Length is 2
+	Plain.Completed(Coding, Unused, ("Strict/Boxes/Using." + Halving, "Strict/Boxes/Using." + Halving)).methods.Length is 1
+	Plain.Completed(Coding, Unused, List(Text) + "Strict/Boxes/Usage.Through(Wrapped(Halver))").methods.Length is 0
 	for Range(values.ArgumentStart(node), node.children.Length)
 		values.TypeOf(node.children(value), block)
 IsPlain(owner Text) Boolean
 	Plain.IsPlain("Using")
 	Plain.IsPlain("Strict/Wrapped(Halver)") is false
+	Plain.IsPlain("Wrapped") is false
+	Plain.IsPlain("Strict/Halver(Number)") is false
+	Plain.IsPlain("Halver")
+	Traited.IsPlain("Many") is false
 	let short = TypeEntry.ShortName(owner)
 	let members = Text.Combine(values.target.types.MembersOf(short).types)
 	(values.target.types.BaseName(short) is short) and (members.IndexOf("Generic") < 0)
 IsGeneric(type Text) Boolean
 	Plain.IsGeneric("Wrapped")
 	Plain.IsGeneric("Halver") is false
+	Traited.IsGeneric("Many")
+	Traited.IsGeneric("Counter")
 	let members = values.target.types.MembersOf(type).types
 	IsTrait(type) or values.target.types.IsKnown(type) and (("Generic" is in members) or ("Generics" is in members))
 IsTrait(type Text) Boolean
+	Traited.IsTrait("Counter")
+	Plain.IsTrait("Halver") is false
+	Traited.IsTrait("Many") is false
 	values.target.types.ParameterScope(type).TypeOf(" trait") is "true"
 Header(line Text, name Text) Text
 	Plain.Header(Using(1), Halving) is "Through(wrapped Wrapped(Halver)) Number"
@@ -57,6 +75,11 @@ Header(line Text, name Text) Text
 		after = (at < 0) or (base is " ") then after else at + value.Length
 	header
 Parameter(line Text, name Text, index Number) Text
+	Plain.Parameter(Using(1), Halving, 0) is "Wrapped"
+	Plain.Parameter("Scored(model Generic) Number", "Scored(Halver)", 0) is "Generic"
+	Plain.Parameter(Using(1), "Through(Wrapped(Halver), Number)", 1) is "Generic"
+	Plain.Parameter(Using(1), "Through(Wrapped(Halver), Number)", 0) is "Wrapped"
+	Plain.Parameter("Add(amount Number) Number", "Add(Halver)", 0) is ""
 	let arguments = Instantiation(values.target.types).Arguments(name)
 	let parameters = HeaderTokens(Tokenizer(line).Tokens).ParameterTypes
 	if arguments.Length is parameters.Length
