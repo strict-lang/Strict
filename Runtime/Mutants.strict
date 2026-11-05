@@ -87,7 +87,9 @@ Round(types List(TypeEntry), methods List(MethodEntry), round Number) Texts
 			let mutant = List(MethodEntry) + Mutation(value).Mutant(candidates(round))
 			let alone = Execute(logger).Started(Replaced(types, List(MethodEntry) + value, mutant), path)
 			if Passes(alone, TestCodegen.Runner + index) and Passes(alone, TestCodegen.Runner + methods.Length)
-				survivors.Add(Survivor(value, candidates(round)))
+				let lines = File(path).ReadLines
+				if MutationFlow(value).IsWritten(candidates(round), lines(Mutation(value).Line(candidates(round)) - 1))
+					survivors.Add(Survivor(value, candidates(round)))
 	survivors
 Passes(started Machine, runner Text) Boolean
 	Sample.Passes(Machine.Hello, TestCodegen.Runner)
