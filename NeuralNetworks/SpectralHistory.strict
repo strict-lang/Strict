@@ -7,12 +7,19 @@ constant Pair = SpectralHistory((-1, 0), (1, 2, 3, 4), 2, SpectralFit(1, 0, 1), 
 Ready Boolean
 	Pair.Ready
 	SpectralHistory.Ready is false
+	SpectralHistory((-1, 0), List(Number), 0, SpectralFit(1, 0, 1), 2).Ready is false
+	SpectralHistory((-1, 0), (1, 2, 3), 2, SpectralFit(1, 0, 1), 2).Ready is false
+	SpectralHistory((-1, 0), (1, 2, 3, 4), 2, SpectralFit(1, 0, 2), 2).Ready is false
+	SpectralHistory((0), (1, 2), 2, SpectralFit(1, 0, 1), 2).Ready is false
 	let shaped = (width > 0) and (features.Length is width * coords.Length)
 	shaped and fit.IsValid and (coords.Length >= fit.degree + 1)
 Remembered(coord Number, feature Numbers) SpectralHistory
 	Pair.Remembered(0.5, (5, 6)).coords is (0, 0.5)
 	Pair.Remembered(0.5, (5, 6)).features is (3, 4, 5, 6)
 	Pair.Remembered(0.5, (1, 2, 3)).coords is List(Number) + 0.5
+	(Pair.Remembered(1 / 0, (5, 6)) is Error) and (Pair.Remembered(0.5, List(Number)) is Error)
+	(Pair.Remembered(0, (5, 6)) is Error) and (Pair.Remembered(-2, (5, 6)) is Error)
+	SpectralHistory.Remembered(-5, (1)).coords.Last is -5
 	if (coord.IsFinite is false) or (feature.Length < 1) or (maximum < fit.degree + 1)
 		return Error("Invalid spectral history")
 	if (coords.Length > 0) and (coord <= coords.Last)
@@ -20,6 +27,8 @@ Remembered(coord Number, feature Numbers) SpectralHistory
 	Appended(coord, feature)
 Appended(coord Number, feature Numbers) SpectralHistory
 	SpectralHistory((-1, 0), (1, 2, 3, 4), 2, SpectralFit(1, 0, 1), 3).Appended(0.5, (5, 6)).features is (1, 2, 3, 4, 5, 6)
+	SpectralHistory((-1, 0), (1, 2, 3, 4), 2, SpectralFit(1, 0, 1), 1).Remembered(0.5, (5, 6)) is Error
+	Pair.Remembered(0.5, (1, 2, 3)).features is (1, 2, 3)
 	let count = feature.Length is width then coords.Length else 0
 	let kept = count.Clamp(0, maximum - 1)
 	let dropped = count - kept
@@ -41,6 +50,9 @@ Predicted(coord Number) Numbers
 		Softmax.Weighted(weights, 0, coords.Length, data, index, width)
 Combined(data Numbers, span Number, first Number, second Number, third Number, fourth Number) Numbers
 	Combined((1, 2, 3, 4, 5, 6), 2, 0.5, 0.5, 1, 0) is (7, 9)
+	Combined((1, 2, 3, 4, 5, 6, 7, 8), 2, 0, 0, 1, 1) is (12, 14) and (Combined((1, 2), 2, 3, 0, 0, 0) is (3, 6))
+	SpectralHistory((-1, 0), List(Number), 0, SpectralFit(1, 0, 1), 2).Predicted(1) is Error
+	SpectralHistory((0, 1, 2, 3, 4), (1, 2, 3, 4, 5), 1, SpectralFit(1, 0, 1), 8).Predicted(5) is (6)
 	let secondOffset = second is 0 then 0 else span
 	let thirdOffset = third is 0 then 0 else span * 2
 	let fourthOffset = fourth is 0 then 0 else span * 3
