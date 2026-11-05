@@ -132,7 +132,7 @@ Specialized(codegen TypeCodegen, start Number, name Text) MethodEntry
 	Plain.Completed(Coding, Plain.Completed(Coding, Unused, Targets), Targets).methods.Length is 1
 	let header = Header(codegen.lines(start), name)
 	let lines = codegen.lines.Slice(0, start) + header + codegen.lines.Slice(start + 1, codegen.lines.Length - start - 1)
-	let method = TypeCodegen(codegen.fullName, lines, codegen.inference, codegen.typeNames).Method(start)
+	let method = TypeCodegen(codegen, lines = lines).Method(start)
 	MethodEntry(name, method.parameters, method.declaredType, method.instructions)
 Completed(codegen TypeCodegen, entry TypeEntry, targets Texts) TypeEntry
 	Plain.Completed(Coding, Unused, List(Text) + "Strict/Boxes/Using.Through(Wrapped(Halver))").methods.Length is 1

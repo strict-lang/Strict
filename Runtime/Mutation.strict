@@ -52,11 +52,12 @@ Changed(entry InstructionEntry, kind Number) InstructionEntry
 	let register = entry.payload(0)
 	if kind < 2
 		return Forced(entry, kind)
-	if ((kind is 2) and (method.returnType is "Strict/Text")) or (kind is 6)
+	let type = MutationKinds(method).Typed(kind, entry)
+	if ((kind is in (2, 7)) and (type is "Strict/Text")) or (kind is 6)
 		return InstructionEntry.LoadText(register, "")
-	if (kind is 2) and (method.returnType is "Strict/Boolean")
+	if (kind is in (2, 7)) and (type is "Strict/Boolean")
 		return InstructionEntry.LoadBoolean(register, false)
-	if kind < 5
+	if (kind < 5) or (kind is 7)
 		return InstructionEntry.LoadNumber(register, 0)
 	InstructionEntry(Swapped(entry.kind), entry.texts, entry.payload, entry.line)
 Forced(entry InstructionEntry, kind Number) InstructionEntry
@@ -73,6 +74,7 @@ Forced(entry InstructionEntry, kind Number) InstructionEntry
 Swapped(kind Number) Number
 	Twice.Swapped(InstructionType.Multiply) is InstructionType.Divide
 	Twice.Swapped(InstructionType.Subtract) is InstructionType.Add
+	Twice.Changed(MutationKinds.Limiting, 7) is InstructionEntry.LoadNumber(0, 0)
 	Mutation.Source(("	A", "B"), 1) is ("> 1: 	A")
 	Mutation.Source(("A", "B", "	C", "	D"), 4) is ("  2: B", "  3: 	C", "> 4: 	D")
 	let pair = kind is in (InstructionType.Add, InstructionType.Subtract) then 0 else 2
@@ -97,9 +99,8 @@ Replaced(kind Number, entry InstructionEntry, nth Text) Text
 	Mutation(MethodEntry(Twice.method, declaredType = "Strict/Text")).Replaced(2, Greater, "") is "the result with \"\""
 	if kind < 2
 		return "the " + nth + "comparison " + Operator(entry.kind) + " with " + (kind is 0 then "true" else "false")
-	let empty = method.returnType is "Strict/Boolean" then "false" else "0"
-	if kind is 2
-		return "the result with " + (method.returnType is "Strict/Text" then "\"\"" else empty)
+	if kind is in (2, 7)
+		return MutationKinds(method).Replacement(kind, entry)
 	if kind is 6
 		return "text \"" + entry.texts.First + "\" with empty text \"\""
 	(nth is "" then "" else "the " + nth) + Operator(entry.kind) + " with " + Operator(Swapped(entry.kind))

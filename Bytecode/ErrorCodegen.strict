@@ -16,7 +16,7 @@ constant Sizing = ErrorCodegen(ValueCodegen(TypeInference(KnownTypes(List(Text) 
 Folded(node SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Folded(ValueCodegen.One, CodeBlock.Empty).text is "1"
 	Plain.Folded(SyntaxParser(Tokenizer("outer.B.Greet").Tokens).Parse, CodeBlock.Empty).children(0).Kind is "Type"
-	let folding = ConstantFolding(values.target.TypeName, values.inference)
+	let folding = ConstantFolding(values.target.TypeName, values.inference, values.isOptimizing)
 	let typed = block.scope.TypeOf("outer") is "" then folding.Outer(node) else node
 	ConversionCodegen(values).Typed(folding.Folded(typed), block)
 Handled(node SyntaxNode, block CodeBlock) CodeBlock

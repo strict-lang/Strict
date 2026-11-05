@@ -14,6 +14,7 @@ constant Texted = TypeCodegen("Strict/Digit", ("has a Number", "to Text", "\t\"c
 constant Leveled = TypeCodegen("Strict/L", ("has level = Fast", "constant Fast = \"a\""), NoTypes, List(Text))
 constant Rebuilt = SyntaxParser(Tokenizer("Greeter(Greeter(\"a\"), text = \"b\")").Tokens).Parse
 Entry Slow(TypeEntry)
+	Texted.Methods(("to")).Length is 1
 	Hello.Entry is TypeEntry.HelloLogger
 	ConstantMethods.Counting.Methods(List(Text)).Length is 2
 	Specialization.Coding.Methods(List(Text) + Specialization.Halving).Length is 1
@@ -71,7 +72,7 @@ Initial(node SyntaxNode) List(InstructionEntry)
 	Hello.Initial(SyntaxNode("Call", "Range")).Length is 0
 	Vectors.Initial(SyntaxParser(Tokenizer("Vector2(1, 2)").Tokens).Parse).First.payload is (6, -1, 2, 1, 1, 1, 2, 0)
 	Hello.Initial(SyntaxParser("(", "1", ",", "2", ")").ParseRange(0, 5)).First.payload is (6, -1, 2, 1, 1, 1, 2, 0)
-	let literal = ConstantFolding(Generator.target.TypeName, inference).Unwrapped(node)
+	let literal = ConstantFolding(Generator.target.TypeName, inference, isOptimizing).Unwrapped(node)
 	if literal.IsLiteral is false
 		return List(InstructionEntry)
 	let load = Generator.Expression(literal, CodeBlock.Empty).instructions(0)
@@ -80,7 +81,6 @@ Methods(names Texts) List(MethodEntry)
 	Limit.Methods(List(Text)).First.instructions.Length is 2
 	Texted.Methods(("to Text")).Length is 1
 	Limit.Methods(List(Text)).First.Name is "Run"
-	Texted.Methods(("to")).Length is 1
 	mutable methods = List(Mutable(MethodEntry))
 	for lines
 		if TypeShape(lines).IsMethodHeader(value)
@@ -88,7 +88,8 @@ Methods(names Texts) List(MethodEntry)
 			let converted = tokens.First is "to" then "to " + HeaderTokens(tokens).ReturnType else tokens.First
 			if (names.Length is 0) or (tokens.First is in names) or (converted is in names)
 				methods.Add(Method(index))
-	methods + ConstantMethods(inference).Methods(value, names) + Specialization(Generator).Methods(value, names)
+	let constants = ConstantMethods(inference, isOptimizing).Methods(value, names)
+	methods + constants + Specialization(Generator).Methods(value, names)
 Method(start Number) Slow(MethodEntry)
 	(Hello.Method(1).returnType, Created.Method(1).returnType) is ("None", "Strict/C")
 	Iterating.Method(1).instructions(0).texts.First is "Strict/List(Number)"

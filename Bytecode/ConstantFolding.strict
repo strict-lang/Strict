@@ -1,5 +1,6 @@
 has typeName Text
 has inference Expressions/TypeInference
+has isOptimizing Boolean = true
 constant Counts = TypeInference(KnownTypes.Sample, TypeInference.Limits)
 constant Limits = ConstantFolding("Count", Counts)
 constant Calls = ConstantFolding("Count", TypeInference(KnownTypes.Sample, (Scope(List(Text) + "Empty", List(Text) + "Count(1)"), TypeInference.NoShape)))
@@ -101,7 +102,7 @@ Aliased(node SyntaxNode, aliases Texts) SyntaxNode
 	if (definition is "") or (owner + "." + node.text is in aliases)
 		return node
 	let parsed = ConstantMethods(inference).Definition(owner, node.text)
-	if ConstantMethods(inference).IsCached(owner, node.text)
+	if ConstantMethods(inference, isOptimizing or (owner is not typeName)).IsCached(owner, node.text)
 		return SyntaxNode("MethodCall", node.text, List(SyntaxNode) + SyntaxNode("Type", owner), node.line)
 	parsed.Kind is "Member" then Aliased(parsed, aliases + (owner + "." + node.text)) else parsed
 Qualified(node SyntaxNode) SyntaxNode
@@ -157,6 +158,7 @@ OuterTyped(call SyntaxNode) List(SyntaxNode)
 	for call.children
 		index is 0 then SyntaxNode("Type", call.text) else Outer(value)
 Constructed(node SyntaxNode) SyntaxNode
+	ConstantFolding("Other", Counts, false).Aliased(SyntaxNode("Member", "Limit", Count), List(Text)).Kind is "Number"
 	Limits.Constructed(SyntaxNode("MethodCall", "Count", (SyntaxNode("Type", "Count"), Two))) to Text is "Count(2)"
 	Limits.Constructed(SyntaxNode("MethodCall", "Count", (SyntaxNode("Type", "Other"), Two))).Kind is "MethodCall"
 	Limits.Constructed(SyntaxNode("MethodCall", "Count", (SyntaxNode("Identifier", "Count"), Two))).Kind is "MethodCall"
@@ -169,16 +171,16 @@ Constructed(node SyntaxNode) SyntaxNode
 		return node
 	SyntaxNode("Call", node.text, Rest(node.children), node.line)
 Rest(nodes SyntaxNodes) SyntaxNodes
+	ConstantFolding("Count", Counts, false).Aliased(Limit, List(Text)).Kind is "MethodCall"
 	Limits.Appended(Plus, SyntaxParser(Tokenizer("(1, 2)").Tokens).Parse, Two) to Text is "(1, 2, 2)"
 	Limits.Appended(SyntaxNode("Binary", "-", (Limit, Two)), SyntaxNode("List", "", (Two, Two)), Two).Kind is "Binary"
 	Limits.Appended(Plus, SyntaxNode("List", "", (Limit, Limit)), Limit).Kind is "Binary"
 	Limits.Appended(Plus, SyntaxNode("Member", "List", SyntaxNode("Type", "Number")), Two).Kind is "Binary"
 	Limits.Appended(Plus, SyntaxNode("Call", "Set", SyntaxNode("Type", "Number")), Two).Kind is "Binary"
 	Limits.Appended(Plus, SyntaxNode("Call", "List", (SyntaxNode("Type", "Number"), Two)), Two).Kind is "Binary"
-	Limits.Qualified(SyntaxNode("Identifier", "Twice")).Kind is "Identifier"
 	Cached.Constant(SyntaxNode("Identifier", "Bad")) to Text is "Error(1)"
 	Cached.Aliased(SyntaxNode("Identifier", "Started"), List(Text)).children(0).Kind is "Type"
-	Limits.Rest((Two, Limit)) is (Limit)
+	(Limits.Rest((Two, Limit)) is (Limit)) and (Limits.Qualified(SyntaxNode("Identifier", "Twice")).Kind is "Identifier")
 	for Range(1, nodes.Length)
 		nodes(value)
 Negated(node SyntaxNode) SyntaxNode

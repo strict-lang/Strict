@@ -1,10 +1,12 @@
 has inference Expressions/TypeInference
+has isOptimizing Boolean = true
 constant Known = KnownTypes(("Count"), (KnownTypes.CountMembers), (Scope(("Increment", "Twice", "Started"), ("Count", "Count", "Count"))), (KnownTypes.CountParameters))
 constant Growing = ConstantMethods(TypeInference(Known, (Scope(("Started", "Alias", "Plain"), ("Count(1).Twice", "Count.Started", "Count(1)")), TypeInference.NoShape)))
 constant Counting = TypeCodegen("Strict/Count", ("has number", "constant Started = Count(1).Twice", "Twice Count", "\tCount(number * 2)"), Growing.inference, List(Text))
 constant Value = SyntaxNode("Number", "1")
 constant Lettered = TypeCodegen("Strict/Count", ("has number", "constant Started", "Twice Count", "mutable Started = Count(1)"), Growing.inference, List(Text))
 Definition(owner Text, name Text) SyntaxNode
+	ConstantMethods(Growing.inference, false).IsCached("Count", "Plain")
 	Growing.Definition("Count", "Plain").Kind is "Call"
 	Growing.Definition("Count", "Alias").children(0).Kind is "Identifier"
 	Growing.IsCall(SyntaxNode("MethodCall", "Count", SyntaxNode("Identifier", "Count")), SyntaxNode("Identifier", "Count"))
@@ -25,7 +27,7 @@ IsCached(owner Text, name Text) Boolean
 	let definition = Definition(owner, name)
 	let isOther = (definition.Kind is "Member") and (definition.children(0).Kind is in ("Identifier", "Type"))
 	let isAlias = isOther and (inference.ConstantOf(definition.children(0).text, definition.text) is not "")
-	(isAlias is false) and HasCall(definition, owner)
+	((isOptimizing is false) and (definition.text is not "Error")) or ((isAlias is false) and HasCall(definition, owner))
 HasCall(node SyntaxNode, owner Text = "") Boolean
 	Growing.HasCall(SyntaxNode("Member", "Started", SyntaxNode("Type", "Count")))
 	Growing.HasCall(SyntaxNode("Member", "Plain", SyntaxNode("Type", "Count"))) is false
@@ -70,7 +72,7 @@ Method(types TypeCodegen, name Text, line Number) MethodEntry
 	let owner = types.Generator.target.TypeName
 	let header = name + " " + inference.types.MethodsOf(owner).TypeOf(name)
 	let body = "\t" + inference.ConstantOf(owner, name)
-	let extended = TypeCodegen(types.fullName, types.lines + header + body, inference, types.typeNames)
+	let extended = TypeCodegen(types, lines = types.lines + header + body, inference = inference)
 	let method = extended.Method(types.lines.Length)
 	mutable lined = List(Mutable(InstructionEntry))
 	for method.instructions

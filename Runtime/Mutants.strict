@@ -10,6 +10,8 @@ constant Budgeted = (InstructionEntry.LoadBoolean(1, false), Budget)
 constant Twice = Machine.Doubler.methods.First
 constant Doubled = List(TypeEntry) + Machine.Doubler
 constant Sample = Mutants(Logger, "Examples/Fibonacci.strict")
+constant Lined = MethodEntry(Twice, instructions = List(InstructionEntry) + InstructionEntry(InstructionEntry.Return(0), line = 2))
+constant Valued = TypeEntry(Machine.Doubler, members = List(MemberEntry) + MemberEntry("Twice", "Strict/Number", List(InstructionEntry), true), methods = List(MethodEntry) + Lined)
 constant Inputs = ("/File", "/Directory", "/Process", "/Logger", "/TextWriter", "/Time", "/Library", "/Http", "/Socket", "/Random", "/GpuMemory")
 constant Crashed = ", its rounds were not tested: run strict test on this file to see the error"
 constant Hint = " kept passing all tests, improve the tests!"
@@ -69,8 +71,10 @@ Shown(survivor Text) Text
 	survivor + "\n" + Text.Combine(Mutation.Source(File(path).ReadLines, line), "\n")
 Mutated(type TypeEntry) List(MethodEntry)
 	Sample.Mutated(Machine.Doubler).Length is 0
+	Sample.Mutated(TypeEntry(Machine.Doubler, methods = List(MethodEntry) + Lined)).Length is 1
+	Sample.Mutated(Valued).Length is 0
 	for type.methods
-		if IsMutated(value)
+		if IsMutated(value) and (type.ConstantSlot(value) < 0)
 			value
 Runner(type TypeEntry) MethodEntry
 	Sample.Runner(Machine.Doubler) is Twice

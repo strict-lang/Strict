@@ -3,6 +3,8 @@ constant Twice = MutationKinds(Mutation.Twice.method)
 constant Compared = MutationKinds(Mutation.Compared.method)
 constant Storing = MutationKinds(Mutation.Storing.method)
 constant Comparisons = (InstructionType.Equal, InstructionType.NotEqual, InstructionType.LessThan, InstructionType.GreaterThan)
+constant Primitives = ("Strict/Number", "Strict/Text", "Strict/Boolean")
+constant Limiting = InstructionEntry.Invoke(0, ("T", "Limit", "Strict/Number"), List(Number), -1)
 constant Logging = InstructionEntry.Invoke(0, ("T", "Log", "None"), List(Number), -1)
 constant Returned = InstructionEntry.Return(0)
 constant Temporary = InstructionEntry(Mutation.Stored, texts = ("logical0"))
@@ -32,11 +34,11 @@ Possible(position Number) Numbers
 		return (0, 1)
 	let isLast = position is method.instructions.Length - 1
 	if (entry.kind is InstructionType.Return) and isLast and (IsLiteral(position) is false)
-		return method.returnType is in ("Strict/Number", "Strict/Text", "Strict/Boolean") then (2) else List(Number)
+		return method.returnType is in Primitives then (2) else List(Number)
 	if (entry.kind is InstructionType.StoreRegisterToVariable) and IsReassigned(position)
 		return List(Number) + 3
-	if IsDropped(entry)
-		return List(Number) + 4
+	if IsDropped(entry) or IsConstant(entry)
+		return List(Number) + (IsDropped(entry) then 4 else 7)
 	Valued(position)
 Valued(position Number) Numbers
 	Twice.Valued(1) is (5)
@@ -125,6 +127,25 @@ IsDropped(entry InstructionEntry) Boolean
 	Valuing.Possible(12).Length is 0 and (Valuing.Possible(13).Length is 0) and (Valuing.Possible(14) is (4))
 	let isCall = (entry.kind is InstructionType.Invoke) and (entry.texts.Length > 2) and (entry.texts(2) is "None")
 	isCall or (entry.kind is InstructionType.InvokeWriteToList)
+IsConstant(entry InstructionEntry) Boolean
+	Twice.IsConstant(Limiting) and (Twice.IsConstant(Logging) is false)
+	Twice.IsConstant(InstructionEntry.Invoke(0, ("T", "Limit", "Strict/Number"), List(Number) + 1, -1)) is false
+	Twice.IsConstant(InstructionEntry.Invoke(0, ("T", "Limit", "Strict/Number"), List(Number), 1)) is false
+	Twice.IsConstant(InstructionEntry(Limiting, kind = InstructionType.Return)) is false
+	MutationKinds(MethodEntry(Twice.method, instructions = (Limiting, Returned))).Possible(0) is (7)
+	let isPlain = (entry.texts.Length is 3) and (entry.payload.Length is 7) and (entry.payload.Last is 0)
+	(entry.kind is InstructionType.Invoke) and isPlain and (entry.texts(2) is in Primitives)
+Replacement(kind Number, entry InstructionEntry) Text
+	Twice.Replacement(2, Logging) is "the result with 0"
+	Twice.Replacement(7, Limiting) is "constant Limit with 0"
+	Twice.Replacement(7, InstructionEntry.Invoke(0, ("T", "N", "Strict/Text"), List(Number), -1)) is "constant N with \"\""
+	Twice.Replacement(7, InstructionEntry(Limiting, texts = ("T", "B", "Strict/Boolean"))) is "constant B with false"
+	let type = Typed(kind, entry)
+	let empty = type is "Strict/Boolean" then "false" else (type is "Strict/Text" then "\"\"" else "0")
+	(kind is 2 then "the result" else "constant " + entry.texts(1)) + " with " + empty
+Typed(kind Number, entry InstructionEntry) Text
+	Twice.Typed(7, Logging) is "None" and (Twice.Typed(2, Logging) is "Strict/Number")
+	kind is 7 then entry.texts(2) else method.returnType
 IsReassigned(position Number) Boolean
 	Twice.IsReassigned(1) is false
 	Storing.IsReassigned(1) and (Storing.IsReassigned(0) is false)

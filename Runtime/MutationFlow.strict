@@ -97,12 +97,12 @@ IsMessage(entry InstructionEntry, register Number) Boolean
 	isLogged or (isReported and (register is in details))
 IsWritten(code Number, source Text) Boolean
 	Joining.IsWritten(6, "\tlet x = \"a\"") and (Joining.IsWritten(6, "\tYes") is false)
-	Joining.IsWritten(21, "x + y") and (Joining.IsWritten(21, "x") is false) and Joining.IsWritten(7, "\tYes")
+	Joining.IsWritten(21, "x + y") and (Joining.IsWritten(21, "x") is false) and Joining.IsWritten(2, "\tYes")
 	Stored.IsWritten(11, "\ttext = 5") and (Stored.IsWritten(11, "\tCall(text)") is false)
 	let entry = method.instructions((code / 8).Floor)
 	if code % 8 is 3
 		return source.IndexOf(entry.texts.First + " = ") >= 0
-	if code % 8 is 4
+	if code % 8 is in (4, 7)
 		return (source.IndexOf(entry.texts.Length > 1 then entry.texts(1) else "Add") >= 0) or (source.IndexOf(" + ") >= 0)
 	if code % 8 is 6
 		return source.IndexOf("\"" + entry.texts.First.Replace("\n", "\\n").Replace("\t", "\\t") + "\"") >= 0
