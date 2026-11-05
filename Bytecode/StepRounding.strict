@@ -2,9 +2,20 @@ has values ValueCodegen
 constant Plain = StepRounding(ValueCodegen.Plain)
 constant OwnStepped = SyntaxNode("MethodCall", "Stepped", (SyntaxNode("Call", "Greet"), SyntaxNode("Number", "2")))
 constant Price = SyntaxNode("Identifier", "price")
+constant Steps = Scope(("price step", "Greet", "Greet amount step", "Run"), ("0.01", "amount", "0.5 Floor", "price,amount"))
+constant Types = KnownTypes(("Greeter"), (Scope(("text", "price"), ("Text", "Number"))), (KnownTypes.NoMembers), (Steps))
+constant Stepping = StepRounding(ValueCodegen(TypeInference(Types, CallTarget.NoScopes), Plain.values.methods, CallTarget.Plain))
+constant InGreet = CodeBlock(List(InstructionEntry), 0, 0, Scope((CodeBlock.ErrorMarker, "price"), ("Greet", "Number")))
+constant Amount = SyntaxNode("Identifier", "amount")
+constant Named = SyntaxNode("Reassignment", "", (Amount, One))
+constant One = ValueCodegen.One
+constant Empty = CodeBlock.Empty
+constant Hi = ValueCodegen.Hi
+constant NewGreeter = ValueCodegen.NewGreeter
 Rounded(node SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Rounded(Price, CodeBlock.Empty) is Price
 	Plain.Rounded(Plain.Wrapped(Price, "0.01"), CodeBlock.Empty) to Text is "price.Stepped(0.01)"
+	Stepping.Rounded(SyntaxNode("Reassignment", "x", (Price, Price)), InGreet).children(1) is Plain.Wrapped(Price, "0.01")
 	mutable children = List(Mutable(SyntaxNode))
 	for node.children
 		let isKept = (index is 0) and (node.Kind is "Reassignment" or node.text is "Stepped")
@@ -16,6 +27,13 @@ Rounded(node SyntaxNode, block CodeBlock) SyntaxNode
 	isComparison then Compared(rebuilt, block) else rebuilt
 Read(node SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Read(Price, CodeBlock.Empty) is Price
+	Stepping.Read(Price, Empty) is Plain.Wrapped(Price, "0.01")
+	Stepping.Read(SyntaxNode("MethodCall", "price", (Hi)), Empty).text is "price"
+	Stepping.Read(SyntaxNode("Identifier", "price", (One)), Empty).children(0).children(0) is One
+	Stepping.Read(SyntaxNode("Call", "Greet", (One, One)), Empty).children is (Plain.Wrapped(One, "0.5 Floor"), One)
+	Stepping.Rounded(Plain.Wrapped(Price, "0.01"), InGreet) is Plain.Wrapped(Price, "0.01")
+	Stepping.Rounded(SyntaxNode("Binary", ">", (Price, One)), InGreet).children(1) is Plain.Wrapped(One, "0.01")
+	Stepping.StepOf(SyntaxNode("Member", "price", (Hi)), Empty) is ""
 	let owner = node.Kind is "Identifier" then values.target.TypeName else values.Owner(node, block)
 	let call = node.Kind is in ("Call", "MethodCall") then Arguments(node, block) else node
 	let step = values.inference.types.ParameterScope(owner).TypeOf(node.text + " step")
@@ -34,10 +52,24 @@ Arguments(call SyntaxNode, block CodeBlock) SyntaxNode
 	SyntaxNode(call.Kind, call.text, children, call.line)
 Parameters(owner Text, method Text) Texts
 	Plain.Parameters("Greeter", "Missing").Length is 0
+	Stepping.Parameters("Greeter", "Run") is ("price", "amount")
+	Stepping.values.inference.types is Types and Stepping.values.methods is ValueCodegen.Plain.methods
+	Plain.Wrapped(SyntaxNode("MethodCall", "Greet"), "1").text is "Stepped"
+	Stepping.Rounded(SyntaxNode("Binary", "+", (Price, One)), InGreet).children is (Plain.Wrapped(Price, "0.01"), One)
+	Stepping.Rounded(SyntaxNode("List", "is", (Price, One)), InGreet).children(1) is One
+	Stepping.Arguments(SyntaxNode("Call", "Greeter", (Hi, One)), Empty).children(1) is Plain.Wrapped(One, "0.01")
+	Stepping.Arguments(SyntaxNode("MethodCall", "Greet", (NewGreeter, One)), Empty).children(1).Kind is "MethodCall"
+	Stepping.Arguments(SyntaxNode("MethodCall", "price", (NewGreeter, One)), Empty).children(0) is NewGreeter
+	Stepping.Arguments(SyntaxNode("MethodCall", "Greeter", (NewGreeter, Hi, One)), Empty).children(2) is One
 	let names = values.inference.types.ParameterScope(owner).TypeOf(method)
 	names is "" then List(Text) else names.Split(",")
 Argument(argument SyntaxNode, owner Text, key Text) SyntaxNode
 	Plain.Argument(Price, "Greeter", "price").Kind is "Identifier"
+	Stepping.Argument(One, "Greeter", "price") is Plain.Wrapped(One, "0.01")
+	Stepping.Argument(Named, "Greeter", "Greet x").children(1) is Plain.Wrapped(One, "0.5 Floor")
+	Stepping.Argument(Named, "Greeter", "Greet x").Kind is "Reassignment"
+	Stepping.Rounded(SyntaxNode("Reassignment", "x", (Price, Price)), Empty).children(0) is Price
+	Stepping.Argument(SyntaxNode("Reassignment", "", (Price, One)), "Greeter", "Greet x").children(1) is One
 	let isNamed = argument.Kind is "Reassignment"
 	let named = isNamed then key.Substring(0, key.LastIndexOf(" ") + 1) + argument.children(0).text else key
 	let step = values.inference.types.ParameterScope(owner).TypeOf(named.Trim + " step")
@@ -48,6 +80,9 @@ Wrapped(node SyntaxNode, step Text) SyntaxNode
 	Plain.Wrapped(Price, "0.01") to Text is "price.Stepped(0.01)"
 	Plain.Wrapped(Price, "0.01 Floor") to Text is "price.Stepped(0.01, \"Floor\")"
 	Plain.Wrapped(Plain.Wrapped(Price, "0.01"), "0.01") to Text is "price.Stepped(0.01)"
+	Plain.Wrapped(Price, "0.5 Floor").children(1) is SyntaxNode("Number", "0.5")
+	Plain.Wrapped(Price, "0.5 Floor").children(2) is SyntaxNode("Text", "\"Floor\"")
+	Plain.Wrapped(SyntaxNode("Call", "Stepped"), "1").Kind is "MethodCall"
 	if (node.Kind is "MethodCall") and (node.text is "Stepped")
 		return node
 	let parts = step.Split(" ")
@@ -56,6 +91,13 @@ Wrapped(node SyntaxNode, step Text) SyntaxNode
 	SyntaxNode("MethodCall", "Stepped", List(SyntaxNode) + node + SyntaxNode("Number", parts(0)) + rounding, node.line)
 Compared(node SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Compared(SyntaxNode("Binary", ">", (Price, Price)), CodeBlock.Empty).children(0) is Price
+	Stepping.Compared(SyntaxNode("Binary", ">", (Price, One)), Empty).children(1) is Plain.Wrapped(One, "0.01")
+	Stepping.Compared(SyntaxNode("Binary", ">", (Price, One)), Empty).children(0) is Plain.Wrapped(Price, "0.01")
+	Plain.StepOf(Plain.Wrapped(One, "0.01"), Empty) is "0.01"
+	Plain.StepOf(SyntaxNode("Call", "Stepped", (One, One)), Empty) is ""
+	Plain.StepOf(SyntaxNode("MethodCall", "Greet", (One, One)), Empty) is ""
+	Stepping.StepOf(SyntaxNode("Binary", "-", (One, Price)), Empty) is "0.01"
+	Stepping.StepOf(SyntaxNode("Binary", "*", (Price, Price)), Empty) is ""
 	let step = Finest(StepOf(node.children(0), block), StepOf(node.children(1), block))
 	if step is ""
 		return node
@@ -77,6 +119,11 @@ Finest(first Text, second Text) Text
 	Plain.Finest("", "0.01") is "0.01"
 	Plain.Finest("0.01", "0.001") is "0.001"
 	Plain.Finest("0.5", "") is "0.5"
+	Plain.Finest("0.001", "0.01") is "0.001"
+	Stepping.StepOf(Amount, InGreet) is "0.5"
+	Stepping.StepOf(SyntaxNode("Call", "amount"), InGreet) is ""
+	Stepping.StepOf(SyntaxNode("Call", "+", (Price, Price)), Empty) is ""
+	Stepping.StepOf(SyntaxNode("Binary", "+", (Price, One)), Empty) is "0.01"
 	if (first is "") or (second is "")
 		return first is "" then second else first
 	first to Number < second to Number then first else second

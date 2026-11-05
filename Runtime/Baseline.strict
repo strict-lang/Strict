@@ -5,11 +5,11 @@ Kept(types List(TypeEntry)) List(MethodEntry)
 	Libraries.Kept(Execute(Logger).Loaded("Library.strict", ".")).Length is 0
 	let methods = IsBase(types.First) then List(MethodEntry) else mutants.Mutated(types.First)
 	let tested = mutants.Tested(types, mutants.Runner(types.First), methods)
-	let started = Execute(mutants.logger).Started(tested, mutants.path)
 	let limit = mutants.isWhole then 1 else 0.1
 	for methods
+		let fresh = Execute(mutants.logger).Started(tested, mutants.path)
 		let begun = Process.Elapsed
-		let failed = Machine(started, deadline = begun + limit).Tested(types.First.Name, TestCodegen.Runner + index)
+		let failed = Machine(fresh, deadline = begun + limit).Tested(types.First.Name, TestCodegen.Runner + index)
 		if (failed is 0) and (Process.Elapsed - begun < limit) and IsRun(tested, value, TestCodegen.Runner + index)
 			value
 IsRun(tested List(TypeEntry), method MethodEntry, runner Text) Boolean
