@@ -21,8 +21,7 @@ Day Number
 	(Now / Duration.Day.seconds).Floor
 Date Numbers
 	Moment.Date is (2023, 11, 14)
-	Time(0).Date is (1970, 1, 1)
-	Time(951782400).Date is (2000, 2, 29)
+	(Time(0).Date is (1970, 1, 1)) and (Time(951782400).Date is (2000, 2, 29))
 	let shifted = (seconds / Duration.Day.seconds).Floor + DaysBeforeEpoch
 	let era = (shifted / DaysPerEra).Floor
 	let dayOfEra = shifted - era * DaysPerEra
@@ -31,7 +30,8 @@ Date Numbers
 	let dayOfYear = dayOfEra - (DaysPerYear * yearOfEra + (yearOfEra / 4).Floor - (yearOfEra / 100).Floor)
 	let monthIndex = ((5 * dayOfYear + 2) / MarchToJulyDays).Floor
 	let month = monthIndex < 10 then monthIndex + 3 else monthIndex - 9
-	(yearOfEra + era * YearsPerEra + (month <= 2 then 1 else 0), month, dayOfYear - MonthStart(monthIndex) + 1)
+	let day = dayOfYear - ((MarchToJulyDays * monthIndex + 2) / 5).Floor + 1
+	(yearOfEra + era * YearsPerEra + (month <= 2 then 1 else 0), month, day)
 Clock Numbers
 	Moment.Clock is (22, 13, 20)
 	let day = Duration.Day.seconds
@@ -76,13 +76,9 @@ Days(year Number, month Number, day Number) Number
 	let shiftedYear = month <= 2 then year - 1 else year
 	let era = (shiftedYear / YearsPerEra).Floor
 	let yearOfEra = shiftedYear - era * YearsPerEra
-	let dayOfYear = MonthStart(month > 2 then month - 3 else month + 9) + day - 1
+	let dayOfYear = ((MarchToJulyDays * (month > 2 then month - 3 else month + 9) + 2) / 5).Floor + day - 1
 	let dayOfEra = yearOfEra * DaysPerYear + (yearOfEra / 4).Floor - (yearOfEra / 100).Floor + dayOfYear
 	era * DaysPerEra + dayOfEra - DaysBeforeEpoch
-MonthStart(monthIndex Number) Number
-	Moment.MonthStart(0) is 0
-	Moment.MonthStart(11) is 337
-	((MarchToJulyDays * monthIndex + 2) / 5).Floor
 RoundUp(step Number) Time
 	Time(61).RoundUp(60) is Time(120)
 	Time(120).RoundUp(60) is Time(120)
