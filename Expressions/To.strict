@@ -5,6 +5,8 @@ to Text
 	expression + " to " + targetTypeName
 Parse(text Text) To
 	Parse("x to Number").targetTypeName is "Number"
+	Parse("x to Number") is To("x", "Number")
+	Parse("x") is To("x", "Any")
 	let toIndex = text.IndexOf(" to ")
 	if toIndex is -1
 		return To(text, "Any")

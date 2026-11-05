@@ -2,6 +2,7 @@ has tokens Texts
 LastDot(start Number, end Number) Number
 	Postfix(("a", ".", "b", ".", "c")).LastDot(0, 5) is 3
 	Postfix(("f", "(", "a", ".", "b", ")")).LastDot(0, 6) is -1
+	Postfix(("a", "(", "b", ".", "c")).LastDot(2, 5) is 3
 	let brackets = SyntaxParser(tokens)
 	mutable depth = 0
 	mutable dot = -1
@@ -14,6 +15,7 @@ IndexStart(start Number, end Number) Number
 	Postfix(("f", "(", "1", ")", "(", "2", ")")).IndexStart(0, 7) is 4
 	Postfix(("f", "(", "1", ")")).IndexStart(0, 4) is -1
 	Postfix(("f", "(", "1", ")", ".", "x")).IndexStart(0, 6) is -1
+	Postfix(("(", "1", ")")).IndexStart(0, 3) is -1
 	let brackets = SyntaxParser(tokens)
 	mutable depth = 0
 	mutable open = -1

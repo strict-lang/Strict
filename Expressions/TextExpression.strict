@@ -6,6 +6,8 @@ to Text
 	"\"" + text + "\""
 Parse(input Text) TextExpression
 	Parse("\"hi\"").text is "hi"
+	Parse("hi").text is "hi"
+	Parse("\"").text is "\""
 	if input.Length >= 2 and input.StartsWith("\"")
 		return TextExpression(input.Substring(1, input.Length - 2))
 	TextExpression(input)

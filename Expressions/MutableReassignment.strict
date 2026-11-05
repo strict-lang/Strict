@@ -5,6 +5,8 @@ to Text
 	variableName + " = " + newValue
 Parse(text Text) MutableReassignment
 	Parse("total = 0").variableName is "total"
+	Parse("total = 0") is MutableReassignment("total", "0")
+	Parse("total") is MutableReassignment("total", "")
 	let equalsIndex = text.IndexOf(" = ")
 	if equalsIndex is -1
 		return MutableReassignment(text, "")

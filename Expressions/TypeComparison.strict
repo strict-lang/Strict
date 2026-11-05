@@ -5,6 +5,8 @@ to Text
 	subject + " is " + matchTypeName
 Parse(text Text) TypeComparison
 	Parse("value is Number").matchTypeName is "Number"
+	Parse("value is Number") is TypeComparison("value", "Number")
+	Parse("value") is TypeComparison("value", "Any")
 	let isIndex = text.IndexOf(" is ")
 	if isIndex is -1
 		return TypeComparison(text, "Any")

@@ -9,6 +9,8 @@ to Text
 	instance + "." + memberName
 Parse(text Text) MemberCall
 	Parse("image.Width").memberName is "Width"
+	Parse("image.Width") is MemberCall("image", "Width", "Any")
+	Parse("value") is MemberCall("", "value", "Any")
 	let dotIndex = text.IndexOf(".")
 	if dotIndex is -1
 		return MemberCall("", text, "Any")
