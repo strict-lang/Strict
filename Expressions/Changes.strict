@@ -5,6 +5,12 @@ constant Reading = Changes(Ticking.lines, true)
 Members Texts
 	Ticking.Members is ("count")
 	Reading.Members is ("count", "step")
+	Changes(("mutable count Number", "Next Number", "\tcount = 1")).Methods is ("Next")
+	Changes(("has count Number", "Next Number", "\tvalue"), true).Methods.Length is 0
+	Changes(("has count Number", "Next Number", "\tcount = 1")).IsDefaulted is false
+	Changes(("has count Number", "constant One = 1")).IsDefaulted is false
+	Changes(("Sum Number", "\tif true", "\t\tvalue")).IsLooped(2) is false
+	Changes(("Sum Number", "\tif true", "\t\tfor 3", "\t\t\t1", "\t\tif true", "\t\t\tvalue")).IsLooped(5) is false
 	for lines
 		if value.StartsWith("mutable ") or isReading and value.StartsWith("has ")
 			Tokenizer(value).Tokens(1)
@@ -42,6 +48,9 @@ Found(members Texts, changing Texts) Texts
 	result
 Tokens(at Number) Texts
 	Reading.Tokens(3) is ("count", "=", "count", "+", "step")
+	Changes(("Sum Number", "\tfor 3", "\t\tvalue + 1")).Tokens(2) is ("value", "+", "1")
+	Changes(("Sum Number", "\tvalue + 1"), true).Tokens(1) is ("value", "+", "1")
+	Changes(("Sum Number", "\tfor 3", "\t\t1 + 1"), true).Tokens(2) is ("1", "+", "1")
 	Changes(("Sum Number", "\tfor 3", "\t\tvalue + 1"), true).Tokens(2) is ("+", "1")
 	let tokens = Tokenizer(lines(at).TrimStart).Tokens
 	isReading and ("value" is in tokens) and IsLooped(at) then tokens - "value" else tokens
@@ -73,6 +82,11 @@ IsChanging(tokens Texts, members Texts, changing Texts) Boolean
 IsUsed(tokens Texts, at Number, members Texts, changing Texts) Boolean
 	Ticking.IsUsed(("a", ".", "random", ".", "Get"), 2, ("random"), List(Text)) is false
 	Reading.IsUsed(List(Text) + "step", 0, List(Text) + "step", List(Text))
+	Ticking.IsUsed(("random", ".", "Get", "."), 0, ("random"), List(Text))
+	Ticking.IsUsed(("a", "random", ".", "Get"), 1, ("random"), List(Text))
+	Reading.IsUsed(List(Text) + "value", 0, List(Text), List(Text))
+	Ticking.IsUsed(List(Text) + "step", 0, List(Text) + "step", List(Text)) is false
+	Reading.IsUsed(List(Text) + "other", 0, List(Text) + "step", List(Text)) is false
 	let token = tokens(at)
 	if (at > 0) and (tokens(at - 1) is ".")
 		return false
@@ -89,6 +103,10 @@ Added(scope Scope) Scope
 HasChanges(scope Scope) Boolean
 	Ticking.HasChanges(Ticking.Added(KnownTypes.NoMembers))
 	Ticking.HasChanges(KnownTypes.NoMembers) is false
+	Ticking.HasChanges(Reading.Added(KnownTypes.NoMembers)) is false
+	Ticking.IsChanging(("other", "=", "count"), ("count"), List(Text)) is false
+	Ticking.IsChanging(("step", "=", "1"), ("count", "step"), List(Text))
+	Ticking.IsChanging(List(Text), ("count"), List(Text)) is false
 	for scope.types
 		if value is "changes"
 			return true

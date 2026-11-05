@@ -16,10 +16,21 @@ constant Mutables = Holding.With("ticker mutable", "mutable")
 Issue(scoped ScopedStatement, current Scope) Text
 	Counting.Issue(Immutable, Counted).StartsWith("MutatingCallNeedsMutableVariable: a.Increment")
 	Counting.Issue(ScopedStatement(Increment, Counted.With("a mutable", "mutable"), 0), Counted) is ""
+	Ticked.Issue(ScopedStatement(Ticking, Holding, 0), Holding).EndsWith("ticker.Next changes ticker, declare it mutable")
+	Ticked.Changing(SyntaxNode("Binary", "+", (Added, Ticking)), Holding, Holding) is not ""
+	Counting.Issue(Immutable, Counted).EndsWith(" has no effect, use a mutable variable or assign the result")
+	Counting.Issue(ScopedStatement(Increment.children(0), Counted, 0), Holding).EndsWith("Count, assign or return it")
+	Counting.Unused(ScopedStatement(SyntaxNode("Binary", "is", Added.children), Counted, 0), Counted) is ""
+	Ticked.IsChangingCall(SyntaxNode("Binary", "Next", Ticking.children), Holding, Holding) is false
+	Ticked.IsChangingCall(SyntaxNode("Member", "Next", List(SyntaxNode)), Holding, Holding) is false
+	Ticked.IsChangingCall(SyntaxNode("MethodCall", "Next", Ticking.children), Holding, Holding)
 	let changing = Changing(scoped.statement, scoped.scope, current)
 	changing is "" then Mutated(scoped, current) else changing
 Mutated(scoped ScopedStatement, current Scope) Text
 	Counting.Mutated(Immutable, Counted).StartsWith("MutatingCallNeedsMutableVariable: a.Increment")
+	Counting.Mutated(ScopedStatement(Increment, Counted.With(" dropped", ""), 0), Counted) is ""
+	Counting.Mutated(ScopedStatement(Added, Counted, 0), Counted).StartsWith("UnusedValueMustBeRemoved")
+	Ticked.Changing(SyntaxNode("Member", "Next", SyntaxNode("Type", "Ticker")), Scope(("Ticker"), ("a")), Holding) is ""
 	let statement = scoped.statement
 	if (scoped.scope.TypeOf(" dropped") is "") or (IsMutating(statement, scoped.scope, current) is false)
 		return Unused(scoped, current)
@@ -67,6 +78,10 @@ Unused(scoped ScopedStatement, current Scope) Text
 	type is in Unchecked then "" else "UnusedValueMustBeRemoved: " + statement + " is a " + type + ", assign or return it"
 IsMutating(statement SyntaxNode, scope Scope, current Scope) Boolean
 	Counting.IsMutating(Increment, Counted, Counted)
+	Counting.IsMutating(Added, Counted, Counted) is false
+	Counting.IsMutating(Twice, Counted, Counted) is false
+	Counting.IsMutating(SyntaxNode("Member", "Increment", Added), Counted, Counted) is false
+	Counting.IsMutating(SyntaxNode("MethodCall", "Increment", Increment.children), Counted, Counted)
 	if (statement.Kind is not in ("MethodCall", "Member")) or (statement.children(0).Kind is not "Identifier")
 		return false
 	let type = inference.TypeOf(statement.children(0), scope, current)
