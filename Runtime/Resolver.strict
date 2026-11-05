@@ -14,10 +14,18 @@ constant Comparisons = (InstructionType.Equal, InstructionType.NotEqual, Instruc
 constant ElementStore = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "a(1)")
 constant Sample = MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 7), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "a"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "a"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 0, "list")))
 Resolved List(TypeEntry)
+	Doubling.Local(MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 7), "a")) is "a"
+	Doubling.Local(InstructionEntry(InstructionType.CheckError, List(Text), List(Number), 0)) is "#result"
+	Doubling.Local(InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "pair.b(1)")) is "pair.b(1)"
+	Doubling.Local(Sample.instructions(1)) is "a" and (Doubling.Local(ElementStore) is "a")
+	Doubling.Slotted(MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 7), "index"), Specials).payload.Length is 5
+	Doubling.Slotted(ElementStore, Specials + "a").payload is (0, 6, LiteralIndex, 1)
 	Doubling.Resolved.First.methods.First.instructions.Length is 3
 	for types
 		TypeEntry(value.Name, value.members, Methods(value))
 Methods(type TypeEntry) List(MethodEntry)
+	Doubling.Methods(TypeEntry("Strict/Go", List(MemberEntry), List(MethodEntry) + Sample)).First.Name is "Run"
+	Doubling.Methods(TypeEntry("Strict/Go", List(MemberEntry), List(MethodEntry) + Sample)).First.declaredType is "None"
 	Doubling.Methods(TypeEntry("Strict/Go", List(MemberEntry), List(MethodEntry) + MethodEntry.GoRun)).Length is 1
 	Doubling.Methods(Machine.Doubler).First.Slots is 9
 	for type.methods
@@ -25,6 +33,9 @@ Methods(type TypeEntry) List(MethodEntry)
 		let scratch = names.Length + LoadReuse(value.instructions).RegisterCount
 		MethodEntry(value.Name, value.parameters, value.declaredType, Instructions(value, names, scratch), scratch + 1)
 Instructions(method MethodEntry, names Texts, scratch Number) List(InstructionEntry)
+	Doubling.Instructions(Machine.Doubler.methods.First, Specials + ChangedInstance.Name, 8).Last.payload.Last is 6
+	Doubling.Instructions(Machine.Doubler.methods.First, Specials + ChangedInstance.Name, 8).First.payload.Length is 3
+	Doubling.Instructions(Machine.Doubler.methods.First, Specials, 8).Last.payload.Length is 1
 	Doubling.Instructions(MethodEntry.GoRun, Specials, 7).First.payload.Length is 10
 	Doubling.Instructions(Machine.Doubler.methods.First, Specials, 8).Last.Target is Frame.ResultSlot
 	let changed = Changed(method, names)
@@ -34,6 +45,9 @@ Instructions(method MethodEntry, names Texts, scratch Number) List(InstructionEn
 		let isChanged = (value.kind is InstructionType.Return) and (changed.Length > 0)
 		isChanged then InstructionEntry(placed, payload = placed.payload + changed) else placed
 Changed(method MethodEntry, names Texts) Numbers
+	Doubling.Changed(MethodEntry.Logged, List(Text) + "changed_0") is (-1, 0)
+	Doubling.Changed(MethodEntry.Logged, List(Text) + ChangedInstance.Name) is (0, -1)
+	Doubling.Changed(MethodEntry.Logged, Specials).Length is 0
 	Doubling.Changed(MethodEntry.GoRun, Specials).Length is 0
 	Doubling.Changed(MethodEntry.GoRun, List(Text) + ChangedInstance.Name) is (0)
 	mutable slots = List(Mutable(Number)) + names.Index(ChangedInstance.Name)
@@ -53,6 +67,8 @@ Targeted(entry InstructionEntry) InstructionEntry
 	let path = Accessor(Machine(types)).Marked(target, call.Count)
 	InstructionEntry(entry.kind, entry.texts, entry.payload + target + path, entry.line)
 Target(call Invocation) Numbers
+	Doubling.Target(Invocation(Twice, entry = InstructionEntry.Invoke(0, ("B", "Trim", "B"), 0, -1))) is (Native, 0, 0)
+	Doubling.Target(Invocation.Parsing) is (Native, 0, 0)
 	Doubling.Target(Invocation.Uppered) is (Searching, 0, 0)
 	Doubling.Target(Hosted.SystemCall) is (Hosting, 0, 0)
 	if Hosted(call).IsHosted
@@ -72,6 +88,10 @@ Called(call Invocation) Numbers
 		return (Native, 0, 0)
 	(Position(type), method, Natives(types).IsMemberCall(call, type, type.methods(method)) then 1 else 0)
 Position(type TypeEntry) Number
+	Doubling.Destination(MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 7), "a"), 9) is 0
+	Doubling.Destination(InstructionEntry.LoopBegin(0, -1), 9) is Frame.LoopSlot
+	Doubling.Destination(InstructionEntry.Binary(InstructionType.Add, (0, 0, 1)), 9) is 1
+	Doubling.Destination(InstructionEntry.Jump(InstructionType.JumpEnd, 0), 9) is 9
 	Doubling.Position(Machine.Doubler) is 0
 	Doubling.Position(TypeEntry.HelloLogger) is -1
 	for types
@@ -80,6 +100,7 @@ Position(type TypeEntry) Number
 	-1
 Slots(type TypeEntry, method MethodEntry) Texts
 	Doubling.Slots(Storage.Pair, Sample) is Specials + ("logger", "b", "a", "list")
+	Doubling.Slots(Machine.Doubler, MethodEntry.Logged) is Specials + "logger"
 	mutable names = List(Mutable(Text)) + Specials
 	for type.members
 		names.Add(value.Name)
@@ -130,6 +151,8 @@ Decoded(entry InstructionEntry) InstructionEntry
 		payload = payload + entry.payload(value)
 	InstructionEntry(entry.kind, entry.texts, payload, entry.line)
 Element(entry InstructionEntry, names Texts) Numbers
+	Doubling.Element(InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "a(1)"), Specials).Length is 0
+	Doubling.Element(Sample.instructions(1), Specials).Length is 0
 	Doubling.Element(ElementStore, Specials) is (LiteralIndex, 1)
 	Doubling.Element(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "a(index)"), Specials).Length is 1
 	if entry.kind is not InstructionType.StoreRegisterToVariable
@@ -140,6 +163,7 @@ Element(entry InstructionEntry, names Texts) Numbers
 	let slot = Slot(parts(1), names)
 	slot is -1 then (LiteralIndex, parts(1) to Number) else List(Number) + slot
 Slot(name Text, names Texts) Number
+	Doubling.Slot("outer.index", Specials) is OuterIndexSlot
 	Doubling.Slot("outer", Specials) is OuterSlot
 	Doubling.Slot("index", Specials) is 5
 	Doubling.Slot("index", Specials + "index") is 6
@@ -152,6 +176,7 @@ Slot(name Text, names Texts) Number
 			return value
 	-1
 Placed(entry InstructionEntry, method MethodEntry, position Number, scratch Number) InstructionEntry
+	Doubling.Placed(Sample.instructions(0), Sample, 0, 9).payload is Sample.instructions(0).payload
 	Doubling.Placed(MethodEntry.Branching.instructions(0), MethodEntry.Branching, 0, 9).payload is (0, 2)
 	Doubling.Placed(MethodEntry.Branching.instructions(0), MethodEntry.Branching, 0, 9).Target is 9
 	Doubling.Placed(MethodEntry.CountingLoop.instructions(1), MethodEntry.CountingLoop, 1, 9).payload is (1, 0)
