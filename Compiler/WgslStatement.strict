@@ -6,6 +6,11 @@ constant Absolute = MlirGpuCheck.Absolute
 constant Summed = MlirDeviceStatements.Summed
 constant Records = MlirDeviceRecords.Holding
 constant Less = InstructionEntry.Binary(InstructionType.LessThan, (0, 1, 2))
+constant Measuring = MlirFunction(Summed.types, GpuSamples.Layered, GpuSamples.Measured)
+constant Looping = ("let e2 = r0l;", "let s2i = v_index;", "let s2v = v_value;", "let c2 = e2.y;", "for (var k2 = 0u; k2 < c2; k2++) {", "v_index = n_int(i32(k2));", "v_value = n_of(n_item(e2.x, k2));")
+constant Indexing = ("let k6 = n_index(r3);", "if (r3.f >= 0.0 && k6 < v_inputl.y) { r4 = n_of(n_item(v_inputl.x, k6)); }", "else { failed[0] = 1u; r4 = n_int(0); }")
+constant Recording = ("let k4 = n_index(r1) * 2u;", "if (k4 < v_pairsl.y) { r2 = n_int(i32(k4)); }", "else { failed[0] = 1u; r2 = n_int(0); }")
+constant Fielding = ("let k5 = n_index(r2) + 1u;", "if (k5 < v_pairsl.y) { r3 = n_of(n_item(v_pairsl.x, k5)); }", "else { failed[0] = 1u; r3 = n_int(0); }")
 constant Arithmetic = ("n_add(", "n_sub(", "n_mul(", "n_div(", "n_mod(")
 constant Comparisons = ("n_equal(", "n_unequal(", "n_less(", "n_more(")
 Lines Texts
@@ -23,6 +28,9 @@ Lines Texts
 	entry.kind is InstructionType.Invoke then Called(entry) else isLoop then Looped(entry) else Finished(entry)
 Moved(entry InstructionEntry) Texts
 	WgslStatement(Twice, 0).Moved(Twice.method.instructions(0)) is ("r0 = v_number;")
+	WgslStatement(Summed, 0).Lines is ("v_sum = n_int(0);")
+	WgslStatement(Summed, 10).Lines is ("v_sum = r6;")
+	WgslStatement(Twice, 0).Moved(MethodCodegen.StoreConstant(Twice.method.instructions(1), "a")) is ("v_a = n_int(2);")
 	if entry.kind is InstructionType.LoadVariableToRegister
 		return Copied("v_" + entry.texts(0), "r" + entry.payload(0), entry.texts(0))
 	if entry.kind is InstructionType.StoreRegisterToVariable
@@ -32,12 +40,16 @@ Moved(entry InstructionEntry) Texts
 	List(Text) + (target + " = " + Literal(PayloadDecoder(entry).Value(isLoad then 1 else 0).number) + ";")
 Copied(source Text, target Text, name Text) Texts
 	WgslStatement(Summed, 5).Copied("v_input", "r3", "input") is ("r3l = v_inputl;")
+	WgslStatement(Summed, 6).Lines is Indexing
+	WgslStatement(Records, 4).Lines is Recording
+	WgslStatement(Records, 5).Lines is Fielding
 	let isList = MlirDeviceStatements(function, at).IsList(MlirKinds(function).VariableKind(at + 1, name))
 	List(Text) + (isList then target + "l = " + source + "l;" else target + " = " + source + ";")
 Literal(number Number) Text
 	WgslStatement(Twice, 1).Literal(-0.5) is "n_float(-0.5)"
 	WgslStatement(Twice, 1).Literal(0.00000000000001) is "n_float(1e-14)"
 	WgslStatement(Twice, 1).Literal(117964800) is "n_int(117964800)"
+	WgslStatement(Twice, 1).Literal(2147483648) is "n_float(2147483648)"
 	let isWhole = (number is number.Floor) and (number.Absolute < 2147483648)
 	(isWhole then "n_int(" else "n_float(") + number + ")"
 Calculated(entry InstructionEntry) Texts
@@ -82,6 +94,11 @@ Called(entry InstructionEntry) Texts
 IsNative(entry InstructionEntry) Boolean
 	WgslStatement(Doubled, 4).IsNative(MlirDeviceCalls.Making)
 	WgslStatement(Doubled, 4).IsNative(MlirDeviceCalls.Rounding) is false
+	WgslStatement(Doubled, 4).IsNative(MlirDeviceCalls.Sining)
+	WgslStatement(Measuring, 1).Lines is ("r1 = n_int(i32(r0l.y));")
+	WgslStatement(Doubled, 4).Called(MlirDeviceCalls.Rounding) is ("unsupported: from")
+	WgslStatement(Twice, 2).Called(Doubled.method.instructions(4)) is ("unsupported: Twice")
+	WgslStatement(MlirGpuCheck.Powered, 2).Lines is ("r2 = n_power(r0, r1);")
 	let name = entry.texts(1)
 	let isMade = (name is "from") and (MlirDeviceCalls(function, at, function).IsRounding(entry) is false)
 	(name is in ("Floor", "Length")) or (name is in MlirDeviceCalls.Approximations) or isMade
@@ -100,12 +117,16 @@ Native(entry InstructionEntry, instance Text) Text
 	"r" + entry.payload(0) + " = " + native + ";"
 Looped(entry InstructionEntry) Texts
 	WgslStatement(Summed, 11).Looped(Summed.method.instructions(11)) is ("}", "v_index = s2i;", "v_value = s2v;")
+	WgslStatement(Summed, 2).Lines is Looping
+	WgslStatement(Summed, 7).Lines is List(Text)
 	if entry.kind is InstructionType.LoopBegin
 		return Begun("r" + entry.payload(0), entry)
 	let begin = function.method.LoopBeginOf(at)
 	("}", "v_index = s" + begin + "i;", "v_value = s" + begin + "v;")
 Begun(register Text, entry InstructionEntry) Texts
 	WgslStatement(Summed, 2).Begun("r0", Summed.method.instructions(2)).Last.StartsWith("v_value = ")
+	WgslStatement(Records, 2).Begun("r0", Records.method.instructions(2))(3) is "let c2 = n_index(r0);"
+	WgslStatement(Records, 2).Lines.Last is "v_value = n_int(i32(k2));"
 	let isList = MlirDeviceStatements(function, at).IsList(MlirKinds(function).KindOf(at, entry.payload(0)))
 	let counter = "k" + at
 	let saved = ("let e" + at + " = " + register + "l;", "let s" + at + "i = v_index;", "let s" + at + "v = v_value;")
