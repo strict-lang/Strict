@@ -8,7 +8,7 @@ IsConstant Boolean
 	MlirConstants(MlirTexts.Joined, 0).IsConstant
 	MlirConstants(MlirTexts.Joined, 1).IsConstant is false
 	MlirConstants(MlirTexts.Joined, 2).IsConstant is false
-	MlirConstants(MlirLists.Literals, 0).IsConstant
+	MlirConstants(MlirLists.Literals, 0).IsConstant and MlirConstants(MlirInstances.Shapes, 1).IsConstant
 	let isMember = position >= function.method.instructions.Length
 	let kind = isMember then InstructionType.LoadConstantToRegister else function.method.instructions(position).kind
 	if kind is InstructionType.Invoke

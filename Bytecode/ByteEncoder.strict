@@ -62,6 +62,7 @@ UnicodeBytes(text Text) Numbers
 Double(number Number) ByteEncoder
 	ByteEncoder(1, 2).Double(1.5).bytes is (1, 2, 0, 0, 0, 0, 0, 0, 248, 63)
 	ByteEncoder(1, 2).Double(-2).bytes is (1, 2, 0, 0, 0, 0, 0, 0, 0, 192)
+	ByteEncoder(1, 2).Double(0.1).bytes is (1, 2, 154, 153, 153, 153, 153, 153, 185, 63)
 	if number is 0
 		return UInt(0, 8)
 	let exponent = Exponent(number.Absolute)

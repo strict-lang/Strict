@@ -11,6 +11,7 @@ constant keywordKinds = ("Return", "If", "For", "ElseIf", "ElseValue")
 constant keywordTexts = ("return", "if", "for", "else if", "else")
 constant one = SyntaxNode("Number", "1")
 constant two = SyntaxNode("Number", "2")
+constant sum = SyntaxNode("Binary", "+", (one, two))
 constant identifier = SyntaxNode("Identifier", "a")
 constant missing = SyntaxNode("Missing", "")
 constant nested = SyntaxNode("Body", "", List(SyntaxNode) + SyntaxNode("If", "if", (SyntaxNode("Identifier", "a"), SyntaxNode("Body", "", List(SyntaxNode) + SyntaxNode("Number", "1")))))
@@ -41,6 +42,7 @@ BinaryText Text
 	SyntaxNode("Binary", "-", (one, SyntaxNode("Binary", "-", (one, two)))).BinaryText is "1 - (1 - 2)"
 	SyntaxNode("Binary", "*", (missing, missing)).BinaryText is "*"
 	SyntaxNode("Binary", "*", (one, missing)).BinaryText is "1 *"
+	SyntaxNode("Binary", "*", (sum, two)).BinaryText is "(1 + 2) * 2"
 	constant left = ChildText(0, Precedence)
 	constant right = ChildText(1, Precedence + 1)
 	if left is ""
@@ -92,6 +94,9 @@ ValuesText Text
 	SyntaxNode("List", "", HasBody then children.Slice(0, children.Length - 1) else children).ArgumentsText(0)
 ChildText(childIndex Number, minimumPrecedence Number) Text
 	SyntaxNode("Not", "", (SyntaxNode("Identifier", "a"), SyntaxNode("Identifier", "a"))).ChildText(0, 15) is "a"
+	SyntaxNode("Member", "Length", (sum, sum)).CallText is "(1 + 2).Length"
+	SyntaxNode("MethodCall", "Add", (sum, one)).CallText is "(1 + 2).Add(1)"
+	SyntaxNode("Index", "", (sum, one)).CallText is "(1 + 2)(1)"
 	let child = children(childIndex)
 	let childText = child to Text
 	if child.Precedence > 0 and child.Precedence < minimumPrecedence

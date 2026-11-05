@@ -22,6 +22,7 @@ IsEntry(position Number) Boolean
 	Sample.IsEntry(0)
 	Sample.IsEntry(1) is false
 	ZipReader(Sample.Content(0, 60)).IsEntry(0) is false
+	ZipReader((80, 75, 3, 4) + Sample.Content(Sample.bytes.Length - EndRecordSize, EndRecordSize)).IsEntry(0) is false
 	if position + LocalHeaderSize > bytes.Length
 		return false
 	(Read(bytes.Length - EndRecordSize, 4) is EndHeader) and (Read(position, 4) is LocalHeader)
