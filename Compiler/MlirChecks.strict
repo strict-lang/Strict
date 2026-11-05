@@ -5,14 +5,24 @@ constant Presenting = MlirFunction(List(TypeEntry), TypeEntry("Strict/Game", Lis
 constant Returning = MlirChecks(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 7), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 0), InstructionEntry.Return(0)))), 1)
 constant Testing = MlirChecks(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 7), InstructionEntry(InstructionType.CheckError, List(Text) + "tested", (0, 5)), InstructionEntry.Return(0), InstructionEntry.Jump(InstructionType.JumpEnd, 5)))), 1)
 constant FlatRead = MlirChecks(MlirFunction((MlirFlats.Tripling, MlirFlats.Summing), MlirFlats.Tripling, MethodEntry("First", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 0), InstructionEntry(InstructionType.IndexCall, "numbers", (1, 0)), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 1), InstructionEntry.Return(1)))), 2)
+constant Guarded = MethodEntry("Guarded", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 7), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 0), InstructionEntry.Return(0)))
+constant Calls = TypeEntry("Strict/Calls", List(MemberEntry), (MlirParallel.Twice, Guarded))
+constant Doubling = MlirChecks(MlirFunction(List(TypeEntry) + Calls, Calls, MethodEntry("Run", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 3), InstructionEntry.Invoke(1, ("Strict/Calls", "Twice", "Strict/Number", "number"), List(Number) + 0, -1), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 1), InstructionEntry.Return(1)))), 2)
+constant Guarding = MlirChecks(MlirFunction(List(TypeEntry) + Calls, Calls, MethodEntry("Run", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 3), InstructionEntry.Invoke(1, ("Strict/Calls", "Guarded", "Strict/Number"), List(Number), -1), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 1), InstructionEntry.Return(1)))), 2)
+constant Deferring = MlirChecks(MlirDeferred.Reading.function, 5)
+constant Measuring = MlirChecks(MlirFunction(List(TypeEntry), MlirNatives.Named, MethodEntry("Run", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadText(0, "ab"), MlirNatives.LengthCall, InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 1), InstructionEntry.Return(1)))), 2)
 Emitted Texts
 	FlatRead.Emitted is ("    cf.br ^bb3")
 	Returning.Emitted.Index("    cf.cond_br %t1k, ^bb1e, ^bb2") is 2
 	Returning.Emitted.Last is "    return %t1tr : f64"
 	Testing.Emitted.Last is "    cf.br ^bb3"
+	Doubling.Emitted is ("    cf.br ^bb3")
 	if function.FastLoop >= 0
 		return List(Text)
-	IsFlatRead then List(Text) + ("    cf.br ^bb" + (position + 1)) else Checked(function.method.instructions(position))
+	if IsFlatRead or IsInfallible
+		return List(Text) + ("    cf.br ^bb" + (position + 1))
+	let entry = function.method.instructions(position)
+	function.IsDeferred then Deferred(entry) else Checked(entry)
 Checked(entry InstructionEntry) Texts
 	Text.Combine(Returning.Checked(Returning.function.method.instructions(1))).IndexOf("@strict_trace_checked(%t1v,") > 0
 	let checked = "%t" + position + "v"
@@ -33,3 +43,58 @@ Left(entry InstructionEntry) Texts
 		return MlirLines(function).End + ("    return %t" + position + "tr : f64")
 	let target = MlirStatements(function, position).JumpEnd(PayloadDecoder(entry).SevenBit(1))
 	(function.Store("%t" + position + "tr", "%v_" + entry.texts(0)), "    cf.br ^bb" + target)
+IsInfallible Boolean
+	Doubling.IsInfallible
+	Guarding.IsInfallible is false
+	Returning.IsInfallible is false
+	Measuring.IsInfallible
+	let previous = function.method.instructions(position - 1)
+	let isCalled = previous.kind is InstructionType.Invoke
+	if (isCalled is false) or (previous.payload(0) is not function.method.instructions(position).payload(0))
+		return false
+	IsFailing(function, position - 1, 0) is false
+CannotFail(callee MlirFunction, depth Number) Boolean
+	Doubling.CannotFail(MlirFunction(Doubling.function.types, Calls, MlirParallel.Twice), 0)
+	Doubling.CannotFail(MlirFunction(Doubling.function.types, Calls, Guarded), 0) is false
+	let returned = callee.method.declaredType
+	if returned.EndsWith("Error") or returned.EndsWith("ErrorWithValue") or MlirForeign(callee).IsForeign
+		return false
+	for callee.method.instructions
+		if IsFailing(callee, index, depth)
+			return false
+	true
+IsFailing(callee MlirFunction, at Number, depth Number) Boolean
+	Doubling.IsFailing(Guarding.function, 2, 0)
+	Doubling.IsFailing(Doubling.function, 1, 0) is false
+	let entry = callee.method.instructions(at)
+	if entry.kind is in (InstructionType.CheckError, InstructionType.IndexCall)
+		return true
+	if entry.kind is not InstructionType.Invoke
+		return false
+	let nested = MlirModule(callee.types, "").Called(callee, at)
+	if nested.Length is 0
+		return IsNativeFailing(callee, at)
+	(depth >= 3) or (CannotFail(nested.First, depth + 1) is false)
+IsNativeFailing(callee MlirFunction, at Number) Boolean
+	Doubling.IsNativeFailing(Measuring.function, 1) is false
+	Doubling.IsNativeFailing(Guarding.function, 1)
+	let entry = callee.method.instructions(at)
+	let decoder = PayloadDecoder(entry)
+	let helper = MlirCalls(callee, at).NativeHelper(entry, decoder)
+	(decoder.Text(1) is not "Strict/Number") and (helper is not in ("strict_text_length", "strict_list_length"))
+Returned(target MlirFunction, register Number) Texts
+	Text.Combine(MlirCalls(Doubling.function, 1).Emitted).IndexOf("@strict_trace(") < 0
+	Text.Combine(MlirCalls(Guarding.function, 1).Emitted).IndexOf("@strict_trace(") > 0
+	let result = "%t" + position + "r"
+	if CannotFail(target, 0)
+		return List(Text) + function.Store(result, "%r" + register)
+	let traced = "%t" + position + "tr"
+	MlirMemory(function, position).Traced(result, traced, "strict_trace") + function.Store(traced, "%r" + register)
+Deferred(entry InstructionEntry) Texts
+	Deferring.Deferred(Deferring.function.method.instructions(5)).Last is "    cf.br ^bb6"
+	Deferring.Deferred(Deferring.function.method.instructions(5))(1).IndexOf("@strict_deferred_number(%t5v, %failed)") > 0
+	let register = "%r" + entry.payload(0)
+	let checked = "%t" + position
+	let call = " = func.call @strict_deferred_number(" + checked + "v, %failed)" + MlirParameters.Numbered
+	let kept = (function.Load(checked + "v", register), "    " + checked + "k" + call)
+	kept + function.Store(checked + "k", register) + ("    cf.br ^bb" + (position + 1))

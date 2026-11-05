@@ -104,17 +104,18 @@ Indexed(entry InstructionEntry) Texts
 	MlirLists(Listed, 2).Indexed(Steps(2)).Last is "    llvm.store %t2x, %r2 : f64, !llvm.ptr"
 	Text.Combine(Hoisting.Indexed(Hoisting.function.method.instructions(1))).IndexOf("@strict_hoisted_read(") > 0
 	let isText = MlirLayout(function).Represented(MlirKinds(function).VariableKind(position, entry.texts(0))) is "Text"
-	let memory = MlirMemory(function, position)
 	let arguments = isText then (Temp("l"), Temp("i")) else (Temp("l"), Temp("i"), Temp("nb"))
-	let access = memory.Called(Temp("x"), isText then "strict_text_at" else "strict_list_read", arguments)
+	let helper = isText then "strict_text_at" else "strict_list_read"
+	let access = MlirMemory(function, position).Called(Temp("x"), helper, arguments)
 	let loads = (function.Load(Temp("l"), "%v_" + entry.texts(0)), function.Load(Temp("i"), "%r" + entry.payload(1)))
 	let stored = function.Store(Temp("x"), "%r" + entry.payload(0))
-	let parameters = MlirParameters(function)
-	if entry.texts(0) is in parameters.FixedLists
-		return loads + NameBits + parameters.Read(entry.texts(0), Temp("l"), Temp("i"), Temp("nb"), Temp("x")) + stored
+	let list = MlirParameters(function).Fixed(entry.texts(0))
+	if list is not ""
+		return loads + NameBits + MlirParameters(function).Fetched(list, Temp("l"), Temp("i"), Temp("nb"), Temp("x")) + stored
 	(isText then loads else loads + NameBits) + access + stored
 NameBits Texts
 	MlirLists(Listed, 2).NameBits.Last.IndexOf("strict_bits") > 0
+	Text.Combine(MlirLists(MlirParameters.Aliasing.function, 3).Emitted).IndexOf("@strict_hoisted_read(%h_numbers") > 0
 	let address = "    " + Temp("n") + " = llvm.mlir.addressof @s" + function.Symbol + "_" + position + " : !llvm.ptr"
 	(address, "    " + Temp("nb") + " = func.call @strict_bits(" + Temp("n") + ") : (!llvm.ptr) -> f64")
 IsElementStore Boolean

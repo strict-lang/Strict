@@ -17,9 +17,9 @@ IsParallel Boolean
 	Doubling.IsParallel
 	Randomizing.IsParallel is false
 	MlirParallel(MlirFunction(List(TypeEntry) + Rows, Rows, Filtered), 2).IsParallel is false
-	MlirParallel(MlirKernel.Doubling.function, 2).IsParallel is false
+	MlirParallel(MlirKernel.Doubling.function, 2).IsParallel
 	let isBegin = function.method.instructions(position).kind is InstructionType.LoopBegin
-	let isSpecial = function.IsCounted or MlirLayout(function).IsInitializer or MlirKernel(function, position).IsSimple
+	let isSpecial = function.IsCounted or MlirLayout(function).IsInitializer
 	if (isBegin is false) or isSpecial or (MlirLoops(function, position).IsCollecting is false)
 		return false
 	for Range(position + 1, function.method.LoopEndOf(position))
@@ -114,13 +114,16 @@ Restored(first Number, limit Number) Texts
 Iterated Texts
 	Text.Combine(Doubling.Iterated).IndexOf("cf.br ^loop2child(%from : i64)") > 0
 	Text.Combine(Byting.Iterated).IndexOf("@strict_list_data(%t2rv)") > 0
-	let loops = MlirLoops(function, position)
+	Text.Combine(Doubling.Iterated).IndexOf("%t2g = llvm.load %t2ep") > 0
+	Text.Combine(Doubling.Iterated).IndexOf("  ^fhloop2packed:") > 0
+	let loops = MlirLoops(function, position, true)
 	let entry = function.method.instructions(position)
 	let bounds = entry.payload(1) is 1 then loops.RangeBounds(entry) else loops.CountBounds(entry)
 	let itemizer = MlirBytes(function, position).Itemizer
 	let items = "    " + Temp("ri") + " = func.call " + itemizer + "(" + Temp("rv") + ") : (f64) -> !llvm.ptr"
 	let started = (function.Load(Temp("rv"), "%v_forResult"), items, "    cf.br ^loop" + position + "child(%from : i64)")
-	bounds + loops.Items + started + Checked + loops.Current + Body + Next
+	let prefix = bounds + loops.Items + started + Checked + loops.Current
+	MlirDeferred(function, position).Packed(MlirDeferred(function, position).Versioned(prefix, prefix + Body + Next))
 Checked Texts
 	Doubling.Checked.First is "  ^loop2child(%t2ki: i64):"
 	let label = "^loop" + position + "child"
@@ -147,6 +150,7 @@ Body Texts
 Collected(at Number) Texts
 	MlirParallel(MlirFiltering.Keeping.function, 2).Collected(7).Last.IndexOf("@strict_rc_written(%t7p)") > 0
 	Doubling.Collected(5).Length is 3
-	let stored = MlirFastLoop(function, position).Emitted(at)
+	let emitted = MlirFastLoop(function, position).Emitted(at)
+	let stored = function.IsDeferred then MlirDeferred(function, position).Scoped(emitted) else emitted
 	let written = "    func.call @strict_rc_written(%t" + at + "p) : (!llvm.ptr) -> ()"
 	Filler is "strict_list_filled" then stored + written else stored

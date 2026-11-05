@@ -10,9 +10,9 @@ has Guarded Number = -1
 has IsRecursive Boolean = true
 has typeIndex Dictionary(Text, Number) = Dictionary(Text, Number)
 has safeCalls Dictionary(Text, Number) = Dictionary(Text, Number)
+has IsDeferred Boolean = false
 constant Counter = MlirFunction(List(TypeEntry), TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry)), MethodEntry.CountingLoop)
 constant Shape = TypeEntry("Strict/Shape", (MemberEntry("width", "Strict/Number", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
-constant ListKinds = (InstructionType.IndexCall, InstructionType.InvokeWriteToList, InstructionType.CopyList, InstructionType.InvokeRemove)
 IsCounted = lineSlots.Length > 0
 Symbol Text
 	Counter.Symbol is "Counter_Run_0"
@@ -93,12 +93,14 @@ Entry Texts
 	"  ^stackChecked:" is in MlirGroups.Norming.function.Entry
 	"  ^tailed:" is in MlirTails.Sample.function.Entry
 	"    %self = llvm.load %instance : !llvm.ptr -> f64" is in MlirInstances.Looping.Entry
+	"    %q_numbers = llvm.load %v_numbers : !llvm.ptr -> f64" is in MlirParameters.Membered.function.Entry
 	let checked = IsRecursive and (method.Invoked.Length > 0) then MlirRecursion.StackChecked else List(Text)
 	mutable lines = Slot("%instance") + Store("%p0", "%instance") + checked
 	for Parameters
 		lines = lines + Store("%p" + index, "%v_" + value)
-	lines = lines + MlirDestined(value, 0).Prologue + MlirTails(value, 0).Restart
-	lines + MlirParameters(value).Hoisted + MlirInstances(value, 0).Unpacked + MlirInstances(value, 0).Constants
+	let lists = MlirParameters(value)
+	let unpacked = lists.Hoisted(method.parameters) + MlirInstances(value, 0).Unpacked + lists.Hoisted(lists.Indexed)
+	lines + MlirDestined(value, 0).Prologue + MlirTails(value, 0).Restart + unpacked + MlirInstances(value, 0).Constants
 Slot(name Text) Texts
 	Counter.Slot("%r0").Length is 2
 	("    " + name + " = llvm.alloca %one x f64 : (i64) -> !llvm.ptr", Store("%zero", name))
@@ -124,7 +126,7 @@ Label(position Number) Texts
 	let label = "  ^bb" + position + ":"
 	afterTerminator then List(Text) + label else ("    cf.br ^bb" + position, label)
 Emitted(position Number) Texts
-	Counter.Emitted(0).Length is 18
+	Counter.Emitted(0).Length is 19
 	let kind = method.instructions(position).kind
 	if kind is in (InstructionType.LoopBegin, InstructionType.LoopEnd)
 		return kind is InstructionType.LoopBegin then MlirLoops(value, position).Begin else MlirLoops(value, position).End
@@ -133,6 +135,6 @@ Emitted(position Number) Texts
 		return statements.Binary(method.instructions(position))
 	let isCall = kind is in (InstructionType.Invoke, InstructionType.Print, InstructionType.FieldLoad)
 	let lists = MlirLists(value, position)
-	let isList = (kind is in ListKinds) or lists.IsElementStore
+	let isList = (kind is in MlirStatements.ListKinds) or lists.IsElementStore
 	let emitted = isCall then MlirCalls(value, position).Emitted else isList then lists.Emitted else statements.Emitted
 	MlirHanded(value, position).Wrapped(MlirChanged(value, position).With(emitted) + MlirPacking(value, position).Repacked)

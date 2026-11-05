@@ -58,11 +58,11 @@ Parameters Text
 		parameters.Add("%p" + index + ": f64")
 	Text.Combine(parameters, ", ")
 Converted Texts
-	MlirForeign(Doubler).Converted is List(Text) + "    %c1 = func.call @strict_list_flat(%p1) : (f64) -> f64"
+	MlirForeign(Doubler).Converted is List(Text) + "    %c1 = func.call @strict_list_ready(%p1) : (f64) -> f64"
 	mutable lines = List(Mutable(Text))
 	for function.method.parameters
 		if IsNumbers(value.typeName)
-			lines.Add("    %c" + (index + 1) + " = func.call @strict_list_flat(%p" + (index + 1) + ") : (f64) -> f64")
+			lines.Add("    %c" + (index + 1) + " = func.call @strict_list_ready(%p" + (index + 1) + ") : (f64) -> f64")
 	lines
 Arguments Text
 	MlirForeign(Adder).Arguments is "%p0, %p1, %p2"

@@ -1,0 +1,51 @@
+has function MlirFunction
+has position Number
+constant Seeding = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MemberEntry("start", "Strict/List(Number)", List(InstructionEntry), false), "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "start"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "moved")) + MlirOwned.Built))
+constant Dropping = MlirDying(MlirOwned.Rebuilt.function, 10)
+constant Dropped = InstructionEntry.Return(4)
+constant Kept = ("    %t#ss = arith.cmpf oeq, %t#o, %t#sv : f64", "    %t#sk = arith.ori %t#same, %t#ss : i1")
+Loaded(register Number) Text
+	MlirDying(Seeding, 1).Loaded(0) is "start"
+	MlirDying(Seeding, 4).Loaded(0) is "listResult0"
+	let writer = MlirKinds(function).Writer(position, register)
+	let loaded = writer >= 0 then function.method.instructions(writer) else function.method.instructions(position)
+	loaded.kind is InstructionType.LoadVariableToRegister then loaded.texts(0) else ""
+Seed(name Text) Text
+	MlirDying(Seeding, 0).Seed("moved") is "start"
+	MlirDying(MlirOwned.Moving, 0).Seed("moved") is ""
+	for function.method.instructions
+		if (value.kind is InstructionType.StoreRegisterToVariable) and (value.texts(0) is name)
+			let loaded = MlirDying(function, index).Loaded(value.payload(0))
+			if loaded is in function.method.ParameterNames
+				return loaded
+	""
+Guarded(lines Texts, seed Text) Texts
+	Text.Combine(MlirOwned(Seeding, 4).Stored(Seeding.method.instructions(4))).IndexOf("%t4sv = llvm.load %v_start") > 0
+	MlirDying(Seeding, 4).Guarded(MlirOwned.Fresh, "") is MlirOwned.Fresh
+	if seed is ""
+		return lines
+	let skipped = lines(1).Replace("%t#same,", "%t#sk,")
+	((List(Text) + lines(0) + function.Load("%t#sv", "%v_" + seed)) + Kept + skipped) + lines.Slice(2, lines.Length - 2)
+Mutated Texts
+	Dropping.Mutated is ("moved")
+	MlirDying(Seeding, 4).Mutated.Length is 0
+	mutable stored = List(Text)
+	for function.method.instructions
+		if value.kind is InstructionType.StoreRegisterToVariable
+			stored = stored + value.texts(0)
+	for stored
+		let isFirst = (stored.Index(value) is index) and (stored.Count(value) > 1)
+		if isFirst and (Seed(value) is "") and MlirOwned(function, 0).IsOwned(value)
+			value
+Returned(entry InstructionEntry) Texts
+	Dropping.Returned(Dropped).Last is "    func.call @strict_rc_dead(%t10d0, %t10) : (f64, f64) -> ()"
+	Dropping.Returned(InstructionEntry.Return(7)).Length is 0
+	let returned = "%t" + position
+	let kept = Loaded(entry.payload(0))
+	mutable lines = List(Text)
+	for Mutated
+		if value is not kept
+			let old = returned + "d" + index
+			let dead = "    func.call @strict_rc_dead(" + old + ", " + returned + ") : (f64, f64) -> ()"
+			lines = lines + function.Load(old, "%v_" + value) + dead
+	lines

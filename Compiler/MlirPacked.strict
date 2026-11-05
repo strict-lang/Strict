@@ -7,12 +7,22 @@ constant Numbered = " = arith.constant "
 constant Summing = MlirPacked(MlirKernel.Summing.function, 1)
 constant Doubling = MlirPacked(MlirKernel.Doubling.function, 2)
 constant SecondCases = ("1024: ^ffloop1fast", "2048: ^fgloop1fast", "512: ^fhloop1fast", "384: ^filoop1fast", "256: ^fjloop1fast")
-Branch Text
-	Summing.Branch is "    cf.cond_br %f1ok1, ^floop1packed, ^loop1generic"
-	Doubling.Branch is "    cf.cond_br %f2ok1, ^floop2packed, ^loop2generic"
+Branch Texts
+	Summing.Branch is ("    cf.cond_br %f1ok1, ^floop1packed, ^loop1generic")
+	Doubling.Branch.Last is "    cf.cond_br %f2fast, ^floop2packed, ^loop2generic"
 	let kind = Packable.Length > 0 then "packed, ^loop" else "fast, ^loop"
 	let flag = "%f" + position + "ok" + MlirKernel(function, position).Sources.Length
-	"    cf.cond_br " + flag + ", ^floop" + position + kind + position + "generic"
+	let targets = ", ^floop" + position + kind + position + "generic"
+	let isParallel = MlirParallel(function, position).IsParallel
+	let chosen = isParallel then "%f" + position + "fast" else flag
+	(isParallel then Limited(flag) else List(Text)) + ("    cf.cond_br " + chosen + targets)
+Limited(flag Text) Texts
+	Doubling.Limited("%f2ok1")(1) is "    %f2few = arith.cmpf olt, %f2n, %f2pt : f64"
+	Doubling.Limited("%f2ok1").Last is "    %f2fast = arith.andi %f2ok1, %f2few : i1"
+	let prefix = "%f" + position
+	let threshold = "    " + prefix + "pt = arith.constant " + MlirCost(function, position).Threshold + ".0 : f64"
+	let few = "    " + prefix + "few = arith.cmpf olt, " + prefix + "n, " + prefix + "pt : f64"
+	(threshold, few, "    " + prefix + "fast = arith.andi " + flag + ", " + prefix + "few : i1")
 Packable Texts
 	Summing.Packable is (MlirFastLoop.Iterated, "numbers")
 	Doubling.Packable is (MlirFastLoop.Iterated, "numbers")
