@@ -10,6 +10,9 @@ constant Halving = "Through(Wrapped(Halver))"
 constant Traits = KnownTypes(("Counter", "Many"), (Scope(List(Text) + "length", List(Text) + "Number"), Scope(List(Text) + "elements", List(Text) + "Generics")), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Scope(List(Text) + " trait", List(Text) + "true"), KnownTypes.NoMembers))
 constant Traited = Specialization(ValueCodegen(TypeInference(Traits, (KnownTypes.NoMembers, KnownTypes.NoMembers)), Scope(List(Text), List(Text)), CallTarget(Traits, TypeShape(Using), "Strict/Boxes/Using", List(Text))))
 constant Wrap = SyntaxParser(Tokenizer("Wrapped(w)").Tokens).Parse
+constant Doubled = KnownTypes(List(Text) + "Using", List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(("Through", "Through"), ("Number", "Number")), List(Scope) + Scope(("Through", "Through types", "Through", "Through types"), ("wrapped", "Wrapped", "other", "Number")))
+constant Overloaded = Specialization(ValueCodegen(TypeInference(Doubled, List(Scope) + KnownTypes.NoMembers), Scope(List(Text), List(Text)), CallTarget(Doubled, TypeShape(Using), "Strict/Boxes/Using", List(Text))))
+constant Targets = List(Text) + "Strict/Boxes/Using.Through(Wrapped(Halver), Number)"
 Signed(node SyntaxNode, owner Text, returnType Text, block CodeBlock) Texts
 	Plain.Signed(Passing, "Using", "Number", Wrapping)(1) is Halving
 	Plain.Signed(Passing, "Using", "Number", CodeBlock.Empty.Declare("w", "Wrapped"))(1) is "Through"
@@ -38,6 +41,11 @@ Arguments(node SyntaxNode, block CodeBlock) Texts
 	Plain.Specialized(Coding, 1, Halving).instructions.Length is 2
 	Plain.Completed(Coding, Unused, ("Strict/Boxes/Using." + Halving, "Strict/Boxes/Using." + Halving)).methods.Length is 1
 	Plain.Completed(Coding, Unused, List(Text) + "Strict/Boxes/Usage.Through(Wrapped(Halver))").methods.Length is 0
+	Plain.Name(Passing, List(Text) + "Halver", "Using", CodeBlock.Empty.Declare("w", "Halver(Number)")) is "Through"
+	Plain.Name(Passing, List(Text) + "Generic", "Wrapped", Wrapping) is "Through"
+	Plain.Name(Passing, ("Wrapped", "Wrapped"), "Using", Wrapping) is Halving
+	Plain.Name(Passing, List(Text) + "Generic", "Using", CodeBlock.Empty.Declare("w", "Generic")) is "Through"
+	Traited.Name(Passing, List(Text) + "Counter", "Using", CodeBlock.Empty.Declare("w", "Counter")) is "Through"
 	for Range(values.ArgumentStart(node), node.children.Length)
 		values.TypeOf(node.children(value), block)
 IsPlain(owner Text) Boolean
@@ -55,12 +63,20 @@ IsGeneric(type Text) Boolean
 	Plain.IsGeneric("Halver") is false
 	Traited.IsGeneric("Many")
 	Traited.IsGeneric("Counter")
+	Traited.Name(Passing, List(Text) + "Counter", "Using", CodeBlock.Empty.Declare("w", "Generic")) is "Through"
+	Traited.Name(Passing, List(Text) + "Counter", "Using", CodeBlock.Empty.Declare("w", "Many")) is "Through(Many)"
+	Plain.Name(Passing, List(Text) + "Wrapped", "Using", CodeBlock.Empty.Declare("w", "Halver")) is "Through"
 	let members = values.target.types.MembersOf(type).types
 	IsTrait(type) or values.target.types.IsKnown(type) and (("Generic" is in members) or ("Generics" is in members))
 IsTrait(type Text) Boolean
 	Traited.IsTrait("Counter")
 	Plain.IsTrait("Halver") is false
 	Traited.IsTrait("Many") is false
+	Plain.Header("T(a Number, b Generic)", "T(Wrapped(Halver), X)") is "T(a Number, b X)"
+	Plain.Header("T(a Generic) Number", "T(Halver(Number), X)") is "T(a X) Number"
+	Plain.Header("Add(amount Number) Number", "Add(Halver)") is "Add(amount Number) Number"
+	Plain.Header(Using(1), "Through(Halver, Number)") is Using(1)
+	Plain.Header("T(a Generic, b Wrapped, c Generic)", "T(Wrapped(Halver), X)") is "T(a Generic, b Wrapped(Halver), c X)"
 	values.target.types.ParameterScope(type).TypeOf(" trait") is "true"
 Header(line Text, name Text) Text
 	Plain.Header(Using(1), Halving) is "Through(wrapped Wrapped(Halver)) Number"
@@ -91,6 +107,7 @@ Methods(codegen TypeCodegen, names Texts) List(MethodEntry)
 	Plain.Methods(Coding, List(Text) + Halving).First.Name is Halving
 	Plain.Methods(Coding, List(Text) + Halving).First.parameters.First.typeName.EndsWith("Wrapped(Halver)")
 	Plain.Methods(Coding, List(Text) + "Through").Length is 0
+	Plain.Start(("", Using(1)), "Through") is 1
 	for names
 		let start = value.IndexOf("(") > 0 then Start(codegen.lines, value) else -1
 		if start >= 0
@@ -110,6 +127,9 @@ Start(lines Texts, method Text) Number
 	-1
 Specialized(codegen TypeCodegen, start Number, name Text) MethodEntry
 	Plain.Specialized(Coding, 1, Halving).Name is Halving
+	Overloaded.Start(("Through(wrapped Wrapped) Number", "	1", "Through(o Number) Number", "	2"), "Through(Number)") is 2
+	Overloaded.Start(Using, "Through(Wrapped)") is 1
+	Plain.Completed(Coding, Plain.Completed(Coding, Unused, Targets), Targets).methods.Length is 1
 	let header = Header(codegen.lines(start), name)
 	let lines = codegen.lines.Slice(0, start) + header + codegen.lines.Slice(start + 1, codegen.lines.Length - start - 1)
 	let method = TypeCodegen(codegen.fullName, lines, codegen.inference, codegen.typeNames).Method(start)
