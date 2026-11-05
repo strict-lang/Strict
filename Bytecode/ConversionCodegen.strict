@@ -15,12 +15,21 @@ constant Nesting = SyntaxNode("Binary", "+", (SyntaxNode("Identifier", "x"), Syn
 constant Pixelated = CodeBlock.Empty.Declare("pixels", "ColorValues")
 ArgumentTypes(node SyntaxNode, owner Text, block CodeBlock) Texts
 	Plain.ArgumentTypes(SyntaxNode("Call", "Greet", ValueCodegen.One), "Greeter", CodeBlock.Empty) is ("Unknown")
+	Plain.Typed(SyntaxNode("Binary", "+", Typing.children), CodeBlock.Empty).text is "+"
+	Plain.Typed(SyntaxNode("Call", "to", Typing.children), CodeBlock.Empty).Kind is "Call"
+	Plain.Typed(ValueCodegen.ToText, CodeBlock.Empty.Declare("x", "Number")) is ValueCodegen.ToText
+	Plain.Replaced(SyntaxNode("Call", "Greeter", (Pixels, Pixels))) to Text is "Greeter(pixels, pixels)"
+	Plain.Replaced(SyntaxNode("Call", "Unknown", Repainted.children)).Kind is "Call"
 	let isOverloaded = values.target.IsOverloaded(node.text, owner)
 	for Range(values.ArgumentStart(node), node.children.Length)
 		isOverloaded then values.TypeOf(node.children(value), block) else "Unknown"
 Assigned(node SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Assigned(SyntaxNode("Declaration", "let a", ValueCodegen.One), CodeBlock.Empty).Kind is "Number"
 	Colored.Assigned(Repainted.children(1), CodeBlock.Empty.Declare("c", "Color")).text is "Color"
+	Kinded.Textual(SyntaxNode("Binary", "+", (ValueCodegen.One, SyntaxNode("Call", "Kind"))), Pixelated).text is "Kind"
+	Kinded.Operand(SyntaxNode("Binary", "-", (ValueCodegen.Hi, SyntaxNode("Call", "Kind"))), Pixelated).text is "Kind"
+	Plain.Operand(Nesting, CodeBlock.Empty.Declare("x", "List(Numbers)")).Kind is "List"
+	Colored.Elements(SyntaxNode("List", "", NewColorValue), "Colors", CodeBlock.Empty).Kind is "List"
 	let right = node.children.Last
 	node.Kind is "Declaration" then right else Converted(right, values.TypeOf(node.children(0), block), block)
 Converted(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
@@ -84,6 +93,13 @@ Typed(node SyntaxNode, block CodeBlock) SyntaxNode
 	known is "Text" then node else TypeValue(values.target.FullName(known))
 TypeValue(full Text) SyntaxNode
 	Plain.TypeValue("Strict/Number") to Text is "Type(\"Number\", \"Strict\")"
+	Plain.TypeValue("Strict/Number").children(0).Kind is "Text" and (Plain.TypeValue("A/B").children(1).Kind is "Text")
+	Stepped.Bracketed(SyntaxNode("Call", "Step"), CodeBlock.Empty) to Text is "\"(\" + (Step().step + \")\")"
+	Plain.Changed(ValueCodegen.One, "to", "Text", CodeBlock.Empty) to Text is "1 to Text"
+	Colored.Held(NewColor, "Byte", CodeBlock.Empty) to Text is "Color(1).Red"
+	Stepped.Converted(SyntaxNode("Call", "Step"), "Text", CodeBlock.Empty).text is "+"
+	Stepped.Converted(SyntaxNode("Call", "Step"), "Number", CodeBlock.Empty).text is "Step"
+	Colored.Converted(ValueCodegen.Ones, "Color", CodeBlock.Empty) to Text is "Color(1, 1)"
 	let split = full.LastIndexOf("/")
 	let name = SyntaxNode("Text", "\"" + full.Substring(split + 1, full.Length - split - 1) + "\"")
 	SyntaxNode("Call", "Type", (name, SyntaxNode("Text", "\"" + full.Substring(0, split) + "\"")))
