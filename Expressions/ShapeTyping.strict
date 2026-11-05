@@ -5,6 +5,7 @@ constant Counting = ShapeTyping(ResolveCheck.Counting)
 constant Twice = TypeShape("Twice = number * 2")
 constant Next = Tokenizer("Next(add = 1) = number + add").Tokens
 constant Boxed = ShapeTyping(TypeInference(KnownTypes(("Box", "Item"), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Scope(("Sample", "Inner"), ("Box", "Item")), KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers)), (Scope(List(Text) + "Sample", List(Text) + "Box(3).Inner"), KnownTypes.NoMembers)))
+constant Swapped = ShapeTyping(Instantiation.Inferring)
 Typed(shape TypeShape, scope Scope, typeName Text) Scope
 	Counting.Typed(TypeShape("constant a = 1"), KnownTypes.NoMembers, "Count").names.Length is 0
 	Counting.Typed(Twice, KnownTypes.NoMembers, "Count").TypeOf("Twice") is "Number"
@@ -30,6 +31,10 @@ Refined(scope Scope, name Text, type Text) Scope
 			types(index) = type
 	Scope(scope.names, types)
 Known(scope Scope, name Text, type Text) Scope
+	Swapped.Typed(Instantiation.Swapping, KnownTypes.NoMembers, "Couple").TypeOf("Swapped") is "Couple(second, first)"
+	Counting.Typed(TypeShape("constant a = List(Number) + 3"), KnownTypes.NoMembers, "Count").TypeOf("a") is "Numbers"
+	Counting.Refined(Scope(List(Text) + "a", List(Text) + "Box"), "a", "").TypeOf("a") is "Box"
+	Counting.Refined(Scope(("a", "b"), ("Box", "Box")), "a", "Item").TypeOf("b") is "Box"
 	Counting.Known(KnownTypes.NoMembers, "a", "").names.Length is 0
 	Counting.Known(KnownTypes.NoMembers, "a", "Number").TypeOf("a") is "Number"
 	type is "" then scope else scope.With(name, type)
@@ -47,6 +52,8 @@ ChainType(tokens Texts, typeName Text, known Scope) Text
 	let isInferred = node.Kind is in ("MethodCall", "Member", "Binary", "List")
 	isInferred then Inferred(node, typeName, known) else ""
 Inferred(node SyntaxNode, typeName Text, known Scope) Text
+	Chained.Inferred(SyntaxParser(Tokenizer("Box(3).Sample").Tokens).Parse, "User", KnownTypes.NoMembers) is "Item"
+	Chained.Expanded(SyntaxNode("Identifier", "x")) is SyntaxNode("Identifier", "x")
 	Boxed.Inferred(SyntaxParser(Tokenizer("Box.Sample").Tokens).Parse, "User", KnownTypes.NoMembers) is "Item"
 	Chained.Inferred(SyntaxParser(Tokenizer("Box.Sample.Weight").Tokens).Parse, "User", KnownTypes.NoMembers) is "Number"
 	let owner = node.Kind is "Member" then node.children(0).text else ""
@@ -66,6 +73,8 @@ Expanded(node SyntaxNode) SyntaxNode
 		children.Add(Expanded(value))
 	SyntaxNode(node.Kind, node.text, children, node.line)
 ComputedType(tokens Texts, typeName Text, methods Scope) Text
+	Counting.ChainType(Tokenizer("constant a + Twice(2)").Tokens, "Count", KnownTypes.NoMembers) is ""
+	Counting.ChainType(("constant", "a", "="), "Count", KnownTypes.NoMembers) is ""
 	Counting.ComputedType(Next, "Count", KnownTypes.NoMembers) is "Number"
 	let header = HeaderTokens(tokens)
 	let node = SyntaxParser(tokens).ParseRange(header.ParametersEnd + 2, tokens.Length)
