@@ -79,7 +79,10 @@ IsWritten(code Number, source Text) Boolean
 	Joining.IsWritten(6, "\tlet x = \"a\"")
 	Joining.IsWritten(6, "\tYes") is false
 	Joining.IsWritten(21, "x + y") and (Joining.IsWritten(21, "x") is false)
+	Stored.IsWritten(11, "\ttext = 5") and (Stored.IsWritten(11, "\tCall(text)") is false)
 	let entry = method.instructions((code / 8).Floor)
+	if code % 8 is 3
+		return source.IndexOf(entry.texts.First + " = ") >= 0
 	if code % 8 is 6
 		return source.IndexOf("\"" + entry.texts.First.Replace("\n", "\\n").Replace("\t", "\\t") + "\"") >= 0
 	(code % 8 is not 5) or (source.IndexOf(Mutation.Operators(Mutation.Arithmetic.Index(entry.kind))) >= 0)
