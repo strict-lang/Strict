@@ -39,7 +39,8 @@ Converted(operand SyntaxNode, typeName Text) SyntaxNode
 	Collapse("5 to Number") is "5 to Number"
 	Collapse("\"5\" to Text") is "\"5\" to Text"
 	Collapse("5 to Text") is "\"5\""
-	Collapse("true to Number") is "true to Number"
+	Collapse("true to Number") is "true to Number" and Converted(SyntaxNode("Number", "5"), "Text").Kind is "Text"
+	Converted(SyntaxNode("Text", "5"), "Number").Kind is "Number"
 	if (operand.Kind is "Text") and (typeName is "Number")
 		return SyntaxNode("Number", Inner(operand))
 	if (operand.Kind is in ("Number", "Boolean")) and (typeName is "Text")

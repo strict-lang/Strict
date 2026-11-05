@@ -16,6 +16,7 @@ Issues List(ValidationIssue)
 Loops(node SyntaxNode, isNested Boolean, constants Texts, isShort Boolean) List(LoopBody)
 	Loops(BodyParser(("Run", "\tfor 3", "\t\tfor 2", "\t\t\tvalue")).Block(1, 1), false, List(Text), true).Last.isNested
 	Loops(BodyParser(("Run", "\tfor y, x in 3, 2", "\t\ty + x")).Block(1, 1), false, List(Text), true).First.isNested
+	Loops(BodyParser(("Run", "\tfor 3", "\t\tfor 2", "\t\t\tvalue")).Block(1, 1), false, List(Text), true).Length is 2
 	mutable loops = List(Mutable(LoopBody))
 	for node.children
 		let isLoop = value.Kind is "For"

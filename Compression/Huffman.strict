@@ -21,6 +21,7 @@ Sorted(lengths Numbers) Numbers
 Decoded(stream Inflate, position Number) Symbol
 	Sample.Decoded(Inflate(List(Number) + 6), 1) is Symbol(2, 3)
 	Longest.Decoded(Inflate((1, 0)), 0) is Symbol(9, 16)
+	(Sample.Decoded(Inflate((1, 7)), 0) is Symbol(0, 2)) and (Sample.Decoded(Inflate((1, 7)), 8) is Symbol(3, 3))
 	mutable relative = 0
 	mutable offset = 0
 	for Range(1, counts.Length)
