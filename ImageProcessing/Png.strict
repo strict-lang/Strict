@@ -1,7 +1,6 @@
 has bytes Numbers
 constant ImageData = 1229209940
 constant Palette = 1347179589
-constant ByteValues = 256
 constant KindOffset = 25
 constant DepthOffset = 24
 constant RedWeight = 299
@@ -41,8 +40,8 @@ Step Number
 	bytesPerPixel < 1 then 1 else bytesPerPixel
 Number32(position Number) Number
 	GraySample.Number32(8) is 13
-	let high = bytes(position) * ByteValues + bytes(position + 1)
-	(high * ByteValues + bytes(position + 2)) * ByteValues + bytes(position + 3)
+	let high = bytes(position) * Byte.Values + bytes(position + 1)
+	(high * Byte.Values + bytes(position + 2)) * Byte.Values + bytes(position + 3)
 Chunk(type Number) Numbers
 	PaletteSample.Chunk(Palette) is (0, 0, 0, 255, 255, 255)
 	constant ChunkOverhead = 12
@@ -76,12 +75,12 @@ Filtered(kind Number, filtered Number, left Number, up Number, corner Number) Nu
 	GraySample.Filtered(4, 5, 10, 20, 15) is 20
 	(GraySample.Filtered(2, 5, 10, 30, 15) is 35) and (GraySample.Filtered(3, 5, 10, 30, 15) is 25)
 	if kind is 1
-		return (filtered + left) % ByteValues
+		return (filtered + left) % Byte.Values
 	if kind is 2
-		return (filtered + up) % ByteValues
+		return (filtered + up) % Byte.Values
 	if kind is 3
-		return (filtered + ((left + up) / 2).Floor) % ByteValues
-	kind is 4 then (filtered + Paeth(left, up, corner)) % ByteValues else filtered
+		return (filtered + ((left + up) / 2).Floor) % Byte.Values
+	kind is 4 then (filtered + Paeth(left, up, corner)) % Byte.Values else filtered
 Paeth(left Number, up Number, corner Number) Number
 	GraySample.Paeth(10, 20, 15) is 15
 	GraySample.Unfiltered((0, 5, 9, 0, 4, 252, 0, 0)) is (5, 9, 0, 1, 5, 0)
@@ -122,4 +121,4 @@ Gray(samples Numbers, palette Numbers, pixel Number) Number
 		return Luma(palette(first * 3), palette(first * 3 + 1), palette(first * 3 + 2))
 	if (bytes(KindOffset) is 2) or (bytes(KindOffset) is 6)
 		return Luma(first, samples(pixel * channels + 1), samples(pixel * channels + 2))
-	first / (bytes(DepthOffset) >= 8 then Color.Limit else 2 ^ bytes(DepthOffset) - 1)
+	first / (bytes(DepthOffset) >= 8 then Byte.Max else 2 ^ bytes(DepthOffset) - 1)

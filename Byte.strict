@@ -1,2 +1,3 @@
 has number with value >= 0 and value <= Max and value.Bits is 8
 constant Max = 255
+constant Values = 256

@@ -2,6 +2,7 @@ has counts Numbers
 has symbols Numbers
 constant Sample = Huffman.From((2, 1, 3, 3))
 constant Longest = Huffman((0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1), (5, 9))
+constant CodeLengthCount = 16
 From(lengths Numbers) Huffman
 	Huffman.From((2, 1, 3, 3)).symbols is (1, 0, 2, 3)
 	Huffman.From((2, 2, 2, 2)).Decoded(Inflate((3)), 0) is Symbol(3, 2)
@@ -9,13 +10,13 @@ From(lengths Numbers) Huffman
 Counts(lengths Numbers) Numbers
 	Sample.Counts((2, 1, 3, 3)).Length is 16
 	Sample.Counts((2, 1, 3, 3)).Sum is 4
-	for 16
+	for CodeLengthCount
 		index is 0 then 0 else lengths.Count(index)
 Sorted(lengths Numbers) Numbers
 	Sample.Sorted((2, 1, 3, 3)) is (1, 0, 2, 3)
 	Sample.Sorted((0, 2, 0, 1)) is (3, 1)
 	mutable sorted = List(Mutable(Number))
-	for length, symbolLength in Range(1, 16), lengths
+	for length, symbolLength in Range(1, CodeLengthCount), lengths
 		if symbolLength is length
 			sorted.Add(index)
 	sorted

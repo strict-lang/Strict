@@ -23,7 +23,7 @@ Height Number
 Number16(position Number) Number
 	Gray.Number16(4) is 16
 	Gray.Number16(0) is 65496
-	bytes(position) * Png.ByteValues + bytes(position + 1)
+	bytes(position) * Byte.Values + bytes(position + 1)
 Segment(marker Number) Number
 	Gray.Segment(Scan) is 151
 	Gray.Segment(Restart) is -1

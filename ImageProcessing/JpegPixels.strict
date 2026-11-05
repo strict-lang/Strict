@@ -26,7 +26,7 @@ Sample(component Number, column Number, row Number) Number
 Grays Numbers
 	Gray.Grays.First is 1 / 255
 	for Plane(0)
-		value / Color.Limit
+		value / Byte.Max
 Colors Slow(List(ColorValue))
 	Gray.Colors.First is ColorValue(1 / 255, 1 / 255, 1 / 255)
 	Colored.Colors.Last.Red > 0.9
@@ -47,4 +47,4 @@ Converted(luma Number, blue Number, red Number) ColorValue
 Clamped(component Number) Number
 	Colored.Clamped(300) is 1
 	Colored.Clamped(-5) is 0
-	component < 0 then 0 else component > Color.Limit then 1 else component / Color.Limit
+	component < 0 then 0 else component > Byte.Max then 1 else component / Byte.Max

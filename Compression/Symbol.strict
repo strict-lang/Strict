@@ -1,2 +1,7 @@
 has number Number
 has bits Number
+constant EndOfBlock = 256
+constant FirstLength = 257
+constant RepeatPrevious = 16
+constant RepeatZeros = 17
+constant RepeatLongZeros = 18
