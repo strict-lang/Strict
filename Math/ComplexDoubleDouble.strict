@@ -26,6 +26,7 @@ High Complex
 Decimals(count Number) Text
 	ComplexDoubleDouble(DoubleDouble(1.5), DoubleDouble(-2)).Decimals(1) is "1.5 - 2.0i"
 	Sample.Decimals(2) is "1.00 + 2.00i"
-	let negative = imaginary.high < 0 or (imaginary.high is 0 and imaginary.low < 0)
+	ComplexDoubleDouble(DoubleDouble(1), DoubleDouble(0, -0.5)).Decimals(1) is "1.0 - 0.5i"
+	let negative = imaginary.IsNegative
 	let magnitude = negative then DoubleDouble(-imaginary.high, -imaginary.low) else imaginary
 	real.Decimals(count) + (negative then " - " else " + ") + magnitude.Decimals(count) + "i"

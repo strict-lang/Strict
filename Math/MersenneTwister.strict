@@ -11,6 +11,8 @@ Seeded(seed Number) Slow(MersenneTwister)
 	MersenneTwister(seeded)
 Spread(previous Number) Number
 	MersenneTwister(List(Number)).Spread(1) is 1812433253
+	MersenneTwister(List(Number)).Spread(3000000000) is 2022844618
+	MersenneTwister(List(Number)).Spread(123456789) is 2139825737
 	let mixed = previous xor (previous / 1073741824).Floor
 	(1812433253 * (mixed / 65536).Floor % 65536 * 65536 + 1812433253 * (mixed % 65536)) % 4294967296
 Uints(count Number) Slow(Numbers)
@@ -23,6 +25,9 @@ Uints(count Number) Slow(Numbers)
 		Tempered(raw(index + 624))
 Twisted(first Number, second Number) Number
 	MersenneTwister(List(Number)).Twisted(0, 1) is 2567483615
+	MersenneTwister(List(Number)).Twisted(2147483649, 6) is 1073741827
+	MersenneTwister(List(Number)).Twisted(3, 5) is 2567483613
+	MersenneTwister(List(Number)).Twisted(2147483648, 7) is 3641225436
 	let joined = (first and 2147483648) + (second and 2147483647)
 	(joined / 2).Floor xor joined % 2 * 2567483615
 Tempered(number Number) Number
@@ -36,20 +41,22 @@ Normals(count Number) Slow(Numbers)
 	MersenneTwister.Seeded(42).Normals(20)(16).IsNearlyEqual(-0.3097268, 0.00001)
 	MersenneTwister.Seeded(42).Normals(20)(19).IsNearlyEqual(-0.6215954, 0.00001)
 	MersenneTwister.Seeded(7).Normals(16).Last.IsNearlyEqual(1.0901651, 0.00001)
+	Seeded(42).Normals(36)(17).IsNearlyEqual(-0.1596, 0.0001) and Seeded(42).Normals(20)(5).IsNearlyEqual(1.0783, 0.0001)
 	MersenneTwister(List(Number)).Normals(8) is Error("FewerThanSixteen")
 	if count < 16
 		return Error("FewerThanSixteen")
 	let tail = count % 16 is 0 then count else count - 16
 	let uniforms = Uniforms(Uints(count * 2 - tail))
 	for count
-		let start = index >= tail then tail else index - index % 16
-		Normal(uniforms, index >= tail then tail + 16 else start, index - start)
+		Normal(uniforms, index >= tail then count else index - index % 16, index >= tail then index - tail else index % 16)
 Uniforms(uints Numbers) Numbers
 	MersenneTwister(List(Number)).Uniforms((16777216, 8388608)) is (0, 0.5)
 	for uints
 		(value and 16777215) / 16777216
 Normal(uniforms Numbers, start Number, at Number) Number
 	MersenneTwister(List(Number)).Normal((0, 0, 0, 0, 0, 0, 0, 0, 0.25), 0, 0) is 0
+	MersenneTwister(List(Number)).Normal((0.5, 0.25, 0, 0, 0, 0, 0, 0, 0, 0.375), 0, 1).IsNearlyEqual(-0.53636, 0.00001)
+	MersenneTwister(List(Number)).Normal((0, 0, 0, 0.25, 0, 0, 0, 0, 0, 0, 0, 0.375), 2, 9).IsNearlyEqual(0.53636, 0.00001)
 	let radius = (-2 * (1 - uniforms(start + at % 8)).Logarithm).SquareRoot
 	let angle = Radians(2 * Number.Pi * uniforms(start + at % 8 + 8)) to Degrees
 	radius * (at < 8 then angle.Cos else angle.Sin)

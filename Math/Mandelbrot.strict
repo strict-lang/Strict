@@ -13,6 +13,8 @@ Interior(real Number, imaginary Number) Boolean
 	Interior(-1, 0)
 	Interior(0.3, 0) is false
 	Interior(-1.25, 0) is false
+	Interior(0, 0.5) and Interior(-1.1, 0)
+	(Interior(0.4, 0.1) or Interior(0.25, 0) or Interior(-1, 0.3)) is false
 	let vertical = imaginary * imaginary
 	let shifted = real - 0.25
 	let radius = shifted * shifted + vertical
@@ -69,4 +71,6 @@ DiskError(orbit List(Complex), position Number, offset Complex, previous Number)
 Beyond(squared DoubleDouble) Boolean
 	Beyond(DoubleDouble(4, 0.000000000000000000000000000001))
 	Beyond(DoubleDouble(4, -0.000000000000000000000000000001)) is false
+	Beyond(DoubleDouble(4.5, -0.000000000000000000000000000001))
+	Beyond(DoubleDouble(3.5, 0.000000000000000000000000000001)) is false
 	squared.high >= 4 and (squared.high > 4 or squared.low > 0)

@@ -34,6 +34,7 @@ Length Number
 Cross(other) Vector3
 	Vector3.UnitX.Cross(Vector3.UnitY) is Vector3.UnitZ
 	Vector3.UnitY.Cross(Vector3.UnitX) is Vector3(0, 0, -1)
+	Vector3(1, 2, 3).Cross(Vector3(4, 5, 6)) is Vector3(-3, 6, -3)
 	Vector3(Y * other.Z - Z * other.Y, Z * other.X - X * other.Z, X * other.Y - Y * other.X)
 Normalize Vector3
 	Vector3(3, 0, 4).Normalize is Vector3(0.6, 0, 0.8)

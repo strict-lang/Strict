@@ -50,4 +50,6 @@ Lerp(other, alpha Number) Vector2
 	Vector2(X + (other.X - X) * alpha, Y + (other.Y - Y) * alpha)
 Rotated(angle Degrees) Vector2
 	Vector2(1, 0).Rotated(Degrees(90)).DistanceTo(Vector2(0, 1)) < 0.000001
+	Vector2(0, 1).Rotated(Degrees(90)).DistanceTo(Vector2(-1, 0)) < 0.000001
+	Vector2(1, 2).Rotated(Degrees(0)).DistanceTo(Vector2(1, 2)) < 0.000001
 	Vector2(X * angle.Cos - Y * angle.Sin, X * angle.Sin + Y * angle.Cos)

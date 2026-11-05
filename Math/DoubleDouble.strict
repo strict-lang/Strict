@@ -3,15 +3,19 @@ has low Number = 0
 +(other) DoubleDouble
 	(DoubleDouble(10000000000000000) + DoubleDouble(1)).low is 1
 	(DoubleDouble(1, 0.00000000000000001) + DoubleDouble(-1)).high * 100000000000000000 is 1
+	(DoubleDouble(10000000000000000, 1) + DoubleDouble(1, 0.5)) is DoubleDouble(10000000000000002, 0.5)
+	DoubleDouble(1) + DoubleDouble(10000000000000000) is DoubleDouble(10000000000000000, 1)
 	let sum = high + other.high
 	let moved = sum - high
 	let error = (high - (sum - moved)) + (other.high - moved) + low + other.low
 	Normalized(sum, error)
 -(other) DoubleDouble
 	(DoubleDouble(10000000000000000, 1) - DoubleDouble(10000000000000000)).high is 1
+	(DoubleDouble(10000000000000000, 3) - DoubleDouble(10000000000000000, 1)).high is 2
 	value + DoubleDouble(-other.high, -other.low)
 *(other) DoubleDouble
 	(DoubleDouble(1, 0.00000000000000001) * DoubleDouble(2)).low * 100000000000000000 is 2
+	(DoubleDouble(1000000003, 0.5) * DoubleDouble(1000000009, -0.25)) is DoubleDouble(1000000012250000000, 30.625)
 	let product = high * other.high
 	let left = Split(high)
 	let right = Split(other.high)
@@ -28,22 +32,35 @@ has low Number = 0
 Normalized(head Number, tail Number) DoubleDouble
 	Normalized(1, 1).high is 2
 	Normalized(1, 10000000000000000).low is 1
+	Normalized(10000000000000000, 3) is DoubleDouble(10000000000000004, -1)
+	Normalized(3, 10000000000000000) is DoubleDouble(10000000000000004, -1)
 	let sum = head + tail
 	let moved = sum - head
 	DoubleDouble(sum, (head - (sum - moved)) + (tail - moved))
 Split(number Number) DoubleDouble
 	Split(1.00000001).low > 0
+	Split(134217729) is DoubleDouble(134217728, 1)
 	let scaled = 134217729 * number
 	let head = scaled - (scaled - number)
 	DoubleDouble(head, number - head)
 Whole Number
 	DoubleDouble(2, -0.000000000000000001).Whole is 1
 	DoubleDouble(2.5).Whole is 2
+	DoubleDouble(2, 0.000000000000000001).Whole is 2
+	DoubleDouble(2.5, -0.000000000000000001).Whole is 2
+	DoubleDouble(-2.5).Whole is -3
 	let floor = high.Floor
 	floor is high and low < 0 then floor - 1 else floor
+IsNegative Boolean
+	DoubleDouble(-1).IsNegative
+	DoubleDouble(0, -0.5).IsNegative
+	DoubleDouble(0, 0.5).IsNegative is false
+	DoubleDouble(1, -0.5).IsNegative is false
+	high < 0 or (high is 0 and low < 0)
 Decimals(count Number) Text
 	DoubleDouble(1, 0.00000000000000001).Decimals(17) is "1.00000000000000001"
-	let negative = high < 0 or (high is 0 and low < 0)
+	(DoubleDouble(-1.25).Decimals(2) is "-1.25") and (DoubleDouble(0, -0.5).Decimals(1) is "-0.5")
+	let negative = IsNegative
 	let magnitude = negative then DoubleDouble(-high, -low) else value
 	mutable rest = magnitude - DoubleDouble(magnitude.Whole)
 	mutable digits = (negative then "-" else "") + magnitude.Whole + "."
@@ -66,6 +83,7 @@ Parsed(text Text) DoubleDouble
 	negative then DoubleDouble(-parsed.high, -parsed.low) else parsed
 Fraction(digits Text) DoubleDouble
 	Fraction("25").high is 0.25
+	Fraction("123456789").high is 0.123456789
 	mutable scaled = DoubleDouble(0)
 	for (digits.Length / 8).Ceiling
 		let length = (digits.Length - index * 8).Clamp(0, 8)

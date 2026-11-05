@@ -1,6 +1,7 @@
 has values Numbers with Length is 16 and value.Bits is 32
 constant Identity = Matrix((1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1))
 constant Moved = Translation(Vector3(1, 2, 3))
+constant Counting = Matrix((1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16))
 Translation(offset Vector3) Matrix
 	Matrix.Translation(Vector3(1, 2, 3)).Transformed(Vector3.Zero) is Vector3(1, 2, 3)
 	Matrix((1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, offset.X, offset.Y, offset.Z, 1))
@@ -10,6 +11,7 @@ Scaling(scale Number) Matrix
 Turned(direction Vector2) Matrix
 	Matrix.Turned(Vector2(0, 2)).Transformed(Vector3.UnitX) is Vector3.UnitY
 	Matrix.Turned(Vector2(0, 0)) is Identity
+	Matrix.Turned(Vector2(3, 4)).Transformed(Vector3(1, 2, 0)).DistanceTo(Vector3(-1, 2, 0)) < 0.000001
 	let length = direction.Length
 	let cosine = length > 0 then direction.X / length else 1
 	let sine = length > 0 then direction.Y / length else 0
@@ -27,6 +29,7 @@ Product(other Matrix) Numbers
 		Cell(index % 4, (index / 4).Floor, other)
 Cell(row Number, column Number, other Matrix) Number
 	Identity.Cell(1, 1, Identity) is 1
+	Counting.Cell(1, 2, Counting) is 356
 	let first = values(row) * other.values(column * 4) + values(4 + row) * other.values(column * 4 + 1)
 	first + values(8 + row) * other.values(column * 4 + 2) + values(12 + row) * other.values(column * 4 + 3)
 Clip(point Vector3) Numbers
@@ -42,6 +45,7 @@ Axis(column Number) Vector3
 	Vector3(values(column * 4), values(column * 4 + 1), values(column * 4 + 2))
 LookAt(eye Vector3, target Vector3, up Vector3) Matrix
 	Matrix.LookAt(Vector3(0, -10, 0), Vector3.Zero, Vector3.UnitZ).Transformed(Vector3.Zero) is Vector3(0, 0, -10)
+	Matrix.LookAt(Vector3.One, Vector3(3, 4, 7), Vector3.UnitZ).Transformed(Vector3.One).Length < 0.00001
 	let forward = (target - eye).Normalize
 	let side = forward.Cross(up).Normalize
 	let top = side.Cross(forward)
@@ -50,6 +54,8 @@ LookAt(eye Vector3, target Vector3, up Vector3) Matrix
 Perspective(fieldOfView Degrees, aspect Number, near Number, far Number) Matrix
 	Matrix.Perspective(Degrees(90), 1, 1, 100).values(0).IsNearlyEqual(1)
 	Matrix.Perspective(Degrees(90), 1, 1, 100).Clip(Vector3(0, 0, -1)).Z.IsNearlyEqual(-1)
+	Matrix.Perspective(Degrees(60), 2, 2, 10).values(0).IsNearlyEqual(0.8660254)
+	Matrix.Perspective(Degrees(60), 2, 2, 10).Clip(Vector3(0, 0, -2)).Z.IsNearlyEqual(-2)
 	let focal = 1 / Degrees(fieldOfView.number / 2).Tan
 	let depth = (far + near) / (near - far)
 	Matrix((focal / aspect, 0, 0, 0, 0, focal, 0, 0, 0, 0, depth, -1, 0, 0, 2 * far * near / (near - far), 0))

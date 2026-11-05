@@ -7,6 +7,9 @@ for Iterator(Vector2)
 in(element Vector2) Boolean
 	Vector2(1, 1) is in Size(2, 2)
 	Vector2(2, 0) is not in Size(2, 2)
+	Vector2(-1, 0) is not in Size(2, 2)
+	Vector2(0, -1) is not in Size(2, 2)
+	Vector2(0, 2) is not in Size(2, 2)
 	element.X >= 0 and element.X < Width and element.Y >= 0 and element.Y < Height
 Area Number
 	Size(1, 1).Area is 1
