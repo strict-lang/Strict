@@ -842,6 +842,24 @@
     %decoding = arith.cmpi sle, %tokens, %decodeTokens : i32
     cf.cond_br %decoding, ^decode, ^prompt
   ^decode:
+    %wholeSize = llvm.mlir.constant(128 : i32) : i32
+    %wholeDecoding = arith.cmpi eq, %size, %wholeSize : i32
+    cf.cond_br %wholeDecoding, ^wholeDecode, ^anyDecode
+  ^wholeDecode:
+    %singleDecodeBits = arith.constant 32 : i64
+    %singleDecodeQueries = arith.cmpi eq, %queryBits, %singleDecodeBits : i64
+    %singleDecodeKeys = arith.cmpi eq, %keyBits, %singleDecodeBits : i64
+    %singleDecodeValues = arith.cmpi eq, %valueBits, %singleDecodeBits : i64
+    %singleDecodeLists = arith.andi %singleDecodeKeys, %singleDecodeValues : i1
+    %singleDecoding = arith.andi %singleDecodeQueries, %singleDecodeLists : i1
+    cf.cond_br %singleDecoding, ^singleDecode, ^bitsDecode
+  ^singleDecode:
+    func.call @strict_device_attention_decode(%result, %queries, %singleDecodeBits, %keys, %singleDecodeBits, %values, %singleDecodeBits, %heads, %groups, %wholeSize, %sequences, %tokens, %positions, %causal, %wide, %valueStart, %valueStep) : (!llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, !llvm.ptr, i64, i32, i32, i32, i32, i32, i32, i1, i1, i32, i32) -> ()
+    return
+  ^bitsDecode:
+    func.call @strict_device_attention_decode(%result, %queries, %queryBits, %keys, %keyBits, %values, %valueBits, %heads, %groups, %wholeSize, %sequences, %tokens, %positions, %causal, %wide, %valueStart, %valueStep) : (!llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, !llvm.ptr, i64, i32, i32, i32, i32, i32, i32, i1, i1, i32, i32) -> ()
+    return
+  ^anyDecode:
     func.call @strict_device_attention_decode(%result, %queries, %queryBits, %keys, %keyBits, %values, %valueBits, %heads, %groups, %size, %sequences, %tokens, %positions, %causal, %wide, %valueStart, %valueStep) : (!llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, !llvm.ptr, i64, i32, i32, i32, i32, i32, i32, i1, i1, i32, i32) -> ()
     return
   ^prompt:
@@ -2368,8 +2386,9 @@
   }
   // `Attention.Merged` of a few tokens (the rows of a group in tiles of 16, one per warp, up to 4 tiles verify drafts)
   // like flash decoding: the 8 warps of a block and the blocks of a tile split the positions 8 at a time, read keys and
-  // values straight into the mma operands and merge their largest scores, sums and outputs, the last block writes them
-  func.func private @strict_device_attention_decode(%result: !llvm.ptr, %queries: !llvm.ptr, %queryBits: i64, %keys: !llvm.ptr, %keyBits: i64, %values: !llvm.ptr, %valueBits: i64, %heads: i32, %groups: i32, %size: i32, %sequences: i32, %tokens: i32, %positions: i32, %causal: i1, %wide: i1, %viewOffset: i32, %viewStride: i32) attributes {llvm.linkage = #llvm.linkage<internal>} {
+  // values straight into the mma operands and merge their largest scores, sums and outputs, the 8 warps of the last
+  // block gather the blocks' parts (every 8th each) and merge them like their own
+  func.func private @strict_device_attention_decode(%result: !llvm.ptr, %queries: !llvm.ptr, %queryBits: i64, %keys: !llvm.ptr, %keyBits: i64, %values: !llvm.ptr, %valueBits: i64, %heads: i32, %groups: i32, %size: i32, %sequences: i32, %tokens: i32, %positions: i32, %causal: i1, %wide: i1, %viewOffset: i32, %viewStride: i32) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %attentionHalves = arith.constant false
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
@@ -2488,21 +2507,23 @@
     func.call @strict_device_barrier() : () -> ()
     %flag = llvm.load %lastSlot : !llvm.ptr<3> -> i32
     %isLastBlock = arith.cmpi ne, %flag, %c0 : i32
-    %collecting = arith.andi %isLastBlock, %isFirstWarp : i1
-    cf.cond_br %collecting, ^collect, ^done
+    cf.cond_br %isLastBlock, ^collect, ^done
   ^collect:
     func.call @strict_device_fence() : () -> ()
-    cf.br ^gather(%c0, %zeros, %started : i32, vector<64xf32>, vector<4xf32>)
+    cf.br ^gather(%warp, %zeros, %started : i32, vector<64xf32>, vector<4xf32>)
   ^gather(%part: i32, %gathered: vector<64xf32>, %gatheredState: vector<4xf32>):
     %moreParts = arith.cmpi slt, %part, %splits : i32
-    cf.cond_br %moreParts, ^gatherBody, ^write(%gathered, %gatheredState : vector<64xf32>, vector<4xf32>)
+    cf.cond_br %moreParts, ^gatherBody, ^gatheredAll(%gathered, %gatheredState : vector<64xf32>, vector<4xf32>)
+  ^gatheredAll(%warpGathered: vector<64xf32>, %warpGatheredState: vector<4xf32>):
+    %allGathered, %allGatheredState = func.call @strict_device_attention_warps(%warpGathered, %warpGatheredState, %warp, %lane) : (vector<64xf32>, vector<4xf32>, i32, i32) -> (vector<64xf32>, vector<4xf32>)
+    cf.cond_br %isFirstWarp, ^write(%allGathered, %allGatheredState : vector<64xf32>, vector<4xf32>), ^done
   ^gatherBody:
     %partAt = arith.addi %slotParts, %part : i32
     %partStart = func.call @strict_device_attention_partial(%partAt) : (i32) -> !llvm.ptr
     %fresh = arith.constant true
     %partOutputs, %partState = func.call @strict_device_attention_get(%partStart, %lane, %fresh) : (!llvm.ptr, i32, i1) -> (vector<64xf32>, vector<4xf32>)
     %combined, %combinedState = func.call @strict_device_attention_merge(%gathered, %gatheredState, %partOutputs, %partState) : (vector<64xf32>, vector<4xf32>, vector<64xf32>, vector<4xf32>) -> (vector<64xf32>, vector<4xf32>)
-    %partFollowing = arith.addi %part, %c1 : i32
+    %partFollowing = arith.addi %part, %c8 : i32
     cf.br ^gather(%partFollowing, %combined, %combinedState : i32, vector<64xf32>, vector<4xf32>)
   ^write(%final: vector<64xf32>, %finalState: vector<4xf32>):
     func.call @strict_device_attention_finish(%result, %wide, %final, %finalState, %lowerToken, %upperToken, %tokenLast, %lowerQuery, %upperQuery, %size, %quad) : (!llvm.ptr, i1, vector<64xf32>, vector<4xf32>, i32, i32, i32, i64, i64, i32, i32) -> ()
