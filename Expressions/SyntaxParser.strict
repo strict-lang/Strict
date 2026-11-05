@@ -29,6 +29,7 @@ ParseUnaryOrCall(start Number, end Number) SyntaxNode
 	SyntaxParser("not", "a").ParseUnaryOrCall(0, 2).Kind is "Not"
 	SyntaxParser("-", "a").ParseUnaryOrCall(0, 2).Kind is "Negate"
 	SyntaxParser("-", "1", ".", "Absolute").ParseUnaryOrCall(0, 4).Kind is "Member"
+	SyntaxParser("-", "1").ParseUnaryOrCall(0, 1).Kind is "Negate"
 	if tokens(start) is "not"
 		return SyntaxNode("Not", "", Single(ParseRange(start + 1, end)))
 	let next = start + 1 < end then tokens(start + 1) else ""
@@ -42,6 +43,7 @@ Leaf(token Text) SyntaxNode
 	SyntaxParser("1").Leaf("\"a\"").Kind is "Text"
 	SyntaxParser("1").Leaf("true").Kind is "Boolean"
 	SyntaxParser("1").Leaf("x").Kind is "Identifier"
+	SyntaxParser("1").Leaf("-1").Kind is "Number" and (SyntaxParser("1").Leaf("-").Kind is "Identifier")
 	if Tokenizer(token).IsDigit(token.Substring(0, 1)) or (token.StartsWith("-") and (token.Length > 1))
 		return SyntaxNode("Number", token)
 	if token.StartsWith("\"")
@@ -51,6 +53,7 @@ Leaf(token Text) SyntaxNode
 	SyntaxNode("Identifier", token)
 Single(node SyntaxNode) SyntaxNodes
 	SyntaxParser("1").Single(SyntaxNode("Number", "1")).Length is 1
+	SyntaxParser("x", "-", "a").ParseUnaryOrCall(1, 3).children(0) to Text is "a"
 	mutable nodes = List(Mutable(SyntaxNode))
 	nodes.Add(node)
 	nodes
@@ -71,6 +74,7 @@ BracketDelta(token Text) Number
 	SyntaxParser("1").BracketDelta("(") is 1
 	SyntaxParser("1").BracketDelta(")") is -1
 	SyntaxParser("1").BracketDelta("a") is 0
+	SyntaxParser("x", "(", "a", "+", "b", ")").LowestOperatorIndex(1, 6) is -1
 	if token is "("
 		return 1
 	if token is ")"
@@ -80,6 +84,7 @@ OperatorPrecedence(position Number, start Number) Number
 	SyntaxParser("a", "-", "b").OperatorPrecedence(1, 0) is 11
 	SyntaxParser("-", "b").OperatorPrecedence(0, 0) is 0
 	SyntaxParser("a", "*", "-", "b").OperatorPrecedence(2, 0) is 0
+	SyntaxParser("(", "-", "a").OperatorPrecedence(1, 0) is 0
 	if position is start
 		return LeadingPrecedence(position)
 	if Binding(tokens(position - 1)) > 0 or (tokens(position - 1) is in Openers)
@@ -89,6 +94,7 @@ LeadingPrecedence(position Number) Number
 	SyntaxParser("*", "a").LeadingPrecedence(0) is 13
 	SyntaxParser("-", "a").LeadingPrecedence(0) is 0
 	SyntaxParser("in", "(", "a", ")").LeadingPrecedence(0) is 0
+	SyntaxParser("a", "*").LeadingPrecedence(1) is 13
 	if tokens(position) is in ("-", "not")
 		return 0
 	if position + 1 < tokens.Length and (tokens(position + 1) is "(")
@@ -98,6 +104,10 @@ OperatorText(position Number) Text
 	SyntaxParser("a", "is", "not", "b").OperatorText(1) is "is not"
 	SyntaxParser("a", "is", "b").OperatorText(1) is "is"
 	SyntaxParser("a", "is", "not", "in", "b").OperatorText(1) is "is not in"
+	SyntaxParser("a", "+", "b").OperatorText(1) is "+" and (SyntaxParser("a", "is").OperatorText(1) is "is")
+	SyntaxParser("a", "is", "not").OperatorText(1) is "is not"
+	SyntaxParser("a", "is", "in", "b").OperatorText(1) is "is in"
+	SyntaxParser("a", "is", "b", "in", "c").OperatorText(1) is "is"
 	if tokens(position) is not "is" or position + 1 >= tokens.Length
 		return tokens(position)
 	if position + 2 < tokens.Length and (tokens(position + 1) is "not") and (tokens(position + 2) is "in")
@@ -131,11 +141,13 @@ ParseCall(start Number, end Number) SyntaxNode
 	IsGrouping(arguments) then arguments(0) else SyntaxNode("List", "", arguments)
 IsGrouping(arguments SyntaxNodes) Boolean
 	SyntaxParser("1").IsGrouping(SyntaxNode("Identifier", "a"), SyntaxNode("Identifier", "b")) is false
+	SyntaxParser("1").IsGrouping(SyntaxNode("Binary", "+"), SyntaxNode("Identifier", "b")) is false
 	if arguments.Length is not 1
 		return false
 	arguments(0).Kind is in ("Binary", "Not", "Negate")
 Arguments(open Number, end Number) SyntaxNodes
 	SyntaxParser("(", "1", ",", "2", ")").Arguments(0, 5).Length is 2
+	SyntaxParser("(", "f", "(", "1", ",", "2", ")", ")").Arguments(0, 8).Length is 1
 	mutable arguments = List(Mutable(SyntaxNode))
 	mutable depth = 0
 	mutable segmentStart = open + 1

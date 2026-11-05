@@ -7,6 +7,10 @@ constant Counting = Constraint("count", "Count", KnownTypes.Sample)
 Condition(constraint Text) Text
 	Counting.Condition("value >= 0") is "count >= 0"
 	Counting.Condition("Increment is value and value < Limit") is "count.Increment is count and count < Limit"
+	Constraint.Kind(List(Text) + "Run(a Number with value > 0)") is ""
+	Constraint.Kind(List(Text) + "has name Text") is ""
+	Counting.Rewritten(SyntaxNode("Identifier", "value")).Kind is "Identifier"
+	Constraint.Kind(("has numbers with Length is 3", "constant Limit = 3 with value > 0")) is "true"
 	Rewritten(SyntaxParser(Tokenizer(constraint).Tokens).Parse) to Text
 Rewritten(node SyntaxNode) SyntaxNode
 	Counting.Rewritten(SyntaxNode("Identifier", "value")).text is "count"
@@ -23,11 +27,14 @@ Rewritten(node SyntaxNode) SyntaxNode
 	SyntaxNode(node.Kind, node.text, children, node.line)
 Failure(constraint Text) Text
 	Counting.Failure("value > 0") is "return Error(\"ConstraintNotMet: count with value > 0 is false for \" + count)"
+	Counting.Failure("\"") is "return Error(\"ConstraintNotMet: count with \\\" is false for \" + count)"
 	let escaped = constraint.Replace("\"", "\\\"")
 	"return Error(\"ConstraintNotMet: " + name + " with " + escaped + " is false for \" + " + name + ")"
 Checked(constraint Text, line Number) SyntaxNode
 	Counting.Checked("value > 0", 3).line is 3
 	Counting.Checked("value > 0", 3) to Text is "if count > 0 is false"
+	Counting.Checked("value > 0", 3).children.Last.Kind is "Body"
+	Counting.Checked("value > 0", 3).children.Last.children.Length is 1
 	let check = StatementParser(Tokenizer("if (" + Condition(constraint) + ") is false").Tokens).ParseStatement
 	let failed = StatementParser(Tokenizer(Failure(constraint)).Tokens).ParseStatement
 	let body = SyntaxNode("Body", "", List(SyntaxNode) + SyntaxNode(failed.Kind, failed.text, failed.children, line))
@@ -37,6 +44,7 @@ IsConstrained(lines Texts) Boolean
 	Constraint.IsConstrained(("has width Number", "Area Number", "\t\"with\"")) is false
 	Constraint.IsConstrained(List(Text) + "has price Number with Step 0.01") is false
 	Constraint.IsConstrained(List(Text) + "has x Number with value.Bits is 32") is false
+	Constraint.IsConstrained(List(Text) + "Run(a Number with value > 0)") is false
 	for lines
 		if TypeShape(lines).IsMemberLine(value) and (Of(value) is not "")
 			return true
@@ -58,6 +66,8 @@ Length(line Text) Number
 	Constraint.Length("has numbers with Length is 3 and value.Bits is 32") is 3
 	Constraint.Length("has width Number with value > 0") is 0
 	Constraint.Length("has numbers with Length is 3 and value . Bits is 32") is 3
+	Constraint.Length("has x Number with value is 5") is 0
+	Constraint.Length("has numbers with Length is 3 and value is 5") is 0
 	let checking = Of(line.Replace(" . ", "."))
 	let words = checking.Split(" ")
 	(words.Length is 3) and checking.StartsWith("Length is ") then words.Last to Number else 0
@@ -73,6 +83,9 @@ Checking(constraint Text) Text
 	Constraint.Checking("value > 0 and value.Bits is 32") is "value > 0"
 	Constraint.Checking("value.Bits is 32 and value > 0") is "value > 0"
 	Constraint.Checking("value.Bits is 32") is ""
+	Constraint.Parameter(HeaderTokens(Tokenizer("B(a N with value.Bits is 3, b N)").Tokens), "a") is "value.Bits is 3"
+	Constraint.Parameter(HeaderTokens(Tokenizer("B(a N with value.Bits is 3)").Tokens), "a") is "value.Bits is 3"
+	Constraint.Parameter(HeaderTokens(Tokenizer("B(a N with value is in (1, 2), b N)").Tokens), "a").EndsWith(")")
 	let clause = "value.Bits is " + Bits(constraint)
 	constraint.Replace(" and " + clause, "").Replace(clause + " and ", "").Replace(clause, "")
 Of(line Text) Text
@@ -99,6 +112,7 @@ Parameter(header HeaderTokens, parameter Text) Text
 Where(path Text, lines Texts) Texts
 	Constraint.Where("A.strict", List(Text) + "has a Number where value > 0").First is Misnamed
 	Constraint.Where("A.strict", List(Text) + "has a Number with value > 0").Length is 0
+	Constraint.Where("A.strict", List(Text) + "	has a Number where value > 0").Length is 0
 	for lines
 		if (value.StartsWith("	") is false) and ("where" is in Tokenizer(value).Tokens)
 			"ConstraintNeedsWith: where in " + path + ":" + (index + 1) + ", write " + value.Replace(" where ", " with ")
