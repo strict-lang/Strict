@@ -6,6 +6,8 @@ constant Used = InstructionEntry(InstructionType.LoadVariableToRegister, "a", (1
 constant Lined = TracedFrame(Frame(Frame.Doubling, MethodEntry("Twice", List(MemberEntry), "Strict/Number", (Loaded, Stored, Looped, Used, InstructionEntry.Return(0))), "Strict/Doubler"))
 constant Reporting = TracedFrame(Frame(Frame.Doubling, MethodEntry(TestCodegen.Runner, List(MemberEntry), "Strict/Number", List(InstructionEntry)), "Strict/Doubler"))
 constant Pairs = TracedFrame(Frame(Machine.Pairing, Frame.Twice.method, "Strict/Pair"))
+constant Printed = InstructionEntry(InstructionType.Print, "a", List(Number), 4)
+constant Same = TracedFrame(Frame(Frame.Doubling, MethodEntry("Twice", List(MemberEntry), "None", (Printed, Printed, InstructionEntry(InstructionType.JumpEnd, List(Text), List(Number), 3), Printed)), "A"))
 constant Seven = VmValue.OfNumber(7)
 constant Letters = "abcdefghijklmnopqrstuvwxyz"
 constant Started = (VmValue.None, VmValue.None, VmValue.None, VmValue.None, Looping.Begun(VmValue.None, VmValue.OfNumber(3), VmValue.None, 2))
@@ -58,6 +60,9 @@ Events(position Number, result VmValue) Texts
 Hit(position Number) Texts
 	Lined.Hit(0) is ("$Hit Strict/Doubler|2")
 	Lined.Hit(2).Length is 0
+	Same.Hit(0) is ("$Hit A|4")
+	Same.Hit(1).Length is 0
+	Same.Hit(2).Length is 0
 	let entry = frame.method.instructions(position)
 	let previous = position > 0 then frame.method.instructions(position - 1).line else 0
 	let isStart = (entry.kind is not InstructionType.JumpEnd) and (entry.line is not previous)
@@ -73,6 +78,11 @@ IsLoopLine(line Number) Boolean
 Ended(position Number, place Text, result VmValue) Texts
 	Lined.Ended(2, "A|4", Seven).Length is 0
 	Lined.Ended(3, "A|5", Seven) is ("$Result A|5|7")
+	Same.Ended(0, "A|4", Seven).Length is 0
+	Same.Ended(1, "A|4", Seven) is ("$Result A|4|7")
+	Same.Ended(2, "A|3", Seven).Length is 0
+	Same.Ended(3, "A|4", Seven) is ("$Result A|4|7")
+	Lined.Ended(4, "A|0", Seven) is ("$Result A|0|7")
 	let instructions = frame.method.instructions
 	let entry = instructions(position)
 	let isLast = (position + 1 >= instructions.Length) or (instructions(position + 1).line is not entry.line)

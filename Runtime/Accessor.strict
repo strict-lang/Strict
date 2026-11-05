@@ -10,6 +10,9 @@ constant Held = VmValue("Strict/Holder", 0, "", (VmValue.None, VmValue.OfList(Vm
 Marked(target Numbers, count Number) Numbers
 	Accessor(Machine(List(TypeEntry) + TypeEntry.Kept)).Marked((0, 0, 0), 0) is (Computed, 0)
 	Getting.Marked((0, 0, 0), 0) is (0, 1)
+	Accessor(Machine(List(TypeEntry) + TypeEntry.Kept)).Marked((0, 0, 0), 1).Length is 0
+	Accessor(Machine(List(TypeEntry) + TypeEntry.Kept)).Marked((-1, 0, 0), 0).Length is 0
+	Getting.Marked((0, 0, 1), 0).Length is 0
 	if (target(0) < 0) or (count > 0)
 		return Path(target, count, 0)
 	let type = machine.types(target(0))
@@ -20,6 +23,7 @@ Path(target Numbers, count Number, depth Number) Numbers
 	Getting.Path((1, 0, 0), 0, 0) is (1, 0, 0, 1, -1, 0)
 	Getting.Path((0, 0, 0), 1, 0).Length is 0
 	Getting.Path((-1, 0, 0), 0, 0).Length is 0
+	Getting.Path((0, 0, 0), 0, 8).Length is 0
 	if (target(0) < 0) or (target(2) is 1) or (count > 0) or (depth > 7)
 		return List(Number)
 	let method = machine.types(target(0)).methods(target(1))
@@ -56,6 +60,9 @@ Member(route Number, name Text) Number
 Indexed(route Number, first InstructionEntry, middle InstructionEntry) Numbers
 	Getting.Indexed(0, Holder.methods(1).instructions.First, Holder.methods(1).instructions(1)) is (0, 1, -1, 0)
 	Getting.Indexed(0, Holder.methods(0).instructions.First, Holder.methods(1).instructions(1)).Length is 0
+	Getting.Indexed(0, InstructionEntry.LoadNumber(0, 1.5), Holder.methods(1).instructions(1)).Length is 0
+	Getting.Indexed(0, InstructionEntry.LoadNumber(1, 0), Holder.methods(1).instructions(1)).Length is 0
+	Getting.Indexed(1, InstructionEntry.LoadNumber(0, 0), Holder.methods(1).instructions(1)).Length is 0
 	let isConstant = (first.kind is InstructionType.LoadConstantToRegister) and (first.payload(0) is middle.payload(1))
 	let loaded = isConstant then PayloadDecoder(first).Value(1) else VmValue.None
 	let member = Member(route, middle.texts(0))
@@ -96,6 +103,7 @@ Step(instance VmValue, route Number, number Number) VmValue
 Wrapped(collection VmValue, at Number) Number
 	Getting.Wrapped(VmValue.OfText("ab"), -1) is 1
 	Getting.Wrapped(VmValue.OfText("ab"), 2) is -1
+	Getting.Wrapped(VmValue.OfText("ab"), -4) is -1
 	let wrapped = at < 0 then at + collection.Length else at
 	(wrapped < 0) or (wrapped >= collection.Length) then -1 else wrapped
 Item(collection VmValue, position Number) VmValue
