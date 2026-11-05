@@ -3,9 +3,13 @@ constant Known = KnownTypes(("Count"), (KnownTypes.CountMembers), (Scope(("Incre
 constant Growing = ConstantMethods(TypeInference(Known, (Scope(("Started", "Alias", "Plain"), ("Count(1).Twice", "Count.Started", "Count(1)")), TypeInference.NoShape)))
 constant Counting = TypeCodegen("Strict/Count", ("has number", "constant Started = Count(1).Twice", "Twice Count", "\tCount(number * 2)"), Growing.inference, List(Text))
 constant Value = SyntaxNode("Number", "1")
+constant Lettered = TypeCodegen("Strict/Count", ("has number", "constant Started", "Twice Count", "mutable Started = Count(1)"), Growing.inference, List(Text))
 Definition(owner Text, name Text) SyntaxNode
 	Growing.Definition("Count", "Plain").Kind is "Call"
 	Growing.Definition("Count", "Alias").children(0).Kind is "Identifier"
+	Growing.IsCall(SyntaxNode("MethodCall", "Count", SyntaxNode("Identifier", "Count")), SyntaxNode("Identifier", "Count"))
+	Growing.IsCall(SyntaxNode("Identifier", "Unknown"), SyntaxNode("Identifier", "Unknown"), "Count") is false
+	Growing.Methods(Lettered, List(Text)).Length is 0 and (Lettered.fullName is "Strict/Count")
 	let tokens = Tokenizer(inference.ConstantOf(owner, name)).Tokens
 	let folding = ConstantFolding(owner, inference)
 	folding.Unhidden(folding.Qualified(folding.Outer(SyntaxParser(tokens).ParseRange(0, tokens.Length))))
@@ -16,6 +20,8 @@ IsCached(owner Text, name Text) Boolean
 	Growing.IsCached("Count", "Alias") is false
 	Growing.IsCached("Count", "Plain") is false
 	Growing.IsCached("Count", "Missing") is false
+	Growing.HasCall(SyntaxNode("Member", "Twice", SyntaxNode("Type", "Count")))
+	Growing.HasCall(SyntaxNode("Member", "Plain", SyntaxNode("Identifier", "Count"))) is false
 	let definition = Definition(owner, name)
 	let isOther = (definition.Kind is "Member") and (definition.children(0).Kind is in ("Identifier", "Type"))
 	let isAlias = isOther and (inference.ConstantOf(definition.children(0).text, definition.text) is not "")
