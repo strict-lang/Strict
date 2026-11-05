@@ -15,11 +15,19 @@ Colors(png Png) List(ColorValue)
 		Pixel(png, samples, palette, index)
 Pixel(png Png, samples Numbers, palette Numbers, pixel Number) ColorValue
 	ImageLoader("").Pixel(Png.PaletteSample, (0, 1), (0, 0, 0, 255, 255, 255), 1) is ColorValue(1, 1, 1)
-	let kind = png.bytes(25)
+	ImageLoader("").Pixel(Png.PaletteSample, (1), (0, 0, 0, 51, 102, 153), 0) is ColorValue(0.2, 0.4, 0.6)
+	ImageLoader("").Pixel(Png.Rgb, (9, 9, 9, 51, 102, 153), List(Number), 1) is ColorValue(0.2, 0.4, 0.6)
 	let start = pixel * png.Channels
-	let entry = samples(start) * 3
-	if kind is 3
+	if png.bytes(25) is 3
+		let entry = samples(start) * 3
 		return ColorValue(palette(entry) / 255, palette(entry + 1) / 255, palette(entry + 2) / 255)
+	Sampled(png, samples, start)
+Sampled(png Png, samples Numbers, start Number) ColorValue
+	ImageLoader("").Sampled(Png.Rgba, (9, 9, 9, 9, 51, 102, 153, 204), 4) is ColorValue(0.2, 0.4, 0.6, 0.8)
+	ImageLoader("").Sampled(Png.GrayAlpha16, (9, 9, 51, 102), 2) is ColorValue(0.2, 0.2, 0.2, 0.4)
+	ImageLoader("").Sampled(Png.Gray2, (2), 0) is ColorValue(2 / 3, 2 / 3, 2 / 3)
+	ImageLoader("").Sampled(Png.Rgb, (51, 102, 153), 0) is ColorValue(0.2, 0.4, 0.6)
+	let kind = png.bytes(25)
 	let most = png.bytes(24) >= 8 then 255 else 2 ^ png.bytes(24) - 1
 	let alpha = kind is 6 then samples(start + 3) / most else kind is 4 then samples(start + 1) / most else 1
 	let colored = (kind is 2) or (kind is 6) then 1 else 0

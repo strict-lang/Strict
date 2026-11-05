@@ -2,6 +2,7 @@ has logger
 constant Source = "ImageProcessing/Compare/Landscape.ppm"
 constant Target = Source.Replace(".ppm", ".strict.ppm")
 constant Radius = 4
+constant Square = Bitmap(Size(2, 2), (Color(1, 1, 1), Color(2, 2, 2), Color(3, 3, 3), Color(4, 4, 4)), true)
 Run
 	let bitmap = Ppm.Loaded(Source)
 	if bitmap is Error
@@ -20,6 +21,7 @@ Blurred(bitmap Bitmap) Colors
 		Neighbors(bitmap, index).Average
 Neighbors(bitmap Bitmap, pixel Number) Colors
 	BenchBlur.Neighbors(Bitmap.Tiny, 0).Length is 9
+	BenchBlur.Neighbors(Square, 3) is Square.Colors
 	for y, x in Range(-Radius, Radius + 1), Range(-Radius, Radius + 1)
 		if bitmap.IsInside(pixel, x, y)
 			bitmap.Colors(pixel + x + y * bitmap.Size.Width)
