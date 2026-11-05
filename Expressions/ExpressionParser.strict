@@ -6,6 +6,10 @@ ParseLine Text
 	ExpressionParser("a + b").ParseLine is "Binary"
 	ExpressionParser("true").ParseLine is "BooleanExpression"
 	ExpressionParser("value is Number").ParseLine is "TypeComparison"
+	ExpressionParser("false").ParseLine is "BooleanExpression"
+	ExpressionParser("if x").ParseLine is "IfExpression"
+	ExpressionParser("for x").ParseLine is "ForExpression"
+	ExpressionParser("x = 1").ParseLine is "MutableReassignment"
 	ParseTrimmed(text.Trim)
 ParseTrimmed(trimmed Text) Text
 	if trimmed is "true"
@@ -20,6 +24,9 @@ ParseTrimmed(trimmed Text) Text
 		return "ForExpression"
 	KeywordOrTail(trimmed)
 KeywordOrTail(trimmed Text) Text
+	ExpressionParser("x to Text").ParseLine is "To"
+	ExpressionParser("x.Length").ParseLine is "MemberCall"
+	ExpressionParser("x").ParseLine is "VariableCall"
 	if IsAssignment(trimmed)
 		return "Declaration"
 	if IsReassignment(trimmed)
@@ -38,6 +45,8 @@ OperatorOrLiteral(trimmed Text) Text
 		return "MemberCall"
 	LiteralOrVariable(trimmed)
 LiteralOrVariable(trimmed Text) Text
+	ExpressionParser("42").ParseLine is "NumberExpression"
+	ExpressionParser("\"hi\"").ParseLine is "TextExpression"
 	if IsNumberLiteral(trimmed)
 		return "NumberExpression"
 	if trimmed.StartsWith("\"")
@@ -45,6 +54,8 @@ LiteralOrVariable(trimmed Text) Text
 	"VariableCall"
 IsAssignment(line Text) Boolean
 	ExpressionParser("let x = 1").IsAssignment("let x = 1")
+	ExpressionParser("mutable x = 1").IsAssignment("mutable x = 1")
+	ExpressionParser("constant x = 1").IsAssignment("constant x = 1")
 	if line.StartsWith("let ")
 		return true
 	if line.StartsWith("mutable ")
@@ -52,12 +63,17 @@ IsAssignment(line Text) Boolean
 	line.StartsWith("constant ")
 IsReassignment(line Text) Boolean
 	ExpressionParser("x = 1").IsReassignment("x = 1")
+	ExpressionParser("let x = 1").IsReassignment("let x = 1") is false
 	if IsAssignment(line)
 		return false
 	line.IndexOf(" = ") is not -1
 IsBinary(line Text) Boolean
 	ExpressionParser("a and b").IsBinary("a and b")
 	ExpressionParser("a + b").IsBinary("a + b")
+	ExpressionParser("a or b").IsBinary("a or b")
+	ExpressionParser("a - b").IsBinary("a - b")
+	ExpressionParser("a * b").IsBinary("a * b")
+	ExpressionParser("a / b").IsBinary("a / b")
 	if HasLogicalOp(line)
 		return true
 	HasArithmeticOp(line)
@@ -77,6 +93,7 @@ HasArithmeticOp(line Text) Boolean
 	line.IndexOf("/") is not -1
 IsTypeCompare(line Text) Boolean
 	ExpressionParser("value is Number").IsTypeCompare("value is Number")
+	ExpressionParser("x").IsTypeCompare("x") is false
 	line.IndexOf(" is ") is not -1
 IsNumberLiteral(line Text) Boolean
 	ExpressionParser("42").IsNumberLiteral("42")
