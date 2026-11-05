@@ -1,13 +1,15 @@
 has logger
 constant Batch = 128
-Tested(folder Text, root Text, isRecursive = true) Number
+Tested(folder Text, root Text, isRecursive = true, isMutating = false) Number
 	Folders(Logger).Tested("Missing", ".") is 0
 	let files = NativeFolder(logger, isRecursive = isRecursive).Files(folder)
-	Ran(Commands("test", files, root))
-Commands(command Text, paths Texts, root Text) Texts
+	Ran(Commands("test", files, root, isMutating))
+Commands(command Text, paths Texts, root Text, isMutating = false) Texts
 	Folders(Logger).Commands("test", List(Text) + "a.strict", ".") is ("test \"a.strict\" \".\" unit")
+	Folders(Logger).Commands("test", List(Text) + "a.strict", ".", true) is ("test \"a.strict\" \".\" unit mutations")
+	let options = (command is "test" then " unit" else "") + (isMutating then " mutations" else "")
 	for paths
-		command + " \"" + value + "\" \"" + root + "\"" + (command is "test" then " unit" else "")
+		command + " \"" + value + "\" \"" + root + "\"" + options
 Ran(arguments Texts) Number
 	Folders(Logger).Ran(List(Text)) is 0
 	mutable failed = 0

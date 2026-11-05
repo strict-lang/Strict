@@ -4,6 +4,7 @@ has Instance VmValue
 has Depth Number = 0
 has Resolved Number = -1
 constant MaxDepth = 20000
+constant MaxSteps = 1000000000000000
 constant FirstTraces = 40
 constant LastTraces = 10
 constant AddCall = Invocation(InstructionEntry.Invoke(2, ("T", "Add", "Strict/Number", "x"), 0, 1), List(VmValue) + VmValue.OfNumber(3), VmValue.OfNumber(4))

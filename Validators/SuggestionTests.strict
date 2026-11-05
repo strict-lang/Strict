@@ -2,8 +2,6 @@ has main TypeCodegen
 has header HeaderTokens
 has root Text
 has path Text
-constant Starting = ("Strict/Runtime/TestBudget", "Started")
-constant Budgeted = (InstructionEntry.LoadBoolean(1, false), InstructionEntry.Invoke(2, Starting + ("Strict/Number", "place", "isSlow"), (0, 1), -1))
 Passing(candidates Texts) Texts
 	if candidates.Length is 0
 		return List(Text)
@@ -23,7 +21,7 @@ Prepared(candidates Texts) List(TypeEntry)
 		methods.Add(Compiled(value, index))
 	let entry = main.Entry
 	let tests = TestCodegen(main, true).Tests
-	let runner = MethodEntry(tests, instructions = Silent(tests.instructions))
+	let runner = MethodEntry(tests, instructions = Mutants.Silent(tests.instructions))
 	let combined = TypeEntry(entry, methods = entry.methods + methods + runner)
 	Resolver(Linker(root, main).Linked(combined, List(Text))).Resolved
 Compiled(body Text, index Number) MethodEntry
@@ -33,16 +31,6 @@ Compiled(body Text, index Number) MethodEntry
 	let code = MethodCodegen(generator).Generate(SyntaxNode("Body", "", expression), scope, main.BodyType(header))
 	let returned = generator.target.FullName(main.Concrete(main.Returned(header)))
 	MethodEntry("$Suggestion" + index, main.Parameters(header), returned, LoadReuse(code.instructions).Optimized)
-Silent(instructions List(InstructionEntry)) List(InstructionEntry)
-	SuggestionTests.Silent(Budgeted).First is InstructionEntry.LoadBoolean(1, true)
-	for instructions
-		if value.kind is not InstructionType.Print
-			IsBudgetFlag(instructions, index) then InstructionEntry.LoadBoolean(value.payload(0), true) else value
-IsBudgetFlag(instructions List(InstructionEntry), position Number) Boolean
-	SuggestionTests.IsBudgetFlag(Budgeted.Reverse, 0) is false
-	let next = position + 1 < instructions.Length then instructions(position + 1) else instructions(position)
-	let isStarted = next.texts.Length > 2 then next.texts.Slice(0, 2) is Starting else false
-	(next.kind is InstructionType.Invoke) and isStarted
 Changed(types List(TypeEntry), candidate Number) List(TypeEntry)
 	mutable methods = types.First.methods
 	mutable replacement = methods.First

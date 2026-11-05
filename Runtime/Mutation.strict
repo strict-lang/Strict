@@ -1,0 +1,93 @@
+has method MethodEntry
+constant Twice = Mutation(Machine.Doubler.methods.First)
+constant Greater = InstructionEntry.Binary(InstructionType.GreaterThan, (0, 1))
+constant Compared = Mutation(MethodEntry("Big", List(MemberEntry), "Strict/Boolean", (Greater, InstructionEntry.Return(0))))
+constant Comparisons = (InstructionType.Equal, InstructionType.NotEqual, InstructionType.LessThan, InstructionType.GreaterThan)
+constant Arithmetic = (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply, InstructionType.Divide)
+constant Defaults = ("Strict/Number", "Strict/Text", "Strict/Boolean")
+Candidates Numbers
+	Twice.Candidates is (13, 18)
+	Compared.Candidates is (0, 1, 10)
+	for position, kind in method.instructions.Length, Kinds(position)
+		position * 8 + kind
+Kinds(position Number) Numbers
+	Twice.Kinds(1) is (5)
+	let entry = method.instructions(position)
+	if IsCompared(position)
+		return (0, 1)
+	if (entry.kind is InstructionType.Return) and (position is method.instructions.Length - 1)
+		return method.returnType is in Defaults then List(Number) + 2 else List(Number)
+	if (entry.kind is InstructionType.StoreRegisterToVariable) and IsStoredBefore(position)
+		return List(Number) + 3
+	if IsDropped(entry)
+		return List(Number) + 4
+	entry.kind is in Arithmetic then List(Number) + 5 else List(Number)
+IsCompared(position Number) Boolean
+	Compared.IsCompared(0)
+	let isLast = position + 1 is method.instructions.Length
+	let next = isLast then -1 else method.instructions(position + 1).kind
+	let isLooping = next is in (InstructionType.LoopBegin, InstructionType.LoopEnd)
+	(method.instructions(position).kind is in Comparisons) and (isLooping is false)
+IsDropped(entry InstructionEntry) Boolean
+	Twice.IsDropped(Twice.method.instructions(0)) is false
+	let isCall = (entry.kind is InstructionType.Invoke) and (entry.texts.Length > 2) and (entry.texts(2) is "None")
+	isCall or (entry.kind is InstructionType.InvokeWriteToList)
+IsStoredBefore(position Number) Boolean
+	Twice.IsStoredBefore(1) is false
+	let name = method.instructions(position).texts
+	for Range(0, position)
+		let entry = method.instructions(value)
+		if (entry.kind is InstructionType.StoreRegisterToVariable) and (entry.texts is name)
+			return true
+	false
+Mutant(code Number) MethodEntry
+	Twice.Mutant(13).instructions(1).kind is InstructionType.Subtract
+	Twice.Mutant(18).instructions(2) is InstructionEntry.LoadNumber(1, 0)
+	Compared.Mutant(1).instructions(0) is InstructionEntry.Binary(InstructionType.NotEqual, (0, 0))
+	let position = (code / 8).Floor
+	let kind = code % 8
+	let entry = method.instructions(position)
+	mutable instructions = method.instructions
+	instructions(position) = Changed(entry, kind)
+	let returned = kind is 2 then instructions + InstructionEntry.Return(entry.payload(0)) else instructions
+	MethodEntry(method, instructions = returned)
+Changed(entry InstructionEntry, kind Number) InstructionEntry
+	Twice.Changed(Twice.method.instructions(1), 5).kind is InstructionType.Subtract
+	let register = entry.payload(0)
+	if kind < 2
+		let comparison = kind is 0 then InstructionType.Equal else InstructionType.NotEqual
+		return InstructionEntry.Binary(comparison, (entry.payload(1), entry.payload(1)))
+	if (kind is 2) and (method.returnType is "Strict/Text")
+		return InstructionEntry.LoadText(register, "")
+	if (kind is 2) and (method.returnType is "Strict/Boolean")
+		return InstructionEntry.LoadBoolean(register, false)
+	if kind < 5
+		return InstructionEntry.LoadNumber(register, 0)
+	InstructionEntry(Swapped(entry.kind), entry.texts, entry.payload, entry.line)
+Swapped(kind Number) Number
+	Twice.Swapped(InstructionType.Multiply) is InstructionType.Divide
+	let pair = kind is in (InstructionType.Add, InstructionType.Subtract) then 0 else 2
+	Arithmetic(Arithmetic.Index(kind) is pair then pair + 1 else pair)
+Described(code Number) Text
+	Twice.Described(18) is "returning the default value instead of the result"
+	Compared.Described(0) is "the comparison always true"
+	let kind = code % 8
+	let entry = method.instructions((code / 8).Floor)
+	if kind < 2
+		return kind is 0 then "the comparison always true" else "the comparison always false"
+	if kind is 2
+		return "returning the default value instead of the result"
+	if kind is 3
+		return "without the assignment to " + entry.texts.First
+	let call = entry.texts.Length > 1 then entry.texts(1) else "Add"
+	kind is 4 then "without the call " + call else "with + and - or * and / swapped"
+Line(code Number) Number
+	Twice.Line(18) is 0
+	let at = method.instructions((code / 8).Floor).line
+	at is 0 then Lines else at
+Lines Number
+	Twice.Lines is 0
+	mutable last = 0
+	for method.instructions
+		last = value.line > last then value.line else last
+	last

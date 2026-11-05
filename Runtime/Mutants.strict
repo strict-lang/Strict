@@ -1,0 +1,71 @@
+has logger
+has path Text
+constant Starting = ("Strict/Runtime/TestBudget", "Started")
+constant Budget = InstructionEntry.Invoke(2, Starting + ("Strict/Number", "place", "isSlow"), (0, 1), -1)
+constant Budgeted = (InstructionEntry.LoadBoolean(1, false), Budget)
+constant Twice = Machine.Doubler.methods.First
+constant Sample = Mutants(Logger, "Examples/Fibonacci.strict")
+constant Inputs = ("/File", "/Directory", "/Process", "/Logger", "/TextWriter", "/Time", "/Library", "/Http", "/Random")
+constant Steps = 1000000
+constant Seconds = 0.2
+constant Hint = " keeps all tests passing: add a test that fails without it or remove the code"
+Survivors(types List(TypeEntry)) Number
+	Sample.Survivors(Execute(Logger).Loaded("Examples/Fibonacci.strict", ".")) is 0
+	let silenced = Silenced(types)
+	mutable survived = 0
+	for types.First.methods
+		if IsMutated(value)
+			survived = survived + Survived(silenced, value)
+	survived
+Silenced(types List(TypeEntry)) List(TypeEntry)
+	Sample.Silenced(List(TypeEntry) + Machine.Doubler).First.methods.Length is 1
+	for types.First.methods
+		if value.Name is TestCodegen.Runner
+			return Replaced(types, value, MethodEntry(value, instructions = Silent(value.instructions)))
+	types
+Survived(types List(TypeEntry), method MethodEntry) Number
+	mutable count = 0
+	let mutation = Mutation(method)
+	for mutation.Candidates
+		let started = Execute(logger).Started(Replaced(types, method, mutation.Mutant(value)), path)
+		if Machine(started, deadline = Process.Elapsed + Seconds).Tested(types.First.Name) is 0
+			let described = method.Name + " " + mutation.Described(value) + Hint
+			logger.Log(path + ":line " + mutation.Line(value) + ": MutationSurvived: " + described)
+			count = count + 1
+	count
+IsMutated(method MethodEntry) Boolean
+	Sample.IsMutated(Twice) is false
+	Sample.IsMutated(MethodEntry(Twice, Name = TestCodegen.Runner)) is false
+	let last = Mutation(method).Lines
+	if (method.Name is TestCodegen.Runner) or method.IsSlow or (last is 0) or (last > File(path).ReadLines.Length)
+		return false
+	for method.instructions
+		if (value.kind is InstructionType.Invoke) and (value.texts.Length > 1) and IsInput(value.texts(0))
+			return false
+	true
+IsInput(type Text) Boolean
+	Sample.IsInput("Strict/File")
+	Sample.IsInput("Strict/Number") is false
+	for Inputs
+		if type.EndsWith(value) or (type.IndexOf(value + "/") >= 0)
+			return true
+	false
+Replaced(types List(TypeEntry), method MethodEntry, replacement MethodEntry) List(TypeEntry)
+	Sample.Replaced(List(TypeEntry) + Machine.Doubler, Twice, Mutation.Twice.Mutant(13)).First.methods.Length is 1
+	mutable methods = types.First.methods
+	for types.First.methods
+		if value is method
+			methods(index) = replacement
+	mutable changed = types
+	changed(0) = TypeEntry(types.First, methods = methods)
+	changed
+Silent(instructions List(InstructionEntry)) List(InstructionEntry)
+	Mutants.Silent(Budgeted).First is InstructionEntry.LoadBoolean(1, true)
+	for instructions
+		if value.kind is not InstructionType.Print
+			IsBudgetFlag(instructions, index) then InstructionEntry.LoadBoolean(value.payload(0), true) else value
+IsBudgetFlag(instructions List(InstructionEntry), position Number) Boolean
+	Mutants.IsBudgetFlag(Budgeted.Reverse, 0) is false
+	let next = position + 1 < instructions.Length then instructions(position + 1) else instructions(position)
+	let isStarted = next.texts.Length > 2 then next.texts.Slice(0, 2) is Starting else false
+	(next.kind is InstructionType.Invoke) and isStarted

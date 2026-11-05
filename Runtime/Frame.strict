@@ -16,7 +16,7 @@ constant Listed = (VmValue.OfText("ab"), VmValue.OfText("a"), VmValue.None, VmVa
 Finished(arguments List(VmValue)) List(VmValue)
 	mutable slots = arguments
 	mutable position = 0
-	for Machine.MaxSteps
+	for machine.deadline > 0 then Mutants.Steps else Invocation.MaxSteps
 		if position >= method.instructions.Length
 			return slots
 		let entry = method.instructions(position)

@@ -66,6 +66,7 @@ strict test Examples/Sum.strict native    build and run the tests natively
 strict test . native --no-recursive       build and run only the root types' tests
 strict test Examples/Sum.strict lines     run the tests natively, then show how often and how long each line ran
 strict test Examples/Sum.strict values    run the tests on the Strict VM, then show the values each line produced
+strict test Examples/Sum.strict mutations run the tests on the VM, then again for mutants of every method (fails for each that passes)
 strict update .                           copy or download the packages of a folder again
 strict version                            version and build time of this strict
 ```

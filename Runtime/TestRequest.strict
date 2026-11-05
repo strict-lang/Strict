@@ -1,4 +1,5 @@
 has rest Texts
+constant Flags = ("native", "lines", "values", "trace", "--no-recursive", "mutations")
 Options Texts
 	rest.Length > 2 then rest.Slice(2, rest.Length - 2) else List(Text)
 Option Text
@@ -9,17 +10,28 @@ Option Text
 Selection Text
 	TestRequest((".", ".", "native", "--no-recursive")).Selection is "*"
 	TestRequest(("a.strict", ".", "unit")).Selection is ""
+	TestRequest(("a.strict", ".", "mutations")).Selection is ""
 	TestRequest(("a.strict", ".", "Merged")).Selection is "Merged"
 	TestRequest(("Math", ".", "native")).Selection is "*"
-	if (Directory.Exists(rest(0)) and ("native" is not in Options)) or ("unit" is in Options) or ("-" is in Options)
+	if (Directory.Exists(rest(0)) and ("native" is not in Options)) or IsWhole
 		return ""
 	for Options
-		if value is not in ("native", "lines", "values", "trace", "--no-recursive")
+		if value is not in Flags
 			return value
 	"*"
+IsRecursive Boolean
+	TestRequest(("a.strict", ".", "--no-recursive")).IsRecursive is false
+	"--no-recursive" is not in Options
+IsMutating Boolean
+	TestRequest(("a.strict", ".", "mutations")).IsMutating
+	"mutations" is in Options
+IsWhole Boolean
+	TestRequest(("a.strict", ".", "mutations")).IsWhole
+	("unit" is in Options) or ("-" is in Options) or ("mutations" is in Options)
 Message Text
+	TestRequest(("a.strict", ".", "mutations")).Message is ""
 	TestRequest((".", ".", "native", "--no-recursive")).Message is ""
-	let methods = Options - "unit" - "native" - "lines" - "values" - "trace" - "-" - "--no-recursive"
+	let methods = Options - Flags - "unit" - "-"
 	if methods.Length > 1
 		return "Only one test file or method can be selected"
 	if methods.Length is 0

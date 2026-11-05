@@ -4,7 +4,7 @@ has prototypes ConstantCache = ConstantCache(List(VmValue))
 has folder Text = ""
 has isTracing = false
 has sources Dictionary(Text, Text) = Dictionary(Text, Text)
-constant MaxSteps = 1000000000000000
+has deadline Number = 0
 constant Hello = Machine(List(TypeEntry) + TypeEntry.HelloLogger)
 constant Doubler = TypeEntry("Strict/Doubler", List(MemberEntry), List(MethodEntry) + MethodEntry("Twice", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 21), InstructionEntry.Binary(InstructionType.Add, (0, 0, 1)), InstructionEntry.Return(1))))
 constant Texts = TypeEntry("Strict/Text", List(MemberEntry) + MemberEntry("characters", "Strict/List(Character)", List(InstructionEntry), false), List(MethodEntry))
@@ -115,8 +115,11 @@ Execute(method MethodEntry, locals List(VmValue), owner Text, depth = 0) VmValue
 	Frame.Doubling.Execute(Frame.Twice.method, Frame.Listed, "Strict/Doubler").number is 42
 	Machine(Frame.Doubling, isTracing = true).Execute(Frame.Twice.method, Frame.Listed, "D").number is 42
 	Frame.Doubling.Execute(Frame.Twice.method, Frame.Listed, "D", Invocation.MaxDepth + 1).items(0).text is "StackOverflow"
+	Machine(Frame.Doubling, deadline = 0.001).Execute(Frame.Twice.method, Frame.Listed, "D").items(0).text is "Timeout"
 	if depth > Invocation.MaxDepth
 		return VmValue.OfError("StackOverflow")
+	if (deadline > 0) and (Process.Elapsed > deadline)
+		return VmValue.OfError("Timeout")
 	let frame = Frame(value, method, owner, depth)
 	let slots = isTracing then TracedFrame(frame).Finished(locals) else frame.Finished(locals)
 	slots(Frame.ResultSlot)
