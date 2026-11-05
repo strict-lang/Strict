@@ -4,6 +4,8 @@ Failures Slow(Number)
 	Socket.Close(0) is 0
 	Socket.Waiting(0) is Error("InvalidSocket")
 	Socket.Port(0) is Error("InvalidSocket")
+	(Socket.Listen(-1) is Error("InvalidPort")) and (Socket.Listen(65536) is Error("InvalidPort"))
+	Socket.Connect("127.0.0.1", 70000) is Error("InvalidPort")
 	Loopback is 0
 	0
 Loopback Number
