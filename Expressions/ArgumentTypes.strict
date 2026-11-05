@@ -17,6 +17,9 @@ Checked(node SyntaxNode, scope Scope, current Scope) Text
 	Sizing.Checked(Grown, Counted, Counted).StartsWith("ArgumentTypeMismatch")
 	Sizing.Checked(Listed, Counted, Counted).StartsWith("LogicalOperandIsAList")
 	Sizing.Checked(Limited, Counted, Counted).StartsWith("ConstantNeedsTypeName")
+	Sizing.ConstantAccess(Limited, Methods(0), Counted).StartsWith("ConstantNeedsTypeName")
+	Sizing.Operands(SyntaxNode("Call", "and", Listed.children)) is ""
+	Sizing.Operands(SyntaxNode("Binary", "+", Listed.children)) is ""
 	let operands = Operands(node) + ConstantAccess(node, scope, current)
 	operands is "" then Issue(node, scope, current) + OwnCall(node, scope, current) else operands
 ConstantAccess(node SyntaxNode, scope Scope, current Scope) Text
@@ -24,6 +27,7 @@ ConstantAccess(node SyntaxNode, scope Scope, current Scope) Text
 	Sizing.ConstantAccess(Limited, Counted, Counted).EndsWith(": Limit is read from an instance, write Count.Limit")
 	Sizing.ConstantAccess(Limited, Counted, Counted).StartsWith("ConstantNeedsTypeName")
 	Sizing.ConstantAccess(SyntaxParser(Tokenizer("Count.Limit").Tokens).Parse, Counted, Counted) is ""
+	Sizing.ConstantAccess(SyntaxParser(Tokenizer("Limit(count)").Tokens).Parse, Counted, Counted) is ""
 	let isMember = (node.Kind is in ("Member", "MethodCall")) and (node.children.Length > 0)
 	let first = isMember then node.children(0) else node
 	let isTypeName = (first.Kind is "Type") or (scope.TypeOf(first.text) is "") and inference.types.IsKnown(first.text)
@@ -61,6 +65,11 @@ OwnCall(call SyntaxNode, scope Scope, current Scope) Text
 	Sizing.OwnCall(OwnGrown, Owned, Methods(0)).EndsWith("Count.Grow got a Count for a Area")
 	Sizing.OwnCall(SyntaxParser(Tokenizer("Grow(area)").Tokens).Parse, Owned, Methods(0)) is ""
 	Sizing.OwnCall(Grown, Owned, Methods(0)) is ""
+	Sizing.OwnCall(OwnGrown, Owned, Counted) is ""
+	Sizing.Issue(SyntaxNode("List", "Count", Created.children), Counted, Counted) is ""
+	Sizing.Issue(SyntaxParser(Tokenizer("Count(count, size)").Tokens).Parse, Counted, Counted).StartsWith("ArgumentType")
+	Sizing.Issue(SyntaxParser(Tokenizer("count.Spread(area, size)").Tokens).Parse, Counted, Counted) is ""
+	Sizing.Issue(SyntaxParser(Tokenizer("count.Grow(area, area)").Tokens).Parse, Counted, Counted) is ""
 	let isOwn = (call.Kind is "Call") and (current.TypeOf(call.text) is not "")
 	isOwn then Compared(call, scope.TypeOf("self type"), call.text, scope, current) else ""
 Copied(call SyntaxNode, scope Scope, current Scope) Text
@@ -166,4 +175,9 @@ IsBaseMismatch(argument Text, parameter Text) Boolean
 IsScalar(type Text) Boolean
 	Sizing.IsScalar("Boolean")
 	Sizing.IsScalar("Count") is false
+	Sizing.IsWrongElement("Count", "Areas") is false
+	Sizing.Mismatch("Xyz", "Area") is false
+	Sizing.IsBaseMismatch("Count", "Area") is false
+	Sizing.IsBaseMismatch("Text", "Area")
+	Sizing.Copied(SyntaxParser(Tokenizer("Area(area)").Tokens).Parse, Counted, Counted).Split(" ")(2) is "copies"
 	type is in ("Boolean", "Number", "Text")
