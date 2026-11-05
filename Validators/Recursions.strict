@@ -42,6 +42,7 @@ Step(method Text, tokens Texts) Number
 	Counting.Step("Count", ("1", "+", "Count", "(", "number", "-", "3", ")", "+", "7")) is 3
 	Counting.Step("Count", ("else", "Count", "(", "number", "-", "1", ")")) is 0
 	Counting.Step("Count", ("1", "+", "Count", "(", "number", "/", "2", ")")) is 0
+	Counting.Step("C", ("C", "(", "x", "-", "5", "+", "O", "(", "x", "-", "6", "+", "C", "[", "x", "-", "7", "+")) is 0
 	for tokens
 		let isNested = (index > 0) and (tokens(index - 1) is in Operators)
 		let isCall = (index + 4 < tokens.Length) and (tokens(index + 1) is "(")
@@ -63,7 +64,7 @@ Argument(method Text, tokens Texts) Number
 	Counting.Argument("Count", ("Count", "(", "number", ")")) is 0
 	Counting.Argument("Count", ("1", "Other", "(", "300", ")", "+", "Count", "(", "700", ")")) is 700
 	Counting.Argument("Count", ("+", "Count", "(", "number", "-", "4", ")")) is 0
-	Counting.Argument("Count", ("+", "Count", "(", "800")) is 0
+	(Counting.Argument("Count", ("+", "Count", "(", "800")) is 0) and (Counting.Argument("C", ("C", "(", "-5", ")")) is 0)
 	Counting.Argument("Count", ("+", "Count", "[", "800", ")")) is 0
 	Counting.Argument("Count", ("+", "Count", "(", "800", "]")) is 0
 	for tokens
@@ -116,6 +117,7 @@ IsOwn(tokens Texts, position Number) Boolean
 Lets List(ValidationIssue)
 	Measuring.Lets.First to Text is "LetCallsItself: Area" + LetHint
 	Placing.Lets.Length is 0
+	Recursions(("Area Number", "	let area = Other.Area", "	area"), "Shape").Lets.Length is 0
 	mutable method = ""
 	mutable issues = List(Mutable(ValidationIssue))
 	for lines
@@ -128,9 +130,9 @@ IsThroughSample(line Text, method Text) Boolean
 	Measuring.IsThroughSample("	let area = Sample.Area", "Area")
 	Measuring.IsThroughSample("	let area = Other.Area", "Area") is false
 	Measuring.IsThroughSample("	let area = Other.Sample.Area", "Area") is false
-	Measuring.IsThroughSample("Sample.Area is 3", "Area")
+	Measuring.IsThroughSample("Sample.Area is 3", "Area") and Measuring.IsThroughSample("Sample.Area.", "Area")
 	Measuring.IsThroughSample("let area = Sample.Other", "Area") is false
-	Measuring.IsThroughSample("let area = Sample+Area", "Area") is false
+	(Measuring.IsThroughSample("let area = Sample+Area", "Area") or Measuring.IsThroughSample("A Sample.", "A")) is false
 	let tokens = Tokenizer(line.Trim).Tokens
 	for tokens
 		let isOwn = (index > 1) and (tokens(index - 2) is in Samples) and ((index < 3) or (tokens(index - 3) is not "."))
@@ -140,6 +142,7 @@ IsThroughSample(line Text, method Text) Boolean
 Samples Texts
 	Measuring.Samples is ("Sample")
 	Recursions(("constant Small = Shape(2)", "constant Big = Shape(9)"), "Shape").Samples is ("Small", "Big")
+	Recursions(("let small = Shape(2)", "constant Name = Text(1)"), "Shape").Samples.Length is 0
 	for lines
 		if value.StartsWith("constant ") and (value.IndexOf(" = " + typeName + "(") > 0)
 			Tokenizer(value).Tokens(1)
