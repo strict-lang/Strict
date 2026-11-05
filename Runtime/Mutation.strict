@@ -55,10 +55,13 @@ IsLiteral(position Number) Boolean
 	(previous.kind is InstructionType.LoadConstantToRegister) and (previous.payload(0) is register)
 IsCompared(position Number) Boolean
 	Compared.IsCompared(0)
+	Mutation(Compared.Mutant(0)).IsCompared(0) is false
 	let isLast = position + 1 is method.instructions.Length
 	let next = isLast then -1 else method.instructions(position + 1).kind
 	let isLooping = next is in (InstructionType.LoopBegin, InstructionType.LoopEnd)
-	(method.instructions(position).kind is in Comparisons) and (isLooping is false)
+	let entry = method.instructions(position)
+	let isSelf = entry.payload.Length > 2 then entry.payload(1) is entry.payload(2) else false
+	(entry.kind is in Comparisons) and (isLooping is false) and (isSelf is false)
 IsDropped(entry InstructionEntry) Boolean
 	Twice.IsDropped(Twice.method.instructions(0)) is false
 	Twice.IsDropped(Logging)
