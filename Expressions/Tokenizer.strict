@@ -4,7 +4,6 @@ constant Dot = 46
 constant LessThan = 60
 constant EqualsSign = 61
 constant GreaterThan = 62
-constant Backslash = 92
 constant LowercaseE = 101
 Tokens Texts
 	Tokenizer("a + b").Tokens is ("a", "+", "b")
@@ -42,7 +41,7 @@ TextEnd(position Number) Number
 		let code = line.characters(value).number
 		if (not escaped) and (code is Character.Quote)
 			return value
-		escaped = (not escaped) and (code is Backslash)
+		escaped = (not escaped) and (code is Character.Backslash)
 	line.Length
 HasOpenText Boolean
 	Tokenizer("x + \"a").HasOpenText

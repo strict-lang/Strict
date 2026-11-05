@@ -35,6 +35,7 @@ IsCrash(exitCode Number) Boolean
 	ToolRunner.IsCrash(139)
 	ToolRunner.IsCrash(-1073741819)
 	ToolRunner.IsCrash(3) is false
-	(exitCode < 0) or (exitCode >= 128)
+	constant crashExitCode = 128
+	(exitCode < 0) or (exitCode >= crashExitCode)
 to Text
 	name

@@ -4,6 +4,15 @@ constant Types = ("bool", "char", "short", "int", "long", "half", "float", "ulon
 constant Unsigned = ("bool", "uchar", "ushort", "uint", "ulong", "half", "float", "ulong", "ulong", "void")
 constant Sizes = (1, 1, 2, 4, 8, 2, 4, 8, 8, 0)
 constant Digits = "0123456789ABCDEF"
+constant HexBase = 16
+constant HighMantissaRange = 1048576
+constant DroppedLowBits = 536870912
+constant SignBit = 2147483648
+constant DoubleExponents = 2048
+constant SingleMantissaRange = 8388608
+constant DoubleInfinity = 2047
+constant SingleInfinity = 255
+constant BiasDifference = 896
 Type Text
 	MetalValue("i32").Type is "int"
 	MetalValue("double").Type is "ulong"
@@ -48,20 +57,20 @@ FloatBits Text
 	MetalValue("0xC160000000000000").FloatBits is "0xCB000000"
 	let high = Hexadecimal(text.Substring(2, 8))
 	let low = Hexadecimal(text.Substring(10, 8))
-	let mantissa = (high % 1048576) * 8 + (low / 536870912).Floor
-	let sign = high >= 2147483648 then 2147483648 else 0
-	"0x" + Hex(sign + Exponent((high / 1048576).Floor % 2048) * 8388608 + mantissa, 8)
+	let mantissa = (high % HighMantissaRange) * 8 + (low / DroppedLowBits).Floor
+	let sign = high >= SignBit then SignBit else 0
+	"0x" + Hex(sign + Exponent((high / HighMantissaRange).Floor % DoubleExponents) * SingleMantissaRange + mantissa, 8)
 Exponent(double Number) Number
 	MetalValue("").Exponent(1023) is 127
 	MetalValue("").Exponent(2047) is 255
 	if double is 0
 		return 0
-	double is 2047 then 255 else double - 896
+	double is DoubleInfinity then SingleInfinity else double - BiasDifference
 Hex(number Number, count Number) Text
 	MetalValue("").Hex(3212836864, 8) is "BF800000"
 	MetalValue("").Hex(10, 2) is "0A"
-	count is 0 then "" else Hex((number / 16).Floor, count - 1) + Digits.Substring(number % 16, 1)
+	count is 0 then "" else Hex((number / HexBase).Floor, count - 1) + Digits.Substring(number % HexBase, 1)
 Hexadecimal(digits Text) Number
 	MetalValue("").Hexadecimal("3FF00000") is 1072693248
 	for digits
-		Digits.IndexOf(value to Text) * 16 ^ (digits.Length - 1 - index)
+		Digits.IndexOf(value to Text) * HexBase ^ (digits.Length - 1 - index)

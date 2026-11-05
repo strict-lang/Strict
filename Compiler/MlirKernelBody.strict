@@ -93,10 +93,11 @@ IsNative(callee MlirFunction, entry InstructionEntry, at Number) Boolean
 Privatized(lines Texts) Texts
 	Body.Privatized(List(Text) + "    %r0 = llvm.alloca %one x i64 : (i64) -> !llvm.ptr").Length is 2
 	Body.Privatized(List(Text) + "    %a = x") is List(Text) + "    %a = x"
+	constant alloca = " = llvm.alloca %one x "
 	mutable result = List(Mutable(Text))
 	for lines
-		let at = value.IndexOf(" = llvm.alloca %one x ")
-		let type = at < 0 then "" else value.Substring(at + 22, value.IndexOf(" : (i64)") - at - 22)
+		let at = value.IndexOf(alloca)
+		let type = at < 0 then "" else value.Substring(at + alloca.Length, value.IndexOf(" : (i64)") - at - alloca.Length)
 		result = at < 0 then result + value else result + MlirTyped(type).Private(value.Substring(4, at - 4))
 	result
 Value(at Number, name Text) Texts

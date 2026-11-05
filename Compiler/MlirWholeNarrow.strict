@@ -48,7 +48,7 @@ IsSmall(at Number) Boolean
 	if entry.kind is not InstructionType.LoadConstantToRegister
 		return false
 	let number = PayloadDecoder(entry).Value(1).number
-	(number >= 0) and (number <= 255) and (number.Floor is number)
+	(number >= 0) and (number <= Byte.Max) and (number.Floor is number)
 Trips Number
 	Adding.Trips is 9
 	MlirWholeNarrow(Summing, 9).Trips is 1
@@ -102,7 +102,7 @@ IsSmallStore(at Number) Boolean
 	let entry = function.method.instructions(at)
 	if entry.kind is InstructionType.StoreConstantToVariable
 		let number = PayloadDecoder(entry).Value(0).number
-		return (number >= 0) and (number <= 255) and (number.Floor is number)
+		return (number >= 0) and (number <= Byte.Max) and (number.Floor is number)
 	let writer = MlirArguments(List(MlirFunction)).Writer(function, entry.payload(0), at)
 	(writer >= 0) and (MlirWholeNarrow(function, writer).Accumulated is entry.texts.Last)
 Emitted Texts

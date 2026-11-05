@@ -114,7 +114,7 @@ Half(entry InstructionEntry) Texts
 	Framed.Half(Widths)(2) is "    %t1v = arith.shrui %t1a, %t1s : i64"
 	Framed.Half(Widths)(4) is "    %t1f = arith.bitcast %t1h : i32 to f32"
 	let halves = MlirCouples(statements.function, 0).Halves(statements.function.TypeOf(entry.texts(1)))
-	let shift = halves.First.Name is entry.texts(0) then 0 else 32
+	let shift = halves.First.Name is entry.texts(0) then 0 else Number.SingleBits
 	let values = MlirWholeValues(statements.position)
 	let truncated = values.Line("h", "arith.trunci " + statements.Temp("v") + " : i64 to i32")
 	let single = values.Line("f", "arith.bitcast " + statements.Temp("h") + " : i32 to f32")

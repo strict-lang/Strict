@@ -115,11 +115,12 @@ Binary(symbol Number) Text
 	MetalInstruction("%5 = udiv i32 %3, %4", true).Binary(14) is "(int)((uint)v3 / (uint)v4)"
 	MetalInstruction("%5 = fadd double %3, %4", true).Binary(10) is ""
 	MetalInstruction("%5 = add i128 %3, %4", true).Binary(0) is ""
+	constant firstUnsigned = 14
 	let llvm = Arguments.First
 	let type = MetalValue(llvm)
 	if (llvm is "double") or (type.Type is "")
 		return ""
-	let prefix = symbol >= 14 then "(" + type.UnsignedType + ")" else ""
+	let prefix = symbol >= firstUnsigned then "(" + type.UnsignedType + ")" else ""
 	let operands = prefix + Operand(1, llvm) + " " + Operators(symbol) + " " + prefix + Operand(2, llvm)
 	"(" + type.Type + ")(" + operands + ")"
 Compared Text

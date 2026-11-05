@@ -2,6 +2,8 @@ has function MlirFunction
 has position Number
 has named Text = ""
 constant Varying = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "value"), MlirInstances.Built)))
+constant PercentSign = 37
+constant EscapedCodes = (Character.Quote, PercentSign, Character.Backslash)
 IsConstant Boolean
 	MlirConstants(MlirTexts.Joined, 0).IsConstant
 	MlirConstants(MlirTexts.Joined, 1).IsConstant is false
@@ -104,16 +106,15 @@ Base Text
 Escaped(text Text, isFormat Boolean) Text
 	MlirConstants(MlirTexts.Joined, 0).Escaped("a\"%", true) is "a\\22%%"
 	MlirConstants(MlirTexts.Joined, 0).Escaped("a%", false) is "a%"
-	constant digits = "0123456789ABCDEF"
 	let percent = isFormat then "%%" else "%"
 	mutable pieces = List(Mutable(Text))
 	for ByteEncoder.Empty.UnicodeBytes(text)
-		let isPlain = value >= 32 and value < 127 and value is not in (34, 37, 92)
-		let hex = "\\" + digits.Substring((value / 16).Floor, 1) + digits.Substring(value % 16, 1)
-		pieces.Add(isPlain then Character(value) to Text else value is 37 then percent else hex)
+		let isPlain = value >= Character.Space and value < Character.Delete and value is not in EscapedCodes
+		let hex = "\\" + MetalValue("").Hex(value, 2)
+		pieces.Add(isPlain then Character(value) to Text else value is PercentSign then percent else hex)
 	Text.Combine(pieces, "")
 EscapedLength(text Text, isFormat Boolean) Number
 	MlirConstants(MlirTexts.Joined, 0).EscapedLength("a%", true) is 3
 	MlirConstants(MlirTexts.Joined, 0).EscapedLength("a%", false) is 2
 	let bytes = ByteEncoder.Empty.UnicodeBytes(text)
-	isFormat then bytes.Length + bytes.Count(37) else bytes.Length
+	isFormat then bytes.Length + bytes.Count(PercentSign) else bytes.Length

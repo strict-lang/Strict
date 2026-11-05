@@ -58,7 +58,8 @@ Sized(mlir Text) Text
 Declared(line Text) Text
 	WebBuild.Declared("  llvm.func @malloc(i64) -> !llvm.ptr") is "malloc"
 	WebBuild.Declared("    %a = llvm.call @malloc(%b)") is ""
-	line.StartsWith("  llvm.func @") then line.Substring(13, line.IndexOf("(") - 13) else ""
+	constant start = MlirGpu.FunctionStart
+	line.StartsWith(start) then line.Substring(start.Length, line.IndexOf("(") - start.Length) else ""
 Preloaded(content Text) Text
 	Missing.Preloaded("Compiler/output/missing") is ""
 	Missing.Preloaded("Compiler") is " --preload-file \"Compiler@/Content\""

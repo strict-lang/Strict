@@ -13,6 +13,8 @@ constant ExactNamed = ("  llvm.mlir.global internal constant @kShape_Shifted_2_g
 constant PlainNamed = ("  llvm.mlir.global internal constant @kShape_Shifted_2_gpu2(\"Shape_Shifted_2_gpu2\00Shape_Shifted_2_gpu2s\00\") : !llvm.array<43 x i8>", "  llvm.mlir.global internal @fShape_Shifted_2_gpu2(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>")
 constant Nesting = (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "offset"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "step"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "step"), InstructionEntry.LoadNumber(3, 2), InstructionEntry.LoadNumber(4, 1.5), InstructionEntry.Binary(InstructionType.LessThan, (2, 1, 5)), InstructionEntry.Binary(InstructionType.Divide, (2, 1, 6)), InstructionEntry.LoopBegin(2, -1), InstructionEntry.Invoke(7, ("Strict/Number", "Floor", "Strict/Number"), List(Number), 2), InstructionEntry.Invoke(8, ("Strict/Number", "Length", "Strict/Number"), List(Number), 2), InstructionEntry.Jump(InstructionType.LoopEnd, 3), InstructionEntry.Jump(InstructionType.LoopEnd, 12))
 constant Nested = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Nested", (MlirLists.Items, Offset), "Strict/List(Number)", Nesting), Float = "f32", Guarded = 2)
+constant MaximumDivisors = 20
+constant DivisorShift = 32
 Origins(position Number, register Number) Texts
 	Shifts.Origins(6, 3) is ("offset")
 	Shifts.Origins(8, 5) is ("?")
@@ -146,7 +148,7 @@ Mask Number
 	let divisors = MlirPassed(MlirFunction(function, Guarded = at), at).Divisors
 	for MlirGpuCheck(function, at).Free
 		mask = (value is in Parameters) or (value is in Reads) then mask + 2 ^ index else mask
-		mask = (index < 20) and (value is in divisors) then mask + 2 ^ (32 + index) else mask
+		mask = (index < MaximumDivisors) and (value is in divisors) then mask + 2 ^ (DivisorShift + index) else mask
 	mask
 Kernel Texts
 	Text.Combine(Shifts.Kernel).IndexOf("_gpu2sx(") > 0

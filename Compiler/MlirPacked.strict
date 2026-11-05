@@ -3,6 +3,7 @@ has position Number
 constant Letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHI"
 constant Widths = (16, 32, 8, 6, 4)
 constant SharedWidths = (16, 32, 8)
+constant WidthBase = 64
 constant Numbered = " = arith.constant "
 constant Summing = MlirPacked(MlirKernel.Summing.function, 1)
 constant Doubling = MlirPacked(MlirKernel.Doubling.function, 2)
@@ -46,7 +47,7 @@ Brained(name Text, index Number) Texts
 	("    " + formats(0) + Numbered + "17 : i64", compared, "    " + formats(1) + Numbered + "16 : i64", chosen)
 Case(source Number) Texts
 	Summing.Case(1) is SecondCases
-	let scale = 64 ^ source
+	let scale = WidthBase ^ source
 	let first = Widths.Length * source
 	for Widths
 		Target(value * scale, first + index)
@@ -55,7 +56,7 @@ Shared(count Number) Texts
 	Summing.Shared(1).Length is 0
 	if count < 2
 		return List(Text)
-	let scale = (64 ^ count - 1) / 63
+	let scale = (WidthBase ^ count - 1) / (WidthBase - 1)
 	let first = Widths.Length * count
 	for SharedWidths
 		Target(value * scale, first + index)
@@ -81,7 +82,7 @@ Mixed(count Number) Numbers
 		let first = Widths(index % Widths.Length)
 		let second = Widths((index / Widths.Length).Floor)
 		if (first is not second) or (first is not in SharedWidths)
-			first + 64 * second
+			first + WidthBase * second
 Dispatched Texts
 	Text.Combine(Summing.Dispatched).IndexOf("[default: ^loop1generic, 0: ^floop1fast, 1040: ^fkloop1fast") > 0
 	Text.Combine(Summing.Dispatched).IndexOf("520: ^fmloop1fast, 16: ^faloop1fast") > 0
@@ -111,7 +112,7 @@ Packings(names Texts) Texts
 		for SharedWidths
 			packings = packings + Text.Combine(Pairs(names, value), " ")
 	for Mixed(names.Length)
-		packings = packings + (names(0) + " " + value % 64 + " " + names(1) + " " + (value / 64).Floor)
+		packings = packings + (names(0) + " " + value % WidthBase + " " + names(1) + " " + (value / WidthBase).Floor)
 	packings
 Variant(packing Text, number Number) Texts
 	Summing.Variant("for 16", 0).First is "  ^faloop1fast:"

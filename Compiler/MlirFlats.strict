@@ -13,6 +13,7 @@ constant Construction = InstructionEntry.Invoke(4, ("Strict/Math/Tripling", "fro
 constant Making = MethodEntry("Made", List(MemberEntry), "Strict/Math/Tripling", (List(InstructionEntry) + MlirOwned.Empty) + (InstructionEntry.LoadNumber(0, 1), InstructionEntry.Named(InstructionType.InvokeWriteToList, 0, "listResult0"), InstructionEntry.LoadNumber(1, 2), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "listResult0"), InstructionEntry.LoadNumber(2, 3), InstructionEntry.Named(InstructionType.InvokeWriteToList, 2, "listResult0")) + InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "listResult0") + Construction + InstructionEntry.Return(4))
 constant Made = MlirFlats(MlirFunction((Tripling, Summing), Tripling, Making), 2)
 constant Sample = MlirFlats(MlirFunction((Tripling, Summing), Tripling, Zed), 1)
+constant MaximumCount = 16
 Count(kind Text) Number
 	Sample.Count("Tripling") is 3
 	Sample.Count("Strict/Math/Tripling") is 3
@@ -22,10 +23,10 @@ Count(kind Text) Number
 	let type = function.TypeOf(TypeEntry.ShortName(kind))
 	let member = type.Changing.Length is 1 then type.Changing.First else Numbers
 	let isNumbers = TypeEntry.ShortName(member.typeName) is in ("List(Number)", "Numbers")
-	if (type.Changing.Length is not 1) or (isNumbers is false) or (member.Bits is not 32)
+	if (type.Changing.Length is not 1) or (isNumbers is false) or (member.Bits is not Number.SingleBits)
 		return 0
 	let count = Constrained(type)
-	(count >= 3) and (count <= 16) and IsSupported(type, member.Name) then count else 0
+	(count >= 3) and (count <= MaximumCount) and IsSupported(type, member.Name) then count else 0
 Constrained(type TypeEntry) Number
 	Sample.IsAccessor(InstructionEntry.Invoke(1, ("Strict/List(Number)", "Z", "N", "x"), List(Number) + 5, 2), 2)
 	Sample.IsAccessor(InstructionEntry.Invoke(1, ("Strict/List(Number)", "Code", "N"), List(Number), 0), 0)

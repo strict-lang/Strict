@@ -12,6 +12,7 @@ constant NameGlobal = "  llvm.mlir.global internal constant @kRows_Doubled_1_gpu
 constant Running = "(!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64"
 constant Launching = ("    %t2gc = arith.fptosi %t2n : f64 to i64", "    %t2gd = func.call @strict_gpu_wanted(%t2gc) : (i64) -> i1", "    cf.cond_br %t2gd, ^loop2gpu, ^loop2host", "  ^loop2gpu:", "    %t2gp = llvm.mlir.addressof @strict_gpu_ptx : !llvm.ptr", "    %t2gk = llvm.mlir.addressof @kRows_Doubled_1_gpu2 : !llvm.ptr", "    %t2gs = llvm.mlir.addressof @fRows_Doubled_1_gpu2 : !llvm.ptr", "    %t2gz = arith.constant 1 : i64", "    %t2ga = llvm.alloca %t2gz x f64 : (i64) -> !llvm.ptr", "    %t2gw = arith.constant 0 : i64", "    %t2gm = arith.constant 0 : i64", "    %t2gr = arith.constant 0 : i64", "    %t2go = arith.constant 0 : i64", "    %t2gj = arith.constant 0 : i64", "    %t2gpf = arith.constant 0 : i64", "    %t2gq = arith.constant 1 : i64", "    %t2gy = arith.constant 1 : i64", "    %t2gg = arith.constant 0 : i64", "    %t2gl = func.call @strict_gpu_run(%t2gp, %t2gk, %t2gs, %t2gc, %t2v, %t2gq, %t2ga, %t2gw, %t2gm, %t2gr, %t2go, %t2gy, %t2gg, %t2gpf, %t2gj) : " + Running, "    %t2gf = arith.cmpf oeq, %t2gl, %zero : f64", "    cf.cond_br %t2gf, ^loop2host, ^loop2gpudone", "  ^loop2gpudone:", "    llvm.store %t2gl, %v_forResult : f64, !llvm.ptr", "    cf.br ^loop2exit", "  ^loop2host:")
 constant Stored = ("    %t2gz = arith.constant 3 : i64", "    %t2ga = llvm.alloca %t2gz x f64 : (i64) -> !llvm.ptr", "    %t2gv0 = llvm.load %v_weights : !llvm.ptr -> f64", "    %t2gx0 = llvm.getelementptr %t2ga[0] : (!llvm.ptr) -> !llvm.ptr, f64", "    llvm.store %t2gv0, %t2gx0 : f64, !llvm.ptr", "    %t2gv1 = llvm.load %v_input : !llvm.ptr -> f64", "    %t2gx1 = llvm.getelementptr %t2ga[1] : (!llvm.ptr) -> !llvm.ptr, f64", "    llvm.store %t2gv1, %t2gx1 : f64, !llvm.ptr", "    %t2gw = arith.constant 2 : i64", "    %t2gm = arith.constant 3 : i64", "    %t2gr = arith.constant 1 : i64", "    %t2go = arith.constant 2 : i64", "    %t2gj = arith.constant 0 : i64", "    %t2gpf = arith.constant 1024 : i64")
+constant FunctionStart = "  llvm.func @"
 Launched Texts
 	Doubling.Launched.Last is "  ^loop2host:" and (Doubling.Launched is Launching)
 	Randomizing.Launched.Length is 0
@@ -78,7 +79,7 @@ Counted(count Number, mask Number, rows Number, dots Number) Texts
 	MlirGpu(reading, 2).Counted(0, 0, 0, 0).Last is "    %t2gpf = arith.constant 2816 : i64"
 	constant names = ("gw", "gm", "gr", "go", "gj", "gpf")
 	let guards = MlirGuards(MlirFunction(function, Float = "f32", Guarded = position), position).Mask
-	let format = MlirDoubles(function, position).Format + 256 * MlirCost(function, position).Shift
+	let format = MlirDoubles(function, position).Format + Byte.Values * MlirCost(function, position).Shift
 	for (count, mask, rows, dots, guards, format)
 		MlirTyped.Integer.Constant(Temp(names(index)), value to Text)
 Finished Texts
@@ -124,8 +125,8 @@ Exported(device Text) Texts
 	MlirGpu.Module(List(MlirFunction) + Doubling.function).Lines.Last is "}"
 	MlirGpu.Module(List(MlirFunction) + Doubling.function).EndsWith(Text.Combine(MlirGpu.Functions(Twiced), "\n") + "\n}")
 	for device.Lines
-		if value.StartsWith("  llvm.func @") and (value.IndexOf("nvvm.kernel") > 0)
-			value.Substring(13, value.IndexOf("(") - 13)
+		if value.StartsWith(FunctionStart) and (value.IndexOf("nvvm.kernel") > 0)
+			value.Substring(FunctionStart.Length, value.IndexOf("(") - FunctionStart.Length)
 Kernels(inspected MlirFunction) Texts
 	MlirGpu.Kernels(Doubling.function).First is MlirDevice.DoublingHeader
 	Text.Combine(MlirGpu.Kernels(Doubling.function)).IndexOf("llvm.func @Rows_Doubled_1_gpu2s(") > 0

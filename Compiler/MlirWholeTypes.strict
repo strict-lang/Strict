@@ -32,8 +32,9 @@ Returned Text
 Settled Text
 	Divided.Settled is "iifi|-if|iiiifii"
 	Halving.Settled.StartsWith("iiii-|")
+	constant maximumSteps = 64
 	mutable combined = Initial
-	for 64
+	for maximumSteps
 		let next = Step(combined)
 		if next is combined
 			return combined

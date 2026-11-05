@@ -29,7 +29,7 @@ IsShaded Boolean
 	WgslShader(MlirGpu.Randomizing.function, 2).IsShaded is false
 	Halved.IsShaded
 	let collection = MlirLoops(function, position).Collection
-	let isFloats = MlirDoubles(function, position).Format is in (0, 17, 32)
+	let isFloats = MlirDoubles(function, position).Format is in (0, MlirDoubles.BFloat16Format, Number.SingleBits)
 	let isKernel = MlirWholeKernel(function, position).IsKernel
 	(collection is in ("", "List(Number)")) and isFloats and (isKernel is false) and MlirGpuCheck(function, position).IsGpu
 Functions Texts
@@ -101,6 +101,6 @@ Singles Text
 	let free = MlirGpuCheck(function, position).Free
 	mutable singles = List(Text)
 	for function.type.members
-		if (value.Bits is 32) and (value.Name is in free)
+		if (value.Bits is Number.SingleBits) and (value.Name is in free)
 			singles = singles + (free.Index(value.Name) to Text)
 	"[" + Text.Combine(singles, ", ") + "]"

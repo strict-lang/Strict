@@ -9,6 +9,8 @@ constant UppercaseZ = 90
 constant CaseOffset = 32
 constant Space = 32
 constant Quote = 34
+constant Backslash = 92
+constant Delete = 127
 from(text)
 	Character("b") is "b"
 	Character(9) is Tab

@@ -151,6 +151,7 @@ Referenced(host Text, base Text, newer Text) Text
 	Missing.Referenced("module {\n}", "Compiler/output/Shared", "// a").IndexOf("hash:Shared\\007868034\\00") > 0
 	let stem = Path(base).FileName.text
 	let shared = File(base + ".runtime.ptx").Exists then PtxCache(base + ".runtime").Read(".ptx") else ""
-	let hash = "" + (HashCode(newer + shared).number % 9999991)
+	constant hashModulus = 9999991
+	let hash = "" + (HashCode(newer + shared).number % hashModulus)
 	let global = "\n  llvm.mlir.global internal constant @strict_gpu_ptx(\"hash:" + stem + "\\00" + hash + "\\00\")"
 	host.Substring(0, host.Length - 1) + global + " : !llvm.array<" + (stem.Length + hash.Length + 7) + " x i8>\n}"

@@ -10,6 +10,9 @@ constant Varied = MlirTokens(MlirFunction(Grouped.function, method = MethodEntry
 constant Code = Dotted.instructions
 constant Ends = (InstructionType.LoadVariableToRegister, InstructionType.Invoke, InstructionType.LoadVariableToRegister, InstructionType.Return)
 constant Tile = 64
+constant StartLoad = 11
+constant SumLoad = 20
+constant Returned = 21
 constant Marker = "    // reads the dot products of strict_device_tokens"
 Call Number
 	Summing.Call is 15
@@ -49,12 +52,12 @@ IsRowDot(callee MlirFunction) Boolean
 	Summing.IsRowDot(Summing.function) is false
 	let names = callee.Parameters
 	let code = callee.method.instructions
-	if (names.Length is not 5) or (code.Length is not 22)
+	if (names.Length is not 5) or (code.Length is not Code.Length)
 		return false
 	let dot = MlirDeviceDot(MlirFunction(callee, Float = "f32"), 4)
-	if ((code(1).kind, code(2).kind, code(20).kind, code(21).kind) is not Ends) or (dot.IsDot is false)
+	if ((code(1).kind, code(2).kind, code(SumLoad).kind, code(Returned).kind) is not Ends) or (dot.IsDot is false)
 		return false
-	let loads = (code(1).texts(0), code(2).texts(1), code(6).texts(0), code(11).texts(0), code(20).texts(0))
+	let loads = (code(1).texts(0), code(2).texts(1), code(6).texts(0), code(StartLoad).texts(0), code(SumLoad).texts(0))
 	let expected = (names(1), "Length", names(2), names(4), code(5).texts(0))
 	(code(4).payload(0) is code(2).payload(0)) and (loads is expected) and (dot.Operands is (names(1), names(3)))
 Row(register Number, before Number) Texts
