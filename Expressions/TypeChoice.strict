@@ -14,10 +14,13 @@ Chosen(files Texts, source Text) Texts
 		if (best is "") or (best is value)
 			value
 Names(files Texts) Texts
+	Plain.Names(("x\\Scene.strict")) is ("Scene.strict")
+	Plain.Best(("./WebWars/Scene.strict"), "./Content/Catalog.strict") is "./WebWars/Scene.strict"
 	Plain.Names(Project) is ("Scene.strict", "Scene.strict", "Unit.strict")
 	for files
 		Path(value.Replace("\\", "/")).FileName.text
 SameNamed(files Texts, names Texts, name Text) Texts
+	Plain.Best(("x\\Scene.strict", "y\\Scene.strict"), "y\\Game.strict") is "y\\Scene.strict"
 	Plain.SameNamed(Project, Plain.Names(Project), "Scene.strict").Length is 2
 	for files
 		if names(index) is name
@@ -35,6 +38,7 @@ Best(candidates Texts, source Text) Text
 			return value
 	""
 Qualifying(candidates Texts) Texts
+	Qualified.IsQualified("x\\WebWars\\Scene.strict")
 	Both.Qualifying(Scenes) is Scenes
 	for candidates
 		if IsQualified(value)
@@ -49,6 +53,7 @@ IsQualified(path Text) Boolean
 			return true
 	false
 Ambiguous(names Texts, path Text) Texts
+	Plain.Ambiguous(("Scene", "Scene", "Unit", "Unit"), "A").Length is 1
 	Plain.Ambiguous(("Scene", "Scene", "Unit"), "Catalog.strict").First.StartsWith("AmbiguousType: Scene")
 	Plain.Ambiguous(("Scene", "Unit"), "./Content/Catalog.strict").Length is 0
 	Both.Ambiguous(("Scene", "Scene"), "A.strict").First.StartsWith("SameNamedTypes: Scene used in A.strict:1 from")
@@ -60,6 +65,9 @@ Ambiguous(names Texts, path Text) Texts
 			let issue = packages.Length > 1 then "SameNamedTypes: " else "AmbiguousType: "
 			issue + value + " used in " + path + ":" + UsedLine(value) + (packages.Length > 1 then clash else advice)
 Packages(name Text) Texts
+	Plain.Packages("Units").Length is 0 and (Both.Packages("Unit").Length is 0)
+	TypeChoice(("Scene")).Packages("Scene").Length is 0
+	TypeChoice(("a WebWars/Scene", "b WebWars/Scene")).Packages("Scene") is ("WebWars")
 	Both.Packages("Scene") is ("LogoApp", "WebWars")
 	Plain.Packages("Scene").Length is 0
 	mutable packages = List(Mutable(Text))
@@ -70,6 +78,8 @@ Packages(name Text) Texts
 				packages.Add(tokens(value))
 	packages
 UsedLine(name Text) Number
+	Plain.Ambiguous(("Scene", "Scene"), "A").First.EndsWith("write Package/Scene in a declaration")
+	Both.Ambiguous(("Scene", "Scene"), "A")(0).EndsWith(" and WebWars, a build keys types by their plain name, rename one")
 	Plain.UsedLine("Scene") is 2
 	Plain.UsedLine("Unit") is 0
 	for lines
