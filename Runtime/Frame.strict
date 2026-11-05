@@ -108,6 +108,8 @@ Invoked(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 Called(entry InstructionEntry, slots List(VmValue)) Invocation
 	Twice.Called(Invocation.AddCall.entry, (VmValue.OfNumber(3), VmValue.OfNumber(4))).Instance.number is 4
 	Twice.Called(Invocation.AddCall.entry, (VmValue.OfNumber(3), VmValue.OfNumber(4))).Arguments.First.number is 3
+	Twice.Called(Invocation.AddCall.entry, Listed).Resolution is 10
+	Twice.Called(InstructionEntry.Invoke(0, ("T", "A", "N", "x", "y"), (1, 0), -1), Listed).Arguments.Last.text is "ab"
 	let count = 5 + entry.payload(3)
 	let flag = count + 1 + entry.payload(count)
 	let instance = entry.payload(flag) is 1 then slots(entry.payload(flag + 1)) else slots(ThisSlot)
@@ -144,10 +146,12 @@ Entered(entry InstructionEntry, slots List(VmValue), position Number) Number
 Ending(entry InstructionEntry, slots List(VmValue)) VmValue
 	Twice.Ending(InstructionEntry.LoopBegin(6, 8), Listed).number is 5
 	Twice.Ending(InstructionEntry.LoopBegin(6, -1), Listed).kind is "None"
+	Twice.Next(InstructionEntry.Jump(InstructionType.JumpEnd, 7), 1, (Listed(0), Listed(0), Listed(0), Listed(2))) is 2
 	entry.payload(1) is 1 then slots(entry.payload(2)) else VmValue.None
 Paired(entry InstructionEntry, slots List(VmValue)) VmValue
 	Twice.Paired(InstructionEntry(InstructionType.Return, List(Text), (8, -1, 6)), Listed).items(2).number is 1
 	Twice.Paired(InstructionEntry(InstructionType.Return, List(Text), (8, -1, 6)), Listed).items(1).kind is "None"
+	Twice.Called(Invocation.AddCall.entry, Listed).Depth is 1
 	mutable items = List(Mutable(VmValue))
 	for entry.payload
 		items.Add(value < 0 then VmValue.None else slots(value))
