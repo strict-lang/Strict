@@ -4,10 +4,15 @@ constant Countdown = BodyParser("Run", "\tfor as long as x > 0", "\t\tx").Block(
 constant Counting = MethodCodegen.LoopBody.children(0)
 constant Shading = Repeating(ValueCodegen(TypeInference(KnownTypes(List(Text) + "Shade", List(Scope) + KnownTypes.NoMembers, List(Scope) + KnownTypes.NoMembers, List(Scope) + KnownTypes.NoMembers), List(Scope) + Scope(("Dark", "Light"), ("0", "1"))), ValueCodegen.Plain.methods, CallTarget.Plain))
 constant ShadeLoop = BodyParser("Run", "\tfor Shade", "\t\tvalue").Block(1, 1).children(0)
+constant Returned = CodeBlock.Empty.Add(InstructionEntry.Return(1))
 Rewritten(loop SyntaxNode) SyntaxNode
 	Plain.Rewritten(Countdown).children(0) to Text is "x > 0 then 1000000000000000 else 0"
 	Plain.Rewritten(Counting) is Counting
 	Shading.Rewritten(ShadeLoop).children(0) to Text is "(Shade.Dark, Shade.Light)"
+	Plain.Rewritten(Countdown).Kind is "For" and (Plain.Rewritten(Countdown).children(0).children(1).Kind is "Number")
+	Plain.Rewritten(Countdown).children(0).children(0).children(1).Kind is "Number"
+	Shading.values.inference.types.names is ("Shade") and (Shading.values.inference.constants.Length is 1)
+	Shading.values.inference.types.methods.Length + Shading.values.inference.types.parameters.Length is 2
 	if loop.text is not "for as long as"
 		return Enumerated(loop)
 	let endless = SyntaxNode("Binary", "then", (loop.children(0), SyntaxNode("Number", "1000000000000000")))
@@ -16,6 +21,8 @@ Rewritten(loop SyntaxNode) SyntaxNode
 Enumerated(loop SyntaxNode) SyntaxNode
 	Shading.Enumerated(ShadeLoop).children(0).children.Length is 2
 	Plain.Enumerated(Counting) is Counting
+	Shading.Enumerated(ShadeLoop).Kind is "For" and (Shading.values.inference.types.members.Length is 1)
+	Shading.Enumerated(SyntaxNode("For", "", (SyntaxNode("Body", "Shade"), SyntaxNode("Body", "")))).HasValue is false
 	let named = loop.HasValue then values.inference.Enumerated(loop.children(0).text) else List(Text)
 	if named.Length is 0
 		return loop
@@ -25,6 +32,8 @@ Enumerated(loop SyntaxNode) SyntaxNode
 Ended(loop SyntaxNode, looped CodeBlock, start CodeBlock) CodeBlock
 	Plain.Ended(Countdown, CodeBlock.Empty, CodeBlock.Empty).instructions.Last.payload is (3, -1)
 	Plain.Ended(Counting, CodeBlock.Empty, CodeBlock.Empty).instructions.Last.payload is (0)
+	Plain.Ended(Counting, Returned, Returned).instructions.Last.payload is (0)
+	Plain.Ended(Counting, Returned, Returned).instructions.Length is 2
 	let isRepeated = loop.text is "for as long as"
 	let checked = isRepeated then OperatorCodegen(values).Compared(loop.children(0), looped) else looped
 	let offset = ByteEncoder.Empty.SevenBit(checked.instructions.Length - start.instructions.Length).bytes

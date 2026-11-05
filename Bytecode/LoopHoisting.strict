@@ -8,6 +8,10 @@ constant Shadowing = BodyParser("Run", "\tfor 3", "\t\tlet bag = bags", "\t\tbag
 constant Scaling = BodyParser("Run", "\tfor 3", "\t\tindex * (1000 / steps)", "\t\tindex + values(0) * steps").Block(1, 1)
 constant Rows = BodyParser("Run", "\tfor 3", "\t\tlet row = index", "\t\tfor 2", "\t\t\trow * steps + index").Block(1, 1)
 constant Scaled = Hoisting.Invariant(Scaling.children(0), CodeBlock.Empty)
+constant Repeated = SyntaxNode("Body", "Run", List(SyntaxNode) + Looping.children(0) + Looping.children(0), 1)
+constant Counting = BodyParser("Run", "	for 3", "		index * (bags.count / 2)").Block(1, 1)
+constant Read = Hoisting.Reads(Looping, Bag)
+constant Valued = CodeBlock.Empty.Declare("value", "Bag").Declare("index", "Bag")
 Hoisted(body SyntaxNode, block CodeBlock) SyntaxNode
 	Hoisting.Hoisted(Looping, Bag).children(0) to Text is "let bagValues = bag.values"
 	Hoisting.Hoisted(Looping, Bag).children(1).children.Last.children(0) to Text is "bagValues(index) * bagValues(0)"
@@ -47,6 +51,9 @@ Invariant(loop SyntaxNode, block CodeBlock) SyntaxNodes
 		declared.Add(SyntaxNode("Declaration", "let " + Invariable(loop.line, index), List(SyntaxNode) + value))
 	declared + nested
 Found(node SyntaxNode, names LoopNames) SyntaxNodes
+	Hoisting.Found(StatementParser(Tokenizer("1000 - steps").Tokens).ParseStatement, LoopNames.Steps).Length is 1
+	Hoisting.Found(StatementParser(Tokenizer("-steps").Tokens).ParseStatement, LoopNames.Steps).Length is 0
+	Hoisting.Found(StatementParser(Tokenizer("steps * outer").Tokens).ParseStatement, LoopNames.Steps).Length is 0
 	Hoisting.Found(Scaling.children(0).children.Last, LoopNames.Steps).Length is 1
 	let isArithmetic = (node.Kind is "Binary") and (node.text is in ("+", "-", "*", "/", "%", "^"))
 	if isArithmetic and names.IsInvariant(node) and LoopNames.HasName(node) and IsSafe(node)
@@ -79,9 +86,18 @@ Substituted(node SyntaxNode, found SyntaxNodes, line Number) SyntaxNode
 		children.Add(Substituted(value, found, line))
 	SyntaxNode(node.Kind, node.text, children, node.line)
 Invariable(line Number, position Number) Text
+	Hoisting.Found(StatementParser(Tokenizer("2 * 3").Tokens).ParseStatement, LoopNames.Steps).Length is 0
+	Hoisting.Found(StatementParser(Tokenizer("index * 2").Tokens).ParseStatement, LoopNames.Steps).Length is 0
+	Hoisting.Found(StatementParser(Tokenizer("row + 2 * a + 2 * a").Tokens).ParseStatement, LoopNames.Steps).Length is 1
+	Hoisting.IsSafe(StatementParser(Tokenizer("steps.Length").Tokens).ParseStatement)
+	Hoisting.IsSafe(StatementParser(Tokenizer("steps.Count").Tokens).ParseStatement) is false
+	Hoisting.IsSafe(StatementParser(Tokenizer("outer.count").Tokens).ParseStatement) is false
+	Hoisting.IsSafe(StatementParser(Tokenizer("steps.count").Tokens).ParseStatement)
 	Hoisting.Invariable(2, 0) is "invariant2x0"
 	"invariant" + line + "x" + position
 Prefixed(prefix Text) Texts
+	Hoisting.Found(StatementParser(Tokenizer("steps > 2").Tokens).ParseStatement, LoopNames.Steps).Length is 0
+	Hoisting.Found(StatementParser(Tokenizer("steps + 1").Tokens).ParseStatement, LoopNames.Steps).Length is 1
 	Hoisting.Prefixed("has ") is ("bags")
 	for values.target.shape.lines
 		if value.StartsWith(prefix)
@@ -113,9 +129,25 @@ Replaced(node SyntaxNode, reads SyntaxNodes) SyntaxNode
 		children.Add(Replaced(value, reads))
 	SyntaxNode(node.Kind, node.text, children, node.line)
 Member(call SyntaxNode) SyntaxNode
+	Valued.scope.TypeOf("value") is "Bag" and (Valued.scope.TypeOf("index") is "Bag")
+	Hoisting.Invariant(Counting.children(0), Bag)(0) to Text is "let invariant2x0 = bags.count / 2"
+	Hoisting.Hoisted(Looping, Bag).Kind is "Body"
+	Scaled(1).Kind is "For"
+	Hoisting.Substituted(MethodCodegen.One, List(SyntaxNode) + MethodCodegen.One, 2).Kind is "Identifier"
+	Hoisting.Prefixed("mutable ").Length is 0
+	Hoisting.Hoisted(Repeated, Bag).children.Length is 3 and (Repeated.Kind is "Body")
+	Hoisting.Replaced(StatementParser(Tokenizer("bag.values(1, 2)").Tokens).ParseStatement, Read).Kind is "MethodCall"
+	Hoisting.Replaced(StatementParser(Tokenizer("bag.values").Tokens).ParseStatement, Read).Kind is "Member"
 	Hoisting.Member(Looping.children(0).children(1).children(0).children(0)) to Text is "bag.values"
 	SyntaxNode("Member", call.text, List(SyntaxNode) + call.children(0))
 Name(member SyntaxNode) Text
+	Hoisting.IsHoistable(StatementParser(Tokenizer("values(bags, 1)").Tokens).ParseStatement, Bag) is false
+	Hoisting.IsHoistable(StatementParser(Tokenizer("bags(0).values(1)").Tokens).ParseStatement, Bag) is false
+	Hoisting.IsHoistable(StatementParser(Tokenizer("bags.values").Tokens).ParseStatement, CodeBlock.Empty) is false
+	Hoisting.IsHoistable(StatementParser(Tokenizer("value.values(0)").Tokens).ParseStatement, Valued) is false
+	Hoisting.IsHoistable(StatementParser(Tokenizer("index.values(0)").Tokens).ParseStatement, Valued) is false
+	Hoisting.IsHoistable(StatementParser(Tokenizer("bags.values(0)").Tokens).ParseStatement, CodeBlock.Empty)
+	Hoisting.IsHoistable(StatementParser(Tokenizer("bags.values(0, 1)").Tokens).ParseStatement, Bag) is false
 	Hoisting.Name(SyntaxNode("Member", "values", List(SyntaxNode) + SyntaxNode("Identifier", "bag"))) is "bagValues"
 	let rest = member.text.Substring(1, member.text.Length - 1)
 	member.children(0).text + member.text.Substring(0, 1).Upper + rest
