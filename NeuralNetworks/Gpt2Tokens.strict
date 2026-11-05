@@ -91,6 +91,7 @@ Ranked(merges Texts, known Dictionary(Text, Number)) Dictionary(Number, Number)
 Raw(mapped Text) Text
 	Raw("Ġab") is " ab"
 	Raw("ab") is "ab"
+	Raw("ġ")(0).number is Character.Delete
 	mutable raw = ""
 	mutable position = 0
 	for as long as position < mapped.Length

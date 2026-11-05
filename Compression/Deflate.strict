@@ -34,6 +34,7 @@ Adler Numbers
 Zlib Slow(Numbers)
 	Inflate(Inflate.Part(Deflate(Repeated).Zlib, 2, Deflate(Repeated).Zlib.Length - 2)).Inflated is Repeated
 	Inflate(Inflate.Part(Deflate(List(Number)).Zlib, 2, 4)).Inflated.Length is 0
+	Inflate.Part(Deflate(Repeated).Zlib, 0, 2) is (120, 1)
 	(List(Number) + ZlibHeader + 1) + Packed(Codes) + Adler
 Codes Numbers
 	(Deflate(Repeated).Codes.Length < 24) and (Deflate(Repeated).Codes is RepeatedCodes)

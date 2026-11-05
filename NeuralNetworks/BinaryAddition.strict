@@ -20,6 +20,7 @@ Trained(network Recurrent, count Number) Recurrent
 	trained
 Operand Number
 	BinaryAddition.Operand < 128
+	BinaryAddition.Operand + BinaryAddition.Operand + BinaryAddition.Operand + BinaryAddition.Operand > 0
 	OperandLimit.Random.Floor
 Pairs(first Number, second Number) List(Numbers)
 	BinaryAddition.Pairs(1, 2).Length is 8

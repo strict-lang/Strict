@@ -13,6 +13,8 @@ Dequantized(coefficients Numbers, quantization Numbers) Numbers
 Inverse(coefficients Numbers) Numbers
 	Idct.Inverse(Flat).Last is 129
 	Idct.Inverse(Flat * 0).First is 128
+	Idct.Inverse(Flat * -100).First is 28
+	Idct.Inverse(Flat * 200).Last is 255
 	for Columns(Rows(coefficients))
 		value + LevelShift < 0 then 0 else value + LevelShift > Byte.Max then Byte.Max else (value + LevelShift).Round
 Rows(values Numbers) Numbers

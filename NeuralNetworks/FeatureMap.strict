@@ -37,6 +37,7 @@ Runs Number
 Partials(groups Number, centers Numbers, squared Boolean) Float32s
 	FeatureMap((1, 2, 3, 6), 1, 2, (0, 0)).Partials(2, (0, 0), false) is (4, 8)
 	FeatureMap((1, 2, 3, 6), 1, 2, (0, 0)).Partials(2, (2, 4), true) is (2, 8)
+	FeatureMap(Layer.Zeros(1025), 1, 1, List(Number) + 1).Partials(1, List(Number) + 0, false) is (1024, 1)
 	let size = channels / groups
 	let total = values.Length / channels
 	for Runs * channels
