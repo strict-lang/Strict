@@ -82,12 +82,18 @@ Argument(method MethodEntry, arguments List(VmValue), position Number) VmValue
 	Hello.Argument(Defaulted, List(VmValue), 0).number is 7
 	Hello.Argument(Defaulted, List(VmValue) + VmValue.OfNumber(2), 0).number is 2
 	Hello.Argument(Defaulted, List(VmValue), 1).kind is "None"
+	Hello.Member(Wrapper, VmValue.OfNumber(3), 3, 0, VmValue.None).kind is "None"
+	Hello.Member(Wrapper, Frame.Listed(7), 7, 2, VmValue.None).number is 20
+	Hello.Member(Wrapper, VmValue.None, 7, 2, VmValue.None).number is 7
+	Hello.Member(Wrapper, VmValue.None, 7, 0, Frame.Listed(7)).number is 20
+	Hello.Member(Paired, VmValue("Pair", 0, "", (VmValue.None, VmValue.OfNumber(2))), 7, 1, VmValue.None).number is 2
 	if position >= method.parameters.Length
 		return VmValue.None
 	position < arguments.Length then arguments(position) else Natives(types).Initial(method.parameters(position))
 Indexed(method MethodEntry, arguments List(VmValue)) VmValue
 	Hello.Indexed(MethodEntry.Indexing, List(VmValue) + VmValue.OfNumber(4)).number is 4
 	Hello.Indexed(Defaulted, List(VmValue)).kind is "None"
+	Hello.Indexed(MethodEntry.Indexing, List(VmValue)).number is 0
 	for method.parameters
 		if value.Name is "index"
 			return index < arguments.Length then arguments(index) else Natives(types).Initial(value)
@@ -129,6 +135,9 @@ Execute(method MethodEntry, locals List(VmValue), owner Text, depth = 0) VmValue
 Call(call Invocation) VmValue
 	Machine(List(TypeEntry) + Doubler).Call(Invocation.AddCall).kind is "Strict/Error"
 	Hello.Call(Invocation.Uppered).text is "AB"
+	Hello.Typed((MemberEntry.LoggerMember, Paired.members.Last), (VmValue.OfText("5"), VmValue.OfText("6")))(0).text is "5"
+	Hello.Typed(List(MemberEntry) + Paired.members.Last, (VmValue.OfText("5"), VmValue.OfText("6"))).Last.number is 6
+	Hello.Bound(Doubler, VmValue.None, MethodEntry.Indexing, (VmValue.OfNumber(4)), VmValue.None)(5).number is 4
 	(deadline > 0) and Hosted(call).IsChanging then VmValue.OfError("ChangeInMutationRun") else Routed(call)
 Routed(call Invocation) VmValue
 	Hello.Routed(Invocation.Uppered).text is "AB"
