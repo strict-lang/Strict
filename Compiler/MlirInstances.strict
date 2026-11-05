@@ -14,11 +14,24 @@ constant Nesting = MlirFunction(List(TypeEntry) + MlirFunction.Shape + Outer, Ou
 constant Counting = "    func.call @strict_rc_written(%s) : (!llvm.ptr) -> ()"
 constant Written = "    func.call @strict_gc_written(%s) : (!llvm.ptr) -> ()"
 Stored(owner TypeEntry) List(MemberEntry)
+	MlirInstances(Shapes, 0).StoredNames(MlirLayout.Byting) is ("number")
+	MlirInstances(Shapes, 1).MemberValue(Built, Shapes.type, Shapes.type.members.First, 5)(1).IndexOf(" %r0 ") > 0
+	MlirInstances(Nesting, 1).MemberValue(Built, Outer, Outer.members(1), 1).Length is 4
+	MlirInstances(Nesting, 1).MemberValue(Built, Outer, Outer.members(1), 1)(2).EndsWith("%t1d1c, %t1s1 : f64, !llvm.ptr")
+	MlirInstances(Nesting, 1).MemberValue(Built, Outer, Outer.members(1), 1).Last is Written.Replace("%s", "%t1s1")
+	MlirInstances(Nesting, 1).MemberValue(Built, Outer, Outer.members(1), 1)(0).IndexOf("%t1op[1]") > 0
 	MlirInstances(Shapes, 0).Stored(MlirFunction.Shape).Length is 1
 	for owner.members
 		if (value.IsConstant is false) and TypeEntry.ShortName(value.typeName) is not "Logger"
 			value
 StoredNames(owner TypeEntry) Texts
+	MlirInstances(Shapes, 1).Constructed(Built, "Strict/Shape")(0) is "    %t1oz = arith.constant 8 : i64"
+	MlirInstances(Shapes, 1).Constructed(Built, "Strict/Shape")(1).IndexOf("%t1op = func.call @strict_alloc(%t1oz)") is 4
+	MlirInstances(Shapes, 1).Constructed(Built, "Strict/Shape")(2).IndexOf("%t1s0 = llvm.getelementptr %t1op[0]") is 4
+	MlirInstances(Shapes, 1).Constructed(Built, "Strict/Shape")(3) is "    %t1a0 = llvm.load %r0 : !llvm.ptr -> f64"
+	MlirInstances(Shapes, 1).Constructed(Built, "Strict/Shape")(4) is "    llvm.store %t1a0, %t1s0 : f64, !llvm.ptr"
+	MlirInstances(Shapes, 1).Constructed(Built, "Strict/Shape")(5) is Counting.Replace("%s", "%t1s0")
+	MlirInstances(Shapes, 1).Constructed(Built, "Strict/Shape")(6).IndexOf("%t1of = func.call @strict_bits(%t1op)") is 4
 	MlirInstances(Shapes, 0).StoredNames(MlirFunction.Shape) is ("width")
 	for Stored(owner)
 		value.Name
@@ -94,6 +107,13 @@ Field(entry InstructionEntry) Texts
 	let loaded = List(Text) + function.Load(Temp("i"), "%r" + entry.payload(1)) + memory.Pointer(Temp("i"), "i")
 	loaded + Member(memory, function.TypeOf(kind), slot) + function.Store(Temp("mv"), "%r" + entry.payload(0))
 Member(memory MlirMemory, owner TypeEntry, slot Number) Texts
+	MlirInstances(Shapes, 2).Field(Width)(0) is "    %t2i = llvm.load %r1 : !llvm.ptr -> f64"
+	MlirInstances(Shapes, 2).Field(Width)(1) is "    %t2ip = func.call @strict_ptr(%t2i) : (f64) -> !llvm.ptr"
+	MlirInstances(Shapes, 2).Field(Width)(2) is "    %t2m = llvm.getelementptr %t2ip[0] : (!llvm.ptr) -> !llvm.ptr, f64"
+	MlirInstances(Shapes, 2).Field(Width)(3) is "    %t2mv = llvm.load %t2m : !llvm.ptr -> f64"
+	MlirInstances(Shapes, 2).Field(Width)(4) is "    llvm.store %t2mv, %r2 : f64, !llvm.ptr"
+	MlirInstances(Shapes, 2).Field(Named) is MlirInstances(Shapes, 2).ErrorName(Named)
+	MlirInstances(Shapes, 2).Field(InstructionEntry(Width.kind, "h", (2, 1, -1)))(0).IndexOf("member Shape.h") > 0
 	Text.Combine(MlirInstances(MlirEmbedded.Boxer, 4).Field(MlirEmbedded.Boxing.instructions(4))).IndexOf("%t4ip[2]") > 0
 	Text.Combine(MlirInstances(MlirEmbedded.Boxer, 5).Field(MlirEmbedded.Reading)).IndexOf("@strict_bits(%t5m)") > 0
 	MlirEmbedded(function).Read(memory, owner, Stored(owner)(slot), Temp("ip"), "m")
@@ -111,6 +131,13 @@ Unpacked Texts
 			lines = lines + loaded + function.Store(memory.Temp("u" + index + "v"), "%v_" + value.Name)
 	lines + ("    cf.br ^unpacked", "  ^unpacked:")
 ErrorName(entry InstructionEntry) Texts
+	MlirInstances(Shapes, 2).ErrorName(Named)(0) is "    %t2e = llvm.load %r1 : !llvm.ptr -> f64"
+	MlirInstances(Shapes, 2).ErrorName(Named)(2) is "    llvm.store %t2n, %r2 : f64, !llvm.ptr"
+	MlirInstances(Looping, 0).Unpacked(0) is "    %self = llvm.load %instance : !llvm.ptr -> f64"
+	MlirInstances(Looping, 0).Unpacked(4) is "    %t-1selfp = func.call @strict_ptr(%self) : (f64) -> !llvm.ptr"
+	MlirInstances(Looping, 0).Unpacked(5) is "    %t-1u0 = llvm.getelementptr %t-1selfp[0] : (!llvm.ptr) -> !llvm.ptr, f64"
+	MlirInstances(Looping, 0).Unpacked(6) is "    %t-1u0v = llvm.load %t-1u0 : !llvm.ptr -> f64"
+	MlirInstances(Looping, 0).Unpacked(7) is "    llvm.store %t-1u0v, %v_width : f64, !llvm.ptr"
 	MlirInstances(Shapes, 2).ErrorName(Named).Index("    %t2n = func.call @strict_error_name(%t2e) : (f64) -> f64") is 1
 	let named = "    " + Temp("n") + " = func.call @strict_error_name(" + Temp("e") + ") : (f64) -> f64"
 	(function.Load(Temp("e"), "%r" + entry.payload(1)), named, function.Store(Temp("n"), "%r" + entry.payload(0)))
@@ -127,17 +154,31 @@ Aliased Texts
 			lines = lines + function.Copied("%instance", "%v_" + value.Name, "%talias" + index)
 	lines
 ReferencedConstants List(MemberEntry)
+	MlirInstances(MlirChecks.FlatRead.function, 2).ReferencedConstants.Length is 0
+	MlirInstances(Widened, 0).Unpacked(5) is "    cf.br ^unpacked"
+	MlirInstances(MlirLayout.Wrapping.function, 0).Unpacked is MlirInstances(MlirLayout.Wrapping.function, 0).Aliased
+	MlirInstances(MlirLayout.Wrapping.function, 0).Aliased(1) is "    llvm.store %talias0, %v_number : f64, !llvm.ptr"
+	MlirInstances(Shapes, 1).Constructed(Built, "Strict/Character")(0) is "    %t1o = llvm.load %r0 : !llvm.ptr -> f64"
+	MlirInstances(Shapes, 1).Constructed(Built, "Strict/Character").Last is "    llvm.store %t1o, %r1 : f64, !llvm.ptr"
 	MlirInstances(Shapes, 0).ReferencedConstants.Length is 0
 	for function.type.members
 		if value.IsConstant and IsReferenced(value.Name)
 			value
 IsReferenced(name Text) Boolean
+	MlirInstances(MlirElements.Later.function, 2).IsReferenced("items")
+	MlirInstances(MlirElements.Later.function, 2).IsReferenced("items(0)") is false
+	MlirInstances(MlirLanes.Collecting, 0).IsReferenced("colors")
 	MlirInstances(Shapes, 0).IsReferenced("width") is false
 	for function.method.instructions
 		if (value.kind is in (InstructionType.IndexCall, InstructionType.LoadVariableToRegister)) and (value.texts(0) is name)
 			return true
 	false
 Constants Texts
+	MlirInstances(Shapes, 0).Fresh(Shapes.type, "%s", "", List(Text))(6).IndexOf("@strict_bits(%t0op)") > 0
+	MlirInstances(Shapes, 0).Fresh(Shapes.type, "%s", "", List(Text))(2).IndexOf("%t0s0 = llvm.getelementptr %t0op") is 4
+	MlirInstances(MlirLayout.Wrapping.function, 0).Fresh(MlirLayout.Degrees, "%s", "", List(Text))(0).IndexOf("%t0dc") is 4
+	MlirInstances(Nesting, 0).Initialized(Outer, Outer.members(0), "%s", "0", List(Text))(1).IndexOf("%t00_0dc") is 4
+	MlirInstances(Nesting, 0).Initialized(Outer, Outer.members(0), "%s", "0", ("Strict/Shape"))(0).IndexOf("%t00dc") is 4
 	MlirInstances(Shapes, 0).Constants.Length is 0
 	mutable lines = List(Mutable(Text))
 	for ReferencedConstants
@@ -145,5 +186,11 @@ Constants Texts
 		lines = lines + MlirStatements(function, MemberBase + index).Literal(initial, "%v_" + value.Name, "")
 	lines
 Temp(suffix Text) Text
+	MlirInstances(Nesting, 1).Default(Outer, Outer.members(1), "%s", "")(1) is "    llvm.store %t1c, %s : f64, !llvm.ptr"
+	MlirInstances(Nesting, 1).Default(Outer, Outer.members(0), "%s", "")(2) is "    %t1v = llvm.load %s : !llvm.ptr -> f64"
+	MlirInstances(Nesting, 1).Default(Outer, Outer.members(0), "%s", "")(4) is "    %t1vn = arith.constant 8 : i64"
+	MlirInstances(Shapes, 0).Fresh(GpuSamples.Numbered, "%s", "", List(Text)).Last.IndexOf("%zero, %s :") is 15
+	MlirInstances(Shapes, 0).Fresh(Shapes.type, "%s", "", List(Text))(0) is "    %t0oz = arith.constant 8 : i64"
+	MlirInstances(Shapes, 0).Fresh(Shapes.type, "%s", "", List(Text)).Last is "    llvm.store %t0of, %s : f64, !llvm.ptr"
 	MlirInstances(Shapes, 1).Temp("o") is "%t1o"
 	"%t" + position + suffix
