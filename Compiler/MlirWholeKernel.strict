@@ -11,6 +11,8 @@ constant Kernel = MlirWholeKernel(MlirFunction(Types, Board, Blurred), 5)
 constant Measuring = (Picking(0), Picking(1), Picking(2), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "board"), InstructionEntry(InstructionType.FieldLoad, ("Size", "Board"), (3, 2, -1, -2)), InstructionEntry(InstructionType.FieldLoad, ("Width", "Sizing"), (4, 3, -1)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 5, "pixel"), InstructionEntry.Binary(InstructionType.Modulo, (5, 4, 6)), InstructionEntry(InstructionType.IndexCall, "list0", (7, 6, -1)), InstructionEntry.Return(7))
 constant Measured = TypeEntry("Strict/Board", (MemberEntry("Size", "Strict/Math/Sizing", List(InstructionEntry), false), Cells), (MethodEntry("Picked", Picked.parameters, "Strict/Rgb", Measuring), Blurred))
 constant Measure = MlirWholeKernel(MlirFunction((MlirLayout.Byting, MlirLanes.Rgb, MlirCouples.Sizing, Measured), Measured, Blurred), 5)
+constant Uncollected = MlirWholeKernel(MlirFunction(Kernel.function, method = MethodEntry(Blurred, instructions = Blurring.Slice(0, 9) + InstructionEntry.Named(InstructionType.InvokeWriteToList, 4, "forResult") + Blurring(10))), 5)
+constant Checked = MlirWholeKernel(MlirFunction(Kernel.function, method = MethodEntry(Blurred, instructions = Blurring.Slice(0, 9) + InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 5) + Blurring.Slice(9, 2))), 5)
 IsKernel Boolean
 	Kernel.IsKernel
 	Measure.IsKernel
@@ -25,6 +27,7 @@ IsKernel Boolean
 Call Number
 	Kernel.Call is 8
 	MlirWholeKernel(MlirParallel.Doubling.function, 2).Call is 4
+	MlirWholeKernel(MlirWholeChild.Brightening.function, 2).Call is -2
 	mutable found = -1
 	for Range(position + 1, function.method.LoopEndOf(position))
 		if function.method.instructions(value).kind is InstructionType.Invoke
@@ -32,9 +35,13 @@ Call Number
 	found
 Callee MlirFunction
 	Kernel.Callee.method.Name is "Picked"
+	Uncollected.IsPlain is false
+	Uncollected.IsKernel is false
+	Checked.IsPlain
 	MlirWholeFunction(function).Callee(function.method.instructions(Call))
 IsPlain Boolean
 	Kernel.IsPlain
+	MlirWholeKernel(MlirParallel.Doubling.function, 2).IsPlain is false
 	let invoke = function.method.instructions(Call)
 	for Range(position + 1, function.method.LoopEndOf(position))
 		let entry = function.method.instructions(value)
@@ -46,6 +53,7 @@ IsPlain Boolean
 	true
 IsSourced Boolean
 	Kernel.IsSourced
+	MlirWholeKernel(MlirParallel.Doubling.function, 2).IsSourced is false
 	let kinds = MlirWholeFunction(Callee).Kinds
 	for Reads
 		let name = MlirWholeFlat(function).Source(value, Call)
@@ -57,11 +65,13 @@ IsSourced Boolean
 	true
 Reads Numbers
 	Kernel.Reads is (3, 4)
+	MlirWholeKernel(MlirParallel.Doubling.function, 2).Free is List(Text) + "value"
 	let invoke = function.method.instructions(Call)
 	for LoadReuse(function.method.instructions).InvokeReads(invoke)
 		invoke.payload(value)
 Source(register Number) Text
 	Kernel.Source(4) is "index"
+	Kernel.Source(5) is ""
 	let writer = MlirKinds(function).Writer(Call, register)
 	let loaded = function.method.instructions(writer < 0 then Call else writer)
 	loaded.kind is InstructionType.LoadVariableToRegister then loaded.texts(0) else ""
@@ -102,6 +112,7 @@ Kind(name Text) Text
 	MlirWholeInstance(function).MemberKind(TypeName(name.Substring(0, dot)), member)
 TypeName(variable Text) Text
 	Kernel.TypeName("board") is "Strict/Board"
+	Kernel.TypeName("index") is "Number"
 	for function.method.parameters
 		if value.Name is variable
 			return value.typeName
