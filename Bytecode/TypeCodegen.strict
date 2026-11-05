@@ -2,8 +2,8 @@ has fullName Text
 has lines Texts
 has inference Expressions/TypeInference
 has typeNames Texts
+has isOptimizing Boolean = true
 constant NoTypes = ValueCodegen.NoTypes
-constant Sized = TypeCodegen("Strict/Size", ("Width Number", "Height Number"), NoTypes, List(Text))
 constant Hello = TypeCodegen("Strict/HelloLogger", ("has logger", "Run", "\tlogger.Log(\"Hi\")"), NoTypes, List(Text))
 constant Limit = TypeCodegen("Strict/Limit", ("constant limit = 10", "Run Number", "\tlimit"), NoTypes, List(Text))
 constant Iterating = TypeCodegen("Strict/Size", ("has Width Number", "for Iterator(Number)", "\tfor Width", "\t\tindex"), NoTypes, List(Text))
@@ -20,14 +20,14 @@ Selected(names Texts) Slow(TypeEntry)
 	Limit.Selected("Run").Name is "Strict/Limit"
 	Limit.Selected("Missing").methods.Length is 0
 	Limit.Selected(List(Text)).methods.Length is 0
-	Sized.Selected(List(Text)).methods.Length is 2
+	TypeCodegen("Strict/S", ("W Number", "H Number"), NoTypes, List(Text)).Selected(List(Text)).methods.Length is 2
 	TypeCodegen("Strict/B", ("Not Boolean", "\ttrue"), NoTypes, List(Text)).Selected(List(Text)).methods.Length is 0
 	let membersOnly = (names.Length is 0) and (TypeShape(lines).IsTrait is false)
 	TypeEntry(fullName, Members, (membersOnly then List(MethodEntry) else Methods(names)))
 Generator ValueCodegen
 	Limit.Generator.target.TypeName is "Limit"
 	let target = CallTarget(inference.types, TypeShape(lines), fullName, typeNames)
-	ValueCodegen(inference, inference.types.MethodsOf(target.TypeName), target)
+	ValueCodegen(inference, inference.types.MethodsOf(target.TypeName), target, isOptimizing)
 Members Slow(List(MemberEntry))
 	Limit.Members.First.initial.First.payload is (1, 10, 0)
 	Leveled.Members.First.typeName is "Strict/Text"

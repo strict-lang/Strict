@@ -1,6 +1,7 @@
 has inference Expressions/TypeInference
 has methods Expressions/Scope
 has target CallTarget
+has isOptimizing Boolean = true
 constant NoNode = SyntaxNode("Identifier", "x")
 constant NewGreeter = SyntaxNode("Call", "Greeter")
 constant GreeterText = SyntaxNode("Member", "text", NewGreeter)
@@ -8,8 +9,7 @@ constant One = SyntaxNode("Number", "1")
 constant Hi = SyntaxNode("Text", "\"Hi\"")
 constant Ones = SyntaxNode("List", "", (One, One))
 constant ToText = SyntaxNode("Binary", "to", (NoNode, SyntaxNode("Identifier", "Text")))
-constant AddOne = SyntaxNode("MethodCall", "Add", (SyntaxNode("Identifier", "values"), One))
-constant RemoveOne = SyntaxNode("MethodCall", "Remove", (SyntaxNode("Identifier", "values"), One))
+constant Edits = (SyntaxNode("MethodCall", "Add", (SyntaxNode("Identifier", "values"), One)), SyntaxNode("MethodCall", "Remove", (SyntaxNode("Identifier", "values"), One)))
 constant NoTypes = TypeInference(CallTarget.Plain.types, CallTarget.NoScopes)
 constant OwnA = ValueCodegen(NoTypes, Scope(("A", "limits"), ("Text", "Numbers")), CallTarget.Plain)
 constant Plain = ValueCodegen(NoTypes, Scope(("Greet", "Run"), ("Text", "None")), CallTarget.Plain)
@@ -151,7 +151,7 @@ Owner(node SyntaxNode, block CodeBlock) Text
 	target.TypeName
 Elements ListCodegen
 	Plain.Elements.values.target.TypeName is "Greeter"
-	ListCodegen(ValueCodegen(inference, methods, target))
+	ListCodegen(ValueCodegen(inference, methods, target, isOptimizing))
 TypeOf(node SyntaxNode, block CodeBlock) Text
 	Plain.TypeOf(SyntaxNode("Number", "1"), CodeBlock.Empty) is "Number"
 	inference.TypeOf(node, block.scope, methods)

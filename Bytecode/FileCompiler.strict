@@ -1,7 +1,10 @@
 has logger
 has isQuiet Boolean = false
 has selection Text = ""
+has isOptimizing Boolean = true
 constant Unlinked = LinkRound(Linker.Hello, List(TypeEntry), List(Text))
+constant Unoptimized = LoopCodegen(MethodCodegen(ValueCodegen(ValueCodegen.Plain, isOptimizing = false)))
+constant Counted = LoopPeeling.Counted
 constant Logged = (Linker.Go, TypeEntry.HelloLogger)
 constant Tips = " is not in this folder, next to strict, in a GitHub repository linked in README.md or in github.com/strict-lang. Fix the typo, add its package to this folder or link its repository in README.md"
 Compiled(path Text, root Text, withTests Boolean, known Texts = List(Text)) List(TypeEntry)
@@ -22,7 +25,7 @@ Built(path Text, root Text, withTests Boolean, files Texts, inference TypeInfere
 	if (isParsed is false) or (Resolved(source, inference, files) is false)
 		return Unlinked
 	let fused = Fusion(File(source).ReadLines, Path(source).PathOnly.text).Fused
-	let main = TypeCodegen(FullName(source, root), fused, inference, FullNames(files, root))
+	let main = TypeCodegen(FullName(source, root), fused, inference, FullNames(files, root), isOptimizing)
 	let entry = BuildProfile(logger).Entry(main, withTests, isQuiet, selection)
 	let linked = BuildProfile(logger).Linked(Linker(root, main, known), entry)
 	linked.With(Checked(linked.linker, linked.entries, source, inference))
@@ -146,6 +149,7 @@ FullName(path Text, root Text) Text
 	let start = slashed.StartsWith(root + "/") then root.Length + 1 else (slashed.StartsWith("./") then 2 else 0)
 	"Strict/" + slashed.Substring(start, slashed.Length - start - 7)
 FullNames(files Texts, root Text) Texts
+	Unoptimized.Loop(LoopPeeling.Summing, Counted, "") is LoopCodegen.Plain.Unpeeled(LoopPeeling.Summing, Counted, "")
 	FullNames(("C:/s/A.strict", "C:/s/B/C.strict"), "C:/s") is ("Strict/A", "Strict/B/C")
 	for files
 		FullName(value, root)

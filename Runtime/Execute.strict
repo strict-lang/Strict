@@ -94,7 +94,9 @@ Tested(types List(TypeEntry), path Text, root Text) Number
 	let elapsed = Process.Elapsed - started
 	let seconds = isWhole or (elapsed < 0.1) then elapsed * 10 + 1 else 0
 	let mutants = Mutants(logger, path, seconds, root, part, isWhole)
-	isMutating and (selection is in ("", "*")) then mutants.Survivors(types) else 0
+	let isFresh = isMutating and (seconds > 0) and ((part is not "") or (MutationCache(path, isWhole).IsCurrent is false))
+	let plain = isFresh then FileCompiler(logger, true, selection, false).Compiled(path, root, true) else types
+	isMutating and (selection is in ("", "*")) then mutants.Survivors(plain) else 0
 Loaded(path Text, root Text, withTests = true, sources Texts = List(Text)) List(TypeEntry)
 	let started = Process.Elapsed
 	let cache = BinaryFile(FileCompiler.Normalized(path))

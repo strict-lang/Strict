@@ -46,9 +46,9 @@ Built(node SyntaxNode, block CodeBlock) CodeBlock
 		result = element.Add(write).At(block.register)
 	result.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, name))
 Added(node SyntaxNode, block CodeBlock) CodeBlock
-	Plain.Added(ValueCodegen.AddOne, CodeBlock.Empty).register is 2
-	Plain.Added(ValueCodegen.RemoveOne, CodeBlock.Empty).instructions(1).kind is InstructionType.InvokeRemove
-	Plain.Added(ValueCodegen.AddOne, Shared).instructions.Last.kind is InstructionType.StoreRegisterToVariable
+	Plain.Added(ValueCodegen.Edits(0), CodeBlock.Empty).register is 2
+	Plain.Added(ValueCodegen.Edits(1), CodeBlock.Empty).instructions(1).kind is InstructionType.InvokeRemove
+	Plain.Added(ValueCodegen.Edits(0), Shared).instructions.Last.kind is InstructionType.StoreRegisterToVariable
 	Colored.Added(AddColor, ConversionCodegen.Pixelated).instructions(3).texts(1) is "to"
 	let name = node.children(0).text
 	if block.Owns(name) is false
@@ -58,8 +58,8 @@ Added(node SyntaxNode, block CodeBlock) CodeBlock
 	let written = added.Add(InstructionEntry.Named(kind, added.Result, name))
 	written.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, written.register, name))
 Copied(node SyntaxNode, block CodeBlock) CodeBlock
-	Plain.Copied(ValueCodegen.RemoveOne, Shared).instructions(2).payload is (3, 0, 1, 2)
-	Plain.Copied(ValueCodegen.RemoveOne, Shared).instructions(2).kind is InstructionType.Subtract
+	Plain.Copied(ValueCodegen.Edits(1), Shared).instructions(2).payload is (3, 0, 1, 2)
+	Plain.Copied(ValueCodegen.Edits(1), Shared).instructions(2).kind is InstructionType.Subtract
 	let list = values.Expression(node.children(0), block)
 	let operand = ConversionCodegen(values).Operand(node, block)
 	let isElement = ConversionCodegen(values).IsElement(values.TypeOf(node.children(0), block), operand, block)
@@ -125,7 +125,7 @@ Disowned(node SyntaxNode, block CodeBlock, isUsed Boolean) CodeBlock
 		result = Disowned(value, result, used)
 	result
 IsUsed(parent SyntaxNode, position Number, isUsed Boolean) Boolean
-	Plain.IsUsed(ValueCodegen.AddOne, 0, true)
+	Plain.IsUsed(ValueCodegen.Edits(0), 0, true)
 	Plain.IsUsed(ValueCodegen.GreeterText, 0, true) is false
 	let isLast = position is parent.children.Length - 1
 	if parent.Kind is in ("Body", "Return")
@@ -149,7 +149,7 @@ Argument(node SyntaxNode, position Number, parameters Texts, block CodeBlock) Co
 	values.Expression((wraps then SyntaxNode("List", "", node) else converted), block)
 Grouped(node SyntaxNode, first Number, parameters Number) SyntaxNode
 	Plain.Grouped(SyntaxNode("Call", "B", (ValueCodegen.One, ValueCodegen.One)), 0, 1).children.Length is 1
-	Plain.Grouped(ValueCodegen.AddOne, 1, 1).children(1).Kind is "Number"
+	Plain.Grouped(ValueCodegen.Edits(0), 1, 1).children(1).Kind is "Number"
 	if parameters is not 1 or node.children.Length - first < 2
 		return node
 	mutable arguments = List(Mutable(SyntaxNode))

@@ -85,7 +85,7 @@ Collected(block CodeBlock, aggregation Text) CodeBlock
 Loop(node SyntaxNode, block CodeBlock, aggregation Text) CodeBlock
 	Plain.Loop(LoopPeeling.Summing, LoopPeeling.Counted, "").instructions.Last.kind is InstructionType.LoopEnd
 	let peeling = LoopPeeling(methods, block)
-	let peeled = peeling.Peeled(node, aggregation)
+	let peeled = methods.values.isOptimizing then peeling.Peeled(node, aggregation) else node
 	if peeled.Kind is "Body"
 		return peeling.Emitted(peeled, LoopCodegen(methods), aggregation)
 	Unpeeled(node, block, aggregation)
