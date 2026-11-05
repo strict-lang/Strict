@@ -82,6 +82,7 @@ static Lock poolLock = SRWLOCK_INIT;
 static Lock poolDispatch = SRWLOCK_INIT;
 static Condition poolStarted = CONDITION_VARIABLE_INIT, poolDone = CONDITION_VARIABLE_INIT;
 static void Locked(Lock* lock) { AcquireSRWLockExclusive(lock); }
+static int IsLocked(Lock* lock) { return TryAcquireSRWLockExclusive(lock); }
 static void Unlocked(Lock* lock) { ReleaseSRWLockExclusive(lock); }
 static void Waited(Condition* condition, Lock* lock) { SleepConditionVariableSRW(condition, lock, INFINITE, 0); }
 static void Woken(Condition* condition) { WakeAllConditionVariable(condition); }
@@ -93,6 +94,7 @@ static Lock poolLock = PTHREAD_MUTEX_INITIALIZER;
 static Lock poolDispatch = PTHREAD_MUTEX_INITIALIZER;
 static Condition poolStarted = PTHREAD_COND_INITIALIZER, poolDone = PTHREAD_COND_INITIALIZER;
 static void Locked(Lock* lock) { pthread_mutex_lock(lock); }
+static int IsLocked(Lock* lock) { return pthread_mutex_trylock(lock) == 0; }
 static void Unlocked(Lock* lock) { pthread_mutex_unlock(lock); }
 static void Waited(Condition* condition, Lock* lock) { pthread_cond_wait(condition, lock); }
 static void Woken(Condition* condition) { pthread_cond_broadcast(condition); }
@@ -168,9 +170,8 @@ static int Started(void)
    divided by PARALLEL_SHARE, which a file sets before including this for its own pool, by default a quarter (experts of
    Qwen3.8-Flash-Next on a Threadripper 3990X: 16 threads 47, 32 threads 40, 64 threads 58 and 128 threads 135 ms per
    token). */
-static void Parallel(void (*work)(void*, uint64_t), void* context, uint64_t count)
+static void Dispatched(void (*work)(void*, uint64_t), void* context, uint64_t count)
 {
-	Locked(&poolDispatch);
 	const char* wanted = poolThreads ? 0 : getenv("STRICT_THREADS");
 	uint64_t threads = poolThreads ? 0 : wanted && atoi(wanted) > 0 ? (uint64_t)atoi(wanted) :
 		Processors() / PARALLEL_SHARE;
@@ -186,6 +187,12 @@ static void Parallel(void (*work)(void*, uint64_t), void* context, uint64_t coun
 	Worked();
 	for (uint64_t busy = atomic_load(&poolBusy); busy > 0; busy = atomic_load(&poolBusy))
 		Awaited(&poolBusy, busy, &poolDone);
+}
+
+static void Parallel(void (*work)(void*, uint64_t), void* context, uint64_t count)
+{
+	Locked(&poolDispatch);
+	Dispatched(work, context, count);
 	Unlocked(&poolDispatch);
 }
 
@@ -199,11 +206,15 @@ static void PartRead(void* context, uint64_t item)
 		atomic_store(&reading->failed, 1);
 }
 
-/* ReadFrom in parts of 64 MB on all threads: 2 GB from the file cache took 190 instead of 520 ms (one read). */
+/* ReadFrom in parts of 64 MB on all threads when the pool is free (2 GB from the file cache took 190 instead of 520 ms),
+   else on this thread: waiting for another thread's job made H3's text encoder load 0.6 s slower. */
 static int ReadParts(Opening file, uint64_t offset, unsigned char* target, uint64_t bytes)
 {
+	if (bytes <= ReadPart || !IsLocked(&poolDispatch))
+		return ReadFrom(file, offset, target, bytes);
 	Reading reading = { file, offset, target, bytes, 0 };
-	Parallel(PartRead, &reading, (bytes + ReadPart - 1) / ReadPart);
+	Dispatched(PartRead, &reading, (bytes + ReadPart - 1) / ReadPart);
+	Unlocked(&poolDispatch);
 	return !atomic_load(&reading.failed);
 }
 #endif
