@@ -22,7 +22,7 @@ LoopIssues(at Number) ValidationIssues
 	Shared.LoopIssues(1).Length is 0
 	Tripled.LoopIssues(1).First to Text is "NestedLoopsMustNameIterators: for first, y, x, fourth in 2, 3, 4, x + 5"
 	Tripled.LoopIssues(2).Length is 0
-	if (IsNested(at) is false) or (at > 0) and IsNested(at - 1)
+	if (IsNested(at) is false) or IsNested(at - 1)
 		return List(ValidationIssue)
 	List(ValidationIssue) + ValidationIssue("NestedLoopsMustNameIterators", Merged(at, List(Text), List(Text)), at + 1)
 IsNested(at Number) Boolean
@@ -68,6 +68,7 @@ Ordinal(position Number) Text
 IsShared(at Number) Boolean
 	Nested.IsShared(1) is false
 	Shared.IsShared(1)
+	Names(("Run", "\tfor 2", "\t\tfor 3", "\t\t\t1", "\t2")).IsShared(1) is false
 	Names(("Run", "\tfor 2", "\t\tfor 3", "\t\t\tfor 4", "\t\t\t\t1", "\t\t\t2")).IsShared(2)
 	let depth = BodyParser.Indent(lines(at))
 	for Range(at + 2, lines.Length)

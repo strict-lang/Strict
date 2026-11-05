@@ -22,7 +22,7 @@ CollapsedBinary SyntaxNode
 	folded.Kind is "Missing" then SyntaxNode("Binary", node.text, (left, right)) else folded
 Folded(left SyntaxNode, operator Text, right SyntaxNode) SyntaxNode
 	Collapse("6 / 3 - 1") is "1"
-	Collapse("true and false or true") is "true"
+	(Collapse("true and false or true") is "true") and (Collapse("true and false") is "false")
 	(Collapse("7 * 2 + 3") is "17") and (Collapse("\"ab\" + 5 + true + \"c\"") is "\"ab5truec\"")
 	(Collapse("false and true") is "false") and (Collapse("true or false") is "true")
 	(Collapse(unfoldableCode) is unfoldableCode) and (Collapse("5 and 3") is "5 and 3")

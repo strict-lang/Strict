@@ -4,12 +4,16 @@ has typeName Text = ""
 constant ReservedNames = ("value", "iterator", "elements", "generic")
 constant Hint = ", capitalize it when other types use it"
 constant Replacing = TypeValidator(TypeShape("has a Number", "has b Number", "Changed(x Number) C", "\tC(1, 2).Changed(3).a is 3", "\tC(value, a = x)"), ("Add", "Remove"), "C")
+constant Computed = TypeValidator(TypeShape("has a Number", "has number = 17 + 4", "Run", "\tnumber"), ("Add"))
 Sample TypeValidator
 	Sample.mutations.Length is 2
 	TypeValidator(TypeShape("has unused Number", "has logger", "Run", "\tlogger.Log(1)"), ("Add", "Remove"))
 Validate ValidationIssues
 	Sample.Validate.Length is 1
 	TypeValidator(TypeShape("Run", "\tlet unused = 5", "\t3"), ("Add")).Validate.Length is 2
+	TypeValidator(TypeShape("Run", "\tlet first = 5", "\tlet unused = 5", "\tfirst"), ("Add")).Validate.Length is 3
+	Computed.Validate.Length is 2
+	TypeValidator(TypeShape("Run(spare Number)", "\t3"), ("Add")).Validate.First.Line is 1
 	mutable issues = List(Mutable(ValidationIssue))
 	for shape.lines
 		if shape.IsMethodHeader(value)
@@ -32,6 +36,7 @@ MemberIssues Slow(ValidationIssues)
 	issues
 MemberNames Texts
 	Sample.MemberNames is ("unused", "logger")
+	TypeValidator(TypeShape("has a Number", "has b Number", "Run"), ("Add")).MemberIssues.Length is 0
 	for shape.lines
 		if shape.IsMemberLine(value)
 			HeaderTokens(Tokenizer(value).Tokens).MemberName
@@ -73,6 +78,7 @@ HasMethodBody Boolean
 	false
 ConstantIssues ValidationIssues
 	TypeValidator(TypeShape("has number = 17 + 4", "Run", "\tnumber"), ("Add", "Remove")).ConstantIssues.Length is 1
+	Computed.ConstantIssues.First to Text is "UseConstantHere: number"
 	mutable issues = List(Mutable(ValidationIssue))
 	for shape.lines
 		if IsComputedMember(value)
@@ -85,7 +91,7 @@ IsComputedMember(line Text) Boolean
 	(Sample.IsComputedMember("has number Number") is false) and (Sample.IsComputedMember("has scale = 3 + x") is false)
 	let tokens = Tokenizer(line).Tokens
 	let equals = tokens.Index("=")
-	if (not shape.IsMemberLine(line)) or line.StartsWith("constant ") or (equals is -1)
+	if (not shape.IsMemberLine(line)) or line.StartsWith("constant ")
 		return false
 	let initial = SyntaxParser(tokens).ParseRange(equals + 1, tokens.Length)
 	(initial.Kind is "Binary") and IsConstantNode(initial)
@@ -110,6 +116,7 @@ Unnamed(node SyntaxNode) Texts
 	Replacing.Unnamed(SyntaxParser(Tokenizer("C(value)").Tokens).Parse).Length is 0
 	Replacing.Unnamed(SyntaxParser(Tokenizer("C(value, 3)").Tokens).Parse).Length is 0
 	Replacing.Unnamed(SyntaxParser(Tokenizer("D(C(value, a = 1), 2)").Tokens).Parse) is ("b")
+	Replacing.Unnamed(SyntaxNode("Body", "C", SyntaxParser(Tokenizer("C(b, a = 1)").Tokens).Parse.children)).Length is 0
 	mutable unnamed = List(Mutable(Text))
 	for node.children
 		unnamed = unnamed + Unnamed(value)

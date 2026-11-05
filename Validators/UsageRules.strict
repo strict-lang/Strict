@@ -17,6 +17,8 @@ Sample UsageRules
 	UsageRules(runHeader, BodyParser(lines).Block(1, 1).Statements, ("count", "x"), ("Add"), 1)
 Issues ValidationIssues
 	Sample.Issues.Length is 5
+	UsageRules(Ticking.header, List(SyntaxNode), List(Text), List(Text)).Issues.Length is 0
+	UsageRules(From.header, From.statements, ("spare"), List(Text)).Issues.Length is 1
 	mutable issues = List(Mutable(ValidationIssue))
 	for statements
 		if value.Kind is "Declaration"
@@ -27,6 +29,7 @@ DeclarationIssues(declaration SyntaxNode) ValidationIssues
 	Sample.DeclarationIssues(Sample.statements(0)).Length is 2
 	Sample.DeclarationIssues(Sample.statements(0)).First.Line is 2
 	Shadowing.DeclarationIssues(Shadowing.statements(0)).First.ruleName is "VariableHidesMemberUseDifferentName"
+	Sample.DeclarationIssues(Sample.statements(0)).Last.ruleName is "UnusedMethodVariableMustBeRemoved"
 	let name = Tokenizer(declaration.text).Tokens.Last
 	mutable issues = KindIssues(declaration, name) + HidingIssues(declaration, name)
 	if not IsUsed(name)
@@ -105,6 +108,7 @@ IsLooping Boolean
 	Looping.IsLooping
 	Sample.IsLooping is false
 	(Plain.IsLooping is false) and (Plain.ParameterIssues.Length is 0)
+	UsageRules(Plain.header, Looping.statements, List(Text), List(Text)).ParameterIssues.Length is 2
 	for statements
 		if value.Kind is "For"
 			return true
@@ -149,6 +153,7 @@ IsMutatingCall(call SyntaxNode, name Text) Boolean
 	Sample.IsMutatingCall(Sample.statements(2), "list")
 	Ticking.IsMutatingCall(SyntaxNode("Member", "Increase", List(SyntaxNode) + SyntaxNode("Identifier", "total")), "total")
 	Ticking.IsMutatingCall(Ticking.statements(4).children(0), "total")
+	Ticking.IsMutatingCall(SyntaxNode("Call", "Increase", Ticking.statements(4).children(0).children), "total") is false
 	Ticking.IsMutatingCall(Ticking.statements(0).children(0), "Ticker") is false
 	Ticking.IsMutatingCall(Sample.statements(2), "list") is false
 	Sample.IsMutatingCall(Sample.statements(2), "count") is false
