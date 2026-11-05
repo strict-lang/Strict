@@ -55,6 +55,7 @@ IsIndexedCall(node SyntaxNode, block CodeBlock) Boolean
 	OwnA.IsIndexedCall(SyntaxNode("Call", "limits", One), CodeBlock.Empty)
 	OwnA.IsIndexedCall(SyntaxNode("Call", "A", One), CodeBlock.Empty)
 	MemberA.IsIndexedCall(SyntaxNode("Call", "A", One), CodeBlock.Empty) is false
+	Plain.IsIndexedCall(SyntaxNode("Call", "text"), CodeBlock.Empty) is false
 	let isOwnMember = values.target.IsMember(values.target.TypeName, node.text)
 	let isConstant = values.methods.TypeOf(node.text) is not "" and (values.target.Header(node.text).tokens.Length is 0)
 	let isMethod = values.target.Header(node.text).tokens.Length > 0
@@ -117,6 +118,7 @@ Source(node SyntaxNode) SyntaxNode
 	Plain.Element(SyntaxNode("Call", "Greet", One), CodeBlock.Empty).instructions(0).texts(1) is "Greet"
 	Plain.Source(SyntaxNode("Index", "", (ValueCodegen.Ones, One))) is ValueCodegen.Ones
 	Plain.Source(SyntaxNode("Call", "text", One)).Kind is "Identifier"
+	Plain.Element(SyntaxNode("Call", "text", One), CodeBlock.Empty).nextId is 0
 	if node.Kind is "Index"
 		return node.children(0)
 	node.Kind is "Call" then SyntaxNode("Identifier", node.text) else SyntaxNode("Member", node.text, node.children(0))
@@ -125,6 +127,7 @@ GridIndex(node SyntaxNode) SyntaxNode
 	Plain.GridIndex(SyntaxNode("MethodCall", "a", (NoNode, One))).text is "1"
 	Plain.GridIndex(SyntaxNode("MethodCall", "a", (NoNode, One, Hi))) to Text is "1 + x.Size.Width * \"Hi\""
 	Plain.GridIndex(SyntaxNode("Call", "a", (One, NoNode))) to Text is "1 + Size.Width * x"
+	Plain.Element(SyntaxNode("Call", "Greet", One), CodeBlock.Empty).instructions(0).kind is InstructionType.Invoke
 	let first = node.Kind is "Call" then 0 else 1
 	if node.children.Length - first < 2
 		return node.children.Last
@@ -137,6 +140,8 @@ Unnested(body SyntaxNode) SyntaxNode
 	Plain.Unnested(Looped).children(0).children.Last.children.Length is 2
 	Plain.Unnested(Computed).children.Length is 2
 	Plain.Unnested(Computed).children.Last to Text is "values(elementIndex2) = 5"
+	Plain.Split(BodyParser("Run", "	x.v(1, 2) = 5").Block(1, 1).children(0)).Last to Text is "x.v(elementIndex2) = 5"
+	Plain.Unnested(Computed).children.Last.children(0).children.Last.Kind is "Identifier"
 	mutable statements = List(Mutable(SyntaxNode))
 	for body.children
 		statements = statements + Split(value.HasBody then Nested(value) else value)
