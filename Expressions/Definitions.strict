@@ -5,12 +5,19 @@ constant Next = Body.children(1)
 constant Assigned = SyntaxNode("Reassignment", "", (SyntaxNode("Identifier", "next"), SyntaxNode("Number", "5")))
 constant Branch = SyntaxNode("If", "", (SyntaxNode("Identifier", "a"), Body))
 constant NextTwo = SyntaxNode("Call", "next", List(SyntaxNode) + SyntaxNode("Number", "2"))
+constant CallsNext = SyntaxNode("Call", "f", List(SyntaxNode) + SyntaxNode("Identifier", "next"))
+constant Double = BodyParser(("Run", "\tdouble(x) = x * 2")).Block(1, 1).children(0)
+constant Member = SyntaxNode("Reassignment", "", (SyntaxNode("Member", "b"), Body))
 Inlined(body SyntaxNode, start Number) SyntaxNode
 	Positions.Inlined(Body, 1).children.Length is 4
 	Positions.Inlined(Body, 1).children.Last to Text is "position + 2"
+	Positions.Defined(Next, List(Text), List(SyntaxNode)).Kind is "Computed"
+	Positions.Defined(Member, List(Text), List(SyntaxNode)).Kind is "Reassignment"
+	Positions.Defined(SyntaxNode("Reassignment", "", (NextTwo, Body)), List(Text), List(SyntaxNode)).Kind is "Reassignment"
 	Expanded(body, Known(start), List(SyntaxNode))
 Known(start Number) Texts
 	Definitions(("has count Number", "Add(other Number) Number", "\tother")).Known(2) is ("count", "other", "value")
+	Definitions(("has count Number", "Add(other Number) Number")).Known(0) is ("count", "value")
 	let header = start > 0 then HeaderTokens(Tokenizer(lines(start - 1)).Tokens).ParameterNames else List(Text)
 	TypeShape(lines).MemberScope.names + header + "value"
 Expanded(body SyntaxNode, known Texts, definitions SyntaxNodes) SyntaxNode
@@ -28,6 +35,7 @@ Expanded(body SyntaxNode, known Texts, definitions SyntaxNodes) SyntaxNode
 	SyntaxNode(body.Kind, body.text, statements, body.line)
 Nested(statement SyntaxNode, known Texts, definitions SyntaxNodes) SyntaxNode
 	Positions.Nested(Branch, List(Text), List(SyntaxNode)).children.Last.children.Length is 4
+	Positions.Nested(SyntaxNode("If", "", (CallsNext, Body)), List(Text), List(SyntaxNode) + Next).children(0) is CallsNext
 	mutable children = List(Mutable(SyntaxNode))
 	for statement.children
 		children.Add(value.Kind is "Body" then Expanded(value, known, definitions) else value)
@@ -36,6 +44,7 @@ Defined(statement SyntaxNode, known Texts, definitions SyntaxNodes) SyntaxNode
 	Positions.Defined(Assigned, List(Text), List(SyntaxNode)).Kind is "Computed"
 	Positions.Defined(Assigned, List(Text) + "next", List(SyntaxNode)).Kind is "Reassignment"
 	Positions.Defined(Assigned, List(Text), List(SyntaxNode) + Next).Kind is "Invalid"
+	Positions.Defined(Assigned, List(Text), List(SyntaxNode) + Next).text.StartsWith("ComputedNameMustNotBeAssigned")
 	if statement.Kind is not "Reassignment"
 		return statement
 	let target = statement.children(0)
@@ -59,6 +68,8 @@ Substituted(node SyntaxNode, definitions SyntaxNodes) SyntaxNode
 Applied(definition SyntaxNode, arguments SyntaxNodes) SyntaxNode
 	Positions.Applied(Next, List(SyntaxNode)) to Text is "position + 1"
 	Positions.Applied(Next, List(SyntaxNode) + SyntaxNode("Identifier", "step")) to Text is "position + step"
+	Positions.Applied(Double, List(SyntaxNode) + SyntaxNode("Number", "3")) to Text is "3 * 2"
+	Positions.Applied(Double, List(SyntaxNode)) to Text is "x * 2"
 	mutable bound = List(Mutable(SyntaxNode))
 	for definition.children(0).children
 		let isDefault = value.Kind is "Reassignment"
@@ -69,6 +80,9 @@ Applied(definition SyntaxNode, arguments SyntaxNodes) SyntaxNode
 Declared(statement SyntaxNode) Texts
 	Positions.Declared(Body.children(0)) is ("position")
 	Positions.Declared(Next).Length is 0
+	Positions.Substituted(Assigned, List(SyntaxNode) + Next) is Assigned
+	Positions.Substituted(Branch, List(SyntaxNode) + Next) is Branch
+	Positions.Substituted(SyntaxNode("Text", "next"), List(SyntaxNode) + Next).Kind is "Text"
 	statement.Kind is "Declaration" then List(Text) + Tokenizer(statement.text).Tokens.Last else List(Text)
 Names(definitions SyntaxNodes) Texts
 	Positions.Names(List(SyntaxNode) + Next) is ("next")
