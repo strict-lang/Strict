@@ -32,7 +32,8 @@ Folds Float32s
 	Center.Folds is (0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0)
 	Box.Folds(3) is 4
 	let inputs = weights.Length / biases.Length / 9
-	for 16 * weights.Length / 9
+	constant FoldedTaps = 16
+	for FoldedTaps * weights.Length / 9
 		let tap = (index / inputs).Floor % 4
 		let parity = (index / (4 * weights.Length / 9)).Floor
 		let output = (index / (4 * inputs)).Floor % biases.Length

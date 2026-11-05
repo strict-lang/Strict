@@ -6,7 +6,7 @@ has token Number = -1
 constant Plain = Sampling(0, 0, 1, PseudoRandom(1))
 constant Warm = Sampling(1, 0, 1, PseudoRandom(5))
 constant Paired = Sampling(1, 2, 1, PseudoRandom(3))
-constant Chunk = 128
+constant Chunk = Greedy.Chunk
 Drawn(logits Numbers) Sampling
 	Plain.Drawn((1, 3, 2)).token is 1
 	Warm.Drawn((0, 0, 0, 20)).token is 3

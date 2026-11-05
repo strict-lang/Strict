@@ -1,4 +1,5 @@
 has number
+constant Largest = 448
 from(unrounded Number)
 	Float8(0.3) is 0.3125
 	Float8(-0.3) is -0.3125
@@ -10,7 +11,7 @@ from(unrounded Number)
 	Float8(0) is 0
 	let exponent = unrounded is 0 then 0 else (unrounded.Absolute.Logarithm / 2.Logarithm).Floor
 	let step = 2 ^ ((exponent < -6 then -6 else exponent) - 3)
-	((unrounded / step).Counted("Even") * step).Clamp(-448, 448)
+	((unrounded / step).Counted("Even") * step).Clamp(-Largest, Largest)
 Packed(numbers Numbers) Float8s
 	Float8.Packed((0.5, 1.125, -3.25)) is (0.5, 1.125, -3.25)
 	Float8.Packed(List(Number) + 0.3).First.number is 0.3125

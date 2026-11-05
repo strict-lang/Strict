@@ -76,19 +76,31 @@ Visible(score Number, position Number, limit Number) Slow(Number)
 	position > limit then -1000000000 else score
 Unmasked(start Number) Slow(Attention)
 	Attention.Unmasked(0).queries.Length is 32
-	Attention(Safetensors.Part(Prompt, start, 32, 1), Prompted.keys, Prompted.values, 2, 1, 16, 1, false)
+	constant HeadSize = 16
+	Attention(Safetensors.Part(Prompt, start, 2 * HeadSize, 1), Prompted.keys, Prompted.values, 2, 1, HeadSize, 1, false)
 Prompted Slow(Attention)
 	Attention.Prompted.heads is 4
-	let promptKeys = Safetensors.Part(Prompt, 4096, 3072, 1)
-	Attention(Safetensors.Part(Prompt, 0, 4096, 1), promptKeys, Safetensors.Part(Prompt, 7168, 3072, 1), 4, 2, 64)
+	constant QueryLength = 4096
+	constant KeyLength = 3072
+	constant HeadSize = 64
+	let promptKeys = Safetensors.Part(Prompt, QueryLength, KeyLength, 1)
+	let promptValues = Safetensors.Part(Prompt, QueryLength + KeyLength, KeyLength, 1)
+	Attention(Safetensors.Part(Prompt, 0, QueryLength, 1), promptKeys, promptValues, 4, 2, HeadSize)
 Strided Slow(Attention)
 	Attention.Strided.valueOffset is 256
-	let rows = Safetensors.Part(Prompt, 0, 9216, 1)
-	Attention(rows, rows, Prompt, 1, 1, 128, 1, false, 256, 136, true)
+	constant RowLength = 9216
+	constant HeadSize = 128
+	constant Offset = 256
+	constant Stride = 136
+	let rows = Safetensors.Part(Prompt, 0, RowLength, 1)
+	Attention(rows, rows, Prompt, 1, 1, HeadSize, 1, false, Offset, Stride, true)
 Spread Slow(Attention)
 	Attention.Spread.queries.Length is 32
-	let evenRows = Safetensors.Part(Prompt, 0, 4800, 2)
-	Attention(Safetensors.Part(Prompt, 9600, 32, 1), evenRows, Safetensors.Part(Prompt, 1, 4800, 2), 2, 1, 8)
+	constant RowLength = 4800
+	constant QueryLength = 32
+	let evenRows = Safetensors.Part(Prompt, 0, RowLength, 2)
+	let queryRows = Safetensors.Part(Prompt, 2 * RowLength, QueryLength, 1)
+	Attention(queryRows, evenRows, Safetensors.Part(Prompt, 1, RowLength, 2), 2, 1, 8)
 Pair Attention
 	Attention.Pair.sequences is 2
 	Attention((1, 0, 0, 1), (1, 0, 1, 0, 0, 1, 0, 1), (3, 4, 7, 8, 5, 6, 5, 6), 1, 1, 2, 2)

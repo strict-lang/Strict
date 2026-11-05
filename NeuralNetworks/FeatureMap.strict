@@ -2,6 +2,7 @@ has values Numbers
 has width Number
 has channels Number
 has offsets Numbers
+constant RunLength = 1024
 constant Square = FeatureMap((1, 2, 3, 4), 2, 1, List(Number) + 0)
 Height Number
 	Square.Height is 2
@@ -32,17 +33,17 @@ Completed Numbers
 		value + offsets(index % channels)
 Runs Number
 	Square.Runs is 1
-	(values.Length / channels / 1024).Ceiling
+	(values.Length / channels / RunLength).Ceiling
 Partials(groups Number, centers Numbers, squared Boolean) Float32s
 	FeatureMap((1, 2, 3, 6), 1, 2, (0, 0)).Partials(2, (0, 0), false) is (4, 8)
 	FeatureMap((1, 2, 3, 6), 1, 2, (0, 0)).Partials(2, (2, 4), true) is (2, 8)
 	let size = channels / groups
 	let total = values.Length / channels
 	for Runs * channels
-		let first = (index / channels).Floor * 1024
+		let first = (index / channels).Floor * RunLength
 		let channel = index % channels
 		let shift = offsets(channel) - centers((channel / size).Floor)
-		Run(first * channels + channel, (total - first).Clamp(0, 1024), shift, squared)
+		Run(first * channels + channel, (total - first).Clamp(0, RunLength), shift, squared)
 Run(start Number, count Number, shift Number, squared Boolean) Number
 	FeatureMap((1, 2, 3, 6), 1, 2, (0, 0)).Run(1, 2, -4, true) is 8
 	mutable sum = 0

@@ -83,7 +83,7 @@ Mean(input Numbers, first Number, size Number) Number
 Gelu(input Numbers) Numbers
 	Tiny.Gelu((0, 1)).Last.IsNearlyEqual(0.8411919906082768)
 	for input
-		let inner = 0.7978845608028654 * (value + 0.044715 * value * value * value)
+		let inner = Activation.GeluScale * (value + Activation.GeluCubic * value * value * value)
 		0.5 * value * (1 + Activation.Tanh.Output(inner))
 Added(left Numbers, right Numbers) Numbers
 	Tiny.Added((1, 2), (3, 4)) is (4, 6)

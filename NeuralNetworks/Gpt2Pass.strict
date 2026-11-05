@@ -88,8 +88,10 @@ Gelued(gradient Numbers) Numbers
 Slope(number Number) Number
 	Tiny.Slope(1).IsNearlyEqual(1.0829640838457826)
 	Tiny.Slope(0) is 0.5
-	let tangent = Activation.Tanh.Output(0.7978845608028654 * (number + 0.044715 * number * number * number))
-	0.5 * (1 + tangent) + 0.5 * number * (1 - tangent * tangent) * 0.7978845608028654 * (1 + 0.134145 * number * number)
+	let tangent = Activation.Tanh.Output(Activation.GeluScale * (number + Activation.GeluCubic * number * number * number))
+	constant CubicSlope = 0.134145
+	let slope = 1 + CubicSlope * number * number
+	0.5 * (1 + tangent) + 0.5 * number * (1 - tangent * tangent) * Activation.GeluScale * slope
 Sums(values Numbers, width Number) Numbers
 	Tiny.Sums((1, 2, 3, 4, 5, 6), 3) is (5, 7, 9)
 	for width

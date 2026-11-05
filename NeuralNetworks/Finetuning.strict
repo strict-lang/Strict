@@ -5,7 +5,7 @@ Run(path Text, steps = 100, length = 256)
 	let evaluation = Evaluation(logger)
 	let heldout = evaluation.Heldout(8)
 	let dropping = LayerDropping(logger)
-	mutable training = Gpt2Training.Loaded(path + "/model.safetensors", 16)
+	mutable training = Gpt2Training.Loaded(path + "/model.safetensors", BFloat16.Bits)
 	logger.Log(path + " before training: " + dropping.Reported(training.model, tokenizer, heldout))
 	let windows = Windows(tokenizer, evaluation.Calibration((steps / 2).Ceiling), length)
 	let started = Process.Elapsed

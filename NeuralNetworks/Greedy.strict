@@ -1,6 +1,7 @@
+constant Chunk = 128
 Largest(logits Numbers) Number
 	Greedy.Largest((1, 3, 2)) is 1
-	let best = Best(logits, 128, logits.Length)
+	let best = Best(logits, Chunk, logits.Length)
 	best(2 * Chosen(best, 0, best.Length / 2) + 1)
 Best(scores Numbers, width Number, length Number) Numbers
 	Greedy.Best((1, 3, 2, 0), 2, 4) is (3, 1, 2, 2)
@@ -38,11 +39,11 @@ Chosen(pairs Numbers, first Number, count Number) Number
 	chosen
 Rows(logits Numbers, vocabulary Number) Numbers
 	Greedy.Rows((1, 3, 2, 5, 4, 0), 3) is (1, 0)
-	let width = vocabulary % 128 is 0 then 128 else vocabulary
+	let width = vocabulary % Chunk is 0 then Chunk else vocabulary
 	let best = Best(logits, width, vocabulary)
 	let groups = vocabulary / width
-	let second = Best(Maxima(best), 128, groups)
-	let third = Best(Maxima(second), 128, (groups / 128).Ceiling)
+	let second = Best(Maxima(best), Chunk, groups)
+	let third = Best(Maxima(second), Chunk, (groups / Chunk).Ceiling)
 	for logits.Length / vocabulary
 		best(2 * second(2 * third(2 * index + 1) + 1) + 1) - index * vocabulary
 Accepted(draft Numbers, predictions Numbers) Number

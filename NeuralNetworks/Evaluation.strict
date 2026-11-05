@@ -8,7 +8,7 @@ Run(path Text)
 	let isQwen = path.EndsWith(".gguf")
 	let tokenizer = isQwen then Gpt2Tokens.Loaded(Gguf(path)) else Gpt2Tokens.Folder(path)
 	let weights = path + "/model.safetensors"
-	let gpt2 = isQwen then List(Numbers) else Perplexity(Gpt2.Loaded(weights, 16)).Reports(tokenizer, texts)
+	let gpt2 = isQwen then List(Numbers) else Perplexity(Gpt2.Loaded(weights, BFloat16.Bits)).Reports(tokenizer, texts)
 	let reports = isQwen then Perplexity(Qwen3.Loaded(path, 8)).Reports(tokenizer, texts) else gpt2
 	logger.Log(path + " English: " + Described(reports(0)))
 	logger.Log(path + " Strict: " + Described(reports(1)))
@@ -52,6 +52,7 @@ Sources(folder Text) Text
 Described(report Numbers) Text
 	Evaluation(Logger).Described((6.931471805599453, 10, 20, 0.5)).StartsWith("perplexity 2, 0.5 bits per character")
 	let perplexity = (report(0) / report(1)).Exponential.Round(3)
-	let bits = (report(0) / 0.6931471805599453 / report(2)).Round(4)
+	constant NatsPerBit = 0.6931471805599453
+	let bits = (report(0) / NatsPerBit / report(2)).Round(4)
 	let speed = (report(3) * 1000 / report(1)).Round(2)
 	"perplexity " + perplexity + ", " + bits + " bits per character, " + speed + " ms per token (" + report(1) + " tokens)"

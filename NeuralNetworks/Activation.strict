@@ -6,6 +6,8 @@ constant LeakyRelu = Activation(3)
 constant Softplus = Activation(4)
 constant Swish = Activation(5)
 constant Linear = Activation(6)
+constant GeluScale = 0.7978845608028654
+constant GeluCubic = 0.044715
 constant Names = ("Sigmoid", "Tanh", "Relu", "LeakyRelu", "Softplus", "Swish", "Linear")
 Output(sum Number) Number
 	Tanh.Output(1).IsNearlyEqual(0.7615941559557649)

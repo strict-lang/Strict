@@ -3,6 +3,13 @@ has ids Dictionary(Text, Number)
 has ranks Dictionary(Number, Number)
 has isQwen Boolean = false
 has specials Dictionary(Text, Number) = Dictionary(Text, Number)
+constant Printable = 33
+constant DeleteOffset = 94
+constant SoftHyphenIndex = 67
+constant SoftHyphen = 173
+constant Ascii = 128
+constant Lead = 192
+constant Payload = 64
 constant Tiny = Gpt2Tokens.Parsed("{\"a\": 0, \"b\": 1, \"\\u0120\": 2, \"ab\": 3, \"\\u0120ab\": 4}", ("#version: 0.2", "a b", "Ġ ab"))
 Parsed(vocabulary Text, merges Texts) Gpt2Tokens
 	Tiny.tokens is ("a", "b", " ", "ab", " ab")
@@ -66,12 +73,12 @@ Unmapped(code Number) Number
 	Unmapped(288) is 32
 	Unmapped(289) is 127
 	Unmapped(323) is 173
-	if code < 256
+	if code < Byte.Values
 		return code
-	let skipped = code - 256
-	if skipped < 33
+	let skipped = code - Byte.Values
+	if skipped < Printable
 		return skipped
-	skipped < 67 then skipped + 94 else 173
+	skipped < SoftHyphenIndex then skipped + DeleteOffset else SoftHyphen
 Ranked(merges Texts, known Dictionary(Text, Number)) Dictionary(Number, Number)
 	Tiny.ranks(1) is 0
 	Tiny.ranks(13) is 1
@@ -88,8 +95,9 @@ Raw(mapped Text) Text
 	mutable position = 0
 	for as long as position < mapped.Length
 		let lead = mapped(position).number
-		raw = raw + Character(lead < 128 then lead else Unmapped((lead - 192) * 64 + mapped(position + 1).number - 128))
-		position = position + (lead < 128 then 1 else 2)
+		let isAscii = lead < Ascii
+		raw = raw + Character(isAscii then lead else Unmapped((lead - Lead) * Payload + mapped(position + 1).number - Ascii))
+		position = position + (isAscii then 1 else 2)
 	raw
 Decoded(tokenIds Numbers) Text
 	Tiny.Decoded((4, 2, 0)) is " ab a"

@@ -1,4 +1,5 @@
 has number
+constant Bits = 16
 from(unrounded Number)
 	BFloat16(1) is 1
 	BFloat16(1.00390625) is 1
