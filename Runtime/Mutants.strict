@@ -10,7 +10,7 @@ constant Budgeted = (InstructionEntry.LoadBoolean(1, false), Budget)
 constant Twice = Machine.Doubler.methods.First
 constant Doubled = List(TypeEntry) + Machine.Doubler
 constant Sample = Mutants(Logger, "Examples/Fibonacci.strict")
-constant Inputs = ("/File", "/Directory", "/Process", "/Logger", "/TextWriter", "/Time", "/Library", "/Http", "/Socket", "/Random")
+constant Inputs = ("/File", "/Directory", "/Process", "/Logger", "/TextWriter", "/Time", "/Library", "/Http", "/Socket", "/Random", "/GpuMemory")
 constant Crashed = ", its rounds were not tested: run strict test on this file to see the error"
 constant Hint = " kept passing all tests, improve the tests!"
 Survivors(types List(TypeEntry)) Number

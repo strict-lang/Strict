@@ -7,10 +7,10 @@ Kept(types List(TypeEntry)) List(MethodEntry)
 	let tested = mutants.Tested(types, mutants.Runner(types.First), methods)
 	let limit = mutants.isWhole then 1 else 0.1
 	for methods
-		let fresh = Execute(mutants.logger).Started(tested, mutants.path)
-		let begun = Process.Elapsed
-		let failed = Machine(fresh, deadline = begun + limit).Tested(types.First.Name, TestCodegen.Runner + index)
-		if (failed is 0) and (Process.Elapsed - begun < limit) and IsRun(tested, value, TestCodegen.Runner + index)
+		let reason = Reason(Execute(mutants.logger).Started(tested, mutants.path), TestCodegen.Runner + index, limit)
+		if (reason is not "") and (mutants.part is "")
+			mutants.logger.Log(mutants.path + ": " + value.Name + " is not mutated, " + reason)
+		if (reason is "") and IsRun(tested, value, TestCodegen.Runner + index)
 			value
 IsRun(tested List(TypeEntry), method MethodEntry, runner Text) Boolean
 	Baseline(Mutants.Sample).IsRun(Mutants.Doubled, Mutants.Twice, TestCodegen.Runner) is false
@@ -22,3 +22,11 @@ IsBase(type TypeEntry) Boolean
 	Baseline(Mutants.Sample).IsBase(TypeEntry(Machine.Doubler, Name = "Strict/Number"))
 	Baseline(Mutants.Sample).IsBase(TypeEntry(Machine.Doubler, Name = "Strict/Math/Size")) is false
 	type.Name is "Strict/" + TypeEntry.ShortName(type.Name)
+Reason(started Machine, runner Text, limit Number) Text
+	Baseline(Mutants.Sample).Reason(Machine.Hello, TestCodegen.Runner, 1) is ""
+	Baseline(Mutants.Sample).Reason(Frame.Doubling, "Missing", 0) is "its tests fail or take over 0s"
+	let read = Process.FilesRead.Length
+	let begun = Process.Elapsed
+	let failed = Machine(started, deadline = begun + limit).Tested(started.types.First.Name, runner)
+	let slow = (failed > 0) or (Process.Elapsed - begun >= limit) then "its tests fail or take over " + limit + "s" else ""
+	Process.FilesRead.Length > read then "its tests read files" else slow
