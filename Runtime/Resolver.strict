@@ -21,9 +21,12 @@ Resolved List(TypeEntry)
 	Doubling.Slotted(MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 7), "index"), Specials).payload.Length is 5
 	Doubling.Slotted(ElementStore, Specials + "a").payload is (0, 6, LiteralIndex, 1)
 	Doubling.Resolved.First.methods.First.instructions.Length is 3
+	Resolver(TypeEntry(TypeEntry.Holding(1), Name = "Strict/Character")).Called(Invocation.Coding) is (0, 0, 1)
 	for types
 		TypeEntry(value.Name, value.members, Methods(value))
 Methods(type TypeEntry) List(MethodEntry)
+	Resolver(TypeEntry("T", List(MemberEntry), Machine.Defaulted)).Called(Invocation.AddCall).First is Native
+	Resolver(TypeEntry("Strict/Doubler", MemberEntry.LoggerMember, Machine.Doubler.methods)).Called(Twice) is (0, 0, 0)
 	Doubling.Methods(TypeEntry("Strict/Go", List(MemberEntry), List(MethodEntry) + Sample)).First.Name is "Run"
 	Doubling.Methods(TypeEntry("Strict/Go", List(MemberEntry), List(MethodEntry) + Sample)).First.declaredType is "None"
 	Doubling.Methods(TypeEntry("Strict/Go", List(MemberEntry), List(MethodEntry) + MethodEntry.GoRun)).Length is 1
@@ -58,6 +61,9 @@ Changed(method MethodEntry, names Texts) Numbers
 		isChanged = isChanged or (slot >= 0)
 	isChanged then slots else List(Number)
 Targeted(entry InstructionEntry) InstructionEntry
+	Doubling.Placed(InstructionEntry(InstructionType.CheckError, List(Text), (5, 0)), Sample, 0, 9).payload is (5, 0)
+	Doubling.Placed(InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, 1), MethodEntry.Branching, 0, 9).payload(1) is 4
+	Doubling.Slotted(InstructionEntry(InstructionType.CheckError, List(Text), List(Number), 0), Specials).payload is (2)
 	Doubling.Targeted(Twice.entry).payload is (0, -1, -2, 0, -3, 0, 0, 0, 0, 0)
 	Doubling.Targeted(InstructionEntry(InstructionType.Invoke, Twice.entry.texts, Twice.entry.payload, 9)).line is 9
 	Doubling.Targeted(Invocation.AddCall.entry).payload is (2, -1, -2, 1, -4, -3, 1, 0, 1, 1, Native, 0, 0)
@@ -67,6 +73,8 @@ Targeted(entry InstructionEntry) InstructionEntry
 	let path = Accessor(Machine(types)).Marked(target, call.Count)
 	InstructionEntry(entry.kind, entry.texts, entry.payload + target + path, entry.line)
 Target(call Invocation) Numbers
+	Doubling.Slotted(InstructionEntry(InstructionType.IndexCall, "a", (4, 3, 9)), Specials + "a").payload is (4, 3, 6)
+	Doubling.Destination(InstructionEntry(InstructionType.InvokeRemove, "list", (0, 4)), 9) is 4
 	Doubling.Target(Invocation(Twice, entry = InstructionEntry.Invoke(0, ("B", "Trim", "B"), 0, -1))) is (Native, 0, 0)
 	Doubling.Target(Invocation.Parsing) is (Native, 0, 0)
 	Doubling.Target(Invocation.Uppered) is (Searching, 0, 0)
@@ -88,6 +96,7 @@ Called(call Invocation) Numbers
 		return (Native, 0, 0)
 	(Position(type), method, Natives(types).IsMemberCall(call, type, type.methods(method)) then 1 else 0)
 Position(type TypeEntry) Number
+	Doubling.Placed(ElementStore, Sample, 0, 9).payload is ElementStore.payload
 	Doubling.Destination(MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 7), "a"), 9) is 0
 	Doubling.Destination(InstructionEntry.LoopBegin(0, -1), 9) is Frame.LoopSlot
 	Doubling.Destination(InstructionEntry.Binary(InstructionType.Add, (0, 0, 1)), 9) is 1
@@ -176,6 +185,7 @@ Slot(name Text, names Texts) Number
 			return value
 	-1
 Placed(entry InstructionEntry, method MethodEntry, position Number, scratch Number) InstructionEntry
+	Doubling.Placed(InstructionEntry(InstructionType.CheckError, "e", (5, 0)), MethodEntry.Branching, 0, 9).payload(2) is 2
 	Doubling.Placed(Sample.instructions(0), Sample, 0, 9).payload is Sample.instructions(0).payload
 	Doubling.Placed(MethodEntry.Branching.instructions(0), MethodEntry.Branching, 0, 9).payload is (0, 2)
 	Doubling.Placed(MethodEntry.Branching.instructions(0), MethodEntry.Branching, 0, 9).Target is 9
