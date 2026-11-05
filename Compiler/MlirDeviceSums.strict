@@ -10,6 +10,7 @@ constant Shifting = MlirDeviceSums(MlirFunction(MlirDeviceStatements.Summed.type
 constant Spreader = MethodEntry("Spread", List(MemberEntry) + MemberEntry("stride", "Strict/Number", List(InstructionEntry), false), "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "weights"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "stride"), InstructionEntry.Invoke(3, ("Strict/Layered", "Strided", "Strict/Number", "row", "stride"), (1, 2), -1), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 3), InstructionEntry.Named(InstructionType.InvokeWriteToList, 3, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 6), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "forResult"), InstructionEntry.Return(0)))
 constant Spreads = TypeEntry("Strict/Layered", GpuSamples.Layered.members, (Spreader, Strided))
 constant Spreading = MlirDeviceSums(MlirFunction(List(TypeEntry) + Spreads, Spreads, Spreader), 2)
+constant Laned = ("    %yw = arith.constant 32 : i64", "    %ys = arith.constant 1 : i64", "    %yt = arith.constant 32768 : i64", "    %ym = arith.cmpi sge, %c, %yt : i64", "    %y = arith.select %ym, %ys, %yw : i64")
 IsSum Boolean
 	Summing.IsSum
 	Doubling.IsSum is false
@@ -59,6 +60,8 @@ IsAccumulation(store Number) Boolean
 	(writer.kind is InstructionType.LoadVariableToRegister) and (writer.texts(0) is entry.texts(0))
 IsAdded(load Number) Boolean
 	Summing.IsAdded(3)
+	Sharing.IsAdded(3) is false
+	MlirDeviceSums(MlirDeviceChoice.Choosing, 4).IsSum is false
 	let register = function.method.instructions(load).payload(0)
 	for Range(load + 1, function.method.LoopEndOf(at))
 		let entry = function.method.instructions(value)
@@ -68,6 +71,7 @@ IsAdded(load Number) Boolean
 	false
 Writer(before Number, register Number) Number
 	Summing.Writer(9, 1) is 3
+	MlirDeviceSums(MlirDeviceChoice.Choosing, 4).Accumulated is List(Text)
 	for before - at - 1
 		let candidate = before - 1 - index
 		if LoadReuse(function.method.instructions).Written(function.method.instructions(candidate)) is register
@@ -77,6 +81,7 @@ IsWarped Boolean
 	MlirDeviceSums(MlirGpu.Layering.function, 2).IsWarped
 	Doubling.IsWarped is false
 	MlirDeviceSums(MlirTokens.Summing.function, 2).IsWarped is false
+	Summing.IsSummed(MlirGpu.Doubling.function, 0, MlirGpu.Doubling.function.method.instructions.Length, false) is false
 	Found(false)
 Found(strided Boolean) Boolean
 	MlirDeviceSums(MlirGpu.Layering.function, 2).Found(false)
@@ -103,11 +108,13 @@ IsSummed(inspected MlirFunction, first Number, limit Number, strided Boolean) Bo
 IsSpread Boolean
 	Spreading.IsSpread
 	MlirDeviceSums(MlirGpu.Layering.function, 2).IsSpread is false
+	Summing.IsSummed(MlirDeviceChoice.Choosing, 0, 16, true) is false
 	Found(true)
 Lanes(target Text, count Text) Texts
 	MlirDeviceSums(MlirGpu.Layering.function, 2).Lanes("%y", "%c") is List(Text) + "    %y = arith.constant 32 : i64"
 	Doubling.Lanes("%y", "%c") is List(Text) + "    %y = arith.constant 1 : i64"
 	Spreading.Lanes("%y", "%c").Last is "    %y = arith.select %ym, %ys, %yw : i64"
+	Spreading.Lanes("%y", "%c") is Laned
 	if (IsWarped is false) or MlirWholeKernel(function, at).IsKernel
 		return List(Text) + MlirTyped.Integer.Constant(target, "1")
 	if IsSpread is false
