@@ -7,6 +7,9 @@ constant Shadowing = UsageRules(HeaderTokens(Tokenizer("Run(value Number)").Toke
 constant Looping = UsageRules(HeaderTokens(Tokenizer("Run(index Number)").Tokens), BodyParser("Run(index Number)", "\tfor 3", "\t\tindex", "\t1").Block(1, 1).Statements, List(Text), List(Text))
 constant ElementStore = BodyParser("Run", "	list(index) = 5").Block(1, 1).children(0)
 constant Lending = UsageRules(HeaderTokens(Tokenizer("Run").Tokens), BodyParser("Run", "	mutable ticker = Ticker(0)", "	Twice(ticker)").Block(1, 1).Statements, List(Text), List(Text) + "Ticker")
+constant Ticking = UsageRules(HeaderTokens(Tokenizer("Run(outer Number, spare Number)").Tokens), BodyParser("Run(outer Number, spare Number)", "\tmutable total = Ticker(2)", "\tfor 3", "\t\ttotal = total + outer", "\tPrint(Count(outer))", "\tPrint(total.Increase(outer))", "\ttotal").Block(1, 1).Statements, List(Text), ("Ticker", "Increase"))
+constant Plain = UsageRules(HeaderTokens(Tokenizer("Run(outer Number)").Tokens), BodyParser("Run(outer Number)", "\touter").Block(1, 1).Statements, List(Text), List(Text))
+constant From = UsageRules(HeaderTokens(Tokenizer("from(spare Number)").Tokens), BodyParser("from(spare Number)", "\t5").Block(1, 1).Statements, List(Text), List(Text))
 Sample UsageRules
 	Sample.statements.Length is 4
 	constant lines = ("Run(count, mutable list)", "\tlet aa = 5", "\tmutable bb = 0", "\tlist.Add(1)", "\tcount + bb")
@@ -14,6 +17,8 @@ Sample UsageRules
 	UsageRules(runHeader, BodyParser(lines).Block(1, 1).Statements, ("count", "x"), ("Add"), 1)
 Issues ValidationIssues
 	Sample.Issues.Length is 5
+	UsageRules(Ticking.header, List(SyntaxNode), List(Text), List(Text)).Issues.Length is 0
+	UsageRules(From.header, From.statements, ("spare"), List(Text)).Issues.Length is 1
 	mutable issues = List(Mutable(ValidationIssue))
 	for statements
 		if value.Kind is "Declaration"
@@ -24,6 +29,7 @@ DeclarationIssues(declaration SyntaxNode) ValidationIssues
 	Sample.DeclarationIssues(Sample.statements(0)).Length is 2
 	Sample.DeclarationIssues(Sample.statements(0)).First.Line is 2
 	Shadowing.DeclarationIssues(Shadowing.statements(0)).First.ruleName is "VariableHidesMemberUseDifferentName"
+	Sample.DeclarationIssues(Sample.statements(0)).Last.ruleName is "UnusedMethodVariableMustBeRemoved"
 	let name = Tokenizer(declaration.text).Tokens.Last
 	mutable issues = KindIssues(declaration, name) + HidingIssues(declaration, name)
 	if not IsUsed(name)
@@ -32,6 +38,8 @@ DeclarationIssues(declaration SyntaxNode) ValidationIssues
 HidingIssues(declaration SyntaxNode, name Text) ValidationIssues
 	Sample.HidingIssues(Sample.statements(0), "list").First.ruleName is "VariableHidesParameterUseDifferentName"
 	Sample.HidingIssues(Sample.statements(0), "x").First.ruleName is "VariableHidesMemberUseDifferentName"
+	Sample.HidingIssues(Sample.statements(0), "value").First.ruleName is "VariableHidesMemberUseDifferentName"
+	Sample.HidingIssues(Sample.statements(0), "aa").Length is 0
 	mutable issues = List(Mutable(ValidationIssue))
 	if (name is in memberNames) or (name is "value")
 		issues.Add(ValidationIssue("VariableHidesMemberUseDifferentName", name, declaration.line))
@@ -41,6 +49,8 @@ HidingIssues(declaration SyntaxNode, name Text) ValidationIssues
 KindIssues(declaration SyntaxNode, name Text) ValidationIssues
 	Sample.KindIssues(Sample.statements(0), "aa").First.ruleName is "UseConstantHere"
 	Lending.KindIssues(Lending.statements(0), "ticker").Length is 0
+	Sample.KindIssues(Sample.statements(1), "bb").First.ruleName is "VariableDeclaredAsMutableButValueNeverChanged"
+	Ticking.KindIssues(Ticking.statements(0), "total").Length is 0
 	mutable issues = List(Mutable(ValidationIssue))
 	if declaration.text.StartsWith("mutable ") and (not IsChanged(name)) and (IsLent(declaration, name) is false)
 		issues.Add(ValidationIssue("VariableDeclaredAsMutableButValueNeverChanged", name, declaration.line))
@@ -50,6 +60,9 @@ KindIssues(declaration SyntaxNode, name Text) ValidationIssues
 IsLent(declaration SyntaxNode, name Text) Boolean
 	Lending.IsLent(Lending.statements(0), "ticker")
 	Sample.IsLent(Sample.statements(1), "bb") is false
+	Ticking.IsLent(Ticking.statements(0), "total") is false
+	Ticking.IsLent(Ticking.statements(3), "outer") is false
+	Ticking.IsLent(Ticking.statements(4), "outer") is false
 	let initial = declaration.children(0)
 	if (initial.Kind is not "Call") or (initial.text is not in mutations)
 		return false
@@ -60,6 +73,10 @@ IsLent(declaration SyntaxNode, name Text) Boolean
 Passes(node SyntaxNode, name Text) Boolean
 	Lending.Passes(Lending.statements(1), "ticker")
 	Lending.Passes(Lending.statements(0), "ticker") is false
+	(Ticking.Passes(Ticking.statements(4), "total") is false) and Ticking.Passes(Ticking.statements(4), "outer")
+	Ticking.Passes(Ticking.statements(2), "outer") is false
+	Ticking.Passes(Ticking.statements(3), "Count") is false
+	Ticking.Passes(Ticking.statements(3), "total") is false
 	let first = node.Kind is "Call" then 0 else 1
 	for node.children
 		let isArgument = (node.Kind is in ("Call", "MethodCall")) and (index >= first)
@@ -67,9 +84,9 @@ Passes(node SyntaxNode, name Text) Boolean
 			return true
 	false
 ParameterIssues ValidationIssues
-	Sample.ParameterIssues.Length is 2
-	Shadowing.ParameterIssues.First.ruleName is "ParameterHidesMemberUseDifferentName"
-	Looping.ParameterIssues.First.ruleName is "ParameterHidesMemberUseDifferentName"
+	(Sample.ParameterIssues.Length is 2) and (Ticking.ParameterIssues(1).ruleName is "UnusedMethodParameterMustBeRemoved")
+	(Shadowing.ParameterIssues.First.ruleName is "ParameterHidesMemberUseDifferentName") and (From.Issues.Length is 0)
+	(Looping.ParameterIssues.First.ruleName is "ParameterHidesMemberUseDifferentName") and (Ticking.Issues.Length is 2)
 	mutable issues = List(Mutable(ValidationIssue))
 	if statements.Length is 0
 		return issues
@@ -82,6 +99,7 @@ ParameterIssues ValidationIssues
 MutableParameterIssues ValidationIssues
 	Sample.MutableParameterIssues.Length is 1
 	Sample.MutableParameterIssues.First.Line is 1
+	Sample.MutableParameterIssues.First.ruleName is "ParameterMustNotBeMutableReturnTheChangedValue"
 	mutable issues = List(Mutable(ValidationIssue))
 	for header.MutableParameters
 		issues.Add(ValidationIssue("ParameterMustNotBeMutableReturnTheChangedValue", value, line))
@@ -89,6 +107,8 @@ MutableParameterIssues ValidationIssues
 IsLooping Boolean
 	Looping.IsLooping
 	Sample.IsLooping is false
+	(Plain.IsLooping is false) and (Plain.ParameterIssues.Length is 0)
+	UsageRules(Plain.header, Looping.statements, List(Text), List(Text)).ParameterIssues.Length is 2
 	for statements
 		if value.Kind is "For"
 			return true
@@ -103,18 +123,24 @@ IsUsed(name Text) Boolean
 UsedNames(statement SyntaxNode) Texts
 	Sample.UsedNames(Sample.statements(3)).Length is 2
 	Sample.UsedNames(ElementStore) is ("list", "index")
+	Ticking.UsedNames(Ticking.statements(2)) is ("total", "outer")
+	Sample.UsedNames(BodyParser("Run", "\tlist(index) = count").Block(1, 1).children(0)) is ("list", "index", "count")
 	if statement.Kind is not "Reassignment"
 		return statement.HeadNames
 	let assigned = statement.children(1).HeadNames
 	statement.children(0).Kind is "Call" then statement.children(0).HeadNames + assigned else assigned
 IsChanged(name Text) Boolean
 	Sample.IsChanged("bb") is false
+	Ticking.IsChanged("total")
 	for statements
 		if Changes(value, name)
 			return true
 	false
 Changes(node SyntaxNode, name Text) Boolean
 	Sample.Changes(Sample.statements(2), "list")
+	Ticking.Changes(Ticking.statements(2), "total") and (Ticking.Changes(Ticking.statements(2), "outer") is false)
+	Sample.Changes(Sample.statements(3), "count") is false
+	(Ticking.Changes(Ticking.statements(1), "total") is false) and Ticking.Changes(Ticking.statements(4), "total")
 	if (node.Kind is "Reassignment") and (RootName(node.children(0)) is name)
 		return true
 	if IsMutatingCall(node, name)
@@ -125,8 +151,15 @@ Changes(node SyntaxNode, name Text) Boolean
 	false
 IsMutatingCall(call SyntaxNode, name Text) Boolean
 	Sample.IsMutatingCall(Sample.statements(2), "list")
+	Ticking.IsMutatingCall(SyntaxNode("Member", "Increase", List(SyntaxNode) + SyntaxNode("Identifier", "total")), "total")
+	Ticking.IsMutatingCall(Ticking.statements(4).children(0), "total")
+	Ticking.IsMutatingCall(SyntaxNode("Call", "Increase", Ticking.statements(4).children(0).children), "total") is false
+	Ticking.IsMutatingCall(Ticking.statements(0).children(0), "Ticker") is false
+	Ticking.IsMutatingCall(Sample.statements(2), "list") is false
+	Sample.IsMutatingCall(Sample.statements(2), "count") is false
 	(call.Kind is in ("MethodCall", "Member")) and (call.text is in mutations) and (RootName(call.children(0)) is name)
 RootName(node SyntaxNode) Text
 	Sample.RootName(Sample.statements(3)) is "count"
+	Sample.RootName(SyntaxNode("Number", "3")) is ""
 	let names = node.HeadNames
 	names.Length is 0 then "" else names(0)

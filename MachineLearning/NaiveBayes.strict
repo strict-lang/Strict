@@ -44,6 +44,7 @@ Scores(sample Numbers) Numbers
 		value.Logarithm + LogLikelihood(sample, means(index), variances(index))
 LogLikelihood(sample Numbers, mean Numbers, variance Numbers) Number
 	NaiveBayes.LogLikelihood(List(Number) + 0, List(Number) + 0, List(Number) + 1).Round(3) is -0.919
+	NaiveBayes.LogLikelihood(List(Number) + 2, List(Number) + 0, List(Number) + 2).Round(3) is -2.266
 	mutable sum = 0
 	for sample
 		let difference = value - mean(index)

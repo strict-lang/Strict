@@ -1,11 +1,14 @@
 has function MlirFunction
 has at Number
 constant Field = InstructionEntry(InstructionType.FieldLoad, ("imaginary", "Pair"), (3, 2, -1, -2))
+constant Listed = InstructionEntry(InstructionType.IndexCall, "forResult", (2, 1, -1))
 constant Reals = MethodEntry("Reals", List(MemberEntry) + MemberEntry("count", "Strict/Number", List(InstructionEntry), false), "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "count"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "index"), LaneFlow.Picking, Field, InstructionEntry.Named(InstructionType.InvokeWriteToList, 3, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 5), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "forResult"), InstructionEntry.Return(4)))
 constant Holder = TypeEntry("Strict/Holder", List(MemberEntry) + LaneFlow.Pairs, List(MethodEntry) + Reals)
 constant Holding = MlirFunction((StructLanes.Pair, Holder), Holder, Reals)
 constant Sample = MlirDeviceRecords(Holding, 4)
 constant Fielding = MlirDeviceRecords(Holding, 5)
+constant IndexedLines = ("    %d4kf = llvm.load %r1 : !llvm.ptr -> f64", "    %d4k = arith.fptosi %d4kf : f64 to i64", "    %d4q = arith.constant 2 : i64", "    %d4s = arith.muli %d4k, %d4q : i64", "    %d4n = llvm.load %v_pairs_n : !llvm.ptr -> i64", "    %d4o = arith.cmpi ult, %d4s, %d4n : i64", "    cf.cond_br %d4o, ^d4read, ^d4fail", "  ^d4fail:", "    %d4f = arith.constant 1 : i64", "    llvm.store %d4f, %failed : i64, !llvm.ptr", "    cf.br ^d4done", "  ^d4read:", "    %d4 = arith.sitofp %d4s : i64 to f64", "    llvm.store %d4, %r2 : f64, !llvm.ptr", "    cf.br ^d4done", "  ^d4done:")
+constant FieldedLines = ("    %d5v = llvm.load %r2 : !llvm.ptr -> f64", "    %d5p = arith.fptosi %d5v : f64 to i64", "    %d5c = arith.constant 1 : i64", "    %d5k = arith.addi %d5p, %d5c : i64", "    %d5n = llvm.load %v_pairs_n : !llvm.ptr -> i64", "    %d5o = arith.cmpi ult, %d5k, %d5n : i64", "    cf.cond_br %d5o, ^d5read, ^d5fail", "  ^d5fail:", "    %d5f = arith.constant 1 : i64", "    llvm.store %d5f, %failed : i64, !llvm.ptr", "    cf.br ^d5done", "  ^d5read:", "    %d5d = llvm.load %v_pairs_d : !llvm.ptr -> !llvm.ptr", "    %d5b = llvm.load %v_pairs_b : !llvm.ptr -> i64", "    %d5 = func.call @strict_device_element(%d5d, %d5b, %d5k, %d5n) : (!llvm.ptr, i64, i64, i64) -> f64", "    llvm.store %d5, %r3 : f64, !llvm.ptr", "    cf.br ^d5done", "  ^d5done:")
 Slots(kind Text) Number
 	Sample.Slots("List(Pair)") is 2
 	Sample.Slots("Pairs") is 2
@@ -44,6 +47,8 @@ Checked(position Text, list Text) Texts
 Counted(slot Text, kind Text) Texts
 	Sample.Counted("%r2_n", "List(Pair)").Last is "    %d4n = arith.divui %d4t, %d4q : i64"
 	Sample.Counted("%r2_n", "Numbers") is ("    %d4n = llvm.load %r2_n : !llvm.ptr -> i64")
+	Sample.Counted("%r2_n", "List(Pair)")(0) is "    %d4t = llvm.load %r2_n : !llvm.ptr -> i64"
+	Sample.Counted("%r2_n", "List(Pair)")(1) is "    %d4q = arith.constant 2 : i64"
 	let slots = Slots(kind)
 	if slots is 0
 		return List(Text) + MlirTyped.Integer.Load(Temp("n"), slot)
@@ -62,6 +67,7 @@ IsRead(entry InstructionEntry) Boolean
 Flattened(loaded Text, kind Text) Texts
 	Sample.Flattened("%a", "List(Pair)").Last is "    %ar = func.call @strict_records_flat(%a, %as) : (f64, f64) -> f64"
 	Sample.Flattened("%a", "Numbers").Length is 0
+	Sample.Flattened("%a", "List(Pair)")(0) is "    %as = arith.constant 2.0 : f64"
 	let slots = Slots(kind)
 	if slots is 0
 		return List(Text)
@@ -69,6 +75,9 @@ Flattened(loaded Text, kind Text) Texts
 	("    " + loaded + "s = arith.constant " + slots + ".0 : f64", "    " + loaded + "r" + call)
 Line(suffix Text, expression Text) Text
 	Sample.Line("o", "x") is "    %d4o = x"
+	Sample.Indexed(Listed)(3) is "    %d4y = arith.constant 0x0 : f64"
+	Sample.Indexed(LaneFlow.Picking) is IndexedLines
+	Fielding.Fielded(Field) is FieldedLines
 	"    " + Temp(suffix) + " = " + expression
 Temp(suffix Text) Text
 	Sample.Temp("k") is "%d4k"

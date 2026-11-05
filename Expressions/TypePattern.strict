@@ -1,7 +1,0 @@
-has ConcreteTypeName Text
-has displayName Text
-IsConstant Boolean
-	true
-to Text
-	TypePattern("Number", "Number") to Text is "Number"
-	displayName

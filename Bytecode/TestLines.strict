@@ -4,12 +4,14 @@ constant One = MethodCodegen.One
 constant Framed = BodyParser("Run(frames = 0 with value >= 0) Number", "\tRun(1) is 1", "\tframes").Block(1, 1)
 constant FramedHeader = HeaderTokens(Tokenizer("Run(frames = 0 with value >= 0) Number").Tokens)
 constant Declared = BodyParser("Run", "\tconstant a = 1", "\ta is 1", "\t2").Block(1, 1)
+constant Undeclared = SyntaxNode("Body", "", (SyntaxNode("Type", "constant a"), Declared.children(1), One))
 constant Sizing = TestLines(ValueCodegen(ValueCodegen.NoTypes, MethodCodegen.NoScope, CallTarget(CallTarget.NoTypes, TypeShape("has Height Number", "has Width Number with value > 0"), "Strict/Size", List(Text))))
 constant Validating = HeaderTokens(Tokenizer("Validated Size").Tokens)
 constant Even = TestLines(ValueCodegen(ValueCodegen.NoTypes, Scope(List(Text) + "IsEven", List(Text) + "Boolean"), CallTarget(CallTarget.NoTypes, TypeShape("IsEven(number Number) Boolean", "\tnumber % 2 is 0"), "Strict/C", List(Text))))
 constant Attacking = KnownTypes(List(Text) + "C", List(Scope) + Scope(List(Text) + "attack", List(Text) + "Boolean"), List(Scope) + Scope(List(Text) + "Read", List(Text) + "C"), List(Scope) + KnownTypes.NoMembers)
 constant Reading = TestLines(ValueCodegen(TypeInference(Attacking, CallTarget.NoScopes), Scope(List(Text) + "Read", List(Text) + "C"), CallTarget(Attacking, TypeShape("has attack Boolean", "Read C", "\tC(true)"), "Strict/C", List(Text))))
 Without(body SyntaxNode, block CodeBlock) SyntaxNode
+	Plain.Without(Declared, CodeBlock.Empty).Kind is "Body"
 	Plain.Without(BodyParser("Run", "	1 is 1", "	2 is not 3", "	2").Block(1, 1), CodeBlock.Empty).children.Length is 1
 	Plain.Without(BodyParser("Run", "\t2 is in (1, 2)", "\t2").Block(1, 1), CodeBlock.Empty).children.Length is 1
 	Plain.Without(BodyParser("Run Boolean", "\t3 > 1", "\ttrue").Block(1, 1), CodeBlock.Empty).children.Length is 1
@@ -21,6 +23,8 @@ Without(body SyntaxNode, block CodeBlock) SyntaxNode
 			code.Add(value)
 	SyntaxNode("Body", "", UsedConstants(body, code, block) + code)
 UsedConstants(body SyntaxNode, code SyntaxNodes, block CodeBlock) SyntaxNodes
+	Plain.UsedConstants(Declared, List(SyntaxNode), CodeBlock.Empty).Length is 0
+	Plain.UsedConstants(SyntaxNode("Body", "", (One) + Declared.children), Declared.children, CodeBlock.Empty).Length is 0
 	Plain.UsedConstants(Declared, Declared.children, CodeBlock.Empty).Length is 1
 	mutable names = List(Mutable(Text))
 	for SyntaxNode("Body", "", code).Statements
@@ -41,6 +45,8 @@ Tests(body SyntaxNode, block CodeBlock) SyntaxNodes
 		if index < end
 			value
 LeadingEnd(body SyntaxNode, block CodeBlock) Number
+	Plain.LeadingEnd(BodyParser("Run Boolean", "\t1 is 1", "\t2 is 2").Block(1, 1), CodeBlock.Empty) is 1
+	Reading.Without(BodyParser("Run", "\tRead.attack", "\tattack").Block(1, 1), CodeBlock.Empty).children.Length is 1
 	Plain.LeadingEnd(Declared, CodeBlock.Empty) is 2
 	for body.children
 		let isLast = index is body.children.Length - 1
@@ -48,6 +54,9 @@ LeadingEnd(body SyntaxNode, block CodeBlock) Number
 			return index
 	body.children.Length
 IsTestConstant(body SyntaxNode, position Number, block CodeBlock) Boolean
+	Plain.IsTestConstant(BodyParser("Run", "\tconstant a = 1", "\ta is 1").Block(1, 1), 0, CodeBlock.Empty) is false
+	Plain.IsTestConstant(BodyParser("Run", "\tconstant a = 1", "\ta", "\ta").Block(1, 1), 0, CodeBlock.Empty) is false
+	Plain.IsTestConstant(Undeclared, 0, CodeBlock.Empty) is false
 	Plain.IsTestConstant(BodyParser("Run", "\tconstant a = 1", "\ta is 1", "\ta").Block(1, 1), 0, CodeBlock.Empty)
 	let line = body.children(position)
 	let isDeclared = (line.Kind is "Declaration") and line.text.StartsWith("constant ")
@@ -65,12 +74,16 @@ IsTest(line SyntaxNode, isLeading Boolean, block CodeBlock) Boolean
 		return values.TypeOf(line, block) is "Boolean"
 	false
 IsCalling(line SyntaxNode, block CodeBlock) Boolean
+	Reading.IsCalling(SyntaxNode("Member", "Read", SyntaxNode("Identifier", "attack")), CodeBlock.Empty)
+	Even.IsTest(SyntaxNode("Call", "IsEven", One), false, CodeBlock.Empty) is false
+	Plain.IsTest(SyntaxNode("Boolean", "true"), true, CodeBlock.Empty) is false
 	Reading.IsCalling(SyntaxNode("Member", "attack", SyntaxNode("Identifier", "Read")), CodeBlock.Empty)
 	Reading.IsCalling(SyntaxNode("Identifier", "attack"), CodeBlock.Empty) is false
 	if line.Kind is "Member"
 		return values.IsMethodCall(line, block) or IsCalling(line.children(0), block)
 	values.IsMethodCall(line, block)
 Guarded(body SyntaxNode, header HeaderTokens, line Number, scope Scope) SyntaxNode
+	Plain.Guarded(Framed, FramedHeader, 1, MethodCodegen.NoScope).Kind is "Body"
 	Plain.Guarded(Framed, FramedHeader, 1, MethodCodegen.NoScope).children(1).Kind is "If"
 	Plain.Guarded(Framed, FramedHeader, 1, MethodCodegen.NoScope).children.Length is 3
 	let end = LeadingEnd(body, CodeBlock(List(InstructionEntry), 0, 0, scope))
@@ -87,6 +100,7 @@ Validations(header HeaderTokens) SyntaxNodes
 		return List(SyntaxNode)
 	Automatic(values.target.shape.lines, "", Instantiation(values.inference.types)).Validations
 Checks(header HeaderTokens, line Number) SyntaxNodes
+	Plain.Checks(HeaderTokens(Tokenizer("Run(frames Number) Number").Tokens), 1).Length is 0
 	Plain.Checks(FramedHeader, 1).First.line is 1
 	Plain.Checks(HeaderTokens(Tokenizer("D(a Numbers with value.Bits is 32)").Tokens), 1).Length is 0
 	let parameterTypes = header.ParameterTypes

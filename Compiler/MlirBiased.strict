@@ -4,6 +4,7 @@ constant Biased = MethodEntry("Sums", (MemberEntry("input", "Strict/List(Number)
 constant Tokens = TypeEntry("Strict/Tokens", (MemberEntry("weights", "Strict/List(Numbers)", List(InstructionEntry), false), MemberEntry("biases", "Strict/List(Number)", List(InstructionEntry), false)), (Biased, MlirTokens.Dotted))
 constant Biasing = MlirBiased(MlirFunction(List(TypeEntry) + Tokens, Tokens, Biased), 2)
 constant Summing = MlirBiased(MlirTokens.Summing.function, 2)
+constant Varied = MlirBiased(MlirFunction(Biasing.function, method = MethodEntry(Biased, instructions = Biased.instructions + (InstructionEntry.Invoke(30, ("Strict/List(Number)", "Sum", "Strict/Number"), List(Number), 15), InstructionEntry.Binary(InstructionType.Modulo, (14, 30, 31)), InstructionEntry.Binary(InstructionType.Modulo, (11, 16, 32)), InstructionEntry.Binary(InstructionType.Divide, (14, 16, 33)), InstructionEntry(InstructionType.Subtract, "biases", (34, 17, -1))))), 2)
 Biases Text
 	Summing.Biases is ""
 	Biasing.Biases is "biases"
@@ -17,11 +18,18 @@ Biases Text
 Written Number
 	Summing.Written is 16
 	Biasing.Written is 22
+	Varied.Measured(27) is ""
+	(Varied.Measured(28) is "") and (Varied.Measured(29) is "")
+	Varied.Read(30) is ""
+	MlirBiased(MlirLoops.Nested.function, 0).Written is -1
 	let last = function.method.LoopEndOf(position) - 1
 	function.method.instructions(last).kind is InstructionType.InvokeWriteToList then last else -1
 Added(at Number, dot Number) Number
 	Biasing.Added(21, 13) is 18
 	Biasing.Added(20, 13) is -1
+	Biasing.Added(5, 1) is -1
+	Biasing.Added(21, 18) is 13
+	Biasing.Added(21, 3) is -1
 	if at < 0
 		return -1
 	let entry = function.method.instructions(at)
@@ -64,11 +72,14 @@ Operand Text
 	(IsFused and (Biases is not "")) then MlirGpu(function, position).Temp("gbias") else "%zero"
 Loaded Texts
 	Summing.Loaded.Length is 0
+	MlirBiased(MlirGpu.Layering.function, 2).IsFused is false
 	Biasing.Loaded is ("    %t2gbias = llvm.load %v_biases : !llvm.ptr -> f64")
 	Operand is "%zero" then List(Text) else List(Text) + function.Load(Operand, "%v_" + Biases)
 Fused Texts
 	Biasing.Fused(1) is "    cf.cond_br %t2gn, ^loop2exit, ^loop2kernel"
 	MlirBiased(MlirGpu.Doubling.function, 2).Fused.Length is 0
+	Biasing.Fused(0) is "    llvm.store %t2gb, %v_forResult : f64, !llvm.ptr"
+	Biasing.Fused(2) is "  ^loop2kernel:"
 	if IsFused is false
 		return List(Text)
 	let gpu = MlirGpu(function, position)

@@ -3,6 +3,10 @@ constant Naming = ReturnTypes(TypeInference(KnownTypes.Sample, (KnownTypes.NoMem
 constant Named = Scope(List(Text) + "name", List(Text) + "Text")
 constant Joined = ScopedStatement(SyntaxParser(Tokenizer("\"a\" + name").Tokens).Parse, Named, 1)
 constant Splitted = ScopedStatement(SyntaxParser(Tokenizer("name.Split(\",\")").Tokens).Parse, Named, 1)
+constant Dropped = Scope((" dropped", "name"), ("Boolean", "Text"))
+constant Returned = ScopedStatement(SyntaxNode("Return", "", List(SyntaxNode) + Joined.statement), Named, 1)
+constant Bodied = ScopedStatement(SyntaxNode("Binary", "+", Joined.statement.children + SyntaxNode("Body", "")), Named, 1)
+constant Counted = ScopedStatement(SyntaxParser(Tokenizer("1").Tokens).Parse, Named, 1)
 constant Lines = ("Names Texts", "\tvalue")
 constant Looped = ("Names Texts", "\tfor names", "\t\tvalue")
 Issue(scoped ScopedStatement, current Scope, lines Texts) Text
@@ -20,6 +24,10 @@ Issue(scoped ScopedStatement, current Scope, lines Texts) Text
 	isSingle then "ReturnTypeMismatch: a " + type + " is returned for " + declared + hint else ""
 Declared(lines Texts, line Number) Text
 	Naming.Declared(Lines, 1) is "Texts"
+	Naming.Declared(Looped, 2) is "Texts"
+	Naming.Issue(ScopedStatement(Joined.statement, Dropped, 1), Named, Lines) is ""
+	Naming.Issue(Returned, Named, ("Names Unknowns", "\tvalue")) is "" and (Naming.Issue(Bodied, Named, Lines) is "")
+	Naming.Issue(Counted, Named, ("Count Number", "\tvalue")) is ""
 	for Range(0, line).Reverse
 		if lines(value).StartsWith("\t") is false
 			return HeaderTokens(Tokenizer(lines(value)).Tokens).ReturnType

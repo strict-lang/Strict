@@ -26,23 +26,34 @@ Main Texts
 Header Texts
 	MlirEntry(Counted, symbol = "strict_main").Header.First.StartsWith("  func.func @strict_main(")
 	Counted.Header.Length is 7
+	Counted.Main(10) is "    llvm.store %t0of, %selfslot : f64, !llvm.ptr"
+	MlirLines.Print is in MlirEntry(MlirFunction(Counted.entry, lineSlots = (1))).Main
+	Framed.Main(23) is "    %arg0 = arith.select %arg0has, %arg0given, %arg0default : f64"
 	constant slot = "    %selfslot = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
 	constant constants = ("    %one = arith.constant 1 : i64", "    %zero = arith.constant 0.0 : f64", slot)
 	let declaration = "  func.func @" + symbol + "(%argc: i32, %argv: !llvm.ptr) -> i32 {"
 	List(Text) + declaration + CollectorStart + constants
 Code Text
 	Counted.Code is "    %code = arith.constant 0 : i32"
+	Framed.Code is "    %code = arith.fptosi %result : f64 to i32"
+	MlirEntry(Framed.entry, List(MlirFunction) + Framed.entry).Code is "    %code = arith.fptosi %total1 : f64 to i32"
+	Framed.Arguments(0) is "    %argindex0 = arith.constant 1 : i32"
+	Framed.Arguments(1).StartsWith("    %arg0giventext = func.call @strict_argument(%argc, %argv, %argindex0)")
 	let total = others.Length is 0 then "%result" else "%total" + others.Length
 	let returned = TypeEntry.ShortName(entry.method.returnType) is "Number"
 	returned then "    %code = arith.fptosi " + total + " : f64 to i32" else "    %code = arith.constant 0 : i32"
 Others Texts
 	Counted.Others.Length is 0
+	Both.Other(Counted.entry, 1)(0) is "    %selfslot1 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
+	Both.Other(Counted.entry, 1)(1) is "    %t0e1_oz = arith.constant 8 : i64"
+	Both.Other(Counted.entry, 1)(5) is "    %self1 = llvm.load %selfslot1 : !llvm.ptr -> f64"
 	mutable lines = List(Mutable(Text))
 	for others
 		lines = lines + Other(value, index + 1)
 	lines
 EntryCall Text
 	Counted.EntryCall is "    %result = func.call @Counter_Run_0(%self) : (f64) -> f64"
+	Framed.EntryCall is "    %result = func.call @Shape_Run_1(%self, %arg0) : (f64, f64) -> f64"
 	let count = entry.method.parameters.Length
 	let names = List(Text) + "%self" + MlirCalls(entry, 0).ArgumentNames(count)
 	let operands = Text.Combine(names, ", ").Replace("%t0a", "%arg")
@@ -84,6 +95,11 @@ Argument(kind Text, index Number, name Text) Texts
 	kind is "Number" then (position, argument, parsed) else (position, argument)
 AllArguments(kind Text, name Text) Text
 	Counted.AllArguments("Texts", "%arg0").IndexOf("@strict_argument_texts(") > 0
+	Counted.AllArguments("Numbers", "%a") is Counted.AllArguments("Texts", "%a").Replace("texts", "numbers")
+	Counted.AllArguments("Texts", "%a").StartsWith("    %a = func.call @strict_argument_texts(")
+	Counted.Argument("Numbers", 0, "%arg0") is (Counted.AllArguments("Numbers", "%arg0"))
+	Counted.Argument("Number", 0, "%arg0")(0) is "    %argindex0 = arith.constant 1 : i32"
+	Counted.Argument("Number", 0, "%a")(2) is "    %a = func.call @strict_text_number(%atext) : (f64) -> f64"
 	let elements = kind is in ("Texts", "List(Text)") then "texts" else "numbers"
 	"    " + name + " = func.call @strict_argument_" + elements + "(%argc, %argv) : (i32, !llvm.ptr) -> f64"
 Other(function MlirFunction, number Number) Texts
@@ -101,4 +117,7 @@ Other(function MlirFunction, number Number) Texts
 Optimized(method MethodEntry, emitted Text) Text
 	MlirEntry.Optimized(MethodEntry(MethodEntry.CountingLoop, Name = TestCodegen.Runner), Linked) is Unoptimized
 	MlirEntry.Optimized(MethodEntry.CountingLoop, Linked) is Linked
+	Framed.Arguments(4) is "    %t0d0c = arith.constant 0x401C000000000000 : f64"
+	Framed.Arguments(6) is "    %arg0has = arith.cmpi sgt, %argc, %argindex0 : i32"
+	Framed.Arguments(7) is "    %arg0default = llvm.load %arg0slot : !llvm.ptr -> f64"
 	method.Name is TestCodegen.Runner then emitted.Replace(Linked, Unoptimized) else emitted

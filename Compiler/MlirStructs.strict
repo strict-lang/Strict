@@ -40,6 +40,13 @@ IsSource(at Number, register Number, depth Number) Boolean
 	let callees = MlirModule(function.types, "").Called(function, writer)
 	callees.Length > 0 then MlirStructs(callees.First, 0).Consumes(depth + 1) else false
 Prologue Texts
+	Filler.Consumes(0) is false
+	Made.Consumes(3) is false
+	Collector.Collected(Calling, List(Text) + "call", "Text") is ("call")
+	Text.Combine(Collector.Collected(Calling, ("call"), "Shape")).Length is 237
+	Text.Combine(Forwarder.Destined(Calling, Forwarding.instructions(2), ("call"))).Length is 124
+	Made.Constructed(Making.instructions(1), MlirInstances.Outer, MlirOwned.Fresh) is MlirOwned.Fresh
+	Text.Combine(Made.Constructed(Making.instructions(1), Maker, MlirOwned.Fresh)).Length is 510
 	Made.Prologue is Taking
 	MlirStructs(MlirInstances.Shapes, 0).Prologue.Length is 0
 	Consumes(0) then Taking else List(Text)
@@ -120,6 +127,9 @@ IsKept(entry InstructionEntry) Boolean
 			return IsWritten(value, stored)
 	false
 IsWritten(at Number, stored Text) Boolean
+	Filler.IsTarget(Calling, InstructionEntry(Inliner.Store, "size(0)", (1, -1)), "Number") is false
+	Filler.IsTarget(Calling, InstructionEntry.Named(Inliner.Store, 1, "items"), "Shape") is false
+	Collector.IsWritten(5, "") and (MlirStructs(Collector.function, 0).IsWritten(5, "Strict/Shape") is false)
 	Collector.IsWritten(7, "made")
 	Collector.IsWritten(7, "other") is false
 	let writer = MlirKinds(function).Writer(at, function.method.instructions(at).payload(0))
@@ -128,6 +138,14 @@ IsWritten(at Number, stored Text) Boolean
 	let step = function.method.instructions(writer)
 	(writer is position) or ((step.kind is InstructionType.LoadVariableToRegister) and (step.texts(0) is stored))
 Destine(suffix Text) Text
+	Forwarder.IsSource(2, 1, 1) and (Forwarder.IsSource(2, 1, 2) is false)
+	Filler.IsTarget(Calling, InstructionEntry(InstructionType.Return, "items(0)", (1, -1)), "Shape") is false
+	Filler.IsTarget(Calling, InstructionEntry.Named(Inliner.Store, 0, "items(0)"), "Shape") is false
+	Filler.IsTarget(Calling, InstructionEntry(Inliner.Store, "items(0)", (1)), "Shape") is false
+	Forwarder.Destined(Calling, InstructionEntry.Return(0), ("call")) is ("call")
+	Forwarder.Destined(Calling, Calling, ("call")) is ("call")
+	Text.Combine(Filler.Element(Calling, InstructionEntry(Inliner.Store, "items(a)", (1, 0)), (""), "Shape")).Length is 177
+	Text.Combine(Filler.Element(Calling, Filling.instructions(2), List(Text), "Shape")).Length is 166
 	Made.Destine("sd") is "    func.call @strict_struct_destine(%t1sd) : (f64) -> ()"
 	"    func.call @strict_struct_destine(%t" + position + suffix + ") : (f64) -> ()"
 IsTarget(entry InstructionEntry, next InstructionEntry, returned Text) Boolean

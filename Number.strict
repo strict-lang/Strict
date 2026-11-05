@@ -79,6 +79,7 @@ IsNearlyEqual(other, difference = 0) Boolean
 	(1 / 0).IsNearlyEqual(1 / 0)
 	(1 / 0).IsNearlyEqual(5) is false
 	34.9.IsNearlyEqual(34.943, 0.5)
+	0.IsNearlyEqual(0.0000100001) and 0.0000100001.IsNearlyEqual(0)
 	let delta = (value - other).Absolute
 	let scale = value.Absolute > other.Absolute then value.Absolute else other.Absolute
 	(value is other) or ((delta < 1 / 0) and ((delta <= difference) or (delta <= Epsilon * (1 + scale))))
@@ -101,6 +102,7 @@ Wrap(minimum Number, maximum Number) Number
 	-10.Wrap(0, 360) is 350
 	360.Wrap(0, 360) is 0
 	190.Wrap(-180, 180) is -170
+	25.Wrap(7, 17) is 15
 	let range = maximum - minimum
 	let offset = (value - minimum) % range
 	minimum + (offset < 0 then offset + range else offset)

@@ -4,9 +4,18 @@ constant Declarations = ("  llvm.func @snprintf(!llvm.ptr, i64, !llvm.ptr, ...) 
 constant Joined = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "a%"), InstructionEntry.LoadNumber(1, 7), InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)), InstructionEntry.PrintValue("x: ", 2, true), MlirKinds.Passed, InstructionEntry.PrintValue("y: ", 2, false), InstructionEntry.PrintValue("z: ", 1, false), InstructionEntry.Invoke(3, ("Strict/Number", "to", "Strict/Text"), List(Number), 1))))
 constant ToNumbers = InstructionEntry.Invoke(1, ("Strict/List(Text)", "to", "Strict/List(Number)"), List(Number), 0)
 constant Listing = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Words, "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "words"), ToNumbers)))
+constant NumberText = ("    %t7v = llvm.load %r1 : !llvm.ptr -> f64", "    %t7vxc = func.constant @strict_number_text : (f64) -> f64", "    %t7vx = func.call @strict_converted(%t7v, %t7vxc) : (f64, (f64) -> f64) -> f64", "    llvm.store %t7vx, %r3 : f64, !llvm.ptr")
+constant ElementLines = ("    %t1w = llvm.load %r0 : !llvm.ptr -> f64", "    %t1wc = func.call @strict_list_numbers(%t1w) : (f64) -> f64", "    llvm.store %t1wc, %r1 : f64, !llvm.ptr")
+constant NumberedLines = ("    %t1n = llvm.load %r0 : !llvm.ptr -> f64", "    %t1nv = func.call @strict_text_number(%t1n) : (f64) -> f64", "    llvm.store %t1nv, %r1 : f64, !llvm.ptr")
+constant ConcatenatedLines = ("    %t2lx = llvm.load %r0 : !llvm.ptr -> f64", "    %t2r = llvm.load %r1 : !llvm.ptr -> f64", "    %t2rxc = func.constant @strict_number_text : (f64) -> f64", "    %t2rx = func.call @strict_converted(%t2r, %t2rxc) : (f64, (f64) -> f64) -> f64", "    %t2c = func.call @strict_text_concat(%t2lx, %t2rx) : (f64, f64) -> f64", "    llvm.store %t2c, %r2 : f64, !llvm.ptr")
 constant ShapeConverter = "    %t1dxc = func.constant @strict_automatic_Shape : (f64) -> f64"
 Temp(suffix Text) Text
 	MlirTexts(Joined, 2).Temp("l") is "%t2l"
+	MlirTexts(Joined, 7).IsNativeConversion(Joined.method.instructions(7), "Boolean") is false
+	MlirTexts(Listing, 1).Elements(0, "List(Text)", "%r1").Length is 2
+	MlirTexts(Listing, 1).Elements(0, "List(Boolean)", "%r1").Length is 2
+	MlirTexts(Joined, 1).Described("", "d", "List(Text, Number)").Length is 4
+	MlirTexts(Joined, 1).Described("", "d", "List(Text, Number)")(3).IndexOf("%t1dx = func.call @strict_pair_text(") > 0
 	MlirStatements(function, position).Temp(suffix)
 IsSum Boolean
 	MlirTexts(Joined, 2).IsSum
@@ -28,6 +37,8 @@ IsConversion Boolean
 IsNativeConversion(entry InstructionEntry, target Text) Boolean
 	MlirTexts(Joined, 7).IsNativeConversion(Joined.method.instructions(7), "Number")
 	MlirTexts(Joined, 7).IsNativeConversion(Joined.method.instructions(7), "Shape") is false
+	MlirTexts(Joined, 7).IsNativeConversion(Joined.method.instructions(7), "Text")
+	MlirTexts(Joined, 7).IsNativeConversion(Joined.method.instructions(7), "Character")
 	let source = MlirKinds(function).KindOf(position, Instance(entry))
 	let layout = MlirLayout(function)
 	if (target is "Text") or (target is "Number") and (layout.Represented(source) is "Text")
@@ -37,6 +48,8 @@ IsNativeConversion(entry InstructionEntry, target Text) Boolean
 	(own.instructions.Length is 0) and ((target is in ("Number", "Character")) or isSame)
 Instance(entry InstructionEntry) Number
 	MlirTexts(Joined, 7).Instance(Joined.method.instructions(7)) is 1
+	MlirTexts(Listing, 1).Instance(ToNumbers) is 0
+	MlirTexts(Joined, 7).Converted(Joined.method.instructions(7)) is NumberText
 	let countPosition = 5 + entry.payload(3)
 	entry.payload(countPosition + 2 + entry.payload(countPosition))
 Converted(entry InstructionEntry) Texts
@@ -55,6 +68,9 @@ Converted(entry InstructionEntry) Texts
 Textual(instance Number, target Text, result Text) Texts
 	MlirTexts(Joined, 7).Textual(1, "Text", "%r3").Length is 4
 	Text.Combine(MlirTexts(Joined, 7).Textual(0, "Text", "%r3")).IndexOf("@strict_converted(%t7v, %t7vxc)") > 0
+	MlirTexts(Joined, 7).Textual(0, "Text", "%r3")(1) is "    %t7vxc = func.constant @strict_text_itself : (f64) -> f64"
+	MlirTexts(Joined, 7).Textual(0, "Text", "%r3")(0) is "    %t7v = llvm.load %r0 : !llvm.ptr -> f64"
+	MlirTexts(Joined, 7).Textual(1, "Character", "%r3")(3).IndexOf("%t7vc = func.call @strict_text_at(%t7vx, %zero)") > 0
 	let isText = Printable(MlirKinds(function).KindOf(position, instance)) is "Text"
 	let loaded = function.Load(Temp("v"), "%r" + instance)
 	let checked = MlirMemory(function, position).Converting(Temp("vx"), "strict_text_itself", Temp("v"))
@@ -63,6 +79,7 @@ Textual(instance Number, target Text, result Text) Texts
 	target is "Text" then text + function.Store(Temp("vx"), result) else text + first + function.Store(Temp("vc"), result)
 Elements(instance Number, target Text, result Text) Texts
 	Text.Combine(MlirTexts(Listing, 1).Elements(0, "List(Number)", "%r1")).IndexOf("@strict_list_numbers(") > 0
+	MlirTexts(Listing, 1).Elements(0, "List(Number)", "%r1") is ElementLines
 	let kinds = MlirKinds(function)
 	let source = kinds.ElementKind(kinds.KindOf(position, instance))
 	let element = kinds.ElementKind(target)
@@ -74,6 +91,9 @@ Elements(instance Number, target Text, result Text) Texts
 	(loaded, converted, function.Store(Temp("wc"), result))
 Numbered(instance Number, target Text) Texts
 	MlirTexts(Joined, 1).Numbered(0, "%r1").Length is 3
+	MlirTexts(Joined, 1).Numbered(0, "%r1") is NumberedLines
+	MlirTexts(Joined, 2).Numbered(1, "%r2").Length is 2
+	MlirTexts(Joined, 7).Textual(1, "Character", "%r3").Last is "    llvm.store %t7vc, %r3 : f64, !llvm.ptr"
 	let loaded = function.Load(Temp("n"), "%r" + instance)
 	if MlirKinds(function).IsText(position, instance) is false
 		return (loaded, function.Store(Temp("n"), target))
@@ -94,6 +114,9 @@ TextBits(register Number, suffix Text) Texts
 Printable(kind Text) Text
 	MlirTexts(Joined, 0).Printable("Number") is "Number"
 	MlirTexts(MlirLanes.Sample.function, 0).Printable("Rgb") is "Lanes3"
+	MlirTexts(Joined, 0).Helper("Pair") is "strict_two_text"
+	MlirTexts(Joined, 0).Helper("Flat") is "strict_flat_text"
+	MlirTexts(Joined, 0).Helper("Lanes3") is "strict_lanes3_text"
 	let own = function.TypeOf(kind).Callee("to", 0, "Text", List(Text))
 	if (own.instructions.Length is 0) and MlirLanes(function, 0).IsPacked(kind)
 		return "Lanes" + MlirLanes(function, 0).Members(kind).Length
@@ -126,10 +149,14 @@ Described(loaded Text, suffix Text, kind Text) Texts
 	List(Text) + loaded + MlirMemory(function, position).Converting(Temp(suffix + "x"), symbol, Temp(suffix))
 Pointer(register Number, suffix Text) Texts
 	MlirTexts(Joined, 3).Pointer(2, "b").Last is "    %t3bp = func.call @strict_ptr(%t3bs) : (f64) -> !llvm.ptr"
+	MlirTexts(Joined, 3).Pointer(2, "b")(1) is "    %t3bs = func.call @strict_shown(%t3bx) : (f64) -> f64"
+	MlirTexts(Joined, 3).Pointer(2, "b").Length is 3
+	MlirTexts(Listing, 1).Converted(ToNumbers) is ElementLines
 	let shown = MlirMemory(function, position).Called(Temp(suffix + "s"), "strict_shown", List(Text) + Temp(suffix + "x"))
 	TextBits(register, suffix) + shown + MlirMemory(function, position).Pointer(Temp(suffix + "s"), suffix)
 Concatenated(entry InstructionEntry) Texts
 	MlirTexts(Joined, 2).Concatenated(Joined.method.instructions(2)).Length is 6
+	MlirTexts(Joined, 2).Concatenated(Joined.method.instructions(2)) is ConcatenatedLines
 	let operands = TextBits(entry.payload(1), "l") + TextBits(entry.payload(2), "r")
 	let joined = MlirMemory(function, position).Called(Temp("c"), "strict_text_concat", (Temp("lx"), Temp("rx")))
 	operands + joined + function.Store(Temp("c"), "%r" + entry.payload(3))

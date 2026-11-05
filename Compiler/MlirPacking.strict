@@ -6,9 +6,14 @@ constant Packed = MlirPacking(MlirFunction((MlirPairs.Pairing, Adder), MlirPairs
 constant Fetching = InstructionEntry(InstructionType.IndexCall, "numbers", (7, 1, -1))
 constant Halved = MlirPacking(MlirFunction((MlirFlats.Halving, MlirFlats.Summing), MlirFlats.Halving, MlirFlats.Halving.methods.Last), 0)
 constant Plain = MlirPacking(MlirLists.Listed, 2)
+constant Repacking = ("    %t0c = llvm.load %r0 : !llvm.ptr -> f64", "    %t0cl = func.call @strict_two_list(%t0c) : (f64) -> f64", "    llvm.store %t0cl, %r0 : f64, !llvm.ptr")
+constant Twice = InstructionEntry.Invoke(1, ("Strict/Math/Adder", "Summed", "Strict/Number", "list"), (3, 0), -1)
+constant Instanced = InstructionEntry.Invoke(1, ("Strict/Math/Adder", "Summed", "Strict/Number", "list"), (0), 3)
+constant Flattening = ("    %t2l = llvm.load %v_numbers : !llvm.ptr -> f64", "    %t2i = llvm.load %r1 : !llvm.ptr -> f64", "    %t2n = llvm.mlir.addressof @sShape_Run_1_2 : !llvm.ptr", "    %t2nb = func.call @strict_bits(%t2n) : (!llvm.ptr) -> f64", "    %t2x = func.call @strict_list_read(%t2l, %t2i, %t2nb) : (f64, f64, f64) -> f64", "    llvm.store %t2x, %r2 : f64, !llvm.ptr")
+constant Indexing = ("    %t0l = llvm.load %v_numbers : !llvm.ptr -> f64", "    %t0i = llvm.load %r1 : !llvm.ptr -> f64", "    %t0x = func.call @strict_two_at(%t0l, %t0i) : (f64, f64) -> f64", "    llvm.store %t0x, %r7 : f64, !llvm.ptr")
 Kind(written Text) Text
-	Listing.Kind("Pairing") is "List(Number)"
-	MlirPacking(Packed.function, 2).Kind("List(Number)") is "Pairing"
+	Listing.Kind("Pairing") is "List(Number)" and (Listing.Kind("Number") is "Number")
+	MlirPacking(Packed.function, 2).Kind("List(Number)") is "Pairing" and (Packed.Kind("Numbers") is "Pairing")
 	let reuse = LoadReuse(function.method.instructions)
 	let register = reuse.Written(function.method.instructions(position))
 	if (register < 0) or (written is not in ("List(Number)", "Numbers")) and (IsPacked(written) is false)
@@ -51,6 +56,8 @@ Converted(written Text, declared Text) Text
 	Listing.Converted("Pairing", "Strict/Math/Pairing") is ""
 	Listing.Converted("Text", "Strict/List(Number)") is ""
 	Halved.Converted("List(Number)", "Strict/Math/Halving") is "Halving"
+	Listing.Converted("Numbers", "Strict/Math/Pairing") is "Pairing"
+	Listing.Converted("Text", "Strict/Math/Pairing") is "" and (Listing.Converted("Numbers", "Strict/List(Number)") is "")
 	let target = TypeEntry.ShortName(declared)
 	if IsPacked(written)
 		return MlirLayout(function).Represented(target).StartsWith("List(") then "List(Number)" else ""
@@ -58,6 +65,7 @@ Converted(written Text, declared Text) Text
 IsPair(kind Text) Boolean
 	Listing.IsPair("Pairing")
 	Listing.IsPair("List(Number)") is false
+	Listing.Expected(InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "x"), 0, "Pairing") is ""
 	(TypeEntry.IsBaseName(kind) is false) and MlirPairs(function, position).IsListed(kind)
 Repacked Texts
 	Listing.Repacked(1) is "    %t0cl = func.call @strict_two_list(%t0c) : (f64) -> f64"
@@ -73,6 +81,8 @@ Repacked Texts
 	let call = "    " + temp + "l = func.call @" + helper + "(" + temp + ") : (f64) -> f64"
 	(function.Load(temp, "%r" + register), call, function.Store(temp + "l", "%r" + register))
 Indexed(entry InstructionEntry, fallback MlirLists) Texts
+	Listing.Indexed(Fetching, MlirLists(Listing.function, 0)) is Indexing
+	Plain.Indexed(MlirLists.Steps(2), MlirLists(MlirLists.Listed, 2)) is Flattening
 	Text.Combine(Listing.Indexed(Fetching, MlirLists(Listing.function, 0))).IndexOf("@strict_two_at(%t0l, %t0i)") > 0
 	Plain.Indexed(MlirLists.Steps(2), MlirLists(MlirLists.Listed, 2)).Last.EndsWith("%r2 : f64, !llvm.ptr")
 	if IsPair(MlirKinds(function).VariableKind(position, entry.texts(0))) is false
@@ -85,11 +95,16 @@ IsPacked(kind Text) Boolean
 	Halved.IsPacked("Halving")
 	Listing.IsPacked("Pairing")
 	Listing.IsPacked("List(Number)") is false
+	Listing.Argument(PayloadDecoder(Twice), 0, "Pairing") is ""
+	Listing.Argument(PayloadDecoder(Instanced), 0, "Pairing") is "List(Number)"
+	Listing.Expected(MlirPairs.Constructing, 0, "List(Number)") is ""
 	IsPair(kind) or (MlirFlats(function, position).Count(kind) > 0)
 Helper(written Text, converted Text) Text
 	Listing.Helper("Pairing", "List(Number)") is "strict_two_list"
 	Halved.Helper("Halving", "List(Number)") is "strict_flat_list"
 	Halved.Helper("List(Number)", "Halving") is "strict_flat_from_list"
+	Listing.Repacked is Repacking and (MlirPacking(Listing.function, 1).Repacked is List(Text))
+	MlirPacking(Listing.function, 3).Kind("Pairing") is "Pairing"
 	let isListed = converted is "List(Number)"
 	let isFlat = MlirFlats(function, position).Count(isListed then written else converted) > 0
 	"strict_" + (isFlat then "flat_" else "two_") + (isListed then "list" else "from_list")

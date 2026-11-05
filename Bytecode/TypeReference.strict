@@ -6,6 +6,7 @@ Covers(needed TypeEntry) Boolean
 	Logged.Covers(TypeEntry.HelloLogger)
 	Logged.Covers(TypeEntry.Converting) is false
 	Memberless.Covers(TypeEntry.HelloLogger) is false
+	Logged.Covers(TypeEntry("Other", MemberEntry.LoggerMember, List(MethodEntry))) is false
 	if (owner.Name is not needed.Name) or (owner.members is not needed.members)
 		return false
 	for needed.methods
@@ -14,6 +15,7 @@ Covers(needed TypeEntry) Boolean
 	true
 Selection(needed TypeEntry) Numbers
 	Logged.Selection(TypeEntry.HelloLogger).Last is 0
+	Logged.Covers(TypeEntry("HelloLogger", List(MemberEntry), List(MethodEntry))) is false
 	mutable selection = Stamp
 	for needed.methods
 		selection = selection + owner.methods.Index(value)
@@ -35,6 +37,8 @@ Stamp Numbers
 	(bytes.Length, Crc(bytes).Value)
 IsValid(selection Numbers) Boolean
 	Logged.IsValid(Logged.Selection(TypeEntry.HelloLogger) + 999) is false
+	Logged.IsValid(Logged.Selection(TypeEntry.HelloLogger) + 0.5) is false
+	Logged.IsValid(Logged.Selection(TypeEntry.HelloLogger) + -1) is false
 	if (selection.Length < 2) or (selection.Slice(0, 2) is not Stamp)
 		return false
 	for selection.Slice(2, selection.Length - 2)

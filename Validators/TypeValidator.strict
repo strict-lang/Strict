@@ -4,11 +4,16 @@ has typeName Text = ""
 constant ReservedNames = ("value", "iterator", "elements", "generic")
 constant Hint = ", capitalize it when other types use it"
 constant Replacing = TypeValidator(TypeShape("has a Number", "has b Number", "Changed(x Number) C", "\tC(1, 2).Changed(3).a is 3", "\tC(value, a = x)"), ("Add", "Remove"), "C")
+constant Computed = TypeValidator(TypeShape("has a Number", "has number = 17 + 4", "Run", "\tnumber"), ("Add"))
 Sample TypeValidator
 	Sample.mutations.Length is 2
 	TypeValidator(TypeShape("has unused Number", "has logger", "Run", "\tlogger.Log(1)"), ("Add", "Remove"))
 Validate ValidationIssues
 	Sample.Validate.Length is 1
+	TypeValidator(TypeShape("Run", "\tlet unused = 5", "\t3"), ("Add")).Validate.Length is 2
+	TypeValidator(TypeShape("Run", "\tlet first = 5", "\tlet unused = 5", "\tfirst"), ("Add")).Validate.Length is 3
+	Computed.Validate.Length is 2
+	TypeValidator(TypeShape("Run(spare Number)", "\t3"), ("Add")).Validate.First.Line is 1
 	mutable issues = List(Mutable(ValidationIssue))
 	for shape.lines
 		if shape.IsMethodHeader(value)
@@ -17,10 +22,10 @@ Validate ValidationIssues
 			issues = issues + UsageRules(header, statements, shape.MemberScope.names, mutations, index + 1).Issues
 	MemberIssues + ConstantIssues + issues
 MemberIssues Slow(ValidationIssues)
-	Sample.MemberIssues.Length is 1
-	Sample.MemberIssues.First.Line is 1
+	(Sample.MemberIssues.Length is 1) and (Sample.MemberIssues.First.Line is 1)
 	Sample.MemberIssues.First to Text is "UnusedMemberMustBeRemoved: unused, capitalize it when other types use it"
 	Replacing.MemberIssues.Length is 0
+	TypeValidator(TypeShape("has elements Numbers", "has Width Number", "Run", "\t2"), ("Add")).MemberIssues.Length is 0
 	mutable issues = List(Mutable(ValidationIssue))
 	let kept = IsExempt then MemberNames else Copied
 	for shape.lines
@@ -31,6 +36,7 @@ MemberIssues Slow(ValidationIssues)
 	issues
 MemberNames Texts
 	Sample.MemberNames is ("unused", "logger")
+	TypeValidator(TypeShape("has a Number", "has b Number", "Run"), ("Add")).MemberIssues.Length is 0
 	for shape.lines
 		if shape.IsMemberLine(value)
 			HeaderTokens(Tokenizer(value).Tokens).MemberName
@@ -47,37 +53,53 @@ UsageCount(name Text) Number
 	count
 IsUsedIn(line Text, name Text) Boolean
 	Sample.IsUsedIn("\tlogger.Log(1)", "logger")
+	Sample.IsUsedIn("let copy = logger", "logger")
+	Sample.IsUsedIn("Log(logger)", "logger")
+	Sample.IsUsedIn("mylogger", "logger") is false
 	line.IndexOf(" " + name) is not -1 or line.IndexOf("\t" + name) is not -1 or line.IndexOf("(" + name) is not -1
 IsExempt Boolean
 	Sample.IsExempt is false
+	TypeValidator(TypeShape("has a Number", "Run", "\ta", "Other Number", "\t2"), ("Add")).IsExempt is false
+	TypeValidator(TypeShape("has a Number", "has b Number", "Run", "\tvalue"), ("Add")).IsExempt is false
+	TypeValidator(TypeShape("has a Number", "Run", "\tvalue", "Other", "\tvalue"), ("Add")).IsExempt
+	TypeValidator(TypeShape("has a Number", "has b Number", "Run"), ("Add")).IsExempt
+	TypeValidator(TypeShape("has a Number", "Run", "\ta"), ("Add")).IsExempt
+	TypeValidator(TypeShape("has a Number", "from(text Text)", "\ta", "Run", "\ta"), ("Add")).IsExempt
 	if (shape.MethodScope.names.Length is MemberNames.Length) or (not HasMethodBody)
 		return true
 	let usesValue = UsageCount("value") > 0 or ("from" is in shape.MethodScope.names)
 	(shape.MemberScope.names.Length is 1) and usesValue
 HasMethodBody Boolean
 	Sample.HasMethodBody
+	TypeValidator(TypeShape("has a Number", "Run"), ("Add")).HasMethodBody is false
 	for shape.lines
 		if value.StartsWith("\t")
 			return true
 	false
 ConstantIssues ValidationIssues
 	TypeValidator(TypeShape("has number = 17 + 4", "Run", "\tnumber"), ("Add", "Remove")).ConstantIssues.Length is 1
+	Computed.ConstantIssues.First to Text is "UseConstantHere: number"
 	mutable issues = List(Mutable(ValidationIssue))
 	for shape.lines
 		if IsComputedMember(value)
 			issues.Add(ValidationIssue("UseConstantHere", HeaderTokens(Tokenizer(value).Tokens).MemberName, index + 1))
 	issues
 IsComputedMember(line Text) Boolean
-	Sample.IsComputedMember("has number = 17 + 4")
+	Sample.IsComputedMember("has number = 17 + 4") and Sample.IsComputedMember("mutable count = 3 + 4")
 	Sample.IsComputedMember("has scale = 1") is false
+	(Sample.IsComputedMember("Run = 3 + 4") is false) and (Sample.IsComputedMember("constant Sum = 3 + 4") is false)
+	(Sample.IsComputedMember("has number Number") is false) and (Sample.IsComputedMember("has scale = 3 + x") is false)
 	let tokens = Tokenizer(line).Tokens
 	let equals = tokens.Index("=")
-	if (not shape.IsMemberLine(line)) or line.StartsWith("constant ") or (equals is -1)
+	if (not shape.IsMemberLine(line)) or line.StartsWith("constant ")
 		return false
 	let initial = SyntaxParser(tokens).ParseRange(equals + 1, tokens.Length)
 	(initial.Kind is "Binary") and IsConstantNode(initial)
 IsConstantNode(node SyntaxNode) Boolean
 	Sample.IsConstantNode(SyntaxNode("Number", "1"))
+	Sample.IsConstantNode(SyntaxParser(Tokenizer("3 + 2").Tokens).Parse)
+	Sample.IsConstantNode(SyntaxParser(Tokenizer("3 + x").Tokens).Parse) is false
+	Sample.IsConstantNode(SyntaxParser(Tokenizer("x + 3").Tokens).Parse) is false
 	if node.Kind is in ("Number", "Text", "Boolean")
 		return true
 	(node.Kind is "Binary") and IsConstantNode(node.children(0)) and IsConstantNode(node.children(1))
@@ -91,6 +113,10 @@ Copied Texts
 Unnamed(node SyntaxNode) Texts
 	Replacing.Unnamed(SyntaxParser(Tokenizer("C(value, a = 1)").Tokens).Parse) is ("b")
 	Replacing.Unnamed(SyntaxParser(Tokenizer("D(value, a = 1)").Tokens).Parse).Length is 0
+	Replacing.Unnamed(SyntaxParser(Tokenizer("C(value)").Tokens).Parse).Length is 0
+	Replacing.Unnamed(SyntaxParser(Tokenizer("C(value, 3)").Tokens).Parse).Length is 0
+	Replacing.Unnamed(SyntaxParser(Tokenizer("D(C(value, a = 1), 2)").Tokens).Parse) is ("b")
+	Replacing.Unnamed(SyntaxNode("Body", "C", SyntaxParser(Tokenizer("C(b, a = 1)").Tokens).Parse.children)).Length is 0
 	mutable unnamed = List(Mutable(Text))
 	for node.children
 		unnamed = unnamed + Unnamed(value)

@@ -7,8 +7,11 @@ constant Paired = VmValue("Strict/Pair", 0, "", (VmValue.None, OneTwo))
 Written(owner VmValue, target Text, position Number, element VmValue) VmValue
 	Pairing.Written(OneTwo, "list", 1, VmValue.OfNumber(7)).items(1).number is 7
 	Pairing.Written(Paired, "pair.b", 0, VmValue.OfNumber(7)).items(1).items(0).number is 7
+	Pairing.Written(Paired, "b", 0, VmValue.OfNumber(7)).items(0).number is 7
+	Pairing.Written(Paired, "pair.b", 1, VmValue.OfNumber(7)).items(1).items(0).number is 1
+	Pairing.Written(OneTwo, "list", 0, VmValue.OfNumber(7)).items(1).number is 2
 	let dot = target.IndexOf(".")
-	let found = dot > 0 then Member(owner, target.Substring(dot + 1, target.Length - dot - 1)) else -1
+	let found = dot > 0 then Member(owner, target.Substring(dot + 1, target.Length)) else -1
 	let list = found < 0 then owner else owner.items(found)
 	let changed = VmValue.OfList(Replaced(list.items, position, element))
 	if found < 0
@@ -17,6 +20,9 @@ Written(owner VmValue, target Text, position Number, element VmValue) VmValue
 Member(owner VmValue, name Text) Number
 	Pairing.Member(Paired, "b") is 1
 	Pairing.Member(Paired, "c") is -1
+	Pairing.Replaced(OneTwo.items, -1, VmValue.None) is OneTwo.items
+	Pairing.Replaced(List(VmValue), 1, VmValue.OfNumber(5)) is (VmValue.None, VmValue.OfNumber(5))
+	Pairing.Replaced(OneTwo.items, 2, VmValue.OfNumber(5)).Last.number is 5
 	for Natives(types).TypeOf(owner.kind).members
 		if value.Name is name
 			return index

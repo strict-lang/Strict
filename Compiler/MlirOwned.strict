@@ -17,17 +17,24 @@ IsOwned(name Text, depth = 0, seed = "") Boolean
 	Owner.IsOwned("moved")
 	MlirOwned(Copying, 2).IsOwned("moved") is false
 	Owner.IsOwned("listResult0") is false
+	(Rebuilt.IsKept(4, "size", "moved") is false) and (Rebuilt.IsKept(4, "shape", "kept") is false)
+	Rebuilt.IsKept(9, "shape", "moved") is false
 	let isTemporary = (name is in Temporaries) or name.StartsWith("listResult") or name.StartsWith("conditional")
 	let isOuter = (name is in function.Parameters) or (name is in MlirInstances(function, 0).StoredNames(function.type))
 	(isTemporary is false) and (isOuter is false) and IsReference(name) and IsContained(name, depth, seed)
 IsReference(name Text) Boolean
 	Owner.IsReference("moved")
+	Text.Combine(Rebuilt.Reconstructed(Rebuilding(7), MlirInstances.Outer, Fresh)).Length is 516
+	Rebuilt.Rewritten(Rebuilding(7), MlirInstances.Outer, "moved")(1) is "    %t7ra1 = llvm.load %r5 : !llvm.ptr -> f64"
+	Rebuilt.Reconstructed(Rebuilding(7), MlirInstances.Outer, Fresh)(0).StartsWith("    %t7old = llvm.load %v_moved")
 	let kind = MlirKinds(function).VariableKind(function.method.instructions.Length, name)
 	let represented = MlirLayout(function).Represented(kind)
 	let isHeap = represented.StartsWith("List(") or (represented is "Flat") or MlirLayout(function).IsStruct(kind)
 	isHeap and (MlirPairs(function, 0).IsPaired(kind) is false)
 IsContained(name Text, depth = 0, seed = "") Boolean
 	Owner.IsContained("moved")
+	Rebuilt.IsFreshCall(Rebuilt.function, 2, 0)
+	Rebuilt.IsFresh(Rebuilt.function, 3, 2, 0)
 	for function.method.instructions
 		if (value.kind is in MlirAlone.Named) and (value.texts(0) is name)
 			let isLoad = value.kind is InstructionType.LoadVariableToRegister
@@ -90,6 +97,9 @@ IsSafeRead(at Number, name Text) Boolean
 IsEscaped(at Number, register Number, name Text) Boolean
 	MlirOwned(Copying, 2).IsEscaped(4, 1, "moved")
 	Owner.IsEscaped(4, 1, "moved") is false
+	MlirOwned(Copying, 2).IsEscaped(4, 0, "moved") is false
+	Owner.IsEscaped(2, 0, "moved") is false
+	Rebuilt.IsLeaked(2, 0) is false
 	let entry = function.method.instructions(at)
 	let isStored = (entry.kind is InstructionType.StoreRegisterToVariable) and (entry.payload(0) is register)
 	let isLooped = (entry.kind is InstructionType.LoopBegin) and (entry.payload(0) is register)
@@ -109,6 +119,8 @@ IsLeaked(at Number, register Number) Boolean
 Stored(entry InstructionEntry) Texts
 	Owner.Stored(Built(2)).Index("    func.call @strict_rc_dead(%t2o, %t2) : (f64, f64) -> ()") is 6
 	MlirOwned(Copying, 4).Stored(Copying.method.instructions(4)).Length is 2
+	Text.Combine(Owner.Stored(Built(2))).Length is 332
+	Text.Combine(Owner.Stored(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "#this"))).Length is 90
 	let slot = entry.texts(0) is "#this" then "%instance" else "%v_" + entry.texts(0)
 	let copied = function.Copied("%r" + entry.payload(0), slot, "%t" + position)
 	let seeded = MlirDying(function, position)
@@ -165,6 +177,10 @@ Put(owner TypeEntry, member MemberEntry, register Number) Texts
 	Placed(Putting.Slice(0, 2), offset, register) + MlirEmbedded(function).Copied(source, target, member.typeName)
 Placed(lines Texts, slot Number, register Number) Texts
 	Rebuilt.Placed(Putting, 1, 5)(1) is "    %t7ra1 = llvm.load %r5 : !llvm.ptr -> f64"
+	Text.Combine(Rebuilt.Put(MlirInstances.Outer, MlirInstances.Outer.members.First, 4)).Length is 323
+	Rebuilt.Put(MlirInstances.Outer, MlirInstances.Outer.members.First, 4).Last.StartsWith("    %t7ra0m = llvm.call")
+	Text.Combine(Rebuilt.Put(MlirFunction.Shape, MlirFunction.Shape.members.First, 5)).Length is 165
+	Text.Combine(Rebuilt.Put(MlirInstances.Outer, MlirInstances.Outer.members.First, 4)).IndexOf("(%t7r0, %t7ra0p,") > 0
 	for lines
 		value.Replace("#", position to Text).Replace("$", slot to Text).Replace("&", register to Text)
 IsKept(register Number, member Text, name Text) Boolean

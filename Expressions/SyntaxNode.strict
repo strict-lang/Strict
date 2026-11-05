@@ -6,11 +6,17 @@ constant operators = ("then", "else", "is", "is in", "is not", "is not in", "or"
 constant precedences = (1, 1, 7, 7, 7, 7, 4, 5, 6, 7, 7, 7, 7, 9, 11, 11, 13, 13, 13, 14, 20)
 constant keywordKinds = ("Return", "If", "For", "ElseIf", "ElseValue")
 constant keywordTexts = ("return", "if", "for", "else if", "else")
+constant one = SyntaxNode("Number", "1")
+constant two = SyntaxNode("Number", "2")
+constant identifier = SyntaxNode("Identifier", "a")
+constant missing = SyntaxNode("Missing", "")
+constant nested = SyntaxNode("Body", "", List(SyntaxNode) + SyntaxNode("If", "if", (SyntaxNode("Identifier", "a"), SyntaxNode("Body", "", List(SyntaxNode) + SyntaxNode("Number", "1")))))
 Precedence Number
 	SyntaxNode("Binary", "+").Precedence is 11
 	SyntaxNode("Binary", "is not").Precedence is 7
 	SyntaxNode("Number", "1").Precedence is 0
 	SyntaxNode("Binary", "x").Precedence is 0
+	SyntaxNode("Not", "").Precedence is 3 and (SyntaxNode("Number", "+").Precedence is 0)
 	if Kind is "Not"
 		return 3
 	if Kind is not "Binary" or text is not in operators
@@ -20,6 +26,8 @@ to Text
 	SyntaxNode("Number", "1") to Text is "1"
 	SyntaxNode("Binary", "+", (SyntaxNode("Number", "1"), SyntaxNode("Number", "2"))) to Text is "1 + 2"
 	SyntaxNode("List", "", (SyntaxNode("Number", "1"), SyntaxNode("Number", "2"))) to Text is "(1, 2)"
+	SyntaxNode("Reassignment", "", (identifier, one)) to Text is "a = 1"
+	SyntaxNode("Identifier", "a", (one, one)) to Text is "a"
 	if Kind is "Binary"
 		return BinaryText
 	if Kind is "List"
@@ -27,6 +35,9 @@ to Text
 	CallText
 BinaryText Text
 	SyntaxNode("Binary", "*", (SyntaxNode("Missing", ""), SyntaxNode("Number", "2"))).BinaryText is "* 2"
+	SyntaxNode("Binary", "-", (one, SyntaxNode("Binary", "-", (one, two)))).BinaryText is "1 - (1 - 2)"
+	SyntaxNode("Binary", "*", (missing, missing)).BinaryText is "*"
+	SyntaxNode("Binary", "*", (one, missing)).BinaryText is "1 *"
 	constant left = ChildText(0, Precedence)
 	constant right = ChildText(1, Precedence + 1)
 	if left is ""
@@ -35,6 +46,7 @@ BinaryText Text
 CallText Text
 	SyntaxNode("Call", "Add", (SyntaxNode("Number", "1"), SyntaxNode("Number", "2"))).CallText is "Add(1, 2)"
 	SyntaxNode("Member", "Length", (SyntaxNode("Identifier", "x"), SyntaxNode("Identifier", "x"))).CallText is "x.Length"
+	SyntaxNode("MethodCall", "Add", (identifier, one, two)).CallText is "a.Add(1, 2)"
 	if Kind is "Call"
 		return text + "(" + ArgumentsText(0) + ")"
 	if Kind is "MethodCall"
@@ -46,6 +58,8 @@ CallText Text
 	UnaryText
 UnaryText Text
 	SyntaxNode("Not", "", (SyntaxNode("Identifier", "a"), SyntaxNode("Identifier", "a"))).UnaryText is "not a"
+	SyntaxNode("Negate", "", (one, one)).UnaryText is "-1"
+	SyntaxNode("Index", "", (identifier, one)).CallText is "a(1)"
 	if Kind is "Not"
 		return "not " + ChildText(0, 13)
 	if Kind is "Negate"
@@ -82,6 +96,7 @@ ArgumentsText(firstIndex Number) Text
 	SyntaxNode("Call", "Add", (SyntaxNode("Number", "1"), SyntaxNode("Number", "2"))).ArgumentsText(1) is "2"
 	StatementParser(Tokenizer("f(1, (a then b else c))").Tokens).ParseStatement to Text is "f(1, (a then b else c))"
 	StatementParser(Tokenizer("f(a then b else c)").Tokens).ParseStatement to Text is "f(a then b else c)"
+	SyntaxNode("MethodCall", "f", (identifier, SyntaxNode("Binary", "then", (one, two)))).ArgumentsText(1) is "1 then 2"
 	let minimumPrecedence = children.Length - firstIndex > 1 then 2 else 0
 	mutable result = ""
 	for children.Length - firstIndex
@@ -108,9 +123,12 @@ HasBody Boolean
 	children.Length > 0 and (children.Last.Kind is "Body")
 HasValue Boolean
 	SyntaxNode("For", "", (SyntaxNode("Body", ""), SyntaxNode("Body", ""))).HasValue is false
+	SyntaxNode("Body", "b").HeadNames.Length is 0
+	SyntaxNode("List", "", List(SyntaxNode) + SyntaxNode("Reassignment", "", (identifier, two))).HeadNames is ("a")
 	children.Length > 0 and children(0).Kind is not "Body"
 Lines(indentation Text) Texts
 	SyntaxNode("Body", "", (SyntaxNode("Identifier", "a"), SyntaxNode("Identifier", "b"))).Lines("\t") is ("\ta", "\tb")
+	nested.Lines("") is ("if a", "\t1")
 	mutable lines = List(Mutable(Text))
 	for children
 		lines.Add(indentation + value to Text)
@@ -129,6 +147,7 @@ IsLiteral Boolean
 	SyntaxNode("List", "", (SyntaxNode("Number", "1"), SyntaxNode("Text", "\"a\""))).IsLiteral
 	SyntaxNode("List", "", (SyntaxNode("Number", "1"), SyntaxNode("Identifier", "a"))).IsLiteral is false
 	SyntaxNode("Boolean", "true").IsLiteral
+	SyntaxNode("Identifier", "a").IsLiteral is false
 	if Kind is in ("Number", "Text", "Boolean")
 		return true
 	if Kind is not "List"
@@ -141,6 +160,7 @@ Unquoted Text
 	SyntaxNode("Text", "\"a\"").Unquoted is "a"
 	SyntaxNode("Text", "\"a\\\\b\"").Unquoted is "a\\b"
 	SyntaxNode("Text", "\"a\\\\tb\"").Unquoted is "a\\tb"
+	SyntaxNode("Text", "\"a\\nb\\rc\\td\\\"e\"").Unquoted is "a\nb\rc\td\"e"
 	mutable parts = List(Mutable(Text))
 	for text.Substring(1, text.Length - 2).Split("\\\\")
 		parts.Add(value.Replace("\\n", "\n").Replace("\\r", "\r").Replace("\\t", "\t").Replace("\\\"", "\""))

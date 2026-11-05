@@ -20,8 +20,8 @@ IsBorrowed(call SyntaxNode, position Number, block CodeBlock) Boolean
 Keeps(name Text, count Number, position Number) Boolean
 	Lending.Keeps("Read", 1, 0) is false
 	Lending.Keeps("Keep", 1, 0)
-	Lending.Keeps("Twice", 1, 0)
-	Lending.Keeps("Early", 1, 0)
+	Lending.Keeps("Twice", 1, 0) and (Lending.Header("Twice", 2) is -1)
+	Lending.Keeps("Early", 1, 0) and (Lending.Header("Keep", 2) is -1)
 	let start = Header(name, count)
 	if start < 0
 		return true
@@ -34,6 +34,8 @@ Header(name Text, count Number) Number
 	Lending.Header("Keep", 1) is 2
 	Lending.Header("Twice", 1) is -1
 	Lending.Header("Missing", 0) is -1
+	Lending.IsBorrowed(SyntaxNode("Member", "Read", SyntaxNode("Identifier", "values")), 0, Owned) is false
+	Lending.IsBorrowed(SyntaxNode("Call", "Read", SyntaxNode("Text", "values")), 0, Owned) is false
 	mutable found = -1
 	for values.target.shape.lines
 		if values.target.shape.IsMethodHeader(value) and (Tokenizer(value).Tokens.First is name)

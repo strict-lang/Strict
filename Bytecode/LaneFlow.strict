@@ -12,10 +12,13 @@ constant Pairs = MemberEntry("pairs", "Strict/List(Pair)", List(InstructionEntry
 constant Picking = InstructionEntry(InstructionType.IndexCall, "pairs", (2, 1, -1))
 constant Holder = TypeEntry("Strict/Holder", List(MemberEntry) + Pairs, List(MethodEntry))
 constant Mixed = Copying + InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "copy")
+constant Chained = Copying + (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "copy"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 6, "again"))
 Variables(instructions List(InstructionEntry), candidates Texts, rounds Number) Texts
 	Sample.Variables(Copying, List(Text), 4) is ("pair Pair", "copy Pair")
 	Sample.Variables(Copying, List(Text), 0) is ("pair Pair")
 	Sample.Variables(Mixed, List(Text), 4) is ("pair Pair")
+	Sample.Variables(Chained, List(Text), 1) is ("pair Pair", "copy Pair")
+	Sample.Variables(Chained, List(Text), 4) is ("pair Pair", "copy Pair", "again Pair")
 	let found = Scan(instructions, candidates)
 	(found is candidates) or (rounds is 0) then found else Variables(instructions, found, rounds - 1)
 Scan(instructions List(InstructionEntry), candidates Texts) Texts
@@ -33,12 +36,15 @@ Scan(instructions List(InstructionEntry), candidates Texts) Texts
 	Agreed(stores)
 Agreed(stores Texts) Texts
 	Sample.Agreed(("a Pair", "b -", "a Pair", "c Pair", "c -")) is ("a Pair")
+	LaneFlow(Sample.types, List(Text), ("pair Pair")).Scan(Copying, List(Text)) is ("pair Pair", "copy Pair")
+	Sample.Scan(Copying + InstructionEntry(InstructionType.StoreConstantToVariable, "pair", (0)), List(Text)).Length is 0
 	for stores
 		if (stores.Index(value) is index) and IsUniform(stores, value)
 			value
 IsUniform(stores Texts, entry Text) Boolean
 	Sample.IsUniform(("a Pair", "a -"), "a Pair") is false
 	Sample.IsUniform(("a Pair", "b -"), "a Pair")
+	Sample.IsUniform(("ab Pair", "a Pair"), "a Pair")
 	if entry.EndsWith(" -")
 		return false
 	let prefix = entry.Substring(0, entry.IndexOf(" ") + 1)
@@ -73,6 +79,8 @@ IsBuilt(entry InstructionEntry) Boolean
 	Sample.IsBuilt(StructLanes.Constructed)
 	Sample.IsBuilt(StructLanes.Calling(4)) is false
 	Sample.IsBuilt(StructLanes.Calling(0)) is false
+	Sample.IsBuilt(LaneCalls.Paired) is false
+	Sample.IsBuilt(InstructionEntry.Invoke(2, ("Pair", "from", "Pair", "real"), List(Number) + 0, -1)) is false
 	if (entry.kind is not InstructionType.Invoke) or (entry.texts(1) is not "from")
 		return false
 	let reads = LoadReuse(List(InstructionEntry)).InvokeReads(entry)
@@ -81,18 +89,22 @@ IsBuilt(entry InstructionEntry) Boolean
 Typed(entries Texts, name Text) Text
 	Sample.Typed(("pair Pair", "other Strict/Other"), "other") is "Strict/Other"
 	Sample.Typed(("pair Pair"), "pa") is ""
+	Sample.IsBuilt(InstructionEntry.Invoke(2, ("Pair", "from", "Pair", "real", "imaginary", "x"), (0, 1), -1)) is false
+	Sample.Scan(StructLanes.Calling, List(Text)).Length is 0
 	for entries
 		if value.StartsWith(name + " ")
 			return value.Substring(name.Length + 1, value.Length - name.Length - 1)
 	""
 Without(laned Texts, register Number) Texts
 	Sample.Without(("2 Pair", "3 Pair"), 2) is ("3 Pair")
+	Sample.Without(("2 Pair", "23 Pair"), 2) is ("23 Pair")
 	for laned
 		if value.StartsWith(register + " ") is false
 			value
 Lists(type TypeEntry, method MethodEntry) Texts
 	Sample.Lists(Holder, StructLanes.Squared) is ("pairs Strict/Pair")
 	Sample.Lists(StructLanes.Caller, StructLanes.Squared).Length is 0
+	Sample.Lists(StructLanes.Pair, StructLanes.Squared).Length is 0
 	for type.members + method.parameters
 		let element = Element(value.typeName)
 		if element is not ""
@@ -101,6 +113,7 @@ Element(typeName Text) Text
 	Sample.Element("Strict/List(Pair)") is "Strict/Pair"
 	Sample.Element("Strict/Pairs") is "Strict/Pair"
 	Sample.Element("Strict/List(Number)") is ""
+	Sample.Element("Strict/Pairx") is "" and (Sample.Element("Strict/Callers") is "")
 	let short = TypeEntry.ShortName(typeName)
 	let plural = short.EndsWith("s") then short.Substring(0, short.Length - 1) else ""
 	let element = Inliner(types).TypeOf(short.StartsWith("List(") then short.Substring(5, short.Length - 6) else plural)

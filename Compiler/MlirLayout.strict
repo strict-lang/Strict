@@ -14,6 +14,8 @@ constant Halves = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunctio
 constant Singles = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Packed", List(MemberEntry) + MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false), "Strict/List(Float32)", (MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Float32)", (0, 6, -1, 0)), "forResult"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 3), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "forResult"), InstructionEntry.Return(0))), List(Number), -1, "", "f32")
 constant Bytings = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Packed", List(MemberEntry) + MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false), "Strict/Bytes", (MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/Bytes", (0, 6, -1, 0)), "forResult"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 3), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "forResult"), InstructionEntry.Return(0))), List(Number), -1, "", "f32")
 IsAliased(entry InstructionEntry, position Number) Boolean
+	MlirLayout(MlirInstances.Shapes).IsAliased(InstructionEntry(InstructionType.FieldLoad, "value", (2, 1, -1)), 2)
+	MlirLayout(MlirInstances.Shapes).IsAliased(InstructionEntry(InstructionType.FieldLoad, "width", (2, 0, -1)), 2)
 	MlirLayout(MlirInstances.Shapes).IsAliased(MlirInstances.Width, 2) is false
 	MlirLayout(Logged).IsAliased(LoggerField, 2)
 	MlirLayout(MlirKinds.Graded.function).IsAliased(MlirKinds.Characters, 1)
@@ -21,6 +23,7 @@ IsAliased(entry InstructionEntry, position Number) Boolean
 	let isValue = (entry.texts(0) is "value") or (IsStruct(kinds.KindOf(position, entry.payload(1))) is false)
 	isValue or (TypeEntry.ShortName(kinds.WrittenKind(position)) is "Logger")
 IsStruct(typeName Text) Boolean
+	MlirLayout(MlirLanes.Sample.function).IsStruct("Rgb") is false
 	Wrapping.IsStruct("Shape")
 	Wrapping.IsStruct("Strict/Degrees") is false
 	Wrapping.IsStruct("List(Number)") is false
@@ -58,6 +61,7 @@ IsNumeric(kind Text) Boolean
 	MlirLayout(MlirLanes.Sample.function).IsNumeric("Rgb") is false
 	(Represented(kind) is "Number") and (MlirLanes(function, 0).IsPacked(kind) is false)
 Wrapped(typeName Text) Text
+	MlirLayout(Eights).Stored("%d", "%p", 4)(0).Length is 76
 	Wrapping.Wrapped("Angle") is "Degrees"
 	Wrapping.Wrapped("Shape") is ""
 	Wrapping.Wrapped("Number") is ""
@@ -71,6 +75,12 @@ Owner(type TypeEntry, name Text) TypeEntry
 	let inner = type.Wrapped is "" then type else function.TypeOf(TypeEntry.ShortName(type.Wrapped))
 	(inner.Name is "") or (inner.Name is type.Name) then type else Owner(inner, name)
 IsInitializer Boolean
+	Packing.Returned(2)(0) is "    %t2nz = arith.constant 8 : i64"
+	Packing.Returned(2)(2) is "    %t2n0 = llvm.getelementptr %t2np[0] : (!llvm.ptr) -> !llvm.ptr, f64"
+	Packing.Returned(2)(3) is "    %t2v0 = llvm.load %v_width : !llvm.ptr -> f64"
+	Packing.Returned(2)(4) is "    llvm.store %t2v0, %t2n0 : f64, !llvm.ptr"
+	Packing.Returned(2)(5) is "    func.call @strict_rc_object(%t2np, %t2nz) : (!llvm.ptr, i64) -> ()"
+	Packing.Returned(2)(6) is "    %t2nf = func.call @strict_bits(%t2np) : (!llvm.ptr) -> f64"
 	Wrapping.IsInitializer is false
 	Packing.IsInitializer
 	IsStruct(function.type.Name) and function.method.IsInitializer(MlirInstances(function, 0).Stored(function.type))
@@ -87,6 +97,8 @@ Returned(position Number) Texts
 	lines = lines + MlirMemory.Counted.Replace("%p", memory.Temp("np")).Replace("%z", memory.Temp("nz"))
 	lines + memory.Bits(memory.Temp("np"), "n") + ("    return " + memory.Temp("nf") + " : f64")
 Copied(member MemberEntry, temp Text, slot Text) Texts
+	Wrapping.Copied(Red, "%v", "%n")(0) is "    %v = llvm.load %v_red : !llvm.ptr -> f64"
+	Wrapping.Copied(Red, "%v", "%n").Last is "    llvm.store %vb, %n : f64, !llvm.ptr"
 	Wrapping.Copied(Byting.members.First, "%v", "%n").Length is 2
 	Wrapping.Copied(Red, "%v", "%n")(1) is "    %vb = func.call @strict_byte(%v) : (f64) -> f64"
 	let loaded = function.Load(temp, "%v_" + member.Name)
@@ -121,6 +133,14 @@ Packed(position Number) Number
 	let isLanes = MlirLanes(function, 0).IsPacked(MlirKinds(function).ElementKind(kind))
 	isLanes then 33 else MlirNarrowing.Format(kind)
 Collected(register Text, pointer Text, at Number) Texts
+	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5)(0).Length is 77
+	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5)(1) is "    %pw = arith.constant 64 : i64"
+	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5)(2) is "    %pv = arith.cmpi eq, %results, %pw : i64"
+	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5)(4) is "  ^d5wide:"
+	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5)(6) is "    cf.br ^d5stored"
+	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5)(7) is "  ^d5narrow:"
+	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5)(8) is "    %dn = arith.truncf %d : f64 to f32"
+	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5)(10) is "    cf.br ^d5stored"
 	MlirLayout(Eights).Collected("%d", "%p", 4)(1) is "    %db = func.call @strict_device_float8(%d) : (f32) -> i8"
 	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5)(5) is "    llvm.store %d, %p : f64, !llvm.ptr"
 	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5).Last is "  ^d5stored:"
@@ -138,6 +158,7 @@ Stored(register Text, pointer Text, at Number) Texts
 	let encoded = "    " + register + "b = func.call " + encoder + register + ") : (f32) -> i8"
 	(address + "i8", encoded, "    llvm.store " + register + "b, " + pointer + " : i8, !llvm.ptr")
 Narrowed(register Text, pointer Text, at Number) Texts
+	MlirLayout(MlirDeviceStatements.Doubled).Narrowed("%d", "%p", 5)(9).EndsWith("%dn, %results)" + Storing)
 	MlirLayout(MlirDeviceStatements.Doubled).Narrowed("%d", "%p", 5)(3) is "    cf.cond_br %pv, ^d5wide, ^d5narrow"
 	let address = "    " + pointer + " = llvm.getelementptr %result[%at]" + MlirFastLoop.Pointer + "f64"
 	let compared = "    " + pointer + "v = arith.cmpi eq, %results, " + pointer + "w : i64"

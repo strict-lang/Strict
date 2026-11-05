@@ -29,6 +29,7 @@ IsSafe(inspected MlirFunction, at Number, depth Number) Boolean
 IsCollected(at Number) Boolean
 	Clamping.IsCollected(17)
 	Filtering.IsCollected(7) is false
+	Doubling.IsCollected(5) and (Clamping.IsCollected(3) is false)
 	mutable open = 0
 	for Range(position + 1, at)
 		let kind = function.method.instructions(value).kind
@@ -41,6 +42,9 @@ IsPlain(inspected MlirFunction, at Number, depth Number) Boolean
 	Doubling.IsPlain(Doubling.function, 3, 0)
 	Doubling.IsPlain(MlirKernel.Doubling.function, 2, 1)
 	Doubling.IsPlain(MlirFunction(Doubling.function.types, MlirParallel.Rows, Checking), 2, 0)
+	Doubling.IsPlain(Doubling.function, 2, 1) and (Doubling.IsPlain(Doubling.function, 2, 0) is false)
+	Doubling.IsPlain(MlirTexts.Joined, 3, 0) is false
+	Doubling.IsPlain(MlirKinds.Paired.function, 1, 0)
 	let kind = inspected.method.instructions(at).kind
 	if kind is not InstructionType.LoopBegin
 		return kind is not in Unsafe
@@ -48,6 +52,9 @@ IsPlain(inspected MlirFunction, at Number, depth Number) Boolean
 IsOwned(inspected MlirFunction, entry InstructionEntry) Boolean
 	Doubling.IsOwned(Doubling.function, InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"))
 	Doubling.IsOwned(Doubling.function, InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "numbers")) is false
+	Doubling.IsOwned(Doubling.function, InstructionEntry.Return(0)) is false
+	Doubling.IsOwned(MlirForeign.Counting, InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "handle")) is false
+	Doubling.IsOwned(MlirForeign.Counting, InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"))
 	if (entry.texts.Length is 0) or (entry.texts(0) is in inspected.Parameters)
 		return false
 	for inspected.type.members
@@ -58,10 +65,10 @@ IsLocal(entry InstructionEntry) Boolean
 	Doubling.IsLocal(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "numbers")) is false
 	Doubling.IsLocal(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "twice"))
 	Doubling.IsLocal(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "numbers(index)")) is false
+	Clamping.IsLocal(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "conditional0"))
 	if entry.kind is not in (InstructionType.StoreRegisterToVariable, InstructionType.StoreConstantToVariable)
 		return true
-	let stored = entry.kind is InstructionType.StoreConstantToVariable then entry.texts.Last else entry.texts.First
-	let name = stored.IndexOf("(") > 0 then stored.Substring(0, stored.IndexOf("(")) else stored
+	let name = entry.texts.Last.Split("(").First
 	let end = function.method.LoopEndOf(position)
 	for function.method.instructions
 		if ((index <= position) or (index >= end)) and (name is in value.texts)
@@ -70,6 +77,13 @@ IsLocal(entry InstructionEntry) Boolean
 IsWritable(name Text) Boolean
 	Pairing.IsWritable("listResult1")
 	Pairing.IsWritable("numbers") is false
+	Doubling.IsSafe(Making, 2, 1) and (Doubling.IsSafe(Making, 2, 0) is false)
+	Doubling.IsSafe(Doubling.function, 0, 1) and (Doubling.IsSafe(Doubling.function, 0, 0) is false)
+	Doubling.IsSafe(Doubling.function, 2, 1) and (Doubling.IsSafe(Doubling.function, 2, 0) is false)
+	Doubling.IsSafe(MlirTexts.Joined, 3, 1) is false
+	Doubling.IsLocal(InstructionEntry.Return(0))
+	Clamping.IsLocal(MethodCodegen.StoreConstant(InstructionEntry.Print("conditional0"), "forResult")) is false
+	Doubling.IsIntrinsic(Doubling.function, 4) is false
 	(name is "forResult") or IsLocal(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, name))
 IsPureCall(inspected MlirFunction, at Number, depth Number) Boolean
 	Doubling.IsPureCall(Doubling.function, 4, 0)
@@ -121,6 +135,13 @@ IsIntrinsic(inspected MlirFunction, at Number) Boolean
 	isConstructor or (helper is not "")
 IsKnown(callee MlirFunction, inspected MlirFunction, depth Number) Boolean
 	Doubling.IsKnown(MlirFunction(Doubling.function.types, MlirParallel.Rows, MlirParallel.Twice), Doubling.function, 0)
+	Doubling.IsKnown(Randomizing.function, Doubling.function, 0) is false
+	Doubling.IsKnown(Making, Doubling.function, 2) and (Doubling.IsKnown(Making, Doubling.function, 3) is false)
+	Doubling.IsKnown(Making, MlirFunction(Making, safeCalls = Dictionary(("Degrees_Made_0", 0))), 0) is false
+	Doubling.IsKnown(Randomizing.function, MlirFunction(Making, safeCalls = Dictionary(("Rows_Randomized_1", 1))), 0)
+	Doubling.IsAllowed(Doubling.function, 4, List(MlirFunction) + MlirForeign.Adder) is false
+	Doubling.IsAllowed(Doubling.function, 4, List(MlirFunction) + Making)
+	Doubling.IsExternalSafe("Number", "Logarithm") and (Doubling.IsExternalSafe("Time", "Now") is false)
 	if callee.Symbol is in inspected.safeCalls
 		return inspected.safeCalls(callee.Symbol) is 1
 	(depth < 3) and IsPureMethod(callee, depth + 1)
@@ -129,6 +150,8 @@ IsPureMethod(callee MlirFunction, depth Number) Boolean
 	Doubling.IsPureMethod(MlirFunction(Doubling.function.types, MlirParallel.Rows, Checking), 1)
 	Doubling.IsPureMethod(MlirFunction(Doubling.function.types, MlirParallel.Rows, MlirParallel.Doubled), 1)
 	Reading.IsPureMethod(MlirFunction(Writing, method = MethodEntry(Writing.method, Name = "Validated")), 1) is false
+	Doubling.IsExternalSafe("Process", "Elapsed") and (Doubling.IsExternalSafe("Library", "Load") is false)
+	Doubling.IsExternalSafe("Text", "Length") and (Doubling.IsExternalSafe("Text", "Random") is false)
 	for callee.method.instructions
 		if IsSafe(callee, index, depth) is false
 			return false

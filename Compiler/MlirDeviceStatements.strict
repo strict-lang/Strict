@@ -27,6 +27,16 @@ Emitted Texts
 		return MlirDeviceLoops(function, at).Emitted
 	entry.kind is InstructionType.Invoke then MlirDeviceRows(function, at).Called(entry) else Finished(entry)
 Temp(suffix Text) Text
+	MlirDeviceStatements(Doubled, 5).Emitted(0) is "    %d5z = arith.constant 0 : i64"
+	MlirDeviceStatements(Doubled, 5).Emitted(1) is "    %d5w = arith.cmpi eq, %lane, %d5z : i64"
+	MlirDeviceStatements(Doubled, 5).Emitted(2) is "    cf.cond_br %d5w, ^d5write, ^d5skip"
+	MlirDeviceStatements(Doubled, 5).Emitted(3) is "  ^d5write:"
+	MlirDeviceStatements(Doubled, 5).Emitted(4) is "    %d5 = llvm.load %r2 : !llvm.ptr -> f64"
+	MlirDeviceStatements(Doubled, 5).Emitted(5).StartsWith("    %d5p = llvm.getelementptr")
+	MlirDeviceStatements(Doubled, 5).Emitted(17) is "    cf.br ^d5skip"
+	MlirDeviceStatements(MlirGrouped.Norming.function, 13).Collected(Call)(1) is "  ^d13write:"
+	MlirDeviceStatements(MlirChecks.Testing.function, 3).Labeled is ("  ^bb3:")
+	MlirDeviceStatements(Absolute.function, 5).Labeled.Length is 0
 	MlirDeviceStatements(Doubled, 3).Temp("a") is "%d3a"
 	"%d" + at + suffix
 Moved(entry InstructionEntry) Texts
@@ -54,6 +64,14 @@ Copied(source Text, target Text, name Text) Texts
 		lines = lines + MlirTyped(MlirTyped.Types(index)).Store(Temp(value), target + value)
 	lines
 IsList(kind Text) Boolean
+	MlirDeviceStatements(MlirDeviceRecords.Holding, 5).IsList("Pairs")
+	MlirDeviceStatements(Summed, 0).Emitted(0) is "    %d0 = arith.constant 0x0000000000000000 : f64"
+	MlirDeviceStatements(Summed, 0).Emitted.Last is "    llvm.store %d0, %v_sum : f64, !llvm.ptr"
+	MlirDeviceStatements(Twice, 1).Emitted.Last is "    llvm.store %d1, %r1 : f64, !llvm.ptr"
+	MlirDeviceStatements(Absolute.function, 7).Emitted(0) is "    %d7 = llvm.load %r4 : !llvm.ptr -> f64"
+	MlirDeviceStatements(Singled, 0).Emitted.Last is "    llvm.store %x0c_q, %r0_q : i64, !llvm.ptr"
+	MlirDeviceStatements(MlirDeviceRows.Nesting, 5).Emitted(1) is "    llvm.store %d5_d, %v_list0_d : !llvm.ptr, !llvm.ptr"
+	MlirDeviceStatements(MlirDeviceRows.Nesting, 5).Emitted(2) is "    %d5_n = llvm.load %r2_n : !llvm.ptr -> i64"
 	Reading.IsList("Numbers")
 	Reading.IsList("Number") is false
 	(MlirLayout(function).Represented(kind) is "List(Number)") or (MlirDeviceRecords(function, at).Slots(kind) > 0)
@@ -70,6 +88,15 @@ Indexed(entry InstructionEntry) Texts
 	let branch = "    cf.cond_br " + Temp("o") + ", ^d" + at + "read, ^d" + at + "fail"
 	position + length + cleared + (inside, branch) + Failed + Read(list, target)
 Failed Texts
+	Reading.Failed(1) is "    %d6f = arith.constant 1 : i64"
+	Reading.Failed(2) is "    llvm.store %d6f, %failed : i64, !llvm.ptr"
+	Reading.Failed.Last is "    cf.br ^d6done"
+	MlirDeviceStatements(MlirGuards.Shifted, 6).Emitted(32).StartsWith("    %d6 = func.call @strict_device_floats(")
+	MlirDeviceStatements(MlirGuards.Shifted, 6).Emitted(32).EndsWith("(%d6d, %d6b, %d6k) : (!llvm.ptr, i64, i64) -> f32")
+	MlirDeviceStatements(Summed, 9).Emitted(2) is "    %d9 = arith.addf %d9a, %d9b fastmath<contract> : f64"
+	Multiplying.Emitted(0) is "    %d2a = llvm.load %r0 : !llvm.ptr -> f64"
+	Multiplying.Emitted(1) is "    %d2b = llvm.load %r1 : !llvm.ptr -> f64"
+	MlirDeviceStatements(Absolute.function, 6).Emitted(2) is "    %d6 = arith.subf %d6a, %d6b : f64"
 	Reading.Failed.First is "  ^d6fail:"
 	let one = MlirTyped.Integer.Constant(Temp("f"), "1")
 	("  ^d" + at + "fail:", one, MlirTyped.Integer.Store(Temp("f"), "%failed"), "    cf.br ^d" + at + "done")
@@ -86,6 +113,7 @@ Read(list Text, target Text) Texts
 	let done = ("    cf.br ^d" + at + "done", "  ^d" + at + "done:")
 	(("  ^d" + at + "read:", data) + loaded + MlirFeeding(function, at).Stored(Temp(""), target)) + done
 Calculated(entry InstructionEntry) Texts
+	MlirDeviceStatements(Singled, 2).Emitted.Last is "    llvm.store %x2d, %r2_q : i64, !llvm.ptr"
 	Multiplying.Calculated(Twice.method.instructions(2)).Last is "    llvm.store %d2, %r2 : f64, !llvm.ptr"
 	Text.Combine(MlirDeviceStatements(Singled, 2).Calculated(Twice.method.instructions(2))).IndexOf(" : f32") > 0
 	Text.Combine(Absolute.Calculated(Absolute.function.method.instructions(2))).IndexOf("arith.cmpf olt") > 0
@@ -98,6 +126,9 @@ Calculated(entry InstructionEntry) Texts
 	let stored = MlirFeeding(function, at).Stored(Temp(""), "%r" + entry.payload(3))
 	((left, right, calculated) + stored) + MlirRational(MlirExact(function, at)).Operated(entry)
 IsContracted(entry InstructionEntry) Boolean
+	MlirDeviceStatements(Summed, 9).IsContracted(Lookup) is false
+	MlirDeviceStatements(MlirDeviceRows.Nesting, 4).IsContracted(Summed.method.instructions(9)) is false
+	Absolute.IsContracted(Absolute.function.method.instructions(6)) is false
 	MlirDeviceStatements(Summed, 9).IsContracted(Summed.method.instructions(9))
 	Multiplying.IsContracted(Twice.method.instructions(2)) is false
 	let begin = function.method.LoopBeginOf(at)
@@ -116,6 +147,16 @@ Called(entry InstructionEntry) Texts
 	let feeding = MlirFeeding(function, at)
 	(calls.Loaded(entry) + feeding.Invoked(calls, Temp(""), arguments)) + feeding.Called(Temp(""), "%r" + entry.payload(0))
 Callee MlirFunction
+	Reading.Emitted(0) is "    %d6kf = llvm.load %r3 : !llvm.ptr -> f64"
+	Reading.Emitted(1) is "    %d6k = arith.fptosi %d6kf : f64 to i64"
+	Reading.Emitted(2) is "    %d6n = llvm.load %v_input_n : !llvm.ptr -> i64"
+	Reading.Emitted(3) is "    %d6y = arith.constant 0x0 : f64"
+	Reading.Emitted(6) is "    cf.cond_br %d6o, ^d6read, ^d6fail"
+	Reading.Emitted(7) is "  ^d6fail:"
+	Reading.Emitted(11) is "  ^d6read:"
+	Reading.Emitted(12) is "    %d6d = llvm.load %v_input_d : !llvm.ptr -> !llvm.ptr"
+	Reading.Emitted(13) is "    %d6b = llvm.load %v_input_b : !llvm.ptr -> i64"
+	Reading.Emitted(16) is "    cf.br ^d6done"
 	Calling.Callee.Symbol is "Rows_Twice_1"
 	MlirModule(function.types, "").Called(function, at).First
 Finished(entry InstructionEntry) Texts
@@ -129,6 +170,11 @@ Finished(entry InstructionEntry) Texts
 		return MlirStatements(function, at).Jumped(entry)
 	entry.kind is InstructionType.Return then Returned("%r" + entry.payload(0)) else Collected(entry)
 Returned(register Text) Texts
+	MlirDeviceStatements(Twice, 3).Emitted(0) is "    %d3 = llvm.load %r2 : !llvm.ptr -> f64"
+	MlirDeviceStatements(Twice, 3).Emitted(1) is "    %d3r0 = llvm.mlir.undef : !llvm.struct<(f64)>"
+	MlirDeviceStatements(MlirDeviceRecords.Holding, 5).Emitted(2) is "    %d5c = arith.constant 1 : i64"
+	MlirDeviceStatements(MlirDeviceRows.Nesting, 2).Emitted(9) is "  ^d2loop:"
+	Calling.Emitted.Last is "    llvm.store %d4, %r2 : f64, !llvm.ptr"
 	MlirDeviceStatements(Singled, 3).Returned("%r1").Last is "    return %d3r3 : !llvm.struct<(f32, i64, i64)>"
 	MlirDeviceStatements(Singled, 3).Returned("%r1")(1) is "    %d3_e = llvm.load %r1_e : !llvm.ptr -> i64"
 	let exact = MlirExact(function, at)
@@ -145,6 +191,7 @@ Labeled Texts
 	let isTerminated = isJump or (previous is InstructionType.Return)
 	isTerminated then List(Text) + ("  ^bb" + at + ":") else ("    cf.br ^bb" + at, "  ^bb" + at + ":")
 Collected(entry InstructionEntry) Texts
+	MlirDeviceStatements(MlirGrouped.Norming.function, 13).Collected(Call).Last is "  ^d13skip:"
 	MlirDeviceStatements(Doubled, 5).Collected(Doubled.method.instructions(5)).Last is "  ^d5skip:"
 	MlirDeviceStatements(MlirGrouped.Norming.function, 13).Collected(Call).First is "    cf.br ^d13write"
 	let stored = MlirLayout(function).Collected(Temp(""), Temp("p"), at)

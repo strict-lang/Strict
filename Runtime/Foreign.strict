@@ -42,6 +42,9 @@ IsForeign(type TypeEntry) Boolean
 	false
 Method(type TypeEntry) MethodEntry
 	Adding.Method(Adder).Name is "Add"
+	Adding.Method(TypeEntry("T", List(MemberEntry), (MlirForeign.Next, Add))) is Add
+	Defaulted.parameters is (Add.parameters(0), Add.parameters(1), MemberEntry.SevenMember)
+	(Defaulted.Name is "Add") and (Defaulted.returnType is "Strict/Number")
 	for type.methods
 		if value.Name is call.MethodName
 			return value
@@ -69,12 +72,21 @@ Converted(library Library, returnType Text, bits Number) VmValue
 	MlirForeign.IsNumbers(returnType) then Elements(library.NumbersResult(bits)) else VmValue.OfNumber(bits)
 Rows(library Library, bits Number) VmValue
 	Adding.Rows(Library("missing.dll"), Library("missing.dll").NumbersSlot(List(Number))).items.Length is 0
+	Adding.call.TypeName is "Strict/Examples/NativeAdd/Adder"
+	Adding.call.ParameterNames is ("left", "right")
+	Adding.call.MethodName is "Add"
+	Adding.call.ReturnType is "Strict/Number"
+	Adding.types is (Adder)
 	mutable rows = List(Mutable(VmValue))
 	for library.NumbersResult(bits)
 		rows.Add(Elements(library.NumbersResult(value)))
 	VmValue.OfList(rows)
 Elements(numbers Numbers) VmValue
 	Adding.Elements((1, 2)).items.Length is 2
+	Framed.types is (Framing)
+	Framed.call.ParameterNames is ("left", "right")
+	Framed.call.ReturnType is "Strict/Number"
+	Calling.call.Arguments is (VmValue.OfText("Add"), VmValue.OfList(VmValue.OfNumber(0)))
 	mutable items = List(Mutable(VmValue))
 	for numbers
 		items.Add(VmValue.OfNumber(value))
@@ -88,6 +100,12 @@ Folder(type TypeEntry) Text
 	Directory.Exists(native) or (TypeSource.Root is ".") then native else TypeSource.Root + "/" + native
 Numbers(values List(VmValue)) Numbers
 	Adding.Numbers((VmValue.OfNumber(1), VmValue.OfNumber(2))) is (1, 2)
+	Missing.kind is "Strict/Library"
+	Missing.items is (VmValue.OfText("missing.dll"))
+	Counter is MlirForeign.Counter
+	Counting.types is (MlirForeign.Counter)
+	Counting.call.MethodName is "Next"
+	Counting.call.ReturnType is "Strict/Number"
 	for values
 		value.number
 Hosted VmValue

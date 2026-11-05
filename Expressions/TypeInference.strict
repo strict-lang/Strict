@@ -14,6 +14,14 @@ constant Paired = Scope(List(Text) + "p", List(Text) + "Pair")
 constant Primitives = ("None", "Boolean", "Number", "Byte", "Text", "Character", "Name", "Generic")
 constant Colors = TypeInference(KnownTypes(("Color", "ColorValue"), (Scope(List(Text) + "Red", List(Text) + "Byte"), KnownTypes.NoMembers), (Scope(List(Text) + "to", List(Text) + "ColorValue"), KnownTypes.NoMembers), (Scope(("from", "from types"), ("current", "ColorValue")), KnownTypes.NoMembers)), NoShapes)
 ConstantOf(typeName Text, name Text) Text
+	NoInference.CallType("A", Scope(("A"), ("Texts")), NoShape) is "A"
+	NoInference.CallType("q", Scope(("q"), ("Bs")), NoShape) is "B"
+	NoInference.TypeOf(SyntaxParser(Tokenizer("List(Text)").Tokens).Parse, NoShape, NoShape) is "Texts"
+	NoInference.TypeOf(SyntaxNode("Call", "Mutable", SyntaxNode("Number", "5")), NoShape, NoShape) is "Number"
+	Scaling.TypeOf(SyntaxParser(Tokenizer("p.Scaled(3)").Tokens).Parse, Paired, NoShape) is "Pair"
+	TypeInference(KnownTypes.Sample, Limits).ConstantOf("Missing", "x") is ""
+	NoInference.TypeOf(ToText, NoShape, NoShape) is "Text"
+	NoInference.TypeOf(SyntaxNode("Binary", "else", (SyntaxNode("Type", "Error"), NoNode)), NoShape, NoShape) is "y"
 	TypeInference(KnownTypes.Sample, Limits).ConstantOf("Count", "Limit") is "3"
 	NoInference.ConstantOf("A", "Missing") is ""
 	let index = types.Index(typeName)
@@ -32,10 +40,25 @@ TypeOf(node SyntaxNode, scope Scope, own Scope) Text
 		return types.ElementType(TypeOf(node.children(0), scope, own))
 	node.Kind is in ("Member", "MethodCall") then MemberCallType(node, scope, own) else OperatorType(node, scope, own)
 ConstructedType(node SyntaxNode) Text
+	TypeInference(KnownTypes.Nested, NoShapes).CallType("f", Scope(("value"), ("G")), NoShape) is "F"
+	Scaling.MemberCallType(SyntaxParser(Tokenizer("p.x(1)").Tokens).Parse, Paired, NoShape) is "Unknown"
+	Scaling.TypeOf(SyntaxParser(Tokenizer("p.x").Tokens).Parse, Paired, NoShape) is "y"
+	NoInference.ConstructedType(SyntaxNode("Identifier", "Mutable", NoNode)) is "Mutable"
+	NoInference.ConstructedType(SyntaxNode("Call", "List", NoNode)) is "List"
+	NoInference.ConstructedType(SyntaxNode("Call", "Slow", NoNode)) is "x"
+	NoInference.OperatorType(SyntaxNode("Negate", "", (SyntaxNode("Number", "1"), NoNode)), NoShape, NoShape) is "Number"
+	NoInference.OperatorType(SyntaxNode("Missing", "", NoNode), NoShape, NoShape) is "Unknown"
+	NoInference.OperatorType(SyntaxParser(Tokenizer("(1, 2, 3)").Tokens).Parse, NoShape, NoShape) is "Numbers"
 	NoInference.Called(SyntaxNode("Call", "Slow", SyntaxNode("Number", "5")), NoShape, NoShape) is "Number"
 	NoInference.ConstructedType(SyntaxNode("Call", "Mutable", (SyntaxNode("Identifier", "Text"), NoNode))) is "Text"
 	(node.Kind is "Call") and (node.text is in ("Mutable", "Slow")) then ConstructedType(node.children(0)) else node.text
 IdentifierType(name Text, scope Scope, current Scope) Text
+	NoInference.MemberCallType(SyntaxNode("Member", "+", (ToText, ToText)), NoShape, NoShape) is "Unknown"
+	NoInference.MemberCallType(SyntaxParser(Tokenizer("t.value(1)").Tokens).Parse, Scope(("t"), ("Bs")), NoShape) is "B"
+	NoInference.Called(SyntaxNode("Call", "Mutable", (ToText, NoNode)), NoShape, NoShape) is "Mutable"
+	NoInference.IdentifierType("q", NoShape, Scope(("q"), ("Number"))) is "Number"
+	TypeInference(KnownTypes.Nested, NoShapes).IdentifierType("f", Scope(("value"), ("G")), NoShape) is "F"
+	NoInference.CallType("X", NoShape, Scope(("X"), ("Texts"))) is "Texts"
 	NoInference.IdentifierType("x", Scope(("x", "y"), ("Number", "Text")), NoShape) is "Number"
 	if scope.TypeOf(name) is not ""
 		return scope.TypeOf(name)
@@ -67,6 +90,12 @@ CallType(name Text, scope Scope, current Scope) Text
 		return scope.TypeOf(name) is "Error" then "ErrorWithValue" else types.ElementType(scope.TypeOf(name))
 	ImplicitValueType(name, scope) is "" then name else ImplicitValueType(name, scope)
 IsIndexed(name Text, current Scope) Boolean
+	NoInference.TypeOf(SyntaxParser(Tokenizer("2 - \"a\"").Tokens).Parse, NoShape, NoShape) is "Number"
+	NoInference.TypeOf(SyntaxParser(Tokenizer("\"a\" + (3)").Tokens).Parse, NoShape, NoShape) is "Text"
+	NoInference.TypeOf(SyntaxParser(Tokenizer("2 * (3)").Tokens).Parse, NoShape, NoShape) is "Number"
+	TypeInference(KnownTypes.Sample, (NoShape, Limits(0))).IsIndexed("Limit", NoShape) is false
+	TypeInference(KnownTypes.Sample, (Limits(0))).IsIndexed("Limit", KnownTypes.NoMembers) is false
+	TypeInference(KnownTypes.Sample, Limits).IsIndexed("Other", KnownTypes.CountMethods) is false
 	NoInference.IsIndexed("precedences", NoShape)
 	NoInference.IsIndexed("Length", NoShape) is false
 	TypeInference(KnownTypes.Sample, Limits).IsIndexed("Limit", KnownTypes.CountMethods)
@@ -87,6 +116,11 @@ MemberCallType(node SyntaxNode, scope Scope, current Scope) Text
 	let isMember = (node.text is "value") or Indexing(types).IsIndexed(instanceType, node.text, node.children.Length - 1)
 	(node.Kind is "MethodCall") and isMember then types.ElementType(type) else type
 ImplicitValueType(name Text, scope Scope) Text
+	NoInference.TypeOf(SyntaxParser(Tokenizer("(1, 2) + 3").Tokens).Parse, NoShape, NoShape) is "Numbers"
+	TypeInference(KnownTypes.Nested, NoShapes).ImplicitValueType("f", Scope(("value", "outer"), ("G", "G"))) is "F"
+	NoInference.Called(SyntaxNode("Call", "Dictionary"), NoShape, NoShape) is "Dictionary"
+	NoInference.Called(SyntaxNode("Call", "Vector2"), NoShape, NoShape) is "Vector2"
+	NoInference.MemberCallType(SyntaxNode("MethodCall", "+", (ToText, ToText)), NoShape, NoShape) is "Text"
 	NoInference.ImplicitValueType("Length", NoShape) is ""
 	TypeInference(KnownTypes.Nested, NoShapes).ImplicitValueType("Length", Scope(("value"), ("G"))) is ""
 	let instance = scope.TypeOf("value")
@@ -133,6 +167,12 @@ ArithmeticType(node SyntaxNode, scope Scope, current Scope) Text
 	let operatorType = ordinal < 0 then types.MemberType(left, node.text) else overloaded
 	isJoined then arguments(0) else (operatorType is "Unknown" then left else operatorType)
 ConditionalType(node SyntaxNode, scope Scope, current Scope) Text
+	NoInference.TypeOf(SyntaxNode("Binary", "then", (NoNode, SyntaxNode("Number", "1"))), NoShape, NoShape) is "Number"
+	NoInference.TypeOf(SyntaxNode("Binary", "else", (SyntaxNode("Number", "1"), NoNode)), NoShape, NoShape) is "Number"
+	NoInference.BinaryType(SyntaxParser(Tokenizer("1 < 2").Tokens).Parse, NoShape, NoShape) is "Boolean"
+	NoInference.BinaryType(SyntaxParser(Tokenizer("true or false").Tokens).Parse, NoShape, NoShape) is "Boolean"
+	NoInference.BinaryType(SyntaxParser(Tokenizer("12 and 10").Tokens).Parse, NoShape, NoShape) is "Number"
+	NoInference.BinaryType(SyntaxNode("Binary", "<", (SyntaxNode("Missing", ""), ToText)), NoShape, NoShape) is "Text"
 	NoInference.ConditionalType(SyntaxNode("Binary", "then", (NoNode, NoNode)), NoShape, NoShape) is "y"
 	if node.text is "then"
 		return TypeOf(node.children(1), scope, current)
@@ -152,6 +192,13 @@ Converter(source Text, type Text) Text
 	let isFrom = (type is not in Primitives) and (origins.Length is 1) and (origins(0) is source)
 	types.MethodsOf(source).Has("to", type) then "to" else (isFrom then "from" else "")
 Assigned(target Text, assigned Text) Text
+	Colors.Assigned("Number", "Text") is "Text"
+	Colors.Converter("Text", "Text") is "" and (Colors.Converter("Number", "Text") is "")
+	Colors.Converter("Text", "Number") is "" and (Colors.Converter("Hash", "Color") is "")
+	TypeInference(KnownTypes.Sample, (KnownTypes.CountMethods, NoShape)).Enumerated("Count").Length is 0
+	TypeInference(KnownTypes.Sample, (NoShape)).Enumerated("Text").Length is 0
+	TypeInference(KnownTypes.Measured, (NoShape, Scope(("Length"), ("1")))).Enumerated("Length") is ("Length")
+	TypeInference(KnownTypes.Measured, NoShapes).Enumerated("Length").Length is 0
 	Colors.Assigned("Color", "ColorValue") is "Color"
 	Colors.Assigned("Number", "Number") is "Number"
 	Converter(assigned, target) is "" then assigned else target

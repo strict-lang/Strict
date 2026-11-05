@@ -26,6 +26,7 @@ Members(type TypeEntry) Texts
 Fields(type TypeEntry) Texts
 	StructLanes.Fields(Pair) is ("real", "imaginary")
 	StructLanes.Fields(Kept) is ("real")
+	StructLanes.Members(TypeEntry("Strict/Five", (Real, Real, Real, Real, Real), List(MethodEntry))).Length is 0
 	for type.members
 		if value.IsConstant is false
 			IsLane(value) then value.Name else ""
@@ -33,6 +34,7 @@ IsLane(member MemberEntry) Boolean
 	StructLanes.IsLane(Real)
 	StructLanes.IsLane(MemberEntry("half", "Strict/Number", List(InstructionEntry), false, 32)) is false
 	StructLanes.IsLane(MemberEntry("named", "Strict/Text", List(InstructionEntry), false)) is false
+	StructLanes.IsLane(MemberEntry("real", "Strict/Number", (InstructionEntry.Return(0)), false)) is false
 	(member.typeName is "Strict/Number") and (member.Bits is in (0, 64)) and (member.initial.Length is 0)
 Split List(TypeEntry)
 	Sample.Split.First.methods.First.instructions.Length is 11
@@ -96,6 +98,8 @@ Built(entry InstructionEntry) List(InstructionEntry)
 Copied(entry InstructionEntry, type Text, base Number) List(InstructionEntry)
 	Sample.Copied(LaneFlow.Kept, "Strict/Pair", 8)(1).texts is ("pair_real")
 	Sample.Copied(LaneFlow.Reloaded, "Strict/Pair", 8)(1).texts is ("lanes5_real")
+	Sample.Copied(LaneFlow.Reloaded, "Strict/Pair", 8)(0).texts is ("pair_real")
+	Sample.Copied(LaneFlow.Kept, "Strict/Pair", 8)(0).texts is ("lanes2_real")
 	let register = "lanes" + entry.payload(0)
 	let isStored = entry.kind is InstructionType.StoreRegisterToVariable
 	Moves(isStored then register else entry.texts(0), isStored then entry.texts(0) else register, type, base, entry.line)
@@ -118,6 +122,8 @@ Materialized(entry InstructionEntry, laned Texts, base Number) List(InstructionE
 	lines
 Rebuilt(register Number, type Text, base Number, line Number) List(InstructionEntry)
 	Sample.Rebuilt(2, "Strict/Pair", 8, 0)(1).texts is ("lanes2_imaginary")
+	Sample.Rebuilt(2, "Strict/Pair", 8, 0)(1).payload is (9, -1)
+	Sample.Rebuilt(2, "Strict/Pair", 8, 0).Last.texts(1) is "from"
 	let members = Members(Inliner(types).TypeOf(type))
 	mutable lines = List(InstructionEntry)
 	mutable arguments = List(Number)

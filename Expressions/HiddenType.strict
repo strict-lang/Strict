@@ -11,6 +11,8 @@ Issue(call SyntaxNode, scope Scope, current Scope) Text
 	Counting.Issue(Created, Valued, Owning).EndsWith("use outer.Count")
 	Counting.Issue(Created, Valued, FileCheck.Counted) is ""
 	Constants.Issue(Created, Valued, Owning) is ""
+	Counting.Issue(Created, Valued, Owning) is "MethodNotFound: Count.Count with 1 arguments" + Counting.Hint("Count")
+	Counting.Issue(OuterCount, Valued, Owning) is ""
 	let owner = scope.TypeOf("self type")
 	let count = call.children.Length
 	let isHiding = (call.Kind is "Call") and IsMethod(call.text, scope, current)
@@ -35,8 +37,20 @@ IsMethod(name Text, scope Scope, current Scope) Boolean
 	Counting.IsMethod("Count", Valued, Owning)
 	Constants.IsMethod("Count", Valued, Owning) is false
 	Counting.IsMethod("Count", Valued, FileCheck.Counted) is false
+	Counting.IsMethod("count", Valued, FileCheck.Counted) is false
+	Counting.Ambiguous(Twiced, Valued, Owning).StartsWith("AmbiguousName: Count is a method and a type, use outer.Count")
+	Counting.Ambiguous(Twiced, Valued, Owning).EndsWith(" for the type or value.Count for the method")
+	Counting.Ambiguous(SyntaxNode("Identifier", "Count"), Valued, Owning) is ""
+	Counting.Ambiguous(SyntaxParser(Tokenizer("f(Count)").Tokens).Parse, Valued, Owning) is ""
 	let isOwn = (current.TypeOf(name) is not "") and (inference.ConstantOf(scope.TypeOf("self type"), name) is "")
 	isOwn and inference.types.IsKnown(name)
 Hint(name Text) Text
 	HiddenType.Hint("Size") is ", local Size hides the type Size, use outer.Size"
+	Counting.Issue(Created, Owning, Owning).StartsWith("MethodNotFound: Count with 1 arguments")
+	Counting.Issue(SyntaxNode("Call", "Count"), Valued, Owning) is ""
+	Counting.Ambiguous(SyntaxParser(Tokenizer("Count(1).Twice").Tokens).Parse, Valued, Owning) is ""
+	Counting.Ambiguous(SyntaxParser(Tokenizer("Count(outer)").Tokens).Parse, Looped, FileCheck.Counted) is ""
+	Counting.Ambiguous(SyntaxParser(Tokenizer("outer.Twice").Tokens).Parse, Looped, FileCheck.Counted) is ""
+	Counting.Ambiguous(SyntaxParser(Tokenizer("x.Count").Tokens).Parse, Looped, Owning) is ""
+	Counting.Ambiguous(SyntaxParser(Tokenizer("Count.Twice(1)").Tokens).Parse, Valued, Owning).StartsWith("AmbiguousName")
 	", local " + name + " hides the type " + name + ", use outer." + name

@@ -50,8 +50,15 @@ static int invalid(void)
 #endif
 }
 
+static int is_port(double port)
+{
+	return port >= 0 && port <= 65535 && port == (double)(int)port;
+}
+
 STRICT_EXPORT double Socket_Connect(double self, double host, double port)
 {
+	if (!is_port(port))
+		return strict_fail("InvalidPort");
 	if (!ensure_started())
 		return strict_fail("SocketStartupFailed");
 	char service[16];
@@ -80,6 +87,8 @@ STRICT_EXPORT double Socket_Connect(double self, double host, double port)
 
 STRICT_EXPORT double Socket_Listen(double self, double port)
 {
+	if (!is_port(port))
+		return strict_fail("InvalidPort");
 	if (!ensure_started())
 		return strict_fail("SocketStartupFailed");
 	int handle = (int)socket(AF_INET, SOCK_STREAM, 0);

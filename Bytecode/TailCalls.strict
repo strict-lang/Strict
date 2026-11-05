@@ -11,12 +11,25 @@ constant Constant = TypeEntry("Strict/Counting", List(MemberEntry) + MemberEntry
 constant TailId = 1000000
 constant Start = InstructionEntry.Jump(InstructionType.JumpEnd, TailId)
 constant Restart = InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, TailId)
+constant Varied = TypeEntry("Strict/Counting", List(MemberEntry), (MethodEntry("Count", (Counted), "Strict/Number", (Again))))
 Rewritten List(TypeEntry)
 	Sample.Rewritten.First.methods.First.instructions.Length is 7
+	Constant.Name is "Strict/Counting" and (Constant.members(0).typeName is "Strict/Number")
+	Constant.methods.Length is 1 and (Itself.Name + Itself.declaredType is "CountStrict/Number")
+	Itself.instructions(0).texts is ("Strict/Counting", "Count", "Strict/Number")
+	Counting.declaredType is "Strict/Number" and (Counting.instructions(0).texts is ("number"))
+	Sample.Methods(Varied).First.instructions.Length is 1
+	Varied.Name + Varied.methods(0).Name + Varied.methods(0).declaredType is "Strict/CountingCountStrict/Number"
 	for types
 		TypeEntry(value.Name, value.members, Methods(value))
 Methods(type TypeEntry) List(MethodEntry)
 	Sample.Methods(Counter).First.instructions.First is Start
+	Sample.Followed(InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "x"), "%v_x") is "%r2"
+	Sample.Followed(Kept, "%v_conditional0") is "" and (Sample.Followed(Again, "%r1") is "")
+	Sample.Followed(InstructionEntry(InstructionType.CheckError, List(Text), (1)), "%r1") is "%r1"
+	Sample.Followed(InstructionEntry(InstructionType.CheckError, List(Text), (1)), "%r2") is ""
+	Sample.IsTail(TypeEntry("Strict/Other", List(MemberEntry), (Counting)), Counting, 1) is false
+	Sample.IsTail(TypeEntry("Strict/Counting", List(MemberEntry), List(MethodEntry)), Counting, 1) is false
 	for type.methods
 		Looped(type, value)
 Looped(type TypeEntry, method MethodEntry) MethodEntry
@@ -46,6 +59,8 @@ IsTail(type TypeEntry, method MethodEntry, position Number) Boolean
 IsLooped(method MethodEntry, position Number) Boolean
 	Sample.IsLooped(MethodEntry.CountingLoop, 1)
 	Sample.IsLooped(Counting, 1) is false
+	Sample.IsLooped(MethodEntry.CountingLoop, 2) is false
+	Sample.IsLooped(MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoopBegin(0, -1), Kept, Kept)), 2)
 	mutable depth = 0
 	for Range(0, position)
 		let kind = method.instructions(value).kind
@@ -56,6 +71,7 @@ Jumped(method MethodEntry, call InstructionEntry) List(InstructionEntry)
 	Sample.Jumped(Counting, Again).Length is 4
 	Sample.Jumped(Counting, Again).First.texts is ("number")
 	Sample.Jumped(Counting, Again).Last is Restart
+	Sample.Jumped(Counting, Again).First.payload is (0, -1)
 	let reads = LoadReuse(List(InstructionEntry)).InvokeReads(call)
 	let result = call.payload(0)
 	mutable lines = List(Mutable(InstructionEntry))

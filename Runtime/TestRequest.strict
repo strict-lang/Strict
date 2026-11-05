@@ -1,5 +1,5 @@
 has rest Texts
-constant Flags = ("native", "lines", "values", "trace", "--no-recursive", "mutations")
+constant Flags = ("native", "lines", "values", "trace", "--no-recursive", "mutations", "full")
 Options Texts
 	rest.Length > 2 then rest.Slice(2, rest.Length - 2) else List(Text)
 Option Text
@@ -10,28 +10,49 @@ Option Text
 Selection Text
 	TestRequest((".", ".", "native", "--no-recursive")).Selection is "*"
 	TestRequest(("a.strict", ".", "unit")).Selection is ""
-	TestRequest(("a.strict", ".", "mutations")).Selection is ""
+	TestRequest(("a.strict", ".", "mutations")).Selection is "*"
 	TestRequest(("a.strict", ".", "Merged")).Selection is "Merged"
 	TestRequest(("Math", ".", "native")).Selection is "*"
 	if (Directory.Exists(rest(0)) and ("native" is not in Options)) or IsWhole
 		return ""
 	for Options
-		if value is not in Flags
+		if (value is not in Flags) and (value.StartsWith("rounds:") is false)
 			return value
 	"*"
+Methods Texts
+	TestRequest(("a.strict", ".", "unit", "rounds:1/4", "Area")).Methods is ("Area")
+	for Options
+		if (value is not in Flags + "unit" + "-") and (value.StartsWith("rounds:") is false)
+			value
+Part Text
+	TestRequest(("a.strict", ".", "unit", "rounds:1/4")).Part is "1/4"
+	TestRequest(List(Text) + "a.strict").Part is ""
+	for Options
+		if value.StartsWith("rounds:")
+			return value.Substring(7, value.Length - 7)
+	""
+IsFull Boolean
+	TestRequest(("Math", ".", "full")).IsFull
+	TestRequest(List(Text) + "Math").IsFull is false
+	"full" is in Options
 IsRecursive Boolean
 	TestRequest(("a.strict", ".", "--no-recursive")).IsRecursive is false
+	TestRequest(List(Text) + "a.strict").IsRecursive
 	"--no-recursive" is not in Options
 IsMutating Boolean
 	TestRequest(("a.strict", ".", "mutations")).IsMutating
-	"mutations" is in Options
+	TestRequest(List(Text) + "a.strict").IsMutating
+	TestRequest(("a.strict", ".", "unit")).IsMutating is false
+	("mutations" is in Options) or ("unit" is not in Options)
 IsWhole Boolean
-	TestRequest(("a.strict", ".", "mutations")).IsWhole
-	("unit" is in Options) or ("-" is in Options) or ("mutations" is in Options)
+	TestRequest(("a.strict", ".", "mutations")).IsWhole is false
+	TestRequest(("a.strict", ".", "unit")).IsWhole
+	TestRequest(List(Text) + "a.strict").IsWhole is false
+	("unit" is in Options) or ("-" is in Options)
 Message Text
 	TestRequest(("a.strict", ".", "mutations")).Message is ""
 	TestRequest((".", ".", "native", "--no-recursive")).Message is ""
-	let methods = Options - Flags - "unit" - "-"
+	let methods = Methods
 	if methods.Length > 1
 		return "Only one test file or method can be selected"
 	if methods.Length is 0

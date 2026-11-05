@@ -1,7 +1,0 @@
-has elements Texts
-has ElementTypeName Text
-to Text
-	ListExpression(("1", "2", "3"), "Number") to Text is "(1, 2, 3)"
-	"(" + Text.Combine(elements) + ")"
-Count Number
-	elements.Length

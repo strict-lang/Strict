@@ -1,10 +1,12 @@
 has lines Texts
 constant Sigmas = LoopBodies(("constant Kilo = 1000", "Sigmas(steps Number) Numbers", "\tfor 2", "\t\tfor steps + 1", "\t\t\tindex is steps then 0 else index / Kilo"))
+constant Spans = LoopBodies(("Run(steps Number) Number", "\t1", "\t2", "\t3", "\t4", "\t5", "\t6", "\t7", "\t8", "\tfor 3", "\t\tindex * (1000 / steps)", "Short(steps Number) Number", "\tfor 3", "\t\tindex * (1000 / steps)"))
 constant Grid = ("Run(rows Number, columns Number) Number", "\tfor rows", "\t\tlet row = value", "\t\tfor columns")
 Issues List(ValidationIssue)
 	(Sigmas.Issues.First.Line is 5) and (Sigmas.Issues.Length is 1)
 	LoopBodies(Grid + "\t\t\trow * columns + value").Issues.First.target.StartsWith("row * columns")
 	LoopBodies(("Run", "\tfor row, column in rows, columns", "\t\trow * columns + column")).Issues.Length is 0
+	(Spans.Issues.Length is 1) and (Spans.Issues.First.Line is 14)
 	let constants = Constants
 	mutable issues = List(Mutable(ValidationIssue))
 	for lines
@@ -16,6 +18,8 @@ Issues List(ValidationIssue)
 Loops(node SyntaxNode, isNested Boolean, constants Texts, isShort Boolean) List(LoopBody)
 	Loops(BodyParser(("Run", "\tfor 3", "\t\tfor 2", "\t\t\tvalue")).Block(1, 1), false, List(Text), true).Last.isNested
 	Loops(BodyParser(("Run", "\tfor y, x in 3, 2", "\t\ty + x")).Block(1, 1), false, List(Text), true).First.isNested
+	Loops(BodyParser(("Run", "\tfor 3", "\t\tfor 2", "\t\t\tvalue")).Block(1, 1), false, List(Text), true).Length is 2
+	Loops(BodyParser(("Run", "\tfor 3", "\t\t1")).Block(1, 1), false, List(Text), true).First.isNested is false
 	mutable loops = List(Mutable(LoopBody))
 	for node.children
 		let isLoop = value.Kind is "For"

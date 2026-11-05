@@ -7,6 +7,7 @@ constant History = (-1, -0.5, 0, 0.5)
 Basis(coord Number) Numbers
 	Quadratic.Basis(0) is (1, 0, -1)
 	Quadratic.Basis(1) is (1, 1, 1)
+	SpectralFit.Basis(0.5) is (1, 0.5, -0.5, -1, -0.5)
 	mutable previous = 1
 	mutable current = coord
 	for degree + 1
@@ -26,6 +27,14 @@ Weights(coords Numbers, target Number) Numbers
 		let fitted = Softmax.Weighted(design(index), 0, degree + 1, solved, 0, 1)
 		blend * fitted + (1 - blend) * Linear(coords, target, index)
 IsValid Boolean
+	Quadratic.IsValid and SpectralFit(0, 0, 0).IsValid and SpectralFit(4, 0, 1).IsValid
+	SpectralFit(-1, 0, 1).IsValid is false
+	SpectralFit(5, 0, 1).IsValid is false
+	SpectralFit(1.5, 0, 1).IsValid is false
+	(SpectralFit(1, -1, 1).IsValid is false) and (SpectralFit(1, 1 / 0, 1).IsValid is false)
+	(SpectralFit(1, 0, -0.5).IsValid is false) and (SpectralFit(1, 0, 1.5).IsValid is false)
+	(SpectralFit(1, 0.1, 1).Weights((0), 1) is Error) and (SpectralFit(1, 0, 2).Weights((-1, 0), 1) is Error)
+	Line.Weights((-1, 0), 1 / 0) is Error
 	let order = (degree >= 0) and (degree <= 4) and (degree.Floor is degree)
 	order and (ridge >= 0) and ridge.IsFinite and (blend >= 0) and (blend <= 1)
 Design(coords Numbers) List(Numbers)
@@ -42,6 +51,8 @@ Cell(design List(Numbers), row Number, column Number) Number
 		sum = sum + value(row) * value(column)
 	sum
 Linear(coords Numbers, target Number, at Number) Number
+	SpectralFit(1, 0, 0).Weights((-1, 0, 2), 4) is (0, -1, 2)
+	SpectralFit(1, 0, 0).Weights((0, 1, 1), 3) is (0, 0, 1)
 	if coords.Length < 2
 		return 1
 	if at < coords.Length - 2

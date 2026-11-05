@@ -9,15 +9,17 @@ constant Merging = MethodEntry("Merged", List(MemberEntry), "Strict/List(Number)
 constant Attended = TypeEntry("Strict/Attention", (MemberEntry("queries", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("keys", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("values", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("heads", "Strict/Number", List(InstructionEntry), false), MemberEntry("groups", "Strict/Number", List(InstructionEntry), false), MemberEntry("size", "Strict/Number", List(InstructionEntry), false), MemberEntry("sequences", "Strict/Number", List(InstructionEntry), false), MemberEntry("causal", "Strict/Boolean", List(InstructionEntry), false), MemberEntry("valueOffset", "Strict/Number", List(InstructionEntry), false), MemberEntry("valueStride", "Strict/Number", List(InstructionEntry), false), MemberEntry("quantized", "Strict/Boolean", List(InstructionEntry), false), MemberEntry("routing", "Strict/Number", List(InstructionEntry), false), MemberEntry("exact", "Strict/Number", List(InstructionEntry), false)), List(MethodEntry) + Merging)
 constant Ending = ("    %isTensored = arith.cmpf une, %tensored, %zero : f64", "    cf.cond_br %isTensored, ^tensored, ^computed", "  ^tensored:", "    return %tensored : f64", "  ^computed:")
 constant Attending = MlirTensors(MlirFunction(List(TypeEntry) + Attended, Attended, Merging))
-constant Multiply = MethodEntry("Multiplied", List(MemberEntry), "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "left"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 3)))
-constant Multiplied = TypeEntry("Strict/Products", (MemberEntry("left", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("right", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("shape", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("strides", "Strict/List(Number)", List(InstructionEntry), false)), List(MethodEntry) + Multiply)
-constant Multiplying = MlirTensors(MlirFunction(List(TypeEntry) + Multiplied, Multiplied, Multiply))
+constant Rotating = MlirTensors(MlirFunction(List(TypeEntry) + Attended, Attended, MethodEntry("Rotated", List(MemberEntry), "Strict/List(Number)", Merging.instructions(1))))
+constant Multiplied = TypeEntry("Strict/Products", (MemberEntry("left", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("right", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("shape", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("strides", "Strict/List(Number)", List(InstructionEntry), false)), List(MethodEntry) + MethodEntry("Multiplied", List(MemberEntry), "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "left"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 3))))
+constant Multiplying = MlirTensors(MlirFunction(List(TypeEntry) + Multiplied, Multiplied, Multiplied.methods.First))
 constant Softmaxing = MlirTensors(MlirFunction(List(TypeEntry), TypeEntry("Strict/Softmax", List(MemberEntry), List(MethodEntry)), TypeCodegen("Strict/Softmax", ("Shares(scores Numbers, width Number) Numbers", "\tfor scores.Length", "\t\tscores(index) / width"), ValueCodegen.NoTypes, List(Text)).Entry.methods.First))
 Kind Text
 	Attending.Kind is "Attention"
 	Multiplying.Kind is "Products"
 	MlirTensors(MlirGpu.Layering.function).Kind is ""
 	Softmaxing.Kind is "Softmax"
+	MlirTensors(MlirFunction(List(TypeEntry) + Attended, Attended, Multiplying.function.method)).Kind is ""
+	MlirTensors(MlirFunction(List(TypeEntry) + Multiplied, Multiplied, Merging)).Kind is "" and (Rotating.Kind is "")
 	let stored = MlirInstances(function, 0).StoredNames(function.type)
 	if function.method.parameters.Length > 0
 		return IsSoftmax then "Softmax" else ""
@@ -27,6 +29,8 @@ Kind Text
 Named(stored Texts) Text
 	Multiplying.Named(Productions) is "Products"
 	Multiplying.Named(Convolutions) is ""
+	Rotating.Named(Hadamards) is "Hadamard" and (Rotating.Named(Sylvesters) is "Sylvester")
+	Rotating.Named(Convolutions) is "" and (Rotating.Named(Productions) is "") and (Multiplying.Named(Hadamards) is "")
 	if (stored is Hadamards) and (function.method.Name is "Rotated")
 		return "Hadamard"
 	if (stored is Sylvesters) and (function.method.Name is "Rotated")
@@ -37,11 +41,14 @@ Named(stored Texts) Text
 IsSoftmax Boolean
 	Softmaxing.IsSoftmax
 	Multiplying.IsSoftmax is false
+	MlirTensors(MlirFunction(List(TypeEntry), Multiplied, Softmaxing.function.method)).IsSoftmax is false
+	MlirTensors(MlirFunction(List(TypeEntry), Softmaxing.function.type, TypeEntry.ToNumber)).IsSoftmax is false
 	let isShares = (function.type.JustName is "Softmax") and (function.method.Name is "Shares")
 	isShares and (function.Parameters is ("value", "scores", "width"))
 IsInvoked(name Text) Boolean
 	Attending.IsInvoked("Softmax.Shares")
 	Attending.IsInvoked("Softmax.Largests") is false
+	Attending.IsInvoked("max.Shares") is false
 	for function.method.Invoked
 		if value.EndsWith("/" + name)
 			return true
@@ -66,6 +73,8 @@ Loads(kind Text) Texts
 		function.Load("%tensor" + index, "%v_" + value)
 Called(kind Text) Texts
 	Multiplying.Called("Products")(1).EndsWith("%tensor3) : (!llvm.ptr, f64, f64, f64, f64) -> f64")
+	Multiplying.Called("Softmax")(0) is "    %tensorPtx = llvm.mlir.addressof @strict_gpu_ptx : !llvm.ptr"
+	Multiplying.Called("Hadamard")(1).StartsWith("    %tensored = func.call @strict_gpu_hadamard(%tensorPtx, %tensor0, ")
 	let count = Members(kind).Length
 	mutable arguments = "%tensorPtx"
 	mutable types = "!llvm.ptr"
@@ -87,6 +96,9 @@ Members(kind Text) Texts
 	kind is "Attention" then Attentions else (kind is "Products" then Productions else Hadamards)
 Marker(kind Text) Text
 	Attending.Marker("Products") is "@strict_gpu_products("
+	Attending.Members("Softmax") is ("scores", "width") and (Multiplying.Named(Sylvesters) is "")
+	MlirTensors(MlirFunction(List(TypeEntry), Multiplied, GpuSamples.Summed)).Named(Convolutions) is "Convolution"
+	MlirTensors(MlirFunction(List(TypeEntry), Multiplied, GpuSamples.Summed)).Named(Productions) is ""
 	"@strict_gpu_" + kind.Lower + "("
 Used(program Text) Texts
 	Attending.Used("x @strict_gpu_products(y") is ("Products")

@@ -4,7 +4,12 @@ constant Picking = MlirFunction(List(TypeEntry) + GpuSamples.Layered, GpuSamples
 constant Lookup = Picking.method.instructions(4)
 constant Types = " : (!llvm.ptr, i64) -> (!llvm.ptr, i64, i64)"
 constant Nesting = MlirFunction(List(TypeEntry) + GpuSamples.Layered, GpuSamples.Layered, MethodEntry("Nested", List(MemberEntry), "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "biases"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "index"), InstructionEntry(InstructionType.IndexCall, "weights", (2, 1, -1)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 2, "list0"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "index"), InstructionEntry(InstructionType.IndexCall, "list0", (4, 3, -1)), InstructionEntry.Named(InstructionType.InvokeWriteToList, 4, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 7), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "forResult"), InstructionEntry.Return(0))))
+constant Lengthy = InstructionEntry.Invoke(1, ("Strict/List(Number)", "Length", "Strict/Number", "x"), (5), 0)
+constant Biased = InstructionEntry(InstructionType.IndexCall, "biases", (2, 1, -1))
 constant Measuring = MlirFunction(List(TypeEntry) + GpuSamples.Layered, GpuSamples.Layered, GpuSamples.Measured)
+constant Exactly = MlirFunction(Measuring, Float = "f32")
+constant Rowed = ("    %d4kf = llvm.load %r1 : !llvm.ptr -> f64", "    %d4k = arith.fptosi %d4kf : f64 to i64", "    %d4d = llvm.load %v_weights_d : !llvm.ptr -> !llvm.ptr", "    %d4w:3 = func.call @strict_device_row(%d4d, %d4k) : (!llvm.ptr, i64) -> (!llvm.ptr, i64, i64)", "    %d4z = arith.constant 0 : i64", "    %d4l = arith.cmpi sge, %d4k, %d4z : i64", "    %d4h = arith.cmpi slt, %d4k, %d4w#2 : i64", "    %d4o = arith.andi %d4l, %d4h : i1", "    cf.cond_br %d4o, ^d4read, ^d4fail", "  ^d4fail:", "    %d4f = arith.constant 1 : i64", "    llvm.store %d4f, %failed : i64, !llvm.ptr", "    cf.br ^d4done", "  ^d4read:", "    llvm.store %d4w#0, %r2_d : !llvm.ptr, !llvm.ptr", "    llvm.store %d4w#1, %r2_b : i64, !llvm.ptr", "    %d4n = llvm.load %v_weights_n : !llvm.ptr -> i64", "    llvm.store %d4n, %r2_n : i64, !llvm.ptr", "    cf.br ^d4done", "  ^d4done:")
+constant Counting = ("    %d1n = llvm.load %r0_n : !llvm.ptr -> i64", "    %d1 = arith.sitofp %d1n : i64 to f32", "    llvm.store %d1, %r1 : f32, !llvm.ptr\n    %d1_r1i = llvm.call_intrinsic \"llvm.fptosi.sat.i32.f32\"(%d1) : (f32) -> i32\n    %d1_r1w = arith.sitofp %d1_r1i : i32 to f32\n    %d1_r1s = arith.cmpf oeq, %d1_r1w, %d1 : f32\n    %d1_r1_e = arith.extsi %d1_r1i : i32 to i64\n    %d1_r1_q = arith.extui %d1_r1s : i1 to i64\n    llvm.store %d1_r1_e, %r1_e : i64, !llvm.ptr\n    llvm.store %d1_r1_q, %r1_q : i64, !llvm.ptr", "    llvm.store %d1n, %r1_e : i64, !llvm.ptr", "    llvm.store %one, %r1_q : i64, !llvm.ptr")
 IsRows(kind Text) Boolean
 	MlirDeviceRows(Picking, 4).IsRows("List(Numbers)")
 	MlirDeviceRows(Picking, 4).IsRows("Numbers") is false
@@ -13,6 +18,7 @@ IsRows(kind Text) Boolean
 Emitted(entry InstructionEntry) Texts
 	Text.Combine(MlirDeviceRows(Picking, 4).Emitted(Lookup)).IndexOf("@strict_device_row(%d4d, %d4k)") > 0
 	MlirDeviceRows(Picking, 4).Emitted(Lookup).Last is "  ^d4done:"
+	MlirDeviceRows(Picking, 4).Emitted(Lookup) is Rowed
 	if IsRows(MlirKinds(function).VariableKind(at, entry.texts(0))) is false
 		return MlirDeviceRecords(function, at).Indexed(entry)
 	let list = "%v_" + entry.texts(0)
@@ -23,6 +29,7 @@ Emitted(entry InstructionEntry) Texts
 	position + row + Bounded + failed + Viewed(list, "%r" + entry.payload(0))
 Bounded Texts
 	MlirDeviceRows(Picking, 4).Bounded.Last is "    cf.cond_br %d4o, ^d4read, ^d4fail"
+	MlirDeviceRows(Picking, 4).Emitted(Biased)(2) is "    %d4n = llvm.load %v_biases_n : !llvm.ptr -> i64"
 	let low = "    " + Temp("l") + " = arith.cmpi sge, " + Temp("k") + ", " + Temp("z") + " : i64"
 	let high = "    " + Temp("h") + " = arith.cmpi slt, " + Temp("k") + ", " + Temp("w") + "#2 : i64"
 	let inside = "    " + Temp("o") + " = arith.andi " + Temp("l") + ", " + Temp("h") + " : i1"
@@ -37,6 +44,8 @@ Viewed(list Text, target Text) Texts
 	(List(Text) + ("  ^d" + at + "read:") + pointer + bits) + columns + done
 Called(entry InstructionEntry) Texts
 	MlirDeviceRows(Measuring, 1).Called(Measuring.method.instructions(1))(1) is "    %d1 = arith.sitofp %d1n : i64 to f64"
+	MlirDeviceRows(Exactly, 1).Called(Lengthy) is Counting
+	MlirDeviceRows(Picking, 7).Called(Picking.method.instructions(7)).Last is "    llvm.store %d7, %r4 : f64, !llvm.ptr"
 	if entry.texts(1) is not "Length"
 		return MlirDeviceStatements(function, at).Called(entry)
 	let countPosition = 5 + entry.payload(3)

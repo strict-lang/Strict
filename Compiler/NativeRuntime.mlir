@@ -20,6 +20,27 @@
     %flushed = llvm.call @fflush(%null) : (!llvm.ptr) -> i32
     return
   }
+  func.func private @strict_log(%format: !llvm.ptr, %text: !llvm.ptr) {
+    %first = llvm.load %format : !llvm.ptr -> i8
+    %secondAddress = llvm.getelementptr %format[1] : (!llvm.ptr) -> !llvm.ptr, i8
+    %second = llvm.load %secondAddress : !llvm.ptr -> i8
+    %value = llvm.load %text : !llvm.ptr -> i8
+    %percent = arith.constant 37 : i8
+    %letter = arith.constant 115 : i8
+    %zero = arith.constant 0 : i8
+    %isPercent = arith.cmpi eq, %first, %percent : i8
+    %isLetter = arith.cmpi eq, %second, %letter : i8
+    %isEmpty = arith.cmpi eq, %value, %zero : i8
+    %isBare = arith.andi %isPercent, %isLetter : i1
+    %skip = arith.andi %isBare, %isEmpty : i1
+    cf.cond_br %skip, ^done, ^print
+  ^print:
+    %printed = llvm.call @printf(%format, %text) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr) -> i32
+    func.call @strict_flush() : () -> ()
+    cf.br ^done
+  ^done:
+    return
+  }
   func.func private @strict_file_delete(%path: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr

@@ -7,6 +7,11 @@ constant Mismatched = StatementParser(Tokenizer("for a, b, c in x, y").Tokens)
 constant Unlisted = StatementParser(Tokenizer("for a, b in").Tokens)
 Syntax SyntaxParser
 	StatementParser("a", "b").Syntax.tokens.Length is 2
+	StatementParser(Tokenizer("for list").Tokens).Keyword("for") to Text is "for list"
+	StatementParser(Tokenizer("if as long as a").Tokens).Keyword("if").Kind is "If"
+	StatementParser(Tokenizer("for as long x a").Tokens).Keyword("for").text is not "for as long as"
+	StatementParser(Tokenizer("for x long as a").Tokens).Keyword("for").text is not "for as long as"
+	StatementParser(Tokenizer("for as x as a").Tokens).Keyword("for").text is not "for as long as"
 	SyntaxParser(tokens)
 ParseStatement SyntaxNode
 	StatementParser(Tokenizer("let a = b + 1").Tokens).ParseStatement to Text is "let a = b + 1"
@@ -25,6 +30,7 @@ Keyword(first Text) SyntaxNode
 	StatementParser(Tokenizer("for as long as a").Tokens).Keyword("for").text is "for as long as"
 	StatementParser("return").Keyword("return").Kind is "Return"
 	StatementParser(Tokenizer("for y, x in Range(0, 2), 3").Tokens).Keyword("for") to Text is "for y, x in Range(0, 2), 3"
+	StatementParser("return").Keyword("return").text is "return"
 	if first is "else"
 		return ParseElse
 	if tokens.Length is 1
@@ -38,6 +44,9 @@ IsNamed Boolean
 	StatementParser(Tokenizer("for x in list").Tokens).IsNamed
 	StatementParser(Tokenizer("for list").Tokens).IsNamed is false
 	StatementParser(Tokenizer("for a, b").Tokens).IsNamed is false
+	StatementParser(Tokenizer("if a, b in c").Tokens).IsNamed is false
+	StatementParser(Tokenizer("for x is in list").Tokens).IsNamed is false
+	StatementParser(Tokenizer("for x in").Tokens).IsNamed is false
 	(tokens.Length > 3) and (tokens(0) is "for") and (tokens(2) is in (",", "in")) and ("in" is in tokens)
 Named SyntaxNode
 	StatementParser(Tokenizer("for y, x in Range(0, 2), 3").Tokens).Named.children.Length is 2
@@ -92,6 +101,7 @@ ParseElse SyntaxNode
 	StatementParser(Tokenizer("else").Tokens).ParseElse.Kind is "Else"
 	StatementParser("else", "if", "a").ParseElse.Kind is "ElseIf"
 	StatementParser("else", "0").ParseElse.Kind is "ElseValue"
+	StatementParser(Tokenizer("else").Tokens).ParseElse.text is "else"
 	if tokens.Length is 1
 		return SyntaxNode("Else", "else")
 	tokens(1) is "if" then SyntaxNode("ElseIf", "", Rest(2)) else SyntaxNode("ElseValue", "", Rest(1))
@@ -99,6 +109,7 @@ ParseAssignmentOrExpression SyntaxNode
 	StatementParser("a", "=", "1").ParseAssignmentOrExpression.Kind is "Reassignment"
 	StatementParser(Tokenizer("a").Tokens).ParseAssignmentOrExpression.Kind is "Identifier"
 	StatementParser(Tokenizer("next(add = 1) = add").Tokens).ParseAssignmentOrExpression to Text is "next(add = 1) = add"
+	StatementParser(Tokenizer("next(add = 1) = add").Tokens).ParseAssignmentOrExpression.Kind is "Computed"
 	constant assignment = AssignmentIndex
 	if assignment is -1
 		return Syntax.Parse
@@ -112,6 +123,7 @@ Signature(assignment Number) SyntaxNode
 AssignmentIndex Number
 	StatementParser("a", "=", "1").AssignmentIndex is 1
 	StatementParser("f", "(", "a", ")").AssignmentIndex is -1
+	StatementParser(Tokenizer("f(a = 1)").Tokens).AssignmentIndex is -1
 	mutable depth = 0
 	mutable assignment = -1
 	for tokens
@@ -122,6 +134,8 @@ AssignmentIndex Number
 Problem(line Text) Text
 	StatementParser.Problem("constant Help = (\"first") is "TextMustEndOnItsLine: constant Help = (\"first"
 	StatementParser.Problem("for x in list") is "SingleIteratorMustNotBeNamed: x" + SingleHint
+	StatementParser.Problem("x = for y") is ForProblem + "x = for y" + ForHint
+	StatementParser.Problem("a") is "ParsingFailed: a"
 	if line.IndexOf(" = for ") > 0
 		return ForProblem + line + ForHint
 	let statement = StatementParser(Tokenizer(line).Tokens).ParseStatement

@@ -3,12 +3,15 @@ has position Number
 constant Lanes = (MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 0), "sum"), InstructionEntry.LoadNumber(0, 9), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "color"), InstructionEntry(InstructionType.FieldLoad, ("red", "Rgb"), (2, 1, -1)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "sum"), InstructionEntry.Binary(InstructionType.Add, (3, 2, 4)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 4, "sum"), InstructionEntry.Jump(InstructionType.LoopEnd, 7), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 5, "sum"), InstructionEntry.Return(5))
 constant Summed = MethodEntry("Summed", List(MemberEntry) + MemberEntry("color", "Strict/Rgb", List(InstructionEntry), false), "Strict/Number", Lanes)
 constant Summing = MlirFunction(MlirLanes.Sample.function.types, MlirLanes.Rgb, Summed)
+constant Mixing = MlirFunction(Summing, method = MethodEntry(Summed, instructions = (MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 255), "total"), MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 256), "big"), MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, -1), "low"), MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 2.5), "half"), InstructionEntry.LoadNumber(0, 2), InstructionEntry.LoadNumber(1, 9000), InstructionEntry.LoopBegin(0, 1), InstructionEntry.LoadNumber(2, 255), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "total"), InstructionEntry.Binary(InstructionType.Add, (3, 2, 4)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 4, "total"), InstructionEntry.Jump(InstructionType.LoopEnd, 5), InstructionEntry.LoopBegin(0, 20), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 5, "big"), InstructionEntry.Binary(InstructionType.Add, (5, 2, 6)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 6, "big"), InstructionEntry.Jump(InstructionType.LoopEnd, 4), InstructionEntry.LoopBegin(2, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 7, "big"), InstructionEntry.Binary(InstructionType.Add, (7, 2, 1)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "big"), InstructionEntry.Binary(InstructionType.Subtract, (7, 2, 9)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 9, "big"), InstructionEntry.Binary(InstructionType.Add, (7, 2, 10)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 8, "big"), InstructionEntry(InstructionType.IndexCall, "big", (11, 7, -1)), InstructionEntry.Binary(InstructionType.Add, (11, 2, 12)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 12, "big"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 13, "total"), InstructionEntry.Binary(InstructionType.Add, (13, 2, 14)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 14, "big"), InstructionEntry.Binary(InstructionType.Add, (15, 2, 16)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 16, "big"), InstructionEntry.Jump(InstructionType.LoopEnd, 16), InstructionEntry.LoadNumber(17, -1), InstructionEntry.LoadNumber(18, 2.5), InstructionEntry.LoadNumber(19, 256), InstructionEntry.LoadNumber(21, 1))))
 constant Adding = MlirWholeNarrow(Summing, 6)
 constant Most = 8192
+constant Narrowed = ("    %t6an = arith.trunci %t6a : i64 to i32", "    %t6bn = arith.trunci %t6b : i64 to i32", "    %t6cn = arith.addi %t6an, %t6bn : i32", "    %t6c = arith.extui %t6cn : i32 to i64")
 IsNarrow Boolean
 	Adding.IsNarrow
 	MlirWholeNarrow(Summing, 4).IsNarrow is false
 	MlirWholeNarrow(MlirWholeFunction.Nesting, 11).IsNarrow is false
+	MlirWholeNarrow(Mixing, 19).IsNarrow is false
 	let name = Accumulated
 	(name is not "") and IsBounded(name)
 Accumulated Text
@@ -26,6 +29,12 @@ Accumulated Text
 	isSelf and IsSmall(Writer(entry.payload(2))) and (Trips > 0) and (Trips <= Most) then next.texts.Last else ""
 Writer(register Number) Number
 	Adding.Writer(3) is 5
+	MlirWholeNarrow(Summing, 10).Accumulated is ""
+	MlirWholeNarrow(Mixing, 19).Accumulated is "big"
+	MlirWholeNarrow(Mixing, 9).Accumulated is "" and (MlirWholeNarrow(Mixing, 14).Accumulated is "")
+	MlirWholeNarrow(Mixing, 21).Accumulated is "" and (MlirWholeNarrow(Mixing, 23).Accumulated is "")
+	MlirWholeNarrow(Mixing, 26).Accumulated is "" and (MlirWholeNarrow(Mixing, 29).Accumulated is "")
+	MlirWholeNarrow(Mixing, 31).Accumulated is ""
 	MlirArguments(List(MlirFunction)).Writer(function, register, position)
 IsSmall(at Number) Boolean
 	Adding.IsSmall(4)
@@ -42,7 +51,9 @@ IsSmall(at Number) Boolean
 	(number >= 0) and (number <= 255) and (number.Floor is number)
 Trips Number
 	Adding.Trips is 9
+	MlirWholeNarrow(Summing, 9).Trips is 1
 	MlirWholeNarrow(MlirWholeFunction.Nesting, 11).Trips is 9
+	MlirWholeNarrow(Mixing, 9).Trips is 8998 and (MlirWholeNarrow(Mixing, 14).Trips is 0)
 	mutable trips = 1
 	for position
 		let entry = function.method.instructions(index)
@@ -52,6 +63,8 @@ Trips Number
 Count(at Number) Number
 	Adding.Count(2) is 9
 	MlirWholeNarrow(MlirWholeFunction.Nesting, 11).Count(6) is 3
+	MlirWholeNarrow(Mixing, 0).Count(6) is 8998
+	MlirWholeNarrow(Mixing, 0).Count(12) is 0 and (MlirWholeNarrow(Mixing, 0).Count(17) is 255)
 	let isRange = function.method.instructions(at).payload(1) is 1
 	let bounds = Bounds(at)
 	if bounds.Length < (isRange then 2 else 1)
@@ -60,6 +73,8 @@ Count(at Number) Number
 Bounds(at Number) Numbers
 	Adding.Bounds(2) is (9)
 	MlirWholeNarrow(MlirWholeFunction.Nesting, 11).Bounds(6) is (0, 3)
+	MlirWholeNarrow(Mixing, 0).Bounds(12) is (2) and (MlirWholeNarrow(Mixing, 0).Bounds(6) is (2, 9000))
+	MlirWholeNarrow(MlirKernel.Summing.function, 0).Bounds(1).Length is 0
 	let entry = function.method.instructions(at)
 	let registers = entry.payload(1) is 1 then (entry.payload(0), entry.payload(2)) else List(Number) + entry.payload(0)
 	for registers
@@ -70,6 +85,9 @@ IsBounded(name Text) Boolean
 	Adding.IsBounded("sum")
 	Adding.IsBounded("color")
 	MlirWholeNarrow(MlirWholeFunction.Nesting, 11).IsBounded("sum") is false
+	MlirWholeNarrow(Mixing, 0).IsBounded("big") is false
+	MlirWholeNarrow(Mixing, 0).IsBounded("sum")
+	MlirWholeNarrow(Mixing, 0).IsBounded("") and (MlirWholeNarrow(Mixing, 0).IsBounded("total") is false)
 	for function.method.instructions
 		let isStore = value.kind is in (InstructionType.StoreConstantToVariable, InstructionType.StoreRegisterToVariable)
 		if isStore and (value.texts.Last is name) and (IsSmallStore(index) is false)
@@ -78,6 +96,9 @@ IsBounded(name Text) Boolean
 IsSmallStore(at Number) Boolean
 	Adding.IsSmallStore(0)
 	Adding.IsSmallStore(7)
+	MlirWholeNarrow(Mixing, 0).IsSmallStore(0) and MlirWholeNarrow(Mixing, 0).IsSmallStore(20)
+	MlirWholeNarrow(Mixing, 0).IsSmallStore(1) is false and (MlirWholeNarrow(Mixing, 0).IsSmallStore(2) is false)
+	MlirWholeNarrow(Mixing, 0).IsSmallStore(3) is false and (MlirWholeNarrow(Mixing, 0).IsSmallStore(22) is false)
 	let entry = function.method.instructions(at)
 	if entry.kind is InstructionType.StoreConstantToVariable
 		let number = PayloadDecoder(entry).Value(0).number
@@ -86,6 +107,10 @@ IsSmallStore(at Number) Boolean
 	(writer >= 0) and (MlirWholeNarrow(function, writer).Accumulated is entry.texts.Last)
 Emitted Texts
 	Adding.Emitted.Last is "    %t6c = arith.extui %t6cn : i32 to i64"
+	Adding.Emitted is Narrowed
+	MlirWholeNarrow(Mixing, 0).IsSmall(-1) is false and MlirWholeNarrow(Mixing, 0).IsSmall(7)
+	MlirWholeNarrow(Mixing, 0).IsSmall(34) is false and (MlirWholeNarrow(Mixing, 0).IsSmall(35) is false)
+	MlirWholeNarrow(Mixing, 0).IsSmall(36) is false and MlirWholeNarrow(Mixing, 0).IsSmall(37)
 	let temp = "%t" + position
 	let left = "    " + temp + "an = arith.trunci " + temp + "a : i64 to i32"
 	let right = "    " + temp + "bn = arith.trunci " + temp + "b : i64 to i32"

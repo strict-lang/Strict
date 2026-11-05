@@ -7,7 +7,13 @@ constant Nesting = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFuncti
 constant Painted = MlirFunction(MlirLanes.Sample.function.types, MlirLanes.Rgb, MethodEntry("Painted", List(MemberEntry) + MemberEntry("colors", "Strict/List(Rgb)", List(InstructionEntry), false), "Strict/Rgb", List(InstructionEntry)))
 constant Nested = MlirWholeFunction(MlirFunction(List(TypeEntry), TypeEntry("Strict/Nested", List(MemberEntry) + MemberEntry("position", "Strict/Text", List(InstructionEntry), false), List(MethodEntry)), MethodEntry("Read", List(MemberEntry), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "position"), InstructionEntry.Return(0)))))
 constant Allowed = (InstructionType.FieldLoad, InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.StoreConstantToVariable, InstructionType.StoreRegisterToVariable, InstructionType.IndexCall, InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply, InstructionType.Divide, InstructionType.Modulo, InstructionType.Equal, InstructionType.NotEqual, InstructionType.LessThan, InstructionType.GreaterThan, InstructionType.Invoke, InstructionType.Return, InstructionType.LoopBegin, InstructionType.LoopEnd, InstructionType.JumpEnd, InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue, InstructionType.CheckError)
+
+constant Validating = InstructionEntry.Invoke(3, ("Strict/Byte", "Validated", "Strict/Byte", "number"), List(Number) + 2, -1)
 Symbol Text
+	MlirWholeFunction(MlirLanes.Sample.function).IsCalled(4, 0)
+	MlirWholeFunction(MlirLanes.Sample.function).IsCalled(3, 0)
+	MlirWholeFunction(MlirArguments.Calling.functions.First).IsCalled(3, 0)
+	MlirWholeFunction(MlirArguments.Calling.functions.First).IsCalled(3, 3) is false
 	Row.Symbol.EndsWith("_whole")
 	function.Symbol + "_whole"
 IsWhole Boolean
@@ -42,6 +48,10 @@ HasWholeParameters Boolean
 			return false
 	true
 IsByteList(name Text) Boolean
+	Row.IsBuilt(Validating, 3)
+	Row.IsBuilt(MlirWholeTypes.Byted(3), 3)
+	Row.IsBuilt(MlirWholeTypes.Halves(3), 3) is false
+	Row.IsBuilt(InstructionEntry.Invoke(1, ("Strict/Number", "Validated", "Strict/Number"), List(Number), 0), 3) is false
 	Row.IsByteList("pixels")
 	Row.IsByteList("middle") is false
 	MlirParameters(function).IsBytes(name) and (name is in MlirParameters(function).FixedLists)
@@ -78,6 +88,9 @@ IsPlain(entry InstructionEntry) Boolean
 	let literal = PayloadDecoder(entry).Value(entry.kind is InstructionType.LoadConstantToRegister then 1 else 0)
 	isPlain and (literal.kind is in ("Number", "Boolean"))
 IsCounted(at Number) Boolean
+	Nested.Kinds is ("o")
+	MlirWholeFunction(MlirLanes.Collecting).IsAllowed(4, 0) is false
+	MlirWholeFunction(MlirLoops.Listing.function).IsAllowed(1, 0) is false
 	Row.IsCounted(6)
 	MlirLoops(function, at).Collection is ""
 IsLocal(name Text, at Number) Boolean
@@ -93,6 +106,8 @@ IsLocal(name Text, at Number) Boolean
 			return true
 	false
 IsInsideLoop(at Number) Boolean
+	Row.IsLocal("unknown", 9) is false
+	Nested.IsLocal("position", 0)
 	Row.IsInsideLoop(9)
 	Row.IsInsideLoop(20) is false
 	for at
@@ -125,6 +140,7 @@ IsBuilt(entry InstructionEntry, at Number) Boolean
 	let isBuilt = (decoder.Text(2) is "from") and (isByte or lanes.IsPacked(decoder.Text(1)))
 	isBuilt or ((decoder.Text(2) is "Validated") and isByte)
 Callee(entry InstructionEntry) MlirFunction
+	Row.IsPlain(InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "row.sum")) is false
 	Halving.Callee(MlirWholeTypes.Halves(3)).method.Name is "Floor"
 	let decoder = PayloadDecoder(entry)
 	let type = function.TypeOf(decoder.Text(1))

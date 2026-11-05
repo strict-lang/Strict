@@ -11,6 +11,7 @@ IsInside(pixel Number, x Number, y Number) Boolean
 	Tiny.IsInside(3, -1, 0) is false
 	Tiny.IsInside(2, 0, 1)
 	Tiny.IsInside(6, 0, 1) is false
+	(Tiny.IsInside(2, 1, 0) is false) and (Tiny.IsInside(1, 0, -1) is false) and Tiny.IsInside(0, 0, 0)
 	let column = pixel % Size.Width + x
 	let row = (pixel / Size.Width).Floor + y
 	column >= 0 and column < Size.Width and row >= 0 and row < Size.Height

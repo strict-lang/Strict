@@ -9,6 +9,7 @@ Message(done Number, elapsed Number) Text
 	Completion(Logger, "Loading", 4, 0).Message(1, 0.5) is ""
 	Completion(Logger, "Loading", 4, 0).Message(4, 9) is ""
 	Completion(Logger, "", 4, 0).Message(1, 4) is ""
+	Completion(Logger, "Loading", 8, 0).Message(4, 3) is "Loading 50% 3s/6s"
 	let quarter = (done * 4 / total).Floor
 	let crossed = quarter > ((done - 1) * 4 / total).Floor
 	let projected = elapsed * total / done

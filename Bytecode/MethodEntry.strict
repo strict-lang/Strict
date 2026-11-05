@@ -14,8 +14,17 @@ constant Initializing = MethodEntry("from", List(MemberEntry), "Strict/A", (Inst
 constant Branching = MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, 0), InstructionEntry.Return(0), InstructionEntry.Jump(InstructionType.JumpEnd, 0), InstructionEntry.Return(1)))
 constant HelloRun = MethodEntry("Run", List(MemberEntry), "None", (PrintHi, InstructionEntry.Return(0)))
 returnType Text
+	Converting.Name + CountingLoop.Name + Branching.Name is "RunRunRun"
+	Converting.returnType + GoRun.returnType + CountingLoop.returnType + Branching.returnType is "NoneNoneNoneNone"
+	Initializing.returnType is "Strict/A"
 	IsSlow then declaredType.Substring(5, declaredType.Length - 6) else declaredType
 IsSlow Boolean
+	MethodEntry("At", MemberEntry.SevenMember, "None", List(InstructionEntry)).Fit("At", 0, "", List(Text)) is 1
+	Indexing.Fit("At", 0, "", List(Text)) is 0
+	Indexing.Fit("At", 2, "", List(Text)) is 0
+	MethodEntry(Converting, Name = "to").Fit("to", 0, "", List(Text)) is 3
+	MethodEntry(Converting, Name = "to").Fit("to", 0, "None", List(Text)) is 3
+	MethodEntry(Converting, Name = "to").Fit("to", 0, "Number", List(Text)) is 0
 	declaredType.StartsWith("Slow(")
 Names(names BinaryNames) BinaryNames
 	MethodEntry("Run", List(MemberEntry), "Slow(Number)", List(InstructionEntry)).returnType is "Number"
@@ -29,6 +38,7 @@ Names(names BinaryNames) BinaryNames
 		result = value.Names(result)
 	result
 Integers(names BinaryNames) Numbers
+	Logged.Integers(BinaryNames("Add", "Strict/Number", "logger", "Strict/Logger")) is (0, 1, 1, 4, 2, 3, 0, 0, 0)
 	HelloRun.Integers(BinaryNames("Run", "None", "Hi")) is (0, 1, 0, 2, 7, 173, 1, 2, 2, 1, 0, 3, 4, 32, 0, 1, 0)
 	mutable integers = List(Number) + names.Index(Name) + names.Index(declaredType) + parameters.Length
 	for parameters
@@ -52,6 +62,9 @@ IsInitializer(members List(MemberEntry)) Boolean
 			return true
 	false
 ParameterNames Texts
+	MethodEntry(Initializing, Name = "Run").IsInitializer(List(MemberEntry) + MemberEntry.LoggerMember) is false
+	Initializing.IsInitializer(List(MemberEntry) + MemberEntry.RealtimeMember) is false
+	Initializing.IsInitializer((MemberEntry.RealtimeMember, MemberEntry.LoggerMember))
 	Logged.ParameterNames is ("logger")
 	for parameters
 		value.Name
@@ -93,6 +106,8 @@ Invoked Texts
 			targets = targets + Implied(value)
 	targets
 Implied(entry InstructionEntry) Texts
+	GoRun.Implied(InstructionEntry.Invoke(0, ("Strict/B", "Code", "None"), List(Number), -1)).Length is 0
+	GoRun.Implied(InstructionEntry.Invoke(0, ("Strict/Dictionary(", "Go", "None"), List(Number), -1)).Length is 0
 	GoRun.Implied(GoRun.instructions.First).Length is 0
 	Converting.Implied(Converting.instructions.Last) is ("Strict/Digit.to Text")
 	if entry.texts(1) is "to"
@@ -100,6 +115,8 @@ Implied(entry InstructionEntry) Texts
 	let isCode = entry.texts(0).StartsWith("Strict/Dictionary(") and (entry.texts(1) is "Code")
 	isCode then List(Text) + "Strict/Text.Code" else List(Text)
 LoopBeginOf(position Number) Number
+	MlirKinds.Paired.function.method.LoopBeginOf(5) is 1
+	MlirLoops.Collecting.function.method.LoopBeginOf(3) is 1
 	CountingLoop.LoopBeginOf(1) is 0
 	mutable depth = 0
 	for position
@@ -111,6 +128,11 @@ LoopBeginOf(position Number) Number
 		depth = depth + change
 	0
 JumpEndOf(jump InstructionEntry) Number
+	GpuSamples.Trailing.IsWritingResult(2)
+	MlirLoops.Collecting.function.method.IsWritingResult(0) is false
+	CountingLoop.IsWritingResult(1) is false
+	MethodEntry(GoRun, instructions = (CountingLoop.instructions.First, MlirLoops.Emptied)).IsWritingResult(0) is false
+	MethodEntry(GoRun, instructions = InstructionEntry(MlirLists.Pushing, texts = ("x"))).IsWritingResult(-1) is false
 	Branching.JumpEndOf(Branching.instructions(0)) is 2
 	Branching.JumpEndOf(InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, 5)) is 4
 	for instructions
@@ -118,6 +140,8 @@ JumpEndOf(jump InstructionEntry) Number
 			return index
 	instructions.Length
 LoopEndOf(position Number) Number
+	MlirKinds.Paired.function.method.LoopEndOf(1) is 5
+	MlirLoops.Collecting.function.method.LoopEndOf(1) is 3
 	CountingLoop.LoopEndOf(0) is 1
 	mutable depth = 0
 	for Range(position + 1, instructions.Length)

@@ -5,20 +5,39 @@ constant Painters = KnownTypes(("Ticker", "Painter"), (Scope(List(Text) + "count
 constant Painting = ChangedArguments(ValueCodegen(TypeInference(Painters, (KnownTypes.NoMembers, KnownTypes.NoMembers)), KnownTypes.NoMembers, CallTarget.Plain), "Paint")
 constant Paint = SyntaxNode("Member", "Paint", (SyntaxNode("Identifier", "painter"), ValueCodegen.One, SyntaxNode("Identifier", "ticker")))
 constant Holding = CodeBlock.Empty.Declare("painter", "Painter").Declare("ticker", "Ticker").Declare("ticker mutable", "mutable")
+constant Immutable = CodeBlock.Empty.Declare("painter", "Painter").Declare("ticker", "Ticker")
+constant Constructing = SyntaxNode("Call", "Painter", (ValueCodegen.One, SyntaxNode("Identifier", "ticker")))
+constant PaintText = SyntaxNode("Member", "Paint", (SyntaxNode("Identifier", "painter"), ValueCodegen.One, SyntaxNode("Text", "ticker")))
+constant Short = SyntaxNode("Member", "Paint", (SyntaxNode("Identifier", "painter"), ValueCodegen.One))
+constant PaintCall = SyntaxNode("Call", "Paint", SyntaxNode("Identifier", "ticker"))
+constant Repaint = SyntaxNode("Member", "Painter", Paint.children)
 Positions(type Text, name Text) Numbers
 	Painting.Positions("Painter", "Paint") is (1)
 	Painting.Positions("Ticker", "Next").Length is 0
+	Repaint.text is "Painter"
+	Repaint.Kind is "Member"
+	Painting.StoredBack(Short, Holding.At(1), Holding.Declare("painter mutable", "mutable")).instructions.Length is 0
 	let types = values.inference.types.ParameterScope(type).TypeOf(name + " types")
 	for types.Split(",")
 		if (value is not "") and Changes.HasChanges(values.inference.types.ParameterScope(value.Trim))
 			index
 Owner(call SyntaxNode, block CodeBlock) Text
 	Painting.Owner(Paint, Holding) is "Painter"
+	Painting.Owner(Constructing, Holding) is "Painter"
+	Painting.Owner(PaintCall, Holding) is not "Paint"
+	Holding.scope.TypeOf("ticker") is "Ticker"
+	Painting.StoredBack(Paint, Holding.At(1), Holding).instructions.Length is 1
+	Painting.StoredBack(Paint, Holding.At(1), Immutable).instructions.Length is 0
+	Painting.StoredBack(PaintText, Holding.At(1), Holding).instructions.Length is 0
+	Painting.StoredBack(Constructing, Holding.At(1), Holding).instructions.Length is 0
 	if values.ArgumentStart(call) > 0
 		return values.TypeOf(call.children(0), block)
 	values.inference.types.IsKnown(call.text) then call.text else values.target.TypeName
 Stored(block CodeBlock) CodeBlock
 	Painting.Stored(CodeBlock.Empty).instructions.Length is 0
+	Immutable.scope.TypeOf("painter") is "Painter"
+	Immutable.scope.TypeOf("ticker") is "Ticker"
+	Painting.StoredBack(Repaint, Holding.At(1), Holding).instructions.Length is 1
 	let header = values.target.Header(method)
 	let bodies = MethodBodies(TypeEntry.ShortName(values.target.TypeName), values.target.shape, values.inference)
 	mutable stored = block

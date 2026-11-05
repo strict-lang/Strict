@@ -1,5 +1,6 @@
 has tokens Texts
 DeclaredType(nameIndex Number) Text
+	HeaderTokens("has", "Math", "/", "Size").DeclaredType(1) is "Size"
 	HeaderTokens("has", "texts").DeclaredType(1) is "Texts"
 	HeaderTokens("has", "count", "=", "0").DeclaredType(1) is "Number"
 	HeaderTokens(Tokenizer("has numbers = List(Number)").Tokens).DeclaredType(1) is "Numbers"
@@ -11,6 +12,7 @@ DeclaredType(nameIndex Number) Text
 		return ValueType(next + 1)
 	next < tokens.Length and tokens(next) is not in ("with", ",", ")") then TypeName(next) else ImplicitType(nameIndex)
 ImplicitType(nameIndex Number) Text
+	HeaderTokens("constant", "add", "=", "1").ImplicitType(1) is "Add"
 	HeaderTokens("constant", "Add").ImplicitType(1) is "Number"
 	HeaderTokens("has", "texts").ImplicitType(1) is "Texts"
 	if (tokens(0) is "constant") and (nameIndex + 1 is tokens.Length)
@@ -30,6 +32,12 @@ ValueType(start Number) Text
 	let kind = first is "-" then "Number" else SyntaxParser(tokens).Leaf(first).Kind
 	kind is "Identifier" then (first is in ("List", "Dictionary") then TypeName(start) else first) else kind
 MemberName Text
+	HeaderTokens("has", "x", "/").MemberName is "x"
+	HeaderTokens("has", "count", "Number", "x").MemberName is "count"
+	HeaderTokens("Run", "1", "else", "\"a\"").ValueType(1) is "Number"
+	HeaderTokens("Run", "1", "else").ValueType(1) is "Number"
+	HeaderTokens("constant", "a", "=", "\"x\"", "+", "1").ValueType(3) is "Text"
+	HeaderTokens("constant", "a", "=", "Vector2", "(", "1", ")").ValueType(3) is "Vector2"
 	HeaderTokens("has", "Math", "/", "Size").MemberName is "Size"
 	HeaderTokens("has", "count", "Number").MemberName is "count"
 	tokens.Length > 3 and (tokens(2) is "/") then tokens(3) else tokens(1)
@@ -47,6 +55,10 @@ TypeName(start Number) Text
 	let isList = (tokens(start) is "List") and inner.Lower is not inner
 	isList then inner + "s" else Arguments(start, inner)
 Arguments(start Number, inner Text) Text
+	HeaderTokens("Map", "(", "Text", ",", "Number", ")").Arguments(0, "Text") is "Map"
+	HeaderTokens("Dictionary", "(", "Text", ")").Arguments(0, "Text") is "Dictionary(Text)"
+	HeaderTokens(Tokenizer("Dictionary(Text, Number) Text").Tokens).Arguments(0, "Text") is "Dictionary(Text, Number)"
+	HeaderTokens("Iterator", "(", "Vector2", ")", "a", "b", "c").Arguments(0, "Vector2") is "Iterator(Vector2)"
 	HeaderTokens("Iterator", "(", "Vector2", ")").Arguments(0, "Vector2") is "Iterator(Vector2)"
 	HeaderTokens(Tokenizer("Dictionary(Text, Number)").Tokens).Arguments(0, "Text") is "Dictionary(Text, Number)"
 	HeaderTokens("Range", "(", "Number", ")").Arguments(0, "Number") is "Range"
@@ -56,6 +68,8 @@ Arguments(start Number, inner Text) Text
 	let isKept = (tokens(start) is not "Range") and (tokens(start + 3) is in (")", "("))
 	tokens(start) + (isKept then "(" + inner + ")" else "")
 ReturnType Text
+	HeaderTokens("Iterator", "(", "List", "(", "Text", ")", ")").Arguments(0, "Texts") is "Iterator(Texts)"
+	HeaderTokens(Tokenizer("Run").Tokens).ParametersEnd is 0
 	HeaderTokens(Tokenizer("Merged Slow(Numbers)").Tokens).ReturnType is "Numbers"
 	HeaderTokens("Run", "Number").ReturnType is "Number"
 	HeaderTokens("Add", "(", "x", ")").ReturnType is "None"
@@ -76,6 +90,7 @@ ParametersEnd Number
 			end = index
 	end
 IsParameterStart(position Number) Boolean
+	HeaderTokens(Tokenizer("Add(x Dictionary(Text, Number))").Tokens).IsParameterStart(7) is false
 	HeaderTokens("Add", "(", "x", ")").IsParameterStart(2)
 	let previous = tokens(position - 1)
 	if previous is "mutable"
@@ -110,11 +125,13 @@ ParameterType(position Number) Text
 	HeaderTokens("Add", "(", "x", "=", "\"a\"", ")").ParameterType(2) is "Text"
 	DeclaredType(position)
 ReturnsMutable Boolean
+	HeaderTokens("Add", "(", "x", ")").ReturnsMutable is false
 	HeaderTokens("Add", "(", "x", ")", "Mutable", "(", "List", ")").ReturnsMutable
 	HeaderTokens("Run", "Number").ReturnsMutable is false
 	constant start = ParametersEnd + 1
 	start < tokens.Length and (tokens(start) is "Mutable")
 ReturnsSlow Boolean
+	HeaderTokens("Add", "(", "x", ")").ReturnsSlow is false
 	HeaderTokens(Tokenizer("Merged Slow(Numbers)").Tokens).ReturnsSlow
 	HeaderTokens("Run", "Number").ReturnsSlow is false
 	let start = ParametersEnd + 1

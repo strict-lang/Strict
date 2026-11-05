@@ -11,6 +11,7 @@ constant Looped = (InstructionEntry.LoopBegin(4, -1), InstructionEntry.Named(Ins
 constant Graded = MlirKinds(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "A"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "letter"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "letter"), Passed, InstructionEntry.Binary(InstructionType.Add, (1, 0, 3)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "width"), NewShape, Width, Indexed) + Looped)))
 constant Shapes = MemberEntry("shapes", "Strict/List(Shape)", List(InstructionEntry), false)
 constant Paired = MlirKinds(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + Shapes, "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "shapes"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "outer"), InstructionEntry(InstructionType.LoopEnd, List(Text), (2)), InstructionEntry(InstructionType.LoopEnd, List(Text), (4))))))
+constant Listed = MlirKinds(MlirListOperators.Mixed)
 KindOf(position Number, register Number) Text
 	Graded.KindOf(1, 0) is "Text"
 	Graded.KindOf(6, 4) is "Number"
@@ -58,6 +59,12 @@ Calculated(writer Number, entry InstructionEntry) Text
 		return left.StartsWith("List(") then left else right
 	(entry.kind is InstructionType.Add) and ((left is "Text") or (right is "Text")) then "Text" else "Number"
 IsText(position Number, register Number) Boolean
+	Graded.Calculated(7, InstructionEntry.Binary(InstructionType.Add, (0, 4, 9))) is "Text"
+	Graded.Calculated(7, InstructionEntry.Binary(InstructionType.Add, (4, 4, 9))) is "Number"
+	Listed.Calculated(5, InstructionEntry.Binary(InstructionType.Invoke, (0, 0, 9))) is "Number"
+	Listed.Calculated(5, InstructionEntry.Binary(InstructionType.LoadConstantToRegister, (0, 0, 9))) is "Number"
+	Listed.Calculated(5, InstructionEntry.Binary(InstructionType.Subtract, (0, 1, 9))) is "List(Number)"
+	Listed.Calculated(5, InstructionEntry.Binary(InstructionType.Add, (0, 1, 9))) is "List(Number)"
 	Graded.IsText(4, 1)
 	Graded.IsText(4, 2) is false
 	MlirLayout(function).Represented(KindOf(position, register)) is "Text"
@@ -116,6 +123,10 @@ OwnValueKind(position Number, name Text) Text
 	let member = MembersKind(function.type.members, name)
 	member is "" then "Number" else member
 LoopValueKind(position Number) Text
+	Graded.LoopValueKind(12) is ""
+	Graded.WrittenKind(0) is "Text"
+	Graded.WrittenKind(4) is "Text"
+	MlirKinds(MlirPacking.Listing.function).WrittenKind(2) is "Number"
 	Graded.LoopValueKind(11) is "Number"
 	Graded.LoopValueKind(3) is ""
 	let begin = function.method.LoopBeginOf(position)
@@ -137,6 +148,10 @@ FieldKind(writer Number, entry InstructionEntry) Text
 	let isStruct = MlirLayout(function).IsStruct(kind) or MlirLanes(function, 0).IsPacked(kind)
 	isStruct then (member is "" then "Number" else member) else (member is "Number" then member else kind)
 MembersKind(members List(MemberEntry), name Text) Text
+	Graded.FieldKind(7, InstructionEntry(InstructionType.FieldLoad, "value", (5, 6, -1))) is "Shape"
+	Graded.FieldKind(7, InstructionEntry(InstructionType.FieldLoad, "other", (5, 6, -1))) is "Number"
+	Graded.Stored(5, "letter") is 1
+	Graded.DeclaredKind(0, "other") is "Number"
 	Graded.MembersKind(MlirFunction.Shape.members, "width") is "Number"
 	Graded.MembersKind(MlirFunction.Shape.members, "other") is ""
 	for members
@@ -144,6 +159,9 @@ MembersKind(members List(MemberEntry), name Text) Text
 			return TypeEntry.ShortName(value.typeName)
 	""
 ElementKind(container Text) Text
+	Graded.ConstantKind(VmValue.OfList(List(VmValue)), List(Text)) is "List(Number)"
+	Graded.ConstantKind(VmValue.OfList(VmValue.OfText("a"), VmValue.OfNumber(1), VmValue.OfNumber(2)), "a") is "List(Text)"
+	Lettered.KindOf(0, 5) is "Number"
 	Graded.ElementKind("List(TypeEntry)") is "TypeEntry"
 	Graded.ElementKind("Text") is "Character"
 	Graded.ElementKind("Number") is "Number"

@@ -3,11 +3,13 @@ constant Triggers = Indexing(KnownTypes(List(Text) + "Trigger", List(Scope) + Kn
 constant Inferring = TypeInference(Triggers.types, List(Scope) + KnownTypes.NoMembers)
 constant Positioned = SyntaxParser(Tokenizer("t.Position(0)").Tokens).Parse
 constant Located = Scope(List(Text) + "t", List(Text) + "Trigger")
+constant Measuring = Indexing(KnownTypes.Measured)
 IsIndexed(typeName Text, name Text, arguments Number) Boolean
 	Indexing(KnownTypes.Sample).IsIndexed("Count", "number", 1)
 	Triggers.IsIndexed("Trigger", "Position", 1)
 	Inferring.TypeOf(Positioned, Located, KnownTypes.NoMembers) is "Number"
-	Triggers.IsIndexed("Trigger", "Moved", 1) is false
+	Triggers.IsIndexed("Trigger", "Moved", 1) is false and (Triggers.IsIndexed("Trigger", "Missing", 1) is false)
+	Triggers.IsIndexed("Trigger", "Position", 2) is false and (Measuring.IsIndexed("Length", "Length", 1) is false)
 	Indexing(KnownTypes.Sample).IsIndexed("Count", "Twice", 1) is false
 	if types.MembersOf(typeName).TypeOf(name) is not ""
 		return true

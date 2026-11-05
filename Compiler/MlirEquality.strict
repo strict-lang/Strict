@@ -12,9 +12,14 @@ constant Packed = ("Pair", "Flat")
 constant Failing = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "a"), InstructionEntry.Invoke(1, ("Strict/Error", "from", "Strict/Error", "Name"), 0, -1), InstructionEntry.Binary(InstructionType.Equal, (0, 1)))))
 constant Greater = InstructionEntry.Binary(InstructionType.GreaterThan, (1, 1))
 constant Epilogue = ("    cf.br ^equal", "  ^equal:", "    return %one : f64", "  ^different:", "    return %zero : f64", "  }")
+constant Checked = ("  ^m0:", "    %t0a0 = llvm.getelementptr %pa[0] : (!llvm.ptr) -> !llvm.ptr, f64", "    %t0a0v = llvm.load %t0a0 : !llvm.ptr -> f64", "    %t0b0 = llvm.getelementptr %pb[0] : (!llvm.ptr) -> !llvm.ptr, f64", "    %t0b0v = llvm.load %t0b0 : !llvm.ptr -> f64", "    %e0 = func.call @strict_equal_number(%t0a0v, %t0b0v) : (f64, f64) -> f64", "    %s0 = arith.cmpf one, %e0, %zero : f64", "    cf.cond_br %s0, ^m1, ^different")
 Handles(entry InstructionEntry) Boolean
 	MlirEquality(Same, 2).Handles(Same.method.instructions(2))
 	MlirEquality(Same, 2).Handles(InstructionEntry.Binary(InstructionType.Equal, (0, 0, 0))) is false
+	MlirEquality(MlirKinds.Graded.function, 4).Handles(InstructionEntry.Binary(InstructionType.LessThan, (1, 2)))
+	MlirEquality(MlirKinds.Graded.function, 4).Handles(InstructionEntry.Binary(InstructionType.LessThan, (2, 1)))
+	MlirEquality(MlirPacking.Listing.function, 1).Handles(Failing.method.instructions(2))
+	MlirEquality(Failing, 2).Handles(Same.method.instructions(2))
 	let kinds = MlirKinds(function)
 	if kinds.IsText(position, entry.payload(1)) or kinds.IsText(position, entry.payload(2))
 		return true
@@ -50,6 +55,10 @@ Compared(entry InstructionEntry) Texts
 Ordered(entry InstructionEntry, kind Text) Texts
 	MlirEquality(Same, 2).Ordered(Greater, "Text").First.IndexOf("@strict_text_less(%t2r, %t2l)") > 0
 	MlirEquality(Same, 2).Ordered(Same.method.instructions(2), "Shape").Length is 1
+	MlirEquality(Same, 2).Ordered(MlirRational.Less, "Text")(0).IndexOf("q = func.call @strict_text_less(%t2l, %t2r)") > 0
+	MlirEquality(Same, 2).Compared(Greater)(2) is "    %t2q = func.call @strict_text_less(%t2r, %t2l) : (f64, f64) -> f64"
+	MlirEquality(Same, 2).Compared(Greater)(3) is "    %t2f = arith.cmpf one, %t2q, %zero : f64"
+	MlirEquality(Same, 2).Compared(Greater)(4) is "    llvm.store %t2f, %flag : i1, !llvm.ptr"
 	let memory = MlirMemory(function, position)
 	if entry.kind is InstructionType.LessThan
 		return List(Text) + memory.Called(Temp("q"), "strict_text_less", (Temp("l"), Temp("r")))
@@ -59,6 +68,8 @@ Ordered(entry InstructionEntry, kind Text) Texts
 Operand(register Number, suffix Text, compared Text) Texts
 	MlirEquality(Same, 2).Operand(1, "l", "Shape") is ("    %t2l = llvm.load %r1 : !llvm.ptr -> f64")
 	MlirEquality(Same, 2).Operand(1, "l", "Pair").Last.IndexOf("@strict_two_from_list(%t2lc)") > 0
+	MlirEquality(Same, 2).Operand(1, "l", "Pair")(0) is "    %t2lc = llvm.load %r1 : !llvm.ptr -> f64"
+	MlirEquality(Same, 2).Operand(1, "l", "Flat")(1).IndexOf("@strict_flat_from_list(%t2lc)") > 0
 	let kind = MlirLayout(function).Represented(MlirKinds(function).KindOf(position, register))
 	let loaded = function.Load(Temp(suffix + "c"), "%r" + register)
 	let converter = compared is "Pair" then "strict_two_from_list" else "strict_flat_from_list"
@@ -71,6 +82,7 @@ Call(kind Text, result Text, left Text, right Text) Texts
 	MlirEquality(Same, 2).Call("Shape", "%q", "%l", "%r").First.IndexOf("@strict_equal_Shape(%l, %r)") > 0
 	MlirEquality(Same, 2).Call("List(Text)", "%q", "%l", "%r").Length is 2
 	MlirEquality(Same, 2).Call("List(Text, Shape)", "%q", "%l", "%r").Last.IndexOf("pair_equal(%l, %r, %qk") > 0
+	MlirEquality(Same, 2).Call("List(Text)", "q", "l", "r")(0).StartsWith("    qe = func.constant @strict_text_equal")
 	let memory = MlirMemory(function, position)
 	if kind.StartsWith("List(") is false
 		return List(Text) + memory.Called(result, Helper(kind), (left, right))
@@ -82,6 +94,9 @@ Call(kind Text, result Text, left Text, right Text) Texts
 Paired(kind Text, result Text, left Text, right Text) Texts
 	MlirEquality(Same, 2).Paired("List(List(Text, Shape))", "%q", "%l", "%r").Last.IndexOf("pairs_equal") > 0
 	MlirEquality(Same, 2).Paired("List(Text, Shape)", "%q", "%l", "%r").First.IndexOf("@strict_text_equal") > 0
+	MlirEquality(Same, 2).Paired("List(Text, Shape)", "q", "l", "r")(2).StartsWith("    q = func.call @strict_pair_")
+	MlirEquality(Same, 2).Paired("List(Text, Shape)", "q", "l", "r")(2).IndexOf("_equal(l, r, qk, qv)") > 0
+	MlirEquality(Same, 2).Paired("List(Text, Shape)", "q", "l", "r")(0).StartsWith("    qk =")
 	let layout = MlirLayout(function)
 	let pair = layout.Paired(kind)
 	let memory = MlirMemory(function, position)
@@ -105,12 +120,20 @@ Helper(kind Text) Text
 Named(kind Text) Text
 	MlirEquality(Same, 2).Named("Flat") is "strict_flat_equal"
 	MlirEquality(Same, 2).Named("Shape") is ""
+	MlirEquality(Same, 2).Named("Pair") is "strict_two_equal"
+	MlirEquality(Same, 2).Paired("List(Text, Shape)", "q", "l", "r")(1).StartsWith("    qv =")
+	MlirEquality(Same, 2).Helper("List(Shape)") is "strict_list_equal_number"
+	MlirEquality(Same, 2).Handles(Greater) is false
+	MlirEquality(Failing, 2).ComparedKind(MlirKinds.Graded.function.method.instructions(4), true) is "Error"
+	MlirEquality(MlirFlats.Sample.function, 1).ComparedKind(MlirRational.Less, false) is "Flat"
 	if kind is in Packed
 		return kind is "Pair" then "strict_two_equal" else "strict_flat_equal"
 	kind is in ("Text", "File", "Error") then (kind is "Error" then "strict_error_equal" else "strict_text_equal") else ""
 IsKnown(kind Text) Boolean
 	MlirEquality(Same, 2).IsKnown("Shape")
 	MlirEquality(Same, 2).IsKnown("Number") is false
+	MlirEquality(MlirLayout.Wrapping.function, 0).IsKnown("Scaled") is false
+	MlirEquality(Same, 2).IsKnown("Range") is false
 	if MlirLayout(function).IsStruct(kind) is false
 		return false
 	for function.types
@@ -119,10 +142,20 @@ IsKnown(kind Text) Boolean
 	false
 Symbol(name Text) Text
 	MlirEquality(Same, 2).Symbol("Iterator(Number)") is "Iterator_Number_"
+	MlirEquality(Same, 2).Symbol("List(Text, Shape)") is "List_Text_Shape_"
+	MlirEquality(MlirFlats.Sample.function, 1).ComparedKind(InstructionEntry.Binary(Greater.kind, (1, 0)), false) is "Flat"
+	MlirEquality(MlirFlats.Sample.function, 1).Operand(0, "l", "Flat") is ("    %t1l = llvm.load %r0 : !llvm.ptr -> f64")
+	MlirEquality(Same, 2).Call("List(Text)", "q", "l", "r")(1).StartsWith("    q = func.call @strict_list_equal(l, r, qe)")
+	MlirEquality(Same, 2).Compared(MlirWholeStatements.Less)(5) is "    %t2d = arith.uitofp %t2f : i1 to f64"
+	MlirEquality(Same, 2).Compared(MlirFiltering.Kept.instructions(5))(3).IndexOf(" oeq,") > 0
+	MlirEquality(MlirKinds.Lettered.function, 2).Operand(1, "", "Text")(1).IndexOf("@strict_character_text(%t2c)") > 0
+	MlirEquality(MlirKinds.Lettered.function, 2).Operand(1, "l", "Shape") is MlirEquality(Same, 2).Operand(1, "l", "Shape")
+	MlirEquality(Same, 2).Operand(1, "l", "Text") is MlirEquality(Same, 2).Operand(1, "l", "Shape")
 	name.Replace("(", "_").Replace(")", "_").Replace(", ", "_")
 Functions Texts
 	MlirEquality(Same, 0).Functions.Length is 27
 	MlirEquality(MlirFunction(Same.types + MlirFunction.Shape, MlirFunction.Shape, Same.method), 0).Functions.Length is 27
+	MlirEquality(MlirLayout.Wrapping.function, 0).Functions.Length is 27
 	mutable lines = List(Mutable(Text))
 	mutable symbols = List(Mutable(Text))
 	for function.types
@@ -135,6 +168,8 @@ Function(type TypeEntry) Texts
 	MlirEquality(Same, 0).Function(MlirFunction.Shape).First.StartsWith("  func.func private @strict_equal_Shape(")
 	Text.Combine(MlirEquality(MlirEmbedded.Boxer, 0).Function(MlirEmbedded.Boxed)).IndexOf("%pa[2]") > 0
 	Text.Combine(MlirEquality(MlirEmbedded.Boxer, 0).Function(MlirEmbedded.Boxed)).IndexOf("@strict_bits(%t0a0)") > 0
+	MlirEquality(Same, 0).Function(Same.type)(20) is "  ^m1:"
+	MlirEquality(Same, 0).Member(MlirFunction.Shape, MlirFunction.Shape.members.First, 0) is Checked
 	let stored = MlirInstances(function, 0).Stored(type)
 	let name = Symbol(TypeEntry.ShortName(type.Name))
 	let header = "  func.func private @strict_equal_" + name + "(%a: f64, %b: f64) -> f64 {"
@@ -157,4 +192,8 @@ Member(owner TypeEntry, member MemberEntry, slot Number) Texts
 	List(Text) + ("  ^m" + slot + ":") + first + second + compared + check + next
 Temp(suffix Text) Text
 	MlirEquality(Same, 2).Temp("q") is "%t2q"
+	MlirEquality(Same, 2).Compared(Built)(0) is "unsupported: Text operator " + Built.kind + " in Shape_Run_0"
+	MlirEquality(Same, 2).Ordered(Built, "Shape")(0).IndexOf("q = func.call @strict_equal_Shape(%t2l, %t2r)") > 0
+	MlirEquality(Same, 2).Compared(Greater)(0) is "    %t2l = llvm.load %r1 : !llvm.ptr -> f64"
+	MlirEquality(Same, 2).Compared(Greater)(1) is "    %t2r = llvm.load %r1 : !llvm.ptr -> f64"
 	"%t" + position + suffix

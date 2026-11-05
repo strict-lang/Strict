@@ -2,8 +2,8 @@ has fullName Text
 has lines Texts
 has inference Expressions/TypeInference
 has typeNames Texts
+has isOptimizing Boolean = true
 constant NoTypes = ValueCodegen.NoTypes
-constant Sized = TypeCodegen("Strict/Size", ("Width Number", "Height Number"), NoTypes, List(Text))
 constant Hello = TypeCodegen("Strict/HelloLogger", ("has logger", "Run", "\tlogger.Log(\"Hi\")"), NoTypes, List(Text))
 constant Limit = TypeCodegen("Strict/Limit", ("constant limit = 10", "Run Number", "\tlimit"), NoTypes, List(Text))
 constant Iterating = TypeCodegen("Strict/Size", ("has Width Number", "for Iterator(Number)", "\tfor Width", "\t\tindex"), NoTypes, List(Text))
@@ -15,19 +15,25 @@ constant Leveled = TypeCodegen("Strict/L", ("has level = Fast", "constant Fast =
 constant Rebuilt = SyntaxParser(Tokenizer("Greeter(Greeter(\"a\"), text = \"b\")").Tokens).Parse
 Entry Slow(TypeEntry)
 	Hello.Entry is TypeEntry.HelloLogger
+	ConstantMethods.Counting.Methods(List(Text)).Length is 2
+	Specialization.Coding.Methods(List(Text) + Specialization.Halving).Length is 1
 	TypeEntry(Generator.target.TypeName, Members, Methods(List(Text)))
 Selected(names Texts) Slow(TypeEntry)
 	Limit.Selected("Run").Name is "Strict/Limit"
 	Limit.Selected("Missing").methods.Length is 0
 	Limit.Selected(List(Text)).methods.Length is 0
-	Sized.Selected(List(Text)).methods.Length is 2
+	Limit.Selected("Run").methods.Length is 1
+	Limit.Selected(("to Number")).methods.Length is 0
+	TypeCodegen("Strict/S", ("W Number", "H Number"), NoTypes, List(Text)).Selected(List(Text)).methods.Length is 2
 	TypeCodegen("Strict/B", ("Not Boolean", "\ttrue"), NoTypes, List(Text)).Selected(List(Text)).methods.Length is 0
 	let membersOnly = (names.Length is 0) and (TypeShape(lines).IsTrait is false)
 	TypeEntry(fullName, Members, (membersOnly then List(MethodEntry) else Methods(names)))
 Generator ValueCodegen
 	Limit.Generator.target.TypeName is "Limit"
+	TypeCodegen("S/List(Number)", ("has x Generic"), NoTypes, List(Text)).Members.First.typeName is "Strict/Number"
+	Leveled.Member(HeaderTokens("has", "x", "Fast"), 0).typeName is "Strict/Fast"
 	let target = CallTarget(inference.types, TypeShape(lines), fullName, typeNames)
-	ValueCodegen(inference, inference.types.MethodsOf(target.TypeName), target)
+	ValueCodegen(inference, inference.types.MethodsOf(target.TypeName), target, isOptimizing)
 Members Slow(List(MemberEntry))
 	Limit.Members.First.initial.First.payload is (1, 10, 0)
 	Leveled.Members.First.typeName is "Strict/Text"
@@ -73,6 +79,8 @@ Initial(node SyntaxNode) List(InstructionEntry)
 Methods(names Texts) List(MethodEntry)
 	Limit.Methods(List(Text)).First.instructions.Length is 2
 	Texted.Methods(("to Text")).Length is 1
+	Limit.Methods(List(Text)).First.Name is "Run"
+	Texted.Methods(("to")).Length is 1
 	mutable methods = List(Mutable(MethodEntry))
 	for lines
 		if TypeShape(lines).IsMethodHeader(value)
@@ -95,21 +103,31 @@ Method(start Number) Slow(MethodEntry)
 	let optimized = LoadReuse(ChangedInstance(generator, header.tokens(0)).Kept(code).instructions).Optimized
 	MethodEntry(header.tokens(0), Parameters(header), returnType, optimized)
 Declared(header HeaderTokens) Text
+	Hello.Declared(HeaderTokens(Tokenizer("Run Slow(Number)").Tokens)) is "Slow(Strict/Number)"
+	Created.Declared(HeaderTokens(Tokenizer("from(b Number)").Tokens)) is "Strict/C"
+	Hello.Member(HeaderTokens("constant", "Add"), 0).IsConstant
 	let result = header.tokens(0) is "from" then Generator.target.TypeName else Concrete(Returned(header))
 	let full = Generator.target.FullName(result)
 	header.ReturnsSlow then "Slow(" + full + ")" else full
 MethodScope(header HeaderTokens, target CallTarget) Scope
 	Hello.MethodScope(HeaderTokens("Run"), Hello.Generator.target).TypeOf(CodeBlock.ErrorMarker) is "Run"
+	TypeCodegen("S/C", ("Run(a = 0 with value > 0)", "\ta"), NoTypes, List(Text)).Method(0).instructions.First.line is 1
 	let declared = Instantiation(inference.types).Members(target.TypeName, target.shape.MemberScope)
 	let members = MethodBodies(target.TypeName, target.shape, inference).HeaderScope(header, declared)
 	members.With(CodeBlock.ErrorMarker, header.tokens(0))
 BodyType(header HeaderTokens) Text
 	Iterating.BodyType(HeaderTokens("for", "Iterator", "(", "Number", ")")) is "Numbers"
 	Hello.BodyType(HeaderTokens("Run", "Number")) is "Number"
+	TypeCodegen("Strict/List(Number)", List(Text), NoTypes, List(Text)).Concrete("Generic") is "Number"
+	TypeCodegen("Strict/List(Number)", List(Text), NoTypes, List(Text)).Concrete("Text") is "Text"
 	let returnType = Returned(header)
 	Concrete(returnType.StartsWith("Iterator(") then inference.types.ElementType(returnType) + "s" else returnType)
 Returned(header HeaderTokens) Text
 	Hello.Returned(HeaderTokens("Run", "Number")) is "Number"
+	TypeCodegen("S/A(B)", List(Text), NoTypes, List(Text)).Returned(HeaderTokens("x", "A")) is "y"
+	TypeCodegen("S/A(B)", List(Text), NoTypes, List(Text)).Returned(HeaderTokens("x", "B")) is "B"
+	TypeCodegen("S/A", List(Text), NoTypes, List(Text)).Returned(HeaderTokens("x", "A")) is "A"
+	TypeCodegen("S/A", List(Text), NoTypes, List(Text)).Returned(HeaderTokens("x", "=")) is "y"
 	let returned = header.ReturnType
 	let name = Generator.target.TypeName
 	let isTemplate = (returned is inference.types.BaseName(name)) and (name.IndexOf("(") > 0)

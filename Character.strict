@@ -2,6 +2,11 @@ has number
 constant zeroCharacter = 48
 constant NewLine = Character(10)
 constant Tab = Character(9)
+constant LowercaseA = 97
+constant LowercaseZ = 122
+constant UppercaseA = 65
+constant UppercaseZ = 90
+constant CaseOffset = 32
 from(text)
 	Character("b") is "b"
 	Character(9) is Tab
@@ -27,12 +32,16 @@ to Number
 Upper Character
 	Character("a").Upper is "A"
 	Character("A").Upper is "A"
-	if number is in Range(97, 123)
-		return Character(number - 32)
+	Character("z").Upper is "Z"
+	Character("{").Upper is "{"
+	if number is in Range(LowercaseA, LowercaseZ + 1)
+		return Character(number - CaseOffset)
 	value
 Lower Character
 	Character("A").Lower is "a"
 	Character("a").Lower is "a"
-	if number is in Range(65, 91)
-		return Character(number + 32)
+	Character("Z").Lower is "z"
+	Character("[").Lower is "["
+	if number is in Range(UppercaseA, UppercaseZ + 1)
+		return Character(number + CaseOffset)
 	value

@@ -3,15 +3,22 @@ has types Expressions/KnownTypes
 constant Bytes = (Scope(("Red", "Green"), ("Byte", "Byte")), Scope(List(Text) + "number", List(Text) + "Number"))
 constant Rg = MemberAverage("Strict/List(Rg)", KnownTypes(("Rg", "Byte"), Bytes, Bytes, Bytes))
 constant Averaging = ("has elements Generics", "Average Generic", "\t(1, 2, 6).Average is 3", "\tSum / Length", "Median Number")
+constant Points = (Scope(("X", "Y"), ("Number", "Number")), Scope(("Red", "Title"), ("Byte", "Text")), Bytes(1))
+constant Xy = KnownTypes(("Xy", "Named", "Byte"), Points, Points, Points)
 Element Text
 	Rg.Element is "Rg"
 	MemberAverage("Strict/Number", Rg.types).Element is ""
+	MemberAverage("Strict/List(Key, Value)", Rg.types).Element is ""
+	Rg.Replaced(("Average Generic")) is Rg.Lines
+	Rg.Replaced(("Average Generic", "Median Number")) is Rg.Lines + "Median Number"
+	Rg.Replaced(("Median Number")) is ("Median Number")
 	let start = type.IndexOf("List(")
 	let inner = start < 0 then "" else type.Substring(start + 5, type.Length - start - 6)
 	inner.IndexOf(",") >= 0 then "" else TypeEntry.ShortName(inner)
 IsAveraged Boolean
 	Rg.IsAveraged
 	MemberAverage("Strict/List(Byte)", Rg.types).IsAveraged is false
+	MemberAverage("Strict/List(Xy)", Xy).IsAveraged and (MemberAverage("Strict/List(Named)", Xy).IsAveraged is false)
 	let members = types.MembersOf(Element)
 	if (Element is "") or (members.names.Length < 2)
 		return false
@@ -33,6 +40,10 @@ Lines Texts
 	lines + ("\t" + Element + "(" + Text.Combine(Averages(members)) + ")")
 Averages(members Scope) Texts
 	Rg.Averages(Rg.types.MembersOf("Rg")) is ("Byte(sumRed / Length)", "Byte(sumGreen / Length)")
+	Rg.Averages(Xy.MembersOf("Xy")) is ("sumX / Length", "sumY / Length")
+	Rg.Replaced(Averaging).Length is 9
+	Rg.Replaced(Averaging).Slice(1, 7) is Rg.Lines
+	Rg.Replaced(("\tx", "Average Generic", "\ty")) is ("\tx") + Rg.Lines
 	for members.names
 		let average = "sum" + value + " / Length"
 		members.types(index) is "Number" then average else members.types(index) + "(" + average + ")"

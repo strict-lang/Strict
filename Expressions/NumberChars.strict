@@ -1,9 +1,0 @@
-has line Text
-StartsWithDigit Boolean
-	NumberChars("42").StartsWithDigit
-	NumberChars("-1").StartsWithDigit
-	NumberChars("x").StartsWithDigit is false
-	NumberChars("").StartsWithDigit is false
-	if line is ""
-		return false
-	line.Substring(0, 1) is in ("-", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9")

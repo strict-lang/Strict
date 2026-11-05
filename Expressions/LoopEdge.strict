@@ -1,8 +1,13 @@
 has loop SyntaxNode
+constant Zero = SyntaxNode("Number", "0")
+constant One = SyntaxNode("Number", "1")
+constant Index = SyntaxNode("Identifier", "index")
+constant Count = SyntaxNode("Identifier", "count")
 constant Sigmas = LoopEdge(BodyParser(("Run", "\tfor steps + 1", "\t\tindex is steps then 0 else index")).Block(1, 1).children.First)
 constant Joining = LoopEdge(BodyParser(("Run", "\tfor texts", "\t\t(index is 0 then \"\" else \", \") + value")).Block(1, 1).children.First)
 constant Nested = BodyParser(("Run", "\tfor 2", "\t\tfor 3", "\t\t\tindex is 0 then 1 else 2")).Block(1, 1)
 Found(node SyntaxNode) SyntaxNode
+	Sigmas.Found(SyntaxNode("Binary", "+", (Count, SyntaxNode("Binary", "is", (Index, Zero))))) to Text is "index is 0"
 	Sigmas.Found(Sigmas.loop.children.Last) to Text is "index is steps"
 	Joining.Found(Joining.loop.children.Last) to Text is "index is 0"
 	Sigmas.Found(SyntaxNode("Identifier", "index")).Kind is "Missing"
@@ -15,10 +20,22 @@ Found(node SyntaxNode) SyntaxNode
 			return Found(value)
 	SyntaxNode("Missing", "")
 IsFirst(edge SyntaxNode) Boolean
+	Sigmas.Found(SyntaxNode("Member", "is", (Index, Zero))).Kind is "Missing"
+	Sigmas.Found(SyntaxNode("Binary", "+", (Index, Zero))).Kind is "Missing"
+	Sigmas.Found(SyntaxNode("Binary", "is", (Count, Zero))).Kind is "Missing"
+	Sigmas.Found(SyntaxNode("Binary", "is", (Index, Count))).Kind is "Missing"
+	LoopEdge(SyntaxNode("For", "", (SyntaxNode("Call", "Range", (Count))))).Lasts.Length is 2
+	LoopEdge(SyntaxNode("For", "", (SyntaxNode("Member", "+", (Count, One))))).Lasts.Length is 2
+	LoopEdge(SyntaxNode("For", "", (SyntaxNode("Binary", "-", (Count, One))))).Lasts.Length is 2
+	LoopEdge(SyntaxNode("For", "", (SyntaxNode("Binary", "+", (Count, Count))))).Lasts.Length is 2
+	LoopEdge(SyntaxNode("For", "", (SyntaxNode("Member", "Range", (One, Count))))).Lasts.Length is 2
 	Joining.IsFirst(Joining.Found(Joining.loop.children.Last))
 	Sigmas.IsFirst(Sigmas.Found(Sigmas.loop.children.Last)) is false
 	edge.children(1) to Text is "0"
 Lasts Texts
+	Sigmas.Lasts is ("steps + 1 - 1", "steps + 1.Length - 1", "steps")
+	LoopEdge(SyntaxNode("For", "", (SyntaxNode("Call", "Range", (One, Count))))).Lasts.Last is "count - 1"
+	LoopEdge(SyntaxNode("For", "", (SyntaxNode("Call", "Add", (One, Count))))).Lasts.Length is 2
 	Sigmas.Lasts.Last is "steps"
 	let iterable = loop.children(0)
 	let named = iterable to Text

@@ -27,6 +27,9 @@ Arranged(call SyntaxNode, block CodeBlock) Slow(SyntaxNode)
 	let names = values.target.FromNames(call.text)
 	Last(call, names) < positional then call else Filled(call, names, positional)
 IsConstructor(call SyntaxNode) Boolean
+	Parts.IsConstructor(Parts.Parsed("Part")) is false
+	Parts.Arranged(Parts.Parsed("Part(Part(1), mask = 3)"), CodeBlock.Empty) to Text is "Part(Part(1), mask = 3)"
+	Parts.Arranged(Parts.Parsed("Missing(1)"), CodeBlock.Empty) to Text is "Missing(1)"
 	Parts.IsConstructor(Masked)
 	Parts.IsConstructor(SyntaxParser(Tokenizer("Missing(1)").Tokens).Parse) is false
 	let isOwnMethod = values.target.Header(call.text).tokens.Length > 0
@@ -38,6 +41,10 @@ Filled(call SyntaxNode, names Texts, positional Number) SyntaxNode
 		arguments.Add(Argument(call, names(value), value < positional then value else -1))
 	SyntaxNode("Call", call.text, arguments, call.line)
 Positional(call SyntaxNode) Number
+	Parts.Last(SyntaxNode("Call", "Part"), ("light", "mask")) is 1
+	Parts.Last(SyntaxNode("Call", "Part"), ("light", "buffer", "mask")) is 0
+	Parts.Last(Parts.Parsed("Part(mask = 3)"), ("light", "buffer")) is -1
+	Parts.Last(Parts.Parsed("Part(1, )"), ("buffer", "light", "mask")) is 0
 	Parts.Positional(Masked) is 1
 	for call.children
 		if value.Kind is in ("Reassignment", "Missing")
@@ -74,6 +81,7 @@ Argument(call SyntaxNode, name Text, position Number) SyntaxNode
 	let fallback = Fallback(call.text, name)
 	fallback is "" then SyntaxNode("Identifier", name) else Qualified(call.text, fallback)
 Defaulted(call SyntaxNode, owner Text, start Number) SyntaxNode
+	Shined.Defaulted(Parts.Parsed("Shine(1)"), "Part", 1) to Text is "Shine(1, 0, Curve.Flat)"
 	Shined.Defaulted(SyntaxParser(Tokenizer("Shine(1)").Tokens).Parse, "Part", 0) to Text is "Shine(1, Curve.Flat)"
 	Parts.Defaulted(Masked, "Part", 0) to Text is "Part(1, mask = 3)"
 	let given = call.children.Length - start
@@ -86,6 +94,8 @@ Defaulted(call SyntaxNode, owner Text, start Number) SyntaxNode
 		children = children + Qualified(owner, Fallback(owner, call.text + " " + names(value)))
 	SyntaxNode(call.Kind, call.text, children, call.line)
 Computed(method Text, owner Text, names Texts, given Number) Number
+	Shined.Computed("Shine", "Part", ("light", "mask"), 2) is -1
+	Shined.Computed("Shine", "Part", ("mask", "light"), 0) is 0
 	Shined.Computed("Shine", "Part", ("light", "mask"), 0) is 1
 	Shined.Computed("Shine", "Part", List(Text) + "light", 0) is -1
 	mutable last = -1
@@ -94,10 +104,12 @@ Computed(method Text, owner Text, names Texts, given Number) Number
 			last = index
 	last
 Fallback(owner Text, key Text) Text
+	Parts.IsComputed("Part", "buffer") is false
 	Shined.Fallback("Part", "Shine mask") is "Curve.Flat"
 	Parts.Fallback("Part", "light") is "0"
 	values.inference.types.ParameterScope(owner).TypeOf(key + " default")
 Qualified(owner Text, fallback Text) SyntaxNode
+	Lit.Qualified("Part", "Light(1)") to Text is "Light(1)"
 	Shined.Qualified("Part", "Curve.Flat").Kind is "Member"
 	Lit.Qualified("Part", "Light") to Text is "Part.Light"
 	Lit.Qualified("Part", "Dark") to Text is "Dark"

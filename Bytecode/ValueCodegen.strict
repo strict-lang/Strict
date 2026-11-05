@@ -1,6 +1,7 @@
 has inference Expressions/TypeInference
 has methods Expressions/Scope
 has target CallTarget
+has isOptimizing Boolean = true
 constant NoNode = SyntaxNode("Identifier", "x")
 constant NewGreeter = SyntaxNode("Call", "Greeter")
 constant GreeterText = SyntaxNode("Member", "text", NewGreeter)
@@ -8,12 +9,16 @@ constant One = SyntaxNode("Number", "1")
 constant Hi = SyntaxNode("Text", "\"Hi\"")
 constant Ones = SyntaxNode("List", "", (One, One))
 constant ToText = SyntaxNode("Binary", "to", (NoNode, SyntaxNode("Identifier", "Text")))
-constant AddOne = SyntaxNode("MethodCall", "Add", (SyntaxNode("Identifier", "values"), One))
-constant RemoveOne = SyntaxNode("MethodCall", "Remove", (SyntaxNode("Identifier", "values"), One))
+constant Edits = (SyntaxNode("MethodCall", "Add", (SyntaxNode("Identifier", "values"), One)), SyntaxNode("MethodCall", "Remove", (SyntaxNode("Identifier", "values"), One)))
 constant NoTypes = TypeInference(CallTarget.Plain.types, CallTarget.NoScopes)
 constant OwnA = ValueCodegen(NoTypes, Scope(("A", "limits"), ("Text", "Numbers")), CallTarget.Plain)
 constant Plain = ValueCodegen(NoTypes, Scope(("Greet", "Run"), ("Text", "None")), CallTarget.Plain)
 Expression(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Leaf(NoNode, CodeBlock.Empty.Declare("value", "A").Declare("outer", "A")).instructions(1).texts(0) is "x"
+	Plain.Leaf(NoNode, CodeBlock.Empty.Declare("x", "A").Declare("value", "A").Declare("outer", "A")).Result is 0
+	Plain.Variable(SyntaxNode("Identifier", "a"), CodeBlock.Empty).instructions.Length is 1
+	Plain.Variable(SyntaxNode("Identifier", "B"), CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
+	Plain.Leaf(SyntaxParser("Numbers").Parse, CodeBlock.Empty.Declare("Numbers", "A")).instructions(0).texts is ("Numbers")
 	Plain.Expression(SyntaxNode("Identifier", "a"), CodeBlock.Empty).register is 1
 	Plain.Expression(SyntaxNode("Binary", "+", (NoNode, NoNode)), CodeBlock.Empty).Result is 2
 	Plain.Expression(SyntaxNode("Binary", "+", (One, One)), CodeBlock.Empty).instructions(0).payload is (0, 1, 2)
@@ -35,8 +40,15 @@ Variable(node SyntaxNode, block CodeBlock) CodeBlock
 		return TypeValue(node, block)
 	block.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, node.text))
 TypeValue(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Call(Edits(0), CodeBlock.Empty.Declare("values", "Numbers")).instructions.Last.kind is not InstructionType.Invoke
+	Plain.Call(SyntaxNode("Call", "text", One), CodeBlock.Empty).instructions.Last.kind is not InstructionType.Invoke
+	Plain.Call(SyntaxNode("Call", "Greeter", Hi), CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
+	Plain.Call(Edits(0), CodeBlock.Empty.Declare("values", "Number")).instructions.Last.kind is InstructionType.Invoke
+	Plain.InstanceCall(SyntaxNode("Not", "not", NoNode), CodeBlock.Empty).instructions.Last.texts(1) is "not"
 	Plain.TypeValue(SyntaxNode("Identifier", "Numbers"), CodeBlock.Empty).instructions(0).payload is (0, 6, -1, 0)
 	Plain.TypeValue(SyntaxNode("Identifier", "B"), CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
+	Plain.Leaf(Ones, CodeBlock.Empty) is Plain.Elements.Of(Ones, CodeBlock.Empty)
+	Plain.Leaf(SyntaxNode("Boolean", "false"), CodeBlock.Empty).instructions(0).payload is (0, 5, 0)
 	if inference.types.IsPlural(node.text)
 		return Elements.Empty(node.text, block)
 	Call(SyntaxNode("Call", node.text, List(SyntaxNode), node.line), block)
@@ -67,9 +79,11 @@ Call(node SyntaxNode, block CodeBlock) CodeBlock
 	let isListVariable = (first.Kind is "Identifier") and inference.types.IsPlural(TypeOf(first, block))
 	(node.text is in ("Add", "Remove")) and isListVariable then Elements.Added(node, block) else InstanceCall(node, block)
 Constructed(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Constructed(SyntaxNode("Call", "Dictionary", (One, One)), CodeBlock.Empty) is Plain.Leaf(Ones, CodeBlock.Empty)
 	Plain.Constructed(SyntaxNode("Call", "List", One), CodeBlock.Empty).instructions(0).payload is (0, 6, -1, 0)
 	Plain.Constructed(SyntaxNode("Call", "Dictionary"), CodeBlock.Empty).instructions(0).payload is (0, 6, -1, 0)
 	Plain.Constructed(SyntaxNode("Call", "Mutable", One), CodeBlock.Empty).instructions(0).payload is (0, 1, 1)
+	Plain.Constructed(SyntaxNode("Call", "Dictionary", One), CodeBlock.Empty).instructions(0).payload is not (0, 6, -1, 0)
 	if node.text is in ("Mutable", "Slow")
 		return ErrorCodegen(value).Handled(node.children(0), block)
 	let isEmpty = (node.text is "List") or (node.children.Length is 0) or IsTypeName(node.children(0), block)
@@ -88,7 +102,16 @@ InstanceCall(node SyntaxNode, block CodeBlock) CodeBlock
 	let call = node.Kind is in ("Binary", "Not") then SyntaxNode("Member", method, node.children(0)) else node
 	ChangedInstance(value, call.text).Back(call, Invoke(call, instance, instance.Result, TypeOf(node, block)), block)
 Field(member Text, owner Text, block CodeBlock, instance Number) CodeBlock
+	Plain.IsMethodCall(SyntaxNode("Identifier", "Greet"), CodeBlock.Empty.Declare("Greet", "Text")) is false
+	Plain.IsMethodCall(SyntaxNode("Member", "value", NewGreeter), CodeBlock.Empty) is false
+	Plain.IsMethodCall(One, CodeBlock.Empty) is false
+	Plain.IsTypeName(SyntaxNode("Identifier", "B"), CodeBlock.Empty.Declare("B", "A")) is false
+	Plain.IsTypeName(SyntaxNode("Member", "B", NoNode), CodeBlock.Empty) is false
+	Plain.IsTypeName(SyntaxNode("Identifier", "Q"), CodeBlock.Empty) is false
+	Plain.InstanceCall(ToText, CodeBlock.Empty).instructions.Last.texts(1) is "to"
 	Plain.InstanceCall(GreeterText, CodeBlock.Empty).instructions(2).texts is ("text", "Greeter")
+	Plain.IsMethodCall(SyntaxNode("Binary", "+", (One, One)), CodeBlock.Empty)
+	Plain.IsMethodCall(NewGreeter, CodeBlock.Empty)
 	block.Load(InstructionEntry(InstructionType.FieldLoad, (member, owner), (block.register, instance, -1, -2)))
 IsMethodCall(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsMethodCall(SyntaxNode("Identifier", "Greet"), CodeBlock.Empty)
@@ -119,6 +142,7 @@ IsTypeName(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsTypeName(SyntaxNode("Identifier", "B"), CodeBlock.Empty)
 	Plain.IsTypeName(NoNode, CodeBlock.Empty) is false
 	Plain.IsTypeName(SyntaxNode("Type", "Run"), CodeBlock.Empty)
+	Plain.IsTypeName(SyntaxNode("Member", "Text", NoNode), CodeBlock.Empty) is false
 	if node.Kind is "Type"
 		return true
 	let isFree = (block.scope.TypeOf(node.text) is "") and (inference.ConstantOf(target.TypeName, node.text) is "")
@@ -137,11 +161,16 @@ Invoke(node SyntaxNode, block CodeBlock, instance Number, returnType Text) CodeB
 		arguments.Add(result.Result)
 	result.Load(InstructionEntry.Invoke(result.register, signature, arguments, instance))
 ArgumentStart(node SyntaxNode) Number
+	Plain.Owner(SyntaxNode("Call", "B"), CodeBlock.Empty) is "B"
+	Plain.Owner(SyntaxNode("Call", "Missing"), CodeBlock.Empty) is "Greeter"
+	Plain.Invoke(SyntaxNode("Call", "Greeter", Hi), CodeBlock.Empty, -1, "Greeter").instructions.Last.payload.Length is 9
+	Plain.InstanceCall(SyntaxNode("Member", "index", NoNode), CodeBlock.Empty).instructions(0).texts is ("x")
 	Plain.ArgumentStart(GreeterText) is 1
 	node.Kind is in ("Member", "MethodCall") then 1 else 0
 Owner(node SyntaxNode, block CodeBlock) Text
 	Plain.Owner(SyntaxNode("Call", "Greet"), CodeBlock.Empty) is "Greeter"
 	OwnA.Owner(SyntaxNode("Call", "A"), CodeBlock.Empty) is "Greeter"
+	Plain.Owner(SyntaxNode("Member", "Length", Hi), CodeBlock.Empty) is "Text"
 	if node.Kind is in ("Member", "MethodCall")
 		return TypeOf(node.children(0), block)
 	let isOwnMethod = methods.TypeOf(node.text) is not ""
@@ -150,8 +179,17 @@ Owner(node SyntaxNode, block CodeBlock) Text
 		return instance.StartsWith(node.text + "(") then instance else node.text
 	target.TypeName
 Elements ListCodegen
+	Plain.Variable(SyntaxNode("Identifier", "Error"), CodeBlock.Empty.Declare("Error", "Text")).instructions.Length is 1
+	Plain.Call(SyntaxNode("Call", "Greeter", Hi), CodeBlock.Empty).instructions.Length is 2
+	Plain.Constructed(SyntaxNode("Call", "Greeter", Hi), CodeBlock.Empty).instructions.Length is 1
+	Plain.Call(Edits(0), CodeBlock.Empty.Declare("values", "Numbers")).instructions.Last.texts is ("values")
+	Plain.Call(Edits(0), CodeBlock.Empty.Declare("values", "Number")).instructions.Last.texts(1) is "Add"
+	Plain.InstanceCall(SyntaxParser("outer", ".", "x").Parse, CodeBlock.Empty).instructions(0).texts(0) is "outer"
+	Plain.InstanceCall(SyntaxNode("Not", "index", SyntaxNode("Identifier", "outer")), CodeBlock.Empty).Result is 1
+	Plain.Replacing(SyntaxNode("Call", "Greet"), CodeBlock.Empty).instructions.Length is 1
 	Plain.Elements.values.target.TypeName is "Greeter"
-	ListCodegen(ValueCodegen(inference, methods, target))
+	ListCodegen(ValueCodegen(inference, methods, target, isOptimizing))
 TypeOf(node SyntaxNode, block CodeBlock) Text
+	Plain.Call(SyntaxNode("MethodCall", "Add", (Ones, One)), CodeBlock.Empty).instructions.Last.texts(1) is "Add"
 	Plain.TypeOf(SyntaxNode("Number", "1"), CodeBlock.Empty) is "Number"
 	inference.TypeOf(node, block.scope, methods)

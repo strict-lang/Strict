@@ -14,6 +14,13 @@ constant Iterated = "for"
 constant Items = " : (f64) -> !llvm.ptr"
 Temp(suffix Text) Text
 	Doubling.Temp("ki") is "%t2ki"
+	Doubling.Checked(3) is "    %t2s = arith.constant 1.0 : f64"
+	Doubling.Checked(4) is "    %t2ok0 = arith.constant true"
+	Doubling.Checked(5) is "    %t2l_numbers = llvm.load %v_numbers : !llvm.ptr -> f64"
+	Doubling.Checked(6) is "    %t2n_numbers = func.call @strict_list_length(%t2l_numbers) : (f64) -> f64"
+	Doubling.Checked(7) is "    %t2e_numbers = arith.cmpf oge, %t2n_numbers, %t2n : f64"
+	Doubling.Counted(4) is "    %t2m = arith.cmpi slt, %t2ki, %t2ni : i64"
+	Doubling.Counted(5) is "    cf.cond_br %t2m, ^loop2body, ^loop2exit"
 	"%t" + position + suffix
 Checked Texts
 	Doubling.Checked.Last is "    %t2ok1 = arith.andi %t2ok0, %t2e_numbers : i1"
@@ -42,9 +49,17 @@ Enough(source Text) Texts
 	(function.Load(offset, "%v_" + shift), whole, needed) + checks + combined
 Compared(name Text, left Text, right Text) Text
 	Doubling.Compared("e", "%a", "%b") is "    %t2e = arith.cmpf oge, %a, %b : f64"
+	Squaring.Enough("input").First is "    %t2o_input = llvm.load %v_start : !llvm.ptr -> f64"
+	Squaring.Enough("input").Index("    %t2oi_input = arith.fptosi %t2o_input : f64 to i64") is 1
+	Squaring.Enough("input").Index("    %t2w_input = arith.addf %t2n, %t2o_input : f64") is 2
+	Squaring.Enough("input").Index("    %t2g_input = arith.cmpf oge, %t2n_input, %t2w_input : f64") is 3
+	Squaring.Enough("input").Index("    %t2p_input = arith.cmpf oge, %t2w_input, %t2n : f64") is 4
 	"    " + Temp(name) + " = arith.cmpf oge, " + left + ", " + right + " : f64"
 Joined(name Text, left Text, right Text) Text
 	Doubling.Joined("ok1", "%a", "%b") is "    %t2ok1 = arith.andi %a, %b : i1"
+	Doubling.Emitted(4).Last is "    llvm.store %t4x, %r2 : f64, !llvm.ptr"
+	Doubling.Emitted(7).First is "    %t7e = llvm.load %r4 : !llvm.ptr -> f64"
+	Doubling.Emitted(7).Index("    %t7p = llvm.getelementptr %t2ri[%t2ki] : (!llvm.ptr, i64) -> !llvm.ptr, f64") is 1
 	"    " + Temp(name) + " = arith.andi " + left + ", " + right + " : i1"
 Started Texts
 	Doubling.Started.First is "  ^loop2fast:"
@@ -61,6 +76,10 @@ Started Texts
 	lines + saved + loops.Outered + (loops.IsCollecting then results else List(Text))
 Counted Texts
 	Doubling.Counted.Last is "  ^loop2body:"
+	Doubling.Counted(0) is "    %t2ni = arith.fptosi %t2n : f64 to i64"
+	Doubling.Counted(1) is "    %t2zi = arith.constant 0 : i64"
+	Doubling.Counted(2) is "    cf.br ^loop2(%t2zi : i64)"
+	Doubling.Counted(3) is "  ^loop2(%t2ki: i64):"
 	let label = "^loop" + position
 	let whole = "    " + Temp("ni") + " = arith.fptosi " + Temp("n") + " : f64 to i64"
 	let start = ("    " + Temp("zi") + " = arith.constant 0 : i64", "    cf.br " + label + "(" + Temp("zi") + " : i64)")
@@ -69,6 +88,10 @@ Counted Texts
 	List(Text) + whole + start + ("  " + label + "(" + Temp("ki") + ": i64):") + check + branch + ("  " + label + "body:")
 Current Texts
 	Doubling.Current.Last is "    llvm.store %t2g, %v_value : f64, !llvm.ptr"
+	Doubling.Current(0) is "    %t2c = arith.sitofp %t2ki : i64 to f64"
+	Doubling.Current(1) is "    llvm.store %t2c, %v_index : f64, !llvm.ptr"
+	Doubling.Current(2) is "    %t2gp = llvm.getelementptr %t2h[%t2ki] : (!llvm.ptr, i64) -> !llvm.ptr, f64"
+	Doubling.Current(3) is "    %t2g = llvm.load %t2gp : !llvm.ptr -> f64"
 	let converted = "    " + Temp("c") + " = arith.sitofp " + Temp("ki") + " : i64 to f64"
 	let index = (converted, function.Store(Temp("c"), "%v_index"))
 	if MlirLoops(function, position).Collection is ""
@@ -77,10 +100,16 @@ Current Texts
 Copied Texts
 	Halving.Copied.First is "  ^loop2fast:"
 	Halving.Copied.Index(Halving.Checked.First) is 1
+	Doubling.Copied(10) is Doubling.Started(1) and (Doubling.Copied(20) is Doubling.Counted.First)
+	Doubling.Copied(27) is Doubling.Current.First and (Doubling.Copied(32) is Doubling.Looped.First)
+	Doubling.Copied(49) is "  ^loop2exit:" and (Doubling.Copied.Length is 53)
 	let started = Started
 	List(Text) + started.First + Checked + (started - started.First) + Counted + Current + Looped + Exited
 Looped Texts
 	Doubling.Looped.Last is "    cf.br ^loop2(%t2next : i64)"
+	Doubling.Looped(0) is "    %t3 = llvm.load %v_index : !llvm.ptr -> f64"
+	Doubling.Looped(14) is "    %t2one = arith.constant 1 : i64"
+	Doubling.Looped(15) is "    %t2next = arith.addi %t2ki, %t2one : i64"
 	mutable lines = List(Mutable(Text))
 	for Range(position + 1, function.method.LoopEndOf(position))
 		lines = lines + MlirLines(function).At(value, Temp("line")) + function.Emitted(value)
@@ -89,6 +118,9 @@ Looped Texts
 	lines + one + next + ("    cf.br ^loop" + position + "(" + Temp("next") + " : i64)")
 Exited Texts
 	Doubling.Exited.First is "  ^loop2exit:"
+	Doubling.Exited(1) is "    %t2fill = func.call @strict_list_filled_numbers(%t2r, %t2n) : (f64, f64) -> f64"
+	Doubling.Exited(2) is "    llvm.store %t2x, %v_index : f64, !llvm.ptr"
+	Doubling.Exited(3) is "    llvm.store %t2y, %v_value : f64, !llvm.ptr"
 	let loops = MlirLoops(function, function.method.LoopEndOf(position))
 	let helper = MlirParallel(function, position).Filler
 	let filled = MlirMemory(function, position).Called(Temp("fill"), helper, (Temp("r"), Temp("n")))
@@ -110,6 +142,13 @@ Emitted(at Number) Texts
 	(function.Load(element, "%r" + entry.payload(0)), address) + bytes.Stored(element, pointer)
 Widths MlirWidths
 	Doubling.Widths.position is 2
+	Doubling.Started(1) is "    %t2h = func.call @strict_list_items(%t2v) : (f64) -> !llvm.ptr"
+	Doubling.Started(3) is "    %t2h_numbers = func.call @strict_list_start(%t2l_numbers) : (f64) -> !llvm.ptr"
+	Doubling.Started(4) is "    %t2x = llvm.load %v_index : !llvm.ptr -> f64"
+	Doubling.Started(5) is "    %t2y = llvm.load %v_value : !llvm.ptr -> f64"
+	Doubling.Started(6) is "    %t2a = arith.maximumf %t2n, %zero : f64"
+	Summing.Started.Last is "    %t1y = llvm.load %v_value : !llvm.ptr -> f64"
+	Summing.Exited(1) is "    llvm.store %t1x, %v_index : f64, !llvm.ptr"
 	MlirWidths(function, position)
 IsAccumulated(at Number) Boolean
 	Summing.IsAccumulated(5)
@@ -124,6 +163,7 @@ IsAccumulated(at Number) Boolean
 	isLoaded and (next.payload(0) is entry.payload(3))
 Writer(register Number, at Number) InstructionEntry
 	Summing.Writer(3, 5).texts.First is "sum"
+	Summing.Writer(0, 5).kind is InstructionType.Add
 	for at - function.FastLoop - 1
 		let earlier = function.method.instructions(at - 1 - index)
 		if LoadReuse(function.method.instructions).Written(earlier) is register

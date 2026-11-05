@@ -3,6 +3,10 @@ has constants Texts
 constant Grid = BodyParser(("Run", "\tfor y, x in 3, 2", "\t\tlet z = Grow(y) + x")).Block(1, 1).children.First
 constant Steps = LoopNames(("value", "index", "row"), List(Text) + "Kilo")
 Of(loop SyntaxNode, known Texts, mutables Texts) LoopNames
+	LoopNames.Names(SyntaxNode("Reassignment", "=", List(SyntaxNode) + SyntaxNode("Identifier", "count"))) is ("count")
+	LoopNames.Names(StatementParser(Tokenizer("Grow(1)").Tokens).ParseStatement) is List(Text)
+	LoopNames.Names(StatementParser(Tokenizer("grow(y)").Tokens).ParseStatement) is List(Text)
+	LoopNames.Names(StatementParser(Tokenizer("list.Length").Tokens).ParseStatement) is List(Text)
 	LoopNames.Of(Grid, List(Text), List(Text) + "count").varying is ("value", "index", "y", "x", "count", "z", "y")
 	LoopNames(("value", "index") + Iterators(loop) + mutables + Names(loop.children.Last), known)
 IsInvariant(node SyntaxNode) Boolean
@@ -26,10 +30,19 @@ IsAllInvariant(nodes SyntaxNodes) Boolean
 			return false
 	true
 IsLower(name Text) Boolean
+	Steps.IsInvariant(SyntaxNode("Identifier", "Kilo"))
+	Steps.IsInvariant(SyntaxNode("Identifier", "Mega")) is false
+	Steps.IsInvariant(SyntaxNode("Identifier", "row")) is false
+	Steps.IsInvariant(StatementParser(Tokenizer("Grow(2)").Tokens).ParseStatement) is false
+	Steps.IsInvariant(StatementParser(Tokenizer("row(2)").Tokens).ParseStatement) is false
+	Steps.IsInvariant(SyntaxNode("Declaration", "let w", List(SyntaxNode) + SyntaxNode("Number", "1"))) is false
 	LoopNames.IsLower("steps")
 	LoopNames.IsLower("Steps") is false
 	name.Substring(0, 1).Lower is name.Substring(0, 1)
 HasName(node SyntaxNode) Boolean
+	LoopNames.HasName(SyntaxNode("Identifier", "a"))
+	LoopNames.HasName(StatementParser(Tokenizer("1 + a").Tokens).ParseStatement)
+	LoopNames.HasName(StatementParser(Tokenizer("1 + 2").Tokens).ParseStatement) is false
 	LoopNames.HasName(SyntaxNode("Number", "1")) is false
 	if node.Kind is "Identifier"
 		return true
@@ -38,6 +51,8 @@ HasName(node SyntaxNode) Boolean
 			return true
 	false
 Iterators(node SyntaxNode) Texts
+	LoopNames.Iterators(SyntaxNode("For", "for row, column")) is List(Text)
+	LoopNames.Iterators(SyntaxNode("For", "row in")) is List(Text)
 	LoopNames.Iterators(SyntaxNode("For", "for row, column in")) is ("row", "column")
 	let isNamed = node.text.StartsWith("for ") and node.text.EndsWith(" in")
 	isNamed then node.text.Substring(4, node.text.Length - 7).Split(", ") else List(Text)

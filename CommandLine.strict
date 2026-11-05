@@ -78,6 +78,8 @@ Following(option Text, at Number) Text
 	next.StartsWith("--") then Error("MissingValue:" + option) else next
 Lines(defaults Texts, descriptions Texts) Texts
 	CommandLine(List(Text), List(Text) + "count").Lines(List(Text) + "1", List(Text)) is ("--count 1")
+	Flags.Lines(("1", "false"), ("Outputs", "")) is ("--count 1  Outputs", "--json_output false")
+	Flags.Lines(("1", "false"), List(Text) + "Outputs") is ("--count 1  Outputs", "--json_output false")
 	for names
 		let described = (index < descriptions.Length) and (descriptions(index) is not "")
 		Spelled(value) + " " + defaults(index) + (described then "  " + descriptions(index) else "")

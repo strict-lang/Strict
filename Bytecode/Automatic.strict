@@ -9,6 +9,10 @@ constant Point = Automatic(("has X Number", "mutable Y Number", "has logger", "c
 constant Paired = Automatic(("has first Generic", "has second Generic"), "Couple(Text, Number)", Instantiation.Pairing)
 constant Bitted = Automatic(List(Text) + "has x Number with value > 0 and value.Bits is 32", "P", Instantiation.Pairing)
 constant Sized = Automatic(("has Width Number with value > 0", "has Height Number"), "Size", Instantiation.Pairing)
+constant Outer = Automatic(List(Text) + "has inner Inner", "Outer", Instantiation(Closeness.Nested.types))
+constant Completing = Greeter.Completed(TypeCodegen.Hello, TypeEntry.HelloLogger, Wanted)
+constant Hashable = Greeter.Completed(TypeCodegen.Hello, TypeEntry.HelloLogger, List(Text) + "Strict/HelloLogger.to HashCode")
+constant Coding = Automatic(("has a Number", "Codes(b Number) Number", "\tb"), "C", Instantiation.Pairing)
 Lines(names Texts) Texts
 	Point.Lines(List(Text)) is Point.lines
 	Point.Lines(Names).Length is 12
@@ -25,6 +29,7 @@ Lines(names Texts) Texts
 Generated(name Text) Texts
 	Point.Generated("to HashCode").First is "to HashCode"
 	Sized.Generated("Validated").Last is "\tvalue"
+	Point.Generated("Code").First is "Code Text"
 	if name is "Members"
 		return List(Text) + "Members Variables" + Described
 	if name is in ("to HashCode", "Code")
@@ -35,6 +40,9 @@ Generated(name Text) Texts
 Closed Texts
 	Point.Closed.First is "IsNearlyEqual(other Point) Boolean"
 	Point.Closed.Last is "\ttestEqual0"
+	Point.Closed(1) is "\tmutable testEqual0 = true"
+	Outer.instantiation is Instantiation(Closeness.Nested.types) and (Outer.lines is ("has inner Inner"))
+	Outer.Closed(2) is "\tlet testEqual0x0 = inner.IsNearlyEqual(other.inner)"
 	Point.Lines(List(Text) + "IsNearlyEqual").Index("IsNearlyEqual(other Point) Boolean") is 6
 	mutable closed = List(Text) + ("IsNearlyEqual(other " + instance + ") Boolean")
 	for Closeness(instantiation.types).Fields("", "other", instance, "0", List(Text) + instance)
@@ -57,6 +65,7 @@ IsWanted(name Text, names Texts) Boolean
 	Point.IsWanted("Members", List(Text)) is false
 	Automatic(List(Text) + "has text", "Name", Instantiation.Pairing).IsWanted("to HashCode", Names)
 	Automatic(("has red Number with value >= 0", "has alpha = 1"), "T", Instantiation.Pairing).IsWanted("Validated", Names)
+	Coding.IsWanted("Code", Names) and (Coding.IsWanted("Codes", List(Text) + "Codes") is false)
 	if (name is not in names) or ((name is "Validated") and (Constraint.IsConstrained(lines) is false))
 		return false
 	for lines
@@ -126,6 +135,7 @@ Header(line Text) HeaderTokens
 Completed(main TypeCodegen, entry TypeEntry, targets Texts) TypeEntry
 	Greeter.Completed(TypeCodegen.Hello, TypeEntry.HelloLogger, List(Text)) is TypeEntry.HelloLogger
 	Greeter.Completed(TypeCodegen.Hello, TypeEntry.HelloLogger, Wanted).methods.Last.Name is "Members"
+	Greeter.instance is "HelloLogger"
 	let missing = Missing(entry, targets, main.fullName)
 	missing.Length is 0 then entry else Appended(main, entry, Lines(missing))
 Appended(main TypeCodegen, entry TypeEntry, all Texts) TypeEntry
@@ -139,6 +149,9 @@ Appended(main TypeCodegen, entry TypeEntry, all Texts) TypeEntry
 Missing(entry TypeEntry, targets Texts, fullName Text) Texts
 	Point.Missing(TypeEntry.HelloLogger, Wanted, "Strict/HelloLogger") is ("Members")
 	Point.Missing(TypeEntry.HelloLogger, Wanted, "Strict/Other").Length is 0
+	Point.Missing(TypeEntry.HelloLogger, List(Text) + "Strict/HelloLogger.Members", "Strict/HelloLogger") is ("Members")
+	Point.Missing(Completing, Wanted, "Strict/HelloLogger").Length is 0
+	Point.Missing(Hashable, List(Text) + "Strict/HelloLogger.to HashCode", "Strict/HelloLogger").Length is 0
 	for Generating
 		let words = value.Split(" ")
 		if ((fullName + "." + value) is in targets) and (entry.Chosen(words.First, -1, words.Last, List(Text)) < 0)

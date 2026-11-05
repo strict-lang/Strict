@@ -1,10 +1,12 @@
 constant Sample = (80, 54, 10, 50, 32, 49, 10, 50, 53, 53, 10, 1, 2, 3, 4, 5, 6)
+constant Spaced = (80, 54, 13, 10, 50, 9, 50, 32, 50, 53, 53, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
 Loaded(path Text) Bitmap
 	Ppm.Loaded("ImageProcessing/Missing.ppm") is Error
 	File(path).Exists then Decoded(File(path).ReadBytes) else Error("MissingFile")
 Decoded(bytes Bytes) Bitmap
 	Ppm.Decoded(Sample).Colors is (Color(1, 2, 3), Color(4, 5, 6))
 	Ppm.Decoded(Sample).Size.Height is 1
+	Ppm.Decoded(Spaced).Colors is (Color(1, 2, 3), Color(4, 5, 6), Color(7, 8, 9), Color(10, 11, 12))
 	let width = Field(bytes, 1)
 	let height = Field(bytes, 2)
 	Bitmap(Size(width, height), Colors(bytes, Start(bytes), width * height), true)
@@ -43,7 +45,7 @@ Start(bytes Bytes) Number
 	mutable wasSpace = false
 	for Range(2, bytes.Length)
 		let isSpace = bytes(value) is in (9, 10, 13, 32)
-		if isSpace and (wasSpace is false) and (token is 3)
+		if isSpace and (token is 3)
 			return value + 1
 		token = wasSpace and (isSpace is false) then token + 1 else token
 		wasSpace = isSpace
@@ -51,6 +53,7 @@ Start(bytes Bytes) Number
 Digits(number Number) Numbers
 	Ppm.Digits(4096) is (52, 48, 57, 54)
 	Ppm.Digits(7) is (55)
+	Ppm.Digits(0) is (48)
 	for 7
 		if ((number / 10 ^ (6 - index)).Floor > 0) or (index is 6)
 			48 + (number / 10 ^ (6 - index)).Floor % 10

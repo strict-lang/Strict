@@ -35,12 +35,13 @@ Valued(lines Texts, folder Text) Texts
 		Line(value.Key, value.Value, folder)
 Hits(lines Texts) Dictionary(Text, Texts)
 	ValueTrace.Hits(Events)("Sum|3") is ("Hit\nRes|1", "Hit\nRes|2")
+	ValueTrace.Hits(("$Use A|1|b|5", "a")).Length is 0
 	mutable hits = Dictionary(Text, Texts)
 	for lines
 		let place = Place(value)
 		if value.StartsWith("$Hit ")
 			hits(place) = (place is in hits then hits(place) else List(Text)) + "Hit"
-		else if (place is not "") and (place is in hits)
+		else if place is in hits
 			mutable summaries = hits(place)
 			summaries(summaries.Length - 1) = summaries.Last + "\n" + value.Substring(1, 3) + "|" + Rest(value)
 			hits(place) = summaries
@@ -82,6 +83,7 @@ Help(code Text, summaries Texts) Text
 Each(results Texts) Text
 	ValueTrace.Each(("1", "2")) is ", each: 1, 2"
 	ValueTrace.Each(List(Text)) is ""
+	ValueTrace.Each(Events + "x").EndsWith("|3|2, ...")
 	if results.Length is 0
 		return ""
 	mutable shown = List(Mutable(Text))
@@ -90,6 +92,9 @@ Each(results Texts) Text
 	", each: " + Text.Combine(shown) + (results.Length > 10 then ", ..." else "")
 Outcome(summary Text, prefix Text) Text
 	ValueTrace.Outcome("\nUse|b|5\nSet|a|7", "Set|a|") is "7"
+	ValueTrace.Help("for Range(0, 1)", List(Text) + "\nSet|for|0") is ", each: 0"
+	ValueTrace.Same("5", List(Text), "", "5") is ""
+	ValueTrace.Same("a", List(Text), "\nUse|a|5", "5") is ": a = 5"
 	mutable found = ""
 	for summary.Split("\n")
 		if value.StartsWith(prefix)
@@ -116,6 +121,7 @@ Unselected(code Text) Text
 Substituted(expression Text, summary Text) Text
 	ValueTrace.Substituted("numbers(0) + b", Summed) is "numbers(0) + 5"
 	ValueTrace.Substituted("number.b", Summed) is "number.b"
+	ValueTrace.Substituted("b + b", Summed) is "5 + 5" and (ValueTrace.Substituted("b.", Summed) is "5.")
 	let tokens = Tokenizer(expression).Tokens
 	mutable text = ""
 	for tokens

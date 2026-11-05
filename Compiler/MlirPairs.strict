@@ -12,7 +12,11 @@ constant Summing = InstructionEntry.Invoke(0, ("Strict/Math/Pairing", "Doubled",
 constant Rewrapped = MlirPairs(MlirFunction(List(TypeEntry) + Pairing, Pairing, MethodEntry("Run", List(MemberEntry), "None", (Summing, Constructing))), 1)
 constant Twice = VmValue.OfList((VmValue.OfNumber(1), VmValue.OfNumber(2)))
 constant Instances = MlirInstances(Sample.function, 1)
+constant Appending = ("    %t3pl = llvm.load %v_listResult0 : !llvm.ptr -> f64", "    %t3pe = llvm.load %r1 : !llvm.ptr -> f64", "    %t3pk = func.call @strict_two_x(%t3pl) : (f64) -> f64", "    %t3pp = func.call @strict_two_packed(%t3pk, %t3pe) : (f64, f64) -> f64", "    llvm.store %t3pp, %v_listResult0 : f64, !llvm.ptr")
 IsPaired(kind Text) Boolean
+	Built.Appended(Building.instructions(3), MlirLists(Built.function, 3)) is Appending
+	Text.Combine(Built.Appended(Building.instructions(4), MlirLists(Built.function, 3))).IndexOf("push(") > 0
+	Text.Combine(Sample.Appended(Building.instructions(2), MlirLists(Sample.function, 1))).IndexOf("push(") > 0
 	Sample.IsPaired("Pairing")
 	MlirPairs(MlirCouples.Sample.function, 0).IsPaired("Sizing")
 	IsListed(kind) or MlirCouples(function, position).IsCoupled(kind)
@@ -61,11 +65,17 @@ IsBuilt(name Text) Boolean
 			isPacked = (index + 1 < instructions.Length) and IsPacking(instructions(index + 1), value.payload(0))
 	isPacked and (writes is 2)
 IsPacking(entry InstructionEntry, register Number) Boolean
+	Built.IsPacking(InstructionEntry.Invoke(1, ("Strict/Math/Pairing", "Sum", "Number"), List(Number) + 2, -1), 2) is false
+	Built.IsPacking(InstructionEntry.Invoke(1, ("Strict/Number", "from", "Number"), List(Number) + 2, -1), 2) is false
 	Built.IsPacking(Building.instructions(5), 2)
 	Built.IsPacking(Building.instructions(5), 1) is false
 	let isFrom = (entry.kind is InstructionType.Invoke) and (entry.texts(1) is "from") and IsPaired(entry.texts(0))
 	isFrom and (entry.payload(5 + entry.payload(3)) is 1) and (entry.payload(6 + entry.payload(3)) is register)
 IsBuiltArgument(entry InstructionEntry) Boolean
+	Sample.Constructed(Constructing, "Pairing", Instances)(0) is "    %t1pa = llvm.load %r0 : !llvm.ptr -> f64"
+	Sample.Constructed(Constructing, "Pairing", Instances)(1).EndsWith("_from_list(%t1pa) : (f64) -> f64")
+	Sample.Constructed(Constructing, "Pairing", Instances)(1).StartsWith("    %t1pp = func.call @strict_two")
+	Sample.Defaulted(Twice, "%s", "d3")(1) is "    %t1d3dy = arith.constant 0x4000000000000000 : f64"
 	MlirPairs(Built.function, 5).IsBuiltArgument(Building.instructions(5))
 	let previous = position > 0 then function.method.instructions(position - 1) else entry
 	(previous.kind is InstructionType.LoadVariableToRegister) and IsBuilt(previous.texts(0))
@@ -83,6 +93,9 @@ Appended(entry InstructionEntry, fallback MlirLists) Texts
 	let loads = (function.Load(temp + "pl", slot), function.Load(temp + "pe", "%r" + entry.payload(0)))
 	loads + kept + packed + function.Store(temp + "pp", slot)
 Written(name Text) Number
+	Sample.Defaulted(Twice, "%s", "d3")(0) is "    %t1d3dx = arith.constant 0x3FF0000000000000 : f64"
+	Sample.Defaulted(Twice, "%s", "d3")(2).EndsWith("(%t1d3dx, %t1d3dy) : (f64, f64) -> f64")
+	Sample.Defaulted(Twice, "%s", "d3")(2).StartsWith("    %t1d3dp = func.call @strict_two_packed(")
 	MlirPairs(Built.function, 3).Written("listResult0") is 1
 	mutable count = 0
 	for position

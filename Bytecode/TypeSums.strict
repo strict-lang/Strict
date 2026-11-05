@@ -3,14 +3,21 @@ constant Paired = TypeSums(MethodCodegen(ValueCodegen(TypeInference(KnownTypes((
 constant Pairs = CodeBlock.Empty.Declare("forResult", "Pair").Declare("forValue", "Pair").Load(InstructionEntry.LoadNumber(0, 1))
 Started(block CodeBlock, type Text) CodeBlock
 	Paired.Started(CodeBlock.Empty, "Pair").instructions(0) is InstructionEntry.LoadNumber(0, 0)
+	Paired.Started(CodeBlock.Empty, "Pair").scope.TypeOf("forValue") is "Pair"
+	Text.Combine(Paired.Started(CodeBlock.Empty, "Pair").instructions.Last.texts) is "forResult"
 	let zeros = Zeros(methods.values.inference.types.MembersOf(type).names)
 	methods.values.Expression(SyntaxNode("Call", type, zeros), block).Stored("forResult").Declare("forValue", type)
 Zeros(names Texts) SyntaxNodes
 	Paired.Zeros(("x", "y")).Length is 2
+	Paired.Zeros(("x", "y"))(1) to Text is "0"
 	for names
 		SyntaxNode("Number", "0")
 Added(block CodeBlock) CodeBlock
 	Text.Combine(Paired.Added(Pairs).instructions.Last.texts) is "forResult"
+	Paired.Added(Pairs).instructions.Length is 9
+	Text.Combine(Paired.Added(Pairs).instructions(1).texts) is "forValue"
+	Text.Combine(Paired.Added(Pairs).instructions(6).texts) is "forValue"
+	Paired.Added(Pairs).instructions(3).texts(1) is "+"
 	let operands = (SyntaxNode("Identifier", "forResult"), SyntaxNode("Identifier", "forValue"))
 	let sum = SyntaxNode("MethodCall", "+", operands)
 	ErrorCodegen(methods.values).Handled(sum, block.Stored("forValue")).Stored("forResult")

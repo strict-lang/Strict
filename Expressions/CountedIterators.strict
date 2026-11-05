@@ -12,6 +12,7 @@ IsFlat(iterables SyntaxNodes, body SyntaxNode) Boolean
 	CountedIterators.IsFlat((SyntaxNode("Number", "8"), SyntaxNode("Identifier", "width")), Dotting) is false
 	CountedIterators.IsFlat((SyntaxNode("Number", "2.5"), SyntaxNode("Number", "8")), Dotting) is false
 	CountedIterators.IsFlat(Eights, Indexing) is false
+	CountedIterators.IsFlat((SyntaxNode("Text", "8"), SyntaxNode("Number", "8")), Dotting) is false
 	for iterables
 		if (value.Kind is not "Number") or (Count(value) < 0)
 			return false
@@ -20,11 +21,14 @@ Count(literal SyntaxNode) Number
 	CountedIterators.Count(SyntaxNode("Number", "8")) is 8
 	CountedIterators.Count(SyntaxNode("Number", "2.5")) is -1
 	CountedIterators.Count(SyntaxNode("Number", "-3")) is -1
+	CountedIterators.Count(SyntaxNode("Number", "08")) is -1
 	let count = literal.text to Number
 	(count >= 0) and (count % 1 is 0) and (count to Text is literal.text) then count else -1
 Flattened(iterables SyntaxNodes, body SyntaxNode) SyntaxNode
 	Grid.Flattened(Eights, Dotting).children(0) to Text is "64"
 	Grid.Flattened(Eights, Dotting).children.Last.Lines("\t") is Flat
+	Grid.Flattened(Eights, Dotting).Kind is "For" and (Grid.Flattened(Eights, Dotting).children.Last.Kind is "Body")
+	Grid.Flattened(Eights, Dotting).children(0).Kind is "Number"
 	let checked = NamedIterators(names, line).Renamed(body, 0)
 	let declarations = Declarations(iterables, NamedIterators(names, line).Mentions(checked))
 	let flat = SyntaxNode("Body", "", declarations + checked.children, body.line)

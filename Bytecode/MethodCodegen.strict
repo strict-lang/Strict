@@ -27,9 +27,16 @@ Generate(body SyntaxNode, scope Scope, returnType Text) CodeBlock
 		return block
 	block.Add(InstructionEntry.Return(block.register is 0 then 0 else block.Result))
 Production(body SyntaxNode, block CodeBlock) SyntaxNode
+	Plain.Log(SyntaxNode("Binary", "+", (ValueCodegen.Hi, NoNode)), InRun).instructions.Length is 2
+	Plain.Log(SyntaxNode("Binary", "+", (One, NoNode)), InRun).instructions.Length is 4
+	Plain.Production(LoopHoisting.Scaling, CodeBlock.Empty).children(0).Kind is "Declaration"
+	FileCompiler.Unoptimized.methods.Production(LoopHoisting.Scaling, CodeBlock.Empty).children(0).Kind is "For"
+	Plain.Generate(BodyParser("Run Number", "\tx + 2").Block(1, 1), NoScope, "None").instructions.Last.payload is (2)
+	Plain.Generate(BodyParser("Run", "\tlet a = 1").Block(1, 1), NoScope, "None").instructions.Last.payload is (0)
 	Plain.Production(BodyParser("Run", "\tconstant a = 2", "\ta").Block(1, 1), CodeBlock.Empty).Lines("") is ("2")
 	let inlined = ConstantFolding(values.target.TypeName, values.inference).Inlined(TestLines(values).Without(body, block))
-	IndexCodegen(values).Unnested(LoopHoisting(values).Hoisted(StepRounding(values).Rounded(inlined, block), block))
+	let rounded = StepRounding(values).Rounded(inlined, block)
+	IndexCodegen(values).Unnested(values.isOptimizing then LoopHoisting(values).Hoisted(rounded, block) else rounded)
 Body(body SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Body(BodyParser("Run", "\t1", "\t2").Block(1, 1), CodeBlock.Empty).register is 1
 	Plain.Body(BodyParser("Run", "\t1", "\t2").Block(1, 1), CodeBlock.Empty).instructions.Last.line is 3
@@ -40,6 +47,7 @@ Body(body SyntaxNode, block CodeBlock) CodeBlock
 		result = Lined(statement, result.instructions.Length, value.line)
 	CodeBlock(result.instructions, result.register, result.nextId, block.scope)
 Lined(block CodeBlock, start Number, line Number) CodeBlock
+	Plain.Lined(Plain.Body(BodyParser("Run", "\t1").Block(1, 1), CodeBlock.Empty), 0, 7).instructions(0).line is 2
 	Plain.Lined(CodeBlock.Empty.Load(InstructionEntry.LoadNumber(0, 1)), 0, 5).instructions.First.line is 5
 	if line is 0
 		return block
@@ -50,6 +58,12 @@ Lined(block CodeBlock, start Number, line Number) CodeBlock
 			lined(value) = InstructionEntry(entry.kind, entry.texts, entry.payload, line)
 	CodeBlock(lined, block.register, block.nextId, block.scope)
 HasElse(body SyntaxNode, position Number) Boolean
+	Plain.HasElse(BodyParser("Run", "\t1", "\tif 1 > 2", "\t\t3", "\telse", "\t\t4").Block(1, 1), 1)
+	Plain.HasElse(BodyParser("Run", "\t1", "\tif 1 > 2", "\t\t3", "\telse", "\t\t4").Block(1, 1), 0) is false
+	Plain.Body(BodyParser("Run", "\tif x", "\t\t3", "\telse if x", "\t\t4").Block(1, 1), InRun).instructions.Length is 16
+	Plain.Body(BodyParser("Run", "\tif x", "\t\treturn 3", "\telse if x", "\t\t4").Block(1, 1), InRun).register is 3
+	Plain.Conditional(IfBody.children(0), CodeBlock.Empty, false, "").instructions.Last.payload is (0)
+	Plain.Conditional(IfBody.children(0), CodeBlock.Empty, false, "Sum").instructions.Length is 10
 	Plain.HasElse(ElseBody, 0)
 	Plain.HasElse(ElseBody, 1) is false
 	position + 1 < body.children.Length and (body.children(position + 1).Kind is in ("ElseIf", "Else"))
@@ -91,6 +105,9 @@ Stored(assigned SyntaxNode, name Text, block CodeBlock, isDeclaration Boolean) C
 	let isConstant = assigned.IsLiteral and (name.IndexOf("(") < 0)
 	isConstant then block.Add(StoreConstant(generated.instructions.Last, name)) else restored.Stored(name)
 AssignedName(node SyntaxNode) Text
+	Plain.Stored(ErrorCodegen.Greeting, "a", CodeBlock.Empty, true).instructions.Length is 2
+	Plain.Stored(ErrorCodegen.Greeting, "a", CodeBlock.Empty, false).instructions.Length is 3
+	Plain.Stored(ErrorCodegen.Greeting, "a", ErrorCodegen.FallibleA, false).instructions.Length is 2
 	Plain.AssignedName(SyntaxNode("Declaration", "let a", One)) is "a"
 	Plain.AssignedName(ElementAssignment) is "x.a(1)"
 	Plain.AssignedName(SyntaxNode("Reassignment", "", (SyntaxNode("Member", "Y", NoNode), One))) is "Y"
@@ -99,16 +116,34 @@ AssignedName(node SyntaxNode) Text
 	let target = node.children(0)
 	target.Kind is "Member" then target.text else target to Text
 Declared(block CodeBlock, name Text, assigned SyntaxNode, isMutable Boolean) CodeBlock
+	Plain.Declared(CodeBlock.Empty, "a", MixedList, false).Owns("a")
+	Plain.Assignment(SyntaxNode("Declaration", "let a", ErrorCodegen.BareError), InRun).instructions(0).texts is ("a")
+	Plain.Assignment(SyntaxNode("Reassignment", "", ErrorCodegen.IsError.children), InRun).instructions(0).texts is ("Run")
+	Plain.Assignment(SyntaxNode("Reassignment", "", (NoNode, One)), CodeBlock.Empty).scope.TypeOf("x") is ""
+	Plain.Assignment(SyntaxNode("Declaration", "let a", One), CodeBlock.Empty).scope.TypeOf("a mutable") is ""
 	Plain.Declared(CodeBlock.Empty.Declare("x", "Numbers"), "a", NoNode, false).Owns("a") is false
 	Plain.Declared(CodeBlock.Empty, "a", ErrorCodegen.Greeting, false).scope.TypeOf("a fallible") is "fallible"
 	let typed = block.Declare(name, values.TypeOf(assigned, block))
 	let shared = typed.Sharing(name, ListCodegen(values).IsNew(assigned) is false)
 	ErrorScope(values).Declared(name, assigned, isMutable, shared)
 StoreConstant(load InstructionEntry, name Text) InstructionEntry
+	Plain.StoreConstant(InstructionEntry.Print("b"), "a").payload is (0, -2, 0)
+	Plain.StoreConstant(InstructionEntry.Print("b"), "a").texts is ("b", "a")
+	Plain.Statement(LoopBody.children(0), CodeBlock.Empty, false).instructions.Length is 4
+	Plain.Statement(SyntaxNode("MethodCall", "Log", (NoNode, ValueCodegen.Hi)), InRun, false).instructions.Length is 1
+	Plain.Statement(SyntaxNode("MethodCall", "Add", (NoNode, One)), InRun, false).instructions.Length is 4
+	Plain.Statement(SyntaxNode("Identifier", "Log"), InRun, false).instructions.Length is 1
+	Plain.Statement(SyntaxNode("Return", ""), InRun, false).instructions.Length is 1
 	Plain.StoreConstant(InstructionEntry.LoadNumber(2, 7), "a").payload is (1, 7, -1, 0)
 	let texts = load.texts + name
 	InstructionEntry(InstructionType.StoreConstantToVariable, texts, LoadedValue(load) + (-1 - load.texts.Length) + 0)
 LoadedValue(load InstructionEntry) Numbers
+	Plain.Log(SyntaxNode("Binary", "+", (ValueCodegen.Hi, ValueCodegen.Hi)), InRun).instructions.Last.texts is ("Hi")
+	Plain.Log(SyntaxNode("Binary", "+", (ValueCodegen.Hi, ValueCodegen.Hi)), InRun).instructions.Last.payload(3) is 1
+	Plain.Log(One, InRun).instructions.Last.payload is (-1, 1, 0, 0)
+	Plain.Log(SyntaxNode("List", "+", (ValueCodegen.Hi, One)), InRun).instructions.Last.texts is not ("Hi")
+	Plain.Log(SyntaxNode("Binary", "-", (ValueCodegen.Hi, One)), InRun).instructions.Last.texts is not ("Hi")
+	Plain.Log(SyntaxNode("Binary", "+", (One, One)), InRun).instructions.Last.texts is not ("1")
 	Plain.LoadedValue(InstructionEntry.LoadNumber(2, 7)) is (1, 7)
 	mutable content = List(Number) + load.payload(1)
 	for Range(2, load.payload.Length)
@@ -137,8 +172,9 @@ Else(node SyntaxNode, block CodeBlock, hasElse Boolean) CodeBlock
 Log(argument SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Log(SyntaxNode("Text", "\"Hi\""), CodeBlock.Empty).instructions(0).texts is ("Hi")
 	Plain.Log(SyntaxNode("Number", "1"), CodeBlock.Empty).instructions.Length is 2
+	Plain.Log(SyntaxNode("Text", "\"\""), CodeBlock.Empty).instructions.Length is 0
 	if argument.Kind is "Text"
-		return block.Add(InstructionEntry.Print(argument.Unquoted))
+		return argument.Unquoted is "" then block else block.Add(InstructionEntry.Print(argument.Unquoted))
 	let hasPrefix = (argument.Kind is "Binary") and (argument.text is "+") and (argument.children(0).Kind is "Text")
 	let printed = ConversionCodegen(values).Converted(hasPrefix then argument.children(1) else argument, "Text", block)
 	let generated = values.Expression(printed, block)

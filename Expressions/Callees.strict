@@ -35,6 +35,7 @@ TypeOf(name Text, at Number) Text
 	""
 Members Texts
 	Callees(("has bitmap Bitmap", "Run"), "").Members is List(Text) + "bitmap Bitmap"
+	Callees(("has bitmap Bitmap", "Run", "\t1", "Other(bitmap Number)", "\t1"), "").TypeOf("bitmap", 4) is "Number"
 	for lines
 		if value.StartsWith("has ")
 			value.Substring(4, value.Length - 4)

@@ -1,9 +1,10 @@
 has tokens Texts
+constant SecondStep = Steps(Tokenizer("B(a Number, b Number with Step 0.5)").Tokens)
 Of(nameIndex Number) Text
-	Steps(Tokenizer("has price Number with Step 0.01").Tokens).Of(1) is "0.01"
+	Steps(Tokenizer("has price Number with Step 0.01").Tokens).Of(1) is "0.01" and (SecondStep.Of(2) is "")
 	Steps(Tokenizer("has lot Number with Step 0.001 Floor").Tokens).Of(1) is "0.001 Floor"
-	Steps(Tokenizer("has width Number with value > 0").Tokens).Of(1) is ""
-	Steps(Tokenizer("has iterator").Tokens).Of(1) is ""
+	Steps(Tokenizer("has width Number with value > 0").Tokens).Of(1) is "" and (SecondStep.Of(5) is "0.5")
+	Steps(Tokenizer("has iterator").Tokens).Of(1) is "" and (Steps(Tokenizer("has a Number Step 0.5").Tokens).Of(1) is "")
 	for Range(nameIndex + 1, tokens.Length - 2 > nameIndex then tokens.Length - 2 else nameIndex + 1)
 		if tokens(value) is in (",", ")")
 			return ""
@@ -13,6 +14,9 @@ Of(nameIndex Number) Text
 	""
 Entries(header HeaderTokens) Scope
 	Steps(List(Text)).Entries(HeaderTokens(Tokenizer("B(a Number with Step 0.5)").Tokens)).TypeOf("B a step") is "0.5"
+	Steps(List(Text)).Entries(HeaderTokens(SecondStep.tokens)).names is ("B b step")
+	Steps(List(Text)).Entries(HeaderTokens(Tokenizer("B(a Number) Number with Step 0.5").Tokens)).TypeOf("B step") is "0.5"
+	Steps(List(Text)).Members(("has maxStep Number", "Run(a Number with Step 0.5)")).names.Length is 0
 	let name = header.tokens(0)
 	mutable entries = Scope(List(Text), List(Text))
 	for header.ParameterNames

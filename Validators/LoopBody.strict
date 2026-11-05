@@ -20,9 +20,13 @@ Issues List(ValidationIssue)
 	Clean.Issues.Length is 0
 	LoopBody(Edged.loop, List(Text), false).Issues.Length is 0
 	LoopBody(Hoisting.loop, List(Text), true, false).Issues.Length is 0
+	Clean.loop.children.Last.children.Length is 3
 	Found(loop.children.Last, loop.line, LoopNames.Of(loop, constants, List(Text)))
 Found(node SyntaxNode, line Number, names LoopNames) List(ValidationIssue)
 	Hoisting.Found(SyntaxNode("Identifier", "steps"), 1, LoopNames.Steps).Length is 0
+	Hoisting.Found(Hoisting.loop, 1, LoopNames.Steps).Length is 0
+	Hoisting.Found(Hoisting.loop.children.Last, 7, LoopNames.Steps).First.Line is 3
+	Edged.Found(Edged.loop.children.Last, 7, LoopNames(List(Text), List(Text))).Length is 1
 	let at = node.line > 0 then node.line else line
 	let own = Issue(node, at, names)
 	if own.Length > 0
@@ -33,12 +37,23 @@ Found(node SyntaxNode, line Number, names LoopNames) List(ValidationIssue)
 	found
 Issue(node SyntaxNode, at Number, names LoopNames) List(ValidationIssue)
 	Hoisting.Issue(SyntaxNode("Number", "1"), 1, LoopNames.Steps).Length is 0
-	let isChoice = (node.Kind is "Binary") and (node.text is "else") and (node.children(0).text is "then")
-	if isChoice
-		let chosen = node.children(0)
-		return Conditional(chosen.children(0), (chosen.children(1), node.children(1)), at, names)
+	(Guarding.Issues.Length is 1) and (Clean.Issues.Length is 0)
+	Edged.Issue(SyntaxNode("Binary", "+", Edged.loop.children.Last.children(0).children), 1, LoopNames.Steps).Length is 0
+	Edged.Issue(SyntaxNode("If", "if", Edged.loop.children.Last.children), 1, LoopNames.Steps).Length is 1
+	Hoisting.Issue(SyntaxNode("Binary", "else", Hoisting.loop.children), 1, LoopNames.Steps).Length is 0
+	Edged.Issue(SyntaxNode("Call", "else", Edged.loop.children.Last.children(0).children), 1, LoopNames.Steps).Length is 0
+	Hoisting.Issue(StatementParser(Tokenizer("x then y else 0").Tokens).ParseStatement, 1, LoopNames.Steps).Length is 1
+	if (node.Kind is "Binary") and (node.text is "else") and (node.children(0).text is "then")
+		return Conditional(node.children(0).children(0), (node.children(0).children(1), node.children(1)), at, names)
 	if node.Kind is "If"
 		return Conditional(node.children(0), node.children.Last.children, at, names)
+	Hoisted(node, at, names)
+Hoisted(node SyntaxNode, at Number, names LoopNames) List(ValidationIssue)
+	Hoisting.Issues(0).target is "1000 / steps" + InvariantHint
+	(Clean.Issues.Length is 0) and (LoopBody(Hoisting.loop, List(Text), true, false).Issues.Length is 0)
+	LoopBody(Guarding.loop, List(Text), false).Issues.Length is 0
+	Hoisting.Hoisted(StatementParser(Tokenizer("1000 / 8").Tokens).ParseStatement, 1, LoopNames.Steps).Length is 0
+	Hoisting.Hoisted(SyntaxNode("Call", "*", (SyntaxNode("Identifier", "steps"))), 1, LoopNames.Steps).Length is 0
 	let isArithmetic = (node.Kind is "Binary") and (node.text is in ("+", "-", "*", "/", "%", "^"))
 	let isNumeric = ((node to Text).IndexOf("\"") < 0) and IsCostly(node)
 	let isHoisted = isShort and isArithmetic and isNumeric and names.IsInvariant(node) and LoopNames.HasName(node)
@@ -46,19 +61,25 @@ Issue(node SyntaxNode, at Number, names LoopNames) List(ValidationIssue)
 	isHoisted then List(ValidationIssue) + issue else List(ValidationIssue)
 Conditional(condition SyntaxNode, branches SyntaxNodes, at Number, names LoopNames) List(ValidationIssue)
 	Hoisting.Conditional(SyntaxNode("Identifier", "steps"), List(SyntaxNode), 1, LoopNames.Steps).Length is 0
+	(Guarding.Issues(0).target is "range is 0" + GuardHint) and (Edged.Issues.Length is 1) and (Clean.Issues.Length is 0)
+	LoopBody(SyntaxNode("For", "for as long as", Guarding.loop.children), List(Text)).Issues.Length is 0
+	Hoisting.Conditional(SyntaxNode("Number", "0"), (SyntaxNode("Number", "0")), 1, LoopNames.Steps).Length is 0
 	if isNested is false
 		return List(ValidationIssue)
 	let edge = Edge(condition)
 	if edge is not ""
 		return List(ValidationIssue) + ValidationIssue("LoopEdgeMustBeOutsideLoop", edge, at)
-	let isWaiting = loop.text is "for as long as"
-	let isInvariant = (isWaiting is false) and names.IsInvariant(condition) and LoopNames.HasName(condition)
-	let isGuard = isInvariant and IsGuarding(branches)
+	let isInvariant = (loop.text is not "for as long as") and names.IsInvariant(condition) and LoopNames.HasName(condition)
 	let issue = ValidationIssue("LoopGuardMustBeOutsideLoop", condition to Text + GuardHint, at)
-	isGuard then List(ValidationIssue) + issue else List(ValidationIssue)
+	isInvariant and IsGuarding(branches) then List(ValidationIssue) + issue else List(ValidationIssue)
 IsCostly(node SyntaxNode) Boolean
 	Hoisting.IsCostly(SyntaxNode("Binary", "/"))
 	Hoisting.IsCostly(SyntaxNode("Binary", "-", (SyntaxNode("Identifier", "steps"), SyntaxNode("Number", "1")))) is false
+	Hoisting.IsCostly(SyntaxNode("Binary", "%")) and Hoisting.IsCostly(SyntaxNode("Binary", "^"))
+	Hoisting.IsCostly(SyntaxNode("Binary", "*"))
+	Hoisting.IsCostly(SyntaxNode("Binary", "+")) is false
+	Hoisting.IsCostly(StatementParser(Tokenizer("(steps - 1) + 2").Tokens).ParseStatement)
+	Hoisting.IsCostly(StatementParser(Tokenizer("2 + (steps - 1)").Tokens).ParseStatement)
 	let first = node.children.Length > 0 then node.children.First.Kind else ""
 	let last = node.children.Length > 0 then node.children.Last.Kind else ""
 	(node.text is in ("*", "/", "%", "^")) or (first is "Binary") or (last is "Binary")
@@ -70,7 +91,10 @@ IsGuarding(branches SyntaxNodes) Boolean
 			return true
 	false
 Edge(node SyntaxNode) Text
+	Guarding.Issue(StatementParser(Tokenizer("index then 0 else 1").Tokens).ParseStatement, 1, LoopNames.Steps).Length is 0
 	Hoisting.Edge(SyntaxNode("Identifier", "index")) is ""
+	Edged.Edge(Edged.loop.children.Last) is "index is steps" + LastHint
+	Edged.Edge(StatementParser(Tokenizer("index is 0").Tokens).ParseStatement) is "index is 0" + FirstHint
 	let edges = LoopEdge(loop)
 	let edge = edges.Found(node)
 	if edge.Kind is "Missing"

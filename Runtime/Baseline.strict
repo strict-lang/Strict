@@ -1,0 +1,65 @@
+has mutants Mutants
+constant Reader = MethodEntry("Read", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Invoke(0, ("Strict/File", "ReadLines", "Strict/List(Text)"), List(Number), -1))
+constant Calling = MethodEntry("Call", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Invoke(0, ("Strict/T", "Read", "None"), List(Number), -1))
+constant Reading = List(TypeEntry) + TypeEntry("Strict/T", List(MemberEntry), (Calling, Reader))
+constant Libraries = Baseline(Mutants(Logger, "Library.strict"))
+constant Sampled = Baseline(Mutants.Sample)
+Kept(types List(TypeEntry)) List(MethodEntry)
+	Baseline(Mutants.Sample).Kept(Mutants.Doubled).Length is 0
+	Libraries.Kept(Execute(Logger).Loaded("Library.strict", ".")).Length is 0
+	let methods = IsBase then List(MethodEntry) else Usable(types)
+	let tested = mutants.Tested(types, mutants.Runner(types.First), methods)
+	let limit = mutants.isWhole then 1 else 0.1
+	for methods
+		let reason = Reason(Execute(mutants.logger).Started(tested, mutants.path), TestCodegen.Runner + index, limit)
+		if (reason is not "") and (mutants.part is "")
+			mutants.logger.Log(mutants.path + ": " + value.Name + " is not mutated, " + reason)
+		if (reason is "") and IsRun(tested, value, TestCodegen.Runner + index)
+			value
+IsRun(tested List(TypeEntry), method MethodEntry, runner Text) Boolean
+	Baseline(Mutants.Sample).IsRun(Mutants.Doubled, Mutants.Twice, TestCodegen.Runner) is false
+	let failing = List(MethodEntry) + MethodEntry(method, instructions = Invocation.Failing.methods.First.instructions)
+	let replaced = mutants.Replaced(tested, List(MethodEntry) + method, failing)
+	let started = Execute(mutants.logger).Started(replaced, mutants.path)
+	Machine(started, deadline = Process.Elapsed + 1).Tested(tested.First.Name, runner) > 0
+Reaching(types List(TypeEntry)) Texts
+	Baseline(Mutants.Sample).Reaching(Reading) is ("T.Read", "T.Call")
+	mutable reaching = List(Mutable(Text))
+	mutable count = -1
+	for as long as count < reaching.Length
+		count = reaching.Length
+		for type, method in types, type.methods
+			let name = TypeEntry.ShortName(type.Name) + "." + method.Name
+			if (name is not in reaching) and IsReaching(method, reaching)
+				reaching.Add(name)
+	reaching
+Usable(types List(TypeEntry)) List(MethodEntry)
+	Baseline(Mutants.Sample).Usable(Mutants.Doubled).Length is 0
+	let reaching = Reaching(types)
+	for mutants.Mutated(types.First)
+		let isInput = TypeEntry.ShortName(types.First.Name) + "." + value.Name is in reaching
+		if isInput and (mutants.part is "")
+			mutants.logger.Log(mutants.path + ": " + value.Name + " is not mutated, it uses input")
+		if isInput is false
+			value
+IsReaching(method MethodEntry, reaching Texts) Boolean
+	Sampled.IsReaching(Reader, List(Text)) and (Sampled.IsReaching(Calling, List(Text)) is false)
+	Baseline(Mutants.Sample).IsReaching(Calling, List(Text) + "T.Read")
+	for method.instructions
+		if (value.kind is InstructionType.Invoke) and (value.texts.Length > 1)
+			if mutants.IsInput(value.texts(0)) or (TypeEntry.ShortName(value.texts(0)) + "." + value.texts(1) is in reaching)
+				return true
+	false
+IsBase Boolean
+	Baseline(Mutants(Logger, "Number.strict")).IsBase and Baseline(Mutants(Logger, "./Text.strict")).IsBase
+	Baseline(Mutants(Logger, "Math/Size.strict")).IsBase is false
+	let folder = Path(mutants.path).PathOnly.text
+	File((folder is "" then "." else folder) + "/Strict.strict").Exists
+Reason(started Machine, runner Text, limit Number) Text
+	Baseline(Mutants.Sample).Reason(Machine.Hello, TestCodegen.Runner, 1) is ""
+	Baseline(Mutants.Sample).Reason(Frame.Doubling, "Missing", 0) is "its tests fail or take over 0s"
+	let read = Process.FilesRead.Length
+	let begun = Process.Elapsed
+	let failed = Machine(started, deadline = begun + limit).Tested(started.types.First.Name, runner)
+	let slow = (failed > 0) or (Process.Elapsed - begun >= limit) then "its tests fail or take over " + limit + "s" else ""
+	Process.FilesRead.Length > read then "its tests read files" else slow

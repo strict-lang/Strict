@@ -40,6 +40,8 @@ NotIterable(scoped ScopedStatement, current Scope) Text
 IsIterable(type Text) Boolean
 	Counting.IsIterable("Text")
 	Counting.IsIterable("Boolean") is false
+	Counting.IsIterable("Count") is false
+	Counting.Unknown(ScopedStatement(SyntaxNode("Invalid", "Broken: x"), Counted, 0), Counted) is "Broken: x"
 	let element = inference.types.ElementType(type)
 	let iterated = inference.types.ElementType(inference.types.MethodsOf(type).TypeOf("for"))
 	(element is not "Unknown") or (iterated is not "Unknown") or (inference.Enumerated(type).Length > 0)
@@ -80,6 +82,8 @@ Fewest(instance Text, name Text) Number
 			fewest = (fewest < 0) or (required < fewest) then required else fewest
 	fewest < 0 then 0 else fewest
 UnknownMembers(call SyntaxNode) Texts
+	Counting.UnknownMembers(SyntaxParser(Tokenizer("c + cs").Tokens).Parse).Length is 0
+	Counting.UnknownMembers(SyntaxParser(Tokenizer("c.Count(size = 2)").Tokens).Parse).Length is 0
 	Counting.UnknownMembers(SyntaxParser(Tokenizer("Count(c, number = 2)").Tokens).Parse).Length is 0
 	Counting.UnknownMembers(SyntaxParser(Tokenizer("Count(c, size = 2)").Tokens).Parse) is ("MemberNotFound: Count.size")
 	Counting.UnknownMembers(SyntaxParser(Tokenizer("c in cs").Tokens).Parse) is ("InMustFollowIs: write c is in cs")
@@ -90,12 +94,19 @@ UnknownMembers(call SyntaxNode) Texts
 		if (call.Kind is "Call") and (value.Kind is "Reassignment") and (value.children(0).text is not in members)
 			"MemberNotFound: " + call.text + "." + value.children(0).text
 IsCall(node SyntaxNode) Boolean
+	Counting.IsCall(SyntaxParser(Tokenizer("count.Twice(1)").Tokens).Parse)
+	Counting.IsCall(SyntaxParser(Tokenizer("Count(c)").Tokens).Parse) is false
+	Counting.IsCall(SyntaxNode("Member", "Twice")) is false
+	Counting.IsCall(SyntaxParser(Tokenizer("count.value").Tokens).Parse) is false
+	Counting.IsCall(SyntaxParser(Tokenizer("count.index").Tokens).Parse) is false
 	Counting.IsCall(MissingCall.statement)
 	Counting.IsCall(OtherName.statement) is false
 	let isNamed = (node.text.Length > 0) and (node.text.Substring(0, 1).Upper is not node.text.Substring(0, 1).Lower)
 	let isMember = (node.Kind is in ("Member", "MethodCall")) and (node.children.Length > 0)
 	isMember and isNamed and (node.text is not in ("value", "index"))
 IsMissing(instance Text, name Text) Boolean
+	Counting.IsMissing("Generics", "number") is false
+	Counting.IsMissing("Xyz", "number") is false
 	Counting.IsMissing("Count", "Missing")
 	Counting.IsMissing("Count", "Twice") is false
 	Counting.IsMissing("Generic", "number") is false
@@ -104,16 +115,25 @@ IsMissing(instance Text, name Text) Boolean
 	isChecked and (types.DeclaredType(instance, name, 3) is "") and (types.MemberType(instance, name) is "Unknown")
 ValueNames(scope Scope) Texts
 	FileCheck(NoInference, ("N", "R")).ValueNames(NoScope).Length is 0
+	Counting.ValueNames(Scope(List(Text) + "value", List(Text) + "Count")) is ("number", "unused", "Increment", "Twice")
+	Counting.IsMissing("Count", "number") is false
+	Counting.IsMissing("Text", "Missing")
 	if scope.TypeOf("value") is ""
 		return List(Text)
 	let valueScope = inference.types.ShapeScope(scope.TypeOf("value"))
 	valueScope.names
 UnknownNames(statement SyntaxNode, names Texts) Texts
+	Counting.IsUnimplemented(("Add Number", "\tAdd is 1"), 0, "A")
+	Counting.IsUnimplemented(("Add(other) Number", "\tAdder(1) is 1"), 0, "A") is false
+	Counting.IsUnimplemented(("Add(other) Number", "\tA(1).Other.Add(2) is 3"), 0, "A") is false
+	Counting.IsUnimplemented(("Add(other) Number", "\tAb(1).Add(2) is 3"), 0, "A") is false
+	Counting.IsUnimplemented(("Add(other) Number", "\tA(1).Add(2) is 3"), 0, "A")
 	FileCheck(NoInference, ("N", "R")).UnknownNames(SyntaxNode("Identifier", "c"), ("a", "b")) is ("c")
 	for statement.HeadNames
 		if not IsKnown(value, names)
 			value
 IsKnown(name Text, names Texts) Boolean
+	IsKnown("ab", List(Text) + "a") is false
 	IsKnown("Numbers", ("Number", "a"))
 	IsKnown("b", ("Number", "a")) is false
 	if name is in names
@@ -122,6 +142,7 @@ IsKnown(name Text, names Texts) Boolean
 		return false
 	name.Substring(0, name.Length - 1) is in names
 Unimplemented(path Text, lines Texts) Texts
+	Counting.Unimplemented("A.strict", Untested + "\tTwice(3) is 6").Length is 1
 	Counting.Unimplemented("A.strict", Untested) is ("ImplementationNotFound: Twice in A.strict:1")
 	Counting.Unimplemented("A.strict", Untested + "\tnumber * 2").Length is 0
 	Counting.Unimplemented("A.strict", ("from(number)", "\tA(2) is A(2)")).Length is 1
@@ -146,6 +167,10 @@ IsUnimplemented(lines Texts, header Number, typeName Text) Boolean
 	let isInstance = last.StartsWith(typeName + "(") and (last.IndexOf(")." + called) > 0)
 	isComparison and (isCalled or isInstance or last.StartsWith(typeName + "." + called))
 LastLine(lines Texts, header Number) Number
+	Counting.IsUnimplemented(List(Text) + "Add(1) is 2", 0, "A") is false
+	Counting.IsUnimplemented(("Add(other) Number", "\tAdd(1) < 2"), 0, "A")
+	Counting.IsUnimplemented(("Add(other) Number", "\tAdd(1) > 0"), 0, "A")
+	Counting.IsUnimplemented(("Add(other) Number", "\tAdd(1)"), 0, "A") is false
 	Counting.LastLine(("Add(other) Number", "\tother", "Run", "\t1"), 0) is 1
 	Counting.LastLine(List(Text) + "has number", 0) is 0
 	mutable last = header

@@ -8,7 +8,12 @@ constant Framing = TypeEntry("Strict/Framing", List(MemberEntry) + MemberEntry("
 constant Widths = InstructionEntry(InstructionType.FieldLoad, ("Width", "Sizing"), (1, 0, -1))
 constant Widening = MethodEntry("Wide", List(MemberEntry), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "Size"), Widths, InstructionEntry.Return(1)))
 constant Framed = MlirWholeNative(MlirWholeStatements(MlirFunction((MlirCouples.Sizing, Framing), Framing, Widening), 1, "ci", "c", "ci"))
+constant Packs = "    %t3a0 = llvm.load %r0 : !llvm.ptr -> i64|    %t3z0 = arith.constant 0 : i64|    %t3y0 = arith.constant 255 : i64|    %t3s0 = arith.constant 0 : i64|    %t3l0 = arith.maxsi %t3a0, %t3z0 : i64|    %t3h0 = arith.minsi %t3l0, %t3y0 : i64|    %t3b0 = arith.shli %t3h0, %t3s0 : i64|    %t3a1 = llvm.load %r1 : !llvm.ptr -> i64|    %t3z1 = arith.constant 0 : i64|    %t3y1 = arith.constant 255 : i64|    %t3s1 = arith.constant 8 : i64|    %t3l1 = arith.maxsi %t3a1, %t3z1 : i64|    %t3h1 = arith.minsi %t3l1, %t3y1 : i64|    %t3b1 = arith.shli %t3h1, %t3s1 : i64|    %t3a2 = llvm.load %r2 : !llvm.ptr -> i64|    %t3z2 = arith.constant 0 : i64|    %t3y2 = arith.constant 255 : i64|    %t3s2 = arith.constant 16 : i64|    %t3l2 = arith.maxsi %t3a2, %t3z2 : i64|    %t3h2 = arith.minsi %t3l2, %t3y2 : i64|    %t3b2 = arith.shli %t3h2, %t3s2 : i64|    %t3o1 = arith.ori %t3b0, %t3b1 : i64|    %t3o2 = arith.ori %t3o1, %t3b2 : i64|    llvm.store %t3o2, %r3 : i64, !llvm.ptr"
+constant Greened = "    %t4a = llvm.load %r3 : !llvm.ptr -> i64|    %t4s = arith.constant 8 : i64|    %t4y = arith.constant 255 : i64|    %t4v = arith.shrui %t4a, %t4s : i64|    %t4m = arith.andi %t4v, %t4y : i64|    llvm.store %t4m, %r4 : i64, !llvm.ptr"
+constant Lengthening = MlirWholeNative(MlirWholeStatements(MlirWholeChild.Brightening.function, 4, MlirWholeChild.Types.Part(0), MlirWholeChild.Types.Part(1), MlirWholeChild.Types.Part(2)))
+constant Flooring = InstructionEntry.Invoke(0, ("Strict/Number", "Floor", "Strict/Number"), List(Number), 0)
 Emitted(entry InstructionEntry) Texts
+	MlirWholeNative(Painting).Built(MlirWholeTypes.Byted(3)) is MlirWholeNative(Painting).Copied(MlirWholeTypes.Byted(3))
 	Floor.Emitted(MlirWholeTypes.Halves(3)).Last is "    llvm.store %t3a, %r3 : i64, !llvm.ptr"
 	MlirWholeNative(MlirWholeStatements.Halving.At(1)).Emitted(MlirWholeCall.Twice.instructions(1)).Length is 0
 	let decoder = PayloadDecoder(entry)
@@ -20,6 +25,11 @@ Emitted(entry InstructionEntry) Texts
 		return Built(entry)
 	(decoder.Text(1) is "Strict/Number") and (decoder.Text(2) is "Floor") then Floored(entry) else List(Text)
 Lengthed(entry InstructionEntry) Texts
+	Lengthening.Lengthed(MlirWholeChild.Lengths(4))(0) is "    %t4c = llvm.load %v_pixels_length : !llvm.ptr -> i64"
+	Lengthening.Lengthed(MlirWholeChild.Lengths(4))(1) is "    llvm.store %t4c, %r2 : i64, !llvm.ptr"
+	Lengthening.Emitted(MlirWholeChild.Lengths(4)) is Lengthening.Lengthed(MlirWholeChild.Lengths(4))
+	Mixed.Emitted(InstructionEntry.Invoke(1, ("Strict/Text", "Floor", "Strict/Number"), List(Number), 0)).Length is 0
+	Mixed.Emitted(InstructionEntry.Invoke(1, ("Strict/Number", "Round", "Strict/Number"), List(Number), 0)).Length is 0
 	Floor.Lengthed(MlirWholeTypes.Halves(3)).Length is 0
 	let listed = MlirWholeTypes(statements.function).Length(statements.position)
 	if listed is ""
@@ -27,10 +37,21 @@ Lengthed(entry InstructionEntry) Texts
 	let length = MlirWholeValues(statements.position).Loaded(statements.Temp("c"), "%v_" + listed + "_length", "i", "i")
 	length + statements.Store("c", "i", entry.payload(0))
 Copied(entry InstructionEntry) Texts
+	Mixed.Copied(Flooring)(2) is "    llvm.store %t0a, %r0i : i64, !llvm.ptr"
+	MlirWholeNative(MlirWholeStatements.Halving.At(1)).Constant(MlirWholeTypes.Halves(1)).Last.EndsWith("i64, !llvm.ptr")
+	Text.Combine(MlirWholeNative(Painting).Packed(MlirLanes.Made, "Rgb"), "|") is Packs
+	MlirWholeNative(Painting).Lane(MlirLanes.Tinted, "alpha", 3)(0) is "    %t3a3 = arith.constant 255 : i64"
+	Text.Combine(MlirWholeNative(Painting.At(4)).Read(MlirLanes.Greens), "|") is Greened
+	Text.Combine(Framed.Half(InstructionEntry(InstructionType.FieldLoad, ("Height", "Sizing"), (1, 0, -1)))).Length is 293
+	Framed.Read(Widths) is Framed.Half(Widths)
+	Framed.Half(Widths)(1) is "    %t1s = arith.constant 0 : i64"
 	Floor.Copied(MlirWholeTypes.Halves(3)).Last is "    llvm.store %t3a, %r3 : i64, !llvm.ptr"
 	let source = entry.payload(LoadReuse(statements.function.method.instructions).InvokeReads(entry).Last)
 	statements.Load("a", source, "i") + statements.Store("a", "i", entry.payload(0))
 Floored(entry InstructionEntry) Texts
+	Mixed.Floored(Flooring)(0) is "    %t0a = llvm.load %r0 : !llvm.ptr -> f64"
+	Mixed.Floored(Flooring)(1) is "    %t0f = llvm.intr.floor(%t0a) : (f64) -> f64"
+	Mixed.Floored(Flooring)(2) is "    %t0c = arith.fptosi %t0f : f64 to i64"
 	Floor.Floored(MlirWholeTypes.Halves(3)).First is "    %t3a = llvm.load %r2 : !llvm.ptr -> i64"
 	let source = entry.payload(LoadReuse(statements.function.method.instructions).InvokeReads(entry).Last)
 	let types = MlirWholeTypes(statements.function)
@@ -40,12 +61,19 @@ Floored(entry InstructionEntry) Texts
 	let converted = MlirWholeValues(statements.position).Converted(statements.Temp("f"), "f", "i", statements.Temp("c"))
 	statements.Load("a", source, "f") + floored + converted + statements.Store("c", "i", entry.payload(0))
 Built(entry InstructionEntry) Texts
+	MlirWholeNative(Painting).Emitted(MlirLanes.Made) is MlirWholeNative(Painting).Built(MlirLanes.Made)
+	Sizing.Read(MlirWholeInstance.Sizing.instructions(1)) is Sizing.Member(MlirWholeInstance.Sizing.instructions(1))
+	Sizing.Member(MlirWholeInstance.Sizing.instructions(1))(1) is "    llvm.store %t1c, %r1p : !llvm.ptr, !llvm.ptr"
+	Sizing.Member(MlirWholeInstance.Sizing.instructions(1))(0).StartsWith("    %t1c = ")
+	Mixed.Emitted(Flooring) is Mixed.Floored(Flooring)
+	Mixed.Floored(Flooring)(3) is "    llvm.store %t0c, %r0i : i64, !llvm.ptr"
 	MlirWholeNative(Painting).Built(MlirLanes.Made).Last is "    llvm.store %t3o2, %r3 : i64, !llvm.ptr"
 	let typeName = PayloadDecoder(entry).Text(1)
 	if MlirLayout(statements.function).IsByte(typeName)
 		return Copied(entry)
 	MlirLanes(statements.function, statements.position).IsPacked(typeName) then Packed(entry, typeName) else List(Text)
 Packed(entry InstructionEntry, typeName Text) Texts
+	Mixed.Emitted(InstructionEntry.Invoke(1, ("Strict/Number", "Validated", "Strict/Number"), List(Number), 0)).Length is 3
 	MlirWholeNative(Painting).Packed(MlirLanes.Made, "Rgb")(1) is "    %t3z0 = arith.constant 0 : i64"
 	let members = MlirLanes(statements.function, statements.position).Members(typeName)
 	let values = MlirWholeValues(statements.position)
@@ -96,6 +124,7 @@ Half(entry InstructionEntry) Texts
 	let stored = statements.Store("m", "i", entry.payload(0))
 	statements.Load("a", entry.payload(1), "c") + moved + (truncated, single, whole) + stored
 Member(entry InstructionEntry) Texts
+	Text.Combine(Sizing.Member(InstructionEntry(InstructionType.FieldLoad, ("width", "Grid"), (4, 3, -1)))).Length is 257
 	Sizing.Member(MlirWholeInstance.Sizing.instructions(1)).First.EndsWith("%v_grid_cells : !llvm.ptr -> !llvm.ptr")
 	let instance = MlirWholeInstance(statements.function)
 	let kind = instance.MemberKind(entry.texts(1), entry.texts(0))
@@ -107,6 +136,7 @@ Member(entry InstructionEntry) Texts
 	let read = MlirWholeFields(statements.function).Field(statements.Temp("a"), slot, statements.Temp("m"), kind)
 	statements.Load("a", entry.payload(1), "o") + read + statements.Store("m" + kind, kind, entry.payload(0))
 Constant(entry InstructionEntry) Texts
+	Mixed.Constant(InstructionEntry.LoadNumber(0, 0.5)).Length is 2 and (Framed.Built(MlirCouples.Sized).Length is 0)
 	Mixed.Constant(Mixing.method.instructions(0)).Last is "    llvm.store %t0c, %r0 : f64, !llvm.ptr"
 	"    llvm.store %t0k, %r0i : i64, !llvm.ptr" is in Mixed.Constant(Mixing.method.instructions(0))
 	let values = MlirWholeValues(statements.position)

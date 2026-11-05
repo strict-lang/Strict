@@ -27,6 +27,7 @@ Typed(parameters List(MemberEntry), arguments List(VmValue)) List(VmValue)
 	Hello.Typed(List(MemberEntry) + Paired.members.Last, List(VmValue) + VmValue.OfText("5")).First.number is 5
 	Hello.Typed(List(MemberEntry) + MemberEntry.LoggerMember, List(VmValue) + VmValue.OfText("a")).First.text is "a"
 	Hello.Typed(List(MemberEntry) + MemberEntry.NumbersMember, List(VmValue) + VmValue.OfText("5")).First.items.Length is 1
+	Hello.Typed((MemberEntry.NumbersMember, Paired.members.Last), (VmValue.OfText("5"), VmValue.OfText("6"))).Length is 2
 	mutable typed = List(Mutable(VmValue))
 	for arguments
 		let parameter = index < parameters.Length then parameters(index) else parameters.Last
@@ -34,12 +35,14 @@ Typed(parameters List(MemberEntry), arguments List(VmValue)) List(VmValue)
 		typed.Add(isNumber then VmValue.OfNumber(value.text to Number) else value)
 	let isListed = (parameters.Length is 1) and parameters.First.typeName.StartsWith("Strict/List(")
 	isListed then List(VmValue) + VmValue.OfList(typed) else typed
-Tested(typeName Text) Number
+Tested(typeName Text, runner Text = TestCodegen.Runner) Number
 	Hello.Tested("HelloLogger") is 0
+	Machine(Hello, deadline = 0.001).Tested("HelloLogger") is 1
 	let main = Natives(types).TypeOf(typeName)
-	let tests = main.Callee(TestCodegen.Runner, 0, "None", List(Text))
+	let tests = main.Callee(runner, 0, "None", List(Text))
 	let instance = Natives(types).Fresh(main)
-	Execute(tests, Bound(main, instance, tests, List(VmValue), instance), main.Name).number
+	let result = Execute(tests, Bound(main, instance, tests, List(VmValue), instance), main.Name)
+	result.kind is "Strict/Error" then 1 else result.number
 Prepared Machine
 	Hello.Prepared.prototypes.entries.First.kind is "HelloLogger"
 	Hello.Prepared.sources("HelloLogger") is "HelloLogger.strict"
@@ -79,12 +82,18 @@ Argument(method MethodEntry, arguments List(VmValue), position Number) VmValue
 	Hello.Argument(Defaulted, List(VmValue), 0).number is 7
 	Hello.Argument(Defaulted, List(VmValue) + VmValue.OfNumber(2), 0).number is 2
 	Hello.Argument(Defaulted, List(VmValue), 1).kind is "None"
+	Hello.Member(Wrapper, VmValue.OfNumber(3), 3, 0, VmValue.None).kind is "None"
+	Hello.Member(Wrapper, Frame.Listed(7), 7, 2, VmValue.None).number is 20
+	Hello.Member(Wrapper, VmValue.None, 7, 2, VmValue.None).number is 7
+	Hello.Member(Wrapper, VmValue.None, 7, 0, Frame.Listed(7)).number is 20
+	Hello.Member(Paired, VmValue("Pair", 0, "", (VmValue.None, VmValue.OfNumber(2))), 7, 1, VmValue.None).number is 2
 	if position >= method.parameters.Length
 		return VmValue.None
 	position < arguments.Length then arguments(position) else Natives(types).Initial(method.parameters(position))
 Indexed(method MethodEntry, arguments List(VmValue)) VmValue
 	Hello.Indexed(MethodEntry.Indexing, List(VmValue) + VmValue.OfNumber(4)).number is 4
 	Hello.Indexed(Defaulted, List(VmValue)).kind is "None"
+	Hello.Indexed(MethodEntry.Indexing, List(VmValue)).number is 0
 	for method.parameters
 		if value.Name is "index"
 			return index < arguments.Length then arguments(index) else Natives(types).Initial(value)
@@ -126,6 +135,12 @@ Execute(method MethodEntry, locals List(VmValue), owner Text, depth = 0) VmValue
 Call(call Invocation) VmValue
 	Machine(List(TypeEntry) + Doubler).Call(Invocation.AddCall).kind is "Strict/Error"
 	Hello.Call(Invocation.Uppered).text is "AB"
+	Hello.Typed((MemberEntry.LoggerMember, Paired.members.Last), (VmValue.OfText("5"), VmValue.OfText("6")))(0).text is "5"
+	Hello.Typed(List(MemberEntry) + Paired.members.Last, (VmValue.OfText("5"), VmValue.OfText("6"))).Last.number is 6
+	Hello.Bound(Doubler, VmValue.None, MethodEntry.Indexing, (VmValue.OfNumber(4)), VmValue.None)(5).number is 4
+	(deadline > 0) and Hosted(call).IsChanging then VmValue.OfError("ChangeInMutationRun") else Routed(call)
+Routed(call Invocation) VmValue
+	Hello.Routed(Invocation.Uppered).text is "AB"
 	let at = call.Resolution
 	let entry = call.entry.payload.Length > at then call.entry else Resolver(types).Targeted(call.entry)
 	let route = entry.payload(at)
@@ -156,6 +171,8 @@ Field(entry InstructionEntry, instance VmValue) VmValue
 			found = MemberValue(owner, instance, index)
 	found
 Logged(message Text) VmValue
+	Hello.Logged("").kind is "None"
 	Hello.Logged("Hi").kind is "None"
-	logger.Log(message)
+	if message is not ""
+		logger.Log(message)
 	VmValue.None

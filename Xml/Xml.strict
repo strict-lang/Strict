@@ -9,7 +9,9 @@ Attribute(key Text) Text
 	Sample.Attribute("Identifier") is "Play"
 	Sample.Attribute("Missing") is ""
 	Menu.Children(0).Attribute("Text") is "Play"
-	Menu.Attribute("Text") is ""
+	(Menu.Attribute("Text") is "") and (Xml("<A BC=\"2\" B=\"1\"").Attribute("B") is "1")
+	(Xml("<A\nB=\"1\"").Attribute("B") is "1") and (Xml("<A\tB=\"1\"").Attribute("B") is "1")
+	Xml("<A\rB=\"1\"").Attribute("B") is "1"
 	let tag = StartTag.Replace("\n", " ").Replace("\t", " ").Replace("\r", " ")
 	let found = tag.IndexOf(" " + key + "=\"")
 	if found < 0
@@ -19,11 +21,16 @@ Attribute(key Text) Text
 Values(key Text) Numbers
 	Sample.Values("Margin") is (0, 0.5, 0, 0)
 	Sample.Values("BlendColor") is (1, 0.5, 1, 1)
-	let numbers = Attribute(key).Replace("(", "").Replace(")", "").Replace(",", "")
+	Xml("<A V=\"(1 ,2)\"").Values("V") is (1, 2)
+	Sample.Values("Missing").Length is 0
+	let numbers = Attribute(key).Replace("(", "").Replace(",", "")
 	numbers is "" then List(Number) else numbers.Split(" ") to Numbers
 Name Text
 	Menu.Name is "Menu"
-	Xml(" A=\"2\"").Name is ""
+	(Xml(" A=\"2\"").Name is "") and (Xml("A").Name is "") and (Xml("<>").Name is "")
+	Xml("<").Name is ""
+	(Xml("<A").Name is "A") and (Xml("<B/").Name is "B") and (Xml("<C D").Name is "C")
+	(Xml("<A\t").Name is "A") and (Xml("<B\r").Name is "B") and (Xml("<C\n").Name is "C")
 	let start = NextTag(0)
 	if start < 0
 		return ""
@@ -32,12 +39,12 @@ Name Text
 		after = after + 1
 	text.Substring(start + 1, after - start - 1)
 Children Xmls
-	Menu.Children.Length is 2
-	Menu.Children(1).Name is "Label"
-	Sample.Children.Length is 0
+	(Menu.Children.Length is 2) and (Xml("A").Children.Length is 0) and (Xml("<A/><B/>").Children.Length is 0)
+	(Menu.Children(1).Name is "Label") and (Xml("<A><B/>").Children.Length is 1)
+	(Sample.Children.Length is 0) and (Xml("<A><B/></A>").Children.Length is 1) and (Xml("<A></A>").Children.Length is 0)
 	mutable children = List(Mutable(Xml))
 	let start = NextTag(0)
-	let close = start < 0 then 0 else TagEnd(start)
+	let close = TagEnd(start)
 	mutable at = (start < 0) or (Depth(start, close) is 0) then -1 else NextTag(close)
 	for as long as (at >= 0) and (text.Substring(at + 1, 1) is not "/")
 		let after = ElementEnd(at)
@@ -54,6 +61,8 @@ get(name Text) Xml
 Content Text
 	Menu.Children(1).Content is "A & B"
 	Menu.Children(0).Content is ""
+	(Xml("A").Content is "") and (Xml("<A/>b").Content is "")
+	Xml("<A>b").Content is "b"
 	let start = NextTag(0)
 	if (start < 0) or (Depth(start, TagEnd(start)) is 0)
 		return ""
@@ -63,11 +72,17 @@ Content Text
 StartTag Text
 	Menu.StartTag is "<Menu>"
 	Xml(" A=\"2\"").StartTag is " A=\"2\""
+	Xml("A>BC").StartTag is "A>BC"
 	let start = NextTag(0)
 	start < 0 then text else text.Substring(start, TagEnd(start) - start)
 NextTag(position Number) Number
 	Menu.NextTag(0) is 17
 	Sample.NextTag(1) is -1
+	Xml("<A>").NextTag(0) is 0
+	Xml("<!-- > < --><A>").NextTag(0) is 12
+	Xml("<?a <b?><A>").NextTag(0) is 8
+	Xml("<!<><A>").NextTag(0) is 4
+	(Xml("<A><?b").NextTag(1) is -1) and (Xml("?<?").NextTag(0) is -1)
 	mutable at = text.IndexOf("<", position)
 	for as long as (at >= 0) and (text.Substring(at + 1, 1) is in ("?", "!"))
 		let found = text.IndexOf(text.StartsWith("<!--", at) then "-->" else ">", at)
@@ -81,6 +96,7 @@ TagEnd(position Number) Number
 ElementEnd(start Number) Number
 	Menu.ElementEnd(17) is Menu.text.Length
 	Sample.ElementEnd(0) is Sample.text.Length
+	(Xml("<A>b").ElementEnd(0) is 4) and (Xml("<A/>b").ElementEnd(-1) is 5)
 	mutable depth = 0
 	mutable at = start
 	for as long as at >= 0
@@ -99,6 +115,5 @@ Depth(at Number, close Number) Number
 	text.Substring(close - 2, 1) is "/" then 0 else 1
 Decoded(raw Text) Text
 	Sample.Decoded("&lt;a&gt; &amp;amp; &quot;") is "<a> &amp; \""
-	if raw.IndexOf("&") < 0
-		return raw
+	Sample.Decoded("&apos;") is "'"
 	raw.Replace("&lt;", "<").Replace("&gt;", ">").Replace("&quot;", "\"").Replace("&apos;", "'").Replace("&amp;", "&")

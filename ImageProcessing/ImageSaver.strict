@@ -3,6 +3,7 @@ has compressed Boolean = true
 constant Signature = (137, 80, 78, 71, 13, 10, 26, 10)
 constant Header = 1229472850
 constant End = 1229278788
+constant Corner = Image(Size(2, 2), (ColorValue(0, 0, 0), ColorValue(0, 0, 0), ColorValue(0, 0, 0), ColorValue(1, 1, 1)))
 Save(image Image)
 	File(path).Write(Bytes(image))
 Bytes(image Image) Slow(Bytes)
@@ -26,6 +27,7 @@ Big32(number Number) Numbers
 	((number / 16777216).Floor % 256, (number / 65536).Floor % 256, (number / 256).Floor % 256, number % 256)
 Scanlines(image Image) Numbers
 	ImageSaver("").Scanlines(Image.Blank(Size(1, 1))) is (0, 0, 0, 0, 255)
+	ImageSaver("").Scanlines(Corner) is (0, 0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 0, 255, 255, 255, 255, 255)
 	let row = image.Size.Width * 4 + 1
 	for image.Size.Height * row
 		let column = index % row
@@ -33,6 +35,9 @@ Scanlines(image Image) Numbers
 		column is 0 then 0 else Channel(image.Colors(pixel), (column - 1) % 4)
 Channel(color ColorValue, channel Number) Number
 	ImageSaver("").Channel(ColorValue(1, 0.5, 0), 1) is 128
+	ImageSaver("").Channel(ColorValue(0.2, 0.4, 0.6, 0.8), 0) is 51
+	ImageSaver("").Channel(ColorValue(0.2, 0.4, 0.6, 0.8), 2) is 153
+	ImageSaver("").Channel(ColorValue(0.2, 0.4, 0.6, 0.8), 3) is 204
 	let rgb = channel is 0 then color.Red else channel is 1 then color.Green else color.Blue
 	let component = channel is 3 then color.Alpha else rgb
 	(component.Clamp * 255).Round

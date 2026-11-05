@@ -17,6 +17,11 @@ IsCoupled(kind Text) Boolean
 	Sample.IsCoupled("Sizing")
 	Sample.IsCoupled("Strict/Math/Sizing")
 	Sample.IsCoupled("Number") is false
+	Sample.Aliased(InstructionEntry(InstructionType.FieldLoad, "value", (3, 2, -1)), "Sizing").Length is 2
+	Turns.Constructed(Turned, "Turning", Instances) is Turns.Single(Turned, "Turning")
+	Sample.Constructed(Sized, "Sizing", Instances)(1) is "    %t2cy = llvm.load %r1 : !llvm.ptr -> f64"
+	constant packing = "    %t2cp = func.call @strict_two_packed(%t2cx, %t2cy) : (f64, f64) -> f64"
+	Sample.Constructed(Sized, "Sizing", Instances)(2) is packing
 	let type = function.TypeOf(TypeEntry.ShortName(kind))
 	let halves = Halves(type)
 	(halves.Length is 2) and IsHalf(halves.First) and IsHalf(halves.Last)
@@ -28,6 +33,9 @@ Halves(type TypeEntry) List(MemberEntry)
 IsHalf(member MemberEntry) Boolean
 	Sample.IsHalf(Sizing.members.First)
 	Sample.IsHalf(Sizing.members.Last) is false
+	Sample.IsHalf(MemberEntry("Width", "Strict/Text", List(InstructionEntry), false, 32)) is false
+	Sample.IsHalf(MemberEntry("Width", "Number", List(InstructionEntry) + Heights, false, 32)) is false
+	Sample.IsHalf(MemberEntry("Width", "Number", List(InstructionEntry), false, 32))
 	Sample.IsHalf(MemberEntry("Width", "Strict/Number", List(InstructionEntry), false)) is false
 	let isNumber = member.typeName is in ("Number", "Strict/Number")
 	isNumber and (member.initial.Length is 0) and (member.Bits is 32)
@@ -47,11 +55,14 @@ Constructed(entry InstructionEntry, typeName Text, instances MlirInstances) Text
 IsSingle(kind Text) Boolean
 	Turns.IsSingle("Turning")
 	Sample.IsSingle("Sizing") is false
+	Sample.IsFlatRead(Heights) is false
+	MlirCouples(MlirFlats.Reader.function, 1).IsFlatField(-1) is false
 	let halves = Halves(function.TypeOf(TypeEntry.ShortName(kind)))
 	(halves.Length is 1) and (IsHalf(halves.First) or (halves.First.Bits is 8))
 Single(entry InstructionEntry, kind Text) Texts
 	Turns.Single(Turned, "Turning")(1) is "    %t1cr = func.call @strict_single(%t1cx) : (f64) -> f64"
 	Turns.Single(Turned, "Turning").Last is "    llvm.store %t1cr, %r1 : f64, !llvm.ptr"
+	Turns.Single(Turned, "Turning").First is "    %t1cx = llvm.load %r0 : !llvm.ptr -> f64"
 	let member = Halves(function.TypeOf(TypeEntry.ShortName(kind))).First
 	let temp = "%t" + position + "c"
 	let rounding = member.Bits is 8 then "@strict_byte(" else "@strict_single("
@@ -61,6 +72,9 @@ Single(entry InstructionEntry, kind Text) Texts
 Argument(entry InstructionEntry, name Text, fallback Number) Text
 	Sample.Argument(Sized, "Height", 0) is "%r1"
 	Sample.Argument(Sized, "Other", 0) is "%r0"
+	MlirCouples(MlirFlats.Made.function, 2).Constructed(MlirFlats.Construction, "Tripling", Instances).Length is 3
+	constant run = MethodEntry("Run", List(MemberEntry) + Sizing.members.First, "None", List(InstructionEntry))
+	MlirCouples(MlirFunction(List(TypeEntry) + Sizing, Sizing, run), 0).Unpacked.Length is 3
 	let named = Invocation(entry, List(VmValue), VmValue.None).ParameterNames.Index(name)
 	"%r" + entry.payload(5 + entry.payload(3) + 1 + (named < 0 then fallback else named))
 Rounded(member MemberEntry, register Number, loaded Text) Texts
@@ -91,6 +105,9 @@ Aliased(entry InstructionEntry, kind Text) Texts
 Unpacked Texts
 	Own.Unpacked.Length is 5
 	Own.Unpacked.Last is "    llvm.store %tcouple1, %v_Height : f64, !llvm.ptr"
+	Own.Unpacked(0) is "    %tcouple = llvm.load %instance : !llvm.ptr -> f64"
+	Own.Unpacked(1) is "    %tcouple0 = func.call @strict_two_x(%tcouple) : (f64) -> f64"
+	Own.Unpacked(3) is "    %tcouple1 = func.call @strict_two_y(%tcouple) : (f64) -> f64"
 	mutable lines = List(Text) + function.Load("%tcouple", "%instance")
 	for Halves(function.type)
 		if value.Name is not in function.method.ParameterNames
@@ -100,6 +117,13 @@ Unpacked Texts
 	lines
 IsFlatRead(entry InstructionEntry) Boolean
 	MlirCouples(MlirFlats.Reader.function, 1).IsFlatRead(MlirFlats.Tripling.methods.Last.instructions(1))
+	constant widths = InstructionEntry(InstructionType.FieldLoad, "Width", (3, 2, -1))
+	Sample.Aliased(widths, "Sizing")(1) is "    %t2hv = func.call @strict_two_x(%t2hp) : (f64) -> f64"
+	Sample.Aliased(Heights, "Sizing").First is "    %t2hp = llvm.load %r2 : !llvm.ptr -> f64"
+	Sample.Aliased(Heights, "Sizing").Last is "    llvm.store %t2hv, %r3 : f64, !llvm.ptr"
+	Sample.Aliased(Heights, "Number").First is "    %t2a = llvm.load %r2 : !llvm.ptr -> f64"
+	Sample.Aliased(Heights, "Number").Last is "    llvm.store %t2a, %r3 : f64, !llvm.ptr"
+	Celled.Aliased(Listing, "Tripling").Length is 2
 	let isFlat = MlirFlats(function, position).Count(MlirKinds(function).VariableKind(position, entry.texts(0))) > 0
 	isFlat or IsFlatAlias(entry.texts(0))
 IsFlatAlias(name Text) Boolean
@@ -117,6 +141,9 @@ IsFlatAlias(name Text) Boolean
 IsFlatField(at Number) Boolean
 	Celled.IsFlatField(1)
 	Celled.IsFlatField(0) is false
+	Sample.IsFlatField(3) is false
+	Celled.IsFlatAlias("missing") is false
+	Turns.Rounded(Turning.members.First, 0, "%a").First is "    %aw = llvm.load %r0 : !llvm.ptr -> f64"
 	MlirFlats(Celled.function, 4).Indexed(Cells(4), MlirLists(Celled.function, 4))(2).IndexOf("flat_at(") > 0
 	let field = at >= 0 then function.method.instructions(at) else InstructionEntry.Return(0)
 	let isField = field.kind is InstructionType.FieldLoad

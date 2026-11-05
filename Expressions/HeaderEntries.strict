@@ -3,6 +3,7 @@ has methods Scope = KnownTypes.NoMembers
 constant Mutating = HeaderEntries(HeaderTokens(Tokenizer("Add(x Number) Mutable(List)").Tokens))
 constant Adding = HeaderEntries(HeaderTokens(Tokenizer("Add(x Number) Number").Tokens))
 constant Defaulting = HeaderEntries(HeaderTokens(Tokenizer("Add(x Number, y List(Text) = List(Text), z = Basis.None)").Tokens))
+constant Pair = HeaderEntries(HeaderTokens(Tokenizer("A(x Number, y Text)").Tokens))
 Parameters Scope
 	HeaderEntries(HeaderTokens(Tokenizer("Merged Slow(Numbers)").Tokens)).Parameters.TypeOf("Merged slow") is "Slow"
 	Mutating.Parameters.TypeOf("Add mutable") is "Mutable"
@@ -17,6 +18,11 @@ Parameters Scope
 	let marked = header.ReturnsSlow then entries.With(name + " slow", "Slow") else entries
 	header.ReturnsMutable then marked.With(name + " mutable", "Mutable") else marked
 ParameterTypes Texts
+	HeaderEntries(HeaderTokens(Tokenizer("A(x o, y = o)").Tokens), Scope(("o"), ("N"))).ParameterTypes is ("o", "N")
+	Pair.Parameters.TypeOf("A") is "x,y"
+	Pair.Parameters.TypeOf("A types") is "Number,Text"
+	HeaderEntries(HeaderTokens(Tokenizer("A(x = Range(0, 2))").Tokens)).Default(2) is ("Range", "(", "0", ",", "2", ")")
+	HeaderEntries(HeaderTokens(Tokenizer("A(x B(c = 1) = d)").Tokens)).Default(2) is ("d")
 	for header.ParameterTypes
 		let position = header.tokens.Index(header.ParameterNames(index))
 		let inferred = header.tokens(position + 1) is "=" then methods.TypeOf(value) else ""

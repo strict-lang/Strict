@@ -50,11 +50,15 @@ Callee(name Text, count Number, returnType Text, names Texts) MethodEntry
 	Converting.Callee("to", 0, "Text", List(Text)).parameters.Length is 1
 	Converting.Callee("to", 0, "Strict/Number", List(Text)).parameters.Length is 0
 	Scaling.Callee("*", 1, "Strict/Vector", List(Text) + "scale").returnType is "Strict/Vector"
+	HelloLogger.Callee("Go", 0, "", List(Text)) is MethodEntry("Go", List(MemberEntry), "None", List(InstructionEntry))
 	let chosen = Chosen(name, count, returnType, names)
 	chosen < 0 then MethodEntry(name, List(MemberEntry), "None", List(InstructionEntry)) else methods(chosen)
 OverloadSuffix(method MethodEntry) Text
 	Scaling.OverloadSuffix(Scaling.methods.Last) is "_scale"
 	HelloLogger.OverloadSuffix(MethodEntry.HelloRun) is ""
+	TypeEntry("A", List(MemberEntry), (ToNumber, ToNumber)).OverloadSuffix(ToNumber) is ""
+	Scaling.OverloadSuffix(MethodEntry("+", Scaling.methods.Last.parameters, "C", List(InstructionEntry))) is ""
+	Scaling.OverloadSuffix(MethodEntry("*", List(MemberEntry), "C", List(InstructionEntry))) is ""
 	mutable count = 0
 	for methods
 		if (value.Name is method.Name) and (value.Name is not "to") and (value.parameters.Length is method.parameters.Length)
@@ -73,7 +77,7 @@ ShortName(typeName Text) Text
 	slash < 0 then typeName else typeName.Substring(slash + 1, typeName.Length - slash - 1)
 Wrapped Text
 	HelloLogger.Wrapped is "Logger"
-	Converting.Wrapped is ""
+	Converting.Wrapped is "" and (CharacterEntry.Wrapped is "")
 	TypeEntry("Strict/Shade", List(MemberEntry) + Lighting, List(MethodEntry)).Wrapped is "Number"
 	let short = ShortName(Name)
 	if IsBaseName(short) or (short is in ("Logger", "File"))
@@ -87,6 +91,9 @@ IsStruct Boolean
 	HelloLogger.IsStruct is false
 	CharacterEntry.IsStruct is false
 	Converting.IsStruct
+	TypeEntry("Strict/File", List(MemberEntry) + MemberEntry.LoggerMember, List(MethodEntry)).IsStruct
+	Initialized.IsStruct and TypeEntry("Strict/S", List(MemberEntry) + Lighting, MethodEntry.HelloRun).IsStruct
+	TypeEntry("Strict/S", (CharacterEntry.members.First, CharacterEntry.members.First), List(MethodEntry)).IsStruct
 	(IsBaseName(ShortName(Name)) is false) and (Wrapped is "")
 Changing List(MemberEntry)
 	HelloLogger.Changing.Length is 1
@@ -102,6 +109,7 @@ IsBaseName(short Text) Boolean
 JustName Text
 	TypeEntry("Strict/Process", List(MemberEntry), List(MethodEntry)).JustName is "Process"
 	HelloLogger.JustName is "HelloLogger"
+	HelloLogger.ShortName("Strict/List(Strict/X)") is "List(Strict/X)"
 	Name.Substring(Name.LastIndexOf("/") + 1, Name.Length - Name.LastIndexOf("/") - 1)
 UsedTypes Texts
 	TypeEntry("A", List(MemberEntry) + MemberEntry.LoggerMember, List(MethodEntry)).UsedTypes is ("Strict/Logger")
@@ -118,6 +126,8 @@ UsedTypes Texts
 ConstantSlot(method MethodEntry) Number
 	Kept.ConstantSlot(Kept.methods.First) is 0
 	HelloLogger.ConstantSlot(HelloLogger.methods.First) is -1
+	Kept.ConstantSlot(MethodEntry("B", CharacterEntry.members, "C", List(InstructionEntry))) is -1
+	Kept.ConstantSlot(ToNumber) is -1
 	if method.parameters.Length > 0
 		return -1
 	for members
@@ -142,5 +152,6 @@ IsRealtime Boolean
 	false
 Source Text
 	CharacterEntry.Source is "Character.strict"
+	CharacterEntry.ConstantSlot(MethodEntry("number", List(MemberEntry), "C", List(InstructionEntry))) is -1
 	let folder = Name.IndexOf("/") + 1
 	Name.Substring(folder, Name.Length - folder) + ".strict"

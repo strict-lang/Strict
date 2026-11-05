@@ -10,8 +10,10 @@ constant Indexing = "] : (!llvm.ptr) -> !llvm.ptr, f64"
 constant Marker = "// device kernels"
 constant NameGlobal = "  llvm.mlir.global internal constant @kRows_Doubled_1_gpu2(\"Rows_Doubled_1_gpu2\\00Rows_Doubled_1_gpu2s\\00\") : !llvm.array<41 x i8>"
 constant Running = "(!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64"
+constant Launching = ("    %t2gc = arith.fptosi %t2n : f64 to i64", "    %t2gd = func.call @strict_gpu_wanted(%t2gc) : (i64) -> i1", "    cf.cond_br %t2gd, ^loop2gpu, ^loop2host", "  ^loop2gpu:", "    %t2gp = llvm.mlir.addressof @strict_gpu_ptx : !llvm.ptr", "    %t2gk = llvm.mlir.addressof @kRows_Doubled_1_gpu2 : !llvm.ptr", "    %t2gs = llvm.mlir.addressof @fRows_Doubled_1_gpu2 : !llvm.ptr", "    %t2gz = arith.constant 1 : i64", "    %t2ga = llvm.alloca %t2gz x f64 : (i64) -> !llvm.ptr", "    %t2gw = arith.constant 0 : i64", "    %t2gm = arith.constant 0 : i64", "    %t2gr = arith.constant 0 : i64", "    %t2go = arith.constant 0 : i64", "    %t2gj = arith.constant 0 : i64", "    %t2gpf = arith.constant 0 : i64", "    %t2gq = arith.constant 1 : i64", "    %t2gy = arith.constant 1 : i64", "    %t2gg = arith.constant 0 : i64", "    %t2gl = func.call @strict_gpu_run(%t2gp, %t2gk, %t2gs, %t2gc, %t2v, %t2gq, %t2ga, %t2gw, %t2gm, %t2gr, %t2go, %t2gy, %t2gg, %t2gpf, %t2gj) : " + Running, "    %t2gf = arith.cmpf oeq, %t2gl, %zero : f64", "    cf.cond_br %t2gf, ^loop2host, ^loop2gpudone", "  ^loop2gpudone:", "    llvm.store %t2gl, %v_forResult : f64, !llvm.ptr", "    cf.br ^loop2exit", "  ^loop2host:")
+constant Stored = ("    %t2gz = arith.constant 3 : i64", "    %t2ga = llvm.alloca %t2gz x f64 : (i64) -> !llvm.ptr", "    %t2gv0 = llvm.load %v_weights : !llvm.ptr -> f64", "    %t2gx0 = llvm.getelementptr %t2ga[0] : (!llvm.ptr) -> !llvm.ptr, f64", "    llvm.store %t2gv0, %t2gx0 : f64, !llvm.ptr", "    %t2gv1 = llvm.load %v_input : !llvm.ptr -> f64", "    %t2gx1 = llvm.getelementptr %t2ga[1] : (!llvm.ptr) -> !llvm.ptr, f64", "    llvm.store %t2gv1, %t2gx1 : f64, !llvm.ptr", "    %t2gw = arith.constant 2 : i64", "    %t2gm = arith.constant 3 : i64", "    %t2gr = arith.constant 1 : i64", "    %t2go = arith.constant 2 : i64", "    %t2gj = arith.constant 0 : i64", "    %t2gpf = arith.constant 1024 : i64")
 Launched Texts
-	Doubling.Launched.Last is "  ^loop2host:"
+	Doubling.Launched.Last is "  ^loop2host:" and (Doubling.Launched is Launching)
 	Randomizing.Launched.Length is 0
 	Text.Combine(Doubling.Launched).IndexOf("strict_gpu_ready") is -1
 	Text.Combine(Doubling.Launched).IndexOf("@strict_gpu_wanted(%t2gc)") > 0
@@ -51,6 +53,8 @@ Values Texts
 	lines + Counted(free.Length, mask, Rows(free), MlirDots(function, position).Mask(free))
 Rows(free Texts) Number
 	MlirGpu(MlirDeviceRows.Picking, 2).Rows(("weights", "input")) is 1
+	MlirGpu(MlirDeviceRows.Picking, 2).Values is Stored
+	MlirGpu(MlirWholeKernel.Kernel.function, 5).Launched.Length is 0
 	mutable rows = 0
 	for free
 		let kind = MlirKinds(function).VariableKind(position, value)
@@ -58,6 +62,8 @@ Rows(free Texts) Number
 	rows
 Value(at Number, name Text) Texts
 	Doubling.Value(0, "input").Last is "    llvm.store %t2gv0, %t2gx0 : f64, !llvm.ptr"
+	MlirGpu(MlirWholeKernel.Kernel.function, 5).Value(0, "a_b") is MlirKernelBody.Body.Value(0, "a_b")
+	MlirGpu(MlirWholeKernel.Kernel.function, 5).Value(0, "b").First is "    %t5gv0 = llvm.load %v_b : !llvm.ptr -> f64"
 	if MlirWholeKernel(function, position).IsKernel and (name.IndexOf("_") > 0)
 		return MlirKernelBody(function, position).Value(at, name)
 	let loaded = Temp("gv" + at)
@@ -91,6 +97,7 @@ Temp(suffix Text) Text
 Globals Texts
 	Doubling.Globals.First is NameGlobal
 	Doubling.Globals.Last is SlotGlobal
+	Randomizing.Globals.Length is 0
 	mutable lines = List(Mutable(Text))
 	for function.method.instructions
 		if (value.kind is InstructionType.LoopBegin) and MlirGpuCheck(function, index).IsGpu
@@ -111,6 +118,11 @@ Module(functions List(MlirFunction)) Text
 	Text.Combine(header + kernels + Functions(callees) + "}", "\n")
 Exported(device Text) Texts
 	MlirGpu.Exported(MlirDevice.DoublingHeader + "\n  llvm.func @Rows_Twice_1_device(") is ("Rows_Doubled_1_gpu2")
+	MlirGpu.Exported("x nvvm.kernel (\n  llvm.func @Twice(") is List(Text)
+	MlirGpu.Module(List(MlirFunction) + Doubling.function).Lines(1).EndsWith("cuda\"} {")
+	MlirGpu.Module(List(MlirFunction) + Doubling.function).Lines(2) is MlirDevice.DoublingHeader
+	MlirGpu.Module(List(MlirFunction) + Doubling.function).Lines.Last is "}"
+	MlirGpu.Module(List(MlirFunction) + Doubling.function).EndsWith(Text.Combine(MlirGpu.Functions(Twiced), "\n") + "\n}")
 	for device.Lines
 		if value.StartsWith("  llvm.func @") and (value.IndexOf("nvvm.kernel") > 0)
 			value.Substring(13, value.IndexOf("(") - 13)
@@ -130,6 +142,8 @@ Kernels(inspected MlirFunction) Texts
 Callees(inspected MlirFunction) List(MlirFunction)
 	MlirGpu.Callees(Doubling.function).First.Symbol is "Rows_Twice_1"
 	MlirGpu.Callees(Randomizing.function).Length is 0
+	MlirGpu.Callees(Doubling.function).Length is 1
+	MlirGpu.Callees(MlirWholeKernel.Kernel.function).Length is 0
 	mutable found = List(Mutable(MlirFunction))
 	for inspected.method.instructions
 		if (value.kind is InstructionType.LoopBegin) and MlirGpuCheck(inspected, index).IsGpu
@@ -138,6 +152,7 @@ Callees(inspected MlirFunction) List(MlirFunction)
 	found
 Devices(inspected MlirFunction, first Number, limit Number, depth Number) List(MlirFunction)
 	MlirGpu.Devices(Doubling.function, 0, 7, 0).First.Symbol is "Rows_Twice_1"
+	MlirGpu.Devices(Doubling.function, 0, 7, 3).Length is 0
 	mutable found = List(Mutable(MlirFunction))
 	for Range(first, limit)
 		let entry = inspected.method.instructions(value)
@@ -150,6 +165,7 @@ Devices(inspected MlirFunction, first Number, limit Number, depth Number) List(M
 Functions(callees List(MlirFunction)) Texts
 	MlirGpu.Functions(List(MlirFunction) + MlirDevice.Twice.function).First.IndexOf("@Rows_Twice_1_device(") > 0
 	Text.Combine(MlirGpu.Functions(Twiced)).IndexOf("@Rows_Twice_1_devices(") > 0
+	MlirGpu.Functions(Twiced + MlirDevice.Twice.function) is MlirGpu.Functions(Twiced)
 	mutable lines = List(Mutable(Text))
 	mutable symbols = List(Mutable(Text))
 	for callees

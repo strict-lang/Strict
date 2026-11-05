@@ -8,9 +8,19 @@ constant Defaulted = InstructionEntry.Invoke(5, ("Strict/Drawer", "Shifted", "St
 constant Made = InstructionEntry.Invoke(6, ("Strict/Drawer", "from", "Strict/Drawer", "offset", "count"), (4, 3), -1)
 constant Offsets = InstructionEntry(InstructionType.FieldLoad, ("offset", "Drawer"), (3, 2, -1, -2))
 constant Sample = LaneCalls((StructLanes.Pair, Drawer))
+constant Twin = TypeEntry("Strict/Pair", StructLanes.Pair.members, List(MethodEntry) + Shifting)
+constant Stub = TypeEntry("Strict/Drawer", Drawer.members, List(MethodEntry) + MethodEntry("Shifted", (Offset, Counted), "Strict/Number", List(InstructionEntry)))
+constant Paired = InstructionEntry.Invoke(5, ("Strict/Pair", "Shifted", "Strict/Number", "offset", "count"), (4, 3), -1)
+constant Swapped = InstructionEntry.Invoke(5, ("Strict/Drawer", "Shifted", "Strict/Number", "count", "offset"), (4, 3), -1)
+constant Doubled = InstructionEntry.Invoke(5, ("Strict/Drawer", "Shifted", "Strict/Number", "offset", "offset"), (4, 3), -1)
 Laned(members List(MemberEntry)) Texts
 	Sample.Laned(Drawer.members) is ("offset Pair")
 	Sample.Laned(StructLanes.Pair.members).Length is 0
+	LaneCalls((Twin, Drawer)).Signature(Paired).Length is 0
+	LaneCalls((StructLanes.Pair, Stub)).Signature(Shift).Length is 0
+	Sample.Signature(Offsets).Length is 0
+	LaneCalls((StructLanes.Pair, Stub)).Signature(Made) is ("offset Pair")
+	LaneCalls((Twin, Drawer)).Signature(Shift) is ("offset Pair")
 	for members
 		if Lanes(value).Length > 0
 			value.Name + " " + TypeEntry.ShortName(value.typeName)
@@ -18,6 +28,7 @@ Lanes(member MemberEntry) Texts
 	Sample.Lanes(Offset) is ("real", "imaginary")
 	Sample.Lanes(Counted).Length is 0
 	Sample.Lanes(MemberEntry("seed", "Strict/Pair", List(InstructionEntry) + StructLanes.Constructed, false)).Length is 0
+	Sample.Lanes(MemberEntry("zero", "Strict/Pair", List(InstructionEntry), true)).Length is 0
 	let isPlain = member.IsConstant or (member.initial.Length > 0)
 	isPlain then List(Text) else StructLanes.Members(Inliner(types).TypeOf(member.typeName))
 Divided(members List(MemberEntry)) List(MemberEntry)
@@ -32,6 +43,7 @@ Divided(members List(MemberEntry)) List(MemberEntry)
 	result
 Split(member MemberEntry, lanes Texts) List(MemberEntry)
 	Sample.Split(Offset, ("real", "imaginary")).First.Name is "offset_real"
+	Sample.Split(Offset, ("real", "imaginary")).First.typeName is "Strict/Number"
 	for lanes
 		MemberEntry(StructLanes.Lane(member.Name, value), "Strict/Number", List(InstructionEntry), false, member.Bits)
 Signature(call InstructionEntry) Texts
@@ -50,6 +62,7 @@ Signature(call InstructionEntry) Texts
 Width(call InstructionEntry, position Number) Number
 	Sample.Width(Shift, 0) is 2
 	Sample.Width(Shift, 1) is 0
+	Sample.Width(Swapped, 1) is 2
 	let type = LaneFlow(types).Typed(Signature(call), call.texts(3 + position))
 	type is "" then 0 else StructLanes.Members(Inliner(types).TypeOf(type)).Length
 Called(call InstructionEntry, laned Texts, base Number) List(InstructionEntry)
@@ -66,6 +79,11 @@ Called(call InstructionEntry, laned Texts, base Number) List(InstructionEntry)
 	Loads(call, laned, base) + InstructionEntry(made.kind, made.texts, made.payload, call.line)
 Given(call InstructionEntry) Number
 	Sample.Given(Defaulted) is 1
+	Sample.Spread(StructLanes.Constructed, "Pair", 8).Length is 5
+	Sample.Spread(StructLanes.Constructed, "Pair", 8)(1).texts is ("real", "Pair")
+	Sample.Spread(StructLanes.Constructed, "Pair", 8)(1).payload is (8, 2, -1, -2)
+	Sample.Spread(Offsets, "Pair", 8).First.payload is (8, 2, -1, -2)
+	Sample.Spread(Offsets, "Pair", 8).Length is 4 and (Sample.Spread(Offsets, "Pair", 8)(1).texts is ("lanes3_real"))
 	call.payload(5 + call.payload(3))
 Names(call InstructionEntry) Texts
 	Sample.Names(Made) is ("offset_real", "offset_imaginary", "count")
@@ -77,6 +95,7 @@ Names(call InstructionEntry) Texts
 	names
 Prefixed(name Text, lanes Texts) Texts
 	Sample.Prefixed("a", ("x", "y")) is ("a_x", "a_y")
+	Sample.Divided(Drawer.members).Last.Name is "count"
 	for lanes
 		StructLanes.Lane(name, value)
 Registers(call InstructionEntry, base Number) Numbers
@@ -91,6 +110,9 @@ Registers(call InstructionEntry, base Number) Numbers
 	registers
 Sequence(start Number, count Number) Numbers
 	Sample.Sequence(9, 2) is (9, 10)
+	Sample.Registers(Doubled, 9) is (9, 10, 11, 12)
+	Sample.Loads(Doubled, List(Text), 9).Last.payload is (12, 3, -1, -2)
+	Sample.Loads(Swapped, List(Text), 9).Length is 2
 	for count
 		start + index
 Loads(call InstructionEntry, laned Texts, base Number) List(InstructionEntry)

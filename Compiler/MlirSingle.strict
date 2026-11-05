@@ -8,12 +8,15 @@ constant Collecting = MlirSingle(MlirFunction(Singled.types, Singled.type, Singl
 constant Allowed = (InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable, InstructionType.IndexCall, InstructionType.CheckError, InstructionType.InvokeWriteToList, InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply, InstructionType.Divide)
 constant Summed = " fastmath<reassoc,contract> : f64"
 constant Operators = (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply, InstructionType.Divide)
+constant Fast = ("  ^loop2fast:", "    %t2b = arith.constant 0.0 : f64", "    %t2v = llvm.load %r0 : !llvm.ptr -> f64", "    %t2n = func.call @strict_list_length(%t2v) : (f64) -> f64", "    %t2s = arith.constant 1.0 : f64", "    %t2ok0 = arith.constant true", "    %t2l_input = llvm.load %v_input : !llvm.ptr -> f64", "    %t2n_input = func.call @strict_list_length(%t2l_input) : (f64) -> f64", "    %t2e_input = arith.cmpf oge, %t2n_input, %t2n : f64", "    %t2ok1 = arith.andi %t2ok0, %t2e_input : i1", "    %t2h = func.call @strict_holder_floats(%f2k_for) : (!llvm.ptr) -> !llvm.ptr", "    %t2hv = func.call @strict_list_version() : () -> i64", "    %t2h_input = func.call @strict_list_start(%t2l_input) : (f64) -> !llvm.ptr", "    %t2x = llvm.load %v_index : !llvm.ptr -> f64", "    %t2y = llvm.load %v_value : !llvm.ptr -> f64", "    %t2ni = arith.fptosi %t2n : f64 to i64", "    %t2zi = arith.constant 0 : i64", "    %t2i0 = llvm.load %v_sum : !llvm.ptr -> f64", "    cf.br ^loop2(%t2zi, %t2i0 : i64, f64)", "  ^loop2(%t2ki: i64, %t2u0: f64):", "    %t2m = arith.cmpi slt, %t2ki, %t2ni : i64", "    cf.cond_br %t2m, ^loop2body, ^loop2exit", "  ^loop2body:", "    %t2cs = arith.sitofp %t2ki : i64 to f32", "    %t2gp = llvm.getelementptr %t2h[%t2ki] : (!llvm.ptr, i64) -> !llvm.ptr, f32", "    %t2gs = llvm.load %t2gp : !llvm.ptr -> f32", "    %t6p = llvm.getelementptr %t2h_input[%t2ki] : (!llvm.ptr, i64) -> !llvm.ptr, f64", "    %t6sn = llvm.load %t6p : !llvm.ptr -> f64", "    %t6s = arith.truncf %t6sn : f64 to f32", "    %t8s = arith.mulf %t2gs, %t6s fastmath<contract> : f32", "    %t9w = arith.extf %t8s : f32 to f64", "    %t9s = arith.addf %t2u0, %t9w fastmath<reassoc,contract> : f64", "    %t2one = arith.constant 1 : i64", "    %t2next = arith.addi %t2ki, %t2one : i64", "    cf.br ^loop2(%t2next, %t9s : i64, f64)", "  ^loop2exit:", "    llvm.store %t2u0, %v_sum : f64, !llvm.ptr", "    llvm.store %t2x, %v_index : f64, !llvm.ptr", "    llvm.store %t2y, %v_value : f64, !llvm.ptr")
+constant Counting = MlirSingle(MlirLoops.Counting.function, 0)
+constant Scaled = MlirFunction(Layered.types, Layered.type, MethodEntry("Scaled", List(MemberEntry), "Strict/Number", (InstructionEntry.LoopBegin(0, -1), InstructionEntry.LoadNumber(1, 2), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "scale"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "value"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 2, "value"), InstructionEntry.Jump(InstructionType.LoopEnd, 5), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "index"), InstructionEntry.Jump(InstructionType.LoopEnd, 2), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Return(0), InstructionEntry.Jump(InstructionType.LoopEnd, 2))), List(Number), 0, "for 4")
 IsSingle Boolean
-	Summing.IsSingle
+	Summing.IsSingle and Collecting.IsSingle
 	Unpacked.IsSingle is false
-	Collecting.IsSingle
 	MlirSingle(MlirFastLoop.Halving.function, 2).IsSingle is false
 	MlirSingle(MlirFunction(MlirNarrowing.Forced.function, Packing = "numbers 32"), 1).IsSingle is false
+	(MlirSingle(Scaled, 0).IsSingle or MlirSingle(Scaled, 6).IsSingle or MlirSingle(Scaled, 9).IsSingle) is false
 	if (function.Packing is "") or MlirNarrowing(function, position).IsForced
 		return false
 	for Range(position + 1, function.method.LoopEndOf(position))
@@ -26,6 +29,7 @@ Copied Texts
 	Summing.Copied.Last is "    llvm.store %t2y, %v_value : f64, !llvm.ptr"
 	Text.Combine(Summing.Copied).IndexOf("arith.addf %t2u0, %t9w fastmath<reassoc,contract> : f64") > 0
 	Text.Combine(Collecting.Copied).IndexOf("llvm.store %t2gs, %t4p : f32, !llvm.ptr") > 0
+	Summing.Copied is Fast
 	let fast = MlirFastLoop(function, position)
 	let started = fast.Started
 	List(Text) + started.First + fast.Checked + (started - started.First) + Counted + Current + Looped + Exited
@@ -44,6 +48,7 @@ Counted Texts
 Current Texts
 	Summing.Current.First is "    %t2cs = arith.sitofp %t2ki : i64 to f32"
 	Summing.Current.Last is "    %t2gs = llvm.load %t2gp : !llvm.ptr -> f32"
+	Counting.Current is ("    %t0cs = arith.sitofp %t0ki : i64 to f32", "    %t0gs = arith.sitofp %t0ki : i64 to f32")
 	let index = "    " + Temp("cs") + " = arith.sitofp " + Temp("ki") + " : i64 to f32"
 	if MlirLoops(function, position).Collection is ""
 		return (index, "    " + Temp("gs") + " = arith.sitofp " + Temp("ki") + " : i64 to f32")
@@ -83,6 +88,8 @@ Stored(entry InstructionEntry, at Number) Texts
 	(address + "f32", "    llvm.store " + Register(entry.payload(0), at) + ", " + pointer + " : f32, !llvm.ptr")
 Literal(entry InstructionEntry, at Number) Texts
 	Summing.Literal(InstructionEntry.LoadNumber(0, 2), 4).Last is "    %t4s = arith.truncf %t4sd : f64 to f32"
+	Summing.Literal(InstructionEntry.LoadNumber(0, 2), 4).First is "    %t4sd = arith.constant 0x4000000000000000 : f64"
+	MlirSingle(Scaled, 0).Statement(1).Last is "    %t1s = arith.truncf %t1sd : f64 to f32"
 	let hex = MlirStatements(function, at).Hex(PayloadDecoder(entry).Value(1).number)
 	Narrowed("%t" + at + "s", "arith.constant " + hex + " : f64")
 Calculated(entry InstructionEntry, at Number) Texts
@@ -110,6 +117,8 @@ Register(register Number, at Number) Text
 Variable(name Text, at Number) Text
 	Summing.Variable("sum", 3) is "%t2u0"
 	Summing.Variable("sum", 11) is "%t9s"
+	Summing.Variable("index", 3) is "%t2cs"
+	Summing.Variable("other", 11) is "%t11s"
 	if name is in ("value", "index")
 		return Temp(name is "value" then "gs" else "cs")
 	for at - position - 1
@@ -119,6 +128,9 @@ Variable(name Text, at Number) Text
 	name is in Carried then Temp("u" + Carried.Index(name)) else "%t" + at + "s"
 Carried Texts
 	Summing.Carried is ("sum")
+	MlirSingle(Scaled, 0).Carried is ("value")
+	Summing.Variable("sum", 4) is "%t2u0"
+	Summing.Variable("sum", 10) is "%t2u0"
 	mutable names = List(Mutable(Text))
 	for Range(position + 1, function.method.LoopEndOf(position))
 		let entry = function.method.instructions(value)
@@ -132,6 +144,7 @@ Repeated(letter Text, suffix Text) Text
 		", " + (letter is "" then "" else Temp(letter + index)) + suffix
 Narrowed(result Text, wide Text) Texts
 	Summing.Narrowed("%a", "x : f64") is ("    %ad = x : f64", "    %a = arith.truncf %ad : f64 to f32")
+	MlirSingle(Scaled, 0).Statement(2).First is "    %t2sd = llvm.load %v_scale : !llvm.ptr -> f64"
 	("    " + result + "d = " + wide, "    " + result + " = arith.truncf " + result + "d : f64 to f32")
 Exited Texts
 	"    llvm.store %t2u0, %v_sum : f64, !llvm.ptr" is in Summing.Exited

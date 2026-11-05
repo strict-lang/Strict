@@ -1,7 +1,10 @@
 has logger
 has isQuiet Boolean = false
 has selection Text = ""
+has isOptimizing Boolean = true
 constant Unlinked = LinkRound(Linker.Hello, List(TypeEntry), List(Text))
+constant Unoptimized = LoopCodegen(MethodCodegen(ValueCodegen(ValueCodegen.Plain, isOptimizing = false)))
+constant Counted = LoopPeeling.Counted
 constant Logged = (Linker.Go, TypeEntry.HelloLogger)
 constant Tips = " is not in this folder, next to strict, in a GitHub repository linked in README.md or in github.com/strict-lang. Fix the typo, add its package to this folder or link its repository in README.md"
 Compiled(path Text, root Text, withTests Boolean, known Texts = List(Text)) List(TypeEntry)
@@ -22,7 +25,7 @@ Built(path Text, root Text, withTests Boolean, files Texts, inference TypeInfere
 	if (isParsed is false) or (Resolved(source, inference, files) is false)
 		return Unlinked
 	let fused = Fusion(File(source).ReadLines, Path(source).PathOnly.text).Fused
-	let main = TypeCodegen(FullName(source, root), fused, inference, FullNames(files, root))
+	let main = TypeCodegen(FullName(source, root), fused, inference, FullNames(files, root), isOptimizing)
 	let entry = BuildProfile(logger).Entry(main, withTests, isQuiet, selection)
 	let linked = BuildProfile(logger).Linked(Linker(root, main, known), entry)
 	linked.With(Checked(linked.linker, linked.entries, source, inference))
@@ -69,9 +72,9 @@ Problems(files Texts) Slow(Texts)
 		broken < 0 then "" else FileCheck.Problem(lines, broken) + " in " + Normalized(value) + ":" + (broken + 1)
 Unparsable(lines Texts) Number
 	FileCompiler.Unparsable(("Add(other Number) Number", "	number + + other")) is 1
-	FileCompiler.Unparsable(("Run", "	logger.Log(1 + 2)")) is -1
-	FileCompiler.Unparsable(("Run", "\t", "\t1")) is 1
-	FileCompiler.Unparsable(("Run", "\t1 is 1", "", "\t1")) is 2
+	FileCompiler.Unparsable(("Run", "	logger.Log(1 + 2)")) is -1 and (FileCompiler.Unparsable(("Run", "")) is -1)
+	FileCompiler.Unparsable(("Run", "\t", "\t1")) is 1 and (FileCompiler.Unparsable(("Run", "", "\t1")) is 1)
+	FileCompiler.Unparsable(("Run", "\t1 is 1", "", "\t1")) is 2 and (FileCompiler.Unparsable(("\t1", "")) is -1)
 	FileCompiler.Unparsable(("has width = 1", "constant Help = (\"first", "- second\")")) is 1
 	for lines
 		let next = index + 1 < lines.Length then lines(index + 1) else ""
@@ -82,10 +85,10 @@ Unparsable(lines Texts) Number
 	-1
 IsParsed(line Text) Boolean
 	FileCompiler.IsParsed("let a = b + c")
-	FileCompiler.IsParsed("(number + other") is false
+	FileCompiler.IsParsed("(number + other") is false and (FileCompiler.IsParsed("a + b)") is false)
 	FileCompiler.IsParsed("if generic is")
-	FileCompiler.IsParsed("* value")
-	FileCompiler.IsParsed("number + other other") is false
+	FileCompiler.IsParsed("* value") and (FileCompiler.IsParsed("a + + b + c") is false)
+	FileCompiler.IsParsed("number + other other") is false and (FileCompiler.IsParsed("(, a)") is false)
 	let tokens = Tokenizer(line).Tokens
 	let statement = StatementParser(tokens).ParseStatement
 	if (statement is Error) or (Tokenizer(line).IsGrouped is false)
@@ -107,6 +110,9 @@ IsOperand(node SyntaxNode, position Number) Boolean
 	FileCompiler.IsOperand(SyntaxNode("Binary", "+", (SyntaxNode("Missing", ""), SyntaxNode("Missing", ""))), 1)
 	FileCompiler.IsOperand(SyntaxNode("Binary", "is", (SyntaxNode("Missing", ""), SyntaxNode("Missing", ""))), 1) is false
 	FileCompiler.IsOperand(SyntaxParser(Tokenizer("(a,)").Tokens).Parse, 1)
+	FileCompiler.IsOperand(SyntaxNode("Binary", "is", (SyntaxNode("Missing", ""), SyntaxNode("Missing", ""))), 0)
+	FileCompiler.IsOperand(SyntaxNode("Member", "a", SyntaxNode("Missing", "")), 0) is false
+	FileCompiler.IsOperand(SyntaxNode("Not", "not", SyntaxNode("Missing", "")), 0)
 	let isBinary = (node.Kind is "Binary") and ((position is 0) or (node.text is not "is"))
 	(node.Kind is in ("Not", "Negate", "List")) or isBinary
 Resolved(source Text, inference TypeInference, files Texts = List(Text)) Slow(Boolean)
@@ -140,12 +146,16 @@ FullName(path Text, root Text) Text
 	FullName("C:/s/Bytecode\\A.strict", "C:/s") is "Strict/Bytecode/A"
 	FullName("./Sub/Game.strict", "C:/s") is "Strict/Sub/Game"
 	FullName("D:/project/Helper.strict", "C:/s") is "Strict/Helper"
+	FullName("/x/Helper.strict", "C:/s") is "Strict/Helper"
+	FullName("C:/sx/A.strict", "C:/s") is "Strict/A"
+	FullName("sx/A.strict", "s") is "Strict/sx/A"
 	let slashed = path.Replace("\\", "/")
 	if (slashed.StartsWith(root + "/") is false) and ((slashed.IndexOf(":") is 1) or slashed.StartsWith("/"))
 		return "Strict/" + Path(slashed).FileName.RemoveExtension.text
 	let start = slashed.StartsWith(root + "/") then root.Length + 1 else (slashed.StartsWith("./") then 2 else 0)
 	"Strict/" + slashed.Substring(start, slashed.Length - start - 7)
 FullNames(files Texts, root Text) Texts
+	Unoptimized.Loop(LoopPeeling.Summing, Counted, "") is LoopCodegen.Plain.Unpeeled(LoopPeeling.Summing, Counted, "")
 	FullNames(("C:/s/A.strict", "C:/s/B/C.strict"), "C:/s") is ("Strict/A", "Strict/B/C")
 	for files
 		FullName(value, root)

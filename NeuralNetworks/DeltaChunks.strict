@@ -36,11 +36,15 @@ Prepared DeltaChunks
 	let inverse = ready.Inverted(ready.Unit(lower), lower, 2)
 	DeltaChunks(ready, attended = ready.Paired(0), corrected = ready.Corrected(inverse))
 Position(token Number, head Number, part Number) Number
+	DeltaChunks(Probe, groups = 2).Position(1, 1, 1) is 18
+	DeltaChunks(Probe, groups = 2).Position(1, 1, 2) is 22
 	Probe.Position(1, 1, 2) is 14
 	Probe.Position(2, 1, 1) is 18
 	let offset = part < 2 then part * groups + (head % groups) else 2 * groups + head
 	(token * (2 * groups + heads) + offset) * size
 Length(start Number) Number
+	Probe.Read.reads(10).IsNearlyEqual(DeltaChunks(Probe, chunk = 4).Read.reads(10))
+	DeltaChunks(Probe, groups = 2).Weighted((1, 0, -0.5, 1, 1, 0, 1, 0, 0, 1, 1, 0), 1, 2, 0) is 0.5
 	Probe.Length(2) is 1
 	tokens - start < chunk then tokens - start else chunk
 Logs Numbers
@@ -55,9 +59,12 @@ Logs Numbers
 			sum = sum + decayed(2 * (start + index) * heads + head)
 		sum
 Decay(token Number, other Number, head Number) Number
+	Probe.Prepared.corrected(40) is 1
+	Probe.Prepared.corrected(6) is 0.3032653298563167
 	Probe.Prepared.Decay(1, 0, 0).IsNearlyEqual(0.818730753)
 	(logs(token * heads + head) - logs(other * heads + head)).Exponential
 Paired(part Number) Numbers
+	DeltaChunks(Probe, chunk = 4).Prepared.Paired(1)(8).IsNearlyEqual(0.054214958144196385)
 	Probe.Prepared.Paired(1)(2).IsNearlyEqual(0.589486)
 	Probe.Prepared.attended(3).IsNearlyEqual(0.95)
 	for heads * tokens * chunk
@@ -70,11 +77,15 @@ Paired(part Number) Numbers
 			sum = sum + keyed(Position(token, head, part) + index) * keyed(Position(other, head, 1) + index)
 		isPaired then sum * Decay(token, other, head) * (part is 1 then decayed((2 * token + 1) * heads + head) else 1) else 0
 Unit(lower Numbers) Numbers
+	Probe.Read.reads(11).IsNearlyEqual(DeltaChunks(Probe, chunk = 4).Read.reads(11))
+	Probe.Unit((0.5, 0, 0.5, 0))(0) is 0.5
 	Probe.Unit((0, 0, 0.5, 0))(2) is -0.5
 	Probe.Unit((0, 0, 0.5, 0))(3) is 1
 	for lower
 		(((index / chunk).Floor % tokens) % chunk) is index % chunk then 1 - value else -value
 Inverted(result Numbers, power Numbers, span Number) Numbers
+	DeltaChunks(Probe, chunk = 4).Inverted((1, 2), (3, 4), 3) is (1, 2)
+	Probe.Inverted((1, 0, 2, 1), (1, 0, 2, 1), 1) is (2, 0, 8, 2)
 	Probe.Inverted((1, 2), (3, 4), 2) is (1, 2)
 	if (span >= chunk) or (span >= tokens)
 		return result
