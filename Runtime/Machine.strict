@@ -171,6 +171,7 @@ Field(entry InstructionEntry, instance VmValue) VmValue
 			found = MemberValue(owner, instance, index)
 	found
 Logged(message Text) VmValue
+	Hello.Logged("").kind is "None"
 	Hello.Logged("Hi").kind is "None"
 	if message is not ""
 		logger.Log(message)
