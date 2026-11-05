@@ -65,8 +65,11 @@ IsMessage(entry InstructionEntry, register Number) Boolean
 	Issued.IsMessage(Issuing, 0)
 	Issued.IsMessage(Issuing, 1) is false
 	Issued.IsMessage(InstructionEntry.Invoke(2, ("Strict/Error", "from", "Error", "Name"), List(Number) + 1, -1), 1)
+	Issued.IsMessage(InstructionEntry.Invoke(2, ("Strict/Logger", "Log", "None", "message"), List(Number) + 1, 3), 1)
 	Issued.IsMessage(InstructionEntry.Invoke(2, ("Strict/Text", "from", "Text", "a", "b"), (1, 0), -1), 0) is false
 	let type = TypeEntry.ShortName(entry.texts.First)
 	let arguments = Arguments(entry)
 	let details = type.EndsWith("Error") then arguments else arguments.Slice(1, arguments.Length - 1)
-	(entry.texts(1) is "from") and (type.EndsWith("Error") or type.EndsWith("Issue")) and (register is in details)
+	let isLogged = (type is "Logger") and (entry.texts(1) is "Log") and (register is in arguments)
+	let isReported = (entry.texts(1) is "from") and (type.EndsWith("Error") or type.EndsWith("Issue"))
+	isLogged or (isReported and (register is in details))

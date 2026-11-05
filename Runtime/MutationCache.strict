@@ -1,7 +1,7 @@
 has path Text
 has isWhole Boolean = false
 constant Steps = 100000
-constant Version = 8
+constant Version = 9
 constant Sample = MutationCache("Compiler/output/Cached.strict")
 Stamp Text
 	Sample.Stamp.StartsWith("unit ")
