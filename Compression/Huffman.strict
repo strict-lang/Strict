@@ -4,6 +4,7 @@ constant Sample = Huffman.From((2, 1, 3, 3))
 constant Longest = Huffman((0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1), (5, 9))
 From(lengths Numbers) Huffman
 	Huffman.From((2, 1, 3, 3)).symbols is (1, 0, 2, 3)
+	Huffman.From((2, 2, 2, 2)).Decoded(Inflate((3)), 0) is Symbol(3, 2)
 	Huffman(Counts(lengths), Sorted(lengths))
 Counts(lengths Numbers) Numbers
 	Sample.Counts((2, 1, 3, 3)).Length is 16

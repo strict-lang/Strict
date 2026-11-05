@@ -23,6 +23,7 @@ Pixel(offset Complex) Number
 	Outside.Pixel(Complex(-1.5, 0)) is 0
 	Tiny.Pixel(Complex(0.75, -0.1)) is 0
 	Perturbation(Outside, step = 0.000001).Pixel(Complex(-1.5, 0)) is 0
+	Perturbation(Tiny, step = 0.000001).Pixel(Complex(0.75, -0.1)) is 2
 	(Rabbit.Pixel(Complex(-0.3, 0.4)), Rabbit.Pixel(Complex(0.96, -0.58)), Rabbit.Pixel(Complex(0.5, 0.6))) is (40, 45, 3)
 	(Offset.Pixel(Complex(-0.6, 0.6)), Offset.Pixel(Complex(0.66, -0.38)), Offset.Pixel(Complex(0.2, 0.8))) is (40, 45, 3)
 	let point = center + offset
@@ -55,6 +56,7 @@ Next(position Number, delta Complex, added Complex) Complex
 	(Inside.Next(1, Complex(0.1, 0), Complex.Zero) - Complex(-0.14, 0.02)).Length < 0.000001
 	Tiny.Next(-2, Complex.Zero, Complex.Zero) is Complex(-2, 0)
 	Tiny.Next(1, Complex(1, 0), Complex.Zero) is Complex(1, 2)
+	Tiny.Next(2, Complex(1, 0), Complex.Zero) is Complex(1, 4)
 	let rebased = position < 0
 	let shifted = rebased then delta + orbit(-1 - position) - orbit(0) else delta
 	let anchor = rebased then orbit(0) else orbit(position)

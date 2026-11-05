@@ -63,6 +63,7 @@ Orthographic(width Number, height Number, near Number, far Number) Matrix
 	Matrix.Orthographic(4, 2, 1, 11).Clip(Vector3(2, 1, -1)).First is 1
 	Matrix.Orthographic(4, 2, 1, 11).Clip(Vector3(2, 1, -1))(2).IsNearlyEqual(-1)
 	Matrix.Orthographic(4, 2, 1, 11).Clip(Vector3(0, 0, -11)).Z.IsNearlyEqual(1)
+	Matrix.Orthographic(4, 2, 1, 11).Clip(Vector3(2, 1, -1))(1) is 1
 	Matrix((2 / width, 0, 0, 0, 0, 2 / height, 0, 0, 0, 0, 2 / (near - far), 0, 0, 0, (far + near) / (near - far), 1))
 Inverse Matrix
 	(Moved * Matrix.Scaling(2)).Inverse.Transformed(Vector3(1, 2, 3)) is Vector3.Zero

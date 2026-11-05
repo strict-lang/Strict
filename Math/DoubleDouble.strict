@@ -76,10 +76,10 @@ Parsed(text Text) DoubleDouble
 	(DoubleDouble.Parsed("1.00000000000000001").low * 100000000000000000).Round is 1
 	DoubleDouble.Parsed("-1.770666019005456612345678912").Decimals(25) is "-1.7706660190054566123456789"
 	let negative = text.StartsWith("-")
-	let magnitude = negative then text.Substring(1, text.Length - 1) else text
+	let magnitude = negative then text.Substring(1, text.Length) else text
 	let point = magnitude.IndexOf(".")
 	let whole = DoubleDouble((point < 0 then magnitude else magnitude.Substring(0, point)) to Number)
-	let parsed = point < 0 then whole else whole + Fraction(magnitude.Substring(point + 1, magnitude.Length - point - 1))
+	let parsed = point < 0 then whole else whole + Fraction(magnitude.Substring(point + 1, magnitude.Length))
 	negative then DoubleDouble(-parsed.high, -parsed.low) else parsed
 Fraction(digits Text) DoubleDouble
 	Fraction("25").high is 0.25

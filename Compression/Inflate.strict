@@ -16,6 +16,7 @@ Inflated Numbers
 	StoredSample.Inflated is (104, 105)
 	FixedSample.Inflated is (97, 98, 99, 97, 98, 99, 97, 98, 99)
 	DynamicSample.Inflated is DynamicText
+	Inflate((0, 1, 0, 254, 255, 104, 1, 1, 0, 254, 255, 105)).Inflated is (104, 105)
 	mutable state = Inflation(List(Number), 0)
 	for bytes.Length
 		let isLast = Bit(state.position) is 1
@@ -41,6 +42,7 @@ Stored(state Inflation) Inflation
 	Inflation(output, (start + 4 + output.Length - state.output.Length) * 8)
 Coded(state Inflation, literals Huffman, distances Huffman) Inflation
 	FixedSample.Coded(Inflation(List(Number), 3), FixedLiteralCodes, FixedDistanceCodes).output.Length is 9
+	FixedSample.Coded(Inflation(List(Number), 3), FixedLiteralCodes, FixedDistanceCodes).position is 54
 	mutable current = state
 	for bytes.Length * 8
 		let symbol = literals.Decoded(Inflate(bytes), current.position)
@@ -96,6 +98,7 @@ Lengths(state Inflation, codes Huffman, count Number) Inflation
 	current
 Repeated(state Inflation, symbol Number) Inflation
 	StoredSample.Repeated(Inflation((1, 2), 0), 16).output is (1, 2, 2, 2, 2, 2)
+	StoredSample.Repeated(Inflation((1, 2), 0), 16).position is 2
 	StoredSample.Repeated(Inflation((1, 2), 8), 17).position is 11
 	StoredSample.Repeated(Inflation((1, 2), 8), 18).position is 15
 	StoredSample.Repeated(Inflation((1, 2), 8), 18).output is (1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)

@@ -67,8 +67,7 @@ LengthCodes(length Number) Numbers
 	Deflate(Repeated).LengthCodes(258) is (163, 8, 0, 0)
 	Deflate(Repeated).LengthCodes(12) is (72, 7, 1, 1)
 	let code = Bucket(Inflate.LengthBases, length)
-	let symbol = 257 + code
-	let huffman = symbol < 280 then (Reversed(symbol - 256, 7), 7) else (Reversed(symbol - 88, 8), 8)
+	let huffman = code < 23 then (Reversed(code + 1, 7), 7) else (Reversed(code + 169, 8), 8)
 	huffman + (length - Inflate.LengthBases(code), Inflate.LengthBits(code))
 DistanceCodes(distance Number) Numbers
 	Deflate(Repeated).DistanceCodes(3) is (8, 5, 0, 0)

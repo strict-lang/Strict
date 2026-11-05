@@ -5,6 +5,7 @@ Escape(real Number, imaginary Number, limit Number) Number
 	Escape(2, 0, 64) is 2
 	Escape(-2, 0, 64) is 0
 	Escape(0, 1, 64) is 0
+	(Escape(0, 3, 64) is 1) and (Escape(3, 0, 64) is 1)
 	if Interior(real, imaginary)
 		return 0
 	Iterated(real, imaginary, limit)
@@ -51,10 +52,12 @@ Enclosed(orbit List(Complex), radius Number, limit Number) Boolean
 	Enclosed(Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Of(Complex(-0.75, 0.1)), 32), 0.0000001, 32)
 	Enclosed(Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Of(Complex(-0.75, 0.1)), 64), 0.0000001, 64) is false
 	Enclosed(Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Zero, 32), 0.75, 32) is false
+	Enclosed((Complex.Zero, Complex.Zero), 0.01, 2) is false
 	if orbit.Length < limit + 1
 		return false
 	DiskEnclosed(orbit, radius, limit)
 DiskEnclosed(orbit List(Complex), radius Number, limit Number) Boolean
+	DiskEnclosed((Complex.Zero, Complex(1, 0), Complex.Zero), 0.9999999999999994, 1) is false
 	mutable offset = Complex.Zero
 	mutable error = 0
 	for limit
@@ -64,6 +67,8 @@ DiskEnclosed(orbit List(Complex), radius Number, limit Number) Boolean
 			return false
 	true
 DiskError(orbit List(Complex), position Number, offset Complex, previous Number) Number
+	DiskError((Complex.Zero), 0, Complex(1, 0), 0) > 1.000000000000003
+	(DiskError((Complex.Zero), 0, Complex.Zero, 0) > 0) and (DiskError((Complex.Zero), 0, Complex.Zero, 1) > 1)
 	let bound = offset.Length * 1.000000000000001
 	let factor = 2 * (orbit(position).Length + 0.000000000000001) + 2 * bound + previous
 	let error = factor * previous + bound * bound

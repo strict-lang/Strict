@@ -3,6 +3,7 @@ Seeded(seed Number) Slow(MersenneTwister)
 	MersenneTwister.Seeded(5489).Uints(3) is (3499211612, 581869302, 3890346734)
 	MersenneTwister.Seeded(4294967338).Uints(1) is MersenneTwister.Seeded(42).Uints(1)
 	MersenneTwister.Seeded(-1) is Error("InvalidSeed")
+	MersenneTwister.Seeded(1.5) is Error("InvalidSeed")
 	if (seed < 0) or (seed % 1 is not 0)
 		return Error("InvalidSeed")
 	mutable seeded = List(Number) + seed % 4294967296
