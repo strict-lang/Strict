@@ -1,0 +1,104 @@
+has method MethodEntry
+constant Twice = MutationKinds(Mutation.Twice.method)
+constant Compared = MutationKinds(Mutation.Compared.method)
+constant Storing = MutationKinds(Mutation.Storing.method)
+constant Comparisons = (InstructionType.Equal, InstructionType.NotEqual, InstructionType.LessThan, InstructionType.GreaterThan)
+constant Logging = InstructionEntry.Invoke(0, ("T", "Log", "None"), List(Number), -1)
+constant Returned = InstructionEntry.Return(0)
+constant Temporary = InstructionEntry(Mutation.Stored, texts = ("logical0"))
+constant Writers = (InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.Invoke) + Mutation.Arithmetic
+constant Named = MutationKinds(MethodEntry("Run", List(MemberEntry) + MemberEntry("name", "Strict/Text", List(InstructionEntry), false), "None", List(InstructionEntry)))
+constant Loaded = InstructionEntry.LoadNumber(1, 1)
+constant Joined = MutationKinds(MethodEntry(Mutation.Twice.method, instructions = (InstructionEntry.LoadText(0, "a"), InstructionEntry.LoadText(1, ""), InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)), InstructionEntry.Return(2))))
+Kinds(position Number) Numbers
+	Twice.Kinds(1) is (5)
+	let entry = method.instructions(position)
+	if IsCompared(position)
+		return (0, 1)
+	let isLast = position is method.instructions.Length - 1
+	if (entry.kind is InstructionType.Return) and isLast and (IsLiteral(position) is false)
+		return method.returnType is in ("Strict/Number", "Strict/Text", "Strict/Boolean") then (2) else List(Number)
+	if (entry.kind is InstructionType.StoreRegisterToVariable) and IsReassigned(position)
+		return List(Number) + 3
+	if IsDropped(entry)
+		return List(Number) + 4
+	Valued(position)
+Valued(position Number) Numbers
+	Twice.Valued(1) is (5)
+	Joined.Valued(0) is (6)
+	Joined.Valued(1).Length is 0
+	Joined.Valued(2).Length is 0
+	let entry = method.instructions(position)
+	if (entry.kind is InstructionType.LoadConstantToRegister) and (entry.payload(1) is 4)
+		return (entry.texts.Length is 0) or (entry.texts.First is "") then List(Number) else (6)
+	let isText = (entry.payload.Length > 3) and (IsText(entry.payload(1), position) or IsText(entry.payload(2), position))
+	(entry.kind is in Mutation.Arithmetic) and (isText is false) then (5) else List(Number)
+IsText(register Number, position Number) Boolean
+	Joined.IsText(0, 2)
+	Joined.IsText(1, 2)
+	Twice.IsText(0, 1) is false
+	for position
+		let at = position - 1 - index
+		let entry = method.instructions(at)
+		let isArithmetic = (entry.kind is in Mutation.Arithmetic) and (entry.payload.Length > 3)
+		if (isArithmetic then entry.payload(3) else entry.payload(0)) is register
+			return (entry.kind is in Writers) and IsTextual(entry, at)
+	false
+IsTextual(entry InstructionEntry, at Number) Boolean
+	Twice.IsTextual(InstructionEntry.Invoke(0, ("T", "Name", "Strict/Text"), List(Number), -1), 0)
+	Twice.IsTextual(InstructionEntry.LoadNumber(0, 2), 0) is false
+	Named.IsTextual(InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "name"), 0)
+	if entry.kind is InstructionType.LoadConstantToRegister
+		return entry.payload(1) is 4
+	if entry.kind is InstructionType.Invoke
+		return (entry.texts.Length > 2) and (entry.texts(2) is "Strict/Text")
+	if entry.kind is InstructionType.LoadVariableToRegister
+		return IsTextVariable(entry.texts.First, at)
+	IsText(entry.payload(1), at) or IsText(entry.payload(2), at)
+IsTextVariable(name Text, at Number) Boolean
+	Storing.IsTextVariable("a", 1) is false
+	Named.IsTextVariable("name", 0)
+	for method.parameters
+		if value.Name is name
+			return value.typeName is "Strict/Text"
+	for at
+		let entry = method.instructions(at - 1 - index)
+		let isStore = entry.kind is InstructionType.StoreRegisterToVariable
+		if isStore and (entry.texts.First is name)
+			return IsText(entry.payload(0), at - 1 - index)
+	false
+IsLiteral(position Number) Boolean
+	Twice.IsLiteral(2) is false
+	MutationKinds(MethodEntry(Twice.method, instructions = (InstructionEntry.LoadNumber(0, 1), Returned))).IsLiteral(1)
+	MutationKinds(MethodEntry(Twice.method, instructions = (Loaded, Returned))).IsLiteral(1) is false
+	let previous = position > 0 then method.instructions(position - 1) else method.instructions(position)
+	let register = method.instructions(position).payload(0)
+	(previous.kind is InstructionType.LoadConstantToRegister) and (previous.payload(0) is register)
+IsCompared(position Number) Boolean
+	Compared.IsCompared(0)
+	MutationKinds(Mutation.Compared.Mutant(0)).IsCompared(0) is false
+	let isLast = position + 1 is method.instructions.Length
+	let next = isLast then -1 else method.instructions(position + 1).kind
+	let isLooping = next is in (InstructionType.LoopBegin, InstructionType.LoopEnd)
+	let entry = method.instructions(position)
+	let isSelf = entry.payload.Length > 2 then entry.payload(1) is entry.payload(2) else false
+	(entry.kind is in Comparisons) and (isLooping is false) and (isSelf is false)
+IsDropped(entry InstructionEntry) Boolean
+	Twice.IsDropped(Twice.method.instructions(0)) is false
+	Twice.IsDropped(Logging)
+	Twice.IsDropped(InstructionEntry.Invoke(0, ("T", "Run", "N"), List(Number), -1)) is false
+	Twice.IsDropped(InstructionEntry(InstructionType.InvokeWriteToList, "list", (1, 0)))
+	let isCall = (entry.kind is InstructionType.Invoke) and (entry.texts.Length > 2) and (entry.texts(2) is "None")
+	isCall or (entry.kind is InstructionType.InvokeWriteToList)
+IsReassigned(position Number) Boolean
+	Twice.IsReassigned(1) is false
+	Storing.IsReassigned(1) and (Storing.IsReassigned(0) is false)
+	MutationKinds(MethodEntry(Storing.method, instructions = (Temporary, Temporary))).IsReassigned(1) is false
+	let name = method.instructions(position).texts
+	if (name.Length > 0) and (name.First.StartsWith("conditional") or name.First.StartsWith("logical"))
+		return false
+	for Range(0, position)
+		let entry = method.instructions(value)
+		if (entry.kind is InstructionType.StoreRegisterToVariable) and (entry.texts is name)
+			return true
+	false

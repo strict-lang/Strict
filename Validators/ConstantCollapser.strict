@@ -1,10 +1,12 @@
 has node Expressions/SyntaxNode
+constant unfoldableCode = "Add(\"a\" - \"b\", 5 + \"b\", \"a\" + x, 5 and true, true and 5, true + false)"
 Collapse(code Text) Text
 	Collapse("1 + 2 * 3") is "7"
 	ConstantCollapser(StatementParser(Tokenizer(code).Tokens).ParseStatement).Collapsed to Text
 Collapsed SyntaxNode
 	Collapse("\"5\" to Number + 1") is "6"
 	Collapse("let a = 5 to Text + \"yo\"") is "let a = \"5yo\""
+	ConstantCollapser(SyntaxNode("Number", "5", List(SyntaxNode), 3)).Collapsed.line is 3
 	if node.Kind is "Binary"
 		return CollapsedBinary
 	node.children.Length is 0 then node else SyntaxNode(node.Kind, node.text, CollapsedChildren)
@@ -21,6 +23,9 @@ CollapsedBinary SyntaxNode
 Folded(left SyntaxNode, operator Text, right SyntaxNode) SyntaxNode
 	Collapse("6 / 3 - 1") is "1"
 	Collapse("true and false or true") is "true"
+	(Collapse("7 * 2 + 3") is "17") and (Collapse("\"ab\" + 5 + true + \"c\"") is "\"ab5truec\"")
+	(Collapse("false and true") is "false") and (Collapse("true or false") is "true")
+	Collapse(unfoldableCode) is unfoldableCode
 	if (left.Kind is "Number") and (right.Kind is "Number") and (operator is in ("+", "-", "*", "/"))
 		return SyntaxNode("Number", Calculated(left.text to Number, operator, right.text to Number) to Text)
 	if (operator is "+") and (left.Kind is "Text") and (right.Kind is in ("Text", "Number", "Boolean"))
@@ -30,6 +35,11 @@ Folded(left SyntaxNode, operator Text, right SyntaxNode) SyntaxNode
 	SyntaxNode("Missing", "")
 Converted(operand SyntaxNode, typeName Text) SyntaxNode
 	Collapse("true to Text") is "\"true\""
+	Collapse("\"5\" to Number") is "5"
+	Collapse("5 to Number") is "5 to Number"
+	Collapse("\"5\" to Text") is "\"5\" to Text"
+	Collapse("5 to Text") is "\"5\""
+	Collapse("true to Number") is "true to Number"
 	if (operand.Kind is "Text") and (typeName is "Number")
 		return SyntaxNode("Number", Inner(operand))
 	if (operand.Kind is in ("Number", "Boolean")) and (typeName is "Text")
@@ -37,6 +47,9 @@ Converted(operand SyntaxNode, typeName Text) SyntaxNode
 	SyntaxNode("Missing", "")
 Calculated(left Number, operator Text, right Number) Number
 	Calculated(2, "*", 3) is 6
+	Calculated(7, "+", 2) is 9
+	Calculated(7, "-", 2) is 5
+	Calculated(8, "/", 2) is 4
 	if operator is "+"
 		return left + right
 	if operator is "-"
@@ -44,7 +57,13 @@ Calculated(left Number, operator Text, right Number) Number
 	operator is "*" then left * right else left / right
 Logical(left Boolean, operator Text, right Boolean) Boolean
 	Logical(true, "or", false)
+	Logical(true, "and", false) is false
+	Logical(true, "and", true)
+	Logical(false, "or", true)
+	Logical(false, "or", false) is false
+	Logical(false, "and", true) is false
 	operator is "and" then left and right else left or right
 Inner(literal SyntaxNode) Text
 	Inner(SyntaxNode("Text", "\"a\"")) is "a"
+	Inner(SyntaxNode("Number", "42")) is "42"
 	literal.Kind is "Text" then literal.Unquoted else literal.text

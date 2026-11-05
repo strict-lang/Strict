@@ -22,7 +22,7 @@ Survivors(types List(TypeEntry)) Number
 		return 0
 	let survivors = isCached then cache.Survivors else Lines(types)
 	for survivors
-		logger.Log(value)
+		logger.Log(Shown(value))
 	if (part is "") and (isCached is false)
 		cache.Saved(survivors)
 	survivors.Length
@@ -58,6 +58,15 @@ Commands(rounds Number) Texts
 	let options = isWhole then " mutations rounds:" else " unit mutations rounds:"
 	for parts
 		"test \"" + path + "\" \"" + root + "\"" + options + index + "/" + parts
+Shown(survivor Text) Text
+	Sample.Shown(Sample.path + ": MutationTestingFailed") is Sample.path + ": MutationTestingFailed"
+	Sample.Shown(Sample.path + ":line 3: MutationSurvived").Lines.Length > 2
+	Mutants(Logger, Sample.path, part = "1/2").Shown(Sample.path + ":line 3: MutationSurvived").Lines.Length is 1
+	let start = survivor.IndexOf(":line ")
+	if (part is not "") or (start < 0)
+		return survivor
+	let line = survivor.Substring(start + 6, survivor.IndexOf(": ", start) - start - 6) to Number
+	survivor + "\n" + Text.Combine(Mutation.Source(File(path).ReadLines, line), "\n")
 Mutated(type TypeEntry) List(MethodEntry)
 	Sample.Mutated(Machine.Doubler).Length is 0
 	for type.methods
@@ -92,7 +101,8 @@ Changed(methods List(MethodEntry), round Number) List(MethodEntry)
 Survivor(method MethodEntry, code Number) Text
 	Sample.Survivor(Twice, 13) is Sample.path + ":line 0: MutationSurvived: Twice with + and - or * and / swapped" + Hint
 	let mutation = Mutation(method)
-	path + ":line " + mutation.Line(code) + ": MutationSurvived: " + method.Name + " " + mutation.Described(code) + Hint
+	let described = mutation.Described(code) + mutation.Position(code)
+	path + ":line " + mutation.Line(code) + ": MutationSurvived: " + method.Name + " " + described + Hint
 Tested(types List(TypeEntry), runner MethodEntry, methods List(MethodEntry)) List(TypeEntry)
 	Sample.Tested(List(TypeEntry) + Machine.Doubler, Twice, List(MethodEntry) + Twice).First.methods.Length is 2
 	mutable runners = List(Mutable(MethodEntry))
