@@ -92,7 +92,7 @@ Tested(types List(TypeEntry), path Text, root Text) Number
 		return failed
 	let isWhole = selection is "*"
 	let elapsed = Process.Elapsed - started
-	let seconds = isWhole or (elapsed < 0.1) then elapsed * 10 + 0.01 else 0
+	let seconds = isWhole or (elapsed < 0.1) then elapsed * 10 + 1 else 0
 	let mutants = Mutants(logger, path, seconds, root, part, isWhole)
 	isMutating and (selection is in ("", "*")) then mutants.Survivors(types) else 0
 Loaded(path Text, root Text, withTests = true, sources Texts = List(Text)) List(TypeEntry)

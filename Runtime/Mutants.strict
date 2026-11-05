@@ -10,9 +10,9 @@ constant Budgeted = (InstructionEntry.LoadBoolean(1, false), Budget)
 constant Twice = Machine.Doubler.methods.First
 constant Doubled = List(TypeEntry) + Machine.Doubler
 constant Sample = Mutants(Logger, "Examples/Fibonacci.strict")
-constant Inputs = ("/File", "/Directory", "/Process", "/Logger", "/TextWriter", "/Time", "/Library", "/Http", "/Random")
+constant Inputs = ("/File", "/Directory", "/Process", "/Logger", "/TextWriter", "/Time", "/Library", "/Http", "/Socket", "/Random")
 constant Crashed = ", its rounds were not tested: run strict test on this file to see the error"
-constant Hint = " keeps all tests passing: add a test that fails without it or remove the code"
+constant Hint = " kept passing all tests, improve the tests!"
 Survivors(types List(TypeEntry)) Number
 	Sample.Survivors(Execute(Logger).Loaded("Examples/Fibonacci.strict", ".")) is 0
 	Mutants(Logger, "Compiler/output/Cached.strict", 0).Survivors(Doubled) is 0
@@ -99,10 +99,9 @@ Changed(methods List(MethodEntry), round Number) List(MethodEntry)
 		let candidates = Mutation(value).Candidates
 		candidates.Length > round then Mutation(value).Mutant(candidates(round)) else value
 Survivor(method MethodEntry, code Number) Text
-	Sample.Survivor(Twice, 13) is Sample.path + ":line 0: MutationSurvived: Twice with + and - or * and / swapped" + Hint
+	Sample.Survivor(Twice, 13) is Sample.path + ":line 0: MutationSurvived: Twice: replaced + with -" + Hint
 	let mutation = Mutation(method)
-	let described = mutation.Described(code) + mutation.Position(code)
-	path + ":line " + mutation.Line(code) + ": MutationSurvived: " + method.Name + " " + described + Hint
+	path + ":line " + mutation.Line(code) + ": MutationSurvived: " + method.Name + ": " + mutation.Described(code) + Hint
 Tested(types List(TypeEntry), runner MethodEntry, methods List(MethodEntry)) List(TypeEntry)
 	Sample.Tested(List(TypeEntry) + Machine.Doubler, Twice, List(MethodEntry) + Twice).First.methods.Length is 2
 	mutable runners = List(Mutable(MethodEntry))

@@ -9,9 +9,21 @@ constant Temporary = InstructionEntry(Mutation.Stored, texts = ("logical0"))
 constant Writers = (InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.Invoke) + Mutation.Arithmetic
 constant Named = MutationKinds(MethodEntry("Run", List(MemberEntry) + MemberEntry("name", "Strict/Text", List(InstructionEntry), false), "None", List(InstructionEntry)))
 constant Loaded = InstructionEntry.LoadNumber(1, 1)
+constant Placed = MutationKinds(MethodEntry(Twice.method, instructions = (Loaded, InstructionEntry(Loaded, line = 2))))
 constant Joined = MutationKinds(MethodEntry(Mutation.Twice.method, instructions = (InstructionEntry.LoadText(0, "a"), InstructionEntry.LoadText(1, ""), InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)), InstructionEntry.Return(2))))
 Kinds(position Number) Numbers
 	Twice.Kinds(1) is (5)
+	MutationKinds(MutationFlow.Issued.method).Kinds(0).Length is 0
+	MutationKinds(MutationFlow.Issued.method).Kinds(1) is (6)
+	MutationKinds(MutationFlow.Looped.method).Kinds(1).Length is 0
+	Placed.Kinds(0).Length is 0
+	let entry = method.instructions(position)
+	let isPlaced = (entry.line is 0) and (Mutation(method).Lines > 0)
+	let flow = MutationFlow(method)
+	let isIgnored = (entry.kind is in Writers) and flow.IsIgnored(flow.Target(entry), position)
+	isPlaced or isIgnored then List(Number) else Possible(position)
+Possible(position Number) Numbers
+	Twice.Possible(1) is (5)
 	let entry = method.instructions(position)
 	if IsCompared(position)
 		return (0, 1)
@@ -40,8 +52,7 @@ IsText(register Number, position Number) Boolean
 	for position
 		let at = position - 1 - index
 		let entry = method.instructions(at)
-		let isArithmetic = (entry.kind is in Mutation.Arithmetic) and (entry.payload.Length > 3)
-		if (isArithmetic then entry.payload(3) else entry.payload(0)) is register
+		if MutationFlow(method).Target(entry) is register
 			return (entry.kind is in Writers) and IsTextual(entry, at)
 	false
 IsTextual(entry InstructionEntry, at Number) Boolean

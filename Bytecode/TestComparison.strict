@@ -25,8 +25,9 @@ Compared(left SyntaxNode, right SyntaxNode, block CodeBlock, exact Boolean) Code
 	let lines = Closeness(values.inference.types).Lines(left to Text, "testExpected", kinds, "1", exact, List(Text))
 	MethodCodegen(values).Body(BodyParser(Shortcut(left to Text, lines)).Block(1, 1), declared)
 Shortcut(left Text, lines Texts) Texts
-	TestComparison(ValueCodegen.Plain).Shortcut("x", List(Text) + "let testEqual1 = x")(2) is "\tif testEqual0 is false"
-	mutable indented = ("Run", "\tmutable testEqual0 = " + left + " is testExpected", "\tif testEqual0 is false")
+	TestComparison(ValueCodegen.Plain).Shortcut("x", List(Text))(2) is "\tif (testEqual0 is false) and (x is not Error)"
+	let guard = "\tif (testEqual0 is false) and (" + left + " is not Error)"
+	mutable indented = ("Run", "\tmutable testEqual0 = " + left + " is testExpected", guard)
 	for lines + "testEqual0 = testEqual1"
 		indented = indented + ("\t\t" + value)
 	indented + "\ttestEqual0"

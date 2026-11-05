@@ -8,13 +8,15 @@ constant Counting = Recursions(("Count(number) Number", "\tRecursions(1).Count(5
 constant DeepHint = ", more than 1000 nested calls overflow the stack: use a loop or make it the only call of a line"
 constant Tailing = Recursions(("Count(number) Number", "\tRecursions(1).Count(5000) is 5000", "\tnumber is 0 then 0 else Count(number - 1)"), "Recursions")
 constant Operators = ("+", "-", "*", "/", "(", ",", "and", "or")
+constant Making = Recursions(("Rest(number) Number", "	number is 0 then 0 else Rest(number - 1)"), "Splash")
+constant ParsedCall = ("Parsed", "(", ")")
 constant Placing = Recursions(("Placed Boolean", "\tRecursions(1).Placed", "Run", "\tPlaced"), "Recursions")
 Issues List(ValidationIssue)
 	Looping.Issues.Length is 1
 	Constants + Endless + Lets + Deep
 Endless List(ValidationIssue)
 	Placing.Endless.First to Text is "OnlyLineCallsItself: Placed" + Hint
-	Looping.Endless.Length is 0
+	(Looping.Endless.Length is 0) and (Making.Endless.Length is 0)
 	Recursions(("+(other) Path", "\tPath(text + other)"), "Path").Endless.Length is 0
 	Recursions(("Loaded(path Text) Terrain", "\tTerrain(Mesh.Loaded(path))"), "Terrain").Endless.Length is 0
 	for lines
@@ -37,6 +39,7 @@ Deep List(ValidationIssue)
 				ValidationIssue("DeepRecursion", method + " nests " + depth + " calls" + DeepHint, index + 1)
 Step(method Text, tokens Texts) Number
 	Counting.Step("Count", ("1", "+", "Count", "(", "number", "-", "2", ")")) is 2
+	Counting.Step("Count", ("1", "+", "Count", "(", "number", "-", "3", ")", "+", "7")) is 3
 	Counting.Step("Count", ("else", "Count", "(", "number", "-", "1", ")")) is 0
 	Counting.Step("Count", ("1", "+", "Count", "(", "number", "/", "2", ")")) is 0
 	for tokens
@@ -58,6 +61,11 @@ Deepest(method Text) Number
 Argument(method Text, tokens Texts) Number
 	Counting.Argument("Count", ("Count", "(", "5000", ")")) is 5000
 	Counting.Argument("Count", ("Count", "(", "number", ")")) is 0
+	Counting.Argument("Count", ("1", "Other", "(", "300", ")", "+", "Count", "(", "700", ")")) is 700
+	Counting.Argument("Count", ("+", "Count", "(", "number", "-", "4", ")")) is 0
+	Counting.Argument("Count", ("+", "Count", "(", "800")) is 0
+	Counting.Argument("Count", ("+", "Count", "[", "800", ")")) is 0
+	Counting.Argument("Count", ("+", "Count", "(", "800", "]")) is 0
 	for tokens
 		let isLiteral = (index + 3 < tokens.Length) and (tokens(index + 1) is "(") and (tokens(index + 3) is ")")
 		if (value is method) and isLiteral and (tokens(index + 2).Substring(0, 1) is in "0123456789")
@@ -66,6 +74,7 @@ Argument(method Text, tokens Texts) Number
 Constants List(ValidationIssue)
 	Looping.Constants.First to Text is "ConstantUsesItself: Blood calls Parsed, which uses Blood"
 	Recursions(Duplicates.Copy, "Copy").Constants.Length is 0
+	Looping.Constants.First.Line is 2
 	for lines
 		if value.StartsWith("constant ")
 			let tokens = Tokenizer(value).Tokens
@@ -76,6 +85,7 @@ Using(name Text, tokens Texts, visited Texts) Text
 	Looping.Using("Blood", ("Parsed", "(", ")"), List(Text)) is "Parsed"
 	Looping.Using("Blood", List(Text) + "name", List(Text)) is ""
 	Looping.Using("Blood", ("Other", ".", "Parsed"), List(Text)) is ""
+	(Looping.Using("Other", ParsedCall, List(Text)) is "") and (Looping.Using("Blood", ParsedCall, ParsedCall) is "")
 	let called = Called(tokens)
 	for lines
 		if TypeShape(lines).IsMethodHeader(value) and (Tokenizer(value).Tokens.First is in called)
@@ -94,6 +104,10 @@ IsOwn(tokens Texts, position Number) Boolean
 	Looping.IsOwn(("Splash", "(", "1", ")", ".", "Blood"), 5)
 	Looping.IsOwn(("Other", ".", "Blood"), 2) is false
 	Looping.IsOwn(("Character", "(", "8", ")", "to", "Text"), 4) is false
+	Looping.IsOwn(("to", "Text"), 0)
+	Looping.IsOwn(("Other", "(", "Blood", ")"), 2)
+	Looping.IsOwn(("Other", "to", "Text"), 1) is false
+	Looping.IsOwn(("Splash", "to", "Text"), 1)
 	let isConverted = (position > 0) and (tokens(position) is "to")
 	if (isConverted is false) and ((position is 0) or (tokens(position - 1) is not "."))
 		return true
@@ -114,6 +128,9 @@ IsThroughSample(line Text, method Text) Boolean
 	Measuring.IsThroughSample("	let area = Sample.Area", "Area")
 	Measuring.IsThroughSample("	let area = Other.Area", "Area") is false
 	Measuring.IsThroughSample("	let area = Other.Sample.Area", "Area") is false
+	Measuring.IsThroughSample("Sample.Area is 3", "Area")
+	Measuring.IsThroughSample("let area = Sample.Other", "Area") is false
+	Measuring.IsThroughSample("let area = Sample+Area", "Area") is false
 	let tokens = Tokenizer(line.Trim).Tokens
 	for tokens
 		let isOwn = (index > 1) and (tokens(index - 2) is in Samples) and ((index < 3) or (tokens(index - 3) is not "."))
@@ -122,6 +139,7 @@ IsThroughSample(line Text, method Text) Boolean
 	false
 Samples Texts
 	Measuring.Samples is ("Sample")
+	Recursions(("constant Small = Shape(2)", "constant Big = Shape(9)"), "Shape").Samples is ("Small", "Big")
 	for lines
 		if value.StartsWith("constant ") and (value.IndexOf(" = " + typeName + "(") > 0)
 			Tokenizer(value).Tokens(1)

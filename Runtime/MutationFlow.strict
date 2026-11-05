@@ -1,0 +1,72 @@
+has method MethodEntry
+constant Twice = MutationFlow(Mutation.Twice.method)
+constant Issuing = InstructionEntry.Invoke(2, ("Strict/Validators/ValidationIssue", "from", "ValidationIssue", "ruleName", "target"), (1, 0), -1)
+constant Issued = MutationFlow(MethodEntry(Mutation.Twice.method, instructions = (InstructionEntry.LoadText(0, "detail"), InstructionEntry.LoadText(1, "Rule"), Issuing, InstructionEntry.Return(2))))
+constant Looped = MutationFlow(MethodEntry(Mutation.Twice.method, instructions = (InstructionEntry.LoadNumber(0, 3), InstructionEntry.Binary(InstructionType.Add, (0, 0, 1)), InstructionEntry(InstructionType.LoopBegin, List(Text), (1, 0, 0)), InstructionEntry.Return(0))))
+constant Stored = MutationFlow(MethodEntry(Mutation.Twice.method, instructions = (InstructionEntry.LoadText(0, "detail"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "text"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "text"), InstructionEntry.LoadText(1, "Rule"), InstructionEntry.Invoke(2, Issuing.texts, (1, 3), -1), InstructionEntry.Return(2))))
+constant Adding = InstructionEntry.Binary(InstructionType.Add, (0, 1, 2))
+Target(entry InstructionEntry) Number
+	Twice.Target(Adding) is 2
+	Twice.Target(InstructionEntry.LoadNumber(1, 1)) is 1
+	(entry.kind is in Mutation.Arithmetic) and (entry.payload.Length > 3) then entry.payload(3) else entry.payload(0)
+IsIgnored(register Number, position Number) Boolean
+	Issued.IsIgnored(0, 0)
+	Issued.IsIgnored(1, 1) is false
+	Looped.IsIgnored(0, 0)
+	Stored.IsIgnored(0, 0)
+	Twice.IsIgnored(0, 0) is false
+	for Range(position + 1, method.instructions.Length)
+		let entry = method.instructions(index)
+		if IsReading(entry, register)
+			return Followed(entry, register, index)
+		if (entry.kind is in MutationKinds.Writers) and (Target(entry) is register)
+			return false
+	false
+Followed(entry InstructionEntry, register Number, at Number) Boolean
+	Issued.Followed(Issuing, 0, 2)
+	Looped.Followed(Looped.method.instructions(2), 1, 2)
+	Twice.Followed(InstructionEntry.Return(0), 0, 0) is false
+	if entry.kind is InstructionType.LoopBegin
+		return true
+	if entry.kind is InstructionType.StoreRegisterToVariable
+		return IsLoadIgnored(entry.texts.First, at)
+	if entry.kind is InstructionType.Invoke
+		return IsMessage(entry, register) or ((entry.texts(2) is not "None") and IsIgnored(entry.payload(0), at))
+	(entry.kind is in Mutation.Arithmetic) and IsIgnored(Target(entry), at)
+IsLoadIgnored(name Text, at Number) Boolean
+	Stored.IsLoadIgnored("text", 1)
+	Stored.IsLoadIgnored("other", 1) is false
+	mutable loads = 0
+	for Range(at + 1, method.instructions.Length)
+		let entry = method.instructions(index)
+		if (entry.kind is InstructionType.LoadVariableToRegister) and (entry.texts.First is name)
+			if IsIgnored(entry.payload(0), index) is false
+				return false
+			loads = loads + 1
+	loads > 0
+IsReading(entry InstructionEntry, register Number) Boolean
+	Twice.IsReading(Adding, 1)
+	Twice.IsReading(Adding, 2) is false
+	Twice.IsReading(Issuing, 0)
+	Twice.IsReading(InstructionEntry(InstructionType.CheckError, List(Text), (2)), 2) is false
+	if (entry.kind is in Mutation.Arithmetic) or (entry.kind is in MutationKinds.Comparisons)
+		return (entry.payload(1) is register) or (entry.payload(2) is register)
+	if entry.kind is InstructionType.Invoke
+		return register is in Arguments(entry)
+	(entry.kind is not InstructionType.CheckError) and (register is in entry.payload)
+Arguments(entry InstructionEntry) Numbers
+	Twice.Arguments(InstructionEntry.Invoke(2, ("T", "Add", "N", "x"), 0, 1)) is (0, 1)
+	Twice.Arguments(Issuing) is (1, 0)
+	let start = 6 + entry.payload(3)
+	let count = entry.payload(start - 1)
+	let arguments = entry.payload.Slice(start, count)
+	entry.payload(start + count) is 1 then arguments + entry.payload(start + count + 1) else arguments
+IsMessage(entry InstructionEntry, register Number) Boolean
+	Issued.IsMessage(Issuing, 0)
+	Issued.IsMessage(Issuing, 1) is false
+	Issued.IsMessage(InstructionEntry.Invoke(2, ("Strict/Error", "from", "Error", "Name"), List(Number) + 1, -1), 1)
+	Issued.IsMessage(InstructionEntry.Invoke(2, ("Strict/Text", "from", "Text", "a", "b"), (1, 0), -1), 0) is false
+	let type = TypeEntry.ShortName(entry.texts.First)
+	let arguments = Arguments(entry)
+	let details = type.EndsWith("Error") then arguments else arguments.Slice(1, arguments.Length - 1)
+	(entry.texts(1) is "from") and (type.EndsWith("Error") or type.EndsWith("Issue")) and (register is in details)

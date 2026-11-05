@@ -8,7 +8,8 @@ constant Storing = Mutation(MethodEntry(Machine.Doubler.methods.First, instructi
 constant Marking = InstructionEntry(InstructionType.LoadConstantToRegister, "1 is 1 in Twice at Doubler.strict:line 2", (0, 4, -1))
 constant Splitting = (InstructionEntry.LoadNumber(0, 0), Marking, InstructionEntry.LoadNumber(1, 1), InstructionEntry.Return(0))
 constant Splitter = Mutation(MethodEntry(Machine.Doubler.methods.First, instructions = Splitting))
-constant Descriptions = ("the comparison always true", "the comparison always false", "returning the default value instead of the result", "", "", "with + and - or * and / swapped", "with an empty text instead of the text")
+constant Operators = ("+", "-", "*", "/", "is", "is not", "<", ">")
+constant Ordinals = ("st", "nd", "rd")
 IsMine(part Text, round Number) Boolean
 	Mutation.IsMine("", 3)
 	Mutation.IsMine("1/2", 3)
@@ -59,26 +60,41 @@ Swapped(kind Number) Number
 	let pair = kind is in (InstructionType.Add, InstructionType.Subtract) then 0 else 2
 	Arithmetic(Arithmetic.Index(kind) is pair then pair + 1 else pair)
 Described(code Number) Text
-	Twice.Described(18) is "returning the default value instead of the result"
-	Compared.Described(0) is "the comparison always true"
-	Twice.Described(13) is "with + and - or * and / swapped"
-	Storing.Described(11) is "without the assignment to a"
-	Twice.Described(6) is "with an empty text instead of the text"
+	(Twice.Described(18) is "replaced the result with 0") and (Twice.Described(13) is "replaced + with -")
+	Compared.Described(0) is "replaced the comparison > with true"
+	Storing.Described(11) is "removed the 2nd assignment to a"
+	Mutation(MutationKinds.Joined.method).Described(6) is "replaced text \"a\" with empty text \"\""
 	let kind = code % 8
 	let entry = method.instructions((code / 8).Floor)
-	if kind is not in (3, 4)
-		return Descriptions(kind)
+	let nth = Position(code)
 	if kind is 3
-		return "without the assignment to " + entry.texts.First
-	"without the call " + (entry.texts.Length > 1 then entry.texts(1) else "Add")
+		return "removed the " + nth + "assignment to " + entry.texts.First
+	if kind is 4
+		return "removed the " + nth + "call " + (entry.texts.Length > 1 then entry.texts(1) else "Add")
+	"replaced " + Replaced(kind, entry, nth)
+Replaced(kind Number, entry InstructionEntry, nth Text) Text
+	Twice.Replaced(5, Twice.method.instructions(1), "2nd ") is "the 2nd + with -"
+	Twice.Replaced(1, MutationKinds.Compared.method.instructions(0), "") is "the comparison > with false"
+	if kind < 2
+		return "the " + nth + "comparison " + Operator(entry.kind) + " with " + (kind is 0 then "true" else "false")
+	let empty = method.returnType is "Strict/Boolean" then "false" else "0"
+	if kind is 2
+		return "the result with " + (method.returnType is "Strict/Text" then "\"\"" else empty)
+	if kind is 6
+		return "text \"" + entry.texts.First + "\" with empty text \"\""
+	(nth is "" then "" else "the " + nth) + Operator(entry.kind) + " with " + Operator(Swapped(entry.kind))
+Operator(kind Number) Text
+	Twice.Operator(InstructionType.Divide) is "/"
+	Twice.Operator(InstructionType.LessThan) is "<"
+	Operators((Arithmetic + MutationKinds.Comparisons).Index(kind))
 Line(code Number) Number
 	Twice.Line(18) is 0
 	let at = method.instructions((code / 8).Floor).line
 	at is 0 then Lines else at
 Position(code Number) Text
 	Twice.Position(13) is ""
-	Mutation(MutationKinds.Joined.method).Position(6) is ", 1 of 2 such instructions of this line"
-	Mutation(MutationKinds.Joined.method).Position(14) is ", 2 of 2 such instructions of this line"
+	Mutation(MutationKinds.Joined.method).Position(6) is "1st "
+	Mutation(MutationKinds.Joined.method).Position(14) is "2nd "
 	let at = (code / 8).Floor
 	let entry = method.instructions(at)
 	mutable before = 0
@@ -87,7 +103,7 @@ Position(code Number) Text
 		if (value.kind is entry.kind) and (value.line is entry.line)
 			total = total + 1
 			before = index < at then before + 1 else before
-	total < 2 then "" else ", " + (before + 1) + " of " + total + " such instructions of this line"
+	total < 2 then "" else (before + 1) + (before < 3 then Ordinals(before) else "th") + " "
 Source(lines Texts, line Number) Texts
 	Mutation.Source(("A", "\tB", "\tC", "D"), 2) is ("  1: A", "> 2: \tB", "  3: \tC")
 	Mutation.Source(("A", "B"), 2) is ("> 2: B")

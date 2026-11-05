@@ -1,7 +1,7 @@
 has path Text
 has isWhole Boolean = false
 constant Steps = 100000
-constant Version = 6
+constant Version = 8
 constant Sample = MutationCache("Compiler/output/Cached.strict")
 Stamp Text
 	Sample.Stamp.StartsWith("unit ")
@@ -26,3 +26,8 @@ Saved(survivors Texts) Boolean
 	Sample.Saved(List(Text))
 	File(Location).Write(Text.Combine(List(Text) + Stamp + survivors, "\n"))
 	File(Location).Exists
+Exhausted(slots List(VmValue)) List(VmValue)
+	MutationCache.Exhausted(Frame.Listed)(Frame.ResultSlot).kind is "Strict/Error"
+	mutable exhausted = slots
+	exhausted(Frame.ResultSlot) = VmValue.OfError("Timeout")
+	exhausted

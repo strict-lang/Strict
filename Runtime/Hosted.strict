@@ -12,6 +12,13 @@ constant Timing = Invocation(InstructionEntry.Invoke(0, ("Strict/Process", "Elap
 constant Deleting = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "Delete", "None"), List(Number), 0), List(VmValue), VmValue("Strict/File", 0, "", List(VmValue) + VmValue.OfText("Runtime/missing")))
 constant Changing = Invocation(InstructionEntry.Invoke(1, ("Strict/Directory", "Change", "Strict/Boolean", "path"), 0, -1), Current, VmValue.None)
 constant Methods = ("File.ReadLines", "File.Exists", "File.Write", "File.Delete", "File.Rename", "File.ReadBytes", "File.WriteLines", "File.WriteBytes", "File.Modified", "File.Length", "File.Locked", "Directory.Files", "Directory.Directories", "Directory.Modified", "Directory.Exists", "Directory.Create", "Directory.Change", "Directory.Current", "File.InMemory", "Process.Input", "Process.InputLine", "Process.Find", "Process.RunTool", "Process.RunTools", "Process.Started", "Process.OperatingSystem", "Process.Current", "Process.Built", "Process.Elapsed", "Process.MemoryUsed", "Process.Executed", "Process.Wait", "Process.FilesRead", "Time.Now", "Number.Logarithm", "Number.Random", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan", "Vector2.Atan", "Library.Call", "Library.TextSlot", "Library.NumbersSlot", "Library.TextResult", "Library.NumbersResult", "Library.Failure", "BuildProfile.Detailed", "TestBudget.Started", "TestBudget.Finished", "TestBudget.Entered", "TestBudget.Left", "ConstantCache.At", "ConstantCache.Stored")
+constant Effects = ("File.Write", "File.Delete", "File.Rename", "File.WriteLines", "File.WriteBytes", "Directory.Create", "Directory.Change", "Process.RunTool", "Process.RunTools", "Process.Started", "Library.Call")
+IsChanging Boolean
+	Hosted(Deleting).IsChanging
+	Hosted(Reading).IsChanging is false
+	Machine(Machine.Hello, deadline = 9000000000).Call(Deleting).kind is "Strict/Error"
+	Machine.Hello.Call(Deleting).kind is "None"
+	TypeEntry.ShortName(call.TypeName) + "." + call.MethodName is in Effects
 IsHosted Boolean
 	Hosted(SystemCall).IsHosted
 	Hosted(Invocation.AddCall).IsHosted is false
