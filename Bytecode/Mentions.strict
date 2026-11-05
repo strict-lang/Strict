@@ -28,6 +28,9 @@ Typed(shape Expressions/TypeShape) Texts
 	typed
 Outer(tokens Texts) Texts
 	Mentions.Outer(("outer", ".", "Key", ".", "F")) is ("Key")
+	Mentions.Outer(("outer", "x", "A", "inner", ".", "B", "Key", "outer", ".")).Length is 0
+	Mentions(("\tRun(value Size)")).Typed(TypeShape("has x Number")) is ("Number")
+	Mentions.Declared(TypeShape(("has x List(Size)", "Run", "A Number", "B Number"))) is ("Sizes", "None", "Number")
 	for tokens
 		if (index > 1) and (tokens(index - 1) is ".") and (tokens(index - 2) is "outer")
 			value
@@ -61,6 +64,7 @@ IsKnown(name Text, known Texts) Boolean
 	Mentions.IsKnown("Numbers", List(Text) + "Number")
 	Mentions.IsKnown("Numbr", List(Text) + "Number") is false
 	Mentions.IsKnown("Numberss", List(Text) + "Number")
+	Mentions.IsKnown("Sizes", List(Text) + "Number") is false
 	if name is in known
 		return true
 	(name.Substring(name.Length - 1, 1) is "s") and IsKnown(name.Substring(0, name.Length - 1), known)
@@ -79,6 +83,7 @@ Declared(shape Expressions/TypeShape) Texts
 	result
 Returned(shape Expressions/TypeShape) Texts
 	Mentions.Returned(TypeShape(("constant Pair = (1, 2)", "Add(other) Number", "	other"))) is ("Number")
+	Mentions.Returned(TypeShape(("has x Number", "Area = 1", "Add(other) Number", "\tother"))) is ("Number")
 	for shape.lines
 		if shape.IsMethodHeader(value) and (shape.IsComputed(value) is false)
 			HeaderTokens(Tokenizer(value).Tokens).ReturnType
