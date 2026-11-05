@@ -30,6 +30,8 @@ IsBounded(tokens Texts) Boolean
 	InX.IsBounded(Tokenizer("x * 2 < w").Tokens) is false
 	InX.IsBounded(Tokenizer("x is 1").Tokens) is false
 	InX.IsBounded(Tokenizer("x").Tokens) is false
+	InX.IsBounded(Tokenizer("x * 2 < w and x < w").Tokens) is false
+	InX.IsBounded(Tokenizer("x < w and x * 2 < w").Tokens) is false
 	let at = Split(tokens, List(Text) + "and")
 	if at < 0
 		return IsCompared(tokens)
@@ -38,6 +40,8 @@ IsCompared(tokens Texts) Boolean
 	InX.IsCompared(Tokenizer("a + x >= 0").Tokens)
 	InX.IsCompared(Tokenizer("not (x < 0)").Tokens) is false
 	InX.IsCompared(Tokenizer("(x < 0) < 1").Tokens) is false
+	InX.IsCompared(Tokenizer("x < a + 1").Tokens) and (InX.IsCompared(Tokenizer("a < x * 2").Tokens) is false)
+	InX.IsCompared(Tokenizer("x < a < 1").Tokens) is false and (InX.IsCompared(Tokenizer("x < a or b").Tokens) is false)
 	let at = Split(tokens, Compares)
 	let right = at < 0 then List(Text) else tokens.Slice(at + 1, tokens.Length - at - 1)
 	if (at < 1) or (Split(right, Compares) >= 0) or Monotone(("or", "is", "not")).Mentions(tokens)
@@ -66,6 +70,8 @@ IsAdditive(tokens Texts) Boolean
 Binary(tokens Texts) Number
 	InX.Binary(Tokenizer("a * -x").Tokens) is -1
 	InX.Binary(Tokenizer("(a - b) + c").Tokens) is 5
+	InX.IsAdditive(Tokenizer("x * 2 + 1").Tokens) is false
+	InX.IsAdditive(Tokenizer("x + (x * 2)").Tokens) is false
 	mutable depth = 0
 	for tokens
 		depth = depth + (value is "(" then 1 else (value is ")" then -1 else 0))
@@ -88,6 +94,7 @@ IsTerm(tokens Texts) Boolean
 Matching(tokens Texts, open Number) Number
 	InX.Matching(("(", "a", "(", "b", ")", ")", "+", "c"), 0) is 5
 	InX.Matching(("(", "a"), 0) is -1
+	InX.IsTerm(Tokenizer("(a) * x").Tokens) is false
 	mutable depth = 0
 	for Range(open, tokens.Length)
 		depth = depth + (tokens(value) is "(" then 1 else (tokens(value) is ")" then -1 else 0))

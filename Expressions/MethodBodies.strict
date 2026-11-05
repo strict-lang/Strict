@@ -84,6 +84,7 @@ Methods Scope
 LoopScope(statement SyntaxNode, scope Scope) Scope
 	MethodBodies("Range", Sample, NoInference).LoopScope(SyntaxNode("For", "for"), NoScope).TypeOf("value") is "Number"
 	MethodBodies("Range", Sample, NoInference).LoopScope(CheckedA, ErrorNarrowing.NumberA).TypeOf("a") is "Error"
+	MethodBodies("Range", Sample, NoInference).LoopScope(SyntaxNode("Else", "else"), NoScope).TypeOf("index") is ""
 	if statement.Kind is "If"
 		return ErrorNarrowing(inference).Narrowed(statement.children(0), scope, Methods)
 	if statement.Kind is not "For"
@@ -94,6 +95,7 @@ LoopScope(statement SyntaxNode, scope Scope) Scope
 Element(iterated Text) Text
 	MethodBodies("Demo", Sample, NoInference).Element("Dictionary(Text, Number)") is "List(Text, Number)"
 	MethodBodies("Demo", Sample, NoInference).Element("Dictionary(Text, Text)") is "Texts"
+	MethodBodies("Demo", Sample, TypeInference(KnownTypes.Sample, TypeInference.Limits)).Element("Text") is "Text"
 	if inference.Enumerated(iterated).Length > 0
 		return iterated
 	let isDictionary = iterated.StartsWith("Dictionary(")
@@ -119,6 +121,9 @@ Pair(type Text) Texts
 	let isPair = type.StartsWith("List(") and (comma > 0) and (type.Substring(5, comma - 5).IndexOf("(") < 0)
 	isPair then (type.Substring(5, comma - 5), type.Substring(comma + 2, type.Length - comma - 3)) else List(Text)
 Declare(statement SyntaxNode, scope Scope) Scope
+	MethodBodies("Demo", Sample, NoInference).StatementType(Looped(0)) is "Number"
+	StatementType(ScopedStatement(SyntaxNode("Return", "", List(SyntaxNode) + SyntaxNode.one), NoScope, 0)) is "Number"
+	BlockType(BodyParser("Run", "	if a is", "		1 then \"x\"").Block(1, 1).children(0), NoScope) is "Text"
 	if statement.Kind is not "Declaration"
 		return scope
 	let name = Tokenizer(statement.text).Tokens.Last
@@ -155,6 +160,8 @@ BlockType(statement SyntaxNode, scope Scope) Text
 IsSelector(statement SyntaxNode) Boolean
 	IsSelector(BodyParser("Run", "\tif a is", "\t\t1 then 2").Block(1, 1).children(0))
 	IsSelector(StatementParser(Tokenizer("if a is b").Tokens).ParseStatement) is false
+	IsSelector(SyntaxNode("If", "", (SyntaxNode("Call", "", (CheckedA, SyntaxNode.missing)), SyntaxNode.nested))) is false
+	IsSelector(StatementParser(Tokenizer("if a is").Tokens).ParseStatement) is false
 	if not (statement.HasValue and statement.HasBody)
 		return false
 	let condition = statement.children(0)
