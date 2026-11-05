@@ -45,6 +45,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - Bytecode crash: a test line calling a constructor inline with a list `+` argument, `Duplicates(List(Text) + "a", 1).Other(...)`, fails with IndexOutOfRange in OperatorCodegen.Operation (line 21, via DefaultInstance.Called/ChangedInstance.Called), the same expression as a constant works.
 - VM Text.IndexOf(x, start) returns -1 for a negative start while Text.strict searches from 0 (`"A>BC".IndexOf(">", -1)` is -1 in the VM, 1 by the spec), so Xml guards like `start < 0` are untestable; Substring(-1, 3) clamps the start but keeps the length. Make the VM follow Text.strict.
 - Native strict.exe crashes with an access violation (exit 139 / 0xC0000005) on some mutants of Runtime/Machine.strict: `strict test Runtime/Machine.strict . mutations rounds:0/1000` (also rounds 16, 7 and 9 of 16 parts) segfaults after all normal tests pass, a bad mutant must end as an Error instead. The worker reports MutationTestingFailed, so those rounds are untested.
+- Overload choice: `CallTarget(KnownTypes.Sample, ...).OtherSignature("Twice", "Count", "Number", ("Number"))` returns the parameters of `Twice(times, offset)` (5 entries) although `Twice(times)` matches the single argument (KnownTypes.ParametersOf("Count", "Twice", 1) is ("times")), check Overloads.Ordinal's non exact fallback.
 
 ## Waiting
 - Later: Qwen3-Coder-Next 80B-A3B and Qwen3-Coder-30B with all experts, image blur on the GPU, Apple Silicon, AMD GPUs, batched training ideas.
