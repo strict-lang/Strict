@@ -4,10 +4,19 @@ constant Double = MlirRational(MlirExact.Double)
 constant Adding = InstructionEntry.Binary(InstructionType.Add, (0, 1, 2))
 constant Less = InstructionEntry.Binary(InstructionType.LessThan, (0, 1))
 constant Kinds = MlirSingle.Operators + InstructionType.Modulo
+constant Wrapped = MlirRational(MlirExact(MlirPassed.Wrapped, 5))
+constant Floors = ("    %x2f_e = llvm.load %r1_e : !llvm.ptr -> i64", "    %x2f_q = llvm.load %r1_q : !llvm.ptr -> i64", "    %x2fv = arith.cmpi ne, %x2f_q, %inexact : i64", "    %x2fs = arith.select %x2fv, %x2f_q, %one : i64", "    %x2ft = arith.divsi %x2f_e, %x2fs : i64", "    %x2fp = arith.muli %x2ft, %x2fs : i64", "    %x2fr = arith.subi %x2f_e, %x2fp : i64", "    %x2fn = arith.cmpi slt, %x2fr, %inexact : i64", "    %x2fb = arith.subi %x2ft, %one : i64", "    %x2ff = arith.select %x2fn, %x2fb, %x2ft : i64", "    %x2o_e = llvm.load %r2_e : !llvm.ptr -> i64", "    %x2o_q = llvm.load %r2_q : !llvm.ptr -> i64", "    %x2fx = arith.select %x2fv, %x2ff, %x2o_e : i64", "    %x2fy = arith.select %x2fv, %one, %x2o_q : i64", "    llvm.store %x2fx, %r2_e : i64, !llvm.ptr", "    llvm.store %x2fy, %r2_q : i64, !llvm.ptr")
+constant Comparisons = ("    %x2a_e = llvm.load %r0_e : !llvm.ptr -> i64", "    %x2a_q = llvm.load %r0_q : !llvm.ptr -> i64", "    %x2b_e = llvm.load %r1_e : !llvm.ptr -> i64", "    %x2b_q = llvm.load %r1_q : !llvm.ptr -> i64", "    %x2l = arith.muli %x2a_e, %x2b_q : i64", "    %x2r = arith.muli %x2b_e, %x2a_q : i64", "    %x2w = arith.cmpi ne, %x2a_q, %inexact : i64", "    %x2y = arith.cmpi ne, %x2b_q, %inexact : i64", "    %x2v = arith.andi %x2w, %x2y : i1", "    %x2i = arith.cmpi slt, %x2l, %x2r : i64", "    %c = arith.select %x2v, %x2i, %f : i1")
+constant Wholes = ("    cf.cond_br %kv, ^kwhole(%k_e : i64), ^kreduced", "  ^kreduced:", "    %kw = arith.cmpi ne, %k_q, %inexact : i64", "    %ks = arith.select %kw, %k_q, %one : i64", "    %kd = arith.divsi %k_e, %ks : i64", "    %kp = arith.muli %kd, %ks : i64", "    %kz = arith.cmpi eq, %kp, %k_e : i64", "    %ka = arith.andi %kw, %kz : i1", "    %kc = arith.select %ka, %kd, %kj : i64", "    cf.br ^kwhole(%kc : i64)", "  ^kwhole(%k: i64):")
+constant Sums = ("    %x2a_e = llvm.load %r0_e : !llvm.ptr -> i64", "    %x2a_q = llvm.load %r0_q : !llvm.ptr -> i64", "    %x2b_e = llvm.load %r1_e : !llvm.ptr -> i64", "    %x2b_q = llvm.load %r1_q : !llvm.ptr -> i64", "    %x2l = arith.muli %x2a_e, %x2b_q : i64", "    %x2r = arith.muli %x2b_e, %x2a_q : i64", "    %x2n = arith.addi %x2l, %x2r : i64", "    %x2d = arith.muli %x2a_q, %x2b_q : i64", "    llvm.store %x2n, %r2_e : i64, !llvm.ptr", "    llvm.store %x2d, %r2_q : i64, !llvm.ptr")
+constant Remainders = ("    %x2z = arith.cmpi eq, %x2r, %inexact : i64", "    %x2s = arith.select %x2z, %one, %x2r : i64", "    %x2nq = arith.divsi %x2l, %x2s : i64", "    %x2nm = arith.muli %x2nq, %x2s : i64", "    %x2n = arith.subi %x2l, %x2nm : i64", "    %x2m = arith.muli %x2a_q, %x2b_q : i64", "    %x2d = arith.select %x2z, %inexact, %x2m : i64")
+constant Divisions = ("    %x2g = arith.cmpi slt, %x2r, %inexact : i64", "    %x2o = arith.subi %inexact, %x2l : i64", "    %x2u = arith.subi %inexact, %x2r : i64", "    %x2n = arith.select %x2g, %x2o, %x2l : i64", "    %x2p = arith.select %x2g, %x2u, %x2r : i64", "    %x2z = arith.cmpi eq, %x2b_q, %inexact : i64", "    %x2d = arith.select %x2z, %inexact, %x2p : i64")
 Operated(entry InstructionEntry) Texts
 	Single.Operated(Adding).Last is "    llvm.store %x2d, %r2_q : i64, !llvm.ptr"
 	"    llvm.store %x2h, %r2 : f32, !llvm.ptr" is not in Single.Operated(Adding)
 	Double.Operated(Adding).Length is 0
+	Single.Operated(Adding) is Sums
+	MlirRational(MlirExact(MlirGroupIndex.Aligning.function, 6)).Operated(Adding) is MlirGroupIndex.Aligning.Remainder
 	Single.Operated(InstructionEntry.Binary(InstructionType.Power, (0, 1, 2))).Length is 0
 	if (exact.Parts.Length is 0) or (entry.kind is not in Kinds)
 		return List(Text)
@@ -20,6 +29,7 @@ OrdinaryOperated(entry InstructionEntry) Texts
 Compared(entry InstructionEntry, float Text, target Text) Texts
 	Single.Compared(Less, "%f", "%c").Last is "    %c = arith.select %x2v, %x2i, %f : i1"
 	Double.Compared(Adding, "%f", "%c").Length is 0
+	Single.Compared(Less, "%f", "%c") is Comparisons
 	if exact.Parts.Length is 0
 		return List(Text)
 	let operands = exact.Loaded(Temp("a"), "%r" + entry.payload(1)) + exact.Loaded(Temp("b"), "%r" + entry.payload(2))
@@ -31,12 +41,16 @@ Compared(entry InstructionEntry, float Text, target Text) Texts
 	operands + Crossed + Valid + compared + chosen
 Valid Texts
 	Single.Valid.Last is "    %x2v = arith.andi %x2w, %x2y : i1"
+	Wrapped.Compared(InstructionEntry.Binary(InstructionType.LessThan, (1, 2)), "%f", "%c").Last.EndsWith("%x5i : i1")
+	Wrapped.Compared(InstructionEntry.Binary(InstructionType.LessThan, (1, 9)), "%f", "%c").Last.EndsWith("%f : i1")
+	Wrapped.Compared(InstructionEntry.Binary(InstructionType.LessThan, (9, 1)), "%f", "%c").Last.EndsWith("%f : i1")
 	let left = "    " + Temp("w") + " = arith.cmpi ne, " + Temp("a_q") + ", %inexact : i64"
 	let right = "    " + Temp("y") + " = arith.cmpi ne, " + Temp("b_q") + ", %inexact : i64"
 	(left, right, "    " + Temp("v") + " = arith.andi " + Temp("w") + ", " + Temp("y") + " : i1")
 Predicate(kind Number) Text
 	Single.Predicate(InstructionType.LessThan) is "slt"
 	Single.Predicate(InstructionType.NotEqual) is "ne"
+	Single.Predicate(InstructionType.Equal) is "eq"
 	let predicate = MlirStatements.Copy.Predicate(kind)
 	predicate is "oeq" then "eq" else (predicate is "une" then "ne" else "s" + predicate.Substring(1, 2))
 Rational(kind Number) Texts
@@ -54,10 +68,12 @@ Rational(kind Number) Texts
 	Crossed + (Integer("n", operation + Temp("l") + ", " + Temp("r")), denominator)
 Crossed Texts
 	Single.Crossed is ("    %x2l = arith.muli %x2a_e, %x2b_q : i64", "    %x2r = arith.muli %x2b_e, %x2a_q : i64")
+	Single.Rational(InstructionType.Divide) is Single.Crossed + Divisions
+	Single.Rational(InstructionType.Multiply).Last is Sums(7)
 	let left = Integer("l", "arith.muli " + Temp("a_e") + ", " + Temp("b_q"))
 	(left, Integer("r", "arith.muli " + Temp("b_e") + ", " + Temp("a_q")))
 Remainder Texts
-	Single.Remainder(3) is "    %x2nm = arith.muli %x2nq, %x2s : i64"
+	Single.Remainder(3) is "    %x2nm = arith.muli %x2nq, %x2s : i64" and (Single.Remainder is Remainders)
 	let zero = Integer("z", "arith.cmpi eq, " + Temp("r") + ", %inexact")
 	let safe = Integer("s", "arith.select " + Temp("z") + ", %one, " + Temp("r"))
 	let divisor = "%r" + exact.function.method.instructions(exact.at).payload(2)
@@ -70,6 +86,8 @@ Remainder Texts
 Divided Texts
 	Single.Divided.First is "    %x2g = arith.cmpi slt, %x2r, %inexact : i64"
 	Single.Divided.Last is "    %x2d = arith.select %x2z, %inexact, %x2p : i64"
+	Single.Divided is Divisions
+	Wrapped.Remainder(10) is "  ^x5nqfast:"
 	let negative = Integer("g", "arith.cmpi slt, " + Temp("r") + ", %inexact")
 	let negated = (Integer("o", "arith.subi %inexact, " + Temp("l")), Integer("u", "arith.subi %inexact, " + Temp("r")))
 	let numerator = Integer("n", "arith.select " + Temp("g") + ", " + Temp("o") + ", " + Temp("l"))
@@ -80,6 +98,8 @@ Divided Texts
 Floored(source Text, target Text) Texts
 	Single.Floored("%r1", "%r2").Last is "    llvm.store %x2fy, %r2_q : i64, !llvm.ptr"
 	Double.Floored("%r1", "%r2").Length is 0
+	Single.Floored("%r1", "%r2") is Floors
+	MlirRational(MlirExact(MlirGroupIndex.Norming.function, 7)).Floored("%r1", "%r2") is MlirGroupIndex.Norming.Floored
 	if exact.Parts.Length is 0
 		return List(Text)
 	let grouped = MlirGroupIndex(exact.function, exact.at).Floored
@@ -87,6 +107,9 @@ Floored(source Text, target Text) Texts
 		return grouped
 	OrdinaryFloor(source, target)
 OrdinaryFloor(source Text, target Text) Texts
+	Wrapped.Floored("%r1", "%r2")(12) is "    %x5fx = arith.select %x5fv, %x5ff, %x5ff : i64"
+	Wrapped.Floored("%r1", "%r2")(13) is "    %x5fy = arith.select %x5fv, %one, %one : i64"
+	Wrapped.Floored("%r9", "%r2")(12) is "    %x5fx = arith.select %x5fv, %x5ff, %x5o_e : i64"
 	let isKnown = MlirGuards(exact.function, exact.at).IsKnown(List(Text) + source)
 	let fallback = isKnown then (Temp("ff"), "%one") else (Temp("o_e"), Temp("o_q"))
 	let numerator = Integer("fx", "arith.select " + Temp("fv") + ", " + Temp("ff") + ", " + fallback(0))
@@ -108,6 +131,7 @@ Quotient(source Text) Texts
 Whole(target Text, fallback Text) Texts
 	Single.Whole("%k", "%kj").First is "    cf.cond_br %kv, ^kwhole(%k_e : i64), ^kreduced"
 	Single.Whole("%k", "%kj").Last is "  ^kwhole(%k: i64):"
+	Single.Whole("%k", "%kj") is Wholes
 	let label = "^" + target.Substring(1, target.Length - 1)
 	let branch = "    cf.cond_br " + target + "v, " + label + "whole(" + target + "_e : i64), " + label + "reduced"
 	let chosen = "    " + target + "c = arith.select " + target + "a, " + target + "d, " + fallback + " : i64"
