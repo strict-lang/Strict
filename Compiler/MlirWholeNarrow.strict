@@ -5,6 +5,7 @@ constant Summed = MethodEntry("Summed", List(MemberEntry) + MemberEntry("color",
 constant Summing = MlirFunction(MlirLanes.Sample.function.types, MlirLanes.Rgb, Summed)
 constant Adding = MlirWholeNarrow(Summing, 6)
 constant Most = 8192
+constant Narrowed = ("    %t6an = arith.trunci %t6a : i64 to i32", "    %t6bn = arith.trunci %t6b : i64 to i32", "    %t6cn = arith.addi %t6an, %t6bn : i32", "    %t6c = arith.extui %t6cn : i32 to i64")
 IsNarrow Boolean
 	Adding.IsNarrow
 	MlirWholeNarrow(Summing, 4).IsNarrow is false
@@ -26,6 +27,7 @@ Accumulated Text
 	isSelf and IsSmall(Writer(entry.payload(2))) and (Trips > 0) and (Trips <= Most) then next.texts.Last else ""
 Writer(register Number) Number
 	Adding.Writer(3) is 5
+	MlirWholeNarrow(Summing, 10).Accumulated is ""
 	MlirArguments(List(MlirFunction)).Writer(function, register, position)
 IsSmall(at Number) Boolean
 	Adding.IsSmall(4)
@@ -42,6 +44,7 @@ IsSmall(at Number) Boolean
 	(number >= 0) and (number <= 255) and (number.Floor is number)
 Trips Number
 	Adding.Trips is 9
+	MlirWholeNarrow(Summing, 9).Trips is 1
 	MlirWholeNarrow(MlirWholeFunction.Nesting, 11).Trips is 9
 	mutable trips = 1
 	for position
@@ -86,6 +89,7 @@ IsSmallStore(at Number) Boolean
 	(writer >= 0) and (MlirWholeNarrow(function, writer).Accumulated is entry.texts.Last)
 Emitted Texts
 	Adding.Emitted.Last is "    %t6c = arith.extui %t6cn : i32 to i64"
+	Adding.Emitted is Narrowed
 	let temp = "%t" + position
 	let left = "    " + temp + "an = arith.trunci " + temp + "a : i64 to i32"
 	let right = "    " + temp + "bn = arith.trunci " + temp + "b : i64 to i32"

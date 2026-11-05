@@ -5,6 +5,7 @@ constant Summing = MlirFeeding(MlirDeviceStatements.Summed, 6)
 constant Singled = MlirFeeding(MlirFunction(MlirDeviceStatements.Summed, Float = "f32"), 6)
 constant Passing = MlirFeeding(MlirFunction(List(TypeEntry) + GpuSamples.Headed, GpuSamples.Headed, MethodEntry("Passed", List(MemberEntry) + MemberEntry("count", "Strict/Number", List(InstructionEntry), false), "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "count"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "index"), InstructionEntry(InstructionType.IndexCall, "weights", (2, 1, -1)), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 2), InstructionEntry.Invoke(3, ("Strict/Headed", "Head", "Strict/Number", "position"), List(Number) + 2, -1), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 3), InstructionEntry.Named(InstructionType.InvokeWriteToList, 3, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 7), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "forResult"), InstructionEntry.Return(0)))), 4)
 constant Unfloated = (InstructionType.StoreRegisterToVariable, InstructionType.CheckError, InstructionType.IndexCall, InstructionType.LoopBegin)
+constant Invoking = "    %d6r = func.call @Rows_Twice_1_device(%a) : (!llvm.ptr, i64, i64, f64, f64) -> !llvm.struct<(f64)>"
 Stored(number Text, target Text) Texts
 	Summing.Stored("%d6", "%r4") is ("    llvm.store %d6, %r4 : f64, !llvm.ptr")
 	Singled.Stored("%d6", "%r4").Last is "    llvm.store %inexact, %r4_q : i64, !llvm.ptr"
@@ -19,6 +20,8 @@ Stored(number Text, target Text) Texts
 Packed(name Text) Texts
 	Singled.Packed("%d3").Last is "    %d3r3 = llvm.insertvalue %d3_q, %d3r2[2] : !llvm.struct<(f32, i64, i64)>"
 	Summing.Packed("%d3").Length is 2
+	Summing.Packed("%d3")(0) is "    %d3r0 = llvm.mlir.undef : !llvm.struct<(f64)>"
+	Chained.IsFloating(0, Chained.function.method.instructions(0))
 	let returned = MlirExact(function, at).Returned
 	mutable lines = List(Text) + ("    " + name + "r0 = llvm.mlir.undef : " + returned)
 	for MlirExact(function, at).Names(name)
@@ -28,18 +31,34 @@ Packed(name Text) Texts
 Unpacked(name Text) Texts
 	Singled.Unpacked("%d6").First is "    %d6 = llvm.extractvalue %d6r[0] : !llvm.struct<(f32, i64, i64)>"
 	Summing.Unpacked("%d6") is ("    %d6 = llvm.extractvalue %d6r[0] : !llvm.struct<(f64)>")
+	Summing.IsFloated(11, 0) is false
+	Summing.IsFloated(7, 1)
+	MlirFeeding(MlirWhole.Row.function, 0).IsFeeding(11, 9)
+	MlirFeeding(MlirFunction(Chained.function, Group = 5), 0).IsFloating(5, InstructionEntry.Return(3)) is false
+	Summing.IsFloated(9, 5) is false
 	let returned = MlirExact(function, at).Returned
 	for MlirExact(function, at).Names(name)
 		"    " + value + " = llvm.extractvalue " + name + "r[" + index + "] : " + returned
 Invoked(calls MlirDeviceCalls, result Text, operands Text) Texts
 	Summing.Invoked(MlirDeviceCalls.Twice, "%d6", "(%a)").First.StartsWith("    %d6r = func.call @Rows_Twice_1_device(%a)")
 	Singled.Invoked(MlirDeviceCalls.Twice, "%d6", "(%a)").Last.StartsWith("    %d6_q = llvm.extractvalue %d6r[2]")
+	Summing.Invoked(MlirDeviceCalls.Twice, "%d6", "(%a)").First is Invoking
+	Chained.IsFloating(0, InstructionEntry.Invoke(0, ("Strict/List", "Length", "Strict/Number"), List(Number), 0)) is false
+	Chained.IsPositional(0, InstructionEntry.Invoke(0, ("Strict/Number", "Floor", "Strict/Number"), List(Number), 0), 0)
+	Passing.IsPositional(5, Passing.function.method.instructions(5), 2) is false
+	Summing.IsFloated(2, 1) is false
+	Chained.IsFloating(0, InstructionEntry.Invoke(0, ("Strict/Number", "Run", "Strict/Number"), List(Number), 0))
+	Passing.IsPassed(6, 5) is false
 	let symbol = calls.callee.Symbol + "_device" + MlirTyped(function.Float).Suffix
 	let call = "    " + result + "r = func.call @" + symbol + operands
 	(List(Text) + (call + " : (" + calls.Types + ") -> " + MlirExact(function, at).Returned)) + Unpacked(result)
 Called(number Text, target Text) Texts
 	Singled.Called("%d6", "%r4").Last is "    llvm.store %d6_q, %r4_q : i64, !llvm.ptr"
 	Summing.Called("%d6", "%r4") is ("    llvm.store %d6, %r4 : f64, !llvm.ptr")
+	Singled.Called("%d6", "%r4")(1) is "    llvm.store %d6_e, %r4_e : i64, !llvm.ptr"
+	Chained.Stored("%d1", "%r1") is ("    llvm.store %d1, %r1 : f64, !llvm.ptr")
+	Singled.Stored("%d6", "%r4")(1) is "    llvm.store %inexact, %r4_e : i64, !llvm.ptr"
+	Chained.IsStored(2, Chained.function.method.instructions(2), 2) is false
 	let exact = MlirExact(function, at).Set(number + "_e", number + "_q", target)
 	(List(Text) + MlirTyped(function.Float).Store(number, target)) + exact
 IsFeeding(position Number, register Number) Boolean
@@ -58,6 +77,12 @@ IsFeeding(position Number, register Number) Boolean
 IsStored(position Number, entry InstructionEntry, register Number) Boolean
 	Chained.IsStored(2, Chained.function.method.instructions(2), 1)
 	Summing.IsStored(10, Summing.function.method.instructions(10), 6) is false
+	MlirFeeding(MlirWhole.Row.function, 0).IsPositional(13, MlirWhole.Rows(13), 9)
+	Chained.IsPositional(0, Chained.function.method.instructions(0), 0) is false
+	MlirFeeding(MlirFiltering.Filtering.function, 0).IsPositional(5, MlirParallel.Filtered.instructions(5), 1)
+	MlirFeeding(MlirWhole.Row.function, 0).IsFloating(13, MlirWhole.Rows(13)) is false
+	MlirFeeding(MlirWhole.Row.function, 0).IsFloating(10, MlirWhole.Rows(10))
+	MlirFeeding(MlirFiltering.Filtering.function, 0).IsFloating(5, MlirParallel.Filtered.instructions(5)) is false
 	let isStore = (entry.kind is InstructionType.StoreRegisterToVariable) and (entry.payload(0) is register)
 	isStore and IsLoaded(position, entry.texts(0))
 IsPositional(position Number, entry InstructionEntry, register Number) Boolean
@@ -87,6 +112,9 @@ IsPassed(position Number, register Number) Boolean
 IsLoaded(position Number, name Text) Boolean
 	Chained.IsLoaded(2, "offset")
 	Summing.IsLoaded(10, "sum") is false
+	Chained.IsLoaded(2, "index") is false
+	Chained.IsFeeding(0, 5) is false
+	Chained.IsFeeding(0, 1) is false
 	for Range(position + 1, function.method.instructions.Length)
 		let entry = function.method.instructions(value)
 		let isNamed = (entry.kind is InstructionType.LoadVariableToRegister) and (entry.texts(0) is name)
@@ -119,6 +147,8 @@ IsFloating(position Number, entry InstructionEntry) Boolean
 IsFloatedVariable(position Number, name Text) Boolean
 	Chained.IsFloatedVariable(2, "offset") is false
 	Summing.IsFloatedVariable(10, "sum")
+	Summing.IsFloatedVariable(10, "row") is false
+	Summing.IsFloated(9, 6)
 	for Range(position + 1, function.method.instructions.Length)
 		let entry = function.method.instructions(value)
 		let isNamed = (entry.kind is InstructionType.LoadVariableToRegister) and (entry.texts(0) is name)
