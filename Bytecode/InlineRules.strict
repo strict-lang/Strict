@@ -5,6 +5,10 @@ constant Placeholder = MethodEntry("Cos", List(MemberEntry), "Strict/Number", (I
 constant Cached = TypeEntry("Strict/List(Number)", (Inliner.Elements, MemberEntry("X", "Strict/Number", List(InstructionEntry), true)), List(MethodEntry) + Inliner.First)
 constant Converting = MethodEntry("to", List(MemberEntry), "Strict/Text", StructLanes.Squared.instructions)
 constant Constant = MethodEntry("Built", List(MemberEntry), "Strict/Text", (InstructionEntry.LoadText(0, ""), InstructionEntry.Return(0)))
+constant Unreturned = MethodEntry("", List(MemberEntry), "", (InstructionEntry.LoadNumber(0, 1)))
+constant Early = MethodEntry("", List(MemberEntry), "", (InstructionEntry.Return(0), InstructionEntry.Return(0)))
+constant Storing = MethodEntry("", List(MemberEntry), "", (InstructionEntry.Named(Inliner.Store, 0, "a"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "a"), InstructionEntry.Return(0)))
+constant Adding = MethodEntry("", List(MemberEntry), "", (InstructionEntry.Binary(InstructionType.Add, (0, 0, 0)), InstructionEntry.Return(0)))
 Fits(owner TypeEntry, type TypeEntry, call InstructionEntry) Boolean
 	Listing.Fits(Inliner.Caller, Inliner.Listed, Inliner.Calling.instructions(1))
 	Listing.Fits(Inliner.Caller, Inliner.Caller, Inliner.Calling.instructions(1)) is false
@@ -21,12 +25,19 @@ IsOwn(call InstructionEntry) Boolean
 	let instance = 6 + call.payload(3) + call.payload(5 + call.payload(3))
 	call.payload(instance) is not 1
 Wrapped(type TypeEntry) Text
+	Listing.Wrapped(Cached) is "elements"
+	Listing.Wrapped(TypeEntry("Strict/A", (Inliner.Elements), List(MethodEntry))) is "elements"
+	Listing.Wrapped(TypeEntry("Strict/List(Number)", List(MemberEntry), List(MethodEntry))) is "elements"
 	Listing.Wrapped(Inliner.Listed) is "elements"
 	Listing.Wrapped(Inliner.Caller) is ""
 	if type.Name.StartsWith("Strict/List(")
 		return "elements"
 	type.Changing.Length is 1 then type.Changing.First.Name else ""
 MemberNames(type TypeEntry) Texts
+	Placeholder.Name is "Cos" and (Placeholder.declaredType is "Strict/Number")
+	Placeholder.instructions(0).texts is ("value")
+	Constant.Name is "Built" and (Constant.declaredType is "Strict/Text") and (Converting.declaredType is "Strict/Text")
+	Cached.methods.Length is 1
 	Listing.MemberNames(Inliner.Listed) is ("elements")
 	for type.members
 		value.Name
@@ -42,6 +53,8 @@ IsSmall Boolean
 			return false
 	true
 HasOwnCall Boolean
+	InlineRules(Storing).IsContained(List(Text))
+	InlineRules(Adding).IsComputed
 	Listing.HasOwnCall is false
 	InlineRules(Inliner.Again).HasOwnCall
 	for callee.instructions
@@ -71,6 +84,7 @@ IsComputed Boolean
 			return true
 	false
 IsReplaceable(type TypeEntry) Boolean
+	Listing.IsReplaceable(TypeEntry("Strict/Examples/A", List(MemberEntry), List(MethodEntry)))
 	Listing.IsReplaceable(Inliner.Listed)
 	Listing.IsReplaceable(TypeEntry("Strict/Process", List(MemberEntry), List(MethodEntry))) is false
 	Listing.IsReplaceable(Inliner.Caller) is false
@@ -112,6 +126,12 @@ IsStraight(isInstance Boolean) Boolean
 			return false
 	true
 IsOwnCall(entry InstructionEntry) Boolean
+	InlineRules(Inliner.NoMethod).IsSmall is false
+	InlineRules(Inliner.NoMethod).IsStraight(true) is false
+	InlineRules(Unreturned).IsSmall is false
+	InlineRules(Unreturned).IsStraight(true) is false
+	InlineRules(Early).IsSmall is false
+	InlineRules(Early).IsStraight(true) is false
 	Listing.IsOwnCall(Inliner.Again.instructions.First)
 	Listing.IsOwnCall(StructLanes.Constructed) is false
 	(entry.kind is InstructionType.Invoke) and IsOwn(entry) and (entry.texts(1) is not "from")
