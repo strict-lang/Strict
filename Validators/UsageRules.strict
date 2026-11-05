@@ -8,6 +8,7 @@ constant Looping = UsageRules(HeaderTokens(Tokenizer("Run(index Number)").Tokens
 constant ElementStore = BodyParser("Run", "	list(index) = 5").Block(1, 1).children(0)
 constant Lending = UsageRules(HeaderTokens(Tokenizer("Run").Tokens), BodyParser("Run", "	mutable ticker = Ticker(0)", "	Twice(ticker)").Block(1, 1).Statements, List(Text), List(Text) + "Ticker")
 constant Ticking = UsageRules(HeaderTokens(Tokenizer("Run(outer Number, spare Number)").Tokens), BodyParser("Run(outer Number, spare Number)", "\tmutable total = Ticker(2)", "\tfor 3", "\t\ttotal = total + outer", "\tPrint(Count(outer))", "\tPrint(total.Increase(outer))", "\ttotal").Block(1, 1).Statements, List(Text), ("Ticker", "Increase"))
+constant Plain = UsageRules(HeaderTokens(Tokenizer("Run(outer Number)").Tokens), BodyParser("Run(outer Number)", "\touter").Block(1, 1).Statements, List(Text), List(Text))
 constant From = UsageRules(HeaderTokens(Tokenizer("from(spare Number)").Tokens), BodyParser("from(spare Number)", "\t5").Block(1, 1).Statements, List(Text), List(Text))
 Sample UsageRules
 	Sample.statements.Length is 4
@@ -103,6 +104,7 @@ MutableParameterIssues ValidationIssues
 IsLooping Boolean
 	Looping.IsLooping
 	Sample.IsLooping is false
+	(Plain.IsLooping is false) and (Plain.ParameterIssues.Length is 0)
 	for statements
 		if value.Kind is "For"
 			return true

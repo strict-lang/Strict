@@ -10,6 +10,7 @@ constant Tailing = Recursions(("Count(number) Number", "\tRecursions(1).Count(50
 constant Operators = ("+", "-", "*", "/", "(", ",", "and", "or")
 constant Making = Recursions(("Rest(number) Number", "	number is 0 then 0 else Rest(number - 1)"), "Splash")
 constant ParsedCall = ("Parsed", "(", ")")
+constant Chained = Recursions(("A Number", "\tB", "B Number", "\tlet y = Xx","\ty", "D Number", "\tD"), "T")
 constant Placing = Recursions(("Placed Boolean", "\tRecursions(1).Placed", "Run", "\tPlaced"), "Recursions")
 Issues List(ValidationIssue)
 	Looping.Issues.Length is 1
@@ -91,13 +92,15 @@ Using(name Text, tokens Texts, visited Texts) Text
 	for lines
 		if TypeShape(lines).IsMethodHeader(value) and (Tokenizer(value).Tokens.First is in called)
 			let method = Tokenizer(value).Tokens.First
-			let body = Tokenizer(Duplicates.Implementation(lines, index).Replace("\n", " ")).Tokens
+			let body = Tokenizer(Duplicates.Implementation(lines, index)).Tokens
 			if (method is not in visited) and ((name is in Called(body)) or (Using(name, body, visited + method) is not ""))
 				return method
 	""
 Called(tokens Texts) Texts
 	"Parsed" is not in Looping.Called(("Other", ".", "Parsed", "Make"))
 	"Blood" is in Looping.Called(("Splash", ".", "Blood"))
+	"Blood" is in Looping.Called(("Blood", "."))
+	(Chained.Using("Xx", ("A"), List(Text)) is "A") and (Chained.Using("X", ("D"), List(Text)) is "")
 	for tokens
 		if IsOwn(tokens, index)
 			value

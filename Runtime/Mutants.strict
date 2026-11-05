@@ -80,24 +80,19 @@ Runner(type TypeEntry) MethodEntry
 			return value
 	type.methods.First
 Round(types List(TypeEntry), methods List(MethodEntry), round Number) Texts
-	let started = Execute(logger).Started(Replaced(types, methods, Changed(methods, round)), path)
 	mutable survivors = List(Mutable(Text))
 	for methods
 		let candidates = Mutation(value).Candidates
-		let machine = Machine(started, deadline = Process.Elapsed + seconds)
-		let whole = TestCodegen.Runner + methods.Length
-		if (candidates.Length > round) and (machine.Tested(types.First.Name, TestCodegen.Runner + index) is 0)
+		if candidates.Length > round
 			let mutant = List(MethodEntry) + Mutation(value).Mutant(candidates(round))
 			let alone = Execute(logger).Started(Replaced(types, List(MethodEntry) + value, mutant), path)
-			if Machine(alone, deadline = Process.Elapsed + seconds).Tested(types.First.Name, whole) is 0
+			if Passes(alone, TestCodegen.Runner + index) and Passes(alone, TestCodegen.Runner + methods.Length)
 				survivors.Add(Survivor(value, candidates(round)))
 	survivors
-Changed(methods List(MethodEntry), round Number) List(MethodEntry)
-	Sample.Changed(List(MethodEntry) + Twice, 0).First.instructions(1).kind is InstructionType.Subtract
-	Sample.Changed((Twice), 5).First is Twice
-	for methods
-		let candidates = Mutation(value).Candidates
-		candidates.Length > round then Mutation(value).Mutant(candidates(round)) else value
+Passes(started Machine, runner Text) Boolean
+	Sample.Passes(Machine.Hello, TestCodegen.Runner)
+	Mutants(Logger, "A.strict", 0).Passes(Frame.Doubling, "Missing") is false
+	Machine(started, deadline = Process.Elapsed + seconds).Tested(started.types.First.Name, runner) is 0
 Survivor(method MethodEntry, code Number) Text
 	Sample.Survivor(Twice, 13) is Sample.path + ":line 0: MutationSurvived: Twice: replaced + with -" + Hint
 	let mutation = Mutation(method)
@@ -132,7 +127,7 @@ IsInput(type Text) Boolean
 			return true
 	false
 Replaced(types List(TypeEntry), methods List(MethodEntry), replacements List(MethodEntry)) List(TypeEntry)
-	Sample.Replaced(Doubled, (Twice), Sample.Changed((Twice), 0)).First.methods.First is Mutation.Twice.Mutant(13)
+	Sample.Replaced(Doubled, (Twice), (Mutation.Twice.Mutant(13))).First.methods.First is Mutation.Twice.Mutant(13)
 	mutable changed = types
 	mutable replaced = List(Mutable(MethodEntry))
 	for types.First.methods
