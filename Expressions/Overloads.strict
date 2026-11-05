@@ -12,16 +12,19 @@ constant Mixing = SyntaxParser(Tokenizer("p.Mixed((1, 2))").Tokens).Parse
 constant Choosing = SyntaxParser(Tokenizer("p.Chosen((\"a\", \"b\"))").Tokens).Parse
 constant LabelsMember = SyntaxNode("Member", "Labels", LabelsCall)
 constant Valued = ("Value(name Text, default Number) Text", "\tname", "Value(name Text, default Text) Text", "\tname")
+constant Relabeled = Scope(("Labels", "Labels", "X"), ("Numbers", "List(Numbers)", "Number"))
 Chosen(owner Text, method Text, argumentTypes Texts) Number
 	Scaling.Chosen("Scaler", "Scaled", List(Text) + "Text") is 0
 	Scaling.Chosen("Scaler", "Scaled", List(Text) + "Number") is 1
 	Scaling.Chosen("Scaler", "*", List(Text) + "Scaler") is 0
 	Scaling.Chosen("Scaler", "*", List(Text) + "Byte") is 1
 	Scaling.Chosen("Scaler", "Missing", List(Text)) is -1
+	Scaling.Chosen("Scaler", "*", List(Text) + "Number") is 1
 	let exact = Ordinal(owner, method, argumentTypes, true)
 	exact >= 0 then exact else Ordinal(owner, method, argumentTypes, false)
 Ordinal(owner Text, method Text, argumentTypes Texts, isExact Boolean) Number
 	Scaling.Ordinal("Scaler", "Scaled", List(Text) + "Number", true) is -1
+	Picking.Ordinal("Picker", "Mixed", List(Text) + "Generics", true) is -1
 	let scope = types.ParameterScope(owner)
 	if scope.Count(method) < 2
 		return -1
@@ -63,6 +66,8 @@ Returned(node SyntaxNode, inference TypeInference, scope Scope, current Scope) T
 	Labeling.Returned(SyntaxNode("Call", "Labels"), LabelInference, KnownTypes.NoMembers, Labeler.methods(0)) is "Numbers"
 	Scaling.Returned(LabelsCall, LabelInference, KnownTypes.NoMembers, KnownTypes.NoMembers) is ""
 	Labeling.Returned(LabelsMember, LabelInference, KnownTypes.NoMembers, Labeler.methods(0)) is "Numbers"
+	Scaling.Returned(SyntaxNode("Call", "Scaled"), LabelInference, KnownTypes.NoMembers, Scaler.methods(0)) is ""
+	Labeling.Returned(LabelsCall, LabelInference, KnownTypes.NoMembers, Relabeled) is ""
 	let position = types.methods.Index(current)
 	if (position < 0) or (current.Count(node.text) < 2)
 		return ""
@@ -70,6 +75,8 @@ Returned(node SyntaxNode, inference TypeInference, scope Scope, current Scope) T
 	ordinal < 0 then "" else current.TypeAt(node.text, ordinal)
 Arguments(node SyntaxNode, inference TypeInference, scope Scope, current Scope) Texts
 	Labeling.Arguments(LabelsMember, LabelInference, KnownTypes.NoMembers, Labeler.methods(0)).Length is 0
+	Picking.Typed(SyntaxNode("Identifier", "value"), "A", LabelInference, KnownTypes.NoMembers, Relabeled) is "A"
+	Picking.Typed(Mixing, "A", LabelInference, KnownTypes.NoMembers, KnownTypes.NoMembers) is "Unknown"
 	let start = node.Kind is in ("Member", "MethodCall") then 1 else 0
 	for Range(start, node.children.Length)
 		inference.TypeOf(node.children(value), scope, current)
@@ -90,6 +97,8 @@ Specialized(type Text, declared Texts, arguments Texts) Text
 	Picking.Specialized("Generics", ("Generics"), ("Numbers")) is "Numbers"
 	Picking.Specialized("Generic", ("Number", "Generics"), ("Number", "Texts")) is "Text"
 	Picking.Specialized("Generic", ("Number"), ("Number")) is "Generic"
+	Picking.Specialized("Generic", ("Number", "Generic"), ("Number", "Texts")) is "Texts"
+	Picking.Specialized("Generic", List(Text) + "Generic", List(Text)) is "Generic"
 	let at = declared.Index("Generics") >= 0 then declared.Index("Generics") else declared.Index("Generic")
 	if (at < 0) or (at >= arguments.Length)
 		return type

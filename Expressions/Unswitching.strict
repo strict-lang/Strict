@@ -69,6 +69,9 @@ IsIndependent(tokens Texts, checked Texts) Boolean
 	Blurring.IsIndependent(Tokenizer("let at = pixel").Tokens, ("pixel", "x"))
 	Blurring.IsIndependent(Tokenizer("pixel = pixel + 1").Tokens, ("pixel", "x")) is false
 	Blurring.IsIndependent(Tokenizer("bitmap.Colors(pixel)").Tokens, ("pixel", "x")) is false
+	Blurring.IsIndependent(Tokenizer("sum").Tokens, ("pixel", "x")) is false
+	Blurring.IsIndependent(Tokenizer("log.Write(sum)").Tokens, ("pixel", "x")) is false
+	Blurring.IsIndependent(Tokenizer("let pixel = 1").Tokens, ("pixel", "x")) is false
 	let isDeclared = tokens.First is in ("let", "mutable")
 	let isAssigned = isDeclared or (tokens.Length > 1) and (tokens(1) is "=")
 	isAssigned and (Monotone(List(Text) + (isDeclared then tokens(1) else tokens.First)).Mentions(checked) is false)
@@ -88,6 +91,7 @@ Iterables(at Number) Texts
 	Blurring.Iterables(2) is ("Range(-1, 2)", "Range(-1, 2)")
 	Single.Iterables(1) is ("Range(-1, 2)")
 	Single.Iterables(2).Length is 0
+	Blurring.Iterables(10).Length is 0 and (Blurring.Names(10).Length is 0)
 	let line = at < lines.Length then lines(at).TrimStart else ""
 	if line.StartsWith("for ") is false
 		return List(Text)
@@ -97,6 +101,8 @@ Bounds(at Number, position Number) Texts
 	Blurring.Bounds(2, 1) is ("-1", "2")
 	Blurring.Bounds(1, 0).Length is 0
 	Unswitching(List(Text) + "\tfor Range(0, f(1, 2), 3)", "").Bounds(0, 0).Length is 0
+	Unswitching(List(Text) + "\tfor Sizes(1, 2)", "").Bounds(0, 0).Length is 0
+	Unswitching(List(Text) + "\tfor Range(1, 2).Reverse", "").Bounds(0, 0).Length is 0
 	let iterables = Iterables(at)
 	let iterable = position < iterables.Length then iterables(position) else ""
 	if (iterable.StartsWith("Range(") is false) or (iterable.EndsWith(")") is false)
@@ -120,6 +126,7 @@ LoopNames(at Number) Texts
 	Blurring.LoopNames(2) is ("x", "y")
 	Single.LoopNames(1) is ("value")
 	Mixed.LoopNames(2) is ("x")
+	Unswitching(("Run", "\tfor y, x in 3, Range(-1, 2)", "\t\tif f(x, y, x)"), "").LoopNames(1) is ("x")
 	let loops = Names(at)
 	mutable names = List(Mutable(Text))
 	for Arguments(at)
@@ -130,6 +137,9 @@ Arguments(at Number) Texts
 	Blurring.Arguments(2) is ("pixel", "x", "y")
 	Blurring.Arguments(3).Length is 0
 	Blurring.Arguments(5).Length is 0
+	Unswitching(List(Text) + "\tabcf(1)", "").Call(0).Length is 0
+	Unswitching(List(Text) + "\tif (1)", "").Call(0).Length is 0
+	Unswitching(List(Text) + "\tif f(1)(2)", "").Call(0).Length is 0
 	let call = at + 1 < lines.Length then Call(at + 1) else List(Text)
 	call.Length < 2 then List(Text) else call.Slice(2, call.Length - 2)
 IsMonotone(at Number) Boolean
