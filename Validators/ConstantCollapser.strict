@@ -25,7 +25,7 @@ Folded(left SyntaxNode, operator Text, right SyntaxNode) SyntaxNode
 	Collapse("true and false or true") is "true"
 	(Collapse("7 * 2 + 3") is "17") and (Collapse("\"ab\" + 5 + true + \"c\"") is "\"ab5truec\"")
 	(Collapse("false and true") is "false") and (Collapse("true or false") is "true")
-	Collapse(unfoldableCode) is unfoldableCode
+	(Collapse(unfoldableCode) is unfoldableCode) and (Collapse("5 and 3") is "5 and 3")
 	if (left.Kind is "Number") and (right.Kind is "Number") and (operator is in ("+", "-", "*", "/"))
 		return SyntaxNode("Number", Calculated(left.text to Number, operator, right.text to Number) to Text)
 	if (operator is "+") and (left.Kind is "Text") and (right.Kind is in ("Text", "Number", "Boolean"))

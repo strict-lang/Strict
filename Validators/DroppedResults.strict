@@ -22,6 +22,10 @@ IsBodyStart(line Text) Boolean
 	Squared.IsBodyStart("\tlogger.Log(width)")
 	Squared.IsBodyStart("\tSquared.Area is 0") is false
 	Squared.IsBodyStart("") is false
+	(Squared.Dropped("\t\tArea", ("Area")) is "") and (Squared.Dropped("\tArea(2 + 1)", ("Area")) is "")
+	(Shaped.Dropped("\tSize", ("Area")) is "") and (Shaped.Dropped("\tshape.Area(2)", ("Area")) is "")
+	DroppedResults(("Area Number", "\t1", "Run", "\t1", "Size Number", "\tArea", "\t2")).Issues.Length is 0
+	DroppedResults(("Area Number", "\t1", "Run", "\tlogger.Log(1)", "\tArea", "\t\t1", "\t2")).Issues.Length is 0
 	(line.Trim is not "") and (Duplicates.IsTest(line.Trim) is false)
 Plain Texts
 	Squared.Plain is ("Area")
@@ -37,7 +41,7 @@ Shared(duplicates Duplicates, mutations Texts) Texts
 			failing.Add(Tokenizer(value).Tokens.Last)
 	for duplicates.owners
 		let name = Tokenizer(value).Tokens.Last
-		if IsPlainBody(duplicates.bodies(index)) and (name is not in failing) and (name is not in mutations)
+		if (name is not in failing) and (name is not in mutations)
 			name
 IsPlainBody(body Text) Boolean
 	Squared.IsPlainBody("width * width\n")
@@ -75,10 +79,10 @@ Called(tokens Texts) Number
 	let at = isQualified then 2 else 0
 	(tokens.Length is at + 1) or (tokens(at + 1) is "(") and (tokens.Last is ")") then at else -1
 Dropped(line Text, plain Texts) Text
-	Squared.Dropped("\tArea", ("Area")) is "Area"
+	(Squared.Dropped("\tArea", ("Area")) is "Area") and (Squared.Dropped("", ("Area")) is "")
 	Squared.Dropped("\tArea(2)", ("Area")) is "Area"
 	(Squared.Dropped("\tlet area = Area", ("Area")) is "") and (Squared.Dropped("\tSize", ("Area")) is "")
-	Squared.Dropped("\tArea(2) + 1", ("Area")) is ""
+	(Squared.Dropped("\tArea(2) + 1", ("Area")) is "") and (Squared.Dropped("\tArea(2", ("Area")) is "")
 	Shaped.Dropped("\tshape.Size(2)", ("Area")) is "Size"
 	let tokens = Tokenizer(line.Trim).Tokens
 	let at = line.StartsWith("\t\t") or (tokens.Length is 0) then -1 else Called(tokens)

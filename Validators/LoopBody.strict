@@ -20,6 +20,7 @@ Issues List(ValidationIssue)
 	Clean.Issues.Length is 0
 	LoopBody(Edged.loop, List(Text), false).Issues.Length is 0
 	LoopBody(Hoisting.loop, List(Text), true, false).Issues.Length is 0
+	Clean.loop.children.Last.children.Length is 3
 	Found(loop.children.Last, loop.line, LoopNames.Of(loop, constants, List(Text)))
 Found(node SyntaxNode, line Number, names LoopNames) List(ValidationIssue)
 	Hoisting.Found(SyntaxNode("Identifier", "steps"), 1, LoopNames.Steps).Length is 0
@@ -90,6 +91,7 @@ IsGuarding(branches SyntaxNodes) Boolean
 			return true
 	false
 Edge(node SyntaxNode) Text
+	Guarding.Issue(StatementParser(Tokenizer("index then 0 else 1").Tokens).ParseStatement, 1, LoopNames.Steps).Length is 0
 	Hoisting.Edge(SyntaxNode("Identifier", "index")) is ""
 	Edged.Edge(Edged.loop.children.Last) is "index is steps" + LastHint
 	Edged.Edge(StatementParser(Tokenizer("index is 0").Tokens).ParseStatement) is "index is 0" + FirstHint

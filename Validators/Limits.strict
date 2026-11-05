@@ -19,6 +19,8 @@ Issues ValidationIssues
 	Limits(Long.lines, false, 10).Issues.Length is 0
 	Limits(OnlyConstants.lines + OnlyConstants.lines + OnlyConstants.lines, false, 10).Issues.Length is 0
 	Methods.Issues.Length is 1
+	Long.Issues.Length is 1
+	Limits(("Run", "\tlet a = 0 - b"), false).Issues.Length is 1
 	mutable issues = List(Mutable(ValidationIssue))
 	for lines
 		issues = issues + LineIssues(value, index) + NegationIssues(value, index)
@@ -76,6 +78,7 @@ Operand(tokens Texts, start Number) Text
 	Sample.Operand(("x", "a", ".", "b"), 1) is "a.b"
 	Sample.Operand(("x", "a", ".", "b", ".", "c"), 1) is "a.b.c"
 	Sample.Operand(("x", "=", "a", ".", "b", "*", "c"), 2) is "a.b"
+	Sample.NegationIssues("\tlet a = 0-b", 0).Length is 0
 	mutable text = tokens(start)
 	for tokens.Length - start - 1
 		if tokens(start + index + 1) is not "." and (text.EndsWith(".") is false)
@@ -111,7 +114,7 @@ Started(shape TypeShape, start Number, index Number) Number
 	Long.Started(TypeShape(Long.lines), 5, 3) is 5
 	Long.Started(TypeShape(Long.lines), 5, 14) is 5
 	Sample.Started(TypeShape(Sample.lines), 5, 0) is 5
-	IsHeader(index) and (index < lines.Length) and shape.IsMethodHeader(lines(index)) then index else start
+	(index < lines.Length) and shape.IsMethodHeader(lines(index)) then index else start
 CountIssues ValidationIssues
 	Limits(("has a Number", "has b Number"), false).CountIssues.Length is 0 and Methods.CountIssues.Length is 1
 	Limits(OnlyConstants.lines, false).CountIssues.Length is 0 and Limits(Methods.lines, true).CountIssues.Length is 0
