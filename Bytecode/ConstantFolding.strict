@@ -12,6 +12,7 @@ constant Plus = SyntaxNode("Binary", "+", (Limit, Two))
 constant Local = BodyParser("Run", "\tconstant a = 2", "\tconstant b = a * 3", "\tb + a").Block(1, 1)
 constant Owned = ConstantFolding("Text", TypeInference(KnownTypes.Sample, (Scope(("Limit", "Twice", "Alias", "Loop", "Missing"), ("3", "Limit * 2", "Limit", "Loop", "Error")), TypeInference.NoShape)))
 constant Wrapping = ConstantFolding("C", TypeInference(KnownTypes(("Vector2", "Angle"), (Scope(List(Text) + "numbers", List(Text) + "Numbers"), Scope(List(Text) + "degrees", List(Text) + "Number")), (KnownTypes.NoMembers, Scope(List(Text) + "from", List(Text) + "Angle")), (KnownTypes.NoMembers, KnownTypes.NoMembers)), (KnownTypes.NoMembers, KnownTypes.NoMembers)))
+constant Cached = ConstantFolding("Count", TypeInference(KnownTypes.Sample, (Scope(("Started", "Bad"), ("Count(1).Twice", "Error(1)")), TypeInference.NoShape)))
 Folded(node SyntaxNode) SyntaxNode
 	Limits.Folded(Limit).text is "3"
 	Limits.Folded(SyntaxNode("Binary", "*", (Limit, Two))).text is "6"
@@ -39,6 +40,8 @@ Appended(binary SyntaxNode, list SyntaxNode, element SyntaxNode) SyntaxNode
 			return binary
 	SyntaxNode("List", "", elements + element)
 Inlined(body SyntaxNode) SyntaxNode
+	Limits.Inlined(Local).Kind is "Body"
+	Limits.Constant(SyntaxNode("Identifier", "Error")).Kind is "Identifier"
 	Limits.Inlined(Local).Lines("") is ("6 + 2")
 	mutable constants = List(Mutable(SyntaxNode))
 	mutable code = List(Mutable(SyntaxNode))
@@ -50,6 +53,11 @@ Inlined(body SyntaxNode) SyntaxNode
 			code.Add(line)
 	SyntaxNode("Body", "", code)
 Literal(line SyntaxNode) SyntaxNode
+	Limits.Literal(SyntaxNode("Call", "constant a", List(SyntaxNode) + Two)).Kind is "Call"
+	Limits.Literal(SyntaxNode("Declaration", "let a", List(SyntaxNode) + Two)).Kind is "Declaration"
+	Limits.Aliased(SyntaxNode("Call", "Limit"), List(Text)).Kind is "Call"
+	Limits.Aliased(SyntaxNode("Member", "Limit", SyntaxNode("Call", "Count")), List(Text)).Kind is "Member"
+	Limits.Qualified(SyntaxNode("Call", "Limit")).Kind is "Call"
 	Limits.Literal(Local.children(0)) to Text is "a"
 	Limits.Literal(Local.children(1)).Kind is "Declaration"
 	if (line.Kind is not "Declaration") or (line.text.StartsWith("constant ") is false)
@@ -58,6 +66,9 @@ Literal(line SyntaxNode) SyntaxNode
 	let isLiteral = folded.Kind is in ("Number", "Text", "Boolean")
 	isLiteral then SyntaxNode("Constant", Tokenizer(line.text).Tokens.Last, List(SyntaxNode) + folded) else line
 Substituted(node SyntaxNode, constants SyntaxNodes) SyntaxNode
+	Limits.Substituted(SyntaxNode("Call", "a"), List(SyntaxNode) + Limits.Literal(Local.children(0))).Kind is "Call"
+	Limits.Substituted(SyntaxNode("Identifier", "b"), List(SyntaxNode) + Limits.Literal(Local.children(0))).text is "b"
+	Limits.Constant(SyntaxNode("Identifier", "x")).text is "x"
 	Limits.Substituted(SyntaxNode("Identifier", "a"), List(SyntaxNode) + Limits.Literal(Local.children(0))).text is "2"
 	Limits.Substituted(SyntaxNode("Call", "f", List(SyntaxNode), 4), List(SyntaxNode)).line is 4
 	for constants
@@ -68,6 +79,7 @@ Substituted(node SyntaxNode, constants SyntaxNodes) SyntaxNode
 		children.Add(Substituted(value, constants))
 	SyntaxNode(node.Kind, node.text, children, node.line)
 Constant(node SyntaxNode) SyntaxNode
+	Owned.Constant(SyntaxNode("Member", "Missing", Count)).children(0).Kind is "Text"
 	Limits.Constant(SyntaxNode("Member", "Limit", SyntaxNode("Identifier", "Count"))).text is "3"
 	Limits.Constant(Two).text is "2"
 	Calls.Constant(SyntaxNode("Identifier", "Empty")).Kind is "Call"
@@ -93,6 +105,7 @@ Aliased(node SyntaxNode, aliases Texts) SyntaxNode
 		return SyntaxNode("MethodCall", node.text, List(SyntaxNode) + SyntaxNode("Type", owner), node.line)
 	parsed.Kind is "Member" then Aliased(parsed, aliases + (owner + "." + node.text)) else parsed
 Qualified(node SyntaxNode) SyntaxNode
+	Limits.Qualified(SyntaxNode("Call", "Twice", (Two, Two))).children(0).Kind is "Type"
 	Limits.Qualified(SyntaxNode("Binary", "*", (Limit, Two))) to Text is "Count.Limit * 2"
 	Limits.Qualified(SyntaxNode("Call", "Twice", (Two, Two))) to Text is "Count.Twice(2, 2)"
 	Limits.Qualified(Limit).children(0).Kind is "Type"
@@ -105,6 +118,9 @@ Qualified(node SyntaxNode) SyntaxNode
 		return SyntaxNode("MethodCall", node.text, List(SyntaxNode) + SyntaxNode("Type", typeName) + qualified)
 	SyntaxNode(node.Kind, node.text, qualified)
 Unhidden(node SyntaxNode) SyntaxNode
+	Painting.Unhidden(SyntaxNode("Call", "Count", Two)) to Text is "Count.Count(2)"
+	Painting.Unhidden(SyntaxNode("Identifier", "Count")).Kind is "Identifier"
+	Painting.Unhidden(SyntaxNode("Call", "Painter", Two)).Kind is "Call"
 	Painting.Unhidden(SyntaxNode("Call", "Count", Two)).children(0).Kind is "Type"
 	Limits.Unhidden(SyntaxNode("Call", "Count", Two)).Kind is "Call"
 	mutable children = List(Mutable(SyntaxNode))
@@ -128,10 +144,24 @@ Outer(node SyntaxNode) SyntaxNode
 		children.Add(Outer(value))
 	SyntaxNode(node.Kind, node.text, children, node.line)
 OuterTyped(call SyntaxNode) List(SyntaxNode)
+	Limits.OuterTyped(SyntaxParser(Tokenizer("outer.Count(1)").Tokens).Parse).Last.text is "1"
+	Limits.Outer(SyntaxParser(Tokenizer("other.Count").Tokens).Parse).Kind is "Member"
+	Limits.Outer(SyntaxNode("MethodCall", "Count", List(SyntaxNode))).Kind is "MethodCall"
+	Limits.Outer(SyntaxNode("Call", "Count", List(SyntaxNode) + SyntaxNode("Identifier", "outer"))).Kind is "Call"
+	Limits.Outer(SyntaxParser(Tokenizer("other.Count(1)").Tokens).Parse).children(0).Kind is "Identifier"
+	Limits.Outer(SyntaxParser(Tokenizer("outer.Count(1)").Tokens).Parse).Kind is "MethodCall"
+	Limits.Outer(SyntaxParser(Tokenizer("outer.Foo(1)").Tokens).Parse).children(0).Kind is "Identifier"
+	Cached.Aliased(SyntaxNode("Identifier", "Started"), List(Text)) to Text is "Count.Started()"
+	Limits.Aliased(SyntaxNode("Member", "Limit", SyntaxNode("Type", "Count")), List(Text)).text is "3"
 	Limits.OuterTyped(SyntaxParser(Tokenizer("outer.Count(1)").Tokens).Parse).First.Kind is "Type"
 	for call.children
 		index is 0 then SyntaxNode("Type", call.text) else Outer(value)
 Constructed(node SyntaxNode) SyntaxNode
+	Limits.Constructed(SyntaxNode("MethodCall", "Count", (SyntaxNode("Type", "Count"), Two))) to Text is "Count(2)"
+	Limits.Constructed(SyntaxNode("MethodCall", "Count", (SyntaxNode("Type", "Other"), Two))).Kind is "MethodCall"
+	Limits.Constructed(SyntaxNode("MethodCall", "Count", (SyntaxNode("Identifier", "Count"), Two))).Kind is "MethodCall"
+	Limits.Constructed(SyntaxNode("MethodCall", "Count", List(SyntaxNode))).Kind is "MethodCall"
+	Limits.Constructed(SyntaxNode("Call", "Count", (SyntaxNode("Type", "Count"), Two))).children.Length is 2
 	Limits.Constructed(Limits.Qualified(SyntaxNode("Call", "Count", Two))) to Text is "Count(2)"
 	Limits.Constructed(Two) is Two
 	let isTyped = (node.Kind is "MethodCall") and (node.children.Length > 0) and (node.children(0).Kind is "Type")
@@ -139,10 +169,25 @@ Constructed(node SyntaxNode) SyntaxNode
 		return node
 	SyntaxNode("Call", node.text, Rest(node.children), node.line)
 Rest(nodes SyntaxNodes) SyntaxNodes
+	Limits.Appended(Plus, SyntaxParser(Tokenizer("(1, 2)").Tokens).Parse, Two) to Text is "(1, 2, 2)"
+	Limits.Appended(SyntaxNode("Binary", "-", (Limit, Two)), SyntaxNode("List", "", (Two, Two)), Two).Kind is "Binary"
+	Limits.Appended(Plus, SyntaxNode("List", "", (Limit, Limit)), Limit).Kind is "Binary"
+	Limits.Appended(Plus, SyntaxNode("Member", "List", SyntaxNode("Type", "Number")), Two).Kind is "Binary"
+	Limits.Appended(Plus, SyntaxNode("Call", "Set", SyntaxNode("Type", "Number")), Two).Kind is "Binary"
+	Limits.Appended(Plus, SyntaxNode("Call", "List", (SyntaxNode("Type", "Number"), Two)), Two).Kind is "Binary"
+	Limits.Qualified(SyntaxNode("Identifier", "Twice")).Kind is "Identifier"
+	Cached.Constant(SyntaxNode("Identifier", "Bad")) to Text is "Error(1)"
+	Cached.Aliased(SyntaxNode("Identifier", "Started"), List(Text)).children(0).Kind is "Type"
 	Limits.Rest((Two, Limit)) is (Limit)
 	for Range(1, nodes.Length)
 		nodes(value)
 Negated(node SyntaxNode) SyntaxNode
+	Limits.Folded(SyntaxNode("Call", "+", (Two, Two))).Kind is "Call"
+	Limits.Folded(SyntaxNode("Binary", "<", (Two, Two))).Kind is "Binary"
+	Limits.Folded(Plus).text is "5"
+	Limits.Folded(SyntaxNode("Binary", "+", (Two, SyntaxNode("Identifier", "x")))).Kind is "Binary"
+	Limits.Negated(SyntaxNode("Negate", "", List(SyntaxNode) + Count)).Kind is "Negate"
+	Limits.Negated(SyntaxNode("Negate", "", List(SyntaxNode) + Two)).Kind is "Number"
 	Limits.Negated(SyntaxNode("Negate", "", List(SyntaxNode) + Two)).text is "-2"
 	Limits.Negated(Two).text is "2"
 	if node.Kind is not "Negate"
@@ -150,6 +195,9 @@ Negated(node SyntaxNode) SyntaxNode
 	let inner = Folded(node.children(0))
 	inner.Kind is "Number" then SyntaxNode("Number", -(inner.text to Number) to Text) else node
 Calculated(operator Text, left Number, right Number) Number
+	Limits.Calculated("+", 7, 2) is 9
+	Limits.Calculated("/", 8, 2) is 4
+	Limits.Unhidden(SyntaxNode("Call", "Twice", Two)).Kind is "Call"
 	Limits.Calculated("-", 7, 2) is 5
 	Limits.Calculated("%", 7, 2) is 1
 	if operator is "+"
@@ -160,6 +208,8 @@ Calculated(operator Text, left Number, right Number) Number
 		return left * right
 	operator is "/" then left / right else left % right
 Unwrapped(node SyntaxNode) SyntaxNode
+	Wrapping.Unwrapped(SyntaxNode("Identifier", "Vector2")) to Text is "Vector2"
+	Wrapping.Unwrapped(SyntaxParser(Tokenizer("f(1)").Tokens).Parse) to Text is "f(1)"
 	Wrapping.Unwrapped(SyntaxParser(Tokenizer("Vector2(1, 2)").Tokens).Parse) to Text is "(1, 2)"
 	Wrapping.Unwrapped(SyntaxParser(Tokenizer("Vector2(Limit)").Tokens).Parse) to Text is "Limit"
 	Wrapping.Unwrapped(SyntaxParser(Tokenizer("Angle(90)").Tokens).Parse) to Text is "Angle(90)"
