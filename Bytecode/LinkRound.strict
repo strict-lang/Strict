@@ -55,6 +55,8 @@ IsForwarded(type Text, index Number, method Text) Boolean
 	Wrapping.IsForwarded("Strict/Character", 1, "Floor")
 	Wrapping.IsForwarded("Strict/Character", 1, "Round") is false
 	Cycled.Forwarded(List(Text) + "Strict/Angle.Floor").Length is 2
+	Wrapping.IsForwarded("Strict/Character", 0, "Floor")
+	Wrapping.IsForwarded("Strict/Character", 0, "from") is false
 	let isRequested = (index is 0) or (method is in Signature(signatures(index - 1)).Names)
 	let isOwn = (method is "from") or linker.IsNative(type, method)
 	isRequested and (isOwn is false) and (entries(index).Chosen(method, -1, "", List(Text)) < 0)
@@ -105,16 +107,21 @@ IsSettled(next LinkRound) Boolean
 	Single.IsSettled(Single)
 	Single.IsSettled(Twice) is false
 	Single.IsSettled(LinkRound(Linker.Sample, List(TypeEntry) + TypeEntry.Converting, List(Text))) is false
+	Twice.IsSettled(Single) is false
+	Twice.IsSettled(LinkRound(Linker.Sample, Twice.entries, List(Text) + "Strict/Other:")) is false
 	let isSame = (next.signatures.Length is signatures.Length) and ((next.signatures - signatures).Length is 0)
 	isSame and (next.entries.First.methods.Length is entries.First.methods.Length)
 With(linked List(TypeEntry)) LinkRound
 	Single.With(List(TypeEntry)).entries.Length is 0
 	Twice.With(List(TypeEntry)).signatures is ("Strict/Logger:")
+	LinkRound(Twice, entries = List(TypeEntry) + Linker.Go).Known(Dictionary(Text, TypeEntry)).Length is 0
+	Twice.Known(Dictionary(("Strict/Logger:", Linker.Iterating)))("Strict/Logger:") is Linker.Iterating
 	LinkRound(linker, linked, signatures)
 Known(known Dictionary(Text, TypeEntry)) Dictionary(Text, TypeEntry)
 	Twice.Known(Dictionary(Text, TypeEntry))("Strict/Logger:") is Linker.Go
 	Single.Known(Dictionary(Text, TypeEntry)).Length is 0
 	LinkRound(Linker.Sample, (Linker.Go, Linker.Go), List(Text)).Known(Dictionary(Text, TypeEntry)).Length is 0
+	Wrapping.Known(Dictionary(Text, TypeEntry))("Strict/Character:Floor") is TypeEntry.CharacterEntry
 	if entries.Length is not signatures.Length + 1
 		return known
 	mutable result = known
@@ -125,6 +132,7 @@ Known(known Dictionary(Text, TypeEntry)) Dictionary(Text, TypeEntry)
 Targets Texts
 	Single.Targets is ("Strict/B.Go")
 	Single.Advanced(Single.entries, List(Text)).Targets is ("Strict/B.Go")
+	LinkRound(Twice, targeted = (List(Text) + "Strict/X.Y", List(Text))).Targets is ("Strict/X.Y")
 	if targeted.Length is not entries.Length
 		return linker.Targets(entries)
 	mutable targets = List(Mutable(Text))
@@ -133,6 +141,7 @@ Targets Texts
 	targets
 UsedTypes Texts
 	LinkRound(Single, entries = List(TypeEntry) + Linker.Reading).UsedTypes is ("Strict/List(Byte)", "Strict/Byte")
+	LinkRound(Twice, used = (List(Text) + "Strict/X", List(Text))).UsedTypes is ("Strict/X")
 	if used.Length is not entries.Length
 		return linker.UsedTypes(entries)
 	mutable types = List(Mutable(Text))

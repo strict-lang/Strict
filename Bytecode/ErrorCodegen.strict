@@ -21,9 +21,23 @@ Folded(node SyntaxNode, block CodeBlock) SyntaxNode
 	ConversionCodegen(values).Typed(folding.Folded(typed), block)
 Handled(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Handled(Greeting, CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
+	Plain.MayFail(SyntaxNode("Call", "Error", ValueCodegen.Hi), CodeBlock.Empty) is false
+	Plain.MayFail(ValueCodegen.ToText, CodeBlock.Empty)
+	Plain.MayFail(SyntaxNode("Call", "List", Greeting), CodeBlock.Empty) is false
+	Plain.MayFail(SyntaxNode("Call", "Dictionary", Greeting), CodeBlock.Empty) is false
+	Plain.MayFail(SyntaxNode("Call", "Mutable", Greeting), CodeBlock.Empty)
+	Plain.MayFail(SyntaxNode("Call", "Slow", Greeting), CodeBlock.Empty)
+	Plain.MayFail(SyntaxNode("Call", "Mutable", ValueCodegen.One), CodeBlock.Empty) is false
+	Plain.MayFail(SyntaxNode("MethodCall", "Add", (A, ValueCodegen.One)), ErrorScope.Numbered)
+	Plain.MayFail(SyntaxNode("Index", "", (A, ValueCodegen.One)), ErrorScope.Numbered)
+	Plain.MayFail(ValueCodegen.GreeterText, CodeBlock.Empty) is false
 	Dispatched(Folded(node, block), block)
 Dispatched(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Dispatched(ValueCodegen.One, CodeBlock.Empty).register is 1
+	Plain.Dispatched(ValueCodegen.ToText, CodeBlock.Empty) is Plain.values.Call(ValueCodegen.ToText, CodeBlock.Empty)
+	Plain.Dispatched(ValueCodegen.GreeterText, Counted) is Plain.values.Call(ValueCodegen.GreeterText, Counted)
+	Plain.Dispatched(Greeting, CodeBlock.Empty) is Plain.values.Call(Greeting, CodeBlock.Empty)
+	Plain.Dispatched(IsOne, CodeBlock.Empty) is OperatorCodegen(Plain.values).Operation(IsOne, CodeBlock.Empty)
 	if node.Kind is in ("Number", "Text", "Boolean", "List", "Identifier")
 		return values.Leaf(node, block)
 	if (node.Kind is in ("Call", "Member", "MethodCall", "Not", "Index")) or (node.text is "to")
@@ -60,6 +74,9 @@ MayFail(node SyntaxNode, block CodeBlock) Boolean
 IsFailing(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsFailing(SyntaxNode("Binary", "+", (ValueCodegen.One, ValueCodegen.One)), CodeBlock.Empty) is false
 	Plain.IsFailing(ValueCodegen.ToText, CodeBlock.Empty)
+	Plain.IsFailing(SyntaxNode("Binary", "else", (SyntaxNode("Binary", "then", (A, Greeting)), BareError)), Counted)
+	Plain.IsFailing(SyntaxNode("Binary", "else", (SyntaxNode("Binary", "then", (A, BareError)), Greeting)), Counted)
+	Plain.IsFailing(SyntaxNode("Binary", "-", (A, A)), ErrorScope.Numbered)
 	if node.text is "else"
 		return MayFail(node.children(0).children(1), block) or MayFail(node.children(1), block)
 	if (node.text is in ("to", "then")) or OperatorCodegen(values).IsCustom(node, block)
@@ -70,6 +87,8 @@ IsFailing(node SyntaxNode, block CodeBlock) Boolean
 Narrowed(condition SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Narrowed(IsError, Counted).scope.TypeOf("a") is "Error"
 	Plain.Narrowed(IsOne, Counted).scope.TypeOf("a") is "Count"
+	Plain.Narrowed(SyntaxNode("Binary", "is not", IsError.children), Counted) is Counted
+	Plain.Narrowed(SyntaxNode("Binary", "is", (Greeting, BareError)), Counted) is Counted
 	if IsErrorComparison(condition, block) is false
 		return block
 	let target = condition.children(0)
@@ -77,6 +96,10 @@ Narrowed(condition SyntaxNode, block CodeBlock) CodeBlock
 AnyError(node SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.AnyError(IsError, CodeBlock.Empty) to Text is "a is Error(\"\")"
 	Plain.AnyError(IsOne, CodeBlock.Empty) to Text is "a is 1"
+	Plain.AnyError(SyntaxNode("Binary", "is not", IsError.children), CodeBlock.Empty) to Text is "a is not Error(\"\")"
+	Plain.AnyError(SyntaxNode("Binary", "+", IsError.children), CodeBlock.Empty) to Text is "a + Error"
+	Plain.AnyError(IsError, CodeBlock.Empty.Declare("Error", "Number")) to Text is "a is Error"
+	Plain.AnyError(SyntaxNode("Binary", "is", (A, SyntaxNode("Text", "Error"))), CodeBlock.Empty) to Text is "a is Error"
 	let wanted = node.children.Last
 	let isBare = (wanted.Kind is "Identifier") and (wanted.text is "Error") and (block.scope.TypeOf("Error") is "")
 	if (node.text is not in ("is", "is not")) or (isBare is false)
@@ -86,6 +109,10 @@ AnyError(node SyntaxNode, block CodeBlock) SyntaxNode
 IsErrorComparison(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsErrorComparison(IsError, CodeBlock.Empty)
 	Plain.IsErrorComparison(IsOne, CodeBlock.Empty) is false
+	Plain.IsErrorComparison(SyntaxNode("Binary", "is not", IsError.children), CodeBlock.Empty)
+	Plain.IsErrorComparison(SyntaxNode("Call", "is", IsError.children), CodeBlock.Empty) is false
+	Plain.IsErrorComparison(SyntaxNode("Binary", "+", IsError.children), CodeBlock.Empty) is false
+	Plain.IsErrorComparison(SyntaxNode("Binary", "is", (BareError, A)), CodeBlock.Empty)
 	if (node.Kind is not "Binary") or (node.text is not in ("is", "is not"))
 		return false
 	let left = values.TypeOf(node.children(0), block)
@@ -94,16 +121,26 @@ Statement(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Statement(SyntaxNode("Return", "", Greeting), CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
 	Plain.Statement(Greeting, CodeBlock.Empty).instructions.Last.kind is InstructionType.CheckError
 	Plain.Statement(SyntaxNode("Return", ""), CodeBlock.Empty).instructions.Last.kind is InstructionType.Return
+	Plain.AnyError(SyntaxNode("Binary", "is", (A, A)), CodeBlock.Empty) to Text is "a is a"
 	if node.Kind is "Return"
 		return node.HasValue then Handled(node.children(0), block) else block.Add(InstructionEntry.Return(0))
 	Checked(node, block)
 Right(node SyntaxNode, block CodeBlock, isConverted Boolean) CodeBlock
 	Plain.Right(IsError, CodeBlock.Empty, false).instructions.Last.kind is InstructionType.Invoke
+	Plain.Right(IsError, Counted, true) is Plain.Handled(Plain.AnyError(IsError, Counted).children(1), Counted)
+	Plain.Right(IsError, Counted, false) is Plain.Handled(Plain.AnyError(IsError, Counted).children(1), Counted)
+	Plain.IsFailing(SyntaxNode("Binary", "then", (A, A)), CodeBlock.Empty)
+	Plain.IsFailing(SyntaxNode("Binary", "+", (A, A)), CodeBlock.Empty.Declare("a", "List(Number)"))
+	Plain.IsFailing(SyntaxNode("Binary", "is", (A, A)), ErrorScope.Numbered) is false
 	let any = AnyError(node, block)
 	let convert = isConverted and (IsErrorComparison(node, block) is false)
 	Compared(node, convert then ConversionCodegen(values).Operand(any, block) else any.children(1), block)
 Kept(node SyntaxNode, name Text, block CodeBlock) CodeBlock
 	Plain.Kept(Greeting, "kept", CodeBlock.Empty).instructions.Last.kind is InstructionType.StoreRegisterToVariable
+	Plain.MayFail(A, CodeBlock.Empty.Declare("a", "Number")) is false
+	Plain.MayFail(SyntaxNode("Member", "Greet", ValueCodegen.NewGreeter), CodeBlock.Empty)
+	FallibleA.scope.TypeOf("a") is "Number"
+	ErrorScope.Plain.IsFallible("a", FallibleA)
 	let stored = Handled(node, block).Stored(name).At(block.register).WithNextId
 	stored.Declare(name, values.TypeOf(node, block))
 Compared(comparison SyntaxNode, operand SyntaxNode, block CodeBlock) CodeBlock

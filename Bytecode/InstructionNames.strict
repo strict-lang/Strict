@@ -1,6 +1,22 @@
 has code Number
+constant Names = InstructionNames(-1)
+constant Subtract = InstructionNames(InstructionType.Subtract)
+constant Multiply = InstructionNames(InstructionType.Multiply)
+constant Divide = InstructionNames(InstructionType.Divide)
+constant Modulo = InstructionNames(InstructionType.Modulo)
+constant NotEqual = InstructionNames(InstructionType.NotEqual)
+constant LessThan = InstructionNames(InstructionType.LessThan)
+constant GreaterThan = InstructionNames(InstructionType.GreaterThan)
+constant Jump = InstructionNames(InstructionType.Jump)
+constant JumpIfTrue = InstructionNames(InstructionType.JumpIfTrue)
+constant JumpIfNotZero = InstructionNames(InstructionType.JumpIfNotZero)
+constant LoadConstant = InstructionNames(InstructionType.LoadConstantToRegister)
+constant LoadVariable = InstructionNames(InstructionType.LoadVariableToRegister)
+constant StoreConstant = InstructionNames(InstructionType.StoreConstantToVariable)
 Name Text
-	InstructionNames(InstructionType.Add).Name is "Add"
+	Subtract.IsArithmetic and Multiply.IsArithmetic and Divide.IsArithmetic and Modulo.IsArithmetic
+	NotEqual.IsComparison and LessThan.IsComparison and GreaterThan.IsComparison
+	InstructionNames(InstructionType.Add).Name is "Add" and (Names.Name is "Unknown")
 	if code is InstructionType.LoadConstantToRegister
 		return "LoadConstantToRegister"
 	if code is InstructionType.LoadVariableToRegister
@@ -11,6 +27,7 @@ Name Text
 		return "Set"
 	NameRest
 NameRest Text
+	Jump.IsJump and JumpIfTrue.IsJump and JumpIfNotZero.IsJump
 	if code is InstructionType.IndexCall
 		return "ListCall"
 	if code is InstructionType.Add
@@ -23,6 +40,7 @@ NameRest Text
 		return "Divide"
 	NameMore
 NameMore Text
+	InstructionNames(InstructionType.JumpToIdIfFalse).IsJump
 	if code is InstructionType.Modulo
 		return "Modulo"
 	if code is InstructionType.Equal
@@ -35,6 +53,7 @@ NameMore Text
 		return "GreaterThan"
 	NameControl
 NameControl Text
+	InstructionNames(InstructionType.JumpToIdIfTrue).IsJump
 	if code is InstructionType.Invoke
 		return "Invoke"
 	if code is InstructionType.Return
@@ -47,6 +66,7 @@ NameControl Text
 		return "Jump"
 	NameJump
 NameJump Text
+	Names.IsArithmetic is false and (Names.IsComparison is false) and (Names.IsJump is false)
 	if code is InstructionType.JumpIfTrue
 		return "JumpIfTrue"
 	if code is InstructionType.JumpIfFalse
@@ -72,6 +92,8 @@ IsArithmetic Boolean
 		return true
 	false
 IsComparison Boolean
+	Names.CodeOf(Jump.Name) is Jump.code and (InstructionNames(Names.CodeOf("JumpIfFalse")).Name is "JumpIfFalse")
+	Names.CodeOf(Divide.Name) is Divide.code and (InstructionNames(Names.CodeOf("LoopBegin")).Name is "LoopBegin")
 	InstructionNames(InstructionType.Equal).IsComparison
 	if code is InstructionType.Equal
 		return true
@@ -83,7 +105,9 @@ IsComparison Boolean
 		return true
 	false
 IsJump Boolean
-	InstructionNames(InstructionType.JumpIfFalse).IsJump
+	Names.CodeOf(Modulo.Name) is Modulo.code and (InstructionNames(Names.CodeOf("FieldLoad")).Name is "FieldLoad")
+	Names.CodeOf(Subtract.Name) is Subtract.code and (InstructionNames(Names.CodeOf("ListCall")).Name is "ListCall")
+	InstructionNames(InstructionType.JumpIfFalse).IsJump and (Names.CodeOf("Power") is -1)
 	if code is InstructionType.Jump
 		return true
 	if code is InstructionType.JumpIfTrue
@@ -94,12 +118,20 @@ IsJump Boolean
 		return true
 	IsJumpId
 IsJumpId Boolean
+	Names.CodeOf(Multiply.Name) is Multiply.code and (InstructionNames(Names.CodeOf("LoopEnd")).Name is "LoopEnd")
+	Names.CodeOf(NotEqual.Name) is NotEqual.code and (InstructionNames(Names.CodeOf("Invoke")).Name is "Invoke")
+	Names.CodeOf(LessThan.Name) is LessThan.code and (InstructionNames(Names.CodeOf("Return")).Name is "Return")
+	Names.CodeOf(JumpIfTrue.Name) is JumpIfTrue.code and (InstructionNames(Names.CodeOf("Equal")).Name is "Equal")
+	Names.CodeOf(GreaterThan.Name) is GreaterThan.code and (InstructionNames(Names.CodeOf("Print")).Name is "Print")
+	InstructionNames(Names.CodeOf("Set")).Name is "Set" and (Names.CodeOf(JumpIfNotZero.Name) is JumpIfNotZero.code)
+	Names.CodeOf(LoadConstant.Name) is LoadConstant.code and (Names.CodeOf(StoreConstant.Name) is StoreConstant.code)
 	if code is InstructionType.JumpToIdIfFalse
 		return true
 	if code is InstructionType.JumpToIdIfTrue
 		return true
 	false
 CodeOf(name Text) Number
+	Names.CodeOf(LoadVariable.Name) is LoadVariable.code
 	InstructionNames.CodeOf("Add") is InstructionType.Add
 	if name is "LoadConstantToRegister"
 		return InstructionType.LoadConstantToRegister
