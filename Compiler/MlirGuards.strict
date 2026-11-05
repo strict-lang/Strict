@@ -11,9 +11,15 @@ constant ExactSlots = "(dense<0> : tensor<9xi64>) : !llvm.array<9 x i64>"
 constant PlainSlots = "(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>"
 constant ExactNamed = ("  llvm.mlir.global internal constant @kShape_Shifted_2_gpu2(\"Shape_Shifted_2_gpu2\00Shape_Shifted_2_gpu2s\00Shape_Shifted_2_gpu2sx\00Shape_Shifted_2_gpu2sxf0\00Shape_Shifted_2_gpu2sxf1\00\") : !llvm.array<116 x i8>", "  llvm.mlir.global internal @fShape_Shifted_2_gpu2(dense<0> : tensor<9xi64>) : !llvm.array<9 x i64>")
 constant PlainNamed = ("  llvm.mlir.global internal constant @kShape_Shifted_2_gpu2(\"Shape_Shifted_2_gpu2\00Shape_Shifted_2_gpu2s\00\") : !llvm.array<43 x i8>", "  llvm.mlir.global internal @fShape_Shifted_2_gpu2(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>")
+constant Nesting = (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "offset"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "step"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "step"), InstructionEntry.LoadNumber(3, 2), InstructionEntry.LoadNumber(4, 1.5), InstructionEntry.Binary(InstructionType.LessThan, (2, 1, 5)), InstructionEntry.Binary(InstructionType.Divide, (2, 1, 6)), InstructionEntry.LoopBegin(2, -1), InstructionEntry.Invoke(7, ("Strict/Number", "Floor", "Strict/Number"), List(Number), 2), InstructionEntry.Invoke(8, ("Strict/Number", "Length", "Strict/Number"), List(Number), 2), InstructionEntry.Jump(InstructionType.LoopEnd, 3), InstructionEntry.Jump(InstructionType.LoopEnd, 12))
+constant Nested = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Nested", (MlirLists.Items, Offset), "Strict/List(Number)", Nesting), Float = "f32", Guarded = 2)
 Origins(position Number, register Number) Texts
 	Shifts.Origins(6, 3) is ("offset")
 	Shifts.Origins(8, 5) is ("?")
+	MlirGuards(MlirFunction(Shifted, Guarded = 5), 2).Origins(6, 3) is ("?")
+	MlirGuards(MlirPassed.Wrapped, 2).Written(8) is ("?", "offset", "/")
+	MlirGuards(Nested, 2).Written(5) is ("offset")
+	MlirGuards(Nested, 2).Written(9) is ("offset", "offset", "/")
 	let writer = MlirKinds(function).Writer(position, register)
 	writer <= function.Guarded then List(Text) + "?" else Written(writer)
 Written(writer Number) Texts
@@ -31,6 +37,12 @@ Written(writer Number) Texts
 	entry.kind is InstructionType.Invoke then Called(writer, entry) else List(Text) + "?"
 Called(writer Number, entry InstructionEntry) Texts
 	Shifts.Called(5, Flooring) is ("offset")
+	Shifts.Called(5, InstructionEntry.Invoke(3, ("Strict/Number", "Length", "Strict/Number"), List(Number), 2)).Length is 0
+	Shifts.Called(5, InstructionEntry.Invoke(3, ("Strict/Number", "Round", "Strict/Number"), List(Number), 2)) is ("?")
+	MlirGuards(Nested, 2).Written(6).Length is 0
+	MlirGuards(Nested, 2).Written(7) is ("?")
+	MlirGuards(Nested, 2).Written(11) is ("offset")
+	MlirGuards(Nested, 2).Written(12).Length is 0
 	let name = PayloadDecoder(entry).Text(2)
 	if name is "Floor"
 		return Floored(writer, entry)
@@ -62,6 +74,10 @@ Floored(position Number, entry InstructionEntry) Texts
 	Shifts.Named is ExactNamed
 	MlirGuards(MlirFunction(Shifted, Float = "f64"), 2).Named is PlainNamed
 	Shifts.Floored(5, Flooring) is ("offset")
+	MlirGuards(Nested, 2).Sited(8) is ("offset", "offset")
+	MlirGuards(Nested, 2).Sited(10) is ("offset")
+	MlirGuards(Nested, 2).Sited(11) is ("offset")
+	MlirGuards(Nested, 2).Sited(12) is ("?")
 	Whole(Origins(position, MlirDeviceCalls(function, position, function).Register(entry)))
 Whole(origins Texts) Texts
 	Shifts.Mask is 3
@@ -82,6 +98,8 @@ IsKnown(slots Texts) Boolean
 IsWhole(slot Text) Boolean
 	Reading.IsWhole("%r3")
 	Reading.IsWhole("%r5") is false
+	MlirGuards(Nested, 10).IsWhole("%r6") is false
+	MlirGuards(Nested, 10).IsKnown(List(Text) + "ab6") is false
 	IsKnown(List(Text) + slot) and ("/" is not in Origins(at, slot.Substring(2, slot.Length - 2) to Number))
 Parameters Texts
 	Shifts.Parameters is ("offset")
@@ -95,6 +113,7 @@ IsUseful Boolean
 	Shifts.IsUseful
 	MlirGuards(MlirFunction(Shifted, Float = "f64"), 2).IsUseful is false
 	MlirGuards(MlirFunction(MlirGroups.Norming.function, Float = "f32", Group = 11), 2).IsUseful
+	MlirGuards(MlirFunction(MlirLoops.Collecting.function, Float = "f32"), 1).IsUseful is false
 	if function.Float is not "f32"
 		return false
 	for Range(at + 1, function.method.LoopEndOf(at))
