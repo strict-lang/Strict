@@ -15,10 +15,24 @@ constant Counted = ListCodegen(ValueCodegen(TypeInference(KnownTypes.Sample, Typ
 constant Limits = SyntaxNode("List", "", (SyntaxNode("Member", "Limit", SyntaxNode("Identifier", "Count")), ValueCodegen.One))
 Of(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Of(ValueCodegen.Ones, CodeBlock.Empty).instructions.Length is 1
+	Plain.Of(ValueCodegen.Ones, CodeBlock.Empty).instructions(0).texts is ("Strict/List(Number)")
+	Plain.Of(SyntaxNode("List", "", ValueCodegen.Hi), CodeBlock.Empty).instructions(0).payload is (0, 6, -1, 1, 4, -2)
+	Plain.IsUsed(SyntaxNode("Return", "", ValueCodegen.One), 0, true)
+	Plain.IsUsed(SyntaxNode("Return", "", ValueCodegen.One), 0, false) is false
+	Plain.IsUsed(SyntaxNode("Body", "", ValueCodegen.Ones.children), 1, true)
+	Plain.IsUsed(SyntaxNode("Body", "", ValueCodegen.Ones.children), 0, true) is false
+	Plain.IsUsed(SyntaxNode("If", "", ValueCodegen.Ones.children), 1, false) is false
 	Counted.Of(Limits, CodeBlock.Empty).instructions(0).payload is (0, 6, -1, 2, 1, 3, 1, 1)
 	SyntaxNode("List", "", Literals(node)).IsLiteral then Constant(node, block) else Built(node, block)
 Literals(node SyntaxNode) List(SyntaxNode)
 	Counted.Literals(Limits).First.text is "3"
+	Plain.IsUsed(SyntaxNode("Else", "", ValueCodegen.Ones.children), 1, false) is false
+	Plain.IsUsed(SyntaxNode("Binary", "then", ValueCodegen.Ones.children), 1, false) is false
+	Plain.IsUsed(SyntaxNode("Binary", "else", ValueCodegen.Ones.children), 0, true)
+	Plain.IsUsed(SyntaxNode("MethodCall", "Remove", ValueCodegen.One), 0, true)
+	Plain.IsUsed(SyntaxNode("MethodCall", "B", ValueCodegen.One), 0, true) is false
+	Plain.IsUsed(SyntaxNode("Binary", "is in", ValueCodegen.Ones.children), 1, true) is false
+	Plain.IsUsed(SyntaxNode("Binary", "+", ValueCodegen.Ones.children), 1, true)
 	for node.children
 		ConstantFolding(values.target.TypeName, values.inference).Folded(value)
 Constant(node SyntaxNode, block CodeBlock) CodeBlock
@@ -60,6 +74,7 @@ Added(node SyntaxNode, block CodeBlock) CodeBlock
 Copied(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Copied(ValueCodegen.Edits(1), Shared).instructions(2).payload is (3, 0, 1, 2)
 	Plain.Copied(ValueCodegen.Edits(1), Shared).instructions(2).kind is InstructionType.Subtract
+	Plain.Copied(ValueCodegen.Edits(0), Shared).instructions(2).kind is InstructionType.Add
 	let list = values.Expression(node.children(0), block)
 	let operand = ConversionCodegen(values).Operand(node, block)
 	let isElement = ConversionCodegen(values).IsElement(values.TypeOf(node.children(0), block), operand, block)
@@ -71,6 +86,7 @@ CopiedBefore(loop SyntaxNode, block CodeBlock, isUsed Boolean) CodeBlock
 	Plain.CopiedBefore(WritingLoop, Shared, false).instructions(0).kind is InstructionType.CopyList
 	MethodCodegen.Plain.Body(BranchCopy, CodeBlock.Empty).instructions.Last.payload.Length is 3
 	Plain.CopiedBefore(SharingLoop, Shared, false).instructions.Length is 0
+	Plain.CopiedBefore(WritingLoop, Owned, false).instructions.Length is 0
 	mutable result = block
 	for ElementWritten(loop.children.Last)
 		let owned = result.Sharing(value, false)
@@ -108,6 +124,10 @@ IsNew(node SyntaxNode) Boolean
 	Plain.IsNew(ValueCodegen.GreeterText) is false
 	Plain.IsNew(ValueCodegen.ToText) is false
 	Plain.IsNew(SyntaxNode("Binary", "+", (SyntaxNode("Identifier", "values"), SyntaxNode("Number", "3")))) is false
+	Plain.IsNew(SyntaxNode("Binary", "-", ValueCodegen.Ones.children))
+	Plain.IsNew(SyntaxNode("Call", "List", ValueCodegen.One))
+	Plain.IsNew(SyntaxNode("Call", "B", ValueCodegen.One)) is false
+	Plain.IsNew(SyntaxNode("Member", "List", ValueCodegen.One)) is false
 	if node.Kind is "Binary"
 		return node.text is "+" then IsNew(node.children(0)) else node.text is not in ("to", "then", "else")
 	((node.Kind is "List") and (node.IsLiteral is false)) or ((node.Kind is "Call") and (node.text is "List"))
@@ -150,6 +170,9 @@ Argument(node SyntaxNode, position Number, parameters Texts, block CodeBlock) Co
 Grouped(node SyntaxNode, first Number, parameters Number) SyntaxNode
 	Plain.Grouped(SyntaxNode("Call", "B", (ValueCodegen.One, ValueCodegen.One)), 0, 1).children.Length is 1
 	Plain.Grouped(ValueCodegen.Edits(0), 1, 1).children(1).Kind is "Number"
+	Plain.Grouped(ValueCodegen.Ones, 0, 1).children(0) is ValueCodegen.Ones
+	Plain.Grouped(ValueCodegen.Ones, 0, 2) is ValueCodegen.Ones
+	Plain.Grouped(SyntaxNode("B", "", ValueCodegen.Ones.children + ValueCodegen.One), 1, 1).children(1).Kind is "List"
 	if parameters is not 1 or node.children.Length - first < 2
 		return node
 	mutable arguments = List(Mutable(SyntaxNode))
@@ -159,5 +182,8 @@ Grouped(node SyntaxNode, first Number, parameters Number) SyntaxNode
 	SyntaxNode(node.Kind, node.text, (first is 1 then (node.children(0), grouped) else List(SyntaxNode) + grouped))
 Empty(type Text, block CodeBlock) CodeBlock
 	Plain.Empty("Numbers", CodeBlock.Empty).instructions(0).texts is ("Strict/List(Number)")
+	Plain.IsAppend(SyntaxNode("Declaration", "", Appending.children), Owned) is false
+	Plain.IsAppend(BodyParser("Run", "	x = x + 1").Block(1, 1).children(0), Owned.Declare("x", "Number")) is false
+	Plain.Disowned(BodyParser("Run", "	values = values to Numbers").Block(1, 1), Owned, false).Owns("values") is false
 	let listType = values.target.FullName(type)
 	block.Load(InstructionEntry(InstructionType.LoadConstantToRegister, listType, (block.register, 6, -1, 0)))
