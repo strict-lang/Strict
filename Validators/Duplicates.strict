@@ -60,10 +60,12 @@ Implementation(lines Texts, header Number) Text
 IsTest(line Text) Boolean
 	Copies.IsTest("Halve(4) is 2")
 	Copies.IsTest("let half = number / 2") is false
-	Copies.IsTest("Default.Valid")
+	Copies.IsTest("Default.Valid") and Copies.IsTest("(Radians(1) to Degrees).number.IsNearlyEqual(45)")
+	Copies.IsTest("2.3.IsNearlyEqual(2.3)") and (Copies.IsTest("value") is false)
 	Copies.IsTest("number is 2") and Copies.IsTest("number < 2") and Copies.IsTest("number > 2")
 	(Copies.IsTest("number + 1") is false) and (Copies.IsTest("if number is 2") is false)
 	let first = Tokenizer(line).Tokens.First
 	let isStatement = first is in ("let", "mutable", "constant", "if", "for", "return", "else")
 	let isComparing = (line.IndexOf(" is ") > 0) or (line.IndexOf(" < ") > 0) or (line.IndexOf(" > ") > 0)
-	(isStatement is false) and (isComparing or (first.Substring(0, 1).Lower is not first.Substring(0, 1)))
+	let start = first.Substring(0, 1)
+	(isStatement is false) and (isComparing or (start.Lower is not start) or (start is "(") or Tokenizer.IsDigit(start))
