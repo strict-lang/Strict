@@ -14,6 +14,11 @@ constant CounterType = TypeEntry(MlirForeign.Counter.Name, MlirForeign.Counter.m
 constant NewCounter = InstructionEntry.Invoke(2, (CounterType.Name, "from", CounterType.Name, "left", "right"), (0, 1), -1)
 constant Counters = MlirCalls(MlirFunction(List(TypeEntry) + CounterType, CounterType, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 10), InstructionEntry.LoadNumber(1, 5), NewCounter))), 2)
 Temp(suffix Text) Text
+	Text.Combine(MlirCalls(Shapes, 3).Printed(InstructionEntry.Print("Hi"))).Length is 192
+	Text.Combine(MlirCalls(Shapes, 3).Printed(InstructionEntry.PrintValue("Hi ", 0, false))).Length is 443
+	MlirCalls(Shapes, 3).Printed(InstructionEntry.Print("Hi")).Last is "    func.call @strict_flush() : () -> ()"
+	Text.Combine(MlirCalls(Shapes, 2).Compiled(Area, PayloadDecoder(Area), AreaShape, 0)).Length is 329
+	Text.Combine(Counters.Created(NewCounter, PayloadDecoder(NewCounter))).Length is 554
 	MlirCalls(Shapes, 1).Temp("a") is "%t1a"
 	"%t" + position + suffix
 Emitted Texts
@@ -151,6 +156,12 @@ Argument(entry InstructionEntry, type TypeEntry, number Number) Text
 	let texts = MlirMemory(function, position).Called(Temp("a" + number), "strict_list_texts", List(Text) + raw)
 	function.Load(raw, "%r" + register) + Character.NewLine + texts
 ArgumentNames(count Number) Texts
+	MlirCalls(Shapes, 1).Loads(NewShape, AreaShape)(0) is "    %t1m = llvm.load %r1 : !llvm.ptr -> f64"
+	MlirCalls(Shapes, 2).Loads(Area, AreaShape) is ("    %t2m = llvm.load %r1 : !llvm.ptr -> f64")
+	MlirCalls(Shapes, 2).Loads(InstructionEntry.Invoke(2, ("T", "A", "N"), List(Number), -1), Hash).First.Length is 35
+	MlirCalls(Shapes, 2).Loads(InstructionEntry.Invoke(2, ("T", "A", "N"), List(Number), -1), AreaShape).First.Length is 49
+	Text.Combine(MlirCalls(Hashes, 1).Defaults(Defaulted, 0)).Length is 143
+	Text.Combine(MlirCalls(Shapes, 1).Shared(List(Text), "%r1")).Length is 459
 	MlirCalls(Shapes, 2).ArgumentNames(2) is ("%t2a0", "%t2a1")
 	for count
 		Temp("a" + index)
