@@ -17,7 +17,7 @@ Temp(suffix Text) Text
 	Text.Combine(MlirCalls(Shapes, 3).Printed(InstructionEntry.Print("Hi"))).Length is 192
 	Text.Combine(MlirCalls(Shapes, 3).Printed(InstructionEntry.PrintValue("Hi ", 0, false))).Length is 443
 	MlirCalls(Shapes, 3).Printed(InstructionEntry.Print("Hi")).Last is "    func.call @strict_flush() : () -> ()"
-	Text.Combine(MlirCalls(Shapes, 2).Compiled(Area, PayloadDecoder(Area), AreaShape, 0)).Length is 329
+	Text.Combine(MlirCalls(Shapes, 2).Compiled(Area, PayloadDecoder(Area), AreaShape, 0)).Length is 143
 	Text.Combine(Counters.Created(NewCounter, PayloadDecoder(NewCounter))).Length is 554
 	MlirCalls(Shapes, 1).Temp("a") is "%t1a"
 	"%t" + position + suffix

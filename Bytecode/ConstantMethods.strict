@@ -3,10 +3,11 @@ has isOptimizing Boolean = true
 constant Known = KnownTypes(("Count"), (KnownTypes.CountMembers), (Scope(("Increment", "Twice", "Started"), ("Count", "Count", "Count"))), (KnownTypes.CountParameters))
 constant Growing = ConstantMethods(TypeInference(Known, (Scope(("Started", "Alias", "Plain"), ("Count(1).Twice", "Count.Started", "Count(1)")), TypeInference.NoShape)))
 constant Counting = TypeCodegen("Strict/Count", ("has number", "constant Started = Count(1).Twice", "Twice Count", "\tCount(number * 2)"), Growing.inference, List(Text))
+constant Unoptimized = ConstantMethods(Growing.inference, false)
 constant Value = SyntaxNode("Number", "1")
 constant Lettered = TypeCodegen("Strict/Count", ("has number", "constant Started", "Twice Count", "mutable Started = Count(1)"), Growing.inference, List(Text))
 Definition(owner Text, name Text) SyntaxNode
-	ConstantMethods(Growing.inference, false).IsCached("Count", "Plain")
+	Unoptimized.IsCached("Count", "Plain")
 	Growing.Definition("Count", "Plain").Kind is "Call"
 	Growing.Definition("Count", "Alias").children(0).Kind is "Identifier"
 	Growing.IsCall(SyntaxNode("MethodCall", "Count", SyntaxNode("Identifier", "Count")), SyntaxNode("Identifier", "Count"))
@@ -58,11 +59,12 @@ Methods(types TypeCodegen, names Texts) Slow(List(MethodEntry))
 	Growing.Methods(Counting, List(Text) + "Started").Length is 1 and (Counting.lines.Length is 4)
 	Growing.Methods(Counting, List(Text)).First.instructions.Last.line is 2
 	Growing.Methods(Counting, List(Text)).First.Name is "Started"
-	Growing.Methods(Counting, List(Text) + "Twice").Length is 0
+	Growing.Methods(Counting, List(Text) + "Twice").Length is 0 and (Unoptimized.Methods(Lettered, List(Text)).Length is 1)
 	let owner = types.Generator.target.TypeName
 	mutable methods = List(Mutable(MethodEntry))
 	for types.lines
-		let name = value.StartsWith("constant ") and (value.IndexOf(" = ") > 0) then Tokenizer(value).Tokens(1) else ""
+		let isConstant = value.StartsWith("constant ") and ((value.IndexOf(" = ") > 0) or (isOptimizing is false))
+		let name = isConstant then Tokenizer(value).Tokens(1) else ""
 		if (name is not "") and ((names.Length is 0) or (name is in names)) and IsCached(owner, name)
 			methods.Add(Method(types, name, index + 1))
 	methods
