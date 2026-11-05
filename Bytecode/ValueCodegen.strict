@@ -37,6 +37,8 @@ Variable(node SyntaxNode, block CodeBlock) CodeBlock
 TypeValue(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.TypeValue(SyntaxNode("Identifier", "Numbers"), CodeBlock.Empty).instructions(0).payload is (0, 6, -1, 0)
 	Plain.TypeValue(SyntaxNode("Identifier", "B"), CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
+	Plain.Leaf(Ones, CodeBlock.Empty) is Plain.Elements.Of(Ones, CodeBlock.Empty)
+	Plain.Leaf(SyntaxNode("Boolean", "false"), CodeBlock.Empty).instructions(0).payload is (0, 5, 0)
 	if inference.types.IsPlural(node.text)
 		return Elements.Empty(node.text, block)
 	Call(SyntaxNode("Call", node.text, List(SyntaxNode), node.line), block)
@@ -70,6 +72,7 @@ Constructed(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Constructed(SyntaxNode("Call", "List", One), CodeBlock.Empty).instructions(0).payload is (0, 6, -1, 0)
 	Plain.Constructed(SyntaxNode("Call", "Dictionary"), CodeBlock.Empty).instructions(0).payload is (0, 6, -1, 0)
 	Plain.Constructed(SyntaxNode("Call", "Mutable", One), CodeBlock.Empty).instructions(0).payload is (0, 1, 1)
+	Plain.Constructed(SyntaxNode("Call", "Dictionary", One), CodeBlock.Empty).instructions(0).payload is not (0, 6, -1, 0)
 	if node.text is in ("Mutable", "Slow")
 		return ErrorCodegen(value).Handled(node.children(0), block)
 	let isEmpty = (node.text is "List") or (node.children.Length is 0) or IsTypeName(node.children(0), block)
@@ -89,6 +92,8 @@ InstanceCall(node SyntaxNode, block CodeBlock) CodeBlock
 	ChangedInstance(value, call.text).Back(call, Invoke(call, instance, instance.Result, TypeOf(node, block)), block)
 Field(member Text, owner Text, block CodeBlock, instance Number) CodeBlock
 	Plain.InstanceCall(GreeterText, CodeBlock.Empty).instructions(2).texts is ("text", "Greeter")
+	Plain.IsMethodCall(SyntaxNode("Binary", "+", (One, One)), CodeBlock.Empty)
+	Plain.IsMethodCall(NewGreeter, CodeBlock.Empty)
 	block.Load(InstructionEntry(InstructionType.FieldLoad, (member, owner), (block.register, instance, -1, -2)))
 IsMethodCall(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsMethodCall(SyntaxNode("Identifier", "Greet"), CodeBlock.Empty)
@@ -119,6 +124,7 @@ IsTypeName(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsTypeName(SyntaxNode("Identifier", "B"), CodeBlock.Empty)
 	Plain.IsTypeName(NoNode, CodeBlock.Empty) is false
 	Plain.IsTypeName(SyntaxNode("Type", "Run"), CodeBlock.Empty)
+	Plain.IsTypeName(SyntaxNode("Member", "Text", NoNode), CodeBlock.Empty) is false
 	if node.Kind is "Type"
 		return true
 	let isFree = (block.scope.TypeOf(node.text) is "") and (inference.ConstantOf(target.TypeName, node.text) is "")
@@ -142,6 +148,7 @@ ArgumentStart(node SyntaxNode) Number
 Owner(node SyntaxNode, block CodeBlock) Text
 	Plain.Owner(SyntaxNode("Call", "Greet"), CodeBlock.Empty) is "Greeter"
 	OwnA.Owner(SyntaxNode("Call", "A"), CodeBlock.Empty) is "Greeter"
+	Plain.Owner(SyntaxNode("Member", "Length", Hi), CodeBlock.Empty) is "Text"
 	if node.Kind is in ("Member", "MethodCall")
 		return TypeOf(node.children(0), block)
 	let isOwnMethod = methods.TypeOf(node.text) is not ""

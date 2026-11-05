@@ -41,10 +41,25 @@ Aggregated(body SyntaxNode, block CodeBlock, returnType Text) CodeBlock
 	Finished(Loop(body.children.Last, Leading(body, started), aggregation), block.register)
 Finished(looped CodeBlock, register Number) CodeBlock
 	Plain.Finished(CodeBlock.Empty.Declare("forResult", "Numbers"), 0).instructions.Last.texts.Last is "forResult"
+	Plain.Started(CodeBlock.Empty, "Text", "sum").instructions(0) is InstructionEntry.LoadText(0, "")
+	Plain.Started(CodeBlock.Empty, "Text", "sum").instructions(1).texts is ("forResult")
+	Plain.Started(CodeBlock.Empty, "Number", "sum").instructions(1).texts is ("forResult")
+	Plain.Started(CodeBlock.Empty, "Number", "sum").instructions(0) is InstructionEntry.LoadNumber(0, 0)
+	LoopCodegen(TypeSums.Paired.methods).Started(CodeBlock.Empty, "Pair", "add").instructions.Length is 5
+	LoopCodegen(TypeSums.Paired.methods).Collected(CodeBlock.Empty.At(1), "add").instructions.Length is 5
+	Plain.Collected(CodeBlock.Empty.At(1), "sum").instructions(1).kind is InstructionType.Add
+	Plain.Collected(CodeBlock.Empty.At(1), "sum").instructions(0).texts is ("forResult")
+	Plain.Collected(CodeBlock.Empty.At(1), "sum").instructions(2).texts is ("forResult")
 	let at = looped.At(register)
 	at.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, at.register, "forResult"))
 Leading(body SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Leading(MethodCodegen.SumBody, CodeBlock.Empty).instructions.Length is 0
+	Plain.Collected(CodeBlock.Empty.At(1), "list").instructions(0).texts is ("forResult")
+	LoopCodegen(TypeSums.Paired.methods).Aggregation(ProductBody, "Pair") is ""
+	Plain.Aggregation(MethodCodegen.SumBody, "Pair") is ""
+	Plain.Aggregation(BodyParser("Minus Number", "	for 3", "		/ index").Block(1, 1), "Number") is ""
+	Plain.Aggregated(BranchLoops, CodeBlock.Empty, "Numbers").scope.TypeOf("forResult") is "Numbers"
+	Plain.Aggregated(BranchLoops, CodeBlock.Empty, "Numbers").instructions.Length is 25
 	mutable result = block
 	for body.children.Length - 1
 		let statement = methods.Statement(body.children(index), result.At(block.register), methods.HasElse(body, index))
@@ -53,6 +68,9 @@ Leading(body SyntaxNode, block CodeBlock) CodeBlock
 AnyTrue(body SyntaxNode) SyntaxNode
 	Plain.AnyTrue(DoubledBody).children.Last.Kind is "Boolean"
 	Plain.AnyTrue(DoubledBody).children(0).children.Last.children(0).Kind is "If"
+	Plain.AnyTrue(MethodCodegen.LoopBody).children(0) is MethodCodegen.LoopBody.children(0)
+	Plain.AnyTrue(DoubledBody).Kind is "Body"
+	Plain.AnyTrue(DoubledBody).children.Last is SyntaxNode("Boolean", "false")
 	mutable statements = List(Mutable(SyntaxNode))
 	for body.children
 		statements.Add(index is body.children.Length - 1 then BranchValues("any").Branch(value) else value)
@@ -84,6 +102,8 @@ Collected(block CodeBlock, aggregation Text) CodeBlock
 	loaded.Load(added).Stored("forResult")
 Loop(node SyntaxNode, block CodeBlock, aggregation Text) CodeBlock
 	Plain.Loop(LoopPeeling.Summing, LoopPeeling.Counted, "").instructions.Last.kind is InstructionType.LoopEnd
+	Plain.Loop(LoopPeeling.Summing, LoopPeeling.Counted, "").instructions.Length is 30
+	FileCompiler.Unoptimized.Loop(LoopPeeling.Summing, LoopPeeling.Counted, "").instructions.Length is 22
 	let peeling = LoopPeeling(methods, block)
 	let peeled = methods.values.isOptimizing then peeling.Peeled(node, aggregation) else node
 	if peeled.Kind is "Body"
@@ -117,6 +137,9 @@ Declared(node SyntaxNode, block CodeBlock) CodeBlock
 	nested.Declare("value", element).Sharing("value", true).Sharing("outer", true)
 Counted(iterator SyntaxNode, body SyntaxNode, block CodeBlock, element Text) SyntaxNode
 	Plain.Counted(SyntaxNode("Number", "3"), DoubledBody, CodeBlock.Empty, "Number").text is "3"
+	Plain.Counted(SyntaxNode("Identifier", "for"), DoubledBody, CodeBlock.Empty, "Number").text is "for"
+	Plain.Counted(SyntaxNode("Member", "for", BranchValues.Value), IndexA.children.Last, CodeBlock.Empty, "").text is "for"
+	Iterating.Declared(ForA, CodeBlock.Empty.Declare("a", "A")).instructions(1).texts(1) is "for"
 	if iterator.Kind is not "Member" or iterator.text is not "for"
 		return iterator
 	let type = methods.values.TypeOf(iterator.children(0), block)
@@ -151,6 +174,8 @@ Iterated(iterator SyntaxNode, block CodeBlock) SyntaxNode
 Begin(iterator SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Begin(SyntaxNode("Number", "3"), CodeBlock.Empty).instructions.Last.kind is InstructionType.LoopBegin
 	Plain.Begin(SyntaxNode("Identifier", "r"), CodeBlock.Empty.Declare("r", "Range")).instructions.Length is 4
+	Plain.Begin(SyntaxNode("Number", "3"), CodeBlock.Empty).instructions.Last is InstructionEntry.LoopBegin(0, -1)
+	Plain.UsesValue(BodyParser("Outer Number", "	outer").Block(1, 1), Scope(("value", "outer"), ("Number", "Number")))
 	let isRange = (iterator.Kind is "Call") and (iterator.text is "Range")
 	if (isRange is false) and (methods.values.TypeOf(iterator, block) is "Range")
 		return RangeFields(iterator, block)
@@ -159,6 +184,11 @@ Begin(iterator SyntaxNode, block CodeBlock) CodeBlock
 	end.Add(InstructionEntry.LoopBegin(start.Result, (isRange then end.Result else -1)))
 RangeFields(iterator SyntaxNode, block CodeBlock) CodeBlock
 	Plain.RangeFields(SyntaxNode("Identifier", "r"), CodeBlock.Empty).instructions(1).texts is ("Start", "Range")
+	Plain.RangeFields(SyntaxNode("Identifier", "r"), CodeBlock.Empty).instructions(2).texts is ("ExclusiveEnd", "Range")
+	Plain.Declared(BareFor, CodeBlock.Empty.Declare("value", "Text")).scope.TypeOf("outer") is "Text"
+	Plain.Declared(BareFor, CodeBlock.Empty.Declare("value", "Text")).scope.TypeOf("index") is "Number"
+	Plain.Declared(BareFor, CodeBlock.Empty.Declare("value", "Text")).Owns("outer") is false
+	Plain.Declared(BareFor, CodeBlock.Empty.Declare("value", "Text")).Owns("value") is false
 	let range = methods.values.Expression(iterator, block)
 	let start = methods.values.Field("Start", "Range", range, range.Result)
 	let end = methods.values.Field("ExclusiveEnd", "Range", start, range.Result)
