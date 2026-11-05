@@ -1,8 +1,7 @@
 constant Sample = (80, 54, 10, 50, 32, 49, 10, 50, 53, 53, 10, 1, 2, 3, 4, 5, 6)
 constant Spaced = (80, 54, 13, 10, 50, 9, 50, 32, 50, 53, 53, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
 constant Signature = (80, 54, 10)
-constant Space = 32
-constant Whitespace = (9, 10, 13, Space)
+constant Whitespace = (9, 10, 13, Character.Space)
 constant MaximumLine = (10, 50, 53, 53, 10)
 Loaded(path Text) Bitmap
 	Ppm.Loaded("ImageProcessing/Missing.ppm") is Error
@@ -22,7 +21,7 @@ Save(bitmap Bitmap, path Text)
 	File(path).Write(Encoded(bitmap))
 Encoded(bitmap Bitmap) Bytes
 	Ppm.Encoded(Ppm.Decoded(Sample)) is Sample
-	let header = Signature + Digits(bitmap.Size.Width) + Space + Digits(bitmap.Size.Height) + MaximumLine
+	let header = Signature + Digits(bitmap.Size.Width) + Character.Space + Digits(bitmap.Size.Height) + MaximumLine
 	let rgb = Rgb(bitmap.Colors)
 	for header.Length + rgb.Length
 		index < header.Length then header(index) else rgb(index - header.Length)

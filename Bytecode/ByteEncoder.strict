@@ -1,21 +1,27 @@
 has bytes Numbers
 constant Empty = ByteEncoder(List(Number))
+constant SevenBitBase = 128
+constant SignBit = 128
+constant ExponentLowBits = 16
+constant ExponentBias = 1023
+constant MantissaBits = Number.IntegerBits - 1
+constant LowMantissaBits = 48
 UInt(number Number, size Number) ByteEncoder
 	ByteEncoder(1, 2).UInt(258, 2).bytes is (1, 2, 2, 1)
 	mutable result = bytes
 	mutable rest = number
 	for size
-		result = result + rest % 256
-		rest = (rest / 256).Floor
+		result = result + rest % Byte.Values
+		rest = (rest / Byte.Values).Floor
 	ByteEncoder(result)
 SevenBit(number Number) ByteEncoder
 	ByteEncoder(1, 2).SevenBit(300).bytes is (1, 2, 172, 2)
 	mutable result = bytes
 	mutable rest = number
-	for (rest / 128).Floor > 0 then SevenBitLength(rest) else 1
-		let isLast = rest < 128
-		result = result + (isLast then rest else rest % 128 + 128)
-		rest = (rest / 128).Floor
+	for (rest / SevenBitBase).Floor > 0 then SevenBitLength(rest) else 1
+		let isLast = rest < SevenBitBase
+		result = result + (isLast then rest else rest % SevenBitBase + SevenBitBase)
+		rest = (rest / SevenBitBase).Floor
 	ByteEncoder(result)
 SevenBits(numbers Numbers) ByteEncoder
 	ByteEncoder(List(Number)).SevenBits((1, 300)).bytes is (1, 172, 2)
@@ -29,9 +35,9 @@ Integers Numbers
 	mutable number = 0
 	mutable scale = 1
 	for bytes
-		number = number + (value % 128) * scale
-		scale = scale * 128
-		if value < 128
+		number = number + (value % SevenBitBase) * scale
+		scale = scale * SevenBitBase
+		if value < SevenBitBase
 			integers.Add(number)
 			number = 0
 			scale = 1
@@ -44,7 +50,7 @@ Spelled(start Number, length Number) Text
 	text
 SevenBitLength(number Number) Number
 	ByteEncoder(1, 2).SevenBitLength(300) is 2
-	number < 128 then 1 else 1 + SevenBitLength((number / 128).Floor)
+	number < SevenBitBase then 1 else 1 + SevenBitLength((number / SevenBitBase).Floor)
 Text(text Text) ByteEncoder
 	ByteEncoder(1, 2).Text("ä").bytes is (1, 2, 2, 195, 164)
 	let unicode = UnicodeBytes(text)
@@ -59,10 +65,11 @@ Double(number Number) ByteEncoder
 	if number is 0
 		return UInt(0, 8)
 	let exponent = Exponent(number.Absolute)
-	let mantissa = (number.Absolute / 2 ^ exponent - 1) * 2 ^ 52
-	let low = UInt(mantissa % 2 ^ 48, 6)
-	let high = (mantissa / 2 ^ 48).Floor + ((exponent + 1023) % 16) * 16
-	low.UInt(high, 1).UInt(((exponent + 1023) / 16).Floor + (number < 0 then 128 else 0), 1)
+	let mantissa = (number.Absolute / 2 ^ exponent - 1) * 2 ^ MantissaBits
+	let low = UInt(mantissa % 2 ^ LowMantissaBits, 6)
+	let high = (mantissa / 2 ^ LowMantissaBits).Floor + ((exponent + ExponentBias) % ExponentLowBits) * ExponentLowBits
+	let top = ((exponent + ExponentBias) / ExponentLowBits).Floor + (number < 0 then SignBit else 0)
+	low.UInt(high, 1).UInt(top, 1)
 Exponent(positive Number) Number
 	ByteEncoder(1, 2).Exponent(10) is 3
 	ByteEncoder(1, 2).Exponent(0.25) is -2

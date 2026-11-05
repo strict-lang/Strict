@@ -24,5 +24,5 @@ CentralHeader(entry ZipEntry, checksum Number, offset Number) Numbers
 	sizes.UInt(name.Length, 2).UInt(0, 8).UInt(0, 4).UInt(offset, 4).bytes + name
 EndRecord(centralSize Number, centralOffset Number) Numbers
 	Sample.EndRecord(94, 66).Length is 22
-	let counts = ByteEncoder.Empty.UInt(1.01010256e8, 4).UInt(0, 4).UInt(entries.Length, 2).UInt(entries.Length, 2)
+	let counts = ByteEncoder.Empty.UInt(ZipReader.EndHeader, 4).UInt(0, 4).UInt(entries.Length, 2).UInt(entries.Length, 2)
 	counts.UInt(centralSize, 4).UInt(centralOffset, 4).UInt(0, 2).bytes

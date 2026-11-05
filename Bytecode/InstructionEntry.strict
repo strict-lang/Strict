@@ -37,7 +37,7 @@ LoadNumber(register Number, number Number) InstructionEntry
 NumberValue(number Number) Numbers
 	InstructionEntry.NumberValue(7) is (1, 7)
 	InstructionEntry.NumberValue(-1).Length is 9
-	if (number is number.Floor) and number >= 0 and number < 256
+	if (number is number.Floor) and number >= 0 and number < Byte.Values
 		return (1, number)
 	List(Number) + 3 + ByteEncoder.Empty.Double(number).bytes
 Set(names Texts, content Numbers) InstructionEntry

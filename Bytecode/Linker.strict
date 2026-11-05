@@ -145,11 +145,12 @@ Elements(types Texts, package Text) Texts
 	Sample.Elements(("Strict/List(Byte)", "Strict/Text"), "Strict") is ("Strict/List(Byte)", "Strict/Byte", "Strict/Text")
 	Sample.UsedTypes(Parameters) is ("Strict/List(MemberEntry)", "Strict/Bytecode/MemberEntry")
 	Sample.Elements(List(Text) + "Strict/List(Character)", "Strict") is ("Strict/List(Character)", "Strict/Character")
+	constant listPrefix = "Strict/List("
 	mutable result = List(Mutable(Text))
 	for types
 		result.Add(value)
-		if value.StartsWith("Strict/List(") and (value.LastIndexOf("(") is 11)
-			result.Add(Qualified(value.Substring(12, value.Length - 13), package))
+		if value.StartsWith(listPrefix) and (value.LastIndexOf("(") is listPrefix.Length - 1)
+			result.Add(Qualified(value.Substring(listPrefix.Length, value.Length - listPrefix.Length - 1), package))
 	result
 Qualified(element Text, package Text) Text
 	Sample.Elements(List(Text) + "Strict/List(List(Byte))", "Strict") is ("Strict/List(List(Byte))")

@@ -110,7 +110,7 @@ MemberCallType(node SyntaxNode, scope Scope, current Scope) Text
 	Overloads.LabelInference.MemberCallType(Overloads.LabelerLabels, NoShape, NoShape) is "Numbers"
 	let instanceType = TypeOf(node.children(0), scope, current)
 	let precedence = node.Kind is "MethodCall" then SyntaxNode("Binary", node.text).Precedence else 0
-	if (precedence >= 11) and (precedence < 20) or (types.MethodsOf(instanceType).Count(node.text) > 1)
+	if precedence is in SyntaxNode.ArithmeticPrecedences or (types.MethodsOf(instanceType).Count(node.text) > 1)
 		return ArithmeticType(SyntaxNode("Binary", node.text, node.children), scope, current)
 	let type = Overloads(types).Typed(node, instanceType, value, scope, current)
 	let isMember = (node.text is "value") or Indexing(types).IsIndexed(instanceType, node.text, node.children.Length - 1)
@@ -152,7 +152,7 @@ BinaryType(node SyntaxNode, scope Scope, current Scope) Text
 		return TypeOf(node.children(1), scope, current)
 	if (node.text is in ("and", "or", "xor")) and (TypeOf(node.children(0), scope, current) is "Number")
 		return "Number"
-	node.Precedence < 11 then "Boolean" else ArithmeticType(node, scope, current)
+	node.Precedence < SyntaxNode.AdditivePrecedence then "Boolean" else ArithmeticType(node, scope, current)
 ArithmeticType(node SyntaxNode, scope Scope, current Scope) Text
 	NoInference.ArithmeticType(SyntaxParser(Tokenizer("2 * 3").Tokens).Parse, NoShape, NoShape) is "Number"
 	NoInference.ArithmeticType(SyntaxParser(Tokenizer("2 + \"a\"").Tokens).Parse, NoShape, NoShape) is "Text"

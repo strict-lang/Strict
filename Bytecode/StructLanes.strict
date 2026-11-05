@@ -35,7 +35,7 @@ IsLane(member MemberEntry) Boolean
 	StructLanes.IsLane(MemberEntry("half", "Strict/Number", List(InstructionEntry), false, 32)) is false
 	StructLanes.IsLane(MemberEntry("named", "Strict/Text", List(InstructionEntry), false)) is false
 	StructLanes.IsLane(MemberEntry("real", "Strict/Number", (InstructionEntry.Return(0)), false)) is false
-	(member.typeName is "Strict/Number") and (member.Bits is 64) and (member.initial.Length is 0)
+	(member.typeName is "Strict/Number") and (member.Bits is Number.DoubleBits) and (member.initial.Length is 0)
 Split List(TypeEntry)
 	Sample.Split.First.methods.First.instructions.Length is 11
 	Splitting.Split.First.methods.First.instructions.Length is 20

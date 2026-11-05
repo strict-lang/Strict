@@ -1,7 +1,6 @@
 has qwen Boolean
 constant Gpt = TokenSplitter(false)
 constant Qwen = TokenSplitter(true)
-constant Space = 32
 constant Whitespace = Range(9, 14)
 constant Uppercase = Range(Character.UppercaseA, Character.UppercaseZ + 1)
 constant Lowercase = Range(Character.LowercaseA, Character.LowercaseZ + 1)
@@ -91,7 +90,7 @@ Kind(text Text, index Number) Number
 	if index >= text.Length
 		return -1
 	let code = text(index).number
-	if (code is Space) or (code is in Whitespace)
+	if (code is Character.Space) or (code is in Whitespace)
 		return 0
 	if (code > LastAscii) or (code is in Uppercase) or (code is in Lowercase)
 		return 1

@@ -122,5 +122,5 @@ Ended(entry InstructionEntry, steps Number) InstructionEntry
 	for entry.payload
 		if isSteps is false
 			rest = rest + value
-		isSteps = isSteps and (value >= 128)
+		isSteps = isSteps and (value >= ByteEncoder.SevenBitBase)
 	InstructionEntry(entry.kind, entry.texts, InstructionEntry.Jump(entry.kind, steps).payload + rest, entry.line)

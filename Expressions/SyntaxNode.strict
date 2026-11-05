@@ -4,6 +4,9 @@ has children SyntaxNodes
 has line Number = 0
 constant operators = ("then", "else", "is", "is in", "is not", "is not in", "or", "xor", "and", "<", ">", "<=", ">=", "in", "+", "-", "%", "*", "/", "^", "to")
 constant precedences = (1, 1, 7, 7, 7, 7, 4, 5, 6, 7, 7, 7, 7, 9, 11, 11, 13, 13, 13, 14, 20)
+constant AdditivePrecedence = 11
+constant ArithmeticPrecedences = Range(AdditivePrecedence, 20)
+constant MemberPrecedence = 21
 constant keywordKinds = ("Return", "If", "For", "ElseIf", "ElseValue")
 constant keywordTexts = ("return", "if", "for", "else if", "else")
 constant one = SyntaxNode("Number", "1")
@@ -50,20 +53,22 @@ CallText Text
 	if Kind is "Call"
 		return text + "(" + ArgumentsText(0) + ")"
 	if Kind is "MethodCall"
-		return ChildText(0, 21) + "." + text + "(" + ArgumentsText(1) + ")"
+		return ChildText(0, MemberPrecedence) + "." + text + "(" + ArgumentsText(1) + ")"
 	if Kind is "Index"
-		return ChildText(0, 21) + "(" + ArgumentsText(1) + ")"
+		return ChildText(0, MemberPrecedence) + "(" + ArgumentsText(1) + ")"
 	if Kind is "Member"
-		return ChildText(0, 21) + "." + text
+		return ChildText(0, MemberPrecedence) + "." + text
 	UnaryText
 UnaryText Text
 	SyntaxNode("Not", "", (SyntaxNode("Identifier", "a"), SyntaxNode("Identifier", "a"))).UnaryText is "not a"
 	SyntaxNode("Negate", "", (one, one)).UnaryText is "-1"
 	SyntaxNode("Index", "", (identifier, one)).CallText is "a(1)"
+	constant notOperandPrecedence = 13
+	constant negatePrecedence = 15
 	if Kind is "Not"
-		return "not " + ChildText(0, 13)
+		return "not " + ChildText(0, notOperandPrecedence)
 	if Kind is "Negate"
-		return "-" + ChildText(0, 15)
+		return "-" + ChildText(0, negatePrecedence)
 	StatementText
 StatementText Text
 	SyntaxNode("Return", "", (SyntaxNode("Number", "1"), SyntaxNode("Number", "1"))).StatementText is "return 1"

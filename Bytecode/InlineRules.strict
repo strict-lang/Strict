@@ -137,11 +137,12 @@ IsLaned(type TypeEntry, call InstructionEntry, isReturning Boolean) Boolean
 	InlineRules(StructLanes.Squared).IsLaned(StructLanes.Pair, StructLanes.Constructed, false) is false
 	InlineRules(StructLanes.Squared).IsLaned(StructLanes.Pair, StructLanes.Constructed, true)
 	InlineRules(Converting).IsLaned(StructLanes.Pair, StructLanes.Calling(4), false) is false
+	constant inlinedInstructionLimit = 80
 	let isInstance = IsOwn(call) is false
 	let lanes = StructLanes.Members(type)
 	let isStruct = isInstance and (lanes.Length > 0) and IsContained(lanes)
 	let isOwnStruct = isReturning and (isInstance is false) and IsContained(MemberNames(type) + "value")
-	let isSmall = (callee.instructions.Length < 80) and (callee.Name is not "to")
+	let isSmall = (callee.instructions.Length < inlinedInstructionLimit) and (callee.Name is not "to")
 	(isStruct or isOwnStruct) and isSmall and IsStraight(isInstance)
 IsStraight(isInstance Boolean) Boolean
 	InlineRules(StructLanes.Squared).IsStraight(true)

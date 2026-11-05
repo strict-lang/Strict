@@ -73,11 +73,12 @@ Fetch(url Text) Texts
 Linked(lines Texts) Texts
 	Repositories.Linked(Readme) is ("strict-lang/Strict", "b/c")
 	Repositories.Linked(("github.com/a/b", "docs/c/d", "github.com/a/b")) is ("a/b")
+	constant host = "github.com/"
 	mutable repositories = List(Mutable(Text))
 	for lines
-		let start = value.IndexOf("github.com/")
+		let start = value.IndexOf(host)
 		if start >= 0
-			let repository = Repository(value.Substring(start + 11, value.Length - start - 11))
+			let repository = Repository(value.Substring(start + host.Length, value.Length - start - host.Length))
 			if (repository is not "") and (repository is not in repositories)
 				repositories.Add(repository)
 	repositories

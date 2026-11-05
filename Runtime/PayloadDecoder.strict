@@ -1,9 +1,4 @@
 has entry Bytecode/InstructionEntry
-constant SignBit = 128
-constant ExponentLowBits = 16
-constant MantissaBits = Number.IntegerBits - 1
-constant ExponentBias = 1023
-constant SevenBitBase = 128
 constant Ones = PayloadDecoder(InstructionEntry(InstructionType.LoadConstantToRegister, ("Strict/List(Number)"), (0, 6, -1, 2, 1, 1, 3, 0, 0, 0, 0, 0, 0, 248, 63)))
 constant ElementStore = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "list(index)")
 constant Scaled = PayloadDecoder(InstructionEntry.Invoke(1, ("Strict/Vector", "*", "Strict/Vector", "scale"), List(Number) + 0, -1))
@@ -43,13 +38,14 @@ Double(position Number) Number
 	PayloadDecoder(InstructionEntry.LoadNumber(0, -1000)).Double(2) is -1000
 	let top = entry.payload(position + 7)
 	let sixth = entry.payload(position + 6)
-	let exponent = (top % SignBit) * ExponentLowBits + (sixth / ExponentLowBits).Floor
-	mutable mantissa = sixth % ExponentLowBits
+	let exponent = (top % ByteEncoder.SignBit) * ByteEncoder.ExponentLowBits + (sixth / ByteEncoder.ExponentLowBits).Floor
+	mutable mantissa = sixth % ByteEncoder.ExponentLowBits
 	for 6
 		mantissa = mantissa * Byte.Values + entry.payload(position + 5 - index)
-	let fraction = exponent is 0 then mantissa / 2 ^ MantissaBits else 1 + mantissa / 2 ^ MantissaBits
-	let magnitude = fraction * 2 ^ ((exponent is 0 then 1 else exponent) - ExponentBias)
-	top < SignBit then magnitude else -magnitude
+	let scaled = mantissa / 2 ^ ByteEncoder.MantissaBits
+	let fraction = exponent is 0 then scaled else 1 + scaled
+	let magnitude = fraction * 2 ^ ((exponent is 0 then 1 else exponent) - ByteEncoder.ExponentBias)
+	top < ByteEncoder.SignBit then magnitude else -magnitude
 ElementParts Texts
 	PayloadDecoder(ElementStore).ElementParts is ("list", "index")
 	PayloadDecoder(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "list")).ElementParts.Length is 0
@@ -71,8 +67,8 @@ SevenBit(position Number) Number
 	mutable result = 0
 	mutable scale = 1
 	for Range(position, entry.payload.Length)
-		result = result + (entry.payload(value) % SevenBitBase) * scale
-		if entry.payload(value) < SevenBitBase
+		result = result + (entry.payload(value) % ByteEncoder.SevenBitBase) * scale
+		if entry.payload(value) < ByteEncoder.SevenBitBase
 			return result
-		scale = scale * SevenBitBase
+		scale = scale * ByteEncoder.SevenBitBase
 	result

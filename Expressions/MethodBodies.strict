@@ -98,8 +98,10 @@ Element(iterated Text) Text
 	MethodBodies("Demo", Sample, TypeInference(KnownTypes.Sample, TypeInference.Limits)).Element("Text") is "Text"
 	if inference.Enumerated(iterated).Length > 0
 		return iterated
-	let isDictionary = iterated.StartsWith("Dictionary(")
-	isDictionary then Item(iterated.Substring(11, iterated.Length - 12)) else inference.types.ElementType(iterated)
+	constant prefix = "Dictionary("
+	if iterated.StartsWith(prefix)
+		return Item(iterated.Substring(prefix.Length, iterated.Length - prefix.Length - 1))
+	inference.types.ElementType(iterated)
 Item(arguments Text) Text
 	MethodBodies.Item("Number") is "Number"
 	MethodBodies.Item("Text, Text") is "Texts"

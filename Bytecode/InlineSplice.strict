@@ -93,6 +93,6 @@ Jumped(entry InstructionEntry) Numbers
 	mutable id = 0
 	mutable scale = 1
 	for entry.payload
-		id = id + (value % 128) * scale
-		scale = scale * 128
+		id = id + (value % ByteEncoder.SevenBitBase) * scale
+		scale = scale * ByteEncoder.SevenBitBase
 	InstructionEntry.Jump(entry.kind, id + (base + 1) * 1000).payload
