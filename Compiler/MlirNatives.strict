@@ -9,6 +9,10 @@ constant Destining = List(Text) + "strict_list_swap_removed"
 constant DefaultedLast = ("strict_text_index", "strict_text_starts", "strict_directory_files", "strict_text_combine")
 constant Named = TypeEntry("Strict/Named", (MemberEntry("name", "Strict/Text", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
 constant Texts = MlirFunction(List(TypeEntry), Named, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "ab"), LengthCall, Search)))
+constant Getting = InstructionEntry.Invoke(2, ("Strict/Dictionary(Text, Number)", "get", "Strict/Number", "key"), 1, -1)
+constant Counted = TypeEntry("Strict/Dictionary(Text, Number)", List(MemberEntry), List(MethodEntry))
+constant SearchLines = ("    %t2m = llvm.load %r0 : !llvm.ptr -> f64", "    %t2a0 = llvm.load %r1 : !llvm.ptr -> f64", "    %t2r = func.call @strict_text_index(%t2m, %t2a0, %zero) : (f64, f64, f64) -> f64", "    llvm.store %t2r, %r2 : f64, !llvm.ptr")
+constant GettingLines = ("    %t2m = arith.constant 0.0 : f64", "    %t2a0 = llvm.load %r1 : !llvm.ptr -> f64", "    %t2h = func.constant @strict_hash_text : (f64) -> i64", "    %t2e = func.constant @strict_text_equal : (f64, f64) -> f64", "    %t2k = func.call @strict_dictionary_get(%t2m, %t2a0, %t2h, %t2e) : (f64, f64, (f64) -> i64, (f64, f64) -> f64) -> f64", "    %t2tw = llvm.mlir.addressof @wNamed_Run_0 : !llvm.ptr", "    %t2twl = arith.constant 0 : i64", "    %t2r = func.call @strict_trace(%t2k, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64", "    llvm.store %t2r, %r2 : f64, !llvm.ptr")
 Helper(typeName Text, name Text, count Number) Text
 	MlirNatives(Texts, 1).Helper("Strict/Text", "Length", 0) is "strict_text_length"
 	MlirNatives(Texts, 1).Helper("Strict/List(Number)", "Count", 0) is "strict_list_length"
@@ -49,6 +53,10 @@ CollectionHelper(kind Text, name Text, count Number) Text
 	let operation = name is "in" then "has" else (name is "SwapRemoved" then "swap_removed" else name.Lower)
 	"strict_list_" + (operation is "index" then "find" else operation)
 DictionaryHelper(name Text) Text
+	MlirNatives(Texts, 1).Helper("Strict/Text", "Upper", 0) is "strict_text_upper"
+	MlirNatives(Texts, 1).Helper("Strict/List(Text)", "in", 1) is "strict_list_has"
+	MlirNatives(Texts, 1).Helper("Strict/Text", "Count", 0) is "strict_text_length"
+	MlirNatives(Texts, 1).Helper("Strict/Text", "Length", 1) is ""
 	MlirNatives(Texts, 1).DictionaryHelper("in") is "strict_dictionary_has"
 	MlirNatives(Texts, 1).DictionaryHelper("to") is ""
 	MlirNatives(Texts, 1).DictionaryHelper("set") is "strict_dictionary_set"
@@ -66,6 +74,9 @@ Keyed(kind Text) Texts
 		return ("strict_hash_number", "strict_equal_number")
 	("strict_hash_" + equality.Symbol(key), equality.Helper(key))
 Key(kind Text) Text
+	MlirNatives(Texts, 1).Key("List(List(Number))") is "Number"
+	MlirNatives(Texts, 1).CollectionHelper("List(Number)", "Count", 2) is ""
+	MlirNatives(Texts, 1).CollectionHelper("List(Text)", "Upper", 1) is ""
 	MlirNatives(Texts, 1).Key("List(List(Text, Number))") is "Text"
 	MlirNatives(Texts, 1).Key("Dictionary(Number, Number)") is "Number"
 	let short = TypeEntry.ShortName(kind)
@@ -84,6 +95,13 @@ Keying(helper Text, operands Texts, kind Text) Texts
 	let traced = memory.Traced(memory.Temp("k"), memory.Temp("r"), "strict_trace")
 	(hash, equal, call + ", (f64) -> i64, (f64, f64) -> f64) -> f64") + traced
 Element(kind Text) Text
+	MlirNatives(Texts, 2).Emitted(Search, TextType, "strict_text_index") is SearchLines
+	MlirNatives(Texts, 2).Emitted(Getting, Counted, "strict_dictionary_get") is GettingLines
+	MlirNatives(Texts, 2).Emitted(Search, TextType, "strict_text_last_index")(2).EndsWith("%t2a0) : (f64, f64) -> f64")
+	MlirNatives(Texts, 1).Emitted(LengthCall, TextType, "strict_text_index")(1).EndsWith("(%t1m) : (f64) -> f64")
+	MlirNatives(Texts, 1).ValueHelper("Boolean", "Floor", 0) is ""
+	MlirNatives(Texts, 1).ValueHelper("Boolean", "Increment", 0) is ""
+	MlirNatives(Texts, 1).ValueHelper("Text", "Upper", 0) is "strict_text_upper"
 	MlirNatives(Texts, 1).Element("List(Text)") is "Text"
 	MlirLayout(function).Represented(MlirKinds(function).ElementKind(kind))
 TypeHelper(kind Text, name Text) Text
@@ -100,6 +118,10 @@ TypeHelper(kind Text, name Text) Text
 		return kind is "GpuMemory" then GpuHelper(name) else ""
 	"strict_" + kind.Lower + "_" + (name is "ReadLines" then "read_lines" else name.Lower)
 GpuHelper(name Text) Text
+	MlirNatives(Texts, 1).TypeHelper("ConstantCache", "At") is "strict_list_get"
+	MlirNatives(Texts, 1).TypeHelper("ConstantCache", "Stored") is "strict_list_set"
+	MlirNatives(Texts, 1).TypeHelper("Degrees", "At") is ""
+	MlirNatives(Texts, 1).TypeHelper("ConstantCache", "Other") is ""
 	MlirNatives(Texts, 1).GpuHelper("Tuned") is "strict_gpu_tuned"
 	"strict_gpu_" + (name is "Released" then "trim_unused" else (name is "Evicted" then "evict_all" else name.Lower))
 TextHelper(name Text) Text
@@ -126,6 +148,9 @@ Emitted(entry InstructionEntry, type TypeEntry, helper Text) Texts
 	let call = helper.StartsWith("strict_dictionary_") then Keying(helper, completed, owner) else plain
 	calls.Loads(entry, type) + textual + call + function.Store(calls.Temp("r"), "%r" + entry.payload(0))
 Textual(entry InstructionEntry, element Text, count Number) Texts
+	MlirNatives(MlirKinds.Lettered.function, 2).Textual(Search, "Text", 1)(0).IndexOf("ct = func.call @strict_char") > 0
+	MlirNatives(MlirKinds.Lettered.function, 2).Textual(Search, "Number", 1).Length is 0
+	MlirNatives(MlirKinds.Lettered.function, 2).Textual(Search, "Text", 2).Length is 0
 	MlirNatives(Texts, 2).Textual(Search, "Text", 1).Length is 0
 	let register = entry.payload(6 + entry.payload(3))
 	let isCharacter = MlirLayout(function).Represented(MlirKinds(function).KindOf(position, register)) is "Character"

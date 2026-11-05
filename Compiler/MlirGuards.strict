@@ -9,6 +9,8 @@ constant Flooring = InstructionEntry.Invoke(3, ("Strict/Number", "Floor", "Stric
 constant Calculated = (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply, InstructionType.Modulo)
 constant ExactSlots = "(dense<0> : tensor<9xi64>) : !llvm.array<9 x i64>"
 constant PlainSlots = "(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>"
+constant ExactNamed = ("  llvm.mlir.global internal constant @kShape_Shifted_2_gpu2(\"Shape_Shifted_2_gpu2\00Shape_Shifted_2_gpu2s\00Shape_Shifted_2_gpu2sx\00Shape_Shifted_2_gpu2sxf0\00Shape_Shifted_2_gpu2sxf1\00\") : !llvm.array<116 x i8>", "  llvm.mlir.global internal @fShape_Shifted_2_gpu2(dense<0> : tensor<9xi64>) : !llvm.array<9 x i64>")
+constant PlainNamed = ("  llvm.mlir.global internal constant @kShape_Shifted_2_gpu2(\"Shape_Shifted_2_gpu2\00Shape_Shifted_2_gpu2s\00\") : !llvm.array<43 x i8>", "  llvm.mlir.global internal @fShape_Shifted_2_gpu2(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>")
 Origins(position Number, register Number) Texts
 	Shifts.Origins(6, 3) is ("offset")
 	Shifts.Origins(8, 5) is ("?")
@@ -57,9 +59,12 @@ Sited(position Number) Texts
 	let isFloor = (kind is InstructionType.Invoke) and (PayloadDecoder(entry).Text(2) is "Floor")
 	isFloor then Floored(position, entry) else List(Text) + "?"
 Floored(position Number, entry InstructionEntry) Texts
+	Shifts.Named is ExactNamed
+	MlirGuards(MlirFunction(Shifted, Float = "f64"), 2).Named is PlainNamed
 	Shifts.Floored(5, Flooring) is ("offset")
 	Whole(Origins(position, MlirDeviceCalls(function, position, function).Register(entry)))
 Whole(origins Texts) Texts
+	Shifts.Mask is 3
 	Shifts.Whole(("offset", "/")) is ("offset")
 	for origins
 		if value is not "/"
