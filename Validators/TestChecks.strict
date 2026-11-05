@@ -37,7 +37,7 @@ IsCalling(left Text) Boolean
 IsCallToken(tokens Texts, position Number) Boolean
 	Locking.IsCallToken(("File", "(", "1", ")"), 1)
 	(Locking.IsCallToken(("(", "not", "false", ")"), 0) or Locking.IsCallToken(("+", "("), 1)) is false
-	Locking.IsCallToken(List(Text) + "Locked", 0)
+	Locking.IsCallToken(List(Text) + "Locked", 0) and (Locking.IsCallToken((".", "A"), 1) is false)
 	Locking.IsCallToken(("A", ".", "Locked"), 2) and Locking.IsCallToken(("A", "+"), 1)
 	(Locking.IsCallToken(("(", "A"), 0) or Locking.IsCallToken(("A", "Locked"), 1)) is false
 	(Locking.IsCallToken(("A", ".", "over"), 2) or Locking.IsCallToken(("A", "+", "Locked", "."), 2)) is false

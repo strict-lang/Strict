@@ -8,6 +8,8 @@ constant Storing = Mutation(MethodEntry(Machine.Doubler.methods.First, instructi
 constant Marking = InstructionEntry(InstructionType.LoadConstantToRegister, "1 is 1 in Twice at Doubler.strict:line 2", (0, 4, -1))
 constant Splitting = (InstructionEntry.LoadNumber(0, 0), Marking, InstructionEntry.LoadNumber(1, 1), InstructionEntry.Return(0))
 constant Splitter = Mutation(MethodEntry(Machine.Doubler.methods.First, instructions = Splitting))
+constant Targeted = InstructionEntry.Binary(InstructionType.LessThan, (0, 1, 5))
+constant Forcing = (InstructionType.Equal, InstructionType.NotEqual)
 constant Operators = ("+", "-", "*", "/", "is", "is not", "<", ">")
 constant Ordinals = ("st", "nd", "rd")
 IsMine(part Text, round Number) Boolean
@@ -46,8 +48,7 @@ Changed(entry InstructionEntry, kind Number) InstructionEntry
 	Twice.Changed(Twice.method.instructions(1), 5).kind is InstructionType.Subtract
 	let register = entry.payload(0)
 	if kind < 2
-		let comparison = kind is 0 then InstructionType.Equal else InstructionType.NotEqual
-		return InstructionEntry.Binary(comparison, (entry.payload(1), entry.payload(1)))
+		return Forced(entry, kind)
 	if ((kind is 2) and (method.returnType is "Strict/Text")) or (kind is 6)
 		return InstructionEntry.LoadText(register, "")
 	if (kind is 2) and (method.returnType is "Strict/Boolean")
@@ -55,6 +56,11 @@ Changed(entry InstructionEntry, kind Number) InstructionEntry
 	if kind < 5
 		return InstructionEntry.LoadNumber(register, 0)
 	InstructionEntry(Swapped(entry.kind), entry.texts, entry.payload, entry.line)
+Forced(entry InstructionEntry, kind Number) InstructionEntry
+	Twice.Forced(Targeted, 1) is InstructionEntry.Binary(InstructionType.NotEqual, (0, 0, 5))
+	Twice.Forced(Greater, 0) is InstructionEntry.Binary(InstructionType.Equal, (0, 0))
+	let same = entry.payload.Slice(1, 1)
+	InstructionEntry.Binary(Forcing(kind), same + same + entry.payload.Slice(3, entry.payload.Length - 3))
 Swapped(kind Number) Number
 	Twice.Swapped(InstructionType.Multiply) is InstructionType.Divide
 	let pair = kind is in (InstructionType.Add, InstructionType.Subtract) then 0 else 2

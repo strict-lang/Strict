@@ -31,6 +31,7 @@ IsNested(at Number) Boolean
 	Shared.IsNested(1) is false
 	Names(("Run", "\tfor 2", "\t\t\tfor 3", "\t\t\t\t1")).IsNested(1) is false
 	Tripled.IsNested(2)
+	Names(("Run", "\tfor 2")).IsNested(1) is false
 	let isLoop = (at + 1 < lines.Length) and (Iterated(lines(at)).Length > 0) and (Iterated(lines(at + 1)).Length > 0)
 	isLoop and (BodyParser.Indent(lines(at + 1)) is BodyParser.Indent(lines(at)) + 1) and (IsShared(at) is false)
 Iterated(line Text) Texts
@@ -86,6 +87,7 @@ LineIssues(line Text, number Number) ValidationIssues
 	Looping.LineIssues(Looping.lines.First, 0).First to Text is "LoopNameMustNotBeDeclared: value"
 	Sample.LineIssues("in(from Text) Boolean", 0).Length is 1
 	Sample.LineIssues("\tlet from = 1", 3).Length is 1
+	Looping.LineIssues("\tlet value = 1", 2).Length is 1
 	(Sample.DeclaredNames("has Math/Size") is ("Size")) and (Sample.DeclaredNames("\tlet a / b") is ("a"))
 	let isHeader = TypeShape(lines).IsMethodHeader(line)
 	mutable issues = List(Mutable(ValidationIssue))
