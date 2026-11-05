@@ -3,6 +3,12 @@ has shift Numbers
 has expansion Batch
 has projection Batch
 constant Tiny = QwenVisionMerger.Loaded(QwenVision.Model, "merger.")
+constant ErfScale = 0.3275911
+constant ErfFirst = 0.254829592
+constant ErfSecond = 0.284496736
+constant ErfThird = 1.421413741
+constant ErfFourth = 1.453152027
+constant ErfFifth = 1.061405429
 Loaded(file Safetensors, prefix Text) QwenVisionMerger
 	Tiny.norm.Length is 32
 	Tiny.projection.weights.Length is 64
@@ -20,8 +26,8 @@ Gelu(values Numbers) Numbers
 Erf(number Number) Number
 	Tiny.Erf(0).IsNearlyEqual(0, 0.0000002)
 	Tiny.Erf(-0.5).IsNearlyEqual(-0.5204999, 0.0000002)
-	let distance = 1 / (1 + 0.3275911 * number.Absolute)
-	let fourth = (1.061405429 * distance - 1.453152027) * distance + 1.421413741
-	let second = (fourth * distance - 0.284496736) * distance + 0.254829592
+	let distance = 1 / (1 + ErfScale * number.Absolute)
+	let fourth = (ErfFifth * distance - ErfFourth) * distance + ErfThird
+	let second = (fourth * distance - ErfSecond) * distance + ErfFirst
 	let magnitude = 1 - second * distance * (-number * number).Exponential
 	number < 0 then -magnitude else magnitude

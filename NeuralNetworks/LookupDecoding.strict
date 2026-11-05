@@ -1,14 +1,17 @@
 has logger
 constant Story = "Alan Turing theorized that computers would one day become"
+constant CopiedCharacters = 300
+constant WarmupTokens = 20
+constant VerifiedTokens = (1, 2, 4, 8, 16)
 Run(path Text, count = 200, bits = 4)
 	let tokenizer = Gpt2Tokens.Loaded(Gguf(path))
 	let model = Qwen3.Loaded(path, bits)
 	let code = Text.Combine(File("Math/Vector2.strict").ReadLines, "\n")
-	let copying = tokenizer.Encoded(code + "\n\n" + code.Substring(0, 300))
-	logger.Log(path + " warming up: " + Compared(model, tokenizer.Encoded(Story), 20))
+	let copying = tokenizer.Encoded(code + "\n\n" + code.Substring(0, CopiedCharacters))
+	logger.Log(path + " warming up: " + Compared(model, tokenizer.Encoded(Story), WarmupTokens))
 	logger.Log(path + " copying code: " + Compared(model, copying, count))
 	logger.Log(path + " writing prose: " + Compared(model, tokenizer.Encoded(Story), count))
-	for (1, 2, 4, 8, 16)
+	for VerifiedTokens
 		let verified = Verified(model.Prefilled(copying, 0), copying.Length, value)
 		logger.Log("verifying " + value + " tokens after " + copying.Length + ": " + verified + " ms")
 Verified(prefilled Qwen3, start Number, count Number) Slow(Number)

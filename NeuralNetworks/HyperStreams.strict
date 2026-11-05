@@ -15,8 +15,9 @@ Loaded(model Gguf, prefix Text) Slow(HyperStreams)
 	HyperStreams.Loaded(Flash, "blk.0.hc_attn").Mixed(Embedded)(0).IsNearlyEqual(0.170274, 0.000001)
 	HyperStreams.Loaded(Flash, "blk.0.hc_attn").Mixed(Embedded)(5).IsNearlyEqual(-0.291299, 0.000001)
 	HyperStreams.Loaded(Flash, "output_hc").inject.weights.Length is 0
-	let isInjecting = model.Shape(prefix + "_inject.weight").Length > 0
-	let injected = isInjecting then Gguf(model, bits = 32).Rows(prefix + "_inject.weight") else List(Numbers)
+	let injection = prefix + "_inject.weight"
+	let isInjecting = model.Shape(injection).Length > 0
+	let injected = isInjecting then Gguf(model, bits = Number.SingleBits).Rows(injection) else List(Numbers)
 	let injecting = Layer(injected, Layer.Unbiased)
 	let lowered = Layer(model.Rows(prefix + "_down.weight"), Layer.Unbiased)
 	let raised = Layer(model.Rows(prefix + "_up.weight"), Layer.Unbiased)

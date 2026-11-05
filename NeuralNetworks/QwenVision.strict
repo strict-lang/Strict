@@ -11,6 +11,8 @@ constant Tiny = QwenVision.Loaded(Model, 2, (0, 1, 2))
 constant Image = QwenVision.Reference.Values("reference.image")
 constant Outputs = QwenVision.Tiny.Encoded(QwenVision.Image, 32, 48)
 constant Pixels = QwenVision.Tiny.Patched(QwenVision.Tiny.Resized(QwenVision.Image, 32, 48, (4, 6)), (4, 6))
+constant MaxPixels = 12845056
+constant MinPixels = 3136
 Loaded(file Safetensors, heads Number, layers Numbers) Slow(QwenVision)
 	Tiny.patchSize is 16
 	Tiny.deepstacks.Length is 3
@@ -54,12 +56,12 @@ Grid(height Number, width Number) Numbers
 	let factor = 2 * patchSize
 	let rows = Rounded(height / factor) * factor
 	let columns = Rounded(width / factor) * factor
-	if rows * columns > 12845056
-		let shrink = (height * width / 12845056).SquareRoot
+	if rows * columns > MaxPixels
+		let shrink = (height * width / MaxPixels).SquareRoot
 		let shrunk = ((height / shrink / factor).Floor * factor, (width / shrink / factor).Floor * factor)
 		return ((factor, shrunk(0)).Maximum / patchSize, (factor, shrunk(1)).Maximum / patchSize)
-	if rows * columns < 3136
-		let grow = (3136 / (height * width)).SquareRoot
+	if rows * columns < MinPixels
+		let grow = (MinPixels / (height * width)).SquareRoot
 		return ((height * grow / factor).Ceiling * 2, (width * grow / factor).Ceiling * 2)
 	(rows / patchSize, columns / patchSize)
 Rounded(number Number) Number

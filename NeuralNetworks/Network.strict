@@ -3,6 +3,7 @@ constant Single = Network(List(Layer) + Layer.Halves)
 constant Halved = (List(Numbers) + (1, 0)) + (List(Number) + 0.5)
 constant Pair = Network((Layer(((0.5, 0.5), (0.5, 0.5)), (0, 0)), Layer.Halves))
 constant Classifier = Network(List(Layer) + Layer(((1, 0), (0, 1)), (0, 0)))
+constant LearningRate = 0.25
 Random(sizes Numbers, hidden = Activation.Sigmoid) Network
 	Network.Random((2, 3, 1)).layers.Length is 2
 	Network.Random((2, 3, 1)).layers.Last.weights.First.Length is 3
@@ -74,7 +75,7 @@ Learned(data Dataset, epochs Number) Slow(Network)
 	for epochs
 		let shuffled = data.Shuffled
 		for shuffled.inputs
-			trained = trained.Trained(value, shuffled.targets(index), 0.25)
+			trained = trained.Trained(value, shuffled.targets(index), LearningRate)
 	trained
 Accuracy(data Dataset) Number
 	Single.Accuracy(Dataset(List(Numbers), List(Numbers))) is 0

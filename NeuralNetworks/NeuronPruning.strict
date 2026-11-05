@@ -1,15 +1,16 @@
 has logger
 constant Pruning = NeuronPruning(Logger)
 constant Measured = Activity(Gpt2.Tiny).Measured(Gpt2Tokens.Tiny, ("ab ab", "ab"))
+constant Fractions = (0.1, 0.2, 0.3, 0.5)
 Run(path Text)
 	let evaluation = Evaluation(logger)
 	let calibrating = evaluation.Calibration(8)
 	let tokenizer = Gpt2Tokens.Folder(path)
-	let model = Gpt2.Loaded(path + "/model.safetensors", 16)
+	let model = Gpt2.Loaded(path + "/model.safetensors", BFloat16.Bits)
 	let activity = Activity(model).Measured(tokenizer, calibrating(0) + calibrating(1))
 	let heldout = evaluation.Heldout(8)
 	logger.Log(path + " with all MLP neurons: " + LayerDropping(logger).Reported(model, tokenizer, heldout))
-	for (0.1, 0.2, 0.3, 0.5)
+	for Fractions
 		let pruned = Pruned(model, activity, value)
 		logger.Log("without " + value * 100 + "% of them: " + LayerDropping(logger).Reported(pruned, tokenizer, heldout))
 Pruned(model Gpt2, activity Activity, fraction Number) Slow(Gpt2)
@@ -51,9 +52,10 @@ Kept(scores Numbers, count Number) Numbers
 Threshold(scores Numbers, count Number) Number
 	Pruning.Threshold((3, 1, 2, 5), 2) > 2
 	Pruning.Threshold((3, 1, 2, 5), 2) <= 3
+	constant BisectionSteps = 60
 	mutable low = scores.Minimum
 	mutable high = scores.Maximum + 1
-	for 60
+	for BisectionSteps
 		let middle = (low + high) / 2
 		let isEnough = Above(scores, middle) >= count
 		low = isEnough then middle else low

@@ -1,5 +1,8 @@
 has logger
 constant Prompt = "Alan Turing theorized that computers would one day become"
+constant TopK = 40
+constant TopP = 0.95
+constant TailShare = 0.95
 Run(path Text, bits Number, count Number, repeats = 1, batch = 1, cacheBits = 32, temperature = 0)
 	let tokenizer = Gpt2Tokens.Loaded(Gguf(path))
 	let started = Process.Elapsed
@@ -24,7 +27,7 @@ Fastest(model Qwen3, prompt Numbers) Slow(Number)
 Sampled(model Qwen3, position Number, count Number, temperature Number) Slow(Numbers)
 	Qwen3Benchmark(Logger).Sampled(Qwen3.Tiny.Step(1, 0), 1, 2, 1).Length is 2
 	let started = Process.Elapsed
-	let tokens = Generation(model, Sampling(temperature, 40, 0.95, PseudoRandom(1))).Continued(position, count)
+	let tokens = Generation(model, Sampling(temperature, TopK, TopP, PseudoRandom(1))).Continued(position, count)
 	let milliseconds = ((Process.Elapsed - started) * 1000 / count).Round(2)
 	if temperature > 0
 		logger.Log("sampled " + count + " tokens at temperature " + temperature + " in " + milliseconds + " ms per token")
@@ -54,7 +57,7 @@ Report(prompt Number, prefill Number, durations Numbers, batch Number) Text
 	let prefilled = "prefill " + prompt + " tokens " + prefill.Round(2) + " ms (" + (1000 / prefill).Round + " tokens/s), "
 	let steps = batch is 1 then durations.Length + " tokens" else durations.Length + " steps of " + batch + " tokens"
 	let decoded = "decode " + steps + " median " + median.Round(2) + " ms (" + (batch * 1000 / median).Round
-	let late = " ms p95 " + Quantile(durations, 0.95).Round(2) + " ms"
+	let late = " ms p95 " + Quantile(durations, TailShare).Round(2) + " ms"
 	prefilled + decoded + " tokens/s) mean " + mean.Round(2) + late
 Quantile(numbers Numbers, share Number) Number
 	Qwen3Benchmark(Logger).Quantile((3, 1, 2), 0.5) is 2

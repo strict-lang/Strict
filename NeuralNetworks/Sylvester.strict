@@ -33,9 +33,10 @@ Stage(input Numbers, flipping Numbers, step Number) Slow(Numbers)
 Sign(row Number, column Number) Number
 	Wide.Sign(3, 1) is -1
 	Wide.Sign(31, 21) is -1
+	constant FifthBit = 16
 	let first = (row % 2) * (column % 2) + ((row / 2).Floor % 2) * ((column / 2).Floor % 2)
 	let second = ((row / 4).Floor % 2) * ((column / 4).Floor % 2) + ((row / 8).Floor % 2) * ((column / 8).Floor % 2)
-	1 - 2 * ((first + second + ((row / 16).Floor % 2) * ((column / 16).Floor % 2)) % 2)
+	1 - 2 * ((first + second + ((row / FifthBit).Floor % 2) * ((column / FifthBit).Floor % 2)) % 2)
 Repeated(count Number) Numbers
 	Wide.Repeated(9) is (-3, -2, -1, 0, 1, 2, 3, -3, -2)
 	for count

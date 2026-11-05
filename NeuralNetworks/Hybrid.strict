@@ -2,6 +2,7 @@ has layers List(DeltaBlock)
 has entered Numbers = List(Number)
 has gates Numbers = List(Number)
 has inputs List(Numbers) = List(Numbers)
+constant RewindableTokens = 16
 constant None = Hybrid(List(DeltaBlock))
 constant Tiny = Hybrid(List(DeltaBlock) + DeltaBlock.Tiny)
 constant Single = Tiny.Prepared(Drafter.Rows(1))
@@ -36,7 +37,7 @@ Prepared(input Numbers) Hybrid
 		let cached = value.Cached(combined)
 		hidden = cached.Output(hidden)
 		stepped.Add(DeltaBlock(cached, merged = List(Number)))
-		combinations.Add(combined.Length > 16 * value.Width then List(Number) else combined)
+		combinations.Add(combined.Length > RewindableTokens * value.Width then List(Number) else combined)
 	Hybrid(stepped, hidden, inputs = combinations)
 Opened(combined Numbers, tokens Number, start Number) Hybrid
 	None.Opened((1, 2, 3, 4), 2, 1).gates is (2, 4)

@@ -1,6 +1,12 @@
 has qwen Boolean
 constant Gpt = TokenSplitter(false)
 constant Qwen = TokenSplitter(true)
+constant Space = 32
+constant Whitespace = Range(9, 14)
+constant Uppercase = Range(Character.UppercaseA, Character.UppercaseZ + 1)
+constant Lowercase = Range(Character.LowercaseA, Character.LowercaseZ + 1)
+constant Digits = Range(Character.zeroCharacter, Character.zeroCharacter + 10)
+constant LastAscii = 127
 Words(text Text) Texts
 	Gpt.Words("Hi there's  42!") is ("Hi", " there", "'s", " ", " 42", "!")
 	Gpt.Words("a\n b ") is ("a", "\n", " b", " ")
@@ -85,8 +91,8 @@ Kind(text Text, index Number) Number
 	if index >= text.Length
 		return -1
 	let code = text(index).number
-	if (code is 32) or (code is in Range(9, 14))
+	if (code is Space) or (code is in Whitespace)
 		return 0
-	if (code > 127) or (code is in Range(65, 91)) or (code is in Range(97, 123))
+	if (code > LastAscii) or (code is in Uppercase) or (code is in Lowercase)
 		return 1
-	code is in Range(48, 58) then 2 else 3
+	code is in Digits then 2 else 3

@@ -4,7 +4,7 @@ Run(path Text, count = 4)
 	let calibrating = evaluation.Calibration(2)
 	let heldout = evaluation.Heldout(8)
 	let tokenizer = Gpt2Tokens.Folder(path)
-	mutable model = Gpt2.Loaded(path + "/model.safetensors", 16)
+	mutable model = Gpt2.Loaded(path + "/model.safetensors", BFloat16.Bits)
 	mutable kept = List(Mutable(Number)) + Indices(model.blocks.Length)
 	logger.Log(path + " with all " + kept.Length + " blocks: " + Reported(model, tokenizer, heldout))
 	for count

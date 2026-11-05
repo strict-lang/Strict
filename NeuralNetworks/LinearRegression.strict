@@ -2,8 +2,9 @@ has logger
 constant Inputs = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
 constant Targets = (1.1, 2.9, 5.2, 6.8, 9.1, 11, 13.2, 14.9, 17.1, 19)
 constant Rate = 0.02
+constant Steps = 2000
 Run
-	logger.Log("Gradient descent: " + Described(Fitted((0, 0), 2000)))
+	logger.Log("Gradient descent: " + Described(Fitted((0, 0), Steps)))
 	logger.Log("Least squares:    " + Described(Exact))
 Described(line Numbers) Text
 	LinearRegression.Described((2, 1)) is "y = 2 x + 1, error 0.017"

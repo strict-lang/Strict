@@ -1,6 +1,6 @@
 has logger
 Run(path Text, count Number, drafts Number)
-	let model = Qwen3(Qwen3.Loaded(path, 4), cacheBits = 32)
+	let model = Qwen3(Qwen3.Loaded(path, 4), cacheBits = Number.SingleBits)
 	let prompt = Gpt2Tokens.Loaded(Gguf(path)).Encoded(Qwen3Benchmark.Prompt)
 	let gguf = Gguf(path, 4)
 	let drafter = Drafter.Loaded(gguf, gguf.Value("qwen35.attention.head_count") to Number)

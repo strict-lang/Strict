@@ -3,6 +3,7 @@ has target Numbers
 constant Planar = Reach(Arm.Planar, (0.4, 0.5, 0))
 constant Franka = Reach(Arm.Franka, (0.01, 0.7, 0.28))
 constant Population = 40
+constant MutationRate = 0.2
 Distance(angles Numbers) Number
 	Planar.Distance((0, 0)) is 0.6403124237432849
 	let difference = Network.Difference(arm.Reached(angles), target)
@@ -32,7 +33,7 @@ Mutated(angles Numbers) Numbers
 	Planar.Mutated((10, 20)).Length is 2
 	Planar.Mutated((180, 180)).First <= 180
 	for angles
-		(1.Random < 0.2 then value + 10.Random - 5 else value).Clamp(arm.lowest(index), arm.highest(index))
+		(1.Random < MutationRate then value + 10.Random - 5 else value).Clamp(arm.lowest(index), arm.highest(index))
 Tournament(population List(Numbers)) Numbers
 	Planar.Tournament(List(Numbers) + (0, 0)) is (0, 0)
 	let first = population(population.Length.Random.Floor)

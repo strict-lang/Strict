@@ -19,7 +19,7 @@ Loaded(model Gguf, prefix Text) Slow(NgramEmbedding)
 	let keyed = Layer(model.Rows(prefix + "ple_key.weight"), Layer.Unbiased)
 	let valued = Layer(model.Rows(prefix + "ple_value.weight"), Layer.Unbiased)
 	let norms = (model.Values(prefix + "ple_norm_key.weight"), model.Values(prefix + "ple_norm_query.weight"))
-	let taps = Gguf(model, bits = 32).Rows(prefix + "ple_conv1d.weight")
+	let taps = Gguf(model, bits = Number.SingleBits).Rows(prefix + "ple_conv1d.weight")
 	NgramEmbedding(keyed, valued, norms(0), norms(1), model.Values(prefix + "ple_norm_conv.weight"), taps)
 Embedded(table List(Numbers), rows Numbers) Numbers
 	Tiny.Embedded(((1), (2), (3)), (2, 0)) is (3, 1)
