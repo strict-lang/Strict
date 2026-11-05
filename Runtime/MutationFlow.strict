@@ -26,7 +26,8 @@ Followed(entry InstructionEntry, register Number, at Number) Boolean
 	Issued.Followed(Issuing, 0, 2)
 	Looped.Followed(Looped.method.instructions(2), 1, 2)
 	Twice.Followed(InstructionEntry.Return(0), 0, 0) is false
-	if entry.kind is InstructionType.LoopBegin
+	Twice.Followed(InstructionEntry(InstructionType.Print, "Settings: ", (-1, 1, 2, 1)), 2, 0)
+	if entry.kind is in (InstructionType.LoopBegin, InstructionType.Print)
 		return true
 	if entry.kind is InstructionType.StoreRegisterToVariable
 		return IsLoadIgnored(entry.texts.First, at)
