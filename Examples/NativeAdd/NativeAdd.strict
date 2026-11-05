@@ -11,6 +11,9 @@ Greeted Text
 Summed Number
 	NativeAdd.Summed is 6
 	Adder.Total((1, 2, 3))
+HalvesTotal Number
+	NativeAdd.HalvesTotal is 6
+	Adder.Total(Adder.Halved((1, 2, 3)))
 Doubles Numbers
 	NativeAdd.Doubles is (2, 4, 6)
 	Adder.Doubled((1, 2, 3))
@@ -20,7 +23,7 @@ Halves Numbers
 Rows List(Numbers)
 	NativeAdd.Rows is ((1, 2), (3, 4))
 	Adder.Split((1, 2, 3, 4), 2)
-Dot(left Numbers, right Numbers) Number
+Dot(left Numbers with value.Bits is 32, right Numbers with value.Bits is 32) Number
 	NativeAdd.Dot(Adder.Halved((1, 2, 3)), (1, 1, 1)) is 6
 	NativeAdd.Dot((1, 1, 1), Adder.Halved((1, 2, 3))) is 6
 	mutable sum = 0

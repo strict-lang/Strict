@@ -83,7 +83,7 @@ Places(functions List(MlirFunction), names Texts, files Texts) Texts
 Uncompiled(functions List(MlirFunction), mains List(TypeEntry)) List(MlirFunction)
 	MlirLines.Uncompiled(List(MlirFunction) + Lined, List(TypeEntry) + Shaped).Length is 1
 	MlirLines.Uncompiled(List(MlirFunction) + Lined, (Shaped, Shaped)).Length is 2
-	let symbols = MlirModule.Counters.Symbols(functions)
+	let symbols = MlirRecursion.Symbols(functions)
 	mutable uncompiled = List(Mutable(MlirFunction))
 	for main, method in mains, main.methods
 		let candidate = MlirFunction(functions.First.types, main, method)

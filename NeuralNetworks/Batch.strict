@@ -51,7 +51,7 @@ Gated(input Numbers) Slow(Numbers)
 	for half * input.Length / width
 		let gate = Dot(weights(index % half), 0, input, (index / half).Floor * width)
 		gate / (1 + (-gate).Exponential) * Dot(weights(index % half + half), 0, input, (index / half).Floor * width)
-Dot(row Numbers, first Number, input Numbers, start Number) Slow(Number)
+Dot(row Numbers with value.Bits is 32, first Number, input Numbers with value.Bits is 32, start Number) Slow(Number)
 	Pair.Dot((1, 2), 0, (5, 1, 3), 1) is 7
 	Fours.Sums(Long)(1277).IsNearlyEqual(5.001, 0.5)
 	Sixes.Sums(Long)(1140).IsNearlyEqual(-3.413, 0.2)

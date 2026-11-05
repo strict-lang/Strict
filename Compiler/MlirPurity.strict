@@ -64,10 +64,11 @@ IsOwned(inspected MlirFunction, entry InstructionEntry) Boolean
 IsLocal(entry InstructionEntry) Boolean
 	Doubling.IsLocal(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "numbers")) is false
 	Doubling.IsLocal(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "twice"))
+	Doubling.IsLocal(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "numbers(index)")) is false
 	Clamping.IsLocal(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "conditional0"))
 	if entry.kind is not in (InstructionType.StoreRegisterToVariable, InstructionType.StoreConstantToVariable)
 		return true
-	let name = entry.kind is InstructionType.StoreConstantToVariable then entry.texts.Last else entry.texts.First
+	let name = entry.texts.Last.Split("(").First
 	let end = function.method.LoopEndOf(position)
 	for function.method.instructions
 		if ((index <= position) or (index >= end)) and (name is in value.texts)
@@ -155,3 +156,25 @@ IsPureMethod(callee MlirFunction, depth Number) Boolean
 		if IsSafe(callee, index, depth) is false
 			return false
 	true
+IsSteady Boolean
+	MlirPurity(MlirLoops.Listing.function, 1).IsSteady
+	MlirPurity(MlirKernel.Calling.function, 1).IsSteady is false
+	MlirPurity(MlirLoops.Collecting.function, 1).IsSteady
+	MlirPurity(MlirKernel.Calling.function, 1).IsChanging(3) is false
+	MlirPurity(MlirLoops.Assigning.function, 1).IsSteady is false
+	MlirPurity(MlirLoops.Assigning.function, 1).IsChanging(3)
+	for Range(position + 1, function.method.LoopEndOf(position))
+		if IsChanging(value)
+			return false
+	true
+IsChanging(at Number) Boolean
+	MlirPurity(MlirLoops.Collecting.function, 1).IsChanging(2) is false
+	MlirPurity(MlirKernel.Calling.function, 1).IsChanging(2)
+	let entry = function.method.instructions(at)
+	if entry.kind is InstructionType.StoreRegisterToVariable
+		return entry.texts(0).IndexOf("(") > 0
+	if entry.kind is in Writes
+		return (entry.texts.Length is 0) or (entry.texts(0) is not "forResult")
+	if entry.kind is not in MlirListOperators.Operators
+		return entry.kind is in (InstructionType.Invoke, InstructionType.Set)
+	MlirListOperators(function, at).IsOperation

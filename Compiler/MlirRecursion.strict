@@ -15,7 +15,7 @@ Recursive(edges List(Numbers)) Texts
 Edges List(Numbers)
 	Looping.Edges(1) is (1)
 	Looping.Edges(0) is (1)
-	let symbols = MlirModule.Counters.Symbols(functions)
+	let symbols = Symbols(functions)
 	mutable edges = List(Mutable(Numbers))
 	for functions
 		edges.Add(Indexes(MlirModule(value.types, "").Callees(value), symbols))
@@ -48,3 +48,7 @@ IsBack(callees Numbers, rank Number, order Numbers) Boolean
 		if (value < 0) or (order.Index(value) >= rank)
 			return true
 	false
+Symbols(listed List(MlirFunction)) Texts
+	MlirRecursion.Symbols(MlirModule.Counters.Functions) is ("Counter_Run_0")
+	for listed
+		value.Symbol

@@ -2,6 +2,7 @@ has function MlirFunction
 has position Number
 constant Copy = MlirStatements(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 7), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "a"), InstructionEntry.Return(0)))), 0)
 constant Summing = MlirStatements(MlirFastLoop.Summing.function, 5)
+constant ListKinds = (InstructionType.IndexCall, InstructionType.InvokeWriteToList, InstructionType.CopyList, InstructionType.InvokeRemove)
 constant Exact = "    %t0c = arith.select %x0v, %x0i, %t0f : i1"
 constant Loading = MlirStatements(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "a"), InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, 1), InstructionEntry.Jump(InstructionType.JumpEnd, 0), InstructionEntry.Jump(InstructionType.JumpEnd, 1), InstructionEntry.Return(1)))), 0)
 constant Branched = ("    %t1 = llvm.load %flag : !llvm.ptr -> i1", "    cf.cond_br %t1, ^bb3, ^bb2")
@@ -56,10 +57,12 @@ Hex(number Number) Text
 Returned(entry InstructionEntry) Texts
 	MlirStatements(Copy.function, 2).Returned(InstructionEntry.Return(0)).Last is "    return %t2 : f64"
 	Text.Combine(MlirStatements(MlirChecks.Presenting, 2).Returned(InstructionEntry.Return(0))).IndexOf("frame_ended") > 0
+	Text.Combine(MlirStatements(MlirDying.Dropping.function, 10).Returned(MlirDying.Dropped)).IndexOf("rc_dead(%t10d0") > 0
 	Copy.Returned(InstructionEntry.Return(1)) is Returning
 	if MlirLayout(function).IsInitializer
 		return MlirChanged(function, position).Kept + MlirLayout(function).Returned(position)
-	let loaded = List(Text) + function.Load(Temp(""), "%r" + entry.payload(0))
+	let dying = MlirDying(function, position).Returned(entry)
+	let loaded = (List(Text) + function.Load(Temp(""), "%r" + entry.payload(0))) + dying
 	MlirChanged(function, position).Kept + loaded + MlirLines(function).Framed + ("    return " + Temp("") + " : f64")
 Jumped(entry InstructionEntry) Texts
 	Copy.Jumped(InstructionEntry.Jump(InstructionType.JumpEnd, 0)).Length is 0
@@ -103,20 +106,25 @@ Operated(kind Number, left Text, right Text) Text
 	Copy.Operated(InstructionType.Add, "%a", "%b") is "    %t0c = arith.addf %a, %b : f64"
 	Summing.Operated(InstructionType.Add, "%a", "%b") is "    %t5c = arith.addf %a, %b fastmath<reassoc,contract> : f64"
 	MlirStatements(MlirFastLoop.Doubling.function, 6).Operated(InstructionType.Add, "%a", "%b").IndexOf("fastmath") is -1
+	Copy.Operated(InstructionType.Power, "%a", "%b").IndexOf("@strict_power(%a, %b)") > 0
+	MlirStatements(MlirFastLoop.Doubling.function, 6).Operated(InstructionType.Power, "%a", "%b").IndexOf("intr.pow(") > 0
 	let result = "    " + Temp("c") + " = "
-	if kind is InstructionType.Power
-		return result + "llvm.intr.pow(" + left + ", " + right + ") : (f64, f64) -> f64"
-	if kind is InstructionType.Modulo
-		return result + "func.call @strict_remainder(" + left + ", " + right + ") : (f64, f64) -> f64"
+	if kind is in (InstructionType.Power, InstructionType.Modulo)
+		return result + Called(kind) + "(" + left + ", " + right + ") : (f64, f64) -> f64"
 	let isSum = MlirFastLoop(function, function.FastLoop).IsAccumulated(position)
 	let flags = isSum then " fastmath<reassoc,contract>" else ""
 	result + "arith." + Operation(kind) + " " + left + ", " + right + flags + " : f64"
+Called(kind Number) Text
+	Copy.Called(InstructionType.Modulo) is "func.call @strict_remainder"
+	if kind is InstructionType.Modulo
+		return "func.call @strict_remainder"
+	function.FastLoop >= 0 then "llvm.intr.pow" else "func.call @strict_power"
 Operation(kind Number) Text
 	Copy.Operation(InstructionType.Divide) is "divf"
 	Copy.Operation(InstructionType.Add) is "addf"
 	Copy.Operation(InstructionType.Subtract) is "subf"
 	Copy.Operation(InstructionType.Multiply) is "mulf"
-	Copy.Operated(InstructionType.Power, "%a", "%b") is "    %t0c = llvm.intr.pow(%a, %b) : (f64, f64) -> f64"
+	Copy.Operated(InstructionType.Power, "%a", "%b") is "    %t0c = func.call @strict_power(%a, %b) : (f64, f64) -> f64"
 	if kind is InstructionType.Add
 		return "addf"
 	if kind is InstructionType.Subtract

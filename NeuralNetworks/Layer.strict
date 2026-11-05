@@ -43,7 +43,7 @@ Sums(input Numbers) Numbers
 	Threes.Sums(Gguf("NeuralNetworks/tiny.gguf", 32).Rows("r2").Last).Last.IsNearlyEqual(45.75, 0.01)
 	for weights
 		Summed(value, input) + biases(index % biases.Length)
-Summed(row Numbers, input Numbers) Number
+Summed(row Numbers with value.Bits is 32, input Numbers with value.Bits is 32) Number
 	Halves.Summed((1, 2), (1, 3)) is 7
 	mutable sum = 0
 	for row

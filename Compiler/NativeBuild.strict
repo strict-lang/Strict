@@ -30,9 +30,9 @@ Compile(path Text, root Text, isCounting = false, isGating = false, sources Text
 Device(program Text, base Text, root Text) Text
 	NativeBuild.Device("module {\n}", "A", ".") is "module {\n" + PtxCache.Empty
 	NativeBuild(Logger, isWeb = true).Device("module {\n" + MlirGpu.Marker + "\n  x\n}", "Web", ".").Length > 0
-	let at = Unsupported(program)
-	if at is not -1
-		return Checked("Native compilation failed, " + program.Substring(at, program.Length - at).Lines.First)
+	let failure = Failure(program)
+	if failure is not ""
+		return Checked("Native compilation failed, " + failure)
 	let marker = program.IndexOf("\n" + MlirGpu.Marker)
 	if (marker < 0) or isFast
 		return PtxCache(base).Unlaunched(program)
@@ -145,12 +145,15 @@ Mlir(program Text, root Text, platform Number) Slow(Text)
 	if platform is Platform.Web
 		return WebBuild.Sized(body + runtime) + "\n" + system + "\n}"
 	Text.Combine((body, runtime, "\n", system, "\n}"), "")
-Unsupported(mlir Text) Number
-	NativeBuild.Unsupported("a\nunsupported: x") is 2
-	NativeBuild.Unsupported("unsupported: x") is 0
-	NativeBuild.Unsupported("@c(\"unsupported: x\")") is -1
-	("\n" + mlir).IndexOf("\nunsupported:")
 Released(mlir Text) Text
 	NativeBuild(Logger, false, isReleased = true).Released(Watching) is Watching.Replace("(1 : i64)", "(0 : i64)")
 	NativeBuild(Logger, false).Released(Watching) is Watching
 	isReleased or isCrossing then mlir.Replace(Watching, Watching.Replace("(1 : i64)", "(0 : i64)")) else mlir
+Failure(program Text) Text
+	NativeBuild.Failure("unsupported: a\nb") is "unsupported: a\nb"
+	NativeBuild.Failure("x\nunsupported: a\nb") is "unsupported: a"
+	NativeBuild.Failure("@c(\"unsupported: x\")") is ""
+	let at = ("\n" + program).IndexOf("\nunsupported:")
+	if at < 0
+		return ""
+	at is 0 then program else program.Substring(at, program.Length - at).Lines.First

@@ -1,4 +1,4 @@
-has numbers
+has numbers with value.Bits is 64
 GetMultiplicationOfNumbers Number
 	ReduceButGrow(2, 3, 4, 5).GetMultiplicationOfNumbers is 120
 	ReduceButGrow(120, 5, 40, 0).GetMultiplicationOfNumbers is 0

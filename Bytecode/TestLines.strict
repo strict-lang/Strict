@@ -102,10 +102,11 @@ Validations(header HeaderTokens) SyntaxNodes
 Checks(header HeaderTokens, line Number) SyntaxNodes
 	Plain.Checks(HeaderTokens(Tokenizer("Run(frames Number) Number").Tokens), 1).Length is 0
 	Plain.Checks(FramedHeader, 1).First.line is 1
+	Plain.Checks(HeaderTokens(Tokenizer("D(a Numbers with value.Bits is 32)").Tokens), 1).Length is 0
 	let parameterTypes = header.ParameterTypes
 	mutable checks = List(Mutable(SyntaxNode))
 	for header.ParameterNames
-		let constraint = Constraint.Parameter(header, value)
+		let constraint = Constraint.Checking(Constraint.Parameter(header, value))
 		if constraint is not ""
 			checks.Add(Constraint(value, parameterTypes(index), values.inference.types).Checked(constraint, line))
 	checks

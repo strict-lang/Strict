@@ -10,7 +10,7 @@ Of(original VmValue) VmValue
 	Single.Of(VmValue.OfList(VmValue.OfNumber(0.1), VmValue.OfNumber(1))).items.First.number is 0.10000000149011612
 	Single.Of(VmValue.OfError("a")).kind is "Strict/Error"
 	Rounding(8).Of(VmValue("Strict/Byte", 127.5, "", List(VmValue))).number is 127
-	if (bits is Number.DoubleBits) or (original.kind is in VmValue.ErrorKinds)
+	if (bits is in (0, Number.DoubleBits)) or (original.kind is in VmValue.ErrorKinds)
 		return original
 	if original.items.Length is 0
 		return VmValue(original.kind, Rounded(original.number), original.text, original.items)
@@ -31,8 +31,9 @@ Bits(member MemberEntry, natives Natives) Number
 	Single.Bits(Natives.Width, Natives.Shapes) is 64
 	Single.Bits(Natives.Pixel.members.First, Natives(List(TypeEntry) + Natives.Byted)) is 8
 	Single.Bits(MemberEntry("x", "Strict/Byte", List(InstructionEntry), false, 32), Bytes) is 32
-	let changing = natives.TypeOf(member.typeName).Changing
-	(member.Bits is not Number.DoubleBits) or (changing.Length is not 1) then member.Bits else changing.First.Bits
+	let type = natives.TypeOf(member.typeName)
+	let own = (member.Bits > 0) or (type.Changing.Length is not 1) then member.Bits else type.Changing.First.Bits
+	own is 0 then Number.DoubleBits else own
 Wrapped(type TypeEntry, call Invocation) VmValue
 	Single.Wrapped(Natives.Single, Natives.NewSingle).number is 0.10000000149011612
 	Single.Wrapped(Natives.Degree, Natives.NewDegree).number is 3

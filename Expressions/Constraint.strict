@@ -73,12 +73,13 @@ Length(line Text) Number
 	(words.Length is 3) and checking.StartsWith("Length is ") then words.Last to Number else 0
 Bits(constraint Text) Number
 	Constraint.Bits("value > 0 and value.Bits is 32") is 32
-	Constraint.Bits("value > 0") is 64
+	Constraint.Bits("value > 0") is 0
+	Constraint.Bits("value.Bits is 64") is 64
 	Constraint.Bits("value . Bits is 16") is 16
 	constant prefix = "Bits is "
 	let start = constraint.IndexOf(prefix)
 	if start < 0
-		return Number.DoubleBits
+		return 0
 	let end = start + prefix.Length
 	Tokenizer(constraint.Substring(end, constraint.Length - end)).Tokens.First to Number
 Checking(constraint Text) Text

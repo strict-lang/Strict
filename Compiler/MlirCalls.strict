@@ -23,7 +23,7 @@ Temp(suffix Text) Text
 	"%t" + position + suffix
 Emitted Texts
 	MlirCalls(Shapes, 1).Emitted.Last is "    llvm.store %t1r, %r1 : f64, !llvm.ptr"
-	MlirCalls(Hashes, 1).Emitted.Last is "    llvm.store %t1tr, %r1 : f64, !llvm.ptr"
+	MlirCalls(Hashes, 1).Emitted.Last is "    llvm.store %t1r, %r1 : f64, !llvm.ptr"
 	Text.Combine(MlirCalls(Shapes, 1).Emitted).IndexOf("@strict_pin(%t1of)") > 0
 	let entry = function.method.instructions(position)
 	if entry.kind is InstructionType.Print
@@ -69,7 +69,7 @@ IsMemberValue(entry InstructionEntry, type TypeEntry, chosen MethodEntry) Boolea
 	let argument = MlirKinds(function).KindOf(position, entry.payload(countPosition + 1))
 	(argument is TypeEntry.ShortName(type.Name)) or (layout.Represented(argument) is member)
 Invoked(entry InstructionEntry, decoder PayloadDecoder) Texts
-	MlirCalls(Shapes, 2).Invoked(Area, PayloadDecoder(Area)).Last is "    llvm.store %t2tr, %r2 : f64, !llvm.ptr"
+	MlirCalls(Shapes, 2).Invoked(Area, PayloadDecoder(Area)).Last is "    llvm.store %t2r, %r2 : f64, !llvm.ptr"
 	Text.Combine(MlirCalls(MlirGroups.Norming.function, 11).Emitted).IndexOf("^t11kept") > 0
 	MlirCalls(MlirTails.Sample.function, 1).Emitted.Last is "  ^tail1:"
 	let type = MlirLayout(function).Owner(function.TypeOf(decoder.Text(1)), decoder.Text(2))
@@ -82,7 +82,7 @@ Invoked(entry InstructionEntry, decoder PayloadDecoder) Texts
 	let compiled = MlirDestined(function, position).Destined(entry, Compiled(entry, decoder, type, count))
 	MlirGrouped(function, position).Kept(compiled, entry.payload(0))
 Compiled(entry InstructionEntry, decoder PayloadDecoder, type TypeEntry, count Number) Texts
-	MlirCalls(Shapes, 2).Compiled(Area, PayloadDecoder(Area), AreaShape, 0).Length is 6
+	MlirCalls(Shapes, 2).Compiled(Area, PayloadDecoder(Area), AreaShape, 0).Length is 3
 	let callee = decoder.Callee(type)
 	let target = MlirFunction(function.types, type, callee, typeIndex = function.typeIndex)
 	if (callee.instructions.Length is 0) and (MlirForeign(target).IsForeign is false)
@@ -91,9 +91,8 @@ Compiled(entry InstructionEntry, decoder PayloadDecoder, type TypeEntry, count N
 	let names = Text.Combine(List(Text) + Temp("m") + ArgumentNames(callee.parameters.Length), ", ")
 	let called = "    " + Temp("r") + " = func.call @" + MlirCached(target).Called
 	let call = called + "(" + names + ") : (" + types + ") -> f64"
-	let traced = MlirMemory(function, position).Traced(Temp("r"), Temp("tr"), "strict_trace")
-	let stored = function.Store(Temp("tr"), "%r" + entry.payload(0))
-	MlirWholeCall(function, position).Dispatched(Loads(entry, type) + Defaults(callee, count) + call + traced + stored)
+	let returned = MlirChecks(function, position).Returned(target, entry.payload(0))
+	MlirWholeCall(function, position).Dispatched(Loads(entry, type) + Defaults(callee, count) + call + returned)
 Defaults(callee MethodEntry, count Number) Texts
 	MlirCalls(Hashes, 1).Defaults(Defaulted, 0).Last is "    %t1a0 = llvm.load %r1 : !llvm.ptr -> f64"
 	if count > callee.parameters.Length

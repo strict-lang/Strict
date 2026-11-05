@@ -1,0 +1,51 @@
+has function MlirFunction
+has position Number
+constant Validating = MethodEntry("Validated", List(MemberEntry), "Strict/Shape", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "width"), InstructionEntry.Return(0)))
+constant Keeping = MethodEntry("Kept", List(MemberEntry), "Strict/Shape", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "width"), InstructionEntry.Invoke(1, ("Strict/Shape", "from", "Strict/Shape", "width"), 0, -1), InstructionEntry.Invoke(2, ("Strict/Shape", "Validated", "Strict/Shape"), List(Number), 1), InstructionEntry.Return(2)))
+constant Validator = TypeEntry("Strict/Shape", MlirFunction.Shape.members, (Validating, Keeping))
+constant Kept = MlirValidated(MlirFunction(List(TypeEntry) + Validator, Validator, Keeping), 2)
+constant Changed = MlirValidated(MlirFunction(List(TypeEntry) + Validator, Validator, MlirStructs.Checker.function.method), 2)
+IsKnown Boolean
+	Kept.IsKnown
+	Changed.IsKnown is false
+	let entry = function.method.instructions(position)
+	let isOwn = (entry.kind is InstructionType.Invoke) and (entry.texts(1) is "Validated")
+	if (isOwn is false) or (entry.texts(0) is not function.type.Name)
+		return false
+	let writer = MlirKinds(function).Writer(position, entry.payload.Last)
+	let made = writer >= 0 then function.method.instructions(writer) else entry
+	(made.kind is InstructionType.Invoke) and (made.texts(1) is "from") and IsUnchanged(made, writer)
+IsUnchanged(made InstructionEntry, at Number) Boolean
+	Kept.IsUnchanged(Keeping.instructions(1), 1)
+	Changed.IsUnchanged(MlirStructs.Checker.function.method.instructions(1), 1) is false
+	for Checked(function.type)
+		if IsKept(made, at, value) is false
+			return false
+	true
+Checked(owner TypeEntry) Texts
+	Kept.Checked(Validator) is ("width")
+	let names = MlirInstances(function, 0).StoredNames(owner)
+	for owner.methods
+		if value.Name is "Validated"
+			return Read(value, names)
+	List(Text)
+Read(validation MethodEntry, names Texts) Texts
+	Kept.Read(Validating, ("width", "height")) is ("width")
+	Kept.Read(Keeping, ("width")) is ("width", "?", "?")
+	Kept.Read(MethodEntry(Keeping, declaredType = "Strict/Text"), ("width")) is ("width")
+	for validation.instructions
+		if (value.kind is InstructionType.LoadVariableToRegister) and (value.texts(0) is in names)
+			value.texts(0)
+		else if (value.kind is InstructionType.Invoke) and (value.texts(0) is validation.declaredType)
+			"?"
+IsKept(made InstructionEntry, at Number, name Text) Boolean
+	Kept.IsKept(Keeping.instructions(1), 1, "width")
+	Changed.IsKept(MlirStructs.Checker.function.method.instructions(1), 1, "width") is false
+	let named = Invocation(made, List(VmValue), VmValue.None).ParameterNames.Index(name)
+	let index = named < 0 then MlirInstances(function, 0).StoredNames(function.type).Index(name) else named
+	if (index < 0) or (index >= made.payload(5 + made.payload(3)))
+		return false
+	let source = MlirKinds(function).Writer(at, made.payload(6 + made.payload(3) + index))
+	let loaded = source >= 0 then function.method.instructions(source) else made
+	let isMember = (loaded.kind is InstructionType.LoadVariableToRegister) and (loaded.texts(0) is name)
+	isMember and (name is not in function.method.ParameterNames) and MlirParameters(function).IsFixed(name)

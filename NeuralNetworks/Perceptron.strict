@@ -1,10 +1,10 @@
-has weights Numbers
+has weights Numbers with value.Bits is 32
 has bias Number
 constant Rate = 0.5
 constant Inputs = ((0, 0), (0, 1), (1, 0), (1, 1))
 constant Untrained = Perceptron((0, 0), 0)
 constant Both = Perceptron((1, 1), -1)
-Output(input Numbers) Number
+Output(input Numbers with value.Bits is 32) Number
 	Both.Output((1, 1)) is 1
 	Both.Output((0, 1)) is 0
 	Perceptron(List(Number) + -1, 1).Output(List(Number) + 1) is 0

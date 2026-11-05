@@ -66,11 +66,10 @@ static double Written(const char* path, unsigned char* bytes, int width, int hei
 STRICT_EXPORT double ImageCodec_SaveJpeg(double self, double path, double pixels, double width, double quality)
 {
 #if defined(_WIN32) || defined(__EMSCRIPTEN__)
-	const strict_numbers* values = strict_numbers_of(pixels);
 	if (!isfinite(width) || width < 1 || width > (INT_MAX - 3) / 3 || floor(width) != width ||
 		!isfinite(quality) || quality < 0 || quality > 100 || floor(quality) != quality)
 		return strict_fail("JpegInvalidDimensionsOrQuality");
-	double height = values->count / (width * 3);
+	double height = strict_count(pixels) / (width * 3);
 	if (!isfinite(height) || height < 1 || height > INT_MAX || floor(height) != height)
 		return strict_fail("JpegInvalidPixelCount");
 #ifdef _WIN32
@@ -87,7 +86,7 @@ STRICT_EXPORT double ImageCodec_SaveJpeg(double self, double path, double pixels
 		for (size_t column = 0; column < (size_t)width; column++)
 			for (size_t channel = 0; channel < channels; channel++)
 			{
-				double value = channel == 3 ? 1 : values->items[(row * (size_t)width + column) * 3 + channel];
+				double value = channel == 3 ? 1 : strict_number(pixels, (row * (size_t)width + column) * 3 + channel);
 				bytes[row * stride + column * channels + (channels == 3 ? 2 - channel : channel)] =
 					!(value > 0) ? 0 : value >= 1 ? 255 : (unsigned char)(value * 255 + 0.5);
 			}

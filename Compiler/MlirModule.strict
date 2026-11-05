@@ -19,10 +19,17 @@ Text Text
 	BuildProfile(Logger).Reported("Emission / reachability (" + reachable.Length + " functions)", started)
 	let edges = MlirRecursion(reachable, entries).Edges
 	let functions = Safe(reachable, edges)
-	if functions.First.method.instructions.Length is 0
-		return "unsupported: no " + entryName + " method without parameters in " + types.First.Name
+	let problem = Problem(functions)
+	if problem is not ""
+		return problem
 	let counted = countedFiles.Length is 0 then functions else MlirLines.Counted(functions, Mains, countedFiles)
 	Combined(Declared(counted, functions, edges), functions, counted)
+Problem(functions List(MlirFunction)) Text
+	Counters.Problem(Counters.Functions) is ""
+	NoRun.Problem(NoRun.Functions).StartsWith("unsupported: no Tests method")
+	if functions.First.method.instructions.Length is 0
+		return "unsupported: no " + entryName + " method without parameters in " + types.First.Name
+	MlirNarrowing.Problem(functions)
 Safe(reachable List(MlirFunction), edges List(Numbers)) List(MlirFunction)
 	Counters.Safe(Counters.Functions, List(Numbers) + List(Number)).Length is 1
 	let started = Process.Elapsed
@@ -100,7 +107,7 @@ RunMethod(main TypeEntry) MethodEntry
 	MethodEntry(entryName, List(MemberEntry), "None", List(InstructionEntry))
 Reachable(known List(MlirFunction), fresh List(MlirFunction)) List(MlirFunction)
 	Counters.Reachable(Counters.Functions, Counters.Functions).Length is 1
-	mutable symbols = Symbols(known)
+	mutable symbols = MlirRecursion.Symbols(known)
 	mutable found = List(Mutable(MlirFunction))
 	for function, callee in fresh, Callees(function)
 		let symbol = callee.Symbol
@@ -108,10 +115,6 @@ Reachable(known List(MlirFunction), fresh List(MlirFunction)) List(MlirFunction)
 			found.Add(callee)
 			symbols = symbols + symbol
 	found.Length is 0 then known else Reachable(known + found, found)
-Symbols(functions List(MlirFunction)) Texts
-	Counters.Symbols(Counters.Functions) is ("Counter_Run_0")
-	for functions
-		value.Symbol
 Callees(function MlirFunction) List(MlirFunction)
 	Counters.Callees(Counters.Functions.First).Length is 0
 	mutable callees = List(Mutable(MlirFunction))

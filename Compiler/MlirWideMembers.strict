@@ -1,0 +1,44 @@
+has function MlirFunction
+has position Number
+constant Spark = TypeEntry("Strict/Spark", (MemberEntry("size", "Strict/Number", List(InstructionEntry), false), MemberEntry("heat", "Strict/Number", List(InstructionEntry), false, 32)), List(MethodEntry))
+constant Sparks = MemberEntry("sparks", "Strict/List(Strict/Spark)", List(InstructionEntry), false)
+constant Advice = "), use value.Bits is 32 on them or on the list"
+constant Sparking = MlirWideMembers(MlirFunction(List(TypeEntry) + Spark + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Sparked", List(MemberEntry) + Sparks, "Strict/List(Strict/Spark)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "sparks"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 3)))), 2)
+Issue Text
+	Sparking.Issue.EndsWith(": VectorLoopMustUse32BitNumbers: Sparked loops over Spark with 64 bit numbers (size" + Advice)
+	MlirWideMembers(MlirParallel.Doubling.function, 2).Issue is ""
+	let wide = IsCandidate then Wide(Element, "", 0) else List(Text)
+	if wide.Length is 0
+		return ""
+	let file = TypeSource(function.type).Located("") + ":line " + function.method.instructions(position).line
+	let loops = ": " + MlirNarrowing.Rule + ": " + function.method.Name + " loops over " + TypeEntry.ShortName(Element)
+	file + loops + " with 64 bit numbers (" + Text.Combine(wide, ", ") + Advice
+Element Text
+	Sparking.Element is "Strict/Spark"
+	MlirKinds(function).ElementKind(MlirLoops(function, position).Collection)
+IsCandidate Boolean
+	Sparking.IsCandidate
+	MlirWideMembers(Sparking.function, 0).IsCandidate is false
+	let narrowing = MlirNarrowing(function, position)
+	let iterated = narrowing.Iterated
+	let isMarked = (iterated.Length > 0) and (narrowing.Bits(iterated.First) > 0)
+	let isStruct = MlirEmbedded(function).IsNumbers(Element) and (MlirPairs(function, 0).IsPaired(Element) is false)
+	let isCpu = MlirGpuCheck(function, position).IsGpu is false
+	isStruct and (isMarked is false) and isCpu and MlirParallel(function, position).IsParallel
+Wide(typeName Text, prefix Text, depth Number) Texts
+	Sparking.Wide("Strict/Spark", "", 0) is ("size")
+	mutable names = List(Text)
+	for MlirInstances(function, 0).Stored(function.TypeOf(TypeEntry.ShortName(typeName)))
+		let kind = MlirLayout(function).Represented(TypeEntry.ShortName(value.typeName))
+		let isWide = (kind is "Number") and (IsMarked(value) is false)
+		let nested = (kind is "Number") or (kind is "Pair") or (depth > 8) or (value.Bits > 0)
+		names = names + (isWide then List(Text) + (prefix + value.Name) else List(Text))
+		names = nested then names else names + Wide(value.typeName, prefix + value.Name + ".", depth + 1)
+	names
+IsMarked(member MemberEntry) Boolean
+	Sparking.IsMarked(Spark.members.Last)
+	Sparking.IsMarked(Spark.members.First) is false
+	if (member.Bits > 0) or (TypeEntry.ShortName(member.typeName) is "Number")
+		return member.Bits > 0
+	let stored = MlirInstances(function, 0).Stored(function.TypeOf(TypeEntry.ShortName(member.typeName)))
+	(stored.Length is 1) and (stored.First.Bits > 0)

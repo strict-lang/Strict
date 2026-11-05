@@ -1,0 +1,126 @@
+has function MlirFunction
+has position Number
+constant Summing = MlirNarrowing(MlirKernel.Summing.function, 1)
+constant Few = MlirNarrowing(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Sum", List(MemberEntry) + MlirLists.Items, "Strict/Number", (List(InstructionEntry) + InstructionEntry.LoadNumber(0, 8)) + MlirKernel.Summed.Slice(1, 7))), 1)
+constant Floats = MlirNarrowing(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Sum", List(MemberEntry) + MemberEntry("numbers", "Strict/List(Float32)", List(InstructionEntry), false), "Strict/Number", MlirKernel.Summed)), 1)
+constant Powering = MlirNarrowing(MlirFunction(Few.function.types, MlirFunction.Shape, MethodEntry("Sum", Few.function.method.parameters, "Strict/Number", (MlirKernel.Summed.Slice(0, 5) + InstructionEntry.Binary(InstructionType.Power, (3, 2, 4))) + MlirKernel.Summed.Slice(6, 2))), 1)
+constant Listed = MlirNarrowing(MlirFunction(Summing.function.types, TypeEntry("Strict/List(Number)", List(MemberEntry), List(MethodEntry)), Summing.function.method), 1)
+constant Texting = MlirNarrowing(MlirFunction(Few.function.types, MlirFunction.Shape, MethodEntry("Paths", List(MemberEntry) + MemberEntry("numbers", "Strict/List(Text)", List(InstructionEntry), false), "Strict/List(Text)", (List(InstructionEntry) + MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Text)", (0, 6, -1, 0)), "forResult")) + MlirLayout.Singles.method.instructions.Slice(1, 7))), 2)
+constant Singling = MlirNarrowing(MlirFunction(Few.function.types + TypeEntry("Strict/Float32", List(MemberEntry) + MemberEntry("number", "Strict/Number", List(InstructionEntry), false), List(MethodEntry)), MlirFunction.Shape, MlirLayout.Singles.method), 2)
+constant Forced = MlirNarrowing(MlirFunction(List(TypeEntry), TypeEntry("Strict/Wide", List(MemberEntry) + MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false, 64), List(MethodEntry)), MethodEntry("Sum", List(MemberEntry), "Strict/Number", MlirKernel.Summed)), 1)
+constant Marked = MlirNarrowing(MlirFunction(Few.function.types, MlirFunction.Shape, MethodEntry("Sum", List(MemberEntry) + MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false, 32), "Strict/Number", MlirKernel.Summed)), 1)
+constant Rule = "VectorLoopMustUse32BitNumbers"
+constant Advice = ", use Float32s or value.Bits is 32"
+constant PackedNames = ("Float32s", "BFloat16s", "Float8s", "Bytes")
+constant Formats = (32, 17, 7, 9)
+Format(kind Text) Number
+	MlirNarrowing.Format("List(Float32)") is 32
+	MlirNarrowing.Format("Bytes") is 9
+	MlirNarrowing.Format("List(Number)") is 0
+	let plural = kind.StartsWith("List(") then kind.Substring(5, kind.Length - 6) + "s" else kind
+	plural is in PackedNames then Formats(PackedNames.Index(plural)) else 0
+Issues(functions List(MlirFunction)) Texts
+	MlirNarrowing.Issues((Summing.function, MlirKernel.Doubling.function)) is List(Text) + Summing.Issue
+	mutable issues = List(Mutable(Text))
+	for functions
+		issues = issues + Found(value)
+	issues
+Found(inspected MlirFunction) Texts
+	MlirNarrowing.Found(Few.function).Length is 0
+	Text.Combine(MlirNarrowing.Found(MlirWideMembers.Sparking.function)).IndexOf("loops over Spark") > 0
+	for inspected.method.instructions
+		let isLoop = value.kind is InstructionType.LoopBegin
+		let issue = isLoop then MlirNarrowing(inspected, index).Issue + MlirWideMembers(inspected, index).Issue else ""
+		if issue is not ""
+			issue
+Issue Text
+	Summing.Issue is "Shape.strict:line 0: " + Rule + ": Sum uses 64 bit numbers (numbers)" + Advice
+	Floats.Issue is ""
+	if IsCandidate is false
+		return ""
+	let wide = Wide
+	let file = TypeSource(function.type).Located("") + ":line "
+	let used = ": " + function.method.Name + " uses 64 bit numbers (" + Text.Combine(wide, ", ") + ")"
+	let issue = file + function.method.instructions(position).line + ": " + Rule + used
+	wide.Length is 0 then "" else issue + Advice
+Wide Texts
+	Summing.Wide is ("numbers")
+	Floats.Wide.Length is 0
+	MlirNarrowing(MlirKernel.Doubling.function, 2).Wide is ("result", "numbers")
+	Texting.Wide.Length is 0
+	Singling.Wide is ("numbers")
+	let names = (IsResulted then List(Text) + "result" else List(Text)) + Iterated
+	let all = names + MlirKernel(function, position).Sources
+	for all
+		if (all.Index(value) is index) and ((value is "result") or IsWide(value))
+			value
+IsResulted Boolean
+	MlirNarrowing(MlirKernel.Doubling.function, 2).IsResulted
+	Singling.IsResulted is false
+	Texting.IsResulted is false
+	MlirLoops(function, position).IsCollecting and IsWide("forResult")
+IsWide(name Text) Boolean
+	Summing.IsWide("numbers")
+	Floats.IsWide("numbers") is false
+	Texting.IsWide("numbers") is false
+	Marked.IsWide("numbers") is false
+	if (Bits(name) > 0) and (Bits(name) < 64)
+		return false
+	let kind = MlirKinds(function).VariableKind(position, name)
+	(MlirLayout(function).Represented(kind) is "List(Number)") and (Format(kind) is 0)
+Iterated Texts
+	Summing.Iterated is ("numbers")
+	Few.Iterated.Length is 0
+	let writer = MlirKinds(function).Writer(position, function.method.instructions(position).payload(0))
+	if (writer < 0) or (MlirLoops(function, position).Collection is "")
+		return List(Text)
+	let entry = function.method.instructions(writer)
+	entry.kind is InstructionType.LoadVariableToRegister then List(Text) + entry.texts(0) else List(Text)
+IsCandidate Boolean
+	Summing.IsCandidate
+	Few.IsCandidate is false
+	Powering.IsCandidate is false
+	Listed.IsCandidate is false
+	MlirNarrowing(MlirKernel.Doubling.function, 2).IsCandidate is false
+	Forced.IsCandidate is false
+	if TypeEntry.IsBaseName(TypeEntry.ShortName(function.type.Name)) or (MlirKernel(function, position).IsSimple is false)
+		return false
+	for Range(position + 1, function.method.LoopEndOf(position))
+		if function.method.instructions(value).kind is not in MlirSingle.Allowed
+			return false
+	(MlirGpuCheck(function, position).IsGpu is false) and (IsFew is false) and (IsForced is false)
+IsFew Boolean
+	Few.IsFew
+	Summing.IsFew is false
+	let writer = MlirKinds(function).Writer(position, function.method.instructions(position).payload(0))
+	if writer < 0
+		return false
+	let entry = function.method.instructions(writer)
+	if entry.kind is not InstructionType.LoadConstantToRegister
+		return false
+	let literal = PayloadDecoder(entry).Value(1)
+	(literal.kind is not "Number") or (literal.number < MlirCost(function, position).Threshold)
+Problem(functions List(MlirFunction)) Text
+	MlirNarrowing.Problem(List(MlirFunction) + Few.function) is ""
+	MlirNarrowing.Problem(List(MlirFunction) + Summing.function) is "unsupported: 64 bit loops\n" + Summing.Issue
+	let issues = Issues(functions)
+	issues.Length is 0 then "" else "unsupported: 64 bit loops\n" + Text.Combine(issues, "\n")
+IsForced Boolean
+	Forced.IsForced
+	Summing.IsForced is false
+	mutable names = Iterated
+	for Range(position + 1, function.method.LoopEndOf(position))
+		let texts = function.method.instructions(value).texts
+		names = texts.Length > 0 then names + texts(0) else names
+	for names
+		if Bits(value) is 64
+			return true
+	false
+Bits(name Text) Number
+	Forced.Bits("numbers") is 64
+	Marked.Bits("numbers") is 32
+	Summing.Bits("numbers") is 0
+	for function.type.members + function.method.parameters
+		if value.Name is name
+			return value.Bits
+	0

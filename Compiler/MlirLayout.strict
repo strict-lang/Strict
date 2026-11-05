@@ -131,11 +131,8 @@ Packed(position Number) Number
 	Wrapping.Packed(0) is 0
 	MlirLayout(MlirLanes.Collecting).Packed(2) is 33
 	let kind = MlirKinds(function).VariableKind(position, "forResult")
-	let plural = kind.StartsWith("List(") then kind.Substring(5, kind.Length - 6) + "s" else kind
 	let isLanes = MlirLanes(function, 0).IsPacked(MlirKinds(function).ElementKind(kind))
-	constant names = ("Float32s", "BFloat16s", "Float8s", "Bytes")
-	constant formats = (32, 17, 7, 9)
-	isLanes then MlirDoubles.LanesFormat else (plural is in names then formats(names.Index(plural)) else 0)
+	isLanes then MlirDoubles.LanesFormat else MlirNarrowing.Format(kind)
 Collected(register Text, pointer Text, at Number) Texts
 	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5)(0).Length is 77
 	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5)(1) is "    %pw = arith.constant 64 : i64"

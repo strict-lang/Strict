@@ -13,7 +13,7 @@ constant Fresh = List(Text) + "fresh"
 constant Reusing = ("    %t#re = func.call @strict_rc_unshared(%t#old) : (f64) -> i1", "    cf.cond_br %t#re, ^t#reuse, ^t#fresh", "  ^t#reuse:", "    %t#rp = func.call @strict_ptr(%t#old) : (f64) -> !llvm.ptr", "    cf.br ^t#join", "  ^t#fresh:", "    cf.br ^t#join", "  ^t#join:", "    %t#same = arith.cmpf oeq, %t#o, %t# : f64", "    cf.cond_br %t#same, ^t#kept, ^t#dead", "  ^t#dead:", "    func.call @strict_rc_dead(%t#o, %t#) : (f64, f64) -> ()", "    cf.br ^t#kept", "  ^t#kept:")
 constant Putting = ("    %t#r$ = llvm.getelementptr %t#rp[$] : (!llvm.ptr) -> !llvm.ptr, f64", "    %t#ra$ = llvm.load %r& : !llvm.ptr -> f64", "    func.call @strict_rc_put(%t#r$, %t#ra$) : (!llvm.ptr, f64) -> ()")
 constant Rebuilt = MlirOwned(MlirFunction((MlirFunction.Shape, MlirInstances.Outer), MlirInstances.Outer, MethodEntry("Run", List(MemberEntry), "None", Rebuilding)), 7)
-IsOwned(name Text, depth = 0) Boolean
+IsOwned(name Text, depth = 0, seed = "") Boolean
 	Owner.IsOwned("moved")
 	MlirOwned(Copying, 2).IsOwned("moved") is false
 	Owner.IsOwned("listResult0") is false
@@ -21,7 +21,7 @@ IsOwned(name Text, depth = 0) Boolean
 	Rebuilt.IsKept(9, "shape", "moved") is false
 	let isTemporary = (name is in Temporaries) or name.StartsWith("listResult") or name.StartsWith("conditional")
 	let isOuter = (name is in function.Parameters) or (name is in MlirInstances(function, 0).StoredNames(function.type))
-	(isTemporary is false) and (isOuter is false) and IsReference(name) and IsContained(name, depth)
+	(isTemporary is false) and (isOuter is false) and IsReference(name) and IsContained(name, depth, seed)
 IsReference(name Text) Boolean
 	Owner.IsReference("moved")
 	Text.Combine(Rebuilt.Reconstructed(Rebuilding(7), MlirInstances.Outer, Fresh)).Length is 516
@@ -31,14 +31,15 @@ IsReference(name Text) Boolean
 	let represented = MlirLayout(function).Represented(kind)
 	let isHeap = represented.StartsWith("List(") or (represented is "Flat") or MlirLayout(function).IsStruct(kind)
 	isHeap and (MlirPairs(function, 0).IsPaired(kind) is false)
-IsContained(name Text, depth = 0) Boolean
+IsContained(name Text, depth = 0, seed = "") Boolean
 	Owner.IsContained("moved")
 	Rebuilt.IsFreshCall(Rebuilt.function, 2, 0)
 	Rebuilt.IsFresh(Rebuilt.function, 3, 2, 0)
 	for function.method.instructions
 		if (value.kind is in MlirAlone.Named) and (value.texts(0) is name)
 			let isLoad = value.kind is InstructionType.LoadVariableToRegister
-			let isKept = isLoad then IsSafeRead(index, name) else IsFresh(function, index, value.payload(0), depth)
+			let isSeed = (seed is not "") and (MlirDying(function, index).Loaded(value.payload(0)) is seed)
+			let isKept = isLoad then IsSafeRead(index, name) else isSeed or IsFresh(function, index, value.payload(0), depth)
 			if isKept is false
 				return false
 	true
@@ -122,9 +123,12 @@ Stored(entry InstructionEntry) Texts
 	Text.Combine(Owner.Stored(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "#this"))).Length is 90
 	let slot = entry.texts(0) is "#this" then "%instance" else "%v_" + entry.texts(0)
 	let copied = function.Copied("%r" + entry.payload(0), slot, "%t" + position)
-	if IsOwned(entry.texts(0)) is false
+	let seeded = MlirDying(function, position)
+	let seed = seeded.Seed(entry.texts(0))
+	if IsOwned(entry.texts(0), 0, seed) is false
 		return copied
-	(List(Text) + function.Load("%t" + position + "o", slot)) + copied + Placed(Reusing.Slice(8, 6), 0, 0)
+	let dying = Placed(seeded.Guarded(Reusing.Slice(8, 6), seed), 0, 0)
+	(List(Text) + function.Load("%t" + position + "o", slot)) + copied + dying
 Reconstructed(entry InstructionEntry, owner TypeEntry, fresh Texts) Texts
 	Text.Combine(Rebuilt.Reconstructed(Rebuilding(7), MlirInstances.Outer, Fresh)).IndexOf("@strict_rc_unshared(") > 0
 	Text.Combine(Rebuilt.Reconstructed(Rebuilding(7), MlirInstances.Outer, Fresh)).IndexOf("%t7rp[1]") > 0

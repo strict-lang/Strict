@@ -2,6 +2,7 @@ has function MlirFunction
 has position Number
 has float = "f64"
 has index = "ki"
+has scope = ""
 constant Doubler = MlirKernel.Doubler
 constant Doubling = MlirWidths(MlirFastLoop.Doubling.function, 2)
 constant Halving = MlirWidths(MlirFastLoop.Halving.function, 2)
@@ -12,7 +13,6 @@ constant Paired = MlirWidths(MlirFunction(Fours.function, Packing = "for 4 numbe
 constant Singles = MlirWidths(MlirFastLoop.Halving.function, 2, "f32")
 constant Narrowing = MlirWidths(MlirFastLoop.Doubling.function, 2, "f32")
 constant Scaling = MlirWidths(MlirFastLoop.Quartering.function, 2, "f32")
-constant Pointer = " : (!llvm.ptr, i64) -> !llvm.ptr, "
 Width(source Text) Text
 	Halving.Width("numbers") is "16"
 	Doubling.Width("numbers") is ""
@@ -32,8 +32,10 @@ Loaded(result Text, address Text, items Text, source Text) Texts
 	Fours.Loaded("%x", "%p", "%h", "numbers").Last is "    %x = arith.extf %xn : f32 to f64"
 	MlirWidths(Fours.function, 2, "f32").Loaded("%x", "%p", "%h", "numbers").Last.EndsWith("-> f32")
 	let type = Element(source)
-	let pointer = "    " + address + " = llvm.getelementptr " + items + "[" + Temp(index) + "]" + Pointer + type
-	let loaded = "    " + result + (type is float then "" else "n") + " = llvm.load " + address + " : !llvm.ptr -> " + type
+	let slot = items + "[" + Temp(index) + "]" + MlirFastLoop.Pointer + type
+	let pointer = "    " + address + " = llvm.getelementptr " + slot
+	let target = result + (type is float then "" else "n")
+	let loaded = "    " + target + " = llvm.load " + address + scope + " : !llvm.ptr -> " + type
 	(pointer, loaded) + Widened(result, items, source)
 Read(result Text, at Number) Texts
 	Doubling.Read("%x", 4) is Doubling.Loaded("%x", "%t4p", "%t2h_numbers", "numbers")
@@ -74,7 +76,7 @@ Scaled(result Text, items Text) Texts
 	Quartering.Scaled("%x", "%h").First is "    %xf = arith.constant 5 : i64"
 	Scaling.Scaled("%x", "%h").Last is "    %x = arith.mulf %xq, %xs : f32"
 	let block = "    " + result + "b = arith.shrui " + Temp(index) + ", " + result + "f : i64"
-	let address = "    " + result + "a = llvm.getelementptr " + items + "s[" + result + "b]" + Pointer + "f32"
+	let address = "    " + result + "a = llvm.getelementptr " + items + "s[" + result + "b]" + MlirFastLoop.Pointer + "f32"
 	let scale = "    " + result + "s = llvm.load " + result + "a : !llvm.ptr -> f32"
 	let widened = "    " + result + "w = arith.extf " + result + "s : f32 to f64"
 	let byte = "    " + result + "q = arith.sitofp " + result + "n : i8 to " + float

@@ -16,8 +16,38 @@ typedef struct { double count; double items[]; } strict_numbers;
 static inline uint64_t strict_bits(double value) { union { double number; uint64_t bits; } slot; slot.number = value; return slot.bits; }
 static inline double strict_value(uint64_t bits) { union { double number; uint64_t bits; } slot; slot.bits = bits; return slot.number; }
 /* Arguments are borrowed for the call only. */
-static inline const char* strict_text(double value) { return (const char*)(uintptr_t)(strict_bits(value) & 0xFFFFFFFFFFFFull); }
-static inline const strict_numbers* strict_numbers_of(double value) { return (const strict_numbers*)(uintptr_t)(strict_bits(value) & 0xFFFFFFFFFFFFull); }
+static inline const void* strict_address(double value) { return (const void*)(uintptr_t)(strict_bits(value) & 0xFFFFFFFFFFFFull); }
+static inline const char* strict_text(double value) { return (const char*)strict_address(value); }
+/* A Numbers argument is the list Strict holds, read where it is: strict_count numbers, doubles at strict_items or, when
+   that is 0, packed at strict_data in strict_format (32 floats, 16 halves, 17 bfloat16, 9 bytes, 33 4 byte lanes);
+   strict_number reads each of them. Lists in other formats arrive as doubles. */
+typedef struct { double length, holder; } strict_list;
+typedef struct { double items, used, capacity, data; } strict_list_holder;
+static inline uint64_t strict_count(double list)
+{
+	const strict_list* view = (const strict_list*)strict_address(list);
+	return view ? (uint64_t)view->length : 0;
+}
+static inline const strict_list_holder* strict_holder(double list)
+{
+	const strict_list* view = (const strict_list*)strict_address(list);
+	return view ? (const strict_list_holder*)strict_address(view->holder) : 0;
+}
+static inline int strict_format(double list)
+{
+	const strict_list_holder* holder = strict_holder(list);
+	return holder && !strict_bits(holder->items) && holder->used >= 0 && holder->capacity < 0 ? (int)-holder->capacity : 0;
+}
+static inline const double* strict_items(double list)
+{
+	const strict_list_holder* holder = strict_holder(list);
+	return holder && !strict_format(list) ? (const double*)strict_address(holder->items) : 0;
+}
+static inline const unsigned char* strict_data(double list)
+{
+	const strict_list_holder* holder = strict_holder(list);
+	return holder ? (const unsigned char*)strict_address(holder->data) : 0;
+}
 /* The caller copies a returned Text or Numbers right away, it only has to live until the call returns. */
 static inline double strict_text_result(const char* text) { return strict_value((uint64_t)(uintptr_t)text); }
 static inline double strict_numbers_result(const strict_numbers* numbers) { return strict_value((uint64_t)(uintptr_t)numbers); }
@@ -113,6 +143,28 @@ static inline uint16_t strict_half(float number)
 		half = (magnitude + 0xC8000FFFu + ((magnitude >> 13) & 1)) >> 13;
 	return (uint16_t)(half | sign >> 16);
 }
+/* strict_half of count numbers stride apart, 8 at once with F16C (its NaNs replaced by the quiet NaN of strict_half). */
+static inline void strict_halves(uint16_t* halves, const float* numbers, uint64_t count, uint64_t stride)
+{
+	uint64_t index = 0;
+#if defined(__F16C__) && defined(__AVX2__)
+	for (; stride == 1 && index + 8 <= count; index += 8)
+	{
+		__m256 value = _mm256_loadu_ps(numbers + index), isNan = _mm256_cmp_ps(value, value, _CMP_UNORD_Q);
+		__m128i half = _mm256_cvtps_ph(value, _MM_FROUND_TO_NEAREST_INT);
+		if (_mm256_movemask_ps(isNan))
+		{
+			__m256i nans = _mm256_or_si256(_mm256_srli_epi32(_mm256_castps_si256(_mm256_and_ps(value,
+				_mm256_set1_ps(-0.0f))), 16), _mm256_set1_epi32(0x7E00)), mask = _mm256_castps_si256(isNan);
+			half = _mm_blendv_epi8(half, _mm_packus_epi32(_mm256_castsi256_si128(nans), _mm256_extracti128_si256(nans, 1)),
+				_mm_packs_epi32(_mm256_castsi256_si128(mask), _mm256_extracti128_si256(mask, 1)));
+		}
+		_mm_storeu_si128((__m128i*)(halves + index), half);
+	}
+#endif
+	for (; index < count; index++)
+		halves[index] = strict_half(numbers[index * stride]);
+}
 /* The nearest bfloat16 (ties to even, a NaN stays a quiet NaN) of a 32 bit float. */
 static inline uint16_t strict_brain(float number)
 {
@@ -135,6 +187,22 @@ static inline float strict_brain_float(uint16_t brain)
 {
 	union { uint32_t bits; float value; } single = { (uint32_t)brain << 16 };
 	return single.value;
+}
+/* The number at index of a Numbers argument in any of its formats. */
+static inline double strict_number(double list, uint64_t index)
+{
+	const double* items = strict_items(list);
+	const unsigned char* data = strict_data(list);
+	if (items)
+		return items[index];
+	switch (strict_format(list))
+	{
+	case 32: return ((const float*)data)[index];
+	case 16: return strict_half_float(((const uint16_t*)data)[index]);
+	case 17: return strict_brain_float(((const uint16_t*)data)[index]);
+	case 33: return ((const uint32_t*)data)[index];
+	default: return data[index];
+	}
 }
 /* Returns an Error with this name, the name must live as long as the program. */
 static inline double strict_fail(const char* name) { return strict_value(0x7FFC000000000000ull | (uint64_t)(uintptr_t)name); }
