@@ -27,7 +27,7 @@ Variances(map FeatureMap, means Numbers) Float32s
 	Pair.Variances(Column, (2, 4)) is (1, 4)
 	GroupNorm((1, 1), (0, 0), 1).Variances(Column, List(Number) + 3) is List(Number) + 3.5
 	Averages(map.Partials(groups, means, true), map.Runs, map.values.Length / groups)
-Averages(partials Numbers, rows Number, count Number) Float32s
+Averages(partials Numbers with value.Bits is 32, rows Number, count Number) Float32s
 	Pair.Averages((1, 2, 3, 6), 2, 2) is (2, 4)
 	GroupNorm((1, 1), (0, 0), 1).Averages((1, 2, 3, 6), 2, 4) is List(Number) + 3
 	let size = partials.Length / rows / groups

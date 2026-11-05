@@ -15,7 +15,7 @@ Scales(centered Numbers) Numbers
 Scale(sum Number, size Number, epsilon Number) Number
 	Sample.Scale(1, 2, 0.000001).IsNearlyEqual(1.41421215)
 	1 / (sum / size + epsilon).SquareRoot
-Squared(numbers Numbers, first Number, size Number) Number
+Squared(numbers Numbers with value.Bits is 32, first Number, size Number) Number
 	Sample.Squared((3, 4, 0, 1), 2, 2) is 1
 	mutable sum = 0
 	for size

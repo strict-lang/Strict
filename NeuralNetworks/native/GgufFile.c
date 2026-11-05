@@ -423,6 +423,32 @@ static void DecodedQ6K(const unsigned char* block, float* y)
 	const unsigned char* high = block + 128;
 	const int8_t* scales = (const int8_t*)(block + 192);
 	float d = HalfAt(block + 208);
+#ifdef __AVX2__
+	const __m256i nibble = _mm256_set1_epi8(15), pair = _mm256_set1_epi8(0x30), offset = _mm256_set1_epi8(32);
+	for (int first = 0; first < 256; first += 128, low += 64, high += 32, scales += 8)
+	{
+		__m256i low0 = _mm256_loadu_si256((const __m256i*)low), low1 = _mm256_loadu_si256((const __m256i*)(low + 32));
+		__m256i bits = _mm256_loadu_si256((const __m256i*)high), codes[4];
+		codes[0] = _mm256_or_si256(_mm256_and_si256(low0, nibble), _mm256_and_si256(_mm256_slli_epi16(bits, 4), pair));
+		codes[1] = _mm256_or_si256(_mm256_and_si256(low1, nibble), _mm256_and_si256(_mm256_slli_epi16(bits, 2), pair));
+		codes[2] = _mm256_or_si256(_mm256_and_si256(_mm256_srli_epi16(low0, 4), nibble), _mm256_and_si256(bits, pair));
+		codes[3] = _mm256_or_si256(_mm256_and_si256(_mm256_srli_epi16(low1, 4), nibble),
+			_mm256_and_si256(_mm256_srli_epi16(bits, 2), pair));
+		for (int part = 0; part < 4; part++)
+		{
+			__m256i value = _mm256_sub_epi8(codes[part], offset);
+			__m128i halves[2] = { _mm256_castsi256_si128(value), _mm256_extracti128_si256(value, 1) };
+			for (int group = 0; group < 2; group++)
+			{
+				__m256 scale = _mm256_set1_ps(d * scales[part * 2 + group]);
+				float* out = y + first + part * 32 + group * 16;
+				_mm256_storeu_ps(out, _mm256_mul_ps(scale, _mm256_cvtepi32_ps(_mm256_cvtepi8_epi32(halves[group]))));
+				_mm256_storeu_ps(out + 8, _mm256_mul_ps(scale,
+					_mm256_cvtepi32_ps(_mm256_cvtepi8_epi32(_mm_srli_si128(halves[group], 8)))));
+			}
+		}
+	}
+#else
 	for (int first = 0; first < 256; first += 128, low += 64, high += 32, scales += 8)
 		for (int index = 0; index < 32; index++)
 		{
@@ -432,6 +458,7 @@ static void DecodedQ6K(const unsigned char* block, float* y)
 			y[first + index + 64] = d * scales[group + 4] * (((low[index] >> 4) | (((high[index] >> 4) & 3) << 4)) - 32);
 			y[first + index + 96] = d * scales[group + 6] * (((low[index + 32] >> 4) | (((high[index] >> 6) & 3) << 4)) - 32);
 		}
+#endif
 }
 
 /* 32 numbers of 5 bits: half d and minimum m, 4 bytes of fifth bits and 16 bytes of nibbles (low ones first). */
@@ -671,8 +698,7 @@ static void Packed(void* context, uint64_t item)
 		if (kept == 8)
 			strict_quantized(data, floats, width, 1);
 		else if (kept == 16)
-			for (uint64_t column = 0; column < width; column++)
-				((uint16_t*)data)[column] = strict_half(floats[column]);
+			strict_halves((uint16_t*)data, floats, width, 1);
 		else
 			memcpy(data, floats, width * sizeof(float));
 	}
@@ -755,8 +781,7 @@ static const Tensor* Stacked(double path, double prefix, const char* name, const
 
 static int IsIndex(double number, uint64_t count) { return number >= 0 && number < count && number == floor(number); }
 
-static const char* Mismatched(const Tensor* gate, const Tensor* up, const Tensor* down, const strict_numbers* chosen,
-	const strict_numbers* input)
+static const char* Mismatched(const Tensor* gate, const Tensor* up, const Tensor* down, double chosen, double input)
 {
 	uint64_t hidden = gate->shape[0], width = gate->shape[1], count = gate->shape[2];
 	if (memcmp(up->shape, gate->shape, sizeof(gate->shape)) != 0 || down->shape[0] != width ||
@@ -764,11 +789,11 @@ static const char* Mismatched(const Tensor* gate, const Tensor* up, const Tensor
 		return "GgufExpertsShapesDiffer";
 	if (Multiplied(up->type).quantize != Multiplied(gate->type).quantize)
 		return "GgufExpertsGateAndUpTypesDiffer";
-	uint64_t tokens = (uint64_t)input->count / hidden;
-	if (tokens == 0 || (uint64_t)input->count % hidden != 0 || (uint64_t)chosen->count % tokens != 0)
+	uint64_t tokens = strict_count(input) / hidden;
+	if (tokens == 0 || strict_count(input) % hidden != 0 || strict_count(chosen) % tokens != 0)
 		return "ExpertsInputLengthDiffers";
-	for (uint64_t index = 0; index < (uint64_t)chosen->count; index++)
-		if (!IsIndex(chosen->items[index], count))
+	for (uint64_t index = 0; index < strict_count(chosen); index++)
+		if (!IsIndex(strict_number(chosen, index), count))
 			return "ExpertNumberOutOfRange";
 	return 0;
 }
@@ -860,7 +885,7 @@ static unsigned char* Activated(const Tensor* down, float* gated, const float* u
 
 /* Stages the gate, up and down rows of each distinct expert of the tasks once (pairs of gate and up tasks, then the
    downs) and points the tasks of every token choosing it at them. */
-static int Shared(Task* tasks, uint64_t count, const strict_numbers* experts, uint64_t expertCount)
+static int Shared(Task* tasks, uint64_t count, double experts, uint64_t expertCount)
 {
 	uint64_t* slots = malloc((expertCount + count + 1) * sizeof(uint64_t)), * chosen = slots + expertCount, distinct = 0;
 	Task* staging = malloc((count * 3 + 1) * sizeof(Task));
@@ -868,7 +893,7 @@ static int Shared(Task* tasks, uint64_t count, const strict_numbers* experts, ui
 		slots[expert] = count;
 	for (uint64_t index = 0; index < count; index++)
 	{
-		uint64_t expert = (uint64_t)experts->items[index];
+		uint64_t expert = (uint64_t)strict_number(experts, index);
 		if (slots[expert] == count)
 		{
 			staging[distinct * 3] = tasks[index * 2], staging[distinct * 3 + 1] = tasks[index * 2 + 1];
@@ -898,8 +923,7 @@ STRICT_EXPORT double GgufFile_ExpertOutputs(double self, double path, double pre
 	const Tensor* gate = Stacked(path, prefix, "ffn_gate_exps.weight", &failure);
 	const Tensor* up = Stacked(path, prefix, "ffn_up_exps.weight", &failure);
 	const Tensor* down = Stacked(path, prefix, "ffn_down_exps.weight", &failure);
-	const strict_numbers* experts = strict_numbers_of(chosen), * values = strict_numbers_of(input);
-	failure = failure ? failure : Mismatched(gate, up, down, experts, values);
+	failure = failure ? failure : Mismatched(gate, up, down, chosen, input);
 	if (failure)
 		return strict_fail(failure);
 	if (!atomic_load(&isTabled))
@@ -913,24 +937,24 @@ STRICT_EXPORT double GgufFile_ExpertOutputs(double self, double path, double pre
 		}
 		Unlocked(&poolLock);
 	}
-	uint64_t hidden = gate->shape[0], width = gate->shape[1], count = (uint64_t)experts->count;
-	uint64_t tokens = (uint64_t)values->count / hidden, used = count / tokens;
+	uint64_t hidden = gate->shape[0], width = gate->shape[1], count = strict_count(chosen);
+	uint64_t tokens = strict_count(input) / hidden, used = count / tokens;
 	float* floats = malloc((tokens * hidden + count * (width * 2 + hidden) + 1) * sizeof(float));
 	float* gated = floats + tokens * hidden, * upped = gated + count * width, * downs = upped + count * width;
 	for (uint64_t index = 0; index < tokens * hidden; index++)
-		floats[index] = (float)values->items[index];
+		floats[index] = (float)strict_number(input, index);
 	unsigned char* quantized = Quantized(gate->type, floats, tokens * hidden);
 	uint64_t inputBytes = hidden / Multiplied(gate->type).numbers * Multiplied(gate->type).bytes;
 	Task* tasks = malloc((count * 3 + 1) * sizeof(Task));
 	for (uint64_t index = 0; index < count; index++)
 	{
-		uint64_t expert = (uint64_t)experts->items[index];
+		uint64_t expert = (uint64_t)strict_number(chosen, index);
 		const unsigned char* token = quantized + index / used * inputBytes;
 		tasks[index * 2] = Rows(gate, expert, token, gated + index * width);
 		tasks[index * 2 + 1] = Rows(up, expert, token, upped + index * width);
 		tasks[count * 2 + index] = Rows(down, expert, 0, downs + index * hidden);
 	}
-	if (!Shared(tasks, count, experts, gate->shape[2]))
+	if (!Shared(tasks, count, chosen, gate->shape[2]))
 	{
 		free(tasks), free(quantized), free(floats);
 		return strict_fail("GgufTensorDataTruncated");
@@ -959,18 +983,17 @@ STRICT_EXPORT double GgufFile_Picked(double self, double path, double name, doub
 {
 	const char* failure = 0;
 	const Tensor* tensor = Requested(path, name, 0, &failure);
-	const strict_numbers* chosen = strict_numbers_of(rows);
 	uint32_t type = tensor ? tensor->type : F32;
 	uint64_t width = tensor ? tensor->shape[0] : 0, height = tensor ? Elements(tensor) / width : 0;
 	if (tensor && (BlockBytes(type) == 0 || width % BlockNumbers(type) != 0))
 		failure = "GgufTensorTypeNotSupported";
 	failure = failure ? failure : Covered(tensor) ? 0 : "GgufTensorDataTruncated";
-	for (uint64_t index = 0; !failure && index < (uint64_t)chosen->count; index++)
-		if (!IsIndex(chosen->items[index], height))
+	for (uint64_t index = 0; !failure && index < strict_count(rows); index++)
+		if (!IsIndex(strict_number(rows, index), height))
 			failure = "GgufRowOutOfRange";
 	if (failure)
 		return strict_fail(failure);
-	uint64_t count = (uint64_t)chosen->count, blockNumbers = BlockNumbers(type);
+	uint64_t count = strict_count(rows), blockNumbers = BlockNumbers(type);
 	uint64_t rowBytes = width / blockNumbers * BlockBytes(type);
 	unsigned char* row = malloc(rowBytes + 1);
 	float* decoded = malloc(width * sizeof(float) + 1);
@@ -979,7 +1002,7 @@ STRICT_EXPORT double GgufFile_Picked(double self, double path, double name, doub
 	picked->count = (double)(count * width);
 	for (uint64_t index = 0; index < count; index++)
 	{
-		uint64_t offset = tensor->start + tensor->offset + (uint64_t)chosen->items[index] * rowBytes;
+		uint64_t offset = tensor->start + tensor->offset + (uint64_t)strict_number(rows, index) * rowBytes;
 		if (!ReadFrom(openings[tensor->shard], offset, row, rowBytes))
 			memset(row, 0, rowBytes), failure = "GgufTensorDataTruncated";
 		Decoded(type, row, width, decoded);

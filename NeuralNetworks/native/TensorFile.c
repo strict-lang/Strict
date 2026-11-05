@@ -535,8 +535,7 @@ static void Packed(unsigned char* data, const float* first, uint64_t count, uint
 	else if (bits == 32 && stride == 1)
 		memcpy(data, first, count * sizeof(float));
 	else if (bits == 16)
-		for (uint64_t column = 0; column < count; column++)
-			((uint16_t*)data)[column] = strict_half(first[column * stride]);
+		strict_halves((uint16_t*)data, first, count, stride);
 	else if (bits == 17)
 		for (uint64_t column = 0; column < count; column++)
 			((uint16_t*)data)[column] = strict_brain(first[column * stride]);
@@ -556,8 +555,26 @@ static void Unpacked(const Fours* fours, uint64_t row, const unsigned char* sour
 	const unsigned char* rowBlocks = fours->blocks + (row / 128) * (fours->blockWidth / 4) * 512 + (row % 32) * 16 +
 		(row % 128 / 32) * 4;
 	const float* inputs = fours->inputs;
-	uint64_t blocks = bytes / 8;
-	for (uint64_t block = 0; block < blocks; block++)
+	uint64_t blocks = bytes / 8, block = 0;
+#ifdef __AVX2__
+	const __m256 magnitudes = _mm256_setr_ps(0, 0.5f, 1, 1.5f, 2, 3, 4, 6);
+	for (; block < blocks; block++)
+	{
+		__m256 scale = _mm256_set1_ps(Eight(rowBlocks[(block / 4) * 512 + (block & 3)]) * fours->scale);
+		__m128i packed = _mm_loadl_epi64((const __m128i*)(source + block * 8)), nibble = _mm_set1_epi8(15);
+		__m128i codes = _mm_unpacklo_epi8(_mm_and_si128(_mm_srli_epi16(packed, 4), nibble), _mm_and_si128(packed, nibble));
+		for (int half = 0; half < 2; half++)
+		{
+			__m256i code = _mm256_cvtepu8_epi32(half ? _mm_srli_si128(codes, 8) : codes);
+			__m256 value = _mm256_mul_ps(_mm256_xor_ps(_mm256_permutevar8x32_ps(magnitudes, code),
+				_mm256_castsi256_ps(_mm256_slli_epi32(_mm256_srli_epi32(code, 3), 31))), scale);
+			if (inputs)
+				value = _mm256_mul_ps(value, _mm256_loadu_ps(inputs + block * 16 + half * 8));
+			_mm256_storeu_ps(target + block * 16 + half * 8, value);
+		}
+	}
+#endif
+	for (; block < blocks; block++)
 	{
 		float scale = Eight(rowBlocks[(block / 4) * 512 + (block & 3)]) * fours->scale;
 		const unsigned char* blockSource = source + block * 8;
@@ -775,8 +792,7 @@ STRICT_EXPORT double TensorFile_Columns(double self, double path, double entry, 
    object each, H3's LoRA merged adaln rows (4.9 million of 8 numbers) made every collection visit them all */
 STRICT_EXPORT double TensorFile_Shaped(double self, double numbers, double width)
 {
-	const strict_numbers* given = strict_numbers_of(numbers);
-	uint64_t total = (uint64_t)given->count, columns = width >= 1 ? (uint64_t)width : 0;
+	uint64_t total = strict_count(numbers), columns = width >= 1 ? (uint64_t)width : 0;
 	if (columns == 0 || total % columns != 0)
 		return strict_fail("ShapedWidthDoesNotFitTheNumbers");
 	unsigned char* data = 0;
@@ -786,7 +802,7 @@ STRICT_EXPORT double TensorFile_Shaped(double self, double numbers, double width
 		return strict_fail("TensorTooLarge");
 	for (uint64_t row = 0; row < total / columns; row++)
 		for (uint64_t column = 0; column < columns; column++)
-			((float*)(data + row * stride))[column] = (float)given->items[row * columns + column];
+			((float*)(data + row * stride))[column] = (float)strict_number(numbers, row * columns + column);
 	return result;
 }
 
@@ -995,13 +1011,12 @@ STRICT_EXPORT double TensorFile_Tuned(double self, double path, double entry, do
 	uint64_t stride = 0;
 	double started = ProfileNow();
 	double quantized = QuantizedRows(path, entry, scales, 8, &tensor, &data, &stride, 1, 0, 0);
-	const strict_numbers* given = strict_numbers_of(factors);
 	Profiled("tuned", tensor.height, tensor.width, started);
-	if (strict_bits(quantized) >> 48 == 0x7FFC || given->count == 0)
+	if (strict_bits(quantized) >> 48 == 0x7FFC || strict_count(factors) == 0)
 		return quantized;
 	uint64_t height = tensor.height, width = tensor.width * (tensor.isNibbles ? 2 : 1);
-	uint64_t rank = (uint64_t)given->count / (width + height + 1);
-	if (rank == 0 || rank * (width + height + 1) != (uint64_t)given->count)
+	uint64_t rank = strict_count(factors) / (width + height + 1);
+	if (rank == 0 || rank * (width + height + 1) != strict_count(factors))
 		return strict_fail("TunedFactorsDoNotFitTheMatrix");
 	Tuning tuning = { malloc(rank * width * sizeof(float)), malloc(rank * height * sizeof(float)), width, rank, stride,
 		height, 1469598103934665603ull, data };
@@ -1011,12 +1026,13 @@ STRICT_EXPORT double TensorFile_Tuned(double self, double path, double entry, do
 		free(tuning.ups);
 		return strict_fail("TensorTooLarge");
 	}
-	const double* ranked = given->items + rank * (width + height);
+	uint64_t ranked = rank * (width + height);
 	for (uint64_t index = 0; index < rank * width; index++)
-		tuning.downs[index] = (float)given->items[index];
+		tuning.downs[index] = (float)strict_number(factors, index);
 	for (uint64_t row = 0; row < height; row++)
 		for (uint64_t part = 0; part < rank; part++)
-			tuning.ups[row * rank + part] = (float)(given->items[rank * (width + row) + part] * ranked[part]);
+			tuning.ups[row * rank + part] = (float)(strict_number(factors, rank * (width + row) + part) *
+				strict_number(factors, ranked + part));
 	for (const char* name = strict_text(entry); *name; name++)
 		tuning.seed = (tuning.seed ^ (unsigned char)*name) * 1099511628211ull;
 	Parallel(TunedChunk, &tuning, (height + ChunkRows - 1) / ChunkRows);
@@ -1029,8 +1045,7 @@ STRICT_EXPORT double TensorFile_Tuned(double self, double path, double entry, do
    tensors it describes, their count. */
 STRICT_EXPORT double TensorFile_Written(double self, double path, double header, double numbers)
 {
-	const strict_numbers* given = strict_numbers_of(numbers);
-	uint64_t count = (uint64_t)given->count, length = strlen(strict_text(header));
+	uint64_t count = strict_count(numbers), length = strlen(strict_text(header));
 	static const char spaces[8] = "       ";
 	unsigned char size[8];
 	for (int index = 0; index < 8; index++)
@@ -1049,7 +1064,7 @@ STRICT_EXPORT double TensorFile_Written(double self, double path, double header,
 	{
 		uint64_t part = count - start < chunk ? count - start : chunk;
 		for (uint64_t index = 0; index < part; index++)
-			floats[index] = (float)given->items[start + index];
+			floats[index] = (float)strict_number(numbers, start + index);
 		complete = fwrite(floats, sizeof(float), part, file) == part;
 	}
 	complete = fclose(file) == 0 && complete;
