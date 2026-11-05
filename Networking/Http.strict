@@ -16,4 +16,4 @@ Response(raw Text) HttpResponse
 	let lineEnd = raw.IndexOf("\n")
 	let headEnd = raw.IndexOf("\n\n")
 	let headers = headEnd > lineEnd then raw.Substring(lineEnd + 1, headEnd - lineEnd - 1) else ""
-	HttpResponse(raw.Substring(0, lineEnd) to Number, headers, raw.Substring(headEnd + 2, raw.Length - headEnd - 2))
+	HttpResponse(raw.Substring(0, lineEnd) to Number, headers, raw.Substring(headEnd + 2, raw.Length))
