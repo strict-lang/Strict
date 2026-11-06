@@ -1,13 +1,15 @@
 has lines Texts
 has shared Texts = List(Text)
 constant Squared = DroppedResults(("has width Number", "Area Number", "\tSquared.Area is 0", "\twidth * width", "Run", "\tlogger.Log(width)", "\tArea", "\tlogger.Log(width)"))
+constant Logged = DroppedResults(("Run", "\tlogger.Log(1)", "\tRun is 2", "\tlogger.Log(2)"))
 constant Shaped = DroppedResults(Squared.lines, ("Size"))
 constant Mixed = Duplicates(("A.Area", "B.Area", "B.Size", "B.Grow"), ("width * width\n", "Measured(1)\n", "2\n", "3\n"))
 constant Hint = " never fails, so dropping its result does nothing: use it or remove the line"
+constant Comparing = " is a comparison in the method code, its result is dropped: move it to the tests or use it"
 constant Operators = ("+", "-", "*", "/", "%", "^", "is", "and", "or", "then", "else", "<", ">", "<=", ">=", "to")
 Issues List(ValidationIssue)
 	Squared.Issues.First to Text is "DroppedResultMustBeUsed: Area" + Hint
-	(Squared.Issues.First.Line is 7) and (Squared.Issues.Length is 1)
+	(Squared.Issues.First.Line is 7) and (Squared.Issues.Length is 1) and (Logged.Issues.First.Line is 3)
 	DroppedResults(("Area Number", "\t1", "Run", "\tlogger.Log(1)", "\tArea", "Size Number", "\t2")).Issues.Length is 0
 	let plain = Plain
 	mutable inBody = false
@@ -15,18 +17,22 @@ Issues List(ValidationIssue)
 		inBody = TypeShape(lines).IsMethodHeader(value) then false else inBody or IsBodyStart(value)
 		let next = index + 1 < lines.Length then lines(index + 1) else ""
 		let isFollowed = next.StartsWith("\t") and (next.StartsWith("\t\t") is false)
-		let dropped = inBody and isFollowed then Dropped(value, plain) else ""
+		let dropped = inBody and isFollowed then Issue(value, plain) else ""
 		if dropped is not ""
-			ValidationIssue("DroppedResultMustBeUsed", dropped + Hint, index + 1)
+			ValidationIssue("DroppedResultMustBeUsed", dropped, index + 1)
 IsBodyStart(line Text) Boolean
 	Squared.IsBodyStart("\tlogger.Log(width)")
 	Squared.IsBodyStart("\tSquared.Area is 0") is false
-	Squared.IsBodyStart("") is false
+	(Squared.IsBodyStart("\t\"hi\".EndsWith(\"i\")") is false) and (Squared.IsBodyStart("\ttrue and true") is false)
+	(Squared.IsBodyStart("") is false) and (Squared.IsBodyStart("\tconstant Missing = Error") is false)
 	(Squared.Dropped("\t\tArea", ("Area")) is "") and (Squared.Dropped("\tArea(2 + 1)", ("Area")) is "")
 	(Shaped.Dropped("\tSize", ("Area")) is "") and (Shaped.Dropped("\tshape.Area(2)", ("Area")) is "")
 	DroppedResults(("Area Number", "\t1", "Run", "\t1", "Size Number", "\tArea", "\t2")).Issues.Length is 0
 	DroppedResults(("Area Number", "\t1", "Run", "\tlogger.Log(1)", "\tArea", "\t\t1", "\t2")).Issues.Length is 0
-	(line.Trim is not "") and (Duplicates.IsTest(line.Trim) is false)
+	let trimmed = line.Trim
+	let first = trimmed is "" then "" else Tokenizer(trimmed).Tokens.First
+	let isLeading = (first is in ("true", "false", "constant")) or first.StartsWith("\"")
+	(trimmed is not "") and (Duplicates.IsTest(trimmed) is false) and (isLeading is false)
 Plain Texts
 	Squared.Plain is ("Area")
 	for lines
@@ -80,6 +86,24 @@ Called(tokens Texts) Number
 		return -1
 	let at = isQualified then 2 else 0
 	(tokens.Length is at + 1) or (tokens(at + 1) is "(") and (tokens.Last is ")") then at else -1
+Issue(line Text, plain Texts) Text
+	Squared.Issue("\twidth is 2", ("Area")) is "width is 2" + Comparing
+	(Squared.Issue("\tArea", ("Area")) is "Area" + Hint) and (Squared.Issue("\tSize", ("Area")) is "")
+	let name = Dropped(line, plain)
+	IsCompared(line) then line.Trim + Comparing else name is "" then "" else name + Hint
+IsCompared(line Text) Boolean
+	Squared.IsCompared("\twidth is 2") and Squared.IsCompared("\twidth > Area(1)")
+	Squared.IsCompared("\t(width + 1) is 2") and Squared.IsCompared("\tArea(width = 2) is 2")
+	(Squared.IsCompared("\tlogger.Log(width is 2)") is false) and (Squared.IsCompared("\t\twidth is 2") is false)
+	(Squared.IsCompared("\tif width is 2") is false) and (Squared.IsCompared("\twidth = width is 2") is false)
+	mutable depth = 0
+	mutable isCompared = false
+	for Tokenizer(line.Trim).Tokens
+		depth = value is "(" then depth + 1 else value is ")" then depth - 1 else depth
+		isCompared = isCompared or ((depth is 0) and (value is in ("is", "<", ">", "<=", ">=")))
+		if (depth is 0) and (value is in ("=", "if", "for", "let", "mutable", "return", "constant"))
+			return false
+	isCompared and (line.StartsWith("\t\t") is false)
 Dropped(line Text, plain Texts) Text
 	(Squared.Dropped("\tArea", ("Area")) is "Area") and (Squared.Dropped("", ("Area")) is "")
 	Squared.Dropped("\tArea(2)", ("Area")) is "Area"

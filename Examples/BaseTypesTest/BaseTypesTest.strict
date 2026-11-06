@@ -53,5 +53,4 @@ TestAny Text
 TestMutable Number
 	mutable counter = 0
 	counter = counter + 1
-	counter is 1
-	1
+	counter
