@@ -824,6 +824,8 @@
     %copied = func.call @strict_text_copy(%result) : (f64) -> f64
     return %copied : f64
   }
+  // a Numbers result of C: a list a native filled or a Strict list it got (on the heap) as it is, else a copy of its
+  // flat count and doubles block or packed numbers
   func.func private @strict_foreign_numbers(%result: f64) -> f64 {
     %isPlaced = func.call @strict_foreign_placed(%result) : (f64) -> i1
     cf.cond_br %isPlaced, ^placed, ^checked
@@ -861,6 +863,13 @@
     %packedList = func.call @strict_packed_list(%flat) : (!llvm.ptr) -> f64
     return %packedList : f64
   ^plain:
+    %located:5 = func.call @strict_gc_locate(%resultBits) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %isList = llvm.icmp "ne" %located#0, %unset : !llvm.ptr
+    cf.cond_br %isList, ^list, ^block
+  ^list:
+    return %result : f64
+  ^block:
     %countNumber = llvm.load %flat : !llvm.ptr -> f64
     %list = func.call @strict_list_new(%countNumber, %countNumber) : (f64, f64) -> f64
     %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
