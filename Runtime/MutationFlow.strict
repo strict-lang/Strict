@@ -36,18 +36,22 @@ IsIgnored(register Number, position Number) Boolean
 			return false
 	false
 Followed(entry InstructionEntry, register Number, at Number) Boolean
-	Issued.Followed(Issuing, 0, 2)
-	Looped.Followed(Looped.method.instructions(2), 1, 2)
+	Issued.Followed(Issuing, 0, 2) and Looped.Followed(Looped.method.instructions(2), 1, 2)
+	Twice.Followed(InstructionEntry.Invoke(1, ("T", "Twice", "N", "x"), 0, -1), 0, 1)
 	Twice.Followed(InstructionEntry.Return(0), 0, 0) is false
 	Twice.Followed(InstructionEntry(InstructionType.Print, "Settings: ", (-1, 1, 2, 1)), 2, 0)
 	Looped.Followed(InstructionEntry.Invoke(1, ("T", "Add", "N", "x"), 0, 1), 0, 1)
-	if entry.kind is in (InstructionType.LoopBegin, InstructionType.Print)
+	if (entry.kind is in (InstructionType.LoopBegin, InstructionType.Print)) or IsRecursive(entry)
 		return true
 	if entry.kind is InstructionType.StoreRegisterToVariable
 		return IsLoadIgnored(entry.texts.First, at)
 	if entry.kind is InstructionType.Invoke
 		return IsMessage(entry, register) or ((entry.texts(2) is not "None") and IsIgnored(entry.payload(0), at))
 	(entry.kind is in Mutation.Arithmetic) and IsIgnored(Target(entry), at)
+IsRecursive(entry InstructionEntry) Boolean
+	Twice.IsRecursive(InstructionEntry.Invoke(1, ("T", "Twice", "N", "x"), 0, -1))
+	Twice.IsRecursive(Issuing) is false
+	(entry.kind is InstructionType.Invoke) and (entry.texts(1) is method.Name)
 IsLoadIgnored(name Text, at Number) Boolean
 	Stored.IsLoadIgnored("text", 1)
 	Stored.IsLoadIgnored("other", 1) is false

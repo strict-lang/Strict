@@ -15,6 +15,7 @@ constant LoadedInLineFour = InstructionEntry(Loaded, line = 4)
 constant GreaterInLineTwo = InstructionEntry(Mutation.Greater, line = 2)
 constant PlacedLines = (LoadedInLineFour, GreaterInLineTwo, GreaterInLineTwo, InstructionEntry(Returned, line = 2), InstructionEntry(Loaded, line = 3))
 constant Placed = MutationKinds(MethodEntry(Twice.method, instructions = PlacedLines + (GreaterInLineTwo, GreaterInLineTwo, Loaded, LoadedInLineFour)))
+constant Repeated = MutationKinds(MethodEntry(Twice.method, instructions = (GreaterInLineTwo, LoadedInLineFour, GreaterInLineTwo, InstructionEntry(InstructionType.LoopEnd, List(Text), (3, -1)))))
 constant Joined = MutationKinds(MethodEntry(Mutation.Twice.method, instructions = (InstructionEntry.LoadText(0, "a"), InstructionEntry.LoadText(1, ""), InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)), InstructionEntry.Return(2))))
 constant Texted = MutationKinds(MethodEntry(Twice.method, instructions = (InstructionEntry.LoadText(0, "a"), Mutation.Stored)))
 constant TextAdditions = (Loaded, InstructionEntry.LoadText(0, "a"), InstructionEntry.Binary(InstructionType.Add, (1, 0, 2)), InstructionEntry.Binary(InstructionType.Add, (1, 1, 2)))
@@ -127,17 +128,21 @@ IsLiteral(position Number) Boolean
 	(previous.kind is InstructionType.LoadConstantToRegister) and (previous.payload(0) is register)
 IsCompared(position Number) Boolean
 	Compared.IsCompared(0)
+	Repeated.IsCompared(0) is false
 	Compared.IsCompared(1) is false
 	MutationKinds(Mutation.Compared.Mutant(0)).IsCompared(0) is false
 	Compared.Possible(0) is (0, 1) and (Twice.Possible(2) is (2))
 	Valuing.IsCompared(7) is false and (Valuing.IsReassigned(11) is false) and (Valuing.IsReassigned(12) is false)
 	MutationKinds(MethodEntry(Twice.method, declaredType = "None")).Possible(2).Length is 0
-	let isLast = position + 1 is method.instructions.Length
-	let next = isLast then -1 else method.instructions(position + 1).kind
-	let isLooping = next is in (InstructionType.LoopBegin, InstructionType.LoopEnd)
 	let entry = method.instructions(position)
 	let isSelf = entry.payload.Length > 2 then entry.payload(1) is entry.payload(2) else false
+	let isLooping = IsLooping(position) or IsLooping(Twin(position))
 	(entry.kind is in Comparisons) and (isLooping is false) and (isSelf is false)
+IsLooping(position Number) Boolean
+	Repeated.IsLooping(2) and (Repeated.IsLooping(0) is false)
+	Compared.IsLooping(1) is false
+	let next = position + 1 is method.instructions.Length then -1 else method.instructions(position + 1).kind
+	next is in (InstructionType.LoopBegin, InstructionType.LoopEnd)
 IsDropped(entry InstructionEntry) Boolean
 	Twice.IsDropped(Twice.method.instructions(0)) is false
 	Twice.IsDropped(Logging)

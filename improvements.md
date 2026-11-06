@@ -52,6 +52,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - `X is Error` in a method body (not a test line) where the Error comes from a nested call inside X returns that Error from the method instead of giving true (test lines catch it since ErrorCodegen.Caught).
 - Mutation reports: some survivors look killed by existing tests (TracedFrame `Doubling.Called(Twice) is (0, 0, 0)` against `instructions.Length is 0` replaced with true, `Doubling.Changed(...) is (-1, 0)` against `slot >= 0` replaced with false): check that "the Nth comparison" names the mutated operator and that mutant runs execute all tests of the method.
 - Native Character as Text: a Character returned from a method declared as Text crashes the test exe (access violation), and `text(0) + "x"` gives "h" instead of "hx" (the right side is dropped); comparisons, `is in`, Text + Character and Character arguments for Text parameters work (found while replacing `Substring(i, 1)` with index access, those sites use `text(i) to Text` for now).
+- Mutant budgets are wall clock (10 times the baseline of the tests run, at least 1 ms): under load (another GPU job running) Json/Json.strict once reported 25 instead of 26 survivors, a pause can kill a mutant that should survive; rerun a timed out mutant once before counting it killed, or count steps instead of time.
 
 ## Waiting
 - Later: Qwen3-Coder-Next 80B-A3B and Qwen3-Coder-30B with all experts, image blur on the GPU, Apple Silicon, AMD GPUs, batched training ideas.
