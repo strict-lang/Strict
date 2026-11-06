@@ -66,4 +66,5 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 ## Waiting
 - Later: Qwen3-Coder-Next 80B-A3B and Qwen3-Coder-30B with all experts, image blur on the GPU, Apple Silicon, AMD GPUs, batched training ideas.
 - Later for Ben's long-term memory: an embedded persistent key-value store (LMDB-like, memory mapped, hash keys to blobs) usable on the VM and natively, once skill and evidence files get too many.
+- Reference counting does not free a `Text.Combine` result whose only use is `.Length` (Examples/ParallelGarbage serial 16x800: each 64 KB result lives until a collection, the heap reaches 933 MB); the temporary should be released right after its last use.
 
