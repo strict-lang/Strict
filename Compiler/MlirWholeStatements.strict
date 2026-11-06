@@ -13,6 +13,8 @@ constant Bytes = " : (!llvm.ptr, i64) -> !llvm.ptr, i8"
 constant Lanes = MlirWholeStatements(MlirWholeFunction.Painted, 0, "ii", "iidiii", "i")
 constant Reading = InstructionEntry(InstructionType.IndexCall, "colors", (1, 0, -1))
 constant Narrowing = MlirWholeStatements(MlirWholeNarrow.Summing, 6, "iiiiii", "ii", "iiiiiii")
+constant Reassociating = "    %t0c = arith.addf %t0a, %t0b" + MlirStatements.Reassociated + " : f64"
+constant Remainder = "    %t0c = func.call @strict_remainder(%t0a, %t0b) : (f64, f64) -> f64"
 Emitted Texts
 	Row.At(13).Emitted.Last is "    llvm.store %t13c, %r11 : i64, !llvm.ptr"
 	Row.At(16).Emitted is ("    cf.br ^bb17")
@@ -53,9 +55,9 @@ Calculated(entry InstructionEntry) Texts
 		return loads + MlirWholeNarrow(function, position).Emitted + Store("c", type, entry.payload(3))
 	loads + Operation(entry.kind, isWhole) + Store("c", type, entry.payload(3))
 Operation(kind Number, isWhole Boolean) Text
-	Row.Operation(InstructionType.Add, false) is "    %t0c = arith.addf %t0a, %t0b" + MlirStatements.Reassociated + " : f64"
+	Row.Operation(InstructionType.Add, false) is Reassociating
 	Row.Operation(InstructionType.Modulo, true) is "    %t0c = arith.remsi %t0a, %t0b : i64"
-	Row.Operation(InstructionType.Modulo, false) is "    %t0c = func.call @strict_remainder(%t0a, %t0b) : (f64, f64) -> f64"
+	Row.Operation(InstructionType.Modulo, false) is Remainder
 	let operands = Temp("a") + ", " + Temp("b")
 	if (kind is InstructionType.Modulo) and (isWhole is false)
 		return "    " + Temp("c") + " = func.call @strict_remainder(" + operands + ") : (f64, f64) -> f64"
