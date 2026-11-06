@@ -1,6 +1,5 @@
-has logger
 has root Text
-constant Version = "strict 1"
+constant Version = "strict 2"
 constant Greeting = "ready\n"
 constant Ending = "\n\n"
 constant Stopping = "stop"
@@ -10,13 +9,25 @@ constant IdleSeconds = 30
 constant GreetingSeconds = 0.02
 constant StartSeconds = 2
 constant PollSeconds = 0.005
-constant Sample = Resident(Logger, "Compiler/output")
-Request(folder Text, arguments Texts) Text
-	Resident.Request("C:/a", ("test", "a.strict")) is "strict 1\nC:/a\ntest\ta.strict\n\n"
-	Version + "\n" + folder + "\n" + Text.Combine(arguments, "\t") + Ending
+constant Settings = ("STRICT_THREADS", "STRICT_GPU", "STRICT_BUILD_PROFILE", "STRICT_GC_LOG", "STRICT_RC", "STRICT_RC_CHECK", "STRICT_RC_DEAD", "STRICT_HEAP", "STRICT_YOUNG")
+constant Sample = Resident("Compiler/output")
+Request(folder Text, arguments Texts, variables = "") Text
+	Resident.Request("C:/a", ("test", "a.strict"), "1") is "strict 2\nC:/a\ntest\ta.strict\n1\n\n"
+	Version + "\n" + folder + "\n" + Text.Combine(arguments, "\t") + "\n" + variables + Ending
+Variables Text
+	Resident.Variables.Split("\t").Length is Settings.Length
+	mutable values = List(Mutable(Text))
+	for Settings
+		values.Add(Process.Variable(value))
+	Text.Combine(values, "\t")
+IsCurrent(request Text) Boolean
+	Resident.IsCurrent(Resident.Request("C:/a", List(Text) + "test", Resident.Variables))
+	Resident.IsCurrent(Resident.Request("C:/a", List(Text) + "test", "other")) is false
+	let lines = request.Split("\n")
+	(lines.Length > 3) and (lines(3) is Variables)
 Arguments(request Text) Texts
 	Resident.Arguments(Resident.Request("C:/a", ("test", "a.strict"))) is ("test", "a.strict")
-	Resident.Arguments("strict 2\nC:/a\ntest\n\n") is List(Text)
+	Resident.Arguments("strict 1\nC:/a\ntest\n\n") is List(Text)
 	let lines = request.Split("\n")
 	(lines.Length < 3) or (lines(0) is not Version) then List(Text) else lines(2).Split("\t")
 Folder(request Text) Text
@@ -51,7 +62,7 @@ Accepted(server Number, built Number) Number
 		return 0
 	Socket.Accept(server)
 Requested(socket Number) Text
-	Sample.Loopback is 3
+	Forwarding.Sample.Loopback is 3
 	Sent(socket, Greeting) then Received(socket, Ending) else ""
 Finished(socket Number, code Number) Number
 	Sample.Finished(0, 1) is 0
@@ -59,64 +70,7 @@ Finished(socket Number, code Number) Number
 	Sent(socket, line)
 	Socket.Close(socket)
 Closed(server Number) Number
-	Resident(Logger, "Compiler/output/Missing").Closed(0) is 0
+	Resident("Compiler/output/Missing").Closed(0) is 0
 	let stamp = File(root + Stamp)
 	stamp.Delete
 	Socket.Close(server)
-Streamed(socket Number) Number
-	Sample.Streamed(0) is -1
-	mutable code = -2
-	for as long as code is -2
-		let block = Received(socket, "\n")
-		code = block.EndsWith("\n") then code else -1
-		for block.Split("\n")
-			let isExit = value.StartsWith(Exiting)
-			if (isExit is false) and (index < block.Split("\n").Length - 1)
-				logger.Log(value)
-			code = isExit then value.Substring(Exiting.Length, value.Length - Exiting.Length) to Number else code
-	code
-Loopback Slow(Number)
-	let server = Socket.Listen(0)
-	let client = Socket.Connect("127.0.0.1", Socket.Port(server))
-	let accepted = Socket.Accept(server)
-	Sent(client, Request(Directory.Current, ("test", "a.strict")))
-	let isRequested = Arguments(Requested(accepted)) is ("test", "a.strict")
-	Finished(accepted, 3)
-	let code = isRequested and Greeted(client) then Streamed(client) else 1
-	Socket.Close(client)
-	Socket.Close(server)
-	code
-Forwarded(arguments Texts) Number
-	Sample.Forwarded(List(Text) + "build") is -1
-	let isForwarded = (arguments.Length > 0) and (arguments(0) is in ("test", "check", Stopping))
-	let isStopping = (arguments.Length > 0) and (arguments(0) is Stopping)
-	if (isForwarded is false) or ((Process.Variable("STRICT_SERVER") is not "1") and (isStopping is false))
-		return -1
-	let socket = Socket.Connect("127.0.0.1", Port(isStopping is false))
-	if socket is Error
-		File(root + Stamp).Delete
-		return isStopping then 0 else -1
-	let code = Greeted(socket) and Sent(socket, Request(Directory.Current, arguments)) then Streamed(socket) else -1
-	Socket.Close(socket)
-	code
-Port(isStarting Boolean) Number
-	Sample.Port(false) is 0
-	if isStarting and (File(root + Stamp).Exists is false)
-		Started
-	File(root + Stamp).Exists then File(root + Stamp).ReadLines.First to Number else 0
-Started Number
-	let executable = "'" + Process.Current.executable + "'"
-	let isWindows = Process.OperatingSystem is "Windows"
-	let hidden = "-NoProfile -Command Start-Process -FilePath " + executable + " -ArgumentList serve -WindowStyle Hidden"
-	let detached = isWindows then hidden else "-c \"nohup " + executable + " serve >/dev/null 2>&1 &\""
-	Process.RunTool(isWindows then "powershell" else "sh", detached)
-	let deadline = Process.Elapsed + StartSeconds
-	for as long as (File(root + Stamp).Exists is false) and (Process.Elapsed < deadline)
-		Process.Wait(PollSeconds)
-	0
-Greeted(socket Number) Boolean
-	Sample.Greeted(0) is false
-	let waited = Socket.Waiting(socket, GreetingSeconds)
-	if (waited is Error) or (waited is not 1)
-		return false
-	ByteEncoder(Socket.Receive(socket, Greeting.Length)).Spelled(0, Greeting.Length) is Greeting

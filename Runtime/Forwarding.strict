@@ -1,0 +1,72 @@
+has logger
+has root Text
+constant Sample = Forwarding(Logger, "Compiler/output")
+constant Server = Resident("Compiler/output")
+Forwarded(arguments Texts) Number
+	Sample.Forwarded(List(Text) + "build") is -1
+	if IsForwarded(arguments) is false
+		return -1
+	let isStopping = arguments(0) is Resident.Stopping
+	let socket = Socket.Connect("127.0.0.1", Port(isStopping is false))
+	if socket is Error
+		File(root + Resident.Stamp).Delete
+		return isStopping then 0 else -1
+	let request = Resident.Request(Directory.Current, arguments, Resident.Variables)
+	let code = Greeted(socket) and Server.Sent(socket, request) then Streamed(socket) else -1
+	Socket.Close(socket)
+	code
+IsForwarded(arguments Texts) Boolean
+	Sample.IsForwarded(List(Text) + "build") is false
+	Sample.IsForwarded(List(Text) + "stop")
+	Sample.IsForwarded(("test", "a.strict", "native")) is false
+	let command = arguments.Length > 0 then arguments(0) else ""
+	let isLocal = ("native" is in arguments) or ("lines" is in arguments) or ("-" is in arguments)
+	let isServed = (command is in ("test", "check")) and (isLocal is false) and (Process.Variable("STRICT_SERVER") is "1")
+	(command is Resident.Stopping) or isServed
+Port(isStarting Boolean) Number
+	Sample.Port(false) is 0
+	let stamp = root + Resident.Stamp
+	if isStarting and (File(stamp).Exists is false)
+		Started
+	File(stamp).Exists then File(stamp).ReadLines.First to Number else 0
+Started Number
+	let executable = "'" + Process.Current.executable + "'"
+	let isWindows = Process.OperatingSystem is "Windows"
+	let hidden = "-NoProfile -Command Start-Process -FilePath " + executable + " -ArgumentList serve -WindowStyle Hidden"
+	let detached = isWindows then hidden else "-c \"nohup " + executable + " serve >/dev/null 2>&1 &\""
+	Process.RunTool(isWindows then "powershell" else "sh", detached)
+	let deadline = Process.Elapsed + Resident.StartSeconds
+	for as long as (File(root + Resident.Stamp).Exists is false) and (Process.Elapsed < deadline)
+		Process.Wait(Resident.PollSeconds)
+	0
+Greeted(socket Number) Boolean
+	Sample.Greeted(0) is false
+	let waited = Socket.Waiting(socket, Resident.GreetingSeconds)
+	if (waited is Error) or (waited is not 1)
+		return false
+	let greeting = Resident.Greeting
+	ByteEncoder(Socket.Receive(socket, greeting.Length)).Spelled(0, greeting.Length) is greeting
+Streamed(socket Number) Number
+	Sample.Streamed(0) is -1
+	let exiting = Resident.Exiting
+	mutable code = -2
+	for as long as code is -2
+		let block = Server.Received(socket, "\n")
+		code = block.EndsWith("\n") then code else -1
+		for block.Split("\n")
+			let isExit = value.StartsWith(exiting)
+			if (isExit is false) and (index < block.Split("\n").Length - 1)
+				logger.Log(value)
+			code = isExit then value.Substring(exiting.Length, value.Length - exiting.Length) to Number else code
+	code
+Loopback Slow(Number)
+	let server = Socket.Listen(0)
+	let client = Socket.Connect("127.0.0.1", Socket.Port(server))
+	let accepted = Socket.Accept(server)
+	Server.Sent(client, Resident.Request(Directory.Current, ("test", "a.strict")))
+	let isRequested = Resident.Arguments(Server.Requested(accepted)) is ("test", "a.strict")
+	Server.Finished(accepted, 3)
+	let code = isRequested and Greeted(client) then Streamed(client) else 1
+	Socket.Close(client)
+	Socket.Close(server)
+	code
