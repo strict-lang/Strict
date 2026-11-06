@@ -1,0 +1,15 @@
+has logger
+Dumped Number
+	DotProbe(Logger).Dumped is 0
+	let types = FileCompiler(logger, true).Compiled("NeuralNetworks/Batch.strict", ".", false)
+	for types
+		if value.Name.EndsWith("/Batch")
+			let batch = value
+			for value.methods
+				if value.Name is in ("Gated", "Sums")
+					let function = MlirFunction(types, batch, value)
+					for value.instructions
+						if value.kind is InstructionType.LoopBegin
+							let tokens = MlirTokens(function, index)
+							logger.Log(function.method.Name + " loop " + index + " call " + tokens.Call + " gated " + MlirGated(function, index).IsGated + " launch " + MlirTokenLaunch(function, index).Launched.Length)
+	0

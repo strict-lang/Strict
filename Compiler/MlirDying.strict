@@ -3,16 +3,22 @@ has position Number
 constant Seeding = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MemberEntry("start", "Strict/List(Number)", List(InstructionEntry), false), "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "start"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "moved")) + MlirOwned.Built))
 constant Dropping = MlirDying(MlirOwned.Rebuilt.function, 10)
 constant Dropped = InstructionEntry.Return(4)
+constant Guarding = ("a", "b %t#same, x", "c", "d")
+constant Guard = "    %t#sv = llvm.load %v_start : !llvm.ptr -> f64"
 constant Kept = ("    %t#ss = arith.cmpf oeq, %t#o, %t#sv : f64", "    %t#sk = arith.ori %t#same, %t#ss : i1")
 Loaded(register Number) Text
 	MlirDying(Seeding, 1).Loaded(0) is "start"
 	MlirDying(Seeding, 4).Loaded(0) is "listResult0"
+	MlirDying(Seeding, 0).Loaded(5) is "start"
+	MlirDying(Dropping.function, 3).Loaded(2) is ""
 	let writer = MlirKinds(function).Writer(position, register)
 	let loaded = writer >= 0 then function.method.instructions(writer) else function.method.instructions(position)
 	loaded.kind is InstructionType.LoadVariableToRegister then loaded.texts(0) else ""
 Seed(name Text) Text
 	MlirDying(Seeding, 0).Seed("moved") is "start"
 	MlirDying(MlirOwned.Moving, 0).Seed("moved") is ""
+	MlirDying(Seeding, 0).Seed("other") is ""
+	MlirDying(Seeding, 0).Seed("start") is ""
 	for function.method.instructions
 		if (value.kind is InstructionType.StoreRegisterToVariable) and (value.texts(0) is name)
 			let loaded = MlirDying(function, index).Loaded(value.payload(0))
@@ -22,6 +28,7 @@ Seed(name Text) Text
 Guarded(lines Texts, seed Text) Texts
 	Text.Combine(MlirOwned(Seeding, 4).Stored(Seeding.method.instructions(4))).IndexOf("%t4sv = llvm.load %v_start") > 0
 	MlirDying(Seeding, 4).Guarded(MlirOwned.Fresh, "") is MlirOwned.Fresh
+	MlirDying(Seeding, 4).Guarded(Guarding, "start") is ((List(Text) + "a" + Guard) + Kept) + ("b %t#sk, x", "c", "d")
 	if seed is ""
 		return lines
 	let skipped = lines(1).Replace("%t#same,", "%t#sk,")
@@ -29,15 +36,18 @@ Guarded(lines Texts, seed Text) Texts
 Mutated Texts
 	Dropping.Mutated is ("moved")
 	MlirDying(Seeding, 4).Mutated.Length is 0
+	MlirDying(MlirOwned.Moving, 0).Mutated.Length is 0
+	MlirDying(MlirOwned.Copying, 0).Mutated.Length is 0
 	mutable stored = List(Text)
 	for function.method.instructions
 		if value.kind is InstructionType.StoreRegisterToVariable
 			stored = stored + value.texts(0)
 	for stored
 		let isFirst = (stored.Index(value) is index) and (stored.Count(value) > 1)
-		if isFirst and (Seed(value) is "") and MlirOwned(function, 0).IsOwned(value)
+		if isFirst and MlirOwned(function, 0).IsOwned(value)
 			value
 Returned(entry InstructionEntry) Texts
+	Dropping.Returned(Dropped).First is "    %t10d0 = llvm.load %v_moved : !llvm.ptr -> f64"
 	Dropping.Returned(Dropped).Last is "    func.call @strict_rc_dead(%t10d0, %t10) : (f64, f64) -> ()"
 	Dropping.Returned(InstructionEntry.Return(7)).Length is 0
 	let returned = "%t" + position

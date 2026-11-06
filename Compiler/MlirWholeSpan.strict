@@ -5,6 +5,8 @@ constant Quads = MlirWholeSpan(MlirFunction(List(TypeEntry) + MlirFunction.Shape
 constant Halving = MlirWholeSpan(MlirWholeTypes.Halving.function, 1)
 constant Split = (InstructionEntry.LoadNumber(0, 2), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "count"), InstructionEntry.Binary(InstructionType.Divide, (1, 0, 2)), InstructionEntry.LoadNumber(3, 1), InstructionEntry.Binary(InstructionType.Add, (2, 3, 4)), InstructionEntry.Return(4))
 constant Splits = MlirWholeSpan(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Split", List(MemberEntry) + MemberEntry("count", "Strict/Number", List(InstructionEntry), false), "Strict/Number", Split)), 2)
+constant Bounded = (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply)
+constant Constants = (InstructionType.LoadConstantToRegister, InstructionType.StoreConstantToVariable)
 Lines Texts
 	Halving.Lines.Length is 0
 	Text.Combine(Quads.Lines).IndexOf("arith.mulf") > 0
@@ -21,14 +23,14 @@ Checks Texts
 	Quads.Checks.Last.EndsWith("wk12")
 	mutable checks = List(Mutable(Text))
 	for function.method.instructions
-		if value.kind is in (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply)
+		if value.kind is in Bounded
 			checks.Add(Name("wk", index))
 	checks
 Grown Boolean
 	Halving.Grown is false
 	Quads.Grown
 	for function.method.instructions
-		if value.kind is in (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply, InstructionType.LoopBegin)
+		if (value.kind is in Bounded) or (value.kind is InstructionType.LoopBegin)
 			return true
 	false
 At(at Number) Texts
@@ -37,11 +39,11 @@ At(at Number) Texts
 	let entry = function.method.instructions(at)
 	if entry.kind is InstructionType.LoopBegin
 		return Counted(at)
-	if entry.kind is in (InstructionType.LoadConstantToRegister, InstructionType.StoreConstantToVariable)
+	if entry.kind is in Constants
 		return Listed(at)
 	if entry.kind is InstructionType.LoadVariableToRegister
 		return Loaded(at)
-	if entry.kind is in (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply)
+	if entry.kind is in Bounded
 		return Combined(at)
 	List(Text)
 Counted(at Number) Texts
@@ -54,7 +56,8 @@ Counted(at Number) Texts
 Listed(at Number) Texts
 	let entry = function.method.instructions(at)
 	let values = PayloadDecoder(entry)
-	let number = entry.kind is InstructionType.StoreConstantToVariable then values.Value(0).number else values.Value(1).number
+	let index = entry.kind is InstructionType.StoreConstantToVariable then 0 else 1
+	let number = values.Value(index).number
 	List(Text) + ("    " + Name("wb", at) + " = arith.constant " + MlirStatements.Copy.Hex(number.Absolute) + " : f64")
 Loaded(at Number) Texts
 	let entry = function.method.instructions(at)
@@ -71,16 +74,15 @@ Combined(at Number) Texts
 	let operation = entry.kind is InstructionType.Multiply then "mulf" else "addf"
 	let factors = Source(entry.payload(1), at) + ", " + Source(entry.payload(2), at)
 	let math = "    " + Name("wb", at) + " = arith." + operation + " " + factors + " : f64"
-	List(Text) + math + ("    " + Name("wk", at) + " = arith.cmpf olt, " + Name("wb", at) + ", %t" + position + "whlimit : f64")
+	let check = "    " + Name("wk", at) + " = arith.cmpf olt, " + Name("wb", at) + ", %t" + position + "whlimit : f64"
+	(List(Text) + math) + check
 Accumulated(at Number, carried Number) Texts
 	let entry = function.method.instructions(at)
 	let term = carried is entry.payload(1) then entry.payload(2) else entry.payload(1)
 	let grown = Name("wb", at) + "g"
-	let name = function.method.instructions(Earlier(carried, at, false)).texts(0)
-	let store = StoreBefore(name, Earlier(0, at, true))
-	let stored = function.method.instructions(store)
-	let initial = stored.kind is InstructionType.StoreConstantToVariable then Name("wb", store) else Source(stored.payload(0), store)
-	let product = "    " + grown + " = arith.mulf " + Name("wn", Earlier(0, at, true)) + ", " + Source(term, at) + " : f64"
+	let loop = Earlier(0, at, true)
+	let initial = Variable(function.method.instructions(Earlier(carried, at, false)), loop)
+	let product = "    " + grown + " = arith.mulf " + Name("wn", loop) + ", " + Source(term, at) + " : f64"
 	let summed = "    " + Name("wb", at) + " = arith.addf " + initial + ", " + grown + " : f64"
 	let check = "    " + Name("wk", at) + " = arith.cmpf olt, " + Name("wb", at) + ", %t" + position + "whlimit : f64"
 	(List(Text) + product + summed) + check
@@ -93,9 +95,8 @@ Source(register Number, at Number) Text
 	let entry = function.method.instructions(writer)
 	if entry.kind is InstructionType.LoadVariableToRegister
 		return Variable(entry, writer)
-	if entry.kind is in (InstructionType.LoadConstantToRegister, InstructionType.StoreConstantToVariable, InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply)
-		return Name("wb", writer)
-	"%t" + position + "whlimit"
+	let isBounded = (entry.kind is in Bounded) or (entry.kind is in Constants)
+	isBounded then Name("wb", writer) else "%t" + position + "whlimit"
 Variable(entry InstructionEntry, at Number) Text
 	if entry.texts(0) is in ("value", "index")
 		return Name("wn", Earlier(0, at, true))
@@ -109,17 +110,15 @@ Variable(entry InstructionEntry, at Number) Text
 Carried(at Number) Number
 	Quads.Carried(12) is 2
 	Quads.Carried(7) is -1
-	let entry = function.method.instructions(at)
-	let writer = Earlier(entry.payload(1), at, false)
-	if (writer < 0) or (Earlier(0, at, true) < 0)
-		return -1
-	let loaded = function.method.instructions(writer)
-	if loaded.kind is not InstructionType.LoadVariableToRegister
+	let first = function.method.instructions(at).payload(1)
+	let writer = Earlier(first, at, false)
+	let loaded = function.method.instructions(writer < 0 then at else writer)
+	if (Earlier(0, at, true) < 0) or (loaded.kind is not InstructionType.LoadVariableToRegister)
 		return -1
 	for Range(at + 1, function.method.LoopEndOf(Earlier(0, at, true)))
 		let step = function.method.instructions(value)
 		if (step.kind is InstructionType.StoreRegisterToVariable) and (step.texts.Last is loaded.texts(0))
-			return entry.payload(1)
+			return first
 	-1
 Earlier(register Number, at Number, isLoop Boolean) Number
 	Quads.Earlier(3, 7, false) is 5

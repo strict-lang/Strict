@@ -4,6 +4,13 @@ constant Spark = TypeEntry("Strict/Spark", (MemberEntry("size", "Strict/Number",
 constant Sparks = MemberEntry("sparks", "Strict/List(Strict/Spark)", List(InstructionEntry), false)
 constant Advice = "), use value.Bits is 32 on them or on the list"
 constant Sparking = MlirWideMembers(MlirFunction(List(TypeEntry) + Spark + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Sparked", List(MemberEntry) + Sparks, "Strict/List(Strict/Spark)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "sparks"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 3)))), 2)
+constant Heat = TypeEntry("Strict/Heat", List(MemberEntry) + MemberEntry("degrees", "Strict/Number", List(InstructionEntry), false, 32), List(MethodEntry))
+constant Cold = TypeEntry("Strict/Cold", List(MemberEntry) + MemberEntry("degrees", "Strict/Number", List(InstructionEntry), false), List(MethodEntry))
+constant Flame = TypeEntry("Strict/Flame", (MemberEntry("spark", "Strict/Spark", List(InstructionEntry), false), MemberEntry("heat", "Strict/Heat", List(InstructionEntry), false), MemberEntry("cold", "Strict/Cold", List(InstructionEntry), false), MemberEntry("kept", "Strict/Spark", List(InstructionEntry), false, 32), MemberEntry("sizing", "Strict/Math/Sizing", List(InstructionEntry), false)), List(MethodEntry))
+constant Flaming = MlirWideMembers(MlirFunction((Spark, Heat, Cold, Flame, MlirCouples.Sizing, MlirFunction.Shape), MlirFunction.Shape, Sparking.function.method), 2)
+constant Marked = MlirWideMembers(MlirFunction(Sparking.function.types, MlirFunction.Shape, MethodEntry(Sparking.function.method, parameters = List(MemberEntry) + MemberEntry("sparks", "Strict/List(Strict/Spark)", List(InstructionEntry), false, 32))), 2)
+constant Unlooped = MlirWideMembers(MlirFunction(Sparking.function.types, MlirFunction.Shape, MethodEntry(Sparking.function.method, instructions = Sparking.function.method.instructions.Slice(0, 4) + InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "other") + Sparking.function.method.instructions.Slice(5, 1))), 2)
+constant Pairs = MlirWideMembers(MlirFunction(Flaming.function.types, MlirFunction.Shape, MethodEntry(Sparking.function.method, parameters = List(MemberEntry) + MemberEntry("sparks", "Strict/List(Strict/Math/Sizing)", List(InstructionEntry), false))), 2)
 Issue Text
 	Sparking.Issue.EndsWith(": VectorLoopMustUse32BitNumbers: Sparked loops over Spark with 64 bit numbers (size" + Advice)
 	MlirWideMembers(MlirParallel.Doubling.function, 2).Issue is ""
@@ -19,6 +26,8 @@ Element Text
 IsCandidate Boolean
 	Sparking.IsCandidate
 	MlirWideMembers(Sparking.function, 0).IsCandidate is false
+	(Marked.IsCandidate or Unlooped.IsCandidate or Pairs.IsCandidate) is false
+	MlirWideMembers(MlirParallel.Doubling.function, 2).IsCandidate is false
 	let narrowing = MlirNarrowing(function, position)
 	let iterated = narrowing.Iterated
 	let isMarked = (iterated.Length > 0) and (narrowing.Bits(iterated.First) > 0)
@@ -27,6 +36,8 @@ IsCandidate Boolean
 	isStruct and (isMarked is false) and isCpu and MlirParallel(function, position).IsParallel
 Wide(typeName Text, prefix Text, depth Number) Texts
 	Sparking.Wide("Strict/Spark", "", 0) is ("size")
+	Flaming.Wide("Strict/Flame", "f.", 0) is ("f.spark.size", "f.cold")
+	Flaming.Wide("Strict/Flame", "f.", 9) is ("f.cold")
 	mutable names = List(Text)
 	for MlirInstances(function, 0).Stored(function.TypeOf(TypeEntry.ShortName(typeName)))
 		let kind = MlirLayout(function).Represented(TypeEntry.ShortName(value.typeName))
@@ -38,6 +49,9 @@ Wide(typeName Text, prefix Text, depth Number) Texts
 IsMarked(member MemberEntry) Boolean
 	Sparking.IsMarked(Spark.members.Last)
 	Sparking.IsMarked(Spark.members.First) is false
+	Flaming.IsMarked(Flame.members(1)) and (Flaming.IsMarked(Flame.members(2)) is false)
+	Flaming.IsMarked(Flame.members(3)) and (Flaming.IsMarked(Flame.members.First) is false)
+	Flaming.IsMarked(Flame.members.Last) is false
 	if (member.Bits > 0) or (TypeEntry.ShortName(member.typeName) is "Number")
 		return member.Bits > 0
 	let stored = MlirInstances(function, 0).Stored(function.TypeOf(TypeEntry.ShortName(member.typeName)))

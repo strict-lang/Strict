@@ -7,7 +7,7 @@ Run(folder Text, root Text) Number
 	let failed = issues is 0 then Folders(logger).Tested(folder, root) else 0
 	issues + failed
 Checked(folder Text, root Text) Number
-	let files = Directory.Files(folder, "*.strict")
+	let files = Files(folder)
 	let mutations = Mutations(files + ResolveCheck(logger).AllFiles(root))
 	let isBase = folder.Replace("\\", "/").Replace("/.", "") is root
 	let duplicates = Duplicates.Of(files + Directory.Files(root, "*.strict"))
@@ -15,6 +15,10 @@ Checked(folder Text, root Text) Number
 	let reached = files.Length is 0 then files else SourceFiles(root).Of(files.First, files)
 	let inference = ResolveCheck(logger).Inference(reached)
 	Counts(files, mutations, isBase, shared, duplicates, inference).Sum
+Files(folder Text) Texts
+	ValidateCheck(Logger).Files("Validators/MagicNumbers.strict") is ("Validators/MagicNumbers.strict")
+	ValidateCheck(Logger).Files("Validators").Length > 1
+	folder.EndsWith(".strict") then List(Text) + folder else Directory.Files(folder, "*.strict")
 Counts(files Texts, mutations Texts, isBase Boolean, shared Texts, duplicates Duplicates, inference Expressions/TypeInference) Numbers
 	for files
 		let found = CheckFile(value, mutations, isBase, shared) + duplicates.Issues(value, File(value).ReadLines)
