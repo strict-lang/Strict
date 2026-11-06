@@ -9,10 +9,11 @@ constant Declaring = SyntaxNode("Declaration", "let a", MethodCodegen.One)
 constant EvenFailed = InstructionEntry(InstructionType.Print, "Test failed: IsEven(2) is true in IsEven at Even.strict:line 2 (", (-1, 1, 14, 1), 2)
 constant EvenPassed = InstructionEntry(InstructionType.Print, "Test passed: IsEven(2) is true in IsEven at Even.strict:line 2 (", (-1, 1, 10, 1), 2)
 constant Runner = "$Tests"
+constant Halving = TestCodegen(TypeCodegen("Strict/Halving", ("Half(number Number) Number", "\t3 / 2 is 1.5", "\tnumber / 2"), TypeCodegen.NoTypes, List(Text)))
 constant TookCall = InstructionEntry.Invoke(1, ("Strict/Even", "$TestsTook", "Strict/Text", "elapsed"), List(Number) + 0, -1)
 constant GotCall = InstructionEntry.Invoke(1, ("Strict/Even", "$TestsGot0", "Strict/Text", "tested"), List(Number) + 0, -1)
 Tests Slow(List(MethodEntry))
-	Even.Tests.First.Name is Runner
+	Even.Tests.First.Name is Runner and (Halving.Tests.Last.Name is "$TestsNear0")
 	Even.Tests.First.instructions.Last.kind is InstructionType.Return
 	let scope = types.Generator.target.shape.MemberScope.With("failed", "Number").With("started", "Number")
 	let start = CodeBlock(List(InstructionEntry), 0, 0, scope.With("elapsed", "Number"))
@@ -117,10 +118,10 @@ Got(block CodeBlock) Slow(CodeBlock)
 	Even.Got(TestedNumber).instructions(1) is GotCall
 	Even.Got(Even.Got(TestedNumber)).scope.Count(TestReports.Showing) is 1
 	let type = block.scope.TypeOf(ErrorCodegen.Tested)
-	let marked = type is in TestReports.Shows(block.scope) then block else block.Declare(TestReports.Showing, type)
+	let marked = TestReports.Mark(block, TestReports.Showing, type)
 	let load = InstructionEntry.Named(InstructionType.LoadVariableToRegister, marked.register, ErrorCodegen.Tested)
 	let tested = marked.Load(load)
-	let ordinal = TestReports.Shows(marked.scope).Index(type)
+	let ordinal = TestReports.Marked(marked.scope, TestReports.Showing).Index(type)
 	let signature = (types.fullName, Runner + "Got" + ordinal, "Strict/Text", ErrorCodegen.Tested)
 	let shown = tested.Load(InstructionEntry.Invoke(tested.register, signature, List(Number) + tested.Result, -1))
 	shown.Add(InstructionEntry.PrintValue("  got: ", shown.Result, true))

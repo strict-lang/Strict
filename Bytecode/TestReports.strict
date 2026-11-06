@@ -1,6 +1,8 @@
 has types TypeCodegen
 has isQuiet Boolean = false
 constant Showing = " shown"
+constant Nearing = " near"
+constant Expected = "testExpected"
 constant Shown = SyntaxParser(Tokenizer("tested is Error then (tested to Text).Replace((tested to Text).Lines.First, tested.Code) else tested.Code").Tokens).Parse
 constant Duration = SyntaxParser(Tokenizer("elapsed.Round(2) + \" ms)\"").Tokens).Parse
 constant Elapsed = SyntaxParser(Tokenizer("Process.Elapsed").Tokens).Parse
@@ -9,20 +11,29 @@ constant Erring = TestReports(TypeCodegen("Strict/Erring", ("Error(number Number
 constant Processing = TestReports(TypeCodegen("Strict/Image", ("Process(number Number) Image", "	Process(1) is Image", "	Image"), TypeInference(KnownTypes(("Process", "Image"), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Scope(List(Text) + "Elapsed", List(Text) + "Number"), Scope(List(Text) + "Process", List(Text) + "Image")), (KnownTypes.NoMembers, KnownTypes.NoMembers)), (KnownTypes.NoMembers, KnownTypes.NoMembers)), List(Text)))
 constant GotNumber = TestCodegen.Even.Got(TestCodegen.TestedNumber).scope
 constant ElapsedParameter = MemberEntry("elapsed", "Strict/Number", List(InstructionEntry), false)
-Shows(scope Scope) Texts
-	TestReports.Shows(TestCodegen.Even.Got(TestCodegen.Even.Got(TestCodegen.TestedNumber)).scope) is ("Number")
+Marked(scope Scope, marker Text) Texts
+	TestReports.Marked(TestCodegen.Even.Got(TestCodegen.Even.Got(TestCodegen.TestedNumber)).scope, Showing) is ("Number")
+	TestReports.Marked(GotNumber, Nearing).Length is 0
 	for scope.names
-		if value is Showing
+		if value is marker
 			scope.types(index)
+Mark(block CodeBlock, marker Text, key Text) CodeBlock
+	TestReports.Mark(TestCodegen.Counter, Showing, "Number").scope.TypeOf(Showing) is "Number"
+	TestReports.Mark(TestReports.Mark(TestCodegen.Counter, Nearing, "A"), Nearing, "A").scope.Count(Nearing) is 1
+	key is in Marked(block.scope, marker) then block else block.Declare(marker, key)
 Helpers(scope Scope) Slow(List(MethodEntry))
 	Even.Helpers(GotNumber).First.Name is "$TestsGot0"
 	Even.Helpers(GotNumber).Last.Name is "$TestsTook"
 	Even.Helpers(GotNumber).Last.parameters is (ElapsedParameter)
 	TestReports(Even.types, true).Helpers(GotNumber).Length is 1
 	mutable helpers = List(Mutable(MethodEntry))
-	for Shows(scope)
+	for Marked(scope, Showing)
 		helpers.Add(Helper("Got" + index, ErrorCodegen.Tested, value, Shown))
-	isQuiet then helpers else helpers + Helper("Took", "elapsed", "Number", Duration)
+	if isQuiet is false
+		helpers.Add(Helper("Took", "elapsed", "Number", Duration))
+	for Marked(scope, Nearing)
+		helpers.Add(Near(value, index))
+	helpers
 Helper(name Text, parameter Text, type Text, expression SyntaxNode) Slow(MethodEntry)
 	Even.Helper("Got1", ErrorCodegen.Tested, "Number", Shown).Name is "$TestsGot1"
 	Even.Helper("Took", "elapsed", "Number", Duration).returnType is "Strict/Text"
@@ -32,6 +43,18 @@ Helper(name Text, parameter Text, type Text, expression SyntaxNode) Slow(MethodE
 	let entry = MemberEntry(parameter, neutral.target.FullName(type), List(InstructionEntry), false)
 	let returned = generated.Add(InstructionEntry.Return(generated.Result))
 	MethodEntry(TestCodegen.Runner + name, List(MemberEntry) + entry, "Strict/Text", returned.instructions)
+Near(kind Text, ordinal Number) Slow(MethodEntry)
+	Even.Near("Number", 1).Name is "$TestsNear1"
+	Even.Near("Number", 0).parameters.Last.typeName is "Strict/Number"
+	let values = types.Generator
+	let tested = ErrorCodegen.Tested
+	let declared = CodeBlock.Empty.Declare(tested, kind).Declare(Expected, kind)
+	let lines = Closeness(values.inference.types).Lines(tested, Expected, (kind, kind), "1", false, List(Text))
+	let body = MethodCodegen(values).Body(BodyParser(TestComparison(values).Shortcut(tested, lines)).Block(1, 1), declared)
+	let parameter = MemberEntry(tested, values.target.FullName(kind), List(InstructionEntry), false)
+	let returned = body.Add(InstructionEntry.Return(body.Result))
+	let parameters = (parameter, MemberEntry(parameter, Name = Expected))
+	MethodEntry(TestCodegen.Runner + "Near" + ordinal, parameters, "Strict/Boolean", returned.instructions)
 Neutral Slow(ValueCodegen)
 	Processing.Neutral.Expression(Elapsed, TestCodegen.Counter).instructions.First.texts.First is "Strict/Process"
 	TestReports(TypeCodegen("P/H", List(Text), Even.types.inference, ("P/S"))).Neutral.target.FullName("S") is "P/S"

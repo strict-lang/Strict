@@ -1,9 +1,10 @@
 has values ValueCodegen
+constant Plain = TestComparison(ValueCodegen.Plain)
 Precise(left SyntaxNode, right SyntaxNode, block CodeBlock) Boolean
 	let kinds = (values.TypeOf(left, block), values.TypeOf(right, block))
 	if values.IsTypeName(right, block) or (kinds.Last is in ("Error", "ErrorWithValue"))
 		return true
-	if kinds.First is in Closeness.Scalars
+	if (kinds.First is in Closeness.Scalars) or (kinds.First is not kinds.Last)
 		return true
 	let fields = values.inference.types.MembersOf(kinds.First).names.Length > 0
 	let list = values.inference.types.BaseName(kinds.First) is "List"
@@ -14,16 +15,20 @@ Checked(test SyntaxNode, left SyntaxNode, right SyntaxNode, block CodeBlock) Cod
 	let exact = (step.StepOf(left, block) is not "") or (step.StepOf(right, block) is not "")
 	let operator = test.text is in ("is", "is not") then test.text else "is"
 	let comparison = SyntaxNode("Binary", operator, (tested, right), test.line)
-	if Precise(left, right, block)
+	if exact or Precise(left, right, block)
 		return values.Expression(comparison, block)
-	let compared = Compared(tested, right, block, exact)
+	let compared = Compared(tested, right, block)
 	operator is "is not" then compared.Negated else compared
-Compared(left SyntaxNode, right SyntaxNode, block CodeBlock, exact Boolean) CodeBlock
-	let generated = values.Expression(right, block).Stored("testExpected").At(block.register)
-	let declared = generated.Declare("testExpected", values.TypeOf(right, block))
-	let kinds = (values.TypeOf(left, block), values.TypeOf(right, block))
-	let lines = Closeness(values.inference.types).Lines(left to Text, "testExpected", kinds, "1", exact, List(Text))
-	MethodCodegen(values).Body(BodyParser(Shortcut(left to Text, lines)).Block(1, 1), declared)
+Compared(left SyntaxNode, right SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Compared(ValueCodegen.One, ValueCodegen.One, CodeBlock.Empty).instructions.Last.texts(1) is "$TestsNear0"
+	Plain.Compared(ValueCodegen.One, ValueCodegen.One, CodeBlock.Empty).scope.TypeOf(" near") is "Number"
+	let key = values.TypeOf(left, block)
+	let marked = TestReports.Mark(block, TestReports.Nearing, key)
+	let expected = values.Expression(right, marked)
+	let tested = values.Expression(left, expected)
+	let name = TestCodegen.Runner + "Near" + TestReports.Marked(marked.scope, TestReports.Nearing).Index(key)
+	let signature = (values.target.fullName, name, "Strict/Boolean", ErrorCodegen.Tested, TestReports.Expected)
+	tested.Load(InstructionEntry.Invoke(tested.register, signature, (tested.Result, expected.Result), -1))
 Shortcut(left Text, lines Texts) Texts
 	TestComparison(ValueCodegen.Plain).Shortcut("x", List(Text))(2) is "\tif (testEqual0 is false) and (x is not Error)"
 	TestComparison(ValueCodegen.Plain).Shortcut("x", List(Text))(0) is "Run"
