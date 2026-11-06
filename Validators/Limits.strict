@@ -52,9 +52,12 @@ LengthIssues(line Text, number Number) ValidationIssues
 	Sample.LengthIssues("\t" + Wide, 2).First to Text is "CharacterCountMustBeWithinLimit: 251 > 120"
 	Sample.LengthIssues("\t" + Wide, 2).First.Line is 3
 	Limits(Long.lines, false, 10).LengthIssues("\t" + Wide, 0).Length is 0
+	Sample.LengthIssues("constant A = " + Wide, 0).First to Text is "CharacterCountMustBeWithinLimit: 263 > 240"
+	Sample.LengthIssues("constant A = 1" + Wide.Substring(0, 100), 0).Length is 0
 	mutable issues = List(Mutable(ValidationIssue))
-	let length = line.Length to Text + " > " + MaxCharacters * scale
-	if line.StartsWith("\t") and (line.Length > MaxCharacters * scale)
+	let limit = (line.StartsWith("constant ") then 2 else 1) * MaxCharacters * scale
+	let length = line.Length to Text + " > " + limit
+	if (line.StartsWith("\t") or line.StartsWith("constant ")) and (line.Length > limit)
 		issues.Add(ValidationIssue("CharacterCountMustBeWithinLimit", length, number + 1))
 	issues
 NegationIssues(line Text, number Number) ValidationIssues
