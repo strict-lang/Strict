@@ -42,7 +42,7 @@ Reached(known Texts, frontier Texts, reached Texts) Slow(Texts)
 		all = Added(all, pending)
 		mutable mentioned = List(Mutable(Text))
 		for pending
-			mentioned = Added(mentioned, Mentions(File(value).ReadLines).Types)
+			mentioned = Added(mentioned, Mentioned(value))
 		indexed = Added(indexed, Nearby(Mentions.Unmatched(mentioned, indexed)))
 		pending = Matching(mentioned, indexed) - all
 	all
@@ -76,6 +76,10 @@ Packages(file Text) Texts
 	SourceFiles(".").Packages("./Bytecode/SourceFiles.strict") is List(Text)
 	constant kind = "packages"
 	Memo.Has(file, kind) then Memo.Texts(file, kind) else Memo.Kept(file, kind, PackagesIn(File(file).ReadLines))
+Mentioned(file Text) Texts
+	"Number" is in SourceFiles(".").Mentioned("./Math/Vector2.strict")
+	constant kind = "mentions"
+	Memo.Has(file, kind) then Memo.Texts(file, kind) else Memo.Kept(file, kind, Mentions(File(file).ReadLines).Types)
 PackagesIn(lines Texts) Texts
 	SourceFiles(".").PackagesIn("has a Bytecode/X", "Run") is List(Text) + "./Bytecode"
 	mutable result = List(Mutable(Text))
