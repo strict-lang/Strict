@@ -79,6 +79,7 @@ IsShared(at Number) Boolean
 Renamed(tokens Texts, name Text) Texts
 	Nested.Renamed(("value", "+", "1"), "first") is ("first", "+", "1")
 	Nested.Renamed(("x", ".", "value"), "first") is ("x", ".", "value")
+	Nested.Renamed(("value", "."), "first") is ("first", ".")
 	Nested.Renamed(("value", ".", "value", "+", "value"), "first") is ("first", ".", "value", "+", "first")
 	for tokens
 		let before = index is 0 then "" else tokens(index - 1)
@@ -125,7 +126,8 @@ IsMisnamedConstant(line Text, name Text) Boolean
 	Sample.IsMisnamedConstant("constant Number = 3", "Number") is false
 	Sample.IsMisnamedConstant("constant ListNumbers = 1", "ListNumbers")
 	Sample.IsMisnamedConstant("let ListNumbers = 1", "ListNumbers") is false
-	line.StartsWith("constant ") and IsMethodName(name)
+	Sample.IsMisnamedConstant("constant Code = 1", "Code")
+	line.StartsWith("constant ") and (IsMethodName(name) or (name is in Automatic.Generating))
 IsMethodName(name Text) Boolean
 	Sample.IsMethodName("ListNumbers")
 	Sample.IsMethodName("Number") is false

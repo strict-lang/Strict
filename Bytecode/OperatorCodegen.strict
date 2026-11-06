@@ -12,7 +12,9 @@ constant Narrowing = SyntaxParser(Tokenizer("x is Error then x.Name else \"\"").
 constant Mismatched = SyntaxParser(Tokenizer("Dictionary(A, B) is Dictionary(B, A)").Tokens).Parse
 constant Hiding = OperatorCodegen(ValueCodegen(ValueCodegen.NoTypes, Scope(List(Text) + "B", List(Text) + "Text"), CallTarget(CallTarget.NoTypes, TypeShape(("has text", "B Text", "\ttext")), "Strict/Examples/Hiding", List(Text))))
 constant Comparisons = ("is", "is not", "<", ">", "xor", ">=", "<=")
-constant ComparisonOffsets = (0, 1, 2, 3, 1, 2, 3)
+constant ErrorLast = SyntaxNode("Binary", "or", (ErrorCodegen.IsOne, ErrorCodegen.IsError))
+constant ErrorFirst = SyntaxNode("Binary", "or", (ErrorCodegen.IsError, ErrorCodegen.IsOne))
+constant ComparisonOffsets = (0, 1, 2, 3, 1, 3, 2)
 Operation(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Operation(SyntaxNode("Binary", "<=", (One, One)), CodeBlock.Empty).Result is 4
 	Plain.Operation(SyntaxNode("Negate", "", List(SyntaxNode) + NoNode), CodeBlock.Empty).Result is 2
@@ -25,7 +27,7 @@ Operation(node SyntaxNode, block CodeBlock) CodeBlock
 	let left = ErrorCodegen(values).Compared(node, node.children(0), block)
 	let right = ErrorCodegen(values).Right(node, left, true)
 	let result = right.Load(InstructionEntry.Binary(OperatorType(node.text), (left.Result, right.Result, right.register)))
-	node.text is in (">=", "<=") then result.Negated else result
+	node.text is in (">=", "<=") then result.OrEqual(left.Result, right.Result) else result
 Negative(operand SyntaxNode, block CodeBlock) CodeBlock
 	Plain.IsMismatched(SyntaxParser(Tokenizer("1 is Dictionary(A, B)").Tokens).Parse, CodeBlock.Empty) is false
 	Plain.IsMismatched(SyntaxParser(Tokenizer("Dictionary(A, B) is 1").Tokens).Parse, CodeBlock.Empty) is false
@@ -128,6 +130,7 @@ Composite(node SyntaxNode, block CodeBlock) CodeBlock
 	node.text is "else" then Choice(node, block) else Contains(node, block)
 Choice(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Choice(Choose, CodeBlock.Empty).instructions.Length is 14
+	Plain.Choice(Choose, CodeBlock.Empty).instructions(12).payload is (1)
 	Plain.Choice(Narrowing, CodeBlock.Empty.Declare("x", "Number")).instructions(6).texts.First is "Strict/Error"
 	let decision = node.children(0)
 	let condition = Condition(decision.children(0), block)
@@ -141,14 +144,14 @@ Choice(node SyntaxNode, block CodeBlock) CodeBlock
 Logical(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Logical(SyntaxNode("", "and", (One, One)), CodeBlock.Empty).instructions(4).kind < InstructionType.JumpToIdIfTrue
 	Plain.Logical(SyntaxNode("", "or", (One, One)), CodeBlock.Empty).instructions(4).kind is InstructionType.JumpToIdIfTrue
-	Plain.Choice(Choose, CodeBlock.Empty).instructions(12).payload is (1)
-	Plain.Compared(SyntaxNode("Identifier", "<"), CodeBlock.Empty.Declare("<", "Boolean")).instructions.Length is 3
+	Plain.Logical(ErrorLast, CodeBlock.Empty) is Plain.Logical(ErrorFirst, CodeBlock.Empty)
 	Plain.Logical(SyntaxNode("Binary", "or", (One, One)), CodeBlock.Empty).instructions.Last.texts is ("logical0")
 	Plain.Logical(SyntaxNode("Binary", "or", (One, One)), CodeBlock.Empty).nextId is 1
-	let left = values.Expression(node.children(0), block)
+	let first = ErrorCodegen(values).IsErrorComparison(node.children(1), block) then 1 else 0
+	let left = values.Expression(node.children(first), block)
 	let name = "logical" + left.nextId
 	let jump = node.text is "and" then InstructionType.JumpToIdIfFalse else InstructionType.JumpToIdIfTrue
-	values.Expression(node.children(1), left.Skipping(name, jump)).Joined(name, left.nextId)
+	values.Expression(node.children(1 - first), left.Skipping(name, jump)).Joined(name, left.nextId)
 Contains(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Contains(SyntaxNode("", "is in", (One, NoNode)), CodeBlock.Empty.Declare("x", "Errors")).nextId is 1
 	Plain.Contains(InOnes, CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
@@ -173,6 +176,7 @@ Condition(node SyntaxNode, block CodeBlock) CodeBlock
 Compared(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Compared(SyntaxNode("Binary", ">", (NoNode, NoNode)), CodeBlock.Empty).instructions.Length is 3
 	Plain.Compared(NoNode, CodeBlock.Empty).instructions.Last.kind is InstructionType.Equal
+	Plain.Compared(SyntaxNode("Identifier", "<"), CodeBlock.Empty.Declare("<", "Boolean")).instructions.Length is 3
 	let isCompared = (node.Kind is "Binary") and (node.text is in ("is", "is not", "<", ">"))
 	let isComparison = isCompared and (Decided(node, block) is "") and (IsCustom(node, block) is false)
 	let operand = isComparison then node.children(0) else node
@@ -185,7 +189,7 @@ Compared(node SyntaxNode, block CodeBlock) CodeBlock
 OperatorType(operator Text) Number
 	Plain.OperatorType("*") is InstructionType.Multiply
 	Plain.OperatorType("is not") is InstructionType.NotEqual
-	Plain.OperatorType(">=") is InstructionType.LessThan
+	Plain.OperatorType(">=") is InstructionType.GreaterThan
 	Plain.OperatorType("xor") is InstructionType.NotEqual
 	constant arithmetic = ("+", "-", "*", "/", "%", "^")
 	constant UnsupportedOperator = Error

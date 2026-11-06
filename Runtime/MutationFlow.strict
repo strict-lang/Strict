@@ -7,6 +7,7 @@ constant Stored = MutationFlow(MethodEntry(Mutation.Twice.method, instructions =
 constant Adding = InstructionEntry.Binary(InstructionType.Add, (0, 1, 2))
 constant Listing = MutationFlow(MethodEntry(Mutation.Twice.method, instructions = (InstructionEntry(InstructionType.InvokeWriteToList, "list", (1, 0)))))
 constant Joining = MutationFlow(MutationKinds.Joined.method)
+constant Limited = MutationFlow(MethodEntry(Mutation.Twice.method, instructions = (MutationKinds.Limiting, InstructionEntry.Return(0))))
 Target(entry InstructionEntry) Number
 	Listing.IsWritten(4, "\tlist.Add(1)") and (Listing.IsWritten(4, "\tYes") is false)
 	Twice.Target(Adding) is 2
@@ -107,3 +108,14 @@ IsWritten(code Number, source Text) Boolean
 	if code % 8 is 6
 		return source.IndexOf("\"" + entry.texts.First.Replace("\n", "\\n").Replace("\t", "\\t") + "\"") >= 0
 	(code % 8 is not 5) or (source.IndexOf(Mutation.Operators(Mutation.Arithmetic.Index(entry.kind))) >= 0)
+IsKept(code Number, lines Texts, line Number) Boolean
+	Limited.IsKept(7, ("constant Limit = 3", "	Limit"), 2)
+	Limited.IsKept(7, ("constant Limit = 0", "	Limit"), 2) is false
+	Limited.IsKept(0, ("constant Limit = 0", "	Limit"), 2)
+	Limited.IsKept(7, ("constant Limit = 3", "	Other"), 2) is false
+	Joining.IsKept(6, ("constant Limit = 0", "	let x = \"a\""), 2)
+	let isWritten = IsWritten(code, lines(line - 1))
+	if (code % 8 is not 7) or (isWritten is false)
+		return isWritten
+	let declared = MutationKinds(method).Replacement(7, method.instructions((code / 8).Floor)).Replace(" with ", " = ")
+	declared is not in lines

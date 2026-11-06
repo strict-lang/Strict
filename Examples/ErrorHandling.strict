@@ -75,3 +75,9 @@ IsKnown Boolean
 	ErrorHandling(5).IsKnown is false
 	let found = Found
 	found is in (Missing, Error("Other"))
+IsSmallOrMissing Boolean
+	ErrorHandling(0).IsSmallOrMissing
+	ErrorHandling(5).IsSmallOrMissing is false
+	ErrorHandling(2).IsSmallOrMissing
+	let found = Found
+	found < 3 or found is Error

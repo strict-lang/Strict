@@ -5,6 +5,7 @@ has scope Expressions/Scope
 constant Empty = CodeBlock(List(InstructionEntry), 0, 0, Scope(List(Text), List(Text)))
 constant SharedMarker = " shares"
 constant ErrorMarker = " error"
+constant Falsity = Empty.Load(InstructionEntry.LoadBoolean(0, false)).Load(InstructionEntry.LoadBoolean(1, false))
 Add(entry InstructionEntry) CodeBlock
 	CodeBlock.Empty.Add(InstructionEntry.Return(0)).instructions.Length is 1
 	CodeBlock(instructions + entry, register, nextId, scope)
@@ -71,6 +72,11 @@ Negated CodeBlock
 	CodeBlock.Empty.Load(InstructionEntry.LoadBoolean(0, true)).Negated.Result is 2
 	let falsity = Load(InstructionEntry.LoadBoolean(register, false))
 	falsity.Load(InstructionEntry.Binary(InstructionType.Equal, (Result, falsity.Result, falsity.register)))
+OrEqual(left Number, right Number) CodeBlock
+	Falsity.OrEqual(0, 0).instructions.Last.kind is InstructionType.NotEqual
+	Falsity.OrEqual(0, 0).instructions.Last.payload(1) is 1
+	let equal = Load(InstructionEntry.Binary(InstructionType.Equal, (left, right, register)))
+	equal.Load(InstructionEntry.Binary(InstructionType.NotEqual, (Result, equal.Result, equal.register)))
 WithNextId CodeBlock
 	CodeBlock.Empty.WithNextId.nextId is 1
 	CodeBlock(instructions, register, nextId + 1, scope)

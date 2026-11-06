@@ -182,6 +182,7 @@ xor(other) Number
 	value > other
 >=(other) Boolean
 	0 >= 0
+	(0 / 0 >= 0) is false
 	value >= other
 <(other) Boolean
 	0 < 0 is false
@@ -189,6 +190,7 @@ xor(other) Number
 	value < other
 <=(other) Boolean
 	0 <= 0
+	(0 / 0 <= 0) is false
 	value <= other
 Increment(amount = 1) Mutable(Number)
 	Mutable(5).Increment.Decrement.Increment is 6
