@@ -1,6 +1,7 @@
 """Run from Strict: python Compiler/check_memory.py. A failed host allocation ends with OutOfMemory (Windows only), a
 program dropping 52 MB lists while keeping 260 MB runs in the 1 GB heap of the web and iOS (natively and in node), one
-dropping 3 MB lists and many small texts in 128 MB, a Realtime type collects at the end of its frames (Presented)."""
+dropping 3 MB lists and many small texts in 128 MB, lists grown by Add free their items by counts alone (no collection),
+a Realtime type collects at the end of its frames (Presented)."""
 import ctypes
 import os
 import subprocess
@@ -93,6 +94,13 @@ with tempfile.TemporaryDirectory(prefix="MemoryCheck", dir=root / "Examples") as
 	ran = subprocess.run([str(small)], capture_output=True, text=True, timeout=60,
 		env=os.environ | {"STRICT_HEAP": "128", "STRICT_THREADS": "1", "STRICT_GPU": "0"})
 	assert ran.returncode == 0 and "total 1757700" in ran.stdout, (ran.returncode, ran.stdout[-300:])
+	grown = built(folder, "GrownLists", filled + "Grown(count Number, offset Number) List(Numbers)\n"
+		"\tGrownLists(Logger).Grown(13, 0)(12) is (12, 13)\n\tmutable grown = List(Mutable(Numbers))\n\tfor count\n"
+		"\t\tgrown.Add(Filled(count is 13 then 2 else 8192, index + offset))\n\tgrown\nRun\n\tmutable total = 0\n"
+		"\tfor 4000\n\t\ttotal = total + Grown(16, index)(15)(1)\n\tlogger.Log(\"total \" + total)")
+	ran = subprocess.run([str(grown)], capture_output=True, text=True, timeout=60,
+		env=os.environ | {"STRICT_GC_LOG": "1", "STRICT_GPU": "0"})
+	assert ran.returncode == 0 and "total 8062000" in ran.stdout and "Collection: " not in ran.stdout, ran.stdout[-500:]
 	ended = frameEnds(folder, "FrameTicker", "Numbers", "index + seed", "(1, 2)", 5000000, 10)
 	assert True in ended and all(ended[ended.index(True):]) and ended.count(True) >= 2, ended
 	ended = frameEnds(folder, "WordTicker", "Texts", "\"w\" + (index + seed)", "(\"w1\", \"w2\")", 100000, 40)

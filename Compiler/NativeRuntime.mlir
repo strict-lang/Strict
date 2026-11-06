@@ -4266,6 +4266,31 @@
   ^done:
     return
   }
+  // the items block a growing list moved out of (counted again in the new block) gives its counts back and holds
+  // none: nothing frees it by its count, it kept every item it had (Qwen3.Forwarded's blocks with their GPU states)
+  // until a full collection; items inside the holder's own block go with the holder
+  func.func private @strict_rc_outgrown(%old: !llvm.ptr, %bytes: i64) {
+    %busy = func.call @strict_rc_busy() : () -> i1
+    cf.cond_br %busy, ^done, ^locate
+  ^locate:
+    %address = llvm.ptrtoint %old : !llvm.ptr to i64
+    %located:5 = func.call @strict_gc_locate(%address) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %found = llvm.icmp "ne" %located#0, %unset : !llvm.ptr
+    %isStart = arith.cmpi eq, %located#1, %address : i64
+    %separate = arith.andi %found, %isStart : i1
+    cf.cond_br %separate, ^released, ^done
+  ^released:
+    func.call @strict_rc_release(%address, %bytes) : (i64, i64) -> ()
+    %flags = func.call @strict_rc_flags(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %flagByte = llvm.load %flags : !llvm.ptr -> i8
+    %withoutHolds = arith.constant -5 : i8
+    %unheld = arith.andi %flagByte, %withoutHolds : i8
+    llvm.store %unheld, %flags : i8, !llvm.ptr
+    return
+  ^done:
+    return
+  }
   func.func private @strict_rc_object_now(%object: !llvm.ptr, %bytes: i64) {
     %container = llvm.ptrtoint %object : !llvm.ptr to i64
     func.call @strict_rc_range(%object, %bytes, %container) : (!llvm.ptr, i64, i64) -> ()
@@ -8534,6 +8559,7 @@
     %usedBytes = arith.fptosi %usedBytesf : f64 to i64
     %grown = llvm.call @memcpy(%moved, %old, %usedBytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     func.call @strict_rc_filled(%moved, %usedBytes) : (!llvm.ptr, i64) -> ()
+    func.call @strict_rc_outgrown(%old, %usedBytes) : (!llvm.ptr, i64) -> ()
     %movedbits = func.call @strict_bits(%moved) : (!llvm.ptr) -> f64
     llvm.store %movedbits, %holder : f64, !llvm.ptr
     func.call @strict_gc_written(%holder) : (!llvm.ptr) -> ()
@@ -9328,6 +9354,7 @@
     %usedBytes = arith.fptosi %usedBytesf : f64 to i64
     %grown = llvm.call @memcpy(%moved, %old, %usedBytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     func.call @strict_rc_filled(%moved, %usedBytes) : (!llvm.ptr, i64) -> ()
+    func.call @strict_rc_outgrown(%old, %usedBytes) : (!llvm.ptr, i64) -> ()
     %movedbits = func.call @strict_bits(%moved) : (!llvm.ptr) -> f64
     llvm.store %movedbits, %holder : f64, !llvm.ptr
     func.call @strict_gc_written(%holder) : (!llvm.ptr) -> ()
