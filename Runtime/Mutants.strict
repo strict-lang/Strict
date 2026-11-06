@@ -1,7 +1,6 @@
 has logger
 has path Text
 has seconds Number = 0.2
-has root Text = "."
 has part Text = ""
 has isWhole Boolean = false
 constant Starting = ("Strict/Runtime/TestBudget", "Started")
@@ -13,7 +12,6 @@ constant Sample = Mutants(Logger, "Examples/Fibonacci.strict")
 constant Lined = MethodEntry(Twice, instructions = List(InstructionEntry) + InstructionEntry(InstructionEntry.Return(0), line = 2))
 constant Valued = TypeEntry(Machine.Doubler, members = List(MemberEntry) + MemberEntry("Twice", "Strict/Number", List(InstructionEntry), true), methods = List(MethodEntry) + Lined)
 constant Inputs = ("/File", "/Memo", "/Directory", "/Process", "/Logger", "/TextWriter", "/Time", "/Library", "/Http", "/Socket", "/Random", "/GpuMemory")
-constant Crashed = ", its rounds were not tested: run strict test on this file to see the error"
 constant Hint = " kept passing all tests, improve the tests!"
 Survivors(types List(TypeEntry)) Number
 	Sample.Survivors(Execute(Logger).Loaded("Examples/Fibonacci.strict", ".")) is 0
@@ -32,36 +30,12 @@ Lines(types List(TypeEntry)) Texts
 	Sample.Lines(Doubled).Length is 0
 	let methods = Baseline(value).Kept(types)
 	let rounds = Mutation.Rounds(methods)
-	let isStrict = Path(Process.Current.executable).FileName.text.Lower.StartsWith("strict")
-	if isWhole and (part is "") and (rounds > Mutation.SpawnAboveRounds) and isStrict
-		return Spawned(rounds)
 	let tested = Tested(types, Runner(types.First), methods)
 	mutable survivors = List(Mutable(Text))
 	for Range(0, isWhole then rounds else 1)
 		if Mutation.IsMine(part, value)
 			survivors = survivors + Round(tested, methods, isWhole then value else rounds.Random.Floor)
 	survivors
-Spawned(rounds Number) Texts
-	Sample.Commands(4).Last is "test \"Examples/Fibonacci.strict\" \".\" unit mutations rounds:1/2"
-	mutable survivors = List(Mutable(Text))
-	let results = Process.RunTools(Process.Current.executable, Commands(rounds))
-	for result, line in results, result.Output.Lines
-		if line.IndexOf("MutationSurvived") >= 0
-			survivors.Add(line.Replace("\r", ""))
-	for results
-		let at = ("\n" + value.Output).IndexOf("\nError: ")
-		let error = at >= 0 then "\n" + value.Output.Substring(at, value.Output.Length - at) else ""
-		if (value.exitCode < 0) or (value.exitCode >= Folders.CrashExitCode) or (error is not "")
-			survivors.Add(path + ": MutationTestingFailed: a worker ended with exit code " + value.exitCode + Crashed + error)
-	survivors
-Commands(rounds Number) Texts
-	Sample.Commands(40).Length is 10
-	Mutants(Logger, "A.strict", 0.1, ".", "", true).Commands(4).Last.EndsWith(" mutations rounds:1/2")
-	constant MaxWorkers = 16
-	let parts = (rounds / 4).Ceiling.Clamp(2, MaxWorkers)
-	let options = isWhole then " mutations rounds:" else " unit mutations rounds:"
-	for parts
-		"test \"" + path + "\" \"" + root + "\"" + options + index + "/" + parts
 Shown(survivor Text) Text
 	Sample.Shown(Sample.path + ": MutationTestingFailed") is Sample.path + ": MutationTestingFailed"
 	Sample.Shown(Sample.path + ":line 3: MutationSurvived").Lines.Length > 2
