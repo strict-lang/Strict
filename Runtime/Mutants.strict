@@ -100,10 +100,12 @@ Survivor(method MethodEntry, code Number) Text
 Tested(types List(TypeEntry), runner MethodEntry, methods List(MethodEntry)) List(TypeEntry)
 	Sample.Tested(List(TypeEntry) + Machine.Doubler, Twice, List(MethodEntry) + Twice).First.methods.Length is 3
 	mutable runners = List(Mutable(MethodEntry))
+	mutable names = List(Mutable(Text))
 	for methods
-		let instructions = Silent(Mutation(runner).Split(value.Name))
+		names.Add(value.Name)
+		let instructions = Silent(Mutation(runner).Split(List(Text) + value.Name))
 		runners.Add(MethodEntry(runner, Name = TestCodegen.Runner + index, instructions = instructions))
-	let whole = Silent(runner.instructions)
+	let whole = Silent(Mutation(runner).Split(names))
 	runners.Add(MethodEntry(runner, Name = TestCodegen.Runner + methods.Length, instructions = whole))
 	mutable changed = types
 	changed(0) = TypeEntry(types.First, methods = types.First.methods + runners)

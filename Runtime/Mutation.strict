@@ -154,21 +154,21 @@ Source(lines Texts, line Number) Texts
 Lines Number
 	Twice.Lines is 0
 	Lined.Lines is 3
-	Mutation(MethodEntry(Twice.method, instructions = Twice.method.instructions + Splitting)).Split("Twice").Length is 4
+	Mutation(MethodEntry(Twice.method, instructions = Twice.method.instructions + Splitting)).Split(("Twice")).Length is 4
 	Mutation(MethodEntry(Twice.method, instructions = Splitting + Splitting)).Position(40) is "5th "
 	mutable last = 0
 	for method.instructions
 		last = value.line > last then value.line else last
 	last
-Split(name Text) List(InstructionEntry)
-	Splitter.Split("Twice").Length is 4
-	Splitter.Split("Other") is Splitting
+Split(names Texts) List(InstructionEntry)
+	Splitter.Split(("Twice")).Length is 4
+	(Splitter.Split(("Other")) is Splitting) and (Splitter.Split(("Other", "Twice")).Length is 4)
 	let last = method.instructions.Length - 2
 	mutable kept = List(Mutable(InstructionEntry)) + method.instructions.First
 	mutable isKept = false
 	for method.instructions
 		let marked = Marked(value)
-		isKept = marked is "" then isKept else marked is name
+		isKept = marked is "" then isKept else marked is in names
 		if isKept and (index > 0) and (index < last)
 			kept.Add(value)
 	kept.Length is 1 then method.instructions else kept + method.instructions.Slice(last, 2)
