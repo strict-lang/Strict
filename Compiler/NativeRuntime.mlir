@@ -7625,8 +7625,9 @@
     %result = func.call @strict_bits(%copy) : (!llvm.ptr) -> f64
     return %result : f64
   }
-  func.func private @strict_list_write(%list: f64, %index: f64, %element: f64) -> f64 {
+  func.func private @strict_list_write(%list: f64, %given: f64, %element: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
+    %index = func.call @strict_list_wrapped(%list, %given) : (f64, f64) -> f64
     %minusOne = arith.constant -1.0 : f64
     %blockSize = arith.constant 56 : i64
     %unset = arith.cmpf oeq, %list, %zero : f64
@@ -8419,8 +8420,21 @@
     func.call @strict_gc_written_range(%to, %bytes) : (!llvm.ptr, i64) -> ()
     return %copy : f64
   }
-  func.func private @strict_list_set(%list: f64, %index: f64, %element: f64) -> f64 {
+  // a negative index counts from the end like on reads: -1 is the last element
+  func.func private @strict_list_wrapped(%list: f64, %index: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
+    %negative = arith.cmpf olt, %index, %zero : f64
+    cf.cond_br %negative, ^wrap, ^done(%index : f64)
+  ^wrap:
+    %length = func.call @strict_list_length(%list) : (f64) -> f64
+    %wrapped = arith.addf %index, %length : f64
+    cf.br ^done(%wrapped : f64)
+  ^done(%result: f64):
+    return %result : f64
+  }
+  func.func private @strict_list_set(%list: f64, %given: f64, %element: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %index = func.call @strict_list_wrapped(%list, %given) : (f64, f64) -> f64
     %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
     %at = arith.fptosi %index : f64 to i64
     %slot = llvm.getelementptr %items[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
@@ -9073,8 +9087,9 @@
   }
   // List.SwapRemoved: the last element takes the removed place, a dying list its alone local handed over
   // (strict_list_destine) changes in place in O(1), any other list is copied first
-  func.func private @strict_list_swap_removed(%list: f64, %position: f64) -> f64 {
+  func.func private @strict_list_swap_removed(%list: f64, %given: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
+    %position = func.call @strict_list_wrapped(%list, %given) : (f64, f64) -> f64
     %one = arith.constant 1.0 : f64
     %zeroCount = arith.constant 0 : i32
     %oneCount = arith.constant 1 : i32

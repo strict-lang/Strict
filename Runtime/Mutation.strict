@@ -14,6 +14,7 @@ constant Forcing = (InstructionType.Equal, InstructionType.NotEqual)
 constant Operators = ("+", "-", "*", "/", "is", "is not", "<", ">")
 constant Ordinals = ("st", "nd", "rd")
 constant SpawnAboveRounds = 16
+constant Rotated = Mutation(MutationKinds.Placed.method).Mutant(8)
 IsMine(part Text, round Number) Boolean
 	Mutation.IsMine("", 3)
 	Mutation.IsMine("1/2", 3)
@@ -39,15 +40,16 @@ Candidates Numbers
 Mutant(code Number) MethodEntry
 	Twice.Mutant(13).instructions(1).kind is InstructionType.Subtract
 	Twice.Mutant(18).instructions(2) is InstructionEntry.LoadNumber(1, 0)
+	Rotated.instructions(5) is Rotated.instructions(1)
 	Compared.Mutant(1).instructions(0) is InstructionEntry.Binary(InstructionType.NotEqual, (0, 0))
 	Mutation(MutationKinds.Joined.method).Mutant(6).instructions(0) is InstructionEntry.LoadText(0, "")
 	let position = (code / 8).Floor
-	let kind = code % 8
 	let entry = method.instructions(position)
-	mutable instructions = method.instructions
-	instructions(position) = Changed(entry, kind)
-	let returned = kind is 2 then instructions + InstructionEntry.Return(entry.payload(0)) else instructions
-	MethodEntry(method, instructions = returned)
+	let twin = MutationKinds(method).Twin(position)
+	mutable changed = method.instructions
+	changed(position) = Changed(entry, code % 8)
+	changed(twin) = Changed(method.instructions(twin), code % 8)
+	MethodEntry(method, instructions = code % 8 is 2 then changed + InstructionEntry.Return(entry.payload(0)) else changed)
 Changed(entry InstructionEntry, kind Number) InstructionEntry
 	Twice.Changed(Twice.method.instructions(1), 5).kind is InstructionType.Subtract
 	let register = entry.payload(0)

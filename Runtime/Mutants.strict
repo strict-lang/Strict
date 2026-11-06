@@ -49,9 +49,10 @@ Spawned(rounds Number) Texts
 		if line.IndexOf("MutationSurvived") >= 0
 			survivors.Add(line.Replace("\r", ""))
 	for results
-		let isCrashed = (value.exitCode < 0) or (value.exitCode >= Folders.CrashExitCode)
-		if isCrashed or (("\n" + value.Output).IndexOf("\nError: ") >= 0)
-			survivors.Add(path + ": MutationTestingFailed: a worker ended with exit code " + value.exitCode + Crashed)
+		let at = ("\n" + value.Output).IndexOf("\nError: ")
+		let error = at >= 0 then "\n" + value.Output.Substring(at, value.Output.Length - at) else ""
+		if (value.exitCode < 0) or (value.exitCode >= Folders.CrashExitCode) or (error is not "")
+			survivors.Add(path + ": MutationTestingFailed: a worker ended with exit code " + value.exitCode + Crashed + error)
 	survivors
 Commands(rounds Number) Texts
 	Sample.Commands(40).Length is 10
@@ -99,7 +100,8 @@ Round(types List(TypeEntry), methods List(MethodEntry), round Number) Texts
 Passes(started Machine, runner Text) Boolean
 	Sample.Passes(Machine.Hello, TestCodegen.Runner)
 	Mutants(Logger, "A.strict", 0).Passes(Frame.Doubling, "Missing") is false
-	Machine(started, deadline = Process.Elapsed + seconds).Tested(started.types.First.Name, runner) is 0
+	let failed = Machine(started, deadline = Process.Elapsed + seconds).Tested(started.types.First.Name, runner)
+	(failed is not Error) and (failed is 0)
 Survivor(method MethodEntry, code Number) Text
 	Sample.Survivor(Twice, 13) is Sample.path + ":line 0: MutationSurvived: Twice: replaced + with -" + Hint
 	let mutation = Mutation(method)

@@ -236,6 +236,7 @@ Shuffled(random PseudoRandom) List
 SwapRemoved(position Number) List
 	(1, 2, 3, 4).SwapRemoved(1) is (1, 4, 3)
 	(1, 2, 3).SwapRemoved(2) is (1, 2)
+	(1, 2, 3, 4).SwapRemoved(-3) is (1, 4, 3)
 	mutable swapped = elements
 	swapped(position) = elements.Last
 	swapped.Slice(0, elements.Length - 1)
