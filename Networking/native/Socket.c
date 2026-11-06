@@ -32,6 +32,16 @@ static BOOL CALLBACK started(PINIT_ONCE once, PVOID argument, PVOID* context)
 }
 #endif
 
+/* Windows sockets are made without the overlapped flag, so a Logger with this handle as output can WriteFile to it. */
+static int open_socket(int family, int type, int protocol)
+{
+#ifdef _WIN32
+	return (int)WSASocketW(family, type, protocol, 0, 0, 0);
+#else
+	return (int)socket(family, type, protocol);
+#endif
+}
+
 static int ensure_started(void)
 {
 #ifdef _WIN32
@@ -69,7 +79,7 @@ STRICT_EXPORT double Socket_Connect(double self, double host, double port)
 	hints.ai_socktype = SOCK_STREAM;
 	if (getaddrinfo(strict_text(host), service, &hints, &list) != 0 || list == 0)
 		return strict_fail("HostNotFound");
-	int handle = (int)socket(list->ai_family, list->ai_socktype, list->ai_protocol);
+	int handle = open_socket(list->ai_family, list->ai_socktype, list->ai_protocol);
 	if (handle == invalid())
 	{
 		freeaddrinfo(list);
@@ -91,7 +101,7 @@ STRICT_EXPORT double Socket_Listen(double self, double port)
 		return strict_fail("InvalidPort");
 	if (!ensure_started())
 		return strict_fail("SocketStartupFailed");
-	int handle = (int)socket(AF_INET, SOCK_STREAM, 0);
+	int handle = open_socket(AF_INET, SOCK_STREAM, 0);
 	if (handle == invalid())
 		return strict_fail("SocketFailed");
 	int reuse = 1;

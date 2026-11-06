@@ -62,7 +62,8 @@ Closed(begin Number) Texts
 Latch(begin Number) Texts
 	let label = "^loop" + begin
 	let moved = Advanced(begin)
-	("  " + label + "lat:") + moved + ("    cf.br " + label + "outer")
+	let back = List(Text) + ("    cf.br " + label + "outer")
+	(List(Text) + ("  " + label + "lat:")) + moved + back
 Advanced(begin Number) Texts
 	let chunk = "    " + Temp("ch") + " = llvm.load %chunk" + begin + " : !llvm.ptr -> i32"
 	let cast = "    " + Temp("cf") + " = arith.sitofp " + Temp("ch") + " : i32 to f64"
@@ -82,6 +83,6 @@ Temp(suffix Text) Text
 	Ranging.Temp("k") is "%t3k"
 	"%t" + position + suffix
 Finished(begin Number) Texts
-	let exit = "  ^loop" + begin + "exit:"
+	let exit = List(Text) + ("  ^loop" + begin + "exit:")
 	let restore = (function.Store("%t" + begin + "x", "%v_index"), function.Store("%t" + begin + "y", "%v_value"))
 	exit + restore + MlirLoops(function, begin).Restored(begin) + MlirKernel(function, begin).Joined

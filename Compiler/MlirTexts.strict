@@ -9,6 +9,7 @@ constant ElementLines = ("    %t1w = llvm.load %r0 : !llvm.ptr -> f64", "    %t1
 constant NumberedLines = ("    %t1n = llvm.load %r0 : !llvm.ptr -> f64", "    %t1nv = func.call @strict_text_number(%t1n) : (f64) -> f64", "    llvm.store %t1nv, %r1 : f64, !llvm.ptr")
 constant ConcatenatedLines = ("    %t2lx = llvm.load %r0 : !llvm.ptr -> f64", "    %t2r = llvm.load %r1 : !llvm.ptr -> f64", "    %t2rxc = func.constant @strict_number_text : (f64) -> f64", "    %t2rx = func.call @strict_converted(%t2r, %t2rxc) : (f64, (f64) -> f64) -> f64", "    %t2c = func.call @strict_text_concat(%t2lx, %t2rx) : (f64, f64) -> f64", "    llvm.store %t2c, %r2 : f64, !llvm.ptr")
 constant ShapeConverter = "    %t1dxc = func.constant @strict_automatic_Shape : (f64) -> f64"
+constant Logging = "    func.call @strict_log_to(%t3h, %f, %f) : (f64, !llvm.ptr, !llvm.ptr) -> ()"
 Temp(suffix Text) Text
 	MlirTexts(Joined, 2).Temp("l") is "%t2l"
 	MlirTexts(Joined, 7).IsNativeConversion(Joined.method.instructions(7), "Boolean") is false
@@ -154,6 +155,16 @@ Pointer(register Number, suffix Text) Texts
 	MlirTexts(Listing, 1).Converted(ToNumbers) is ElementLines
 	let shown = MlirMemory(function, position).Called(Temp(suffix + "s"), "strict_shown", List(Text) + Temp(suffix + "x"))
 	TextBits(register, suffix) + shown + MlirMemory(function, position).Pointer(Temp(suffix + "s"), suffix)
+Directed(entry InstructionEntry, format Text) Texts
+	MlirTexts(Joined, 3).Directed(InstructionEntry.Print("Hi", 1), "%f").Last is Logging
+	MlirTexts(Joined, 3).Directed(InstructionEntry.PrintValue("a", 2, true, 1), "%f").Length is 5
+	let handle = "    " + Temp("h") + " = llvm.load %r" + entry.payload(0) + " : !llvm.ptr -> f64"
+	let isValue = entry.payload(1) is 1
+	let text = isValue then Pointer(entry.payload(2), "b") else List(Text)
+	let shown = isValue then Temp("bp") else format
+	let arguments = Temp("h") + ", " + format + ", " + shown
+	let call = "    func.call @strict_log_to(" + arguments + ") : (f64, !llvm.ptr, !llvm.ptr) -> ()"
+	(List(Text) + handle + text) + call
 Concatenated(entry InstructionEntry) Texts
 	MlirTexts(Joined, 2).Concatenated(Joined.method.instructions(2)).Length is 6
 	MlirTexts(Joined, 2).Concatenated(Joined.method.instructions(2)) is ConcatenatedLines

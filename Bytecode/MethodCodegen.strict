@@ -175,7 +175,6 @@ Log(receiver SyntaxNode, argument SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Log(ValueCodegen.NoNode, ValueCodegen.Hi, CodeBlock.Empty).instructions(0).texts is ("Hi")
 	Plain.Log(ValueCodegen.NoNode, SyntaxNode("Number", "1"), CodeBlock.Empty).instructions.Length is 2
 	Plain.Log(ValueCodegen.NoNode, SyntaxNode("Text", "\"\""), CodeBlock.Empty).instructions.Length is 0
-	Plain.Log(Logger, ValueCodegen.Hi, Logging).instructions.Last.payload is (1, 0)
 	if (argument.Kind is "Text") and (argument.Unquoted is "")
 		return block
 	let output = Output(receiver, block)
@@ -189,7 +188,4 @@ Log(receiver SyntaxNode, argument SyntaxNode, block CodeBlock) CodeBlock
 	generated.Add(InstructionEntry.PrintValue(hasPrefix then argument.children(0).Unquoted else "", generated.Result, isText, target))
 Output(receiver SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Output(ValueCodegen.NoNode, CodeBlock.Empty).instructions.Length is 0
-	if TypeEntry.ShortName(values.TypeOf(receiver, block)) is not "Logger"
-		return block
-	let instance = values.Expression(receiver, block)
-	values.Field("output", "Logger", instance, instance.Result)
+	block
