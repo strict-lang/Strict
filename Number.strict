@@ -38,8 +38,9 @@ Floor Number
 	2.4.Floor is 2
 	-2.4.Floor is -3
 	0.1.Floor is 0
+	(1 / 0).Floor is 1 / 0
 	let fraction = value % 1
-	fraction < 0 then value - fraction - 1 else value - fraction
+	fraction < 0 then value - fraction - 1 else fraction > 0 then value - fraction else value
 Ceiling Number
 	1.Ceiling is 1
 	2.4.Ceiling is 3

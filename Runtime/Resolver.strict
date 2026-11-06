@@ -14,6 +14,7 @@ constant Comparisons = (InstructionType.Equal, InstructionType.NotEqual, Instruc
 constant ElementStore = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "a(1)")
 constant StoringSeven = (InstructionEntry.LoadNumber(0, 7), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "a"))
 constant Sample = MethodEntry("Run", List(MemberEntry), "None", StoringSeven + (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "a"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 0, "list")))
+constant JsonOnly = Resolver(List(TypeEntry) + TypeEntry("Json", List(MemberEntry), List(MethodEntry)))
 Resolved List(TypeEntry)
 	Doubling.Local(MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 7), "a")) is "a"
 	Doubling.Local(InstructionEntry(InstructionType.CheckError, List(Text), List(Number), 0)) is "#result"
@@ -81,7 +82,7 @@ Target(call Invocation) Numbers
 	Doubling.Target(Invocation.Uppered) is (Searching, 0, 0)
 	Doubling.Target(Hosted.SystemCall) is (Hosting, 0, 0)
 	Doubling.Target(HostedJson.Getting) is (Hosting, 0, 0)
-	Resolver(List(TypeEntry) + TypeEntry("Json", List(MemberEntry), List(MethodEntry))).Target(HostedJson.Getting) is (Native, 0, 0)
+	JsonOnly.Target(HostedJson.Getting) is (Native, 0, 0)
 	if Hosted(call).IsHosted and (TypeEntry.ShortName(call.TypeName) is not TypeEntry.ShortName(types.First.Name))
 		return (Hosting, 0, 0)
 	let isText = (call.TypeName is "Strict/Text") and (call.MethodName is in Natives.TextMethods)

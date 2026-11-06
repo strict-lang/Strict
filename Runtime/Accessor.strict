@@ -117,10 +117,11 @@ Wrapped(collection VmValue, at Number) Number
 	Getting.Wrapped(VmValue.OfText("ab"), -1) is 1
 	Getting.Wrapped(VmValue.OfText("ab"), 2) is -1
 	Getting.Wrapped(VmValue.OfText("ab"), -4) is -1
+	Getting.Wrapped(VmValue.OfText("ab"), 0 / 0) is -1
 	Getting.Chained(1, Loading, InstructionEntry.Invoke(1, FirstCall.texts, List(Number), 2), 0) is (1, 0, 0, 1, -1, 0)
 	Getting.Chained(1, Loading, InstructionEntry.Invoke(2, FirstCall.texts, List(Number), -1), 0).Length is 0
 	let wrapped = at < 0 then at + collection.Length else at
-	(wrapped < 0) or (wrapped >= collection.Length) then -1 else wrapped
+	(wrapped >= 0) and (wrapped < collection.Length) then wrapped else -1
 Item(collection VmValue, position Number) VmValue
 	Getting.Item(VmValue.OfText("ab"), 1).text is "b"
 	Getting.Item(Held.items(1), 0).number is 3
