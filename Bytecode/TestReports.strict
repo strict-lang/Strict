@@ -1,0 +1,39 @@
+has types TypeCodegen
+has isQuiet Boolean = false
+constant Showing = " shown"
+constant Shown = SyntaxParser(Tokenizer("tested is Error then (tested to Text).Replace((tested to Text).Lines.First, tested.Code) else tested.Code").Tokens).Parse
+constant Duration = SyntaxParser(Tokenizer("elapsed.Round(2) + \" ms)\"").Tokens).Parse
+constant Elapsed = SyntaxParser(Tokenizer("Process.Elapsed").Tokens).Parse
+constant Even = TestReports(TestCodegen.Even.types)
+constant Erring = TestReports(TypeCodegen("Strict/Erring", ("Error(number Number) Number", "\tError(2) is 2", "\tnumber"), TypeCodegen.NoTypes, List(Text)))
+constant Processing = TestReports(TypeCodegen("Strict/Image", ("Process(number Number) Image", "	Process(1) is Image", "	Image"), TypeInference(KnownTypes(("Process", "Image"), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Scope(List(Text) + "Elapsed", List(Text) + "Number"), Scope(List(Text) + "Process", List(Text) + "Image")), (KnownTypes.NoMembers, KnownTypes.NoMembers)), (KnownTypes.NoMembers, KnownTypes.NoMembers)), List(Text)))
+constant GotNumber = TestCodegen.Even.Got(TestCodegen.TestedNumber).scope
+constant ElapsedParameter = MemberEntry("elapsed", "Strict/Number", List(InstructionEntry), false)
+Shows(scope Scope) Texts
+	TestReports.Shows(TestCodegen.Even.Got(TestCodegen.Even.Got(TestCodegen.TestedNumber)).scope) is ("Number")
+	for scope.names
+		if value is Showing
+			scope.types(index)
+Helpers(scope Scope) Slow(List(MethodEntry))
+	Even.Helpers(GotNumber).First.Name is "$TestsGot0"
+	Even.Helpers(GotNumber).Last.Name is "$TestsTook"
+	Even.Helpers(GotNumber).Last.parameters is (ElapsedParameter)
+	TestReports(Even.types, true).Helpers(GotNumber).Length is 1
+	mutable helpers = List(Mutable(MethodEntry))
+	for Shows(scope)
+		helpers.Add(Helper("Got" + index, ErrorCodegen.Tested, value, Shown))
+	isQuiet then helpers else helpers + Helper("Took", "elapsed", "Number", Duration)
+Helper(name Text, parameter Text, type Text, expression SyntaxNode) Slow(MethodEntry)
+	Even.Helper("Got1", ErrorCodegen.Tested, "Number", Shown).Name is "$TestsGot1"
+	Even.Helper("Took", "elapsed", "Number", Duration).returnType is "Strict/Text"
+	Erring.Helper("Got0", "tested", "Number", Shown).instructions(2).texts is ("Strict/Erring", "Error", "Strict/Error")
+	let neutral = Neutral
+	let generated = neutral.Expression(expression, CodeBlock.Empty.Declare(parameter, type))
+	let entry = MemberEntry(parameter, neutral.target.FullName(type), List(InstructionEntry), false)
+	let returned = generated.Add(InstructionEntry.Return(generated.Result))
+	MethodEntry(TestCodegen.Runner + name, List(MemberEntry) + entry, "Strict/Text", returned.instructions)
+Neutral Slow(ValueCodegen)
+	Processing.Neutral.Expression(Elapsed, TestCodegen.Counter).instructions.First.texts.First is "Strict/Process"
+	TestReports(TypeCodegen("P/H", List(Text), Even.types.inference, ("P/S"))).Neutral.target.FullName("S") is "P/S"
+	let neutral = CallTarget(types.inference.types, TypeShape(List(Text)), types.fullName, types.typeNames)
+	ValueCodegen(types.inference, MethodCodegen.NoScope, neutral)

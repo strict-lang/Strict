@@ -2,6 +2,24 @@ has function MlirFunction
 has position Number
 constant Ranging = MlirRangeLoop(MlirLoops.Ranging.function, 3)
 constant Flags = " fastmath<reassoc,nsz,contract>"
+Slots Texts
+	MlirRangeLoop(MlirFunction.Counter, 0).Slots is MlirFunction.Counter.Slot("%loop0")
+	Ranging.Slots.First.IndexOf("x i32") > 0
+	let name = "%loop" + position
+	if function.method.instructions(position).payload(1) is not 1
+		return function.Slot(name)
+	let inner = "    " + name + " = llvm.alloca %one x i32 : (i64) -> !llvm.ptr"
+	let left = "    %left" + position + " = llvm.alloca %one x i64 : (i64) -> !llvm.ptr"
+	let base = "    %base" + position + " = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
+	let chunk = "    %chunk" + position + " = llvm.alloca %one x i32 : (i64) -> !llvm.ptr"
+	(inner, left, base, chunk)
+IsRanged Boolean
+	MlirRangeLoop(MlirStatements.Copy.function, 0).IsRanged is false
+	MlirRangeLoop(Ranging.function, 4).IsRanged
+	let begin = function.method.LoopBeginOf(position)
+	let opened = function.method.instructions(begin)
+	let covers = function.method.LoopEndOf(begin) >= position
+	(opened.kind is InstructionType.LoopBegin) and covers and (opened.payload(1) is 1)
 Opened(label Text) Texts
 	Text.Combine(MlirRangeLoop(MlirLoops.Counting.function, 0).Opened("^loop0")).IndexOf("cmpf olt") > 0
 	Text.Combine(Ranging.Opened("^loop3")).IndexOf("i32") > 0

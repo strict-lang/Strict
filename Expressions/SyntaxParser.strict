@@ -16,10 +16,11 @@ Parse SyntaxNode
 ParseRange(start Number, end Number) SyntaxNode
 	SyntaxParser("a", "+", "b").ParseRange(0, 3).Kind is "Binary"
 	SyntaxParser("a", "+", "b").ParseRange(3, 3).Kind is "Missing"
+	SyntaxParser(Tokenizer("not").Tokens).ParseRange(0, 1).Kind is "Not"
 	SyntaxParser(Tokenizer("Point(p, y = y + 1)").Tokens).Parse to Text is "Point(p, y = y + 1)"
 	if end <= start
 		return SyntaxNode("Missing", "")
-	if end - start is 1
+	if (end - start is 1) and (tokens(start) is not "not")
 		return Leaf(tokens(start))
 	if (end - start > 2) and (tokens(start + 1) is "=")
 		return SyntaxNode("Reassignment", "", (Leaf(tokens(start)), ParseRange(start + 2, end)))

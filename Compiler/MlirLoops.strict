@@ -26,8 +26,8 @@ Begin Texts
 	let saved = bounds + (function.Load(Temp("x"), "%v_index"), function.Load(Temp("y"), "%v_value")) + Outered
 	let begun = saved + MlirGpu(function, position).Launched + MlirKernel(function, position).Versioned + Presized
 	let tail = MlirRangeLoop(function, position).Opened(label)
-	let value = isRange then MlirRangeLoop(function, position).Value else Current
-	begun + MlirParallel(function, position).Forked + Items + MlirWholeLoop(function, position).Versioned + tail + value
+	let looped = isRange then MlirRangeLoop(function, position).Value else Current
+	begun + MlirParallel(function, position).Forked + Items + MlirWholeLoop(function, position).Versioned + tail + looped
 Current Texts
 	Counting.Current.Length is 4
 	Text.Combine(MlirLoops(MlirBytes.Valuing.function, 1).Current).IndexOf("llvm.store %t1g, %v_value") > 0

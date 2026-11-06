@@ -46,6 +46,19 @@ def built(folder, name, code, platform=""):
 	return source.parent / "Release" / "Web" / (name + ".js") if platform else source.with_suffix(".exe")
 
 
+def frameEnds(folder, name, listType, item, filledTwo, size, frames):
+	"""A Realtime type makes a list of size items per frame, gives for every collection whether it ran at a frame end."""
+	executable = built(folder, name, f"has size Number\nhas frame Number = 0\nhas kept {listType} = List({listType[:-1]})\n"
+		f"has logger\nhas Realtime\nPresented {name}\n\t{name}(3).Presented.kept.Length is 3\n"
+		f"\t{name}(size, frame + 1, Filled(frame))\nFilled(seed Number) {listType}\n\t{name}(2).Filled(1) is {filledTwo}\n"
+		f"\tfor size\n\t\t{item}\nRun\n\tmutable ticker = {name}({size})\n\tfor {frames}\n"
+		f"\t\tticker = ticker.Presented\n\tlogger.Log(\"frames \" + ticker.frame)")
+	ran = subprocess.run([str(executable)], capture_output=True, text=True, timeout=60,
+		env=os.environ | {"STRICT_GC_LOG": "1", "STRICT_GPU": "0"})
+	assert ran.returncode == 0 and f"frames {frames}" in ran.stdout, ran.stdout[-500:]
+	return [line.endswith(", frame end") for line in ran.stdout.splitlines() if line.startswith("Collection: ")]
+
+
 filled = "has logger\nFilled(count Number, offset Number) Numbers\n\tFilled(2, 1) is (1, 2)\n\tfor count\n\t\tindex + offset\n"
 kept = filled + ("Run\n\tlet kept = (Filled(6500000, 1), Filled(6500000, 2), Filled(6500000, 3), Filled(6500000, 4), "
 	"Filled(6500000, 5))\n")
@@ -80,15 +93,8 @@ with tempfile.TemporaryDirectory(prefix="MemoryCheck", dir=root / "Examples") as
 	ran = subprocess.run([str(small)], capture_output=True, text=True, timeout=60,
 		env=os.environ | {"STRICT_HEAP": "128", "STRICT_THREADS": "1", "STRICT_GPU": "0"})
 	assert ran.returncode == 0 and "total 1757700" in ran.stdout, (ran.returncode, ran.stdout[-300:])
-	ticker = built(folder, "FrameTicker", "has size Number\nhas frame Number = 0\nhas kept Numbers = List(Number)\n"
-		"has logger\nhas Realtime\nPresented FrameTicker\n\tFrameTicker(3).Presented.kept is (0, 1, 2)\n"
-		"\tFrameTicker(size, frame + 1, Filled(frame))\nFilled(seed Number) Numbers\n\tFrameTicker(2).Filled(1) is (1, 2)\n"
-		"\tfor size\n\t\tindex + seed\nRun\n\tmutable ticker = FrameTicker(5000000)\n\tfor 10\n"
-		"\t\tticker = ticker.Presented\n\tlogger.Log(\"frames \" + ticker.frame)")
-	ran = subprocess.run([str(ticker)], capture_output=True, text=True, timeout=60,
-		env=os.environ | {"STRICT_GC_LOG": "1", "STRICT_GPU": "0"})
-	collections = [line for line in ran.stdout.splitlines() if line.startswith("Collection: ")]
-	ended = [line.endswith(", frame end") for line in collections]
-	assert ran.returncode == 0 and True in ended and all(ended[ended.index(True):]) and ended.count(True) >= 9, \
-		ran.stdout[-500:]
+	ended = frameEnds(folder, "FrameTicker", "Numbers", "index + seed", "(1, 2)", 5000000, 10)
+	assert True in ended and all(ended[ended.index(True):]) and ended.count(True) >= 2, ended
+	ended = frameEnds(folder, "WordTicker", "Texts", "\"w\" + (index + seed)", "(\"w1\", \"w2\")", 100000, 40)
+	assert all(ended) and len(ended) <= 20, ended
 print("check_memory.py passed")

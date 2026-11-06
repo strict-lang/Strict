@@ -31,11 +31,12 @@ TypeOf(name Text, at Number) Text
 	for Parameters(lines(header)) + Members
 		let words = value.Split(" ")
 		if (words.First is name) and (words.Length > 1)
-			return words(1)
+			return words(1) is "=" then HeaderTokens(Tokenizer("has " + value).Tokens).ValueType(3) else words(1)
 	""
 Members Texts
 	Callees(("has bitmap Bitmap", "Run"), "").Members is List(Text) + "bitmap Bitmap"
 	Callees(("has bitmap Bitmap", "Run", "\t1", "Other(bitmap Number)", "\t1"), "").TypeOf("bitmap", 4) is "Number"
+	Callees(("has folder = \"\"", "Run", "\tfolder"), "").TypeOf("folder", 2) is "Text"
 	for lines
 		if value.StartsWith("has ")
 			value.Substring(4, value.Length - 4)
