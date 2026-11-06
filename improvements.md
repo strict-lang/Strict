@@ -71,7 +71,6 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - MlirNatives: a static call on a list type (`Strict/List(Text)` TypeEntry, no instance) gets Owner `Strict/List(Text)` and Element "Number", MlirLayout.Represented does not strip the Strict/ prefix.
 - MlirSingle.Register line 99 falls back to `"%t" + at + "s"` for a register not written in the loop, the statement's own result name (a self reference), looks unreachable or accidental.
 - MlirPurity: `Doubling.IsLocal(StoreRegisterToVariable "value")` is false although "value" is only used inside the loop (conditional0 in Clamping gives true); value/index may clash with the loop variables.
-- FileCompiler.IsParsed("not") is true: a lone `not` counts as a complete statement.
 - A method-local `constant` in the test section only counts as a test constant when the next line is a test (TestLines.IsTestConstant), so two constants in a row end the test section silently: the test lines after them run as method body code (MlirListDestined.Prologue called itself, MlirFunction.Text hit StackOverflow after 150 s), and no validator flags the dropped Boolean statements.
 - Callees.TypeOf of a member with a default (`has folder = ""` splits into folder, =, "") probably returns "=" instead of a type (found by reading).
 - TypeCodegen.Member types `constant x = Fast` (Fast a Text constant) as Strict/Fast instead of Strict/Text: `let own = isConstant or ("=" is not in header.tokens) then "" else ...` skips the value type for constants.

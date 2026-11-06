@@ -86,7 +86,7 @@ Unparsable(lines Texts) Number
 IsParsed(line Text) Boolean
 	FileCompiler.IsParsed("let a = b + c")
 	FileCompiler.IsParsed("(number + other") is false and (FileCompiler.IsParsed("a + b)") is false)
-	FileCompiler.IsParsed("if generic is")
+	FileCompiler.IsParsed("if generic is") and (FileCompiler.IsParsed("not") is false)
 	FileCompiler.IsParsed("* value") and (FileCompiler.IsParsed("a + + b + c") is false)
 	FileCompiler.IsParsed("number + other other") is false and (FileCompiler.IsParsed("(, a)") is false)
 	let tokens = Tokenizer(line).Tokens
