@@ -1641,7 +1641,12 @@
   llvm.mlir.global internal @strict_pool_context(0 : i64) : i64
   llvm.mlir.global internal @strict_pool_count(0 : i64) : i64
   llvm.mlir.global internal @strict_pool_chunk(0 : i64) : i64
-  llvm.mlir.global internal @strict_pool_next(dense<0> : tensor<8xi64>) {alignment = 64 : i64} : !llvm.array<8 x i64>
+  // a job is split into pieces of chunk items from first on; each piece has a 64 byte claim word holding the job tag
+  // times 2 while it is open and plus 1 once a thread took it: every thread first takes the pieces of its own lane,
+  // so a loop run again (a game tick) gives each thread the same items and their lines stay in its own cache
+  llvm.mlir.global internal @strict_pool_first(0 : i64) : i64
+  llvm.mlir.global internal @strict_pool_pieces(0 : i64) : i64
+  llvm.mlir.global internal @strict_pool_claims(dense<0> : tensor<32768xi64>) {alignment = 64 : i64} : !llvm.array<32768 x i64>
   llvm.mlir.global internal @strict_pool_done(dense<0> : tensor<8xi64>) {alignment = 64 : i64} : !llvm.array<8 x i64>
   llvm.mlir.global internal @strict_pool_failure(0 : i64) : i64
   llvm.mlir.global internal @strict_pool_sleepers(0 : i64) : i64
@@ -1789,11 +1794,8 @@
     %job = arith.addi %previous, %one : i64
     %mask = arith.constant 4294967295 : i64
     %tag = arith.andi %job, %mask : i64
-    %shift = arith.constant 32 : i64
-    %tagged = arith.shli %tag, %shift : i64
-    %first = arith.addi %tagged, %start : i64
-    %nextSlot = llvm.mlir.addressof @strict_pool_next : !llvm.ptr
-    %invalidated = llvm.atomicrmw xchg %nextSlot, %first acq_rel : !llvm.ptr, i64
+    %firstSlot = llvm.mlir.addressof @strict_pool_first : !llvm.ptr
+    llvm.store %start, %firstSlot : i64, !llvm.ptr
     %bodyBits = llvm.ptrtoint %function : !llvm.ptr to i64
     %bodySlot = llvm.mlir.addressof @strict_pool_body : !llvm.ptr
     llvm.store %bodyBits, %bodySlot : i64, !llvm.ptr
@@ -1807,9 +1809,33 @@
     %pieces = arith.muli %threads, %four : i64
     %remaining = arith.subi %count, %start : i64
     %share = arith.divsi %remaining, %pieces : i64
-    %chunk = arith.maxsi %share, %one : i64
+    %enough = arith.maxsi %share, %one : i64
+    %claimLimit = arith.constant 4096 : i64
+    %limitPart = arith.subi %claimLimit, %one : i64
+    %fewest = arith.addi %remaining, %limitPart : i64
+    %smallest = arith.divsi %fewest, %claimLimit : i64
+    %chunk = arith.maxsi %enough, %smallest : i64
     %chunkSlot = llvm.mlir.addressof @strict_pool_chunk : !llvm.ptr
     llvm.store %chunk, %chunkSlot atomic monotonic {alignment = 8 : i64} : i64, !llvm.ptr
+    %chunkRest = arith.subi %chunk, %one : i64
+    %piecesRounded = arith.addi %remaining, %chunkRest : i64
+    %pieceCount = arith.divsi %piecesRounded, %chunk : i64
+    %piecesSlot = llvm.mlir.addressof @strict_pool_pieces : !llvm.ptr
+    llvm.store %pieceCount, %piecesSlot : i64, !llvm.ptr
+    %openTag = arith.shli %tag, %one : i64
+    %claims = llvm.mlir.addressof @strict_pool_claims : !llvm.ptr
+    cf.br ^open(%zero : i64)
+  ^open(%piece: i64):
+    %moreOpen = arith.cmpi slt, %piece, %pieceCount : i64
+    cf.cond_br %moreOpen, ^opened, ^allOpen
+  ^opened:
+    %eight = arith.constant 8 : i64
+    %claimIndex = arith.muli %piece, %eight : i64
+    %claimSlot = llvm.getelementptr %claims[%claimIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    llvm.store %openTag, %claimSlot : i64, !llvm.ptr
+    %nextPiece = arith.addi %piece, %one : i64
+    cf.br ^open(%nextPiece : i64)
+  ^allOpen:
     %doneSlot = llvm.mlir.addressof @strict_pool_done : !llvm.ptr
     llvm.store %start, %doneSlot : i64, !llvm.ptr
     %failureSlot = llvm.mlir.addressof @strict_pool_failure : !llvm.ptr
@@ -1874,73 +1900,103 @@
     return %workers : i64
   }
   llvm.func @strict_pool_run(%job: i64) {
-    %nextSlot = llvm.mlir.addressof @strict_pool_next : !llvm.ptr
-    %countSlot = llvm.mlir.addressof @strict_pool_count : !llvm.ptr
-    %chunkSlot = llvm.mlir.addressof @strict_pool_chunk : !llvm.ptr
-    %doneSlot = llvm.mlir.addressof @strict_pool_done : !llvm.ptr
+    %zero = llvm.mlir.constant(0 : i64) : i64
+    %one = llvm.mlir.constant(1 : i64) : i64
+    %eight = llvm.mlir.constant(8 : i64) : i64
     %mask = llvm.mlir.constant(4294967295 : i64) : i64
-    %shift = llvm.mlir.constant(32 : i64) : i64
     %tag = llvm.and %job, %mask : i64
-    llvm.br ^claim
-  ^claim:
-    %packed = llvm.load %nextSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
-    %owner = llvm.lshr %packed, %shift : i64
-    %isCurrent = llvm.icmp "eq" %owner, %tag : i64
-    llvm.cond_br %isCurrent, ^check, ^leave
-  ^check:
-    %start = llvm.and %packed, %mask : i64
-    %count = llvm.load %countSlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
-    %more = llvm.icmp "slt" %start, %count : i64
-    llvm.cond_br %more, ^try, ^leave
+    %open = llvm.shl %tag, %one : i64
+    %taken = llvm.or %open, %one : i64
+    %claims = llvm.mlir.addressof @strict_pool_claims : !llvm.ptr
+    %piecesSlot = llvm.mlir.addressof @strict_pool_pieces : !llvm.ptr
+    %pieces = llvm.load %piecesSlot : !llvm.ptr -> i64
+    %workersSlot = llvm.mlir.addressof @strict_pool_workers : !llvm.ptr
+    %workers = llvm.load %workersSlot : !llvm.ptr -> i64
+    %threads = llvm.add %workers, %one : i64
+    %lane = func.call @strict_gc_lane_index() : () -> i64
+    %own = llvm.urem %lane, %threads : i64
+    %spread = llvm.mul %own, %pieces : i64
+    %home = llvm.udiv %spread, %threads : i64
+    llvm.br ^scan(%zero : i64)
+  ^scan(%step: i64):
+    %more = llvm.icmp "slt" %step, %pieces : i64
+    llvm.cond_br %more, ^look, ^leave
+  ^look:
+    %shifted = llvm.add %home, %step : i64
+    %piece = llvm.urem %shifted, %pieces : i64
+    %following = llvm.add %step, %one : i64
+    %claimIndex = llvm.mul %piece, %eight : i64
+    %claimSlot = llvm.getelementptr %claims[%claimIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %state = llvm.load %claimSlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
+    %isOpen = llvm.icmp "eq" %state, %open : i64
+    llvm.cond_br %isOpen, ^try, ^scan(%following : i64)
   ^try:
-    %chunk = llvm.load %chunkSlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
-    %proposed = llvm.add %start, %chunk : i64
-    %over = llvm.icmp "sgt" %proposed, %count : i64
-    %end = llvm.select %over, %count, %proposed : i1, i64
-    %size = llvm.sub %end, %start : i64
-    %claimed = llvm.add %packed, %size : i64
-    %pair = llvm.cmpxchg %nextSlot, %packed, %claimed acq_rel monotonic : !llvm.ptr, i64
+    %pair = llvm.cmpxchg %claimSlot, %open, %taken acq_rel monotonic : !llvm.ptr, i64
     %won = llvm.extractvalue %pair[1] : !llvm.struct<(i64, i1)>
-    llvm.cond_br %won, ^work, ^claim
+    llvm.cond_br %won, ^work, ^scan(%following : i64)
   ^work:
+    %range = llvm.call @strict_pool_piece(%piece) : (i64) -> !llvm.struct<(i64, i64)>
+    %start = llvm.extractvalue %range[0] : !llvm.struct<(i64, i64)>
+    %end = llvm.extractvalue %range[1] : !llvm.struct<(i64, i64)>
     %insideSlot = llvm.mlir.addressof @strict_pool_inside : !llvm.ptr
     %wasInside = llvm.load %insideSlot : !llvm.ptr -> i64
     llvm.store %job, %insideSlot : i64, !llvm.ptr
     %result = llvm.call @strict_pool_chunk_run(%start, %end) : (i64, i64) -> i1
     llvm.store %wasInside, %insideSlot : i64, !llvm.ptr
+    %size = llvm.sub %end, %start : i64
+    llvm.call @strict_pool_counted(%size) : (i64) -> ()
+    llvm.cond_br %result, ^close(%zero : i64), ^scan(%following : i64)
+  ^close(%index: i64):
+    %closing = llvm.icmp "slt" %index, %pieces : i64
+    llvm.cond_br %closing, ^closeOne, ^leave
+  ^closeOne:
+    %closeIndex = llvm.mul %index, %eight : i64
+    %closeSlot = llvm.getelementptr %claims[%closeIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %closePair = llvm.cmpxchg %closeSlot, %open, %taken acq_rel monotonic : !llvm.ptr, i64
+    %closed = llvm.extractvalue %closePair[1] : !llvm.struct<(i64, i1)>
+    %nextIndex = llvm.add %index, %one : i64
+    llvm.cond_br %closed, ^skipped, ^close(%nextIndex : i64)
+  ^skipped:
+    %skippedRange = llvm.call @strict_pool_piece(%index) : (i64) -> !llvm.struct<(i64, i64)>
+    %skippedStart = llvm.extractvalue %skippedRange[0] : !llvm.struct<(i64, i64)>
+    %skippedEnd = llvm.extractvalue %skippedRange[1] : !llvm.struct<(i64, i64)>
+    %skippedSize = llvm.sub %skippedEnd, %skippedStart : i64
+    llvm.call @strict_pool_counted(%skippedSize) : (i64) -> ()
+    llvm.br ^close(%nextIndex : i64)
+  ^leave:
+    llvm.return
+  }
+  // the items [start, end) of a piece of the current job
+  llvm.func @strict_pool_piece(%piece: i64) -> !llvm.struct<(i64, i64)> {
+    %firstSlot = llvm.mlir.addressof @strict_pool_first : !llvm.ptr
+    %first = llvm.load %firstSlot : !llvm.ptr -> i64
+    %chunkSlot = llvm.mlir.addressof @strict_pool_chunk : !llvm.ptr
+    %chunk = llvm.load %chunkSlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
+    %countSlot = llvm.mlir.addressof @strict_pool_count : !llvm.ptr
+    %count = llvm.load %countSlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
+    %offset = llvm.mul %piece, %chunk : i64
+    %start = llvm.add %first, %offset : i64
+    %proposed = llvm.add %start, %chunk : i64
+    %over = llvm.icmp "sgt" %proposed, %count : i64
+    %end = llvm.select %over, %count, %proposed : i1, i64
+    %undefined = llvm.mlir.undef : !llvm.struct<(i64, i64)>
+    %withStart = llvm.insertvalue %start, %undefined[0] : !llvm.struct<(i64, i64)>
+    %range = llvm.insertvalue %end, %withStart[1] : !llvm.struct<(i64, i64)>
+    llvm.return %range : !llvm.struct<(i64, i64)>
+  }
+  // size more items of the current job are done, the last ones wake its caller
+  llvm.func @strict_pool_counted(%size: i64) {
+    %doneSlot = llvm.mlir.addressof @strict_pool_done : !llvm.ptr
+    %countSlot = llvm.mlir.addressof @strict_pool_count : !llvm.ptr
+    %count = llvm.load %countSlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
     %finished = llvm.atomicrmw add %doneSlot, %size seq_cst : !llvm.ptr, i64
     %reached = llvm.add %finished, %size : i64
     %isLast = llvm.icmp "sge" %reached, %count : i64
-    llvm.cond_br %isLast, ^lastChunk, ^continued
-  ^lastChunk:
+    llvm.cond_br %isLast, ^last, ^done
+  ^last:
     llvm.call @strict_pool_finished() : () -> ()
-    llvm.br ^continued
-  ^continued:
-    llvm.cond_br %result, ^close, ^claim
-  ^close:
-    %open = llvm.load %nextSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
-    %openOwner = llvm.lshr %open, %shift : i64
-    %stillCurrent = llvm.icmp "eq" %openOwner, %tag : i64
-    %index = llvm.and %open, %mask : i64
-    %total = llvm.load %countSlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
-    %remaining = llvm.icmp "slt" %index, %total : i64
-    %closable = llvm.and %stillCurrent, %remaining : i1
-    llvm.cond_br %closable, ^skip, ^leave
-  ^skip:
-    %rest = llvm.sub %total, %index : i64
-    %closed = llvm.add %open, %rest : i64
-    %closing = llvm.cmpxchg %nextSlot, %open, %closed acq_rel monotonic : !llvm.ptr, i64
-    %skipped = llvm.extractvalue %closing[1] : !llvm.struct<(i64, i1)>
-    llvm.cond_br %skipped, ^skippedRest, ^close
-  ^skippedRest:
-    %counted = llvm.atomicrmw add %doneSlot, %rest seq_cst : !llvm.ptr, i64
-    %allCounted = llvm.add %counted, %rest : i64
-    %isAll = llvm.icmp "sge" %allCounted, %total : i64
-    llvm.cond_br %isAll, ^skippedLast, ^leave
-  ^skippedLast:
-    llvm.call @strict_pool_finished() : () -> ()
-    llvm.return
-  ^leave:
+    llvm.br ^done
+  ^done:
     llvm.return
   }
   llvm.func @strict_pool_chunk_run(%start: i64, %end: i64) -> i1 {

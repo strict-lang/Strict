@@ -882,7 +882,38 @@
   llvm.mlir.global internal @strict_pool_signal(0 : i64) : i64
   llvm.mlir.global internal @strict_pool_finish(0 : i64) : i64
   llvm.mlir.global internal @strict_pool_awaiting(0 : i64) : i64
+  llvm.func @SetThreadIdealProcessorEx(!llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+  // worker index prefers one logical processor, first one per core (even ones), then the second of each core, so a
+  // thread stays on the core and cache holding the items of its lane (strict_pool_run takes them first)
   llvm.func @strict_pool_thread(%argument: !llvm.ptr) -> i32 {
+    %index = llvm.ptrtoint %argument : !llvm.ptr to i64
+    %all = llvm.mlir.constant(-1 : i16) : i16
+    %firstGroup = llvm.mlir.constant(0 : i16) : i16
+    %total = llvm.call @GetActiveProcessorCount(%all) : (i16) -> i32
+    %perGroup = llvm.call @GetActiveProcessorCount(%firstGroup) : (i16) -> i32
+    %totalWide = llvm.zext %total : i32 to i64
+    %groupWide = llvm.zext %perGroup : i32 to i64
+    %two = llvm.mlir.constant(2 : i64) : i64
+    %one = llvm.mlir.constant(1 : i64) : i64
+    %doubled = llvm.mul %index, %two : i64
+    %even = llvm.urem %doubled, %totalWide : i64
+    %round = llvm.udiv %doubled, %totalWide : i64
+    %sibling = llvm.and %round, %one : i64
+    %logical = llvm.add %even, %sibling : i64
+    %group = llvm.udiv %logical, %groupWide : i64
+    %number = llvm.urem %logical, %groupWide : i64
+    %processor = llvm.alloca %one x i32 : (i64) -> !llvm.ptr
+    %groupShort = llvm.trunc %group : i64 to i16
+    %numberByte = llvm.trunc %number : i64 to i8
+    %zeroByte = llvm.mlir.constant(0 : i8) : i8
+    llvm.store %groupShort, %processor : i16, !llvm.ptr
+    %numberSlot = llvm.getelementptr %processor[2] : (!llvm.ptr) -> !llvm.ptr, i8
+    llvm.store %numberByte, %numberSlot : i8, !llvm.ptr
+    %reservedSlot = llvm.getelementptr %processor[3] : (!llvm.ptr) -> !llvm.ptr, i8
+    llvm.store %zeroByte, %reservedSlot : i8, !llvm.ptr
+    %self = llvm.call @GetCurrentThread() : () -> !llvm.ptr
+    %none = llvm.mlir.zero : !llvm.ptr
+    %ideal = llvm.call @SetThreadIdealProcessorEx(%self, %processor, %none) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
     llvm.call @strict_pool_serve() : () -> ()
     %zero = llvm.mlir.constant(0 : i32) : i32
     llvm.return %zero : i32
@@ -960,7 +991,8 @@
     %more = arith.cmpi slt, %index, %workers : i64
     cf.cond_br %more, ^spawn, ^done
   ^spawn:
-    %thread = llvm.call @CreateThread(%null, %workerStack, %procedure, %null, %reserved, %null) : (!llvm.ptr, i64, !llvm.ptr, !llvm.ptr, i32, !llvm.ptr) -> !llvm.ptr
+    %workerIndex = llvm.inttoptr %index : i64 to !llvm.ptr
+    %thread = llvm.call @CreateThread(%null, %workerStack, %procedure, %workerIndex, %reserved, %null) : (!llvm.ptr, i64, !llvm.ptr, !llvm.ptr, i32, !llvm.ptr) -> !llvm.ptr
     %closed = llvm.call @CloseHandle(%thread) : (!llvm.ptr) -> i32
     %next = arith.addi %index, %one : i64
     cf.br ^check(%next : i64)
