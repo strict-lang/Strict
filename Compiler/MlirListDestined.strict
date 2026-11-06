@@ -1,18 +1,35 @@
 has function MlirFunction
 has position Number
 constant Items = MemberEntry("items", "Strict/List(Number)", List(InstructionEntry), false)
-constant Copying = MethodEntry("Copied", List(MemberEntry) + Items, "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "items"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 3), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "forResult"), InstructionEntry.Return(2)))
+constant ItemsLooped = (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "items"), InstructionEntry.LoopBegin(0, -1))
+constant CopiesReturned = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "forResult"), InstructionEntry.Return(2))
+constant ResultsReturned = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "forResult"), InstructionEntry.Return(3))
+constant Copying = MethodEntry("Copied", List(MemberEntry) + Items, "Strict/List(Number)", ItemsLooped + MlirLayout.ValuesWritten + CopiesReturned)
 constant Weighing = MethodEntry("Weighed", (Items, MemberEntry("weights", "Strict/List(Text)", List(InstructionEntry), false)), "Strict/List(Number)", Copying.instructions)
-constant Peeking = MethodEntry("Peeked", List(MemberEntry) + Items, "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "items"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.LoadNumber(1, 0), InstructionEntry(InstructionType.IndexCall, "items", (2, 1)), InstructionEntry.Named(InstructionType.InvokeWriteToList, 2, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 4), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "forResult"), InstructionEntry.Return(3)))
-constant Remaking = MethodEntry("Remade", List(MemberEntry) + MemberEntry("items", "Strict/List(Strict/Math/Tripling)", List(InstructionEntry), false), "Strict/List(Strict/Math/Tripling)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "items"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Invoke(2, ("Strict/Math/Tripling", "Made", "Strict/Math/Tripling"), List(Number), 1), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 2), InstructionEntry.Named(InstructionType.InvokeWriteToList, 2, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 5), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "forResult"), InstructionEntry.Return(3)))
-constant Taking = ("    %listDestinationSlot = llvm.mlir.addressof @strict_list_destination : !llvm.ptr", "    %listDestination = llvm.load %listDestinationSlot : !llvm.ptr -> f64", "    llvm.store %zero, %listDestinationSlot : f64, !llvm.ptr")
+constant FirstWritten = (InstructionEntry.LoadNumber(1, 0), InstructionEntry(InstructionType.IndexCall, "items", (2, 1)), InstructionEntry.Named(InstructionType.InvokeWriteToList, 2, "forResult"))
+constant Peeking = MethodEntry("Peeked", List(MemberEntry) + Items, "Strict/List(Number)", ItemsLooped + FirstWritten + InstructionEntry.Jump(InstructionType.LoopEnd, 4) + ResultsReturned)
+constant TriplingItems = MemberEntry("items", "Strict/List(Strict/Math/Tripling)", List(InstructionEntry), false)
+constant TriplingMade = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Invoke(2, ("Strict/Math/Tripling", "Made", "Strict/Math/Tripling"), List(Number), 1))
+constant MadeWritten = (InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 2), InstructionEntry.Named(InstructionType.InvokeWriteToList, 2, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 5))
+constant Remaking = MethodEntry("Remade", List(MemberEntry) + TriplingItems, "Strict/List(Strict/Math/Tripling)", ItemsLooped + TriplingMade + MadeWritten + ResultsReturned)
+constant DestinationLoaded = ("    %listDestinationSlot = llvm.mlir.addressof @strict_list_destination : !llvm.ptr", "    %listDestination = llvm.load %listDestinationSlot : !llvm.ptr -> f64")
+constant DestinationCleared = ("    llvm.store %zero, %listDestinationSlot : f64, !llvm.ptr")
+constant Taking = DestinationLoaded + DestinationCleared
 constant Copied = MlirListDestined(MlirFunction(List(TypeEntry), MlirFunction.Shape, Copying), 0)
 constant Remade = MlirListDestined(MlirFunction((MlirDestined.Maker, MlirFlats.Summing), MlirDestined.Maker, Remaking), 4)
 constant Destining = "destine_element(%t4ev, %listDestination, %t4ei, %t4er) : (f64, f64, f64, f64) -> ()"
-constant Destinations = ("    %t4ev = llvm.load %v_value : !llvm.ptr -> f64", "    %t4ei = llvm.load %v_items : !llvm.ptr -> f64", "    %t4er = llvm.load %v_forResult : !llvm.ptr -> f64", "    func.call @strict_flat_destine_element(%t4ev, %listDestination, %t4ei, %t4er) : (f64, f64, f64, f64) -> ()", "call")
-constant Lined = MlirListDestined(MlirFunction((MlirFlats.Tripling, MlirFlats.Summing), MlirFlats.Tripling, MethodEntry("Lined", List(MemberEntry), "Strict/List(Strict/Math/Tripling)", (List(InstructionEntry) + MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Strict/Math/Tripling)", (0, 6, -1, 0)), "forResult")) + MlirFlats.Making.instructions.Slice(0, 9) + InstructionEntry.Named(InstructionType.InvokeWriteToList, 4, "forResult"))), 1)
-constant Checked = MlirListDestined(MlirFunction(Lined.function.types, MlirFlats.Tripling, MethodEntry("Lined", List(MemberEntry), "Strict/List(Strict/Math/Tripling)", Lined.function.method.instructions.Slice(0, 10) + InstructionEntry.Invoke(5, ("Strict/Math/Tripling", "Validated", "Strict/Math/Tripling"), List(Number), 4) + InstructionEntry.Named(InstructionType.InvokeWriteToList, 5, "forResult"))), 1)
-constant Keeping = MlirListDestined(MlirFunction(Remade.function.types, Remade.function.type, MethodEntry("Remade", Remaking.parameters, Remaking.returnType, Remaking.instructions.Slice(0, 4) + InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "value") + InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 6, "kept") + Remaking.instructions.Slice(4, 6))), 6)
+constant DestinationOperands = ("    %t4ev = llvm.load %v_value : !llvm.ptr -> f64", "    %t4ei = llvm.load %v_items : !llvm.ptr -> f64", "    %t4er = llvm.load %v_forResult : !llvm.ptr -> f64")
+constant DestinationCall = ("    func.call @strict_flat_destine_element(%t4ev, %listDestination, %t4ei, %t4er) : (f64, f64, f64, f64) -> ()", "call")
+constant Destinations = DestinationOperands + DestinationCall
+constant TriplingsCreated = (List(InstructionEntry) + MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Strict/Math/Tripling)", (0, 6, -1, 0)), "forResult"))
+constant LinedInstructions = TriplingsCreated + MlirFlats.Making.instructions.Slice(0, 9) + InstructionEntry.Named(InstructionType.InvokeWriteToList, 4, "forResult")
+constant Lined = MlirListDestined(MlirFunction((MlirFlats.Tripling, MlirFlats.Summing), MlirFlats.Tripling, MethodEntry("Lined", List(MemberEntry), "Strict/List(Strict/Math/Tripling)", LinedInstructions)), 1)
+constant Validating = InstructionEntry.Invoke(5, ("Strict/Math/Tripling", "Validated", "Strict/Math/Tripling"), List(Number), 4)
+constant ValidatedInstructions = Lined.function.method.instructions.Slice(0, 10) + Validating + InstructionEntry.Named(InstructionType.InvokeWriteToList, 5, "forResult")
+constant Checked = MlirListDestined(MlirFunction(Lined.function.types, MlirFlats.Tripling, MethodEntry("Lined", List(MemberEntry), "Strict/List(Strict/Math/Tripling)", ValidatedInstructions)), 1)
+constant KeptValue = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "value"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 6, "kept"))
+constant KeptInstructions = Remaking.instructions.Slice(0, 4) + KeptValue + Remaking.instructions.Slice(4, 6)
+constant Keeping = MlirListDestined(MlirFunction(Remade.function.types, Remade.function.type, MethodEntry("Remade", Remaking.parameters, Remaking.returnType, KeptInstructions)), 6)
 Prologue Texts
 	Copied.Prologue.Length is 3
 	MlirListDestined(MlirDestined.Made.function, 0).Prologue.Length is 0

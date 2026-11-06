@@ -4,8 +4,11 @@ constant Operators = (InstructionType.Add, InstructionType.Subtract, Instruction
 constant Steps = MlirLists.Listed.method.instructions
 constant WordSteps = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "words"), InstructionEntry.LoadNumber(1, 3), InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)))
 constant Worded = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Words, "None", WordSteps))
-constant Arithmetic = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoadNumber(1, 2), InstructionEntry.Binary(InstructionType.Subtract, (0, 1, 2)), InstructionEntry.Binary(InstructionType.Multiply, (0, 0, 3)), InstructionEntry.Binary(InstructionType.Divide, (0, 1, 4)), InstructionEntry.Binary(InstructionType.Add, (1, 0, 5)))
-constant Downcast = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", (MlirLists.Items, MlirLists.Words), "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "words"), InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)))))
+constant NumbersSubtracted = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoadNumber(1, 2), InstructionEntry.Binary(InstructionType.Subtract, (0, 1, 2)))
+constant ResultsCombined = (InstructionEntry.Binary(InstructionType.Multiply, (0, 0, 3)), InstructionEntry.Binary(InstructionType.Divide, (0, 1, 4)), InstructionEntry.Binary(InstructionType.Add, (1, 0, 5)))
+constant Arithmetic = NumbersSubtracted + ResultsCombined
+constant WordsAdded = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "words"), InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)))
+constant Downcast = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", (MlirLists.Items, MlirLists.Words), "None", WordsAdded))
 constant Mixed = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", Arithmetic))
 IsOperation Boolean
 	MlirListOperators(MlirLists.Listed, 4).IsOperation

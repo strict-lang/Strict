@@ -3,7 +3,9 @@ has row Number
 constant Picking = MlirWholeRows(MlirWholeKernel.Measure.Callee, 1)
 constant Types = MlirWholeTypes(MlirWholeKernel.Measure.Callee)
 constant Extras = ("%rx", "%ry", "%rw")
-constant Relays = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "board"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "pixel"), InstructionEntry.Invoke(2, ("Strict/Board", "Picked", "Strict/Rgb", "board", "pixel"), (0, 1), -1), InstructionEntry.Return(2))
+constant RelayArguments = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "board"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "pixel"))
+constant RelayCall = (InstructionEntry.Invoke(2, ("Strict/Board", "Picked", "Strict/Rgb", "board", "pixel"), (0, 1), -1), InstructionEntry.Return(2))
+constant Relays = RelayArguments + RelayCall
 constant Relay = MlirFunction(MlirWholeKernel.Measure.function.types, MlirWholeKernel.Measured, MethodEntry("Relay", MlirWholeKernel.Picked.parameters, "Strict/Rgb", Relays))
 constant Relaying = MlirWholeRows(Relay, 1)
 constant Relayed = MlirWholeStatements(Relay, 2, MlirWholeTypes(Relay).Part(0), MlirWholeTypes(Relay).Part(1), MlirWholeTypes(Relay).Part(2))

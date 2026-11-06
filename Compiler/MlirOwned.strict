@@ -2,15 +2,26 @@ has function MlirFunction
 has position Number
 constant Empty = MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Number)", (0, 6, -1, 0)), "listResult0")
 constant Built = (Empty, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "listResult0"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "moved"))
-constant Moving = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", Built + InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "moved") + InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "inline3_elements") + InstructionEntry.Return(1)))
-constant Copying = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", Built + InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "moved") + InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "kept")))
-constant Returning = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", Built + InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "moved") + InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 1) + InstructionEntry.Return(1)))
+constant Reloaded = Built + InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "moved")
+constant MovedInstructions = Reloaded + InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "inline3_elements") + InstructionEntry.Return(1)
+constant Moving = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", MovedInstructions))
+constant Copying = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", Reloaded + InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "kept")))
+constant ReturnedInstructions = Reloaded + InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 1) + InstructionEntry.Return(1)
+constant Returning = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", ReturnedInstructions))
 constant Owner = MlirOwned(Moving, 2)
 constant Temporaries = ("index", "value", "outer", "forResult", "changed_instance", "#this")
-constant Making = InstructionEntry.Invoke(2, ("Strict/Outer", "from", "Strict/Outer", "shape", "size"), (0, 1), -1)
-constant Rebuilding = (InstructionEntry.LoadNumber(0, 1), InstructionEntry.LoadNumber(1, 2), Making, InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 2, "moved"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "moved"), InstructionEntry(InstructionType.FieldLoad, "shape", (4, 3, -1)), InstructionEntry.LoadNumber(5, 7), InstructionEntry.Invoke(6, ("Strict/Outer", "from", "Strict/Outer", "shape", "size"), (4, 5), -1), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 6, "moved"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 7, "moved"), InstructionEntry.Return(7))
+constant OuterFrom = ("Strict/Outer", "from", "Strict/Outer", "shape", "size")
+constant Making = InstructionEntry.Invoke(2, OuterFrom, (0, 1), -1)
+constant Remaking = InstructionEntry.Invoke(6, OuterFrom, (4, 5), -1)
+constant OuterMade = (InstructionEntry.LoadNumber(0, 1), InstructionEntry.LoadNumber(1, 2), Making, InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 2, "moved"))
+constant OuterRemade = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "moved"), InstructionEntry(InstructionType.FieldLoad, "shape", (4, 3, -1)), InstructionEntry.LoadNumber(5, 7), Remaking)
+constant RemadeReturned = (InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 6, "moved"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 7, "moved"), InstructionEntry.Return(7))
+constant Rebuilding = OuterMade + OuterRemade + RemadeReturned
 constant Fresh = List(Text) + "fresh"
-constant Reusing = ("    %t#re = func.call @strict_rc_unshared(%t#old) : (f64) -> i1", "    cf.cond_br %t#re, ^t#reuse, ^t#fresh", "  ^t#reuse:", "    %t#rp = func.call @strict_ptr(%t#old) : (f64) -> !llvm.ptr", "    cf.br ^t#join", "  ^t#fresh:", "    cf.br ^t#join", "  ^t#join:", "    %t#same = arith.cmpf oeq, %t#o, %t# : f64", "    cf.cond_br %t#same, ^t#kept, ^t#dead", "  ^t#dead:", "    func.call @strict_rc_dead(%t#o, %t#) : (f64, f64) -> ()", "    cf.br ^t#kept", "  ^t#kept:")
+constant UnsharedReuse = ("    %t#re = func.call @strict_rc_unshared(%t#old) : (f64) -> i1", "    cf.cond_br %t#re, ^t#reuse, ^t#fresh", "  ^t#reuse:", "    %t#rp = func.call @strict_ptr(%t#old) : (f64) -> !llvm.ptr", "    cf.br ^t#join")
+constant FreshJoined = ("  ^t#fresh:", "    cf.br ^t#join", "  ^t#join:", "    %t#same = arith.cmpf oeq, %t#o, %t# : f64", "    cf.cond_br %t#same, ^t#kept, ^t#dead")
+constant DeadReleased = ("  ^t#dead:", "    func.call @strict_rc_dead(%t#o, %t#) : (f64, f64) -> ()", "    cf.br ^t#kept", "  ^t#kept:")
+constant Reusing = UnsharedReuse + FreshJoined + DeadReleased
 constant Putting = ("    %t#r$ = llvm.getelementptr %t#rp[$] : (!llvm.ptr) -> !llvm.ptr, f64", "    %t#ra$ = llvm.load %r& : !llvm.ptr -> f64", "    func.call @strict_rc_put(%t#r$, %t#ra$) : (!llvm.ptr, f64) -> ()")
 constant Rebuilt = MlirOwned(MlirFunction((MlirFunction.Shape, MlirInstances.Outer), MlirInstances.Outer, MethodEntry("Run", List(MemberEntry), "None", Rebuilding)), 7)
 IsOwned(name Text, depth = 0, seed = "") Boolean

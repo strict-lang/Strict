@@ -4,10 +4,23 @@ constant End = MlirWholeCounted(MlirWholeStatements.Row.At(19))
 constant Types = MlirWholeTypes(MlirWholeFunction.Nesting)
 constant Inner = MlirWholeCounted(MlirWholeStatements(MlirWholeFunction.Nesting, 6, Types.Part(0), Types.Part(1), Types.Part(2)))
 constant Closing = MlirWholeCounted(Inner.statements.At(13))
-constant Counting = ("    %t6n = llvm.load %r4 : !llvm.ptr -> i64", "    %t6b = arith.constant 0 : i64", "    %t6s = arith.constant 1 : i64", "    %t6x = llvm.load %v_index : !llvm.ptr -> i64", "    %t6y = llvm.load %v_value : !llvm.ptr -> i64", "    %t6a = arith.constant 0 : i64", "    llvm.store %t6a, %loop6 : i64, !llvm.ptr", "    cf.br ^loop6", "  ^loop6:", "    %t6k = llvm.load %loop6 : !llvm.ptr -> i64", "    %t6m = arith.cmpi slt, %t6k, %t6n : i64", "    cf.cond_br %t6m, ^loop6body, ^loop6exit", "  ^loop6body:", "    %t6o = arith.muli %t6k, %t6s : i64", "    %t6c = arith.addi %t6b, %t6o : i64", "    llvm.store %t6c, %v_value : i64, !llvm.ptr", "    llvm.store %t6c, %v_index : i64, !llvm.ptr")
-constant Ranging = ("    %t6b = llvm.load %r2 : !llvm.ptr -> i64", "    %t6e = llvm.load %r3 : !llvm.ptr -> i64", "    %t6u = arith.subi %t6e, %t6b : i64", "    %t6w = arith.subi %t6b, %t6e : i64", "    %t6d = arith.cmpi slt, %t6e, %t6b : i64", "    %t6p = arith.constant 1 : i64", "    %t6q = arith.constant -1 : i64", "    %t6n = arith.select %t6d, %t6w, %t6u : i64", "    %t6s = arith.select %t6d, %t6q, %t6p : i64", "    %t6x = llvm.load %v_index : !llvm.ptr -> i64", "    %t6y = llvm.load %v_value : !llvm.ptr -> i64", "    %t6z = llvm.load %v_outer : !llvm.ptr -> i64", "    llvm.store %t6y, %v_outer : i64, !llvm.ptr", "    %t6a = arith.constant 0 : i64", "    llvm.store %t6a, %loop6 : i64, !llvm.ptr", "    cf.br ^loop6", "  ^loop6:", "    %t6k = llvm.load %loop6 : !llvm.ptr -> i64", "    %t6m = arith.cmpi slt, %t6k, %t6n : i64", "    cf.cond_br %t6m, ^loop6body, ^loop6exit", "  ^loop6body:", "    %t6o = arith.muli %t6k, %t6s : i64", "    %t6c = arith.addi %t6b, %t6o : i64", "    llvm.store %t6c, %v_value : i64, !llvm.ptr", "    llvm.store %t6c, %v_index : i64, !llvm.ptr")
-constant Exiting = ("    %t19k = llvm.load %loop6 : !llvm.ptr -> i64", "    %t19o = arith.constant 1 : i64", "    %t19w = arith.addi %t19k, %t19o : i64", "    llvm.store %t19w, %loop6 : i64, !llvm.ptr", "    cf.br ^loop6", "  ^loop6exit:", "    llvm.store %t6x, %v_index : i64, !llvm.ptr", "    llvm.store %t6y, %v_value : i64, !llvm.ptr")
-constant Closed = ("    %t13k = llvm.load %loop6 : !llvm.ptr -> i64", "    %t13o = arith.constant 1 : i64", "    %t13w = arith.addi %t13k, %t13o : i64", "    llvm.store %t13w, %loop6 : i64, !llvm.ptr", "    cf.br ^loop6", "  ^loop6exit:", "    llvm.store %t6x, %v_index : i64, !llvm.ptr", "    llvm.store %t6y, %v_value : i64, !llvm.ptr", "    llvm.store %t6z, %v_outer : i64, !llvm.ptr")
+constant CountBounds = ("    %t6n = llvm.load %r4 : !llvm.ptr -> i64", "    %t6b = arith.constant 0 : i64", "    %t6s = arith.constant 1 : i64")
+constant LoopSaved = ("    %t6x = llvm.load %v_index : !llvm.ptr -> i64", "    %t6y = llvm.load %v_value : !llvm.ptr -> i64")
+constant LoopStarted = ("    %t6a = arith.constant 0 : i64", "    llvm.store %t6a, %loop6 : i64, !llvm.ptr", "    cf.br ^loop6", "  ^loop6:")
+constant LoopChecked = ("    %t6k = llvm.load %loop6 : !llvm.ptr -> i64", "    %t6m = arith.cmpi slt, %t6k, %t6n : i64", "    cf.cond_br %t6m, ^loop6body, ^loop6exit", "  ^loop6body:")
+constant LoopStepped = ("    %t6o = arith.muli %t6k, %t6s : i64", "    %t6c = arith.addi %t6b, %t6o : i64", "    llvm.store %t6c, %v_value : i64, !llvm.ptr", "    llvm.store %t6c, %v_index : i64, !llvm.ptr")
+constant Counting = CountBounds + LoopSaved + LoopStarted + LoopChecked + LoopStepped
+constant RangeEnds = ("    %t6b = llvm.load %r2 : !llvm.ptr -> i64", "    %t6e = llvm.load %r3 : !llvm.ptr -> i64")
+constant RangeLengths = ("    %t6u = arith.subi %t6e, %t6b : i64", "    %t6w = arith.subi %t6b, %t6e : i64", "    %t6d = arith.cmpi slt, %t6e, %t6b : i64")
+constant RangeSteps = ("    %t6p = arith.constant 1 : i64", "    %t6q = arith.constant -1 : i64", "    %t6n = arith.select %t6d, %t6w, %t6u : i64", "    %t6s = arith.select %t6d, %t6q, %t6p : i64")
+constant OuterSaved = ("    %t6z = llvm.load %v_outer : !llvm.ptr -> i64", "    llvm.store %t6y, %v_outer : i64, !llvm.ptr")
+constant Ranging = RangeEnds + RangeLengths + RangeSteps + LoopSaved + OuterSaved + LoopStarted + LoopChecked + LoopStepped
+constant EndIncremented = ("    %t19k = llvm.load %loop6 : !llvm.ptr -> i64", "    %t19o = arith.constant 1 : i64", "    %t19w = arith.addi %t19k, %t19o : i64", "    llvm.store %t19w, %loop6 : i64, !llvm.ptr")
+constant LoopRestored = ("    cf.br ^loop6", "  ^loop6exit:", "    llvm.store %t6x, %v_index : i64, !llvm.ptr", "    llvm.store %t6y, %v_value : i64, !llvm.ptr")
+constant Exiting = EndIncremented + LoopRestored
+constant ClosingIncremented = ("    %t13k = llvm.load %loop6 : !llvm.ptr -> i64", "    %t13o = arith.constant 1 : i64", "    %t13w = arith.addi %t13k, %t13o : i64", "    llvm.store %t13w, %loop6 : i64, !llvm.ptr")
+constant OuterRestored = ("    llvm.store %t6z, %v_outer : i64, !llvm.ptr")
+constant Closed = ClosingIncremented + LoopRestored + OuterRestored
 Emitted(entry InstructionEntry) Texts
 	Begin.Emitted(MlirWhole.Rows(6)).Length is 17
 	MlirWholeCounted(MlirWholeStatements.Row.At(16)).Emitted(MlirWhole.Rows(16)) is ("    cf.br ^bb17")

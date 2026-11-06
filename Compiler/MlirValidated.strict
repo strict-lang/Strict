@@ -1,7 +1,8 @@
 has function MlirFunction
 has position Number
 constant Validating = MethodEntry("Validated", List(MemberEntry), "Strict/Shape", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "width"), InstructionEntry.Return(0)))
-constant Keeping = MethodEntry("Kept", List(MemberEntry), "Strict/Shape", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "width"), InstructionEntry.Invoke(1, ("Strict/Shape", "from", "Strict/Shape", "width"), 0, -1), InstructionEntry.Invoke(2, ("Strict/Shape", "Validated", "Strict/Shape"), List(Number), 1), InstructionEntry.Return(2)))
+constant WidthMade = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "width"), InstructionEntry.Invoke(1, ("Strict/Shape", "from", "Strict/Shape", "width"), 0, -1))
+constant Keeping = MethodEntry("Kept", List(MemberEntry), "Strict/Shape", WidthMade + MlirStructs.Validating + InstructionEntry.Return(2))
 constant Validator = TypeEntry("Strict/Shape", MlirFunction.Shape.members, (Validating, Keeping))
 constant Kept = MlirValidated(MlirFunction(List(TypeEntry) + Validator, Validator, Keeping), 2)
 constant Changed = MlirValidated(MlirFunction(List(TypeEntry) + Validator, Validator, MlirStructs.Checker.function.method), 2)

@@ -6,7 +6,10 @@ constant Tricky = "  llvm.mlir.global internal @k(\" constant thread_local \") :
 constant Passes = " --symbol-dce --convert-scf-to-cf --convert-arith-to-llvm --convert-func-to-llvm --convert-cf-to-llvm --reconcile-unrealized-casts"
 constant Translating = " --mlir-disable-threading --mlir-to-llvmir "
 constant Single = Passes + " --mlir-disable-threading -o \""
-constant Sample = MlirSplit(("module {", "  llvm.func @printf(!llvm.ptr, ...) -> i32", "  llvm.mlir.global internal constant @t(\"a\\00\") : !llvm.array<2 x i8>", "  func.func private @A() -> f64 attributes {llvm.linkage = #llvm.linkage<internal>} {", "    %r = func.call @B() : () -> f64", "    return %r : f64", "  }", "  func.func private @B(%p0: f64) -> f64 {", "    return %p0 : f64", "  }", "}"))
+constant SampleHeader = ("module {", "  llvm.func @printf(!llvm.ptr, ...) -> i32", "  llvm.mlir.global internal constant @t(\"a\\00\") : !llvm.array<2 x i8>")
+constant CallingFunction = ("  func.func private @A() -> f64 attributes {llvm.linkage = #llvm.linkage<internal>} {", "    %r = func.call @B() : () -> f64", "    return %r : f64", "  }")
+constant CalledFunction = ("  func.func private @B(%p0: f64) -> f64 {", "    return %p0 : f64", "  }", "}")
+constant Sample = MlirSplit(SampleHeader + CallingFunction + CalledFunction)
 Parts(count Number) Texts
 	Sample.Parts(2).Length is 2
 	Sample.Parts(2).Last.IndexOf("  func.func private @A() -> f64\n") > 0

@@ -1,11 +1,16 @@
 has function MlirFunction
 has mainNames Texts = List(Text)
 has mainFiles Texts = List(Text)
-constant Twice = MethodEntry("Twice", List(MemberEntry), "Strict/Number", (InstructionEntry(InstructionType.LoadConstantToRegister, List(Text), (0, 1, 7), 2), InstructionEntry(InstructionType.LoadConstantToRegister, List(Text), (1, 1, 8), 2), InstructionEntry(InstructionType.Return, List(Text), List(Number) + 0, 3)))
+constant SevenLoaded = InstructionEntry(InstructionType.LoadConstantToRegister, List(Text), (0, 1, 7), 2)
+constant EightReturned = (SevenLoaded, InstructionEntry(InstructionType.LoadConstantToRegister, List(Text), (1, 1, 8), 2), InstructionEntry(InstructionType.Return, List(Text), List(Number) + 0, 3))
+constant Twice = MethodEntry("Twice", List(MemberEntry), "Strict/Number", EightReturned)
 constant Lined = MlirFunction(List(TypeEntry), MlirFunction.Shape, Twice, (4, 5))
-constant Jumped = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Jump", List(MemberEntry), "None", (InstructionEntry(InstructionType.LoadConstantToRegister, List(Text), (0, 1, 7), 2), InstructionEntry(InstructionType.LoadConstantToRegister, List(Text), (1, 1, 8), 3), InstructionEntry(InstructionType.JumpEnd, List(Text), List(Number) + 0, 2))), (0, 1))
+constant EightJumped = (SevenLoaded, InstructionEntry(InstructionType.LoadConstantToRegister, List(Text), (1, 1, 8), 3), InstructionEntry(InstructionType.JumpEnd, List(Text), List(Number) + 0, 2))
+constant Jumped = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Jump", List(MemberEntry), "None", EightJumped), (0, 1))
 constant Unlined = MlirFunction(List(TypeEntry), MlirFunction.Shape, Twice)
-constant State = ("    %linetable = llvm.mlir.addressof @strict_lines : !llvm.ptr", "    %linecount = arith.constant 5 : i64", "    %linestate = llvm.alloca %linecount x f64 : (i64) -> !llvm.ptr", "    func.call @strict_line_enter(%linestate) : (!llvm.ptr) -> ()")
+constant LineTable = ("    %linetable = llvm.mlir.addressof @strict_lines : !llvm.ptr", "    %linecount = arith.constant 5 : i64")
+constant LineState = ("    %linestate = llvm.alloca %linecount x f64 : (i64) -> !llvm.ptr", "    func.call @strict_line_enter(%linestate) : (!llvm.ptr) -> ()")
+constant State = LineTable + LineState
 constant Stop = "    func.call @strict_line_leave(%linetable, %linestate) : (!llvm.ptr, !llvm.ptr) -> ()"
 constant Signature = " : (!llvm.ptr, i64, !llvm.ptr) -> ()"
 constant Shaped = TypeEntry("Strict/Shape", List(MemberEntry), (Twice, MethodEntry.CountingLoop))

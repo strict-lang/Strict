@@ -1,12 +1,28 @@
 has function MlirFunction
 has position Number
-constant Wrapping = (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "index"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "offset"), InstructionEntry.Binary(InstructionType.Modulo, (1, 2, 3)), InstructionEntry(InstructionType.IndexCall, "numbers", (4, 3, -1)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 5, "value"), InstructionEntry.Binary(InstructionType.Divide, (4, 2, 6)), InstructionEntry.Named(InstructionType.InvokeWriteToList, 6, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 8))
+constant IndexLoop = (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "index"))
+constant WrappedIndex = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "offset"), InstructionEntry.Binary(InstructionType.Modulo, (1, 2, 3)))
+constant DividedRead = (InstructionEntry(InstructionType.IndexCall, "numbers", (4, 3, -1)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 5, "value"), InstructionEntry.Binary(InstructionType.Divide, (4, 2, 6)))
+constant DividedWritten = (InstructionEntry.Named(InstructionType.InvokeWriteToList, 6, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 8))
+constant Wrapping = IndexLoop + WrappedIndex + DividedRead + DividedWritten
 constant Wrapped = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Wrapped", (MlirLists.Items, MlirGuards.Offset), "Strict/List(Number)", Wrapping), Float = "f32", Guarded = 2)
 constant Wraps = MlirPassed(Wrapped, 5)
 constant Doubled = MlirPassed(MlirFunction(Wrapped, Float = "f64"), 2)
-constant Branched = ("    %qe = llvm.load %v_offset_e : !llvm.ptr -> i64", "    %qm = arith.cmpi eq, %b, %qe : i64", "    %qk = arith.constant 4294967296 : i64", "    %ql = arith.cmpi ult, %a, %qk : i64", "    %qp = arith.cmpi ne, %m_offset, %inexact : i64", "    %qa = arith.andi %qm, %ql : i1", "    %qb = arith.andi %qa, %qp : i1", "    cf.cond_br %qb, ^qfast, ^qslow", "  ^qfast:", "    %qx = arith.trunci %a : i64 to i32", "    %qw = arith.trunci %m_offset : i64 to i32", "    %qt:2 = arith.mului_extended %qx, %qw : i32", "    %qr = arith.subi %qx, %qt#1 : i32", "    %qo = arith.constant 32 : i64", "    %qn = arith.constant 40 : i64", "    %qf = arith.shrui %m_offset, %qo : i64", "    %qc = arith.trunci %qf : i64 to i8", "    %qy = arith.extui %qc : i8 to i32", "    %qu = arith.shrui %m_offset, %qn : i64", "    %qv = arith.trunci %qu : i64 to i32", "    %qg = arith.shrui %qr, %qy : i32", "    %qh = arith.addi %qt#1, %qg : i32", "    %qz = arith.shrui %qh, %qv : i32", "    %qq = arith.extui %qz : i32 to i64", "    cf.br ^qdivided(%qq : i64)", "  ^qslow:", "    %qs = arith.divsi %a, %b : i64", "    cf.br ^qdivided(%qs : i64)", "  ^qdivided(%q: i64):")
-constant Bounds = ("    %e_offset_a = arith.cmpi sge, %e_offset, %one : i64", "    llvm.intr.assume %e_offset_a : i1", "    %e_offset_l = arith.constant 2147483648 : i64", "    %e_offset_b = arith.cmpi sle, %e_offset, %e_offset_l : i64", "    llvm.intr.assume %e_offset_b : i1", "    %m_offset_a = arith.cmpi ne, %m_offset, %inexact : i64", "    llvm.intr.assume %m_offset_a : i1")
-constant Flagged = ("    %e_offset_s = arith.constant -9223372036854775808 : i64", "    %e_offset_w = arith.cmpi ne, %e_offset, %e_offset_s : i64", "    %e_offset_q = arith.extui %e_offset_w : i1 to i64", "    llvm.store %e_offset, %v_offset_e : i64, !llvm.ptr", "    llvm.store %e_offset_q, %v_offset_q : i64, !llvm.ptr")
+constant DivisorChecks = ("    %qe = llvm.load %v_offset_e : !llvm.ptr -> i64", "    %qm = arith.cmpi eq, %b, %qe : i64", "    %qk = arith.constant 4294967296 : i64", "    %ql = arith.cmpi ult, %a, %qk : i64")
+constant FastCondition = ("    %qp = arith.cmpi ne, %m_offset, %inexact : i64", "    %qa = arith.andi %qm, %ql : i1", "    %qb = arith.andi %qa, %qp : i1", "    cf.cond_br %qb, ^qfast, ^qslow")
+constant FastMultiply = ("  ^qfast:", "    %qx = arith.trunci %a : i64 to i32", "    %qw = arith.trunci %m_offset : i64 to i32", "    %qt:2 = arith.mului_extended %qx, %qw : i32", "    %qr = arith.subi %qx, %qt#1 : i32")
+constant ShiftLoaded = ("    %qo = arith.constant 32 : i64", "    %qn = arith.constant 40 : i64", "    %qf = arith.shrui %m_offset, %qo : i64", "    %qc = arith.trunci %qf : i64 to i8", "    %qy = arith.extui %qc : i8 to i32")
+constant ShiftsApplied = ("    %qu = arith.shrui %m_offset, %qn : i64", "    %qv = arith.trunci %qu : i64 to i32", "    %qg = arith.shrui %qr, %qy : i32", "    %qh = arith.addi %qt#1, %qg : i32", "    %qz = arith.shrui %qh, %qv : i32")
+constant FastDivided = ("    %qq = arith.extui %qz : i32 to i64", "    cf.br ^qdivided(%qq : i64)")
+constant SlowDivided = ("  ^qslow:", "    %qs = arith.divsi %a, %b : i64", "    cf.br ^qdivided(%qs : i64)", "  ^qdivided(%q: i64):")
+constant Branched = DivisorChecks + FastCondition + FastMultiply + ShiftLoaded + ShiftsApplied + FastDivided + SlowDivided
+constant OffsetPositive = ("    %e_offset_a = arith.cmpi sge, %e_offset, %one : i64", "    llvm.intr.assume %e_offset_a : i1")
+constant OffsetLimited = ("    %e_offset_l = arith.constant 2147483648 : i64", "    %e_offset_b = arith.cmpi sle, %e_offset, %e_offset_l : i64", "    llvm.intr.assume %e_offset_b : i1")
+constant MultiplierExact = ("    %m_offset_a = arith.cmpi ne, %m_offset, %inexact : i64", "    llvm.intr.assume %m_offset_a : i1")
+constant Bounds = OffsetPositive + OffsetLimited + MultiplierExact
+constant FlagComputed = ("    %e_offset_s = arith.constant -9223372036854775808 : i64", "    %e_offset_w = arith.cmpi ne, %e_offset, %e_offset_s : i64", "    %e_offset_q = arith.extui %e_offset_w : i1 to i64")
+constant FlagStored = ("    llvm.store %e_offset, %v_offset_e : i64, !llvm.ptr", "    llvm.store %e_offset_q, %v_offset_q : i64, !llvm.ptr")
+constant Flagged = FlagComputed + FlagStored
 Header Text
 	MlirPassed(Wrapped, 2).Header is ", %results: i64, %e_offset: i64, %m_offset: i64) attributes {nvvm.kernel} {"
 	Doubled.Header is ", %results: i64) attributes {nvvm.kernel} {"

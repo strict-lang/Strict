@@ -1,13 +1,18 @@
 has function MlirFunction
-constant Halves = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "number"), InstructionEntry.LoadNumber(1, 2), InstructionEntry.Binary(InstructionType.Divide, (0, 1, 2)), InstructionEntry.Invoke(3, ("Strict/Number", "Floor", "Strict/Number"), List(Number), 2), InstructionEntry.Return(3))
+constant NumberHalved = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "number"), InstructionEntry.LoadNumber(1, 2), InstructionEntry.Binary(InstructionType.Divide, (0, 1, 2)))
+constant FloorReturned = (InstructionEntry.Invoke(3, ("Strict/Number", "Floor", "Strict/Number"), List(Number), 2), InstructionEntry.Return(3))
+constant Halves = NumberHalved + FloorReturned
 constant Halved = MethodEntry("Halved", List(MemberEntry) + MemberEntry("number", "Strict/Number", List(InstructionEntry), false), "Strict/Number", Halves)
 constant Halving = MlirWholeTypes(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, Halved))
 constant Row = MlirWholeTypes(MlirWhole.Row.function)
-constant Byted = Halves.Slice(0, 3) + InstructionEntry.Invoke(3, ("Strict/Byte", "from", "Strict/Byte", "number"), List(Number) + 2, -1)
+constant Byted = NumberHalved + InstructionEntry.Invoke(3, ("Strict/Byte", "from", "Strict/Byte", "number"), List(Number) + 2, -1)
 constant Byting = MlirWholeTypes(MlirFunction(Halving.function.types, MlirFunction.Shape, MethodEntry("Byted", Halved.parameters, "Strict/Byte", Byted + InstructionEntry.Return(3))))
-constant Shadowed = MlirWholeTypes(MlirFunction(MlirArguments.Called.types, MlirArguments.Halves, MethodEntry("Run", List(MemberEntry), "Strict/Number", MlirArguments.Calls.Slice(0, 3) + InstructionEntry.Binary(InstructionType.Add, (2, 0, 3)) + InstructionEntry.Binary(InstructionType.Divide, (0, 1, 2)) + InstructionEntry.Return(3))))
-constant Reused = MlirWholeTypes(MlirFunction(MlirArguments.Called.types, MlirArguments.Halves, MethodEntry("Run", List(MemberEntry), "Strict/Number", MlirArguments.Calls.Slice(0, 4) + InstructionEntry.Binary(InstructionType.Divide, (0, 1, 2)) + InstructionEntry.Return(3))))
-constant Divided = MlirWholeTypes(MlirFunction(Shadowed.function, method = MethodEntry(Shadowed.function.method, instructions = Shadowed.function.method.instructions.Slice(0, 5) + MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 0.5), "half") + InstructionEntry.Return(2))))
+constant DivisionReturned = (InstructionEntry.Binary(InstructionType.Divide, (0, 1, 2)), InstructionEntry.Return(3))
+constant Shadowing = MlirArguments.Calls.Slice(0, 3) + InstructionEntry.Binary(InstructionType.Add, (2, 0, 3)) + DivisionReturned
+constant Shadowed = MlirWholeTypes(MlirFunction(MlirArguments.Called.types, MlirArguments.Halves, MethodEntry("Run", List(MemberEntry), "Strict/Number", Shadowing)))
+constant Reused = MlirWholeTypes(MlirFunction(MlirArguments.Called.types, MlirArguments.Halves, MethodEntry("Run", List(MemberEntry), "Strict/Number", MlirArguments.Calls.Slice(0, 4) + DivisionReturned)))
+constant HalfStored = Shadowed.function.method.instructions.Slice(0, 5) + MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 0.5), "half") + InstructionEntry.Return(2)
+constant Divided = MlirWholeTypes(MlirFunction(Shadowed.function, method = MethodEntry(Shadowed.function.method, instructions = HalfStored)))
 Part(number Number) Text
 	Halving.Natural(0, "iiii", "iif", "") is "f"
 	Divided.Initial is "----|-i-|"

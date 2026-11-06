@@ -2,10 +2,20 @@ has function MlirFunction
 has position Number
 constant Row = MlirWholeLoop(MlirWhole.Row.function, 6)
 constant Entering = "cf.cond_br %t6whok, ^loop6whole(%t6whz, %t6wh2 : i64, i64), ^loop6generic"
-constant Started = ("    %t6whn = arith.fptosi %t6n : f64 to i64", "    " + Entering, "  ^loop6whole(%t6ki: i64, %t6u0: i64):", "    %t6whm = arith.cmpi slt, %t6ki, %t6whn : i64", "    cf.cond_br %t6whm, ^loop6wholebody, ^loop6wholeexit", "  ^loop6wholebody:", "    %t6whone = arith.constant 1 : i64", "    %t6gs = arith.addi %t6ki, %t6whz : i64", "    %t6cs = arith.addi %t6ki, %t6whz : i64")
-constant Computed = ("    %t8s = arith.addi %t6wh0, %t6whz : i64", "    %t10s = arith.addi %t6wh1, %t6whz : i64", "    %t11s = arith.subi %t6gs, %t10s : i64", "    %t12s = arith.constant 4 : i64", "    %t13s = arith.muli %t11s, %t12s : i64", "    %t14s = arith.addi %t8s, %t13s : i64")
+constant LoopCompared = ("    %t6whn = arith.fptosi %t6n : f64 to i64", "    " + Entering, "  ^loop6whole(%t6ki: i64, %t6u0: i64):", "    %t6whm = arith.cmpi slt, %t6ki, %t6whn : i64")
+constant BodyStarted = ("    cf.cond_br %t6whm, ^loop6wholebody, ^loop6wholeexit", "  ^loop6wholebody:", "    %t6whone = arith.constant 1 : i64", "    %t6gs = arith.addi %t6ki, %t6whz : i64", "    %t6cs = arith.addi %t6ki, %t6whz : i64")
+constant Started = LoopCompared + BodyStarted
+constant RowOffsets = ("    %t8s = arith.addi %t6wh0, %t6whz : i64", "    %t10s = arith.addi %t6wh1, %t6whz : i64", "    %t11s = arith.subi %t6gs, %t10s : i64")
+constant IndexScaled = ("    %t12s = arith.constant 4 : i64", "    %t13s = arith.muli %t11s, %t12s : i64", "    %t14s = arith.addi %t8s, %t13s : i64")
+constant Computed = RowOffsets + IndexScaled
 constant Checking = ("    %t15whl = arith.fptosi %n_pixels : f64 to i64", "    %t15whi = arith.cmpi ult, %t14s, %t15whl : i64", "    cf.cond_br %t15whi, ^bb15whole, ^bb15wholefailed", "  ^bb15wholefailed:")
-constant Failing = ("    %t15whf = arith.sitofp %t14s : i64 to f64", "    llvm.store %t15whf, %r12 : f64, !llvm.ptr", "    %fw15l = llvm.load %v_pixels : !llvm.ptr -> f64", "    %fw15i = llvm.load %r12 : !llvm.ptr -> f64", "    %fw15n = llvm.mlir.addressof @sShape_Row_3_15 : !llvm.ptr", "    %fw15nb = func.call @strict_bits(%fw15n) : (!llvm.ptr) -> f64", "    %fw15x = func.call @strict_hoisted_byte_read(%b_pixels, %h_pixels, %n_pixels, %fw15i, %fw15nb, %k_pixels, %fw15l) : (!llvm.ptr, !llvm.ptr, f64, f64, f64, i64, f64) -> f64", "    llvm.store %fw15x, %r13 : f64, !llvm.ptr", "    %fw16v = llvm.load %r13 : !llvm.ptr -> f64", "    %fw16k = func.call @strict_is_failure(%fw16v) : (f64) -> i1", "    cf.cond_br %fw16k, ^fwbb16e, ^fwbb17", "  ^fwbb16e:", "    %fw16tw = llvm.mlir.addressof @wShape_Row_3 : !llvm.ptr", "    %fw16twl = arith.constant 0 : i64", "    %fw16tr = func.call @strict_trace_checked(%fw16v, %fw16tw, %fw16twl) : (f64, !llvm.ptr, i64) -> f64", "    return %fw16tr : f64", "  ^fwbb17:", "    llvm.unreachable")
+constant FailedIndex = ("    %t15whf = arith.sitofp %t14s : i64 to f64", "    llvm.store %t15whf, %r12 : f64, !llvm.ptr", "    %fw15l = llvm.load %v_pixels : !llvm.ptr -> f64", "    %fw15i = llvm.load %r12 : !llvm.ptr -> f64")
+constant ShapeBits = ("    %fw15n = llvm.mlir.addressof @sShape_Row_3_15 : !llvm.ptr", "    %fw15nb = func.call @strict_bits(%fw15n) : (!llvm.ptr) -> f64")
+constant HoistedRead = ("    %fw15x = func.call @strict_hoisted_byte_read(%b_pixels, %h_pixels, %n_pixels, %fw15i, %fw15nb, %k_pixels, %fw15l) : (!llvm.ptr, !llvm.ptr, f64, f64, f64, i64, f64) -> f64")
+constant FailureChecked = ("    llvm.store %fw15x, %r13 : f64, !llvm.ptr", "    %fw16v = llvm.load %r13 : !llvm.ptr -> f64", "    %fw16k = func.call @strict_is_failure(%fw16v) : (f64) -> i1", "    cf.cond_br %fw16k, ^fwbb16e, ^fwbb17")
+constant TraceTarget = ("  ^fwbb16e:", "    %fw16tw = llvm.mlir.addressof @wShape_Row_3 : !llvm.ptr", "    %fw16twl = arith.constant 0 : i64")
+constant Traced = ("    %fw16tr = func.call @strict_trace_checked(%fw16v, %fw16tw, %fw16twl) : (f64, !llvm.ptr, i64) -> f64", "    return %fw16tr : f64", "  ^fwbb17:", "    llvm.unreachable")
+constant Failing = FailedIndex + ShapeBits + HoistedRead + FailureChecked + TraceTarget + Traced
 constant Reading = ("  ^bb15whole:", "    %t15whp = llvm.getelementptr %b_pixels[%t14s] : (!llvm.ptr, i64) -> !llvm.ptr, i8", "    %t15whb = llvm.load %t15whp : !llvm.ptr -> i8", "    %t15s = arith.extui %t15whb : i8 to i64")
 constant Stepped = ("    %t17s = arith.addi %t6u0, %t15s : i64", "    %t6whnext = arith.addi %t6ki, %t6whone : i64", "    cf.br ^loop6whole(%t6whnext, %t17s : i64, i64)")
 Versioned Texts

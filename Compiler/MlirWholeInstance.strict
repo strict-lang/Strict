@@ -1,6 +1,11 @@
 has function MlirFunction
-constant Fitting = MethodEntry("Fits", List(MemberEntry) + MemberEntry("x", "Strict/Number", List(InstructionEntry), false), "Strict/Boolean", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "x"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "width"), InstructionEntry.Binary(InstructionType.LessThan, (0, 1, 2)), InstructionEntry.Return(2)))
-constant Sizing = MethodEntry("Sized", List(MemberEntry) + MemberEntry("grid", "Strict/Grid", List(InstructionEntry), false), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "grid"), InstructionEntry(InstructionType.FieldLoad, ("cells", "Grid"), (1, 0, -1, -2)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "list0"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "grid"), InstructionEntry.LoadNumber(3, 1), InstructionEntry.Invoke(4, ("Strict/Grid", "Fits", "Strict/Boolean", "x"), List(Number) + 3, 2), InstructionEntry.Return(4)))
+constant Bounds = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "x"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "width"))
+constant Compared = (InstructionEntry.Binary(InstructionType.LessThan, (0, 1, 2)), InstructionEntry.Return(2))
+constant Fitting = MethodEntry("Fits", List(MemberEntry) + MemberEntry("x", "Strict/Number", List(InstructionEntry), false), "Strict/Boolean", Bounds + Compared)
+constant CellsLoaded = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "grid"), InstructionEntry(InstructionType.FieldLoad, ("cells", "Grid"), (1, 0, -1, -2)))
+constant FitsArguments = (InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "list0"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "grid"), InstructionEntry.LoadNumber(3, 1))
+constant FitsCall = (InstructionEntry.Invoke(4, ("Strict/Grid", "Fits", "Strict/Boolean", "x"), List(Number) + 3, 2), InstructionEntry.Return(4))
+constant Sizing = MethodEntry("Sized", List(MemberEntry) + MemberEntry("grid", "Strict/Grid", List(InstructionEntry), false), "Strict/Number", CellsLoaded + FitsArguments + FitsCall)
 constant Grid = TypeEntry("Strict/Grid", (MemberEntry("width", "Strict/Number", List(InstructionEntry), false), MemberEntry("cells", "Strict/List(Rgb)", List(InstructionEntry), false)), (Fitting, Sizing))
 constant Types = (MlirLayout.Byting, MlirLanes.Rgb, Grid)
 constant Fits = MlirWholeInstance(MlirFunction(Types, Grid, Fitting))
