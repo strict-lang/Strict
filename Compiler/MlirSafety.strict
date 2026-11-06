@@ -3,6 +3,7 @@ has edges List(Numbers)
 constant Rows = (MlirParallel.Doubling.function, MlirFunction(MlirParallel.Doubling.function.types, MlirParallel.Rows, MlirParallel.Twice), MlirParallel.Randomizing.function)
 constant Rowed = MlirSafety(Rows, MlirRecursion(Rows, 1).Edges)
 constant Chain = MlirSafety(List(MlirFunction), ((1), List(Number)))
+constant Gated = MlirSafety(List(MlirFunction) + MlirFunction(List(TypeEntry) + MlirPurity.Hosting, MlirPurity.Hosting, MlirPurity.Hosting.methods.First), List(Numbers) + List(Number))
 Marked List(MlirFunction)
 	Rowed.Marked.First.safeCalls("Rows_Twice_1") is 1
 	let calls = Calls
@@ -11,15 +12,17 @@ Marked List(MlirFunction)
 Calls Dictionary(Text, Number)
 	Rowed.Calls("Rows_Doubled_1") is 1
 	Rowed.Calls("Rows_Randomized_1") is 0
+	Gated.Calls("Hosted_Result_0") is 1
 	let flags = Spread(Direct)
 	mutable calls = Dictionary(Text, Number)
 	for functions
-		calls(value.Symbol) = 1 - flags(index)
+		calls(value.Symbol) = flags(index) is 1 then 0 else 1
 	calls
 Direct Numbers
 	Rowed.Direct is (0, 0, 1)
+	Gated.Direct is (2)
 	for functions
-		IsDirect(value) then 1 else 0
+		MlirPurity(value, 0).IsGateway then 2 else IsDirect(value) then 1 else 0
 IsDirect(function MlirFunction) Boolean
 	Rowed.IsDirect(Rowed.functions.Last)
 	Rowed.IsDirect(Rowed.functions.First) is false
@@ -39,8 +42,10 @@ Spread(flags Numbers) Numbers
 Spreading(flags Numbers) Numbers
 	Chain.Spreading((0, 1)) is (1, 1)
 	Chain.Spreading((0, 0)) is (0, 0)
+	Chain.Spreading((0, 2)) is (0, 2)
+	Chain.Spreading((2, 1)) is (2, 1)
 	for edges
-		(flags(index) is 1) or IsCalling(value, flags) then 1 else 0
+		(flags(index) is 0) and IsCalling(value, flags) then 1 else flags(index)
 IsCalling(callees Numbers, flags Numbers) Boolean
 	Rowed.IsCalling((2), (0, 0, 1))
 	Rowed.IsCalling((1), (0, 0, 1)) is false

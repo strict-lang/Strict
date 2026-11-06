@@ -21,11 +21,13 @@ constant Byted = MethodEntry("Byted", Doubled.parameters, "Strict/Bytes", (List(
 constant Byting = MlirParallel(MlirFunction(List(TypeEntry) + Rows, Rows, Byted), 2)
 constant Doubling = MlirParallel(MlirFunction(List(TypeEntry) + Rows, Rows, Doubled), 2)
 constant Randomizing = MlirParallel(MlirFunction(List(TypeEntry) + Rows, Rows, Randomized), 2)
+constant Effects = MlirPurity.Caching.function.method.instructions + InstructionEntry.Print("value") + InstructionEntry.Invoke(3, ("Strict/Runtime/Hosted", "Result", "Strict/Number"), List(Number), -1)
+constant Logging = MlirParallel(MlirFunction(List(TypeEntry) + Rows + MlirPurity.Hosting, Rows, MethodEntry(Randomized, instructions = Randomized.instructions.Slice(0, 4) + Effects + Randomized.instructions.Slice(5, 2))), 2)
 IsParallel Boolean
-	Doubling.IsParallel
-	Randomizing.IsParallel is false
+	Doubling.IsParallel and Logging.IsParallel and (Randomizing.IsParallel is false)
 	MlirParallel(MlirFunction(List(TypeEntry) + Rows, Rows, Filtered), 2).IsParallel is false
 	MlirParallel(MlirKernel.Doubling.function, 2).IsParallel
+	MlirParallel(MlirFunction(Logging.function, method = MlirPurity.Written), 2).IsParallel is false
 	let isBegin = function.method.instructions(position).kind is InstructionType.LoopBegin
 	let isSpecial = function.IsCounted or MlirLayout(function).IsInitializer
 	if (isBegin is false) or isSpecial or (MlirLoops(function, position).IsCollecting is false)
