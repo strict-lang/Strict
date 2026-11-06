@@ -2,15 +2,21 @@ has function MlirFunction
 has position Number
 constant Tracing = " : (f64, !llvm.ptr, i64) -> f64"
 constant Presenting = MlirFunction(List(TypeEntry), TypeEntry("Strict/Game", List(MemberEntry) + MemberEntry.RealtimeMember, List(MethodEntry)), MethodEntry("Presented", List(MemberEntry), "Strict/Game", MlirLines.Twice.instructions))
-constant Returning = MlirChecks(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 7), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 0), InstructionEntry.Return(0)))), 1)
-constant Testing = MlirChecks(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 7), InstructionEntry(InstructionType.CheckError, List(Text) + "tested", (0, 5)), InstructionEntry.Return(0), InstructionEntry.Jump(InstructionType.JumpEnd, 5)))), 1)
-constant FlatRead = MlirChecks(MlirFunction((MlirFlats.Tripling, MlirFlats.Summing), MlirFlats.Tripling, MethodEntry("First", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 0), InstructionEntry(InstructionType.IndexCall, "numbers", (1, 0)), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 1), InstructionEntry.Return(1)))), 2)
 constant Guarded = MethodEntry("Guarded", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 7), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 0), InstructionEntry.Return(0)))
+constant Returning = MlirChecks(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "Strict/Number", Guarded.instructions)), 1)
+constant Tested = (InstructionEntry.LoadNumber(0, 7), InstructionEntry(InstructionType.CheckError, List(Text) + "tested", (0, 5)), InstructionEntry.Return(0), InstructionEntry.Jump(InstructionType.JumpEnd, 5))
+constant Testing = MlirChecks(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "Strict/Number", Tested)), 1)
+constant CheckedReturn = (InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 1), InstructionEntry.Return(1))
+constant FirstRead = (InstructionEntry.LoadNumber(0, 0), InstructionEntry(InstructionType.IndexCall, "numbers", (1, 0))) + CheckedReturn
+constant FlatRead = MlirChecks(MlirFunction((MlirFlats.Tripling, MlirFlats.Summing), MlirFlats.Tripling, MethodEntry("First", List(MemberEntry), "Strict/Number", FirstRead)), 2)
 constant Calls = TypeEntry("Strict/Calls", List(MemberEntry), (MlirParallel.Twice, Guarded))
-constant Doubling = MlirChecks(MlirFunction(List(TypeEntry) + Calls, Calls, MethodEntry("Run", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 3), InstructionEntry.Invoke(1, ("Strict/Calls", "Twice", "Strict/Number", "number"), List(Number) + 0, -1), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 1), InstructionEntry.Return(1)))), 2)
-constant Guarding = MlirChecks(MlirFunction(List(TypeEntry) + Calls, Calls, MethodEntry("Run", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 3), InstructionEntry.Invoke(1, ("Strict/Calls", "Guarded", "Strict/Number"), List(Number), -1), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 1), InstructionEntry.Return(1)))), 2)
+constant TwiceCall = (InstructionEntry.LoadNumber(0, 3), InstructionEntry.Invoke(1, ("Strict/Calls", "Twice", "Strict/Number", "number"), List(Number) + 0, -1))
+constant Doubling = MlirChecks(MlirFunction(List(TypeEntry) + Calls, Calls, MethodEntry("Run", List(MemberEntry), "Strict/Number", TwiceCall + CheckedReturn)), 2)
+constant GuardedCall = (InstructionEntry.LoadNumber(0, 3), InstructionEntry.Invoke(1, ("Strict/Calls", "Guarded", "Strict/Number"), List(Number), -1))
+constant Guarding = MlirChecks(MlirFunction(List(TypeEntry) + Calls, Calls, MethodEntry("Run", List(MemberEntry), "Strict/Number", GuardedCall + CheckedReturn)), 2)
 constant Deferring = MlirChecks(MlirDeferred.Reading.function, 5)
-constant Measuring = MlirChecks(MlirFunction(List(TypeEntry), MlirNatives.Named, MethodEntry("Run", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadText(0, "ab"), MlirNatives.LengthCall, InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 1), InstructionEntry.Return(1)))), 2)
+constant LengthRead = (InstructionEntry.LoadText(0, "ab"), MlirNatives.LengthCall) + CheckedReturn
+constant Measuring = MlirChecks(MlirFunction(List(TypeEntry), MlirNatives.Named, MethodEntry("Run", List(MemberEntry), "Strict/Number", LengthRead)), 2)
 Emitted Texts
 	FlatRead.Emitted is ("    cf.br ^bb3")
 	Returning.Emitted.Index("    cf.cond_br %t1k, ^bb1e, ^bb2") is 2

@@ -1,7 +1,11 @@
 has function MlirFunction
 has at Number
 constant Offset = MemberEntry("offset", "Strict/Number", List(InstructionEntry), false)
-constant Shifting = (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "index"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "offset"), InstructionEntry.Binary(InstructionType.Add, (1, 2, 3)), InstructionEntry(InstructionType.IndexCall, "numbers", (4, 3, -1)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 5, "value"), InstructionEntry.Binary(InstructionType.Add, (4, 5, 6)), InstructionEntry.Named(InstructionType.InvokeWriteToList, 6, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 8))
+constant NumbersLoop = (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1))
+constant ShiftOffset = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "index"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "offset"), InstructionEntry.Binary(InstructionType.Add, (1, 2, 3)))
+constant ShiftRead = (InstructionEntry(InstructionType.IndexCall, "numbers", (4, 3, -1)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 5, "value"), InstructionEntry.Binary(InstructionType.Add, (4, 5, 6)))
+constant ShiftWritten = (InstructionEntry.Named(InstructionType.InvokeWriteToList, 6, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 8))
+constant Shifting = NumbersLoop + ShiftOffset + ShiftRead + ShiftWritten
 constant Shifted = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Shifted", (MlirLists.Items, Offset), "Strict/List(Number)", Shifting), Float = "f32", Guarded = 2)
 constant Shifts = MlirGuards(Shifted, 2)
 constant Reading = MlirGuards(Shifted, 6)
@@ -9,9 +13,16 @@ constant Flooring = InstructionEntry.Invoke(3, ("Strict/Number", "Floor", "Stric
 constant Calculated = (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply, InstructionType.Modulo)
 constant ExactSlots = "(dense<0> : tensor<9xi64>) : !llvm.array<9 x i64>"
 constant PlainSlots = "(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>"
-constant ExactNamed = ("  llvm.mlir.global internal constant @kShape_Shifted_2_gpu2(\"Shape_Shifted_2_gpu2\00Shape_Shifted_2_gpu2s\00Shape_Shifted_2_gpu2sx\00Shape_Shifted_2_gpu2sxf0\00Shape_Shifted_2_gpu2sxf1\00\") : !llvm.array<116 x i8>", "  llvm.mlir.global internal @fShape_Shifted_2_gpu2(dense<0> : tensor<9xi64>) : !llvm.array<9 x i64>")
-constant PlainNamed = ("  llvm.mlir.global internal constant @kShape_Shifted_2_gpu2(\"Shape_Shifted_2_gpu2\00Shape_Shifted_2_gpu2s\00\") : !llvm.array<43 x i8>", "  llvm.mlir.global internal @fShape_Shifted_2_gpu2(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>")
-constant Nesting = (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "offset"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "step"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "step"), InstructionEntry.LoadNumber(3, 2), InstructionEntry.LoadNumber(4, 1.5), InstructionEntry.Binary(InstructionType.LessThan, (2, 1, 5)), InstructionEntry.Binary(InstructionType.Divide, (2, 1, 6)), InstructionEntry.LoopBegin(2, -1), InstructionEntry.Invoke(7, ("Strict/Number", "Floor", "Strict/Number"), List(Number), 2), InstructionEntry.Invoke(8, ("Strict/Number", "Length", "Strict/Number"), List(Number), 2), InstructionEntry.Jump(InstructionType.LoopEnd, 3), InstructionEntry.Jump(InstructionType.LoopEnd, 12))
+constant SlotsGlobal = "  llvm.mlir.global internal @fShape_Shifted_2_gpu2"
+constant ExactKernel = "  llvm.mlir.global internal constant @kShape_Shifted_2_gpu2(\"Shape_Shifted_2_gpu2\00Shape_Shifted_2_gpu2s\00Shape_Shifted_2_gpu2sx\00Shape_Shifted_2_gpu2sxf0\00Shape_Shifted_2_gpu2sxf1\00\") : !llvm.array<116 x i8>"
+constant ExactNamed = (ExactKernel, SlotsGlobal + ExactSlots)
+constant PlainNamed = ("  llvm.mlir.global internal constant @kShape_Shifted_2_gpu2(\"Shape_Shifted_2_gpu2\00Shape_Shifted_2_gpu2s\00\") : !llvm.array<43 x i8>", SlotsGlobal + PlainSlots)
+constant StepStored = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "offset"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "step"))
+constant StepLoads = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "step"), InstructionEntry.LoadNumber(3, 2), InstructionEntry.LoadNumber(4, 1.5))
+constant StepCompared = (InstructionEntry.Binary(InstructionType.LessThan, (2, 1, 5)), InstructionEntry.Binary(InstructionType.Divide, (2, 1, 6)), InstructionEntry.LoopBegin(2, -1))
+constant StepCalls = (InstructionEntry.Invoke(7, ("Strict/Number", "Floor", "Strict/Number"), List(Number), 2), InstructionEntry.Invoke(8, ("Strict/Number", "Length", "Strict/Number"), List(Number), 2))
+constant NestedEnds = (InstructionEntry.Jump(InstructionType.LoopEnd, 3), InstructionEntry.Jump(InstructionType.LoopEnd, 12))
+constant Nesting = NumbersLoop + StepStored + StepLoads + StepCompared + StepCalls + NestedEnds
 constant Nested = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Nested", (MlirLists.Items, Offset), "Strict/List(Number)", Nesting), Float = "f32", Guarded = 2)
 constant MaximumDivisors = 20
 constant DivisorShift = 32

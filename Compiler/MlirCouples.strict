@@ -1,6 +1,7 @@
 has function MlirFunction
 has position Number
-constant Sizing = TypeEntry("Strict/Math/Sizing", (MemberEntry("Width", "Strict/Number", List(InstructionEntry), false, 32), MemberEntry("Height", "Strict/Number", List(InstructionEntry), false, 32), MemberEntry("iterator", "Strict/Iterator", List(InstructionEntry), false)), List(MethodEntry))
+constant SizeMembers = (MemberEntry("Width", "Strict/Number", List(InstructionEntry), false, 32), MemberEntry("Height", "Strict/Number", List(InstructionEntry), false, 32))
+constant Sizing = TypeEntry("Strict/Math/Sizing", SizeMembers + MemberEntry("iterator", "Strict/Iterator", List(InstructionEntry), false), List(MethodEntry))
 constant Sized = InstructionEntry.Invoke(2, ("Strict/Math/Sizing", "from", "Sizing", "Width", "Height"), (0, 1), -1)
 constant Heights = InstructionEntry(InstructionType.FieldLoad, "Height", (3, 2, -1))
 constant Sample = MlirCouples(MlirFunction(List(TypeEntry) + Sizing, Sizing, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 3), InstructionEntry.LoadNumber(1, 4), Sized, Heights))), 2)
@@ -9,8 +10,10 @@ constant Turning = TypeEntry("Strict/Math/Turning", List(MemberEntry) + MemberEn
 constant Turned = InstructionEntry.Invoke(1, ("Strict/Math/Turning", "from", "Turning", "number"), 0, -1)
 constant Turns = MlirCouples(MlirFunction(List(TypeEntry) + Turning, Turning, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 3), Turned))), 1)
 constant Listing = InstructionEntry(InstructionType.FieldLoad, "numbers", (1, 0, -1))
-constant Cells = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "other"), Listing, InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "list0"), InstructionEntry.LoadNumber(2, 1), InstructionEntry(InstructionType.IndexCall, "list0", (3, 2)), InstructionEntry.Return(3))
-constant Celled = MlirCouples(MlirFunction((MlirFlats.Tripling, MlirFlats.Summing), MlirFlats.Tripling, MethodEntry("Cell", List(MemberEntry) + MemberEntry("other", "Strict/Math/Tripling", List(InstructionEntry), false), "Strict/Number", Cells)), 1)
+constant OtherList = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "other"), Listing, InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "list0"))
+constant Cells = OtherList + (InstructionEntry.LoadNumber(2, 1), InstructionEntry(InstructionType.IndexCall, "list0", (3, 2)), InstructionEntry.Return(3))
+constant Other = MemberEntry("other", "Strict/Math/Tripling", List(InstructionEntry), false)
+constant Celled = MlirCouples(MlirFunction((MlirFlats.Tripling, MlirFlats.Summing), MlirFlats.Tripling, MethodEntry("Cell", List(MemberEntry) + Other, "Strict/Number", Cells)), 1)
 constant Listed = MlirCouples(MlirPairs.Sample.function, 2)
 constant Own = MlirCouples(MlirFunction(List(TypeEntry) + Sizing, Sizing, MethodEntry.CountingLoop), 0)
 IsCoupled(kind Text) Boolean

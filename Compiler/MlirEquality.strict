@@ -6,13 +6,19 @@ constant Same = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.
 constant ListSignature = " : (f64, f64, (f64, f64) -> f64) -> f64"
 constant PairSignature = " : (f64, f64, (f64, f64) -> f64, (f64, f64) -> f64) -> f64"
 constant Comparing = "(f64, f64) -> f64"
-constant Prologue = ("    %zero = arith.constant 0.0 : f64", "    %one = arith.constant 1.0 : f64", "    %same = arith.cmpf oeq, %a, %b : f64", "    %aUnset = arith.cmpf oeq, %a, %zero : f64", "    %bUnset = arith.cmpf oeq, %b, %zero : f64", "    %unset = arith.ori %aUnset, %bUnset : i1", "    %pa = func.call @strict_ptr(%a) : (f64) -> !llvm.ptr", "    %pb = func.call @strict_ptr(%b) : (f64) -> !llvm.ptr", "    cf.cond_br %same, ^equal, ^check", "  ^check:", "    cf.cond_br %unset, ^different, ^m0")
+constant PrologueConstants = ("    %zero = arith.constant 0.0 : f64", "    %one = arith.constant 1.0 : f64", "    %same = arith.cmpf oeq, %a, %b : f64")
+constant PrologueUnset = ("    %aUnset = arith.cmpf oeq, %a, %zero : f64", "    %bUnset = arith.cmpf oeq, %b, %zero : f64", "    %unset = arith.ori %aUnset, %bUnset : i1")
+constant ProloguePointers = ("    %pa = func.call @strict_ptr(%a) : (f64) -> !llvm.ptr", "    %pb = func.call @strict_ptr(%b) : (f64) -> !llvm.ptr")
+constant Prologue = PrologueConstants + PrologueUnset + ProloguePointers + ("    cf.cond_br %same, ^equal, ^check", "  ^check:", "    cf.cond_br %unset, ^different, ^m0")
 constant ErrorKinds = ("Error", "ErrorWithValue")
 constant Packed = ("Pair", "Flat")
-constant Failing = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "a"), InstructionEntry.Invoke(1, ("Strict/Error", "from", "Strict/Error", "Name"), 0, -1), InstructionEntry.Binary(InstructionType.Equal, (0, 1)))))
+constant ErrorComparison = (InstructionEntry.LoadText(0, "a"), InstructionEntry.Invoke(1, ("Strict/Error", "from", "Strict/Error", "Name"), 0, -1), InstructionEntry.Binary(InstructionType.Equal, (0, 1)))
+constant Failing = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", ErrorComparison))
 constant Greater = InstructionEntry.Binary(InstructionType.GreaterThan, (1, 1))
 constant Epilogue = ("    cf.br ^equal", "  ^equal:", "    return %one : f64", "  ^different:", "    return %zero : f64", "  }")
-constant Checked = ("  ^m0:", "    %t0a0 = llvm.getelementptr %pa[0] : (!llvm.ptr) -> !llvm.ptr, f64", "    %t0a0v = llvm.load %t0a0 : !llvm.ptr -> f64", "    %t0b0 = llvm.getelementptr %pb[0] : (!llvm.ptr) -> !llvm.ptr, f64", "    %t0b0v = llvm.load %t0b0 : !llvm.ptr -> f64", "    %e0 = func.call @strict_equal_number(%t0a0v, %t0b0v) : (f64, f64) -> f64", "    %s0 = arith.cmpf one, %e0, %zero : f64", "    cf.cond_br %s0, ^m1, ^different")
+constant CheckedLeft = ("  ^m0:", "    %t0a0 = llvm.getelementptr %pa[0] : (!llvm.ptr) -> !llvm.ptr, f64", "    %t0a0v = llvm.load %t0a0 : !llvm.ptr -> f64")
+constant CheckedRight = ("    %t0b0 = llvm.getelementptr %pb[0] : (!llvm.ptr) -> !llvm.ptr, f64", "    %t0b0v = llvm.load %t0b0 : !llvm.ptr -> f64")
+constant Checked = CheckedLeft + CheckedRight + ("    %e0 = func.call @strict_equal_number(%t0a0v, %t0b0v) : (f64, f64) -> f64", "    %s0 = arith.cmpf one, %e0, %zero : f64", "    cf.cond_br %s0, ^m1, ^different")
 Handles(entry InstructionEntry) Boolean
 	MlirEquality(Same, 2).Handles(Same.method.instructions(2))
 	MlirEquality(Same, 2).Handles(InstructionEntry.Binary(InstructionType.Equal, (0, 0, 0))) is false

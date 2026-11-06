@@ -4,7 +4,9 @@ constant Choosing = MlirFunction(List(TypeEntry) + GpuSamples.Chosen, GpuSamples
 constant Maximum = MlirDeviceChoice(Choosing, 4)
 constant Chooser = MlirFunction(Choosing.types, GpuSamples.Chosen, GpuSamples.Larger)
 constant Summing = MlirDeviceChoice(MlirDeviceStatements.Summed, 2)
-constant Allowed = (InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable, InstructionType.Equal, InstructionType.LessThan, InstructionType.GreaterThan, InstructionType.Return, InstructionType.JumpEnd, InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)
+constant AllowedMoves = (InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable)
+constant AllowedJumps = (InstructionType.Return, InstructionType.JumpEnd, InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)
+constant Allowed = AllowedMoves + (InstructionType.Equal, InstructionType.LessThan, InstructionType.GreaterThan) + AllowedJumps
 constant Offsets = (16, 8, 4, 2, 1)
 constant Moves = (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable)
 constant Rounded = Maximum.Round(MlirDeviceCalls(Choosing, 10, Chooser), "%d12", 0, 4)
@@ -113,4 +115,4 @@ Round(calls MlirDeviceCalls, prefix Text, number Number, round Number) Texts
 	let operands = "(" + Text.Combine(("%failed", "%lane", "%lanes") + numbers + calls.MemberArguments, ", ") + ")"
 	let invoked = MlirFeeding(function, at).Invoked(calls, prefix + "c" + number + "r" + (round + 1), operands)
 	let offsetLine = "    " + offset + " = arith.constant " + Offsets(round) + " : i32"
-	(offsetLine, MlirTyped(function.Float).Shuffled(shuffled, current, offset)) + invoked
+	(offsetLine, MlirTyped(function.Float).Shuffled(shuffled, current, offset)) + invoked

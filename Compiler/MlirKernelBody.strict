@@ -6,7 +6,9 @@ constant Store = "    llvm.store %wn, %wp : i32, !llvm.ptr"
 constant Narrowed = "    %wn = arith.trunci %wr : i64 to i32"
 constant Placed = "    %wp = llvm.getelementptr %result[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i32"
 constant Attributes = ", %results: i64) attributes {nvvm.kernel} {"
-constant Threads = ("    %thread = func.call @strict_device_thread_index() : () -> i32", "    %block = func.call @strict_device_block_index() : () -> i32", "    %width = func.call @strict_device_block_size() : () -> i32", "    %start = arith.muli %block, %width : i32", "    %sum = arith.addi %start, %thread : i32", "    %at = arith.extui %sum : i32 to i64")
+constant ThreadQueries = ("    %thread = func.call @strict_device_thread_index() : () -> i32", "    %block = func.call @strict_device_block_index() : () -> i32", "    %width = func.call @strict_device_block_size() : () -> i32")
+constant ThreadPosition = ("    %start = arith.muli %block, %width : i32", "    %sum = arith.addi %start, %thread : i32", "    %at = arith.extui %sum : i32 to i64")
+constant Threads = ThreadQueries + ThreadPosition
 Lines Texts
 	Body.Lines.First.StartsWith("  llvm.func @Board_Blurred_1_gpu5(" + MlirDevice.Fixed + ", %f_board_cells_d: !llvm.ptr")
 	Body.Lines.Last is "  }"
