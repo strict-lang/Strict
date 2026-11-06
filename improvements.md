@@ -54,10 +54,8 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 
 - Mutation compiles still inline own-type methods: a removed Add inside an inlined callee is reported on the caller line (Ben Builder.Accumulated line 90, the Add of Built). "replaced the comparison is with true" on `is not in` actually makes the whole check false (the Not stays), the message should name the `is not in`.
 
-- VM: an `if name is` selector without a default case in a Text or Boolean method returns a value that prints as "" (or nothing) but is not equal to "" or false: Ben TextOperations.Changed("Unknown", "ab") is "" fails with got: "", TextOperations.Tested and Operations.Compared("Unknown", 2, 3) is false fail with got: (empty). The fall through should give the default of the return type (Number selectors already give 0).
 
 - GarbageCollectionExceedsTenth fails `strict test` of Compiler/MlirDoubles, DeviceBuild, MlirLibrary and MlirModule.strict (exit 1, 0.56 and 0.95 of 5 s in GC) while other test runs load the machine; the check is wall clock based. Under load it also kills mutants that should survive (MlirDeviceStatements gave 4 or 7 survivors for the same source), so mutation runs should not count it as a failed test.
-- Machine.Logged (and other VM helpers) return VmValue.None only to have something to test; Logged should be a void method, its test can only check `.kind is "None"` without capturing the Logger textWriter (Ben: discuss later).
 - MlirSingle.Register line 99 falls back to `"%t" + at + "s"` for a register not written in the loop, the statement's own result name (a self reference), looks unreachable or accidental.
 - MlirPurity: `Doubling.IsLocal(StoreRegisterToVariable "value")` is false although "value" is only used inside the loop (conditional0 in Clamping gives true); value/index may clash with the loop variables.
 - No validator flags Boolean statements dropped in method body code, e.g. a test line after a body line ends up running as body code (MlirListDestined.Prologue called itself once, MlirFunction.Text hit StackOverflow after 150 s).
