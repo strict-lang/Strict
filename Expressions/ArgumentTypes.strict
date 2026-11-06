@@ -71,7 +71,7 @@ OwnCall(call SyntaxNode, scope Scope, current Scope) Text
 	Sizing.Issue(SyntaxNode("List", "Count", Created.children), Counted, Counted) is ""
 	Sizing.Issue(SyntaxParser(Tokenizer("Count(count, size)").Tokens).Parse, Counted, Counted).StartsWith("ArgumentType")
 	Sizing.Issue(SyntaxParser(Tokenizer("count.Spread(area, size)").Tokens).Parse, Counted, Counted) is ""
-	Sizing.Issue(SyntaxParser(Tokenizer("count.Grow(area, area)").Tokens).Parse, Counted, Counted) is ""
+	Sizing.Issue(SyntaxParser(Tokenizer("count.Grow(area, area)").Tokens).Parse, Counted, Counted).StartsWith("TooMany")
 	let isOwn = (call.Kind is "Call") and (current.TypeOf(call.text) is not "")
 	isOwn then Compared(call, scope.TypeOf("self type"), call.text, scope, current) else ""
 Copied(call SyntaxNode, scope Scope, current Scope) Text
@@ -97,7 +97,7 @@ Compared(call SyntaxNode, instance Text, method Text, scope Scope, current Scope
 	let arguments = Arguments(call, scope, current)
 	let at = Matched(arguments, types, instance, method)
 	let name = method is "from" then instance else instance + "." + method
-	if (method is not "from") and (types.Length > 1) and (arguments.Length > types.Length)
+	if (method is not "from") and (IsListed(types) is false) and (arguments.Length > types.Length)
 		return "TooManyArguments: " + name + " got " + arguments.Length + " of " + types.Length
 	at < 0 then "" else "ArgumentTypeMismatch: " + name + " got a " + arguments(at) + " for a " + types(at)
 Declared(instance Text, method Text) Texts
@@ -118,7 +118,7 @@ Matched(arguments Texts, types Texts, instance Text, method Text) Number
 	Sizing.Matched(List(Text) + "Text", List(Text) + "Text", "Letter", "from") is -1
 	Sizing.Matched(List(Text) + "Text", List(Text) + "Size", "Count", "from") is 0
 	let members = inference.types.MembersOf(instance).types
-	let isMember = (method is "from") and (members.Length > 0) and ((arguments - members).Length is 0)
+	let isMember = (method is "from") and ((arguments - members).Length is 0)
 	isMember then -1 else Mismatched(arguments, types)
 Arguments(call SyntaxNode, scope Scope, current Scope) Texts
 	Sizing.Compared(Grown, "Count", "Missing", Counted, Counted) is ""
@@ -177,6 +177,10 @@ IsBaseMismatch(argument Text, parameter Text) Boolean
 	let isComposite = hasMembers and (TypeEntry.IsBaseName(parameter) is false)
 	let isScalar = IsScalar(parameter) and (argument is not parameter) and (IsScalar(argument) or types.IsPlural(argument))
 	isScalar or (argument is "Text") and isComposite and (types.ValueOf(parameter) is not "Text")
+IsListed(types Texts) Boolean
+	Sizing.IsListed(List(Text) + "Areas") and Sizing.IsListed(List(Text) + "Generic")
+	Sizing.IsListed(List(Text) + "Area") is false and (Sizing.IsListed(("Areas", "Area")) is false)
+	(types.Length is 1) and (inference.types.BaseName(types.First) is in ("List", "Generic", "Generics"))
 IsScalar(type Text) Boolean
 	Sizing.IsScalar("Boolean")
 	Sizing.IsScalar("Count") is false
