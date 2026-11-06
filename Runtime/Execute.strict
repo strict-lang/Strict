@@ -4,6 +4,7 @@ has isRecursive Boolean = true
 has isMutating Boolean = false
 has part Text = ""
 has isFull Boolean = false
+has known Dictionary(Text, TypeEntry) = Dictionary(Text, TypeEntry)
 constant Adder = BinaryFile("./Examples/NativeAdd/Adder.strict")
 constant AdderFiles = SourceFiles(".").Of(Adder.source)
 Run(arguments Texts) Number
@@ -29,7 +30,7 @@ Failures(paths Texts, root Text, isQuiet Boolean) Number
 	let inference = ResolveCheck.Inference(files)
 	mutable failed = 0
 	for paths
-		let failures = value is in stale then Verified(value, root, isQuiet, files, inference, true, stale.Length is 1) else 0
+		let failures = value is in stale then Verified(value, root, isQuiet, files, inference, stale.Length is 1).code else 0
 		if (failures is 0) and (isQuiet is false)
 			logger.Log(Summary(0, value))
 		failed = failed + failures
@@ -67,19 +68,29 @@ Kept(path Text, root Text) Number
 	if File(path).Exists is false
 		return 1
 	let files = SourceFiles(root).Of(FileCompiler.Normalized(path))
-	Verified(path, root, true, files, ResolveCheck.Inference(files), false, true)
-Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInference, isTested = true, isOwn = false) Number
+	Verified(path, root, true, files, ResolveCheck.Inference(files), true, false).code
+Served(path Text, root Text) Answer
+	Execute(Logger).Served("Missing.strict", ".").code is 1
+	if Directory.Exists(path) or (File(path).Exists is false) or (selection is not "") or (Stale((path)).Length is 0)
+		return Answer(Test(path, root), known)
+	let files = SourceFiles(root).Of(FileCompiler.Normalized(path), (path))
+	let answer = Verified(path, root, false, files, ResolveCheck.Inference(files), true)
+	if answer.code is 0
+		logger.Log(Summary(0, path))
+	answer
+Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInference, isOwn = false, isTested = true) Answer
 	let cache = BinaryFile(FileCompiler.Normalized(path))
 	let stamped = BinarySources(files).Stamped
-	let types = FileCompiler(logger, isQuiet, selection).Built(path, root, true, files, inference).entries
+	let linked = FileCompiler(logger, isQuiet, selection).Built(path, root, true, files, inference, known)
+	let types = linked.entries
 	if types.Length is 0
-		return 1
+		return Answer(1, known)
 	let failed = isTested then Tested(types, path, root) else 0
 	if (failed is 0) and (selection is "") and (IsEdited(path) is false)
 		let folder = Path(cache.source).PathOnly.text
 		let header = Completed(cache, root, files, stamped, isOwn).Typed(types, folder).Kept(types).Header
 		cache.Saved(cache.Packed(header, types, List(TypeEntry)))
-	failed
+	Answer(failed, linked.Known(known), "", Dictionary(Text, Number), files)
 Completed(cache BinaryFile, root Text, files Texts, stamped BinarySources, isOwn = false) Slow(BinarySources)
 	Execute(Logger).Completed(Adder, ".", AdderFiles, BinarySources.Mixed).stamps is (1, 2, 3)
 	Execute(Logger).Completed(Adder, ".", List(Text), BinarySources.Mixed, true).stamps is (1, 2, 3)

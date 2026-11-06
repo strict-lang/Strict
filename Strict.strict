@@ -9,30 +9,36 @@ Run(arguments Texts) Number
 	if (arguments.Length > 0) and (arguments(0) is "serve")
 		return Served(resident)
 	let forwarded = Forwarding(logger, resident.root).Forwarded(arguments)
-	forwarded >= 0 then forwarded else Ran(arguments)
+	forwarded >= 0 then forwarded else Ran(arguments).code
 Served(resident Resident) Number
 	let server = resident.Opened
 	let built = File(Process.Current.executable).Modified
 	mutable socket = server > 0 then resident.Accepted(server, built) else 0
+	mutable answer = Answer(0, Dictionary(Text, TypeEntry))
 	for as long as socket > 0
 		let request = resident.Requested(socket)
 		let isStopping = resident.Arguments(request) is (Resident.Stopping)
-		let isCurrent = resident.IsCurrent(request)
-		resident.Finished(socket, isStopping then 0 else (isCurrent then Answered(resident, request, socket) else -1))
-		resident.Released(request)
+		answer = Replied(resident, request, socket, isStopping, answer)
 		socket = isStopping then 0 else resident.Accepted(server, built)
 	server > 0 then resident.Closed(server) else 1
-Answered(resident Resident, request Text, socket Number) Number
+Replied(resident Resident, request Text, socket Number, isStopping Boolean, last Answer) Answer
+	let started = Time.Now
+	let isAnswered = resident.IsCurrent(request) and (isStopping is false)
+	let answer = isAnswered then Answered(resident, request, socket, last) else last
+	resident.Finished(socket, isAnswered then answer.code else (isStopping then 0 else -1))
+	resident.Released(request)
+	isAnswered then answer.Stamped(started) else last
+Answered(resident Resident, request Text, socket Number, last Answer) Answer
 	let home = Directory.Current
 	let folder = resident.Folder(request)
 	let isMoved = (folder is not home) and Directory.Change(folder)
 	Socket.Output(socket)
-	let code = Ran(resident.Arguments(request))
+	let answer = Ran(resident.Arguments(request), last.Fresh(folder))
 	Socket.Output(0)
 	if isMoved
 		Directory.Change(home)
-	code
-Ran(arguments Texts) Number
+	Answer(answer.code, answer.known, folder, answer.stamps, answer.files).Carried(last)
+Ran(arguments Texts, known = Dictionary(Text, TypeEntry)) Answer
 	let folder = Directory.Current
 	let given = Projected(Mained(arguments))
 	let command = given.Length > 0 then given(0) else "help"
@@ -41,10 +47,12 @@ Ran(arguments Texts) Number
 	let message = Message(command, rest)
 	if message is not ""
 		logger.Log(message)
-		return command is in Informing then 0 else 2
+		return Answer(command is in Informing then 0 else 2, known)
 	if command is in ("check", "update", "format", "suggest")
-		return Tool(command, rest)
-	command is "test" then Tested(rest) else (command is "build" then Native(command, rest) else Launched(rest, folder))
+		return Answer(Tool(command, rest), known)
+	command is "test" then Tested(rest, known) else Answer(Dispatched(command, rest, folder), known)
+Dispatched(command Text, rest Texts, folder Text) Number
+	command is "build" then Native(command, rest) else Launched(rest, folder)
 Cleaned(command Text, rest Texts) Texts
 	Strict(Logger).Cleaned("build", ("Compiler/output/Clean/A.strict", ".", "full")).Last is "."
 	Strict(Logger).Cleaned("test", ("Compiler/output/Clean", ".", "full")).Last is "full"
@@ -65,19 +73,22 @@ Message(command Text, rest Texts) Text
 		return Text.Combine(Help, "\n")
 	let isFolder = (command is "test") and Directory.Exists(rest(0))
 	(command is in ("check", "update")) or isFolder or File(rest(0)).Exists then "" else rest(0) + " not found"
-Tested(rest Texts) Number
-	Strict.Tested(("Missing.strict", ".")) is 1
+Tested(rest Texts, known = Dictionary(Text, TypeEntry)) Answer
+	Strict.Tested(("Missing.strict", ".")).code is 1
 	let request = TestRequest(rest)
 	if request.Message is not ""
 		logger.Log(request.Message)
-		return 2
+		return Answer(2, known)
 	if request.Option is "-"
 		File(FileCompiler.Normalized(rest(0))).InMemory(Process.Input)
 	if request.Option is in ("values", "trace")
-		let trace = ValueTrace(logger, request.Selection)
-		return request.Option is "values" then trace.Run(rest(0), rest(1)) else trace.Traced(rest(0), rest(1))
-	let execute = Execute(logger, request.Selection, request.IsRecursive, request.IsMutating, request.Part, request.IsFull)
-	request.Option is in ("lines", "native") then Native("test", rest) else execute.Test(rest(0), rest(1))
+		return Answer(Traced(request, rest), known)
+	let selection = request.Selection
+	let execute = Execute(logger, selection, request.IsRecursive, request.IsMutating, request.Part, request.IsFull, known)
+	request.Option is in ("lines", "native") then Answer(Native("test", rest), known) else execute.Served(rest(0), rest(1))
+Traced(request TestRequest, rest Texts) Number
+	let trace = ValueTrace(logger, request.Selection)
+	request.Option is "values" then trace.Run(rest(0), rest(1)) else trace.Traced(rest(0), rest(1))
 Rooted(arguments Texts) Texts
 	Strict.Rooted(List(Text) + "a.strict") is ("a.strict", ".")
 	Strict.Rooted(("a.strict", ".")) is ("a.strict", ".")

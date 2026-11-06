@@ -1,0 +1,48 @@
+has code Number
+has known Dictionary(Text, TypeEntry)
+has folder Text = ""
+has stamps Dictionary(Text, Number) = Dictionary(Text, Number)
+has files Texts = List(Text)
+constant Sources = ("./Character.strict", "./Number.strict")
+constant Known = Dictionary(("Strict/Character:", TypeEntry.CharacterEntry))
+constant Holder = TypeEntry("Strict/Holder", List(MemberEntry) + MemberEntry("items", "Strict/List(Number)", List(InstructionEntry), false), List(MethodEntry))
+constant Character = Answer(0, Known, ".", Dictionary(Text, Number), Sources)
+Stamped(started Number) Answer
+	Character.Stamped(Time.Now).Fresh(".").Length is 1
+	Character.Stamped(0).Fresh(".").Length is 0
+	mutable stamped = Dictionary(Text, Number)
+	for pair, file in known, Files(pair.Value)
+		let modified = File(file).Modified
+		stamped(file) = modified < started then modified else -1
+	Answer(code, known, folder, stamped, files)
+Fresh(current Text) Dictionary(Text, TypeEntry)
+	Character.Fresh("elsewhere").Length is 0
+	Character.Fresh(".").Length is 1
+	if current is not folder
+		return Dictionary(Text, TypeEntry)
+	let changed = Changed
+	mutable kept = Dictionary(Text, TypeEntry)
+	for known
+		if (changed.Length is 0) or ((Files(value.Value) - changed).Length is Files(value.Value).Length)
+			kept(value.Key) = value.Value
+	kept
+Changed Texts
+	Character.Stamped(0).Changed is ("./Number.strict", "./Character.strict")
+	for stamps
+		if File(value.Key).Modified is not value.Value
+			value.Key
+Files(entry TypeEntry) Texts
+	Character.Files(TypeEntry.CharacterEntry).Last is "./Character.strict"
+	Answer(0, Known).Files(TypeEntry.CharacterEntry).Length is 0
+	Answer(0, Known, ".", Dictionary(Text, Number), ("./AList.strict", "./List.strict")).Files(Holder) is ("./List.strict")
+	for name, file in entry.UsedTypes + entry.Name, files
+		let open = name.IndexOf("(")
+		let bare = open > 0 then name.Substring(0, open) else name
+		if file.EndsWith("/" + Path(bare).FileName.text + ".strict")
+			file
+Carried(last Answer) Answer
+	Answer(0, Known).Carried(Character).files is Sources
+	Character.Carried(Answer(0, Known)).files is Sources
+	if files.Length > 0
+		return Answer(code, known, folder, stamps, files)
+	Answer(code, known, last.folder, last.stamps, last.files)
