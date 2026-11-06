@@ -104,7 +104,7 @@ Tested(types List(TypeEntry), path Text, root Text, files Texts, inference TypeI
 	if failed > 0
 		logger.Log(Summary(failed, path))
 		return failed
-	let mutants = Mutants(logger, path, (Process.Elapsed - started) * 10 + 1, part, selection is "*")
+	let mutants = Mutants(logger, path, Baseline.Budget(started), part, selection is "*")
 	isMutating and (selection is in ("", "*")) then mutants.Ran(types, root, files, inference) else 0
 Loaded(path Text, root Text, withTests = true, sources Texts = List(Text)) List(TypeEntry)
 	let started = Process.Elapsed

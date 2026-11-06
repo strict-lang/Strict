@@ -19,6 +19,20 @@ Kept(types List(TypeEntry)) List(MethodEntry)
 			mutants.logger.Log(mutants.path + ": " + value.Name + " is not mutated, " + reason)
 		if (reason is "") and IsRun(tested, value, TestCodegen.Runner + index)
 			value
+Budgets(tested List(TypeEntry), count Number) Numbers
+	Sampled.Budgets(Mutants.Doubled, 0).Length is 0
+	Sampled.Budgets(Mutants.Doubled, 2).Length is 2
+	for count
+		Timed(Execute(mutants.logger).Started(tested, mutants.path), TestCodegen.Runner + index)
+Timed(started Machine, runner Text) Number
+	Sampled.Timed(Machine.Hello, TestCodegen.Runner) < Mutants.Sample.seconds
+	Baseline(Mutants(Logger, "A.strict", 0)).Timed(Frame.Doubling, "Missing") is 0
+	let begun = Process.Elapsed
+	mutants.Passes(started, runner, mutants.seconds) then Budget(begun) else mutants.seconds
+Budget(started Number) Number
+	Baseline.Budget(Process.Elapsed) is 0.001
+	Baseline.Budget(Process.Elapsed - 1) < 10.1
+	((Process.Elapsed - started) * 10, 0.001).Maximum
 IsRun(tested List(TypeEntry), method MethodEntry, runner Text) Boolean
 	Baseline(Mutants.Sample).IsRun(Mutants.Doubled, Mutants.Twice, TestCodegen.Runner) is false
 	let failing = List(MethodEntry) + MethodEntry(method, instructions = Invocation.Failing.methods.First.instructions)

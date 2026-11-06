@@ -9,7 +9,7 @@ constant FlagSlot = 3
 constant LoopSlot = 4
 constant IndexSlot = 5
 constant MembersSlot = 6
-constant CheckSteps = 65536
+constant CheckSteps = 4096
 constant Doubling = Machine(Resolver(List(TypeEntry) + Machine.Doubler).Resolved)
 constant Twice = Frame(Doubling, Doubling.types.First.methods.First, "Strict/Doubler")
 constant FailCall = InstructionEntry.Invoke(0, ("Strict/Failing", "Fail", "Strict/Number"), List(Number), -1)
@@ -20,8 +20,8 @@ Finished(arguments List(VmValue)) List(VmValue)
 	mutable slots = arguments
 	mutable position = 0
 	for machine.deadline > 0 then MutationCache.Steps else Invocation.MaxSteps
-		if (position >= method.instructions.Length) or ((index % CheckSteps is 1) and (TestBudget.Expired is not ""))
-			return position >= method.instructions.Length then slots else MutationCache.Exhausted(slots, TestBudget.Expired)
+		if (position >= method.instructions.Length) or (MutationCache.Stopped(machine.deadline, index) is not "")
+			return position >= method.instructions.Length then slots else MutationCache.Exhausted(slots, machine.deadline)
 		let entry = method.instructions(position)
 		slots(entry.Target) = Value(entry, position, slots)
 		if (entry.kind is InstructionType.Invoke) and (slots(entry.Target).kind is "Changing")
@@ -162,6 +162,7 @@ Paired(entry InstructionEntry, slots List(VmValue)) VmValue
 	Twice.Paired(InstructionEntry(InstructionType.Return, List(Text), (8, -1, 6)), Listed).items(2).number is 1
 	Twice.Paired(InstructionEntry(InstructionType.Return, List(Text), (8, -1, 6)), Listed).items(1).kind is "None"
 	Twice.Called(Invocation.AddCall.entry, Listed).Depth is 1
+	Frame(Machine(Doubling, deadline = 0.001), Twice.method).Finished(Listed)(ResultSlot).items.First.text is "Timeout"
 	mutable items = List(Mutable(VmValue))
 	for entry.payload
 		items.Add(value < 0 then VmValue.None else slots(value))

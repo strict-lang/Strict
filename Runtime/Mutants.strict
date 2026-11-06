@@ -40,15 +40,16 @@ Lines(types List(TypeEntry)) Texts
 	Sample.Lines(Doubled).Length is 0
 	let methods = Baseline(value).Kept(types)
 	let tested = Tested(types, Runner(types.First), methods)
+	let budgets = Baseline(value).Budgets(tested, methods.Length)
 	let rounds = Mutation.Picked(part, Mutation.Rounds(methods), isWhole)
 	let waves = Range(0, (rounds.Length / Wave).Ceiling)
-	for wave, found, survivor in waves, Rounds(tested, methods, rounds, wave), found
+	for wave, found, survivor in waves, Rounds(tested, methods, budgets, rounds, wave), found
 		survivor
-Rounds(types List(TypeEntry), methods List(MethodEntry), rounds Numbers, wave Number) List(Texts)
-	Sample.Rounds(Doubled, List(MethodEntry), (0, 1), 0).Length is 2
-	Sample.Rounds(Doubled, List(MethodEntry), Mutation.Picked("", Wave + 6, true), 1).Length is 6
+Rounds(types List(TypeEntry), methods List(MethodEntry), budgets Numbers, rounds Numbers, wave Number) List(Texts)
+	Sample.Rounds(Doubled, List(MethodEntry), List(Number), (0, 1), 0).Length is 2
+	Sample.Rounds(Doubled, List(MethodEntry), List(Number), Mutation.Picked("", Wave + 6, true), 1).Length is 6
 	for rounds.Slice(wave * Wave, (rounds.Length - wave * Wave).Clamp(0, Wave))
-		Round(types, methods, value)
+		Round(types, methods, budgets, value)
 Shown(survivor Text) Text
 	Sample.Shown(Sample.path + ": MutationTestingFailed") is Sample.path + ": MutationTestingFailed"
 	Sample.Shown(Sample.path + ":line 3: MutationSurvived").Lines.Length > 2
@@ -74,22 +75,23 @@ Runner(type TypeEntry) MethodEntry
 		if value.Name is TestCodegen.Runner
 			return value
 	type.methods.First
-Round(types List(TypeEntry), methods List(MethodEntry), round Number) Texts
+Round(types List(TypeEntry), methods List(MethodEntry), budgets Numbers, round Number) Texts
 	mutable survivors = List(Mutable(Text))
 	for methods
 		let candidates = Mutation(value).Candidates
 		if candidates.Length > round
 			let mutant = List(MethodEntry) + Mutation(value).Mutant(candidates(round))
 			let alone = Execute(logger).Started(Replaced(types, List(MethodEntry) + value, mutant), path)
-			if Passes(alone, TestCodegen.Runner + index) and Passes(alone, TestCodegen.Runner + methods.Length)
+			let isPassing = Passes(alone, TestCodegen.Runner + index, budgets(index))
+			if isPassing and Passes(alone, TestCodegen.Runner + methods.Length, seconds)
 				let lines = File(path).ReadLines
 				if MutationFlow(value).IsKept(candidates(round), lines, Mutation(value).Line(candidates(round)))
 					survivors.Add(Survivor(value, candidates(round)))
 	survivors
-Passes(started Machine, runner Text) Boolean
-	Sample.Passes(Machine.Hello, TestCodegen.Runner)
-	Mutants(Logger, "A.strict", 0).Passes(Frame.Doubling, "Missing") is false
-	let failed = Machine(started, deadline = Process.Elapsed + seconds).Tested(started.types.First.Name, runner)
+Passes(started Machine, runner Text, budget Number) Boolean
+	Sample.Passes(Machine.Hello, TestCodegen.Runner, 1)
+	Mutants(Logger, "A.strict", 0).Passes(Frame.Doubling, "Missing", 0) is false
+	let failed = Machine(started, deadline = Process.Elapsed + budget).Tested(started.types.First.Name, runner)
 	(failed is not Error) and (failed is 0)
 Survivor(method MethodEntry, code Number) Text
 	Sample.Survivor(Twice, 13) is Sample.path + ":line 0: MutationSurvived: Twice: replaced + with -" + Hint

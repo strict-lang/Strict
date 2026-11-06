@@ -65,9 +65,17 @@ Slotted(folder Text) Texts
 	MutationCache.Slotted("obj").Last is "obj/mutation25.slot"
 	for Range(0, MaxRuns)
 		folder + "/mutation" + value + ".slot"
-Exhausted(slots List(VmValue), name = "Timeout") List(VmValue)
+Exhausted(slots List(VmValue), deadline = 0) List(VmValue)
 	MutationCache.Exhausted(Frame.Listed)(Frame.ResultSlot).kind is "Strict/Error"
-	MutationCache.Exhausted(Frame.Listed, "Gone")(Frame.ResultSlot).items.First.text is "Gone"
+	MutationCache.Exhausted(Frame.Listed, 0.001)(Frame.ResultSlot).items.First.text is "Timeout"
+	let stopped = Stopped(deadline)
 	mutable exhausted = slots
-	exhausted(Frame.ResultSlot) = VmValue.OfError(name)
+	exhausted(Frame.ResultSlot) = VmValue.OfError(stopped is "" then "Timeout" else stopped)
 	exhausted
+Stopped(deadline Number, step = 1) Text
+	MutationCache.Stopped(0) is ""
+	MutationCache.Stopped(0.001) is "Timeout"
+	MutationCache.Stopped(0.001, 2) is ""
+	if step % Frame.CheckSteps is not 1
+		return ""
+	(deadline > 0) and (Process.Elapsed > deadline) then "Timeout" else TestBudget.Expired
