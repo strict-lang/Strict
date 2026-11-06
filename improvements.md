@@ -73,7 +73,6 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - MlirSingle.Register line 99 falls back to `"%t" + at + "s"` for a register not written in the loop, the statement's own result name (a self reference), looks unreachable or accidental.
 - MlirPurity: `Doubling.IsLocal(StoreRegisterToVariable "value")` is false although "value" is only used inside the loop (conditional0 in Clamping gives true); value/index may clash with the loop variables.
 - WgslStatement.Literal(-2147483648) emits n_float although the value fits an i32 (`number.Absolute < 2147483648` check).
-- KnownTypes.ElementType("Iterator(Couple(Text, Number))") gives Number: `LastIndexOf(", ")` matches the inner comma instead of the top-level one.
 - FileCompiler.IsParsed("not") is true: a lone `not` counts as a complete statement.
 - A method-local `constant` in the test section only counts as a test constant when the next line is a test (TestLines.IsTestConstant), so two constants in a row end the test section silently: the test lines after them run as method body code (MlirListDestined.Prologue called itself, MlirFunction.Text hit StackOverflow after 150 s), and no validator flags the dropped Boolean statements.
 - Callees.TypeOf of a member with a default (`has folder = ""` splits into folder, =, "") probably returns "=" instead of a type (found by reading).
