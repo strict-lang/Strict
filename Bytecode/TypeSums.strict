@@ -1,5 +1,6 @@
 has methods MethodCodegen
-constant Paired = TypeSums(MethodCodegen(ValueCodegen(TypeInference(KnownTypes(("Pair"), (Scope(("x", "y"), ("Number", "Number"))), (Scope(("+"), ("Pair"))), (KnownTypes.NoMembers)), CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain)))
+constant PairTypes = KnownTypes(("Pair"), (Scope(("x", "y"), ("Number", "Number"))), (Scope(("+"), ("Pair"))), (KnownTypes.NoMembers))
+constant Paired = TypeSums(MethodCodegen(ValueCodegen(TypeInference(PairTypes, CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain)))
 constant Pairs = CodeBlock.Empty.Declare("forResult", "Pair").Declare("forValue", "Pair").Load(InstructionEntry.LoadNumber(0, 1))
 Started(block CodeBlock, type Text) CodeBlock
 	Paired.Started(CodeBlock.Empty, "Pair").instructions(0) is InstructionEntry.LoadNumber(0, 0)

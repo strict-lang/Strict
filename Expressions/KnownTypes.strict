@@ -4,6 +4,7 @@ has methods Scopes
 has parameters Scopes
 has positions Dictionary(Text, Number) = Dictionary(Text, Number)
 constant NoMembers = Scope(List(Text), List(Text))
+constant NoMemberPair = (NoMembers, NoMembers)
 constant CountMembers = Scope(("number", "unused"), ("Number", "Unused"))
 constant CountMethods = Scope(("Increment", "Twice"), ("Count", "Count"))
 constant Lengths = (Scope(("Length"), ("Length")), NoMembers)

@@ -13,7 +13,9 @@ constant IsError = SyntaxNode("Binary", "is", (A, BareError))
 constant IsOne = SyntaxNode("Binary", "is", (A, ValueCodegen.One))
 constant FallibleA = ErrorScope.Plain.Fallible("a", CodeBlock.Empty.Declare("a", "Number"))
 constant NewSize = SyntaxNode("Call", "Size", ValueCodegen.One)
-constant Sizing = ErrorCodegen(ValueCodegen(TypeInference(KnownTypes(List(Text) + "Size", List(Scope) + Scope(List(Text) + "Width", List(Text) + "Number"), List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(List(Text) + TypeShape.Constrained, List(Text) + "2")), CallTarget.NoScopes), Scope(List(Text), List(Text)), CallTarget.Plain))
+constant SizeParameters = List(Scope) + Scope(List(Text) + TypeShape.Constrained, List(Text) + "2")
+constant SizeTypes = KnownTypes(List(Text) + "Size", List(Scope) + Scope(List(Text) + "Width", List(Text) + "Number"), List(Scope) + KnownTypes.NoMembers, SizeParameters)
+constant Sizing = ErrorCodegen(ValueCodegen(TypeInference(SizeTypes, CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
 Folded(node SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Folded(ValueCodegen.One, CodeBlock.Empty).text is "1"
 	Plain.Folded(SyntaxParser(Tokenizer("outer.B.Greet").Tokens).Parse, CodeBlock.Empty).children(0).Kind is "Type"

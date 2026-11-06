@@ -9,7 +9,8 @@ constant Sample = InlineSplice(Inliner.First, Inliner.Calling.instructions(1), 2
 constant Jumps = (InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue, InstructionType.JumpEnd)
 constant Squaring = InlineSplice(StructLanes.Squared, StructLanes.Calling(4), 5, "", List(Text), ("real", "imaginary"), 18)
 constant Owning = InlineSplice(StructLanes.Squared, InstructionEntry.Invoke(4, ("Strict/Pair", "Squared", "Strict/Pair"), List(Number), -1), 5, "", ("real", "imaginary", "value"), ("real", "imaginary"), 18)
-constant Valued = InlineSplice(MethodEntry("V", List(MemberEntry), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "value"), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 5), InstructionEntry.Return(0))), Inliner.Calling.instructions(1), 2, "elements", List(Text))
+constant CheckedValue = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "value"), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 5), InstructionEntry.Return(0))
+constant Valued = InlineSplice(MethodEntry("V", List(MemberEntry), "Strict/Number", CheckedValue), Inliner.Calling.instructions(1), 2, "elements", List(Text))
 Spliced List(InstructionEntry)
 	Valued.Spliced.Length is 4
 	Sample.Spliced.Length is 3
