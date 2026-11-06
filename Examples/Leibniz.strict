@@ -9,11 +9,16 @@ Pi(rounds Number) Number
 	for Range(1, rounds + 1)
 		pi = pi + (1 - 2 * (value % 2)) / (2 * value + 1)
 	pi
-Run
+Run(times = 1) Number
+	Leibniz.Run(0) is 0
+	if times < 1
+		return 0
 	let rounds = File("rounds.txt").ReadLines.First.Trim to Number
 	let warmup = Pi(rounds)
-	let started = Process.Elapsed
-	let pi = Pi(rounds)
-	let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
-	let difference = warmup is pi then "" else ", the first call differs"
-	logger.Log("" + milliseconds + " ms " + (pi * 4).Fixed(Digits) + difference)
+	for times
+		let started = Process.Elapsed
+		let pi = Pi(rounds)
+		let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
+		let difference = warmup is pi then "" else ", the first call differs"
+		logger.Log("" + milliseconds + " ms " + (pi * 4).Fixed(Digits) + difference)
+	0

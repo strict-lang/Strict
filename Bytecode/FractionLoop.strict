@@ -52,8 +52,8 @@ Built(loop SyntaxNode, parts Text) SyntaxNode
 	let factor = even then coefficient else "-" + coefficient
 	let acc = loop.children.Last.children(0).children(0).text
 	let name = SyntaxNode("Identifier", acc)
-	let add = SyntaxNode("Reassignment", "", (name, Bin("+", name, SyntaxNode("Identifier", "value"))))
-	let total = SyntaxNode("For", loop.text, (SyntaxNode("Identifier", "forResult"), SyntaxNode("Body", "", add)))
+	let summed = SyntaxNode("MethodCall", "Sum", List(SyntaxNode) + SyntaxNode("Identifier", "forResult"))
+	let total = SyntaxNode("Reassignment", "", (name, Bin("+", name, summed)))
 	let setup = Blocks(loop).children + (List(SyntaxNode) + Group(loop, start, coefficient, offset, factor))
 	SyntaxNode("Body", "", setup + (List(SyntaxNode) + Rest(loop, start)) + (List(SyntaxNode) + total))
 Blocks(loop SyntaxNode) SyntaxNode
@@ -71,8 +71,7 @@ Blocks(loop SyntaxNode) SyntaxNode
 	SyntaxNode("Body", "", (one, two, SyntaxNode("Declaration", "let extra", List(SyntaxNode) + extra)))
 Group(loop SyntaxNode, start SyntaxNode, coefficient Text, offset Text, factor Text) SyntaxNode
 	let parsed = BodyParser("Run", "\tvalue is 0 then extra else 0").Block(1, 1).children(0)
-	let added = Bin("+", SyntaxNode("Identifier", "width"), parsed)
-	let count = SyntaxNode("MethodCall", "Floor", List(SyntaxNode) + added)
+	let count = Bin("+", SyntaxNode("Identifier", "width"), parsed)
 	let chosen = BodyParser("Run", "\tvalue is 0 then blocks - count else (2499 - value) * width").Block(1, 1)
 	let high = BodyParser("Run", "\tlow + count - 1").Block(1, 1).children(0)
 	let range = SyntaxNode("Call", "Range", (high, Bin("-", SyntaxNode("Identifier", "low"), SyntaxNode("Number", "1"))))

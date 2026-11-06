@@ -1,19 +1,18 @@
 has root Text
-constant Version = "strict 2"
+constant Version = "strict 3"
 constant Greeting = "ready\n"
 constant Ending = "\n\n"
 constant Stopping = "stop"
 constant Exiting = "strict exit "
 constant Stamp = "/obj/strict.server"
+constant Free = "/obj/strict.free"
 constant IdleSeconds = 30
-constant GreetingSeconds = 0.02
-constant StartSeconds = 2
-constant PollSeconds = 0.005
+constant GreetingSeconds = 1
 constant Settings = ("STRICT_THREADS", "STRICT_GPU", "STRICT_BUILD_PROFILE", "STRICT_GC_LOG", "STRICT_RC", "STRICT_RC_CHECK", "STRICT_RC_DEAD", "STRICT_HEAP", "STRICT_YOUNG")
 constant Sample = Resident("Compiler/output")
-Request(folder Text, arguments Texts, variables = "") Text
-	Resident.Request("C:/a", ("test", "a.strict"), "1") is "strict 2\nC:/a\ntest\ta.strict\n1\n\n"
-	Version + "\n" + folder + "\n" + Text.Combine(arguments, "\t") + "\n" + variables + Ending
+Request(folder Text, arguments Texts, variables = "", claim = "") Text
+	Resident.Request("C:/a", ("test", "a.strict"), "1", "7") is "strict 3\nC:/a\ntest\ta.strict\n1\n7\n\n"
+	Version + "\n" + folder + "\n" + Text.Combine(arguments, "\t") + "\n" + variables + "\n" + claim + Ending
 Variables Text
 	Resident.Variables.Split("\t").Length is Settings.Length
 	mutable values = List(Mutable(Text))
@@ -35,6 +34,19 @@ Folder(request Text) Text
 	Resident.Folder("broken") is ""
 	let lines = request.Split("\n")
 	lines.Length < 3 then "" else lines(1)
+Claim(request Text) Text
+	Resident.Claim(Resident.Request("C:/a", List(Text) + "test", "1", "7")) is "7"
+	Resident.Claim("broken") is ""
+	let lines = request.Split("\n")
+	lines.Length < 5 then "" else lines(4)
+Released(request Text) Boolean
+	Resident("Compiler/output/Missing").Released(Resident.Request("C:/a", List(Text) + "test", "1", "7")) is false
+	Resident("Compiler/output/Missing").Released("broken") is false
+	let port = Claim(request) to Number
+	if port is Error
+		return false
+	File(root + Free + "." + port).Rename(root + Free)
+	File(root + Free).Exists
 Sent(socket Number, text Text) Boolean
 	Sample.Sent(0, "a") is false
 	(Socket.Send(socket, ByteEncoder(List(Number)).UnicodeBytes(text)) is Error) is false
@@ -53,14 +65,19 @@ Opened Number
 	let server = Socket.Listen(0)
 	if server is Error
 		return 0
-	File(root + Stamp).Write(Socket.Port(server) to Text)
+	let port = Socket.Port(server) to Text
+	File(root + Stamp).Write(port)
+	File(root + Free).Write(port)
 	server
 Accepted(server Number, built Number) Number
-	let executable = File(Process.Current.executable)
 	let waited = Socket.Waiting(server, IdleSeconds)
-	if (waited is Error) or (waited is not 1) or (executable.Modified is not built)
+	if (waited is Error) or (waited is not 1)
 		return 0
-	Socket.Accept(server)
+	let socket = Socket.Accept(server)
+	if File(Process.Current.executable).Modified is built
+		return socket
+	Finished(socket, -1)
+	0
 Requested(socket Number) Text
 	Forwarding.Sample.Loopback is 3
 	Sent(socket, Greeting) then Received(socket, Ending) else ""
@@ -71,6 +88,11 @@ Finished(socket Number, code Number) Number
 	Socket.Close(socket)
 Closed(server Number) Number
 	Resident("Compiler/output/Missing").Closed(0) is 0
+	Sample.Opened > 0
+	Sample.Closed(Socket.Listen(0)) is 0
+	File(Sample.root + Stamp).Exists
 	let stamp = File(root + Stamp)
-	stamp.Delete
+	if stamp.Exists and (stamp.ReadLines.First is (Socket.Port(server) to Text))
+		stamp.Delete
+		File(root + Free).Delete
 	Socket.Close(server)
