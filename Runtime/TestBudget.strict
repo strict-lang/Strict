@@ -8,3 +8,5 @@ Entered Number
 	Process.Elapsed
 Left(entered Number) Number
 	Process.Elapsed - entered
+Expired Text
+	""

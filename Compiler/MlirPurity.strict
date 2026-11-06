@@ -123,6 +123,8 @@ IsAllowed(inspected MlirFunction, at Number, callees List(MlirFunction)) Boolean
 	Doubling.IsExternalSafe("File", "Write") is false
 	Doubling.IsExternalSafe("Directory", "Delete") is false
 	Doubling.IsExternalSafe("Process", "RunTools") is false
+	Doubling.IsExternalSafe("TestBudget", "Expired")
+	Doubling.IsExternalSafe("TestBudget", "Started") is false
 	let decoder = PayloadDecoder(inspected.method.instructions(at))
 	let isNever = IsExternalSafe(TypeEntry.ShortName(decoder.Text(1)), decoder.Text(2)) is false
 	(isNever is false) and ((callees.Length is 0) or (MlirForeign(callees.First).IsForeign is false))
@@ -133,8 +135,8 @@ IsExternalSafe(kind Text, method Text) Boolean
 		return method is in ("from", "Exists", "Modified", "Length", "ReadLines", "ReadBytes")
 	if kind is "Directory"
 		return method is in ("from", "Files", "Directories", "Exists", "Current", "Modified")
-	if kind is "Process"
-		return method is in ("from", "Elapsed", "MemoryUsed", "OperatingSystem", "Find", "Current", "FilesRead")
+	if kind is in ("Process", "TestBudget")
+		return method is in ("from", "Elapsed", "MemoryUsed", "OperatingSystem", "Find", "Current", "FilesRead", "Expired")
 	if kind + "." + method is in Hosted.Methods
 		return (kind is in ("Number", "Degrees", "Ratio", "Vector2", "ConstantCache")) and (method is not "Random")
 	constant Never = ("Library", "TextReader", "TextWriter", "BytesReader", "BytesWriter", "GpuMemory")

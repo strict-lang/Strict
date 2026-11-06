@@ -128,8 +128,9 @@ Execute(method MethodEntry, locals List(VmValue), owner Text, depth = 0) VmValue
 	Machine(Frame.Doubling, deadline = 0.001).Execute(Frame.Twice.method, Frame.Listed, "D").items(0).text is "Timeout"
 	if depth > Invocation.MaxDepth
 		return VmValue.OfError("StackOverflow")
-	if (deadline > 0) and (Process.Elapsed > deadline)
-		return VmValue.OfError("Timeout")
+	let stopped = (deadline > 0) and (Process.Elapsed > deadline) then "Timeout" else TestBudget.Expired
+	if stopped is not ""
+		return VmValue.OfError(stopped)
 	let frame = Frame(value, method, owner, depth)
 	let slots = isTracing then TracedFrame(frame).Finished(locals) else frame.Finished(locals)
 	slots(Frame.ResultSlot)

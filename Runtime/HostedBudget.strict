@@ -5,6 +5,8 @@ Result VmValue
 		return VmValue.OfNumber(TestBudget.Started(arguments(0).text, arguments(1).IsTrue))
 	if call.MethodName is "Entered"
 		return VmValue.OfNumber(TestBudget.Entered)
+	if call.MethodName is "Expired"
+		return VmValue.OfText(TestBudget.Expired)
 	if call.MethodName is "Left"
 		return VmValue.OfNumber(TestBudget.Left(arguments(0).number))
 	VmValue.OfNumber(TestBudget.Finished(arguments(0).number))

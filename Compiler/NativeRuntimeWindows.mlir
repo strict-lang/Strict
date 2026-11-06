@@ -1434,6 +1434,48 @@
     %killed = llvm.call @TerminateProcess(%process, %failure) : (!llvm.ptr, i32) -> i32
     return
   }
+  llvm.mlir.global internal constant @strict_test_winsock("ws2_32.dll\00") : !llvm.array<11 x i8>
+  llvm.mlir.global internal constant @strict_test_select("select\00") : !llvm.array<7 x i8>
+  llvm.mlir.global internal constant @strict_test_receive("recv\00") : !llvm.array<5 x i8>
+  // whether the peer closed the socket: readable at once but no byte to peek (a served request's caller went away)
+  func.func private @strict_test_hungup(%socket: i64) -> i1 {
+    %false = arith.constant false
+    %null = llvm.mlir.zero : !llvm.ptr
+    %libraryName = llvm.mlir.addressof @strict_test_winsock : !llvm.ptr
+    %library = llvm.call @LoadLibraryA(%libraryName) : (!llvm.ptr) -> !llvm.ptr
+    %selectName = llvm.mlir.addressof @strict_test_select : !llvm.ptr
+    %select = llvm.call @GetProcAddress(%library, %selectName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %receiveName = llvm.mlir.addressof @strict_test_receive : !llvm.ptr
+    %receive = llvm.call @GetProcAddress(%library, %receiveName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %hasSelect = llvm.icmp "ne" %select, %null : !llvm.ptr
+    %hasReceive = llvm.icmp "ne" %receive, %null : !llvm.ptr
+    %usable = arith.andi %hasSelect, %hasReceive : i1
+    cf.cond_br %usable, ^select, ^done(%false : i1)
+  ^select:
+    %two = arith.constant 2 : i64
+    %one = arith.constant 1 : i64
+    %zero = arith.constant 0 : i64
+    %set = llvm.alloca %two x i64 : (i64) -> !llvm.ptr
+    llvm.store %one, %set : i64, !llvm.ptr
+    %entry = llvm.getelementptr %set[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %socket, %entry : i64, !llvm.ptr
+    %limit = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
+    llvm.store %zero, %limit : i64, !llvm.ptr
+    %ignored = arith.constant 0 : i32
+    %ready = llvm.call %select(%ignored, %set, %null, %null, %limit) : !llvm.ptr, (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    %readable = arith.cmpi sgt, %ready, %ignored : i32
+    cf.cond_br %readable, ^peek, ^done(%false : i1)
+  ^peek:
+    %byte = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
+    %handle = llvm.inttoptr %socket : i64 to !llvm.ptr
+    %wanted = arith.constant 1 : i32
+    %peek = arith.constant 2 : i32
+    %got = llvm.call %receive(%handle, %byte, %wanted, %peek) : !llvm.ptr, (!llvm.ptr, !llvm.ptr, i32, i32) -> i32
+    %closed = arith.cmpi sle, %got, %ignored : i32
+    cf.br ^done(%closed : i1)
+  ^done(%hungUp: i1):
+    return %hungUp : i1
+  }
   // writes a formatted log line to handle, the socket strict_log routes to
   func.func private @strict_log_handle(%handle: i64, %format: !llvm.ptr, %text: !llvm.ptr) {
     %null = llvm.mlir.zero : !llvm.ptr

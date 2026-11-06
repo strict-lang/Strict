@@ -24,12 +24,39 @@
   llvm.mlir.global internal thread_local @strict_output(0 : i64) : i64
   // the output of the thread that forked the running pool job, used by its pool workers
   llvm.mlir.global internal @strict_output_pooled(0 : i64) : i64
+  // a new or ended request also ends a cancellation of the request before (strict_testbudget_expired)
   func.func private @strict_socket_output(%self: f64, %socket: f64) -> f64 {
     %slot = llvm.mlir.addressof @strict_output : !llvm.ptr
     %handle = arith.fptosi %socket : f64 to i64
     llvm.store %handle, %slot : i64, !llvm.ptr
+    %claim = arith.constant false
+    %testSlot = func.call @strict_test_mine(%claim) : (i1) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %missing = llvm.icmp "eq" %testSlot, %null : !llvm.ptr
+    cf.cond_br %missing, ^done, ^reset
+  ^reset:
+    %stateSlot = llvm.getelementptr %testSlot[5] : (!llvm.ptr) -> !llvm.ptr, i64
+    %running = arith.constant 0 : i64
+    llvm.store %running, %stateSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    cf.br ^done
+  ^done:
     %zero = arith.constant 0.0 : f64
     return %zero : f64
+  }
+  // where log output of this thread goes, a pool worker uses the output of the thread that forked its job
+  func.func private @strict_output_handle() -> i64 {
+    %console = arith.constant 0 : i64
+    %outputSlot = llvm.mlir.addressof @strict_output : !llvm.ptr
+    %own = llvm.load %outputSlot : !llvm.ptr -> i64
+    %insideSlot = llvm.mlir.addressof @strict_pool_inside : !llvm.ptr
+    %inside = llvm.load %insideSlot : !llvm.ptr -> i64
+    %pooledSlot = llvm.mlir.addressof @strict_output_pooled : !llvm.ptr
+    %pooled = llvm.load %pooledSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %isWorker = arith.cmpi ne, %inside, %console : i64
+    %hasOwn = arith.cmpi ne, %own, %console : i64
+    %fromPool = arith.select %isWorker, %pooled, %own : i64
+    %output = arith.select %hasOwn, %own, %fromPool : i64
+    return %output : i64
   }
   func.func private @strict_log(%format: !llvm.ptr, %text: !llvm.ptr) {
     %first = llvm.load %format : !llvm.ptr -> i8
@@ -46,17 +73,8 @@
     %skip = arith.andi %isBare, %isEmpty : i1
     cf.cond_br %skip, ^done, ^print
   ^print:
-    %outputSlot = llvm.mlir.addressof @strict_output : !llvm.ptr
-    %own = llvm.load %outputSlot : !llvm.ptr -> i64
     %console = arith.constant 0 : i64
-    %insideSlot = llvm.mlir.addressof @strict_pool_inside : !llvm.ptr
-    %inside = llvm.load %insideSlot : !llvm.ptr -> i64
-    %pooledSlot = llvm.mlir.addressof @strict_output_pooled : !llvm.ptr
-    %pooled = llvm.load %pooledSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
-    %isWorker = arith.cmpi ne, %inside, %console : i64
-    %hasOwn = arith.cmpi ne, %own, %console : i64
-    %fromPool = arith.select %isWorker, %pooled, %own : i64
-    %output = arith.select %hasOwn, %own, %fromPool : i64
+    %output = func.call @strict_output_handle() : () -> i64
     %isConsole = arith.cmpi eq, %output, %console : i64
     cf.cond_br %isConsole, ^console, ^routed
   ^console:
@@ -379,8 +397,8 @@
   }
   llvm.mlir.global internal @strict_test_failing(0 : i64) : i64
   llvm.mlir.global internal @strict_test_watching(0 : i64) : i64
-  // timed test state of each thread running tests (deadline, version, place, limit, shift in 64 bytes), the watchdog
-  // scans all claimed slots; a pool job uses the slot of the thread that forked it (strict_test_pooled)
+  // timed test state of each thread running tests (deadline, version, place, limit, shift, stop state, output in 64
+  // bytes), the watchdog scans all claimed slots; a pool job uses the slot of the thread that forked it (strict_test_pooled)
   llvm.mlir.global internal @strict_test_slots(dense<0> : tensor<2048xi64>) {alignment = 64 : i64} : !llvm.array<2048 x i64>
   llvm.mlir.global internal @strict_test_claimed(0 : i64) : i64
   llvm.mlir.global internal thread_local @strict_test_slot(0 : i64) : i64
@@ -423,9 +441,20 @@
   }
   llvm.mlir.global internal constant @strict_test_timeout("Test failed: %s\0A  got: TestDurationMustNotExceedHundredMilliseconds: unit test exceeded 100 ms; use Slow(ReturnType) for explicit functional tests\0A\00") : !llvm.array<148 x i8>
   llvm.mlir.global internal constant @strict_test_unavailable("Test failed: %s\0A  got: TestBudgetWatchdogUnavailable: cannot enforce the unit-test deadline on this platform\0A\00") : !llvm.array<110 x i8>
-  func.func private @strict_test_failed(%place: i64, %unavailable: i1) {
+  // a served request (output is its caller) gets the message and only its work fails, else the process ends
+  func.func private @strict_test_failed(%place: i64, %unavailable: i1, %output: i64) {
     %zero = arith.constant 0 : i64
     %one64 = arith.constant 1 : i64
+    %name = llvm.inttoptr %place : i64 to !llvm.ptr
+    %timeoutFormat = llvm.mlir.addressof @strict_test_timeout : !llvm.ptr
+    %unavailableFormat = llvm.mlir.addressof @strict_test_unavailable : !llvm.ptr
+    %format = arith.select %unavailable, %unavailableFormat, %timeoutFormat : !llvm.ptr
+    %served = arith.cmpi ne, %output, %zero : i64
+    cf.cond_br %served, ^answer, ^process
+  ^answer:
+    func.call @strict_log_handle(%output, %format, %name) : (i64, !llvm.ptr, !llvm.ptr) -> ()
+    return
+  ^process:
     %failingSlot = llvm.mlir.addressof @strict_test_failing : !llvm.ptr
     %wasFailing = llvm.atomicrmw xchg %failingSlot, %one64 acq_rel : !llvm.ptr, i64
     %first = arith.cmpi eq, %wasFailing, %zero : i64
@@ -434,10 +463,6 @@
     func.call @strict_test_pause() : () -> ()
     cf.br ^wait
   ^report:
-    %name = llvm.inttoptr %place : i64 to !llvm.ptr
-    %timeoutFormat = llvm.mlir.addressof @strict_test_timeout : !llvm.ptr
-    %unavailableFormat = llvm.mlir.addressof @strict_test_unavailable : !llvm.ptr
-    %format = arith.select %unavailable, %unavailableFormat, %timeoutFormat : !llvm.ptr
     %printed = llvm.call @printf(%format, %name) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr) -> i32
     func.call @strict_flush() : () -> ()
     func.call @strict_test_quit() : () -> ()
@@ -513,6 +538,13 @@
     llvm.store %zero, %deadlineSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     %version = llvm.atomicrmw add %versionSlot, %one acq_rel : !llvm.ptr, i64
     llvm.store %nameBits, %placeSlot atomic monotonic {alignment = 8 : i64} : i64, !llvm.ptr
+    %output = func.call @strict_output_handle() : () -> i64
+    %outputSlot = llvm.getelementptr %deadlineSlot[6] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %output, %outputSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    %stateSlot = llvm.getelementptr %deadlineSlot[5] : (!llvm.ptr) -> !llvm.ptr, i64
+    %expired = llvm.cmpxchg %stateSlot, %one, %zero acq_rel acquire : !llvm.ptr, i64
+    %seen = arith.constant 3 : i64
+    %reported = llvm.cmpxchg %stateSlot, %seen, %zero acq_rel acquire : !llvm.ptr, i64
     %slow = arith.cmpf une, %isSlow, %zeroFloat : f64
     cf.cond_br %slow, ^untimed, ^watch
   ^watch:
@@ -526,7 +558,8 @@
     cf.cond_br %spawned, ^arm, ^failed
   ^failed:
     %unavailable = arith.constant true
-    func.call @strict_test_failed(%nameBits, %unavailable) : (i64, i1) -> ()
+    %failedOutput = func.call @strict_output_handle() : () -> i64
+    func.call @strict_test_failed(%nameBits, %unavailable, %failedOutput) : (i64, i1, i64) -> ()
     cf.br ^untimed
   ^arm:
     %now = func.call @strict_clock() : () -> f64
@@ -541,6 +574,7 @@
   func.func private @strict_testbudget_finished(%self: f64, %started: f64) -> f64 {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
+    %true = arith.constant true
     %claim = arith.constant false
     %deadlineSlot = func.call @strict_test_mine(%claim) : (i1) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
@@ -555,13 +589,24 @@
     %until = arith.bitcast %bits : i64 to f64
     %active = arith.cmpi ne, %bits, %zero : i64
     %over = arith.cmpf ogt, %now, %until : f64
-    %failed = arith.andi %active, %over : i1
+    %overrun = arith.andi %active, %over : i1
+    %outputSlot = llvm.getelementptr %deadlineSlot[6] : (!llvm.ptr) -> !llvm.ptr, i64
+    %output = llvm.load %outputSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %stateSlot = llvm.getelementptr %deadlineSlot[5] : (!llvm.ptr) -> !llvm.ptr, i64
+    %expired = llvm.cmpxchg %stateSlot, %one, %zero acq_rel acquire : !llvm.ptr, i64
+    %unseen = llvm.extractvalue %expired[1] : !llvm.struct<(i64, i1)>
+    %three = arith.constant 3 : i64
+    %reported = llvm.cmpxchg %stateSlot, %three, %zero acq_rel acquire : !llvm.ptr, i64
+    %stopped = llvm.extractvalue %reported[1] : !llvm.struct<(i64, i1)>
+    %unreported = arith.xori %stopped, %true : i1
+    %late = arith.andi %overrun, %unreported : i1
+    %failed = arith.ori %late, %unseen : i1
     cf.cond_br %failed, ^failed, ^shifted
   ^failed:
     %placeSlot = llvm.getelementptr %deadlineSlot[2] : (!llvm.ptr) -> !llvm.ptr, i64
     %place = llvm.load %placeSlot : !llvm.ptr -> i64
     %unavailable = arith.constant false
-    func.call @strict_test_failed(%place, %unavailable) : (i64, i1) -> ()
+    func.call @strict_test_failed(%place, %unavailable, %output) : (i64, i1, i64) -> ()
     cf.br ^shifted
   ^shifted:
     %shiftSlot = llvm.getelementptr %deadlineSlot[4] : (!llvm.ptr) -> !llvm.ptr, i64
@@ -689,13 +734,85 @@
     %next = arith.addi %version, %one : i64
     %claimed = llvm.cmpxchg %versionSlot, %version, %next acq_rel acquire : !llvm.ptr, i64
     %same = llvm.extractvalue %claimed[1] : !llvm.struct<(i64, i1)>
+    %outputSlot = llvm.getelementptr %deadlineSlot[6] : (!llvm.ptr) -> !llvm.ptr, i64
+    %output = llvm.load %outputSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %served = arith.cmpi ne, %output, %zero : i64
+    %expiring = arith.andi %same, %served : i1
+    cf.cond_br %expiring, ^expire, ^local
+  ^expire:
+    %disarmed = llvm.cmpxchg %deadlineSlot, %bits, %zero acq_rel acquire : !llvm.ptr, i64
+    %stillRunning = llvm.extractvalue %disarmed[1] : !llvm.struct<(i64, i1)>
+    cf.cond_br %stillRunning, ^mark, ^done
+  ^mark:
+    %stateSlot = llvm.getelementptr %deadlineSlot[5] : (!llvm.ptr) -> !llvm.ptr, i64
+    %marked = llvm.cmpxchg %stateSlot, %zero, %one acq_rel acquire : !llvm.ptr, i64
+    cf.br ^done
+  ^local:
     cf.cond_br %same, ^failed, ^done
   ^failed:
     %unavailable = arith.constant false
-    func.call @strict_test_failed(%place, %unavailable) : (i64, i1) -> ()
+    %console = arith.constant 0 : i64
+    func.call @strict_test_failed(%place, %unavailable, %console) : (i64, i1, i64) -> ()
     cf.br ^done
   ^done:
     return
+  }
+  llvm.mlir.global internal constant @strict_test_running("\00") : !llvm.array<1 x i8>
+  llvm.mlir.global internal constant @strict_test_expired("TestDurationMustNotExceedHundredMilliseconds\00") : !llvm.array<45 x i8>
+  llvm.mlir.global internal constant @strict_test_disconnected("CallerDisconnected\00") : !llvm.array<19 x i8>
+  llvm.mlir.global internal thread_local @strict_test_heard(0.0 : f64) : f64
+  // the Error name the VM work of a served request stops with at its next check: its test is over the deadline (until
+  // the test finishes) or its caller disconnected (looked at every 20 ms, until the request ends); empty otherwise
+  func.func private @strict_testbudget_expired(%self: f64) -> f64 {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %three = arith.constant 3 : i64
+    %runningText = llvm.mlir.addressof @strict_test_running : !llvm.ptr
+    %running = func.call @strict_bits(%runningText) : (!llvm.ptr) -> f64
+    %output = func.call @strict_output_handle() : () -> i64
+    %served = arith.cmpi ne, %output, %zero : i64
+    cf.cond_br %served, ^mine, ^done(%running : f64)
+  ^mine:
+    %claim = arith.constant true
+    %slot = func.call @strict_test_mine(%claim) : (i1) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %missing = llvm.icmp "eq" %slot, %null : !llvm.ptr
+    cf.cond_br %missing, ^done(%running : f64), ^state
+  ^state:
+    %stateSlot = llvm.getelementptr %slot[5] : (!llvm.ptr) -> !llvm.ptr, i64
+    %state = llvm.load %stateSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %isGone = arith.cmpi eq, %state, %two : i64
+    cf.cond_br %isGone, ^disconnected, ^timed
+  ^timed:
+    %isOver = arith.cmpi ne, %state, %zero : i64
+    cf.cond_br %isOver, ^expired, ^listen
+  ^expired:
+    %seen = llvm.cmpxchg %stateSlot, %one, %three acq_rel acquire : !llvm.ptr, i64
+    %expiredText = llvm.mlir.addressof @strict_test_expired : !llvm.ptr
+    %expiredName = func.call @strict_bits(%expiredText) : (!llvm.ptr) -> f64
+    cf.br ^done(%expiredName : f64)
+  ^listen:
+    %heardSlot = llvm.mlir.addressof @strict_test_heard : !llvm.ptr
+    %heard = llvm.load %heardSlot : !llvm.ptr -> f64
+    %now = func.call @strict_clock() : () -> f64
+    %since = arith.subf %now, %heard : f64
+    %pause = arith.constant 0.02 : f64
+    %due = arith.cmpf oge, %since, %pause : f64
+    cf.cond_br %due, ^check, ^done(%running : f64)
+  ^check:
+    llvm.store %now, %heardSlot : f64, !llvm.ptr
+    %hungUp = func.call @strict_test_hungup(%output) : (i64) -> i1
+    cf.cond_br %hungUp, ^cancel, ^done(%running : f64)
+  ^cancel:
+    llvm.store %two, %stateSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    cf.br ^disconnected
+  ^disconnected:
+    %goneText = llvm.mlir.addressof @strict_test_disconnected : !llvm.ptr
+    %goneName = func.call @strict_bits(%goneText) : (!llvm.ptr) -> f64
+    cf.br ^done(%goneName : f64)
+  ^done(%result: f64):
+    return %result : f64
   }
   llvm.mlir.global internal @strict_started(0.0 : f64) : f64
   func.func private @strict_process_elapsed(%self: f64) -> f64 {

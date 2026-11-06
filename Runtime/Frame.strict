@@ -9,6 +9,7 @@ constant FlagSlot = 3
 constant LoopSlot = 4
 constant IndexSlot = 5
 constant MembersSlot = 6
+constant CheckSteps = 65536
 constant Doubling = Machine(Resolver(List(TypeEntry) + Machine.Doubler).Resolved)
 constant Twice = Frame(Doubling, Doubling.types.First.methods.First, "Strict/Doubler")
 constant FailCall = InstructionEntry.Invoke(0, ("Strict/Failing", "Fail", "Strict/Number"), List(Number), -1)
@@ -19,8 +20,8 @@ Finished(arguments List(VmValue)) List(VmValue)
 	mutable slots = arguments
 	mutable position = 0
 	for machine.deadline > 0 then MutationCache.Steps else Invocation.MaxSteps
-		if position >= method.instructions.Length
-			return slots
+		if (position >= method.instructions.Length) or ((index % CheckSteps is 1) and (TestBudget.Expired is not ""))
+			return position >= method.instructions.Length then slots else MutationCache.Exhausted(slots, TestBudget.Expired)
 		let entry = method.instructions(position)
 		slots(entry.Target) = Value(entry, position, slots)
 		if (entry.kind is InstructionType.Invoke) and (slots(entry.Target).kind is "Changing")

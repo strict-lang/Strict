@@ -65,8 +65,9 @@ Slotted(folder Text) Texts
 	MutationCache.Slotted("obj").Last is "obj/mutation25.slot"
 	for Range(0, MaxRuns)
 		folder + "/mutation" + value + ".slot"
-Exhausted(slots List(VmValue)) List(VmValue)
+Exhausted(slots List(VmValue), name = "Timeout") List(VmValue)
 	MutationCache.Exhausted(Frame.Listed)(Frame.ResultSlot).kind is "Strict/Error"
+	MutationCache.Exhausted(Frame.Listed, "Gone")(Frame.ResultSlot).items.First.text is "Gone"
 	mutable exhausted = slots
-	exhausted(Frame.ResultSlot) = VmValue.OfError("Timeout")
+	exhausted(Frame.ResultSlot) = VmValue.OfError(name)
 	exhausted

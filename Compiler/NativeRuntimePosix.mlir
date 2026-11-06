@@ -1119,6 +1119,18 @@
     llvm.call @_exit(%failure) : (i32) -> ()
     return
   }
+  llvm.func @recv(i32, !llvm.ptr, i64, i32) -> i64
+  // whether the peer closed the socket: a peek without waiting reads the end (a served request's caller went away)
+  func.func private @strict_test_hungup(%socket: i64) -> i1 {
+    %one = arith.constant 1 : i64
+    %byte = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
+    %descriptor = arith.trunci %socket : i64 to i32
+    %flags = arith.constant 66 : i32
+    %got = llvm.call @recv(%descriptor, %byte, %one, %flags) : (i32, !llvm.ptr, i64, i32) -> i64
+    %zero = arith.constant 0 : i64
+    %closed = arith.cmpi eq, %got, %zero : i64
+    return %closed : i1
+  }
   // writes a formatted log line to handle, the socket strict_log routes to
   func.func private @strict_log_handle(%handle: i64, %format: !llvm.ptr, %text: !llvm.ptr) {
     %null = llvm.mlir.zero : !llvm.ptr

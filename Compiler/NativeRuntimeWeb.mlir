@@ -1268,6 +1268,11 @@
     llvm.call @exit(%failure) : (i32) -> ()
     return
   }
+  // the browser serves no requests, no caller can go away
+  func.func private @strict_test_hungup(%socket: i64) -> i1 {
+    %false = arith.constant false
+    return %false : i1
+  }
   // writes a formatted log line to handle, the socket strict_log routes to
   func.func private @strict_log_handle(%handle: i64, %format: !llvm.ptr, %text: !llvm.ptr) {
     %printed = llvm.call @printf(%format, %text) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr) -> i32
