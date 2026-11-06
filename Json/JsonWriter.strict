@@ -49,6 +49,6 @@ Escaped(character Character) Text
 		return character to Text
 	let named = JsonText.Controls.Index(character to Text)
 	if named >= 0
-		return "\\" + "ntrbf"(named)
+		return "\\" + "ntrbf".characters(named)
 	constant hex = JsonText.HexDigits
-	"\\u00" + hex((character.number / hex.Length).Floor) + hex(character.number % hex.Length)
+	"\\u00" + hex.characters((character.number / hex.Length).Floor) + hex.characters(character.number % hex.Length)
