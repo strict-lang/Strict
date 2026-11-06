@@ -13,6 +13,11 @@ Result VmValue
 	if call.MethodName is "RunTools"
 		return Ran(Process.RunTools(call.Arguments.First.text, Hosted(call).TextsOf(call.Arguments.Last)))
 	Hosted(call).Processed
+Texted Text
+	HostedProcess(Hosted.SystemCall).Texted is in ("Windows", "Linux", "MacOS", "Unknown")
+	if call.MethodName is "Variable"
+		return Process.Variable(call.Arguments.First.text)
+	call.MethodName is "Built" then Process(call.Instance.Member(0).text).Built else Process.OperatingSystem
 Ran(results List(ProcessResult)) VmValue
 	HostedProcess(Running).Ran(List(ProcessResult) + ProcessResult(1, "a", "b")).items.First.items.Last.text is "b"
 	mutable values = List(Mutable(VmValue))

@@ -44,6 +44,10 @@ FilesRead Texts
 	File("Process.strict").ReadLines.Length > 10
 	"Process.strict" is in Process.FilesRead
 	List(Text)
+Variable(name Text) Text
+	Process.Variable("StrictVariableNeverSet") is ""
+	Process.Variable("PATH").Length > 0
+	Error("Process.Variable needs the native runtime to read " + name)
 Input Text
 	""
 InputLine Text

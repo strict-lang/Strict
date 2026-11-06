@@ -9886,6 +9886,19 @@
     %result = func.call @strict_bits(%copy) : (!llvm.ptr) -> f64
     return %result : f64
   }
+  llvm.mlir.global internal constant @strict_variable_unset("\00") : !llvm.array<1 x i8>
+  // the value of the environment variable name, "" when it is not set
+  func.func private @strict_process_variable(%self: f64, %name: f64) -> f64 {
+    %key = func.call @strict_ptr(%name) : (f64) -> !llvm.ptr
+    %setting = llvm.call @getenv(%key) : (!llvm.ptr) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %isSet = llvm.icmp "ne" %setting, %null : !llvm.ptr
+    %unset = llvm.mlir.addressof @strict_variable_unset : !llvm.ptr
+    %source = llvm.select %isSet, %setting, %unset : i1, !llvm.ptr
+    %bits = func.call @strict_bits(%source) : (!llvm.ptr) -> f64
+    %copied = func.call @strict_text_copy(%bits) : (f64) -> f64
+    return %copied : f64
+  }
   func.func private @strict_text_cased(%text: f64, %upper: i1) -> f64 {
     %zero = arith.constant 0.0 : f64
     %one = arith.constant 1 : i64
