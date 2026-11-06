@@ -11,6 +11,8 @@ has IsRecursive Boolean = true
 has typeIndex Dictionary(Text, Number) = Dictionary(Text, Number)
 has safeCalls Dictionary(Text, Number) = Dictionary(Text, Number)
 has IsDeferred Boolean = false
+constant OperatorNames = ("+", "-", "*", "/", "%", "^", "<", ">", "<=", ">=")
+constant OperatorWords = ("Plus", "Minus", "Times", "Divide", "Modulo", "Power", "Less", "More", "AtMost", "AtLeast")
 constant Counter = MlirFunction(List(TypeEntry), TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry)), MethodEntry.CountingLoop)
 constant Shape = TypeEntry("Strict/Shape", (MemberEntry("width", "Strict/Number", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
 IsCounted = lineSlots.Length > 0
@@ -20,15 +22,15 @@ Symbol Text
 	MlirFunction(Counter.types, Shape, MethodEntry(Counter.method, Name = "<")).Symbol is "Shape_Less_0"
 	if MlirForeign(value).IsForeign
 		return MlirForeign(value).Wrapper
-	let name = MlirEquality(value, 0).Symbol(type.JustName)
-	let conversion = method.Name is "to" then "_" + TypeEntry.ShortName(method.returnType) else ""
-	constant operatorNames = ("+", "-", "*", "/", "%", "^", "<", ">", "<=", ">=")
-	constant operatorWords = ("Plus", "Minus", "Times", "Divide", "Modulo", "Power", "Less", "More", "AtMost", "AtLeast")
-	let plain = MlirEquality(value, 0).Symbol(method.Name)
-	let spelled = method.Name is in operatorNames then operatorWords(operatorNames.Index(method.Name)) else plain
+	let symbols = MlirEquality(value, 0)
+	let name = symbols.Symbol(type.JustName)
+	let conversion = method.Name is "to" then "_" + symbols.Symbol(TypeEntry.ShortName(method.returnType)) else ""
+	let plain = symbols.Symbol(method.Name)
+	let spelled = method.Name is in OperatorNames then OperatorWords(OperatorNames.Index(method.Name)) else plain
 	name + "_" + spelled + "_" + method.parameters.Length + conversion + type.OverloadSuffix(method)
 Parameters Texts
 	Counter.Parameters is ("value")
+	MlirFunction(Counter, method = MethodEntry(Counter.method, Name = "to", declaredType = "B(A)")).Symbol.EndsWith("B_A_")
 	mutable names = List(Mutable(Text))
 	names.Add("value")
 	for method.parameters

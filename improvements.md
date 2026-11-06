@@ -64,7 +64,6 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 
 - GarbageCollectionExceedsTenth fails `strict test` of Compiler/MlirDoubles, DeviceBuild, MlirLibrary and MlirModule.strict (exit 1, 0.56 and 0.95 of 5 s in GC) while other test runs load the machine; the check is wall clock based. Under load it also kills mutants that should survive (MlirDeviceStatements gave 4 or 7 survivors for the same source), so mutation runs should not count it as a failed test.
 - Machine.Logged (and other VM helpers) return VmValue.None only to have something to test; Logged should be a void method, its test can only check `.kind is "None"` without capturing the Logger textWriter (Ben: discuss later).
-- MlirFunction.Symbol keeps generic parentheses: a `to` method returning List(Number) on Counter gives `Counter_to_1_List(Number)`, likely not a valid MLIR symbol (TypeEntry.ShortName).
 - MlirNatives: a static call on a list type (`Strict/List(Text)` TypeEntry, no instance) gets Owner `Strict/List(Text)` and Element "Number", MlirLayout.Represented does not strip the Strict/ prefix.
 - MlirSingle.Register line 99 falls back to `"%t" + at + "s"` for a register not written in the loop, the statement's own result name (a self reference), looks unreachable or accidental.
 - MlirPurity: `Doubling.IsLocal(StoreRegisterToVariable "value")` is false although "value" is only used inside the loop (conditional0 in Clamping gives true); value/index may clash with the loop variables.
