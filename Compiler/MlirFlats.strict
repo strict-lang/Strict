@@ -129,7 +129,7 @@ Started(count Number, written Number, slot Text) Texts
 	if written > 0
 		return List(Text) + function.Load(temp + "f", slot)
 	let counted = "    " + temp + "n = arith.constant " + count + ".0 : f64"
-	let created = MlirDestined(function, position).Started(temp, slot.Substring(3, slot.Length - 3))
+	let created = MlirDestined(function, position).Started(temp, slot.Replace("%v_", ""))
 	(List(Text) + counted) + created + function.Store(temp + "f", slot)
 Constructed(entry InstructionEntry, typeName Text, instances MlirInstances) Texts
 	MlirFlats(Made.function, 8).Constructed(Construction, "Tripling", MlirInstances(Made.function, 8)).Length is 2
