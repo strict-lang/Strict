@@ -80,7 +80,9 @@ Target(call Invocation) Numbers
 	Doubling.Target(Invocation.Parsing) is (Native, 0, 0)
 	Doubling.Target(Invocation.Uppered) is (Searching, 0, 0)
 	Doubling.Target(Hosted.SystemCall) is (Hosting, 0, 0)
-	if Hosted(call).IsHosted
+	Doubling.Target(HostedJson.Getting) is (Hosting, 0, 0)
+	Resolver(List(TypeEntry) + TypeEntry("Json", List(MemberEntry), List(MethodEntry))).Target(HostedJson.Getting) is (Native, 0, 0)
+	if Hosted(call).IsHosted and (TypeEntry.ShortName(call.TypeName) is not TypeEntry.ShortName(types.First.Name))
 		return (Hosting, 0, 0)
 	let isText = (call.TypeName is "Strict/Text") and (call.MethodName is in Natives.TextMethods)
 	isText then (Searching, 0, 0) else Called(call)
