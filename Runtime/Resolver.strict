@@ -12,7 +12,8 @@ constant Twice = Invocation(InstructionEntry.Invoke(0, ("Strict/Doubler", "Twice
 constant ListWrites = (InstructionType.StoreRegisterToVariable, InstructionType.InvokeWriteToList, InstructionType.InvokeRemove)
 constant Comparisons = (InstructionType.Equal, InstructionType.NotEqual, InstructionType.LessThan, InstructionType.GreaterThan)
 constant ElementStore = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "a(1)")
-constant Sample = MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 7), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "a"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "a"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 0, "list")))
+constant StoringSeven = (InstructionEntry.LoadNumber(0, 7), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "a"))
+constant Sample = MethodEntry("Run", List(MemberEntry), "None", StoringSeven + (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "a"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 0, "list")))
 Resolved List(TypeEntry)
 	Doubling.Local(MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 7), "a")) is "a"
 	Doubling.Local(InstructionEntry(InstructionType.CheckError, List(Text), List(Number), 0)) is "#result"

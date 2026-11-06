@@ -1,6 +1,7 @@
 has lines Texts
 has folder = ""
-constant Sums = ("Sums(bitmap Bitmap, pixel Number) Number", "\tmutable sum = 0", "\tfor y, x in Range(-1, 2), Range(-1, 2)", "\t\tif bitmap.IsInside(pixel, x, y)", "\t\t\tsum = sum + bitmap.Colors(pixel + x + y * bitmap.Size.Width).Red", "\tsum")
+constant NeighborSum = ("\t\tif bitmap.IsInside(pixel, x, y)", "\t\t\tsum = sum + bitmap.Colors(pixel + x + y * bitmap.Size.Width).Red", "\tsum")
+constant Sums = ("Sums(bitmap Bitmap, pixel Number) Number", "\tmutable sum = 0", "\tfor y, x in Range(-1, 2), Range(-1, 2)") + NeighborSum
 constant Blurring = Callees(Sums, "ImageProcessing")
 constant Inside = "\tcolumn >= 0 and column < Size.Width and row >= 0 and row < Size.Height"
 Lines(receiver Text, method Text, at Number) Texts

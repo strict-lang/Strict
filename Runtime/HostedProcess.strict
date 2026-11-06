@@ -1,5 +1,6 @@
 has call Invocation
-constant Running = Invocation(InstructionEntry.Invoke(2, ("Strict/Process", "RunTools", "Strict/List(ProcessResult)", "name", "arguments"), (0, 1), -1), (VmValue.OfText("missingStrictTool"), VmValue.OfList((VmValue.OfText("a"), VmValue.OfText("b")))), VmValue.None)
+constant RunToolsCall = InstructionEntry.Invoke(2, ("Strict/Process", "RunTools", "Strict/List(ProcessResult)", "name", "arguments"), (0, 1), -1)
+constant Running = Invocation(RunToolsCall, (VmValue.OfText("missingStrictTool"), VmValue.OfList((VmValue.OfText("a"), VmValue.OfText("b")))), VmValue.None)
 Result VmValue
 	HostedProcess(Hosted.SystemCall).Result.text is in ("Windows", "Linux", "MacOS", "Unknown")
 	HostedProcess(Running).Result.items.Last.items.First.number is 127

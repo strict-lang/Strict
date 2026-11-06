@@ -1,10 +1,12 @@
 has inference TypeInference
 constant NoScope = Scope(List(Text), List(Text))
-constant Chained = ShapeTyping(TypeInference(KnownTypes(("Box", "Item"), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Scope(List(Text) + "Inner", List(Text) + "Item"), Scope(List(Text) + "Weight", List(Text) + "Number")), (KnownTypes.NoMembers, KnownTypes.NoMembers)), (Scope(List(Text) + "Sample", List(Text) + "Box(3).Inner"), KnownTypes.NoMembers)))
+constant NoScopes = (NoScope, NoScope)
+constant Samples = (Scope(List(Text) + "Sample", List(Text) + "Box(3).Inner"), NoScope)
+constant Chained = ShapeTyping(TypeInference(KnownTypes(("Box", "Item"), NoScopes, (Scope(List(Text) + "Inner", List(Text) + "Item"), Scope(List(Text) + "Weight", List(Text) + "Number")), NoScopes), Samples))
 constant Counting = ShapeTyping(ResolveCheck.Counting)
 constant Twice = TypeShape("Twice = number * 2")
 constant Next = Tokenizer("Next(add = 1) = number + add").Tokens
-constant Boxed = ShapeTyping(TypeInference(KnownTypes(("Box", "Item"), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Scope(("Sample", "Inner"), ("Box", "Item")), KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers)), (Scope(List(Text) + "Sample", List(Text) + "Box(3).Inner"), KnownTypes.NoMembers)))
+constant Boxed = ShapeTyping(TypeInference(KnownTypes(("Box", "Item"), NoScopes, (Scope(("Sample", "Inner"), ("Box", "Item")), NoScope), NoScopes), Samples))
 constant Swapped = ShapeTyping(Instantiation.Inferring)
 Typed(shape TypeShape, scope Scope, typeName Text) Scope
 	Counting.Typed(TypeShape("constant a = 1"), KnownTypes.NoMembers, "Count").names.Length is 0

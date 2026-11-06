@@ -1,5 +1,6 @@
 has values ValueCodegen
-constant Bags = KnownTypes(("Bag", "Plain"), (Scope(List(Text) + "items", List(Text) + "Texts"), KnownTypes.NoMembers), (Scope(List(Text) + "Count", List(Text) + "Number"), KnownTypes.NoMembers), (Scope(("items default", "Count reads"), ("(\"a\")", "reads")), KnownTypes.NoMembers))
+constant BagParameters = (Scope(("items default", "Count reads"), ("(\"a\")", "reads")), KnownTypes.NoMembers)
+constant Bags = KnownTypes(("Bag", "Plain"), (Scope(List(Text) + "items", List(Text) + "Texts"), KnownTypes.NoMembers), (Scope(List(Text) + "Count", List(Text) + "Number"), KnownTypes.NoMembers), BagParameters)
 constant Bagged = DefaultInstance(ValueCodegen(TypeInference(Bags, (KnownTypes.NoMembers, KnownTypes.NoMembers)), KnownTypes.NoMembers, CallTarget.Plain))
 constant Counting = SyntaxNode("Member", "Count", SyntaxNode("Identifier", "Bag"))
 constant Plainly = SyntaxNode("Member", "Count", SyntaxNode("Identifier", "Plain"))

@@ -11,7 +11,8 @@ constant IndexSlot = 5
 constant MembersSlot = 6
 constant Doubling = Machine(Resolver(List(TypeEntry) + Machine.Doubler).Resolved)
 constant Twice = Frame(Doubling, Doubling.types.First.methods.First, "Strict/Doubler")
-constant Calling = Frame(Machine(Resolver(List(TypeEntry) + Invocation.Failing).Resolved), MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Invoke(0, ("Strict/Failing", "Fail", "Strict/Number"), List(Number), -1)), "Strict/Caller")
+constant FailCall = InstructionEntry.Invoke(0, ("Strict/Failing", "Fail", "Strict/Number"), List(Number), -1)
+constant Calling = Frame(Machine(Resolver(List(TypeEntry) + Invocation.Failing).Resolved), MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + FailCall), "Strict/Caller")
 constant Listed = (VmValue.OfText("ab"), VmValue.OfText("a"), VmValue.None, VmValue.OfBoolean(true), Looping.Counting, VmValue.None, VmValue.OfNumber(1), VmValue.OfList(VmValue.OfNumber(10), VmValue.OfNumber(20)), VmValue.OfNumber(5))
 constant Stopping = (Listed(3), Listed(0), Listed(0), Listed(2), Listed(4))
 Finished(arguments List(VmValue)) List(VmValue)

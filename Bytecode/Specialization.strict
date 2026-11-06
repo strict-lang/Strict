@@ -1,5 +1,7 @@
 has values ValueCodegen
-constant Boxes = KnownTypes(("Wrapped", "Halver", "Using"), (Scope(List(Text) + "inner", List(Text) + "Generic"), Scope(List(Text) + "amount", List(Text) + "Number"), KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers, Scope(List(Text) + "Through", List(Text) + "Number")), (KnownTypes.NoMembers, KnownTypes.NoMembers, Scope(("Through", "Through types"), ("wrapped", "Wrapped"))))
+constant BoxMembers = (Scope(List(Text) + "inner", List(Text) + "Generic"), Scope(List(Text) + "amount", List(Text) + "Number"), KnownTypes.NoMembers)
+constant BoxParameters = (KnownTypes.NoMembers, KnownTypes.NoMembers, Scope(("Through", "Through types"), ("wrapped", "Wrapped")))
+constant Boxes = KnownTypes(("Wrapped", "Halver", "Using"), BoxMembers, (KnownTypes.NoMembers, KnownTypes.NoMembers, Scope(List(Text) + "Through", List(Text) + "Number")), BoxParameters)
 constant Using = ("has logger", "Through(wrapped Wrapped) Number", "\t1")
 constant Plain = Specialization(ValueCodegen(TypeInference(Boxes, (KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers)), Scope(List(Text), List(Text)), CallTarget(Boxes, TypeShape(Using), "Strict/Boxes/Using", List(Text))))
 constant Wrapping = CodeBlock.Empty.Declare("w", "Wrapped(Halver)")
@@ -7,10 +9,10 @@ constant Passing = SyntaxParser(Tokenizer("Through(w)").Tokens).Parse
 constant Coding = TypeCodegen("Strict/Boxes/Using", Using, TypeInference(Boxes, (KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers)), List(Text))
 constant Unused = TypeEntry("Strict/Boxes/Using", List(MemberEntry), List(MethodEntry))
 constant Halving = "Through(Wrapped(Halver))"
-constant Traits = KnownTypes(("Counter", "Many"), (Scope(List(Text) + "length", List(Text) + "Number"), Scope(List(Text) + "elements", List(Text) + "Generics")), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Scope(List(Text) + " trait", List(Text) + "true"), KnownTypes.NoMembers))
+constant Traits = KnownTypes(("Counter", "Many"), (Scope(("length"), ("Number")), Scope(("elements"), ("Generics"))), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Scope((" trait"), ("true")), KnownTypes.NoMembers))
 constant Traited = Specialization(ValueCodegen(TypeInference(Traits, (KnownTypes.NoMembers, KnownTypes.NoMembers)), Scope(List(Text), List(Text)), CallTarget(Traits, TypeShape(Using), "Strict/Boxes/Using", List(Text))))
 constant Wrap = SyntaxParser(Tokenizer("Wrapped(w)").Tokens).Parse
-constant Doubled = KnownTypes(List(Text) + "Using", List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(("Through", "Through"), ("Number", "Number")), List(Scope) + Scope(("Through", "Through types", "Through", "Through types"), ("wrapped", "Wrapped", "other", "Number")))
+constant Doubled = KnownTypes(("Using"), (KnownTypes.NoMembers), (Scope(("Through", "Through"), ("Number", "Number"))), (Scope(("Through", "Through types", "Through", "Through types"), ("wrapped", "Wrapped", "other", "Number"))))
 constant Overloaded = Specialization(ValueCodegen(TypeInference(Doubled, List(Scope) + KnownTypes.NoMembers), Scope(List(Text), List(Text)), CallTarget(Doubled, TypeShape(Using), "Strict/Boxes/Using", List(Text))))
 constant Targets = List(Text) + "Strict/Boxes/Using.Through(Wrapped(Halver), Number)"
 Signed(node SyntaxNode, owner Text, returnType Text, block CodeBlock) Texts

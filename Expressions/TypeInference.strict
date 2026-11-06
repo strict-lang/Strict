@@ -9,10 +9,12 @@ constant ToText = SyntaxNode("Binary", "to", (NoNode, SyntaxNode("Identifier", "
 constant Pairs = SyntaxParser(Tokenizer("Dictionary((1, \"a\"))").Tokens).Parse
 constant Typed = SyntaxParser(Tokenizer("Dictionary(Text, Number)").Tokens).Parse
 constant Hashing = TypeInference(KnownTypes(("Hash", "B"), (KnownTypes.NoMembers, KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Scope(("from", "from types"), ("generic", "Generic")), KnownTypes.NoMembers)), NoShapes)
-constant Scaling = TypeInference(KnownTypes(List(Text) + "Pair", List(Scope) + NoShape, List(Scope) + Scope(("Scaled", "Scaled", "Scaled", "Scaled"), ("Pair", "Number", "Pair", "Number")), List(Scope) + Scope(("Scaled", "Scaled types", "Scaled", "Scaled types", "Scaled", "Scaled types", "Scaled", "Scaled types"), ("factor", "Number", "other", "Other", "factor,offset", "Number,Number", "other,offset", "Other,Number"))), List(Scope) + NoShape)
+constant PairScaling = Scope(("Scaled", "Scaled types", "Scaled", "Scaled types", "Scaled", "Scaled types", "Scaled", "Scaled types"), ("factor", "Number", "other", "Other", "factor,offset", "Number,Number", "other,offset", "Other,Number"))
+constant Scaling = TypeInference(KnownTypes(List(Text) + "Pair", List(Scope) + NoShape, List(Scope) + Scope(("Scaled", "Scaled", "Scaled", "Scaled"), ("Pair", "Number", "Pair", "Number")), List(Scope) + PairScaling), List(Scope) + NoShape)
 constant Paired = Scope(List(Text) + "p", List(Text) + "Pair")
 constant Primitives = ("None", "Boolean", "Number", "Byte", "Text", "Character", "Name", "Generic")
-constant Colors = TypeInference(KnownTypes(("Color", "ColorValue"), (Scope(List(Text) + "Red", List(Text) + "Byte"), KnownTypes.NoMembers), (Scope(List(Text) + "to", List(Text) + "ColorValue"), KnownTypes.NoMembers), (Scope(("from", "from types"), ("current", "ColorValue")), KnownTypes.NoMembers)), NoShapes)
+constant ColorFrom = (Scope(("from", "from types"), ("current", "ColorValue")), KnownTypes.NoMembers)
+constant Colors = TypeInference(KnownTypes(("Color", "ColorValue"), (Scope(List(Text) + "Red", List(Text) + "Byte"), KnownTypes.NoMembers), (Scope(List(Text) + "to", List(Text) + "ColorValue"), KnownTypes.NoMembers), ColorFrom), NoShapes)
 ConstantOf(typeName Text, name Text) Text
 	NoInference.CallType("A", Scope(("A"), ("Texts")), NoShape) is "A"
 	NoInference.CallType("q", Scope(("q"), ("Bs")), NoShape) is "B"

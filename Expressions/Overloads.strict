@@ -1,12 +1,14 @@
 has types KnownTypes
-constant Scaler = KnownTypes(("Scaler", "Byte"), (KnownTypes.NoMembers, Scope(List(Text) + "number", List(Text) + "Number")), (Scope(("Scaled", "Scaled", "*", "*"), ("Number", "Number", "Number", "Scaler")), KnownTypes.NoMembers), (Scope(("Scaled", "Scaled types", "Scaled", "Scaled types", "*", "* types", "*", "* types"), ("text", "Text", "byte", "Byte", "other", "Other", "factor", "Number")), KnownTypes.NoMembers))
+constant ScalerParameters = (Scope(("Scaled", "Scaled types", "Scaled", "Scaled types", "*", "* types", "*", "* types"), ("text", "Text", "byte", "Byte", "other", "Other", "factor", "Number")), KnownTypes.NoMembers)
+constant Scaler = KnownTypes(("Scaler", "Byte"), (KnownTypes.NoMembers, Scope(("number"), ("Number"))), (Scope(("Scaled", "Scaled", "*", "*"), ("Number", "Number", "Number", "Scaler")), KnownTypes.NoMembers), ScalerParameters)
 constant Scaling = Overloads(Scaler)
-constant Labeler = KnownTypes(List(Text) + "Labeler", List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(("Labels", "Labels"), ("Numbers", "List(Numbers)")), List(Scope) + Scope(("Labels", "Labels types", "Labels", "Labels types"), ("", "", "label,count", "Numbers,Number")))
+constant LabelsParameters = Scope(("Labels", "Labels types", "Labels", "Labels types"), ("", "", "label,count", "Numbers,Number"))
+constant Labeler = KnownTypes(List(Text) + "Labeler", List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(("Labels", "Labels"), ("Numbers", "List(Numbers)")), List(Scope) + LabelsParameters)
 constant Labeling = Overloads(Labeler)
 constant LabelInference = TypeInference(Labeler, List(Scope) + KnownTypes.NoMembers)
 constant LabelsCall = SyntaxParser(Tokenizer("Labels((1, 0), 2)").Tokens).Parse
 constant LabelerLabels = SyntaxNode("Member", "Labels", SyntaxNode("Type", "Labeler"))
-constant Picker = KnownTypes(List(Text) + "Picker", List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(("Mixed", "Chosen"), ("Generics", "Generic")), List(Scope) + Scope(("Mixed", "Mixed types", "Chosen", "Chosen types"), ("items", "Generics", "items", "Generics")))
+constant Picker = KnownTypes(("Picker"), (KnownTypes.NoMembers), (Scope(("Mixed", "Chosen"), ("Generics", "Generic"))), (Scope(("Mixed", "Mixed types", "Chosen", "Chosen types"), ("items", "Generics", "items", "Generics"))))
 constant Picking = Overloads(Picker)
 constant Mixing = SyntaxParser(Tokenizer("p.Mixed((1, 2))").Tokens).Parse
 constant Choosing = SyntaxParser(Tokenizer("p.Chosen((\"a\", \"b\"))").Tokens).Parse

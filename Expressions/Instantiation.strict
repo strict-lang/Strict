@@ -1,8 +1,11 @@
 has types KnownTypes
-constant Couples = KnownTypes(("Couple", "Text"), (Scope(("first", "second"), ("Generic", "Generic")), KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Scope(("from", "from types"), ("first,second", "Generic,Generic")), KnownTypes.NoMembers))
+constant CoupleFrom = Scope(("from", "from types"), ("first,second", "Generic,Generic"))
+constant Couples = KnownTypes(("Couple", "Text"), (Scope(("first", "second"), ("Generic", "Generic")), KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers), (CoupleFrom, KnownTypes.NoMembers))
 constant Implicit = Instantiation(KnownTypes(("Couple", "Text"), (Couples.members(0), KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Scope(("from", "from types"), ("", "Type")), KnownTypes.NoMembers)))
 constant Pairing = Instantiation(Couples)
-constant Boxed = KnownTypes(("Box", "Meter", "Number", "Any"), (Scope(("first", "size", "second"), ("Generic", "Number", "Generic")), Scope(("Number"), ("Number")), KnownTypes.NoMembers, KnownTypes.NoMembers), (Scope(("Swap", "Sizes"), ("Box(second, size, first)", "List(Number)")), Scope(("Half", "get"), ("Number", "Text")), Scope(("Abs", "size"), ("Number", "Text")), Scope(("Copy", "to"), ("Any", "Text"))), (KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers))
+constant BoxMembers = (Scope(("first", "size", "second"), ("Generic", "Number", "Generic")), Scope(("Number"), ("Number")), KnownTypes.NoMembers, KnownTypes.NoMembers)
+constant BoxMethods = (Scope(("Swap", "Sizes"), ("Box(second, size, first)", "List(Number)")), Scope(("Half", "get"), ("Number", "Text")), Scope(("Abs", "size"), ("Number", "Text")), Scope(("Copy", "to"), ("Any", "Text")))
+constant Boxed = KnownTypes(("Box", "Meter", "Number", "Any"), BoxMembers, BoxMethods, (KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers))
 constant Inferring = TypeInference(Couples, (KnownTypes.NoMembers, KnownTypes.NoMembers))
 constant Swapping = TypeShape("has first Generic", "has second Generic", "Swapped Couple", "\tCouple(second, first)")
 constant Mixed = SyntaxParser(Tokenizer("Couple(\"a\", 2)").Tokens).Parse

@@ -3,8 +3,12 @@ constant Scalars = ("Text", "Boolean", "Error", "ErrorWithValue", "Dictionary")
 constant Plain = Closeness(ValueCodegen.Plain.inference.types)
 constant Deep = "Numberssssssssss"
 constant NumberElements = Plain.Elements("a", "b", "Numbers", "0", List(Text))
-constant Listed = Closeness(KnownTypes(("List", "Text"), (Scope(List(Text) + "x", List(Text) + "Number"), Scope(List(Text) + "x", List(Text) + "Number")), (KnownTypes.NoMembers, KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers)))
-constant Nested = Closeness(KnownTypes(("Outer", "Inner", "Counter", "Walker"), (Scope(List(Text) + "inner", List(Text) + "Inner"), Scope(List(Text) + "x", List(Text) + "Number"), Scope(List(Text) + "length", List(Text) + "Number"), Scope(List(Text) + "length", List(Text) + "Number")), (KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers), (KnownTypes.NoMembers, Scope(List(Text) + "x step", List(Text) + "1"), Scope(List(Text) + " trait", List(Text) + "true"), Scope(("in", "in types"), ("element", "Generic")))))
+constant NumberX = Scope(List(Text) + "x", List(Text) + "Number")
+constant NumberLength = Scope(List(Text) + "length", List(Text) + "Number")
+constant Listed = Closeness(KnownTypes(("List", "Text"), (NumberX, NumberX), (KnownTypes.NoMembers, KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers)))
+constant NestedParameters = (KnownTypes.NoMembers, Scope(List(Text) + "x step", List(Text) + "1"), Scope(List(Text) + " trait", List(Text) + "true"), Scope(("in", "in types"), ("element", "Generic")))
+constant NestedMethods = (KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers)
+constant Nested = Closeness(KnownTypes(("Outer", "Inner", "Counter", "Walker"), (Scope(List(Text) + "inner", List(Text) + "Inner"), NumberX, NumberLength, NumberLength), NestedMethods, NestedParameters))
 Lines(left Text, right Text, kinds Texts, slot Text, exact Boolean, expanded Texts) Texts
 	Plain.Lines("left", "right", ("Number", "Number"), "0", true, List(Text)).Last is "let testEqual0 = left is right"
 	Nested.Lines("a", "b", ("Inner", "Inner"), "1", false, List(Text) + "Outer") is ("let testEqual1 = a.IsNearlyEqual(b)")

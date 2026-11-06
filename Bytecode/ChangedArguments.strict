@@ -1,7 +1,9 @@
 has values ValueCodegen
 has method Text
 constant Store = InstructionType.StoreRegisterToVariable
-constant Painters = KnownTypes(("Ticker", "Painter"), (Scope(List(Text) + "count", List(Text) + "Number"), KnownTypes.NoMembers), (Scope(List(Text) + "Next", List(Text) + "Number"), Scope(List(Text) + "Paint", List(Text) + "Number")), (Scope(("Next", "Next changes"), ("", "changes")), Scope(("Paint", "Paint types"), ("count,ticker", "Number,Ticker"))))
+constant PainterMethods = (Scope(List(Text) + "Next", List(Text) + "Number"), Scope(List(Text) + "Paint", List(Text) + "Number"))
+constant PainterParameters = (Scope(("Next", "Next changes"), ("", "changes")), Scope(("Paint", "Paint types"), ("count,ticker", "Number,Ticker")))
+constant Painters = KnownTypes(("Ticker", "Painter"), (Scope(List(Text) + "count", List(Text) + "Number"), KnownTypes.NoMembers), PainterMethods, PainterParameters)
 constant Painting = ChangedArguments(ValueCodegen(TypeInference(Painters, (KnownTypes.NoMembers, KnownTypes.NoMembers)), KnownTypes.NoMembers, CallTarget.Plain), "Paint")
 constant Paint = SyntaxNode("Member", "Paint", (SyntaxNode("Identifier", "painter"), ValueCodegen.One, SyntaxNode("Identifier", "ticker")))
 constant Holding = CodeBlock.Empty.Declare("painter", "Painter").Declare("ticker", "Ticker").Declare("ticker mutable", "mutable")

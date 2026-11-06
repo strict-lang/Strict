@@ -1,5 +1,6 @@
 has machine Machine
-constant Keeping = TypeEntry("Strict/Keeping", List(MemberEntry) + MemberEntry("Seven", "Strict/Number", List(InstructionEntry), true), List(MethodEntry) + MethodEntry("Seven", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 7), InstructionEntry.Return(0))))
+constant SevenMethod = MethodEntry("Seven", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 7), InstructionEntry.Return(0)))
+constant Keeping = TypeEntry("Strict/Keeping", List(MemberEntry) + MemberEntry("Seven", "Strict/Number", List(InstructionEntry), true), List(MethodEntry) + SevenMethod)
 Computed Machine
 	Constants(Machine(Resolver(List(TypeEntry) + Keeping).Resolved).Prepared).Value(0, 0).number is 7
 	mutable created = List(Mutable(VmValue))

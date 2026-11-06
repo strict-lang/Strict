@@ -2,7 +2,8 @@ has values ValueCodegen
 has method Text
 constant Name = "changed_instance"
 constant Ticking = TypeCodegen("Strict/Ticker", ("mutable count Number", "has step Number = 1", "Next Number", "\tcount = count + step", "\tcount", "Size Number", "\tstep"), ValueCodegen.NoTypes, List(Text))
-constant Tickers = KnownTypes(List(Text) + "Ticker", List(Scope) + Scope(List(Text) + "count", List(Text) + "Number"), List(Scope) + Scope(List(Text) + "Next", List(Text) + "Number"), List(Scope) + Scope(("Next", "Next types", "Next changes"), ("", "", "changes")))
+constant TickerParameters = List(Scope) + Scope(("Next", "Next types", "Next changes"), ("", "", "changes"))
+constant Tickers = KnownTypes(List(Text) + "Ticker", List(Scope) + Scope(List(Text) + "count", List(Text) + "Number"), List(Scope) + Scope(List(Text) + "Next", List(Text) + "Number"), TickerParameters)
 constant Ticked = ChangedInstance(ValueCodegen(TypeInference(Tickers, List(Scope) + KnownTypes.NoMembers), KnownTypes.NoMembers, CallTarget.Plain), "Next")
 constant Calling = SyntaxNode("Member", "Next", SyntaxNode("Identifier", "ticker"))
 constant Holding = CodeBlock.Empty.Declare("ticker", "Ticker")

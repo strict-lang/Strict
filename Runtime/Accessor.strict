@@ -1,10 +1,14 @@
 has machine Machine
 constant Computed = -2
 constant Listed = MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false)
-constant Holder = TypeEntry("Strict/Holder", (MemberEntry.LoggerMember, Listed), (MethodEntry("Numbers", List(MemberEntry), "Strict/List(Number)", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.Return(0))), MethodEntry("First", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 0), InstructionEntry(InstructionType.IndexCall, "numbers", (1, 0, -1)), InstructionEntry.Return(1)))))
+constant NumbersMethod = MethodEntry("Numbers", List(MemberEntry), "Strict/List(Number)", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.Return(0)))
+constant FirstMethod = MethodEntry("First", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 0), InstructionEntry(InstructionType.IndexCall, "numbers", (1, 0, -1)), InstructionEntry.Return(1)))
+constant Holder = TypeEntry("Strict/Holder", (MemberEntry.LoggerMember, Listed), (NumbersMethod, FirstMethod))
 constant FirstCall = InstructionEntry.Invoke(1, ("Strict/Holder", "First", "Strict/Number"), List(Number), 0)
-constant Outer = TypeEntry("Strict/Outer", List(MemberEntry) + MemberEntry("holder", "Strict/Holder", List(InstructionEntry), false), List(MethodEntry) + MethodEntry("Head", List(MemberEntry), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "holder"), FirstCall, InstructionEntry.Return(1))))
-constant Odd = TypeEntry(Holder.Name, Holder.members + MemberEntry.SevenMember, (MethodEntry(Holder.methods(0), parameters = Listed), MethodEntry(Holder.methods(1), instructions = InstructionEntry.Return(0)), MethodEntry(Holder.methods(1), instructions = Holder.methods(1).instructions + InstructionEntry.Return(1))))
+constant HeadMethod = MethodEntry("Head", List(MemberEntry), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "holder"), FirstCall, InstructionEntry.Return(1)))
+constant Outer = TypeEntry("Strict/Outer", List(MemberEntry) + MemberEntry("holder", "Strict/Holder", List(InstructionEntry), false), List(MethodEntry) + HeadMethod)
+constant OddMethods = (MethodEntry(NumbersMethod, parameters = Listed), MethodEntry(FirstMethod, instructions = InstructionEntry.Return(0)), MethodEntry(FirstMethod, instructions = FirstMethod.instructions + InstructionEntry.Return(1)))
+constant Odd = TypeEntry(Holder.Name, Holder.members + MemberEntry.SevenMember, OddMethods)
 constant Loading = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "holder")
 constant Getting = Accessor(Machine((Holder, Outer, Odd)))
 constant FirstResolved = Resolver(Getting.machine.types).Targeted(FirstCall)
