@@ -2,9 +2,9 @@ has lines Texts
 constant Upper = MagicNumbers(("Upper Character", "	Character(\"a\").Upper is \"A\"", "	if number is in Range(97, 123)", "		return Character(number - 32)", "	value"))
 constant Plain = MagicNumbers(("Run Number", "	Run is 300", "	constant Width = 320", "	let total = 3 + 100", "	total * 1000 + 0.5 + Width"))
 Issues List(ValidationIssue)
-	Upper.Issues.Length is 3
+	Upper.Issues.Length is 2
 	Upper.Issues.First to Text is "NumberMustBeNamedConstant: 97, name it with a constant"
-	Upper.Issues.Last.Line is 4
+	Upper.Issues.Last.Line is 3
 	Plain.Issues.Length is 0
 	mutable issues = List(Mutable(ValidationIssue))
 	for lines
@@ -12,7 +12,7 @@ Issues List(ValidationIssue)
 			issues = issues + Body(index)
 	issues
 Body(header Number) List(ValidationIssue)
-	Upper.Body(0).Length is 3
+	Upper.Body(0).Length is 2
 	MagicNumbers(("Run", "	Run is 300", "	300")).Body(0).Length is 1
 	mutable issues = List(Mutable(ValidationIssue))
 	let last = FileCheck.LastLine(lines, header)
@@ -30,17 +30,22 @@ Numbers(code Text, line Number) List(ValidationIssue)
 		if IsMagic(value)
 			ValidationIssue("NumberMustBeNamedConstant", value + ", name it with a constant", line)
 IsMagic(token Text) Boolean
-	Plain.IsMagic("97") and Plain.IsMagic("32") and Plain.IsMagic("0.25") and Plain.IsMagic("11")
+	Plain.IsMagic("97") and Plain.IsMagic("96") and Plain.IsMagic("0.25") and Plain.IsMagic("11")
 	(Plain.IsMagic("7") or Plain.IsMagic("10") or Plain.IsMagic("1000") or Plain.IsMagic("0.5")) is false
+	(Plain.IsMagic("32") or Plain.IsMagic("65536") or Plain.IsMagic("4194304")) is false
 	(Plain.IsMagic("0.001") or Plain.IsMagic("x") or Plain.IsMagic("\"97\"")) is false
 	if Tokenizer.IsDigit(token.Substring(0, 1)) is false
 		return false
-	let isSmall = (token.Length is 1) or (token is "10")
-	(isSmall or (token is "0.5") or IsPowerOfTen(token)) is false
+	((token.Length is 1) or (token is "0.5") or IsPowerOfTen(token) or IsPowerOfTwo(token to Number)) is false
 IsPowerOfTen(token Text) Boolean
 	Plain.IsPowerOfTen("100") and Plain.IsPowerOfTen("0.01") and (Plain.IsPowerOfTen("101") is false)
 	MagicNumbers(("Run Boolean", "	value is 97")).Body(0).Length is 1
-	MagicNumbers(("Run", "	Run is 300", "	let a = 32", "	a is 97", "	a")).Body(0).Length is 2
+	MagicNumbers(("Run", "	Run is 300", "	let a = 33", "	a is 97", "	a")).Body(0).Length is 2
 	Plain.IsMagic("Width") is false
 	let digits = token.Replace(".", "")
 	digits.Replace("0", "") is "1"
+IsPowerOfTwo(number Number) Boolean
+	Plain.IsPowerOfTwo(64) and Plain.IsPowerOfTwo(4294967296) and Plain.IsPowerOfTwo(16)
+	(Plain.IsPowerOfTwo(96) or Plain.IsPowerOfTwo(0.25) or Plain.IsPowerOfTwo(24)) is false
+	(Plain.IsPowerOfTwo(4294967297) or Plain.IsPowerOfTwo(1)) is false
+	(number > 1) and ((2 ^ (number.Logarithm / 2.Logarithm).Round) is number)
