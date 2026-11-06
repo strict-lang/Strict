@@ -1,14 +1,20 @@
 has function MlirFunction
 has position Number
-constant Looped = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "index"), InstructionEntry(InstructionType.IndexCall, "numbers", (2, 1, -1)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "value"), InstructionEntry.Binary(InstructionType.Add, (3, 2, 4)), InstructionEntry.Named(InstructionType.InvokeWriteToList, 4, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 6))
+constant NumbersLoop = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1))
+constant ElementRead = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "index"), InstructionEntry(InstructionType.IndexCall, "numbers", (2, 1, -1)))
+constant ValueAdded = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "value"), InstructionEntry.Binary(InstructionType.Add, (3, 2, 4)))
+constant AddedWritten = (InstructionEntry.Named(InstructionType.InvokeWriteToList, 4, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 6))
+constant Looped = NumbersLoop + ElementRead + ValueAdded + AddedWritten
 constant Body = List(InstructionEntry) + MlirLoops.Emptied + Looped
 constant Doubler = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Doubled", List(MemberEntry) + MlirLists.Items, "Strict/List(Number)", Body))
 constant Doubling = MlirKernel(Doubler, 2)
 constant Uncollected = MlirKernel(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Doubled", List(MemberEntry) + MlirLists.Items, "Strict/List(Number)", Looped)), 1)
-constant Summed = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "index"), InstructionEntry(InstructionType.IndexCall, "numbers", (2, 1, -1)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "sum"), InstructionEntry.Binary(InstructionType.Add, (3, 2, 4)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 4, "sum"), InstructionEntry.Jump(InstructionType.LoopEnd, 6))
+constant SumAdded = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "sum"), InstructionEntry.Binary(InstructionType.Add, (3, 2, 4)))
+constant SumStored = (InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 4, "sum"), InstructionEntry.Jump(InstructionType.LoopEnd, 6))
+constant Summed = NumbersLoop + ElementRead + SumAdded + SumStored
 constant Summing = MlirKernel(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Sum", List(MemberEntry) + MlirLists.Items, "Strict/Number", Summed)), 1)
 constant Squaring = MlirKernel(MlirDeviceDot.Squaring.function, 2)
-constant Calling = MlirKernel(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), MethodEntry.GoCall, InstructionEntry.Jump(InstructionType.LoopEnd, 1)))), 1)
+constant Calling = MlirKernel(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", NumbersLoop + MethodEntry.GoCall + InstructionEntry.Jump(InstructionType.LoopEnd, 1))), 1)
 IsSimple Boolean
 	Doubling.IsSimple
 	Calling.IsSimple is false

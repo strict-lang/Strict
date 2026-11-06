@@ -17,7 +17,7 @@ ImplicitType(nameIndex Number) Text
 	HeaderTokens("has", "texts").ImplicitType(1) is "Texts"
 	if (tokens(0) is "constant") and (nameIndex + 1 is tokens.Length)
 		return "Number"
-	tokens(nameIndex).Substring(0, 1).Upper + tokens(nameIndex).Substring(1, tokens(nameIndex).Length - 1)
+	tokens(nameIndex).Capitalize
 ValueType(start Number) Text
 	HeaderTokens("constant", "a", "=", "(", "1", ",", "2", ")").ValueType(3) is "Numbers"
 	HeaderTokens("constant", "a", "=", "-", "1").ValueType(3) is "Number"

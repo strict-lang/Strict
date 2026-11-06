@@ -3,16 +3,21 @@ has position Number
 constant Constraint = "ConstraintNotMet: numbers with Length is 2 is false for "
 constant Validating = MethodEntry("Validated", List(MemberEntry), "Strict/Math/Pairing", (InstructionEntry.LoadText(0, Constraint), InstructionEntry.Return(0)))
 constant Pairing = TypeEntry("Strict/Math/Pairing", List(MemberEntry) + MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false, 32, 2), List(MethodEntry) + Validating)
-constant Constructing = InstructionEntry.Invoke(1, ("Strict/Math/Pairing", "from", "Pairing", "numbers"), List(Number) + 0, -1)
+constant PairingFrom = ("Strict/Math/Pairing", "from", "Pairing", "numbers")
+constant Constructing = InstructionEntry.Invoke(1, PairingFrom, List(Number) + 0, -1)
 constant Reading = InstructionEntry.Invoke(1, ("Strict/List(Number)", "X", "Strict/Number"), List(Number), 0)
-constant Building = MethodEntry("Doubled", List(MemberEntry), "Strict/Math/Pairing", (MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Number)", (0, 6, -1, 0)), "listResult0"), InstructionEntry.LoadNumber(1, 2), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "listResult0"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "listResult0"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "listResult0"), InstructionEntry.Invoke(3, ("Strict/Math/Pairing", "from", "Pairing", "numbers"), List(Number) + 2, -1), InstructionEntry.Return(3)))
+constant PairWritten = (MlirOwned.Empty, InstructionEntry.LoadNumber(1, 2), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "listResult0"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "listResult0"))
+constant PairConstructed = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "listResult0"), InstructionEntry.Invoke(3, PairingFrom, List(Number) + 2, -1), InstructionEntry.Return(3))
+constant Building = MethodEntry("Doubled", List(MemberEntry), "Strict/Math/Pairing", PairWritten + PairConstructed)
 constant Built = MlirPairs(MlirFunction(List(TypeEntry) + Pairing, Pairing, Building), 3)
 constant Sample = MlirPairs(MlirFunction(List(TypeEntry) + Pairing, Pairing, Validating), 1)
 constant Summing = InstructionEntry.Invoke(0, ("Strict/Math/Pairing", "Doubled", "Strict/Math/Pairing"), List(Number), -1)
 constant Rewrapped = MlirPairs(MlirFunction(List(TypeEntry) + Pairing, Pairing, MethodEntry("Run", List(MemberEntry), "None", (Summing, Constructing))), 1)
 constant Twice = VmValue.OfList((VmValue.OfNumber(1), VmValue.OfNumber(2)))
 constant Instances = MlirInstances(Sample.function, 1)
-constant Appending = ("    %t3pl = llvm.load %v_listResult0 : !llvm.ptr -> f64", "    %t3pe = llvm.load %r1 : !llvm.ptr -> f64", "    %t3pk = func.call @strict_two_x(%t3pl) : (f64) -> f64", "    %t3pp = func.call @strict_two_packed(%t3pk, %t3pe) : (f64, f64) -> f64", "    llvm.store %t3pp, %v_listResult0 : f64, !llvm.ptr")
+constant AppendLoads = ("    %t3pl = llvm.load %v_listResult0 : !llvm.ptr -> f64", "    %t3pe = llvm.load %r1 : !llvm.ptr -> f64")
+constant AppendPacked = ("    %t3pk = func.call @strict_two_x(%t3pl) : (f64) -> f64", "    %t3pp = func.call @strict_two_packed(%t3pk, %t3pe) : (f64, f64) -> f64", "    llvm.store %t3pp, %v_listResult0 : f64, !llvm.ptr")
+constant Appending = AppendLoads + AppendPacked
 IsPaired(kind Text) Boolean
 	Built.Appended(Building.instructions(3), MlirLists(Built.function, 3)) is Appending
 	Text.Combine(Built.Appended(Building.instructions(4), MlirLists(Built.function, 3))).IndexOf("push(") > 0

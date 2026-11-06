@@ -5,7 +5,7 @@ constant Twice = MlirDevice.Twice.function
 constant Singled = MlirFunction(Twice, Float = "f32")
 constant Checked = MlirGpu.Checking.function
 constant Layered = MlirGpu.Layering.function
-constant Summed = MlirFunction(Layered.types, GpuSamples.Layered, GpuSamples.Summed)
+constant Summed = MlirFunction(Layered.types, GpuLayerSamples.Layered, GpuLayerSamples.Summed)
 constant Calling = MlirDeviceStatements(Doubled, 4)
 constant Call = Doubled.method.instructions(4)
 constant Multiplying = MlirDeviceStatements(Twice, 2)

@@ -1,7 +1,8 @@
 has function MlirFunction
 has position Number
 constant PricesCode = InstructionEntry.Invoke(1, ("Strict/Dictionary(Text, Number)", "Code", "Strict/Text"), List(Number), 0)
-constant Pricing = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MemberEntry("prices", "Strict/Dictionary(Text, Number)", List(InstructionEntry), false), "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "prices"), PricesCode)))
+constant Prices = MemberEntry("prices", "Strict/Dictionary(Text, Number)", List(InstructionEntry), false)
+constant Pricing = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + Prices, "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "prices"), PricesCode)))
 IsPairCode(entry InstructionEntry) Boolean
 	MlirCodes(Pricing, 1).IsPairCode(Pricing.method.instructions(1))
 	MlirCodes(MlirTexts.Joined, 7).IsPairCode(MlirTexts.Joined.method.instructions(7)) is false

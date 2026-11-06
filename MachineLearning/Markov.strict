@@ -27,7 +27,7 @@ Next(context Text) Text
 	if count is 0
 		return ""
 	let position = Position(context, count.Random.Floor)
-	text.Substring(position + context.Length, 1)
+	text(position + context.Length) to Text
 Generated(start Text, length Number) Text
 	Sample.Generated("bc", 1) is "bca"
 	Sample.Generated("bd", 5) is "bd"

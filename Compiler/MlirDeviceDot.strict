@@ -2,10 +2,14 @@ has function MlirFunction
 has at Number
 constant Summed = MlirFunction(MlirDeviceStatements.Summed, Float = "f32")
 constant Summing = MlirDeviceDot(Summed, 2)
-constant Squaring = MlirDeviceDot(MlirFunction(List(TypeEntry) + GpuSamples.Layered, GpuSamples.Layered, GpuSamples.Squared, List(Number), -1, "", "f32"), 2)
-constant Kinds = (InstructionType.LoadVariableToRegister, InstructionType.LoadVariableToRegister, InstructionType.LoadVariableToRegister, InstructionType.IndexCall, InstructionType.CheckError, InstructionType.Multiply, InstructionType.Add, InstructionType.StoreRegisterToVariable, InstructionType.LoopEnd)
+constant Squaring = MlirDeviceDot(MlirFunction(List(TypeEntry) + GpuLayerSamples.Layered, GpuLayerSamples.Layered, GpuNumberSamples.Squared, List(Number), -1, "", "f32"), 2)
+constant Loads = (InstructionType.LoadVariableToRegister, InstructionType.LoadVariableToRegister, InstructionType.LoadVariableToRegister)
+constant Indexing = (InstructionType.IndexCall, InstructionType.CheckError)
+constant Accumulating = (InstructionType.Multiply, InstructionType.Add, InstructionType.StoreRegisterToVariable, InstructionType.LoopEnd)
+constant Kinds = Loads + Indexing + Accumulating
 constant Types = " : (!llvm.ptr, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, i64, i64) -> f32"
-constant Offsets = (InstructionType.LoadVariableToRegister, InstructionType.LoadVariableToRegister, InstructionType.LoadVariableToRegister, InstructionType.Add, InstructionType.IndexCall, InstructionType.CheckError, InstructionType.LoadVariableToRegister, InstructionType.LoadVariableToRegister, InstructionType.Add, InstructionType.IndexCall, InstructionType.CheckError, InstructionType.Multiply, InstructionType.Add, InstructionType.StoreRegisterToVariable, InstructionType.LoopEnd)
+constant OffsetIndexing = (InstructionType.Add, InstructionType.IndexCall, InstructionType.CheckError)
+constant Offsets = Loads + OffsetIndexing + (InstructionType.LoadVariableToRegister, InstructionType.LoadVariableToRegister) + OffsetIndexing + Accumulating
 constant Lanes = ", %lane, %lanes)"
 constant OffsetTypes = " : (!llvm.ptr, !llvm.ptr, i64, i64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64) -> f32"
 constant ProductAt = 12

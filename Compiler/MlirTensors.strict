@@ -5,14 +5,26 @@ constant Productions = ("left", "right", "shape", "strides")
 constant Hadamards = ("values", "group")
 constant Sylvesters = ("values", "flips", "size")
 constant Convolutions = ("values", "affine", "weights", "shape")
-constant Merging = MethodEntry("Merged", List(MemberEntry), "Strict/List(Number)", (InstructionEntry.Invoke(0, ("Strict/Softmax", "Shares", "Strict/List(Number)"), List(Number), -1), InstructionEntry.Invoke(1, ("Strict/Softmax", "Weighted", "Strict/Number"), List(Number), -1), MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "queries"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 3)))
-constant Attended = TypeEntry("Strict/Attention", (MemberEntry("queries", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("keys", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("values", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("heads", "Strict/Number", List(InstructionEntry), false), MemberEntry("groups", "Strict/Number", List(InstructionEntry), false), MemberEntry("size", "Strict/Number", List(InstructionEntry), false), MemberEntry("sequences", "Strict/Number", List(InstructionEntry), false), MemberEntry("causal", "Strict/Boolean", List(InstructionEntry), false), MemberEntry("valueOffset", "Strict/Number", List(InstructionEntry), false), MemberEntry("valueStride", "Strict/Number", List(InstructionEntry), false), MemberEntry("quantized", "Strict/Boolean", List(InstructionEntry), false), MemberEntry("routing", "Strict/Number", List(InstructionEntry), false), MemberEntry("exact", "Strict/Number", List(InstructionEntry), false)), List(MethodEntry) + Merging)
+constant ValueCollected = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 3))
+constant SoftmaxCalls = (InstructionEntry.Invoke(0, ("Strict/Softmax", "Shares", "Strict/List(Number)"), List(Number), -1), InstructionEntry.Invoke(1, ("Strict/Softmax", "Weighted", "Strict/Number"), List(Number), -1))
+constant QueriesLoop = (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "queries"), InstructionEntry.LoopBegin(0, -1))
+constant Merging = MethodEntry("Merged", List(MemberEntry), "Strict/List(Number)", SoftmaxCalls + QueriesLoop + ValueCollected)
+constant QueryKeys = (MemberEntry("queries", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("keys", "Strict/List(Number)", List(InstructionEntry), false))
+constant ValueHeads = (MemberEntry("values", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("heads", "Strict/Number", List(InstructionEntry), false), MemberEntry("groups", "Strict/Number", List(InstructionEntry), false))
+constant Sequencing = (MemberEntry("size", "Strict/Number", List(InstructionEntry), false), MemberEntry("sequences", "Strict/Number", List(InstructionEntry), false), MemberEntry("causal", "Strict/Boolean", List(InstructionEntry), false))
+constant ValueOffsets = (MemberEntry("valueOffset", "Strict/Number", List(InstructionEntry), false), MemberEntry("valueStride", "Strict/Number", List(InstructionEntry), false))
+constant Quantizing = (MemberEntry("quantized", "Strict/Boolean", List(InstructionEntry), false), MemberEntry("routing", "Strict/Number", List(InstructionEntry), false), MemberEntry("exact", "Strict/Number", List(InstructionEntry), false))
+constant Attended = TypeEntry("Strict/Attention", QueryKeys + ValueHeads + Sequencing + ValueOffsets + Quantizing, List(MethodEntry) + Merging)
 constant Ending = ("    %isTensored = arith.cmpf une, %tensored, %zero : f64", "    cf.cond_br %isTensored, ^tensored, ^computed", "  ^tensored:", "    return %tensored : f64", "  ^computed:")
 constant Attending = MlirTensors(MlirFunction(List(TypeEntry) + Attended, Attended, Merging))
 constant Rotating = MlirTensors(MlirFunction(List(TypeEntry) + Attended, Attended, MethodEntry("Rotated", List(MemberEntry), "Strict/List(Number)", Merging.instructions(1))))
-constant Multiplied = TypeEntry("Strict/Products", (MemberEntry("left", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("right", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("shape", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("strides", "Strict/List(Number)", List(InstructionEntry), false)), List(MethodEntry) + MethodEntry("Multiplied", List(MemberEntry), "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "left"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 3))))
+constant Factors = (MemberEntry("left", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("right", "Strict/List(Number)", List(InstructionEntry), false))
+constant ProductShape = (MemberEntry("shape", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("strides", "Strict/List(Number)", List(InstructionEntry), false))
+constant LeftLoop = (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "left"), InstructionEntry.LoopBegin(0, -1))
+constant Multiplied = TypeEntry("Strict/Products", Factors + ProductShape, List(MethodEntry) + MethodEntry("Multiplied", List(MemberEntry), "Strict/List(Number)", LeftLoop + ValueCollected))
 constant Multiplying = MlirTensors(MlirFunction(List(TypeEntry) + Multiplied, Multiplied, Multiplied.methods.First))
-constant Softmaxing = MlirTensors(MlirFunction(List(TypeEntry), TypeEntry("Strict/Softmax", List(MemberEntry), List(MethodEntry)), TypeCodegen("Strict/Softmax", ("Shares(scores Numbers, width Number) Numbers", "\tfor scores.Length", "\t\tscores(index) / width"), ValueCodegen.NoTypes, List(Text)).Entry.methods.First))
+constant SoftmaxShares = TypeCodegen("Strict/Softmax", ("Shares(scores Numbers, width Number) Numbers", "\tfor scores.Length", "\t\tscores(index) / width"), ValueCodegen.NoTypes, List(Text)).Entry
+constant Softmaxing = MlirTensors(MlirFunction(List(TypeEntry), TypeEntry("Strict/Softmax", List(MemberEntry), List(MethodEntry)), SoftmaxShares.methods.First))
 Kind Text
 	Attending.Kind is "Attention"
 	Multiplying.Kind is "Products"
@@ -97,8 +109,8 @@ Members(kind Text) Texts
 Marker(kind Text) Text
 	Attending.Marker("Products") is "@strict_gpu_products("
 	Attending.Members("Softmax") is ("scores", "width") and (Multiplying.Named(Sylvesters) is "")
-	MlirTensors(MlirFunction(List(TypeEntry), Multiplied, GpuSamples.Summed)).Named(Convolutions) is "Convolution"
-	MlirTensors(MlirFunction(List(TypeEntry), Multiplied, GpuSamples.Summed)).Named(Productions) is ""
+	MlirTensors(MlirFunction(List(TypeEntry), Multiplied, GpuLayerSamples.Summed)).Named(Convolutions) is "Convolution"
+	MlirTensors(MlirFunction(List(TypeEntry), Multiplied, GpuLayerSamples.Summed)).Named(Productions) is ""
 	"@strict_gpu_" + kind.Lower + "("
 Used(program Text) Texts
 	Attending.Used("x @strict_gpu_products(y") is ("Products")

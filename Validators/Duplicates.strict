@@ -68,5 +68,5 @@ IsTest(line Text) Boolean
 	let first = Tokenizer(line).Tokens.First
 	let isStatement = first is in ("let", "mutable", "constant", "if", "for", "return", "else")
 	let isComparing = (line.IndexOf(" is ") > 0) or (line.IndexOf(" < ") > 0) or (line.IndexOf(" > ") > 0)
-	let start = first.Substring(0, 1)
+	let start = first(0)
 	(isStatement is false) and (isComparing or (start.Lower is not start) or (start is "(") or Tokenizer.IsDigit(start))

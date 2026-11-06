@@ -43,7 +43,7 @@ MemberNames Texts
 IsPublic(name Text) Boolean
 	Sample.IsPublic("Count")
 	Sample.IsPublic("count") is false
-	name.Substring(0, 1) is name.Substring(0, 1).Upper
+	name(0) is name(0).Upper
 UsageCount(name Text) Number
 	Sample.UsageCount("logger") is 2
 	mutable count = 0

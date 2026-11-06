@@ -1,14 +1,24 @@
 has function MlirFunction
 has position Number
 constant Cells = MemberEntry("cells", "Strict/List(Rgb)", List(InstructionEntry), false)
-constant Picking = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "board"), InstructionEntry(InstructionType.FieldLoad, ("cells", "Board"), (1, 0, -1, -2)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "list0"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "pixel"), InstructionEntry(InstructionType.IndexCall, "list0", (3, 2, -1)), InstructionEntry.Return(3))
+constant BoardCells = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "board"), InstructionEntry(InstructionType.FieldLoad, ("cells", "Board"), (1, 0, -1, -2)))
+constant CellsStored = BoardCells + InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "list0")
+constant PixelPicked = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "pixel"), InstructionEntry(InstructionType.IndexCall, "list0", (3, 2, -1)), InstructionEntry.Return(3))
+constant Picking = CellsStored + PixelPicked
 constant Picked = MethodEntry("Picked", (MemberEntry("board", "Strict/Board", List(InstructionEntry), false), MemberEntry("pixel", "Strict/Number", List(InstructionEntry), false)), "Strict/Rgb", Picking)
-constant Blurring = (MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Rgb)", (0, 6, -1, 0)), "forResult"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "board"), InstructionEntry(InstructionType.FieldLoad, ("cells", "Board"), (1, 0, -1, -2)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "list0"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "list0"), InstructionEntry.LoopBegin(2, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "board"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "index"), InstructionEntry.Invoke(5, ("Strict/Board", "Picked", "Strict/Rgb", "board", "pixel"), (3, 4), -1), InstructionEntry.Named(InstructionType.InvokeWriteToList, 5, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 9))
+constant ResultCreated = (MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Rgb)", (0, 6, -1, 0)), "forResult"))
+constant CellsLooped = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "list0"), InstructionEntry.LoopBegin(2, -1))
+constant PickArguments = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "board"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "index"))
+constant PickCollected = (InstructionEntry.Invoke(5, ("Strict/Board", "Picked", "Strict/Rgb", "board", "pixel"), (3, 4), -1), InstructionEntry.Named(InstructionType.InvokeWriteToList, 5, "forResult"))
+constant Blurring = ResultCreated + CellsStored + CellsLooped + PickArguments + PickCollected + InstructionEntry.Jump(InstructionType.LoopEnd, 9)
 constant Blurred = MethodEntry("Blurred", List(MemberEntry) + MemberEntry("board", "Strict/Board", List(InstructionEntry), false), "Strict/List(Rgb)", Blurring)
 constant Board = TypeEntry("Strict/Board", (MemberEntry("width", "Strict/Number", List(InstructionEntry), false), Cells), (Picked, Blurred))
 constant Types = (MlirLayout.Byting, MlirLanes.Rgb, Board)
 constant Kernel = MlirWholeKernel(MlirFunction(Types, Board, Blurred), 5)
-constant Measuring = (Picking(0), Picking(1), Picking(2), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "board"), InstructionEntry(InstructionType.FieldLoad, ("Size", "Board"), (3, 2, -1, -2)), InstructionEntry(InstructionType.FieldLoad, ("Width", "Sizing"), (4, 3, -1)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 5, "pixel"), InstructionEntry.Binary(InstructionType.Modulo, (5, 4, 6)), InstructionEntry(InstructionType.IndexCall, "list0", (7, 6, -1)), InstructionEntry.Return(7))
+constant SizeLoaded = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "board"), InstructionEntry(InstructionType.FieldLoad, ("Size", "Board"), (3, 2, -1, -2)))
+constant PixelWrapped = (InstructionEntry(InstructionType.FieldLoad, ("Width", "Sizing"), (4, 3, -1)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 5, "pixel"), InstructionEntry.Binary(InstructionType.Modulo, (5, 4, 6)))
+constant WrappedPicked = (InstructionEntry(InstructionType.IndexCall, "list0", (7, 6, -1)), InstructionEntry.Return(7))
+constant Measuring = CellsStored + SizeLoaded + PixelWrapped + WrappedPicked
 constant Measured = TypeEntry("Strict/Board", (MemberEntry("Size", "Strict/Math/Sizing", List(InstructionEntry), false), Cells), (MethodEntry("Picked", Picked.parameters, "Strict/Rgb", Measuring), Blurred))
 constant Measure = MlirWholeKernel(MlirFunction((MlirLayout.Byting, MlirLanes.Rgb, MlirCouples.Sizing, Measured), Measured, Blurred), 5)
 constant Uncollected = MlirWholeKernel(MlirFunction(Kernel.function, method = MethodEntry(Blurred, instructions = Blurring.Slice(0, 9) + InstructionEntry.Named(InstructionType.InvokeWriteToList, 4, "forResult") + Blurring(10))), 5)

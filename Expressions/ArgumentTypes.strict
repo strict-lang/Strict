@@ -1,10 +1,12 @@
 has inference TypeInference
 constant Scopes = (Scope(List(Text) + "number", List(Text) + "Number"), Scope(("size", "depth"), ("Size", "Number")), Scope(List(Text) + "width", List(Text) + "Number"), Scope(List(Text) + "number", List(Text) + "Number"))
 constant Methods = (Scope(("Grow", "Spread"), ("Count", "Count")), KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers)
-constant Parameters = (Scope(("Grow", "Grow types", "Grow required", "Spread", "Spread types", "from", "from types"), ("area", "Area", "1", "area,size", "Area,Size", "size", "Size")), KnownTypes.NoMembers, Scope(List(Text) + "from", List(Text) + "width"), Scope(("from", "from types"), ("text", "Text")))
+constant CountParameters = Scope(("Grow", "Grow types", "Grow required", "Spread", "Spread types", "from", "from types"), ("area", "Area", "1", "area,size", "Area,Size", "size", "Size"))
+constant Parameters = (CountParameters, KnownTypes.NoMembers, Scope(List(Text) + "from", List(Text) + "width"), Scope(("from", "from types"), ("text", "Text")))
 constant Shapes = (Scope(List(Text) + "Limit", List(Text) + "3"), KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers)
 constant Sizing = ArgumentTypes(TypeInference(KnownTypes(("Count", "Area", "Size", "Letter"), Scopes, Methods, Parameters), Shapes))
-constant Generics = ArgumentTypes(TypeInference(KnownTypes(("Range", "Generic"), (Scope(List(Text) + "start", List(Text) + "Number"), Scope(List(Text) + "type", List(Text) + "Range")), (KnownTypes.NoMembers, KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers)), Shapes))
+constant RangeMembers = (Scope(List(Text) + "start", List(Text) + "Number"), Scope(List(Text) + "type", List(Text) + "Range"))
+constant Generics = ArgumentTypes(TypeInference(KnownTypes(("Range", "Generic"), RangeMembers, KnownTypes.NoMemberPair, KnownTypes.NoMemberPair), Shapes))
 constant Grown = SyntaxParser(Tokenizer("count.Grow(count)").Tokens).Parse
 constant Listed = SyntaxParser(Tokenizer("1 > 0 and (count)").Tokens).Parse
 constant Limited = SyntaxParser(Tokenizer("count.Limit").Tokens).Parse
@@ -13,7 +15,8 @@ constant Spread = SyntaxParser(Tokenizer("count.Spread(area, size, size)").Token
 constant Counted = Scope(("count", "area", "size"), ("Count", "Area", "Size"))
 constant Owned = Counted.With("self type", "Count")
 constant OwnGrown = SyntaxParser(Tokenizer("Grow(count)").Tokens).Parse
-constant Copies = (SyntaxParser(Tokenizer("Area(area, size, depth = 2)").Tokens).Parse, SyntaxParser(Tokenizer("Area(area, depth = 2)").Tokens).Parse, SyntaxParser(Tokenizer("Area(size, size, depth = 2)").Tokens).Parse, SyntaxNode("Call", "Area"), SyntaxParser(Tokenizer("Area(area, size)").Tokens).Parse, SyntaxParser(Tokenizer("Area(size)").Tokens).Parse, SyntaxParser(Tokenizer("Number(5)").Tokens).Parse)
+constant DepthCopies = (SyntaxParser(Tokenizer("Area(area, size, depth = 2)").Tokens).Parse, SyntaxParser(Tokenizer("Area(area, depth = 2)").Tokens).Parse, SyntaxParser(Tokenizer("Area(size, size, depth = 2)").Tokens).Parse)
+constant Copies = DepthCopies + (SyntaxNode("Call", "Area"), SyntaxParser(Tokenizer("Area(area, size)").Tokens).Parse, SyntaxParser(Tokenizer("Area(size)").Tokens).Parse, SyntaxParser(Tokenizer("Number(5)").Tokens).Parse)
 constant Mixed = "CopyChangesMustBeNamed: Area(area, size, depth = 2) copies area, name every change like depth = 2"
 Checked(node SyntaxNode, scope Scope, current Scope) Text
 	Sizing.Checked(Grown, Counted, Counted).StartsWith("ArgumentTypeMismatch")

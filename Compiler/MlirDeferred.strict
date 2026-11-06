@@ -1,13 +1,20 @@
 has function MlirFunction
 has position Number
-constant Picking = (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.LoadNumber(1, 0), InstructionEntry(InstructionType.IndexCall, "numbers", (2, 1, -1)), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 2), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "value"), InstructionEntry.Binary(InstructionType.Add, (2, 3, 4)), InstructionEntry.Named(InstructionType.InvokeWriteToList, 4, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 7))
+constant NumbersLoop = (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1))
+constant FirstChecked = (InstructionEntry.LoadNumber(1, 0), InstructionEntry(InstructionType.IndexCall, "numbers", (2, 1, -1)), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 2))
+constant ValueAdded = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "value"), InstructionEntry.Binary(InstructionType.Add, (2, 3, 4)), InstructionEntry.Named(InstructionType.InvokeWriteToList, 4, "forResult"))
+constant Picking = NumbersLoop + FirstChecked + ValueAdded + InstructionEntry.Jump(InstructionType.LoopEnd, 7)
 constant Reading = MlirDeferred(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, MethodEntry("Picked", List(MemberEntry) + MlirLists.Items, "Strict/List(Number)", Picking)), 2)
 constant Doubling = MlirDeferred(MlirParallel.Doubling.function, 2)
 constant Original = List(Text) + "  original"
 constant Failing = ("    %failed = llvm.alloca %one x i1 : (i64) -> !llvm.ptr", "    %failedNot = arith.constant false", "    llvm.store %failedNot, %failed : i1, !llvm.ptr")
 constant Checking = "    %failedNow = llvm.load %failed : !llvm.ptr -> i1"
-constant Nesting = MlirDeferred(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoopBegin(0, -1), InstructionEntry.LoopBegin(0, -1), InstructionEntry.LoadNumber(1, 0), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 1), InstructionEntry.Jump(InstructionType.LoopEnd, 3), InstructionEntry.Jump(InstructionType.LoopEnd, 5)))), 0)
-constant Looping = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Jump(InstructionType.LoopEnd, 2), InstructionEntry.Jump(InstructionType.LoopEnd, 1))))
+constant NestedCheck = (InstructionEntry.LoopBegin(0, -1), InstructionEntry.LoopBegin(0, -1), InstructionEntry.LoadNumber(1, 0), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 1))
+constant NestedEnds = (InstructionEntry.Jump(InstructionType.LoopEnd, 3), InstructionEntry.Jump(InstructionType.LoopEnd, 5))
+constant Nesting = MlirDeferred(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, MethodEntry("Run", List(MemberEntry), "None", NestedCheck + NestedEnds)), 0)
+constant NumbersLoops = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.LoopBegin(0, -1))
+constant LoopingEnds = (InstructionEntry.Jump(InstructionType.LoopEnd, 2), InstructionEntry.Jump(InstructionType.LoopEnd, 1))
+constant Looping = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", NumbersLoops + LoopingEnds))
 IsDeferring Boolean
 	Reading.IsDeferring
 	Doubling.IsDeferring is false

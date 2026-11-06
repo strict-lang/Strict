@@ -189,7 +189,7 @@ Temp(suffix Text) Text
 	MlirInstances(Nesting, 1).Default(Outer, Outer.members(1), "%s", "")(1) is "    llvm.store %t1c, %s : f64, !llvm.ptr"
 	MlirInstances(Nesting, 1).Default(Outer, Outer.members(0), "%s", "")(2) is "    %t1v = llvm.load %s : !llvm.ptr -> f64"
 	MlirInstances(Nesting, 1).Default(Outer, Outer.members(0), "%s", "")(4) is "    %t1vn = arith.constant 8 : i64"
-	MlirInstances(Shapes, 0).Fresh(GpuSamples.Numbered, "%s", "", List(Text)).Last.IndexOf("%zero, %s :") is 15
+	MlirInstances(Shapes, 0).Fresh(GpuNumberSamples.Numbered, "%s", "", List(Text)).Last.IndexOf("%zero, %s :") is 15
 	MlirInstances(Shapes, 0).Fresh(Shapes.type, "%s", "", List(Text))(0) is "    %t0oz = arith.constant 8 : i64"
 	MlirInstances(Shapes, 0).Fresh(Shapes.type, "%s", "", List(Text)).Last is "    llvm.store %t0of, %s : f64, !llvm.ptr"
 	MlirInstances(Shapes, 1).Temp("o") is "%t1o"

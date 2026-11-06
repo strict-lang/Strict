@@ -4,7 +4,8 @@ constant Items = MemberEntry("items", "Strict/List(Strict/Math/Tripling)", List(
 constant Remaking = InstructionEntry.Invoke(2, ("Strict/Math/Tripling", "Made", "Strict/Math/Tripling"), List(Number), 1)
 constant Reading = InstructionEntry(InstructionType.IndexCall, "items", (1, 0))
 constant Moving = (InstructionEntry.LoadNumber(0, 0), Reading, Remaking, InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 2, "items(0)"), InstructionEntry.Return(2))
-constant Keeping = (InstructionEntry.LoadNumber(0, 0), Reading, InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "kept"), Remaking, InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 2, "items(0)"), InstructionEntry.Return(2))
+constant KeptRead = (InstructionEntry.LoadNumber(0, 0), Reading, InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "kept"))
+constant Keeping = KeptRead + (Remaking, InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 2, "items(0)"), InstructionEntry.Return(2))
 constant Returning = Moving.Slice(0, 4) + Reading + InstructionEntry.Return(1)
 constant Later = MlirElements(MlirFunction((MlirDestined.Maker, MlirFlats.Summing), MlirDestined.Maker, MethodEntry("Later", List(MemberEntry) + Items, "None", Returning)), 2)
 constant Moved = MlirElements(MlirFunction((MlirDestined.Maker, MlirFlats.Summing), MlirDestined.Maker, MethodEntry("Moved", List(MemberEntry) + Items, "None", Moving)), 2)
@@ -37,7 +38,7 @@ IsKept(list Text) Boolean
 Index(text Text, temp Text) Text
 	Moved.Index("0", "%i") is "    %i = arith.constant 0.0 : f64"
 	Moved.Index("at", "%i") is "    %i = llvm.load %v_at : !llvm.ptr -> f64"
-	let isNumber = "0123456789".IndexOf(text.Substring(0, 1)) is not -1
+	let isNumber = "0123456789".IndexOf(text(0)) is not -1
 	isNumber then "    " + temp + " = arith.constant " + text + ".0 : f64" else function.Load(temp, "%v_" + text)
 FlatResult Text
 	Moved.FlatResult is "Tripling"

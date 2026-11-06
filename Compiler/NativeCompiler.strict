@@ -24,11 +24,11 @@ Locked(target Text) Slow(Boolean)
 		return true
 	logger.Log("Waiting for the other build of " + target)
 	let started = Process.Elapsed
-	for as long as Process.Elapsed - started < Strict.MaxWait
+	for as long as Process.Elapsed - started < Strict.BuildWait
 		Process.Wait(0.1)
 		if lock.Locked
 			return true
-	logger.Log("The other build of " + target + " did not finish within " + Strict.MaxWait + " seconds")
+	logger.Log("The other build of " + target + " did not finish within " + Strict.BuildWait + " seconds")
 	false
 Lock(target Text) Text
 	NativeCompiler.Lock("Examples/Sum.strict") is "./Examples/obj/Sum.strict.lock"

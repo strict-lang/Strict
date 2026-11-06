@@ -1,9 +1,12 @@
 has functions List(MlirFunction)
 has entries Number
-constant Again = MethodEntry("Again", List(MemberEntry), "Strict/Number", (InstructionEntry.Invoke(0, ("Strict/Looped", "Again", "Strict/Number"), List(Number), -1), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 0), InstructionEntry.Return(0)))
-constant Starting = MethodEntry("Run", List(MemberEntry), "Strict/Number", (InstructionEntry.Invoke(0, ("Strict/Looped", "Again", "Strict/Number"), List(Number), -1), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 0), InstructionEntry.Return(0)))
+constant AgainCalled = (InstructionEntry.Invoke(0, ("Strict/Looped", "Again", "Strict/Number"), List(Number), -1), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 0), InstructionEntry.Return(0))
+constant Again = MethodEntry("Again", List(MemberEntry), "Strict/Number", AgainCalled)
+constant Starting = MethodEntry("Run", List(MemberEntry), "Strict/Number", AgainCalled)
 constant Looped = MlirModule(List(TypeEntry) + TypeEntry("Strict/Looped", List(MemberEntry), (Starting, Again)), "Run")
-constant StackChecked = ("    %stackShort = func.call @strict_stack_short() : () -> i1", "    cf.cond_br %stackShort, ^stackOverflowed, ^stackChecked", "  ^stackOverflowed:", "    %stackOverflow = func.call @strict_stack_overflowed() : () -> f64", "    return %stackOverflow : f64", "  ^stackChecked:")
+constant StackTested = ("    %stackShort = func.call @strict_stack_short() : () -> i1", "    cf.cond_br %stackShort, ^stackOverflowed, ^stackChecked", "  ^stackOverflowed:")
+constant OverflowReturned = ("    %stackOverflow = func.call @strict_stack_overflowed() : () -> f64", "    return %stackOverflow : f64", "  ^stackChecked:")
+constant StackChecked = StackTested + OverflowReturned
 constant Looping = MlirRecursion(Looped.Functions, 1)
 Recursive(edges List(Numbers)) Texts
 	Looping.Recursive(Looping.Edges) is ("Looped_Again_0")

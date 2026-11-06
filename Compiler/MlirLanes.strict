@@ -7,11 +7,22 @@ constant Painted = InstructionEntry.Invoke(3, ("Strict/Rgba", "from", "Rgba", "r
 constant Made = InstructionEntry.Invoke(3, ("Strict/Rgb", "from", "Rgb", "red", "green", "blue"), (0, 1, 2), -1)
 constant Greens = InstructionEntry(InstructionType.FieldLoad, ("green", "Rgb"), (4, 3, -1))
 constant Making = MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 1), InstructionEntry.LoadNumber(1, 2), InstructionEntry.LoadNumber(2, 3), Made, Greens))
-constant Collecting = MlirFunction((MlirLayout.Byting, Rgb), Rgb, MethodEntry("Collected", List(MemberEntry) + MemberEntry("colors", "Strict/List(Rgb)", List(InstructionEntry), false), "Strict/List(Rgb)", (MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Rgb)", (0, 6, -1, 0)), "forResult"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "colors"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 3), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "forResult"), InstructionEntry.Return(0))))
+constant ResultCreated = (MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Rgb)", (0, 6, -1, 0)), "forResult"))
+constant ColorsLooped = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "colors"), InstructionEntry.LoopBegin(0, -1))
+constant Collects = ResultCreated + ColorsLooped + MlirLayout.ValuesWritten + MlirLayout.ResultReturned
+constant Collecting = MlirFunction((MlirLayout.Byting, Rgb), Rgb, MethodEntry("Collected", List(MemberEntry) + MemberEntry("colors", "Strict/List(Rgb)", List(InstructionEntry), false), "Strict/List(Rgb)", Collects))
 constant Sample = MlirLanes(MlirFunction((MlirLayout.Byting, Rgb, Rgba), Rgb, Making), 3)
-constant Packing = ("    %t3a0 = llvm.load %r0 : !llvm.ptr -> f64", "    %t3s0 = arith.constant 0 : i64", "    %t3b0 = func.call @strict_byte_lane(%t3a0, %t3s0) : (f64, i64) -> i64", "    %t3a1 = llvm.load %r1 : !llvm.ptr -> f64", "    %t3s1 = arith.constant 8 : i64", "    %t3b1 = func.call @strict_byte_lane(%t3a1, %t3s1) : (f64, i64) -> i64", "    %t3a2 = llvm.load %r2 : !llvm.ptr -> f64", "    %t3s2 = arith.constant 16 : i64", "    %t3b2 = func.call @strict_byte_lane(%t3a2, %t3s2) : (f64, i64) -> i64", "    %t3o1 = arith.ori %t3b0, %t3b1 : i64", "    %t3o2 = arith.ori %t3o1, %t3b2 : i64", "    %t3f = arith.sitofp %t3o2 : i64 to f64", "    llvm.store %t3f, %r3 : f64, !llvm.ptr")
+constant RedLane = ("    %t3a0 = llvm.load %r0 : !llvm.ptr -> f64", "    %t3s0 = arith.constant 0 : i64", "    %t3b0 = func.call @strict_byte_lane(%t3a0, %t3s0) : (f64, i64) -> i64")
+constant GreenLane = ("    %t3a1 = llvm.load %r1 : !llvm.ptr -> f64", "    %t3s1 = arith.constant 8 : i64", "    %t3b1 = func.call @strict_byte_lane(%t3a1, %t3s1) : (f64, i64) -> i64")
+constant BlueLane = ("    %t3a2 = llvm.load %r2 : !llvm.ptr -> f64", "    %t3s2 = arith.constant 16 : i64", "    %t3b2 = func.call @strict_byte_lane(%t3a2, %t3s2) : (f64, i64) -> i64")
+constant LanesJoined = ("    %t3o1 = arith.ori %t3b0, %t3b1 : i64", "    %t3o2 = arith.ori %t3o1, %t3b2 : i64", "    %t3f = arith.sitofp %t3o2 : i64 to f64", "    llvm.store %t3f, %r3 : f64, !llvm.ptr")
+constant Packing = RedLane + GreenLane + BlueLane + LanesJoined
 constant Reading = ("    %t4p = llvm.load %r3 : !llvm.ptr -> f64", "    %t4s = arith.constant 8 : i64", "    %t4v = func.call @strict_byte_of(%t4p, %t4s) : (f64, i64) -> f64", "    llvm.store %t4v, %r4 : f64, !llvm.ptr")
-constant Unpacking = ("    %tbyte = llvm.load %instance : !llvm.ptr -> f64", "    %tbyte0s = arith.constant 0 : i64", "    %tbyte0 = func.call @strict_byte_of(%tbyte, %tbyte0s) : (f64, i64) -> f64", "    llvm.store %tbyte0, %v_red : f64, !llvm.ptr", "    %tbyte1s = arith.constant 8 : i64", "    %tbyte1 = func.call @strict_byte_of(%tbyte, %tbyte1s) : (f64, i64) -> f64", "    llvm.store %tbyte1, %v_green : f64, !llvm.ptr", "    %tbyte2s = arith.constant 16 : i64", "    %tbyte2 = func.call @strict_byte_of(%tbyte, %tbyte2s) : (f64, i64) -> f64", "    llvm.store %tbyte2, %v_blue : f64, !llvm.ptr")
+constant PackedLoad = ("    %tbyte = llvm.load %instance : !llvm.ptr -> f64")
+constant RedUnpacked = ("    %tbyte0s = arith.constant 0 : i64", "    %tbyte0 = func.call @strict_byte_of(%tbyte, %tbyte0s) : (f64, i64) -> f64", "    llvm.store %tbyte0, %v_red : f64, !llvm.ptr")
+constant GreenUnpacked = ("    %tbyte1s = arith.constant 8 : i64", "    %tbyte1 = func.call @strict_byte_of(%tbyte, %tbyte1s) : (f64, i64) -> f64", "    llvm.store %tbyte1, %v_green : f64, !llvm.ptr")
+constant BlueUnpacked = ("    %tbyte2s = arith.constant 16 : i64", "    %tbyte2 = func.call @strict_byte_of(%tbyte, %tbyte2s) : (f64, i64) -> f64", "    llvm.store %tbyte2, %v_blue : f64, !llvm.ptr")
+constant Unpacking = PackedLoad + RedUnpacked + GreenUnpacked + BlueUnpacked
 constant Sizes = MlirLanes(MlirCouples.Sample.function, 2)
 IsPacked(kind Text) Boolean
 	Sample.IsPacked("Rgb")

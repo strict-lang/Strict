@@ -5,12 +5,34 @@ constant Adding = InstructionEntry.Binary(InstructionType.Add, (0, 1, 2))
 constant Less = InstructionEntry.Binary(InstructionType.LessThan, (0, 1))
 constant Kinds = MlirSingle.Operators + InstructionType.Modulo
 constant Wrapped = MlirRational(MlirExact(MlirPassed.Wrapped, 5))
-constant Floors = ("    %x2f_e = llvm.load %r1_e : !llvm.ptr -> i64", "    %x2f_q = llvm.load %r1_q : !llvm.ptr -> i64", "    %x2fv = arith.cmpi ne, %x2f_q, %inexact : i64", "    %x2fs = arith.select %x2fv, %x2f_q, %one : i64", "    %x2ft = arith.divsi %x2f_e, %x2fs : i64", "    %x2fp = arith.muli %x2ft, %x2fs : i64", "    %x2fr = arith.subi %x2f_e, %x2fp : i64", "    %x2fn = arith.cmpi slt, %x2fr, %inexact : i64", "    %x2fb = arith.subi %x2ft, %one : i64", "    %x2ff = arith.select %x2fn, %x2fb, %x2ft : i64", "    %x2o_e = llvm.load %r2_e : !llvm.ptr -> i64", "    %x2o_q = llvm.load %r2_q : !llvm.ptr -> i64", "    %x2fx = arith.select %x2fv, %x2ff, %x2o_e : i64", "    %x2fy = arith.select %x2fv, %one, %x2o_q : i64", "    llvm.store %x2fx, %r2_e : i64, !llvm.ptr", "    llvm.store %x2fy, %r2_q : i64, !llvm.ptr")
-constant Comparisons = ("    %x2a_e = llvm.load %r0_e : !llvm.ptr -> i64", "    %x2a_q = llvm.load %r0_q : !llvm.ptr -> i64", "    %x2b_e = llvm.load %r1_e : !llvm.ptr -> i64", "    %x2b_q = llvm.load %r1_q : !llvm.ptr -> i64", "    %x2l = arith.muli %x2a_e, %x2b_q : i64", "    %x2r = arith.muli %x2b_e, %x2a_q : i64", "    %x2w = arith.cmpi ne, %x2a_q, %inexact : i64", "    %x2y = arith.cmpi ne, %x2b_q, %inexact : i64", "    %x2v = arith.andi %x2w, %x2y : i1", "    %x2i = arith.cmpi slt, %x2l, %x2r : i64", "    %c = arith.select %x2v, %x2i, %f : i1")
-constant Wholes = ("    cf.cond_br %kv, ^kwhole(%k_e : i64), ^kreduced", "  ^kreduced:", "    %kw = arith.cmpi ne, %k_q, %inexact : i64", "    %ks = arith.select %kw, %k_q, %one : i64", "    %kd = arith.divsi %k_e, %ks : i64", "    %kp = arith.muli %kd, %ks : i64", "    %kz = arith.cmpi eq, %kp, %k_e : i64", "    %ka = arith.andi %kw, %kz : i1", "    %kc = arith.select %ka, %kd, %kj : i64", "    cf.br ^kwhole(%kc : i64)", "  ^kwhole(%k: i64):")
-constant Sums = ("    %x2a_e = llvm.load %r0_e : !llvm.ptr -> i64", "    %x2a_q = llvm.load %r0_q : !llvm.ptr -> i64", "    %x2b_e = llvm.load %r1_e : !llvm.ptr -> i64", "    %x2b_q = llvm.load %r1_q : !llvm.ptr -> i64", "    %x2l = arith.muli %x2a_e, %x2b_q : i64", "    %x2r = arith.muli %x2b_e, %x2a_q : i64", "    %x2n = arith.addi %x2l, %x2r : i64", "    %x2d = arith.muli %x2a_q, %x2b_q : i64", "    llvm.store %x2n, %r2_e : i64, !llvm.ptr", "    llvm.store %x2d, %r2_q : i64, !llvm.ptr")
-constant Remainders = ("    %x2z = arith.cmpi eq, %x2r, %inexact : i64", "    %x2s = arith.select %x2z, %one, %x2r : i64", "    %x2nq = arith.divsi %x2l, %x2s : i64", "    %x2nm = arith.muli %x2nq, %x2s : i64", "    %x2n = arith.subi %x2l, %x2nm : i64", "    %x2m = arith.muli %x2a_q, %x2b_q : i64", "    %x2d = arith.select %x2z, %inexact, %x2m : i64")
-constant Divisions = ("    %x2g = arith.cmpi slt, %x2r, %inexact : i64", "    %x2o = arith.subi %inexact, %x2l : i64", "    %x2u = arith.subi %inexact, %x2r : i64", "    %x2n = arith.select %x2g, %x2o, %x2l : i64", "    %x2p = arith.select %x2g, %x2u, %x2r : i64", "    %x2z = arith.cmpi eq, %x2b_q, %inexact : i64", "    %x2d = arith.select %x2z, %inexact, %x2p : i64")
+constant FloorLoads = ("    %x2f_e = llvm.load %r1_e : !llvm.ptr -> i64", "    %x2f_q = llvm.load %r1_q : !llvm.ptr -> i64")
+constant FloorDivided = ("    %x2fv = arith.cmpi ne, %x2f_q, %inexact : i64", "    %x2fs = arith.select %x2fv, %x2f_q, %one : i64", "    %x2ft = arith.divsi %x2f_e, %x2fs : i64")
+constant FloorRemainder = ("    %x2fp = arith.muli %x2ft, %x2fs : i64", "    %x2fr = arith.subi %x2f_e, %x2fp : i64", "    %x2fn = arith.cmpi slt, %x2fr, %inexact : i64")
+constant FloorRounded = ("    %x2fb = arith.subi %x2ft, %one : i64", "    %x2ff = arith.select %x2fn, %x2fb, %x2ft : i64")
+constant FallbackLoads = ("    %x2o_e = llvm.load %r2_e : !llvm.ptr -> i64", "    %x2o_q = llvm.load %r2_q : !llvm.ptr -> i64")
+constant FloorStored = ("    %x2fx = arith.select %x2fv, %x2ff, %x2o_e : i64", "    %x2fy = arith.select %x2fv, %one, %x2o_q : i64", "    llvm.store %x2fx, %r2_e : i64, !llvm.ptr", "    llvm.store %x2fy, %r2_q : i64, !llvm.ptr")
+constant Floors = FloorLoads + FloorDivided + FloorRemainder + FloorRounded + FallbackLoads + FloorStored
+constant LeftLoads = ("    %x2a_e = llvm.load %r0_e : !llvm.ptr -> i64", "    %x2a_q = llvm.load %r0_q : !llvm.ptr -> i64")
+constant RightLoads = ("    %x2b_e = llvm.load %r1_e : !llvm.ptr -> i64", "    %x2b_q = llvm.load %r1_q : !llvm.ptr -> i64")
+constant CrossMultiplied = ("    %x2l = arith.muli %x2a_e, %x2b_q : i64", "    %x2r = arith.muli %x2b_e, %x2a_q : i64")
+constant BothExact = ("    %x2w = arith.cmpi ne, %x2a_q, %inexact : i64", "    %x2y = arith.cmpi ne, %x2b_q, %inexact : i64", "    %x2v = arith.andi %x2w, %x2y : i1")
+constant LessSelected = ("    %x2i = arith.cmpi slt, %x2l, %x2r : i64", "    %c = arith.select %x2v, %x2i, %f : i1")
+constant Comparisons = LeftLoads + RightLoads + CrossMultiplied + BothExact + LessSelected
+constant WholeBranch = ("    cf.cond_br %kv, ^kwhole(%k_e : i64), ^kreduced", "  ^kreduced:")
+constant ReducedDivided = ("    %kw = arith.cmpi ne, %k_q, %inexact : i64", "    %ks = arith.select %kw, %k_q, %one : i64", "    %kd = arith.divsi %k_e, %ks : i64")
+constant ReducedExact = ("    %kp = arith.muli %kd, %ks : i64", "    %kz = arith.cmpi eq, %kp, %k_e : i64", "    %ka = arith.andi %kw, %kz : i1")
+constant WholeJoined = ("    %kc = arith.select %ka, %kd, %kj : i64", "    cf.br ^kwhole(%kc : i64)", "  ^kwhole(%k: i64):")
+constant Wholes = WholeBranch + ReducedDivided + ReducedExact + WholeJoined
+constant SumStored = ("    %x2n = arith.addi %x2l, %x2r : i64", "    %x2d = arith.muli %x2a_q, %x2b_q : i64", "    llvm.store %x2n, %r2_e : i64, !llvm.ptr", "    llvm.store %x2d, %r2_q : i64, !llvm.ptr")
+constant Sums = LeftLoads + RightLoads + CrossMultiplied + SumStored
+constant ZeroGuarded = ("    %x2z = arith.cmpi eq, %x2r, %inexact : i64", "    %x2s = arith.select %x2z, %one, %x2r : i64")
+constant RemainderDivided = ("    %x2nq = arith.divsi %x2l, %x2s : i64", "    %x2nm = arith.muli %x2nq, %x2s : i64", "    %x2n = arith.subi %x2l, %x2nm : i64")
+constant RemainderDenominator = ("    %x2m = arith.muli %x2a_q, %x2b_q : i64", "    %x2d = arith.select %x2z, %inexact, %x2m : i64")
+constant Remainders = ZeroGuarded + RemainderDivided + RemainderDenominator
+constant SignsFlipped = ("    %x2g = arith.cmpi slt, %x2r, %inexact : i64", "    %x2o = arith.subi %inexact, %x2l : i64", "    %x2u = arith.subi %inexact, %x2r : i64")
+constant SignsSelected = ("    %x2n = arith.select %x2g, %x2o, %x2l : i64", "    %x2p = arith.select %x2g, %x2u, %x2r : i64")
+constant DenominatorSelected = ("    %x2z = arith.cmpi eq, %x2b_q, %inexact : i64", "    %x2d = arith.select %x2z, %inexact, %x2p : i64")
+constant Divisions = SignsFlipped + SignsSelected + DenominatorSelected
 Operated(entry InstructionEntry) Texts
 	Single.Operated(Adding).Last is "    llvm.store %x2d, %r2_q : i64, !llvm.ptr"
 	"    llvm.store %x2h, %r2 : f32, !llvm.ptr" is not in Single.Operated(Adding)

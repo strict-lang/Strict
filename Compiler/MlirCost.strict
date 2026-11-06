@@ -5,10 +5,14 @@ constant Outside = 20000
 constant Native = 8
 constant Repeats = 15
 constant Work = 50000
-constant Reading = MethodEntry("Reading", MlirParallel.Randomized.parameters, "Strict/List(Number)", (MlirParallel.Randomized.instructions.Slice(0, 4) + InstructionEntry.Invoke(2, ("Strict/File", "Exists", "Strict/Boolean"), List(Number), 1)) + MlirParallel.Randomized.instructions.Slice(5, 2))
+constant FileExists = InstructionEntry.Invoke(2, ("Strict/File", "Exists", "Strict/Boolean"), List(Number), 1)
+constant Reading = MethodEntry("Reading", MlirParallel.Randomized.parameters, "Strict/List(Number)", (MlirParallel.Randomized.instructions.Slice(0, 4) + FileExists) + MlirParallel.Randomized.instructions.Slice(5, 2))
 constant Doubling = MlirCost(MlirParallel.Doubling.function, 2)
 constant Filtering = MlirCost(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, MlirParallel.Filtered), 2)
-constant Doubler = MethodEntry("Doubler", List(MemberEntry) + MemberEntry("rows", "Strict/List(List(Number))", List(InstructionEntry), false), "Strict/List(List(Number))", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "rows"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Invoke(2, ("Strict/Rows", "Doubled", "Strict/List(Number)", "numbers"), List(Number) + 1, -1), InstructionEntry.Named(InstructionType.InvokeWriteToList, 2, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 4)))
+constant RowsMember = MemberEntry("rows", "Strict/List(List(Number))", List(InstructionEntry), false)
+constant RowsLoop = (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "rows"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"))
+constant DoubledRow = (InstructionEntry.Invoke(2, ("Strict/Rows", "Doubled", "Strict/List(Number)", "numbers"), List(Number) + 1, -1), InstructionEntry.Named(InstructionType.InvokeWriteToList, 2, "forResult"))
+constant Doubler = MethodEntry("Doubler", List(MemberEntry) + RowsMember, "Strict/List(List(Number))", RowsLoop + DoubledRow + InstructionEntry.Jump(InstructionType.LoopEnd, 4))
 constant Devices = MlirCost(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, Doubler), 2)
 constant Device = 4096
 constant SlowLoop = MlirCost(MlirFunction(Doubling.function, method = MethodEntry(Doubling.function.method, declaredType = "Slow(Numbers)")), 2)

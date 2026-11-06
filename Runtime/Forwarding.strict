@@ -2,16 +2,36 @@ has logger
 has root Text
 constant Sample = Forwarding(Logger, "Compiler/output")
 constant Server = Resident("Compiler/output")
+constant Missing = Forwarding(Logger, "Compiler/output/Missing")
+constant Dropped = -3
+constant StopSeconds = 1
+constant PollSeconds = 0.02
+constant Finding = "-NoProfile -Command Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq '"
+constant Serving = "' -and $_.CommandLine -like '* serve*' } | ForEach-Object { taskkill /F /T /PID $_.ProcessId }"
+constant Searching = "-c \"for found in $(pgrep -f '"
+constant Ending = " serve'); do pkill -KILL -P $found; kill -KILL $found; done\""
 Forwarded(arguments Texts) Number
 	Sample.Forwarded(List(Text) + "build") is -1
 	if IsForwarded(arguments) is false
 		return -1
-	let isStopping = arguments(0) is Resident.Stopping
+	if arguments(0) is Resident.Stopping
+		return Stopped
 	let stamp = File(root + Resident.Stamp)
 	if stamp.Exists is false
-		return isStopping then 0 else Started
-	let code = File(root + Resident.Free).Exists then Answered(stamp.ReadLines.First to Number, arguments) else -1
-	isStopping then 0 else code
+		return Started
+	let port = stamp.ReadLines.First to Number
+	if File(root + Resident.Free).Exists
+		return Answered(port, arguments)
+	IsDead(port) then Restarted else -1
+IsDead(port Number) Boolean
+	Sample.IsDead(0)
+	let socket = Socket.Connect("127.0.0.1", port)
+	if socket is Error
+		return true
+	Socket.Close(socket)
+	false
+Restarted Number
+	Killed is 0 then Started else -1
 Answered(port Number, arguments Texts) Number
 	Sample.Answered(0, List(Text) + "test") is -1
 	let socket = Socket.Connect("127.0.0.1", port)
@@ -22,14 +42,47 @@ Answered(port Number, arguments Texts) Number
 	let request = Resident.Request(Directory.Current, arguments, Resident.Variables, claim)
 	let code = (claim is not "") and Greeted(socket) and Server.Sent(socket, request) then Streamed(socket) else -1
 	Socket.Close(socket)
-	code
+	code is Dropped then Interrupted(port) else code
+Interrupted(port Number) Number
+	Missing.Interrupted(0) is 1
+	let stamp = File(root + Resident.Stamp)
+	if stamp.Exists and (stamp.ReadLines.First is (port to Text))
+		return -1
+	logger.Log("strict stop ended this request")
+	1
+Stopped Number
+	Missing.Stopped is 0
+	let stamp = File(root + Resident.Stamp)
+	if stamp.Exists is false
+		return 0
+	if File(root + Resident.Free).Exists is false
+		return Killed
+	Answered(stamp.ReadLines.First to Number, List(Text) + Resident.Stopping)
+	let started = Process.Elapsed
+	for as long as stamp.Exists and (Process.Elapsed - started < StopSeconds)
+		Process.Wait(PollSeconds)
+	stamp.Exists then Killed else 0
+Killed Number
+	let isWindows = Process.OperatingSystem is "Windows"
+	File(root + Resident.Stamp).Delete
+	Process.RunTool(isWindows then "powershell" else "sh", Killing(Process.Current.executable, isWindows))
+	File(root + Resident.Stamp).Delete
+	for Directory.Files(root + "/obj", "strict.free*")
+		File(value).Delete
+	0
+Killing(executable Text, isWindows Boolean) Text
+	Forwarding.Killing("C:/a/strict.exe", true) is Finding + "C:\\a\\strict.exe" + Serving
+	Forwarding.Killing("/a/strict", false) is Searching + "/a/strict" + Ending
+	isWindows then Finding + executable.Replace("/", "\\") + Serving else Searching + executable + Ending
 IsForwarded(arguments Texts) Boolean
 	Sample.IsForwarded(List(Text) + "build") is false
 	Sample.IsForwarded(List(Text) + "stop")
+	Sample.IsForwarded(("test", "a.strict")) or (Process.Variable("STRICT_SERVER") is "0")
 	Sample.IsForwarded(("test", "a.strict", "native")) is false
 	let command = arguments.Length > 0 then arguments(0) else ""
 	let isLocal = ("native" is in arguments) or ("lines" is in arguments) or ("-" is in arguments)
-	let isServed = (command is in ("test", "check")) and (isLocal is false) and (Process.Variable("STRICT_SERVER") is "1")
+	let isOptedOut = Process.Variable("STRICT_SERVER") is "0"
+	let isServed = (command is in ("test", "check")) and (isLocal is false) and (isOptedOut is false)
 	(command is Resident.Stopping) or isServed
 Started Number
 	let executable = "'" + Process.Current.executable + "'"
@@ -53,12 +106,12 @@ Greeted(socket Number) Boolean
 	let greeting = Resident.Greeting
 	ByteEncoder(Socket.Receive(socket, greeting.Length)).Spelled(0, greeting.Length) is greeting
 Streamed(socket Number) Number
-	Sample.Streamed(0) is -1
+	Sample.Streamed(0) is Dropped
 	let exiting = Resident.Exiting
 	mutable code = -2
 	for as long as code is -2
 		let block = Server.Received(socket, "\n")
-		code = block.EndsWith("\n") then code else -1
+		code = block.EndsWith("\n") then code else Dropped
 		for block.Split("\n")
 			let isExit = value.StartsWith(exiting)
 			if (isExit is false) and (index < block.Split("\n").Length - 1)

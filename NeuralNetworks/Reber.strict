@@ -38,7 +38,7 @@ Allowed(state Number) Numbers
 		(index is edge(0)) or (index is edge(2)) then 1 else 0
 Text(steps List(Numbers)) Text
 	Simple.Text(Shortest) is "BTXSE"
-	Embedded.Text(Embedded.Walk).Substring(2, 1) is "B"
+	Embedded.Text(Embedded.Walk)(2) is "B"
 	mutable text = ""
 	for steps
 		text = text + Symbols(value.First)

@@ -1,14 +1,20 @@
 has function MlirFunction
 constant Writers = (InstructionType.StoreRegisterToVariable, InstructionType.StoreConstantToVariable, InstructionType.InvokeWriteToList, InstructionType.InvokeRemove, InstructionType.CopyList)
-constant Reading = MlirParameters(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", (InstructionEntry.LoadNumber(1, 0), InstructionEntry(InstructionType.IndexCall, "numbers", (2, 1, -1))))))
-constant Aliasing = MlirParameters(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "copy"), InstructionEntry.LoadNumber(1, 0), InstructionEntry(InstructionType.IndexCall, "copy", (2, 1, -1)), InstructionEntry.LoadNumber(3, 7), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 3, "other")))))
+constant NumbersRead = (InstructionEntry.LoadNumber(1, 0), InstructionEntry(InstructionType.IndexCall, "numbers", (2, 1, -1)))
+constant Reading = MlirParameters(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", NumbersRead)))
+constant Copied = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "copy"))
+constant CopyRead = (InstructionEntry.LoadNumber(1, 0), InstructionEntry(InstructionType.IndexCall, "copy", (2, 1, -1)))
+constant OtherStored = (InstructionEntry.LoadNumber(3, 7), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 3, "other"))
+constant Aliasing = MlirParameters(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", Copied + CopyRead + OtherStored)))
 constant DeferredTypes = " : (f64, f64, !llvm.ptr) -> i64"
 constant Numbered = " : (f64, !llvm.ptr) -> f64"
-constant ReadScope = " {alias_scopes = [#llvm.alias_scope<id = distinct[1]<>, domain = #llvm.alias_scope_domain<id = distinct[0]<>, description = \"strict\">>], noalias_scopes = [#llvm.alias_scope<id = distinct[2]<>, domain = #llvm.alias_scope_domain<id = distinct[0]<>, description = \"strict\">>]}"
-constant WriteScope = " {alias_scopes = [#llvm.alias_scope<id = distinct[2]<>, domain = #llvm.alias_scope_domain<id = distinct[0]<>, description = \"strict\">>], noalias_scopes = [#llvm.alias_scope<id = distinct[1]<>, domain = #llvm.alias_scope_domain<id = distinct[0]<>, description = \"strict\">>]}"
+constant ScopeDomain = ", domain = #llvm.alias_scope_domain<id = distinct[0]<>, description = \"strict\">>]"
+constant ReadScope = " {alias_scopes = [#llvm.alias_scope<id = distinct[1]<>" + ScopeDomain + ", noalias_scopes = [#llvm.alias_scope<id = distinct[2]<>" + ScopeDomain + "}"
+constant WriteScope = " {alias_scopes = [#llvm.alias_scope<id = distinct[2]<>" + ScopeDomain + ", noalias_scopes = [#llvm.alias_scope<id = distinct[1]<>" + ScopeDomain + "}"
 constant Deferring = MlirParameters(MlirFunction(Reading.function, IsDeferred = true))
 constant ByteReadTypes = " : (!llvm.ptr, !llvm.ptr, f64, f64, f64, i64, f64) -> f64"
-constant Bytes = MlirParameters(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MemberEntry("pixels", "Strict/List(Byte)", List(InstructionEntry), false), "None", List(InstructionEntry))))
+constant PixelsParameter = List(MemberEntry) + MemberEntry("pixels", "Strict/List(Byte)", List(InstructionEntry), false)
+constant Bytes = MlirParameters(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", PixelsParameter, "None", List(InstructionEntry))))
 constant Holding = TypeEntry("Strict/Holding", List(MemberEntry) + MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false), List(MethodEntry))
 constant Membered = MlirParameters(MlirFunction(List(TypeEntry) + Holding, Holding, MethodEntry("Picked", List(MemberEntry), "Strict/List(Number)", MlirDeferred.Picking)))
 constant Texting = TypeEntry("Strict/Text", Holding.members, List(MethodEntry))

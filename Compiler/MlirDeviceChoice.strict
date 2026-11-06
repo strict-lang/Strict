@@ -1,10 +1,12 @@
 has function MlirFunction
 has at Number
-constant Choosing = MlirFunction(List(TypeEntry) + GpuSamples.Chosen, GpuSamples.Chosen, GpuSamples.Largest)
+constant Choosing = MlirFunction(List(TypeEntry) + GpuChoiceSamples.Chosen, GpuChoiceSamples.Chosen, GpuChoiceSamples.Largest)
 constant Maximum = MlirDeviceChoice(Choosing, 4)
-constant Chooser = MlirFunction(Choosing.types, GpuSamples.Chosen, GpuSamples.Larger)
+constant Chooser = MlirFunction(Choosing.types, GpuChoiceSamples.Chosen, GpuChoiceSamples.Larger)
 constant Summing = MlirDeviceChoice(MlirDeviceStatements.Summed, 2)
-constant Allowed = (InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable, InstructionType.Equal, InstructionType.LessThan, InstructionType.GreaterThan, InstructionType.Return, InstructionType.JumpEnd, InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)
+constant AllowedMoves = (InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable)
+constant AllowedJumps = (InstructionType.Return, InstructionType.JumpEnd, InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)
+constant Allowed = AllowedMoves + (InstructionType.Equal, InstructionType.LessThan, InstructionType.GreaterThan) + AllowedJumps
 constant Offsets = (16, 8, 4, 2, 1)
 constant Moves = (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable)
 constant Rounded = Maximum.Round(MlirDeviceCalls(Choosing, 10, Chooser), "%d12", 0, 4)
@@ -62,8 +64,8 @@ IsChoosing(callee MlirFunction) Boolean
 			return false
 	(parameters(1).typeName is "Strict/Number") and IsCompared(callee)
 IsPlain(entry InstructionEntry, parameters List(MemberEntry)) Boolean
-	Maximum.IsPlain(GpuSamples.Larger.instructions(0), GpuSamples.Larger.parameters)
-	Maximum.IsPlain(InstructionEntry.LoadNumber(0, 1), GpuSamples.Larger.parameters) is false
+	Maximum.IsPlain(GpuChoiceSamples.Larger.instructions(0), GpuChoiceSamples.Larger.parameters)
+	Maximum.IsPlain(InstructionEntry.LoadNumber(0, 1), GpuChoiceSamples.Larger.parameters) is false
 	if entry.kind is InstructionType.LoadConstantToRegister
 		return PayloadDecoder(entry).Value(1).kind is "Boolean"
 	if entry.kind is not in Moves
@@ -72,7 +74,7 @@ IsPlain(entry InstructionEntry, parameters List(MemberEntry)) Boolean
 	name.StartsWith("conditional") or (name is parameters(0).Name) or (name is parameters(1).Name)
 IsCompared(callee MlirFunction) Boolean
 	Maximum.IsCompared(Chooser)
-	Maximum.IsCompared(MlirFunction(Choosing.types, GpuSamples.Chosen, GpuSamples.Largest)) is false
+	Maximum.IsCompared(MlirFunction(Choosing.types, GpuChoiceSamples.Chosen, GpuChoiceSamples.Largest)) is false
 	mutable compared = List(Mutable(Text))
 	for callee.method.instructions
 		if (value.kind is InstructionType.LessThan) or (value.kind is InstructionType.GreaterThan)
@@ -113,4 +115,4 @@ Round(calls MlirDeviceCalls, prefix Text, number Number, round Number) Texts
 	let operands = "(" + Text.Combine(("%failed", "%lane", "%lanes") + numbers + calls.MemberArguments, ", ") + ")"
 	let invoked = MlirFeeding(function, at).Invoked(calls, prefix + "c" + number + "r" + (round + 1), operands)
 	let offsetLine = "    " + offset + " = arith.constant " + Offsets(round) + " : i32"
-	(offsetLine, MlirTyped(function.Float).Shuffled(shuffled, current, offset)) + invoked
+	(offsetLine, MlirTyped(function.Float).Shuffled(shuffled, current, offset)) + invoked

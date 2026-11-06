@@ -150,7 +150,7 @@ Name(member SyntaxNode) Text
 	Hoisting.IsHoistable(StatementParser(Tokenizer("bags.values(0, 1)").Tokens).ParseStatement, Bag) is false
 	Hoisting.Name(SyntaxNode("Member", "values", List(SyntaxNode) + SyntaxNode("Identifier", "bag"))) is "bagValues"
 	let rest = member.text.Substring(1, member.text.Length - 1)
-	member.children(0).text + member.text.Substring(0, 1).Upper + rest
+	member.children(0).text + member.text(0).Upper + rest
 Declared(node SyntaxNode) Texts
 	Hoisting.Declared(Shadowing.children(0)) is ("bag")
 	mutable names = List(Mutable(Text))

@@ -4,8 +4,8 @@ Greet Text
 	TextHelper("Strict").Greet is "Hello, Strict!"
 	"Hello, " + text + "!"
 Initial Text
-	TextHelper("world").Initial + TextHelper("world").text.Substring(0, 1) is "Ww"
-	text.Substring(0, 1).Upper
+	TextHelper("world").Initial + TextHelper("world").text(0) is "Ww"
+	text(0).Upper to Text
 Wrapped Text
 	TextHelper("World").Wrapped is "(World)"
 	(List(Text) + text) to Text

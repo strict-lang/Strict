@@ -2,16 +2,28 @@ has function MlirFunction
 has position Number
 constant Doubling = MlirGpu(MlirParallel.Doubling.function, 2)
 constant Randomizing = MlirGpu(MlirParallel.Randomizing.function, 2)
-constant Checking = MlirGpu(MlirFunction(Doubling.function.types, MlirParallel.Rows, GpuSamples.Checked), 2)
-constant Layering = MlirGpu(MlirFunction(List(TypeEntry) + GpuSamples.Layered, GpuSamples.Layered, GpuSamples.Sums), 2)
+constant Checking = MlirGpu(MlirFunction(Doubling.function.types, MlirParallel.Rows, GpuLayerSamples.Checked), 2)
+constant Layering = MlirGpu(MlirFunction(List(TypeEntry) + GpuLayerSamples.Layered, GpuLayerSamples.Layered, GpuLayerSamples.Sums), 2)
 constant SlotGlobal = "  llvm.mlir.global internal @fRows_Doubled_1_gpu2(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>"
 constant Twiced = List(MlirFunction) + MlirDevice.Twice.function
 constant Indexing = "] : (!llvm.ptr) -> !llvm.ptr, f64"
 constant Marker = "// device kernels"
 constant NameGlobal = "  llvm.mlir.global internal constant @kRows_Doubled_1_gpu2(\"Rows_Doubled_1_gpu2\\00Rows_Doubled_1_gpu2s\\00\") : !llvm.array<41 x i8>"
 constant Running = "(!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64"
-constant Launching = ("    %t2gc = arith.fptosi %t2n : f64 to i64", "    %t2gd = func.call @strict_gpu_wanted(%t2gc) : (i64) -> i1", "    cf.cond_br %t2gd, ^loop2gpu, ^loop2host", "  ^loop2gpu:", "    %t2gp = llvm.mlir.addressof @strict_gpu_ptx : !llvm.ptr", "    %t2gk = llvm.mlir.addressof @kRows_Doubled_1_gpu2 : !llvm.ptr", "    %t2gs = llvm.mlir.addressof @fRows_Doubled_1_gpu2 : !llvm.ptr", "    %t2gz = arith.constant 1 : i64", "    %t2ga = llvm.alloca %t2gz x f64 : (i64) -> !llvm.ptr", "    %t2gw = arith.constant 0 : i64", "    %t2gm = arith.constant 0 : i64", "    %t2gr = arith.constant 0 : i64", "    %t2go = arith.constant 0 : i64", "    %t2gj = arith.constant 0 : i64", "    %t2gpf = arith.constant 0 : i64", "    %t2gq = arith.constant 1 : i64", "    %t2gy = arith.constant 1 : i64", "    %t2gg = arith.constant 0 : i64", "    %t2gl = func.call @strict_gpu_run(%t2gp, %t2gk, %t2gs, %t2gc, %t2v, %t2gq, %t2ga, %t2gw, %t2gm, %t2gr, %t2go, %t2gy, %t2gg, %t2gpf, %t2gj) : " + Running, "    %t2gf = arith.cmpf oeq, %t2gl, %zero : f64", "    cf.cond_br %t2gf, ^loop2host, ^loop2gpudone", "  ^loop2gpudone:", "    llvm.store %t2gl, %v_forResult : f64, !llvm.ptr", "    cf.br ^loop2exit", "  ^loop2host:")
-constant Stored = ("    %t2gz = arith.constant 3 : i64", "    %t2ga = llvm.alloca %t2gz x f64 : (i64) -> !llvm.ptr", "    %t2gv0 = llvm.load %v_weights : !llvm.ptr -> f64", "    %t2gx0 = llvm.getelementptr %t2ga[0] : (!llvm.ptr) -> !llvm.ptr, f64", "    llvm.store %t2gv0, %t2gx0 : f64, !llvm.ptr", "    %t2gv1 = llvm.load %v_input : !llvm.ptr -> f64", "    %t2gx1 = llvm.getelementptr %t2ga[1] : (!llvm.ptr) -> !llvm.ptr, f64", "    llvm.store %t2gv1, %t2gx1 : f64, !llvm.ptr", "    %t2gw = arith.constant 2 : i64", "    %t2gm = arith.constant 3 : i64", "    %t2gr = arith.constant 1 : i64", "    %t2go = arith.constant 2 : i64", "    %t2gj = arith.constant 0 : i64", "    %t2gpf = arith.constant 1024 : i64")
+constant LaunchWanted = ("    %t2gc = arith.fptosi %t2n : f64 to i64", "    %t2gd = func.call @strict_gpu_wanted(%t2gc) : (i64) -> i1", "    cf.cond_br %t2gd, ^loop2gpu, ^loop2host", "  ^loop2gpu:")
+constant LaunchKernel = ("    %t2gp = llvm.mlir.addressof @strict_gpu_ptx : !llvm.ptr", "    %t2gk = llvm.mlir.addressof @kRows_Doubled_1_gpu2 : !llvm.ptr", "    %t2gs = llvm.mlir.addressof @fRows_Doubled_1_gpu2 : !llvm.ptr")
+constant LaunchSlots = ("    %t2gz = arith.constant 1 : i64", "    %t2ga = llvm.alloca %t2gz x f64 : (i64) -> !llvm.ptr", "    %t2gw = arith.constant 0 : i64", "    %t2gm = arith.constant 0 : i64", "    %t2gr = arith.constant 0 : i64")
+constant LaunchSizes = ("    %t2go = arith.constant 0 : i64", "    %t2gj = arith.constant 0 : i64", "    %t2gpf = arith.constant 0 : i64", "    %t2gq = arith.constant 1 : i64", "    %t2gy = arith.constant 1 : i64")
+constant LaunchRun = ("    %t2gg = arith.constant 0 : i64", "    %t2gl = func.call @strict_gpu_run(%t2gp, %t2gk, %t2gs, %t2gc, %t2v, %t2gq, %t2ga, %t2gw, %t2gm, %t2gr, %t2go, %t2gy, %t2gg, %t2gpf, %t2gj) : " + Running)
+constant LaunchChecked = ("    %t2gf = arith.cmpf oeq, %t2gl, %zero : f64", "    cf.cond_br %t2gf, ^loop2host, ^loop2gpudone", "  ^loop2gpudone:")
+constant LaunchStored = ("    llvm.store %t2gl, %v_forResult : f64, !llvm.ptr", "    cf.br ^loop2exit", "  ^loop2host:")
+constant Launching = LaunchWanted + LaunchKernel + LaunchSlots + LaunchSizes + LaunchRun + LaunchChecked + LaunchStored
+constant StoredAlloca = ("    %t2gz = arith.constant 3 : i64", "    %t2ga = llvm.alloca %t2gz x f64 : (i64) -> !llvm.ptr")
+constant StoredWeights = ("    %t2gv0 = llvm.load %v_weights : !llvm.ptr -> f64", "    %t2gx0 = llvm.getelementptr %t2ga[0] : (!llvm.ptr) -> !llvm.ptr, f64", "    llvm.store %t2gv0, %t2gx0 : f64, !llvm.ptr")
+constant StoredInput = ("    %t2gv1 = llvm.load %v_input : !llvm.ptr -> f64", "    %t2gx1 = llvm.getelementptr %t2ga[1] : (!llvm.ptr) -> !llvm.ptr, f64", "    llvm.store %t2gv1, %t2gx1 : f64, !llvm.ptr")
+constant StoredCounts = ("    %t2gw = arith.constant 2 : i64", "    %t2gm = arith.constant 3 : i64", "    %t2gr = arith.constant 1 : i64")
+constant StoredOffsets = ("    %t2go = arith.constant 2 : i64", "    %t2gj = arith.constant 0 : i64", "    %t2gpf = arith.constant 1024 : i64")
+constant Stored = StoredAlloca + StoredWeights + StoredInput + StoredCounts + StoredOffsets
 constant FunctionStart = "  llvm.func @"
 Launched Texts
 	Doubling.Launched.Last is "  ^loop2host:" and (Doubling.Launched is Launching)

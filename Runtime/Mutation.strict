@@ -13,7 +13,6 @@ constant Targeted = InstructionEntry.Binary(InstructionType.LessThan, (0, 1, 5))
 constant Forcing = (InstructionType.Equal, InstructionType.NotEqual)
 constant Operators = ("+", "-", "*", "/", "is", "is not", "<", ">")
 constant Ordinals = ("st", "nd", "rd")
-constant SpawnAboveRounds = 16
 constant Rotated = Mutation(MutationKinds.Placed.method).Mutant(8)
 IsMine(part Text, round Number) Boolean
 	Mutation.IsMine("", 3)

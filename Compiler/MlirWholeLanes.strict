@@ -3,8 +3,12 @@ has position Number
 constant Blurring = MlirWholeLanes(MlirWholeKernel.Kernel.function, 5)
 constant Sized = MlirWholeLanes(MlirWholeKernel.Measure.function, 5)
 constant Zero = "    %wzero = arith.constant 0 : i64"
-constant Begun = ("  ^wholestart:", "    llvm.store %from, %wloop : i64, !llvm.ptr", "    %wy0 = arith.divsi %from, %ww : i64", "    %wx0 = arith.remsi %from, %ww : i64", "    llvm.store %wx0, %wx : i64, !llvm.ptr", "    llvm.store %wy0, %wy : i64, !llvm.ptr", "    cf.br ^wloop", "  ^wloop:")
-constant Advanced = ("    %wx1 = arith.addi %wxv, %one : i64", "    %wwrap = arith.cmpi eq, %wx1, %ww : i64", "    %wxn = arith.select %wwrap, %wzero, %wx1 : i64", "    %wy1 = arith.addi %wyv, %one : i64", "    %wyn = arith.select %wwrap, %wy1, %wyv : i64", "    llvm.store %wxn, %wx : i64, !llvm.ptr", "    llvm.store %wyn, %wy : i64, !llvm.ptr")
+constant StartDivided = ("  ^wholestart:", "    llvm.store %from, %wloop : i64, !llvm.ptr", "    %wy0 = arith.divsi %from, %ww : i64", "    %wx0 = arith.remsi %from, %ww : i64")
+constant LoopEntered = ("    llvm.store %wx0, %wx : i64, !llvm.ptr", "    llvm.store %wy0, %wy : i64, !llvm.ptr", "    cf.br ^wloop", "  ^wloop:")
+constant Begun = StartDivided + LoopEntered
+constant ColumnWrapped = ("    %wx1 = arith.addi %wxv, %one : i64", "    %wwrap = arith.cmpi eq, %wx1, %ww : i64", "    %wxn = arith.select %wwrap, %wzero, %wx1 : i64")
+constant RowAdvanced = ("    %wy1 = arith.addi %wyv, %one : i64", "    %wyn = arith.select %wwrap, %wy1, %wyv : i64", "    llvm.store %wxn, %wx : i64, !llvm.ptr", "    llvm.store %wyn, %wy : i64, !llvm.ptr")
+constant Advanced = ColumnWrapped + RowAdvanced
 constant Stored = ("    %wb = arith.trunci %wr : i64 to i32", "    %wp = llvm.getelementptr %wout[%wk] : (!llvm.ptr, i64) -> !llvm.ptr, i32", "    llvm.store %wb, %wp : i32, !llvm.ptr")
 Lines(header Text, fallback Texts) Texts
 	Text.Combine(Blurring.Lines("h", List(Text))).IndexOf("@Board_Picked_2_whole(%t8wa0, %t8wa1)") > 0

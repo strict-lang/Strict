@@ -40,13 +40,13 @@ Averaged(line Text) Text
 	if start < 1
 		return ""
 	let name = Name(line, start)
-	let isOwn = (start - name.Length is 0) or (line.Substring(start - name.Length - 1, 1) is not ".")
+	let isOwn = (start - name.Length is 0) or (line(start - name.Length - 1) is not ".")
 	isOwn and IsFusable(name) then name else ""
 Opening(line Text, closing Number) Number
 	Averaging.Opening("Ones(f(2)).Average", 9) is 4
 	mutable depth = 0
 	for closing
-		let character = line.Substring(closing - 1 - index, 1)
+		let character = line(closing - 1 - index)
 		if (character is "(") and (depth is 0)
 			return closing - 1 - index
 		depth = character is ")" then depth + 1 else (character is "(" then depth - 1 else depth)
@@ -56,7 +56,7 @@ Name(line Text, start Number) Text
 	Averaging.Name("x.Ones(2)", 6) is "Ones"
 	mutable begin = start
 	for start
-		let character = line.Substring(start - 1 - index, 1)
+		let character = line(start - 1 - index)
 		if (begin is start - index) and (character.Upper is not character.Lower)
 			begin = start - 1 - index
 	line.Substring(begin, start - begin)

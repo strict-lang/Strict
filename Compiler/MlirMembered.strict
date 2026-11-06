@@ -2,7 +2,12 @@ has function MlirFunction
 has position Number
 constant Mover = TypeEntry("Strict/Mover", (MemberEntry("position", "Strict/Math/Tripling", List(InstructionEntry), false), MemberEntry("velocity", "Strict/Math/Tripling", List(InstructionEntry), false)), List(MethodEntry))
 constant Building = InstructionEntry.Invoke(0, ("Strict/Mover", "from", "Mover", "position", "velocity"), (10, 11), -1)
-constant Moving = (Building, InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "entity"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "entity"), InstructionEntry(InstructionType.FieldLoad, "position", (2, 1, -1)), InstructionEntry.Invoke(3, ("Strict/Math/Tripling", "Made", "Strict/Math/Tripling"), List(Number), 2), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "entity"), InstructionEntry(InstructionType.FieldLoad, "velocity", (5, 4, -1)), InstructionEntry.Invoke(6, ("Strict/Mover", "from", "Mover", "position", "velocity"), (3, 5), -1), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 6, "entity"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 7, "entity"), InstructionEntry.Return(7))
+constant EntityStored = (Building, InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "entity"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "entity"))
+constant PositionTripled = (InstructionEntry(InstructionType.FieldLoad, "position", (2, 1, -1)), InstructionEntry.Invoke(3, ("Strict/Math/Tripling", "Made", "Strict/Math/Tripling"), List(Number), 2))
+constant VelocityLoaded = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "entity"), InstructionEntry(InstructionType.FieldLoad, "velocity", (5, 4, -1)))
+constant MoverRebuilt = (InstructionEntry.Invoke(6, ("Strict/Mover", "from", "Mover", "position", "velocity"), (3, 5), -1), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 6, "entity"))
+constant EntityReturned = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 7, "entity"), InstructionEntry.Return(7))
+constant Moving = EntityStored + PositionTripled + VelocityLoaded + MoverRebuilt + EntityReturned
 constant Moved = MlirMembered(MlirFunction((MlirDestined.Maker, MlirFlats.Summing, Mover), Mover, MethodEntry("Run", List(MemberEntry), "None", Moving)), 4)
 constant Defaulted = MlirMembered(MlirFunction(Moved.function.types, Mover, MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Invoke(0, ("Strict/Mover", "from", "Mover"), List(Number), -1))), 0)
 Destined(entry InstructionEntry, compiled Texts) Texts

@@ -4,15 +4,22 @@ constant LengthCall = InstructionEntry.Invoke(1, ("Strict/Text", "Length", "Stri
 constant Search = InstructionEntry.Invoke(2, ("Strict/Text", "IndexOf", "Strict/Number", "text"), 1, 0)
 constant TextType = TypeEntry("Strict/Text", List(MemberEntry), List(MethodEntry))
 constant TextNames = ("StartsWith", "IndexOf", "LastIndexOf", "Substring", "Upper", "Lower", "Capitalize", "Trim", "TrimStart", "TrimEnd", "Combine")
-constant TextHelpers = ("strict_text_starts", "strict_text_index", "strict_text_last_index", "strict_text_substring", "strict_text_upper", "strict_text_lower", "strict_text_capitalize", "strict_text_trim", "strict_text_trim_start", "strict_text_trim_end", "strict_text_combine")
+constant TextSearchHelpers = ("strict_text_starts", "strict_text_index", "strict_text_last_index", "strict_text_substring")
+constant TextChangeHelpers = ("strict_text_upper", "strict_text_lower", "strict_text_capitalize", "strict_text_trim", "strict_text_trim_start", "strict_text_trim_end", "strict_text_combine")
+constant TextHelpers = TextSearchHelpers + TextChangeHelpers
 constant Destining = List(Text) + "strict_list_swap_removed"
 constant DefaultedLast = ("strict_text_index", "strict_text_starts", "strict_directory_files", "strict_text_combine")
 constant Named = TypeEntry("Strict/Named", (MemberEntry("name", "Strict/Text", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
 constant Texts = MlirFunction(List(TypeEntry), Named, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "ab"), LengthCall, Search)))
 constant Getting = InstructionEntry.Invoke(2, ("Strict/Dictionary(Text, Number)", "get", "Strict/Number", "key"), 1, -1)
 constant Counted = TypeEntry("Strict/Dictionary(Text, Number)", List(MemberEntry), List(MethodEntry))
-constant SearchLines = ("    %t2m = llvm.load %r0 : !llvm.ptr -> f64", "    %t2a0 = llvm.load %r1 : !llvm.ptr -> f64", "    %t2r = func.call @strict_text_index(%t2m, %t2a0, %zero) : (f64, f64, f64) -> f64", "    llvm.store %t2r, %r2 : f64, !llvm.ptr")
-constant GettingLines = ("    %t2m = arith.constant 0.0 : f64", "    %t2a0 = llvm.load %r1 : !llvm.ptr -> f64", "    %t2h = func.constant @strict_hash_text : (f64) -> i64", "    %t2e = func.constant @strict_text_equal : (f64, f64) -> f64", "    %t2k = func.call @strict_dictionary_get(%t2m, %t2a0, %t2h, %t2e) : (f64, f64, (f64) -> i64, (f64, f64) -> f64) -> f64", "    %t2tw = llvm.mlir.addressof @wNamed_Run_0 : !llvm.ptr", "    %t2twl = arith.constant 0 : i64", "    %t2r = func.call @strict_trace(%t2k, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64", "    llvm.store %t2r, %r2 : f64, !llvm.ptr")
+constant ArgumentLoad = "    %t2a0 = llvm.load %r1 : !llvm.ptr -> f64"
+constant ResultStore = "    llvm.store %t2r, %r2 : f64, !llvm.ptr"
+constant SearchLines = ("    %t2m = llvm.load %r0 : !llvm.ptr -> f64", ArgumentLoad, "    %t2r = func.call @strict_text_index(%t2m, %t2a0, %zero) : (f64, f64, f64) -> f64", ResultStore)
+constant KeyFunctions = ("    %t2m = arith.constant 0.0 : f64", ArgumentLoad, "    %t2h = func.constant @strict_hash_text : (f64) -> i64", "    %t2e = func.constant @strict_text_equal : (f64, f64) -> f64")
+constant DictionaryGet = "    %t2k = func.call @strict_dictionary_get(%t2m, %t2a0, %t2h, %t2e) : (f64, f64, (f64) -> i64, (f64, f64) -> f64) -> f64"
+constant ValueTraced = ("    %t2tw = llvm.mlir.addressof @wNamed_Run_0 : !llvm.ptr", "    %t2twl = arith.constant 0 : i64", "    %t2r = func.call @strict_trace(%t2k, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64", ResultStore)
+constant GettingLines = KeyFunctions + DictionaryGet + ValueTraced
 Helper(typeName Text, name Text, count Number) Text
 	MlirNatives(Texts, 1).Helper("Strict/Text", "Length", 0) is "strict_text_length"
 	MlirNatives(Texts, 1).Helper("Strict/List(Number)", "Count", 0) is "strict_list_length"

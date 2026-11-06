@@ -1,10 +1,20 @@
 has function MlirFunction
 has position Number
-constant Quad = (MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 0), "sum"), InstructionEntry.LoadNumber(0, 0), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "count"), InstructionEntry.LoopBegin(0, 1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "sum"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "value"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "value"), InstructionEntry.Binary(InstructionType.Multiply, (3, 4, 5)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "value"), InstructionEntry.Binary(InstructionType.Multiply, (5, 6, 7)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 8, "value"), InstructionEntry.Binary(InstructionType.Multiply, (7, 8, 9)), InstructionEntry.Binary(InstructionType.Add, (2, 9, 10)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 10, "sum"), InstructionEntry.Jump(InstructionType.LoopEnd, 1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 11, "sum"), InstructionEntry.Return(11))
-constant Quads = MlirWholeSpan(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Sum", List(MemberEntry) + MemberEntry("count", "Strict/Number", List(InstructionEntry), false), "Strict/Number", Quad)), 4)
+constant CountParameters = List(MemberEntry) + MemberEntry("count", "Strict/Number", List(InstructionEntry), false)
+constant CountLooped = (MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 0), "sum"), InstructionEntry.LoadNumber(0, 0), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "count"), InstructionEntry.LoopBegin(0, 1))
+constant Operands = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "sum"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "value"))
+constant Squared = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "value"), InstructionEntry.Binary(InstructionType.Multiply, (3, 4, 5)))
+constant Cubed = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "value"), InstructionEntry.Binary(InstructionType.Multiply, (5, 6, 7)))
+constant Quartic = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 8, "value"), InstructionEntry.Binary(InstructionType.Multiply, (7, 8, 9)))
+constant SumAdded = (InstructionEntry.Binary(InstructionType.Add, (2, 9, 10)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 10, "sum"), InstructionEntry.Jump(InstructionType.LoopEnd, 1))
+constant SumReturned = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 11, "sum"), InstructionEntry.Return(11))
+constant Quad = CountLooped + Operands + Squared + Cubed + Quartic + SumAdded + SumReturned
+constant Quads = MlirWholeSpan(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Sum", CountParameters, "Strict/Number", Quad)), 4)
 constant Halving = MlirWholeSpan(MlirWholeTypes.Halving.function, 1)
-constant Split = (InstructionEntry.LoadNumber(0, 2), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "count"), InstructionEntry.Binary(InstructionType.Divide, (1, 0, 2)), InstructionEntry.LoadNumber(3, 1), InstructionEntry.Binary(InstructionType.Add, (2, 3, 4)), InstructionEntry.Return(4))
-constant Splits = MlirWholeSpan(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Split", List(MemberEntry) + MemberEntry("count", "Strict/Number", List(InstructionEntry), false), "Strict/Number", Split)), 2)
+constant HalfCount = (InstructionEntry.LoadNumber(0, 2), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "count"), InstructionEntry.Binary(InstructionType.Divide, (1, 0, 2)))
+constant Incremented = (InstructionEntry.LoadNumber(3, 1), InstructionEntry.Binary(InstructionType.Add, (2, 3, 4)), InstructionEntry.Return(4))
+constant Split = HalfCount + Incremented
+constant Splits = MlirWholeSpan(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Split", CountParameters, "Strict/Number", Split)), 2)
 constant Bounded = (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply)
 constant Constants = (InstructionType.LoadConstantToRegister, InstructionType.StoreConstantToVariable)
 Lines Texts

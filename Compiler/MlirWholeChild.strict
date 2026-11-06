@@ -1,9 +1,15 @@
 has function MlirFunction
 has position Number
-constant Lengths = (MlirLayout.Bytings.method.instructions(0), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "pixels"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "pixels"), InstructionEntry.Invoke(2, ("Strict/List", "Length", "Strict/Number"), List(Number), 1), InstructionEntry.Invoke(3, ("Strict/Rows", "Twice", "Strict/Number", "number"), List(Number) + 2, -1), InstructionEntry.Named(InstructionType.InvokeWriteToList, 3, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 5))
+constant PixelsLoop = (MlirLayout.Bytings.method.instructions(0), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "pixels"), InstructionEntry.LoopBegin(0, -1))
+constant PixelLength = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "pixels"), InstructionEntry.Invoke(2, ("Strict/List", "Length", "Strict/Number"), List(Number), 1))
+constant ResultWrite = (InstructionEntry.Named(InstructionType.InvokeWriteToList, 3, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 5))
+constant Lengths = PixelsLoop + PixelLength + InstructionEntry.Invoke(3, ("Strict/Rows", "Twice", "Strict/Number", "number"), List(Number) + 2, -1) + ResultWrite
 constant Brightened = MethodEntry("Brightened", List(MemberEntry) + MemberEntry("pixels", "Strict/List(Byte)", List(InstructionEntry), false), "Strict/Bytes", Lengths)
 constant Brightening = MlirWholeChild(MlirFunction(List(TypeEntry) + MlirFunction.Shape + MlirLayout.Byting + MlirParallel.Rows, MlirParallel.Rows, Brightened), 2)
-constant Reads = (MlirLayout.Bytings.method.instructions(0), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "pixels"), InstructionEntry.Invoke(1, ("Strict/List", "Length", "Strict/Number"), List(Number), 0), InstructionEntry.LoopBegin(1, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "index"), InstructionEntry(InstructionType.IndexCall, "pixels", (3, 2)), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 3), InstructionEntry.Named(InstructionType.InvokeWriteToList, 3, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 5))
+constant PixelsLength = (MlirLayout.Bytings.method.instructions(0), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "pixels"), InstructionEntry.Invoke(1, ("Strict/List", "Length", "Strict/Number"), List(Number), 0))
+constant IndexLoop = (InstructionEntry.LoopBegin(1, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "index"), InstructionEntry(InstructionType.IndexCall, "pixels", (3, 2)))
+constant PixelChecked = (InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 3))
+constant Reads = PixelsLength + IndexLoop + PixelChecked + ResultWrite
 constant Reading = MlirWholeChild(MlirFunction(Brightening.function.types, MlirParallel.Rows, MethodEntry("Copied", Brightened.parameters, "Strict/Bytes", Reads)), 3)
 constant Types = MlirWholeTypes(Brightening.function)
 constant Pointer = " : (!llvm.ptr, i64) -> !llvm.ptr, i8"
@@ -32,7 +38,7 @@ IsAllowed(at Number, settled Text) Boolean
 	Brightening.IsAllowed(4, "--x-||") is false
 	let entry = function.method.instructions(at)
 	let written = LoadReuse(function.method.instructions).Written(entry)
-	if (written >= 0) and (settled.Substring(written, 1) is "x")
+	if (written >= 0) and (settled(written) is "x")
 		return false
 	if entry.kind is InstructionType.InvokeWriteToList
 		return entry.texts(0) is "forResult"
@@ -132,8 +138,8 @@ Current(variables Text) Texts
 	Text.Combine(Brightening.Current(Types.Part(1))).Length is 257
 	Text.Combine(Reading.Current(MlirWholeTypes(Reading.function).Part(1))).Length is 92
 	let values = MlirWholeValues(position)
-	let index = values.Stored("%wk", "i", "%v_index", variables.Substring(function.VariableNames.Index("index"), 1))
-	let type = variables.Substring(function.VariableNames.Index("value"), 1)
+	let index = values.Stored("%wk", "i", "%v_index", variables(function.VariableNames.Index("index")))
+	let type = variables(function.VariableNames.Index("value")) to Text
 	if MlirLoops(function, position).Collection is ""
 		return index + values.Stored("%wk", "i", "%v_value", type)
 	index + Element + values.Stored("%wv", "i", "%v_value", type)
@@ -141,7 +147,7 @@ Written(at Number, registers Text, naturals Text) Texts
 	Brightening.Written(6, Types.Part(0), Types.Part(2)).Last is "    llvm.store %t6b, %t6p : i8, !llvm.ptr"
 	let register = function.method.instructions(at).payload(0)
 	let type = MlirWholeTypes(function).Reaching(register, at, registers, naturals)
-	let loaded = MlirWholeValues(at).Loaded("%t" + at + "v", "%r" + register, registers.Substring(register, 1), type)
+	let loaded = MlirWholeValues(at).Loaded("%t" + at + "v", "%r" + register, registers(register), type)
 	let slot = "    %t" + at + "p = llvm.getelementptr %wout[%wk]" + Pointer
 	let stored = "    llvm.store %t" + at + "b, %t" + at + "p : i8, !llvm.ptr"
 	if type is "f"

@@ -4,15 +4,20 @@ has Format Number = -1
 constant Doubling = MlirDevice(MlirParallel.Doubling.function, 2)
 constant Twice = MlirDevice(MlirFunction(Doubling.function.types, MlirParallel.Rows, MlirParallel.Twice), 0)
 constant Layering = MlirDevice(MlirGpu.Layering.function, 2)
-constant Summing = MlirDevice(MlirFunction(MlirGpu.Layering.function.types, GpuSamples.Layered, GpuSamples.Summed), 0)
+constant Summing = MlirDevice(MlirFunction(MlirGpu.Layering.function.types, GpuLayerSamples.Layered, GpuLayerSamples.Summed), 0)
 constant Exact = MlirDevice(MlirGuards.Shifted, 2)
-constant Gated = MlirDevice(MlirFunction(Doubling.function.types, MlirParallel.Rows, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "gate"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "gated")))), 0)
+constant GateStores = (InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "gate"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "gated"))
+constant Gated = MlirDevice(MlirFunction(Doubling.function.types, MlirParallel.Rows, MethodEntry("Run", List(MemberEntry), "None", GateStores)), 0)
 constant Fixed = "%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64"
 constant DoublingHeader = "  llvm.func @Rows_Doubled_1_gpu2(" + Fixed + ", %results: i64) attributes {nvvm.kernel} {"
 constant Ending = ("    cf.br ^exit", "  ^exit:", "    llvm.return", "  }")
-constant Launches = ("    %lanesWanted = arith.constant 32 : i64", "    %lanesSingle = arith.constant 1 : i64", "    %launchBlocks = func.call @strict_device_block_count() : () -> i32", "    %launchBlocksWide = arith.extui %launchBlocks : i32 to i64", "    %launchWidth = arith.extui %width : i32 to i64", "    %launchThreads = arith.muli %launchBlocksWide, %launchWidth : i64", "    %warpThreads = arith.muli %count, %lanesWanted : i64", "    %laneWarped = arith.cmpi uge, %launchThreads, %warpThreads : i64", "    %lanes = arith.select %laneWarped, %lanesWanted, %lanesSingle : i64")
+constant LaunchLimits = ("    %lanesWanted = arith.constant 32 : i64", "    %lanesSingle = arith.constant 1 : i64", "    %launchBlocks = func.call @strict_device_block_count() : () -> i32")
+constant LaunchThreads = ("    %launchBlocksWide = arith.extui %launchBlocks : i32 to i64", "    %launchWidth = arith.extui %width : i32 to i64", "    %launchThreads = arith.muli %launchBlocksWide, %launchWidth : i64")
+constant LaneSelection = ("    %warpThreads = arith.muli %count, %lanesWanted : i64", "    %laneWarped = arith.cmpi uge, %launchThreads, %warpThreads : i64", "    %lanes = arith.select %laneWarped, %lanesWanted, %lanesSingle : i64")
+constant Launches = LaunchLimits + LaunchThreads + LaneSelection
 constant Singled = MlirDevice(MlirFunction(Twice.function, Float = "f32"), 0)
-constant Rows = ("    %rowed:3 = func.call @strict_device_row(%source, %at) : (!llvm.ptr, i64) -> (!llvm.ptr, i64, i64)", "    llvm.store %rowed#0, %v_value_d : !llvm.ptr, !llvm.ptr", "    llvm.store %columns, %v_value_n : i64, !llvm.ptr", "    llvm.store %rowed#1, %v_value_b : i64, !llvm.ptr")
+constant RowLoad = ("    %rowed:3 = func.call @strict_device_row(%source, %at) : (!llvm.ptr, i64) -> (!llvm.ptr, i64, i64)", "    llvm.store %rowed#0, %v_value_d : !llvm.ptr, !llvm.ptr")
+constant Rows = RowLoad + ("    llvm.store %columns, %v_value_n : i64, !llvm.ptr", "    llvm.store %rowed#1, %v_value_b : i64, !llvm.ptr")
 Name Text
 	Doubling.Name is "Rows_Doubled_1_gpu2"
 	MlirDevice(MlirFunction(Doubling.function, Float = "f32"), 2).Name is "Rows_Doubled_1_gpu2s"

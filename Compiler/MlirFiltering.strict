@@ -1,6 +1,10 @@
 has function MlirFunction
 has position Number
-constant Kept = MethodEntry("Kept", List(MemberEntry) + MemberEntry("names", "Strict/List(Text)", List(InstructionEntry), false), "Strict/List(Text)", (MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Text)", (0, 6, -1, 0)), "forResult"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "names"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.LoadText(2, ""), InstructionEntry.Binary(InstructionType.NotEqual, (1, 2)), InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, 0), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.JumpEnd, 0), InstructionEntry.Jump(InstructionType.LoopEnd, 7)))
+constant KeptLoop = (MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Text)", (0, 6, -1, 0)), "forResult"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "names"))
+constant KeptCheck = (InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.LoadText(2, ""), InstructionEntry.Binary(InstructionType.NotEqual, (1, 2)))
+constant KeptWrite = (InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, 0), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.JumpEnd, 0))
+constant KeptInstructions = KeptLoop + KeptCheck + KeptWrite + InstructionEntry.Jump(InstructionType.LoopEnd, 7)
+constant Kept = MethodEntry("Kept", List(MemberEntry) + MemberEntry("names", "Strict/List(Text)", List(InstructionEntry), false), "Strict/List(Text)", KeptInstructions)
 constant Keeping = MlirFiltering(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, Kept), 2)
 constant Filtering = MlirFiltering(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, MlirParallel.Filtered), 2)
 constant Doubling = MlirFiltering(MlirParallel.Doubling.function, 2)

@@ -1,14 +1,26 @@
 has function MlirFunction
 has position Number
 constant Made = MlirDestined(MlirFlats.Made.function, 2)
-constant Swapping = MethodEntry("Swapped", List(MemberEntry), "Strict/Math/Tripling", (MlirOwned.Empty, InstructionEntry.LoadNumber(0, 1), InstructionEntry(InstructionType.IndexCall, "numbers", (1, 0)), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "listResult0"), InstructionEntry.LoadNumber(2, 0), InstructionEntry(InstructionType.IndexCall, "numbers", (3, 2)), InstructionEntry.Named(InstructionType.InvokeWriteToList, 3, "listResult0"), InstructionEntry.LoadNumber(4, 2), InstructionEntry(InstructionType.IndexCall, "numbers", (5, 4)), InstructionEntry.Named(InstructionType.InvokeWriteToList, 5, "listResult0"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "listResult0"), InstructionEntry.Invoke(7, ("Strict/Math/Tripling", "from", "Strict/Math/Tripling", "numbers"), List(Number) + 6, -1), InstructionEntry.Return(7)))
+constant MovedForward = (MlirOwned.Empty, InstructionEntry.LoadNumber(0, 1), InstructionEntry(InstructionType.IndexCall, "numbers", (1, 0)), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "listResult0"))
+constant MovedBack = (InstructionEntry.LoadNumber(2, 0), InstructionEntry(InstructionType.IndexCall, "numbers", (3, 2)), InstructionEntry.Named(InstructionType.InvokeWriteToList, 3, "listResult0"))
+constant KeptLast = (InstructionEntry.LoadNumber(4, 2), InstructionEntry(InstructionType.IndexCall, "numbers", (5, 4)), InstructionEntry.Named(InstructionType.InvokeWriteToList, 5, "listResult0"))
+constant Rebuilt = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "listResult0"), InstructionEntry.Invoke(7, ("Strict/Math/Tripling", "from", "Strict/Math/Tripling", "numbers"), List(Number) + 6, -1))
+constant Swapping = MethodEntry("Swapped", List(MemberEntry), "Strict/Math/Tripling", MovedForward + MovedBack + KeptLast + Rebuilt + InstructionEntry.Return(7))
 constant Maker = TypeEntry("Strict/Math/Tripling", List(MemberEntry) + MlirFlats.Numbers, (MlirFlats.Validating, MlirFlats.Making))
-constant Calling = (InstructionEntry.Invoke(0, ("Strict/Math/Tripling", "Made", "Strict/Math/Tripling"), List(Number), -1), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "moved"), InstructionEntry.Invoke(1, ("Strict/Math/Tripling", "Made", "Strict/Math/Tripling"), List(Number), -1), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "moved"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "moved"), InstructionEntry.Return(2))
+constant MadeMoved = (InstructionEntry.Invoke(0, ("Strict/Math/Tripling", "Made", "Strict/Math/Tripling"), List(Number), -1), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "moved"))
+constant MadeAgain = (InstructionEntry.Invoke(1, ("Strict/Math/Tripling", "Made", "Strict/Math/Tripling"), List(Number), -1), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "moved"))
+constant MovedReturned = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "moved"), InstructionEntry.Return(2))
+constant Calling = MadeMoved + MadeAgain + MovedReturned
 constant Caller = MlirDestined(MlirFunction((Maker, MlirFlats.Summing), Maker, MethodEntry("Run", List(MemberEntry), "None", Calling)), 2)
-constant Keeping = MlirDestined(MlirFunction((Maker, MlirFlats.Summing), Maker, MethodEntry("Run", List(MemberEntry), "None", Calling.Slice(0, 2) + InstructionEntry.LoadNumber(4, 0) + InstructionEntry(InstructionType.IndexCall, "moved", (5, 4)) + InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 5, "first") + Calling.Slice(2, 4))), 2)
+constant FirstStored = (InstructionEntry.LoadNumber(4, 0), InstructionEntry(InstructionType.IndexCall, "moved", (5, 4)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 5, "first"))
+constant Keeping = MlirDestined(MlirFunction((Maker, MlirFlats.Summing), Maker, MethodEntry("Run", List(MemberEntry), "None", MadeMoved + FirstStored + MadeAgain + MovedReturned)), 2)
 constant Removing = InstructionEntry.Invoke(1, ("Strict/List(Number)", "SwapRemoved", "Strict/List(Number)", "position"), List(Number) + 0, 2)
-constant Thinning = MlirDestined(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Number)", (0, 6, -1, 0)), "moved"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "moved"), InstructionEntry.LoadNumber(2, 0), InstructionEntry.Invoke(3, Removing.texts, List(Number) + 2, 1), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 3, "moved"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "moved"), InstructionEntry.Return(4)))), 3)
-constant Taking = ("    %flatDestinationSlot = llvm.mlir.addressof @strict_flat_destination : !llvm.ptr", "    %flatDestination = llvm.load %flatDestinationSlot : !llvm.ptr -> f64", "    llvm.store %zero, %flatDestinationSlot : f64, !llvm.ptr")
+constant MovedEmpty = MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Number)", (0, 6, -1, 0)), "moved")
+constant SwapRemove = (MovedEmpty, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "moved"), InstructionEntry.LoadNumber(2, 0), InstructionEntry.Invoke(3, Removing.texts, List(Number) + 2, 1))
+constant Thinned = (InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 3, "moved"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "moved"), InstructionEntry.Return(4))
+constant Thinning = MlirDestined(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", SwapRemove + Thinned)), 3)
+constant FlatDestination = ("    %flatDestinationSlot = llvm.mlir.addressof @strict_flat_destination : !llvm.ptr", "    %flatDestination = llvm.load %flatDestinationSlot : !llvm.ptr -> f64")
+constant Taking = FlatDestination + "    llvm.store %zero, %flatDestinationSlot : f64, !llvm.ptr"
 constant Write = InstructionType.InvokeWriteToList
 constant Swapped = MlirDestined(MlirFunction((MlirFlats.Tripling, MlirFlats.Summing), MlirFlats.Tripling, Swapping), 0)
 constant Lined = MlirDestined(MlirListDestined.Lined.function, 1)

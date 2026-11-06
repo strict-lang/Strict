@@ -34,7 +34,7 @@ IsMagic(token Text) Boolean
 	(Plain.IsMagic("7") or Plain.IsMagic("10") or Plain.IsMagic("1000") or Plain.IsMagic("0.5")) is false
 	(Plain.IsMagic("32") or Plain.IsMagic("65536") or Plain.IsMagic("4194304")) is false
 	(Plain.IsMagic("0.001") or Plain.IsMagic("x") or Plain.IsMagic("\"97\"")) is false
-	if Tokenizer.IsDigit(token.Substring(0, 1)) is false
+	if Tokenizer.IsDigit(token(0)) is false
 		return false
 	((token.Length is 1) or (token is "0.5") or IsPowerOfTen(token) or IsPowerOfTwo(token to Number)) is false
 IsPowerOfTen(token Text) Boolean

@@ -40,7 +40,7 @@ Tree(folder Text) Texts
 	mutable folders = List(Mutable(Text)) + folder
 	for Directory.Directories(folder)
 		let name = Path(value.Replace("\\", "/")).FileName.text
-		let first = name.Substring(0, 1)
+		let first = name(0)
 		if (first is first.Upper) and (first is not first.Lower)
 			folders = folders + Tree(folder + "/" + name)
 	folders

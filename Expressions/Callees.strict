@@ -56,7 +56,7 @@ Parts(text Text) Texts
 	mutable depth = 0
 	mutable start = 0
 	for text.Length
-		let character = text.Substring(index, 1)
+		let character = text(index)
 		depth = depth + (character is "(" then 1 else (character is ")" then -1 else 0))
 		if (depth is 0) and (character is ",")
 			parts.Add(text.Substring(start, index - start))
@@ -67,7 +67,7 @@ Closing(text Text, open Number) Number
 	Blurring.Closing("(a", 0) is -1
 	mutable depth = 0
 	for Range(open, text.Length)
-		let character = text.Substring(value, 1)
+		let character = text(value)
 		depth = depth + (character is "(" then 1 else (character is ")" then -1 else 0))
 		if depth is 0
 			return value

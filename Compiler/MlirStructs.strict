@@ -1,18 +1,26 @@
 has function MlirFunction
 has position Number
 constant Sizing = MemberEntry("size", "Strict/Number", List(InstructionEntry), false)
-constant Making = MethodEntry("Made", List(MemberEntry) + Sizing, "Strict/Shape", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "size"), InstructionEntry.Invoke(1, ("Strict/Shape", "from", "Strict/Shape", "width"), 0, -1), InstructionEntry.Return(1)))
+constant SizeLoad = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "size")
+constant Making = MethodEntry("Made", List(MemberEntry) + Sizing, "Strict/Shape", (SizeLoad, InstructionEntry.Invoke(1, ("Strict/Shape", "from", "Strict/Shape", "width"), 0, -1), InstructionEntry.Return(1)))
 constant Maker = TypeEntry("Strict/Shape", MlirFunction.Shape.members, List(MethodEntry) + Making)
 constant Made = MlirStructs(MlirFunction(List(TypeEntry) + Maker, Maker, Making), 1)
-constant Checker = MlirStructs(MlirFunction(List(TypeEntry) + Maker, Maker, MethodEntry("Checked", List(MemberEntry) + Sizing, "Strict/Shape", Making.instructions.Slice(0, 2) + InstructionEntry.Invoke(2, ("Strict/Shape", "Validated", "Strict/Shape"), List(Number), 1) + InstructionEntry.Return(2))), 1)
+constant Validating = InstructionEntry.Invoke(2, ("Strict/Shape", "Validated", "Strict/Shape"), List(Number), 1)
+constant Checker = MlirStructs(MlirFunction(List(TypeEntry) + Maker, Maker, MethodEntry("Checked", List(MemberEntry) + Sizing, "Strict/Shape", Making.instructions.Slice(0, 2) + Validating + InstructionEntry.Return(2))), 1)
 constant Calling = InstructionEntry.Invoke(1, ("Strict/Shape", "Made", "Strict/Shape", "size"), 0, -1)
-constant Forwarding = MethodEntry("Forwarded", List(MemberEntry) + Sizing, "Strict/Shape", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "size"), Calling, InstructionEntry.Return(1)))
+constant Forwarding = MethodEntry("Forwarded", List(MemberEntry) + Sizing, "Strict/Shape", (SizeLoad, Calling, InstructionEntry.Return(1)))
 constant Forwarder = MlirStructs(MlirFunction(List(TypeEntry) + Maker, Maker, Forwarding), 1)
-constant Filling = MethodEntry("Filled", (MemberEntry("items", "Strict/List(Strict/Shape)", List(InstructionEntry), false), Sizing), "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "size"), Calling, InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "items(0)"), InstructionEntry.Return(1)))
+constant ShapeItems = MemberEntry("items", "Strict/List(Strict/Shape)", List(InstructionEntry), false)
+constant Filling = MethodEntry("Filled", (ShapeItems, Sizing), "None", (SizeLoad, Calling, InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "items(0)"), InstructionEntry.Return(1)))
 constant Filler = MlirStructs(MlirFunction(List(TypeEntry) + Maker, Maker, Filling), 1)
-constant Collecting = MethodEntry("Collected", List(MemberEntry) + Sizing, "Strict/List(Strict/Shape)", (MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Strict/Shape)", (0, 6, -1, 0)), "forResult"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "size"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "size"), Calling, InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "made"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "made"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 2, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 6)))
+constant ShapesEmptied = MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Strict/Shape)", (0, 6, -1, 0)), "forResult")
+constant MakingLoop = (ShapesEmptied, SizeLoad, InstructionEntry.LoopBegin(0, -1), SizeLoad, Calling, InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "made"))
+constant MadeAdding = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "made"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 2, "forResult"))
+constant Collecting = MethodEntry("Collected", List(MemberEntry) + Sizing, "Strict/List(Strict/Shape)", MakingLoop + MadeAdding + InstructionEntry.Jump(InstructionType.LoopEnd, 6))
 constant Collector = MlirStructs(MlirFunction(List(TypeEntry) + Maker, Maker, Collecting), 4)
-constant Taking = ("    %structDestinationGlobal = llvm.mlir.addressof @strict_struct_destination : !llvm.ptr", "    %structDestinationValue = llvm.load %structDestinationGlobal : !llvm.ptr -> f64", "    llvm.store %zero, %structDestinationGlobal : f64, !llvm.ptr", "    %structDestination = llvm.alloca %one x f64 : (i64) -> !llvm.ptr", "    llvm.store %structDestinationValue, %structDestination : f64, !llvm.ptr")
+constant DestinationRead = ("    %structDestinationGlobal = llvm.mlir.addressof @strict_struct_destination : !llvm.ptr", "    %structDestinationValue = llvm.load %structDestinationGlobal : !llvm.ptr -> f64")
+constant DestinationCopied = ("    %structDestination = llvm.alloca %one x f64 : (i64) -> !llvm.ptr", "    llvm.store %structDestinationValue, %structDestination : f64, !llvm.ptr")
+constant Taking = DestinationRead + "    llvm.store %zero, %structDestinationGlobal : f64, !llvm.ptr" + DestinationCopied
 Consumes(depth Number) Boolean
 	Made.Consumes(0)
 	Forwarder.Consumes(0)
@@ -94,7 +102,7 @@ Element(entry InstructionEntry, next InstructionEntry, compiled Texts, returned 
 	if IsTarget(entry, next, returned) is false
 		return Collected(entry, compiled, returned)
 	let parts = PayloadDecoder(next).ElementParts
-	let isNumber = "0123456789".IndexOf(parts(1).Substring(0, 1)) is not -1
+	let isNumber = "0123456789".IndexOf(parts(1)(0)) is not -1
 	let temp = "%t" + position + "s"
 	let literal = "    " + temp + "i = arith.constant " + parts(1) + ".0 : f64"
 	let index = isNumber then literal else function.Load(temp + "i", "%v_" + parts(1))

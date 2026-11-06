@@ -5,12 +5,17 @@ constant NewShape = InstructionEntry.Invoke(6, ("Strict/Shape", "from", "Strict/
 constant Width = InstructionEntry(InstructionType.FieldLoad, "width", (5, 6, -1))
 constant Characters = InstructionEntry(InstructionType.FieldLoad, "characters", (5, 0, -1))
 constant Coded = InstructionEntry(InstructionType.FieldLoad, "number", (2, 1, -1))
-constant Lettered = MlirKinds(MlirFunction(List(TypeEntry) + TypeEntry.CharacterEntry, TypeEntry.CharacterEntry, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "b"), InstructionEntry.Invoke(1, ("Strict/Character", "from", "Strict/Character", "text"), 0, -1), Coded))))
+constant LetterText = (InstructionEntry.LoadText(0, "b"), InstructionEntry.Invoke(1, ("Strict/Character", "from", "Strict/Character", "text"), 0, -1))
+constant Lettered = MlirKinds(MlirFunction(List(TypeEntry) + TypeEntry.CharacterEntry, TypeEntry.CharacterEntry, MethodEntry("Run", List(MemberEntry), "None", LetterText + Coded)))
 constant Indexed = InstructionEntry(InstructionType.IndexCall, "letters", (7, 4, -1))
 constant Looped = (InstructionEntry.LoopBegin(4, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 8, "value"), InstructionEntry(InstructionType.LoopEnd, List(Text), (1)))
-constant Graded = MlirKinds(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "A"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "letter"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "letter"), Passed, InstructionEntry.Binary(InstructionType.Add, (1, 0, 3)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "width"), NewShape, Width, Indexed) + Looped)))
+constant LetterStored = (InstructionEntry.LoadText(0, "A"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "letter"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "letter"))
+constant GradedInstructions = LetterStored + Passed + InstructionEntry.Binary(InstructionType.Add, (1, 0, 3)) + InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "width") + NewShape + Width + Indexed + Looped
+constant Graded = MlirKinds(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", GradedInstructions)))
 constant Shapes = MemberEntry("shapes", "Strict/List(Shape)", List(InstructionEntry), false)
-constant Paired = MlirKinds(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + Shapes, "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "shapes"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "outer"), InstructionEntry(InstructionType.LoopEnd, List(Text), (2)), InstructionEntry(InstructionType.LoopEnd, List(Text), (4))))))
+constant ShapesLoops = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "shapes"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.LoopBegin(0, -1))
+constant PairedInstructions = ShapesLoops + InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "outer") + InstructionEntry(InstructionType.LoopEnd, List(Text), (2)) + InstructionEntry(InstructionType.LoopEnd, List(Text), (4))
+constant Paired = MlirKinds(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + Shapes, "None", PairedInstructions)))
 constant Listed = MlirKinds(MlirListOperators.Mixed)
 KindOf(position Number, register Number) Text
 	Graded.KindOf(1, 0) is "Text"

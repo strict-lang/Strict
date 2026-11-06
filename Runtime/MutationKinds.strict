@@ -11,10 +11,19 @@ constant Temporary = InstructionEntry(Mutation.Stored, texts = ("logical0"))
 constant Writers = (InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.Invoke) + Mutation.Arithmetic
 constant Named = MutationKinds(MethodEntry("Run", List(MemberEntry) + MemberEntry("name", "Strict/Text", List(InstructionEntry), false), "None", List(InstructionEntry)))
 constant Loaded = InstructionEntry.LoadNumber(1, 1)
-constant Placed = MutationKinds(MethodEntry(Twice.method, instructions = (InstructionEntry(Loaded, line = 4), InstructionEntry(Mutation.Greater, line = 2), InstructionEntry(Mutation.Greater, line = 2), InstructionEntry(Returned, line = 2), InstructionEntry(Loaded, line = 3), InstructionEntry(Mutation.Greater, line = 2), InstructionEntry(Mutation.Greater, line = 2), Loaded, InstructionEntry(Loaded, line = 4))))
+constant LoadedInLineFour = InstructionEntry(Loaded, line = 4)
+constant GreaterInLineTwo = InstructionEntry(Mutation.Greater, line = 2)
+constant PlacedLines = (LoadedInLineFour, GreaterInLineTwo, GreaterInLineTwo, InstructionEntry(Returned, line = 2), InstructionEntry(Loaded, line = 3))
+constant Placed = MutationKinds(MethodEntry(Twice.method, instructions = PlacedLines + (GreaterInLineTwo, GreaterInLineTwo, Loaded, LoadedInLineFour)))
 constant Joined = MutationKinds(MethodEntry(Mutation.Twice.method, instructions = (InstructionEntry.LoadText(0, "a"), InstructionEntry.LoadText(1, ""), InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)), InstructionEntry.Return(2))))
 constant Texted = MutationKinds(MethodEntry(Twice.method, instructions = (InstructionEntry.LoadText(0, "a"), Mutation.Stored)))
-constant Valuing = MutationKinds(MethodEntry(Twice.method, instructions = (Loaded, InstructionEntry.LoadText(0, "a"), InstructionEntry.Binary(InstructionType.Add, (1, 0, 2)), InstructionEntry.Binary(InstructionType.Add, (1, 1, 2)), InstructionEntry(InstructionType.Subtract, List(Text), (2, 0)), InstructionEntry(InstructionType.LoadConstantToRegister, "a", (3, 1, -1)), InstructionEntry(InstructionType.LoadConstantToRegister, List(Text), (3, 4, -1)), Mutation.Greater, MutationFlow.Looped.method.instructions(2), InstructionEntry(InstructionEntry.Binary(InstructionType.Add, (4, 1, 2)), line = 1), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 3, "conditional0"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 3, "conditional0"), Mutation.Stored, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "a"), Logging)))
+constant TextAdditions = (Loaded, InstructionEntry.LoadText(0, "a"), InstructionEntry.Binary(InstructionType.Add, (1, 0, 2)), InstructionEntry.Binary(InstructionType.Add, (1, 1, 2)))
+constant Load = InstructionType.LoadConstantToRegister
+constant ConstantLoads = (InstructionEntry(InstructionType.Subtract, List(Text), (2, 0)), InstructionEntry(Load, "a", (3, 1, -1)), InstructionEntry(Load, List(Text), (3, 4, -1)))
+constant StoredConditional = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 3, "conditional0")
+constant ConditionalStores = (Mutation.Greater, MutationFlow.Looped.method.instructions(2), InstructionEntry(InstructionEntry.Binary(InstructionType.Add, (4, 1, 2)), line = 1), StoredConditional, StoredConditional)
+constant LoggedText = (Mutation.Stored, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "a"), Logging)
+constant Valuing = MutationKinds(MethodEntry(Twice.method, instructions = TextAdditions + ConstantLoads + ConditionalStores + LoggedText))
 Kinds(position Number) Numbers
 	Twice.Kinds(1) is (5)
 	MutationKinds(MutationFlow.Issued.method).Kinds(0).Length is 0

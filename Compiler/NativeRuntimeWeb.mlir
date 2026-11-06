@@ -548,6 +548,10 @@
     %mixed = arith.xori %now, %address : i64
     return %mixed : i64
   }
+  // File.Delete removes the file, other processes lock a new one at that path
+  func.func private @strict_file_unlocked(%path: f64) {
+    return
+  }
   func.func private @strict_file_locked(%path: f64) -> f64 {
     %held = arith.constant 1.0 : f64
     return %held : f64

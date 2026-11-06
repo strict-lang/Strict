@@ -1,15 +1,25 @@
 has statements MlirWholeStatements
 constant Floor = MlirWholeNative(MlirWholeStatements.Halving.At(3))
 constant Sizing = MlirWholeNative(MlirWholeStatements(MlirWholeInstance.Sized.function, 1, "od-ii", "-o-", "odoii"))
-constant Mixing = MlirFunction(MlirArguments.Called.types, MlirArguments.Halves, MethodEntry("Run", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 3), InstructionEntry.LoadNumber(1, 2), InstructionEntry.Binary(InstructionType.Divide, (0, 1, 0)), InstructionEntry.Return(0))))
+constant Divided = (InstructionEntry.LoadNumber(0, 3), InstructionEntry.LoadNumber(1, 2), InstructionEntry.Binary(InstructionType.Divide, (0, 1, 0)), InstructionEntry.Return(0))
+constant Mixing = MlirFunction(MlirArguments.Called.types, MlirArguments.Halves, MethodEntry("Run", List(MemberEntry), "Strict/Number", Divided))
 constant Mixed = MlirWholeNative(MlirWholeStatements(Mixing, 0, MlirWholeTypes(Mixing).Part(0), MlirWholeTypes(Mixing).Part(1), MlirWholeTypes(Mixing).Part(2)))
 constant Painting = MlirWholeStatements(MlirLanes.Sample.function, 3, "iiiii", "--", "iiiii")
 constant Framing = TypeEntry("Strict/Framing", List(MemberEntry) + MemberEntry("Size", "Strict/Math/Sizing", List(InstructionEntry), false), List(MethodEntry))
 constant Widths = InstructionEntry(InstructionType.FieldLoad, ("Width", "Sizing"), (1, 0, -1))
 constant Widening = MethodEntry("Wide", List(MemberEntry), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "Size"), Widths, InstructionEntry.Return(1)))
 constant Framed = MlirWholeNative(MlirWholeStatements(MlirFunction((MlirCouples.Sizing, Framing), Framing, Widening), 1, "ci", "c", "ci"))
-constant Packs = "    %t3a0 = llvm.load %r0 : !llvm.ptr -> i64|    %t3z0 = arith.constant 0 : i64|    %t3y0 = arith.constant 255 : i64|    %t3s0 = arith.constant 0 : i64|    %t3l0 = arith.maxsi %t3a0, %t3z0 : i64|    %t3h0 = arith.minsi %t3l0, %t3y0 : i64|    %t3b0 = arith.shli %t3h0, %t3s0 : i64|    %t3a1 = llvm.load %r1 : !llvm.ptr -> i64|    %t3z1 = arith.constant 0 : i64|    %t3y1 = arith.constant 255 : i64|    %t3s1 = arith.constant 8 : i64|    %t3l1 = arith.maxsi %t3a1, %t3z1 : i64|    %t3h1 = arith.minsi %t3l1, %t3y1 : i64|    %t3b1 = arith.shli %t3h1, %t3s1 : i64|    %t3a2 = llvm.load %r2 : !llvm.ptr -> i64|    %t3z2 = arith.constant 0 : i64|    %t3y2 = arith.constant 255 : i64|    %t3s2 = arith.constant 16 : i64|    %t3l2 = arith.maxsi %t3a2, %t3z2 : i64|    %t3h2 = arith.minsi %t3l2, %t3y2 : i64|    %t3b2 = arith.shli %t3h2, %t3s2 : i64|    %t3o1 = arith.ori %t3b0, %t3b1 : i64|    %t3o2 = arith.ori %t3o1, %t3b2 : i64|    llvm.store %t3o2, %r3 : i64, !llvm.ptr"
-constant Greened = "    %t4a = llvm.load %r3 : !llvm.ptr -> i64|    %t4s = arith.constant 8 : i64|    %t4y = arith.constant 255 : i64|    %t4v = arith.shrui %t4a, %t4s : i64|    %t4m = arith.andi %t4v, %t4y : i64|    llvm.store %t4m, %r4 : i64, !llvm.ptr"
+constant RedLoaded = "    %t3a0 = llvm.load %r0 : !llvm.ptr -> i64|    %t3z0 = arith.constant 0 : i64|    %t3y0 = arith.constant 255 : i64|    %t3s0 = arith.constant 0 : i64|"
+constant RedClamped = "    %t3l0 = arith.maxsi %t3a0, %t3z0 : i64|    %t3h0 = arith.minsi %t3l0, %t3y0 : i64|    %t3b0 = arith.shli %t3h0, %t3s0 : i64|"
+constant GreenLoaded = "    %t3a1 = llvm.load %r1 : !llvm.ptr -> i64|    %t3z1 = arith.constant 0 : i64|    %t3y1 = arith.constant 255 : i64|    %t3s1 = arith.constant 8 : i64|"
+constant GreenClamped = "    %t3l1 = arith.maxsi %t3a1, %t3z1 : i64|    %t3h1 = arith.minsi %t3l1, %t3y1 : i64|    %t3b1 = arith.shli %t3h1, %t3s1 : i64|"
+constant BlueLoaded = "    %t3a2 = llvm.load %r2 : !llvm.ptr -> i64|    %t3z2 = arith.constant 0 : i64|    %t3y2 = arith.constant 255 : i64|    %t3s2 = arith.constant 16 : i64|"
+constant BlueClamped = "    %t3l2 = arith.maxsi %t3a2, %t3z2 : i64|    %t3h2 = arith.minsi %t3l2, %t3y2 : i64|    %t3b2 = arith.shli %t3h2, %t3s2 : i64|"
+constant LanesJoined = "    %t3o1 = arith.ori %t3b0, %t3b1 : i64|    %t3o2 = arith.ori %t3o1, %t3b2 : i64|    llvm.store %t3o2, %r3 : i64, !llvm.ptr"
+constant Packs = RedLoaded + RedClamped + GreenLoaded + GreenClamped + BlueLoaded + BlueClamped + LanesJoined
+constant GreenShift = "    %t4a = llvm.load %r3 : !llvm.ptr -> i64|    %t4s = arith.constant 8 : i64|    %t4y = arith.constant 255 : i64|"
+constant GreenMasked = "    %t4v = arith.shrui %t4a, %t4s : i64|    %t4m = arith.andi %t4v, %t4y : i64|    llvm.store %t4m, %r4 : i64, !llvm.ptr"
+constant Greened = GreenShift + GreenMasked
 constant Lengthening = MlirWholeNative(MlirWholeStatements(MlirWholeChild.Brightening.function, 4, MlirWholeChild.Types.Part(0), MlirWholeChild.Types.Part(1), MlirWholeChild.Types.Part(2)))
 constant Flooring = InstructionEntry.Invoke(0, ("Strict/Number", "Floor", "Strict/Number"), List(Number), 0)
 Emitted(entry InstructionEntry) Texts

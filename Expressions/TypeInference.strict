@@ -104,7 +104,7 @@ IsIndexed(name Text, current Scope) Boolean
 	TypeInference(KnownTypes.Sample, Limits).IsIndexed("Limit", KnownTypes.CountMethods)
 	let owner = types.methods.Index(current)
 	let isConstant = owner >= 0 and owner < constants.Length then constants(owner).TypeOf(name) is not "" else false
-	isConstant or name.Substring(0, 1).Lower is name.Substring(0, 1)
+	isConstant or name(0).Lower is name(0)
 MemberCallType(node SyntaxNode, scope Scope, current Scope) Text
 	NoInference.MemberCallType(SyntaxNode("Member", "Length", (ToText, NoNode)), NoShape, NoShape) is "Unknown"
 	Scaling.MemberCallType(SyntaxParser(Tokenizer("p.Scaled(3)").Tokens).Parse, Paired, NoShape) is "Pair"

@@ -1,6 +1,7 @@
 has function MlirFunction
 has position Number
-constant Seeding = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MemberEntry("start", "Strict/List(Number)", List(InstructionEntry), false), "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "start"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "moved")) + MlirOwned.Built))
+constant SeedMoves = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "start"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "moved"))
+constant Seeding = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MemberEntry("start", "Strict/List(Number)", List(InstructionEntry), false), "None", SeedMoves + MlirOwned.Built))
 constant Dropping = MlirDying(MlirOwned.Rebuilt.function, 10)
 constant Dropped = InstructionEntry.Return(4)
 constant Guarding = ("a", "b %t#same, x", "c", "d")

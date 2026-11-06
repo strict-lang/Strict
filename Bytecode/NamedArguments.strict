@@ -4,7 +4,8 @@ constant Constructing = Scope(("from", "from types", "light default", "mask defa
 constant Types = KnownTypes(("Part", "Number"), (PartMembers, KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Constructing, KnownTypes.NoMembers))
 constant Parts = NamedArguments(ValueCodegen(TypeInference(Types, CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget(Types, CallTarget.Greeter, "Strict/Part", List(Text))))
 constant Curving = Scope(("from", "from types", "light default", "mask default"), ("buffer,light,mask", "Number,Number,Curve", "0", "Curve.Flat"))
-constant Curved = NamedArguments(ValueCodegen(TypeInference(KnownTypes(("Part", "Curve"), (PartMembers, KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Curving, KnownTypes.NoMembers)), CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget(Types, CallTarget.Greeter, "Strict/Part", List(Text))))
+constant CurveTypes = KnownTypes(("Part", "Curve"), (PartMembers, KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Curving, KnownTypes.NoMembers))
+constant Curved = NamedArguments(ValueCodegen(TypeInference(CurveTypes, CallTarget.NoScopes), KnownTypes.NoMembers, Parts.values.target))
 constant Named = SyntaxParser(Tokenizer("Part(buffer = 1, mask = 3)").Tokens).Parse
 constant Masked = SyntaxParser(Tokenizer("Part(1, mask = 3)").Tokens).Parse
 constant Shining = Constructing.WithAll(("Shine", "Shine light default", "Shine mask default"), ("light,mask", "0", "Curve.Flat"))

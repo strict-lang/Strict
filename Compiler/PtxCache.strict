@@ -102,7 +102,7 @@ Waited(key Text, isTiling Boolean) Slow(Texts)
 	PtxCache("Compiler/output/Unbuilt/module").Waited("module {\n}", false).Length is 0
 	let lock = File(Path(base).PathOnly.text + ".lock")
 	let started = Process.Elapsed
-	for as long as Process.Elapsed - started < Strict.MaxWait
+	for as long as Process.Elapsed - started < Strict.BuildWait
 		let previous = Previous(key, isTiling)
 		if (previous.Length > 0) or lock.Locked
 			return previous.Length > 0 then previous else Previous(key, isTiling)

@@ -38,7 +38,7 @@ Quoted(content Text) Text
 Added(entry Text) JsonWriter
 	Object.Added("\"a\":1").Added("\"b\":2").text is "{\"a\":1,\"b\":2}"
 	let separator = text.Length > 2 then "," else ""
-	JsonWriter(text.Substring(0, text.Length - 1) + separator + entry + text.Substring(text.Length - 1, 1))
+	JsonWriter(text.Substring(0, text.Length - 1) + separator + entry + text(text.Length - 1))
 Escaped(character Character) Text
 	Object.Escaped(Character(9)) is "\\t"
 	Object.Escaped(Character(1)) is "\\u0001"
@@ -49,6 +49,6 @@ Escaped(character Character) Text
 		return character to Text
 	let named = JsonText.Controls.Index(character to Text)
 	if named >= 0
-		return "\\" + "ntrbf".Substring(named, 1)
+		return "\\" + "ntrbf".characters(named)
 	constant hex = JsonText.HexDigits
-	"\\u00" + hex.Substring((character.number / hex.Length).Floor, 1) + hex.Substring(character.number % hex.Length, 1)
+	"\\u00" + hex.characters((character.number / hex.Length).Floor) + hex.characters(character.number % hex.Length)

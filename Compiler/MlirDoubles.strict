@@ -1,7 +1,9 @@
 has function MlirFunction
 has position Number
 constant Count = MemberEntry("count", "Strict/Number", List(InstructionEntry), false)
-constant Tabled = MethodEntry("Tabled", List(MemberEntry) + Count, "Strict/List(Number)", (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "count"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "index"), InstructionEntry.LoadNumber(2, 8), InstructionEntry.Binary(InstructionType.Divide, (1, 2, 3)), InstructionEntry.Named(InstructionType.InvokeWriteToList, 3, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 5)))
+constant CountLoop = (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "count"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "index"))
+constant ResultWrite = (InstructionEntry.Named(InstructionType.InvokeWriteToList, 3, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 5))
+constant Tabled = MethodEntry("Tabled", List(MemberEntry) + Count, "Strict/List(Number)", CountLoop + (InstructionEntry.LoadNumber(2, 8), InstructionEntry.Binary(InstructionType.Divide, (1, 2, 3))) + ResultWrite)
 constant Squared = MethodEntry("Squared", Tabled.parameters, Tabled.returnType, Tabled.instructions.Slice(0, 5) + InstructionEntry.Binary(InstructionType.Power, (1, 2, 3)) + Tabled.instructions.Slice(6, 2))
 constant Tabling = MlirDoubles(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, Tabled), 2)
 constant Squaring = MlirDoubles(MlirFunction(Tabling.function.types, MlirParallel.Rows, Squared), 2)

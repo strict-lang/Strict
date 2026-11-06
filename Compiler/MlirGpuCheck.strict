@@ -4,14 +4,14 @@ constant Doubling = MlirGpuCheck(MlirGpu.Doubling.function, 2)
 constant Randomizing = MlirGpuCheck(MlirGpu.Randomizing.function, 2)
 constant Layering = MlirGpuCheck(MlirGpu.Layering.function, 2)
 constant Summed = MlirDeviceStatements.Summed
-constant Absolute = MlirFunction(List(TypeEntry) + GpuSamples.Numbered, GpuSamples.Numbered, GpuSamples.Absolute)
-constant Powered = MlirFunction(List(TypeEntry) + GpuSamples.Numbered, GpuSamples.Numbered, GpuSamples.Powered)
-constant Floored = MlirFunction(Powered.types, Powered.type, GpuSamples.Floored)
+constant Absolute = MlirFunction(List(TypeEntry) + GpuNumberSamples.Numbered, GpuNumberSamples.Numbered, GpuNumberSamples.Absolute)
+constant Powered = MlirFunction(List(TypeEntry) + GpuNumberSamples.Numbered, GpuNumberSamples.Numbered, GpuNumberSamples.Powered)
+constant Floored = MlirFunction(Powered.types, Powered.type, GpuNumberSamples.Floored)
 constant Flooring = Floored.method.instructions(1)
 constant Moves = (InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.StoreConstantToVariable, InstructionType.StoreRegisterToVariable)
 constant Controls = (InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue, InstructionType.JumpEnd, InstructionType.LoopEnd, InstructionType.CheckError)
 constant Values = ("Number", "Boolean")
-constant Heading = MlirGpuCheck(MlirFunction(List(TypeEntry) + GpuSamples.Headed, GpuSamples.Headed, GpuSamples.Heading), 2)
+constant Heading = MlirGpuCheck(MlirFunction(List(TypeEntry) + GpuChoiceSamples.Headed, GpuChoiceSamples.Headed, GpuChoiceSamples.Heading), 2)
 constant Rows = ("", "List(Number)", "List(Numbers)", "List(List(Number))")
 IsGpu Boolean
 	Doubling.IsGpu
@@ -35,8 +35,8 @@ IsPure Boolean
 IsDeviceBody Boolean
 	Doubling.IsDeviceBody
 	Randomizing.IsDeviceBody is false
-	MlirGpuCheck(GpuSamples.Gathering, 2).IsDeviceBody is false
-	MlirGpuCheck(GpuSamples.Weighting, 2).IsDeviceBody is false
+	MlirGpuCheck(GpuLayerSamples.Gathering, 2).IsDeviceBody is false
+	MlirGpuCheck(GpuChoiceSamples.Weighting, 2).IsDeviceBody is false
 	for Range(position + 1, function.method.LoopEndOf(position))
 		if IsDevice(function, value, 0) is false
 			return false
@@ -44,7 +44,7 @@ IsDeviceBody Boolean
 IsDevice(inspected MlirFunction, at Number, depth Number) Boolean
 	Doubling.IsDevice(Doubling.function, 4, 0)
 	Randomizing.IsDevice(Randomizing.function, 4, 0) is false
-	Doubling.IsDevice(MlirFunction(Powered.types, Powered.type, GpuSamples.Sined), 1, 0)
+	Doubling.IsDevice(MlirFunction(Powered.types, Powered.type, GpuNumberSamples.Sined), 1, 0)
 	let entry = inspected.method.instructions(at)
 	if (entry.kind is in Moves) or (entry.kind is InstructionType.IndexCall)
 		return IsValued(inspected, at, depth)
@@ -145,7 +145,7 @@ IsDeviceMethod(callees List(MlirFunction), depth Number) Boolean
 	true
 IsPassable(callee MlirFunction) Boolean
 	Layering.IsPassable(Summed)
-	Layering.IsPassable(MlirFunction(Summed.types, GpuSamples.Layered, GpuSamples.Rowed)) is false
+	Layering.IsPassable(MlirFunction(Summed.types, GpuLayerSamples.Layered, GpuLayerSamples.Rowed)) is false
 	for callee.method.parameters
 		if MlirDeviceRows(callee, 0).IsRows(TypeEntry.ShortName(value.typeName))
 			return false

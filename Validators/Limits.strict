@@ -5,13 +5,18 @@ constant MaxCharacters = 120
 constant MaxMethodLines = 13
 constant MaxMethods = 16
 constant MaxMembers = 15
-constant ExtraConstants = 2
+constant MaxConstants = 40
 constant MinusPrecedence = SyntaxNode("Binary", "-").Precedence
-constant OnlyConstants = Limits(("constant A", "constant B", "constant C", "constant D", "constant E", "constant F", "constant G", "constant H", "constant I", "constant J", "constant K", "constant L", "constant M", "constant N", "constant O", "constant P"), false)
+constant ConstantsAToH = ("constant A", "constant B", "constant C", "constant D", "constant E", "constant F", "constant G", "constant H")
+constant ConstantsIToP = ("constant I", "constant J", "constant K", "constant L", "constant M", "constant N", "constant O", "constant P")
+constant OnlyConstants = Limits(ConstantsAToH + ConstantsIToP, false)
 constant Sample = Limits(("has number", "Run", "\t\t\t\t\t\t1", "  2"), false)
 constant Long = Limits(("Run", "\t1", "\t2", "\t3", "\t4", "\t5", "\t6", "\t7", "\t8", "\t9", "\t10", "\t11", "\t12", "\t13"), false)
+constant Crowded = Limits(OnlyConstants.lines + OnlyConstants.lines + OnlyConstants.lines, false)
+constant Crowding = Limits(Text.Combine(OnlyConstants.lines, "\n").Replace("constant ", "has ").Lines, false)
 constant Twice = Limits(Long.lines, false, 2)
-constant Wide = " xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+constant WideHalf = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+constant Wide = " x" + WideHalf + WideHalf
 constant Indent = ValidationIssue("ExtraWhitespacesFoundAtBeginningOfLine", "indent with tabs", 5)
 constant Methods = Limits(("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q"), false)
 constant Lengthy = (ValidationIssue("MethodLengthMustNotExceedTwelve", "Run", 1), ValidationIssue("MethodLengthMustNotExceedTwelve", "Run", 17))
@@ -23,6 +28,7 @@ Issues ValidationIssues
 	Methods.Issues.Length is 1
 	Long.Issues.Length is 1
 	Limits(("Run", "\tlet a = 0 - b"), false).Issues.Length is 1
+	Limits(("Run", "\t1", "has a"), false).Issues.Length is 1
 	mutable issues = List(Mutable(ValidationIssue))
 	for lines
 		issues = issues + LineIssues(value, index) + NegationIssues(value, index)
@@ -51,9 +57,12 @@ LengthIssues(line Text, number Number) ValidationIssues
 	Sample.LengthIssues("\t" + Wide, 2).First to Text is "CharacterCountMustBeWithinLimit: 251 > 120"
 	Sample.LengthIssues("\t" + Wide, 2).First.Line is 3
 	Limits(Long.lines, false, 10).LengthIssues("\t" + Wide, 0).Length is 0
+	Sample.LengthIssues("constant A = " + Wide, 0).First to Text is "CharacterCountMustBeWithinLimit: 263 > 240"
+	Sample.LengthIssues("constant A = 1" + Wide.Substring(0, 100), 0).Length is 0
 	mutable issues = List(Mutable(ValidationIssue))
-	let length = line.Length to Text + " > " + MaxCharacters * scale
-	if line.StartsWith("\t") and (line.Length > MaxCharacters * scale)
+	let limit = (line.StartsWith("constant ") then 2 else 1) * MaxCharacters * scale
+	let length = line.Length to Text + " > " + limit
+	if (line.StartsWith("\t") or line.StartsWith("constant ")) and (line.Length > limit)
 		issues.Add(ValidationIssue("CharacterCountMustBeWithinLimit", length, number + 1))
 	issues
 NegationIssues(line Text, number Number) ValidationIssues
@@ -130,28 +139,25 @@ Started(shape TypeShape, start Number, index Number) Number
 CountIssues ValidationIssues
 	Limits(("has a Number", "has b Number"), false).CountIssues.Length is 0 and Methods.CountIssues.Length is 1
 	Limits(OnlyConstants.lines, false).CountIssues.Length is 0 and Limits(Methods.lines, true).CountIssues.Length is 0
-	Limits(OnlyConstants.lines + "constant Q" + "constant R" + "Run", false).CountIssues.First.target is "18 > 17"
+	Limits(OnlyConstants.lines + "constant Q" + "constant R" + "Run", false).CountIssues.Length is 0
 	Methods.CountIssues.First to Text is "MethodCountMustNotExceedLimit: 17 > 16"
 	Limits(Methods.lines, false, 2).CountIssues.Length is 0
 	let shape = TypeShape(lines)
 	mutable methods = 0
 	for lines
 		methods = methods + (shape.IsMethodHeader(value) then 1 else 0)
-	let members = Count("has ") + Count("constant ")
 	let methodIssues = Counted("MethodCountMustNotExceedLimit", isBase then 0 else methods, MaxMethods * scale)
-	methodIssues + Counted("MemberCountShouldNotExceedLimit", members, MemberLimit(methods, members))
-MemberLimit(methods Number, members Number) Number
-	OnlyConstants.MemberLimit(0, 16) is 40 and OnlyConstants.MemberLimit(1, 16) is 17
-	OnlyConstants.MemberLimit(0, 3) is 17 and (Sample.MemberLimit(1, 1) is 15)
-	Sample.MemberLimit(0, 0) is 40
-	Twice.MemberLimit(0, 0) is 80 and Twice.MemberLimit(1, 0) is 30
-	constant OnlyConstantsLimit = 40
-	let extra = Count("constant ").Clamp(0, ExtraConstants)
-	((methods is 0) and (members is Count("constant ")) then OnlyConstantsLimit else MaxMembers + extra) * scale
+	let memberIssues = Counted("MemberCountShouldNotExceedLimit", Count("has "), MaxMembers * scale)
+	methodIssues + memberIssues + Counted("ConstantCountShouldNotExceedLimit", Count("constant "), MaxConstants * scale)
 Count(start Text) Number
 	OnlyConstants.Count("constant ") is 16
 	Sample.Count("has ") is 1
 	Long.Count("\t1") is 5
+	Crowded.CountIssues.First to Text is "ConstantCountShouldNotExceedLimit: 48 > 40"
+	Limits(Crowded.lines, false, 2).CountIssues.Length is 0 and (Limits(Crowding.lines, false, 2).CountIssues.Length is 0)
+	Crowding.CountIssues.First to Text is "MemberCountShouldNotExceedLimit: 16 > 15"
+	Limits(OnlyConstants.lines + OnlyConstants.lines + Long.lines, false).CountIssues.Length is 0
+	Limits(Methods.lines + Crowding.lines, false).CountIssues.Length is 2
 	mutable count = 0
 	for lines
 		count = count + (value.StartsWith(start) then 1 else 0)

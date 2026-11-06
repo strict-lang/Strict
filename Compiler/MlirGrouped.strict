@@ -8,11 +8,21 @@ constant Allocated = " = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
 constant Plain = ("    %inside = arith.cmpi slt, %at, %count : i64", "    cf.cond_br %inside, ^body, ^exit")
 constant Looped = ("    %inside = arith.cmpi slt, %atFirst, %count : i64", "    cf.cond_br %inside, ^body(%atFirst : i64), ^exit")
 constant Next = ("    cf.br ^next", "  ^next:", "    %atNext = arith.addi %at, %lanes : i64", "    %more = arith.cmpi slt, %atNext, %groupEnd : i64", "    cf.cond_br %more, ^body(%atNext : i64), ^last", "  ^last:")
-constant Lanes = ("    %lanes = func.call @strict_device_group_lanes(%group) : (i64) -> i64", "    %lane = arith.remui %global, %lanes : i64", "    %groupIndex = arith.divui %global, %lanes : i64", "    %groupStart = arith.muli %groupIndex, %group : i64", "    %groupEnd = arith.addi %groupStart, %group : i64", "    %atFirst = arith.addi %groupStart, %lane : i64", "    %countLimit = arith.constant 4294967295 : i64", "    %countFits = arith.cmpi ule, %count, %countLimit : i64", "    llvm.intr.assume %countFits : i1")
+constant LaneIndex = ("    %lanes = func.call @strict_device_group_lanes(%group) : (i64) -> i64", "    %lane = arith.remui %global, %lanes : i64", "    %groupIndex = arith.divui %global, %lanes : i64")
+constant GroupRange = ("    %groupStart = arith.muli %groupIndex, %group : i64", "    %groupEnd = arith.addi %groupStart, %group : i64", "    %atFirst = arith.addi %groupStart, %lane : i64")
+constant CountAssumed = ("    %countLimit = arith.constant 4294967295 : i64", "    %countFits = arith.cmpi ule, %count, %countLimit : i64", "    llvm.intr.assume %countFits : i1")
+constant Lanes = LaneIndex + GroupRange + CountAssumed
 constant Exacting = MlirGrouped(MlirGroupBatched.Sample.function, 11)
-constant Checking = ("    %t11gi = llvm.load %v_index : !llvm.ptr -> f64", "    %t11gs = llvm.load %v_size : !llvm.ptr -> f64", "    %t11gq = arith.divf %t11gi, %t11gs : f64", "    %t11gk = llvm.intr.floor(%t11gq) : (f64) -> f64", "    %t11gm = llvm.load %memo11k : !llvm.ptr -> f64", "    %t11gh = arith.cmpf oeq, %t11gk, %t11gm : f64", "    cf.cond_br %t11gh, ^t11kept, ^t11call", "  ^t11call:")
-constant Joining = ("    llvm.store %t11gk, %memo11k : f64, !llvm.ptr", "    %t11gr = llvm.load %r9 : !llvm.ptr -> f64", "    llvm.store %t11gr, %memo11 : f64, !llvm.ptr", "    cf.br ^t11joined", "  ^t11kept:", "    %t11gc = llvm.load %memo11 : !llvm.ptr -> f64", "    llvm.store %t11gc, %r9 : f64, !llvm.ptr", "    cf.br ^t11joined", "  ^t11joined:")
-constant Shared = ("    %t11gf = arith.cmpi eq, %at, %atFirst : i64", "    cf.cond_br %t11gf, ^t11call, ^t11kept", "  ^t11call:", "    call", "    %t11gn = llvm.load %r9 : !llvm.ptr -> f64", "    llvm.store %t11gn, %groupMemo : f64, !llvm.ptr", "    cf.br ^t11joined", "  ^t11kept:", "    %t11go = llvm.load %groupMemo : !llvm.ptr -> f64", "    llvm.store %t11go, %r9 : f64, !llvm.ptr", "    cf.br ^t11joined", "  ^t11joined:")
+constant KeyFloored = ("    %t11gi = llvm.load %v_index : !llvm.ptr -> f64", "    %t11gs = llvm.load %v_size : !llvm.ptr -> f64", "    %t11gq = arith.divf %t11gi, %t11gs : f64", "    %t11gk = llvm.intr.floor(%t11gq) : (f64) -> f64")
+constant KeyCompared = ("    %t11gm = llvm.load %memo11k : !llvm.ptr -> f64", "    %t11gh = arith.cmpf oeq, %t11gk, %t11gm : f64", "    cf.cond_br %t11gh, ^t11kept, ^t11call", "  ^t11call:")
+constant Checking = KeyFloored + KeyCompared
+constant MemoStored = ("    llvm.store %t11gk, %memo11k : f64, !llvm.ptr", "    %t11gr = llvm.load %r9 : !llvm.ptr -> f64", "    llvm.store %t11gr, %memo11 : f64, !llvm.ptr", "    cf.br ^t11joined")
+constant MemoKept = ("  ^t11kept:", "    %t11gc = llvm.load %memo11 : !llvm.ptr -> f64", "    llvm.store %t11gc, %r9 : f64, !llvm.ptr", "    cf.br ^t11joined", "  ^t11joined:")
+constant Joining = MemoStored + MemoKept
+constant SharedCall = ("    %t11gf = arith.cmpi eq, %at, %atFirst : i64", "    cf.cond_br %t11gf, ^t11call, ^t11kept", "  ^t11call:", "    call", "    %t11gn = llvm.load %r9 : !llvm.ptr -> f64")
+constant SharedStored = ("    llvm.store %t11gn, %groupMemo : f64, !llvm.ptr", "    cf.br ^t11joined", "  ^t11kept:")
+constant SharedKept = ("    %t11go = llvm.load %groupMemo : !llvm.ptr -> f64", "    llvm.store %t11go, %r9 : f64, !llvm.ptr", "    cf.br ^t11joined", "  ^t11joined:")
+constant Shared = SharedCall + SharedStored + SharedKept
 Indexed Texts
 	Norming.Indexed(1) is "    %group = arith.fptosi %groupd : f64 to i64"
 	Norming.Indexed.First is "    %groupd = llvm.load %v_size : !llvm.ptr -> f64"

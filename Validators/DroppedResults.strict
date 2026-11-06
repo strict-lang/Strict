@@ -65,7 +65,7 @@ IsCall(tokens Texts, position Number) Boolean
 	if position is 0
 		return false
 	let previous = tokens(position - 1)
-	let first = previous.Substring(0, 1)
+	let first = previous(0)
 	(first.Lower is not first.Upper) and (previous is not in Operators)
 Called(tokens Texts) Number
 	Squared.Called(("Area")) is 0
@@ -74,7 +74,7 @@ Called(tokens Texts) Number
 	Squared.Called(("Shape", ".", "Area")) is -1
 	(Squared.Called(("Area", "(", "2", ")")) is 0) and (Squared.Called(("Area", "(", "2")) is -1)
 	Squared.Called(("Area", "+", "(", ")")) is -1
-	let first = tokens.First.Substring(0, 1)
+	let first = tokens(0)(0)
 	let isQualified = (tokens.Length > 2) and (tokens(1) is ".")
 	if isQualified and (first.Upper is first)
 		return -1

@@ -10,7 +10,8 @@ constant Limit = TypeCodegen("Strict/Limit", ("constant limit = 10", "Run Number
 constant Iterating = TypeCodegen("Strict/Size", ("has Width Number", "for Iterator(Number)", "\tfor Width", "\t\tindex"), NoTypes, List(Text))
 constant Grid = TypeCodegen("Strict/Size", ("has Width Number", "has Height Number", "for Iterator(Vector2)", "\tfor Height", "\t\tfor Width", "\t\t\tVector2(index, outer.index)"), NoTypes, List(Text))
 constant Created = TypeCodegen("Strict/C", ("has a Number", "from(b Number)", "\ta = b"), NoTypes, List(Text))
-constant Vectors = TypeCodegen("Strict/C", List(Text), TypeInference(KnownTypes(List(Text) + "Vector2", List(Scope) + Scope(List(Text) + "numbers", List(Text) + "Numbers"), List(Scope) + KnownTypes.NoMembers, List(Scope) + KnownTypes.NoMembers), List(Scope) + KnownTypes.NoMembers), List(Text))
+constant VectorTypes = KnownTypes(List(Text) + "Vector2", List(Scope) + Scope(List(Text) + "numbers", List(Text) + "Numbers"), List(Scope) + KnownTypes.NoMembers, List(Scope) + KnownTypes.NoMembers)
+constant Vectors = TypeCodegen("Strict/C", List(Text), TypeInference(VectorTypes, List(Scope) + KnownTypes.NoMembers), List(Text))
 constant Texted = TypeCodegen("Strict/Digit", ("has a Number", "to Text", "\t\"c\""), NoTypes, List(Text))
 constant Leveled = TypeCodegen("Strict/L", ("has level = Fast", "constant Fast = \"a\""), NoTypes, List(Text))
 constant Rebuilt = SyntaxParser(Tokenizer("Greeter(Greeter(\"a\"), text = \"b\")").Tokens).Parse

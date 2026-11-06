@@ -49,7 +49,7 @@ Receiver(receiver Text, type Text, sameName Boolean) Texts
 					calls.Add(call)
 	calls
 Named(name Text) Boolean
-	let first = name.Substring(0, 1)
+	let first = name(0)
 	let named = Tokenizer.IsWordCharacter(first) and (Tokenizer.IsDigit(first) is false)
 	named and (name is not in DefaultCheck.Keywords) and (name is not "Run")
 Call(prefix Text, type Text, name Text, receiver Text) Text

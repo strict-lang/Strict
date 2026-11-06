@@ -48,7 +48,7 @@ Calculated(entry InstructionEntry) Texts
 	Mixed.At(4).Emitted(4) is "    %t4c = arith.divf %t4a, %t4b : f64"
 	Halving.At(2).Calculated(MlirWholeTypes.Halves(2))(2) is "    %t2c = arith.floordivsi %t2a, %t2b : i64"
 	Text.Combine(Narrowing.Calculated(MlirWholeNarrow.Lanes(6))).IndexOf(" : i32") > 0
-	let isWhole = naturals.Substring(position, 1) is "i"
+	let isWhole = naturals(position) is "i"
 	let type = isWhole then "i" else "f"
 	let loads = Load("a", entry.payload(1), type) + Load("b", entry.payload(2), type)
 	if isWhole and MlirWholeNarrow(function, position).IsNarrow
@@ -144,11 +144,11 @@ Store(suffix Text, given Text, register Number) Texts
 Register(register Number) Text
 	Mixed.At(2).Emitted(4) is "    %t2cs = arith.sitofp %t2c : i64 to f64"
 	Halving.Register(2) is "i"
-	registers.Substring(register, 1)
+	registers(register) to Text
 Variable(name Text) Text
 	Lanes.Read(Reading)(2).EndsWith("[%t0i]" + Bytes.Replace("i8", "i32"))
 	Row.Variable("pixels") is "p"
-	variables.Substring(function.VariableNames.Index(name), 1)
+	variables(function.VariableNames.Index(name)) to Text
 At(at Number) MlirWholeStatements
 	Row.At(8).Emitted(0) is "    %t8 = llvm.load %v_middle : !llvm.ptr -> i64"
 	Row.At(11).Emitted(2) is "    %t11c = arith.subi %t11a, %t11b : i64"

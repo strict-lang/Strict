@@ -7,7 +7,9 @@ constant Written = InstructionEntry.Named(InstructionType.InvokeWriteToList, 12,
 constant Tail = (WithinLoad, InputRead, Scaled, Written) + MlirGroups.Normed.instructions.Slice(14, 3)
 constant SampleMethod = MethodEntry(MlirGroups.Normed, instructions = MlirGroups.AlignedCode.Slice(0, 13) + Tail)
 constant Sample = MlirGroupBatched(MlirFunction(MlirGroups.Aligning.function, method = SampleMethod, Float = "f32", Guarded = 2, Group = 11), 2)
-constant Guard = ("  ^quadEntry:", "    %batchZero = arith.constant 0 : i64", "    %quadShift = arith.constant 2 : i64", "    %batchActive = arith.constant 4 : i64", "    %quadStep = arith.shli %lanes, %quadShift : i64", "    %quadRest = arith.remui %group, %quadStep : i64", "    %isQuad = arith.cmpi eq, %quadRest, %batchZero : i64", "    cf.cond_br %isQuad, ^quadHead, ^body(%atFirst : i64)")
+constant QuadSetup = ("  ^quadEntry:", "    %batchZero = arith.constant 0 : i64", "    %quadShift = arith.constant 2 : i64", "    %batchActive = arith.constant 4 : i64", "    %quadStep = arith.shli %lanes, %quadShift : i64")
+constant QuadCheck = ("    %quadRest = arith.remui %group, %quadStep : i64", "    %isQuad = arith.cmpi eq, %quadRest, %batchZero : i64", "    cf.cond_br %isQuad, ^quadHead, ^body(%atFirst : i64)")
+constant Guard = QuadSetup + QuadCheck
 constant HeadStart = ("  ^quadHead:", "    %quadHead_at = arith.addi %atFirst, %batchZero : i64", "    cf.br ^quadHead_body")
 constant ChunkHeader = ("    %quadOffset = arith.shli %lane, %quadShift : i64", "    %quadFirst = arith.addi %groupStart, %quadOffset : i64", "    cf.br ^quadChunk(%quadFirst : i64)", "  ^quadChunk(%batchFirst: i64):")
 constant LoopBack = ("    %quadNext = arith.addi %batchFirst, %quadStep : i64", "    %quadMore = arith.cmpi slt, %quadNext, %groupEnd : i64", "    cf.cond_br %quadMore, ^quadChunk(%quadNext : i64), ^exit")

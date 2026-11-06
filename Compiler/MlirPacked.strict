@@ -72,7 +72,7 @@ Shared(count Number) Texts
 		Target(value * scale, first + index)
 Target(key Number, number Number) Text
 	Summing.Target(1040, 10) is "1040: ^fkloop1fast"
-	(key to Text) + ": ^f" + Letters.Substring(number, 1) + "loop" + position + "fast"
+	(key to Text) + ": ^f" + Letters(number) + "loop" + position + "fast"
 Cases(count Number) Texts
 	Summing.Cases(2).Length is 35
 	"2052: ^fuloop1fast" is in Summing.Cases(2)
@@ -129,7 +129,7 @@ Variant(packing Text, number Number) Texts
 	let packed = MlirFunction(function.types, function.type, function.method, function.lineSlots, position, packing)
 	let single = MlirSingle(packed, position)
 	let copied = single.IsSingle then single.Copied else MlirFastLoop(packed, position).Copied
-	let renamed = MlirKernel(function, position).Renamed(copied, Letters.Substring(number, 1))
+	let renamed = MlirKernel(function, position).Renamed(copied, Letters(number))
 	renamed + ("    cf.br ^loop" + position + "joined")
 Pairs(names Texts, width Number) Texts
 	Summing.Pairs(("for", "numbers"), 16) is ("for 16", "numbers 16")

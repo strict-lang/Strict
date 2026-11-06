@@ -2,8 +2,8 @@ has function MlirFunction
 has position Number
 constant Summing = MlirSums(MlirSingle.Summing.function, 2)
 constant Adding = MlirSingle.Layered.method.instructions(9)
-constant Multiplied = (GpuSamples.Summed.instructions.Slice(0, 9) + InstructionEntry.Binary(InstructionType.Multiply, (1, 5, 6))) + GpuSamples.Summed.instructions.Slice(10, 4)
-constant Multiplying = MlirSums(MlirFunction(Summing.function.types, Summing.function.type, MethodEntry("Summed", GpuSamples.Summed.parameters, "Strict/Number", Multiplied), List(Number), 2, "for 4"), 2)
+constant Multiplied = (GpuLayerSamples.Summed.instructions.Slice(0, 9) + InstructionEntry.Binary(InstructionType.Multiply, (1, 5, 6))) + GpuLayerSamples.Summed.instructions.Slice(10, 4)
+constant Multiplying = MlirSums(MlirFunction(Summing.function.types, Summing.function.type, MethodEntry("Summed", GpuLayerSamples.Summed.parameters, "Strict/Number", Multiplied), List(Number), 2, "for 4"), 2)
 IsSummed(name Text) Boolean
 	Summing.IsSummed("sum")
 	Multiplying.IsSummed("sum") is false

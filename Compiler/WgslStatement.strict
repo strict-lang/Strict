@@ -6,7 +6,7 @@ constant Absolute = MlirGpuCheck.Absolute
 constant Summed = MlirDeviceStatements.Summed
 constant Records = MlirDeviceRecords.Holding
 constant Less = InstructionEntry.Binary(InstructionType.LessThan, (0, 1, 2))
-constant Measuring = MlirFunction(Summed.types, GpuSamples.Layered, GpuSamples.Measured)
+constant Measuring = MlirFunction(Summed.types, GpuLayerSamples.Layered, GpuLayerSamples.Measured)
 constant Looping = ("let e2 = r0l;", "let s2i = v_index;", "let s2v = v_value;", "let c2 = e2.y;", "for (var k2 = 0u; k2 < c2; k2++) {", "v_index = n_int(i32(k2));", "v_value = n_of(n_item(e2.x, k2));")
 constant Indexing = ("let k6 = n_index(r3);", "if (r3.f >= 0.0 && k6 < v_inputl.y) { r4 = n_of(n_item(v_inputl.x, k6)); }", "else { failed[0] = 1u; r4 = n_int(0); }")
 constant Recording = ("let k4 = n_index(r1) * 2u;", "if (k4 < v_pairsl.y) { r2 = n_int(i32(k4)); }", "else { failed[0] = 1u; r2 = n_int(0); }")

@@ -94,7 +94,7 @@ TrimEnd Text
 Capitalize Text
 	"logger".Capitalize is "Logger"
 	"a".Capitalize is "A"
-	Length is 0 then "" else Substring(0, 1).Upper + Substring(1, Length - 1)
+	Length is 0 then "" else (characters(0).Upper to Text) + Substring(1, Length - 1)
 IndexOf(text Text, startIndex = 0) Number
 	"hello".IndexOf("he") is 0
 	"hello".IndexOf("ll") is 2
@@ -120,9 +120,9 @@ Substring(start Number, length Number) Text
 	constant SubstringOutOfRange = Error
 	"abcd".Substring(0, 5) is SubstringOutOfRange
 	"abcd".Substring(-1, 2) is SubstringOutOfRange
-	"abcd".Substring(-1, 1) is SubstringOutOfRange
+	"abcd".Substring(0, -1) is SubstringOutOfRange
 	let offset = start < 0 then Length + start else start
-	if (offset < 0) or (length < 0) or (offset + length > Length) or ((start < 0) and (length is 1))
+	if (offset < 0) or (length < 0) or (offset + length > Length)
 		return SubstringOutOfRange
 	for Range(offset, offset + length)
 		characters(index)
