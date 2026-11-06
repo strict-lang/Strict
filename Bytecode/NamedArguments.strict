@@ -38,7 +38,7 @@ Filled(call SyntaxNode, names Texts, positional Number) SyntaxNode
 	Parts.Filled(Masked, ("buffer", "light", "mask"), 1) to Text is "Part(1, 0, 3)"
 	mutable arguments = List(Mutable(SyntaxNode))
 	for Range(0, Last(call, names) + 1)
-		arguments.Add(Argument(call, names(value), value < positional then value else -1))
+		arguments.Add(value < positional then call.children(value) else Argument(call, call.text, "", names(value)))
 	SyntaxNode("Call", call.text, arguments, call.line)
 Positional(call SyntaxNode) Number
 	Parts.Last(SyntaxNode("Call", "Part"), ("light", "mask")) is 1
@@ -69,39 +69,40 @@ IsComputed(owner Text, key Text) Boolean
 	Shined.IsComputed("Part", "Shine mask")
 	let fallback = Fallback(owner, key)
 	(fallback is not "") and (ConstantFolding(owner, values.inference).Unwrapped(Parsed(fallback)).IsLiteral is false)
-Argument(call SyntaxNode, name Text, position Number) SyntaxNode
-	OwnDefaults.Argument(SyntaxNode("Call", "Part"), "mask", -1) to Text is "Part.Light"
-	Parts.Argument(Masked, "light", -1).text is "0"
-	Parts.Argument(Masked, "mask", -1).text is "3"
-	if position >= 0
-		return call.children(position)
+Argument(call SyntaxNode, owner Text, prefix Text, name Text) SyntaxNode
+	OwnDefaults.Argument(SyntaxNode("Call", "Part"), "Part", "", "mask") to Text is "Part.Light"
+	Parts.Argument(Masked, "Part", "", "light").text is "0"
+	Parts.Argument(Masked, "Part", "", "mask").text is "3"
+	Shined.Argument(SyntaxNode("Call", "Shine"), "Part", "Shine ", "mask").Kind is "Member"
 	for call.children
 		if (value.Kind is "Reassignment") and (value.children(0).text is name)
 			return value.children(1)
-	let fallback = Fallback(call.text, name)
-	fallback is "" then SyntaxNode("Identifier", name) else Qualified(call.text, fallback)
+	let fallback = Fallback(owner, prefix + name)
+	fallback is "" then SyntaxNode("Identifier", name) else Qualified(owner, fallback)
 Defaulted(call SyntaxNode, owner Text, start Number) SyntaxNode
 	Shined.Defaulted(Parts.Parsed("Shine(1)"), "Part", 1) to Text is "Shine(1, 0, Curve.Flat)"
 	Shined.Defaulted(SyntaxParser(Tokenizer("Shine(1)").Tokens).Parse, "Part", 0) to Text is "Shine(1, Curve.Flat)"
 	Parts.Defaulted(Masked, "Part", 0) to Text is "Part(1, mask = 3)"
-	let given = call.children.Length - start
-	let names = values.inference.types.ParametersOf(owner, call.text, given)
-	let last = Computed(call.text, owner, names, given)
-	if last < given
-		return call
-	mutable children = call.children
+	Shined.Defaulted(Parts.Parsed("Shine(mask = 3)"), "Part", 0) to Text is "Shine(0, 3)"
+	let given = Positional(call) - start
+	let names = values.inference.types.ParametersOf(owner, call.text, call.children.Length - start)
+	let last = Computed(call, owner, names, given)
+	mutable children = call.children.Slice(0, Positional(call))
 	for Range(given, last + 1)
-		children = children + Qualified(owner, Fallback(owner, call.text + " " + names(value)))
-	SyntaxNode(call.Kind, call.text, children, call.line)
-Computed(method Text, owner Text, names Texts, given Number) Number
-	Shined.Computed("Shine", "Part", ("light", "mask"), 2) is -1
-	Shined.Computed("Shine", "Part", ("mask", "light"), 0) is 0
-	Shined.Computed("Shine", "Part", ("light", "mask"), 0) is 1
-	Shined.Computed("Shine", "Part", List(Text) + "light", 0) is -1
-	mutable last = -1
+		children = children + Argument(call, owner, call.text + " ", names(value))
+	last < given then call else SyntaxNode(call.Kind, call.text, children, call.line)
+Computed(call SyntaxNode, owner Text, names Texts, given Number) Number
+	Shined.Computed(SyntaxNode("Call", "Shine"), "Part", ("light", "mask"), 2) is 1
+	Shined.Computed(Parts.Parsed("Shine(light = 1)"), "Part", ("mask", "light"), 0) is 1
+	Shined.Computed(SyntaxNode("Call", "Shine"), "Part", ("light", "mask"), 0) is 1
+	Shined.Computed(SyntaxNode("Call", "Shine"), "Part", List(Text) + "light", 0) is -1
+	mutable last = given - 1
 	for names
-		if (index >= given) and IsComputed(owner, method + " " + value)
+		if (index >= given) and IsComputed(owner, call.text + " " + value)
 			last = index
+	for call.children
+		let named = value.Kind is "Reassignment" then names.Index(value.children(0).text) else -1
+		last = named > last then named else last
 	last
 Fallback(owner Text, key Text) Text
 	Parts.IsComputed("Part", "buffer") is false
