@@ -2,8 +2,8 @@ constant Sample = BodyParser("Run", "\tfor Range(1, rounds + 1)", "\t\tpi = pi +
 constant PlainSum = BodyParser("Run", "\tfor Range(0, rounds)", "\t\tsum = sum + value").Block(1, 1).children(0)
 Merged(loop SyntaxNode) SyntaxNode
 	FractionLoop.Merged(PlainSum).Kind is "For"
-	(FractionLoop.Merged(Sample).children(1).children(0) to Text).IndexOf("-1") > 0
-	FractionLoop.Merged(Sample).children(1).children(1).children.Last to Text is "pi = pi + -2 * (left + right) / (left * right)"
+	Text.Combine(FractionLoop.Merged(Sample).Lines(""), " ").IndexOf("2500") > 0
+	Text.Combine(FractionLoop.Merged(Sample).Lines(""), " ").IndexOf("sum = sum + -2") > 0
 	let term = Term(loop)
 	if (term.Kind is not "Binary") or (term.text is not "/")
 		return loop
@@ -47,33 +47,53 @@ Built(loop SyntaxNode, parts Text) SyntaxNode
 	let coefficient = parts.Split("*")(0)
 	let offset = parts.Split("*")(1)
 	let start = loop.children(0).children(0)
-	let even = start.text.EndsWith("0") or start.text.EndsWith("2") or start.text.EndsWith("4") or start.text.EndsWith("6") or start.text.EndsWith("8")
+	let tail = start.text.EndsWith("0") or start.text.EndsWith("2") or start.text.EndsWith("4")
+	let even = tail or start.text.EndsWith("6") or start.text.EndsWith("8")
 	let factor = even then coefficient else "-" + coefficient
-	SyntaxNode("Body", "", (Blocks(loop), Group(loop, start, coefficient, offset, factor), Rest(loop, start)))
+	let acc = loop.children.Last.children(0).children(0).text
+	let name = SyntaxNode("Identifier", acc)
+	let add = SyntaxNode("Reassignment", "", (name, Bin("+", name, SyntaxNode("Identifier", "value"))))
+	let total = SyntaxNode("For", loop.text, (SyntaxNode("Identifier", "forResult"), SyntaxNode("Body", "", add)))
+	let setup = Blocks(loop).children + (List(SyntaxNode) + Group(loop, start, coefficient, offset, factor))
+	SyntaxNode("Body", "", setup + (List(SyntaxNode) + Rest(loop, start)) + (List(SyntaxNode) + total))
 Blocks(loop SyntaxNode) SyntaxNode
 	let start = loop.children(0).children(0)
 	let end = loop.children(0).children(1)
 	let span = start.text is "0" then end else Bin("-", end, start)
 	let quarter = Bin("/", span, SyntaxNode("Number", "4"))
-	let floor = SyntaxNode("MethodCall", "Floor", List(SyntaxNode) + quarter)
-	SyntaxNode("Declaration", "let blocks", List(SyntaxNode) + floor)
+	let blocks = SyntaxNode("MethodCall", "Floor", List(SyntaxNode) + quarter)
+	let divided = Bin("/", SyntaxNode("Identifier", "blocks"), SyntaxNode("Number", "2500"))
+	let width = SyntaxNode("MethodCall", "Floor", List(SyntaxNode) + divided)
+	let times = Bin("*", SyntaxNode("Identifier", "width"), SyntaxNode("Number", "2500"))
+	let extra = Bin("-", SyntaxNode("Identifier", "blocks"), times)
+	let one = SyntaxNode("Declaration", "let blocks", List(SyntaxNode) + blocks)
+	let two = SyntaxNode("Declaration", "let width", List(SyntaxNode) + width)
+	SyntaxNode("Body", "", (one, two, SyntaxNode("Declaration", "let extra", List(SyntaxNode) + extra)))
 Group(loop SyntaxNode, start SyntaxNode, coefficient Text, offset Text, factor Text) SyntaxNode
-	let high = Bin("-", SyntaxNode("Identifier", "blocks"), SyntaxNode("Number", "1"))
-	let range = SyntaxNode("Call", "Range", (high, SyntaxNode("Number", "-1")))
-	let body = Inner(loop, start, coefficient, offset, factor)
-	SyntaxNode("For", loop.text, (range, body), loop.line)
+	let parsed = BodyParser("Run", "\tvalue is 0 then extra else 0").Block(1, 1).children(0)
+	let added = Bin("+", SyntaxNode("Identifier", "width"), parsed)
+	let count = SyntaxNode("MethodCall", "Floor", List(SyntaxNode) + added)
+	let chosen = BodyParser("Run", "\tvalue is 0 then blocks - count else (2499 - value) * width").Block(1, 1)
+	let high = BodyParser("Run", "\tlow + count - 1").Block(1, 1).children(0)
+	let range = SyntaxNode("Call", "Range", (high, Bin("-", SyntaxNode("Identifier", "low"), SyntaxNode("Number", "1"))))
+	let inner = SyntaxNode("For", loop.text, (range, Inner(start, coefficient, offset, factor)), loop.line)
+	let opening = SyntaxNode("Declaration", "let count", List(SyntaxNode) + count)
+	let placed = SyntaxNode("Declaration", "let low", List(SyntaxNode) + chosen.children(0))
+	let zero = SyntaxNode("Declaration", "mutable sum", List(SyntaxNode) + SyntaxNode("Number", "0"))
+	let body = SyntaxNode("Body", "", (opening, placed, zero, inner, SyntaxNode("Identifier", "sum")))
+	SyntaxNode("For", "slices", (SyntaxNode("Number", "2500"), body))
 Rest(loop SyntaxNode, start SyntaxNode) SyntaxNode
 	let end = loop.children(0).children(1)
 	let range = SyntaxNode("Call", "Range", (Shift(start, "blocks"), end))
 	SyntaxNode("For", loop.text, (range, loop.children.Last), loop.line)
-Inner(loop SyntaxNode, start SyntaxNode, coefficient Text, offset Text, factor Text) SyntaxNode
-	let acc = loop.children.Last.children(0).children(0).text
+Inner(start SyntaxNode, coefficient Text, offset Text, factor Text) SyntaxNode
 	let origin = SyntaxNode("Declaration", "let origin", List(SyntaxNode) + Shift(start, "value"))
 	let first = SyntaxNode("Declaration", "let first", List(SyntaxNode) + Widen(coefficient, offset))
 	let step = Bin("+", SyntaxNode("Identifier", "first"), SyntaxNode("Number", coefficient))
 	let left = SyntaxNode("Declaration", "let left", List(SyntaxNode) + Bin("*", SyntaxNode("Identifier", "first"), step))
 	let right = SyntaxNode("Declaration", "let right", List(SyntaxNode) + Sides(coefficient))
-	let update = SyntaxNode("Reassignment", "", (SyntaxNode("Identifier", acc), Bin("+", SyntaxNode("Identifier", acc), Ratio(factor))))
+	let added = Bin("+", SyntaxNode("Identifier", "sum"), Ratio(factor))
+	let update = SyntaxNode("Reassignment", "", (SyntaxNode("Identifier", "sum"), added))
 	SyntaxNode("Body", "", (origin, first, left, right, update))
 Widen(coefficient Text, offset Text) SyntaxNode
 	let scaled = Bin("*", SyntaxNode("Number", coefficient), SyntaxNode("Identifier", "origin"))

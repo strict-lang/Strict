@@ -106,13 +106,12 @@ Loop(node SyntaxNode, block CodeBlock, aggregation Text) CodeBlock
 	Plain.Loop(LoopPeeling.Summing, LoopPeeling.Counted, "").instructions.Last.kind is InstructionType.LoopEnd
 	Plain.Loop(LoopPeeling.Summing, LoopPeeling.Counted, "").instructions.Length is 30
 	FileCompiler.Unoptimized.Loop(LoopPeeling.Summing, LoopPeeling.Counted, "").instructions.Length is 22
-	let peeling = LoopPeeling(methods, block)
 	let merged = methods.values.isOptimizing then FractionLoop.Merged(node) else node
 	if merged.Kind is "Body"
 		return methods.Body(merged, block)
-	let peeled = methods.values.isOptimizing then peeling.Peeled(node, aggregation) else node
+	let peeled = methods.values.isOptimizing then LoopPeeling(methods, block).Peeled(node, aggregation) else node
 	if peeled.Kind is "Body"
-		return peeling.Emitted(peeled, LoopCodegen(methods), aggregation)
+		return LoopPeeling(methods, block).Emitted(peeled, LoopCodegen(methods), aggregation)
 	Unpeeled(node, block, aggregation)
 Unpeeled(node SyntaxNode, block CodeBlock, aggregation Text) CodeBlock
 	MethodCodegen.Plain.Generate(MethodCodegen.LoopBody, MethodCodegen.NoScope, "None").instructions.Length is 6

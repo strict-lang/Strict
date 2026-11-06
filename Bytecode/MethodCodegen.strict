@@ -12,6 +12,7 @@ constant FilterBody = BodyParser("Count Number", "\tfor 3", "\t\tif index > 0", 
 constant ElseBody = BodyParser("Run", "\tif 1 > 2", "\t\t3", "\telse", "\t\t4").Block(1, 1)
 constant ReturnElse = BodyParser("Run", "\tif 1 > 2", "\t\treturn 3", "\telse", "\t\treturn 4").Block(1, 1)
 constant InRun = CodeBlock.Empty.Declare(CodeBlock.ErrorMarker, "Run")
+constant SliceFor = SyntaxNode("For", "slices", (SyntaxNode("Number", "2"), SyntaxNode("Body", "", One)))
 constant CopiedBody = BodyParser("Run", "\tmutable copy = (1)", "\tlet saved = copy", "\tcopy.Add(1)").Block(1, 1)
 Generate(body SyntaxNode, scope Scope, returnType Text) CodeBlock
 	Plain.Generate(BodyParser("Run Number", "\tx + 2").Block(1, 1), NoScope, "None").instructions.Length is 4
@@ -75,7 +76,7 @@ Statement(node SyntaxNode, previous CodeBlock, hasElse Boolean) CodeBlock
 	if node.Kind is in ("If", "ElseIf", "Else")
 		return node.Kind is "If" then Conditional(node, block, hasElse, "") else Else(node, block, hasElse)
 	if node.Kind is "For"
-		return LoopCodegen(MethodCodegen(values)).Loop(node, block, "")
+		return node.text is "slices" then Slices(node, block) else LoopCodegen(MethodCodegen(values)).Loop(node, block, "")
 	if (node.Kind is "MethodCall") and (node.text is "Log")
 		return Log(node.children(1), block)
 	let generated = ErrorCodegen(values).Statement(node, block)
@@ -180,3 +181,8 @@ Log(argument SyntaxNode, block CodeBlock) CodeBlock
 	let generated = values.Expression(printed, block)
 	let prefix = hasPrefix then argument.children(0).Unquoted else ""
 	generated.Add(InstructionEntry.PrintValue(prefix, generated.Result, values.TypeOf(printed, generated) is "Text"))
+Slices(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Slices(SliceFor, CodeBlock.Empty).instructions(0).texts.Last is "forResult"
+	let loops = LoopCodegen(MethodCodegen(values))
+	let started = loops.Started(block, "Numbers", "list").Declare("forResult", "Numbers")
+	loops.Loop(node, started.At(block.register), "list")

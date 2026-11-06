@@ -11,4 +11,9 @@ Pi(rounds Number) Number
 	pi
 Run
 	let rounds = File("rounds.txt").ReadLines.First.Trim to Number
-	logger.Log((Pi(rounds) * 4).Fixed(Digits))
+	let warmup = Pi(rounds)
+	let started = Process.Elapsed
+	let pi = Pi(rounds)
+	let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
+	let difference = warmup is pi then "" else ", the first call differs"
+	logger.Log("" + milliseconds + " ms " + (pi * 4).Fixed(Digits) + difference)
