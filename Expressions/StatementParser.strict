@@ -74,7 +74,7 @@ Unnamed Text
 	StatementParser(Tokenizer("for a, (b) in x").Tokens).Unnamed is "("
 	StatementParser(Tokenizer("for a, b in x").Tokens).Unnamed is ""
 	for IteratorNames
-		let first = value.Substring(0, 1)
+		let first = value(0)
 		if (first.Lower is not first) or (first.Upper is first)
 			return value
 	""

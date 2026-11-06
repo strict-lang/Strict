@@ -65,7 +65,7 @@ Converted(instance VmValue, target Text) VmValue
 		return VmValue.OfList(converted)
 	if target is "Strict/Number"
 		return VmValue.OfNumber(instance.text to Number)
-	VmValue.OfText(target is "Strict/Character" then (instance to Text).Substring(0, 1) else instance to Text)
+	VmValue.OfText(target is "Strict/Character" then (instance to Text).characters(0) to Text else instance to Text)
 Logical(name Text, left VmValue, call Invocation) VmValue
 	Shapes.Logical("not", VmValue.OfBoolean(true), NewShape).IsTrue is false
 	Shapes.Logical("and", VmValue.TrueValue, NewShape).IsTrue is false
@@ -209,4 +209,4 @@ IsNamed(type TypeEntry, name Text, short Text) Boolean
 	Shapes.IsNamed(Shape, "B/ape", "ape") is false
 	if (type.Name is name) or (type.Name is short)
 		return true
-	type.Name.EndsWith(short) and (type.Name.Substring(type.Name.Length - short.Length - 1, 1) is "/")
+	type.Name.EndsWith("/" + short)

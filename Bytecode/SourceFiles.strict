@@ -112,7 +112,7 @@ PackageWith(type Text, projects Text) Text
 	SourceFiles("C:/Missing").PackageWith("Adder", ".") is "./Examples/NativeAdd"
 	for Directory.Directories(projects)
 		let project = Path(value.Replace("\\", "/")).FileName.text
-		let first = project.Substring(0, 1)
+		let first = project(0)
 		let isPackage = (first is first.Upper) and (first is not first.Lower)
 		let folder = isPackage then SubfolderWith(projects + "/" + project, type) else ""
 		if folder is not ""

@@ -121,7 +121,7 @@ IsListPrefixed(line Text, name Text) Boolean
 	(Sample.IsListPrefixed("has List(x", "List(x") is false) and (Sample.IsListPrefixed("MistX Number", "MistX") is false)
 	let isTyped = TypeShape(lines).IsMethodHeader(line) or line.StartsWith("has ") or line.StartsWith("mutable ")
 	let isListed = (name.StartsWith("List") or name.StartsWith("list")) and (name.Length > 4)
-	let next = name.Substring(4, 1)
+	let next = name(4)
 	isTyped and isListed and (next.Upper is next) and (next is not "(")
 IsMisnamedConstant(line Text, name Text) Boolean
 	Sample.IsMisnamedConstant("constant Number = 3", "Number") is false

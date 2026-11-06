@@ -13,7 +13,7 @@ get(key Text) Json
 	Bones("missing") to Text is ""
 	let open = Skip(0)
 	let parts = Parts(open)
-	for Range(0, text.Substring(open, 1) is "{" then (parts.Length - 1) / 2 else 0)
+	for Range(0, text(open) is "{" then (parts.Length - 1) / 2 else 0)
 		if Unquoted(parts(value * 2)) is key
 			return Slice(MemberValue(parts(value * 2)), parts(value * 2 + 1))
 	Json("")
@@ -22,7 +22,7 @@ Keys Texts
 	Bones("bones").Keys.Length is 0
 	let open = Skip(0)
 	let parts = Parts(open)
-	for Range(0, text.Substring(open, 1) is "{" then (parts.Length - 1) / 2 else 0)
+	for Range(0, text(open) is "{" then (parts.Length - 1) / 2 else 0)
 		Unquoted(parts(value * 2))
 Elements Jsons
 	Bones("bones").Elements.Length is 2
@@ -31,7 +31,7 @@ Elements Jsons
 	let parts = Parts(open)
 	for Range(0, (parts.Length - 1) / 2)
 		let start = parts(value * 2)
-		Slice(text.Substring(open, 1) is "{" then MemberValue(start) else start, parts(value * 2 + 1))
+		Slice(text(open) is "{" then MemberValue(start) else start, parts(value * 2 + 1))
 Values Numbers
 	Json("[1, -2.5, 1.0E-5]").Values is (1, -2.5, 0.00001)
 	for Elements
@@ -47,27 +47,27 @@ to Number
 	text.Trim to Number
 Parts(open Number) Numbers
 	Json("[1, \"b\"]").Parts(0) is (1, 2, 4, 7, 7)
-	let isObject = text.Substring(open, 1) is "{"
+	let isObject = text(open) is "{"
 	mutable parts = List(Mutable(Number))
-	if (isObject is false) and (text.Substring(open, 1) is not "[")
+	if (isObject is false) and (text(open) is not "[")
 		return parts + open
 	mutable at = Skip(open + 1)
-	for as long as (at < text.Length) and (text.Substring(at, 1) is not in ("}", "]"))
+	for as long as (at < text.Length) and (text(at) is not in ("}", "]"))
 		let finish = ValueEnd(isObject then MemberValue(at) else at)
 		parts = parts + at + finish
 		let after = Skip(finish)
-		at = text.Substring(after, 1) is "," then Skip(after + 1) else after
+		at = text(after) is "," then Skip(after + 1) else after
 	parts + at
 ValueEnd(start Number) Number
 	Json("[1, [2]]").ValueEnd(0) is 8
 	Json("12, 3").ValueEnd(0) is 2
-	let first = text.Substring(start, 1)
+	let first = text(start)
 	if first is "\""
 		return StringEnd(start)
 	if first is in ("{", "[")
 		return Parts(start).Last + 1
 	mutable after = start
-	for as long as (after < text.Length) and (text.Substring(after, 1) is not in Ends)
+	for as long as (after < text.Length) and (text(after) is not in Ends)
 		after = after + 1
 	after
 StringEnd(start Number) Number
@@ -80,7 +80,7 @@ StringEnd(start Number) Number
 Slashes(position Number) Number
 	Escaped.Slashes(4) is 1
 	mutable count = 0
-	for as long as (position > count) and (text.Substring(position - count - 1, 1) is "\\")
+	for as long as (position > count) and (text(position - count - 1) is "\\")
 		count = count + 1
 	count
 MemberValue(key Number) Number
@@ -91,7 +91,7 @@ MemberValue(key Number) Number
 Skip(position Number) Number
 	Json(" \t\n1").Skip(0) is 3
 	mutable at = position
-	for as long as (at < text.Length) and (text.Substring(at, 1) is in Spaces)
+	for as long as (at < text.Length) and (text(at) is in Spaces)
 		at = at + 1
 	at
 Slice(start Number, finish Number) Json

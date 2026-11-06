@@ -26,12 +26,12 @@ Step(position Number) Number
 	Escaped.Step(5) is 6
 	Escaped.Step(17) is 12
 	constant PairEscapeLength = 12
-	raw.Substring(position, 1) is not "u" then 2 else IsPair(position) then PairEscapeLength else 6
+	raw(position) is not "u" then 2 else IsPair(position) then PairEscapeLength else 6
 Escape(position Number) Text
 	Escaped.Escape(2) is "\""
 	Escaped.Escape(29) is "\n"
 	Escaped.Escape(17) is "😀"
-	let code = raw.Substring(position, 1)
+	let code = raw(position) to Text
 	let high = Hex(position + 1)
 	if code is "u"
 		let offset = (high - HighSurrogate) * SurrogateValues - LowSurrogate
@@ -48,7 +48,7 @@ Hex(position Number) Number
 	JsonText("D83d").Hex(0) is 55357
 	mutable number = 0
 	for Range(position, position + 4)
-		number = number * HexDigits.Length + HexDigits.IndexOf(raw.Substring(value, 1).Lower)
+		number = number * HexDigits.Length + HexDigits.IndexOf(raw(value).Lower)
 	number
 Utf8(code Number) Text
 	Escaped.Utf8(65) is "A"

@@ -35,7 +35,7 @@ Name Text
 	if start < 0
 		return ""
 	mutable after = start + 1
-	for as long as (after < text.Length) and (text.Substring(after, 1) is not in (" ", ">", "/", "\t", "\n", "\r"))
+	for as long as (after < text.Length) and (text(after) is not in (" ", ">", "/", "\t", "\n", "\r"))
 		after = after + 1
 	text.Substring(start + 1, after - start - 1)
 Children Xmls
@@ -46,7 +46,7 @@ Children Xmls
 	let start = NextTag(0)
 	let close = TagEnd(start)
 	mutable at = (start < 0) or (Depth(start, close) is 0) then -1 else NextTag(close)
-	for as long as (at >= 0) and (text.Substring(at + 1, 1) is not "/")
+	for as long as (at >= 0) and (text(at + 1) is not "/")
 		let after = ElementEnd(at)
 		children.Add(Xml(text.Substring(at, after - at)))
 		at = NextTag(after)
@@ -110,9 +110,9 @@ Depth(at Number, close Number) Number
 	Menu.Depth(17, 23) is 1
 	Xml("</A>").Depth(0, 4) is -1
 	Xml("<A />").Depth(0, 5) is 0
-	if text.Substring(at + 1, 1) is "/"
+	if text(at + 1) is "/"
 		return -1
-	text.Substring(close - 2, 1) is "/" then 0 else 1
+	text(close - 2) is "/" then 0 else 1
 Decoded(raw Text) Text
 	Sample.Decoded("&lt;a&gt; &amp;amp; &quot;") is "<a> &amp; \""
 	Sample.Decoded("&apos;") is "'"

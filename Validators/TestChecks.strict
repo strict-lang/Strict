@@ -42,10 +42,10 @@ IsCallToken(tokens Texts, position Number) Boolean
 	(Locking.IsCallToken(("(", "A"), 0) or Locking.IsCallToken(("A", "Locked"), 1)) is false
 	(Locking.IsCallToken(("A", ".", "over"), 2) or Locking.IsCallToken(("A", "+", "Locked", "."), 2)) is false
 	let token = tokens(position)
-	let previous = position > 0 then tokens(position - 1).Substring(0, 1) else ""
-	let first = token.Substring(0, 1)
+	let previous = position > 0 then tokens(position - 1) else " "
+	let first = token(0)
 	let isMethod = (position > 1) and (tokens(position - 1) is ".") and (first.Lower is not first)
-	let isCall = (token is "(") and (previous.Lower is not previous.Upper)
+	let isCall = (token is "(") and (previous(0).Lower is not previous(0).Upper)
 	isMethod or isCall or (token is in Operators) or (position is 0) and IsOwnMethod(token)
 IsOwnMethod(name Text) Boolean
 	Locking.IsOwnMethod("Locked")

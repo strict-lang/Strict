@@ -60,7 +60,7 @@ Element(loop VmValue, iteration Number) VmValue
 	if loop.number is 1
 		return iterable.items(iteration)
 	if loop.number is 2
-		return VmValue.OfText(iterable.text.Substring(iteration, 1))
+		return VmValue.OfText(iterable.text(iteration) to Text)
 	let start = loop.items(1).number
 	VmValue.OfNumber(loop.items(2).number < start then start - iteration else start + iteration)
 Count(iterable VmValue) Number

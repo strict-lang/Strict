@@ -90,11 +90,11 @@ Repository(link Text) Text
 		return ""
 	mutable end = slash + 1
 	for Range(slash + 1, link.Length)
-		if (end is value) and (link.Substring(value, 1) is not in Delimiters)
+		if (end is value) and (link(value) is not in Delimiters)
 			end = value + 1
 	let repository = link.Substring(0, end).Replace(".git", "")
 	let last = repository.Length - 1
-	repository.Substring(last, 1) is "." then repository.Substring(0, last) else repository
+	repository.EndsWith(".") then repository.Substring(0, last) else repository
 Quoted(lines Texts, key Text) Texts
 	Repositories.Quoted(Listing, "path") is ("Math/Vector2.strict", "Math/Size.strict", "Math/README.md", "Vector2.strict")
 	Repositories.Quoted(Listed, "full_name") is ("strict-lang/Strict", "strict-lang/sdk")
@@ -106,7 +106,7 @@ Folder(paths Texts, type Text) Text
 	Repositories.Folder(Repositories.Quoted(Listing, "path"), "Vector2") is "Math"
 	Repositories.Folder(List(Text) + "Vector2.strict", "Vector2s") is "."
 	Repositories.Folder(List(Text) + "Math/Size.strict", "Vector2") is ""
-	let singular = type.Substring(type.Length - 1, 1) is "s" then type.Substring(0, type.Length - 1) else type
+	let singular = type.EndsWith("s") then type.Substring(0, type.Length - 1) else type
 	for paths
 		let file = Path(value).FileName.text
 		if file is in (type + ".strict", singular + ".strict")

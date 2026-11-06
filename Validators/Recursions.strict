@@ -28,7 +28,7 @@ Endless List(ValidationIssue)
 		if TypeShape(lines).IsMethodHeader(value) and (FileCheck.LastLine(lines, index) is index + 1)
 			let method = Tokenizer(value).Tokens.First
 			let only = Tokenizer(lines(index + 1).Trim).Tokens
-			let isNamed = method.Substring(0, 1).Lower is not method.Substring(0, 1)
+			let isNamed = method(0).Lower is not method(0)
 			if isNamed and (method is in Called(only)) and ("then" is not in only)
 				ValidationIssue("OnlyLineCallsItself", method + Hint, index + 2)
 Deep List(ValidationIssue)
@@ -75,7 +75,7 @@ Argument(method Text, tokens Texts) Number
 	Counting.Argument("Count", ("+", "Count", "(", "800", "]")) is 0
 	for tokens
 		let isLiteral = (index + 3 < tokens.Length) and (tokens(index + 1) is "(") and (tokens(index + 3) is ")")
-		if (value is method) and isLiteral and (tokens(index + 2).Substring(0, 1) is in "0123456789")
+		if (value is method) and isLiteral and Tokenizer.IsDigit(tokens(index + 2)(0))
 			return tokens(index + 2) to Number
 	0
 Constants List(ValidationIssue)

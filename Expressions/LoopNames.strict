@@ -38,7 +38,7 @@ IsLower(name Text) Boolean
 	Steps.IsInvariant(SyntaxNode("Declaration", "let w", List(SyntaxNode) + SyntaxNode("Number", "1"))) is false
 	LoopNames.IsLower("steps")
 	LoopNames.IsLower("Steps") is false
-	name.Substring(0, 1).Lower is name.Substring(0, 1)
+	name(0).Lower is name(0)
 HasName(node SyntaxNode) Boolean
 	LoopNames.HasName(SyntaxNode("Identifier", "a"))
 	LoopNames.HasName(StatementParser(Tokenizer("1 + a").Tokens).ParseStatement)

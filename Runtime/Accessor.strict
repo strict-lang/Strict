@@ -124,4 +124,4 @@ Wrapped(collection VmValue, at Number) Number
 Item(collection VmValue, position Number) VmValue
 	Getting.Item(VmValue.OfText("ab"), 1).text is "b"
 	Getting.Item(Held.items(1), 0).number is 3
-	collection.kind is "Text" then VmValue.OfText(collection.text.Substring(position, 1)) else collection.items(position)
+	collection.kind is "Text" then VmValue.OfText(collection.text(position) to Text) else collection.items(position)

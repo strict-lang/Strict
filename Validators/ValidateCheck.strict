@@ -31,7 +31,7 @@ Unresolved(path Text, inference Expressions/TypeInference) Number
 CheckFile(path Text, mutations Texts, isBase Boolean, shared Texts) List(ValidationIssue)
 	let lines = File(path).ReadLines
 	let typeName = Path(path).FileName.RemoveExtension.text
-	let limits = Limits(lines, isBase, Limits.Scale(path)).Issues
+	let limits = Limits(lines, isBase, Limits.Scale(path)).Issues + SubstringLengths(lines).Issues
 	let rules = TypeValidator(TypeShape(lines), mutations, typeName).Validate + limits
 	let shaped = Names(lines).Issues + Recursions(lines, typeName).Issues + TestChecks(lines).Issues
 	rules + shaped + DroppedResults(lines, shared).Issues + LoopBodies(lines).Issues + MagicNumbers(lines).Issues
