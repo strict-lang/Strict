@@ -171,6 +171,6 @@ Field(entry InstructionEntry, instance VmValue) VmValue
 			found = MemberValue(owner, instance, index)
 	found
 Logged(message Text)
-	(Hello.Logged("") is Error) is false
+	Hello.Logged("") is not Error
 	if message is not ""
 		logger.Log(message)
