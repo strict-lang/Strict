@@ -22,6 +22,8 @@
   }
   // where log output of this thread goes: 0 is the console, else a socket handle (the caller of a resident strict server request)
   llvm.mlir.global internal thread_local @strict_output(0 : i64) : i64
+  // the output of the thread that forked the running pool job, used by its pool workers
+  llvm.mlir.global internal @strict_output_pooled(0 : i64) : i64
   func.func private @strict_socket_output(%self: f64, %socket: f64) -> f64 {
     %slot = llvm.mlir.addressof @strict_output : !llvm.ptr
     %handle = arith.fptosi %socket : f64 to i64
@@ -45,8 +47,16 @@
     cf.cond_br %skip, ^done, ^print
   ^print:
     %outputSlot = llvm.mlir.addressof @strict_output : !llvm.ptr
-    %output = llvm.load %outputSlot : !llvm.ptr -> i64
+    %own = llvm.load %outputSlot : !llvm.ptr -> i64
     %console = arith.constant 0 : i64
+    %insideSlot = llvm.mlir.addressof @strict_pool_inside : !llvm.ptr
+    %inside = llvm.load %insideSlot : !llvm.ptr -> i64
+    %pooledSlot = llvm.mlir.addressof @strict_output_pooled : !llvm.ptr
+    %pooled = llvm.load %pooledSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %isWorker = arith.cmpi ne, %inside, %console : i64
+    %hasOwn = arith.cmpi ne, %own, %console : i64
+    %fromPool = arith.select %isWorker, %pooled, %own : i64
+    %output = arith.select %hasOwn, %own, %fromPool : i64
     %isConsole = arith.cmpi eq, %output, %console : i64
     cf.cond_br %isConsole, ^console, ^routed
   ^console:
@@ -2059,6 +2069,10 @@
     %testOwner = llvm.load %testOwnerSlot : !llvm.ptr -> i64
     %testPooledSlot = llvm.mlir.addressof @strict_test_pooled : !llvm.ptr
     llvm.store %testOwner, %testPooledSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    %outputOwnerSlot = llvm.mlir.addressof @strict_output : !llvm.ptr
+    %outputOwner = llvm.load %outputOwnerSlot : !llvm.ptr -> i64
+    %outputPooledSlot = llvm.mlir.addressof @strict_output_pooled : !llvm.ptr
+    llvm.store %outputOwner, %outputPooledSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     %jobSlot = llvm.mlir.addressof @strict_pool_job : !llvm.ptr
     %previous = llvm.load %jobSlot : !llvm.ptr -> i64
     %job = arith.addi %previous, %one : i64
