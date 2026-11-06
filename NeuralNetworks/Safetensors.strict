@@ -63,7 +63,19 @@ Quantized(name Text, tokenBits = 8) List(Numbers)
 	let scale = Entry(name + ".weight_scale_2")
 	if scale is ""
 		return TensorFile.Quantized(path, weight, scales, tokenBits)
-	TensorFile.Fours(path, weight, scales, scale, Entry(name + ".pre_quant_scale"), tokenBits)
+	TensorFile.Fours(path, weight, scales, scale, Entry(name + ".pre_quant_scale"), "", tokenBits)
+IsFours(name Text) Boolean
+	Fours.IsFours("a")
+	Bytes.IsFours("a") is false
+	Entry(name + ".weight_scale_2") is not ""
+Folded(name Text, rowFactors Text, tokenBits = 8) List(Numbers)
+	Fours.Folded("a", "").Length is Fours.Quantized("a").Length
+	Fours.Folded("a", "", 32)(33)(17).IsNearlyEqual(0.183465, 0.00001)
+	Fours.Folded("a", "", 32)(130)(70).IsNearlyEqual(2.709632, 0.00001)
+	Fours.Folded("a", Fours.Entry("a.pre_quant_scale")) is Error("OnlyNvfp4MatricesWithSwizzledBlockScalesAreSupported")
+	let weight = Entry(name + ".weight")
+	let scale = Entry(name + ".weight_scale_2")
+	TensorFile.Fours(path, weight, Entry(name + ".weight_scale"), scale, "", rowFactors, tokenBits)
 Hosted(name Text, picked = List(Number), part = 4096) List(Numbers)
 	Bytes.Hosted("a") is Bytes.Quantized("a")
 	Bytes.Hosted("a", List(Number), 3)(3) is Bytes.Quantized("a")(3)

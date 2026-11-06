@@ -658,6 +658,11 @@
     %none = arith.constant 0 : i64
     return %none : i64
   }
+  // free RAM for GpuMemory.HostAvailable: a page can not tell, 0 (unknown)
+  func.func private @strict_memory_available() -> f64 {
+    %zero = arith.constant 0.0 : f64
+    return %zero : f64
+  }
   // Process.MemoryUsed: bytes of the WebAssembly memory (the heap only grows, it is never given back)
   func.func private @strict_process_memoryused(%self: f64) -> f64 {
     %heap = llvm.call @emscripten_get_heap_size() : () -> i32

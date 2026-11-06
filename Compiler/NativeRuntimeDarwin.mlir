@@ -772,6 +772,11 @@
     return %number : f64
   }
   llvm.func @sysconf(i32) -> i64
+  // free RAM for GpuMemory.HostAvailable: macOS has no free page count in sysconf, 0 (unknown)
+  func.func private @strict_memory_available() -> f64 {
+    %zero = arith.constant 0.0 : f64
+    return %zero : f64
+  }
   llvm.func @pthread_attr_init(!llvm.ptr) -> i32
   llvm.func @pthread_attr_setstacksize(!llvm.ptr, i64) -> i32
   llvm.func @pthread_create(!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32

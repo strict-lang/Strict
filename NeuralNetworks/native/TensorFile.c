@@ -546,7 +546,8 @@ static void Packed(unsigned char* data, const float* first, uint64_t count, uint
 
 /* NVFP4 rows: two 4 bit e2m1 numbers per byte (the first in the high nibble), each 16 scaled by its 8 bit float in the
    swizzled cuBLAS layout of blocks (tiles of 128 rows by 4 scales), all by scale and each column by its input factor. */
-typedef struct { const unsigned char* blocks; uint64_t blockWidth; float scale; const float* inputs; } Fours;
+typedef struct { const unsigned char* blocks; uint64_t blockWidth; float scale; const float* inputs; int isCompact;
+	const float* factors; } Fours;
 static const float Nibbles[16] = { 0, 0.5f, 1, 1.5f, 2, 3, 4, 6, -0.0f, -0.5f, -1, -1.5f, -2, -3, -4, -6 };
 
 /* The block scales stay the bytes of the file, each widened once for its 16 numbers. */
@@ -555,12 +556,13 @@ static void Unpacked(const Fours* fours, uint64_t row, const unsigned char* sour
 	const unsigned char* rowBlocks = fours->blocks + (row / 128) * (fours->blockWidth / 4) * 512 + (row % 32) * 16 +
 		(row % 128 / 32) * 4;
 	const float* inputs = fours->inputs;
+	float rowScale = fours->scale * (fours->factors ? fours->factors[row] : 1);
 	uint64_t blocks = bytes / 8, block = 0;
 #ifdef __AVX2__
 	const __m256 magnitudes = _mm256_setr_ps(0, 0.5f, 1, 1.5f, 2, 3, 4, 6);
 	for (; block < blocks; block++)
 	{
-		__m256 scale = _mm256_set1_ps(Eight(rowBlocks[(block / 4) * 512 + (block & 3)]) * fours->scale);
+		__m256 scale = _mm256_set1_ps(Eight(rowBlocks[(block / 4) * 512 + (block & 3)]) * rowScale);
 		__m128i packed = _mm_loadl_epi64((const __m128i*)(source + block * 8)), nibble = _mm_set1_epi8(15);
 		__m128i codes = _mm_unpacklo_epi8(_mm_and_si128(_mm_srli_epi16(packed, 4), nibble), _mm_and_si128(packed, nibble));
 		for (int half = 0; half < 2; half++)
@@ -576,7 +578,7 @@ static void Unpacked(const Fours* fours, uint64_t row, const unsigned char* sour
 #endif
 	for (; block < blocks; block++)
 	{
-		float scale = Eight(rowBlocks[(block / 4) * 512 + (block & 3)]) * fours->scale;
+		float scale = Eight(rowBlocks[(block / 4) * 512 + (block & 3)]) * rowScale;
 		const unsigned char* blockSource = source + block * 8;
 		float* blockTarget = target + block * 16;
 		if (inputs)
@@ -600,10 +602,28 @@ static void Unpacked(const Fours* fours, uint64_t row, const unsigned char* sour
 	for (uint64_t column = blocks * 16; column < 2 * bytes; column++)
 	{
 		uint64_t block = column / 16;
-		float scale = Eight(rowBlocks[(block / 4) * 512 + (block & 3)]) * fours->scale;
+		float scale = Eight(rowBlocks[(block / 4) * 512 + (block & 3)]) * rowScale;
 		unsigned char nibble = column % 2 ? source[column / 2] & 15 : source[column / 2] >> 4;
 		target[column] = Nibbles[nibble] * scale * (inputs ? inputs[column] : 1);
 	}
+}
+
+/* An NVFP4 row as a row of format 5 (strict.h, kept on the GPU as it is, strict_gpu_expanded): its codes as they are,
+   the 8 bit float scales of its blocks out of their swizzled tiles, then the factor of the row (the scale of the matrix,
+   times the factor of the row when given). */
+static void Fourths(const Fours* fours, uint64_t row, const unsigned char* source, unsigned char* target, uint64_t bytes)
+{
+	const unsigned char* rowBlocks = fours->blocks + (row / 128) * (fours->blockWidth / 4) * 512 + (row % 32) * 16 +
+		(row % 128 / 32) * 4;
+	uint64_t groups = (2 * bytes + 31) / 32, blocks = bytes / 8, factorAt = (groups * 18 + 3) / 4 * 4;
+	memmove(target, source, bytes);
+	memset(target + bytes, 0, groups * 16 - bytes);
+	unsigned char* scales = target + groups * 16;
+	for (uint64_t block = 0; block < blocks; block++)
+		scales[block] = rowBlocks[(block / 4) * 512 + (block & 3)];
+	memset(scales + blocks, 0, factorAt - groups * 16 - blocks);
+	float factor = fours->scale * (fours->factors ? fours->factors[row] : 1);
+	memcpy(target + factorAt, &factor, sizeof(float));
 }
 
 enum { ChunkRows = 64 };
@@ -611,8 +631,26 @@ typedef struct { Opening file; const Tensor* tensor; uint64_t start; unsigned ch
 	int isStored; const float* scales; const Fours* fours; atomic_int failed; const unsigned char* read; uint64_t first;
 	uint64_t last; } Placing;
 
-/* Reads the rows of one chunk at once into a buffer and copies them to their place, converted unless stored, 8 bit rows
+/* A stored row read to source moved to its place (they may overlap), as a row of format 5 for NVFP4 rows, 8 bit rows
    with a scale each get it for all their 32 numbers. */
+static void Spread(const Placing* placing, uint64_t row, const unsigned char* source, uint64_t columns)
+{
+	unsigned char* target = placing->data + row * placing->stride;
+	if (placing->fours)
+	{
+		Fourths(placing->fours, row, source, target, placing->tensor->width);
+		return;
+	}
+	memmove(target, source, placing->tensor->width * placing->tensor->bytes);
+	float* parts = (float*)(target + strict_packed_data(columns, 8));
+	for (uint64_t part = 0; placing->scales && part < (columns + 31) / 32; part++)
+		parts[part] = placing->scales[row];
+}
+
+/* Reads the rows of one chunk at once into a buffer and copies them to their place, converted unless stored, 8 bit rows
+   with a scale each get it for all their 32 numbers. Stored rows are read straight to the place of the chunk and spread
+   to their stride from the last row on (a row only moves up over rows read after it, which moved already): through the
+   buffer they were copied once more (13 GB of NVFP4 rows of the H3 text encoder, 21 GB of 8 bit rows of H3). */
 static void PlacedChunk(void* context, uint64_t chunk)
 {
 	Placing* placing = context;
@@ -621,6 +659,22 @@ static void PlacedChunk(void* context, uint64_t chunk)
 	uint64_t end = placing->last ? placing->last : tensor->height;
 	uint64_t count = end - first < ChunkRows ? end - first : ChunkRows;
 	uint64_t columns = placing->fours || tensor->isNibbles ? 2 * tensor->width : tensor->width;
+#ifndef STRICT_LIBRARY
+	/* only native rows have nothing but padding between them, those of the VM library (strict.h) a header each */
+	if (!placing->read && placing->isStored && !tensor->isNibbles && placing->stride >= rowBytes &&
+		(!placing->fours || placing->fours->isCompact))
+	{
+		unsigned char* region = placing->data + first * placing->stride;
+		if (!ReadFrom(placing->file, placing->start + first * rowBytes, region, count * rowBytes))
+		{
+			atomic_store(&placing->failed, 1);
+			return;
+		}
+		for (uint64_t back = count; back > 0; back--)
+			Spread(placing, first + back - 1, region + (back - 1) * rowBytes, columns);
+		return;
+	}
+#endif
 	uint64_t bufferNeeded = count * rowBytes + 1;
 	if (bufferNeeded > chunkBufferCap)
 	{
@@ -650,6 +704,11 @@ static void PlacedChunk(void* context, uint64_t chunk)
 	{
 		unsigned char* target = placing->data + row * placing->stride;
 		const unsigned char* source = buffer + (row - first) * rowBytes;
+		if (placing->fours && placing->fours->isCompact)
+		{
+			Fourths(placing->fours, row, source, target, tensor->width);
+			continue;
+		}
 		if (placing->fours)
 			Unpacked(placing->fours, row, source, floats, tensor->width);
 		else if (floats)
@@ -875,14 +934,18 @@ STRICT_EXPORT double TensorFile_HostedPart(double self, double path, double entr
 	return QuantizedRows(path, entry, scales, 8, &tensor, &data, &stride, 1, (uint64_t)first, (uint64_t)count);
 }
 
-/* The rows of an NVFP4 matrix (U8 entry of two numbers per byte, F8_E4M3 block scales, the F32 scale and the optional
-   input factors of AWQ) as 8 bit rows (strict_quantized, plus STRICT_KEPT_TOKENS above 8 token bits). */
+/* The rows of an NVFP4 matrix (U8 entry of two numbers per byte, F8_E4M3 block scales, the F32 scale, the optional
+   input factors of AWQ and the optional factors of its rows, the input factors of the next matrix: the up_proj rows
+   take the factors of down_proj) as 8 bit rows (strict_quantized), above 8 token bits (rows only the GPU multiplies,
+   plus STRICT_KEPT_TOKENS) without input factors as NVFP4 rows (format 5, Fourths): the bytes of the file, which stay
+   on the GPU at 4.5 bits per number (the 15.7 GB H3 text encoder had 27 GB of 8 bit rows) and become 8 bit rows there
+   just before a kernel reads them (strict_gpu_expanded); STRICT_FOURS_EIGHT=1 keeps 8 bit rows to compare them. */
 STRICT_EXPORT double TensorFile_Fours(double self, double path, double entry, double scales, double scale, double inputs,
-	double tokenBits)
+	double rowFactors, double tokenBits)
 {
 	if (!ThreadReady())
 		return strict_fail("NativeThreadStateFailed");
-	Tensor tensor, blocked, global, factors;
+	Tensor tensor, blocked, global, factors, rowed;
 	const char* failure = Described(strict_text(entry), &tensor);
 	if (!failure)
 		failure = Described(strict_text(scales), &blocked);
@@ -891,30 +954,41 @@ STRICT_EXPORT double TensorFile_Fours(double self, double path, double entry, do
 	int hasInputs = !failure && *strict_text(inputs);
 	if (hasInputs)
 		failure = Described(strict_text(inputs), &factors);
+	int hasRowFactors = !failure && *strict_text(rowFactors);
+	if (hasRowFactors)
+		failure = Described(strict_text(rowFactors), &rowed);
 	if (!failure && (tensor.bytes != 1 || tensor.isSigned || tensor.isEight || tensor.rank != 2 || !blocked.isEight ||
 		blocked.height < (tensor.height + 127) / 128 * 128 || blocked.width < (tensor.width / 8 + 3) / 4 * 4 ||
-		global.height * global.width != 1 || (hasInputs && factors.height * factors.width != 2 * tensor.width)))
+		global.height * global.width != 1 || (hasInputs && factors.height * factors.width != 2 * tensor.width) ||
+		(hasRowFactors && rowed.height * rowed.width != tensor.height)))
 		failure = "OnlyNvfp4MatricesWithSwizzledBlockScalesAreSupported";
 	double started = ProfileNow();
 	unsigned char* blocks = failure ? 0 : Loaded(path, &blocked, 1, &failure);
 	float* factor = blocks ? Read(path, &global, &failure) : 0;
 	float* columns = factor && hasInputs ? Read(path, &factors, &failure) : 0;
+	float* rows = factor && hasRowFactors ? Read(path, &rowed, &failure) : 0;
 	profileRead += ProfileNow() - started;
+	const char* eight = getenv("STRICT_FOURS_EIGHT");
+	int isCompact = tokenBits > 8 && !hasInputs && !(eight && *eight == '1');
+#ifdef __EMSCRIPTEN__
+	isCompact = 0;
+#endif
 	unsigned char* data = 0;
 	uint64_t stride = 0;
 	double profiled = ProfileNow();
-	double result = failure ? 0 : strict_rows(tensor.height, 2 * tensor.width, tokenBits > 8 ? 8 + STRICT_KEPT_TOKENS : 8,
-		&data, &stride);
+	double bits = (isCompact ? 5 : 8) + (tokenBits > 8 ? STRICT_KEPT_TOKENS : 0);
+	double result = failure ? 0 : strict_rows(tensor.height, 2 * tensor.width, bits, &data, &stride);
 	profileRows += ProfileNow() - profiled;
-	Fours fours = { blocks, blocked.width, factor ? *factor : 0, columns };
+	Fours fours = { blocks, blocked.width, factor ? *factor : 0, columns, isCompact, rows };
 	/* the block scales stay bytes, Unpacked widens them with the table: nothing else may have filled it yet (all NVFP4
 	   weights of the text encoder were 0 when no 8 bit float was widened before) */
 	EightTableInit();
 	profiled = ProfileNow();
 	if (!failure)
-		failure = !data ? "TensorTooLarge" : Placed(path, &tensor, data, stride, 8, 0, 0, &fours);
+		failure = !data ? "TensorTooLarge" : Placed(path, &tensor, data, stride, 8, isCompact, 0, &fours);
 	profilePlaced += ProfileNow() - profiled;
-	Profiled("fours", tensor.height, tensor.width, started);
+	Profiled(isCompact ? "fours compact" : "fours", tensor.height, tensor.width, started);
+	free(rows);
 	free(columns);
 	free(factor);
 	free(blocks);

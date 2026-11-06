@@ -10,6 +10,12 @@ Finished Number
 Held Number
 	GpuMemory.Held >= 0
 	0
+Available Number
+	GpuMemory.Available >= 0
+	0
+HostAvailable Number
+	GpuMemory.HostAvailable >= 0
+	0
 Stamped Number
 	GpuMemory.Stamped >= -1
 	-1

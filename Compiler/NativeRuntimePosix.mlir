@@ -805,6 +805,19 @@
     return %number : f64
   }
   llvm.func @sysconf(i32) -> i64
+  // free RAM for GpuMemory.HostAvailable: the free pages (sysconf _SC_AVPHYS_PAGES, 86) times their size (_SC_PAGESIZE, 30)
+  func.func private @strict_memory_available() -> f64 {
+    %freePages = arith.constant 86 : i32
+    %pageSize = arith.constant 30 : i32
+    %pages = llvm.call @sysconf(%freePages) : (i32) -> i64
+    %size = llvm.call @sysconf(%pageSize) : (i32) -> i64
+    %none = arith.constant 0 : i64
+    %known = arith.cmpi sgt, %pages, %none : i64
+    %bytes = arith.muli %pages, %size : i64
+    %counted = arith.select %known, %bytes, %none : i64
+    %result = arith.sitofp %counted : i64 to f64
+    return %result : f64
+  }
   llvm.func @pthread_self() -> i64
   llvm.func @pthread_getattr_np(i64, !llvm.ptr) -> i32
   llvm.func @pthread_attr_getstack(!llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32

@@ -65,16 +65,18 @@ typedef struct { double count; double bits; unsigned char data[]; } strict_packe
 static inline double strict_packed_result(const strict_packed* packed) { return strict_value(0x7FF9000000000000ull | (uint64_t)(uintptr_t)packed); }
 /* Added to the bits of a packed row: dot products with it on the GPU keep their tokens unquantized. */
 #define STRICT_KEPT_TOKENS 256
+/* Format 5 are NVFP4 rows: two 4 bit e2m1 numbers per byte (the first in the high nibble) in groups of 32, then an 8
+   bit float (E4M3) scale per 16 numbers, then the 32 bit factor of the row (4 byte aligned) */
 static inline uint64_t strict_packed_data(uint64_t count, uint64_t bits)
 {
 	return bits == 4 ? (count + 255) / 256 * 144 : bits == 6 ? (count + 255) / 256 * 208 : bits == 3 ? (count + 127) / 128 * 28 :
-		(count + 3) / 4 * 4;
+		bits == 5 ? (count + 31) / 32 * 16 : (count + 3) / 4 * 4;
 }
 static inline uint64_t strict_packed_bytes(uint64_t count, uint64_t bits)
 {
 	uint64_t data = strict_packed_data(count, bits);
 	return bits == 8 ? data + (count + 31) / 32 * 4 : bits == 6 ? data + ((count + 255) / 256 * 2 + 3) / 4 * 4 :
-		bits == 4 || bits == 3 ? data : count * bits / 8;
+		bits == 5 ? ((count + 31) / 32 * 18 + 3) / 4 * 4 + 4 : bits == 4 || bits == 3 ? data : count * bits / 8;
 }
 /* Packs count floats (stride apart) into the 8 bit numbers at data, the scale of 32 numbers is their largest magnitude
    / 127, numbers round half away from zero (adding the float below 0.5 before truncating). */

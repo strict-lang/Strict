@@ -949,6 +949,22 @@
     %bytes = arith.muli %kilobytes, %kilobyte : i64
     return %bytes : i64
   }
+  llvm.func @GlobalMemoryStatusEx(!llvm.ptr) -> i32
+  // free RAM for GpuMemory.HostAvailable: ullAvailPhys at byte 16 of MEMORYSTATUSEX (64 bytes), 0 when unknown
+  func.func private @strict_memory_available() -> f64 {
+    %zero = arith.constant 0 : i64
+    %eight = arith.constant 8 : i64
+    %status = llvm.alloca %eight x i64 : (i64) -> !llvm.ptr
+    %size = arith.constant 64 : i32
+    llvm.store %zero, %status : i64, !llvm.ptr
+    llvm.store %size, %status : i32, !llvm.ptr
+    %availableSlot = llvm.getelementptr %status[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %zero, %availableSlot : i64, !llvm.ptr
+    %read = llvm.call @GlobalMemoryStatusEx(%status) : (!llvm.ptr) -> i32
+    %available = llvm.load %availableSlot : !llvm.ptr -> i64
+    %bytes = arith.uitofp %available : i64 to f64
+    return %bytes : f64
+  }
   llvm.func @K32GetProcessMemoryInfo(!llvm.ptr, !llvm.ptr, i32) -> i32
   // Process.MemoryUsed: the working set, WorkingSetSize at byte 16 of PROCESS_MEMORY_COUNTERS (72 bytes), 0 when unknown
   func.func private @strict_process_memoryused(%self: f64) -> f64 {

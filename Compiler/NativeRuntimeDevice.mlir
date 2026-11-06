@@ -2317,6 +2317,187 @@
   ^exit:
     llvm.return
   }
+  // number index (0 to 31) of 32 NVFP4 numbers (16 bytes of e2m1 codes, the first in the high nibble) whose first 16
+  // have the scale first and the others second: the magnitude 0, 0.5, 1, 1.5, 2, 3, 4 or 6 times the scale, negated by
+  // the sign bit, the same float TensorFile.c's Unpacked gave
+  func.func private @strict_device_fours_value(%nibbles: !llvm.ptr, %index: i64, %first: f32, %second: f32) -> f32 attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+    %one = arith.constant 1 : i64
+    %sixteen = arith.constant 16 : i64
+    %fifteen = arith.constant 15 : i32
+    %fourBits = arith.constant 4 : i32
+    %seven = arith.constant 7 : i32
+    %eight = arith.constant 8 : i32
+    %none = arith.constant 0 : i32
+    %byteAt = arith.shrui %index, %one : i64
+    %byteSlot = llvm.getelementptr %nibbles[%byteAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %byte = llvm.load %byteSlot : !llvm.ptr -> i8
+    %wide = arith.extui %byte : i8 to i32
+    %high = arith.shrui %wide, %fourBits : i32
+    %low = arith.andi %wide, %fifteen : i32
+    %odd = arith.andi %index, %one : i64
+    %isSecondNibble = arith.cmpi eq, %odd, %one : i64
+    %code = arith.select %isSecondNibble, %low, %high : i32
+    %magnitudeCode = arith.andi %code, %seven : i32
+    %shift = arith.muli %magnitudeCode, %eight : i32
+    %shiftWide = arith.extui %shift : i32 to i64
+    // twice the magnitudes of the codes, a byte each
+    %table = arith.constant 866949542568919296 : i64
+    %shifted = arith.shrui %table, %shiftWide : i64
+    %byteMask = arith.constant 255 : i64
+    %twiceWide = arith.andi %shifted, %byteMask : i64
+    %twice = arith.trunci %twiceWide : i64 to i32
+    // ored into the mantissa of 2^23 it is 2^23 + twice, without a conversion instruction
+    %magic = arith.constant 1258291200 : i32
+    %magicFloat = arith.constant 8388608.0 : f32
+    %biased = arith.ori %twice, %magic : i32
+    %biasedFloat = arith.bitcast %biased : i32 to f32
+    %twiceFloat = arith.subf %biasedFloat, %magicFloat : f32
+    %halfStep = arith.constant 0.5 : f32
+    %magnitude = arith.mulf %twiceFloat, %halfStep : f32
+    %isFirst = arith.cmpi ult, %index, %sixteen : i64
+    %scale = arith.select %isFirst, %first, %second : f32
+    %unsigned = arith.mulf %magnitude, %scale : f32
+    %negated = arith.negf %unsigned : f32
+    %sign = arith.andi %code, %eight : i32
+    %isNegative = arith.cmpi ne, %sign, %none : i32
+    %value = arith.select %isNegative, %negated, %unsigned : f32
+    return %value : f32
+  }
+  // NVFP4 rows (format 5, strict.h) of a matrix on the GPU as 8 bit rows (codes, then a 32 bit scale per 32 numbers: their
+  // largest magnitude / 127, rounded half away from zero like strict_quantized of strict.h), both behind the header of
+  // strict_gpu_rows (header bytes in all: the stride and count word, then a format byte per row), a thread per 32
+  // numbers of a row, rows that already are 8 bit rows are copied (strict_gpu_expanded)
+  llvm.func @strict_device_fours(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %stride: i64, %header: i64) attributes {nvvm.kernel} {
+    %thread = func.call @strict_device_thread_index() : () -> i32
+    %block = func.call @strict_device_block_index() : () -> i32
+    %size = func.call @strict_device_block_size() : () -> i32
+    %thread64 = arith.extui %thread : i32 to i64
+    %block64 = arith.extui %block : i32 to i64
+    %size64 = arith.extui %size : i32 to i64
+    %start = arith.muli %block64, %size64 : i64
+    %at = arith.addi %start, %thread64 : i64
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %three = arith.constant 3 : i64
+    %four = arith.constant 4 : i64
+    %five = arith.constant 5 : i64
+    %eight = arith.constant 8 : i64
+    %sixteen = arith.constant 16 : i64
+    %eighteen = arith.constant 18 : i64
+    %thirtyTwo = arith.constant 32 : i64
+    %alignMask = arith.constant -4 : i64
+    %zero = arith.constant 0.0 : f32
+    %groups = arith.shrui %width, %five : i64
+    %total = arith.muli %count, %groups : i64
+    %inside = arith.cmpi slt, %at, %total : i64
+    cf.cond_br %inside, ^place, ^exit
+  ^place:
+    %row = arith.divui %at, %groups : i64
+    %rowFirst = arith.muli %row, %groups : i64
+    %group = arith.subi %at, %rowFirst : i64
+    %word = llvm.load %source : !llvm.ptr -> i64
+    %strideMask = arith.constant 2147483647 : i64
+    %sourceStride = arith.andi %word, %strideMask : i64
+    %formatAt = arith.addi %row, %eight : i64
+    %formatSlot = llvm.getelementptr %source[%formatAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %format = llvm.load %formatSlot : !llvm.ptr -> i8
+    %sourceOffset = arith.muli %row, %sourceStride : i64
+    %sourceStart = arith.addi %header, %sourceOffset : i64
+    %sourceRow = llvm.getelementptr %source[%sourceStart] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %targetOffset = arith.muli %row, %stride : i64
+    %targetStart = arith.addi %header, %targetOffset : i64
+    %targetRow = llvm.getelementptr %target[%targetStart] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %codesAt = arith.muli %group, %thirtyTwo : i64
+    %codes = llvm.getelementptr %targetRow[%codesAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %padded = arith.addi %width, %three : i64
+    %codesBytes = arith.andi %padded, %alignMask : i64
+    %scaleOffset = arith.muli %group, %four : i64
+    %scaleAt = arith.addi %codesBytes, %scaleOffset : i64
+    %scaleSlot = llvm.getelementptr %targetRow[%scaleAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %isFirstGroup = arith.cmpi eq, %group, %none : i64
+    cf.cond_br %isFirstGroup, ^marked, ^convert
+  ^marked:
+    %eightFormat = arith.constant 8 : i8
+    %markSlot = llvm.getelementptr %target[%formatAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %eightFormat, %markSlot : i8, !llvm.ptr
+    %isFirstRow = arith.cmpi eq, %row, %none : i64
+    cf.cond_br %isFirstRow, ^headed, ^convert
+  ^headed:
+    %countShift = arith.constant 32 : i64
+    %countHigh = arith.shli %count, %countShift : i64
+    %targetWord = arith.ori %stride, %countHigh : i64
+    llvm.store %targetWord, %target : i64, !llvm.ptr
+    cf.br ^convert
+  ^convert:
+    %eightByte = arith.constant 8 : i8
+    %isCopy = arith.cmpi eq, %format, %eightByte : i8
+    cf.cond_br %isCopy, ^copy, ^expand
+  ^copy:
+    %copySource = llvm.getelementptr %sourceRow[%codesAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %copied = llvm.load %copySource {alignment = 16 : i64} : !llvm.ptr -> vector<8xi32>
+    llvm.store %copied, %codes {alignment = 16 : i64} : vector<8xi32>, !llvm.ptr
+    %copyScaleSlot = llvm.getelementptr %sourceRow[%scaleAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %copyScale = llvm.load %copyScaleSlot : !llvm.ptr -> f32
+    llvm.store %copyScale, %scaleSlot : f32, !llvm.ptr
+    cf.br ^exit
+  ^expand:
+    %nibbleAt = arith.muli %group, %sixteen : i64
+    %nibbles = llvm.getelementptr %sourceRow[%nibbleAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %scalesStart = arith.muli %groups, %sixteen : i64
+    %blockAt = arith.muli %group, %two : i64
+    %blockOffset = arith.addi %scalesStart, %blockAt : i64
+    %firstBlockSlot = llvm.getelementptr %sourceRow[%blockOffset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %firstBlockByte = llvm.load %firstBlockSlot : !llvm.ptr -> i8
+    %secondBlockSlot = llvm.getelementptr %firstBlockSlot[1] : (!llvm.ptr) -> !llvm.ptr, i8
+    %secondBlockByte = llvm.load %secondBlockSlot : !llvm.ptr -> i8
+    %groupBytes = arith.muli %groups, %eighteen : i64
+    %groupPadded = arith.addi %groupBytes, %three : i64
+    %factorAt = arith.andi %groupPadded, %alignMask : i64
+    %factorSlot = llvm.getelementptr %sourceRow[%factorAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %factor = llvm.load %factorSlot : !llvm.ptr -> f32
+    %firstEight = func.call @strict_device_float8_number(%firstBlockByte) : (i8) -> f32
+    %secondEight = func.call @strict_device_float8_number(%secondBlockByte) : (i8) -> f32
+    %firstScale = arith.mulf %firstEight, %factor : f32
+    %secondScale = arith.mulf %secondEight, %factor : f32
+    cf.br ^largest(%none, %zero : i64, f32)
+  ^largest(%index: i64, %most: f32):
+    %more = arith.cmpi slt, %index, %thirtyTwo : i64
+    cf.cond_br %more, ^measure, ^scaled
+  ^measure:
+    %value = func.call @strict_device_fours_value(%nibbles, %index, %firstScale, %secondScale) : (!llvm.ptr, i64, f32, f32) -> f32
+    %magnitude = llvm.call_intrinsic "llvm.fabs.f32"(%value) : (f32) -> f32
+    %larger = arith.maximumf %most, %magnitude : f32
+    %nextIndex = arith.addi %index, %one : i64
+    cf.br ^largest(%nextIndex, %larger : i64, f32)
+  ^scaled:
+    %levels = arith.constant 127.0 : f32
+    %unit = arith.divf %most, %levels : f32
+    llvm.store %unit, %scaleSlot : f32, !llvm.ptr
+    %isZero = arith.cmpf oeq, %most, %zero : f32
+    %reciprocal = arith.divf %levels, %most : f32
+    %inverse = arith.select %isZero, %zero, %reciprocal : f32
+    cf.br ^code(%none : i64)
+  ^code(%codeIndex: i64):
+    %moreCodes = arith.cmpi slt, %codeIndex, %thirtyTwo : i64
+    cf.cond_br %moreCodes, ^write, ^exit
+  ^write:
+    %number = func.call @strict_device_fours_value(%nibbles, %codeIndex, %firstScale, %secondScale) : (!llvm.ptr, i64, f32, f32) -> f32
+    %scaledNumber = arith.mulf %number, %inverse : f32
+    %isNegative = arith.cmpf olt, %number, %zero : f32
+    %up = arith.constant 0.49999997 : f32
+    %down = arith.constant -0.49999997 : f32
+    %rounding = arith.select %isNegative, %down, %up : f32
+    %rounded = arith.addf %scaledNumber, %rounding : f32
+    %whole = arith.fptosi %rounded : f32 to i32
+    %code = arith.trunci %whole : i32 to i8
+    %codeSlot = llvm.getelementptr %codes[%codeIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %code, %codeSlot : i8, !llvm.ptr
+    %nextCode = arith.addi %codeIndex, %one : i64
+    cf.br ^code(%nextCode : i64)
+  ^exit:
+    llvm.return
+  }
   llvm.func @strict_device_quantize(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64) attributes {nvvm.kernel} {
     %brainBits = arith.constant 17 : i64
     %isBrain = arith.cmpi eq, %bits, %brainBits : i64
