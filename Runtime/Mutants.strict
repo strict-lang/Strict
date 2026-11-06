@@ -15,7 +15,7 @@ constant Inputs = ("/File", "/Memo", "/Directory", "/Process", "/Logger", "/Text
 constant Hint = " kept passing all tests, improve the tests!"
 constant Wave = 8
 Survivors(types List(TypeEntry)) Number
-	Sample.Survivors(Execute(Logger).Loaded("Examples/Fibonacci.strict", ".")) is 0
+	Sample.Survivors(Doubled) is 0
 	Mutants(Logger, "Compiler/output/Cached.strict", 0).Survivors(Doubled) is 0
 	let cache = MutationCache(path, isWhole)
 	let isCached = (part is "") and cache.IsCurrent
