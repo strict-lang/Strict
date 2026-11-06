@@ -108,7 +108,7 @@ Slots Texts
 	for VariableNames
 		lines = lines + Slot("%v_" + value)
 	for method.instructions
-		lines = value.kind is InstructionType.LoopBegin then lines + LoopSlot(index) else lines
+		lines = value.kind is InstructionType.LoopBegin then lines + MlirRangeLoop(outer, index).Slots else lines
 	lines + MlirGrouped(value, 0).Memos + MlirHanded(value, 0).Slots + MlirLines(value).Allocated + Entry
 Entry Texts
 	Counter.Entry.Length is 4
@@ -123,17 +123,6 @@ Entry Texts
 	let lists = MlirParameters(value)
 	let unpacked = lists.Hoisted(method.parameters) + MlirInstances(value, 0).Unpacked + lists.Hoisted(lists.Indexed)
 	lines + MlirDestined(value, 0).Prologue + MlirTails(value, 0).Restart + unpacked + MlirInstances(value, 0).Constants
-LoopSlot(index Number) Texts
-	Counter.LoopSlot(0) is Counter.Slot("%loop0")
-	MlirLoops.Ranging.function.LoopSlot(3).First.IndexOf("x i32") > 0
-	let name = "%loop" + index
-	if method.instructions(index).payload(1) is not 1
-		return Slot(name)
-	let inner = "    " + name + " = llvm.alloca %one x i32 : (i64) -> !llvm.ptr"
-	let left = "    %left" + index + " = llvm.alloca %one x i64 : (i64) -> !llvm.ptr"
-	let base = "    %base" + index + " = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
-	let chunk = "    %chunk" + index + " = llvm.alloca %one x i32 : (i64) -> !llvm.ptr"
-	(inner, left, base, chunk)
 Slot(name Text) Texts
 	Counter.Slot("%r0")(1) is "    llvm.store %zero, %r0 : f64, !llvm.ptr"
 	Counter.Slots(3) is "    %r0 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
