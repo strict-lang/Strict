@@ -19,6 +19,7 @@ Served(resident Resident) Number
 		let isStopping = resident.Arguments(request) is (Resident.Stopping)
 		let isCurrent = resident.IsCurrent(request)
 		resident.Finished(socket, isStopping then 0 else (isCurrent then Answered(resident, request, socket) else -1))
+		resident.Released(request)
 		socket = isStopping then 0 else resident.Accepted(server, built)
 	server > 0 then resident.Closed(server) else 1
 Answered(resident Resident, request Text, socket Number) Number
