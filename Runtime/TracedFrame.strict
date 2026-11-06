@@ -37,7 +37,8 @@ IsReporting(entry InstructionEntry, isReporting Boolean) Boolean
 		return isReporting
 	entry.texts(0).StartsWith("Test failed: ") or isReporting and (entry.texts(0) is not "  got: ")
 Logged(position Number, slots List(VmValue)) Number
-	Lined.Logged(4, Frame.Listed) is 0
+	Lined.Logged(4, Frame.Listed) is 0 and (Lined.Logged(0, Frame.Listed) is 2)
+	Lined.Logged(2, Started) is 2
 	if frame.method.Name is TestCodegen.Runner
 		return 0
 	let entry = frame.method.instructions(position)
@@ -95,6 +96,7 @@ Ended(position Number, place Text, result VmValue) Texts
 	isLast and (isControl is false) then List(Text) + ("$Result " + place + "|" + Shown(result)) else List(Text)
 Iteration(position Number, slots List(VmValue)) Texts
 	Lined.Iteration(2, Counted).Length is 0
+	Lined.Iteration(3, Started).Length is 0
 	Lined.Iteration(2, Started).Last is "$Set Strict/Doubler|4|for|0"
 	let entry = frame.method.instructions(position)
 	let begin = entry.kind is InstructionType.LoopBegin then position else entry.payload.Last
@@ -107,6 +109,7 @@ Shown(result VmValue) Text
 	Lined.Shown(VmValue.OfText("ab")) is "\"ab\""
 	Lined.Shown(VmValue.OfList(VmValue.OfNumber(1), VmValue.OfNumber(2))) is "(1, 2)"
 	Lined.Shown(VmValue.OfList(List(VmValue))) is "()"
+	Pairs.Shown(VmValue("Strict/Pair", 0, "", (VmValue.None, VmValue.OfNumber(2)))) is "Pair(b = 2)"
 	Lined.Shown(VmValue.OfText(Letters + Letters + Letters + "abcdef")).Length is 83
 	constant MaxShownLength = 80
 	let items = result.items
@@ -119,7 +122,6 @@ Named(record VmValue) Text
 	Lined.Iteration(2, Started) is ("$Hit Strict/Doubler|4", "$Set Strict/Doubler|4|for|0")
 	Lined.Iteration(3, Started).Length is 0
 	Lined.Shown(VmValue.OfList(Seven, Seven, Seven, Seven, Seven, Seven)) is "(7, 7, 7, 7, 7, ...)"
-	Pairs.Shown(VmValue("Strict/Pair", 0, "", (VmValue.None, VmValue.OfNumber(2)))) is "Pair(b = 2)"
 	Pairs.Named(VmValue("Strict/Pair", 0, "", (VmValue.None, VmValue.OfNumber(2)))) is "Pair(b = 2)"
 	TypeEntry.ShortName(record.kind) + "(" + Text.Combine(Members(record, true) + Members(record, false)) + ")"
 Members(record VmValue, isChanged Boolean) Texts
