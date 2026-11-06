@@ -10106,7 +10106,6 @@
     %one = arith.constant 1 : i64
     %terminator = arith.constant 0 : i8
     %zero = arith.constant 0.0 : f64
-    %single = arith.constant 1.0 : f64
     %textLength = func.call @strict_text_length(%text) : (f64) -> f64
     %negativeStart = arith.cmpf olt, %start, %zero : f64
     %fromEnd = arith.addf %textLength, %start : f64
@@ -10115,11 +10114,8 @@
     %beforeText = arith.cmpf olt, %first, %zero : f64
     %negativeCount = arith.cmpf olt, %length, %zero : f64
     %pastEnd = arith.cmpf ogt, %last, %textLength : f64
-    %isSingle = arith.cmpf oeq, %length, %single : f64
-    %isIndex = arith.andi %negativeStart, %isSingle : i1
     %outsideStart = arith.ori %beforeText, %negativeCount : i1
-    %outsideEnd = arith.ori %pastEnd, %isIndex : i1
-    %outside = arith.ori %outsideStart, %outsideEnd : i1
+    %outside = arith.ori %outsideStart, %pastEnd : i1
     cf.cond_br %outside, ^outOfRange, ^inside
   ^outOfRange:
     %errorName = llvm.mlir.addressof @strict_substring_out_of_range : !llvm.ptr
