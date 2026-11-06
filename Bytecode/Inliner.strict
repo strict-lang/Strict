@@ -13,6 +13,8 @@ constant Store = InstructionType.StoreRegisterToVariable
 constant Splitting = Inliner((StructLanes.Caller, StructLanes.Pair), true)
 constant Scaled = InstructionEntry.Invoke(0, ("", "*", "", "scale"), (0), 0)
 constant NoMethod = MethodEntry("", List(MemberEntry), "None", List(InstructionEntry))
+constant Failing = MethodEntry(StructLanes.Squared, instructions = (StructLanes.Made, StructLanes.Squared.instructions(9)) + StructLanes.Squared.instructions)
+constant Failed = Inliner((StructLanes.Caller, TypeEntry(StructLanes.Pair.Name, StructLanes.Pair.members, List(MethodEntry) + Failing)), true)
 Inlined List(TypeEntry)
 	Calling.Name is "Run" and (Caller.Name is "Strict/Caller")
 	Calling.parameters is (MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false))
@@ -32,6 +34,8 @@ Methods(type TypeEntry) List(MethodEntry)
 	Splitting.Inlinable(StructLanes.Caller, StructLanes.Constructed, StructLanes.Calling(3)).Name is ""
 	Sample.Expanded(Caller, Calling.instructions + Calling.instructions, 1)(9).texts.First is "inline5_elements"
 	Sample.Methods(Caller).First.instructions(3).kind is InstructionType.IndexCall
+	Failed.Inlinable(StructLanes.Caller, StructLanes.Calling(4), StructLanes.Calling(6)).Name is ""
+	Sample.Inlinable(StructLanes.Caller, StructLanes.Calling(4), StructLanes.Calling(5)).Name is ""
 	for type.methods
 		MethodEntry(value.Name, value.parameters, value.declaredType, Expanded(type, value.instructions, 3), value.Slots)
 Expanded(owner TypeEntry, instructions List(InstructionEntry), depth Number) List(InstructionEntry)
@@ -61,15 +65,15 @@ Inlinable(owner TypeEntry, call InstructionEntry, next InstructionEntry) MethodE
 	Sample.Inlinable(Caller, Calling.instructions(1), Calling.instructions(2)).Name is "X"
 	Sample.Inlinable(Caller, Calling.instructions(1), Calling.instructions(3)).Name is ""
 	Splitting.Inlinable(StructLanes.Caller, StructLanes.Calling(4), StructLanes.Calling(6)).Name is "Squared"
-	Sample.Inlinable(StructLanes.Caller, StructLanes.Calling(4), StructLanes.Calling(5)).Name is ""
 	let isChecked = (next.kind is InstructionType.CheckError) and (next.texts.Length is 0)
 	if call.kind is not InstructionType.Invoke
 		return NoMethod
 	let type = TypeOf(call.texts(0))
 	let callee = type.Name is "" then NoMethod else Callee(type, call)
 	let rules = InlineRules(callee)
-	let isFitting = isChecked and (next.payload(0) is call.payload(0)) and rules.Fits(owner, type, call)
-	isFitting or (isSplitting and rules.IsLaned(type, call, IsReturning(callee))) then callee else NoMethod
+	let isMatched = isChecked and (next.payload(0) is call.payload(0))
+	let isLaned = isSplitting and (isMatched or rules.IsUnchecked) and rules.IsLaned(type, call, IsReturning(callee))
+	(isMatched and rules.Fits(owner, type, call)) or isLaned then callee else NoMethod
 TypeOf(name Text) TypeEntry
 	Sample.TypeOf("List(Number)").Name is "Strict/List(Number)" and (Sample.TypeOf("Caller").Name is "Strict/Caller")
 	Sample.TypeOf("Strict/List(Number)").methods.Length is 1

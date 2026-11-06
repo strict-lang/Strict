@@ -167,3 +167,11 @@ IsOwnCall(entry InstructionEntry) Boolean
 	Listing.IsOwnCall(StructLanes.Constructed) is false
 	Listing.IsOwnCall(Inliner.Scaled) is false
 	(entry.kind is InstructionType.Invoke) and IsOwn(entry) and (entry.texts(1) is not "from")
+IsUnchecked Boolean
+	InlineRules(StructLanes.Squared).IsUnchecked
+	InlineRules(Inliner.Failing).IsUnchecked is false
+	for callee.instructions
+		if value.kind is InstructionType.CheckError
+			if (index < callee.instructions.Length - 2) or (value.payload(0) is not callee.instructions.Last.payload(0))
+				return false
+	true
