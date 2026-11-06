@@ -1,5 +1,7 @@
 has lines Texts
-constant Kernel = MetalFunction(("define ptx_kernel void @K(i64 %0, ptr writeonly captures(none) %1) local_unnamed_addr #0 {", "  %3 = icmp sgt i64 %0, 4", "  br i1 %3, label %4, label %6", "", "4:                                                ; preds = %2", "  %5 = getelementptr float, ptr %1, i64 %0", "  br label %6", "", "6:", "  %7 = phi i64 [ 1, %4 ], [ 2, %2 ]", "  ret void", "}"))
+constant KernelEntry = ("define ptx_kernel void @K(i64 %0, ptr writeonly captures(none) %1) local_unnamed_addr #0 {", "  %3 = icmp sgt i64 %0, 4", "  br i1 %3, label %4, label %6", "")
+constant KernelBlocks = ("4:                                                ; preds = %2", "  %5 = getelementptr float, ptr %1, i64 %0", "  br label %6", "", "6:", "  %7 = phi i64 [ 1, %4 ], [ 2, %2 ]", "  ret void", "}")
+constant Kernel = MetalFunction(KernelEntry + KernelBlocks)
 constant Helper = MetalFunction(("define float @strict_device.largest(float %0) local_unnamed_addr #6 {", "  %2 = fmul float %0, %0", "  ret float %2", "}"))
 constant Arguments = "(constant ulong* strict_parameters [[buffer(0)]], uint3 strict_lane [[thread_position_in_threadgroup]], "
 constant Positions = "uint3 strict_group [[threadgroup_position_in_grid]], uint3 strict_size [[threads_per_threadgroup]], "

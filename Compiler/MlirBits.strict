@@ -1,8 +1,12 @@
 has name Text
 constant Converting = MlirBits("%n")
 constant ConvertedFields = ("    %nb = llvm.bitcast %v : f64 to i64", "    %n0 = arith.constant 0 : i64", "    %n1 = arith.constant 1 : i64")
-constant ConvertedIntegers = ("    %n52 = arith.constant 52 : i64", "    %nk1 = arith.constant 2047 : i64", "    %nx = arith.shrui %nb, %n52 : i64", "    %nk = arith.andi %nx, %nk1 : i64", "    %nmm = arith.constant 4503599627370495 : i64", "    %nm = arith.andi %nb, %nmm : i64", "    %niu = arith.constant 4503599627370496 : i64", "    %niz = arith.cmpi ne, %nk, %n0 : i64", "    %nii = arith.select %niz, %niu, %n0 : i64", "    %ni = arith.ori %nm, %nii : i64", "    %nrr = arith.constant 1075 : i64", "    %nr = arith.subi %nrr, %nk : i64")
-constant ConvertedMagnitude = ("    %n63 = arith.constant 63 : i64", "    %nt = arith.minui %nr, %n63 : i64", "    %nf = arith.shrui %ni, %nt : i64", "    %nn = arith.cmpi slt, %nb, %n0 : i64", "    %nc = arith.subi %n0, %nf : i64", "    %n_e = arith.select %nn, %nc, %nf : i64")
+constant ExponentBits = ("    %n52 = arith.constant 52 : i64", "    %nk1 = arith.constant 2047 : i64", "    %nx = arith.shrui %nb, %n52 : i64", "    %nk = arith.andi %nx, %nk1 : i64")
+constant MantissaBits = ("    %nmm = arith.constant 4503599627370495 : i64", "    %nm = arith.andi %nb, %nmm : i64", "    %niu = arith.constant 4503599627370496 : i64")
+constant ImplicitBit = ("    %niz = arith.cmpi ne, %nk, %n0 : i64", "    %nii = arith.select %niz, %niu, %n0 : i64", "    %ni = arith.ori %nm, %nii : i64")
+constant ConvertedIntegers = ExponentBits + MantissaBits + ImplicitBit + ("    %nrr = arith.constant 1075 : i64", "    %nr = arith.subi %nrr, %nk : i64")
+constant ShiftedBits = ("    %n63 = arith.constant 63 : i64", "    %nt = arith.minui %nr, %n63 : i64", "    %nf = arith.shrui %ni, %nt : i64")
+constant ConvertedMagnitude = ShiftedBits + ("    %nn = arith.cmpi slt, %nb, %n0 : i64", "    %nc = arith.subi %n0, %nf : i64", "    %n_e = arith.select %nn, %nc, %nf : i64")
 constant ConvertedExact = ("    %nh = arith.shli %n1, %nt : i64", "    %ny = arith.subi %nh, %n1 : i64", "    %nj = arith.andi %ni, %ny : i64", "    %nw = arith.cmpi eq, %nj, %n0 : i64", "    %n_q = arith.extui %nw : i1 to i64")
 Converted(number Text) Texts
 	Converting.Converted("%v") is ConvertedFields + ConvertedIntegers + ConvertedMagnitude + ConvertedExact

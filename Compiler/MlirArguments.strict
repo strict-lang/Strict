@@ -1,5 +1,6 @@
 has functions List(MlirFunction)
-constant Calls = (InstructionEntry.LoadNumber(0, 3), InstructionEntry.LoadNumber(1, 4), InstructionEntry.Binary(InstructionType.Multiply, (0, 1, 2)), InstructionEntry.Invoke(3, ("Strict/Halves", "Halved", "Strict/Number", "number"), List(Number) + 2, -1), InstructionEntry.Return(3))
+constant Multiplied = (InstructionEntry.LoadNumber(0, 3), InstructionEntry.LoadNumber(1, 4), InstructionEntry.Binary(InstructionType.Multiply, (0, 1, 2)))
+constant Calls = Multiplied + (InstructionEntry.Invoke(3, ("Strict/Halves", "Halved", "Strict/Number", "number"), List(Number) + 2, -1), InstructionEntry.Return(3))
 constant Caller = MethodEntry("Run", List(MemberEntry), "Strict/Number", Calls)
 constant Halves = TypeEntry("Strict/Halves", List(MemberEntry), (MlirWholeTypes.Halved, Caller))
 constant Called = MlirFunction(List(TypeEntry) + MlirFunction.Shape + Halves, Halves, MlirWholeTypes.Halved)

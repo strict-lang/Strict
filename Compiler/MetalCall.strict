@@ -1,6 +1,8 @@
 has line Text
 has isKernel Boolean
-constant Intrinsics = ("llvm.fabs.f32", "llvm.floor.f32", "llvm.ceil.f32", "llvm.sqrt.f32", "llvm.exp2.f32", "llvm.log2.f32", "llvm.nvvm.lg2.approx.f", "llvm.nvvm.ex2.approx.f", "llvm.fma.f32", "llvm.minnum.f32", "llvm.maxnum.f32", "llvm.smin.i32", "llvm.smax.i32", "llvm.smin.i64", "llvm.smax.i64", "llvm.fptosi.sat.i32.f32", "llvm.nvvm.f2i.rn", "llvm.nvvm.shfl.sync.bfly.i32", "llvm.nvvm.shfl.sync.bfly.f32")
+constant FloatIntrinsics = ("llvm.fabs.f32", "llvm.floor.f32", "llvm.ceil.f32", "llvm.sqrt.f32", "llvm.exp2.f32", "llvm.log2.f32", "llvm.nvvm.lg2.approx.f", "llvm.nvvm.ex2.approx.f", "llvm.fma.f32", "llvm.minnum.f32", "llvm.maxnum.f32")
+constant IntegerIntrinsics = ("llvm.smin.i32", "llvm.smax.i32", "llvm.smin.i64", "llvm.smax.i64", "llvm.fptosi.sat.i32.f32", "llvm.nvvm.f2i.rn", "llvm.nvvm.shfl.sync.bfly.i32", "llvm.nvvm.shfl.sync.bfly.f32")
+constant Intrinsics = FloatIntrinsics + IntegerIntrinsics
 constant Functions = ("fabs", "floor", "ceil", "sqrt", "exp2", "log2", "log2", "exp2", "fma", "fmin", "fmax", "min", "max", "min", "max", "strict_saturated", "strict_rounded", "strict_shuffled", "strict_shuffled")
 constant Identities = ("llvm.nvvm.read.ptx.sreg.tid.x", "llvm.nvvm.read.ptx.sreg.ctaid.x", "llvm.nvvm.read.ptx.sreg.ntid.x", "llvm.nvvm.read.ptx.sreg.nctaid.x")
 constant Positions = ("(int)strict_lane.x", "(int)strict_group.x", "(int)strict_size.x", "(int)strict_groups.x")

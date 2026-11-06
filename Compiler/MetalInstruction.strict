@@ -1,6 +1,8 @@
 has line Text
 has isKernel Boolean
-constant Flags = ("nuw", "nsw", "exact", "disjoint", "samesign", "nneg", "inbounds", "tail", "musttail", "notail", "fast", "reassoc", "nnan", "ninf", "nsz", "arcp", "contract", "afn", "noundef", "readonly", "readnone", "writeonly", "nonnull", "zeroext", "signext", "volatile", "noalias")
+constant InstructionFlags = ("nuw", "nsw", "exact", "disjoint", "samesign", "nneg", "inbounds", "tail", "musttail", "notail", "fast", "reassoc", "nnan", "ninf", "nsz", "arcp", "contract", "afn")
+constant AttributeFlags = ("noundef", "readonly", "readnone", "writeonly", "nonnull", "zeroext", "signext", "volatile", "noalias")
+constant Flags = InstructionFlags + AttributeFlags
 constant Wrapped = ("range(", "captures(", "dereferenceable(", "nofpclass(", "align(")
 constant Symbols = ("add", "sub", "mul", "and", "or", "xor", "shl", "sdiv", "srem", "ashr", "fadd", "fsub", "fmul", "fdiv", "udiv", "urem", "lshr")
 constant Operators = ("+", "-", "*", "&", "|", "^", "<<", "/", "%", ">>", "+", "-", "*", "/", "/", "%", ">>")

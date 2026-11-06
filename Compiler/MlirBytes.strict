@@ -1,7 +1,10 @@
 has function MlirFunction
 has position Number
-constant Valuing = MlirBytes(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Jump(InstructionType.LoopEnd, 2)))), 1)
-constant Indexing = MlirBytes(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.LoadNumber(1, 0), InstructionEntry(InstructionType.IndexCall, "value", (2, 1, -1)), InstructionEntry.Jump(InstructionType.LoopEnd, 3)))), 1)
+constant Looped = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1))
+constant Values = Looped + (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Jump(InstructionType.LoopEnd, 2))
+constant Valuing = MlirBytes(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", Values)), 1)
+constant Indexes = Looped + (InstructionEntry.LoadNumber(1, 0), InstructionEntry(InstructionType.IndexCall, "value", (2, 1, -1)), InstructionEntry.Jump(InstructionType.LoopEnd, 3))
+constant Indexing = MlirBytes(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", Indexes)), 1)
 constant Iterating = MlirBytes(MlirLoops.Bytewise.function, 1)
 constant Collecting = MlirBytes(MlirFastLoop.Byting.function, 2)
 constant Doubling = MlirBytes(MlirFastLoop.Doubling.function, 2)
