@@ -104,10 +104,10 @@ Outcome(summary Text, prefix Text) Text
 Same(code Text, named Texts, summary Text, result Text) Text
 	ValueTrace.Same("a + b", List(Text), "\nUse|a|5\nUse|b|3", "8") is ": 5 + 3 = 8"
 	ValueTrace.Same("let a = 7", ("a", "a"), "", "7") is ": a = 7"
-	ValueTrace.Same("a > b", List(Text), "", "true") is ""
 	ValueTrace.Same("return false", List(Text), "", "false") is ": false = false"
 	let plain = Unselected(code.Replace("return ", ""))
-	let expression = named.Length is 2 then code.Substring(code.IndexOf(" = ") + 3, code.Length) else plain
+	let start = code.IndexOf(" = ") + 3
+	let expression = named.Length is 2 then code.Substring(start, code.Length - start) else plain
 	let isSimple = Tokenizer(expression).Tokens.Length is 1
 	let shown = isSimple then result else Substituted(expression, summary) + " = " + result
 	if named.Length is 2
@@ -115,6 +115,7 @@ Same(code Text, named Texts, summary Text, result Text) Text
 	let isHidden = (code.StartsWith("return ") is false) and ((result is "true") or isSimple and (expression is result))
 	isHidden then "" else ": " + (isSimple then expression + " = " + shown else shown)
 Unselected(code Text) Text
+	ValueTrace.Same("a > b", List(Text), "", "true") is ""
 	ValueTrace.Unselected("\"add\" then first + second") is "first + second"
 	ValueTrace.Unselected("a > 0 then a else 0") is "a > 0 then a else 0"
 	let at = code.IndexOf(" then ")

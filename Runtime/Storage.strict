@@ -9,7 +9,7 @@ Written(owner VmValue, target Text, position Number, element VmValue) VmValue
 	Pairing.Written(Paired, "pair.b", 0, VmValue.OfNumber(7)).items(1).items is (VmValue.OfNumber(7), VmValue.OfNumber(2))
 	Pairing.Written(Paired, "b", 0, VmValue.OfNumber(7)).items(0).number is 7
 	let dot = target.IndexOf(".")
-	let found = dot > 0 then Member(owner, target.Substring(dot + 1, target.Length)) else -1
+	let found = dot > 0 then Member(owner, target.Substring(dot + 1, target.Length - dot - 1)) else -1
 	let list = found < 0 then owner else owner.items(found)
 	let at = position < 0 then position + list.items.Length else position
 	let isOutside = (at < 0) or (at >= list.items.Length)
