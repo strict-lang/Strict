@@ -85,7 +85,7 @@ Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInfer
 	let types = linked.entries
 	if types.Length is 0
 		return Answer(1, known)
-	let failed = isTested then Tested(types, path, root) else 0
+	let failed = isTested then Tested(types, path, root, files, inference) else 0
 	if (failed is 0) and (selection is "") and (IsEdited(path) is false)
 		let folder = Path(cache.source).PathOnly.text
 		let header = Completed(cache, root, files, stamped, isOwn).Typed(types, folder).Kept(types).Header
@@ -98,18 +98,18 @@ Completed(cache BinaryFile, root Text, files Texts, stamped BinarySources, isOwn
 		return stamped
 	let current = SourceFiles(root).Of(cache.source)
 	current.Length is files.Length then stamped else BinarySources(current).Stamped
-Tested(types List(TypeEntry), path Text, root Text) Number
+Tested(types List(TypeEntry), path Text, root Text, files Texts, inference TypeInference) Number
 	let started = Process.Elapsed
 	let failed = Started(types, path).Tested(types.First.Name)
 	if failed > 0
 		logger.Log(Summary(failed, path))
 		return failed
 	let isWhole = selection is "*"
-	let elapsed = Process.Elapsed - started
-	let seconds = elapsed * 10 + 1
+	let seconds = (Process.Elapsed - started) * 10 + 1
 	let cache = MutationCache(path, isWhole)
 	let isFresh = isMutating and (seconds > 0) and ((part is not "") or (cache.Waited(TypeSource.Root + "/obj") is false))
-	let plain = isFresh then FileCompiler(logger, true, selection, false).Compiled(path, root, true) else types
+	let unoptimized = FileCompiler(logger, true, selection, false)
+	let plain = isFresh then unoptimized.Built(path, root, true, files, inference).entries else types
 	isMutating and (selection is in ("", "*")) then Mutants(logger, path, seconds, part, isWhole).Survivors(plain) else 0
 Loaded(path Text, root Text, withTests = true, sources Texts = List(Text)) List(TypeEntry)
 	let started = Process.Elapsed
