@@ -65,11 +65,13 @@ Commands(rounds Number) Texts
 Shown(survivor Text) Text
 	Sample.Shown(Sample.path + ": MutationTestingFailed") is Sample.path + ": MutationTestingFailed"
 	Sample.Shown(Sample.path + ":line 3: MutationSurvived").Lines.Length > 2
+	Sample.Shown(Sample.path + ":line 3") is Sample.path + ":line 3"
 	Mutants(Logger, Sample.path, part = "1/2").Shown(Sample.path + ":line 3: MutationSurvived").Lines.Length is 1
 	let start = survivor.IndexOf(":line ")
-	if (part is not "") or (start < 0)
+	let end = start < 0 then -1 else survivor.IndexOf(": ", start)
+	if (part is not "") or (end < 0)
 		return survivor
-	let line = survivor.Substring(start + 6, survivor.IndexOf(": ", start) - start - 6) to Number
+	let line = survivor.Substring(start + 6, end - start - 6) to Number
 	survivor + "\n" + Text.Combine(Mutation.Source(File(path).ReadLines, line), "\n")
 Mutated(type TypeEntry) List(MethodEntry)
 	Sample.Mutated(Machine.Doubler).Length is 0
