@@ -4283,6 +4283,31 @@
   ^done:
     return
   }
+  // the items block a growing list moved out of (counted again in the new block) gives its counts back and holds
+  // none: nothing frees it by its count, it kept every item it had (Qwen3.Forwarded's blocks with their GPU states)
+  // until a full collection; items inside the holder's own block go with the holder
+  func.func private @strict_rc_outgrown(%old: !llvm.ptr, %bytes: i64) {
+    %busy = func.call @strict_rc_busy() : () -> i1
+    cf.cond_br %busy, ^done, ^locate
+  ^locate:
+    %address = llvm.ptrtoint %old : !llvm.ptr to i64
+    %located:5 = func.call @strict_gc_locate(%address) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %found = llvm.icmp "ne" %located#0, %unset : !llvm.ptr
+    %isStart = arith.cmpi eq, %located#1, %address : i64
+    %separate = arith.andi %found, %isStart : i1
+    cf.cond_br %separate, ^released, ^done
+  ^released:
+    func.call @strict_rc_release(%address, %bytes) : (i64, i64) -> ()
+    %flags = func.call @strict_rc_flags(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %flagByte = llvm.load %flags : !llvm.ptr -> i8
+    %withoutHolds = arith.constant -5 : i8
+    %unheld = arith.andi %flagByte, %withoutHolds : i8
+    llvm.store %unheld, %flags : i8, !llvm.ptr
+    return
+  ^done:
+    return
+  }
   func.func private @strict_rc_object_now(%object: !llvm.ptr, %bytes: i64) {
     %container = llvm.ptrtoint %object : !llvm.ptr to i64
     func.call @strict_rc_range(%object, %bytes, %container) : (!llvm.ptr, i64, i64) -> ()
@@ -6353,7 +6378,8 @@
     %survived = llvm.load %markedLargeSlot : !llvm.ptr -> i64
     %morePromoted = arith.addi %promoted, %survived : i64
     llvm.store %morePromoted, %promotedSlot : i64, !llvm.ptr
-    cf.br ^done
+    %nothingReturned = arith.constant 0.0 : f64
+    cf.br ^done(%nothingReturned : f64)
   ^threshold:
     %marked = llvm.load %markedSlot : !llvm.ptr -> i64
     %twice = arith.addi %marked, %marked : i64
@@ -6376,15 +6402,19 @@
     %thresholdPages = arith.shrui %threshold, %pageShift : i64
     %fewPages = arith.cmpi ult, %thresholdPages, %poolMinimum : i64
     %keep = arith.select %fewPages, %poolMinimum, %thresholdPages : i64
+    %returning = func.call @strict_thread_seconds() : () -> f64
     func.call @strict_gc_trim_pool(%keep) : (i64) -> ()
     %keepBytes = arith.shli %keep, %pageShift : i64
     func.call @strict_gc_trim_runs(%keepBytes) : (i64) -> ()
     %allocatedSlot = llvm.mlir.addressof @strict_gc_allocated : !llvm.ptr
+    %returned = func.call @strict_thread_seconds() : () -> f64
+    %returnedPages = arith.subf %returned, %returning : f64
     llvm.store %zero, %allocatedSlot : i64, !llvm.ptr
-    cf.br ^done
-  ^done:
+    cf.br ^done(%returnedPages : f64)
+  ^done(%pagesReturned: f64):
     func.call @strict_gc_log(%full, %startedAt) : (i1, f64) -> ()
-    func.call @strict_gc_watch(%ranBefore) : (f64) -> ()
+    %collectedFrom = arith.addf %ranBefore, %pagesReturned : f64
+    func.call @strict_gc_watch(%collectedFrom) : (f64) -> ()
     %resetMadeSlot = llvm.mlir.addressof @strict_gc_small_made : !llvm.ptr
     %resetVisitedSlot = llvm.mlir.addressof @strict_gc_small_visited : !llvm.ptr
     %resetNone = arith.constant 0 : i64
@@ -6394,7 +6424,8 @@
   }
   // collections may take at most a tenth of the time: more than 0.5 s of collecting in the last 5 seconds ends the
   // program, it allocates too much and has to be fixed first (a single long collection stays below it); counted is the
-  // time the collecting thread ran (strict_thread_seconds), waiting for a core shared with other programs is not
+  // time the collecting thread ran (strict_thread_seconds), waiting for a core shared with other programs is not, nor
+  // giving free pages back to the system (0.1 s per GB: MossImage's 8 GB text encoder after its prompts took 0.8 s)
   llvm.mlir.global internal @strict_gc_seconds(dense<0.0> : tensor<5xf64>) : !llvm.array<5 x f64>
   llvm.mlir.global internal @strict_gc_stamps(dense<-1> : tensor<5xi64>) : !llvm.array<5 x i64>
   llvm.mlir.global internal constant @strict_gc_exceeded("GarbageCollectionExceedsTenth: %.2f of the last 5 seconds were spent collecting garbage (at most 10 %%), allocate less in the loops of this program\0A\00") : !llvm.array<149 x i8>
@@ -8561,6 +8592,7 @@
     %usedBytes = arith.fptosi %usedBytesf : f64 to i64
     %grown = llvm.call @memcpy(%moved, %old, %usedBytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     func.call @strict_rc_filled(%moved, %usedBytes) : (!llvm.ptr, i64) -> ()
+    func.call @strict_rc_outgrown(%old, %usedBytes) : (!llvm.ptr, i64) -> ()
     %movedbits = func.call @strict_bits(%moved) : (!llvm.ptr) -> f64
     llvm.store %movedbits, %holder : f64, !llvm.ptr
     func.call @strict_gc_written(%holder) : (!llvm.ptr) -> ()
@@ -9355,6 +9387,7 @@
     %usedBytes = arith.fptosi %usedBytesf : f64 to i64
     %grown = llvm.call @memcpy(%moved, %old, %usedBytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     func.call @strict_rc_filled(%moved, %usedBytes) : (!llvm.ptr, i64) -> ()
+    func.call @strict_rc_outgrown(%old, %usedBytes) : (!llvm.ptr, i64) -> ()
     %movedbits = func.call @strict_bits(%moved) : (!llvm.ptr) -> f64
     llvm.store %movedbits, %holder : f64, !llvm.ptr
     func.call @strict_gc_written(%holder) : (!llvm.ptr) -> ()
