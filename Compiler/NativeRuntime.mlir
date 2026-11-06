@@ -6128,8 +6128,11 @@
   llvm.mlir.global internal constant @strict_gc_log_within("\00") : !llvm.array<1 x i8>
   llvm.mlir.global internal @strict_gc_ending(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_framed(0 : i64) : i64
+  llvm.mlir.global internal @strict_frame_collected(0.0 : f64) : f64
+  llvm.mlir.global internal @strict_frame_collecting(0.0 : f64) : f64
   // the Presented of a Realtime type returns (MlirLines.End): from the first frame on collections wait for the end of
-  // a frame unless it allocated more than the frame budget (strict_gc_due), what the frame left behind is freed now
+  // a frame unless it allocated more than the frame budget (strict_gc_due), what the frames left behind is freed at
+  // the first frame end 19 times as long after the last one as it took (frame end collections take at most 5 %)
   func.func private @strict_frame_ended() {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -6138,7 +6141,17 @@
     %youngSlot = llvm.mlir.addressof @strict_gc_young : !llvm.ptr
     %young = llvm.load %youngSlot : !llvm.ptr -> i64
     %allocated = arith.cmpi ne, %young, %none : i64
-    cf.cond_br %allocated, ^collect, ^done
+    %now = func.call @strict_clock() : () -> f64
+    %collectedSlot = llvm.mlir.addressof @strict_frame_collected : !llvm.ptr
+    %collected = llvm.load %collectedSlot : !llvm.ptr -> f64
+    %collectingSlot = llvm.mlir.addressof @strict_frame_collecting : !llvm.ptr
+    %collecting = llvm.load %collectingSlot : !llvm.ptr -> f64
+    %since = arith.subf %now, %collected : f64
+    %ratio = arith.constant 19.0 : f64
+    %waiting = arith.mulf %collecting, %ratio : f64
+    %waited = arith.cmpf oge, %since, %waiting : f64
+    %isDue = arith.andi %allocated, %waited : i1
+    cf.cond_br %isDue, ^collect, ^done
   ^collect:
     %endingSlot = llvm.mlir.addressof @strict_gc_ending : !llvm.ptr
     llvm.store %one, %endingSlot : i64, !llvm.ptr
@@ -6153,6 +6166,10 @@
     %full = arith.ori %due, %replaced : i1
     func.call @strict_gc_run(%full) : (i1) -> ()
     llvm.store %none, %endingSlot : i64, !llvm.ptr
+    %ended = func.call @strict_clock() : () -> f64
+    %took = arith.subf %ended, %now : f64
+    llvm.store %ended, %collectedSlot : f64, !llvm.ptr
+    llvm.store %took, %collectingSlot : f64, !llvm.ptr
     cf.br ^done
   ^done:
     return
