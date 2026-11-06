@@ -66,7 +66,7 @@ Streamed(socket Number) Number
 			code = isExit then value.Substring(exiting.Length, value.Length - exiting.Length) to Number else code
 	code
 Loopback Slow(Number)
-	let server = Socket.Listen(0)
+	let server = Socket.Local(0)
 	let client = Socket.Connect("127.0.0.1", Socket.Port(server))
 	let accepted = Socket.Accept(server)
 	Server.Sent(client, Resident.Request(Directory.Current, ("test", "a.strict")))

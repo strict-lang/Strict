@@ -7,10 +7,11 @@ Failures Slow(Number)
 	Socket.Port(0) is Error("InvalidSocket")
 	(Socket.Listen(-1) is Error("InvalidPort")) and (Socket.Listen(65536) is Error("InvalidPort"))
 	Socket.Connect("127.0.0.1", 70000) is Error("InvalidPort")
-	Loopback is 0
+	Socket.Local(-1) is Error("InvalidPort")
+	Loopback(Socket.Listen(0)) is 0
+	Loopback(Socket.Local(0)) is 0
 	0
-Loopback Number
-	let server = Socket.Listen(0)
+Loopback(server Number) Number
 	if server is Error
 		return 1
 	let result = Connected(server)

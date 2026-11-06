@@ -105,7 +105,8 @@ STRICT_EXPORT double Socket_Connect(double self, double host, double port)
 	return (double)sent_at_once(handle);
 }
 
-STRICT_EXPORT double Socket_Listen(double self, double port)
+/* A server on all interfaces (other computers can connect) or on 127.0.0.1 only. */
+static double listening(double port, unsigned long host)
 {
 	if (!is_port(port))
 		return strict_fail("InvalidPort");
@@ -119,14 +120,24 @@ STRICT_EXPORT double Socket_Listen(double self, double port)
 	struct sockaddr_in address;
 	memset(&address, 0, sizeof(address));
 	address.sin_family = AF_INET;
-	address.sin_addr.s_addr = htonl(INADDR_ANY);
+	address.sin_addr.s_addr = htonl(host);
 	address.sin_port = htons((unsigned short)(int)port);
-	if (bind(handle, (struct sockaddr*)&address, (socket_size)sizeof(address)) != 0 || listen(handle, 8) != 0)
+	if (bind(handle, (struct sockaddr*)&address, (socket_size)sizeof(address)) != 0 || listen(handle, SOMAXCONN) != 0)
 	{
 		close_socket(handle);
 		return strict_fail("ListenFailed");
 	}
 	return (double)handle;
+}
+
+STRICT_EXPORT double Socket_Listen(double self, double port)
+{
+	return listening(port, INADDR_ANY);
+}
+
+STRICT_EXPORT double Socket_Local(double self, double port)
+{
+	return listening(port, INADDR_LOOPBACK);
 }
 
 STRICT_EXPORT double Socket_Port(double self, double socket)

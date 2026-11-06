@@ -62,7 +62,7 @@ Received(socket Number, ending Text) Text
 		gathered = isOpen then gathered + ByteEncoder(chunk).Spelled(0, chunk.Length) else gathered
 	gathered
 Opened Number
-	let server = Socket.Listen(0)
+	let server = Socket.Local(0)
 	if server is Error
 		return 0
 	let port = Socket.Port(server) to Text
@@ -89,7 +89,7 @@ Finished(socket Number, code Number) Number
 Closed(server Number) Number
 	Resident("Compiler/output/Missing").Closed(0) is 0
 	Sample.Opened > 0
-	Sample.Closed(Socket.Listen(0)) is 0
+	Sample.Closed(Socket.Local(0)) is 0
 	File(Sample.root + Stamp).Exists
 	let stamp = File(root + Stamp)
 	if stamp.Exists and (stamp.ReadLines.First is (Socket.Port(server) to Text))
