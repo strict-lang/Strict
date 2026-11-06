@@ -21,8 +21,8 @@ Prepared(candidates Texts) List(TypeEntry)
 		methods.Add(Compiled(value, index))
 	let entry = main.Entry
 	let tests = TestCodegen(main, true).Tests
-	let runner = MethodEntry(tests, instructions = Mutants.Silent(tests.instructions))
-	let combined = TypeEntry(entry, methods = entry.methods + methods + runner)
+	let runner = MethodEntry(tests.First, instructions = Mutants.Silent(tests.First.instructions))
+	let combined = TypeEntry(entry, methods = entry.methods + methods + runner + (tests - tests.First))
 	Resolver(Linker(root, main).Linked(combined, List(Text))).Resolved
 Compiled(body Text, index Number) MethodEntry
 	let generator = main.Generator
