@@ -370,6 +370,10 @@
   }
   llvm.func @open(!llvm.ptr, i32, ...) -> i32
   llvm.func @flock(i32, i32) -> i32
+  // File.Delete removes the file, other processes lock a new one at that path
+  func.func private @strict_file_unlocked(%path: f64) {
+    return
+  }
   // holds an exclusive lock on the file until this process ends
   func.func private @strict_file_locked(%path: f64) -> f64 {
     %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr

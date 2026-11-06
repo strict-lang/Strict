@@ -3,7 +3,7 @@ has isWhole Boolean = false
 constant Steps = 100000
 constant Version = 24
 constant MaxRuns = 26
-constant MaxWait = 300
+constant RunWait = 90
 constant Accepting = Invocation(InstructionEntry.Invoke(0, ("Strict/Networking/Socket", "Accept", "Strict/Number"), List(Number), -1), List(VmValue), VmValue.None)
 constant Sample = MutationCache("Compiler/output/Cached.strict")
 Stamp Text
@@ -29,31 +29,37 @@ Saved(survivors Texts) Boolean
 	Sample.Saved(List(Text))
 	File(Location).Write(Text.Combine(List(Text) + Stamp + survivors, "\n"))
 	File(Location).Exists
-Waited(slots Text) Boolean
-	MutationCache("Compiler/output/Missing/Waiting.strict", true).Waited("Compiler/output/Missing/Deeper") is false
-	Sample.Saved(List(Text)) and Sample.Waited("Compiler/output/Missing/Deeper")
-	if isWhole and (IsCurrent is false)
-		Claimed(List(Text) + Lock)
+Held(slots Text) Texts
+	MutationCache("Compiler/output/Missing/Waiting.strict", true).Held("Compiler/output/Missing/Deeper").Length is 0
+	Sample.Saved(List(Text)) and (Sample.Held("Compiler/output/Missing/Deeper").Length is 0)
+	let whole = isWhole and (IsCurrent is false) then Claimed(List(Text) + Lock) else List(Text)
 	if IsCurrent
-		return true
-	Claimed(Slotted(slots))
-	false
+		return Released(whole) then List(Text) else whole
+	whole + Claimed(Slotted(slots))
 Lock Text
 	Sample.Lock is Sample.Location + "." + HashCode(Sample.Stamp).number + ".lock"
 	Location + "." + HashCode(Stamp).number + ".lock"
-Claimed(locks Texts) Boolean
-	MutationCache.Claimed(List(Text) + "Compiler/output/Missing/Deeper/Waiting.lock") is false
-	MutationCache.Claimed(List(Text) + ("Compiler/output/Claimed" + Process.Elapsed + ".lock"))
+Claimed(locks Texts) Texts
+	MutationCache.Claimed(List(Text) + "Compiler/output/Missing/Deeper/Waiting.lock").Length is 0
+	MutationCache.Claimed(List(Text) + ("Compiler/output/Claimed" + Process.Elapsed + ".lock")).Length is 1
 	let folder = Path(locks.First).PathOnly.text
 	if (Directory.Exists(folder) is false) and Directory.Exists(Path(folder).PathOnly.text)
 		Directory.Create(folder)
 	let started = Process.Elapsed
-	for as long as Directory.Exists(folder) and (Process.Elapsed - started < MaxWait)
+	for as long as Directory.Exists(folder) and (Process.Elapsed - started < RunWait)
 		for locks
 			if File(value).Locked
-				return true
+				return List(Text) + value
 		Process.Wait(0.1)
-	false
+	List(Text)
+Released(locks Texts) Boolean
+	MutationCache.Released(MutationCache.Claimed(List(Text) + ("Compiler/output/Released" + Process.Elapsed + ".lock")))
+	for locks
+		File(value).Delete
+	for locks
+		if File(value).Exists
+			return false
+	true
 Slotted(folder Text) Texts
 	MutationCache.Slotted("obj").Length is MaxRuns
 	MutationCache.Slotted("obj").Last is "obj/mutation25.slot"

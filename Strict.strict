@@ -1,7 +1,7 @@
 has logger
 constant Version = "1.0"
 constant Commands = ("build", "test", "check", "update", "format", "suggest")
-constant MaxWait = 300
+constant BuildWait = 90
 constant Informing = ("version", "--version", "help", "--help")
 constant RunHelp = List(Text) + "strict <file or Type> [arguments]  run the program natively (built first when outdated); a type without Run runs its native tests, not again while they passed and nothing changed"
 constant BuildHelp = ("strict build <file or Type>  compile a native executable without running tests (Name.test without Run)", "strict build [platform]    build the program named like this folder (in FractalZoomer/: FractalZoomer.strict)")
@@ -195,7 +195,7 @@ Rebuilt(compiler Text, lock Text) Number
 Waited(compiler Text, lock Text) Slow(Number)
 	Strict(Logger).Waited("Missing.exe", "Missing.building") is 1
 	let started = Process.Elapsed
-	for as long as Directory.Exists(lock) and (Process.Elapsed - started < MaxWait)
+	for as long as Directory.Exists(lock) and (Process.Elapsed - started < BuildWait)
 		Process.Wait(0.1)
 	if IsCompiled(compiler, TypeSource.Root)
 		return 0

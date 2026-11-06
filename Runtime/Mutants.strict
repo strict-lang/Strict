@@ -26,6 +26,15 @@ Survivors(types List(TypeEntry)) Number
 	if isWhole and (part is "") and (isCached is false)
 		cache.Saved(survivors)
 	survivors.Length
+Ran(types List(TypeEntry), root Text, files Texts, inference TypeInference) Number
+	let cache = MutationCache(path, isWhole)
+	let held = part is "" then cache.Held(TypeSource.Root + "/obj") else List(Text)
+	let isFresh = (part is not "") or (cache.IsCurrent is false)
+	let unoptimized = FileCompiler(logger, true, isWhole then "*" else "", false)
+	let plain = isFresh then unoptimized.Built(path, root, true, files, inference).entries else types
+	let survivors = Survivors(plain)
+	cache.Released(held)
+	survivors
 Lines(types List(TypeEntry)) Texts
 	Sample.Lines(Doubled).Length is 0
 	let methods = Baseline(value).Kept(types)

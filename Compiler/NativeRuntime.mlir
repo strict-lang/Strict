@@ -213,6 +213,7 @@
   }
   func.func private @strict_file_delete(%path: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
+    func.call @strict_file_unlocked(%path) : (f64) -> ()
     %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
     %removed = llvm.call @remove(%name) : (!llvm.ptr) -> i32
     return %zero : f64

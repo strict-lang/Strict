@@ -104,13 +104,8 @@ Tested(types List(TypeEntry), path Text, root Text, files Texts, inference TypeI
 	if failed > 0
 		logger.Log(Summary(failed, path))
 		return failed
-	let isWhole = selection is "*"
-	let seconds = (Process.Elapsed - started) * 10 + 1
-	let cache = MutationCache(path, isWhole)
-	let isFresh = isMutating and (seconds > 0) and ((part is not "") or (cache.Waited(TypeSource.Root + "/obj") is false))
-	let unoptimized = FileCompiler(logger, true, selection, false)
-	let plain = isFresh then unoptimized.Built(path, root, true, files, inference).entries else types
-	isMutating and (selection is in ("", "*")) then Mutants(logger, path, seconds, part, isWhole).Survivors(plain) else 0
+	let mutants = Mutants(logger, path, (Process.Elapsed - started) * 10 + 1, part, selection is "*")
+	isMutating and (selection is in ("", "*")) then mutants.Ran(types, root, files, inference) else 0
 Loaded(path Text, root Text, withTests = true, sources Texts = List(Text)) List(TypeEntry)
 	let started = Process.Elapsed
 	let cache = BinaryFile(FileCompiler.Normalized(path))
