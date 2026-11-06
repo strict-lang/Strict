@@ -1,13 +1,17 @@
 has logger
+constant Digits = 16
 Pi(rounds Number) Number
 	Leibniz.Pi(0) is 1
 	Leibniz.Pi(1) is 1 - 1 / 3
 	Leibniz.Pi(2) is 1 - 1 / 3 + 1 / 5
+	Leibniz.Pi(4) is 1 - 1 / 3 + 1 / 5 - 1 / 7 + 1 / 9
 	mutable pi = 1
-	for Range(2, rounds + 2)
-		let x = -1 + 2 * (value % 2)
-		pi = pi + x / (2 * value - 1)
+	for Range(0, (rounds / 4).Floor)
+		let first = 1 + 4 * value
+		pi = pi - 1 / (2 * first + 1) + 1 / (2 * first + 3) - 1 / (2 * first + 5) + 1 / (2 * first + 7)
+	for Range(1 + 4 * (rounds / 4).Floor, rounds + 1)
+		pi = pi + (1 - 2 * (value % 2)) / (2 * value + 1)
 	pi
 Run
 	let rounds = File("rounds.txt").ReadLines.First.Trim to Number
-	logger.Log((Pi(rounds) * 4).Fixed(16))
+	logger.Log((Pi(rounds) * 4).Fixed(Digits))

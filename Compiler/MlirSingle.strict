@@ -101,7 +101,7 @@ Calculated(entry InstructionEntry, at Number) Texts
 	let target = sums.AddedTo(at)
 	if (target is not "") and sums.IsSummed(target)
 		return sums.Added(entry, at, left, right)
-	let flags = target is "" then " fastmath<contract>" else " fastmath<reassoc,contract>"
+	let flags = target is "" then " fastmath<contract>" else MlirStatements.Reassociated
 	let operation = "    %t" + at + "s = arith." + MlirStatements(function, at).Operation(entry.kind) + " "
 	List(Text) + (operation + left + ", " + right + flags + " : f32")
 Register(register Number, at Number) Text

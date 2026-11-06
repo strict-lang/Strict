@@ -25,7 +25,7 @@ Survivors(types List(TypeEntry)) Number
 	let survivors = isCached then cache.Survivors else Lines(types)
 	for survivors
 		logger.Log(Shown(value))
-	if (part is "") and (isCached is false)
+	if isWhole and (part is "") and (isCached is false)
 		cache.Saved(survivors)
 	survivors.Length
 Lines(types List(TypeEntry)) Texts
@@ -33,13 +33,13 @@ Lines(types List(TypeEntry)) Texts
 	let methods = Baseline(value).Kept(types)
 	let rounds = Mutation.Rounds(methods)
 	let isStrict = Path(Process.Current.executable).FileName.text.Lower.StartsWith("strict")
-	if (part is "") and (rounds > Mutation.SpawnAboveRounds) and isStrict
+	if isWhole and (part is "") and (rounds > Mutation.SpawnAboveRounds) and isStrict
 		return Spawned(rounds)
 	let tested = Tested(types, Runner(types.First), methods)
 	mutable survivors = List(Mutable(Text))
-	for Range(0, rounds)
+	for Range(0, isWhole then rounds else 1)
 		if Mutation.IsMine(part, value)
-			survivors = survivors + Round(tested, methods, value)
+			survivors = survivors + Round(tested, methods, isWhole then value else rounds.Random.Floor)
 	survivors
 Spawned(rounds Number) Texts
 	Sample.Commands(4).Last is "test \"Examples/Fibonacci.strict\" \".\" unit mutations rounds:1/2"

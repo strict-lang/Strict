@@ -2,6 +2,7 @@ has function MlirFunction
 has position Number
 constant Copy = MlirStatements(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 7), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "a"), InstructionEntry.Return(0)))), 0)
 constant Summing = MlirStatements(MlirFastLoop.Summing.function, 5)
+constant Reassociated = " fastmath<reassoc,contract>"
 constant ListKinds = (InstructionType.IndexCall, InstructionType.InvokeWriteToList, InstructionType.CopyList, InstructionType.InvokeRemove)
 constant Exact = "    %t0c = arith.select %x0v, %x0i, %t0f : i1"
 constant Loading = MlirStatements(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "a"), InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, 1), InstructionEntry.Jump(InstructionType.JumpEnd, 0), InstructionEntry.Jump(InstructionType.JumpEnd, 1), InstructionEntry.Return(1)))), 0)
@@ -112,7 +113,7 @@ Operated(kind Number, left Text, right Text) Text
 	if kind is in (InstructionType.Power, InstructionType.Modulo)
 		return result + Called(kind) + "(" + left + ", " + right + ") : (f64, f64) -> f64"
 	let isSum = MlirFastLoop(function, function.FastLoop).IsAccumulated(position)
-	let flags = isSum then " fastmath<reassoc,contract>" else ""
+	let flags = isSum then Reassociated else ""
 	result + "arith." + Operation(kind) + " " + left + ", " + right + flags + " : f64"
 Called(kind Number) Text
 	Copy.Called(InstructionType.Modulo) is "func.call @strict_remainder"
