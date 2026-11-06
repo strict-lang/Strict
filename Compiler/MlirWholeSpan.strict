@@ -3,9 +3,12 @@ has position Number
 constant Quad = (MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 0), "sum"), InstructionEntry.LoadNumber(0, 0), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "count"), InstructionEntry.LoopBegin(0, 1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "sum"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "value"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "value"), InstructionEntry.Binary(InstructionType.Multiply, (3, 4, 5)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "value"), InstructionEntry.Binary(InstructionType.Multiply, (5, 6, 7)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 8, "value"), InstructionEntry.Binary(InstructionType.Multiply, (7, 8, 9)), InstructionEntry.Binary(InstructionType.Add, (2, 9, 10)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 10, "sum"), InstructionEntry.Jump(InstructionType.LoopEnd, 1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 11, "sum"), InstructionEntry.Return(11))
 constant Quads = MlirWholeSpan(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Sum", List(MemberEntry) + MemberEntry("count", "Strict/Number", List(InstructionEntry), false), "Strict/Number", Quad)), 4)
 constant Halving = MlirWholeSpan(MlirWholeTypes.Halving.function, 1)
+constant Split = (InstructionEntry.LoadNumber(0, 2), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "count"), InstructionEntry.Binary(InstructionType.Divide, (1, 0, 2)), InstructionEntry.LoadNumber(3, 1), InstructionEntry.Binary(InstructionType.Add, (2, 3, 4)), InstructionEntry.Return(4))
+constant Splits = MlirWholeSpan(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Split", List(MemberEntry) + MemberEntry("count", "Strict/Number", List(InstructionEntry), false), "Strict/Number", Split)), 2)
 Lines Texts
 	Halving.Lines.Length is 0
 	Text.Combine(Quads.Lines).IndexOf("arith.mulf") > 0
+	Text.Combine(Splits.Lines).IndexOf("wb2") < 0
 	Quads.Checks.Length > 2
 	if Grown is false
 		return List(Text)
@@ -83,13 +86,16 @@ Accumulated(at Number, carried Number) Texts
 	(List(Text) + product + summed) + check
 Source(register Number, at Number) Text
 	Quads.Source(3, 7) is "%t4wn3"
+	Splits.Source(2, 4) is "%t2whlimit"
 	let writer = Earlier(register, at, false)
 	if writer < 0
 		return "%t" + position + "whlimit"
 	let entry = function.method.instructions(writer)
 	if entry.kind is InstructionType.LoadVariableToRegister
 		return Variable(entry, writer)
-	Name("wb", writer)
+	if entry.kind is in (InstructionType.LoadConstantToRegister, InstructionType.StoreConstantToVariable, InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply)
+		return Name("wb", writer)
+	"%t" + position + "whlimit"
 Variable(entry InstructionEntry, at Number) Text
 	if entry.texts(0) is in ("value", "index")
 		return Name("wn", Earlier(0, at, true))

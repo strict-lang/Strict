@@ -6,7 +6,7 @@ Builds native executables. `NativeBuild` behind `strict build` turns the instruc
 ## Building
 - Builds first require passing VM unit tests, reusing unchanged passing results; Slow tests only run when asked for. Program and library emission omit test bytecode.
 - A type without `Run` builds its test executable without running it. `strict test <file> native` builds and runs native tests, `strict test <file> lines` also records per-line timings.
-- `strict build <file>` is the one optimized build (`-O2`, `Toolchain.Optimization`) for every target.
+- `strict build <file>` is the one optimized build (`-O3`, `Toolchain.Optimization`) for every target.
 - `NativeCache` keeps a `.nativecache` stamp of sources, native C/header/flag inputs, folder membership, content, compiler and tool binaries and outputs. `strict` checks it before launching NativeCompiler; an unchanged build or native test does nothing and prints `Up to date: X.strict (last changed ...) < X.exe (last build ...)` or `Tests up to date:`. Options are part of the key. Cross-platform, library and instrumented builds bypass it.
 - Native C objects are reused only when their `.o.nativecache` sidecar matches sources, headers and compile options.
 - The GPU module of a successful build is kept as `obj/Name.kernels.mlir` next to `obj/Name.ptx` (`PtxCache`): when emitted input, target flags, exported symbols and LLVM tools match, the PTX is reused. Shared runtime PTX lives in `Tools/PtxCache`, published from a private staging directory so parallel builds never read partial results.

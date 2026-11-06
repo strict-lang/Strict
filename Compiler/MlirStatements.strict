@@ -102,6 +102,12 @@ Calculated(entry InstructionEntry) Texts
 	if entry.kind > InstructionType.ArithmeticSeparator
 		return loads + Compared(entry, left + ", " + right)
 	loads + Operated(entry.kind, left, right) + function.Store(Temp("c"), "%r" + entry.payload(3))
+IsRanged Boolean
+	Copy.IsRanged is false
+	let begin = function.method.LoopBeginOf(position)
+	let opened = function.method.instructions(begin)
+	let covers = function.method.LoopEndOf(begin) >= position
+	(opened.kind is InstructionType.LoopBegin) and covers and (opened.payload(1) is 1)
 Operated(kind Number, left Text, right Text) Text
 	Copy.Operated(InstructionType.Modulo, "%a", "%b").IndexOf("@strict_remainder(%a, %b)") > 0
 	Copy.Operated(InstructionType.Add, "%a", "%b") is "    %t0c = arith.addf %a, %b : f64"
@@ -113,7 +119,7 @@ Operated(kind Number, left Text, right Text) Text
 	if kind is in (InstructionType.Power, InstructionType.Modulo)
 		return result + Called(kind) + "(" + left + ", " + right + ") : (f64, f64) -> f64"
 	let isSum = MlirFastLoop(function, function.FastLoop).IsAccumulated(position)
-	let flags = isSum then Reassociated else ""
+	let flags = isSum then Reassociated else (IsRanged then " fastmath<reassoc,nsz,contract>" else "")
 	result + "arith." + Operation(kind) + " " + left + ", " + right + flags + " : f64"
 Called(kind Number) Text
 	Copy.Called(InstructionType.Modulo) is "func.call @strict_remainder"

@@ -22,13 +22,12 @@ Begin Texts
 	let entry = function.method.instructions(position)
 	let bounds = entry.payload(1) is 1 then RangeBounds(entry) else CountBounds(entry)
 	let label = "^loop" + position
-	let header = (function.Store("%zero", "%loop" + position), "    cf.br " + label, "  " + label + ":")
-	constant check = "    " + Temp("m") + " = arith.cmpf olt, " + Temp("k") + ", " + Temp("n") + " : f64"
-	let branch = "    cf.cond_br " + Temp("m") + ", " + label + "body, " + label + "exit"
-	let step = header + (function.Load(Temp("k"), "%loop" + position), check, branch, "  " + label + "body:")
+	let isRange = entry.payload(1) is 1
 	let saved = bounds + (function.Load(Temp("x"), "%v_index"), function.Load(Temp("y"), "%v_value")) + Outered
 	let begun = saved + MlirGpu(function, position).Launched + MlirKernel(function, position).Versioned + Presized
-	begun + MlirParallel(function, position).Forked + Items + MlirWholeLoop(function, position).Versioned + step + Current
+	let tail = MlirRangeLoop(function, position).Opened(label)
+	let value = isRange then MlirRangeLoop(function, position).Value else Current
+	begun + MlirParallel(function, position).Forked + Items + MlirWholeLoop(function, position).Versioned + tail + value
 Current Texts
 	Counting.Current.Length is 4
 	Text.Combine(MlirLoops(MlirBytes.Valuing.function, 1).Current).IndexOf("llvm.store %t1g, %v_value") > 0
@@ -162,13 +161,16 @@ Restored(begin Number) Texts
 End Texts
 	MlirLoops(Counting.function, 1).End.Length is 8
 	let begin = function.method.LoopBeginOf(position)
-	let counter = "%loop" + begin
-	constant next = "    " + Temp("w") + " = arith.addf " + Temp("k") + ", " + Temp("u") + " : f64"
-	let increment = (function.Load(Temp("k"), counter), "    " + Temp("u") + " = arith.constant 1.0 : f64", next)
-	let exit = Back(begin) + ("  ^loop" + begin + "exit:")
+	if function.method.instructions(begin).payload(1) is 1
+		let ranged = MlirRangeLoop(function, position)
+		return ranged.Closed(begin) + ranged.Finished(begin)
+	let load = "    " + Temp("k") + " = llvm.load %loop" + begin + " : !llvm.ptr -> f64"
+	let one = "    " + Temp("u") + " = arith.constant 1.0 : f64"
+	let next = "    " + Temp("w") + " = arith.addf " + Temp("k") + ", " + Temp("u") + " : f64"
+	let store = "    llvm.store " + Temp("w") + ", %loop" + begin + " : f64, !llvm.ptr"
 	let restore = (function.Store("%t" + begin + "x", "%v_index"), function.Store("%t" + begin + "y", "%v_value"))
-	let joined = MlirKernel(function, begin).Joined
-	increment + function.Store(Temp("w"), counter) + exit + restore + Restored(begin) + joined
+	let tail = (load, one, next, store) + Back(begin) + ("  ^loop" + begin + "exit:")
+	tail + restore + Restored(begin) + MlirKernel(function, begin).Joined
 Back(begin Number) Texts
 	MlirLoops(Counting.function, 1).Back(0).Length is 1
 	MlirLoops(Repeated, 1).Back(0).Last is "    cf.cond_br %t1f, ^loop0, ^loop0exit"

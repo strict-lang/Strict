@@ -1,0 +1,4 @@
+has logger
+Run
+	Logger(FileWriter("writer_try.txt")).Log("hello through the writer")
+	logger.Log("console line")

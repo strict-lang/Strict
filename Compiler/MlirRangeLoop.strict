@@ -1,0 +1,87 @@
+has function MlirFunction
+has position Number
+constant Ranging = MlirRangeLoop(MlirLoops.Ranging.function, 3)
+constant Flags = " fastmath<reassoc,nsz,contract>"
+Opened(label Text) Texts
+	Text.Combine(MlirRangeLoop(MlirLoops.Counting.function, 0).Opened("^loop0")).IndexOf("cmpf olt") > 0
+	Text.Combine(Ranging.Opened("^loop3")).IndexOf("i32") > 0
+	if function.method.instructions(position).payload(1) is 1
+		return Chunked(label)
+	Headed(label, false, "f64")
+Chunked(label Text) Texts
+	Text.Combine(Ranging.Chunked("^loop3")).IndexOf("2147483647") > 0
+	let cap = "    " + Temp("mx") + " = arith.constant 2147483647 : i64"
+	let zero = "    " + Temp("iz") + " = arith.constant 0 : i32"
+	let raw = "    " + Temp("bi") + " = arith.fptosi " + Temp("b") + " : f64 to i64"
+	let whole = "    " + Temp("bf") + " = arith.sitofp " + Temp("bi") + " : i64 to f64"
+	let trip = "    llvm.store " + Temp("ni") + ", %left" + position + " : i64, !llvm.ptr"
+	let base = "    llvm.store " + Temp("bf") + ", %base" + position + " : f64, !llvm.ptr"
+	(Limit, cap, zero, raw, whole, trip, base) + Outer(label)
+Outer(label Text) Texts
+	let zero = "    " + Temp("z6") + " = arith.constant 0 : i64"
+	let left = "    " + Temp("lf") + " = llvm.load %left" + position + " : !llvm.ptr -> i64"
+	let more = "    " + Temp("mo") + " = arith.cmpi sgt, " + Temp("lf") + ", " + Temp("z6") + " : i64"
+	let branch = "    cf.cond_br " + Temp("mo") + ", " + label + "pre, " + label + "exit"
+	let open = ("    cf.br " + label + "outer", "  " + label + "outer:", zero, left, more, branch)
+	open + ("  " + label + "pre:") + Slice(label)
+Slice(label Text) Texts
+	let fit = "    " + Temp("ft") + " = arith.cmpi slt, " + Temp("lf") + ", " + Temp("mx") + " : i64"
+	let wide = "    " + Temp("c6") + " = arith.select " + Temp("ft") + ", " + Temp("lf") + ", " + Temp("mx") + " : i64"
+	let narrow = "    " + Temp("ch") + " = arith.trunci " + Temp("c6") + " : i64 to i32"
+	let kept = "    llvm.store " + Temp("ch") + ", %chunk" + position + " : i32, !llvm.ptr"
+	let reset = "    llvm.store " + Temp("iz") + ", %loop" + position + " : i32, !llvm.ptr"
+	let enter = "    cf.br " + label
+	let load = "    " + Temp("k") + " = llvm.load %loop" + position + " : !llvm.ptr -> i32"
+	let step = "    " + Temp("ck") + " = llvm.load %chunk" + position + " : !llvm.ptr -> i32"
+	let check = "    " + Temp("m") + " = arith.cmpi slt, " + Temp("k") + ", " + Temp("ck") + " : i32"
+	let branch = "    cf.cond_br " + Temp("m") + ", " + label + "body, " + label + "lat"
+	(fit, wide, narrow, kept, reset, enter, "  " + label + ":", load, step, check, branch, "  " + label + "body:")
+Headed(label Text, isRange Boolean, kind Text) Texts
+	let zero = isRange then Temp("iz") else "%zero"
+	let limit = isRange then Temp("ni") else Temp("n")
+	let math = isRange then "cmpi slt" else "cmpf olt"
+	let stored = "    llvm.store " + zero + ", %loop" + position + " : " + kind + ", !llvm.ptr"
+	let load = "    " + Temp("k") + " = llvm.load %loop" + position + " : !llvm.ptr -> " + kind
+	let check = "    " + Temp("m") + " = arith." + math + ", " + Temp("k") + ", " + limit + " : " + kind
+	let branch = "    cf.cond_br " + Temp("m") + ", " + label + "body, " + label + "exit"
+	(stored, "    cf.br " + label, "  " + label + ":") + (load, check, branch, "  " + label + "body:")
+Value Texts
+	Text.Combine(Ranging.Value).IndexOf("arith.sitofp") > 0
+	let cast = "    " + Temp("kf") + " = arith.sitofp " + Temp("k") + " : i32 to f64"
+	let base = "    " + Temp("bv") + " = llvm.load %base" + position + " : !llvm.ptr -> f64"
+	let off = "    " + Temp("of") + " = arith.mulf " + Temp("kf") + ", " + Temp("s") + Flags + " : f64"
+	let sum = "    " + Temp("c") + " = arith.addf " + Temp("bv") + ", " + Temp("of") + Flags + " : f64"
+	(cast, base, off, sum, function.Store(Temp("c"), "%v_index")) + function.Store(Temp("c"), "%v_value")
+Closed(begin Number) Texts
+	let loop = "%loop" + begin
+	let load = "    " + Temp("k") + " = llvm.load " + loop + " : !llvm.ptr -> i32"
+	let one = "    " + Temp("u") + " = arith.constant 1 : i32"
+	let next = "    " + Temp("w") + " = arith.addi " + Temp("k") + ", " + Temp("u") + " : i32"
+	let store = "    llvm.store " + Temp("w") + ", " + loop + " : i32, !llvm.ptr"
+	(load, one, next, store) + MlirLoops(function, position).Back(begin) + Latch(begin)
+Latch(begin Number) Texts
+	let label = "^loop" + begin
+	let moved = Advanced(begin)
+	("  " + label + "lat:") + moved + ("    cf.br " + label + "outer")
+Advanced(begin Number) Texts
+	let chunk = "    " + Temp("ch") + " = llvm.load %chunk" + begin + " : !llvm.ptr -> i32"
+	let cast = "    " + Temp("cf") + " = arith.sitofp " + Temp("ch") + " : i32 to f64"
+	let adv = "    " + Temp("ad") + " = arith.mulf " + Temp("cf") + ", %t" + begin + "s" + Flags + " : f64"
+	let base = "    " + Temp("bs") + " = llvm.load %base" + begin + " : !llvm.ptr -> f64"
+	let sum = "    " + Temp("nb") + " = arith.addf " + Temp("bs") + ", " + Temp("ad") + Flags + " : f64"
+	let save = "    llvm.store " + Temp("nb") + ", %base" + begin + " : f64, !llvm.ptr"
+	let wide = "    " + Temp("cz") + " = arith.extsi " + Temp("ch") + " : i32 to i64"
+	let left = "    " + Temp("lf") + " = llvm.load %left" + begin + " : !llvm.ptr -> i64"
+	let sub = "    " + Temp("nl") + " = arith.subi " + Temp("lf") + ", " + Temp("cz") + " : i64"
+	let keep = "    llvm.store " + Temp("nl") + ", %left" + begin + " : i64, !llvm.ptr"
+	(chunk, cast, adv, base, sum, save, wide, left, sub, keep)
+Limit Text
+	Ranging.Limit is "    %t3ni = arith.fptosi %t3n : f64 to i64"
+	"    " + Temp("ni") + " = arith.fptosi " + Temp("n") + " : f64 to i64"
+Temp(suffix Text) Text
+	Ranging.Temp("k") is "%t3k"
+	"%t" + position + suffix
+Finished(begin Number) Texts
+	let exit = "  ^loop" + begin + "exit:"
+	let restore = (function.Store("%t" + begin + "x", "%v_index"), function.Store("%t" + begin + "y", "%v_value"))
+	exit + restore + MlirLoops(function, begin).Restored(begin) + MlirKernel(function, begin).Joined

@@ -1,3 +1,4 @@
 has textWriter
+has output = 0
 Log(text)
 	textWriter.Write(text)
