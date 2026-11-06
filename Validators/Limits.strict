@@ -91,6 +91,7 @@ MethodIssues ValidationIssues
 	Twice.MethodIssues.Length is 0 and Long.MethodIssues.First to Text is "MethodLengthMustNotExceedTwelve: Run"
 	Limits(Long.lines + ("Run", "\t1") + Long.lines, false).MethodIssues is Lengthy and Long.MethodIssues.First.Line is 1
 	Limits(OnlyConstants.lines, false).MethodIssues.Length is 0
+	Limits(Long.lines - "\t13" + "", false).MethodIssues.Length is 0
 	let shape = TypeShape(lines)
 	mutable issues = List(Mutable(ValidationIssue))
 	mutable start = -1
@@ -116,6 +117,8 @@ Started(shape TypeShape, start Number, index Number) Number
 	Long.Started(TypeShape(Long.lines), 5, 3) is 5
 	Long.Started(TypeShape(Long.lines), 5, 14) is 5
 	Sample.Started(TypeShape(Sample.lines), 5, 0) is 5
+	if (index < lines.Length) and (lines(index) is "")
+		return -1
 	(index < lines.Length) and shape.IsMethodHeader(lines(index)) then index else start
 CountIssues ValidationIssues
 	Limits(("has a Number", "has b Number"), false).CountIssues.Length is 0 and Methods.CountIssues.Length is 1
