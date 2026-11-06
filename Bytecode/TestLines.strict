@@ -4,6 +4,7 @@ constant One = MethodCodegen.One
 constant Framed = BodyParser("Run(frames = 0 with value >= 0) Number", "\tRun(1) is 1", "\tframes").Block(1, 1)
 constant FramedHeader = HeaderTokens(Tokenizer("Run(frames = 0 with value >= 0) Number").Tokens)
 constant Declared = BodyParser("Run", "\tconstant a = 1", "\ta is 1", "\t2").Block(1, 1)
+constant Consecutive = BodyParser("Run", "\tconstant a = 1", "\tconstant b = 2", "\ta is 1", "\tb is 2", "\ta").Block(1, 1)
 constant Undeclared = SyntaxNode("Body", "", (SyntaxNode("Type", "constant a"), Declared.children(1), One))
 constant Sizing = TestLines(ValueCodegen(ValueCodegen.NoTypes, MethodCodegen.NoScope, CallTarget(CallTarget.NoTypes, TypeShape("has Height Number", "has Width Number with value > 0"), "Strict/Size", List(Text))))
 constant Validating = HeaderTokens(Tokenizer("Validated Size").Tokens)
@@ -38,6 +39,7 @@ Tests(body SyntaxNode, block CodeBlock) SyntaxNodes
 	Plain.Tests(BodyParser("Run", "\tlet a = 1", "\ta is 1", "\ta").Block(1, 1), CodeBlock.Empty).Length is 0
 	Plain.Tests(BodyParser("Run", "\tconstant a = 1", "\ta is 1", "\ta").Block(1, 1), CodeBlock.Empty).Length is 2
 	Plain.Tests(BodyParser("Run", "\t1 is 1", "\tconstant a = 1", "\ta").Block(1, 1), CodeBlock.Empty).Length is 1
+	Plain.Tests(Consecutive, CodeBlock.Empty).Length is 4
 	Plain.Tests(BodyParser("Run", "\tmutable a = 1", "\ta is 1", "\ta").Block(1, 1), CodeBlock.Empty).Length is 0
 	Reading.Tests(BodyParser("Run", "\t1 is 1", "\tRead.attack", "\t2").Block(1, 1), CodeBlock.Empty).Length is 2
 	let end = LeadingEnd(body, block)
@@ -60,7 +62,8 @@ IsTestConstant(body SyntaxNode, position Number, block CodeBlock) Boolean
 	Plain.IsTestConstant(BodyParser("Run", "\tconstant a = 1", "\ta is 1", "\ta").Block(1, 1), 0, CodeBlock.Empty)
 	let line = body.children(position)
 	let isDeclared = (line.Kind is "Declaration") and line.text.StartsWith("constant ")
-	isDeclared and (position + 2 < body.children.Length) and IsTest(body.children(position + 1), true, block)
+	let isNext = isDeclared and (position + 2 < body.children.Length)
+	isNext and (IsTest(body.children(position + 1), true, block) or IsTestConstant(body, position + 1, block))
 IsTest(line SyntaxNode, isLeading Boolean, block CodeBlock) Boolean
 	Plain.IsTest(SyntaxNode("Binary", ">", (One, One)), false, CodeBlock.Empty) is false
 	Plain.IsTest(SyntaxNode("Not", "", SyntaxNode("Binary", "is", (One, One))), false, CodeBlock.Empty)
