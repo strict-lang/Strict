@@ -53,18 +53,18 @@ Calculated(entry InstructionEntry) Texts
 		return loads + MlirWholeNarrow(function, position).Emitted + Store("c", type, entry.payload(3))
 	loads + Operation(entry.kind, isWhole) + Store("c", type, entry.payload(3))
 Operation(kind Number, isWhole Boolean) Text
-	Row.Operation(InstructionType.Add, false) is "    %t0c = arith.addf %t0a, %t0b : f64"
-	Row.Operation(InstructionType.Modulo, false).StartsWith("    %t0c = func.call @strict_remainder(%t0a, %t0b)")
+	Row.Operation(InstructionType.Add, false) is "    %t0c = arith.addf %t0a, %t0b" + MlirStatements.Reassociated + " : f64"
 	Row.Operation(InstructionType.Modulo, true) is "    %t0c = arith.remsi %t0a, %t0b : i64"
-	Row.Operation(InstructionType.Modulo, false).EndsWith("@strict_remainder(%t0a, %t0b) : (f64, f64) -> f64")
+	Row.Operation(InstructionType.Modulo, false) is "    %t0c = func.call @strict_remainder(%t0a, %t0b) : (f64, f64) -> f64"
 	let operands = Temp("a") + ", " + Temp("b")
 	if (kind is InstructionType.Modulo) and (isWhole is false)
 		return "    " + Temp("c") + " = func.call @strict_remainder(" + operands + ") : (f64, f64) -> f64"
 	let generic = MlirStatements.Copy.Operation(kind)
 	let divided = kind is InstructionType.Divide then "floordivsi" else generic.Substring(0, 3) + "i"
 	let whole = kind is InstructionType.Modulo then "remsi" else divided
-	let type = isWhole then "i64" else "f64"
-	"    " + Temp("c") + " = arith." + (isWhole then whole else generic) + " " + operands + " : " + type
+	let isSum = (isWhole is false) and (kind is in (InstructionType.Add, InstructionType.Subtract))
+	let typed = (isSum then MlirStatements.Reassociated else "") + " : " + (isWhole then "i64" else "f64")
+	"    " + Temp("c") + " = arith." + (isWhole then whole else generic) + " " + operands + typed
 Compared(entry InstructionEntry) Texts
 	Row.At(6).Compared(Less)(2) is "    %t6c = arith.cmpi slt, %t6a, %t6b : i64"
 	let type = MlirWholeTypes(function).Operands(entry, position, registers, naturals)
