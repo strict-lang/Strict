@@ -103,7 +103,8 @@ Element(kind Text) Text
 	MlirNatives(Texts, 1).ValueHelper("Boolean", "Increment", 0) is ""
 	MlirNatives(Texts, 1).ValueHelper("Text", "Upper", 0) is "strict_text_upper"
 	MlirNatives(Texts, 1).Element("List(Text)") is "Text"
-	MlirLayout(function).Represented(MlirKinds(function).ElementKind(kind))
+	MlirNatives(Texts, 1).Element("Strict/List(Text)") is "Text"
+	MlirLayout(function).Represented(MlirKinds(function).ElementKind(TypeEntry.ShortName(kind)))
 TypeHelper(kind Text, name Text) Text
 	MlirNatives(Texts, 1).TypeHelper("File", "ReadLines") is "strict_file_read_lines"
 	MlirNatives(Texts, 1).TypeHelper("Directory", "Files") is "strict_directory_files"
