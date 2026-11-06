@@ -5,6 +5,7 @@ constant ErrorTypes = ("Error", "ErrorWithValue")
 constant Plain = ErrorCodegen(ValueCodegen.Plain)
 constant Greeting = SyntaxNode("Call", "Greet")
 constant BareError = SyntaxNode("Identifier", "Error")
+constant GreetingPlusOne = SyntaxNode("Binary", "+", (Greeting, ValueCodegen.One))
 constant InTest = CodeBlock.Empty.Declare(FailureMarker, "7")
 constant Counted = CodeBlock.Empty.Declare("a", "Count")
 constant A = SyntaxNode("Identifier", "a")
@@ -147,6 +148,19 @@ Compared(comparison SyntaxNode, operand SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Compared(IsError, Greeting, CodeBlock.Empty).instructions.Length is 1
 	Plain.Compared(IsOne, Greeting, CodeBlock.Empty).instructions.Length is 2
 	IsErrorComparison(comparison, block) then Handled(operand, block) else Checked(operand, block)
+Caught(comparison SyntaxNode, node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Caught(IsError, Greeting, InTest).instructions.Last is InstructionEntry.Jump(InstructionType.JumpEnd, 0)
+	Plain.Caught(IsError, GreetingPlusOne, InTest).instructions(1).payload is (0, 0)
+	Plain.Caught(IsOne, GreetingPlusOne, InTest).instructions(1).payload is (0, 7)
+	Plain.Caught(IsError, Greeting, InTest).scope.TypeOf(FailureMarker) is "7"
+	Plain.Caught(IsOne, Greeting, InTest).instructions.Last.texts is List(Text) + Tested
+	let isError = IsErrorComparison(comparison, block)
+	let caught = isError then block.WithNextId.Declare(FailureMarker, block.nextId to Text) else block
+	let stored = Handled(node, caught).Stored(Tested).At(block.register)
+	if isError is false
+		return stored
+	let joined = stored.Add(InstructionEntry.Jump(InstructionType.JumpEnd, block.nextId))
+	joined.Declare(FailureMarker, block.scope.TypeOf(FailureMarker))
 Validated(node SyntaxNode, block CodeBlock, constructed CodeBlock) CodeBlock
 	Sizing.Validated(NewSize, CodeBlock.Empty, CodeBlock.Empty).instructions.Last.texts(1) is "Validated"
 	Plain.Validated(Greeting, CodeBlock.Empty, CodeBlock.Empty).instructions.Length is 0

@@ -86,7 +86,7 @@ Compared(test SyntaxNode, block CodeBlock) Slow(CodeBlock)
 	Even.Compared(OneIsOne, Counter).scope.TypeOf(ErrorCodegen.Tested) is "Number"
 	let isComparison = (test.Kind is "Binary") and (test.text is in ("is", "is not"))
 	let left = isComparison then test.children(0) else test
-	let stored = ErrorCodegen(types.Generator).Handled(left, block).Stored(ErrorCodegen.Tested).At(block.register)
+	let stored = ErrorCodegen(types.Generator).Caught(test, left, block)
 	let declared = stored.Declare(ErrorCodegen.Tested, types.Generator.TypeOf(left, block))
 	let right = isComparison then test.children(1) else SyntaxNode("Boolean", "true")
 	let generated = TestComparison(types.Generator).Checked(test, left, right, declared)
