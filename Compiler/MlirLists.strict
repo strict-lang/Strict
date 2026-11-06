@@ -160,7 +160,7 @@ ElementStored(entry InstructionEntry) Texts
 	MlirLists(Written, 1).ElementStored(Versioning).Last is "    llvm.store %t1s, %v_numbers : f64, !llvm.ptr"
 	let parts = PayloadDecoder(entry).ElementParts
 	let index = parts(1)
-	let isNumber = "0123456789".IndexOf(index.Substring(0, 1)) is not -1
+	let isNumber = "0123456789".IndexOf(index(0)) is not -1
 	constant prefix = "    " + Temp("i") + " = arith.constant "
 	let indexed = isNumber then prefix + index + ".0 : f64" else function.Load(Temp("i"), "%v_" + index)
 	let loads = Target(parts(0)) + indexed + function.Load(Temp("e"), "%r" + entry.payload(0))

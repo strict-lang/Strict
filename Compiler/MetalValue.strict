@@ -42,7 +42,7 @@ Literal(type Text) Text
 	MetalValue("-3").Literal("i64") is "((long)-3)"
 	MetalValue("2.500000e-01").Literal("float") is "2.500000e-01f"
 	MetalValue("1.500000e+00").Literal("double") is "@1.500000e+00"
-	let isNumber = (text is not "") and ("0123456789-".IndexOf(text.Substring(0, 1)) >= 0)
+	let isNumber = (text is not "") and ("0123456789-".IndexOf(text(0)) >= 0)
 	if (isNumber is false) or (type is "double") or (MetalValue(type).Type is "")
 		return "@" + text
 	type is "float" then text + "f" else "((" + MetalValue(type).Type + ")" + text + ")"
@@ -69,7 +69,7 @@ Exponent(double Number) Number
 Hex(number Number, count Number) Text
 	MetalValue("").Hex(3212836864, 8) is "BF800000"
 	MetalValue("").Hex(10, 2) is "0A"
-	count is 0 then "" else Hex((number / HexBase).Floor, count - 1) + Digits.Substring(number % HexBase, 1)
+	count is 0 then "" else Hex((number / HexBase).Floor, count - 1) + Digits(number % HexBase)
 Hexadecimal(digits Text) Number
 	MetalValue("").Hexadecimal("3FF00000") is 1072693248
 	for digits

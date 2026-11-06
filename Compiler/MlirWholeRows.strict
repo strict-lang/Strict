@@ -43,7 +43,7 @@ Emitted(statements MlirWholeStatements) Texts
 	let at = statements.position
 	let entry = function.method.instructions(at)
 	let isDivided = entry.kind is in (InstructionType.Modulo, InstructionType.Divide)
-	if isDivided and IsIndex(entry.payload(1), at) and (statements.naturals.Substring(at, 1) is "i")
+	if isDivided and IsIndex(entry.payload(1), at) and (statements.naturals(at) is "i")
 		return Divided(statements, entry)
 	let passed = Passed(entry, at)
 	if (passed >= 0) and (MlirWholeNative(statements).Emitted(entry).Length is 0)

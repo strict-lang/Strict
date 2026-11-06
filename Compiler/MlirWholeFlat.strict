@@ -49,12 +49,12 @@ Header Text
 	let returned = ") -> " + MlirWholeValues(0).Typed(MlirWholeTypes(function).Returned)
 	"  func.func private @" + Symbol + "(" + Text.Combine(typed, ", ") + returned + MlirWholeBody.Inlined
 Parameters(variables Text) Texts
-	Sized.Parameters("o-").Length is 0
-	Fits.Parameters("i-") is List(Text) + "    llvm.store %p0, %v_x : i64, !llvm.ptr"
+	Sized.Parameters("o-----").Length is 0
+	Fits.Parameters("--i--") is List(Text) + "    llvm.store %p0, %v_x : i64, !llvm.ptr"
 	let kinds = MlirWholeFunction(function).Kinds
 	mutable lines = List(Mutable(Text))
 	for function.method.parameters
-		let type = MlirWholeValues(0).Typed(variables.Substring(function.VariableNames.Index(value.Name), 1))
+		let type = MlirWholeValues(0).Typed(variables(function.VariableNames.Index(value.Name)))
 		lines = kinds(index) is "o" then lines else lines + MlirWholeBody(function).Parameter(index, type)
 	lines
 Prologue Texts

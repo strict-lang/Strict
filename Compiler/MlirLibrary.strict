@@ -35,7 +35,7 @@ Exported List(MethodEntry)
 IsExported(method MethodEntry) Boolean
 	Policy.IsExported(Start)
 	Policy.IsExported(MethodEntry.CountingLoop) is false
-	let first = method.Name.Substring(0, 1)
+	let first = method.Name(0)
 	let isNamed = (first.Upper is first) and (first.Lower is not first)
 	let isPublic = isNamed and (method.Name is not in ("Run", TestCodegen.Runner))
 	mutable isSupported = Kind(method.returnType) is not ""

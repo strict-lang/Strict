@@ -56,7 +56,7 @@ Marked(types Text, at Number, type Text) Text
 	Sample.Marked("-f-", 1, "i") is "-f-"
 	if at < 0
 		return types
-	let old = types.Substring(at, 1)
+	let old = types(at) to Text
 	let isPointer = (old is in ("p", "d", "o")) or (type is in ("p", "d", "o"))
 	let isConflict = (old is "x") or (isPointer and (old is not type) and (old is not "-"))
 	let combined = isConflict then "x" else (((old is "f") or (type is "f")) then "f" else type)

@@ -102,7 +102,7 @@ Element(entry InstructionEntry, next InstructionEntry, compiled Texts, returned 
 	if IsTarget(entry, next, returned) is false
 		return Collected(entry, compiled, returned)
 	let parts = PayloadDecoder(next).ElementParts
-	let isNumber = "0123456789".IndexOf(parts(1).Substring(0, 1)) is not -1
+	let isNumber = "0123456789".IndexOf(parts(1)(0)) is not -1
 	let temp = "%t" + position + "s"
 	let literal = "    " + temp + "i = arith.constant " + parts(1) + ".0 : f64"
 	let index = isNumber then literal else function.Load(temp + "i", "%v_" + parts(1))

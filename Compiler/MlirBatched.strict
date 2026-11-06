@@ -107,7 +107,7 @@ Computed(lines Texts, prefix Text = "compute") Texts
 	for lines
 		mutable text = value
 		for Names
-			text = text.Replace(value, value.Substring(0, 1) + prefix + "_" + value.Substring(1, value.Length - 1))
+			text = text.Replace(value, (value(0) to Text) + prefix + "_" + value.Substring(1, value.Length - 1))
 		text
 LoadStart Texts
 	Paired.LoadStart is Loading

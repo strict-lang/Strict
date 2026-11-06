@@ -28,7 +28,7 @@ IsNative(method MethodEntry) Boolean
 	MlirForeign(Adder).IsNative(Add)
 	MlirForeign(Counting).IsNative(Started)
 	MlirForeign(Counting).IsNative(MethodEntry("from", List(MemberEntry), "None", List(InstructionEntry))) is false
-	let first = method.Name.Substring(0, 1)
+	let first = method.Name(0)
 	let isConstructor = (method.Name is "from") and (method.parameters.Length > 0) and (function.type.members.Length is 1)
 	(first.Lower is not first) or isConstructor
 Symbol Text

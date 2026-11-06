@@ -38,7 +38,7 @@ IsKept(list Text) Boolean
 Index(text Text, temp Text) Text
 	Moved.Index("0", "%i") is "    %i = arith.constant 0.0 : f64"
 	Moved.Index("at", "%i") is "    %i = llvm.load %v_at : !llvm.ptr -> f64"
-	let isNumber = "0123456789".IndexOf(text.Substring(0, 1)) is not -1
+	let isNumber = "0123456789".IndexOf(text(0)) is not -1
 	isNumber then "    " + temp + " = arith.constant " + text + ".0 : f64" else function.Load(temp, "%v_" + text)
 FlatResult Text
 	Moved.FlatResult is "Tripling"

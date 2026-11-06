@@ -138,7 +138,7 @@ WslPath(path Text) Text
 	OnWindows.WslPath("D:\\B\\c") is "/mnt/d/B/c"
 	OnWindows.WslPath("./Examples/Sum") is "./Examples/Sum"
 	let slashed = path.Replace("\\", "/")
-	let drive = "/mnt/" + slashed.Substring(0, 1).Lower
+	let drive = "/mnt/" + slashed(0).Lower
 	slashed.IndexOf(":") is 1 then drive + slashed.Substring(2, slashed.Length - 2) else slashed
 Lowered(base Text, kept = "", parts = 1) Text
 	OnWindows.Lowered("Compiler/output/missing").StartsWith("mlir-opt failed")

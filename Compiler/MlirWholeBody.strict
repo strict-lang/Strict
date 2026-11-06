@@ -26,7 +26,7 @@ Whole Texts
 	let parts = MlirWholeTypes(function).Settled.Split("|")
 	(List(Text) + Header) + Slots(parts(0), parts(1)) + Body(parts(0), parts(1), parts(2), false) + "  }"
 Body(registers Text, variables Text, naturals Text, isFlat Boolean) Texts
-	Text.Combine(Halving.Body("iiii", "--i", "iiiii", false)).IndexOf("arith.floordivsi") > 0
+	Text.Combine(Halving.Body("iiii", "--i-", "iiiii", false)).IndexOf("arith.floordivsi") > 0
 	mutable lines = List(Mutable(Text))
 	for function.method.instructions
 		let statements = MlirWholeStatements(function, index, registers, variables, naturals, isFlat)
@@ -46,26 +46,26 @@ Header Text
 	let symbol = row < 0 then MlirWholeFunction(function).Symbol else MlirWholeRows(function, row).Symbol
 	"  func.func private @" + symbol + "(" + Text.Combine(typed, ", ") + returned + Inlined
 Slots(registers Text, variables Text) Texts
-	Halving.Slots("iifi", "--i").Last is "    llvm.store %p0, %v_number : i64, !llvm.ptr"
-	Constants.Slots("iifi", "--i").Last is "    llvm.store %c0i, %v_number : i64, !llvm.ptr"
+	Halving.Slots("iifi", "--i-").Last is "    llvm.store %p0, %v_number : i64, !llvm.ptr"
+	Constants.Slots("iifi", "--i-").Last is "    llvm.store %c0i, %v_number : i64, !llvm.ptr"
 	Allocated(registers, variables) + Parameters(variables) + MlirWholeFields(function).Prologue
 Allocated(registers Text, variables Text) Texts
-	"    %v_number = llvm.alloca %one x i64 : (i64) -> !llvm.ptr" is in Halving.Allocated("iifi", "--i")
+	"    %v_number = llvm.alloca %one x i64 : (i64) -> !llvm.ptr" is in Halving.Allocated("iifi", "--i-")
 	let values = MlirWholeValues(0)
 	mutable lines = ("    %one = arith.constant 1 : i64", Slot("%flag", "i1"))
 	for registers.Length
-		let typed = Slot("%r" + index, values.Typed(registers.Substring(index, 1)))
+		let typed = Slot("%r" + index, values.Typed(registers(index)))
 		lines = lines + typed + Slot("%r" + index + "p", "!llvm.ptr") + Slot("%r" + index + "i", "i64")
 	for function.VariableNames
-		lines = lines + Slot("%v_" + value, values.Typed(variables.Substring(index, 1)))
+		lines = lines + Slot("%v_" + value, values.Typed(variables(index)))
 	for function.method.instructions
 		lines = value.kind is InstructionType.LoopBegin then lines + Slot("%loop" + index, "i64") else lines
 	lines
 Parameters(variables Text) Texts
-	Halving.Parameters("--i") is ("    llvm.store %p0, %v_number : i64, !llvm.ptr")
+	Halving.Parameters("--i-") is ("    llvm.store %p0, %v_number : i64, !llvm.ptr")
 	mutable lines = List(Mutable(Text))
 	for function.method.parameters
-		let type = MlirWholeValues(0).Typed(variables.Substring(function.VariableNames.Index(value.Name), 1))
+		let type = MlirWholeValues(0).Typed(variables(function.VariableNames.Index(value.Name)))
 		lines = lines + Parameter(index, type)
 	lines
 Slot(name Text, type Text) Text
