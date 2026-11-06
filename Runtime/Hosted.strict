@@ -11,7 +11,7 @@ constant Probing = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "Exists
 constant Timing = Invocation(InstructionEntry.Invoke(0, ("Strict/Process", "Elapsed", "Strict/Number"), List(Number), -1), List(VmValue), VmValue.None)
 constant Deleting = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "Delete", "None"), List(Number), 0), List(VmValue), VmValue("Strict/File", 0, "", List(VmValue) + VmValue.OfText("Runtime/missing")))
 constant Changing = Invocation(InstructionEntry.Invoke(1, ("Strict/Directory", "Change", "Strict/Boolean", "path"), 0, -1), Current, VmValue.None)
-constant Methods = ("File.ReadLines", "File.Exists", "File.Write", "File.Delete", "File.Rename", "File.ReadBytes", "File.WriteLines", "File.WriteBytes", "File.Modified", "File.Length", "File.Locked", "Directory.Files", "Directory.Directories", "Directory.Modified", "Directory.Exists", "Directory.Create", "Directory.Change", "Directory.Current", "File.InMemory", "Process.Input", "Process.Variable", "Process.InputLine", "Process.Find", "Process.RunTool", "Process.RunTools", "Process.Started", "Process.OperatingSystem", "Process.Current", "Process.Built", "Process.Elapsed", "Process.MemoryUsed", "Process.Executed", "Process.Wait", "Process.FilesRead", "Time.Now", "Number.Logarithm", "Number.Random", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan", "Vector2.Atan", "Library.Call", "Library.TextSlot", "Library.NumbersSlot", "Library.TextResult", "Library.NumbersResult", "Library.Failure", "BuildProfile.Detailed", "TestBudget.Started", "TestBudget.Finished", "TestBudget.Entered", "TestBudget.Left", "ConstantCache.At", "ConstantCache.Stored")
+constant Methods = ("File.ReadLines", "File.Exists", "File.Write", "File.Delete", "File.Rename", "File.ReadBytes", "File.WriteLines", "File.WriteBytes", "File.Modified", "File.Length", "File.Locked", "Directory.Files", "Directory.Directories", "Directory.Modified", "Directory.Exists", "Directory.Create", "Directory.Change", "Directory.Current", "File.InMemory", "Process.Input", "Process.Variable", "Process.InputLine", "Process.Find", "Process.RunTool", "Process.RunTools", "Process.Started", "Process.OperatingSystem", "Process.Current", "Process.Built", "Process.Elapsed", "Process.MemoryUsed", "Process.Executed", "Process.Wait", "Process.FilesRead", "Time.Now", "Number.Logarithm", "Number.Random", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan", "Vector2.Atan", "Library.Call", "Library.TextSlot", "Library.NumbersSlot", "Library.TextResult", "Library.NumbersResult", "Library.Failure", "Socket.Output", "BuildProfile.Detailed", "TestBudget.Started", "TestBudget.Finished", "TestBudget.Entered", "TestBudget.Left", "ConstantCache.At", "ConstantCache.Stored")
 constant Effects = ("File.Write", "File.Delete", "File.Rename", "File.WriteLines", "File.WriteBytes", "Directory.Create", "Directory.Change", "Process.RunTool", "Process.RunTools", "Process.Started", "Library.Call", "Socket.Connect", "Socket.Listen", "Socket.Accept", "Socket.Waiting", "Socket.Send", "Socket.Receive")
 IsChanging Boolean
 	Hosted(Deleting).IsChanging
@@ -28,13 +28,14 @@ IsHosted Boolean
 	(TypeEntry.ShortName(call.TypeName) + "." + call.MethodName is in Methods) or HostedJson(call).IsHosted
 Result VmValue
 	Hosted(SystemCall).Result.text is in ("Windows", "Linux", "MacOS", "Unknown")
-	Hosted(Existing).Result.IsTrue
-	Hosted(Timing).Result.number > 0
+	Hosted(Existing).Result.IsTrue and (Hosted(Timing).Result.number > 0)
 	let type = TypeEntry.ShortName(call.TypeName)
 	if (call.MethodName is in ("Input", "InputLine")) or (type is "Directory") and (call.MethodName is "Current")
 		return VmValue.OfText(Read(call.MethodName))
 	if type is in ("Process", "Library", "BuildProfile", "TestBudget", "ConstantCache")
 		return type is "Library" then Foreign(call, List(TypeEntry)).Hosted else HostedProcess(call).Result
+	if type is "Socket"
+		return VmValue.OfNumber(Socket.Output(call.Arguments.First.number))
 	if type is not in ("File", "Directory")
 		return type is "Json" then HostedJson(call).Result else HostedMath(call).Measured
 	call.MethodName is in ("ReadLines", "ReadBytes", "Files", "Directories") then Entries else Stored

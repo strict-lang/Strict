@@ -12,7 +12,7 @@ constant Doubled = List(TypeEntry) + Machine.Doubler
 constant Sample = Mutants(Logger, "Examples/Fibonacci.strict")
 constant Lined = MethodEntry(Twice, instructions = List(InstructionEntry) + InstructionEntry(InstructionEntry.Return(0), line = 2))
 constant Valued = TypeEntry(Machine.Doubler, members = List(MemberEntry) + MemberEntry("Twice", "Strict/Number", List(InstructionEntry), true), methods = List(MethodEntry) + Lined)
-constant Inputs = ("/File", "/Directory", "/Process", "/Logger", "/TextWriter", "/Time", "/Library", "/Http", "/Socket", "/Random", "/GpuMemory")
+constant Inputs = ("/File", "/Memo", "/Directory", "/Process", "/Logger", "/TextWriter", "/Time", "/Library", "/Http", "/Socket", "/Random", "/GpuMemory")
 constant Crashed = ", its rounds were not tested: run strict test on this file to see the error"
 constant Hint = " kept passing all tests, improve the tests!"
 Survivors(types List(TypeEntry)) Number

@@ -110,11 +110,11 @@ TypeHelper(kind Text, name Text) Text
 	MlirNatives(Texts, 1).TypeHelper("File", "Rename") is "strict_file_rename"
 	MlirNatives(Texts, 1).TypeHelper("Process", "RunTool") is "strict_process_runtool"
 	MlirNatives(Texts, 1).TypeHelper("Degrees", "Sin") is "strict_degrees_sin"
-	MlirNatives(Texts, 1).TypeHelper("Vector2", "Atan") is "strict_vector2_atan"
+	MlirNatives(Texts, 1).TypeHelper("Memo", "Kept") is "strict_memo_kept"
 	MlirNatives(Texts, 1).TypeHelper("File", "ReadBytes") is "strict_file_readbytes"
 	if (kind is "ConstantCache") and (name is in ("At", "Stored"))
 		return name is "At" then "strict_list_get" else "strict_list_set"
-	if kind + "." + name is not in Hosted.Methods
+	if (kind + "." + name is not in Hosted.Methods) and (kind is not "Memo")
 		return kind is "GpuMemory" then GpuHelper(name) else Validated(name)
 	"strict_" + kind.Lower + "_" + (name is "ReadLines" then "read_lines" else name.Lower)
 GpuHelper(name Text) Text

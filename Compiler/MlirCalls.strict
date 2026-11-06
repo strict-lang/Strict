@@ -14,9 +14,9 @@ constant CounterType = TypeEntry(MlirForeign.Counter.Name, MlirForeign.Counter.m
 constant NewCounter = InstructionEntry.Invoke(2, (CounterType.Name, "from", CounterType.Name, "left", "right"), (0, 1), -1)
 constant Counters = MlirCalls(MlirFunction(List(TypeEntry) + CounterType, CounterType, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 10), InstructionEntry.LoadNumber(1, 5), NewCounter))), 2)
 Temp(suffix Text) Text
-	Text.Combine(MlirCalls(Shapes, 3).Printed(InstructionEntry.Print("Hi"))).Length is 192
+	Text.Combine(MlirCalls(Shapes, 3).Printed(InstructionEntry.Print("Hi"))).Length is 128
 	Text.Combine(MlirCalls(Shapes, 3).Printed(InstructionEntry.PrintValue("Hi ", 0, false))).Length is 443
-	MlirCalls(Shapes, 3).Printed(InstructionEntry.Print("Hi")).Last is "    func.call @strict_flush() : () -> ()"
+	MlirCalls(Shapes, 3).Printed(InstructionEntry.Print("Hi")).Last.IndexOf("@strict_log(%t3a, %t3a)") > 0
 	Text.Combine(MlirCalls(Shapes, 2).Compiled(Area, PayloadDecoder(Area), AreaShape, 0)).Length is 143
 	Text.Combine(Counters.Created(NewCounter, PayloadDecoder(NewCounter))).Length is 554
 	MlirCalls(Shapes, 1).Temp("a") is "%t1a"
@@ -171,10 +171,8 @@ ArgumentTypes(count Number) Texts
 Printed(entry InstructionEntry) Texts
 	MlirCalls(Shapes, 3).Printed(InstructionEntry.PrintValue("Hi ", 0, false)).Last.IndexOf("@strict_log(") > 0
 	let address = "    " + Temp("a") + " = llvm.mlir.addressof @s" + function.Symbol + "_" + position + " : !llvm.ptr"
-	constant printf = " = llvm.call @printf("
-	constant vararg = ") vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr"
-	constant flush = "    func.call @strict_flush() : () -> ()"
+	let text = entry.payload(1) is 0 then Temp("a") else Temp("bp")
+	let logged = "    func.call @strict_log(" + Temp("a") + ", " + text + ") : (!llvm.ptr, !llvm.ptr) -> ()"
 	if entry.payload(1) is 0
-		return (address, "    " + Temp("c") + printf + Temp("a") + vararg + ") -> i32", flush)
-	constant logged = "    func.call @strict_log(" + Temp("a") + ", " + Temp("bp") + ") : (!llvm.ptr, !llvm.ptr) -> ()"
+		return (address, logged)
 	List(Text) + address + MlirTexts(function, position).Pointer(entry.payload(2), "b") + logged

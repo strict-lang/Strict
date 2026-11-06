@@ -170,11 +170,9 @@ Field(entry InstructionEntry, instance VmValue) VmValue
 		if value.Name is entry.texts(0)
 			found = MemberValue(owner, instance, index)
 	found
-Logged(entry InstructionEntry, slots List(VmValue)) VmValue
-	Hello.Logged(InstructionEntry.Print(""), List(VmValue)).kind is "None"
-	Hello.Logged(InstructionEntry.Print("Hi"), List(VmValue)).kind is "None"
-	let message = entry.texts(0) + (entry.payload(1) is 1 then slots(entry.payload(2)) to Text else "")
-	let output = entry.payload(0) < 0 then 0 else slots(entry.payload(0)).number
+Logged(message Text) VmValue
+	Hello.Logged("").kind is "None"
+	Hello.Logged("Hi").kind is "None"
 	if message is not ""
-		(output is 0 then logger else Logger(logger, output = output)).Log(message)
+		logger.Log(message)
 	VmValue.None

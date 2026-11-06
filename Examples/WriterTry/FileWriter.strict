@@ -1,3 +1,0 @@
-has path Text
-Write(lines Texts)
-	File(path).WriteLines(lines)

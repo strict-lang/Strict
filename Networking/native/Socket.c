@@ -19,6 +19,8 @@ typedef int socket_size;
 #include <netdb.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #define close_socket close
 typedef socklen_t socket_size;
 #endif
@@ -40,6 +42,14 @@ static int open_socket(int family, int type, int protocol)
 #else
 	return (int)socket(family, type, protocol);
 #endif
+}
+
+/* Small writes (log lines of a resident server request) go out at once instead of waiting for the delayed ACK. */
+static int sent_at_once(int handle)
+{
+	int flag = 1;
+	setsockopt(handle, IPPROTO_TCP, TCP_NODELAY, (const char*)&flag, (socket_size)sizeof(flag));
+	return handle;
 }
 
 static int ensure_started(void)
@@ -92,7 +102,7 @@ STRICT_EXPORT double Socket_Connect(double self, double host, double port)
 		return strict_fail("ConnectionFailed");
 	}
 	freeaddrinfo(list);
-	return (double)handle;
+	return (double)sent_at_once(handle);
 }
 
 STRICT_EXPORT double Socket_Listen(double self, double port)
@@ -137,18 +147,19 @@ STRICT_EXPORT double Socket_Accept(double self, double server)
 	int handle = (int)accept((int)server, 0, 0);
 	if (handle == invalid())
 		return strict_fail("AcceptFailed");
-	return (double)handle;
+	return (double)sent_at_once(handle);
 }
 
-STRICT_EXPORT double Socket_Waiting(double self, double server)
+STRICT_EXPORT double Socket_Waiting(double self, double server, double seconds)
 {
 	if ((int)server <= 0)
 		return strict_fail("InvalidSocket");
 	fd_set readable;
 	FD_ZERO(&readable);
 	FD_SET((int)server, &readable);
-	struct timeval none = {0, 0};
-	return select((int)server + 1, &readable, 0, 0, &none) > 0 ? 1 : 0;
+	double wait = seconds > 0 ? seconds : 0;
+	struct timeval limit = {(long)wait, (long)((wait - (long)wait) * 1000000)};
+	return select((int)server + 1, &readable, 0, 0, &limit) > 0 ? 1 : 0;
 }
 
 STRICT_EXPORT double Socket_Send(double self, double socket, double bytes)

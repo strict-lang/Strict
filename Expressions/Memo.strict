@@ -1,0 +1,10 @@
+Has(file Text, kind Text) Boolean
+	Memo.Has("Expressions/Memo.strict", "packages") is false
+	Texts(file, kind).Length > 0
+Texts(file Text, kind Text) Texts
+	Memo.Texts("Expressions/Memo.strict", "packages") is List(Text)
+	Kept(file, kind, List(Text))
+Kept(file Text, kind Text, texts Texts) Texts
+	Memo.Kept("Expressions/Memo.strict", "packages", ("a")) is ("a")
+	Memo.Kept("Expressions/Memo.strict", "", ("a")) is Error
+	kind.Length > 0 then texts else Error("Memo needs a kind for " + file)
