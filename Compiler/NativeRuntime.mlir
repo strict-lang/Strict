@@ -295,6 +295,7 @@
   llvm.mlir.global internal constant @strict_quote("\22\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @strict_key_not_found("KeyNotFound\00") : !llvm.array<12 x i8>
   llvm.mlir.global internal constant @strict_index_out_of_range("IndexOutOfRange\00") : !llvm.array<16 x i8>
+  llvm.mlir.global internal constant @strict_modulo_by_zero("ModuloByZero\00") : !llvm.array<13 x i8>
   llvm.mlir.global internal constant @strict_duplicate_key("DuplicateKey\00") : !llvm.array<13 x i8>
   llvm.mlir.global internal thread_local @strict_power_base(0 : i64) : i64
   llvm.mlir.global internal thread_local @strict_power_exponent(0 : i64) : i64
@@ -339,7 +340,13 @@
     %rightSet = arith.cmpf one, %right, %zero : f64
     %small = arith.andi %leftSmall, %rightSmall : i1
     %usable = arith.andi %small, %rightSet : i1
-    cf.cond_br %usable, ^convert, ^fractional
+    cf.cond_br %usable, ^convert, ^checked
+  ^checked:
+    cf.cond_br %rightSet, ^fractional, ^zero
+  ^zero:
+    %name = llvm.mlir.addressof @strict_modulo_by_zero : !llvm.ptr
+    %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
+    return %error : f64
   ^convert:
     %leftWhole = arith.fptosi %left : f64 to i64
     %rightWhole = arith.fptosi %right : f64 to i64

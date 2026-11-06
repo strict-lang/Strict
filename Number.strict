@@ -155,6 +155,7 @@ is(other) Boolean
 	7 % 4 is 3
 	-7 % 3 is -1
 	5.5 % 2 is 1.5
+	7 % 0 is Error
 	value % other
 ^(other) Number
 	2 ^ 2 is 4
