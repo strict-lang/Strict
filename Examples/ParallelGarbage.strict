@@ -1,15 +1,18 @@
 has rounds Numbers
+constant Count = 50
+constant Doublings = 12
+constant RowLength = 4097
 Grown Slow(Number)
 	ParallelGarbage(ParallelGarbage.Counted(256)).Grown < 1200000000
 	let before = Process.MemoryUsed
-	Lengths(50).Sum is rounds.Length * 50 * 16 * 4097 then Process.MemoryUsed - before else 1000000000000
+	Lengths(Count).Sum is rounds.Length * Count * 16 * RowLength then Process.MemoryUsed - before else 1000000000000
 Lengths(count Number) Numbers
 	ParallelGarbage((1, 2)).Lengths(1) is (16 * 4097, 16 * 4097)
 	for rounds
 		Garbage(value, count)
 Garbage(round Number, count Number) Number
 	ParallelGarbage(List(Number)).Garbage(1, 2) is 2 * 16 * 4097
-	let prefix = Doubled((round % 10) to Text, 12)
+	let prefix = LargeCollections.Doubled((round % 10) to Text, Doublings)
 	mutable length = 0
 	for count
 		length = length + Text.Combine(Rows(prefix, index), "").Length
@@ -18,12 +21,6 @@ Rows(prefix Text, seed Number) Texts
 	ParallelGarbage(List(Number)).Rows("ab", 3)(15) is "ab8"
 	for 16
 		prefix + (seed + index) % 10
-Doubled(text Text, times Number) Text
-	ParallelGarbage(List(Number)).Doubled("ab", 3) is "abababababababab"
-	mutable doubled = text
-	for times
-		doubled = doubled + doubled
-	doubled
 Counted(count Number) Numbers
 	ParallelGarbage.Counted(3) is (0, 1, 2)
 	for count
