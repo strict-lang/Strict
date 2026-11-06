@@ -8,18 +8,20 @@ Written(owner VmValue, target Text, position Number, element VmValue) VmValue
 	Pairing.Written(OneTwo, "list", 1, VmValue.OfNumber(7)).items is (VmValue.OfNumber(1), VmValue.OfNumber(7))
 	Pairing.Written(Paired, "pair.b", 0, VmValue.OfNumber(7)).items(1).items is (VmValue.OfNumber(7), VmValue.OfNumber(2))
 	Pairing.Written(Paired, "b", 0, VmValue.OfNumber(7)).items(0).number is 7
-	Pairing.Written(OneTwo, "list", -1, VmValue.OfNumber(7)) is Pairing.Written(OneTwo, "list", 1, VmValue.OfNumber(7))
 	let dot = target.IndexOf(".")
 	let found = dot > 0 then Member(owner, target.Substring(dot + 1, target.Length)) else -1
 	let list = found < 0 then owner else owner.items(found)
 	let at = position < 0 then position + list.items.Length else position
-	let changed = VmValue.OfList(Replaced(list.items, at, element))
-	if found < 0
+	let isOutside = (at < 0) or (at >= list.items.Length)
+	let changed = isOutside then VmValue.OfError("IndexOutOfRange") else VmValue.OfList(Replaced(list.items, at, element))
+	if (found < 0) or isOutside
 		return changed
 	VmValue(owner.kind, owner.number, owner.text, Replaced(owner.items, found, changed))
 Member(owner VmValue, name Text) Number
 	Pairing.Member(Paired, "b") is 1
 	Pairing.Member(Paired, "c") is -1
+	Pairing.Written(OneTwo, "list", -1, VmValue.OfNumber(7)) is Pairing.Written(OneTwo, "list", 1, VmValue.OfNumber(7))
+	Pairing.Written(OneTwo, "list", 2, VmValue.OfNumber(7)) is VmValue.OfError("IndexOutOfRange")
 	Pairing.Replaced(OneTwo.items, -1, VmValue.None) is OneTwo.items
 	Pairing.Replaced(List(VmValue), 1, VmValue.OfNumber(5)) is (VmValue.None, VmValue.OfNumber(5))
 	Pairing.Replaced(OneTwo.items, 2, VmValue.OfNumber(5)).Last.number is 5

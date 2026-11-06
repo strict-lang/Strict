@@ -8459,6 +8459,16 @@
   func.func private @strict_list_set(%list: f64, %given: f64, %element: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %index = func.call @strict_list_wrapped(%list, %given) : (f64, f64) -> f64
+    %length = func.call @strict_list_length(%list) : (f64) -> f64
+    %below = arith.cmpf olt, %index, %zero : f64
+    %beyond = arith.cmpf oge, %index, %length : f64
+    %outside = arith.ori %below, %beyond : i1
+    cf.cond_br %outside, ^outside, ^inside
+  ^outside:
+    %name = llvm.mlir.addressof @strict_index_out_of_range : !llvm.ptr
+    %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
+    return %error : f64
+  ^inside:
     %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
     %at = arith.fptosi %index : f64 to i64
     %slot = llvm.getelementptr %items[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
