@@ -111,6 +111,7 @@ Loaded(path Text, root Text, withTests = true, sources Texts = List(Text)) List(
 HasRun(type TypeEntry) Boolean
 	Execute.HasRun(TypeEntry.HelloLogger)
 	Execute.HasRun(TypeEntry("A", List(MemberEntry), List(MethodEntry))) is false
+	Execute.HasRun(TypeEntry("A", List(MemberEntry), List(MethodEntry) + MethodEntry.Logged)) is false
 	for type.methods
 		if value.Name is "Run"
 			return true

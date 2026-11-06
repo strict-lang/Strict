@@ -36,6 +36,7 @@ Built(type TypeEntry) Text
 IsForeign(type TypeEntry) Boolean
 	Adding.IsForeign(Adder)
 	Adding.IsForeign(TypeEntry("Strict/Shape", List(MemberEntry), List(MethodEntry))) is false
+	Adding.IsForeign(TypeEntry(Adder.Name, List(MemberEntry), List(MethodEntry) + MethodEntry(Add, Name = "Sub"))) is false
 	for type.methods
 		if value.Name is call.MethodName
 			return MlirForeign(MlirFunction(types, type, value)).IsForeign

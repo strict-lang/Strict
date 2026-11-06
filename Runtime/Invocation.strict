@@ -64,6 +64,7 @@ Flag Number
 Resolution Number
 	AddCall.Resolution is 10
 	Invocation(AddCall.entry, List(VmValue), VmValue.None, 0, 4).Resolution is 4
+	Invocation(AddCall.entry, List(VmValue), VmValue.None, 0, 0).Resolution is 0
 	if Resolved >= 0
 		return Resolved
 	let flag = Flag
