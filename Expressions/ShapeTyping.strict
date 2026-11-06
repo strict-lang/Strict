@@ -44,13 +44,13 @@ ChainType(tokens Texts, typeName Text, known Scope) Text
 	Counting.ChainType(Tokenizer("constant a = Twice(2)").Tokens, "Count", KnownTypes.NoMembers) is "Count"
 	Counting.ChainType(Tokenizer("constant a = List(Number) + 3").Tokens, "Count", KnownTypes.NoMembers) is "Numbers"
 	Counting.ChainType(Tokenizer("constant b = a.Twice(2)").Tokens, "C", NoScope.With("a", "Count")) is "Count"
+	Swapped.ChainType(Tokenizer("constant a = Couple(\"a\", 2)").Tokens, "U", NoScope) is "Couple(Text, Number)"
 	if (tokens.Length < 4) or (tokens(2) is not "=")
 		return ""
 	let node = SyntaxParser(tokens).ParseRange(3, tokens.Length)
-	if node.Kind is in ("Call", "Identifier")
-		return inference.types.MethodsOf(typeName).TypeOf(node.text)
-	let isInferred = node.Kind is in ("MethodCall", "Member", "Binary", "List")
-	isInferred then Inferred(node, typeName, known) else ""
+	let own = node.Kind is in ("Call", "Identifier") then inference.types.MethodsOf(typeName).TypeOf(node.text) else ""
+	let isInferred = (own is "") and (node.Kind is in ("MethodCall", "Member", "Binary", "List", "Call"))
+	isInferred then Inferred(node, typeName, known) else own
 Inferred(node SyntaxNode, typeName Text, known Scope) Text
 	Chained.Inferred(SyntaxParser(Tokenizer("Box(3).Sample").Tokens).Parse, "User", KnownTypes.NoMembers) is "Item"
 	Chained.Expanded(SyntaxNode("Identifier", "x")) is SyntaxNode("Identifier", "x")
