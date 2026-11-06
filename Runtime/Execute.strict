@@ -92,7 +92,7 @@ Tested(types List(TypeEntry), path Text, root Text) Number
 		return failed
 	let isWhole = selection is "*"
 	let elapsed = Process.Elapsed - started
-	let seconds = isWhole or (elapsed < 0.1) then elapsed * 10 + 1 else 0
+	let seconds = elapsed * 10 + 1
 	let mutants = Mutants(logger, path, seconds, root, part, isWhole)
 	let isFresh = isMutating and (seconds > 0) and ((part is not "") or (MutationCache(path, isWhole).IsCurrent is false))
 	let plain = isFresh then FileCompiler(logger, true, selection, false).Compiled(path, root, true) else types

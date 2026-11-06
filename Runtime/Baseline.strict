@@ -10,7 +10,7 @@ constant Rolling = TypeEntry(Machine.Doubler, methods = (Mutants.Lined, MethodEn
 Kept(types List(TypeEntry)) List(MethodEntry)
 	Baseline(Mutants.Sample).Kept(Mutants.Doubled).Length is 0
 	Libraries.Kept(Execute(Logger).Loaded("Library.strict", ".")).Length is 0
-	let methods = IsBase then List(MethodEntry) else Usable(types)
+	let methods = IsBase then List(MethodEntry) else Picked(Usable(types))
 	let tested = mutants.Tested(types, mutants.Runner(types.First), methods)
 	let limit = mutants.isWhole then 1 else 0.1
 	for methods
@@ -59,6 +59,12 @@ IsReaching(method MethodEntry, reaching Texts) Boolean
 			if mutants.IsInput(value.texts(0)) or (value.texts(1) is "Random") or (name is in reaching)
 				return true
 	false
+Picked(methods List(MethodEntry)) List(MethodEntry)
+	Sampled.Picked((Reader, Calling, Reader, Calling)).Length is 3
+	Baseline(Mutants(Logger, "a.strict", isWhole = true)).Picked((Reader, Calling, Reader, Calling)).Length is 4
+	constant LightMethods = 3
+	let isAll = mutants.isWhole or (methods.Length <= LightMethods)
+	isAll then methods else methods.Shuffled(PseudoRandom(Byte.Values.Random)).Slice(0, LightMethods)
 IsBase Boolean
 	Baseline(Mutants(Logger, "Number.strict")).IsBase and Baseline(Mutants(Logger, "./Text.strict")).IsBase
 	Baseline(Mutants(Logger, "Math/Size.strict")).IsBase is false
