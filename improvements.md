@@ -53,6 +53,8 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 
 - Mutation compiles still inline own-type methods: a removed Add inside an inlined callee is reported on the caller line (Ben Builder.Accumulated line 90, the Add of Built). "replaced the comparison is with true" on `is not in` actually makes the whole check false (the Not stays), the message should name the `is not in`.
 
+- VM: an `if name is` selector without a default case in a Text or Boolean method returns a value that prints as "" (or nothing) but is not equal to "" or false: Ben TextOperations.Changed("Unknown", "ab") is "" fails with got: "", TextOperations.Tested and Operations.Compared("Unknown", 2, 3) is false fail with got: (empty). The fall through should give the default of the return type (Number selectors already give 0).
+
 - Limits.MethodIssues counts one line too many for the last method of a file: a 13 line method (header and tests included) at the end of Runtime/MutationFlow.strict or MutationKinds.strict gets MethodLengthMustNotExceedTwelve, the same method elsewhere passes.
 - TypeInference.TypeOf of an unknown identifier returns the name itself instead of Unknown: FileCheck.NotIterable of `for other` gives "NotIterable: other is a other", ValueCodegen.InstanceCall(ToText) signs ("Strict/x", "to", "Strict/Text").
 - GarbageCollectionExceedsTenth fails `strict test` of Compiler/MlirDoubles, DeviceBuild, MlirLibrary and MlirModule.strict (exit 1, 0.56 and 0.95 of 5 s in GC) while other test runs load the machine; the check is wall clock based. Under load it also kills mutants that should survive (MlirDeviceStatements gave 4 or 7 survivors for the same source), so mutation runs should not count it as a failed test.
