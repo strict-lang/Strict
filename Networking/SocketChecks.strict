@@ -1,3 +1,4 @@
+has logger
 Failures Slow(Number)
 	Socket.Send(0, List(Number)) is Error("InvalidSocket")
 	Socket.Receive(0, 1) is Error("InvalidSocket")
@@ -32,4 +33,7 @@ Exchanged(client Number, accepted Number) Number
 	if (sent is Error) or (sent is not 3)
 		return 4
 	let received = Socket.Receive(accepted, 3)
-	(received is Error) then 5 else received is (1, 2, 3) then 0 else 5
+	if (received is Error) or (received is not (1, 2, 3))
+		return 5
+	Logger(logger, output = accepted).Log("hi")
+	Socket.Pending(client) is 3 and (Socket.Receive(client, 3) is (104, 105, 10)) then 0 else 6
