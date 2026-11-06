@@ -2,9 +2,12 @@ has function MlirFunction
 has position Number
 has named Text = ""
 constant Items = MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false)
-constant Steps = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoadNumber(1, 0), InstructionEntry(InstructionType.IndexCall, "numbers", (2, 1, -1)), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "numbers"), InstructionEntry.Binary(InstructionType.Add, (0, 1, 3)), InstructionEntry.Binary(InstructionType.Add, (0, 0, 3)))
+constant IndexReads = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoadNumber(1, 0), InstructionEntry(InstructionType.IndexCall, "numbers", (2, 1, -1)))
+constant AppendSums = (InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "numbers"), InstructionEntry.Binary(InstructionType.Add, (0, 1, 3)), InstructionEntry.Binary(InstructionType.Add, (0, 0, 3)))
+constant Steps = IndexReads + AppendSums
 constant Listed = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + Items, "None", Steps))
-constant Written = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + Items, "None", (InstructionEntry.LoadNumber(0, 7), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "numbers(1)"), InstructionEntry(InstructionType.CopyList, "numbers", -1))))
+constant ElementWrites = (InstructionEntry.LoadNumber(0, 7), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "numbers(1)"), InstructionEntry(InstructionType.CopyList, "numbers", -1))
+constant Written = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + Items, "None", ElementWrites))
 constant Pair = VmValue.OfList(VmValue.OfNumber(1), VmValue.OfText("a"))
 constant Removal = InstructionEntry.Named(InstructionType.InvokeRemove, 1, "numbers")
 constant Hoisting = MlirLists(MlirParameters.Reading.function, 1)
@@ -12,7 +15,8 @@ constant MemberCopy = InstructionEntry(InstructionType.CopyList, "numbers.width"
 constant Pushing = InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult")
 constant Versioning = InstructionEntry(InstructionType.StoreRegisterToVariable, "numbers(1)", (0, -1, 1))
 constant Words = MemberEntry("words", "Strict/List(Text)", List(InstructionEntry), false)
-constant Literals = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Number)", (0, 6, -1, 2, 1, 1, 1, 2))))
+constant LiteralLoad = InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Number)", (0, 6, -1, 2, 1, 1, 1, 2))
+constant Literals = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + LiteralLoad))
 Temp(suffix Text) Text
 	MlirLists(Listed, 2).Temp("l") is "%t2l"
 	Text.Combine(MlirLists(Listed, 2).Indexed(Steps(2))).Length is 345
