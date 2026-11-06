@@ -1,16 +1,16 @@
 has function MlirFunction
 has at Number
-constant Picking = MlirFunction(List(TypeEntry) + GpuSamples.Layered, GpuSamples.Layered, GpuSamples.Picked)
+constant Picking = MlirFunction(List(TypeEntry) + GpuLayerSamples.Layered, GpuLayerSamples.Layered, GpuLayerSamples.Picked)
 constant Lookup = Picking.method.instructions(4)
 constant Types = " : (!llvm.ptr, i64) -> (!llvm.ptr, i64, i64)"
 constant NestedLoop = (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "biases"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "index"))
 constant NestedRow = (InstructionEntry(InstructionType.IndexCall, "weights", (2, 1, -1)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 2, "list0"))
 constant NestedRead = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "index"), InstructionEntry(InstructionType.IndexCall, "list0", (4, 3, -1)), InstructionEntry.Named(InstructionType.InvokeWriteToList, 4, "forResult"))
 constant NestedInstructions = NestedLoop + NestedRow + NestedRead + (InstructionEntry.Jump(InstructionType.LoopEnd, 7), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "forResult"), InstructionEntry.Return(0))
-constant Nesting = MlirFunction(List(TypeEntry) + GpuSamples.Layered, GpuSamples.Layered, MethodEntry("Nested", List(MemberEntry), "Strict/List(Number)", NestedInstructions))
+constant Nesting = MlirFunction(List(TypeEntry) + GpuLayerSamples.Layered, GpuLayerSamples.Layered, MethodEntry("Nested", List(MemberEntry), "Strict/List(Number)", NestedInstructions))
 constant Lengthy = InstructionEntry.Invoke(1, ("Strict/List(Number)", "Length", "Strict/Number", "x"), (5), 0)
 constant Biased = InstructionEntry(InstructionType.IndexCall, "biases", (2, 1, -1))
-constant Measuring = MlirFunction(List(TypeEntry) + GpuSamples.Layered, GpuSamples.Layered, GpuSamples.Measured)
+constant Measuring = MlirFunction(List(TypeEntry) + GpuLayerSamples.Layered, GpuLayerSamples.Layered, GpuLayerSamples.Measured)
 constant Exactly = MlirFunction(Measuring, Float = "f32")
 constant RowedLoad = ("    %d4kf = llvm.load %r1 : !llvm.ptr -> f64", "    %d4k = arith.fptosi %d4kf : f64 to i64", "    %d4d = llvm.load %v_weights_d : !llvm.ptr -> !llvm.ptr")
 constant RowedCall = ("    %d4w:3 = func.call @strict_device_row(%d4d, %d4k) : (!llvm.ptr, i64) -> (!llvm.ptr, i64, i64)", "    %d4z = arith.constant 0 : i64")

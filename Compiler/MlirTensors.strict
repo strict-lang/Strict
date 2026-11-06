@@ -109,8 +109,8 @@ Members(kind Text) Texts
 Marker(kind Text) Text
 	Attending.Marker("Products") is "@strict_gpu_products("
 	Attending.Members("Softmax") is ("scores", "width") and (Multiplying.Named(Sylvesters) is "")
-	MlirTensors(MlirFunction(List(TypeEntry), Multiplied, GpuSamples.Summed)).Named(Convolutions) is "Convolution"
-	MlirTensors(MlirFunction(List(TypeEntry), Multiplied, GpuSamples.Summed)).Named(Productions) is ""
+	MlirTensors(MlirFunction(List(TypeEntry), Multiplied, GpuLayerSamples.Summed)).Named(Convolutions) is "Convolution"
+	MlirTensors(MlirFunction(List(TypeEntry), Multiplied, GpuLayerSamples.Summed)).Named(Productions) is ""
 	"@strict_gpu_" + kind.Lower + "("
 Used(program Text) Texts
 	Attending.Used("x @strict_gpu_products(y") is ("Products")

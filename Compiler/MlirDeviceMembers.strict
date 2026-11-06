@@ -1,5 +1,5 @@
 has function MlirFunction
-constant Head = MlirFunction(List(TypeEntry) + GpuSamples.Headed, GpuSamples.Headed, GpuSamples.Head)
+constant Head = MlirFunction(List(TypeEntry) + GpuChoiceSamples.Headed, GpuChoiceSamples.Headed, GpuChoiceSamples.Head)
 constant Heading = MlirDeviceMembers(MlirGpuCheck.Heading.function)
 Names Texts
 	MlirDeviceMembers(Head).Names is ("heads", "weights")

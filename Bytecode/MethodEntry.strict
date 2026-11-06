@@ -128,7 +128,7 @@ LoopBeginOf(position Number) Number
 		depth = depth + change
 	0
 JumpEndOf(jump InstructionEntry) Number
-	GpuSamples.Trailing.IsWritingResult(2)
+	GpuLayerSamples.Trailing.IsWritingResult(2)
 	MlirLoops.Collecting.function.method.IsWritingResult(0) is false
 	CountingLoop.IsWritingResult(1) is false
 	MethodEntry(GoRun, instructions = (CountingLoop.instructions.First, MlirLoops.Emptied)).IsWritingResult(0) is false

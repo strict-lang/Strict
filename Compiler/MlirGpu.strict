@@ -2,8 +2,8 @@ has function MlirFunction
 has position Number
 constant Doubling = MlirGpu(MlirParallel.Doubling.function, 2)
 constant Randomizing = MlirGpu(MlirParallel.Randomizing.function, 2)
-constant Checking = MlirGpu(MlirFunction(Doubling.function.types, MlirParallel.Rows, GpuSamples.Checked), 2)
-constant Layering = MlirGpu(MlirFunction(List(TypeEntry) + GpuSamples.Layered, GpuSamples.Layered, GpuSamples.Sums), 2)
+constant Checking = MlirGpu(MlirFunction(Doubling.function.types, MlirParallel.Rows, GpuLayerSamples.Checked), 2)
+constant Layering = MlirGpu(MlirFunction(List(TypeEntry) + GpuLayerSamples.Layered, GpuLayerSamples.Layered, GpuLayerSamples.Sums), 2)
 constant SlotGlobal = "  llvm.mlir.global internal @fRows_Doubled_1_gpu2(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>"
 constant Twiced = List(MlirFunction) + MlirDevice.Twice.function
 constant Indexing = "] : (!llvm.ptr) -> !llvm.ptr, f64"

@@ -2,7 +2,7 @@ has function MlirFunction
 has at Number
 constant Summed = MlirFunction(MlirDeviceStatements.Summed, Float = "f32")
 constant Summing = MlirDeviceDot(Summed, 2)
-constant Squaring = MlirDeviceDot(MlirFunction(List(TypeEntry) + GpuSamples.Layered, GpuSamples.Layered, GpuSamples.Squared, List(Number), -1, "", "f32"), 2)
+constant Squaring = MlirDeviceDot(MlirFunction(List(TypeEntry) + GpuLayerSamples.Layered, GpuLayerSamples.Layered, GpuNumberSamples.Squared, List(Number), -1, "", "f32"), 2)
 constant Loads = (InstructionType.LoadVariableToRegister, InstructionType.LoadVariableToRegister, InstructionType.LoadVariableToRegister)
 constant Indexing = (InstructionType.IndexCall, InstructionType.CheckError)
 constant Accumulating = (InstructionType.Multiply, InstructionType.Add, InstructionType.StoreRegisterToVariable, InstructionType.LoopEnd)
