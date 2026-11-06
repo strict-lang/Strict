@@ -9,6 +9,7 @@ constant Looping = BodyParser("Run", "\tfor 3", "\t\tindex").Block(1, 1).childre
 constant Result = SyntaxNode("Identifier", "forResult")
 constant Selecting = BodyParser("Named Text", "\tif 2 is", "\t\t1 then \"a\"").Block(1, 1)
 constant Selector = Selecting.children(0)
+constant Unmatched = SyntaxParser(Tokenizer("Error(\"NoCaseMatched\")").Tokens).Parse
 Rewritten(body SyntaxNode) SyntaxNode
 	BranchValues("Text").Rewritten(Selecting).children(0).children.Last.children.Last.Kind is "ElseValue"
 	Returning.Rewritten(Mixed).children is Mixed.children and (Returning.Rewritten(Mixed).Kind is "Body")
@@ -23,17 +24,16 @@ Rewritten(body SyntaxNode) SyntaxNode
 		statements.Add(rewritten)
 	SyntaxNode("Body", body.text, statements)
 Defaulted(node SyntaxNode) SyntaxNode
-	BranchValues("Boolean").Defaulted(Selector).children.Last.children.Last.children(0).text is "false"
-	Returning.Defaulted(Selector).children.Last.children.Last.children(0).text is "0"
-	(BranchValues("Texts").Defaulted(Selector) is Selector) and (Returning.Defaulted(Value) is Value)
+	BranchValues("Boolean").Defaulted(Selector).children.Last.children.Last.children(0) is Unmatched
+	BranchValues("Texts").Defaulted(Selector).children.Last.children.Last.Kind is "ElseValue"
+	(BranchValues("None").Defaulted(Selector) is Selector) and (Returning.Defaulted(Value) is Value)
 	Returning.Defaulted(Returning.Defaulted(Selector)).children.Last.children.Length is 2
 	BranchValues("Text").Defaulted(Selector).children.Last.children(0) is Selector.children.Last.children(0)
-	constant types = ("Number", "Text", "Boolean")
-	if (mode is not in types) or (MethodBodies.IsSelector(node) is false)
+	if (mode is in ("", "None")) or (MethodBodies.IsSelector(node) is false)
 		return node
 	let cases = node.children.Last
-	let empty = SyntaxNode("ElseValue", "", SyntaxNode(mode, ("0", "\"\"", "false")(types.Index(mode))))
-	let all = cases.children.Last.Kind is "ElseValue" then cases.children else cases.children + empty
+	let unmatched = SyntaxNode("ElseValue", "", Unmatched)
+	let all = cases.children.Last.Kind is "ElseValue" then cases.children else cases.children + unmatched
 	SyntaxNode(node.Kind, node.text, (node.children(0), SyntaxNode(cases.Kind, cases.text, all, cases.line)), node.line)
 ChainStart(body SyntaxNode) Number
 	Returning.ChainStart(Chained) is 0
