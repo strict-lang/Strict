@@ -1,7 +1,7 @@
 has function MlirFunction
 has position Number
 constant Doubling = MlirGpuCheck(MlirGpu.Doubling.function, 2)
-constant Randomizing = MlirGpuCheck(MlirGpu.Randomizing.function, 2)
+constant Timing = MlirGpuCheck(MlirGpu.Timing.function, 2)
 constant Layering = MlirGpuCheck(MlirGpu.Layering.function, 2)
 constant Summed = MlirDeviceStatements.Summed
 constant Absolute = MlirFunction(List(TypeEntry) + GpuNumberSamples.Numbered, GpuNumberSamples.Numbered, GpuNumberSamples.Absolute)
@@ -16,7 +16,7 @@ constant Rows = ("", "List(Number)", "List(Numbers)", "List(List(Number))")
 IsGpu Boolean
 	Doubling.IsGpu
 	Heading.IsGpu
-	Randomizing.IsGpu is false
+	Timing.IsGpu is false
 	MlirGpuCheck(MlirGpu.Checking.function, 2).IsGpu
 	Layering.IsGpu
 	MlirGpuCheck(MlirKernel.Doubler, 2).IsGpu
@@ -29,12 +29,12 @@ IsGpu Boolean
 IsPure Boolean
 	Doubling.IsPure
 	MlirGpuCheck(MlirKernel.Doubler, 2).IsPure
-	Randomizing.IsPure is false
+	Timing.IsPure is false
 	let isSimple = MlirKernel(function, position).IsSimple and MlirLoops(function, position).IsCollecting
 	isSimple or MlirParallel(function, position).IsParallel
 IsDeviceBody Boolean
 	Doubling.IsDeviceBody
-	Randomizing.IsDeviceBody is false
+	Timing.IsDeviceBody is false
 	MlirGpuCheck(GpuLayerSamples.Gathering, 2).IsDeviceBody is false
 	MlirGpuCheck(GpuChoiceSamples.Weighting, 2).IsDeviceBody is false
 	for Range(position + 1, function.method.LoopEndOf(position))
@@ -43,7 +43,7 @@ IsDeviceBody Boolean
 	true
 IsDevice(inspected MlirFunction, at Number, depth Number) Boolean
 	Doubling.IsDevice(Doubling.function, 4, 0)
-	Randomizing.IsDevice(Randomizing.function, 4, 0) is false
+	Timing.IsDevice(Timing.function, 4, 0) is false
 	Doubling.IsDevice(MlirFunction(Powered.types, Powered.type, GpuNumberSamples.Sined), 1, 0)
 	let entry = inspected.method.instructions(at)
 	if (entry.kind is in Moves) or (entry.kind is InstructionType.IndexCall)

@@ -3,7 +3,7 @@ has position Number
 constant Branches = (InstructionType.Jump, InstructionType.JumpIfTrue, InstructionType.JumpIfFalse, InstructionType.JumpIfNotZero)
 constant Writes = (InstructionType.InvokeWriteToList, InstructionType.InvokeWriteToTable, InstructionType.InvokeRemove)
 constant Doubling = MlirPurity(MlirParallel.Doubling.function, 2)
-constant Randomizing = MlirPurity(MlirParallel.Randomizing.function, 2)
+constant Timing = MlirPurity(MlirParallel.Timing.function, 2)
 constant ValueKept = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "value"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 3, "conditional0"))
 constant ElseJumped = (InstructionEntry.LoadBoolean(4, true), InstructionEntry.Binary(InstructionType.Equal, (4, 4)), InstructionEntry.Jump(InstructionType.JumpEnd, 0), InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, 1))
 constant ZeroKept = (InstructionEntry.LoadNumber(5, 0), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 5, "conditional0"), InstructionEntry.Jump(InstructionType.JumpEnd, 1))
@@ -23,17 +23,19 @@ constant ValueListed = (InstructionEntry.Named(InstructionType.LoadVariableToReg
 constant InnerListWritten = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "listResult1"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 2, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 6))
 constant Pairing = MlirPurity(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, MethodEntry("Paired", List(MemberEntry) + MlirLists.Items, "Strict/List(List(Number))", InnerListLoop + ValueListed + InnerListWritten)), 2)
 constant Hosting = TypeEntry("Strict/Runtime/Hosted", List(MemberEntry), List(MethodEntry) + MethodEntry(Writing.method, Name = "Result"))
-constant Written = MethodEntry(MlirParallel.Randomized, instructions = MlirParallel.Randomized.instructions.Slice(0, 4) + MlirParallel.Effects + Writing.method.instructions + MlirParallel.Randomized.instructions.Slice(5, 2))
+constant Written = MethodEntry(MlirParallel.Timed, instructions = MlirParallel.Timed.instructions.Slice(0, 4) + MlirParallel.Effects + Writing.method.instructions + MlirParallel.Timed.instructions.Slice(5, 2))
 constant Setting = MlirFunction(Doubling.function, method = MethodEntry(Checking, instructions = List(InstructionEntry) + InstructionEntry.Set(List(Text), (1, 7))))
+constant Gate = TypeEntry("Strict/Runtime/Foreign", List(MemberEntry), List(MethodEntry) + MethodEntry(Writing.method, Name = "Called"))
 IsGateway Boolean
 	MlirPurity(MlirFunction(List(TypeEntry) + Hosting, Hosting, Hosting.methods.First), 0).IsGateway
+	MlirPurity(MlirFunction(List(TypeEntry) + Gate, Gate, Gate.methods.First), 0).IsGateway
 	MlirPurity(MlirFunction(List(TypeEntry) + Hosting, Hosting, Writing.method), 0).IsGateway is false
 	MlirPurity(MlirFunction(Writing, method = Hosting.methods.First), 0).IsGateway is false
-	(function.type.Name is "Strict/Runtime/Hosted") and (function.method.Name is "Result")
+	function.type.Name + "." + function.method.Name is in ("Strict/Runtime/Hosted.Result", "Strict/Runtime/Foreign.Called")
 IsSafe(inspected MlirFunction, at Number, depth Number) Boolean
 	Doubling.IsSafe(Doubling.function, 4, 0)
 	Pairing.IsSafe(Pairing.function, 5, 0)
-	Randomizing.IsSafe(Randomizing.function, 4, 0) is false
+	Timing.IsSafe(Timing.function, 4, 0) is false
 	Clamping.IsSafe(Clamping.function, 6, 0)
 	Filtering.IsSafe(Filtering.function, 7, 0)
 	let entry = inspected.method.instructions(at)
@@ -105,7 +107,7 @@ IsWritable(name Text) Boolean
 	(name is "forResult") or IsLocal(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, name))
 IsPureCall(inspected MlirFunction, at Number, depth Number) Boolean
 	Doubling.IsPureCall(Doubling.function, 4, 0)
-	Randomizing.IsPureCall(Randomizing.function, 4, 0) is false
+	Timing.IsPureCall(Timing.function, 4, 0) is false
 	Reading.IsPureCall(Reading.function, 4, 0)
 	Doubling.IsPureCall(Making, 1, 0)
 	Doubling.IsPureCall(MlirFunction(Doubling.function, safeCalls = Dictionary(("Rows_Twice_1", 0))), 4, 0) is false
@@ -117,7 +119,7 @@ IsPureCall(inspected MlirFunction, at Number, depth Number) Boolean
 	IsKnown(callees.First, inspected, depth)
 IsAllowed(inspected MlirFunction, at Number, callees List(MlirFunction)) Boolean
 	Caching.IsAllowed(Caching.function, 0, List(MlirFunction))
-	Randomizing.IsAllowed(Randomizing.function, 4, List(MlirFunction)) is false
+	Timing.IsAllowed(Timing.function, 4, List(MlirFunction)) is false
 	Reading.IsAllowed(Reading.function, 4, List(MlirFunction))
 	Reading.IsAllowed(Writing, 0, List(MlirFunction)) is false
 	Doubling.IsExternalSafe("File", "Write") is false
@@ -129,8 +131,8 @@ IsAllowed(inspected MlirFunction, at Number, callees List(MlirFunction)) Boolean
 	let isNever = IsExternalSafe(TypeEntry.ShortName(decoder.Text(1)), decoder.Text(2)) is false
 	(isNever is false) and ((callees.Length is 0) or (MlirForeign(callees.First).IsForeign is false))
 IsExternalSafe(kind Text, method Text) Boolean
-	Doubling.IsExternalSafe("File", "ReadLines")
-	Doubling.IsExternalSafe("File", "from")
+	Doubling.IsExternalSafe("File", "ReadLines") and Doubling.IsExternalSafe("TestBudget", "Entered")
+	Doubling.IsExternalSafe("File", "from") and Doubling.IsExternalSafe("Number", "Random")
 	if kind is "File"
 		return method is in ("from", "Exists", "Modified", "Length", "ReadLines", "ReadBytes")
 	if kind is "Directory"
@@ -138,7 +140,7 @@ IsExternalSafe(kind Text, method Text) Boolean
 	if kind is in ("Process", "TestBudget")
 		return method is in ("from", "Elapsed", "MemoryUsed", "OperatingSystem", "Find", "Current", "FilesRead", "Expired")
 	if kind + "." + method is in Hosted.Methods
-		return (kind is in ("Number", "Degrees", "Ratio", "Vector2", "ConstantCache")) and (method is not "Random")
+		return kind is in ("Number", "Degrees", "Ratio", "Vector2", "ConstantCache", "TestBudget")
 	constant Never = ("Library", "TextReader", "TextWriter", "BytesReader", "BytesWriter", "GpuMemory")
 	(kind is not in Never) and (method is not "Random")
 IsIntrinsic(inspected MlirFunction, at Number) Boolean
@@ -155,10 +157,10 @@ IsIntrinsic(inspected MlirFunction, at Number) Boolean
 	isConstructor or (helper is not "")
 IsKnown(callee MlirFunction, inspected MlirFunction, depth Number) Boolean
 	Doubling.IsKnown(MlirFunction(Doubling.function.types, MlirParallel.Rows, MlirParallel.Twice), Doubling.function, 0)
-	Doubling.IsKnown(Randomizing.function, Doubling.function, 0) is false
+	Doubling.IsKnown(Timing.function, Doubling.function, 0) is false
 	Doubling.IsKnown(Making, Doubling.function, 2) and (Doubling.IsKnown(Making, Doubling.function, 3) is false)
 	Doubling.IsKnown(Making, MlirFunction(Making, safeCalls = Dictionary(("Degrees_Made_0", 0))), 0) is false
-	Doubling.IsKnown(Randomizing.function, MlirFunction(Making, safeCalls = Dictionary(("Rows_Randomized_1", 1))), 0)
+	Doubling.IsKnown(Timing.function, MlirFunction(Making, safeCalls = Dictionary(("Rows_Timed_1", 1))), 0)
 	Doubling.IsKnown(MlirFunction(List(TypeEntry) + Hosting, Hosting, Hosting.methods.First), Doubling.function, 0)
 	Doubling.IsAllowed(Doubling.function, 4, List(MlirFunction) + MlirForeign.Adder) is false
 	Doubling.IsAllowed(Doubling.function, 4, List(MlirFunction) + Making)

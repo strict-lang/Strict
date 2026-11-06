@@ -1,7 +1,7 @@
 has function MlirFunction
 has position Number
 constant Doubling = MlirGpu(MlirParallel.Doubling.function, 2)
-constant Randomizing = MlirGpu(MlirParallel.Randomizing.function, 2)
+constant Timing = MlirGpu(MlirParallel.Timing.function, 2)
 constant Checking = MlirGpu(MlirFunction(Doubling.function.types, MlirParallel.Rows, GpuLayerSamples.Checked), 2)
 constant Layering = MlirGpu(MlirFunction(List(TypeEntry) + GpuLayerSamples.Layered, GpuLayerSamples.Layered, GpuLayerSamples.Sums), 2)
 constant SlotGlobal = "  llvm.mlir.global internal @fRows_Doubled_1_gpu2(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>"
@@ -27,7 +27,7 @@ constant Stored = StoredAlloca + StoredWeights + StoredInput + StoredCounts + St
 constant FunctionStart = "  llvm.func @"
 Launched Texts
 	Doubling.Launched.Last is "  ^loop2host:" and (Doubling.Launched is Launching)
-	Randomizing.Launched.Length is 0
+	Timing.Launched.Length is 0
 	Text.Combine(Doubling.Launched).IndexOf("strict_gpu_ready") is -1
 	Text.Combine(Doubling.Launched).IndexOf("@strict_gpu_wanted(%t2gc)") > 0
 	Text.Combine(MlirGpu(MlirLoops.Ranging.function, 3).Launched).IndexOf("%t3gd = arith.andi %t3gu, %t3ge : i1") > 0
@@ -110,7 +110,7 @@ Temp(suffix Text) Text
 Globals Texts
 	Doubling.Globals.First is NameGlobal
 	Doubling.Globals.Last is SlotGlobal
-	Randomizing.Globals.Length is 0
+	Timing.Globals.Length is 0
 	mutable lines = List(Mutable(Text))
 	for function.method.instructions
 		if (value.kind is InstructionType.LoopBegin) and MlirGpuCheck(function, index).IsGpu
@@ -118,7 +118,7 @@ Globals Texts
 	lines
 Module(functions List(MlirFunction)) Text
 	MlirGpu.Module(List(MlirFunction) + Doubling.function).StartsWith(Marker)
-	MlirGpu.Module(List(MlirFunction) + Randomizing.function) is ""
+	MlirGpu.Module(List(MlirFunction) + Timing.function) is ""
 	mutable kernels = List(Mutable(Text))
 	mutable callees = List(Mutable(MlirFunction))
 	for functions
@@ -154,7 +154,7 @@ Kernels(inspected MlirFunction) Texts
 	lines
 Callees(inspected MlirFunction) List(MlirFunction)
 	MlirGpu.Callees(Doubling.function).First.Symbol is "Rows_Twice_1"
-	MlirGpu.Callees(Randomizing.function).Length is 0
+	MlirGpu.Callees(Timing.function).Length is 0
 	MlirGpu.Callees(Doubling.function).Length is 1
 	MlirGpu.Callees(MlirWholeKernel.Kernel.function).Length is 0
 	mutable found = List(Mutable(MlirFunction))

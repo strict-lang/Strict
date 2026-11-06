@@ -6,7 +6,7 @@ constant Native = 8
 constant Repeats = 15
 constant Work = 50000
 constant FileExists = InstructionEntry.Invoke(2, ("Strict/File", "Exists", "Strict/Boolean"), List(Number), 1)
-constant Reading = MethodEntry("Reading", MlirParallel.Randomized.parameters, "Strict/List(Number)", (MlirParallel.Randomized.instructions.Slice(0, 4) + FileExists) + MlirParallel.Randomized.instructions.Slice(5, 2))
+constant Reading = MethodEntry("Reading", MlirParallel.Timed.parameters, "Strict/List(Number)", (MlirParallel.Timed.instructions.Slice(0, 4) + FileExists) + MlirParallel.Timed.instructions.Slice(5, 2))
 constant Doubling = MlirCost(MlirParallel.Doubling.function, 2)
 constant Filtering = MlirCost(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, MlirParallel.Filtered), 2)
 constant RowsMember = MemberEntry("rows", "Strict/List(List(Number))", List(InstructionEntry), false)
@@ -14,6 +14,7 @@ constant RowsLoop = (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.L
 constant DoubledRow = (InstructionEntry.Invoke(2, ("Strict/Rows", "Doubled", "Strict/List(Number)", "numbers"), List(Number) + 1, -1), InstructionEntry.Named(InstructionType.InvokeWriteToList, 2, "forResult"))
 constant Doubler = MethodEntry("Doubler", List(MemberEntry) + RowsMember, "Strict/List(List(Number))", RowsLoop + DoubledRow + InstructionEntry.Jump(InstructionType.LoopEnd, 4))
 constant Devices = MlirCost(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, Doubler), 2)
+constant Reader = RowsLoop + FileExists + DoubledRow + InstructionEntry.Jump(InstructionType.LoopEnd, 5)
 constant Device = 4096
 constant SlowLoop = MlirCost(MlirFunction(Doubling.function, method = MethodEntry(Doubling.function.method, declaredType = "Slow(Numbers)")), 2)
 Threshold Number
@@ -21,8 +22,10 @@ Threshold Number
 	Doubling.Threshold is 6250
 	Filtering.Threshold is 8334
 	Devices.Threshold is Device
+	MlirCost(MlirFunction(Devices.function, method = MethodEntry(Doubler, instructions = Reader)), 2).Threshold is 3
 	let count = (Work / Iteration).Ceiling
-	let least = IsDevice(function, position + 1, function.method.LoopEndOf(position), 0) then Device else 2
+	let isDevice = (Iteration < Outside) and IsDevice(function, position + 1, function.method.LoopEndOf(position), 0)
+	let least = isDevice then Device else 2
 	count < least then least else count
 IsDevice(inspected MlirFunction, first Number, last Number, depth Number) Boolean
 	Devices.IsDevice(Devices.function, 3, 6, 0)

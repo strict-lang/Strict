@@ -14,14 +14,17 @@ constant Forcing = (InstructionType.Equal, InstructionType.NotEqual)
 constant Operators = ("+", "-", "*", "/", "is", "is not", "<", ">")
 constant Ordinals = ("st", "nd", "rd")
 constant Rotated = Mutation(MutationKinds.Placed.method).Mutant(8)
-IsMine(part Text, round Number) Boolean
-	Mutation.IsMine("", 3)
-	Mutation.IsMine("1/2", 3)
-	Mutation.IsMine("1/2", 2) is false
+Picked(part Text, rounds Number, isWhole Boolean) Numbers
+	Mutation.Picked("", 3, true) is (0, 1, 2)
+	Mutation.Picked("1/2", 4, true) is (1, 3)
+	Mutation.Picked("", 3, false).Length is 1
+	Mutation.Picked("1/2", 3, false).Length is 0
 	let at = part.IndexOf("/")
-	if at < 0
-		return true
-	round % (part.Substring(at + 1, part.Length - at - 1) to Number) is (part.Substring(0, at) to Number)
+	let parts = at < 0 then 1 else part.Substring(at + 1, part.Length - at - 1) to Number
+	let mine = at < 0 then 0 else part.Substring(0, at) to Number
+	for Range(0, isWhole then rounds else 1)
+		if value % parts is mine
+			isWhole then value else rounds.Random.Floor
 Rounds(methods List(MethodEntry)) Number
 	Mutation.Rounds(List(MethodEntry) + Twice.method) is 2
 	Mutation.Rounds((Compared.method, Twice.method)) is 3

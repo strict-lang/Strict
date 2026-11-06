@@ -2169,6 +2169,15 @@
     func.call @strict_executed_add(%zero, %elements) : (i64, i64) -> ()
     cf.br ^done
   ^done:
+    // no collection runs while a job runs, what its jobs made is collected once the outermost loop is done
+    cf.cond_br %outside, ^settled, ^returned
+  ^settled:
+    %due = func.call @strict_gc_due() : () -> i1
+    cf.cond_br %due, ^collect, ^returned
+  ^collect:
+    func.call @strict_gc_collect() : () -> ()
+    cf.br ^returned
+  ^returned:
     return %result : f64
   }
   func.func private @strict_parallel_forked(%body: (!llvm.ptr, i64, i64) -> f64, %context: !llvm.ptr, %from: i64, %count: i64) -> f64 {

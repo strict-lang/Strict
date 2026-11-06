@@ -43,7 +43,7 @@ Source Text
 IsShaded Boolean
 	Scaled.IsShaded
 	Doubling.IsShaded
-	WgslShader(MlirGpu.Randomizing.function, 2).IsShaded is false
+	WgslShader(MlirGpu.Timing.function, 2).IsShaded is false
 	Halved.IsShaded
 	let collection = MlirLoops(function, position).Collection
 	let isFloats = MlirDoubles(function, position).Format is in (0, MlirDoubles.BFloat16Format, Number.SingleBits)
@@ -95,7 +95,7 @@ Started Texts
 Scripts(functions List(MlirFunction)) Text
 	WgslShader.Scripts(List(MlirFunction) + Scaled.function).StartsWith(Marker + "\n;(Module[\"strictShaders\"] ||= {})")
 	WgslShader.Scripts(List(MlirFunction) + Doubling.function).IndexOf("Rows_Doubled_1_gpu2s") > 0
-	WgslShader.Scripts(List(MlirFunction) + MlirGpu.Randomizing.function) is ""
+	WgslShader.Scripts(List(MlirFunction) + MlirGpu.Timing.function) is ""
 	WgslShader.Scripts(List(MlirFunction) + Halved.function).IndexOf("Halving_Halved_") > 0
 	mutable lines = List(Text)
 	for functions

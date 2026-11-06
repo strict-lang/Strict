@@ -1,6 +1,6 @@
 has functions List(MlirFunction)
 has edges List(Numbers)
-constant Rows = (MlirParallel.Doubling.function, MlirFunction(MlirParallel.Doubling.function.types, MlirParallel.Rows, MlirParallel.Twice), MlirParallel.Randomizing.function)
+constant Rows = (MlirParallel.Doubling.function, MlirFunction(MlirParallel.Doubling.function.types, MlirParallel.Rows, MlirParallel.Twice), MlirParallel.Timing.function)
 constant Rowed = MlirSafety(Rows, MlirRecursion(Rows, 1).Edges)
 constant Chain = MlirSafety(List(MlirFunction), ((1), List(Number)))
 constant Gated = MlirSafety(List(MlirFunction) + MlirFunction(List(TypeEntry) + MlirPurity.Hosting, MlirPurity.Hosting, MlirPurity.Hosting.methods.First), List(Numbers) + List(Number))
@@ -11,7 +11,7 @@ Marked List(MlirFunction)
 		MlirFunction(value, safeCalls = calls)
 Calls Dictionary(Text, Number)
 	Rowed.Calls("Rows_Doubled_1") is 1
-	Rowed.Calls("Rows_Randomized_1") is 0
+	Rowed.Calls("Rows_Timed_1") is 0
 	Gated.Calls("Hosted_Result_0") is 1
 	let flags = Spread(Direct)
 	mutable calls = Dictionary(Text, Number)
