@@ -10,6 +10,7 @@ constant Even = TestReports(TestCodegen.Even.types)
 constant Erring = TestReports(TypeCodegen("Strict/Erring", ("Error(number Number) Number", "\tError(2) is 2", "\tnumber"), TypeCodegen.NoTypes, List(Text)))
 constant Processing = TestReports(TypeCodegen("Strict/Image", ("Process(number Number) Image", "	Process(1) is Image", "	Image"), TypeInference(KnownTypes(("Process", "Image"), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Scope(List(Text) + "Elapsed", List(Text) + "Number"), Scope(List(Text) + "Process", List(Text) + "Image")), (KnownTypes.NoMembers, KnownTypes.NoMembers)), (KnownTypes.NoMembers, KnownTypes.NoMembers)), List(Text)))
 constant GotNumber = TestCodegen.Even.Got(TestCodegen.TestedNumber).scope
+constant Nothing = SyntaxNode("Text", "\"None\"")
 constant ElapsedParameter = MemberEntry("elapsed", "Strict/Number", List(InstructionEntry), false)
 Marked(scope Scope, marker Text) Texts
 	TestReports.Marked(TestCodegen.Even.Got(TestCodegen.Even.Got(TestCodegen.TestedNumber)).scope, Showing) is ("Number")
@@ -28,7 +29,7 @@ Helpers(scope Scope) Slow(List(MethodEntry))
 	TestReports(Even.types, true).Helpers(GotNumber).Length is 1
 	mutable helpers = List(Mutable(MethodEntry))
 	for Marked(scope, Showing)
-		helpers.Add(Helper("Got" + index, ErrorCodegen.Tested, value, Shown))
+		helpers.Add(Helper("Got" + index, ErrorCodegen.Tested, value, value is "None" then Nothing else Shown))
 	if isQuiet is false
 		helpers.Add(Helper("Took", "elapsed", "Number", Duration))
 	for Marked(scope, Nearing)
@@ -37,6 +38,7 @@ Helpers(scope Scope) Slow(List(MethodEntry))
 Helper(name Text, parameter Text, type Text, expression SyntaxNode) Slow(MethodEntry)
 	Even.Helper("Got1", ErrorCodegen.Tested, "Number", Shown).Name is "$TestsGot1"
 	Even.Helper("Took", "elapsed", "Number", Duration).returnType is "Strict/Text"
+	Even.Helpers(TestCodegen.Counter.Declare(Showing, "None")).First.instructions.Length is 2
 	Erring.Helper("Got0", "tested", "Number", Shown).instructions(2).texts is ("Strict/Erring", "Error", "Strict/Error")
 	let neutral = Neutral
 	let generated = neutral.Expression(expression, CodeBlock.Empty.Declare(parameter, type))
