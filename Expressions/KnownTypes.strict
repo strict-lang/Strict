@@ -108,18 +108,15 @@ ShapeScope(typeName Text) Scope
 	let typeMethods = MethodsOf(typeName)
 	MembersOf(typeName).WithAll(typeMethods.names, typeMethods.types)
 ElementType(typeName Text) Text
-	Sample.ElementType("Texts") is "Text"
-	Sample.ElementType("Range") is "Number"
-	Sample.ElementType("Iterator(Text)") is "Text"
+	Sample.ElementType("Texts") is "Text" and (Sample.ElementType("Range") is "Number")
+	Sample.ElementType("Iterator(Text)") is "Text" and (Sample.ElementType("Text") is "Character")
 	Sample.ElementType("Dictionary(Text, Number)") is "Number"
 	Sample.ElementType("Iterator(Couple(Text, Number))") is "Couple(Text, Number)"
 	Sample.ElementType("Dictionary(Text, Couple(Text, Number))") is "Couple(Text, Number)"
-	Sample.ElementType("Text") is "Character"
 	if typeName is in ("Number", "Range", "Text", "List")
 		return typeName is "Text" then "Character" else typeName is "List" then "Generics" else "Number"
 	if typeName.StartsWith("Iterator(") or typeName.StartsWith("Dictionary(")
-		let comma = typeName.StartsWith("Dictionary(") then typeName.IndexOf(", ") else -1
-		let start = comma > 0 then comma + 2 else typeName.IndexOf("(") + 1
+		let start = typeName.StartsWith("Dictionary(") then typeName.IndexOf(", ") + 2 else typeName.IndexOf("(") + 1
 		return typeName.Substring(start, typeName.Length - start - 1)
 	let keyed = MethodsOf(typeName).TypeOf("get")
 	IsPlural(typeName) then typeName.Substring(0, typeName.Length - 1) else keyed is "" then "Unknown" else keyed

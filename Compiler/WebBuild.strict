@@ -45,12 +45,12 @@ Favicons(page Text, icon Text) Text
 	linked then page else page.Replace("</head>", "<link rel=\"icon\" href=\"" + icon + "\"></head>")
 Sized(mlir Text) Text
 	WebBuild.Sized("  llvm.func @malloc(i64) -> !llvm.ptr\n  llvm.call @malloc(%b)") is "  llvm.call @strict_c_malloc(%b)"
-	WebBuild.Sized("  llvm.func @free(!llvm.ptr)") is "  llvm.func @free(!llvm.ptr)"
+	WebBuild.Sized("  llvm.func @free(!llvm.ptr)" + MlirParameters.ReadScope) is "  llvm.func @free(!llvm.ptr)"
 	WebBuild.Sized(MlirEntry.CollectorStart.First).IndexOf("\"llvm.stacksave.p0\"()") > 0
 	mutable kept = List(Mutable(Text))
 	for mlir.Lines
 		if Declared(value) is not in Sizes
-			kept.Add(value)
+			kept.Add(value.Replace(MlirParameters.ReadScope, "").Replace(MlirParameters.WriteScope, ""))
 	mutable sized = Text.Combine(kept, "\n")
 	for Sizes
 		sized = sized.Replace("@" + value + "(", "@strict_c_" + value + "(")

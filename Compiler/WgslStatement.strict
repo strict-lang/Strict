@@ -50,8 +50,10 @@ Literal(number Number) Text
 	WgslStatement(Twice, 1).Literal(0.00000000000001) is "n_float(1e-14)"
 	WgslStatement(Twice, 1).Literal(117964800) is "n_int(117964800)"
 	WgslStatement(Twice, 1).Literal(2147483648) is "n_float(2147483648)"
+	WgslStatement(Twice, 1).Literal(-2147483648) is "n_int(-2147483648)"
+	WgslStatement(Twice, 1).Literal(-2147483649) is "n_float(-2147483649)"
 	constant int32Limit = 2147483648
-	let isWhole = (number is number.Floor) and (number.Absolute < int32Limit)
+	let isWhole = (number is number.Floor) and (number >= -int32Limit) and (number < int32Limit)
 	(isWhole then "n_int(" else "n_float(") + number + ")"
 Calculated(entry InstructionEntry) Texts
 	WgslStatement(Twice, 2).Calculated(Twice.method.instructions(2)) is ("r2 = n_mul(r0, r1);")
