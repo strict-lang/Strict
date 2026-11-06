@@ -43,7 +43,8 @@ Guarded Texts
 		let loaded = Temp("wl" + index)
 		let checked = Checked(index, kinds(index))
 		lines = lines + function.Load(loaded, "%r" + entry.payload(value)) + checked
-	lines + guard.Joined(Conditions(kinds.Length))
+	let span = MlirWholeSpan(MlirWholeFunction(function).Callee(entry), position)
+	lines + span.Lines + guard.Joined(Conditions(kinds.Length) + span.Checks)
 Checked(number Number, kind Text) Texts
 	Calling.Checked(0, "i").First is "    %t1wh0t = llvm.intr.trunc(%t1wl0) : (f64) -> f64"
 	Calling.Checked(0, "p").First is "    %t1wa0 = func.call @strict_list_bytes(%t1wl0) : (f64) -> !llvm.ptr"

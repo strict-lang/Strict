@@ -1,0 +1,147 @@
+has function MlirFunction
+has position Number
+constant Quad = (MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 0), "sum"), InstructionEntry.LoadNumber(0, 0), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "count"), InstructionEntry.LoopBegin(0, 1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "sum"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "value"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "value"), InstructionEntry.Binary(InstructionType.Multiply, (3, 4, 5)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "value"), InstructionEntry.Binary(InstructionType.Multiply, (5, 6, 7)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 8, "value"), InstructionEntry.Binary(InstructionType.Multiply, (7, 8, 9)), InstructionEntry.Binary(InstructionType.Add, (2, 9, 10)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 10, "sum"), InstructionEntry.Jump(InstructionType.LoopEnd, 1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 11, "sum"), InstructionEntry.Return(11))
+constant Quads = MlirWholeSpan(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Sum", List(MemberEntry) + MemberEntry("count", "Strict/Number", List(InstructionEntry), false), "Strict/Number", Quad)), 4)
+constant Halving = MlirWholeSpan(MlirWholeTypes.Halving.function, 1)
+Lines Texts
+	Halving.Lines.Length is 0
+	Text.Combine(Quads.Lines).IndexOf("arith.mulf") > 0
+	Quads.Checks.Length > 2
+	if Grown is false
+		return List(Text)
+	mutable lines = List(Mutable(Text))
+	for function.method.instructions
+		lines = lines + At(index)
+	lines
+Checks Texts
+	Halving.Checks.Length is 0
+	Quads.Checks.Last.EndsWith("wk12")
+	mutable checks = List(Mutable(Text))
+	for function.method.instructions
+		if value.kind is in (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply)
+			checks.Add(Name("wk", index))
+	checks
+Grown Boolean
+	Halving.Grown is false
+	Quads.Grown
+	for function.method.instructions
+		if value.kind is in (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply, InstructionType.LoopBegin)
+			return true
+	false
+At(at Number) Texts
+	Text.Combine(Quads.At(3)).IndexOf("wn3") > 0
+	Text.Combine(Quads.At(7)).IndexOf("mulf") > 0
+	let entry = function.method.instructions(at)
+	if entry.kind is InstructionType.LoopBegin
+		return Counted(at)
+	if entry.kind is in (InstructionType.LoadConstantToRegister, InstructionType.StoreConstantToVariable)
+		return Listed(at)
+	if entry.kind is InstructionType.LoadVariableToRegister
+		return Loaded(at)
+	if entry.kind is in (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply)
+		return Combined(at)
+	List(Text)
+Counted(at Number) Texts
+	let entry = function.method.instructions(at)
+	let start = Source(entry.payload(0), at)
+	if entry.payload(1) is not 1
+		return List(Text) + ("    " + Name("wn", at) + " = llvm.intr.fabs(" + start + ") : (f64) -> f64")
+	let end = Source(entry.payload(2), at)
+	List(Text) + ("    " + Name("wn", at) + " = arith.addf " + start + ", " + end + " : f64")
+Listed(at Number) Texts
+	let entry = function.method.instructions(at)
+	let values = PayloadDecoder(entry)
+	let number = entry.kind is InstructionType.StoreConstantToVariable then values.Value(0).number else values.Value(1).number
+	List(Text) + ("    " + Name("wb", at) + " = arith.constant " + MlirStatements.Copy.Hex(number.Absolute) + " : f64")
+Loaded(at Number) Texts
+	let entry = function.method.instructions(at)
+	let parameter = Parameter(entry.texts(0))
+	if (parameter < 0) or (entry.texts(0) is in ("value", "index"))
+		return List(Text)
+	let input = "%t" + position + "wl" + parameter
+	List(Text) + ("    " + Name("wb", at) + " = llvm.intr.fabs(" + input + ") : (f64) -> f64")
+Combined(at Number) Texts
+	let entry = function.method.instructions(at)
+	let carried = Carried(at)
+	if (entry.kind is not InstructionType.Multiply) and (carried >= 0)
+		return Accumulated(at, carried)
+	let operation = entry.kind is InstructionType.Multiply then "mulf" else "addf"
+	let factors = Source(entry.payload(1), at) + ", " + Source(entry.payload(2), at)
+	let math = "    " + Name("wb", at) + " = arith." + operation + " " + factors + " : f64"
+	List(Text) + math + ("    " + Name("wk", at) + " = arith.cmpf olt, " + Name("wb", at) + ", %t" + position + "whlimit : f64")
+Accumulated(at Number, carried Number) Texts
+	let entry = function.method.instructions(at)
+	let term = carried is entry.payload(1) then entry.payload(2) else entry.payload(1)
+	let grown = Name("wb", at) + "g"
+	let name = function.method.instructions(Earlier(carried, at, false)).texts(0)
+	let store = StoreBefore(name, Earlier(0, at, true))
+	let stored = function.method.instructions(store)
+	let initial = stored.kind is InstructionType.StoreConstantToVariable then Name("wb", store) else Source(stored.payload(0), store)
+	let product = "    " + grown + " = arith.mulf " + Name("wn", Earlier(0, at, true)) + ", " + Source(term, at) + " : f64"
+	let summed = "    " + Name("wb", at) + " = arith.addf " + initial + ", " + grown + " : f64"
+	let check = "    " + Name("wk", at) + " = arith.cmpf olt, " + Name("wb", at) + ", %t" + position + "whlimit : f64"
+	(List(Text) + product + summed) + check
+Source(register Number, at Number) Text
+	Quads.Source(3, 7) is "%t4wn3"
+	let writer = Earlier(register, at, false)
+	if writer < 0
+		return "%t" + position + "whlimit"
+	let entry = function.method.instructions(writer)
+	if entry.kind is InstructionType.LoadVariableToRegister
+		return Variable(entry, writer)
+	Name("wb", writer)
+Variable(entry InstructionEntry, at Number) Text
+	if entry.texts(0) is in ("value", "index")
+		return Name("wn", Earlier(0, at, true))
+	if Parameter(entry.texts(0)) >= 0
+		return Name("wb", at)
+	let store = StoreBefore(entry.texts(0), at)
+	if store < 0
+		return "%t" + position + "whlimit"
+	let stored = function.method.instructions(store)
+	stored.kind is InstructionType.StoreConstantToVariable then Name("wb", store) else Source(stored.payload(0), store)
+Carried(at Number) Number
+	Quads.Carried(12) is 2
+	Quads.Carried(7) is -1
+	let entry = function.method.instructions(at)
+	let writer = Earlier(entry.payload(1), at, false)
+	if (writer < 0) or (Earlier(0, at, true) < 0)
+		return -1
+	let loaded = function.method.instructions(writer)
+	if loaded.kind is not InstructionType.LoadVariableToRegister
+		return -1
+	for Range(at + 1, function.method.LoopEndOf(Earlier(0, at, true)))
+		let step = function.method.instructions(value)
+		if (step.kind is InstructionType.StoreRegisterToVariable) and (step.texts.Last is loaded.texts(0))
+			return entry.payload(1)
+	-1
+Earlier(register Number, at Number, isLoop Boolean) Number
+	Quads.Earlier(3, 7, false) is 5
+	Quads.Earlier(0, 7, true) is 3
+	for at
+		let earlier = at - 1 - index
+		let entry = function.method.instructions(earlier)
+		let writes = LoadReuse(function.method.instructions).Written(entry) is register
+		let opens = entry.kind is InstructionType.LoopBegin
+		if (isLoop and opens and (function.method.LoopEndOf(earlier) >= at)) or ((isLoop is false) and writes)
+			return earlier
+	-1
+StoreBefore(name Text, at Number) Number
+	Quads.StoreBefore("sum", 4) is 0
+	for at
+		let earlier = at - 1 - index
+		let entry = function.method.instructions(earlier)
+		let isStore = entry.kind is in (InstructionType.StoreRegisterToVariable, InstructionType.StoreConstantToVariable)
+		if isStore and (entry.texts.Last is name)
+			return earlier
+	-1
+Parameter(name Text) Number
+	Quads.Parameter("count") is 0
+	Quads.Parameter("value") is -1
+	for function.method.parameters
+		if value.Name is name
+			return index
+	-1
+Name(prefix Text, at Number) Text
+	Quads.Name("wb", 7) is "%t4wb7"
+	"%t" + position + prefix + at

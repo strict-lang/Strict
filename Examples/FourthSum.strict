@@ -1,0 +1,9 @@
+Sum(count Number) Number
+	FourthSum.Sum(0) is 0
+	FourthSum.Sum(1) is 0
+	FourthSum.Sum(3) is 17
+	FourthSum.Sum(100000) > 1e24
+	mutable sum = 0
+	for Range(0, count)
+		sum = sum + value * value * value * value
+	sum
