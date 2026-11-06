@@ -29,7 +29,7 @@ Failures(paths Texts, root Text, isQuiet Boolean) Number
 	let inference = ResolveCheck.Inference(files)
 	mutable failed = 0
 	for paths
-		let failures = value is in stale then Verified(value, root, isQuiet, files, inference) else 0
+		let failures = value is in stale then Verified(value, root, isQuiet, files, inference, true, stale.Length is 1) else 0
 		if (failures is 0) and (isQuiet is false)
 			logger.Log(Summary(0, value))
 		failed = failed + failures
@@ -67,8 +67,8 @@ Kept(path Text, root Text) Number
 	if File(path).Exists is false
 		return 1
 	let files = SourceFiles(root).Of(FileCompiler.Normalized(path))
-	Verified(path, root, true, files, ResolveCheck.Inference(files), false)
-Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInference, isTested = true) Number
+	Verified(path, root, true, files, ResolveCheck.Inference(files), false, true)
+Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInference, isTested = true, isOwn = false) Number
 	let cache = BinaryFile(FileCompiler.Normalized(path))
 	let stamped = BinarySources(files).Stamped
 	let types = FileCompiler(logger, isQuiet, selection).Built(path, root, true, files, inference).entries
@@ -77,11 +77,14 @@ Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInfer
 	let failed = isTested then Tested(types, path, root) else 0
 	if (failed is 0) and (selection is "") and (IsEdited(path) is false)
 		let folder = Path(cache.source).PathOnly.text
-		let header = Completed(cache, root, files, stamped).Typed(types, folder).Kept(types).Header
+		let header = Completed(cache, root, files, stamped, isOwn).Typed(types, folder).Kept(types).Header
 		cache.Saved(cache.Packed(header, types, List(TypeEntry)))
 	failed
-Completed(cache BinaryFile, root Text, files Texts, stamped BinarySources) Slow(BinarySources)
+Completed(cache BinaryFile, root Text, files Texts, stamped BinarySources, isOwn = false) Slow(BinarySources)
 	Execute(Logger).Completed(Adder, ".", AdderFiles, BinarySources.Mixed).stamps is (1, 2, 3)
+	Execute(Logger).Completed(Adder, ".", List(Text), BinarySources.Mixed, true).stamps is (1, 2, 3)
+	if isOwn
+		return stamped
 	let current = SourceFiles(root).Of(cache.source)
 	current.Length is files.Length then stamped else BinarySources(current).Stamped
 Tested(types List(TypeEntry), path Text, root Text) Number

@@ -61,9 +61,7 @@
   }
   // folder listings by folder and pattern, kept while the write time of the folder is unchanged and older than 2 s
   // (the write time granularity of some file systems): a resident strict server lists its project tree only once
-  llvm.mlir.global internal @strict_listing_keys(0.0 : f64) : f64
-  llvm.mlir.global internal @strict_listing_stamps(0.0 : f64) : f64
-  llvm.mlir.global internal @strict_listing_values(0.0 : f64) : f64
+  llvm.mlir.global internal @strict_listing_entries(0.0 : f64) : f64
   llvm.mlir.global internal constant @strict_listing_separator("|\00") : !llvm.array<2 x i8>
   llvm.mlir.global internal constant @strict_listing_folders("|folders\00") : !llvm.array<9 x i8>
   func.func private @strict_directory_files(%self: f64, %path: f64, %pattern: f64) -> f64 {
@@ -151,54 +149,31 @@
     %stamp = arith.select %isKept, %modified, %zero : f64
     return %stamp : f64
   }
-  // the position of key in the kept listings, -1 when it is not there
-  func.func private @strict_listing_index(%key: f64) -> i64 {
-    %none = arith.constant -1 : i64
-    %zero = arith.constant 0.0 : f64
-    %keysSlot = llvm.mlir.addressof @strict_listing_keys : !llvm.ptr
-    %keys = llvm.load %keysSlot : !llvm.ptr -> f64
-    %isEmpty = arith.cmpf oeq, %keys, %zero : f64
-    cf.cond_br %isEmpty, ^done(%none : i64), ^scan
-  ^scan:
-    %lengthNumber = func.call @strict_list_length(%keys) : (f64) -> f64
-    %length = arith.fptosi %lengthNumber : f64 to i64
-    %start = arith.constant 0 : i64
-    cf.br ^check(%start : i64)
-  ^check(%index: i64):
-    %more = arith.cmpi slt, %index, %length : i64
-    cf.cond_br %more, ^compare(%index : i64), ^done(%none : i64)
-  ^compare(%at: i64):
-    %position = arith.sitofp %at : i64 to f64
-    %kept = func.call @strict_list_get(%keys, %position) : (f64, f64) -> f64
-    %equal = func.call @strict_text_equal(%kept, %key) : (f64, f64) -> f64
-    %isEqual = arith.cmpf one, %equal, %zero : f64
-    %one = arith.constant 1 : i64
-    %next = arith.addi %at, %one : i64
-    cf.cond_br %isEqual, ^done(%at : i64), ^check(%next : i64)
-  ^done(%found: i64):
-    return %found : i64
-  }
   // a copy of the listing kept for key when its folder still has stamp, 0 otherwise
   func.func private @strict_listed(%key: f64, %stamp: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
-    %isKeepable = arith.cmpf one, %stamp, %zero : f64
-    cf.cond_br %isKeepable, ^find, ^miss
-  ^find:
-    %index = func.call @strict_listing_index(%key) : (f64) -> i64
     %none = arith.constant -1 : i64
-    %isFound = arith.cmpi ne, %index, %none : i64
-    cf.cond_br %isFound, ^stamped(%index : i64), ^miss
-  ^stamped(%at: i64):
-    %position = arith.sitofp %at : i64 to f64
-    %stampsSlot = llvm.mlir.addressof @strict_listing_stamps : !llvm.ptr
-    %stamps = llvm.load %stampsSlot : !llvm.ptr -> f64
-    %kept = func.call @strict_list_get(%stamps, %position) : (f64, f64) -> f64
+    %entriesSlot = llvm.mlir.addressof @strict_listing_entries : !llvm.ptr
+    %entries = llvm.load %entriesSlot : !llvm.ptr -> f64
+    %isKeepable = arith.cmpf one, %stamp, %zero : f64
+    %hasEntries = arith.cmpf one, %entries, %zero : f64
+    %isLooked = arith.andi %isKeepable, %hasEntries : i1
+    cf.cond_br %isLooked, ^find, ^miss
+  ^find:
+    %hash = func.constant @strict_hash_text : (f64) -> i64
+    %equal = func.constant @strict_text_equal : (f64, f64) -> f64
+    %position = func.call @strict_dictionary_find(%entries, %key, %hash, %equal) : (f64, f64, (f64) -> i64, (f64, f64) -> f64) -> i64
+    %isFound = arith.cmpi ne, %position, %none : i64
+    cf.cond_br %isFound, ^stamped, ^miss
+  ^stamped:
+    %entry = func.call @strict_dictionary_get(%entries, %key, %hash, %equal) : (f64, f64, (f64) -> i64, (f64, f64) -> f64) -> f64
+    %first = arith.constant 0.0 : f64
+    %second = arith.constant 1.0 : f64
+    %kept = func.call @strict_list_get(%entry, %first) : (f64, f64) -> f64
     %isCurrent = arith.cmpf oeq, %kept, %stamp : f64
-    cf.cond_br %isCurrent, ^hit(%position : f64), ^miss
-  ^hit(%slot: f64):
-    %valuesSlot = llvm.mlir.addressof @strict_listing_values : !llvm.ptr
-    %values = llvm.load %valuesSlot : !llvm.ptr -> f64
-    %listing = func.call @strict_list_get(%values, %slot) : (f64, f64) -> f64
+    cf.cond_br %isCurrent, ^hit, ^miss
+  ^hit:
+    %listing = func.call @strict_list_get(%entry, %second) : (f64, f64) -> f64
     %copy = func.call @strict_list_copy(%listing, %zero) : (f64, f64) -> f64
     return %copy : f64
   ^miss:
@@ -208,47 +183,17 @@
   func.func private @strict_listing_kept(%key: f64, %stamp: f64, %listing: f64) {
     %zero = arith.constant 0.0 : f64
     %isKeepable = arith.cmpf one, %stamp, %zero : f64
-    cf.cond_br %isKeepable, ^prepare, ^done
-  ^prepare:
-    %keysSlot = llvm.mlir.addressof @strict_listing_keys : !llvm.ptr
-    %stampsSlot = llvm.mlir.addressof @strict_listing_stamps : !llvm.ptr
-    %valuesSlot = llvm.mlir.addressof @strict_listing_values : !llvm.ptr
-    %keys = llvm.load %keysSlot : !llvm.ptr -> f64
-    %isFirst = arith.cmpf oeq, %keys, %zero : f64
-    cf.cond_br %isFirst, ^create, ^store
-  ^create:
-    %capacity = arith.constant 256.0 : f64
-    %newKeys = func.call @strict_list_new(%capacity, %zero) : (f64, f64) -> f64
-    %newStamps = func.call @strict_list_new(%capacity, %zero) : (f64, f64) -> f64
-    %newValues = func.call @strict_list_new(%capacity, %zero) : (f64, f64) -> f64
-    func.call @strict_pin(%newKeys) : (f64) -> ()
-    func.call @strict_pin(%newStamps) : (f64) -> ()
-    func.call @strict_pin(%newValues) : (f64) -> ()
-    llvm.store %newKeys, %keysSlot : f64, !llvm.ptr
-    llvm.store %newStamps, %stampsSlot : f64, !llvm.ptr
-    llvm.store %newValues, %valuesSlot : f64, !llvm.ptr
-    cf.br ^store
+    cf.cond_br %isKeepable, ^store, ^done
   ^store:
+    %entriesSlot = llvm.mlir.addressof @strict_listing_entries : !llvm.ptr
+    %entries = llvm.load %entriesSlot : !llvm.ptr -> f64
     %copy = func.call @strict_list_copy(%listing, %zero) : (f64, f64) -> f64
-    %index = func.call @strict_listing_index(%key) : (f64) -> i64
-    %none = arith.constant -1 : i64
-    %isFound = arith.cmpi ne, %index, %none : i64
-    %stamps = llvm.load %stampsSlot : !llvm.ptr -> f64
-    %values = llvm.load %valuesSlot : !llvm.ptr -> f64
-    cf.cond_br %isFound, ^replace(%index : i64), ^append
-  ^replace(%at: i64):
-    %position = arith.sitofp %at : i64 to f64
-    %setStamp = func.call @strict_list_set(%stamps, %position, %stamp) : (f64, f64, f64) -> f64
-    %setValue = func.call @strict_list_set(%values, %position, %copy) : (f64, f64, f64) -> f64
-    cf.br ^done
-  ^append:
-    %oldKeys = llvm.load %keysSlot : !llvm.ptr -> f64
-    %addedKeys = func.call @strict_list_add(%oldKeys, %key) : (f64, f64) -> f64
-    %addedStamps = func.call @strict_list_add(%stamps, %stamp) : (f64, f64) -> f64
-    %addedValues = func.call @strict_list_add(%values, %copy) : (f64, f64) -> f64
-    func.call @strict_listing_moved(%keysSlot, %oldKeys, %addedKeys) : (!llvm.ptr, f64, f64) -> ()
-    func.call @strict_listing_moved(%stampsSlot, %stamps, %addedStamps) : (!llvm.ptr, f64, f64) -> ()
-    func.call @strict_listing_moved(%valuesSlot, %values, %addedValues) : (!llvm.ptr, f64, f64) -> ()
+    %stamped = func.call @strict_list_add(%zero, %stamp) : (f64, f64) -> f64
+    %entry = func.call @strict_list_add(%stamped, %copy) : (f64, f64) -> f64
+    %hash = func.constant @strict_hash_text : (f64) -> i64
+    %equal = func.constant @strict_text_equal : (f64, f64) -> f64
+    %updated = func.call @strict_dictionary_set(%entries, %key, %entry, %hash, %equal) : (f64, f64, f64, (f64) -> i64, (f64, f64) -> f64) -> f64
+    func.call @strict_listing_moved(%entriesSlot, %entries, %updated) : (!llvm.ptr, f64, f64) -> ()
     cf.br ^done
   ^done:
     return
