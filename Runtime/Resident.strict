@@ -24,10 +24,6 @@ Folder(request Text) Text
 	Resident.Folder("broken") is ""
 	let lines = request.Split("\n")
 	lines.Length < 3 then "" else lines(1)
-Answered(arguments Texts) Number
-	Sample.Answered(("test", "a.strict")) is 0
-	logger.Log("mock " + Text.Combine(arguments, " "))
-	0
 Sent(socket Number, text Text) Boolean
 	Sample.Sent(0, "a") is false
 	(Socket.Send(socket, ByteEncoder(List(Number)).UnicodeBytes(text)) is Error) is false
@@ -42,18 +38,31 @@ Received(socket Number, ending Text) Text
 		isOpen = isOpen and ((chunk is Error) is false)
 		gathered = isOpen then gathered + ByteEncoder(chunk).Spelled(0, chunk.Length) else gathered
 	gathered
-Served(socket Number) Boolean
-	Sample.Loopback is 0
-	let arguments = Sent(socket, Greeting) then Arguments(Received(socket, Ending)) else List(Text)
-	let isServing = arguments is not (Stopping)
-	if isServing
-		Socket.Output(socket)
-		let code = Answered(arguments)
-		Socket.Output(0)
-		Sent(socket, Exiting + code + "\n")
-	else
-		Sent(socket, Exiting + "0\n")
-	isServing
+Opened Number
+	let server = Socket.Listen(0)
+	if server is Error
+		return 0
+	File(root + Stamp).Write(Socket.Port(server) to Text)
+	server
+Accepted(server Number, built Number) Number
+	let executable = File(Process.Current.executable)
+	let waited = Socket.Waiting(server, IdleSeconds)
+	if (waited is Error) or (waited is not 1) or (executable.Modified is not built)
+		return 0
+	Socket.Accept(server)
+Requested(socket Number) Text
+	Sample.Loopback is 3
+	Sent(socket, Greeting) then Received(socket, Ending) else ""
+Finished(socket Number, code Number) Number
+	Sample.Finished(0, 1) is 0
+	let line = Exiting + code + "\n"
+	Sent(socket, line)
+	Socket.Close(socket)
+Closed(server Number) Number
+	Resident(Logger, "Compiler/output/Missing").Closed(0) is 0
+	let stamp = File(root + Stamp)
+	stamp.Delete
+	Socket.Close(server)
 Streamed(socket Number) Number
 	Sample.Streamed(0) is -1
 	mutable code = -2
@@ -70,34 +79,13 @@ Loopback Slow(Number)
 	let server = Socket.Listen(0)
 	let client = Socket.Connect("127.0.0.1", Socket.Port(server))
 	let accepted = Socket.Accept(server)
-	Sent(client, Request(".", ("test", "a.strict")))
-	let isServing = Served(accepted)
-	Socket.Close(accepted)
-	let isGreeted = Greeted(client)
-	let code = isServing and isGreeted then Streamed(client) else 1
+	Sent(client, Request(Directory.Current, ("test", "a.strict")))
+	let isRequested = Arguments(Requested(accepted)) is ("test", "a.strict")
+	Finished(accepted, 3)
+	let code = isRequested and Greeted(client) then Streamed(client) else 1
 	Socket.Close(client)
 	Socket.Close(server)
 	code
-Serve Number
-	let server = Socket.Listen(0)
-	if server is Error
-		return 1
-	File(root + Stamp).Write(Socket.Port(server) to Text)
-	Looped(server, File(Process.Current.executable).Modified)
-	File(root + Stamp).Delete
-	Socket.Close(server)
-	0
-Looped(server Number, built Number) Number
-	let executable = File(Process.Current.executable)
-	mutable last = Process.Elapsed
-	mutable isServing = true
-	for as long as isServing and (Process.Elapsed - last < IdleSeconds)
-		if Socket.Waiting(server, IdleSeconds) is 1
-			let socket = Socket.Accept(server)
-			isServing = (executable.Modified is built) and Served(socket)
-			Socket.Close(socket)
-			last = Process.Elapsed
-	0
 Forwarded(arguments Texts) Number
 	Sample.Forwarded(List(Text) + "build") is -1
 	let isForwarded = (arguments.Length > 0) and (arguments(0) is in ("test", "check", Stopping))

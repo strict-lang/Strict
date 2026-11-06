@@ -7,9 +7,29 @@ constant Help = ("strict <file or Type> [arguments]  run the program natively (b
 Run(arguments Texts) Number
 	let resident = Resident(logger, Path(Process.Current.executable).PathOnly.text)
 	if (arguments.Length > 0) and (arguments(0) is "serve")
-		return resident.Serve
+		return Served(resident)
 	let forwarded = resident.Forwarded(arguments)
 	forwarded >= 0 then forwarded else Ran(arguments)
+Served(resident Resident) Number
+	let server = resident.Opened
+	let built = File(Process.Current.executable).Modified
+	mutable socket = server > 0 then resident.Accepted(server, built) else 0
+	for as long as socket > 0
+		let request = resident.Requested(socket)
+		let isStopping = resident.Arguments(request) is (Resident.Stopping)
+		resident.Finished(socket, isStopping then 0 else Answered(resident, request, socket))
+		socket = isStopping then 0 else resident.Accepted(server, built)
+	server > 0 then resident.Closed(server) else 1
+Answered(resident Resident, request Text, socket Number) Number
+	let home = Directory.Current
+	let folder = resident.Folder(request)
+	let isMoved = (folder is not home) and Directory.Change(folder)
+	Socket.Output(socket)
+	let code = Ran(resident.Arguments(request))
+	Socket.Output(0)
+	if isMoved
+		Directory.Change(home)
+	code
 Ran(arguments Texts) Number
 	let folder = Directory.Current
 	let given = Projected(Mained(arguments))
