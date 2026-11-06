@@ -26,7 +26,14 @@ Issues ValidationIssues
 	mutable issues = List(Mutable(ValidationIssue))
 	for lines
 		issues = issues + LineIssues(value, index) + NegationIssues(value, index)
-	issues + MethodIssues + CountIssues
+	issues + MethodIssues + CountIssues + OrderIssues
+OrderIssues ValidationIssues
+	Limits(("Run", "\t1", "has a"), false).OrderIssues.First to Text is "MembersMustComeBeforeMethods: has a"
+	Limits(("has a", "Run", "\t1"), false).OrderIssues.Length is 0
+	let shape = TypeShape(lines)
+	for Range(shape.MembersEnd, lines.Length)
+		if shape.IsMemberLine(lines(value))
+			ValidationIssue("MembersMustComeBeforeMethods", lines(value), value + 1)
 LineIssues(line Text, number Number) ValidationIssues
 	Sample.LineIssues("\t\t\t\t\t\t1", 2).First.Line is 3 and Sample.LineIssues(Wide, 4) is (Indent)
 	Sample.LineIssues(" a", 0).First to Text is "ExtraWhitespacesFoundAtBeginningOfLine: indent with tabs"

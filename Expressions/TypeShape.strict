@@ -54,12 +54,19 @@ MemberScope Scope
 	TypeShape("has count Number", "constant Limit = 3").MemberScope.names.Length is 1
 	mutable names = List(Mutable(Text))
 	mutable types = List(Mutable(Text))
-	for lines
+	for lines.Slice(0, MembersEnd)
 		if IsMemberLine(value) and (not value.StartsWith("constant "))
 			let header = HeaderTokens(Tokenizer(value).Tokens)
 			names.Add(header.MemberName)
 			types.Add(header.DeclaredType(1))
 	Scope(names, types)
+MembersEnd Number
+	TypeShape("has a", "constant B = 1", "Run", "\t1").MembersEnd is 2
+	TypeShape("has a").MembersEnd is 1
+	for lines
+		if IsMethodHeader(value)
+			return index
+	lines.Length
 ParameterScope Scope
 	TypeShape("Add(first Number, second Number) Number", "\tfirst").ParameterScope.TypeOf("Add") is "first,second"
 	TypeShape("Add(first Number, second) Number", "\tfirst").ParameterScope.TypeOf("Add types") is "Number,Second"
@@ -148,7 +155,7 @@ ConstantScope Scope
 	TypeShape("constant A = ").ConstantScope.names.Length is 0
 	mutable names = List(Mutable(Text))
 	mutable literals = List(Mutable(Text))
-	for lines
+	for lines.Slice(0, MembersEnd)
 		if value.StartsWith("constant ") and ConstantText(index) is not ""
 			let tokens = Tokenizer(value).Tokens
 			names.Add(tokens(1))

@@ -156,7 +156,7 @@ Design decisions: an immutable expression tree (static analysis only), validatio
 ```
 
 ## Members, variables, constants
-Members are defined at the top of a type file. A type is composed of its members and can be used as any of them, if a member type is a trait (methods without implementation) the type implements its methods. Members are `has` (the default), `constant` (precomputed, anything built only from constants is a constant too) or `mutable` (rare, only for optimizations). A member or parameter can have a default like `has activation = Activation.Sigmoid`. A copy with some members replaced names them: `Unit(unit, health = unit.health - damage)`.
+Members are defined at the top of a type file, before the first method (`MembersMustComeBeforeMethods`). A type is composed of its members and can be used as any of them, if a member type is a trait (methods without implementation) the type implements its methods. Members are `has` (the default), `constant` (precomputed, anything built only from constants is a constant too) or `mutable` (rare, only for optimizations). A member or parameter can have a default like `has activation = Activation.Sigmoid`. A copy with some members replaced names them: `Unit(unit, health = unit.health - damage)`.
 
 A member of type `Generic` makes a type generic, one type argument per `Generic` member: `Couple("a", 2)` with `has first Generic` and `has second Generic` is a `Couple(Text, Number)`. Methods are compiled per instance, so a call on a `Generic` member reaches the concrete type (`Examples/Couple.strict`, `Examples/Holder.strict`).
 
