@@ -19,7 +19,19 @@ Forwarded(arguments Texts) Number
 	let stamp = File(root + Resident.Stamp)
 	if stamp.Exists is false
 		return Started
-	File(root + Resident.Free).Exists then Answered(stamp.ReadLines.First to Number, arguments) else -1
+	let port = stamp.ReadLines.First to Number
+	if File(root + Resident.Free).Exists
+		return Answered(port, arguments)
+	IsDead(port) then Restarted else -1
+IsDead(port Number) Boolean
+	Sample.IsDead(0)
+	let socket = Socket.Connect("127.0.0.1", port)
+	if socket is Error
+		return true
+	Socket.Close(socket)
+	false
+Restarted Number
+	Killed is 0 then Started else -1
 Answered(port Number, arguments Texts) Number
 	Sample.Answered(0, List(Text) + "test") is -1
 	let socket = Socket.Connect("127.0.0.1", port)
