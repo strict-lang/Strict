@@ -9984,8 +9984,9 @@
     %nothing = arith.constant 0 : i8
     %a = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr
     %b = func.call @strict_ptr(%search) : (f64) -> !llvm.ptr
-    %offset = arith.fptosi %start : f64 to i64
     %zeroStart = arith.constant 0.0 : f64
+    %clamped = arith.maximumf %start, %zeroStart : f64
+    %offset = arith.fptosi %clamped : f64 to i64
     %fromStart = arith.cmpf ole, %start, %zeroStart : f64
     cf.cond_br %fromStart, ^search, ^measure
   ^measure:

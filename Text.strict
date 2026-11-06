@@ -100,6 +100,7 @@ IndexOf(text Text, startIndex = 0) Number
 	"hello".IndexOf("ll") is 2
 	"hello".IndexOf("lo") is 3
 	"hello".IndexOf("no") is -1
+	"A>B>".IndexOf(">", -1) is 1
 	for Range(startIndex, Length - text.Length + 1)
 		if StartsWith(text, index)
 			return index
