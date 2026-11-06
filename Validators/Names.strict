@@ -69,6 +69,7 @@ IsShared(at Number) Boolean
 	Nested.IsShared(1) is false
 	Shared.IsShared(1)
 	Names(("Run", "\tfor 2", "\t\tfor 3", "\t\t\t1", "\t2")).IsShared(1) is false
+	Names(("Run", "\tfor 2", "\t\tfor 3", "\t\t\t1", "\t2", "\t\t3")).IsShared(1) is false
 	Names(("Run", "\tfor 2", "\t\tfor 3", "\t\t\tfor 4", "\t\t\t\t1", "\t\t\t2")).IsShared(2)
 	let depth = BodyParser.Indent(lines(at))
 	for Range(at + 2, lines.Length)

@@ -75,8 +75,8 @@ Passes(node SyntaxNode, name Text) Boolean
 	Lending.Passes(Lending.statements(0), "ticker") is false
 	(Ticking.Passes(Ticking.statements(4), "total") is false) and Ticking.Passes(Ticking.statements(4), "outer")
 	Ticking.Passes(Ticking.statements(2), "outer") is false
-	Ticking.Passes(Ticking.statements(3), "Count") is false
-	Ticking.Passes(Ticking.statements(3), "total") is false
+	(Ticking.Passes(Ticking.statements(3), "Count") or Ticking.Passes(Ticking.statements(3), "total")) is false
+	Lending.Passes(SyntaxParser(Tokenizer("Add(1, ticker)").Tokens).Parse, "ticker")
 	let first = node.Kind is "Call" then 0 else 1
 	for node.children
 		let isArgument = (node.Kind is in ("Call", "MethodCall")) and (index >= first)

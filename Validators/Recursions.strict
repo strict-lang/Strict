@@ -154,6 +154,7 @@ Samples Texts
 	Measuring.Samples is ("Sample")
 	Recursions(("constant Small = Shape(2)", "constant Big = Shape(9)"), "Shape").Samples is ("Small", "Big")
 	Recursions(("let small = Shape(2)", "constant Name = Text(1)"), "Shape").Samples.Length is 0
+	Recursions(("constant Wrapped = List(Shape(2))", "constant Many = Shapes"), "Shape").Samples.Length is 0
 	for lines
 		if value.StartsWith("constant ") and (value.IndexOf(" = " + typeName + "(") > 0)
 			Tokenizer(value).Tokens(1)
