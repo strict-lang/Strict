@@ -296,6 +296,7 @@
   llvm.mlir.global internal constant @strict_key_not_found("KeyNotFound\00") : !llvm.array<12 x i8>
   llvm.mlir.global internal constant @strict_index_out_of_range("IndexOutOfRange\00") : !llvm.array<16 x i8>
   llvm.mlir.global internal constant @strict_modulo_by_zero("ModuloByZero\00") : !llvm.array<13 x i8>
+  llvm.mlir.global internal constant @strict_substring_out_of_range("SubstringOutOfRange\00") : !llvm.array<20 x i8>
   llvm.mlir.global internal constant @strict_duplicate_key("DuplicateKey\00") : !llvm.array<13 x i8>
   llvm.mlir.global internal thread_local @strict_power_base(0 : i64) : i64
   llvm.mlir.global internal thread_local @strict_power_exponent(0 : i64) : i64
@@ -10072,19 +10073,29 @@
     %one = arith.constant 1 : i64
     %terminator = arith.constant 0 : i8
     %zero = arith.constant 0.0 : f64
-    %a = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr
-    %negativeStart = arith.cmpf olt, %start, %zero : f64
-    %startOrZero = arith.select %negativeStart, %zero, %start : f64
-    %negativeCount = arith.cmpf olt, %length, %zero : f64
-    %countOrZero = arith.select %negativeCount, %zero, %length : f64
+    %single = arith.constant 1.0 : f64
     %textLength = func.call @strict_text_length(%text) : (f64) -> f64
-    %beyond = arith.cmpf ogt, %startOrZero, %textLength : f64
-    %clampedStart = arith.select %beyond, %textLength, %startOrZero : f64
-    %rest = arith.subf %textLength, %clampedStart : f64
-    %tooLong = arith.cmpf ogt, %countOrZero, %rest : f64
-    %clampedCount = arith.select %tooLong, %rest, %countOrZero : f64
-    %offset = arith.fptosi %clampedStart : f64 to i64
-    %count = arith.fptosi %clampedCount : f64 to i64
+    %negativeStart = arith.cmpf olt, %start, %zero : f64
+    %fromEnd = arith.addf %textLength, %start : f64
+    %first = arith.select %negativeStart, %fromEnd, %start : f64
+    %last = arith.addf %first, %length : f64
+    %beforeText = arith.cmpf olt, %first, %zero : f64
+    %negativeCount = arith.cmpf olt, %length, %zero : f64
+    %pastEnd = arith.cmpf ogt, %last, %textLength : f64
+    %isSingle = arith.cmpf oeq, %length, %single : f64
+    %isIndex = arith.andi %negativeStart, %isSingle : i1
+    %outsideStart = arith.ori %beforeText, %negativeCount : i1
+    %outsideEnd = arith.ori %pastEnd, %isIndex : i1
+    %outside = arith.ori %outsideStart, %outsideEnd : i1
+    cf.cond_br %outside, ^outOfRange, ^inside
+  ^outOfRange:
+    %errorName = llvm.mlir.addressof @strict_substring_out_of_range : !llvm.ptr
+    %error = func.call @strict_error_named(%errorName) : (!llvm.ptr) -> f64
+    return %error : f64
+  ^inside:
+    %a = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr
+    %offset = arith.fptosi %first : f64 to i64
+    %count = arith.fptosi %length : f64 to i64
     %from = llvm.getelementptr %a[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %isCharacter = arith.cmpi eq, %count, %one : i64
     cf.cond_br %isCharacter, ^character, ^copy

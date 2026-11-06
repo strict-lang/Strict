@@ -41,7 +41,7 @@ to Text
 	Json(" 82 ") to Text is "82"
 	Json("\"\\u00e9\\ud83d\\ude00\"") to Text is "é😀"
 	let start = Skip(0)
-	text.Substring(start, 1) is "\"" then Unquoted(start) else text.Trim
+	text.StartsWith("\"", start) then Unquoted(start) else text.Trim
 to Number
 	Json(" 82 ") to Number is 82
 	text.Trim to Number

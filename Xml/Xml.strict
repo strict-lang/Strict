@@ -84,7 +84,7 @@ NextTag(position Number) Number
 	Xml("<!<><A>").NextTag(0) is 4
 	(Xml("<A><?b").NextTag(1) is -1) and (Xml("?<?").NextTag(0) is -1)
 	mutable at = text.IndexOf("<", position)
-	for as long as (at >= 0) and (text.Substring(at + 1, 1) is in ("?", "!"))
+	for as long as (at >= 0) and (text.StartsWith("<?", at) or text.StartsWith("<!", at))
 		let found = text.IndexOf(text.StartsWith("<!--", at) then "-->" else ">", at)
 		at = found < 0 then -1 else text.IndexOf("<", found + 1)
 	at

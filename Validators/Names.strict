@@ -44,8 +44,8 @@ Iterated(line Text) Texts
 	if (line.StartsWith("\t") is false) or (code.StartsWith("for ") is false) or code.StartsWith("for as long as ")
 		return List(Text)
 	if StatementParser(Tokenizer(code).Tokens).IsNamed is false
-		return List(Text) + code.Substring(4, code.Length)
-	let parts = Callees.Parts(code.Substring(code.IndexOf(" in ") + 4, code.Length))
+		return List(Text) + code.Substring(4, code.Length - 4)
+	let parts = Callees.Parts(code.Substring(code.IndexOf(" in ") + 4, code.Length - code.IndexOf(" in ") - 4))
 	parts.Length > 1 then parts else List(Text)
 Merged(at Number, names Texts, iterables Texts) Text
 	Nested.Merged(1, List(Text), List(Text)) is "for first, second in 2, first + 1"

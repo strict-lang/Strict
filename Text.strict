@@ -116,10 +116,16 @@ LastIndexOf(text Text) Number
 	-1
 Substring(start Number, length Number) Text
 	"hello".Substring(1, 3) is "ell"
-	"hello".Substring(3, 10) is "lo"
-	for Range(start, start + length)
-		if index < Length
-			characters(index)
+	"abcd".Substring(-2, 2) is "cd"
+	constant SubstringOutOfRange = Error
+	"abcd".Substring(0, 5) is SubstringOutOfRange
+	"abcd".Substring(-1, 2) is SubstringOutOfRange
+	"abcd".Substring(-1, 1) is SubstringOutOfRange
+	let offset = start < 0 then Length + start else start
+	if (offset < 0) or (length < 0) or (offset + length > Length) or ((start < 0) and (length is 1))
+		return SubstringOutOfRange
+	for Range(offset, offset + length)
+		characters(index)
 Replace(searchFor Text, replaceWith Text) Text
 	"a,b,c".Replace(",", ";") is "a;b;c"
 	"abc".Replace(",", ";") is "abc"

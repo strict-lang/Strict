@@ -12,6 +12,8 @@ constant Pixel = TypeEntry("Strict/Pixel", (MemberEntry("Red", "Strict/Byte", Li
 constant NewPixel = Invocation(InstructionEntry.Invoke(1, ("Strict/Pixel", "from", "Strict/Pixel", "Red", "Green"), 0, -1), (VmValue.OfNumber(127.5), VmValue.OfNumber(3)), VmValue.None)
 constant NewSingle = Invocation(InstructionEntry.Invoke(1, ("Strict/Single", "from", "Strict/Single", "width"), 0, -1), List(VmValue) + VmValue.OfNumber(0.1), VmValue.None)
 constant Pairs = VmValue.OfList(VmValue.OfList(VmValue.OfNumber(1), VmValue.OfNumber(3)), VmValue.OfList(VmValue.OfNumber(2), VmValue.OfNumber(4)))
+constant BcTwo = (VmValue.OfText("bc"), VmValue.OfNumber(2))
+constant Cut = VmValue.OfError("SubstringOutOfRange")
 constant TextMethods = ("StartsWith", "IndexOf", "LastIndexOf", "Substring", "Upper", "Lower", "Capitalize", "Trim", "TrimStart", "TrimEnd")
 Result(call Invocation) VmValue
 	(Shapes.Result(NewShape).items.First.number is 3) and (Shapes.Result(Invocation.Parsing).number is 5)
@@ -100,15 +102,15 @@ Queried(name Text, instance VmValue, call Invocation) VmValue
 		return VmValue.OfNumber(instance.items.Index(call.Arguments.First))
 	Foreign(call, types, folder).Called
 Searched(name Text, text Text, arguments List(VmValue)) VmValue
-	Shapes.Searched("StartsWith", "abc", (VmValue.OfText("bc"), VmValue.OfNumber(1))).IsTrue
-	Shapes.Searched("Substring", "abc", (VmValue.OfNumber(1), VmValue.OfNumber(2))).text is "bc"
-	Shapes.Searched("IndexOf", "abc", List(VmValue) + VmValue.OfText("c")).number is 2
+	Shapes.Searched("StartsWith", "abbc", BcTwo).IsTrue and (Shapes.Searched("IndexOf", "bcbcbc", BcTwo).number is 2)
+	(Shapes.Searched("Substring", "abc", BcTwo).text is "ab") and (Shapes.Searched("Substring", "a", BcTwo) is Cut)
 	if arguments.Length is 0
 		return Edited(name, text)
 	let first = arguments.First
 	let second = arguments.Length > 1 then arguments(1).number else 0
 	if name is "Substring"
-		return VmValue.OfText(text.Substring(first.number, second))
+		let part = text.Substring(first.number, second)
+		return part is Error then Cut else VmValue.OfText(part)
 	if name is "StartsWith"
 		return VmValue.OfBoolean(text.StartsWith(first.text, second))
 	VmValue.OfNumber(name is "IndexOf" then text.IndexOf(first.text, second) else text.LastIndexOf(first.text))
