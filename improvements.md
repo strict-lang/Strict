@@ -26,7 +26,6 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - `strict test Compiler/NativeBuild.strict` and `Compiler/DeviceBuild.strict` stop with GarbageCollectionExceedsTenth (NativeBuild in the Mlir tests, DeviceBuild after Built line 57; each method alone passes): the VM collects too often while combining the runtime texts.
 - Qwen3Benchmark stops with GarbageCollectionExceedsTenth on long prompts (Qwen3-Coder 30B, repeats 137 or 200) in a plain build, release builds only warn.
 - MossImage: the same seed gives a different image than the build of 2026-11-04 11:41 and loading Moss with its LoRAs got slower (7.2 to about 9 s); not from the C loop changes of 31ed107f (reverting them gives the same image and time), find the commit and check it is intended.
-- Native tests of `Graphics3D/BillboardBatch.strict` (line 7) and `Skybox.strict` (line 8) stop with `Error: WindowNotOpen`: the inlined `Created` returns its Error from the test method instead of comparing it with `is Error` (the VM passes, also before 2026-11-05).
 - `strict test Compiler native` and `strict test NeuralNetworks native --no-recursive` (sometimes also `Expressions`, DeltaEngine's `RealTimeStrategy`) stop with GarbageCollectionExceedsTenth in their frontend or emission (the plain built NativeCompiler, also before 2026-11-05); single files build and pass. The heap reaches 4-20 GB with under 300 MB live before the first big collection: the parallel emission allocates without collecting.
 
 ## Next
