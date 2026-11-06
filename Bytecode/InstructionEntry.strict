@@ -21,17 +21,15 @@ Integers(names BinaryNames) Numbers
 	for payload
 		integers = integers + (value < 0 then -2 * value - 1 else 2 * value)
 	line > 0 then integers + line else integers
-Print(text Text, output = -1) InstructionEntry
+Print(text Text) InstructionEntry
 	InstructionEntry.Print("b").payload is (-1, 0)
-	InstructionEntry.Print("b", 3).payload is (3, 0)
-	InstructionEntry(InstructionType.Print, text, (output, 0))
+	InstructionEntry(InstructionType.Print, text, (-1, 0))
 Return(register Number) InstructionEntry
 	InstructionEntry.Return(3).payload is List(Number) + 3
 	InstructionEntry(InstructionType.Return, List(Text), register)
-PrintValue(prefix Text, register Number, isText Boolean, output = -1) InstructionEntry
+PrintValue(prefix Text, register Number, isText Boolean) InstructionEntry
 	InstructionEntry.PrintValue("a", 2, true).payload is (-1, 1, 2, 1)
-	InstructionEntry.PrintValue("a", 2, true, 4).payload is (4, 1, 2, 1)
-	InstructionEntry(InstructionType.Print, prefix, (output, 1, register, (isText then 1 else 0)))
+	InstructionEntry(InstructionType.Print, prefix, (-1, 1, register, (isText then 1 else 0)))
 LoadNumber(register Number, number Number) InstructionEntry
 	InstructionEntry.LoadNumber(2, 7).payload is (2, 1, 7)
 	InstructionEntry.LoadNumber(0, 1.5).payload is (0, 3, 0, 0, 0, 0, 0, 0, 248, 63)

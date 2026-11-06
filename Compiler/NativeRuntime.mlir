@@ -20,6 +20,15 @@
     %flushed = llvm.call @fflush(%null) : (!llvm.ptr) -> i32
     return
   }
+  // where log output goes: 0 is the console, else a socket handle (the caller of a resident strict server request)
+  llvm.mlir.global internal @strict_output(0 : i64) : i64
+  func.func private @strict_socket_output(%self: f64, %socket: f64) -> f64 {
+    %slot = llvm.mlir.addressof @strict_output : !llvm.ptr
+    %handle = arith.fptosi %socket : f64 to i64
+    llvm.store %handle, %slot : i64, !llvm.ptr
+    %zero = arith.constant 0.0 : f64
+    return %zero : f64
+  }
   func.func private @strict_log(%format: !llvm.ptr, %text: !llvm.ptr) {
     %first = llvm.load %format : !llvm.ptr -> i8
     %secondAddress = llvm.getelementptr %format[1] : (!llvm.ptr) -> !llvm.ptr, i8
@@ -35,8 +44,17 @@
     %skip = arith.andi %isBare, %isEmpty : i1
     cf.cond_br %skip, ^done, ^print
   ^print:
+    %outputSlot = llvm.mlir.addressof @strict_output : !llvm.ptr
+    %output = llvm.load %outputSlot : !llvm.ptr -> i64
+    %console = arith.constant 0 : i64
+    %isConsole = arith.cmpi eq, %output, %console : i64
+    cf.cond_br %isConsole, ^console, ^routed
+  ^console:
     %printed = llvm.call @printf(%format, %text) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr) -> i32
     func.call @strict_flush() : () -> ()
+    cf.br ^done
+  ^routed:
+    func.call @strict_log_handle(%output, %format, %text) : (i64, !llvm.ptr, !llvm.ptr) -> ()
     cf.br ^done
   ^done:
     return

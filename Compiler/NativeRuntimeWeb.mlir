@@ -1259,15 +1259,8 @@
     llvm.call @exit(%failure) : (i32) -> ()
     return
   }
-  // writes a log line to handle (the socket of a resident server request), the console when it is 0
-  func.func private @strict_log_to(%handle: f64, %format: !llvm.ptr, %text: !llvm.ptr) {
-    %console = arith.constant 0.0 : f64
-    %isConsole = arith.cmpf oeq, %handle, %console : f64
-    cf.cond_br %isConsole, ^console, ^handle
-  ^console:
-    func.call @strict_log(%format, %text) : (!llvm.ptr, !llvm.ptr) -> ()
-    return
-  ^handle:
-    func.call @strict_log(%format, %text) : (!llvm.ptr, !llvm.ptr) -> ()
+  // writes a formatted log line to handle, the socket strict_log routes to
+  func.func private @strict_log_handle(%handle: i64, %format: !llvm.ptr, %text: !llvm.ptr) {
+    %printed = llvm.call @printf(%format, %text) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr) -> i32
     return
   }

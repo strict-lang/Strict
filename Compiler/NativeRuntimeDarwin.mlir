@@ -1887,15 +1887,8 @@
     llvm.call @_exit(%failure) : (i32) -> ()
     return
   }
-  // writes a log line to handle (the socket of a resident server request), the console when it is 0
-  func.func private @strict_log_to(%handle: f64, %format: !llvm.ptr, %text: !llvm.ptr) {
-    %console = arith.constant 0.0 : f64
-    %isConsole = arith.cmpf oeq, %handle, %console : f64
-    cf.cond_br %isConsole, ^console, ^handle
-  ^console:
-    func.call @strict_log(%format, %text) : (!llvm.ptr, !llvm.ptr) -> ()
-    return
-  ^handle:
+  // writes a formatted log line to handle, the socket strict_log routes to
+  func.func private @strict_log_handle(%handle: i64, %format: !llvm.ptr, %text: !llvm.ptr) {
     %null = llvm.mlir.zero : !llvm.ptr
     %none = arith.constant 0 : i64
     %measured = llvm.call @snprintf(%null, %none, %format, %text) vararg(!llvm.func<i32 (ptr, i64, ptr, ...)>) : (!llvm.ptr, i64, !llvm.ptr, !llvm.ptr) -> i32
@@ -1904,7 +1897,7 @@
     %size = arith.addi %length, %one : i64
     %buffer = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
     %formatted = llvm.call @snprintf(%buffer, %size, %format, %text) vararg(!llvm.func<i32 (ptr, i64, ptr, ...)>) : (!llvm.ptr, i64, !llvm.ptr, !llvm.ptr) -> i32
-    %descriptor = arith.fptosi %handle : f64 to i32
+    %descriptor = arith.trunci %handle : i64 to i32
     %result = llvm.call @write(%descriptor, %buffer, %length) : (i32, !llvm.ptr, i64) -> i64
     return
   }

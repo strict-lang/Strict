@@ -35,5 +35,8 @@ Exchanged(client Number, accepted Number) Number
 	let received = Socket.Receive(accepted, 3)
 	if (received is Error) or (received is not (1, 2, 3))
 		return 5
-	Logger(logger, output = accepted).Log("hi")
-	Socket.Pending(client) is 3 and (Socket.Receive(client, 3) is (104, 105, 10)) then 0 else 6
+	Socket.Output(accepted)
+	logger.Log("a")
+	Socket.Output(0)
+	let logged = Socket.Pending(client) is 2 then Socket.Receive(client, 2) else List(Number)
+	logged is (Character.LowercaseA, Character.NewLine.number) then 0 else 6

@@ -140,15 +140,16 @@ STRICT_EXPORT double Socket_Accept(double self, double server)
 	return (double)handle;
 }
 
-STRICT_EXPORT double Socket_Waiting(double self, double server)
+STRICT_EXPORT double Socket_Waiting(double self, double server, double seconds)
 {
 	if ((int)server <= 0)
 		return strict_fail("InvalidSocket");
 	fd_set readable;
 	FD_ZERO(&readable);
 	FD_SET((int)server, &readable);
-	struct timeval none = {0, 0};
-	return select((int)server + 1, &readable, 0, 0, &none) > 0 ? 1 : 0;
+	double wait = seconds > 0 ? seconds : 0;
+	struct timeval limit = {(long)wait, (long)((wait - (long)wait) * 1000000)};
+	return select((int)server + 1, &readable, 0, 0, &limit) > 0 ? 1 : 0;
 }
 
 STRICT_EXPORT double Socket_Send(double self, double socket, double bytes)

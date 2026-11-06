@@ -82,16 +82,15 @@ Reads(entry InstructionEntry) Numbers
 		registers.Add(entry.payload(value))
 	registers
 ReadPositions(entry InstructionEntry) Numbers
-	Twice.ReadPositions(AddBoth) is (1, 2) and (Twice.ReadPositions(Indexed) is List(Number) + 1)
+	Twice.ReadPositions(AddBoth) is (1, 2)
+	Twice.ReadPositions(Indexed) is List(Number) + 1
 	Twice.ReadPositions(InstructionEntry.PrintValue("a", 0, false)) is (2)
-	Twice.ReadPositions(InstructionEntry.PrintValue("a", 0, false, 4)) is (0, 2) and (Twice.ReadPositions(InstructionEntry.Print("b", 3)) is (0))
 	let kind = entry.kind
 	if kind > InstructionType.StoreSeparator and kind < InstructionType.BinaryOperatorsSeparator
 		return (1, 2)
 	if kind is InstructionType.Invoke
 		return InvokeReads(entry)
-	let isOutput = kind is InstructionType.Print then entry.payload(0) >= 0 else false
-	let leading = (kind is in FirstRegisterKinds) or isOutput then List(Number) + 0 else List(Number)
+	let leading = kind is in FirstRegisterKinds then List(Number) + 0 else List(Number)
 	let flagged = kind is in (InstructionType.Print, InstructionType.LoopBegin) then entry.payload(1) is 1 else false
 	let trailing = flagged then leading + 2 else leading
 	kind is in (InstructionType.FieldLoad, InstructionType.IndexCall) then List(Number) + 1 else trailing

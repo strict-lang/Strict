@@ -12,8 +12,6 @@ constant FilterBody = BodyParser("Count Number", "\tfor 3", "\t\tif index > 0", 
 constant ElseBody = BodyParser("Run", "\tif 1 > 2", "\t\t3", "\telse", "\t\t4").Block(1, 1)
 constant ReturnElse = BodyParser("Run", "\tif 1 > 2", "\t\treturn 3", "\telse", "\t\treturn 4").Block(1, 1)
 constant InRun = CodeBlock.Empty.Declare(CodeBlock.ErrorMarker, "Run")
-constant Logging = CodeBlock.Empty.Declare("logger", "Logger")
-constant Logger = SyntaxNode("Identifier", "logger")
 constant CopiedBody = BodyParser("Run", "\tmutable copy = (1)", "\tlet saved = copy", "\tcopy.Add(1)").Block(1, 1)
 Generate(body SyntaxNode, scope Scope, returnType Text) CodeBlock
 	Plain.Generate(BodyParser("Run Number", "\tx + 2").Block(1, 1), NoScope, "None").instructions.Length is 4
@@ -29,8 +27,8 @@ Generate(body SyntaxNode, scope Scope, returnType Text) CodeBlock
 		return block
 	block.Add(InstructionEntry.Return(block.register is 0 then 0 else block.Result))
 Production(body SyntaxNode, block CodeBlock) SyntaxNode
-	Plain.Log(ValueCodegen.NoNode, SyntaxNode("Binary", "+", (ValueCodegen.Hi, NoNode)), InRun).instructions.Length is 2
-	Plain.Log(ValueCodegen.NoNode, SyntaxNode("Binary", "+", (One, NoNode)), InRun).instructions.Length is 4
+	Plain.Log(SyntaxNode("Binary", "+", (ValueCodegen.Hi, NoNode)), InRun).instructions.Length is 2
+	Plain.Log(SyntaxNode("Binary", "+", (One, NoNode)), InRun).instructions.Length is 4
 	Plain.Production(LoopHoisting.Scaling, CodeBlock.Empty).children(0).Kind is "Declaration"
 	FileCompiler.Unoptimized.methods.Production(LoopHoisting.Scaling, CodeBlock.Empty).children(0).Kind is "For"
 	Plain.Generate(BodyParser("Run Number", "\tx + 2").Block(1, 1), NoScope, "None").instructions.Last.payload is (2)
@@ -79,7 +77,7 @@ Statement(node SyntaxNode, previous CodeBlock, hasElse Boolean) CodeBlock
 	if node.Kind is "For"
 		return LoopCodegen(MethodCodegen(values)).Loop(node, block, "")
 	if (node.Kind is "MethodCall") and (node.text is "Log")
-		return Log(node.children(0), node.children(1), block)
+		return Log(node.children(1), block)
 	let generated = ErrorCodegen(values).Statement(node, block)
 	(node.Kind is "Return") and node.HasValue then generated.Add(InstructionEntry.Return(generated.Result)) else generated
 Assignment(node SyntaxNode, block CodeBlock) CodeBlock
@@ -140,12 +138,12 @@ StoreConstant(load InstructionEntry, name Text) InstructionEntry
 	let texts = load.texts + name
 	InstructionEntry(InstructionType.StoreConstantToVariable, texts, LoadedValue(load) + (-1 - load.texts.Length) + 0)
 LoadedValue(load InstructionEntry) Numbers
-	Plain.Log(ValueCodegen.NoNode, SyntaxNode("Binary", "+", (ValueCodegen.Hi, ValueCodegen.Hi)), InRun).instructions.Last.texts is ("Hi")
-	Plain.Log(ValueCodegen.NoNode, SyntaxNode("Binary", "+", (ValueCodegen.Hi, ValueCodegen.Hi)), InRun).instructions.Last.payload(3) is 1
-	Plain.Log(ValueCodegen.NoNode, One, InRun).instructions.Last.payload is (-1, 1, 0, 0)
-	Plain.Log(ValueCodegen.NoNode, SyntaxNode("List", "+", (ValueCodegen.Hi, One)), InRun).instructions.Last.texts is not ("Hi")
-	Plain.Log(ValueCodegen.NoNode, SyntaxNode("Binary", "-", (ValueCodegen.Hi, One)), InRun).instructions.Last.texts is not ("Hi")
-	Plain.Log(ValueCodegen.NoNode, SyntaxNode("Binary", "+", (One, One)), InRun).instructions.Last.texts is not ("1")
+	Plain.Log(SyntaxNode("Binary", "+", (ValueCodegen.Hi, ValueCodegen.Hi)), InRun).instructions.Last.texts is ("Hi")
+	Plain.Log(SyntaxNode("Binary", "+", (ValueCodegen.Hi, ValueCodegen.Hi)), InRun).instructions.Last.payload(3) is 1
+	Plain.Log(One, InRun).instructions.Last.payload is (-1, 1, 0, 0)
+	Plain.Log(SyntaxNode("List", "+", (ValueCodegen.Hi, One)), InRun).instructions.Last.texts is not ("Hi")
+	Plain.Log(SyntaxNode("Binary", "-", (ValueCodegen.Hi, One)), InRun).instructions.Last.texts is not ("Hi")
+	Plain.Log(SyntaxNode("Binary", "+", (One, One)), InRun).instructions.Last.texts is not ("1")
 	Plain.LoadedValue(InstructionEntry.LoadNumber(2, 7)) is (1, 7)
 	mutable content = List(Number) + load.payload(1)
 	for Range(2, load.payload.Length)
@@ -171,21 +169,14 @@ Else(node SyntaxNode, block CodeBlock, hasElse Boolean) CodeBlock
 	let jumped = block.Add(InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, block.nextId)).WithNextId
 	let inner = node.Kind is "ElseIf" then Conditional(node, jumped, hasElse, "") else Body(node.children.Last, jumped)
 	inner.Add(InstructionEntry.Jump(InstructionType.JumpEnd, block.nextId))
-Log(receiver SyntaxNode, argument SyntaxNode, block CodeBlock) CodeBlock
-	Plain.Log(ValueCodegen.NoNode, ValueCodegen.Hi, CodeBlock.Empty).instructions(0).texts is ("Hi")
-	Plain.Log(ValueCodegen.NoNode, SyntaxNode("Number", "1"), CodeBlock.Empty).instructions.Length is 2
-	Plain.Log(ValueCodegen.NoNode, SyntaxNode("Text", "\"\""), CodeBlock.Empty).instructions.Length is 0
-	if (argument.Kind is "Text") and (argument.Unquoted is "")
-		return block
-	let output = Output(receiver, block)
-	let target = output.instructions.Length > block.instructions.Length then output.Result else -1
+Log(argument SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Log(SyntaxNode("Text", "\"Hi\""), CodeBlock.Empty).instructions(0).texts is ("Hi")
+	Plain.Log(SyntaxNode("Number", "1"), CodeBlock.Empty).instructions.Length is 2
+	Plain.Log(SyntaxNode("Text", "\"\""), CodeBlock.Empty).instructions.Length is 0
 	if argument.Kind is "Text"
-		return output.Add(InstructionEntry.Print(argument.Unquoted, target))
+		return argument.Unquoted is "" then block else block.Add(InstructionEntry.Print(argument.Unquoted))
 	let hasPrefix = (argument.Kind is "Binary") and (argument.text is "+") and (argument.children(0).Kind is "Text")
-	let printed = ConversionCodegen(values).Converted(hasPrefix then argument.children(1) else argument, "Text", output)
-	let generated = values.Expression(printed, output)
-	let isText = values.TypeOf(printed, generated) is "Text"
-	generated.Add(InstructionEntry.PrintValue(hasPrefix then argument.children(0).Unquoted else "", generated.Result, isText, target))
-Output(receiver SyntaxNode, block CodeBlock) CodeBlock
-	Plain.Output(ValueCodegen.NoNode, CodeBlock.Empty).instructions.Length is 0
-	block
+	let printed = ConversionCodegen(values).Converted(hasPrefix then argument.children(1) else argument, "Text", block)
+	let generated = values.Expression(printed, block)
+	let prefix = hasPrefix then argument.children(0).Unquoted else ""
+	generated.Add(InstructionEntry.PrintValue(prefix, generated.Result, values.TypeOf(printed, generated) is "Text"))

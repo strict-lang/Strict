@@ -176,5 +176,5 @@ Changed(entry InstructionEntry, slots List(VmValue)) VmValue
 	if entry.kind is InstructionType.InvokeRemove
 		return Operations.Removed(slots(entry.payload(1)), slots(entry.payload(0)))
 	if entry.kind is InstructionType.Print
-		return machine.Logged(entry, slots)
+		return machine.Logged(entry.texts(0) + (entry.payload(1) is 1 then slots(entry.payload(2)) to Text else ""))
 	VmValue.None
