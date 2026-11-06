@@ -157,7 +157,7 @@
     %result = func.call @strict_text_concat(%prefix, %name) : (f64, f64) -> f64
     return %result : f64
   }
-  func.func private @strict_directory_files(%self: f64, %path: f64, %pattern: f64) -> f64 {
+  func.func private @strict_directory_files_listed(%self: f64, %path: f64, %pattern: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %four = arith.constant 4.0 : f64
     %size = arith.constant 320 : i64
@@ -262,7 +262,7 @@
   ^done(%result: f64):
     return %result : f64
   }
-  func.func private @strict_directory_directories(%self: f64, %path: f64) -> f64 {
+  func.func private @strict_directory_directories_listed(%self: f64, %path: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %four = arith.constant 4.0 : f64
     %size = arith.constant 320 : i64

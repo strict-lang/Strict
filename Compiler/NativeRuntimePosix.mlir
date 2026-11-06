@@ -163,7 +163,7 @@
     %order = llvm.call @strcasecmp(%leftName, %rightName) : (!llvm.ptr, !llvm.ptr) -> i32
     llvm.return %order : i32
   }
-  func.func private @strict_directory_files(%self: f64, %path: f64, %pattern: f64) -> f64 {
+  func.func private @strict_directory_files_listed(%self: f64, %path: f64, %pattern: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %four = arith.constant 4.0 : f64
     %none = arith.constant 0 : i32
@@ -312,7 +312,7 @@
     %newest = func.call @strict_directory_newest(%path) : (f64) -> f64
     return %newest : f64
   }
-  func.func private @strict_directory_directories(%self: f64, %path: f64) -> f64 {
+  func.func private @strict_directory_directories_listed(%self: f64, %path: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %four = arith.constant 4.0 : f64
     %slotSize = arith.constant 8 : i64

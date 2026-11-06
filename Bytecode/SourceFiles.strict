@@ -70,8 +70,12 @@ Referenced(folder Text) Texts
 	SourceFiles(".").Referenced("./Missing").Length is 0
 	mutable result = List(Mutable(Text))
 	for Directory.Files(folder, "*.strict")
-		result = Added(result, PackagesIn(File(value).ReadLines))
+		result = Added(result, Packages(value))
 	result
+Packages(file Text) Texts
+	SourceFiles(".").Packages("./Bytecode/SourceFiles.strict") is List(Text)
+	constant kind = "packages"
+	Memo.Has(file, kind) then Memo.Texts(file, kind) else Memo.Kept(file, kind, PackagesIn(File(file).ReadLines))
 PackagesIn(lines Texts) Texts
 	SourceFiles(".").PackagesIn("has a Bytecode/X", "Run") is List(Text) + "./Bytecode"
 	mutable result = List(Mutable(Text))
