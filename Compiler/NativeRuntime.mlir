@@ -20,8 +20,8 @@
     %flushed = llvm.call @fflush(%null) : (!llvm.ptr) -> i32
     return
   }
-  // where log output goes: 0 is the console, else a socket handle (the caller of a resident strict server request)
-  llvm.mlir.global internal @strict_output(0 : i64) : i64
+  // where log output of this thread goes: 0 is the console, else a socket handle (the caller of a resident strict server request)
+  llvm.mlir.global internal thread_local @strict_output(0 : i64) : i64
   func.func private @strict_socket_output(%self: f64, %socket: f64) -> f64 {
     %slot = llvm.mlir.addressof @strict_output : !llvm.ptr
     %handle = arith.fptosi %socket : f64 to i64
@@ -367,11 +367,49 @@
     return %fraction : f64
   }
   llvm.mlir.global internal @strict_test_failing(0 : i64) : i64
-  llvm.mlir.global internal @strict_test_version(0 : i64) : i64
-  llvm.mlir.global internal @strict_test_limit(4581421828931458171 : i64) : i64
-  llvm.mlir.global internal @strict_test_deadline(0 : i64) : i64
-  llvm.mlir.global internal @strict_test_place(0 : i64) : i64
   llvm.mlir.global internal @strict_test_watching(0 : i64) : i64
+  // timed test state of each thread running tests (deadline, version, place, limit, shift in 64 bytes), the watchdog
+  // scans all claimed slots; a pool job uses the slot of the thread that forked it (strict_test_pooled)
+  llvm.mlir.global internal @strict_test_slots(dense<0> : tensor<2048xi64>) {alignment = 64 : i64} : !llvm.array<2048 x i64>
+  llvm.mlir.global internal @strict_test_claimed(0 : i64) : i64
+  llvm.mlir.global internal thread_local @strict_test_slot(0 : i64) : i64
+  llvm.mlir.global internal @strict_test_pooled(0 : i64) : i64
+  func.func private @strict_test_mine(%claim: i1) -> !llvm.ptr {
+    %zero = arith.constant 0 : i64
+    %mineSlot = llvm.mlir.addressof @strict_test_slot : !llvm.ptr
+    %mine = llvm.load %mineSlot : !llvm.ptr -> i64
+    %has = arith.cmpi ne, %mine, %zero : i64
+    cf.cond_br %has, ^done(%mine : i64), ^borrow
+  ^borrow:
+    %insideSlot = llvm.mlir.addressof @strict_pool_inside : !llvm.ptr
+    %inside = llvm.load %insideSlot : !llvm.ptr -> i64
+    %pooledSlot = llvm.mlir.addressof @strict_test_pooled : !llvm.ptr
+    %pooled = llvm.load %pooledSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %isJob = arith.cmpi ne, %inside, %zero : i64
+    %hasPooled = arith.cmpi ne, %pooled, %zero : i64
+    %borrowed = arith.andi %isJob, %hasPooled : i1
+    cf.cond_br %borrowed, ^done(%pooled : i64), ^fresh
+  ^fresh:
+    cf.cond_br %claim, ^claimed, ^done(%zero : i64)
+  ^claimed:
+    %one = arith.constant 1 : i64
+    %claimedSlot = llvm.mlir.addressof @strict_test_claimed : !llvm.ptr
+    %index = llvm.atomicrmw add %claimedSlot, %one acq_rel : !llvm.ptr, i64
+    %capacity = arith.constant 256 : i64
+    %fits = arith.cmpi slt, %index, %capacity : i64
+    cf.cond_br %fits, ^take, ^done(%zero : i64)
+  ^take:
+    %words = arith.constant 8 : i64
+    %word = arith.muli %index, %words : i64
+    %slots = llvm.mlir.addressof @strict_test_slots : !llvm.ptr
+    %slot = llvm.getelementptr %slots[%word] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %bits = llvm.ptrtoint %slot : !llvm.ptr to i64
+    llvm.store %bits, %mineSlot : i64, !llvm.ptr
+    cf.br ^done(%bits : i64)
+  ^done(%found: i64):
+    %result = llvm.inttoptr %found : i64 to !llvm.ptr
+    return %result : !llvm.ptr
+  }
   llvm.mlir.global internal constant @strict_test_timeout("Test failed: %s\0A  got: TestDurationMustNotExceedHundredMilliseconds: unit test exceeded 100 ms; use Slow(ReturnType) for explicit functional tests\0A\00") : !llvm.array<148 x i8>
   llvm.mlir.global internal constant @strict_test_unavailable("Test failed: %s\0A  got: TestBudgetWatchdogUnavailable: cannot enforce the unit-test deadline on this platform\0A\00") : !llvm.array<110 x i8>
   func.func private @strict_test_failed(%place: i64, %unavailable: i1) {
@@ -433,52 +471,52 @@
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %zeroFloat = arith.constant 0.0 : f64
-    %deadlineSlot = llvm.mlir.addressof @strict_test_deadline : !llvm.ptr
+    %name = func.call @strict_ptr(%place) : (f64) -> !llvm.ptr
+    %nameBits = llvm.ptrtoint %name : !llvm.ptr to i64
+    %claim = arith.constant true
+    %deadlineSlot = func.call @strict_test_mine(%claim) : (i1) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %missing = llvm.icmp "eq" %deadlineSlot, %null : !llvm.ptr
+    cf.cond_br %missing, ^failed, ^claimed
+  ^claimed:
+    %versionSlot = llvm.getelementptr %deadlineSlot[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %placeSlot = llvm.getelementptr %deadlineSlot[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %limitSlot = llvm.getelementptr %deadlineSlot[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %shiftSlot = llvm.getelementptr %deadlineSlot[4] : (!llvm.ptr) -> !llvm.ptr, i64
     %previous = llvm.load %deadlineSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
     %armed = arith.cmpi ne, %previous, %zero : i64
     cf.cond_br %armed, ^reused, ^fresh
   ^reused:
     %previousUntil = arith.bitcast %previous : i64 to f64
-    %limitSlot = llvm.mlir.addressof @strict_test_limit : !llvm.ptr
     %limitBits = llvm.load %limitSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
     %budget = arith.bitcast %limitBits : i64 to f64
     %previousShifted = arith.subf %previousUntil, %budget : f64
-    %reusedShiftSlot = llvm.mlir.addressof @strict_test_shift : !llvm.ptr
-    %reusedShift = llvm.load %reusedShiftSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> f64
+    %reusedShift = llvm.load %shiftSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> f64
     %previousStart = arith.subf %previousShifted, %reusedShift : f64
     return %previousStart : f64
   ^fresh:
     %noShift = arith.constant 0.0 : f64
-    %shiftSlot = llvm.mlir.addressof @strict_test_shift : !llvm.ptr
     llvm.store %noShift, %shiftSlot atomic release {alignment = 8 : i64} : f64, !llvm.ptr
-    %freshLimitSlot = llvm.mlir.addressof @strict_test_limit : !llvm.ptr
     %freshLimit = arith.bitcast %limit : f64 to i64
-    llvm.store %freshLimit, %freshLimitSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    llvm.store %freshLimit, %limitSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     llvm.store %zero, %deadlineSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
-    %versionSlot = llvm.mlir.addressof @strict_test_version : !llvm.ptr
     %version = llvm.atomicrmw add %versionSlot, %one acq_rel : !llvm.ptr, i64
-    %name = func.call @strict_ptr(%place) : (f64) -> !llvm.ptr
-    %nameBits = llvm.ptrtoint %name : !llvm.ptr to i64
-    %placeSlot = llvm.mlir.addressof @strict_test_place : !llvm.ptr
     llvm.store %nameBits, %placeSlot atomic monotonic {alignment = 8 : i64} : i64, !llvm.ptr
     %slow = arith.cmpf une, %isSlow, %zeroFloat : f64
     cf.cond_br %slow, ^untimed, ^watch
   ^watch:
     func.call @strict_test_collected() : () -> ()
     %watchingSlot = llvm.mlir.addressof @strict_test_watching : !llvm.ptr
-    %watching = llvm.load %watchingSlot : !llvm.ptr -> i64
+    %watching = llvm.atomicrmw xchg %watchingSlot, %one acq_rel : !llvm.ptr, i64
     %active = arith.cmpi ne, %watching, %zero : i64
     cf.cond_br %active, ^arm, ^spawn
   ^spawn:
     %spawned = func.call @strict_test_spawn() : () -> i1
-    cf.cond_br %spawned, ^remember, ^failed
+    cf.cond_br %spawned, ^arm, ^failed
   ^failed:
     %unavailable = arith.constant true
     func.call @strict_test_failed(%nameBits, %unavailable) : (i64, i1) -> ()
     cf.br ^untimed
-  ^remember:
-    llvm.store %one, %watchingSlot : i64, !llvm.ptr
-    cf.br ^arm
   ^arm:
     %now = func.call @strict_clock() : () -> f64
     %until = arith.addf %now, %limit : f64
@@ -492,27 +530,36 @@
   func.func private @strict_testbudget_finished(%self: f64, %started: f64) -> f64 {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
-    %versionSlot = llvm.mlir.addressof @strict_test_version : !llvm.ptr
+    %claim = arith.constant false
+    %deadlineSlot = func.call @strict_test_mine(%claim) : (i1) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %missing = llvm.icmp "eq" %deadlineSlot, %null : !llvm.ptr
+    %unshifted = arith.constant 0.0 : f64
+    cf.cond_br %missing, ^done(%unshifted : f64), ^timed
+  ^timed:
+    %versionSlot = llvm.getelementptr %deadlineSlot[1] : (!llvm.ptr) -> !llvm.ptr, i64
     %version = llvm.atomicrmw add %versionSlot, %one acq_rel : !llvm.ptr, i64
-    %deadlineSlot = llvm.mlir.addressof @strict_test_deadline : !llvm.ptr
     %bits = llvm.atomicrmw xchg %deadlineSlot, %zero acq_rel : !llvm.ptr, i64
     %now = func.call @strict_clock() : () -> f64
     %until = arith.bitcast %bits : i64 to f64
     %active = arith.cmpi ne, %bits, %zero : i64
     %over = arith.cmpf ogt, %now, %until : f64
     %failed = arith.andi %active, %over : i1
-    cf.cond_br %failed, ^failed, ^done
+    cf.cond_br %failed, ^failed, ^shifted
   ^failed:
-    %placeSlot = llvm.mlir.addressof @strict_test_place : !llvm.ptr
+    %placeSlot = llvm.getelementptr %deadlineSlot[2] : (!llvm.ptr) -> !llvm.ptr, i64
     %place = llvm.load %placeSlot : !llvm.ptr -> i64
     %unavailable = arith.constant false
     func.call @strict_test_failed(%place, %unavailable) : (i64, i1) -> ()
-    cf.br ^done
-  ^done:
-    %shiftSlot = llvm.mlir.addressof @strict_test_shift : !llvm.ptr
+    cf.br ^shifted
+  ^shifted:
+    %shiftSlot = llvm.getelementptr %deadlineSlot[4] : (!llvm.ptr) -> !llvm.ptr, i64
     %shift = llvm.load %shiftSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> f64
-    %passed = arith.subf %now, %started : f64
-    %seconds = arith.subf %passed, %shift : f64
+    cf.br ^done(%shift : f64)
+  ^done(%moved: f64):
+    %ended = func.call @strict_clock() : () -> f64
+    %passed = arith.subf %ended, %started : f64
+    %seconds = arith.subf %passed, %moved : f64
     %thousand = arith.constant 1000.0 : f64
     %elapsed = arith.mulf %seconds, %thousand : f64
     return %elapsed : f64
@@ -520,7 +567,6 @@
   // a shared constant initializes on first use, once per run: its time does not count for the test that first used
   // it (the outermost of nested constants measures, the deadline is held off while it computes and then moves later)
   llvm.mlir.global internal thread_local @strict_test_constants(0 : i64) : i64
-  llvm.mlir.global internal @strict_test_shift(0.0 : f64) : f64
   func.func private @strict_testbudget_entered(%self: f64) -> f64 {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -556,15 +602,26 @@
     %held = arith.constant 1000000.0 : f64
     %moved = arith.subf %seconds, %held : f64
     func.call @strict_test_extended(%moved) : (f64) -> ()
-    %shiftSlot = llvm.mlir.addressof @strict_test_shift : !llvm.ptr
+    %claim = arith.constant false
+    %slot = func.call @strict_test_mine(%claim) : (i1) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %missing = llvm.icmp "eq" %slot, %null : !llvm.ptr
+    cf.cond_br %missing, ^untimed, ^timed
+  ^timed:
+    %shiftSlot = llvm.getelementptr %slot[4] : (!llvm.ptr) -> !llvm.ptr, i64
     %old = llvm.atomicrmw fadd %shiftSlot, %seconds acq_rel : !llvm.ptr, f64
+    cf.br ^untimed
+  ^untimed:
     return %seconds : f64
   }
   // moves the deadline of the running timed test by seconds, nothing when no test is timed
   func.func private @strict_test_extended(%seconds: f64) {
     %zero = arith.constant 0 : i64
-    %deadlineSlot = llvm.mlir.addressof @strict_test_deadline : !llvm.ptr
-    cf.br ^read
+    %claim = arith.constant false
+    %deadlineSlot = func.call @strict_test_mine(%claim) : (i1) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %missing = llvm.icmp "eq" %deadlineSlot, %null : !llvm.ptr
+    cf.cond_br %missing, ^done, ^read
   ^read:
     %bits = llvm.load %deadlineSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
     %armed = arith.cmpi ne, %bits, %zero : i64
@@ -582,31 +639,52 @@
   func.func private @strict_test_watch() {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
-    %versionSlot = llvm.mlir.addressof @strict_test_version : !llvm.ptr
-    %deadlineSlot = llvm.mlir.addressof @strict_test_deadline : !llvm.ptr
-    %placeSlot = llvm.mlir.addressof @strict_test_place : !llvm.ptr
+    %capacity = arith.constant 256 : i64
+    %words = arith.constant 8 : i64
+    %claimedSlot = llvm.mlir.addressof @strict_test_claimed : !llvm.ptr
+    %slots = llvm.mlir.addressof @strict_test_slots : !llvm.ptr
     cf.br ^loop
   ^loop:
     func.call @strict_test_pause() : () -> ()
+    %claimed = llvm.load %claimedSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %used = arith.minsi %claimed, %capacity : i64
+    cf.br ^scan(%zero : i64)
+  ^scan(%index: i64):
+    %more = arith.cmpi slt, %index, %used : i64
+    cf.cond_br %more, ^check, ^loop
+  ^check:
+    %word = arith.muli %index, %words : i64
+    %slot = llvm.getelementptr %slots[%word] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    func.call @strict_test_overdue(%slot) : (!llvm.ptr) -> ()
+    %next = arith.addi %index, %one : i64
+    cf.br ^scan(%next : i64)
+  }
+  func.func private @strict_test_overdue(%deadlineSlot: !llvm.ptr) {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %versionSlot = llvm.getelementptr %deadlineSlot[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %placeSlot = llvm.getelementptr %deadlineSlot[2] : (!llvm.ptr) -> !llvm.ptr, i64
     %version = llvm.load %versionSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
     %bits = llvm.load %deadlineSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
     %active = arith.cmpi ne, %bits, %zero : i64
-    cf.cond_br %active, ^clock, ^loop
+    cf.cond_br %active, ^clock, ^done
   ^clock:
     %until = arith.bitcast %bits : i64 to f64
     %now = func.call @strict_clock() : () -> f64
     %over = arith.cmpf ogt, %now, %until : f64
-    cf.cond_br %over, ^claim, ^loop
+    cf.cond_br %over, ^claim, ^done
   ^claim:
     %place = llvm.load %placeSlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
     %next = arith.addi %version, %one : i64
     %claimed = llvm.cmpxchg %versionSlot, %version, %next acq_rel acquire : !llvm.ptr, i64
     %same = llvm.extractvalue %claimed[1] : !llvm.struct<(i64, i1)>
-    cf.cond_br %same, ^failed, ^loop
+    cf.cond_br %same, ^failed, ^done
   ^failed:
     %unavailable = arith.constant false
     func.call @strict_test_failed(%place, %unavailable) : (i64, i1) -> ()
-    cf.br ^loop
+    cf.br ^done
+  ^done:
+    return
   }
   llvm.mlir.global internal @strict_started(0.0 : f64) : f64
   func.func private @strict_process_elapsed(%self: f64) -> f64 {
@@ -1976,6 +2054,10 @@
     llvm.store %zero, %busySlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     cf.br ^shared(%rest, %helpersWanted : i64, i64)
   ^shared(%start: i64, %helperLimit: i64):
+    %testOwnerSlot = llvm.mlir.addressof @strict_test_slot : !llvm.ptr
+    %testOwner = llvm.load %testOwnerSlot : !llvm.ptr -> i64
+    %testPooledSlot = llvm.mlir.addressof @strict_test_pooled : !llvm.ptr
+    llvm.store %testOwner, %testPooledSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     %jobSlot = llvm.mlir.addressof @strict_pool_job : !llvm.ptr
     %previous = llvm.load %jobSlot : !llvm.ptr -> i64
     %job = arith.addi %previous, %one : i64
@@ -6957,7 +7039,7 @@
     %result = llvm.call @log(%self) : (f64) -> f64
     return %result : f64
   }
-  llvm.mlir.global internal @strict_random_state(0 : i64) : i64
+  llvm.mlir.global internal thread_local @strict_random_state(0 : i64) : i64
   func.func private @strict_number_random(%self: f64) -> f64 {
     %stateAddress = llvm.mlir.addressof @strict_random_state : !llvm.ptr
     %state = llvm.load %stateAddress : !llvm.ptr -> i64
@@ -11762,8 +11844,8 @@
     %result = func.call @strict_boolean(%exists) : (i1) -> f64
     return %result : f64
   }
-  llvm.mlir.global internal @strict_read_paths(0 : i64) : i64
-  llvm.mlir.global internal @strict_read_count(0 : i64) : i64
+  llvm.mlir.global internal thread_local @strict_read_paths(0 : i64) : i64
+  llvm.mlir.global internal thread_local @strict_read_count(0 : i64) : i64
   func.func private @strict_file_noted(%path: f64) {
     %one = arith.constant 1 : i64
     %eight = arith.constant 8 : i64
@@ -11772,7 +11854,6 @@
     %size = arith.addi %length, %one : i64
     %copy = func.call @strict_malloc(%size) : (i64) -> !llvm.ptr
     %copied = llvm.call @memcpy(%copy, %name, %size) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
-    llvm.call @strict_gc_lock() : () -> ()
     %countSlot = llvm.mlir.addressof @strict_read_count : !llvm.ptr
     %count = llvm.load %countSlot : !llvm.ptr -> i64
     %next = arith.addi %count, %one : i64
@@ -11786,7 +11867,6 @@
     %slot = llvm.getelementptr %grown[%count] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.ptr
     llvm.store %copy, %slot : !llvm.ptr, !llvm.ptr
     llvm.store %next, %countSlot : i64, !llvm.ptr
-    llvm.call @strict_gc_unlock() : () -> ()
     return
   }
   func.func private @strict_process_filesread(%self: f64) -> f64 {
