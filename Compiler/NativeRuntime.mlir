@@ -825,6 +825,8 @@
     return %result : f64
   }
   llvm.mlir.global internal @strict_started(0.0 : f64) : f64
+  // the cycle counter at the start, its rate since then converts thread cycles to seconds (strict_thread_seconds)
+  llvm.mlir.global internal @strict_started_cycles(0 : i64) : i64
   func.func private @strict_process_elapsed(%self: f64) -> f64 {
     %now = func.call @strict_clock() : () -> f64
     %startedSlot = llvm.mlir.addressof @strict_started : !llvm.ptr
@@ -1848,6 +1850,9 @@
     %startedNow = func.call @strict_clock() : () -> f64
     %startedSlot = llvm.mlir.addressof @strict_started : !llvm.ptr
     llvm.store %startedNow, %startedSlot : f64, !llvm.ptr
+    %startedCycles = llvm.call_intrinsic "llvm.readcyclecounter"() : () -> i64
+    %startedCyclesSlot = llvm.mlir.addressof @strict_started_cycles : !llvm.ptr
+    llvm.store %startedCycles, %startedCyclesSlot : i64, !llvm.ptr
     %heapBytes = func.call @strict_gc_heap_bytes() : () -> i64
     %tableShift = arith.constant 13 : i64
     %cardShift = arith.constant 9 : i64
@@ -1949,6 +1954,7 @@
     cf.br ^done
   ^done:
     func.call @strict_alloc_start() : () -> ()
+    func.call @strict_gc_limits() : () -> ()
     return
   }
   llvm.mlir.global internal thread_local @strict_stack_bottom(0 : i64) : i64
@@ -4577,12 +4583,47 @@
     llvm.store %zero, %localVisitedSlot : i64, !llvm.ptr
     return
   }
-  // a collection with other registered threads drains in parallel, a single thread drains alone
+  // drains alone up to that many objects, the work left over is returned (0 when the collection marked everything)
+  func.func private @strict_gc_drain_some(%limit: i64) -> i64 {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %workSlot = llvm.mlir.addressof @strict_gc_work : !llvm.ptr
+    %usedSlot = llvm.mlir.addressof @strict_gc_work_size : !llvm.ptr
+    cf.br ^loop(%zero : i64)
+  ^loop(%done: i64):
+    %used = llvm.load %usedSlot : !llvm.ptr -> i64
+    %isEmpty = arith.cmpi eq, %used, %zero : i64
+    %isEnough = arith.cmpi sge, %done, %limit : i64
+    %stop = arith.ori %isEmpty, %isEnough : i1
+    cf.cond_br %stop, ^left(%used : i64), ^pop(%used : i64)
+  ^pop(%size: i64):
+    %last = arith.subi %size, %one : i64
+    llvm.store %last, %usedSlot : i64, !llvm.ptr
+    %work = llvm.load %workSlot : !llvm.ptr -> i64
+    %workPointer = llvm.inttoptr %work : i64 to !llvm.ptr
+    %position = arith.muli %last, %two : i64
+    %entry = llvm.getelementptr %workPointer[%position] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %object = llvm.load %entry : !llvm.ptr -> i64
+    %sizeEntry = llvm.getelementptr %entry[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %bytes = llvm.load %sizeEntry : !llvm.ptr -> i64
+    func.call @strict_gc_drain_one(%object, %bytes) : (i64, i64) -> ()
+    %more = arith.addi %done, %one : i64
+    cf.br ^loop(%more : i64)
+  ^left(%remaining: i64):
+    return %remaining : i64
+  }
+  // a collection drains alone first, only one with more than 10000 objects to mark wakes the other registered threads
+  // to drain in parallel (waking and waiting for them cost up to 10 ms, a young collection in a pool job marked nothing)
   func.func private @strict_gc_drain_parallel() {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
+    %alone = arith.constant 10000 : i64
+    %remaining = func.call @strict_gc_drain_some(%alone) : (i64) -> i64
+    %isDone = arith.cmpi eq, %remaining, %zero : i64
     %count = func.call @strict_gc_thread_total() : () -> i64
-    %isAlone = arith.cmpi ule, %count, %one : i64
+    %isSingle = arith.cmpi ule, %count, %one : i64
+    %isAlone = arith.ori %isDone, %isSingle : i1
     cf.cond_br %isAlone, ^alone, ^shared
   ^alone:
     %publishing = arith.constant false
@@ -8288,13 +8329,59 @@
     func.call @strict_gc_start() : () -> ()
     return
   }
-  // collections may take at most 15 % of the time: more than 0.75 s of collecting in the last 5 seconds ends the
-  // program, it allocates too much and has to be fixed first (a single long collection stays below it); counted is the
-  // time the collecting thread ran (strict_thread_seconds), waiting for a core shared with other programs is not, nor
-  // giving free pages back to the system (0.1 s per GB: MossImage's 8 GB text encoder after its prompts took 0.8 s)
+  // collections should take below 10 % of the time (a warning once) and may take at most 15 %: more than that of the
+  // last 5 seconds ends the program, it allocates too much and has to be fixed first (a single long collection stays
+  // below it); STRICT_GC_LIMIT (percent) and STRICT_GC_WINDOW (seconds) set the limit and the window, 5 % of 1 s finds
+  // every allocation heavy loop; counted is the time the collecting thread ran (strict_thread_seconds), waiting for a
+  // core shared with other programs is not, nor giving free pages back to the system (0.1 s per GB)
   llvm.mlir.global internal @strict_gc_seconds(dense<0.0> : tensor<5xf64>) : !llvm.array<5 x f64>
   llvm.mlir.global internal @strict_gc_stamps(dense<-1> : tensor<5xi64>) : !llvm.array<5 x i64>
-  llvm.mlir.global internal constant @strict_gc_exceeded("GarbageCollectionExceedsTenth: %.2f of the last 5 seconds were spent collecting garbage (at most 15 %%), allocate less in the loops of this program\0A\00") : !llvm.array<149 x i8>
+  llvm.mlir.global internal @strict_gc_window(5.0 : f64) : f64
+  llvm.mlir.global internal @strict_gc_time_limit(0.15 : f64) : f64
+  llvm.mlir.global internal @strict_gc_target(0.1 : f64) : f64
+  llvm.mlir.global internal @strict_gc_targeted(0 : i64) : i64
+  llvm.mlir.global internal constant @strict_gc_exceeded("GarbageCollectionExceedsLimit: %.2f of the last %.1f seconds were spent collecting garbage (at most %.0f %%), allocate less in the loops of this program\0A\00") : !llvm.array<154 x i8>
+  llvm.mlir.global internal constant @strict_gc_above("Warning: GarbageCollectionAboveTarget: %.2f of the last %.1f seconds were spent collecting garbage (below %.0f %% is the goal), allocate less in the loops of this program\0A\00") : !llvm.array<172 x i8>
+  llvm.mlir.global internal constant @strict_gc_limit_switch("STRICT_GC_LIMIT\00") : !llvm.array<16 x i8>
+  llvm.mlir.global internal constant @strict_gc_window_switch("STRICT_GC_WINDOW\00") : !llvm.array<17 x i8>
+  llvm.func @atof(!llvm.ptr) -> f64
+  func.func private @strict_gc_limits() {
+    %hundred = arith.constant 100.0 : f64
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %nothing = arith.constant 0.0 : f64
+    %limitName = llvm.mlir.addressof @strict_gc_limit_switch : !llvm.ptr
+    %limitText = llvm.call @getenv(%limitName) : (!llvm.ptr) -> !llvm.ptr
+    %hasLimit = llvm.icmp "ne" %limitText, %unset : !llvm.ptr
+    cf.cond_br %hasLimit, ^limit, ^window
+  ^limit:
+    %percent = llvm.call @atof(%limitText) : (!llvm.ptr) -> f64
+    %fraction = arith.divf %percent, %hundred : f64
+    %isPositive = arith.cmpf ogt, %fraction, %nothing : f64
+    cf.cond_br %isPositive, ^setLimit(%fraction : f64), ^window
+  ^setLimit(%limit: f64):
+    %limitSlot = llvm.mlir.addressof @strict_gc_time_limit : !llvm.ptr
+    llvm.store %limit, %limitSlot : f64, !llvm.ptr
+    %targetSlot = llvm.mlir.addressof @strict_gc_target : !llvm.ptr
+    %target = llvm.load %targetSlot : !llvm.ptr -> f64
+    %lower = arith.minimumf %target, %limit : f64
+    llvm.store %lower, %targetSlot : f64, !llvm.ptr
+    cf.br ^window
+  ^window:
+    %windowName = llvm.mlir.addressof @strict_gc_window_switch : !llvm.ptr
+    %windowText = llvm.call @getenv(%windowName) : (!llvm.ptr) -> !llvm.ptr
+    %hasWindow = llvm.icmp "ne" %windowText, %unset : !llvm.ptr
+    cf.cond_br %hasWindow, ^readWindow, ^done
+  ^readWindow:
+    %seconds = llvm.call @atof(%windowText) : (!llvm.ptr) -> f64
+    %isLonger = arith.cmpf ogt, %seconds, %nothing : f64
+    cf.cond_br %isLonger, ^setWindow(%seconds : f64), ^done
+  ^setWindow(%window: f64):
+    %windowSlot = llvm.mlir.addressof @strict_gc_window : !llvm.ptr
+    llvm.store %window, %windowSlot : f64, !llvm.ptr
+    cf.br ^done
+  ^done:
+    return
+  }
   // release builds (strict build X windows or linux, NativeBuild.Released) set it to 0: a shipped program does not stop,
   // it warns once on the console instead
   llvm.mlir.global internal @strict_gc_watching(1 : i64) : i64
@@ -8307,7 +8394,12 @@
     %programSlot = llvm.mlir.addressof @strict_started : !llvm.ptr
     %programStart = llvm.load %programSlot : !llvm.ptr -> f64
     %running = arith.subf %now, %programStart : f64
-    %second = arith.fptosi %running : f64 to i64
+    %windowSlot = llvm.mlir.addressof @strict_gc_window : !llvm.ptr
+    %window = llvm.load %windowSlot : !llvm.ptr -> f64
+    %fifths = arith.constant 5.0 : f64
+    %bucket = arith.divf %window, %fifths : f64
+    %buckets = arith.divf %running, %bucket : f64
+    %second = arith.fptosi %buckets : f64 to i64
     %five = arith.constant 5 : i64
     %slot = arith.remsi %second, %five : i64
     %stamps = llvm.mlir.addressof @strict_gc_stamps : !llvm.ptr
@@ -8340,12 +8432,34 @@
     %next = arith.addi %index, %one : i64
     cf.br ^sum(%next, %summed : i64, f64)
   ^check(%collecting: f64):
-    %window = arith.constant 5.0 : f64
-    %tenth = arith.constant 0.75 : f64
+    %limitSlot = llvm.mlir.addressof @strict_gc_time_limit : !llvm.ptr
+    %limit = llvm.load %limitSlot : !llvm.ptr -> f64
+    %allowed = arith.mulf %limit, %window : f64
+    %targetSlot = llvm.mlir.addressof @strict_gc_target : !llvm.ptr
+    %target = llvm.load %targetSlot : !llvm.ptr -> f64
+    %goal = arith.mulf %target, %window : f64
     %isLong = arith.cmpf oge, %running, %window : f64
-    %isOver = arith.cmpf ogt, %collecting, %tenth : f64
+    %isOver = arith.cmpf ogt, %collecting, %allowed : f64
+    %isAbove = arith.cmpf ogt, %collecting, %goal : f64
     %exceeded = arith.andi %isLong, %isOver : i1
-    cf.cond_br %exceeded, ^fail, ^done
+    %hundredth = arith.constant 100.0 : f64
+    %percent = arith.mulf %limit, %hundredth : f64
+    cf.cond_br %exceeded, ^fail, ^target
+  ^target:
+    %aboveLong = arith.andi %isLong, %isAbove : i1
+    %targetedSlot = llvm.mlir.addressof @strict_gc_targeted : !llvm.ptr
+    %targeted = llvm.load %targetedSlot : !llvm.ptr -> i64
+    %noTarget = arith.constant 0 : i64
+    %isFirst = arith.cmpi eq, %targeted, %noTarget : i64
+    %isTargetWarned = arith.andi %aboveLong, %isFirst : i1
+    cf.cond_br %isTargetWarned, ^warnTarget, ^done
+  ^warnTarget:
+    %marked = arith.constant 1 : i64
+    llvm.store %marked, %targetedSlot : i64, !llvm.ptr
+    %aboveFormat = llvm.mlir.addressof @strict_gc_above : !llvm.ptr
+    %goalPercent = arith.mulf %target, %hundredth : f64
+    %aboveShown = llvm.call @printf(%aboveFormat, %collecting, %window, %goalPercent) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, f64, f64, f64) -> i32
+    cf.br ^done
   ^fail:
     %message = llvm.mlir.addressof @strict_gc_exceeded : !llvm.ptr
     %watchingSlot = llvm.mlir.addressof @strict_gc_watching : !llvm.ptr
@@ -8354,7 +8468,7 @@
     %isWatching = arith.cmpi ne, %watching, %none : i64
     cf.cond_br %isWatching, ^stop, ^warn
   ^stop:
-    %printed = llvm.call @printf(%message, %collecting) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, f64) -> i32
+    %printed = llvm.call @printf(%message, %collecting, %window, %percent) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, f64, f64, f64) -> i32
     llvm.call @strict_crash_log(%message) : (!llvm.ptr) -> ()
     %code = arith.constant 1 : i32
     llvm.call @exit(%code) : (i32) -> ()
@@ -8369,7 +8483,7 @@
     llvm.store %once, %warnedSlot : i64, !llvm.ptr
     %prefix = llvm.mlir.addressof @strict_gc_warning : !llvm.ptr
     %prefixed = llvm.call @printf(%prefix) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr) -> i32
-    %warning = llvm.call @printf(%message, %collecting) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, f64) -> i32
+    %warning = llvm.call @printf(%message, %collecting, %window, %percent) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, f64, f64, f64) -> i32
     cf.br ^done
   ^done:
     return
@@ -16505,7 +16619,7 @@
   // when a collection for a block of 16 MB or more (strict_gpu_obtain short of memory, a list of its size class on the
   // GPU) found none to reuse, the next one waits ten times as long as it took: the lists there mostly were alive, H3
   // ran a full collection of its 24 GB heap for most of its blocks (126 in two 480x832 videos, 8.6 s of the second
-  // decode on a 3080 once) and ended with GarbageCollectionExceedsTenth on the 4090; an allocation that still fails
+  // decode on a 3080 once) and ended with GarbageCollectionExceedsLimit on the 4090; an allocation that still fails
   // collects in strict_gpu_starved. The end of the last one that found nothing and when the next may run
   llvm.mlir.global internal @strict_gpu_own_wait(dense<0.0> : tensor<2xf64>) : !llvm.array<2 x f64>
   func.func private @strict_gpu_own_collectable() -> i1 {

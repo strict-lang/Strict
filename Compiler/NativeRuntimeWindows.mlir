@@ -338,7 +338,33 @@
   llvm.func @GetCurrentThread() -> !llvm.ptr
   llvm.func @GetThreadTimes(!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
   // seconds this thread ran on a core (kernel and user time in 100 ns), what a collection really cost while cores were shared
+  // the cycles this thread ran (QueryThreadCycleTime) at the rate of the cycle counter since the start: GetThreadTimes
+  // only moves in 15.6 ms clock ticks, a 5 ms collection counted as 0 or 15.6 ms; the first 10 ms still use it
+  llvm.func @QueryThreadCycleTime(!llvm.ptr, !llvm.ptr) -> i32
   func.func private @strict_thread_seconds() -> f64 {
+    %one = arith.constant 1 : i64
+    %now = func.call @strict_clock() : () -> f64
+    %startedSlot = llvm.mlir.addressof @strict_started : !llvm.ptr
+    %started = llvm.load %startedSlot : !llvm.ptr -> f64
+    %elapsed = arith.subf %now, %started : f64
+    %calibrated = arith.constant 0.01 : f64
+    %isCalibrated = arith.cmpf oge, %elapsed, %calibrated : f64
+    cf.cond_br %isCalibrated, ^cycles, ^ticks
+  ^cycles:
+    %cyclesSlot = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
+    %cyclesThread = llvm.call @GetCurrentThread() : () -> !llvm.ptr
+    %queried = llvm.call @QueryThreadCycleTime(%cyclesThread, %cyclesSlot) : (!llvm.ptr, !llvm.ptr) -> i32
+    %cycles = llvm.load %cyclesSlot : !llvm.ptr -> i64
+    %counter = llvm.call_intrinsic "llvm.readcyclecounter"() : () -> i64
+    %startedCyclesSlot = llvm.mlir.addressof @strict_started_cycles : !llvm.ptr
+    %startedCycles = llvm.load %startedCyclesSlot : !llvm.ptr -> i64
+    %passed = arith.subi %counter, %startedCycles : i64
+    %passedFloat = arith.uitofp %passed : i64 to f64
+    %rate = arith.divf %passedFloat, %elapsed : f64
+    %cyclesFloat = arith.uitofp %cycles : i64 to f64
+    %ran = arith.divf %cyclesFloat, %rate : f64
+    return %ran : f64
+  ^ticks:
     %four = arith.constant 4 : i64
     %times = llvm.alloca %four x i64 : (i64) -> !llvm.ptr
     %thread = llvm.call @GetCurrentThread() : () -> !llvm.ptr
