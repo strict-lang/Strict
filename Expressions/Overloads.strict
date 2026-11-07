@@ -8,6 +8,11 @@ constant Labeling = Overloads(Labeler)
 constant LabelInference = TypeInference(Labeler, List(Scope) + KnownTypes.NoMembers)
 constant LabelsCall = SyntaxParser(Tokenizer("Labels((1, 0), 2)").Tokens).Parse
 constant LabelerLabels = SyntaxNode("Member", "Labels", SyntaxNode("Type", "Labeler"))
+constant Presets = KnownTypes(List(Text) + "Presets", List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(List(Text) + "Preset", List(Text) + "Numbers"), List(Scope) + KnownTypes.NoMembers)
+constant Presetting = Overloads(Presets)
+constant PresetRead = SyntaxParser(Tokenizer("Preset(0)").Tokens).Parse
+constant OtherRead = SyntaxParser(Tokenizer("Other(0)").Tokens).Parse
+constant ScaledRead = SyntaxParser(Tokenizer("Scaled(3)").Tokens).Parse
 constant Picker = KnownTypes(("Picker"), (KnownTypes.NoMembers), (Scope(("Mixed", "Chosen"), ("Generics", "Generic"))), (Scope(("Mixed", "Mixed types", "Chosen", "Chosen types"), ("items", "Generics", "items", "Generics"))))
 constant Picking = Overloads(Picker)
 constant Mixing = SyntaxParser(Tokenizer("p.Mixed((1, 2))").Tokens).Parse
@@ -72,9 +77,22 @@ Returned(node SyntaxNode, inference TypeInference, scope Scope, current Scope) T
 	Labeling.Returned(LabelsCall, LabelInference, KnownTypes.NoMembers, Relabeled) is ""
 	let position = types.methods.Index(current)
 	if (position < 0) or (current.Count(node.text) < 2)
-		return ""
+		return Indexed(node, current)
 	let ordinal = Chosen(types.names(position), node.text, Arguments(node, inference, scope, current))
 	ordinal < 0 then "" else current.TypeAt(node.text, ordinal)
+Indexed(node SyntaxNode, current Scope) Text
+	Presetting.Indexed(PresetRead, Presets.methods(0)) is "Number"
+	Presetting.Indexed(SyntaxNode("Call", "Preset"), Presets.methods(0)) is ""
+	Presetting.Indexed(OtherRead, Presets.methods(0)) is ""
+	Presetting.Indexed(PresetRead, KnownTypes.NoMembers) is ""
+	(Labeling.Indexed(LabelsCall, Labeler.methods(0)) is "") and (Labeling.Indexed(LabelsMember, Labeler.methods(0)) is "")
+	Scaling.Indexed(ScaledRead, Scaler.methods(0)) is ""
+	let position = types.methods.Index(current)
+	if (position < 0) or (node.Kind is not "Call") or (node.children.Length is not 1)
+		return ""
+	let returned = current.TypeOf(node.text)
+	let isPlain = types.ParameterScope(types.names(position)).TypeOf(node.text) is ""
+	(returned is not "") and isPlain then types.ElementType(returned) else ""
 Arguments(node SyntaxNode, inference TypeInference, scope Scope, current Scope) Texts
 	Labeling.Arguments(LabelsMember, LabelInference, KnownTypes.NoMembers, Labeler.methods(0)).Length is 0
 	Picking.Typed(SyntaxNode("Identifier", "value"), "A", LabelInference, KnownTypes.NoMembers, Relabeled) is "A"
