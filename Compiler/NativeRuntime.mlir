@@ -3961,6 +3961,7 @@
     func.call @strict_gc_trim_pool(%keptPages) : (i64) -> ()
     %keptRuns = arith.constant 67108864 : i64
     func.call @strict_gc_trim_runs(%keptRuns) : (i64) -> ()
+    func.call @strict_gpu_unpin_spare() : () -> ()
     cf.br ^runs(%full : i1)
   ^fail:
     %what = llvm.mlir.addressof @strict_gc_pages_name : !llvm.ptr
@@ -17307,6 +17308,23 @@
   }
   // downloads go through pinned memory, copies into pageable memory ran at about 1 GB/s
   llvm.mlir.global internal @strict_gpu_bounced(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  // a heap that cannot grow first gets the room of the pinned download and merge buffers, they grow again when used
+  func.func private @strict_gpu_unpin_spare() {
+    %bounced = llvm.mlir.addressof @strict_gpu_bounced : !llvm.ptr
+    func.call @strict_gpu_unbounce(%bounced) : (!llvm.ptr) -> ()
+    %tuned = llvm.mlir.addressof @strict_gpu_tuned_bounced : !llvm.ptr
+    func.call @strict_gpu_unbounce(%tuned) : (!llvm.ptr) -> ()
+    return
+  }
+  func.func private @strict_gpu_unbounce(%bounced: !llvm.ptr) {
+    %none = arith.constant 0 : i64
+    %old = llvm.load %bounced : !llvm.ptr -> i64
+    func.call @strict_gpu_unpinned(%old) : (i64) -> ()
+    llvm.store %none, %bounced : i64, !llvm.ptr
+    %capacitySlot = llvm.getelementptr %bounced[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<2 x i64>
+    llvm.store %none, %capacitySlot : i64, !llvm.ptr
+    return
+  }
   // null when no pinned memory is left (a commit limit): the caller copies through its own pageable memory then
   func.func private @strict_gpu_bounce(%bounced: !llvm.ptr, %bytes: i64) -> !llvm.ptr {
     %capacitySlot = llvm.getelementptr %bounced[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<2 x i64>
