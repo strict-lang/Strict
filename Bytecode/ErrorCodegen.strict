@@ -10,6 +10,9 @@ constant InTest = CodeBlock.Empty.Declare(FailureMarker, "7")
 constant Counted = CodeBlock.Empty.Declare("a", "Count")
 constant A = SyntaxNode("Identifier", "a")
 constant IsError = SyntaxNode("Binary", "is", (A, BareError))
+constant FailingSum = SyntaxNode("Binary", "is", (GreetingPlusOne, BareError))
+constant LeftSum = Plain.Compared(FailingSum, GreetingPlusOne, CodeBlock.Empty)
+constant RightSum = Plain.Compared(IsError, GreetingPlusOne, CodeBlock.Empty)
 constant IsOne = SyntaxNode("Binary", "is", (A, ValueCodegen.One))
 constant FallibleA = ErrorScope.Plain.Fallible("a", CodeBlock.Empty.Declare("a", "Number"))
 constant NewSize = SyntaxNode("Call", "Size", ValueCodegen.One)
@@ -149,7 +152,16 @@ Kept(node SyntaxNode, name Text, block CodeBlock) CodeBlock
 Compared(comparison SyntaxNode, operand SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Compared(IsError, Greeting, CodeBlock.Empty).instructions.Length is 1
 	Plain.Compared(IsOne, Greeting, CodeBlock.Empty).instructions.Length is 2
-	IsErrorComparison(comparison, block) then Handled(operand, block) else Checked(operand, block)
+	LeftSum.instructions(1).texts is List(Text) + Tested
+	LeftSum.instructions.Last.texts is List(Text) + Tested
+	LeftSum.scope.TypeOf(Tested) is not ""
+	(RightSum.instructions(1).texts.Length is 0) and (Plain.Compared(IsError, A, CodeBlock.Empty).instructions.Length is 1)
+	if IsErrorComparison(comparison, block) is false
+		return Checked(operand, block)
+	if (operand is not comparison.children(0)) or (operand.children.Length is 0)
+		return Handled(operand, block)
+	let caught = Caught(comparison, operand, block).Declare(Tested, values.TypeOf(operand, block))
+	caught.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, caught.register, Tested))
 Caught(comparison SyntaxNode, node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Caught(IsError, Greeting, InTest).instructions.Last is InstructionEntry.Jump(InstructionType.JumpEnd, 0)
 	Plain.Caught(IsError, GreetingPlusOne, InTest).instructions(1).payload is (0, 0)

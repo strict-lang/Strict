@@ -2,7 +2,6 @@
 What to fix next, one short line each, bugs first. Remove a line once it is done, add what is found at the end. No history or measurements (those go into commit messages). Speed work: [performance.md](performance.md).
 
 ## Now
-- `X is Error` in a method body (not a test line) where the Error comes from a nested call inside X returns that Error from the method instead of giving true (test lines catch it since ErrorCodegen.Caught).
 - A conditional with a Number and a Numbers branch is typed by its first branch without an issue: `let chunk = available is Error then available else Socket.Receive(socket, 1)` made ByteEncoder(chunk) call Character.from(text) on the received bytes. Mixed branch types should be a validation issue.
 - Generic members natively: a Resident with `has handler Generic` built into strict.exe returned its mutable `last` instead of 0 from a `for as long as` loop that never ran (the same loop in a plain type works), so the resident server avoids Generic for now.
 - `"abc".Reverse` (a List method returning the list, called on a Text) gives `(", c, b, a, ")` on the VM and `undefined symbol: Text_Reverse` natively (Ben). `Text(text.characters.Reverse)` works on the VM, natively a Text's `characters` is the Text handle itself: `Length` works on it, Reverse, First and `Text.Combine` of it see an empty list. Decide one native List(Character) representation, then forward such calls to `characters` in ValueCodegen and convert back with `Text(...)`.
