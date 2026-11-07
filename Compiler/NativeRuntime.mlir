@@ -2720,15 +2720,25 @@
     %one = arith.constant 1 : i64
     %null = llvm.mlir.zero : !llvm.ptr
     %stoppingSlot = llvm.mlir.addressof @strict_gc_stopping : !llvm.ptr
-    cf.br ^wait
-  ^wait:
+    // after 1024 checks it pauses 32 times per check: 31 spinning workers made the collecting one twice as slow
+    %patience = arith.constant 1024 : i64
+    %burst = arith.constant 32 : i64
+    cf.br ^wait(%zero : i64)
+  ^wait(%spun: i64):
     %stopping = llvm.load %stoppingSlot atomic seq_cst {alignment = 8 : i64} : !llvm.ptr -> i64
     %isStopping = arith.cmpi ne, %stopping, %zero : i64
     cf.cond_br %isStopping, ^pause, ^run
   ^pause:
     func.call @strict_gc_help() : () -> ()
+    %more = arith.addi %spun, %one : i64
+    %isLong = arith.cmpi uge, %more, %patience : i64
+    %pauses = arith.select %isLong, %burst, %one : i64
+    cf.br ^paused(%zero : i64)
+  ^paused(%paused: i64):
     llvm.call @strict_pause() : () -> ()
-    cf.br ^wait
+    %pausedMore = arith.addi %paused, %one : i64
+    %rested = arith.cmpi uge, %pausedMore, %pauses : i64
+    cf.cond_br %rested, ^wait(%more : i64), ^paused(%pausedMore : i64)
   ^run:
     %missing = llvm.icmp "eq" %entry, %null : !llvm.ptr
     cf.cond_br %missing, ^done, ^running
@@ -2739,7 +2749,7 @@
     cf.cond_br %stopped, ^park, ^done
   ^park:
     llvm.store %one, %entry atomic seq_cst {alignment = 8 : i64} : i64, !llvm.ptr
-    cf.br ^wait
+    cf.br ^wait(%zero : i64)
   ^done:
     return
   }
@@ -3296,22 +3306,31 @@
     llvm.store %grown, %youngSlot : i64, !llvm.ptr
     return
   }
-  // a full collection is due when 8 times the bytes live after the last one were allocated since or young ones marked
-  // more big objects than it kept (a big text copied over and over keeps every copy a young one saw), a young one after
-  // the young limit (64 MB, STRICT_YOUNG sets it in MB, 0 has none); within a frame (strict_frame_ended) only after
-  // 256 MB, the end of the frame collects
+  // a full collection is due when young ones marked more than the last one kept (the old objects doubled) or more big
+  // objects (a big text copied over and over), without young ones after 8 times what it kept was allocated; a young
+  // one after the young limit (64 MB, STRICT_YOUNG in MB, 0 has none), within a frame (strict_frame_ended) after 256 MB
+  llvm.mlir.global internal @strict_gc_aged(0 : i64) : i64
   func.func private @strict_gc_full_due() -> i1 {
+    %none = arith.constant 0 : i64
     %allocatedSlot = llvm.mlir.addressof @strict_gc_allocated : !llvm.ptr
     %allocated = llvm.load %allocatedSlot : !llvm.ptr -> i64
     %thresholdSlot = llvm.mlir.addressof @strict_gc_threshold : !llvm.ptr
     %threshold = llvm.load %thresholdSlot : !llvm.ptr -> i64
-    %spent = arith.cmpi ugt, %allocated, %threshold : i64
+    %limitSlot = llvm.mlir.addressof @strict_gc_young_limit : !llvm.ptr
+    %limit = llvm.load %limitSlot : !llvm.ptr -> i64
+    %noYoung = arith.cmpi eq, %limit, %none : i64
+    %allocatedMuch = arith.cmpi ugt, %allocated, %threshold : i64
+    %spent = arith.andi %noYoung, %allocatedMuch : i1
     %promotedSlot = llvm.mlir.addressof @strict_gc_promoted : !llvm.ptr
     %promoted = llvm.load %promotedSlot : !llvm.ptr -> i64
     %keptSlot = llvm.mlir.addressof @strict_gc_kept : !llvm.ptr
     %kept = llvm.load %keptSlot : !llvm.ptr -> i64
     %grown = arith.cmpi ugt, %promoted, %kept : i64
-    %full = arith.ori %spent, %grown : i1
+    %agedSlot = llvm.mlir.addressof @strict_gc_aged : !llvm.ptr
+    %aged = llvm.load %agedSlot : !llvm.ptr -> i64
+    %doubled = arith.cmpi ugt, %aged, %kept : i64
+    %bigOrOld = arith.ori %grown, %doubled : i1
+    %full = arith.ori %spent, %bigOrOld : i1
     return %full : i1
   }
   // the heap top after the last collection: the heap growing by the young limit since makes a young collection due,
@@ -4682,6 +4701,53 @@
     return
   }
   // the page of a large object is the one of its header (continued pages name it in the page table)
+  // whether the small object holding a heap offset was marked by a collection, other addresses count as old
+  func.func private @strict_gc_slot_old(%offset: i64) -> i1 {
+    %sixteen = arith.constant 16 : i64
+    %one = arith.constant 1 : i64
+    %yes = arith.constant true
+    %kindMask = arith.constant 255 : i64
+    %pageIndex = arith.shrui %offset, %sixteen : i64
+    %tableSlot = llvm.mlir.addressof @strict_gc_table : !llvm.ptr
+    %table = llvm.load %tableSlot : !llvm.ptr -> i64
+    %tablePointer = llvm.inttoptr %table : i64 to !llvm.ptr
+    %entrySlot = llvm.getelementptr %tablePointer[%pageIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %entry = llvm.load %entrySlot : !llvm.ptr -> i64
+    %kind = arith.andi %entry, %kindMask : i64
+    %isSmall = arith.cmpi eq, %kind, %one : i64
+    cf.cond_br %isSmall, ^small, ^old
+  ^small:
+    %baseSlot = llvm.mlir.addressof @strict_gc_base : !llvm.ptr
+    %base = llvm.load %baseSlot : !llvm.ptr -> i64
+    %pageStart = arith.shli %pageIndex, %sixteen : i64
+    %page = arith.addi %base, %pageStart : i64
+    %pagePointer = llvm.inttoptr %page : i64 to !llvm.ptr
+    %countSlot = llvm.getelementptr %pagePointer[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %count = llvm.load %countSlot : !llvm.ptr -> i64
+    %firstSlot = llvm.getelementptr %pagePointer[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %first = llvm.load %firstSlot : !llvm.ptr -> i64
+    %reciprocalSlot = llvm.getelementptr %pagePointer[5] : (!llvm.ptr) -> !llvm.ptr, i64
+    %reciprocal = llvm.load %reciprocalSlot : !llvm.ptr -> i64
+    %within = arith.subi %offset, %pageStart : i64
+    %isHeader = arith.cmpi ult, %within, %first : i64
+    cf.cond_br %isHeader, ^old, ^object
+  ^object:
+    %relative = arith.subi %within, %first : i64
+    %product = arith.muli %relative, %reciprocal : i64
+    %thirtyTwo = arith.constant 32 : i64
+    %objectIndex = arith.shrui %product, %thirtyTwo : i64
+    %inPage = arith.cmpi ult, %objectIndex, %count : i64
+    cf.cond_br %inPage, ^marked, ^old
+  ^marked:
+    %marks = llvm.getelementptr %pagePointer[64] : (!llvm.ptr) -> !llvm.ptr, i8
+    %markSlot = llvm.getelementptr %marks[%objectIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %mark = llvm.load %markSlot : !llvm.ptr -> i8
+    %unmarked = arith.constant 0 : i8
+    %isMarked = arith.cmpi ne, %mark, %unmarked : i8
+    return %isMarked : i1
+  ^old:
+    return %yes : i1
+  }
   func.func private @strict_gc_page_old(%offset: i64) -> i1 {
     %sixteen = arith.constant 16 : i64
     %eight = arith.constant 8 : i64
@@ -4740,11 +4806,17 @@
     cf.cond_br %isClean, ^aged, ^done
   ^aged:
     // 1 marks a card of a page holding old objects, 2 one of a page of young objects only: later writes see it set,
-    // the next collection clears both before it marks anything and scans only the first
+    // the next collection clears both before it marks anything and scans only the first; filling a young object made
+    // in a free slot of an old page leaves the card clean (a mutation run listed 600 000 such cards per collection)
     %holdsOld = func.call @strict_gc_page_old(%offset) : (i64) -> i1
+    cf.cond_br %holdsOld, ^oldPage, ^remember(%holdsOld : i1)
+  ^oldPage:
+    %isOld = func.call @strict_gc_slot_old(%offset) : (i64) -> i1
+    cf.cond_br %isOld, ^remember(%isOld : i1), ^done
+  ^remember(%old: i1):
     %dirtyCard = arith.constant 1 : i8
     %youngCard = arith.constant 2 : i8
-    %marked = arith.select %holdsOld, %dirtyCard, %youngCard : i8
+    %marked = arith.select %old, %dirtyCard, %youngCard : i8
     llvm.store %marked, %card : i8, !llvm.ptr
     func.call @strict_gc_remember(%index) : (i64) -> ()
     cf.br ^done
@@ -6270,13 +6342,26 @@
   ^done:
     return
   }
-  // inside a pool job only the card byte is marked: the next collection scans every card once instead of the list
+  // inside a pool job every registered thread lists its cards in its own list (items, count, capacity), an
+  // unregistered one only marks the card byte: the next collection then scans every card once
   llvm.mlir.global internal @strict_gc_cards_lost(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_thread_dirty(dense<0> : tensor<1536xi64>) : !llvm.array<1536 x i64>
   func.func private @strict_gc_remember(%index: i64) {
     %shared = func.call @strict_rc_busy() : () -> i1
-    cf.cond_br %shared, ^lost, ^alone
+    cf.cond_br %shared, ^pooled, ^alone
   ^alone:
-    func.call @strict_gc_dirty_card(%index) : (i64) -> ()
+    %dirty = llvm.mlir.addressof @strict_gc_dirty : !llvm.ptr
+    func.call @strict_gc_dirty_card(%dirty, %index) : (!llvm.ptr, i64) -> ()
+    return
+  ^pooled:
+    %threadSlot = llvm.mlir.addressof @strict_gc_thread : !llvm.ptr
+    %thread = llvm.load %threadSlot : !llvm.ptr -> i64
+    %limit = arith.constant 512 : i64
+    %isRegistered = arith.cmpi ult, %thread, %limit : i64
+    cf.cond_br %isRegistered, ^own, ^lost
+  ^own:
+    %own = func.call @strict_gc_thread_cards(%thread) : (i64) -> !llvm.ptr
+    func.call @strict_gc_dirty_card(%own, %index) : (!llvm.ptr, i64) -> ()
     return
   ^lost:
     %one = arith.constant 1 : i64
@@ -6284,13 +6369,19 @@
     llvm.store %one, %lostSlot atomic monotonic {alignment = 8 : i64} : i64, !llvm.ptr
     return
   }
-  func.func private @strict_gc_dirty_card(%index: i64) {
+  func.func private @strict_gc_thread_cards(%thread: i64) -> !llvm.ptr {
+    %three = arith.constant 3 : i64
+    %word = arith.muli %thread, %three : i64
+    %lists = llvm.mlir.addressof @strict_gc_thread_dirty : !llvm.ptr
+    %list = llvm.getelementptr %lists[%word] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    return %list : !llvm.ptr
+  }
+  func.func private @strict_gc_dirty_card(%dirty: !llvm.ptr, %index: i64) {
     %one = arith.constant 1 : i64
     %eight = arith.constant 8 : i64
-    %dirty = llvm.mlir.addressof @strict_gc_dirty : !llvm.ptr
-    %countSlot = llvm.getelementptr %dirty[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<3 x i64>
+    %countSlot = llvm.getelementptr %dirty[1] : (!llvm.ptr) -> !llvm.ptr, i64
     %count = llvm.load %countSlot : !llvm.ptr -> i64
-    %capacitySlot = llvm.getelementptr %dirty[0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<3 x i64>
+    %capacitySlot = llvm.getelementptr %dirty[2] : (!llvm.ptr) -> !llvm.ptr, i64
     %capacity = llvm.load %capacitySlot : !llvm.ptr -> i64
     %full = arith.cmpi sge, %count, %capacity : i64
     cf.cond_br %full, ^grow, ^store
@@ -6356,13 +6447,12 @@
   ^done:
     return
   }
-  // cleans all marked cards, a young collection first marks what the old objects in them point to
-  func.func private @strict_gc_cards_done(%scan: i1) {
+  // cleans the cards of one list (strict_gc_dirty or a thread's), a young collection scans the old ones first
+  func.func private @strict_gc_cards_listed(%dirty: !llvm.ptr, %scan: i1) {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %clean = arith.constant 0 : i8
-    %dirty = llvm.mlir.addressof @strict_gc_dirty : !llvm.ptr
-    %countSlot = llvm.getelementptr %dirty[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<3 x i64>
+    %countSlot = llvm.getelementptr %dirty[1] : (!llvm.ptr) -> !llvm.ptr, i64
     %count = llvm.load %countSlot : !llvm.ptr -> i64
     %itemsBits = llvm.load %dirty : !llvm.ptr -> i64
     %items = llvm.inttoptr %itemsBits : i64 to !llvm.ptr
@@ -6389,6 +6479,25 @@
     cf.br ^loop(%next : i64)
   ^done:
     llvm.store %zero, %countSlot : i64, !llvm.ptr
+    return
+  }
+  // cleans all marked cards, a young collection first marks what the old objects in them point to
+  func.func private @strict_gc_cards_done(%scan: i1) {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %dirty = llvm.mlir.addressof @strict_gc_dirty : !llvm.ptr
+    func.call @strict_gc_cards_listed(%dirty, %scan) : (!llvm.ptr, i1) -> ()
+    %threads = func.call @strict_gc_thread_total() : () -> i64
+    cf.br ^thread(%zero : i64)
+  ^thread(%thread: i64):
+    %moreThreads = arith.cmpi ult, %thread, %threads : i64
+    cf.cond_br %moreThreads, ^own, ^listed
+  ^own:
+    %own = func.call @strict_gc_thread_cards(%thread) : (i64) -> !llvm.ptr
+    func.call @strict_gc_cards_listed(%own, %scan) : (!llvm.ptr, i1) -> ()
+    %nextThread = arith.addi %thread, %one : i64
+    cf.br ^thread(%nextThread : i64)
+  ^listed:
     %lostSlot = llvm.mlir.addressof @strict_gc_cards_lost : !llvm.ptr
     %lost = llvm.load %lostSlot : !llvm.ptr -> i64
     %isLost = arith.cmpi ne, %lost, %zero : i64
@@ -7253,6 +7362,11 @@
     %survived = llvm.load %markedLargeSlot : !llvm.ptr -> i64
     %morePromoted = arith.addi %promoted, %survived : i64
     llvm.store %morePromoted, %promotedSlot : i64, !llvm.ptr
+    %agedSlot = llvm.mlir.addressof @strict_gc_aged : !llvm.ptr
+    %aged = llvm.load %agedSlot : !llvm.ptr -> i64
+    %youngMarked = llvm.load %markedSlot : !llvm.ptr -> i64
+    %moreAged = arith.addi %aged, %youngMarked : i64
+    llvm.store %moreAged, %agedSlot : i64, !llvm.ptr
     %nothingReturned = arith.constant 0.0 : f64
     cf.br ^done(%nothingReturned : f64)
   ^threshold:
@@ -7272,6 +7386,8 @@
     %keptSlot = llvm.mlir.addressof @strict_gc_kept : !llvm.ptr
     llvm.store %kept, %keptSlot : i64, !llvm.ptr
     llvm.store %zero, %promotedSlot : i64, !llvm.ptr
+    %agedReset = llvm.mlir.addressof @strict_gc_aged : !llvm.ptr
+    llvm.store %zero, %agedReset : i64, !llvm.ptr
     %poolMinimum = arith.constant 1024 : i64
     %pageShift = arith.constant 16 : i64
     %thresholdPages = arith.shrui %threshold, %pageShift : i64
