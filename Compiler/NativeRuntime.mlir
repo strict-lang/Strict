@@ -19622,13 +19622,17 @@
     %stagedCount = arith.addi %stagedFactors, %rank : i64
     %stagedBytes = arith.muli %stagedCount, %four : i64
     %bounced = llvm.mlir.addressof @strict_gpu_tuned_bounced : !llvm.ptr
-    %staging = func.call @strict_gpu_bounce(%bounced, %stagedBytes) : (!llvm.ptr, i64) -> !llvm.ptr
+    %pinned = func.call @strict_gpu_bounce(%bounced, %stagedBytes) : (!llvm.ptr, i64) -> !llvm.ptr
     %factorBuffer = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
     llvm.store %none, %factorBuffer : i64, !llvm.ptr
     %unpinned = llvm.mlir.zero : !llvm.ptr
-    %isPinned = llvm.icmp "ne" %staging, %unpinned : !llvm.ptr
-    cf.cond_br %isPinned, ^convert, ^forget
-  ^convert:
+    %isPinned = llvm.icmp "ne" %pinned, %unpinned : !llvm.ptr
+    cf.cond_br %isPinned, ^convert(%pinned : !llvm.ptr), ^pageable
+  ^pageable:
+    %own = llvm.call @malloc(%stagedBytes) : (i64) -> !llvm.ptr
+    %hasOwn = llvm.icmp "ne" %own, %unpinned : !llvm.ptr
+    cf.cond_br %hasOwn, ^convert(%own : !llvm.ptr), ^cpu
+  ^convert(%staging: !llvm.ptr):
     cf.cond_br %isResident, ^scalesOnly, ^allFactors
   ^scalesOnly:
     func.call @strict_gpu_tuned_scales(%factors, %staging, %rank) : (!llvm.ptr, !llvm.ptr, i64) -> ()
@@ -19639,10 +19643,18 @@
   ^stage:
     %factorDevice = func.call @strict_gpu_temporary(%stagedBytes, %factorBuffer) : (i64, !llvm.ptr) -> i64
     %allocated = arith.cmpi ne, %factorDevice, %none : i64
-    cf.cond_br %allocated, ^put, ^failed
+    cf.cond_br %allocated, ^put, ^staged(%allocated : i1)
   ^put:
     %put = func.call @strict_gpu_stage(%factorDevice, %staging, %stagedBytes) : (i64, !llvm.ptr, i64) -> i1
-    cf.cond_br %put, ^launch, ^failed
+    cf.br ^staged(%put : i1)
+  ^staged(%isStaged: i1):
+    %isOwn = llvm.icmp "ne" %staging, %pinned : !llvm.ptr
+    cf.cond_br %isOwn, ^freeOwn, ^stagedNext
+  ^freeOwn:
+    llvm.call @free(%staging) : (!llvm.ptr) -> ()
+    cf.br ^stagedNext
+  ^stagedNext:
+    cf.cond_br %isStaged, ^launch, ^failed
   ^launch:
     %stagedDownBytes = arith.muli %stagedDowns, %four : i64
     %hostUps = arith.addi %factorDevice, %stagedDownBytes : i64
@@ -19666,6 +19678,9 @@
   ^failed:
     %factorTemporary = llvm.load %factorBuffer : !llvm.ptr -> i64
     func.call @strict_gpu_release(%factorTemporary) : (i64) -> ()
+    cf.br ^cpu
+  ^cpu:
+    func.call @strict_gpu_tuned_fallback() : () -> ()
     cf.br ^forget
   ^forget:
     %temporary = llvm.load %buffer : !llvm.ptr -> i64
@@ -19681,6 +19696,22 @@
     return %true : i1
   ^unable:
     return %false : i1
+  }
+  // the CPU merge rounds differently from the seeded GPU kernel, so a model merged there is not bit-identical: said once
+  llvm.mlir.global internal @strict_gpu_tuned_fell(0 : i64) : i64
+  llvm.mlir.global internal constant @strict_gpu_tuned_fallback_text("GPU LoRA merge fell back to the CPU merge (no device or host memory for it), results differ slightly from the GPU merge\0A\00") : !llvm.array<121 x i8>
+  func.func private @strict_gpu_tuned_fallback() {
+    %one = arith.constant 1 : i64
+    %fellSlot = llvm.mlir.addressof @strict_gpu_tuned_fell : !llvm.ptr
+    %fell = llvm.atomicrmw xchg %fellSlot, %one monotonic : !llvm.ptr, i64
+    %first = arith.cmpi ne, %fell, %one : i64
+    cf.cond_br %first, ^say, ^done
+  ^say:
+    %text = llvm.mlir.addressof @strict_gpu_tuned_fallback_text : !llvm.ptr
+    %said = llvm.call @printf(%text) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr) -> i32
+    cf.br ^done
+  ^done:
+    return
   }
   // the device address of the factor list in the slots at of factors when it is on the GPU as 32 bit floats or as
   // bfloat16 (the rotated downs of Convrot.Rotated and the packed ups are), else 0; a waiting rotation into it runs first
