@@ -7196,6 +7196,111 @@
   ^done:
     return
   }
+  // STRICT_GC_ROOTS=MB: a full collection marks root by root and prints each one that alone keeps that many MB alive
+  // (the kind, thread, address, the word and the size of the object it points to): what holds a dropped model
+  llvm.mlir.global internal constant @strict_gc_roots_switch("STRICT_GC_ROOTS\00") : !llvm.array<16 x i8>
+  llvm.mlir.global internal constant @strict_gc_roots_format("  root %s of thread %lld at %llx keeps %lld MB alive (word %llx, an object of %lld bytes)\0A\00") : !llvm.array<91 x i8>
+  llvm.mlir.global internal constant @strict_gc_roots_stack("stack\00") : !llvm.array<6 x i8>
+  llvm.mlir.global internal constant @strict_gc_roots_pinned("pinned\00") : !llvm.array<7 x i8>
+  llvm.mlir.global internal constant @strict_gc_roots_spilled("register\00") : !llvm.array<9 x i8>
+  llvm.mlir.global internal constant @strict_gc_roots_locals("thread local\00") : !llvm.array<13 x i8>
+  llvm.mlir.global internal constant @strict_gc_roots_methods("  its stack ends at %llx, these Strict methods are on it:\0A\00") : !llvm.array<59 x i8>
+  func.func private @strict_gc_roots(%full: i1, %from: i64, %to: i64, %spilledFrom: i64, %spilledTo: i64) {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %eight = arith.constant 8 : i64
+    %name = llvm.mlir.addressof @strict_gc_roots_switch : !llvm.ptr
+    %setting = llvm.call @getenv(%name) : (!llvm.ptr) -> !llvm.ptr
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %isSet = llvm.icmp "ne" %setting, %unset : !llvm.ptr
+    %isTraced = arith.andi %isSet, %full : i1
+    cf.cond_br %isTraced, ^trace, ^done
+  ^trace:
+    %megabytes = llvm.call @atoll(%setting) : (!llvm.ptr) -> i64
+    %shift = arith.constant 20 : i64
+    %asked = arith.shli %megabytes, %shift : i64
+    %oneMegabyte = arith.constant 1048576 : i64
+    %least = arith.maxsi %asked, %oneMegabyte : i64
+    %threadSlot = llvm.mlir.addressof @strict_gc_thread : !llvm.ptr
+    %self = llvm.load %threadSlot : !llvm.ptr -> i64
+    %stack = llvm.mlir.addressof @strict_gc_roots_stack : !llvm.ptr
+    %held = func.call @strict_gc_roots_range(%stack, %self, %from, %to, %least) : (!llvm.ptr, i64, i64, i64, i64) -> i1
+    cf.cond_br %held, ^methods, ^others
+  ^methods:
+    %methodsFormat = llvm.mlir.addressof @strict_gc_roots_methods : !llvm.ptr
+    %shown = llvm.call @printf(%methodsFormat, %to) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, i64) -> i32
+    func.call @strict_places_print() : () -> ()
+    cf.br ^others
+  ^others:
+    %pinnedSlot = llvm.mlir.addressof @strict_gc_pinned : !llvm.ptr
+    %pinnedStart = llvm.load %pinnedSlot : !llvm.ptr -> i64
+    %pinnedCountSlot = llvm.mlir.addressof @strict_gc_pinned_count : !llvm.ptr
+    %pinnedCount = llvm.load %pinnedCountSlot : !llvm.ptr -> i64
+    %pinnedBytes = arith.muli %pinnedCount, %eight : i64
+    %pinnedEnd = arith.addi %pinnedStart, %pinnedBytes : i64
+    %pinned = llvm.mlir.addressof @strict_gc_roots_pinned : !llvm.ptr
+    %pinnedHeld = func.call @strict_gc_roots_range(%pinned, %self, %pinnedStart, %pinnedEnd, %least) : (!llvm.ptr, i64, i64, i64, i64) -> i1
+    %spilled = llvm.mlir.addressof @strict_gc_roots_spilled : !llvm.ptr
+    %spilledHeld = func.call @strict_gc_roots_range(%spilled, %self, %spilledFrom, %spilledTo, %least) : (!llvm.ptr, i64, i64, i64, i64) -> i1
+    %own = func.call @strict_gc_own_entry() : () -> !llvm.ptr
+    func.call @strict_gc_published(%own, %from) : (!llvm.ptr, i64) -> ()
+    %count = func.call @strict_gc_thread_total() : () -> i64
+    %locals = llvm.mlir.addressof @strict_gc_roots_locals : !llvm.ptr
+    cf.br ^thread(%zero : i64)
+  ^thread(%index: i64):
+    %more = arith.cmpi ult, %index, %count : i64
+    cf.cond_br %more, ^roots, ^done
+  ^roots:
+    %entry = func.call @strict_gc_thread_entry(%index) : (i64) -> !llvm.ptr
+    %entryAddress = llvm.ptrtoint %entry : !llvm.ptr to i64
+    %rootsOffset = arith.constant 24 : i64
+    %rootsBytes = arith.constant 32 : i64
+    %rootsStart = arith.addi %entryAddress, %rootsOffset : i64
+    %rootsEnd = arith.addi %rootsStart, %rootsBytes : i64
+    %localsHeld = func.call @strict_gc_roots_range(%locals, %index, %rootsStart, %rootsEnd, %least) : (!llvm.ptr, i64, i64, i64, i64) -> i1
+    %next = arith.addi %index, %one : i64
+    %isSelf = arith.cmpi eq, %index, %self : i64
+    cf.cond_br %isSelf, ^thread(%next : i64), ^other
+  ^other:
+    %lowSlot = llvm.getelementptr %entry[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %low = llvm.load %lowSlot : !llvm.ptr -> i64
+    %high = func.call @strict_gc_thread_high(%index) : (i64) -> i64
+    %otherHeld = func.call @strict_gc_roots_range(%stack, %index, %low, %high, %least) : (!llvm.ptr, i64, i64, i64, i64) -> i1
+    cf.br ^thread(%next : i64)
+  ^done:
+    return
+  }
+  func.func private @strict_gc_roots_range(%kind: !llvm.ptr, %thread: i64, %from: i64, %to: i64, %least: i64) -> i1 {
+    %eight = arith.constant 8 : i64
+    %shift = arith.constant 20 : i64
+    %none = arith.constant false
+    %some = arith.constant true
+    %markedSlot = llvm.mlir.addressof @strict_gc_marked : !llvm.ptr
+    %format = llvm.mlir.addressof @strict_gc_roots_format : !llvm.ptr
+    cf.br ^word(%from, %none : i64, i1)
+  ^word(%at: i64, %any: i1):
+    %more = arith.cmpi ult, %at, %to : i64
+    cf.cond_br %more, ^mark, ^done
+  ^mark:
+    %before = llvm.load %markedSlot : !llvm.ptr -> i64
+    %end = arith.addi %at, %eight : i64
+    %marking = func.call @strict_gc_mark_range(%at, %end) : (i64, i64) -> i64
+    %publishing = arith.constant false
+    func.call @strict_gc_drain(%publishing) : (i1) -> ()
+    %after = llvm.load %markedSlot : !llvm.ptr -> i64
+    %kept = arith.subi %after, %before : i64
+    %isBig = arith.cmpi uge, %kept, %least : i64
+    cf.cond_br %isBig, ^print, ^word(%end, %any : i64, i1)
+  ^print:
+    %wordPointer = llvm.inttoptr %at : i64 to !llvm.ptr
+    %word = llvm.load %wordPointer : !llvm.ptr -> i64
+    %located:5 = func.call @strict_gc_locate(%word) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %megabytes = arith.shrui %kept, %shift : i64
+    %printed = llvm.call @printf(%format, %kind, %thread, %at, %megabytes, %word, %located#2) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr, i64, i64, i64, i64, i64) -> i32
+    cf.br ^word(%end, %some : i64, i1)
+  ^done:
+    return %any : i1
+  }
   // STRICT_GC_LOG prints every collection: young or full, its time, the bytes it marked and the heap used
   func.func private @strict_gc_log(%full: i1, %started: f64) {
     %name = llvm.mlir.addressof @strict_gc_log_switch : !llvm.ptr
@@ -7315,6 +7420,7 @@
     %threadSlot = llvm.mlir.addressof @strict_gc_thread : !llvm.ptr
     %self = llvm.load %threadSlot : !llvm.ptr -> i64
     %to = func.call @strict_gc_thread_high(%self) : (i64) -> i64
+    func.call @strict_gc_roots(%full, %from, %to, %spilled#0, %spilled#1) : (i1, i64, i64, i64, i64) -> ()
     func.call @strict_gc_mark_range(%from, %to) : (i64, i64) -> i64
     %pinnedSlot = llvm.mlir.addressof @strict_gc_pinned : !llvm.ptr
     %pinnedStart = llvm.load %pinnedSlot : !llvm.ptr -> i64
