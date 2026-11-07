@@ -2233,10 +2233,11 @@
     %function = builtin.unrealized_conversion_cast %body : (!llvm.ptr, i64, i64) -> f64 to !llvm.ptr
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
+    // the busy flag is claimed at once: two threads outside the pool checking it first could both start a job
     %busySlot = llvm.mlir.addressof @strict_pool_busy : !llvm.ptr
-    %busy = llvm.load %busySlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
-    %isBusy = arith.cmpi ne, %busy, %zero : i64
-    cf.cond_br %isBusy, ^serial, ^pool
+    %claim = llvm.cmpxchg %busySlot, %zero, %one acq_rel monotonic : !llvm.ptr, i64
+    %claimed = llvm.extractvalue %claim[1] : !llvm.struct<(i64, i1)>
+    cf.cond_br %claimed, ^pool, ^serial
   ^pool:
     %workers = func.call @strict_pool_started() : () -> i64
     %alone = arith.cmpi eq, %workers, %zero : i64
@@ -2251,7 +2252,6 @@
     %soloJob = arith.addi %lastJob, %one : i64
     llvm.store %soloJob, %soloJobSlot : i64, !llvm.ptr
     func.call @strict_gc_lanes_carried() : () -> ()
-    llvm.store %one, %busySlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     %soloInsideSlot = llvm.mlir.addressof @strict_pool_inside : !llvm.ptr
     %soloWasInside = llvm.load %soloInsideSlot : !llvm.ptr -> i64
     llvm.store %soloJob, %soloInsideSlot : i64, !llvm.ptr
@@ -2279,7 +2279,6 @@
     %probeJob = arith.addi %probeLast, %one : i64
     llvm.store %probeJob, %probeJobSlot : i64, !llvm.ptr
     func.call @strict_gc_lanes_carried() : () -> ()
-    llvm.store %one, %busySlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     %probeInsideSlot = llvm.mlir.addressof @strict_pool_inside : !llvm.ptr
     %probeWasInside = llvm.load %probeInsideSlot : !llvm.ptr -> i64
     llvm.store %probeJob, %probeInsideSlot : i64, !llvm.ptr
@@ -2318,7 +2317,6 @@
     return %probeResult : f64
   ^handoff(%rest: i64, %helpersWanted: i64):
     llvm.store %probeWasInside, %probeInsideSlot : i64, !llvm.ptr
-    llvm.store %zero, %busySlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     cf.br ^shared(%rest, %helpersWanted : i64, i64)
   ^shared(%start: i64, %helperLimit: i64):
     %testOwnerSlot = llvm.mlir.addressof @strict_test_slot : !llvm.ptr
@@ -2381,7 +2379,6 @@
     %failureSlot = llvm.mlir.addressof @strict_pool_failure : !llvm.ptr
     llvm.store %zero, %failureSlot : i64, !llvm.ptr
     func.call @strict_gc_lanes_carried() : () -> ()
-    llvm.store %one, %busySlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     llvm.store %job, %jobSlot atomic seq_cst {alignment = 8 : i64} : i64, !llvm.ptr
     %lastPart = arith.subi %chunk, %one : i64
     %rounded = arith.addi %remaining, %lastPart : i64
