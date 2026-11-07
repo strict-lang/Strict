@@ -61,12 +61,24 @@ Usable(types List(TypeEntry)) List(MethodEntry)
 	let reaching = Reaching(types)
 	let runner = mutants.Runner(types.First)
 	for mutants.Mutated(types.First)
-		let tests = MethodEntry(runner, instructions = Mutation(runner).Split(List(Text) + value.Name))
-		let isInput = (TypeEntry.ShortName(types.First.Name) + "." + value.Name is in reaching) or IsReaching(tests, reaching)
-		if isInput and (mutants.part is "")
-			mutants.logger.Log(mutants.path + ": " + value.Name + " is not mutated, it or its tests use input or Random")
-		if isInput is false
+		let reason = Inputs(value, TypeEntry.ShortName(types.First.Name) + "." + value.Name, runner, reaching)
+		if (reason is not "") and (mutants.part is "")
+			mutants.logger.Log(mutants.path + ": " + value.Name + " is not mutated, " + reason)
+		if reason is ""
 			value
+Inputs(method MethodEntry, name Text, runner MethodEntry, reaching Texts) Text
+	Sampled.Inputs(Reader, "T.Read", Calling, List(Text) + "T.Read") is "it uses input or Random"
+	Sampled.Inputs(Calling, "T.Call", Calling, List(Text)) is ""
+	Sampled.Inputs(Calling, "T.Call", Calling, List(Text) + "T.Read").StartsWith("it has no tests, the other tests use")
+	Sampled.Inputs(Mutants.Twice, "D.Twice", Rolling.methods.Last, List(Text)) is "its tests use input or Random"
+	if name is in reaching
+		return "it uses input or Random"
+	let tests = MethodEntry(runner, instructions = Mutation(runner).Split(List(Text) + method.Name))
+	mutable hasTests = false
+	for runner.instructions
+		hasTests = hasTests or (Mutation(runner).Marked(value) is method.Name)
+	let other = hasTests then "its tests" else "it has no tests, the other tests"
+	IsReaching(tests, reaching) then other + " use input or Random" else ""
 IsReaching(method MethodEntry, reaching Texts) Boolean
 	Sampled.IsReaching(Reader, List(Text)) and (Sampled.IsReaching(Calling, List(Text)) is false)
 	Baseline(Mutants.Sample).IsReaching(Calling, List(Text) + "T.Read")
