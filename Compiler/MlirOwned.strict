@@ -130,15 +130,15 @@ IsLeaked(at Number, register Number) Boolean
 Stored(entry InstructionEntry) Texts
 	Owner.Stored(Built(2)).Index("    func.call @strict_rc_dead(%t2o, %t2) : (f64, f64) -> ()") is 6
 	MlirOwned(Copying, 4).Stored(Copying.method.instructions(4)).Length is 2
+	MlirOwned(MlirCarried.Carrying.function, 6).Stored(MlirCarried.Stored).Length > 2
 	Text.Combine(Owner.Stored(Built(2))).Length is 332
 	Text.Combine(Owner.Stored(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "#this"))).Length is 90
 	let slot = entry.texts(0) is "#this" then "%instance" else "%v_" + entry.texts(0)
 	let copied = function.Copied("%r" + entry.payload(0), slot, "%t" + position)
-	let seeded = MlirDying(function, position)
-	let seed = seeded.Seed(entry.texts(0))
-	if IsOwned(entry.texts(0), 0, seed) is false
+	let seed = MlirDying(function, position).Seed(entry.texts(0))
+	if (IsOwned(entry.texts(0), 0, seed) or MlirCarried(function).IsCarried(entry.texts(0))) is false
 		return copied
-	let dying = Placed(seeded.Guarded(Reusing.Slice(8, 6), seed), 0, 0)
+	let dying = Placed(MlirDying(function, position).Guarded(Reusing.Slice(8, 6), seed), 0, 0)
 	(List(Text) + function.Load("%t" + position + "o", slot)) + copied + dying
 Reconstructed(entry InstructionEntry, owner TypeEntry, fresh Texts) Texts
 	Text.Combine(Rebuilt.Reconstructed(Rebuilding(7), MlirInstances.Outer, Fresh)).IndexOf("@strict_rc_unshared(") > 0
