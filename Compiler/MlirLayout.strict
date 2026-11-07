@@ -22,6 +22,7 @@ constant Singles = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFuncti
 constant BytingsInstructions = (MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/Bytes", (0, 6, -1, 0)), "forResult")) + ListWritten
 constant Bytings = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Packed", List(MemberEntry) + MlirLists.Items, "Strict/Bytes", BytingsInstructions), List(Number), -1, "", "f32")
 constant Keyed = "Dictionary("
+constant Plain = ("Number", "Text", "Boolean", "Character", "None")
 IsAliased(entry InstructionEntry, position Number) Boolean
 	MlirLayout(MlirInstances.Shapes).IsAliased(InstructionEntry(InstructionType.FieldLoad, "value", (2, 1, -1)), 2)
 	MlirLayout(MlirInstances.Shapes).IsAliased(InstructionEntry(InstructionType.FieldLoad, "width", (2, 0, -1)), 2)
@@ -42,12 +43,11 @@ IsStruct(typeName Text) Boolean
 	let isPacked = couples.IsCoupled(typeName) or couples.IsSingle(typeName) or MlirLanes(function, 0).IsPacked(typeName)
 	isStruct and (isPacked is false)
 Represented(kind Text) Text
-	Wrapping.Represented("Angle") is "Number"
-	Wrapping.Represented("Shape") is "Shape"
-	Wrapping.Represented("Texts") is "List(Text)"
+	(Wrapping.Represented("Angle") is "Number") and (Wrapping.Represented("Shape") is "Shape")
+	(Wrapping.Represented("Texts") is "List(Text)") and (Wrapping.Represented("Boolean") is "Boolean")
 	Wrapping.Represented("Dictionary(Text, Number)") is "List(List(Text, Number))"
-	if kind is in ("Texts", "Numbers", "Booleans")
-		return "List(" + kind.Substring(0, kind.Length - 1) + ")"
+	if kind is in Plain
+		return kind
 	if kind.StartsWith(Keyed)
 		return "List(" + Represented(MethodBodies.Item(kind.Substring(Keyed.Length, kind.Length - Keyed.Length - 1))) + ")"
 	let packed = MlirLanes(function, 0).IsPacked(kind) then "Number" else MlirFlats(function, 0).Kind(kind)

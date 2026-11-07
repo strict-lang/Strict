@@ -58,6 +58,8 @@ Arguments(instanceType Text) Texts
 	Pairing.Arguments("Couple(Text, Number)") is ("Text", "Number")
 	Pairing.Arguments("Couple(List(Text, Number), Number)") is ("List(Text, Number)", "Number")
 	Pairing.Arguments("Couple").Length is 0
+	if instanceType.IndexOf("(") < 0
+		return List(Text)
 	for SyntaxParser(Tokenizer(instanceType).Tokens).Parse.children
 		value to Text
 Members(typeName Text, members Scope) Scope

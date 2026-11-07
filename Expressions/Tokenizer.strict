@@ -122,11 +122,10 @@ IsDigitCode(code Number) Boolean
 	Tokenizer("1").IsName(0, 1) is false and (Tokenizer("Id =").IsName(0, 2) is false)
 	Tokenizer("Id= 1").IsName(0, 2) is false
 	(code >= Character.zeroCharacter) and (code <= Character.zeroCharacter + 9)
-IsGrouped Boolean
-	Tokenizer("value.None is ()").IsGrouped is false
-	Tokenizer("(a + b) * c").IsGrouped
-	Tokenizer("(a + b").IsGrouped is false
-	let tokens = Tokens
+IsGrouped(tokens Texts) Boolean
+	Tokenizer.IsGrouped(Tokenizer("value.None is ()").Tokens) is false
+	Tokenizer.IsGrouped(Tokenizer("(a + b) * c").Tokens)
+	Tokenizer.IsGrouped(Tokenizer("(a + b").Tokens) is false
 	if tokens.Count("(") is not tokens.Count(")")
 		return false
 	for tokens
