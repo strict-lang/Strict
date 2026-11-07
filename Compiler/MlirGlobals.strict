@@ -1,11 +1,44 @@
 has functions List(MlirFunction)
 constant Counted = MlirGlobals(MlirModule.Counters.Functions)
+constant Filling = ("  func.func private @strict_places_fill() -> i64 {", "    %table = llvm.mlir.addressof @strict_places : !llvm.ptr")
+constant Returning = ("    return %count : i64", "  }")
+constant ShapeFunction = ("    %f2 = func.constant @Shape_Run_0 : (f64) -> f64", "    %c2 = builtin.unrealized_conversion_cast %f2 : (f64) -> f64 to !llvm.ptr")
+constant ShapeStored = ("    %s2 = llvm.getelementptr %table[4] : (!llvm.ptr) -> !llvm.ptr, i64", "    llvm.store %c2, %s2 : !llvm.ptr, !llvm.ptr")
+constant ShapeNamed = ("    %w2 = llvm.mlir.addressof @wShape_Run_0 : !llvm.ptr", "    %n2 = llvm.getelementptr %s2[1] : (!llvm.ptr) -> !llvm.ptr, i64", "    llvm.store %w2, %n2 : !llvm.ptr, !llvm.ptr")
+constant Table = "  llvm.mlir.global internal @strict_places(dense<0> : tensor<"
 Lines Texts
-	Counted.Lines.Length is 1
+	Counted.Lines.Length is 14
 	mutable lines = List(Mutable(Text))
 	for functions
 		lines = lines + Function(value)
-	lines + MlirDefaults(functions.First).Globals + MlirChanged.Declarations(functions)
+	lines + MlirDefaults(functions.First).Globals + MlirChanged.Declarations(functions) + Places
+Places Texts
+	Counted.Places.First is Table + "2xi64>) : !llvm.array<2 x i64>"
+	(Counted.Places(1) is Filling.First) and Counted.Places(3).StartsWith("    %f0 = func.constant @")
+	(Counted.Places.Last is "  }") and Counted.Places(Counted.Places.Length - 3).EndsWith(" 1 : i64")
+	mutable fills = List(Mutable(Text))
+	mutable count = 0
+	for functions
+		if MlirForeign(value).IsForeign is false
+			fills = fills + Place(value, count)
+			count = count + 1
+	let size = (count, 1).Maximum * 2
+	let table = Table + size + "xi64>) : !llvm.array<" + size + " x i64>"
+	(List(Text) + table) + Filling + fills + ("    %count = arith.constant " + count + " : i64") + Returning
+Place(function MlirFunction, at Number) Texts
+	Counted.Place(MlirCalls.Shapes, 2) is ShapeFunction + ShapeStored + ShapeNamed
+	let signature = "(" + outer.Text.Combine(Types(function), ", ") + ") -> f64"
+	let pointer = "    %c" + at + " = builtin.unrealized_conversion_cast %f" + at + " : " + signature + " to !llvm.ptr"
+	let slot = "    %s" + at + " = llvm.getelementptr %table[" + at * 2 + "] : (!llvm.ptr) -> !llvm.ptr, i64"
+	let named = "    %n" + at + " = llvm.getelementptr %s" + at + "[1] : (!llvm.ptr) -> !llvm.ptr, i64"
+	let where = "    %w" + at + " = llvm.mlir.addressof @w" + function.Symbol + " : !llvm.ptr"
+	let called = "    %f" + at + " = func.constant @" + function.Symbol + " : " + signature
+	let stores = ("    llvm.store %c" + at + ", %s" + at + " : !llvm.ptr, !llvm.ptr", where, named)
+	(called, pointer, slot) + stores + ("    llvm.store %w" + at + ", %n" + at + " : !llvm.ptr, !llvm.ptr")
+Types(function MlirFunction) Texts
+	Counted.Types(MlirCalls.Shapes).First is "f64"
+	for function.Parameters
+		"f64"
 Function(function MlirFunction) Texts
 	Counted.Function(MlirCalls.Shapes).Length is 3
 	Counted.Function(MlirCalls.Shapes).First.IndexOf("(\"Shape.Run\\00Shape.strict\\00\")") > 0

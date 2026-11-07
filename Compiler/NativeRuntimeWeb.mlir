@@ -1278,3 +1278,8 @@
     %printed = llvm.call @printf(%format, %text) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr) -> i32
     return
   }
+  // the start addresses of the functions of the stack frames for strict_places_print, none known here yet
+  func.func private @strict_stack_starts(%frames: !llvm.ptr, %limit: i64) -> i64 {
+    %none = arith.constant 0 : i64
+    return %none : i64
+  }

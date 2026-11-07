@@ -2068,9 +2068,53 @@
     %format = llvm.mlir.addressof @strict_gc_out_of_memory_what : !llvm.ptr
     %printed = llvm.call @printf(%format, %what, %megabytes, %heap) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr, i64, i64) -> i32
     %message = llvm.mlir.addressof @strict_gc_out_of_memory : !llvm.ptr
+    func.call @strict_places_print() : () -> ()
     llvm.call @strict_crash_log(%message) : (!llvm.ptr) -> ()
     %code = arith.constant 1 : i32
     llvm.call @exit(%code) : (i32) -> ()
+    return
+  }
+  // the Strict methods on the stack when memory runs out: the generated strict_places_fill writes the address and the
+  // where text (Type.Method, file) of every method into strict_places only then, strict_stack_starts gives the frames
+  llvm.mlir.global internal constant @strict_place_format("\09at %s in %s\0A\00") : !llvm.array<14 x i8>
+  func.func private @strict_places_print() {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %limit = arith.constant 64 : i64
+    %count = func.call @strict_places_fill() : () -> i64
+    %table = llvm.mlir.addressof @strict_places : !llvm.ptr
+    %frames = llvm.alloca %limit x i64 : (i64) -> !llvm.ptr
+    %found = func.call @strict_stack_starts(%frames, %limit) : (!llvm.ptr, i64) -> i64
+    cf.br ^frame(%zero : i64)
+  ^frame(%at: i64):
+    %more = arith.cmpi slt, %at, %found : i64
+    cf.cond_br %more, ^start, ^done
+  ^start:
+    %frameSlot = llvm.getelementptr %frames[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %start = llvm.load %frameSlot : !llvm.ptr -> i64
+    %next = arith.addi %at, %one : i64
+    cf.br ^entry(%zero : i64)
+  ^entry(%index: i64):
+    %isListed = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %isListed, ^compare, ^frame(%next : i64)
+  ^compare:
+    %two = arith.constant 2 : i64
+    %position = arith.muli %index, %two : i64
+    %addressSlot = llvm.getelementptr %table[%position] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %address = llvm.load %addressSlot : !llvm.ptr -> i64
+    %following = arith.addi %index, %one : i64
+    %isMethod = arith.cmpi eq, %address, %start : i64
+    cf.cond_br %isMethod, ^print, ^entry(%following : i64)
+  ^print:
+    %whereSlot = llvm.getelementptr %addressSlot[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %where = llvm.load %whereSlot : !llvm.ptr -> !llvm.ptr
+    %methodLength = llvm.call @strlen(%where) : (!llvm.ptr) -> i64
+    %fileOffset = arith.addi %methodLength, %one : i64
+    %file = llvm.getelementptr %where[%fileOffset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %format = llvm.mlir.addressof @strict_place_format : !llvm.ptr
+    %printed = llvm.call @printf(%format, %where, %file) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    cf.br ^frame(%next : i64)
+  ^done:
     return
   }
   func.func private @strict_commit(%at: !llvm.ptr, %size: i64) {

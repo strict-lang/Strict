@@ -1499,3 +1499,39 @@
     %result = llvm.call @WriteFile(%target, %buffer, %count, %done, %null) : (!llvm.ptr, !llvm.ptr, i32, !llvm.ptr, !llvm.ptr) -> i32
     return
   }
+  // the start addresses of the functions of the stack frames for strict_places_print, from the unwind data of the image
+  llvm.func @RtlCaptureStackBackTrace(i32, i32, !llvm.ptr, !llvm.ptr) -> i16
+  llvm.func @RtlLookupFunctionEntry(i64, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
+  func.func private @strict_stack_starts(%frames: !llvm.ptr, %limit: i64) -> i64 {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %skipped = arith.constant 0 : i32
+    %null = llvm.mlir.zero : !llvm.ptr
+    %wanted = arith.trunci %limit : i64 to i32
+    %captured = llvm.call @RtlCaptureStackBackTrace(%skipped, %wanted, %frames, %null) : (i32, i32, !llvm.ptr, !llvm.ptr) -> i16
+    %count = arith.extui %captured : i16 to i64
+    %baseSlot = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
+    cf.br ^frame(%zero : i64)
+  ^frame(%at: i64):
+    %more = arith.cmpi slt, %at, %count : i64
+    cf.cond_br %more, ^lookup, ^done
+  ^lookup:
+    %slot = llvm.getelementptr %frames[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %pc = llvm.load %slot : !llvm.ptr -> i64
+    %entry = llvm.call @RtlLookupFunctionEntry(%pc, %baseSlot, %null) : (i64, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %next = arith.addi %at, %one : i64
+    %isKnown = llvm.icmp "ne" %entry, %null : !llvm.ptr
+    cf.cond_br %isKnown, ^known, ^unknown
+  ^known:
+    %begin = llvm.load %entry : !llvm.ptr -> i32
+    %offset = arith.extui %begin : i32 to i64
+    %base = llvm.load %baseSlot : !llvm.ptr -> i64
+    %start = arith.addi %base, %offset : i64
+    llvm.store %start, %slot : i64, !llvm.ptr
+    cf.br ^frame(%next : i64)
+  ^unknown:
+    llvm.store %zero, %slot : i64, !llvm.ptr
+    cf.br ^frame(%next : i64)
+  ^done:
+    return %count : i64
+  }
