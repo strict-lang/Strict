@@ -13571,7 +13571,11 @@
     %bytesEntry = llvm.getelementptr %merging[0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<3 x i64>
     %bytes = llvm.load %bytesEntry : !llvm.ptr -> i64
     %bounced = llvm.mlir.addressof @strict_gpu_bounced : !llvm.ptr
-    %bounce = func.call @strict_gpu_bounce(%bounced, %bytes) : (!llvm.ptr, i64) -> !llvm.ptr
+    %pinned = func.call @strict_gpu_bounce(%bounced, %bytes) : (!llvm.ptr, i64) -> !llvm.ptr
+    %target = func.call @strict_list_data(%host) : (f64) -> !llvm.ptr
+    %unpinned = llvm.mlir.zero : !llvm.ptr
+    %isPinned = llvm.icmp "ne" %pinned, %unpinned : !llvm.ptr
+    %bounce = arith.select %isPinned, %pinned, %target : !llvm.ptr
     %hasEvent = arith.cmpi ne, %eventBits, %none : i64
     cf.cond_br %hasEvent, ^after, ^plain
   ^after:
@@ -13582,8 +13586,11 @@
     %got = func.call @strict_gpu_get(%bounce, %device, %bytes) : (!llvm.ptr, i64, i64) -> i1
     cf.br ^copy
   ^copy:
-    %target = func.call @strict_list_data(%host) : (f64) -> !llvm.ptr
+    cf.cond_br %isPinned, ^copied, ^done
+  ^copied:
     %copied = llvm.call @memcpy(%target, %bounce, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    cf.br ^done
+  ^done:
     return
   }
   func.func private @strict_gpu_threshold() -> i64 {
@@ -17242,7 +17249,10 @@
     %host = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
     %current = func.call @strict_gpu_current() : () -> i1
     %bounced = llvm.mlir.addressof @strict_gpu_bounced : !llvm.ptr
-    %bounce = func.call @strict_gpu_bounce(%bounced, %size) : (!llvm.ptr, i64) -> !llvm.ptr
+    %pinned = func.call @strict_gpu_bounce(%bounced, %size) : (!llvm.ptr, i64) -> !llvm.ptr
+    %unpinned = llvm.mlir.zero : !llvm.ptr
+    %isPinned = llvm.icmp "ne" %pinned, %unpinned : !llvm.ptr
+    %bounce = arith.select %isPinned, %pinned, %host : !llvm.ptr
     %event = func.call @strict_gpu_marked(%holder) : (!llvm.ptr) -> !llvm.ptr
     %noEvent = llvm.mlir.zero : !llvm.ptr
     %isMarked = llvm.icmp "ne" %event, %noEvent : !llvm.ptr
@@ -17254,7 +17264,11 @@
     %plainGot = func.call @strict_gpu_get(%bounce, %device, %bytes) : (!llvm.ptr, i64, i64) -> i1
     cf.br ^copy(%plainGot : i1)
   ^copy(%got: i1):
+    cf.cond_br %isPinned, ^bounced(%got : i1), ^checked(%got : i1)
+  ^bounced(%bouncedGot: i1):
     %copied = llvm.call @memcpy(%host, %bounce, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    cf.br ^checked(%bouncedGot : i1)
+  ^checked(%checkedGot: i1):
     %failureSlot = llvm.mlir.addressof @strict_gpu_failure : !llvm.ptr
     %word = llvm.load %failureSlot : !llvm.ptr -> i64
     %hasWord = arith.cmpi ne, %word, %none : i64
@@ -17293,6 +17307,7 @@
   }
   // downloads go through pinned memory, copies into pageable memory ran at about 1 GB/s
   llvm.mlir.global internal @strict_gpu_bounced(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  // null when no pinned memory is left (a commit limit): the caller copies through its own pageable memory then
   func.func private @strict_gpu_bounce(%bounced: !llvm.ptr, %bytes: i64) -> !llvm.ptr {
     %capacitySlot = llvm.getelementptr %bounced[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<2 x i64>
     %capacity = llvm.load %capacitySlot : !llvm.ptr -> i64
@@ -17305,7 +17320,10 @@
     %doubled = arith.shli %bytes, %one : i64
     %fresh = func.call @strict_gpu_pinned(%doubled) : (i64) -> i64
     llvm.store %fresh, %bounced : i64, !llvm.ptr
-    llvm.store %doubled, %capacitySlot : i64, !llvm.ptr
+    %none = arith.constant 0 : i64
+    %isPinned = arith.cmpi ne, %fresh, %none : i64
+    %kept = arith.select %isPinned, %doubled, %none : i64
+    llvm.store %kept, %capacitySlot : i64, !llvm.ptr
     cf.br ^done
   ^done:
     %bufferBits = llvm.load %bounced : !llvm.ptr -> i64
