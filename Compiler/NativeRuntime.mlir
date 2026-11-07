@@ -1948,6 +1948,7 @@
     llvm.store %youngLimit, %youngLimitSlot : i64, !llvm.ptr
     cf.br ^done
   ^done:
+    func.call @strict_alloc_start() : () -> ()
     return
   }
   llvm.mlir.global internal thread_local @strict_stack_bottom(0 : i64) : i64
@@ -3052,6 +3053,7 @@
   }
   func.func private @strict_gc_allocate(%size: i64, %list: i64) -> !llvm.ptr {
     %zero = arith.constant 0 : i64
+    func.call @strict_alloc_check() : () -> ()
     %shared = func.call @strict_rc_busy() : () -> i1
     %madeSlot = llvm.mlir.addressof @strict_gc_small_made : !llvm.ptr
     cf.cond_br %shared, ^locked, ^alone
@@ -7193,6 +7195,279 @@
     llvm.store %ended, %collectedSlot : f64, !llvm.ptr
     llvm.store %took, %collectingSlot : f64, !llvm.ptr
     cf.br ^done
+  ^done:
+    return
+  }
+  // STRICT_ALLOC_PROFILE=N samples every Nth allocation: the Strict methods on its stack (strict_stack_starts and the
+  // strict_places table) are counted, at exit the 25 methods most often allocating themselves and on the stack print
+  llvm.mlir.global internal @strict_alloc_every(0 : i64) : i64
+  llvm.mlir.global internal @strict_alloc_left(0 : i64) : i64
+  llvm.mlir.global internal @strict_alloc_methods(0 : i64) : i64
+  llvm.mlir.global internal @strict_alloc_samples(0 : i64) : i64
+  llvm.mlir.global internal @strict_alloc_counts(0 : i64) : i64
+  llvm.mlir.global internal @strict_alloc_hash(0 : i64) : i64
+  llvm.mlir.global internal constant @strict_alloc_switch("STRICT_ALLOC_PROFILE\00") : !llvm.array<21 x i8>
+  llvm.mlir.global internal constant @strict_alloc_header("Allocation profile: %lld samples, one every %lld allocations, %s\0A\00") : !llvm.array<66 x i8>
+  llvm.mlir.global internal constant @strict_alloc_self("allocating in the method itself\00") : !llvm.array<32 x i8>
+  llvm.mlir.global internal constant @strict_alloc_inclusive("the method or one it calls\00") : !llvm.array<27 x i8>
+  llvm.mlir.global internal constant @strict_alloc_line("  %8lld %5.1f%%  %s\0A\00") : !llvm.array<21 x i8>
+  llvm.func @atexit(!llvm.ptr) -> i32
+  func.func private @strict_alloc_start() {
+    %zero = arith.constant 0 : i64
+    %name = llvm.mlir.addressof @strict_alloc_switch : !llvm.ptr
+    %setting = llvm.call @getenv(%name) : (!llvm.ptr) -> !llvm.ptr
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %isSet = llvm.icmp "ne" %setting, %unset : !llvm.ptr
+    cf.cond_br %isSet, ^asked, ^done
+  ^asked:
+    %every = llvm.call @atoll(%setting) : (!llvm.ptr) -> i64
+    %isPositive = arith.cmpi sgt, %every, %zero : i64
+    cf.cond_br %isPositive, ^start(%every : i64), ^done
+  ^start(%interval: i64):
+    %count = func.call @strict_places_fill() : () -> i64
+    %two = arith.constant 2 : i64
+    %eight = arith.constant 8 : i64
+    %noByte = arith.constant 0 : i32
+    %slots = arith.muli %count, %two : i64
+    %countBytes = arith.muli %slots, %eight : i64
+    %counts = func.call @strict_malloc(%countBytes) : (i64) -> !llvm.ptr
+    %clearedCounts = llvm.call @memset(%counts, %noByte, %countBytes) : (!llvm.ptr, i32, i64) -> !llvm.ptr
+    %hashBytes = arith.constant 1048576 : i64
+    %hash = func.call @strict_malloc(%hashBytes) : (i64) -> !llvm.ptr
+    %clearedHash = llvm.call @memset(%hash, %noByte, %hashBytes) : (!llvm.ptr, i32, i64) -> !llvm.ptr
+    %countsBits = llvm.ptrtoint %counts : !llvm.ptr to i64
+    %countsSlot = llvm.mlir.addressof @strict_alloc_counts : !llvm.ptr
+    llvm.store %countsBits, %countsSlot : i64, !llvm.ptr
+    %hashBits = llvm.ptrtoint %hash : !llvm.ptr to i64
+    %hashSlot = llvm.mlir.addressof @strict_alloc_hash : !llvm.ptr
+    llvm.store %hashBits, %hashSlot : i64, !llvm.ptr
+    %methodsSlot = llvm.mlir.addressof @strict_alloc_methods : !llvm.ptr
+    llvm.store %count, %methodsSlot : i64, !llvm.ptr
+    %table = llvm.mlir.addressof @strict_places : !llvm.ptr
+    %one = arith.constant 1 : i64
+    %mask = arith.constant 131071 : i64
+    cf.br ^insert(%zero : i64)
+  ^insert(%index: i64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^probe, ^armed
+  ^probe:
+    %position = arith.muli %index, %two : i64
+    %addressSlot = llvm.getelementptr %table[%position] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %address = llvm.load %addressSlot : !llvm.ptr -> i64
+    %home = func.call @strict_alloc_bucket(%address) : (i64) -> i64
+    cf.br ^bucket(%home : i64)
+  ^bucket(%at: i64):
+    %entrySlot = llvm.getelementptr %hash[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %entry = llvm.load %entrySlot : !llvm.ptr -> i64
+    %isFree = arith.cmpi eq, %entry, %zero : i64
+    %following = arith.addi %at, %one : i64
+    %wrapped = arith.andi %following, %mask : i64
+    cf.cond_br %isFree, ^store, ^bucket(%wrapped : i64)
+  ^store:
+    %stored = arith.addi %index, %one : i64
+    llvm.store %stored, %entrySlot : i64, !llvm.ptr
+    %next = arith.addi %index, %one : i64
+    cf.br ^insert(%next : i64)
+  ^armed:
+    %everySlot = llvm.mlir.addressof @strict_alloc_every : !llvm.ptr
+    llvm.store %interval, %everySlot : i64, !llvm.ptr
+    %leftSlot = llvm.mlir.addressof @strict_alloc_left : !llvm.ptr
+    llvm.store %interval, %leftSlot : i64, !llvm.ptr
+    %report = llvm.mlir.addressof @strict_alloc_exit : !llvm.ptr
+    %registered = llvm.call @atexit(%report) : (!llvm.ptr) -> i32
+    cf.br ^done
+  ^done:
+    return
+  }
+  func.func private @strict_alloc_bucket(%address: i64) -> i64 {
+    %four = arith.constant 4 : i64
+    %mask = arith.constant 131071 : i64
+    %shifted = arith.shrui %address, %four : i64
+    %bucket = arith.andi %shifted, %mask : i64
+    return %bucket : i64
+  }
+  // the index of the method starting at an address in strict_places, -1 for runtime functions and other code
+  func.func private @strict_alloc_method(%start: i64) -> i64 {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %missing = arith.constant -1 : i64
+    %mask = arith.constant 131071 : i64
+    %hashSlot = llvm.mlir.addressof @strict_alloc_hash : !llvm.ptr
+    %hashBits = llvm.load %hashSlot : !llvm.ptr -> i64
+    %hash = llvm.inttoptr %hashBits : i64 to !llvm.ptr
+    %table = llvm.mlir.addressof @strict_places : !llvm.ptr
+    %home = func.call @strict_alloc_bucket(%start) : (i64) -> i64
+    cf.br ^bucket(%home : i64)
+  ^bucket(%at: i64):
+    %entrySlot = llvm.getelementptr %hash[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %entry = llvm.load %entrySlot : !llvm.ptr -> i64
+    %isFree = arith.cmpi eq, %entry, %zero : i64
+    cf.cond_br %isFree, ^none, ^compare
+  ^compare:
+    %index = arith.subi %entry, %one : i64
+    %position = arith.muli %index, %two : i64
+    %addressSlot = llvm.getelementptr %table[%position] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %address = llvm.load %addressSlot : !llvm.ptr -> i64
+    %isMethod = arith.cmpi eq, %address, %start : i64
+    %following = arith.addi %at, %one : i64
+    %wrapped = arith.andi %following, %mask : i64
+    cf.cond_br %isMethod, ^found(%index : i64), ^bucket(%wrapped : i64)
+  ^found(%method: i64):
+    return %method : i64
+  ^none:
+    return %missing : i64
+  }
+  func.func private @strict_alloc_check() attributes {llvm.passthrough = ["alwaysinline"]} {
+    %zero = arith.constant 0 : i64
+    %leftSlot = llvm.mlir.addressof @strict_alloc_left : !llvm.ptr
+    %left = llvm.load %leftSlot : !llvm.ptr -> i64
+    %isOn = arith.cmpi ne, %left, %zero : i64
+    cf.cond_br %isOn, ^count, ^done
+  ^count:
+    func.call @strict_alloc_counted(%left) : (i64) -> ()
+    cf.br ^done
+  ^done:
+    return
+  }
+  func.func private @strict_alloc_counted(%left: i64) attributes {llvm.passthrough = ["noinline"]} {
+    %one = arith.constant 1 : i64
+    %next = arith.subi %left, %one : i64
+    %isDue = arith.cmpi slt, %next, %one : i64
+    %everySlot = llvm.mlir.addressof @strict_alloc_every : !llvm.ptr
+    %every = llvm.load %everySlot : !llvm.ptr -> i64
+    %stored = arith.select %isDue, %every, %next : i64
+    %leftSlot = llvm.mlir.addressof @strict_alloc_left : !llvm.ptr
+    llvm.store %stored, %leftSlot : i64, !llvm.ptr
+    cf.cond_br %isDue, ^sample, ^done
+  ^sample:
+    func.call @strict_alloc_sample() : () -> ()
+    cf.br ^done
+  ^done:
+    return
+  }
+  // the first Strict method on the stack allocates itself, every Strict method on it counts once per sample as well
+  func.func private @strict_alloc_sample() {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %limit = arith.constant 64 : i64
+    %frames = llvm.alloca %limit x i64 : (i64) -> !llvm.ptr
+    %seen = llvm.alloca %limit x i64 : (i64) -> !llvm.ptr
+    %found = func.call @strict_stack_starts(%frames, %limit) : (!llvm.ptr, i64) -> i64
+    %samplesSlot = llvm.mlir.addressof @strict_alloc_samples : !llvm.ptr
+    %samples = llvm.atomicrmw add %samplesSlot, %one monotonic : !llvm.ptr, i64
+    %countsSlot = llvm.mlir.addressof @strict_alloc_counts : !llvm.ptr
+    %countsBits = llvm.load %countsSlot : !llvm.ptr -> i64
+    %counts = llvm.inttoptr %countsBits : i64 to !llvm.ptr
+    cf.br ^frame(%zero, %zero : i64, i64)
+  ^frame(%at: i64, %listed: i64):
+    %more = arith.cmpi slt, %at, %found : i64
+    cf.cond_br %more, ^lookup, ^done
+  ^lookup:
+    %frameSlot = llvm.getelementptr %frames[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %start = llvm.load %frameSlot : !llvm.ptr -> i64
+    %method = func.call @strict_alloc_method(%start) : (i64) -> i64
+    %next = arith.addi %at, %one : i64
+    %isMethod = arith.cmpi sge, %method, %zero : i64
+    cf.cond_br %isMethod, ^repeat(%zero : i64), ^frame(%next, %listed : i64, i64)
+  ^repeat(%earlier: i64):
+    %isChecked = arith.cmpi eq, %earlier, %listed : i64
+    cf.cond_br %isChecked, ^count, ^compare
+  ^compare:
+    %seenSlot = llvm.getelementptr %seen[%earlier] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %seenMethod = llvm.load %seenSlot : !llvm.ptr -> i64
+    %isSeen = arith.cmpi eq, %seenMethod, %method : i64
+    %later = arith.addi %earlier, %one : i64
+    cf.cond_br %isSeen, ^frame(%next, %listed : i64, i64), ^repeat(%later : i64)
+  ^count:
+    %newSlot = llvm.getelementptr %seen[%listed] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    llvm.store %method, %newSlot : i64, !llvm.ptr
+    %position = arith.muli %method, %two : i64
+    %selfSlot = llvm.getelementptr %counts[%position] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %inclusiveSlot = llvm.getelementptr %selfSlot[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %isFirst = arith.cmpi eq, %listed, %zero : i64
+    %selfAdded = arith.extui %isFirst : i1 to i64
+    %selfOld = llvm.atomicrmw add %selfSlot, %selfAdded monotonic : !llvm.ptr, i64
+    %inclusiveOld = llvm.atomicrmw add %inclusiveSlot, %one monotonic : !llvm.ptr, i64
+    %moreListed = arith.addi %listed, %one : i64
+    cf.br ^frame(%next, %moreListed : i64, i64)
+  ^done:
+    return
+  }
+  llvm.func @strict_alloc_exit() {
+    func.call @strict_alloc_report() : () -> ()
+    llvm.return
+  }
+  func.func private @strict_alloc_report() {
+    %one = arith.constant 1 : i64
+    %zero = arith.constant 0 : i64
+    %samplesSlot = llvm.mlir.addressof @strict_alloc_samples : !llvm.ptr
+    %samples = llvm.load %samplesSlot : !llvm.ptr -> i64
+    %everySlot = llvm.mlir.addressof @strict_alloc_every : !llvm.ptr
+    %every = llvm.load %everySlot : !llvm.ptr -> i64
+    %leftSlot = llvm.mlir.addressof @strict_alloc_left : !llvm.ptr
+    llvm.store %zero, %leftSlot : i64, !llvm.ptr
+    %header = llvm.mlir.addressof @strict_alloc_header : !llvm.ptr
+    %self = llvm.mlir.addressof @strict_alloc_self : !llvm.ptr
+    %printedSelf = llvm.call @printf(%header, %samples, %every, %self) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i32
+    func.call @strict_alloc_top(%zero, %samples) : (i64, i64) -> ()
+    %inclusive = llvm.mlir.addressof @strict_alloc_inclusive : !llvm.ptr
+    %printedInclusive = llvm.call @printf(%header, %samples, %every, %inclusive) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i32
+    func.call @strict_alloc_top(%one, %samples) : (i64, i64) -> ()
+    %null = llvm.mlir.zero : !llvm.ptr
+    %flushed = llvm.call @fflush(%null) : (!llvm.ptr) -> i32
+    return
+  }
+  // prints the 25 largest counts of one column (0 self, 1 inclusive), each printed one is cleared
+  func.func private @strict_alloc_top(%column: i64, %samples: i64) {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %shown = arith.constant 25 : i64
+    %methodsSlot = llvm.mlir.addressof @strict_alloc_methods : !llvm.ptr
+    %methods = llvm.load %methodsSlot : !llvm.ptr -> i64
+    %countsSlot = llvm.mlir.addressof @strict_alloc_counts : !llvm.ptr
+    %countsBits = llvm.load %countsSlot : !llvm.ptr -> i64
+    %counts = llvm.inttoptr %countsBits : i64 to !llvm.ptr
+    %table = llvm.mlir.addressof @strict_places : !llvm.ptr
+    %format = llvm.mlir.addressof @strict_alloc_line : !llvm.ptr
+    %total = arith.sitofp %samples : i64 to f64
+    %hundred = arith.constant 100.0 : f64
+    cf.br ^rank(%zero : i64)
+  ^rank(%rank: i64):
+    %moreRanks = arith.cmpi slt, %rank, %shown : i64
+    cf.cond_br %moreRanks, ^search(%zero, %zero, %zero : i64, i64, i64), ^done
+  ^search(%index: i64, %best: i64, %bestCount: i64):
+    %moreMethods = arith.cmpi slt, %index, %methods : i64
+    cf.cond_br %moreMethods, ^look, ^print(%best, %bestCount : i64, i64)
+  ^look:
+    %position = arith.muli %index, %two : i64
+    %cell = arith.addi %position, %column : i64
+    %slot = llvm.getelementptr %counts[%cell] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %count = llvm.load %slot : !llvm.ptr -> i64
+    %isMore = arith.cmpi sgt, %count, %bestCount : i64
+    %chosen = arith.select %isMore, %index, %best : i64
+    %chosenCount = arith.select %isMore, %count, %bestCount : i64
+    %nextIndex = arith.addi %index, %one : i64
+    cf.br ^search(%nextIndex, %chosen, %chosenCount : i64, i64, i64)
+  ^print(%method: i64, %methodCount: i64):
+    %isEmpty = arith.cmpi eq, %methodCount, %zero : i64
+    cf.cond_br %isEmpty, ^done, ^line
+  ^line:
+    %bestPosition = arith.muli %method, %two : i64
+    %bestCell = arith.addi %bestPosition, %column : i64
+    %bestSlot = llvm.getelementptr %counts[%bestCell] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    llvm.store %zero, %bestSlot : i64, !llvm.ptr
+    %whereIndex = arith.addi %bestPosition, %one : i64
+    %whereSlot = llvm.getelementptr %table[%whereIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %where = llvm.load %whereSlot : !llvm.ptr -> !llvm.ptr
+    %countFloat = arith.sitofp %methodCount : i64 to f64
+    %share = arith.divf %countFloat, %total : f64
+    %percent = arith.mulf %share, %hundred : f64
+    %printed = llvm.call @printf(%format, %methodCount, %percent, %where) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, i64, f64, !llvm.ptr) -> i32
+    %nextRank = arith.addi %rank, %one : i64
+    cf.br ^rank(%nextRank : i64)
   ^done:
     return
   }
