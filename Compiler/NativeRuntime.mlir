@@ -2327,6 +2327,10 @@
     %outputOwner = llvm.load %outputOwnerSlot : !llvm.ptr -> i64
     %outputPooledSlot = llvm.mlir.addressof @strict_output_pooled : !llvm.ptr
     llvm.store %outputOwner, %outputPooledSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    %overrideOwnerSlot = llvm.mlir.addressof @strict_override : !llvm.ptr
+    %overrideOwner = llvm.load %overrideOwnerSlot : !llvm.ptr -> i64
+    %overridePooledSlot = llvm.mlir.addressof @strict_override_pooled : !llvm.ptr
+    llvm.store %overrideOwner, %overridePooledSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     %jobSlot = llvm.mlir.addressof @strict_pool_job : !llvm.ptr
     %previous = llvm.load %jobSlot : !llvm.ptr -> i64
     %job = arith.addi %previous, %one : i64
@@ -12929,8 +12933,10 @@
     llvm.call @free(%text) : (!llvm.ptr) -> ()
     return
   }
-  llvm.mlir.global internal @strict_override_path(0.0 : f64) : f64
-  llvm.mlir.global internal @strict_override_text(0.0 : f64) : f64
+  // File.InMemory of this thread: one block holding the path and the text, set at once so no reader sees a path with
+  // the text of another; a pool worker uses the one of the thread that forked its job like strict_output_pooled
+  llvm.mlir.global internal thread_local @strict_override(0 : i64) : i64
+  llvm.mlir.global internal @strict_override_pooled(0 : i64) : i64
   func.func private @strict_kept_text(%text: f64) -> f64 {
     %one = arith.constant 1 : i64
     %pointer = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr
@@ -12941,28 +12947,69 @@
     %result = func.call @strict_bits(%copy) : (!llvm.ptr) -> f64
     return %result : f64
   }
+  // the previous block is freed outside of pool jobs, inside one a worker may still read the block of its forker
   func.func private @strict_file_inmemory(%path: f64, %text: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %pairBytes = arith.constant 16 : i64
     %keptPath = func.call @strict_kept_text(%path) : (f64) -> f64
     %keptText = func.call @strict_kept_text(%text) : (f64) -> f64
-    %pathSlot = llvm.mlir.addressof @strict_override_path : !llvm.ptr
-    llvm.store %keptPath, %pathSlot : f64, !llvm.ptr
-    %textSlot = llvm.mlir.addressof @strict_override_text : !llvm.ptr
+    %pair = func.call @strict_malloc(%pairBytes) : (i64) -> !llvm.ptr
+    llvm.store %keptPath, %pair : f64, !llvm.ptr
+    %textSlot = llvm.getelementptr %pair[1] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %keptText, %textSlot : f64, !llvm.ptr
+    %ownSlot = llvm.mlir.addressof @strict_override : !llvm.ptr
+    %old = llvm.load %ownSlot : !llvm.ptr -> i64
+    %pairBits = llvm.ptrtoint %pair : !llvm.ptr to i64
+    llvm.store %pairBits, %ownSlot : i64, !llvm.ptr
+    %insideSlot = llvm.mlir.addressof @strict_pool_inside : !llvm.ptr
+    %inside = llvm.load %insideSlot : !llvm.ptr -> i64
+    %isOutside = arith.cmpi eq, %inside, %none : i64
+    %hasOld = arith.cmpi ne, %old, %none : i64
+    %isFreed = arith.andi %isOutside, %hasOld : i1
+    cf.cond_br %isFreed, ^free, ^done
+  ^free:
+    %oldPair = llvm.inttoptr %old : i64 to !llvm.ptr
+    %oldPath = llvm.load %oldPair : !llvm.ptr -> f64
+    %oldTextSlot = llvm.getelementptr %oldPair[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %oldText = llvm.load %oldTextSlot : !llvm.ptr -> f64
+    %oldPathPointer = func.call @strict_ptr(%oldPath) : (f64) -> !llvm.ptr
+    %oldTextPointer = func.call @strict_ptr(%oldText) : (f64) -> !llvm.ptr
+    llvm.call @free(%oldPathPointer) : (!llvm.ptr) -> ()
+    llvm.call @free(%oldTextPointer) : (!llvm.ptr) -> ()
+    llvm.call @free(%oldPair) : (!llvm.ptr) -> ()
+    cf.br ^done
+  ^done:
     return %zero : f64
+  }
+  func.func private @strict_override_pair() -> i64 {
+    %none = arith.constant 0 : i64
+    %ownSlot = llvm.mlir.addressof @strict_override : !llvm.ptr
+    %own = llvm.load %ownSlot : !llvm.ptr -> i64
+    %insideSlot = llvm.mlir.addressof @strict_pool_inside : !llvm.ptr
+    %inside = llvm.load %insideSlot : !llvm.ptr -> i64
+    %pooledSlot = llvm.mlir.addressof @strict_override_pooled : !llvm.ptr
+    %pooled = llvm.load %pooledSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %isWorker = arith.cmpi ne, %inside, %none : i64
+    %hasOwn = arith.cmpi ne, %own, %none : i64
+    %fromPool = arith.select %isWorker, %pooled, %own : i64
+    %pair = arith.select %hasOwn, %own, %fromPool : i64
+    return %pair : i64
   }
   func.func private @strict_overridden(%path: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
-    %pathSlot = llvm.mlir.addressof @strict_override_path : !llvm.ptr
-    %stored = llvm.load %pathSlot : !llvm.ptr -> f64
-    %isSet = arith.cmpf one, %stored, %zero : f64
+    %none = arith.constant 0 : i64
+    %pairBits = func.call @strict_override_pair() : () -> i64
+    %isSet = arith.cmpi ne, %pairBits, %none : i64
     cf.cond_br %isSet, ^compare, ^none
   ^compare:
+    %pair = llvm.inttoptr %pairBits : i64 to !llvm.ptr
+    %stored = llvm.load %pair : !llvm.ptr -> f64
     %same = func.call @strict_text_equal(%path, %stored) : (f64, f64) -> f64
     %isSame = arith.cmpf one, %same, %zero : f64
     cf.cond_br %isSame, ^found, ^none
   ^found:
-    %textSlot = llvm.mlir.addressof @strict_override_text : !llvm.ptr
+    %textSlot = llvm.getelementptr %pair[1] : (!llvm.ptr) -> !llvm.ptr, f64
     %text = llvm.load %textSlot : !llvm.ptr -> f64
     return %text : f64
   ^none:
