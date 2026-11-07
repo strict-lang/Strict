@@ -46,7 +46,8 @@ Wrapped(type TypeEntry) Text
 	InlineRules(Reloaded).IsComputed and InlineRules(Reloaded).IsSmall and InlineRules(Twice).IsComputed
 	if type.Name.StartsWith("Strict/List(")
 		return "elements"
-	type.Changing.Length is 1 then type.Changing.First.Name else ""
+	let changing = type.Changing
+	changing.Length is 1 then changing.First.Name else ""
 MemberNames(type TypeEntry) Texts
 	Placeholder.Name is "Cos" and (Placeholder.declaredType is "Strict/Number")
 	Placeholder.instructions(0).texts is ("value")

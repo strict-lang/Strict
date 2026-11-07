@@ -120,7 +120,8 @@ IsByte(typeName Text) Boolean
 	Wrapping.IsByte("Byte")
 	Wrapping.IsByte("Number") is false
 	let type = function.TypeOf(TypeEntry.ShortName(typeName))
-	(type.Changing.Length is 1) and (type.Changing.First.Bits is 8)
+	let changing = type.Changing
+	(changing.Length is 1) and (changing.First.Bits is 8)
 Paired(kind Text) Texts
 	Wrapping.Paired("List(Text, Number)") is ("Text", "Number")
 	Wrapping.Paired("Dictionary(Text, Shape)") is ("Text", "Shape")

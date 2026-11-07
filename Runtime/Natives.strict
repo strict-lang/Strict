@@ -196,17 +196,16 @@ TypeOf(name Text) TypeEntry
 		if value.Name is name
 			return value
 	let short = Path(name).FileName.text
+	let qualified = "/" + short
 	for types
-		if IsNamed(value, name, short)
+		if IsNamed(value, name, short, qualified)
 			return value
 	TypeEntry(name, List(MemberEntry), List(MethodEntry))
-IsNamed(type TypeEntry, name Text, short Text) Boolean
-	Shapes.IsNamed(Shape, "Shape", "Shape")
-	Shapes.IsNamed(Shape, "Strict/Other", "Other") is false
-	Shapes.IsNamed(TypeEntry("Shape", List(MemberEntry), List(MethodEntry)), "Strict/A/Shape", "Shape")
-	Shapes.IsNamed(Shape, "Strict/Shape", "X")
-	Shapes.IsNamed(Shape, "X/Shape", "Shape")
-	Shapes.IsNamed(Shape, "B/ape", "ape") is false
-	if (type.Name is name) or (type.Name is short)
-		return true
-	type.Name.EndsWith("/" + short)
+IsNamed(type TypeEntry, name Text, short Text, qualified Text) Boolean
+	Shapes.IsNamed(Shape, "Shape", "Shape", "/Shape")
+	Shapes.IsNamed(Shape, "Strict/Other", "Other", "/Other") is false
+	Shapes.IsNamed(TypeEntry("Shape", List(MemberEntry), List(MethodEntry)), "Strict/A/Shape", "Shape", "/Shape")
+	Shapes.IsNamed(Shape, "Strict/Shape", "X", "/X")
+	Shapes.IsNamed(Shape, "X/Shape", "Shape", "/Shape")
+	Shapes.IsNamed(Shape, "B/ape", "ape", "/ape") is false
+	(type.Name is name) or (type.Name is short) or type.Name.EndsWith(qualified)

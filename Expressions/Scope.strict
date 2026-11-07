@@ -12,9 +12,10 @@ TypeOf(name Text) Text
 	Scope(("a", "b"), ("A", "B")).TypeOf("b") is "B"
 	Scope(("a", "b"), ("A", "B")).TypeOf("c") is ""
 	Scope(("a", "a"), ("A", "B")).TypeOf("a") is "B"
-	for Range(indexed, names.Length).Reverse
-		if names(value) is name
-			return types(value)
+	for names.Length - indexed
+		let position = names.Length - 1 - index
+		if names(position) is name
+			return types(position)
 	name is in positions then types(positions(name)) else ""
 Has(name Text, type Text) Boolean
 	Scope(("to", "to"), ("A", "B")).Has("to", "A")

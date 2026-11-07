@@ -29,7 +29,8 @@ IsListed(kind Text) Boolean
 	Sample.IsListed("Strict/Math/Pairing")
 	Sample.IsListed("Number") is false
 	let type = function.TypeOf(TypeEntry.ShortName(kind))
-	let member = type.Changing.Length is 1 then TypeEntry.ShortName(type.Changing.First.typeName) else ""
+	let changing = type.Changing
+	let member = changing.Length is 1 then TypeEntry.ShortName(changing.First.typeName) else ""
 	let isNumbers = member is in ("List(Number)", "Numbers")
 	isNumbers then (type.Changing.First.Bits is Number.SingleBits) and (type.Changing.First.Count is 2) else false
 Helper(entry InstructionEntry, owner Text, name Text) Text

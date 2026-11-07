@@ -21,17 +21,17 @@ constant Made = MlirFlats(MlirFunction((Tripling, Summing), Tripling, Making), 2
 constant Sample = MlirFlats(MlirFunction((Tripling, Summing), Tripling, Zed), 1)
 constant MaximumCount = 16
 Count(kind Text) Number
-	Sample.Count("Tripling") is 3
-	Sample.Count("Strict/Math/Tripling") is 3
+	(Sample.Count("Tripling") is 3) and (Sample.Count("Strict/Math/Tripling") is 3)
 	Sample.Count("Summing") is 0
 	MlirFlats(MlirPacking.Halved.function, 0).Count("Halving") is 3
 	Sample.Count("Number") is 0
 	let type = function.TypeOf(TypeEntry.ShortName(kind))
-	let member = type.Changing.Length is 1 then type.Changing.First else Numbers
+	let changing = type.Changing
+	let member = changing.Length is 1 then changing.First else Numbers
 	let isNumbers = TypeEntry.ShortName(member.typeName) is in ("List(Number)", "Numbers")
-	if (type.Changing.Length is not 1) or (isNumbers is false) or (member.Bits is not Number.SingleBits)
+	if (changing.Length is not 1) or (isNumbers is false) or (member.Bits is not Number.SingleBits)
 		return 0
-	let count = Constrained(type)
+	let count = member.Count
 	(count >= 3) and (count <= MaximumCount) and IsSupported(type, member.Name) then count else 0
 Constrained(type TypeEntry) Number
 	Sample.IsAccessor(InstructionEntry.Invoke(1, ("Strict/List(Number)", "Z", "N", "x"), List(Number) + 5, 2), 2)
@@ -43,7 +43,8 @@ Constrained(type TypeEntry) Number
 	Sample.IsAccessor(InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "inline2"), 0) is false
 	MlirFlats(MlirPairs.Sample.function, 0).Count("Pairing") is 0
 	Sample.Constrained(Tripling) is 3
-	type.Changing.Length is 1 then type.Changing.First.Count else 0
+	let changing = type.Changing
+	changing.Length is 1 then changing.First.Count else 0
 IsSupported(type TypeEntry, member Text) Boolean
 	Sample.IsSupported(Tripling, "numbers")
 	Sample.IsSupported(Summing, "numbers") is false
