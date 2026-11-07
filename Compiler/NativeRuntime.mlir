@@ -296,6 +296,16 @@
   llvm.mlir.global internal @strict_gc_work(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_work_size(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_work_capacity(0 : i64) : i64
+  // held while a thread pushes during the parallel card scan (locking is set until the last helper left it), the
+  // collector drains the work stack after it alone
+  llvm.mlir.global internal @strict_gc_work_lock(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_work_locking(0 : i64) : i64
+  // the card table scan of a young collection in chunks claimed from next until count, active while it is handed out
+  llvm.mlir.global internal @strict_gc_card_next(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_card_count(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_card_scan(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_card_active(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_card_helpers(0 : i64) : i64
   // allocation cursors and ends of the 64 size classes per thread, a thread takes its lane at its first allocation,
   // threads past the last lane share lane 0 and allocate under the collector lock while the pool runs
   llvm.mlir.global internal @strict_gc_lanes(dense<0> : tensor<65536xi64>) : !llvm.array<65536 x i64>
@@ -2672,6 +2682,7 @@
     %isStopping = arith.cmpi ne, %stopping, %zero : i64
     cf.cond_br %isStopping, ^pause, ^run
   ^pause:
+    func.call @strict_gc_help() : () -> ()
     llvm.call @strict_pause() : () -> ()
     cf.br ^wait
   ^run:
@@ -4170,11 +4181,27 @@
     return %result : !llvm.ptr
   }
   func.func private @strict_gc_push(%object: i64, %size: i64) {
-    %visitedSlot = llvm.mlir.addressof @strict_gc_small_visited : !llvm.ptr
-    func.call @strict_gc_counted(%visitedSlot, %size) : (!llvm.ptr, i64) -> ()
     %one = arith.constant 1 : i64
     %two = arith.constant 2 : i64
     %zero = arith.constant 0 : i64
+    %visitedSlot = llvm.mlir.addressof @strict_gc_small_visited : !llvm.ptr
+    %smallest = arith.constant 16384 : i64
+    %isSmall = arith.cmpi ule, %size, %smallest : i64
+    %visited = arith.select %isSmall, %one, %zero : i64
+    %visitedBefore = llvm.atomicrmw add %visitedSlot, %visited monotonic : !llvm.ptr, i64
+    %lockingSlot = llvm.mlir.addressof @strict_gc_work_locking : !llvm.ptr
+    %locking = llvm.load %lockingSlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
+    %isShared = arith.cmpi ne, %locking, %zero : i64
+    %lockSlot = llvm.mlir.addressof @strict_gc_work_lock : !llvm.ptr
+    cf.cond_br %isShared, ^lock, ^pushing
+  ^lock:
+    %pair = llvm.cmpxchg %lockSlot, %zero, %one acquire monotonic : !llvm.ptr, i64
+    %won = llvm.extractvalue %pair[1] : !llvm.struct<(i64, i1)>
+    cf.cond_br %won, ^pushing, ^contended
+  ^contended:
+    llvm.call @strict_pause() : () -> ()
+    cf.br ^lock
+  ^pushing:
     %sixteen = arith.constant 16 : i64
     %workSlot = llvm.mlir.addressof @strict_gc_work : !llvm.ptr
     %usedSlot = llvm.mlir.addressof @strict_gc_work_size : !llvm.ptr
@@ -4205,6 +4232,11 @@
     llvm.store %size, %sizeEntry : i64, !llvm.ptr
     %increased = arith.addi %used, %one : i64
     llvm.store %increased, %usedSlot : i64, !llvm.ptr
+    cf.cond_br %isShared, ^unlock, ^done
+  ^unlock:
+    llvm.store %zero, %lockSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    cf.br ^done
+  ^done:
     return
   }
   func.func private @strict_gc_locate(%tagged: i64) -> (!llvm.ptr, i64, i64, i1, i1) attributes {llvm.passthrough = ["alwaysinline"]} {
@@ -4305,28 +4337,24 @@
   ^width:
     cf.cond_br %located#3, ^large, ^small
   ^small:
-    %mark = llvm.load %located#0 : !llvm.ptr -> i8
     %unmarked = arith.constant 0 : i8
-    %isUnmarked = arith.cmpi eq, %mark, %unmarked : i8
-    cf.cond_br %isUnmarked, ^setSmall, ^done(%zero, %zero : i64, i64)
-  ^setSmall:
     %marked = arith.constant 1 : i8
-    llvm.store %marked, %located#0 : i8, !llvm.ptr
+    %smallPair = llvm.cmpxchg %located#0, %unmarked, %marked monotonic monotonic : !llvm.ptr, i8
+    %smallWon = llvm.extractvalue %smallPair[1] : !llvm.struct<(i8, i1)>
+    cf.cond_br %smallWon, ^setSmall, ^done(%zero, %zero : i64, i64)
+  ^setSmall:
     func.call @strict_gc_page_aged(%located#1) : (i64) -> ()
     cf.br ^counted(%zero, %zero : i64, i64)
   ^large:
     %largeEnd = arith.addi %located#1, %located#2 : i64
-    %largeMark = llvm.load %located#0 : !llvm.ptr -> i64
-    %isLargeUnmarked = arith.cmpi eq, %largeMark, %zero : i64
-    cf.cond_br %isLargeUnmarked, ^setLarge, ^done(%located#1, %largeEnd : i64, i64)
-  ^setLarge:
     %one = arith.constant 1 : i64
-    llvm.store %one, %located#0 : i64, !llvm.ptr
+    %largePair = llvm.cmpxchg %located#0, %zero, %one monotonic monotonic : !llvm.ptr, i64
+    %largeWon = llvm.extractvalue %largePair[1] : !llvm.struct<(i64, i1)>
+    cf.cond_br %largeWon, ^setLarge, ^done(%located#1, %largeEnd : i64, i64)
+  ^setLarge:
     func.call @strict_gc_page_aged(%located#1) : (i64) -> ()
     %markedLargeSlot = llvm.mlir.addressof @strict_gc_marked_large : !llvm.ptr
-    %markedLarge = llvm.load %markedLargeSlot : !llvm.ptr -> i64
-    %moreLarge = arith.addi %markedLarge, %located#2 : i64
-    llvm.store %moreLarge, %markedLargeSlot : i64, !llvm.ptr
+    %markedLargeBefore = llvm.atomicrmw add %markedLargeSlot, %located#2 monotonic : !llvm.ptr, i64
     cf.br ^counted(%located#1, %largeEnd : i64, i64)
   ^counted(%start: i64, %end: i64):
     func.call @strict_gc_add_marked(%located#2) : (i64) -> ()
@@ -4380,9 +4408,7 @@
   }
   func.func private @strict_gc_add_marked(%bytes: i64) {
     %markedSlot = llvm.mlir.addressof @strict_gc_marked : !llvm.ptr
-    %marked = llvm.load %markedSlot : !llvm.ptr -> i64
-    %more = arith.addi %marked, %bytes : i64
-    llvm.store %more, %markedSlot : i64, !llvm.ptr
+    %markedBefore = llvm.atomicrmw add %markedSlot, %bytes monotonic : !llvm.ptr, i64
     return
   }
   // words pointing into the large object marked last are skipped (the rows of a matrix share one, strict_packed_rows),
@@ -4601,7 +4627,7 @@
   func.func private @strict_gc_page_aged(%address: i64) {
     %slot = func.call @strict_gc_page_slot(%address) : (i64) -> !llvm.ptr
     %old = arith.constant 1 : i8
-    llvm.store %old, %slot : i8, !llvm.ptr
+    llvm.store %old, %slot atomic monotonic {alignment = 1 : i64} : i8, !llvm.ptr
     return
   }
   func.func private @strict_gc_page_renewed(%page: i64) {
@@ -6330,15 +6356,70 @@
     %top = llvm.load %topSlot : !llvm.ptr -> i64
     %used = arith.subi %top, %base : i64
     %nine = arith.constant 9 : i64
-    %eight = arith.constant 8 : i64
     %cardCount = arith.shrui %used, %nine : i64
-    cf.br ^check(%zero : i64)
+    %cardCountSlot = llvm.mlir.addressof @strict_gc_card_count : !llvm.ptr
+    llvm.store %cardCount, %cardCountSlot : i64, !llvm.ptr
+    %cardNextSlot = llvm.mlir.addressof @strict_gc_card_next : !llvm.ptr
+    llvm.store %zero, %cardNextSlot : i64, !llvm.ptr
+    %scanWord = arith.extui %scan : i1 to i64
+    %cardScanSlot = llvm.mlir.addressof @strict_gc_card_scan : !llvm.ptr
+    llvm.store %scanWord, %cardScanSlot : i64, !llvm.ptr
+    %lockingSlot = llvm.mlir.addressof @strict_gc_work_locking : !llvm.ptr
+    llvm.store %one, %lockingSlot atomic seq_cst {alignment = 8 : i64} : i64, !llvm.ptr
+    %activeSlot = llvm.mlir.addressof @strict_gc_card_active : !llvm.ptr
+    llvm.store %one, %activeSlot atomic seq_cst {alignment = 8 : i64} : i64, !llvm.ptr
+    func.call @strict_gc_claim_cards(%scan) : (i1) -> ()
+    llvm.store %zero, %activeSlot atomic seq_cst {alignment = 8 : i64} : i64, !llvm.ptr
+    %helpersSlot = llvm.mlir.addressof @strict_gc_card_helpers : !llvm.ptr
+    cf.br ^helped
+  ^helped:
+    %helpers = llvm.load %helpersSlot atomic seq_cst {alignment = 8 : i64} : !llvm.ptr -> i64
+    %alone = arith.cmpi eq, %helpers, %zero : i64
+    cf.cond_br %alone, ^unlocked, ^waitHelpers
+  ^unlocked:
+    llvm.store %zero, %lockingSlot atomic seq_cst {alignment = 8 : i64} : i64, !llvm.ptr
+    cf.br ^finished
+  ^waitHelpers:
+    llvm.call @strict_pause() : () -> ()
+    cf.br ^helped
+  ^finished:
+    return
+  }
+  // takes chunks of the card table until none is left, the collector and every parked thread that helps
+  func.func private @strict_gc_claim_cards(%scan: i1) {
+    %chunk = arith.constant 4096 : i64
+    %nextSlot = llvm.mlir.addressof @strict_gc_card_next : !llvm.ptr
+    %countSlot = llvm.mlir.addressof @strict_gc_card_count : !llvm.ptr
+    %count = llvm.load %countSlot : !llvm.ptr -> i64
+    cf.br ^claim
+  ^claim:
+    %from = llvm.atomicrmw add %nextSlot, %chunk monotonic : !llvm.ptr, i64
+    %hasCards = arith.cmpi ult, %from, %count : i64
+    cf.cond_br %hasCards, ^span, ^done
+  ^span:
+    %end = arith.addi %from, %chunk : i64
+    %to = arith.minui %end, %count : i64
+    func.call @strict_gc_scan_span(%from, %to, %scan) : (i64, i64, i1) -> ()
+    cf.br ^claim
+  ^done:
+    return
+  }
+  // cleans the dirty cards from until to and scans the old objects of those written since the last collection
+  func.func private @strict_gc_scan_span(%from: i64, %to: i64, %scan: i1) {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %eight = arith.constant 8 : i64
+    %clean = arith.constant 0 : i8
+    %cardsSlot = llvm.mlir.addressof @strict_gc_cards : !llvm.ptr
+    %cardsBits = llvm.load %cardsSlot : !llvm.ptr -> i64
+    %cards = llvm.inttoptr %cardsBits : i64 to !llvm.ptr
+    cf.br ^check(%from : i64)
   ^check(%checked: i64):
-    %moreCards = arith.cmpi ult, %checked, %cardCount : i64
+    %moreCards = arith.cmpi ult, %checked, %to : i64
     cf.cond_br %moreCards, ^readGroup, ^finished
   ^readGroup:
     %nextGroup = arith.addi %checked, %eight : i64
-    %hasGroup = arith.cmpi ule, %nextGroup, %cardCount : i64
+    %hasGroup = arith.cmpi ule, %nextGroup, %to : i64
     cf.cond_br %hasGroup, ^groupWord, ^read
   ^groupWord:
     %groupSlot = llvm.getelementptr %cards[%checked] : (!llvm.ptr, i64) -> !llvm.ptr, i8
@@ -6361,6 +6442,32 @@
     func.call @strict_gc_scan_card(%checked) : (i64) -> ()
     cf.br ^check(%following : i64)
   ^finished:
+    return
+  }
+  // a parked thread scans card chunks while a young collection hands them out
+  func.func private @strict_gc_help() {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %activeSlot = llvm.mlir.addressof @strict_gc_card_active : !llvm.ptr
+    %active = llvm.load %activeSlot atomic seq_cst {alignment = 8 : i64} : !llvm.ptr -> i64
+    %isActive = arith.cmpi ne, %active, %zero : i64
+    cf.cond_br %isActive, ^join, ^done
+  ^join:
+    %helpersSlot = llvm.mlir.addressof @strict_gc_card_helpers : !llvm.ptr
+    %joined = llvm.atomicrmw add %helpersSlot, %one seq_cst : !llvm.ptr, i64
+    %still = llvm.load %activeSlot atomic seq_cst {alignment = 8 : i64} : !llvm.ptr -> i64
+    %isStill = arith.cmpi ne, %still, %zero : i64
+    cf.cond_br %isStill, ^work, ^leave
+  ^work:
+    %scanSlot = llvm.mlir.addressof @strict_gc_card_scan : !llvm.ptr
+    %scanWord = llvm.load %scanSlot : !llvm.ptr -> i64
+    %scan = arith.cmpi ne, %scanWord, %zero : i64
+    func.call @strict_gc_claim_cards(%scan) : (i1) -> ()
+    cf.br ^leave
+  ^leave:
+    %left = llvm.atomicrmw sub %helpersSlot, %one seq_cst : !llvm.ptr, i64
+    cf.br ^done
+  ^done:
     return
   }
   func.func private @strict_gc_scan_card(%index: i64) {
