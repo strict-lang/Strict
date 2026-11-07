@@ -194,7 +194,7 @@ Subject(position Number) Text
 		return isElement then "list element" else "call " + (entry.texts.Length > 1 then entry.texts(1) else "Add")
 	let previous = position > 1 then method.instructions(position - 1) else entry
 	let isTruth = (entry.kind is Equal) and (previous.kind is Load) and (previous.payload is (entry.payload(2), 5, 1))
-	let isCondition = isTruth and (Text.Combine(method.instructions(position - 2).texts).StartsWith("logical") is false)
+	let isCondition = isTruth and (MutationFlow(method).IsLogical(position) is false)
 	isCondition then "condition" else "comparison " + Mutation(method).Operator(entry.kind)
 IsReassigned(position Number) Boolean
 	Twice.IsReassigned(1) is false

@@ -10,6 +10,11 @@ constant Adding = InstructionEntry.Binary(InstructionType.Add, (0, 1, 2))
 constant Listing = MutationFlow(MethodEntry(Mutation.Twice.method, instructions = (InstructionEntry(InstructionType.InvokeWriteToList, "list", (1, 0)))))
 constant Joining = MutationFlow(MutationKinds.Joined.method)
 constant Limited = MutationFlow(MethodEntry(Mutation.Twice.method, instructions = (MutationKinds.Limiting, InstructionEntry.Return(0))))
+constant Checked = (MutationKinds.Temporary, InstructionEntry.LoadBoolean(1, true), MutationKinds.Truth)
+constant Anded = MutationFlow(MethodEntry(Mutation.Twice.method, instructions = Checked + InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, 1)))
+constant Conditional = MutationFlow(MutationKinds.Conditioned.method)
+constant Unchecked = MutationFlow(MethodEntry(Mutation.Twice.method, instructions = Checked.Slice(0, 2) + InstructionEntry(MutationKinds.Truth, kind = InstructionType.NotEqual)))
+constant Ored = MutationFlow(MethodEntry(Mutation.Twice.method, instructions = Checked + InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, 1)))
 Target(entry InstructionEntry) Number
 	Listing.IsWritten(4, "\tlist.Add(1)") and (Listing.IsWritten(4, "\tYes") is false)
 	Twice.Target(Adding) is 2
@@ -125,3 +130,18 @@ IsKept(code Number, lines Texts, line Number) Boolean
 		return isWritten
 	let declared = MutationKinds(method).Replacement(7, method.instructions((code / 8).Floor)).Replace(" with ", " = ")
 	declared is not in lines
+IsLogical(position Number) Boolean
+	Anded.IsLogical(2) and (Anded.IsLogical(1) is false)
+	(Conditional.IsLogical(2) is false) and (Unchecked.IsLogical(2) is false)
+	let entry = method.instructions(position)
+	let stored = position > 1 then method.instructions(position - 2) else entry
+	(entry.kind is InstructionType.Equal) and Text.Combine(stored.texts).StartsWith("logical")
+Forced(position Number, kind Number, nth Text) Text
+	(Anded.Forced(2, 1, "") is "and with its left side") and (Anded.Forced(2, 0, "") is "and with its right side")
+	(Ored.Forced(2, 0, "") is "or with its left side") and (Ored.Forced(2, 1, "") is "or with its right side")
+	Conditional.Forced(2, 0, "2nd ") is "2nd condition with true"
+	Conditional.Forced(2, 1, "") is "condition with false"
+	if IsLogical(position) is false
+		return nth + MutationKinds(method).Subject(position) + " with " + (kind is 0 then "true" else "false")
+	let isAnd = method.instructions(position + 1).kind is InstructionType.JumpToIdIfFalse
+	(isAnd then "and" else "or") + " with its " + (isAnd is (kind is 1) then "left" else "right") + " side"

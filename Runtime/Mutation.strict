@@ -106,7 +106,7 @@ Replaced(kind Number, position Number, nth Text) Text
 	Mutation(MethodEntry(Compared.method, declaredType = "Strict/Text")).Replaced(2, 0, "") is "the result with \"\""
 	let entry = method.instructions(position)
 	if kind < 2
-		return "the " + nth + MutationKinds(method).Subject(position) + " with " + (kind is 0 then "true" else "false")
+		return "the " + MutationFlow(method).Forced(position, kind, nth)
 	if kind is in (2, 7)
 		return MutationKinds(method).Replacement(kind, entry)
 	if kind is 6
