@@ -13,6 +13,8 @@ constant Targeted = InstructionEntry.Binary(InstructionType.LessThan, (0, 1, 5))
 constant Forcing = (InstructionType.Equal, InstructionType.NotEqual)
 constant Operators = ("+", "-", "*", "/", "is", "is not", "<", ">")
 constant Ordinals = ("st", "nd", "rd")
+constant Writes = (InstructionEntry(InstructionType.InvokeWriteToList, "listResult1", (1, 0)), InstructionEntry(InstructionType.InvokeWriteToList, "listResult1", (2, 0)))
+constant Written = Mutation(MethodEntry(Machine.Doubler.methods.First, instructions = Writes + InstructionEntry(InstructionType.InvokeWriteToList, "built", (1, 0))))
 constant Rotated = Mutation(MutationKinds.Placed.method).Mutant(8)
 Picked(part Text, rounds Number, isWhole Boolean) Numbers
 	Mutation.Picked("", 3, true) is (0, 1, 2)
@@ -95,15 +97,16 @@ Described(code Number) Text
 	if kind is 3
 		return "removed the " + nth + "assignment to " + entry.texts.First
 	if kind is 4
-		return "removed the " + nth + "call " + (entry.texts.Length > 1 then entry.texts(1) else "Add")
-	"replaced " + Replaced(kind, entry, nth)
-Replaced(kind Number, entry InstructionEntry, nth Text) Text
-	Twice.Replaced(5, Twice.method.instructions(1), "2nd ") is "the 2nd + with -"
-	Twice.Replaced(1, MutationKinds.Compared.method.instructions(0), "") is "the comparison > with false"
-	Compared.Replaced(2, Greater, "") is "the result with false"
-	Mutation(MethodEntry(Twice.method, declaredType = "Strict/Text")).Replaced(2, Greater, "") is "the result with \"\""
+		return "removed the " + nth + MutationKinds(method).Subject((code / 8).Floor)
+	"replaced " + Replaced(kind, (code / 8).Floor, nth)
+Replaced(kind Number, position Number, nth Text) Text
+	Twice.Replaced(5, 1, "2nd ") is "the 2nd + with -"
+	Mutation(MutationKinds.Compared.method).Replaced(1, 0, "") is "the comparison > with false"
+	Compared.Replaced(2, 0, "") is "the result with false"
+	Mutation(MethodEntry(Compared.method, declaredType = "Strict/Text")).Replaced(2, 0, "") is "the result with \"\""
+	let entry = method.instructions(position)
 	if kind < 2
-		return "the " + nth + "comparison " + Operator(entry.kind) + " with " + (kind is 0 then "true" else "false")
+		return "the " + nth + MutationKinds(method).Subject(position) + " with " + (kind is 0 then "true" else "false")
 	if kind is in (2, 7)
 		return MutationKinds(method).Replacement(kind, entry)
 	if kind is 6
@@ -128,7 +131,7 @@ Line(code Number) Number
 Position(code Number) Text
 	Twice.Position(13) is ""
 	Mutation(MutationKinds.Joined.method).Position(6) is "1st "
-	Mutation(MutationKinds.Joined.method).Position(14) is "2nd "
+	(Mutation(MutationKinds.Joined.method).Position(14) is "2nd ") and (Written.Position(12) is "2nd ")
 	let at = (code / 8).Floor
 	let entry = method.instructions(at)
 	mutable before = 0

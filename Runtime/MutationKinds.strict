@@ -6,6 +6,8 @@ constant Comparisons = (InstructionType.Equal, InstructionType.NotEqual, Instruc
 constant Primitives = ("Strict/Number", "Strict/Text", "Strict/Boolean")
 constant Limiting = InstructionEntry.Invoke(0, ("T", "Limit", "Strict/Number"), List(Number), -1)
 constant Logging = InstructionEntry.Invoke(0, ("T", "Log", "None"), List(Number), -1)
+constant Equal = InstructionType.Equal
+constant Truth = InstructionEntry.Binary(InstructionType.Equal, (0, 1))
 constant Returned = InstructionEntry.Return(0)
 constant Temporary = InstructionEntry(Mutation.Stored, texts = ("logical0"))
 constant Writers = (InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.Invoke) + Mutation.Arithmetic
@@ -25,6 +27,13 @@ constant StoredConditional = InstructionEntry.Named(InstructionType.StoreRegiste
 constant ConditionalStores = (Mutation.Greater, MutationFlow.Looped.method.instructions(2), InstructionEntry(InstructionEntry.Binary(InstructionType.Add, (4, 1, 2)), line = 1), StoredConditional, StoredConditional)
 constant LoggedText = (Mutation.Stored, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "a"), Logging)
 constant Valuing = MutationKinds(MethodEntry(Twice.method, instructions = TextAdditions + ConstantLoads + ConditionalStores + LoggedText))
+constant Truths = (Loaded, InstructionEntry.LoadBoolean(1, true), Truth)
+constant Conditioned = MutationKinds(MethodEntry(Twice.method, instructions = Truths))
+constant Early = MutationKinds(MethodEntry(Twice.method, instructions = Truths.Slice(1, 2)))
+constant Unequal = MutationKinds(MethodEntry(Twice.method, instructions = Truths.Slice(0, 2) + InstructionEntry(Truth, kind = InstructionType.NotEqual)))
+constant Untrue = MutationKinds(MethodEntry(Twice.method, instructions = (Loaded, Loaded, Truth)))
+constant Logically = MutationKinds(MethodEntry(Twice.method, instructions = (Temporary, InstructionEntry.LoadBoolean(1, true), Truth)))
+constant Logged = MutationKinds(MethodEntry(Twice.method, instructions = List(InstructionEntry) + Logging))
 Kinds(position Number) Numbers
 	Twice.Kinds(1) is (5)
 	MutationKinds(MutationFlow.Issued.method).Kinds(0).Length is 0
@@ -174,6 +183,19 @@ Replacement(kind Number, entry InstructionEntry) Text
 Typed(kind Number, entry InstructionEntry) Text
 	Twice.Typed(7, Logging) is "None" and (Twice.Typed(2, Logging) is "Strict/Number")
 	kind is 7 then entry.texts(2) else method.returnType
+Subject(position Number) Text
+	(Compared.Subject(0) is "comparison >") and (MutationKinds(Mutation.Written.method).Subject(2) is "call Add")
+	(Conditioned.Subject(2) is "condition") and (Logged.Subject(0) is "call Log") and (Early.Subject(1) is "comparison is")
+	(Unequal.Subject(2) is "comparison is not") and (Untrue.Subject(2) is "comparison is")
+	(Logically.Subject(2) is "comparison is") and (MutationKinds(Mutation.Written.method).Subject(0) is "list element")
+	let entry = method.instructions(position)
+	let isElement = (entry.kind is InstructionType.InvokeWriteToList) and entry.texts.First.StartsWith("listResult")
+	if entry.kind is in (InstructionType.InvokeWriteToList, InstructionType.Invoke)
+		return isElement then "list element" else "call " + (entry.texts.Length > 1 then entry.texts(1) else "Add")
+	let previous = position > 1 then method.instructions(position - 1) else entry
+	let isTruth = (entry.kind is Equal) and (previous.kind is Load) and (previous.payload is (entry.payload(2), 5, 1))
+	let isCondition = isTruth and (Text.Combine(method.instructions(position - 2).texts).StartsWith("logical") is false)
+	isCondition then "condition" else "comparison " + Mutation(method).Operator(entry.kind)
 IsReassigned(position Number) Boolean
 	Twice.IsReassigned(1) is false
 	Storing.IsReassigned(1) and (Storing.IsReassigned(0) is false)
