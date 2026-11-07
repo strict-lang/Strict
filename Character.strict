@@ -24,7 +24,7 @@ Code Text
 to Text
 	Character("a") to Text is "a"
 	"" + value
-+(other) Text
++(other Text) Text
 	Character("1") + Character("2") is "12"
 	value to Text + other
 to Number
