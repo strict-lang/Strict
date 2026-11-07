@@ -2,6 +2,7 @@ has function MlirFunction
 has position Number
 constant Built = InstructionEntry.Invoke(1, ("Strict/Shape", "from", "Strict/Shape", "width"), 0, -1)
 constant Width = InstructionEntry(InstructionType.FieldLoad, "width", (2, 1, -1))
+constant Loggers = (MemberEntry.LoggerMember, MemberEntry("plain", "Logger", List(InstructionEntry), false), MemberEntry("count", "Number", List(InstructionEntry), false))
 constant Shapes = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 3), Built, Width)))
 constant MemberBase = 100000
 constant Looping = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry.CountingLoop)
@@ -21,8 +22,9 @@ Stored(owner TypeEntry) List(MemberEntry)
 	MlirInstances(Nesting, 1).MemberValue(Built, Outer, Outer.members(1), 1).Last is Written.Replace("%s", "%t1s1")
 	MlirInstances(Nesting, 1).MemberValue(Built, Outer, Outer.members(1), 1)(0).IndexOf("%t1op[1]") > 0
 	MlirInstances(Shapes, 0).Stored(MlirFunction.Shape).Length is 1
+	MlirInstances(Shapes, 0).Stored(TypeEntry("Strict/Logged", Loggers, List(MethodEntry))).Length is 1
 	for owner.members
-		if (value.IsConstant is false) and TypeEntry.ShortName(value.typeName) is not "Logger"
+		if (value.IsConstant is false) and (value.typeName is not "Logger") and (value.typeName.EndsWith("/Logger") is false)
 			value
 StoredNames(owner TypeEntry) Texts
 	MlirInstances(Shapes, 1).Constructed(Built, "Strict/Shape")(0) is "    %t1oz = arith.constant 8 : i64"

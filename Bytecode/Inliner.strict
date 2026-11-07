@@ -13,6 +13,8 @@ constant CallingX = (InstructionEntry.Named(InstructionType.LoadVariableToRegist
 constant Calling = MethodEntry("Run", List(MemberEntry) + NumbersMember, "Strict/Number", CallingX)
 constant Caller = TypeEntry("Strict/Caller", List(MemberEntry), List(MethodEntry) + Calling)
 constant Sample = Inliner((Caller, Listed))
+constant Mutated = "Strict/List(Mutable(Text))"
+constant Unprefixed = Inliner((TypeEntry("Caller", List(MemberEntry), List(MethodEntry)), TypeEntry(Mutated, List(MemberEntry), List(MethodEntry))))
 constant Again = MethodEntry("Again", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Invoke(0, ("Strict/Caller", "Run", "Strict/Number"), List(Number), -1))
 constant Store = InstructionType.StoreRegisterToVariable
 constant Splitting = Inliner((StructLanes.Caller, StructLanes.Pair), true)
@@ -82,9 +84,12 @@ Inlinable(owner TypeEntry, call InstructionEntry, next InstructionEntry) MethodE
 TypeOf(name Text) TypeEntry
 	Sample.TypeOf("List(Number)").Name is "Strict/List(Number)" and (Sample.TypeOf("Caller").Name is "Strict/Caller")
 	Sample.TypeOf("Strict/List(Number)").methods.Length is 1
-	Sample.TypeOf("Strict/Missing").Name is ""
+	Sample.TypeOf("Strict/Missing").Name is "" and (Sample.TypeOf("aller").Name is "")
+	(Unprefixed.TypeOf("Strict/Caller").Name is "Caller") and (Unprefixed.TypeOf(Mutated).Name is Mutated)
+	let short = TypeEntry.ShortName(name)
+	let qualified = "/" + short
 	for types
-		if (value.Name is name) or (TypeEntry.ShortName(value.Name) is TypeEntry.ShortName(name))
+		if (value.Name is name) or (value.Name is short) or value.Name.EndsWith(qualified)
 			return value
 	TypeEntry("", List(MemberEntry), List(MethodEntry))
 Callee(type TypeEntry, call InstructionEntry) MethodEntry
