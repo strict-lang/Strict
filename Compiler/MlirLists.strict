@@ -23,7 +23,7 @@ Temp(suffix Text) Text
 	Text.Combine(Hoisting.Indexed(Hoisting.function.method.instructions(1))).Length is 405
 	Text.Combine(MlirLists(Literals, 0).Cached(List(Text), "%x", "pin")).Length is 400
 	Text.Combine(MlirLists(Written, 1).ElementStored(Versioning)).Length is 266
-	Text.Combine(MlirLists(Written, 1).ElementStored(Written.method.instructions(1))).Length is 214
+	Text.Combine(MlirLists(Written, 1).ElementStored(Written.method.instructions(1))).Length is 547
 	Hoisting.ElementStored(InstructionEntry(InstructionType.StoreRegisterToVariable, "x(i)", 0))(1).Length is 44
 	Text.Combine(MlirLists(Listed, 3).Appended(Steps(3))).Length is 216
 	MlirLists(Listed, 2).Emitted is MlirLists(Listed, 2).Indexed(Steps(2))
@@ -156,7 +156,7 @@ IsElementStore Boolean
 		return false
 	entry.texts(0).IndexOf("(") > 0
 ElementStored(entry InstructionEntry) Texts
-	MlirLists(Written, 1).ElementStored(Written.method.instructions(1)).Last.IndexOf("strict_list_set") > 0
+	Text.Combine(MlirLists(Written, 1).ElementStored(Written.method.instructions(1))).IndexOf("strict_is_failure") > 0
 	MlirLists(Written, 1).ElementStored(Versioning).Last is "    llvm.store %t1s, %v_numbers : f64, !llvm.ptr"
 	let parts = PayloadDecoder(entry).ElementParts
 	let index = parts(1)
@@ -167,7 +167,16 @@ ElementStored(entry InstructionEntry) Texts
 	let isVersioned = entry.payload.Length > 2
 	let helper = isVersioned then "strict_list_write" else "strict_list_set"
 	let call = MlirMemory(function, position).Called(Temp("s"), helper, (Temp("l"), Temp("i"), Temp("e")))
-	isVersioned then loads + call + function.Store(Temp("s"), "%v_" + parts(0)) else loads + call
+	isVersioned then loads + call + function.Store(Temp("s"), "%v_" + parts(0)) else loads + call + Failed
+Failed Texts
+	MlirLists(Written, 1).Failed.First is "    %t1f = func.call @strict_is_failure(%t1s) : (f64) -> i1"
+	MlirLists(Written, 1).Failed(2) is "  ^bb1w:"
+	MlirLists(Written, 1).Failed.Last is "  ^bb1c:"
+	let failed = "    " + Temp("f") + " = func.call @strict_is_failure(" + Temp("s") + ") : (f64) -> i1"
+	let branch = "    cf.cond_br " + Temp("f") + ", ^bb" + position + "w, ^bb" + position + "c"
+	let traced = MlirMemory(function, position).Traced(Temp("s"), Temp("tr"), "strict_trace_checked")
+	let returned = MlirLines(function).End + ("    return " + Temp("tr") + " : f64", "  ^bb" + position + "c:")
+	(failed, branch, "  ^bb" + position + "w:") + traced + returned
 Target(path Text) Texts
 	MlirLists(Written, 1).Target("numbers") is ("    %t1l = llvm.load %v_numbers : !llvm.ptr -> f64")
 	MlirLists(Written, 1).Target("numbers.width").Last is "    %t1l = llvm.load %t1ls : !llvm.ptr -> f64"

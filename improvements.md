@@ -2,7 +2,6 @@
 What to fix next, one short line each, bugs first. Remove a line once it is done, add what is found at the end. No history or measurements (those go into commit messages). Speed work: [performance.md](performance.md).
 
 ## Now
-- A list write outside the list is IndexOutOfRange on the VM and skipped natively, but generated native code ignores the result of `strict_list_set` (MlirLists.ElementStored), so natively the Error does not surface yet.
 - Native Character as Text: a Character returned from a method declared as Text crashes the test exe (access violation), and `text(0) + "x"` gives "h" instead of "hx" (the right side is dropped); comparisons, `is in`, Text + Character and Character arguments for Text parameters work (found while replacing `Substring(i, 1)` with index access, those sites use `text(i) to Text` for now).
 - `X is Error` in a method body (not a test line) where the Error comes from a nested call inside X returns that Error from the method instead of giving true (test lines catch it since ErrorCodegen.Caught).
 - A conditional with a Number and a Numbers branch is typed by its first branch without an issue: `let chunk = available is Error then available else Socket.Receive(socket, 1)` made ByteEncoder(chunk) call Character.from(text) on the received bytes. Mixed branch types should be a validation issue.
