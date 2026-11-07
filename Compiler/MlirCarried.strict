@@ -3,7 +3,8 @@ has isOwner Boolean = true
 constant Outer = MemberEntry("outer", "Strict/Outer", List(InstructionEntry), false)
 constant Same = MethodEntry("Same", List(MemberEntry) + Outer, "Strict/Outer", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "outer"), InstructionEntry.Return(0)))
 constant Stale = MethodEntry("Stale", Same.parameters, "Strict/Outer", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "last"), InstructionEntry.Return(0)))
-constant Holder = TypeEntry("Strict/Holder", List(MemberEntry) + MemberEntry("last", "Strict/Outer", List(InstructionEntry), false), (Same, Stale))
+constant Itself = MethodEntry("Itself", List(MemberEntry), "Strict/Holder", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "value"), InstructionEntry.Return(0)))
+constant Holder = TypeEntry("Strict/Holder", List(MemberEntry) + MemberEntry("last", "Strict/Outer", List(InstructionEntry), false), (Same, Stale, Itself))
 constant Calling = InstructionEntry.Invoke(4, ("Strict/Holder", "Same", "Strict/Outer", "outer"), List(Number) + 3, -1)
 constant Staling = InstructionEntry.Invoke(4, ("Strict/Holder", "Stale", "Strict/Outer", "outer"), List(Number) + 3, -1)
 constant Making = (InstructionEntry.LoadNumber(0, 1), InstructionEntry.LoadNumber(1, 2), MlirOwned.Making)
@@ -20,6 +21,15 @@ constant Branching = MlirCarried(MlirFunction(Types, Holder, MethodEntry("Run", 
 constant Returning = MlirCarried(MlirFunction(Types, Holder, Same), false)
 constant Kept = List(Text) + "kept"
 constant Copied = MlirCarried(MlirOwned.Copying)
+constant Escaping = MlirCarried(MlirFunction(Types, Holder, MethodEntry("Run", List(MemberEntry), "None", (Made + InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 3, "other")) + Ended)))
+constant Looping = MlirCarried(MlirFunction(Types, Holder, MethodEntry("Run", List(MemberEntry), "None", (Made + InstructionEntry.LoopBegin(3, -1)) + Ended)))
+constant Reading = MlirCarried(MlirFunction(Types, Holder, MethodEntry("Run", List(MemberEntry), "None", (Made + InstructionEntry(InstructionType.FieldLoad, "shape", (5, 3, -1))) + Ended)))
+constant Counted = (InstructionEntry.LoadNumber(5, 1), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 5, "count"))
+constant Mixed = MlirCarried(MlirFunction(Types, Holder, MethodEntry("Run", List(MemberEntry), "None", (Made + Calling + Stored) + Counted + Ended)))
+constant Sum = (InstructionEntry.Binary(InstructionType.Add, (0, 1, 5)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 5, "kept"))
+constant Summed = MlirCarried(MlirFunction(Types, Holder, MethodEntry("Run", List(MemberEntry), "None", (Making + Sum) + Ended)))
+constant SelfCall = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "last"), InstructionEntry.Invoke(4, ("Strict/Holder", "Itself", "Strict/Holder"), List(Number), 3))
+constant Selfing = MlirCarried(MlirFunction(Types, Holder, MethodEntry("Run", List(MemberEntry), "None", SelfCall)))
 IsCarried(name Text) Boolean
 	Carrying.IsCarried("kept") and (Leaking.IsCarried("kept") is false) and (Copied.IsCarried("kept") is false)
 	Branching.IsCarried("kept") and (Branching.IsCarried("conditional0") is false)
@@ -35,12 +45,16 @@ IsCarried(name Text) Boolean
 IsPlain(name Text) Boolean
 	Carrying.IsPlain("kept") and (Carrying.IsPlain("conditional0") is false) and (Carrying.IsPlain("value") is false)
 	MlirCarried(MlirFunction(Types, Holder, Stale)).IsPlain("last") is false
+	(Carrying.IsPlain("listResult0") is false) and (Carrying.IsPlain("index") is false)
+	Mixed.IsCarried("kept") and (Mixed.IsCarried("count") is false) and Reading.IsCarried("kept")
+	(Escaping.IsCarried("kept") is false) and (Looping.IsCarried("kept") is false) and (Summed.IsCarried("kept") is false)
 	let isTemporary = (name is in MlirOwned.Temporaries) or name.StartsWith("listResult") or name.StartsWith("conditional")
 	let isOuter = (name is in function.Parameters) or (name is in MlirInstances(function, 0).StoredNames(function.type))
 	(isTemporary or isOuter) is false
 IsKeptRead(at Number, name Text, depth Number) Boolean
 	Carrying.IsKeptRead(4, "kept", 0) and (Leaking.IsKeptRead(4, "kept", 0) is false)
 	Branching.IsKeptRead(7, "kept", 0) and Branching.IsKeptRead(4, "kept", 0)
+	(Escaping.IsKeptRead(4, "kept", 0) is false) and (Looping.IsKeptRead(4, "kept", 0) is false)
 	let instructions = function.method.instructions
 	let register = instructions(at).payload(0)
 	let reuse = LoadReuse(instructions)
@@ -53,6 +67,7 @@ IsKeptRead(at Number, name Text, depth Number) Boolean
 IsSafeUse(at Number, register Number, name Text, depth Number) Boolean
 	Carrying.IsSafeUse(6, 4, "kept", 0) and (Carrying.IsSafeUse(5, 3, "kept", 7) is false)
 	Leaking.IsSafeUse(5, 3, "kept", 0) is false
+	(Escaping.IsSafeUse(5, 3, "kept", 0) is false) and (Looping.IsSafeUse(5, 3, "kept", 0) is false)
 	let entry = function.method.instructions(at)
 	if (entry.kind is InstructionType.StoreRegisterToVariable) and (entry.payload(0) is register)
 		return IsBack(entry.texts(0), name, depth)
@@ -64,6 +79,7 @@ IsSafeUse(at Number, register Number, name Text, depth Number) Boolean
 IsBack(target Text, name Text, depth Number) Boolean
 	Branching.IsBack("conditional0", "kept", 0) and Branching.IsBack("kept", "kept", 0)
 	(Branching.IsBack("conditional0", "other", 0) is false) and (Branching.IsBack("other", "kept", 0) is false)
+	Reading.IsKeptRead(4, "kept", 0) and (Summed.IsKeptValue(4, 5, Kept, 0) is false)
 	if (target is name) or (target.StartsWith("conditional") is false)
 		return target is name
 	for function.method.instructions
@@ -104,6 +120,7 @@ IsKeepingCall(at Number, allowed Texts, depth Number) Boolean
 IsPassing(caller MlirCarried, at Number, allowed Texts, depth Number) Boolean
 	Returning.IsPassing(Carrying, 5, Kept, 0)
 	Returning.IsPassing(Carrying, 5, Kept, 7) is false
+	MlirCarried(MlirFunction(Types, Holder, Itself), false).IsPassing(Selfing, 1, Kept, 0) is false
 	let entry = caller.function.method.instructions(at)
 	let positions = LoadReuse(caller.function.method.instructions).InvokeReads(entry)
 	let count = entry.payload(5 + entry.payload(3))
