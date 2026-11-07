@@ -88,10 +88,13 @@ Round(types List(TypeEntry), methods List(MethodEntry), budgets Numbers, round N
 				if MutationFlow(value).IsKept(candidates(round), lines, Mutation(value).Line(candidates(round)))
 					survivors.Add(Survivor(value, candidates(round)))
 	survivors
-Passes(started Machine, runner Text, budget Number) Boolean
+Passes(started Machine, runner Text, budget Number, isRetried = false) Boolean
 	Sample.Passes(Machine.Hello, TestCodegen.Runner, 1)
 	Mutants(Logger, "A.strict", 0).Passes(Frame.Doubling, "Missing", 0) is false
-	let failed = Machine(started, deadline = Process.Elapsed + budget).Tested(started.types.First.Name, runner)
+	let begun = Process.Elapsed
+	let failed = Machine(started, deadline = begun + budget).Tested(started.types.First.Name, runner)
+	if (failed is not 0) and (isRetried is false) and Baseline.Expired(begun, budget)
+		return Passes(started, runner, budget, true)
 	(failed is not Error) and (failed is 0)
 Survivor(method MethodEntry, code Number) Text
 	Sample.Survivor(Twice, 13) is Sample.path + ":line 0: MutationSurvived: Twice: replaced + with -" + Hint
