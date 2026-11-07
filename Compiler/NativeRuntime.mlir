@@ -2720,9 +2720,9 @@
     %one = arith.constant 1 : i64
     %null = llvm.mlir.zero : !llvm.ptr
     %stoppingSlot = llvm.mlir.addressof @strict_gc_stopping : !llvm.ptr
-    // after 1024 checks it pauses 32 times per check: 31 spinning workers made the collecting one twice as slow
+    // after 1024 checks it pauses 256 times per check: 31 spinning workers made the collecting one twice as slow
     %patience = arith.constant 1024 : i64
-    %burst = arith.constant 32 : i64
+    %burst = arith.constant 256 : i64
     cf.br ^wait(%zero : i64)
   ^wait(%spun: i64):
     %stopping = llvm.load %stoppingSlot atomic seq_cst {alignment = 8 : i64} : !llvm.ptr -> i64
