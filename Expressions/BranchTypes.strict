@@ -1,0 +1,24 @@
+has inference TypeInference
+constant Sizing = BranchTypes(ArgumentTypes.Sizing.inference)
+constant Counted = ArgumentTypes.Counted
+constant Mixed = SyntaxParser(Tokenizer("count is count then count else area").Tokens).Parse
+constant Same = SyntaxParser(Tokenizer("count is count then count else count").Tokens).Parse
+constant Failing = SyntaxParser(Tokenizer("count is count then count else Error").Tokens).Parse
+constant Fallback = SyntaxParser(Tokenizer("count else area").Tokens).Parse
+constant Statement = SyntaxNode("Else", "else")
+constant Compared = SyntaxNode("Binary", "is", Mixed.children)
+constant Message = "ConditionalBranchesMustHaveOneType: count is count then count else area gives a Count or a Area"
+constant Unchecked = ("", "Unknown", "Error", "ErrorWithValue", "None", "Generic")
+Issue(node SyntaxNode, scope Scope, current Scope) Text
+	Sizing.Issue(Mixed, Counted, Counted) is Message
+	(Sizing.Issue(Same, Counted, Counted) is "") and (Sizing.Issue(Failing, Counted, Counted) is "")
+	(Sizing.Issue(ArgumentTypes.Grown, Counted, Counted) is "") and (Sizing.Issue(Statement, Counted, Counted) is "")
+	(Sizing.Issue(Compared, Counted, Counted) is "") and (Sizing.Issue(Fallback, Counted, Counted) is "")
+	if (node.Kind is not "Binary") or (node.text is not "else") or (node.children(0).text is not "then")
+		return ""
+	let thenType = inference.TypeOf(node.children(0).children(1), scope, current)
+	let elseType = inference.TypeOf(node.children(1), scope, current)
+	let checks = ArgumentTypes(inference)
+	let isMixed = checks.Mismatch(elseType, thenType) or checks.Mismatch(thenType, elseType)
+	let message = "ConditionalBranchesMustHaveOneType: " + node + " gives a " + thenType + " or a " + elseType
+	(thenType is not in Unchecked) and (elseType is not in Unchecked) and isMixed then message else ""

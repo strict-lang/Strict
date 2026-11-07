@@ -25,7 +25,8 @@ Checked(node SyntaxNode, scope Scope, current Scope) Text
 	Sizing.ConstantAccess(Limited, Methods(0), Counted).StartsWith("ConstantNeedsTypeName")
 	Sizing.Operands(SyntaxNode("Call", "and", Listed.children)) is ""
 	Sizing.Operands(SyntaxNode("Binary", "+", Listed.children)) is ""
-	let operands = Operands(node) + ConstantAccess(node, scope, current)
+	let branched = BranchTypes(inference).Issue(node, scope, current)
+	let operands = Operands(node) + ConstantAccess(node, scope, current) + branched
 	operands is "" then Issue(node, scope, current) + OwnCall(node, scope, current) else operands
 ConstantAccess(node SyntaxNode, scope Scope, current Scope) Text
 	Sizing.ConstantAccess(SyntaxParser(Tokenizer("count.Grow").Tokens).Parse, Counted, Counted) is ""
