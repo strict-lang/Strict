@@ -14,8 +14,8 @@ constant Comparisons = (InstructionType.Equal, InstructionType.NotEqual, Instruc
 constant ElementStore = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "a(1)")
 constant StoringSeven = (InstructionEntry.LoadNumber(0, 7), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "a"))
 constant Sample = MethodEntry("Run", List(MemberEntry), "None", StoringSeven + (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "a"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 0, "list")))
-constant JsonOnly = Resolver(List(TypeEntry) + TypeEntry("Json", List(MemberEntry), List(MethodEntry)))
 Resolved List(TypeEntry)
+	Doubling.Slotted(InstructionEntry(InstructionType.IndexCall, "a", (4, 3, 9)), Specials + "a").payload is (4, 3, 6)
 	Doubling.Local(MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 7), "a")) is "a"
 	Doubling.Local(InstructionEntry(InstructionType.CheckError, List(Text), List(Number), 0)) is "#result"
 	Doubling.Local(InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "pair.b(1)")) is "pair.b(1)"
@@ -23,12 +23,13 @@ Resolved List(TypeEntry)
 	Doubling.Slotted(MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 7), "index"), Specials).payload.Length is 5
 	Doubling.Slotted(ElementStore, Specials + "a").payload is (0, 6, LiteralIndex, 1)
 	Doubling.Resolved.First.methods.First.instructions.Length is 3
-	Resolver(TypeEntry(TypeEntry.Holding(1), Name = "Strict/Character")).Called(Invocation.Coding) is (0, 0, 1)
+	Routes(TypeEntry(TypeEntry.Holding(1), Name = "Strict/Character")).Called(Invocation.Coding) is (0, 0, 1)
 	for types
 		TypeEntry(value.Name, value.members, Methods(value))
 Methods(type TypeEntry) List(MethodEntry)
-	Resolver(TypeEntry("T", List(MemberEntry), Machine.Defaulted)).Called(Invocation.AddCall).First is Native
-	Resolver(TypeEntry("Strict/Doubler", MemberEntry.LoggerMember, Machine.Doubler.methods)).Called(Twice) is (0, 0, 0)
+	Doubling.Destination(InstructionEntry(InstructionType.InvokeRemove, "list", (0, 4)), 9) is 4
+	Routes(TypeEntry("T", List(MemberEntry), Machine.Defaulted)).Called(Invocation.AddCall).First is Native
+	Routes(TypeEntry("Strict/Doubler", MemberEntry.LoggerMember, Machine.Doubler.methods)).Called(Twice) is (0, 0, 0)
 	Doubling.Methods(TypeEntry("Strict/Go", List(MemberEntry), List(MethodEntry) + Sample)).First.Name is "Run"
 	Doubling.Methods(TypeEntry("Strict/Go", List(MemberEntry), List(MethodEntry) + Sample)).First.declaredType is "None"
 	Doubling.Methods(TypeEntry("Strict/Go", List(MemberEntry), List(MethodEntry) + MethodEntry.GoRun)).Length is 1
@@ -71,34 +72,9 @@ Targeted(entry InstructionEntry) InstructionEntry
 	Doubling.Targeted(Invocation.AddCall.entry).payload is (2, -1, -2, 1, -4, -3, 1, 0, 1, 1, Native, 0, 0)
 	Accessor.FirstResolved.payload is (1, -1, -2, 0, -3, 0, 1, 0, 0, 1, 0, 0, 1, -1, 0)
 	let call = Invocation(entry, List(VmValue), VmValue.None)
-	let target = Target(call)
+	let target = Routes(types).Target(call)
 	let path = Accessor(Machine(types)).Marked(target, call.Count)
 	InstructionEntry(entry.kind, entry.texts, entry.payload + target + path, entry.line)
-Target(call Invocation) Numbers
-	Doubling.Slotted(InstructionEntry(InstructionType.IndexCall, "a", (4, 3, 9)), Specials + "a").payload is (4, 3, 6)
-	Doubling.Destination(InstructionEntry(InstructionType.InvokeRemove, "list", (0, 4)), 9) is 4
-	Doubling.Target(Invocation(Twice, entry = InstructionEntry.Invoke(0, ("B", "Trim", "B"), 0, -1))) is (Native, 0, 0)
-	Doubling.Target(Invocation.Parsing) is (Native, 0, 0)
-	Doubling.Target(Invocation.Uppered) is (Searching, 0, 0)
-	Doubling.Target(Hosted.SystemCall) is (Hosting, 0, 0)
-	Doubling.Target(HostedJson.Getting) is (Hosting, 0, 0)
-	JsonOnly.Target(HostedJson.Getting) is (Native, 0, 0)
-	if Hosted(call).IsHosted and (TypeEntry.ShortName(call.TypeName) is not TypeEntry.ShortName(types.First.Name))
-		return (Hosting, 0, 0)
-	let isText = (call.TypeName is "Strict/Text") and (call.MethodName is in Natives.TextMethods)
-	isText then (Searching, 0, 0) else Called(call)
-Called(call Invocation) Numbers
-	Doubling.Called(Twice) is (0, 0, 0)
-	Doubling.Called(Invocation.AddCall) is (Native, 0, 0)
-	Resolver(TypeEntry.Holding).Called(Invocation.Held) is (1, 0, 0)
-	let name = call.MethodName
-	let own = Natives(types).TypeOf(call.TypeName)
-	let isMissing = (own.Chosen(name, call.Count, call.ReturnType, call.ParameterNames) < 0) and (name is not "from")
-	let type = isMissing and (own.Changing.Length is 1) then Natives(types).TypeOf(own.Changing.First.typeName) else own
-	let method = type.Chosen(name, call.Count, call.ReturnType, call.ParameterNames)
-	if (method < 0) or call.IsNativeConversion or (type.methods(method).instructions.Length is 0)
-		return (Native, 0, 0)
-	(Position(type), method, Natives(types).IsMemberCall(call, type, type.methods(method)) then 1 else 0)
 Position(type TypeEntry) Number
 	Doubling.Placed(ElementStore, Sample, 0, 9).payload is ElementStore.payload
 	Doubling.Destination(MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 7), "a"), 9) is 0

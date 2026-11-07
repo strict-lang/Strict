@@ -90,7 +90,7 @@ Chained(route Number, first InstructionEntry, middle InstructionEntry, depth Num
 	let loaded = middle.payload(call.Flag) is 1 then Loaded(route, first, middle.payload(call.Flag + 1)) else List(Number)
 	if loaded.Length is 0
 		return loaded
-	let inner = Path(Resolver(machine.types).Target(call), call.Count, depth + 1)
+	let inner = Path(Routes(machine.types).Target(call), call.Count, depth + 1)
 	inner.Length is 0 then inner else loaded + inner
 Accessed(call Invocation) VmValue
 	Getting.Accessed(Invocation(FirstResolved, List(VmValue), Held)).number is 3
@@ -116,6 +116,7 @@ Step(instance VmValue, route Number, number Number) VmValue
 Wrapped(collection VmValue, at Number) Number
 	Getting.Wrapped(VmValue.OfText("ab"), -1) is 1
 	Getting.Wrapped(VmValue.OfText("ab"), 2) is -1
+	(Getting.Wrapped(VmValue.OfText("ab"), 0) is 0) and (Getting.Wrapped(VmValue.OfText("ab"), 1) is 1)
 	Getting.Wrapped(VmValue.OfText("ab"), -4) is -1
 	Getting.Wrapped(VmValue.OfText("ab"), 0 / 0) is -1
 	Getting.Chained(1, Loading, InstructionEntry.Invoke(1, FirstCall.texts, List(Number), 2), 0) is (1, 0, 0, 1, -1, 0)
