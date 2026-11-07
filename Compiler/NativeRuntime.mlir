@@ -2575,6 +2575,7 @@
     %tired = llvm.icmp "sge" %spins, %limit : i64
     llvm.cond_br %tired, ^sleep, ^spin
   ^spin:
+    func.call @strict_gc_help() : () -> ()
     llvm.call @strict_pause() : () -> ()
     %counted = llvm.add %spins, %one : i64
     llvm.br ^wait(%seen, %counted : i64, i64)
@@ -4255,6 +4256,18 @@
     %smallest = arith.constant 16384 : i64
     %isSmall = arith.cmpi ule, %size, %smallest : i64
     %visited = arith.select %isSmall, %one, %zero : i64
+    %localSlot = llvm.mlir.addressof @strict_gc_local_on : !llvm.ptr
+    %localOn = llvm.load %localSlot : !llvm.ptr -> i64
+    %isLocal = arith.cmpi ne, %localOn, %zero : i64
+    cf.cond_br %isLocal, ^local, ^global
+  ^local:
+    %localVisitedSlot = llvm.mlir.addressof @strict_gc_local_visited : !llvm.ptr
+    %localVisited = llvm.load %localVisitedSlot : !llvm.ptr -> i64
+    %moreVisited = arith.addi %localVisited, %visited : i64
+    llvm.store %moreVisited, %localVisitedSlot : i64, !llvm.ptr
+    func.call @strict_gc_local_push(%object, %size) : (i64, i64) -> ()
+    return
+  ^global:
     %visitedBefore = llvm.atomicrmw add %visitedSlot, %visited monotonic : !llvm.ptr, i64
     %lockingSlot = llvm.mlir.addressof @strict_gc_work_locking : !llvm.ptr
     %locking = llvm.load %lockingSlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
@@ -4269,6 +4282,19 @@
     llvm.call @strict_pause() : () -> ()
     cf.br ^lock
   ^pushing:
+    func.call @strict_gc_shared_store(%object, %size) : (i64, i64) -> ()
+    cf.cond_br %isShared, ^unlock, ^done
+  ^unlock:
+    llvm.store %zero, %lockSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    cf.br ^done
+  ^done:
+    return
+  }
+  // the shared work stack of a collection, grown when full (callers that share it hold strict_gc_work_lock)
+  func.func private @strict_gc_shared_store(%object: i64, %size: i64) {
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %zero = arith.constant 0 : i64
     %sixteen = arith.constant 16 : i64
     %workSlot = llvm.mlir.addressof @strict_gc_work : !llvm.ptr
     %usedSlot = llvm.mlir.addressof @strict_gc_work_size : !llvm.ptr
@@ -4299,9 +4325,313 @@
     llvm.store %size, %sizeEntry : i64, !llvm.ptr
     %increased = arith.addi %used, %one : i64
     llvm.store %increased, %usedSlot : i64, !llvm.ptr
-    cf.cond_br %isShared, ^unlock, ^done
-  ^unlock:
+    return
+  }
+  // the parallel drain of a collection: the collector and every waiting thread (parked ones in strict_gc_help, idle
+  // pool workers in their spin loop) take batches of the shared work stack into their own one, push what they find
+  // there and give it back when it is full; done when the shared stack is empty and no thread holds work
+  llvm.mlir.global internal @strict_gc_drain_active(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_drain_busy(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_drain_helpers(0 : i64) : i64
+  llvm.mlir.global internal thread_local @strict_gc_local_on(0 : i64) : i64
+  llvm.mlir.global internal thread_local @strict_gc_local_marked(0 : i64) : i64
+  llvm.mlir.global internal thread_local @strict_gc_local_visited(0 : i64) : i64
+  llvm.mlir.global internal thread_local @strict_gc_local_size(0 : i64) : i64
+  llvm.mlir.global internal thread_local @strict_gc_local(dense<0> : tensor<1024xi64>) : !llvm.array<1024 x i64>
+  func.func private @strict_gc_work_acquire() {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %lockSlot = llvm.mlir.addressof @strict_gc_work_lock : !llvm.ptr
+    cf.br ^try
+  ^try:
+    %pair = llvm.cmpxchg %lockSlot, %zero, %one acquire monotonic : !llvm.ptr, i64
+    %won = llvm.extractvalue %pair[1] : !llvm.struct<(i64, i1)>
+    cf.cond_br %won, ^done, ^contended
+  ^contended:
+    llvm.call @strict_pause() : () -> ()
+    cf.br ^try
+  ^done:
+    return
+  }
+  func.func private @strict_gc_work_release() {
+    %zero = arith.constant 0 : i64
+    %lockSlot = llvm.mlir.addressof @strict_gc_work_lock : !llvm.ptr
     llvm.store %zero, %lockSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    return
+  }
+  // pushes onto this thread's stack while it drains, a full one goes to the shared stack under the lock first
+  func.func private @strict_gc_local_push(%object: i64, %size: i64) {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %capacity = arith.constant 512 : i64
+    %sizeSlot = llvm.mlir.addressof @strict_gc_local_size : !llvm.ptr
+    %count = llvm.load %sizeSlot : !llvm.ptr -> i64
+    %isFull = arith.cmpi sge, %count, %capacity : i64
+    cf.cond_br %isFull, ^flush, ^store(%count : i64)
+  ^flush:
+    func.call @strict_gc_local_flush() : () -> ()
+    cf.br ^store(%zero : i64)
+  ^store(%at: i64):
+    %local = llvm.mlir.addressof @strict_gc_local : !llvm.ptr
+    %position = arith.muli %at, %two : i64
+    %entry = llvm.getelementptr %local[0, %position] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<1024 x i64>
+    llvm.store %object, %entry : i64, !llvm.ptr
+    %sizeEntry = llvm.getelementptr %entry[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %size, %sizeEntry : i64, !llvm.ptr
+    %more = arith.addi %at, %one : i64
+    llvm.store %more, %sizeSlot : i64, !llvm.ptr
+    return
+  }
+  func.func private @strict_gc_local_flush() {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %sizeSlot = llvm.mlir.addressof @strict_gc_local_size : !llvm.ptr
+    %count = llvm.load %sizeSlot : !llvm.ptr -> i64
+    %local = llvm.mlir.addressof @strict_gc_local : !llvm.ptr
+    func.call @strict_gc_work_acquire() : () -> ()
+    cf.br ^loop(%zero : i64)
+  ^loop(%at: i64):
+    %more = arith.cmpi slt, %at, %count : i64
+    cf.cond_br %more, ^move, ^done
+  ^move:
+    %position = arith.muli %at, %two : i64
+    %entry = llvm.getelementptr %local[0, %position] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<1024 x i64>
+    %object = llvm.load %entry : !llvm.ptr -> i64
+    %sizeEntry = llvm.getelementptr %entry[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %size = llvm.load %sizeEntry : !llvm.ptr -> i64
+    func.call @strict_gc_shared_store(%object, %size) : (i64, i64) -> ()
+    %next = arith.addi %at, %one : i64
+    cf.br ^loop(%next : i64)
+  ^done:
+    func.call @strict_gc_work_release() : () -> ()
+    llvm.store %zero, %sizeSlot : i64, !llvm.ptr
+    return
+  }
+  // gives the older half of this thread's stack (nearest the roots, the largest parts left) to the shared one
+  func.func private @strict_gc_local_donate() {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %sizeSlot = llvm.mlir.addressof @strict_gc_local_size : !llvm.ptr
+    %count = llvm.load %sizeSlot : !llvm.ptr -> i64
+    %half = arith.divsi %count, %two : i64
+    %local = llvm.mlir.addressof @strict_gc_local : !llvm.ptr
+    func.call @strict_gc_work_acquire() : () -> ()
+    cf.br ^give(%zero : i64)
+  ^give(%at: i64):
+    %more = arith.cmpi slt, %at, %half : i64
+    cf.cond_br %more, ^move, ^shift(%zero : i64)
+  ^move:
+    %position = arith.muli %at, %two : i64
+    %entry = llvm.getelementptr %local[0, %position] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<1024 x i64>
+    %object = llvm.load %entry : !llvm.ptr -> i64
+    %sizeEntry = llvm.getelementptr %entry[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %size = llvm.load %sizeEntry : !llvm.ptr -> i64
+    func.call @strict_gc_shared_store(%object, %size) : (i64, i64) -> ()
+    %next = arith.addi %at, %one : i64
+    cf.br ^give(%next : i64)
+  ^shift(%index: i64):
+    %kept = arith.subi %count, %half : i64
+    %moreKept = arith.cmpi slt, %index, %kept : i64
+    cf.cond_br %moreKept, ^copy, ^done
+  ^copy:
+    %from = arith.addi %index, %half : i64
+    %fromPosition = arith.muli %from, %two : i64
+    %source = llvm.getelementptr %local[0, %fromPosition] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<1024 x i64>
+    %sourceObject = llvm.load %source : !llvm.ptr -> i64
+    %sourceSize = llvm.getelementptr %source[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %sourceBytes = llvm.load %sourceSize : !llvm.ptr -> i64
+    %toPosition = arith.muli %index, %two : i64
+    %target = llvm.getelementptr %local[0, %toPosition] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<1024 x i64>
+    llvm.store %sourceObject, %target : i64, !llvm.ptr
+    %targetSize = llvm.getelementptr %target[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %sourceBytes, %targetSize : i64, !llvm.ptr
+    %following = arith.addi %index, %one : i64
+    cf.br ^shift(%following : i64)
+  ^done:
+    func.call @strict_gc_work_release() : () -> ()
+    %left = arith.subi %count, %half : i64
+    llvm.store %left, %sizeSlot : i64, !llvm.ptr
+    return
+  }
+  // moves up to 128 entries from the top of the shared stack (the caller holds the lock) into this thread's one
+  func.func private @strict_gc_local_take(%used: i64) {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %batch = arith.constant 128 : i64
+    %count = arith.minsi %used, %batch : i64
+    %first = arith.subi %used, %count : i64
+    %workSlot = llvm.mlir.addressof @strict_gc_work : !llvm.ptr
+    %work = llvm.load %workSlot : !llvm.ptr -> i64
+    %workPointer = llvm.inttoptr %work : i64 to !llvm.ptr
+    %local = llvm.mlir.addressof @strict_gc_local : !llvm.ptr
+    cf.br ^loop(%zero : i64)
+  ^loop(%at: i64):
+    %more = arith.cmpi slt, %at, %count : i64
+    cf.cond_br %more, ^move, ^done
+  ^move:
+    %index = arith.addi %first, %at : i64
+    %from = arith.muli %index, %two : i64
+    %source = llvm.getelementptr %workPointer[%from] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %object = llvm.load %source : !llvm.ptr -> i64
+    %sourceSize = llvm.getelementptr %source[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %size = llvm.load %sourceSize : !llvm.ptr -> i64
+    %to = arith.muli %at, %two : i64
+    %target = llvm.getelementptr %local[0, %to] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<1024 x i64>
+    llvm.store %object, %target : i64, !llvm.ptr
+    %targetSize = llvm.getelementptr %target[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %size, %targetSize : i64, !llvm.ptr
+    %next = arith.addi %at, %one : i64
+    cf.br ^loop(%next : i64)
+  ^done:
+    %usedSlot = llvm.mlir.addressof @strict_gc_work_size : !llvm.ptr
+    llvm.store %first, %usedSlot : i64, !llvm.ptr
+    %sizeSlot = llvm.mlir.addressof @strict_gc_local_size : !llvm.ptr
+    llvm.store %count, %sizeSlot : i64, !llvm.ptr
+    return
+  }
+  func.func private @strict_gc_drain_worker() {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %onSlot = llvm.mlir.addressof @strict_gc_local_on : !llvm.ptr
+    llvm.store %one, %onSlot : i64, !llvm.ptr
+    %usedSlot = llvm.mlir.addressof @strict_gc_work_size : !llvm.ptr
+    %busySlot = llvm.mlir.addressof @strict_gc_drain_busy : !llvm.ptr
+    %sizeSlot = llvm.mlir.addressof @strict_gc_local_size : !llvm.ptr
+    %local = llvm.mlir.addressof @strict_gc_local : !llvm.ptr
+    cf.br ^idle
+  ^idle:
+    func.call @strict_gc_work_acquire() : () -> ()
+    %used = llvm.load %usedSlot : !llvm.ptr -> i64
+    %hasWork = arith.cmpi sgt, %used, %zero : i64
+    cf.cond_br %hasWork, ^take(%used : i64), ^empty
+  ^empty:
+    %busy = llvm.load %busySlot : !llvm.ptr -> i64
+    func.call @strict_gc_work_release() : () -> ()
+    %isDone = arith.cmpi eq, %busy, %zero : i64
+    cf.cond_br %isDone, ^finish, ^wait
+  ^wait:
+    llvm.call @strict_pause() : () -> ()
+    cf.br ^idle
+  ^take(%available: i64):
+    %busyBefore = llvm.load %busySlot : !llvm.ptr -> i64
+    %busyAfter = arith.addi %busyBefore, %one : i64
+    llvm.store %busyAfter, %busySlot : i64, !llvm.ptr
+    func.call @strict_gc_local_take(%available) : (i64) -> ()
+    func.call @strict_gc_work_release() : () -> ()
+    cf.br ^local
+  ^local:
+    %count = llvm.load %sizeSlot : !llvm.ptr -> i64
+    %hasLocal = arith.cmpi sgt, %count, %zero : i64
+    cf.cond_br %hasLocal, ^offer(%count : i64), ^refill
+  ^offer(%offered: i64):
+    %sharedNow = llvm.load %usedSlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
+    %isStarving = arith.cmpi eq, %sharedNow, %zero : i64
+    %enough = arith.constant 16 : i64
+    %isRich = arith.cmpi sgt, %offered, %enough : i64
+    %isDonating = arith.andi %isStarving, %isRich : i1
+    cf.cond_br %isDonating, ^donate, ^pop(%offered : i64)
+  ^donate:
+    func.call @strict_gc_local_donate() : () -> ()
+    cf.br ^local
+  ^pop(%held: i64):
+    %last = arith.subi %held, %one : i64
+    %position = arith.muli %last, %two : i64
+    %entry = llvm.getelementptr %local[0, %position] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<1024 x i64>
+    %object = llvm.load %entry : !llvm.ptr -> i64
+    %sizeEntry = llvm.getelementptr %entry[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %size = llvm.load %sizeEntry : !llvm.ptr -> i64
+    llvm.store %last, %sizeSlot : i64, !llvm.ptr
+    func.call @strict_gc_drain_one(%object, %size) : (i64, i64) -> ()
+    cf.br ^local
+  ^refill:
+    func.call @strict_gc_work_acquire() : () -> ()
+    %shared = llvm.load %usedSlot : !llvm.ptr -> i64
+    %hasShared = arith.cmpi sgt, %shared, %zero : i64
+    cf.cond_br %hasShared, ^takeMore(%shared : i64), ^rest
+  ^takeMore(%remaining: i64):
+    func.call @strict_gc_local_take(%remaining) : (i64) -> ()
+    func.call @strict_gc_work_release() : () -> ()
+    cf.br ^local
+  ^rest:
+    %busyNow = llvm.load %busySlot : !llvm.ptr -> i64
+    %busyLess = arith.subi %busyNow, %one : i64
+    llvm.store %busyLess, %busySlot : i64, !llvm.ptr
+    func.call @strict_gc_work_release() : () -> ()
+    cf.br ^idle
+  ^finish:
+    llvm.store %zero, %onSlot : i64, !llvm.ptr
+    %localMarkedSlot = llvm.mlir.addressof @strict_gc_local_marked : !llvm.ptr
+    %localMarked = llvm.load %localMarkedSlot : !llvm.ptr -> i64
+    %markedSlot = llvm.mlir.addressof @strict_gc_marked : !llvm.ptr
+    %markedBefore = llvm.atomicrmw add %markedSlot, %localMarked monotonic : !llvm.ptr, i64
+    llvm.store %zero, %localMarkedSlot : i64, !llvm.ptr
+    %localVisitedSlot = llvm.mlir.addressof @strict_gc_local_visited : !llvm.ptr
+    %localVisited = llvm.load %localVisitedSlot : !llvm.ptr -> i64
+    %visitedSlot = llvm.mlir.addressof @strict_gc_small_visited : !llvm.ptr
+    %visitedBefore = llvm.atomicrmw add %visitedSlot, %localVisited monotonic : !llvm.ptr, i64
+    llvm.store %zero, %localVisitedSlot : i64, !llvm.ptr
+    return
+  }
+  // a collection with other registered threads drains in parallel, a single thread drains alone
+  func.func private @strict_gc_drain_parallel() {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %count = func.call @strict_gc_thread_total() : () -> i64
+    %isAlone = arith.cmpi ule, %count, %one : i64
+    cf.cond_br %isAlone, ^alone, ^shared
+  ^alone:
+    %publishing = arith.constant false
+    func.call @strict_gc_drain(%publishing) : (i1) -> ()
+    return
+  ^shared:
+    %lockingSlot = llvm.mlir.addressof @strict_gc_work_locking : !llvm.ptr
+    llvm.store %one, %lockingSlot atomic seq_cst {alignment = 8 : i64} : i64, !llvm.ptr
+    %busySlot = llvm.mlir.addressof @strict_gc_drain_busy : !llvm.ptr
+    llvm.store %zero, %busySlot atomic seq_cst {alignment = 8 : i64} : i64, !llvm.ptr
+    %activeSlot = llvm.mlir.addressof @strict_gc_drain_active : !llvm.ptr
+    llvm.store %one, %activeSlot atomic seq_cst {alignment = 8 : i64} : i64, !llvm.ptr
+    %workersSlot = llvm.mlir.addressof @strict_pool_workers : !llvm.ptr
+    %workers = llvm.load %workersSlot : !llvm.ptr -> i64
+    llvm.call @strict_pool_wake(%workers) : (i64) -> ()
+    func.call @strict_gc_drain_worker() : () -> ()
+    llvm.store %zero, %activeSlot atomic seq_cst {alignment = 8 : i64} : i64, !llvm.ptr
+    %helpersSlot = llvm.mlir.addressof @strict_gc_drain_helpers : !llvm.ptr
+    cf.br ^helped
+  ^helped:
+    %helpers = llvm.load %helpersSlot atomic seq_cst {alignment = 8 : i64} : !llvm.ptr -> i64
+    %isLeft = arith.cmpi eq, %helpers, %zero : i64
+    cf.cond_br %isLeft, ^done, ^waiting
+  ^waiting:
+    llvm.call @strict_pause() : () -> ()
+    cf.br ^helped
+  ^done:
+    llvm.store %zero, %lockingSlot atomic seq_cst {alignment = 8 : i64} : i64, !llvm.ptr
+    return
+  }
+  // a waiting thread joins a running parallel drain
+  func.func private @strict_gc_help_drain() {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %activeSlot = llvm.mlir.addressof @strict_gc_drain_active : !llvm.ptr
+    %active = llvm.load %activeSlot atomic seq_cst {alignment = 8 : i64} : !llvm.ptr -> i64
+    %isActive = arith.cmpi ne, %active, %zero : i64
+    cf.cond_br %isActive, ^join, ^done
+  ^join:
+    %helpersSlot = llvm.mlir.addressof @strict_gc_drain_helpers : !llvm.ptr
+    %joined = llvm.atomicrmw add %helpersSlot, %one seq_cst : !llvm.ptr, i64
+    %still = llvm.load %activeSlot atomic seq_cst {alignment = 8 : i64} : !llvm.ptr -> i64
+    %isStill = arith.cmpi ne, %still, %zero : i64
+    cf.cond_br %isStill, ^work, ^leave
+  ^work:
+    func.call @strict_gc_drain_worker() : () -> ()
+    cf.br ^leave
+  ^leave:
+    %left = llvm.atomicrmw sub %helpersSlot, %one seq_cst : !llvm.ptr, i64
     cf.br ^done
   ^done:
     return
@@ -4474,6 +4804,18 @@
     return %isLargeMarked : i1
   }
   func.func private @strict_gc_add_marked(%bytes: i64) {
+    %zero = arith.constant 0 : i64
+    %onSlot = llvm.mlir.addressof @strict_gc_local_on : !llvm.ptr
+    %on = llvm.load %onSlot : !llvm.ptr -> i64
+    %isLocal = arith.cmpi ne, %on, %zero : i64
+    cf.cond_br %isLocal, ^local, ^shared
+  ^local:
+    %localSlot = llvm.mlir.addressof @strict_gc_local_marked : !llvm.ptr
+    %local = llvm.load %localSlot : !llvm.ptr -> i64
+    %more = arith.addi %local, %bytes : i64
+    llvm.store %more, %localSlot : i64, !llvm.ptr
+    return
+  ^shared:
     %markedSlot = llvm.mlir.addressof @strict_gc_marked : !llvm.ptr
     %markedBefore = llvm.atomicrmw add %markedSlot, %bytes monotonic : !llvm.ptr, i64
     return
@@ -4558,6 +4900,28 @@
     cf.br ^loop(%next, %start, %end, %refers : i64, i64, i64, i64)
   ^done:
     return %referenced : i64
+  }
+  func.func private @strict_gc_drain_one(%object: i64, %size: i64) {
+    %one = arith.constant 1 : i64
+    %end = arith.addi %object, %size : i64
+    %referenced = func.call @strict_gc_mark_range(%object, %end) : (i64, i64) -> i64
+    %smallLimit = arith.constant 16384 : i64
+    %isLarge = arith.cmpi ugt, %size, %smallLimit : i64
+    cf.cond_br %isLarge, ^remember, ^done
+  ^remember:
+    %objectPointer = llvm.inttoptr %object : i64 to !llvm.ptr
+    %scannedSlot = llvm.getelementptr %objectPointer[-12] : (!llvm.ptr) -> !llvm.ptr, i8
+    %referencedBytes = arith.subi %referenced, %object : i64
+    %seven = arith.constant 7 : i64
+    %three = arith.constant 3 : i64
+    %roundedBytes = arith.addi %referencedBytes, %seven : i64
+    %referencedWords = arith.shrui %roundedBytes, %three : i64
+    %known = arith.addi %referencedWords, %one : i64
+    %scanned = arith.trunci %known : i64 to i32
+    llvm.store %scanned, %scannedSlot : i32, !llvm.ptr
+    cf.br ^done
+  ^done:
+    return
   }
   func.func private @strict_gc_drain(%publishing: i1) {
     %zero = arith.constant 0 : i64
@@ -4691,10 +5055,17 @@
     %slot = llvm.getelementptr %pages[0, %bounded] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<1048576 x i8>
     return %slot : !llvm.ptr
   }
+  // only a page not yet known as old is written: threads draining in parallel keep its line shared
   func.func private @strict_gc_page_aged(%address: i64) {
     %slot = func.call @strict_gc_page_slot(%address) : (i64) -> !llvm.ptr
     %old = arith.constant 1 : i8
+    %known = llvm.load %slot atomic monotonic {alignment = 1 : i64} : !llvm.ptr -> i8
+    %isOld = arith.cmpi eq, %known, %old : i8
+    cf.cond_br %isOld, ^done, ^mark
+  ^mark:
     llvm.store %old, %slot atomic monotonic {alignment = 1 : i64} : i8, !llvm.ptr
+    cf.br ^done
+  ^done:
     return
   }
   func.func private @strict_gc_page_renewed(%page: i64) {
@@ -6625,6 +6996,7 @@
     %left = llvm.atomicrmw sub %helpersSlot, %one seq_cst : !llvm.ptr, i64
     cf.br ^done
   ^done:
+    func.call @strict_gc_help_drain() : () -> ()
     return
   }
   func.func private @strict_gc_scan_card(%index: i64) {
@@ -7824,8 +8196,7 @@
     func.call @strict_gc_mark_range(%pinnedStart, %pinnedEnd) : (i64, i64) -> i64
     func.call @strict_gc_mark_range(%spilled#0, %spilled#1) : (i64, i64) -> i64
     func.call @strict_gc_mark_threads(%from) : (i64) -> ()
-    %publishing = arith.constant false
-    func.call @strict_gc_drain(%publishing) : (i1) -> ()
+    func.call @strict_gc_drain_parallel() : () -> ()
     func.call @strict_rc_survived() : () -> ()
     %checkingSlot = llvm.mlir.addressof @strict_rc_checking : !llvm.ptr
     %checking = llvm.load %checkingSlot : !llvm.ptr -> i64

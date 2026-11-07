@@ -1104,7 +1104,12 @@
   ^check:
     %current = llvm.load %jobSlot atomic seq_cst {alignment = 8 : i64} : !llvm.ptr -> i64
     %same = llvm.icmp "eq" %current, %seen : i64
-    llvm.cond_br %same, ^sleep, ^leave
+    %drainSlot = llvm.mlir.addressof @strict_gc_drain_active : !llvm.ptr
+    %draining = llvm.load %drainSlot atomic seq_cst {alignment = 8 : i64} : !llvm.ptr -> i64
+    %noDrain = llvm.mlir.constant(0 : i64) : i64
+    %isQuiet = llvm.icmp "eq" %draining, %noDrain : i64
+    %isSleeping = llvm.and %same, %isQuiet : i1
+    llvm.cond_br %isSleeping, ^sleep, ^leave
   ^sleep:
     %slept = llvm.call @SleepConditionVariableSRW(%signal, %lock, %forever, %exclusive) : (!llvm.ptr, !llvm.ptr, i32, i32) -> i32
     llvm.br ^check
