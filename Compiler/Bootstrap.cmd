@@ -8,7 +8,7 @@ set "PATH=%PATH%;C:\msys64\ucrt64\bin;C:\Program Files\LLVM\bin"
 set "PASSES=--symbol-dce --convert-scf-to-cf --convert-arith-to-llvm --convert-func-to-llvm --convert-cf-to-llvm --reconcile-unrealized-casts"
 mlir-opt NativeCompiler.mlir %PASSES% -o NativeCompiler.llvm.mlir || exit /b 1
 mlir-translate --mlir-to-llvmir NativeCompiler.llvm.mlir -o NativeCompiler.ll || exit /b 1
-clang NativeCompiler.ll -o NativeCompiler.exe -O2 -march=native -Wno-override-module -Wl,-Brepro -Wl,/STACK:67108864 || exit /b 1
+clang NativeCompiler.ll -o NativeCompiler.exe -O3 -march=native -Wno-override-module -Wl,-Brepro -Wl,/STACK:67108864 || exit /b 1
 cd ..
 set "STRICT_GPU=0"
 Compiler\NativeCompiler.exe build Strict.strict . || exit /b 1

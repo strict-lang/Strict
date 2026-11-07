@@ -479,6 +479,7 @@
     %code = llvm.load %record : !llvm.ptr -> i32
     %text = llvm.mlir.addressof @strict_access_text : !llvm.ptr
     %printed = llvm.call @printf(%text) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr) -> i32
+    func.call @strict_places_print() : () -> ()
     llvm.call @strict_crash_log(%text) : (!llvm.ptr) -> ()
     %null = llvm.mlir.zero : !llvm.ptr
     %flushed = llvm.call @fflush(%null) : (!llvm.ptr) -> i32

@@ -1,5 +1,6 @@
 has functions List(MlirFunction)
 constant Counted = MlirGlobals(MlirModule.Counters.Functions)
+constant Foreign = MlirGlobals(List(MlirFunction) + MlirForeign.Adder)
 constant Filling = ("  func.func private @strict_places_fill() -> i64 {", "    %table = llvm.mlir.addressof @strict_places : !llvm.ptr")
 constant Returning = ("    return %count : i64", "  }")
 constant ShapeFunction = ("    %f2 = func.constant @Shape_Run_0 : (f64) -> f64", "    %c2 = builtin.unrealized_conversion_cast %f2 : (f64) -> f64 to !llvm.ptr")
@@ -13,7 +14,7 @@ Lines Texts
 		lines = lines + Function(value)
 	lines + MlirDefaults(functions.First).Globals + MlirChanged.Declarations(functions) + Places
 Places Texts
-	Counted.Places.First is Table + "2xi64>) : !llvm.array<2 x i64>"
+	(Counted.Places.First is Table + "2xi64>) : !llvm.array<2 x i64>") and Foreign.Places.Length is 6
 	(Counted.Places(1) is Filling.First) and Counted.Places(3).StartsWith("    %f0 = func.constant @")
 	(Counted.Places.Last is "  }") and Counted.Places(Counted.Places.Length - 3).EndsWith(" 1 : i64")
 	mutable fills = List(Mutable(Text))
@@ -27,6 +28,7 @@ Places Texts
 	(List(Text) + table) + Filling + fills + ("    %count = arith.constant " + count + " : i64") + Returning
 Place(function MlirFunction, at Number) Texts
 	Counted.Place(MlirCalls.Shapes, 2) is ShapeFunction + ShapeStored + ShapeNamed
+	Foreign.Place(MlirForeign.Adder, 0)(0).EndsWith("f64, f64) -> f64")
 	let signature = "(" + outer.Text.Combine(Types(function), ", ") + ") -> f64"
 	let pointer = "    %c" + at + " = builtin.unrealized_conversion_cast %f" + at + " : " + signature + " to !llvm.ptr"
 	let slot = "    %s" + at + " = llvm.getelementptr %table[" + at * 2 + "] : (!llvm.ptr) -> !llvm.ptr, i64"

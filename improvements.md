@@ -2,7 +2,6 @@
 What to fix next, one short line each, bugs first. Remove a line once it is done, add what is found at the end. No history or measurements (those go into commit messages). Speed work: [performance.md](performance.md).
 
 ## Now
-- `"abc".Reverse` (a List method returning the list, called on a Text) gives `(", c, b, a, ")` on the VM and `undefined symbol: Text_Reverse` natively (Ben). `Text(text.characters.Reverse)` works on the VM, natively a Text's `characters` is the Text handle itself: `Length` works on it, Reverse, First and `Text.Combine` of it see an empty list. Decide one native List(Character) representation, then forward such calls to `characters` in ValueCodegen and convert back with `Text(...)`.
 
 ## Soon
 - The compiler makes 3.7 million small objects (up to 16 KB) a second and its full collections visit up to 728 thousand of them (STRICT_GC_LOG prints both, its own build of NativeCompiler: 20 million in 5.5 s); reduce that first, then add the runtime rule: 10 thousand small objects collected every second for 5 seconds, or more than 100 thousand small live objects at once, end tests and plain builds and warn in release builds (H3Video's per-row LoRA lists, 4.9 million live, were found that way).
@@ -17,6 +16,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - `Directory.Change` only works natively (strict.exe uses it to work from the project folder), on the VM it gives the Error DirectoryChangeNeedsNative: Runtime/Hosted calling it needs a stage A build and a regenerated Compiler/Bootstrap.mlir.
 
 ## Later
+- `"abc".Reverse` (a List method called on a Text) gives `(", c, b, a, ")` on the VM and `undefined symbol: Text_Reverse` natively (Ben, rare). Decided 2026-11-07: no extra native representation, a Text natively is its list of UTF-8 characters the whole time, so List methods (Reverse, First, Text.Combine of characters, today only Length) must work on the Text handle directly and give a Text where the List result is one.
 - OutOfMemory names the Strict methods on the stack only on Windows (unwind data gives each frame its function start), strict_stack_starts on Linux, macOS and the web returns no frames yet.
 - Generic members natively: a Resident with `has handler Generic` built into strict.exe returned its mutable `last` instead of 0 from a `for as long as` loop that never ran (the same loop in a plain type works), so the resident server avoids Generic for now. A probe of that shape (has handler Generic, mutable last, a for as long as that never runs) gives 0 natively on 2026-11-07; the Resident code that failed was never committed.
 - A list freed by reference counting keeps its spill and host slots (strict_gpu_spills, strict_gpu_hosts) until the next collection: a new rows list at the recycled address with the same row count could upload the old rows (found by reading, never reproduced; a 65536 bit filter checked in strict_rc_forget_device would close it).
