@@ -10358,6 +10358,35 @@
     func.call @strict_gc_written_range(%to, %bytes) : (!llvm.ptr, i64) -> ()
     return %copy : f64
   }
+  // a copy to grow: its holder is a small block of its own, its items lie apart with twice the room like those of a
+  // grown list; in a pool job a holder inside a large list block is never this thread's (strict_gc_mine), each Add
+  // copied the whole list again (EntryDecoder.Of decoding chunks of a folder test took minutes)
+  func.func private @strict_list_apart(%list: f64) -> f64 {
+    %eight = arith.constant 8.0 : f64
+    %two = arith.constant 2.0 : f64
+    %four = arith.constant 4.0 : f64
+    %none = arith.constant 0.0 : f64
+    %length = func.call @strict_list_length(%list) : (f64) -> f64
+    %copy = func.call @strict_list_new(%none, %length) : (f64, f64) -> f64
+    %doubled = arith.mulf %length, %two : f64
+    %capacity = arith.addf %doubled, %four : f64
+    %roomBytes = arith.mulf %capacity, %eight : f64
+    %bytes = arith.fptosi %roomBytes : f64 to i64
+    %items = func.call @strict_alloc(%bytes) : (i64) -> !llvm.ptr
+    %from = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    %usedBytes = arith.mulf %length, %eight : f64
+    %used = arith.fptosi %usedBytes : f64 to i64
+    %copied = llvm.call @memcpy(%items, %from, %used) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    func.call @strict_rc_filled(%items, %used) : (!llvm.ptr, i64) -> ()
+    %view = func.call @strict_ptr(%copy) : (f64) -> !llvm.ptr
+    %holder = llvm.getelementptr %view[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %itemsBits = func.call @strict_bits(%items) : (!llvm.ptr) -> f64
+    llvm.store %itemsBits, %holder : f64, !llvm.ptr
+    func.call @strict_gc_written(%holder) : (!llvm.ptr) -> ()
+    %room = llvm.getelementptr %holder[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %capacity, %room : f64, !llvm.ptr
+    return %copy : f64
+  }
   // a negative index counts from the end like on reads: -1 is the last element
   func.func private @strict_list_wrapped(%list: f64, %index: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
@@ -10445,7 +10474,7 @@
     %inPlace = arith.andi %newest, %growable : i1
     cf.cond_br %inPlace, ^grow, ^copy
   ^copy:
-    %copied = func.call @strict_list_copy(%list, %four) : (f64, f64) -> f64
+    %copied = func.call @strict_list_apart(%list) : (f64) -> f64
     %again = func.call @strict_list_add(%copied, %element) : (f64, f64) -> f64
     return %again : f64
   ^grow:
