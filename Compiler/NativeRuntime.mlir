@@ -7199,7 +7199,8 @@
     return
   }
   // STRICT_ALLOC_PROFILE=N samples every Nth allocation: the Strict methods on its stack (strict_stack_starts and the
-  // strict_places table) are counted, at exit the 25 methods most often allocating themselves and on the stack print
+  // strict_places table) are counted, at exit the 25 methods most often allocating themselves, on the stack and as
+  // allocating method with its caller print
   llvm.mlir.global internal @strict_alloc_every(0 : i64) : i64
   llvm.mlir.global internal @strict_alloc_left(0 : i64) : i64
   llvm.mlir.global internal @strict_alloc_methods(0 : i64) : i64
@@ -7210,6 +7211,8 @@
   llvm.mlir.global internal constant @strict_alloc_header("Allocation profile: %lld samples, one every %lld allocations, %s\0A\00") : !llvm.array<66 x i8>
   llvm.mlir.global internal constant @strict_alloc_self("allocating in the method itself\00") : !llvm.array<32 x i8>
   llvm.mlir.global internal constant @strict_alloc_inclusive("the method or one it calls\00") : !llvm.array<27 x i8>
+  llvm.mlir.global internal constant @strict_alloc_pair_line("  %8lld %5.1f%%  %s <- %s\0A\00") : !llvm.array<27 x i8>
+  llvm.mlir.global internal constant @strict_alloc_paired("the method and its caller\00") : !llvm.array<26 x i8>
   llvm.mlir.global internal constant @strict_alloc_line("  %8lld %5.1f%%  %s\0A\00") : !llvm.array<21 x i8>
   llvm.func @atexit(!llvm.ptr) -> i32
   func.func private @strict_alloc_start() {
@@ -7241,6 +7244,11 @@
     %hashBits = llvm.ptrtoint %hash : !llvm.ptr to i64
     %hashSlot = llvm.mlir.addressof @strict_alloc_hash : !llvm.ptr
     llvm.store %hashBits, %hashSlot : i64, !llvm.ptr
+    %pairs = func.call @strict_malloc(%hashBytes) : (i64) -> !llvm.ptr
+    %clearedPairs = llvm.call @memset(%pairs, %noByte, %hashBytes) : (!llvm.ptr, i32, i64) -> !llvm.ptr
+    %pairsBits = llvm.ptrtoint %pairs : !llvm.ptr to i64
+    %pairsSlot = llvm.mlir.addressof @strict_alloc_pairs : !llvm.ptr
+    llvm.store %pairsBits, %pairsSlot : i64, !llvm.ptr
     %methodsSlot = llvm.mlir.addressof @strict_alloc_methods : !llvm.ptr
     llvm.store %count, %methodsSlot : i64, !llvm.ptr
     %table = llvm.mlir.addressof @strict_places : !llvm.ptr
@@ -7390,10 +7398,116 @@
     %selfAdded = arith.extui %isFirst : i1 to i64
     %selfOld = llvm.atomicrmw add %selfSlot, %selfAdded monotonic : !llvm.ptr, i64
     %inclusiveOld = llvm.atomicrmw add %inclusiveSlot, %one monotonic : !llvm.ptr, i64
+    %isSecond = arith.cmpi eq, %listed, %one : i64
+    cf.cond_br %isSecond, ^pair, ^counted
+  ^pair:
+    %innermost = llvm.load %seen : !llvm.ptr -> i64
+    func.call @strict_alloc_pair(%innermost, %method) : (i64, i64) -> ()
+    cf.br ^counted
+  ^counted:
     %moreListed = arith.addi %listed, %one : i64
     cf.br ^frame(%next, %moreListed : i64, i64)
   ^done:
     return
+  }
+  // the allocating method and its calling Strict method of each sample, 65536 slots of (key, count), key 0 is free
+  llvm.mlir.global internal @strict_alloc_pairs(0 : i64) : i64
+  func.func private @strict_alloc_pair(%first: i64, %second: i64) {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %mask = arith.constant 65535 : i64
+    %spread = arith.constant 2654435761 : i64
+    %shift = arith.constant 17 : i64
+    %pairsSlot = llvm.mlir.addressof @strict_alloc_pairs : !llvm.ptr
+    %pairsBits = llvm.load %pairsSlot : !llvm.ptr -> i64
+    %pairs = llvm.inttoptr %pairsBits : i64 to !llvm.ptr
+    %high = arith.shli %first, %shift : i64
+    %joined = arith.addi %high, %second : i64
+    %key = arith.addi %joined, %one : i64
+    %mixed = arith.muli %key, %spread : i64
+    %home = arith.andi %mixed, %mask : i64
+    cf.br ^bucket(%home : i64)
+  ^bucket(%at: i64):
+    %position = arith.muli %at, %two : i64
+    %keySlot = llvm.getelementptr %pairs[%position] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %stored = llvm.load %keySlot : !llvm.ptr -> i64
+    %isFree = arith.cmpi eq, %stored, %zero : i64
+    %isSame = arith.cmpi eq, %stored, %key : i64
+    %isMine = arith.ori %isFree, %isSame : i1
+    %following = arith.addi %at, %one : i64
+    %wrapped = arith.andi %following, %mask : i64
+    cf.cond_br %isMine, ^count, ^bucket(%wrapped : i64)
+  ^count:
+    llvm.store %key, %keySlot : i64, !llvm.ptr
+    %countSlot = llvm.getelementptr %keySlot[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %old = llvm.atomicrmw add %countSlot, %one monotonic : !llvm.ptr, i64
+    return
+  }
+  // prints the 25 most frequent allocating method and caller pairs
+  func.func private @strict_alloc_pairs_top(%samples: i64) {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %shown = arith.constant 25 : i64
+    %slots = arith.constant 65536 : i64
+    %shift = arith.constant 17 : i64
+    %low = arith.constant 131071 : i64
+    %pairsSlot = llvm.mlir.addressof @strict_alloc_pairs : !llvm.ptr
+    %pairsBits = llvm.load %pairsSlot : !llvm.ptr -> i64
+    %pairs = llvm.inttoptr %pairsBits : i64 to !llvm.ptr
+    %table = llvm.mlir.addressof @strict_places : !llvm.ptr
+    %format = llvm.mlir.addressof @strict_alloc_pair_line : !llvm.ptr
+    %total = arith.sitofp %samples : i64 to f64
+    %hundred = arith.constant 100.0 : f64
+    cf.br ^rank(%zero : i64)
+  ^rank(%rank: i64):
+    %moreRanks = arith.cmpi slt, %rank, %shown : i64
+    cf.cond_br %moreRanks, ^search(%zero, %zero, %zero : i64, i64, i64), ^done
+  ^search(%index: i64, %best: i64, %bestCount: i64):
+    %moreSlots = arith.cmpi slt, %index, %slots : i64
+    cf.cond_br %moreSlots, ^look, ^print(%best, %bestCount : i64, i64)
+  ^look:
+    %position = arith.muli %index, %two : i64
+    %keySlot = llvm.getelementptr %pairs[%position] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %countSlot = llvm.getelementptr %keySlot[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %count = llvm.load %countSlot : !llvm.ptr -> i64
+    %isMore = arith.cmpi sgt, %count, %bestCount : i64
+    %chosen = arith.select %isMore, %index, %best : i64
+    %chosenCount = arith.select %isMore, %count, %bestCount : i64
+    %nextIndex = arith.addi %index, %one : i64
+    cf.br ^search(%nextIndex, %chosen, %chosenCount : i64, i64, i64)
+  ^print(%slot: i64, %slotCount: i64):
+    %isEmpty = arith.cmpi eq, %slotCount, %zero : i64
+    cf.cond_br %isEmpty, ^done, ^line
+  ^line:
+    %bestPosition = arith.muli %slot, %two : i64
+    %bestKeySlot = llvm.getelementptr %pairs[%bestPosition] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %bestKey = llvm.load %bestKeySlot : !llvm.ptr -> i64
+    %bestCountSlot = llvm.getelementptr %bestKeySlot[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %zero, %bestCountSlot : i64, !llvm.ptr
+    %joined = arith.subi %bestKey, %one : i64
+    %first = arith.shrui %joined, %shift : i64
+    %second = arith.andi %joined, %low : i64
+    %firstWhere = func.call @strict_alloc_where(%table, %first) : (!llvm.ptr, i64) -> !llvm.ptr
+    %secondWhere = func.call @strict_alloc_where(%table, %second) : (!llvm.ptr, i64) -> !llvm.ptr
+    %countFloat = arith.sitofp %slotCount : i64 to f64
+    %share = arith.divf %countFloat, %total : f64
+    %percent = arith.mulf %share, %hundred : f64
+    %printed = llvm.call @printf(%format, %slotCount, %percent, %firstWhere, %secondWhere) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, i64, f64, !llvm.ptr, !llvm.ptr) -> i32
+    %nextRank = arith.addi %rank, %one : i64
+    cf.br ^rank(%nextRank : i64)
+  ^done:
+    return
+  }
+  func.func private @strict_alloc_where(%table: !llvm.ptr, %method: i64) -> !llvm.ptr {
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %position = arith.muli %method, %two : i64
+    %whereIndex = arith.addi %position, %one : i64
+    %whereSlot = llvm.getelementptr %table[%whereIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %where = llvm.load %whereSlot : !llvm.ptr -> !llvm.ptr
+    return %where : !llvm.ptr
   }
   llvm.func @strict_alloc_exit() {
     func.call @strict_alloc_report() : () -> ()
@@ -7415,6 +7529,9 @@
     %inclusive = llvm.mlir.addressof @strict_alloc_inclusive : !llvm.ptr
     %printedInclusive = llvm.call @printf(%header, %samples, %every, %inclusive) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i32
     func.call @strict_alloc_top(%one, %samples) : (i64, i64) -> ()
+    %paired = llvm.mlir.addressof @strict_alloc_paired : !llvm.ptr
+    %printedPaired = llvm.call @printf(%header, %samples, %every, %paired) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i32
+    func.call @strict_alloc_pairs_top(%samples) : (i64) -> ()
     %null = llvm.mlir.zero : !llvm.ptr
     %flushed = llvm.call @fflush(%null) : (!llvm.ptr) -> i32
     return
