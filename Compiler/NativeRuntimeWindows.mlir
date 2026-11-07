@@ -1018,7 +1018,9 @@
     return %bytes : i64
   }
   llvm.func @GlobalMemoryStatusEx(!llvm.ptr) -> i32
-  // free RAM for GpuMemory.HostAvailable: ullAvailPhys at byte 16 of MEMORYSTATUSEX (64 bytes), 0 when unknown
+  // free RAM for GpuMemory.HostAvailable: the lower of ullAvailPhys (byte 16 of MEMORYSTATUSEX, 64 bytes) and the
+  // commit room ullAvailPageFile (byte 32), 0 when unknown; with a small page file the commit limit runs out first
+  // (a resident H3Video at 47 of 67.8 GB committed: ffmpeg failed a 1 MB malloc while 27 GB of RAM were free)
   func.func private @strict_memory_available() -> f64 {
     %zero = arith.constant 0 : i64
     %eight = arith.constant 8 : i64
@@ -1028,8 +1030,12 @@
     llvm.store %size, %status : i32, !llvm.ptr
     %availableSlot = llvm.getelementptr %status[2] : (!llvm.ptr) -> !llvm.ptr, i64
     llvm.store %zero, %availableSlot : i64, !llvm.ptr
+    %commitSlot = llvm.getelementptr %status[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %zero, %commitSlot : i64, !llvm.ptr
     %read = llvm.call @GlobalMemoryStatusEx(%status) : (!llvm.ptr) -> i32
-    %available = llvm.load %availableSlot : !llvm.ptr -> i64
+    %physical = llvm.load %availableSlot : !llvm.ptr -> i64
+    %commit = llvm.load %commitSlot : !llvm.ptr -> i64
+    %available = arith.minui %physical, %commit : i64
     %bytes = arith.uitofp %available : i64 to f64
     return %bytes : f64
   }

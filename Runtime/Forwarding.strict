@@ -7,6 +7,9 @@ constant Dropped = -3
 constant StopSeconds = 1
 constant Output = "/server.log"
 constant Errors = "/server.errors.log"
+constant Previous = "/server.previous"
+constant Starting = "-NoProfile -Command Start-Process -FilePath cmd -ArgumentList '/c "
+constant Quote = "\\\""
 constant PollSeconds = 0.02
 constant Finding = "-NoProfile -Command Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq '"
 constant Serving = "' -and $_.CommandLine -like '* serve*' } | ForEach-Object { taskkill /F /T /PID $_.ProcessId }"
@@ -87,15 +90,28 @@ IsForwarded(arguments Texts) Boolean
 	let isServed = (command is in ("test", "check")) and (isLocal is false) and (isOptedOut is false)
 	(command is Resident.Stopping) or isServed
 Started Number
-	let executable = "'" + Process.Current.executable + "'"
+	let executable = Process.Current.executable
 	let isWindows = Process.OperatingSystem is "Windows"
-	let objects = root + "/obj"
-	let hasObjects = Directory.Exists(objects) or Directory.Create(objects)
-	let logged = hasObjects then " -RedirectStandardOutput '" + objects + Output + "' -RedirectStandardError '" + objects + Errors + "'" else ""
-	let hidden = "-NoProfile -Command Start-Process -FilePath " + executable + " -ArgumentList serve -WindowStyle Hidden" + logged
-	let detached = isWindows then hidden else "-c \"nohup " + executable + " serve >'" + objects + Output + "' 2>'" + objects + Errors + "' &\""
+	let logged = Logged(root + "/obj", isWindows)
+	let hidden = Starting + Quote + Quote + executable + Quote + " serve" + logged + Quote + "' -WindowStyle Hidden"
+	let detached = isWindows then hidden else "-c \"nohup '" + executable + "' serve" + logged + " &\""
 	Process.RunTool(isWindows then "powershell" else "sh", detached)
 	-1
+Logged(objects Text, isWindows Boolean) Text
+	Sample.Logged("Compiler", true).EndsWith(" 2>" + Quote + "Compiler/server.errors.log" + Quote)
+	Sample.Logged("Compiler", false) is " >'Compiler/server.log' 2>'Compiler/server.errors.log'"
+	let hasObjects = Directory.Exists(objects) or Directory.Create(objects)
+	Kept(objects, Output)
+	Kept(objects, Errors)
+	if hasObjects is false
+		return isWindows then "" else " >/dev/null 2>&1"
+	let mark = isWindows then Quote else "'"
+	" >" + mark + objects + Output + mark + " 2>" + mark + objects + Errors + mark
+Kept(objects Text, log Text) Boolean
+	Missing.Kept("Compiler/output/Missing", Output) is false
+	let previous = objects + log.Replace("/server", Previous)
+	File(previous).Delete
+	File(objects + log).Exists and File(objects + log).Rename(previous)
 Claimed(socket Number) Text
 	Sample.Claimed(0) is ""
 	let port = Socket.Port(socket)
