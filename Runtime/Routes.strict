@@ -5,6 +5,9 @@ constant Leading = Routes(List(TypeEntry) + TypeEntry("Strict/Process", List(Mem
 constant Computing = Routes(List(TypeEntry) + TypeEntry("Strict/Process", List(MemberEntry), List(MethodEntry) + MethodEntry(InlineRules.Adding, Name = "OperatingSystem", declaredType = "Strict/Text")))
 constant Unnamed = Routes(List(TypeEntry) + TypeEntry("Strict/Process", List(MemberEntry), List(MethodEntry) + InlineRules.Placeholder))
 constant Trimming = Invocation(Resolver.Twice, entry = InstructionEntry.Invoke(0, ("B", "Trim", "B"), 0, -1))
+constant Constructing = MethodEntry(InlineRules.Placeholder, instructions = (InstructionEntry.LoadNumber(0, 0), InstructionEntry.Invoke(1, ("Strict/Degrees", "from", "Strict/Degrees"), List(Number) + 0, -1), InstructionEntry.Return(1)))
+constant Reading = MethodEntry(InlineRules.Placeholder, instructions = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "key"), InstructionEntry.Return(0)))
+constant Fielding = MethodEntry(InlineRules.Placeholder, instructions = (InstructionEntry(InstructionType.FieldLoad, "x", (0, 0, -1)), InstructionEntry.Return(0)))
 constant JsonOnly = Routes(List(TypeEntry) + TypeEntry("Json", List(MemberEntry), List(MethodEntry)))
 Target(call Invocation) Numbers
 	Doubling.Target(Trimming) is (Resolver.Native, 0, 0)
@@ -24,8 +27,19 @@ IsSourceRun(call Invocation) Boolean
 	Computing.IsSourceRun(Hosted.SystemCall) and Unnamed.IsSourceRun(Hosted.SystemCall)
 	let type = Natives(types).TypeOf(call.TypeName)
 	let method = type.Chosen(call.MethodName, call.Count, call.ReturnType, call.ParameterNames)
-	let isPlaceholder = (method >= 0) and (InlineRules(type.methods(method)).IsComputed is false)
+	let isPlaceholder = (method >= 0) and IsPlaceholder(type.methods(method))
 	(TypeEntry.ShortName(call.TypeName) is TypeEntry.ShortName(types.First.Name)) and (isPlaceholder is false)
+IsPlaceholder(method MethodEntry) Boolean
+	Doubling.IsPlaceholder(InlineRules.Placeholder) and Doubling.IsPlaceholder(Constructing)
+	(Doubling.IsPlaceholder(InlineRules.Adding) is false) and (Doubling.IsPlaceholder(Reading) is false)
+	Doubling.IsPlaceholder(Fielding) is false
+	for method.instructions
+		let isRead = (value.kind is InstructionType.LoadVariableToRegister) and (value.texts.First is not "value")
+		let kind = value.kind
+		let isComputed = (kind > InstructionType.StoreSeparator) and (kind < InstructionType.BinaryOperatorsSeparator)
+		if isRead or isComputed or (value.kind is in (InstructionType.IndexCall, InstructionType.FieldLoad))
+			return false
+	true
 Called(call Invocation) Numbers
 	Doubling.Called(Resolver.Twice) is (0, 0, 0)
 	Doubling.Called(Invocation.AddCall) is (Resolver.Native, 0, 0)
