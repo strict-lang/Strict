@@ -5,6 +5,8 @@ constant Server = Resident("Compiler/output")
 constant Missing = Forwarding(Logger, "Compiler/output/Missing")
 constant Dropped = -3
 constant StopSeconds = 1
+constant Output = "/server.log"
+constant Errors = "/server.errors.log"
 constant PollSeconds = 0.02
 constant Finding = "-NoProfile -Command Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq '"
 constant Serving = "' -and $_.CommandLine -like '* serve*' } | ForEach-Object { taskkill /F /T /PID $_.ProcessId }"
@@ -87,8 +89,11 @@ IsForwarded(arguments Texts) Boolean
 Started Number
 	let executable = "'" + Process.Current.executable + "'"
 	let isWindows = Process.OperatingSystem is "Windows"
-	let hidden = "-NoProfile -Command Start-Process -FilePath " + executable + " -ArgumentList serve -WindowStyle Hidden"
-	let detached = isWindows then hidden else "-c \"nohup " + executable + " serve >/dev/null 2>&1 &\""
+	let objects = root + "/obj"
+	let hasObjects = Directory.Exists(objects) or Directory.Create(objects)
+	let logged = hasObjects then " -RedirectStandardOutput '" + objects + Output + "' -RedirectStandardError '" + objects + Errors + "'" else ""
+	let hidden = "-NoProfile -Command Start-Process -FilePath " + executable + " -ArgumentList serve -WindowStyle Hidden" + logged
+	let detached = isWindows then hidden else "-c \"nohup " + executable + " serve >'" + objects + Output + "' 2>'" + objects + Errors + "' &\""
 	Process.RunTool(isWindows then "powershell" else "sh", detached)
 	-1
 Claimed(socket Number) Text

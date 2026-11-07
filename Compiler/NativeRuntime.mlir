@@ -14201,8 +14201,9 @@
   // kernel gets several times slower, so the pool gives its free big blocks back first when less than 256 MB would be
   // left (with 1 GB a pool reused every layer went to the driver and back next to 0.5 GB of other programs)
   // the GPU memory the runtime may hold and the bytes its driver allocations hold now: the free memory the driver reports
-  // at the first question plus what was held then, less 1.5 GB for what the runtime does not count (context, graphs,
-  // local memory) and the noise of that free memory next to other programs (0.9 GB between starts next to ComfyUI, with
+  // at the first question plus what was held then, less 1 GB for what the runtime does not count (context, graphs,
+  // local memory, measured near 0 on a 3080 with H3) and the noise of that free memory next to other programs (0.5 GB
+  // gained nothing for H3 or Moss on a 3080 and is too close to ComfyUI: 0.9 GB between starts next to it, with
   // 0.5 GB left the driver paged both for minutes), lowered to what is held when the driver refuses an allocation
   llvm.mlir.global internal @strict_gpu_budget(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   // address and bytes of every driver allocation in 8192 slots (open addressing from a hash of the address)
@@ -16651,7 +16652,7 @@
     cf.cond_br %measured, ^left(%budget : i64), ^measure
   ^measure:
     %driver = func.call @strict_gpu_driver_free() : () -> i64
-    %margin = arith.constant 1610612736 : i64
+    %margin = arith.constant 1073741824 : i64
     %whole = arith.addi %driver, %held : i64
     %roomy = arith.cmpi ugt, %whole, %margin : i64
     %spare = arith.subi %whole, %margin : i64
