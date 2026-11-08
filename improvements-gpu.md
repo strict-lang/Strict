@@ -5,7 +5,7 @@ Details for the GPU line of [improvements.md](improvements.md), one short line e
 - `strict_device_dense_attention` keeps the 8 bit tensor pipe 53 % busy (Moss on the 3080, 1.26 ms per layer, 253 registers leave one block per SM; comfy_kitchen's `int8_attention` was ~20 % faster on the 4090 before warps 4 to 7 ran half a step behind): fewer softmax instructions (part of the exponentials as a polynomial on the fma pipe), or two blocks per SM
 - the row maximum on the integer sums (IMNMX) needs one key scale per lane and step instead of one per position
 - the 2 tile copies of a routed step sit in conditional blocks (long scoreboard stalls after them): branch-free copies like `strict_device_dense_issued`
-- the routing planner reads all pooled keys of a head in every block: moments once per head, the scores as a small product kernel
+- the routing planner reads all pooled keys of a head in every block: moments once per head, the scores as a small product kernel (2026-11-08: fusing the moments and score passes, or only storing the centroid before the moments loop, made the routed kernel run 2.25x the instructions and L2 bytes at 480x832, so plans got longer although the data flow reads as equivalent: dump plan lengths before trying again)
 - the Hadamard on Q and K
 - routing plans at most 1024 key blocks (65536 positions), longer prompts attend densely: plans in global memory
 - head size 64 (H3 VAE decode) has no tensor core attention kernel

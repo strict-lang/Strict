@@ -17488,6 +17488,12 @@
     %bytes = func.call @strict_memory_available() : () -> f64
     return %bytes : f64
   }
+  // `GpuMemory.HostTotal`: the bytes of RAM of this machine, 0 when unknown
+  func.func private @strict_gpu_hosttotal(%self: f64) -> f64 {
+    %installed = func.call @strict_host_memory() : () -> i64
+    %bytes = arith.uitofp %installed : i64 to f64
+    return %bytes : f64
+  }
   // `GpuMemory.Held`: bytes of device memory this program allocated and still holds (pool blocks included), 0 without a GPU
   func.func private @strict_gpu_held(%self: f64) -> f64 {
     %budget = llvm.mlir.addressof @strict_gpu_budget : !llvm.ptr

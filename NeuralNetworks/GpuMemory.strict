@@ -19,6 +19,9 @@ Available Number
 HostAvailable Number
 	GpuMemory.HostAvailable >= 0
 	0
+HostTotal Number
+	GpuMemory.HostTotal >= 0
+	0
 Stamped Number
 	GpuMemory.Stamped >= -1
 	-1
