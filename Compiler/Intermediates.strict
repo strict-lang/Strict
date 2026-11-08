@@ -10,7 +10,7 @@ Removed(base Text) Boolean
 		files = files + (base + value)
 	for Toolchain.Parts
 		let part = base + "-" + value
-		files = files + (part, part + ".o", part + ".mlir", part + ".llvm.mlir")
+		files = files + (part, part + ".mlir", part + ".llvm.mlir")
 	for files
 		if Deleted(value) is false
 			logger.Log("Could not remove build intermediate: " + value + " (another program still held it after 5 s)")

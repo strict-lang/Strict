@@ -1,0 +1,81 @@
+has split MlirSplit
+has starts Numbers = List(Number)
+has declarations Texts = List(Text)
+has owners Numbers = List(Number)
+has shared Texts = List(Text)
+has placed Numbers = List(Number)
+constant Sample = MlirParts(MlirSplit.Sample).Laid
+constant Second = MlirParts(Sample, owners = (1, 0)).Part(1)
+Laid MlirParts
+	Sample.starts is (3, 7)
+	Sample.declarations.Length is 2
+	Sample.owners is (MlirSplit.Sample.Owner(MlirSplit.Sample.lines(3)), MlirSplit.Sample.Owner(MlirSplit.Sample.lines(7)))
+	Sample.shared.Length is 2
+	Sample.placed.Length is 2
+	let lines = split.Starts
+	let common = split.Shared
+	let laid = MlirParts(split, lines, split.Declarations(lines), Owners(lines))
+	MlirParts(laid, shared = common, placed = split.Placed(common))
+Owners(lines Numbers) Numbers
+	MlirParts(MlirSplit.Sample).Owners((3)) is (MlirSplit.Sample.Owner(MlirSplit.Sample.lines(3)))
+	for lines
+		split.Owner(split.lines(value))
+Part(index Number) Text
+	Second.IndexOf("  func.func private @B(f64) -> f64\n") > 0
+	Second.IndexOf("  func.func @A() -> f64 {\n") > 0
+	Second.IndexOf("  llvm.func @printf(!llvm.ptr, ...) -> i32\n") > 0
+	Second.StartsWith("module {\n")
+	Second.EndsWith("\n}")
+	let others = split.Data(index, shared, placed) + split.Externals(index, shared, placed)
+	let declared = others + split.Others(declarations, owners, index)
+	Text.Combine((List(Text) + "module {") + declared + split.Owned(starts, owners, index) + "}", "\n")
+Changed(base Text, flags Text) Numbers
+	PtxCache("Compiler/output/Unsplit-0").Saved("", "stale")
+	Sample.Changed("Compiler/output/Unsplit", "a").Length > 0
+	File("Compiler/output/Unsplit-0").Exists is false
+	mutable changed = List(Mutable(Number))
+	for Range(0, Toolchain.Parts)
+		let part = base + "-" + value
+		File(part).Delete
+		let owned = split.Data(value, shared, placed) + split.Owned(starts, owners, value)
+		if Written(part, flags, Text.Combine(owned, "\n"))
+			File(part + ".mlir").Write(Part(value))
+			changed.Add(value)
+	changed
+IsCurrent(part Text, key Text) Boolean
+	PtxCache("Compiler/output/Current").Saved(".o", "compiled")
+	PtxCache("Compiler/output/Current").Saved(".owned", "a")
+	Sample.IsCurrent("Compiler/output/Current", "a")
+	Sample.IsCurrent("Compiler/output/Current", "b") is false
+	Sample.IsCurrent("Compiler/output/Absent", "a") is false
+	File(part + ".o").Exists and File(part + ".owned").Exists and (PtxCache(part).Read(".owned") is key)
+Written(part Text, flags Text, owned Text) Boolean
+	PtxCache("Compiler/output/Keyed").Saved(".o", "compiled")
+	Sample.Written("Compiler/output/Keyed", "f", "") is false
+	File("Compiler/output/Keyed.o").Exists is false
+	Sample.Written("Compiler/output/Keyed", "f", "a")
+	if owned is ""
+		File(part + ".o").Delete
+		return false
+	if IsCurrent(part, flags + owned)
+		return false
+	File(part + ".o").Delete
+	PtxCache(part).Saved(".owned", flags + owned)
+	true
+Lowered(base Text, tools Toolchain) Text
+	Sample.Lowered("Compiler/output/missing", Toolchain.OnWindows).StartsWith("mlir-opt failed")
+	mutable optimizing = List(Text)
+	mutable translating = List(Text)
+	for Changed(base, MlirSplit.Single + tools.cpu + Toolchain.Optimized)
+		let part = base + "-" + value
+		optimizing = optimizing + ("\"" + part + ".mlir\"" + MlirSplit.Single + part + ".llvm.mlir\"")
+		translating = translating + (MlirSplit.Translating + "\"" + part + ".llvm.mlir\" -o \"" + part + "\"")
+	File(base + ".ll").Delete
+	let lowered = Ran("mlir-opt", optimizing, tools)
+	lowered is "" then Ran("mlir-translate", translating, tools) else lowered
+Ran(tool Text, arguments Texts, tools Toolchain) Text
+	Sample.Ran("noSuchStrictTool", List(Text) + "", Toolchain.OnWindows).StartsWith("noSuchStrictTool failed")
+	for ToolRunner(tools.Located(tool)).ExecuteAll(arguments, tool)
+		if value.Failed
+			return tool + " failed: " + value.error
+	""
