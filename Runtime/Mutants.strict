@@ -38,9 +38,10 @@ Ran(types List(TypeEntry), root Text, files Texts, inference TypeInference) Numb
 	survivors
 Lines(types List(TypeEntry)) Texts
 	Sample.Lines(Doubled).Length is 0
-	let methods = Baseline(value).Kept(types)
+	let kept = Baseline(value).Kept(types)
+	let methods = Baseline(value).Methods(kept)
 	let tested = Tested(types, Runner(types.First), methods)
-	let budgets = Baseline(value).Budgets(tested, methods.Length)
+	let budgets = Baseline(value).Budgets(kept)
 	let rounds = Mutation.Picked(part, Mutation.Rounds(methods), isWhole)
 	let waves = Range(0, (rounds.Length / Wave).Ceiling)
 	for wave, found, survivor in waves, Rounds(tested, methods, budgets, rounds, wave), found
@@ -81,7 +82,7 @@ Round(types List(TypeEntry), methods List(MethodEntry), budgets Numbers, round N
 		let candidates = Mutation(value).Candidates
 		if candidates.Length > round
 			let mutant = List(MethodEntry) + Mutation(value).Mutant(candidates(round))
-			let alone = Execute(logger).Started(Replaced(types, List(MethodEntry) + value, mutant), path)
+			let alone = Execute(logger).Started(Replaced(types, List(MethodEntry) + value, mutant), path, false, false)
 			let isPassing = Passes(alone, TestCodegen.Runner + index, budgets(index))
 			if isPassing and Passes(alone, TestCodegen.Runner + methods.Length, seconds)
 				let lines = File(path).ReadLines

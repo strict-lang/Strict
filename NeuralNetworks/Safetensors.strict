@@ -13,7 +13,7 @@ constant Single = "\"x\":{\"dtype\":\"F32\",\"shape\":[2],\"data_offsets\":[0,8]
 constant Second = Safetensors.Bytes.Part(Safetensors.Bytes.Values("a.weight"), 64, 64, 1)
 constant Exact = Safetensors.Bytes.Quantized("a")
 constant Firsts = Safetensors.Bytes.Part(Safetensors.Bytes.Values("a.weight"), 0, 128, 1)
-Entry(name Text) Text
+Entry(name Text) Slow(Text)
 	Tiny.Entry("b") is "\"dtype\":\"F32\",\"shape\":[3],\"data_offsets\":[24,36]"
 	Tiny.Entry("missing") is ""
 	Safetensors("NeuralNetworks/tiny.safetensors", 32, "a").Entry("") is Tiny.Entry("a")

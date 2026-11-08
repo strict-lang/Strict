@@ -1,4 +1,4 @@
-Sum(count Number) Number
+Sum(count Number) Slow(Number)
 	FourthSum.Sum(0) is 0
 	FourthSum.Sum(1) is 0
 	FourthSum.Sum(3) is 17
