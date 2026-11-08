@@ -12317,14 +12317,12 @@
     return %copy : f64
   }
   func.func private @strict_character_text(%code: f64) -> f64 {
-    %two = arith.constant 2 : i64
-    %terminator = arith.constant 0 : i8
-    %copy = func.call @strict_alloc_text(%two) : (i64) -> !llvm.ptr
     %byte = arith.fptoui %code : f64 to i8
-    llvm.store %byte, %copy : i8, !llvm.ptr
-    %end = llvm.getelementptr %copy[1] : (!llvm.ptr) -> !llvm.ptr, i8
-    llvm.store %terminator, %end : i8, !llvm.ptr
-    %result = func.call @strict_bits(%copy) : (!llvm.ptr) -> f64
+    %wide = arith.extui %byte : i8 to i64
+    %twice = arith.addi %wide, %wide : i64
+    %table = llvm.mlir.addressof @strict_characters : !llvm.ptr
+    %shared = llvm.getelementptr %table[%twice] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %result = func.call @strict_bits(%shared) : (!llvm.ptr) -> f64
     return %result : f64
   }
   func.func private @strict_floor(%number: f64) -> f64 {
