@@ -28,7 +28,7 @@ Count(kind Text) Number
 	MlirFlats(MlirPacking.Halved.function, 0).Count("Halving") is 3
 	Sample.Count("Number") is 0
 	Looked.Count("Strict/Math/Tripling") is 3
-	let type = kind is in function.typeIndex then function.TypeOf(kind) else function.TypeOf(TypeEntry.ShortName(kind))
+	let type = function.TypeOf(kind, true)
 	let member = Flat(type)
 	if TypeEntry.ShortName(member.typeName) is not in ("List(Number)", "Numbers")
 		return 0

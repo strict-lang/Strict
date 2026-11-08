@@ -165,5 +165,5 @@ IsTarget(entry InstructionEntry, next InstructionEntry, returned Text) Boolean
 		return false
 	let kinds = MlirKinds(function)
 	let list = PayloadDecoder(next).ElementParts(0)
-	let element = function.TypeOf(TypeEntry.ShortName(kinds.ElementKind(kinds.VariableKind(position, list))))
-	(element.members.Length > 0) and (element.Name is function.TypeOf(TypeEntry.ShortName(returned)).Name)
+	let element = function.TypeOf(kinds.ElementKind(kinds.VariableKind(position, list)), true)
+	(element.members.Length > 0) and (element.Name is function.TypeOf(returned, true).Name)

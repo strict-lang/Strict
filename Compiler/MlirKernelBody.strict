@@ -118,5 +118,5 @@ Slot(name Text) Number
 	Body.Slot("board_width") is 0
 	let variable = name.Substring(0, name.IndexOf("_"))
 	let member = name.Substring(name.IndexOf("_") + 1, name.Length - name.IndexOf("_") - 1)
-	let type = function.TypeOf(TypeEntry.ShortName(MlirWholeKernel(function, position).TypeName(variable)))
+	let type = function.TypeOf(MlirWholeKernel(function, position).TypeName(variable), true)
 	MlirEmbedded(function).Offset(type, member)

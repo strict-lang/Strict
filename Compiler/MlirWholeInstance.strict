@@ -24,7 +24,7 @@ IsInstance(typeName Text) Boolean
 MemberKind(typeName Text, member Text) Text
 	Sized.MemberKind("Grid", "width") is "i"
 	Sized.MemberKind("Grid", "cells") is "d"
-	for MlirInstances(function, 0).Stored(function.TypeOf(TypeEntry.ShortName(typeName)))
+	for MlirInstances(function, 0).Stored(function.TypeOf(typeName, true))
 		if value.Name is member
 			return Kind(value.typeName)
 	""

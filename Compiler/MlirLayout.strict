@@ -38,7 +38,7 @@ IsStruct(typeName Text) Boolean
 	Wrapping.IsStruct("Strict/Degrees") is false
 	Wrapping.IsStruct("List(Number)") is false
 	Wrapping.IsStruct("Scaled") is false
-	let isStruct = function.TypeOf(TypeEntry.ShortName(typeName)).IsStruct
+	let isStruct = function.TypeOf(typeName, true).IsStruct
 	let couples = MlirCouples(function, 0)
 	let isPacked = couples.IsCoupled(typeName) or couples.IsSingle(typeName) or MlirLanes(function, 0).IsPacked(typeName)
 	isStruct and (isPacked is false)
@@ -74,14 +74,14 @@ Wrapped(typeName Text) Text
 	Wrapping.Wrapped("Angle") is "Degrees"
 	Wrapping.Wrapped("Shape") is ""
 	Wrapping.Wrapped("Number") is ""
-	function.TypeOf(TypeEntry.ShortName(typeName)).Wrapped
+	function.TypeOf(typeName, true).Wrapped
 Owner(type TypeEntry, name Text) TypeEntry
 	TypeEntry.ShortName(Wrapping.Owner(Angle, "Floor").Name) is "Number"
 	Wrapping.Owner(MlirFunction.Shape, "Floor").Name is MlirFunction.Shape.Name
 	for type.methods
 		if value.Name is name
 			return type
-	let inner = type.Wrapped is "" then type else function.TypeOf(TypeEntry.ShortName(type.Wrapped))
+	let inner = type.Wrapped is "" then type else function.TypeOf(type.Wrapped, true)
 	(inner.Name is "") or (inner.Name is type.Name) then type else Owner(inner, name)
 IsInitializer Boolean
 	Packing.Returned(2)(0) is "    %t2nz = arith.constant 8 : i64"
@@ -119,7 +119,7 @@ Copied(member MemberEntry, temp Text, slot Text) Texts
 IsByte(typeName Text) Boolean
 	Wrapping.IsByte("Byte")
 	Wrapping.IsByte("Number") is false
-	let type = function.TypeOf(TypeEntry.ShortName(typeName))
+	let type = function.TypeOf(typeName, true)
 	let changing = type.Changing
 	(changing.Length is 1) and (changing.First.Bits is 8)
 Paired(kind Text) Texts

@@ -23,7 +23,7 @@ Slots(kind Text) Number
 	Sample.Slots("Pairs") is 2
 	Sample.Slots("List(Number)") is 0
 	let element = LaneFlow(function.types).Element(kind)
-	element is "" then 0 else StructLanes.Members(function.TypeOf(TypeEntry.ShortName(element))).Length
+	element is "" then 0 else StructLanes.Members(function.TypeOf(element, true)).Length
 Indexed(entry InstructionEntry) Texts
 	"    %d4s = arith.muli %d4k, %d4q : i64" is in Sample.Indexed(LaneFlow.Picking)
 	Sample.Indexed(LaneFlow.Picking).Last is "  ^d4done:"
