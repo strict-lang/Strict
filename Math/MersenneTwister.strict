@@ -1,6 +1,7 @@
 has state Numbers
 constant StateSize = 624
 constant TwistOffset = 397
+constant Twists = 227
 constant WordRange = 4294967296
 constant BatchSize = 16
 Seeded(seed Number) Slow(MersenneTwister)
@@ -29,10 +30,15 @@ Uints(count Number) Slow(Numbers)
 	mutable raw = List(Number)
 	for state
 		raw = raw + value
-	for count
-		raw = raw + (raw(index + TwistOffset) xor Twisted(raw(index), raw(index + 1)))
+	for (count / Twists).Ceiling
+		raw = raw + Generation(raw, index * Twists)
 	for count
 		Tempered(raw(index + StateSize))
+Generation(raw Numbers, start Number) Slow(Numbers)
+	MersenneTwister.Seeded(42).Generation(MersenneTwister.Seeded(42).state, 0).Length is 227
+	MersenneTwister.Seeded(5489).Generation(MersenneTwister.Seeded(5489).state, 0).First is 2601187879
+	for Twists
+		raw(start + index + TwistOffset) xor Twisted(raw(start + index), raw(start + index + 1))
 Twisted(first Number, second Number) Number
 	MersenneTwister(List(Number)).Twisted(0, 1) is 2567483615
 	MersenneTwister(List(Number)).Twisted(2147483649, 6) is 1073741827
