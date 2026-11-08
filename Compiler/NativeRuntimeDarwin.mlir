@@ -1951,8 +1951,49 @@
     %result = llvm.call @write(%descriptor, %buffer, %length) : (i32, !llvm.ptr, i64) -> i64
     return
   }
-  // the start addresses of the functions of the stack frames for strict_places_print, none known here yet
+  // the start addresses of the functions of the stack frames for strict_places_print, from the unwind tables: the
+  // unwinder calls strict_stack_frame per frame with the state (frames, count, limit), 0 for a frame of no function
+  llvm.func @_Unwind_Backtrace(!llvm.ptr, !llvm.ptr) -> i32
+  llvm.func @_Unwind_GetIP(!llvm.ptr) -> i64
+  llvm.func @_Unwind_FindEnclosingFunction(!llvm.ptr) -> !llvm.ptr
+  llvm.func @strict_stack_frame(%context: !llvm.ptr, %state: !llvm.ptr) -> i32 {
+    %one = llvm.mlir.constant(1 : i64) : i64
+    %going = llvm.mlir.constant(0 : i32) : i32
+    %ended = llvm.mlir.constant(5 : i32) : i32
+    %countSlot = llvm.getelementptr %state[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %count = llvm.load %countSlot : !llvm.ptr -> i64
+    %limitSlot = llvm.getelementptr %state[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %limit = llvm.load %limitSlot : !llvm.ptr -> i64
+    %isFull = llvm.icmp "sge" %count, %limit : i64
+    llvm.cond_br %isFull, ^full, ^frame
+  ^full:
+    llvm.return %ended : i32
+  ^frame:
+    %returned = llvm.call @_Unwind_GetIP(%context) : (!llvm.ptr) -> i64
+    %inside = llvm.sub %returned, %one : i64
+    %address = llvm.inttoptr %inside : i64 to !llvm.ptr
+    %start = llvm.call @_Unwind_FindEnclosingFunction(%address) : (!llvm.ptr) -> !llvm.ptr
+    %startBits = llvm.ptrtoint %start : !llvm.ptr to i64
+    %framesBits = llvm.load %state : !llvm.ptr -> i64
+    %frames = llvm.inttoptr %framesBits : i64 to !llvm.ptr
+    %slot = llvm.getelementptr %frames[%count] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    llvm.store %startBits, %slot : i64, !llvm.ptr
+    %next = llvm.add %count, %one : i64
+    llvm.store %next, %countSlot : i64, !llvm.ptr
+    llvm.return %going : i32
+  }
   func.func private @strict_stack_starts(%frames: !llvm.ptr, %limit: i64) -> i64 {
     %none = arith.constant 0 : i64
-    return %none : i64
+    %three = arith.constant 3 : i64
+    %state = llvm.alloca %three x i64 : (i64) -> !llvm.ptr
+    %framesBits = llvm.ptrtoint %frames : !llvm.ptr to i64
+    llvm.store %framesBits, %state : i64, !llvm.ptr
+    %countSlot = llvm.getelementptr %state[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %none, %countSlot : i64, !llvm.ptr
+    %limitSlot = llvm.getelementptr %state[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %limit, %limitSlot : i64, !llvm.ptr
+    %callback = llvm.mlir.addressof @strict_stack_frame : !llvm.ptr
+    %walked = llvm.call @_Unwind_Backtrace(%callback, %state) : (!llvm.ptr, !llvm.ptr) -> i32
+    %count = llvm.load %countSlot : !llvm.ptr -> i64
+    return %count : i64
   }
