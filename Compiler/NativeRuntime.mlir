@@ -253,12 +253,81 @@
   ^done:
     return
   }
+  // removes before unlocking: a held file is removed when the handle closes on Windows, and no other process
+  // can lock the path between the close and the remove
   func.func private @strict_file_delete(%path: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
-    func.call @strict_file_unlocked(%path) : (f64) -> ()
     %name = func.call @strict_named(%path) : (f64) -> !llvm.ptr
     %removed = llvm.call @remove(%name) : (!llvm.ptr) -> i32
+    func.call @strict_file_unlocked(%path) : (f64) -> ()
     return %zero : f64
+  }
+  // path hash and handle of up to 64 files this process holds with File.Locked
+  llvm.mlir.global internal @strict_file_locks(dense<0> : tensor<128xi64>) : !llvm.array<128 x i64>
+  func.func private @strict_file_lock_at(%index: i64) -> !llvm.ptr {
+    %two = arith.constant 2 : i64
+    %at = arith.muli %index, %two : i64
+    %locks = llvm.mlir.addressof @strict_file_locks : !llvm.ptr
+    %slot = llvm.getelementptr %locks[0, %at] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<128 x i64>
+    return %slot : !llvm.ptr
+  }
+  // index of the entry holding handle for path (handle 0: a free entry), -1 when there is none
+  func.func private @strict_file_lock_slot(%path: f64, %handle: i64) -> i64 {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %count = arith.constant 64 : i64
+    %missing = arith.constant -1 : i64
+    %hash = func.call @strict_hash_text(%path) : (f64) -> i64
+    %isFree = arith.cmpi eq, %handle, %zero : i64
+    cf.br ^check(%zero : i64)
+  ^check(%index: i64):
+    %isInside = arith.cmpi ult, %index, %count : i64
+    cf.cond_br %isInside, ^look, ^done(%missing : i64)
+  ^look:
+    %slot = func.call @strict_file_lock_at(%index) : (i64) -> !llvm.ptr
+    %stored = llvm.load %slot : !llvm.ptr -> i64
+    %handleSlot = llvm.getelementptr %slot[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %held = llvm.load %handleSlot : !llvm.ptr -> i64
+    %isEmpty = arith.cmpi eq, %held, %zero : i64
+    %isSame = arith.cmpi eq, %stored, %hash : i64
+    %isHeld = arith.cmpi ne, %held, %zero : i64
+    %isMine = arith.andi %isSame, %isHeld : i1
+    %isMatch = arith.select %isFree, %isEmpty, %isMine : i1
+    %next = arith.addi %index, %one : i64
+    cf.cond_br %isMatch, ^done(%index : i64), ^check(%next : i64)
+  ^done(%result: i64):
+    return %result : i64
+  }
+  func.func private @strict_file_lock_kept(%path: f64, %handle: i64) {
+    %none = arith.constant 0 : i64
+    %free = func.call @strict_file_lock_slot(%path, %none) : (f64, i64) -> i64
+    %found = arith.cmpi sge, %free, %none : i64
+    cf.cond_br %found, ^store, ^done
+  ^store:
+    %slot = func.call @strict_file_lock_at(%free) : (i64) -> !llvm.ptr
+    %hash = func.call @strict_hash_text(%path) : (f64) -> i64
+    llvm.store %hash, %slot : i64, !llvm.ptr
+    %handleSlot = llvm.getelementptr %slot[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %handle, %handleSlot : i64, !llvm.ptr
+    cf.br ^done
+  ^done:
+    return
+  }
+  // the handle kept for path, its entry is free again, 0 when this process does not hold path
+  func.func private @strict_file_lock_taken(%path: f64) -> i64 {
+    %zero = arith.constant 0 : i64
+    %any = arith.constant 1 : i64
+    %index = func.call @strict_file_lock_slot(%path, %any) : (f64, i64) -> i64
+    %found = arith.cmpi sge, %index, %zero : i64
+    cf.cond_br %found, ^take, ^done(%zero : i64)
+  ^take:
+    %slot = func.call @strict_file_lock_at(%index) : (i64) -> !llvm.ptr
+    %handleSlot = llvm.getelementptr %slot[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %held = llvm.load %handleSlot : !llvm.ptr -> i64
+    llvm.store %zero, %handleSlot : i64, !llvm.ptr
+    cf.br ^done(%held : i64)
+  ^done(%result: i64):
+    return %result : i64
   }
   llvm.mlir.global internal constant @strict_time_format("%Y-%m-%d %H:%M:%S\00") : !llvm.array<18 x i8>
   func.func private @strict_time_text(%local: !llvm.ptr) -> f64 {
