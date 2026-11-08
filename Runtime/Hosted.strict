@@ -80,9 +80,9 @@ Stored VmValue
 	Answered(Location)
 Moved VmValue
 	Hosted(Deleting).Moved.IsTrue is false
-	Hosted(Changing).Result.items.First.text is "DirectoryChangeNeedsNative"
+	Hosted(Changing).Moved.IsTrue
 	if call.MethodName is "Change"
-		return VmValue.OfError("DirectoryChangeNeedsNative")
+		return VmValue.OfBoolean(Directory.Change(Location))
 	if call.MethodName is "Delete"
 		File(Location).Delete
 	else if call.MethodName is "InMemory"

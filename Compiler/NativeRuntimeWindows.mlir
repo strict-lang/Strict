@@ -102,7 +102,7 @@
     %invalid = arith.constant -1 : i32
     %directoryFlag = arith.constant 16 : i32
     %none = arith.constant 0 : i32
-    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %name = func.call @strict_named(%path) : (f64) -> !llvm.ptr
     %attributes = llvm.call @GetFileAttributesA(%name) : (!llvm.ptr) -> i32
     %valid = arith.cmpi ne, %attributes, %invalid : i32
     %masked = arith.andi %attributes, %directoryFlag : i32
@@ -128,12 +128,13 @@
     %end = llvm.getelementptr %path[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %terminator = arith.constant 0 : i8
     llvm.store %terminator, %end : i8, !llvm.ptr
-    %result = func.call @strict_bits(%path) : (!llvm.ptr) -> f64
+    %system = func.call @strict_bits(%path) : (!llvm.ptr) -> f64
+    %result = func.call @strict_folder_current(%system) : (f64) -> f64
     return %result : f64
   }
   func.func private @strict_directory_create(%self: f64, %path: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
-    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %name = func.call @strict_named(%path) : (f64) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     %created = llvm.call @CreateDirectoryA(%name, %null) : (!llvm.ptr, !llvm.ptr) -> i32
     %failure = arith.constant 0 : i32
@@ -142,12 +143,29 @@
     return %result : f64
   }
   llvm.func @SetCurrentDirectoryA(!llvm.ptr) -> i32
+  // only this thread changes its folder (strict_folder), the folder of the process stays
   func.func private @strict_directory_change(%self: f64, %path: f64) -> f64 {
-    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
-    %changed = llvm.call @SetCurrentDirectoryA(%name) : (!llvm.ptr) -> i32
-    %zero = arith.constant 0 : i32
-    %isChanged = arith.cmpi ne, %changed, %zero : i32
-    %result = func.call @strict_boolean(%isChanged) : (i1) -> f64
+    %exists = func.call @strict_directory_exists(%self, %path) : (f64, f64) -> f64
+    %no = arith.constant 0.0 : f64
+    %yes = arith.constant 1.0 : f64
+    %isFolder = arith.cmpf one, %exists, %no : f64
+    cf.cond_br %isFolder, ^change, ^done(%no : f64)
+  ^change:
+    %name = func.call @strict_named(%path) : (f64) -> !llvm.ptr
+    %size = arith.constant 1024 : i64
+    %limit = arith.constant 1023 : i32
+    %full = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %length = llvm.call @GetFullPathNameA(%name, %limit, %full, %null) : (!llvm.ptr, i32, !llvm.ptr, !llvm.ptr) -> i32
+    %nothing = arith.constant 0 : i32
+    %isFull = arith.cmpi ugt, %length, %nothing : i32
+    %fits = arith.cmpi ult, %length, %limit : i32
+    %isResolved = arith.andi %isFull, %fits : i1
+    cf.cond_br %isResolved, ^keep, ^done(%no : f64)
+  ^keep:
+    func.call @strict_folder_changed(%full) : (!llvm.ptr) -> ()
+    cf.br ^done(%yes : f64)
+  ^done(%result: f64):
     return %result : f64
   }
   func.func private @strict_path_join(%path: f64, %name: f64) -> f64 {
@@ -172,7 +190,7 @@
     %isEmpty = arith.cmpf oeq, %patternLength, %zero : f64
     %chosen = arith.select %isEmpty, %any, %safePattern : f64
     %search = func.call @strict_path_join(%path, %chosen) : (f64, f64) -> f64
-    %searchText = func.call @strict_ptr(%search) : (f64) -> !llvm.ptr
+    %searchText = func.call @strict_named(%search) : (f64) -> !llvm.ptr
     %data = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
     %created = func.call @strict_list_new(%four, %zero) : (f64, f64) -> f64
     %handle = llvm.call @FindFirstFileA(%searchText, %data) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
@@ -216,7 +234,7 @@
     %anyText = llvm.mlir.addressof @strict_any_file : !llvm.ptr
     %any = func.call @strict_bits(%anyText) : (!llvm.ptr) -> f64
     %search = func.call @strict_path_join(%path, %any) : (f64, f64) -> f64
-    %searchText = func.call @strict_ptr(%search) : (f64) -> !llvm.ptr
+    %searchText = func.call @strict_named(%search) : (f64) -> !llvm.ptr
     %data = llvm.alloca %size x i8 : (i64) -> !llvm.ptr
     %handle = llvm.call @FindFirstFileA(%searchText, %data) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %handleValue = llvm.ptrtoint %handle : !llvm.ptr to i64
@@ -272,7 +290,7 @@
     %anyText = llvm.mlir.addressof @strict_any_file : !llvm.ptr
     %any = func.call @strict_bits(%anyText) : (!llvm.ptr) -> f64
     %search = func.call @strict_path_join(%path, %any) : (f64, f64) -> f64
-    %searchText = func.call @strict_ptr(%search) : (f64) -> !llvm.ptr
+    %searchText = func.call @strict_named(%search) : (f64) -> !llvm.ptr
     %data = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
     %created = func.call @strict_list_new(%four, %zero) : (f64, f64) -> f64
     %handle = llvm.call @FindFirstFileA(%searchText, %data) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
@@ -419,8 +437,8 @@
   func.func private @strict_file_rename(%path: f64, %newPath: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %replacing = arith.constant 1 : i32
-    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
-    %newName = func.call @strict_ptr(%newPath) : (f64) -> !llvm.ptr
+    %name = func.call @strict_named(%path) : (f64) -> !llvm.ptr
+    %newName = func.call @strict_named(%newPath) : (f64) -> !llvm.ptr
     %moved = llvm.call @MoveFileExA(%name, %newName, %replacing) : (!llvm.ptr, !llvm.ptr, i32) -> i32
     return %zero : f64
   }
@@ -590,7 +608,7 @@
   ^disk:
     %dataSize = arith.constant 40 : i64
     %data = llvm.alloca %dataSize x i8 : (i64) -> !llvm.ptr
-    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %name = func.call @strict_named(%path) : (f64) -> !llvm.ptr
     %standard = arith.constant 0 : i32
     %found = llvm.call @GetFileAttributesExA(%name, %standard, %data) : (!llvm.ptr, i32, !llvm.ptr) -> i32
     %none = arith.constant 0 : i32
@@ -683,14 +701,14 @@
     llvm.store %length, %attributes : i32, !llvm.ptr
     %inheritSlot = llvm.getelementptr %attributes[16] : (!llvm.ptr) -> !llvm.ptr, i8
     llvm.store %inherit, %inheritSlot : i32, !llvm.ptr
-    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %name = func.call @strict_named(%path) : (f64) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     %handle = llvm.call @CreateFileA(%name, %write, %share, %attributes, %always, %normal, %null) : (!llvm.ptr, i32, i32, !llvm.ptr, i32, i32, !llvm.ptr) -> !llvm.ptr
     return %handle : !llvm.ptr
   }
   // holds the file exclusively until File.Delete or the end of this process, Windows deletes it then
   func.func private @strict_file_locked(%path: f64) -> f64 {
-    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %name = func.call @strict_named(%path) : (f64) -> !llvm.ptr
     %access = arith.constant 1073807360 : i32
     %share = arith.constant 0 : i32
     %always = arith.constant 4 : i32
@@ -772,7 +790,7 @@
     return
   }
   func.func private @strict_removed_file(%path: f64) -> f64 {
-    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %name = func.call @strict_named(%path) : (f64) -> !llvm.ptr
     %text = func.call @strict_file_text(%path) : (f64) -> f64
     %deleted = llvm.call @DeleteFileA(%name) : (!llvm.ptr) -> i32
     return %text : f64
@@ -791,7 +809,8 @@
     %quote = func.call @strict_bits(%quoteText) : (!llvm.ptr) -> f64
     %quoteSpaceText = llvm.mlir.addressof @strict_quote_space : !llvm.ptr
     %quoteSpace = func.call @strict_bits(%quoteSpaceText) : (!llvm.ptr) -> f64
-    %quoted = func.call @strict_text_concat(%quote, %path) : (f64, f64) -> f64
+    %located = func.call @strict_program_joined(%path) : (f64) -> f64
+    %quoted = func.call @strict_text_concat(%quote, %located) : (f64, f64) -> f64
     %program = func.call @strict_text_concat(%quoted, %quoteSpace) : (f64, f64) -> f64
     %command = func.call @strict_text_concat(%program, %arguments) : (f64, f64) -> f64
     %startupWords = arith.constant 13 : i64
@@ -804,7 +823,8 @@
     %commandText = func.call @strict_ptr(%command) : (f64) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     func.call @strict_flush() : () -> ()
-    %started = llvm.call @CreateProcessA(%null, %commandText, %null, %null, %inherit, %noFlags, %null, %null, %startup, %information) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    %startFolder = func.call @strict_folder_pointer() : () -> !llvm.ptr
+    %started = llvm.call @CreateProcessA(%null, %commandText, %null, %null, %inherit, %noFlags, %null, %startFolder, %startup, %information) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
     %failed = arith.cmpi eq, %started, %noFlags : i32
     cf.cond_br %failed, ^notStarted, ^running
   ^notStarted:
@@ -852,7 +872,8 @@
     %quote = func.call @strict_bits(%quoteText) : (!llvm.ptr) -> f64
     %quoteSpaceText = llvm.mlir.addressof @strict_quote_space : !llvm.ptr
     %quoteSpace = func.call @strict_bits(%quoteSpaceText) : (!llvm.ptr) -> f64
-    %quoted = func.call @strict_text_concat(%quote, %path) : (f64, f64) -> f64
+    %located = func.call @strict_program_joined(%path) : (f64) -> f64
+    %quoted = func.call @strict_text_concat(%quote, %located) : (f64, f64) -> f64
     %program = func.call @strict_text_concat(%quoted, %quoteSpace) : (f64, f64) -> f64
     %command = func.call @strict_text_concat(%program, %arguments) : (f64, f64) -> f64
     %outputPath = func.call @strict_temp_file() : () -> f64
@@ -885,7 +906,8 @@
     %commandText = func.call @strict_ptr(%command) : (f64) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     func.call @strict_tool_environment(%toolShare, %toolShareValue) : (i64, !llvm.ptr) -> ()
-    %started = llvm.call @CreateProcessA(%null, %commandText, %null, %null, %inherit, %noFlags, %null, %null, %startup, %information) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    %startFolder = func.call @strict_folder_pointer() : () -> !llvm.ptr
+    %started = llvm.call @CreateProcessA(%null, %commandText, %null, %null, %inherit, %noFlags, %null, %startFolder, %startup, %information) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
     func.call @strict_tool_environment(%toolShare, %null) : (i64, !llvm.ptr) -> ()
     %closedOutput = llvm.call @CloseHandle(%output) : (!llvm.ptr) -> i32
     %closedError = llvm.call @CloseHandle(%error) : (!llvm.ptr) -> i32
@@ -938,7 +960,7 @@
   llvm.func @GetProcAddress(!llvm.ptr, !llvm.ptr) -> !llvm.ptr
   llvm.func @GetFullPathNameA(!llvm.ptr, i32, !llvm.ptr, !llvm.ptr) -> i32
   func.func private @strict_library_call(%path: f64, %symbol: f64, %arguments: f64) -> f64 {
-    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %name = func.call @strict_named(%path) : (f64) -> !llvm.ptr
     %size = arith.constant 4096 : i32
     %full = llvm.alloca %size x i8 : (i32) -> !llvm.ptr
     %noPart = llvm.mlir.zero : !llvm.ptr
