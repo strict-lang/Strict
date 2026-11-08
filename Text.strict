@@ -19,8 +19,9 @@ in(text) Boolean
 	"hi" is not in "hello there"
 	"lo" is in "hello there"
 	"re" is in "hello there"
-	for Length - text.Length + 1
-		StartsWith(text, index)
+	"" is in ""
+	"long" is not in "lo"
+	IndexOf(text) >= 0
 Combine(texts Texts, separator = ", ") Text
 	Combine(("a", "b", "c")) is "a, b, c"
 	Combine(("a", "b"), "") is "ab"

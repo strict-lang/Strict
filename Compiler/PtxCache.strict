@@ -2,6 +2,7 @@ has base Text
 constant Sample = PtxCache("Compiler/output/Kept")
 constant Metal = DeviceBuild(Toolchain(Platform.MacOS, "."))
 constant Reducing = PtxCache("Compiler/output/Reducing")
+constant Known = PtxCache("Compiler/output/Known")
 constant Doubles = Text.Combine(MlirGpu.Exported(DeviceBuild.Doubling), ",")
 constant Combining = DeviceBuild.Local.Combined(DeviceBuild.Doubling, DeviceBuild.Without)
 constant Empty = "  llvm.mlir.global internal constant @strict_gpu_ptx(\"\\00\") : !llvm.array<1 x i8>\n}"
@@ -86,6 +87,17 @@ Fingerprint(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Text
 		key = key + "\n// " + File(Process.Current.executable).Modified
 	key
 Shared(device Text, isTiling Boolean, builder DeviceBuild) Texts
+	Known.Saved(".ptx", "// known") and Known.Saved(".shared.mlir", Fingerprint("x", false, DeviceBuild.Missing, ""))
+	Known.Shared("x", false, DeviceBuild.Missing) is ("// known")
+	Known.Shared("y", false, DeviceBuild.Missing) is Error("DirectoryNotCreated")
+	let direct = Fingerprint(device, isTiling, builder, "")
+	let isReady = (builder.isShipped is false) or File(base + ".fatbin").Exists
+	let known = isReady then Previous(direct, isTiling, ".shared.mlir") else List(Text)
+	if known.Length > 0
+		return known
+	let built = SharedKept(device, isTiling, builder)
+	built.First.StartsWith("//") and Saved(".shared.mlir", direct) then built else built
+SharedKept(device Text, isTiling Boolean, builder DeviceBuild) Texts
 	File(base + ".gpu.mlir").Write(device)
 	let reduced = Kept(builder.tools, "") is "" then Read(".gpu.kept.mlir") else device
 	let key = Fingerprint(reduced, isTiling, builder, "")
