@@ -47,7 +47,7 @@ LineIssues(line Text, number Number) ValidationIssues
 	Sample.LineIssues("\t\t\t\t\t\t1", 2).First to Text is "NestingMoreThanFiveLevelsIsNotAllowed: more than five levels"
 	Sample.LineIssues("\t\t\t\t\t\t" + Wide, 0).Length is 2
 	Sample.LineIssues("\tlet a = (1", 0).Length is 1
-	mutable issues = LengthIssues(line, number) + ParenthesisIssues(line, number)
+	mutable issues = LengthIssues(line, number) + ParenthesisIssues(line, number) + MissingIssues(line, number)
 	if line.StartsWith("\t\t\t\t\t\t")
 		issues.Add(ValidationIssue("NestingMoreThanFiveLevelsIsNotAllowed", "more than five levels", number + 1))
 	if line.StartsWith(" ")
@@ -63,6 +63,20 @@ ParenthesisIssues(line Text, number Number) ValidationIssues
 	if tokens.Count("(") is tokens.Count(")")
 		return List(ValidationIssue)
 	List(ValidationIssue) + ValidationIssue("ParenthesesMustBeClosed", line.Trim, number + 1)
+MissingIssues(line Text, number Number) ValidationIssues
+	Sample.MissingIssues("\tlet a =", 4).First to Text is "ValueMustFollowAssignment: let a ="
+	Sample.MissingIssues("\tlet a =", 4).First.Line is 5
+	Sample.MissingIssues("\tx =", 0).Length is 1
+	Sample.MissingIssues("\tlet a = 1", 0).Length is 0
+	Sample.MissingIssues("\tlet a = \"b =\"", 0).Length is 0
+	Sample.MissingIssues("\tfor as long as", 2).First to Text is "ConditionMustFollowLoop: for as long as"
+	Sample.MissingIssues("\tfor as long as x > 1", 0).Length is 0
+	Sample.LineIssues("\tx =", 0).Length is 1
+	if line.Trim is "for as long as"
+		return List(ValidationIssue) + ValidationIssue("ConditionMustFollowLoop", line.Trim, number + 1)
+	if line.EndsWith(" =")
+		return List(ValidationIssue) + ValidationIssue("ValueMustFollowAssignment", line.Trim, number + 1)
+	List(ValidationIssue)
 LengthIssues(line Text, number Number) ValidationIssues
 	Sample.LengthIssues("\t1", 0).Length is 0 and Sample.LengthIssues(Wide, 0).Length is 0
 	Sample.LengthIssues("\t" + Wide, 2).First to Text is "CharacterCountMustBeWithinLimit: 251 > 120"
