@@ -176,16 +176,15 @@ Sorted List
 Merged(other) List
 	(1, 3, 5).Merged((2, 4)) is (1, 2, 3, 4, 5)
 	(2).Merged((1, 2)) is (1, 2, 2)
-	mutable merged = elements.Slice(0, 0)
 	mutable left = 0
 	mutable right = 0
 	for Range(0, Length + other.elements.Length)
 		let isDone = right >= other.elements.Length
 		let isLeft = isDone or ((left < elements.Length) and ((other.elements(right) < elements(left)) is false))
-		merged = merged + (isLeft then elements(left) else other.elements(right))
+		let item = isLeft then elements(left) else other.elements(right)
 		left = isLeft then left + 1 else left
 		right = isLeft then right else right + 1
-	merged
+		item
 Average Generic
 	(1, 2, 6).Average is 3
 	Sum / Length
