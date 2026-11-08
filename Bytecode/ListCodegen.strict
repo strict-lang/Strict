@@ -140,12 +140,16 @@ Disowned(node SyntaxNode, block CodeBlock, isUsed Boolean) CodeBlock
 	Plain.Disowned(BodyParser("Run", "\tif 1 > 2", "\t\treturn values").Block(1, 1), Owned, false).Owns("values")
 	if node.Kind is "Identifier"
 		return isUsed then block.Disowned(node.text) else block
-	let reassigned = (node.Kind is "Reassignment") and (IsNew(node.children(1)) is false)
-	mutable result = reassigned then block.Disowned(node.children(0) to Text) else block
+	mutable result = IsShared(node, block) then block.Disowned(node.children(0) to Text) else block
 	for node.children
 		let used = IsUsed(node, index, isUsed) and (Borrowing(values, borrowing).IsBorrowed(node, index, result) is false)
 		result = Disowned(value, result, used)
 	result
+IsShared(node SyntaxNode, block CodeBlock) Boolean
+	Plain.IsShared(BodyParser("Run", "\tvalues = other").Block(1, 1).children(0), Owned)
+	Plain.IsShared(Appending, Owned) is false
+	Plain.IsShared(BodyParser("Run", "\tvalues = List(Number)").Block(1, 1).children(0), Owned) is false
+	(node.Kind is "Reassignment") and (IsNew(node.children(1)) is false) and (IsAppend(node, block) is false)
 IsUsed(parent SyntaxNode, position Number, isUsed Boolean) Boolean
 	Plain.IsUsed(ValueCodegen.Edits(0), 0, true)
 	Plain.IsUsed(ValueCodegen.GreeterText, 0, true) is false

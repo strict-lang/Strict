@@ -9,6 +9,7 @@ Details for the GPU line of [improvements.md](improvements.md), one short line e
 - the Hadamard on Q and K
 - routing plans at most 1024 key blocks (65536 positions), longer prompts attend densely: plans in global memory
 - head size 64 (H3 VAE decode) has no tensor core attention kernel
+- routed strict_device_bytes_attentions is L2 bound on the 4090 (L2 81 %, DRAM 4.5 %, compute 40 %, 238 registers): every 64 query block loads its own tiles, kernel time is ~0.7 ms plus ~3.2 ms per plan at 384x640 (half the entries: 3.88 -> 2.29 ms); neighbouring query blocks of a head share 46-118 of their 78-134 exact tiles, so two query blocks per block of 8 warps loading the union once (each half computing only its own plan, pooled chunks are per half) would load 27-46 % less: ~25-30 % kernel, ~10-12 % of an H3 step at 480x832, ~4 % at 384x640
 
 ## 16 bit lists
 - bf16 QK attention beyond the 128 wide QKV path
