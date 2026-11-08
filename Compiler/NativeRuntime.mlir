@@ -6409,7 +6409,10 @@
     %clockSlot = llvm.mlir.addressof @strict_gpu_clock : !llvm.ptr
     %clock = llvm.load %clockSlot : !llvm.ptr -> i64
     %isUsed = arith.cmpi ne, %clock, %none : i64
-    cf.cond_br %isUsed, ^next(%none : i64), ^done
+    cf.cond_br %isUsed, ^owned, ^done
+  ^owned:
+    func.call @strict_gpu_forget_owned(%object) : (i64) -> ()
+    cf.br ^next(%none : i64)
   ^next(%probe: i64):
     %more = arith.cmpi slt, %probe, %probes : i64
     cf.cond_br %more, ^compare, ^done
@@ -17639,6 +17642,7 @@
     %bitsSlot = llvm.getelementptr %entry[3] : (!llvm.ptr) -> !llvm.ptr, i64
     %bits = llvm.load %bitsSlot : !llvm.ptr -> i64
     llvm.store %listBits, %slot : i64, !llvm.ptr
+    func.call @strict_gpu_noted(%listBits) : (i64) -> ()
     %slotCount = llvm.getelementptr %slot[1] : (!llvm.ptr) -> !llvm.ptr, i64
     llvm.store %count, %slotCount : i64, !llvm.ptr
     %slotPinned = llvm.getelementptr %slot[2] : (!llvm.ptr) -> !llvm.ptr, i64
@@ -17824,6 +17828,7 @@
   ^store:
     %listBits = arith.bitcast %list : f64 to i64
     llvm.store %listBits, %slot : i64, !llvm.ptr
+    func.call @strict_gpu_noted(%listBits) : (i64) -> ()
     %countSlot = llvm.getelementptr %slot[1] : (!llvm.ptr) -> !llvm.ptr, i64
     llvm.store %count, %countSlot : i64, !llvm.ptr
     %blockBits = llvm.ptrtoint %block : !llvm.ptr to i64
@@ -17886,7 +17891,10 @@
     cf.cond_br %isUsed, ^alive, ^next(%following : i64)
   ^alive:
     %marked = func.call @strict_gc_is_marked(%listBits) : (i64) -> i1
-    cf.cond_br %marked, ^next(%following : i64), ^forget
+    cf.cond_br %marked, ^kept, ^forget
+  ^kept:
+    func.call @strict_gpu_noted(%listBits) : (i64) -> ()
+    cf.br ^next(%following : i64)
   ^forget:
     llvm.store %none, %slot : i64, !llvm.ptr
     cf.br ^next(%following : i64)
@@ -17999,6 +18007,7 @@
   ^record:
     %listBits = arith.bitcast %rows : f64 to i64
     llvm.store %listBits, %slot : i64, !llvm.ptr
+    func.call @strict_gpu_noted(%listBits) : (i64) -> ()
     %countSlot = llvm.getelementptr %slot[1] : (!llvm.ptr) -> !llvm.ptr, i64
     llvm.store %count, %countSlot : i64, !llvm.ptr
     %blockBits = llvm.ptrtoint %block : !llvm.ptr to i64
@@ -18034,25 +18043,9 @@
   ^done:
     return
   }
-  // the pinned copies of rows whose list died go back
-  func.func private @strict_gpu_unspill_dead() {
+  // the pinned copy of a spill slot goes back (unlocked when it is the block of its list) and the slot is free again
+  func.func private @strict_gpu_unspill_slot(%index: i64, %slot: !llvm.ptr) {
     %none = arith.constant 0 : i64
-    %one = arith.constant 1 : i64
-    %slots = arith.constant 1024 : i64
-    cf.br ^next(%none : i64)
-  ^next(%index: i64):
-    %more = arith.cmpi slt, %index, %slots : i64
-    cf.cond_br %more, ^check, ^done
-  ^check:
-    %slot = func.call @strict_gpu_spill_at(%index) : (i64) -> !llvm.ptr
-    %listBits = llvm.load %slot : !llvm.ptr -> i64
-    %following = arith.addi %index, %one : i64
-    %isUsed = arith.cmpi ne, %listBits, %none : i64
-    cf.cond_br %isUsed, ^alive, ^next(%following : i64)
-  ^alive:
-    %marked = func.call @strict_gc_is_marked(%listBits) : (i64) -> i1
-    cf.cond_br %marked, ^next(%following : i64), ^release
-  ^release:
     %pinnedSlot = llvm.getelementptr %slot[2] : (!llvm.ptr) -> !llvm.ptr, i64
     %pinned = llvm.load %pinnedSlot : !llvm.ptr -> i64
     %hostedFlags = llvm.mlir.addressof @strict_gpu_spill_hosted : !llvm.ptr
@@ -18066,7 +18059,7 @@
     %lockedTotalSlot = llvm.getelementptr %slot[3] : (!llvm.ptr) -> !llvm.ptr, i64
     %lockedTotal = llvm.load %lockedTotalSlot : !llvm.ptr -> i64
     func.call @strict_gpu_unlocked(%pinned, %lockedTotal) : (i64, i64) -> ()
-    cf.br ^next(%following : i64)
+    cf.br ^done
   ^unpin:
     func.call @strict_gpu_unpinned(%pinned) : (i64) -> ()
     llvm.store %none, %slot : i64, !llvm.ptr
@@ -18076,6 +18069,96 @@
     %spilled = llvm.load %spilledSlot : !llvm.ptr -> i64
     %remaining = arith.subi %spilled, %total : i64
     llvm.store %remaining, %spilledSlot : i64, !llvm.ptr
+    cf.br ^done
+  ^done:
+    return
+  }
+  // a bit per address hash of each list holding a spill or host slot: a list freed by reference counting looks for its
+  // slots only when its bit is set (strict_gpu_forget_owned), a collection clears them and sets those of kept slots
+  llvm.mlir.global internal @strict_gpu_owned(dense<0> : tensor<1024xi64>) : !llvm.array<1024 x i64>
+  func.func private @strict_gpu_owned_bit(%listBits: i64) -> (!llvm.ptr, i64) {
+    %one = arith.constant 1 : i64
+    %four = arith.constant 4 : i64
+    %six = arith.constant 6 : i64
+    %bitMask = arith.constant 65535 : i64
+    %positionMask = arith.constant 63 : i64
+    %shifted = arith.shrui %listBits, %four : i64
+    %bit = arith.andi %shifted, %bitMask : i64
+    %word = arith.shrui %bit, %six : i64
+    %position = arith.andi %bit, %positionMask : i64
+    %mask = arith.shli %one, %position : i64
+    %owned = llvm.mlir.addressof @strict_gpu_owned : !llvm.ptr
+    %wordSlot = llvm.getelementptr %owned[0, %word] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<1024 x i64>
+    return %wordSlot, %mask : !llvm.ptr, i64
+  }
+  func.func private @strict_gpu_noted(%listBits: i64) {
+    %owned:2 = func.call @strict_gpu_owned_bit(%listBits) : (i64) -> (!llvm.ptr, i64)
+    %bits = llvm.load %owned#0 : !llvm.ptr -> i64
+    %set = arith.ori %bits, %owned#1 : i64
+    llvm.store %set, %owned#0 : i64, !llvm.ptr
+    return
+  }
+  // a list freed by reference counting gives its spill and host slots back at once: a new list at its address with
+  // the same row count found them and uploaded the old rows
+  func.func private @strict_gpu_forget_owned(%object: i64) {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %slots = arith.constant 1024 : i64
+    %owned:2 = func.call @strict_gpu_owned_bit(%object) : (i64) -> (!llvm.ptr, i64)
+    %bits = llvm.load %owned#0 : !llvm.ptr -> i64
+    %hit = arith.andi %bits, %owned#1 : i64
+    %isNoted = arith.cmpi ne, %hit, %none : i64
+    cf.cond_br %isNoted, ^next(%none : i64), ^done
+  ^next(%index: i64):
+    %more = arith.cmpi slt, %index, %slots : i64
+    cf.cond_br %more, ^spill, ^done
+  ^spill:
+    %slot = func.call @strict_gpu_spill_at(%index) : (i64) -> !llvm.ptr
+    %spilled = llvm.load %slot : !llvm.ptr -> i64
+    %isSpill = arith.cmpi eq, %spilled, %object : i64
+    cf.cond_br %isSpill, ^unspill, ^host
+  ^unspill:
+    func.call @strict_gpu_unspill_slot(%index, %slot) : (i64, !llvm.ptr) -> ()
+    cf.br ^host
+  ^host:
+    %hostSlot = func.call @strict_gpu_host_slot(%index) : (i64) -> !llvm.ptr
+    %hosted = llvm.load %hostSlot : !llvm.ptr -> i64
+    %isHost = arith.cmpi eq, %hosted, %object : i64
+    %following = arith.addi %index, %one : i64
+    cf.cond_br %isHost, ^unhost, ^next(%following : i64)
+  ^unhost:
+    llvm.store %none, %hostSlot : i64, !llvm.ptr
+    cf.br ^next(%following : i64)
+  ^done:
+    return
+  }
+  // the pinned copies of rows whose list died go back
+  func.func private @strict_gpu_unspill_dead() {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %slots = arith.constant 1024 : i64
+    %owned = llvm.mlir.addressof @strict_gpu_owned : !llvm.ptr
+    %ownedBytes = arith.constant 8192 : i64
+    %noByte = arith.constant 0 : i32
+    %cleared = llvm.call @memset(%owned, %noByte, %ownedBytes) : (!llvm.ptr, i32, i64) -> !llvm.ptr
+    cf.br ^next(%none : i64)
+  ^next(%index: i64):
+    %more = arith.cmpi slt, %index, %slots : i64
+    cf.cond_br %more, ^check, ^done
+  ^check:
+    %slot = func.call @strict_gpu_spill_at(%index) : (i64) -> !llvm.ptr
+    %listBits = llvm.load %slot : !llvm.ptr -> i64
+    %following = arith.addi %index, %one : i64
+    %isUsed = arith.cmpi ne, %listBits, %none : i64
+    cf.cond_br %isUsed, ^alive, ^next(%following : i64)
+  ^alive:
+    %marked = func.call @strict_gc_is_marked(%listBits) : (i64) -> i1
+    cf.cond_br %marked, ^kept, ^release
+  ^kept:
+    func.call @strict_gpu_noted(%listBits) : (i64) -> ()
+    cf.br ^next(%following : i64)
+  ^release:
+    func.call @strict_gpu_unspill_slot(%index, %slot) : (i64, !llvm.ptr) -> ()
     cf.br ^next(%following : i64)
   ^done:
     func.call @strict_gpu_unhost_dead() : () -> ()
