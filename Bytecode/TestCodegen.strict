@@ -9,6 +9,7 @@ constant Declaring = SyntaxNode("Declaration", "let a", MethodCodegen.One)
 constant EvenFailed = InstructionEntry(InstructionType.Print, "Test failed: IsEven(2) is true in IsEven at Even.strict:line 2 (", (-1, 1, 14, 1), 2)
 constant EvenPassed = InstructionEntry(InstructionType.Print, "Test passed: IsEven(2) is true in IsEven at Even.strict:line 2 (", (-1, 1, 10, 1), 2)
 constant Runner = "$Tests"
+constant Running = TestCodegen(TypeCodegen("Strict/Running", ("Run Number", "\t3"), TypeCodegen.NoTypes, List(Text)))
 constant Halving = TestCodegen(TypeCodegen("Strict/Halving", ("Half(number Number) Number", "\t3 / 2 is 1.5", "\tnumber / 2"), TypeCodegen.NoTypes, List(Text)))
 constant TookCall = InstructionEntry.Invoke(1, ("Strict/Even", "$TestsTook", "Strict/Text", "elapsed"), List(Number) + 0, -1)
 constant GotCall = InstructionEntry.Invoke(1, ("Strict/Even", "$TestsGot0", "Strict/Text", "tested"), List(Number) + 0, -1)
@@ -27,8 +28,15 @@ Tests Slow(List(MethodEntry))
 	List(MethodEntry) + runner + TestReports(types, isQuiet).Helpers(block.scope)
 Entry TypeEntry
 	Even.Entry.methods(1).Name is "$TestsGot0"
+	Running.Entry.methods.Last.Name is "Run"
 	let entry = types.Entry
-	TypeEntry(entry.Name, entry.members, Reachable(entry.methods, Tests))
+	TypeEntry(entry.Name, entry.members, Reachable(entry.methods, Tests + Runs(entry.methods)))
+Runs(methods List(MethodEntry)) List(MethodEntry)
+	Even.Runs(List(MethodEntry) + MethodEntry.HelloRun).Length is 1
+	Even.Runs(List(MethodEntry) + MethodEntry.Logged).Length is 0
+	for methods
+		if value.Name is "Run"
+			value
 Reachable(known List(MethodEntry), methods List(MethodEntry)) List(MethodEntry)
 	let targets = TypeEntry(types.fullName, List(MemberEntry), methods).Invoked
 	mutable added = List(Mutable(MethodEntry))

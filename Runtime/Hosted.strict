@@ -19,6 +19,7 @@ constant MathMethods = ("Number.Logarithm", "Number.Random", "Degrees.Sin", "Deg
 constant LibraryMethods = ("Library.Call", "Library.TextSlot", "Library.NumbersSlot", "Library.TextResult", "Library.NumbersResult", "Library.Failure")
 constant RuntimeMethods = ("Time.Now", "Socket.Output", "BuildProfile.Detailed", "TestBudget.Started", "TestBudget.Finished", "TestBudget.Entered", "TestBudget.Left", "TestBudget.Expired", "ConstantCache.At", "ConstantCache.Stored")
 constant Methods = FileMethods + DirectoryMethods + ProcessMethods + ToolMethods + MathMethods + LibraryMethods + RuntimeMethods
+constant Kinds = ("File", "Directory", "Process", "Number", "Degrees", "Ratio", "Vector2", "Library", "Time", "Socket", "BuildProfile", "TestBudget", "ConstantCache")
 constant LocalEffects = ("File.Write", "File.Delete", "File.Rename", "File.WriteLines", "File.WriteBytes", "Directory.Create", "Directory.Change", "Process.RunTool", "Process.RunTools", "Process.Started", "Library.Call")
 constant Effects = LocalEffects + ("Socket.Connect", "Socket.Listen", "Socket.Local", "Socket.Accept", "Socket.Waiting", "Socket.Send", "Socket.Receive")
 IsChanging Boolean
