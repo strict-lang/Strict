@@ -20,7 +20,7 @@ constant Help = RunHelp + BuildHelp + PlatformHelp + AppHelp + BuildModeHelp + T
 Run(arguments Texts) Number
 	let resident = Resident(Path(Process.Current.executable).PathOnly.text)
 	if (arguments.Length > 0) and (arguments(0) is "serve")
-		return Served(resident)
+		return Served(arguments.Length > 1 then Resident(resident.root, arguments(1)) else resident)
 	let forwarded = Forwarding(logger, resident.root).Forwarded(arguments)
 	forwarded >= 0 then forwarded else Ran(arguments).code
 Served(resident Resident) Number
