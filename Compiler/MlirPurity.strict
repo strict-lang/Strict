@@ -167,7 +167,7 @@ IsKnown(callee MlirFunction, inspected MlirFunction, depth Number) Boolean
 	Doubling.IsAllowed(Doubling.function, 4, List(MlirFunction) + Making)
 	Doubling.IsExternalSafe("Number", "Logarithm") and (Doubling.IsExternalSafe("Time", "Now") is false)
 	if callee.Symbol is in inspected.safeCalls
-		return inspected.safeCalls(callee.Symbol) is 1
+		return inspected.safeCalls(callee.Symbol) is not 0
 	MlirPurity(callee, 0).IsGateway or ((depth < 3) and IsPureMethod(callee, depth + 1))
 IsPureMethod(callee MlirFunction, depth Number) Boolean
 	Doubling.IsPureMethod(MlirFunction(Doubling.function.types, MlirParallel.Rows, MlirParallel.Twice), 1)
@@ -180,6 +180,18 @@ IsPureMethod(callee MlirFunction, depth Number) Boolean
 		if IsSafe(callee, index, depth) is false
 			return false
 	true
+IsReachingGpu Boolean
+	MlirPurity(MlirParallel.Held.function, 2).IsReachingGpu
+	Doubling.IsReachingGpu is false
+	MlirPurity(MlirFunction(Doubling.function, safeCalls = Dictionary(("Rows_Twice_1", 1))), 2).IsReachingGpu is false
+	Doubling.IsKnown(Timing.function, MlirFunction(Making, safeCalls = Dictionary(("Rows_Timed_1", 2))), 0)
+	for Range(position + 1, function.method.LoopEndOf(position))
+		let isCall = function.method.instructions(value).kind is InstructionType.Invoke
+		let callees = isCall then MlirModule(function.types, "").Called(function, value) else List(MlirFunction)
+		let symbol = callees.Length > 0 then callees.First.Symbol else ""
+		if (symbol is in function.safeCalls) and (function.safeCalls(symbol) is 2)
+			return true
+	false
 IsSteady Boolean
 	MlirPurity(MlirLoops.Listing.function, 1).IsSteady
 	MlirPurity(MlirKernel.Calling.function, 1).IsSteady is false

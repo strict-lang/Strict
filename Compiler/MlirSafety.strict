@@ -3,6 +3,7 @@ has edges List(Numbers)
 constant Rows = (MlirParallel.Doubling.function, MlirFunction(MlirParallel.Doubling.function.types, MlirParallel.Rows, MlirParallel.Twice), MlirParallel.Timing.function)
 constant Rowed = MlirSafety(Rows, MlirRecursion(Rows, 1).Edges)
 constant Chain = MlirSafety(List(MlirFunction), ((1), List(Number)))
+constant Tensored = MlirSafety(List(MlirFunction) + MlirTensors.Attending.function, List(Numbers) + List(Number))
 constant Gated = MlirSafety(List(MlirFunction) + MlirFunction(List(TypeEntry) + MlirPurity.Hosting, MlirPurity.Hosting, MlirPurity.Hosting.methods.First), List(Numbers) + List(Number))
 Marked List(MlirFunction)
 	Rowed.Marked.First.safeCalls("Rows_Twice_1") is 1
@@ -13,16 +14,32 @@ Calls Dictionary(Text, Number)
 	Rowed.Calls("Rows_Doubled_1") is 1
 	Rowed.Calls("Rows_Timed_1") is 0
 	Gated.Calls("Hosted_Result_0") is 1
+	Tensored.Calls(MlirTensors.Attending.function.Symbol) is 2
 	let flags = Spread(Direct)
+	let heavy = Spread(Heavy)
 	mutable calls = Dictionary(Text, Number)
 	for functions
-		calls(value.Symbol) = flags(index) is 1 then 0 else 1
+		calls(value.Symbol) = flags(index) is 1 then 0 else (heavy(index) is 1 then 2 else 1)
 	calls
 Direct Numbers
 	Rowed.Direct is (0, 0, 1)
 	Gated.Direct is (2)
 	for functions
 		MlirPurity(value, 0).IsGateway then 2 else IsDirect(value) then 1 else 0
+Heavy Numbers
+	Rowed.Heavy is (0, 0, 0)
+	Tensored.Heavy is (1)
+	for functions
+		IsHeavy(value) then 1 else 0
+IsHeavy(function MlirFunction) Boolean
+	Rowed.IsHeavy(MlirTokens.Summing.function)
+	Rowed.IsHeavy(Rowed.functions.First) is false
+	if MlirTensors(function).Kind is not ""
+		return true
+	for function.method.instructions
+		if (value.kind is InstructionType.LoopBegin) and (MlirTokens(function, index).Call >= 0)
+			return true
+	false
 IsDirect(function MlirFunction) Boolean
 	Rowed.IsDirect(Rowed.functions.Last)
 	Rowed.IsDirect(Rowed.functions.First) is false

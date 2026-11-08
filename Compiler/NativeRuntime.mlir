@@ -16393,6 +16393,48 @@
   ^done:
     return
   }
+  // a parallel loop whose body reaches tensor or token kernels (MlirPurity.IsReachingGpu) only forks without a usable
+  // GPU (none or STRICT_GPU=0): its pool threads cannot use the GPU and would run those kernels on the CPU
+  func.func private @strict_parallel_forkable() -> i1 {
+    %true = arith.constant true
+    %minimum = func.call @strict_gpu_threshold() : () -> i64
+    %never = arith.constant 9223372036854775807 : i64
+    %isOff = arith.cmpi eq, %minimum, %never : i64
+    cf.cond_br %isOff, ^done(%true : i1), ^asked
+  ^asked:
+    %ready = func.call @strict_gpu_ready() : () -> i1
+    %free = arith.xori %ready, %true : i1
+    cf.br ^done(%free : i1)
+  ^done(%forkable: i1):
+    return %forkable : i1
+  }
+  // the first GPU sized loop a parallel loop's thread runs on the CPU is named once (the GPU is only used from the
+  // thread that forked the loop), not before the GPU is open
+  llvm.mlir.global internal @strict_gpu_refusals(0 : i64) : i64
+  llvm.mlir.global internal constant @strict_gpu_refused_text("Warning: the GPU loop %s ran on the CPU in a parallel loop (its threads cannot use the GPU), keep the loop around it serial\0A\00") : !llvm.array<125 x i8>
+  func.func private @strict_gpu_refused(%name: !llvm.ptr, %count: i64) {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %stateSlot = llvm.mlir.addressof @strict_gpu_state : !llvm.ptr
+    %state = llvm.load %stateSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %isOpen = arith.cmpi eq, %state, %one : i64
+    cf.cond_br %isOpen, ^sized, ^done
+  ^sized:
+    %minimum = func.call @strict_gpu_threshold() : () -> i64
+    %isLarge = arith.cmpi sge, %count, %minimum : i64
+    cf.cond_br %isLarge, ^counted, ^done
+  ^counted:
+    %refusalsSlot = llvm.mlir.addressof @strict_gpu_refusals : !llvm.ptr
+    %before = llvm.atomicrmw add %refusalsSlot, %one monotonic : !llvm.ptr, i64
+    %isFirst = arith.cmpi eq, %before, %zero : i64
+    cf.cond_br %isFirst, ^named, ^done
+  ^named:
+    %text = llvm.mlir.addressof @strict_gpu_refused_text : !llvm.ptr
+    %printed = llvm.call @printf(%text, %name) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr) -> i32
+    cf.br ^done
+  ^done:
+    return
+  }
   // a kernel that ran (a result, not 0 for "run it on the CPU") is counted for Process.Executed
   func.func private @strict_gpu_run(%ptx: !llvm.ptr, %name: !llvm.ptr, %slot: !llvm.ptr, %count: i64, %source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64, %rows: i64, %dots: i64, %lanes: i64, %group: i64, %packedFormat: i64, %guards: i64) -> f64 {
     %result = func.call @strict_gpu_dispatched(%ptx, %name, %slot, %count, %source, %kind, %values, %valueCount, %mask, %rows, %dots, %lanes, %group, %packedFormat, %guards) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
@@ -16414,6 +16456,7 @@
     %busy = func.call @strict_rc_busy() : () -> i1
     cf.cond_br %busy, ^worker, ^host
   ^worker:
+    func.call @strict_gpu_refused(%name, %count) : (!llvm.ptr, i64) -> ()
     return %zero : f64
   ^host:
     %shadedMask = arith.constant 255 : i64

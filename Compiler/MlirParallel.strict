@@ -24,6 +24,7 @@ constant Doubling = MlirParallel(MlirFunction(List(TypeEntry) + Rows, Rows, Doub
 constant Timing = MlirParallel(MlirFunction(List(TypeEntry) + Rows, Rows, Timed), 2)
 constant Randomizing = MlirParallel(MlirFunction(Timing.function, method = MethodEntry(Timed, instructions = ValueLoop + RandomCall + WrittenLoopEnd)), 2)
 constant Effects = MlirPurity.Caching.function.method.instructions + InstructionEntry.Print("value") + InstructionEntry.Invoke(3, ("Strict/Runtime/Hosted", "Result", "Strict/Number"), List(Number), -1)
+constant Held = MlirParallel(MlirFunction(Doubling.function, safeCalls = Dictionary(("Rows_Twice_1", 2))), 2)
 constant Logging = MlirParallel(MlirFunction(List(TypeEntry) + Rows + MlirPurity.Hosting, Rows, MethodEntry(Timed, instructions = Timed.instructions.Slice(0, 4) + Effects + Timed.instructions.Slice(5, 2))), 2)
 IsParallel Boolean
 	Doubling.IsParallel and Logging.IsParallel and Randomizing.IsParallel and (Timing.IsParallel is false)
@@ -59,11 +60,23 @@ Forked Texts
 		return List(Text)
 	let count = "    " + Temp("pn") + " = arith.fptosi " + Temp("n") + " : f64 to i64"
 	let threshold = "    " + Temp("pt") + " = arith.constant " + MlirCost(function, position).Threshold + " : i64"
-	let enough = "    " + Temp("pb") + " = arith.cmpi sge, " + Temp("pn") + ", " + Temp("pt") + " : i64"
 	let label = "^loop" + position
 	let branch = "    cf.cond_br " + Temp("pb") + ", " + label + "parallel, " + label + "serial"
 	let packed = MlirBytes(function, position).Created(Temp("pk")) + MlirFiltering(function, position).Holed
-	(count, threshold, enough, branch, "  " + label + "parallel:") + packed + Context + Joined + ("  " + label + "serial:")
+	let checked = (List(Text) + count + threshold) + Enough + branch
+	checked + ("  " + label + "parallel:") + packed + Context + Joined + ("  " + label + "serial:")
+Enough Texts
+	Doubling.Enough is ("    %t2pb = arith.cmpi sge, %t2pn, %t2pt : i64")
+	Held.Enough(0) is "    %t2pwc = arith.cmpi sge, %t2pn, %t2pt : i64"
+	Held.Enough(1) is "    %t2pwr = func.call @strict_parallel_forkable() : () -> i1"
+	Held.Enough.Last is "    %t2pb = arith.andi %t2pwc, %t2pwr : i1"
+	Text.Combine(Held.Forked).IndexOf("forkable") > 0 and (Text.Combine(Doubling.Forked).IndexOf("forkable") < 0)
+	let compared = " = arith.cmpi sge, " + Temp("pn") + ", " + Temp("pt") + " : i64"
+	if MlirPurity(function, position).IsReachingGpu is false
+		return List(Text) + ("    " + Temp("pb") + compared)
+	let forkable = "    " + Temp("pwr") + " = func.call @strict_parallel_forkable() : () -> i1"
+	let both = "    " + Temp("pb") + " = arith.andi " + Temp("pwc") + ", " + Temp("pwr") + " : i1"
+	("    " + Temp("pwc") + compared, forkable, both)
 Context Texts
 	Doubling.Context.Last is "    func.call @strict_rc_object(%t2pc, %t2ps) : (!llvm.ptr, i64) -> ()"
 	let names = Snapshot
