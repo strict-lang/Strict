@@ -1,5 +1,7 @@
 has types List(TypeEntry)
 has isSplitting Boolean = false
+constant MadeError = InstructionEntry.Invoke(0, ("Strict/Error", "from", "Strict/Error"), List(Number), -1)
+constant ReadTested = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, ErrorCodegen.Tested)
 constant Renamed = (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable, InstructionType.IndexCall)
 constant Arithmetic = (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply, InstructionType.Divide, InstructionType.Modulo, InstructionType.Power)
 constant Comparisons = (InstructionType.Equal, InstructionType.NotEqual, InstructionType.LessThan, InstructionType.GreaterThan)
@@ -50,9 +52,10 @@ Expanded(owner TypeEntry, instructions List(InstructionEntry), depth Number) Lis
 	Sample.Expanded(Caller, Calling.instructions, 1).Length is 6
 	mutable result = List(Mutable(InstructionEntry))
 	mutable base = LoadReuse(instructions).RegisterCount
+	let isWatching = IsWatching(instructions)
 	for instructions
 		let next = index + 1 < instructions.Length then instructions(index + 1) else value
-		let callee = depth > 0 then Inlinable(owner, value, next) else NoMethod
+		let callee = depth > 0 then Inlinable(owner, value, next, isWatching) else NoMethod
 		let spliced = callee.Name is "" then List(InstructionEntry) + value else Splice(owner, callee, value, base).Spliced
 		base = base + Reserved(callee, value)
 		result = result + spliced
@@ -68,19 +71,38 @@ Reserved(callee MethodEntry, call InstructionEntry) Number
 		return 0
 	let isLaned = isSplitting and (StructLanes.Members(TypeOf(call.texts(0))).Length > 0)
 	LoadReuse(callee.instructions).RegisterCount + (isLaned then 1 else 0)
-Inlinable(owner TypeEntry, call InstructionEntry, next InstructionEntry) MethodEntry
+IsWatching(instructions List(InstructionEntry)) Boolean
+	Sample.IsWatching(Calling.instructions) is false
+	Sample.IsWatching(List(InstructionEntry) + MadeError)
+	Sample.IsWatching(List(InstructionEntry) + ReadTested)
+	Failed.Inlinable(StructLanes.Caller, StructLanes.Calling(4), StructLanes.Calling(6), false).Name is "Squared"
+	for instructions
+		if (value.kind is InstructionType.Invoke) and (TypeEntry.ShortName(value.texts(0)) is "Error")
+			return true
+		if (value.kind is InstructionType.LoadVariableToRegister) and (value.texts(0) is ErrorCodegen.Tested)
+			return true
+	false
+Inlinable(owner TypeEntry, call InstructionEntry, next InstructionEntry, isWatching = true) MethodEntry
 	Sample.Inlinable(Caller, Calling.instructions(1), Calling.instructions(2)).Name is "X"
 	Sample.Inlinable(Caller, Calling.instructions(1), Calling.instructions(3)).Name is ""
 	Splitting.Inlinable(StructLanes.Caller, StructLanes.Calling(4), StructLanes.Calling(6)).Name is "Squared"
-	let isChecked = (next.kind is InstructionType.CheckError) and (next.texts.Length is 0)
 	if call.kind is not InstructionType.Invoke
 		return NoMethod
 	let type = TypeOf(call.texts(0))
 	let callee = type.Name is "" then NoMethod else Callee(type, call)
 	let rules = InlineRules(callee)
-	let isMatched = isChecked and (next.payload(0) is call.payload(0))
-	let isLaned = isSplitting and (isMatched or rules.IsUnchecked) and rules.IsLaned(type, call, IsReturning(callee))
+	let isMatched = IsMatched(call, next)
+	let isLanable = rules.IsLaned(type, call, IsReturning(callee))
+	let isLaned = isSplitting and (isMatched or rules.IsUnchecked or (isWatching is false)) and isLanable
 	(isMatched and rules.Fits(owner, type, call)) or isLaned then callee else NoMethod
+IsMatched(call InstructionEntry, next InstructionEntry) Boolean
+	Sample.IsMatched(StructLanes.Calling(4), StructLanes.Calling(5))
+	Sample.IsMatched(StructLanes.Calling(4), StructLanes.Calling(6)) is false
+	Failed.Inlinable(StructLanes.Caller, StructLanes.Calling(4), StructLanes.Calling(5)).Name is "Squared"
+	Sample.IsMatched(ReadTested, InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 1)) is false
+	Sample.IsMatched(ReadTested, InstructionEntry(InstructionType.CheckError, ("a"), List(Number) + 0)) is false
+	let isChecked = (next.kind is InstructionType.CheckError) and (next.texts.Length is 0)
+	isChecked and (next.payload(0) is call.payload(0))
 TypeOf(name Text) TypeEntry
 	Sample.TypeOf("List(Number)").Name is "Strict/List(Number)" and (Sample.TypeOf("Caller").Name is "Strict/Caller")
 	Sample.TypeOf("Strict/List(Number)").methods.Length is 1
