@@ -14,6 +14,7 @@ constant Pooled = Linker(Linker.Sample, Places = Dictionary((Needed.Name, Home.s
 constant Pointing = ZipEntry("links", ByteEncoder.Empty.UnicodeBytes(Linking))
 constant Selecting = ZipEntry("links", ByteEncoder.Empty.UnicodeBytes("\tA\tTexted"))
 constant Growing = BinaryFile("./Bytecode/Growing.strict")
+constant Tested = TypeEntry("A", List(MemberEntry), List(MethodEntry) + MethodEntry(Texted, Name = TestCodegen.Runner))
 constant Missing = TypeEntry("Strict/Missing", List(MemberEntry), List(MethodEntry))
 constant Unknown = TypeEntry("", List(MemberEntry), List(MethodEntry))
 Lines(types List(TypeEntry), names Texts, linker Linker) Texts
@@ -25,10 +26,12 @@ Lines(types List(TypeEntry), names Texts, linker Linker) Texts
 		(index is 0) or isHomed then Line(place, value) else ""
 Line(place Text, type TypeEntry) Text
 	User.Line("a", Homed) is "a\tHomed\tRun"
+	User.Line("a", Converter) is "a\tA\tto Text;Texted"
 	User.Line("", Missing) is "\tStrict/Missing\t"
 	place + "\t" + type.Name + "\t" + Text.Combine(Named(type), Separator)
 Named(type TypeEntry) Texts
 	User.Named(Converter) is ("to Text", "Texted")
+	User.Named(TypeEntry("A", List(MemberEntry), (Texted, Texted))) is ("Texted")
 	mutable names = List(Mutable(Text))
 	for type.methods
 		let name = value.Name is "to" then "to " + TypeEntry.ShortName(value.returnType) else value.Name
@@ -98,6 +101,7 @@ Owned(entries List(ZipEntry), stamps Dictionary(Text, Number)) TypeEntry
 	file.IsCurrent(entries, stamps) then Own(entries) else Unknown
 IsTested(entries List(ZipEntry)) Boolean
 	User.IsTested(BinaryFile.Packing) is false
+	User.IsTested(Home.Unpacked(Home.Packed(Empty, List(TypeEntry) + Tested, List(Text))))
 	Matching(Own(entries), TestCodegen.Runner).Length > 0
 Own(entries List(ZipEntry)) TypeEntry
 	BinaryLinks(BinaryFile.Probe).Own(BinaryFile.Packing) is TypeEntry.HelloLogger
@@ -139,7 +143,8 @@ Linked(parts Texts) TypeEntry
 	file.IsCurrent(entries) then Selected(Own(entries), parts(1), parts(2)) else Unknown
 Selected(own TypeEntry, name Text, names Text) TypeEntry
 	User.Selected(TypeEntry.HelloLogger, "A", "Run") is TypeEntry(TypeEntry.HelloLogger, Name = "A")
-	User.Selected(TypeEntry.HelloLogger, "A", "").methods.Length is 0
+	User.Selected(TypeEntry.HelloLogger, "A", "").Name is "A"
+	User.Selected(Converter, "A", "Texted;to Text").methods.Length is 2
 	User.Selected(TypeEntry.HelloLogger, "A", "Missing") is Unknown
 	let asked = names is "" then List(Text) else names.Split(Separator)
 	Absent(own, asked).Length is 0 then TypeEntry(name, own.members, Picked(own, asked)) else Unknown
