@@ -82,7 +82,7 @@ Round(types List(TypeEntry), methods List(MethodEntry), budgets Numbers, round N
 		let candidates = Mutation(value).Candidates
 		if candidates.Length > round
 			let mutant = List(MethodEntry) + Mutation(value).Mutant(candidates(round))
-			let alone = Execute(logger).Started(Replaced(types, List(MethodEntry) + value, mutant), path)
+			let alone = Execute(logger).Started(Replaced(types, List(MethodEntry) + value, mutant), path, false, false)
 			let isPassing = Passes(alone, TestCodegen.Runner + index, budgets(index))
 			if isPassing and Passes(alone, TestCodegen.Runner + methods.Length, seconds)
 				let lines = File(path).ReadLines
