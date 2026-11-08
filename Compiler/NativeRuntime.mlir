@@ -8495,8 +8495,19 @@
   // release builds (strict build X windows or linux, NativeBuild.Released) and web pages set it to 0: a shipped program does not stop,
   // it warns once on the console instead
   llvm.mlir.global internal @strict_gc_watching(1 : i64) : i64
+  // 1 during a collection the runtime asks for itself to find dead lists and give back their WebGPU buffers
+  // (strict_gpu_kernel on the web, 35 an image with almost nothing allocated): it says nothing about the program
+  llvm.mlir.global internal @strict_gc_housekeeping(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_warned(0 : i64) : i64
   func.func private @strict_gc_watch(%ranBefore: f64) {
+    %housekeepingSlot = llvm.mlir.addressof @strict_gc_housekeeping : !llvm.ptr
+    %housekeeping = llvm.load %housekeepingSlot : !llvm.ptr -> i64
+    %noHousekeeping = arith.constant 0 : i64
+    %isHousekeeping = arith.cmpi ne, %housekeeping, %noHousekeeping : i64
+    cf.cond_br %isHousekeeping, ^housekept, ^watched
+  ^housekept:
+    return
+  ^watched:
     %now = func.call @strict_clock() : () -> f64
     %ran = func.call @strict_thread_seconds() : () -> f64
     %spent = arith.subf %ran, %ranBefore : f64
