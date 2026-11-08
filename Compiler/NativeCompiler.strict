@@ -49,7 +49,7 @@ Compiled(command Text, rest Texts, sources Texts = List(Text)) Number
 	let build = NativeBuild(logger, false, selection = request.Selection, isRecursive = isRecursive)
 	build.Compile(rest(0), rest(1), isCounting, isCounting is false, sources)
 Checked(rest Texts, sources Texts) Number
-	let failed = Execute(logger).Test(rest(0), rest(1), true)
+	let failed = Execute(logger).Test(rest(0), rest(1), true, sources)
 	failed is 0 then Built(rest, sources) else failed
 Built(rest Texts, sources Texts = List(Text)) Number
 	let options = Options(rest)

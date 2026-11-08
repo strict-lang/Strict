@@ -19,14 +19,14 @@ Run(arguments Texts) Number
 	for Range(2, arguments.Length)
 		texts.Add(VmValue.OfText(arguments(value)))
 	Started(types, arguments(0)).Launch(types.First.Name, texts)
-Test(path Text, root Text, isQuiet = false) Number
+Test(path Text, root Text, isQuiet = false, sources Texts = List(Text)) Number
 	Execute(Logger).Test("Missing.strict", ".") is 1
 	if File(path).Exists and (Directory.Exists(path) is false)
-		return Failures(List(Text) + path, root, isQuiet)
+		return Failures(List(Text) + path, root, isQuiet, sources)
 	Directory.Exists(path) then Folders(logger).Tested(path, root, isRecursive, isMutating, isFull) else 1
-Failures(paths Texts, root Text, isQuiet Boolean) Number
+Failures(paths Texts, root Text, isQuiet Boolean, sources Texts = List(Text)) Number
 	let stale = selection is "" then Stale(paths) else paths
-	let files = stale.Length is 0 then List(Text) else SourceFiles(root).Of(FileCompiler.Normalized(stale.First), stale)
+	let files = Sourced(stale, root, sources)
 	let inference = ResolveCheck.Inference(files)
 	mutable failed = 0
 	for paths
@@ -37,6 +37,13 @@ Failures(paths Texts, root Text, isQuiet Boolean) Number
 	if stale.Length > 1
 		Compacted(stale, Owners(paths))
 	failed
+Sourced(stale Texts, root Text, sources Texts) Texts
+	Execute(Logger).Sourced(List(Text), ".", List(Text) + "A.strict").Length is 0
+	Execute(Logger).Sourced(List(Text) + "Examples/Sum.strict", ".", List(Text) + "A.strict") is ("A.strict")
+	"./Examples/Sum.strict" is in Execute(Logger).Sourced(List(Text) + "Examples/Sum.strict", ".", List(Text))
+	if (stale.Length is 0) or (sources.Length > 0)
+		return stale.Length is 0 then List(Text) else sources
+	SourceFiles(root).Of(FileCompiler.Normalized(stale.First), stale)
 Compacted(paths Texts, owners List(TypeEntry)) Number
 	Execute(Logger).Compacted(List(Text) + "Missing.strict", List(TypeEntry)) is 0
 	mutable compacted = 0
