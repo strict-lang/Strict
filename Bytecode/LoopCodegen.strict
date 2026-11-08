@@ -11,6 +11,7 @@ constant NestedLoop = BodyParser("Pairs Numbers", "\tfor 2", "\t\tfor 3", "\t\t\
 constant ForA = BodyParser("Run", "\tfor a", "\t\tvalue").Block(1, 1).children(0)
 constant IndexA = BodyParser("Run", "\tfor a", "\t\tindex").Block(1, 1).children(0)
 constant RowsBody = BodyParser("Rows List(Numbers)", "\tmutable row = (1)", "\tfor 2", "\t\trow.Add(index)", "\t\trow").Block(1, 1)
+constant Leaded = BodyParser("Run", "\tlet x = 1", "\tfor 3", "\t\tindex").Block(1, 1)
 constant BareFor = BodyParser("Upper Text", "\tfor", "\t\tUpper").Block(1, 1).children(0)
 constant OnText = LoopCodegen(MethodCodegen(ValueCodegen(ValueCodegen.NoTypes, ValueCodegen.Plain.methods, CallTarget(CallTarget.NoTypes, TypeShape("has characters"), "Strict/Text", List(Text)))))
 Aggregation(body SyntaxNode, returnType Text) Text
@@ -35,10 +36,15 @@ Aggregated(body SyntaxNode, block CodeBlock, returnType Text) CodeBlock
 	let aggregation = Aggregation(body, returnType)
 	if aggregation is in ("", "any")
 		return methods.Body((aggregation is "any" then AnyTrue(body) else body), block)
-	let started = Started(block, returnType, aggregation).Declare("forResult", returnType).At(block.register)
+	let started = Initialized(body, block, returnType, aggregation)
 	if body.children.Last.Kind is not "For"
 		return Finished(methods.Body(BranchValues(aggregation).Rewritten(body), started), block.register)
-	Finished(Loop(body.children.Last, Leading(body, started), aggregation), block.register)
+	Finished(Loop(body.children.Last, started, aggregation), block.register)
+Initialized(body SyntaxNode, block CodeBlock, returnType Text, aggregation Text) CodeBlock
+	Plain.Initialized(DoubledBody, CodeBlock.Empty, "Numbers", "list").scope.TypeOf("forResult") is "Numbers"
+	Plain.Initialized(Leaded, CodeBlock.Empty, "Numbers", "list").instructions(0).texts.Last is "x"
+	let leading = body.children.Last.Kind is "For" then Leading(body, block) else block
+	Started(leading, returnType, aggregation).Declare("forResult", returnType).At(block.register)
 Finished(looped CodeBlock, register Number) CodeBlock
 	Plain.Finished(CodeBlock.Empty.Declare("forResult", "Numbers"), 0).instructions.Last.texts.Last is "forResult"
 	Plain.Started(CodeBlock.Empty, "Text", "sum").instructions(0) is InstructionEntry.LoadText(0, "")

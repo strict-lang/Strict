@@ -11970,9 +11970,17 @@
     %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
     return %error : f64
   }
+  // the key and value list of a new entry, both added in place: nothing else knows the fresh list yet
+  func.func private @strict_dictionary_pair(%key: f64, %value: f64) -> f64 {
+    %two = arith.constant 2.0 : f64
+    %empty = arith.constant 0.0 : f64
+    %fresh = func.call @strict_list_new(%two, %empty) : (f64, f64) -> f64
+    %single = func.call @strict_list_add_owned(%fresh, %key) : (f64, f64) -> f64
+    %pair = func.call @strict_list_add_owned(%single, %value) : (f64, f64) -> f64
+    return %pair : f64
+  }
   func.func private @strict_dictionary_add(%dictionary: f64, %key: f64, %value: f64, %hash: (f64) -> i64, %equal: (f64, f64) -> f64) -> f64 {
     %none = arith.constant -1 : i64
-    %nothing = arith.constant 0.0 : f64
     %position = func.call @strict_dictionary_find(%dictionary, %key, %hash, %equal) : (f64, f64, (f64) -> i64, (f64, f64) -> f64) -> i64
     %found = arith.cmpi ne, %position, %none : i64
     cf.cond_br %found, ^duplicate, ^append
@@ -11981,8 +11989,7 @@
     %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
     return %error : f64
   ^append:
-    %single = func.call @strict_list_add(%nothing, %key) : (f64, f64) -> f64
-    %pair = func.call @strict_list_add(%single, %value) : (f64, f64) -> f64
+    %pair = func.call @strict_dictionary_pair(%key, %value) : (f64, f64) -> f64
     %result = func.call @strict_list_add(%dictionary, %pair) : (f64, f64) -> f64
     return %result : f64
   }
@@ -11990,8 +11997,7 @@
     %none = arith.constant -1 : i64
     %nothing = arith.constant 0.0 : f64
     %position = func.call @strict_dictionary_find(%dictionary, %key, %hash, %equal) : (f64, f64, (f64) -> i64, (f64, f64) -> f64) -> i64
-    %single = func.call @strict_list_add(%nothing, %key) : (f64, f64) -> f64
-    %pair = func.call @strict_list_add(%single, %value) : (f64, f64) -> f64
+    %pair = func.call @strict_dictionary_pair(%key, %value) : (f64, f64) -> f64
     %found = arith.cmpi ne, %position, %none : i64
     cf.cond_br %found, ^replace, ^append
   ^replace:
