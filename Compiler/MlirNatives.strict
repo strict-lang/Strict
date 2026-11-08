@@ -122,7 +122,7 @@ TypeHelper(kind Text, name Text) Text
 	MlirNatives(Texts, 1).TypeHelper("File", "ReadBytes") is "strict_file_readbytes"
 	if (kind is "ConstantCache") and (name is in ("At", "Stored"))
 		return name is "At" then "strict_list_get" else "strict_list_set"
-	if (kind + "." + name is not in Hosted.Methods) and (kind is not "Memo")
+	if (kind + "." + name is not in Hosted.Methods) and ((kind is not "Memo") or name.StartsWith(TestCodegen.Runner))
 		return kind is "GpuMemory" then GpuHelper(name) else Validated(name)
 	"strict_" + kind.Lower + "_" + (name is "ReadLines" then "read_lines" else name.Lower)
 GpuHelper(name Text) Text
@@ -130,7 +130,11 @@ GpuHelper(name Text) Text
 	MlirNatives(Texts, 1).TypeHelper("ConstantCache", "Stored") is "strict_list_set"
 	MlirNatives(Texts, 1).TypeHelper("Degrees", "At") is ""
 	MlirNatives(Texts, 1).TypeHelper("ConstantCache", "Other") is ""
+	MlirNatives(Texts, 1).TypeHelper("Memo", "$TestsTook") is ""
+	MlirNatives(Texts, 1).TypeHelper("GpuMemory", "$TestsGot0") is ""
 	MlirNatives(Texts, 1).GpuHelper("Tuned") is "strict_gpu_tuned"
+	if name.StartsWith(TestCodegen.Runner)
+		return ""
 	"strict_gpu_" + (name is "Released" then "trim_unused" else (name is "Evicted" then "evict_all" else name.Lower))
 Validated(name Text) Text
 	MlirNatives(MlirValidated.Kept.function, 2).Validated("Validated") is "strict_validated"
