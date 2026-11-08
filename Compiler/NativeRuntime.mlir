@@ -8451,7 +8451,7 @@
   llvm.mlir.global internal @strict_gc_target(0.1 : f64) : f64
   llvm.mlir.global internal @strict_gc_targeted(0 : i64) : i64
   llvm.mlir.global internal constant @strict_gc_exceeded("GarbageCollectionExceedsLimit: %.2f of the last %.1f seconds were spent collecting garbage (at most %.0f %%), allocate less in the loops of this program\0A\00") : !llvm.array<154 x i8>
-  llvm.mlir.global internal constant @strict_gc_above("Warning: GarbageCollectionAboveTarget: %.2f of the last %.1f seconds were spent collecting garbage (below %.0f %% is the goal), allocate less in the loops of this program\0A\00") : !llvm.array<172 x i8>
+  llvm.mlir.global internal constant @strict_gc_above("GarbageCollectionAboveTarget: %.2f of the last %.1f seconds were spent collecting garbage (below %.0f %% is the goal), allocate less in the loops of this program\0A\00") : !llvm.array<163 x i8>
   llvm.mlir.global internal constant @strict_gc_limit_switch("STRICT_GC_LIMIT\00") : !llvm.array<16 x i8>
   llvm.mlir.global internal constant @strict_gc_window_switch("STRICT_GC_WINDOW\00") : !llvm.array<17 x i8>
   llvm.func @atof(!llvm.ptr) -> f64
@@ -8496,7 +8496,6 @@
   // it warns once on the console instead
   llvm.mlir.global internal @strict_gc_watching(1 : i64) : i64
   llvm.mlir.global internal @strict_gc_warned(0 : i64) : i64
-  llvm.mlir.global internal constant @strict_gc_warning("Warning: \00") : !llvm.array<10 x i8>
   func.func private @strict_gc_watch(%ranBefore: f64) {
     %now = func.call @strict_clock() : () -> f64
     %ran = func.call @strict_thread_seconds() : () -> f64
@@ -8591,8 +8590,6 @@
   ^print:
     %once = arith.constant 1 : i64
     llvm.store %once, %warnedSlot : i64, !llvm.ptr
-    %prefix = llvm.mlir.addressof @strict_gc_warning : !llvm.ptr
-    %prefixed = llvm.call @printf(%prefix) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr) -> i32
     %warning = llvm.call @printf(%message, %collecting, %window, %percent) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, f64, f64, f64) -> i32
     cf.br ^done
   ^done:

@@ -82,9 +82,17 @@ Checked List(TypeEntry)
 	Linker.Sample.Linked(Linker.Iterating, List(Text)).entries.Length is 1
 	let missing = Unresolved
 	if missing.Length > 0
-		Logger.Log("UnresolvedLink: " + missing.First)
+		Logger.Log(Explained(missing.First))
 		return List(TypeEntry)
 	entries
+Explained(target Text) Text
+	Single.Explained("Strict/Missing.Go") is "UnresolvedLink: Strict/Missing.Go"
+	Single.Explained("Strict/Logger.Log") is "UnresolvedLink: Strict/Logger.Log"
+	PtxCache("Compiler/output/Stray").Saved(".strict", "Run\n\t1\nconstant A = 1")
+	Single.Explained("Strict/Compiler/output/Stray.A").StartsWith("MembersMustComeBeforeMethods: constant A = 1 in ")
+	let path = linker.SourcePath(target.Substring(0, target.LastIndexOf(".")))
+	let misplaced = File(path).Exists then ResolveCheck(Logger).Misplaced(path, File(path).ReadLines) else List(Text)
+	misplaced.Length > 0 then misplaced.First else "UnresolvedLink: " + target
 Unresolved Texts
 	Writing.Unresolved.Length is 0
 	Texting.Unresolved.Length is 0

@@ -1,5 +1,6 @@
 has logger
 constant Counting = TypeInference(KnownTypes.Sample, (KnownTypes.NoMembers, KnownTypes.NoMembers))
+constant Stray = "MembersMustComeBeforeMethods: constant B = 1 in A.strict:3"
 constant Joined = ("Names Texts", "\t\"a\" + \"b\"")
 constant Joining = MethodBodies("Demo", TypeShape(Joined), Counting)
 constant Missing = ("Names Texts", "\tmissing")
@@ -25,7 +26,13 @@ Unresolved(path Text, inference TypeInference) Texts
 	let issues = check.Unimplemented(path, lines) + DefaultCheck(inference).Unsupported(path, lines)
 	let ambiguous = TypeChoice(lines).Ambiguous(inference.types.names, path)
 	let overloaded = Overloads(inference.types).Ambiguities(path, lines)
-	issues + Constraint.Where(path, lines) + ambiguous + overloaded + Found(check, bodies, lines, path)
+	let placed = issues + Misplaced(path, lines) + Constraint.Where(path, lines)
+	placed + ambiguous + overloaded + Found(check, bodies, lines, path)
+Misplaced(path Text, lines Texts) Texts
+	ResolveCheck.Misplaced("A.strict", ("Run", "\t1", "constant B = 1")) is (Stray)
+	ResolveCheck.Misplaced("A.strict", ("constant B = 1", "Run", "\t1")).Length is 0
+	for Limits(lines, false).OrderIssues
+		value to Text + " in " + path + ":" + value.Line
 Found(check FileCheck, bodies MethodBodies, lines Texts, path Text) Texts
 	ResolveCheck.Found(FileCheck(Counting, List(Text)), Joining, Joined, "A.strict").First.EndsWith("A.strict:2")
 	ResolveCheck.Found(FileCheck(Counting, List(Text)), Missed, Missing, "A").First.EndsWith("missing used in A:2")
