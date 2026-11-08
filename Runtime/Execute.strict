@@ -5,6 +5,7 @@ has isMutating Boolean = false
 has part Text = ""
 has isFull Boolean = false
 has known Dictionary(Text, TypeEntry) = Dictionary(Text, TypeEntry)
+constant Greeting = List(TypeEntry) + TypeEntry.HelloLogger
 constant Adder = BinaryFile("./Examples/NativeAdd/Adder.strict")
 constant AdderFiles = SourceFiles(".").Of(Adder.source)
 Run(arguments Texts) Number
@@ -28,15 +29,23 @@ Failures(paths Texts, root Text, isQuiet Boolean, sources Texts = List(Text)) Nu
 	let stale = selection is "" then Stale(paths) else paths
 	let files = Sourced(stale, root, sources)
 	let inference = ResolveCheck.Inference(files)
+	let isOwn = stale.Length is 1
 	mutable failed = 0
 	for paths
-		let failures = value is in stale then Verified(value, root, isQuiet, files, inference, stale.Length is 1).code else 0
+		let failures = value is in stale then Verified(value, root, isQuiet, files, inference, isOwn).code else Cached(value)
 		if (failures is 0) and (isQuiet is false)
 			logger.Log(Summary(0, value))
 		failed = failed + failures
-	if stale.Length > 1
-		Compacted(stale, Owners(paths))
 	failed
+Cached(path Text) Number
+	Execute(Logger).Cached("Missing.strict") is 0
+	Execute(Logger, isMutating = true).Cached("Missing.strict") is 0
+	let cache = MutationCache(path)
+	if (isMutating is false) or (cache.IsCurrent is false)
+		return 0
+	for cache.Survivors
+		logger.Log(value)
+	cache.Survivors.Length
 Sourced(stale Texts, root Text, sources Texts) Texts
 	Execute(Logger).Sourced(List(Text), ".", List(Text) + "A.strict").Length is 0
 	Execute(Logger).Sourced(List(Text) + "Examples/Sum.strict", ".", List(Text) + "A.strict") is ("A.strict")
@@ -44,22 +53,6 @@ Sourced(stale Texts, root Text, sources Texts) Texts
 	if (stale.Length is 0) or (sources.Length > 0)
 		return stale.Length is 0 then List(Text) else sources
 	SourceFiles(root).Of(FileCompiler.Normalized(stale.First), stale)
-Compacted(paths Texts, owners List(TypeEntry)) Number
-	Execute(Logger).Compacted(List(Text) + "Missing.strict", List(TypeEntry)) is 0
-	mutable compacted = 0
-	for paths
-		let cache = BinaryFile(FileCompiler.Normalized(value))
-		let entries = File(cache.Path).Exists then cache.Unpacked(File(cache.Path).ReadBytes) else List(ZipEntry)
-		if cache.IsFresh(entries)
-			cache.Saved(cache.Packed(ByteEncoder(entries.First.content).Integers, cache.Types(entries), owners))
-			compacted = compacted + 1
-	compacted
-Owners(paths Texts) List(TypeEntry)
-	Execute(Logger).Owners(List(Text) + "Missing.strict").Length is 0
-	for paths
-		let owner = BinaryFile(FileCompiler.Normalized(value)).Owned(Path(value).FileName.RemoveExtension.text)
-		if owner.Name is not ""
-			owner
 Stale(paths Texts) Texts
 	for paths
 		let cache = BinaryFile(FileCompiler.Normalized(value))
@@ -92,12 +85,17 @@ Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInfer
 	let types = linked.entries
 	if types.Length is 0
 		return Answer(1, known)
-	let failed = isTested then Tested(types, path, root, files, inference) else 0
+	let started = Process.Elapsed
+	let failed = isTested then Tested(types, path) else 0
 	if (failed is 0) and (selection is "") and (IsEdited(path) is false)
-		let folder = Path(cache.source).PathOnly.text
-		let header = Completed(cache, root, files, stamped, isOwn).Typed(types, folder).Kept(types).Header
-		cache.Saved(cache.Packed(header, types, List(TypeEntry)))
-	Answer(failed, linked.Known(known), "", Dictionary(Text, Number), files)
+		Stored(cache, root, files, stamped, isOwn, types)
+	let survived = (failed is 0) and isTested then Mutated(types, path, root, files, inference, started) else 0
+	Answer(failed + survived, linked.Known(known), "", Dictionary(Text, Number), files)
+Stored(cache BinaryFile, root Text, files Texts, stamped BinarySources, isOwn Boolean, types List(TypeEntry)) Boolean
+	Execute(Logger).Stored(BinaryFile.Probe, ".", List(Text), BinarySources(List(Text)), true, Greeting)
+	let folder = Path(cache.source).PathOnly.text
+	let header = Completed(cache, root, files, stamped, isOwn).Typed(types, folder).Kept(types).Header
+	cache.Saved(cache.Packed(header, types, List(TypeEntry)))
 Completed(cache BinaryFile, root Text, files Texts, stamped BinarySources, isOwn = false) Slow(BinarySources)
 	Execute(Logger).Completed(Adder, ".", AdderFiles, BinarySources.Mixed).stamps is (1, 2, 3)
 	Execute(Logger).Completed(Adder, ".", List(Text), BinarySources.Mixed, true).stamps is (1, 2, 3)
@@ -105,12 +103,12 @@ Completed(cache BinaryFile, root Text, files Texts, stamped BinarySources, isOwn
 		return stamped
 	let current = SourceFiles(root).Of(cache.source)
 	current.Length is files.Length then stamped else BinarySources(current).Stamped
-Tested(types List(TypeEntry), path Text, root Text, files Texts, inference TypeInference) Number
-	let started = Process.Elapsed
+Tested(types List(TypeEntry), path Text) Number
 	let failed = Started(types, path).Tested(types.First.Name)
 	if failed > 0
 		logger.Log(Summary(failed, path))
-		return failed
+	failed
+Mutated(types List(TypeEntry), path Text, root Text, files Texts, inference TypeInference, started Number) Number
 	let mutants = Mutants(logger, path, Baseline.Budget(started), part, selection is "*")
 	isMutating and (selection is in ("", "*")) then mutants.Ran(types, root, files, inference) else 0
 Loaded(path Text, root Text, withTests = true, sources Texts = List(Text)) List(TypeEntry)
