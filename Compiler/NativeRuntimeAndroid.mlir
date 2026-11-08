@@ -4,7 +4,13 @@
   llvm.mlir.global internal constant @strict_online(97 : i32) : i32
   llvm.mlir.global internal constant @strict_physical_pages(98 : i32) : i32
   llvm.mlir.global internal constant @strict_page_size(39 : i32) : i32
+  llvm.func @signal(i32, !llvm.ptr) -> !llvm.ptr
+  // a write to a caller that went away (its socket closed) fails instead of ending the process with SIGPIPE
   func.func private @strict_guard() {
+    %brokenPipe = arith.constant 13 : i32
+    %ignoreBits = arith.constant 1 : i64
+    %ignore = llvm.inttoptr %ignoreBits : i64 to !llvm.ptr
+    %previousPipe = llvm.call @signal(%brokenPipe, %ignore) : (i32, !llvm.ptr) -> !llvm.ptr
     %one = arith.constant 1 : i64
     %stackBytes = arith.constant 65536 : i64
     %null = llvm.mlir.zero : !llvm.ptr
