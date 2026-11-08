@@ -85,9 +85,8 @@ Linked(line Text) TypeEntry
 	let path = Path(file.Path).PathOnly.text + "/" + parts(0) + Extension
 	if (parts.Length is not 4) or (File(path).Exists is false)
 		return Unknown
-	let entries = file.Head(File(path).ReadBytes)
-	let isSame = (entries.Length > 1) and ((Crc(entries(1).content).Value to Text) is parts(3))
-	isSame then Selected(Own(entries), parts(1), parts(2)) else Unknown
+	let bytes = File(path).ReadBytes
+	(file.Checked(bytes) to Text) is parts(3) then Selected(Own(file.Head(bytes)), parts(1), parts(2)) else Unknown
 Selected(own TypeEntry, name Text, indices Text) TypeEntry
 	User.Selected(TypeEntry.HelloLogger, "A", "0") is TypeEntry(TypeEntry.HelloLogger, Name = "A")
 	User.Selected(TypeEntry.HelloLogger, "A", "").methods.Length is 0

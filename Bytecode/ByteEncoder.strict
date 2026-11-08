@@ -35,7 +35,7 @@ Integers Numbers
 	mutable number = 0
 	mutable scale = 1
 	for bytes
-		number = number + (value % SevenBitBase) * scale
+		number = number + (value < SevenBitBase then value else value - SevenBitBase) * scale
 		scale = scale * SevenBitBase
 		if value < SevenBitBase
 			integers.Add(number)

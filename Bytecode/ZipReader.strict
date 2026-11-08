@@ -3,6 +3,7 @@ constant LocalHeader = 6.7324752e7
 constant EndHeader = 1.01010256e8
 constant LocalHeaderSize = 30
 constant EndRecordSize = 22
+constant ChecksumOffset = 14
 constant SizeOffset = 18
 constant NameLengthOffset = 26
 constant ExtraLengthOffset = 28

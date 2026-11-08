@@ -31,9 +31,9 @@ Homing(signed Texts) LinkRound
 		let type = Signature(value).Type
 		if type is not in homes
 			let file = BinaryFile(FileCompiler.Normalized(linker.SourcePath(type)))
-			let head = File(file.Path).Exists then file.Head(File(file.Path).ReadBytes) else List(ZipEntry)
-			homes(type) = BinaryLinks(file).Owned(head, linker.Stamps)
-			places(type) = file.Path + "\t" + (head.Length > 1 then Crc(head(1).content).Value else 0)
+			let bytes = File(file.Path).Exists then File(file.Path).ReadBytes else List(Byte)
+			homes(type) = BinaryLinks(file).Owned(file.Head(bytes), linker.Stamps)
+			places(type) = file.Path + "\t" + file.Checked(bytes)
 	LinkRound(value, linker = Linker(linker, Homes = homes, Places = places))
 Fresh(signature Text) Slow(TypeEntry)
 	Single.Fresh("Strict/Logger:").Name is "Strict/Logger"
