@@ -103,6 +103,12 @@ Changing List(MemberEntry)
 	HelloLogger.Changing.Length is 1
 	TypeEntry("A", List(MemberEntry) + MemberEntry.SevenMember, List(MethodEntry)).Changing.Length is 0
 	for members
+		if value.IsConstant
+			return Unconstant
+	members
+Unconstant List(MemberEntry)
+	TypeEntry("A", (MemberEntry.SevenMember, MemberEntry.LoggerMember), List(MethodEntry)).Unconstant.Length is 1
+	for members
 		if value.IsConstant is false
 			value
 IsBaseName(short Text) Boolean

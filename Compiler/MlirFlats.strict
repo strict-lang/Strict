@@ -20,8 +20,9 @@ constant Making = MethodEntry("Made", List(MemberEntry), "Strict/Math/Tripling",
 constant Made = MlirFlats(MlirFunction((Tripling, Summing), Tripling, Making), 2)
 constant Sample = MlirFlats(MlirFunction((Tripling, Summing), Tripling, Zed), 1)
 constant MaximumCount = 16
+constant Listed = TypeEntry(Tripling, members = List(MemberEntry) + MemberEntry(Numbers, typeName = "Strict/Numbers"))
 constant Unflat = MemberEntry("", "Strict/Number", List(InstructionEntry), false)
-constant Looked = MlirFlats(MlirFunction((Tripling, Summing), Tripling, Zed, typeIndex = Dictionary(("Strict/Math/Tripling", 0))), 1)
+constant Looked = MlirFlats(MlirFunction((Tripling, Summing), Tripling, Zed, typeIndex = Dictionary(("Strict/Math/Tripling", 0), ("Tripling", 0))), 1)
 Count(kind Text) Number
 	(Sample.Count("Tripling") is 3) and (Sample.Count("Strict/Math/Tripling") is 3)
 	Sample.Count("Summing") is 0
@@ -30,12 +31,14 @@ Count(kind Text) Number
 	Looked.Count("Strict/Math/Tripling") is 3
 	let type = function.TypeOf(kind, true)
 	let member = Flat(type)
-	if TypeEntry.ShortName(member.typeName) is not in ("List(Number)", "Numbers")
+	let isListed = member.typeName.EndsWith("s") or member.typeName.EndsWith(")")
+	if (isListed is false) or (TypeEntry.ShortName(member.typeName) is not in ("List(Number)", "Numbers"))
 		return 0
 	let count = member.Count
 	(count >= 3) and (count <= MaximumCount) and IsSupported(type, member.Name) then count else 0
 Flat(type TypeEntry) MemberEntry
 	Sample.Flat(Tripling) is Numbers
+	MlirFlats(MlirFunction(List(TypeEntry) + Listed, Listed, Zed), 1).Count("Tripling") is 3
 	Sample.Flat(TypeEntry("Strict/Two", (Numbers, Numbers), List(MethodEntry))) is Unflat
 	Sample.Flat(TypeEntry("Strict/Kept", (MemberEntry.SevenMember, Numbers), List(MethodEntry))) is Numbers
 	Sample.Flat(TypeEntry("Strict/Wide", List(MemberEntry) + MemberEntry(Numbers, Bits = 64), List(MethodEntry))) is Unflat

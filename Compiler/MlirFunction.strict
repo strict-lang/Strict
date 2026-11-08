@@ -43,6 +43,8 @@ VariableNames Texts
 	let declared = (("index", "value") + Parameters) + MlirInstances(value, 0).StoredNames(type)
 	((declared + Named).Unique - "#this") - ""
 Named Texts
+	"    %q_input = llvm.load %v_input : !llvm.ptr -> f64" is in MlirGroups.Norming.function.Entry
+	("  ^stackChecked:" is in MlirFunction(MlirGroups.Norming.function, IsRecursive = false).Entry) is false
 	MlirFunction(Counter.types, Counter.type, MlirParallel.Doubled).Named(1) is "numbers"
 	MlirFunction(Counter.types, Counter.type, MlirParallel.Doubled).Named(2) is ""
 	constant loaded = (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable)
@@ -51,16 +53,17 @@ Named Texts
 		let isNamed = ((value.kind is in loaded) or (value.kind is in written)) and value.texts(0).IndexOf("(") < 0
 		value.kind is InstructionType.StoreConstantToVariable then value.texts.Last else (isNamed then value.texts(0) else "")
 TypeOf(name Text, isKind = false) TypeEntry
-	Counter.Entry(0) is "    %instance = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
-	Counter.Entry(2) is "    llvm.store %p0, %instance : f64, !llvm.ptr"
-	Counter.Entry(3) is "    llvm.store %p0, %v_value : f64, !llvm.ptr"
-	"    %q_input = llvm.load %v_input : !llvm.ptr -> f64" is in MlirGroups.Norming.function.Entry
-	("  ^stackChecked:" is in MlirFunction(MlirGroups.Norming.function, IsRecursive = false).Entry) is false
 	Counter.TypeOf("Strict/Other").members.Length is 0
 	MlirFlats.Looked.function.TypeOf("Strict/Mutable(Strict/Math/Tripling)", true).Name is "Strict/Math/Tripling"
 	MlirFlats.Looked.function.TypeOf("Strict/Mutable(Strict/Math/Tripling)").Name is "Strict/Mutable(Strict/Math/Tripling)"
+	MlirFlats.Looked.function.TypeOf("Strict/Text", true).Name is "Text"
+	MlirFlats.Looked.function.TypeOf("Other/Tripling").Name is "Strict/Math/Tripling"
+	MlirFlats.Sample.function.TypeOf("Tripling", true).Name is "Strict/Math/Tripling"
 	let short = isKind and (name is not in typeIndex) then TypeEntry.ShortName(name) else name
-	short is in typeIndex then types(typeIndex(short)) else Natives(types).TypeOf(short)
+	if short is in typeIndex
+		return types(typeIndex(short))
+	let isUnknown = isKind and (typeIndex.Length > 0)
+	isUnknown then TypeEntry(short, List(MemberEntry), List(MethodEntry)) else Natives(types).TypeOf(short)
 Load(target Text, slot Text) Text
 	MlirFunction(Counter, method = MlirParallel.Doubled).Named(4) is ""
 	MlirFunction(Counter, method = MlirParallel.Doubled).Named(5) is "forResult"
@@ -72,6 +75,7 @@ Load(target Text, slot Text) Text
 	MlirFunction(Counter, Float = "f32").Load("%a", "%r0") is "    %a = llvm.load %r0 : !llvm.ptr -> f32"
 	"    " + target + " = llvm.load " + slot + " : !llvm.ptr -> " + Float
 Store(stored Text, slot Text) Text
+	Counter.Entry(3) is "    llvm.store %p0, %v_value : f64, !llvm.ptr"
 	MlirFunction(Counter, Float = "f32").Store("%a", "%b") is "    llvm.store %a, %b : f32, !llvm.ptr"
 	MlirFunction(Counter, Float = "f32").Store("%a", "%v_b").StartsWith("    llvm.store %a, %v_b : f32, !llvm.ptr\n    %a")
 	Counter.Store("%a", "%r0") is "    llvm.store %a, %r0 : f64, !llvm.ptr"
@@ -141,6 +145,8 @@ Slot(name Text) Texts
 	Counter.Slot("%r0").Length is 2
 	("    " + name + " = llvm.alloca %one x f64 : (i64) -> !llvm.ptr", Store("%zero", name))
 Body Texts
+	Counter.Entry(0) is "    %instance = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
+	Counter.Entry(2) is "    llvm.store %p0, %instance : f64, !llvm.ptr"
 	Counter.Body.Last is "    return %zero : f64"
 	MlirLines.Lined.Body.Length > MlirLines.Unlined.Body.Length
 	outer.Text.Combine(MlirPacking.Listing.function.Body).IndexOf("@strict_two_list(") > 0
