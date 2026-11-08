@@ -11278,6 +11278,7 @@
     llvm.store %shorter, %targetView : f64, !llvm.ptr
     return %target : f64
   }
+  // a number pushed needs no count and no card, only a reference can make an old list point to a young object
   func.func private @strict_list_push(%list: f64, %element: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %one = arith.constant 1.0 : f64
@@ -11314,7 +11315,15 @@
     %at = arith.fptosi %used : f64 to i64
     %slot = llvm.getelementptr %items[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     llvm.store %element, %slot : f64, !llvm.ptr
+    %elementBits = arith.bitcast %element : f64 to i64
+    %target = func.call @strict_rc_target(%elementBits) : (i64) -> i64
+    %noTarget = arith.constant 0 : i64
+    %isReference = arith.cmpi ne, %target, %noTarget : i64
+    cf.cond_br %isReference, ^written, ^stored
+  ^written:
     func.call @strict_gc_written(%slot) : (!llvm.ptr) -> ()
+    cf.br ^stored
+  ^stored:
     %next = arith.addf %used, %one : f64
     llvm.store %next, %usedSlot : f64, !llvm.ptr
     llvm.store %next, %view : f64, !llvm.ptr

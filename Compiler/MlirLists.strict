@@ -48,10 +48,10 @@ Literal(literal Runtime/VmValue, slot Text, suffix Text) Texts
 	MlirLists(Literals, 0).Literal(Pair, "%r0", "").Last is "    llvm.store %t0r, %r0 : f64, !llvm.ptr"
 	Text.Combine(MlirLists(Literals, 0).Literal(Pair, "%r0", "")).Length is 929
 	let count = literal.items.Length
-	if (count is 0) and MlirPairs(function, position).IsBuilt(slot.Substring(3, slot.Length - 3))
-		return List(Text) + function.Store("%zero", slot)
-	let result = count is 0 then Temp(suffix + "l") else Temp(suffix + "e" + (count - 1) + "l")
-	if (suffix is not "") or (count is 0) or (MlirConstants(function, position).IsConstant is false)
+	if count is 0
+		return MlirPairs(function, position).Started(slot, suffix)
+	let result = Temp(suffix + "e" + (count - 1) + "l")
+	if (suffix is not "") or (MlirConstants(function, position).IsConstant is false)
 		return Built(literal, suffix) + function.Store(result, slot)
 	Cached(Built(literal, suffix), result, "strict_list_pin") + function.Store(Temp("r"), slot)
 Built(literal Runtime/VmValue, suffix Text) Texts

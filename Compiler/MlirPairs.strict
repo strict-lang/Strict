@@ -10,6 +10,7 @@ constant PairWritten = (MlirOwned.Empty, InstructionEntry.LoadNumber(1, 2), Inst
 constant PairConstructed = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "listResult0"), InstructionEntry.Invoke(3, PairingFrom, List(Number) + 2, -1), InstructionEntry.Return(3))
 constant Building = MethodEntry("Doubled", List(MemberEntry), "Strict/Math/Pairing", PairWritten + PairConstructed)
 constant Built = MlirPairs(MlirFunction(List(TypeEntry) + Pairing, Pairing, Building), 3)
+constant Tripled = MlirFunction(List(TypeEntry) + Pairing, Pairing, MethodEntry("Tripled", List(MemberEntry), "None", PairWritten + PairWritten(2)))
 constant Sample = MlirPairs(MlirFunction(List(TypeEntry) + Pairing, Pairing, Validating), 1)
 constant Summing = InstructionEntry.Invoke(0, ("Strict/Math/Pairing", "Doubled", "Strict/Math/Pairing"), List(Number), -1)
 constant Rewrapped = MlirPairs(MlirFunction(List(TypeEntry) + Pairing, Pairing, MethodEntry("Run", List(MemberEntry), "None", (Summing, Constructing))), 1)
@@ -98,6 +99,23 @@ Appended(entry InstructionEntry, fallback MlirLists) Texts
 	let packed = "    " + temp + "pp = func.call @strict_two_packed(" + parts + ") : (f64, f64) -> f64"
 	let loads = (function.Load(temp + "pl", slot), function.Load(temp + "pe", "%r" + entry.payload(0)))
 	loads + kept + packed + function.Store(temp + "pp", slot)
+Writes(name Text) Number
+	Built.Writes("listResult0") is 2
+	Built.Writes("numbers") is 0
+	mutable count = 0
+	for function.method.instructions
+		if (value.kind is InstructionType.InvokeWriteToList) and (value.texts(0) is name)
+			count = count + 1
+	count
+Started(slot Text, suffix Text) Texts
+	Built.Started("%v_listResult0", "") is List(Text) + "    llvm.store %zero, %v_listResult0 : f64, !llvm.ptr"
+	MlirPairs(Tripled, 0).Started("%v_listResult0", "")(0).IndexOf("0x401C") > 0
+	MlirPairs(Tripled, 0).Started("%v_listResult0", "").Last is "    llvm.store %t0l, %v_listResult0 : f64, !llvm.ptr"
+	let name = slot.Substring(3, slot.Length - 3)
+	if IsBuilt(name)
+		return List(Text) + function.Store("%zero", slot)
+	let lists = MlirLists(function, position)
+	lists.Created(Writes(name), suffix) + function.Store(lists.Temp(suffix + "l"), slot)
 Written(name Text) Number
 	Sample.Defaulted(Twice, "%s", "d3")(0) is "    %t1d3dx = arith.constant 0x3FF0000000000000 : f64"
 	Sample.Defaulted(Twice, "%s", "d3")(2).EndsWith("(%t1d3dx, %t1d3dy) : (f64, f64) -> f64")
