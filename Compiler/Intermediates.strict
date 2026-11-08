@@ -9,13 +9,15 @@ Removed(base Text) Boolean
 	for Endings
 		files = files + (base + value)
 	for Toolchain.Parts
-		let part = base + "-" + value
-		files = files + (part, part + ".mlir", part + ".llvm.mlir")
+		files = files + Part(base + "-" + value) + Part(base + ".linux-" + value)
 	for files
 		if Deleted(value) is false
 			logger.Log("Could not remove build intermediate: " + value + " (another program still held it after 5 s)")
 			return false
 	true
+Part(name Text) Texts
+	Intermediates(Logger).Part("a") is ("a", "a.mlir", "a.llvm.mlir")
+	(name, name + ".mlir", name + ".llvm.mlir")
 Deleted(path Text) Boolean
 	Intermediates(Logger).Deleted("Compiler/output/missing")
 	let started = Process.Elapsed

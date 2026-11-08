@@ -3,6 +3,7 @@ has root Text
 has natives Texts = List(Text)
 has isWeb Boolean = false
 has cpu = "native"
+has target = ""
 constant Needed = ("mlir-opt", "mlir-translate", "clang", "opt", "llc")
 constant WindowsFolders = ("C:/Program Files/LLVM/bin/", "C:/msys64/ucrt64/bin/")
 constant LinuxRelease = "LLVM-23.1.3-Linux-X64"
@@ -10,7 +11,7 @@ constant Optimized = " -march=native -Wno-override-module -O3"
 constant Optimization = " -O3"
 constant Parts = 64
 constant Direct = " -fuse-ld=lld -Wl,clang_rt.builtins-x86_64.lib"
-constant LtoCachePolicy = " -Wl,/lldltocachepolicy:prune_interval=0s:cache_size_bytes=64m"
+constant LtoCachePolicy = "prune_interval=0s:cache_size_bytes=64m"
 constant Thin = " -x none -flto=thin -Wl,/opt:lldltojobs=all -Wl,/mllvm:-mcpu=native" + Direct
 constant OnWindows = Toolchain(Platform.Windows, "C:/s")
 constant OnLinux = Toolchain(Platform.Linux, "/s")
@@ -107,16 +108,14 @@ Inputs(base Text) Text
 		return Quoted(base + ".ll") + (platform is Platform.Windows then Direct else "")
 	if PartsCompiled(base) is false
 		return Quoted(base + ".ll")
-	mutable parts = ""
-	for Parts
-		if File(base + "-" + value + ".o").Exists
-			parts = parts + " " + Quoted(base + "-" + value + ".o")
-	let cache = " -Xlinker " + Quoted("/lldltocache:" + base + ".lto") + LtoCachePolicy
+	let parts = PartObjects(base)
+	let cache = " -Xlinker " + Quoted("/lldltocache:" + base + ".lto") + " -Wl,/lldltocachepolicy:" + LtoCachePolicy
 	parts + Thin.Replace("native", cpu) + cache + " -Wno-unused-command-line-argument"
 Bitcode(part Text) Text
 	OnWindows.Bitcode("p").StartsWith("-c -flto=thin -x ir \"p\" -o \"p.o\" -march=")
 	Toolchain(Platform.Windows, ".", cpu = "skylake").Bitcode("p").IndexOf("-march=skylake") > 0
-	"-c -flto=thin -x ir " + Quoted(part) + " -o " + Quoted(part + ".o") + Optimized.Replace("native", cpu)
+	Toolchain(Platform.Windows, ".", target = " --target=x").Bitcode("p").IndexOf(" --target=x -march=") > 0
+	"-c -flto=thin -x ir " + Quoted(part) + " -o " + Quoted(part + ".o") + target + Optimized.Replace("native", cpu)
 PartsCompiled(base Text) Boolean
 	PtxCache("Compiler/output/Broken-0").Saved("", "not llvm")
 	OnWindows.PartsCompiled("Compiler/output/Broken") is false
@@ -130,25 +129,20 @@ PartsCompiled(base Text) Boolean
 			Logger.Log("clang failed (exit " + value.exitCode + "): " + value.Output + value.error)
 			return false
 	true
-CrossBuilt(base Text) Text
-	OnWindows.CrossBuilt("Compiler/output/missing").StartsWith("mlir-opt failed")
-	let lowered = Lowered(base + ".linux")
-	if lowered is not ""
-		return lowered
-	constant target = " --target=x86_64-unknown-linux-gnu -march=x86-64-v3 -c -Wno-override-module"
-	let compiling = Quoted(base + ".linux.ll") + " -o " + Quoted(base + ".linux.o") + target + Optimization
-	let compiled = ToolRunner(Located("clang")).Execute(compiling)
-	if compiled.Failed
-		return "clang failed: " + compiled.error
-	let program = BuildOutput.Released(base, "Linux")
-	NativeSources(natives).LinuxLinked(base, program, root)
+PartObjects(base Text) Text
+	OnWindows.PartObjects("Compiler/output/missing") is ""
+	mutable parts = ""
+	for Parts
+		if File(base + "-" + value + ".o").Exists
+			parts = parts + " " + Quoted(base + "-" + value + ".o")
+	parts
 WslPath(path Text) Text
 	OnWindows.WslPath("C:/code/A") is "/mnt/c/code/A"
 	OnWindows.WslPath("D:\\B\\c") is "/mnt/d/B/c"
 	OnWindows.WslPath("./Examples/Sum") is "./Examples/Sum"
+	OnWindows.WslPath("") is ""
 	let slashed = path.Replace("\\", "/")
-	let drive = "/mnt/" + slashed(0).Lower
-	slashed.IndexOf(":") is 1 then drive + slashed.Substring(2, slashed.Length - 2) else slashed
+	slashed.IndexOf(":") is 1 then "/mnt/" + slashed(0).Lower + slashed.Substring(2, slashed.Length - 2) else slashed
 Lowered(base Text, kept = "", parts = 1) Text
 	OnWindows.Lowered("Compiler/output/missing").StartsWith("mlir-opt failed")
 	if (parts > 1) and File(base + ".mlir").Exists
