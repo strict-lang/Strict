@@ -20,7 +20,6 @@ Details for the GPU line of [improvements.md](improvements.md), one short line e
 ## Memory
 - streamed weights are not overlapped with compute (H3 idles ~230 ms per step, ComfyUI 60): uploads ahead in a ring need a cheaper refill than walking the chain
 - without spilled rows the trim before an own block runs at every block
-- full collections before big activation blocks (H3 ~98 per step, 18-28 ms each in strict_gc_mark_range): skip lists without references in the mark, or a sub-allocating pool
 - GPU-only lists can't be spilled, activations kept across streamed blocks take every byte from the weights
 - a reference in a local stays alive after its last use in a callee-saved register or spill slot (conservative stack scan)
 - NVFP4 matrices (`TensorFile_Fours`) load as 8 bit rows (27 instead of 15.7 GB): e2m1 rows with their block scales on the GPU
