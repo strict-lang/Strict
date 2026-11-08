@@ -27,6 +27,7 @@ constant ScalerInference = TypeInference(Scaler, (KnownTypes.NoMembers, KnownTyp
 constant Scalers = Scope(List(Text) + "scaler", List(Text) + "Scaler")
 constant Unfitted = "NoOverloadFits: Scaler.Scaled got Scaler"
 constant Rescaled = SyntaxParser(Tokenizer("scaler.Scaled(scaler)").Tokens).Parse
+constant Renamed = SyntaxParser(Tokenizer("scaler.Scaled(scaler, factor = 2)").Tokens).Parse
 constant ScaledOnce = SyntaxParser(Tokenizer("scaler.Scaled(1)").Tokens).Parse
 constant ScaledTwice = SyntaxParser(Tokenizer("scaler.Scaled(1, 2)").Tokens).Parse
 constant Relabeled = Scope(("Labels", "Labels", "X"), ("Numbers", "List(Numbers)", "Number"))
@@ -128,9 +129,11 @@ Unfit(call SyntaxNode, instance Text, method Text, inference TypeInference, scop
 	Scaling.Unfit(ScaledOnce, "Scaler", "Scaled", ScalerInference, Scalers, Scalers) is ""
 	Scaling.Unfit(ScaledTwice, "Scaler", "Scaled", ScalerInference, Scalers, Scalers).EndsWith("Number, Number")
 	Scaling.Unfit(Rescaled, "Scaler", "Missing", ScalerInference, Scalers, Scalers) is ""
+	Scaling.Unfit(Renamed, "Scaler", "Scaled", ScalerInference, Scalers, Scalers) is ""
 	let arguments = Arguments(call, inference, scope, current)
 	let isOverloaded = types.ParameterScope(instance).Count(method) > 1
-	let isUnfit = isOverloaded and (Chosen(instance, method, arguments) < 0)
+	let isNamed = (call.children.Length > 0) and (call.children.Last.Kind is "Reassignment")
+	let isUnfit = isOverloaded and (isNamed is false) and (Chosen(instance, method, arguments) < 0)
 	isUnfit then "NoOverloadFits: " + instance + "." + method + " got " + Text.Combine(arguments, ", ") else ""
 Arguments(node SyntaxNode, inference TypeInference, scope Scope, current Scope) Texts
 	Labeling.Arguments(LabelsMember, LabelInference, KnownTypes.NoMembers, Labeler.methods(0)).Length is 0

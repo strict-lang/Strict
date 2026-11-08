@@ -7,3 +7,4 @@ Bugs to fix, most harmful first, one short line each. Remove a line once it is d
 
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).
 - Game engine (iOS, Android, one game loop, Spine, platform services): [improvements-engine.md](improvements-engine.md).
+- A `constant` after a method (DeltaEngine had three) only surfaces as UnresolvedLink at a user of it, `strict check` should name it. `Warning: GarbageCollectionAboveTarget` is the last runtime warning, Strict has no warnings.

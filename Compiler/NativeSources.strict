@@ -116,7 +116,7 @@ LinuxLinked(base Text, program Text, root Text) Text
 	mutable sources = folders.Length is 0 then "" else " -I" + tools.Quoted(tools.WslPath(root + "/Compiler"))
 	for Files
 		sources = sources + " " + tools.Quoted(tools.WslPath(value))
-	let gcc = folders.Length is 0 then "-e gcc -static " else "-e gcc "
+	let gcc = folders.Length is 0 then "-e gcc -static " else "-e gcc -no-pie "
 	let linkage = gcc + tools.Quoted(tools.WslPath(base + ".linux.o"))
 	let libraries = " -Wl,--gc-sections -lm -lpthread" + Wsl(Flags(Platform.Linux, root), tools)
 	let output = " -o " + tools.Quoted(tools.WslPath(program)) + libraries
