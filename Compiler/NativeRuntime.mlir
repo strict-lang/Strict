@@ -4351,12 +4351,16 @@
     llvm.store %increased, %usedSlot : i64, !llvm.ptr
     return
   }
-  // the parallel drain of a collection: the collector and every waiting thread (parked ones in strict_gc_help, idle
-  // pool workers in their spin loop) take batches of the shared work stack into their own one, push what they find
-  // there and give it back when it is full; done when the shared stack is empty and no thread holds work
+  // the parallel drain of a collection: the collector and the waiting threads with a seat (parked ones in
+  // strict_gc_help, idle pool workers in their spin loop) take batches of the shared work stack into their own one, push
+  // what they find there and give it back when it is full; done when the shared stack is empty and no thread holds
+  // work; an idle thread reads both without the lock and takes it only for work or to finish
   llvm.mlir.global internal @strict_gc_drain_active(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_drain_busy(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_drain_helpers(0 : i64) : i64
+  // helpers a parallel drain lets in (16): all 127 threads of a 128 thread machine fighting over the work lock made
+  // 18 MB of marking take 396 ms where one thread alone took 46 ms; on 32 threads 8 seats were 17 % slower than 16 or 32
+  llvm.mlir.global internal @strict_gc_drain_seats(0 : i64) : i64
   llvm.mlir.global internal thread_local @strict_gc_local_on(0 : i64) : i64
   llvm.mlir.global internal thread_local @strict_gc_local_marked(0 : i64) : i64
   llvm.mlir.global internal thread_local @strict_gc_local_visited(0 : i64) : i64
@@ -4529,12 +4533,19 @@
     %local = llvm.mlir.addressof @strict_gc_local : !llvm.ptr
     cf.br ^idle
   ^idle:
+    %seen = llvm.load %usedSlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
+    %seenBusy = llvm.load %busySlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
+    %seenWork = arith.cmpi sgt, %seen, %zero : i64
+    %seenDone = arith.cmpi eq, %seenBusy, %zero : i64
+    %isWorth = arith.ori %seenWork, %seenDone : i1
+    cf.cond_br %isWorth, ^locked, ^wait
+  ^locked:
     func.call @strict_gc_work_acquire() : () -> ()
     %used = llvm.load %usedSlot : !llvm.ptr -> i64
     %hasWork = arith.cmpi sgt, %used, %zero : i64
     cf.cond_br %hasWork, ^take(%used : i64), ^empty
   ^empty:
-    %busy = llvm.load %busySlot : !llvm.ptr -> i64
+    %busy = llvm.load %busySlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
     func.call @strict_gc_work_release() : () -> ()
     %isDone = arith.cmpi eq, %busy, %zero : i64
     cf.cond_br %isDone, ^finish, ^wait
@@ -4542,9 +4553,9 @@
     llvm.call @strict_pause() : () -> ()
     cf.br ^idle
   ^take(%available: i64):
-    %busyBefore = llvm.load %busySlot : !llvm.ptr -> i64
+    %busyBefore = llvm.load %busySlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
     %busyAfter = arith.addi %busyBefore, %one : i64
-    llvm.store %busyAfter, %busySlot : i64, !llvm.ptr
+    llvm.store %busyAfter, %busySlot atomic monotonic {alignment = 8 : i64} : i64, !llvm.ptr
     func.call @strict_gc_local_take(%available) : (i64) -> ()
     func.call @strict_gc_work_release() : () -> ()
     cf.br ^local
@@ -4582,9 +4593,9 @@
     func.call @strict_gc_work_release() : () -> ()
     cf.br ^local
   ^rest:
-    %busyNow = llvm.load %busySlot : !llvm.ptr -> i64
+    %busyNow = llvm.load %busySlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
     %busyLess = arith.subi %busyNow, %one : i64
-    llvm.store %busyLess, %busySlot : i64, !llvm.ptr
+    llvm.store %busyLess, %busySlot atomic monotonic {alignment = 8 : i64} : i64, !llvm.ptr
     func.call @strict_gc_work_release() : () -> ()
     cf.br ^idle
   ^finish:
@@ -4631,13 +4642,15 @@
   ^left(%remaining: i64):
     return %remaining : i64
   }
-  // a collection drains alone first, only one with more than 10000 objects to mark wakes the other registered threads
-  // to drain in parallel (waking and waiting for them cost up to 10 ms, a young collection in a pool job marked nothing)
+  // a collection drains alone first, only one with objects left to mark after its first 10000 wakes helpers to drain
+  // in parallel (waking and waiting for them cost up to 10 ms, a young collection in a pool job marked nothing); what is
+  // left then is only the frontier, far fewer objects than the drain marks, so it does not size the helpers
   func.func private @strict_gc_drain_parallel() {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %alone = arith.constant 10000 : i64
     %remaining = func.call @strict_gc_drain_some(%alone) : (i64) -> i64
+    %seats = arith.constant 16 : i64
     %isDone = arith.cmpi eq, %remaining, %zero : i64
     %count = func.call @strict_gc_thread_total() : () -> i64
     %isSingle = arith.cmpi ule, %count, %one : i64
@@ -4654,9 +4667,12 @@
     llvm.store %zero, %busySlot atomic seq_cst {alignment = 8 : i64} : i64, !llvm.ptr
     %activeSlot = llvm.mlir.addressof @strict_gc_drain_active : !llvm.ptr
     llvm.store %one, %activeSlot atomic seq_cst {alignment = 8 : i64} : i64, !llvm.ptr
+    %seatsSlot = llvm.mlir.addressof @strict_gc_drain_seats : !llvm.ptr
+    llvm.store %seats, %seatsSlot atomic seq_cst {alignment = 8 : i64} : i64, !llvm.ptr
     %workersSlot = llvm.mlir.addressof @strict_pool_workers : !llvm.ptr
     %workers = llvm.load %workersSlot : !llvm.ptr -> i64
-    llvm.call @strict_pool_wake(%workers) : (i64) -> ()
+    %woken = arith.minui %workers, %seats : i64
+    llvm.call @strict_pool_wake(%woken) : (i64) -> ()
     func.call @strict_gc_drain_worker() : () -> ()
     llvm.store %zero, %activeSlot atomic seq_cst {alignment = 8 : i64} : i64, !llvm.ptr
     %helpersSlot = llvm.mlir.addressof @strict_gc_drain_helpers : !llvm.ptr
@@ -4672,7 +4688,7 @@
     llvm.store %zero, %lockingSlot atomic seq_cst {alignment = 8 : i64} : i64, !llvm.ptr
     return
   }
-  // a waiting thread joins a running parallel drain
+  // a waiting thread joins a running parallel drain while it has a free seat, the others go back to waiting
   func.func private @strict_gc_help_drain() {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -4685,7 +4701,11 @@
     %joined = llvm.atomicrmw add %helpersSlot, %one seq_cst : !llvm.ptr, i64
     %still = llvm.load %activeSlot atomic seq_cst {alignment = 8 : i64} : !llvm.ptr -> i64
     %isStill = arith.cmpi ne, %still, %zero : i64
-    cf.cond_br %isStill, ^work, ^leave
+    %seatsSlot = llvm.mlir.addressof @strict_gc_drain_seats : !llvm.ptr
+    %seats = llvm.load %seatsSlot atomic seq_cst {alignment = 8 : i64} : !llvm.ptr -> i64
+    %hasSeat = arith.cmpi ult, %joined, %seats : i64
+    %isSeated = arith.andi %isStill, %hasSeat : i1
+    cf.cond_br %isSeated, ^work, ^leave
   ^work:
     func.call @strict_gc_drain_worker() : () -> ()
     cf.br ^leave
