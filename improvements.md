@@ -2,7 +2,6 @@
 What to fix next, one short line each, bugs first. Remove a line once it is done, add what is found at the end. No history or measurements (those go into commit messages). Speed work: [performance.md](performance.md).
 
 ## Now
-- A warm MossImage backend (encoder and Moss resident) runs about 10 full collections per 8 image run (55-130 ms each, 14.5 GB marked) and ends with GarbageCollectionExceedsLimit unless the limit is off.
 - CPU-only compilers (the Bootstrap.cmd seed, any NativeCompiler built with STRICT_GPU=0) spend 16-29 % of their time collecting and stop at GarbageCollectionExceedsLimit when building NativeCompiler.strict or Strict.strict (and some `strict test` runs of the strict.exe they build), so a fresh bootstrap needs STRICT_GC_LIMIT=100.
 
 ## Soon
@@ -28,7 +27,7 @@ What to fix next, one short line each, bugs first. Remove a line once it is done
 - On the web dead values can stay roots: Asyncify saves every local that is live at any unwind point of a function with whatever it held last, and the collector scans them (strict_registers_spilled). The old value of an owned local is freed when it is replaced (strict_rc_dead), so `moss = Loaded(model)` releases the old Moss; a value that is not provably owned (passed to a method returning it, aliased) can still be kept by such a copy until the local is reused. Precise roots (reference locals in a shadow stack frame the collector scans instead of the Asyncify locals) would cover all of them.
 - Lists of numbers made by generic list paths (`strict_list_add` growing `raw = raw + ...` in MersenneTwister.Uints, `strict_list_new` of other loops) are scanned by the collector: on wasm the halves of their numbers look like references and keep dead big lists alive while they live; they should be scanned only up to their items like `strict_numbers_new` lists.
 - Two greedy runs of Qwen3-Coder-30B-A3B on the same prompt give different outputs (Ben, not investigated: atomics or reduction order in the expert path?).
-- MossImage: the same seed gives a different image than the build of 2026-11-04 11:41 and loading Moss with its LoRAs got slower (7.2 to about 9 s); not from the C loop changes of 31ed107f (reverting them gives the same image and time), find the commit and check it is intended. 2026-11-06 on the 3080: current build and the 11-06 05:36 release give identical images, the 11-04 03:53 build differs slightly (mean pixel difference 5.1, same composition, numeric drift); Moss load with the turbo LoRA alone is 4.3 s for all three, the slowdown needs the full LoRA stack.
+- Loading Moss with several LoRAs got about 2 s slower since 2026-11-04 (three LoRAs 8.6-9.1 s before, 10-11.4 s without the Packed shortcut of StrictComfy a8f6c9b, which adds about 2 s more): find what else changed.
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).
 - Game engine (iOS, Android, one game loop, Spine, platform services): [improvements-engine.md](improvements-engine.md).
 - Nightly CI: build and run every program's Run once a day (games and long running apps for a few frames); work too slow for a Slow test (rebuilding all content, big models) belongs in a Run, not in tests.
