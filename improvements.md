@@ -2,6 +2,7 @@
 What to fix next, one short line each, bugs first. Remove a line once it is done, add what is found at the end. No history or measurements (those go into commit messages). Speed work: [performance.md](performance.md).
 
 ## Now
+- CPU-only compilers (the Bootstrap.cmd seed, any NativeCompiler built with STRICT_GPU=0) spend 16-29 % of their time collecting and stop at GarbageCollectionExceedsLimit when building NativeCompiler.strict or Strict.strict (and some `strict test` runs of the strict.exe they build), so a fresh bootstrap needs STRICT_GC_LIMIT=100.
 
 ## Soon
 - A strict build of Strict.strict makes 17.8 million small objects (19.4 before 0e1dc76d), STRICT_ALLOC_PROFILE=1024 lists who: Tokenizer.Tokens 16% (Instantiation.Arguments, BodyParser.Statement, FileCompiler.IsParsed, DefaultCheck tokenize the same lines again), TypeEntry.ShortName 8% (MlirFlats.Count, MlirPairs.IsListed), TypeEntry.Changing 5%, MlirCouples.Halves 4%; reduce that first, then add the runtime rule: 10 thousand small objects collected every second for 5 seconds, or more than 100 thousand small live objects at once, end tests and plain builds and warn in release builds (H3Video's per-row LoRA lists, 4.9 million live, were found that way).

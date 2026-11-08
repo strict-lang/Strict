@@ -9,5 +9,5 @@ Report(name Text, reach Reach, generations Number) Slow(Text)
 	let best = reach.Evolved(reach.Arms, generations)
 	let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
 	let millimeters = (reach.Distance(best) * 1000).Round(2)
-	let reached = " reach " + reach.target + " within " + millimeters + " mm"
-	name + ": joint angles " + best + reached + " in " + milliseconds + " ms"
+	let reached = " reach " + (reach.target to Text) + " within " + millimeters + " mm"
+	name + ": joint angles " + (best to Text) + reached + " in " + milliseconds + " ms"

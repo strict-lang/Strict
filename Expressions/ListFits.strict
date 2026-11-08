@@ -1,0 +1,29 @@
+has types KnownTypes
+constant Scaling = ListFits(Overloads.Scaler)
+Widened(argument Text, declared Text) Boolean
+	Scaling.Widened("Bytes", "Numbers")
+	Scaling.Widened("List(Bytes, Numbers)", "List(Numbers)")
+	Scaling.Widened("List(Bytes, Text)", "List(Numbers)") is false
+	Scaling.Widened("Bytes", "Generic") and (Scaling.Widened("Bytes", "Number") is false)
+	Scaling.Widened("Byte", "Bytes") and (Scaling.Widened("Text", "Bytes") is false)
+	let elements = Elements(argument)
+	let wanted = Elements(declared)
+	if wanted.Length is not 1
+		return Overloads(types).Converts(argument, declared)
+	if elements.Length is 0
+		return Overloads(types).Assignable(argument, wanted.First, false)
+	Fitting(elements, wanted.First)
+Fitting(elements Texts, element Text) Boolean
+	Scaling.Fitting(("Byte", "Number"), "Number")
+	Scaling.Fitting(("Byte", "Text"), "Number") is false
+	for elements
+		if Overloads(types).Assignable(value, element, false) is false
+			return false
+	true
+Elements(type Text) Texts
+	Scaling.Elements("Bytes") is ("Byte")
+	Scaling.Elements("List(Bytes, Numbers)") is ("Bytes", "Numbers")
+	Scaling.Elements("Byte").Length is 0
+	if type.StartsWith("List(")
+		return Instantiation(types).Arguments(type)
+	types.IsPlural(type) then List(Text) + types.ElementType(type) else List(Text)

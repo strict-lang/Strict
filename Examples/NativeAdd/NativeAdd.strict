@@ -42,6 +42,7 @@ Counted Number
 	counter.Next + counter.Next
 Run
 	logger.Log("1 + 2 = " + Added)
-	logger.Log(Greeted + ", the sum of 1, 2, 3 is " + Summed + " and doubled they are " + Doubles)
+	logger.Log(Greeted + ", the sum of 1, 2, 3 is " + Summed + " and doubled they are " + (Doubles to Text))
 	logger.Log("A counter from 10 by 5 counts " + Counted)
-	logger.Log("Halves " + Halves + ", rows " + Rows + ", dot " + Dot(Adder.Halved((1, 2, 3)), (1, 1, 1)))
+	let dot = Dot(Adder.Halved((1, 2, 3)), (1, 1, 1))
+	logger.Log("Halves " + (Halves to Text) + ", rows " + (Rows to Text) + ", dot " + dot)
