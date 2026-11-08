@@ -14,7 +14,7 @@ constant Serving = "' -and $_.CommandLine -like '* serve*' } | ForEach-Object { 
 constant Searching = "-c 'for found in $(pgrep -f \""
 constant Ending = " [s]erve\"); do pkill -KILL -P $found; kill -KILL $found; done'"
 Forwarded(arguments Texts) Number
-	Sample.Forwarded(List(Text) + "build") is -1
+	Sample.Forwarded(List(Text) + "format") is -1
 	if IsForwarded(arguments) is false
 		return -1
 	arguments(0) is Resident.Stopping then Stopped else Slotted(arguments, 0)
@@ -46,6 +46,8 @@ Answered(server Resident, port Number, arguments Texts) Number
 	let request = Resident.Request(Directory.Current, arguments, Resident.Variables, claim)
 	let code = (claim is not "") and Greeted(socket) and Server.Sent(socket, request) then Streamed(socket) else -1
 	Socket.Close(socket)
+	if (code is -1) and (claim is not "")
+		File(server.Freed + "." + claim).Rename(server.Freed)
 	code is Dropped then Interrupted(server, port) else code
 Interrupted(server Resident, port Number) Number
 	Missing.Interrupted(Resident("Compiler/output/Missing"), 0) is 1
@@ -70,14 +72,15 @@ Killing(executable Text, isWindows Boolean) Text
 	Forwarding.Killing("/a/strict", false) is Searching + "/a/strict" + Ending
 	isWindows then Finding + executable.Replace("/", "\\") + Serving else Searching + executable + Ending
 IsForwarded(arguments Texts) Boolean
-	Sample.IsForwarded(List(Text) + "build") is false
+	Sample.IsForwarded(List(Text) + "format") is false
+	Sample.IsForwarded(("build", "a.strict")) or (Process.Variable("STRICT_SERVER") is "0")
 	Sample.IsForwarded(List(Text) + "stop")
 	Sample.IsForwarded(("test", "a.strict")) or (Process.Variable("STRICT_SERVER") is "0")
 	Sample.IsForwarded(("test", "a.strict", "native")) is false
 	let command = arguments.Length > 0 then arguments(0) else ""
 	let isLocal = ("native" is in arguments) or ("lines" is in arguments) or ("-" is in arguments)
 	let isOptedOut = Process.Variable("STRICT_SERVER") is "0"
-	let isServed = (command is in ("test", "check")) and (isLocal is false) and (isOptedOut is false)
+	let isServed = (command is in ("test", "check", "build")) and (isLocal is false) and (isOptedOut is false)
 	(command is Resident.Stopping) or isServed
 Started(slot Text) Number
 	let executable = Process.Current.executable

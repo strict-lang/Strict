@@ -3,6 +3,7 @@ has known Dictionary(Text, TypeEntry)
 has folder Text = ""
 has stamps Dictionary(Text, Number) = Dictionary(Text, Number)
 has files Texts = List(Text)
+has Types List(TypeEntry) = List(TypeEntry)
 constant Sources = ("./Character.strict", "./Number.strict")
 constant Known = Dictionary(("Strict/Character:", TypeEntry.CharacterEntry))
 constant Holder = TypeEntry("Strict/Holder", List(MemberEntry) + MemberEntry("items", "Strict/List(Number)", List(InstructionEntry), false), List(MethodEntry))
@@ -11,9 +12,9 @@ Stamped(started Number) Answer
 	Character.Stamped(Time.Now).Fresh(".").Length is 1
 	Character.Stamped(0).Fresh(".").Length is 0
 	mutable stamped = Dictionary(Text, Number)
-	for pair, file in known, Files(pair.Value)
-		let modified = File(file).Modified
-		stamped(file) = modified < started then modified else -1
+	for files
+		let modified = File(value).Modified
+		stamped(value) = modified < started then modified else -1
 	Answer(code, known, folder, stamped, files)
 Fresh(current Text) Dictionary(Text, TypeEntry)
 	Character.Fresh("elsewhere").Length is 0
@@ -23,23 +24,25 @@ Fresh(current Text) Dictionary(Text, TypeEntry)
 	let changed = Changed
 	mutable kept = Dictionary(Text, TypeEntry)
 	for known
-		if (changed.Length is 0) or ((Files(value.Value) - changed).Length is Files(value.Value).Length)
+		if IsUsing(value.Value, changed) is false
 			kept(value.Key) = value.Value
 	kept
 Changed Texts
-	Character.Stamped(0).Changed is ("./Number.strict", "./Character.strict")
+	Character.Stamped(0).Changed is ("Character", "Number")
 	for stamps
 		if File(value.Key).Modified is not value.Value
-			value.Key
-Files(entry TypeEntry) Texts
-	Character.Files(TypeEntry.CharacterEntry).Last is "./Character.strict"
-	Answer(0, Known).Files(TypeEntry.CharacterEntry).Length is 0
-	Answer(0, Known, ".", Dictionary(Text, Number), ("./AList.strict", "./List.strict")).Files(Holder) is ("./List.strict")
-	for name, file in entry.UsedTypes + entry.Name, files
-		let open = name.IndexOf("(")
-		let bare = open > 0 then name.Substring(0, open) else name
-		if file.EndsWith("/" + Path(bare).FileName.text + ".strict")
-			file
+			Path(value.Key).FileName.text.Replace(".strict", "")
+IsUsing(entry TypeEntry, names Texts) Boolean
+	Character.IsUsing(TypeEntry.CharacterEntry, List(Text) + "Character")
+	Character.IsUsing(TypeEntry.CharacterEntry, List(Text) + "Missing") is false
+	Character.IsUsing(Holder, List(Text) + "List")
+	Character.IsUsing(Holder, List(Text) + "AList") is false
+	for entry.UsedTypes + entry.Name
+		let open = value.IndexOf("(")
+		let bare = open > 0 then value.Substring(0, open) else value
+		if Path(bare).FileName.text is in names
+			return true
+	false
 Carried(last Answer) Answer
 	Answer(0, Known).Carried(Character).files is Sources
 	Character.Carried(Answer(0, Known)).files is Sources

@@ -93,6 +93,7 @@ IsCurrent(entries List(ZipEntry), known = Dictionary(Text, Number)) Boolean
 	Probe.IsCurrent(Packing)
 	Probe.IsCurrent(Outdated) is false
 	Probe.IsCurrent(List(ZipEntry)) is false
+	Probe.IsCurrent(Probe.Unpacked(Probe.Packed((1, 2), List(TypeEntry), List(Text)))) is false
 	if (entries.Length is 0) or (entries.First.Name is not "sources")
 		return false
 	let header = EntryDecoder.Of(entries.First.content)

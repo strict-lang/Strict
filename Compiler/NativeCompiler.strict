@@ -6,11 +6,13 @@ constant Summing = List(Text) + "Examples/Sum.strict"
 constant Learning = ("Examples/Sum.strict", "NeuralNetworks/Batch.strict")
 constant Whole = "fast builds single programs, build a complete game with its Content without fast: "
 Ran(arguments Texts) Number
-	let started = Process.Elapsed
 	let rest = arguments.Slice(1, arguments.Length - 1)
 	if Locked(rest(0)) is false
 		return 1
-	let cache = NativeCache(arguments(0), rest)
+	let code = Held(NativeCache(arguments(0), rest))
+	Unlocked(rest(0)) then code else 1
+Held(cache NativeCache) Number
+	let started = Process.Elapsed
 	if BuildProfile(logger).Current(cache)
 		logger.Log(cache.Message)
 		BuildProfile(logger).Reported("Build total", started)
@@ -30,6 +32,13 @@ Locked(target Text) Slow(Boolean)
 			return true
 	logger.Log("The other build of " + target + " did not finish within " + Strict.BuildWait + " seconds")
 	false
+Unlocked(target Text) Boolean
+	NativeCompiler(Logger).Locked("Compiler/output/Again.strict")
+	NativeCompiler(Logger).Unlocked("Compiler/output/Again.strict")
+	NativeCompiler(Logger).Locked("Compiler/output/Again.strict")
+	NativeCompiler(Logger).Unlocked("Compiler/output/Again.strict")
+	File(Lock(target)).Delete
+	File(Lock(target)).Exists is false
 Lock(target Text) Text
 	NativeCompiler.Lock("Examples/Sum.strict") is "./Examples/obj/Sum.strict.lock"
 	let path = BuildOutput.Intermediate(target) + ".lock"
@@ -49,9 +58,9 @@ Compiled(command Text, rest Texts, sources Texts = List(Text)) Number
 	let build = NativeBuild(logger, false, selection = request.Selection, isRecursive = isRecursive)
 	build.Compile(rest(0), rest(1), isCounting, isCounting is false, sources)
 Checked(rest Texts, sources Texts) Number
-	let failed = Execute(logger).Test(rest(0), rest(1), true, sources)
-	failed is 0 then Built(rest, sources) else failed
-Built(rest Texts, sources Texts = List(Text)) Number
+	let gate = Execute(logger).Served(rest(0), rest(1), true, sources)
+	gate.code is 0 then Built(rest, sources, gate.Types) else gate.code
+Built(rest Texts, sources Texts, gated List(TypeEntry)) Number
 	let options = Options(rest)
 	if (rest.Length > 2) and (rest(2) is "library")
 		return LibraryBuild(logger).Built(rest(0), rest(1))
@@ -59,7 +68,7 @@ Built(rest Texts, sources Texts = List(Text)) Number
 	if problem is not ""
 		logger.Log(problem)
 		return 1
-	Configured(options).Compile(rest(0), rest(1), false, false, sources)
+	NativeBuild(Configured(options), gated = gated).Compile(rest(0), rest(1), false, false, sources)
 Problem(path Text, options Texts, sources Texts) Text
 	NativeCompiler(Logger).Problem("Examples/Sum.strict", List(Text) + "fast", Summing) is ""
 	NativeCompiler(Logger).Problem("Examples/Sum.strict", ("android", "ios"), Summing) is Mixed

@@ -7,9 +7,11 @@ Of(bytes Numbers) EntryDecoder
 	EntryDecoder(integers, EntryDecoder(integers, List(Text)).Names)
 Names Texts
 	EntryDecoder((5, 2, 1, 97, 1, 98), List(Text)).Names is ("a", "b")
+	EntryDecoder((1, 2), List(Text)).Names is ("", "")
+	EntryDecoder((1), List(Text)).Names.Length is 0
 	mutable position = 2
-	for stream(1)
-		let length = stream(position)
+	for stream.Length > 1 then stream(1) else 0
+		let length = position < stream.Length then stream(position) else 0
 		position = position + 1 + length
 		ByteEncoder(stream).Spelled(position - length, length)
 Type TypeEntry

@@ -39,10 +39,10 @@ Served(resident Resident) Number
 Replied(resident Resident, request Text, socket Number, isStopping Boolean, last Answer) Answer
 	let started = Time.Now
 	let isAnswered = resident.IsCurrent(request) and (isStopping is false)
-	let answer = isAnswered then Answered(resident, request, socket, last) else last
-	resident.Finished(socket, isAnswered then answer.code else (isStopping then 0 else -1))
+	let answer = isAnswered then Answered(resident, request, socket, last).Stamped(started) else last
 	resident.Released(request)
-	isAnswered then answer.Stamped(started) else last
+	resident.Finished(socket, isAnswered then answer.code else (isStopping then 0 else -1))
+	answer
 Answered(resident Resident, request Text, socket Number, last Answer) Answer
 	let home = Directory.Current
 	let folder = resident.Folder(request)

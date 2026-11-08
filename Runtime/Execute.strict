@@ -69,13 +69,14 @@ Kept(path Text, root Text) Number
 		return 1
 	let files = SourceFiles(root).Of(FileCompiler.Normalized(path))
 	Verified(path, root, true, files, ResolveCheck.Inference(files), true, false).code
-Served(path Text, root Text) Answer
+Served(path Text, root Text, isQuiet = false, sources Texts = List(Text)) Answer
 	Execute(Logger).Served("Missing.strict", ".").code is 1
+	Execute(Logger).Served("Missing.strict", ".", true).Types.Length is 0
 	if Directory.Exists(path) or (File(path).Exists is false) or (selection is not "") or (Stale((path)).Length is 0)
-		return Answer(Test(path, root), known)
-	let files = SourceFiles(root).Of(FileCompiler.Normalized(path), (path))
-	let answer = Verified(path, root, false, files, ResolveCheck.Inference(files), true)
-	if answer.code is 0
+		return Answer(Test(path, root, isQuiet, sources), known)
+	let files = Sourced((path), root, sources)
+	let answer = Verified(path, root, isQuiet, files, ResolveCheck.Inference(files), true)
+	if (answer.code is 0) and (isQuiet is false)
 		logger.Log(Summary(0, path))
 	answer
 Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInference, isOwn = false, isTested = true) Answer
@@ -90,7 +91,7 @@ Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInfer
 	if (failed is 0) and (selection is "") and (IsEdited(path) is false)
 		Stored(cache, root, files, stamped, isOwn, linked)
 	let survived = (failed is 0) and isTested then Mutated(types, path, root, files, inference, started) else 0
-	Answer(failed + survived, linked.Known(known), "", Dictionary(Text, Number), files)
+	Answer(failed + survived, linked.Known(known), "", Dictionary(Text, Number), files, types)
 Stored(cache BinaryFile, root Text, files Texts, stamped BinarySources, isOwn Boolean, linked LinkRound) Boolean
 	Execute(Logger).Stored(BinaryFile.Probe, ".", List(Text), BinarySources(List(Text)), true, LinkRound.Greeting)
 	let folder = Path(cache.source).PathOnly.text
