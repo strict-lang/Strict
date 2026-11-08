@@ -87,7 +87,7 @@ Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInfer
 	if types.Length is 0
 		return Answer(1, known)
 	let started = Process.Elapsed
-	let failed = isTested then Tested(types, path) else 0
+	let failed = isTested then Tested(types, path, isQuiet) else 0
 	if (failed is 0) and (selection is "") and (IsEdited(path) is false)
 		Stored(cache, root, files, stamped, isOwn, linked)
 	let survived = (failed is 0) and isTested then Mutated(types, path, root, files, inference, started) else 0
@@ -110,8 +110,8 @@ Completed(cache BinaryFile, root Text, files Texts, stamped BinarySources, isOwn
 		return stamped
 	let current = SourceFiles(root).Of(cache.source)
 	current.Length is files.Length then stamped else BinarySources(current).Stamped
-Tested(types List(TypeEntry), path Text) Number
-	let failed = Started(types, path).Tested(types.First.Name)
+Tested(types List(TypeEntry), path Text, isQuiet = false) Number
+	let failed = Machine(Started(types, path), isQuiet = isQuiet).Tested(types.First.Name)
 	if failed > 0
 		logger.Log(Summary(failed, path))
 	failed

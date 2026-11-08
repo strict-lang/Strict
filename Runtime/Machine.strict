@@ -5,6 +5,7 @@ has folder Text = ""
 has isTracing = false
 has sources Dictionary(Text, Text) = Dictionary(Text, Text)
 has deadline Number = 0
+has isQuiet = false
 constant Hello = Machine(List(TypeEntry) + TypeEntry.HelloLogger)
 constant TwiceMethod = MethodEntry("Twice", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 21), InstructionEntry.Binary(InstructionType.Add, (0, 0, 1)), InstructionEntry.Return(1)))
 constant Doubler = TypeEntry("Strict/Doubler", List(MemberEntry), List(MethodEntry) + TwiceMethod)
@@ -174,5 +175,12 @@ Field(entry InstructionEntry, instance VmValue) VmValue
 	found
 Logged(message Text)
 	Hello.Logged("") is not Error
-	if message is not ""
+	Machine(Hello, isQuiet = true).Logged("a") is not Error
+	if (message is not "") and IsShown(message)
 		logger.Log(message)
+IsShown(message Text) Boolean
+	Hello.IsShown("a")
+	Machine(Hello, isQuiet = true).IsShown("a") is false
+	Machine(Hello, isQuiet = true).IsShown("Test failed: a")
+	Machine(Hello, isQuiet = true).IsShown("  got: 1")
+	(isQuiet is false) or message.StartsWith("Test failed: ") or message.StartsWith("  got: ")

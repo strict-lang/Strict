@@ -10,7 +10,7 @@ IsEnabled Boolean
 	let isSource = Directory.Exists(rest(0)) or (File(rest(0)).Exists and (File(rest(0)).Modified is not 0))
 	if (isSource is false) or ((command is "test") and (TestRequest(rest).Selection is not in ("", "*")))
 		return false
-	(NativeCompiler.Options(rest) - "native" - "unit" - "fast").Length is 0
+	(NativeCompiler.Options(rest) - "native" - "unit" - "fast" - "windows" - "linux").Length is 0
 CacheFile Text
 	NativeCache("test", ("Math", ".", "native")).CacheFile is "./Math/obj/Tests.test.nativecache"
 	NativeCache("build", ("Examples/Sum.strict", ".")).CacheFile is "./Examples/obj/Sum.nativecache"
@@ -96,12 +96,20 @@ Outputs Texts
 	for Release.Sidecars
 		if File(base + value).Exists
 			files = files + (base + value)
-	for (release.Parent + "/Release", release.Parent + "/Release/" + Platform.NameOf(Platform.Current))
+	files + Released(release.Parent)
+Released(parent Text) Texts
+	NativeCache("build", ("Examples/Sum.strict", ".")).Released("Compiler/output/Missing").Length is 2
+	NativeCache("build", ("Examples/Sum.strict", ".", "windows")).IsEnabled
+	NativeCache("build", ("Examples/Sum.strict", ".", "linux")).IsEnabled
+	NativeCache("build", ("Examples/Sum.strict", ".", "web")).IsEnabled is false
+	mutable files = List(Text)
+	let name = Path(Output).FileName.text
+	for (parent + "/Release", parent + "/Release/" + Platform.NameOf(Platform.Current))
 		files = files + (value + "/Content/**")
-		let target = value + "/" + Path(Output).FileName.text
-		if File(target).Exists
-			files = files + target
-	files
+		if File(value + "/" + name).Exists
+			files = files + (value + "/" + name)
+	let linux = parent + "/Release/Linux/" + name.Replace(".exe", "")
+	File(linux).Exists then files + linux else files
 Written(text Text) Boolean
 	let temporary = CacheFile + "." + 1000000000.Random.Floor + ".tmp"
 	File(temporary).Write(text)

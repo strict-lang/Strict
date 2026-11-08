@@ -89,6 +89,18 @@ Current(entries List(ZipEntry)) List(TypeEntry)
 		if value.Name is ""
 			return List(TypeEntry)
 	types
+Relative(target Text) Text
+	Probe.Relative("./Examples/obj/A.strictbinary") is "../../Examples/obj/A.strictbinary"
+	Probe.Relative("./Bytecode/obj/A.strictbinary") is "A.strictbinary"
+	let here = value.Path.Substring(0, value.Path.LastIndexOf("/")).Split("/")
+	let there = target.Split("/")
+	mutable shared = 0
+	for as long as (shared < here.Length) and (shared < there.Length - 1) and (here(shared) is there(shared))
+		shared = shared + 1
+	mutable relative = ""
+	for here.Length - shared
+		relative = relative + "../"
+	relative + Text.Combine(there.Slice(shared, there.Length - shared), "/")
 IsCurrent(entries List(ZipEntry), known = Dictionary(Text, Number)) Boolean
 	Probe.IsCurrent(Packing)
 	Probe.IsCurrent(Outdated) is false

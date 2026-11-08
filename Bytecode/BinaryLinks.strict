@@ -111,16 +111,10 @@ Own(entries List(ZipEntry)) TypeEntry
 Relative(target Text) Text
 	User.Relative("./Bytecode/obj/Homed.strictbinary") is "../../Bytecode/obj/Homed"
 	User.Relative("./Examples/obj/Other.strictbinary") is "Other"
-	let here = Path(file.Path).PathOnly.text.Split("/")
-	let there = target.Split("/")
-	mutable shared = 0
-	for as long as (shared < here.Length) and (shared < there.Length - 1) and (here(shared) is there(shared))
-		shared = shared + 1
-	mutable relative = ""
-	for here.Length - shared
-		relative = relative + "../"
-	let rest = relative + Text.Combine(there.Slice(shared, there.Length - shared), "/")
-	rest.Substring(0, rest.Length - Extension.Length)
+	User.Relative("C:/a/obj/Other.strictbinary") is "C:/a/obj/Other"
+	User.Relative("/a/obj/Other.strictbinary") is "/a/obj/Other"
+	let place = TypeSource.Absolute(target) is target then target else file.Relative(target)
+	place.Substring(0, place.Length - Extension.Length)
 Resolved(stored List(TypeEntry), entry ZipEntry) List(TypeEntry)
 	Written and (User.Resolved(List(TypeEntry) + Homed, Pointing).Last is Needed)
 	User.Resolved(List(TypeEntry) + Converter, Selecting).First.methods is List(MethodEntry) + Texted
@@ -136,7 +130,9 @@ Linked(parts Texts) TypeEntry
 	Written and (User.Linked(Linking.Split("\t")) is Needed)
 	User.Linked("../../Bytecode/obj/Missing\tStrict/Missing\t".Split("\t")) is Unknown
 	User.Linked(List(Text) + "a") is Unknown
-	let path = Path(file.Path).PathOnly.text + "/" + parts(0) + Extension
+	Written and (User.Linked((TypeSource.Absolute("./Bytecode/obj/Homed"), Needed.Name, "Run")) is Needed)
+	let folder = TypeSource.Absolute(parts(0)) is parts(0) then "" else Path(file.Path).PathOnly.text + "/"
+	let path = folder + parts(0) + Extension
 	if (parts.Length is not 3) or (File(path).Exists is false)
 		return Unknown
 	let entries = file.Head(File(path).ReadBytes)
