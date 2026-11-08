@@ -4,8 +4,9 @@ constant Units = Mentions(("has units List(Unit)", "has logger", "Scored(model S
 Types Texts
 	Units.Types is ("List", "Unit", "Shape", "Number", "Counted", "Units", "Logger")
 	Mentions(("has Instruction", "has Registers")).Types is ("Instruction", "Registers")
+	Mentions(("Run", "\tconstant Limit = 3", "\tLimit + Size")).Types is ("Size")
 	let shape = TypeShape(lines)
-	let own = shape.MemberScope.names + shape.MethodScope.names
+	let own = shape.MemberScope.names + shape.MethodScope.names + Constants
 	mutable tokens = List(Mutable(Text))
 	for lines
 		tokens = tokens + Tokenizer(value.Trim).Names
@@ -40,14 +41,16 @@ Missing(files Texts) Texts
 	Unknown(Names(files))
 Unknown(names Texts) Texts
 	Typo.Unknown(List(Text) + "Number") is ("Numbr", "Other")
-	mutable known = List(Mutable(Text))
-	for lines
-		if value.StartsWith("constant ")
-			known.Add(Tokenizer(value).Tokens(1))
-	let all = names + known
+	let all = names + Constants
 	for Declared(TypeShape(lines)) + TypeShape(lines).UsedTypes
 		if IsKnown(value, all) is false
 			value
+Constants Texts
+	Typo.Constants is ("Limit")
+	Mentions(("Run", "\tconstant Missing = Error")).Constants is ("Missing")
+	for lines
+		if value.Trim.StartsWith("constant ")
+			Tokenizer(value.Trim).Tokens(1)
 Unmatched(names Texts, files Texts) Texts
 	Mentions.Unmatched(("Vector2s", "Missing"), List(Text) + "./Math/Vector2.strict") is ("Missing")
 	let known = Names(files)

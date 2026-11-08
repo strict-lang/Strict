@@ -1,6 +1,7 @@
 has line Text
 constant Minus = 45
 constant Dot = 46
+constant Slash = 47
 constant LessThan = 60
 constant EqualsSign = 61
 constant GreaterThan = 62
@@ -149,9 +150,11 @@ IsName(start Number, length Number) Boolean
 	Tokenizer("Id = 1").IsName(0, 2) is false
 	Tokenizer("Id >= 1").IsName(0, 2)
 	Tokenizer("x").IsName(0, 1) is false
+	Tokenizer("Validators/Check").IsName(0, 10) is false
 	let first = line.characters(start)
 	mutable after = start + length
 	for as long as (after < line.Length) and (line.characters(after).number is Character.Space)
 		after = after + 1
 	let isAssigned = (after < line.Length) and (line.characters(after).number is EqualsSign) and (TokenLength(after) is 1)
-	(first is first.Upper) and (first is not first.Lower) and (isAssigned is false)
+	let isPackage = (start + length < line.Length) and (line.characters(start + length).number is Slash)
+	(first is first.Upper) and (first is not first.Lower) and (isAssigned is false) and (isPackage is false)
