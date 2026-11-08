@@ -123,7 +123,7 @@ CrossBuild(base Text, program Text, tools Toolchain, isCounting Boolean) Number
 	if (Target is not Platform.Windows) or isCounting or (isCrossing is false)
 		return 0
 	File(base + ".linux.mlir").Write(Released(Mlir(program, tools.root, Platform.Linux)))
-	let crossed = tools.CrossBuilt(base)
+	let crossed = LinuxBuild(tools).Built(base)
 	logger.Log(crossed)
 	crossed.StartsWith("Built ") then 0 else 1
 Output(path Text, isProgram Boolean) Text

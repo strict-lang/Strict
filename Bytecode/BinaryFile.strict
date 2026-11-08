@@ -38,11 +38,16 @@ Head(bytes Bytes) List(ZipEntry)
 	if (second < 0) or (second > bytes.Length)
 		return Unpacked(bytes)
 	(Entry(bytes, 0), Entry(bytes, first))
-Checked(bytes Bytes) Number
-	Probe.Checked(Greeting) is Crc(TypeEntry.HelloLogger.Bytes).Value
-	Probe.Checked(List(Byte)) is 0
-	let first = Ended(bytes, 0)
-	first < 0 then 0 else Header(bytes, first).Read(ZipReader.ChecksumOffset, 4)
+Rewritten(header Numbers, own TypeEntry, rest List(ZipEntry)) Bytes
+	Probe.Unpacked(Probe.Rewritten((1, 0, 7), TypeEntry.HelloLogger, Packing + ZipEntry("x", (97)))).Last.Name is "x"
+	Probe.Unpacked(Probe.Rewritten((1, 0, 7), TypeEntry.HelloLogger, List(ZipEntry))).Length is 2
+	mutable entries = List(Mutable(ZipEntry)) + ZipEntry("sources", ByteEncoder.Empty.SevenBits(header).bytes)
+	entries.Add(ZipEntry(own.Name + ".bytecode", own.Bytes))
+	for rest
+		if index > 1
+			entries.Add(value)
+	for ZipWriter(entries).Bytes
+		Byte(value)
 Ended(bytes Bytes, position Number) Number
 	Probe.Ended(List(Byte), 0) is -1
 	Probe.Head(Greeting.Slice(0, 50)).Length is 0
@@ -103,7 +108,7 @@ Types(entries List(ZipEntry)) List(TypeEntry)
 		if value.Name.EndsWith(".bytecode")
 			types.Add(EntryDecoder.Of(value.content).Type)
 		else if value.Name is "links"
-			types = types + BinaryLinks(BinaryFile(source)).Types(value)
+			return BinaryLinks(BinaryFile(source)).Resolved(types, value)
 	types
 Data(path Text, ignored Texts = List(Text)) Slow(Texts)
 	Probe.Data("Compiler/NativeBuild.strict") is ("Compiler/NativeRuntime.mlir")

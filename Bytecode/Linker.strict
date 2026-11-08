@@ -1,9 +1,10 @@
 has root Text
 has main TypeCodegen
 has Known Dictionary(Text, TypeEntry) = Dictionary(Text, TypeEntry)
-has Stamps Dictionary(Text, Number) = Dictionary(Text, Number)
+has Sourced BinarySources = Unsourced
 has Homes Dictionary(Text, TypeEntry) = Dictionary(Text, TypeEntry)
 has Places Dictionary(Text, Text) = Dictionary(Text, Text)
+constant Unsourced = BinarySources(List(Text))
 constant Go = TypeEntry("A", List(MemberEntry), MethodEntry.GoRun)
 constant CountCall = InstructionEntry.Invoke(0, ("Strict/Range", "Count", "Strict/Number"), List(Number), -1)
 constant CountRun = MethodEntry("Run", List(MemberEntry), "None", CountCall)
@@ -39,7 +40,7 @@ Next(round LinkRound) Slow(LinkRound)
 	let completed = LinkRound(round, entries = Completed(round.entries, invoked))
 	let targets = invoked + completed.Forwarded(invoked)
 	let signed = Signatures(Linkable(BaseTypes(round.UsedTypes, targets), round.signatures), targets)
-	let homed = completed.Homing(signed)
+	let homed = LinkHomes(completed).Homing(signed)
 	let advanced = (List(TypeEntry) + Completed(completed.entries, targets).First) + homed.Entries(signed)
 	homed.Advanced(advanced, signed)
 Completed(entries List(TypeEntry), targets Texts) Slow(List(TypeEntry))
@@ -75,31 +76,30 @@ Signatures(types Texts, targets Texts) Texts
 LinkedType(type Text, methods Texts) Slow(TypeEntry)
 	Sample.LinkedType("Strict/Logger", List(Text)).Name is "Strict/Logger"
 	Sample.LinkedType("Strict/Bytecode/Crc", List(Text)).Name is "Crc"
-	Housed.Homed("Strict/Missing", List(Text) + "from").Name is ""
-	Housed.Homed("Strict/Logger", List(Text) + "Missing").Name is ""
+	Housed.Homed("Strict/Logger", List(Text) + "Missing").methods.Length is 0
+	Housed.Homed("Strict/Bytecode/Logged", ("Run")).Name is "Logged"
 	let homed = Homed(type, methods)
-	if (homed.Name is not "") and (IsChecking is false)
+	if IsChecking is false
 		return homed
 	let compiled = Compiled(type, methods)
-	if (homed.Name is not "") and (homed is not compiled)
+	if BinaryLinks.User.Picked(compiled, methods) is not BinaryLinks.User.Picked(homed, methods)
 		Logger.Log("LinkCheckFailed: " + type + " " + Text.Combine(methods, ", "))
 	compiled
 Homed(type Text, methods Texts) TypeEntry
 	Housed.Homed("Strict/Logger", ("Run")).Name is "Strict/Logger"
-	Housed.Homed("Strict/Bytecode/Logged", ("Run")).Name is "Logged"
-	Housed.Homed("Strict/Logger", ("Run", "from")).methods.Length is 1
-	Housed.Homed("Strict/Logger", List(Text) + "from").Name is "Strict/Logger"
+	Sample.Homed("Strict/Logger", ("Log", "Reset")).methods.First.Name is "Log"
 	let own = type is in Homes then Homes(type) else BinaryLinks.Unknown
-	let isDeclared = "from" is in main.inference.types.MethodsOf(TypeEntry.ShortName(type)).names
-	let asked = isDeclared then methods else methods - "from"
-	let picked = BinaryLinks.User.Picked(own, asked)
+	if methods.Length is 0
+		return Compiled(type, methods)
+	let absent = BinaryLinks.User.Compilable(own, methods, main.inference.types.MethodsOf(TypeEntry.ShortName(type)))
+	let added = (own.Name is "") or (absent.Length > 0) then Compiled(type, absent) else BinaryLinks.Unknown
 	let name = Path(type).PathOnly.text is Path(main.fullName).PathOnly.text then Path(type).FileName.text else type
-	let isConstructed = (asked.Length is 0) and (methods.Length > 0) and (own.Name is not "")
-	(picked.Length > 0) or isConstructed then TypeEntry(name, own.members, picked) else BinaryLinks.Unknown
+	let whole = TypeEntry(own, methods = own.methods + added.methods)
+	TypeEntry(name, own.Name is "" then added.members else own.members, BinaryLinks.User.Picked(whole, methods))
 Compiled(type Text, methods Texts) TypeEntry
 	Sample.Compiled("Strict/Bytecode/Crc", List(Text)).methods.Length is 0
-	Sample.Homed("Strict/Missing", List(Text) + "Go").Name is ""
-	Sample.Homed("Strict/List(Text)", List(Text) + "Length").Name is ""
+	Housed.Homed("Strict/Logger", ("Run", "from")).methods.Length is 1
+	Housed.Homed("Strict/Logger", List(Text) + "from").Name is "Strict/Logger"
 	let folder = Path(SourcePath(type)).PathOnly.text
 	let source = Fusion(File(SourcePath(type)).ReadLines, folder).Fused
 	let generator = Automatic(source, TypeEntry.ShortName(type), Instantiation(main.inference.types))

@@ -25,8 +25,8 @@ Cleaned(folder Text) Number
 		removed = removed + (name is "obj" then Removed(value) else (name is in (".git", "Tools") then 0 else Cleaned(value)))
 	removed
 IsKept(file Text) Boolean
-	Folders(Logger).IsKept("Compiler/obj/NativeCompiler.ptx")
-	Folders(Logger).IsKept("Compiler/obj/NativeCompiler.mlir") is false
+	Folders(Logger).IsKept("./obj/strict.ptx")
+	Folders(Logger).IsKept("./obj/strict.mlir") is false
 	Folders(Logger).IsKept("Compiler/obj/Missing.ptx") is false
 	let name = Path(file).FileName.text
 	let program = Path(Path(file).PathOnly.text).PathOnly.text + "/" + name.Split(".").First

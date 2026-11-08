@@ -1,0 +1,24 @@
+has tools Toolchain
+constant Missing = LinuxBuild(Toolchain.OnWindows)
+constant Target = " --target=x86_64-unknown-linux-gnu"
+constant Sections = " -mllvm -function-sections -mllvm -data-sections"
+Built(base Text) Text
+	Missing.Built("Compiler/output/missing").StartsWith("mlir-opt failed")
+	let linux = Toolchain(tools.platform, tools.root, tools.natives, tools.isWeb, "x86-64-v3", Target)
+	let lowered = linux.Lowered(base + ".linux", "", Toolchain.Parts)
+	if lowered is not ""
+		return lowered
+	if linux.PartsCompiled(base + ".linux") is false
+		return "clang failed for " + base + ".linux"
+	let compiled = ToolRunner(tools.Located("ld.lld")).Execute(LinuxBuild(linux).Relocatable(base + ".linux"))
+	if compiled.Failed
+		return "ld.lld failed: " + compiled.error
+	NativeSources(tools.natives).LinuxLinked(base, BuildOutput.Released(base, "Linux"), tools.root)
+Relocatable(base Text) Text
+	Missing.Relocatable("a").EndsWith(" -o \"a.o\"")
+	Missing.Relocatable("a").StartsWith("-r -m elf_x86_64 --lto-O3 --thinlto-jobs=all -mllvm -mcpu=native" + Sections)
+	Missing.Relocatable("a").IndexOf(" --thinlto-cache-dir=\"a.lto\" --thinlto-cache-policy=prune_interval=0s") > 0
+	let policy = " --thinlto-cache-policy=" + Toolchain.LtoCachePolicy
+	let cache = " --thinlto-cache-dir=" + tools.Quoted(base + ".lto") + policy
+	let options = "-r -m elf_x86_64 --lto-O3 --thinlto-jobs=all -mllvm -mcpu=" + tools.cpu + Sections + cache
+	options + tools.PartObjects(base) + " -o " + tools.Quoted(base + ".o")

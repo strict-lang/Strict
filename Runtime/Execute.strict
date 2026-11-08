@@ -55,7 +55,8 @@ Sourced(stale Texts, root Text, sources Texts) Texts
 Stale(paths Texts) Texts
 	for paths
 		let cache = BinaryFile(FileCompiler.Normalized(value))
-		if IsEdited(value) or (cache.IsFresh(cache.Unpacked(File(cache.Path).ReadBytes)) is false)
+		let entries = cache.Unpacked(File(cache.Path).ReadBytes)
+		if IsEdited(value) or (cache.IsFresh(entries) is false) or (BinaryLinks(cache).IsTested(entries) is false)
 			value
 IsEdited(path Text) Boolean
 	Execute(Logger).IsEdited("Execute.strict") is false
@@ -96,8 +97,11 @@ Stored(cache BinaryFile, root Text, files Texts, stamped BinarySources, isOwn Bo
 	let types = linked.entries
 	let links = BinaryLinks(cache).Lines(types, linked.TypeNames, linked.linker)
 	let kept = BinaryLinks(cache).Kept(types, links)
-	let header = Completed(cache, root, files, stamped, isOwn).Typed(types, folder).Kept(types).Header
-	cache.Saved(cache.Packed(header, kept, links - ""))
+	let own = BinaryLinks(cache).Owned(cache.Head(File(cache.Path).ReadBytes), stamped.Indexed)
+	let whole = TypeEntry(kept.First, methods = kept.First.methods + BinaryLinks(cache).Added(kept.First, own))
+	let names = BinarySources.Names(kept) + LinkHomes(linked).SourceNames(cache.source, whole)
+	let header = Completed(cache, root, files, stamped, isOwn).Typed(kept, folder).Named(names).Header
+	cache.Saved(cache.Packed(header, (List(TypeEntry) + whole) + kept.Slice(1, kept.Length - 1), links - ""))
 Completed(cache BinaryFile, root Text, files Texts, stamped BinarySources, isOwn = false) Slow(BinarySources)
 	Execute(Logger).Completed(Adder, ".", AdderFiles, BinarySources.Mixed).stamps is (1, 2, 3)
 	Execute(Logger).Completed(Adder, ".", List(Text), BinarySources.Mixed, true).stamps is (1, 2, 3)
@@ -116,8 +120,9 @@ Mutated(types List(TypeEntry), path Text, root Text, files Texts, inference Type
 Loaded(path Text, root Text, withTests = true, sources Texts = List(Text)) List(TypeEntry)
 	let started = Process.Elapsed
 	let cache = BinaryFile(FileCompiler.Normalized(path))
-	let bypass = IsEdited(path) or (selection is not "") or (withTests is false)
-	let types = bypass then List(TypeEntry) else cache.Current(cache.Unpacked(File(cache.Path).ReadBytes))
+	let entries = cache.Unpacked(File(cache.Path).ReadBytes)
+	let isReady = withTests and (selection is "") and (IsEdited(path) is false) and BinaryLinks(cache).IsTested(entries)
+	let types = isReady then cache.Current(entries) else List(TypeEntry)
 	let status = types.Length > 0 then "hit" else "miss"
 	BuildProfile(logger).Reported("Bytecode cache " + status, started)
 	types.Length > 0 then types else FileCompiler(logger, false, selection).Compiled(path, root, withTests, sources)

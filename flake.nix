@@ -62,8 +62,8 @@
           cp -a . $out/lib/strict/
           interpreter=$(cat $NIX_CC/nix-support/dynamic-linker)
           tools=$out/lib/strict/Tools/LLVM-23.1.3-Linux-X64/bin
-          chmod -R u+w $out/lib/strict/strict $out/lib/strict/Compiler/NativeCompiler "$tools"
-          for binary in $out/lib/strict/strict $out/lib/strict/Compiler/NativeCompiler "$tools"/*; do
+          chmod -R u+w $out/lib/strict/strict "$tools"
+          for binary in $out/lib/strict/strict "$tools"/*; do
             if [ -f "$binary" ]; then
               patchelf --set-interpreter "$interpreter" --set-rpath "$libPath" "$binary" || true
             fi

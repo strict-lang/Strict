@@ -10,19 +10,15 @@ constant SampleHeader = ("module {", "  llvm.func @printf(!llvm.ptr, ...) -> i32
 constant CallingFunction = ("  func.func private @A() -> f64 attributes {llvm.linkage = #llvm.linkage<internal>} {", "    %r = func.call @B() : () -> f64", "    return %r : f64", "  }")
 constant CalledFunction = ("  func.func private @B(%p0: f64) -> f64 {", "    return %p0 : f64", "  }", "}")
 constant Sample = MlirSplit(SampleHeader + CallingFunction + CalledFunction)
-Parts(count Number) Texts
-	Sample.Parts(2).Length is 2
-	Sample.Parts(2).Last.IndexOf("  func.func private @A() -> f64\n") > 0
-	Sample.Parts(2).Last.IndexOf("llvm.mlir.global external constant @t() : !llvm.array<2 x i8>") > 0
-	let starts = Starts
-	let declarations = Declarations(starts)
-	for Range(0, count)
-		let first = (value * lines.Length / count).Floor
-		let last = ((value + 1) * lines.Length / count).Floor
-		let shared = Shared(value is 0) + Others(starts, declarations, first, last)
-		Text.Combine((List(Text) + "module {") + shared + Owned(starts, first, last) + "}", "\n")
+constant Linking = MlirSplit(("  llvm.linker_options [\"a\"]"))
+constant RuntimeParts = 8
+constant Common = Sample.Shared
+constant Placing = Sample.Placed(Common)
+constant LinkerOptions = "  llvm.linker_options"
+constant Nowhere = -1
 Starts Numbers
 	Sample.Starts is (3, 7)
+	MlirSplit(("  llvm.func @a() {")).Starts is (0)
 	for lines
 		if (value.EndsWith("{") and (value.StartsWith("  func.func ") or value.StartsWith("  llvm.func ")))
 			index
@@ -30,29 +26,74 @@ Declarations(starts Numbers) Texts
 	Sample.Declarations(Sample.Starts) is ("  func.func private @A() -> f64", "  func.func private @B(f64) -> f64")
 	for starts
 		Declared(lines(value))
-Shared(isFirst Boolean) Texts
-	Sample.Shared(true).Last is "  llvm.mlir.global constant @t(\"a\\00\") : !llvm.array<2 x i8>"
-	Sample.Shared(false).Last is "  llvm.mlir.global external constant @t() : !llvm.array<2 x i8>"
+Name(line Text) Text
+	Sample.Name(Tricky) is "k"
+	Sample.Name(Sample.lines(3)) is "A"
+	let at = line.IndexOf("@")
+	line.Substring(at + 1, line.IndexOf("(", at) - at - 1)
+Typed(name Text) Text
+	Sample.Typed("Xor_Run_0") is "Xor"
+	Sample.Typed("lXor_Run_0_1") is "Xor"
+	Sample.Typed("List_Number__First_0") is "List"
+	Sample.Typed("dp0") is "p0"
+	Sample.Typed("__stack_low") is "__stack_low"
+	Sample.Typed("t") is "t"
+	let type = name.Split("_").First
+	if type.Length < 2
+		return name
+	type(0).Lower is type(0) then type.Substring(1, type.Length - 1) else type
+Owner(line Text) Number
+	Sample.Owner("  func.func @strict_new() {") < RuntimeParts
+	Sample.Owner("  llvm.func @strict_new(%a: i64) {") is Sample.Owner("  func.func @strict_new() {")
+	Sample.Owner("  func.func @Xor_Run_0() {") is RuntimeParts + HashCode("Xor").number % (Toolchain.Parts - RuntimeParts)
+	Sample.Owner("  func.func @Xor_Run_0() {") is Sample.Owner("  llvm.mlir.global constant @lXor_Run_0_1(\"a\") : x")
+	let name = Name(line)
+	if name.StartsWith("strict_")
+		return HashCode(name).number % RuntimeParts
+	RuntimeParts + HashCode(Typed(name)).number % (Toolchain.Parts - RuntimeParts)
+Shared Texts
+	Sample.Shared.Length is 2
+	Sample.Shared.First is "  llvm.func @printf(!llvm.ptr, ...) -> i32"
+	Linking.Shared is Linking.lines
+	MlirSplit(("  func.func private @x()")).Shared.Length is 1
 	for lines
-		if value.StartsWith("  llvm.mlir.global ")
-			Global(value, isFirst)
-		else if IsDeclaration(value, isFirst)
+		if value.StartsWith(Visible) or value.StartsWith(LinkerOptions)
 			value
-IsDeclaration(line Text, isFirst Boolean) Boolean
-	Sample.IsDeclaration("  llvm.func @printf(!llvm.ptr, ...) -> i32", false)
-	Sample.IsDeclaration("  llvm.linker_options [\"a\"]", false) is false
-	let isFunction = line.StartsWith("  llvm.func ") or line.StartsWith("  func.func ")
-	(isFunction and (line.EndsWith("{") is false)) or (isFirst and line.StartsWith("  llvm.linker_options"))
-Others(starts Numbers, declarations Texts, first Number, last Number) Texts
-	Sample.Others(Sample.Starts, Sample.Declarations(Sample.Starts), 0, 6) is ("  func.func private @B(f64) -> f64")
-	for starts
-		if (value < first) or (value >= last)
-			declarations(index)
-Owned(starts Numbers, first Number, last Number) Texts
-	Sample.Owned(Sample.Starts, 0, 6).First is "  func.func @A() -> f64 {"
+		else if (value.StartsWith("  llvm.func ") or value.StartsWith("  func.func ")) and (value.EndsWith("{") is false)
+			value
+Placed(shared Texts) Numbers
+	Placing is (Nowhere, Sample.Owner(Sample.lines(2)))
+	Linking.Placed(Linking.lines) is (0)
+	for shared
+		value.StartsWith(Visible) then Owner(value) else value.StartsWith(LinkerOptions) then 0 else Nowhere
+Data(part Number, shared Texts, placed Numbers) Texts
+	Sample.Data(Placing.Last, Common, Placing) is ("  llvm.mlir.global constant @t(\"a\\00\") : !llvm.array<2 x i8>")
+	Linking.Data(0, Linking.lines, (0)) is Linking.lines
+	Linking.Data(1, Linking.lines, (0)).Length is 0
+	for shared
+		if placed(index) is part
+			Global(value, true)
+Externals(part Number, shared Texts, placed Numbers) Texts
+	Sample.Externals(Placing.Last, Common, Placing) is ("  llvm.func @printf(!llvm.ptr, ...) -> i32")
+	Sample.Externals(Placing.Last + 1, Common, Placing).Last.EndsWith(" external constant @t() : !llvm.array<2 x i8>")
+	Linking.Externals(1, Linking.lines, (0)).Length is 0
+	for shared
+		if placed(index) is Nowhere
+			value
+		else if value.StartsWith(Visible) and (placed(index) is not part)
+			Global(value, false)
+Others(declarations Texts, owners Numbers, part Number) Texts
+	Sample.Others(Sample.Declarations(Sample.Starts), (0, 1), 0) is ("  func.func private @B(f64) -> f64")
+	for declarations
+		if owners(index) is not part
+			value
+Owned(starts Numbers, owners Numbers, part Number) Texts
+	Sample.Owned(Sample.Starts, (0, 1), 0).First is "  func.func @A() -> f64 {"
+	Sample.Owned(Sample.Starts, (0, 1), 0).Last is "  }"
+	Sample.Owned(Sample.Starts, (0, 1), 0).Length is 4
 	mutable owned = List(Text)
 	for starts
-		if (value >= first) and (value < last)
+		if owners(index) is part
 			owned = owned + Public(lines(value)) + Body(value + 1)
 	owned
 Body(start Number) Texts
@@ -65,6 +106,9 @@ Body(start Number) Texts
 	body
 Public(header Text) Text
 	Sample.Public(Sample.lines(3)) is "  func.func @A() -> f64 {"
+	Sample.Public("  func.func @B() attributes {" + Internal + ", a} {") is "  func.func @B() attributes {a} {"
+	Sample.Public("  func.func @B() attributes {a, " + Internal + "} {") is "  func.func @B() attributes {a} {"
+	Sample.Public("  llvm.func internal @l() {") is "  llvm.func @l() {"
 	let unlinked = header.Replace(" attributes {" + Internal + "}", "").Replace(Internal + ", ", "")
 	let plain = unlinked.Replace(", " + Internal, "")
 	plain.Replace("  func.func private @", "  func.func @").Replace("  llvm.func internal @", "  llvm.func @")
@@ -93,32 +137,15 @@ Types(arguments Text) Texts
 Results(rest Text) Text
 	Sample.Results(" -> f64 attributes {a} {") is " -> f64"
 	Sample.Results(" {") is ""
-	let arrow = rest.StartsWith(" -> ")
+	Sample.Results(" attributes {a} {") is ""
 	let ending = rest.IndexOf(" attributes {") >= 0 then rest.IndexOf(" attributes {") else rest.Length - 2
-	arrow then rest.Substring(0, ending) else ""
-Lowered(base Text, tools Toolchain) Text
-	Sample.Lowered("Compiler/output/missing", Toolchain.OnWindows).StartsWith("mlir-opt failed")
-	mutable optimizing = List(Text)
-	mutable translating = List(Text)
-	for Parts(Toolchain.Parts)
-		let part = base + "-" + index
-		File(part + ".mlir").Write(value)
-		optimizing = optimizing + ("\"" + part + ".mlir\"" + Single + part + ".llvm.mlir\"")
-		translating = translating + (Translating + "\"" + part + ".llvm.mlir\" -o \"" + part + "\"")
-	File(base + ".ll").Delete
-	let lowered = Ran("mlir-opt", optimizing, tools)
-	lowered is "" then Ran("mlir-translate", translating, tools) else lowered
-Ran(tool Text, arguments Texts, tools Toolchain) Text
-	Sample.Ran("noSuchStrictTool", List(Text) + "", Toolchain.OnWindows).StartsWith("noSuchStrictTool failed")
-	for ToolRunner(tools.Located(tool)).ExecuteAll(arguments, tool)
-		if value.Failed
-			return tool + " failed: " + value.error
-	""
-Global(line Text, isFirst Boolean) Text
+	rest.Substring(0, ending)
+Global(line Text, isOwned Boolean) Text
 	Sample.Global(Tricky, false).EndsWith("external @k() : f64")
+	Sample.Global("  llvm.mlir.global constant @t(0) : x", true) is "  llvm.mlir.global constant @t(0) : x"
 	Sample.Global("  llvm.mlir.global internal @k(\" internal \")", true) is "  llvm.mlir.global @k(\" internal \")"
 	Sample.Global("  llvm.mlir.global internal thread_local @d(0 : i64) : i64", false).EndsWith(" thread_local @d() : i64")
-	if isFirst
+	if isOwned
 		return line.StartsWith(Hidden) then Visible + line.Substring(Hidden.Length, line.Length - Hidden.Length) else line
 	let flags = line.Substring(0, line.IndexOf("@"))
 	let name = line.Substring(flags.Length, line.IndexOf("(", flags.Length) - flags.Length)

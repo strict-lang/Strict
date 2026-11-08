@@ -106,7 +106,7 @@ with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as 
 	last_build = datetime.fromtimestamp(executable.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
 	message = f"Up to date: {source} (last changed {changed}) < {executable.name} (last build {last_build})"
 	assert built.stdout.strip() == message, built.stdout
-	direct = subprocess.run([str(root / "Compiler" / ("NativeCompiler" + extension)), "build", str(source), "."],
+	direct = subprocess.run([str(root / ("strict" + extension)), "build", str(source), "."],
 		cwd=root, capture_output=True, text=True, timeout=10)
 	assert direct.returncode == 0 and direct.stdout.strip() == message, direct.stdout + direct.stderr
 	message_source = Path(folder) / "MessageCheck.strict"
@@ -201,19 +201,6 @@ with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as 
 		"Whole-file reads still allocate a list of lines before joining it"
 	print("Whole-file read fusion preserves LF, CRLF, BOM, Unicode and empty files")
 
-def check_parallel_refresh():
-	"""Builds started together after a compiler change rebuild NativeCompiler once, the others wait for it."""
-	os.utime(root / "Compiler/NativeCompiler.strict")
-	programs = ["Examples/HelloLogger.strict", "Examples/FizzBuzz.strict", "Examples/Fibonacci.strict"]
-	started = [subprocess.Popen([str(root / ("strict" + extension)), "build", program], cwd=root,
-		stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True) for program in programs]
-	outputs = [process.communicate(timeout=280)[0] for process in started]
-	logs = "\n----\n".join(outputs)
-	assert all(process.returncode == 0 for process in started), "A parallel build failed:\n" + logs
-	assert sum("building it again first" in output for output in outputs) == 1, "Not exactly one rebuild:\n" + logs
-	assert not (root / "Compiler/NativeCompiler.building").exists(), "The rebuild lock was left behind"
-	print("Parallel builds after a compiler change rebuild NativeCompiler once")
-
 def check_concurrent_builds():
 	"""Builds of one target take turns on its lock, a killed build releases it and the next one recovers."""
 	with tempfile.TemporaryDirectory(prefix="ConcurrentCheck", dir=root / "Examples") as folder:
@@ -276,6 +263,5 @@ def check_link_workers():
 	assert modules[0] == modules[1], "Linking with one worker emitted a different program"
 	print("Links found over several rounds compile the same with one worker and with all")
 
-check_parallel_refresh()
 check_concurrent_builds()
 check_link_workers()

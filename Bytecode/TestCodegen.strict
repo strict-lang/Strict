@@ -9,10 +9,6 @@ constant Declaring = SyntaxNode("Declaration", "let a", MethodCodegen.One)
 constant EvenFailed = InstructionEntry(InstructionType.Print, "Test failed: IsEven(2) is true in IsEven at Even.strict:line 2 (", (-1, 1, 14, 1), 2)
 constant EvenPassed = InstructionEntry(InstructionType.Print, "Test passed: IsEven(2) is true in IsEven at Even.strict:line 2 (", (-1, 1, 10, 1), 2)
 constant Runner = "$Tests"
-constant Unbound = MethodEntry("Run", List(MemberEntry), "None", InstructionEntry.Invoke(0, ("Strict/Generic", "to", "Strict/HashCode"), List(Number), -1))
-constant Unknowing = InstructionEntry.Invoke(0, ("Strict/Unknown", "Key", "Strict/Number"), List(Number), -1)
-constant Boxing = TestCodegen(TypeCodegen("Strict/Boxing", ("has value Generic", "First Generic", "\tvalue"), TypeCodegen.NoTypes, List(Text)))
-constant Generical = MethodEntry("from", List(MemberEntry) + MemberEntry("generic", "Strict/Generic", List(InstructionEntry), false), "", List(InstructionEntry))
 constant Running = TestCodegen(TypeCodegen("Strict/Running", ("Run Number", "\t3"), TypeCodegen.NoTypes, List(Text)))
 constant Halving = TestCodegen(TypeCodegen("Strict/Halving", ("Half(number Number) Number", "\t3 / 2 is 1.5", "\tnumber / 2"), TypeCodegen.NoTypes, List(Text)))
 constant TookCall = InstructionEntry.Invoke(1, ("Strict/Even", "$TestsTook", "Strict/Text", "elapsed"), List(Number) + 0, -1)
@@ -34,34 +30,13 @@ Entry TypeEntry
 	Even.Entry.methods(1).Name is "$TestsGot0"
 	Running.Entry.methods.Last.Name is "Run"
 	let entry = types.Entry
-	TypeEntry(entry.Name, entry.members, Reachable(entry.methods, Tests + Linkable(entry)))
-Linkable(type TypeEntry) List(MethodEntry)
-	Even.Linkable(TypeEntry("A", MemberEntry.LoggerMember, (MethodEntry.HelloRun, MethodEntry.Logged))).Length is 2
-	Even.Linkable(TypeEntry("A", List(MemberEntry), List(MethodEntry) + Unbound)).Length is 0
-	Boxing.Linkable(TypeEntry("A", List(MemberEntry), List(MethodEntry) + MethodEntry.HelloRun)).Length is 0
-	if types.Generator.target.shape.UsesGenerics
-		return List(MethodEntry)
-	for type.methods
-		if IsBound(value)
+	TypeEntry(entry.Name, entry.members, Reachable(entry.methods, Tests + Runs(entry.methods)))
+Runs(methods List(MethodEntry)) List(MethodEntry)
+	Even.Runs(List(MethodEntry) + MethodEntry.HelloRun).Length is 1
+	Even.Runs(List(MethodEntry) + MethodEntry.Logged).Length is 0
+	for methods
+		if value.Name is "Run"
 			value
-IsBound(method MethodEntry) Boolean
-	Even.IsBound(MethodEntry.HelloRun) and Even.IsBound(MethodEntry.Converting)
-	Even.IsBound(MethodEntry(Unbound, instructions = List(InstructionEntry) + Unknowing)) is false
-	Even.IsBound(Generical) is false
-	for method.SignatureTypes
-		if IsGeneric(value)
-			return false
-	for method.Invoked
-		if IsGeneric(value.Substring(0, value.LastIndexOf(".")))
-			return false
-	true
-IsGeneric(typeName Text) Boolean
-	Even.IsGeneric("Strict/List(Generic)") and Even.IsGeneric("Strict/Unknown")
-	Even.IsGeneric("Strict/Number") is false
-	let isNamed = (typeName.IndexOf("Generic") >= 0) or typeName.StartsWith("Strict/Unknown")
-	let short = TypeEntry.ShortName(typeName)
-	let isPlain = (short.IndexOf("(") < 0) and (types.inference.types.IsPlural(short) is false)
-	isNamed or (isPlain and (Text.Combine(types.inference.types.MembersOf(short).types).IndexOf("Generic") >= 0))
 Reachable(known List(MethodEntry), methods List(MethodEntry)) List(MethodEntry)
 	let targets = TypeEntry(types.fullName, List(MemberEntry), methods).Invoked
 	mutable added = List(Mutable(MethodEntry))
