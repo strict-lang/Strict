@@ -11,6 +11,9 @@ constant TickingBody = BodyParser("Run(outer Number, spare Number)", "\tmutable 
 constant Ticking = UsageRules(HeaderTokens(Tokenizer("Run(outer Number, spare Number)").Tokens), TickingBody.Block(1, 1).Statements, List(Text), ("Ticker", "Increase"))
 constant Plain = UsageRules(HeaderTokens(Tokenizer("Run(outer Number)").Tokens), BodyParser("Run(outer Number)", "\touter").Block(1, 1).Statements, List(Text), List(Text))
 constant From = UsageRules(HeaderTokens(Tokenizer("from(spare Number)").Tokens), BodyParser("from(spare Number)", "\t5").Block(1, 1).Statements, List(Text), List(Text))
+constant Assigning = UsageRules(HeaderTokens(Tokenizer("Run").Tokens), BodyParser("Run", "\tfor 3", "\t\tvalue = value + 1", "\t\tvalue").Block(1, 1).Statements, List(Text), List(Text))
+constant LoopValues = ("value", "index", "outer")
+constant Branching = BodyParser("Run", "\tif 1 > 2", "\t\tvalue = 1").Block(1, 1).children(0)
 Sample UsageRules
 	Sample.statements.Length is 4
 	constant lines = ("Run(count, mutable list)", "\tlet aa = 5", "\tmutable bb = 0", "\tlist.Add(1)", "\tcount + bb")
@@ -20,11 +23,24 @@ Issues ValidationIssues
 	Sample.Issues.Length is 5
 	UsageRules(Ticking.header, List(SyntaxNode), List(Text), List(Text)).Issues.Length is 0
 	UsageRules(From.header, From.statements, ("spare"), List(Text)).Issues.Length is 1
+	Assigning.Issues.Length is 1
 	mutable issues = List(Mutable(ValidationIssue))
 	for statements
+		issues = issues + LoopValueIssues(value, false)
 		if value.Kind is "Declaration"
 			issues = issues + DeclarationIssues(value)
 	ParameterIssues + issues
+LoopValueIssues(node SyntaxNode, isLooped Boolean) ValidationIssues
+	Assigning.LoopValueIssues(Assigning.statements(0), false).First to Text is "LoopValueMustNotBeAssigned: value"
+	Assigning.LoopValueIssues(Assigning.statements(0).children.Last.children(0), false).Length is 0
+	Sample.LoopValueIssues(Branching, false).Length is 0
+	let isAssigned = isLooped and (node.Kind is "Reassignment") and (node.children(0) to Text is in LoopValues)
+	mutable issues = List(Mutable(ValidationIssue))
+	if isAssigned
+		issues.Add(ValidationIssue("LoopValueMustNotBeAssigned", node.children(0) to Text, node.line))
+	for node.children
+		issues = issues + LoopValueIssues(value, isLooped or (node.Kind is "For"))
+	issues
 DeclarationIssues(declaration SyntaxNode) ValidationIssues
 	Sample.DeclarationIssues(Sample.statements(1)).Length is 1
 	Sample.DeclarationIssues(Sample.statements(0)).Length is 2
