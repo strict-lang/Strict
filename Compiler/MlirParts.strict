@@ -66,7 +66,7 @@ Lowered(base Text, tools Toolchain) Text
 	Sample.Lowered("Compiler/output/missing", Toolchain.OnWindows).StartsWith("mlir-opt failed")
 	mutable optimizing = List(Text)
 	mutable translating = List(Text)
-	for Changed(base, MlirSplit.Single + tools.cpu + Toolchain.Optimized)
+	for Changed(base, MlirSplit.Single + tools.Bitcode(""))
 		let part = base + "-" + value
 		optimizing = optimizing + ("\"" + part + ".mlir\"" + MlirSplit.Single + part + ".llvm.mlir\"")
 		translating = translating + (MlirSplit.Translating + "\"" + part + ".llvm.mlir\" -o \"" + part + "\"")

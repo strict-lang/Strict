@@ -9,7 +9,7 @@ Removed(base Text) Boolean
 	for Endings
 		files = files + (base + value)
 	for Toolchain.Parts
-		files = files + Part(base + "-" + value) + Part(base + ".linux-" + value)
+		files = files + Part(base + "-" + value) + Part(base + ".linux-" + value) + Part(base + ".web-" + value)
 	for files
 		if Deleted(value) is false
 			logger.Log("Could not remove build intermediate: " + value + " (another program still held it after 5 s)")

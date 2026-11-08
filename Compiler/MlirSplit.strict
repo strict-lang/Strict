@@ -36,7 +36,11 @@ Typed(name Text) Text
 	Sample.Typed("lXor_Run_0_1") is "Xor"
 	Sample.Typed("List_Number__First_0") is "List"
 	Sample.Typed("dp0") is "p0"
+	Sample.Typed("__stack_low") is "__stack_low"
+	Sample.Typed("t") is "t"
 	let type = name.Split("_").First
+	if type.Length < 2
+		return name
 	type(0).Lower is type(0) then type.Substring(1, type.Length - 1) else type
 Owner(line Text) Number
 	Sample.Owner("  func.func @strict_new() {") < RuntimeParts

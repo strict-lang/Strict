@@ -4,9 +4,12 @@ constant Options = " -sALLOW_MEMORY_GROWTH -sMAXIMUM_MEMORY=4GB -sINITIAL_MEMORY
 constant OneCallerInlining = " --one-caller-inline-max-function-size=1000"
 constant Features = " --enable-bulk-memory --enable-sign-ext --enable-nontrapping-float-to-int --enable-mutable-globals"
 constant Passes = " --strip-debug --strip-producers --skip-pass=coalesce-locals" + OneCallerInlining + Features
+constant Target = " -target wasm32-unknown-emscripten -fignore-exceptions -Wno-override-module"
+constant Lowering = " -mllvm -combiner-global-alias-analysis=false -mllvm -enable-emscripten-sjlj -mllvm -disable-lsr"
+constant LinkLowering = " -Wl,-mllvm,-combiner-global-alias-analysis=false -Wl,-mllvm,-enable-emscripten-sjlj -Wl,-mllvm,-disable-lsr"
+constant Thin = " -Wl,--lto-O2 -Wl,--thinlto-jobs=all" + LinkLowering + " -Wl,--thinlto-cache-policy=" + Toolchain.LtoCachePolicy
 constant Sizes = ("malloc", "calloc", "realloc", "memcpy", "memset", "strlen", "strncmp", "strftime", "fread", "fwrite", "fseek", "ftell", "strtol", "snprintf")
 Linked(base Text, executable Text) Text
-	(Options.IndexOf("--closure 1") >= 0) and (Options.IndexOf("--profiling-funcs") is -1)
 	Missing.Linked("Compiler/output/missing", "missing.html").StartsWith("mlir-opt failed")
 	let compiled = Compiled(base)
 	if compiled is not ""
@@ -15,17 +18,23 @@ Linked(base Text, executable Text) Text
 	let sources = NativeSources(tools.natives).Arguments(Platform.Web, tools.root) + Preloaded(folder + "/Content")
 	let page = " --shell-file " + tools.Quoted(Shell(base))
 	Release(Logger, base).Created(Path(executable).PathOnly.text)
-	let inputs = tools.Quoted(base + ".o") + sources + Mirrored(folder, base) + Scripted(base) + page + Runtime
-	let linked = ToolRunner(tools.Located("emcc")).Execute(inputs + " -o " + tools.Quoted(executable) + Options + " -O1")
+	let inputs = tools.PartObjects(base + ".web") + sources + Mirrored(folder, base) + Scripted(base) + page + Runtime
+	let output = " -o " + tools.Quoted(executable) + Options + Thinned(base) + " -O1"
+	let linked = ToolRunner(tools.Located("emcc")).Execute(inputs + output)
 	linked.Failed then "emcc failed: " + linked.error else Optimized(executable)
+Thinned(base Text) Text
+	(Options.IndexOf("--closure 1") >= 0) and (Options.IndexOf("--profiling-funcs") is -1)
+	Missing.Thinned("a").EndsWith(" -Wl,--thinlto-cache-dir=\"a.web.lto\"")
+	Missing.Thinned("a").StartsWith(Thin)
+	Thin + " -Wl,--thinlto-cache-dir=" + tools.Quoted(base + ".web.lto")
 Compiled(base Text) Text
 	Missing.Compiled("Compiler/output/missing").StartsWith("mlir-opt failed")
-	let lowered = tools.Lowered(base)
+	if File(base + ".mlir").Exists is false
+		return tools.Lowered(base)
+	let lowered = MlirParts(MlirSplit(File(base + ".mlir").ReadLines)).Laid.Lowered(base + ".web", tools)
 	if lowered is not ""
 		return lowered
-	let output = " -o " + tools.Quoted(base + ".o") + " -Wno-override-module" + Toolchain.Optimization
-	let compiled = ToolRunner(tools.Located("emcc")).Execute("-c " + tools.Quoted(base + ".ll") + output)
-	compiled.Failed then "emcc failed: " + compiled.error else ""
+	tools.PartsCompiled(base + ".web") then "" else "clang failed for " + base
 Optimized(executable Text) Text
 	Missing.Optimized("Compiler/output/missing.html").StartsWith("wasm-opt failed")
 	let wasm = tools.Quoted(executable.Replace(".html", ".wasm"))
