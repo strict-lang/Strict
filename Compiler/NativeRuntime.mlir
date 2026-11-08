@@ -16319,9 +16319,9 @@
   // also names, once each, a GPU loop that has an exact copy (MlirGuards) but runs its generic body, which reads every
   // list through the format dispatch of strict_device_element, and the value that sent it there
   llvm.mlir.global internal @strict_gpu_generics(dense<0> : tensor<65xi64>) : !llvm.array<65 x i64>
-  llvm.mlir.global internal constant @strict_gpu_generic_list("GPU loop %s runs its generic body: value %lld is a list of %lld bit numbers (its exact copy reads 32 bit, bfloat16 or 16 bit lists)\0A\00") : !llvm.array<133 x i8>
+  llvm.mlir.global internal constant @strict_gpu_generic_list("GPU loop %s runs its generic body: value %lld is a list of %lld numbers of %lld bits (its exact copy reads 32 bit, bfloat16 or 16 bit lists)\0A\00") : !llvm.array<142 x i8>
   llvm.mlir.global internal constant @strict_gpu_generic_number("GPU loop %s runs its generic body: value %lld is not a whole number (its exact copy needs whole numbers there)\0A\00") : !llvm.array<112 x i8>
-  func.func private @strict_gpu_generic(%name: !llvm.ptr, %possible: i1, %value: i64, %bits: i64) {
+  func.func private @strict_gpu_generic(%name: !llvm.ptr, %possible: i1, %value: i64, %bits: i64, %length: i64) {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %most = arith.constant 64 : i64
@@ -16363,7 +16363,7 @@
     cf.br ^done
   ^list:
     %listText = llvm.mlir.addressof @strict_gpu_generic_list : !llvm.ptr
-    %listPrinted = llvm.call @printf(%listText, %name, %value, %bits) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr, i64, i64) -> i32
+    %listPrinted = llvm.call @printf(%listText, %name, %value, %length, %bits) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr, i64, i64, i64) -> i32
     cf.br ^done
   ^done:
     return
@@ -16629,10 +16629,10 @@
     func.call @strict_gpu_exacts(%values, %valueCount, %mask, %slots, %slotIndex) : (!llvm.ptr, i64, i64, !llvm.ptr, i64) -> ()
     // a kernel with an exact copy (MlirGuards) runs it when its guarded numbers are whole and its guarded lists 32 or 16 bit
     %hasGuards = arith.cmpi ne, %guards, %none : i64
-    %unsuited:2 = func.call @strict_gpu_guarded(%values, %valueCount, %mask, %slots, %slotIndex, %guards) : (!llvm.ptr, i64, i64, !llvm.ptr, i64, i64) -> (i64, i64)
+    %unsuited:3 = func.call @strict_gpu_guarded(%values, %valueCount, %mask, %slots, %slotIndex, %guards) : (!llvm.ptr, i64, i64, !llvm.ptr, i64, i64) -> (i64, i64, i64)
     %guardsHold = arith.cmpi slt, %unsuited#0, %none : i64
     %exactPossible = arith.andi %hasGuards, %narrowSingle : i1
-    func.call @strict_gpu_generic(%name, %exactPossible, %unsuited#0, %unsuited#1) : (!llvm.ptr, i1, i64, i64) -> ()
+    func.call @strict_gpu_generic(%name, %exactPossible, %unsuited#0, %unsuited#1, %unsuited#2) : (!llvm.ptr, i1, i64, i64, i64) -> ()
     %guarded = arith.andi %hasGuards, %guardsHold : i1
     %runsExact = arith.andi %guarded, %narrowSingle : i1
     // a loop collecting 8 bit floats (7) or bytes (9) keeps its result on the GPU also from the double kernel, which
@@ -23156,10 +23156,10 @@
     return
   }
   // the first value with a bit in guards that does not suit the exact copy of a 32 bit kernel and its list bits (0 for a
-  // number), -1 when all do: lists of 32 bit, bfloat16 or 16 bit
+  // number, then its length), -1 when all do: lists of 32 bit, bfloat16 or 16 bit
   // numbers (their views in slots from 6 on, three slots each), whole numbers (their exact slots from exacts + 1 on, two each)
   // and for a bit 32 places higher a magic number (a divisor from 1 to 2^31, the kernel assumes it, MlirPassed.Bounded)
-  func.func private @strict_gpu_guarded(%values: !llvm.ptr, %valueCount: i64, %mask: i64, %slots: !llvm.ptr, %exacts: i64, %guards: i64) -> (i64, i64) {
+  func.func private @strict_gpu_guarded(%values: !llvm.ptr, %valueCount: i64, %mask: i64, %slots: !llvm.ptr, %exacts: i64, %guards: i64) -> (i64, i64, i64) {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %two = arith.constant 2 : i64
@@ -23194,7 +23194,10 @@
     %floating = arith.ori %isSingle, %halves : i1
     %listSlot = arith.addi %slotIndex, %three : i64
     %listFails = arith.cmpi ult, %floating, %isGuarded : i1
-    cf.cond_br %listFails, ^failed(%index, %bits : i64, i64), ^next(%nextIndex, %listSlot, %exactIndex : i64, i64, i64)
+    %lengthIndex = arith.addi %slotIndex, %one : i64
+    %lengthSlot = llvm.getelementptr %slots[%lengthIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %length = llvm.load %lengthSlot : !llvm.ptr -> i64
+    cf.cond_br %listFails, ^failed(%index, %bits, %length : i64, i64, i64), ^next(%nextIndex, %listSlot, %exactIndex : i64, i64, i64)
   ^number:
     %exactSlot = llvm.getelementptr %slots[%exactIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
     %exact = llvm.load %exactSlot : !llvm.ptr -> i64
@@ -23211,12 +23214,12 @@
     %hasMagic = arith.cmpi ne, %magic, %none : i64
     %magicFails = arith.cmpi ult, %hasMagic, %isDivisor : i1
     %numberFails = arith.ori %wholeFails, %magicFails : i1
-    cf.cond_br %numberFails, ^failed(%index, %none : i64, i64), ^next(%nextIndex, %numberSlot, %nextExact : i64, i64, i64)
-  ^failed(%failedIndex: i64, %failedBits: i64):
-    return %failedIndex, %failedBits : i64, i64
+    cf.cond_br %numberFails, ^failed(%index, %none, %none : i64, i64, i64), ^next(%nextIndex, %numberSlot, %nextExact : i64, i64, i64)
+  ^failed(%failedIndex: i64, %failedBits: i64, %failedLength: i64):
+    return %failedIndex, %failedBits, %failedLength : i64, i64, i64
   ^held:
     %held = arith.constant -1 : i64
-    return %held, %none : i64, i64
+    return %held, %none, %none : i64, i64, i64
   }
   func.func private @strict_gpu_name(%name: !llvm.ptr, %index: i64) -> !llvm.ptr {
     %none = arith.constant 0 : i64
@@ -23334,7 +23337,7 @@
     %magic = arith.select %valid, %packed, %none : i64
     return %magic : i64
   }
-  // the 32 bit kernel reads big lists of doubles as floats: their 32 bit copy is made once and kept with the device
+  // the 32 bit kernel reads lists of doubles as floats: their 32 bit copy is made once and kept with the device
   // copies (kind 3), so its guarded body reads all lists as floats (MlirGuards) and half the bytes, with the same values;
   // doubles on the CPU are rounded there, doubles computed on the GPU there (strict_device_singles)
   func.func private @strict_gpu_singles(%ptx: !llvm.ptr, %single: i1, %values: !llvm.ptr, %valueCount: i64, %mask: i64, %rows: i64, %slots: !llvm.ptr) {
@@ -23373,7 +23376,6 @@
     %three = arith.constant 3 : i64
     %thirtyTwo = arith.constant 32 : i64
     %sixtyFour = arith.constant 64 : i64
-    %cacheable = arith.constant 65536 : i64
     %lengthSlot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, i64
     %length = llvm.load %lengthSlot : !llvm.ptr -> i64
     %bitsSlot = llvm.getelementptr %view[2] : (!llvm.ptr) -> !llvm.ptr, i64
@@ -23382,10 +23384,14 @@
     %resident = func.call @strict_gpu_device(%list) : (f64) -> i64
     %isHost = arith.cmpi eq, %resident, %none : i64
     %bytes = arith.shli %length, %two : i64
-    %doubleBytes = arith.shli %length, %three : i64
-    %big = arith.cmpi uge, %doubleBytes, %cacheable : i64
-    %wanted = arith.andi %isDouble, %big : i1
-    cf.cond_br %wanted, ^cached, ^done
+    cf.cond_br %isDouble, ^sized, ^done
+  ^sized:
+    %isEmpty = arith.cmpi eq, %length, %none : i64
+    cf.cond_br %isEmpty, ^empty, ^cached
+  ^empty:
+    // nothing to read, a 32 bit copy of no numbers would be an allocation of no bytes
+    llvm.store %thirtyTwo, %bitsSlot : i64, !llvm.ptr
+    cf.br ^done
   ^cached:
     %hit = func.call @strict_gpu_cached(%list, %three, %length, %view) : (f64, i64, i64, !llvm.ptr) -> i1
     cf.cond_br %hit, ^done, ^obtain
