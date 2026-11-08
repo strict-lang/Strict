@@ -24,20 +24,29 @@ constant GreenUnpacked = ("    %tbyte1s = arith.constant 8 : i64", "    %tbyte1 
 constant BlueUnpacked = ("    %tbyte2s = arith.constant 16 : i64", "    %tbyte2 = func.call @strict_byte_of(%tbyte, %tbyte2s) : (f64, i64) -> f64", "    llvm.store %tbyte2, %v_blue : f64, !llvm.ptr")
 constant Unpacking = PackedLoad + RedUnpacked + GreenUnpacked + BlueUnpacked
 constant Sizes = MlirLanes(MlirCouples.Sample.function, 2)
+constant Mono = TypeEntry("Strict/Mono", List(MemberEntry) + MlirLayout.Red, List(MethodEntry))
+constant Septet = TypeEntry("Strict/Septet", Rgba.members + Rgb.members, List(MethodEntry))
+constant Six = TypeEntry("Strict/Six", Rgb.members + Rgb.members, List(MethodEntry))
+constant LoggedRgb = TypeEntry("Strict/LoggedRgb", Rgb.members + MemberEntry.LoggerMember, List(MethodEntry))
+constant Ranges = MlirLanes(MlirFunction((MlirLayout.Byting, Mono, Septet, Six, LoggedRgb), Mono, Making), 3)
 IsPacked(kind Text) Boolean
 	Sample.IsPacked("Rgb")
 	Sample.IsPacked("Strict/Rgb")
 	Sample.IsPacked("Byte") is false
-	MlirLanes(MlirCouples.Sample.function, 0).IsPacked("Sizing") is false
-	let members = MlirCouples(function, 0).Halves(function.TypeOf(kind, true))
-	if (members.Length < 2) or (members.Length > 6)
-		return false
-	for members
-		if MlirLayout(function).IsByte(value.typeName) is false
-			return false
-	true
+	let couples = MlirCouples(function, 0)
+	let layout = MlirLayout(function)
+	mutable parts = 0
+	for function.TypeOf(kind, true).members
+		if couples.IsPart(value)
+			if layout.IsByte(value.typeName) is false
+				return false
+			parts = parts + 1
+	(parts >= 2) and (parts <= 6)
 Members(kind Text) Texts
 	Sample.Members("Rgb") is ("red", "green", "blue")
+	(Ranges.IsPacked("Mono") or Ranges.IsPacked("Septet")) is false
+	Ranges.IsPacked("Six") and Ranges.IsPacked("LoggedRgb")
+	MlirLanes(MlirCouples.Sample.function, 0).IsPacked("Sizing") is false
 	for MlirCouples(function, 0).Halves(function.TypeOf(kind, true))
 		value.Name
 Constructed(entry InstructionEntry, typeName Text) Texts
