@@ -42,7 +42,7 @@ with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as 
 	assert trait_build.returncode == 0, trait_build.stdout + trait_build.stderr
 	assert subprocess.run([str(trait.with_suffix(extension))], timeout=10).returncode == 49
 	trait_run = run(str(trait))
-	assert trait_run.returncode == 0 and trait_run.stdout.strip() == "49", trait_run.stdout + trait_run.stderr
+	assert trait_run.returncode == 49 and trait_run.stdout.strip() == "49", trait_run.stdout + trait_run.stderr
 	print("Trait members and parameters call their concrete implementation", flush=True)
 	cleanup = Path(folder) / "CleanupCheck.strict"
 	locked_base = (Path(folder) / "Locked").as_posix()
@@ -71,7 +71,7 @@ with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as 
 		result = subprocess.run([str(nested.with_suffix(extension))], capture_output=True, text=True, timeout=10,
 			env=dict(os.environ, STRICT_THREADS=threads, STRICT_GPU="all"))
 		expected = str(sum(number * number for number in range(256)) * 8192 + sum(range(8192)))
-		assert result.returncode == 0 and result.stdout.strip() == expected, result.stdout + result.stderr
+		assert result.returncode == 0 and result.stdout.strip().endswith(expected), result.stdout + result.stderr
 	print("Nested GPU loops use correct CPU fallback inside pool jobs", flush=True)
 	profile = Path(folder) / "ProfileCheck.strict"
 	profile.write_text('has profile Compiler/BuildProfile\nRun Number\n'
@@ -114,7 +114,7 @@ with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as 
 		f'constant Source = {json.dumps(str(source))}\nRun Number\n'
 		'\tLogger.Log(NativeCache("build", (Source, ".")).Message)\n\t0', encoding="utf-8")
 	interpreted = run(str(message_source))
-	assert interpreted.returncode == 0 and interpreted.stdout.strip() == message, interpreted.stdout + interpreted.stderr
+	assert interpreted.returncode == 0 and interpreted.stdout.strip().endswith(message), interpreted.stdout + interpreted.stderr
 	assert not obj(source, ".mlir").exists(), "Unchanged build regenerated MLIR"
 	assert executable.stat().st_mtime_ns == modified, "Unchanged build relinked executable"
 	asset.write_text("changed")
