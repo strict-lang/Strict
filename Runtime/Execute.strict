@@ -5,7 +5,6 @@ has isMutating Boolean = false
 has part Text = ""
 has isFull Boolean = false
 has known Dictionary(Text, TypeEntry) = Dictionary(Text, TypeEntry)
-constant Greeting = List(TypeEntry) + TypeEntry.HelloLogger
 constant Adder = BinaryFile("./Examples/NativeAdd/Adder.strict")
 constant AdderFiles = SourceFiles(".").Of(Adder.source)
 Run(arguments Texts) Number
@@ -88,14 +87,17 @@ Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInfer
 	let started = Process.Elapsed
 	let failed = isTested then Tested(types, path) else 0
 	if (failed is 0) and (selection is "") and (IsEdited(path) is false)
-		Stored(cache, root, files, stamped, isOwn, types)
+		Stored(cache, root, files, stamped, isOwn, linked)
 	let survived = (failed is 0) and isTested then Mutated(types, path, root, files, inference, started) else 0
 	Answer(failed + survived, linked.Known(known), "", Dictionary(Text, Number), files)
-Stored(cache BinaryFile, root Text, files Texts, stamped BinarySources, isOwn Boolean, types List(TypeEntry)) Boolean
-	Execute(Logger).Stored(BinaryFile.Probe, ".", List(Text), BinarySources(List(Text)), true, Greeting)
+Stored(cache BinaryFile, root Text, files Texts, stamped BinarySources, isOwn Boolean, linked LinkRound) Boolean
+	Execute(Logger).Stored(BinaryFile.Probe, ".", List(Text), BinarySources(List(Text)), true, LinkRound.Greeting)
 	let folder = Path(cache.source).PathOnly.text
+	let types = linked.entries
+	let links = BinaryLinks(cache).Lines(types, linked.TypeNames, linked.linker)
+	let kept = BinaryLinks(cache).Kept(types, links)
 	let header = Completed(cache, root, files, stamped, isOwn).Typed(types, folder).Kept(types).Header
-	cache.Saved(cache.Packed(header, types, List(TypeEntry)))
+	cache.Saved(cache.Packed(header, kept, links - ""))
 Completed(cache BinaryFile, root Text, files Texts, stamped BinarySources, isOwn = false) Slow(BinarySources)
 	Execute(Logger).Completed(Adder, ".", AdderFiles, BinarySources.Mixed).stamps is (1, 2, 3)
 	Execute(Logger).Completed(Adder, ".", List(Text), BinarySources.Mixed, true).stamps is (1, 2, 3)

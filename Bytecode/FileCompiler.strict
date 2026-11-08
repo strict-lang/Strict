@@ -27,7 +27,7 @@ Built(path Text, root Text, withTests Boolean, files Texts, inference TypeInfere
 	let fused = Fusion(File(source).ReadLines, Path(source).PathOnly.text).Fused
 	let main = TypeCodegen(FullName(source, root), fused, inference, FullNames(files, root), isOptimizing)
 	let entry = BuildProfile(logger).Entry(main, withTests, isQuiet, selection)
-	let linked = BuildProfile(logger).Linked(Linker(root, main, known), entry)
+	let linked = BuildProfile(logger).Linked(Linker(root, main, known, BinarySources(files).Stamped.Indexed), entry)
 	linked.With(Checked(linked.linker, linked.entries, source, inference))
 Checked(linker Linker, linked List(TypeEntry), source Text, inference TypeInference) List(TypeEntry)
 	FileCompiler.Checked(Linker.Sample, List(TypeEntry) + Linker.Go, "./A.strict", ResolveCheck.Counting).Length is 1

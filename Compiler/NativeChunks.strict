@@ -38,7 +38,7 @@ Saved(output Text, root Text, paths Texts) Number
 	let counted = NativeFolder(logger, selection, false).Counted(paths, root)
 	if counted.Length < paths.Length
 		return 1
-	File(output).Write(BinaryFile(output).Packed(List(Number), counted, List(TypeEntry)))
+	File(output).Write(BinaryFile(output).Packed(List(Number), counted, List(Text)))
 	0
 Loaded(outputs Texts, chunks List(Texts)) List(List(TypeEntry))
 	NativeChunks.Loaded(List(Text) + Unsaved, Single).First.Length is 0

@@ -1,0 +1,103 @@
+has file BinaryFile
+constant Home = BinaryFile("./Bytecode/Homed.strict")
+constant User = BinaryLinks(BinaryFile("./Examples/Linking.strict"))
+constant Homed = TypeEntry("Homed", TypeEntry.HelloLogger.members, TypeEntry.HelloLogger.methods)
+constant Needed = TypeEntry(Homed, Name = "Strict/Bytecode/Homed")
+constant Empty = BinarySources(List(Text)).Header
+constant Written = Home.Saved(Home.Packed(Empty, List(TypeEntry) + Homed, List(Text))) and User.file.Saved(User.file.Packed(Empty, List(TypeEntry), List(Text)))
+constant Linking = "../../Bytecode/obj/Homed\tStrict/Bytecode/Homed\t0\t" + Crc(Homed.Bytes).Value
+constant Extension = ".strictbinary"
+constant Texted = MethodEntry(MethodEntry.HelloRun, Name = "Texted", declaredType = "Strict/Text")
+constant Converter = TypeEntry("A", List(MemberEntry), (MethodEntry(Texted, Name = "to"), Texted))
+constant Pooled = Linker(Linker.Sample, Homes = Dictionary((Needed.Name, Homed)), Places = Dictionary((Needed.Name, Home.Path + "\t" + Crc(Homed.Bytes).Value)))
+constant Missing = TypeEntry("Strict/Missing", List(MemberEntry), List(MethodEntry))
+constant Unknown = TypeEntry("", List(MemberEntry), List(MethodEntry))
+Lines(types List(TypeEntry), names Texts, linker Linker) Texts
+	User.Lines((Needed, Missing), (Needed.Name, Missing.Name), Pooled) is ("", "")
+	User.Lines((Unknown, Needed), ("", Needed.Name), Pooled) is ("", Linking)
+	for types
+		index is 0 then "" else Line(value, names(index), linker)
+Line(type TypeEntry, name Text, linker Linker) Text
+	User.Line(TypeEntry(Needed, members = List(MemberEntry)), Needed.Name, Pooled) is ""
+	User.Line(Missing, Missing.Name, Pooled) is ""
+	let own = name is in linker.Homes then linker.Homes(name) else Unknown
+	let selection = Selection(own, type)
+	let isCovered = (own.Name is not "") and (own.members is type.members) and (selection.Length is type.methods.Length)
+	let place = isCovered then linker.Places(name).Split("\t") else List(Text)
+	isCovered then Relative(place(0)) + "\t" + type.Name + "\t" + Text.Combine(selection, ",") + "\t" + place(1) else ""
+Kept(types List(TypeEntry), lines Texts) List(TypeEntry)
+	User.Kept((Needed, Homed), ("", "x")) is List(TypeEntry) + Needed
+	for types
+		if lines(index) is ""
+			value
+Picked(own TypeEntry, names Texts) List(MethodEntry)
+	User.Picked(TypeEntry.HelloLogger, ("Run")) is TypeEntry.HelloLogger.methods
+	User.Picked(TypeEntry.HelloLogger, ("Run", "Missing")).Length is 0
+	User.Picked(Converter, ("to Text")).Length is 1 and (User.Picked(Converter, ("to Number")).Length is 0)
+	User.Picked(Converter, ("Texted")).Length is 1
+	mutable found = List(Mutable(Text))
+	mutable picked = List(Mutable(MethodEntry))
+	for own.methods
+		let converted = "to " + TypeEntry.ShortName(value.returnType)
+		if (value.Name is in names) or ((value.Name is "to") and (converted is in names))
+			picked.Add(value)
+			found = found + value.Name + converted
+	(names - found).Length is 0 then picked else List(MethodEntry)
+Owned(entries List(ZipEntry), stamps Dictionary(Text, Number)) TypeEntry
+	BinaryLinks(BinaryFile("./Missing.strict")).Owned(List(ZipEntry), Dictionary(Text, Number)) is Unknown
+	Written and (BinaryLinks(Home).Owned(Home.Head(File(Home.Path).ReadBytes), Dictionary(Text, Number)) is Homed)
+	file.IsCurrent(entries, stamps) then Own(entries) else Unknown
+Own(entries List(ZipEntry)) TypeEntry
+	BinaryLinks(BinaryFile.Probe).Own(BinaryFile.Packing) is TypeEntry.HelloLogger
+	BinaryLinks(BinaryFile.Probe).Own(List(ZipEntry)) is Unknown
+	BinaryLinks(BinaryFile.Probe).Own(Home.Unpacked(Home.Packed(Empty, List(TypeEntry), ("a")))) is Unknown
+	entries.Length > 1 and entries(1).Name.EndsWith(".bytecode") then EntryDecoder.Of(entries(1).content).Type else Unknown
+Selection(own TypeEntry, needed TypeEntry) Numbers
+	User.Selection(TypeEntry.HelloLogger, TypeEntry.HelloLogger) is (0)
+	User.Selection(Unknown, TypeEntry.HelloLogger).Length is 0
+	User.Selection(TypeEntry(Unknown, methods = (MethodEntry.Logged, MethodEntry.HelloRun)), TypeEntry.HelloLogger) is (1)
+	for needed.methods
+		let at = own.methods.Index(value)
+		if at >= 0
+			at
+Relative(target Text) Text
+	User.Relative("./Bytecode/obj/Homed.strictbinary") is "../../Bytecode/obj/Homed"
+	User.Relative("./Examples/obj/Other.strictbinary") is "Other"
+	let here = Path(file.Path).PathOnly.text.Split("/")
+	let there = target.Split("/")
+	mutable shared = 0
+	for as long as (shared < here.Length) and (shared < there.Length - 1) and (here(shared) is there(shared))
+		shared = shared + 1
+	mutable relative = ""
+	for here.Length - shared
+		relative = relative + "../"
+	let rest = relative + Text.Combine(there.Slice(shared, there.Length - shared), "/")
+	rest.Substring(0, rest.Length - Extension.Length)
+Types(entry ZipEntry) List(TypeEntry)
+	Written and (User.Types(ZipEntry("links", ByteEncoder.Empty.UnicodeBytes(Linking))).First is Needed)
+	let text = ByteEncoder(entry.content).Spelled(0, entry.content.Length)
+	for text.Lines
+		Linked(value)
+Linked(line Text) TypeEntry
+	Written and (User.Linked(Linking) is Needed) and (User.Linked(Linking + "1") is Unknown)
+	User.Linked("../../Bytecode/obj/Missing\tStrict/Missing\t\t1") is Unknown
+	let parts = line.Split("\t")
+	let path = Path(file.Path).PathOnly.text + "/" + parts(0) + Extension
+	if (parts.Length is not 4) or (File(path).Exists is false)
+		return Unknown
+	let entries = file.Head(File(path).ReadBytes)
+	let isSame = (entries.Length > 1) and ((Crc(entries(1).content).Value to Text) is parts(3))
+	isSame then Selected(Own(entries), parts(1), parts(2)) else Unknown
+Selected(own TypeEntry, name Text, indices Text) TypeEntry
+	User.Selected(TypeEntry.HelloLogger, "A", "0") is TypeEntry(TypeEntry.HelloLogger, Name = "A")
+	User.Selected(TypeEntry.HelloLogger, "A", "").methods.Length is 0
+	User.Selected(TypeEntry.HelloLogger, "A", "1") is Unknown
+	User.Selected(TypeEntry.HelloLogger, "A", "-1") is User.Selected(TypeEntry.HelloLogger, "A", "5")
+	User.Selected(TypeEntry.HelloLogger, "A", "0.5") is Unknown
+	mutable methods = List(Mutable(MethodEntry))
+	for indices is "" then List(Text) else indices.Split(",")
+		let at = value to Number
+		if (at < 0) or (at >= own.methods.Length) or (at.Floor is not at)
+			return Unknown
+		methods.Add(own.methods(at))
+	TypeEntry(name, own.members, methods)

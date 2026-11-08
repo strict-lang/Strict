@@ -2,13 +2,20 @@ has sources Texts
 has stamps Numbers = List(Number)
 constant Listing = TypeEntry("Strict/List(Number)", List(MemberEntry), List(MethodEntry))
 constant Mixed = BinarySources(("./Examples/A.strict", "./Examples/data.csv", "./Examples/List.strict"), (1, 2, 3))
-Stamped BinarySources
+Stamped(known = Dictionary(Text, Number)) BinarySources
 	BinarySources(List(Text) + "./Missing.strict").Stamped.stamps is (0)
 	BinarySources(List(Text) + "./Any.strict").Stamped.stamps.First > 1.7e12
+	BinarySources(List(Text) + "./Any.strict").Stamped(Dictionary(("./Any.strict", 5))).stamps is (5)
 	mutable found = List(Number)
 	for sources
-		found = found + (File(value).Modified * 1000).Floor
+		found = found + (value is in known then known(value) else (File(value).Modified * 1000).Floor)
 	BinarySources(sources, found)
+Indexed Dictionary(Text, Number)
+	Mixed.Indexed("./Examples/List.strict") is 3
+	mutable indexed = Dictionary(Text, Number)
+	for sources
+		indexed(value) = stamps(index)
+	indexed
 Kept(types List(TypeEntry)) BinarySources
 	Mixed.Kept(List(TypeEntry) + Listing).sources is ("./Examples/data.csv", "./Examples/List.strict")
 	Mixed.Kept(List(TypeEntry) + Listing).stamps is (2, 3)
