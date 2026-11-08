@@ -1,4 +1,5 @@
 has root Text
+has slot Text = ""
 constant Version = "strict 3"
 constant Greeting = "ready\n"
 constant Ending = "\n\n"
@@ -7,6 +8,7 @@ constant Exiting = "strict exit "
 constant Stamp = "/obj/strict.server"
 constant Free = "/obj/strict.free"
 constant IdleSeconds = 30
+constant Servers = 4
 constant GreetingSeconds = 1
 constant Settings = ("STRICT_THREADS", "STRICT_GPU", "STRICT_BUILD_PROFILE", "STRICT_GC_LOG", "STRICT_RC", "STRICT_RC_CHECK", "STRICT_RC_DEAD", "STRICT_HEAP", "STRICT_YOUNG")
 constant Sample = Resident("Compiler/output")
@@ -39,14 +41,21 @@ Claim(request Text) Text
 	Resident.Claim("broken") is ""
 	let lines = request.Split("\n")
 	lines.Length < 5 then "" else lines(4)
+Stamped Text
+	Sample.Stamped is "Compiler/output/obj/strict.server"
+	Resident("Compiler/output", "2").Stamped is "Compiler/output/obj/strict.server2"
+	root + Stamp + slot
+Freed Text
+	Resident("Compiler/output", "2").Freed is "Compiler/output/obj/strict.free2"
+	root + Free + slot
 Released(request Text) Boolean
 	Resident("Compiler/output/Missing").Released(Resident.Request("C:/a", List(Text) + "test", "1", "7")) is false
 	Resident("Compiler/output/Missing").Released("broken") is false
 	let port = Claim(request) to Number
 	if port is Error
 		return false
-	File(root + Free + "." + port).Rename(root + Free)
-	File(root + Free).Exists
+	File(Freed + "." + port).Rename(Freed)
+	File(Freed).Exists
 Sent(socket Number, text Text) Boolean
 	Sample.Sent(0, "a") is false
 	(Socket.Send(socket, ByteEncoder(List(Number)).UnicodeBytes(text)) is Error) is false
@@ -66,8 +75,8 @@ Opened Number
 	if server is Error
 		return 0
 	let port = Socket.Port(server) to Text
-	File(root + Stamp).Write(port)
-	File(root + Free).Write(port)
+	File(Stamped).Write(port)
+	File(Freed).Write(port)
 	server
 Accepted(server Number, built Number) Number
 	let waited = Socket.Waiting(server, IdleSeconds)
@@ -90,9 +99,9 @@ Closed(server Number) Number
 	Resident("Compiler/output/Missing").Closed(0) is 0
 	Sample.Opened > 0
 	Sample.Closed(Socket.Local(0)) is 0
-	File(Sample.root + Stamp).Exists
-	let stamp = File(root + Stamp)
+	File(Sample.Stamped).Exists
+	let stamp = File(Stamped)
 	if stamp.Exists and (stamp.ReadLines.First is (Socket.Port(server) to Text))
 		stamp.Delete
-		File(root + Free).Delete
+		File(Freed).Delete
 	Socket.Close(server)
