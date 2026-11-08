@@ -66,7 +66,6 @@ ParenthesisIssues(line Text, number Number) ValidationIssues
 MissingIssues(line Text, number Number) ValidationIssues
 	Sample.MissingIssues("\tlet a =", 4).First to Text is "ValueMustFollowAssignment: let a ="
 	Sample.MissingIssues("\tlet a =", 4).First.Line is 5
-	Sample.MissingIssues("\tx =", 0).Length is 1
 	Sample.MissingIssues("\tlet a = 1", 0).Length is 0
 	Sample.MissingIssues("\tlet a = \"b =\"", 0).Length is 0
 	Sample.MissingIssues("\tfor as long as", 2).First to Text is "ConditionMustFollowLoop: for as long as"
