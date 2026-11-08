@@ -46,6 +46,7 @@ LineIssues(line Text, number Number) ValidationIssues
 	Limits(Long.lines, false, 10).LineIssues(RoundTrip.Packed + RoundTrip.Packed, 0).Length is 0
 	Sample.LineIssues("\t\t\t\t\t\t1", 2).First to Text is "NestingMoreThanFiveLevelsIsNotAllowed: more than five levels"
 	Sample.LineIssues("\t\t\t\t\t\t" + Wide, 0).Length is 2
+	Sample.LineIssues("\tlet a = (1", 0).Length is 1
 	mutable issues = LengthIssues(line, number) + ParenthesisIssues(line, number)
 	if line.StartsWith("\t\t\t\t\t\t")
 		issues.Add(ValidationIssue("NestingMoreThanFiveLevelsIsNotAllowed", "more than five levels", number + 1))
