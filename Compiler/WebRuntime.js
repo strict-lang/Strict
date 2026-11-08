@@ -26,7 +26,7 @@ addToLibrary({
 	$strictWebGpu: { device: null, failed: false, pipelines: {}, buffers: {}, failures: {}, next: 1, grown: 0, queued: 0, done: [],
 		halves: {}, uploads: {}, views: [], borrowed: {}, lent: {}, dropped: {}, sixteens: {}, compiling: {},
 		encoder: null, recorded: 0, fresh: 0, unused: [], staging: { current: null, full: [], free: [] }, pool: {},
-		pooled: new WeakSet(), pooledBytes: 0, pass: null, prelude: null, flags: new WeakSet(), flagsUsed: [], flagPool: [],
+		pooled: new WeakSet(), pooledBytes: 0, poolOrder: new Set(), pass: null, prelude: null, flags: new WeakSet(), flagsUsed: [], flagPool: [],
 		layout: null, lazy: {}, filed: {},
 		poolLimit: 0, queueLimit: 0 },
 	// kernels and copies are recorded into one command encoder, submitted before the host reads a result or after 64
@@ -106,19 +106,33 @@ addToLibrary({
 		}));
 	},
 	// a buffer of a kernel (strictWebGpuBuffer) goes back to its pool, the queue runs the commands in order, so the next
-	// kernel writes it only after earlier ones read it (up to 2 GB are kept: 512 MB still left Moss creating 1100 buffers a
-	// 480x848 step, 2 s instead of 1.5; 256 MB on phones and tablets, whose GPU shares the memory: a Galaxy S25 Ultra
+	// kernel writes it only after earlier ones read it (up to 4 GB are kept: 2 GB still left Moss creating 1250 to 1700
+	// buffers an image at 480x848, 3 s instead of 2; 256 MB on phones and tablets, whose GPU shares the memory: a Galaxy S25 Ultra
 	// killed the page at 5.7 GB), others are destroyed now or, when commands still to be submitted might use them, after
 	// their submit
-	$strictWebGpuDestroyed__deps: ['$strictWebGpu', '$strictWebGpuMobile'],
+	$strictWebGpuDestroyed__deps: ['$strictWebGpu', '$strictWebGpuMobile', '$strictWebGpuDropped'],
 	$strictWebGpuDestroyed: (buffer) => {
 		if (strictWebGpu.flags.has(buffer))
 			(strictWebGpu.encoder ? strictWebGpu.flagsUsed : strictWebGpu.flagPool).push(buffer);
-		else if (strictWebGpu.pooled.has(buffer) && strictWebGpu.pooledBytes + buffer.size <= (strictWebGpu.poolLimit ||=
-			strictWebGpuMobile() ? 268435456 : 2147483648)) {
+		else if (strictWebGpu.pooled.has(buffer) && buffer.size <= (strictWebGpu.poolLimit ||=
+			strictWebGpuMobile() ? 268435456 : 4294967296)) {
+			// the longest unused buffers make room: after another image size they are all of sizes no kernel asks for anymore
+			while (strictWebGpu.pooledBytes + buffer.size > strictWebGpu.poolLimit) {
+				const oldest = strictWebGpu.poolOrder.values().next().value, free = strictWebGpu.pool[oldest.size + ' ' + oldest.usage];
+				free.splice(free.indexOf(oldest), 1);
+				strictWebGpu.poolOrder.delete(oldest);
+				strictWebGpu.pooledBytes -= oldest.size;
+				strictWebGpuDropped(oldest);
+			}
 			(strictWebGpu.pool[buffer.size + ' ' + buffer.usage] ||= []).push(buffer);
+			strictWebGpu.poolOrder.add(buffer);
 			strictWebGpu.pooledBytes += buffer.size;
-		} else if (strictWebGpu.encoder)
+		} else
+			strictWebGpuDropped(buffer);
+	},
+	$strictWebGpuDropped__deps: ['$strictWebGpu'],
+	$strictWebGpuDropped: (buffer) => {
+		if (strictWebGpu.encoder)
 			strictWebGpu.unused.push(buffer);
 		else
 			buffer.destroy();
@@ -128,7 +142,9 @@ addToLibrary({
 		const size = Math.max(Math.ceil(bytes / 4) * 4, 4), free = strictWebGpu.pool[size + ' ' + usage];
 		if (free && free.length) {
 			strictWebGpu.pooledBytes -= size;
-			return free.pop();
+			const reused = free.pop();
+			strictWebGpu.poolOrder.delete(reused);
+			return reused;
 		}
 		const buffer = strictWebGpu.device.createBuffer({ size, usage });
 		strictWebGpu.pooled.add(buffer);
@@ -865,6 +881,7 @@ addToLibrary({
 		strictWebGpuFlush();
 		Object.values(strictWebGpu.pool).flat().concat(strictWebGpu.flagPool).forEach((buffer) => buffer.destroy());
 		strictWebGpu.pool = {};
+		strictWebGpu.poolOrder.clear();
 		strictWebGpu.flagPool = [];
 		strictWebGpu.pooledBytes = 0;
 	},

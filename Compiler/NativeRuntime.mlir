@@ -8492,7 +8492,7 @@
   ^done:
     return
   }
-  // release builds (strict build X windows or linux, NativeBuild.Released) set it to 0: a shipped program does not stop,
+  // release builds (strict build X windows or linux, NativeBuild.Released) and web pages set it to 0: a shipped program does not stop,
   // it warns once on the console instead
   llvm.mlir.global internal @strict_gc_watching(1 : i64) : i64
   llvm.mlir.global internal @strict_gc_warned(0 : i64) : i64
@@ -15524,6 +15524,8 @@
   llvm.mlir.global internal constant @strict_gpu_unloaded_text("the GPU driver did not load the kernels next to the executable\00") : !llvm.array<63 x i8>
   llvm.mlir.global internal constant @strict_gpu_required_format("Error: STRICT_GPU=all but %s\0A\00") : !llvm.array<30 x i8>
   llvm.mlir.global internal constant @strict_gpu_cpu_format("%s, GPU loops run on the CPU\0A\00") : !llvm.array<30 x i8>
+  // web pages set it to 0 (NativeBuild.Released): their loops run through WGSL, no native driver is ever opened
+  llvm.mlir.global internal @strict_gpu_cpu_notice(1 : i64) : i64
   func.func private @strict_gpu_required(%message: !llvm.ptr) {
     %one = arith.constant 1 : i64
     %minimum = func.call @strict_gpu_threshold() : () -> i64
@@ -15536,8 +15538,16 @@
     llvm.call @exit(%exitCode) : (i32) -> ()
     cf.br ^done
   ^done:
+    %noticeSlot = llvm.mlir.addressof @strict_gpu_cpu_notice : !llvm.ptr
+    %notice = llvm.load %noticeSlot : !llvm.ptr -> i64
+    %none = arith.constant 0 : i64
+    %isNoticed = arith.cmpi ne, %notice, %none : i64
+    cf.cond_br %isNoticed, ^notify, ^quiet
+  ^notify:
     %cpuFormat = llvm.mlir.addressof @strict_gpu_cpu_format : !llvm.ptr
     %logged = llvm.call @printf(%cpuFormat, %message) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr) -> i32
+    cf.br ^quiet
+  ^quiet:
     return
   }
   // the path of the executable copied out of the collected heap once: the warm thread must not allocate there, the

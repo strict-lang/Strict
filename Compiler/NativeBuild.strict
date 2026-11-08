@@ -12,6 +12,7 @@ has gated List(TypeEntry) = List(TypeEntry)
 constant Logged = List(TypeEntry) + TypeEntry.HelloLogger
 constant Broken = "module {\n  func.func private @A() -> f64 {\n    return %missing : f64\n  }\n}"
 constant Watching = "llvm.mlir.global internal @strict_gc_watching(1 : i64)"
+constant CpuNotice = "llvm.mlir.global internal @strict_gpu_cpu_notice(1 : i64)"
 Folder NativeFolder
 	NativeBuild(Logger, gated = Logged).Folder.gated is Logged
 	NativeBuild(Logger, selection = "A").Folder.selection is "A"
@@ -155,7 +156,11 @@ Mlir(program Text, root Text, platform Number) Slow(Text)
 Released(mlir Text) Text
 	NativeBuild(Logger, false, isReleased = true).Released(Watching) is Watching.Replace("(1 : i64)", "(0 : i64)")
 	NativeBuild(Logger, false).Released(Watching) is Watching
-	isReleased or isCrossing then mlir.Replace(Watching, Watching.Replace("(1 : i64)", "(0 : i64)")) else mlir
+	NativeBuild(Logger, isWeb = true).Released(Watching) is Watching.Replace("(1 : i64)", "(0 : i64)")
+	NativeBuild(Logger, isWeb = true).Released(CpuNotice) is CpuNotice.Replace("(1 : i64)", "(0 : i64)")
+	NativeBuild(Logger, false).Released(CpuNotice) is CpuNotice
+	let quiet = isWeb then mlir.Replace(CpuNotice, CpuNotice.Replace("(1 : i64)", "(0 : i64)")) else mlir
+	isReleased or isCrossing or isWeb then quiet.Replace(Watching, Watching.Replace("(1 : i64)", "(0 : i64)")) else quiet
 Failure(program Text) Text
 	NativeBuild.Failure("unsupported: a\nb") is "unsupported: a\nb"
 	NativeBuild.Failure("x\nunsupported: a\nb") is "unsupported: a"
