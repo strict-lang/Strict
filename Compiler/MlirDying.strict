@@ -60,3 +60,14 @@ Returned(entry InstructionEntry) Texts
 			let dead = "    func.call @strict_rc_dead(" + old + ", " + returned + ") : (f64, f64) -> ()"
 			lines = lines + function.Load(old, "%v_" + value) + dead
 	lines
+Adder(name Text) Text
+	MlirDying(MlirOwned.Moving, 0).Adder("moved") is "strict_list_add_owned"
+	MlirDying(MlirCarried.Carrying.function, 0).Adder("kept") is "strict_list_add_owned"
+	MlirDying(Seeding, 0).Adder("moved") is "strict_list_add"
+	MlirDying(MlirOwned.Copying, 0).Adder("moved") is "strict_list_add"
+	MlirDying(Seeding, 0).Adder("forResult") is "strict_list_push"
+	MlirDying(Seeding, 0).Adder("listResult3") is "strict_list_push"
+	if (name is "forResult") or name.StartsWith("listResult")
+		return "strict_list_push"
+	let isOwned = MlirOwned(function, position).IsOwned(name) or MlirCarried(function).IsCarried(name)
+	isOwned then "strict_list_add_owned" else "strict_list_add"
