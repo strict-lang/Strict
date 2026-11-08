@@ -3,4 +3,3 @@ Open speed work that can be done soon, one short line each, measurements go into
 
 ## Soon
 - MossWeb 480p after 720p images in the same page is 15-20 % slower than in a fresh page (fastest 5.1-5.7 instead of 4.3-4.5 s an image on a 3080): the WebGPU buffer pool probably keeps the 720p sized buffers, smaller sizes should reuse or shrink them.
-- Loading Moss with several LoRAs got about 2 s slower since 2026-11-04 (three LoRAs 8.6-9.1 s before, 10.1-11.1 s now): find what changed.
