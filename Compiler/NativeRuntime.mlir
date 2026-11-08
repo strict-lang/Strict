@@ -15912,6 +15912,14 @@
     return
   }
   func.func private @strict_gpu_alloc(%bytes: i64) -> i64 {
+    %mayTake = arith.constant true
+    %device = func.call @strict_gpu_allocated(%bytes, %mayTake) : (i64, i1) -> i64
+    return %device : i64
+  }
+  // short of memory the allocation of spilled rows is taken over (mayTake, strict_gpu_handed) before the driver frees
+  // anything: on the one stream its new owner runs after the launches reading the old rows, an upload on a stream of its
+  // own (strict_gpu_put_aside) would not
+  func.func private @strict_gpu_allocated(%bytes: i64, %mayTake: i1) -> i64 {
     %zero = arith.constant 0 : i64
     %zero32 = arith.constant 0 : i32
     %one = arith.constant 1 : i64
@@ -15922,6 +15930,15 @@
     %short = arith.cmpi ult, %free, %needed : i64
     cf.cond_br %short, ^release, ^allocate
   ^release:
+    cf.cond_br %mayTake, ^take, ^starve
+  ^take:
+    %atLeast = arith.constant true
+    %taken = func.call @strict_gpu_handed(%bytes, %atLeast) : (i64, i1) -> i64
+    %isTaken = arith.cmpi ne, %taken, %zero : i64
+    cf.cond_br %isTaken, ^taken, ^starve
+  ^taken:
+    cf.br ^done(%taken : i64)
+  ^starve:
     %shortfall = arith.subi %needed, %free : i64
     %releasedEarly = func.call @strict_gpu_starved(%shortfall) : (i64) -> i1
     cf.br ^allocate
@@ -15945,7 +15962,7 @@
     %released = func.call @strict_gpu_starved(%needed) : (i64) -> i1
     cf.cond_br %released, ^again, ^done(%zero : i64)
   ^again:
-    %again = func.call @strict_gpu_alloc(%bytes) : (i64) -> i64
+    %again = func.call @strict_gpu_allocated(%bytes, %mayTake) : (i64, i1) -> i64
     cf.br ^done(%again : i64)
   ^done(%chosen: i64):
     return %chosen : i64
@@ -16989,19 +17006,15 @@
     cf.cond_br %trimNeeded, ^shortOwn, ^allocateOwn
   ^shortOwn:
     %shortfall = arith.subi %ownNeeded, %freeForOwn : i64
-    // with streamed rows spilled evict those first instead of trimming pool blocks the next layers allocate again
+    // with streamed rows spilled strict_gpu_alloc takes the allocation of one of them instead of trimming pool blocks the
+    // next layers allocate again (evicting 2 GB of them freed and allocated every block on the driver)
     %spilledSlot = llvm.mlir.addressof @strict_gpu_spilled_bytes : !llvm.ptr
     %spilledCopies = llvm.load %spilledSlot : !llvm.ptr -> i64
     %hostedBytesSlot = llvm.mlir.addressof @strict_gpu_hosted_bytes : !llvm.ptr
     %hostedBytes = llvm.load %hostedBytesSlot : !llvm.ptr -> i64
     %spilled = arith.addi %spilledCopies, %hostedBytes : i64
     %noneSpilled = arith.cmpi eq, %spilled, %none : i64
-    cf.cond_br %noneSpilled, ^trimOwn(%shortfall : i64), ^evictOwn(%shortfall : i64)
-  ^evictOwn(%evictShortfall: i64):
-    %spilledOnlyOwn = arith.constant true
-    %lastUsesOwn = arith.constant 16 : i64
-    %evictedOwn = func.call @strict_gpu_evicted(%evictShortfall, %spilledOnlyOwn, %lastUsesOwn) : (i64, i1, i64) -> i1
-    cf.br ^allocateOwn
+    cf.cond_br %noneSpilled, ^trimOwn(%shortfall : i64), ^allocateOwn
   ^trimOwn(%trimShortfall: i64):
     %waiting = arith.constant true
     %trimmed = func.call @strict_gpu_trim(%trimShortfall, %none, %waiting) : (i64, i64, i1) -> i64
@@ -17287,7 +17300,8 @@
     %everything = arith.constant 1099511627776 : i64
     %anyKind = arith.constant false
     %noneKept = arith.constant -1 : i64
-    %evicted = func.call @strict_gpu_evicted(%everything, %anyKind, %noneKept) : (i64, i1, i64) -> i1
+    %noHeadroom = arith.constant 0 : i64
+    %evicted = func.call @strict_gpu_evicted(%everything, %anyKind, %noneKept, %noHeadroom) : (i64, i1, i64, i64) -> i1
     %most = arith.constant 9223372036854775807 : i64
     %none = arith.constant 0 : i64
     %full = arith.constant true
@@ -17295,6 +17309,44 @@
     %freed = arith.uitofp %trimmed : i64 to f64
     %total = arith.addf %released, %freed : f64
     cf.br ^done(%total : f64)
+  ^done(%result: f64):
+    return %result : f64
+  }
+  // `GpuMemory.Freed(bytes)`: device copies go until bytes are free for the next work, rows with a pinned copy first, none
+  // of the last 16 uses, after one wait for the GPU: what a program frees in one go before a phase that needs that much
+  // (H3 before its VAE decode) instead of starving for it allocation by allocation; the bytes free then (0 without a GPU)
+  func.func private @strict_gpu_freed(%self: f64, %bytesNumber: f64) -> f64 {
+    %one = arith.constant 1 : i64
+    %zero = arith.constant 0.0 : f64
+    %stateSlot = llvm.mlir.addressof @strict_gpu_state : !llvm.ptr
+    %state = llvm.load %stateSlot : !llvm.ptr -> i64
+    %isOpen = arith.cmpi eq, %state, %one : i64
+    cf.cond_br %isOpen, ^measure, ^done(%zero : f64)
+  ^measure:
+    %wanted = arith.fptoui %bytesNumber : f64 to i64
+    %free = func.call @strict_gpu_free_memory() : () -> i64
+    %short = arith.cmpi ult, %free, %wanted : i64
+    cf.cond_br %short, ^evict, ^measured
+  ^evict:
+    %needed = arith.subi %wanted, %free : i64
+    func.call @strict_gpu_replay() : () -> ()
+    func.call @strict_gpu_synchronize() : () -> ()
+    %lastUses = arith.constant 16 : i64
+    %noHeadroom = arith.constant 0 : i64
+    %spilledOnly = arith.constant true
+    %pinned = func.call @strict_gpu_evicted(%needed, %spilledOnly, %lastUses, %noHeadroom) : (i64, i1, i64, i64) -> i1
+    %after = func.call @strict_gpu_free_memory() : () -> i64
+    %stillShort = arith.cmpi ult, %after, %wanted : i64
+    cf.cond_br %stillShort, ^any, ^measured
+  ^any:
+    %missing = arith.subi %wanted, %after : i64
+    %anyKind = arith.constant false
+    %others = func.call @strict_gpu_evicted(%missing, %anyKind, %lastUses, %noHeadroom) : (i64, i1, i64, i64) -> i1
+    cf.br ^measured
+  ^measured:
+    %left = func.call @strict_gpu_free_memory() : () -> i64
+    %leftNumber = arith.uitofp %left : i64 to f64
+    cf.br ^done(%leftNumber : f64)
   ^done(%result: f64):
     return %result : f64
   }
@@ -17510,7 +17562,8 @@
     %sparedFirst = func.call @strict_gpu_unspared() : () -> i64
     %spilledOnly = arith.constant true
     %lastUses = arith.constant 16 : i64
-    %restored = func.call @strict_gpu_evicted(%needed, %spilledOnly, %lastUses) : (i64, i1, i64) -> i1
+    %headroom = arith.constant 2147483648 : i64
+    %restored = func.call @strict_gpu_evicted(%needed, %spilledOnly, %lastUses, %headroom) : (i64, i1, i64, i64) -> i1
     cf.cond_br %restored, ^enough, ^trim
   ^trim:
     %full = arith.constant true
@@ -17530,7 +17583,7 @@
     %missing = arith.subi %needed, %released : i64
     %anyRows = arith.constant false
     %rowUses = arith.constant 16 : i64
-    %evicted = func.call @strict_gpu_evicted(%missing, %anyRows, %rowUses) : (i64, i1, i64) -> i1
+    %evicted = func.call @strict_gpu_evicted(%missing, %anyRows, %rowUses, %headroom) : (i64, i1, i64, i64) -> i1
     %either = arith.ori %any, %evicted : i1
     cf.cond_br %either, ^enough, ^cold
   ^cold:
@@ -17541,19 +17594,19 @@
     %true = arith.constant true
     return %true : i1
   }
-  // device copies of live host lists in allocations of their own go until the driver has needed bytes and 2 GB more
+  // device copies of live host lists in allocations of their own go until the driver has needed bytes and headroom more
+  // (2 GB when starving)
   // (each round waits for the GPU and collects), the most recently used first but none of the last 16 uses or of the
   // prepared launches (they need them): weights used in turn every step (more blocks than fit) keep all but the ones streamed
   // through the same memory, evicting the least recently used would evict the next block every time; rows with a pinned
   // copy go first (only them when spilledOnly), so the streamed ones stay the same; true when one went (the list uploads
   // again at its next use); a window of -1 keeps none of the last uses (GpuMemory.Evicted between jobs)
-  func.func private @strict_gpu_evicted(%needed: i64, %spilledOnly: i1, %window: i64) -> i1 {
+  func.func private @strict_gpu_evicted(%needed: i64, %spilledOnly: i1, %window: i64, %headroom: i64) -> i1 {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %entries = arith.constant 65536 : i64
     %false = arith.constant false
     %true = arith.constant true
-    %headroom = arith.constant 2147483648 : i64
     %notOnly = arith.xori %spilledOnly, %true : i1
     %start = func.call @strict_gpu_free_memory() : () -> i64
     %wanted = arith.addi %start, %needed : i64
@@ -17756,11 +17809,11 @@
     return
   }
   // the allocation of the most recently used rows outside the last 16 uses and the prepared launches that have a pinned
-  // copy of total bytes (the
-  // weights streamed every step all have their sizes), taken over for an upload when the driver is short of memory: the
-  // copy runs after the launches reading the old rows on the one stream, without a collection, a wait for the GPU or a
-  // driver free and allocation (30 ms per H3 block); 0 when the driver has room or no such rows are on the GPU
-  func.func private @strict_gpu_handed(%total: i64) -> i64 {
+  // copy of total bytes (at least total with atLeast, the weights streamed every step all have their sizes), taken over
+  // for an upload when the driver is short of memory: the copy runs after the launches reading the old rows on the one
+  // stream, without a collection, a wait for the GPU or a driver free and allocation (30 ms per H3 block); 0 when the
+  // driver has room or no such rows are on the GPU
+  func.func private @strict_gpu_handed(%total: i64, %atLeast: i1) -> i64 {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %window = arith.constant 16 : i64
@@ -17810,6 +17863,8 @@
     %spillTotalSlot = llvm.getelementptr %spill[3] : (!llvm.ptr) -> !llvm.ptr, i64
     %spillTotal = llvm.load %spillTotalSlot : !llvm.ptr -> i64
     %sameSize = arith.cmpi eq, %spillTotal, %total : i64
+    %largeEnough = arith.cmpi uge, %spillTotal, %total : i64
+    %sizeFits = arith.select %atLeast, %largeEnough, %sameSize : i1
     %rowsDeviceSlot = llvm.getelementptr %entry[1] : (!llvm.ptr) -> !llvm.ptr, i64
     %rowsDevice = llvm.load %rowsDeviceSlot : !llvm.ptr -> i64
     %active = func.call @strict_gpu_active_has(%rowsDevice) : (i64) -> i1
@@ -17822,7 +17877,7 @@
     %isSecondPending = arith.cmpi eq, %rowsDevice, %secondPending : i64
     %isPending = arith.ori %isFirstPending, %isSecondPending : i1
     %blocked = arith.ori %active, %isPending : i1
-    %fits = arith.select %blocked, %false, %sameSize : i1
+    %fits = arith.select %blocked, %false, %sizeFits : i1
     %chosenIndex = arith.select %fits, %following, %best : i64
     %chosenUse = arith.select %fits, %used, %bestUse : i64
     cf.br ^scan(%following, %chosenIndex, %chosenUse : i64, i64, i64)
@@ -17855,7 +17910,8 @@
   ^allocate:
     %totalSlot = llvm.getelementptr %slot[3] : (!llvm.ptr) -> !llvm.ptr, i64
     %total = llvm.load %totalSlot : !llvm.ptr -> i64
-    %handed = func.call @strict_gpu_handed(%total) : (i64) -> i64
+    %exactSize = arith.constant false
+    %handed = func.call @strict_gpu_handed(%total, %exactSize) : (i64, i1) -> i64
     %isHanded = arith.cmpi ne, %handed, %none : i64
     cf.cond_br %isHanded, ^upload(%handed : i64), ^driver
   ^driver:
@@ -19520,7 +19576,8 @@
   ^place:
     %totalSlot = llvm.getelementptr %slot[3] : (!llvm.ptr) -> !llvm.ptr, i64
     %total = llvm.load %totalSlot : !llvm.ptr -> i64
-    %handed = func.call @strict_gpu_handed(%total) : (i64) -> i64
+    %exactSize = arith.constant false
+    %handed = func.call @strict_gpu_handed(%total, %exactSize) : (i64, i1) -> i64
     %isHanded = arith.cmpi ne, %handed, %none : i64
     cf.cond_br %isHanded, ^upload(%handed : i64), ^room
   ^room:
@@ -23654,7 +23711,8 @@
   ^upload:
     cf.cond_br %big, ^dedicated, ^temporary
   ^dedicated:
-    %dedicated = func.call @strict_gpu_alloc(%total) : (i64) -> i64
+    %uploadedAside = arith.constant false
+    %dedicated = func.call @strict_gpu_allocated(%total, %uploadedAside) : (i64, i1) -> i64
     llvm.store %dedicated, %buffer : i64, !llvm.ptr
     cf.br ^allocated(%dedicated : i64)
   ^temporary:

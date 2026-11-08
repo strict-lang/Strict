@@ -10,6 +10,9 @@ Finished Number
 Held Number
 	GpuMemory.Held >= 0
 	0
+Freed(bytes Number) Number
+	GpuMemory.Freed(0) >= 0
+	0
 Available Number
 	GpuMemory.Available >= 0
 	0
