@@ -17796,7 +17796,11 @@
     %ahead = llvm.mlir.addressof @strict_gpu_ahead : !llvm.ptr
     %pendingSlot = llvm.getelementptr %ahead[3] : (!llvm.ptr) -> !llvm.ptr, i64
     %pending = llvm.load %pendingSlot : !llvm.ptr -> i64
-    %isPending = arith.cmpi eq, %rowsDevice, %pending : i64
+    %secondPendingSlot = llvm.getelementptr %ahead[8] : (!llvm.ptr) -> !llvm.ptr, i64
+    %secondPending = llvm.load %secondPendingSlot : !llvm.ptr -> i64
+    %isFirstPending = arith.cmpi eq, %rowsDevice, %pending : i64
+    %isSecondPending = arith.cmpi eq, %rowsDevice, %secondPending : i64
+    %isPending = arith.ori %isFirstPending, %isSecondPending : i1
     %blocked = arith.ori %active, %isPending : i1
     %fits = arith.select %blocked, %false, %sameSize : i1
     %chosenIndex = arith.select %fits, %following, %best : i64
@@ -19312,8 +19316,9 @@
   }
   // the next spilled rows go up on a copy stream of their own while the launches before their first use run: copy
   // stream, event where an upload forks from the stream, event after the last upload, device of an upload the stream
-  // waits for at its next join, the spill and device of the rows that went up ahead, the spill that went up last
-  llvm.mlir.global internal @strict_gpu_ahead(dense<0> : tensor<7xi64>) : !llvm.array<7 x i64>
+  // waits for at its next join, the spill and device of the rows that went up ahead, the spill that went up last, then
+  // event, device, spill and device of a second upload (5 further): two go up ahead, one starts while the other runs
+  llvm.mlir.global internal @strict_gpu_ahead(dense<0> : tensor<11xi64>) : !llvm.array<11 x i64>
   func.func private @strict_gpu_ahead_create() {
     %none = arith.constant 0 : i64
     %ahead = llvm.mlir.addressof @strict_gpu_ahead : !llvm.ptr
@@ -19328,10 +19333,14 @@
     %forked = llvm.call %event(%forkSlot, %withoutTiming) : !llvm.ptr, (!llvm.ptr, i32) -> i32
     %copiedSlot = llvm.getelementptr %ahead[2] : (!llvm.ptr) -> !llvm.ptr, i64
     %copied = llvm.call %event(%copiedSlot, %withoutTiming) : !llvm.ptr, (!llvm.ptr, i32) -> i32
+    %secondSlot = llvm.getelementptr %ahead[7] : (!llvm.ptr) -> !llvm.ptr, i64
+    %second = llvm.call %event(%secondSlot, %withoutTiming) : !llvm.ptr, (!llvm.ptr, i32) -> i32
     %zero32 = arith.constant 0 : i32
     %isForked = arith.cmpi eq, %forked, %zero32 : i32
     %isCopied = arith.cmpi eq, %copied, %zero32 : i32
-    %hasEvents = arith.andi %isForked, %isCopied : i1
+    %isSecond = arith.cmpi eq, %second, %zero32 : i32
+    %bothEvents = arith.andi %isForked, %isCopied : i1
+    %hasEvents = arith.andi %bothEvents, %isSecond : i1
     cf.cond_br %hasEvents, ^stream, ^done
   ^stream:
     %createIndex = arith.constant 16 : i64
@@ -19342,8 +19351,9 @@
   ^done:
     return
   }
-  // bytes of host go up on the copy stream after the launches so far, the launches after the next join wait for them
-  func.func private @strict_gpu_put_ahead(%device: i64, %host: !llvm.ptr, %bytes: i64) -> i1 {
+  // bytes of host go up on the copy stream after the launches so far, the launches after the next join of base (0 or 5
+  // for the second upload) wait for them
+  func.func private @strict_gpu_put_ahead(%device: i64, %host: !llvm.ptr, %bytes: i64, %base: i64) -> i1 {
     %zero32 = arith.constant 0 : i32
     %ahead = llvm.mlir.addressof @strict_gpu_ahead : !llvm.ptr
     %copyBits = llvm.load %ahead : !llvm.ptr -> i64
@@ -19351,7 +19361,9 @@
     %forkSlot = llvm.getelementptr %ahead[1] : (!llvm.ptr) -> !llvm.ptr, i64
     %forkBits = llvm.load %forkSlot : !llvm.ptr -> i64
     %fork = llvm.inttoptr %forkBits : i64 to !llvm.ptr
-    %copiedSlot = llvm.getelementptr %ahead[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %two = arith.constant 2 : i64
+    %copiedAt = arith.addi %base, %two : i64
+    %copiedSlot = llvm.getelementptr %ahead[%copiedAt] : (!llvm.ptr, i64) -> !llvm.ptr, i64
     %copiedBits = llvm.load %copiedSlot : !llvm.ptr -> i64
     %copied = llvm.inttoptr %copiedBits : i64 to !llvm.ptr
     %stream = func.call @strict_gpu_stream() : () -> !llvm.ptr
@@ -19365,7 +19377,9 @@
     %put = func.call @strict_gpu_call(%putIndex) : (i64) -> !llvm.ptr
     %result = llvm.call %put(%device, %host, %bytes, %copy) : !llvm.ptr, (i64, !llvm.ptr, i64, !llvm.ptr) -> i32
     %recorded = llvm.call %record(%copied, %copy) : !llvm.ptr, (!llvm.ptr, !llvm.ptr) -> i32
-    %pendingSlot = llvm.getelementptr %ahead[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %three = arith.constant 3 : i64
+    %pendingAt = arith.addi %base, %three : i64
+    %pendingSlot = llvm.getelementptr %ahead[%pendingAt] : (!llvm.ptr, i64) -> !llvm.ptr, i64
     llvm.store %device, %pendingSlot : i64, !llvm.ptr
     func.call @strict_gpu_captured(%wait) : (!llvm.ptr) -> ()
     %done = arith.cmpi eq, %result, %zero32 : i32
@@ -19374,15 +19388,27 @@
   // the launches after this wait for the uploads ahead when one is pending (before a capture begins or ends, at the first
   // use of rows that went up ahead)
   func.func private @strict_gpu_ahead_join() {
+    %none = arith.constant 0 : i64
+    %five = arith.constant 5 : i64
+    func.call @strict_gpu_ahead_joined(%none) : (i64) -> ()
+    func.call @strict_gpu_ahead_joined(%five) : (i64) -> ()
+    return
+  }
+  // the launches after this wait for the upload of base (0, or 5 for the second one) when it is pending
+  func.func private @strict_gpu_ahead_joined(%base: i64) {
     %zero32 = arith.constant 0 : i32
     %none = arith.constant 0 : i64
+    %two = arith.constant 2 : i64
+    %three = arith.constant 3 : i64
     %ahead = llvm.mlir.addressof @strict_gpu_ahead : !llvm.ptr
-    %pendingSlot = llvm.getelementptr %ahead[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %pendingAt = arith.addi %base, %three : i64
+    %pendingSlot = llvm.getelementptr %ahead[%pendingAt] : (!llvm.ptr, i64) -> !llvm.ptr, i64
     %pending = llvm.load %pendingSlot : !llvm.ptr -> i64
     %isPending = arith.cmpi ne, %pending, %none : i64
     cf.cond_br %isPending, ^join, ^done
   ^join:
-    %copiedSlot = llvm.getelementptr %ahead[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %copiedAt = arith.addi %base, %two : i64
+    %copiedSlot = llvm.getelementptr %ahead[%copiedAt] : (!llvm.ptr, i64) -> !llvm.ptr, i64
     %copiedBits = llvm.load %copiedSlot : !llvm.ptr -> i64
     %copied = llvm.inttoptr %copiedBits : i64 to !llvm.ptr
     %waitIndex = arith.constant 33 : i64
@@ -19394,7 +19420,7 @@
   ^done:
     return
   }
-  // the spill that went up last gets slot as its next one, the next one of slot goes up ahead
+  // the spill that went up last gets slot as its next one, the next two of slot go up ahead
   func.func private @strict_gpu_followed(%slot: !llvm.ptr) {
     %none = arith.constant 0 : i64
     %ahead = llvm.mlir.addressof @strict_gpu_ahead : !llvm.ptr
@@ -19415,19 +19441,46 @@
     %nextSlot = llvm.getelementptr %slot[7] : (!llvm.ptr) -> !llvm.ptr, i64
     %next = llvm.load %nextSlot : !llvm.ptr -> i64
     func.call @strict_gpu_prefetch(%next) : (i64) -> ()
+    %hasNext = arith.cmpi ne, %next, %none : i64
+    cf.cond_br %hasNext, ^further, ^done
+  ^further:
+    %nextSpill = llvm.inttoptr %next : i64 to !llvm.ptr
+    %furtherSlot = llvm.getelementptr %nextSpill[7] : (!llvm.ptr) -> !llvm.ptr, i64
+    %further = llvm.load %furtherSlot : !llvm.ptr -> i64
+    func.call @strict_gpu_prefetch(%further) : (i64) -> ()
+    cf.br ^done
+  ^done:
     return
   }
-  // the rows of spill slot next (its address, 0 for none) go up ahead when they are not on the GPU, one at a time
+  // the rows of spill slot next (its address, 0 for none) go up ahead when they are not on the GPU, two at a time: into
+  // the upload slot whose rows were used, else one whose copy was joined
   func.func private @strict_gpu_prefetch(%next: i64) {
     %none = arith.constant 0 : i64
     %two = arith.constant 2 : i64
     %three = arith.constant 3 : i64
+    %four = arith.constant 4 : i64
     %ahead = llvm.mlir.addressof @strict_gpu_ahead : !llvm.ptr
     %copy = llvm.load %ahead : !llvm.ptr -> i64
-    %pendingSlot = llvm.getelementptr %ahead[3] : (!llvm.ptr) -> !llvm.ptr, i64
-    %pending = llvm.load %pendingSlot : !llvm.ptr -> i64
+    %five = arith.constant 5 : i64
+    %firstPendingSlot = llvm.getelementptr %ahead[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %firstPending = llvm.load %firstPendingSlot : !llvm.ptr -> i64
+    %firstDeviceSlot = llvm.getelementptr %ahead[5] : (!llvm.ptr) -> !llvm.ptr, i64
+    %firstDevice = llvm.load %firstDeviceSlot : !llvm.ptr -> i64
+    %secondPendingSlot = llvm.getelementptr %ahead[8] : (!llvm.ptr) -> !llvm.ptr, i64
+    %secondPending = llvm.load %secondPendingSlot : !llvm.ptr -> i64
+    %secondDeviceSlot = llvm.getelementptr %ahead[10] : (!llvm.ptr) -> !llvm.ptr, i64
+    %secondDevice = llvm.load %secondDeviceSlot : !llvm.ptr -> i64
+    %firstJoined = arith.cmpi eq, %firstPending, %none : i64
+    %secondJoined = arith.cmpi eq, %secondPending, %none : i64
+    %firstUsed = arith.cmpi eq, %firstDevice, %none : i64
+    %secondUsed = arith.cmpi eq, %secondDevice, %none : i64
+    %firstFree = arith.andi %firstJoined, %firstUsed : i1
+    %secondFree = arith.andi %secondJoined, %secondUsed : i1
+    %joinedBase = arith.select %firstJoined, %none, %five : i64
+    %freeBase = arith.select %secondFree, %five, %joinedBase : i64
+    %base = arith.select %firstFree, %none, %freeBase : i64
     %hasCopy = arith.cmpi ne, %copy, %none : i64
-    %isIdle = arith.cmpi eq, %pending, %none : i64
+    %isIdle = arith.ori %firstJoined, %secondJoined : i1
     %hasNext = arith.cmpi ne, %next, %none : i64
     %canStart = arith.andi %hasCopy, %isIdle : i1
     %ready = arith.andi %canStart, %hasNext : i1
@@ -19464,7 +19517,7 @@
     %pinnedSlot = llvm.getelementptr %slot[2] : (!llvm.ptr) -> !llvm.ptr, i64
     %pinned = llvm.load %pinnedSlot : !llvm.ptr -> i64
     %host = llvm.inttoptr %pinned : i64 to !llvm.ptr
-    %put = func.call @strict_gpu_put_ahead(%device, %host, %total) : (i64, !llvm.ptr, i64) -> i1
+    %put = func.call @strict_gpu_put_ahead(%device, %host, %total, %base) : (i64, !llvm.ptr, i64, i64) -> i1
     cf.cond_br %put, ^view, ^failed
   ^failed:
     func.call @strict_gpu_ahead_join() : () -> ()
@@ -19479,9 +19532,11 @@
     %kindSlot = llvm.getelementptr %slot[6] : (!llvm.ptr) -> !llvm.ptr, i64
     %kind = llvm.load %kindSlot : !llvm.ptr -> i64
     func.call @strict_gpu_remember(%list, %kind, %count, %out, %none) : (f64, i64, i64, !llvm.ptr, i64) -> ()
-    %aheadSlot = llvm.getelementptr %ahead[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    %spillAt = arith.addi %base, %four : i64
+    %aheadSlot = llvm.getelementptr %ahead[%spillAt] : (!llvm.ptr, i64) -> !llvm.ptr, i64
     llvm.store %next, %aheadSlot : i64, !llvm.ptr
-    %aheadDevice = llvm.getelementptr %ahead[5] : (!llvm.ptr) -> !llvm.ptr, i64
+    %deviceAt = arith.addi %base, %five : i64
+    %aheadDevice = llvm.getelementptr %ahead[%deviceAt] : (!llvm.ptr, i64) -> !llvm.ptr, i64
     llvm.store %device, %aheadDevice : i64, !llvm.ptr
     cf.br ^done
   ^done:
@@ -19490,18 +19545,30 @@
   // the first use of rows that went up ahead waits for their upload and sends the next ones up
   func.func private @strict_gpu_ahead_hit(%out: !llvm.ptr) {
     %none = arith.constant 0 : i64
+    %four = arith.constant 4 : i64
+    %five = arith.constant 5 : i64
     %ahead = llvm.mlir.addressof @strict_gpu_ahead : !llvm.ptr
     %device = llvm.load %out : !llvm.ptr -> i64
-    %aheadDevice = llvm.getelementptr %ahead[5] : (!llvm.ptr) -> !llvm.ptr, i64
-    %expected = llvm.load %aheadDevice : !llvm.ptr -> i64
-    %isExpected = arith.cmpi eq, %device, %expected : i64
-    %isSet = arith.cmpi ne, %expected, %none : i64
-    %wentAhead = arith.andi %isExpected, %isSet : i1
+    %firstSlot = llvm.getelementptr %ahead[5] : (!llvm.ptr) -> !llvm.ptr, i64
+    %first = llvm.load %firstSlot : !llvm.ptr -> i64
+    %secondSlot = llvm.getelementptr %ahead[10] : (!llvm.ptr) -> !llvm.ptr, i64
+    %second = llvm.load %secondSlot : !llvm.ptr -> i64
+    %isFirstDevice = arith.cmpi eq, %device, %first : i64
+    %hasFirst = arith.cmpi ne, %first, %none : i64
+    %isFirst = arith.andi %isFirstDevice, %hasFirst : i1
+    %isSecondDevice = arith.cmpi eq, %device, %second : i64
+    %hasSecond = arith.cmpi ne, %second, %none : i64
+    %isSecond = arith.andi %isSecondDevice, %hasSecond : i1
+    %wentAhead = arith.ori %isFirst, %isSecond : i1
+    %base = arith.select %isSecond, %five, %none : i64
     cf.cond_br %wentAhead, ^take, ^done
   ^take:
-    func.call @strict_gpu_ahead_join() : () -> ()
+    func.call @strict_gpu_ahead_joined(%base) : (i64) -> ()
+    %deviceAt = arith.addi %base, %five : i64
+    %aheadDevice = llvm.getelementptr %ahead[%deviceAt] : (!llvm.ptr, i64) -> !llvm.ptr, i64
     llvm.store %none, %aheadDevice : i64, !llvm.ptr
-    %aheadSlot = llvm.getelementptr %ahead[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    %spillAt = arith.addi %base, %four : i64
+    %aheadSlot = llvm.getelementptr %ahead[%spillAt] : (!llvm.ptr, i64) -> !llvm.ptr, i64
     %slotBits = llvm.load %aheadSlot : !llvm.ptr -> i64
     %slot = llvm.inttoptr %slotBits : i64 to !llvm.ptr
     func.call @strict_gpu_followed(%slot) : (!llvm.ptr) -> ()
