@@ -36,7 +36,8 @@ Ended(loop SyntaxNode, looped CodeBlock, start CodeBlock) CodeBlock
 	Plain.Ended(Counting, Returned, Returned).instructions.Last.payload is (0)
 	Plain.Ended(Counting, Returned, Returned).instructions.Length is 2
 	let isRepeated = loop.text is "for as long as"
-	let checked = isRepeated then OperatorCodegen(values).Compared(loop.children(0), looped) else looped
+	let outside = CodeBlock(looped.instructions, looped.register, looped.nextId, start.scope)
+	let checked = isRepeated then OperatorCodegen(values).Compared(loop.children(0), outside) else looped
 	let offset = ByteEncoder.Empty.SevenBit(checked.instructions.Length - start.instructions.Length).bytes
 	let end = InstructionEntry(InstructionType.LoopEnd, List(Text), isRepeated then offset + -1 else offset)
 	CodeBlock(checked.instructions + end, checked.register, checked.nextId, start.scope)

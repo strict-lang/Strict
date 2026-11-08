@@ -1,0 +1,10 @@
+has numbers
+Doubled Number
+	LoopConditionMember((1, 2, 3)).Doubled is 4
+	mutable width = 1
+	for as long as width < Length
+		width = width * 2
+	width
+Length Number
+	LoopConditionMember((1, 2, 3)).Length is 3
+	numbers.Length
