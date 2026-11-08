@@ -19,6 +19,16 @@ constant Mixing = SyntaxParser(Tokenizer("p.Mixed((1, 2))").Tokens).Parse
 constant Choosing = SyntaxParser(Tokenizer("p.Chosen((\"a\", \"b\"))").Tokens).Parse
 constant LabelsMember = SyntaxNode("Member", "Labels", LabelsCall)
 constant Valued = ("Value(name Text, default Number) Text", "\tname", "Value(name Text, default Text) Text", "\tname")
+constant ListToText = KnownTypes(List(Text) + "List", List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(List(Text) + "to", List(Text) + "Text"), List(Scope) + KnownTypes.NoMembers)
+constant DefaultNames = ("from", "from types", "from", "from types", "b default", "Get", "Get types", "Get", "Get types", "Get count default")
+constant DefaultTypes = ("text", "Text", "a,b", "Number,Number", "0", "x,y", "Number,Number", "count", "Number", "1")
+constant Defaulted = Overloads(KnownTypes(List(Text) + "D", List(Scope) + KnownTypes.NoMembers, List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(DefaultNames, DefaultTypes)))
+constant ScalerInference = TypeInference(Scaler, (KnownTypes.NoMembers, KnownTypes.NoMembers))
+constant Scalers = Scope(List(Text) + "scaler", List(Text) + "Scaler")
+constant Unfitted = "NoOverloadFits: Scaler.Scaled got Scaler"
+constant Rescaled = SyntaxParser(Tokenizer("scaler.Scaled(scaler)").Tokens).Parse
+constant ScaledOnce = SyntaxParser(Tokenizer("scaler.Scaled(1)").Tokens).Parse
+constant ScaledTwice = SyntaxParser(Tokenizer("scaler.Scaled(1, 2)").Tokens).Parse
 constant Relabeled = Scope(("Labels", "Labels", "X"), ("Numbers", "List(Numbers)", "Number"))
 Chosen(owner Text, method Text, argumentTypes Texts) Number
 	Scaling.Chosen("Scaler", "Scaled", List(Text) + "Text") is 0
@@ -27,6 +37,8 @@ Chosen(owner Text, method Text, argumentTypes Texts) Number
 	Scaling.Chosen("Scaler", "*", List(Text) + "Byte") is 1
 	Scaling.Chosen("Scaler", "Missing", List(Text)) is -1
 	Scaling.Chosen("Scaler", "*", List(Text) + "Number") is 1
+	Defaulted.Chosen("D", "from", List(Text) + "Number") is 1
+	Defaulted.Chosen("D", "from", ("Number", "Number")) is 1
 	let exact = Ordinal(owner, method, argumentTypes, true)
 	exact >= 0 then exact else Ordinal(owner, method, argumentTypes, false)
 Ordinal(owner Text, method Text, argumentTypes Texts, isExact Boolean) Number
@@ -39,16 +51,35 @@ Ordinal(owner Text, method Text, argumentTypes Texts, isExact Boolean) Number
 	for scope.names
 		if value is method + " types"
 			ordinal = ordinal + 1
-			if Fits(types.ParameterNames(scope.types(index)), argumentTypes, owner, isExact)
+			let required = Required(owner, method, scope.TypeAt(method, ordinal).Split(","))
+			if Fits(types.ParameterNames(scope.types(index)), argumentTypes, owner, isExact, required)
 				return ordinal
 	-1
-Fits(declared Texts, argumentTypes Texts, owner Text, isExact Boolean) Boolean
-	Scaling.Fits(("Other", "Bytes"), ("Scaler", "List(Byte)"), "Scaler", true)
-	Scaling.Fits(List(Text) + "Texts", List(Text) + "Bytes", "Scaler", true) is false
-	if declared.Length is not argumentTypes.Length
+Required(owner Text, method Text, names Texts) Number
+	Defaulted.Required("D", "from", ("a", "b")) is 1
+	Defaulted.Required("D", "from", List(Text) + "text") is 1
+	Scaling.Required("Scaler", "Scaled", List(Text) + "text") is 1
+	Labeling.Required("Labeler", "Labels", List(Text) + "") is 0
+	Defaulted.Required("D", "Get", List(Text) + "count") is 0 and (Defaulted.Required("D", "Get", List(Text) + "b") is 1)
+	Defaulted.Chosen("D", "Get", List(Text) + "Number") is 1 and (Defaulted.Chosen("D", "Get", List(Text)) is 1)
+	let scope = types.ParameterScope(owner)
+	mutable required = 0
+	for names
+		let isOwn = scope.TypeOf(method + " " + value + " default") is not ""
+		let isMember = (method is "from") and (scope.TypeOf(value + " default") is not "")
+		if (value is not "") and ((isOwn or isMember) is false)
+			required = required + 1
+	required
+Fits(declared Texts, argumentTypes Texts, owner Text, isExact Boolean, required Number) Boolean
+	Scaling.Fits(("Other", "Bytes"), ("Scaler", "List(Byte)"), "Scaler", true, 2)
+	Scaling.Fits(List(Text) + "Texts", List(Text) + "Bytes", "Scaler", true, 1) is false
+	Scaling.Fits(("Number", "Number"), List(Text) + "Number", "Scaler", true, 1)
+	Scaling.Fits(("Number", "Number"), List(Text) + "Number", "Scaler", true, 2) is false
+	Scaling.Fits(List(Text) + "Number", ("Number", "Number"), "Scaler", true, 1) is false
+	if (argumentTypes.Length > declared.Length) or (argumentTypes.Length < required)
 		return false
-	for declared
-		if Assignable(argumentTypes(index), (value is "Other" then owner else value), isExact) is false
+	for argumentTypes
+		if Assignable(value, (declared(index) is "Other" then owner else declared(index)), isExact) is false
 			return false
 	true
 Assignable(argument Text, declared Text, isExact Boolean) Boolean
@@ -56,18 +87,46 @@ Assignable(argument Text, declared Text, isExact Boolean) Boolean
 	Scaling.Assignable("List(A, B)", "List(A, B)", true)
 	Scaling.Assignable("Number", "Generic", true) is false
 	Scaling.Assignable("Number", "Generic", false)
+	Scaling.Assignable("Bytes", "Numbers", false) and (Scaling.Assignable("Bytes", "Numbers", true) is false)
+	Scaling.Assignable("List(Bytes, Numbers)", "List(Numbers)", false)
+	Scaling.Assignable("List(Bytes, Text)", "List(Numbers)", false) is false
+	Scaling.Assignable("Bytes", "Generic", false) and (Scaling.Assignable("Bytes", "Number", false) is false)
+	Scaling.Assignable("Byte", "Bytes", false) and (Scaling.Assignable("Text", "Bytes", false) is false)
 	let isList = argument.StartsWith("List(") and (argument.IndexOf(",") < 0)
 	let plural = isList then argument.Substring(5, argument.Length - 6) + "s" else argument
 	if plural is declared
 		return true
-	(isExact is false) and Converts(argument, declared)
+	let elements = Elements(argument)
+	let wanted = Elements(declared)
+	if isExact or (wanted.Length is not 1)
+		return (isExact is false) and Converts(argument, declared)
+	if elements.Length is 0
+		return Assignable(argument, wanted.First, false)
+	Fitting(elements, wanted.First)
+Fitting(elements Texts, element Text) Boolean
+	Scaling.Fitting(("Byte", "Number"), "Number")
+	Scaling.Fitting(("Byte", "Text"), "Number") is false
+	for elements
+		if Assignable(value, element, false) is false
+			return false
+	true
+Elements(type Text) Texts
+	Scaling.Elements("Bytes") is ("Byte")
+	Scaling.Elements("List(Bytes, Numbers)") is ("Bytes", "Numbers")
+	Scaling.Elements("Byte").Length is 0
+	if type.StartsWith("List(")
+		return Instantiation(types).Arguments(type)
+	types.IsPlural(type) then List(Text) + types.ElementType(type) else List(Text)
 Converts(argument Text, declared Text) Boolean
 	Scaling.Converts("Byte", "Number")
 	Overloads(TypeInference.Colors.types).Converts("ColorValue", "Color")
 	Scaling.Converts("Text", "Number") is false
+	Overloads(ListToText).Converts("Texts", "Text") is false
+	Overloads(TypeInference.Colors.types).Converts("Color", "ColorValue")
 	if (declared is "Generic") or (types.ValueOf(declared) is argument) or (types.ValueOf(argument) is declared)
 		return true
-	TypeInference(types, List(Scope)).Converter(argument, declared) is not ""
+	let converter = TypeInference(types, List(Scope)).Converter(argument, declared)
+	(converter is "from") or (converter is "to") and (Elements(argument).Length is 0)
 Returned(node SyntaxNode, inference TypeInference, scope Scope, current Scope) Text
 	Labeling.Returned(LabelsCall, LabelInference, KnownTypes.NoMembers, Labeler.methods(0)) is "List(Numbers)"
 	Labeling.Returned(SyntaxNode("Call", "Labels"), LabelInference, KnownTypes.NoMembers, Labeler.methods(0)) is "Numbers"
@@ -93,6 +152,15 @@ Indexed(node SyntaxNode, current Scope) Text
 	let returned = current.TypeOf(node.text)
 	let isPlain = types.ParameterScope(types.names(position)).TypeOf(node.text) is ""
 	(returned is not "") and isPlain then types.ElementType(returned) else ""
+Unfit(call SyntaxNode, instance Text, method Text, inference TypeInference, scope Scope, current Scope) Text
+	Scaling.Unfit(Rescaled, "Scaler", "Scaled", ScalerInference, Scalers, Scalers) is Unfitted
+	Scaling.Unfit(ScaledOnce, "Scaler", "Scaled", ScalerInference, Scalers, Scalers) is ""
+	Scaling.Unfit(ScaledTwice, "Scaler", "Scaled", ScalerInference, Scalers, Scalers).EndsWith("Number, Number")
+	Scaling.Unfit(Rescaled, "Scaler", "Missing", ScalerInference, Scalers, Scalers) is ""
+	let arguments = Arguments(call, inference, scope, current)
+	let isOverloaded = types.ParameterScope(instance).Count(method) > 1
+	let isUnfit = isOverloaded and (Chosen(instance, method, arguments) < 0)
+	isUnfit then "NoOverloadFits: " + instance + "." + method + " got " + Text.Combine(arguments, ", ") else ""
 Arguments(node SyntaxNode, inference TypeInference, scope Scope, current Scope) Texts
 	Labeling.Arguments(LabelsMember, LabelInference, KnownTypes.NoMembers, Labeler.methods(0)).Length is 0
 	Picking.Typed(SyntaxNode("Identifier", "value"), "A", LabelInference, KnownTypes.NoMembers, Relabeled) is "A"

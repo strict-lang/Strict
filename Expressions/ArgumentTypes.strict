@@ -17,6 +17,8 @@ constant Owned = Counted.With("self type", "Count")
 constant OwnGrown = SyntaxParser(Tokenizer("Grow(count)").Tokens).Parse
 constant DepthCopies = (SyntaxParser(Tokenizer("Area(area, size, depth = 2)").Tokens).Parse, SyntaxParser(Tokenizer("Area(area, depth = 2)").Tokens).Parse, SyntaxParser(Tokenizer("Area(size, size, depth = 2)").Tokens).Parse)
 constant Copies = DepthCopies + (SyntaxNode("Call", "Area"), SyntaxParser(Tokenizer("Area(area, size)").Tokens).Parse, SyntaxParser(Tokenizer("Area(size)").Tokens).Parse, SyntaxParser(Tokenizer("Number(5)").Tokens).Parse)
+constant Scaling = ArgumentTypes(Overloads.ScalerInference)
+constant Scalers = Overloads.Scalers
 constant Mixed = "CopyChangesMustBeNamed: Area(area, size, depth = 2) copies area, name every change like depth = 2"
 Checked(node SyntaxNode, scope Scope, current Scope) Text
 	Sizing.Checked(Grown, Counted, Counted).StartsWith("ArgumentTypeMismatch")
@@ -25,7 +27,8 @@ Checked(node SyntaxNode, scope Scope, current Scope) Text
 	Sizing.ConstantAccess(Limited, Methods(0), Counted).StartsWith("ConstantNeedsTypeName")
 	Sizing.Operands(SyntaxNode("Call", "and", Listed.children)) is ""
 	Sizing.Operands(SyntaxNode("Binary", "+", Listed.children)) is ""
-	let branched = BranchTypes(inference).Issue(node, scope, current)
+	Sizing.Checked(TextJoins.Listed, TextJoins.Named, TextJoins.Named).StartsWith("ListToTextMustBeExplicit")
+	let branched = BranchTypes(inference).Issue(node, scope, current) + TextJoins(inference).Issue(node, scope, current)
 	let operands = Operands(node) + ConstantAccess(node, scope, current) + branched
 	operands is "" then Issue(node, scope, current) + OwnCall(node, scope, current) else operands
 ConstantAccess(node SyntaxNode, scope Scope, current Scope) Text
@@ -94,9 +97,10 @@ Copied(call SyntaxNode, scope Scope, current Scope) Text
 Compared(call SyntaxNode, instance Text, method Text, scope Scope, current Scope) Text
 	Sizing.Compared(Grown, "Count", "Grow", Counted, Counted).StartsWith("ArgumentTypeMismatch: Count.Grow")
 	Sizing.Compared(Spread, "Count", "Spread", Counted, Counted) is "TooManyArguments: Count.Spread got 3 of 2"
+	Scaling.Compared(Overloads.Rescaled, "Scaler", "Scaled", Scalers, Scalers).StartsWith("NoOverloadFits")
 	let parameters = inference.types.ParameterScope(instance)
 	if parameters.Count(method) is not 1
-		return ""
+		return Overloads(inference.types).Unfit(call, instance, method, inference, scope, current)
 	let types = Declared(instance, method)
 	let arguments = Arguments(call, scope, current)
 	let at = Matched(arguments, types, instance, method)
