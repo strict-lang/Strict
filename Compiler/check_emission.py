@@ -1,11 +1,11 @@
-"""Run from Strict after rebuilding NativeCompiler: python Compiler/check_emission.py."""
+"""Run from Strict after rebuilding strict: python Compiler/check_emission.py."""
 from pathlib import Path
 import os
 import subprocess
 import time
 
 root = Path(__file__).resolve().parent.parent
-compiler = root / "Compiler" / ("NativeCompiler.exe" if os.name == "nt" else "NativeCompiler")
+compiler = root / ("strict.exe" if os.name == "nt" else "strict")
 started = time.perf_counter()
 process = subprocess.Popen([str(compiler), "test", "Math/Matrix.strict", ".", "native"],
 	cwd=root, start_new_session=os.name != "nt")

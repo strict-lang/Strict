@@ -50,7 +50,7 @@ Inputs(sources Texts) Texts
 	let source = FileCompiler.Normalized(rest(0))
 	let runtimes = Directory.Files(rest(1) + "/Compiler", "NativeRuntime*.mlir")
 	let extension = Toolchain(Platform.Current, rest(1)).Extension
-	let tools = (rest(1) + "/strict" + extension, rest(1) + "/Compiler/NativeCompiler" + extension) - Output - Output.Lower
+	let tools = (List(Text) + (rest(1) + "/strict" + extension)) - Output - Output.Lower
 	let content = Path(source).PathOnly.text + "/Content"
 	let inputs = sources + runtimes + tools + NativeInputs(Folders(sources))
 	command is "test" then inputs else inputs + (content + "/**")

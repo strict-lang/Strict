@@ -21,6 +21,8 @@ Run(arguments Texts) Number
 	let resident = Resident(Path(Process.Current.executable).PathOnly.text)
 	if (arguments.Length > 0) and (arguments(0) is "serve")
 		return Served(arguments.Length > 1 then Resident(resident.root, arguments(1)) else resident)
+	if (arguments.Length > 0) and (arguments(0) is "linked")
+		return Native("linked", arguments.Slice(1, arguments.Length - 1))
 	let forwarded = Forwarding(logger, resident.root).Forwarded(arguments)
 	forwarded >= 0 then forwarded else Ran(arguments).code
 Served(resident Resident) Number
@@ -167,63 +169,9 @@ Checked(checker Validators/ValidateCheck, folder Text, root Text) Number
 Updated(updater Bytecode/Repositories, folder Text) Number
 	logger.Log("Updated " + updater.Updated(folder) + " packages in " + folder)
 	0
-Native(command Text, rest Texts, compiler = "") Number
-	Strict(Logger).Native("test", List(Text), "Missing.exe") is 2
-	let path = compiler is "" then NativeCompiler.Executable(TypeSource.Root) else compiler
-	if File(path).Exists is false
-		logger.Log(path + " not found, build it with Compiler/Bootstrap.cmd or sh Compiler/bootstrap.sh")
-		return 2
-	let refreshed = compiler is "" then Refreshed(path, rest) else 0
-	refreshed is not 0 then refreshed else Started(command, rest, path)
-Started(command Text, rest Texts, path Text) Number
-	let cache = NativeCache(command, rest)
-	if BuildProfile(logger).Current(cache, "CLI build cache")
-		logger.Log(cache.Message)
-		return 0
-	Process(path).Started(NativeCompiler.Arguments(command, rest))
-Refreshed(compiler Text, rest Texts) Number
-	Strict(Logger).Refreshed("Missing.exe", ("Compiler/NativeCompiler.strict", ".")) is 0
-	if rest(0).Replace("\\", "/").EndsWith("Compiler/NativeCompiler.strict") or IsCompiled(compiler, TypeSource.Root)
-		return 0
-	let lock = Path(compiler).RemoveExtension.text + ".building"
-	Directory.Create(lock) is false then Waited(compiler, lock) else Rebuilt(compiler, lock)
-Rebuilt(compiler Text, lock Text) Number
-	let source = TypeSource.Root + "/Compiler/NativeCompiler.strict"
-	logger.Log(compiler + " is older than the compiler sources, building it again first")
-	let built = Process(compiler).Started(NativeCompiler.Arguments("build", (source, TypeSource.Root)))
-	if built is 0
-		File(Checked(compiler)).Write("built from the compiler sources newer than " + compiler)
-	Directory.Delete(lock)
-	built
-Waited(compiler Text, lock Text) Slow(Number)
-	Strict(Logger).Waited("Missing.exe", "Missing.building") is 1
-	let started = Process.Elapsed
-	for as long as Directory.Exists(lock) and (Process.Elapsed - started < BuildWait)
-		Process.Wait(0.1)
-	if IsCompiled(compiler, TypeSource.Root)
-		return 0
-	logger.Log(compiler + " was not built by the other strict (" + lock + "), remove it if no build is running")
-	1
-Checked(compiler Text) Text
-	Strict.Checked("Compiler/NativeCompiler.exe") is "Compiler/NativeCompiler.checked"
-	Path(compiler).RemoveExtension.text + ".checked"
-CompilerSources(root Text) Slow(Texts)
-	Strict.CompilerSources(".").Length > 100
-	"./Compiler/NativeRuntime.mlir" is in Strict.CompilerSources(".")
-	"./Bytecode/TestCodegen.strict" is in Strict.CompilerSources(".")
-	Strict.CompilerSources(".").Index("./Compiler/NativeCompiler.mlir") is -1
-	mutable sources = List(Text)
-	for ("Compiler", "Bytecode", "Expressions")
-		sources = sources + Directory.Files(root + "/" + value, "*.strict")
-	for Directory.Files(root + "/Compiler", "*.mlir")
-		if Path(value).FileName.text.StartsWith("NativeRuntime")
-			sources = sources + value
-	sources
-IsCompiled(compiler Text, root Text) Boolean
-	Strict.IsCompiled("Missing.exe", ".") is false
-	let sources = CompilerSources(root)
-	let builds = NativeSources(List(Text))
-	builds.IsCurrent(compiler, sources) or builds.IsCurrent(Checked(compiler), sources)
+Native(command Text, rest Texts) Number
+	Strict(Logger).Native("test", ("Missing.strict", ".", "values", "other")) is 2
+	NativeCompiler(logger).Ran((List(Text) + command) + rest)
 Format(path Text) Slow(Number)
 	Strict.Format("Examples/HelloLogger.strict") is 0
 	let lines = RoundTrip(logger).Tabbed(File(path).ReadLines)

@@ -29,7 +29,7 @@ with tempfile.TemporaryDirectory(prefix="DataCheck", dir=root / "Examples") as f
 		'\tLogger.Log("Discovery seconds: " + (Process.Elapsed - started))\n\t0', encoding="utf-8")
 	command = [str(root / ("strict" + extension)), str(program)]
 	if "native" in sys.argv:
-		built = subprocess.run([str(root / ("Compiler/NativeCompiler" + extension)), "build", str(program), str(root)], cwd=root,
+		built = subprocess.run([str(root / ("strict" + extension)), "build", str(program), str(root)], cwd=root,
 			capture_output=True, text=True, timeout=240)
 		assert built.returncode == 0, built.stdout + built.stderr
 		command = [str(program.with_suffix(extension))]

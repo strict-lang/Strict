@@ -5,7 +5,7 @@ constant Model = " uses NeuralNetworks and runs on the GPU, build it without fas
 constant Summing = List(Text) + "Examples/Sum.strict"
 constant Learning = ("Examples/Sum.strict", "NeuralNetworks/Batch.strict")
 constant Whole = "fast builds single programs, build a complete game with its Content without fast: "
-Run(arguments Texts) Number
+Ran(arguments Texts) Number
 	let started = Process.Elapsed
 	let rest = arguments.Slice(1, arguments.Length - 1)
 	if Locked(rest(0)) is false
@@ -119,8 +119,8 @@ Options(rest Texts) Texts
 	NativeCompiler.Options(("a.strict", ".", "linux")) is ("linux")
 	rest.Length > 2 then rest.Slice(2, rest.Length - 2) else List(Text)
 Executable(root Text) Text
-	NativeCompiler.Executable(".") is "./Compiler/NativeCompiler" + Toolchain(Platform.Current, ".").Extension
-	root + "/Compiler/NativeCompiler" + Toolchain(Platform.Current, root).Extension
+	NativeCompiler.Executable(".") is "./strict" + Toolchain(Platform.Current, ".").Extension
+	root + "/strict" + Toolchain(Platform.Current, root).Extension
 Arguments(command Text, rest Texts) Text
 	NativeCompiler.Arguments("build", ("a b.strict", ".")) is "build \"a b.strict\" \".\""
 	mutable text = command

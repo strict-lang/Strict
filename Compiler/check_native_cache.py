@@ -16,7 +16,7 @@ with tempfile.TemporaryDirectory(prefix="ObjectCheck", dir=root / "Examples") as
 	program = folder / "ObjectCheck.strict"
 	program.write_text('has logger\nhas flags Flags\nRun Number\n\tlogger.Log(Flags.Mode)\n\t0', encoding="utf-8")
 	for options, expected in [([], "2"), (["small"], "1"), ([], "2")]:
-		result = subprocess.run([str(root / ("Compiler/NativeCompiler" + extension)), "build", str(program),
+		result = subprocess.run([str(root / ("strict" + extension)), "build", str(program),
 			str(root), *options], cwd=root, capture_output=True, text=True, timeout=60)
 		assert result.returncode == 0, result.stdout + result.stderr
 		result = subprocess.run([str(program.with_suffix(extension))], capture_output=True, text=True, timeout=10)

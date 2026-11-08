@@ -1,5 +1,5 @@
 @echo off
-rem Builds NativeCompiler.exe from Bootstrap.mlir without any Strict binary and with it strict.exe in the Strict folder,
+rem Builds a seed compiler from Bootstrap.mlir without any Strict binary and with it strict.exe in the Strict folder,
 rem needs mlir-opt, mlir-translate and clang; the seed has no GPU code, so its compiler runs on the CPU
 setlocal
 cd /d "%~dp0"
@@ -12,4 +12,5 @@ clang NativeCompiler.ll -o NativeCompiler.exe -O3 -march=native -Wno-override-mo
 cd ..
 set "STRICT_GPU=0"
 Compiler\NativeCompiler.exe build Strict.strict . || exit /b 1
-echo Built %~dp0NativeCompiler.exe and %~dp0..\strict.exe
+del Compiler\NativeCompiler.exe Compiler\NativeCompiler.ll Compiler\NativeCompiler.llvm.mlir Compiler\NativeCompiler.mlir
+echo Built %~dp0..\strict.exe
