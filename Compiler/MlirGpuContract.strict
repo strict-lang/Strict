@@ -1,0 +1,65 @@
+has function MlirFunction
+has position Number
+constant Rule = "GpuLoopMustRunOnGpu"
+constant Narrow = MemberEntry("weights", "Strict/List(Number)", List(InstructionEntry), false, 32)
+constant Contracted = TypeEntry(GpuChoiceSamples.Weighted, members = GpuChoiceSamples.Weighted.members + Narrow)
+constant Weights = GpuChoiceSamples.Weighting
+constant Weighing = MlirGpuContract(MlirFunction(Weights.types, Contracted, Weights.method), 2)
+constant Free = MlirGpuContract(Weights, 2)
+constant Doubling = MlirGpuContract(MlirParallel.Doubling.function, 2)
+constant Timing = MlirGpuContract(MlirFunction(MlirParallel.Timing.function.types, Contracted, MlirParallel.Timed), 2)
+constant Narrowed = MlirNarrowing.Texting.function
+constant Texts = MlirGpuContract(MlirFunction(Narrowed.types, Contracted, Narrowed.method), 2)
+constant Few = MlirGpuContract(MlirFunction(MlirNarrowing.Few.function.types, Contracted, MlirNarrowing.Few.function.method), 1)
+constant Doubled = MlirParallel.Doubling.function
+constant Running = MlirGpuContract(MlirFunction(Doubled.types, Contracted, Doubled.method), 2)
+constant Filtering = MlirGpuContract(MlirFunction(Weights.types, Contracted, Weights.method), 0)
+Issue Text
+	Weighing.Issue.IndexOf(": " + Rule + ": ") > 0
+	Free.Issue is ""
+	Doubling.Issue is ""
+	if IsRequired is false
+		return ""
+	let instructions = function.method.instructions
+	let blocker = Blocker(function, position + 1, function.method.LoopEndOf(position), 0)
+	let file = TypeSource(function.type).Located("") + ":line " + instructions(position).line
+	file + ": " + Rule + ": " + function.method.Name + " runs on the CPU because of " + blocker
+IsRequired Boolean
+	Weighing.IsRequired
+	Free.IsRequired is false
+	Doubling.IsRequired is false
+	Timing.IsRequired is false
+	Filtering.IsRequired is false
+	Texts.IsRequired is false
+	Few.IsRequired is false
+	Running.IsRequired is false
+	let check = MlirGpuCheck(function, position)
+	let isListed = MlirLoops(function, position).Collection is in MlirGpuCheck.Rows
+	let isPlain = isListed and (MlirLanes(function, position).IsTouched is false) and check.IsPure
+	HasContract and isPlain and (MlirNarrowing(function, position).IsFew is false) and (check.IsGpu is false)
+HasContract Boolean
+	Weighing.HasContract
+	Free.HasContract is false
+	for function.type.members
+		if value.Bits is 32
+			return true
+	false
+Blocker(inspected MlirFunction, first Number, last Number, depth Number) Text
+	Weighing.Blocker(Weighing.function, 3, Weighing.function.method.LoopEndOf(2), 0).Length > 0
+	Doubling.Blocker(Doubling.function, 3, Doubling.function.method.LoopEndOf(2), 0) is ""
+	let check = MlirGpuCheck(inspected, first)
+	for Range(first, last)
+		if check.IsDevice(inspected, value, depth) is false
+			return Blamed(inspected, value, depth)
+	""
+Blamed(inspected MlirFunction, at Number, depth Number) Text
+	Doubling.Blamed(Doubling.function, 2, 0).StartsWith("instruction ")
+	Weighing.Issue.IndexOf(" because of Strict/") > 0
+	let entry = inspected.method.instructions(at)
+	let named = entry.texts.Length > 1 then entry.texts(0) + "." + entry.texts(1) else "instruction " + entry.kind
+	let isCall = entry.kind is InstructionType.Invoke
+	let callees = isCall then MlirDeviceMembers(inspected).Passable(at) else List(MlirFunction)
+	if callees.Length is not 1
+		return named
+	let inner = Blocker(callees.First, 0, callees.First.method.instructions.Length, depth + 1)
+	inner is "" then named else named + " > " + inner

@@ -1,4 +1,6 @@
 has logger
+constant Swapped = PtxCache("Compiler/output/Swapped")
+constant Swapping = Swapped.Saved(".exe", "a") and Swapped.Saved(".old.exe", "b") and Swapped.Saved(".new.exe", "built")
 constant Mixed = "Mobile target cannot be combined with another platform"
 constant Alone = "fast builds for this computer only, without a platform or other options"
 constant Model = " uses NeuralNetworks and runs on the GPU, build it without fast"
@@ -114,10 +116,11 @@ Configured(options Texts) NativeBuild
 	let isFast = "fast" is in options
 	NativeBuild(configured, isSimulator = "simulator" is in options, isReleased = "windows" is in options, isFast = isFast)
 Replaced(executable Text, target Text) Boolean
+	Swapping and NativeCompiler(Logger).Replaced("Compiler/output/Swapped.exe", "Compiler/output/Swapped.new.exe")
+	Swapped.Read(".exe") is "built"
 	let old = executable.Replace(".exe", ".old.exe")
+	Intermediates(logger).Deleted(old)
 	File(executable).Rename(old)
-	if File(executable).Exists
-		return false
 	File(target).Rename(executable)
 	if File(target).Exists
 		File(old).Rename(executable)

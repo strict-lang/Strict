@@ -39,7 +39,8 @@ Found(inspected MlirFunction) Texts
 	Text.Combine(MlirNarrowing.Found(MlirWideMembers.Sparking.function)).IndexOf("loops over Spark") > 0
 	for inspected.method.instructions
 		let isLoop = value.kind is InstructionType.LoopBegin
-		let issue = isLoop then MlirNarrowing(inspected, index).Issue + MlirWideMembers(inspected, index).Issue else ""
+		let wide = isLoop then MlirNarrowing(inspected, index).Issue + MlirWideMembers(inspected, index).Issue else ""
+		let issue = isLoop then wide + MlirGpuContract(inspected, index).Issue else ""
 		if issue is not ""
 			issue
 Issue Text
@@ -111,9 +112,9 @@ IsFew Boolean
 	(literal.kind is not "Number") or (literal.number < MlirCost(function, position).Threshold)
 Problem(functions List(MlirFunction)) Text
 	MlirNarrowing.Problem(List(MlirFunction) + Few.function) is ""
-	MlirNarrowing.Problem(List(MlirFunction) + Summing.function) is "unsupported: 64 bit loops\n" + Summing.Issue
+	MlirNarrowing.Problem(List(MlirFunction) + Summing.function) is "unsupported: loops\n" + Summing.Issue
 	let issues = Issues(functions)
-	issues.Length is 0 then "" else "unsupported: 64 bit loops\n" + Text.Combine(issues, "\n")
+	issues.Length is 0 then "" else "unsupported: loops\n" + Text.Combine(issues, "\n")
 IsForced Boolean
 	Forced.IsForced
 	Summing.IsForced is false

@@ -15522,20 +15522,25 @@
   ^done:
     return %hash : i64
   }
-  // STRICT_GPU=all asks for every loop on the GPU, a GPU that can not be used stops the program instead of the CPU
-  llvm.mlir.global internal constant @strict_gpu_unopened_text("Error: STRICT_GPU=all but no GPU driver could be opened\0A\00") : !llvm.array<57 x i8>
-  llvm.mlir.global internal constant @strict_gpu_unloaded_text("Error: STRICT_GPU=all but the GPU driver did not load the kernels next to the executable\0A\00") : !llvm.array<90 x i8>
+  // STRICT_GPU=all asks for every loop on the GPU, a GPU that can not be used stops the program, else it is logged once
+  llvm.mlir.global internal constant @strict_gpu_unopened_text("no GPU driver could be opened\00") : !llvm.array<30 x i8>
+  llvm.mlir.global internal constant @strict_gpu_unloaded_text("the GPU driver did not load the kernels next to the executable\00") : !llvm.array<63 x i8>
+  llvm.mlir.global internal constant @strict_gpu_required_format("Error: STRICT_GPU=all but %s\0A\00") : !llvm.array<30 x i8>
+  llvm.mlir.global internal constant @strict_gpu_cpu_format("%s, GPU loops run on the CPU\0A\00") : !llvm.array<30 x i8>
   func.func private @strict_gpu_required(%message: !llvm.ptr) {
     %one = arith.constant 1 : i64
     %minimum = func.call @strict_gpu_threshold() : () -> i64
     %isAll = arith.cmpi eq, %minimum, %one : i64
     cf.cond_br %isAll, ^failed, ^done
   ^failed:
-    %printed = llvm.call @printf(%message) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr) -> i32
+    %format = llvm.mlir.addressof @strict_gpu_required_format : !llvm.ptr
+    %printed = llvm.call @printf(%format, %message) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr) -> i32
     %exitCode = arith.constant 1 : i32
     llvm.call @exit(%exitCode) : (i32) -> ()
     cf.br ^done
   ^done:
+    %cpuFormat = llvm.mlir.addressof @strict_gpu_cpu_format : !llvm.ptr
+    %logged = llvm.call @printf(%cpuFormat, %message) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr) -> i32
     return
   }
   // the path of the executable copied out of the collected heap once: the warm thread must not allocate there, the
@@ -16481,10 +16486,10 @@
   ^done(%forkable: i1):
     return %forkable : i1
   }
-  // the first GPU sized loop a parallel loop's thread runs on the CPU is named once (the GPU is only used from the
+  // a GPU sized loop that a parallel loop's thread would run on the CPU stops the program (the GPU is only used from the
   // thread that forked the loop), not before the GPU is open
   llvm.mlir.global internal @strict_gpu_refusals(0 : i64) : i64
-  llvm.mlir.global internal constant @strict_gpu_refused_text("Warning: the GPU loop %s ran on the CPU in a parallel loop (its threads cannot use the GPU), keep the loop around it serial\0A\00") : !llvm.array<125 x i8>
+  llvm.mlir.global internal constant @strict_gpu_refused_text("Error: GpuLoopMustRunOnGpu: the GPU loop %s ran on the CPU in a parallel loop (its threads cannot use the GPU), keep the loop around it serial\0A\00") : !llvm.array<144 x i8>
   func.func private @strict_gpu_refused(%name: !llvm.ptr, %count: i64) {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -16504,6 +16509,8 @@
   ^named:
     %text = llvm.mlir.addressof @strict_gpu_refused_text : !llvm.ptr
     %printed = llvm.call @printf(%text, %name) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr) -> i32
+    %exitCode = arith.constant 1 : i32
+    llvm.call @exit(%exitCode) : (i32) -> ()
     cf.br ^done
   ^done:
     return

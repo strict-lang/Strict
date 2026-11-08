@@ -8,6 +8,7 @@ constant Exiting = "strict exit "
 constant Stamp = "/obj/strict.server"
 constant Free = "/obj/strict.free"
 constant IdleSeconds = 300
+constant WakeSeconds = 5
 constant Servers = 4
 constant GreetingSeconds = 1
 constant Settings = ("STRICT_THREADS", "STRICT_GPU", "STRICT_BUILD_PROFILE", "STRICT_GC_LOG", "STRICT_RC", "STRICT_RC_CHECK", "STRICT_RC_DEAD", "STRICT_HEAP", "STRICT_YOUNG")
@@ -79,9 +80,17 @@ Opened Number
 	File(Freed).Write(port)
 	server
 Accepted(server Number, built Number) Number
-	let waited = Socket.Waiting(server, IdleSeconds)
-	if (waited is Error) or (waited is not 1)
-		return 0
+	Sample.Accepted(0, -1) is 0
+	mutable idle = 0
+	for as long as (idle < IdleSeconds) and (File(Process.Current.executable).Modified is built)
+		let waited = Socket.Waiting(server, WakeSeconds)
+		if waited is Error
+			return 0
+		if waited is 1
+			return Taken(server, built)
+		idle = idle + WakeSeconds
+	0
+Taken(server Number, built Number) Number
 	let socket = Socket.Accept(server)
 	if File(Process.Current.executable).Modified is built
 		return socket
