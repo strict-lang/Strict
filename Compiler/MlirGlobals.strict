@@ -9,9 +9,10 @@ constant ShapeNamed = ("    %w2 = llvm.mlir.addressof @wShape_Run_0 : !llvm.ptr"
 constant Table = "  llvm.mlir.global internal @strict_places(dense<0> : tensor<"
 Lines Texts
 	Counted.Lines.Length is 14
+	let files = Files
 	mutable lines = List(Mutable(Text))
 	for functions
-		lines = lines + Function(value)
+		lines = lines + Function(value, files(value.type.Name))
 	lines + MlirDefaults(functions.First).Globals + MlirChanged.Declarations(functions) + Places
 Places Texts
 	(Counted.Places.First is Table + "2xi64>) : !llvm.array<2 x i64>") and Foreign.Places.Length is 6
@@ -41,16 +42,23 @@ Types(function MlirFunction) Texts
 	Counted.Types(MlirCalls.Shapes).First is "f64"
 	for function.Parameters
 		"f64"
-Function(function MlirFunction) Texts
-	Counted.Function(MlirCalls.Shapes).Length is 3
-	Counted.Function(MlirCalls.Shapes).First.IndexOf("(\"Shape.Run\\00Shape.strict\\00\")") > 0
-	let location = TypeSource(function.type).Location(function.method.Name)
+Files Dictionary(Text, Text)
+	MlirGlobals(List(MlirFunction) + MlirCalls.Shapes).Files(MlirCalls.Shapes.type.Name) is "Shape.strict"
+	mutable files = Dictionary(Text, Text)
+	for functions
+		if value.type.Name is not in files
+			files.Add(value.type.Name, TypeSource(value.type).Located(""))
+	files
+Function(function MlirFunction, file Text) Texts
+	Counted.Function(MlirCalls.Shapes, "Shape.strict").Length is 3
+	Counted.Function(MlirCalls.Shapes, "Shape.strict").First.IndexOf("(\"Shape.Run\\00Shape.strict\\00\")") > 0
+	let location = TypeSource(function.type).Location(function.method.Name, file)
 	let content = location.Replace(" in ", "\\00") + "\\00\")"
 	let where = "  llvm.mlir.global internal constant @w" + function.Symbol + "(\"" + content
 	mutable lines = List(Text) + (where + " : !llvm.array<" + (location.Length - 2) + " x i8>")
 	for Positions(function)
 		if IsGlobal(function, value)
-			lines = lines + Global(function, value)
+			lines = lines + Global(function, value, file)
 	lines + MlirGpu(function, 0).Globals
 Positions(function MlirFunction) Numbers
 	Counted.Positions(MlirCalls.Shapes).Length is 4
@@ -67,23 +75,23 @@ IsGlobal(function MlirFunction, position Number) Boolean
 	if kind is in (InstructionType.Print, InstructionType.IndexCall)
 		return true
 	MlirConstants(function, position).IsConstant
-Global(function MlirFunction, position Number) Text
-	Counted.Global(MlirCalls.Shapes, 3).IndexOf("Hi %s\\0A\\00") > 0
-	Counted.Global(MlirCalls.Shapes, 1) is "  llvm.mlir.global internal @lShape_Run_0_1(0.0 : f64) : f64"
+Global(function MlirFunction, position Number, file Text) Text
+	Counted.Global(MlirCalls.Shapes, 3, "Shape.strict").IndexOf("Hi %s\\0A\\00") > 0
+	Counted.Global(MlirCalls.Shapes, 1, "Shape.strict") is "  llvm.mlir.global internal @lShape_Run_0_1(0.0 : f64) : f64"
 	let constants = MlirConstants(function, position)
 	if position >= function.method.instructions.Length
 		return constants.Global
 	let entry = function.method.instructions(position)
 	if entry.kind is InstructionType.IndexCall
-		return NameGlobal(function, position)
+		return NameGlobal(function, position, file)
 	if entry.kind is InstructionType.Invoke
 		return "  llvm.mlir.global internal " + constants.Cache + "(0.0 : f64) : f64"
 	entry.kind is InstructionType.Print then PrintGlobal(function, position, entry) else constants.Global
-NameGlobal(function MlirFunction, position Number) Text
-	Counted.NameGlobal(Counted.functions.First, 0).IndexOf("Run\\00") > 0
-	Counted.NameGlobal(Counted.functions.First, 0).IndexOf("\\00Counter.Run\\00Counter.strict\\000\\00") > 0
+NameGlobal(function MlirFunction, position Number, file Text) Text
+	Counted.NameGlobal(Counted.functions.First, 0, "Counter.strict").IndexOf("Run\\00") > 0
+	Counted.NameGlobal(Counted.functions.First, 0, "C.strict").IndexOf("\\00Counter.Run\\00C.strict\\000\\00") > 0
 	let name = function.method.Name
-	let location = TypeSource(function.type).Location(name)
+	let location = TypeSource(function.type).Location(name, file)
 	let line = function.method.instructions(position).line to Text
 	let content = name + "\\00" + location.Replace(" in ", "\\00") + "\\00" + line + "\\00"
 	let global = "  llvm.mlir.global internal constant @s" + function.Symbol + "_" + position
