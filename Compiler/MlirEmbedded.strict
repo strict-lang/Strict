@@ -27,7 +27,7 @@ IsNested(typeName Text, depth Number) Boolean
 	let layout = MlirLayout(function)
 	if (depth > 8) or (layout.IsStruct(typeName) is false)
 		return false
-	let stored = MlirInstances(function, 0).Stored(function.TypeOf(TypeEntry.ShortName(typeName)))
+	let stored = MlirInstances(function, 0).Stored(function.TypeOf(typeName, true))
 	for stored
 		let isNumber = layout.Represented(TypeEntry.ShortName(value.typeName)) is in ("Number", "Pair")
 		if (isNumber is false) and (IsNested(value.typeName, depth + 1) is false)
@@ -39,7 +39,7 @@ Slots(typeName Text) Number
 	Sample.Slots("Strict/Boxed") is 3
 	Text.Combine(Building.Constructed(Making, "Strict/Boxed")).IndexOf("constant 24 : i64") > 0
 	Text.Combine(Initializing.Returned(2)).IndexOf("constant 24 : i64") > 0
-	let owner = function.TypeOf(TypeEntry.ShortName(typeName))
+	let owner = function.TypeOf(typeName, true)
 	mutable count = 0
 	for MlirInstances(function, 0).Stored(owner)
 		count = count + Width(owner, value)
@@ -88,7 +88,7 @@ IsCopied(at Number, register Number) Boolean
 	let built = membered.Rebuilding(register)
 	if (built < 0) or (membered.Reader(at, register) is not built)
 		return false
-	let owner = function.TypeOf(TypeEntry.ShortName(function.method.instructions(built).texts(0)))
+	let owner = function.TypeOf(function.method.instructions(built).texts(0), true)
 	let slot = membered.Slot(built, register)
 	if slot < 0
 		return false

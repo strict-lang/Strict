@@ -43,7 +43,7 @@ Slot(at Number, register Number) Number
 	let entry = function.method.instructions(at)
 	let countPosition = 5 + entry.payload(3)
 	let names = Invocation(entry, List(VmValue), VmValue.None).ParameterNames
-	for MlirInstances(function, 0).Stored(function.TypeOf(TypeEntry.ShortName(entry.texts(0))))
+	for MlirInstances(function, 0).Stored(function.TypeOf(entry.texts(0), true))
 		let chosen = names.Index(value.Name) < 0 then index else names.Index(value.Name)
 		let isPassed = chosen < entry.payload(countPosition)
 		if isPassed then entry.payload(countPosition + 1 + chosen) is register else false
@@ -53,7 +53,7 @@ Target(at Number, slot Number) Text
 	Moved.Target(7, 0) is "entity"
 	Moved.Target(7, 1) is ""
 	let entry = function.method.instructions(at)
-	let owner = function.TypeOf(TypeEntry.ShortName(entry.texts(0)))
+	let owner = function.TypeOf(entry.texts(0), true)
 	let name = MlirOwned(function, at).Target(entry, owner)
 	if (name is "") or (MlirAlone(function).IsAlone(name) is false)
 		return ""

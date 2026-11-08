@@ -46,7 +46,7 @@ Wide(typeName Text, prefix Text, depth Number) Texts
 	Flaming.Wide("Strict/Flame", "f.", 0) is ("f.spark.size", "f.cold")
 	Flaming.Wide("Strict/Flame", "f.", 9) is ("f.cold")
 	mutable names = List(Text)
-	for MlirInstances(function, 0).Stored(function.TypeOf(TypeEntry.ShortName(typeName)))
+	for MlirInstances(function, 0).Stored(function.TypeOf(typeName, true))
 		let kind = MlirLayout(function).Represented(TypeEntry.ShortName(value.typeName))
 		let isWide = (kind is "Number") and (IsMarked(value) is false)
 		let nested = (kind is "Number") or (kind is "Pair") or (depth > 8) or (value.Bits > 0)
@@ -61,5 +61,5 @@ IsMarked(member MemberEntry) Boolean
 	Flaming.IsMarked(Flame.members.Last) is false
 	if (member.Bits > 0) or (TypeEntry.ShortName(member.typeName) is "Number")
 		return member.Bits > 0
-	let stored = MlirInstances(function, 0).Stored(function.TypeOf(TypeEntry.ShortName(member.typeName)))
+	let stored = MlirInstances(function, 0).Stored(function.TypeOf(member.typeName, true))
 	(stored.Length is 1) and (stored.First.Bits > 0)

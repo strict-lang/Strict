@@ -4,6 +4,7 @@ has isRecursive Boolean = true
 constant Counting = TypeEntry("Strict/A", List(MemberEntry), List(MethodEntry) + MethodEntry.CountingLoop)
 constant Initializing = TypeEntry("Strict/A", List(MemberEntry), List(MethodEntry) + MethodEntry.Initializing)
 constant Hellos = ("Examples/HelloLogger.strict", "Examples/HelloLogger.strict")
+constant Runless = List(TypeEntry) + TypeEntry("Strict/A", List(MemberEntry), List(MethodEntry))
 constant Other = TypeEntry("Strict/B", List(MemberEntry), List(MethodEntry))
 constant Greeting = List(TypeEntry) + TypeEntry.HelloLogger
 Module(path Text, root Text, isCounting Boolean, isProgram Boolean, platform = -1, sources Texts = List(Text)) Slow(MlirModule)
@@ -11,9 +12,9 @@ Module(path Text, root Text, isCounting Boolean, isProgram Boolean, platform = -
 	NativeFolder(Logger).Module("Examples/NativeAdd", ".", false, false).types.First.Name.EndsWith("Adder")
 	let started = Process.Elapsed
 	let paths = Paths(path)
-	let execute = Execute(logger, selection)
 	let isCollected = isCounting or Directory.Exists(path)
-	let types = isCollected then Collected(path, root) else execute.Loaded(path, root, isProgram is false, sources)
+	let loaded = isCollected then Collected(path, root) else Execute(logger, selection).Loaded(path, root, true, sources)
+	let types = isProgram then Programmed(loaded, path, root, sources) else loaded
 	let counted = isCounting then CountedFiles(paths, root) else List(Text)
 	let symbol = platform is Platform.IOS then "strict_main" else "main"
 	let inlined = BuildProfile(logger).Inlined(types)
@@ -38,6 +39,11 @@ CountedFiles(paths Texts, root Text) Texts
 	NativeFolder(Logger).CountedFiles(List(Text) + "./Examples/Sum.strict", ".") is ("Examples/Sum.strict")
 	for paths
 		TypeEntry(FileCompiler.FullName(value, root), List(MemberEntry), List(MethodEntry)).Source
+Programmed(loaded List(TypeEntry), path Text, root Text, sources Texts) List(TypeEntry)
+	NativeFolder(Logger).Programmed(List(TypeEntry) + TypeEntry.HelloLogger, "Missing.strict", ".", List(Text)).Length is 1
+	Execute.HasRun(NativeFolder(Logger).Programmed(Runless, "Examples/HelloLogger.strict", ".", List(Text)).First)
+	let isOld = loaded.Length > 0 then Execute.HasRun(loaded.First) is false else false
+	isOld then Execute(logger, selection).Loaded(path, root, false, sources) else loaded
 Paths(path Text) Texts
 	NativeFolder.Paths("Examples/Sum.strict") is ("Examples/Sum.strict")
 	Directory.Exists(path) then Files(path) else List(Text) + path

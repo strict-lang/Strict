@@ -21,20 +21,28 @@ IsCoupled(kind Text) Boolean
 	Sample.IsCoupled("Sizing")
 	Sample.IsCoupled("Strict/Math/Sizing")
 	Sample.IsCoupled("Number") is false
+	mutable halves = 0
+	for function.TypeOf(kind, true).members
+		if IsPart(value)
+			if IsHalf(value) is false
+				return false
+			halves = halves + 1
+	halves is 2
+Halves(type TypeEntry) List(MemberEntry)
+	Sample.Halves(Sizing).Length is 2
+	Sample.Halves(TypeEntry("Strict/Walking", Walkers, List(MethodEntry))).Length is 1
+	for type.members
+		if IsPart(value)
+			value
+IsPart(member MemberEntry) Boolean
+	Sample.IsPart(Sizing.members.First)
+	Sample.IsPart(MemberEntry("walker", "Strict/Iterator", List(InstructionEntry), false)) is false
 	Sample.Aliased(InstructionEntry(InstructionType.FieldLoad, "value", (3, 2, -1)), "Sizing").Length is 2
 	Turns.Constructed(Turned, "Turning", Instances) is Turns.Single(Turned, "Turning")
 	Sample.Constructed(Sized, "Sizing", Instances)(1) is "    %t2cy = llvm.load %r1 : !llvm.ptr -> f64"
 	constant packing = "    %t2cp = func.call @strict_two_packed(%t2cx, %t2cy) : (f64, f64) -> f64"
 	Sample.Constructed(Sized, "Sizing", Instances)(2) is packing
-	let type = function.TypeOf(TypeEntry.ShortName(kind))
-	let halves = Halves(type)
-	(halves.Length is 2) and IsHalf(halves.First) and IsHalf(halves.Last)
-Halves(type TypeEntry) List(MemberEntry)
-	Sample.Halves(Sizing).Length is 2
-	Sample.Halves(TypeEntry("Strict/Walking", Walkers, List(MethodEntry))).Length is 1
-	for MlirInstances(function, 0).Stored(type)
-		if (value.typeName is not "Iterator") and (value.typeName.EndsWith("/Iterator") is false)
-			value
+	member.IsStored and (member.typeName is not "Iterator") and (member.typeName.EndsWith("/Iterator") is false)
 IsHalf(member MemberEntry) Boolean
 	Sample.IsHalf(Sizing.members.First)
 	Sample.IsHalf(Sizing.members.Last) is false
@@ -51,7 +59,7 @@ Constructed(entry InstructionEntry, typeName Text, instances MlirInstances) Text
 		return Single(entry, typeName)
 	if IsCoupled(typeName) is false
 		return MlirFlats(function, position).Constructed(entry, typeName, instances)
-	let halves = Halves(function.TypeOf(TypeEntry.ShortName(typeName)))
+	let halves = Halves(function.TypeOf(typeName, true))
 	let temp = "%t" + position + "c"
 	let packed = "    " + temp + "p = func.call @strict_two_packed(" + temp + "x, " + temp + "y) : (f64, f64) -> f64"
 	let first = function.Load(temp + "x", Argument(entry, halves.First.Name, 0))
@@ -62,13 +70,13 @@ IsSingle(kind Text) Boolean
 	Sample.IsSingle("Sizing") is false
 	Sample.IsFlatRead(Heights) is false
 	MlirCouples(MlirFlats.Reader.function, 1).IsFlatField(-1) is false
-	let halves = Halves(function.TypeOf(TypeEntry.ShortName(kind)))
+	let halves = Halves(function.TypeOf(kind, true))
 	(halves.Length is 1) and (IsHalf(halves.First) or (halves.First.Bits is 8))
 Single(entry InstructionEntry, kind Text) Texts
 	Turns.Single(Turned, "Turning")(1) is "    %t1cr = func.call @strict_single(%t1cx) : (f64) -> f64"
 	Turns.Single(Turned, "Turning").Last is "    llvm.store %t1cr, %r1 : f64, !llvm.ptr"
 	Turns.Single(Turned, "Turning").First is "    %t1cx = llvm.load %r0 : !llvm.ptr -> f64"
-	let member = Halves(function.TypeOf(TypeEntry.ShortName(kind))).First
+	let member = Halves(function.TypeOf(kind, true)).First
 	let temp = "%t" + position + "c"
 	let rounding = member.Bits is 8 then "@strict_byte(" else "@strict_single("
 	let rounded = "    " + temp + "r = func.call " + rounding + temp + "x) : (f64) -> f64"
@@ -101,7 +109,7 @@ Aliased(entry InstructionEntry, kind Text) Texts
 	let isListed = (entry.texts(0) is not "value") and MlirFlats(function, position).IsListed(kind) and (IsBlock is false)
 	if (entry.texts(0) is "value") or ((IsCoupled(kind) is false) and (isListed is false))
 		return function.Copied("%r" + entry.payload(1), "%r" + entry.payload(0), "%t" + position + "a")
-	let halves = Halves(function.TypeOf(TypeEntry.ShortName(kind)))
+	let halves = Halves(function.TypeOf(kind, true))
 	let half = isListed then "list" else (halves.First.Name is entry.texts(0) then "x" else "y")
 	let helper = MlirFlats(function, position).Count(kind) > 0 then "flat_list" else "two_" + half
 	let temp = "%t" + position + "h"

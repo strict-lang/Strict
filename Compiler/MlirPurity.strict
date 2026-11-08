@@ -140,7 +140,7 @@ IsExternalSafe(kind Text, method Text) Boolean
 		return method is in ("from", "Files", "Directories", "Exists", "Current", "Modified")
 	if kind is in ("Process", "TestBudget")
 		return method is in ProcessReads
-	if kind + "." + method is in Hosted.Methods
+	if kind is in Hosted.Kinds then kind + "." + method is in Hosted.Methods else false
 		return kind is in ("Number", "Degrees", "Ratio", "Vector2", "ConstantCache", "TestBudget")
 	constant Never = ("Library", "TextReader", "TextWriter", "BytesReader", "BytesWriter", "GpuMemory")
 	(kind is not in Never) and (method is not "Random")

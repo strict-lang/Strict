@@ -29,6 +29,8 @@ Symbol Text
 	let spelled = method.Name is in OperatorNames then OperatorWords(OperatorNames.Index(method.Name)) else plain
 	name + "_" + spelled + "_" + method.parameters.Length + conversion + type.OverloadSuffix(method)
 Parameters Texts
+	MlirForeign.Adder.Symbol is "Adder_Add_foreign"
+	MlirFunction(Counter, method = MethodEntry(MlirForeign.Add, Name = "to")).Symbol is "Counter_to_2_Number"
 	Counter.Parameters is ("value")
 	MlirFunction(Counter, method = MethodEntry(Counter.method, Name = "to", declaredType = "B(A)")).Symbol.EndsWith("B_A_")
 	mutable names = List(Mutable(Text))
@@ -48,16 +50,17 @@ Named Texts
 	for method.instructions
 		let isNamed = ((value.kind is in loaded) or (value.kind is in written)) and value.texts(0).IndexOf("(") < 0
 		value.kind is InstructionType.StoreConstantToVariable then value.texts.Last else (isNamed then value.texts(0) else "")
-TypeOf(name Text) TypeEntry
-	MlirForeign.Adder.Symbol is "Adder_Add_foreign"
-	MlirFunction(Counter, method = MethodEntry(MlirForeign.Add, Name = "to")).Symbol is "Counter_to_2_Number"
+TypeOf(name Text, isKind = false) TypeEntry
 	Counter.Entry(0) is "    %instance = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
 	Counter.Entry(2) is "    llvm.store %p0, %instance : f64, !llvm.ptr"
 	Counter.Entry(3) is "    llvm.store %p0, %v_value : f64, !llvm.ptr"
 	"    %q_input = llvm.load %v_input : !llvm.ptr -> f64" is in MlirGroups.Norming.function.Entry
 	("  ^stackChecked:" is in MlirFunction(MlirGroups.Norming.function, IsRecursive = false).Entry) is false
 	Counter.TypeOf("Strict/Other").members.Length is 0
-	name is in typeIndex then types(typeIndex(name)) else Natives(types).TypeOf(name)
+	MlirFlats.Looked.function.TypeOf("Strict/Mutable(Strict/Math/Tripling)", true).Name is "Strict/Math/Tripling"
+	MlirFlats.Looked.function.TypeOf("Strict/Mutable(Strict/Math/Tripling)").Name is "Strict/Mutable(Strict/Math/Tripling)"
+	let short = isKind and (name is not in typeIndex) then TypeEntry.ShortName(name) else name
+	short is in typeIndex then types(typeIndex(short)) else Natives(types).TypeOf(short)
 Load(target Text, slot Text) Text
 	MlirFunction(Counter, method = MlirParallel.Doubled).Named(4) is ""
 	MlirFunction(Counter, method = MlirParallel.Doubled).Named(5) is "forResult"

@@ -8,6 +8,10 @@ constant SevenMember = MemberEntry("a", "b", InstructionEntry(InstructionType.Se
 constant LoggerMember = MemberEntry("logger", "Strict/Logger", List(InstructionEntry), false)
 constant RealtimeMember = MemberEntry("Realtime", "Strict/Realtime", List(InstructionEntry), false)
 constant NumbersMember = MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false)
+IsStored Boolean
+	NumbersMember.IsStored and (LoggerMember.IsStored is false) and (SevenMember.IsStored is false)
+	MemberEntry("log", "Logger", List(InstructionEntry), false).IsStored is false
+	(IsConstant is false) and (typeName is not "Logger") and (typeName.EndsWith("/Logger") is false)
 Limited(line Text) MemberEntry
 	NumbersMember.Limited("has numbers with Length is 3 and value.Bits is 32").Count is 3
 	MemberEntry(Name, typeName, initial, IsConstant, Constraint.Bits(line), Constraint.Length(line))

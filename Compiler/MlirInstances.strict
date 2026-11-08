@@ -24,7 +24,7 @@ Stored(owner TypeEntry) List(MemberEntry)
 	MlirInstances(Shapes, 0).Stored(MlirFunction.Shape).Length is 1
 	MlirInstances(Shapes, 0).Stored(TypeEntry("Strict/Logged", Loggers, List(MethodEntry))).Length is 1
 	for owner.members
-		if (value.IsConstant is false) and (value.typeName is not "Logger") and (value.typeName.EndsWith("/Logger") is false)
+		if value.IsStored
 			value
 StoredNames(owner TypeEntry) Texts
 	MlirInstances(Shapes, 1).Constructed(Built, "Strict/Shape")(0) is "    %t1oz = arith.constant 8 : i64"

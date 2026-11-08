@@ -20,19 +20,32 @@ constant Making = MethodEntry("Made", List(MemberEntry), "Strict/Math/Tripling",
 constant Made = MlirFlats(MlirFunction((Tripling, Summing), Tripling, Making), 2)
 constant Sample = MlirFlats(MlirFunction((Tripling, Summing), Tripling, Zed), 1)
 constant MaximumCount = 16
+constant Unflat = MemberEntry("", "Strict/Number", List(InstructionEntry), false)
+constant Looked = MlirFlats(MlirFunction((Tripling, Summing), Tripling, Zed, typeIndex = Dictionary(("Strict/Math/Tripling", 0))), 1)
 Count(kind Text) Number
 	(Sample.Count("Tripling") is 3) and (Sample.Count("Strict/Math/Tripling") is 3)
 	Sample.Count("Summing") is 0
 	MlirFlats(MlirPacking.Halved.function, 0).Count("Halving") is 3
 	Sample.Count("Number") is 0
-	let type = function.TypeOf(TypeEntry.ShortName(kind))
-	let changing = type.Changing
-	let member = changing.Length is 1 then changing.First else Numbers
-	let isNumbers = TypeEntry.ShortName(member.typeName) is in ("List(Number)", "Numbers")
-	if (changing.Length is not 1) or (isNumbers is false) or (member.Bits is not Number.SingleBits)
+	Looked.Count("Strict/Math/Tripling") is 3
+	let type = function.TypeOf(kind, true)
+	let member = Flat(type)
+	if TypeEntry.ShortName(member.typeName) is not in ("List(Number)", "Numbers")
 		return 0
 	let count = member.Count
 	(count >= 3) and (count <= MaximumCount) and IsSupported(type, member.Name) then count else 0
+Flat(type TypeEntry) MemberEntry
+	Sample.Flat(Tripling) is Numbers
+	Sample.Flat(TypeEntry("Strict/Two", (Numbers, Numbers), List(MethodEntry))) is Unflat
+	Sample.Flat(TypeEntry("Strict/Kept", (MemberEntry.SevenMember, Numbers), List(MethodEntry))) is Numbers
+	Sample.Flat(TypeEntry("Strict/Wide", List(MemberEntry) + MemberEntry(Numbers, Bits = 64), List(MethodEntry))) is Unflat
+	mutable only = Unflat
+	for type.members
+		if value.IsConstant is false
+			if only.Name is not ""
+				return Unflat
+			only = value
+	only.Bits is Number.SingleBits then only else Unflat
 Constrained(type TypeEntry) Number
 	Sample.IsAccessor(InstructionEntry.Invoke(1, ("Strict/List(Number)", "Z", "N", "x"), List(Number) + 5, 2), 2)
 	Sample.IsAccessor(InstructionEntry.Invoke(1, ("Strict/List(Number)", "Code", "N"), List(Number), 0), 0)
