@@ -173,7 +173,7 @@ Sorted List
 		return elements
 	mutable sorted = elements
 	mutable width = 1
-	for as long as width < Length
+	for as long as width < elements.Length
 		sorted = sorted.MergedRuns(width)
 		width = width * 2
 	sorted

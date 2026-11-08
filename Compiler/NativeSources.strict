@@ -21,6 +21,7 @@ Rooted(flags Text, folder Text, root Text) Text
 	Adding.Rooted("-DX a/b.c a/d.m -Ia/c", "../E/F/native", ".") is " -DX ../E/a/b.c ../E/a/d.m -I../E/a/c"
 	Adding.Rooted("-DX a/b.c", "Frameworks/native", ".") is " -DX a/b.c"
 	Adding.Rooted("-DX a/b.c -Ia/c", "C:/s/E/native", "C:/s") is " -DX C:/s/a/b.c -IC:/s/a/c"
+	Adding.Rooted("-DX a/b.c", "C:/sx/E/native", "C:/s") is " -DX a/b.c"
 	let inside = folder.StartsWith(root + "/") then root + "/" else ""
 	let project = folder.StartsWith("../") then "../" + folder.Split("/")(1) + "/" else inside
 	mutable rooted = ""
@@ -65,6 +66,7 @@ Options(tokens Texts, isLinking Boolean) Text
 	Adding.Options(("-DX", "a/b.c", "-lgdi32", "-Wl,/OPT:REF"), true) is " -lgdi32 -Wl,/OPT:REF"
 	Adding.Options(("-DX", "a/b.c", "-lgdi32"), false) is " -DX"
 	Adding.Options(("-DX", "a/b.m"), false) is " -DX"
+	Adding.Options(("", "-DX"), false) is " -DX"
 	mutable options = ""
 	for tokens
 		let isLinked = value.StartsWith("-l") or value.StartsWith("-Wl")

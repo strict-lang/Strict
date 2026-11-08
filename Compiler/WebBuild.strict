@@ -50,11 +50,14 @@ Iconed(executable Text) Text
 Favicons(page Text, icon Text) Text
 	Missing.Favicons("<head></head>", "a.ico") is "<head><link rel=\"icon\" href=\"a.ico\"></head>"
 	Missing.Favicons("<head><link rel=icon href=b.ico></head>", "a.ico") is "<head><link rel=icon href=b.ico></head>"
-	let linked = (page.IndexOf("rel=icon") >= 0) or (page.IndexOf("rel=\"icon\"") >= 0)
+	Missing.Favicons("rel=icon</head>", "a.ico") is "rel=icon</head>"
+	Missing.Favicons("rel=\"icon\"</head>", "a.ico") is "rel=\"icon\"</head>"
+	let linked = ("rel=icon" is in page) or ("rel=\"icon\"" is in page)
 	linked then page else page.Replace("</head>", "<link rel=\"icon\" href=\"" + icon + "\"></head>")
 Sized(mlir Text) Text
 	WebBuild.Sized("  llvm.func @malloc(i64) -> !llvm.ptr\n  llvm.call @malloc(%b)") is "  llvm.call @strict_c_malloc(%b)"
 	WebBuild.Sized("  llvm.func @free(!llvm.ptr)" + MlirParameters.ReadScope) is "  llvm.func @free(!llvm.ptr)"
+	WebBuild.Sized("  a\n  b") is "  a\n  b"
 	WebBuild.Sized(MlirEntry.CollectorStart.First).IndexOf("\"llvm.stacksave.p0\"()") > 0
 	mutable kept = List(Mutable(Text))
 	for mlir.Lines
@@ -119,6 +122,8 @@ Scripted(base Text) Text
 	Missing.Scripted("Compiler/output/missing") is ""
 	File(base + ".shaders.js").Exists then " --pre-js \"" + base + ".shaders.js\"" else ""
 InstallLines Texts
+	Missing.InstallLines.First is "git clone --depth 1 https://github.com/emscripten-core/emsdk.git C:/s/Tools/emsdk"
+	Missing.InstallLines(1) is "C:/s/Tools/emsdk/emsdk install latest"
 	Missing.InstallLines.Last is "C:/s/Tools/emsdk/emsdk activate latest"
 	let folder = tools.root + "/Tools/emsdk"
 	let cloned = "git clone --depth 1 https://github.com/emscripten-core/emsdk.git " + folder

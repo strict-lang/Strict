@@ -5,7 +5,7 @@ constant Reading = List(TypeEntry) + TypeEntry("Strict/T", List(MemberEntry), (C
 constant Libraries = Baseline(Mutants(Logger, "Library.strict"))
 constant Sampled = Baseline(Mutants.Sample)
 constant Rolled = InstructionEntry.Invoke(1, ("Strict/Number", "Random", "Strict/Number"), List(Number), 0)
-constant Splitting = (InstructionEntry.LoadNumber(0, 0), Mutation.Marking, Rolled, InstructionEntry.LoadNumber(1, 1), InstructionEntry.Return(0))
+constant Splitting = (InstructionEntry.LoadNumber(0, 0), Mutation.Marking, Rolled, Mutants.Budget, InstructionEntry.LoadNumber(1, 1), InstructionEntry.Return(0))
 constant Rolling = TypeEntry(Machine.Doubler, methods = (Mutants.Lined, MethodEntry(Mutants.Lined, Name = TestCodegen.Runner, instructions = Splitting)))
 Kept(types List(TypeEntry)) List(KeptMethod)
 	Baseline(Mutants.Sample).Kept(Mutants.Doubled).Length is 0
@@ -82,7 +82,7 @@ Inputs(method MethodEntry, name Text, runner MethodEntry, reaching Texts) Text
 	let tests = MethodEntry(runner, instructions = Mutation(runner).Split(List(Text) + method.Name))
 	mutable hasTests = false
 	for runner.instructions
-		hasTests = hasTests or (Mutation(runner).Marked(value) is method.Name)
+		hasTests = hasTests or (Mutation(runner).Section(index) is method.Name)
 	let other = hasTests then "its tests" else "it has no tests, the other tests"
 	IsReaching(tests, reaching) then other + " use input or Random" else ""
 IsReaching(method MethodEntry, reaching Texts) Boolean

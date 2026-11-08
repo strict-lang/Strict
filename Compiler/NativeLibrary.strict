@@ -51,15 +51,18 @@ Waited(target Text, inputs Texts, options Text) Slow(Text)
 		let recorded = Text.Combine(File(target + ".built.nativecache").ReadLines, "\n")
 		if recorded.StartsWith("clang failed") and sources.IsCurrent(target + ".built.nativecache", inputs)
 			return Located(target, recorded)
-		if File(target + "." + Newest(inputs) + ".lock").Locked
+		if File(target + ".lock").Locked
 			return ""
 		Process.Wait(0.1)
 	""
 Finished(result ProcessResult, output Text, target Text, options Text) Text
+	File("Compiler/output/Cut.o.lock").Locked
 	Adding.Finished(ProcessResult(1, "", "no"), "Compiler/output/Cut.1.o", "Compiler/output/Cut.o", "") is Failing
+	File("Compiler/output/Cut.o.lock").Exists is false
 	let failure = "clang failed for " + target + ": " + result.error
 	let built = result.Failed then failure else "Built " + sources.Placed(output, target)
 	File(target + ".built.nativecache").Write(built)
+	File(target + ".lock").Delete
 	if built is "Built " + target
 		File(target + ".nativecache").Write(options)
 	built
@@ -71,11 +74,3 @@ Located(target Text, recorded Text) Text
 		return recorded
 	let folder = Path(target).PathOnly.text
 	"Built " + (folder is "" then "" else folder + "/") + Path(recorded.Substring(6, recorded.Length - 6)).FileName.text
-Newest(inputs Texts) Number
-	Adding.Newest(List(Text) + "Compiler/strict.h") is File("Compiler/strict.h").Modified
-	Adding.Newest(List(Text) + "Compiler/Missing.h") is 0
-	mutable newest = 0
-	for inputs
-		if File(value).Exists and (File(value).Modified > newest)
-			newest = File(value).Modified
-	newest

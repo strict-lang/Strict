@@ -6,8 +6,11 @@ constant Arithmetic = (InstructionType.Add, InstructionType.Subtract, Instructio
 constant Stored = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "a")
 constant Storing = Mutation(MethodEntry(Machine.Doubler.methods.First, instructions = (Stored, Stored)))
 constant Marking = InstructionEntry(InstructionType.LoadConstantToRegister, "1 is 1 in Twice at Doubler.strict:line 2", (0, 4, -1))
-constant Splitting = (InstructionEntry.LoadNumber(0, 0), Marking, InstructionEntry.LoadNumber(1, 1), InstructionEntry.Return(0))
+constant Stamped = InstructionEntry.LoadNumber(1, 1)
+constant Splitting = (InstructionEntry.LoadNumber(0, 0), Marking, Stamped, Mutants.Budget, InstructionEntry.Return(0))
 constant Splitter = Mutation(MethodEntry(Machine.Doubler.methods.First, instructions = Splitting))
+constant Lookalike = InstructionEntry.LoadText(0, "1 is 1 in Other at Doubler.strict:line 3")
+constant Quoting = Mutation(MethodEntry(Machine.Doubler.methods.First, instructions = (Splitting(0), Marking, Stamped, Mutants.Budget, Lookalike, Splitting(0), Splitting(0))))
 constant Lined = Mutation(MethodEntry(Machine.Doubler.methods.First, instructions = (InstructionEntry(MutationKinds.Loaded, line = 3), MutationKinds.Loaded, InstructionEntry(MutationKinds.Loaded, line = 1))))
 constant Targeted = InstructionEntry.Binary(InstructionType.LessThan, (0, 1, 5))
 constant Forcing = (InstructionType.Equal, InstructionType.NotEqual)
@@ -115,10 +118,6 @@ Replaced(kind Number, position Number, nth Text) Text
 Operator(kind Number) Text
 	Twice.Operator(InstructionType.Divide) is "/"
 	Twice.Operator(InstructionType.LessThan) is "<"
-	Twice.Marked(InstructionEntry.LoadText(0, "abcdef at Z:line 2")) is ""
-	Twice.Marked(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "x in Y at Z:line 2")) is ""
-	Twice.Marked(InstructionEntry.LoadText(0, "x at Z:line 2")) is ""
-	Twice.Marked(InstructionEntry.LoadText(0, "x in Y at Z")) is ""
 	Operators((Arithmetic + MutationKinds.Comparisons).Index(kind))
 Line(code Number) Number
 	Twice.Line(18) is 0
@@ -157,30 +156,46 @@ Source(lines Texts, line Number) Texts
 Lines Number
 	Twice.Lines is 0
 	Lined.Lines is 3
-	Mutation(MethodEntry(Twice.method, instructions = Twice.method.instructions + Splitting)).Split(("Twice")).Length is 4
-	Mutation(MethodEntry(Twice.method, instructions = Splitting + Splitting)).Position(40) is "5th "
+	Mutation(MethodEntry(Twice.method, instructions = Twice.method.instructions + Splitting)).Split(("Twice")).Length is 5
+	Mutation(MethodEntry(Twice.method, instructions = Splitting + Splitting)).Position(48) is "5th "
 	mutable last = 0
 	for method.instructions
 		last = value.line > last then value.line else last
 	last
 Split(names Texts) List(InstructionEntry)
-	Splitter.Split(("Twice")).Length is 4
-	(Splitter.Split(("Other")) is Splitting) and (Splitter.Split(("Other", "Twice")).Length is 4)
+	Splitter.Split(("Twice")).Length is 5
+	(Splitter.Split(("Other")) is Splitting) and (Splitter.Split(("Other", "Twice")).Length is 5)
+	Quoting.Split(("Twice")).Length is 7
 	let last = method.instructions.Length - 2
 	mutable kept = List(Mutable(InstructionEntry)) + method.instructions.First
 	mutable isKept = false
 	for method.instructions
-		let marked = Marked(value)
+		let marked = Section(index)
 		isKept = marked is "" then isKept else marked is in names
-		if isKept and (index > 0) and (index < last)
+		if isKept and (index < last)
 			kept.Add(value)
 	kept.Length is 1 then method.instructions else kept + method.instructions.Slice(last, 2)
+Section(position Number) Text
+	Splitter.Section(1) is "Twice"
+	Splitter.Section(2) is ""
+	Quoting.Section(4) is ""
+	Splitter.Section(3) is ""
+	Splitter.Section(4) is ""
+	if position + 1 is method.instructions.Length
+		return ""
+	Mutants.IsBudgetFlag(method.instructions, position + 1) then Marked(method.instructions(position)) else ""
 Marked(entry InstructionEntry) Text
 	Twice.Marked(Marking) is "Twice"
 	Twice.Marked(InstructionEntry.LoadNumber(0, 0)) is ""
-	Twice.Marked(InstructionEntry.LoadText(0, "x in Y")) is ""
+	Twice.Marked(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "x in Y at Z:line 2")) is ""
 	let isText = (entry.kind is InstructionType.LoadConstantToRegister) and (entry.texts.Length > 0)
-	let text = isText then entry.texts(0) else ""
+	isText then Placed(entry.texts(0)) else ""
+Placed(text Text) Text
+	Twice.Placed("1 is 1 in Twice at Z:line 2") is "Twice"
+	Twice.Placed("x in Y") is ""
+	Twice.Placed("abcdef at Z:line 2") is ""
+	Twice.Placed("x at Z:line 2") is ""
+	Twice.Placed("x in Y at Z") is ""
 	let at = text.LastIndexOf(" at ")
 	if (at < 0) or (text.Substring(at, text.Length - at).IndexOf(":line ") < 0)
 		return ""

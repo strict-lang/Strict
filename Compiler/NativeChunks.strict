@@ -4,6 +4,7 @@ constant Size = 8
 constant Saving = "Compiler/output/Hellos.strictbinary"
 constant Unsaved = "Compiler/output/Unsaved.strictbinary"
 constant Single = NativeChunks.Of(List(Text) + "Missing.strict", true)
+constant Clashing = (List(Text) + "a/P.strict", List(Text) + "b/P.strict")
 Of(folders Texts, isParallel Boolean) List(Texts)
 	NativeChunks.Of(("Examples/Sum.strict", "Examples/HelloLogger.strict"), true).Length is 2
 	NativeChunks.Of(List(Text) + "Math", false).Length is 1
@@ -17,9 +18,27 @@ Of(folders Texts, isParallel Boolean) List(Texts)
 	chunks
 Compiled(chunks List(Texts), root Text, base Text) List(List(TypeEntry))
 	NativeChunks(Logger, "*").Compiled(List(Texts), ".", "Compiler/output/Compiled").Length is 0
+	NativeChunks(Logger, "*").Compiled(Clashing, ".", "Compiler/output/Compiled").First.Length is 0
+	let clash = Clash(chunks)
+	if clash is not ""
+		logger.Log(clash)
+		return (List(TypeEntry), List(TypeEntry))
 	let loaded = Loaded(Prepared(chunks, root, base), chunks)
 	for chunks
 		loaded(index).Length > 0 then loaded(index) else NativeFolder(logger, selection, false).Counted(value, root)
+Clash(chunks List(Texts)) Text
+	NativeChunks.Clash(Single) is ""
+	NativeChunks.Clash(Clashing).StartsWith("SameNamedTypes: P in a/P.strict and b/P.strict, a build keys")
+	mutable seen = Dictionary(Text, Text)
+	for chunks
+		let chunk = value
+		for chunk
+			let name = Path(value).FileName.text
+			if name is in seen
+				let places = name.Replace(".strict", "") + " in " + seen(name) + " and " + value
+				return "SameNamedTypes: " + places + ", a build keys types by their plain name, rename one"
+			seen.Add(name, value)
+	""
 Chunked(base Text, index Number) Text
 	NativeChunks.Chunked("./Math/Tests.test", 2) is "./Math/Tests.test-2.strictbinary"
 	base + "-" + index + ".strictbinary"

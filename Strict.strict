@@ -122,7 +122,8 @@ Mained(arguments Texts) Texts
 	Strict.Mained(("test", "Math")) is ("test", "Math")
 	if (arguments.Length is 0) or (arguments(0) is not "build")
 		return arguments
-	let main = Path(Directory.Current.Replace("\\", "/")).FileName.text + ".strict"
+	let named = Path(Directory.Current.Replace("\\", "/")).FileName.text + ".strict"
+	let main = File(named).Exists then named else "Strict.strict"
 	let given = arguments.Length > 1 then arguments(1) else ""
 	let isSource = (given is not "") and (File(given).Exists or File(given + ".strict").Exists or Directory.Exists(given))
 	isSource or (File(main).Exists is false) then arguments else (List(Text) + "build" + main) + Rest(arguments)
@@ -147,7 +148,8 @@ Joined(arguments Texts) Text
 Launched(rest Texts, folder Text) Number
 	if NativeBuild.IsProgram(rest(0)) is false
 		return Native("test", (rest(0), rest(1), "native"))
-	let built = Native("build", (rest(0), rest(1)))
+	let isCurrent = NativeCache("build", (rest(0), rest(1))).IsCurrent
+	let built = isCurrent then 0 else Native("build", (rest(0), rest(1)))
 	let program = TypeSource.Absolute(Toolchain(Platform.Current, rest(1)).Executable(NativeBuild.Output(rest(0), true)))
 	if built is not 0
 		return built
