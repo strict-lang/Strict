@@ -1,7 +1,7 @@
 has logger
-constant Fallback = Process.OperatingSystem is "Windows" then ("STRICT_BUILD_PROFILE=1" is in Process.RunTool("cmd", "/d /c set STRICT_BUILD_PROFILE").Output.Lines) else Process.RunTool("printenv", "STRICT_BUILD_PROFILE").Output is "1\n"
+constant IsRequested = Process.Variable("STRICT_BUILD_PROFILE") is "1"
 Detailed Boolean
-	Fallback
+	IsRequested
 Reported(phase Text, started Number) Number
 	let elapsed = Process.Elapsed - started
 	if Detailed or (elapsed >= 3)

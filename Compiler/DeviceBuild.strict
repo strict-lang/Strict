@@ -76,10 +76,15 @@ Hsaco(base Text, device Text, runtimes Texts) Text
 	AmdCompiled(base, targets)
 Targets Texts
 	DeviceBuild(Toolchain(Platform.MacOS, ".")).Targets.Length is 0
-	if tools.platform is Platform.MacOS
+	Local.HasAmdDriver or (Local.Targets.Length is 0)
+	if (tools.platform is Platform.MacOS) or (HasAmdDriver is false)
 		return List(Text)
 	let found = ToolRunner(tools.Located("amdgpu-arch")).Execute("")
 	found.Failed or (found.Output.Trim is "") then List(Text) else found.Output.Trim.Lines.Unique
+HasAmdDriver Boolean
+	Missing.HasAmdDriver is Local.HasAmdDriver
+	let folder = Process.Variable("SystemRoot") + "/System32"
+	ToolRunner.IsWindows then (Directory.Files(folder, "amdhip64*.dll").Length > 0) else Directory.Exists("/sys/class/kfd")
 AmdCompiled(base Text, targets Texts) Text
 	Missing.AmdCompiled("Compiler/output/missing", ("gfx803")).StartsWith("mlir-opt failed")
 	let lowered = tools.Lowered(base + ".amd")
