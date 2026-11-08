@@ -16522,7 +16522,7 @@
     func.call @strict_gpu_warm(%ptx) : (!llvm.ptr) -> ()
     cf.br ^inputs(%isNear : i1)
   ^inputs(%packedEnough: i1):
-    %onDevice = func.call @strict_gpu_residents(%source, %kind, %values, %valueCount, %mask, %packedEnough) : (f64, i64, !llvm.ptr, i64, i64, i1) -> i1
+    %onDevice = func.call @strict_gpu_residents(%count, %source, %kind, %values, %valueCount, %mask, %packedEnough) : (i64, f64, i64, !llvm.ptr, i64, i64, i1) -> i1
     %hasRows = arith.cmpi ne, %rows, %none : i64
     %present = func.call @strict_gpu_present() : () -> i1
     %rowsLive = arith.andi %hasRows, %present : i1
@@ -18861,7 +18861,25 @@
   ^plain:
     return %none : i64
   }
-  func.func private @strict_gpu_residents(%source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64, %packedEnough: i1) -> i1 {
+  // a list on the GPU keeps a loop there, except a small loop reading at least a quarter of it: a launch and reading its
+  // result back cost as much as downloading the list once (List.Sorted launched a kernel per Slice down to single numbers,
+  // 25 times slower), a list is not downloaded for a few of its numbers
+  func.func private @strict_gpu_worth_reading(%count: i64, %list: f64, %packedEnough: i1) -> i1 {
+    %resides = func.call @strict_gpu_readable(%list, %packedEnough) : (f64, i1) -> i1
+    %fewest = arith.constant 256 : i64
+    %isFew = arith.cmpi slt, %count, %fewest : i64
+    %length = func.call @strict_list_length(%list) : (f64) -> f64
+    %four = arith.constant 4.0 : f64
+    %counted = arith.sitofp %count : i64 to f64
+    %shortest = arith.mulf %counted, %four : f64
+    %isShort = arith.cmpf ole, %length, %shortest : f64
+    %isCheap = arith.andi %isFew, %isShort : i1
+    %true = arith.constant true
+    %isWorth = arith.xori %isCheap, %true : i1
+    %worth = arith.andi %resides, %isWorth : i1
+    return %worth : i1
+  }
+  func.func private @strict_gpu_residents(%count: i64, %source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64, %packedEnough: i1) -> i1 {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %true = arith.constant true
@@ -18869,7 +18887,7 @@
     %isList = arith.cmpi eq, %kind, %one : i64
     cf.cond_br %isList, ^source, ^next(%none : i64)
   ^source:
-    %sourceResides = func.call @strict_gpu_readable(%source, %packedEnough) : (f64, i1) -> i1
+    %sourceResides = func.call @strict_gpu_worth_reading(%count, %source, %packedEnough) : (i64, f64, i1) -> i1
     cf.cond_br %sourceResides, ^found, ^next(%none : i64)
   ^next(%index: i64):
     %more = arith.cmpi slt, %index, %valueCount : i64
@@ -18883,7 +18901,7 @@
   ^listed:
     %slot = llvm.getelementptr %values[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     %value = llvm.load %slot : !llvm.ptr -> f64
-    %resides = func.call @strict_gpu_readable(%value, %packedEnough) : (f64, i1) -> i1
+    %resides = func.call @strict_gpu_worth_reading(%count, %value, %packedEnough) : (i64, f64, i1) -> i1
     cf.cond_br %resides, ^found, ^next(%following : i64)
   ^found:
     return %true : i1

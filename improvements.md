@@ -2,7 +2,7 @@
 What to fix next, one short line each, bugs first. Remove a line once it is done, add what is found at the end. No history or measurements (those go into commit messages). Speed work: [performance.md](performance.md).
 
 ## Now
-- List.Sorted of a million numbers takes over 60 s when a GPU is usable and 1.25 s with STRICT_GPU=0: probably List.Slice (a plain `for`) becoming a kernel at every level above the GPU minimum while Merged reads on the CPU; trace it, then keep such loops on the CPU.
+- A warm MossImage backend (encoder and Moss resident) runs about 10 full collections per 8 image run (55-130 ms each, 14.5 GB marked) and ends with GarbageCollectionExceedsLimit unless the limit is off.
 - CPU-only compilers (the Bootstrap.cmd seed, any NativeCompiler built with STRICT_GPU=0) spend 16-29 % of their time collecting and stop at GarbageCollectionExceedsLimit when building NativeCompiler.strict or Strict.strict (and some `strict test` runs of the strict.exe they build), so a fresh bootstrap needs STRICT_GC_LIMIT=100.
 
 ## Soon
