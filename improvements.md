@@ -2,6 +2,7 @@
 What to fix next, one short line each, bugs first. Remove a line once it is done, add what is found at the end. No history or measurements (those go into commit messages). Speed work: [performance.md](performance.md).
 
 ## Now
+- MossImage hangs encoding when a batch has two different prompts (StrictComfy prompt.txt with choices, --local --count 2): after "Text encoder loaded" no prompt is ever encoded, GPU idle, CPU busy without allocations, also with STRICT_THREADS=1, STRICT_GPU_WARM=0 and the encode loop forced serial; one unique prompt (--seed) works. Not the parallel for, the GPU warm up or list aliasing in MossBatch.Picked (probed); the encoder is QwenSafetensors.Loaded with the picked ids of all prompts (Safetensors.Hosted rows), then Prefilled of the first prompt. Next: a CPU sample of the hung process with symbols.
 - CPU-only compilers (the Bootstrap.cmd seed, any NativeCompiler built with STRICT_GPU=0) spend 16-29 % of their time collecting and stop at GarbageCollectionExceedsLimit when building NativeCompiler.strict or Strict.strict (and some `strict test` runs of the strict.exe they build), so a fresh bootstrap needs STRICT_GC_LIMIT=100.
 
 ## Soon
