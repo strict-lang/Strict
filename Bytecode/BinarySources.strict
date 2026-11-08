@@ -19,11 +19,14 @@ Indexed Dictionary(Text, Number)
 Kept(types List(TypeEntry)) BinarySources
 	Mixed.Kept(List(TypeEntry) + Listing).sources is ("./Examples/data.csv", "./Examples/List.strict")
 	Mixed.Kept(List(TypeEntry) + Listing).stamps is (2, 3)
-	let names = Names(types)
+	Named(Names(types))
+Named(names Texts) BinarySources
+	Mixed.Named(List(Text) + "Lists").sources is ("./Examples/data.csv", "./Examples/List.strict")
 	mutable kept = List(Text)
 	mutable marks = List(Number)
 	for sources
-		if (value.EndsWith(".strict") is false) or (Path(value).FileName.RemoveExtension.text is in names)
+		let name = Path(value).FileName.RemoveExtension.text
+		if (value.EndsWith(".strict") is false) or (name is in names) or ((name + "s") is in names)
 			kept = kept + value
 			marks = marks + stamps(index)
 	BinarySources(kept, marks)

@@ -23,18 +23,6 @@ Entries(signed Texts) Slow(List(TypeEntry))
 	LinkRound(Single, linker = cached).Entries(List(Text) + "Strict/Logger:").First is Linker.Iterating
 	for signed
 		(value is not in signatures) and (value is in linker.Known) then linker.Known(value) else Fresh(value)
-Homing(signed Texts) LinkRound
-	Single.Homing(List(Text) + "Strict/Missing:Go").linker.Homes("Strict/Missing") is BinaryLinks.Unknown
-	mutable homes = linker.Homes
-	mutable places = linker.Places
-	for signed
-		let type = Signature(value).Type
-		if type is not in homes
-			let file = BinaryFile(FileCompiler.Normalized(linker.SourcePath(type)))
-			let bytes = File(file.Path).Exists then File(file.Path).ReadBytes else List(Byte)
-			homes(type) = BinaryLinks(file).Owned(file.Head(bytes), linker.Stamps)
-			places(type) = file.Path + "\t" + file.Checked(bytes)
-	LinkRound(value, linker = Linker(linker, Homes = homes, Places = places))
 Fresh(signature Text) Slow(TypeEntry)
 	Single.Fresh("Strict/Logger:").Name is "Strict/Logger"
 	Twice.Fresh("Strict/Logger:Log").methods.Length is 2

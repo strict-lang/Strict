@@ -1,0 +1,38 @@
+has round LinkRound
+constant Single = LinkHomes(LinkRound.Single)
+Homing(signed Texts) LinkRound
+	Single.Homing(List(Text) + "Strict/Missing:Go").linker.Homes("Strict/Missing") is BinaryLinks.Unknown
+	let stamps = round.linker.Sourced.Indexed
+	mutable homes = round.linker.Homes
+	mutable places = round.linker.Places
+	for signed
+		let type = Signature(value).Type
+		if (type is not in homes) and (type.IndexOf("(") < 0)
+			let file = BinaryFile(FileCompiler.Normalized(round.linker.SourcePath(type)))
+			homes(type) = BinaryLinks(file).Owned(file.Head(File(file.Path).ReadBytes), stamps)
+			if (file.source is in stamps) and (stamps(file.source) > 0)
+				places(type) = file.source
+	LinkRound(round, linker = Linker(round.linker, Homes = homes, Places = places))
+Saved LinkRound
+	Single.Saved is LinkRound.Single
+	Single.Homing(List(Text) + "Strict/List(Text):Length").linker.Homes.Length is 0
+	Single.Homing(List(Text) + "Strict/Missing:Go").linker.Places.Length is 0
+	if round.entries.Length is not round.signatures.Length + 1
+		return round
+	for round.signatures
+		let type = Signature(value).Type
+		if type is in round.linker.Places
+			Grew(BinaryLinks(BinaryFile(round.linker.Places(type))), round.linker.Homes(type), round.entries(index + 1))
+	round
+Grew(links BinaryLinks, own TypeEntry, entry TypeEntry) Boolean
+	Single.Grew(BinaryLinks.User, TypeEntry.HelloLogger, TypeEntry.HelloLogger) is false
+	if (own.Name is not "") and (links.Added(own, entry).Length is 0)
+		return false
+	links.Grown(own, entry, SourceNames(links.file.source, entry), round.linker.Sourced)
+SourceNames(source Text, entry TypeEntry) Texts
+	"Number" is in Single.SourceNames("./Math/Vector2.strict", TypeEntry.HelloLogger)
+	mutable names = SourceFiles(".").Mentioned(source)
+	for round.linker.UsedTypes(List(TypeEntry) + entry)
+		let short = TypeEntry.ShortName(value)
+		names = names + (short.IndexOf("(") < 0 then short else short.Substring(0, short.IndexOf("(")))
+	names
