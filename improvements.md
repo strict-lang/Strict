@@ -2,7 +2,7 @@
 What to fix next, one short line each, bugs first. Remove a line once it is done, add what is found at the end. No history or measurements (those go into commit messages). Speed work: [performance.md](performance.md).
 
 ## Now
-- No fitting overload silently takes the first one with the same parameter count (Bytecode/CallTarget.Chosen, ordinal < 0): `Safetensors.Written(("a", "b"), (BFloat16.Packed(x), y))` ran Written(name Text, numbers Numbers) with the names as one Text, because `(BFloat16s, Numbers)` is typed as the pair List(BFloat16s, Numbers) (TypeInference.OperatorType). Needs a compile issue; open: should Number-valued element types unify to List(Numbers)?
+- CPU-only compilers (the Bootstrap.cmd seed, any NativeCompiler built with STRICT_GPU=0) spend 16-29 % of their time collecting and stop at GarbageCollectionExceedsLimit when building NativeCompiler.strict or Strict.strict (and some `strict test` runs of the strict.exe they build), so a fresh bootstrap needs STRICT_GC_LIMIT=100.
 
 ## Soon
 - `test Expressions . native` and `test NeuralNetworks . native` fail to build: mlir-opt says `'func.call' op 'strict_memo_$teststook'` (`strict_gpu_$teststook` in NeuralNetworks) `does not reference a valid function`, a native named after the generated `$TestsTook` helper is called but never emitted.

@@ -21,7 +21,7 @@ constant LabelsMember = SyntaxNode("Member", "Labels", LabelsCall)
 constant Valued = ("Value(name Text, default Number) Text", "\tname", "Value(name Text, default Text) Text", "\tname")
 constant ListToText = KnownTypes(List(Text) + "List", List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(List(Text) + "to", List(Text) + "Text"), List(Scope) + KnownTypes.NoMembers)
 constant DefaultNames = ("from", "from types", "from", "from types", "b default", "Get", "Get types", "Get", "Get types", "Get count default")
-constant DefaultTypes = ("text", "Text", "a,b", "Number,Number", "0", "x,y", "Number,Number", "count", "Number", "1")
+constant DefaultTypes = ("text", "Text", "a,b", "Number,Number", "0", "x,b", "Number,Number", "count", "Number", "1")
 constant Defaulted = Overloads(KnownTypes(List(Text) + "D", List(Scope) + KnownTypes.NoMembers, List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(DefaultNames, DefaultTypes)))
 constant ScalerInference = TypeInference(Scaler, (KnownTypes.NoMembers, KnownTypes.NoMembers))
 constant Scalers = Scope(List(Text) + "scaler", List(Text) + "Scaler")
@@ -41,7 +41,7 @@ Chosen(owner Text, method Text, argumentTypes Texts) Number
 	Defaulted.Chosen("D", "from", ("Number", "Number")) is 1
 	let exact = Ordinal(owner, method, argumentTypes, true)
 	exact >= 0 then exact else Ordinal(owner, method, argumentTypes, false)
-Ordinal(owner Text, method Text, argumentTypes Texts, isExact Boolean) Number
+Ordinal(owner Text, method Text, arguments Texts, isExact Boolean) Number
 	Scaling.Ordinal("Scaler", "Scaled", List(Text) + "Number", true) is -1
 	Picking.Ordinal("Picker", "Mixed", List(Text) + "Generics", true) is -1
 	let scope = types.ParameterScope(owner)
@@ -51,25 +51,20 @@ Ordinal(owner Text, method Text, argumentTypes Texts, isExact Boolean) Number
 	for scope.names
 		if value is method + " types"
 			ordinal = ordinal + 1
-			let required = Required(owner, method, scope.TypeAt(method, ordinal).Split(","))
-			if Fits(types.ParameterNames(scope.types(index)), argumentTypes, owner, isExact, required)
+			if Fits(types.ParameterNames(scope.types(index)), arguments, owner, isExact, Required(owner, method, ordinal).Length)
 				return ordinal
 	-1
-Required(owner Text, method Text, names Texts) Number
-	Defaulted.Required("D", "from", ("a", "b")) is 1
-	Defaulted.Required("D", "from", List(Text) + "text") is 1
-	Scaling.Required("Scaler", "Scaled", List(Text) + "text") is 1
-	Labeling.Required("Labeler", "Labels", List(Text) + "") is 0
-	Defaulted.Required("D", "Get", List(Text) + "count") is 0 and (Defaulted.Required("D", "Get", List(Text) + "b") is 1)
+Required(owner Text, method Text, ordinal Number) Texts
+	Defaulted.Required("D", "from", 1) is ("a") and (Defaulted.Required("D", "from", 0) is ("text"))
+	Labeling.Required("Labeler", "Labels", 0).Length is 0
+	Defaulted.Required("D", "Get", 1).Length is 0 and (Defaulted.Required("D", "Get", 0) is ("x", "b"))
 	Defaulted.Chosen("D", "Get", List(Text) + "Number") is 1 and (Defaulted.Chosen("D", "Get", List(Text)) is 1)
 	let scope = types.ParameterScope(owner)
-	mutable required = 0
-	for names
+	for scope.TypeAt(method, ordinal).Split(",")
 		let isOwn = scope.TypeOf(method + " " + value + " default") is not ""
 		let isMember = (method is "from") and (scope.TypeOf(value + " default") is not "")
 		if (value is not "") and ((isOwn or isMember) is false)
-			required = required + 1
-	required
+			value
 Fits(declared Texts, argumentTypes Texts, owner Text, isExact Boolean, required Number) Boolean
 	Scaling.Fits(("Other", "Bytes"), ("Scaler", "List(Byte)"), "Scaler", true, 2)
 	Scaling.Fits(List(Text) + "Texts", List(Text) + "Bytes", "Scaler", true, 1) is false
@@ -88,35 +83,11 @@ Assignable(argument Text, declared Text, isExact Boolean) Boolean
 	Scaling.Assignable("Number", "Generic", true) is false
 	Scaling.Assignable("Number", "Generic", false)
 	Scaling.Assignable("Bytes", "Numbers", false) and (Scaling.Assignable("Bytes", "Numbers", true) is false)
-	Scaling.Assignable("List(Bytes, Numbers)", "List(Numbers)", false)
-	Scaling.Assignable("List(Bytes, Text)", "List(Numbers)", false) is false
-	Scaling.Assignable("Bytes", "Generic", false) and (Scaling.Assignable("Bytes", "Number", false) is false)
-	Scaling.Assignable("Byte", "Bytes", false) and (Scaling.Assignable("Text", "Bytes", false) is false)
 	let isList = argument.StartsWith("List(") and (argument.IndexOf(",") < 0)
 	let plural = isList then argument.Substring(5, argument.Length - 6) + "s" else argument
 	if plural is declared
 		return true
-	let elements = Elements(argument)
-	let wanted = Elements(declared)
-	if isExact or (wanted.Length is not 1)
-		return (isExact is false) and Converts(argument, declared)
-	if elements.Length is 0
-		return Assignable(argument, wanted.First, false)
-	Fitting(elements, wanted.First)
-Fitting(elements Texts, element Text) Boolean
-	Scaling.Fitting(("Byte", "Number"), "Number")
-	Scaling.Fitting(("Byte", "Text"), "Number") is false
-	for elements
-		if Assignable(value, element, false) is false
-			return false
-	true
-Elements(type Text) Texts
-	Scaling.Elements("Bytes") is ("Byte")
-	Scaling.Elements("List(Bytes, Numbers)") is ("Bytes", "Numbers")
-	Scaling.Elements("Byte").Length is 0
-	if type.StartsWith("List(")
-		return Instantiation(types).Arguments(type)
-	types.IsPlural(type) then List(Text) + types.ElementType(type) else List(Text)
+	(isExact is false) and ListFits(types).Widened(argument, declared)
 Converts(argument Text, declared Text) Boolean
 	Scaling.Converts("Byte", "Number")
 	Overloads(TypeInference.Colors.types).Converts("ColorValue", "Color")
@@ -126,7 +97,7 @@ Converts(argument Text, declared Text) Boolean
 	if (declared is "Generic") or (types.ValueOf(declared) is argument) or (types.ValueOf(argument) is declared)
 		return true
 	let converter = TypeInference(types, List(Scope)).Converter(argument, declared)
-	(converter is "from") or (converter is "to") and (Elements(argument).Length is 0)
+	(converter is "from") or (converter is "to") and (ListFits(types).Elements(argument).Length is 0)
 Returned(node SyntaxNode, inference TypeInference, scope Scope, current Scope) Text
 	Labeling.Returned(LabelsCall, LabelInference, KnownTypes.NoMembers, Labeler.methods(0)) is "List(Numbers)"
 	Labeling.Returned(SyntaxNode("Call", "Labels"), LabelInference, KnownTypes.NoMembers, Labeler.methods(0)) is "Numbers"

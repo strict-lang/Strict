@@ -72,6 +72,7 @@ Issue(call SyntaxNode, scope Scope, current Scope) Text
 	(compared is "") and isConstructor then Copied(call, scope, current) else compared
 OwnCall(call SyntaxNode, scope Scope, current Scope) Text
 	Sizing.OwnCall(OwnGrown, Owned, Methods(0)).EndsWith("Count.Grow got a Count for a Area")
+	Scaling.Issue(Overloads.Rescaled, Scalers, Scalers).StartsWith("NoOverloadFits")
 	Sizing.OwnCall(SyntaxParser(Tokenizer("Grow(area)").Tokens).Parse, Owned, Methods(0)) is ""
 	Sizing.OwnCall(Grown, Owned, Methods(0)) is ""
 	Sizing.OwnCall(OwnGrown, Owned, Counted) is ""
@@ -97,7 +98,6 @@ Copied(call SyntaxNode, scope Scope, current Scope) Text
 Compared(call SyntaxNode, instance Text, method Text, scope Scope, current Scope) Text
 	Sizing.Compared(Grown, "Count", "Grow", Counted, Counted).StartsWith("ArgumentTypeMismatch: Count.Grow")
 	Sizing.Compared(Spread, "Count", "Spread", Counted, Counted) is "TooManyArguments: Count.Spread got 3 of 2"
-	Scaling.Compared(Overloads.Rescaled, "Scaler", "Scaled", Scalers, Scalers).StartsWith("NoOverloadFits")
 	let parameters = inference.types.ParameterScope(instance)
 	if parameters.Count(method) is not 1
 		return Overloads(inference.types).Unfit(call, instance, method, inference, scope, current)
