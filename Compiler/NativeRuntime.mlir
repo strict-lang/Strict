@@ -242,7 +242,7 @@
   func.func private @strict_file_delete(%path: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     func.call @strict_file_unlocked(%path) : (f64) -> ()
-    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %name = func.call @strict_named(%path) : (f64) -> !llvm.ptr
     %removed = llvm.call @remove(%name) : (!llvm.ptr) -> i32
     return %zero : f64
   }
@@ -2338,6 +2338,10 @@
     %overrideOwner = llvm.load %overrideOwnerSlot : !llvm.ptr -> i64
     %overridePooledSlot = llvm.mlir.addressof @strict_override_pooled : !llvm.ptr
     llvm.store %overrideOwner, %overridePooledSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    %folderOwnerSlot = llvm.mlir.addressof @strict_folder : !llvm.ptr
+    %folderOwner = llvm.load %folderOwnerSlot : !llvm.ptr -> i64
+    %folderPooledSlot = llvm.mlir.addressof @strict_folder_pooled : !llvm.ptr
+    llvm.store %folderOwner, %folderPooledSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     %jobSlot = llvm.mlir.addressof @strict_pool_job : !llvm.ptr
     %previous = llvm.load %jobSlot : !llvm.ptr -> i64
     %job = arith.addi %previous, %one : i64
@@ -13755,7 +13759,7 @@
     %textBytes = llvm.call @strlen(%text) : (!llvm.ptr) -> i64
     cf.br ^done(%textBytes : i64)
   ^disk:
-    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %name = func.call @strict_named(%path) : (f64) -> !llvm.ptr
     %fileBytes = func.call @strict_file_size(%name) : (!llvm.ptr) -> i64
     cf.br ^done(%fileBytes : i64)
   ^done(%bytes: i64):
@@ -13771,7 +13775,7 @@
     %present = arith.constant 1.0 : f64
     return %present : f64
   ^disk:
-    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %name = func.call @strict_named(%path) : (f64) -> !llvm.ptr
     %isFile = func.call @strict_file_present(%name) : (!llvm.ptr) -> i1
     %isMapped = func.call @strict_web_file_mapped(%name) : (!llvm.ptr) -> i1
     %exists = arith.ori %isFile, %isMapped : i1
@@ -13944,6 +13948,148 @@
   func.func @strict_release(%text: !llvm.ptr) {
     llvm.call @free(%text) : (!llvm.ptr) -> ()
     return
+  }
+  // the folder Directory.Change gave this thread (a kept absolute path, 0 is the folder of the process): relative paths
+  // given to the system are joined to it, so each request of the resident server keeps its own folder; a pool worker
+  // uses the one of the thread that forked its job like strict_output_pooled
+  llvm.mlir.global internal thread_local @strict_folder(0 : i64) : i64
+  llvm.mlir.global internal @strict_folder_pooled(0 : i64) : i64
+  func.func private @strict_folder_own() -> i64 {
+    %none = arith.constant 0 : i64
+    %ownSlot = llvm.mlir.addressof @strict_folder : !llvm.ptr
+    %own = llvm.load %ownSlot : !llvm.ptr -> i64
+    %insideSlot = llvm.mlir.addressof @strict_pool_inside : !llvm.ptr
+    %inside = llvm.load %insideSlot : !llvm.ptr -> i64
+    %pooledSlot = llvm.mlir.addressof @strict_folder_pooled : !llvm.ptr
+    %pooled = llvm.load %pooledSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %isWorker = arith.cmpi ne, %inside, %none : i64
+    %hasOwn = arith.cmpi ne, %own, %none : i64
+    %fromPool = arith.select %isWorker, %pooled, %own : i64
+    %folder = arith.select %hasOwn, %own, %fromPool : i64
+    return %folder : i64
+  }
+  // the path joined to the folder of this thread unless it is absolute (/, \ or a drive) or no folder was set
+  func.func private @strict_folder_joined(%path: f64) -> f64 {
+    %none = arith.constant 0 : i64
+    %end = arith.constant 0 : i8
+    %slash = arith.constant 47 : i8
+    %backslash = arith.constant 92 : i8
+    %colon = arith.constant 58 : i8
+    %folder = func.call @strict_folder_own() : () -> i64
+    %isSet = arith.cmpi ne, %folder, %none : i64
+    cf.cond_br %isSet, ^check, ^done(%path : f64)
+  ^check:
+    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %first = llvm.load %name : !llvm.ptr -> i8
+    %isEmpty = arith.cmpi eq, %first, %end : i8
+    %isSlash = arith.cmpi eq, %first, %slash : i8
+    %isBackslash = arith.cmpi eq, %first, %backslash : i8
+    %isRooted = arith.ori %isSlash, %isBackslash : i1
+    %folderPointer = llvm.inttoptr %folder : i64 to !llvm.ptr
+    %folderText = func.call @strict_bits(%folderPointer) : (!llvm.ptr) -> f64
+    cf.cond_br %isEmpty, ^done(%folderText : f64), ^rooted
+  ^rooted:
+    cf.cond_br %isRooted, ^done(%path : f64), ^drive
+  ^drive:
+    %secondSlot = llvm.getelementptr %name[1] : (!llvm.ptr) -> !llvm.ptr, i8
+    %second = llvm.load %secondSlot : !llvm.ptr -> i8
+    %isDrive = arith.cmpi eq, %second, %colon : i8
+    cf.cond_br %isDrive, ^done(%path : f64), ^join
+  ^join:
+    %joined = func.call @strict_path_join(%folderText, %path) : (f64, f64) -> f64
+    cf.br ^done(%joined : f64)
+  ^done(%result: f64):
+    return %result : f64
+  }
+  llvm.mlir.global internal constant @strict_separators("/\5C\00") : !llvm.array<3 x i8>
+  llvm.func @strpbrk(!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+  // a program given with a folder starts from the folder of this thread, a bare name is searched on the PATH
+  func.func private @strict_program_joined(%path: f64) -> f64 {
+    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %separators = llvm.mlir.addressof @strict_separators : !llvm.ptr
+    %found = llvm.call @strpbrk(%name, %separators) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %isBare = llvm.icmp "eq" %found, %null : !llvm.ptr
+    cf.cond_br %isBare, ^done(%path : f64), ^join
+  ^join:
+    %joined = func.call @strict_folder_joined(%path) : (f64) -> f64
+    cf.br ^done(%joined : f64)
+  ^done(%result: f64):
+    return %result : f64
+  }
+  llvm.mlir.global internal constant @strict_folder_enter("cd '\00") : !llvm.array<5 x i8>
+  llvm.mlir.global internal constant @strict_folder_then("' && \00") : !llvm.array<6 x i8>
+  // a shell command started from the folder of this thread (Posix processes start through sh)
+  func.func private @strict_folder_command(%command: f64) -> f64 {
+    %none = arith.constant 0 : i64
+    %folder = func.call @strict_folder_own() : () -> i64
+    %isSet = arith.cmpi ne, %folder, %none : i64
+    cf.cond_br %isSet, ^enter, ^done(%command : f64)
+  ^enter:
+    %enterText = llvm.mlir.addressof @strict_folder_enter : !llvm.ptr
+    %enter = func.call @strict_bits(%enterText) : (!llvm.ptr) -> f64
+    %thenText = llvm.mlir.addressof @strict_folder_then : !llvm.ptr
+    %then = func.call @strict_bits(%thenText) : (!llvm.ptr) -> f64
+    %folderPointer = llvm.inttoptr %folder : i64 to !llvm.ptr
+    %folderText = func.call @strict_bits(%folderPointer) : (!llvm.ptr) -> f64
+    %entering = func.call @strict_text_concat(%enter, %folderText) : (f64, f64) -> f64
+    %entered = func.call @strict_text_concat(%entering, %then) : (f64, f64) -> f64
+    %placed = func.call @strict_text_concat(%entered, %command) : (f64, f64) -> f64
+    cf.br ^done(%placed : f64)
+  ^done(%result: f64):
+    return %result : f64
+  }
+  // the folder of this thread for a started process, null for the folder of this process
+  func.func private @strict_folder_pointer() -> !llvm.ptr {
+    %folder = func.call @strict_folder_own() : () -> i64
+    %pointer = llvm.inttoptr %folder : i64 to !llvm.ptr
+    return %pointer : !llvm.ptr
+  }
+  func.func private @strict_named(%path: f64) -> !llvm.ptr {
+    %joined = func.call @strict_folder_joined(%path) : (f64) -> f64
+    %name = func.call @strict_ptr(%joined) : (f64) -> !llvm.ptr
+    return %name : !llvm.ptr
+  }
+  // Directory.Change keeps the absolute folder for this thread, the one before is freed outside of pool jobs
+  func.func private @strict_folder_changed(%absolute: !llvm.ptr) {
+    %none = arith.constant 0 : i64
+    %bits = func.call @strict_bits(%absolute) : (!llvm.ptr) -> f64
+    %kept = func.call @strict_kept_text(%bits) : (f64) -> f64
+    %keptPointer = func.call @strict_ptr(%kept) : (f64) -> !llvm.ptr
+    %keptBits = llvm.ptrtoint %keptPointer : !llvm.ptr to i64
+    %ownSlot = llvm.mlir.addressof @strict_folder : !llvm.ptr
+    %old = llvm.load %ownSlot : !llvm.ptr -> i64
+    llvm.store %keptBits, %ownSlot : i64, !llvm.ptr
+    %insideSlot = llvm.mlir.addressof @strict_pool_inside : !llvm.ptr
+    %inside = llvm.load %insideSlot : !llvm.ptr -> i64
+    %isOutside = arith.cmpi eq, %inside, %none : i64
+    %hasOld = arith.cmpi ne, %old, %none : i64
+    %isFreed = arith.andi %isOutside, %hasOld : i1
+    cf.cond_br %isFreed, ^free, ^done
+  ^free:
+    %oldPointer = llvm.inttoptr %old : i64 to !llvm.ptr
+    llvm.call @free(%oldPointer) : (!llvm.ptr) -> ()
+    cf.br ^done
+  ^done:
+    return
+  }
+  // Directory.Current: a copy of the folder of this thread, %system when none was set
+  func.func private @strict_folder_current(%system: f64) -> f64 {
+    %none = arith.constant 0 : i64
+    %folder = func.call @strict_folder_own() : () -> i64
+    %isSet = arith.cmpi ne, %folder, %none : i64
+    cf.cond_br %isSet, ^copy, ^done(%system : f64)
+  ^copy:
+    %one = arith.constant 1 : i64
+    %folderPointer = llvm.inttoptr %folder : i64 to !llvm.ptr
+    %length = llvm.call @strlen(%folderPointer) : (!llvm.ptr) -> i64
+    %size = arith.addi %length, %one : i64
+    %buffer = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
+    %copiedBytes = llvm.call @memcpy(%buffer, %folderPointer, %size) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %copied = func.call @strict_bits(%buffer) : (!llvm.ptr) -> f64
+    cf.br ^done(%copied : f64)
+  ^done(%result: f64):
+    return %result : f64
   }
   // File.InMemory of this thread: one block holding the path and the text, set at once so no reader sees a path with
   // the text of another; a pool worker uses the one of the thread that forked its job like strict_output_pooled
@@ -14141,7 +14287,7 @@
     %beginning = arith.constant 0 : i32
     %one = arith.constant 1 : i64
     %terminator = arith.constant 0 : i8
-    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %name = func.call @strict_named(%path) : (f64) -> !llvm.ptr
     %mode = llvm.mlir.addressof @strict_read_mode : !llvm.ptr
     %file = llvm.call @fopen(%name, %mode) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
@@ -14292,7 +14438,7 @@
     %step = arith.constant 1 : i64
     %slash = arith.constant 47 : i8
     %backslash = arith.constant 92 : i8
-    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %name = func.call @strict_named(%path) : (f64) -> !llvm.ptr
     %mode = llvm.mlir.addressof @strict_write_mode : !llvm.ptr
     %file = llvm.call @fopen(%name, %mode) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
@@ -14372,7 +14518,7 @@
     %byteFormat = arith.constant 9 : i64
     %ending = arith.constant 2 : i32
     %beginning = arith.constant 0 : i32
-    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %name = func.call @strict_named(%path) : (f64) -> !llvm.ptr
     %mode = llvm.mlir.addressof @strict_read_mode : !llvm.ptr
     %file = llvm.call @fopen(%name, %mode) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr

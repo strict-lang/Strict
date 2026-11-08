@@ -26,6 +26,7 @@ constant Hosting = TypeEntry("Strict/Runtime/Hosted", List(MemberEntry), List(Me
 constant Written = MethodEntry(MlirParallel.Timed, instructions = MlirParallel.Timed.instructions.Slice(0, 4) + MlirParallel.Effects + Writing.method.instructions + MlirParallel.Timed.instructions.Slice(5, 2))
 constant Setting = MlirFunction(Doubling.function, method = MethodEntry(Checking, instructions = List(InstructionEntry) + InstructionEntry.Set(List(Text), (1, 7))))
 constant Gate = TypeEntry("Strict/Runtime/Foreign", List(MemberEntry), List(MethodEntry) + MethodEntry(Writing.method, Name = "Called"))
+constant ProcessReads = ("from", "Elapsed", "MemoryUsed", "OperatingSystem", "Find", "Current", "FilesRead", "Expired", "Entered", "Left")
 IsGateway Boolean
 	MlirPurity(MlirFunction(List(TypeEntry) + Hosting, Hosting, Hosting.methods.First), 0).IsGateway
 	MlirPurity(MlirFunction(List(TypeEntry) + Gate, Gate, Gate.methods.First), 0).IsGateway
@@ -138,7 +139,7 @@ IsExternalSafe(kind Text, method Text) Boolean
 	if kind is "Directory"
 		return method is in ("from", "Files", "Directories", "Exists", "Current", "Modified")
 	if kind is in ("Process", "TestBudget")
-		return method is in ("from", "Elapsed", "MemoryUsed", "OperatingSystem", "Find", "Current", "FilesRead", "Expired")
+		return method is in ProcessReads
 	if kind + "." + method is in Hosted.Methods
 		return kind is in ("Number", "Degrees", "Ratio", "Vector2", "ConstantCache", "TestBudget")
 	constant Never = ("Library", "TextReader", "TextWriter", "BytesReader", "BytesWriter", "GpuMemory")
