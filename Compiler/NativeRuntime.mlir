@@ -17334,9 +17334,14 @@
     %released = arith.maxsi %after, %none : i64
     return %released : i64
   }
-  // explicit workload boundary: collect dead temporaries and release unused pool blocks, retaining live tensor copies
+  // explicit workload boundary: collect dead temporaries and release unused pool blocks, retaining live tensor copies;
+  // the budget is measured again at the next allocation, a resident server sees the memory a neighbour gave back since
+  // a refused allocation lowered it
   func.func private @strict_gpu_trim_unused(%self: f64) -> f64 {
     func.call @strict_gpu_web_trim() : () -> ()
+    %unmeasured = arith.constant 0 : i64
+    %budgetSlot = llvm.mlir.addressof @strict_gpu_budget : !llvm.ptr
+    llvm.store %unmeasured, %budgetSlot : i64, !llvm.ptr
     %full = arith.constant true
     func.call @strict_gc_run(%full) : (i1) -> ()
     %most = arith.constant 9223372036854775807 : i64
