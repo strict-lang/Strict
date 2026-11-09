@@ -42,6 +42,7 @@ Ordered(positions Numbers, rows Number) Numbers
 Rows Number
 	Sample.Rows is 8
 	Grouping((0, 0, 0), 2, 1, 2).Rows is 6
+	Grouping((0, 0, 0), 2, 1, 4).Rows is 12
 	((chosen.Length + experts * (tile - 1)) / tile).Ceiling * tile
 Bases(starts Numbers, rows Number, count Number) Numbers
 	Sample.Bases(Sample.Starts, 8, 10) is (0, 10, 20, 20)
