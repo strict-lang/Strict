@@ -44,16 +44,16 @@ Deep List(ValidationIssue)
 			if depth > 1000
 				ValidationIssue("DeepRecursion", method + " nests " + depth + " calls" + DeepHint, index + 1)
 Step(method Text, tokens Texts) Number
-	Counting.Step("Count", ("1", "+", "Count", "(", "number", "-", "2", ")")) is 2
 	Counting.Step("Count", ("1", "+", "Count", "(", "number", "-", "3", ")", "+", "7")) is 3
 	Counting.Step("Count", ("else", "Count", "(", "number", "-", "1", ")")) is 0
+	Counting.Step("Count", ("1", "+", "Count", "(", "number", "-", "step", ")")) is 0
 	Counting.Step("Count", ("1", "+", "Count", "(", "number", "/", "2", ")")) is 0
 	Counting.Step("C", ("C", "(", "x", "-", "5", "+", "O", "(", "x", "-", "6", "+", "C", "[", "x", "-", "7", "+")) is 0
 	for tokens
 		let isNested = (index > 0) and (tokens(index - 1) is in Operators)
 		let isCall = (index + 4 < tokens.Length) and (tokens(index + 1) is "(")
 		let isStepping = isNested and isCall and (tokens(index + 3) is "-")
-		if (value is method) and isStepping
+		if (value is method) and isStepping and Tokenizer.IsDigit(tokens(index + 4)(0))
 			return tokens(index + 4) to Number
 	0
 Deepest(method Text) Number
