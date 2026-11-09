@@ -16053,7 +16053,8 @@
     cf.br ^done(%taken : i64)
   ^starve:
     %shortfall = arith.subi %needed, %free : i64
-    %releasedEarly = func.call @strict_gpu_starved(%shortfall) : (i64) -> i1
+    %mayWait = arith.constant true
+    %releasedEarly = func.call @strict_gpu_starved(%shortfall, %mayWait) : (i64, i1) -> i1
     cf.br ^allocate
   ^allocate:
     %slot = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
@@ -16072,7 +16073,8 @@
     %heldSlot = llvm.getelementptr %budget[1] : (!llvm.ptr) -> !llvm.ptr, i64
     %held = llvm.load %heldSlot : !llvm.ptr -> i64
     llvm.store %held, %budget : i64, !llvm.ptr
-    %released = func.call @strict_gpu_starved(%needed) : (i64) -> i1
+    %refused = arith.constant false
+    %released = func.call @strict_gpu_starved(%needed, %refused) : (i64, i1) -> i1
     cf.cond_br %released, ^again, ^done(%zero : i64)
   ^again:
     %again = func.call @strict_gpu_allocated(%bytes, %mayTake) : (i64, i1) -> i64
@@ -17098,7 +17100,9 @@
   // GPU) found none to reuse, the next one waits ten times as long as it took: the lists there mostly were alive, H3
   // ran a full collection of its 24 GB heap for most of its blocks (126 in two 480x832 videos, 8.6 s of the second
   // decode on a 3080 once) and ended with GarbageCollectionExceedsLimit on the 4090; an allocation that still fails
-  // collects in strict_gpu_starved. The end of the last one that found nothing and when the next may run
+  // collects in strict_gpu_starved. The end of the last one that found nothing and when the next may run, also for the
+  // budget check of strict_gpu_allocated: next to a model bigger than the GPU it collected for each block without
+  // finding any (a 19.5 GB heap, 40 ms each, 19 in a row ended Qwen3-Coder 30B with GarbageCollectionExceedsLimit)
   llvm.mlir.global internal @strict_gpu_own_wait(dense<0.0> : tensor<2xf64>) : !llvm.array<2 x f64>
   func.func private @strict_gpu_own_collectable() -> i1 {
     %wait = llvm.mlir.addressof @strict_gpu_own_wait : !llvm.ptr
@@ -17789,8 +17793,31 @@
   ^done:
     return %released : i64
   }
-  // drain and evict pinned rows first; only run a full collection before trimming pool blocks and cold host copies
-  func.func private @strict_gpu_starved(%needed: i64) -> i1 {
+  // the memory a collection can give back: free in the budget and in pool blocks of 16 MB and more
+  func.func private @strict_gpu_recoverable() -> i64 {
+    %one = arith.constant 1 : i64
+    %classCount = arith.constant 64 : i64
+    %free = func.call @strict_gpu_free_memory() : () -> i64
+    %firstOwn = arith.constant 16 : i64
+    cf.br ^class(%firstOwn, %free : i64, i64)
+  ^class(%class: i64, %total: i64):
+    %more = arith.cmpi ult, %class, %classCount : i64
+    cf.cond_br %more, ^add, ^done
+  ^add:
+    %stack = func.call @strict_gpu_stack(%class) : (i64) -> !llvm.ptr
+    %countSlot = llvm.getelementptr %stack[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %count = llvm.load %countSlot : !llvm.ptr -> i64
+    %size = func.call @strict_gpu_class_size(%class) : (i64) -> i64
+    %bytes = arith.muli %count, %size : i64
+    %sum = arith.addi %total, %bytes : i64
+    %next = arith.addi %class, %one : i64
+    cf.br ^class(%next, %sum : i64, i64)
+  ^done:
+    return %total : i64
+  }
+  // drain and evict pinned rows first; only run a full collection before trimming pool blocks and cold host copies,
+  // mayWait: only the budget is short, the driver did not refuse, a last collection that found nothing makes it wait
+  func.func private @strict_gpu_starved(%needed: i64, %mayWait: i1) -> i1 {
     %none = arith.constant 0 : i64
     func.call @strict_rc_reclaim() : () -> ()
     func.call @strict_gpu_replay() : () -> ()
@@ -17803,9 +17830,25 @@
     cf.cond_br %restored, ^enough, ^trim
   ^trim:
     %full = arith.constant true
+    %mayCollect = func.call @strict_gpu_own_collectable() : () -> i1
+    %mustCollect = arith.xori %mayWait, %full : i1
+    %collecting = arith.ori %mayCollect, %mustCollect : i1
+    cf.cond_br %collecting, ^collect, ^unspare
+  ^collect:
+    %availableBefore = func.call @strict_gpu_recoverable() : () -> i64
+    %collectStarted = func.call @strict_clock() : () -> f64
     func.call @strict_gc_run(%full) : (i1) -> ()
+    %availableAfter = func.call @strict_gpu_recoverable() : () -> i64
+    %gave = arith.cmpi ugt, %availableAfter, %availableBefore : i64
+    %spares = llvm.mlir.addressof @strict_gpu_spares : !llvm.ptr
+    %spareCount = llvm.load %spares : !llvm.ptr -> i64
+    %kept = arith.cmpi sgt, %spareCount, %none : i64
+    %found = arith.ori %gave, %kept : i1
+    func.call @strict_gpu_own_collected(%collectStarted, %found) : (f64, i1) -> ()
     func.call @strict_gpu_replay() : () -> ()
     func.call @strict_gpu_synchronize() : () -> ()
+    cf.br ^unspare
+  ^unspare:
     %sparedAfter = func.call @strict_gpu_unspared() : () -> i64
     %spared = arith.addi %sparedFirst, %sparedAfter : i64
     %notWaiting = arith.constant false
