@@ -1,5 +1,5 @@
 # Ideas
-Large features, difficult or long work and far fetched things, kept here until someone wants them. Not a to do list, lines may get deleted any time. Bugs: [improvements.md](improvements.md), speed work: [performance.md](performance.md).
+Large features, difficult or long work and far fetched things, kept here until someone wants them. Not a to do list, lines may get deleted any time. Bugs: [bugs.md](bugs.md), speed work: [performance.md](performance.md).
 
 ## Features and long work
 - Testing one file on the VM spends up to 1.6 s (Compiler/MlirCalls 1.6 s, MlirLibrary 1.3 s, Tokenizer 0.14 s), all of it again every run: TypeShape.MemberScope is rebuilt 1191 times and TypeCodegen.Generator 1239 times for Number.strict, Changes(lines).Members and .Methods per method body and call site, source discovery tokenizes every line with a `/`, ResolveCheck.Inference covers all project files. Compute shape scopes once per TypeCodegen, cache per file scopes in the server by file stamp.
@@ -91,3 +91,24 @@ Large features, difficult or long work and far fetched things, kept here until s
 - Uniform branches still in GPU loops, measure their share first (none showed up in Qwen3-Coder): `tokens_blocks` switches on the row bits per block, `products_run` runs bits chains per element, `strict_device_dots` has no bfloat16 arm, prompt attention masks every tile.
 - small number types as kernel values: values, parameters and members of types with 2-4 Number members (Complex) and lists of them read by index work (StructLanes, LaneCalls, MlirDeviceRecords), still on the CPU: a `for` over a List(Complex) (a list member with `value.Bits is 32` fails the build, index it instead), a List(Complex) result, a method returning a Complex that has a loop or an early return, the 32 bit types (Vector2, Vector3, Size); a flattened list goes up again for every launch; a `to Text` reached only through text conversion is not emitted unless something calls it (why lane inlining skips `to`)
 - H3Picture.Frame takes 1.2 s for a keyframe PNG at any size (256x256 too), its VAE encode only 0.03-0.85 s: reading the PNG or fitting it, not measured apart.
+
+## Model: Ternary Bonsai 27B
+`C:/code/Models/Bonsai`, 12.7-18 ms per token on the RTX 4090 (Prism's llama.cpp ~11); per token (ncu) the products take ~8.7 ms, the quantize kernels ~0.6. Left:
+- the dot products decode every PTQ1_0 block twice, the two lanes of a block should split the codes
+- one kernel for 1 to 8 tokens (like Kindi's) so `LookupDecoding` verifies cheaper (2, 4, 8 tokens 27.7, 37.3, 47.2 ms against 16.8 for one)
+- CPU loops unpack 3 bit rows to doubles (`MlirWidths` decodes only 4 and 6 bit blocks per use)
+- the 257 `Sylvester` launches per token still take ~1.1 ms (4.4 us each with one barrier, latency bound): rotate the inputs of a block in fewer launches
+- 10 GB budget: a holder process does not simulate it on Windows (the budget never saw the holder), capping the driver's free memory at 10 GB in `strict_gpu_free_memory` does (budget 8.5 GB, peak 10.0 GB in use, the same in cold and warm runs). Then 64 tokens decode in a median of 22-24 instead of 12-14 ms: per token 3-4 of the 12 CUDA graphs are instantiated anew (5 ms, 1 ms destroying, 9 instead of 12 updates), 3-4 cuMemAlloc/cuMemFree (2 ms), the result download waits 7 instead of 3 ms; 2 tokens per run take ~290 ms freeing and allocating ~100 buffers (one uploads 298 MB)
+
+## Model: Qwen3.8-Flash-Next
+qwen4exp, `C:/code/Models/FlashNext`, ~280 ms per token, 325 with MTP drafts. Left:
+- draft acceptance on a chat prompt with a longer answer and with 3 drafts (llama.cpp reports 89 %, here 7 and 12 of 24)
+- the 3 token `Steps` costs ~1.5 plain steps
+- the QSA indexer past 2051 tokens
+
+## Game engine
+- iOS: `strict build <file> ios` stages an arm64 iOS 15 static archive with `strict_main` and the content; linking against the SDK, UIKit, window, input and audio, signing and TestFlight need the MacMini ([Compiler/IOS.md](Compiler/IOS.md)).
+- Android release path for SoulCraft: `strict build <file> android` stages an API 26 arm64-v8a `libmain.so` and `assets/Content`; the APK/AAB, Activity/JNI glue, window, input, audio and ASTC/ETC2 textures belong to DeltaEngine. The `stb_image.h` include paths of `Content/native/ImageFile.c` and `Graphics3D/native/Gpu.c` have Android flags now, the link was not tried again with the NDK; keep the shipped app's identity (package `de.mobilebits.soulcraftdefault`, its signing and saves).
+- One game loop for all games: `Games/*`, `RealTimeStrategy/RtsGame.strict` and `Frameworks/GameApplication.strict` repeat the same `Played(application)` loop (21 times) because `current.Frame(handle, now)` returns the concrete game type. A `GameLoop` trait needs a type instance passed where a trait is expected, a method returning the trait type when the implementation returns its own type, and the loop keeping that value without knowing the concrete type.
+- Spine 2D skeletal animation for Elemental, TinyBat and other 2D games: wrap a native Spine runtime once, the `.strict` side only plays animations and sets skins.
+- Platform services as trait implementations: Steam, Google Play Games and Apple Game Center implement the `Achievements`, `InAppPurchase` and `Login` traits of DeltaEngine `Platform` (mocks and Google sign in exist).
