@@ -68,7 +68,6 @@ Length(line Text) Number
 	Constraint.Length("has numbers with Length is 3 and value . Bits is 32") is 3
 	Constraint.Length("has x Number with value is 5") is 0
 	Constraint.Length("has numbers with Length is 3 and value is 5") is 0
-<<<<<<< Updated upstream
 	Constraint.Length("has colors with Length is Size.Length") is 0
 	let checking = Of(line.Replace(" . ", "."))
 	let words = checking.Split(" ")
@@ -80,15 +79,6 @@ Literal(word Text) Number
 	if length is Error
 		return 0
 	length
-=======
-	Constraint.Length("mutable Colors List(ColorValue) with Length is Size.Length") is 0
-	let checking = Of(line.Replace(" . ", "."))
-	let words = checking.Split(" ")
-	if (words.Length is not 3) or (checking.StartsWith("Length is ") is false)
-		return 0
-	let count = words.Last to Number
-	count is Error then 0 else count
->>>>>>> Stashed changes
 Bits(constraint Text) Number
 	Constraint.Bits("value > 0 and value.Bits is 32") is 32
 	Constraint.Bits("value > 0") is 0
