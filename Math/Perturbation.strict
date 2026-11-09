@@ -13,7 +13,7 @@ constant Rabbits = Mandelbrot.Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDoubl
 constant Rabbit = Perturbation(Rabbits, Complex.Zero, 0, 0, 0.01, 64, 1, 0)
 constant Offset = Perturbation(Rabbits + Mandelbrot.Orbit(ComplexDoubleDouble.Of(Complex(0.3, -0.2)), ComplexDoubleDouble.Of(Complex(-0.123, 0.745)), 64), Complex(0.3, -0.2), 0, 0, 0.01, 64, 1, 65)
 constant Tiny = Perturbation(Inside, orbit = (Complex(1, 0), Complex(0, 1), Complex(0, 2)))
-Strip(first Number, count Number, width Number) Numbers
+Strip(first Number, count Number, width Number) Float32s
 	Inside.Strip(0, 4, 2) is (34, 0, 33, 35)
 	Inside.Rebased(Complex(1.75, -0.1)) is 3
 	for count
@@ -36,7 +36,7 @@ Rebased(offset Complex) Number
 	for limit
 		delta = Next(position, delta, offset * (1 - julia))
 		position = Moved(position, delta)
-		if position >= orbit.Length
+		if position is orbit.Length
 			return index + 1
 	0
 Moved(position Number, delta Complex) Number
@@ -44,13 +44,13 @@ Moved(position Number, delta Complex) Number
 	Inside.Moved(-3, Complex.Zero) is 1
 	Outside.Moved(2, Complex.Zero) is Outside.orbit.Length
 	Inside.Moved(0, Complex(0.5, 0)) is -2
-	(Offset.Moved(63, Complex.Zero), Offset.Moved(70, Complex.Zero)) is (-65, 71)
+	(Offset.Moved(63, Complex.Zero), Offset.Moved(70, Complex.Zero)) is (-65, 71) and Rabbit.Moved(63, Complex.Zero) is -65
 	let next = position < 0 then 1 else position + 1
 	let squared = (orbit(next) + delta).SquaredLength
 	if squared > 4
 		return orbit.Length
 	let last = next < start then start else orbit.Length
-	squared < delta.SquaredLength or next + 1 >= last then -1 - next else next
+	squared < delta.SquaredLength or next + 1 is last then -1 - next else next
 Next(position Number, delta Complex, added Complex) Complex
 	Inside.Next(0, Complex.Zero, Complex(0.5, 0.5)) is Complex(0.5, 0.5)
 	(Inside.Next(1, Complex(0.1, 0), Complex.Zero) - Complex(-0.14, 0.02)).Length < 0.000001
