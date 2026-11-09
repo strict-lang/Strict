@@ -37,7 +37,8 @@ Value(entry InstructionEntry, position Number, slots List(VmValue)) VmValue
 	if entry.kind < InstructionType.StoreSeparator
 		return Stored(entry, slots, position)
 	if entry.kind < InstructionType.BinaryOperatorsSeparator
-		return Operations.Result(entry.kind, slots(entry.payload(1)), slots(entry.payload(2)))
+		let result = Operations.Result(entry.kind, slots(entry.payload(1)), slots(entry.payload(2)))
+		return (machine.deadline > 0) and MutationCache.IsOversized(result) then VmValue.OfError("MemoryBudget") else result
 	Other(entry, slots, position)
 Next(entry InstructionEntry, position Number, slots List(VmValue)) Number
 	Twice.Next(InstructionEntry(InstructionType.JumpToIdIfTrue, List(Text), (0, 7)), 1, Listed) is 7

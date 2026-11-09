@@ -4,6 +4,7 @@ constant Steps = 100000
 constant Version = 25
 constant MaxRuns = 26
 constant RunWait = 90
+constant MaxItems = 1048576
 constant Accepting = Invocation(InstructionEntry.Invoke(0, ("Strict/Networking/Socket", "Accept", "Strict/Number"), List(Number), -1), List(VmValue), VmValue.None)
 constant Sample = MutationCache("Compiler/output/Cached.strict")
 Stamp Text
@@ -72,6 +73,12 @@ Exhausted(slots List(VmValue), deadline = 0) List(VmValue)
 	mutable exhausted = slots
 	exhausted(Frame.ResultSlot) = VmValue.OfError(stopped is "" then "Timeout" else stopped)
 	exhausted
+IsOversized(result VmValue, limit = MaxItems) Boolean
+	MutationCache.IsOversized(Operations.OneTwo, 1)
+	MutationCache.IsOversized(Operations.OneTwo, 2) is false
+	MutationCache.IsOversized(VmValue.OfText("abc"), 2)
+	MutationCache.IsOversized(VmValue.OfNumber(5), 0) is false
+	(result.kind is "List" then result.items.Length else result.text.Length) > limit
 Stopped(deadline Number, step = 1) Text
 	MutationCache.Stopped(0) is ""
 	MutationCache.Stopped(0.001) is "Timeout"

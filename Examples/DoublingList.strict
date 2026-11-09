@@ -1,0 +1,9 @@
+has limit Number
+Filled Numbers
+	DoublingList(8).Filled.Length is 8
+	mutable size = limit
+	mutable items = List(Number) + 1
+	for as long as size > 1
+		items = items + items
+		size = size / 2
+	items
