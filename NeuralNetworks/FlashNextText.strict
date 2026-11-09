@@ -5,6 +5,10 @@ constant Probe = FlashNextText(Logger)
 constant Head = "NeuralNetworks/tinyqwen4expmtp.gguf"
 Run(folder Text, draft = "")
 	let path = folder + "/" + Weights
+	if MachineUse.Weights(logger, "FlashNextText", path).Checked is 0
+		Ran(folder, draft)
+Ran(folder Text, draft Text)
+	let path = folder + "/" + Weights
 	let started = Process.Elapsed
 	let tokenizer = Gpt2Tokens.Loaded(Gguf(path))
 	let prompt = tokenizer.Encoded(Qwen3Text.Prompt)

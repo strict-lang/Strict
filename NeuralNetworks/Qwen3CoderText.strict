@@ -7,6 +7,10 @@ Run(folder Text)
 	let path = folder + "/" + Weights
 	if File(path).Exists is false
 		Downloaded(path)
+	if MachineUse.Weights(logger, "Qwen3CoderText", path).Checked is 0
+		Ran(folder)
+Ran(folder Text)
+	let path = folder + "/" + Weights
 	let started = Process.Elapsed
 	let tokenizer = Gpt2Tokens.Loaded(Gguf(path))
 	let model = Qwen3.Loaded(path, 4)

@@ -1,0 +1,127 @@
+has logger
+has program Text
+has ram Number
+has vram Number
+has isForced = false
+constant Gigabyte = 1073741824
+constant Mebibyte = 1048576
+constant VideoShare = 4
+constant HostShare = 2
+constant Force = "--force"
+constant Local = "--local"
+constant Programs = ("H3Video", "MossImage", "strict")
+constant Query = "--query-gpu=memory.total,memory.free,utilization.gpu --format=csv,noheader,nounits"
+constant VideoUse = "$g = @{}; Get-CimInstance Win32_PerfFormattedData_GPUPerformanceCounters_GPUProcessMemory | ForEach-Object { $id = [int]$_.Name.Split('_')[1]; $g[$id] = [long]$g[$id] + [long]$_.DedicatedUsage }; "
+constant HostUse = "Get-CimInstance Win32_Process | ForEach-Object { $v = [long]$g[[int]$_.ProcessId]; $r = [long]$_.PrivatePageCount; if ($r -gt 1GB -or $v -gt 512MB) { "
+constant Line = "[string]$_.ProcessId + '|' + $_.Name + '|' + $r + '|' + $v + '|' + ($_.CommandLine -like '* serve*') } }"
+constant Listing = "-NoProfile -Command " + VideoUse + HostUse + Line
+constant BusyPercent = 50
+constant Slower = " the model takes, the rest stays in RAM and runs slower"
+constant Stopping = "  MossImage backend (pid 12): 24 GB RAM, 7 GB VRAM, type 'MossImage stop' to free them"
+constant Advice = "Close them or wait until they finish, then run "
+constant Forcing = ", or add --force (STRICT_FORCE=1) to run anyway, very slow while they hold the memory"
+constant Sample = MachineUse(Logger, "H3Video", 25 * Gigabyte, 22 * Gigabyte)
+Models(logging Logger, name Text, model Number, encoder Number, growth Number, forced Boolean) MachineUse
+	MachineUse.Models(Logger, "MossImage", 5 * Gigabyte, 10 * Gigabyte, 1.6, false).ram is 16 * Gigabyte
+	MachineUse.Models(Logger, "MossImage", 5 * Gigabyte, 10 * Gigabyte, 1.6, true).vram is 6 * Gigabyte
+	let encoding = encoder * growth
+	MachineUse(logging, name, encoding > model then encoding else model, model + Gigabyte, forced)
+Weights(logging Logger, name Text, path Text) MachineUse
+	MachineUse.Weights(Logger, "Qwen3Text", "NeuralNetworks/missing.gguf").ram is 0
+	let size = Weighed(path)
+	MachineUse(logging, name, size, size is 0 then 0 else size + Gigabyte, IsForced(List(Text)))
+Weighed(path Text) Number
+	Sample.Weighed("NeuralNetworks/missing.gguf") is 0
+	let parts = path.Split("-00001-of-")
+	if parts.Length < 2
+		return File(path).Exists then File(path).Length else 0
+	mutable size = 0
+	for Directory.Files(Path(path).PathOnly.text, "*-of-" + parts(1))
+		size = size + File(value).Length
+	size
+IsForced(arguments Texts) Boolean
+	MachineUse.IsForced(("--quality", "best", Force))
+	(Force is in arguments) or (Process.Variable("STRICT_FORCE") is "1")
+IsChecked(arguments Texts, root Text) Boolean
+	MachineUse.IsChecked(List(Text) + Resident.Stopping, "artifacts/h3test") is false
+	MachineUse.IsChecked(("--quality", "best"), "artifacts/missing")
+	let isResident = (Local is in arguments is false) and File(root + Resident.Stamp).Exists
+	(isResident or (arguments is (Resident.Stopping))) is false
+Checked Number
+	let device = Device
+	let problem = Problem(GpuMemory.HostAvailable, GpuMemory.HostTotal, device(1), device(0))
+	if problem is ""
+		return Noted(device(0))
+	logger.Log(problem + (device(2) > BusyPercent then ", the GPU is " + device(2) + " % busy" else ""))
+	if isForced
+		logger.Log("Running anyway (--force), this can be very slow while other programs hold the memory")
+		return Noted(device(0))
+	Refused
+Refused Number
+	logger.Log("Programs using them:")
+	for Users
+		logger.Log(value)
+	logger.Log(Advice + program + " again" + Forcing)
+	1
+Problem(hostFree Number, hostTotal Number, deviceFree Number, deviceTotal Number) Text
+	Sample.Problem(65 * Gigabyte, 128 * Gigabyte, 23 * Gigabyte, 24 * Gigabyte) is ""
+	Sample.Problem(7 * Gigabyte, 128 * Gigabyte, 23 * Gigabyte, 24 * Gigabyte).StartsWith("Not enough")
+	Sample.Problem(65 * Gigabyte, 128 * Gigabyte, 2 * Gigabyte, 24 * Gigabyte).EndsWith("2 GB of 24 GB VRAM are free")
+	Sample.Problem(20 * Gigabyte, 32 * Gigabyte, 9 * Gigabyte, 10 * Gigabyte) is ""
+	Sample.Problem(0, 0, 0, 0) is ""
+	let isShort = IsShort(ram, hostFree, hostTotal, HostShare) or IsShort(vram, deviceFree, deviceTotal, VideoShare)
+	let needs = Sized(Usable(ram, hostTotal, HostShare)) + " RAM and " + Sized(Usable(vram, deviceTotal, VideoShare))
+	let frees = Sized(hostFree) + " of " + Sized(hostTotal) + " RAM and " + Sized(deviceFree) + " of " + Sized(deviceTotal)
+	let text = "Not enough free memory for " + program + ", it needs " + needs + " VRAM, " + frees
+	isShort then text + " VRAM are free" else ""
+IsShort(needed Number, free Number, total Number, share Number) Boolean
+	Sample.IsShort(25 * Gigabyte, 7 * Gigabyte, 128 * Gigabyte, HostShare)
+	Sample.IsShort(25 * Gigabyte, 30 * Gigabyte, 128 * Gigabyte, HostShare) is false
+	Sample.IsShort(25 * Gigabyte, 17 * Gigabyte, 32 * Gigabyte, HostShare) is false
+	Sample.IsShort(25 * Gigabyte, 15 * Gigabyte, 32 * Gigabyte, HostShare)
+	Sample.IsShort(25 * Gigabyte, 0, 128 * Gigabyte, HostShare) is false
+	(free > 0) and (total > 0) and (free < Usable(needed, total, share))
+Usable(needed Number, total Number, share Number) Number
+	Sample.Usable(22 * Gigabyte, 24 * Gigabyte, VideoShare) is 18 * Gigabyte
+	Sample.Usable(6 * Gigabyte, 24 * Gigabyte, VideoShare) is 6 * Gigabyte
+	Sample.Usable(6 * Gigabyte, 0, VideoShare) is 6 * Gigabyte
+	let usable = total - total / share
+	(total is 0) or (needed < usable) then needed else usable
+Noted(deviceTotal Number) Number
+	Sample.Noted(0) is 0
+	if (deviceTotal > 0) and (deviceTotal < vram)
+		logger.Log("The GPU has " + Sized(deviceTotal) + " of VRAM, less than the " + Sized(vram) + Slower)
+	0
+Sized(bytes Number) Text
+	Sample.Sized(24 * Gigabyte) is "24 GB"
+	Sample.Sized(Gigabyte * 2.5) is "2.5 GB"
+	(bytes / Gigabyte).Round(1) + " GB"
+Device Slow(Numbers)
+	Sample.Device.Length is 3
+	let result = Process.RunTool("nvidia-smi", Query)
+	let parts = result.Output.Split("\n").First.Split(",")
+	(result.Failed or (parts.Length < 3)) then (0, 0, 0) else Measured(parts)
+Measured(parts Texts) Numbers
+	Sample.Measured(("24564", " 24049", " 3")) is (24564 * Mebibyte, 24049 * Mebibyte, 3)
+	(parts(0).Trim to Number * Mebibyte, parts(1).Trim to Number * Mebibyte, parts(2).Trim to Number)
+Users Texts
+	if Process.OperatingSystem is not "Windows"
+		return List(Text) + "  (see the task manager or nvidia-smi)"
+	let users = Listed(Process.RunTool("powershell", Listing).Output.Split("\n")) - ""
+	users.Length is 0 then List(Text) + "  (none found, see the task manager)" else users
+Listed(lines Texts) Texts
+	Sample.Listed(("", "5|python.exe|32212254720|0|False")).Last is "  python (pid 5): 30 GB RAM, 0 GB VRAM"
+	for lines
+		User(value)
+User(line Text) Text
+	Sample.User("12|MossImage.exe|25769803776|7516192768|True") is Stopping
+	Sample.User("5|python.exe|32212254720|12884901888|False") is "  python (pid 5): 30 GB RAM, 12 GB VRAM"
+	Sample.User("") is ""
+	let parts = line.Trim.Split("|")
+	if parts.Length < 5
+		return ""
+	let name = parts(1).Replace(".exe", "")
+	let isBackend = (name is in Programs) and (parts(4) is "True")
+	let usage = ": " + Sized(parts(2) to Number) + " RAM, " + Sized(parts(3) to Number) + " VRAM"
+	let stop = isBackend then ", type '" + name + " stop' to free them" else ""
+	"  " + name + (isBackend then " backend" else "") + " (pid " + parts(0) + ")" + usage + stop

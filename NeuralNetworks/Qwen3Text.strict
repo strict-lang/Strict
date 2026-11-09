@@ -7,6 +7,9 @@ Run
 	if File(Folder + "model.gguf").Exists is false
 		if Process.RunTool("curl", "-sfL --create-dirs -o \"" + Folder + "model.gguf\" \"" + Address + "\"").Failed
 			return Error("DownloadFailed: " + Address)
+	if MachineUse.Weights(logger, "Qwen3Text", Folder + "model.gguf").Checked is 0
+		Ran
+Ran
 	let started = Process.Elapsed
 	let tokenizer = Gpt2Tokens.Loaded(Gguf(Folder + "model.gguf"))
 	let model = Qwen3.Loaded(Folder + "model.gguf", 8)
