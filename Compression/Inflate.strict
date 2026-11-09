@@ -42,32 +42,37 @@ Stored(state Inflation) Inflation
 		output = output + bytes(start + 4 + index)
 	Inflation(output, (start + 4 + output.Length - state.output.Length) * 8)
 Coded(state Inflation, literals Huffman, distances Huffman) Inflation
-	FixedSample.Coded(Inflation(List(Number), 3), FixedLiteralCodes, FixedDistanceCodes).output.Length is 9
-	FixedSample.Coded(Inflation(List(Number), 3), FixedLiteralCodes, FixedDistanceCodes).position is 54
-	mutable current = state
+	let stream = value
+	mutable output = state.output
+	mutable position = state.position
 	for bytes.Length * 8
-		let symbol = literals.Decoded(Inflate(bytes), current.position)
+		let symbol = literals.Decoded(stream, position)
+		position = position + symbol.bits
 		if symbol.number is Symbol.EndOfBlock
-			return Inflation(current.output, current.position + symbol.bits)
-		current = Applied(Inflation(current.output, current.position + symbol.bits), symbol.number, distances)
-	current
-Applied(state Inflation, symbol Number, distances Huffman) Inflation
-	StoredSample.Applied(Inflation(List(Number), 0), 65, Huffman.Sample).output is (65)
-	Inflate((0, 73)).Applied(Inflation((1, 2, 3, 4, 5, 6, 7), 8), 265, FixedDistanceCodes).position is 15
-	Inflate((0, 73)).Applied(Inflation((1, 2, 3, 4, 5, 6, 7), 8), 265, FixedDistanceCodes).output.Sum is 82
-	if symbol < Symbol.EndOfBlock
-		return Inflation(state.output + symbol, state.position)
-	let length = LengthBases(symbol - Symbol.FirstLength) + Bits(state.position, LengthBits(symbol - Symbol.FirstLength))
-	let afterLength = state.position + LengthBits(symbol - Symbol.FirstLength)
-	let code = distances.Decoded(Inflate(bytes), afterLength)
-	let extra = DistanceBits(code.number)
-	let distance = DistanceBases(code.number) + Bits(afterLength + code.bits, extra)
-	Inflation(Copied(state.output, length, distance), afterLength + code.bits + extra)
+			return Inflation(output, position)
+		let isLiteral = symbol.number < Symbol.EndOfBlock
+		output = isLiteral then output + symbol.number else Matched(output, symbol.number, position, distances)
+		position = isLiteral then position else After(symbol.number, position, distances)
+	Inflation(output, position)
+Matched(output Numbers, symbol Number, position Number, distances Huffman) Numbers
+	FixedSample.Coded(Inflation(List(Number), 3), FixedLiteralCodes, FixedDistanceCodes).output.Length is 9
+	Inflate((0, 73)).Matched((1, 2, 3, 4, 5, 6, 7), 265, 8, FixedDistanceCodes).Sum is 82
+	let length = LengthBases(symbol - Symbol.FirstLength) + Bits(position, LengthBits(symbol - Symbol.FirstLength))
+	let afterLength = position + LengthBits(symbol - Symbol.FirstLength)
+	let code = distances.Decoded(value, afterLength)
+	Copied(output, length, DistanceBases(code.number) + Bits(afterLength + code.bits, DistanceBits(code.number)))
+After(symbol Number, position Number, distances Huffman) Number
+	Inflate((0, 73)).After(265, 8, FixedDistanceCodes) is 15
+	FixedSample.Coded(Inflation(List(Number), 3), FixedLiteralCodes, FixedDistanceCodes).position is 54
+	let afterLength = position + LengthBits(symbol - Symbol.FirstLength)
+	let code = distances.Decoded(value, afterLength)
+	afterLength + code.bits + DistanceBits(code.number)
 Copied(output Numbers, length Number, distance Number) Numbers
 	StoredSample.Copied((1, 2), 3, 2) is (1, 2, 1, 2, 1)
+	let start = output.Length - distance
 	mutable result = output
 	for length
-		result = result + result(result.Length - distance)
+		result = result + result(start + index)
 	result
 Dynamic(state Inflation) Inflation
 	DynamicSample.Dynamic(Inflation(List(Number), 3)).output is DynamicText
@@ -120,11 +125,25 @@ Filled(output Numbers, number Number, times Number) Numbers
 Bits(position Number, count Number) Number
 	StoredSample.Bits(0, 3) is 1
 	StoredSample.Bits(8, 2) is 2
-	mutable result = 0
-	let last = position + count - 1
-	for count
-		result = result * 2 + Bit(last - index)
-	result
+	Inflate((255, 255, 255)).Bits(7, 13) is 8191
+	Inflate((255)).Bits(7, 1) is 1
+	if count is 0
+		return 0
+	let at = (position / 8).Floor
+	let middle = at + 1 < bytes.Length then bytes(at + 1) else 0
+	let high = at + 2 < bytes.Length then bytes(at + 2) else 0
+	let joined = bytes(at) + (middle + high * Byte.Values) * Byte.Values
+	(joined / Powers(position % 8)).Floor % 2 ^ count
+Peek(position Number) Number
+	StoredSample.Peek(0) is 1
+	StoredSample.Peek(8) is 2
+	StoredSample.Peek(3) is 64
+	StoredSample.Peek(53) is 3
+	Inflate((255, 255)).Peek(0) is 511
+	Inflate((255, 255)).Peek(15) is 1
+	let at = (position / 8).Floor
+	let high = at + 1 < bytes.Length then bytes(at + 1) else 0
+	((bytes(at) + high * Byte.Values) / Powers(position % 8)).Floor % 2 ^ Huffman.TableBits
 Bit(position Number) Number
 	StoredSample.Bit(0) is 1
 	StoredSample.Bit(1) is 0
@@ -138,5 +157,4 @@ FixedLengths Numbers
 		index < NineBitLiterals then 8 else index < Symbol.EndOfBlock then 9 else index < EightBitLengths then 7 else 8
 Part(numbers Numbers, start Number, count Number) Numbers
 	StoredSample.Part((1, 2, 3, 4), 1, 2) is (2, 3)
-	for count
-		numbers(start + index)
+	numbers.Slice(start, count)

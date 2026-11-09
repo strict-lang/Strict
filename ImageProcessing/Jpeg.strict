@@ -105,7 +105,7 @@ Huffmans(info Number, scan Number) Huffman
 		let position = Entry(value, info, true)
 		if (value < scan) and (position >= 0)
 			let counts = Inflate.Part(bytes, position + 1, Lengths)
-			found = Huffman(List(Number) + 0 + counts, Inflate.Part(bytes, position + 1 + Lengths, counts.Sum))
+			found = Huffman(List(Number) + 0 + counts, Inflate.Part(bytes, position + 1 + Lengths, counts.Sum)).Tabled
 	found
 Interval(scan Number) Number
 	Gray.Interval(151) is 0

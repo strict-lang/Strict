@@ -1,12 +1,38 @@
 has counts Numbers
 has symbols Numbers
+has table Numbers = List(Number)
 constant Sample = Huffman.From((2, 1, 3, 3))
 constant Longest = Huffman((0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1), (5, 9))
 constant CodeLengthCount = 16
+constant TableBits = 9
+constant EntryScale = 16
 From(lengths Numbers) Huffman
 	Huffman.From((2, 1, 3, 3)).symbols is (1, 0, 2, 3)
 	Huffman.From((2, 2, 2, 2)).Decoded(Inflate((3)), 0) is Symbol(3, 2)
-	Huffman(Counts(lengths), Sorted(lengths))
+	Huffman(Counts(lengths), Sorted(lengths)).Tabled
+Entry(bits Number) Number
+	Sample.Entry(0) is 17
+	Sample.Entry(511) is 51
+	mutable relative = 0
+	mutable offset = 0
+	mutable rest = bits
+	for Range(1, TableBits + 1)
+		relative = (relative - counts(value - 1)) * 2 + rest % 2
+		rest = (rest / 2).Floor
+		offset = offset + counts(value - 1)
+		if relative < counts(value)
+			return symbols(offset + relative) * EntryScale + value
+	0
+Tabled Huffman
+	Sample.Tabled.table.Length is 512
+	Sample.Tabled.table(3) is 35
+	Longest.Entry(1) is 0
+	Sample.Entry(1) is 2
+	Huffman(counts, symbols, Entries)
+Entries Numbers
+	Sample.Entries.Length is 512
+	for 2 ^ TableBits
+		Entry(index)
 Counts(lengths Numbers) Numbers
 	Sample.Counts((2, 1, 3, 3)).Length is 16
 	Sample.Counts((2, 1, 3, 3)).Sum is 4
@@ -24,6 +50,10 @@ Decoded(stream Inflate, position Number) Symbol
 	Sample.Decoded(Inflate(List(Number) + 6), 1) is Symbol(2, 3)
 	Longest.Decoded(Inflate((1, 0)), 0) is Symbol(9, 16)
 	(Sample.Decoded(Inflate((1, 7)), 0) is Symbol(0, 2)) and (Sample.Decoded(Inflate((1, 7)), 8) is Symbol(3, 3))
+	let entry = table.Length > 0 then table(stream.Peek(position)) else 0
+	entry > 0 then Symbol((entry / EntryScale).Floor, entry % EntryScale) else Walked(stream, position)
+Walked(stream Inflate, position Number) Symbol
+	Longest.Walked(Inflate((1, 0)), 0) is Symbol(9, 16)
 	mutable relative = 0
 	mutable offset = 0
 	for Range(1, counts.Length)
