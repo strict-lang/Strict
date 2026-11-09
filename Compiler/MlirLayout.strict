@@ -74,7 +74,8 @@ Wrapped(typeName Text) Text
 	Wrapping.Wrapped("Angle") is "Degrees"
 	Wrapping.Wrapped("Shape") is ""
 	Wrapping.Wrapped("Number") is ""
-	function.TypeOf(typeName, true).Wrapped
+	Wrapping.Wrapped("Float32") is "Number"
+	(typeName + "s") is in MlirNarrowing.PackedNames then "Number" else function.TypeOf(typeName, true).Wrapped
 Owner(type TypeEntry, name Text) TypeEntry
 	TypeEntry.ShortName(Wrapping.Owner(Angle, "Floor").Name) is "Number"
 	Wrapping.Owner(MlirFunction.Shape, "Floor").Name is MlirFunction.Shape.Name
