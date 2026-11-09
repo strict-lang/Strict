@@ -803,12 +803,13 @@
     %unused = arith.constant 0 : i32
     %crowded = llvm.call @strict_webgpu_crowded() : () -> i32
     %isCrowded = arith.cmpi ne, %crowded, %unused : i32
+    %fullKind = arith.constant 1 : i32
+    %isFullKind = arith.cmpi eq, %crowded, %fullKind : i32
     cf.cond_br %isCrowded, ^collect, ^table
   ^collect:
-    %full = arith.constant true
     %housekeepingSlot = llvm.mlir.addressof @strict_gc_housekeeping : !llvm.ptr
     llvm.store %one, %housekeepingSlot : i64, !llvm.ptr
-    func.call @strict_gc_run(%full) : (i1) -> ()
+    func.call @strict_gc_run(%isFullKind) : (i1) -> ()
     llvm.store %none, %housekeepingSlot : i64, !llvm.ptr
     cf.br ^table
   ^table:

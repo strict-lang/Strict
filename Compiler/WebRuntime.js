@@ -891,12 +891,12 @@ addToLibrary({
 		strictWebGpu.grown = 0;
 		strictWebFile.blocks.clear();
 	},
-	// 1 once kept results took 1 GB (64 MB on mobile) since the last time, the collector then gives back the buffers of dead lists
+	// not 0 once kept results took 1 GB (64 MB on mobile) since the last time, the collector then gives back the buffers of dead lists: young (2) on desktops, full (1) on mobile
 	strict_webgpu_crowded__deps: ['$strictWebGpu', '$strictWebGpuMobile'],
 	strict_webgpu_crowded: () => {
 		const isCrowded = strictWebGpu.grown > (strictWebGpuMobile() ? 67108864 : 1073741824);
 		if (isCrowded)
 			strictWebGpu.grown = 0;
-		return isCrowded ? 1 : 0;
+		return isCrowded ? (strictWebGpuMobile() ? 1 : 2) : 0;
 	},
 });
