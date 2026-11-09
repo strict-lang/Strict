@@ -10,6 +10,8 @@ constant Heads = MlirDeviceCalls(MlirGpuCheck.Heading.function, 4, MlirDeviceMem
 constant Decimals = MemberEntry("decimals", "Strict/Number", List(InstructionEntry) + InstructionEntry(InstructionType.Set, List(Text), (1, 3, 0)), false)
 constant Spaced = MemberEntry("spaces", "Strict/Text", List(InstructionEntry), false)
 constant Half = MemberEntry("half", "Strict/Number", List(InstructionEntry) + InstructionEntry(InstructionType.Set, List(Text), (1, 0.5, 0)), false)
+constant Tiny = MemberEntry("tiny", "Strict/Number", List(InstructionEntry) + InstructionEntry(InstructionType.Set, List(Text), (1, 0.00001, 0)), false)
+constant Large = MemberEntry("large", "Strict/Number", List(InstructionEntry) + InstructionEntry(InstructionType.Set, List(Text), (1, 1000000, 0)), false)
 constant Sized = Twice.callee.method.parameters
 constant Defaulted = MethodEntry("Twice", Sized + Decimals, "Strict/Number", Twice.callee.method.instructions)
 constant Filling = MlirDeviceCalls(Twice.function, 4, MlirFunction(Twice.callee.types, Twice.callee.type, Defaulted))
@@ -59,12 +61,12 @@ Types Text
 	Text.Combine(types + MlirDeviceMembers(callee).Types(function.Float), ", ")
 Loaded(entry InstructionEntry) Texts
 	Twice.Loaded(Twicing).Last is "    %d4p0 = llvm.load %r1 : !llvm.ptr -> f64"
-	Filling.Loaded(Twicing).Last is "    %d4p1 = arith.constant 3.0 : f64"
+	Filling.Loaded(Twicing).Last is "    %d4p0 = llvm.load %r1 : !llvm.ptr -> f64"
 	let countPosition = 5 + entry.payload(3)
 	mutable lines = Instance(entry, Temp("i"))
 	for entry.payload(countPosition)
 		lines = lines + Argument(index, "%r" + entry.payload(countPosition + 1 + index))
-	lines + Filled(entry.payload(countPosition)) + MemberLoads
+	lines + MemberLoads
 MemberLoads Texts
 	Heads.MemberLoads.First is "    %d4m0 = llvm.load %v_heads : !llvm.ptr -> f64"
 	MlirDeviceMembers(callee).Loads(Temp("m"), function.Float)
@@ -85,11 +87,11 @@ IsFilled(entry InstructionEntry) Boolean
 		if MlirDefaults(function).IsWhole(parameters(value)) is false
 			return false
 	given <= parameters.Length
-Filled(given Number) Texts
-	Twice.Filled(1).Length is 0
-	Filling.Filled(1) is ("    %d4p1 = arith.constant 3.0 : f64")
+Filled(entry InstructionEntry) Texts
+	Twice.Filled(Twicing).Length is 0
+	Filling.Filled(Twicing) is ("    %d4p1 = arith.constant 3.0 : f64")
 	mutable lines = List(Mutable(Text))
-	for Range(given, callee.method.parameters.Length)
+	for Range(entry.payload(5 + entry.payload(3)), callee.method.parameters.Length)
 		let name = Temp("p" + value)
 		let number = MlirDefaults(function).Whole(callee.method.parameters(value))
 		let literal = MlirTyped(function.Float).Constant(name, number + ".0")

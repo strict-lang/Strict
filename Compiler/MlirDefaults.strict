@@ -5,6 +5,7 @@ constant Label = Labeled.members.First
 constant Instances = MlirInstances(Labeling.function, 0)
 constant Greeting = TypeCodegen("Strict/Greeting", ("Greeted(name = \"Hi\") Text", "\tname"), ValueCodegen.NoTypes, List(Text)).Entry
 constant Greets = MlirDefaults(MlirFunction(List(TypeEntry) + Greeting, Greeting, MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry))))
+constant LargestWhole = 1000000
 constant LabelGlobal = "  llvm.mlir.global internal constant @dLabeled_label(\"Names\\00\") : !llvm.array<6 x i8>"
 Name(owner TypeEntry, member MemberEntry) Text
 	Labeling.Name(Labeled, Label) is "@dLabeled_label"
@@ -55,9 +56,13 @@ IsWhole(parameter MemberEntry) Boolean
 	MlirDefaults(MlirDeviceCalls.Twice.function).IsWhole(MlirDeviceCalls.Decimals)
 	MlirDefaults(MlirDeviceCalls.Twice.function).IsWhole(MlirDeviceCalls.Spaced) is false
 	MlirDefaults(MlirDeviceCalls.Twice.function).IsWhole(MlirDeviceCalls.Half) is false
+	MlirDefaults(MlirDeviceCalls.Twice.function).IsWhole(MlirDeviceCalls.Tiny) is false
+	MlirDefaults(MlirDeviceCalls.Twice.function).IsWhole(MlirDeviceCalls.Large) is false
 	MlirDefaults(MlirDeviceCalls.Twice.function).IsWhole(MlirDeviceCalls.Twice.callee.method.parameters.First) is false
 	let initial = Natives(function.types).Initial(parameter)
-	(parameter.initial.Length > 0) and (initial.kind is "Number") and (initial.number is initial.number.Floor)
+	let isFraction = (initial.number - initial.number.Floor) > 0
+	let isNumber = (parameter.initial.Length > 0) and (initial.kind is "Number")
+	isNumber and (isFraction is false) and (initial.number.Absolute < LargestWhole)
 Whole(parameter MemberEntry) Number
 	MlirDefaults(MlirDeviceCalls.Twice.function).Whole(MlirDeviceCalls.Decimals) is 3
 	Natives(function.types).Initial(parameter).number

@@ -145,7 +145,8 @@ Called(entry InstructionEntry) Texts
 	let calls = MlirDeviceCalls(function, at, Callee)
 	let arguments = "(" + Text.Combine(calls.Arguments, ", ") + ")"
 	let feeding = MlirFeeding(function, at)
-	(calls.Loaded(entry) + feeding.Invoked(calls, Temp(""), arguments)) + feeding.Called(Temp(""), "%r" + entry.payload(0))
+	let loaded = calls.Loaded(entry) + calls.Filled(entry)
+	(loaded + feeding.Invoked(calls, Temp(""), arguments)) + feeding.Called(Temp(""), "%r" + entry.payload(0))
 Callee MlirFunction
 	Reading.Emitted(0) is "    %d6kf = llvm.load %r3 : !llvm.ptr -> f64"
 	Reading.Emitted(1) is "    %d6k = arith.fptosi %d6kf : f64 to i64"
