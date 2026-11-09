@@ -806,7 +806,10 @@
     cf.cond_br %isCrowded, ^collect, ^table
   ^collect:
     %full = arith.constant true
+    %housekeepingSlot = llvm.mlir.addressof @strict_gc_housekeeping : !llvm.ptr
+    llvm.store %one, %housekeepingSlot : i64, !llvm.ptr
     func.call @strict_gc_run(%full) : (i1) -> ()
+    llvm.store %none, %housekeepingSlot : i64, !llvm.ptr
     cf.br ^table
   ^table:
     %entries = arith.muli %valueCount, %three : i64
