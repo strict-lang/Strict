@@ -282,6 +282,21 @@ def check_moved_program():
 				assert ran.returncode == 1 and "is missing or empty" in ran.stdout, ran.stdout + ran.stderr
 	print("A program without its PTX stops with an error instead of hanging")
 
+def check_native_folder():
+	"""Native libraries open relative paths in the folder of the request, not where the resident server started."""
+	strict = str(root / ("strict" + extension))
+	subprocess.run([strict, "stop"], cwd=root, capture_output=True, text=True, timeout=60)
+	started = subprocess.run([strict, "test", "Fibonacci.strict"], cwd=root / "Examples", capture_output=True, text=True, timeout=120)
+	assert started.returncode == 0, started.stdout + started.stderr
+	cached = root / "NeuralNetworks/obj/Layer.strictbinary"
+	if cached.exists():
+		cached.unlink()
+	tested = subprocess.run([strict, "test", "NeuralNetworks/Layer.strict"], cwd=root, capture_output=True, text=True, timeout=120)
+	assert "GgufFileNotReadable" not in tested.stdout + tested.stderr, tested.stdout + tested.stderr
+	subprocess.run([strict, "stop"], cwd=root, capture_output=True, text=True, timeout=60)
+	print("Native libraries read files relative to the request of a resident server started elsewhere")
+
 check_concurrent_builds()
 check_link_workers()
 check_moved_program()
+check_native_folder()

@@ -171,6 +171,7 @@
     cf.cond_br %isResolved, ^keep, ^done(%no : f64)
   ^keep:
     func.call @strict_folder_changed(%full) : (!llvm.ptr) -> ()
+    %processFolder = llvm.call @chdir(%full) : (!llvm.ptr) -> i32
     cf.br ^done(%yes : f64)
   ^done(%result: f64):
     return %result : f64

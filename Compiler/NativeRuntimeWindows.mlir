@@ -143,7 +143,8 @@
     return %result : f64
   }
   llvm.func @SetCurrentDirectoryA(!llvm.ptr) -> i32
-  // only this thread changes its folder (strict_folder), the folder of the process stays
+  // this thread changes its folder (strict_folder) and the process folder follows for native libraries, they open
+  // relative paths there (GgufFile.c); requests run one at a time per process, threads in one server have to pass paths
   func.func private @strict_directory_change(%self: f64, %path: f64) -> f64 {
     %exists = func.call @strict_directory_exists(%self, %path) : (f64, f64) -> f64
     %no = arith.constant 0.0 : f64
@@ -164,6 +165,7 @@
     cf.cond_br %isResolved, ^keep, ^done(%no : f64)
   ^keep:
     func.call @strict_folder_changed(%full) : (!llvm.ptr) -> ()
+    %processFolder = llvm.call @SetCurrentDirectoryA(%full) : (!llvm.ptr) -> i32
     cf.br ^done(%yes : f64)
   ^done(%result: f64):
     return %result : f64
