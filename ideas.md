@@ -1,5 +1,5 @@
 # Ideas
-Large features, difficult or long work and far fetched things, kept here until someone wants them. Not a to do list, lines may get deleted any time. Bugs: [bugs.md](bugs.md), speed work: [performance.md](performance.md).
+Large features, difficult or long work and far fetched things, kept here until someone wants them. Not a to do list, lines may get deleted any time. Bugs go into `bugs.md`, speed work for soon into `performance.md`, while there are any.
 
 ## Features and long work
 - Testing one file on the VM spends up to 1.6 s (Compiler/MlirCalls 1.6 s, MlirLibrary 1.3 s, Tokenizer 0.14 s), all of it again every run: TypeShape.MemberScope is rebuilt 1191 times and TypeCodegen.Generator 1239 times for Number.strict, Changes(lines).Members and .Methods per method body and call site, source discovery tokenizes every line with a `/`, ResolveCheck.Inference covers all project files. Compute shape scopes once per TypeCodegen, cache per file scopes in the server by file stamp.

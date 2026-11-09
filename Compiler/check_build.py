@@ -295,6 +295,13 @@ def check_native_folder():
 	assert "GgufFileNotReadable" not in tested.stdout + tested.stderr, tested.stdout + tested.stderr
 	subprocess.run([strict, "stop"], cwd=root, capture_output=True, text=True, timeout=60)
 	print("Native libraries read files relative to the request of a resident server started elsewhere")
+	with tempfile.TemporaryDirectory(prefix="MovingCheck", dir=root / "Examples") as folder:
+		source = Path(folder) / "MovingCheck.strict"
+		source.write_text('Moved Number\n\tDirectory.Change("Math") is true\n\t1\n', encoding="utf-8")
+		built = subprocess.run([strict, "build", str(source)], cwd=root, capture_output=True, text=True, timeout=120)
+		assert built.returncode == 0, built.stdout + built.stderr
+	subprocess.run([strict, "stop"], cwd=root, capture_output=True, text=True, timeout=60)
+	print("A test that changes the folder does not move the build")
 
 check_concurrent_builds()
 check_link_workers()

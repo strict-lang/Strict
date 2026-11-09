@@ -111,13 +111,18 @@ Completed(cache BinaryFile, root Text, files Texts, stamped BinarySources, isOwn
 	let current = SourceFiles(root).Of(cache.source)
 	current.Length is files.Length then stamped else BinarySources(current).Stamped
 Tested(types List(TypeEntry), path Text, isQuiet = false) Number
+	let home = Directory.Current
 	let failed = Machine(Started(types, path), isQuiet = isQuiet).Tested(types.First.Name)
+	Directory.Change(home)
 	if failed > 0
 		logger.Log(Summary(failed, path))
 	failed
 Mutated(types List(TypeEntry), path Text, root Text, files Texts, inference TypeInference, started Number) Number
+	let home = Directory.Current
 	let mutants = Mutants(logger, path, Baseline.Budget(started), part, selection is "*")
-	isMutating and (selection is in ("", "*")) then mutants.Ran(types, root, files, inference) else 0
+	let survived = isMutating and (selection is in ("", "*")) then mutants.Ran(types, root, files, inference) else 0
+	Directory.Change(home)
+	survived
 Loaded(path Text, root Text, withTests = true, sources Texts = List(Text)) List(TypeEntry)
 	let started = Process.Elapsed
 	let cache = BinaryFile(FileCompiler.Normalized(path))

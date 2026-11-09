@@ -73,9 +73,17 @@ IsTest(line SyntaxNode, isLeading Boolean, block CodeBlock) Boolean
 	if line.Kind is in ("If", "ElseIf", "Else", "Declaration", "Reassignment")
 		return false
 	let lineText = line to Text
-	if isLeading and IsCalling(line, block) or lineText.IndexOf(" is ") >= 0
+	if isLeading and IsCalling(line, block) and (IsEffect(line) is false) or lineText.IndexOf(" is ") >= 0
 		return values.TypeOf(line, block) is "Boolean"
 	false
+IsEffect(line SyntaxNode) Boolean
+	Plain.IsEffect(SyntaxParser(Tokenizer("Directory.Change(\"a\")").Tokens).Parse)
+	Plain.IsEffect(SyntaxParser(Tokenizer("Directory.Create(\"a\")").Tokens).Parse)
+	Plain.IsEffect(SyntaxParser(Tokenizer("Directory.Exists(\"a\")").Tokens).Parse) is false
+	Plain.IsEffect(SyntaxParser(Tokenizer("Other.Change(\"a\")").Tokens).Parse) is false
+	Plain.IsEffect(One) is false
+	let isOnDirectory = line.children.Length > 0 and (line.children(0).text is "Directory")
+	isOnDirectory and (line.text is in ("Change", "Create", "Delete"))
 IsCalling(line SyntaxNode, block CodeBlock) Boolean
 	Reading.IsCalling(SyntaxNode("Member", "Read", SyntaxNode("Identifier", "attack")), CodeBlock.Empty)
 	Even.IsTest(SyntaxNode("Call", "IsEven", One), false, CodeBlock.Empty) is false

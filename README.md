@@ -129,7 +129,7 @@ Builds, checks, folder tests on the VM, VS Code typing checks and value tracing 
 | `Runtime` | The Strict VM running those instructions (`strict test` and the VS Code extension) |
 | `Compiler` | Instructions to MLIR, the runtime in `NativeRuntime*.mlir`, GPU kernels, mlir-opt, mlir-translate and clang |
 
-Details are in the README of each package. Open bugs are in [bugs.md](bugs.md) in priority order, performance work in [performance.md](performance.md), larger ideas in [ideas.md](ideas.md).
+Details are in the README of each package. Open bugs and speed work go into `bugs.md` and `performance.md` while there are any, larger ideas are in [ideas.md](ideas.md).
 
 Design decisions: an immutable expression tree (static analysis only), validation before execution, tests that live with the code and disappear from the bytecode, strict rules first and then hardware speed. Only code that is actually called is parsed, validated, tested and executed, so millions of generated lines can be checked and discarded almost immediately.
 
