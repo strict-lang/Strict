@@ -1,7 +1,9 @@
 has inference Expressions/TypeInference
 has isOptimizing Boolean = true
 constant Known = KnownTypes(("Count"), (KnownTypes.CountMembers), (Scope(("Increment", "Twice", "Started"), ("Count", "Count", "Count"))), (KnownTypes.CountParameters))
-constant Growing = ConstantMethods(TypeInference(Known, (Scope(("Started", "Alias", "Plain"), ("Count(1).Twice", "Count.Started", "Count(1)")), TypeInference.NoShape)))
+constant ConstantNames = ("Started", "Alias", "Plain", "Rows", "Tally", "Row", "Both", "Sum")
+constant ConstantValues = ("Count(1).Twice", "Count.Started", "Count(1)", "(1, 2) + (3)", "1 + 2", "(1, 2)", "Row + Row", "Tally + Tally")
+constant Growing = ConstantMethods(TypeInference(Known, (Scope(ConstantNames, ConstantValues), TypeInference.NoShape)))
 constant Counting = TypeCodegen("Strict/Count", ("has number", "constant Started = Count(1).Twice", "Twice Count", "\tCount(number * 2)"), Growing.inference, List(Text))
 constant Unoptimized = ConstantMethods(Growing.inference, false)
 constant Value = SyntaxNode("Number", "1")
@@ -36,12 +38,33 @@ HasCall(node SyntaxNode, owner Text = "") Boolean
 	let isOwned = (node.Kind is "Member") and (first.Kind is in ("Identifier", "Type"))
 	if isOwned and (inference.ConstantOf(first.text, node.text) is not "")
 		return IsCached(first.text, node.text)
-	if IsCall(node, first, owner)
+	if IsCall(node, first, owner) or IsListBuilt(node, owner)
 		return true
 	for node.children
 		if HasCall(value, owner)
 			return true
 	false
+IsListBuilt(node SyntaxNode, owner Text) Boolean
+	Growing.IsListBuilt(Growing.Definition("Count", "Rows"), "Count")
+	Growing.IsListBuilt(Growing.Definition("Count", "Tally"), "Count") is false
+	Growing.IsListBuilt(SyntaxNode("Number", "1"), "Count") is false
+	Growing.IsCached("Count", "Rows")
+	Growing.IsCached("Count", "Tally") is false
+	Growing.IsCached("Count", "Both")
+	Growing.IsCached("Count", "Sum") is false
+	node.Kind is "Binary" and (IsList(node.children(0), owner) or IsList(node.children(1), owner))
+IsList(node SyntaxNode, owner Text) Boolean
+	Growing.IsList(Growing.Definition("Count", "Row"), "Count")
+	Growing.IsList(SyntaxNode("Member", "Row", SyntaxNode("Type", "Count")), "Count")
+	Growing.IsList(SyntaxNode("Member", "Tally", SyntaxNode("Type", "Count")), "Count") is false
+	Growing.IsList(SyntaxNode("Number", "1"), "Count") is false
+	let isConstant = node.Kind is "Member" and inference.ConstantOf(node.children(0).text, node.text) is not ""
+	if isConstant
+		return IsList(Definition(node.children(0).text, node.text), node.children(0).text)
+	if node.Kind is "Binary"
+		return IsListBuilt(node, owner)
+	let type = inference.TypeOf(node, TypeInference.NoShape, inference.types.ShapeScope(owner))
+	type.StartsWith("List(") or inference.types.IsPlural(type)
 IsCall(node SyntaxNode, first SyntaxNode, owner Text = "") Boolean
 	Growing.IsCall(SyntaxNode("Identifier", "Twice"), SyntaxNode("Identifier", "Twice"), "Count")
 	Growing.IsCall(SyntaxNode("Identifier", "Started"), SyntaxNode("Identifier", "Started"), "Count") is false
