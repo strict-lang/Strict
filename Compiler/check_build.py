@@ -263,5 +263,33 @@ def check_link_workers():
 	assert modules[0] == modules[1], "Linking with one worker emitted a different program"
 	print("Links found over several rounds compile the same with one worker and with all")
 
+def check_moved_program():
+	"""A program moved away from its obj folder stops with the PTX error, also for a loop only big enough to warm the GPU."""
+	with tempfile.TemporaryDirectory(prefix="MovedCheck", dir=root / "Examples") as folder:
+		source = Path(folder) / "MovedCheck.strict"
+		source.write_text("has logger
+has weights Numbers with value.Bits is 32
+Loop(count Number) Numbers
+	for count
+"
+			"		weights(index % 4) * 3
+Run(count Number)
+	let results = MovedCheck(logger, (1.1, 2.2, 3.3, 5.5)).Loop(count)
+"
+			"	logger.Log(results(0) to Text)
+", encoding="utf-8")
+		built = subprocess.run([str(root / ("strict" + extension)), "build", str(source)], cwd=root,
+			capture_output=True, text=True, timeout=120)
+		assert built.returncode == 0, built.stdout + built.stderr
+		with tempfile.TemporaryDirectory(prefix="MovedCheck") as elsewhere:
+			moved = Path(elsewhere) / ("MovedCheck" + extension)
+			moved.write_bytes(source.with_suffix(extension).read_bytes())
+			moved.chmod(0o755)
+			for count in ("32000", "128000", "5000000"):
+				ran = subprocess.run([str(moved), count], cwd=elsewhere, capture_output=True, text=True, timeout=30)
+				assert ran.returncode == 1 and "is missing or empty" in ran.stdout, ran.stdout + ran.stderr
+	print("A program without its PTX stops with an error instead of hanging")
+
 check_concurrent_builds()
 check_link_workers()
+check_moved_program()

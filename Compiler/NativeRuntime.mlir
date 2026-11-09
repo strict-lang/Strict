@@ -14998,7 +14998,10 @@
   ^done:
     return
   }
-  // exit waits for the warming thread: a process ending while it loads the driver crashed in the driver (0xC0000005)
+  // exit waits for the warming thread: a process ending while it loads the driver crashed in the driver (0xC0000005),
+  // so that thread must not exit: with a missing or wrong PTX it gives up (strict_gpu_warm_abandoned), the first GPU
+  // loop reads it again and stops with the error
+  llvm.mlir.global internal @strict_gpu_warm_abandoned(0 : i64) : i64
   llvm.func @strict_gpu_settled() {
     %warming = llvm.mlir.constant(3 : i64) : i64
     %stateSlot = llvm.mlir.addressof @strict_gpu_state : !llvm.ptr
@@ -15019,6 +15022,8 @@
     %opened = func.call @strict_gpu_open() : () -> i1
     cf.cond_br %opened, ^load, ^unopened
   ^unopened:
+    %unopenedState = llvm.mlir.addressof @strict_gpu_state : !llvm.ptr
+    llvm.store %two, %unopenedState atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     %unopened = llvm.mlir.addressof @strict_gpu_unopened_text : !llvm.ptr
     func.call @strict_gpu_required(%unopened) : (!llvm.ptr) -> ()
     cf.br ^store(%two : i64)
@@ -15026,6 +15031,14 @@
     %ptxSlot = llvm.mlir.addressof @strict_gpu_warm_ptx : !llvm.ptr
     %ptxBits = llvm.load %ptxSlot : !llvm.ptr -> i64
     %ptx = llvm.inttoptr %ptxBits : i64 to !llvm.ptr
+    %code = func.call @strict_gpu_text(%ptx) : (!llvm.ptr) -> !llvm.ptr
+    %abandonedSlot = llvm.mlir.addressof @strict_gpu_warm_abandoned : !llvm.ptr
+    %abandoned = llvm.load %abandonedSlot : !llvm.ptr -> i64
+    %none = arith.constant 0 : i64
+    %isAbandoned = arith.cmpi ne, %abandoned, %none : i64
+    llvm.store %none, %abandonedSlot : i64, !llvm.ptr
+    cf.cond_br %isAbandoned, ^store(%one : i64), ^compile
+  ^compile:
     %module = func.call @strict_gpu_module(%ptx) : (!llvm.ptr) -> i64
     cf.br ^store(%one : i64)
   ^store(%state: i64):
@@ -15413,6 +15426,13 @@
     %newer = func.call @strict_gpu_beside(%stem, %newerEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %runtime = func.call @strict_gpu_beside_shared(%stem, %runtimeEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     func.call @strict_gpu_matched(%ptx, %newerEnding, %newer, %runtime) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> ()
+    %abandonedSlot = llvm.mlir.addressof @strict_gpu_warm_abandoned : !llvm.ptr
+    %abandoned = llvm.load %abandonedSlot : !llvm.ptr -> i64
+    %isAbandoned = arith.cmpi ne, %abandoned, %zero : i64
+    cf.cond_br %isAbandoned, ^unusable, ^usable
+  ^unusable:
+    return %newer : !llvm.ptr
+  ^usable:
     %older = func.call @strict_gpu_beside(%stem, %olderEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %runtimeOlder = func.call @strict_gpu_beside(%stem, %runtimeOlderEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %runtimeBuffer = func.call @strict_gpu_paired(%runtime, %runtimeOlder) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
@@ -15531,8 +15551,18 @@
     %mismatch = llvm.mlir.addressof @strict_gpu_mismatch_text : !llvm.ptr
     cf.cond_br %isSame, ^done, ^failed(%mismatch : !llvm.ptr)
   ^failed(%format: !llvm.ptr):
+    %stateSlot = llvm.mlir.addressof @strict_gpu_state : !llvm.ptr
+    %state = llvm.load %stateSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %warming = arith.constant 3 : i64
+    %isWarming = arith.cmpi eq, %state, %warming : i64
+    cf.cond_br %isWarming, ^abandoned, ^stopped(%format : !llvm.ptr)
+  ^abandoned:
+    %abandonedSlot = llvm.mlir.addressof @strict_gpu_warm_abandoned : !llvm.ptr
+    llvm.store %one, %abandonedSlot : i64, !llvm.ptr
+    return
+  ^stopped(%stoppedFormat: !llvm.ptr):
     %executable = func.call @strict_gpu_executable() : () -> !llvm.ptr
-    %printed = llvm.call @printf(%format, %stem, %ending, %executable) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    %printed = llvm.call @printf(%stoppedFormat, %stem, %ending, %executable) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
     %exitCode = arith.constant 1 : i32
     llvm.call @exit(%exitCode) : (i32) -> ()
     cf.br ^done
