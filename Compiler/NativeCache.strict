@@ -20,12 +20,17 @@ Key Text
 Output Text
 	let program = (command is "build") and NativeBuild.IsProgram(rest(0))
 	Toolchain(Platform.Current, rest(1)).Executable(NativeBuild.Output(rest(0), program))
-Message Text
+Stamp(path Text) Text
+	NativeCache.Stamp("Compiler/output/missing") is "unknown"
+	NativeCache.Stamp(Process.Current.executable).Length is 16
 	constant minuteLength = 16
+	let built = Process(path).Built
+	built.Length < minuteLength then "unknown" else built.Substring(0, minuteLength)
+Message Text
 	let source = rest(0)
 	let executable = Output
-	let changed = " (last changed " + Process(source).Built.Substring(0, minuteLength) + ")"
-	let built = " (last build " + Process(executable).Built.Substring(0, minuteLength) + ")"
+	let changed = " (last changed " + Stamp(source) + ")"
+	let built = " (last build " + Stamp(executable) + ")"
 	let prefix = command is "test" then "Tests up to date: " else "Up to date: "
 	prefix + source + changed + " < " + Path(executable).FileName.text + built
 IsCurrent Boolean
