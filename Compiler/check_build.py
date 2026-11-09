@@ -267,17 +267,9 @@ def check_moved_program():
 	"""A program moved away from its obj folder stops with the PTX error, also for a loop only big enough to warm the GPU."""
 	with tempfile.TemporaryDirectory(prefix="MovedCheck", dir=root / "Examples") as folder:
 		source = Path(folder) / "MovedCheck.strict"
-		source.write_text("has logger
-has weights Numbers with value.Bits is 32
-Loop(count Number) Numbers
-	for count
-"
-			"		weights(index % 4) * 3
-Run(count Number)
-	let results = MovedCheck(logger, (1.1, 2.2, 3.3, 5.5)).Loop(count)
-"
-			"	logger.Log(results(0) to Text)
-", encoding="utf-8")
+		source.write_text("has logger\nhas weights Numbers with value.Bits is 32\nLoop(count Number) Numbers\n\tfor count\n"
+			"\t\tweights(index % 4) * 3\nRun(count Number)\n\tlet results = MovedCheck(logger, (1.1, 2.2, 3.3, 5.5)).Loop(count)\n"
+			"\tlogger.Log(results(0) to Text)\n", encoding="utf-8")
 		built = subprocess.run([str(root / ("strict" + extension)), "build", str(source)], cwd=root,
 			capture_output=True, text=True, timeout=120)
 		assert built.returncode == 0, built.stdout + built.stderr
