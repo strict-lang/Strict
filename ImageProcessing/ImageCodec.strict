@@ -1,1 +1,5 @@
+Width(path Text) Number
+Height(path Text) Number
+Pixels(path Text, channels Number) Numbers
 SaveJpeg(path Text, pixels Numbers, width Number, quality Number) Number
+SavePng(path Text, pixels Numbers, width Number) Number

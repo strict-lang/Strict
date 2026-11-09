@@ -1,5 +1,5 @@
 has root Text
-constant Imaging = List(Text) + "./ImageProcessing/Png.strict"
+constant Imaging = List(Text) + "./Compression/Deflate.strict"
 constant Plain = SourceFiles(".")
 constant Compressed = Directory.Files("./Compression", "*.strict")
 Of(path Text, others Texts = List(Text)) Slow(Texts)

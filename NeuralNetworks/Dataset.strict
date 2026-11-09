@@ -22,7 +22,7 @@ Images(folder Text, classes Number) Slow(Dataset)
 Pictures(files Texts) List(Numbers)
 	Pairs.Pictures(List(Text)).Length is 0
 	for files
-		value.EndsWith(".jpg") then JpegPixels.Read(value).Grays else Png.Read(value).Grays
+		ImageLoader(value).Grays
 Labels(label Numbers, count Number) List(Numbers)
 	Pairs.Labels((1, 0), 2) is ((1, 0), (1, 0))
 	for count

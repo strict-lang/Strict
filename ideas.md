@@ -89,7 +89,6 @@ Large features, difficult or long work and far fetched things, kept here until s
 - each convolution writes bfloat16 copies of its input and weights first; stages of 64 channels or 3 buffers once shared memory allows it
 - Uniform branches still in GPU loops, measure their share first (none showed up in Qwen3-Coder): `tokens_blocks` switches on the row bits per block, `products_run` runs bits chains per element, `strict_device_dots` has no bfloat16 arm, prompt attention masks every tile.
 - small number types as kernel values: values, parameters and members of types with 2-4 Number members (Complex) and lists of them read by index work (StructLanes, LaneCalls, MlirDeviceRecords), still on the CPU: a `for` over a List(Complex) (a list member with `value.Bits is 32` fails the build, index it instead), a List(Complex) result, a method returning a Complex that has a loop or an early return, the 32 bit types (Vector2, Vector3, Size); a flattened list goes up again for every launch; a `to Text` reached only through text conversion is not emitted unless something calls it (why lane inlining skips `to`)
-- Image files in Strict are still far from C: PNG load 860 ms for 1536x1024 (Inflate 440, unfilter 190, 4.7 MB), save 1330 ms compressed and 307 ms stored, JPEG load 200 ms for 720x1280: a native decoder (GDI+ like SaveJpeg, canvas on the web) or tighter loops.
 
 ## Model: Ternary Bonsai 27B
 `C:/code/Models/Bonsai`, 12.7-18 ms per token on the RTX 4090 (Prism's llama.cpp ~11); per token (ncu) the products take ~8.7 ms, the quantize kernels ~0.6. Left:

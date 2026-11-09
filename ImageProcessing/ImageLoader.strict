@@ -2,33 +2,17 @@ has path Text
 Loaded Slow(Image)
 	ImageLoader("ImageProcessing/4x4.png").Loaded.Size is Size(4, 4)
 	ImageLoader("ImageProcessing/Digit.jpg").Loaded.Size is Size(28, 28)
-	if path.EndsWith(".jpg") or path.EndsWith(".jpeg")
-		let pixels = JpegPixels.Read(path)
-		return Image(Size(pixels.decoder.jpeg.Width, pixels.decoder.jpeg.Height), pixels.Colors)
-	let png = Png.Read(path)
-	Image(Size(png.Width, png.Height), Colors(png))
-Colors(png Png) List(ColorValue)
-	ImageLoader("").Colors(Png.GraySample).First is ColorValue(10 / 255, 10 / 255, 10 / 255)
-	let samples = png.Samples(png.Unfiltered(png.Raw))
-	let palette = png.Chunk(Png.Palette)
-	for png.Width * png.Height
-		Pixel(png, samples, palette, index)
-Pixel(png Png, samples Numbers, palette Numbers, pixel Number) ColorValue
-	ImageLoader("").Pixel(Png.PaletteSample, (0, 1), (0, 0, 0, 255, 255, 255), 1) is ColorValue(1, 1, 1)
-	ImageLoader("").Pixel(Png.PaletteSample, (1), (0, 0, 0, 51, 102, 153), 0) is ColorValue(0.2, 0.4, 0.6)
-	ImageLoader("").Pixel(Png.Rgb, (9, 9, 9, 51, 102, 153), List(Number), 1) is ColorValue(0.2, 0.4, 0.6)
-	let start = pixel * png.Channels
-	if png.bytes(Png.KindOffset) is 3
-		let entry = samples(start) * 3
-		return ColorValue(palette(entry) / Byte.Max, palette(entry + 1) / Byte.Max, palette(entry + 2) / Byte.Max)
-	Sampled(png, samples, start)
-Sampled(png Png, samples Numbers, start Number) ColorValue
-	ImageLoader("").Sampled(Png.Rgba, (9, 9, 9, 9, 51, 102, 153, 204), 4) is ColorValue(0.2, 0.4, 0.6, 0.8)
-	ImageLoader("").Sampled(Png.GrayAlpha16, (9, 9, 51, 102), 2) is ColorValue(0.2, 0.2, 0.2, 0.4)
-	ImageLoader("").Sampled(Png.Gray2, (2), 0) is ColorValue(2 / 3, 2 / 3, 2 / 3)
-	ImageLoader("").Sampled(Png.Rgb, (51, 102, 153), 0) is ColorValue(0.2, 0.4, 0.6)
-	let kind = png.bytes(Png.KindOffset)
-	let most = png.bytes(Png.DepthOffset) >= 8 then Byte.Max else 2 ^ png.bytes(Png.DepthOffset) - 1
-	let alpha = kind is 6 then samples(start + 3) / most else kind is 4 then samples(start + 1) / most else 1
-	let colored = (kind is 2) or (kind is 6) then 1 else 0
-	ColorValue(samples(start) / most, samples(start + colored) / most, samples(start + colored * 2) / most, alpha)
+	ImageLoader("ImageProcessing/Progressive.jpg").Loaded.Size is Size(48, 16)
+	Image(Size(ImageCodec.Width(path), ImageCodec.Height(path)), Colors(ImageCodec.Pixels(path, 4)))
+Colors(bytes Numbers) List(ColorValue)
+	ImageLoader("").Colors((51, 102, 153, 204)) is List(ColorValue) + ColorValue(0.2, 0.4, 0.6, 0.8)
+	ImageLoader("").Colors((0, 0, 0, 255, 255, 255, 255, 0)).Last is ColorValue(1, 1, 1, 0)
+	for bytes.Length / 4
+		Color(bytes, index * 4)
+Color(bytes Numbers, at Number) ColorValue
+	ImageLoader("").Color((1, 51, 102, 153, 204), 1) is ColorValue(0.2, 0.4, 0.6, 0.8)
+	ColorValue(bytes(at) / Byte.Max, bytes(at + 1) / Byte.Max, bytes(at + 2) / Byte.Max, bytes(at + 3) / Byte.Max)
+Grays Slow(Numbers)
+	ImageLoader("ImageProcessing/Digit.jpg").Grays.Length is 784
+	for ImageCodec.Pixels(path, 1)
+		value / Byte.Max

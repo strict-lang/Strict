@@ -1,44 +1,17 @@
 has path Text
-has compressed Boolean = true
-constant Signature = (137, 80, 78, 71, 13, 10, 26, 10)
-constant Header = 1229472850
-constant End = 1229278788
 constant Corner = Image(Size(2, 2), (ColorValue(0, 0, 0), ColorValue(0, 0, 0), ColorValue(0, 0, 0), ColorValue(1, 1, 1)))
-Save(image Image)
-	File(path).Write(Bytes(image))
-Bytes(image Image) Slow(Bytes)
-	ImageSaver("").Bytes(Image.Blank(Size(1, 1))).Length is 68
-	ImageSaver("").Bytes(Image.Blank(Size(16, 16))).Length < 200
-	let header = Big32(image.Size.Width) + Big32(image.Size.Height) + (8, 6, 0, 0, 0)
-	let data = Data(image)
-	let numbers = Signature + Chunk(Header, header) + Chunk(Png.ImageData, data) + Chunk(End, List(Number))
-	for numbers
-		Byte(value)
-Data(image Image) Slow(Numbers)
-	ImageSaver("", false).Data(Image.Blank(Size(16, 16))).Length is 1051
-	let deflate = Deflate(Scanlines(image))
-	compressed then deflate.Zlib else deflate.Stored
-Chunk(type Number, data Numbers) Numbers
-	ImageSaver("").Chunk(End, List(Number)) is (0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130)
-	let typed = Big32(type) + data
-	Big32(data.Length) + typed + Big32(Crc(typed).Value)
-Big32(number Number) Numbers
-	ImageSaver("").Big32(258) is (0, 0, 1, 2)
-	for 4
-		(number / Byte.Values ^ (3 - index)).Floor % Byte.Values
-Scanlines(image Image) Numbers
-	ImageSaver("").Scanlines(Image.Blank(Size(1, 1))) is (0, 0, 0, 0, 255)
-	ImageSaver("").Scanlines(Corner) is (0, 0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 0, 255, 255, 255, 255, 255)
-	let row = image.Size.Width * 4 + 1
-	for image.Size.Height * row
-		let column = index % row
-		let pixel = (index / row).Floor * image.Size.Width + ((column - 1) / 4).Floor
-		column is 0 then 0 else Channel(image.Colors(pixel), (column - 1) % 4)
+constant Saved = "Compiler/output/ImageSaverCorner.png"
+Save(image Image) Slow(Number)
+	ImageSaver(Saved).Save(Corner) is 1
+	ImageLoader(Saved).Loaded.Colors is Corner.Colors
+	ImageCodec.SavePng(path, Flat(image), image.Size.Width)
+Flat(image Image) Numbers
+	ImageSaver("").Flat(Image.Blank(Size(1, 1))) is (0, 0, 0, 1)
+	ImageSaver("").Flat(Image(Size(1, 1), List(ColorValue) + ColorValue(0.2, 0.4, 0.6, 0.8))) is (0.2, 0.4, 0.6, 0.8)
+	for image.Colors.Length * 4
+		Channel(image.Colors((index / 4).Floor), index % 4)
 Channel(color ColorValue, channel Number) Number
-	ImageSaver("").Channel(ColorValue(1, 0.5, 0), 1) is 128
-	ImageSaver("").Channel(ColorValue(0.2, 0.4, 0.6, 0.8), 0) is 51
-	ImageSaver("").Channel(ColorValue(0.2, 0.4, 0.6, 0.8), 2) is 153
-	ImageSaver("").Channel(ColorValue(0.2, 0.4, 0.6, 0.8), 3) is 204
+	ImageSaver("").Channel(ColorValue(1, 0.5, 0), 1) is 0.5
+	ImageSaver("").Channel(ColorValue(0.2, 0.4, 0.6, 0.8), 3) is 0.8
 	let rgb = channel is 0 then color.Red else channel is 1 then color.Green else color.Blue
-	let component = channel is 3 then color.Alpha else rgb
-	(component.Clamp * Byte.Max).Round
+	channel is 3 then color.Alpha else rgb
