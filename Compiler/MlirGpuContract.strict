@@ -13,17 +13,42 @@ constant Texts = MlirGpuContract(MlirFunction(Narrowed.types, Contracted, Narrow
 constant Few = MlirGpuContract(MlirFunction(MlirNarrowing.Few.function.types, Contracted, MlirNarrowing.Few.function.method), 1)
 constant Doubled = MlirParallel.Doubling.function
 constant Running = MlirGpuContract(MlirFunction(Doubled.types, Contracted, Doubled.method), 2)
+constant Colored = MemberEntry("colors", "Strict/List(Rgb)", List(InstructionEntry), false, 32)
+constant Coloring = MlirLanes.Collecting
+constant Laned = MlirGpuContract(MlirFunction(Coloring.types, TypeEntry(MlirLanes.Rgb, members = MlirLanes.Rgb.members + Colored), Coloring.method), 2)
+constant Unbound = MlirGpuContract(Coloring, 2)
 constant Filtering = MlirGpuContract(MlirFunction(Weights.types, Contracted, Weights.method), 0)
 Issue Text
 	Weighing.Issue.IndexOf(": " + Rule + ": ") > 0
 	Free.Issue is ""
 	Doubling.Issue is ""
-	if IsRequired is false
+	let listed = ContractedList
+	if (IsRequired is false) and (listed is "")
 		return ""
 	let instructions = function.method.instructions
-	let blocker = Blocker(function, position + 1, function.method.LoopEndOf(position), 0)
+	let end = function.method.LoopEndOf(position)
+	let blocker = listed is "" then Blocker(function, position + 1, end, 0) else "its for over " + listed
 	let file = TypeSource(function.type).Located("") + ":line " + instructions(position).line
 	file + ": " + Rule + ": " + function.method.Name + " runs on the CPU because of " + blocker
+ContractedList Text
+	Laned.ContractedList is "List(Rgb)"
+	Laned.Issue.EndsWith("Collected runs on the CPU because of its for over List(Rgb)")
+	Unbound.Issue is ""
+	Unbound.ContractedList is ""
+	Doubling.ContractedList is ""
+	let iterated = MlirKinds(function).KindOf(position, function.method.instructions(position).payload(0))
+	let check = MlirGpuCheck(function, position)
+	let isBlocked = check.IsPure and (check.IsGpu is false)
+	let isSmall = MlirLayout(function).Represented(iterated) is not in MlirGpuCheck.Rows
+	isBlocked and isSmall and HasContractOn(iterated) then iterated else ""
+HasContractOn(kind Text) Boolean
+	Laned.HasContractOn("List(Rgb)")
+	Laned.HasContractOn("List(Number)") is false
+	Unbound.HasContractOn("List(Rgb)") is false
+	for function.type.members
+		if (value.Bits is 32) and (TypeEntry.ShortName(value.typeName) is kind)
+			return true
+	false
 IsRequired Boolean
 	Weighing.IsRequired
 	Free.IsRequired is false
