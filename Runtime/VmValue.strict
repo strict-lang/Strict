@@ -28,8 +28,9 @@ OfError(name Text) VmValue
 KeyIndex(key VmValue) Number
 	OfList(OfList(OfNumber(1), OfNumber(3)), OfList(OfNumber(2), OfNumber(4))).KeyIndex(OfNumber(2)) is 1
 	OfList(OfList(OfNumber(1), OfNumber(3))).KeyIndex(OfNumber(5)) is -1
+	OfList(OfList(List(VmValue)), OfList(OfNumber(2), OfNumber(4))).KeyIndex(OfNumber(2)) is 1
 	for items
-		if value.items.First is key
+		if (value.items.Length is 2) and (value.items.First is key)
 			return index
 	-1
 Counted(arguments List(VmValue)) Number

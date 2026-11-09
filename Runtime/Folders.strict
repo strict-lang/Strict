@@ -51,9 +51,12 @@ Ran(arguments Texts) Number
 		let count = arguments.Length - start < Batch then arguments.Length - start else Batch
 		for Process.RunTools(Process.Current.executable, arguments.Slice(start, count))
 			logger.Log((value.Output + value.error).Replace("\r", "").Trim)
+			if value.exitCode is not 0
+				logger.Log("strict " + arguments(start + index) + " exited with " + value.exitCode)
 			failed = failed + Failed(value.exitCode)
 	failed
 Failed(exitCode Number) Number
 	Folders.Failed(3) is 3
 	Folders.Failed(-1073741819) is 1
+	Folders.Failed(0) is 0 and Folders.Failed(200) is 1
 	(exitCode >= 0) and (exitCode < CrashExitCode) then exitCode else 1

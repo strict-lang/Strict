@@ -1002,6 +1002,9 @@
     %shifted = arith.shli %handle, %eight : i64
     %device = arith.ori %shifted, %webClass : i64
     llvm.store %device, %deviceSlot : i64, !llvm.ptr
+    func.call @strict_rc_device(%list) : (f64) -> ()
+    %listBits = arith.bitcast %list : f64 to i64
+    func.call @strict_gpu_reside(%listBits, %shifted, %webClass) : (i64, i64, i64) -> ()
     return %handle : i64
   ^none:
     return %none : i64

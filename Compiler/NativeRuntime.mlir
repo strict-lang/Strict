@@ -14962,6 +14962,8 @@
     %ptxSlot = llvm.mlir.addressof @strict_gpu_warm_ptx : !llvm.ptr
     llvm.store %ptxBits, %ptxSlot : i64, !llvm.ptr
     %executable = func.call @strict_gpu_executable() : () -> !llvm.ptr
+    %settled = llvm.mlir.addressof @strict_gpu_settled : !llvm.ptr
+    %registered = llvm.call @atexit(%settled) : (!llvm.ptr) -> i32
     %spawned = func.call @strict_gpu_spawn() : () -> i1
     cf.cond_br %spawned, ^done, ^unspawned
   ^unspawned:
@@ -14969,6 +14971,21 @@
     cf.br ^done
   ^done:
     return
+  }
+  // exit waits for the warming thread: a process ending while it loads the driver crashed in the driver (0xC0000005)
+  llvm.func @strict_gpu_settled() {
+    %warming = llvm.mlir.constant(3 : i64) : i64
+    %stateSlot = llvm.mlir.addressof @strict_gpu_state : !llvm.ptr
+    llvm.br ^check
+  ^check:
+    %state = llvm.load %stateSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %isWarming = llvm.icmp "eq" %state, %warming : i64
+    llvm.cond_br %isWarming, ^pause, ^done
+  ^pause:
+    func.call @strict_test_pause() : () -> ()
+    llvm.br ^check
+  ^done:
+    llvm.return
   }
   func.func private @strict_gpu_warming() {
     %one = arith.constant 1 : i64
@@ -17468,7 +17485,6 @@
   // the budget is measured again at the next allocation, a resident server sees the memory a neighbour gave back since
   // a refused allocation lowered it
   func.func private @strict_gpu_trim_unused(%self: f64) -> f64 {
-    func.call @strict_gpu_web_trim() : () -> ()
     %unmeasured = arith.constant 0 : i64
     %budgetSlot = llvm.mlir.addressof @strict_gpu_budget : !llvm.ptr
     llvm.store %unmeasured, %budgetSlot : i64, !llvm.ptr
@@ -17477,6 +17493,7 @@
     %most = arith.constant 9223372036854775807 : i64
     %none = arith.constant 0 : i64
     %released = func.call @strict_gpu_trim(%most, %none, %full) : (i64, i64, i1) -> i64
+    func.call @strict_gpu_web_trim() : () -> ()
     %result = arith.uitofp %released : i64 to f64
     return %result : f64
   }
@@ -17702,13 +17719,19 @@
     %stateSlot = llvm.mlir.addressof @strict_gpu_state : !llvm.ptr
     %state = llvm.load %stateSlot : !llvm.ptr -> i64
     %isReady = arith.cmpi eq, %state, %one : i64
-    cf.cond_br %isReady, ^current, ^done
+    cf.cond_br %isReady, ^current, ^web
   ^current:
     %made = func.call @strict_gpu_current() : () -> i1
     cf.cond_br %made, ^drain, ^done
   ^drain:
     func.call @strict_gpu_replay() : () -> ()
     func.call @strict_gpu_synchronize() : () -> ()
+    cf.br ^done
+  ^web:
+    %isWeb = func.call @strict_gpu_webgpu() : () -> i1
+    cf.cond_br %isWeb, ^trimWeb, ^done
+  ^trimWeb:
+    %unused = func.call @strict_gpu_trim_unused(%self) : (f64) -> f64
     cf.br ^done
   ^done:
     return %zero : f64

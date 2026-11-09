@@ -3,6 +3,10 @@ Bugs to fix, most harmful first, one short line each. Remove a line once it is d
 
 - Ben-Home-PC: two greedy runs of Qwen3-Coder-30B-A3B on the same prompt give different outputs (Ben, not investigated: atomics or reduction order in the expert path?).
 - Ben-Home-PC: once in 8 Qwen3-Coder 30B runs, right after loading, a full collection followed another (19 in a row, about 40 ms each, nothing freed) until GarbageCollectionExceedsLimit: probably the own block path of strict_gpu_obtain, whose pause after a collection is skipped when it freed one reusable block.
+- The resident server kept stale sources or folder listings after DeltaEngine edits (files restored with Copy-Item keep their old write time): `strict test Games/TorinsTowers/TowersGame.strict unit` failed with UnresolvedLink on a different existing method each run (Match.Queue, RtsClient.Viewer, LiveCatalog.Validated) until `strict stop`.
+- Mutation run of DeltaEngine Graphs/NavigationMap.strict used up 16 GB (OutOfMemory) on a mutant of a doubling loop instead of killing it at a memory budget.
+- `outer.Key.Z` inside a `for` body gives MethodNotFound: Character.Z (DeltaEngine Games/RacingGame/RaceSettings.Edited worked around it with a type constant).
+- `"abc" to Number` gives 0 instead of an Error; the member limit (15 `has`) is not enforced (DeltaEngine GameData/SheetDownload has 20 members); MagicNumbers skips numbers in methods without tests and in leading lines that look like tests (plain `Label(...)` calls).
 - `strict check NeuralNetworks` reports 8 issues: GpuMemory unused stub parameters, Safetensors.Tuned, Qwen3.Forwarded and QwenSafetensors.Blocks over 12 lines, a Safetensors line over 120 characters, QwenSafetensors with 19 methods.
 
 - GPU speed and memory: [improvements-gpu.md](improvements-gpu.md); Ternary Bonsai and Qwen3.8-Flash-Next: [improvements-models.md](improvements-models.md).

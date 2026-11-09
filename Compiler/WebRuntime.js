@@ -77,7 +77,7 @@ addToLibrary({
 		strictWebGpu.flags.add(flag);
 		return flag;
 	},
-	$strictWebGpuFlush__deps: ['$strictWebGpu'],
+	$strictWebGpuFlush__deps: ['$strictWebGpu', '$strictWebGpuMobile'],
 	$strictWebGpuFlush: () => {
 		const encoder = strictWebGpu.encoder, staging = strictWebGpu.staging, device = strictWebGpu.device;
 		if (!encoder)
@@ -101,13 +101,14 @@ addToLibrary({
 		strictWebGpu.queued += bytes;
 		strictWebGpu.done.push(device.queue.onSubmittedWorkDone().then(() => {
 			strictWebGpu.queued -= bytes;
-			used.forEach((staged) => staging.free.push(Object.assign(staged, { used: 0 })));
+			used.forEach((staged) => strictWebGpuMobile() && staging.free.length
+				? staged.buffer.destroy() : staging.free.push(Object.assign(staged, { used: 0 })));
 			strictWebGpu.done.shift();
 		}));
 	},
 	// a buffer of a kernel (strictWebGpuBuffer) goes back to its pool, the queue runs the commands in order, so the next
 	// kernel writes it only after earlier ones read it (up to 4 GB are kept: 2 GB still left Moss creating 1250 to 1700
-	// buffers an image at 480x848, 3 s instead of 2; 256 MB on phones and tablets, whose GPU shares the memory: a Galaxy S25 Ultra
+	// buffers an image at 480x848, 3 s instead of 2; 128 MB on phones and tablets, whose GPU shares the memory: a Galaxy S25 Ultra
 	// killed the page at 5.7 GB), others are destroyed now or, when commands still to be submitted might use them, after
 	// their submit
 	$strictWebGpuDestroyed__deps: ['$strictWebGpu', '$strictWebGpuMobile', '$strictWebGpuDropped'],
@@ -115,7 +116,7 @@ addToLibrary({
 		if (strictWebGpu.flags.has(buffer))
 			(strictWebGpu.encoder ? strictWebGpu.flagsUsed : strictWebGpu.flagPool).push(buffer);
 		else if (strictWebGpu.pooled.has(buffer) && buffer.size <= (strictWebGpu.poolLimit ||=
-			strictWebGpuMobile() ? 268435456 : 4294967296)) {
+			strictWebGpuMobile() ? 134217728 : 4294967296)) {
 			// the longest unused buffers make room: after another image size they are all of sizes no kernel asks for anymore
 			while (strictWebGpu.pooledBytes + buffer.size > strictWebGpu.poolLimit) {
 				const oldest = strictWebGpu.poolOrder.values().next().value, free = strictWebGpu.pool[oldest.size + ' ' + oldest.usage];
@@ -732,7 +733,7 @@ addToLibrary({
 	},
 	// the buffer of a kept handle: rows of a file (strict_webfile_rows), rows joined only from files and whole borrows of
 	// them get it on their first use, once, again after GpuMemory.Evicted gave it back (strict_webgpu_evicted)
-	$strictWebGpuPlaced__deps: ['$strictWebGpu'],
+	$strictWebGpuPlaced__deps: ['$strictWebGpu', '$strictWebFile'],
 	$strictWebGpuPlaced: (handle) => {
 		const lazy = strictWebGpu.lazy[handle];
 		if (!lazy)
@@ -747,6 +748,8 @@ addToLibrary({
 				return undefined;
 			}
 			delete strictWebGpu.lazy[handle];
+			if (!Object.keys(strictWebGpu.lazy).length)
+				strictWebFile.blocks.clear();
 			strictWebGpu.buffers[handle] = buffer;
 			strictWebGpu.grown += lazy.borrowOf ? 0 : buffer.size;
 			return buffer;
@@ -876,19 +879,22 @@ addToLibrary({
 	},
 	// GpuMemory.Released and Evicted destroy the pooled buffers of finished kernels and the free failure flags after the
 	// commands still to be submitted (Firefox ran out of memory loading Moss with the encoder's buffers pooled)
-	strict_webgpu_trimmed__deps: ['$strictWebGpu', '$strictWebGpuFlush'],
+	strict_webgpu_trimmed__deps: ['$strictWebGpu', '$strictWebGpuFlush', '$strictWebFile'],
 	strict_webgpu_trimmed: () => {
 		strictWebGpuFlush();
-		Object.values(strictWebGpu.pool).flat().concat(strictWebGpu.flagPool).forEach((buffer) => buffer.destroy());
+		Object.values(strictWebGpu.pool).flat().concat(strictWebGpu.flagPool,
+			strictWebGpu.staging.free.splice(0).map((staged) => staged.buffer)).forEach((buffer) => buffer.destroy());
 		strictWebGpu.pool = {};
 		strictWebGpu.poolOrder.clear();
 		strictWebGpu.flagPool = [];
 		strictWebGpu.pooledBytes = 0;
+		strictWebGpu.grown = 0;
+		strictWebFile.blocks.clear();
 	},
-	// 1 once kept results took 1 GB since the last time, the collector then gives back the buffers of dead lists
-	strict_webgpu_crowded__deps: ['$strictWebGpu'],
+	// 1 once kept results took 1 GB (64 MB on mobile) since the last time, the collector then gives back the buffers of dead lists
+	strict_webgpu_crowded__deps: ['$strictWebGpu', '$strictWebGpuMobile'],
 	strict_webgpu_crowded: () => {
-		const isCrowded = strictWebGpu.grown > 1073741824;
+		const isCrowded = strictWebGpu.grown > (strictWebGpuMobile() ? 67108864 : 1073741824);
 		if (isCrowded)
 			strictWebGpu.grown = 0;
 		return isCrowded ? 1 : 0;
