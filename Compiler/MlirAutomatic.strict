@@ -114,6 +114,7 @@ Conversion(kind Text) Text
 	Sample.Conversion("Number") is "strict_number_text"
 	Sample.Conversion("Shape") is "strict_automatic_Shape"
 	Sample.Conversion("Logger") is "skip"
+	Sample.Conversion("Float32") is "strict_number_text"
 	let represented = MlirLayout(function).Represented(kind)
 	if represented is "Text"
 		return ""

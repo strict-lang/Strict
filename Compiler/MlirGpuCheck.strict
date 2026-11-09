@@ -123,7 +123,7 @@ IsCall(inspected MlirFunction, at Number, depth Number) Boolean
 	if entry.texts(1) is "Length"
 		return MlirDeviceStatements(inspected, at).IsList(instance)
 	let callees = MlirDeviceMembers(inspected).Passable(at)
-	let fits = (callees.Length is 1) and (callees.First.method.parameters.Length is entry.payload(5 + entry.payload(3)))
+	let fits = callees.Length is 1 then MlirDeviceCalls(inspected, at, callees.First).IsFilled(entry) else false
 	let isNative = MlirDeviceMembers(inspected).IsNativeCall(at)
 	IsNumbered(inspected, instance) and (depth < 3) and (isNative or (fits and IsDeviceMethod(callees, depth + 1)))
 Instance(inspected MlirFunction, at Number) Text

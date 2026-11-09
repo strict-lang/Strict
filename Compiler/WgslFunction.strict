@@ -26,11 +26,18 @@ IsList(parameter Number) Boolean
 	MlirDeviceStatements(function, 0).IsList(kind)
 Arguments(entry InstructionEntry) Text
 	Twice.Arguments(MlirDeviceStatements.Call) is ", r1"
+	WgslFunction(MlirDeviceCalls.Filling.callee).Arguments(MlirDeviceCalls.Twicing) is ", r1, n_int(3)"
 	let countPosition = 5 + entry.payload(3)
 	mutable text = ""
 	for entry.payload(countPosition)
 		let register = "r" + entry.payload(countPosition + 1 + index)
 		text = text + ", " + (IsList(index) then register + "l" else register)
+	text + Defaults(entry.payload(countPosition))
+Defaults(given Number) Text
+	Twice.Defaults(1) is ""
+	mutable text = ""
+	for Range(given, function.method.parameters.Length)
+		text = text + ", n_int(" + MlirDefaults(function).Whole(function.method.parameters(value)) + ")"
 	text
 Declarations Texts
 	Twice.Declarations.First is "var flag = false;"

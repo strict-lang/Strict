@@ -152,7 +152,6 @@ Helper(kind Text) Text
 Described(loaded Text, suffix Text, kind Text) Texts
 	MlirTexts(Joined, 1).Described("", "d", "Shape").Index(ShapeConverter) is 1
 	MlirTexts(Joined, 1).Described("", "d", "Logger").First.StartsWith("unsupported")
-	MlirTexts(Joined, 1).Described("", "d", "Float32").First.StartsWith("unsupported") is false
 	MlirTexts(Joined, 1).Described("", "d", "List(Text, Number)").Last.IndexOf("@strict_pair_text(") > 0
 	let type = function.TypeOf(kind)
 	let method = type.Callee("to", 0, "Text", List(Text))

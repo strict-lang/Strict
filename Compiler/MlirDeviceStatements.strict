@@ -143,7 +143,7 @@ Called(entry InstructionEntry) Texts
 	if MlirDeviceCalls(function, at, function).IsNative(entry)
 		return MlirDeviceCalls(function, at, function).Native(entry)
 	let calls = MlirDeviceCalls(function, at, Callee)
-	let arguments = "(" + Text.Combine(calls.Arguments(entry), ", ") + ")"
+	let arguments = "(" + Text.Combine(calls.Arguments, ", ") + ")"
 	let feeding = MlirFeeding(function, at)
 	(calls.Loaded(entry) + feeding.Invoked(calls, Temp(""), arguments)) + feeding.Called(Temp(""), "%r" + entry.payload(0))
 Callee MlirFunction

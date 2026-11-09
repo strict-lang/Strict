@@ -51,3 +51,13 @@ Added(texts Texts, parameters List(MemberEntry)) Texts
 		if (initial.kind is "Text") and (initial.text is not "") and (initial.text is not in added)
 			added = added + initial.text
 	added
+IsWhole(parameter MemberEntry) Boolean
+	MlirDefaults(MlirDeviceCalls.Twice.function).IsWhole(MlirDeviceCalls.Decimals)
+	MlirDefaults(MlirDeviceCalls.Twice.function).IsWhole(MlirDeviceCalls.Spaced) is false
+	MlirDefaults(MlirDeviceCalls.Twice.function).IsWhole(MlirDeviceCalls.Half) is false
+	MlirDefaults(MlirDeviceCalls.Twice.function).IsWhole(MlirDeviceCalls.Twice.callee.method.parameters.First) is false
+	let initial = Natives(function.types).Initial(parameter)
+	(parameter.initial.Length > 0) and (initial.kind is "Number") and (initial.number is initial.number.Floor)
+Whole(parameter MemberEntry) Number
+	MlirDefaults(MlirDeviceCalls.Twice.function).Whole(MlirDeviceCalls.Decimals) is 3
+	Natives(function.types).Initial(parameter).number

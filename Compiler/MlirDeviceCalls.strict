@@ -7,6 +7,13 @@ constant Flooring = MlirDeviceCalls(MlirGpuCheck.Floored, 1, MlirGpuCheck.Floore
 constant Making = InstructionEntry.Invoke(1, ("Strict/Degrees", "from", "Strict/Degrees", "number"), List(Number) + 0, -1)
 constant Rounding = InstructionEntry.Invoke(1, ("Strict/Float8", "from", "Strict/Float8", "number"), List(Number) + 0, -1)
 constant Heads = MlirDeviceCalls(MlirGpuCheck.Heading.function, 4, MlirDeviceMembers.Head)
+constant Decimals = MemberEntry("decimals", "Strict/Number", List(InstructionEntry) + InstructionEntry(InstructionType.Set, List(Text), (1, 3, 0)), false)
+constant Spaced = MemberEntry("spaces", "Strict/Text", List(InstructionEntry), false)
+constant Half = MemberEntry("half", "Strict/Number", List(InstructionEntry) + InstructionEntry(InstructionType.Set, List(Text), (1, 0.5, 0)), false)
+constant Sized = Twice.callee.method.parameters
+constant Defaulted = MethodEntry("Twice", Sized + Decimals, "Strict/Number", Twice.callee.method.instructions)
+constant Filling = MlirDeviceCalls(Twice.function, 4, MlirFunction(Twice.callee.types, Twice.callee.type, Defaulted))
+constant Required = MlirDeviceCalls(Twice.function, 4, MlirFunction(Twice.callee.types, Twice.callee.type, MethodEntry("Twice", Sized + Spaced, "Strict/Number", Twice.callee.method.instructions)))
 constant Sining = GpuNumberSamples.Sined.instructions(1)
 constant Logarithmic = InstructionEntry.Invoke(1, ("Strict/Number", "Logarithm", "Strict/Number"), List(Number), 0)
 constant Natives = ("Floor", "Logarithm", "from", "Sin", "Cos")
@@ -29,12 +36,13 @@ IsList(parameter Number) Boolean
 	Summing.IsList(0)
 	Twice.IsList(0) is false
 	MlirLayout(callee).Represented(TypeEntry.ShortName(callee.method.parameters(parameter).typeName)) is "List(Number)"
-Arguments(entry InstructionEntry) Texts
-	Twice.Arguments(Twicing) is ("%failed", "%lane", "%lanes", "%d4i", "%d4p0")
-	Heads.Arguments(GpuChoiceSamples.Heading.instructions(4)).Last is "%d4m1_b"
+Arguments Texts
+	Twice.Arguments is ("%failed", "%lane", "%lanes", "%d4i", "%d4p0")
+	Heads.Arguments.Last is "%d4m1_b"
+	Filling.Arguments.Last is "%d4p1"
 	let exact = MlirExact(function, at)
 	mutable names = ("%failed", "%lane", "%lanes") + exact.Names(Temp("i"))
-	for entry.payload(5 + entry.payload(3))
+	for callee.method.parameters
 		let parts = (Temp("p" + index + "_d"), Temp("p" + index + "_n"), Temp("p" + index + "_b"))
 		names = IsList(index) then names + parts else names + exact.Names(Temp("p" + index))
 	names + MemberArguments
@@ -51,11 +59,12 @@ Types Text
 	Text.Combine(types + MlirDeviceMembers(callee).Types(function.Float), ", ")
 Loaded(entry InstructionEntry) Texts
 	Twice.Loaded(Twicing).Last is "    %d4p0 = llvm.load %r1 : !llvm.ptr -> f64"
+	Filling.Loaded(Twicing).Last is "    %d4p1 = arith.constant 3.0 : f64"
 	let countPosition = 5 + entry.payload(3)
 	mutable lines = Instance(entry, Temp("i"))
 	for entry.payload(countPosition)
 		lines = lines + Argument(index, "%r" + entry.payload(countPosition + 1 + index))
-	lines + MemberLoads
+	lines + Filled(entry.payload(countPosition)) + MemberLoads
 MemberLoads Texts
 	Heads.MemberLoads.First is "    %d4m0 = llvm.load %v_heads : !llvm.ptr -> f64"
 	MlirDeviceMembers(callee).Loads(Temp("m"), function.Float)
@@ -66,6 +75,26 @@ Instance(entry InstructionEntry, name Text) Texts
 	if register < 0
 		return (List(Text) + MlirTyped(function.Float).Constant(name, "0.0")) + exact.Whole(name, "0")
 	(List(Text) + function.Load(name, "%r" + register)) + exact.Loaded(name, "%r" + register)
+IsFilled(entry InstructionEntry) Boolean
+	Twice.IsFilled(Twicing)
+	Filling.IsFilled(Twicing)
+	Required.IsFilled(Twicing) is false
+	let given = entry.payload(5 + entry.payload(3))
+	let parameters = callee.method.parameters
+	for Range(given, parameters.Length)
+		if MlirDefaults(function).IsWhole(parameters(value)) is false
+			return false
+	given <= parameters.Length
+Filled(given Number) Texts
+	Twice.Filled(1).Length is 0
+	Filling.Filled(1) is ("    %d4p1 = arith.constant 3.0 : f64")
+	mutable lines = List(Mutable(Text))
+	for Range(given, callee.method.parameters.Length)
+		let name = Temp("p" + value)
+		let number = MlirDefaults(function).Whole(callee.method.parameters(value))
+		let literal = MlirTyped(function.Float).Constant(name, number + ".0")
+		lines = (lines + literal) + MlirExact(function, at).Whole(name, number to Text)
+	lines
 Register(entry InstructionEntry) Number
 	Twice.Register(Twicing) is -1
 	Flooring.Register(MlirGpuCheck.Flooring) is 0
