@@ -13,6 +13,9 @@ to Number
 	"-17" to Number is -17
 	"1.3" to Number is 1.3
 	"1e10" to Number is 1e10
+	"abc" to Number is Error("InvalidNumber")
+	"12 monkeys" to Number is Error("InvalidNumber")
+	"" to Number is Error("InvalidNumber")
 	for characters.Reverse
 		value to Number * 10 ^ index
 in(text) Boolean

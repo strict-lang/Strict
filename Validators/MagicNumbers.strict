@@ -1,4 +1,5 @@
 has lines Texts
+constant NoMethods = Scope(List(Text), List(Text))
 constant Upper = MagicNumbers(("Upper Character", "	Character(\"a\").Upper is \"A\"", "	if number is in Range(97, 123)", "		return Character(number - 32)", "	value"))
 constant Plain = MagicNumbers(("Run Number", "	Run is 300", "	constant Width = 320", "	let total = 3 + 100", "	total * 1000 + 0.5 + Width"))
 Issues List(ValidationIssue)
@@ -16,13 +17,26 @@ Body(header Number) List(ValidationIssue)
 	MagicNumbers(("Run", "	Run is 300", "	300")).Body(0).Length is 1
 	mutable issues = List(Mutable(ValidationIssue))
 	let last = FileCheck.LastLine(lines, header)
+	let methods = TypeShape(lines).MethodScope
 	mutable isTest = true
 	for Range(header + 1, last + 1)
 		let code = lines(value).Trim
-		isTest = isTest and (value < last) and Duplicates.IsTest(code)
+		isTest = isTest and (value < last) and Duplicates.IsTest(code) and (IsPlainCall(code, methods) is false)
 		if (isTest is false) and (code.StartsWith("constant ") is false)
 			issues = issues + Numbers(code, value + 1)
 	issues
+IsPlainCall(code Text, methods Scope) Boolean
+	MagicNumbers(("Run", "	Label(97)", "	1")).Body(0).Length is 1
+	MagicNumbers(("IsOdd(number Number) Boolean", "	IsOdd(97)", "	number")).Body(0).Length is 0
+	(Plain.IsPlainCall("Label(97).IsShown", NoMethods) or Plain.IsPlainCall("A(1) is A(1)", NoMethods)) is false
+	(Plain.IsPlainCall("A(1) < A(2)", NoMethods) or Plain.IsPlainCall("A(1) > A(2)", NoMethods)) is false
+	(Plain.IsPlainCall("Label", NoMethods) or Plain.IsPlainCall("A.B(1)", NoMethods)) is false
+	Plain.IsPlainCall("A(1) + 2", NoMethods) is false
+	let tokens = Tokenizer(code).Tokens
+	let isCompared = (" is " is in code) or (" < " is in code) or (" > " is in code) or (")." is in code)
+	if isCompared or (tokens.Length < 3) or (tokens(1) is not "(") or (tokens.Last is not ")")
+		return false
+	methods.TypeOf(tokens(0)) is not "Boolean"
 Numbers(code Text, line Number) List(ValidationIssue)
 	Plain.Numbers("x + 97", 2).First.Line is 2
 	Plain.Numbers("\"97\" + 10", 2).Length is 0

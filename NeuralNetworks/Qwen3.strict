@@ -97,9 +97,8 @@ Forwarded(input Numbers, rotation Numbers, sequences Number, deepstack List(Numb
 	for blocks
 		let prepared = value.hybrid.Prepared(current)
 		let cached = Qwen3Block(value, hybrid = prepared).Cached(prepared.entered, rotation, cacheBits)
-		current = cached.Output(prepared.entered, sequences)
-		if index < deepstack.Length
-			current = Stacked(current, deepstack(index), rows)
+		let output = cached.Output(prepared.entered, sequences)
+		current = index < deepstack.Length then Stacked(output, deepstack(index), rows) else output
 		updated.Add(Qwen3Block(cached, queries = List(Number), hybrid = Hybrid(prepared.layers, inputs = prepared.inputs)))
 		completion.Report(index + 1)
 	Qwen3(value, blocks = updated, hidden = current)

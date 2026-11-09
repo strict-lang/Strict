@@ -24,7 +24,8 @@ Slotted(arguments Texts, slot Number) Number
 		return -1
 	let server = Resident(root, slot is 0 then "" else slot to Text)
 	let stamp = File(server.Stamped)
-	let port = stamp.Exists then stamp.ReadLines.First to Number else 0
+	let stamped = stamp.Exists then stamp.ReadLines.First to Number else 0
+	let port = stamped is Error then 0 else stamped
 	if File(server.Freed).Exists and (port > 0)
 		return Answered(server, port, arguments)
 	let isDead = (port is 0) or IsDead(port)

@@ -22,12 +22,10 @@ Loaded(theta Number, picked = List(Number)) Slow(Qwen3)
 	let normed = file.Entry("norm.weight") is "" then Layer.Zeros(width) else Norm("norm.weight")
 	Qwen3(Blocks(basis), file.Hosted("embed_tokens", picked), List(Numbers), normed, theta, rotary = rotary, basis = basis)
 Blocks(basis Basis) Slow(List(Qwen3Block))
-	Tiny.Blocks(Basis.None).First.heads is 2
-	let layers = Layers
-	let completion = Completion(Logger, label, layers, Process.Elapsed)
+	let completion = Completion(Logger, label, Layers, Process.Elapsed)
 	mutable blocks = List(Mutable(Qwen3Block))
 	mutable deltas = List(Mutable(DeltaBlock))
-	for layers
+	for Layers
 		let layer = "layers." + index + "."
 		if file.Entry(layer + "self_attn.q_proj.weight") is ""
 			deltas.Add(Delta(layer, basis))
@@ -44,6 +42,7 @@ Layers Number
 	count
 Attending(layer Text, basis Basis) Slow(Qwen3Block)
 	Tiny.Attending("layers.3.", Basis.None).queryNorm.Length is 4
+	Tiny.Attending("layers.3.", Basis.None).heads is 2
 	let size = file.Shape(layer + "self_attn.q_norm.weight").First
 	let projected = Layer(file.Quantized(layer + "self_attn.o_proj", Number.SingleBits), Layer.Unbiased)
 	let rows = HeadRows(size, rotary, projected.weights.First.Length / size)
@@ -107,23 +106,19 @@ FeedForward(layer Text, basis Basis) Slow(Experts)
 	Tiny.FeedForward("layers.0.", Basis.None).used is 1
 	Plain.FeedForward("layers.0.", Basis.None).used is 1
 	let gated = file.Quantized(layer + "mlp.gate_proj", Number.SingleBits)
-	let expansion = Layer(gated + Up(layer), Layer.Unbiased)
-	let reduction = Layer(Down(layer), Layer.Unbiased)
+	let inputs = file.Entry(layer + "mlp.down_proj.pre_quant_scale")
+	let expansion = Layer(gated + Projection(layer, "mlp.up_proj", inputs), Layer.Unbiased)
+	let reduction = Layer(Projection(layer, "mlp.down_proj", ""), Layer.Unbiased)
 	Experts(Experts.Dense(expansion, reduction), basis = basis)
 IsFolded(layer Text) Boolean
 	Plain.IsFolded("layers.0.")
 	Tiny.IsFolded("layers.0.") is false
 	let inputs = file.Entry(layer + "mlp.down_proj.pre_quant_scale")
 	(inputs is not "") and file.IsFours(layer + "mlp.up_proj") and file.IsFours(layer + "mlp.down_proj")
-Up(layer Text) List(Numbers)
-	Plain.Up("layers.0.").Length is Plain.file.Shape("layers.0.mlp.up_proj.weight").First
-	let name = layer + "mlp.up_proj"
-	let inputs = file.Entry(layer + "mlp.down_proj.pre_quant_scale")
+Projection(layer Text, kind Text, inputs Text) List(Numbers)
+	Plain.Projection("layers.0.", "mlp.up_proj", "").Length is Plain.file.Shape("layers.0.mlp.up_proj.weight").First
+	let name = layer + kind
 	IsFolded(layer) then file.Folded(name, inputs, Number.SingleBits) else file.Quantized(name, Number.SingleBits)
-Down(layer Text) List(Numbers)
-	Plain.Down("layers.0.").Length is Plain.file.Shape("layers.0.mlp.down_proj.weight").First
-	let name = layer + "mlp.down_proj"
-	IsFolded(layer) then file.Folded(name, "", Number.SingleBits) else file.Quantized(name, Number.SingleBits)
 Norm(name Text) Numbers
 	Tiny.Norm("norm.weight").Length is 8
 	for file.Values(name)

@@ -13197,11 +13197,26 @@
     %result = func.call @strict_degrees(%angle) : (f64) -> f64
     return %result : f64
   }
+  llvm.mlir.global internal constant @strict_invalid_number("InvalidNumber\00") : !llvm.array<14 x i8>
+  // all of the text has to be the number, strtod alone reads "abc" as 0 and "12 monkeys" as 12
   func.func private @strict_text_number(%text: f64) -> f64 {
     %a = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr
-    %null = llvm.mlir.zero : !llvm.ptr
-    %result = llvm.call @strtod(%a, %null) : (!llvm.ptr, !llvm.ptr) -> f64
+    %one = arith.constant 1 : i64
+    %endSlot = llvm.alloca %one x !llvm.ptr : (i64) -> !llvm.ptr
+    %result = llvm.call @strtod(%a, %endSlot) : (!llvm.ptr, !llvm.ptr) -> f64
+    %end = llvm.load %endSlot : !llvm.ptr -> !llvm.ptr
+    %last = llvm.load %end : !llvm.ptr -> i8
+    %none = arith.constant 0 : i8
+    %isAtEnd = arith.cmpi eq, %last, %none : i8
+    %isMoved = llvm.icmp "ne" %end, %a : !llvm.ptr
+    %isWhole = arith.andi %isAtEnd, %isMoved : i1
+    cf.cond_br %isWhole, ^number, ^invalid
+  ^number:
     return %result : f64
+  ^invalid:
+    %name = llvm.mlir.addressof @strict_invalid_number : !llvm.ptr
+    %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
+    return %error : f64
   }
   func.func private @strict_text_upper(%text: f64) -> f64 {
     %upper = arith.constant 1 : i1

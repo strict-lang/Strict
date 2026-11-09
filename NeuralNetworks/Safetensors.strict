@@ -8,6 +8,9 @@ constant Fours = Safetensors("NeuralNetworks/tinyfours.safetensors")
 constant Nibbles = Safetensors("NeuralNetworks/tinyint4.safetensors")
 constant Vision = "NeuralNetworks/tinyqwenvision.safetensors"
 constant Lifted = Layer.Zeros(63) + 1
+constant FarDowns = Layer.Zeros(32768) + Second
+constant FarUps = Layer.Zeros(512) + 1 + Layer.Zeros(1539)
+constant FarScales = Layer.Zeros(512) + 0.5
 constant Lifting = Safetensors.Nibbles.Tuned("b", Safetensors.Lifted, (1, 0, 0, 0), (1))
 constant Single = "\"x\":{\"dtype\":\"F32\",\"shape\":[2],\"data_offsets\":[0,8]}"
 constant Second = Safetensors.Bytes.Part(Safetensors.Bytes.Values("a.weight"), 64, 64, 1)
@@ -95,11 +98,9 @@ Tuned(name Text, downs Numbers, ups Numbers, scales Numbers) Slow(List(Numbers))
 	Bytes.Tuned("a", Second, (1, 0, 0, 0), List(Number) + 0.5)(2) is Bytes.Quantized("a")(2)
 	Bytes.Tuned("a", Second, (1, 0, 0, 0), List(Number) + 0.5)(0)(5).IsNearlyEqual(Exact(0)(5) + Second(5) / 2, 1)
 	Bytes.Tuned("a", Firsts, (0, 1, 0, 0, 0, 0, 0, 1), (0.5, 0.25))(3)(7).IsNearlyEqual(Exact(3)(7) + Second(7) / 4, 1)
-	Bytes.Tuned("a", Layer.Zeros(32768) + Second, Layer.Zeros(512) + 1 + Layer.Zeros(1539), Layer.Zeros(512) + 0.5)(0)(5).IsNearlyEqual(Exact(0)(5) + Second(5) / 2, 1)
+	Bytes.Tuned("a", FarDowns, FarUps, FarScales)(0)(5).IsNearlyEqual(Exact(0)(5) + Second(5) / 2, 1)
 	Bytes.Tuned("a", (1, 2), (1, 0, 0, 0), List(Number) + 1) is Error
-	if scales.Length is 0
-		return Quantized(name)
-	let merged = GpuMemory.Tuned(Quantized(name), downs, ups, scales)
+	let merged = scales.Length is 0 then Quantized(name) else GpuMemory.Tuned(Quantized(name), downs, ups, scales)
 	if merged.Length > 0
 		return merged
 	TensorFile.Tuned(path, Entry(name + ".weight"), Entry(name + ".weight_scale"), downs + ups + scales)
