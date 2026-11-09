@@ -13,20 +13,31 @@ constant IndexA = BodyParser("Run", "\tfor a", "\t\tindex").Block(1, 1).children
 constant RowsBody = BodyParser("Rows List(Numbers)", "\tmutable row = (1)", "\tfor 2", "\t\trow.Add(index)", "\t\trow").Block(1, 1)
 constant Leaded = BodyParser("Run", "\tlet x = 1", "\tfor 3", "\t\tindex").Block(1, 1)
 constant BareFor = BodyParser("Upper Text", "\tfor", "\t\tUpper").Block(1, 1).children(0)
+constant Numbered = MethodCodegen(ValueCodegen(TypeInference(KnownTypes.Sample, CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
+constant NumberPlus = KnownTypes(List(Text) + "Plus", List(Scope) + Scope(List(Text) + "number", List(Text) + "Number"), List(Scope) + Scope(List(Text) + "+", List(Text) + "Plus"), KnownTypes.NoMembers)
+constant Adding = MethodCodegen(ValueCodegen(TypeInference(NumberPlus, CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
 constant OnText = LoopCodegen(MethodCodegen(ValueCodegen(ValueCodegen.NoTypes, ValueCodegen.Plain.methods, CallTarget(CallTarget.NoTypes, TypeShape("has characters"), "Strict/Text", List(Text)))))
 Aggregation(body SyntaxNode, returnType Text) Text
 	Plain.Aggregation(MethodCodegen.SumBody, "Number") is "sum"
 	Plain.Aggregation(DoubledBody, "Boolean") is "any"
 	LoopCodegen(TypeSums.Paired.methods).Aggregation(MethodCodegen.SumBody, "Pair") is "add"
 	Plain.Aggregation(BranchLoops, "Numbers") is "list"
+	LoopCodegen(Numbered).Aggregation(MethodCodegen.SumBody, "Count") is "sum"
 	let loop = BranchValues(returnType).LastLoop(body)
 	let isList = methods.values.inference.types.IsPlural(returnType) or returnType.StartsWith("List(")
 	if (loop.Kind is not "For") or (returnType is "Boolean") or isList
 		return loop.Kind is not "For" then "" else (isList then "list" else "any")
-	let reduction = BranchValues(returnType).Reduction(loop.children.Last.children.Last)
-	if returnType is in ("Number", "Text")
+	Reduced(BranchValues(returnType).Reduction(loop.children.Last.children.Last), returnType)
+Reduced(reduction Text, returnType Text) Text
+	LoopCodegen(Numbered).Reduced("*", "Count") is "product"
+	LoopCodegen(TypeSums.Paired.methods).Reduced("*", "Pair") is ""
+	LoopCodegen(Adding).Reduced("", "Plus") is "add"
+	let hasAdd = OperatorCodegen(methods.values).HasOperator(returnType, "+")
+	let member = methods.values.inference.types.MembersOf(returnType).TypeOf("number")
+	let isNumber = (hasAdd is false) and (member is "Number")
+	if isNumber or (returnType is in ("Number", "Text"))
 		return reduction is in ("", "+") then "sum" else (reduction is "*" then "product" else "")
-	(reduction is "") and OperatorCodegen(methods.values).HasOperator(returnType, "+") then "add" else ""
+	(reduction is "") and hasAdd then "add" else ""
 Aggregated(body SyntaxNode, block CodeBlock, returnType Text) CodeBlock
 	Plain.Aggregated(MethodCodegen.SumBody, CodeBlock.Empty, "Number").Result is 0
 	Plain.Aggregated(DoubledBody, CodeBlock.Empty, "Numbers").instructions(0).texts.Last is "forResult"
@@ -87,7 +98,7 @@ Started(block CodeBlock, returnType Text, aggregation Text) CodeBlock
 	if returnType is "Text"
 		return block.Load(InstructionEntry.LoadText(block.register, "")).Stored("forResult")
 	let start = aggregation is "product" then 1 else 0
-	if returnType is "Number"
+	if aggregation is in ("sum", "product")
 		return block.Load(InstructionEntry.LoadNumber(block.register, start)).Stored("forResult")
 	if aggregation is "add"
 		return TypeSums(methods).Started(block, returnType)

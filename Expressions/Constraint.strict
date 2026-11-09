@@ -68,9 +68,17 @@ Length(line Text) Number
 	Constraint.Length("has numbers with Length is 3 and value . Bits is 32") is 3
 	Constraint.Length("has x Number with value is 5") is 0
 	Constraint.Length("has numbers with Length is 3 and value is 5") is 0
+	Constraint.Length("has colors with Length is Size.Length") is 0
 	let checking = Of(line.Replace(" . ", "."))
 	let words = checking.Split(" ")
-	(words.Length is 3) and checking.StartsWith("Length is ") then words.Last to Number else 0
+	(words.Length is 3) and checking.StartsWith("Length is ") then Literal(words.Last) else 0
+Literal(word Text) Number
+	Constraint.Literal("3") is 3
+	Constraint.Literal("Size.Length") is 0
+	let length = word to Number
+	if length is Error
+		return 0
+	length
 Bits(constraint Text) Number
 	Constraint.Bits("value > 0 and value.Bits is 32") is 32
 	Constraint.Bits("value > 0") is 0

@@ -105,7 +105,7 @@ Builds, checks, folder tests on the VM, VS Code typing checks and value tracing 
 - `(x)` is a list with one element, brackets around operators only group: `(5 + 3) * 2 is 16`.
 - `and`, `or` and `xor` of Numbers are bitwise: `12 and 10 is 8`.
 - Keywords (`from`, `to`, `is`, `in`, `and`, `or`, `not`, `constant`, `mutable`, `let`, ...) can't be names, `value` and `index` can't be declared in a method with a loop and no member is named `value` (it is the instance in every method).
-- The innermost name wins: a method, member or variable named like a type hides it (also right of `is`), `outer.Marker` is the type. Inside a loop `outer` is the value outside the loop, `outer.Marker` there is reported as ambiguous.
+- The innermost name wins: a method, member or variable named like a type hides it (also right of `is`), `outer.Marker` is the type. Inside a loop `outer` is the value outside the loop, `outer.Marker` there is reported as ambiguous. A bare name in a loop body means the member of `value` when it has one, `Length` in a loop over numbers stays the own method: numbers have no `Length` of their own, only their `iterator` does.
 - Members don't repeat their type when the name says it: `has number`, not `has number Number`.
 - A member default is a literal, a constant, an empty `List(...)`/`Dictionary(...)` or a one-member type with literal arguments.
 - Test lines are Boolean comparisons at the start of each method, every method needs one. A failing test prints what it got as Strict code to paste as the expected value.

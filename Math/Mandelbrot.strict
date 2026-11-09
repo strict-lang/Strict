@@ -2,17 +2,6 @@ constant CardioidCenter = 0.25
 constant CardioidFactor = 0.25
 constant BulbRadiusSquared = 0.0625
 constant RoundingGrowth = 1.000000000000001
-Escape(real Number, imaginary Number, limit Number) Number
-	Escape(0, 0, 64) is 0
-	Escape(-1, 0, 64) is 0
-	Escape(1, 0, 64) is 3
-	Escape(2, 0, 64) is 2
-	Escape(-2, 0, 64) is 0
-	Escape(0, 1, 64) is 0
-	(Escape(0, 3, 64) is 1) and (Escape(3, 0, 64) is 1)
-	if Interior(real, imaginary)
-		return 0
-	Iterated(real, imaginary, limit)
 Interior(real Number, imaginary Number) Boolean
 	Interior(0, 0)
 	Interior(-1, 0)
@@ -25,19 +14,6 @@ Interior(real Number, imaginary Number) Boolean
 	let radius = shifted * shifted + vertical
 	let cardioid = radius * (radius + shifted) < CardioidFactor * vertical - 0.00000000000001
 	cardioid or (real + 1) * (real + 1) + vertical < BulbRadiusSquared - 0.00000000000001
-Iterated(real Number, imaginary Number, limit Number) Number
-	mutable horizontal = 0
-	mutable vertical = 0
-	mutable squared = 0
-	mutable height = 0
-	for limit
-		vertical = 2 * horizontal * vertical + imaginary
-		horizontal = squared - height + real
-		squared = horizontal * horizontal
-		height = vertical * vertical
-		if squared + height > 4
-			return index + 1
-	0
 Orbit(start ComplexDoubleDouble, seed ComplexDoubleDouble, limit Number) List(Complex)
 	Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Of(Complex(1, 0)), 8).Length is 4
 	Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Of(Complex(1, 0)), 8).Last is Complex(5, 0)
@@ -61,7 +37,8 @@ Enclosed(orbit List(Complex), radius Number, limit Number) Boolean
 		return false
 	DiskEnclosed(orbit, radius, limit)
 DiskEnclosed(orbit List(Complex), radius Number, limit Number) Boolean
-	DiskEnclosed((Complex.Zero, Complex(1, 0), Complex.Zero), 0.9999999999999994, 1) is false
+	DiskEnclosed((Complex.Zero, Complex(1, 0), Complex.Zero), 0.9999999999999977, 1) is false
+	DiskEnclosed((Complex.Zero, Complex(1, 0), Complex.Zero), 0.9999999999999976, 1)
 	mutable offset = Complex.Zero
 	mutable error = 0
 	for limit

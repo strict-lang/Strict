@@ -12,6 +12,17 @@ constant Overloaded = CallTarget(NoTypes, TypeShape("Members Number", "\tMembers
 constant BareError = SyntaxNode("Identifier", "Error")
 constant Plain = CallTarget(NoTypes, Greeter, "Strict/Examples/Greeter", ("Strict/Logger", "Strict/Examples/Helper"))
 constant Counting = CallTarget(KnownTypes.Sample, Greeter, "Strict/C", List(Text))
+constant IteratorMember = Scope(List(Text) + "iterator", List(Text) + "Iterator")
+constant LengthMethod = Scope(List(Text) + "Length", List(Text) + "Number")
+constant FloorMethod = Scope(List(Text) + "Floor", List(Text) + "Number")
+constant NoneScope = KnownTypes.NoMembers
+constant RangeMembers = Scope(("iterator", "from"), ("Iterator", "Number"))
+constant TypeNames = ("Number", "Iterator", "Range", "One", "Any")
+constant TypeMembers = (IteratorMember, NoneScope, RangeMembers, Scope(List(Text) + "from", List(Text) + "Iterator"), NoneScope)
+constant CodeMethod = Scope(List(Text) + "Code", List(Text) + "Text")
+constant NumberTypes = KnownTypes(TypeNames, TypeMembers, (FloorMethod, LengthMethod, NoneScope, NoneScope, CodeMethod), (NoneScope, NoneScope, NoneScope, NoneScope, NoneScope))
+constant Iterated = CallTarget(NumberTypes, Greeter, "Strict/C", List(Text))
+constant InNumbers = Scope(("value", "outer"), ("Number", "A"))
 constant Colored = CallTarget(ConversionCodegen.ColorTypes, Greeter, "Strict/C", List(Text))
 Signature(name Text, type Text, returnType Text, argumentTypes Texts) Texts
 	Plain.Signature("Greeter", "Greeter", "Greeter", List(Text)) is ("Strict/Examples/Greeter", "from", "Greeter", "text")
@@ -106,11 +117,24 @@ ImplicitOwner(name Text, scope Scope) Text
 	Plain.ImplicitOwner("x", Scope(("value", "outer"), ("A", "A"))) is "value"
 	Plain.ImplicitOwner("x", Scope(List(Text) + "value", List(Text) + "A")) is ""
 	Plain.ImplicitOwner("x", Scope(("value", "outer"), ("Q", "A"))) is ""
+	Iterated.ImplicitOwner("Floor", InNumbers) is "value"
+	Iterated.ImplicitOwner("Length", InNumbers) is ""
 	CallTarget(NoTypes, TypeShape("has a A"), "Strict/C", List(Text)).ImplicitOwner("x", NoScope) is "a"
 	CallTarget(NoTypes, TypeShape("has a A", "x Number"), "Strict/C", List(Text)).ImplicitOwner("x", NoScope) is ""
-	if scope.TypeOf("outer") is not "" and types.MemberType(scope.TypeOf("value"), name) is not "Unknown"
+	if scope.TypeOf("outer") is not "" and IsLoopMember(scope.TypeOf("value"), name)
 		return "value"
 	Header(name).tokens.Length > 0 then "" else InheritingMember(name)
+IsLoopMember(type Text, name Text) Boolean
+	Iterated.IsLoopMember("Number", "Floor")
+	Iterated.IsLoopMember("Number", "Length") is false
+	Iterated.IsLoopMember("Iterator", "Length")
+	Iterated.IsLoopMember("Range", "Length")
+	Iterated.IsLoopMember("One", "Length")
+	Iterated.IsLoopMember("Number", "Code")
+	let names = types.MembersOf(type).names
+	if (names.Length is 1) and (names.First is "iterator")
+		return types.MethodsOf(type).TypeOf(name) is not "" or types.MethodsOf("Any").TypeOf(name) is not ""
+	types.MemberType(type, name) is not "Unknown"
 IsMember(type Text, name Text) Boolean
 	Plain.IsMember("Greeter", "text")
 	Plain.IsMember("Greeter", "Greet") is false
