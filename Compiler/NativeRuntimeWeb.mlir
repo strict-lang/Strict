@@ -363,7 +363,7 @@
     %changed = llvm.call @chdir(%name) : (!llvm.ptr) -> i32
     %zero = arith.constant 0 : i32
     %isChanged = arith.cmpi eq, %changed, %zero : i32
-    %result = func.call @strict_boolean(%isChanged) : (i1) -> f64
+    %result = func.call @strict_directory_changed(%isChanged) : (i1) -> f64
     return %result : f64
   }
   func.func private @strict_path_join(%path: f64, %name: f64) -> f64 {

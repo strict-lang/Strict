@@ -8,5 +8,6 @@ Result VmValue
 	if call.MethodName is "Expired"
 		return VmValue.OfText(TestBudget.Expired)
 	if call.MethodName is "Left"
-		return VmValue.OfNumber(TestBudget.Left(arguments(0).number))
+		TestBudget.Left(arguments(0).number)
+		return VmValue.None
 	VmValue.OfNumber(TestBudget.Finished(arguments(0).number))

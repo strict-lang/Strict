@@ -129,7 +129,7 @@ Bitcode(part Text) Text
 	let flags = isWeb then WebBuild.Target + WebBuild.Lowering + Optimization else native
 	"-c -flto=thin -x ir " + Quoted(part) + " -o " + Quoted(part + ".o") + flags
 PartsCompiled(base Text) Boolean
-	PtxCache("Compiler/output/Broken-0").Saved("", "not llvm")
+	PtxCache("Compiler/output/Broken-0").Saved("", "not llvm") is not Error
 	OnWindows.PartsCompiled("Compiler/output/Broken") is false
 	mutable compiling = List(Mutable(Text))
 	for Parts

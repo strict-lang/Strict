@@ -10,7 +10,7 @@ constant Dating = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "Modifie
 constant Probing = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "Exists", "Strict/Boolean"), List(Number), 0), List(VmValue), VmValue.OfText("."))
 constant Timing = Invocation(InstructionEntry.Invoke(0, ("Strict/Process", "Elapsed", "Strict/Number"), List(Number), -1), List(VmValue), VmValue.None)
 constant Deleting = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "Delete", "None"), List(Number), 0), List(VmValue), VmValue("Strict/File", 0, "", List(VmValue) + VmValue.OfText("Runtime/missing")))
-constant Changing = Invocation(InstructionEntry.Invoke(1, ("Strict/Directory", "Change", "Strict/Boolean", "path"), 0, -1), Current, VmValue.None)
+constant Changing = Invocation(InstructionEntry.Invoke(1, ("Strict/Directory", "Change", "None", "path"), 0, -1), Current, VmValue.None)
 constant FileMethods = ("File.ReadLines", "File.Exists", "File.Write", "File.Delete", "File.Rename", "File.ReadBytes", "File.WriteLines", "File.WriteBytes", "File.Modified", "File.Length", "File.Locked", "File.InMemory")
 constant DirectoryMethods = ("Directory.Files", "Directory.Directories", "Directory.Modified", "Directory.Exists", "Directory.Create", "Directory.Change", "Directory.Current")
 constant ProcessMethods = ("Process.Input", "Process.Variable", "Process.InputLine", "Process.OperatingSystem", "Process.Current", "Process.Built", "Process.Elapsed", "Process.MemoryUsed", "Process.FilesRead")
@@ -44,7 +44,7 @@ Result VmValue
 	if type is in ("Process", "Library", "BuildProfile", "TestBudget", "ConstantCache")
 		return type is "Library" then Foreign(call, List(TypeEntry)).Hosted else HostedProcess(call).Result
 	if type is "Socket"
-		return VmValue.OfNumber(Socket.Output(call.Arguments.First.number))
+		return Socket.Output(call.Arguments.First.number) is Error then VmValue.OfError("OutputNotChanged") else VmValue.None
 	if type is not in ("File", "Directory")
 		return type is "Json" then HostedJson(call).Result else HostedMath(call).Measured
 	call.MethodName is in ("ReadLines", "ReadBytes", "Files", "Directories") then Entries else Stored
@@ -76,14 +76,13 @@ Stored VmValue
 	if call.MethodName is in ("Delete", "Rename", "InMemory", "Change")
 		return Moved
 	if call.MethodName is "Create"
-		let created = Directory.Create(Location)
-		return created is Error then VmValue.OfError("DirectoryNotCreated") else VmValue.OfBoolean(created)
+		return Directory.Create(Location) is Error then VmValue.OfError("DirectoryNotCreated") else VmValue.None
 	Answered(Location)
 Moved VmValue
 	Hosted(Deleting).Moved.IsTrue is false
-	Hosted(Changing).Moved.IsTrue
+	Hosted(Changing).Moved.kind is "None"
 	if call.MethodName is "Change"
-		return VmValue.OfBoolean(Directory.Change(Location))
+		return Directory.Change(Location) is Error then VmValue.OfError("DirectoryNotFound") else VmValue.None
 	if call.MethodName is "Delete"
 		File(Location).Delete
 	else if call.MethodName is "InMemory"

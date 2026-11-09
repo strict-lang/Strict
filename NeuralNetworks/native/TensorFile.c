@@ -1116,7 +1116,7 @@ STRICT_EXPORT double TensorFile_Tuned(double self, double path, double entry, do
 }
 
 /* Writes a new .safetensors file at path: the JSON header (padded to 8 bytes) and numbers as the 32 bit floats of the
-   tensors it describes, their count. */
+   tensors it describes. */
 STRICT_EXPORT double TensorFile_Written(double self, double path, double header, double numbers)
 {
 	uint64_t count = strict_count(numbers), length = strlen(strict_text(header));
@@ -1143,7 +1143,7 @@ STRICT_EXPORT double TensorFile_Written(double self, double path, double header,
 	}
 	complete = fclose(file) == 0 && complete;
 	free(floats);
-	return complete ? (double)count : strict_fail("TensorFileNotWritable");
+	return complete ? 0 : strict_fail("TensorFileNotWritable");
 }
 
 /* Reads a whole file once on a thread of its own, 16 MB at a time, so its pages are in the file cache when a program

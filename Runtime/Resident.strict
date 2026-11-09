@@ -49,17 +49,15 @@ Stamped Text
 Freed Text
 	Resident("Compiler/output", "2").Freed is "Compiler/output/obj/strict.free2"
 	root + Free + slot
-Released(request Text) Boolean
-	Resident("Compiler/output/Missing").Released(Resident.Request("C:/a", List(Text) + "test", "1", "7")) is false
-	Resident("Compiler/output/Missing").Released("broken") is false
+Released(request Text)
+	Resident("Compiler/output/Missing").Released(Resident.Request("C:/a", List(Text) + "test", "1", "7")) is not Error
+	Resident("Compiler/output/Missing").Released("broken") is not Error
 	let port = Claim(request) to Number
-	if port is Error
-		return false
-	File(Freed + "." + port).Rename(Freed)
-	File(Freed).Exists
-Sent(socket Number, text Text) Boolean
-	Sample.Sent(0, "a") is false
-	(Socket.Send(socket, ByteEncoder(List(Number)).UnicodeBytes(text)) is Error) is false
+	if port is not Error
+		File(Freed + "." + port).Rename(Freed)
+Send(socket Number, text Text)
+	Sample.Send(0, "a") is Error
+	Socket.Send(socket, ByteEncoder(List(Number)).UnicodeBytes(text))
 Received(socket Number, ending Text) Text
 	Sample.Received(0, "\n") is ""
 	mutable gathered = ""
@@ -94,20 +92,23 @@ Taken(server Number, built Number) Number
 	let socket = Socket.Accept(server)
 	if File(Process.Current.executable).Modified is built
 		return socket
-	Finished(socket, -1)
+	Ended(socket, -1)
 	0
 Requested(socket Number) Text
 	Forwarding.Sample.Loopback is 3
-	Sent(socket, Greeting) then Received(socket, Ending) else ""
-Finished(socket Number, code Number) Number
-	Sample.Finished(0, 1) is 0
-	let line = Exiting + code + "\n"
-	Sent(socket, line)
+	(Send(socket, Greeting) is not Error) then Received(socket, Ending) else ""
+Finished(socket Number, code Number)
+	Sample.Finished(0, 1) is Error
+	Send(socket, Exiting + code + "\n")
 	Socket.Close(socket)
-Closed(server Number) Number
-	Resident("Compiler/output/Missing").Closed(0) is 0
+Ended(socket Number, code Number)
+	Sample.Ended(0, 1) is not Error
+	if Finished(socket, code) is Error
+		Socket.Close(socket)
+Closed(server Number)
+	Resident("Compiler/output/Missing").Closed(0) is not Error
 	Sample.Opened > 0
-	Sample.Closed(Socket.Local(0)) is 0
+	Sample.Closed(Socket.Local(0)) is not Error
 	File(Sample.Stamped).Exists
 	let stamp = File(Stamped)
 	if stamp.Exists and (stamp.ReadLines.First is (Socket.Port(server) to Text))

@@ -3,7 +3,7 @@
 HTTP and HTTPS requests, HMAC-SHA256 signatures and TCP/IP sockets for the
 programs of the repository.
 
-- `Http.Send(method, url, body, headers, seconds, maximum)`: the `HttpResponse`
+- `Http.Fetched(method, url, body, headers, seconds, maximum)`: the `HttpResponse`
   (`status`, `headers` and `body`) of a request, any status is a response.
   `headers` are "Name: value" lines, `body` and `headers` default to empty,
   `seconds` (15) limits each step, `maximum` (64 MB) the bytes of the response.
@@ -35,8 +35,8 @@ accepts, both send and receive bytes.
 - `Socket.Local(port)`: like Listen, but only programs on this computer can connect (127.0.0.1).
 - `Socket.Port(socket)`: its local port, including the port assigned by the OS.
 - `Socket.Accept(server)`: the socket of the client that connects.
-- `Socket.Send(socket, bytes)`: sends the bytes (0 to 255) and returns how many
-  went out.
+- `Socket.Send(socket, bytes)`: sends all bytes (0 to 255), an Error when it
+  can not.
 - `Socket.Receive(socket, count)`: reads exactly the bytes, they arrive in the
   order they were sent.
 - `Socket.Pending(socket)`: the bytes that are already there, a game polls it

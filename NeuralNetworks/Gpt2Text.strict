@@ -6,7 +6,8 @@ constant Count = 20
 Run
 	for ("model.safetensors", "vocab.json", "merges.txt")
 		if File(Folder + value).Exists is false
-			Process.RunTool("curl", "-sfL --create-dirs -o \"" + Folder + value + "\" \"" + Address + value + "\"")
+			if Process.RunTool("curl", "-sfL --create-dirs -o \"" + Folder + value + "\" \"" + Address + value + "\"").Failed
+				return Error("DownloadFailed: " + Address + value)
 	let started = Process.Elapsed
 	let tokenizer = Gpt2Tokens.Parsed(File(Folder + "vocab.json").ReadLines.First, File(Folder + "merges.txt").ReadLines)
 	let model = Gpt2.Loaded(Folder + "model.safetensors", BFloat16.Bits)

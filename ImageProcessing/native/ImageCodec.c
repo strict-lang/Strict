@@ -95,7 +95,7 @@ STRICT_EXPORT double ImageCodec_SaveJpeg(double self, double path, double pixels
 		return strict_fail(failure);
 	int written = stbi_write_jpg(strict_text(path), (int)width, height, 3, bytes, (int)quality);
 	free(bytes);
-	return written ? 1 : strict_fail("ImageNotWritable");
+	return written ? 0 : strict_fail("ImageNotWritable");
 }
 
 STRICT_EXPORT double ImageCodec_SavePng(double self, double path, double pixels, double width)
@@ -107,5 +107,5 @@ STRICT_EXPORT double ImageCodec_SavePng(double self, double path, double pixels,
 		return strict_fail(failure);
 	int written = stbi_write_png(strict_text(path), (int)width, height, 4, bytes, (int)width * 4);
 	free(bytes);
-	return written ? 1 : strict_fail("ImageNotWritable");
+	return written ? 0 : strict_fail("ImageNotWritable");
 }

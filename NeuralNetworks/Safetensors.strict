@@ -104,18 +104,18 @@ Tuned(name Text, downs Numbers, ups Numbers, scales Numbers) Slow(List(Numbers))
 	if merged.Length > 0
 		return merged
 	TensorFile.Tuned(path, Entry(name + ".weight"), Entry(name + ".weight_scale"), downs + ups + scales)
-Written(name Text, numbers Numbers) Number
-	Safetensors("NeuralNetworks/written.tmp").Written("x", (1.5, -2, 3)) is 3
+Written(name Text, numbers Numbers)
+	Safetensors("NeuralNetworks/written.tmp").Written("x", (1.5, -2, 3)) is not Error
 	Safetensors("NeuralNetworks/written.tmp").Values("x") is (1.5, -2, 3)
 	Safetensors("NeuralNetworks/written.tmp").Shape("x")(0) is 3
 	Safetensors("NeuralNetworks/missing/written.tmp").Written("x", (1, 2)) is Error
 	Written(List(Text) + name, List(Numbers) + numbers)
-Written(names Texts, lists List(Numbers)) Number
-	Safetensors("NeuralNetworks/writtenpair.tmp").Written(("x", "y"), ((1.5, -2), List(Number) + 3)) is 3
+Written(names Texts, lists List(Numbers))
+	Safetensors("NeuralNetworks/writtenpair.tmp").Written(("x", "y"), ((1.5, -2), List(Number) + 3)) is not Error
 	Safetensors("NeuralNetworks/writtenpair.tmp").Values("x") is (1.5, -2)
 	Safetensors("NeuralNetworks/writtenpair.tmp").Values("y") is (3)
 	Safetensors("NeuralNetworks/writtenpair.tmp").Shape("y")(0) is 1
-	Safetensors("NeuralNetworks/writtenpair.tmp").Written(List(Text) + "x", List(Numbers) + (7, 8, 9)) is 3
+	Safetensors("NeuralNetworks/writtenpair.tmp").Written(List(Text) + "x", List(Numbers) + (7, 8, 9)) is not Error
 	Safetensors("NeuralNetworks/writtenpair.tmp").Values("x") is (7, 8, 9)
 	TensorFile.Written(path, Header(names, lists), Combined(lists))
 Header(names Texts, lists List(Numbers)) Text

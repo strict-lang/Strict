@@ -44,7 +44,6 @@ Durations(model Qwen3, token Number, start Number, count Number, batch Number) S
 	mutable last = Process.Elapsed
 	for count
 		current = current.Steps(chosen, Repeated(List(Number) + (start + index), batch), batch)
-		chosen.First >= 0
 		chosen = current.Nexts
 		let duration = (Process.Elapsed - last) * 1000
 		last = last + duration / 1000

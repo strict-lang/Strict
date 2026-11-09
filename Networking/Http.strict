@@ -1,7 +1,7 @@
 constant FormHeader = "Content-Type: application/x-www-form-urlencoded"
-Send(method Text, url Text, body Text = "", headers Text = "", seconds Number = 15, maximum Number = 67108864) HttpResponse
-	Http.Send("GET", "ftp://example.com") is Error("InvalidHttpUrl")
-	Http.Send("GET", "https://") is Error("InvalidHttpUrl")
+Fetched(method Text, url Text, body Text = "", headers Text = "", seconds Number = 15, maximum Number = 67108864) HttpResponse
+	Http.Fetched("GET", "ftp://example.com") is Error("InvalidHttpUrl")
+	Http.Fetched("GET", "https://") is Error("InvalidHttpUrl")
 	Response(Requested(method, url, body, headers, seconds, maximum))
 Requested(method Text, url Text, body Text, headers Text, seconds Number, maximum Number) Text
 Started(method Text, url Text, body Text = "", headers Text = "", seconds Number = 15, maximum Number = 67108864) Number

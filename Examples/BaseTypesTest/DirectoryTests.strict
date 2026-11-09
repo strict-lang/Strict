@@ -11,16 +11,19 @@ Files(path) Texts
 Directories(path) Texts
 	Directories(Path("..")).Length > 0
 	Directory.Directories(path)
-Create(path) Boolean
-	Create(".") is false
+Create(path)
+	Create(".") is not Error
 	Create("Missing/Nested/Created") is Error
 	Directory.Create(path)
+Change(path)
+	Change("Missing/Changed") is Error
+	Directory.Change(path)
 Created(path Text) Slow(Boolean)
 	Created("Examples/BaseTypesTest/NewFolder")
-	let created = Directory.Create(path)
+	Directory.Create(path)
 	let exists = Directory.Exists(path)
 	Directory.Delete(path)
-	created and exists
+	exists
 Written(path Text) Boolean
 	Written("Examples/BaseTypesTest/Created/written")
 	File(path).Write(List(Text) + "written")

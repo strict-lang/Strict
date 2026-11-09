@@ -45,10 +45,9 @@ Matches(lines Texts) Boolean
 		if Value(lines(position)) is not lines(position + 1)
 			return false
 	true
-Saved(inputs Texts) Boolean
-	if (IsEnabled is false) or (Matches(inputs) is false)
-		return false
-	Written(Text.Combine((List(Text) + Key) + inputs + Snapshot(Outputs.Unique), "\n"))
+Saved(inputs Texts)
+	if IsEnabled and Matches(inputs)
+		Written(Text.Combine((List(Text) + Key) + inputs + Snapshot(Outputs.Unique), "\n"))
 Inputs(sources Texts) Texts
 	"./Content/**" is not in NativeCache("test", ("Math", ".", "native")).Inputs(List(Text))
 	"./Examples/Content/**" is in NativeCache("build", ("Examples/Sum.strict", ".")).Inputs(List(Text))
@@ -115,13 +114,9 @@ Released(parent Text) Texts
 			files = files + (value + "/" + name)
 	let linux = parent + "/Release/Linux/" + name.Replace(".exe", "")
 	File(linux).Exists then files + linux else files
-Written(text Text) Boolean
+Written(text Text)
 	let temporary = CacheFile + "." + 1000000000.Random.Floor + ".tmp"
 	File(temporary).Write(text)
-	if Text.Combine(File(temporary).ReadLines, "\n") is not text
-		File(temporary).Delete
-		return false
-	File(temporary).Rename(CacheFile)
-	let saved = (File(temporary).Exists is false) and File(CacheFile).Exists
+	if Text.Combine(File(temporary).ReadLines, "\n") is text
+		File(temporary).Rename(CacheFile)
 	File(temporary).Delete
-	saved

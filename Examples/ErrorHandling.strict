@@ -31,11 +31,6 @@ Described Text
 	if found is Error
 		return found to Text
 	found to Text
-Dropped Number
-	ErrorHandling(5).Dropped is 1
-	ErrorHandling(0).Dropped is Missing
-	Found
-	1
 Passed Number
 	ErrorHandling(5).Passed is 6
 	ErrorHandling(0).Passed is Missing

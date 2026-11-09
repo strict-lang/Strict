@@ -15,7 +15,8 @@ Commands(command Text, paths Texts, root Text, isMutating = false, isFull = fals
 		command + " \"" + value + "\" \"" + root + "\"" + options
 Cleaned(folder Text) Number
 	Folders(Logger).Cleaned("Missing") is 0
-	(Directory.Create("Compiler/output/Clean") or true) and (Directory.Create("Compiler/output/Clean/obj") or true)
+	Directory.Create("Compiler/output/Clean") is not Error
+	Directory.Create("Compiler/output/Clean/obj") is not Error
 	Directory.Exists("Compiler/output/Clean/obj")
 	Folders(Logger).Cleaned("Compiler/output/Clean") is 0
 	Directory.Exists("Compiler/output/Clean/obj") is false

@@ -51,11 +51,14 @@ Fetched(repository Text, type Text) Text
 		return ""
 	let local = target + "/" + Path((folder is "." then repository else folder)).FileName.text
 	for Files(paths, folder)
-		let file = local + "/" + Relative(value, folder)
-		Process.RunTool("curl", "-sfL --create-dirs -o \"" + file + "\" \"" + Raw + repository + "/HEAD/" + value + "\"")
+		Downloaded(Raw + repository + "/HEAD/" + value, local + "/" + Relative(value, folder))
 	File(local + "/.origin").Write(List(Text) + "https://github.com/" + repository + "/tree/HEAD/" + folder)
 	logger.Log("Downloaded " + local + " from https://github.com/" + repository)
 	Provided(local, type)
+Downloaded(url Text, file Text)
+	Repositories(Logger, "artifacts").Downloaded("https://missing.invalid/a", "Compiler/output/a") is Error
+	if Process.RunTool("curl", "-sfL --create-dirs -o \"" + file + "\" \"" + url + "\"").Failed
+		return Error("DownloadFailed: " + url)
 Copied(folder Text, type Text) Slow(Text)
 	Repositories(Logger, "artifacts").Copied("Examples/NativeAdd", "Adder") is "artifacts/NativeAdd"
 	let local = target + "/" + Path(folder).FileName.text

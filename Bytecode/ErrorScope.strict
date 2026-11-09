@@ -2,6 +2,7 @@ has values ValueCodegen
 constant FallibleMarker = " fallible"
 constant MutableMarker = " mutable"
 constant Plain = ErrorScope(ValueCodegen.Plain)
+constant Unused = ", use the value (condition, comparison, assignment, argument or result) or call a method without one"
 constant Mutated = CodeBlock.Empty.Declare("a", "Count").Declare("a" + MutableMarker, "mutable")
 constant Counting = ErrorScope(ValueCodegen(TypeInference(KnownTypes.Sample, TypeInference.Limits), KnownTypes.NoMembers, CallTarget.Plain))
 constant Reassigning = BodyParser("Run", "\tmutable a = 1", "\ta = Greet").Block(1, 1)
@@ -38,15 +39,37 @@ Reassigned(node SyntaxNode) Texts
 Dropped(node SyntaxNode, block CodeBlock) SyntaxNode
 	Counting.Dropped(Increment, CodeBlock.Empty.Declare("a", "Count")) to Text is "a.Increment"
 	Counting.Dropped(Increment, Mutated) to Text is "a = a.Increment"
-	if (node.Kind is not in ("MethodCall", "Member")) or (node.children(0).Kind is not "Identifier")
+	if IsMutating(node, block) is false
 		return node
 	let target = node.children(0)
-	let type = values.TypeOf(target, block)
-	let isMutating = values.inference.types.ParameterScope(type).TypeOf(node.text + MutableMarker) is not ""
-	let isInPlace = (node.text is in ("Add", "Remove")) and values.inference.types.IsPlural(type)
+	let isInPlace = (node.text is in ("Add", "Remove")) and values.inference.types.IsPlural(values.TypeOf(target, block))
 	let isMutable = block.scope.TypeOf(target.text + MutableMarker) is not ""
-	let isRewritten = isMutating and isMutable and (isInPlace is false)
-	isRewritten then SyntaxNode("Reassignment", "", (target, node), node.line) else node
+	isMutable and (isInPlace is false) then SyntaxNode("Reassignment", "", (target, node), node.line) else node
+IsMutating(node SyntaxNode, block CodeBlock) Boolean
+	Counting.IsMutating(Increment, Mutated)
+	Counting.IsMutating(SyntaxNode("Member", "Twice", Increment.children), Mutated) is false
+	if (node.Kind is not in ("MethodCall", "Member")) or (node.children(0).Kind is not "Identifier")
+		return false
+	let type = values.TypeOf(node.children(0), block)
+	values.inference.types.ParameterScope(type).TypeOf(node.text + MutableMarker) is not ""
+Used(node SyntaxNode, block CodeBlock) SyntaxNode
+	Plain.Used(SyntaxParser(Tokenizer("1 is 2").Tokens).Parse, CodeBlock.Empty) is Error
+	Plain.Used(SyntaxParser(Tokenizer("1 + 2").Tokens).Parse, CodeBlock.Empty) is Error
+	Counting.Used(Increment, Mutated) is Increment
+	Plain.Used(SyntaxNode("Identifier", "Run"), CodeBlock.Empty).Kind is "Identifier"
+	Plain.Used(BodyParser("Run", "\tif 1 is 2", "\t\t3").Block(1, 1).children(0), CodeBlock.Empty).Kind is "If"
+	if node.Kind is in ("If", "ElseIf", "Else", "For", "Declaration", "Reassignment", "Return")
+		return node
+	if (values.TypeOf(node, block) is in ("None", "")) or IsMutating(node, block) or IsGrowing(node, block)
+		return node
+	Error("ResultMustBeUsed: " + (node to Text) + " in " + values.target.fullName + ".strict:line " + node.line + Unused)
+IsGrowing(node SyntaxNode, block CodeBlock) Boolean
+	Plain.IsGrowing(SyntaxNode("Member", "Add", Increment.children), Mutated)
+	Plain.IsGrowing(SyntaxNode("Member", "Add", Increment.children), CodeBlock.Empty.Declare("a", "Count")) is false
+	Plain.IsGrowing(Increment, Mutated) is false
+	if (node.Kind is not in ("MethodCall", "Member")) or (node.text is not in ("Add", "Remove"))
+		return false
+	block.scope.TypeOf(node.children(0).text + MutableMarker) is not ""
 Declared(name Text, assigned SyntaxNode, isMutable Boolean, block CodeBlock) CodeBlock
 	Plain.Declared("a", ErrorCodegen.Greeting, false, CodeBlock.Empty).scope.TypeOf("a" + FallibleMarker) is "fallible"
 	Plain.Declared("a", ValueCodegen.One, true, CodeBlock.Empty).scope.TypeOf("a" + MutableMarker) is "mutable"

@@ -35,18 +35,23 @@ Served(resident Resident) Number
 		let isStopping = resident.Arguments(request) is (Resident.Stopping)
 		answer = Replied(resident, request, socket, isStopping, answer)
 		socket = isStopping then 0 else resident.Accepted(server, built)
-	server > 0 then resident.Closed(server) else 1
+	if server <= 0
+		return 1
+	resident.Closed(server)
+	0
 Replied(resident Resident, request Text, socket Number, isStopping Boolean, last Answer) Answer
 	let started = Time.Now
 	let isAnswered = resident.IsCurrent(request) and (isStopping is false)
 	let answer = isAnswered then Answered(resident, request, socket, last).Stamped(started) else last
 	resident.Released(request)
-	resident.Finished(socket, isAnswered then answer.code else (isStopping then 0 else -1))
+	resident.Ended(socket, isAnswered then answer.code else (isStopping then 0 else -1))
 	answer
 Answered(resident Resident, request Text, socket Number, last Answer) Answer
 	let home = Directory.Current
 	let folder = resident.Folder(request)
-	let isMoved = (folder is not home) and Directory.Change(folder)
+	let isMoved = folder is not home
+	if isMoved
+		Directory.Change(folder)
 	Socket.Output(socket)
 	let answer = Ran(resident.Arguments(request), last.Fresh(folder))
 	if answer is Error
@@ -136,7 +141,9 @@ Projected(arguments Texts) Texts
 	let source = File(named + ".strict").Exists then named + ".strict" else named
 	let project = source.EndsWith(".strict") then TypeSource.Project(source) else ""
 	let full = TypeSource.Absolute(source)
-	let isMoved = (project is not "") and Directory.Change(project)
+	let isMoved = project is not ""
+	if isMoved
+		Directory.Change(project)
 	for arguments
 		index is at then (isMoved then TypeSource.Relative(full) else source) else value
 Joined(arguments Texts) Text

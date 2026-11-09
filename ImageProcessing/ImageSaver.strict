@@ -1,8 +1,8 @@
 has path Text
 constant Corner = Image(Size(2, 2), (ColorValue(0, 0, 0), ColorValue(0, 0, 0), ColorValue(0, 0, 0), ColorValue(1, 1, 1)))
 constant Saved = "Compiler/output/ImageSaverCorner.png"
-Save(image Image) Slow(Number)
-	ImageSaver(Saved).Save(Corner) is 1
+Save(image Image)
+	ImageSaver(Saved).Save(Corner) is not Error
 	ImageLoader(Saved).Loaded.Colors is Corner.Colors
 	ImageCodec.SavePng(path, Flat(image), image.Size.Width)
 Flat(image Image) Numbers

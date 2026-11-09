@@ -168,7 +168,9 @@
     %processFolder = llvm.call @SetCurrentDirectoryA(%full) : (!llvm.ptr) -> i32
     cf.br ^done(%yes : f64)
   ^done(%result: f64):
-    return %result : f64
+    %isChanged = arith.cmpf one, %result, %no : f64
+    %answer = func.call @strict_directory_changed(%isChanged) : (i1) -> f64
+    return %answer : f64
   }
   func.func private @strict_path_join(%path: f64, %name: f64) -> f64 {
     %separatorText = llvm.mlir.addressof @strict_separator_path : !llvm.ptr

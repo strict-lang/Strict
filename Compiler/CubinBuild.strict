@@ -21,8 +21,7 @@ Fatbin(base Text) Text
 	let packed = Packed(stem, base)
 	failures.Length > 0 then failures.First else packed
 Outdated(base Text) Boolean
-	PtxCache(Outdating).Saved(".fatbin", "old")
-	PtxCache(Outdating).Saved(".ptx", "// newer")
+	PtxCache(Outdating).Saved((".fatbin", ".ptx"), ("old", "// newer")) is not Error
 	CubinBuild(Local.tools, false).Fatbin(Outdating) is ""
 	File(Outdating + ".fatbin").Exists is false
 	let ptx = File(base + ".ptx")
@@ -33,7 +32,7 @@ Outdated(base Text) Boolean
 	true
 Cubins(ptxas Text, base Text, stem Text) Texts
 	Local.Cubins("ptxas", "Compiler/output/missing", "Compiler/output/missing").First.StartsWith("ptxas failed")
-	PtxCache(Emptied).Saved(".ptx", Tiny) and PtxCache(Emptied).Saved(".older.ptx", "")
+	PtxCache(Emptied).Saved((".ptx", ".older.ptx"), (Tiny, "")) is not Error
 	(Local.Cubins("ptxas", Emptied, Emptied).Length is 0) is (Local.tools.Located("ptxas") is not "")
 	constant splitting = " --split-compile 8 "
 	mutable arguments = List(Mutable(Text))
@@ -46,7 +45,7 @@ Cubins(ptxas Text, base Text, stem Text) Texts
 			"ptxas failed: " + value.error
 Packed(stem Text, base Text) Text
 	Local.Packed("Compiler/output/missing", "Compiler/output/missing").StartsWith("fatbinary failed")
-	PtxCache(Broken).Saved(".ptx", Tiny) and PtxCache(Broken).Saved(".older.ptx", "broken")
+	PtxCache(Broken).Saved((".ptx", ".older.ptx"), (Tiny, "broken")) is not Error
 	Local.Fatbin(Broken).StartsWith("ptxas failed") or (Local.tools.Located("ptxas") is "")
 	Directory.Files("Compiler/output", "Broken.*.cubin").Length is 0
 	let arguments = "--compress-all --create=" + tools.Quoted(stem + ".fatbin") + Images(stem)
@@ -65,7 +64,7 @@ Images(stem Text) Text
 		images = images + " --image3=kind=elf,sm=" + value.Substring(3, value.Length - 3) + ",file=" + cubin
 	images
 Shipped(source Text, target Text) Text
-	PtxCache("Compiler/output/Shipped").Saved(".fatbin", "stale")
+	PtxCache("Compiler/output/Shipped").Saved(".fatbin", "stale") is not Error
 	Local.Shipped("Compiler/output/missing", "Compiler/output/Shipped") is ""
 	File("Compiler/output/Shipped.fatbin").Exists is false
 	let failed = Fatbin(source)

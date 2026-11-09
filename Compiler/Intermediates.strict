@@ -3,26 +3,26 @@ constant CrossEndings = (".ios.o", ".ios.new.a", ".android.o", ".llvm.mlir", ".l
 constant LinuxEndings = (".linux.mlir", ".linux.llvm.mlir", ".linux.ll", ".linux.o", ".pre.js", ".shaders.js", ".o", ".gpu.opt.ll")
 constant RuntimeEndings = (".runtime.gpu.mlir", ".runtime.gpu.kept.mlir", ".runtime.gpu.llvm.mlir", ".runtime.gpu.ll", ".runtime.sm_75.ptx", ".runtime.sm_80.ptx")
 constant Endings = CrossEndings + LinuxEndings + RuntimeEndings
-Removed(base Text) Boolean
-	Intermediates(Logger).Removed("Compiler/output/missing")
+Removed(base Text)
+	Intermediates(Logger).Removed("Compiler/output/missing") is not Error
 	mutable files = Directory.Files(Path(base).PathOnly.text, Path(base).FileName.text + ".ios-*.o")
 	for Endings
 		files = files + (base + value)
 	for Toolchain.Parts
 		files = files + Part(base + "-" + value) + Part(base + ".linux-" + value) + Part(base + ".web-" + value)
 	for files
-		if Deleted(value) is false
+		if Deleted(value) is Error
 			logger.Log("Could not remove build intermediate: " + value + " (another program still held it after 5 s)")
-			return false
-	true
+			return Error("IntermediateNotRemoved")
 Part(name Text) Texts
 	Intermediates(Logger).Part("a") is ("a", "a.mlir", "a.llvm.mlir")
 	(name, name + ".mlir", name + ".llvm.mlir")
-Deleted(path Text) Boolean
-	Intermediates(Logger).Deleted("Compiler/output/missing")
+Deleted(path Text)
+	Intermediates(Logger).Deleted("Compiler/output/missing") is not Error
 	let started = Process.Elapsed
 	for as long as File(path).Exists and (Process.Elapsed - started < 5)
 		File(path).Delete
 		if File(path).Exists
 			Process.Wait(0.1)
-	File(path).Exists is false
+	if File(path).Exists
+		return Error("FileNotDeleted")

@@ -2,12 +2,11 @@ has logger
 constant IsRequested = Process.Variable("STRICT_BUILD_PROFILE") is "1"
 Detailed Boolean
 	IsRequested
-Reported(phase Text, started Number) Number
+Reported(phase Text, started Number)
 	let elapsed = Process.Elapsed - started
 	if Detailed or (elapsed >= 3)
 		let label = Detailed then "[build] " + phase else phase
 		logger.Log(label + ": " + elapsed.Round(Detailed then 4 else 2) + " s")
-	elapsed
 Current(cache NativeCache, phase = "Compiler build cache") Boolean
 	let started = Process.Elapsed
 	let current = cache.IsCurrent

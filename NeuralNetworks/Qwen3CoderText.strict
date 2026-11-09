@@ -6,7 +6,7 @@ constant Count = 24
 Run(folder Text)
 	let path = folder + "/" + Weights
 	if File(path).Exists is false
-		Process.RunTool("curl", "-sfL --create-dirs -o \"" + path + "\" \"" + Address + Weights + "\"")
+		Downloaded(path)
 	let started = Process.Elapsed
 	let tokenizer = Gpt2Tokens.Loaded(Gguf(path))
 	let model = Qwen3.Loaded(path, 4)
@@ -16,3 +16,6 @@ Run(folder Text)
 	logger.Log(Prompt + tokenizer.Decoded(generated))
 	let seconds = (loaded - started).Round(1)
 	logger.Log("Qwen3-Coder-30B-A3B loaded in " + seconds + " s, " + milliseconds + " ms per token")
+Downloaded(path Text)
+	if Process.RunTool("curl", "-sfL --create-dirs -o \"" + path + "\" \"" + Address + Weights + "\"").Failed
+		return Error("DownloadFailed: " + Address + Weights)

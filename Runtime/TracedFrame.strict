@@ -36,19 +36,19 @@ IsReporting(entry InstructionEntry, isReporting Boolean) Boolean
 	if (frame.method.Name is not TestCodegen.Runner) or (entry.kind is not InstructionType.Print)
 		return isReporting
 	entry.texts(0).StartsWith("Test failed: ") or isReporting and (entry.texts(0) is not "  got: ")
-Logged(position Number, slots List(VmValue)) Number
-	Lined.Logged(4, Frame.Listed) is 0 and (Lined.Logged(0, Frame.Listed) is 2)
-	Lined.Logged(2, Started) is 2
+Logged(position Number, slots List(VmValue))
+	for Logs(position, slots)
+		frame.machine.logger.Log(value)
+Logs(position Number, slots List(VmValue)) Texts
+	Lined.Logs(4, Frame.Listed).Length is 0 and (Lined.Logs(0, Frame.Listed).Length is 2)
+	Lined.Logs(2, Started).Length is 2
 	if frame.method.Name is TestCodegen.Runner
-		return 0
+		return List(Text)
 	let entry = frame.method.instructions(position)
 	let loop = entry.kind is in (InstructionType.LoopBegin, InstructionType.LoopEnd)
 	let branch = entry.kind is in (InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)
 	let slot = entry.kind is InstructionType.CheckError then entry.payload(0) else entry.Target
-	let events = loop then Iteration(position, slots) else Events(position, slots(branch then Frame.FlagSlot else slot))
-	for events
-		frame.machine.logger.Log(value)
-	events.Length
+	loop then Iteration(position, slots) else Events(position, slots(branch then Frame.FlagSlot else slot))
 Events(position Number, result VmValue) Texts
 	Lined.Events(0, Seven) is ("$Hit Strict/Doubler|2", "$Result Strict/Doubler|2|7")
 	Lined.Events(1, Seven) is ("$Hit Strict/Doubler|3", "$Set Strict/Doubler|3|a|7", "$Result Strict/Doubler|3|7")
@@ -74,7 +74,7 @@ Hit(position Number) Texts
 	let hit = "$Hit " + frame.owner + "|" + entry.line
 	isStart and (IsLoopLine(entry.line) is false) then List(Text) + hit else List(Text)
 IsLoopLine(line Number) Boolean
-	Reporting.Logged(0, Frame.Listed) is 0
+	Reporting.Logs(0, Frame.Listed).Length is 0
 	Lined.IsLoopLine(4)
 	Lined.IsLoopLine(2) is false
 	for frame.method.instructions

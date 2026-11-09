@@ -92,31 +92,29 @@ Placed(source Text, target Text) Boolean
 	let isPlaced = isComplete and (File(temporary).Exists is false) and File(target).Exists
 	File(temporary).Delete
 	isPlaced
-Sidecar(release Text) Number
-	Release(Logger, "Missing/App").Sidecar("Missing/Release") is 0
+Sidecar(release Text)
+	Release(Logger, "Missing/App").Sidecar("Missing/Release") is not Error
 	PtxCache("Compiler/output/Sided").Written(List(Text) + "// a", ".ptx")
-	Release(Logger, "Compiler/output/Sided").Sidecar("Compiler/output/Release/Web") is 0
-	if Path(release).FileName.text is "Web"
-		return (Icon is not TypeSource.Root + "/Strict.ico") and Placed(Icon, release + "/favicon.ico") then 1 else 0
-	mutable copied = 0
+	Release(Logger, "Compiler/output/Sided").Sidecar("Compiler/output/Release/Web") is not Error
+	let isWeb = Path(release).FileName.text is "Web"
+	if isWeb and (Icon is not TypeSource.Root + "/Strict.ico") and (Placed(Icon, release + "/favicon.ico") is false)
+		logger.Log("Release could not place " + release + "/favicon.ico")
 	for Sidecars
 		let sidecar = base + value
-		if File(sidecar).Exists and (File(sidecar).Length > 0)
+		if (isWeb is false) and File(sidecar).Exists and (File(sidecar).Length > 0)
 			File(BuildOutput.Shipped(release, sidecar)).Write(File(sidecar).ReadBytes)
-			copied = copied + 1
-	copied
 Mirrored(target Text) Number
-	if target is not ""
-		let shared = Parent + "/Release/Content"
-		Copied(shared, target)
-		Removed(shared, target)
+	target is "" then 0 else Synced(Parent + "/Release/Content", target)
+Synced(source Text, target Text) Number
+	Copied(source, target)
+	Removed(source, target)
 	0
 Content(target Text) Number
 	Release(Logger, "Missing/App").Content("Missing/Release/Content") is 0
 	let source = Parent + "/Content"
 	let builder = Parent + "/ContentBuild.strict"
 	if File(builder).Exists is false
-		return Copied(source, target) + Removed(source, target)
+		return Synced(source, target)
 	let tools = Toolchain(Platform.Current, TypeSource.Root)
 	let compiled = ToolRunner(tools.Executable(TypeSource.Root + "/Strict")).Execute("build \"" + builder + "\"")
 	let program = ToolRunner(tools.Executable(Parent + "/ContentBuild"))
@@ -124,40 +122,32 @@ Content(target Text) Number
 	if built.Failed
 		logger.Log("Content build failed: " + builder + " " + built.error + built.Output)
 	built.Failed then -1 else 0
-Copied(source Text, target Text) Number
+Copied(source Text, target Text)
+	if Directory.Exists(source)
+		Created(target)
+		for Directory.Files(source)
+			let copy = target + "/" + Named(value)
+			if (File(copy).Exists is false) or (File(value).Modified > File(copy).Modified)
+				File(copy).Write(File(value).ReadBytes)
+		for Directory.Directories(source)
+			Copied(value, target + "/" + Named(value))
+Created(path Text)
+	Release(Logger, "Missing/App").Created("artifacts/Release/Content") is not Error
+	Release(Logger, "Missing/App").Created("") is not Error
+	if (path is not "") and (Directory.Exists(path) is false)
+		Created(Path(path).PathOnly.text)
+		Directory.Create(path)
+Removed(source Text, target Text)
+	Release(Logger, "Missing/App").Removed("Missing/Content", "Missing/Release/Content") is not Error
 	if Directory.Exists(source) is false
-		return 0
-	Created(target)
-	mutable copied = 0
-	for Directory.Files(source)
-		let copy = target + "/" + Named(value)
-		if (File(copy).Exists is false) or (File(value).Modified > File(copy).Modified)
-			File(copy).Write(File(value).ReadBytes)
-			copied = copied + 1
-	for Directory.Directories(source)
-		copied = copied + Copied(value, target + "/" + Named(value))
-	copied
-Created(path Text) Boolean
-	Release(Logger, "Missing/App").Created("artifacts/Release/Content") or Directory.Exists("artifacts/Release/Content")
-	Release(Logger, "Missing/App").Created("")
-	if (path is "") or Directory.Exists(path)
-		return true
-	let parent = Path(path).PathOnly.text
-	if (parent is not "") and (Directory.Exists(parent) is false)
-		Created(parent)
-	Directory.Create(path)
-Removed(source Text, target Text) Number
-	Release(Logger, "Missing/App").Removed("Missing/Content", "Missing/Release/Content") is 0
-	if Directory.Exists(source) is false
-		return Directory.Exists(target) and Directory.Delete(target) then 1 else 0
-	mutable removed = 0
+		if Directory.Exists(target)
+			Directory.Delete(target)
+		return
 	for Directory.Files(target)
 		if File(source + "/" + Named(value)).Exists is false
 			File(value).Delete
-			removed = removed + 1
 	for Directory.Directories(target)
-		removed = removed + Removed(source + "/" + Named(value), value)
-	removed
+		Removed(source + "/" + Named(value), value)
 Named(path Text) Text
 	Release(Logger, "App").Named("a\b/c.png") is "c.png"
 	Path(path.Replace("\\", "/")).FileName.text

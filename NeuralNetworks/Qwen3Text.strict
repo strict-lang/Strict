@@ -5,7 +5,8 @@ constant Prompt = "Alan Turing theorized that computers would one day become"
 constant Count = 20
 Run
 	if File(Folder + "model.gguf").Exists is false
-		Process.RunTool("curl", "-sfL --create-dirs -o \"" + Folder + "model.gguf\" \"" + Address + "\"")
+		if Process.RunTool("curl", "-sfL --create-dirs -o \"" + Folder + "model.gguf\" \"" + Address + "\"").Failed
+			return Error("DownloadFailed: " + Address)
 	let started = Process.Elapsed
 	let tokenizer = Gpt2Tokens.Loaded(Gguf(Folder + "model.gguf"))
 	let model = Qwen3.Loaded(Folder + "model.gguf", 8)

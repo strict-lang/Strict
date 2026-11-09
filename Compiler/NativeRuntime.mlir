@@ -11681,22 +11681,29 @@
     return %current : f64
   }
   llvm.mlir.global internal constant @strict_directory_not_created("DirectoryNotCreated\00") : !llvm.array<20 x i8>
-  // Directory.Create: true when it made the directory, false when it was already there, else an Error
+  // Directory.Create: None when the directory is there afterwards, else an Error
   func.func private @strict_directory_created(%made: i1, %path: f64) -> f64 {
+    %none = arith.constant 0.0 : f64
+    cf.cond_br %made, ^done(%none : f64), ^check
+  ^check:
     %yes = arith.constant true
     %created = func.call @strict_boolean(%yes) : (i1) -> f64
-    cf.cond_br %made, ^done(%created : f64), ^check
-  ^check:
-    %none = arith.constant 0.0 : f64
     %exists = func.call @strict_directory_exists(%none, %path) : (f64, f64) -> f64
     %isThere = arith.cmpf oeq, %exists, %created : f64
-    cf.cond_br %isThere, ^existing, ^failed
-  ^existing:
-    %no = arith.constant false
-    %kept = func.call @strict_boolean(%no) : (i1) -> f64
-    cf.br ^done(%kept : f64)
+    cf.cond_br %isThere, ^done(%none : f64), ^failed
   ^failed:
     %name = llvm.mlir.addressof @strict_directory_not_created : !llvm.ptr
+    %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
+    cf.br ^done(%error : f64)
+  ^done(%result: f64):
+    return %result : f64
+  }
+  llvm.mlir.global internal constant @strict_directory_not_found("DirectoryNotFound\00") : !llvm.array<18 x i8>
+  func.func private @strict_directory_changed(%isChanged: i1) -> f64 {
+    %none = arith.constant 0.0 : f64
+    cf.cond_br %isChanged, ^done(%none : f64), ^failed
+  ^failed:
+    %name = llvm.mlir.addressof @strict_directory_not_found : !llvm.ptr
     %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
     cf.br ^done(%error : f64)
   ^done(%result: f64):

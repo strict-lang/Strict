@@ -45,11 +45,14 @@ Answered(server Resident, port Number, arguments Texts) Number
 		return -1
 	let claim = Claimed(server, socket)
 	let request = Resident.Request(Directory.Current, arguments, Resident.Variables, claim)
-	let code = (claim is not "") and Greeted(socket) and Server.Sent(socket, request) then Streamed(socket) else -1
+	let code = (claim is not "") and Greeted(socket) then Requested(socket, request) else -1
 	Socket.Close(socket)
 	if (code is -1) and (claim is not "")
 		File(server.Freed + "." + claim).Rename(server.Freed)
 	code is Dropped then Interrupted(server, port) else code
+Requested(socket Number, request Text) Number
+	Sample.Requested(0, "") is -1
+	Server.Send(socket, request) is Error then -1 else Streamed(socket)
 Interrupted(server Resident, port Number) Number
 	Missing.Interrupted(Resident("Compiler/output/Missing"), 0) is 1
 	let stamp = File(server.Stamped)
@@ -64,10 +67,10 @@ Killed Number
 	let isWindows = Process.OperatingSystem is "Windows"
 	for Directory.Files(root + "/obj", "strict.server*")
 		File(value).Delete
-	Process.RunTool(isWindows then "powershell" else "sh", Killing(Process.Current.executable, isWindows))
+	let killed = Process.RunTool(isWindows then "powershell" else "sh", Killing(Process.Current.executable, isWindows))
 	for Directory.Files(root + "/obj", "strict.server*") + Directory.Files(root + "/obj", "strict.free*")
 		File(value).Delete
-	0
+	killed.exitCode
 Killing(executable Text, isWindows Boolean) Text
 	Forwarding.Killing("C:/a/strict.exe", true) is Finding + "C:\\a\\strict.exe" + Serving
 	Forwarding.Killing("/a/strict", false) is Searching + "/a/strict" + Ending
@@ -89,12 +92,14 @@ Started(slot Text) Number
 	let served = " serve " + slot + Logged(root + "/obj", isWindows, slot)
 	let hidden = Starting + Quote + Quote + executable + Quote + served + Quote + "' -WindowStyle Hidden"
 	let detached = isWindows then hidden else "-c \"nohup '" + executable + "'" + served + " &\""
-	Process.RunTool(isWindows then "powershell" else "sh", detached)
+	let started = Process.RunTool(isWindows then "powershell" else "sh", detached)
+	if started.exitCode is not 0
+		logger.Log("strict server " + slot + " did not start: " + started.Output + started.error)
 	-1
 Logged(objects Text, isWindows Boolean, slot Text) Text
 	Sample.Logged("Compiler", true, "").EndsWith(" 2>" + Quote + "Compiler/server.errors.log" + Quote)
 	Sample.Logged("Compiler", false, "2") is " >'Compiler/server2.log' 2>'Compiler/server2.errors.log'"
-	let hasObjects = Directory.Exists(objects) or Directory.Create(objects)
+	let hasObjects = Directory.Create(objects) is not Error
 	let output = Output.Replace("server", "server" + slot)
 	let errors = Errors.Replace("server", "server" + slot)
 	Kept(objects, output)
@@ -103,11 +108,12 @@ Logged(objects Text, isWindows Boolean, slot Text) Text
 		return isWindows then "" else " >/dev/null 2>&1"
 	let mark = isWindows then Quote else "'"
 	" >" + mark + objects + output + mark + " 2>" + mark + objects + errors + mark
-Kept(objects Text, log Text) Boolean
-	Missing.Kept("Compiler/output/Missing", Output) is false
+Kept(objects Text, log Text)
+	Missing.Kept("Compiler/output/Missing", Output) is not Error
 	let previous = objects + log.Replace("/server", Previous)
 	File(previous).Delete
-	File(objects + log).Exists and File(objects + log).Rename(previous)
+	if File(objects + log).Exists
+		File(objects + log).Rename(previous)
 Claimed(server Resident, socket Number) Text
 	Sample.Claimed(Server, 0) is ""
 	let port = Socket.Port(socket)
@@ -139,7 +145,7 @@ Loopback Slow(Number)
 	let server = Socket.Local(0)
 	let client = Socket.Connect("127.0.0.1", Socket.Port(server))
 	let accepted = Socket.Accept(server)
-	Server.Sent(client, Resident.Request(Directory.Current, ("test", "a.strict")))
+	Server.Send(client, Resident.Request(Directory.Current, ("test", "a.strict")))
 	let isRequested = Resident.Arguments(Server.Requested(accepted)) is ("test", "a.strict")
 	Server.Finished(accepted, 3)
 	let code = isRequested and Greeted(client) then Streamed(client) else 1

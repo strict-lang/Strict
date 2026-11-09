@@ -78,7 +78,7 @@ Build(base Text, program Text, tools Toolchain, isCounting = false) Number
 	if built.StartsWith("Built ") is false
 		return 1
 	let crossed = CrossBuild(base, program, tools, isCounting)
-	let result = Intermediates(logger).Removed(base) then crossed else 1
+	let result = Intermediates(logger).Removed(base) is Error then 1 else crossed
 	isFast then result else BuildProfile(logger).Packaged(value, base, program, result, tools)
 Target Number
 	NativeBuild(Logger, isIOS = true).Target is Platform.IOS

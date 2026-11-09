@@ -88,7 +88,7 @@ Checked List(TypeEntry)
 Explained(target Text) Text
 	Single.Explained("Strict/Missing.Go") is "UnresolvedLink: Strict/Missing.Go"
 	Single.Explained("Strict/Logger.Log") is "UnresolvedLink: Strict/Logger.Log"
-	PtxCache("Compiler/output/Stray").Saved(".strict", "Run\n\t1\nconstant A = 1")
+	PtxCache("Compiler/output/Stray").Saved(".strict", "Run\n\t1\nconstant A = 1") is not Error
 	Single.Explained("Strict/Compiler/output/Stray.A").StartsWith("MembersMustComeBeforeMethods: constant A = 1 in ")
 	let path = linker.SourcePath(target.Substring(0, target.LastIndexOf(".")))
 	let misplaced = File(path).Exists then ResolveCheck(Logger).Misplaced(path, File(path).ReadLines) else List(Text)

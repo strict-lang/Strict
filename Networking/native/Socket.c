@@ -200,7 +200,7 @@ STRICT_EXPORT double Socket_Send(double self, double socket, double bytes)
 	}
 	if (!isBytes)
 		free(buffer);
-	return (double)sent;
+	return 0;
 }
 
 STRICT_EXPORT double Socket_Receive(double self, double socket, double count)

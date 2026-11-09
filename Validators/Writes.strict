@@ -1,0 +1,36 @@
+has lines Texts
+constant Verbs = ("Create", "Delete", "Change", "Write", "Written", "Rename", "Save", "Saved", "Send", "Close", "Remove", "Move", "Copy", "Set", "Edit")
+constant Hint = " writes, so it returns nothing (failures are an Error), read results with another method"
+constant Saving = Writes(("Pixels(path Text) Numbers", "Save(path Text) Number", "Delete(path Text)", "SetPixel(at Number) Boolean", "\tSetPixel(1) is true", "\t1"))
+Issues List(ValidationIssue)
+	Saving.Issues.Length is 2
+	Saving.Issues.First to Text is "WriteMustReturnNothing: Save" + Hint
+	(Saving.Issues.First.Line is 2) and (Saving.Issues.Last.Line is 4)
+	Writes(("Save(path Text) Number", "\t1")).Issues.Length is 0
+	let shape = TypeShape(lines)
+	let isExternal = IsExternal(shape)
+	for lines
+		if isExternal and IsWriting(value)
+			ValidationIssue("WriteMustReturnNothing", Tokenizer(value).Tokens.First + Hint, index + 1)
+IsExternal(shape TypeShape) Boolean
+	Saving.IsExternal(TypeShape("Run", "\t1", "Save Number"))
+	Saving.IsExternal(TypeShape("Area = Width * Height", "Run", "\t1")) is false
+	for shape.lines
+		let next = index + 1 < shape.lines.Length then shape.lines(index + 1) else ""
+		if shape.IsMethodHeader(value) and (shape.IsComputed(value) is false) and (next.StartsWith("\t") is false)
+			return true
+	false
+IsWriting(line Text) Boolean
+	Saving.IsWriting("SaveJpeg(path Text) Number")
+	Saving.IsWriting("Settings Number") is false
+	Saving.IsWriting("Delete(path Text)") is false
+	let tokens = Tokenizer(line).Tokens
+	(HeaderTokens(tokens).ReturnType is not "None") and (Verb(tokens.First) is in Verbs)
+Verb(name Text) Text
+	Saving.Verb("SetPixel") is "Set"
+	Saving.Verb("Settings") is "Settings"
+	Saving.Verb("Write2") is "Write2"
+	for Range(1, name.Length)
+		if name(value) is not name(value).Lower
+			return name.Substring(0, value)
+	name

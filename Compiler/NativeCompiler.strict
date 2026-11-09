@@ -1,6 +1,5 @@
 has logger
 constant Swapped = PtxCache("Compiler/output/Swapped")
-constant Swapping = Swapped.Saved(".exe", "a") and Swapped.Saved(".old.exe", "b") and Swapped.Saved(".new.exe", "built")
 constant Mixed = "Mobile target cannot be combined with another platform"
 constant Alone = "fast builds for this computer only, without a platform or other options"
 constant Model = " uses NeuralNetworks and runs on the GPU, build it without fast"
@@ -85,7 +84,7 @@ Problem(path Text, options Texts, sources Texts) Text
 	isFast and IsLearning(sources) then path + Model else ""
 IsGame(path Text) Boolean
 	NativeCompiler.IsGame("Missing/App/App.strict") is false
-	Release(Logger, "Compiler/output/Game/obj/Demo").Created("Compiler/output/Game/Content")
+	Release(Logger, "Compiler/output/Game/obj/Demo").Created("Compiler/output/Game/Content") is not Error
 	NativeCompiler.IsGame("Compiler/output/Game/Game.strict")
 	NativeCompiler.IsGame("Compiler/output/Game/Demo.strict") is false
 	let folder = Path(path).PathOnly.text
@@ -116,7 +115,8 @@ Configured(options Texts) NativeBuild
 	let isFast = "fast" is in options
 	NativeBuild(configured, isSimulator = "simulator" is in options, isReleased = "windows" is in options, isFast = isFast)
 Replaced(executable Text, target Text) Boolean
-	Swapping and NativeCompiler(Logger).Replaced("Compiler/output/Swapped.exe", "Compiler/output/Swapped.new.exe")
+	Swapped.Saved((".exe", ".old.exe", ".new.exe"), ("a", "b", "built")) is not Error
+	NativeCompiler(Logger).Replaced("Compiler/output/Swapped.exe", "Compiler/output/Swapped.new.exe")
 	Swapped.Read(".exe") is "built"
 	let old = executable.Replace(".exe", ".old.exe")
 	Intermediates(logger).Deleted(old)

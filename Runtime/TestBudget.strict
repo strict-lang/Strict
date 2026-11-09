@@ -6,7 +6,6 @@ Finished(started Number) Number
 	(Process.Elapsed - started) * 1000
 Entered Number
 	Process.Elapsed
-Left(entered Number) Number
-	Process.Elapsed - entered
+Left(entered Number)
 Expired Text
 	""

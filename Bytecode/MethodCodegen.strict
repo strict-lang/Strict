@@ -39,11 +39,12 @@ Production(body SyntaxNode, block CodeBlock) SyntaxNode
 	let rounded = StepRounding(values).Rounded(inlined, block)
 	IndexCodegen(values).Unnested(values.isOptimizing then LoopHoisting(values).Hoisted(rounded, block) else rounded)
 Body(body SyntaxNode, block CodeBlock) CodeBlock
-	Plain.Body(BodyParser("Run", "\t1", "\t2").Block(1, 1), CodeBlock.Empty).register is 1
-	Plain.Body(BodyParser("Run", "\t1", "\t2").Block(1, 1), CodeBlock.Empty).instructions.Last.line is 3
+	Plain.Body(BodyParser("Run", "\tRun", "\t2").Block(1, 1), CodeBlock.Empty).register is 1
+	Plain.Body(BodyParser("Run", "\tRun", "\t2").Block(1, 1), CodeBlock.Empty).instructions.Last.line is 3
 	mutable result = block
 	for body.children
-		let rewritten = ErrorScope(values).Dropped(value, result)
+		let dropped = ErrorScope(values).Dropped(value, result)
+		let rewritten = index < body.children.Length - 1 then ErrorScope(values).Used(dropped, result) else dropped
 		let statement = Statement(rewritten, result.At(block.register), HasElse(body, index))
 		result = Lined(statement, result.instructions.Length, value.line)
 	CodeBlock(result.instructions, result.register, result.nextId, block.scope)

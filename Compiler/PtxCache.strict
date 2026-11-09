@@ -1,5 +1,6 @@
 has base Text
 constant Sample = PtxCache("Compiler/output/Kept")
+constant Single = PtxCache("Compiler/output/Single")
 constant Metal = DeviceBuild(Toolchain(Platform.MacOS, "."))
 constant Reducing = PtxCache("Compiler/output/Reducing")
 constant Known = PtxCache("Compiler/output/Known")
@@ -37,7 +38,7 @@ Remembered(device Text, ptx Texts) Texts
 	File("Compiler/output/Unkeyed.kernels.mlir").Exists is false
 	if ptx.First.StartsWith("//") is false
 		return ptx
-	let isKeyed = (device is "") or Saved(".kernels.mlir", device)
+	let isKeyed = device is "" then true else Saved(".kernels.mlir", device) is not Error
 	Written(ptx, ".ptx") and isKeyed then ptx else List(Text) + ("GPU cache write failed: " + base)
 Built(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Texts
 	PtxCache("Compiler/output/Invalid").Built("x", false, DeviceBuild.Missing, "").First.StartsWith("mlir-opt failed")
@@ -53,7 +54,7 @@ Built(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Texts
 	isCached then Remembered(key, built) else built
 Reduced(isTiling Boolean, builder DeviceBuild, kept Text) Texts
 	Reducing.Built(Combining, false, DeviceBuild.Local, Doubles).First.StartsWith("//")
-	Reducing.Saved(".ptx", "// reused") and Reducing.Saved(".gpu.mlir", Combining + "\n// changed")
+	Reducing.Saved((".ptx", ".gpu.mlir"), ("// reused", Combining + "\n// changed")) is not Error
 	Reducing.Reduced(false, DeviceBuild.Local, Doubles) is ("// reused")
 	let key = Kept(builder.tools, kept) is "" then Fingerprint(Read(".gpu.kept.mlir"), isTiling, builder, kept) else ""
 	let previous = key is "" then List(Text) else Previous(key, isTiling, ".kept.mlir")
@@ -87,7 +88,7 @@ Fingerprint(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Text
 		key = key + "\n// " + File(Process.Current.executable).Modified
 	key
 Shared(device Text, isTiling Boolean, builder DeviceBuild) Texts
-	Known.Saved(".ptx", "// known") and Known.Saved(".shared.mlir", Fingerprint("x", false, DeviceBuild.Missing, ""))
+	Known.Saved((".ptx", ".shared.mlir"), ("// known", Fingerprint("x", false, DeviceBuild.Missing, ""))) is not Error
 	Known.Shared("x", false, DeviceBuild.Missing) is ("// known")
 	Known.Shared("y", false, DeviceBuild.Missing) is Error("DirectoryNotCreated")
 	let direct = Fingerprint(device, isTiling, builder, "")
@@ -96,7 +97,9 @@ Shared(device Text, isTiling Boolean, builder DeviceBuild) Texts
 	if known.Length > 0
 		return known
 	let built = SharedKept(device, isTiling, builder)
-	built.First.StartsWith("//") and Saved(".shared.mlir", direct) then built else built
+	if built.First.StartsWith("//")
+		Saved(".shared.mlir", direct)
+	built
 SharedKept(device Text, isTiling Boolean, builder DeviceBuild) Texts
 	File(base + ".gpu.mlir").Write(device)
 	let reduced = Kept(builder.tools, "") is "" then Read(".gpu.kept.mlir") else device
@@ -143,10 +146,9 @@ IsWritten(ptx Texts, ending Text) Boolean
 	let isOlder = older is "" then File(base + ".older" + ending).Exists is false else Read(".older" + ending) is older
 	File(base + ending).Exists and (Read(ending) is ptx.First) and isOlder
 Written(ptx Texts, ending Text) Boolean
-	PtxCache("Compiler/output/Single").Written(List(Text) + "// only", ".ptx")
-	File("Compiler/output/Single.older.ptx").Exists is false
-	PtxCache("Compiler/output/Single").IsWritten(List(Text) + "// only", ".ptx")
-	Sample.Saved(".fatbin", "binary")
+	Single.Written(List(Text) + "// only", ".ptx")
+	File("Compiler/output/Single.older.ptx").Exists is false and Single.IsWritten(("// only"), ".ptx")
+	Sample.Saved(".fatbin", "binary") is not Error
 	Sample.Written(("// new", "// old"), ".ptx")
 	CubinBuild.Local.Outdated(Sample.base) is false
 	let older = ptx.Length > 1 then ptx.Last else ""
@@ -154,15 +156,19 @@ Written(ptx Texts, ending Text) Boolean
 		return true
 	if older is ""
 		File(base + ".older" + ending).Delete
-	Saved(ending, ptx.First) and ((older is "") or Saved(".older" + ending, older))
-Saved(ending Text, text Text) Boolean
+	Saved(older is "" then List(Text) + ending else (ending, ".older" + ending), (ptx.First, older))
+	IsWritten(ptx, ending)
+Saved(endings Texts, texts Texts)
+	Sample.Saved((".a", ".b"), ("1", "2")) is not Error
+	for endings
+		Saved(value, texts(index))
+Saved(ending Text, text Text)
 	let path = base + ending
 	let temporary = path + "." + 1000000000.Random.Floor + ".tmp"
 	File(temporary).Write(text)
-	if PtxCache(temporary).Read("") is not text
-		File(temporary).Delete
-		return false
-	File(temporary).Rename(path)
-	let saved = (File(temporary).Exists is false) and File(path).Exists
+	if PtxCache(temporary).Read("") is text
+		File(temporary).Rename(path)
+	let isLeft = File(temporary).Exists
 	File(temporary).Delete
-	saved
+	if isLeft or (File(path).Exists is false)
+		return Error("CacheNotWritten")

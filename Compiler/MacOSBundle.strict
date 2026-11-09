@@ -40,12 +40,16 @@ Released Number
 	let program = BuildOutput.Delivered(base)
 	let refreshed = release.Refreshed(Contents + "/MacOS", Contents + "/Resources/Content", program, List(Text) + "")
 	refreshed is not 0 then refreshed else Completed(release.Icon)
+Converting(icon Text) Text
+	MacOSBundle(Logger, "Missing/App").Converting("a.ico").StartsWith("-s format icns \"a.ico\" --out ")
+	"-s format icns \"" + icon + "\" --out \"" + Contents + "/Resources/" + Name + ".icns\""
 Completed(icon Text) Number
 	MacOSBundle(Logger, "Missing/App").Completed("Missing.ico") is 1
 	if File(Contents + "/MacOS/" + Name).Exists is false
 		return 1
 	File(Contents + "/Info.plist").Write(Text.Combine(Plist, "\n"))
-	ToolRunner("sips").Execute("-s format icns \"" + icon + "\" --out \"" + Contents + "/Resources/" + Name + ".icns\"")
+	if ToolRunner("sips").Execute(Converting(icon)).Failed
+		logger.Log("sips could not convert " + icon)
 	let identity = Identity(ToolRunner("security").Execute("find-identity -v -p codesigning").Output)
 	let app = Contents.Substring(0, Contents.Length - 9)
 	let signed = ToolRunner("codesign").Execute(Signing(identity, app))

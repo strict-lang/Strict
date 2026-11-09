@@ -75,7 +75,7 @@ Declared(line Text) Text
 Preloaded(content Text) Text
 	Missing.Preloaded("Compiler/output/missing") is ""
 	Missing.Preloaded("Compiler") is " --preload-file \"Compiler@/Content\""
-	Release(Logger, "Missing/App").Created("Compiler/output/EmptyApp/Content/Inner")
+	Release(Logger, "Missing/App").Created("Compiler/output/EmptyApp/Content/Inner") is not Error
 	Missing.Preloaded("Compiler/output/EmptyApp/Content") is ""
 	HasFiles(content) then " --preload-file \"" + content + "@/Content\"" else ""
 HasFiles(folder Text) Boolean

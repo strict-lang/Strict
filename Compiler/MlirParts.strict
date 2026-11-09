@@ -30,7 +30,7 @@ Part(index Number) Text
 	let declared = others + split.Others(declarations, owners, index)
 	Text.Combine((List(Text) + "module {") + declared + split.Owned(starts, owners, index) + "}", "\n")
 Changed(base Text, flags Text) Numbers
-	PtxCache("Compiler/output/Unsplit-0").Saved("", "stale")
+	PtxCache("Compiler/output/Unsplit-0").Saved("", "stale") is not Error
 	Sample.Changed("Compiler/output/Unsplit", "a").Length > 0
 	File("Compiler/output/Unsplit-0").Exists is false
 	mutable changed = List(Mutable(Number))
@@ -43,14 +43,13 @@ Changed(base Text, flags Text) Numbers
 			changed.Add(value)
 	changed
 IsCurrent(part Text, key Text) Boolean
-	PtxCache("Compiler/output/Current").Saved(".o", "compiled")
-	PtxCache("Compiler/output/Current").Saved(".owned", "a")
+	PtxCache("Compiler/output/Current").Saved((".o", ".owned"), ("compiled", "a")) is not Error
 	Sample.IsCurrent("Compiler/output/Current", "a")
 	Sample.IsCurrent("Compiler/output/Current", "b") is false
 	Sample.IsCurrent("Compiler/output/Absent", "a") is false
 	File(part + ".o").Exists and File(part + ".owned").Exists and (PtxCache(part).Read(".owned") is key)
 Written(part Text, flags Text, owned Text) Boolean
-	PtxCache("Compiler/output/Keyed").Saved(".o", "compiled")
+	PtxCache("Compiler/output/Keyed").Saved(".o", "compiled") is not Error
 	Sample.Written("Compiler/output/Keyed", "f", "") is false
 	File("Compiler/output/Keyed.o").Exists is false
 	Sample.Written("Compiler/output/Keyed", "f", "a")
