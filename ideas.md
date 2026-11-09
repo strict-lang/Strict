@@ -87,10 +87,9 @@ Large features, difficult or long work and far fetched things, kept here until s
 - bounds, reduction and tail checks remain: extend the four wide loads (`MlirBatched`) and fuse memory passes
 - an index divided by a power of two (`size / 2`) divides in 64 bits at every read: shift
 - each convolution writes bfloat16 copies of its input and weights first; stages of 64 channels or 3 buffers once shared memory allows it
-- PNG encoding takes 0.28 s for a 720x1280 image (ComfyUI 0.08)
 - Uniform branches still in GPU loops, measure their share first (none showed up in Qwen3-Coder): `tokens_blocks` switches on the row bits per block, `products_run` runs bits chains per element, `strict_device_dots` has no bfloat16 arm, prompt attention masks every tile.
 - small number types as kernel values: values, parameters and members of types with 2-4 Number members (Complex) and lists of them read by index work (StructLanes, LaneCalls, MlirDeviceRecords), still on the CPU: a `for` over a List(Complex) (a list member with `value.Bits is 32` fails the build, index it instead), a List(Complex) result, a method returning a Complex that has a loop or an early return, the 32 bit types (Vector2, Vector3, Size); a flattened list goes up again for every launch; a `to Text` reached only through text conversion is not emitted unless something calls it (why lane inlining skips `to`)
-- H3Picture.Frame takes 1.2 s for a keyframe PNG at any size (256x256 too), its VAE encode only 0.03-0.85 s: reading the PNG or fitting it, not measured apart.
+- Image files in Strict are still far from C: PNG load 860 ms for 1536x1024 (Inflate 440, unfilter 190, 4.7 MB), save 1330 ms compressed and 307 ms stored, JPEG load 200 ms for 720x1280: a native decoder (GDI+ like SaveJpeg, canvas on the web) or tighter loops.
 
 ## Model: Ternary Bonsai 27B
 `C:/code/Models/Bonsai`, 12.7-18 ms per token on the RTX 4090 (Prism's llama.cpp ~11); per token (ncu) the products take ~8.7 ms, the quantize kernels ~0.6. Left:
