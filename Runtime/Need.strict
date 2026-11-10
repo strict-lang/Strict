@@ -15,4 +15,5 @@ Parsed(words Texts) Need
 		return Need
 	let ram = (words(3) to Number, words(4) to Number)
 	let vram = (words(5) to Number, words(6) to Number)
-	Need(words(1), words(2), ram(0), ram(1), vram(0), vram(1), words(7) to Number, words(8))
+	let made = Need(job = words(1), label = words(2), minimumRam = ram(0), idealRam = ram(1))
+	Need(made, minimumVram = vram(0), idealVram = vram(1), threads = words(7) to Number, mode = words(8))

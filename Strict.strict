@@ -32,16 +32,15 @@ Run(arguments Texts) Number
 	forwarded >= 0 then forwarded else Ran(arguments).code
 Served(resident Resident) Number
 	let server = resident.Opened
-	let built = File(Process.Current.executable).Modified
-	mutable socket = server > 0 then resident.Accepted(server, built) else 0
+	if server <= 0
+		return 1
+	mutable socket = resident.Accepted(server, File(Process.Current.executable).Modified)
 	mutable answer = Answer(0, Dictionary(Text, TypeEntry))
 	for as long as socket > 0
 		let request = resident.Requested(socket)
-		let isStopping = resident.Arguments(request) is (Resident.Stopping)
-		answer = Replied(resident, request, socket, isStopping, answer)
-		socket = isStopping then 0 else resident.Accepted(server, built)
-	if server <= 0
-		return 1
+		let stopping = resident.Arguments(request) is (Resident.Stopping)
+		answer = Replied(resident, request, socket, stopping, answer)
+		socket = stopping then 0 else resident.Accepted(server, File(Process.Current.executable).Modified)
 	resident.Closed(server)
 	0
 Replied(resident Resident, request Text, socket Number, isStopping Boolean, last Answer) Answer
@@ -58,14 +57,16 @@ Answered(resident Resident, request Text, socket Number, last Answer) Answer
 	if isMoved
 		Directory.Change(folder)
 	Socket.Output(socket)
-	let answer = Ran(resident.Arguments(request), last.Fresh(folder))
-	if answer is Error
-		logger.Log(answer to Text)
+	let answer = Logged(Ran(resident.Arguments(request), last.Fresh(folder)))
 	Socket.Output(0)
 	if isMoved
 		Directory.Change(home)
 	let failed = Answer(1, last.known, last.folder, last.stamps, last.files)
 	answer is Error then failed else Answer(answer.code, answer.known, folder, answer.stamps, answer.files).Carried(last)
+Logged(answer Answer) Answer
+	if answer is Error
+		logger.Log(answer to Text)
+	answer
 Ran(arguments Texts, known = Dictionary(Text, TypeEntry)) Answer
 	let folder = Directory.Current
 	let given = Projected(Mained(arguments))
@@ -146,11 +147,10 @@ Projected(arguments Texts) Texts
 	let source = File(named + ".strict").Exists then named + ".strict" else named
 	let project = source.EndsWith(".strict") then TypeSource.Project(source) else ""
 	let full = TypeSource.Absolute(source)
-	let isMoved = project is not ""
-	if isMoved
+	if project is not ""
 		Directory.Change(project)
 	for arguments
-		index is at then (isMoved then TypeSource.Relative(full) else source) else value
+		index is at then (project is "" then source else TypeSource.Relative(full)) else value
 Joined(arguments Texts) Text
 	Strict.Joined(("a b", "c")) is " \"a b\" c"
 	mutable joined = ""

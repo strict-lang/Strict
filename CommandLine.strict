@@ -24,6 +24,8 @@ Numeric(name Text, default Number) Number
 	if text is ""
 		return default
 	let number = text to Number
+	if number is Error
+		return Error("InvalidNumber:" + Spelled(name))
 	number.IsFinite and ((number to Text) is text) then number else Error("InvalidNumber:" + Spelled(name))
 Flag(name Text, default Boolean) Boolean
 	Sample.Flag("jsonOutput", false)

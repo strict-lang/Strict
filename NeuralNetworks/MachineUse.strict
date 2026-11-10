@@ -28,17 +28,14 @@ Models(logging Logger, name Text, model Number, encoder Number, growth Number, f
 	MachineUse(logging, name, encoding > model then encoding else model, model + Gigabyte, forced)
 Weights(logging Logger, name Text, path Text) MachineUse
 	MachineUse.Weights(Logger, "Qwen3Text", "NeuralNetworks/missing.gguf").ram is 0
-	let size = Weighed(path)
-	MachineUse(logging, name, size, size is 0 then 0 else size + Gigabyte, IsForced(List(Text)))
-Weighed(path Text) Number
-	Sample.Weighed("NeuralNetworks/missing.gguf") is 0
 	let parts = path.Split("-00001-of-")
+	let single = File(path).Exists then File(path).Length else 0
 	if parts.Length < 2
-		return File(path).Exists then File(path).Length else 0
+		return MachineUse(logging, name, single, single is 0 then 0 else single + Gigabyte, IsForced(List(Text)))
 	mutable size = 0
 	for Directory.Files(Path(path).PathOnly.text, "*-of-" + parts(1))
 		size = size + File(value).Length
-	size
+	MachineUse(logging, name, size, size is 0 then 0 else size + Gigabyte, IsForced(List(Text)))
 IsForced(arguments Texts) Boolean
 	MachineUse.IsForced(("--quality", "best", Force))
 	(Force is in arguments) or (Process.Variable("STRICT_FORCE") is "1")
@@ -51,7 +48,7 @@ Needed Text
 	MachineUse(Logger, "H3Video", 4, 2).Needed.StartsWith("need\tH3Video\tH3Video\t4\t4\t2\t2\t0\t")
 	let mode = isForced then "force" else "wait"
 	"need\t" + program + "\t" + program + "\t" + ram + "\t" + ram + "\t" + vram + "\t" + vram + "\t0\t" + mode
-Admitted Number
+Admitted Slow(Number)
 	MachineUse(Logger, "H3Video", 0, 0, true).Admitted is 0
 	let reply = Coordinator(Logger).Resolved(Needed)
 	if reply.StartsWith("refused")

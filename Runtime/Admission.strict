@@ -1,7 +1,7 @@
 has logger
 constant HostShare = 2
 constant VideoShare = 4
-constant Sample = Admission(Logger)
+constant Sample = Admission(logger = Logger)
 Verdict(need Need, seen MachineView) Text
 	Sample.Verdict(Need.Tiny, MachineView.Wide) is "refused"
 	Sample.Verdict(Need.Small, MachineView.Wide) is "go"
