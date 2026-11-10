@@ -14,15 +14,18 @@ Checked(folder Text, root Text) Number
 	let shared = DroppedResults.Shared(duplicates, mutations)
 	let reached = files.Length is 0 then files else SourceFiles(root).Of(files.First, files)
 	let inference = ResolveCheck(logger).Inference(reached)
-	Counts(files, mutations, isBase, shared, duplicates, inference).Sum
+	let sure = SureMethods.Named(reached)
+	Counts(files, mutations, isBase, shared, duplicates, inference, sure).Sum
 Files(folder Text) Texts
 	ValidateCheck(Logger).Files("Validators/MagicNumbers.strict") is ("Validators/MagicNumbers.strict")
 	ValidateCheck(Logger).Files("Validators").Length > 1
 	folder.EndsWith(".strict") then List(Text) + folder else Directory.Files(folder, "*.strict")
-Counts(files Texts, mutations Texts, isBase Boolean, shared Texts, duplicates Duplicates, inference Expressions/TypeInference) Numbers
+Counts(files Texts, mutations Texts, isBase Boolean, shared Texts, duplicates Duplicates, inference Expressions/TypeInference, sure Texts) Numbers
 	for files
-		let found = CheckFile(value, mutations, isBase, shared) + duplicates.Issues(value, File(value).ReadLines)
-		Logged(value, found) + Unresolved(value, inference)
+		let lines = File(value).ReadLines
+		let typeName = Path(value).FileName.RemoveExtension.text
+		let found = CheckFile(value, mutations, isBase, shared) + duplicates.Issues(value, lines)
+		Logged(value, found + SureChecks(lines, sure, typeName, inference).Issues) + Unresolved(value, inference)
 Unresolved(path Text, inference Expressions/TypeInference) Number
 	let unresolved = ResolveCheck(logger).Unresolved(path, inference)
 	for unresolved

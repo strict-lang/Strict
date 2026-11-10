@@ -56,11 +56,13 @@ Used(node SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Used(SyntaxParser(Tokenizer("1 is 2").Tokens).Parse, CodeBlock.Empty) is Error
 	Plain.Used(SyntaxParser(Tokenizer("1 + 2").Tokens).Parse, CodeBlock.Empty) is Error
 	Counting.Used(Increment, Mutated) is Increment
-	Plain.Used(SyntaxNode("Identifier", "Run"), CodeBlock.Empty).Kind is "Identifier"
 	Plain.Used(BodyParser("Run", "\tif 1 is 2", "\t\t3").Block(1, 1).children(0), CodeBlock.Empty).Kind is "If"
+	Plain.Used(SyntaxNode("Member", "Greet", ValueCodegen.NewGreeter), CodeBlock.Empty).Kind is "Member"
 	if node.Kind is in ("If", "ElseIf", "Else", "For", "Declaration", "Reassignment", "Return")
 		return node
 	if (values.TypeOf(node, block) is in ("None", "")) or IsMutating(node, block) or IsGrowing(node, block)
+		return node
+	if ErrorCodegen(values).MayFail(node, block)
 		return node
 	Error("ResultMustBeUsed: " + (node to Text) + " in " + values.target.fullName + ".strict:line " + node.line + Unused)
 IsGrowing(node SyntaxNode, block CodeBlock) Boolean

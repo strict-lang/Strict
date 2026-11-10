@@ -10,6 +10,11 @@ Next Number
 	low = LowMultiplier * (low % HalfRange) + (low / HalfRange).Floor
 	high = HighMultiplier * (high % HalfRange) + (high / HalfRange).Floor
 	(high * HalfRange + low) % HashCode.UnsignedRange
+Forked PseudoRandom
+	PseudoRandom(1).Forked.Next is not PseudoRandom(1).Next
+	mutable copy = value
+	copy.Next
+	copy
 Get(minimum Number, maximum Number) Number
 	PseudoRandom(1).Get(0, 10).Floor is 6
 	PseudoRandom(1).Get(5, 5) is 5

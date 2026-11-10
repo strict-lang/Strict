@@ -1,0 +1,44 @@
+has lines Texts
+has sure Texts
+has typeName = "Sample"
+has inference Expressions/TypeInference = TypeInference.NoInference
+constant Random = Scope(("random"), ("PseudoRandom"))
+constant NextCheck = BodyParser("Run", "\tif random.Next is Error").Block(1, 1).children(0)
+constant PlainCall = SyntaxParser(Tokenizer("Get(1) is Error").Tokens).Parse
+constant Checked = SureChecks(("has random PseudoRandom", "Run", "	if random.Next is Error", "		0"), ("PseudoRandom.Next"))
+constant Kept = SureChecks(("Run", "	Get(1) is Error(\"Bad\")"), ("PseudoRandom.Next"))
+Issues List(ValidationIssue)
+	Checked.Issues.Length is 1
+	Checked.Issues.First to Text is "ErrorCheckCannotFail: PseudoRandom.Next never returns Error"
+	Kept.Issues.Length is 0
+	let bodies = MethodBodies(typeName, TypeShape(lines), inference)
+	mutable found = List(Mutable(ValidationIssue))
+	for bodies.Statements
+		let key = Key(value.statement, value.scope)
+		if (Duplicates.IsTest(lines(value.line).Trim) is false) and (key is in sure)
+			found = found + ValidationIssue("ErrorCheckCannotFail", key + " never returns Error", value.line + 1)
+	found
+Key(node SyntaxNode, scope Scope) Text
+	SureChecks.Key(NextCheck, Random) is "PseudoRandom.Next"
+	SureChecks.Key(PlainCall, Random) is ""
+	let side = Compared(node)
+	if (side.Kind is not "Binary") or (side.text is not "is") or (IsReported(side.children(1)) is false)
+		return ""
+	let call = side.children(0)
+	if call.Kind is not in ("Member", "MethodCall")
+		return ""
+	TypeInference.NoInference.TypeOf(call.children(0), scope, scope) + "." + call.text
+Compared(node SyntaxNode) SyntaxNode
+	SureChecks.Compared(NextCheck).text is "is"
+	SureChecks.Compared(PlainCall).text is "is"
+	if node.Kind is in ("If", "ElseIf")
+		return Compared(node.children(0))
+	if (node.Kind is "Binary") and (node.text is in ("and", "or"))
+		let right = Compared(node.children(1))
+		return right.text is "is" then right else Compared(node.children(0))
+	node
+IsReported(node SyntaxNode) Boolean
+	SureChecks.IsReported(SyntaxNode("Identifier", "Error"))
+	SureChecks.IsReported(SyntaxNode("Call", "Error"))
+	SureChecks.IsReported(SyntaxNode("Number", "1")) is false
+	((node.Kind is "Identifier") or (node.Kind is "Call")) and (node.text is "Error")
