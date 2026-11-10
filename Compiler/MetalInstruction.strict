@@ -110,7 +110,8 @@ Operand(at Number, type Text) Text
 	MetalInstruction("%17 = getelementptr half, ptr %3, i64 %13", true).Type is "ptr"
 	MetalInstruction("%4 = select i1 %1, float %2, float %3", true).Type is "float"
 	MetalInstruction("%5 = call fastcc float @f(float %4)", true).Type is "float"
-	MetalValue(Arguments(at)).Operand(type)
+	let arguments = Arguments
+	MetalValue(arguments(at)).Operand(type)
 Binary(symbol Number) Text
 	Adding.Binary(0) is "(int)(v11 + v8)"
 	MetalInstruction("%5 = udiv i32 %3, %4", true).Binary(14) is "(int)((uint)v3 / (uint)v4)"

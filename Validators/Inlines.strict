@@ -39,13 +39,17 @@ IsInlinable(at Number) Boolean
 	let length = Line(at + 1).Length + inlined.Length - name.Length
 	let fits = length + (inlined.Count(" ") > 0 then 2 else 0) <= Limits.MaxCharacters
 	let isOnce = (Uses(next, name) is 1) and (IsUsedLater(name, at + 2) is false)
-	fits and isOnce and (IsReordered(inlined, next, name) is false) and (IsRebound(inlined, next) is false)
-IsRebound(inlined Text, next Texts) Boolean
+	fits and isOnce and (IsReordered(inlined, next, name) is false) and (IsRebound(inlined, next, name) is false)
+IsRebound(inlined Text, next Texts, name Text) Boolean
 	Inlines(("Run", "\tfor 2", "\t\tlet chunk = value", "\t\tfor chunk", "\t\t\t1")).IsInlinable(2) is false
-	Evicted.IsRebound("value.numbers", ("for", "found")) and Evicted.IsRebound("index + 1", ("for", "found"))
-	(Evicted.IsRebound("value", ("Log", "found")) is false) and (Evicted.IsRebound("count", ("for", "x")) is false)
+	Evicted.IsRebound("value.numbers", ("for", "x"), "x") and Evicted.IsRebound("index + 1", ("for", "x"), "x")
+	(Evicted.IsRebound("value", ("Log", "x"), "x") is false) and (Evicted.IsRebound("count", ("for", "x"), "x") is false)
+	Evicted.IsRebound("Account", ("for", "account", "(", "list", ")"), "account")
+	Evicted.IsRebound("a", ("Log", "(", "found", ")"), "found") is false
 	let tokens = Tokenizer(inlined).Tokens
-	(next.First is "for") and (Uses(tokens, "value") + Uses(tokens, "index") > 0)
+	let after = next.Index(name) + 1
+	let isIndexed = after < next.Length then next(after) is "(" else false
+	isIndexed or ((next.First is "for") and (Uses(tokens, "value") + Uses(tokens, "index") > 0))
 Value(line Text) Text
 	Inlines(("Run", "\tx", "\tx")).IsInlinable(1) is false
 	Evicted.Value("\tlet evicted = GpuMemory.Evicted") is "GpuMemory.Evicted"
@@ -93,7 +97,7 @@ ReturnIssues(at Number) ValidationIssues
 	Inlines(("Run", "\tif done", "\t\treturn 1", "\tlet x = 2")).ReturnIssues(1).Length is 0
 	Inlines(("Run", "\tif done", "\t\treturn 1")).ReturnIssues(1).Length is 0
 	let merged = Merged(at)
-	if (merged is "") or (merged.Length + 1 > Limits.MaxCharacters)
+	if (merged is "") or (merged.Length + (Line(at + 1).IndexOf(" then ") is -1 then 1 else 3) > Limits.MaxCharacters)
 		return List(ValidationIssue)
 	if IsNarrowed(at) or (Header(at).IndexOf(" or ") is not -1)
 		return List(ValidationIssue)
@@ -110,6 +114,8 @@ IsNarrowed(at Number) Boolean
 	isChecked then Line(at + 1).Replace("(", " ").IndexOf(" " + condition(1) + ".") is not -1 else false
 Header(at Number) Text
 	(Returned.Header(2) is "A Text") and (Returned.Header(4) is "Run")
+	Inlines(("R", "\tif done", "\t\treturn a then 1 else 2", "\t" + Padding.Substring(0, 86))).ReturnIssues(1).Length is 1
+	Inlines(("R", "\tif done", "\t\treturn a then 1 else 2", "\t" + Padding.Substring(0, 87))).ReturnIssues(1).Length is 0
 	Inlines(("Mixed Boolean or Text", "\tif done", "\t\treturn true", "\t\"no\"")).ReturnIssues(1).Length is 0
 	for Range(0, at + 1).Reverse
 		if lines(value).StartsWith("\t") is false
