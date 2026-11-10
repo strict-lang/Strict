@@ -21,7 +21,7 @@ Finished(arguments List(VmValue)) List(VmValue)
 	mutable position = 0
 	for machine.deadline > 0 then MutationCache.Steps else Invocation.MaxSteps
 		if (position >= method.instructions.Length) or (MutationCache.Stopped(machine.deadline, index) is not "")
-			return position >= method.instructions.Length then slots else MutationCache.Exhausted(slots, machine.deadline)
+			return position >= method.instructions.Length then Ended(slots) else MutationCache.Exhausted(slots, machine.deadline)
 		let entry = method.instructions(position)
 		slots(entry.Target) = Value(entry, position, slots)
 		if (entry.kind is InstructionType.Invoke) and (slots(entry.Target).kind is "Changing")
@@ -29,6 +29,10 @@ Finished(arguments List(VmValue)) List(VmValue)
 				slots(entry.Target + index) = value
 		position = entry.kind < InstructionType.Return then position + 1 else Next(entry, position, slots)
 	MutationCache.Exhausted(slots)
+Ended(slots List(VmValue)) List(VmValue)
+	Twice.Ended(Listed)(0).text is "ab"
+	Frame(Machine(Doubling, deadline = 0.001), Twice.method, "D").Ended(Listed)(ResultSlot).items.First.text is "Timeout"
+	MutationCache.Stopped(machine.deadline) is "" then slots else MutationCache.Exhausted(slots, machine.deadline)
 Value(entry InstructionEntry, position Number, slots List(VmValue)) VmValue
 	Twice.Value(InstructionEntry(InstructionType.LoadVariableToRegister, "a", (6, 8)), 0, Listed).number is 5
 	Twice.Value(InstructionEntry.Binary(InstructionType.LessThan, (6, 8)), 0, Listed).IsTrue

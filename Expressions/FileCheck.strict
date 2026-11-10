@@ -55,9 +55,10 @@ UnknownMethods(node SyntaxNode, scope Scope, current Scope) Texts
 	let issue = hidden is "" then typed else hidden
 	if issue is not ""
 		unknown = unknown + issue
+	let narrowed = node.text is "then" then ErrorNarrowing(inference).Narrowed(node.children(0), scope, current) else scope
 	for node.children
 		if value.Kind is not "Body"
-			unknown = unknown + UnknownMethods(value, scope, current)
+			unknown = unknown + UnknownMethods(value, narrowed, current)
 	unknown
 CallIssue(call SyntaxNode, scope Scope, current Scope) Text
 	Counting.CallIssue(MissingCall.statement, Counted, KnownTypes.NoMembers) is "MethodNotFound: Count.Missing"
@@ -186,3 +187,9 @@ Problem(lines Texts, broken Number) Text
 		if lines(value).StartsWith("	") is false
 			header = value
 	"EmptyLineInsideMethod: " + Tokenizer(lines(header)).Tokens.First
+Parsed(code Text) SyntaxNode
+	Counting.UnknownMethods(Parsed("count is Error then count.Missing else 1"), Counted, KnownTypes.NoMembers).Length is 0
+	Counting.UnknownMethods(Parsed("count is Error then 1 else count.Missing"), Counted, KnownTypes.NoMembers).Length is 1
+	Counting.UnknownMethods(Parsed("count is Error or count.Missing"), Counted, KnownTypes.NoMembers).Length is 1
+	Counting.Parsed("1").Kind is "Number"
+	SyntaxParser(Tokenizer(code).Tokens).Parse

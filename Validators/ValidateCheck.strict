@@ -35,7 +35,7 @@ CheckFile(path Text, mutations Texts, isBase Boolean, shared Texts) List(Validat
 	let limits = Limits(lines, isBase, Limits.Scale(path)).Issues + SubstringLengths(lines).Issues
 	let rules = TypeValidator(TypeShape(lines), mutations, typeName).Validate + limits
 	let names = Names(lines).Issues + Recursions(lines, typeName).Issues + Inlines(lines).Issues
-	let shaped = names + TestChecks(lines).Issues + Writes(lines, typeName).Issues
+	let shaped = names + TestChecks(lines).Issues + Writes(lines, typeName).Issues + StatusCodes(lines).Issues
 	rules + shaped + (DroppedResults(lines, shared).Issues + LoopBodies(lines).Issues + MagicNumbers(lines).Issues)
 Logged(path Text, found List(ValidationIssue)) Number
 	for found

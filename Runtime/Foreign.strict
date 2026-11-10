@@ -116,9 +116,7 @@ Hosted VmValue
 	if name is not in ("Call", "TextSlot", "NumbersSlot")
 		return Copied(library, name, call.Arguments.First.number)
 	let result = Raw(library, name)
-	if result is Error
-		return VmValue.OfError(result.Name.text)
-	VmValue.OfNumber(result)
+	result is Error then VmValue.OfError(result.Name.text) else VmValue.OfNumber(result)
 Raw(library Library, name Text) Number
 	Calling.Raw(Library("missing.dll"), "Call") is Error
 	let argument = call.Arguments.First

@@ -36,8 +36,16 @@ Kept(lines Texts, header Number) Boolean
 	SureMethods.Kept(("Next Number", "\tlow + 1"), 0)
 	SureMethods.Kept(("Send(socket Number)", "\tSend(0) is 1"), 0) is false
 	SureMethods.Kept(("Parsed Number", "\tname to Number"), 0) is false
+	SureMethods.Kept(("Added(other Numbers) Numbers", "\t(1) + (\"Hi\") is Error", "\tother"), 0) is false
 	let body = Duplicates.Implementation(lines, header)
-	(Fails(body) is false) and HasBody(body)
+	(Fails(body) is false) and HasBody(body) and (IsTestedFailing(lines, header) is false)
+IsTestedFailing(lines Texts, header Number) Boolean
+	SureMethods.IsTestedFailing(("A Number", "\tA is Error", "\t1", "B", "\tB is Error"), 0)
+	SureMethods.IsTestedFailing(("A Number", "\tA is not Error", "\t1", "B", "\tB is Error"), 0) is false
+	for Range(header + 1, FileCheck.LastLine(lines, header) + 1)
+		if lines(value).IndexOf(" is Error") is not -1
+			return true
+	false
 Fails(body Text) Boolean
 	SureMethods.Fails("return Error(\"Bad\")")
 	SureMethods.Fails("value to Number")
@@ -56,11 +64,26 @@ Direct(type Text, node SyntaxNode, scope Scope) Texts
 	SureMethods.Direct("Demo", SyntaxNode("Text", "+"), Numbered).Length is 0
 	SureMethods.Direct("Demo", Ranged, Numbered).Length is 0
 	Limited.Direct("Count", SyntaxNode("Identifier", "Increment"), Numbered) is ("Count.Increment")
+	Limited.Direct("Count", Parsed("low % Limit"), Numbered).Length is 0
+	if IsSafeDivision(type, node)
+		return List(Text)
 	if (node.Kind is in ("Member", "MethodCall")) or ((node.Kind is "Binary") and (node.text is in Operators))
 		return Keyed(node.children(0), node.text, scope, inference.types.MethodsOf(type))
 	if (node.Kind is "Call") and (scope.TypeOf(node.text) is not "")
 		return List(Text) + "Index"
 	IsOwn(type, node, scope) then List(Text) + (type + "." + node.text) else List(Text)
+IsSafeDivision(type Text, node SyntaxNode) Boolean
+	Limited.IsSafeDivision("Count", Parsed("low % Limit")) and Limited.IsSafeDivision("Count", Parsed("low / 2"))
+	Limited.IsSafeDivision("Other", Parsed("low % Count.Limit"))
+	Limited.IsSafeDivision("Count", Parsed("low / 0")) is false
+	Limited.IsSafeDivision("Count", Parsed("low % high")) is false
+	Limited.IsSafeDivision("Count", Parsed("low % Increment")) is false
+	(Limited.IsSafeDivision("A", Parsed("low + 2")) or Limited.IsSafeDivision("A", SyntaxNode("Text", "/"))) is false
+	if (node.Kind is not "Binary") or (node.text is not in ("/", "%"))
+		return false
+	let divisor = node.children(1)
+	let owner = divisor.Kind is "Member" then divisor.children(0).text else type
+	divisor.Kind is "Number" then divisor.text is not "0" else inference.ConstantOf(owner, divisor.text) is not ""
 IsOwn(type Text, node SyntaxNode, scope Scope) Boolean
 	Limited.IsOwn("Count", SyntaxNode("Identifier", "Increment"), Numbered)
 	Limited.IsOwn("Count", SyntaxNode("Identifier", "Increment"), Scope(("Increment"), ("Number"))) is false

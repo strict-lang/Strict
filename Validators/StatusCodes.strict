@@ -1,0 +1,124 @@
+has lines Texts
+constant Stopping = StatusCodes(("StopAll Number", "\tEmpty.Stopped(1) is 0", "\tStopped(1)", "\t0"))
+constant Counting = StatusCodes(("Count(list Numbers) Number", "\tif list.Length is 0", "\t\treturn 0", "\tlist.Length"))
+constant Freeing = StatusCodes(("Freed Number", "\tlet told = Sent", "\tReleased(2)", "\ttold is Error then 2 else -1"))
+constant Yielding = StatusCodes(("Numbers Numbers", "\tfor 3", "\t\tLog(value)"))
+constant Waiting = StatusCodes(("Wait Number", "\tfor as long as true", "\t\tLog(1)", "\t0"))
+constant Comparisons = ("is", "<", ">", "<=", ">=", "and", "or", "not", "=")
+constant Hint = ", return nothing, a Boolean, an Error or an enum instead of a status number"
+Issues ValidationIssues
+	Stopping.Issues.First to Text is "StatusNumberMustNotBeReturned: StopAll returns 0" + Hint
+	(Stopping.Issues.First.Line is 4) and (Counting.Issues.Length is 0) and (Freeing.Issues.Length is 2)
+	(StatusCodes(("Run Number", "\tLog(1)", "\t0")).Issues.Length is 0) and (Waiting.Issues.Length is 1)
+	mutable issues = List(Mutable(ValidationIssue))
+	for lines
+		if IsStatus(index)
+			issues = issues + Returned(index)
+	issues
+IsStatus(at Number) Boolean
+	Stopping.IsStatus(0) and (Counting.IsStatus(0) is false) and (Stopping.IsStatus(2) is false)
+	StatusCodes(("Run Number", "\tLog(1)", "\t0")).IsStatus(0) is false
+	StatusCodes(("Stop Text", "\tLog(1)", "\t\"\"")).IsStatus(0) is false
+	StatusCodes(("A", "\tB Number", "\tLog(1)", "\t0")).IsStatus(1) is false
+	if TypeShape(lines).IsMethodHeader(lines(at)) is false
+		return false
+	let tokens = Tokenizer(lines(at).Trim).Tokens
+	(tokens.First is not "Run") and (HeaderTokens(tokens).ReturnType is "Number") and IsWriting(at)
+End(at Number) Number
+	(Stopping.End(0) is 4) and (StatusCodes(("A", "\t1", "B", "\t2")).End(0) is 2)
+	for Range(at + 1, lines.Length)
+		if lines(value).StartsWith("\t") is false
+			return value
+	lines.Length
+IsWriting(at Number) Boolean
+	Stopping.IsWriting(0) and (Counting.IsWriting(0) is false)
+	StatusCodes(("A Number", "\tLog(1)")).IsWriting(0) is false
+	StatusCodes(List(Text) + "A Number").IsWriting(0) is false
+	StatusCodes(("A Number", "\tLog(1)", "\t0")).IsWriting(0)
+	for Range(at + 1, End(at))
+		if (value < End(at) - 1) and IsStatement(value)
+			return true
+	false
+IsStatement(at Number) Boolean
+	Stopping.IsStatement(2) and (Stopping.IsStatement(1) is false) and (Counting.IsStatement(1) is false)
+	(Yielding.IsStatement(2) is false) and Waiting.IsStatement(2) and Freeing.IsStatement(2)
+	(Freeing.IsStatement(1) is false) and (StatusCodes(("A", "\tx = Log(1)")).IsStatement(1) is false)
+	StatusCodes(("A", "\tx.Log")).IsStatement(1) and (StatusCodes(("A", "\tx")).IsStatement(1) is false)
+	StatusCodes(("A", "\treturn Log(1)")).IsStatement(1) is false
+	StatusCodes(("A Number", "", "\t0")).IsStatement(1) is false
+	let tokens = Tokenizer(lines(at).Trim).Tokens
+	let isCall = ("(" is in tokens) or ("." is in tokens)
+	isCall and (tokens.First is not in Inlines.Keywords) and (IsComparing(tokens) is false) and (IsYielded(at) is false)
+IsComparing(tokens Texts) Boolean
+	Stopping.IsComparing(("a", "is", "1")) and (Stopping.IsComparing(("Log", "(", "a", "is", "1", ")")) is false)
+	Stopping.IsComparing(("Log", "(", "a", ")", "=", "1"))
+	Stopping.IsComparing(("Sinc", "(", "1", ")", ".", "IsNearlyEqual", "(", "1", ")"))
+	mutable depth = 0
+	for tokens
+		depth = value is "(" then depth + 1 else value is ")" then depth - 1 else depth
+		if (depth is 0) and (value is in Comparisons)
+			return true
+	IsChecking(tokens)
+IsChecking(tokens Texts) Boolean
+	Stopping.IsChecking(("a", ".", "EndsWith", "(", "b", ")")) and Stopping.IsChecking(("File", ".", "Exists"))
+	(Stopping.IsChecking(("Log", "(", "IsDone", ")")) is false) and (Stopping.IsChecking(("Issued", "(", ")")) is false)
+	Stopping.IsChecking(("x", ".", "HasA")) and (Stopping.IsChecking(("Is", "(", ")")) is false)
+	Stopping.IsChecking(("x", ".", "LogA")) is false
+	mutable depth = 0
+	mutable name = ""
+	for tokens
+		depth = value is "(" then depth + 1 else value is ")" then depth - 1 else depth
+		name = (depth is 0) and (value(0).Lower is not value(0)) then value else name
+	let prefix = name.StartsWith("Is") then 2 else name.StartsWith("Has") then 3 else 0
+	let isBoolean = ((prefix > 0) and (name.Length > prefix)) then name(prefix).Lower is not name(prefix) else false
+	isBoolean or name.EndsWith("With") or (name is "Exists")
+IsYielded(at Number) Boolean
+	Yielding.IsYielded(2) and (Stopping.IsYielded(2) is false) and (Waiting.IsYielded(2) is false)
+	StatusCodes(("A", "\tfor 3", "\t\tif value is 1", "\t\t\tLog(value)")).IsYielded(3)
+	StatusCodes(("A", "\tfor 3", "\t\t1", "\tif x", "\t\tLog(1)")).IsYielded(4) is false
+	mutable indent = Inlines(lines).Indent(lines(at))
+	for Range(0, at).Reverse
+		let trimmed = lines(value).Trim
+		if Inlines(lines).Indent(lines(value)) < indent
+			if trimmed.StartsWith("for ") and (trimmed.StartsWith("for as long as ") is false)
+				return true
+			indent = Inlines(lines).Indent(lines(value))
+	false
+Returned(at Number) ValidationIssues
+	(Stopping.Returned(0).Length is 1) and (Counting.Returned(0).First.Line is 3)
+	(Freeing.Returned(0).Length is 2) and (Freeing.Returned(0).First.Line is 4)
+	StatusCodes(("A Number", "\tfor 2", "\t\t0")).Returned(0).Length is 0
+	StatusCodes(("A Number", "\t0", "\tLog(1)", "\t2")).Returned(0).Length is 1
+	mutable issues = List(Mutable(ValidationIssue))
+	let name = Tokenizer(lines(at)).Tokens.First
+	for Range(at + 1, End(at))
+		let trimmed = lines(value).Trim
+		let isLast = (value is End(at) - 1) and (Inlines(lines).Indent(lines(value)) is 1)
+		let returned = trimmed.StartsWith("return ") then trimmed.Substring(7, trimmed.Length - 7) else ""
+		issues = issues + Issued(name, Literals(isLast then trimmed else returned), value + 1)
+	issues
+Issued(name Text, literals Texts, line Number) ValidationIssues
+	Stopping.Issued("A", ("0", "1"), 2).Last to Text is "StatusNumberMustNotBeReturned: A returns 1" + Hint
+	Stopping.Issued("A", List(Text), 2).Length is 0
+	for literals
+		ValidationIssue("StatusNumberMustNotBeReturned", name + " returns " + value + Hint, line)
+Literals(result Text) Texts
+	(Stopping.Literals("0") is ("0")) and (Stopping.Literals("a then 2 else -1") is ("2", "-1"))
+	(Stopping.Literals("a then b else Count(1)").Length is 0) and (Stopping.Literals("1 + x").Length is 0)
+	(Stopping.Literals("").Length is 0) and (Stopping.Literals("0.5").Length is 0)
+	for result.Split(" else ")
+		let at = value.LastIndexOf(" then ")
+		let part = at < 0 then value else value.Substring(at + 6, value.Length - at - 6)
+		if IsInteger(part)
+			part
+IsInteger(text Text) Boolean
+	Stopping.IsInteger("12") and Stopping.IsInteger("-1")
+	(Stopping.IsInteger("x") is false) and (Stopping.IsInteger("1.5") is false) and (Stopping.IsInteger("") is false)
+	Stopping.IsInteger("-") is false
+	let digits = text.StartsWith("-") then text.Substring(1, text.Length - 1) else text
+	if digits is ""
+		return false
+	for Range(0, digits.Length)
+		if Tokenizer.IsDigit(digits(value)) is false
+			return false
+	true

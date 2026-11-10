@@ -3,6 +3,7 @@ constant Evicted = Inlines(("A Text", "\tlet evicted = GpuMemory.Evicted", "\tev
 constant Returned = Inlines(("A Text", "\tif GpuMemory.Evicted is Error", "\t\treturn \"\"", "\tanswer", "Run"))
 constant Ordered = Inlines(("A Text", "\tlet answer = Run(1)", "\tGpuMemory.Evicted is Error then \"\" else answer"))
 constant Padding = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+constant Nested = "\t\treturn a then 1 else 2"
 constant Keywords = ("let", "mutable", "for", "if", "else", "return")
 Issues ValidationIssues
 	Evicted.Issues.First to Text is "SingleUseLetMustBeInlined: evicted, use GpuMemory.Evicted in the next line"
@@ -93,41 +94,37 @@ IsReordered(inlined Text, next Texts, name Text) Boolean
 	false
 ReturnIssues(at Number) ValidationIssues
 	(Returned.ReturnIssues(1).Length is 1) and (Returned.ReturnIssues(2).Length is 0)
-	Inlines(("Run", "\tif done", "\t\treturn 123", "\t" + Padding)).ReturnIssues(1).Length is 1
-	Inlines(("Run", "\tif done", "\t\treturn 1234", "\t" + Padding)).ReturnIssues(1).Length is 0
-	Inlines(("Run", "\tif done", "\t\treturn 1", "Other")).ReturnIssues(1).Length is 0
-	Inlines(("Run", "\tif done", "\t\treturn 1", "\tlet x = 2")).ReturnIssues(1).Length is 0
-	Inlines(("Run", "\tif done", "\t\treturn 1")).ReturnIssues(1).Length is 0
+	Inlines(("R Number", "\tif done", "\t\treturn 123", "\t" + Padding)).ReturnIssues(1).Length is 1
+	Inlines(("R Number", "\tif done", "\t\treturn 1234", "\t" + Padding)).ReturnIssues(1).Length is 0
+	Inlines(("R Number", "\tif done", "\t\treturn 1", "Other")).ReturnIssues(1).Length is 0
+	Inlines(("R Number", "\tif done", "\t\treturn 1", "\tlet x = 2")).ReturnIssues(1).Length is 0
+	Inlines(("R Number", "\tif done", "\t\treturn 1")).ReturnIssues(1).Length is 0
 	let merged = Merged(at)
 	if (merged is "") or (merged.Length + (Line(at + 1).IndexOf(" then ") is -1 then 1 else 3) > Limits.MaxCharacters)
 		return List(ValidationIssue)
-	if IsNarrowed(at) or (Header(at).IndexOf(" or ") is not -1)
+	if HasOneResult(at) is false
 		return List(ValidationIssue)
 	List(ValidationIssue) + ValidationIssue("IfReturnMustBeThenElse", merged, at + 1)
-IsNarrowed(at Number) Boolean
-	Inlines(("Run", "\tif result is Error", "\t\treturn Wrapped(result.Name)", "\t1")).ReturnIssues(1).Length is 0
-	Inlines(("Run", "\tif result is Error", "\t\treturn result", "\t1")).IsNarrowed(1) is false
-	Inlines(("Run", "\tif result is Error", "\t\treturn result.Name", "\t1")).IsNarrowed(1)
-	Inlines(("Run", "\tif result is Error", "\t\treturn myresult.Name", "\t1")).IsNarrowed(1) is false
-	Inlines(("Run", "\tif result is 1", "\t\treturn result.Name", "\t1")).IsNarrowed(1) is false
-	Inlines(("Run", "\tif x.Y is Error", "\t\treturn x.Z", "\t1")).IsNarrowed(1) is false
-	let condition = Tokenizer(lines(at).Trim).Tokens
-	let isChecked = condition.Length is 4 then condition(3) is "Error" else false
-	isChecked then Line(at + 1).Replace("(", " ").IndexOf(" " + condition(1) + ".") is not -1 else false
+HasOneResult(at Number) Boolean
+	Inlines(("R Number", "\tif result is Error", "\t\treturn Wrapped(result.Name)", "\t1")).ReturnIssues(1).Length is 1
+	Returned.HasOneResult(1) and (Inlines(("Log(text Text)", "\tx")).HasOneResult(1) is false)
+	let header = Header(at)
+	(header.IndexOf(" or ") is -1) and (HeaderTokens(Tokenizer(header).Tokens).ReturnType is not "None")
 Header(at Number) Text
 	(Returned.Header(2) is "A Text") and (Returned.Header(4) is "Run")
-	Inlines(("R", "\tif done", "\t\treturn a then 1 else 2", "\t" + Padding.Substring(0, 86))).ReturnIssues(1).Length is 1
-	Inlines(("R", "\tif done", "\t\treturn a then 1 else 2", "\t" + Padding.Substring(0, 87))).ReturnIssues(1).Length is 0
+	Inlines(("R Number", "\tif done", Nested, "\t" + Padding.Substring(0, 86))).ReturnIssues(1).Length is 1
+	Inlines(("R Number", "\tif done", Nested, "\t" + Padding.Substring(0, 87))).ReturnIssues(1).Length is 0
 	Inlines(("Mixed Boolean or Text", "\tif done", "\t\treturn true", "\t\"no\"")).ReturnIssues(1).Length is 0
+	Inlines(("Log(text Text)", "\tif done", "\t\treturn Error(text)", "\tlogger.Log(text)")).ReturnIssues(1).Length is 0
 	for Range(0, at + 1).Reverse
 		if lines(value).StartsWith("\t") is false
 			return lines(value)
 	""
 Merged(at Number) Text
 	Returned.Merged(1) is "GpuMemory.Evicted is Error then \"\" else answer"
-	Inlines(("Run", "\tif done", "\t\treturn 1", "\t1", "\t2")).Merged(1) is ""
+	Inlines(("R Number", "\tif done", "\t\treturn 1", "\t1", "\t2")).Merged(1) is ""
 	Inlines(("Run", "\tfor done", "\t\treturn 1", "\t1")).Merged(1) is ""
-	Inlines(("Run", "\tif done", "\t\tLog(1)", "\t1")).Merged(1) is ""
+	Inlines(("R Number", "\tif done", "\t\tLog(1)", "\t1")).Merged(1) is ""
 	let returned = Line(at + 1).Trim
 	let last = Line(at + 2)
 	let isValue = (Indent(last) is 1) and (Tokenizer(last.Trim).Tokens.First is not in Keywords)

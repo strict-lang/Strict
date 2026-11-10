@@ -696,6 +696,7 @@
     %failed = arith.ori %late, %unseen : i1
     cf.cond_br %failed, ^failed, ^shifted
   ^failed:
+    llvm.store %one, %stateSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     %placeSlot = llvm.getelementptr %deadlineSlot[2] : (!llvm.ptr) -> !llvm.ptr, i64
     %place = llvm.load %placeSlot : !llvm.ptr -> i64
     %unavailable = arith.constant false

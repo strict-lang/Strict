@@ -61,6 +61,7 @@ IsMutating(node SyntaxNode, block CodeBlock) Boolean
 Used(node SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Used(SyntaxParser(Tokenizer("1 is 2").Tokens).Parse, CodeBlock.Empty) is Error
 	Plain.Used(SyntaxParser(Tokenizer("1 + 2").Tokens).Parse, CodeBlock.Empty) is Error
+	Plain.Used(ValueCodegen.One, Mutated) is Error("ResultMustBeUsed: 1 in Examples/Greeter.strict:line 0" + Unused)
 	(Counting.Used(Increment, Mutated) is Increment) and (Plain.Used(Growing, Mutated).Kind is "Member")
 	Ticked.Used(SyntaxNode("Member", "Next", Increment.children), Ticker).Kind is "Member"
 	Plain.Used(SyntaxNode("Identifier", "a"), CodeBlock.Empty.Declare("a", "None")).Kind is "Identifier"
@@ -68,7 +69,8 @@ Used(node SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Used(SyntaxNode("Member", "Greet", ValueCodegen.NewGreeter), CodeBlock.Empty) is Error
 	if (node.Kind is in Statements) or (values.TypeOf(node, block) is in ("None", "")) or IsChanging(node, block)
 		return node
-	Error("ResultMustBeUsed: " + (node to Text) + " in " + values.target.fullName + ".strict:line " + node.line + Unused)
+	let file = TypeEntry(values.target.fullName, List(MemberEntry), List(MethodEntry)).Source
+	Error("ResultMustBeUsed: " + (node to Text) + " in " + file + ":line " + node.line + Unused)
 IsChanging(node SyntaxNode, block CodeBlock) Boolean
 	Ticked.IsChanging(SyntaxNode("Member", "Next", Increment.children), Ticker)
 	Ticked.IsChanging(SyntaxNode("Member", "Size", Increment.children), Ticker) is false

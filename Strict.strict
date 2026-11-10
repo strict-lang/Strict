@@ -17,6 +17,9 @@ constant SourceHelp = ("strict check <folder>      validate the .strict files: t
 constant MaintenanceHelp = ("strict update <folder>     refresh the packages copied into the folder (.origin) from their clone or GitHub", "strict version             show the version number and when this strict executable was built")
 constant SuggestHelp = List(Text) + "strict suggest <file> <method>  print bodies passing its tests; add - to read unsaved source"
 constant Help = RunHelp + BuildHelp + PlatformHelp + AppHelp + BuildModeHelp + TestHelp + TestInputHelp + LinesHelp + ValuesHelp + FullHelp + SourceHelp + MaintenanceHelp + SuggestHelp
+constant FirstTraceLines = 3
+constant LastTraceLines = 3
+constant LongTrace = "Error: A\n\t1\n\t2\n\t3\n\t4\n\t5\n\t6\n\tat Strict.Logged in Strict.strict:line 66"
 Run(arguments Texts) Number
 	let resident = Resident(Path(Process.Current.executable).PathOnly.text)
 	if (arguments.Length > 0) and (arguments(0) is "serve")
@@ -29,7 +32,7 @@ Run(arguments Texts) Number
 	if (arguments.Length > 0) and (arguments(0) is "status")
 		return Coordinator(logger).Reported
 	let forwarded = Forwarding(logger, resident.root).Forwarded(arguments)
-	forwarded >= 0 then forwarded else Ran(arguments).code
+	forwarded >= 0 then forwarded else Logged(arguments).code
 Served(resident Resident) Number
 	let server = resident.Opened
 	let built = File(Process.Current.executable).Modified
@@ -60,13 +63,22 @@ Answered(resident Resident, request Text, socket Number, last Answer) Answer
 	Socket.Output(0)
 	if isMoved
 		Directory.Change(home)
-	let failed = Answer(1, last.known, last.folder, last.stamps, last.files)
-	answer is Error then failed else Answer(answer.code, answer.known, folder, answer.stamps, answer.files).Carried(last)
-Logged(arguments Texts, known Dictionary(Text, TypeEntry)) Answer
+	Answer(answer.code, answer.known, folder, answer.stamps, answer.files).Carried(last)
+Logged(arguments Texts, known = Dictionary(Text, TypeEntry)) Answer
 	let answer = Ran(arguments, known)
 	if answer is Error
-		logger.Log(answer to Text)
+		logger.Log(Shortened(answer to Text))
+		return Answer(1, known)
 	answer
+Shortened(trace Text) Text
+	Strict.Shortened("Error: A\n\t1") is "Error: A\n\t1"
+	Strict.Shortened(LongTrace) is "Error: A\n\t1\n\t2\n\t... (skipped 1 lines)\n\t4\n\t5\n\t6"
+	let logged = trace.LastIndexOf("\n\tat Strict.Logged ")
+	let lines = (logged < 0 then trace else trace.Substring(0, logged)).Split("\n")
+	if lines.Length <= FirstTraceLines + LastTraceLines
+		return Text.Combine(lines, "\n")
+	let gap = "\t... (skipped " + (lines.Length - FirstTraceLines - LastTraceLines) + " lines)"
+	Text.Combine(lines.Slice(0, FirstTraceLines) + gap + lines.Slice(lines.Length - LastTraceLines, LastTraceLines), "\n")
 Ran(arguments Texts, known = Dictionary(Text, TypeEntry)) Answer
 	let folder = Directory.Current
 	let given = Projected(Mained(arguments))
@@ -77,11 +89,9 @@ Ran(arguments Texts, known = Dictionary(Text, TypeEntry)) Answer
 	if message is not ""
 		logger.Log(message)
 		return Answer(command is in Informing then 0 else 2, known)
-	if command is in ("check", "update", "format", "suggest")
-		return Answer(Tool(command, rest), known)
-	command is "test" then Tested(rest, known) else Answer(Dispatched(command, rest, folder), known)
-Dispatched(command Text, rest Texts, folder Text) Number
-	command is "build" then Native(command, rest) else Launched(rest, folder)
+	if command is in ("build", "check", "update", "format", "suggest")
+		return Answer(command is "build" then Native(command, rest) else Tool(command, rest), known)
+	command is "test" then Tested(rest, known) else Answer(Launched(rest, folder), known)
 Cleaned(command Text, rest Texts) Texts
 	Strict(Logger).Cleaned("build", ("Compiler/output/Clean/A.strict", ".", "full")).Last is "."
 	Strict(Logger).Cleaned("test", ("Compiler/output/Clean", ".", "full")).Last is "full"

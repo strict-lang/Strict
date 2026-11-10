@@ -10,8 +10,8 @@ environment = dict(os.environ, STRICT_THREADS="8")
 with tempfile.TemporaryDirectory(prefix="TestPolicy", dir=root / "Examples") as temporary:
 	folder = Path(temporary)
 	work = folder / "TestWork.strict"
-	work.write_text('Pause Number\n\tlet started = Process.Elapsed\n'
-		'\tmutable count = 0\n\tfor as long as Process.Elapsed - started < 0.15\n'
+	work.write_text('constant Seconds = 0.15\nPause Number\n\tlet started = Process.Elapsed\n'
+		'\tmutable count = 0\n\tfor as long as Process.Elapsed - started < Seconds\n'
 		'\t\tcount = count + 1\n\tcount > 0 then 1 else 0', encoding="utf-8")
 	source = folder / "OverBudget.strict"
 	source.write_text('Delay Number\n\tOverBudget.Delay is 1\n\tTestWork.Pause', encoding="utf-8")
@@ -34,11 +34,11 @@ with tempfile.TemporaryDirectory(prefix="TestPolicy", dir=root / "Examples") as 
 		assert shared.returncode == 0, "A shared constant's first initialization counted for its test:\n" + shared.stdout + shared.stderr
 
 	source = folder / "LazyFixture.strict"
-	source.write_text('has logger\nconstant Shared = Created\nCreated Number\n\tlogger.Log("fixture computed")\n\t7\nCheck Number\n\tLazyFixture.Check is 7\n\tShared is 7\n\tShared + Shared is 14\n\tfalse then Shared else 7', encoding="utf-8")
+	source.write_text('has logger\nconstant Shared = Created\nCreated Text\n\tlogger.Log("fixture computed")\n\t"seven"\nCheck Text\n\tLazyFixture.Check is "seven"\n\tShared is "seven"\n\tShared + Shared is "sevenseven"\n\tfalse then Shared else "seven"', encoding="utf-8")
 	lazy = subprocess.run([command, "test", str(source), "unit"], cwd=root, env=environment,
 		capture_output=True, text=True, timeout=10)
 	assert lazy.returncode == 0 and lazy.stdout.count("fixture computed") == 1, lazy.stdout + lazy.stderr
-	assert lazy.stdout.index("Test passed: LazyFixture.Check is 7") < lazy.stdout.index("fixture computed"), lazy.stdout
+	assert lazy.stdout.index('Test passed: LazyFixture.Check is "seven"') < lazy.stdout.index("fixture computed"), lazy.stdout
 
 	source = folder / "SetupBudget.strict"
 	source.write_text('Check Number\n\tconstant sample = TestWork.Pause\n\tsample is 1\n\t1', encoding="utf-8")
