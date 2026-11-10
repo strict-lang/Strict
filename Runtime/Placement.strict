@@ -1,0 +1,12 @@
+Chosen(remote Text, verdict Text, free Texts) Text
+	Placement.Chosen("AiServer", "go", List(Text)) is "AiServer"
+	Placement.Chosen("", "go", List(Text) + "AiServer") is ""
+	Placement.Chosen("any", "go", List(Text) + "AiServer") is ""
+	Placement.Chosen("any", "wait", List(Text) + "AiServer") is "AiServer"
+	Placement.Chosen("Any", "refused", List(Text)) is ""
+	Placement.Chosen("any", "free", ("Ben-Work-PC", "AiServer")) is "Ben-Work-PC"
+	if Peers.IsAny(remote) is false
+		return remote
+	if verdict is "go"
+		return ""
+	free.Length is 0 then "" else free.First

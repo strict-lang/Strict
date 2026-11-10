@@ -4,6 +4,9 @@ Released Number
 Evicted Number
 	GpuMemory.Evicted >= 0
 	0
+Yielded Number
+	GpuMemory.Yielded >= 0
+	0
 Finished Number
 	GpuMemory.Finished is 0
 	0

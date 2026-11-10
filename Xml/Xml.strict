@@ -23,7 +23,7 @@ Values(key Text) Numbers
 	Sample.Values("BlendColor") is (1, 0.5, 1, 1)
 	Xml("<A V=\"(1 ,2)\"").Values("V") is (1, 2)
 	Sample.Values("Missing").Length is 0
-	let numbers = Attribute(key).Replace("(", "").Replace(",", "")
+	let numbers = Attribute(key).Replace("(", "").Replace(")", "").Replace(",", "")
 	numbers is "" then List(Number) else numbers.Split(" ") to Numbers
 Name Text
 	Menu.Name is "Menu"

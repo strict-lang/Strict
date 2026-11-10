@@ -33,7 +33,7 @@ CheckFile(path Text, mutations Texts, isBase Boolean, shared Texts) List(Validat
 	let typeName = Path(path).FileName.RemoveExtension.text
 	let limits = Limits(lines, isBase, Limits.Scale(path)).Issues + SubstringLengths(lines).Issues
 	let rules = TypeValidator(TypeShape(lines), mutations, typeName).Validate + limits
-	let shaped = Names(lines).Issues + Recursions(lines, typeName).Issues + TestChecks(lines).Issues + Writes(lines).Issues
+	let shaped = Names(lines).Issues + Recursions(lines, typeName).Issues + TestChecks(lines).Issues + Writes(lines, typeName).Issues
 	rules + shaped + DroppedResults(lines, shared).Issues + LoopBodies(lines).Issues + MagicNumbers(lines).Issues
 Logged(path Text, found List(ValidationIssue)) Number
 	for found

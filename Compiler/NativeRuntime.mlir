@@ -1110,6 +1110,17 @@
     %number = func.call @strict_canonical(%result) : (f64) -> f64
     return %number : f64
   }
+  // a native method with no Strict result: C still returns a double, strict_fail comes back as an Error, success is nothing
+  func.func private @strict_foreign_none(%result: f64) -> f64 {
+    %failed = func.call @strict_foreign_failed(%result) : (f64) -> i1
+    cf.cond_br %failed, ^fail, ^done
+  ^fail:
+    %error = func.call @strict_foreign_error(%result) : (f64) -> f64
+    return %error : f64
+  ^done:
+    %none = arith.constant 0.0 : f64
+    return %none : f64
+  }
   func.func private @strict_canonical(%value: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %isTagged = func.call @strict_is_failure(%value) : (f64) -> i1
     %canonical = arith.constant 0x7FF8000000000000 : f64
@@ -17591,6 +17602,21 @@
     cf.br ^done(%total : f64)
   ^done(%result: f64):
     return %result : f64
+  }
+  // `GpuMemory.Yielded`: evict every device copy, then give the GPU lock back even when this process still holds more than 1 GB
+  func.func private @strict_gpu_yielded(%self: f64) -> f64 {
+    %released = func.call @strict_gpu_evict_all(%self) : (f64) -> f64
+    %none = arith.constant 0 : i64
+    %slot = llvm.mlir.addressof @strict_gpu_lock_handle : !llvm.ptr
+    %handle = llvm.load %slot : !llvm.ptr -> i64
+    %isHeld = arith.cmpi ne, %handle, %none : i64
+    cf.cond_br %isHeld, ^give, ^done
+  ^give:
+    func.call @strict_gpu_lock_give(%handle) : (i64) -> ()
+    llvm.store %none, %slot : i64, !llvm.ptr
+    cf.br ^done
+  ^done:
+    return %released : f64
   }
   // `GpuMemory.Freed(bytes)`: device copies go until bytes are free for the next work, rows with a pinned copy first, none
   // of the last 16 uses, after one wait for the GPU: what a program frees in one go before a phase that needs that much

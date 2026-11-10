@@ -13,6 +13,8 @@ constant Splits = MethodEntry("Split", Doubles.parameters, "Strict/List(Numbers)
 constant Splitter = MlirFunction(List(TypeEntry), Doubler.type, Splits)
 constant Unimplementing = "TraitHasNoImplementation: Adder.Add has no body and no native/Adder.c, use a Generic member to hold any type with Add"
 constant Started = MethodEntry("from", Add.parameters, "Strict/Examples/NativeAdd/Counter", List(InstructionEntry))
+constant Closed = MethodEntry("Close", List(MemberEntry), "None", List(InstructionEntry))
+constant Closing = MlirFunction(List(TypeEntry), Adder.type, Closed)
 IsForeign Boolean
 	MlirForeign(Adder).IsForeign
 	MlirForeign(MlirFunction.Counter).IsForeign is false
@@ -75,8 +77,10 @@ Returned Texts
 	MlirForeign(Adder).Returned.First is "    %converted = func.call @strict_foreign_number(%result) : (f64) -> f64"
 	MlirForeign(Doubler).Returned.First.IndexOf("@strict_foreign_numbers(") > 0
 	MlirForeign(Splitter).Returned.First.IndexOf("@strict_foreign_rows(") > 0
+	MlirForeign(Closing).Returned.First.IndexOf("@strict_foreign_none(") > 0
 	let returned = function.method.returnType
-	let single = returned.EndsWith("Text") then "text" else "number"
+	let isNone = returned is "None"
+	let single = isNone then "none" else (returned.EndsWith("Text") then "text" else "number")
 	let kind = IsNumbers(returned) then "numbers" else IsRows(returned) then "rows" else single
 	("    %converted = func.call @strict_foreign_" + kind + "(%result) : (f64) -> f64", "    return %converted : f64")
 IsNumbers(typeName Text) Boolean

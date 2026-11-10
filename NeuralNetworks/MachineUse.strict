@@ -47,6 +47,16 @@ IsChecked(arguments Texts, root Text) Boolean
 	MachineUse.IsChecked(("--quality", "best"), "artifacts/missing")
 	let isResident = (Local is in arguments is false) and File(root + Resident.Stamp).Exists
 	(isResident or (arguments is (Resident.Stopping))) is false
+Needed Text
+	MachineUse(Logger, "H3Video", 4, 2).Needed.StartsWith("need\tH3Video\tH3Video\t4\t4\t2\t2\t0\t")
+	let mode = isForced then "force" else "wait"
+	"need\t" + program + "\t" + program + "\t" + ram + "\t" + ram + "\t" + vram + "\t" + vram + "\t0\t" + mode
+Admitted Number
+	MachineUse(Logger, "H3Video", 0, 0, true).Admitted is 0
+	let reply = Coordinator(Logger).Resolved(Needed)
+	if reply.StartsWith("refused")
+		return 1
+	reply is "" then Checked else 0
 Checked Number
 	let device = Device
 	let problem = Problem(GpuMemory.HostAvailable, GpuMemory.HostTotal, device(1), device(0))

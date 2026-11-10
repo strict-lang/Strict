@@ -1,0 +1,19 @@
+Matches(words Texts, running Text) Boolean
+	JobCancel.Matches(("cancel", "a"), "a")
+	JobCancel.Matches(("lost", "a"), "a")
+	JobCancel.Matches(("cancel", "b"), "a") is false
+	JobCancel.Matches(("lost", "b"), "a") is false
+	JobCancel.Matches(("done"), "a") is false
+	let asked = Asked(words)
+	(running is not "") and (asked is running)
+Asked(words Texts) Text
+	JobCancel.Asked(("cancel", "a")) is "a"
+	JobCancel.Asked(("lost", "b")) is "b"
+	JobCancel.Asked(("status")) is ""
+	(words.Length > 1) and ((words(0) is "cancel") or (words(0) is "lost")) then words(1) else ""
+Decided(running Text, words Texts) Text
+	JobCancel.Decided("a", ("cancel", "a")) is "yield"
+	JobCancel.Decided("a", ("lost", "a")) is "yield"
+	JobCancel.Decided("a", ("cancel", "b")) is "keep"
+	JobCancel.Decided("a", ("lost", "b")) is "keep"
+	Matches(words, running) then "yield" else "keep"

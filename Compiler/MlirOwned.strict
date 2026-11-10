@@ -3,6 +3,19 @@ has position Number
 constant Empty = MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Number)", (0, 6, -1, 0)), "listResult0")
 constant Built = (Empty, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "listResult0"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "moved"))
 constant Reloaded = Built + InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "moved")
+constant LoadList = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "listResult0")
+constant StoreHeld = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "held")
+constant LoadHeld = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "held")
+constant HeldAgain = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "held")
+constant HeldCall = InstructionEntry.Invoke(2, ("Strict/MutationCache", "Released", "Strict/Boolean", "locks"), 1, -1)
+constant HeldLoads = (Empty, LoadList, StoreHeld, LoadHeld, HeldCall, HeldAgain)
+constant HeldRun = MethodEntry("Run", List(MemberEntry), "None", HeldLoads)
+constant Holding = MlirOwned(MlirFunction(List(TypeEntry), MlirFunction.Shape, HeldRun), 3)
+constant StoreMoved = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "moved")
+constant LoadMoved = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "moved")
+constant RewrittenLoads = Reloaded + (StoreMoved, LoadMoved)
+constant RewrittenRun = MethodEntry("Run", List(MemberEntry), "None", RewrittenLoads)
+constant Rewriting = MlirOwned(MlirFunction(List(TypeEntry), MlirFunction.Shape, RewrittenRun), 3)
 constant MovedInstructions = Reloaded + InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "inline3_elements") + InstructionEntry.Return(1)
 constant Moving = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", MovedInstructions))
 constant Copying = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", Reloaded + InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "kept")))
@@ -27,6 +40,8 @@ constant Rebuilt = MlirOwned(MlirFunction((MlirFunction.Shape, MlirInstances.Out
 IsOwned(name Text, depth = 0, seed = "") Boolean
 	Owner.IsOwned("moved")
 	MlirOwned(Copying, 2).IsOwned("moved") is false
+	Holding.IsOwned("held") is false
+	Rewriting.IsSafeRead(3, "moved")
 	Owner.IsOwned("listResult0") is false
 	(Rebuilt.IsKept(4, "size", "moved") is false) and (Rebuilt.IsKept(4, "shape", "kept") is false)
 	Rebuilt.IsKept(9, "shape", "moved") is false
@@ -93,16 +108,28 @@ IsFreshMethod(callee MlirFunction, depth Number) Boolean
 			if (isReturned or IsFresh(callee, index, value.payload(0), depth)) is false
 				return false
 	true
+IsReread(at Number, name Text) Boolean
+	Holding.IsReread(3, "held")
+	Owner.IsReread(3, "moved") is false
+	Rewriting.IsReread(3, "moved") is false
+	for Range(at + 1, function.method.instructions.Length)
+		let entry = function.method.instructions(value)
+		if (entry.kind is InstructionType.StoreRegisterToVariable) and (entry.texts(0) is name)
+			return false
+		if (entry.kind is InstructionType.LoadVariableToRegister) and (entry.texts(0) is name)
+			return true
+	false
 IsSafeRead(at Number, name Text) Boolean
 	Owner.IsSafeRead(3, "moved")
 	MlirOwned(Copying, 2).IsSafeRead(3, "moved") is false
-	let instructions = function.method.instructions
-	let register = instructions(at).payload(0)
-	let reuse = LoadReuse(instructions)
-	for Range(at + 1, instructions.Length)
+	if IsReread(at, name)
+		return false
+	let register = function.method.instructions(at).payload(0)
+	let reuse = LoadReuse(function.method.instructions)
+	for Range(at + 1, function.method.instructions.Length)
 		if IsEscaped(value, register, name)
 			return false
-		if reuse.Written(instructions(value)) is register
+		if reuse.Written(function.method.instructions(value)) is register
 			return true
 	true
 IsEscaped(at Number, register Number, name Text) Boolean

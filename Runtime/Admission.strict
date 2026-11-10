@@ -1,0 +1,39 @@
+has logger
+constant HostShare = 2
+constant VideoShare = 4
+constant Sample = Admission(Logger)
+Verdict(need Need, seen MachineView) Text
+	Sample.Verdict(Need.Tiny, MachineView.Wide) is "refused"
+	Sample.Verdict(Need.Small, MachineView.Wide) is "go"
+	Sample.Verdict(Need.Small, MachineView.Idle) is "free"
+	Sample.Verdict(Need.Small, MachineView.Tight) is "refused"
+	Decided(need, seen)
+Decided(need Need, seen MachineView) Text
+	Sample.Decided(Need.Small, MachineView.Busy) is "wait"
+	Sample.Decided(Need.Small, MachineView.Room) is "go"
+	Sample.Decided(Need(Need.Tiny, mode = "force"), MachineView.Wide) is "go"
+	if IsTiny(need, seen) and (need.mode is not "force")
+		return "refused"
+	if seen.isBusy and (Fits(need, seen.freeRam, seen.freeVram) is false)
+		return "wait"
+	if Fits(need, seen.freeRam, seen.freeVram)
+		return "go"
+	if Fits(need, seen.freeRam + seen.idleRam, seen.freeVram + seen.idleVram)
+		return "free"
+	need.mode is "force" then "go" else "refused"
+Fits(need Need, ram Number, vram Number) Boolean
+	Sample.Fits(Need.Small, 4, 2)
+	Sample.Fits(Need.Small, 2, 2) is false
+	let ramNeed = need.idealRam > 0 then need.idealRam else need.minimumRam
+	let vramNeed = need.idealVram > 0 then need.idealVram else need.minimumVram
+	(ram >= ramNeed) and (vram >= vramNeed)
+IsTiny(need Need, seen MachineView) Boolean
+	Sample.IsTiny(Need.Tiny, MachineView.Wide)
+	Sample.IsTiny(Need.Small, MachineView.Wide) is false
+	let ram = (seen.totalRam > 0) and (seen.totalRam < need.minimumRam)
+	let vram = (seen.totalVram > 0) and (seen.totalVram < need.minimumVram)
+	ram or vram
+Usable(total Number, share Number) Number
+	Sample.Usable(16, HostShare) is 8
+	Sample.Usable(0, HostShare) is 0
+	total - total / share

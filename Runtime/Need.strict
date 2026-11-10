@@ -1,0 +1,18 @@
+has job Text = ""
+has label Text = ""
+has minimumRam Number = 0
+has idealRam Number = 0
+has minimumVram Number = 0
+has idealVram Number = 0
+has threads Number = 0
+has mode Text = "wait"
+constant Tiny = Need(minimumRam = 32, minimumVram = 8)
+constant Small = Need(minimumRam = 4, minimumVram = 2)
+Parsed(words Texts) Need
+	Need.Parsed(("need", "job", "label", "4", "8", "2", "4", "0", "wait")).minimumRam is 4
+	Need.Parsed(("need")).job is ""
+	if words.Length < 9
+		return Need
+	let ram = (words(3) to Number, words(4) to Number)
+	let vram = (words(5) to Number, words(6) to Number)
+	Need(words(1), words(2), ram(0), ram(1), vram(0), vram(1), words(7) to Number, words(8))

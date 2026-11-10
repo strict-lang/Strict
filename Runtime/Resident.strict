@@ -99,7 +99,9 @@ Requested(socket Number) Text
 	(Send(socket, Greeting) is not Error) then Received(socket, Ending) else ""
 Finished(socket Number, code Number)
 	Sample.Finished(0, 1) is Error
-	Send(socket, Exiting + code + "\n")
+	if Send(socket, Exiting + code + "\n") is Error
+		Socket.Close(socket)
+		return Error("SendFailed")
 	Socket.Close(socket)
 Ended(socket Number, code Number)
 	Sample.Ended(0, 1) is not Error

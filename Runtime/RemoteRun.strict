@@ -1,0 +1,15 @@
+has logger
+Started(words Texts) Text
+	RemoteRun(Logger).Started(("run", "AiServer")) is "1"
+	if words.Length < 3
+		return "1"
+	let ran = Process.RunTool(words(2), Text.Combine(words.Slice(3, words.Length - 3), " "))
+	logger.Log(ran.Output)
+	ran.exitCode to Text
+Answered(words Texts, seen MachineView) Text
+	RemoteRun(Logger).Answered(("hello"), MachineView.Wide) is "ok"
+	if (words.Length > 0) and (words(0) is "run")
+		return Started(words)
+	if (words.Length > 0) and (words(0) is "fit")
+		return Admission(Logger).Verdict(Need.Parsed(words), seen)
+	"ok"

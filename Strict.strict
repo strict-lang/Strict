@@ -23,6 +23,11 @@ Run(arguments Texts) Number
 		return Served(arguments.Length > 1 then Resident(resident.root, arguments(1)) else resident)
 	if (arguments.Length > 0) and (arguments(0) is "linked")
 		return Native("linked", arguments.Slice(1, arguments.Length - 1))
+	if (arguments.Length > 0) and (arguments(0) is "coordinator")
+		mutable coordinator = Coordinator(logger)
+		return coordinator.Served
+	if (arguments.Length > 0) and (arguments(0) is "status")
+		return Coordinator(logger).Reported
 	let forwarded = Forwarding(logger, resident.root).Forwarded(arguments)
 	forwarded >= 0 then forwarded else Ran(arguments).code
 Served(resident Resident) Number

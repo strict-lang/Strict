@@ -1,0 +1,168 @@
+has logger
+has root Text = ""
+mutable idleRam Number = 0
+mutable idleVram Number = 0
+mutable seenAt Number = -100
+mutable wantsFree Boolean = false
+mutable busyJob Text = ""
+mutable busyLabel Text = ""
+constant StaleSeconds = 16
+constant BeatSeconds = 5
+constant Mebibyte = 1048576
+constant Query = "--query-gpu=memory.total,memory.free --format=csv,noheader,nounits"
+constant Start = "-NoProfile -Command Start-Process -FilePath cmd -ArgumentList '/c "
+constant Sample = Coordinator(Logger)
+Place Text
+	Coordinator(Logger, "Compiler/output/coord").Place is "Compiler/output/coord"
+	Coordinator(Logger).Place.EndsWith("/coordinator")
+	if root is not ""
+		return root
+	let home = Process.Variable(Process.OperatingSystem is "Windows" then "LOCALAPPDATA" else "HOME")
+	let folder = Process.OperatingSystem is "Windows" then "/Strict" else "/.cache/strict"
+	home + folder + "/coordinator"
+Opened Number
+	Coordinator(Logger, "Compiler/output/coord").Opened > 0
+	let server = Socket.Local(Peers.Port)
+	let bound = server is Error then Socket.Local(0) else server
+	if bound is Error
+		return 0
+	Directory.Create(Path(Place).PathOnly.text)
+	File(Place).Write(Socket.Port(bound) to Text)
+	bound
+Served Number
+	Sample.Taken(0) is 0
+	let server = Opened
+	mutable idle = Process.Elapsed
+	mutable socket = 0
+	for as long as (server > 0) and (Process.Elapsed - idle < Resident.IdleSeconds)
+		socket = Taken(server)
+		if socket > 0
+			idle = Replied(socket) then Process.Elapsed else idle
+			Socket.Close(socket)
+	File(Place).Delete
+	Socket.Close(server)
+	0
+Taken(server Number) Number
+	Sample.Taken(0) is 0
+	let waiting = Socket.Waiting(server, 1)
+	(waiting is Error) or (waiting is not 1) then 0 else Socket.Accept(server)
+Replied(socket Number) Boolean
+	Sample.Chosen(("hello", "a", "1", "b", "0")) is "ok"
+	let line = Resident("").Received(socket, "\n")
+	let sent = Resident("").Send(socket, Chosen(line.Trim.Split("\t")) + "\n")
+	if sent is Error
+		logger.Log("The client left before the result was sent")
+	(busyJob is not "") or (Process.Elapsed - seenAt < StaleSeconds)
+Chosen(words Texts) Text
+	Sample.Chosen(("status")) is "busy\t\t"
+	if (words.Length > 0) and (words(0) is "holding")
+		return Held(words)
+	if (words.Length > 0) and ((words(0) is "done") or JobCancel.Matches(words, busyJob))
+		wantsFree = words(0) is not "done"
+		busyJob = ""
+		seenAt = Process.Elapsed
+		return wantsFree then "free" else "ok"
+	if (words.Length > 0) and (words(0) is "need")
+		return Needed(words, Seen)
+	let busy = "busy\t" + busyJob + "\t" + busyLabel
+	(words.Length > 0) and (words(0) is "status") then busy else RemoteRun(logger).Answered(words, Seen)
+Command Text
+	Sample.Command.IndexOf("coordinator") > 0
+	let exe = Process.Current.executable
+	let isWindows = Process.OperatingSystem is "Windows"
+	let quoted = Forwarding.Quote + Forwarding.Quote + exe + Forwarding.Quote
+	let hidden = Start + quoted + " coordinator " + Forwarding.Quote + "' -WindowStyle Hidden"
+	isWindows then hidden else "-c \"nohup '" + exe + "' coordinator >/dev/null 2>&1 &\""
+Held(words Texts) Text
+	Sample.Granted(("need", "job", "label", "4", "8", "2", "4", "0", "wait"), MachineView.Wide) is "go\tjob\t0"
+	idleRam = words.Length > 1 then words(1) to Number else 0
+	idleVram = words.Length > 2 then words(2) to Number else 0
+	seenAt = Process.Elapsed
+	if wantsFree and ((busyLabel is "exit") or (idleRam > 0) or (idleVram > 0))
+		return busyLabel is "exit" then "exit" else "free"
+	"ok"
+Needed(words Texts, seen MachineView) Text
+	let need = Need.Parsed(words)
+	let verdict = Admission(logger).Verdict(need, seen)
+	if verdict is "go"
+		busyJob = need.job
+		busyLabel = need.label
+		wantsFree = false
+		return "go\t" + need.job + "\t" + need.threads
+	wantsFree = (verdict is "free") or ((verdict is "refused") and (Process.Elapsed - seenAt < StaleSeconds))
+	busyLabel = (verdict is "refused") and wantsFree then "exit" else busyLabel
+	if (verdict is "refused") and (wantsFree is false)
+		return "refused\t" + need.job + "\tNot enough free memory"
+	"wait\t" + need.job + "\t1\t" + need.label + "\t0\t0"
+Granted(words Texts, seen MachineView) Text
+	Sample.Granted(("need", "job", "label", "4", "8", "2", "4", "0", "wait"), MachineView.Wide) is "go\tjob\t0"
+	mutable sample = Coordinator(Logger)
+	let held = sample.Held(("holding", "4", "2"))
+	(held is "ok") and (sample.idleRam is 4) then sample.Needed(words, seen) else "bad"
+Seen Slow(MachineView)
+	Sample.Seen.freeRam >= 0
+	let video = Vram("")
+	let idle = Process.Elapsed - seenAt < StaleSeconds then idleRam else 0
+	let device = Process.Elapsed - seenAt < StaleSeconds then idleVram else 0
+	let freeRam = Forced("STRICT_MACHINE_RAM", GpuMemory.HostAvailable)
+	let totalRam = Forced("STRICT_MACHINE_RAM", GpuMemory.HostTotal)
+	MachineView(freeRam, video(1), totalRam, video(0), idle, device, busyJob is not "")
+Forced(name Text, fallback Number) Number
+	Sample.Forced("StrictVariableNeverSet", 4) is 4
+	let forced = Process.Variable(name)
+	(forced is "") or (forced to Number is Error) then fallback else forced to Number
+Vram(text Text) Numbers
+	Sample.Vram("24564, 24049") is (24564 * Mebibyte, 24049 * Mebibyte)
+	Sample.Vram("nope") is (0, 0)
+	let measured = text is "" then Process.RunTool("nvidia-smi", Query).Output else text
+	let forced = Process.Variable("STRICT_MACHINE_VRAM")
+	if (text is "") and (forced is not "")
+		return (forced to Number, forced to Number)
+	let parts = measured.Split(",")
+	if parts.Length < 2
+		return (0, 0)
+	(parts(0).Trim to Number * Mebibyte, parts(1).Trim to Number * Mebibyte)
+Sent(line Text) Text
+	Coordinator(Logger, "Compiler/output/MissingCoordinator").Sent("status") is ""
+	let socket = root is "" then Linked else Connected
+	if socket is 0
+		return ""
+	if Resident("").Send(socket, line + "\n") is Error
+		Socket.Close(socket)
+		return ""
+	let reply = Resident("").Received(socket, "\n")
+	Socket.Close(socket)
+	reply is Error then "" else reply.Trim
+Resolved(line Text) Text
+	Coordinator(Logger, "Compiler/output/MissingCoordinator").Resolved("need") is ""
+	mutable reply = Sent(line)
+	for as long as reply.StartsWith("wait")
+		logger.Log(reply)
+		Process.Wait(1)
+		let again = Sent(line)
+		reply = again is "" then Sent(line) else again
+	reply
+Connected Number
+	Coordinator(Logger, "Compiler/output/MissingCoordinator").Connected is 0
+	let port = File(Place).Exists then File(Place).ReadLines.First to Number else 0
+	if (port is Error) or (port is 0)
+		return 0
+	let socket = Socket.Connect("127.0.0.1", port)
+	socket is Error then 0 else socket
+Linked Number
+	Coordinator(Logger, "Compiler/output/MissingCoordinator").Connected is 0
+	let existing = Connected
+	if existing > 0
+		return existing
+	let tool = Process.OperatingSystem is "Windows" then "powershell" else "sh"
+	let started = Process.RunTool(tool, Command)
+	for Range(0, started.exitCode is 0 then BeatSeconds else 0)
+		if File(Place).Exists
+			return Connected
+		Process.Wait(1)
+	0
+Reported Number
+	Coordinator(Logger, "Compiler/output/MissingCoordinator").Reported is 0
+	let reply = Sent("status")
+	logger.Log(reply is "" then "No coordinator" else reply)
+	0

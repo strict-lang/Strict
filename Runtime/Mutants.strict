@@ -37,7 +37,7 @@ Ran(types List(TypeEntry), root Text, files Texts, inference TypeInference) Numb
 	let plain = isFresh then unoptimized.Built(path, root, true, files, inference).entries else types
 	let survivors = Survivors(plain)
 	if cache.Released(held) is false
-		logger.Log("Could not release the mutation locks")
+		logger.Log("Could not release the mutation locks: " + Text.Combine(held, ", "))
 	survivors
 Lines(types List(TypeEntry)) Texts
 	Sample.Lines(Doubled).Length is 0

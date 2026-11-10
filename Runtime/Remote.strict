@@ -1,0 +1,56 @@
+has logger
+constant Flag = "--remote"
+constant Any = "any"
+constant Ben = "any"
+constant Sample = Remote(Logger)
+Target(arguments Texts, absent Text) Text
+	Sample.Target(("--remote", "AiServer", "a"), "") is "AiServer"
+	Sample.Target(("a", "b"), "") is ""
+	Sample.Target(("--remote", "any"), "") is "any"
+	Sample.Target(List(Text), Ben) is "any"
+	let at = arguments.Index(Flag)
+	(at < 0) or (at + 1 >= arguments.Length) then absent else arguments(at + 1)
+Without(arguments Texts) Texts
+	Sample.Without(("--remote", "AiServer", "--quality", "fast")) is ("--quality", "fast")
+	Sample.Without(("--quality", "fast")) is ("--quality", "fast")
+	mutable kept = List(Mutable(Text))
+	mutable skip = false
+	for arguments
+		if skip
+			skip = false
+		else if value is Flag
+			skip = true
+		else
+			kept.Add(value)
+	kept
+Named(arguments Texts) Number
+	Sample.Named(List(Text)) is -1
+	let remote = Target(arguments, "")
+	if Peers.IsAny(remote) or (remote is "")
+		return -1
+	Forwarded(remote, Without(arguments))
+Sent(arguments Texts, absent Text, reply Text, line Text) Number
+	Sample.Sent(List(Text), Ben, "go\tjob\t0", "need") is -1
+	Sample.Sent(List(Text), Ben, "", "need") is -1
+	let remote = Target(arguments, absent)
+	let verdict = reply.Split("\t").First
+	if (Peers.IsAny(remote) is false) or (verdict is "go") or (verdict is "")
+		return -1
+	let chosen = Placement.Chosen(remote, verdict, Peers.Probed(line))
+	chosen is "" then -1 else Forwarded(chosen, Without(arguments))
+Forwarded(name Text, arguments Texts) Number
+	Sample.Forwarded("missing", List(Text)) is 1
+	let host = Peers.Host(name)
+	if host is ""
+		logger.Log("No peer named " + name)
+		return 1
+	let socket = Socket.Connect(host, Peers.Port)
+	socket is Error then 1 else Finished(socket, arguments)
+Finished(socket Number, arguments Texts) Number
+	Peers.Host("missing") is ""
+	Resident("").Send(socket, "run\t" + Text.Combine(arguments, "\t") + "\n")
+	let reply = Resident("").Received(socket, "\n")
+	Socket.Close(socket)
+	logger.Log(reply.Trim)
+	let code = reply.Trim.Split("\t").First to Number
+	code is Error then 1 else code

@@ -1,0 +1,10 @@
+Taken(values Texts) Boolean
+	Taken(List(Text))
+	Taken(("a")) is false
+	values.Length is 0
+Joined(held Texts) Text
+	HeldList.Joined(("a", "b")) is "a, b"
+	HeldList.Joined(List(Text)) is "none"
+	if Taken(held)
+		return "none"
+	Text.Combine(held, ", ")

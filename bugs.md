@@ -1,1 +1,0 @@
-- `strict test NeuralNetworks/Sampling.strict` crashed (AccessViolation in Mutants.Lines) when Mutants.Ran logged `Text.Combine(held, ", ")` inside `if cache.Released(held) is false`: a list passed to the call in an if condition and used again in its body breaks ownership

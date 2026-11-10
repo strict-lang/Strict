@@ -1,0 +1,12 @@
+has freeRam Number = 0
+has freeVram Number = 0
+has totalRam Number = 0
+has totalVram Number = 0
+has idleRam Number = 0
+has idleVram Number = 0
+has isBusy Boolean = false
+constant Wide = MachineView(freeRam = 16, freeVram = 8, totalRam = 16, totalVram = 8)
+constant Tight = MachineView(freeRam = 2, freeVram = 1, totalRam = 64, totalVram = 16)
+constant Idle = MachineView(freeRam = 2, freeVram = 1, totalRam = 64, totalVram = 16, idleRam = 8, idleVram = 4)
+constant Busy = MachineView(freeRam = 2, freeVram = 1, totalRam = 64, totalVram = 16, isBusy = true)
+constant Room = MachineView(freeRam = 16, freeVram = 8, totalRam = 64, totalVram = 16, isBusy = true)

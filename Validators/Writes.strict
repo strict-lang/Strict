@@ -1,12 +1,17 @@
 has lines Texts
+has typeName Text = ""
 constant Verbs = ("Create", "Delete", "Change", "Write", "Written", "Rename", "Save", "Saved", "Send", "Close", "Remove", "Move", "Copy", "Set", "Edit")
 constant Hint = " writes, so it returns nothing (failures are an Error), read results with another method"
 constant Saving = Writes(("Pixels(path Text) Numbers", "Save(path Text) Number", "Delete(path Text)", "SetPixel(at Number) Boolean", "\tSetPixel(1) is true", "\t1"))
+constant Created = Writes(("Create(width Number) Texture", "Create(width Number) TextureHandle"), "Texture")
+constant Numbered = Writes(("Create(width Number) Number", "Create(path Text) Path"), "Texture")
 Issues List(ValidationIssue)
 	Saving.Issues.Length is 2
 	Saving.Issues.First to Text is "WriteMustReturnNothing: Save" + Hint
 	(Saving.Issues.First.Line is 2) and (Saving.Issues.Last.Line is 4)
 	Writes(("Save(path Text) Number", "\t1")).Issues.Length is 0
+	Created.Issues.Length is 0
+	Numbered.Issues.Length is 2
 	let shape = TypeShape(lines)
 	let isExternal = IsExternal(shape)
 	for lines
@@ -25,7 +30,9 @@ IsWriting(line Text) Boolean
 	Saving.IsWriting("Settings Number") is false
 	Saving.IsWriting("Delete(path Text)") is false
 	let tokens = Tokenizer(line).Tokens
-	(HeaderTokens(tokens).ReturnType is not "None") and (Verb(tokens.First) is in Verbs)
+	let returned = HeaderTokens(tokens).ReturnType
+	let isHandle = (returned is typeName) or returned.EndsWith("Handle")
+	(returned is not "None") and (isHandle is false) and (Verb(tokens.First) is in Verbs)
 Verb(name Text) Text
 	Saving.Verb("SetPixel") is "Set"
 	Saving.Verb("Settings") is "Settings"

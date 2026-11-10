@@ -1,0 +1,37 @@
+constant Home = "Ben-Home-PC"
+constant Work = "Ben-Work-PC"
+constant Server = "AiServer"
+constant Named = (Home, Work, Server)
+constant Hosts = ("10.0.0.1", "10.0.0.2", "10.0.0.3")
+constant Port = 17431
+Host(name Text) Text
+	Peers.Host(Server) is "10.0.0.3"
+	Peers.Host(Home) is "10.0.0.1"
+	Peers.Host("missing") is ""
+	let at = Named.Index(name)
+	at < 0 then "" else Hosts(at)
+IsAny(name Text) Boolean
+	Peers.IsAny("any")
+	Peers.IsAny("Any")
+	Peers.IsAny(Server) is false
+	Peers.IsAny("") is false
+	(name is "any") or (name is "Any")
+Probed(line Text) Texts
+	Peers.Host("missing") is ""
+	mutable open = List(Mutable(Text))
+	for Named
+		if Answered(value, line)
+			open.Add(value)
+	open
+Answered(name Text, line Text) Boolean
+	Peers.Host("missing") is ""
+	let host = Host(name)
+	if host is ""
+		return false
+	let socket = Socket.Connect(host, Port)
+	if socket is Error
+		return false
+	Resident("").Send(socket, line.Replace("need\t", "fit\t") + "\n")
+	let reply = Resident("").Received(socket, "\n")
+	Socket.Close(socket)
+	reply.Trim.StartsWith("go")
