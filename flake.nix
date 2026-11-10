@@ -33,17 +33,35 @@
           mkdir -p Tools
           tar -xJf ${llvm} -C Tools
           bin="$PWD/Tools/LLVM-23.1.3-Linux-X64/bin"
+          # The upstream LLVM binaries ask the kernel for /lib64/ld-linux-x86-64.so.2. A Nix sandbox
+          # does not have the host /lib64, so exec fails with "required file not found" before any
+          # library search. Point them at Nix's loader; the clang wrapper below still links outputs.
+          interpreter=$(cat $NIX_CC/nix-support/dynamic-linker)
+          for binary in "$bin"/*; do
+            if [ -f "$binary" ] && [ ! -L "$binary" ] && patchelf --print-interpreter "$binary" >/dev/null 2>&1; then
+              patchelf --set-interpreter "$interpreter" --set-rpath "$libPath:${pkgs.glibc}/lib" "$binary"
+            fi
+          done
           gcclib=$(dirname ${pkgs.gcc.cc}/lib/gcc/*/*/crtbegin.o)
           rm -f "$bin/clang"
           cat > "$bin/clang" << EOF
           #!/bin/sh
-          exec "\$(dirname "\$0")/clang-23" \\
-            --gcc-toolchain=${pkgs.gcc.cc} \\
-            -B${pkgs.glibc}/lib -B$gcclib \\
-            -L${pkgs.glibc}/lib -L$gcclib \\
-            -Wl,-dynamic-linker,${pkgs.glibc}/lib/ld-linux-x86-64.so.2 \\
-            -Wl,-rpath,${pkgs.glibc}/lib -Wl,-rpath,$gcclib \\
-            "\$@"
+          link=yes
+          for argument in "\$@"; do
+            case \$argument in
+              -c|-E|-S|-M|-MM) link=no ;;
+            esac
+          done
+          headers="-isystem ${pkgs.glibc.dev}/include -isystem ${pkgs.linuxHeaders}/include"
+          toolchain="--gcc-toolchain=${pkgs.gcc.cc} -B${pkgs.glibc}/lib -B$gcclib -B${pkgs.stdenv.cc.cc.lib}/lib"
+          if [ "\$link" = yes ]; then
+            exec "\$(dirname "\$0")/clang-23" \$toolchain -fuse-ld=lld \\
+              -L${pkgs.glibc}/lib -L$gcclib -L${pkgs.stdenv.cc.cc.lib}/lib \\
+              -Wl,-dynamic-linker,${pkgs.glibc}/lib/ld-linux-x86-64.so.2 \\
+              -Wl,-rpath,${pkgs.glibc}/lib -Wl,-rpath,${pkgs.stdenv.cc.cc.lib}/lib \\
+              "\$@"
+          fi
+          exec "\$(dirname "\$0")/clang-23" \$toolchain \$headers "\$@"
           EOF
           chmod +x "$bin/clang"
           export PATH="$bin:$PATH"
