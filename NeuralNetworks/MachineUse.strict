@@ -20,6 +20,7 @@ constant BusyPercent = 50
 constant Slower = " the model takes, the rest stays in RAM and runs slower"
 constant Stopping = "  MossImage backend (pid 12): 24 GB RAM, 7 GB VRAM, type 'MossImage stop' to free them"
 constant Advice = "Close them or wait until they finish, then run "
+constant TooSmall = "Add --force (STRICT_FORCE=1) to run anyway, much slower because the model does not fit"
 constant Forcing = ", or add --force (STRICT_FORCE=1) to run anyway, very slow while they hold the memory"
 constant Nowhere = "NeuralNetworks/MissingCoordinator"
 constant Sample = MachineUse(Logger, "H3Video", 25 * Gigabyte, 22 * Gigabyte)
@@ -54,35 +55,42 @@ Admitted Slow(Number)
 	MachineUse(Logger, "H3Video", 0, 0, true, Nowhere).Admitted is 0
 	let reply = Coordinator(logger, coordinator).Resolved(Needed)
 	if reply.StartsWith("refused")
-		return 1
+		return Explained(reply)
 	reply is "" then Checked else 0
 Checked Number
 	let device = Device
 	let problem = Problem(GpuMemory.HostAvailable, GpuMemory.HostTotal, device(1), device(0))
 	if problem is ""
 		return Noted(device(0))
-	logger.Log(problem + (device(2) > BusyPercent then ", the GPU is " + device(2) + " % busy" else ""))
 	if isForced
+		logger.Log(problem)
 		logger.Log("Running anyway (--force), this can be very slow while other programs hold the memory")
 		return Noted(device(0))
-	Refused
-Refused Number
+	Explained
+Explained(reply = "") Number
+	let device = Device
+	let parts = reply.Split("\t")
+	let given = parts.Length > 2 then "Not enough memory for " + program + ": " + parts(2) else ""
+	let local = Problem(GpuMemory.HostAvailable, GpuMemory.HostTotal, device(1), device(0), true)
+	let problem = given is "" then local else given
+	logger.Log(problem + (device(2) > BusyPercent then ", the GPU is " + device(2) + " % busy" else ""))
 	logger.Log("Programs using them:")
 	for Users
 		logger.Log(value)
-	logger.Log(Advice + program + " again" + Forcing)
+	logger.Log(given.IndexOf("this machine has") >= 0 then TooSmall else Advice + program + " again" + Forcing)
 	1
-Problem(hostFree Number, hostTotal Number, deviceFree Number, deviceTotal Number) Text
+Problem(hostFree Number, hostTotal Number, deviceFree Number, deviceTotal Number, isShown = false) Text
 	Sample.Problem(65 * Gigabyte, 128 * Gigabyte, 23 * Gigabyte, 24 * Gigabyte) is ""
 	Sample.Problem(7 * Gigabyte, 128 * Gigabyte, 23 * Gigabyte, 24 * Gigabyte).StartsWith("Not enough")
 	Sample.Problem(65 * Gigabyte, 128 * Gigabyte, 2 * Gigabyte, 24 * Gigabyte).EndsWith("2 GB of 24 GB VRAM are free")
 	Sample.Problem(20 * Gigabyte, 32 * Gigabyte, 9 * Gigabyte, 10 * Gigabyte) is ""
 	Sample.Problem(0, 0, 0, 0) is ""
+	Sample.Problem(30 * Gigabyte, 64 * Gigabyte, 20 * Gigabyte, 24 * Gigabyte, true).StartsWith("Not enough")
 	let isShort = IsShort(ram, hostFree, hostTotal, HostShare) or IsShort(vram, deviceFree, deviceTotal, VideoShare)
 	let needs = Sized(Usable(ram, hostTotal, HostShare)) + " RAM and " + Sized(Usable(vram, deviceTotal, VideoShare))
 	let frees = Sized(hostFree) + " of " + Sized(hostTotal) + " RAM and " + Sized(deviceFree) + " of " + Sized(deviceTotal)
 	let text = "Not enough free memory for " + program + ", it needs " + needs + " VRAM, " + frees
-	isShort then text + " VRAM are free" else ""
+	isShort or isShown then text + " VRAM are free" else ""
 IsShort(needed Number, free Number, total Number, share Number) Boolean
 	Sample.IsShort(25 * Gigabyte, 7 * Gigabyte, 128 * Gigabyte, HostShare)
 	Sample.IsShort(25 * Gigabyte, 30 * Gigabyte, 128 * Gigabyte, HostShare) is false

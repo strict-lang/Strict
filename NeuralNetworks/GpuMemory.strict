@@ -1,21 +1,11 @@
-Released Number
-	GpuMemory.Released >= 0
-	0
-Evicted Number
-	GpuMemory.Evicted >= 0
-	0
-Yielded Number
-	GpuMemory.Yielded >= 0
-	0
-Finished Number
-	GpuMemory.Finished is 0
-	0
+Released
+Evicted
+Yielded
+Finished
 Held Number
 	GpuMemory.Held >= 0
 	0
-Freed(bytes Number) Number
-	GpuMemory.Freed(0) >= 0
-	bytes.Clamp(0, Held)
+Freed(bytes Number)
 Available Number
 	GpuMemory.Available >= 0
 	0

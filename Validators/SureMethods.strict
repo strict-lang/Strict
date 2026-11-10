@@ -1,90 +1,91 @@
+has inference Expressions/TypeInference = TypeInference.NoInference
+constant Operators = ("+", "-", "*", "/", "%", "^")
+constant Randoms = ("Number.strict", "HashCode.strict", "PseudoRandom.strict")
+constant Numbered = Scope(("low", "elements"), ("Number", "Numbers"))
+constant Counts = KnownTypes(List(Text) + "Count", List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(("Limit", "Increment"), ("Number", "Count")), List(Scope) + KnownTypes.NoMembers)
+constant Limited = SureMethods(TypeInference(Counts, List(Scope) + Scope(List(Text) + "Limit", List(Text) + "3")))
+constant Ranged = SyntaxParser(Tokenizer("Range(0, 1)").Tokens).Parse
+constant Lists = List(Text) + "List.strict"
 Named(paths Texts) Slow(Texts)
 	SureMethods.Named(List(Text)).Length is 0
-	"PseudoRandom.Next" is in SureMethods.Named(("Number.strict", "HashCode.strict", "PseudoRandom.strict"))
-	("List.First" is in SureMethods.Named(("List.strict"))) is false
-	let names = Headers(paths)
-	Settled(Listed(paths, names), Failing(paths))
-Headers(paths Texts) Texts
-	mutable names = List(Mutable(Text))
-	for paths
-		names = names + Heads(File(value).ReadLines)
-	names
-Heads(lines Texts) Texts
-	let shape = TypeShape(lines)
-	for lines
-		if shape.IsMethodHeader(value)
-			Tokenizer(value).Tokens.First
-Listed(paths Texts, methods Texts) Texts
-	mutable found = List(Mutable(Text))
+	"PseudoRandom.Next" is in SureMethods(ResolveCheck(Logger).Inference(Randoms)).Named(Randoms)
+	("List.First" is in SureMethods(ResolveCheck(Logger).Inference(Lists)).Named(Lists)) is false
+	mutable records = List(Mutable(Text))
 	for paths
 		if IsBase(value)
-			let type = Path(value).FileName.RemoveExtension.text
-			found = found + Records(type, File(value).ReadLines, methods)
-	found
-Records(type Text, lines Texts, methods Texts) Texts
+			records = records + Records(Path(value).FileName.RemoveExtension.text, File(value).ReadLines)
+	Settled(records)
+Records(type Text, lines Texts) Texts
 	let shape = TypeShape(lines)
+	let statements = MethodBodies(type, shape, inference).Statements
 	for lines
 		if shape.IsMethodHeader(value) and Kept(lines, index)
 			let name = Tokenizer(value).Tokens.First
-			type + "." + name + "|" + Text.Combine(Calls(Duplicates.Implementation(lines, index), methods), ",")
+			type + "." + name + "|" + Text.Combine(Used(type, statements, lines, index) - (type + "." + name), ",")
+Used(type Text, statements ScopedStatements, lines Texts, header Number) Texts
+	let last = FileCheck.LastLine(lines, header)
+	mutable keys = List(Mutable(Text))
+	for statements
+		if (value.line > header) and (value.line <= last) and (Duplicates.IsTest(lines(value.line).Trim) is false)
+			keys = keys + Calls(type, value.statement, value.scope)
+	keys
+Parsed(code Text) SyntaxNode
+	SureMethods.Parsed("1").Kind is "Number"
+	SyntaxParser(Tokenizer(code).Tokens).Parse
 Kept(lines Texts, header Number) Boolean
 	SureMethods.Kept(("Next Number", "\tlow + 1"), 0)
 	SureMethods.Kept(("Send(socket Number)", "\tSend(0) is 1"), 0) is false
 	SureMethods.Kept(("Parsed Number", "\tname to Number"), 0) is false
 	let body = Duplicates.Implementation(lines, header)
 	(Fails(body) is false) and HasBody(body)
-Failing(paths Texts) Texts
-	mutable names = List(Mutable(Text))
-	for paths
-		if IsBase(value)
-			names = names + Bad(File(value).ReadLines)
-	names
-Bad(lines Texts) Texts
-	let shape = TypeShape(lines)
-	for lines
-		if shape.IsMethodHeader(value) and Fails(Duplicates.Implementation(lines, index))
-			Tokenizer(value).Tokens.First
 Fails(body Text) Boolean
 	SureMethods.Fails("return Error(\"Bad\")")
 	SureMethods.Fails("value to Number")
 	SureMethods.Fails("low + high") is false
-	SureMethods.Fails("elements(0)")
-	SureMethods.Fails("for (1, 2)\nRange(0, 1)") is false
 	let tokens = Tokenizer(body).Tokens
-	for tokens
-		let isIndex = Opens(tokens, index) and (value(0).Upper is not value(0)) and (value is not in DefaultCheck.Keywords)
-		if isIndex or (value is in ("Error", "to"))
-			return true
-	false
-Opens(tokens Texts, index Number) Boolean
-	SureMethods.Opens(("Floor", "("), 0) and SureMethods.Opens(("elements", "("), 0)
-	SureMethods.Opens(("*", "("), 0) is false
-	SureMethods.Opens(("Floor", "+"), 0) is false
-	SureMethods.Opens(List(Text) + "Floor", 0) is false
-	let name = tokens(index)
-	(index + 1 < tokens.Length) and (tokens(index + 1) is "(") and (name(0).Upper is not name(0).Lower)
-Calls(body Text, methods Texts) Texts
-	SureMethods.Calls("value.Floor + List(Text)", ("Floor", "List")) is ("Floor", "List")
-	SureMethods.Calls("HashCode.UnsignedRange", ("Floor")).Length is 0
-	(SureMethods.Calls("x Floor", ("Floor")) + SureMethods.Calls("Floor value", ("Floor"))).Length is 0
-	SureMethods.Calls("low * (high + 1)", ("*", "+")).Length is 0
-	SureMethods.Calls("Floor.", ("Floor")).Length is 0
-	let tokens = Tokenizer(body).Tokens
-	mutable names = List(Mutable(Text))
-	for tokens
-		let isCalled = (index > 0) and (tokens(index - 1) is ".") or Opens(tokens, index)
-		if isCalled and (value is in methods)
-			names = names + value
-	names
-Settled(records Texts, failing Texts) Texts
-	SureMethods.Settled(("Number.Floor|", "PseudoRandom.Next|Floor"), List(Text)) is ("Number.Floor", "PseudoRandom.Next")
-	SureMethods.Settled(("Demo.Run|Next"), ("Next")).Length is 0
+	("Error" is in tokens) or ("to" is in tokens)
+Calls(type Text, node SyntaxNode, scope Scope) Texts
+	SureMethods.Calls("Demo", Parsed("low * (low + 1)"), Numbered) is ("Number.*", "Number.+")
+	SureMethods.Calls("Demo", Parsed("elements(0).Floor"), Numbered) is ("Number.Floor", "Index")
+	mutable keys = Direct(type, node, scope)
+	for node.children
+		keys = keys + Calls(type, value, scope)
+	keys
+Direct(type Text, node SyntaxNode, scope Scope) Texts
+	SureMethods.Direct("Demo", Parsed("low is 1"), Numbered).Length is 0
+	SureMethods.Direct("Demo", SyntaxNode("Text", "+"), Numbered).Length is 0
+	SureMethods.Direct("Demo", Ranged, Numbered).Length is 0
+	Limited.Direct("Count", SyntaxNode("Identifier", "Increment"), Numbered) is ("Count.Increment")
+	if (node.Kind is in ("Member", "MethodCall")) or ((node.Kind is "Binary") and (node.text is in Operators))
+		return Keyed(node.children(0), node.text, scope, inference.types.MethodsOf(type))
+	if (node.Kind is "Call") and (scope.TypeOf(node.text) is not "")
+		return List(Text) + "Index"
+	IsOwn(type, node, scope) then List(Text) + (type + "." + node.text) else List(Text)
+IsOwn(type Text, node SyntaxNode, scope Scope) Boolean
+	Limited.IsOwn("Count", SyntaxNode("Identifier", "Increment"), Numbered)
+	Limited.IsOwn("Count", SyntaxNode("Identifier", "Increment"), Scope(("Increment"), ("Number"))) is false
+	Limited.IsOwn("Count", SyntaxNode("Text", "Increment"), Numbered) is false
+	(node.Kind is in ("Identifier", "Call")) and (scope.TypeOf(node.text) is "") and IsMethod(type, node.text)
+IsMethod(type Text, name Text) Boolean
+	Limited.IsMethod("Count", "Increment")
+	(Limited.IsMethod("Count", "Limit") is false) and (Limited.IsMethod("Count", "Missing") is false)
+	(inference.types.MethodsOf(type).TypeOf(name) is not "") and (inference.ConstantOf(type, name) is "")
+Keyed(receiver SyntaxNode, name Text, scope Scope, methods Scope) Texts
+	SureMethods.Keyed(SyntaxNode("Identifier", "elements"), "First", Numbered, Numbered) is ("List.First")
+	Limited.Keyed(SyntaxNode("Type", "Count"), "Limit", Numbered, Numbered).Length is 0
+	Limited.Keyed(SyntaxNode("Type", "Count"), "Increment", Numbered, Numbered) is ("Count.Increment")
+	let base = inference.types.BaseName(inference.TypeOf(receiver, scope, methods))
+	let isField = (inference.types.Index(base) is not -1) and (IsMethod(base, name) is false)
+	isField then List(Text) else List(Text) + (base + "." + name)
+Settled(records Texts) Texts
+	SureMethods.Settled(("Number.Floor|", "PseudoRandom.Next|Number.Floor")) is ("Number.Floor", "PseudoRandom.Next")
+	SureMethods.Settled(("Demo.Run|Index", "Demo.Twice|Demo.Twice")).Length is 0
 	mutable sure = List(Mutable(Text))
 	mutable added = 1
 	for as long as added > 0
 		added = 0
 		for records
-			if (Key(value) is not in sure) and Accepts(CallList(value), sure, failing)
+			if (Key(value) is not in sure) and Accepts(CallList(value), sure)
 				sure = sure + Key(value)
 				added = 1
 	sure
@@ -92,28 +93,19 @@ Key(record Text) Text
 	SureMethods.Key("PseudoRandom.Next|Floor") is "PseudoRandom.Next"
 	record.Split("|").First
 CallList(record Text) Texts
-	SureMethods.CallList("PseudoRandom.Next|Floor") is ("Floor")
+	SureMethods.CallList("PseudoRandom.Next|Number.Floor") is ("Number.Floor")
 	SureMethods.CallList("Number.Floor|").Length is 0
-	SureMethods.CallList("Demo.Run|Floor,Next") is ("Floor", "Next")
+	SureMethods.CallList("Demo.Run|Number.Floor,Demo.Next") is ("Number.Floor", "Demo.Next")
 	let rest = record.Split("|").Last
 	record.EndsWith("|") then List(Text) else rest.Split(",")
-Accepts(calls Texts, sure Texts, failing Texts) Boolean
-	SureMethods.Accepts(List(Text), ("Number.Floor"), List(Text))
-	SureMethods.Accepts(("Floor"), ("Number.Floor"), List(Text))
-	SureMethods.Accepts(("Missing"), ("Number.Floor"), List(Text)) is false
-	SureMethods.Accepts(("Next"), ("PseudoRandom.Next"), ("Next")) is false
+Accepts(calls Texts, sure Texts) Boolean
+	SureMethods.Accepts(List(Text), ("Number.Floor"))
+	SureMethods.Accepts(("Number.Floor"), ("Number.Floor"))
+	SureMethods.Accepts(("Number.Floor", "Index"), ("Number.Floor")) is false
 	for calls
-		if (value is in failing) or (Found(value, sure) is false)
+		if value is not in sure
 			return false
 	true
-Found(name Text, sure Texts) Boolean
-	SureMethods.Found("Floor", ("Number.Floor", "PseudoRandom.Next"))
-	SureMethods.Found("Next", ("Number.Floor")) is false
-	SureMethods.Found("ext", ("PseudoRandom.Next")) is false
-	for sure
-		if value.EndsWith("." + name)
-			return true
-	false
 HasBody(body Text) Boolean
 	SureMethods.HasBody("low + high")
 	SureMethods.HasBody("Next is 1") is false

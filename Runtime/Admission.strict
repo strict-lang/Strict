@@ -1,6 +1,10 @@
 has logger
 constant HostShare = 2
 constant VideoShare = 4
+constant Gigabyte = 1073741824
+constant BigNeed = Need(minimumRam = 64 * Gigabyte, idealRam = 70 * Gigabyte, minimumVram = 10 * Gigabyte)
+constant SmallMachine = MachineView(freeRam = 20 * Gigabyte, freeVram = 4 * Gigabyte, totalRam = 32 * Gigabyte, totalVram = 24 * Gigabyte)
+constant HeldMachine = MachineView(SmallMachine, totalRam = 128 * Gigabyte, idleRam = 40 * Gigabyte, idleVram = 18 * Gigabyte)
 constant Sample = Admission(logger = Logger)
 Verdict(need Need, seen MachineView) Text
 	Sample.Verdict(Need.Tiny, MachineView.Wide) is "refused"
@@ -37,3 +41,23 @@ Usable(total Number, share Number) Number
 	Sample.Usable(16, HostShare) is 8
 	Sample.Usable(0, HostShare) is 0
 	total - total / share
+Reason(need Need, seen MachineView) Text
+	Sample.Reason(BigNeed, SmallMachine).StartsWith("this machine has 32 GB RAM and 24 GB VRAM")
+	Sample.Reason(BigNeed, HeldMachine).StartsWith("it needs 70 GB RAM and 10 GB VRAM, 20 GB of 128 GB RAM and 4 GB")
+	Sample.Reason(BigNeed, HeldMachine).EndsWith(", idle backends could free 40 GB RAM and 18 GB VRAM")
+	if IsTiny(need, seen)
+		return Undersized(need, seen)
+	let ram = need.idealRam > 0 then need.idealRam else need.minimumRam
+	let vram = need.idealVram > 0 then need.idealVram else need.minimumVram
+	let needs = "it needs " + Sized(ram) + " RAM and " + Sized(vram) + " VRAM, "
+	let free = Sized(seen.freeRam) + " of " + Sized(seen.totalRam) + " RAM and " + Sized(seen.freeVram) + " of "
+	let idle = ", idle backends could free " + Sized(seen.idleRam) + " RAM and " + Sized(seen.idleVram) + " VRAM"
+	let text = needs + free + Sized(seen.totalVram) + " VRAM are free"
+	(seen.idleRam > 0) or (seen.idleVram > 0) then text + idle else text
+Undersized(need Need, seen MachineView) Text
+	Sample.Undersized(BigNeed, SmallMachine).EndsWith(" VRAM, it needs at least 64 GB RAM and 10 GB VRAM")
+	let total = "this machine has " + Sized(seen.totalRam) + " RAM and " + Sized(seen.totalVram) + " VRAM"
+	total + ", it needs at least " + Sized(need.minimumRam) + " RAM and " + Sized(need.minimumVram) + " VRAM"
+Sized(bytes Number) Text
+	Sample.Sized(Gigabyte * 2.5) is "2.5 GB"
+	(bytes / Gigabyte).Round(1) + " GB"

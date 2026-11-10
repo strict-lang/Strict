@@ -1,0 +1,2 @@
+- Routes.Called keeps 2 surviving mutants (the `call.IsNativeConversion` branch and the `IsMemberCall` result), both need a conversion fixture that `Chosen` finds.
+- `SureMethods` decides "can fail" from body tokens (`Error`, `to`) and typed index access: List `+` with a Text element returns Error at runtime without either, so it still counts as sure.

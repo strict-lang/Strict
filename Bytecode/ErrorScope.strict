@@ -1,4 +1,5 @@
 has values ValueCodegen
+constant Statements = ("If", "ElseIf", "Else", "For", "Declaration", "Reassignment", "Return")
 constant FallibleMarker = " fallible"
 constant MutableMarker = " mutable"
 constant Plain = ErrorScope(ValueCodegen.Plain)
@@ -12,6 +13,9 @@ constant Numbered = CodeBlock.Empty.Declare("a", "Numbers")
 constant Lists = KnownTypes(("List"), (KnownTypes.NoMembers), (KnownTypes.NoMembers), (Scope(("Add mutable", "Remove mutable", "Increment mutable"), ("Mutable", "Mutable", "Mutable"))))
 constant Listing = ErrorScope(ValueCodegen(TypeInference(Lists, TypeInference.Limits), KnownTypes.NoMembers, CallTarget.Plain))
 constant Growing = SyntaxNode("Member", "Add", Increment.children)
+constant Tickers = KnownTypes(("Ticker"), (KnownTypes.NoMembers), (KnownTypes.NoMembers), (Changes.Ticking.Added(KnownTypes.NoMembers)))
+constant Ticked = ErrorScope(ValueCodegen(TypeInference(Tickers, TypeInference.Limits), KnownTypes.NoMembers, CallTarget.Plain))
+constant Ticker = CodeBlock.Empty.Declare("a", "Ticker").Declare("a" + MutableMarker, "mutable")
 constant ListMutated = CodeBlock.Empty.Declare("a", "List").Declare("a" + MutableMarker, "mutable")
 constant Listed = CodeBlock.Empty.Declare("a", "Counts").Declare("a" + MutableMarker, "mutable").Declare("Counts" + MutableMarker, "mutable")
 Prepared(body SyntaxNode, block CodeBlock) CodeBlock
@@ -59,14 +63,23 @@ Used(node SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Used(SyntaxParser(Tokenizer("1 is 2").Tokens).Parse, CodeBlock.Empty) is Error
 	Plain.Used(SyntaxParser(Tokenizer("1 + 2").Tokens).Parse, CodeBlock.Empty) is Error
 	(Counting.Used(Increment, Mutated) is Increment) and (Plain.Used(Growing, Mutated).Kind is "Member")
+	Ticked.Used(SyntaxNode("Member", "Next", Increment.children), Ticker).Kind is "Member"
+	Plain.Used(SyntaxNode("Identifier", "a"), CodeBlock.Empty.Declare("a", "None")).Kind is "Identifier"
 	Plain.Used(BodyParser("Run", "\tif 1 is 2", "\t\t3").Block(1, 1).children(0), CodeBlock.Empty).Kind is "If"
 	Plain.Used(SyntaxNode("Member", "Greet", ValueCodegen.NewGreeter), CodeBlock.Empty) is Error
-	Plain.Used(SyntaxNode("Identifier", "a"), CodeBlock.Empty.Declare("a", "None")).Kind is "Identifier"
-	if node.Kind is in ("If", "ElseIf", "Else", "For", "Declaration", "Reassignment", "Return")
-		return node
-	if (values.TypeOf(node, block) is in ("None", "")) or IsMutating(node, block) or IsGrowing(node, block)
+	if (node.Kind is in Statements) or (values.TypeOf(node, block) is in ("None", "")) or IsChanging(node, block)
 		return node
 	Error("ResultMustBeUsed: " + (node to Text) + " in " + values.target.fullName + ".strict:line " + node.line + Unused)
+IsChanging(node SyntaxNode, block CodeBlock) Boolean
+	Ticked.IsChanging(SyntaxNode("Member", "Next", Increment.children), Ticker)
+	Ticked.IsChanging(SyntaxNode("Member", "Size", Increment.children), Ticker) is false
+	Counting.IsChanging(Increment, Mutated) and Plain.IsChanging(Growing, Mutated)
+	Plain.IsChanging(ValueCodegen.One, CodeBlock.Empty) is false
+	if IsMutating(node, block) or IsGrowing(node, block)
+		return true
+	if node.Kind is not in ("MethodCall", "Member")
+		return false
+	values.inference.types.ParameterScope(values.TypeOf(node.children(0), block)).TypeOf(node.text + " changes") is not ""
 IsGrowing(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsGrowing(Growing, Mutated)
 	Plain.IsGrowing(Growing, CodeBlock.Empty.Declare("a", "Count")) is false

@@ -95,7 +95,7 @@ Needed(words Texts, seen MachineView) Text
 	wantsFree = (verdict is "free") or ((verdict is "refused") and (Process.Elapsed - seenAt < StaleSeconds))
 	busyLabel = (verdict is "refused") and wantsFree then "exit" else busyLabel
 	if (verdict is "refused") and (wantsFree is false)
-		return "refused\t" + need.job + "\tNot enough free memory"
+		return "refused\t" + need.job + "\t" + Admission(logger).Reason(need, seen)
 	"wait\t" + need.job + "\t1\t" + need.label + "\t0\t0"
 Granted(words Texts, seen MachineView) Text
 	Sample.Granted(("need", "job", "label", "4", "8", "2", "4", "0", "wait"), MachineView.Wide) is "go\tjob\t0"

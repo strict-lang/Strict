@@ -11,6 +11,8 @@ constant Probing = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "Exists
 constant Timing = Invocation(InstructionEntry.Invoke(0, ("Strict/Process", "Elapsed", "Strict/Number"), List(Number), -1), List(VmValue), VmValue.None)
 constant Deleting = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "Delete", "None"), List(Number), 0), List(VmValue), VmValue("Strict/File", 0, "", List(VmValue) + VmValue.OfText("Runtime/missing")))
 constant Changing = Invocation(InstructionEntry.Invoke(1, ("Strict/Directory", "Change", "None", "path"), 0, -1), Current, VmValue.None)
+constant Releasing = Invocation(InstructionEntry.Invoke(0, ("Strict/GpuMemory", "Released", "None"), List(Number), -1), List(VmValue), VmValue.None)
+constant Unsent = VmValue.OfError("OutputNotChanged")
 constant FileMethods = ("File.ReadLines", "File.Exists", "File.Write", "File.Delete", "File.Rename", "File.ReadBytes", "File.WriteLines", "File.WriteBytes", "File.Modified", "File.Length", "File.Locked", "File.InMemory")
 constant DirectoryMethods = ("Directory.Files", "Directory.Directories", "Directory.Modified", "Directory.Exists", "Directory.Create", "Directory.Change", "Directory.Current")
 constant ProcessMethods = ("Process.Input", "Process.Variable", "Process.InputLine", "Process.OperatingSystem", "Process.Current", "Process.Built", "Process.Elapsed", "Process.MemoryUsed", "Process.FilesRead")
@@ -18,7 +20,8 @@ constant ToolMethods = ("Process.Find", "Process.RunTool", "Process.RunTools", "
 constant MathMethods = ("Number.Logarithm", "Number.Random", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan", "Vector2.Atan")
 constant LibraryMethods = ("Library.Call", "Library.TextSlot", "Library.NumbersSlot", "Library.TextResult", "Library.NumbersResult", "Library.Failure")
 constant RuntimeMethods = ("Time.Now", "Socket.Output", "BuildProfile.Detailed", "TestBudget.Started", "TestBudget.Finished", "TestBudget.Entered", "TestBudget.Left", "TestBudget.Expired", "ConstantCache.At", "ConstantCache.Stored")
-constant Methods = FileMethods + DirectoryMethods + ProcessMethods + ToolMethods + MathMethods + LibraryMethods + RuntimeMethods
+constant GpuMethods = ("GpuMemory.Released", "GpuMemory.Evicted", "GpuMemory.Yielded", "GpuMemory.Finished", "GpuMemory.Freed")
+constant Methods = FileMethods + DirectoryMethods + ProcessMethods + ToolMethods + MathMethods + LibraryMethods + RuntimeMethods + GpuMethods
 constant Kinds = ("File", "Directory", "Process", "Number", "Degrees", "Ratio", "Vector2", "Library", "Time", "Socket", "BuildProfile", "TestBudget", "ConstantCache")
 constant LocalEffects = ("File.Write", "File.Delete", "File.Rename", "File.WriteLines", "File.WriteBytes", "Directory.Create", "Directory.Change", "Process.RunTool", "Process.RunTools", "Process.Started", "Library.Call")
 constant Effects = LocalEffects + ("Socket.Connect", "Socket.Listen", "Socket.Local", "Socket.Accept", "Socket.Waiting", "Socket.Send", "Socket.Receive")
@@ -33,18 +36,19 @@ IsHosted Boolean
 	Hosted(SystemCall).IsHosted
 	Hosted(Invocation.AddCall).IsHosted is false
 	"Process.InputLine" is in Hosted.Methods
+	Hosted(Releasing).IsHosted
 	Hosted(HostedJson.Getting).IsHosted
 	(TypeEntry.ShortName(call.TypeName) + "." + call.MethodName is in Methods) or HostedJson(call).IsHosted
 Result VmValue
 	Hosted(SystemCall).Result.text is in ("Windows", "Linux", "MacOS", "Unknown")
-	Hosted(Existing).Result.IsTrue and (Hosted(Timing).Result.number > 0)
+	Hosted(Existing).Result.IsTrue and (Hosted(Timing).Result.number > 0) and (Hosted(Releasing).Result.kind is "None")
 	let type = TypeEntry.ShortName(call.TypeName)
 	if (call.MethodName is in ("Input", "InputLine")) or (type is "Directory") and (call.MethodName is "Current")
 		return VmValue.OfText(Read(call.MethodName))
 	if type is in ("Process", "Library", "BuildProfile", "TestBudget", "ConstantCache")
 		return type is "Library" then Foreign(call, List(TypeEntry)).Hosted else HostedProcess(call).Result
-	if type is "Socket"
-		return Socket.Output(call.Arguments.First.number) is Error then VmValue.OfError("OutputNotChanged") else VmValue.None
+	if type is in ("Socket", "GpuMemory")
+		return (type is "GpuMemory") or (Socket.Output(call.Arguments(0).number) is not Error) then VmValue.None else Unsent
 	if type is not in ("File", "Directory")
 		return type is "Json" then HostedJson(call).Result else HostedMath(call).Measured
 	call.MethodName is in ("ReadLines", "ReadBytes", "Files", "Directories") then Entries else Stored
