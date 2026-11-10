@@ -56,13 +56,14 @@ Answered(resident Resident, request Text, socket Number, last Answer) Answer
 	if isMoved
 		Directory.Change(folder)
 	Socket.Output(socket)
-	let answer = Logged(Ran(resident.Arguments(request), last.Fresh(folder)))
+	let answer = Logged(resident.Arguments(request), last.Fresh(folder))
 	Socket.Output(0)
 	if isMoved
 		Directory.Change(home)
 	let failed = Answer(1, last.known, last.folder, last.stamps, last.files)
 	answer is Error then failed else Answer(answer.code, answer.known, folder, answer.stamps, answer.files).Carried(last)
-Logged(answer Answer) Answer
+Logged(arguments Texts, known Dictionary(Text, TypeEntry)) Answer
+	let answer = Ran(arguments, known)
 	if answer is Error
 		logger.Log(answer to Text)
 	answer

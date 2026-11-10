@@ -26,7 +26,8 @@ Locked(target Text) Slow(Boolean)
 	if lock.Locked
 		return true
 	logger.Log("Waiting for the other build of " + target)
-	for as long as Process.Elapsed - Process.Elapsed < Strict.BuildWait
+	let started = Process.Elapsed
+	for as long as Process.Elapsed - started < Strict.BuildWait
 		Process.Wait(0.1)
 		if lock.Locked
 			return true

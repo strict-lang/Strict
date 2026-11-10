@@ -46,10 +46,12 @@ IsRebound(inlined Text, next Texts, name Text) Boolean
 	(Evicted.IsRebound("value", ("Log", "x"), "x") is false) and (Evicted.IsRebound("count", ("for", "x"), "x") is false)
 	Evicted.IsRebound("Account", ("for", "account", "(", "list", ")"), "account")
 	Evicted.IsRebound("a", ("Log", "(", "found", ")"), "found") is false
+	Evicted.IsRebound("a", ("for", "as", "x"), "x") and (Evicted.IsRebound("a", ("if", "as", "x"), "x") is false)
 	let tokens = Tokenizer(inlined).Tokens
 	let after = next.Index(name) + 1
 	let isIndexed = after < next.Length then next(after) is "(" else false
-	isIndexed or ((next.First is "for") and (Uses(tokens, "value") + Uses(tokens, "index") > 0))
+	let isRepeated = (next.First is "for") and (next.Index("as") is 1)
+	isIndexed or isRepeated or ((next.First is "for") and (Uses(tokens, "value") + Uses(tokens, "index") > 0))
 Value(line Text) Text
 	Inlines(("Run", "\tx", "\tx")).IsInlinable(1) is false
 	Evicted.Value("\tlet evicted = GpuMemory.Evicted") is "GpuMemory.Evicted"

@@ -114,7 +114,8 @@ SharedKept(device Text, isTiling Boolean, builder DeviceBuild) Texts
 Waited(key Text, isTiling Boolean) Slow(Texts)
 	PtxCache("Compiler/output/Unbuilt/module").Waited("module {\n}", false).Length is 0
 	let lock = File(Path(base).PathOnly.text + ".lock")
-	for as long as Process.Elapsed - Process.Elapsed < Strict.BuildWait
+	let started = Process.Elapsed
+	for as long as Process.Elapsed - started < Strict.BuildWait
 		let previous = Previous(key, isTiling)
 		if (previous.Length > 0) or lock.Locked
 			return previous.Length > 0 then previous else Previous(key, isTiling)
