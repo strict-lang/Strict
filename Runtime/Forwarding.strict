@@ -1,8 +1,10 @@
 has logger
 has root Text
-constant Sample = Forwarding(Logger, "Compiler/output")
+has coordinator = ""
+constant Nowhere = "Compiler/output/MissingCoordinator"
+constant Sample = Forwarding(Logger, "Compiler/output", Nowhere)
 constant Server = Resident("Compiler/output")
-constant Missing = Forwarding(Logger, "Compiler/output/Missing")
+constant Missing = Forwarding(Logger, "Compiler/output/Missing", Nowhere)
 constant Dropped = -3
 constant Output = "/server.log"
 constant Errors = "/server.errors.log"
@@ -62,7 +64,11 @@ Interrupted(server Resident, port Number) Number
 	1
 Stopped Number
 	Missing.Stopped is 0
-	Directory.Files(root + "/obj", "strict.server*").Length is 0 then 0 else Killed
+	let killed = Directory.Files(root + "/obj", "strict.server*").Length is 0 then 0 else Killed
+	let job = Path(Process.Current.executable.Replace("\\", "/")).FileName.RemoveExtension.text
+	if Coordinator(logger, coordinator).Sent("exit\t" + job, false) is "busy"
+		logger.Log("The coordinator keeps running for a job of another program")
+	killed
 Killed Number
 	let isWindows = Process.OperatingSystem is "Windows"
 	for Directory.Files(root + "/obj", "strict.server*")

@@ -1,5 +1,7 @@
-Named(paths Texts) Texts
+Named(paths Texts) Slow(Texts)
 	SureMethods.Named(List(Text)).Length is 0
+	"PseudoRandom.Next" is in SureMethods.Named(("Number.strict", "HashCode.strict", "PseudoRandom.strict"))
+	("List.First" is in SureMethods.Named(("List.strict"))) is false
 	let names = Headers(paths)
 	Settled(Listed(paths, names), Failing(paths))
 Headers(paths Texts) Texts
@@ -8,8 +10,9 @@ Headers(paths Texts) Texts
 		names = names + Heads(File(value).ReadLines)
 	names
 Heads(lines Texts) Texts
+	let shape = TypeShape(lines)
 	for lines
-		if TypeShape(lines).IsMethodHeader(value)
+		if shape.IsMethodHeader(value)
 			Tokenizer(value).Tokens.First
 Listed(paths Texts, methods Texts) Texts
 	mutable found = List(Mutable(Text))
@@ -19,13 +22,15 @@ Listed(paths Texts, methods Texts) Texts
 			found = found + Records(type, File(value).ReadLines, methods)
 	found
 Records(type Text, lines Texts, methods Texts) Texts
+	let shape = TypeShape(lines)
 	for lines
-		if TypeShape(lines).IsMethodHeader(value) and Kept(lines, index)
+		if shape.IsMethodHeader(value) and Kept(lines, index)
 			let name = Tokenizer(value).Tokens.First
 			type + "." + name + "|" + Text.Combine(Calls(Duplicates.Implementation(lines, index), methods), ",")
 Kept(lines Texts, header Number) Boolean
 	SureMethods.Kept(("Next Number", "\tlow + 1"), 0)
 	SureMethods.Kept(("Send(socket Number)", "\tSend(0) is 1"), 0) is false
+	SureMethods.Kept(("Parsed Number", "\tname to Number"), 0) is false
 	let body = Duplicates.Implementation(lines, header)
 	(Fails(body) is false) and HasBody(body)
 Failing(paths Texts) Texts
@@ -35,26 +40,40 @@ Failing(paths Texts) Texts
 			names = names + Bad(File(value).ReadLines)
 	names
 Bad(lines Texts) Texts
+	let shape = TypeShape(lines)
 	for lines
-		if TypeShape(lines).IsMethodHeader(value) and Fails(Duplicates.Implementation(lines, index))
+		if shape.IsMethodHeader(value) and Fails(Duplicates.Implementation(lines, index))
 			Tokenizer(value).Tokens.First
 Fails(body Text) Boolean
 	SureMethods.Fails("return Error(\"Bad\")")
 	SureMethods.Fails("value to Number")
 	SureMethods.Fails("low + high") is false
+	SureMethods.Fails("elements(0)")
+	SureMethods.Fails("for (1, 2)\nRange(0, 1)") is false
 	let tokens = Tokenizer(body).Tokens
-	("Error" is in tokens) or ("to" is in tokens)
+	for tokens
+		let isIndex = Opens(tokens, index) and (value(0).Upper is not value(0)) and (value is not in DefaultCheck.Keywords)
+		if isIndex or (value is in ("Error", "to"))
+			return true
+	false
+Opens(tokens Texts, index Number) Boolean
+	SureMethods.Opens(("Floor", "("), 0) and SureMethods.Opens(("elements", "("), 0)
+	SureMethods.Opens(("*", "("), 0) is false
+	SureMethods.Opens(("Floor", "+"), 0) is false
+	SureMethods.Opens(List(Text) + "Floor", 0) is false
+	let name = tokens(index)
+	(index + 1 < tokens.Length) and (tokens(index + 1) is "(") and (name(0).Upper is not name(0).Lower)
 Calls(body Text, methods Texts) Texts
 	SureMethods.Calls("value.Floor + List(Text)", ("Floor", "List")) is ("Floor", "List")
 	SureMethods.Calls("HashCode.UnsignedRange", ("Floor")).Length is 0
-	SureMethods.Calls("x Floor", ("Floor")).Length is 0
-	SureMethods.Calls("Floor value", ("Floor")).Length is 0
+	(SureMethods.Calls("x Floor", ("Floor")) + SureMethods.Calls("Floor value", ("Floor"))).Length is 0
+	SureMethods.Calls("low * (high + 1)", ("*", "+")).Length is 0
 	SureMethods.Calls("Floor.", ("Floor")).Length is 0
 	let tokens = Tokenizer(body).Tokens
 	mutable names = List(Mutable(Text))
 	for tokens
-		let mark = (index > 0) and (tokens(index - 1) is ".") or (index + 1 < tokens.Length) and (tokens(index + 1) is "(")
-		if mark and (value is in methods)
+		let isCalled = (index > 0) and (tokens(index - 1) is ".") or Opens(tokens, index)
+		if isCalled and (value is in methods)
 			names = names + value
 	names
 Settled(records Texts, failing Texts) Texts
@@ -107,6 +126,6 @@ IsBase(path Text) Boolean
 	SureMethods.IsBase("PseudoRandom.strict")
 	SureMethods.IsBase("Strict/PseudoRandom.strict") and SureMethods.IsBase("./PseudoRandom.strict")
 	SureMethods.IsBase("Networking/Socket.strict") is false
+	SureMethods.IsBase("Networking\\Socket.strict") is false
 	let parts = path.Replace("\\", "/").Split("/")
-	let parent = parts.Length > 1 then parts(parts.Length - 2) else ""
-	(parts.Length is 1) or (parent is "Strict") or (parent is ".")
+	(parts.Length is 1) or (parts(parts.Length - 2) is in ("Strict", "."))

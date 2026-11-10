@@ -121,6 +121,7 @@ Written(names Texts, lists List(Numbers))
 Header(names Texts, lists List(Numbers)) Text
 	Tiny.Header(List(Text) + "x", List(Numbers) + (1, 2)) is "{" + Single + "}"
 	Tiny.Header(("x", "y"), ((1, 2), List(Number) + 3)).EndsWith("\"shape\":[1],\"data_offsets\":[8,12]}}")
+	Tiny.Header(("x", "y"), ((1, 2), List(Number) + 3)).Split("},\"").Length is 2
 	"{" + Text.Combine(Entries(names, Counts(lists)), ",") + "}"
 Entries(names Texts, counts Numbers) Texts
 	Tiny.Entries(List(Text) + "x", List(Number) + 2) is List(Text) + Single
@@ -134,8 +135,6 @@ Counts(lists List(Numbers)) Numbers
 		value.Length
 Combined(lists List(Numbers)) Numbers
 	Tiny.Combined(((1, 2), List(Number) + 3)) is (1, 2, 3)
-	if lists.Length is 1
-		return lists.First
 	mutable combined = List(Number)
 	for lists
 		combined = combined + value
@@ -146,5 +145,6 @@ Columns(name Text) List(Numbers)
 	TensorFile.Columns(path, Entry(name), bits)
 Part(values Numbers, start Number, count Number, step Number) Numbers
 	Tiny.Part((1, 2, 3, 4), 1, 2, 2) is (2, 4)
+	Tiny.Part((1, 2, 3, 4, 5), 0, 3, 2) is (1, 3, 5)
 	for count
 		values(start + index * step)

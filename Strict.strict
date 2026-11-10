@@ -32,17 +32,16 @@ Run(arguments Texts) Number
 	forwarded >= 0 then forwarded else Ran(arguments).code
 Served(resident Resident) Number
 	let server = resident.Opened
-	if server <= 0
-		return 1
-	mutable socket = resident.Accepted(server, File(Process.Current.executable).Modified)
+	let built = File(Process.Current.executable).Modified
+	mutable socket = resident.Accepted(server, built)
 	mutable answer = Answer(0, Dictionary(Text, TypeEntry))
 	for as long as socket > 0
 		let request = resident.Requested(socket)
 		let stopping = resident.Arguments(request) is (Resident.Stopping)
 		answer = Replied(resident, request, socket, stopping, answer)
-		socket = stopping then 0 else resident.Accepted(server, File(Process.Current.executable).Modified)
+		socket = stopping then 0 else resident.Accepted(server, built)
 	resident.Closed(server)
-	0
+	server > 0 then 0 else 1
 Replied(resident Resident, request Text, socket Number, isStopping Boolean, last Answer) Answer
 	let started = Time.Now
 	let isAnswered = resident.IsCurrent(request) and (isStopping is false)
@@ -145,7 +144,7 @@ Projected(arguments Texts) Texts
 	let at = (arguments.Length > 0) and (arguments(0) is in Commands) then 1 else 0
 	let named = arguments.Length > at then arguments(at) else ""
 	let source = File(named + ".strict").Exists then named + ".strict" else named
-	let project = source.EndsWith(".strict") then TypeSource.Project(source) else ""
+	let project = source.EndsWith(".strict") or Directory.Exists(source) then TypeSource.Project(source) else ""
 	let full = TypeSource.Absolute(source)
 	if project is not ""
 		Directory.Change(project)

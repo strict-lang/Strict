@@ -8,6 +8,18 @@ constant Trimming = Invocation(Resolver.Twice, entry = InstructionEntry.Invoke(0
 constant Constructing = MethodEntry(InlineRules.Placeholder, instructions = (InstructionEntry.LoadNumber(0, 0), InstructionEntry.Invoke(1, ("Strict/Degrees", "from", "Strict/Degrees"), List(Number) + 0, -1), InstructionEntry.Return(1)))
 constant Reading = MethodEntry(InlineRules.Placeholder, instructions = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "key"), InstructionEntry.Return(0)))
 constant Fielding = MethodEntry(InlineRules.Placeholder, instructions = (InstructionEntry(InstructionType.FieldLoad, "x", (0, 0, -1)), InstructionEntry.Return(0)))
+constant Failing = MethodEntry(InlineRules.Placeholder, instructions = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "name"), Inliner.MadeError, InstructionEntry.Return(0)))
+constant Membered = MethodEntry(Failing, instructions = (Fielding.instructions(0), Inliner.MadeError, Failing.instructions(2)))
+constant Jumping = InstructionEntry(InstructionType.Jump, "", (0, 0, -1))
+constant Branching = MethodEntry(Failing, instructions = (Failing.instructions(0), Jumping, Inliner.MadeError, InstructionEntry.Return(0)))
+constant Ticking = Routes((TypeEntry(Machine.Doubler, members = TypeEntry.Holding(0).members), TypeEntry.Holding(1)))
+constant Holder = TypeEntry(TypeEntry.Holding(1), methods = TypeEntry.Holding(1).methods + Machine.Doubler.methods(0))
+constant Wrapper = TypeEntry("Strict/Wrapper", List(MemberEntry) + MemberEntry("inner", "Strict/Holder", List(InstructionEntry), false), List(MethodEntry))
+constant Redirecting = Routes((Wrapper, Holder))
+constant WrapperTwice = Invocation(InstructionEntry.Invoke(0, ("Strict/Wrapper", "Twice", "Strict/Number"), List(Number), -1), List(VmValue), VmValue.None)
+constant WrapperFrom = Invocation(InstructionEntry.Invoke(1, ("Strict/Wrapper", "from", "Strict/Wrapper", "counter"), 0, -1), List(VmValue) + VmValue.OfNumber(5), VmValue.None)
+constant Defaulting = Routes(List(TypeEntry) + TypeEntry(Machine.Doubler, methods = Machine.Doubler.methods + Machine.Defaulted))
+constant DefaultAdd = Invocation(InstructionEntry.Invoke(0, ("Strict/Doubler", "Add", "Strict/Number"), List(Number) + 0, -1), List(VmValue) + VmValue.OfNumber(1), VmValue.None)
 constant JsonOnly = Routes(List(TypeEntry) + TypeEntry("Json", List(MemberEntry), List(MethodEntry)))
 Target(call Invocation) Numbers
 	Doubling.Target(Trimming) is (Resolver.Native, 0, 0)
@@ -33,6 +45,9 @@ IsPlaceholder(method MethodEntry) Boolean
 	Doubling.IsPlaceholder(InlineRules.Placeholder) and Doubling.IsPlaceholder(Constructing)
 	(Doubling.IsPlaceholder(InlineRules.Adding) is false) and (Doubling.IsPlaceholder(Reading) is false)
 	Doubling.IsPlaceholder(Fielding) is false
+	Doubling.IsPlaceholder(Failing) and (Doubling.IsPlaceholder(Branching) is false)
+	IsFailing(method) or IsInert(method)
+IsInert(method MethodEntry) Boolean
 	for method.instructions
 		let isRead = (value.kind is InstructionType.LoadVariableToRegister) and (value.texts.First is not "value")
 		let kind = value.kind
@@ -40,10 +55,23 @@ IsPlaceholder(method MethodEntry) Boolean
 		if isRead or isComputed or (value.kind is in (InstructionType.IndexCall, InstructionType.FieldLoad))
 			return false
 	true
+IsFailing(method MethodEntry) Boolean
+	Doubling.IsFailing(Failing)
+	Doubling.IsFailing(MethodEntry(Failing, instructions = List(InstructionEntry))) is false
+	Doubling.IsFailing(Membered)
+	(Doubling.IsFailing(Branching) is false) and (Doubling.IsFailing(Constructing) is false)
+	let count = method.instructions.Length
+	if (count < 2) or (method.instructions(count - 2).kind is not InstructionType.Invoke)
+		return false
+	for method.instructions
+		if (value.kind > InstructionType.Return) and (value.kind < InstructionType.InvokeWriteToList)
+			return false
+	method.instructions(count - 2).texts.First is "Strict/Error"
 Called(call Invocation) Numbers
-	Doubling.Called(Resolver.Twice) is (0, 0, 0)
-	Doubling.Called(Invocation.AddCall) is (Resolver.Native, 0, 0)
-	Routes(TypeEntry.Holding).Called(Invocation.Held) is (1, 0, 0)
+	(Doubling.Called(Resolver.Twice) is (0, 0, 0)) and (Doubling.Called(Invocation.AddCall)(0) is Resolver.Native)
+	(Routes(TypeEntry.Holding).Called(Invocation.Held) is (1, 0, 0)) and (Redirecting.Called(WrapperTwice)(0) is 1)
+	(Ticking.Called(Resolver.Twice) is (0, 0, 0)) and (Redirecting.Called(WrapperFrom)(0) is -1)
+	Defaulting.Called(DefaultAdd) is (Resolver.Native, 0, 0)
 	let name = call.MethodName
 	let own = Natives(types).TypeOf(call.TypeName)
 	let isMissing = (own.Chosen(name, call.Count, call.ReturnType, call.ParameterNames) < 0) and (name is not "from")

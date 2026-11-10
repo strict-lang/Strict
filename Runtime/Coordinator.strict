@@ -6,6 +6,7 @@ mutable seenAt Number = -100
 mutable wantsFree Boolean = false
 mutable busyJob Text = ""
 mutable busyLabel Text = ""
+mutable isEnding Boolean = false
 constant StaleSeconds = 16
 constant BeatSeconds = 5
 constant Mebibyte = 1048576
@@ -34,7 +35,7 @@ Served Number
 	let server = Opened
 	mutable idle = Process.Elapsed
 	mutable socket = 0
-	for as long as (server > 0) and (Process.Elapsed - idle < Resident.IdleSeconds)
+	for as long as (server > 0) and (isEnding is false) and (Process.Elapsed - idle < Resident.IdleSeconds)
 		socket = Taken(server)
 		if socket > 0
 			idle = Replied(socket) then Process.Elapsed else idle
@@ -48,8 +49,10 @@ Taken(server Number) Number
 	(waiting is Error) or (waiting is not 1) then 0 else Socket.Accept(server)
 Replied(socket Number) Boolean
 	Sample.Chosen(("hello", "a", "1", "b", "0")) is "ok"
-	let line = Resident("").Received(socket, "\n")
-	let sent = Resident("").Send(socket, Chosen(line.Trim.Split("\t")) + "\n")
+	let words = Resident("").Received(socket, "\n").Trim.Split("\t")
+	isEnding = (words(0) is "exit") and ((busyJob is "") or (words.Last is busyJob))
+	let answer = words(0) is "exit" then (isEnding then "ok" else "busy") else Chosen(words)
+	let sent = Resident("").Send(socket, answer + "\n")
 	if sent is Error
 		logger.Log("The client left before the result was sent")
 	(busyJob is not "") or (Process.Elapsed - seenAt < StaleSeconds)
@@ -122,9 +125,10 @@ Vram(text Text) Numbers
 	if parts.Length < 2
 		return (0, 0)
 	(parts(0).Trim to Number * Mebibyte, parts(1).Trim to Number * Mebibyte)
-Sent(line Text) Text
+Sent(line Text, isStarting = true) Text
 	Coordinator(Logger, "Compiler/output/MissingCoordinator").Sent("status") is ""
-	let socket = root is "" then Linked else Connected
+	Coordinator(Logger, "Compiler/output/MissingCoordinator").Sent("exit\tH3Video", false) is ""
+	let socket = (root is "") and isStarting then Linked else Connected
 	if socket is 0
 		return ""
 	if Resident("").Send(socket, line + "\n") is Error

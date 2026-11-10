@@ -7,10 +7,16 @@ constant NextCheck = BodyParser("Run", "\tif random.Next is Error").Block(1, 1).
 constant PlainCall = SyntaxParser(Tokenizer("Get(1) is Error").Tokens).Parse
 constant Checked = SureChecks(("has random PseudoRandom", "Run", "	if random.Next is Error", "		0"), ("PseudoRandom.Next"))
 constant Kept = SureChecks(("Run", "	Get(1) is Error(\"Bad\")"), ("PseudoRandom.Next"))
+constant Tested = SureChecks(("has random PseudoRandom", "Run", "	random.Next is Error", "	1"), ("PseudoRandom.Next"))
+constant Unsure = SureChecks(Checked.lines, ("PseudoRandom.Get"))
+constant Either = SyntaxParser(Tokenizer("random.Next is Error or done").Tokens).Parse
+constant Ordered = SyntaxParser(Tokenizer("done and random.Next is Error").Tokens).Parse
 Issues List(ValidationIssue)
 	Checked.Issues.Length is 1
 	Checked.Issues.First to Text is "ErrorCheckCannotFail: PseudoRandom.Next never returns Error"
 	Kept.Issues.Length is 0
+	Tested.Issues.Length is 0
+	Unsure.Issues.Length is 0
 	let bodies = MethodBodies(typeName, TypeShape(lines), inference)
 	mutable found = List(Mutable(ValidationIssue))
 	for bodies.Statements
@@ -31,6 +37,9 @@ Key(node SyntaxNode, scope Scope) Text
 Compared(node SyntaxNode) SyntaxNode
 	SureChecks.Compared(NextCheck).text is "is"
 	SureChecks.Compared(PlainCall).text is "is"
+	SureChecks.Compared(Either).children(1).text is "Error"
+	SureChecks.Compared(Ordered).children(1).text is "Error"
+	SureChecks.Compared(SyntaxNode("Identifier", "and")).text is "and"
 	if node.Kind is in ("If", "ElseIf")
 		return Compared(node.children(0))
 	if (node.Kind is "Binary") and (node.text is in ("and", "or"))
@@ -41,4 +50,6 @@ IsReported(node SyntaxNode) Boolean
 	SureChecks.IsReported(SyntaxNode("Identifier", "Error"))
 	SureChecks.IsReported(SyntaxNode("Call", "Error"))
 	SureChecks.IsReported(SyntaxNode("Number", "1")) is false
+	SureChecks.IsReported(SyntaxNode("Text", "Error")) is false
+	SureChecks.IsReported(SyntaxNode("Identifier", "done")) is false
 	((node.Kind is "Identifier") or (node.Kind is "Call")) and (node.text is "Error")

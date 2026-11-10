@@ -11,6 +11,8 @@ constant Increment = SyntaxNode("Member", "Increment", SyntaxNode("Identifier", 
 constant Numbered = CodeBlock.Empty.Declare("a", "Numbers")
 constant Lists = KnownTypes(("List"), (KnownTypes.NoMembers), (KnownTypes.NoMembers), (Scope(("Add mutable", "Remove mutable", "Increment mutable"), ("Mutable", "Mutable", "Mutable"))))
 constant Listing = ErrorScope(ValueCodegen(TypeInference(Lists, TypeInference.Limits), KnownTypes.NoMembers, CallTarget.Plain))
+constant Growing = SyntaxNode("Member", "Add", Increment.children)
+constant ListMutated = CodeBlock.Empty.Declare("a", "List").Declare("a" + MutableMarker, "mutable")
 constant Listed = CodeBlock.Empty.Declare("a", "Counts").Declare("a" + MutableMarker, "mutable").Declare("Counts" + MutableMarker, "mutable")
 Prepared(body SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Prepared(Reassigning, CodeBlock.Empty).scope.TypeOf("a fallible") is "fallible"
@@ -39,6 +41,7 @@ Reassigned(node SyntaxNode) Texts
 Dropped(node SyntaxNode, block CodeBlock) SyntaxNode
 	Counting.Dropped(Increment, CodeBlock.Empty.Declare("a", "Count")) to Text is "a.Increment"
 	Counting.Dropped(Increment, Mutated) to Text is "a = a.Increment"
+	Listing.Dropped(SyntaxNode("Member", "Add", Increment.children), ListMutated) to Text is "a = a.Add"
 	if IsMutating(node, block) is false
 		return node
 	let target = node.children(0)
@@ -55,20 +58,20 @@ IsMutating(node SyntaxNode, block CodeBlock) Boolean
 Used(node SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Used(SyntaxParser(Tokenizer("1 is 2").Tokens).Parse, CodeBlock.Empty) is Error
 	Plain.Used(SyntaxParser(Tokenizer("1 + 2").Tokens).Parse, CodeBlock.Empty) is Error
-	Counting.Used(Increment, Mutated) is Increment
+	(Counting.Used(Increment, Mutated) is Increment) and (Plain.Used(Growing, Mutated).Kind is "Member")
 	Plain.Used(BodyParser("Run", "\tif 1 is 2", "\t\t3").Block(1, 1).children(0), CodeBlock.Empty).Kind is "If"
-	Plain.Used(SyntaxNode("Member", "Greet", ValueCodegen.NewGreeter), CodeBlock.Empty).Kind is "Member"
+	Plain.Used(SyntaxNode("Member", "Greet", ValueCodegen.NewGreeter), CodeBlock.Empty) is Error
+	Plain.Used(SyntaxNode("Identifier", "a"), CodeBlock.Empty.Declare("a", "None")).Kind is "Identifier"
 	if node.Kind is in ("If", "ElseIf", "Else", "For", "Declaration", "Reassignment", "Return")
 		return node
 	if (values.TypeOf(node, block) is in ("None", "")) or IsMutating(node, block) or IsGrowing(node, block)
 		return node
-	if ErrorCodegen(values).MayFail(node, block)
-		return node
 	Error("ResultMustBeUsed: " + (node to Text) + " in " + values.target.fullName + ".strict:line " + node.line + Unused)
 IsGrowing(node SyntaxNode, block CodeBlock) Boolean
-	Plain.IsGrowing(SyntaxNode("Member", "Add", Increment.children), Mutated)
-	Plain.IsGrowing(SyntaxNode("Member", "Add", Increment.children), CodeBlock.Empty.Declare("a", "Count")) is false
+	Plain.IsGrowing(Growing, Mutated)
+	Plain.IsGrowing(Growing, CodeBlock.Empty.Declare("a", "Count")) is false
 	Plain.IsGrowing(Increment, Mutated) is false
+	Plain.IsGrowing(SyntaxNode("Identifier", "Add"), Mutated) is false
 	if (node.Kind is not in ("MethodCall", "Member")) or (node.text is not in ("Add", "Remove"))
 		return false
 	block.scope.TypeOf(node.children(0).text + MutableMarker) is not ""

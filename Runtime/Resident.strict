@@ -30,6 +30,7 @@ IsCurrent(request Text) Boolean
 Arguments(request Text) Texts
 	Resident.Arguments(Resident.Request("C:/a", ("test", "a.strict"))) is ("test", "a.strict")
 	Resident.Arguments("strict 1\nC:/a\ntest\n\n") is List(Text)
+	Resident.Arguments(Version + "\nC:/a") is List(Text)
 	let lines = request.Split("\n")
 	(lines.Length < 3) or (lines(0) is not Version) then List(Text) else lines(2).Split("\t")
 Folder(request Text) Text

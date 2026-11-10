@@ -32,17 +32,22 @@ Relative(path Text) Text
 Absolute(path Text) Text
 	Sizing.Absolute("C:/a/b.strict") is "C:/a/b.strict"
 	Sizing.Absolute("./a.strict") is Directory.Current.Replace("\\", "/") + "/a.strict"
+	Sizing.Absolute(".") is Directory.Current.Replace("\\", "/")
 	let slashed = path.Replace("\\", "/")
 	if (slashed.IndexOf(":") is 1) or slashed.StartsWith("/")
 		return slashed
 	let inside = slashed.StartsWith("./") then slashed.Substring(2, slashed.Length - 2) else slashed
-	Directory.Current.Replace("\\", "/") + "/" + inside
+	let current = Directory.Current.Replace("\\", "/")
+	inside is "." then current else current + "/" + inside
 Project(path Text) Text
 	Sizing.Project("Examples/Sum.strict") is ""
 	Directory.Create("Compiler/output/Projected") or Directory.Exists("Compiler/output/Projected")
 	Directory.Create("Compiler/output/Projected/.git") or Directory.Exists("Compiler/output/Projected/.git")
 	Sizing.Project("Compiler/output/Projected/A/B.strict") is Sizing.Absolute("Compiler/output/Projected")
-	mutable folder = Path(Absolute(path)).PathOnly.text
+	Sizing.Project("Compiler/output/Projected") is Sizing.Absolute("Compiler/output/Projected")
+	Sizing.Project("Examples") is ""
+	let full = Absolute(path)
+	mutable folder = Directory.Exists(full) then full else Path(full).PathOnly.text
 	for as long as (folder.Length > 3) and (IsProject(folder) is false)
 		folder = Path(folder).PathOnly.text
 	IsProject(folder) and (folder.Lower is not Directory.Current.Replace("\\", "/").Lower) then folder else ""
@@ -62,5 +67,7 @@ IsSlow(fullName Text, header HeaderTokens) Boolean
 	TypeSource.IsSlow("Strict/Even", HeaderTokens("Run", "Slow", "(", "Number", ")"))
 	TypeSource.IsSlow("Strict/Even", HeaderTokens("Run", "Number")) is false
 	TypeSource.IsSlow("Game/Compiler/Even", HeaderTokens("Run", "Number")) is false
+	TypeSource.IsSlow("Strict/Compiler", HeaderTokens("Run", "Number")) is false
+	TypeSource.IsSlow("Strict/Math/Size", HeaderTokens("Run", "Number")) is false
 	let parts = fullName.Split("/")
 	header.ReturnsSlow or ((parts.Length > 2) and (parts(0) is "Strict") and (parts(1) is in InternalPackages))
