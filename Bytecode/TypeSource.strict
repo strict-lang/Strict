@@ -39,7 +39,7 @@ Absolute(path Text) Text
 	inside is "." then current else current + "/" + inside
 Cased(path Text) Text
 	(Sizing.Cased("strict") is "Strict.strict") and (Sizing.Cased("Examples/sum.STRICT") is "Examples/Sum.strict")
-	(Sizing.Cased("Missing") is "") and (Sizing.Cased("Examples") is "")
+	(Sizing.Cased("Missing") is "Missing") and (Sizing.Cased("Examples") is "Examples")
 	let slashed = path.Replace("\\", "/")
 	let named = slashed.Lower.EndsWith(".strict") then Path(slashed).RemoveExtension.text else slashed
 	let folder = named.IndexOf("/") < 0 then "." else Path(named).PathOnly.text
@@ -48,7 +48,7 @@ Cased(path Text) Text
 		let file = Path(value.Replace("\\", "/")).FileName.text
 		if file.Lower is wanted + ".strict"
 			return folder is "." then file else folder + "/" + file
-	""
+	path
 Project(path Text) Text
 	Sizing.Project("Examples/Sum.strict") is ""
 	Directory.Create("Compiler/output/Projected") or Directory.Exists("Compiler/output/Projected")
