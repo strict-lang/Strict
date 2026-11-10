@@ -8503,9 +8503,9 @@
   ^done:
     return
   }
-  // release builds (strict build X windows or linux, NativeBuild.Released) and web pages set it to 0: a shipped program does not stop,
-  // it warns once on the console instead
-  llvm.mlir.global internal @strict_gc_watching(1 : i64) : i64
+  // starts at 0 so the bootstrap seed, which links this file as it is, warns and continues. A development build turns it
+  // on (NativeBuild.Released); a release build (windows, linux, web) leaves it off and warns once
+  llvm.mlir.global internal @strict_gc_watching(0 : i64) : i64
   // 1 during a collection the runtime asks for itself to find dead lists and give back their WebGPU buffers
   // (strict_gpu_kernel on the web, 35 an image with almost nothing allocated): it says nothing about the program
   llvm.mlir.global internal @strict_gc_housekeeping(0 : i64) : i64

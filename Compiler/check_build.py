@@ -11,6 +11,10 @@ from datetime import datetime
 root = Path(__file__).resolve().parent.parent
 assert "@NativeCompiler_Checked_" in (root / "Compiler/Bootstrap.mlir").read_text(), \
 	"Bootstrap compiler bypasses the unit-test gate"
+runtime = (root / "Compiler/NativeRuntime.mlir").read_text(encoding="utf-8")
+assert "strict_gc_watching(0 : i64)" in runtime and "strict_gc_watching(1 : i64)" not in runtime
+assert "build Strict.strict . linux" in (root / "Compiler/bootstrap.sh").read_text(encoding="utf-8")
+assert "build Strict.strict . windows" in (root / "Compiler/Bootstrap.cmd").read_text(encoding="utf-8")
 extension = ".exe" if sys.platform == "win32" else ""
 def obj(source, suffix):
 	"""Where a build keeps an intermediate file of source: obj/ next to it."""

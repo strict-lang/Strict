@@ -11,6 +11,7 @@ mlir-translate --mlir-to-llvmir NativeCompiler.llvm.mlir -o NativeCompiler.ll ||
 clang NativeCompiler.ll -o NativeCompiler.exe -O3 -march=native -Wno-override-module -Wl,-Brepro -Wl,/STACK:67108864 || exit /b 1
 cd ..
 set "STRICT_GPU=0"
-Compiler\NativeCompiler.exe build Strict.strict . || exit /b 1
+rem windows builds a release compiler: a long garbage collection warns instead of stopping
+Compiler\NativeCompiler.exe build Strict.strict . windows || exit /b 1
 del Compiler\NativeCompiler.exe Compiler\NativeCompiler.ll Compiler\NativeCompiler.llvm.mlir Compiler\NativeCompiler.mlir
 echo Built %~dp0..\strict.exe

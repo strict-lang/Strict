@@ -11,7 +11,7 @@ has isFast Boolean = false
 has gated List(TypeEntry) = List(TypeEntry)
 constant Logged = List(TypeEntry) + TypeEntry.HelloLogger
 constant Broken = "module {\n  func.func private @A() -> f64 {\n    return %missing : f64\n  }\n}"
-constant Watching = "llvm.mlir.global internal @strict_gc_watching(1 : i64)"
+constant Watching = "llvm.mlir.global internal @strict_gc_watching(0 : i64)"
 constant CpuNotice = "llvm.mlir.global internal @strict_gpu_cpu_notice(1 : i64)"
 Folder NativeFolder
 	NativeBuild(Logger, gated = Logged).Folder.gated is Logged
@@ -154,13 +154,13 @@ Mlir(program Text, root Text, platform Number) Slow(Text)
 		return WebBuild.Sized(body + runtime) + "\n" + system + "\n}"
 	Text.Combine((body, runtime, "\n", system, "\n}"), "")
 Released(mlir Text) Text
-	NativeBuild(Logger, false, isReleased = true).Released(Watching) is Watching.Replace("(1 : i64)", "(0 : i64)")
-	NativeBuild(Logger, false).Released(Watching) is Watching
-	NativeBuild(Logger, isWeb = true).Released(Watching) is Watching.Replace("(1 : i64)", "(0 : i64)")
+	NativeBuild(Logger, false, isReleased = true).Released(Watching) is Watching
+	NativeBuild(Logger, false).Released(Watching) is Watching.Replace("(0 : i64)", "(1 : i64)")
+	NativeBuild(Logger, isWeb = true).Released(Watching) is Watching
 	NativeBuild(Logger, isWeb = true).Released(CpuNotice) is CpuNotice.Replace("(1 : i64)", "(0 : i64)")
 	NativeBuild(Logger, false).Released(CpuNotice) is CpuNotice
 	let quiet = isWeb then mlir.Replace(CpuNotice, CpuNotice.Replace("(1 : i64)", "(0 : i64)")) else mlir
-	isReleased or isCrossing or isWeb then quiet.Replace(Watching, Watching.Replace("(1 : i64)", "(0 : i64)")) else quiet
+	isReleased or isCrossing or isWeb then quiet else quiet.Replace(Watching, Watching.Replace("(0 : i64)", "(1 : i64)"))
 Failure(program Text) Text
 	NativeBuild.Failure("unsupported: a\nb") is "unsupported: a\nb"
 	NativeBuild.Failure("x\nunsupported: a\nb") is "unsupported: a"

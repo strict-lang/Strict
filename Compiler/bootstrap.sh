@@ -15,6 +15,11 @@ mlir-opt NativeCompiler.$platform.mlir $passes -o NativeCompiler.$platform.llvm.
 mlir-translate --mlir-to-llvmir NativeCompiler.$platform.llvm.mlir -o NativeCompiler.$platform.ll
 clang NativeCompiler.$platform.ll -o NativeCompiler -O3 -march=native -Wno-override-module $linked
 cd ..
-STRICT_GPU=0 ./Compiler/NativeCompiler build Strict.strict .
+# linux builds a release compiler: a long garbage collection warns instead of stopping
+release=linux
+if [ "$(uname)" = Darwin ]; then
+	release=
+fi
+STRICT_GPU=0 ./Compiler/NativeCompiler build Strict.strict . $release
 rm -f Compiler/NativeCompiler Compiler/NativeCompiler.$platform.ll Compiler/NativeCompiler.$platform.llvm.mlir Compiler/NativeCompiler.$platform.mlir
 echo "Built $(pwd)/strict"
