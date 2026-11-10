@@ -37,6 +37,18 @@ Absolute(path Text) Text
 	let inside = slashed.StartsWith("./") then slashed.Substring(2, slashed.Length - 2) else slashed
 	let current = Directory.Current.Replace("\\", "/")
 	inside is "." then current else current + "/" + inside
+Cased(path Text) Text
+	(Sizing.Cased("strict") is "Strict.strict") and (Sizing.Cased("Examples/sum.STRICT") is "Examples/Sum.strict")
+	(Sizing.Cased("Missing") is "") and (Sizing.Cased("Examples") is "")
+	let slashed = path.Replace("\\", "/")
+	let named = slashed.Lower.EndsWith(".strict") then Path(slashed).RemoveExtension.text else slashed
+	let folder = named.IndexOf("/") < 0 then "." else Path(named).PathOnly.text
+	let wanted = Path(named).FileName.text.Lower
+	for Directory.Files(folder, "*.strict")
+		let file = Path(value.Replace("\\", "/")).FileName.text
+		if file.Lower is wanted + ".strict"
+			return folder is "." then file else folder + "/" + file
+	""
 Project(path Text) Text
 	Sizing.Project("Examples/Sum.strict") is ""
 	Directory.Create("Compiler/output/Projected") or Directory.Exists("Compiler/output/Projected")

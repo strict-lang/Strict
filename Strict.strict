@@ -132,18 +132,22 @@ Mained(arguments Texts) Texts
 	Strict.Mained(("test", "Math")) is ("test", "Math")
 	if (arguments.Length is 0) or (arguments(0) is not "build")
 		return arguments
-	let named = Path(Directory.Current.Replace("\\", "/")).FileName.text + ".strict"
-	let main = File(named).Exists then named else "Strict.strict"
+	let named = TypeSource.Cased(Path(Directory.Current.Replace("\\", "/")).FileName.text)
+	let main = named is "" then "Strict.strict" else named
 	let given = arguments.Length > 1 then arguments(1) else ""
-	let isSource = (given is not "") and (File(given).Exists or File(given + ".strict").Exists or Directory.Exists(given))
+	let isFound = File(given).Exists or (TypeSource.Cased(given) is not "") or Directory.Exists(given)
+	let isSource = (given is not "") and isFound
 	isSource or (File(main).Exists is false) then arguments else (List(Text) + "build" + main) + Rest(arguments)
 Projected(arguments Texts) Texts
 	Strict(Logger).Projected(("test", "Examples/Sum.strict")) is ("test", "Examples/Sum.strict")
 	Strict(Logger).Projected(("Examples/Sum", "5")) is ("Examples/Sum.strict", "5")
 	Strict(Logger).Projected(("build", "Examples/Sum", "web")) is ("build", "Examples/Sum.strict", "web")
+	Strict(Logger).Projected(("build", "strict")) is ("build", "Strict.strict")
+	Strict(Logger).Projected(("test", "Examples/sum.STRICT")) is ("test", "Examples/Sum.strict")
 	let at = (arguments.Length > 0) and (arguments(0) is in Commands) then 1 else 0
 	let named = arguments.Length > at then arguments(at) else ""
-	let source = File(named + ".strict").Exists then named + ".strict" else named
+	let cased = TypeSource.Cased(named)
+	let source = cased is "" then named else cased
 	let project = source.EndsWith(".strict") or Directory.Exists(source) then TypeSource.Project(source) else ""
 	let full = TypeSource.Absolute(source)
 	if project is not ""
