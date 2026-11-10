@@ -27,8 +27,7 @@ Transposed(shares Numbers, numbers Numbers) Numbers
 	let count = numbers.Length / width
 	for attention.keys.Length
 		let head = (index / attention.size).Floor % attention.heads
-		let start = head * positions + (index / width).Floor
-		Strided(shares, start, stride, numbers, index % width, width, count)
+		Strided(shares, head * positions + (index / width).Floor, stride, numbers, index % width, width, count)
 Strided(left Numbers, leftStart Number, leftStride Number, right Numbers, rightStart Number, rightStride Number, count Number) Number
 	Pair.Strided((1, 9, 2), 0, 2, (3, 9, 4), 0, 2, 2) is 11
 	mutable sum = 0

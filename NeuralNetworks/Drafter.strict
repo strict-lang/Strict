@@ -15,8 +15,7 @@ Loaded(model Gguf, heads Number) Slow(Drafter)
 	Tiny.projection.weights.First.Length is 16
 	Tiny.blocks.First.heads is 2
 	Tiny.headNorm.Length is 8
-	let architecture = model.Value("general.architecture")
-	let prefix = "blk." + ((model.Value(architecture + ".block_count") to Number) - 1) + ".nextn."
+	let prefix = "blk." + ((model.Value(model.Value("general.architecture") + ".block_count") to Number) - 1) + ".nextn."
 	let block = Qwen3Block.Loaded(model, prefix.Substring(0, prefix.Length - 6), heads, Basis.None)
 	let joining = Qwen3Block.Dense(model, prefix, List(Text) + "eh_proj")
 	let normed = model.Values(prefix + "enorm.weight")

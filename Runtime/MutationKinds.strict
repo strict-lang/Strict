@@ -58,8 +58,7 @@ Twin(position Number) Number
 			before = same.Length
 		if (value.kind is entry.kind) and (value.line is entry.line)
 			same.Add(index)
-	let swapped = before * 2 is same.Length then same.Slice(before, before) + same.Slice(0, before) else same
-	swapped(same.Index(position))
+	(before * 2 is same.Length then same.Slice(before, before) + same.Slice(0, before) else same)(same.Index(position))
 Possible(position Number) Numbers
 	Twice.Possible(1) is (5) and (Compared.Possible(1) is (2)) and (Storing.Possible(1) is (3))
 	let entry = method.instructions(position)
@@ -70,9 +69,7 @@ Possible(position Number) Numbers
 		return method.returnType is in Primitives then (2) else List(Number)
 	if (entry.kind is InstructionType.StoreRegisterToVariable) and IsReassigned(position)
 		return List(Number) + 3
-	if IsDropped(entry) or IsConstant(entry)
-		return List(Number) + (IsDropped(entry) then 4 else 7)
-	Valued(position)
+	IsDropped(entry) or IsConstant(entry) then (List(Number) + (IsDropped(entry) then 4 else 7)) else Valued(position)
 Valued(position Number) Numbers
 	Twice.Valued(1) is (5)
 	Joined.Valued(0) is (6)
@@ -119,8 +116,7 @@ IsTextVariable(name Text, at Number) Boolean
 			return value.typeName is "Strict/Text"
 	for at
 		let entry = method.instructions(at - 1 - index)
-		let isStore = entry.kind is InstructionType.StoreRegisterToVariable
-		if isStore and (entry.texts.First is name)
+		if (entry.kind is InstructionType.StoreRegisterToVariable) and (entry.texts.First is name)
 			return IsText(entry.payload(0), at - 1 - index)
 	false
 IsLiteral(position Number) Boolean

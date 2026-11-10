@@ -72,8 +72,7 @@ IsTest(line SyntaxNode, isLeading Boolean, block CodeBlock) Boolean
 	Even.IsTest(SyntaxNode("Call", "IsEven", One), true, CodeBlock.Empty)
 	if line.Kind is in ("If", "ElseIf", "Else", "Declaration", "Reassignment")
 		return false
-	let lineText = line to Text
-	if isLeading and IsCalling(line, block) or lineText.IndexOf(" is ") >= 0
+	if isLeading and IsCalling(line, block) or (line to Text).IndexOf(" is ") >= 0
 		return values.TypeOf(line, block) is "Boolean"
 	false
 IsCalling(line SyntaxNode, block CodeBlock) Boolean

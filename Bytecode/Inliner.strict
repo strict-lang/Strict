@@ -104,8 +104,7 @@ IsMatched(call InstructionEntry, next InstructionEntry) Boolean
 	Failed.Inlinable(StructLanes.Caller, StructLanes.Calling(4), StructLanes.Calling(5)).Name is "Squared"
 	Sample.IsMatched(ReadTested, InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 1)) is false
 	Sample.IsMatched(ReadTested, InstructionEntry(InstructionType.CheckError, ("a"), List(Number) + 0)) is false
-	let isChecked = (next.kind is InstructionType.CheckError) and (next.texts.Length is 0)
-	isChecked and (next.payload(0) is call.payload(0))
+	((next.kind is InstructionType.CheckError) and (next.texts.Length is 0)) and (next.payload(0) is call.payload(0))
 TypeOf(name Text) TypeEntry
 	Sample.TypeOf("List(Number)").Name is "Strict/List(Number)" and (Sample.TypeOf("Caller").Name is "Strict/Caller")
 	Sample.TypeOf("Strict/List(Number)").methods.Length is 1

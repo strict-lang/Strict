@@ -43,8 +43,7 @@ IsPassed(at Number) Boolean
 		let callees = parameter >= 0 then MlirModule(function.types, "").Called(function, value) else List(MlirFunction)
 		if callees.Length is 1
 			let callee = callees.First
-			let name = callee.method.parameters(parameter).Name
-			return IsDotted(callee, 0, callee.method.instructions.Length, name, false)
+			return IsDotted(callee, 0, callee.method.instructions.Length, callee.method.parameters(parameter).Name, false)
 	false
 Argument(entry InstructionEntry, register Number) Number
 	Layering.Argument(Layering.function.method.instructions(5), 2) is 1

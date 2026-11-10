@@ -68,9 +68,7 @@ Kept(called Texts, register Number) Texts
 	let counted = begin >= 0 then MlirLoops(function, begin).Collection is "" else false
 	let adding = counted then MlirGroups(function, 0).Adding(position) else 0
 	let call = adding < 1 then -1 else MlirGroups(function, begin).Call
-	if call is not position
-		return called
-	Keyed(MlirGroups(function, begin).Size(position)) + called + Rejoined(register)
+	call is not position then called else Keyed(MlirGroups(function, begin).Size(position)) + called + Rejoined(register)
 Keyed(size Text) Texts
 	Calling.Keyed("size") is Checking
 	Calling.Keyed("size").Last is "  ^t11call:"

@@ -59,8 +59,7 @@ Wide Texts
 	MlirNarrowing(MlirKernel.Doubling.function, 2).Wide is ("result", "numbers")
 	Texting.Wide.Length is 0
 	Singling.Wide is ("numbers")
-	let names = (IsResulted then List(Text) + "result" else List(Text)) + Iterated
-	let all = names + MlirKernel(function, position).Sources
+	let all = ((IsResulted then List(Text) + "result" else List(Text)) + Iterated) + MlirKernel(function, position).Sources
 	for all
 		if (all.Index(value) is index) and ((value is "result") or IsWide(value))
 			value

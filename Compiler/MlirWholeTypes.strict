@@ -54,8 +54,7 @@ Initial Text
 	mutable variables = ""
 	for function.VariableNames
 		let parameter = function.method.ParameterNames.Index(value)
-		let isNumber = value is in function.Parameters
-		let other = isNumber then "i" else MlirWholeInstance(function).OwnKind(value)
+		let other = (value is in function.Parameters) then "i" else MlirWholeInstance(function).OwnKind(value)
 		variables = variables + (parameter >= 0 then kinds(parameter) else other)
 	registers + "|" + variables + "|"
 Step(combined Text) Text
@@ -97,8 +96,7 @@ IsFractional(at Number, settled Text) Boolean
 	Halving.IsFractional(3, Halving.Settled) is false
 	Reused.IsFractional(3, Reused.Settled) is false
 	let parts = settled.Split("|")
-	let entry = function.method.instructions(at)
-	for Checked(entry)
+	for Checked(function.method.instructions(at))
 		if Reaching(value, at, parts(0), parts(2)) is "f"
 			return true
 	false

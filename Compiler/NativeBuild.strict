@@ -95,9 +95,7 @@ IsUnchanged(base Text, mlir Text, tools Toolchain) Boolean
 	let isCross = isAndroid or isIOS or tools.isWeb or (tools.cpu is not "native")
 	if isCross or (previous.Exists is false) or (sources.IsCurrent(tools.Executable(base), inputs) is false)
 		return false
-	if previous.Length is not mlir.Length
-		return false
-	Text.Combine(previous.ReadLines, "\n") is mlir
+	previous.Length is not mlir.Length then false else Text.Combine(previous.ReadLines, "\n") is mlir
 Rebuilt(base Text, mlir Text, tools Toolchain) Slow(Text)
 	NativeBuild(Logger).Rebuilt("Compiler/output/Written", Broken, Toolchain.OnWindows).StartsWith("mlir-opt failed")
 	if IsUnchanged(base, mlir, tools)
@@ -166,6 +164,4 @@ Failure(program Text) Text
 	NativeBuild.Failure("x\nunsupported: a\nb") is "unsupported: a"
 	NativeBuild.Failure("@c(\"unsupported: x\")") is ""
 	let at = ("\n" + program).IndexOf("\nunsupported:")
-	if at < 0
-		return ""
-	at is 0 then program else program.Substring(at, program.Length - at).Lines.First
+	at < 0 then "" else at is 0 then program else program.Substring(at, program.Length - at).Lines.First

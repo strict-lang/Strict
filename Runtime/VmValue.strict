@@ -77,9 +77,7 @@ to Text
 		return number to Text
 	if kind is "Boolean"
 		return IsTrue then "true" else "false"
-	if kind is "List"
-		return Joined
-	kind is in ("Text", "None") then text else Automatic
+	kind is "List" then Joined else kind is in ("Text", "None") then text else Automatic
 Joined Text
 	OfList(OfNumber(1), OfNumber(2)).Joined is "(1, 2)"
 	OfList(List(VmValue) + OfNumber(5)).Joined is "(5)"

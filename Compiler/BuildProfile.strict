@@ -5,8 +5,7 @@ Detailed Boolean
 Reported(phase Text, started Number)
 	let elapsed = Process.Elapsed - started
 	if Detailed or (elapsed >= 3)
-		let label = Detailed then "[build] " + phase else phase
-		logger.Log(label + ": " + elapsed.Round(Detailed then 4 else 2) + " s")
+		logger.Log((Detailed then "[build] " + phase else phase) + ": " + elapsed.Round(Detailed then 4 else 2) + " s")
 Current(cache NativeCache, phase = "Compiler build cache") Boolean
 	let started = Process.Elapsed
 	let current = cache.IsCurrent
@@ -91,7 +90,6 @@ Packaged(build NativeBuild, base Text, program Text, built Number, tools Toolcha
 	result
 Lowered(tools Toolchain, base Text) Text
 	let started = Process.Elapsed
-	let parts = tools.platform is Platform.Windows then Toolchain.Parts else 1
-	let lowered = tools.Lowered(base, "", parts)
+	let lowered = tools.Lowered(base, "", (tools.platform is Platform.Windows then Toolchain.Parts else 1))
 	Reported("Host lowering and translation", started)
 	lowered

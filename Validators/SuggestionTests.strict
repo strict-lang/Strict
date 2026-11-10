@@ -11,8 +11,7 @@ Passing(candidates Texts) Texts
 	mutable passed = List(Mutable(Text))
 	for candidates
 		let changed = Changed(types, index)
-		let machine = Machine(changed, Logger, List(VmValue), Path(path).PathOnly.text).Prepared
-		if machine.Tested(changed.First.Name) is 0
+		if Machine(changed, Logger, List(VmValue), Path(path).PathOnly.text).Prepared.Tested(changed.First.Name) is 0
 			passed.Add(value)
 	passed
 Prepared(candidates Texts) List(TypeEntry)

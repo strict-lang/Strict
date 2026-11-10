@@ -38,14 +38,10 @@ Upper Character
 	Character("A").Upper is "A"
 	Character("z").Upper is "Z"
 	Character("{").Upper is "{"
-	if number is in Range(LowercaseA, LowercaseZ + 1)
-		return Character(number - CaseOffset)
-	value
+	number is in Range(LowercaseA, LowercaseZ + 1) then Character(number - CaseOffset) else value
 Lower Character
 	Character("A").Lower is "a"
 	Character("a").Lower is "a"
 	Character("Z").Lower is "z"
 	Character("[").Lower is "["
-	if number is in Range(UppercaseA, UppercaseZ + 1)
-		return Character(number + CaseOffset)
-	value
+	number is in Range(UppercaseA, UppercaseZ + 1) then Character(number + CaseOffset) else value

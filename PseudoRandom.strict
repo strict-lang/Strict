@@ -21,9 +21,7 @@ Get(minimum Number, maximum Number) Number
 	PseudoRandom(1).Get(10, 0) is Error("InvalidRange")
 	PseudoRandom(1).Get(10, 20) is 16.28162719715311
 	PseudoRandom(1).Get(0, 4294967296).Floor is 2697938337
-	if maximum < minimum
-		return Error("InvalidRange")
-	(Next + 1) * UnitScale * (maximum - minimum) + minimum
+	maximum < minimum then Error("InvalidRange") else (Next + 1) * UnitScale * (maximum - minimum) + minimum
 Skip(count Number) Number
 	PseudoRandom(1).Skip(2) is 1580277510
 	mutable last = 0

@@ -19,8 +19,7 @@ Place Text
 	if root is not ""
 		return root
 	let home = Process.Variable(Process.OperatingSystem is "Windows" then "LOCALAPPDATA" else "HOME")
-	let folder = Process.OperatingSystem is "Windows" then "/Strict" else "/.cache/strict"
-	home + folder + "/coordinator"
+	home + (Process.OperatingSystem is "Windows" then "/Strict" else "/.cache/strict") + "/coordinator"
 Opened Number
 	Coordinator(Logger, "Compiler/output/coord").Opened > 0
 	let server = Socket.Local(Peers.Port)
@@ -52,8 +51,7 @@ Replied(socket Number) Boolean
 	let words = Resident("").Received(socket, "\n").Trim.Split("\t")
 	isEnding = (words(0) is "exit") and ((busyJob is "") or (words.Last is busyJob))
 	let answer = words(0) is "exit" then (isEnding then "ok" else "busy") else Chosen(words)
-	let sent = Resident("").Send(socket, answer + "\n")
-	if sent is Error
+	if Resident("").Send(socket, answer + "\n") is Error
 		logger.Log("The client left before the result was sent")
 	(busyJob is not "") or (Process.Elapsed - seenAt < StaleSeconds)
 Chosen(words Texts) Text
@@ -100,8 +98,7 @@ Needed(words Texts, seen MachineView) Text
 Granted(words Texts, seen MachineView) Text
 	Sample.Granted(("need", "job", "label", "4", "8", "2", "4", "0", "wait"), MachineView.Wide) is "go\tjob\t0"
 	mutable sample = Coordinator(Logger)
-	let held = sample.Held(("holding", "4", "2"))
-	(held is "ok") and (sample.idleRam is 4) then sample.Needed(words, seen) else "bad"
+	(sample.Held(("holding", "4", "2")) is "ok") and (sample.idleRam is 4) then sample.Needed(words, seen) else "bad"
 Seen Slow(MachineView)
 	Sample.Seen.freeRam >= 0
 	let video = Vram("")
@@ -122,9 +119,7 @@ Vram(text Text) Numbers
 	if (text is "") and (forced is not "")
 		return (forced to Number, forced to Number)
 	let parts = measured.Split(",")
-	if parts.Length < 2
-		return (0, 0)
-	(parts(0).Trim to Number * Mebibyte, parts(1).Trim to Number * Mebibyte)
+	parts.Length < 2 then (0, 0) else (parts(0).Trim to Number * Mebibyte, parts(1).Trim to Number * Mebibyte)
 Sent(line Text, isStarting = true) Text
 	Coordinator(Logger, "Compiler/output/MissingCoordinator").Sent("status") is ""
 	Coordinator(Logger, "Compiler/output/MissingCoordinator").Sent("exit\tH3Video", false) is ""
@@ -159,8 +154,7 @@ Linked Number
 	if existing > 0
 		return existing
 	let tool = Process.OperatingSystem is "Windows" then "powershell" else "sh"
-	let started = Process.RunTool(tool, Command)
-	for Range(0, started.exitCode is 0 then BeatSeconds else 0)
+	for Range(0, Process.RunTool(tool, Command).exitCode is 0 then BeatSeconds else 0)
 		if File(Place).Exists
 			return Connected
 		Process.Wait(1)

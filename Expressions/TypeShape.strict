@@ -18,9 +18,7 @@ IsMethodHeader(line Text) Boolean
 	TypeShape("Get Generic", "Run", "\t1").IsGenericLine(0)
 	TypeShape("Run").IsGenericLine(0) is false
 	TypeShape("constant Names = (\"Generic\")").IsGenericLine(0) is false
-	if (line is "") or line.StartsWith("\t")
-		return false
-	not IsMemberLine(line)
+	(line is "") or line.StartsWith("\t") then false else not IsMemberLine(line)
 IsComputed(line Text) Boolean
 	TypeShape("has a").IsComputed("Area = Width * Height")
 	TypeShape("has a").IsComputed("Next(add = 1) = add")
@@ -144,8 +142,7 @@ ConstantText(position Number) Text
 	TypeShape("constant A", "constant B = 10", "constant C").ConstantText(2) is "11"
 	TypeShape("constant Limit = 3 * 2").ConstantText(0) is "3 * 2"
 	TypeShape("has a", "has b = 5", "constant C").EnumValue(2) is 0
-	let tokens = Tokenizer(lines(position)).Tokens
-	if tokens.Length is 2
+	if Tokenizer(lines(position)).Tokens.Length is 2
 		return EnumValue(position) to Text
 	let line = lines(position)
 	line.Substring(line.IndexOf(" = ") + 3, line.Length - line.IndexOf(" = ") - 3)
@@ -157,8 +154,7 @@ ConstantScope Scope
 	mutable literals = List(Mutable(Text))
 	for lines.Slice(0, MembersEnd)
 		if value.StartsWith("constant ") and ConstantText(index) is not ""
-			let tokens = Tokenizer(value).Tokens
-			names.Add(tokens(1))
+			names.Add(Tokenizer(value).Tokens(1))
 			literals.Add(ConstantText(index))
 	Scope(names, literals)
 UsedTypes Texts

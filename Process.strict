@@ -5,9 +5,7 @@ Find(name Text) Process
 IsAvailable Boolean
 	Process("").IsAvailable is false
 	Process("strict").IsAvailable
-	if executable is ""
-		return false
-	true
+	executable is not ""
 Run(arguments Text) ProcessResult
 	ProcessResult(1, "", "Process.Run is not available for: " + arguments)
 Started(arguments Text) Number
@@ -15,9 +13,7 @@ Started(arguments Text) Number
 	Error("Process.Started needs the native runtime to start " + executable + " " + arguments)
 RunTool(name Text, arguments Text) ProcessResult
 	let tool = Find(name)
-	if not tool.IsAvailable
-		return ProcessResult(NotFoundExitCode, "", "tool not found: " + name)
-	tool.Run(arguments)
+	tool.IsAvailable then tool.Run(arguments) else ProcessResult(NotFoundExitCode, "", "tool not found: " + name)
 RunTools(name Text, arguments Texts) List(ProcessResult)
 	Process.RunTools("missingStrictTool", ("a", "b")).Length is 2
 	Process.RunTools("missingStrictTool", ("a", "b")).Last.exitCode is 127
@@ -55,6 +51,4 @@ Built Text
 	Process.Current.Built.Length is 19
 	""
 to Text
-	if executable is ""
-		return "Process(missing)"
-	"Process(" + executable + ")"
+	executable is "" then "Process(missing)" else "Process(" + executable + ")"

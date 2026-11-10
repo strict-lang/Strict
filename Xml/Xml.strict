@@ -110,9 +110,7 @@ Depth(at Number, close Number) Number
 	Menu.Depth(17, 23) is 1
 	Xml("</A>").Depth(0, 4) is -1
 	Xml("<A />").Depth(0, 5) is 0
-	if text(at + 1) is "/"
-		return -1
-	text(close - 2) is "/" then 0 else 1
+	text(at + 1) is "/" then -1 else text(close - 2) is "/" then 0 else 1
 Decoded(raw Text) Text
 	Sample.Decoded("&lt;a&gt; &amp;amp; &quot;") is "<a> &amp; \""
 	Sample.Decoded("&apos;") is "'"

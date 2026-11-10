@@ -28,8 +28,7 @@ Declared(owner TypeEntry, member MemberEntry) Texts
 	let constants = MlirConstants(function, 0, Name(owner, member))
 	if literal.kind is "Text"
 		return literal.text is "" then List(Text) else List(Text) + constants.TextGlobal(literal.text, "")
-	let elements = literal.kind is "List" then constants.TextElements(literal) else List(Number)
-	for elements
+	for (literal.kind is "List" then constants.TextElements(literal) else List(Number))
 		constants.TextGlobal(literal.items(value).text, "_" + value)
 ParameterName(text Text) Text
 	Greets.ParameterName("Hi") is "@dp0"

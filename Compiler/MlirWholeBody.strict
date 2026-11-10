@@ -65,8 +65,7 @@ Parameters(variables Text) Texts
 	Halving.Parameters("--i-") is ("    llvm.store %p0, %v_number : i64, !llvm.ptr")
 	mutable lines = List(Mutable(Text))
 	for function.method.parameters
-		let type = MlirWholeValues(0).Typed(variables(function.VariableNames.Index(value.Name)))
-		lines = lines + Parameter(index, type)
+		lines = lines + Parameter(index, MlirWholeValues(0).Typed(variables(function.VariableNames.Index(value.Name))))
 	lines
 Slot(name Text, type Text) Text
 	Row.Slot("%r0", "i64") is "    %r0 = llvm.alloca %one x i64 : (i64) -> !llvm.ptr"

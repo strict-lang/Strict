@@ -33,8 +33,7 @@ IsOwn(call InstructionEntry) Boolean
 	Listing.Fits(Linker.Go, Linker.Go, StructLanes.Constructed) is false
 	Listing.Fits(Inliner.Caller, Inliner.Listed, StructLanes.Constructed) is false
 	InlineRules(Recursing).Fits(Cached, Linker.Reading, Inliner.Scaled) is false
-	let instance = 6 + call.payload(3) + call.payload(5 + call.payload(3))
-	call.payload(instance) is not 1
+	call.payload(6 + call.payload(3) + call.payload(5 + call.payload(3))) is not 1
 Wrapped(type TypeEntry) Text
 	Listing.Wrapped(Cached) is "elements"
 	Listing.Wrapped(TypeEntry("Strict/A", (Inliner.Elements), List(MethodEntry))) is "elements"
@@ -117,9 +116,7 @@ IsReplaceable(type TypeEntry) Boolean
 	InlineRules(MethodEntry(Early, instructions = (StructLanes.Calling(6), Early.instructions.First))).IsSmall is false
 	InlineRules(MethodEntry(Early, instructions = (MethodEntry.PrintHi, Early.instructions(1)))).IsStraight(true) is false
 	InlineRules(MethodEntry(Early, instructions = (TailCalls.Start, Early.instructions.First))).IsStraight(false)
-	if type.Name.StartsWith("Strict/List(")
-		return callee.Name is in Accessors
-	type.Name.LastIndexOf("/") is not 6
+	type.Name.StartsWith("Strict/List(") then callee.Name is in Accessors else type.Name.LastIndexOf("/") is not 6
 IsReturningComputed Boolean
 	Listing.IsReturningComputed
 	InlineRules(Placeholder).IsReturningComputed is false

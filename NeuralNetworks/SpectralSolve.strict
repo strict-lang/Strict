@@ -16,11 +16,11 @@ Augmented Numbers
 		column is right.Length then right(row) else matrix(row * right.Length + column)
 Reduced(rows Numbers, pivot Number) Numbers
 	let width = right.Length + 1
-	let diagonal = rows(pivot * width + pivot)
+	let start = pivot * width
+	let diagonal = rows(start + pivot)
 	if (diagonal.IsFinite is false) or (diagonal.Absolute < 0.000000000001)
 		return Error("Singular spectral fit")
 	for rows.Length
 		let row = (index / width).Floor
-		let column = index % width
-		let normalized = rows(pivot * width + column) / diagonal
+		let normalized = rows(start + index % width) / diagonal
 		row is pivot then normalized else rows(index) - rows(row * width + pivot) * normalized

@@ -6,6 +6,4 @@ Stored(index Number, element VmValue) Number
 Hosted(call Invocation) VmValue
 	let cache = ConstantCache(call.Instance.Member(0).items)
 	let index = call.Arguments.First.number
-	if call.MethodName is "At"
-		return cache.At(index)
-	VmValue.OfNumber(cache.Stored(index, call.Arguments.Last))
+	call.MethodName is "At" then cache.At(index) else VmValue.OfNumber(cache.Stored(index, call.Arguments.Last))

@@ -68,9 +68,7 @@ IsKnown(name Text, known Texts) Boolean
 	Mentions.IsKnown("Numbr", List(Text) + "Number") is false
 	Mentions.IsKnown("Numberss", List(Text) + "Number")
 	Mentions.IsKnown("Sizes", List(Text) + "Number") is false
-	if name is in known
-		return true
-	name.EndsWith("s") and IsKnown(name.Substring(0, name.Length - 1), known)
+	name is in known then true else name.EndsWith("s") and IsKnown(name.Substring(0, name.Length - 1), known)
 Declared(shape Expressions/TypeShape) Texts
 	Mentions.Declared(TypeShape(Typo.lines)) is ("Numbr", "Numbers", "Other", "Number")
 	let calls = shape.CallScope(List(Text))

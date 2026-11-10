@@ -70,8 +70,7 @@ Positions(function MlirFunction) Numbers
 	positions
 IsGlobal(function MlirFunction, position Number) Boolean
 	Counted.IsGlobal(MlirCalls.Shapes, 3)
-	let isInstruction = position < function.method.instructions.Length
-	let kind = isInstruction then function.method.instructions(position).kind else -1
+	let kind = (position < function.method.instructions.Length) then function.method.instructions(position).kind else -1
 	if kind is in (InstructionType.Print, InstructionType.IndexCall)
 		return true
 	MlirConstants(function, position).IsConstant
@@ -100,8 +99,7 @@ PrintGlobal(function MlirFunction, position Number, entry InstructionEntry) Text
 	Counted.PrintGlobal(MlirCalls.Shapes, 3, MlirCalls.Shapes.method.instructions(3)).StartsWith("  llvm")
 	let constants = MlirConstants(function, position)
 	let hasValue = entry.payload(1) is 1
-	let format = hasValue then "%s" else ""
-	let content = constants.Escaped(entry.texts(0), true) + format + "\\0A\\00"
+	let content = constants.Escaped(entry.texts(0), true) + (hasValue then "%s" else "") + "\\0A\\00"
 	let length = constants.EscapedLength(entry.texts(0), true) + (hasValue then 4 else 2)
 	let name = "@s" + function.Symbol + "_" + position
 	"  llvm.mlir.global internal constant " + name + "(\"" + content + "\") : !llvm.array<" + length + " x i8>"

@@ -53,9 +53,7 @@ Calculated(left Number, operator Text, right Number) Number
 	Calculated(8, "/", 2) is 4
 	if operator is "+"
 		return left + right
-	if operator is "-"
-		return left - right
-	operator is "*" then left * right else left / right
+	operator is "-" then left - right else operator is "*" then left * right else left / right
 Logical(left Boolean, operator Text, right Boolean) Boolean
 	Logical(true, "or", false)
 	Logical(true, "and", false) is false

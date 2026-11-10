@@ -86,17 +86,14 @@ Count(at Number) Number
 	MlirWholeNarrow(Mixing, 0).Count(12) is 0 and (MlirWholeNarrow(Mixing, 0).Count(17) is 255)
 	let isRange = function.method.instructions(at).payload(1) is 1
 	let bounds = Bounds(at)
-	if bounds.Length < (isRange then 2 else 1)
-		return 0
-	isRange then (bounds(1) - bounds(0)).Absolute else bounds(0)
+	bounds.Length < (isRange then 2 else 1) then 0 else isRange then (bounds(1) - bounds(0)).Absolute else bounds(0)
 Bounds(at Number) Numbers
 	Adding.Bounds(2) is (9)
 	MlirWholeNarrow(MlirWholeFunction.Nesting, 11).Bounds(6) is (0, 3)
 	MlirWholeNarrow(Mixing, 0).Bounds(12) is (2) and (MlirWholeNarrow(Mixing, 0).Bounds(6) is (2, 9000))
 	MlirWholeNarrow(MlirKernel.Summing.function, 0).Bounds(1).Length is 0
 	let entry = function.method.instructions(at)
-	let registers = entry.payload(1) is 1 then (entry.payload(0), entry.payload(2)) else List(Number) + entry.payload(0)
-	for registers
+	for (entry.payload(1) is 1 then (entry.payload(0), entry.payload(2)) else List(Number) + entry.payload(0))
 		let writer = MlirArguments(List(MlirFunction)).Writer(function, value, at)
 		if (writer >= 0) and (function.method.instructions(writer).kind is InstructionType.LoadConstantToRegister)
 			PayloadDecoder(function.method.instructions(writer)).Value(1).number

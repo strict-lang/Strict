@@ -65,8 +65,7 @@ IsContained(name Text, depth = 0, seed = "") Boolean
 		if (value.kind is in MlirAlone.Named) and (value.texts(0) is name)
 			let isLoad = value.kind is InstructionType.LoadVariableToRegister
 			let isSeed = (seed is not "") and (MlirDying(function, index).Loaded(value.payload(0)) is seed)
-			let isKept = isLoad then IsSafeRead(index, name) else isSeed or IsFresh(function, index, value.payload(0), depth)
-			if isKept is false
+			if (isLoad then IsSafeRead(index, name) else isSeed or IsFresh(function, index, value.payload(0), depth)) is false
 				return false
 	true
 IsFresh(inspected MlirFunction, at Number, register Number, depth Number) Boolean
@@ -189,8 +188,7 @@ Target(entry InstructionEntry, owner TypeEntry) Text
 	let isStored = (next.kind is Inliner.Store) and (next.payload(0) is entry.payload(0))
 	let isFull = entry.payload(5 + entry.payload(3)) >= MlirInstances(function, 0).Stored(owner).Length
 	let isBuilt = isFull and (MlirConstants(function, position).IsConstant is false)
-	let isOwned = isStored and isBuilt then IsOwned(next.texts(0)) else false
-	isOwned then next.texts(0) else ""
+	(isStored and isBuilt then IsOwned(next.texts(0)) else false) then next.texts(0) else ""
 Rewritten(entry InstructionEntry, owner TypeEntry, name Text) Texts
 	Rebuilt.Rewritten(Rebuilding(7), MlirInstances.Outer, "moved").Last is "    llvm.store %t7ra1, %t7r1 : f64, !llvm.ptr"
 	let countPosition = 5 + entry.payload(3)

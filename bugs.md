@@ -1,2 +1,4 @@
 - Routes.Called keeps 2 surviving mutants (the `call.IsNativeConversion` branch and the `IsMemberCall` result), both need a conversion fixture that `Chosen` finds.
 - `SureMethods` decides "can fail" from body tokens (`Error`, `to`) and typed index access: List `+` with a Text element returns Error at runtime without either, so it still counts as sure.
+- `if (chosen < entry.payload(countPosition)) then entry.payload(countPosition + 1 + chosen) is register else false` in the loop of `Compiler/MlirMembered.strict` Slot fails the `Moved.Target(7, 0)` test on the VM, the same line without the parentheses passes (a small loop with the same shape passes both ways).
+- `then` branches do not narrow `x is Error`: `result is Error then VmValue.OfError(result.Name.text) else ...` in `Runtime/Foreign.strict` Hosted is `MethodNotFound: Number.Name`, so `Inlines` skips that pattern.

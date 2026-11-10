@@ -45,8 +45,7 @@ Forward(input Numbers, rotation Numbers) Slow(FlashLayer)
 	Doubled.streams(261).IsNearlyEqual(Stepped.streams(5), 0.002)
 	let cached = Cached(mixing.Mixed(input), rotation)
 	let combined = mixing.Combined(input, cached.Attended, mixing.Injected(input))
-	let fed = Fed(feeding.Mixed(combined))
-	FlashLayer(cached, streams = feeding.Combined(combined, fed, feeding.Injected(combined)))
+	FlashLayer(cached, streams = feeding.Combined(combined, Fed(feeding.Mixed(combined)), feeding.Injected(combined)))
 Cached(mixed Numbers, rotation Numbers) FlashLayer
 	First.Cached(Mixed, List(Number)).linear.First.merged.Length is 32
 	if attention.Length > 0

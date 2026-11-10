@@ -75,8 +75,7 @@ IsFeeding(position Number, register Number) Boolean
 	let reuse = LoadReuse(function.method.instructions)
 	for Range(position + 1, function.method.instructions.Length)
 		let entry = function.method.instructions(value)
-		let isRead = (register is in reuse.Reads(entry)) and IsPositional(value, entry, register)
-		if isRead or IsStored(value, entry, register)
+		if ((register is in reuse.Reads(entry)) and IsPositional(value, entry, register)) or IsStored(value, entry, register)
 			return true
 		if reuse.Written(entry) is register
 			return false

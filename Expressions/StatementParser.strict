@@ -35,8 +35,7 @@ Keyword(first Text) SyntaxNode
 		return ParseElse
 	if tokens.Length is 1
 		return SyntaxNode(first.Capitalize, first)
-	let isWhile = (first is "for") and (tokens.Length > 4) and (tokens(1) is "as") and (tokens(3) is "as")
-	if isWhile and (tokens(2) is "long")
+	if ((first is "for") and (tokens.Length > 4) and (tokens(1) is "as") and (tokens(3) is "as")) and (tokens(2) is "long")
 		return SyntaxNode("For", "for as long as", Rest(4))
 	(first is "for") and IsNamed then Named else SyntaxNode(first.Capitalize, "", Rest(1))
 IsNamed Boolean

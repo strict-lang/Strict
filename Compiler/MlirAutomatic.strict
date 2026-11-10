@@ -66,8 +66,7 @@ IsSkipped(kind Text) Boolean
 	Sample.IsSkipped("Dictionary(Number, Missing)")
 	Sample.IsSkipped("Dictionary(Text, Number)") is false
 	let pair = MlirLayout(function).Paired(kind)
-	let converters = pair.Length is 0 then List(Text) + Conversion(kind) else (Converter(pair(0)), Converter(pair(1)))
-	"skip" is in converters
+	"skip" is in (pair.Length is 0 then List(Text) + Conversion(kind) else (Converter(pair(0)), Converter(pair(1))))
 Added(count Number, text Text, loaded Text, kind Text) Text
 	Sample.Added(0, "%x0", "%v", "Number") is "    %l1 = func.call @strict_list_add(%l0, %x0) : (f64, f64) -> f64"
 	Sample.Added(1, "%x1", "%v", "Shape").IndexOf("@strict_list_add_set(%l1, %x1, %v)") > 0

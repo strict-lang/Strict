@@ -12,8 +12,7 @@ Issues List(ValidationIssue)
 	Writes(("Save(path Text) Number", "\t1")).Issues.Length is 0
 	Created.Issues.Length is 0
 	Numbered.Issues.Length is 2
-	let shape = TypeShape(lines)
-	let isExternal = IsExternal(shape)
+	let isExternal = IsExternal(TypeShape(lines))
 	for lines
 		if isExternal and IsWriting(value)
 			ValidationIssue("WriteMustReturnNothing", Tokenizer(value).Tokens.First + Hint, index + 1)

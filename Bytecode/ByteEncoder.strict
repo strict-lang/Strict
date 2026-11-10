@@ -19,8 +19,7 @@ SevenBit(number Number) ByteEncoder
 	mutable result = bytes
 	mutable rest = number
 	for (rest / SevenBitBase).Floor > 0 then SevenBitLength(rest) else 1
-		let isLast = rest < SevenBitBase
-		result = result + (isLast then rest else rest % SevenBitBase + SevenBitBase)
+		result = result + ((rest < SevenBitBase) then rest else rest % SevenBitBase + SevenBitBase)
 		rest = (rest / SevenBitBase).Floor
 	ByteEncoder(result)
 SevenBits(numbers Numbers) ByteEncoder
@@ -74,6 +73,4 @@ Double(number Number) ByteEncoder
 Exponent(positive Number) Number
 	ByteEncoder(1, 2).Exponent(10) is 3
 	ByteEncoder(1, 2).Exponent(0.25) is -2
-	if positive >= 2
-		return 1 + Exponent(positive / 2)
-	positive < 1 then Exponent(positive * 2) - 1 else 0
+	positive >= 2 then 1 + Exponent(positive / 2) else positive < 1 then Exponent(positive * 2) - 1 else 0

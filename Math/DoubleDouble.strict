@@ -7,8 +7,7 @@ has low Number = 0
 	DoubleDouble(1) + DoubleDouble(10000000000000000) is DoubleDouble(10000000000000000, 1)
 	let sum = high + other.high
 	let moved = sum - high
-	let error = (high - (sum - moved)) + (other.high - moved) + low + other.low
-	Normalized(sum, error)
+	Normalized(sum, (high - (sum - moved)) + (other.high - moved) + low + other.low)
 -(other) DoubleDouble
 	(DoubleDouble(10000000000000000, 1) - DoubleDouble(10000000000000000)).high is 1
 	(DoubleDouble(10000000000000000, 3) - DoubleDouble(10000000000000000, 1)).high is 2
@@ -27,8 +26,7 @@ has low Number = 0
 	let first = high / other.high
 	let rest = value - other * DoubleDouble(first)
 	let second = rest.high / other.high
-	let remainder = rest - other * DoubleDouble(second)
-	Normalized(first, second + remainder.high / other.high)
+	Normalized(first, second + (rest - other * DoubleDouble(second)).high / other.high)
 Normalized(head Number, tail Number) DoubleDouble
 	Normalized(1, 1).high is 2
 	Normalized(1, 10000000000000000).low is 1
@@ -91,5 +89,4 @@ Fraction(digits Text) DoubleDouble
 		scaled = scaled * DoubleDouble(10 ^ length) + DoubleDouble(digits.Substring(index * 8, length) to Number)
 	constant ExactExponent = 22
 	let rest = (digits.Length - ExactExponent).Clamp(0, ExactExponent)
-	let power = DoubleDouble(10 ^ digits.Length.Clamp(0, ExactExponent)) * DoubleDouble(10 ^ rest)
-	scaled / power
+	scaled / (DoubleDouble(10 ^ digits.Length.Clamp(0, ExactExponent)) * DoubleDouble(10 ^ rest))

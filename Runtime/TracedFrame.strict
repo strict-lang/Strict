@@ -131,8 +131,7 @@ Members(record VmValue, isChanged Boolean) Texts
 	let natives = Natives(frame.machine.types)
 	for natives.TypeOf(record.kind).members
 		let item = index < record.items.Length then record.items(index) else VmValue.None
-		let isShown = (value.IsConstant is false) and (item.kind is not "None")
-		if isShown and ((item is natives.Initial(value)) is not isChanged)
+		if ((value.IsConstant is false) and (item.kind is not "None")) and ((item is natives.Initial(value)) is not isChanged)
 			value.Name + " = " + ValueCode(item).Code
 Elements(items List(VmValue)) Texts
 	Lined.Elements((Seven, Seven, Seven, Seven, Seven, Seven)) is ("7", "7", "7", "7", "7")

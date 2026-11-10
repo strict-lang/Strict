@@ -17,8 +17,7 @@ Rewritten Texts
 		FusedLine(value)
 FusedLine(line Text) Text
 	Averaging.FusedLine("\tOnes(2).Average") is "\tOnesAveraged(2)"
-	let name = Averaged(line)
-	if name is ""
+	if Averaged(line) is ""
 		return line
 	let at = line.IndexOf(").Average")
 	let start = Opening(line, at)
@@ -40,8 +39,7 @@ Averaged(line Text) Text
 	if start < 1
 		return ""
 	let name = Name(line, start)
-	let isOwn = (start - name.Length is 0) or (line(start - name.Length - 1) is not ".")
-	isOwn and IsFusable(name) then name else ""
+	((start - name.Length is 0) or (line(start - name.Length - 1) is not ".")) and IsFusable(name) then name else ""
 Opening(line Text, closing Number) Number
 	Averaging.Opening("Ones(f(2)).Average", 9) is 4
 	mutable depth = 0
@@ -111,7 +109,6 @@ MemberTypes(element Text) Texts
 MemberLines(element Text) Texts
 	Coloring.MemberLines("Color").First is "has Red Byte"
 	let path = folder + "/" + element + ".strict"
-	let found = (folder is not "") and File(path).Exists then File(path).ReadLines else List(Text)
-	for found
+	for ((folder is not "") and File(path).Exists then File(path).ReadLines else List(Text))
 		if value.StartsWith("has ")
 			value

@@ -26,8 +26,7 @@ Value(route Number, slot Number) VmValue
 		return found
 	Saved(route, slot, VmValue(found, kind = "$Computing"))
 	let method = machine.types(route).methods(found.items.First.number)
-	let call = Invocation(InstructionEntry.Return(0), List(VmValue), prototype)
-	let computed = Computed(route, method, call)
+	let computed = Computed(route, method, Invocation(InstructionEntry.Return(0), List(VmValue), prototype))
 	Saved(route, slot, computed)
 	computed
 Computed(route Number, method MethodEntry, call Invocation) VmValue

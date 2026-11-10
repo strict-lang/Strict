@@ -21,16 +21,12 @@ Checked Number
 	ErrorHandling(5).Checked is 10
 	ErrorHandling(0).Checked is 0
 	let found = Found
-	if found is Error
-		return 0
-	found * 2
+	found is Error then 0 else found * 2
 Described Text
 	ErrorHandling(5).Described is "5"
 	ErrorHandling(0).Described.StartsWith("Error: Missing")
 	let found = Found
-	if found is Error
-		return found to Text
-	found to Text
+	found is Error then found to Text else found to Text
 Passed Number
 	ErrorHandling(5).Passed is 6
 	ErrorHandling(0).Passed is Missing
@@ -45,9 +41,7 @@ Collected Numbers
 Branched Number
 	ErrorHandling(5).Branched is 1
 	ErrorHandling(0).Branched is Missing
-	if Found > 3
-		return 1
-	2
+	Found > 3 then 1 else 2
 Counted Number
 	ErrorHandling(5).Counted is 2
 	mutable known = Dictionary(Text, Number)
@@ -68,8 +62,7 @@ Incremented Number
 IsKnown Boolean
 	ErrorHandling(0).IsKnown
 	ErrorHandling(5).IsKnown is false
-	let found = Found
-	found is in (Missing, Error("Other"))
+	Found is in (Missing, Error("Other"))
 IsSmallOrMissing Boolean
 	ErrorHandling(0).IsSmallOrMissing
 	ErrorHandling(5).IsSmallOrMissing is false

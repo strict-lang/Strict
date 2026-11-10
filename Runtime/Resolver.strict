@@ -131,8 +131,7 @@ Decoded(entry InstructionEntry) InstructionEntry
 	Doubling.Decoded(InstructionEntry.LoadNumber(0, 7)).payload is (0, 1, 7)
 	Doubling.Decoded(MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 0.5), "a")).payload is (1, 0.5, -1, 0)
 	let at = entry.kind is InstructionType.LoadConstantToRegister then 1 else 0
-	let isConstant = (at is 1) or (entry.kind is InstructionType.StoreConstantToVariable)
-	if (isConstant is false) or (entry.payload(at) is not 3)
+	if (((at is 1) or (entry.kind is InstructionType.StoreConstantToVariable)) is false) or (entry.payload(at) is not 3)
 		return entry
 	let number = PayloadDecoder(entry).Double(at + 1)
 	mutable payload = at is 1 then (entry.payload(0), 1, number) else (1, number)
@@ -186,6 +185,4 @@ Destination(entry InstructionEntry, scratch Number) Number
 	if kind is in (InstructionType.Return, InstructionType.LoopBegin, InstructionType.LoopEnd)
 		return kind is InstructionType.Return then Frame.ResultSlot else Frame.LoopSlot
 	let written = LoadReuse(List(InstructionEntry)).WritePosition(entry)
-	if written >= 0
-		return entry.payload(written)
-	kind is in Comparisons then Frame.FlagSlot else scratch
+	written >= 0 then entry.payload(written) else kind is in Comparisons then Frame.FlagSlot else scratch

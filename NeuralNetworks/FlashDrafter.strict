@@ -14,8 +14,7 @@ Loaded(head Gguf) Slow(FlashDrafter)
 	Tiny.block.attention.Length is 1
 	Tiny.projection.weights.Length is 64
 	Tiny.mixer.norm.Length is 256
-	let architecture = head.Value("general.architecture")
-	let layer = (head.Value(architecture + ".block_count") to Number) - 1
+	let layer = (head.Value(head.Value("general.architecture") + ".block_count") to Number) - 1
 	let prefix = "blk." + layer + ".nextn."
 	let projected = Layer(head.Rows(prefix + "eh_proj.weight"), Layer.Unbiased)
 	let normed = (head.Values(prefix + "enorm.weight"), head.Values(prefix + "hnorm.weight"))

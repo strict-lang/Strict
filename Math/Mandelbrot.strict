@@ -33,9 +33,7 @@ Enclosed(orbit List(Complex), radius Number, limit Number) Boolean
 	Enclosed(Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Of(Complex(-0.75, 0.1)), 64), 0.0000001, 64) is false
 	Enclosed(Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Zero, 32), 0.75, 32) is false
 	Enclosed((Complex.Zero, Complex.Zero), 0.01, 2) is false
-	if orbit.Length < limit + 1
-		return false
-	DiskEnclosed(orbit, radius, limit)
+	orbit.Length < limit + 1 then false else DiskEnclosed(orbit, radius, limit)
 DiskEnclosed(orbit List(Complex), radius Number, limit Number) Boolean
 	DiskEnclosed((Complex.Zero, Complex(1, 0), Complex.Zero), 0.9999999999999977, 1) is false
 	DiskEnclosed((Complex.Zero, Complex(1, 0), Complex.Zero), 0.9999999999999976, 1)
@@ -52,8 +50,7 @@ DiskError(orbit List(Complex), position Number, offset Complex, previous Number)
 	(DiskError((Complex.Zero), 0, Complex.Zero, 0) > 0) and (DiskError((Complex.Zero), 0, Complex.Zero, 1) > 1)
 	let bound = offset.Length * RoundingGrowth
 	let factor = 2 * (orbit(position).Length + 0.000000000000001) + 2 * bound + previous
-	let error = factor * previous + bound * bound
-	error * RoundingGrowth + bound * 0.000000000000001 + 0.00000000000000000000000000001
+	(factor * previous + bound * bound) * RoundingGrowth + bound * 0.000000000000001 + 0.00000000000000000000000000001
 Beyond(squared DoubleDouble) Boolean
 	Beyond(DoubleDouble(4, 0.000000000000000000000000000001))
 	Beyond(DoubleDouble(4, -0.000000000000000000000000000001)) is false

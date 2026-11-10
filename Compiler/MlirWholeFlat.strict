@@ -19,8 +19,7 @@ MemberKinds(input Number) Texts
 Owner(input Number) Text
 	Sized.Owner(0) is "Strict/Grid"
 	Fits.Owner(1) is "Strict/Grid"
-	let isSelf = input >= function.method.parameters.Length
-	isSelf then function.type.Name else function.method.parameters(input).typeName
+	(input >= function.method.parameters.Length) then function.type.Name else function.method.parameters(input).typeName
 Names Texts
 	Sized.Names is ("%p0_cells", "%p0_width")
 	Fits.Names is ("%p0", "%p1_width")

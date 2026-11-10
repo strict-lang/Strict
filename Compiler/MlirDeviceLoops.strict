@@ -95,8 +95,7 @@ Current(register Text, isList Boolean) Texts
 	let data = MlirTyped.Pointer.Load(Temp("ed"), register + "_d")
 	let sizes = (MlirTyped.Integer.Load(Temp("eb"), register + "_b"), MlirTyped.Integer.Load(Temp("en"), register + "_n"))
 	let operands = "(" + Temp("ed") + ", " + Temp("eb") + ", " + Temp("k") + ", " + Temp("en") + ")"
-	let read = MlirTyped(function.Float).Read(Temp("e"), operands)
-	index + data + sizes + (read, function.Store(Temp("e"), "%v_value"))
+	index + data + sizes + (MlirTyped(function.Float).Read(Temp("e"), operands), function.Store(Temp("e"), "%v_value"))
 End Texts
 	Ending.End.Last is "    llvm.store %d11y0, %v_sum : f64, !llvm.ptr"
 	MlirDeviceLoops(MlirDeviceChoice.Choosing, 12).End.Last is "    llvm.store %d12c0r5, %v_largest : f64, !llvm.ptr"

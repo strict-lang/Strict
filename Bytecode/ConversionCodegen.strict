@@ -97,8 +97,7 @@ Typed(node SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Typed(ValueCodegen.ToText, CodeBlock.Empty) is ValueCodegen.ToText
 	Plain.Typed(Typing, CodeBlock.Empty) to Text is "Type(\"Number\", \"Strict\")"
 	Plain.Typed(SyntaxNode("Call", "to", Typing.children), CodeBlock.Empty).text is "to"
-	let isType = (node.Kind is "Binary") and (node.text is "to") and (node.children(1).text is "Type")
-	if isType is false
+	if ((node.Kind is "Binary") and (node.text is "to") and (node.children(1).text is "Type")) is false
 		return node
 	let source = node.children(0)
 	if source.Kind is "Text"
@@ -181,8 +180,7 @@ Looped(node SyntaxNode, block CodeBlock) CodeBlock
 	Colored.Looped(Colored.Elements(Pixels, "Colors", Pixelated), Pixelated).instructions(4).kind is InstructionType.Invoke
 	Colored.Looped(Colored.Elements(Pixels, "Colors", Pixelated), Pixelated).instructions(7).payload is (6)
 	let name = "converted" + block.nextId
-	let type = values.target.FullName(node.text)
-	let empty = InstructionEntry(InstructionType.LoadConstantToRegister, type, (0, 6, -1, 0))
+	let empty = InstructionEntry(InstructionType.LoadConstantToRegister, values.target.FullName(node.text), (0, 6, -1, 0))
 	let started = block.Add(MethodCodegen.StoreConstant(empty, name)).WithNextId
 	let begun = LoopCodegen(MethodCodegen(values)).Declared(SyntaxNode("For", "", node.children), started)
 	let element = values.Expression(node.children(1), begun)

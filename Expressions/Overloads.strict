@@ -86,9 +86,7 @@ Assignable(argument Text, declared Text, isExact Boolean) Boolean
 	Scaling.Assignable("Bytes", "Numbers", false) and (Scaling.Assignable("Bytes", "Numbers", true) is false)
 	let isList = argument.StartsWith("List(") and (argument.IndexOf(",") < 0)
 	let plural = isList then argument.Substring(5, argument.Length - 6) + "s" else argument
-	if plural is declared
-		return true
-	(isExact is false) and ListFits(types).Widened(argument, declared)
+	plural is declared then true else (isExact is false) and ListFits(types).Widened(argument, declared)
 Converts(argument Text, declared Text) Boolean
 	Scaling.Converts("Byte", "Number")
 	Overloads(TypeInference.Colors.types).Converts("ColorValue", "Color")
@@ -139,8 +137,7 @@ Arguments(node SyntaxNode, inference TypeInference, scope Scope, current Scope) 
 	Labeling.Arguments(LabelsMember, LabelInference, KnownTypes.NoMembers, Labeler.methods(0)).Length is 0
 	Picking.Typed(SyntaxNode("Identifier", "value"), "A", LabelInference, KnownTypes.NoMembers, Relabeled) is "A"
 	Picking.Typed(Mixing, "A", LabelInference, KnownTypes.NoMembers, KnownTypes.NoMembers) is "Unknown"
-	let start = node.Kind is in ("Member", "MethodCall") then 1 else 0
-	for Range(start, node.children.Length)
+	for Range((node.Kind is in ("Member", "MethodCall") then 1 else 0), node.children.Length)
 		inference.TypeOf(node.children(value), scope, current)
 Typed(node SyntaxNode, instanceType Text, inference TypeInference, scope Scope, current Scope) Text
 	Picking.Typed(Mixing, "Picker", LabelInference, KnownTypes.NoMembers, KnownTypes.NoMembers) is "Numbers"

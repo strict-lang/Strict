@@ -82,8 +82,7 @@ Decided(node SyntaxNode, block CodeBlock) Text
 	let isType = IsTypeTest(wanted, block)
 	if (isType is false) and (IsMismatched(node, block) is false)
 		return ""
-	let matches = isType and Matches(values.TypeOf(node.children(0), block), wanted.text)
-	(matches is (node.text is "is")) to Text
+	((isType and Matches(values.TypeOf(node.children(0), block), wanted.text)) is (node.text is "is")) to Text
 IsTypeTest(wanted SyntaxNode, block CodeBlock) Boolean
 	Plain.Composite(SyntaxNode("Binary", "and", (NoNode, NoNode)), CodeBlock.Empty.Declare("x", "Boolean")).nextId is 1
 	Plain.Composite(InOnes, CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke

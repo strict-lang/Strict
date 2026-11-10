@@ -41,9 +41,7 @@ Floating Text
 		return arguments(3) is "float" then "strict_float(" + Value + ")" else ""
 	if operation is "fpext" and (arguments(3) is "double")
 		return arguments(0) is "float" then "strict_double(" + Value + ")" else ""
-	if isDouble
-		return ""
-	"(" + Target.Type + ")" + Unsigned + Value
+	isDouble then "" else "(" + Target.Type + ")" + Unsigned + Value
 Unsigned Text
 	MetalCast(("i32", "%1", "to", "float"), "uitofp").Unsigned is "(uint)"
 	if operation is "uitofp"

@@ -77,6 +77,4 @@ Described(help Text, at Number) Texts
 	Count.Described("Help", 2) is ("Help(2)")
 	Count.Described("", 0) is ("\"\"")
 	Sized.Described("", 0) is ("Resolution.Help(0)", "Resolution.Help(1)")
-	if IsNested
-		return Nested.Descriptions(Type + ".")
-	List(Text) + (help is "" then "\"\"" else help + "(" + at + ")")
+	IsNested then Nested.Descriptions(Type + ".") else List(Text) + (help is "" then "\"\"" else help + "(" + at + ")")

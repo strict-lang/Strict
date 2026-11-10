@@ -29,9 +29,7 @@ Block(state Inflation, kind Number) Inflation
 	StoredSample.Block(Inflation(List(Number), 3), 0).output is (104, 105)
 	if kind is 0
 		return Stored(state)
-	if kind is 1
-		return Coded(state, FixedLiteralCodes, FixedDistanceCodes)
-	Dynamic(state)
+	kind is 1 then Coded(state, FixedLiteralCodes, FixedDistanceCodes) else Dynamic(state)
 Stored(state Inflation) Inflation
 	StoredSample.Stored(Inflation(List(Number), 3)).position is 56
 	StoredSample.Stored(Inflation((1, 2), 3)).output is (1, 2, 104, 105)
@@ -132,8 +130,7 @@ Bits(position Number, count Number) Number
 	let at = (position / 8).Floor
 	let middle = at + 1 < bytes.Length then bytes(at + 1) else 0
 	let high = at + 2 < bytes.Length then bytes(at + 2) else 0
-	let joined = bytes(at) + (middle + high * Byte.Values) * Byte.Values
-	(joined / Powers(position % 8)).Floor % 2 ^ count
+	((bytes(at) + (middle + high * Byte.Values) * Byte.Values) / Powers(position % 8)).Floor % 2 ^ count
 Peek(position Number) Number
 	StoredSample.Peek(0) is 1
 	StoredSample.Peek(8) is 2

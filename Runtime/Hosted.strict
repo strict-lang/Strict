@@ -54,9 +54,7 @@ Result VmValue
 	call.MethodName is in ("ReadLines", "ReadBytes", "Files", "Directories") then Entries else Stored
 Read(name Text) Text
 	Hosted(SystemCall).Read("Current") is Directory.Current
-	if name is "Input"
-		return Process.Input
-	name is "InputLine" then Process.InputLine else Directory.Current
+	name is "Input" then Process.Input else name is "InputLine" then Process.InputLine else Directory.Current
 Processed VmValue
 	Hosted(SystemCall).Processed.text is in ("Windows", "Linux", "MacOS", "Unknown")
 	let name = call.MethodName

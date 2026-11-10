@@ -9,8 +9,7 @@ Run(path Text, root Text) Number
 	if File(path).Exists is false
 		return 2
 	let mode = selection is "" then "unit" else (selection is "*" then "" else selection)
-	let arguments = "test \"" + path + "\" \"" + root + "\" trace " + mode
-	let result = ToolRunner(Process.Current.executable).Execute(arguments)
+	let result = ToolRunner(Process.Current.executable).Execute("test \"" + path + "\" \"" + root + "\" trace " + mode)
 	let lines = result.Output.Lines
 	for Plain(lines) + Valued(lines, Path(path).PathOnly.text)
 		logger.Log(value)
@@ -31,8 +30,7 @@ Traced(path Text, root Text) Number
 Valued(lines Texts, folder Text) Texts
 	ValueTrace(Logger).Valued(Events, "Examples").First.EndsWith("line 2 hit 2 times")
 	ValueTrace(Logger).Valued(Events, "Examples").Last.EndsWith("line 3 hit 2 times, each: 1, 2")
-	let hits = Hits(lines)
-	for hits
+	for Hits(lines)
 		Line(value.Key, value.Value, folder)
 Hits(lines Texts) Dictionary(Text, Texts)
 	ValueTrace.Hits(Events)("Sum|3") is ("Hit\nRes|1", "Hit\nRes|2")
@@ -137,7 +135,6 @@ Assigned(line Text) Texts
 	ValueTrace.Assigned("\tlet scale = 10 ^ decimals") is ("scale", "scale")
 	ValueTrace.Assigned("\t\tcount = count + 1") is ("count", "count")
 	ValueTrace.Assigned("has number with value >= -1").Length is 0
-	let code = line.Trim
-	let words = code.Split(" ")
+	let words = line.Trim.Split(" ")
 	let at = words.First is in ("let", "mutable") then 1 else 0
 	(words.Length > at + 2) and (words(at + 1) is "=") then (words(at), words(at)) else List(Text)

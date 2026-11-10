@@ -149,8 +149,7 @@ Entered(entry InstructionEntry, slots List(VmValue), position Number) Number
 	Twice.Entered(MethodEntry.CountingLoop.instructions(0), Listed, 0) is 1
 	Twice.Finished(Listed).Index(VmValue.OfNumber(42)) is ResultSlot
 	Twice.Traced(VmValue("Strict/ErrorWithValue", 0, "", (VmValue.OfError("a"), Listed(5))), 0).items(0).Traces.Length > 0
-	let isEmpty = Looping.IsEmpty(slots(entry.payload(0)), Ending(entry, slots))
-	isEmpty then method.LoopEndOf(position) + 1 else position + 1
+	Looping.IsEmpty(slots(entry.payload(0)), Ending(entry, slots)) then method.LoopEndOf(position) + 1 else position + 1
 Ending(entry InstructionEntry, slots List(VmValue)) VmValue
 	Twice.Ending(InstructionEntry.LoopBegin(6, 8), Listed).number is 5
 	Twice.Ending(InstructionEntry.LoopBegin(6, -1), Listed).kind is "None"

@@ -3,9 +3,7 @@ has position Number
 Helper(helper Text) Text
 	if (helper is "strict_file_read_lines") and IsRead
 		return "strict_file_joined"
-	if (helper is "strict_text_combine") and IsJoin
-		return "strict_file_joined_result"
-	helper
+	(helper is "strict_text_combine") and IsJoin then "strict_file_joined_result" else helper
 IsRead Boolean
 	let steps = function.method.instructions
 	if (position < 0) or (position + 3 >= steps.Length)
@@ -14,9 +12,7 @@ IsRead Boolean
 	if IsCall(read, "File", "ReadLines") is false
 		return false
 	let check = steps(position + 1)
-	let literal = steps(position + 2)
-	let join = steps(position + 3)
-	Matches(read, check, literal, join) and Unused(read.payload(0), position + 3)
+	Matches(read, check, steps(position + 2), steps(position + 3)) and Unused(read.payload(0), position + 3)
 Matches(read InstructionEntry, check InstructionEntry, literal InstructionEntry, join InstructionEntry) Boolean
 	if (check.kind is not InstructionType.CheckError) or (check.payload(0) is not read.payload(0))
 		return false

@@ -37,9 +37,7 @@ Kind(typeName Text) Text
 		return "i"
 	if MlirLanes(function, 0).IsPacked(MlirKinds(function).ElementKind(short))
 		return "d"
-	if MlirCouples(function, 0).IsCoupled(short)
-		return "c"
-	short is in ("Bytes", "List(Byte)") then "p" else ""
+	MlirCouples(function, 0).IsCoupled(short) then "c" else short is in ("Bytes", "List(Byte)") then "p" else ""
 UsesSelf Boolean
 	Fits.UsesSelf
 	Sized.UsesSelf is false
@@ -76,8 +74,7 @@ Passed(entry InstructionEntry, at Number, name Text) Texts
 	let callee = MlirWholeFunction(function).Callee(entry)
 	mutable names = List(Mutable(Text))
 	for reads
-		let isSame = callee.method.Name is function.method.Name
-		if (isSame is false) and IsFrom(entry.payload(value), at, name)
+		if ((callee.method.Name is function.method.Name) is false) and IsFrom(entry.payload(value), at, name)
 			names = names + MlirWholeInstance(callee).Members(index)
 	names
 IsFrom(register Number, at Number, name Text) Boolean
@@ -116,8 +113,7 @@ IsReadable(entry InstructionEntry) Boolean
 	Coupled.IsReadable(MlirWholeNative.Widths)
 	MlirWholeInstance(MlirLanes.Sample.function).IsReadable(MlirLanes.Greens)
 	let isPacked = MlirLanes(function, 0).IsPacked(entry.texts(1)) or MlirCouples(function, 0).IsCoupled(entry.texts(1))
-	let isOwner = IsInstance(entry.texts(1)) or isPacked
-	isOwner and (MemberKind(entry.texts(1), entry.texts(0)) is not "")
+	(IsInstance(entry.texts(1)) or isPacked) and (MemberKind(entry.texts(1), entry.texts(0)) is not "")
 IsMemberList(name Text) Boolean
 	Sized.IsMemberList("list0")
 	Sized.IsMemberList("grid") is false

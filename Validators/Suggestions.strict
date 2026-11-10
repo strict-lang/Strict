@@ -27,10 +27,8 @@ Search(header HeaderTokens) SuggestionCalls
 	SuggestionCalls(Path(path).FileName.RemoveExtension.text, header, values, inference.types)
 Tests(header Number) Texts
 	let code = TypeCodegen(FileCompiler.FullName(path, root), lines, inference, List(Text))
-	let body = BodyParser(lines).Method(header + 1)
-	let extended = SyntaxNode("Body", "", body.children + MethodCodegen.One)
-	let tests = TestLines(code.Generator).Tests(extended, CodeBlock.Empty)
-	SyntaxNode("Body", "", tests).Lines("\t")
+	let extended = SyntaxNode("Body", "", BodyParser(lines).Method(header + 1).children + MethodCodegen.One)
+	SyntaxNode("Body", "", TestLines(code.Generator).Tests(extended, CodeBlock.Empty)).Lines("\t")
 WithBody(header Number) Texts
 	mutable changed = List(Mutable(Text))
 	for lines

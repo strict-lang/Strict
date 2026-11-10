@@ -26,9 +26,7 @@ Without(arguments Texts) Texts
 Named(arguments Texts) Number
 	Sample.Named(List(Text)) is -1
 	let remote = Target(arguments, "")
-	if Peers.IsAny(remote) or (remote is "")
-		return -1
-	Forwarded(remote, Without(arguments))
+	Peers.IsAny(remote) or (remote is "") then -1 else Forwarded(remote, Without(arguments))
 Sent(arguments Texts, absent Text, reply Text, line Text) Number
 	Sample.Sent(List(Text), Ben, "go\tjob\t0", "need") is -1
 	Sample.Sent(List(Text), Ben, "", "need") is -1

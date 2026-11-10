@@ -6,8 +6,7 @@ constant Shown = (37, 85)
 Run
 	let started = Process.Elapsed
 	let trained = Trained(Recurrent.Random(2, 1), Examples)
-	let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
-	logger.Log("Trained on " + Examples + " random sums in " + milliseconds + " ms")
+	logger.Log("Trained on " + Examples + " random sums in " + ((Process.Elapsed - started) * 1000).Round(1) + " ms")
 	let shown = Shown(0) + " + " + Shown(1) + " = " + Added(trained, Shown(0), Shown(1))
 	logger.Log(Correct(trained, 100) + " of 100 new sums are right, " + shown)
 Trained(network Recurrent, count Number) Recurrent

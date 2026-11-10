@@ -15,14 +15,10 @@ ClassifyHeader(header Text) Text
 	"Method: " + methodName + " returns " + returnType
 ExtractMethodName(header Text) Text
 	let spacePos = header.IndexOf(" ")
-	if spacePos > 0
-		return header.Substring(0, spacePos)
-	header
+	spacePos > 0 then header.Substring(0, spacePos) else header
 ExtractReturnType(header Text) Text
 	let spacePos = header.IndexOf(" ")
-	if spacePos > 0
-		return header.Substring(spacePos + 1, header.characters.Length - spacePos - 1)
-	""
+	spacePos > 0 then header.Substring(spacePos + 1, header.characters.Length - spacePos - 1) else ""
 ParseBodyExpressions
 	constant bodyLines = ("logger.Log(\"Hi\")", "return count + 1", "if count > 0", "for items", "mutable total = 0")
 	logger.Log("Body expression types:")
@@ -42,6 +38,4 @@ ClassifyBodyLine(line Text) Text
 		return "Declaration: " + ParseExpressions.ExtractAfterKeyword(line, 8)
 	"Expression: " + line
 ClassifyReassignment(line Text) Text
-	if line.IndexOf(" = ") > 0
-		return "Reassignment: " + line
-	"Expression: " + line
+	line.IndexOf(" = ") > 0 then "Reassignment: " + line else "Expression: " + line

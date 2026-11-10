@@ -76,8 +76,7 @@ ShortName(typeName Text) Text
 	if typeName.IndexOf("Mutable(") is not -1
 		return ShortName(typeName.Replace("Mutable(", "").Substring(0, typeName.Length - 9))
 	let open = typeName.IndexOf("(")
-	let head = open < 0 then typeName else typeName.Substring(0, open)
-	let slash = head.LastIndexOf("/")
+	let slash = (open < 0 then typeName else typeName.Substring(0, open)).LastIndexOf("/")
 	slash < 0 then typeName else typeName.Substring(slash + 1, typeName.Length - slash - 1)
 Wrapped Text
 	HelloLogger.Wrapped is "Logger"

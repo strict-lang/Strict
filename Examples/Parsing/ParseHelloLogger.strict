@@ -10,22 +10,12 @@ LogMethodLines
 	for methodLines
 		logger.Log(ClassifyLine(value))
 IsMember(line Text) Boolean
-	if line.StartsWith("has ")
-		return true
-	if line.StartsWith("mutable ")
-		return true
-	line.StartsWith("constant ")
+	line.StartsWith("has ") then true else line.StartsWith("mutable ") then true else line.StartsWith("constant ")
 IsBody(line Text) Boolean
 	line.StartsWith("\t")
 ClassifyLine(line Text) Text
 	if IsMember(line)
 		return "Member(" + MemberKind(line) + "): " + line
-	if IsBody(line)
-		return "Body: " + line
-	"Method: " + line
+	IsBody(line) then "Body: " + line else "Method: " + line
 MemberKind(line Text) Text
-	if line.StartsWith("has ")
-		return "has"
-	if line.StartsWith("mutable ")
-		return "mutable"
-	"constant"
+	line.StartsWith("has ") then "has" else line.StartsWith("mutable ") then "mutable" else "constant"

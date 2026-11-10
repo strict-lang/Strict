@@ -35,5 +35,4 @@ Rotation Matrix
 	Quaternion(2, 3, 4, 5).Rotation is Matrix((-49, 52, -14, 0, -28, -39, 44, 0, 46, 4, -25, 0, 0, 0, 0, 1))
 	let first = (1 - 2 * (Y * Y + Z * Z), 2 * (X * Y + W * Z), 2 * (X * Z - W * Y), 0)
 	let second = (2 * (X * Y - W * Z), 1 - 2 * (X * X + Z * Z), 2 * (Y * Z + W * X), 0)
-	let third = (2 * (X * Z + W * Y), 2 * (Y * Z - W * X), 1 - 2 * (X * X + Y * Y), 0)
-	Matrix(first + second + third + (0, 0, 0, 1))
+	Matrix(first + second + (2 * (X * Z + W * Y), 2 * (Y * Z - W * X), 1 - 2 * (X * X + Y * Y), 0) + (0, 0, 0, 1))

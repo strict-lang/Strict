@@ -103,8 +103,7 @@ Aliased(node SyntaxNode, aliases Texts) SyntaxNode
 	if node.Kind is not "Identifier" and (isOther is false)
 		return node
 	let owner = isOther then node.children(0).text else typeName
-	let definition = inference.ConstantOf(owner, node.text)
-	if (definition is "") or (owner + "." + node.text is in aliases)
+	if (inference.ConstantOf(owner, node.text) is "") or (owner + "." + node.text is in aliases)
 		return node
 	let parsed = ConstantMethods(inference).Definition(owner, node.text)
 	if ConstantMethods(inference, isOptimizing or (owner is not typeName)).IsCached(owner, node.text)
@@ -211,9 +210,7 @@ Calculated(operator Text, left Number, right Number) Number
 		return left + right
 	if operator is "-"
 		return left - right
-	if operator is "*"
-		return left * right
-	operator is "/" then left / right else left % right
+	operator is "*" then left * right else operator is "/" then left / right else left % right
 Unwrapped(node SyntaxNode) SyntaxNode
 	Wrapping.Unwrapped(SyntaxNode("Identifier", "Vector2")) to Text is "Vector2"
 	Wrapping.Unwrapped(SyntaxParser(Tokenizer("f(1)").Tokens).Parse) to Text is "f(1)"

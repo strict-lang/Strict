@@ -24,8 +24,7 @@ Weights(coords Numbers, target Number) Numbers
 	let design = Design(coords)
 	let solved = SpectralSolve(Gram(design), Basis(target)).Solved
 	for coords.Length
-		let fitted = Softmax.Weighted(design(index), 0, degree + 1, solved, 0, 1)
-		blend * fitted + (1 - blend) * Linear(coords, target, index)
+		blend * Softmax.Weighted(design(index), 0, degree + 1, solved, 0, 1) + (1 - blend) * Linear(coords, target, index)
 IsValid Boolean
 	Quadratic.IsValid and SpectralFit(0, 0, 0).IsValid and SpectralFit(4, 0, 1).IsValid
 	SpectralFit(-1, 0, 1).IsValid is false

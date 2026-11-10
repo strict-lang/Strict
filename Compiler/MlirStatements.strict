@@ -32,9 +32,7 @@ Binary(entry InstructionEntry) Texts
 	if MlirTexts(function, position).IsSum
 		return MlirTexts(function, position).Concatenated(entry)
 	let operators = MlirListOperators(function, position)
-	if operators.IsOperation
-		return operators.Operated(entry)
-	Calculated(entry)
+	operators.IsOperation then operators.Operated(entry) else Calculated(entry)
 Temp(suffix Text) Text
 	Copy.Temp("c") is "%t0c"
 	Loading.Emitted is ("    %t0 = llvm.load %v_a : !llvm.ptr -> f64", "    llvm.store %t0, %r1 : f64, !llvm.ptr")
@@ -132,9 +130,7 @@ Operation(kind Number) Text
 	Copy.Operated(InstructionType.Power, "%a", "%b") is "    %t0c = func.call @strict_power(%a, %b) : (f64, f64) -> f64"
 	if kind is InstructionType.Add
 		return "addf"
-	if kind is InstructionType.Subtract
-		return "subf"
-	kind is InstructionType.Multiply then "mulf" else "divf"
+	kind is InstructionType.Subtract then "subf" else kind is InstructionType.Multiply then "mulf" else "divf"
 Predicate(kind Number) Text
 	Copy.Predicate(InstructionType.NotEqual) is "une"
 	Copy.Predicate(InstructionType.Equal) is "oeq"
@@ -142,9 +138,7 @@ Predicate(kind Number) Text
 	Copy.Predicate(InstructionType.GreaterThan) is "ogt"
 	if kind is InstructionType.Equal
 		return "oeq"
-	if kind is InstructionType.NotEqual
-		return "une"
-	kind is InstructionType.LessThan then "olt" else "ogt"
+	kind is InstructionType.NotEqual then "une" else kind is InstructionType.LessThan then "olt" else "ogt"
 Compared(entry InstructionEntry, operands Text) Texts
 	Copy.Compared(InstructionEntry.Binary(InstructionType.Equal, (0, 1)), "%a, %b").Length is 2
 	constant single = MlirStatements(MlirFunction(Copy.function, Float = "f32"), 0)

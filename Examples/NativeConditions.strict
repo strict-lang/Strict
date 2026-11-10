@@ -1,5 +1,3 @@
 constant limit = 10
 Run Number
-	if limit > 5
-		return limit * 3
-	1
+	limit > 5 then limit * 3 else 1

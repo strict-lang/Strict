@@ -46,8 +46,7 @@ Remembered(verified Qwen3, kept Numbers, following Number) Slow(Drafter)
 		return drafter
 	let rows = Safetensors.Part(verified.hidden, 0, kept.Length * drafter.embedNorm.Length, 1)
 	let tokens = Safetensors.Part(kept, 1, kept.Length - 1, 1) + following
-	let primed = drafter.Primed(model, context + next)
-	primed.Extended(model, rows, tokens, Qwen3.Positions(context.Length + 1, kept.Length))
+	drafter.Primed(model, context + next).Extended(model, rows, tokens, Qwen3.Positions(context.Length + 1, kept.Length))
 Adapted(drafted Number, accepted Number) Slow(Number)
 	Started.Adapted(0, 0) is Started.drafts
 	Started.Adapted(15, 3) is 15

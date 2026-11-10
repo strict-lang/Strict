@@ -41,6 +41,5 @@ Header(name Text, count Number) Number
 	mutable found = -1
 	for values.target.shape.lines
 		if values.target.shape.IsMethodHeader(value) and (Tokenizer(value).Tokens.First is name)
-			let isOnly = (found is -1) and (HeaderTokens(Tokenizer(value).Tokens).ParameterNames.Length is count)
-			found = isOnly then index else -2
+			found = ((found is -1) and (HeaderTokens(Tokenizer(value).Tokens).ParameterNames.Length is count)) then index else -2
 	found < 0 then -1 else found

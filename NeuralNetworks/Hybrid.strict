@@ -23,8 +23,7 @@ Rewound(before Hybrid, tokens Number) Hybrid
 	Tiny.Prepared(Drafter.Pair).Rewound(Tiny, 1).layers(0).memory is Single.layers(0).memory
 	mutable rewound = List(Mutable(DeltaBlock))
 	for before.layers
-		let combined = Safetensors.Part(inputs(index), 0, tokens * value.Width, 1)
-		rewound.Add(value.Rewound(combined))
+		rewound.Add(value.Rewound(Safetensors.Part(inputs(index), 0, tokens * value.Width, 1)))
 	Hybrid(value, layers = rewound, inputs = List(Numbers))
 Prepared(input Numbers) Hybrid
 	None.Prepared((1, 2)).entered is (1, 2)
@@ -43,9 +42,7 @@ Opened(combined Numbers, tokens Number, start Number) Hybrid
 	None.Opened((1, 2, 3, 4), 2, 1).gates is (2, 4)
 	None.Opened((1, 2, 3, 4), 1, 4).gates.Length is 0
 	let width = combined.Length / tokens
-	if start is width
-		return value
-	Hybrid(value, gates = Batch.Columns(combined, width, start, width - start))
+	start is width then value else Hybrid(value, gates = Batch.Columns(combined, width, start, width - start))
 Gated(merged Numbers) Numbers
 	None.Gated((1, 2)) is (1, 2)
 	Hybrid(List(DeltaBlock), gates = (0, 0)).Gated((1, 2)) is (0.5, 1)

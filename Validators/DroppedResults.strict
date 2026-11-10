@@ -36,8 +36,7 @@ IsBodyStart(line Text) Boolean
 Plain Texts
 	Squared.Plain is ("Area")
 	for lines
-		let body = TypeShape(lines).IsMethodHeader(value) then Duplicates.Implementation(lines, index) else ""
-		if IsPlainBody(body)
+		if IsPlainBody(TypeShape(lines).IsMethodHeader(value) then Duplicates.Implementation(lines, index) else "")
 			Tokenizer(value).Tokens.First
 Shared(duplicates Duplicates, mutations Texts) Texts
 	Squared.Shared(Mixed, List(Text) + "Grow") is ("Size")
@@ -115,5 +114,4 @@ Dropped(line Text, plain Texts) Text
 	for tokens
 		if value is in Operators
 			return ""
-	let isOwn = (at is 0) and (tokens.First is in plain)
-	isOwn or (at > 0) and (tokens(at) is in shared) then tokens(at) else ""
+	((at is 0) and (tokens.First is in plain)) or (at > 0) and (tokens(at) is in shared) then tokens(at) else ""

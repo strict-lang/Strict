@@ -19,8 +19,7 @@ Call(corner Number) Text
 		let bit = names.Index(value)
 		let isHigh = (corner / (2 ^ bit)).Floor % 2 is 1
 		arguments.Add(bit < 0 then value else Value(loops.Index(value), isHigh))
-	let name = call(0) is "" then call(1) else call(0) + "." + call(1)
-	name + "(" + Text.Combine(arguments, ", ") + ")"
+	(call(0) is "" then call(1) else call(0) + "." + call(1)) + "(" + Text.Combine(arguments, ", ") + ")"
 Value(position Number, isHigh Boolean) Text
 	Blurring.Value(0, false) is "-1"
 	Blurring.Value(1, true) is "2 - 1"

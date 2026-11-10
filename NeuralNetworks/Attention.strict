@@ -35,8 +35,7 @@ Stride Slow(Number)
 ValueStart(at Number) Number
 	let row = (at / size).Floor
 	let sequence = (at / (queries.Length / sequences)).Floor
-	let group = sequence * groups + ((row % heads) * groups / heads).Floor
-	valueOffset + group * size + at % size
+	valueOffset + (sequence * groups + ((row % heads) * groups / heads).Floor) * size + at % size
 Scores(positions Number) Numbers
 	Single.Scores(2).First.IsNearlyEqual(0.7071067811865476)
 	Single.Scores(2).Last is 0

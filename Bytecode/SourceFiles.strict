@@ -12,8 +12,7 @@ Of(path Text, others Texts = List(Text)) Slow(Texts)
 			start = Added(start, List(Text) + FileCompiler.Normalized(value))
 	let base = Directory.Files(root, "*.strict")
 	let reached = Reached(Added(Indexed(start), base), start, base)
-	let lines = File(path).Exists then File(path).ReadLines else List(Text)
-	TypeChoice(lines).Chosen(reached, path)
+	TypeChoice(File(path).Exists then File(path).ReadLines else List(Text)).Chosen(reached, path)
 Folder(path Text) Texts
 	Plain.Folder("./Math").Length > 10
 	Plain.Folder("./Math/Vector2.strict").Length is 0

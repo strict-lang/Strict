@@ -97,6 +97,4 @@ Edge(node SyntaxNode) Text
 	Edged.Edge(StatementParser(Tokenizer("index is 0").Tokens).ParseStatement) is "index is 0" + FirstHint
 	let edges = LoopEdge(loop)
 	let edge = edges.Found(node)
-	if edge.Kind is "Missing"
-		return ""
-	edge to Text + (edges.IsFirst(edge) then FirstHint else LastHint)
+	edge.Kind is "Missing" then "" else edge to Text + (edges.IsFirst(edge) then FirstHint else LastHint)

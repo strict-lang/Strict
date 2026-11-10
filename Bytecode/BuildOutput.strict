@@ -10,8 +10,7 @@ Delivered(base Text) Text
 	BuildOutput.Delivered("./Math/obj/Tests.test") is "./Math/obj/Tests.test"
 	BuildOutput.Delivered("Compiler/output/Sum") is "Compiler/output/Sum"
 	let slash = base.LastIndexOf("/")
-	let isProgram = (base.EndsWith(".test") is false) and (slash >= 4)
-	let isObj = isProgram and (base.Substring(slash - 4, 4) is "/obj")
+	let isObj = ((base.EndsWith(".test") is false) and (slash >= 4)) and (base.Substring(slash - 4, 4) is "/obj")
 	isObj then base.Substring(0, slash - 4) + base.Substring(slash, base.Length - slash) else base
 Released(base Text, platformName Text) Text
 	BuildOutput.Released("./Examples/obj/Sum", "Linux") is "./Examples/Release/Linux/Sum"

@@ -3,8 +3,7 @@ constant Batch = 128
 constant CrashExitCode = 128
 Tested(folder Text, root Text, isRecursive = true, isMutating = false, isFull = false) Number
 	Folders(Logger).Tested("Missing", ".") is 0
-	let files = NativeFolder(logger, isRecursive = isRecursive).Files(folder)
-	Ran(Commands("test", files, root, isMutating, isFull))
+	Ran(Commands("test", NativeFolder(logger, isRecursive = isRecursive).Files(folder), root, isMutating, isFull))
 Commands(command Text, paths Texts, root Text, isMutating = false, isFull = false) Texts
 	Folders(Logger).Commands("test", List(Text) + "a.strict", ".") is ("test \"a.strict\" \".\" unit")
 	Folders(Logger).Commands("test", List(Text) + "a.strict", ".", true) is ("test \"a.strict\" \".\" unit mutations")

@@ -31,11 +31,7 @@ ClassifyExpression(line Text) Text
 		return "If: condition=" + ExtractAfterKeyword(line, 3)
 	if line.StartsWith("for ")
 		return "For: iterator=" + ExtractAfterKeyword(line, 4)
-	if line.StartsWith("mutable ")
-		return "Declaration: " + ExtractAfterKeyword(line, 8)
-	"Expression: " + line
+	line.StartsWith("mutable ") then "Declaration: " + ExtractAfterKeyword(line, 8) else "Expression: " + line
 ParseMethodCall(line Text) Text
 	let dotPos = line.IndexOf(".")
-	let instance = line.Substring(0, dotPos)
-	let rest = ExtractAfterKeyword(line, dotPos + 1)
-	instance + "." + rest
+	line.Substring(0, dotPos) + "." + ExtractAfterKeyword(line, dotPos + 1)

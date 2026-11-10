@@ -58,8 +58,7 @@ IsList(node SyntaxNode, owner Text) Boolean
 	Growing.IsList(SyntaxNode("Member", "Row", SyntaxNode("Type", "Count")), "Count")
 	Growing.IsList(SyntaxNode("Member", "Tally", SyntaxNode("Type", "Count")), "Count") is false
 	Growing.IsList(SyntaxNode("Number", "1"), "Count") is false
-	let isConstant = node.Kind is "Member" and inference.ConstantOf(node.children(0).text, node.text) is not ""
-	if isConstant
+	if node.Kind is "Member" and inference.ConstantOf(node.children(0).text, node.text) is not ""
 		return IsList(Definition(node.children(0).text, node.text), node.children(0).text)
 	if node.Kind is "Binary"
 		return IsListBuilt(node, owner)

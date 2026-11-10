@@ -110,8 +110,7 @@ Operand(at Number, type Text) Text
 	MetalInstruction("%17 = getelementptr half, ptr %3, i64 %13", true).Type is "ptr"
 	MetalInstruction("%4 = select i1 %1, float %2, float %3", true).Type is "float"
 	MetalInstruction("%5 = call fastcc float @f(float %4)", true).Type is "float"
-	let arguments = Arguments
-	MetalValue(arguments(at)).Operand(type)
+	MetalValue(Arguments(at)).Operand(type)
 Binary(symbol Number) Text
 	Adding.Binary(0) is "(int)(v11 + v8)"
 	MetalInstruction("%5 = udiv i32 %3, %4", true).Binary(14) is "(int)((uint)v3 / (uint)v4)"
@@ -123,8 +122,7 @@ Binary(symbol Number) Text
 	if (llvm is "double") or (type.Type is "")
 		return ""
 	let prefix = symbol >= firstUnsigned then "(" + type.UnsignedType + ")" else ""
-	let operands = prefix + Operand(1, llvm) + " " + Operators(symbol) + " " + prefix + Operand(2, llvm)
-	"(" + type.Type + ")(" + operands + ")"
+	"(" + type.Type + ")(" + (prefix + Operand(1, llvm) + " " + Operators(symbol) + " " + prefix + Operand(2, llvm)) + ")"
 Compared Text
 	MetalInstruction("%9 = icmp ult i64 %5, 4", true).Compared is "(ulong)v5 < (ulong)((long)4)"
 	MetalInstruction("%9 = icmp slt i32 %5, %6", true).Expression is "v5 < v6"

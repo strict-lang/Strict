@@ -29,8 +29,7 @@ Thinned(count Number) List(Vector3)
 Untouched Number
 	Swarm(Logger).Untouched is 3
 	let before = Line(3)
-	let after = before.SwapRemoved(0)
-	before.Length + after.Length - 2
+	before.Length + before.SwapRemoved(0).Length - 2
 Nudged(count Number) Vector3
 	Swarm(Logger).Nudged(2) is Vector3(2, 0, 0)
 	mutable positions = (Vector3(0, 0, 0), Vector3(1, 0, 0))

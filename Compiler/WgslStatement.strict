@@ -116,8 +116,7 @@ Native(entry InstructionEntry, instance Text) Text
 	let argument = "r" + entry.payload(6 + entry.payload(3))
 	let made = name is "from" then argument else "n_" + name + "(" + instance + ")"
 	let called = name is "Floor" then "n_floor(" + instance + ")" else made
-	let native = name is "Length" then counted else called
-	"r" + entry.payload(0) + " = " + native + ";"
+	"r" + entry.payload(0) + " = " + (name is "Length" then counted else called) + ";"
 Looped(entry InstructionEntry) Texts
 	WgslStatement(Summed, 11).Looped(Summed.method.instructions(11)) is ("}", "v_index = s2i;", "v_value = s2v;")
 	WgslStatement(Summed, 2).Lines is Looping

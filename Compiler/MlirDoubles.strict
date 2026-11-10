@@ -60,9 +60,7 @@ Format Number
 	MlirDoubles(MlirLayout.Halves, 2).Format is 17
 	MlirDoubles(WgslShader.Scaled.function, 2).Format is 32
 	let packed = MlirLayout(function).Packed(position)
-	if (packed is 0) and IsSingle
-		return Number.SingleBits
-	(packed is 0) and Kept then Number.DoubleBits else packed
+	(packed is 0) and IsSingle then Number.SingleBits else (packed is 0) and Kept then Number.DoubleBits else packed
 IsSingle Boolean
 	MlirDoubles(WgslShader.Scaled.function, 2).IsSingle
 	Tabling.IsSingle is false

@@ -79,8 +79,7 @@ Returned Texts
 	MlirForeign(Splitter).Returned.First.IndexOf("@strict_foreign_rows(") > 0
 	MlirForeign(Closing).Returned.First.IndexOf("@strict_foreign_none(") > 0
 	let returned = function.method.returnType
-	let isNone = returned is "None"
-	let single = isNone then "none" else (returned.EndsWith("Text") then "text" else "number")
+	let single = (returned is "None") then "none" else (returned.EndsWith("Text") then "text" else "number")
 	let kind = IsNumbers(returned) then "numbers" else IsRows(returned) then "rows" else single
 	("    %converted = func.call @strict_foreign_" + kind + "(%result) : (f64) -> f64", "    return %converted : f64")
 IsNumbers(typeName Text) Boolean

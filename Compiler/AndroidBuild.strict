@@ -5,8 +5,7 @@ constant Flags = Architecture + " -shared -Wl,--no-undefined -Wl,-z,max-page-siz
 Environment(name Text) Text
 	AndroidBuild(Toolchain.OnWindows).Environment("STRICT_MISSING_ENVIRONMENT") is ""
 	let isWindows = tools.platform is Platform.Windows
-	let result = ToolRunner(isWindows then "cmd" else "env").Execute(isWindows then "/c set" else "")
-	for result.Output.Lines
+	for ToolRunner(isWindows then "cmd" else "env").Execute(isWindows then "/c set" else "").Output.Lines
 		if value.StartsWith(name + "=")
 			return value.Substring(name.Length + 1, value.Length - name.Length - 1)
 	""

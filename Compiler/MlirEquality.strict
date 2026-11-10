@@ -42,16 +42,13 @@ ComparedKind(entry InstructionEntry, isText Boolean) Text
 	if (left is in ErrorKinds) or (right is in ErrorKinds)
 		return "Error"
 	let packed = left is in Packed then left else right
-	if packed is in Packed
-		return packed
-	isText then "Text" else left
+	packed is in Packed then packed else isText then "Text" else left
 Compared(entry InstructionEntry) Texts
 	MlirEquality(Same, 2).Compared(Same.method.instructions(2)).Length is 5
 	if entry.kind is not in (Comparisons + InstructionType.LessThan + InstructionType.GreaterThan)
 		return List(Text) + MlirStatements(function, position).Unsupported("Text operator " + entry.kind)
 	let kinds = MlirKinds(function)
-	let isText = kinds.IsText(position, entry.payload(1)) or kinds.IsText(position, entry.payload(2))
-	let kind = ComparedKind(entry, isText)
+	let kind = ComparedKind(entry, kinds.IsText(position, entry.payload(1)) or kinds.IsText(position, entry.payload(2)))
 	let loads = Operand(entry.payload(1), "l", kind) + Operand(entry.payload(2), "r", kind)
 	let predicate = entry.kind is InstructionType.NotEqual then "oeq" else "one"
 	let flag = "    " + Temp("f") + " = arith.cmpf " + predicate + ", " + Temp("q") + ", %zero : f64"
@@ -191,8 +188,7 @@ Member(owner TypeEntry, member MemberEntry, slot Number) Texts
 	let second = embedded.Read(memory, owner, member, "%pb", "b" + slot)
 	let left = memory.Temp("a" + slot + "v")
 	let right = memory.Temp("b" + slot + "v")
-	let kind = MlirLayout(function).Represented(TypeEntry.ShortName(member.typeName))
-	let compared = Call(kind, "%e" + slot, left, right)
+	let compared = Call(MlirLayout(function).Represented(TypeEntry.ShortName(member.typeName)), "%e" + slot, left, right)
 	let check = "    %s" + slot + " = arith.cmpf one, %e" + slot + ", %zero : f64"
 	let next = "    cf.cond_br %s" + slot + ", ^m" + (slot + 1) + ", ^different"
 	List(Text) + ("  ^m" + slot + ":") + first + second + compared + check + next

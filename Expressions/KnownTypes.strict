@@ -31,9 +31,7 @@ Index(typeName Text) Number
 	Sample.Index("Missing") is -1
 	Indexed.Index("Text") is 1
 	Indexed.Index("Missing") is -1
-	if positions.Length is 0
-		return names.Index(typeName)
-	typeName is in positions then positions(typeName) else -1
+	positions.Length is 0 then names.Index(typeName) else typeName is in positions then positions(typeName) else -1
 IsPlural(typeName Text) Boolean
 	Instantiation.Boxed.ResolvedType("Box(Text, Number)", "Swap", 1) is "Box(Number, Text)"
 	Instantiation.Boxed.ResolvedType("Box(Text, Number)", "Sizes", 1) is "List(Number)"
@@ -170,6 +168,4 @@ MemberMethodType(memberType Text, name Text, depth Number) Text
 		let type = ResolvedType(memberType, name, depth)
 		return type is "Unknown" then "" else type
 	let listType = IsPlural(memberType) then MethodsOf("List").TypeOf(name) else ""
-	if listType is "Generic"
-		return ElementType(memberType)
-	listType is "List" then memberType else listType
+	listType is "Generic" then ElementType(memberType) else listType is "List" then memberType else listType

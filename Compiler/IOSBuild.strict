@@ -55,9 +55,7 @@ Linked(base Text) Text
 	if (tools.natives.Length > 0) and (sdk is "")
 		return "iOS native packages require macOS with full Xcode: xcrun --sdk " + SdkName + " --show-sdk-path"
 	let objects = Objects(base, sdk)
-	if (objects.Length > 0) and objects.First.StartsWith("iOS clang failed")
-		return objects.First
-	Archived(base, objects)
+	(objects.Length > 0) and objects.First.StartsWith("iOS clang failed") then objects.First else Archived(base, objects)
 Archived(base Text, objects Texts) Text
 	let building = base + ".ios.new.a"
 	File(building).Delete

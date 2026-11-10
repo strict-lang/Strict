@@ -119,8 +119,7 @@ SquaredEmitted Texts
 	let counted = Whole("a", "%v_" + instructions(at + 2).texts(0)) + Whole("c", "%r" + instructions(at).payload(0))
 	let first = Temp("xd") + ", " + Temp("xb") + ", " + Temp("xn") + ", "
 	let operands = "%failed, " + first + Temp("ci") + ", " + Temp("ai") + Lanes + SquareTypes
-	let call = List(Text) + ("    " + Temp("") + " = func.call @strict_device_squares(" + operands)
-	parts + counted + call + Accumulated
+	parts + counted + (List(Text) + ("    " + Temp("") + " = func.call @strict_device_squares(" + operands)) + Accumulated
 Operands Texts
 	Summing.Operands is ("input")
 	Squaring.Operands is ("input", "input")

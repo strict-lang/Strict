@@ -56,8 +56,7 @@ IsPowerOfTen(token Text) Boolean
 	MagicNumbers(("Run Boolean", "	value is 97")).Body(0).Length is 1
 	MagicNumbers(("Run", "	Run is 300", "	let a = 33", "	a is 97", "	a")).Body(0).Length is 2
 	Plain.IsMagic("Width") is false
-	let digits = token.Replace(".", "")
-	digits.Replace("0", "") is "1"
+	token.Replace(".", "").Replace("0", "") is "1"
 IsPowerOfTwo(number Number) Boolean
 	Plain.IsPowerOfTwo(64) and Plain.IsPowerOfTwo(4294967296) and Plain.IsPowerOfTwo(16)
 	(Plain.IsPowerOfTwo(96) or Plain.IsPowerOfTwo(0.25) or Plain.IsPowerOfTwo(24)) is false

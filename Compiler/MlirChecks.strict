@@ -78,9 +78,7 @@ IsFailing(callee MlirFunction, at Number, depth Number) Boolean
 	if entry.kind is not InstructionType.Invoke
 		return false
 	let nested = MlirModule(callee.types, "").Called(callee, at)
-	if nested.Length is 0
-		return IsNativeFailing(callee, at)
-	(depth >= 3) or (CannotFail(nested.First, depth + 1) is false)
+	nested.Length is 0 then IsNativeFailing(callee, at) else (depth >= 3) or (CannotFail(nested.First, depth + 1) is false)
 IsNativeFailing(callee MlirFunction, at Number) Boolean
 	Doubling.IsNativeFailing(Measuring.function, 1) is false
 	Doubling.IsNativeFailing(Guarding.function, 1)

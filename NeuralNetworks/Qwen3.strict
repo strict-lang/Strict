@@ -20,8 +20,7 @@ Loaded(path Text, bits = 8, isGenerating = true) Slow(Qwen3)
 	TinyMixture.outputs is not TinyMixture.tokens
 	Qwen3.Loaded("NeuralNetworks/tinyqwen3moe.gguf", 32, false).outputs is TinyMixture.tokens
 	let model = Gguf(path, bits)
-	let architecture = model.Value("general.architecture")
-	let base = model.Value(architecture + ".rope.freq_base") to Number
+	let base = model.Value(model.Value("general.architecture") + ".rope.freq_base") to Number
 	let embedding = model.Rows("token_embd.weight")
 	let output = isGenerating and (model.Shape("output.weight").Length > 0) then model.Rows("output.weight") else embedding
 	let normed = model.Values("output_norm.weight")

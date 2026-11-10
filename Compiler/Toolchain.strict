@@ -75,8 +75,7 @@ LinuxLines Texts
 	let bin = " " + LinuxRelease + "/bin/"
 	let members = bin + Text.Combine(Tools + Offload, bin) + " " + LinuxRelease + "/lib/clang/23/include"
 	let download = LinuxDownload + LinuxRelease + ".tar.xz"
-	let extract = " | tar -xJ --occurrence -C " + root + "/Tools" + members
-	("mkdir -p " + root + "/Tools", "curl -sL " + download + extract)
+	("mkdir -p " + root + "/Tools", "curl -sL " + download + (" | tar -xJ --occurrence -C " + root + "/Tools" + members))
 Launch(script Text) Text
 	OnWindows.Launch("C:/s/Tools/Install.cmd") is "/c start \"Strict tools\" cmd /k \"C:\\s\\Tools\\Install.cmd\""
 	OnLinux.Launch("/s/Tools/install.sh") is "-c \"nohup sh /s/Tools/install.sh > /s/Tools/install.log 2>&1 &\""
@@ -91,8 +90,7 @@ Installing(missing Texts) Text
 	let script = root + "/Tools/" + (isWindows then "Install.cmd" else "install.sh")
 	Directory.Create(root + "/Tools")
 	File(script).Write(Text.Combine(InstallLines(missing), "\n"))
-	let shell = isWindows then "cmd" else "sh"
-	let started = Process.RunTool(shell, Launch(script))
+	let started = Process.RunTool((isWindows then "cmd" else "sh"), Launch(script))
 	let where = isWindows then " in a new window" else " in the background (" + root + "/Tools/install.log)"
 	let problem = started.Failed then ", could not start it: " + started.error else ""
 	Text.Combine(missing, ", ") + " not found, installing them with " + script + where + problem
@@ -111,8 +109,7 @@ Built(base Text, executable Text) Text
 	linked.Failed then "clang failed: " + linked.error + linked.Output else "Built " + executable
 Inputs(base Text) Text
 	OnLinux.Inputs("Compiler/output/missing") is "\"Compiler/output/missing.ll\""
-	let isDivided = (platform is Platform.Windows) and (File(base + ".ll").Exists is false)
-	if isDivided is false
+	if ((platform is Platform.Windows) and (File(base + ".ll").Exists is false)) is false
 		return Quoted(base + ".ll") + (platform is Platform.Windows then Direct else "")
 	if PartsCompiled(base) is false
 		return Quoted(base + ".ll")

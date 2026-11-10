@@ -10,9 +10,7 @@ Written(at Number) Boolean
 	if entry.kind is InstructionType.LoadConstantToRegister
 		let number = PayloadDecoder(entry).Value(1)
 		return MlirWholeValues(at).IsWhole(number) and (number.number >= 0)
-	if entry.kind is InstructionType.Invoke
-		return Called(at, entry)
-	Calculated(at, entry)
+	entry.kind is InstructionType.Invoke then Called(at, entry) else Calculated(at, entry)
 Variable(at Number, name Text) Boolean
 	let stored = MlirKinds(function).Stored(at, name)
 	if stored > position

@@ -129,8 +129,7 @@ Variant(packing Text, number Number) Texts
 	let packed = MlirFunction(function.types, function.type, function.method, function.lineSlots, position, packing)
 	let single = MlirSingle(packed, position)
 	let copied = single.IsSingle then single.Copied else MlirFastLoop(packed, position).Copied
-	let renamed = MlirKernel(function, position).Renamed(copied, Letters(number))
-	renamed + ("    cf.br ^loop" + position + "joined")
+	MlirKernel(function, position).Renamed(copied, Letters(number)) + ("    cf.br ^loop" + position + "joined")
 Pairs(names Texts, width Number) Texts
 	Summing.Pairs(("for", "numbers"), 16) is ("for 16", "numbers 16")
 	for names

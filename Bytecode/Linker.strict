@@ -41,8 +41,7 @@ Next(round LinkRound) Slow(LinkRound)
 	let targets = invoked + completed.Forwarded(invoked)
 	let signed = Signatures(Linkable(BaseTypes(round.UsedTypes, targets), round.signatures), targets)
 	let homed = LinkHomes(completed).Homing(signed)
-	let advanced = (List(TypeEntry) + Completed(completed.entries, targets).First) + homed.Entries(signed)
-	homed.Advanced(advanced, signed)
+	homed.Advanced((List(TypeEntry) + Completed(completed.entries, targets).First) + homed.Entries(signed), signed)
 Completed(entries List(TypeEntry), targets Texts) Slow(List(TypeEntry))
 	Sample.Completed(Go, List(Text)).Length is 1
 	Sample.Completed((Go, Counted), List(Text))(1) is Counted
@@ -116,8 +115,7 @@ BaseTypes(used Texts, targets Texts) Texts
 	mutable types = List(Mutable(Text))
 	for targets
 		types.Add(value.Substring(0, value.LastIndexOf(".")))
-	let candidates = (types + used).Unique
-	for candidates
+	for (types + used).Unique
 		if value is not main.fullName
 			value
 UsedMethods(targets Texts, type Text) Texts

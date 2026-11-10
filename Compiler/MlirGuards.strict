@@ -57,9 +57,7 @@ Called(writer Number, entry InstructionEntry) Texts
 	MlirGuards(Nested, 2).Written(11) is ("offset")
 	MlirGuards(Nested, 2).Written(12).Length is 0
 	let name = PayloadDecoder(entry).Text(2)
-	if name is "Floor"
-		return Floored(writer, entry)
-	name is "Length" then List(Text) else List(Text) + "?"
+	name is "Floor" then Floored(writer, entry) else name is "Length" then List(Text) else List(Text) + "?"
 Variable(position Number, name Text) Texts
 	Shifts.Variable(4, "offset") is ("offset")
 	Shifts.Variable(4, "index").Length is 0
@@ -174,7 +172,6 @@ Named Texts
 	let formats = MlirFormats(function, at)
 	let first = MlirDoubles(function, at).Failing then "" else name
 	let names = first + "\00" + name + "s\00" + (isExact then name + "sx\00" + formats.Names(name) else "")
-	let extra = isExact then name.Length + 3 + formats.Count * (name.Length + 5) else 0
-	let size = first.Length + name.Length + 3 + extra
+	let size = first.Length + name.Length + 3 + (isExact then name.Length + 3 + formats.Count * (name.Length + 5) else 0)
 	let text = "  llvm.mlir.global internal constant @k" + name + "(\"" + names + "\") : !llvm.array<" + size + " x i8>"
 	(text, "  llvm.mlir.global internal @f" + name + (isExact then ExactSlots else PlainSlots))

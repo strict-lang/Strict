@@ -5,8 +5,7 @@ Guarded Texts
 	Text.Combine(Row.Guarded).IndexOf("%t6wh0f = llvm.load %v_middle") > 0
 	Row.Guarded.Last.StartsWith("    %t6whok = arith.andi")
 	let names = MlirWhole(function, position).Inputs + MlirSingle(function, position).Carried
-	let counted = Line("whc", "arith.cmpf olt, " + Temp("n") + ", " + Temp("whlimit") + " : f64")
-	mutable lines = Started + counted
+	mutable lines = Started + Line("whc", "arith.cmpf olt, " + Temp("n") + ", " + Temp("whlimit") + " : f64")
 	for names + MlirKernel(function, position).Sources
 		lines = lines + (index < names.Length then Guard(value, index) else Present("%b_" + value, index))
 	for Range(position + 1, function.method.LoopEndOf(position))
@@ -38,8 +37,7 @@ Bound(at Number) Texts
 	Row.Bound(16).Length is 0
 	if HasBound(at) is false
 		return List(Text)
-	let entry = function.method.instructions(at)
-	let isStored = entry.kind is InstructionType.StoreRegisterToVariable
+	let isStored = function.method.instructions(at).kind is InstructionType.StoreRegisterToVariable
 	let measured = isStored then Accumulated(at) else List(Text) + Measured(at)
 	measured + ("    %t" + at + "wk = arith.cmpf olt, %t" + at + "wb, " + Temp("whlimit") + " : f64")
 HasBound(at Number) Boolean
@@ -71,8 +69,7 @@ Grown(at Number) Text
 Accumulated(at Number) Texts
 	Row.Accumulated(18)(2) is "    %t18wm = arith.mulf %t18wc, %t15wb : f64"
 	let whole = MlirWhole(function, position)
-	let added = function.method.instructions(at - 1)
-	let term = "%t" + whole.Writer(added.payload(2), at - 1) + "wb"
+	let term = "%t" + whole.Writer(function.method.instructions(at - 1).payload(2), at - 1) + "wb"
 	let carried = MlirSingle(function, position).Carried.Index(function.method.instructions(at).texts(0))
 	let start = Temp("wh" + (whole.Inputs.Length + carried) + "f")
 	let initial = "    %t" + at + "wi = llvm.intr.fabs(" + start + ") : (f64) -> f64"

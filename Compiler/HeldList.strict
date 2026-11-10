@@ -5,6 +5,4 @@ Taken(values Texts) Boolean
 Joined(held Texts) Text
 	HeldList.Joined(("a", "b")) is "a, b"
 	HeldList.Joined(List(Text)) is "none"
-	if Taken(held)
-		return "none"
-	Text.Combine(held, ", ")
+	Taken(held) then "none" else Text.Combine(held, ", ")

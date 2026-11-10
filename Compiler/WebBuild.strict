@@ -32,9 +32,7 @@ Compiled(base Text) Text
 	if File(base + ".mlir").Exists is false
 		return tools.Lowered(base)
 	let lowered = MlirParts(MlirSplit(File(base + ".mlir").ReadLines)).Laid.Lowered(base + ".web", tools)
-	if lowered is not ""
-		return lowered
-	tools.PartsCompiled(base + ".web") then "" else "clang failed for " + base
+	lowered is not "" then lowered else tools.PartsCompiled(base + ".web") then "" else "clang failed for " + base
 Optimized(executable Text) Text
 	Missing.Optimized("Compiler/output/missing.html").StartsWith("wasm-opt failed")
 	let wasm = tools.Quoted(executable.Replace(".html", ".wasm"))

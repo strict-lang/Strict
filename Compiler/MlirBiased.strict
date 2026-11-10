@@ -55,8 +55,7 @@ Read(at Number) Text
 	let entry = function.method.instructions(at < 0 then position else at)
 	if (at < 0) or (entry.kind is not InstructionType.IndexCall)
 		return ""
-	let modulo = MlirGroups(function, position).Writer(entry.payload(1), at)
-	Measured(modulo) is entry.texts(0) then entry.texts(0) else ""
+	Measured(MlirGroups(function, position).Writer(entry.payload(1), at)) is entry.texts(0) then entry.texts(0) else ""
 Measured(at Number) Text
 	Biasing.Measured(19) is "biases"
 	Biasing.Measured(5) is ""

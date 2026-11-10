@@ -76,9 +76,7 @@ Unmapped(code Number) Number
 	if code < Byte.Values
 		return code
 	let skipped = code - Byte.Values
-	if skipped < Printable
-		return skipped
-	skipped < SoftHyphenIndex then skipped + DeleteOffset else SoftHyphen
+	skipped < Printable then skipped else skipped < SoftHyphenIndex then skipped + DeleteOffset else SoftHyphen
 Ranked(merges Texts, known Dictionary(Text, Number)) Dictionary(Number, Number)
 	Tiny.ranks(1) is 0
 	Tiny.ranks(13) is 1

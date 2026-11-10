@@ -84,14 +84,12 @@ Rotated(input Numbers, start Number, count Number, weights Numbers, rotation Num
 		let first = token * Gap(input, count, size, rotation.Length) + start + head * size
 		let partner = (within + size / 2) % size
 		let own = input(first + within) * weights(within) * rotation(token * 2 * size + within)
-		let other = input(first + partner) * weights(partner) * rotation((token * 2 + 1) * size + within)
-		(own + other) * scales(head)
+		(own + (input(first + partner) * weights(partner) * rotation((token * 2 + 1) * size + within))) * scales(head)
 HeadScales(input Numbers, start Number, count Number, size Number, rotations Number) Float32s
 	Tiny.HeadScales((3, 4, 0, 1), 0, 4, 2, 4)(1).IsNearlyEqual(1.41421215)
 	let perRotation = count / rotations
 	for count / size
-		let token = (index / perRotation / 2).Floor
-		let first = token * Gap(input, count, size, rotations) + start + index * size
+		let first = (index / perRotation / 2).Floor * Gap(input, count, size, rotations) + start + index * size
 		Normalization.Scale(Normalization.Squared(input, first, size), size, Epsilon)
 Gap(input Numbers, count Number, size Number, rotations Number) Number
 	Tiny.Gap((1, 2, 3, 4, 5, 6), 2, 2, 4) is 4

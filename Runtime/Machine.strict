@@ -133,8 +133,7 @@ Execute(method MethodEntry, locals List(VmValue), owner Text, depth = 0) VmValue
 	if stopped is not ""
 		return VmValue.OfError(stopped)
 	let frame = Frame(value, method, owner, depth)
-	let slots = isTracing then TracedFrame(frame).Finished(locals) else frame.Finished(locals)
-	slots(Frame.ResultSlot)
+	(isTracing then TracedFrame(frame).Finished(locals) else frame.Finished(locals))(Frame.ResultSlot)
 Call(call Invocation) VmValue
 	Machine(List(TypeEntry) + Doubler).Call(Invocation.AddCall).kind is "Strict/Error"
 	Hello.Call(Invocation.Uppered).text is "AB"
@@ -158,8 +157,7 @@ Executed(route Number, method MethodEntry, call Invocation) VmValue
 	Pairing.Executed(0, Resolver.Doubling.Methods(Paired).First, Invocation.AddCall).items.First.number is 7
 	let type = types(route)
 	let prototype = route < prototypes.entries.Length then prototypes.At(route) else Natives(types).Fresh(type)
-	let isInitializer = method.Name is "from" then type.IsStruct and method.IsInitializer(type.Changing) else false
-	if isInitializer is false
+	if (method.Name is "from" then type.IsStruct and method.IsInitializer(type.Changing) else false) is false
 		return Execute(method, Bound(type, call.Instance, method, call.Arguments, prototype), type.Name, call.Depth)
 	let frame = Frame(value, method, type.Name, call.Depth)
 	Natives(types).Constructed(type, frame.Finished(Bound(type, prototype, method, call.Arguments, prototype)))

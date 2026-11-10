@@ -89,8 +89,7 @@ Trained(chosen Numbers) Slow(Gpt2Training)
 	Tiny.Trained(Chosen).step is 1
 	let gradients = Gradients(chosen)
 	let next = step + 1
-	let squareCorrection = (1 - Moments.SquareBeta ^ next).SquareRoot
-	let corrected = rate * squareCorrection / (1 - Optimizer.Adam ^ next)
+	let corrected = rate * (1 - Moments.SquareBeta ^ next).SquareRoot / (1 - Optimizer.Adam ^ next)
 	let averaged = Moments.Start.Averaged(firsts, gradients, Optimizer.Adam, false)
 	let squared = Moments.Start.Averaged(seconds, gradients, Moments.SquareBeta, true)
 	let changed = model.Changed(Moments.Start.Stepped(model.Vectors, averaged, squared, corrected))

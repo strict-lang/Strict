@@ -11,6 +11,5 @@ Delete(path Text)
 	Directory.Delete("Missing/Deleted") is not Error
 	let isWindows = Process.OperatingSystem is "Windows"
 	let command = isWindows then "/c rd /s /q \"" + path.Replace("/", "\\") + "\"" else "-rf \"" + path + "\""
-	let removed = Process.RunTool(isWindows then "cmd" else "rm", command)
-	if (removed.exitCode < 0) or Exists(path)
+	if (Process.RunTool(isWindows then "cmd" else "rm", command).exitCode < 0) or Exists(path)
 		return Error("DirectoryNotDeleted")

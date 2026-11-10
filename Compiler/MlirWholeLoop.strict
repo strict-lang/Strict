@@ -81,8 +81,7 @@ Operated(entry InstructionEntry, at Number) Texts
 	Row.Operated(MlirWhole.Rows(13), 13) is ("    %t13s = arith.muli %t11s, %t12s : i64")
 	Row.Operated(MlirWhole.Rows(11), 11) is ("    %t11s = arith.subi %t6gs, %t10s : i64")
 	Row.Operated(MlirWhole.Rows(18), 18).Length is 0
-	let isOperator = entry.kind is in (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply)
-	if isOperator is false
+	if (entry.kind is in (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply)) is false
 		return List(Text)
 	let single = MlirSingle(function, position)
 	let operands = single.Register(entry.payload(1), at) + ", " + single.Register(entry.payload(2), at)

@@ -40,8 +40,7 @@ Output(input Numbers) Slow(Numbers)
 	Contracted(attended, Activated(attended))
 Attended(input Numbers) Numbers
 	Tiny.Cached(Embedded).Attended(Embedded).Length is 12
-	let merged = Attention(queries, keys, values, Heads, Heads, queries.Length / Heads, 1).Merged
-	Added(input, projection.Sums(merged))
+	Added(input, projection.Sums(Attention(queries, keys, values, Heads, Heads, queries.Length / Heads, 1).Merged))
 Activated(attended Numbers) Numbers
 	Tiny.Activated(Embedded).Length is 48
 	Gelu(expansion.Sums(Normalized(attended, mlpGain, mlpBias)))
@@ -67,8 +66,7 @@ Normalized(input Numbers, gain Numbers, bias Numbers, epsilon = 0.00001) Numbers
 	let size = gain.Length
 	let centered = Centered(input, size)
 	for centered.Length
-		let first = (index / size).Floor * size
-		let scale = Normalization.Scale(Normalization.Squared(centered, first, size), size, epsilon)
+		let scale = Normalization.Scale(Normalization.Squared(centered, (index / size).Floor * size, size), size, epsilon)
 		gain(index % size) * centered(index) * scale + bias(index % size)
 Centered(input Numbers, size Number) Numbers
 	Tiny.Centered((1, 2, 4, 8), 2) is (-0.5, 0.5, -2, 2)

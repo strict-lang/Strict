@@ -35,9 +35,7 @@ Operand(type Text) Text
 		return "v" + text.Substring(1, text.Length - 1).Replace(".", "_").Replace("-", "_")
 	if text is in ("true", "false", "poison", "undef", "null", "zeroinitializer")
 		return text is in ("true", "false") then text else "0"
-	if text.StartsWith("0x")
-		return Hexed(type)
-	Literal(type)
+	text.StartsWith("0x") then Hexed(type) else Literal(type)
 Literal(type Text) Text
 	MetalValue("-3").Literal("i64") is "((long)-3)"
 	MetalValue("2.500000e-01").Literal("float") is "2.500000e-01f"
@@ -63,9 +61,7 @@ FloatBits Text
 Exponent(double Number) Number
 	MetalValue("").Exponent(1023) is 127
 	MetalValue("").Exponent(2047) is 255
-	if double is 0
-		return 0
-	double is DoubleInfinity then SingleInfinity else double - BiasDifference
+	double is 0 then 0 else double is DoubleInfinity then SingleInfinity else double - BiasDifference
 Hex(number Number, count Number) Text
 	MetalValue("").Hex(3212836864, 8) is "BF800000"
 	MetalValue("").Hex(10, 2) is "0A"

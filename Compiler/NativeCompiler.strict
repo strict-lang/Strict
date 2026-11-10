@@ -26,8 +26,7 @@ Locked(target Text) Slow(Boolean)
 	if lock.Locked
 		return true
 	logger.Log("Waiting for the other build of " + target)
-	let started = Process.Elapsed
-	for as long as Process.Elapsed - started < Strict.BuildWait
+	for as long as Process.Elapsed - Process.Elapsed < Strict.BuildWait
 		Process.Wait(0.1)
 		if lock.Locked
 			return true
@@ -79,9 +78,7 @@ Problem(path Text, options Texts, sources Texts) Text
 	let isFast = "fast" is in options
 	if IsMixed(options) or (isFast and (options.Length > 1))
 		return isFast then Alone else Mixed
-	if isFast and IsGame(path)
-		return Whole + path
-	isFast and IsLearning(sources) then path + Model else ""
+	isFast and IsGame(path) then Whole + path else isFast and IsLearning(sources) then path + Model else ""
 IsGame(path Text) Boolean
 	NativeCompiler.IsGame("Missing/App/App.strict") is false
 	Release(Logger, "Compiler/output/Game/obj/Demo").Created("Compiler/output/Game/Content") is not Error

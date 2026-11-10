@@ -147,8 +147,7 @@ Kept(node SyntaxNode, name Text, block CodeBlock) CodeBlock
 	Plain.MayFail(SyntaxNode("Member", "Greet", ValueCodegen.NewGreeter), CodeBlock.Empty)
 	FallibleA.scope.TypeOf("a") is "Number"
 	ErrorScope.Plain.IsFallible("a", FallibleA)
-	let stored = Handled(node, block).Stored(name).At(block.register).WithNextId
-	stored.Declare(name, values.TypeOf(node, block))
+	Handled(node, block).Stored(name).At(block.register).WithNextId.Declare(name, values.TypeOf(node, block))
 Compared(comparison SyntaxNode, operand SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Compared(IsError, Greeting, CodeBlock.Empty).instructions.Length is 1
 	Plain.Compared(IsOne, Greeting, CodeBlock.Empty).instructions.Length is 2

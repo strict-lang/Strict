@@ -90,8 +90,7 @@ LoopScope(statement SyntaxNode, scope Scope) Scope
 	if statement.Kind is not "For"
 		return scope
 	let iterated = statement.HasValue then inference.TypeOf(statement.children(0), scope, Methods) else IteratedType
-	let nested = scope.With("outer", scope.TypeOf("value"))
-	nested.With("value", Element(iterated)).With("index", "Number")
+	scope.With("outer", scope.TypeOf("value")).With("value", Element(iterated)).With("index", "Number")
 Element(iterated Text) Text
 	MethodBodies("Demo", Sample, NoInference).Element("Dictionary(Text, Number)") is "List(Text, Number)"
 	MethodBodies("Demo", Sample, NoInference).Element("Dictionary(Text, Text)") is "Texts"
@@ -110,8 +109,7 @@ Item(arguments Text) Text
 	MethodBodies.Item("List(Text, Number), List(Text, Number)") is "List(Text, Number)s"
 	if arguments.IndexOf(", ") < 0
 		return arguments
-	let half = ((arguments.Length - 2) / 2).Floor
-	let first = arguments.Substring(0, half)
+	let first = arguments.Substring(0, ((arguments.Length - 2) / 2).Floor)
 	first + ", " + first is arguments then first + "s" else "List(" + arguments + ")"
 Pair(type Text) Texts
 	MethodBodies.Pair("List(Text, Number)") is ("Text", "Number")
@@ -157,8 +155,7 @@ BlockType(statement SyntaxNode, scope Scope) Text
 	if not IsSelector(statement)
 		return ""
 	let lastCase = statement.children.Last.children.Last
-	let chosen = lastCase.Kind is "ElseValue" then lastCase.children(0) else lastCase.children(1)
-	inference.TypeOf(chosen, scope, Methods)
+	inference.TypeOf((lastCase.Kind is "ElseValue" then lastCase.children(0) else lastCase.children(1)), scope, Methods)
 IsSelector(statement SyntaxNode) Boolean
 	IsSelector(BodyParser("Run", "\tif a is", "\t\t1 then 2").Block(1, 1).children(0))
 	IsSelector(StatementParser(Tokenizer("if a is b").Tokens).ParseStatement) is false

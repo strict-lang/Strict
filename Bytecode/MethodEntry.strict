@@ -124,8 +124,7 @@ LoopBeginOf(position Number) Number
 		let kind = instructions(candidate).kind
 		if (kind is InstructionType.LoopBegin) and (depth is 0)
 			return candidate
-		let change = kind is InstructionType.LoopEnd then 1 else kind is InstructionType.LoopBegin then -1 else 0
-		depth = depth + change
+		depth = depth + (kind is InstructionType.LoopEnd then 1 else kind is InstructionType.LoopBegin then -1 else 0)
 	0
 JumpEndOf(jump InstructionEntry) Number
 	GpuLayerSamples.Trailing.IsWritingResult(2)
@@ -148,15 +147,13 @@ LoopEndOf(position Number) Number
 		let kind = instructions(value).kind
 		if (kind is InstructionType.LoopEnd) and (depth is 0)
 			return value
-		let change = kind is InstructionType.LoopBegin then 1 else kind is InstructionType.LoopEnd then -1 else 0
-		depth = depth + change
+		depth = depth + (kind is InstructionType.LoopBegin then 1 else kind is InstructionType.LoopEnd then -1 else 0)
 	instructions.Length
 IsWritingResult(position Number) Boolean
 	MlirLoops.Collecting.function.method.IsWritingResult(1)
 	CountingLoop.IsWritingResult(0) is false
 	mutable at = position + 1
-	let end = LoopEndOf(position)
-	for as long as at < end
+	for as long as at < LoopEndOf(position)
 		let entry = instructions(at)
 		if (entry.kind is InstructionType.InvokeWriteToList) and (entry.texts.Last is "forResult")
 			return true

@@ -4,9 +4,7 @@ constant InternalPackages = ("Compiler", "Runtime", "Bytecode", "Expressions")
 Root Text
 	TypeSource.Root is "."
 	let folder = Path(Process.Current.executable.Replace("\\", "/")).PathOnly.text
-	if File("Any.strict").Exists
-		return "."
-	File(folder + "/Any.strict").Exists then folder else Path(folder).PathOnly.text
+	File("Any.strict").Exists then "." else File(folder + "/Any.strict").Exists then folder else Path(folder).PathOnly.text
 Located(folder Text) Text
 	Sizing.Located("./Fonts") is "Math/Size.strict"
 	TypeSource(TypeEntry("Strict/List(Number)", List(MemberEntry), List(MethodEntry))).Located("") is "List.strict"
@@ -59,8 +57,7 @@ NativeFolder(path Text, root Text) Text
 	TypeSource(TypeEntry("Gpu", List(MemberEntry), List(MethodEntry))).NativeFolder("Gpu.strict", ".") is "./native"
 	TypeSource(TypeEntry("Strict/P/T", List(MemberEntry), List(MethodEntry))).NativeFolder("A", "C:") is "C:/P/native"
 	let source = File(entry.Source).Exists then entry.Source else root + "/" + entry.Source
-	let file = entry.Name.IndexOf("/") < 0 then path else source
-	let parent = Path(file).PathOnly.text
+	let parent = Path(entry.Name.IndexOf("/") < 0 then path else source).PathOnly.text
 	(parent is "" then "." else parent) + "/native"
 IsSlow(fullName Text, header HeaderTokens) Boolean
 	TypeSource.IsSlow("Strict/Compiler/Even", HeaderTokens("Run", "Number"))

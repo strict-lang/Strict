@@ -41,8 +41,7 @@ Mixed(context Numbers, order Number) Numbers
 Remainder(mixed Numbers, divisor Number) Number
 	Flash.Remainder((1, 5), 3) is 0
 	Flash.Remainder((26270, 2655732705), 20000081) is 9633156
-	let high = ((mixed(0) % divisor) * Limb + (mixed(1) / Limb).Floor) % divisor
-	(high * Limb + (mixed(1) % Limb)) % divisor
+	((((mixed(0) % divisor) * Limb + (mixed(1) / Limb).Floor) % divisor) * Limb + (mixed(1) % Limb)) % divisor
 Rows(tokens Numbers, position Number) Numbers
 	Flash.Rows((5, 7, 9), 2)(0) is 5471414
 	Flash.Rows((5, 7, 9), 2)(15) is 301899296

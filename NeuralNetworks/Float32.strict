@@ -9,6 +9,5 @@ from(unrounded Number)
 Rounded(unrounded Number, mantissa Number) Number
 	Float32.Rounded(1.00390625, 7) is 1
 	Float32.Rounded(41473, 7) is 41472
-	let exponent = unrounded is 0 then 0 else (unrounded.Absolute.Logarithm / 2.Logarithm).Floor
-	let step = 2 ^ (exponent - mantissa)
+	let step = 2 ^ ((unrounded is 0 then 0 else (unrounded.Absolute.Logarithm / 2.Logarithm).Floor) - mantissa)
 	(unrounded / step).Counted("Even") * step

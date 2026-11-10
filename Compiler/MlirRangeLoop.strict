@@ -11,8 +11,7 @@ Slots Texts
 	let inner = "    " + name + " = llvm.alloca %one x i32 : (i64) -> !llvm.ptr"
 	let left = "    %left" + position + " = llvm.alloca %one x i64 : (i64) -> !llvm.ptr"
 	let base = "    %base" + position + " = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
-	let chunk = "    %chunk" + position + " = llvm.alloca %one x i32 : (i64) -> !llvm.ptr"
-	(inner, left, base, chunk)
+	(inner, left, base, "    %chunk" + position + " = llvm.alloca %one x i32 : (i64) -> !llvm.ptr")
 IsRanged Boolean
 	MlirRangeLoop(MlirStatements.Copy.function, 0).IsRanged is false
 	MlirRangeLoop(Ranging.function, 4).IsRanged
@@ -23,9 +22,7 @@ IsRanged Boolean
 Opened(label Text) Texts
 	Text.Combine(MlirRangeLoop(MlirLoops.Counting.function, 0).Opened("^loop0")).IndexOf("cmpf olt") > 0
 	Text.Combine(Ranging.Opened("^loop3")).IndexOf("i32") > 0
-	if function.method.instructions(position).payload(1) is 1
-		return Chunked(label)
-	Headed(label, false, "f64")
+	function.method.instructions(position).payload(1) is 1 then Chunked(label) else Headed(label, false, "f64")
 Chunked(label Text) Texts
 	Text.Combine(Ranging.Chunked("^loop3")).IndexOf("2147483647") > 0
 	let cap = "    " + Temp("mx") + " = arith.constant 2147483647 : i64"

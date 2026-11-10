@@ -28,8 +28,7 @@ Pixel(offset Complex) Number
 	(Rabbit.Pixel(Complex(-0.3, 0.4)), Rabbit.Pixel(Complex(0.96, -0.58)), Rabbit.Pixel(Complex(0.5, 0.6))) is (40, 45, 3)
 	(Offset.Pixel(Complex(-0.6, 0.6)), Offset.Pixel(Complex(0.66, -0.38)), Offset.Pixel(Complex(0.2, 0.8))) is (40, 45, 3)
 	let point = center + offset
-	let coarse = julia < 0.5 and step > 0.00001 and Mandelbrot.Interior(point.real, point.imaginary)
-	coarse then 0 else Rebased(offset)
+	(julia < 0.5 and step > 0.00001 and Mandelbrot.Interior(point.real, point.imaginary)) then 0 else Rebased(offset)
 Rebased(offset Complex) Number
 	Outside.Rebased(Complex(-1.75, 0.1)) is 33
 	mutable delta = offset * julia
@@ -60,5 +59,4 @@ Next(position Number, delta Complex, added Complex) Complex
 	Tiny.Next(2, Complex(1, 0), Complex.Zero) is Complex(1, 4)
 	let rebased = position < 0
 	let shifted = rebased then delta + orbit(-1 - position) - orbit(0) else delta
-	let anchor = rebased then orbit(0) else orbit(position)
-	anchor * shifted * 2 + shifted.Squared + added
+	(rebased then orbit(0) else orbit(position)) * shifted * 2 + shifted.Squared + added

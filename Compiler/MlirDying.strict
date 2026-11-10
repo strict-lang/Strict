@@ -44,8 +44,7 @@ Mutated Texts
 		if value.kind is InstructionType.StoreRegisterToVariable
 			stored = stored + value.texts(0)
 	for stored
-		let isFirst = (stored.Index(value) is index) and (stored.Count(value) > 1)
-		if isFirst and MlirOwned(function, 0).IsOwned(value)
+		if ((stored.Index(value) is index) and (stored.Count(value) > 1)) and MlirOwned(function, 0).IsOwned(value)
 			value
 Returned(entry InstructionEntry) Texts
 	Dropping.Returned(Dropped).First is "    %t10d0 = llvm.load %v_moved : !llvm.ptr -> f64"

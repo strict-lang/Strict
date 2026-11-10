@@ -42,8 +42,7 @@ Invariant(loop SyntaxNode, block CodeBlock) SyntaxNodes
 	Scaled(0) to Text is "let invariant2x0 = 1000 / steps"
 	Scaled(1).children.Last.Lines("") is ("index * invariant2x0", "index + values(0) * steps")
 	Hoisting.Invariant(Rows.children(0), Bag).Last.children.Last.children(1) to Text is "let invariant4x0 = row * steps"
-	let names = LoopNames.Of(loop, Prefixed("constant "), Prefixed("mutable "))
-	let found = Found(loop.children.Last, names)
+	let found = Found(loop.children.Last, LoopNames.Of(loop, Prefixed("constant "), Prefixed("mutable ")))
 	let body = Hoisted(Substituted(loop.children.Last, found, loop.line), block)
 	let nested = SyntaxNode("For", loop.text, loop.children.Slice(0, loop.children.Length - 1) + body, loop.line)
 	mutable declared = List(Mutable(SyntaxNode))

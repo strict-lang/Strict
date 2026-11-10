@@ -141,9 +141,7 @@ Validated(name Text) Text
 	MlirNatives(MlirValidated.Kept.function, 2).Validated("Validated") is "strict_validated"
 	MlirNatives(MlirValidated.Changed.function, 2).Validated("Validated") is ""
 	MlirNatives(Texts, 1).Validated("Floor") is ""
-	if name is not "Validated"
-		return ""
-	MlirValidated(function, position).IsKnown then "strict_validated" else ""
+	name is not "Validated" then "" else MlirValidated(function, position).IsKnown then "strict_validated" else ""
 TextHelper(name Text) Text
 	MlirNatives(Texts, 1).TypeHelper("File", "WriteLines") is "strict_file_writelines"
 	MlirNatives(Texts, 1).TypeHelper("File", "Modified") is "strict_file_modified"

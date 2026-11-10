@@ -65,8 +65,7 @@ Given Texts
 	for MlirGpuCheck(function, position).Free
 		let given = "%f_" + value
 		let slot = "%v_" + value
-		let typed = MlirTyped(function.Float).Given(given, slot)
-		let number = typed + MlirPassed(function, position).Given(value, slot)
+		let number = MlirTyped(function.Float).Given(given, slot) + MlirPassed(function, position).Given(value, slot)
 		lines = IsList(value) then lines + MlirFormats(function, position).Given(value, Format) else lines + number
 	lines + (function.Guarded is position then Assumed else List(Text))
 Assumed Texts

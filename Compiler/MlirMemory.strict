@@ -80,9 +80,7 @@ Unwrapped(path Text) Text
 	Boxing.Unwrapped("box.values") is "box"
 	Pairing.Unwrapped("numbers") is "numbers"
 	let dot = path.IndexOf(".")
-	if dot < 0
-		return path
-	Member(path).Last is 1 then path.Substring(0, dot) else path
+	dot < 0 then path else Member(path).Last is 1 then path.Substring(0, dot) else path
 Constant(target Text, symbol Text, signature Text) Text
 	Sample.Constant("%e", "f", "(f64) -> f64") is "    %e = func.constant @f : (f64) -> f64"
 	"    " + target + " = func.constant @" + symbol + " : " + signature

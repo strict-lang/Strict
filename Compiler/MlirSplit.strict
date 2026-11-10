@@ -39,9 +39,7 @@ Typed(name Text) Text
 	Sample.Typed("__stack_low") is "__stack_low"
 	Sample.Typed("t") is "t"
 	let type = name.Split("_").First
-	if type.Length < 2
-		return name
-	type(0).Lower is type(0) then type.Substring(1, type.Length - 1) else type
+	type.Length < 2 then name else type(0).Lower is type(0) then type.Substring(1, type.Length - 1) else type
 Owner(line Text) Number
 	Sample.Owner("  func.func @strict_new() {") < RuntimeParts
 	Sample.Owner("  llvm.func @strict_new(%a: i64) {") is Sample.Owner("  func.func @strict_new() {")
@@ -138,8 +136,7 @@ Results(rest Text) Text
 	Sample.Results(" -> f64 attributes {a} {") is " -> f64"
 	Sample.Results(" {") is ""
 	Sample.Results(" attributes {a} {") is ""
-	let ending = rest.IndexOf(" attributes {") >= 0 then rest.IndexOf(" attributes {") else rest.Length - 2
-	rest.Substring(0, ending)
+	rest.Substring(0, (rest.IndexOf(" attributes {") >= 0 then rest.IndexOf(" attributes {") else rest.Length - 2))
 Global(line Text, isOwned Boolean) Text
 	Sample.Global(Tricky, false).EndsWith("external @k() : f64")
 	Sample.Global("  llvm.mlir.global constant @t(0) : x", true) is "  llvm.mlir.global constant @t(0) : x"

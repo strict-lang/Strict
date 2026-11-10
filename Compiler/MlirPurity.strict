@@ -115,9 +115,7 @@ IsPureCall(inspected MlirFunction, at Number, depth Number) Boolean
 	let callees = MlirModule(inspected.types, "").Called(inspected, at)
 	if IsAllowed(inspected, at, callees) is false
 		return false
-	if callees.Length is 0
-		return IsIntrinsic(inspected, at)
-	IsKnown(callees.First, inspected, depth)
+	callees.Length is 0 then IsIntrinsic(inspected, at) else IsKnown(callees.First, inspected, depth)
 IsAllowed(inspected MlirFunction, at Number, callees List(MlirFunction)) Boolean
 	Caching.IsAllowed(Caching.function, 0, List(MlirFunction))
 	Timing.IsAllowed(Timing.function, 4, List(MlirFunction)) is false
@@ -153,9 +151,7 @@ IsIntrinsic(inspected MlirFunction, at Number) Boolean
 	let type = inspected.TypeOf(decoder.Text(1))
 	let isConstructor = (decoder.Text(2) is "from") and (type.members.Length > 0)
 	let helper = MlirCalls(inspected, at).NativeHelper(entry, decoder)
-	if MlirTexts(inspected, at).IsConversion
-		return true
-	isConstructor or (helper is not "")
+	MlirTexts(inspected, at).IsConversion then true else isConstructor or (helper is not "")
 IsKnown(callee MlirFunction, inspected MlirFunction, depth Number) Boolean
 	Doubling.IsKnown(MlirFunction(Doubling.function.types, MlirParallel.Rows, MlirParallel.Twice), Doubling.function, 0)
 	Doubling.IsKnown(Timing.function, Doubling.function, 0) is false

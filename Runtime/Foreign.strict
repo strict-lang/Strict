@@ -95,8 +95,7 @@ Elements(numbers Numbers) VmValue
 Folder(type TypeEntry) Text
 	Adding.Folder(Adder) is "Examples/NativeAdd/native"
 	Foreign(Invocation.AddCall, List(TypeEntry), "Examples/NativeAdd").Folder(Shorter) is "Examples/NativeAdd/native"
-	let file = type.Name.IndexOf("/") < 0 then folder + "/" + type.Source else type.Source
-	let parent = Path(file).PathOnly.text
+	let parent = Path(type.Name.IndexOf("/") < 0 then folder + "/" + type.Source else type.Source).PathOnly.text
 	let native = parent is "" then "native" else parent + "/native"
 	Directory.Exists(native) or (TypeSource.Root is ".") then native else TypeSource.Root + "/" + native
 Numbers(values List(VmValue)) Numbers

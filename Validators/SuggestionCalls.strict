@@ -34,8 +34,7 @@ Calls(sameName Boolean) Texts
 	mutable calls = List(Mutable(Text))
 	for Receivers
 		let declared = values.TypeOf(value)
-		let type = declared is "" then value else declared
-		calls = calls + Receiver(value, type, sameName)
+		calls = calls + Receiver(value, (declared is "" then value else declared), sameName)
 	calls
 Receiver(receiver Text, type Text, sameName Boolean) Texts
 	mutable calls = List(Mutable(Text))
@@ -43,8 +42,7 @@ Receiver(receiver Text, type Text, sameName Boolean) Texts
 		let recursive = (type is own) and (value is header.tokens.First)
 		if Named(value) and (recursive is false) and ((Stem(value) is Stem(header.tokens.First)) is sameName)
 			if (known.MemberType(type, value) is header.ReturnType) and (value is in known.ParameterScope(type).names)
-				let prefix = type is own then value else receiver + "." + value
-				let call = Call(prefix, type, value, receiver)
+				let call = Call((type is own then value else receiver + "." + value), type, value, receiver)
 				if call is not ""
 					calls.Add(call)
 	calls

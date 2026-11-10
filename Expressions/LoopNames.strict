@@ -58,8 +58,7 @@ Iterators(node SyntaxNode) Texts
 	isNamed then node.text.Substring(4, node.text.Length - 7).Split(", ") else List(Text)
 Names(node SyntaxNode) Texts
 	LoopNames.Names(SyntaxNode("Declaration", "let width", List(SyntaxNode) + SyntaxNode("Number", "1"))) is ("width")
-	let isChanged = node.Kind is in ("Reassignment", "MethodCall")
-	let changed = isChanged then List(Text) + Root(node.children(0)) else List(Text)
+	let changed = (node.Kind is in ("Reassignment", "MethodCall")) then List(Text) + Root(node.children(0)) else List(Text)
 	mutable names = node.Kind is "Declaration" then changed + node.text.Split(" ").Last else changed
 	let isCalled = (node.Kind is "Call") and (IsLower(node.text) is false)
 	for node.children

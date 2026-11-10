@@ -37,8 +37,7 @@ IsCurrent Boolean
 	if (IsEnabled is false) or (File(CacheFile).Exists is false) or (File(Output).Exists is false)
 		return false
 	let lines = File(CacheFile).ReadLines
-	let valid = (lines.Length > 1) and (lines.Length % 2 is 1) and (lines.First is Key)
-	valid and Matches(lines.Slice(1, lines.Length - 1))
+	((lines.Length > 1) and (lines.Length % 2 is 1) and (lines.First is Key)) and Matches(lines.Slice(1, lines.Length - 1))
 Matches(lines Texts) Boolean
 	for Range(0, lines.Length / 2)
 		let position = value * 2

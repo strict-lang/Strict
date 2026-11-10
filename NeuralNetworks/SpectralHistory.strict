@@ -11,8 +11,7 @@ Ready Boolean
 	SpectralHistory((-1, 0), (1, 2, 3), 2, SpectralFit(1, 0, 1), 2).Ready is false
 	SpectralHistory((-1, 0), (1, 2, 3, 4), 2, SpectralFit(1, 0, 2), 2).Ready is false
 	SpectralHistory((0), (1, 2), 2, SpectralFit(1, 0, 1), 2).Ready is false
-	let shaped = (width > 0) and (features.Length is width * coords.Length)
-	shaped and fit.IsValid and (coords.Length >= fit.degree + 1)
+	((width > 0) and (features.Length is width * coords.Length)) and fit.IsValid and (coords.Length >= fit.degree + 1)
 Remembered(coord Number, feature Numbers) SpectralHistory
 	Pair.Remembered(0.5, (5, 6)).coords is (0, 0.5)
 	Pair.Remembered(0.5, (5, 6)).features is (3, 4, 5, 6)

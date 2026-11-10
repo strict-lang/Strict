@@ -15,9 +15,7 @@ NameOf(code Number) Text
 		return "Linux"
 	if code is MacOS
 		return "MacOS"
-	if code is Web
-		return "Web"
-	code is Android then "Android" else (IsIOS(code) then "iOS" else "Unknown")
+	code is Web then "Web" else code is Android then "Android" else (IsIOS(code) then "iOS" else "Unknown")
 Current Number
 	Platform.Current is in (Windows, Linux, MacOS)
 	FromName(Process.OperatingSystem)
@@ -28,11 +26,7 @@ FromName(name Text) Number
 	FromName("MacOS") is MacOS
 	if name is "Windows"
 		return Windows
-	if name is "Android"
-		return Android
-	if name is "iOS"
-		return IOS
-	name is "MacOS" then MacOS else Linux
+	name is "Android" then Android else name is "iOS" then IOS else name is "MacOS" then MacOS else Linux
 Architecture Text
 	Platform.Architecture is in ("X64", "Arm64")
 	Process.RunTool("uname", "-m").Output.Trim is "arm64" then "Arm64" else "X64"
@@ -59,23 +53,13 @@ LibraryExtension(code Number) Text
 	Platform.LibraryExtension(Windows) is ".dll"
 	Platform.LibraryExtension(Linux) is ".so"
 	Platform.LibraryExtension(MacOS) is ".dylib"
-	if code is Windows
-		return ".dll"
-	if IsIOS(code)
-		return ".a"
-	code is MacOS then ".dylib" else ".so"
+	code is Windows then ".dll" else IsIOS(code) then ".a" else code is MacOS then ".dylib" else ".so"
 IsWindows(code Number) Boolean
-	if code is Windows
-		return true
-	false
+	code is Windows
 IsLinux(code Number) Boolean
-	if code is Linux
-		return true
-	false
+	code is Linux
 IsMacOS(code Number) Boolean
-	if code is MacOS
-		return true
-	false
+	code is MacOS
 IsIOS(code Number) Boolean
 	IsIOS(IOSSimulator)
 	IsIOS(MacOS) is false

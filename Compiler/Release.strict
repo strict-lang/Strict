@@ -66,12 +66,9 @@ Icon Text
 	Release(Logger, "Examples/NativeAdd/obj/NativeAdd").Icon is "Examples/NativeAdd/NativeAdd.ico"
 	let own = BuildOutput.Delivered(base) + ".ico"
 	let folder = Parent + "/" + Path(Parent).FileName.text + ".ico"
-	if File(own).Exists
-		return own
-	File(folder).Exists then folder else TypeSource.Root + "/Strict.ico"
+	File(own).Exists then own else File(folder).Exists then folder else TypeSource.Root + "/Strict.ico"
 Refreshed(release Text, content Text, stem Text, endings Texts) Number
-	let parent = Path(release).PathOnly.text
-	Directory.Create(parent)
+	Directory.Create(Path(release).PathOnly.text)
 	Directory.Create(release)
 	for endings
 		let built = stem + value

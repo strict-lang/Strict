@@ -99,9 +99,7 @@ Invoked(entry InstructionEntry, at Number) Text
 	Norming.Invoked(Normed.instructions(11), 11) is "!"
 	let register = MlirDeviceCalls(function, at, function).Register(entry)
 	let instance = register < 0 then "" else Grouping(register, at)
-	if entry.texts(1) is "Floor"
-		return Floored(instance)
-	Combined(instance, Arguments(entry, at)) is "" then "" else "!"
+	entry.texts(1) is "Floor" then Floored(instance) else Combined(instance, Arguments(entry, at)) is "" then "" else "!"
 Writer(register Number, before Number) Number
 	Aligning.Aligned(InstructionEntry.Binary(InstructionType.Subtract, (2, 4, 7)), 7) is "size"
 	Ranging.Aligned(AlignedCode(9), 9) is ""

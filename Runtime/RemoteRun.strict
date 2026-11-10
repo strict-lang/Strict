@@ -10,6 +10,4 @@ Answered(words Texts, seen MachineView) Text
 	RemoteRun(Logger).Answered(("hello"), MachineView.Wide) is "ok"
 	if (words.Length > 0) and (words(0) is "run")
 		return Started(words)
-	if (words.Length > 0) and (words(0) is "fit")
-		return Admission(Logger).Verdict(Need.Parsed(words), seen)
-	"ok"
+	(words.Length > 0) and (words(0) is "fit") then Admission(Logger).Verdict(Need.Parsed(words), seen) else "ok"

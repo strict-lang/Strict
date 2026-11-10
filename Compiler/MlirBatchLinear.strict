@@ -47,9 +47,7 @@ Written(at Number) Number
 		return Variable(at, entry.texts(0))
 	if entry.kind is InstructionType.LoadConstantToRegister
 		return MlirWholeValues(at).IsWhole(PayloadDecoder(entry).Value(1)) then 0 else -1
-	if entry.kind is InstructionType.Invoke
-		return Floored(at, entry)
-	Arithmetic(at, entry)
+	entry.kind is InstructionType.Invoke then Floored(at, entry) else Arithmetic(at, entry)
 Variable(at Number, name Text) Number
 	Paired.Variable(3, "index") is 1
 	Paired.Variable(3, "value") is 1
@@ -60,9 +58,7 @@ Variable(at Number, name Text) Number
 	let stored = MlirKinds(function).Stored(at, name)
 	if stored > position
 		return Slope(stored, function.method.instructions(stored).payload(0))
-	if name is in ("index", "value")
-		return 1
-	name is in MlirGpuCheck(function, position).Free then 0 else -1
+	name is in ("index", "value") then 1 else name is in MlirGpuCheck(function, position).Free then 0 else -1
 Arithmetic(at Number, entry InstructionEntry) Number
 	if entry.kind is not in ArithmeticKinds
 		return -1
@@ -72,9 +68,7 @@ Arithmetic(at Number, entry InstructionEntry) Number
 		return entry.kind is InstructionType.Divide then 3 else 0
 	if (entry.kind is InstructionType.Add) and (left >= 0) and (right >= 0) and (left + right is 1)
 		return 1
-	if (entry.kind is InstructionType.Subtract) and (left is 1) and (right is 0)
-		return 1
-	Divided(at, entry, left, right)
+	(entry.kind is InstructionType.Subtract) and (left is 1) and (right is 0) then 1 else Divided(at, entry, left, right)
 Divided(at Number, entry InstructionEntry, left Number, right Number) Number
 	Negative.Divided(6, InstructionEntry.Binary(InstructionType.Divide, (4, 3, 7)), 1, 0) is 2
 	Negative.Divided(6, InstructionEntry.Binary(InstructionType.Modulo, (1, 3, 7)), 1, 0) is 1
@@ -84,8 +78,7 @@ Divided(at Number, entry InstructionEntry, left Number, right Number) Number
 	if (Aligned(at, entry.payload(1)) is false) or (Divisor(at, entry.payload(2)) is false)
 		return -1
 	if entry.kind is InstructionType.Modulo
-		let nonnegative = MlirBatchSign(function, position).IsNonnegative(at, entry.payload(1))
-		return nonnegative then 1 else -1
+		return MlirBatchSign(function, position).IsNonnegative(at, entry.payload(1)) then 1 else -1
 	entry.kind is InstructionType.Divide then 2 else -1
 Floored(at Number, entry InstructionEntry) Number
 	Paired.Floored(6, InstructionEntry.Invoke(7, ("Strict/List", "Length", "Strict/Number"), List(Number), 1)) is 0
@@ -95,9 +88,7 @@ Floored(at Number, entry InstructionEntry) Number
 		return 0
 	if entry.texts(1) is not "Floor"
 		return -1
-	let source = MlirDeviceCalls(function, at, function).Register(entry)
-	let slope = Slope(at, source)
-	slope is in (0, 2, 3) then 0 else -1
+	Slope(at, MlirDeviceCalls(function, at, function).Register(entry)) is in (0, 2, 3) then 0 else -1
 Aligned(at Number, register Number) Boolean
 	Paired.Aligned(4, 1)
 	Negative.Aligned(2, 0) is false
@@ -187,5 +178,4 @@ Guarded(name Text, at Number) Texts
 	let aligned = "    " + prefix + "Aligned = arith.cmpi eq, " + prefix + "Rest, %linearZero : i64"
 	let positive = "    " + prefix + "Positive = arith.cmpi sgt, %e_" + name + ", %linearZero : i64"
 	let valid = "    " + prefix + "Valid = arith.andi " + prefix + "Aligned, " + prefix + "Positive : i1"
-	let both = "    " + prefix + " = arith.andi " + previous + ", " + prefix + "Valid : i1"
-	(rest, aligned, positive, valid, both)
+	(rest, aligned, positive, valid, "    " + prefix + " = arith.andi " + previous + ", " + prefix + "Valid : i1")

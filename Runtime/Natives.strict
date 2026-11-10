@@ -25,9 +25,7 @@ Result(call Invocation) VmValue
 		return name is "to" then Converted(call.Instance, call.ReturnType) else VmValue.OfText(ValueCode(call.Instance).Code)
 	if name is in ("Length", "Count")
 		return VmValue.OfNumber(call.Instance.Counted(call.Arguments))
-	if name is in ("not", "and", "or", "xor")
-		return Logical(name, call.Instance, call)
-	Queried(name, call.Instance, call)
+	name is in ("not", "and", "or", "xor") then Logical(name, call.Instance, call) else Queried(name, call.Instance, call)
 Keyed(name Text, pairs VmValue, arguments List(VmValue)) VmValue
 	Shapes.Keyed("get", Pairs, List(VmValue) + VmValue.OfNumber(2)).number is 4
 	Shapes.Keyed("Add", Pairs, (VmValue.OfNumber(2), VmValue.OfNumber(5))) is VmValue.OfError("DuplicateKey")

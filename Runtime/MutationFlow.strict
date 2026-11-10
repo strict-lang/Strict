@@ -134,8 +134,7 @@ IsKept(code Number, lines Texts, line Number) Boolean
 	let isWritten = IsWritten(code, lines(line - 1))
 	if (code % 8 is not 7) or (isWritten is false)
 		return isWritten
-	let declared = MutationKinds(method).Replacement(7, method.instructions((code / 8).Floor)).Replace(" with ", " = ")
-	declared is not in lines
+	MutationKinds(method).Replacement(7, method.instructions((code / 8).Floor)).Replace(" with ", " = ") is not in lines
 IsLogical(position Number) Boolean
 	Anded.IsLogical(2) and (Anded.IsLogical(1) is false)
 	(Branched.IsLogical(2) is false) and (Unchecked.IsLogical(2) is false)

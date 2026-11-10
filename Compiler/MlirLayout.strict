@@ -51,9 +51,7 @@ Represented(kind Text) Text
 	if kind.StartsWith(Keyed)
 		return "List(" + Represented(MethodBodies.Item(kind.Substring(Keyed.Length, kind.Length - Keyed.Length - 1))) + ")"
 	let packed = MlirLanes(function, 0).IsPacked(kind) then "Number" else MlirFlats(function, 0).Kind(kind)
-	if packed is not ""
-		return packed
-	Wrapped(kind) is "" then Plural(kind) else Represented(Wrapped(kind))
+	packed is not "" then packed else Wrapped(kind) is "" then Plural(kind) else Represented(Wrapped(kind))
 Plural(kind Text) Text
 	Wrapping.Plural("Bytes") is "List(Number)"
 	Wrapping.Plural("List(Byte)") is "List(Number)"
@@ -120,8 +118,7 @@ Copied(member MemberEntry, temp Text, slot Text) Texts
 IsByte(typeName Text) Boolean
 	Wrapping.IsByte("Byte")
 	Wrapping.IsByte("Number") is false
-	let type = function.TypeOf(typeName, true)
-	let changing = type.Changing
+	let changing = function.TypeOf(typeName, true).Changing
 	(changing.Length is 1) and (changing.First.Bits is 8)
 Paired(kind Text) Texts
 	Wrapping.Paired("List(Text, Number)") is ("Text", "Number")

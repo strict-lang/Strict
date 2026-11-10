@@ -22,8 +22,7 @@ Previous(device Text, isTiling Boolean, ending = ".kernels.mlir") Texts
 	Sample.Previous("module {\n}", true).Length is 0
 	let key = File(base + ending)
 	let missing = isTiling and (File(base + ".older.ptx").Exists is false)
-	let ready = key.Exists and (missing is false) and File(base + ".ptx").Exists
-	if (ready is false) or (Read(ending) is not device)
+	if ((key.Exists and (missing is false) and File(base + ".ptx").Exists) is false) or (Read(ending) is not device)
 		return List(Text)
 	isTiling then (Read(".ptx"), Read(".older.ptx")) else List(Text) + Read(".ptx")
 Read(ending Text) Text
@@ -73,8 +72,7 @@ Kept(tools Toolchain, kept Text) Text
 	let input = tools.Quoted(base + ".gpu.mlir")
 	let output = tools.Quoted(base + ".gpu.kept.mlir")
 	let privatized = kept is "" then "" else " --symbol-privatize=exclude=" + kept
-	let arguments = input + privatized + " --symbol-dce -o " + output
-	let ran = ToolRunner(tools.Located("mlir-opt")).Execute(arguments)
+	let ran = ToolRunner(tools.Located("mlir-opt")).Execute(input + privatized + " --symbol-dce -o " + output)
 	ran.Failed then "mlir-opt failed: " + ran.error else ""
 Fingerprint(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Text
 	PtxCache("Compiler/output/Keyed").Fingerprint("a", false, DeviceBuild.Local, "").IndexOf("sm_120") > 0
@@ -116,8 +114,7 @@ SharedKept(device Text, isTiling Boolean, builder DeviceBuild) Texts
 Waited(key Text, isTiling Boolean) Slow(Texts)
 	PtxCache("Compiler/output/Unbuilt/module").Waited("module {\n}", false).Length is 0
 	let lock = File(Path(base).PathOnly.text + ".lock")
-	let started = Process.Elapsed
-	for as long as Process.Elapsed - started < Strict.BuildWait
+	for as long as Process.Elapsed - Process.Elapsed < Strict.BuildWait
 		let previous = Previous(key, isTiling)
 		if (previous.Length > 0) or lock.Locked
 			return previous.Length > 0 then previous else Previous(key, isTiling)

@@ -35,9 +35,7 @@ Head(bytes Bytes) List(ZipEntry)
 	Probe.Head(Probe.Packed((1), (TypeEntry.HelloLogger, TypeEntry.HelloLogger), List(Text))).Length is 2
 	let first = Ended(bytes, 0)
 	let second = first < 0 then -1 else Ended(bytes, first)
-	if (second < 0) or (second > bytes.Length)
-		return Unpacked(bytes)
-	(Entry(bytes, 0), Entry(bytes, first))
+	(second < 0) or (second > bytes.Length) then Unpacked(bytes) else (Entry(bytes, 0), Entry(bytes, first))
 Rewritten(header Numbers, own TypeEntry, rest List(ZipEntry)) Bytes
 	Probe.Unpacked(Probe.Rewritten((1, 0, 7), TypeEntry.HelloLogger, Packing + ZipEntry("x", (97)))).Last.Name is "x"
 	Probe.Unpacked(Probe.Rewritten((1, 0, 7), TypeEntry.HelloLogger, List(ZipEntry))).Length is 2
@@ -73,8 +71,7 @@ Header(bytes Bytes, position Number) ZipReader
 	for Range(position, position + ZipReader.LocalHeaderSize)
 		header.Add(bytes(value).number)
 	let start = position + ZipReader.LocalHeaderSize
-	let named = ZipReader(header).Read(ZipReader.NameLengthOffset, 2)
-	for Range(start, (start + named, bytes.Length).Minimum)
+	for Range(start, (start + ZipReader(header).Read(ZipReader.NameLengthOffset, 2), bytes.Length).Minimum)
 		header.Add(bytes(value).number)
 	ZipReader(header)
 IsFresh(entries List(ZipEntry)) Boolean

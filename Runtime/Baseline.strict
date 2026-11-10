@@ -25,8 +25,7 @@ Checked(tested List(TypeEntry), method MethodEntry, runner Text) KeptMethod
 	let budget = Budget(begun)
 	if (reason is not "") and (mutants.part is "")
 		mutants.logger.Log(mutants.path + ": " + method.Name + " is not mutated, " + reason)
-	let isKept = (reason is "") and IsRun(tested, method, runner)
-	KeptMethod(method, isKept then budget else 0)
+	KeptMethod(method, ((reason is "") and IsRun(tested, method, runner)) then budget else 0)
 Methods(kept List(KeptMethod)) List(MethodEntry)
 	Sampled.Methods(List(KeptMethod) + KeptMethod(Mutants.Twice, 2)).First is Mutants.Twice
 	for kept

@@ -28,8 +28,7 @@ Endless List(ValidationIssue)
 		if TypeShape(lines).IsMethodHeader(value) and (FileCheck.LastLine(lines, index) is index + 1)
 			let method = Tokenizer(value).Tokens.First
 			let only = Tokenizer(lines(index + 1).Trim).Tokens
-			let isNamed = method(0).Lower is not method(0)
-			if isNamed and (method is in Called(only)) and ("then" is not in only)
+			if (method(0).Lower is not method(0)) and (method is in Called(only)) and ("then" is not in only)
 				ValidationIssue("OnlyLineCallsItself", method + Hint, index + 2)
 Deep List(ValidationIssue)
 	Counting.Deep.First to Text is "DeepRecursion: Count nests 5000 calls" + DeepHint

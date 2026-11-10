@@ -1,4 +1,3 @@
 has scorer Scorer
 Label(shape Shape) Text
-	let text = shape to Text
-	(scorer.Scored(shape) to Text) + " " + text
+	(scorer.Scored(shape) to Text) + " " + (shape to Text)

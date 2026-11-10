@@ -7,34 +7,23 @@ Format Text
 		return FormatSet
 	if typeName is "LoadConstantToRegister"
 		return FormatLoadConst
-	if typeName is "LoadVariableToRegister"
-		return FormatLoadVar
-	FormatRest
+	typeName is "LoadVariableToRegister" then FormatLoadVar else FormatRest
 FormatSet Text
-	let regName = Register.NameOf(register)
-	"Set " + regName + " " + amount to Text
+	"Set " + Register.NameOf(register) + " " + amount to Text
 FormatLoadConst Text
-	let regName = Register.NameOf(register)
-	"LoadConstant " + regName + " " + amount to Text
+	"LoadConstant " + Register.NameOf(register) + " " + amount to Text
 FormatLoadVar Text
-	let regName = Register.NameOf(register)
-	"LoadVariable " + label + " " + regName
+	"LoadVariable " + label + " " + Register.NameOf(register)
 FormatRest Text
 	if typeName is "StoreConstantToVariable"
 		return "StoreConstant " + label + " " + amount to Text
 	if typeName is "StoreRegisterToVariable"
 		return FormatStoreReg
-	if typeName is "Return"
-		return FormatReturn
-	if typeName is "Print"
-		return "Print " + label
-	FormatBinary
+	typeName is "Return" then FormatReturn else typeName is "Print" then "Print " + label else FormatBinary
 FormatStoreReg Text
-	let regName = Register.NameOf(register)
-	"StoreRegister " + regName + " " + label
+	"StoreRegister " + Register.NameOf(register) + " " + label
 FormatReturn Text
-	let regName = Register.NameOf(register)
-	"Return " + regName
+	"Return " + Register.NameOf(register)
 FormatBinary Text
 	if typeName is "Add"
 		return typeName + " " + ThreeRegs
@@ -42,9 +31,7 @@ FormatBinary Text
 		return typeName + " " + ThreeRegs
 	if typeName is "Multiply"
 		return typeName + " " + ThreeRegs
-	if typeName is "Divide"
-		return typeName + " " + ThreeRegs
-	FormatMore
+	typeName is "Divide" then typeName + " " + ThreeRegs else FormatMore
 FormatMore Text
 	if typeName is "Modulo"
 		return typeName + " " + ThreeRegs
@@ -52,10 +39,6 @@ FormatMore Text
 		return typeName + " " + ThreeRegs
 	if typeName is "NotEqual"
 		return typeName + " " + ThreeRegs
-	if typeName is "Invoke"
-		return "Invoke " + label
-	typeName + " " + amount to Text
+	typeName is "Invoke" then "Invoke " + label else typeName + " " + amount to Text
 ThreeRegs Text
-	let left = Register.NameOf(register)
-	let right = Register.NameOf(amount)
-	left + " " + right + " " + label
+	Register.NameOf(register) + " " + Register.NameOf(amount) + " " + label

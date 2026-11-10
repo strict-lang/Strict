@@ -28,6 +28,5 @@ Erf(number Number) Number
 	Tiny.Erf(-0.5).IsNearlyEqual(-0.5204999, 0.0000002)
 	let distance = 1 / (1 + ErfScale * number.Absolute)
 	let fourth = (ErfFifth * distance - ErfFourth) * distance + ErfThird
-	let second = (fourth * distance - ErfSecond) * distance + ErfFirst
-	let magnitude = 1 - second * distance * (-number * number).Exponential
+	let magnitude = 1 - ((fourth * distance - ErfSecond) * distance + ErfFirst) * distance * (-number * number).Exponential
 	number < 0 then -magnitude else magnitude

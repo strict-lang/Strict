@@ -92,6 +92,5 @@ Truncated(original FlashNext, kept Numbers) Slow(FlashNext)
 		truncated.Add(value.Truncated(original.layers(index), count, original.tokens.Length + count))
 	let added = history.Slice(history.Length - tokens.Length + original.tokens.Length, count)
 	let remembered = original.history.Slice(count, original.history.Length - count) + added
-	let width = head.norm.Length
-	let rows = Safetensors.Part(streams, 0, count * width, 1)
+	let rows = Safetensors.Part(streams, 0, count * head.norm.Length, 1)
 	FlashNext(value, layers = truncated, tokens = original.tokens + kept, streams = rows, history = remembered)

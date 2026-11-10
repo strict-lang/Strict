@@ -9,8 +9,7 @@ Slots Texts
 Allocated(name Text, kind Text) Texts
 	let allocated = "    " + name + "Private = llvm.alloca %batchSize x " + kind
 	constant typed = " : (i64) -> !llvm.ptr<5>"
-	let casted = "    " + name + " = llvm.addrspacecast " + name + "Private : !llvm.ptr<5> to !llvm.ptr"
-	(allocated + typed, casted)
+	(allocated + typed, "    " + name + " = llvm.addrspacecast " + name + "Private : !llvm.ptr<5> to !llvm.ptr")
 Prefetched(at Number) Texts
 	let entry = function.method.instructions(at)
 	if entry.kind is InstructionType.IndexCall
@@ -75,9 +74,7 @@ Stored Texts
 	List(Text) + Storing + " : (!llvm.ptr, i64, i64, !llvm.ptr, i64) -> ()"
 LinearPrefetched(at Number) Texts
 	let emitted = Prefetched(at)
-	if function.method.instructions(at).kind is not InstructionType.IndexCall
-		return emitted
-	emitted + Filled(at)
+	function.method.instructions(at).kind is not InstructionType.IndexCall then emitted else emitted + Filled(at)
 Filled(at Number) Texts
 	mutable lines = List(Mutable(Text))
 	for 3

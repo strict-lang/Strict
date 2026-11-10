@@ -20,8 +20,7 @@ Rewritten(body SyntaxNode) SyntaxNode
 	let start = ChainStart(body)
 	mutable statements = List(Mutable(SyntaxNode))
 	for body.children
-		let rewritten = index >= start then Branch(Defaulted(value)) else value
-		statements.Add(rewritten)
+		statements.Add(index >= start then Branch(Defaulted(value)) else value)
 	SyntaxNode("Body", body.text, statements)
 Defaulted(node SyntaxNode) SyntaxNode
 	BranchValues("Boolean").Defaulted(Selector).children.Last.children.Last.children(0) is Unmatched
@@ -54,8 +53,7 @@ Branch(node SyntaxNode) SyntaxNode
 		return node
 	mutable parts = List(Mutable(SyntaxNode))
 	for node.children
-		let part = index is node.children.Length - 1 then LastWrapped(value) else value
-		parts.Add(part)
+		parts.Add(index is node.children.Length - 1 then LastWrapped(value) else value)
 	SyntaxNode(node.Kind, node.text, parts, node.line)
 LastWrapped(block SyntaxNode) SyntaxNode
 	Returning.LastWrapped(SyntaxNode("Body", "", (Value, Value))).children(0) is Value
@@ -66,8 +64,7 @@ LastWrapped(block SyntaxNode) SyntaxNode
 		return Rewritten(block)
 	mutable lines = List(Mutable(SyntaxNode))
 	for block.children
-		let line = index is block.children.Length - 1 then Wrapped(value) else value
-		lines.Add(line)
+		lines.Add(index is block.children.Length - 1 then Wrapped(value) else value)
 	SyntaxNode("Body", block.text, lines)
 Wrapped(line SyntaxNode) SyntaxNode
 	Returning.Wrapped(Value).Kind is "Return"
@@ -102,8 +99,7 @@ LastLoop(body SyntaxNode) SyntaxNode
 	if body.children.Length is 0
 		return body
 	let last = body.children.Last
-	let isBranch = (last.Kind is in ("If", "ElseIf", "Else")) and last.HasBody
-	isBranch then LastLoop(last.children.Last) else last
+	((last.Kind is in ("If", "ElseIf", "Else")) and last.HasBody) then LastLoop(last.children.Last) else last
 Reduction(line SyntaxNode) Text
 	Returning.Reduction(SyntaxNode("Binary", "+", (Value, Value))) is ""
 	Returning.Reduction(SyntaxNode("Identifier", "value")) is ""

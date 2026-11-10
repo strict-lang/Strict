@@ -37,8 +37,7 @@ Changed(base Text, flags Text) Numbers
 	for Range(0, Toolchain.Parts)
 		let part = base + "-" + value
 		File(part).Delete
-		let owned = split.Data(value, shared, placed) + split.Owned(starts, owners, value)
-		if Written(part, flags, Text.Combine(owned, "\n"))
+		if Written(part, flags, Text.Combine(split.Data(value, shared, placed) + split.Owned(starts, owners, value), "\n"))
 			File(part + ".mlir").Write(Part(value))
 			changed.Add(value)
 	changed

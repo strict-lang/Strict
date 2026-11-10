@@ -4,6 +4,4 @@ to Text
 	"return " + valueExpression
 Parse(text Text) Return
 	Parse("return 1").valueExpression is "1"
-	if text.StartsWith("return ")
-		return Return(text.Substring(7, text.Length - 7))
-	Return(text)
+	text.StartsWith("return ") then Return(text.Substring(7, text.Length - 7)) else Return(text)

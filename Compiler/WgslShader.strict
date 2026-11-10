@@ -90,8 +90,7 @@ Started Texts
 	let isCounted = MlirLoops(function, position).Collection is ""
 	let isRanged = function.method.instructions(position).payload(1) is 1
 	let counter = isRanged then "n_add(n_of(numbers[" + source + "]), n_int(i32(at)))" else "n_int(i32(at))"
-	let item = isCounted then counter else "n_of(n_item(" + source + ", at))"
-	("v_index = " + counter + ";", "v_value = " + item + ";")
+	("v_index = " + counter + ";", "v_value = " + (isCounted then counter else "n_of(n_item(" + source + ", at))") + ";")
 Scripts(functions List(MlirFunction)) Text
 	WgslShader.Scripts(List(MlirFunction) + Scaled.function).StartsWith(Marker + "\n;(Module[\"strictShaders\"] ||= {})")
 	WgslShader.Scripts(List(MlirFunction) + Doubling.function).IndexOf("Rows_Doubled_1_gpu2s") > 0

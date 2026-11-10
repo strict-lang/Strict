@@ -79,8 +79,7 @@ Constructed(entry InstructionEntry, owner TypeEntry, built Texts) Texts
 		return owned.Reconstructed(entry, owner, built)
 	let old = "%t" + position + "old"
 	let compared = "    %t" + position + "re = arith.cmpf une, " + old + ", %zero : f64"
-	let checked = (function.Load(old, "%structDestination"), compared)
-	let opened = checked + owned.Placed(MlirOwned.Reusing.Slice(1, 3), 0, 0)
+	let opened = (function.Load(old, "%structDestination"), compared) + owned.Placed(MlirOwned.Reusing.Slice(1, 3), 0, 0)
 	let reused = owned.Rewritten(entry, owner, "") + function.Store(old, "%r" + entry.payload(0))
 	let fresh = owned.Placed(MlirOwned.Reusing.Slice(4, 2), 0, 0) + built
 	opened + reused + fresh + owned.Placed(MlirOwned.Reusing.Slice(6, 2), 0, 0)
@@ -93,8 +92,7 @@ Destined(entry InstructionEntry, next InstructionEntry, compiled Texts) Texts
 	let callees = MlirModule(function.types, "").Called(function, position)
 	if (callees.Length is 0 then true else MlirStructs(callees.First, 0).Consumes(1) is false)
 		return MlirElements(function, position).Destined(entry, next, compiled)
-	let isForwarded = (next.kind is InstructionType.Return) and (next.payload(0) is entry.payload(0))
-	if isForwarded and Consumes(0)
+	if ((next.kind is InstructionType.Return) and (next.payload(0) is entry.payload(0))) and Consumes(0)
 		return (function.Load("%t" + position + "sd", "%structDestination"), Destine("sd")) + compiled
 	Element(entry, next, compiled, TypeEntry.ShortName(callees.First.method.returnType))
 Element(entry InstructionEntry, next InstructionEntry, compiled Texts, returned Text) Texts

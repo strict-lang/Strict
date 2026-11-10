@@ -38,8 +38,7 @@ IsCarried(name Text) Boolean
 	for function.method.instructions
 		if (value.kind is in MlirAlone.Named) and (value.texts(0) is name)
 			let isLoad = value.kind is InstructionType.LoadVariableToRegister
-			let isKept = isLoad then IsKeptRead(index, name, 0) else IsKeptValue(index, value.payload(0), (name), 0)
-			if isKept is false
+			if (isLoad then IsKeptRead(index, name, 0) else IsKeptValue(index, value.payload(0), (name), 0)) is false
 				return false
 	true
 IsPlain(name Text) Boolean
@@ -71,8 +70,7 @@ IsSafeUse(at Number, register Number, name Text, depth Number) Boolean
 	let entry = function.method.instructions(at)
 	if (entry.kind is InstructionType.StoreRegisterToVariable) and (entry.payload(0) is register)
 		return IsBack(entry.texts(0), name, depth)
-	let isLooped = (entry.kind is InstructionType.LoopBegin) and (entry.payload(0) is register)
-	if isLooped or (depth > 6)
+	if ((entry.kind is InstructionType.LoopBegin) and (entry.payload(0) is register)) or (depth > 6)
 		return false
 	let isPassed = (entry.kind is InstructionType.Invoke) and MlirOwned(function, 0).IsLeaked(at, register)
 	(isPassed is false) or (IsKeepingCall(at, (name), depth + 1) and IsKeptRead(at, name, depth + 1))
@@ -141,8 +139,7 @@ Typed Texts
 	Returning.Typed is ("outer")
 	MlirCarried(MlirFunction(Types, MlirInstances.Outer, Same)).Typed is ("value", "outer")
 	let returned = TypeEntry.ShortName(function.method.returnType)
-	let isInstance = TypeEntry.ShortName(function.type.Name) is returned
-	(isInstance then ("value") else List(Text)) + Named(returned)
+	((TypeEntry.ShortName(function.type.Name) is returned) then ("value") else List(Text)) + Named(returned)
 Named(returned Text) Texts
 	Returning.Named("Outer") is ("outer")
 	Returning.Named("Shape").Length is 0

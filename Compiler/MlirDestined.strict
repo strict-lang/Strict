@@ -149,8 +149,7 @@ IsAlone(name Text) Boolean
 	if MlirOwned(function, position).IsOwned(name) is false
 		return false
 	for function.method.instructions
-		let isNamed = value.texts.Length > 0 then value.texts(0) is name else false
-		if isNamed and (IsRead(value, index) is false)
+		if (value.texts.Length > 0 then value.texts(0) is name else false) and (IsRead(value, index) is false)
 			return false
 	true
 IsRead(entry InstructionEntry, at Number) Boolean

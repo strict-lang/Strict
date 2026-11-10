@@ -138,8 +138,7 @@ Bounded(name Text) Texts
 	let positive = (Line(exact, "_a", "cmpi sge, " + exact + ", %one : i64"), Assumption(exact + "_a"))
 	let limit = MlirTyped.Integer.Constant(exact + "_l", "2147483648")
 	let below = (limit, Line(exact, "_b", "cmpi sle, " + exact + ", " + exact + "_l : i64"), Assumption(exact + "_b"))
-	let known = (Line(magic, "_a", "cmpi ne, " + magic + ", %inexact : i64"), Assumption(magic + "_a"))
-	positive + below + known
+	positive + below + (Line(magic, "_a", "cmpi ne, " + magic + ", %inexact : i64"), Assumption(magic + "_a"))
 Assumption(condition Text) Text
 	Wraps.Assumption("%c") is "    llvm.intr.assume %c : i1"
 	"    llvm.intr.assume " + condition + " : i1"

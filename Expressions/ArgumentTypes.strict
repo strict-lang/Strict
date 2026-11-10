@@ -98,8 +98,7 @@ Copied(call SyntaxNode, scope Scope, current Scope) Text
 Compared(call SyntaxNode, instance Text, method Text, scope Scope, current Scope) Text
 	Sizing.Compared(Grown, "Count", "Grow", Counted, Counted).StartsWith("ArgumentTypeMismatch: Count.Grow")
 	Sizing.Compared(Spread, "Count", "Spread", Counted, Counted) is "TooManyArguments: Count.Spread got 3 of 2"
-	let parameters = inference.types.ParameterScope(instance)
-	if parameters.Count(method) is not 1
+	if inference.types.ParameterScope(instance).Count(method) is not 1
 		return Overloads(inference.types).Unfit(call, instance, method, inference, scope, current)
 	let types = Declared(instance, method)
 	let arguments = Arguments(call, scope, current)
@@ -126,8 +125,7 @@ Matched(arguments Texts, types Texts, instance Text, method Text) Number
 	Sizing.Matched(List(Text) + "Text", List(Text) + "Text", "Letter", "from") is -1
 	Sizing.Matched(List(Text) + "Text", List(Text) + "Size", "Count", "from") is 0
 	let members = inference.types.MembersOf(instance).types
-	let isMember = (method is "from") and ((arguments - members).Length is 0)
-	isMember then -1 else Mismatched(arguments, types)
+	((method is "from") and ((arguments - members).Length is 0)) then -1 else Mismatched(arguments, types)
 Arguments(call SyntaxNode, scope Scope, current Scope) Texts
 	Sizing.Compared(Grown, "Count", "Missing", Counted, Counted) is ""
 	Sizing.IsBaseMismatch("Number", "Count") is false
@@ -136,8 +134,7 @@ Arguments(call SyntaxNode, scope Scope, current Scope) Texts
 	Sizing.Mismatch("Size", "Size") is false
 	Sizing.Mismatch("Count", "Xyz") is false
 	Sizing.Arguments(SyntaxParser(Tokenizer("count.Grow(area)").Tokens).Parse, Counted, Counted) is ("Area")
-	let start = call.Kind is "MethodCall" then 1 else 0
-	for Range(start, call.children.Length)
+	for Range((call.Kind is "MethodCall" then 1 else 0), call.children.Length)
 		inference.TypeOf(call.children(value), scope, current)
 Mismatched(arguments Texts, types Texts) Number
 	Sizing.Mismatched(("Area", "Count"), List(Text) + "Area") is -1

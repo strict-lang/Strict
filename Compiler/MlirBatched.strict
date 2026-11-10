@@ -56,8 +56,7 @@ Body Texts
 		let scalar = device.Started + device.Emitted(position + 1, function.method.LoopEndOf(position))
 		return grouped.IsUsed then grouped.Body + scalar else scalar
 	let loaded = function.Float is "f32" then Prefetched else List(Text) + "  ^loadStart:"
-	let body = device.Started + Emitted(false)
-	loaded + "    cf.br ^computeEntry" + "  ^computeEntry:" + Computing + Computed(body)
+	loaded + "    cf.br ^computeEntry" + "  ^computeEntry:" + Computing + Computed(device.Started + Emitted(false))
 Prefetched Texts
 	Paired.Prefetched.Length is 43 and Paired.Prefetched(34) is "  ^loaded:"
 	Paired.Prefetched(30) is "    %loadNext = arith.addi %at, %one : i64"

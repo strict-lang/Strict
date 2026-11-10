@@ -76,9 +76,7 @@ Literal(word Text) Number
 	Constraint.Literal("3") is 3
 	Constraint.Literal("Size.Length") is 0
 	let length = word to Number
-	if length is Error
-		return 0
-	length
+	length is Error then 0 else length
 Bits(constraint Text) Number
 	Constraint.Bits("value > 0 and value.Bits is 32") is 32
 	Constraint.Bits("value > 0") is 0

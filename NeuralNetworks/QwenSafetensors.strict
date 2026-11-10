@@ -108,8 +108,7 @@ FeedForward(layer Text, basis Basis) Slow(Experts)
 	let gated = file.Quantized(layer + "mlp.gate_proj", Number.SingleBits)
 	let inputs = file.Entry(layer + "mlp.down_proj.pre_quant_scale")
 	let expansion = Layer(gated + Projection(layer, "mlp.up_proj", inputs), Layer.Unbiased)
-	let reduction = Layer(Projection(layer, "mlp.down_proj", ""), Layer.Unbiased)
-	Experts(Experts.Dense(expansion, reduction), basis = basis)
+	Experts(Experts.Dense(expansion, Layer(Projection(layer, "mlp.down_proj", ""), Layer.Unbiased)), basis = basis)
 IsFolded(layer Text) Boolean
 	Plain.IsFolded("layers.0.")
 	Tiny.IsFolded("layers.0.") is false

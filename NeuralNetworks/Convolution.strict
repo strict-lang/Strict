@@ -37,8 +37,7 @@ Folds Float32s
 		let tap = (index / inputs).Floor % 4
 		let parity = (index / (4 * weights.Length / 9)).Floor
 		let output = (index / (4 * inputs)).Floor % biases.Length
-		let start = output * 9 * inputs + index % inputs
-		Fold(start, inputs, (parity / 2).Floor, (tap / 2).Floor, parity % 2, tap % 2)
+		Fold(output * 9 * inputs + index % inputs, inputs, (parity / 2).Floor, (tap / 2).Floor, parity % 2, tap % 2)
 Fold(start Number, inputs Number, rowParity Number, rowTap Number, columnParity Number, columnTap Number) Number
 	Box.Fold(0, 1, 0, 1, 0, 1) is 4
 	Center.Fold(0, 1, 1, 1, 0, 0) is 0

@@ -119,10 +119,7 @@ ValueNames(scope Scope) Texts
 	Counting.ValueNames(Scope(List(Text) + "value", List(Text) + "Count")) is ("number", "unused", "Increment", "Twice")
 	Counting.IsMissing("Count", "number") is false
 	Counting.IsMissing("Text", "Missing")
-	if scope.TypeOf("value") is ""
-		return List(Text)
-	let valueScope = inference.types.ShapeScope(scope.TypeOf("value"))
-	valueScope.names
+	scope.TypeOf("value") is "" then List(Text) else inference.types.ShapeScope(scope.TypeOf("value")).names
 UnknownNames(statement SyntaxNode, names Texts) Texts
 	Counting.IsUnimplemented(("Add Number", "\tAdd is 1"), 0, "A")
 	Counting.IsUnimplemented(("Add(other) Number", "\tAdder(1) is 1"), 0, "A") is false
@@ -139,9 +136,7 @@ IsKnown(name Text, names Texts) Boolean
 	IsKnown("b", ("Number", "a")) is false
 	if name is in names
 		return true
-	if name.EndsWith("s") is false
-		return false
-	name.Substring(0, name.Length - 1) is in names
+	name.EndsWith("s") is false then false else name.Substring(0, name.Length - 1) is in names
 Unimplemented(path Text, lines Texts) Texts
 	Counting.Unimplemented("A.strict", Untested + "\tTwice(3) is 6").Length is 1
 	Counting.Unimplemented("A.strict", Untested) is ("ImplementationNotFound: Twice in A.strict:1")

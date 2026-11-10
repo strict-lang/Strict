@@ -23,20 +23,14 @@ Precedence Number
 	SyntaxNode("Not", "").Precedence is 3 and (SyntaxNode("Number", "+").Precedence is 0)
 	if Kind is "Not"
 		return 3
-	if Kind is not "Binary" or text is not in operators
-		return 0
-	precedences(operators.Index(text))
+	Kind is not "Binary" or text is not in operators then 0 else precedences(operators.Index(text))
 to Text
 	SyntaxNode("Number", "1") to Text is "1"
 	SyntaxNode("Binary", "+", (SyntaxNode("Number", "1"), SyntaxNode("Number", "2"))) to Text is "1 + 2"
 	SyntaxNode("List", "", (SyntaxNode("Number", "1"), SyntaxNode("Number", "2"))) to Text is "(1, 2)"
 	SyntaxNode("Reassignment", "", (identifier, one)) to Text is "a = 1"
 	SyntaxNode("Identifier", "a", (one, one)) to Text is "a"
-	if Kind is "Binary"
-		return BinaryText
-	if Kind is "List"
-		return "(" + ArgumentsText(0) + ")"
-	CallText
+	Kind is "Binary" then BinaryText else Kind is "List" then "(" + ArgumentsText(0) + ")" else CallText
 BinaryText Text
 	SyntaxNode("Binary", "*", (SyntaxNode("Missing", ""), SyntaxNode("Number", "2"))).BinaryText is "* 2"
 	SyntaxNode("Binary", "-", (one, SyntaxNode("Binary", "-", (one, two)))).BinaryText is "1 - (1 - 2)"
@@ -58,9 +52,7 @@ CallText Text
 		return ChildText(0, MemberPrecedence) + "." + text + "(" + ArgumentsText(1) + ")"
 	if Kind is "Index"
 		return ChildText(0, MemberPrecedence) + "(" + ArgumentsText(1) + ")"
-	if Kind is "Member"
-		return ChildText(0, MemberPrecedence) + "." + text
-	UnaryText
+	Kind is "Member" then ChildText(0, MemberPrecedence) + "." + text else UnaryText
 UnaryText Text
 	SyntaxNode("Not", "", (SyntaxNode("Identifier", "a"), SyntaxNode("Identifier", "a"))).UnaryText is "not a"
 	SyntaxNode("Negate", "", (one, one)).UnaryText is "-1"
@@ -69,9 +61,7 @@ UnaryText Text
 	constant negatePrecedence = 15
 	if Kind is "Not"
 		return "not " + ChildText(0, notOperandPrecedence)
-	if Kind is "Negate"
-		return "-" + ChildText(0, negatePrecedence)
-	StatementText
+	Kind is "Negate" then "-" + ChildText(0, negatePrecedence) else StatementText
 StatementText Text
 	SyntaxNode("Return", "", (SyntaxNode("Number", "1"), SyntaxNode("Number", "1"))).StatementText is "return 1"
 	SyntaxNode("Declaration", "let a", (SyntaxNode("Number", "1"), SyntaxNode("Number", "1"))).StatementText is "let a = 1"
@@ -99,9 +89,7 @@ ChildText(childIndex Number, minimumPrecedence Number) Text
 	SyntaxNode("Index", "", (sum, one)).CallText is "(1 + 2)(1)"
 	let child = children(childIndex)
 	let childText = child to Text
-	if child.Precedence > 0 and child.Precedence < minimumPrecedence
-		return "(" + childText + ")"
-	childText
+	child.Precedence > 0 and child.Precedence < minimumPrecedence then "(" + childText + ")" else childText
 ArgumentsText(firstIndex Number) Text
 	SyntaxNode("Call", "Add", (SyntaxNode("Number", "1"), SyntaxNode("Number", "2"))).ArgumentsText(1) is "2"
 	StatementParser(Tokenizer("f(1, (a then b else c))").Tokens).ParseStatement to Text is "f(1, (a then b else c))"

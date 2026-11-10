@@ -20,8 +20,7 @@ Grown(rows List(Numbers), depth Number, picked Number) DecisionTree
 		return Leaf(Majority(Kinds(rows)))
 	let position = features.Length
 	let left = Node(split).Grown(Side(rows, split, true), depth - 1, picked)
-	let right = left.Grown(Side(rows, split, false), depth - 1, picked)
-	right.Linked(position, left.features.Length)
+	left.Grown(Side(rows, split, false), depth - 1, picked).Linked(position, left.features.Length)
 Leaf(label Number) DecisionTree
 	Empty.Leaf(1).labels is (1)
 	DecisionTree(features + -1, thresholds + 0, rights + -1, labels + label)

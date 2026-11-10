@@ -45,8 +45,7 @@ Slot(at Number, register Number) Number
 	let names = Invocation(entry, List(VmValue), VmValue.None).ParameterNames
 	for MlirInstances(function, 0).Stored(function.TypeOf(entry.texts(0), true))
 		let chosen = names.Index(value.Name) < 0 then index else names.Index(value.Name)
-		let isPassed = chosen < entry.payload(countPosition)
-		if isPassed then entry.payload(countPosition + 1 + chosen) is register else false
+		if chosen < entry.payload(countPosition) then entry.payload(countPosition + 1 + chosen) is register else false
 			return index
 	-1
 Target(at Number, slot Number) Text

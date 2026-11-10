@@ -34,8 +34,7 @@ Ran(types List(TypeEntry), root Text, files Texts, inference TypeInference) Numb
 	let held = part is "" then cache.Held(TypeSource.Root + "/obj") else List(Text)
 	let isFresh = (part is not "") or (cache.IsCurrent is false)
 	let unoptimized = FileCompiler(logger, true, isWhole then "*" else "", false)
-	let plain = isFresh then unoptimized.Built(path, root, true, files, inference).entries else types
-	let survivors = Survivors(plain)
+	let survivors = Survivors(isFresh then unoptimized.Built(path, root, true, files, inference).entries else types)
 	if cache.Released(held) is false
 		logger.Log("Could not release the mutation locks: " + Text.Combine(held, ", "))
 	survivors
@@ -85,8 +84,7 @@ Round(types List(TypeEntry), ready List(TypeEntry), methods List(MethodEntry), b
 	for methods
 		let candidates = Mutation(value).Candidates
 		if candidates.Length > round
-			let at = types.First.methods.Index(value)
-			let alone = Alone(ready, at, Mutation(value).Mutant(candidates(round)))
+			let alone = Alone(ready, types.First.methods.Index(value), Mutation(value).Mutant(candidates(round)))
 			let isPassing = Passes(alone, TestCodegen.Runner + index, budgets(index))
 			if isPassing and Passes(alone, TestCodegen.Runner + methods.Length, seconds)
 				let lines = File(path).ReadLines

@@ -12,8 +12,7 @@ Sourced Texts
 		return (gpu.Temp("gb"), "1")
 	let collection = MlirLoops(function, position).Collection
 	let isPlain = (collection is "List(Number)") or (MlirBytes(function, position).Iterated is MlirDoubles.LanesFormat)
-	let number = collection is "" then "0" else isPlain then "1" else "2"
-	(collection is "" then gpu.Temp("b") else gpu.Temp("v"), number)
+	(collection is "" then gpu.Temp("b") else gpu.Temp("v"), (collection is "" then "0" else isPlain then "1" else "2"))
 Launched Texts
 	Summing.Launched.Last is "  ^loop2kernel:"
 	Text.Combine(MlirTokenLaunch(MlirGated.Gating.function, 2).Launched).IndexOf("%t2ggated = arith.constant 1.0") > 0

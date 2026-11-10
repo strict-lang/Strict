@@ -125,9 +125,7 @@ Floored(source Text, target Text) Texts
 	if exact.Parts.Length is 0
 		return List(Text)
 	let grouped = MlirGroupIndex(exact.function, exact.at).Floored
-	if grouped.Length > 0
-		return grouped
-	OrdinaryFloor(source, target)
+	grouped.Length > 0 then grouped else OrdinaryFloor(source, target)
 OrdinaryFloor(source Text, target Text) Texts
 	Wrapped.Floored("%r1", "%r2")(12) is "    %x5fx = arith.select %x5fv, %x5ff, %x5ff : i64"
 	Wrapped.Floored("%r1", "%r2")(13) is "    %x5fy = arith.select %x5fv, %one, %one : i64"

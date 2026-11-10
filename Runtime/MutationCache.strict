@@ -34,9 +34,7 @@ Held(slots Text) Texts
 	MutationCache("Compiler/output/Missing/Waiting.strict", true).Held("Compiler/output/Missing/Deeper").Length is 0
 	Sample.Saved(List(Text)) and (Sample.Held("Compiler/output/Missing/Deeper").Length is 0)
 	let whole = isWhole and (IsCurrent is false) then Claimed(List(Text) + Lock) else List(Text)
-	if IsCurrent
-		return Released(whole) then List(Text) else whole
-	whole + Claimed(Slotted(slots))
+	IsCurrent then (Released(whole) then List(Text) else whole) else whole + Claimed(Slotted(slots))
 Lock Text
 	Sample.Lock is Sample.Location + "." + HashCode(Sample.Stamp).number + ".lock"
 	Location + "." + HashCode(Stamp).number + ".lock"

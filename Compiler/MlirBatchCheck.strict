@@ -26,8 +26,7 @@ Reads Numbers
 	reads
 IsSafe Boolean
 	for Range(position + 1, function.method.LoopEndOf(position))
-		let entry = function.method.instructions(value)
-		if IsAllowed(value, entry) is false
+		if IsAllowed(value, function.method.instructions(value)) is false
 			return false
 	true
 IsAllowed(at Number, entry InstructionEntry) Boolean

@@ -30,9 +30,7 @@ IsListed(kind Text) Boolean
 	Sample.IsListed("Strict/Math/Pairing")
 	Sample.IsListed("Number") is false
 	let member = MlirFlats(function, position).Flat(function.TypeOf(kind, true))
-	if member.Count is not 2
-		return false
-	TypeEntry.ShortName(member.typeName) is in ("List(Number)", "Numbers")
+	member.Count is not 2 then false else TypeEntry.ShortName(member.typeName) is in ("List(Number)", "Numbers")
 Helper(entry InstructionEntry, owner Text, name Text) Text
 	Sample.Helper(Reading, "Pairing", "X") is "strict_two_x"
 	Sample.Helper(Reading, "Pairing", "Length") is "strict_two_length"

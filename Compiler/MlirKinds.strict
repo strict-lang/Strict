@@ -31,8 +31,7 @@ KindOf(position Number, register Number) Text
 IsChanged(at Number, register Number) Boolean
 	MlirKinds(MlirChanged.Taking.function).IsChanged(0, 1)
 	MlirKinds(MlirChanged.Taking.function).IsChanged(0, 0) is false
-	let steps = function.method.instructions
-	let entry = steps(at)
+	let entry = function.method.instructions(at)
 	let offset = register - entry.payload(0)
 	if (entry.kind is not InstructionType.Invoke) or (offset < 1) or (offset > 1 + entry.payload(5 + entry.payload(3)))
 		return false
@@ -79,8 +78,7 @@ Writer(position Number, register Number) Number
 	let reuse = LoadReuse(function.method.instructions)
 	for position
 		let at = position - 1 - index
-		let entry = function.method.instructions(at)
-		if (reuse.Written(entry) is register) or IsChanged(at, register)
+		if (reuse.Written(function.method.instructions(at)) is register) or IsChanged(at, register)
 			return at
 	-1
 VariableKind(position Number, name Text) Text

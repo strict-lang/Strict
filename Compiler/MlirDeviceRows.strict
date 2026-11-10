@@ -37,8 +37,7 @@ Emitted(entry InstructionEntry) Texts
 	let position = MlirExact(function, at).Position("%r" + entry.payload(1), Temp("k"))
 	let called = " = func.call @strict_device_row(" + Temp("d") + ", " + Temp("k") + ")" + Types
 	let row = (MlirTyped.Pointer.Load(Temp("d"), list + "_d"), "    " + Temp("w") + ":3" + called)
-	let failed = MlirDeviceStatements(function, at).Failed
-	position + row + Bounded + failed + Viewed(list, "%r" + entry.payload(0))
+	position + row + Bounded + MlirDeviceStatements(function, at).Failed + Viewed(list, "%r" + entry.payload(0))
 Bounded Texts
 	MlirDeviceRows(Picking, 4).Bounded.Last is "    cf.cond_br %d4o, ^d4read, ^d4fail"
 	MlirDeviceRows(Picking, 4).Emitted(Biased)(2) is "    %d4n = llvm.load %v_biases_n : !llvm.ptr -> i64"

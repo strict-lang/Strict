@@ -72,8 +72,7 @@ Indexed(node SyntaxNode, block CodeBlock) CodeBlock
 	let type = values.TypeOf(named, block)
 	if type.StartsWith("Dictionary(") or (values.inference.types.MethodsOf(type).TypeOf("get") is not "")
 		return ErrorCodegen(values).Handled(SyntaxNode("MethodCall", "get", (named, node.children.Last)), block)
-	let isError = isCall and (block.scope.TypeOf(node.text) is "Error")
-	isError then WithValue(node, block) else Element(node, block)
+	(isCall and (block.scope.TypeOf(node.text) is "Error")) then WithValue(node, block) else Element(node, block)
 Keyed(statement SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Keyed(One, Named) is One
 	Plain.Keyed(SyntaxNode("Reassignment", "", (SyntaxNode("Index", "named", One), One)), Named).children(1) is One

@@ -161,8 +161,7 @@ Conditional(node SyntaxNode, block CodeBlock, hasElse Boolean, aggregation Text)
 	let branch = CodeBlock(narrowed.instructions, narrowed.register, narrowed.nextId, condition.scope)
 	let body = aggregation is "" then branch else LoopCodegen(MethodCodegen(values)).Collected(branch, aggregation)
 	let skipsElse = hasElse and body.instructions.Last.kind is not InstructionType.Return
-	let flagged = skipsElse then body.Flagged else body
-	flagged.Add(InstructionEntry.Jump(InstructionType.JumpEnd, condition.nextId - 1))
+	(skipsElse then body.Flagged else body).Add(InstructionEntry.Jump(InstructionType.JumpEnd, condition.nextId - 1))
 Else(node SyntaxNode, block CodeBlock, hasElse Boolean) CodeBlock
 	Plain.Generate(ElseBody, NoScope, "None").instructions.Length is 12
 	Plain.Generate(ReturnElse, NoScope, "None").instructions.Length is 9
@@ -185,5 +184,4 @@ Log(argument SyntaxNode, block CodeBlock) CodeBlock
 Slices(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Slices(SliceFor, CodeBlock.Empty).instructions(0).texts.Last is "forResult"
 	let loops = LoopCodegen(MethodCodegen(values))
-	let started = loops.Started(block, "Numbers", "list").Declare("forResult", "Numbers")
-	loops.Loop(node, started.At(block.register), "list")
+	loops.Loop(node, loops.Started(block, "Numbers", "list").Declare("forResult", "Numbers").At(block.register), "list")

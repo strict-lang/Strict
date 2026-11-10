@@ -72,8 +72,7 @@ Lane(entry InstructionEntry, name Text, lane Number) Texts
 	let call = "    " + temp + "b" + lane + " = func.call @strict_byte_lane" + operands
 	let passed = Passed(entry, name)
 	let target = temp + "a" + lane
-	let loaded = passed >= 0 then function.Load(target, "%r" + passed) else Default(entry, name, target)
-	(loaded, shift, call)
+	((passed >= 0 then function.Load(target, "%r" + passed) else Default(entry, name, target)), shift, call)
 Passed(entry InstructionEntry, name Text) Number
 	Sample.Passed(Made, "green") is 1
 	Sample.Passed(Tinted, "alpha") is -1

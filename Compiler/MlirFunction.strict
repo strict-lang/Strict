@@ -40,8 +40,7 @@ Parameters Texts
 	names
 VariableNames Texts
 	Counter.VariableNames is ("index", "value")
-	let declared = (("index", "value") + Parameters) + MlirInstances(value, 0).StoredNames(type)
-	((declared + Named).Unique - "#this") - ""
+	((((("index", "value") + Parameters) + MlirInstances(value, 0).StoredNames(type)) + Named).Unique - "#this") - ""
 Named Texts
 	"    %q_input = llvm.load %v_input : !llvm.ptr -> f64" is in MlirGroups.Norming.function.Entry
 	("  ^stackChecked:" is in MlirFunction(MlirGroups.Norming.function, IsRecursive = false).Entry) is false

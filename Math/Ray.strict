@@ -7,6 +7,4 @@ At(distance Number) Vector3
 Ground(height Number) Vector3
 	Down.Ground(4) is Vector3(1, 2, 4)
 	Ray(Vector3.Zero, Vector3.UnitX).Ground(1) is Error("RayParallelToGround")
-	if direction.Z.Absolute < 0.000001
-		return Error("RayParallelToGround")
-	At((height - origin.Z) / direction.Z)
+	direction.Z.Absolute < 0.000001 then Error("RayParallelToGround") else At((height - origin.Z) / direction.Z)

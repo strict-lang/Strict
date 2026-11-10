@@ -152,9 +152,7 @@ IsElementStore Boolean
 	MlirLists(Written, 1).Emitted is MlirLists(Written, 1).ElementStored(Written.method.instructions(1))
 	MlirLists(Written, 2).Emitted is MlirLists(Written, 2).Copied(Written.method.instructions(2))
 	let entry = function.method.instructions(position)
-	if entry.kind is not InstructionType.StoreRegisterToVariable
-		return false
-	entry.texts(0).IndexOf("(") > 0
+	entry.kind is not InstructionType.StoreRegisterToVariable then false else entry.texts(0).IndexOf("(") > 0
 ElementStored(entry InstructionEntry) Texts
 	Text.Combine(MlirLists(Written, 1).ElementStored(Written.method.instructions(1))).IndexOf("strict_is_failure") > 0
 	MlirLists(Written, 1).ElementStored(Versioning).Last is "    llvm.store %t1s, %v_numbers : f64, !llvm.ptr"
@@ -188,8 +186,7 @@ Target(path Text) Texts
 		return List(Text) + function.Load(Temp("l"), "%v_" + target)
 	let slot = memory.Slot(Temp("op"), memory.Member(target).First, "ls")
 	let owner = function.Load(Temp("o"), "%v_" + target.Substring(0, dot))
-	let pointer = List(Text) + owner + memory.Pointer(Temp("o"), "o")
-	pointer + slot + function.Load(Temp("l"), Temp("ls"))
+	(List(Text) + owner + memory.Pointer(Temp("o"), "o")) + slot + function.Load(Temp("l"), Temp("ls"))
 Copied(entry InstructionEntry) Texts
 	MlirLists(Written, 2).Copied(Written.method.instructions(2)).Length is 3
 	MlirLists(Written, 2).Copied(MemberCopy).Last is "    llvm.store %t2oc, %v_numbers : f64, !llvm.ptr"

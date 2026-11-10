@@ -34,8 +34,7 @@ Reduced(reduction Text, returnType Text) Text
 	LoopCodegen(Adding).Reduced("", "Plus") is "add"
 	let hasAdd = OperatorCodegen(methods.values).HasOperator(returnType, "+")
 	let member = methods.values.inference.types.MembersOf(returnType).TypeOf("number")
-	let isNumber = (hasAdd is false) and (member is "Number")
-	if isNumber or (returnType is in ("Number", "Text"))
+	if ((hasAdd is false) and (member is "Number")) or (returnType is in ("Number", "Text"))
 		return reduction is in ("", "+") then "sum" else (reduction is "*" then "product" else "")
 	(reduction is "") and hasAdd then "add" else ""
 Aggregated(body SyntaxNode, block CodeBlock, returnType Text) CodeBlock
@@ -115,8 +114,7 @@ Collected(block CodeBlock, aggregation Text) CodeBlock
 		return TypeSums(methods).Added(block)
 	let loaded = block.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, "forResult"))
 	let operation = aggregation is "product" then InstructionType.Multiply else InstructionType.Add
-	let added = InstructionEntry.Binary(operation, (loaded.Result, block.Result, loaded.register))
-	loaded.Load(added).Stored("forResult")
+	loaded.Load(InstructionEntry.Binary(operation, (loaded.Result, block.Result, loaded.register))).Stored("forResult")
 Loop(node SyntaxNode, block CodeBlock, aggregation Text) CodeBlock
 	Plain.Begin(SyntaxNode("Call", "Range", ValueCodegen.Ones.children), CodeBlock.Empty).instructions.Length is 3
 	Plain.Begin(SyntaxNode("Call", "Range", ValueCodegen.Ones.children), CodeBlock.Empty).instructions(2).payload(1) is 1
@@ -190,8 +188,7 @@ Iterated(iterator SyntaxNode, block CodeBlock) SyntaxNode
 	let types = methods.values.inference.types
 	if (type is "Range") or types.IsPlural(type)
 		return iterator
-	let iteratorType = types.MethodsOf(type).TypeOf("for")
-	iteratorType.StartsWith("Iterator") then SyntaxNode("Member", "for", iterator) else iterator
+	types.MethodsOf(type).TypeOf("for").StartsWith("Iterator") then SyntaxNode("Member", "for", iterator) else iterator
 Begin(iterator SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Begin(SyntaxNode("Number", "3"), CodeBlock.Empty).instructions.Last.kind is InstructionType.LoopBegin
 	Plain.Begin(SyntaxNode("Identifier", "r"), CodeBlock.Empty.Declare("r", "Range")).instructions.Length is 4

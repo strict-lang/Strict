@@ -69,8 +69,7 @@ Line(line SyntaxNode, method Text, code CodeBlock) Slow(CodeBlock)
 	Even.Line(Declaring, "IsEven", Counter).scope.TypeOf(ErrorCodegen.Tested) is "Error"
 	if line.Kind is not "Declaration"
 		return Checked(line, method, code)
-	let prepared = Started(code, Place(line, method))
-	let marked = prepared.WithNextId.Declare(ErrorCodegen.FailureMarker, code.nextId to Text)
+	let marked = Started(code, Place(line, method)).WithNextId.Declare(ErrorCodegen.FailureMarker, code.nextId to Text)
 	let declared = MethodCodegen(types.Generator).Statement(line, marked, false).Declare(ErrorCodegen.FailureMarker, "")
 	let skip = declared.Flagged.Add(InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, declared.nextId)).WithNextId
 	let error = skip.Add(InstructionEntry.Jump(InstructionType.JumpEnd, code.nextId)).Declare(ErrorCodegen.Tested, "Error")
@@ -79,8 +78,7 @@ Line(line SyntaxNode, method Text, code CodeBlock) Slow(CodeBlock)
 Checked(test SyntaxNode, method Text, block CodeBlock) Slow(CodeBlock)
 	Even.Checked(SyntaxNode("Boolean", "true"), "A", Counter).instructions.Last.kind is InstructionType.JumpEnd
 	let failure = block.nextId
-	let marked = block.WithNextId.Declare(ErrorCodegen.FailureMarker, failure to Text)
-	let timed = Started(marked, Place(test, method))
+	let timed = Started(block.WithNextId.Declare(ErrorCodegen.FailureMarker, failure to Text), Place(test, method))
 	let rounded = StepRounding(types.Generator).Rounded(test, timed)
 	let compared = Compared(rounded, timed).Declare(ErrorCodegen.FailureMarker, "")
 	let place = Place(test, method)

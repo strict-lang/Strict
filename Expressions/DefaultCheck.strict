@@ -136,9 +136,7 @@ IsConstantMember(member SyntaxNode) Boolean
 	Counting.IsConstant(SyntaxParser(Tokenizer("-Count(1, 2)").Tokens).Parse) is false
 	Counting.IsConstant(SyntaxParser(Tokenizer("Dictionary(Text, Number)").Tokens).Parse)
 	let expression = inference.ConstantOf(member.children(0).text, member.text)
-	if expression is ""
-		return true
-	IsConstant(SyntaxParser(Tokenizer(expression).Tokens).Parse)
+	expression is "" then true else IsConstant(SyntaxParser(Tokenizer(expression).Tokens).Parse)
 IsWrapper(call SyntaxNode) Boolean
 	Counting.IsWrapper(SyntaxParser(Tokenizer("Number(1)").Tokens).Parse)
 	Counting.IsWrapper(SyntaxParser(Tokenizer("Count(1, 2)").Tokens).Parse) is false

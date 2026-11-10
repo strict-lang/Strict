@@ -39,8 +39,7 @@ IsUsing(entry TypeEntry, names Texts) Boolean
 	Character.IsUsing(Holder, List(Text) + "AList") is false
 	for entry.UsedTypes + entry.Name
 		let open = value.IndexOf("(")
-		let bare = open > 0 then value.Substring(0, open) else value
-		if Path(bare).FileName.text is in names
+		if Path(open > 0 then value.Substring(0, open) else value).FileName.text is in names
 			return true
 	false
 Carried(last Answer) Answer

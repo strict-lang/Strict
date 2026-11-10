@@ -36,9 +36,7 @@ QwenEnd(text Text, start Number) Number
 		return contraction
 	if IsWordStart(text, start)
 		return Stretched(text, start + 1, 1)
-	if Kind(text, start) is 2
-		return start + 1
-	Punctuated(text, start)
+	Kind(text, start) is 2 then start + 1 else Punctuated(text, start)
 IsWordStart(text Text, start Number) Boolean
 	Qwen.IsWordStart("(a", 0)
 	Qwen.IsWordStart("\na", 0) is false
@@ -72,9 +70,7 @@ Spaced(text Text, start Number) Number
 	for Range(start, ending)
 		if text(value) is in ("\r", "\n")
 			lastBreak = value
-	if lastBreak >= 0
-		return lastBreak + 1
-	(ending < text.Length) and (ending - start > 1) then ending - 1 else ending
+	lastBreak >= 0 then lastBreak + 1 else (ending < text.Length) and (ending - start > 1) then ending - 1 else ending
 Stretched(text Text, first Number, kind Number) Number
 	Gpt.Stretched("aab ", 1, 1) is 3
 	mutable ending = first

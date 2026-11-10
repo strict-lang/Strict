@@ -13,8 +13,7 @@ Lines Texts
 	Body.Lines.First.StartsWith("  llvm.func @Board_Blurred_1_gpu5(" + MlirDevice.Fixed + ", %f_board_cells_d: !llvm.ptr")
 	Body.Lines.Last is "  }"
 	Text.Combine(Body.Lines).IndexOf("@Board_Picked_2_whole_flat(%f_board_cells_d, %at) : (!llvm.ptr, i64)") > 0
-	let device = MlirDevice(function, position)
-	let header = "  llvm.func @" + device.Name + "(" + MlirDevice.Fixed + Freed + Attributes
+	let header = "  llvm.func @" + MlirDevice(function, position).Name + "(" + MlirDevice.Fixed + Freed + Attributes
 	(List(Text) + header) + Threads + MlirGrouped.Plain + "  ^body:" + Arguments + Stored + MlirDevice.Ending
 Kernels Texts
 	Body.Kernels.Length is Body.Lines.Length * 2 + Body.Functions.Length

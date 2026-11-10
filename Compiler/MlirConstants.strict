@@ -25,8 +25,7 @@ TextElements(literal Runtime/VmValue) Numbers
 Constant Runtime/VmValue
 	MlirConstants(MlirTexts.Joined, 0).Constant.text is "a%"
 	if position >= function.method.instructions.Length
-		let referenced = MlirInstances(function, 0).ReferencedConstants
-		let member = referenced(position - MlirInstances.MemberBase)
+		let member = MlirInstances(function, 0).ReferencedConstants(position - MlirInstances.MemberBase)
 		return Natives(function.types).Initial(member)
 	let entry = function.method.instructions(position)
 	PayloadDecoder(entry).Value(entry.kind is InstructionType.LoadConstantToRegister then 1 else 0)
@@ -47,9 +46,7 @@ IsShared Boolean
 	MlirConstants(MlirCalls.Hashes, 1).IsShared is false
 	let entry = function.method.instructions(position)
 	let decoder = PayloadDecoder(entry)
-	if decoder.Text(2) is not "from"
-		return false
-	IsPlain(decoder) and AreConstants(entry)
+	decoder.Text(2) is not "from" then false else IsPlain(decoder) and AreConstants(entry)
 IsPlain(decoder PayloadDecoder) Boolean
 	MlirConstants(MlirInstances.Shapes, 1).IsPlain(PayloadDecoder(MlirInstances.Built))
 	MlirConstants(MlirCalls.Hashes, 1).IsPlain(PayloadDecoder(MlirCalls.Hashed)) is false

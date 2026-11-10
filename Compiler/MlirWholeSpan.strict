@@ -53,9 +53,7 @@ At(at Number) Texts
 		return Listed(at)
 	if entry.kind is InstructionType.LoadVariableToRegister
 		return Loaded(at)
-	if entry.kind is in Bounded
-		return Combined(at)
-	List(Text)
+	entry.kind is in Bounded then Combined(at) else List(Text)
 Counted(at Number) Texts
 	let entry = function.method.instructions(at)
 	let start = Source(entry.payload(0), at)
@@ -65,9 +63,7 @@ Counted(at Number) Texts
 	List(Text) + ("    " + Name("wn", at) + " = arith.addf " + start + ", " + end + " : f64")
 Listed(at Number) Texts
 	let entry = function.method.instructions(at)
-	let values = PayloadDecoder(entry)
-	let index = entry.kind is InstructionType.StoreConstantToVariable then 0 else 1
-	let number = values.Value(index).number
+	let number = PayloadDecoder(entry).Value(entry.kind is InstructionType.StoreConstantToVariable then 0 else 1).number
 	List(Text) + ("    " + Name("wb", at) + " = arith.constant " + MlirStatements.Copy.Hex(number.Absolute) + " : f64")
 Loaded(at Number) Texts
 	let entry = function.method.instructions(at)
@@ -105,8 +101,7 @@ Source(register Number, at Number) Text
 	let entry = function.method.instructions(writer)
 	if entry.kind is InstructionType.LoadVariableToRegister
 		return Variable(entry, writer)
-	let isBounded = (entry.kind is in Bounded) or (entry.kind is in Constants)
-	isBounded then Name("wb", writer) else "%t" + position + "whlimit"
+	((entry.kind is in Bounded) or (entry.kind is in Constants)) then Name("wb", writer) else "%t" + position + "whlimit"
 Variable(entry InstructionEntry, at Number) Text
 	if entry.texts(0) is in ("value", "index")
 		return Name("wn", Earlier(0, at, true))

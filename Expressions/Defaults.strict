@@ -29,5 +29,4 @@ Constructors(scope Scope, names Texts, members Scope) Scope
 	mutable types = List(Mutable(Text))
 	for names
 		types.Add(members.TypeOf(value))
-	let built = Scope(("from", "from types"), (Text.Combine(names, ","), Text.Combine(types, ",")))
-	built.WithAll(scope.names, scope.types)
+	Scope(("from", "from types"), (Text.Combine(names, ","), Text.Combine(types, ","))).WithAll(scope.names, scope.types)

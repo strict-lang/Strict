@@ -91,7 +91,6 @@ StoredBack(call SyntaxNode, invoked CodeBlock, block CodeBlock) CodeBlock
 	let target = call.children(0)
 	if (target.Kind is not "Identifier") or (block.scope.TypeOf(target.text + " mutable") is "")
 		return invoked
-	let type = values.TypeOf(target, block)
-	if values.inference.types.ParameterScope(type).TypeOf(method + " changes") is ""
+	if values.inference.types.ParameterScope(values.TypeOf(target, block)).TypeOf(method + " changes") is ""
 		return invoked
 	invoked.Add(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, invoked.register, target.text))

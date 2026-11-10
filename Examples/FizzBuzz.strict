@@ -8,11 +8,7 @@ Classify Text
 	FizzBuzz(7).Classify is "7"
 	if number % FizzBuzzDivisor is 0
 		return "FizzBuzz"
-	if number % 3 is 0
-		return "Fizz"
-	if number % 5 is 0
-		return "Buzz"
-	number to Text
+	number % 3 is 0 then "Fizz" else number % 5 is 0 then "Buzz" else number to Text
 Run
 	constant three = FizzBuzz(3)
 	constant five = FizzBuzz(5)

@@ -13,8 +13,7 @@ Module(path Text, root Text, isCounting Boolean, isProgram Boolean, platform = -
 	NativeFolder(Logger).Module("Examples/NativeAdd", ".", false, false).types.First.Name.EndsWith("Adder")
 	let started = Process.Elapsed
 	let paths = Paths(path)
-	let isCollected = isCounting or Directory.Exists(path)
-	let loaded = isCollected then Collected(path, root) else Tested(path, root, sources)
+	let loaded = (isCounting or Directory.Exists(path)) then Collected(path, root) else Tested(path, root, sources)
 	let types = isProgram then Programmed(loaded, path, root, sources) else loaded
 	let counted = isCounting then CountedFiles(paths, root) else List(Text)
 	let symbol = platform is Platform.IOS then "strict_main" else "main"
@@ -109,8 +108,7 @@ Typed(path Text, root Text, files Texts, inference TypeInference, known Dictiona
 	NativeFolder(Logger).Typed("Missing.strict", ".", List(Text), ResolveCheck.Counting, none).entries.Length is 0
 	if File(path).Exists is false
 		return FileCompiler.Unlinked
-	let isFresh = (selection is "") and (Execute(logger).Stale(List(Text) + path).Length is 0)
-	if isFresh
+	if (selection is "") and (Execute(logger).Stale(List(Text) + path).Length is 0)
 		return FileCompiler.Unlinked.With(Execute(logger).Loaded(path, root))
 	let linked = FileCompiler(logger, false, selection).Built(path, root, true, files, inference, known)
 	if linked.entries.Length is 0

@@ -124,8 +124,7 @@ IsInsideLoop(at Number) Boolean
 	Row.IsInsideLoop(9)
 	Row.IsInsideLoop(20) is false
 	for at
-		let isBegin = function.method.instructions(index).kind is InstructionType.LoopBegin
-		if isBegin and (function.method.LoopEndOf(index) > at)
+		if (function.method.instructions(index).kind is InstructionType.LoopBegin) and (function.method.LoopEndOf(index) > at)
 			return true
 	false
 IsCalled(at Number, depth Number) Boolean

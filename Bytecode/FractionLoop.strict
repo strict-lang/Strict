@@ -7,11 +7,8 @@ Merged(loop SyntaxNode) SyntaxNode
 	let term = Term(loop)
 	if (term.Kind is not "Binary") or (term.text is not "/")
 		return loop
-	let numerator = term.children(0) to Text
-	let parts = numerator is "1 - 2 * (value % 2)" then Linear(term.children(1), "value") else ""
-	if (parts is "") or (Bound(loop).Kind is not "Number")
-		return loop
-	Built(loop, parts)
+	let parts = (term.children(0) to Text) is "1 - 2 * (value % 2)" then Linear(term.children(1), "value") else ""
+	(parts is "") or (Bound(loop).Kind is not "Number") then loop else Built(loop, parts)
 Term(loop SyntaxNode) SyntaxNode
 	let body = loop.Kind is "For" then loop.children.Last else loop
 	let statement = body.Kind is "Body" then (body.children.Length is 1 then body.children(0) else loop) else body
@@ -40,18 +37,14 @@ Product(node SyntaxNode, name Text) Text
 	let right = node.children(1)
 	if (left.Kind is "Number") and (right.Kind is "Identifier") and (right.text is name)
 		return left.text
-	if (right.Kind is "Number") and (left.Kind is "Identifier") and (left.text is name)
-		return right.text
-	""
+	(right.Kind is "Number") and (left.Kind is "Identifier") and (left.text is name) then right.text else ""
 Built(loop SyntaxNode, parts Text) SyntaxNode
 	let coefficient = parts.Split("*")(0)
 	let offset = parts.Split("*")(1)
 	let start = loop.children(0).children(0)
 	let tail = start.text.EndsWith("0") or start.text.EndsWith("2") or start.text.EndsWith("4")
-	let even = tail or start.text.EndsWith("6") or start.text.EndsWith("8")
-	let factor = even then coefficient else "-" + coefficient
-	let acc = loop.children.Last.children(0).children(0).text
-	let name = SyntaxNode("Identifier", acc)
+	let factor = (tail or start.text.EndsWith("6") or start.text.EndsWith("8")) then coefficient else "-" + coefficient
+	let name = SyntaxNode("Identifier", loop.children.Last.children(0).children(0).text)
 	let summed = SyntaxNode("MethodCall", "Sum", List(SyntaxNode) + SyntaxNode("Identifier", "forResult"))
 	let total = SyntaxNode("Reassignment", "", (name, Bin("+", name, summed)))
 	let setup = Blocks(loop).children + (List(SyntaxNode) + Group(loop, start, coefficient, offset, factor))
@@ -59,8 +52,7 @@ Built(loop SyntaxNode, parts Text) SyntaxNode
 Blocks(loop SyntaxNode) SyntaxNode
 	let start = loop.children(0).children(0)
 	let end = loop.children(0).children(1)
-	let span = start.text is "0" then end else Bin("-", end, start)
-	let quarter = Bin("/", span, SyntaxNode("Number", "4"))
+	let quarter = Bin("/", (start.text is "0" then end else Bin("-", end, start)), SyntaxNode("Number", "4"))
 	let blocks = SyntaxNode("MethodCall", "Floor", List(SyntaxNode) + quarter)
 	let divided = Bin("/", SyntaxNode("Identifier", "blocks"), SyntaxNode("Number", "2500"))
 	let width = SyntaxNode("MethodCall", "Floor", List(SyntaxNode) + divided)
@@ -99,8 +91,7 @@ Widen(coefficient Text, offset Text) SyntaxNode
 	Bin("+", scaled, SyntaxNode("Number", offset))
 Sides(coefficient Text) SyntaxNode
 	let near = Bin("+", SyntaxNode("Identifier", "first"), Scale("2", coefficient))
-	let far = Bin("+", SyntaxNode("Identifier", "first"), Scale("3", coefficient))
-	Bin("*", near, far)
+	Bin("*", near, Bin("+", SyntaxNode("Identifier", "first"), Scale("3", coefficient)))
 Ratio(factor Text) SyntaxNode
 	let sum = Bin("+", SyntaxNode("Identifier", "left"), SyntaxNode("Identifier", "right"))
 	let prod = Bin("*", SyntaxNode("Identifier", "left"), SyntaxNode("Identifier", "right"))

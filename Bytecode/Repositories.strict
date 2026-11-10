@@ -111,8 +111,7 @@ Folder(paths Texts, type Text) Text
 	Repositories.Folder(List(Text) + "Math/Size.strict", "Vector2") is ""
 	let singular = type.EndsWith("s") then type.Substring(0, type.Length - 1) else type
 	for paths
-		let file = Path(value).FileName.text
-		if file is in (type + ".strict", singular + ".strict")
+		if Path(value).FileName.text is in (type + ".strict", singular + ".strict")
 			return value.IndexOf("/") < 0 then "." else value.Substring(0, value.LastIndexOf("/"))
 	""
 Files(paths Texts, folder Text) Texts

@@ -64,8 +64,7 @@ IsLooped(method MethodEntry, position Number) Boolean
 	mutable depth = 0
 	for Range(0, position)
 		let kind = method.instructions(value).kind
-		let step = kind is InstructionType.LoopBegin then 1 else kind is InstructionType.LoopEnd then -1 else 0
-		depth = depth + step
+		depth = depth + (kind is InstructionType.LoopBegin then 1 else kind is InstructionType.LoopEnd then -1 else 0)
 	depth > 0
 Jumped(method MethodEntry, call InstructionEntry) List(InstructionEntry)
 	Sample.Jumped(Counting, Again).Length is 4

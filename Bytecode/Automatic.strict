@@ -34,9 +34,7 @@ Generated(name Text) Texts
 		return List(Text) + "Members Variables" + Described
 	if name is in ("to HashCode", "Code")
 		return name is "Code" then (List(Text) + "Code Text" + Coded) else (List(Text) + "to HashCode" + Hashed)
-	if name is "IsNearlyEqual"
-		return Closed
-	List(Text) + ("Validated " + instance) + "\tvalue"
+	name is "IsNearlyEqual" then Closed else List(Text) + ("Validated " + instance) + "\tvalue"
 Closed Texts
 	Point.Closed.First is "IsNearlyEqual(other Point) Boolean"
 	Point.Closed.Last is "\ttestEqual0"

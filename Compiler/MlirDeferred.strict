@@ -78,8 +78,7 @@ Formats Texts
 	(list, packed, "    " + Temp("zb") + " = arith.constant 17 : i64", brain)
 Variant(width Text, letter Text) Texts
 	Doubling.Variant("16", "h").First is "  ^fhloop2packed:"
-	let packing = MlirFastLoop.Iterated + " " + width
-	let packed = MlirParallel(MlirFunction(function, Packing = packing), position).Iterated
+	let packed = MlirParallel(MlirFunction(function, Packing = MlirFastLoop.Iterated + " " + width), position).Iterated
 	Renamed(List(Text) + ("  ^loop" + position + "packed:") + packed, letter)
 Renamed(lines Texts, letter Text) Texts
 	Doubling.Renamed(List(Text) + "    %t2m = arith.cmpi slt, %t2ki, %to : i64", "s").Last.EndsWith("%fs2ki, %to : i64")
@@ -90,8 +89,7 @@ Copied(prefix Texts) Texts
 	Reading.Copied(List(Text)).First is "  ^fdloop2deferred:"
 	Text.Combine(Reading.Copied(MlirParallel(Reading.function, 2).Checked)).IndexOf("%fd2ki, %to : i64") > 0
 	let parallel = MlirParallel(MlirFunction(function, IsDeferred = true), position)
-	let started = List(Text) + ("  ^loop" + position + "deferred:")
-	Renamed(started + prefix + parallel.Body + parallel.Next.Slice(0, 3), "d")
+	Renamed((List(Text) + ("  ^loop" + position + "deferred:")) + prefix + parallel.Body + parallel.Next.Slice(0, 3), "d")
 Ready Texts
 	Reading.Ready.Last is "    %t2rr = arith.andi %t2rj0, %t2rj0 : i1"
 	mutable lines = ("    " + Temp("rz") + " = llvm.mlir.zero : !llvm.ptr", "    " + Temp("rt") + " = arith.constant true")

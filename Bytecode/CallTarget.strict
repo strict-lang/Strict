@@ -111,8 +111,7 @@ WithErrorArguments(node SyntaxNode, scope Scope) SyntaxNode
 	if node.text is not "Error" or node.children.Length > 0
 		return node
 	constant stacktraces = SyntaxNode("Call", "List", SyntaxNode("Identifier", "Stacktrace"))
-	let name = SyntaxNode("Text", "\"" + scope.TypeOf(CodeBlock.ErrorMarker) + "\"")
-	SyntaxNode("Call", "Error", (name, stacktraces))
+	SyntaxNode("Call", "Error", (SyntaxNode("Text", "\"" + scope.TypeOf(CodeBlock.ErrorMarker) + "\""), stacktraces))
 ImplicitOwner(name Text, scope Scope) Text
 	Plain.ImplicitOwner("x", Scope(("value", "outer"), ("A", "A"))) is "value"
 	Plain.ImplicitOwner("x", Scope(List(Text) + "value", List(Text) + "A")) is ""

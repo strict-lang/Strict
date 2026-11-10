@@ -23,6 +23,5 @@ Timed(rounds Number, times Number) Number
 		let started = Process.Elapsed
 		let pi = Pi(rounds)
 		let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
-		let difference = warmup is pi then "" else ", the first call differs"
-		logger.Log("" + milliseconds + " ms " + pi.Fixed(Digits) + difference)
+		logger.Log("" + milliseconds + " ms " + pi.Fixed(Digits) + (warmup is pi then "" else ", the first call differs"))
 	0

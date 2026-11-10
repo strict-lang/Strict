@@ -67,6 +67,4 @@ Count(iterable VmValue) Number
 	Count(VmValue.OfNumber(2.5)) is 2
 	Count(VmValue.OfText("abc")) is 3
 	Count(VmValue.OfNumber(-2)) is 0
-	if iterable.kind is "Number"
-		return iterable.number < 0 then 0 else iterable.number.Floor
-	iterable.Length
+	iterable.kind is "Number" then (iterable.number < 0 then 0 else iterable.number.Floor) else iterable.Length

@@ -36,8 +36,7 @@ Reassigned(node SyntaxNode) Texts
 	if (node.Kind is "Reassignment") and (node.children(0).Kind is "Identifier")
 		let assigned = node.children(1)
 		let isOperator = (assigned.Kind is "Binary") and (assigned.text is not in ("to", "then", "else"))
-		let isSafe = (assigned.Kind is in safe) or isOperator
-		return isSafe then List(Text) else List(Text) + node.children(0).text
+		return ((assigned.Kind is in safe) or isOperator) then List(Text) else List(Text) + node.children(0).text
 	mutable names = List(Mutable(Text))
 	for node.children
 		names = names + Reassigned(value)

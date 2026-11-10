@@ -2,14 +2,8 @@ has exitCode Number
 has Output Text
 has error Text
 Succeeded Boolean
-	if exitCode is 0
-		return true
-	false
+	exitCode is 0
 Failed Boolean
-	if exitCode is 0
-		return false
-	true
+	exitCode is not 0
 to Text
-	if Succeeded
-		return "ok exit=0"
-	"fail exit=" + exitCode to Text + " " + error
+	Succeeded then "ok exit=0" else "fail exit=" + exitCode to Text + " " + error

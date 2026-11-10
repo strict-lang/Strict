@@ -54,9 +54,7 @@ Needed Text
 Admitted Slow(Number)
 	MachineUse(Logger, "H3Video", 0, 0, true, Nowhere).Admitted is 0
 	let reply = Coordinator(logger, coordinator).Resolved(Needed)
-	if reply.StartsWith("refused")
-		return Explained(reply)
-	reply is "" then Checked else 0
+	reply.StartsWith("refused") then Explained(reply) else reply is "" then Checked else 0
 Checked Number
 	let device = Device
 	let problem = Problem(GpuMemory.HostAvailable, GpuMemory.HostTotal, device(1), device(0))

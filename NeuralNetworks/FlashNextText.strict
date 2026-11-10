@@ -4,8 +4,7 @@ constant Count = 30
 constant Probe = FlashNextText(Logger)
 constant Head = "NeuralNetworks/tinyqwen4expmtp.gguf"
 Run(folder Text, draft = "")
-	let path = folder + "/" + Weights
-	if MachineUse.Weights(logger, "FlashNextText", path).Admitted is 0
+	if MachineUse.Weights(logger, "FlashNextText", folder + "/" + Weights).Admitted is 0
 		Ran(folder, draft)
 Ran(folder Text, draft Text)
 	let path = folder + "/" + Weights
