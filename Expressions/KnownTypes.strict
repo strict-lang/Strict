@@ -157,11 +157,19 @@ DeclaredType(typeName Text, name Text, depth Number) Text
 		return member
 	if (MethodsOf(typeName).TypeOf(name) is not "") or (depth is 0)
 		return MethodsOf(typeName).TypeOf(name)
+	let holder = Holder(typeName, name, depth)
+	holder is "" then MethodsOf("Any").TypeOf(name) else MemberMethodType(typeMembers.TypeOf(holder), name, depth - 1)
+Holder(typeName Text, name Text, depth Number) Text
+	Measured.Holder("F", "Length", 1) is "Length"
+	Nested.Holder("G", "Length", 2) is "f"
+	Sample.Holder("Count", "Twice", 1) is ""
+	if MethodsOf(typeName).TypeOf(name) is not ""
+		return ""
+	let typeMembers = Instantiation(value).Members(typeName, MembersOf(typeName))
 	for typeMembers.types
-		let type = MemberMethodType(value, name, depth - 1)
-		if type is not ""
-			return type
-	MethodsOf("Any").TypeOf(name)
+		if MemberMethodType(value, name, depth - 1) is not ""
+			return typeMembers.names(index)
+	""
 MemberMethodType(memberType Text, name Text, depth Number) Text
 	Sample.MemberMethodType("Texts", "Missing", 1) is ""
 	if IsKnown(memberType)

@@ -14,6 +14,7 @@ constant Scaling = TypeInference(KnownTypes(List(Text) + "Pair", List(Scope) + N
 constant Paired = Scope(List(Text) + "p", List(Text) + "Pair")
 constant Primitives = ("None", "Boolean", "Number", "Byte", "Text", "Character", "Name", "Generic")
 constant ColorFrom = (Scope(("from", "from types"), ("current", "ColorValue")), KnownTypes.NoMembers)
+constant Measuring = TypeInference(KnownTypes.Measured, NoShapes)
 constant Colors = TypeInference(KnownTypes(("Color", "ColorValue"), (Scope(List(Text) + "Red", List(Text) + "Byte"), KnownTypes.NoMembers), (Scope(List(Text) + "to", List(Text) + "ColorValue"), KnownTypes.NoMembers), ColorFrom), NoShapes)
 ConstantOf(typeName Text, name Text) Text
 	NoInference.CallType("A", Scope(("A"), ("Texts")), NoShape) is "A"
@@ -220,3 +221,14 @@ Enumerated(typeName Text) Texts
 		if value is not in constants(position).names
 			return List(Text)
 	constants(position).names
+Origin(name Text, scope Scope) Text
+	NoInference.Origin("Size", Scope(("self type", "Size"), ("A", "Number"))) is "local Size"
+	Measuring.Origin("Length", Scope(("Length", "self type"), ("Length", "F"))) is "member Length"
+	Measuring.Origin("Length", Scope(("value"), ("F"))) is "Length.Length"
+	Measuring.Origin("Length", Scope(("value", "outer"), ("F", "F"))) is "method Length"
+	NoInference.Origin("A", NoShape) is "method A"
+	if scope.TypeOf(name) is not ""
+		return (types.MembersOf(scope.TypeOf("self type")).TypeOf(name) is "" then "local " else "member ") + name
+	let isImplicit = (ImplicitValueType(name, scope) is not "") and (scope.TypeOf("outer") is "")
+	let holder = isImplicit then types.Holder(scope.TypeOf("value"), name, 1) else ""
+	holder is "" then "method " + name else holder + "." + name
