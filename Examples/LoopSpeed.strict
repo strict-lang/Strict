@@ -1,0 +1,67 @@
+has logger
+constant Shift = 397
+constant Divisor = 7
+constant Small = 227
+constant Rounds = 100000
+constant Large = 10000000
+constant Nanoseconds = 1000000000
+constant Seed = 42
+constant Repeats = 3
+constant Kinds = ("offsets", "locals", "remainders", "gathered", "summed", "twisted")
+Counted(count Number) Numbers
+	LoopSpeed.Counted(3) is (0, 1, 2)
+	for count
+		index
+Offsets(raw Numbers, count Number) Numbers
+	LoopSpeed.Offsets(LoopSpeed.Counted(400), 2) is (397, 400)
+	for count
+		raw(index + Shift) + raw(index) * raw(index + 1)
+Locals(lists List(Numbers), count Number) Numbers
+	LoopSpeed.Locals(List(Numbers) + LoopSpeed.Counted(400), 2) is (397, 400)
+	let raw = lists.First
+	for count
+		raw(index + Shift) + raw(index) * raw(index + 1)
+Remainders(numbers Numbers) Numbers
+	LoopSpeed.Remainders((7, 8, 9)) is (0, 1, 2)
+	for numbers
+		value % Divisor
+Gathered(table Numbers, picks Numbers) Numbers
+	LoopSpeed.Gathered((5, 6, 7), (2, 0)) is (7, 5)
+	for picks
+		table(value)
+Summed(count Number) Number
+	LoopSpeed.Summed(4) is 6
+	mutable sum = 0
+	for Range(0, count)
+		sum = sum + value
+	sum
+Once(kind Text, exact Numbers, padded Numbers) Number
+	LoopSpeed.Once("offsets", LoopSpeed.Counted(2), LoopSpeed.Counted(400)) is 400
+	LoopSpeed.Once("summed", LoopSpeed.Counted(4), LoopSpeed.Counted(4)) is 6
+	if kind is "offsets"
+		return Offsets(padded, exact.Length).Last
+	if kind is "locals"
+		return Locals(List(Numbers) + padded, exact.Length).Last
+	if kind is "remainders"
+		return Remainders(exact).Last
+	if kind is "gathered"
+		return Gathered(exact, exact).Last
+	kind is "summed" then Summed(exact.Length) else MersenneTwister.Seeded(Seed).Uints(exact.Length).Last
+Spent(started Number, elements Number) Number
+	LoopSpeed.Spent(Process.Elapsed, 1) >= 0
+	((Process.Elapsed - started) * Nanoseconds / elements).Round(1)
+Measured(kind Text, exact Numbers, padded Numbers, rounds Number) Number
+	LoopSpeed(Logger).Measured("summed", LoopSpeed.Counted(4), LoopSpeed.Counted(4), 0) is 6
+	mutable total = Once(kind, exact, padded)
+	let started = Process.Elapsed
+	for rounds
+		total = total + Once(kind, exact, padded)
+	if rounds > 0
+		logger.Log(kind + " " + exact.Length + " x " + rounds + ": " + Spent(started, exact.Length * rounds) + " ns each")
+	total
+Run
+	mutable total = 0
+	for Kinds
+		total = total + Measured(value, Counted(Small), Counted(Small + Shift + 1), Rounds)
+		total = total + Measured(value, Counted(Large), Counted(Large + Shift + 1), Repeats)
+	logger.Log("checksum " + total)
