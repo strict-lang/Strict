@@ -170,6 +170,9 @@ Joined(arguments Texts) Text
 Launched(rest Texts, folder Text) Number
 	if NativeBuild.IsProgram(rest(0)) is false
 		return Native("test", (rest(0), rest(1), "native"))
+	let tested = Execute(logger, "*").Served(rest(0), rest(1)).code
+	if tested is not 0
+		return tested
 	let built = NativeCache("build", (rest(0), rest(1))).IsCurrent then 0 else Native("build", (rest(0), rest(1)))
 	let program = TypeSource.Absolute(Toolchain(Platform.Current, rest(1)).Executable(NativeBuild.Output(rest(0), true)))
 	if built is not 0
