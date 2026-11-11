@@ -173,12 +173,24 @@ Launched(rest Texts, folder Text) Number
 	let tested = Execute(logger, "*").Served(rest(0), rest(1)).code
 	if tested is not 0
 		return tested
-	let built = NativeCache("build", (rest(0), rest(1))).IsCurrent then 0 else Native("build", (rest(0), rest(1)))
-	let program = TypeSource.Absolute(Toolchain(Platform.Current, rest(1)).Executable(NativeBuild.Output(rest(0), true)))
+	let base = NativeBuild.Output(rest(0), true)
+	let extension = Toolchain(Platform.Current, rest(1)).Extension
+	Started(rest, folder, BuildOutput.Fresh(base, extension, BuildOutput.Sources(rest(0))))
+Compiled(rest Texts, fresh Text) Number
+	if fresh is not ""
+		return 0
+	NativeCache("build", (rest(0), rest(1))).IsCurrent then 0 else Native("build", (rest(0), rest(1)))
+Started(rest Texts, folder Text, fresh Text) Number
+	let base = NativeBuild.Output(rest(0), true)
+	let tools = Toolchain(Platform.Current, rest(1))
+	let built = Compiled(rest, fresh)
 	if built is not 0
 		return built
+	if fresh is not ""
+		logger.Log("Up to date: " + fresh)
 	Directory.Change(folder)
-	Process(program).Started(Joined(rest.Slice(2, rest.Length - 2)).Trim)
+	let program = fresh is "" then tools.Executable(base) else fresh
+	Process(TypeSource.Absolute(program)).Started(Joined(rest.Slice(2, rest.Length - 2)).Trim)
 Rest(arguments Texts) Texts
 	Strict.Rest(("test", "a", "b")) is ("a", "b")
 	for Range(1, arguments.Length)
