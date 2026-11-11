@@ -40,12 +40,13 @@ Loaded(result Text, address Text, items Text, source Text) Texts
 Read(result Text, at Number) Texts
 	Doubling.Read("%x", 4) is Doubling.Loaded("%x", "%t4p", "%t2h_numbers", "numbers")
 	MlirWidths(MlirFastLoop.Squaring.function, 2).Read("%x", 7).Last is "    %x = llvm.load %t7p : !llvm.ptr -> f64"
+	MlirWidths(MlirFastLoop.Shifting.function, 2).Read("%x", 13).First is "    %t2k13 = arith.addi %t2ki, %t2oi_13 : i64"
 	let source = function.method.instructions(at).texts(0)
 	let pointer = "%t" + at + "p"
 	let items = Temp("h_" + source)
-	if MlirKernel(function, position).Offset(at) is ""
+	if MlirKernel(function, position).Offsets(at).Length is 0
 		return Loaded(result, pointer, items, source)
-	let shifted = "    " + Temp("k" + at) + " = arith.addi " + Temp("ki") + ", " + Temp("oi_" + source) + " : i64"
+	let shifted = "    " + Temp("k" + at) + " = arith.addi " + Temp("ki") + ", " + Temp("oi_" + at) + " : i64"
 	List(Text) + shifted + MlirWidths(function, position, float, "k" + at).Loaded(result, pointer, items, source)
 Widened(result Text, items Text, source Text) Texts
 	Halving.Widened("%x", "%h", "numbers").Last is "    %x = arith.select %f2brain_numbers, %xg, %xw : f64"

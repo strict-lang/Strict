@@ -8,6 +8,8 @@ constant Halving = MlirFastLoop(MlirFunction(Doubler.types, Doubler.type, Double
 constant Quartering = MlirFastLoop(MlirFunction(Doubler.types, Doubler.type, Doubler.method, List(Number), 2, "numbers 8"), 2)
 constant Squared = MlirKernel.Squaring.function
 constant Squaring = MlirFastLoop(MlirFunction(Squared.types, Squared.type, Squared.method, List(Number), 2), 2)
+constant Shifted = MlirKernel.Offsetting.function
+constant Shifting = MlirFastLoop(MlirFunction(Shifted.types, Shifted.type, Shifted.method, List(Number), 2), 2)
 constant Byting = MlirFastLoop(MlirFunction(MlirLayout.Bytings.types, MlirLayout.Bytings.type, MlirLayout.Bytings.method), 2)
 constant Pointer = " : (!llvm.ptr, i64) -> !llvm.ptr, "
 constant Iterated = "for"
@@ -37,23 +39,49 @@ Checked Texts
 Enough(source Text) Texts
 	Doubling.Enough("numbers") is ("    %t2e_numbers = arith.cmpf oge, %t2n_numbers, %t2n : f64")
 	Squaring.Enough("input").Last is "    %t2e_input = arith.andi %t2g_input, %t2p_input : i1"
-	let shift = MlirKernel(function, position).Shift(source)
-	if shift is ""
+	let reads = MlirKernel(function, position).Shifted(source)
+	if reads.Length is 0
 		return List(Text) + Compared("e_" + source, Temp("n_" + source), Temp("n"))
-	let offset = Temp("o_" + source)
-	let total = Temp("w_" + source)
-	let whole = "    " + Temp("oi_" + source) + " = arith.fptosi " + offset + " : f64 to i64"
-	let needed = "    " + total + " = arith.addf " + Temp("n") + ", " + offset + " : f64"
-	let checks = (Compared("g_" + source, Temp("n_" + source), total), Compared("p_" + source, total, Temp("n")))
-	let combined = Joined("e_" + source, Temp("g_" + source), Temp("p_" + source))
-	(function.Load(offset, "%v_" + shift), whole, needed) + checks + combined
+	mutable lines = List(Mutable(Text))
+	for reads
+		lines = lines + Offset(value) + Spanned(value, reads)
+	let needed = "    " + Temp("w_" + source) + " = arith.addf " + Temp("n") + ", " + Temp("hi_" + reads.Last) + " : f64"
+	let fits = Compared("g_" + source, Temp("n_" + source), Temp("w_" + source))
+	let checks = (needed, fits, Compared("p_" + source, Temp("lo_" + reads.Last), "%zero"))
+	lines + checks + Joined("e_" + source, Temp("g_" + source), Temp("p_" + source))
+Offset(at Number) Texts
+	Squaring.Offset(7).First is "    %t2v0_7 = llvm.load %v_start : !llvm.ptr -> f64"
+	Shifting.Offset(13)(1) is "    %t2o1_13 = arith.addf %zero, %t2v0_13 : f64"
+	Shifting.Offset(13)(3) is "    %t2o0_13 = arith.addf %t2o1_13, %t2v1_13 : f64"
+	let terms = MlirKernel(function, position).Offsets(at)
+	mutable lines = List(Mutable(Text))
+	for terms
+		let term = Temp("v" + index + "_" + at)
+		let sum = index is 0 then "%zero" else Temp("o" + (terms.Length - index) + "_" + at)
+		let read = value.StartsWith("0x") then MlirTyped.Double.Constant(term, value) else function.Load(term, "%v_" + value)
+		let added = Temp("o" + (terms.Length - 1 - index) + "_" + at) + " = arith.addf " + sum + ", " + term
+		lines = lines + read + ("    " + added + " : f64")
+	lines + ("    " + Temp("oi_" + at) + " = arith.fptosi " + Temp("o0_" + at) + " : f64 to i64")
+Spanned(at Number, reads Numbers) Texts
+	Squaring.Spanned(7, (7, 12)).First is "    %t2lo_7 = arith.minimumf %zero, %t2o0_7 : f64"
+	Squaring.Spanned(7, (7, 12)).Last is "    %t2hi_7 = arith.maximumf %zero, %t2o0_7 : f64"
+	Squaring.Spanned(12, (7, 12)).First is "    %t2lo_12 = arith.minimumf %t2lo_7, %t2o0_12 : f64"
+	Squaring.Spanned(12, (7, 12)).Last is "    %t2hi_12 = arith.maximumf %t2hi_7, %t2o0_12 : f64"
+	Shifting.Offset(8).First is "    %t2v0_8 = arith.constant 0x4078D00000000000 : f64"
+	Shifting.Enough("numbers").Length is 16
+	let order = reads.Index(at)
+	let low = order is 0 then "%zero" else Temp("lo_" + reads(order - 1))
+	let high = order is 0 then "%zero" else Temp("hi_" + reads(order - 1))
+	let sum = ", " + Temp("o0_" + at) + " : f64"
+	let lowest = "    " + Temp("lo_" + at) + " = arith.minimumf " + low + sum
+	(lowest, "    " + Temp("hi_" + at) + " = arith.maximumf " + high + sum)
 Compared(name Text, left Text, right Text) Text
 	Doubling.Compared("e", "%a", "%b") is "    %t2e = arith.cmpf oge, %a, %b : f64"
-	Squaring.Enough("input").First is "    %t2o_input = llvm.load %v_start : !llvm.ptr -> f64"
-	Squaring.Enough("input").Index("    %t2oi_input = arith.fptosi %t2o_input : f64 to i64") is 1
-	Squaring.Enough("input").Index("    %t2w_input = arith.addf %t2n, %t2o_input : f64") is 2
-	Squaring.Enough("input").Index("    %t2g_input = arith.cmpf oge, %t2n_input, %t2w_input : f64") is 3
-	Squaring.Enough("input").Index("    %t2p_input = arith.cmpf oge, %t2w_input, %t2n : f64") is 4
+	Squaring.Enough("input").First is "    %t2v0_7 = llvm.load %v_start : !llvm.ptr -> f64"
+	Squaring.Enough("input").Index("    %t2oi_7 = arith.fptosi %t2o0_7 : f64 to i64") is 2
+	Squaring.Enough("input").Index("    %t2w_input = arith.addf %t2n, %t2hi_12 : f64") is 10
+	Squaring.Enough("input").Index("    %t2g_input = arith.cmpf oge, %t2n_input, %t2w_input : f64") is 11
+	Squaring.Enough("input").Index("    %t2p_input = arith.cmpf oge, %t2lo_12, %zero : f64") is 12
 	"    " + Temp(name) + " = arith.cmpf oge, " + left + ", " + right + " : f64"
 Joined(name Text, left Text, right Text) Text
 	Doubling.Joined("ok1", "%a", "%b") is "    %t2ok1 = arith.andi %a, %b : i1"
@@ -131,7 +159,7 @@ Emitted(at Number) Texts
 	Doubling.Emitted(4).First is "    %t4p = llvm.getelementptr %t2h_numbers[%t2ki] : (!llvm.ptr, i64) -> !llvm.ptr, f64"
 	Doubling.Emitted(7).Last is "    llvm.store %t7e, %t7p : f64, !llvm.ptr"
 	Halving.Emitted(4).Index("    %t4xw = arith.extf %t4xn : f16 to f64") is 2
-	Squaring.Emitted(7).First is "    %t2k7 = arith.addi %t2ki, %t2oi_input : i64"
+	Squaring.Emitted(7).First is "    %t2k7 = arith.addi %t2ki, %t2oi_7 : i64"
 	let entry = function.method.instructions(at)
 	let pointer = "%t" + at + "p"
 	if entry.kind is InstructionType.IndexCall

@@ -14,6 +14,10 @@ Counted(count Number) Numbers
 		index
 Offsets(raw Numbers, count Number) Numbers
 	LoopSpeed.Offsets(LoopSpeed.Counted(400), 2) is (397, 400)
+	LoopSpeed.Offsets(LoopSpeed.Counted(400), 3).Last is 405
+	LoopSpeed.Offsets(LoopSpeed.Counted(400), 4) is Error("IndexOutOfRange")
+	LoopSpeed.Offsets(LoopSpeed.Counted(400), 0).Length is 0
+	LoopSpeed.Offsets(List(Number), 0).Length is 0
 	for count
 		raw(index + Shift) + raw(index) * raw(index + 1)
 Locals(lists List(Numbers), count Number) Numbers
