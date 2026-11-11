@@ -10,6 +10,7 @@ Scalar Boolean
 Composite Boolean
 	(0.20000000298023224, 0.05999999865889549) is (0.2, 0.06)
 	Vector2(-1.033333420753479, 0.574999988079071) is Vector2(-15.5 * (128 / 1920), 11.5 * (96 / 1920))
+	((0.2, 0.06) is (0.20000000298023224, 0.05999999865889549)) and (0.8888888955116272 is 8 / 9 or false)
 	true
 Stepped Boolean
 	AssertionPrecision(0.00000001).Amount is not AssertionPrecision(0.00000002).Amount
