@@ -11,6 +11,8 @@ constant Fallback = SyntaxParser(Tokenizer("count else area").Tokens).Parse
 constant Statement = SyntaxNode("Else", "else")
 constant Compared = SyntaxNode("Binary", "is", Mixed.children)
 constant Message = "ConditionalBranchesMustHaveOneType: count is count then count else area gives a Count or a Area"
+constant Coupled = BranchTypes(Instantiation.Inferring)
+constant Paired = SyntaxParser(Tokenizer("1 is 1 then Couple(\"a\", 2) else Couple(1, 2)").Tokens).Parse
 constant Unchecked = ("", "Unknown", "Error", "ErrorWithValue", "None", "Generic")
 Issue(node SyntaxNode, scope Scope, current Scope) Text
 	Sizing.Issue(Mixed, Counted, Counted) is Message
@@ -22,9 +24,19 @@ Issue(node SyntaxNode, scope Scope, current Scope) Text
 	let thenType = Then(node.children(0), scope, current)
 	let elseType = inference.TypeOf(node.children(1), scope, current)
 	let checks = ArgumentTypes(inference)
-	let isMixed = checks.Mismatch(elseType, thenType) or checks.Mismatch(thenType, elseType)
+	let isMixed = checks.Mismatch(elseType, thenType) or checks.Mismatch(thenType, elseType) or IsSplit(thenType, elseType)
 	let message = "ConditionalBranchesMustHaveOneType: " + node + " gives a " + thenType + " or a " + elseType
 	(thenType is not in Unchecked) and (elseType is not in Unchecked) and isMixed then message else ""
+IsSplit(first Text, second Text) Boolean
+	Coupled.IsSplit("Couple(Text, Number)", "Couple(Number, Number)")
+	(Coupled.IsSplit("Couple(Text)", "Couple") or Coupled.IsSplit("Couple", "Couple(Text)")) is false
+	Coupled.Issue(Paired, Counted, Counted).EndsWith(" gives a Couple(Text, Number) or a Couple(Number, Number)")
+	(Coupled.IsSplit("Pair(Text)", "Pair(Number)") or Coupled.IsSplit("Couple(Text)", "Couple(Text)")) is false
+	Coupled.IsSplit("Couple(Text, Number)", "Pair(Number)") is false
+	let types = inference.types
+	let isOpen = "Generic" is in types.MembersOf(types.BaseName(first)).types
+	let isArgued = (first.IndexOf("(") > 0) and (second.IndexOf("(") > 0)
+	isOpen and isArgued and (first is not second) and (types.BaseName(first) is types.BaseName(second))
 Then(branch SyntaxNode, scope Scope, current Scope) Text
 	Sizing.Then(Handed.children(0), Counted, Counted) is "Error"
 	Sizing.Then(Mixed.children(0), Counted, Counted) is "Count"

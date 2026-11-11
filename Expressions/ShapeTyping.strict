@@ -8,6 +8,9 @@ constant Twice = TypeShape("Twice = number * 2")
 constant Next = Tokenizer("Next(add = 1) = number + add").Tokens
 constant Boxed = ShapeTyping(TypeInference(KnownTypes(("Box", "Item"), NoScopes, (Scope(("Sample", "Inner"), ("Box", "Item")), NoScope), NoScopes), Samples))
 constant Swapped = ShapeTyping(Instantiation.Inferring)
+constant Making = TypeShape("has logger", "Made(name Text) Couple", "\tCouple(name, 2)")
+constant Plain = TypeShape("Made Text", "\t\"a\"")
+constant Lost = TypeShape("Made Couple", "\tCouple(missing, 2)")
 Typed(shape TypeShape, scope Scope, typeName Text) Scope
 	Counting.Typed(TypeShape("constant a = 1"), KnownTypes.NoMembers, "Count").names.Length is 0
 	Counting.Typed(Twice, KnownTypes.NoMembers, "Count").TypeOf("Twice") is "Number"
@@ -19,8 +22,20 @@ Typed(shape TypeShape, scope Scope, typeName Text) Scope
 		else if shape.IsComputed(value)
 			result = result.With(tokens(0), ComputedType(tokens, typeName, result))
 		else if shape.IsMethodHeader(value)
-			result = Known(result, tokens(0), Instantiation(inference.types).Template(shape, index, typeName))
+			result = Known(result, tokens(0), Returned(shape, index, typeName))
 	result
+Returned(shape TypeShape, position Number, typeName Text) Text
+	Swapped.Returned(Making, 1, "User") is "Couple(Text, Number)"
+	Swapped.Returned(Instantiation.Swapping, 2, "Couple") + Swapped.Returned(Plain, 0, "User") is "Couple(second, first)"
+	(Swapped.Returned(TypeShape("Made Couple", "\t\"a\""), 0, "User") + Swapped.Returned(Lost, 0, "User")) is ""
+	let header = HeaderTokens(Tokenizer(shape.lines(position)).Tokens)
+	let isOpen = "Generic" is in inference.types.MembersOf(header.ReturnType).types
+	if (header.ReturnType is typeName) or (isOpen is false)
+		return Instantiation(inference.types).Template(shape, position, typeName)
+	let result = BodyParser(shape.lines).Method(position + 1).children.Last
+	let parameters = Scope(header.ParameterNames, header.ParameterTypes)
+	let type = inference.TypeOf(result, parameters, inference.types.ShapeScope(typeName))
+	(inference.types.BaseName(type) is header.ReturnType) and (type.IndexOf("Unknown") < 0) then type else ""
 Refined(scope Scope, name Text, type Text) Scope
 	Counting.Refined(Scope(List(Text) + "a", List(Text) + "Box"), "a", "Item").names.Length is 1
 	Counting.Refined(Scope(List(Text) + "a", List(Text) + "Box"), "a", "Item").TypeOf("a") is "Item"
