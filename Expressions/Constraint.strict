@@ -2,7 +2,7 @@ has name Text
 has type Text
 has types KnownTypes
 constant Framed = "Run(frames = 0 with value >= 0, other Number)"
-constant Misnamed = "ConstraintNeedsWith: where in A.strict:1, write has a Number with value > 0"
+constant Misnamed = "A.strict:line 1: ConstraintNeedsWith: where, write has a Number with value > 0"
 constant Counting = Constraint("count", "Count", KnownTypes.Sample)
 Condition(constraint Text) Text
 	Counting.Condition("value >= 0") is "count >= 0"
@@ -136,4 +136,4 @@ Where(path Text, lines Texts) Texts
 	Constraint.Where("A.strict", List(Text) + "	has a Number where value > 0").Length is 0
 	for lines
 		if (value.StartsWith("	") is false) and ("where" is in Tokenizer(value).Tokens)
-			"ConstraintNeedsWith: where in " + path + ":" + (index + 1) + ", write " + value.Replace(" where ", " with ")
+			ResolveCheck.Located(path, index + 1, "ConstraintNeedsWith: where, write " + value.Replace(" where ", " with "))

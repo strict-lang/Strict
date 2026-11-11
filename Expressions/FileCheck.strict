@@ -145,7 +145,7 @@ IsKnown(name Text, names Texts) Boolean
 	name.EndsWith("s") is false then false else name.Substring(0, name.Length - 1) is in names
 Unimplemented(path Text, lines Texts) Texts
 	Counting.Unimplemented("A.strict", Untested + "\tTwice(3) is 6").Length is 1
-	Counting.Unimplemented("A.strict", Untested) is ("ImplementationNotFound: Twice in A.strict:1")
+	Counting.Unimplemented("A.strict", Untested) is ("A.strict:line 1: ImplementationNotFound: Twice")
 	Counting.Unimplemented("A.strict", Untested + "\tnumber * 2").Length is 0
 	Counting.Unimplemented("A.strict", ("from(number)", "\tA(2) is A(2)")).Length is 1
 	Counting.Unimplemented("A.strict", List(Text) + "constant Ones = A(1) is A(1)").Length is 0
@@ -155,7 +155,7 @@ Unimplemented(path Text, lines Texts) Texts
 	let typeName = Path(path).FileName.RemoveExtension.text
 	for lines
 		if (value.StartsWith("\t") is false) and IsUnimplemented(lines, index, typeName)
-			"ImplementationNotFound: " + Tokenizer(value).Tokens.First + " in " + path + ":" + (index + 1)
+			ResolveCheck.Located(path, index + 1, "ImplementationNotFound: " + Tokenizer(value).Tokens.First)
 IsUnimplemented(lines Texts, header Number, typeName Text) Boolean
 	Counting.IsUnimplemented(("Add(other) Number", "\tAdd(1) > 0 is true"), 0, "A")
 	Counting.IsUnimplemented(("Add(other) Number", "\tA.Add(1) is 1"), 0, "A")

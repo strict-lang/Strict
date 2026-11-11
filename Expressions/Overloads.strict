@@ -25,6 +25,7 @@ constant Choosing = SyntaxParser(Tokenizer("p.Chosen((\"a\", \"b\"))").Tokens).P
 constant LabelsMember = SyntaxNode("Member", "Labels", LabelsCall)
 constant Limits = ("constant Limit = 3", "has count", "constant Limit = 4")
 constant Valued = ("Value(name Text, default Number) Text", "\tname", "Value(name Text, default Text) Text", "\tname")
+constant Clashing = "A:line 3: OverloadsNeedDifferentParameterNames: Value(name, default) like line 1"
 constant ListToText = KnownTypes(List(Text) + "List", List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(List(Text) + "to", List(Text) + "Text"), List(Scope) + KnownTypes.NoMembers)
 constant DefaultNames = ("from", "from types", "from", "from types", "b default", "Get", "Get types", "Get", "Get types", "Get count default")
 constant DefaultTypes = ("text", "Text", "a,b", "Number,Number", "0", "x,b", "Number,Number", "count", "Number", "1")
@@ -170,15 +171,15 @@ Specialized(type Text, declared Texts, arguments Texts) Text
 	let element = declared(at) is "Generics" then types.ElementType(arguments(at)) else arguments(at)
 	type is "Generics" then Instantiation(types).Plural(element) else element
 Ambiguities(path Text, lines Texts) Texts
-	Scaling.Ambiguities("A", Valued) is ("OverloadsNeedDifferentParameterNames: Value(name, default) in A:3 like line 1")
+	Scaling.Ambiguities("A", Valued) is (Clashing)
 	Scaling.Ambiguities("A", ("to Text", "\t\"a\"", "to Number", "\t1")).Length is 0
-	Scaling.Ambiguities("A", Limits) is ("NameAlreadyDeclared: Limit in A:3 like line 1")
+	Scaling.Ambiguities("A", Limits) is ("A:line 3: NameAlreadyDeclared: Limit like line 1")
 	let signatures = Signatures(lines)
 	for signatures
 		if (value is not "") and (signatures.Index(value) < index)
 			let first = signatures.Index(value) + 1
 			let rule = value.EndsWith(")") then "OverloadsNeedDifferentParameterNames: " else "NameAlreadyDeclared: "
-			rule + value + " in " + path + ":" + (index + 1) + " like line " + first
+			ResolveCheck.Located(path, index + 1, rule + value + " like line " + first)
 Signatures(lines Texts) Texts
 	Scaling.Signatures(Valued) is ("Value(name, default)", "", "Value(name, default)", "")
 	let shape = TypeShape(lines)

@@ -44,7 +44,7 @@ Unnumbered(path Text, lines Texts) Texts
 	for lines
 		let type = value.StartsWith("	") then "" else Steps(Tokenizer(value).Tokens).Unrounded
 		if type is not ""
-			"StepMustBeOnNumber: " + type + " in " + path + ":" + (index + 1) + ", only a Number is rounded to its step"
+			ResolveCheck.Located(path, index + 1, "StepMustBeOnNumber: " + type + ", only a Number is rounded to its step")
 Unrounded Text
 	Mixed.Unrounded is ")"
 	Steps(Tokenizer("has a Numbers Step 1").Tokens).Unrounded is ""

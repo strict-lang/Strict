@@ -221,7 +221,7 @@ Formatted(path Text) Slow(Text)
 	let lines = RoundTrip(logger).Tabbed(File(path).ReadLines)
 	let broken = FileCompiler.Unparsable(lines)
 	if broken >= 0
-		return Error(FileCheck.Problem(lines, broken) + " in " + FileCompiler.Normalized(path) + ":" + (broken + 1))
+		return Error(ResolveCheck.Located(FileCompiler.Normalized(path), broken + 1, FileCheck.Problem(lines, broken)))
 	Text.Combine(RoundTrip(logger).Formatted(lines), "\n")
 Suggested(rest Texts) Number
 	let source = FileCompiler.Normalized(rest(0))

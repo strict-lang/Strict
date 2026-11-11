@@ -44,7 +44,7 @@ CheckFile(path Text, lines Texts, typeName Text, mutations Texts, isBase Boolean
 	rules + shaped + (LoopBodies(lines).Issues + MagicNumbers(lines).Issues)
 Logged(path Text, found List(ValidationIssue)) Number
 	for found
-		logger.Log(path + ":line " + value.Line + ": " + value)
+		logger.Log(ResolveCheck.Located(path, value.Line, value to Text))
 	found.Length
 Mutations(files Texts) Texts
 	mutable mutations = List(Mutable(Text))

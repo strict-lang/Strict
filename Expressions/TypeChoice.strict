@@ -51,16 +51,16 @@ IsQualified(path Text) Boolean
 	parts(parts.Length - 2) is in Packages(parts.Last.Replace(".strict", ""))
 Ambiguous(names Texts, path Text) Texts
 	Plain.Ambiguous(("Scene", "Scene", "Unit", "Unit"), "A").Length is 1
-	Plain.Ambiguous(("Scene", "Scene", "Unit"), "Catalog.strict").First.StartsWith("AmbiguousType: Scene")
+	Plain.Ambiguous(("Scene", "Scene", "Unit"), "A").First.StartsWith("A:line 2: AmbiguousType: Scene")
 	Plain.Ambiguous(("Scene", "Unit"), "./Content/Catalog.strict").Length is 0
-	Both.Ambiguous(("Scene", "Scene"), "A.strict").First.StartsWith("SameNamedTypes: Scene used in A.strict:1 from")
+	Both.Ambiguous(("Scene", "Scene"), "A.strict").First.StartsWith("A.strict:line 1: SameNamedTypes: Scene from")
 	for names
 		if (names.Index(value) is index) and (names.Count(value) > 1) and (UsedLine(value) > 0)
 			let packages = Packages(value)
 			let clash = " from " + Text.Combine(packages, " and ") + ", a build keys types by their plain name, rename one"
 			let advice = " is defined in several packages here, write Package/" + value + " in a declaration"
 			let issue = packages.Length > 1 then "SameNamedTypes: " else "AmbiguousType: "
-			issue + value + " used in " + path + ":" + UsedLine(value) + (packages.Length > 1 then clash else advice)
+			ResolveCheck.Located(path, UsedLine(value), issue + value + (packages.Length > 1 then clash else advice))
 Packages(name Text) Texts
 	Plain.Packages("Units").Length is 0 and (Both.Packages("Unit").Length is 0)
 	TypeChoice(("Scene")).Packages("Scene").Length is 0

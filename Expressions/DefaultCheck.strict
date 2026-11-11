@@ -11,21 +11,22 @@ constant Shifting = ("Shifted(index Number) Numbers", "\tfor 2", "\t\tindex")
 constant Methods = ("Run", "\tfor 2", "\t\t1", "\t1", "Other", "\t1", "Last", "\tfor 2", "\t\t1")
 constant Defaulted = ("has b Text", "constant c = Text(other)", "Run", "\tlet d = Text(other)")
 constant Declared = ("Run", "\tmutable outer = 1", "\tconstant outer = 1", "\tlet other = 1", "\tif outer", "\tlet", "constant outer = 1")
+constant ValueMember = List(Text) + "has value Number"
 constant Measuring = DefaultCheck(TypeInference(KnownTypes.Measured, (KnownTypes.NoMembers, KnownTypes.NoMembers)))
 constant Coupled = DefaultCheck(Instantiation.Inferring)
 constant Empty = (KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers)
 constant Kept = (Scope(("pair"), ("Couple")), Instantiation.Couples.members(0), Scope(("value"), ("Number")))
 constant Keeping = DefaultCheck(TypeInference(KnownTypes(("Keeper", "Couple", "Valued"), Kept, Empty, Empty), List(Scope)))
-constant Unstepped = "StepMustBeOnNumber: Numbers in A:1, only a Number is rounded to its step"
-constant Paired = "GenericMemberTypeMustBeNamed: pair in A:1, name the type of each Generic member of Couple like has pair Couple(Number, Number)"
+constant Unstepped = "A:line 1: StepMustBeOnNumber: Numbers, only a Number is rounded to its step"
+constant Paired = "A:line 1: GenericMemberTypeMustBeNamed: pair, name the type of each Generic member of Couple like has pair Couple(Number, Number)"
 constant Named = ("has pair Couple(Text, Number)", "has name Text", "has first Generic", "has items Generics", "has other Couple(first, Generic)")
 constant Typed = Named + ("constant Pair = Couple", "Swapped Couple", "\tCouple(1, 2)")
 Unsupported(path Text, lines Texts) Texts
 	Coupled.Unsupported("A", List(Text) + "has pair Couple").Length is 1
-	Counting.Unsupported("A.strict", Moving).First is "CannotUseKeywordsAsName: from in A.strict:1"
-	Counting.Unsupported("A.strict", Countdown).First is "LoopNameMustNotBeDeclared: index in A.strict:2"
-	Counting.Unsupported("A.strict", Missed).First is "ConstantNotFound: Count.Missing in A.strict:1"
-	Counting.Unsupported("A.strict", Shifting).First is "LoopNameMustNotBeDeclared: index in A.strict:1"
+	Counting.Unsupported("A.strict", Moving).First is "A.strict:line 1: CannotUseKeywordsAsName: from"
+	Counting.Unsupported("A.strict", Countdown).First is "A.strict:line 2: LoopNameMustNotBeDeclared: index"
+	Counting.Unsupported("A.strict", Missed).First is "A.strict:line 1: ConstantNotFound: Count.Missing"
+	Counting.Unsupported("A.strict", Shifting).First is "A.strict:line 1: LoopNameMustNotBeDeclared: index"
 	Counting.Unsupported("A", List(Text) + "has value Number").Length is 1
 	Counting.Unsupported("A", List(Text) + "L(prices Numbers with Step 0.5) Number").First is Unstepped
 	let named = LoopNames(path, lines) + LoopParameters(path, lines) + Members(path, lines)
@@ -43,17 +44,17 @@ HasCheckedMembers(typeName Text) Boolean
 	"value" is in members.names
 OpenMembers(path Text, lines Texts) Texts
 	Coupled.OpenMembers("A", List(Text) + "has pair Couple").First is Paired
-	Coupled.OpenMembers("A", ("has name Text", "has couple")).First is Paired.Replace("pair", "couple").Replace(":1", ":2")
+	Coupled.OpenMembers("A", ("has name Text", "has couple")).First is Paired.Replace("pair", "couple").Replace("line 1", "line 2")
 	Coupled.OpenMembers("A", Typed).Length is 0
 	let shape = TypeShape(lines)
 	for lines
 		let isMember = shape.IsMemberLine(value) and (value.StartsWith("constant ") is false)
-		let issue = isMember then Unnamed(HeaderTokens(Tokenizer(value).Tokens), path + ":" + (index + 1)) else ""
+		let issue = isMember then Unnamed(HeaderTokens(Tokenizer(value).Tokens)) else ""
 		if issue is not ""
-			issue
-Unnamed(member HeaderTokens, location Text) Text
-	Coupled.Unnamed(HeaderTokens("mutable", "pair", "Couple"), "A:1") is Paired.Replace("has", "mutable")
-	Counting.Unnamed(HeaderTokens("has", "count"), "A:1") is ""
+			ResolveCheck.Located(path, index + 1, issue)
+Unnamed(member HeaderTokens) Text
+	ResolveCheck.Located("A", 1, Coupled.Unnamed(HeaderTokens("mutable", "pair", "Couple"))) is Paired.Replace("has", "mutable")
+	Counting.Unnamed(HeaderTokens("has", "count")) is ""
 	let type = inference.types.BaseName(member.DeclaredType(1))
 	mutable types = List(Mutable(Text))
 	for inference.types.MembersOf(type).types
@@ -62,26 +63,26 @@ Unnamed(member HeaderTokens, location Text) Text
 	let named = member.tokens(0) + " " + member.MemberName + " " + type + "(" + Text.Combine(types, ", ") + ")"
 	let hint = ", name the type of each Generic member of " + type + " like " + named
 	let isNamed = (types.Length is 0) or (Text.Combine(member.tokens, " ").IndexOf(type + " (") > 0)
-	isNamed then "" else "GenericMemberTypeMustBeNamed: " + member.MemberName + " in " + location + hint
+	isNamed then "" else "GenericMemberTypeMustBeNamed: " + member.MemberName + hint
 ValueMembers(path Text, lines Texts) Texts
-	Counting.ValueMembers("A", List(Text) + "has value Number").First.StartsWith("MemberMustNotBeNamedValue: value in A:1")
+	Counting.ValueMembers("A", ValueMember).First.StartsWith("A:line 1: MemberMustNotBeNamedValue: value")
 	Counting.ValueMembers("A.strict", Sized).Length is 0
-	Counting.ValueMembers("A", List(Text) + "has value Number").First.EndsWith(", value is the instance in every method")
+	Counting.ValueMembers("A", ValueMember).First.EndsWith(", value is the instance in every method")
 	Counting.ValueMembers("A", ("Run", "\tlet value = 1")).Length is 0
 	let shape = TypeShape(lines)
 	for lines
 		if shape.IsMemberLine(value) and (HeaderTokens(Tokenizer(value).Tokens).MemberName is "value")
-			"MemberMustNotBeNamedValue: value in " + path + ":" + (index + 1) + ", value is the instance in every method"
+			ResolveCheck.Located(path, index + 1, "MemberMustNotBeNamedValue: value, value is the instance in every method")
 LoopNames(path Text, lines Texts) Texts
 	Counting.LoopNames("A.strict", Moving).Length is 0
-	Counting.LoopNames("A.strict", Outside).First is "LoopNameMustNotBeDeclared: outer in A.strict:3"
-	Counting.LoopNames("A.strict", ("Run", "\tlet outer = 1")).First is "LoopNameMustNotBeDeclared: outer in A.strict:2"
+	Counting.LoopNames("A.strict", Outside).First is "A.strict:line 3: LoopNameMustNotBeDeclared: outer"
+	Counting.LoopNames("A.strict", ("Run", "\tlet outer = 1")).First is "A.strict:line 2: LoopNameMustNotBeDeclared: outer"
 	Counting.LoopNames("A.strict", Declared).Length is 2
-	Counting.LoopNames("A.strict", Declared).Last is "LoopNameMustNotBeDeclared: outer in A.strict:3"
+	Counting.LoopNames("A.strict", Declared).Last is "A.strict:line 3: LoopNameMustNotBeDeclared: outer"
 	for lines
 		let tokens = Tokenizer(value.Trim).Tokens
 		if IsDeclared(value) and IsLoopName(tokens(1), lines, index)
-			"LoopNameMustNotBeDeclared: " + tokens(1) + " in " + path + ":" + (index + 1)
+			ResolveCheck.Located(path, index + 1, "LoopNameMustNotBeDeclared: " + tokens(1))
 IsDeclared(line Text) Boolean
 	DefaultCheck.IsDeclared("\tmutable outer = 1")
 	(DefaultCheck.IsDeclared("constant outer = 1") or DefaultCheck.IsDeclared("\tlet")) is false
@@ -116,7 +117,7 @@ Keyworded(path Text, lines Texts) Texts
 		if TypeShape(lines).IsMethodHeader(value)
 			for HeaderTokens(Tokenizer(value).Tokens).ParameterNames
 				if value is in Keywords
-					issues.Add("CannotUseKeywordsAsName: " + value + " in " + path + ":" + line)
+					issues.Add(ResolveCheck.Located(path, line, "CannotUseKeywordsAsName: " + value))
 	issues
 LoopParameters(path Text, lines Texts) Texts
 	Counting.LoopParameters("A.strict", Moving).Length is 0
@@ -129,10 +130,10 @@ LoopParameters(path Text, lines Texts) Texts
 		if TypeShape(lines).IsMethodHeader(value) and HasLoop(lines, index)
 			for HeaderTokens(Tokenizer(value).Tokens).ParameterNames
 				if value is in LoopVariables
-					issues.Add("LoopNameMustNotBeDeclared: " + value + " in " + path + ":" + line)
+					issues.Add(ResolveCheck.Located(path, line, "LoopNameMustNotBeDeclared: " + value))
 	issues
 Defaults(path Text, lines Texts) Texts
-	Counting.Unsupported("A.strict", Sized).First.StartsWith("UnsupportedDefault: size in A.strict:1, ")
+	Counting.Unsupported("A.strict", Sized).First.StartsWith("A.strict:line 1: UnsupportedDefault: size, ")
 	Counting.Unsupported("A.strict", ("has a Number = 5", "has c Numbers = List(Number)")).Length is 0
 	Counting.Unsupported("A.strict", List(Text) + "has b Text = Text(other)").Length is 1
 	Counting.Defaults("A.strict", Defaulted).Length is 0
@@ -140,20 +141,20 @@ Defaults(path Text, lines Texts) Texts
 	for lines
 		let tokens = Tokenizer(value).Tokens
 		let isDefault = shape.IsMemberLine(value) and (value.StartsWith("constant ") is false) and (tokens.Index("=") > 0)
-		let issue = isDefault then Issue(tokens, path + ":" + (index + 1)) else ""
+		let issue = isDefault then Issue(tokens) else ""
 		if issue is not ""
-			issue
-Issue(tokens Texts, location Text) Text
-	Counting.Issue(Tokenizer(Sized(0)).Tokens, "A.strict:1").EndsWith("pass it to the constructor")
-	Counting.Issue(Tokenizer("has size Count = Count.Limit").Tokens, "A.strict:1") is ""
-	Counting.Issue(Tokenizer("has size Count = Count.Started").Tokens, "A.strict:1") is ""
-	Counting.Issue(Tokenizer("has a Number = 5 with value > 0").Tokens, "A.strict:1") is ""
+			ResolveCheck.Located(path, index + 1, issue)
+Issue(tokens Texts) Text
+	Counting.Issue(Tokenizer(Sized(0)).Tokens).EndsWith("pass it to the constructor")
+	Counting.Issue(Tokenizer("has size Count = Count.Limit").Tokens) is ""
+	Counting.Issue(Tokenizer("has size Count = Count.Started").Tokens) is ""
+	Counting.Issue(Tokenizer("has a Number = 5 with value > 0").Tokens) is ""
 	constant hint = ", only literals, constants, empty lists and dictionaries and types with one member can be defaults"
 	let end = tokens.Index("with") > 0 then tokens.Index("with") else tokens.Length
 	let node = SyntaxParser(tokens).ParseRange(tokens.Index("=") + 1, end)
 	if (node.Kind is not "Member") and (IsConstant(node) is false)
-		return "UnsupportedDefault: " + tokens(1) + " in " + location + hint + ", pass it to the constructor"
-	Missing(node) is "" then "" else Missing(node) + " in " + location
+		return "UnsupportedDefault: " + tokens(1) + hint + ", pass it to the constructor"
+	Missing(node)
 Missing(node SyntaxNode) Text
 	Counting.Missing(SyntaxParser(Tokenizer("Count.Missing").Tokens).Parse) is "ConstantNotFound: Count.Missing"
 	Counting.Missing(SyntaxParser(Tokenizer("Count.Limit").Tokens).Parse) is ""
