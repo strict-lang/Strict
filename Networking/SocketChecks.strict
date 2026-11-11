@@ -8,35 +8,38 @@ Failures Slow(Number)
 	(Socket.Listen(-1) is Error("InvalidPort")) and (Socket.Listen(65536) is Error("InvalidPort"))
 	Socket.Connect("127.0.0.1", 70000) is Error("InvalidPort")
 	Socket.Local(-1) is Error("InvalidPort")
-	Loopback(Socket.Listen(0)) is 0
-	Loopback(Socket.Local(0)) is 0
+	Loopback(Socket.Listen(0)) is not Error
+	Loopback(Socket.Local(0)) is not Error
 	0
-Loopback(server Number) Number
+Loopback(server Number)
 	if server is Error
-		return 1
-	let result = Connected(server)
+		return Error("ServerNotOpened")
+	let connected = Connected(server)
 	Socket.Close(server)
-	result
-Connected(server Number) Number
+	if connected is Error
+		return connected
+Connected(server Number)
 	let client = Socket.Connect("127.0.0.1", Socket.Port(server))
 	if client is Error
-		return 2
+		return Error("ClientNotConnected")
 	let accepted = Socket.Accept(server)
 	if accepted is Error
 		Socket.Close(client)
-		return 3
-	let result = Exchanged(client, accepted)
+		return Error("ClientNotAccepted")
+	let exchanged = Exchanged(client, accepted)
 	Socket.Close(accepted)
 	Socket.Close(client)
-	result
-Exchanged(client Number, accepted Number) Number
+	if exchanged is Error
+		return exchanged
+Exchanged(client Number, accepted Number)
 	if Socket.Send(client, (1, 2, 3)) is Error
-		return 4
+		return Error("BytesNotSent")
 	let received = Socket.Receive(accepted, 3)
 	if (received is Error) or (received is not (1, 2, 3))
-		return 5
+		return Error("BytesNotReceived")
 	Socket.Output(accepted)
 	logger.Log("a")
 	Socket.Output(0)
 	let logged = Socket.Pending(client) is 2 then Socket.Receive(client, 2) else List(Number)
-	logged is (Character.LowercaseA, Character.NewLine.number) then 0 else 6
+	if logged is not (Character.LowercaseA, Character.NewLine.number)
+		return Error("LogNotForwarded")
