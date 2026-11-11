@@ -46,7 +46,7 @@ IsFlatRead Boolean
 Left(entry InstructionEntry) Texts
 	Returning.Left(Returning.function.method.instructions(1)) is ("    return %t1tr : f64")
 	if entry.texts.Length is 0
-		return MlirLines(function).End + ("    return %t" + position + "tr : f64")
+		return MlirChanged(function, position).Unchanged + MlirLines(function).End + ("    return %t" + position + "tr : f64")
 	let target = MlirStatements(function, position).JumpEnd(PayloadDecoder(entry).SevenBit(1))
 	(function.Store("%t" + position + "tr", "%v_" + entry.texts(0)), "    cf.br ^bb" + target)
 IsInfallible Boolean
