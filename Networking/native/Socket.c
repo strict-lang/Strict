@@ -4,6 +4,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+#ifndef _WIN32
+#include <fcntl.h>
+#endif
 #include "strict.h"
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -262,4 +266,172 @@ STRICT_EXPORT double Socket_Close(double self, double socket)
 	if ((int)socket > 0)
 		close_socket((int)socket);
 	return 0;
+}
+
+static int would_block(void)
+{
+#ifdef _WIN32
+	return WSAGetLastError() == WSAEWOULDBLOCK;
+#else
+	return errno == EAGAIN || errno == EWOULDBLOCK || errno == EINPROGRESS;
+#endif
+}
+
+static int set_nonblocking(int handle, int enabled)
+{
+#ifdef _WIN32
+	u_long mode = enabled ? 1 : 0;
+	return ioctlsocket((SOCKET)handle, FIONBIO, &mode) == 0;
+#else
+	int flags = fcntl(handle, F_GETFL, 0);
+	if (flags < 0)
+		return 0;
+	if (enabled)
+		flags |= O_NONBLOCK;
+	else
+		flags &= ~O_NONBLOCK;
+	return fcntl(handle, F_SETFL, flags) == 0;
+#endif
+}
+
+/* Connect, but give up after seconds instead of waiting for the system timeout. */
+STRICT_EXPORT double Socket_Try(double self, double host, double port, double seconds)
+{
+	if (!is_port(port) || seconds < 0)
+		return strict_fail("InvalidPort");
+	if (!ensure_started())
+		return strict_fail("SocketStartupFailed");
+	char service[16];
+	snprintf(service, sizeof(service), "%d", (int)port);
+	struct addrinfo hints, *list = 0;
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	if (getaddrinfo(strict_text(host), service, &hints, &list) != 0 || list == 0)
+		return strict_fail("HostNotFound");
+	int handle = open_socket(list->ai_family, list->ai_socktype, list->ai_protocol);
+	if (handle == invalid() || !set_nonblocking(handle, 1))
+	{
+		if (handle != invalid())
+			close_socket(handle);
+		freeaddrinfo(list);
+		return strict_fail("SocketFailed");
+	}
+	int connected = connect(handle, list->ai_addr, (socket_size)list->ai_addrlen) == 0;
+	if (!connected && !would_block())
+	{
+		close_socket(handle);
+		freeaddrinfo(list);
+		return strict_fail("ConnectionFailed");
+	}
+	freeaddrinfo(list);
+	if (!connected)
+	{
+		fd_set writable;
+		FD_ZERO(&writable);
+		FD_SET(handle, &writable);
+		struct timeval limit = {(long)seconds, (long)((seconds - (long)seconds) * 1000000)};
+		if (select(handle + 1, 0, &writable, 0, &limit) <= 0)
+		{
+			close_socket(handle);
+			return strict_fail("ConnectionFailed");
+		}
+		int code = 0;
+		socket_size size = sizeof(code);
+		getsockopt(handle, SOL_SOCKET, SO_ERROR, (char*)&code, &size);
+		if (code != 0)
+		{
+			close_socket(handle);
+			return strict_fail("ConnectionFailed");
+		}
+	}
+	set_nonblocking(handle, 0);
+	return (double)sent_at_once(handle);
+}
+
+/* UDP socket on every interface, so a StrictGen can shout and hear on the local network. */
+STRICT_EXPORT double Socket_Beacon(double self, double port)
+{
+	if (!is_port(port))
+		return strict_fail("InvalidPort");
+	if (!ensure_started())
+		return strict_fail("SocketStartupFailed");
+	int handle = open_socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (handle == invalid())
+		return strict_fail("SocketFailed");
+	int reuse = 1;
+	int broadcast = 1;
+	setsockopt(handle, SOL_SOCKET, SO_REUSEADDR, (const char*)&reuse, (socket_size)sizeof(reuse));
+	setsockopt(handle, SOL_SOCKET, SO_BROADCAST, (const char*)&broadcast, (socket_size)sizeof(broadcast));
+	struct sockaddr_in address;
+	memset(&address, 0, sizeof(address));
+	address.sin_family = AF_INET;
+	address.sin_addr.s_addr = htonl(INADDR_ANY);
+	address.sin_port = htons((unsigned short)(int)port);
+	if (bind(handle, (struct sockaddr*)&address, (socket_size)sizeof(address)) != 0 || !set_nonblocking(handle, 1))
+	{
+		close_socket(handle);
+		return strict_fail("ListenFailed");
+	}
+	return (double)handle;
+}
+
+static double told(int beacon, struct sockaddr_in* address, double bytes)
+{
+	if (beacon <= 0)
+		return strict_fail("InvalidSocket");
+	size_t count = (size_t)strict_count(bytes);
+	unsigned char* buffer = count == 0 ? 0 : (unsigned char*)malloc(count);
+	if (count > 0 && buffer == 0)
+		return strict_fail("OutOfMemory");
+	for (size_t index = 0; index < count; index++)
+		buffer[index] = (unsigned char)(int)strict_number(bytes, index);
+	int sent = (int)sendto(beacon, (const char*)buffer, (int)count, 0, (struct sockaddr*)address, (socket_size)sizeof(*address));
+	free(buffer);
+	return sent < 0 ? strict_fail("SendFailed") : 0;
+}
+
+STRICT_EXPORT double Socket_Tell(double self, double beacon, double host, double port, double bytes)
+{
+	if (!is_port(port))
+		return strict_fail("InvalidPort");
+	struct sockaddr_in address;
+	memset(&address, 0, sizeof(address));
+	address.sin_family = AF_INET;
+	address.sin_port = htons((unsigned short)(int)port);
+	if (inet_pton(AF_INET, strict_text(host), &address.sin_addr) != 1)
+		return strict_fail("HostNotFound");
+	return told((int)beacon, &address, bytes);
+}
+
+STRICT_EXPORT double Socket_Shout(double self, double beacon, double port, double bytes)
+{
+	if (!is_port(port))
+		return strict_fail("InvalidPort");
+	struct sockaddr_in address;
+	memset(&address, 0, sizeof(address));
+	address.sin_family = AF_INET;
+	address.sin_port = htons((unsigned short)(int)port);
+	address.sin_addr.s_addr = htonl(INADDR_BROADCAST);
+	return told((int)beacon, &address, bytes);
+}
+
+static char heard_text[4096];
+
+/* One datagram, or an empty text when nothing is waiting. "sender-ip\\tbody". */
+STRICT_EXPORT double Socket_Hear(double self, double beacon)
+{
+	if ((int)beacon <= 0)
+		return strict_fail("InvalidSocket");
+	char buffer[2048];
+	struct sockaddr_in sender;
+	socket_size size = sizeof(sender);
+	int got = (int)recvfrom((int)beacon, buffer, (int)sizeof(buffer) - 1, 0, (struct sockaddr*)&sender, &size);
+	if (got < 0)
+		return would_block() ? strict_text_result("") : strict_fail("ReceiveFailed");
+	buffer[got] = 0;
+	char ip[64];
+	inet_ntop(AF_INET, &sender.sin_addr, ip, sizeof(ip));
+	snprintf(heard_text, sizeof(heard_text), "%s\t%s", ip, buffer);
+	return strict_text_result(heard_text);
 }

@@ -1,5 +1,10 @@
 Connect(host Text, port Number) Number
+Try(host Text, port Number, seconds Number) Number
 Listen(port Number) Number
+Beacon(port Number) Number
+Tell(beacon Number, host Text, port Number, bytes Numbers) Number
+Shout(beacon Number, port Number, bytes Numbers) Number
+Hear(beacon Number) Text
 Local(port Number) Number
 Port(socket Number) Number
 Accept(server Number) Number
