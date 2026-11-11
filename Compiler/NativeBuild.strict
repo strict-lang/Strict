@@ -72,7 +72,7 @@ Build(base Text, program Text, tools Toolchain, isCounting = false) Number
 	if missing.Length > 0
 		logger.Log(tools.Installing(missing))
 		return 1
-	let mlir = Released(BuildProfile(logger).Runtime(program, tools.root, Target))
+	let mlir = BuildProfile(logger).Runtime(value, program, tools.root)
 	let built = Rebuilt(base, mlir, Toolchain(tools, cpu = isReleased then "x86-64-v3" else "native"))
 	logger.Log(built)
 	if built.StartsWith("Built ") is false
@@ -128,7 +128,7 @@ CrossBuild(base Text, program Text, tools Toolchain, isCounting Boolean) Number
 	NativeBuild(Logger, false).CrossBuild("Compiler/output/missing", "module {}", Toolchain.OnWindows, false) is 0
 	if (Target is not Platform.Windows) or isCounting or (isCrossing is false)
 		return 0
-	File(base + ".linux.mlir").Write(Released(Mlir(program, tools.root, Platform.Linux)))
+	File(base + ".linux.mlir").Write(Mlir(program, tools.root, Platform.Linux))
 	let crossed = LinuxBuild(tools).Built(base)
 	logger.Log(crossed)
 	crossed.StartsWith("Built ") then 0 else 1
@@ -145,7 +145,8 @@ Mlir(program Text, root Text, platform Number) Slow(Text)
 	NativeBuild.Mlir("module {\n}", ".", Platform.MacOS).IndexOf("llvm.func @strict_opendir(") > 0
 	NativeBuild.Mlir("module {\n}", ".", Platform.Web).IndexOf("@strict_web(") > 0
 	NativeBuild.Mlir("module {\n}", ".", Platform.Web).IndexOf("@memset(!llvm.ptr, i32, i64)") is -1
-	let runtime = Text.Combine(File(root + "/Compiler/NativeRuntime.mlir").ReadLines, "\n")
+	NativeBuild(Logger, false).Mlir("module {\n" + Watching + "\n}", ".", Platform.Linux).Split(Watching).Length is 2
+	let runtime = Released(Text.Combine(File(root + "/Compiler/NativeRuntime.mlir").ReadLines, "\n"))
 	let system = Text.Combine(Platform.Runtime(platform, root), "\n")
 	let body = program.Substring(0, program.Length - 1)
 	if platform is Platform.Web
