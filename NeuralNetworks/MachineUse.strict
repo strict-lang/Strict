@@ -10,7 +10,7 @@ constant VideoShare = 4
 constant HostShare = 2
 constant Force = "--force"
 constant Local = "--local"
-constant Programs = ("H3Video", "MossImage", "strict")
+constant Programs = ("H3Video", "H3Image", "MossImage", "strict")
 constant Query = "--query-gpu=memory.total,memory.free,utilization.gpu --format=csv,noheader,nounits"
 constant VideoUse = "$g = @{}; Get-CimInstance Win32_PerfFormattedData_GPUPerformanceCounters_GPUProcessMemory | ForEach-Object { $id = [int]$_.Name.Split('_')[1]; $g[$id] = [long]$g[$id] + [long]$_.DedicatedUsage }; "
 constant HostUse = "Get-CimInstance Win32_Process | ForEach-Object { $v = [long]$g[[int]$_.ProcessId]; $r = [long]$_.PrivatePageCount; if ($r -gt 1GB -or $v -gt 512MB) { "
