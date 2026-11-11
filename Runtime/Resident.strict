@@ -78,10 +78,11 @@ Opened Number
 	File(Stamped).Write(port)
 	File(Freed).Write(port)
 	server
-Accepted(server Number, built Number) Number
+Accepted(server Number, built Number, limit = IdleSeconds) Number
 	Sample.Accepted(0, -1) is 0
+	Sample.Accepted(Socket.Local(0), File(Process.Current.executable).Modified, 0) is 0
 	mutable idle = 0
-	for as long as (idle < IdleSeconds) and (File(Process.Current.executable).Modified is built)
+	for as long as (idle < limit) and (File(Process.Current.executable).Modified is built)
 		let waited = Socket.Waiting(server, WakeSeconds)
 		if waited is Error
 			return 0

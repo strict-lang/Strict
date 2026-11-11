@@ -135,8 +135,9 @@ Sent(line Text, isStarting = true) Text
 Resolved(line Text) Text
 	Coordinator(Logger, "Compiler/output/MissingCoordinator").Resolved("need") is ""
 	mutable reply = Sent(line)
+	if reply.StartsWith("wait")
+		logger.Log("Waiting for other programs to finish or to free the memory this run needs")
 	for as long as reply.StartsWith("wait")
-		logger.Log(reply)
 		Process.Wait(1)
 		let again = Sent(line)
 		reply = again is "" then Sent(line) else again
