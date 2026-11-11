@@ -146,6 +146,7 @@ Unimplemented(path Text, lines Texts) Texts
 	Counting.Unimplemented("A.strict", List(Text) + "constant Ones = A(1) is A(1)").Length is 0
 	Counting.Unimplemented("A.strict", ("from", "\tA(2) is A(2)")).Length is 0
 	Counting.Unimplemented("A.strict", ("Twice(number Number) Number", "\tA(3).Twice(2) is 6")).Length is 1
+	Counting.Unimplemented("A.strict", ("Run", "\t1", "", "\t2")).Length is 0
 	let typeName = Path(path).FileName.RemoveExtension.text
 	for lines
 		if (value.StartsWith("\t") is false) and IsUnimplemented(lines, index, typeName)
@@ -155,7 +156,7 @@ IsUnimplemented(lines Texts, header Number, typeName Text) Boolean
 	Counting.IsUnimplemented(("Add(other) Number", "\tA.Add(1) is 1"), 0, "A")
 	Counting.IsUnimplemented(("Add(other) Number", "\tother + 1"), 0, "A") is false
 	let lastLine = LastLine(lines, header)
-	if (lastLine is header) or (lines(header) is "from") or TypeShape(lines).IsMemberLine(lines(header))
+	if (lastLine is header) or (lines(header) is in ("from", "")) or TypeShape(lines).IsMemberLine(lines(header))
 		return false
 	let last = lines(lastLine).Trim
 	let called = lines(header).StartsWith("from") then typeName else Tokenizer(lines(header)).Tokens.First
@@ -179,14 +180,9 @@ LastLine(lines Texts, header Number) Number
 Problem(lines Texts, broken Number) Text
 	Counting.Problem(("Run", "	1 +"), 1) is "ParsingFailed: 1 +"
 	Counting.Problem(("Run", "	let a = for 3"), 1).StartsWith("ForWithBodyOnlyAsMethodResult: let a = for 3, ")
-	Counting.Problem(("has number", "Run", "	1", "", "	2"), 3) is "EmptyLineInsideMethod: Run"
-	if lines(broken).Trim is not ""
-		return StatementParser.Problem(lines(broken).Trim)
-	mutable header = 0
-	for Range(0, broken)
-		if lines(value).StartsWith("	") is false
-			header = value
-	"EmptyLineInsideMethod: " + Tokenizer(lines(header)).Tokens.First
+	Counting.Problem(("has number", "Run", "	1", "", "	2"), 3) is "EmptyLineIsNotAllowed: remove it"
+	Counting.Problem(("", "Run"), 0) is "EmptyLineIsNotAllowed: remove it"
+	lines(broken).Trim is "" then "EmptyLineIsNotAllowed: remove it" else StatementParser.Problem(lines(broken).Trim)
 Parsed(code Text) SyntaxNode
 	Counting.UnknownMethods(Parsed("count is Error then count.Missing else 1"), Counted, KnownTypes.NoMembers).Length is 0
 	Counting.UnknownMethods(Parsed("count is Error then 1 else count.Missing"), Counted, KnownTypes.NoMembers).Length is 1

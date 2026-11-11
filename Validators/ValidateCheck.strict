@@ -6,14 +6,21 @@ Run(folder Text, root Text) Number
 	logger.Log("Validation issues: " + issues)
 	issues + (issues is 0 then Folders(logger).Tested(folder, root) else 0)
 Checked(folder Text, root Text) Number
-	let files = Files(folder)
+	let problems = FileCompiler.Problems(Files(folder))
+	let files = Parsed(Files(folder), problems)
 	let mutations = Mutations(files + ResolveCheck(logger).AllFiles(root))
 	let isBase = folder.Replace("\\", "/").Replace("/.", "") is root
 	let duplicates = Duplicates.Of(files + Directory.Files(root, "*.strict"))
 	let shared = DroppedResults.Shared(duplicates, mutations)
 	let reached = files.Length is 0 then files else SourceFiles(root).Of(files.First, files)
 	let inference = ResolveCheck(logger).Inference(reached)
-	Counts(files, mutations, isBase, shared, duplicates, inference, SureMethods(inference).Named(reached)).Sum
+	let sure = SureMethods(inference).Named(reached)
+	Reported(problems - "") + Counts(files, mutations, isBase, shared, duplicates, inference, sure).Sum
+Parsed(files Texts, problems Texts) Texts
+	ValidateCheck(Logger).Parsed(("A.strict", "B.strict"), ("EmptyLineIsNotAllowed", "")) is ("B.strict")
+	for files
+		if problems(index) is ""
+			value
 Files(folder Text) Texts
 	ValidateCheck(Logger).Files("Validators/MagicNumbers.strict") is ("Validators/MagicNumbers.strict")
 	ValidateCheck(Logger).Files("Validators").Length > 1
@@ -25,10 +32,11 @@ Counts(files Texts, mutations Texts, isBase Boolean, shared Texts, duplicates Du
 		let found = CheckFile(value, lines, typeName, mutations, isBase, shared) + duplicates.Issues(value, lines)
 		Logged(value, found + SureChecks(lines, sure, typeName, inference).Issues) + Unresolved(value, inference)
 Unresolved(path Text, inference Expressions/TypeInference) Number
-	let unresolved = ResolveCheck(logger).Unresolved(path, inference)
-	for unresolved
+	Reported(ResolveCheck(logger).Unresolved(path, inference))
+Reported(issues Texts) Number
+	for issues
 		logger.Log(value)
-	unresolved.Length
+	issues.Length
 CheckFile(path Text, lines Texts, typeName Text, mutations Texts, isBase Boolean, shared Texts) List(ValidationIssue)
 	let limits = Limits(lines, isBase, Limits.Scale(path)).Issues + SubstringLengths(lines).Issues
 	let rules = TypeValidator(TypeShape(lines), mutations, typeName).Validate + limits
