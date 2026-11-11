@@ -1,31 +1,6 @@
 has logger
 constant Digits = "1,2,3,4,5,6,7,8,9,1,2,3,4,5,6,7,8,9,1,2,3,4,5,6,7,8,9,1,2"
 constant Packed = "\t(" + Digits + "," + Digits + ")"
-Run(folder Text)
-	mutable mismatches = 0
-	for Directory.Files(folder, "*.strict")
-		mismatches = mismatches + CheckFile(value)
-	logger.Log("Round trip mismatches: " + mismatches)
-CheckFile(path Text) Number
-	let shape = TypeShape(File(path).ReadLines)
-	mutable mismatches = 0
-	for shape.lines
-		if shape.IsMethodHeader(value)
-			mismatches = mismatches + CheckBody(shape.lines, index + 1, path)
-	mismatches
-CheckBody(lines Texts, start Number, path Text) Number
-	CheckBody(("Run", "\tif a + b * c", "\t\tlet x = (1, 2)"), 1, "test") is 0
-	CheckBody(("Run", "\tlet x=(1,2)"), 1, "test") is 1
-	mutable mismatches = 0
-	for BodyParser(lines).Block(start, 1).Lines("\t")
-		let original = lines(start + index)
-		if value is not original
-			logger.Log(Mismatch(path, original, value))
-			mismatches = mismatches + 1
-	mismatches
-Mismatch(path Text, line Text, formatted Text) Text
-	RoundTrip.Mismatch("a", "b", "c") is "a: b => c"
-	path + ": " + line + " => " + formatted
 Formatted(lines Texts) Texts
 	RoundTrip.Formatted(("Run", "	let x=(1,2)")) is ("Run", "	let x = (1, 2)")
 	RoundTrip.Formatted(("has number ", "Twice Number", "	number*2")) is ("has number", "Twice Number", "	number * 2")
