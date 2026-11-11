@@ -17,6 +17,8 @@ constant Numbered = MethodCodegen(ValueCodegen(TypeInference(KnownTypes.Sample, 
 constant NumberPlus = KnownTypes(List(Text) + "Plus", List(Scope) + Scope(List(Text) + "number", List(Text) + "Number"), List(Scope) + Scope(List(Text) + "+", List(Text) + "Plus"), KnownTypes.NoMembers)
 constant Adding = MethodCodegen(ValueCodegen(TypeInference(NumberPlus, CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
 constant OnText = LoopCodegen(MethodCodegen(ValueCodegen(ValueCodegen.NoTypes, ValueCodegen.Plain.methods, CallTarget(CallTarget.NoTypes, TypeShape("has characters"), "Strict/Text", List(Text)))))
+constant Wanting = CodeBlock.Empty.Declare(CodeBlock.ValueMarker, "Text")
+constant Letters = BodyParser("Letters Texts", "\tfor 2", "\t\tx(index)").Block(1, 1)
 Aggregation(body SyntaxNode, returnType Text) Text
 	Plain.Aggregation(MethodCodegen.SumBody, "Number") is "sum"
 	Plain.Aggregation(DoubledBody, "Boolean") is "any"
@@ -53,8 +55,12 @@ Aggregated(body SyntaxNode, block CodeBlock, returnType Text) CodeBlock
 Initialized(body SyntaxNode, block CodeBlock, returnType Text, aggregation Text) CodeBlock
 	Plain.Initialized(DoubledBody, CodeBlock.Empty, "Numbers", "list").scope.TypeOf("forResult") is "Numbers"
 	Plain.Initialized(Leaded, CodeBlock.Empty, "Numbers", "list").instructions(0).texts.Last is "x"
+	Plain.Initialized(DoubledBody, Wanting, "Text", "sum").scope.TypeOf(CodeBlock.ValueMarker) is ""
+	Plain.Aggregated(Letters, CodeBlock.Empty.Declare("x", "Text"), "Texts").instructions(6).kind is InstructionType.Invoke
 	let leading = body.children.Last.Kind is "For" then Leading(body, block) else block
-	Started(leading, returnType, aggregation).Declare("forResult", returnType).At(block.register)
+	let element = aggregation is "list" then methods.values.inference.types.ElementType(returnType) else ""
+	let started = Started(leading, returnType, aggregation).Declare("forResult", returnType)
+	started.Declare(CodeBlock.ValueMarker, element).At(block.register)
 Finished(looped CodeBlock, register Number) CodeBlock
 	Plain.Finished(CodeBlock.Empty.Declare("forResult", "Numbers"), 0).instructions.Last.texts.Last is "forResult"
 	Plain.Started(CodeBlock.Empty, "Text", "sum").instructions(0) is InstructionEntry.LoadText(0, "")

@@ -15,14 +15,16 @@ constant InRun = CodeBlock.Empty.Declare(CodeBlock.ErrorMarker, "Run")
 constant Logging = InRun.Declare("x", "Logger")
 constant SliceFor = SyntaxNode("For", "slices", (SyntaxNode("Number", "2"), SyntaxNode("Body", "", One)))
 constant CopiedBody = BodyParser("Run", "\tmutable copy = (1)", "\tlet saved = copy", "\tcopy.Add(1)").Block(1, 1)
+constant Letter = BodyParser("Letter Text", "\tx(0)").Block(1, 1)
+constant Texted = Scope(List(Text) + "x", List(Text) + "Text")
 Generate(body SyntaxNode, scope Scope, returnType Text) CodeBlock
 	Plain.Generate(BodyParser("Run Number", "\tx + 2").Block(1, 1), NoScope, "None").instructions.Length is 4
 	Plain.Generate(BodyParser("Run Number", "\treturn 1").Block(1, 1), NoScope, "None").instructions.Length is 2
-	Plain.Generate(BodyParser("Exists Boolean").Block(1, 1), NoScope, "None").instructions.Length is 0
 	Plain.Generate(SumBody, NoScope, "Number").instructions.Length is 11
 	Plain.Generate(FilterBody, NoScope, "Number").instructions(12).kind is InstructionType.JumpEnd
 	Plain.Generate(CopiedBody, NoScope, "None").instructions(5).kind is InstructionType.Add
-	let start = ErrorScope(values).Prepared(body, CodeBlock(List(InstructionEntry), 0, 0, scope))
+	let typed = scope.With(CodeBlock.ReturnMarker, returnType).With(CodeBlock.ValueMarker, returnType)
+	let start = ErrorScope(values).Prepared(body, CodeBlock(List(InstructionEntry), 0, 0, typed))
 	let code = BranchValues(returnType).Rewritten(Production(body, start))
 	let block = LoopCodegen(MethodCodegen(values)).Aggregated(code, start, returnType)
 	if (code.children.Length is 0) or (block.instructions.Last.kind is InstructionType.Return)
@@ -79,7 +81,7 @@ Statement(node SyntaxNode, previous CodeBlock, hasElse Boolean) CodeBlock
 		return node.Kind is "If" then Conditional(node, block, hasElse, "") else Else(node, block, hasElse)
 	if node.Kind is "For"
 		return node.text is "slices" then Slices(node, block) else LoopCodegen(MethodCodegen(values)).Loop(node, block, "")
-	let generated = ErrorCodegen(values).Statement(node, block)
+	let generated = ErrorCodegen(values).Statement(ConversionCodegen(values).Valued(node, block), block)
 	(node.Kind is "Return") and node.HasValue then generated.Add(InstructionEntry.Return(generated.Result)) else generated
 Assignment(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Assignment(SyntaxNode("Declaration", "let a", One), CodeBlock.Empty).scope.TypeOf("a") is "Number"
@@ -182,5 +184,7 @@ Log(argument SyntaxNode, block CodeBlock) CodeBlock
 	generated.Add(InstructionEntry.PrintValue(prefix, generated.Result, values.TypeOf(printed, generated) is "Text"))
 Slices(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Slices(SliceFor, CodeBlock.Empty).instructions(0).texts.Last is "forResult"
+	Plain.Generate(Letter, Texted, "Text").instructions(3).texts is ("Strict/Character", "to", "Strict/Text")
+	Plain.Generate(BodyParser("Exists Boolean").Block(1, 1), NoScope, "None").instructions.Length is 0
 	let loops = LoopCodegen(MethodCodegen(values))
 	loops.Loop(node, loops.Started(block, "Numbers", "list").Declare("forResult", "Numbers").At(block.register), "list")
