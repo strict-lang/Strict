@@ -24,8 +24,10 @@ Issues(path Text, lines Texts) List(ValidationIssue)
 	Copies.Issues("A.strict", Copy).Length is 0
 	let typeName = Path(path).FileName.RemoveExtension.text
 	for lines
-		if TypeShape(lines).IsMethodHeader(value) and (Other(typeName, lines, index) is not "")
-			ValidationIssue("MethodAlreadyExists", Other(typeName, lines, index), index + 1)
+		if TypeShape(lines).IsMethodHeader(value)
+			let other = Other(typeName, lines, index)
+			if other is not ""
+				ValidationIssue("MethodAlreadyExists", other, index + 1)
 Other(typeName Text, lines Texts, header Number) Text
 	Copies.Other("B", Copy, 0) is "A.Halve"
 	Evolving.Other("A", Looping, 2) is ""
