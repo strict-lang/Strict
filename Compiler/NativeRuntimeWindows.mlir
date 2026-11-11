@@ -897,7 +897,7 @@
     %codeSlot = llvm.alloca %count x i32 : (i64) -> !llvm.ptr
     %gotCode = llvm.call @GetExitCodeProcess(%process, %codeSlot) : (!llvm.ptr, !llvm.ptr) -> i32
     %exitCode = llvm.load %codeSlot : !llvm.ptr -> i32
-    %exitNumber = arith.uitofp %exitCode : i32 to f64
+    %exitNumber = arith.sitofp %exitCode : i32 to f64
     cf.br ^collect(%exitNumber : f64)
   ^collect(%code: f64):
     %closedProcess = llvm.call @CloseHandle(%process) : (!llvm.ptr) -> i32
