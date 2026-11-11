@@ -147,6 +147,7 @@ TextHelper(name Text) Text
 	MlirNatives(Texts, 1).TypeHelper("File", "Modified") is "strict_file_modified"
 	MlirNatives(Texts, 1).TypeHelper("GpuMemory", "Released") is "strict_gpu_trim_unused"
 	MlirNatives(Texts, 1).TypeHelper("GpuMemory", "Evicted") is "strict_gpu_evict_all"
+	MlirNatives(Texts, 1).TypeHelper("Process", "Collected") is "strict_process_collected"
 	MlirNatives(Texts, 1).Helper("Strict/File", "Length", 0) is "strict_file_length"
 	MlirNatives(Texts, 1).TextHelper("Upper") is "strict_text_upper"
 	MlirNatives(Texts, 1).TextHelper("Split") is ""

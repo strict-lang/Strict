@@ -1,6 +1,7 @@
 has call Invocation
 constant RunToolsCall = InstructionEntry.Invoke(2, ("Strict/Process", "RunTools", "Strict/List(ProcessResult)", "name", "arguments"), (0, 1), -1)
 constant Running = Invocation(RunToolsCall, (VmValue.OfText("missingStrictTool"), VmValue.OfList((VmValue.OfText("a"), VmValue.OfText("b")))), VmValue.None)
+constant Collecting = Invocation(InstructionEntry.Invoke(0, ("Strict/Process", "Collected", "None"), List(Number), -1), List(VmValue), VmValue.None)
 Result VmValue
 	HostedProcess(Hosted.SystemCall).Result.text is in ("Windows", "Linux", "MacOS", "Unknown")
 	HostedProcess(Running).Result.items.Last.items.First.number is 127
@@ -8,12 +9,16 @@ Result VmValue
 		return call.MethodName is in ("At", "Stored") then ConstantCache.Hosted(call) else HostedBudget(call).Result
 	if call.MethodName is "Started"
 		return VmValue.OfNumber(Process(call.Instance.Member(0).text).Started(call.Arguments.First.text))
-	if call.MethodName is "Wait"
-		Process.Wait(call.Arguments.First.number)
-		return VmValue.None
+	if call.MethodName is in ("Wait", "Collected")
+		return Paused
 	if call.MethodName is "RunTools"
 		return Ran(Process.RunTools(call.Arguments.First.text, Hosted(call).TextsOf(call.Arguments.Last)))
 	Hosted(call).Processed
+Paused VmValue
+	HostedProcess(Collecting).Paused.kind is "None"
+	if call.MethodName is "Wait"
+		Process.Wait(call.Arguments.First.number)
+	VmValue.None
 Texted Text
 	HostedProcess(Hosted.SystemCall).Texted is in ("Windows", "Linux", "MacOS", "Unknown")
 	if call.MethodName is "Variable"

@@ -2,7 +2,8 @@
 program dropping 52 MB lists while keeping 260 MB runs in the 1 GB heap of the web and iOS (natively and in node), one
 dropping 3 MB lists and many small texts in 128 MB, lists grown by Add free their items by counts alone (no collection),
 giving 8 GB of free pages back after a full collection is not counted as collecting (GarbageCollectionExceedsTenth),
-a Realtime type collects at the end of its frames (Presented)."""
+GpuMemory.Released never collects and Process.Collected always does, a Realtime type collects at the end of its
+frames (Presented)."""
 import ctypes
 import os
 import subprocess
@@ -105,9 +106,13 @@ with tempfile.TemporaryDirectory(prefix="MemoryCheck", dir=root / "Examples") as
 	trimmed = built(folder, "TrimmedPool", filled + "Held(count Number) Slow(List(Numbers))\n"
 		"\tTrimmedPool(Logger).Held(1).Length is 1\n\tfor count\n\t\tFilled(16000000, index)\nLast(count Number) Slow(Number)\n"
 		"\tTrimmedPool(Logger).Last(1) is 1\n\tHeld(count).Last(1)\nRun\n\tmutable total = 0\n\tfor 3\n"
-		"\t\ttotal = total + Last(64)\n\t\tGpuMemory.Released\n\tlogger.Log(\"total \" + total)")
-	ran = subprocess.run([str(trimmed)], capture_output=True, text=True, timeout=60, env=os.environ | {"STRICT_GPU": "0"})
+		"\t\ttotal = total + Last(64)\n\t\tProcess.Collected\n\tlogger.Log(\"collected\")\n\tGpuMemory.Released\n"
+		"\tlogger.Log(\"total \" + total)")
+	ran = subprocess.run([str(trimmed)], capture_output=True, text=True, timeout=60,
+		env=os.environ | {"STRICT_GC_LOG": "1", "STRICT_GPU": "0"})
 	assert ran.returncode == 0 and "total 192" in ran.stdout, ran.stdout[-500:]
+	collected, released = ran.stdout.split("collected")
+	assert collected.count("Collection: full") >= 3 and "Collection: " not in released, ran.stdout[-500:]
 	ended = frameEnds(folder, "FrameTicker", "Numbers", "index + seed", "(1, 2)", 5000000, 10)
 	assert True in ended and all(ended[ended.index(True):]) and ended.count(True) >= 2, ended
 	ended = frameEnds(folder, "WordTicker", "Texts", "\"w\" + (index + seed)", "(\"w1\", \"w2\")", 100000, 40)

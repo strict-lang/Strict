@@ -25,6 +25,7 @@ Current Process
 	Process.Current.IsAvailable
 	Process("")
 Wait(seconds Number)
+Collected
 Elapsed Number
 	Process.Elapsed > 0
 	0
