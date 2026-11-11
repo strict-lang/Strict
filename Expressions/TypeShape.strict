@@ -108,22 +108,28 @@ CallScope(generics Texts) Scope
 	TypeShape("has width Number with value > 0").CallScope(List(Text)).TypeOf(Constrained) is "true"
 	TypeShape("has light Number = 0").CallScope(List(Text)).TypeOf("light default") is "0"
 	constant parameters = Defaults(lines).Added(ParameterScope)
-	constant scope = Constraint.Kind(lines) is "" then parameters else parameters.With(Constrained, Constraint.Kind(lines))
+	constant kind = Constraint.Kind(lines)
+	constant members = MemberScope
+	constant names = ConstructorNames(members, generics)
+	Defaults(lines).Constructors(kind is "" then parameters else parameters.With(Constrained, kind), names, members)
+ConstructorNames(members Scope, generics Texts) Texts
+	TypeShape(List(Text)).ConstructorNames(Scope(("a", "b"), ("Generic", "Generics")), List(Text)) is ("a")
 	mutable names = List(Mutable(Text))
-	for MemberScope.types
+	for members.types
 		if (value is not in generics) and ((value is "Generic") or (value.IndexOf("Generic") is -1))
-			names.Add(MemberScope.names(index))
-	Defaults(lines).Constructors(scope, names, MemberScope)
+			names.Add(members.names(index))
+	names
 MethodScope Scope
 	TypeShape("constant Limit = 3", "Add(other Number) Number", "\tother").MethodScope.TypeOf("Add") is "Number"
 	TypeShape("constant Limit = 3", "Add(other Number) Number", "\tother").MethodScope.TypeOf("Limit") is "Number"
 	mutable names = List(Mutable(Text))
 	mutable types = List(Mutable(Text))
 	for lines
-		if value.StartsWith("constant ") or IsMethodHeader(value)
+		let isMethod = IsMethodHeader(value)
+		if isMethod or value.StartsWith("constant ")
 			let header = HeaderTokens(Tokenizer(value).Tokens)
-			names.Add(IsMethodHeader(value) then header.tokens(0) else header.MemberName)
-			types.Add(IsMethodHeader(value) then header.ReturnType else header.DeclaredType(1))
+			names.Add(isMethod then header.tokens(0) else header.MemberName)
+			types.Add(isMethod then header.ReturnType else header.DeclaredType(1))
 	Scope(names, types)
 EnumValue(position Number) Number
 	TypeShape("constant A", "constant B = 10", "constant C").EnumValue(2) is 11
@@ -153,9 +159,11 @@ ConstantScope Scope
 	mutable names = List(Mutable(Text))
 	mutable literals = List(Mutable(Text))
 	for lines.Slice(0, MembersEnd)
-		if value.StartsWith("constant ") and ConstantText(index) is not ""
-			names.Add(Tokenizer(value).Tokens(1))
-			literals.Add(ConstantText(index))
+		if value.StartsWith("constant ")
+			let literal = ConstantText(index)
+			if literal is not ""
+				names.Add(Tokenizer(value).Tokens(1))
+				literals.Add(literal)
 	Scope(names, literals)
 UsedTypes Texts
 	Measured.UsedTypes is ("Vector2")
