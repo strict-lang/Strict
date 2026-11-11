@@ -10,6 +10,7 @@ constant Boxed = ShapeTyping(TypeInference(KnownTypes(("Box", "Item"), NoScopes,
 constant Swapped = ShapeTyping(Instantiation.Inferring)
 constant Making = TypeShape("has logger", "Made(name Text) Couple", "\tCouple(name, 2)")
 constant Plain = TypeShape("Made Text", "\t\"a\"")
+constant Local = TypeShape("has logger", "Made(name Text) Couple", "\tlet other = name", "\tCouple(other, 2)")
 constant Lost = TypeShape("Made Couple", "\tCouple(missing, 2)")
 Typed(shape TypeShape, scope Scope, typeName Text) Scope
 	Counting.Typed(TypeShape("constant a = 1"), KnownTypes.NoMembers, "Count").names.Length is 0
@@ -26,16 +27,25 @@ Typed(shape TypeShape, scope Scope, typeName Text) Scope
 	result
 Returned(shape TypeShape, position Number, typeName Text) Text
 	Swapped.Returned(Making, 1, "User") is "Couple(Text, Number)"
+	Swapped.Returned(Local, 1, "User") is "Couple(Text, Number)"
 	Swapped.Returned(Instantiation.Swapping, 2, "Couple") + Swapped.Returned(Plain, 0, "User") is "Couple(second, first)"
 	(Swapped.Returned(TypeShape("Made Couple", "\t\"a\""), 0, "User") + Swapped.Returned(Lost, 0, "User")) is ""
 	let header = HeaderTokens(Tokenizer(shape.lines(position)).Tokens)
 	let isOpen = "Generic" is in inference.types.MembersOf(header.ReturnType).types
 	if (header.ReturnType is typeName) or (isOpen is false)
 		return Instantiation(inference.types).Template(shape, position, typeName)
-	let result = BodyParser(shape.lines).Method(position + 1).children.Last
-	let parameters = Scope(header.ParameterNames, header.ParameterTypes)
-	let type = inference.TypeOf(result, parameters, inference.types.ShapeScope(typeName))
+	let type = Result(shape, position, typeName)
 	(inference.types.BaseName(type) is header.ReturnType) and (type.IndexOf("Unknown") < 0) then type else ""
+Result(shape TypeShape, position Number, typeName Text) Text
+	Swapped.Result(Local, 1, "User") is "Couple(Text, Number)"
+	Swapped.Result(Plain, 0, "User") is "Text"
+	let bodies = MethodBodies(typeName, shape, inference)
+	let header = HeaderTokens(Tokenizer(shape.lines(position)).Tokens)
+	mutable scope = bodies.HeaderScope(header, shape.MemberScope.With("self type", typeName))
+	let body = BodyParser(shape.lines).Method(position + 1)
+	for body.children
+		scope = bodies.Declare(value, scope)
+	bodies.StatementType(ScopedStatement(body.children.Last, scope, position))
 Refined(scope Scope, name Text, type Text) Scope
 	Counting.Refined(Scope(List(Text) + "a", List(Text) + "Box"), "a", "Item").names.Length is 1
 	Counting.Refined(Scope(List(Text) + "a", List(Text) + "Box"), "a", "Item").TypeOf("a") is "Item"
