@@ -12939,7 +12939,28 @@
     %one = arith.constant 1.0 : f64
     %count = func.call @strict_list_length(%list) : (f64) -> f64
     %flat = func.call @strict_flat_new(%count) : (f64) -> f64
-    cf.br ^loop(%zero : f64)
+    %none = arith.constant 0 : i64
+    %packed = func.call @strict_list_packed(%list) : (f64) -> i64
+    %isPlain = arith.cmpi eq, %packed, %none : i64
+    %some = arith.cmpf ogt, %count, %zero : f64
+    %isRaw = arith.andi %isPlain, %some : i1
+    cf.cond_br %isRaw, ^plain, ^loop(%zero : f64)
+  ^plain:
+    // a list of plain numbers is copied from its items, every other form is read like strict_list_get reads it
+    %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    %block = func.call @strict_ptr(%flat) : (f64) -> !llvm.ptr
+    %end = arith.fptosi %count : f64 to i64
+    %step = arith.constant 1 : i64
+    cf.br ^raw(%none : i64)
+  ^raw(%at: i64):
+    %source = llvm.getelementptr %items[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %number = llvm.load %source : !llvm.ptr -> f64
+    %single = arith.truncf %number : f64 to f32
+    %after = arith.addi %at, %step : i64
+    %target = llvm.getelementptr %block[%after] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    llvm.store %single, %target : f32, !llvm.ptr
+    %left = arith.cmpi slt, %after, %end : i64
+    cf.cond_br %left, ^raw(%after : i64), ^done
   ^loop(%index: f64):
     %more = arith.cmpf olt, %index, %count : f64
     cf.cond_br %more, ^copy, ^done
