@@ -14,11 +14,12 @@ constant Tiny = Gpt2Tokens.Parsed("{\"a\": 0, \"b\": 1, \"\\u0120\": 2, \"ab\": 
 Parsed(vocabulary Text, merges Texts) Gpt2Tokens
 	Tiny.tokens is ("a", "b", " ", "ab", " ab")
 	Tiny.ids(" ab") is 4
+	Gpt2Tokens.Parsed("{\"b\": 0, \"a\": 1, \"ab\": 2, \" \": 3, \"Ġ\": 4}", ("#version: 0.2", "a b")).Merged("ab") is (2)
 	let ordered = Vocabulary(vocabulary)
 	mutable known = Dictionary(Text, Number)
 	for ordered
 		known(value) = index
-	Gpt2Tokens(ordered, known, Ranked(merges, known))
+	Gpt2Tokens(ordered, known, Ranked(merges, known, ordered.Length))
 Loaded(model Gguf) Gpt2Tokens
 	Gpt2Tokens.Loaded(Gguf("NeuralNetworks/tiny.gguf")).Encoded("ab c") is (4, 5)
 	Gpt2Tokens.Loaded(Gguf("NeuralNetworks/tiny.gguf")).isQwen
@@ -29,7 +30,7 @@ Loaded(model Gguf) Gpt2Tokens
 	for model.Value("tokenizer.ggml.tokens").Lines
 		raw.Add(Raw(value))
 		known(raw.Last) = index
-	let ranked = Ranked(model.Value("tokenizer.ggml.merges").Lines, known)
+	let ranked = Ranked(model.Value("tokenizer.ggml.merges").Lines, known, raw.Length)
 	Gpt2Tokens(raw, known, ranked, model.Value("tokenizer.ggml.pre") is in ("qwen2", "qwen35"), Controls(model, raw))
 Controls(model Gguf, names Texts) Dictionary(Text, Number)
 	Gpt2Tokens.Controls(Gguf.Tiny, Tiny.tokens).Length is 0
@@ -77,14 +78,14 @@ Unmapped(code Number) Number
 		return code
 	let skipped = code - Byte.Values
 	skipped < Printable then skipped else skipped < SoftHyphenIndex then skipped + DeleteOffset else SoftHyphen
-Ranked(merges Texts, known Dictionary(Text, Number)) Dictionary(Number, Number)
+Ranked(merges Texts, known Dictionary(Text, Number), width Number) Dictionary(Number, Number)
 	Tiny.ranks(1) is 0
 	Tiny.ranks(13) is 1
 	mutable ranked = Dictionary(Number, Number)
 	for merges
 		if (" " is in value) and (value.StartsWith("#version") is false)
 			let parts = value.Split(" ")
-			ranked(known(Raw(parts(0))) * known.Length + known(Raw(parts(1)))) = index - 1
+			ranked(known(Raw(parts(0))) * width + known(Raw(parts(1)))) = index - 1
 	ranked
 Raw(mapped Text) Text
 	Raw("Ġab") is " ab"
