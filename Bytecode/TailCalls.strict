@@ -51,8 +51,7 @@ IsTail(type TypeEntry, method MethodEntry, position Number) Boolean
 		return false
 	let count = 5 + call.payload(3)
 	let isOwn = (TypeEntry.ShortName(call.texts(0)) is TypeEntry.ShortName(type.Name)) and (type.ConstantSlot(method) < 0)
-	let arguments = call.payload(count)
-	let isCounted = call.payload(count + 1 + arguments) is 0
+	let isCounted = call.payload(count + 1 + call.payload(count)) is 0
 	let isOwnCall = isOwn and isCounted and (IsLooped(method, position) is false)
 	let isSame = isOwnCall and (Inliner(types).Callee(type, call) is method)
 	isSame and Returns(method.instructions, call.payload(0), position + 1)
