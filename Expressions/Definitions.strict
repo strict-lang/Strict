@@ -45,10 +45,11 @@ Defined(statement SyntaxNode, known Texts, definitions SyntaxNodes) SyntaxNode
 	Positions.Defined(Assigned, List(Text) + "next", List(SyntaxNode)).Kind is "Reassignment"
 	Positions.Defined(Assigned, List(Text), List(SyntaxNode) + Next).Kind is "Invalid"
 	Positions.Defined(Assigned, List(Text), List(SyntaxNode) + Next).text.StartsWith("ComputedNameMustNotBeAssigned")
+	Positions.Defined(SyntaxNode("Reassignment", "", Next.children), List(Text), List(SyntaxNode) + Next).Kind is "Invalid"
 	if statement.Kind is not "Reassignment"
 		return statement
 	let target = statement.children(0)
-	if (target.Kind is "Identifier") and (target.text is in Names(definitions))
+	if (target.Kind is in ("Identifier", "Call")) and (target.text is in Names(definitions))
 		return SyntaxNode("Invalid", "ComputedNameMustNotBeAssigned: " + target.text, List(SyntaxNode), statement.line)
 	let isNew = (target.Kind is in ("Identifier", "Call")) and (target.text is not in known) and AreNames(target.children)
 	isNew then SyntaxNode("Computed", target.text, statement.children, statement.line) else statement
