@@ -12228,8 +12228,8 @@
     %result = arith.uitofp %byte : i8 to f64
     return %result : f64
   }
-  // strict_text_at with IndexOutOfRange like strict_list_read: a negative index is measured, a positive one is the
-  // length when its byte is the terminator (always readable); measuring each read would make index loops quadratic
+  // strict_text_at with IndexOutOfRange like strict_list_read: a byte behind the terminator belongs to something else,
+  // so a read that is no terminator is compared with the length (texts of 256 bytes or more keep it cached)
   func.func private @strict_text_read(%text: f64, %index: f64, %name: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %negative = arith.cmpf olt, %index, %zero : f64
@@ -12242,11 +12242,15 @@
   ^read(%chosen: f64):
     %byte = func.call @strict_text_at(%text, %chosen) : (f64, f64) -> f64
     %ended = arith.cmpf oeq, %byte, %zero : f64
-    cf.cond_br %ended, ^error, ^inside
+    cf.cond_br %ended, ^error, ^measure
+  ^measure:
+    %measured = func.call @strict_text_length(%text) : (f64) -> f64
+    %inside = arith.cmpf olt, %chosen, %measured : f64
+    cf.cond_br %inside, ^read_done, ^error
   ^error:
     %error = func.call @strict_index_error(%name) : (f64) -> f64
     return %error : f64
-  ^inside:
+  ^read_done:
     return %byte : f64
   }
   func.func private @strict_boolean(%condition: i1) -> f64 {

@@ -99,6 +99,7 @@ Capitalize Text
 	"logger".Capitalize is "Logger"
 	"a".Capitalize is "A"
 	"ab".characters(2) is Error
+	("ab", "cdefgh")(0).characters(3) is Error
 	"ab".characters(-3) is Error
 	Length is 0 then "" else (characters(0).Upper to Text) + Substring(1, Length - 1)
 IndexOf(text Text, startIndex = 0) Number
