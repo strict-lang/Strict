@@ -2,6 +2,7 @@ has sources Texts
 has stamps Numbers = List(Number)
 constant Listing = TypeEntry("Strict/List(Number)", List(MemberEntry), List(MethodEntry))
 constant Mixed = BinarySources(("./Examples/A.strict", "./Examples/data.csv", "./Examples/List.strict"), (1, 2, 3))
+constant CompilerStamp = BinarySources(List(Text) + Process.Current.executable).Stamped.stamps.First
 Stamped(known = Dictionary(Text, Number)) BinarySources
 	BinarySources(List(Text) + "./Missing.strict").Stamped.stamps is (0)
 	BinarySources(List(Text) + "./Any.strict").Stamped.stamps.First > 1.7e12
@@ -47,8 +48,8 @@ Names(types List(TypeEntry)) Texts
 		short.IndexOf("(") < 0 then short else short.Substring(0, short.IndexOf("("))
 Header Numbers
 	Mixed.Header.Last is 3
-	BinarySources(List(Text)).Header is (1, 0, 7)
-	BinaryNames(sources).Integers + TypeEntry.FormatVersion + stamps
+	BinarySources(List(Text)).Header is (1, 0, 7, CompilerStamp)
+	BinaryNames(sources).Integers + TypeEntry.FormatVersion + CompilerStamp + stamps
 Matches(stream Numbers, start Number) Boolean
 	Mixed.Matches((0, 1, 2, 3), 1)
 	Mixed.Matches((0, 1, 2, 4), 1) is false

@@ -2,7 +2,7 @@ has source Text
 constant Probe = BinaryFile("./Bytecode/Probe.strict")
 constant Greeting = Probe.Packed(BinarySources(List(Text)).Header, List(TypeEntry) + TypeEntry.HelloLogger, List(Text))
 constant Packing = Probe.Unpacked(Greeting)
-constant Outdated = Probe.Unpacked(Probe.Packed(BinaryNames(List(Text) + "./Any.strict").Integers + TypeEntry.FormatVersion + 5, List(TypeEntry) + TypeEntry.HelloLogger, List(Text)))
+constant Outdated = Probe.Unpacked(Probe.Packed(BinaryNames(List(Text) + "./Any.strict").Integers + TypeEntry.FormatVersion + BinarySources.CompilerStamp + 5,List(TypeEntry) + TypeEntry.HelloLogger, List(Text)))
 Path Text
 	Probe.Path is "./Bytecode/obj/Probe.strictbinary"
 	let intermediate = BuildOutput.Intermediate(source)
@@ -25,7 +25,7 @@ Packed(header Numbers, types List(TypeEntry), links Texts) Bytes
 		Byte(value)
 Unpacked(bytes Bytes) List(ZipEntry)
 	Packing.Length is 2
-	Packing.First.content is (1, 0, 7)
+	Packing.First.content is ByteEncoder.Empty.SevenBits((1, 0, 7, BinarySources.CompilerStamp)).bytes
 	ZipReader(ZipReader.Copied(bytes, 0, bytes.Length)).Entries
 Head(bytes Bytes) List(ZipEntry)
 	Probe.Head(Greeting) is Packing
@@ -98,9 +98,10 @@ IsCurrent(entries List(ZipEntry), known = Dictionary(Text, Number)) Boolean
 		return false
 	let header = EntryDecoder.Of(entries.First.content)
 	let start = 1 + header.stream(0)
-	let complete = header.stream.Length is start + 1 + header.names.Length
+	let complete = header.stream.Length is start + 2 + header.names.Length
 	let stamped = BinarySources(header.names).Stamped(known)
-	complete and (header.stream(start) is TypeEntry.FormatVersion) and stamped.Matches(header.stream, start + 1)
+	let isSameCompiler = complete and (header.stream(start + 1) is BinarySources.CompilerStamp)
+	isSameCompiler and (header.stream(start) is TypeEntry.FormatVersion) and stamped.Matches(header.stream, start + 2)
 Types(entries List(ZipEntry)) List(TypeEntry)
 	Probe.Types(Packing) is List(TypeEntry) + TypeEntry.HelloLogger
 	Probe.Types(List(ZipEntry)).Length is 0

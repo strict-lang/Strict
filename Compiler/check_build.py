@@ -328,6 +328,32 @@ def check_native_change():
 				assert result.returncode == 0 and "Up to date" not in result.stdout, changed + ": " + result.stdout + result.stderr
 	print("A changed native source or package of another folder rebuilds for strict build and strict <file>")
 
+def check_compiler_change():
+	"""A changed compiler compiles a used type again instead of linking the bytecode the old one stored for it."""
+	strict = root / ("strict" + extension)
+	with tempfile.TemporaryDirectory(prefix="CompilerChange", dir=root / "Examples") as folder:
+		(Path(folder) / "CompilerUsed.strict").write_text("Doubled(number Number) Number\n\tDoubled(2) is 4\n\tnumber * 2\n",
+			encoding="utf-8")
+		source = Path(folder) / "CompilerChange.strict"
+		source.write_text("Tripled(number Number) Number\n\tTripled(2) is 6\n\tCompilerUsed.Doubled(number) + number\n",
+			encoding="utf-8")
+		used = obj(source.with_name("CompilerUsed.strict"), ".strictbinary")
+		def tested():
+			result = subprocess.run([str(strict), "test", str(source), "native"], cwd=root, capture_output=True, text=True,
+				timeout=270)
+			assert result.returncode == 0 and "Up to date" not in result.stdout, result.stdout + result.stderr
+			return used.stat().st_mtime_ns
+		stored = tested()
+		os.utime(source)
+		assert tested() == stored, "An unchanged compiler did not link the stored bytecode of a used type"
+		stamp = strict.stat()
+		try:
+			os.utime(strict, ns=(stamp.st_atime_ns, stamp.st_mtime_ns + 1000000000))
+			assert tested() != stored, "A changed compiler linked the bytecode the old one stored for a used type"
+		finally:
+			os.utime(strict, ns=(stamp.st_atime_ns, stamp.st_mtime_ns))
+	print("A changed compiler compiles used types again")
+
 def check_named_failure():
 	"""A build stopped by an Error of the front end names it instead of ending with exit 1 and no output."""
 	with tempfile.TemporaryDirectory(prefix="NamedCheck", dir=root / "Examples") as folder:
@@ -344,3 +370,4 @@ check_link_workers()
 check_moved_program()
 check_native_folder()
 check_native_change()
+check_compiler_change()
