@@ -3,9 +3,12 @@ has entryName Text
 has countedFiles Texts = List(Text)
 has entries = 1
 has entrySymbol Text = "main"
+has platform = -1
 constant Counters = MlirModule(List(TypeEntry) + TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry) + MethodEntry.CountingLoop), "Run")
 constant Pair = MlirModule(Counters.types + TypeEntry("Strict/Other", List(MemberEntry), List(MethodEntry) + MethodEntry.CountingLoop), "Run", List(Text), 2)
 constant NoFunctions = List(MlirFunction)
+constant Scaled = MlirModule(List(TypeEntry) + WgslShader.Scaling, "Scaled")
+constant Shaded = MlirModule(Scaled.types, "Scaled", platform = Platform.Web)
 constant Started = MlirModule(List(TypeEntry) + TypeEntry(Counters.types.First, methods = (MethodEntry.CountingLoop, MlirEntry.Start)), "Run")
 constant Floor = MethodEntry("Floor", List(MemberEntry), "Strict/Number", List(InstructionEntry) + InstructionEntry.Return(0))
 constant FloorCall = InstructionEntry.Invoke(0, ("Strict/Degrees", "Floor", "Strict/Number"), List(Number), -1)
@@ -61,6 +64,7 @@ Emission(function MlirFunction, functions List(MlirFunction), recursive Texts) T
 	whole.Length is 0 then emitted else emitted + "\n" + outer.Text.Combine(whole, "\n")
 Combined(lines Texts, functions List(MlirFunction), counted List(MlirFunction)) Text
 	Counters.Combined(List(Text), Counters.Functions, Counters.Functions).EndsWith("}")
+	Scaled.Text.IndexOf(WgslShader.Marker) < Shaded.Text.IndexOf(WgslShader.Marker)
 	let table = countedFiles.Length is 0 then List(Text) else MlirLines.Table(functions, Mains, countedFiles)
 	let started = Process.Elapsed
 	let device = MlirGpu.Module(functions)
@@ -69,7 +73,7 @@ Combined(lines Texts, functions List(MlirFunction), counted List(MlirFunction)) 
 	let main = MlirEntry(counted.First, Others(counted), entrySymbol).Main
 	let host = outer.Text.Combine(lines + MlirGlobals(functions).Lines + table + main + "}", "\n")
 	BuildProfile(Logger).Reported("Emission / globals and assembly", before)
-	outer.Text.Combine((host, device, WgslShader.Scripts(functions)) - "", "\n")
+	outer.Text.Combine((host, device, platform is Platform.Web then WgslShader.Scripts(functions) else "") - "", "\n")
 Functions List(MlirFunction)
 	Counters.Functions.Length is 1
 	Pair.Functions.Length is 2
