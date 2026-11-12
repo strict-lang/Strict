@@ -103,7 +103,8 @@ Calculated(entry InstructionEntry) Texts
 		return MlirEquality(function, position).Compared(entry)
 	if entry.kind > InstructionType.ArithmeticSeparator
 		return loads + Compared(entry, left + ", " + right)
-	loads + Operated(entry.kind, left, right) + function.Store(Temp("c"), "%r" + entry.payload(3))
+	let lines = loads + Operated(entry.kind, left, right) + function.Store(Temp("c"), "%r" + entry.payload(3))
+	entry.kind is InstructionType.Modulo then MlirCounter(function, position).Remainder(entry, lines) else lines
 Operated(kind Number, left Text, right Text) Text
 	Copy.Operated(InstructionType.Modulo, "%a", "%b").IndexOf("@strict_remainder(%a, %b)") > 0
 	Copy.Operated(InstructionType.Add, "%a", "%b") is "    %t0c = arith.addf %a, %b : f64"

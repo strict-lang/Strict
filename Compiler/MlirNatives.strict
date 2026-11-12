@@ -165,7 +165,8 @@ Emitted(entry InstructionEntry, type TypeEntry, helper Text) Texts
 	let completed = (helper is in DefaultedLast) and (count is 1) then operands + "%zero" else operands
 	let plain = MlirMemory(function, position).Passed(calls.Temp("r"), helper, completed, Element(owner))
 	let call = helper.StartsWith("strict_dictionary_") then Keying(helper, completed, owner) else plain
-	calls.Loads(entry, type) + textual + call + function.Store(calls.Temp("r"), "%r" + entry.payload(0))
+	let lines = calls.Loads(entry, type) + textual + call + function.Store(calls.Temp("r"), "%r" + entry.payload(0))
+	helper is "strict_floor" then MlirCounter(function, position).Floor(entry, lines) else lines
 Textual(entry InstructionEntry, element Text, count Number) Texts
 	MlirNatives(MlirKinds.Lettered.function, 2).Textual(Search, "Text", 1)(0).IndexOf("ct = func.call @strict_char") > 0
 	MlirNatives(MlirKinds.Lettered.function, 2).Textual(Search, "Number", 1).Length is 0

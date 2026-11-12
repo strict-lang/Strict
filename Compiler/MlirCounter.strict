@@ -1,0 +1,61 @@
+has function MlirFunction
+has position Number
+constant IndexLoad = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "index")
+constant Remaining = InstructionEntry.Binary(InstructionType.Modulo, (1, 2, 3))
+constant Divided = (Remaining, InstructionEntry.Binary(InstructionType.Divide, (1, 2, 4)))
+constant FloorNames = ("Strict/Number", "Floor", "Strict/Number")
+constant Floored = InstructionEntry.Invoke(5, FloorNames, List(Number), 4)
+constant Written = InstructionEntry.Named(InstructionType.InvokeWriteToList, 6, "forResult")
+constant Ended = InstructionEntry.Jump(InstructionType.LoopEnd, 8)
+constant Summed = (InstructionEntry.Binary(InstructionType.Add, (3, 5, 6)), Written, Ended)
+constant Quarters = MlirKernel.NumbersLoop + IndexLoad + InstructionEntry.LoadNumber(2, 4) + Divided + Floored + Summed
+constant Doubler = MlirKernel.Doubler
+constant Number = TypeEntry("Strict/Number", List(MemberEntry), List(MethodEntry))
+constant Body = List(InstructionEntry) + MlirLoops.Emptied + Quarters
+constant Quartered = MethodEntry("Quartered", Doubler.method.parameters, "Strict/List(Number)", Body)
+constant Quotient = "    %t7i = arith.divsi %t2ki, %t7w : i64"
+constant Quartering = MlirCounter(MlirFunction(Doubler.types, Doubler.type, Quartered, List(Number), 2), 5)
+Remainder(entry InstructionEntry, lines Texts) Texts
+	MlirStatements(Quartering.function, 5).Calculated(Remaining)(1) is "    %t5i = arith.remsi %t2ki, %t5w : i64"
+	Quartering.Remainder(Divided.First, List(Text)).Last is "    llvm.store %t5c, %r3 : f64, !llvm.ptr"
+	MlirCounter(MlirFunction(Quartering.function, FastLoop = -1), 5).Remainder(Divided.First, ("x")) is ("x")
+	Whole(Divisor(entry.payload(1), entry.payload(2)), "remsi", entry.payload(3), lines)
+Floor(entry InstructionEntry, lines Texts) Texts
+	MlirNatives(Quartering.function, 7).Emitted(Floored, Number, "strict_floor")(1) is Quotient
+	Quartering.At(7).Floor(Floored, List(Text)).Last is "    llvm.store %t7c, %r5 : f64, !llvm.ptr"
+	Quartering.At(8).Floor(InstructionEntry.Invoke(5, FloorNames, List(Number), 3), ("x")) is ("x")
+	let instance = PayloadDecoder(entry).Instance
+	let writer = LoadReuse(function.method.instructions).Writer(instance, position, function.FastLoop)
+	let divide = writer < 0 then entry else function.method.instructions(writer)
+	if divide.kind is not InstructionType.Divide
+		return lines
+	Whole(At(writer).Divisor(divide.payload(1), divide.payload(2)), "divsi", entry.payload(0), lines)
+Divisor(left Number, right Number) Number
+	Quartering.Divisor(1, 2) is 4
+	Quartering.Divisor(2, 1) is 0
+	Quartering.At(4).Divisor(1, 2) is 0
+	let writer = LoadReuse(function.method.instructions).Writer(right, position, function.FastLoop)
+	let terms = MlirKernel(function, function.FastLoop).Terms(left, position)
+	if (function.FastLoop < 0) or (writer < 0) or (terms is not ("index"))
+		return 0
+	let loaded = function.method.instructions(writer)
+	if loaded.kind is not InstructionType.LoadConstantToRegister
+		return 0
+	let divisor = PayloadDecoder(loaded).Value(1).number
+	(divisor >= 1) and (divisor is divisor.Floor) then divisor else 0
+Whole(divisor Number, operation Text, register Number, lines Texts) Texts
+	Quartering.Whole(0, "remsi", 3, ("x")) is ("x")
+	Quartering.Whole(4, "divsi", 3, List(Text)).First is "    %t5w = arith.constant 4 : i64"
+	Quartering.Whole(4, "divsi", 3, List(Text))(2) is "    %t5c = arith.sitofp %t5i : i64 to f64"
+	if divisor is 0
+		return lines
+	let literal = "    " + Temp("w") + " = arith.constant " + divisor + " : i64"
+	let whole = "    " + Temp("i") + " = arith." + operation + " %t" + function.FastLoop + "ki, " + Temp("w") + " : i64"
+	let number = "    " + Temp("c") + " = arith.sitofp " + Temp("i") + " : i64 to f64"
+	(literal, whole, number, function.Store(Temp("c"), "%r" + register))
+Temp(suffix Text) Text
+	Quartering.Temp("w") is "%t5w"
+	"%t" + position + suffix
+At(at Number) MlirCounter
+	Quartering.At(7).position is 7
+	MlirCounter(function, at)
