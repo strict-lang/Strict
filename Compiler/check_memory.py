@@ -3,7 +3,8 @@ program dropping 52 MB lists while keeping 260 MB runs in the 1 GB heap of the w
 dropping 3 MB lists and many small texts in 128 MB, lists grown by Add free their items by counts alone (no collection),
 giving 8 GB of free pages back after a full collection is not counted as collecting (GarbageCollectionExceedsTenth),
 GpuMemory.Released never collects and Process.Collected always does, a Realtime type collects at the end of its
-frames (Presented)."""
+frames (Presented), reading 1000 lines of 80 KB measures the 80 MB text once (its remembered length survives reclaims
+that do not free it, measuring it again per line took 13 s)."""
 import ctypes
 import os
 import subprocess
@@ -117,4 +118,10 @@ with tempfile.TemporaryDirectory(prefix="MemoryCheck", dir=root / "Examples") as
 	assert True in ended and all(ended[ended.index(True):]) and ended.count(True) >= 2, ended
 	ended = frameEnds(folder, "WordTicker", "Texts", "\"w\" + (index + seed)", "(\"w1\", \"w2\")", 100000, 40)
 	assert all(ended) and len(ended) <= 20, ended
+	(Path(folder) / "long.txt").write_text(("x" * 80000 + "\n") * 1000, encoding="utf-8", newline="\n")
+	long = built(folder, "LongLines", "has logger\nRun\n\tlet started = Process.Elapsed\n"
+		f"\tlet lines = File(\"{Path(folder).as_posix()}/long.txt\").ReadLines\n"
+		"\tlogger.Log(\"lines \" + lines.Length + \" slow \" + (Process.Elapsed - started > 3))")
+	ran = subprocess.run([str(long)], capture_output=True, text=True, timeout=60, env=os.environ | {"STRICT_GPU": "0"})
+	assert ran.returncode == 0 and "lines 1001 slow false" in ran.stdout, ran.stdout[-300:]
 print("check_memory.py passed")

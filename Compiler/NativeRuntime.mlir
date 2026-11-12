@@ -5997,8 +5997,6 @@
     func.call @strict_rc_mark_all() : () -> ()
     cf.br ^roots
   ^roots:
-    %measuredSlot = llvm.mlir.addressof @strict_measured_text : !llvm.ptr
-    llvm.store %zero, %measuredSlot : i64, !llvm.ptr
     func.call @strict_rc_roots(%seen) : (i1) -> ()
     %lengthSlot = llvm.mlir.addressof @strict_rc_length : !llvm.ptr
     %tableSlot = llvm.mlir.addressof @strict_rc_table : !llvm.ptr
@@ -6243,6 +6241,7 @@
     cf.br ^free
   ^free:
     func.call @strict_rc_forget_device(%object) : (i64) -> ()
+    func.call @strict_measured_freed(%object, %located#2) : (i64, i64) -> ()
     %header = arith.subi %object, %headerBytes : i64
     func.call @strict_gc_free_large(%header) : (i64) -> ()
     func.call @strict_gc_uncount(%located#2) : (i64) -> ()
@@ -6448,6 +6447,7 @@
     cf.br ^cleared
   ^cleared:
     func.call @strict_rc_forget_device(%object) : (i64) -> ()
+    func.call @strict_measured_freed(%object, %size) : (i64, i64) -> ()
     %wiped = llvm.call @memset(%pointer, %clear, %size) : (!llvm.ptr, i32, i64) -> !llvm.ptr
     llvm.store %clear, %counter : i32, !llvm.ptr
     llvm.store %unmarked, %flags : i8, !llvm.ptr
@@ -12159,6 +12159,21 @@
   }
   llvm.mlir.global internal @strict_measured_text(0 : i64) : i64
   llvm.mlir.global internal @strict_measured_length(0 : i64) : i64
+  // a block freed by its count may hold the text whose length is remembered: only then it is forgotten (a reclaim
+  // that forgot it every time measured an 80 MB text again for each of its lines, File.ReadLines)
+  func.func private @strict_measured_freed(%object: i64, %size: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
+    %zero = arith.constant 0 : i64
+    %textSlot = llvm.mlir.addressof @strict_measured_text : !llvm.ptr
+    %measured = llvm.load %textSlot : !llvm.ptr -> i64
+    %end = arith.addi %object, %size : i64
+    %inside = func.call @strict_gc_within(%measured, %object, %end) : (i64, i64, i64) -> i1
+    cf.cond_br %inside, ^forget, ^done
+  ^forget:
+    llvm.store %zero, %textSlot : i64, !llvm.ptr
+    cf.br ^done
+  ^done:
+    return
+  }
   func.func private @strict_text_length(%text: f64) -> f64 {
     %pointer = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr
     %address = llvm.ptrtoint %pointer : !llvm.ptr to i64
