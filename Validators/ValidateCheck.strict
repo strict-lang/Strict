@@ -11,11 +11,10 @@ Checked(folder Text, root Text) Number
 	let mutations = Mutations(files + ResolveCheck(logger).AllFiles(root))
 	let isBase = folder.Replace("\\", "/").Replace("/.", "") is root
 	let duplicates = Duplicates.Of(files + Directory.Files(root, "*.strict"))
-	let shared = DroppedResults.Shared(duplicates, mutations)
 	let reached = files.Length is 0 then files else SourceFiles(root).Of(files.First, files)
 	let inference = ResolveCheck(logger).Inference(reached)
 	let sure = SureMethods(inference).Named(reached)
-	Reported(problems - "") + Counts(files, mutations, isBase, shared, duplicates, inference, sure).Sum
+	Reported(problems - "") + Counts(files, mutations, isBase, duplicates, inference, sure).Sum
 Parsed(files Texts, problems Texts) Texts
 	ValidateCheck(Logger).Parsed(("A.strict", "B.strict"), ("EmptyLineIsNotAllowed", "")) is ("B.strict")
 	for files
@@ -25,11 +24,11 @@ Files(folder Text) Texts
 	ValidateCheck(Logger).Files("Validators/MagicNumbers.strict") is ("Validators/MagicNumbers.strict")
 	ValidateCheck(Logger).Files("Validators").Length > 1
 	folder.EndsWith(".strict") then List(Text) + folder else Directory.Files(folder, "*.strict")
-Counts(files Texts, mutations Texts, isBase Boolean, shared Texts, duplicates Duplicates, inference Expressions/TypeInference, sure Texts) Numbers
+Counts(files Texts, mutations Texts, isBase Boolean, duplicates Duplicates, inference Expressions/TypeInference, sure Texts) Numbers
 	for files
 		let lines = File(value).ReadLines
 		let typeName = Path(value).FileName.RemoveExtension.text
-		let found = CheckFile(value, lines, typeName, mutations, isBase, shared) + duplicates.Issues(value, lines)
+		let found = CheckFile(value, lines, typeName, mutations, isBase) + duplicates.Issues(value, lines)
 		Logged(value, found + SureChecks(lines, sure, typeName, inference).Issues) + Unresolved(value, inference)
 Unresolved(path Text, inference Expressions/TypeInference) Number
 	Reported(ResolveCheck(logger).Unresolved(path, inference))
@@ -37,12 +36,12 @@ Reported(issues Texts) Number
 	for issues
 		logger.Log(value)
 	issues.Length
-CheckFile(path Text, lines Texts, typeName Text, mutations Texts, isBase Boolean, shared Texts) List(ValidationIssue)
+CheckFile(path Text, lines Texts, typeName Text, mutations Texts, isBase Boolean) List(ValidationIssue)
 	let limits = Limits(lines, isBase, Limits.Scale(path)).Issues + SubstringLengths(lines).Issues
 	let rules = TypeValidator(TypeShape(lines), mutations, typeName).Validate + limits
 	let names = Names(lines).Issues + Recursions(lines, typeName).Issues + Inlines(lines).Issues
 	let shaped = names + TestChecks(lines).Issues + Writes(lines, typeName).Issues + StatusCodes(lines).Issues
-	rules + shaped + (DroppedResults(lines, shared).Issues + LoopBodies(lines).Issues + MagicNumbers(lines).Issues)
+	rules + shaped + (LoopBodies(lines).Issues + MagicNumbers(lines).Issues)
 Logged(path Text, found List(ValidationIssue)) Number
 	for found
 		logger.Log(path + ":line " + value.Line + ": " + value)
