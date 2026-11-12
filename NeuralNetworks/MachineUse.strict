@@ -51,21 +51,25 @@ Needed Text
 	MachineUse(Logger, "H3Video", 4, 2).Needed.StartsWith("need\tH3Video\tH3Video\t4\t4\t2\t2\t0\t")
 	let mode = isForced then "force" else "wait"
 	"need\t" + program + "\t" + program + "\t" + ram + "\t" + ram + "\t" + vram + "\t" + vram + "\t0\t" + mode
-Admitted Slow(Number)
-	MachineUse(Logger, "H3Video", 0, 0, true, Nowhere).Admitted is 0
+Admitted Slow(Boolean)
+	MachineUse(Logger, "H3Video", 0, 0, true, Nowhere).Admitted
 	let reply = Coordinator(logger, coordinator).Resolved(Needed)
-	reply.StartsWith("refused") then Explained(reply) else reply is "" then Checked else 0
-Checked Number
+	if reply.StartsWith("refused")
+		Explained(reply)
+		return false
+	reply is "" then Checked else true
+Checked Boolean
 	let device = Device
 	let problem = Problem(GpuMemory.HostAvailable, GpuMemory.HostTotal, device(1), device(0))
-	if problem is ""
-		return Noted(device(0))
-	if isForced
+	if (problem is not "") and isForced
 		logger.Log(problem)
 		logger.Log("Running anyway (--force), this can be very slow while other programs hold the memory")
-		return Noted(device(0))
+	if (problem is "") or isForced
+		Noted(device(0))
+		return true
 	Explained
-Explained(reply = "") Number
+	false
+Explained(reply = "")
 	let device = Device
 	let parts = reply.Split("\t")
 	let given = parts.Length > 2 then "Not enough memory for " + program + ": " + parts(2) else ""
@@ -76,7 +80,6 @@ Explained(reply = "") Number
 	for Users
 		logger.Log(value)
 	logger.Log(given.IndexOf("this machine has") >= 0 then TooSmall else Advice + program + " again" + Forcing)
-	1
 Problem(hostFree Number, hostTotal Number, deviceFree Number, deviceTotal Number, isShown = false) Text
 	Sample.Problem(65 * Gigabyte, 128 * Gigabyte, 23 * Gigabyte, 24 * Gigabyte) is ""
 	Sample.Problem(7 * Gigabyte, 128 * Gigabyte, 23 * Gigabyte, 24 * Gigabyte).StartsWith("Not enough")
@@ -102,11 +105,10 @@ Usable(needed Number, total Number, share Number) Number
 	Sample.Usable(6 * Gigabyte, 0, VideoShare) is 6 * Gigabyte
 	let usable = total - total / share
 	(total is 0) or (needed < usable) then needed else usable
-Noted(deviceTotal Number) Number
-	Sample.Noted(0) is 0
+Noted(deviceTotal Number)
+	Sample.Noted(0) is not Error
 	if (deviceTotal > 0) and (deviceTotal < vram)
 		logger.Log("The GPU has " + Sized(deviceTotal) + " of VRAM, less than the " + Sized(vram) + Slower)
-	0
 Sized(bytes Number) Text
 	Sample.Sized(24 * Gigabyte) is "24 GB"
 	Sample.Sized(Gigabyte * 2.5) is "2.5 GB"

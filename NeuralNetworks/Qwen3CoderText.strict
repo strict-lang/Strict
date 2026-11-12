@@ -7,7 +7,7 @@ Run(folder Text)
 	let path = folder + "/" + Weights
 	if File(path).Exists is false
 		Downloaded(path)
-	if MachineUse.Weights(logger, "Qwen3CoderText", path).Admitted is 0
+	if MachineUse.Weights(logger, "Qwen3CoderText", path).Admitted
 		Ran(folder)
 Ran(folder Text)
 	let path = folder + "/" + Weights
