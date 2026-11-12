@@ -4,6 +4,7 @@ constant Hashed = VmValue("Strict/HashCode(Type)", 0, "", List(VmValue) + VmValu
 constant Letter = VmValue("Strict/Character", 0, "", List(VmValue) + VmValue.OfNumber(97))
 constant Detailed = VmValue("Strict/ErrorWithValue", 0, "", (DimensionError, OneTwo))
 constant Wrapped = VmValue.OfList(List(VmValue) + Letter)
+constant Undefined = VmValue.OfNumber(0 / 0)
 Result(kind Number, left VmValue, right VmValue) VmValue
 	Result(InstructionType.Add, VmValue.OfNumber(3), VmValue.OfNumber(4)).number is 7
 	Result(InstructionType.LessThan, VmValue.OfNumber(3), VmValue.OfNumber(4)).IsTrue
@@ -71,6 +72,7 @@ Calculated(kind Number, left VmValue, right VmValue) VmValue
 	Calculated(InstructionType.Modulo, VmValue.OfNumber(7), VmValue.OfNumber(4)).number is 3
 	Calculated(InstructionType.Multiply, OneTwo, OneTwo).Length is 2
 	Calculated(InstructionType.Divide, OneTwo, VmValue.OfNumber(2)).Length is 2
+	Calculated(InstructionType.Modulo, VmValue.OfNumber(7), Undefined) is VmValue.OfError("ModuloByZero")
 	let isValue = (left.kind is not in ("Text", "List")) and (right.kind is not in ("Text", "List"))
 	if isValue and ((left.kind is "Strict/Error") or (right.kind is "Strict/Error"))
 		return left.kind is "Strict/Error" then left else right
@@ -78,8 +80,11 @@ Calculated(kind Number, left VmValue, right VmValue) VmValue
 		return Added(left, right)
 	if left.kind is "List"
 		return kind is InstructionType.Subtract then Removed(left, right) else Zipped(kind, left, right)
-	let isZeroModulo = (kind is InstructionType.Modulo) and (right.number is 0)
-	isZeroModulo then VmValue.OfError("ModuloByZero") else VmValue.OfNumber(Numeric(kind, left.number, right.number))
+	Computed(kind, left.number, right.number)
+Computed(kind Number, left Number, right Number) VmValue
+	Computed(InstructionType.Divide, 6, 4).number is 1.5
+	let number = Numeric(kind, left, right)
+	number is Error then VmValue.OfError(number.Name.text) else VmValue.OfNumber(number)
 Numeric(kind Number, left Number, right Number) Number
 	Numeric(InstructionType.Modulo, 7, 4) is 3
 	Calculated(InstructionType.Modulo, DimensionError, VmValue.OfNumber(1)) is DimensionError
@@ -144,7 +149,7 @@ Zipped(kind Number, left VmValue, right VmValue) VmValue
 	let length = (left.items.Length is 0) or (left.items.Length > others.Length) then left.items.Length else others.Length
 	mutable results = List(Mutable(VmValue))
 	for length
-		results.Add(VmValue.OfNumber(Numeric(kind, Element(left.items, index).number, Element(others, index).number)))
+		results.Add(Computed(kind, Element(left.items, index).number, Element(others, index).number))
 	VmValue.OfList(results)
 Element(items List(VmValue), position Number) VmValue
 	Element(OneTwo.items, 1).number is 2
