@@ -116,10 +116,11 @@ Renamed(node SyntaxNode, level Number) SyntaxNode
 RenamedChildren(node SyntaxNode, level Number) SyntaxNodes
 	Pairs.RenamedChildren(Inner, 2).Last.Lines("\t") is ("\touter + y")
 	Pairs.RenamedChildren(Inner, 2).First to Text is "4"
+	Pairs.RenamedChildren(Inner, 0).Last.Lines("\t") is ("\tx + y")
 	for node.children
 		let isMember = (node.Kind is in ("Member", "MethodCall")) and (index is 0) and (Distance(value, level) is 1)
 		let isCondition = (node.text is "for as long as") and (index is 0)
-		let deeper = (node.Kind is "For") and (value.Kind is "Body") then level + 1 else level
+		let deeper = (level > 0) and (node.Kind is "For") and (value.Kind is "Body") then level + 1 else level
 		IsTarget(node, index) or isMember or isCondition then value else Renamed(value, deeper)
 Distance(node SyntaxNode, level Number) Number
 	Pairs.Distance(SyntaxNode("Identifier", "y"), 2) is 1

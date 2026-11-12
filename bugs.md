@@ -13,7 +13,6 @@
 - `LinkRound.IsForwarded("Strict/B", 0, "Go")` is true for B's own Go method: line 66 only looks at the round's entry (`entries(index).Chosen(method, -1, ...) < 0`), never at the methods B declares itself.
 - `Tokenizer.IsGrouped` only compares the counts of `(` and `)`, so `") ("` counts as grouped (Tokenizer line 129).
 - `ShapeTyping.Expanded` sets the owner only for an Identifier (line 95): a call owner like `Box(3).Sample.Weight` gets no owner and does not resolve.
-- `NamedIterators` renames `x` to `outer` in the body of a `for as long as` inside a named loop but keeps `x` in its condition (`isCondition`, line 121; a test pins it): either both or none.
 - `next(a) = ...` with `next` already defined silently becomes a second Computed: `Definitions` line 51 only checks Identifier targets for `ComputedNameMustNotBeAssigned`.
 - A call's return type is `Strict/Unknown` where it is known: `IndexCodegen.Indexed` on a `Dictionary(Text, Number)` emits `get` returning Strict/Unknown instead of Number, `OperatorCodegen.Composite` of a Number `or` calls `or` returning Strict/Unknown.
 - `Wrong(1)` with only `has logger` still builds (a Number is accepted for any composite member, `ArgumentTypes.IsBaseMismatch`), `Wrong(1, 2)` is `TooManyArguments` since 2026-11-12.
