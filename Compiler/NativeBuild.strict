@@ -168,5 +168,7 @@ Failure(program Text) Text
 	NativeBuild.Failure("unsupported: a\nb") is "unsupported: a\nb"
 	NativeBuild.Failure("x\nunsupported: a\nb") is "unsupported: a"
 	NativeBuild.Failure("@c(\"unsupported: x\")") is ""
-	let at = ("\n" + program).IndexOf("\nunsupported:")
-	at < 0 then "" else at is 0 then program else program.Substring(at, program.Length - at).Lines.First
+	if program.StartsWith("unsupported:")
+		return program
+	let at = program.IndexOf("\nunsupported:")
+	at < 0 then "" else program.Substring(at + 1, program.Length - at - 1).Lines.First
