@@ -83,7 +83,7 @@ IsExponentSign(start Number, position Number) Boolean
 	Tokenizer("1e-").IsExponentSign(0, 2) is false
 	Tokenizer("1e-x").IsExponentSign(0, 2) is false
 	Tokenizer("ae-5").IsExponentSign(0, 2) is false
-	let isExponent = (position > start) and (line.characters(position - 1).number is LowercaseE)
+	let isExponent = line.characters(position - 1).number is LowercaseE
 	let isNumber = isExponent and IsDigitCode(line.characters(start).number)
 	isNumber and (position + 1 < line.Length) and IsDigitCode(line.characters(position + 1).number)
 IsWordCharacter(character Text) Boolean
@@ -143,7 +143,7 @@ Names Texts
 		let length = line.characters(position).number is Character.Space then 0 else TokenLength(position)
 		if (length > 0) and (isAfterDot is false) and IsName(position, length)
 			names.Add(line.Substring(position, length))
-		isAfterDot = length is 0 then isAfterDot else (length is 1) and (line.characters(position).number is Dot)
+		isAfterDot = length is 0 then isAfterDot else line.characters(position).number is Dot
 		position = position + (length is 0 then 1 else length)
 	names
 IsName(start Number, length Number) Boolean
@@ -155,6 +155,6 @@ IsName(start Number, length Number) Boolean
 	mutable after = start + length
 	for as long as (after < line.Length) and (line.characters(after).number is Character.Space)
 		after = after + 1
-	let isAssigned = (after < line.Length) and (line.characters(after).number is EqualsSign) and (TokenLength(after) is 1)
+	let isAssigned = (after < line.Length) and (line.characters(after).number is EqualsSign)
 	let isPackage = (start + length < line.Length) and (line.characters(start + length).number is Slash)
-	(first is first.Upper) and (first is not first.Lower) and (isAssigned is false) and (isPackage is false)
+	(first is not first.Lower) and (isAssigned is false) and (isPackage is false)

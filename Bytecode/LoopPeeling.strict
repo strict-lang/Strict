@@ -37,7 +37,7 @@ Kind(loop SyntaxNode) Text
 	let type = isSingle and (loop.text is not "for as long as") then methods.values.TypeOf(loop.children(0), block) else ""
 	if type is "Number"
 		return "count"
-	((type is not "") and (methods.values.inference.types.IsPlural(type) or type.StartsWith("List("))) then "list" else ""
+	(methods.values.inference.types.IsPlural(type) or type.StartsWith("List(")) then "list" else ""
 Element(loop SyntaxNode, edge SyntaxNode, kind Text, isFirst Boolean) SyntaxNode
 	Shifted.children(1) to Text is "for Range((steps + 1 - 1).Clamp(0, steps + 1), (steps + 1).Clamp(0, steps + 1))"
 	Joined.children(0) to Text is "for texts.Slice(0, 1.Clamp(0, texts.Length))"

@@ -20,7 +20,7 @@ IsAveraged Boolean
 	MemberAverage("Strict/List(Byte)", Rg.types).IsAveraged is false
 	MemberAverage("Strict/List(Xy)", Xy).IsAveraged and (MemberAverage("Strict/List(Named)", Xy).IsAveraged is false)
 	let members = types.MembersOf(Element)
-	if (Element is "") or (members.names.Length < 2)
+	if members.names.Length < 2
 		return false
 	for members.types
 		if (value is not "Number") and (types.MembersOf(value).TypeOf("number") is not "Number")

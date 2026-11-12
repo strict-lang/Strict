@@ -73,7 +73,7 @@ Wrapped(line SyntaxNode) SyntaxNode
 	BranchValues("any").Wrapped(Value).Kind is "If"
 	BranchValues("add").Wrapped(Value).Kind is "Reassignment"
 	Returning.Wrapped(SyntaxNode("Number", "1", List(SyntaxNode), 6)).line is 6
-	if (line.Kind is "For") or (IsValue(line) is false)
+	if IsValue(line) is false
 		return line.Kind is "For" then Looped(line) else line
 	if mode is "any"
 		return SyntaxNode("If", "", (line, ReturnTrue), line.line)
