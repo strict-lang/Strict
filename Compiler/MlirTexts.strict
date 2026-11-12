@@ -89,6 +89,7 @@ Textual(instance Number, target Text, result Text) Texts
 	MlirTexts(Joined, 7).Textual(0, "Text", "%r3")(1) is "    %t7vxc = func.constant @strict_text_itself : (f64) -> f64"
 	MlirTexts(Joined, 7).Textual(0, "Text", "%r3")(0) is "    %t7v = llvm.load %r0 : !llvm.ptr -> f64"
 	MlirTexts(Joined, 7).Textual(1, "Character", "%r3")(3).IndexOf("%t7vc = func.call @strict_text_at(%t7vx, %zero)") > 0
+	MlirTexts(Joined, 7).Textual(1, "Character", "%r3").Last is "    llvm.store %t7vc, %r3 : f64, !llvm.ptr"
 	let isText = Printable(MlirKinds(function).KindOf(position, instance)) is "Text"
 	let loaded = function.Load(Temp("v"), "%r" + instance)
 	let checked = MlirMemory(function, position).Converting(Temp("vx"), "strict_text_itself", Temp("v"))
@@ -111,12 +112,15 @@ Numbered(instance Number, target Text) Texts
 	MlirTexts(Joined, 1).Numbered(0, "%r1").Length is 3
 	MlirTexts(Joined, 1).Numbered(0, "%r1") is NumberedLines
 	MlirTexts(Joined, 2).Numbered(1, "%r2").Length is 2
-	MlirTexts(Joined, 7).Textual(1, "Character", "%r3").Last is "    llvm.store %t7vc, %r3 : f64, !llvm.ptr"
+	MlirTexts(MlirKinds.Lettered.function, 2).Numbered(1, "%r2")(2).IndexOf("@strict_text_number(%t2nt)") > 0
 	let loaded = function.Load(Temp("n"), "%r" + instance)
-	if MlirKinds(function).IsText(position, instance) is false
+	let isCharacter = MlirKinds(function).KindOf(position, instance) is "Character"
+	if (MlirKinds(function).IsText(position, instance) or isCharacter) is false
 		return (loaded, function.Store(Temp("n"), target))
-	let parsed = MlirMemory(function, position).Called(Temp("nv"), "strict_text_number", List(Text) + Temp("n"))
-	(loaded, parsed, function.Store(Temp("nv"), target))
+	let shown = MlirMemory(function, position).Called(Temp("nt"), "strict_character_text", List(Text) + Temp("n"))
+	let text = isCharacter then Temp("nt") else Temp("n")
+	let parsed = MlirMemory(function, position).Called(Temp("nv"), "strict_text_number", List(Text) + text)
+	(isCharacter then (loaded, shown) else List(Text) + loaded) + parsed + function.Store(Temp("nv"), target)
 TextBits(register Number, suffix Text) Texts
 	MlirTexts(Joined, 3).TextBits(2, "b") is ("    %t3bx = llvm.load %r2 : !llvm.ptr -> f64")
 	MlirTexts(Joined, 5).TextBits(2, "b").Last.IndexOf("@strict_converted(%t5b, %t5bxc)") > 0
@@ -170,6 +174,7 @@ Pointer(register Number, suffix Text) Texts
 	MlirTexts(Joined, 3).Pointer(2, "b")(1) is "    %t3bs = func.call @strict_shown(%t3bx) : (f64) -> f64"
 	MlirTexts(Joined, 3).Pointer(2, "b").Length is 3
 	MlirTexts(Listing, 1).Converted(ToNumbers) is ElementLines
+	MlirTexts(MlirKinds.Lettered.function, 2).Numbered(1, "%r2")(1).IndexOf("@strict_character_text(%t2n)") > 0
 	let shown = MlirMemory(function, position).Called(Temp(suffix + "s"), "strict_shown", List(Text) + Temp(suffix + "x"))
 	TextBits(register, suffix) + shown + MlirMemory(function, position).Pointer(Temp(suffix + "s"), suffix)
 Concatenated(entry InstructionEntry) Texts
