@@ -24,6 +24,7 @@ constant Scaled = InstructionEntry.Invoke(0, ("", "*", "", "scale"), (0), 0)
 constant Shifted = MemberEntry("shift", "Strict/Number", List(InstructionEntry) + InstructionEntry(InstructionType.Set, List(Text), (1, 3, 0)), false)
 constant Shifting = MethodEntry("Shift", List(MemberEntry) + Shifted, "Strict/Number", First.instructions)
 constant Unfilled = InstructionEntry.Invoke(1, ("Strict/Shifter", "Shift", "Strict/Number"), List(Number), -1)
+constant Shifter = TypeEntry("Strict/Shifter", List(MemberEntry), List(MethodEntry) + Shifting)
 constant NoMethod = MethodEntry("", List(MemberEntry), "None", List(InstructionEntry))
 constant Failing = MethodEntry(StructLanes.Squared, instructions = (StructLanes.Made, StructLanes.Squared.instructions(9)) + StructLanes.Squared.instructions)
 constant Failed = Inliner((StructLanes.Caller, TypeEntry(StructLanes.Pair.Name, StructLanes.Pair.members, List(MethodEntry) + Failing)), true)
@@ -119,14 +120,16 @@ TypeOf(name Text) TypeEntry
 Callee(type TypeEntry, call InstructionEntry) MethodEntry
 	Sample.Callee(TypeEntry.Scaling, Scaled).parameters(0).Name is "scale"
 	Sample.Callee(Listed, Calling.instructions(1)).Name is "X"
-	Sample.Callee(TypeEntry("Strict/Shifter", List(MemberEntry), List(MethodEntry) + Shifting), Unfilled).Name is ""
+	Sample.Callee(Shifter, Unfilled).Name is ""
+	let callee = Declared(type, call)
+	callee.parameters.Length > call.payload(5 + call.payload(3)) then NoMethod else callee
+Declared(type TypeEntry, call InstructionEntry) MethodEntry
+	Sample.Declared(Shifter, Unfilled).Name is "Shift"
 	mutable names = List(Text)
 	for call.texts
 		if index > 2
 			names = names + value
-	let given = call.payload(5 + call.payload(3))
-	let callee = type.Callee(call.texts(1), given, call.texts(2), names)
-	callee.parameters.Length > given then NoMethod else callee
+	type.Callee(call.texts(1), call.payload(5 + call.payload(3)), call.texts(2), names)
 Splice(owner TypeEntry, callee MethodEntry, call InstructionEntry, base Number) InlineSplice
 	Sample.Splice(Listed, First, InstructionEntry.Invoke(1, ("List(Number)", "", ""), List(Number), -1), 2).member is ""
 	Sample.Splice(Caller, Calling, Again.instructions.First, 2).kept is ("value")

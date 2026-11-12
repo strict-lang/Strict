@@ -13,6 +13,11 @@ constant Nested = KnownTypes(("G", "F", "Length"), (Scope(("f"), ("F")), Lengths
 constant CountParameters = Scope(("Increment", "Increment mutable", "Twice", "Twice", "Twice types"), ("", "Mutable", "times,offset", "times", "Number"))
 constant SampleParameters = (CountParameters, NoMembers)
 constant Sample = KnownTypes(("Count", "Text"), (CountMembers, NoMembers), (CountMethods, NoMembers), SampleParameters)
+constant AnyMethods = Scope(("from", "to", "Parsed", "Usage"), ("Any", "Text", "Any", "Text"))
+constant OptionMembers = (Scope(List(Text) + "count", List(Text) + "Number"), Scope(List(Text) + "characters", List(Text) + "Characters"), NoMembers)
+constant TextParameters = Scope(("from", "Combine separator default"), ("characters", "\", \""))
+constant OptionParameters = (Scope(("count default", "from"), ("1", "count")), TextParameters, Scope(("Parsed", "Parsed types"), ("arguments", "Texts")))
+constant Options = KnownTypes(("Settings", "Text", "Any"), OptionMembers, (Scope(List(Text) + "to", List(Text) + "Text"), NoMembers, AnyMethods), OptionParameters)
 constant Indexed = KnownTypes(Sample.names, Sample.members, Sample.methods, Sample.parameters, Dictionary(("Count", 0), ("Text", 1)))
 IsKnown(typeName Text) Boolean
 	Sample.ResolvedType("Text", "Missing", 1) is "Unknown"
@@ -151,6 +156,9 @@ ValueOf(typeName Text) Text
 	typeMembers.types.Length is 1 then typeMembers.types(0) else ""
 DeclaredType(typeName Text, name Text, depth Number) Text
 	Sample.DeclaredType("Count", "number", 0) is "Number"
+	Options.DeclaredType("Text", "Parsed", 3) is ""
+	Options.DeclaredType("Settings", "Parsed", 3) is "Any"
+	Options.DeclaredType("Text", "to", 3) is "Text"
 	let typeMembers = Instantiation(value).Members(typeName, MembersOf(typeName))
 	let member = typeMembers.TypeOf(name)
 	if (member is not "") and ((member is not name) or (MethodsOf(member).TypeOf(name) is ""))
@@ -158,7 +166,17 @@ DeclaredType(typeName Text, name Text, depth Number) Text
 	if (MethodsOf(typeName).TypeOf(name) is not "") or (depth is 0)
 		return MethodsOf(typeName).TypeOf(name)
 	let holder = Holder(typeName, name, depth)
-	holder is "" then MethodsOf("Any").TypeOf(name) else MemberMethodType(typeMembers.TypeOf(holder), name, depth - 1)
+	holder is "" then Inherited(typeName, name) else MemberMethodType(typeMembers.TypeOf(holder), name, depth - 1)
+Inherited(typeName Text, name Text) Text
+	Options.Inherited("Settings", "Usage") is "Text"
+	Options.Inherited("Text", "Usage") is ""
+	Options.Inherited("Text", "to") is "Text"
+	if name is not in ("Parsed", "Usage")
+		return MethodsOf("Any").TypeOf(name)
+	for MembersOf(typeName).names
+		if ParameterScope(typeName).TypeOf(value + " default") is not ""
+			return MethodsOf("Any").TypeOf(name)
+	""
 Holder(typeName Text, name Text, depth Number) Text
 	Measured.Holder("F", "Length", 1) is "Length"
 	Nested.Holder("G", "Length", 2) is "f"

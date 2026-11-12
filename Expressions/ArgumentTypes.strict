@@ -19,6 +19,8 @@ constant DepthCopies = (SyntaxParser(Tokenizer("Area(area, size, depth = 2)").To
 constant Copies = DepthCopies + (SyntaxNode("Call", "Area"), SyntaxParser(Tokenizer("Area(area, size)").Tokens).Parse, SyntaxParser(Tokenizer("Area(size)").Tokens).Parse, SyntaxParser(Tokenizer("Number(5)").Tokens).Parse)
 constant Scaling = ArgumentTypes(Overloads.ScalerInference)
 constant Scalers = Overloads.Scalers
+constant Inheriting = ArgumentTypes(TypeInference(KnownTypes.Options, (KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers)))
+constant Parsing = SyntaxParser(Tokenizer("settings.Parsed(5)").Tokens).Parse
 constant Mixed = "CopyChangesMustBeNamed: Area(area, size, depth = 2) copies area, name every change like depth = 2"
 Checked(node SyntaxNode, scope Scope, current Scope) Text
 	Sizing.Checked(Grown, Counted, Counted).StartsWith("ArgumentTypeMismatch")
@@ -98,7 +100,7 @@ Copied(call SyntaxNode, scope Scope, current Scope) Text
 Compared(call SyntaxNode, instance Text, method Text, scope Scope, current Scope) Text
 	Sizing.Compared(Grown, "Count", "Grow", Counted, Counted).StartsWith("ArgumentTypeMismatch: Count.Grow")
 	Sizing.Compared(Spread, "Count", "Spread", Counted, Counted) is "TooManyArguments: Count.Spread got 3 of 2"
-	if inference.types.ParameterScope(instance).Count(method) is not 1
+	if inference.types.ParameterScope(Owner(instance, method)).Count(method) is not 1
 		return Overloads(inference.types).Unfit(call, instance, method, inference, scope, current)
 	let types = Declared(instance, method)
 	let arguments = Arguments(call, scope, current)
@@ -107,11 +109,21 @@ Compared(call SyntaxNode, instance Text, method Text, scope Scope, current Scope
 	if (method is not "from") and (IsListed(types) is false) and (arguments.Length > types.Length)
 		return "TooManyArguments: " + name + " got " + arguments.Length + " of " + types.Length
 	at < 0 then "" else "ArgumentTypeMismatch: " + name + " got a " + arguments(at) + " for a " + types(at)
+Owner(instance Text, method Text) Text
+	Inheriting.Owner("Settings", "Parsed") is "Any"
+	Inheriting.Owner("Text", "Parsed") is "Text"
+	Inheriting.Owner("Settings", "from") is "Settings"
+	Inheriting.Owner("Settings", "to") is "Settings"
+	Inheriting.Compared(Parsing, "Settings", "Parsed", Counted, Counted).EndsWith(".Parsed got a Number for a Texts")
+	Sizing.Owner("Count", "Grow") is "Count"
+	let types = inference.types
+	let isOwn = (types.ParameterScope(instance).Count(method) > 0) or (types.MethodsOf(instance).TypeOf(method) is not "")
+	isOwn or (types.Inherited(instance, method) is "") then instance else "Any"
 Declared(instance Text, method Text) Texts
 	Sizing.Declared("Count", "Grow") is ("Area")
 	Sizing.Declared("Size", "from") is ("Number")
 	ArgumentTypes(TypeInference(Instantiation.Implicit.types, List(Scope))).Declared("Couple", "from").Length is 0
-	let parameters = inference.types.ParameterScope(instance)
+	let parameters = inference.types.ParameterScope(Owner(instance, method))
 	if (method is "from") and ("Generic" is in inference.types.MembersOf(instance).types)
 		return List(Text)
 	let declared = parameters.TypeOf(method + " types")

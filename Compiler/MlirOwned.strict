@@ -11,6 +11,9 @@ constant HeldCall = InstructionEntry.Invoke(2, ("Strict/MutationCache", "Release
 constant HeldLoads = (Empty, LoadList, StoreHeld, LoadHeld, HeldCall, HeldAgain)
 constant HeldRun = MethodEntry("Run", List(MemberEntry), "None", HeldLoads)
 constant Holding = MlirOwned(MlirFunction(List(TypeEntry), MlirFunction.Shape, HeldRun), 3)
+constant HeldBetween = (InstructionEntry.LoadNumber(5, 1), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 5, "other"))
+constant HeldLater = MethodEntry("Run", List(MemberEntry), "None", (Empty, LoadList, StoreHeld, LoadHeld, HeldCall) + HeldBetween + HeldAgain)
+constant Delaying = MlirOwned(MlirFunction(List(TypeEntry), MlirFunction.Shape, HeldLater), 3)
 constant StoreMoved = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "moved")
 constant LoadMoved = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "moved")
 constant RewrittenLoads = Reloaded + (StoreMoved, LoadMoved)
@@ -41,7 +44,9 @@ IsOwned(name Text, depth = 0, seed = "") Boolean
 	Owner.IsOwned("moved")
 	MlirOwned(Copying, 2).IsOwned("moved") is false
 	Holding.IsOwned("held") is false
+	Delaying.IsReread(3, "held")
 	Rewriting.IsSafeRead(3, "moved")
+	MlirOwned(MlirMembered.Moved.function, 0).IsSafeRead(2, "entity")
 	Owner.IsOwned("listResult0") is false
 	(Rebuilt.IsKept(4, "size", "moved") is false) and (Rebuilt.IsKept(4, "shape", "kept") is false)
 	Rebuilt.IsKept(9, "shape", "moved") is false
@@ -111,12 +116,14 @@ IsReread(at Number, name Text) Boolean
 	Holding.IsReread(3, "held")
 	Owner.IsReread(3, "moved") is false
 	Rewriting.IsReread(3, "moved") is false
+	let register = function.method.instructions(at).payload(0)
+	let reuse = LoadReuse(function.method.instructions)
+	mutable isPassed = false
 	for Range(at + 1, function.method.instructions.Length)
 		let entry = function.method.instructions(value)
-		if (entry.kind is InstructionType.StoreRegisterToVariable) and (entry.texts(0) is name)
-			return false
-		if (entry.kind is InstructionType.LoadVariableToRegister) and (entry.texts(0) is name)
-			return true
+		if (entry.kind is in MlirAlone.Named) and (entry.texts(0) is name)
+			return isPassed and (entry.kind is InstructionType.LoadVariableToRegister)
+		isPassed = isPassed or (entry.kind is not InstructionType.FieldLoad) and (register is in reuse.Reads(entry))
 	false
 IsSafeRead(at Number, name Text) Boolean
 	Owner.IsSafeRead(3, "moved")

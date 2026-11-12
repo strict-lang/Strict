@@ -116,6 +116,7 @@ IsMissing(instance Text, name Text) Boolean
 	Counting.IsMissing("Count", "Missing")
 	Counting.IsMissing("Count", "Twice") is false
 	Counting.IsMissing("Generic", "number") is false
+	FileCheck(TypeInference(KnownTypes.Options, NoScopes), ("Text")).IsMissing("Text", "Parsed")
 	let types = inference.types
 	let isChecked = types.IsKnown(types.BaseName(instance)) and (instance is not in ("Generic", "Generics"))
 	isChecked and (types.DeclaredType(instance, name, 3) is "") and (types.MemberType(instance, name) is "Unknown")

@@ -57,7 +57,7 @@ Signature(call InstructionEntry) Texts
 	let type = Inliner(types).TypeOf(call.texts(0))
 	if call.texts(1) is "from"
 		return StructLanes.Members(type).Length > 0 then List(Text) else Laned(type.members)
-	let callee = Inliner(types).Callee(type, call)
+	let callee = Inliner(types).Declared(type, call)
 	let isOwn = (StructLanes.Members(type).Length > 0) or (callee.instructions.Length is 0)
 	isOwn then List(Text) else Laned(callee.parameters)
 Width(call InstructionEntry, position Number) Number
