@@ -2,7 +2,7 @@ has values ValueCodegen
 constant Plain = StepRounding(ValueCodegen.Plain)
 constant OwnStepped = SyntaxNode("MethodCall", "Stepped", (SyntaxNode("Call", "Greet"), SyntaxNode("Number", "2")))
 constant Price = SyntaxNode("Identifier", "price")
-constant Steps = Scope(("price step", "Greet", "Greet amount step", "Run"), ("0.01", "amount", "0.5 Floor", "price,amount"))
+constant Steps = Scope(("price step", "Greet", "Greet amount step", "Run", "Run step"), ("0.01", "amount", "0.5 Floor", "price,amount", "0.01"))
 constant Types = KnownTypes(("Greeter"), (Scope(("text", "price"), ("Text", "Number"))), (KnownTypes.NoMembers), (Steps))
 constant Stepping = StepRounding(ValueCodegen(TypeInference(Types, CallTarget.NoScopes), Plain.values.methods, CallTarget.Plain))
 constant InGreet = CodeBlock(List(InstructionEntry), 0, 0, Scope((CodeBlock.ErrorMarker, "price"), ("Greet", "Number")))
@@ -48,7 +48,8 @@ Arguments(call SyntaxNode, block CodeBlock) SyntaxNode
 	for call.children
 		let position = index - start
 		let name = (position >= 0) and (position < names.Length) then names(position) else ""
-		children.Add(index < start then value else Argument(value, owner, isCreating then name else call.text + " " + name))
+		let key = isCreating then name else call.text + " " + name
+		children.Add(name is "" then value else Argument(value, owner, key))
 	SyntaxNode(call.Kind, call.text, children, call.line)
 Parameters(owner Text, method Text) Texts
 	Plain.Parameters("Greeter", "Missing").Length is 0
@@ -121,6 +122,7 @@ Finest(first Text, second Text) Text
 	Plain.Finest("0.5", "") is "0.5"
 	Plain.Finest("0.001", "0.01") is "0.001"
 	Stepping.StepOf(Amount, InGreet) is "0.5"
+	Stepping.Arguments(SyntaxNode("MethodCall", "Run", (NewGreeter, One, One, One)), Empty).children(3) is One
 	Stepping.StepOf(SyntaxNode("Call", "amount"), InGreet) is ""
 	Stepping.StepOf(SyntaxNode("Call", "+", (Price, Price)), Empty) is ""
 	Stepping.StepOf(SyntaxNode("Binary", "+", (Price, One)), Empty) is "0.01"
