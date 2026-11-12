@@ -165,10 +165,12 @@ IsWrongElement(argument Text, parameter Text) Boolean
 	Sizing.IsWrongElement("Number", "Sizes") is false
 	Sizing.IsWrongElement("Text", "Texts") is false
 	Sizing.IsWrongElement("Sizes", "Sizes") is false
-	let isPlural = inference.types.IsPlural(parameter)
-	let listed = parameter.StartsWith("List(") then parameter.Substring(5, parameter.Length - 6) else ""
-	let element = isPlural then parameter.Substring(0, parameter.Length - 1) else listed
-	IsScalar(argument) and (element is not "") and Mismatch(argument, element)
+	Sizing.IsWrongElement("Texts", "Numbers") and (Sizing.IsWrongElement("Numbers", "Texts") is false)
+	(Sizing.IsWrongElement("Numbers", "Sizes") is false) and (Sizing.IsWrongElement("List(Texts)", "Numbers") is false)
+	let elements = ListFits(inference.types).Elements(parameter)
+	let listed = ListFits(inference.types).Elements(argument)
+	let compared = (listed.Length is not 1) or ("Text" is in elements) then argument else listed(0)
+	IsScalar(compared) and (elements.Length is 1) and Mismatch(compared, elements(0))
 Mismatch(argument Text, parameter Text) Boolean
 	Sizing.Mismatch("Count", "Area")
 	Sizing.Mismatch("Area", "Size") is false
