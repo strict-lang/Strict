@@ -12,8 +12,8 @@ Basis(coord Number) Numbers
 	mutable current = coord
 	for degree + 1
 		let next = index is 0 then 1 else (index is 1 then coord else 2 * coord * current - previous)
-		previous = index > 1 then current else previous
-		current = index > 1 then next else current
+		previous = current
+		current = next
 		next
 Weights(coords Numbers, target Number) Numbers
 	Quadratic.Weights(History, 1).First.IsNearlyEqual(0.3152753108348134, 0.00000001)
