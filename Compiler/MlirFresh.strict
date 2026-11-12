@@ -1,0 +1,52 @@
+has function MlirFunction
+constant Scalars = ("Number", "Boolean", "None", "Text")
+constant Checking = InstructionEntry.Invoke(3, ("Strict/Outer", "Validated", "Strict/Outer", "outer"), 2, 2)
+constant Calling = MethodEntry("Run", List(MemberEntry), "None", MlirOwned.OuterMade.Slice(0, 3) + Checking)
+constant Checked = MlirFresh(MlirFunction(MlirOwned.Rebuilt.function, method = Calling))
+constant Itself = MlirFresh(MlirFunction(MlirCarried.Types, MlirCarried.Holder, MlirCarried.Itself))
+IsCall(at Number, depth Number) Boolean
+	Checked.IsCall(3, 0) is false
+	let entry = function.method.instructions(at)
+	let arguments = entry.payload(5 + entry.payload(3))
+	let first = 6 + entry.payload(3)
+	if entry.texts(1) is "from"
+		let isBuilt = (arguments > 0) and MlirOwned(function, 0).IsFresh(function, at, entry.payload(first), depth)
+		return MlirLayout(function).IsStruct(entry.texts(0)) or isBuilt
+	if MlirNatives(function, at).Helper(entry.texts(0), entry.texts(1), arguments) is in MlirNatives.Destining
+		return true
+	let callees = MlirModule(function.types, "").Called(function, at)
+	(depth < 4) and (callees.Length > 0) and MlirFresh(callees.First).IsMethod(depth + 1, IsOwn(at, depth))
+IsOwn(at Number, depth Number) Boolean
+	Checked.IsOwn(3, 0)
+	MlirFresh(MlirOwned.Rebuilt.function).IsCall(2, 0)
+	let entry = function.method.instructions(at)
+	let flag = 6 + entry.payload(3) + entry.payload(5 + entry.payload(3))
+	entry.payload(flag) is 1 then MlirOwned(function, 0).IsFresh(function, at, entry.payload(flag + 1), depth) else false
+IsMethod(depth Number, isOwn Boolean) Boolean
+	MlirFresh(MlirOwned.Moving).IsMethod(0, false) is false
+	MlirFresh(MlirOwned.Returning).IsMethod(0, false)
+	for function.method.instructions
+		if (value.kind is InstructionType.Return) and (IsReturn(index, depth, isOwn) is false)
+			return false
+	true
+IsReturn(at Number, depth Number, isOwn Boolean) Boolean
+	Itself.IsMethod(0, true)
+	Itself.IsMethod(0, false) is false
+	let steps = function.method.instructions
+	let register = steps(at).payload(0)
+	let writer = MlirKinds(function).Writer(at, register)
+	let isChecked = (writer + 2 is at) and (steps(at - 1).kind is InstructionType.CheckError)
+	let loaded = (writer + 1 is at) or isChecked then steps(writer) else steps(at)
+	if (loaded.kind is InstructionType.LoadVariableToRegister) and IsLocal(loaded.texts(0), at, depth, isOwn)
+		return true
+	let kind = MlirLayout(function).Represented(MlirKinds(function).KindOf(at, register))
+	(kind is in Scalars) or MlirOwned(function, 0).IsFresh(function, at, register, depth)
+IsLocal(name Text, at Number, depth Number, isOwn Boolean) Boolean
+	Itself.IsLocal("value", 1, 0, true)
+	Itself.IsLocal("value", 1, 0, false) is false
+	if depth >= 4
+		return false
+	let isSelf = (name is "value") and (MlirWholeFunction(function).IsInsideLoop(at) is false)
+	if isSelf and ("value" is in MlirCarried(function, false).Typed)
+		return isOwn
+	MlirOwned(function, 0).IsOwned(name, depth + 1)

@@ -2,7 +2,8 @@
 program dropping 52 MB lists while keeping 260 MB runs in the 1 GB heap of the web and iOS (natively and in node), one
 dropping 3 MB lists and many small texts in 128 MB, lists grown by Add free their items by counts alone (no collection),
 giving 8 GB of free pages back after a full collection is not counted as collecting (GarbageCollectionExceedsTenth),
-GpuMemory.Released never collects and Process.Collected always does, a Realtime type collects at the end of its
+GpuMemory.Released never collects and Process.Collected always does, a list a method named Validated hands back
+is not refilled while the local it came from still reads it, a Realtime type collects at the end of its
 frames (Presented), reading 1000 lines of 80 KB measures the 80 MB text once (its remembered length survives reclaims
 that do not free it, measuring it again per line took 13 s)."""
 import ctypes
@@ -114,6 +115,12 @@ with tempfile.TemporaryDirectory(prefix="MemoryCheck", dir=root / "Examples") as
 	assert ran.returncode == 0 and "total 192" in ran.stdout, ran.stdout[-500:]
 	collected, released = ran.stdout.split("collected")
 	assert collected.count("Collection: full") >= 3 and "Collection: " not in released, ran.stdout[-500:]
+	handed = built(folder, "HandedBack", "has logger\nconstant Plain = HandedBack(Logger)\n" + filled[11:] +
+		"Validated(numbers Numbers) Numbers\n\tPlain.Validated((1, 2)) is (1, 2)\n\tnumbers\nRun\n\tmutable total = 0\n"
+		"\tfor 1000\n\t\tlet made = Filled(300, index)\n\t\tmutable checked = Plain.Validated(made)\n"
+		"\t\tchecked = Filled(300, index + 1)\n\t\ttotal = total + made(5) + checked(5)\n\tlogger.Log(\"total \" + total)")
+	ran = subprocess.run([str(handed)], capture_output=True, text=True, timeout=60, env=os.environ | {"STRICT_GPU": "0"})
+	assert ran.returncode == 0 and "total 1010000" in ran.stdout, ran.stdout[-500:]
 	ended = frameEnds(folder, "FrameTicker", "Numbers", "index + seed", "(1, 2)", 5000000, 10)
 	assert True in ended and all(ended[ended.index(True):]) and ended.count(True) >= 2, ended
 	ended = frameEnds(folder, "WordTicker", "Texts", "\"w\" + (index + seed)", "(\"w1\", \"w2\")", 100000, 40)

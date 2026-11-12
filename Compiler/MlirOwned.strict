@@ -64,7 +64,6 @@ IsReference(name Text) Boolean
 	isHeap and (MlirPairs(function, 0).IsPaired(kind) is false)
 IsContained(name Text, depth = 0, seed = "") Boolean
 	Owner.IsContained("moved")
-	Rebuilt.IsFreshCall(Rebuilt.function, 2, 0)
 	Rebuilt.IsFresh(Rebuilt.function, 3, 2, 0)
 	for function.method.instructions
 		if (value.kind is in MlirAlone.Named) and (value.texts(0) is name)
@@ -85,33 +84,7 @@ IsFresh(inspected MlirFunction, at Number, register Number, depth Number) Boolea
 		return (entry.texts(0) is "forResult") or entry.texts(0).StartsWith("listResult")
 	if entry.kind is InstructionType.LoadConstantToRegister
 		return true
-	(entry.kind is InstructionType.Invoke) and IsFreshCall(inspected, writer, depth)
-IsFreshCall(inspected MlirFunction, at Number, depth Number) Boolean
-	let entry = inspected.method.instructions(at)
-	let arguments = entry.payload(5 + entry.payload(3))
-	let first = 6 + entry.payload(3)
-	if entry.texts(1) is "Validated"
-		return IsFresh(inspected, at, entry.payload(first + arguments + 1), depth)
-	if entry.texts(1) is "from"
-		let isBuilt = (arguments > 0) and IsFresh(inspected, at, entry.payload(first), depth)
-		return MlirLayout(inspected).IsStruct(entry.texts(0)) or isBuilt
-	if MlirNatives(inspected, at).Helper(entry.texts(0), entry.texts(1), arguments) is in MlirNatives.Destining
-		return true
-	let callees = MlirModule(inspected.types, "").Called(inspected, at)
-	(depth < 4) and (callees.Length > 0) and IsFreshMethod(callees.First, depth + 1)
-IsFreshMethod(callee MlirFunction, depth Number) Boolean
-	Owner.IsFreshMethod(Moving, 0) is false
-	Owner.IsFreshMethod(Returning, 0)
-	for callee.method.instructions
-		if value.kind is InstructionType.Return
-			let writer = MlirKinds(callee).Writer(index, value.payload(0))
-			let isChecked = (writer + 2 is index) and (callee.method.instructions(index - 1).kind is InstructionType.CheckError)
-			let loaded = (writer + 1 is index) or isChecked then callee.method.instructions(writer) else value
-			let isLocal = (loaded.kind is InstructionType.LoadVariableToRegister) and (depth < 4)
-			let isReturned = isLocal and MlirOwned(callee, 0).IsOwned(loaded.texts(0), depth + 1)
-			if (isReturned or IsFresh(callee, index, value.payload(0), depth)) is false
-				return false
-	true
+	(entry.kind is InstructionType.Invoke) and MlirFresh(inspected).IsCall(writer, depth)
 IsReread(at Number, name Text) Boolean
 	Holding.IsReread(3, "held")
 	Owner.IsReread(3, "moved") is false
@@ -159,7 +132,7 @@ IsLeaked(at Number, register Number) Boolean
 		if entry.payload(value) is register
 			isTaken = true
 	let returned = MlirLayout(function).Represented(TypeEntry.ShortName(entry.texts(2)))
-	isTaken and (returned is not in ("Number", "Boolean", "None", "Text")) and (IsFreshCall(function, at, 0) is false)
+	isTaken and (returned is not in MlirFresh.Scalars) and (MlirFresh(function).IsCall(at, 0) is false)
 Stored(entry InstructionEntry) Texts
 	Owner.Stored(Built(2)).Index("    func.call @strict_rc_dead(%t2o, %t2) : (f64, f64) -> ()") is 6
 	MlirOwned(Copying, 4).Stored(Copying.method.instructions(4)).Length is 2
