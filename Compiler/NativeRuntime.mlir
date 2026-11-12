@@ -13611,6 +13611,32 @@
     %result = func.call @strict_bits(%buffer) : (!llvm.ptr) -> f64
     return %result : f64
   }
+  // an empty text with room for capacity one byte characters, filled by strict_text_written (a for collecting Characters)
+  func.func private @strict_text_new(%capacity: f64) -> f64 {
+    %one = arith.constant 1 : i64
+    %terminator = arith.constant 0 : i8
+    %whole = llvm.intr.ceil(%capacity) : (f64) -> f64
+    %count = arith.fptosi %whole : f64 to i64
+    %size = arith.addi %count, %one : i64
+    %buffer = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
+    llvm.store %terminator, %buffer : i8, !llvm.ptr
+    %result = func.call @strict_bits(%buffer) : (!llvm.ptr) -> f64
+    return %result : f64
+  }
+  func.func private @strict_text_written(%text: f64, %at: f64, %code: f64) -> f64 {
+    %one = arith.constant 1 : i64
+    %terminator = arith.constant 0 : i8
+    %buffer = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr
+    %index = arith.fptosi %at : f64 to i64
+    %byte = arith.fptoui %code : f64 to i8
+    %slot = llvm.getelementptr %buffer[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %byte, %slot : i8, !llvm.ptr
+    %next = arith.addi %index, %one : i64
+    %end = llvm.getelementptr %buffer[%next] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %terminator, %end : i8, !llvm.ptr
+    %advanced = arith.sitofp %next : i64 to f64
+    return %advanced : f64
+  }
   llvm.mlir.global internal constant @strict_comma(", \00") : !llvm.array<3 x i8>
   func.func private @strict_list_text(%list: f64, %isText: i1) -> f64 {
     %commaText = llvm.mlir.addressof @strict_comma : !llvm.ptr

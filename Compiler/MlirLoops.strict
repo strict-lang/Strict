@@ -18,6 +18,12 @@ constant Assigning = MlirLoops(MlirFunction(List(TypeEntry) + MlirFunction.Shape
 constant Repeated = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoopBegin(0, -1), InstructionEntry(InstructionType.LoopEnd, List(Text), (1, -1)))))
 constant ReturningLoop = (InstructionEntry.LoopBegin(0, -1), InstructionEntry.Return(0), InstructionEntry.Jump(InstructionType.LoopEnd, 1))
 constant Returned = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "Strict/Number", ReturningLoop))
+constant TextStarted = (InstructionEntry.LoadText(0, ""), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "forResult"), InstructionEntry.LoadText(0, "ab"))
+constant Lettered = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Invoke(2, ("Strict/Character", "from", "Strict/Character", "text"), 1, -1))
+constant LetterAdded = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "forResult"), InstructionEntry.Binary(InstructionType.Add, (3, 2, 4)))
+constant Spelled = TextStarted + InstructionEntry.LoopBegin(0, -1) + Lettered + LetterAdded + InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 4, "forResult")
+constant TextCreated = ("    %t3a = arith.maximumf %t3n, %zero : f64", "    %t3r = func.call @strict_text_new(%t3a) : (f64) -> f64", "    llvm.store %zero, %spelled3 : f64, !llvm.ptr", "    llvm.store %t3r, %v_forResult : f64, !llvm.ptr")
+constant Spelling = MlirLoops(MlirFunction(List(TypeEntry) + TypeEntry.CharacterEntry, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "Strict/Text", Spelled + InstructionEntry.Jump(InstructionType.LoopEnd, 6))), 3)
 Temp(suffix Text) Text
 	Counting.Temp("k") is "%t0k"
 	"%t" + position + suffix
@@ -144,15 +150,31 @@ IsCollecting Boolean
 		if (entry.kind is InstructionType.StoreConstantToVariable) and (entry.texts.Last is "forResult")
 			return (entry.payload(0) is 6) and function.method.IsWritingResult(position)
 	false
+IsSpelling Boolean
+	Spelling.IsSpelling
+	let method = function.method
+	let stored = MlirKinds(function).Stored(position, "forResult")
+	let start = stored > 0 then method.instructions(stored - 1) else method.instructions(position)
+	let isEmptied = (start.kind is InstructionType.LoadConstantToRegister) and (Text.Combine(start.texts) is "")
+	let isText = isEmptied and (MlirKinds(function).VariableKind(position, "forResult") is "Text")
+	if (isText is false) or (method.LoopBeginOf(stored) is not method.LoopBeginOf(position))
+		return false
+	for Range(position + 1, method.LoopEndOf(position))
+		if MlirTexts(function, value).IsMisspelled(position)
+			return false
+	-1 is not in method.instructions(method.LoopEndOf(position)).payload
 Presized Texts
 	Counting.Presized.Length is 0
 	Collecting.Presized.Last is "    llvm.store %t1r, %v_forResult : f64, !llvm.ptr"
 	MlirLoops(MlirParallel.Byting.function, 2).Presized.Length is 0
+	Spelling.Presized is TextCreated
 	let isForked = MlirBytes(function, position).IsCollected and MlirParallel(function, position).IsParallel
-	if (IsCollecting is false) or isForked
+	if ((IsCollecting or IsSpelling) is false) or isForked
 		return List(Text)
 	constant capacity = "    " + Temp("a") + " = arith.maximumf " + Temp("n") + ", %zero : f64"
-	let created = MlirListDestined(function, position).Created(Temp("r"), Temp("a"))
+	let reset = function.Store("%zero", "%spelled" + position)
+	let text = (MlirMemory(function, position).Called(Temp("r"), "strict_text_new", List(Text) + Temp("a")), reset)
+	let created = IsSpelling then text else MlirListDestined(function, position).Created(Temp("r"), Temp("a"))
 	(List(Text) + capacity) + created + function.Store(Temp("r"), "%v_forResult")
 Restored(begin Number) Texts
 	MlirLoops(Nested.function, 2).Restored(0) is List(Text) + "    llvm.store %t0z, %v_outer : f64, !llvm.ptr"

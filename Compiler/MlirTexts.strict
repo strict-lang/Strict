@@ -27,6 +27,8 @@ constant ShapeConverter = "    %t1dxc = func.constant @strict_automatic_Shape : 
 constant QuotedNumber = MethodEntry("to", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 1), InstructionEntry.Return(0)))
 constant Quoted = TypeEntry("Strict/Quoted", List(MemberEntry) + MemberEntry("text", "Strict/Text", List(InstructionEntry), false), List(MethodEntry) + QuotedNumber)
 constant Unquoting = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "quoted"), InstructionEntry.Invoke(1, ("Strict/Quoted", "to", "Strict/Number"), List(Number), 0))
+constant SpelledLoads = ("    %t7lx = llvm.load %r3 : !llvm.ptr -> f64", "    %t7r = llvm.load %r2 : !llvm.ptr -> f64", "    %t7sa = llvm.load %spelled3 : !llvm.ptr -> f64")
+constant SpelledWrites = ("    %t7sn = func.call @strict_text_written(%t7lx, %t7sa, %t7r) : (f64, f64, f64) -> f64", "    llvm.store %t7sn, %spelled3 : f64, !llvm.ptr", "    llvm.store %t7lx, %r4 : f64, !llvm.ptr")
 constant Quoting = MlirFunction(List(TypeEntry) + Quoted, Quoted, MethodEntry("Run", List(MemberEntry) + MemberEntry("quoted", "Strict/Quoted", List(InstructionEntry), false), "None", Unquoting))
 Temp(suffix Text) Text
 	MlirTexts(Joined, 2).Temp("l") is "%t2l"
@@ -180,6 +182,38 @@ Pointer(register Number, suffix Text) Texts
 Concatenated(entry InstructionEntry) Texts
 	MlirTexts(Joined, 2).Concatenated(Joined.method.instructions(2)).Length is 6
 	MlirTexts(Joined, 2).Concatenated(Joined.method.instructions(2)) is ConcatenatedLines
+	Text.Combine(MlirTexts(MlirLoops.Spelling.function, 7).Concatenated(MlirLoops.Spelled(7))).IndexOf("_concat") is -1
+	if IsLetter and MlirLoops(function, function.method.LoopBeginOf(position)).IsSpelling
+		return Spelled(entry)
 	let operands = TextBits(entry.payload(1), "l") + TextBits(entry.payload(2), "r")
 	let joined = MlirMemory(function, position).Called(Temp("c"), "strict_text_concat", (Temp("lx"), Temp("rx")))
 	operands + joined + function.Store(Temp("c"), "%r" + entry.payload(3))
+IsLetter Boolean
+	MlirTexts(MlirLoops.Spelling.function, 7).IsLetter
+	MlirTexts(MlirLoops.Spelling.function, 4).IsLetter is false
+	MlirTexts(Joined, 2).IsLetter is false
+	let steps = function.method.instructions
+	let entry = steps(position)
+	if (entry.kind is not InstructionType.Add) or (position + 1 >= steps.Length)
+		return false
+	let loaded = steps(position - 1)
+	let stored = steps(position + 1)
+	let isLoaded = (Text.Combine(loaded.texts) is "forResult") and (loaded.payload(0) is entry.payload(1))
+	let isStored = (stored.kind is InstructionType.StoreRegisterToVariable) and (Text.Combine(stored.texts) is "forResult")
+	isLoaded and isStored and (MlirKinds(function).KindOf(position, entry.payload(2)) is "Character")
+IsMisspelled(begin Number) Boolean
+	MlirTexts(MlirLoops.Spelling.function, 8).IsMisspelled(3) is false
+	MlirTexts(MlirLoops.Spelling.function, 8).IsMisspelled(0)
+	MlirTexts(MlirLoops.Spelling.function, 7).IsMisspelled(0) is false
+	let entry = function.method.instructions(position)
+	if (entry.kind is not InstructionType.StoreRegisterToVariable) or (Text.Combine(entry.texts) is not "forResult")
+		return false
+	(function.method.LoopBeginOf(position) is not begin) or (MlirTexts(function, position - 1).IsLetter is false)
+Spelled(entry InstructionEntry) Texts
+	MlirTexts(MlirLoops.Spelling.function, 7).Spelled(MlirLoops.Spelled(7)) is SpelledLoads + SpelledWrites
+	let slot = "%spelled" + function.method.LoopBeginOf(position)
+	let letter = function.Load(Temp("r"), "%r" + entry.payload(2))
+	let loads = TextBits(entry.payload(1), "l") + letter + function.Load(Temp("sa"), slot)
+	let operands = (Temp("lx"), Temp("sa"), Temp("r"))
+	let written = MlirMemory(function, position).Called(Temp("sn"), "strict_text_written", operands)
+	loads + written + function.Store(Temp("sn"), slot) + function.Store(Temp("lx"), "%r" + entry.payload(3))
