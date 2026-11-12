@@ -15,6 +15,11 @@ constant HalfCount = (InstructionEntry.LoadNumber(0, 2), InstructionEntry.Named(
 constant Incremented = (InstructionEntry.LoadNumber(3, 1), InstructionEntry.Binary(InstructionType.Add, (2, 3, 4)), InstructionEntry.Return(4))
 constant Split = HalfCount + Incremented
 constant Splits = MlirWholeSpan(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Split", CountParameters, "Strict/Number", Split)), 2)
+constant Scaling = CountLooped + Operands + InstructionEntry.Binary(InstructionType.Multiply, (2, 3, 10)) + SumAdded.Slice(1, 2) + SumReturned
+constant Scaled = MlirWholeSpan(MlirFunction(Quads.function, method = MethodEntry(Quads.function.method, instructions = Scaling)), 4)
+constant Tripled = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 11, "sum"), InstructionEntry.Binary(InstructionType.Multiply, (11, 3, 12)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 12, "sum"))
+constant Rescaled = MlirWholeSpan(MlirFunction(Quads.function, method = MethodEntry(Quads.function.method, instructions = Quad.Slice(0, 14) + Tripled + Quad.Slice(14, 3))), 4)
+constant Pairs = MlirWholeSpan(MlirWholeFunction.Nesting, 4)
 constant Bounded = (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply)
 constant Constants = (InstructionType.LoadConstantToRegister, InstructionType.StoreConstantToVariable)
 Lines Texts
@@ -73,6 +78,7 @@ Loaded(at Number) Texts
 	let input = "%t" + position + "wl" + parameter
 	List(Text) + ("    " + Name("wb", at) + " = llvm.intr.fabs(" + input + ") : (f64) -> f64")
 Combined(at Number) Texts
+	Rescaled.Combined(12).First is "    %t4wb12 = arith.addf %t4whlimit, %t4wb11 : f64"
 	let entry = function.method.instructions(at)
 	let carried = Carried(at)
 	if (entry.kind is not InstructionType.Multiply) and (carried >= 0)
@@ -83,18 +89,31 @@ Combined(at Number) Texts
 	let check = "    " + Name("wk", at) + " = arith.cmpf olt, " + Name("wb", at) + ", %t" + position + "whlimit : f64"
 	(List(Text) + math) + check
 Accumulated(at Number, carried Number) Texts
+	Pairs.Accumulated(11, 4).First is "    %t4wb11c3 = arith.mulf %t4wn3, %t4wn6 : f64"
 	let entry = function.method.instructions(at)
 	let term = carried is entry.payload(1) then entry.payload(2) else entry.payload(1)
-	let grown = Name("wb", at) + "g"
-	let loop = Earlier(0, at, true)
-	let initial = Variable(function.method.instructions(Earlier(carried, at, false)), loop)
-	let product = "    " + grown + " = arith.mulf " + Name("wn", loop) + ", " + Source(term, at) + " : f64"
-	let summed = "    " + Name("wb", at) + " = arith.addf " + initial + ", " + grown + " : f64"
+	let loaded = function.method.instructions(Earlier(carried, at, false))
+	let reached = StoreBefore(loaded.texts(0), at)
+	let initial = Variable(loaded, reached + 1)
+	let summed = "    " + Name("wb", at) + " = arith.addf " + initial + ", " + Name("wb", at) + "g : f64"
 	let check = "    " + Name("wk", at) + " = arith.cmpf olt, " + Name("wb", at) + ", %t" + position + "whlimit : f64"
-	(List(Text) + product + summed) + check
+	(Product(at, reached, Source(term, at)) + summed) + check
+Product(at Number, reached Number, term Text) Texts
+	Pairs.Product(11, 0, "%x").Last is "    %t4wb11g = arith.mulf %t4wb11c3, %x : f64"
+	Quads.Product(12, 0, "%x") is ("    %t4wb12g = arith.mulf %t4wn3, %x : f64")
+	mutable loop = Earlier(0, at, true)
+	mutable counted = Name("wn", loop)
+	mutable lines = List(Mutable(Text))
+	for as long as Earlier(0, loop, true) > reached
+		loop = Earlier(0, loop, true)
+		let name = Name("wb", at) + "c" + loop
+		lines = lines + ("    " + name + " = arith.mulf " + Name("wn", loop) + ", " + counted + " : f64")
+		counted = name
+	lines + ("    " + Name("wb", at) + "g = arith.mulf " + counted + ", " + term + " : f64")
 Source(register Number, at Number) Text
 	Quads.Source(3, 7) is "%t4wn3"
 	Splits.Source(2, 4) is "%t2whlimit"
+	Scaled.Source(2, 6) is "%t4whlimit"
 	let writer = Earlier(register, at, false)
 	if writer < 0
 		return "%t" + position + "whlimit"
@@ -108,7 +127,7 @@ Variable(entry InstructionEntry, at Number) Text
 	if Parameter(entry.texts(0)) >= 0
 		return Name("wb", at)
 	let store = StoreBefore(entry.texts(0), at)
-	if store < 0
+	if (store < 0) or (LastStore(entry.texts(0), at) > at)
 		return "%t" + position + "whlimit"
 	let stored = function.method.instructions(store)
 	stored.kind is InstructionType.StoreConstantToVariable then Name("wb", store) else Source(stored.payload(0), store)
@@ -118,12 +137,17 @@ Carried(at Number) Number
 	let first = function.method.instructions(at).payload(1)
 	let writer = Earlier(first, at, false)
 	let loaded = function.method.instructions(writer < 0 then at else writer)
-	if (Earlier(0, at, true) < 0) or (loaded.kind is not InstructionType.LoadVariableToRegister)
+	if loaded.kind is not InstructionType.LoadVariableToRegister
 		return -1
-	for Range(at + 1, function.method.LoopEndOf(Earlier(0, at, true)))
-		let step = function.method.instructions(value)
-		if (step.kind is InstructionType.StoreRegisterToVariable) and (step.texts.Last is loaded.texts(0))
-			return first
+	LastStore(loaded.texts(0), at) is at + 1 then first else -1
+LastStore(name Text, at Number) Number
+	Quads.LastStore("sum", 12) is 13
+	Rescaled.LastStore("sum", 12) is 16
+	Quads.LastStore("sum", 15) is -1
+	for Range(StoreBefore(name, at) + 1, at)
+		let opens = function.method.instructions(value).kind is InstructionType.LoopBegin
+		if opens and (function.method.LoopEndOf(value) >= at)
+			return StoreBefore(name, function.method.LoopEndOf(value))
 	-1
 Earlier(register Number, at Number, isLoop Boolean) Number
 	Quads.Earlier(3, 7, false) is 5
