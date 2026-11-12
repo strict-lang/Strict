@@ -91,7 +91,7 @@ Compiled(entry InstructionEntry, decoder PayloadDecoder, type TypeEntry, count N
 	let names = Text.Combine(List(Text) + Temp("m") + ArgumentNames(callee.parameters.Length), ", ")
 	let called = "    " + Temp("r") + " = func.call @" + MlirCached(target).Called
 	let call = called + "(" + names + ") : (" + types + ") -> f64"
-	let returned = MlirChecks(function, position).Returned(target, entry.payload(0))
+	let returned = MlirSpent(function, position).Dead + MlirChecks(function, position).Returned(target, entry.payload(0))
 	MlirWholeCall(function, position).Dispatched(Loads(entry, type) + Defaults(callee, count) + call + returned)
 Defaults(callee MethodEntry, count Number) Texts
 	MlirCalls(Hashes, 1).Defaults(Defaulted, 0).Last is "    %t1a0 = llvm.load %r1 : !llvm.ptr -> f64"

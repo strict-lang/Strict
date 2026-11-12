@@ -13,14 +13,17 @@ Reader Number
 	reader < 0 then -1 else IsPlain(position) and IsReference then reader else -1
 Next(register Number) Number
 	Built.Next(1) is 2
+	let reader = First(register)
+	reader < 0 then -1 else IsPlain(reader) then reader else -1
+First(register Number) Number
+	Built.First(1) is 2
 	let steps = function.method.instructions
 	let reuse = LoadReuse(steps)
 	for Range(position + 1, steps.Length)
-		let isRead = register is in reuse.Reads(steps(value))
-		if isRead and IsPlain(value)
+		let isChecked = steps(value).kind is InstructionType.CheckError
+		if (register is in reuse.Reads(steps(value))) and (isChecked is false)
 			return value
-		let isOther = isRead and (steps(value).kind is not InstructionType.CheckError)
-		if isOther or IsFlow(steps(value).kind) or (reuse.Written(steps(value)) is register)
+		if IsFlow(steps(value).kind) or (reuse.Written(steps(value)) is register)
 			return -1
 	-1
 IsFlow(kind Number) Boolean

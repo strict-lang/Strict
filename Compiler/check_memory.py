@@ -1,6 +1,7 @@
 """Run from Strict: python Compiler/check_memory.py. A failed host allocation ends with OutOfMemory (Windows only), a
 program dropping 52 MB lists while keeping 260 MB runs in the 1 GB heap of the web and iOS (natively and in node), one
 dropping 3 MB lists and many small texts in 128 MB, lists grown by Add free their items by counts alone (no collection),
+so does a fresh list passed straight to a method (a grown one and a long one),
 giving 8 GB of free pages back after a full collection is not counted as collecting (GarbageCollectionExceedsTenth),
 GpuMemory.Released never collects and Process.Collected always does, a list a method named Validated hands back
 is not refilled while the local it came from still reads it, a Realtime type collects at the end of its
@@ -65,7 +66,19 @@ def frameEnds(folder, name, listType, item, filledTwo, size, frames):
 
 
 filled = "has logger\nFilled(count Number, offset Number) Numbers\n\tFilled(2, 1) is (1, 2)\n\tfor count\n\t\tindex + offset\n"
-kept = filled + ("Run\n\tlet kept = (Filled(6500000, 1), Filled(6500000, 2), Filled(6500000, 3), Filled(6500000, 4), "
+grower = ("Grown(count Number, offset Number) List(Numbers)\n\tName(Logger).Grown(13, 0)(12) is (12, 13)\n"
+	"\tmutable grown = List(Mutable(Numbers))\n\tfor count\n"
+	"\t\tgrown.Add(Filled(count is 13 then 2 else 8192, index + offset))\n\tgrown\n")
+
+
+def uncollected(executable, total):
+	"""The program logs its total and frees what it drops by counts alone: no collection runs."""
+	ran = subprocess.run([str(executable)], capture_output=True, text=True, timeout=60,
+		env=os.environ | {"STRICT_GC_LOG": "1", "STRICT_GPU": "0"})
+	assert ran.returncode == 0 and f"total {total}" in ran.stdout and "Collection: " not in ran.stdout, ran.stdout[-500:]
+
+
+kept = filled + ("Run\n\tlet kept =(Filled(6500000, 1), Filled(6500000, 2), Filled(6500000, 3), Filled(6500000, 4), "
 	"Filled(6500000, 5))\n")
 
 
@@ -98,13 +111,16 @@ with tempfile.TemporaryDirectory(prefix="MemoryCheck", dir=root / "Examples") as
 	ran = subprocess.run([str(small)], capture_output=True, text=True, timeout=60,
 		env=os.environ | {"STRICT_HEAP": "128", "STRICT_THREADS": "1", "STRICT_GPU": "0"})
 	assert ran.returncode == 0 and "total 1757700" in ran.stdout, (ran.returncode, ran.stdout[-300:])
-	grown = built(folder, "GrownLists", filled + "Grown(count Number, offset Number) List(Numbers)\n"
-		"\tGrownLists(Logger).Grown(13, 0)(12) is (12, 13)\n\tmutable grown = List(Mutable(Numbers))\n\tfor count\n"
-		"\t\tgrown.Add(Filled(count is 13 then 2 else 8192, index + offset))\n\tgrown\nRun\n\tmutable total = 0\n"
+	grown = built(folder, "GrownLists", filled + grower.replace("Name", "GrownLists") + "Run\n\tmutable total = 0\n"
 		"\tfor 4000\n\t\ttotal = total + Grown(16, index)(15)(1)\n\tlogger.Log(\"total \" + total)")
-	ran = subprocess.run([str(grown)], capture_output=True, text=True, timeout=60,
-		env=os.environ | {"STRICT_GC_LOG": "1", "STRICT_GPU": "0"})
-	assert ran.returncode == 0 and "total 8062000" in ran.stdout and "Collection: " not in ran.stdout, ran.stdout[-500:]
+	uncollected(grown, 8062000)
+	uncollected(built(folder, "GrownPassed", filled + grower.replace("Name", "GrownPassed") +
+		"Picked(lists List(Numbers)) Number\n\tGrownPassed(Logger).Picked(((1, 2), (3, 4))) is 4\n"
+		"\tlists(lists.Length - 1)(1)\nRun\n\tmutable total = 0\n\tfor 4000\n"
+		"\t\ttotal = total + Picked(Grown(16, index))\n\tlogger.Log(\"total \" + total)"), 8062000)
+	uncollected(built(folder, "PassedLarge", filled + "Last(numbers Numbers) Number\n"
+		"\tPassedLarge(Logger).Last((1, 2)) is 2\n\tnumbers(numbers.Length - 1)\nRun\n\tmutable total = 0\n"
+		"\tfor 60000\n\t\ttotal = total + Last(Filled(8192, index))\n\tlogger.Log(\"total \" + total)"), 2291430000)
 	trimmed = built(folder, "TrimmedPool", filled + "Held(count Number) Slow(List(Numbers))\n"
 		"\tTrimmedPool(Logger).Held(1).Length is 1\n\tfor count\n\t\tFilled(16000000, index)\nLast(count Number) Slow(Number)\n"
 		"\tTrimmedPool(Logger).Last(1) is 1\n\tHeld(count).Last(1)\nRun\n\tmutable total = 0\n\tfor 3\n"

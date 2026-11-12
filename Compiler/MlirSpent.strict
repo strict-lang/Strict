@@ -1,0 +1,43 @@
+has function MlirFunction
+has position Number
+constant Sizing = InstructionEntry.Invoke(3, ("Strict/Outer", "Sized", "Strict/Number", "outer"), 2, -1)
+constant Made = MlirOwned.OuterMade.Slice(0, 3)
+constant Once = MethodEntry("Run", List(MemberEntry), "None", Made + Sizing)
+constant Passing = MlirSpent(MlirFunction(MlirOwned.Rebuilt.function, method = Once), 3)
+constant Again = MethodEntry("Run", List(MemberEntry), "None", Made + Sizing + Sizing)
+constant Twice = MlirSpent(MlirFunction(MlirOwned.Rebuilt.function, method = Again), 3)
+Dead Texts
+	Passing.Dead.First is "    %t3dz0 = arith.constant 0.0 : f64"
+	Passing.Dead.Last is "    func.call @strict_rc_dead(%t3a0, %t3dz0) : (f64, f64) -> ()"
+	MlirSpent(Passing.function, 2).Dead.Length is 0
+	let entry = function.method.instructions(position)
+	let registers = entry.payload.Slice(6 + entry.payload(3), entry.payload(5 + entry.payload(3)))
+	mutable lines = List(Mutable(Text))
+	for registers
+		if (registers.Index(value) is index) and IsSpent(value)
+			let zero = "%t" + position + "dz" + index
+			let dead = "    func.call @strict_rc_dead(%t" + position + "a" + index + ", " + zero + ") : (f64, f64) -> ()"
+			lines = lines + ("    " + zero + " = arith.constant 0.0 : f64") + dead
+	lines
+IsSpent(register Number) Boolean
+	Passing.IsSpent(2)
+	Passing.IsSpent(0) is false
+	Twice.IsSpent(2) is false
+	let writer = MlirKinds(function).Writer(position, register)
+	let owned = MlirOwned(function, position)
+	let isCall = writer >= 0 then function.method.instructions(writer).kind is InstructionType.Invoke else false
+	if (isCall and owned.IsHeap(MlirKinds(function).KindOf(position, register))) is false
+		return false
+	let isKept = MlirCarried(function).IsKeptValue(position, register, List(Text), 0)
+	let isNext = MlirHanded(function, writer).First(register) is position
+	isKept and isNext and (owned.IsLeaked(position, register) is false) and IsUnread(register)
+IsUnread(register Number) Boolean
+	Passing.IsUnread(2)
+	Twice.IsUnread(2) is false
+	let reuse = LoadReuse(function.method.instructions)
+	for Range(position + 1, reuse.instructions.Length)
+		if register is in reuse.Reads(reuse.instructions(value))
+			return false
+		if reuse.Written(reuse.instructions(value)) is register
+			return true
+	true

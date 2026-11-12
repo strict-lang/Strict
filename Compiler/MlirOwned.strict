@@ -58,7 +58,10 @@ IsReference(name Text) Boolean
 	Text.Combine(Rebuilt.Reconstructed(Rebuilding(7), MlirInstances.Outer, Fresh)).Length is 516
 	Rebuilt.Rewritten(Rebuilding(7), MlirInstances.Outer, "moved")(1) is "    %t7ra1 = llvm.load %r5 : !llvm.ptr -> f64"
 	Rebuilt.Reconstructed(Rebuilding(7), MlirInstances.Outer, Fresh)(0).StartsWith("    %t7old = llvm.load %v_moved")
-	let kind = MlirKinds(function).VariableKind(function.method.instructions.Length, name)
+	IsHeap(MlirKinds(function).VariableKind(function.method.instructions.Length, name))
+IsHeap(kind Text) Boolean
+	Owner.IsHeap("List(Number)")
+	Owner.IsHeap("Number") is false
 	let represented = MlirLayout(function).Represented(kind)
 	let isHeap = represented.StartsWith("List(") or (represented is "Flat") or MlirLayout(function).IsStruct(kind)
 	isHeap and (MlirPairs(function, 0).IsPaired(kind) is false)
