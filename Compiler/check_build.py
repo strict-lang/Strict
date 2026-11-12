@@ -388,7 +388,44 @@ def check_held_copy():
 				process.wait()
 	print("A rebuild succeeds while the previous executable and its old copy still run")
 
+def check_restarted_resident():
+	"""A rebuild stops a running resident program (obj/strict.server* next to it) and starts it again with its arguments."""
+	if sys.platform != "win32":
+		return
+	strict = str(root / "strict.exe")
+	def listed(executable):
+		query = ("Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq '" + str(executable) +
+			"' } | ForEach-Object { '' + $_.ProcessId + ' ' + $_.CommandLine }")
+		found = subprocess.run(["powershell", "-NoProfile", "-Command", query], capture_output=True, text=True, timeout=60)
+		return [line.split(" ", 1) for line in found.stdout.splitlines() if line.strip()]
+	with tempfile.TemporaryDirectory(prefix="ResidentCheck", dir=root / "Examples") as folder:
+		source = Path(folder) / "ResidentCheck.strict"
+		executable = source.with_suffix(".exe")
+		started = None
+		try:
+			for attempt in range(2):
+				source.write_text("Run(seconds Number)\n\tlet resident = Resident(Path(Process.Current.executable).PathOnly.text)\n"
+					"\tlet server = resident.Opened\n\tlet started = Process.Elapsed\n\tfor as long as Process.Elapsed - started < "
+					"seconds\n\t\tProcess.Wait(0.1" + str(attempt) + ")\n\tresident.Closed(server)\n", encoding="utf-8")
+				built = subprocess.run([strict, "build", str(source)], cwd=root, capture_output=True, text=True, timeout=120)
+				assert built.returncode == 0, built.stdout + built.stderr
+				if attempt == 0:
+					started = subprocess.Popen([str(executable), "60"])
+					time.sleep(1)
+			assert started.poll() is not None, "The build did not stop the running resident program\n" + built.stdout
+			again = listed(executable)
+			assert len(again) == 1 and again[0][1].split()[1:] == ["60"], str(again) + "\n" + built.stdout
+			assert "Stopping " in built.stdout and "Started " in built.stdout, built.stdout
+		finally:
+			if started is not None and started.poll() is None:
+				started.kill()
+			for process in listed(executable):
+				subprocess.run(["taskkill", "/F", "/PID", process[0]], capture_output=True)
+			time.sleep(1)
+	print("A rebuild stops a running resident program and starts it again with its arguments")
+
 check_held_copy()
+check_restarted_resident()
 check_named_failure()
 check_concurrent_builds()
 check_link_workers()

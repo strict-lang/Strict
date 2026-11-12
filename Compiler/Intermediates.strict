@@ -6,9 +6,6 @@ constant Endings = CrossEndings + LinuxEndings + RuntimeEndings
 constant Swapped = PtxCache("Compiler/output/Swapped")
 constant Held = PtxCache("./Compiler/output/Held")
 constant Renewing = Held.base + ".new.exe"
-constant Holding = "-NoProfile -Command $file = Get-Item -ErrorAction Ignore '"
-constant Running = "'; if ($file) { Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq $file.FullName"
-constant Before = " -and $_.CreationDate -lt $file.LastWriteTime } | ForEach-Object { $_.ProcessId } }"
 Removed(base Text)
 	Intermediates(Logger).Removed("Compiler/output/missing") is not Error
 	mutable files = Directory.Files(Path(base).PathOnly.text, Path(base).FileName.text + ".ios-*.o")
@@ -42,7 +39,7 @@ Replaced(executable Text, target Text) Text
 	if File(target).Exists
 		File(old).Rename(executable)
 	File(old).Delete
-	File(target).Exists then Used(executable, executable) else ""
+	File(target).Exists then Used(executable, executable) else Running(logger, executable).Restarted(old)
 Free(executable Text) Text
 	Intermediates(Logger).Free("Compiler/output/Missing/A.exe") is "Compiler/output/Missing/A.old.exe"
 	let pattern = Path(executable).FileName.text.Replace(".exe", ".old*.exe")
@@ -61,5 +58,4 @@ Used(file Text, executable Text) Slow(Text)
 	Held.Saved(List(Text) + ".new.exe", List(Text) + "built") is not Error
 	Intermediates(Logger).Replaced(Held.base + ".exe", Renewing) is Held.base + ".exe is in use by another program"
 	File("Compiler/output/Held.exe").Delete
-	let found = Process.RunTool("powershell", Holding + executable + Running + Before).Output.Lines - ""
-	file + " is in use by " + (found.Length is 0 then "another program" else "process " + Text.Combine(found, ", "))
+	file + " is in use by " + Running(logger, executable).Described

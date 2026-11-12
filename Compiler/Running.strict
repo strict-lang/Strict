@@ -1,0 +1,65 @@
+has logger
+has executable Text
+constant Listing = "-NoProfile -Command $file = Get-Item -ErrorAction Ignore '"
+constant Matching = "'; if ($file) { Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq $file.FullName"
+constant Older = " -and $_.CreationDate -lt $file.LastWriteTime }"
+constant Printed = " | ForEach-Object { '' + $_.ProcessId + [char]9 + $_.CommandLine } }"
+constant Missing = Running(Logger, "Compiler/output/Missing.exe")
+constant Served = Running(Logger, "C:/s/strict.exe")
+constant Line = "12\t\"C:/s/Sum.exe\" 5"
+Listed Texts
+	Missing.Listed.Length is 0
+	Process.RunTool("powershell", Listing + TypeSource.Absolute(executable) + Matching + Older + Printed).Output.Lines - ""
+Described Text
+	Missing.Described is "another program"
+	let found = Listed
+	mutable ids = List(Mutable(Text))
+	for found
+		ids.Add(Id(value))
+	found.Length is 0 then "another program" else "process " + Text.Combine(ids, ", ")
+Id(line Text) Text
+	Missing.Id(Line) is "12"
+	line.Split("\t").First
+Command(line Text) Text
+	Missing.Command(Line) is "\"C:/s/Sum.exe\" 5"
+	line.Substring(Id(line).Length + 1, line.Length - Id(line).Length - 1)
+IsStopped(line Text) Boolean
+	Missing.IsStopped(Line)
+	Served.IsStopped("12\t\"C:/s/strict.exe\" serve 2")
+	Served.IsStopped("12\t\"C:/s/strict.exe\" build Strict.strict") is false
+	(IsStrict is false) or (Command(line).IndexOf(" serve") > 0)
+IsStrict Boolean
+	Served.IsStrict
+	Missing.IsStrict is false
+	Path(executable).FileName.RemoveExtension.text is "strict"
+Stopping Texts
+	Missing.Stopping.Length is 0
+	mutable kept = List(Mutable(Text))
+	for Listed
+		if IsStopped(value)
+			kept.Add(value)
+	kept
+Ended(id Text) Boolean
+	Missing.Ended("0") is false
+	let isClosed = Process.RunTool("taskkill", "/PID " + id).exitCode is 0
+	isClosed or (Process.RunTool("taskkill", "/F /PID " + id).exitCode is 0)
+Restarted(old Text) Slow(Text)
+	Missing.Restarted("Compiler/output/Missing.old.exe") is ""
+	if Directory.Files(Path(executable).PathOnly.text + "/obj", "strict.server*").Length is 0
+		return ""
+	let stopping = Stopping
+	for stopping
+		logger.Log("Stopping " + executable + " (process " + Id(value) + ")")
+		if Ended(Id(value)) is false
+			return "process " + Id(value) + " did not stop"
+	if (stopping.Length > 0) and (IsStrict is false) and (Intermediates(logger).Deleted(old) is Error)
+		return old + " is still in use by " + Described
+	Started(stopping)
+Started(lines Texts) Text
+	Missing.Started(List(Text)) is ""
+	for lines
+		let command = Forwarding.Quote + Command(value).Replace("'", "''").Replace("\"", Forwarding.Quote) + Forwarding.Quote
+		let folder = "' -WindowStyle Hidden -WorkingDirectory '" + Directory.Current + "'"
+		let started = Process.RunTool("powershell", Forwarding.Starting + command + folder)
+		logger.Log(started.exitCode is 0 then "Started " + executable + " again" else "Could not start " + Command(value))
+	""
