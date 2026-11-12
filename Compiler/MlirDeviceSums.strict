@@ -91,7 +91,7 @@ IsAdded(load Number) Boolean
 	let register = function.method.instructions(load).payload(0)
 	for Range(load + 1, function.method.LoopEndOf(at))
 		let entry = function.method.instructions(value)
-		let isOperator = (entry.kind > InstructionType.StoreSeparator) and (entry.kind < InstructionType.BinaryOperatorsSeparator)
+		let isOperator = (entry.kind > InstructionType.StoreSeparator) and (entry.kind < InstructionType.Invoke)
 		if isOperator and (register is in (entry.payload(1), entry.payload(2)))
 			let isSum = (entry.kind is InstructionType.Add) or (entry.kind is InstructionType.Subtract)
 			return isSum and (entry.payload(1) is register) and IsAccumulation(value + 1)
