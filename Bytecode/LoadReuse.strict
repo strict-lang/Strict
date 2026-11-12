@@ -48,7 +48,7 @@ EarlierLoad(load Number) Number
 		let earlier = instructions(position)
 		let isSameName = name is in earlier.texts
 		if IsBoundary(earlier) or isSameName and earlier.kind <= InstructionType.StoreRegisterToVariable
-			return isSameName and (earlier.kind is InstructionType.LoadVariableToRegister) then position else -1
+			return earlier.kind is InstructionType.LoadVariableToRegister then position else -1
 	-1
 IsUnchanged(register Number, first Number, load Number) Boolean
 	Twice.IsUnchanged(0, 0, 1)
@@ -136,8 +136,7 @@ Rebased(entry InstructionEntry, base Number) InstructionEntry
 	Twice.Rebased(AddBoth, 6).payload is (3, 6, 7, 8)
 	Twice.Rebased(InstructionEntry.Return(2), 6).payload is List(Number) + 8
 	Twice.Rebased(InstructionEntry.Binary(InstructionType.Equal, (0, 1)), 6).payload is (2, 6, 7)
-	let written = WritePosition(entry)
-	let positions = written < 0 then ReadPositions(entry) else ReadPositions(entry) + written
+	let positions = ReadPositions(entry) + WritePosition(entry)
 	mutable content = List(Mutable(Number))
 	for entry.payload
 		content.Add(index is in positions then value + base else value)
