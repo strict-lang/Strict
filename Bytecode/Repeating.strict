@@ -1,6 +1,6 @@
 has values ValueCodegen
 constant Plain = Repeating(ValueCodegen.Plain)
-constant Countdown = BodyParser("Run", "\tfor as long as x > 0", "\t\tx").Block(1, 1).children(0)
+constant Countdown = BodyParser("Run", "\tfor as long as x > 0", "\t\tRun").Block(1, 1).children(0)
 constant Counting = MethodCodegen.LoopBody.children(0)
 constant ShadeTypes = KnownTypes(List(Text) + "Shade", List(Scope) + KnownTypes.NoMembers, List(Scope) + KnownTypes.NoMembers, List(Scope) + KnownTypes.NoMembers)
 constant Shading = Repeating(ValueCodegen(TypeInference(ShadeTypes, List(Scope) + Scope(("Dark", "Light"), ("0", "1"))), ValueCodegen.Plain.methods, CallTarget.Plain))

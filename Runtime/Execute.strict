@@ -7,6 +7,7 @@ has isFull Boolean = false
 has known Dictionary(Text, TypeEntry) = Dictionary(Text, TypeEntry)
 constant Adder = BinaryFile("./Examples/NativeAdd/Adder.strict")
 constant AdderFiles = SourceFiles(".").Of(Adder.source)
+constant Unstamped = BinarySources(List(Text))
 Run(arguments Texts) Number
 	let failed = Failures(List(Text) + arguments(0), arguments(1), true)
 	if failed > 0
@@ -92,8 +93,9 @@ Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInfer
 		Stored(cache, root, files, stamped, isOwn, linked)
 	let survived = (failed is 0) and isTested then Mutated(types, path, root, files, inference, started) else 0
 	Answer(failed + survived, linked.Known(known), "", Dictionary(Text, Number), files, types)
-Stored(cache BinaryFile, root Text, files Texts, stamped BinarySources, isOwn Boolean, linked LinkRound) Boolean
-	Execute(Logger).Stored(BinaryFile.Probe, ".", List(Text), BinarySources(List(Text)), true, LinkRound.Greeting)
+Stored(cache BinaryFile, root Text, files Texts, stamped BinarySources, isOwn Boolean, linked LinkRound)
+	Execute(Logger).Stored(BinaryFile.Probe, ".", List(Text), Unstamped, true, LinkRound.Greeting) is not Error
+	File(BinaryFile.Probe.Path).Exists
 	let folder = Path(cache.source).PathOnly.text
 	let types = linked.entries
 	let links = BinaryLinks(cache).Lines(types, linked.TypeNames, linked.linker)
