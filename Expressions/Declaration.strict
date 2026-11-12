@@ -2,4 +2,6 @@ IsUnspaced(line Text) Boolean
 	IsUnspaced("constant Value =\" a\"")
 	IsUnspaced("constant Value = \" a\"") is false
 	IsUnspaced("has width Number with value >= 0") is false
-	(line.IndexOf(" = ") < 0) and ("=" is in Tokenizer(line).Tokens)
+	IsUnspaced("constant Looked =Parsed(\"a = 5\")")
+	let tokens = Tokenizer(line).Tokens
+	line.Split(" = ").Length - Text.Combine(tokens, "").Split(" = ").Length < tokens.Count("=")
