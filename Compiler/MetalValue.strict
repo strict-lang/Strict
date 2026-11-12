@@ -53,11 +53,15 @@ Hexed(type Text) Text
 FloatBits Text
 	MetalValue("0x3FF0000000000000").FloatBits is "0x3F800000"
 	MetalValue("0xC160000000000000").FloatBits is "0xCB000000"
+	MetalValue("0x37A16C2000000000").FloatBits is "0x000116C2"
 	let high = Hexadecimal(text.Substring(2, 8))
 	let low = Hexadecimal(text.Substring(10, 8))
 	let mantissa = (high % HighMantissaRange) * 8 + (low / DroppedLowBits).Floor
 	let sign = high >= SignBit then SignBit else 0
-	"0x" + Hex(sign + Exponent((high / HighMantissaRange).Floor % DoubleExponents) * SingleMantissaRange + mantissa, 8)
+	let double = (high / HighMantissaRange).Floor % DoubleExponents
+	if (double > 0) and (double <= BiasDifference)
+		return "0x" + Hex(sign + (SingleMantissaRange + mantissa) / 2 ^ (BiasDifference + 1 - double), 8)
+	"0x" + Hex(sign + Exponent(double) * SingleMantissaRange + mantissa, 8)
 Exponent(double Number) Number
 	MetalValue("").Exponent(1023) is 127
 	MetalValue("").Exponent(2047) is 255
