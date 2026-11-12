@@ -21,12 +21,6 @@ Loaded(model Gguf, prefix Text) Slow(NgramEmbedding)
 	let norms = (model.Values(prefix + "ple_norm_key.weight"), model.Values(prefix + "ple_norm_query.weight"))
 	let taps = Gguf(model, bits = Number.SingleBits).Rows(prefix + "ple_conv1d.weight")
 	NgramEmbedding(keyed, valued, norms(0), norms(1), model.Values(prefix + "ple_norm_conv.weight"), taps)
-Embedded(table List(Numbers), rows Numbers) Numbers
-	Tiny.Embedded(((1), (2), (3)), (2, 0)) is (3, 1)
-	mutable embedding = List(Number)
-	for rows
-		embedding = embedding + table(value)
-	embedding
 Grouped(values Numbers, weights Numbers) Numbers
 	Tiny.Grouped(HyperStreams.Streams, Norm) is HyperStreams.Tiny.Normalized(HyperStreams.Streams)
 	HyperStreams(weights, HyperStreams.Down, HyperStreams.Up, HyperStreams.Inject).Normalized(values)

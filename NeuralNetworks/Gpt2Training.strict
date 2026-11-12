@@ -18,16 +18,6 @@ Transposes(weights Safetensors, count Number) Slow(List(Gpt2Block))
 	Tiny.Transposes(Gpt2Block.Weights, 1).First.contraction.weights.Length is 48
 	for count
 		Gpt2Pass.Transposed(weights, "h." + index + ".")
-Loss(chosen Numbers) Slow(Number)
-	Tiny.Loss(Chosen).IsNearlyEqual(5.32793779522955)
-	let logits = Logits(Hidden(Passes(chosen), chosen))
-	let width = model.tokens.Length
-	let largests = Softmax.Largests(logits, width)
-	let totals = Softmax.Totals(logits, largests, width)
-	mutable loss = 0
-	for chosen.Length - 1
-		loss = loss - logits(index * width + chosen(index + 1)) + largests(index) + totals(index).Logarithm
-	loss
 Passes(chosen Numbers) Slow(List(Gpt2Pass))
 	Tiny.Passes(Chosen).Length is 1
 	mutable state = Embedded(chosen)
@@ -85,7 +75,7 @@ Flattened(reversed List(List(Numbers))) List(Numbers)
 	for reversed.Length * 8
 		reversed(reversed.Length - 1 - (index / 8).Floor)(1 + index % 8)
 Trained(chosen Numbers) Slow(Gpt2Training)
-	Tiny.Trained(Chosen).Trained(Chosen).Loss(Chosen) < Tiny.Loss(Chosen)
+	Perplexity(Tiny.Trained(Chosen).Trained(Chosen).model).Measured(Chosen) < Perplexity(Tiny.model).Measured(Chosen)
 	Tiny.Trained(Chosen).step is 1
 	let gradients = Gradients(chosen)
 	let next = step + 1

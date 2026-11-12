@@ -19,16 +19,6 @@ Drawn(logits Numbers) Sampling
 	mutable state = random
 	let picked = state.Get(0, 1)
 	Sampling(value, random = state, token = Picked(Gathered(logits, chunks), chunks, bound, picked))
-Draws(logits Numbers, count Number) Numbers
-	Sampling(1, 1, 1, PseudoRandom(5)).Draws((3, 3), 9).Sum is 0
-	Warm.Draws(List(Number) + 20 + Layer.Zeros(127) + 19, 5).Sum / 128 is 2
-	Warm.Draws((0, 0.6931), 60).Sum.IsNearlyEqual(40, 5)
-	mutable current = value
-	mutable tokens = List(Mutable(Number))
-	for count
-		current = current.Drawn(logits)
-		tokens.Add(current.token)
-	tokens
 Selected(numbers Numbers, bound Number) Numbers
 	Warm.Selected((3, 1, 2), 2) is (0, 2)
 	for numbers
