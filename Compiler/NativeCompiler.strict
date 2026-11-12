@@ -51,8 +51,6 @@ Lock(target Text) Text
 Compiled(command Text, rest Texts, sources Texts = List(Text)) Number
 	if command is "build"
 		return Checked(rest, sources)
-	if command is "linked"
-		return NativeChunks(logger, rest(2)).Saved(rest(0), rest(1), rest.Slice(3, rest.Length - 3))
 	let request = TestRequest(rest)
 	if request.Message is not ""
 		logger.Log(request.Message)

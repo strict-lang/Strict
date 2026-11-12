@@ -20,16 +20,16 @@ constant Starting = MethodEntry(DefaultInstance.Starter, List(MemberEntry), "Str
 constant Reading = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "b"), InstructionEntry.Return(0))
 constant Read = MethodEntry(TestCodegen.Runner, List(MemberEntry), "Strict/Number", Reading)
 constant Defaulting = Machine(Resolver(List(TypeEntry) + TypeEntry("Strict/Pair", Paired.members, (Starting, Read))).Resolved)
-Launch(typeName Text, arguments List(VmValue)) Number
+Completed(typeName Text, arguments List(VmValue)) Boolean
 	let main = Natives(types).TypeOf(typeName)
 	let exact = main.Callee("Run", arguments.Length, "None", List(Text))
 	let run = exact.instructions.Length > 0 then exact else main.Callee("Run", 1, "None", List(Text))
 	let instance = Started(main)
 	let result = Execute(run, Bound(main, instance, run, Typed(run.parameters, arguments), instance), main.Name)
-	if result.kind is in VmValue.ErrorKinds
+	let isFailed = result.kind is in VmValue.ErrorKinds
+	if isFailed
 		logger.Log(result to Text)
-		return 1
-	0
+	isFailed is false
 Typed(parameters List(MemberEntry), arguments List(VmValue)) List(VmValue)
 	Hello.Typed(List(MemberEntry) + Paired.members.Last, List(VmValue) + VmValue.OfText("5")).First.number is 5
 	Hello.Typed(List(MemberEntry) + MemberEntry.LoggerMember, List(VmValue) + VmValue.OfText("a")).First.text is "a"

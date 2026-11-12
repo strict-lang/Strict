@@ -18,7 +18,7 @@ Run(arguments Texts) Number
 	mutable texts = List(Mutable(VmValue))
 	for Range(2, arguments.Length)
 		texts.Add(VmValue.OfText(arguments(value)))
-	Started(types, arguments(0)).Launch(types.First.Name, texts)
+	Started(types, arguments(0)).Completed(types.First.Name, texts) then 0 else 1
 Test(path Text, root Text, isQuiet = false, sources Texts = List(Text)) Number
 	Execute(Logger).Test("Missing.strict", ".") is 1
 	if File(path).Exists and (Directory.Exists(path) is false)

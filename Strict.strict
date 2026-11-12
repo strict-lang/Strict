@@ -22,19 +22,26 @@ constant LastTraceLines = 3
 constant LongTrace = "Error: A\n\t1\n\t2\n\t3\n\t4\n\t5\n\t6\n\tat Strict.Logged in Strict.strict:line 66"
 Run(arguments Texts) Number
 	let resident = Resident(Path(Process.Current.executable).PathOnly.text)
-	if (arguments.Length > 0) and (arguments(0) is "serve")
-		return Served(arguments.Length > 1 then Resident(resident.root, arguments(1)) else resident)
-	if (arguments.Length > 0) and (arguments(0) is "linked")
-		return Native("linked", arguments.Slice(1, arguments.Length - 1))
-	if (arguments.Length > 0) and (arguments(0) is "coordinator")
+	let command = arguments.Length > 0 then arguments(0) else ""
+	if command is "coordinator"
 		mutable coordinator = Coordinator(logger)
 		return coordinator.Served
-	if (arguments.Length > 0) and (arguments(0) is "status")
-		return Coordinator(logger).Reported
+	if command is in ("serve", "linked", "status")
+		Hosted(command, arguments, resident)
+		return 0
 	let forwarded = Forwarding(logger, resident.root).Forwarded(arguments)
 	forwarded >= 0 then forwarded else Logged(arguments).code
-Served(resident Resident) Number
+Hosted(command Text, arguments Texts, resident Resident)
+	if command is "serve"
+		return Served(arguments.Length > 1 then Resident(resident.root, arguments(1)) else resident)
+	if command is "status"
+		return Coordinator(logger).Reported
+	let rest = arguments.Slice(1, arguments.Length - 1)
+	NativeChunks(logger, rest(2)).Saved(rest(0), rest(1), rest.Slice(3, rest.Length - 3))
+Served(resident Resident)
 	let server = resident.Opened
+	if server is 0
+		return Error("ServerNotOpened")
 	let built = File(Process.Current.executable).Modified
 	mutable socket = resident.Accepted(server, built)
 	mutable answer = Answer(0, Dictionary(Text, TypeEntry))
@@ -44,7 +51,6 @@ Served(resident Resident) Number
 		answer = Replied(resident, request, socket, stopping, answer)
 		socket = stopping then 0 else resident.Accepted(server, built)
 	resident.Closed(server)
-	server > 0 then 0 else 1
 Replied(resident Resident, request Text, socket Number, isStopping Boolean, last Answer) Answer
 	let started = Time.Now
 	let isAnswered = resident.IsCurrent(request) and (isStopping is false)

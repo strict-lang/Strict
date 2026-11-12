@@ -160,8 +160,7 @@ Linked Number
 			return Connected
 		Process.Wait(1)
 	0
-Reported Number
-	Coordinator(Logger, "Compiler/output/MissingCoordinator").Reported is 0
+Reported
+	Coordinator(Logger, "Compiler/output/MissingCoordinator").Reported is not Error
 	let reply = Sent("status")
 	logger.Log(reply is "" then "No coordinator" else reply)
-	0

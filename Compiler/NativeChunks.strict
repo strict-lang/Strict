@@ -52,13 +52,12 @@ Prepared(chunks List(Texts), root Text, base Text) Texts
 		commands.Add(NativeCompiler.Arguments("linked", (Chunked(base, index), root, selection) + value))
 	for ToolRunner(NativeCompiler.Executable(root)).ExecuteAll(commands, "Frontend / chunks (" + chunks.Length + " jobs)")
 		Chunked(base, index)
-Saved(output Text, root Text, paths Texts) Number
-	NativeChunks(Logger, "*").Saved(Unsaved, ".", List(Text) + "Missing.strict") is 1
+Saved(output Text, root Text, paths Texts)
+	NativeChunks(Logger, "*").Saved(Unsaved, ".", List(Text) + "Missing.strict") is Error("ChunkNotCompiled")
 	let counted = NativeFolder(logger, selection, false).Counted(paths, root)
 	if counted.Length < paths.Length
-		return 1
+		return Error("ChunkNotCompiled")
 	File(output).Write(BinaryFile(output).Packed(List(Number), counted, List(Text)))
-	0
 Loaded(outputs Texts, chunks List(Texts)) List(List(TypeEntry))
 	NativeChunks.Loaded(List(Text) + Unsaved, Single).First.Length is 0
 	let decoded = Decodings(outputs, chunks)
@@ -71,7 +70,7 @@ Decodings(outputs Texts, chunks List(Texts)) List(List(TypeEntry))
 		Decoded(value, chunks(index).Length)
 Decoded(output Text, count Number) List(TypeEntry)
 	NativeChunks.Decoded(Unsaved, 1).Length is 0
-	NativeChunks(Logger, "*").Saved(Saving, ".", NativeFolder.Hellos) is 0
+	NativeChunks(Logger, "*").Saved(Saving, ".", NativeFolder.Hellos) is not Error
 	NativeChunks.Decoded(Saving, 2)(1).Name is "Strict/Examples/HelloLogger"
 	if File(output).Exists is false
 		return List(TypeEntry)
