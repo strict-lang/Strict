@@ -117,11 +117,11 @@ ElementType(typeName Text) Text
 	Sample.ElementType("Dictionary(Text, Number)") is "Number"
 	Sample.ElementType("Iterator(Couple(Text, Number))") is "Couple(Text, Number)"
 	Sample.ElementType("Dictionary(Text, Couple(Text, Number))") is "Couple(Text, Number)"
+	Sample.ElementType("Dictionary(Couple(Text, Number), Number)") is "Number"
 	if typeName is in ("Number", "Range", "Text", "List")
 		return typeName is "Text" then "Character" else typeName is "List" then "Generics" else "Number"
 	if typeName.StartsWith("Iterator(") or typeName.StartsWith("Dictionary(")
-		let start = typeName.StartsWith("Dictionary(") then typeName.IndexOf(", ") + 2 else typeName.IndexOf("(") + 1
-		return typeName.Substring(start, typeName.Length - start - 1)
+		return Instantiation(value).Arguments(typeName).Last
 	let keyed = MethodsOf(typeName).TypeOf("get")
 	IsPlural(typeName) then typeName.Substring(0, typeName.Length - 1) else keyed is "" then "Unknown" else keyed
 MemberType(instanceType Text, name Text) Text
