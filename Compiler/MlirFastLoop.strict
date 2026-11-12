@@ -10,6 +10,8 @@ constant Squared = MlirKernel.Squaring.function
 constant Squaring = MlirFastLoop(MlirFunction(Squared.types, Squared.type, Squared.method, List(Number), 2), 2)
 constant Shifted = MlirKernel.Offsetting.function
 constant Shifting = MlirFastLoop(MlirFunction(Shifted.types, Shifted.type, Shifted.method, List(Number), 2), 2)
+constant Guarded = MlirKernel.Guarding.function
+constant Guarding = MlirFastLoop(MlirFunction(Guarded.types, Guarded.type, Guarded.method, List(Number), 1), 1)
 constant Byting = MlirFastLoop(MlirFunction(MlirLayout.Bytings.types, MlirLayout.Bytings.type, MlirLayout.Bytings.method), 2)
 constant Pointer = " : (!llvm.ptr, i64) -> !llvm.ptr, "
 constant Iterated = "for"
@@ -31,11 +33,21 @@ Checked Texts
 	mutable lines = MlirLoops(function, position).CountBounds(function.method.instructions(position))
 	lines = lines + ("    " + Temp("ok0") + " = arith.constant true")
 	for MlirKernel(function, position).Sources
-		let list = Temp("l_" + value)
-		let length = memory.Called(Temp("n_" + value), "strict_list_length", List(Text) + list)
+		let length = memory.Called(Temp("n_" + value), "strict_list_length", List(Text) + Temp("l_" + value))
 		let combined = Joined("ok" + (index + 1), Temp("ok" + index), Temp("e_" + value))
-		lines = lines + function.Load(list, "%v_" + value) + length + Enough(value) + combined
+		lines = lines + Listed(value) + length + Enough(value) + combined
 	lines
+Listed(source Text) Texts
+	Doubling.Listed("numbers") is ("    %t2l_numbers = llvm.load %v_numbers : !llvm.ptr -> f64")
+	Guarding.Listed("numbers").Last is "    %t1l_numbers = arith.select %t1lf_numbers, %zero, %t1lu_numbers : f64"
+	Guarding.Listed("numbers")(1) is "    %t1lf_numbers = func.call @strict_is_failure(%t1lu_numbers) : (f64) -> i1"
+	let list = Temp("l_" + source)
+	if source is not in MlirKernel(function, position).Checked
+		return List(Text) + function.Load(list, "%v_" + source)
+	let loaded = Temp("lu_" + source)
+	let failed = "    " + Temp("lf_" + source) + " = func.call @strict_is_failure(" + loaded + ") : (f64) -> i1"
+	let chosen = "    " + list + " = arith.select " + Temp("lf_" + source) + ", %zero, " + loaded + " : f64"
+	(function.Load(loaded, "%v_" + source), failed, chosen)
 Enough(source Text) Texts
 	Doubling.Enough("numbers") is ("    %t2e_numbers = arith.cmpf oge, %t2n_numbers, %t2n : f64")
 	Squaring.Enough("input").Last is "    %t2e_input = arith.andi %t2g_input, %t2p_input : i1"
