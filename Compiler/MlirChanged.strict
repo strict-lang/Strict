@@ -10,6 +10,7 @@ constant Taking = MlirChanged(MlirFunction((Ticker, Caller), Caller, Calls), 0)
 constant Food = List(MemberEntry) + MemberEntry("food", "Strict/Number", List(InstructionEntry), false)
 constant Fed = MethodEntry("Fed", Food, "Strict/Number", (InstructionEntry.LoadNumber(0, 1), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "changed_0"), InstructionEntry.Return(0)))
 constant Keeping = MlirChanged(MlirFunction((Ticker, Caller), Ticker, Next), 2)
+constant Feeding = MlirChanged(MlirFunction((Ticker, Caller), Ticker, Fed), 2)
 Kept Texts
 	Keeping.Kept.Last is "    llvm.store %t2c0v, %t2c0a : f64, !llvm.ptr"
 	MlirChanged(Taking.function, 1).Kept.Length is 0
@@ -23,13 +24,16 @@ Unchanged Texts
 	Keeping.Unchanged.Last is "    llvm.store %t2c0v, %t2c0a : f64, !llvm.ptr"
 	MlirChanged(Taking.function, 1).Unchanged.Length is 0
 	Keeping.Unchanged(1) is Keeping.Address(ChangedInstance.Name, 0)
-	MlirChanged(MlirFunction((Ticker, Caller), Ticker, Fed), 2).Unchanged.First is "    %t2c0v = llvm.load %v_food : !llvm.ptr -> f64"
+	Feeding.Unchanged.First is "    %t2c0v = llvm.load %v_food : !llvm.ptr -> f64"
 	mutable lines = List(Mutable(Text))
 	for Names(function.method)
-		let given = value is ChangedInstance.Name then "%instance" else "%v_" + function.method.parameters(Offset(value) - 2).Name
-		let loaded = "    " + Temp("c" + index + "v") + " = llvm.load " + given + " : !llvm.ptr -> f64"
+		let loaded = "    " + Temp("c" + index + "v") + " = llvm.load " + Given(value) + " : !llvm.ptr -> f64"
 		lines = lines + (loaded, Address(value, index), Stored(index, Temp("c" + index + "a")))
 	lines
+Given(name Text) Text
+	Feeding.Given("changed_0") is "%v_food"
+	Keeping.Given(ChangedInstance.Name) is "%instance"
+	name is ChangedInstance.Name then "%instance" else "%v_" + function.method.parameters(Offset(name) - 2).Name
 Taken Texts
 	Taking.Taken.Last is "    llvm.store %t0c0v, %r1 : f64, !llvm.ptr"
 	MlirChanged(Taking.function, 1).Taken.Length is 0
