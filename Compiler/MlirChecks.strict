@@ -109,6 +109,8 @@ CannotFail(callee MlirFunction, depth Number) Boolean
 	Doubling.CannotFail(MlirFunction(Doubling.function.types, Calls, MlirParallel.Twice), 0)
 	Doubling.CannotFail(MlirFunction(Doubling.function.types, Calls, Guarded), 0) is false
 	Doubling.CannotFail(Measuring.function, 0)
+	Doubling.CannotFail(FlatRead.function, 0)
+	Doubling.CannotFail(MlirFunction(List(TypeEntry), MlirFunction.Shape, MlirFlats.FirstNumber), 0) is false
 	let returned = callee.method.declaredType
 	if returned.EndsWith("Error") or returned.EndsWith("ErrorWithValue") or MlirForeign(callee).IsForeign
 		return false
@@ -121,9 +123,9 @@ IsFailing(callee MlirFunction, at Number, depth Number) Boolean
 	Doubling.IsFailing(Doubling.function, 1, 0) is false
 	let entry = callee.method.instructions(at)
 	if entry.kind is InstructionType.CheckError
-		return (IsCallCheck(callee, at) is false) or IsFailing(callee, at - 1, depth)
+		return ((IsCallCheck(callee, at) or MlirChecks(callee, at).IsFlatRead) is false) or IsFailing(callee, at - 1, depth)
 	if entry.kind is InstructionType.IndexCall
-		return true
+		return MlirCouples(callee, at).IsFlatRead(entry) is false
 	if entry.kind is not InstructionType.Invoke
 		return false
 	let nested = MlirModule(callee.types, "").Called(callee, at)

@@ -33,6 +33,10 @@ constant ListChecked = (InstructionEntry.Named(InstructionType.LoadVariableToReg
 constant IndexChecked = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "index"), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 6))
 constant Guarded = NumbersLoop + ListChecked + ElementRead + IndexChecked + SumAdded + InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 4, "sum") + InstructionEntry.Jump(InstructionType.LoopEnd, 10)
 constant Guarding = MlirKernel(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Sum", List(MemberEntry) + MlirLists.Items, "Strict/Number", Guarded)), 1)
+constant FirstCalled = (InstructionEntry.Invoke(1, ("Strict/Math/Tripling", "First", "Strict/Number"), List(Number), -1), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 1))
+constant FirstsWritten = (InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 4))
+constant Firsts = (MlirLoops.Emptied, InstructionEntry.LoadNumber(0, 3), InstructionEntry.LoopBegin(0, -1)) + FirstCalled + FirstsWritten
+constant Reading = MlirKernel(MlirFunction((MlirFlats.Tripling, MlirFlats.Summing), MlirFlats.Tripling, MethodEntry("Firsts", List(MemberEntry), "Strict/List(Number)", Firsts)), 2)
 constant Accesses = (InstructionType.IndexCall, InstructionType.InvokeWriteToList, InstructionType.CheckError, InstructionType.Invoke)
 IsSimple Boolean
 	Doubling.IsSimple
@@ -88,6 +92,8 @@ IsCalled(at Number) Boolean
 	MlirKernel(MlirParallel.Doubling.function, 2).IsCalled(4)
 	Calling.IsCalled(2) is false
 	MlirKernel(MlirParallel.Timing.function, 2).IsCalled(4) is false
+	Reading.IsCalled(3)
+	Reading.Versioned.Last is "  ^loop2generic:"
 	let entry = function.method.instructions(at)
 	if (entry.texts.Length < 3) or (entry.texts(2) is not "Strict/Number")
 		return false
