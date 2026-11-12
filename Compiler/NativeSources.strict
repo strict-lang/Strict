@@ -1,5 +1,6 @@
 has folders Texts
 constant Adding = NativeSources(List(Text) + "Examples/NativeAdd/native")
+constant Paralleled = NativeSources(("Examples/NativeAdd/native", "NeuralNetworks/native"))
 constant Iconed = "Examples/NativeAdd/NativeAdd"
 constant Resourced = " \"Examples/NativeAdd/NativeAdd.res\""
 constant Summed = " \"Examples/Sum.res\""
@@ -78,8 +79,11 @@ IsCompiled(target Text, inputs Texts, options Text) Boolean
 	flags.Exists and (Text.Combine(flags.ReadLines, "\n") is options) and IsCurrent(target, inputs)
 Inputs(platform Number, root Text) Texts
 	Adding.Inputs(Platform.Windows, ".").Last is "Examples/NativeAdd/native/Windows.flags"
-	let flags = folders.First + "/" + Platform.NameOf(platform) + ".flags"
-	Directory.Files(folders.First, "*.h") + (root + "/Compiler/strict.h") + flags
+	"NeuralNetworks/native/Parallel.h" is in Paralleled.Inputs(Platform.Windows, ".")
+	mutable inputs = List(Text) + (root + "/Compiler/strict.h")
+	for folders
+		inputs = inputs + Directory.Files(value, "*.h") + (value + "/" + Platform.NameOf(platform) + ".flags")
+	inputs
 Placed(building Text, library Text) Text
 	Adding.Placed("Examples/NativeAdd/native/Missing.1.dll", Iconed + ".dll") is Iconed + ".dll"
 	File(building).Rename(library)
