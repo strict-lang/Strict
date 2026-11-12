@@ -10,18 +10,20 @@ Ran(arguments Texts) Number
 	let rest = arguments.Slice(1, arguments.Length - 1)
 	if Locked(rest(0)) is false
 		return 1
-	let code = Held(NativeCache(arguments(0), rest))
-	Unlocked(rest(0)) then code else 1
-Held(cache NativeCache) Number
 	let started = Process.Elapsed
-	if BuildProfile(logger).Current(cache)
+	let cache = NativeCache(arguments(0), rest)
+	let result = Current(cache) then 0 else BuildProfile(logger).Compiled(cache)
+	let code = result is Error("InvalidTestRequest") then 2 else result is Error then 1 else result
+	let reported = Reported(code, started)
+	Unlocked(rest(0)) then reported else 1
+Current(cache NativeCache) Boolean
+	let isCurrent = BuildProfile(logger).Current(cache)
+	if isCurrent
 		logger.Log(cache.Message)
-		BuildProfile(logger).Reported("Build total", started)
-		return 0
-	let compiled = BuildProfile(logger).Compiled(cache)
-	let failed = compiled is Error then 1 else compiled
-	BuildProfile(logger).Reported(failed is 0 then "Build total" else "Build FAILED (" + failed + "), total", started)
-	failed
+	isCurrent
+Reported(code Number, started Number) Number
+	BuildProfile(logger).Reported(code is 0 then "Build total" else "Build FAILED (" + code + "), total", started)
+	code
 Locked(target Text) Slow(Boolean)
 	let lock = File(Lock(target))
 	if lock.Locked
@@ -54,7 +56,7 @@ Compiled(command Text, rest Texts, sources Texts = List(Text)) Number
 	let request = TestRequest(rest)
 	if request.Message is not ""
 		logger.Log(request.Message)
-		return 2
+		return Error("InvalidTestRequest")
 	let isCounting = request.Option is "lines"
 	let isRecursive = "--no-recursive" is not in request.Options
 	let build = NativeBuild(logger, false, selection = request.Selection, isRecursive = isRecursive)

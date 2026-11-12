@@ -65,8 +65,7 @@ Icon Text
 	let folder = Parent + "/" + Path(Parent).FileName.text + ".ico"
 	File(own).Exists then own else File(folder).Exists then folder else TypeSource.Root + "/Strict.ico"
 Refreshed(release Text, content Text, stem Text, endings Texts)
-	Directory.Create(Path(release).PathOnly.text)
-	Directory.Create(release)
+	Created(release)
 	for endings
 		let built = stem + value
 		if File(built).Exists

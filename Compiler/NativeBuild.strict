@@ -11,6 +11,7 @@ has isFast Boolean = false
 has gated List(TypeEntry) = List(TypeEntry)
 constant Logged = List(TypeEntry) + TypeEntry.HelloLogger
 constant Broken = "module {\n  func.func private @A() -> f64 {\n    return %missing : f64\n  }\n}"
+constant Unbuilt = NativeBuild(Logger, false, isReleased = true)
 constant Watching = "llvm.mlir.global internal @strict_gc_watching(0 : i64)"
 constant CpuNotice = "llvm.mlir.global internal @strict_gpu_cpu_notice(1 : i64)"
 Folder NativeFolder
@@ -69,12 +70,9 @@ Natives(path Text, root Text, types List(TypeEntry)) Texts
 				folders.Add(folder)
 	folders
 Build(base Text, program Text, tools Toolchain, isCounting = false)
-	let missing = tools.Missing(tools.isWeb then Toolchain.Needed + "emcc" else Toolchain.Needed)
-	if missing.Length > 0
-		logger.Log(tools.Installing(missing))
-		return Error("ToolsMissing")
-	let mlir = BuildProfile(logger).Runtime(value, program, tools.root)
-	let built = Rebuilt(base, mlir, Toolchain(tools, cpu = isReleased then "x86-64-v3" else "native"))
+	Unbuilt.Build("Compiler/output/Unbuilt/App", Broken, Toolchain.OnWindows) is Error("NotBuilt")
+	Directory.Exists("Compiler/output/Unbuilt/Release") is false
+	let built = Rebuilt(base, BuildProfile(logger).Runtime(value, program, tools.root), tools)
 	logger.Log(built)
 	if built.StartsWith("Built ") is false
 		return Error("NotBuilt")
@@ -99,12 +97,16 @@ IsUnchanged(base Text, mlir Text, tools Toolchain) Boolean
 	previous.Length is not mlir.Length then false else Text.Combine(previous.ReadLines, "\n") is mlir
 Rebuilt(base Text, mlir Text, tools Toolchain) Slow(Text)
 	NativeBuild(Logger).Rebuilt("Compiler/output/Written", Broken, Toolchain.OnWindows).StartsWith("mlir-opt failed")
-	if IsUnchanged(base, mlir, tools)
-		return "Built " + tools.Executable(base) + ", unchanged"
+	let missing = tools.Missing(tools.isWeb then Toolchain.Needed + "emcc" else Toolchain.Needed)
+	if missing.Length > 0
+		return tools.Installing(missing)
+	let tuned =Toolchain(tools, cpu = isReleased then "x86-64-v3" else "native")
+	if IsUnchanged(base, mlir, tuned)
+		return "Built " + tuned.Executable(base) + ", unchanged"
 	File(base + ".mlir").Write(mlir)
 	if isIOS
-		return IOSBuild(tools, isSimulator).Linked(base)
-	isAndroid then AndroidBuild(tools).Linked(base) else Linked(base, tools)
+		return IOSBuild(tuned, isSimulator).Linked(base)
+	isAndroid then AndroidBuild(tuned).Linked(base) else Linked(base, tuned)
 Ran(base Text, tools Toolchain, path Text, isCounting Boolean) Number
 	let executable = tools.Executable(base)
 	let result = ToolRunner(executable).Cleaned(Process.RunTool(executable, ""))
