@@ -11262,7 +11262,7 @@
   }
   // the list a collecting loop fills in place of its destination, a new one when that is still used elsewhere
   func.func private @strict_list_into(%destination: f64, %capacity: f64, %flatCount: f64) -> f64 {
-    %reused = func.call @strict_list_reused(%destination, %flatCount) : (f64, f64) -> f64
+    %reused = func.call @strict_list_reused(%destination, %capacity, %flatCount) : (f64, f64, f64) -> f64
     %bits = arith.bitcast %reused : f64 to i64
     %none = arith.constant 0 : i64
     %isReused = arith.cmpi ne, %bits, %none : i64
@@ -11277,7 +11277,7 @@
   // wasm looked like references and kept old images alive)
   func.func private @strict_numbers_into(%destination: f64, %capacity: f64) -> f64 {
     %plain = arith.constant 0.0 : f64
-    %reused = func.call @strict_list_reused(%destination, %plain) : (f64, f64) -> f64
+    %reused = func.call @strict_list_reused(%destination, %capacity, %plain) : (f64, f64, f64) -> f64
     %bits = arith.bitcast %reused : f64 to i64
     %none = arith.constant 0 : i64
     %isReused = arith.cmpi ne, %bits, %none : i64
@@ -11288,8 +11288,9 @@
     %created = func.call @strict_numbers_new(%capacity) : (f64) -> f64
     return %created : f64
   }
-  // destination emptied for a collecting loop when nothing else uses it, 0.0 otherwise
-  func.func private @strict_list_reused(%destination: f64, %flatCount: f64) -> f64 {
+  // destination emptied for a collecting loop when nothing else uses it and it holds the capacity the loop fills
+  // without growing (a counted loop stores its items by index), 0.0 otherwise
+  func.func private @strict_list_reused(%destination: f64, %capacity: f64, %flatCount: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %zeroCount = arith.constant 0 : i32
     %one = arith.constant 1 : i32
@@ -11303,11 +11304,13 @@
     %capacitySlot = llvm.getelementptr %holder[2] : (!llvm.ptr) -> !llvm.ptr, f64
     %held = llvm.load %capacitySlot : !llvm.ptr -> f64
     %isGrowable = arith.cmpf ogt, %held, %zero : f64
+    %fits = arith.cmpf oge, %held, %capacity : f64
+    %isRoomy = arith.andi %isGrowable, %fits : i1
     %holderAddress = llvm.ptrtoint %holder : !llvm.ptr to i64
     %located:5 = func.call @strict_gc_locate(%holderAddress) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
     %unknown = llvm.mlir.zero : !llvm.ptr
     %found = llvm.icmp "ne" %located#0, %unknown : !llvm.ptr
-    %usable = arith.andi %found, %isGrowable : i1
+    %usable = arith.andi %found, %isRoomy : i1
     cf.cond_br %usable, ^private, ^fresh
   ^private:
     %shared = func.call @strict_gc_shared(%holderAddress) : (i64) -> i1
