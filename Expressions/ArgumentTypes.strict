@@ -7,6 +7,12 @@ constant Shapes = (Scope(List(Text) + "Limit", List(Text) + "3"), KnownTypes.NoM
 constant Sizing = ArgumentTypes(TypeInference(KnownTypes(("Count", "Area", "Size", "Letter"), Scopes, Methods, Parameters), Shapes))
 constant RangeMembers = (Scope(List(Text) + "start", List(Text) + "Number"), Scope(List(Text) + "type", List(Text) + "Range"))
 constant Generics = ArgumentTypes(TypeInference(KnownTypes(("Range", "Generic"), RangeMembers, KnownTypes.NoMemberPair, KnownTypes.NoMemberPair), Shapes))
+constant LoggedMembers = (Scope(List(Text) + "logger", List(Text) + "Logger"), KnownTypes.NoMembers)
+constant LoggedTypes = KnownTypes(("Wrong", "Logger"), LoggedMembers, KnownTypes.NoMemberPair, (Scope(List(Text) + "from", List(Text) + "logger"), KnownTypes.NoMembers))
+constant Logged = ArgumentTypes(TypeInference(LoggedTypes, Shapes))
+constant Made = SyntaxParser(Tokenizer("Wrong(1, 2)").Tokens).Parse
+constant Couples = ArgumentTypes(TypeInference(Instantiation.Implicit.types, List(Scope)))
+constant Coupled = SyntaxParser(Tokenizer("Couple(\"a\", 2)").Tokens).Parse
 constant Grown = SyntaxParser(Tokenizer("count.Grow(count)").Tokens).Parse
 constant Listed = SyntaxParser(Tokenizer("1 > 0 and (count)").Tokens).Parse
 constant Limited = SyntaxParser(Tokenizer("count.Limit").Tokens).Parse
@@ -106,9 +112,21 @@ Compared(call SyntaxNode, instance Text, method Text, scope Scope, current Scope
 	let arguments = Arguments(call, scope, current)
 	let at = Matched(arguments, types, instance, method)
 	let name = method is "from" then instance else instance + "." + method
-	if (method is not "from") and (IsListed(types) is false) and (arguments.Length > types.Length)
-		return "TooManyArguments: " + name + " got " + arguments.Length + " of " + types.Length
-	at < 0 then "" else "ArgumentTypeMismatch: " + name + " got a " + arguments(at) + " for a " + types(at)
+	if at < 0
+		return TooMany(call, name, types)
+	"ArgumentTypeMismatch: " + name + " got a " + arguments(at) + " for a " + types(at)
+TooMany(call SyntaxNode, name Text, types Texts) Text
+	Logged.Compared(Made, "Wrong", "from", Counted, Counted) is "TooManyArguments: Wrong got 2 of 1"
+	(Sizing.TooMany(DepthCopies(1), "Area", List(Text) + "Size") is "") and (Logged.TooMany(Made, "Wrong", ("")) is "")
+	(Couples.TooMany(Coupled, "Couple", List(Text)) is "") and (Sizing.TooMany(Created, "Count", ("Size", "Number")) is "")
+	mutable given = 0
+	for call.children
+		if (value.Kind is not "Reassignment") and ((index > 0) or (call.Kind is not "MethodCall"))
+			given = given + 1
+	let isOpen = ("" is in types) or (Text.Combine(inference.types.MembersOf(name).types).IndexOf("Generic") >= 0)
+	if IsListed(types) or isOpen or (given <= types.Length)
+		return ""
+	"TooManyArguments: " + name + " got " + given + " of " + types.Length
 Owner(instance Text, method Text) Text
 	Inheriting.Owner("Settings", "Parsed") is "Any"
 	Inheriting.Owner("Text", "Parsed") is "Text"
@@ -122,7 +140,7 @@ Owner(instance Text, method Text) Text
 Declared(instance Text, method Text) Texts
 	Sizing.Declared("Count", "Grow") is ("Area")
 	Sizing.Declared("Size", "from") is ("Number")
-	ArgumentTypes(TypeInference(Instantiation.Implicit.types, List(Scope))).Declared("Couple", "from").Length is 0
+	Couples.Declared("Couple", "from").Length is 0
 	let parameters = inference.types.ParameterScope(Owner(instance, method))
 	if (method is "from") and ("Generic" is in inference.types.MembersOf(instance).types)
 		return List(Text)
