@@ -38,6 +38,7 @@ Combined(device Text, runtimes Texts, target = "Nvidia") Text
 	Local.Combined("module {\n" + MlirTokens.Marker + "\n}", Without).IndexOf("@strict_device_tokens(") > 0
 	Local.Combined("module {\n}", Attending).IndexOf("@strict_device_attention(") > 0
 	Local.Combined("module {\n}", Attending).IndexOf("@strict_gpu_run(") is -1
+	Local.Combined("module {\n}", Without).IndexOf("%widthRow = arith.minui %at, %count : i64") > 0
 	let batched = device.IndexOf(MlirTokens.Marker) >= 0 then List(Text) + "Tokens" else List(Text)
 	device.Substring(0, device.Length - 1) + Runtime(("Device", target) + batched + runtimes) + "\n}"
 Amd(device Text, runtimes Texts) Text

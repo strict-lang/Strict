@@ -14,9 +14,10 @@ constant Measuring = MlirFunction(List(TypeEntry) + GpuLayerSamples.Layered, Gpu
 constant Exactly = MlirFunction(Measuring, Float = "f32")
 constant RowedLoad = ("    %d4kf = llvm.load %r1 : !llvm.ptr -> f64", "    %d4k = arith.fptosi %d4kf : f64 to i64", "    %d4d = llvm.load %v_weights_d : !llvm.ptr -> !llvm.ptr")
 constant RowedCall = ("    %d4w:3 = func.call @strict_device_row(%d4d, %d4k) : (!llvm.ptr, i64) -> (!llvm.ptr, i64, i64)", "    %d4z = arith.constant 0 : i64")
-constant RowedBounds = ("    %d4l = arith.cmpi sge, %d4k, %d4z : i64", "    %d4h = arith.cmpi slt, %d4k, %d4w#2 : i64", "    %d4o = arith.andi %d4l, %d4h : i1", "    cf.cond_br %d4o, ^d4read, ^d4fail")
-constant RowedRead = ("  ^d4read:", "    llvm.store %d4w#0, %r2_d : !llvm.ptr, !llvm.ptr", "    llvm.store %d4w#1, %r2_b : i64, !llvm.ptr")
-constant Rowed = RowedLoad + RowedCall + RowedBounds + MlirDeviceRecords.IndexedFailure + RowedRead + ("    %d4n = llvm.load %v_weights_n : !llvm.ptr -> i64", "    llvm.store %d4n, %r2_n : i64, !llvm.ptr", "    cf.br ^d4done", "  ^d4done:")
+constant RowedBounds = ("    %d4l = arith.cmpi sge, %d4k, %d4z : i64", "    %d4h = arith.cmpi slt, %d4k, %d4w#2 : i64", "    %d4o = arith.andi %d4l, %d4h : i1")
+constant RowedRead = ("    llvm.store %d4w#0, %r2_d : !llvm.ptr, !llvm.ptr", "    llvm.store %d4w#1, %r2_b : i64, !llvm.ptr", "    %d4n = llvm.load %v_weights_n : !llvm.ptr -> i64")
+constant RowedCount = ("    %d4c = arith.select %d4o, %d4n, %d4z : i64", "    llvm.store %d4c, %r2_n : i64, !llvm.ptr", "    cf.cond_br %d4o, ^d4done, ^d4fail")
+constant Rowed = RowedLoad + RowedCall + RowedBounds + RowedRead + RowedCount + MlirDeviceRecords.IndexedFailure + "  ^d4done:"
 constant CountLoad = ("    %d1n = llvm.load %r0_n : !llvm.ptr -> i64", "    %d1 = arith.sitofp %d1n : i64 to f32")
 constant CountStore = "    llvm.store %d1, %r1 : f32, !llvm.ptr\n    %d1_r1i = llvm.call_intrinsic \"llvm.fptosi.sat.i32.f32\"(%d1) : (f32) -> i32\n"
 constant CountExactness = "    %d1_r1w = arith.sitofp %d1_r1i : i32 to f32\n    %d1_r1s = arith.cmpf oeq, %d1_r1w, %d1 : f32\n    %d1_r1_e = arith.extsi %d1_r1i : i32 to i64\n"
@@ -31,28 +32,28 @@ Emitted(entry InstructionEntry) Texts
 	Text.Combine(MlirDeviceRows(Picking, 4).Emitted(Lookup)).IndexOf("@strict_device_row(%d4d, %d4k)") > 0
 	MlirDeviceRows(Picking, 4).Emitted(Lookup).Last is "  ^d4done:"
 	MlirDeviceRows(Picking, 4).Emitted(Lookup) is Rowed
+	"    %d4c = arith.select %d4o, %d4n, %d4z : i64" is in MlirDeviceRows(Picking, 4).Emitted(Lookup)
 	if IsRows(MlirKinds(function).VariableKind(at, entry.texts(0))) is false
 		return MlirDeviceRecords(function, at).Indexed(entry)
 	let list = "%v_" + entry.texts(0)
 	let position = MlirExact(function, at).Position("%r" + entry.payload(1), Temp("k"))
 	let called = " = func.call @strict_device_row(" + Temp("d") + ", " + Temp("k") + ")" + Types
 	let row = (MlirTyped.Pointer.Load(Temp("d"), list + "_d"), "    " + Temp("w") + ":3" + called)
-	position + row + Bounded + MlirDeviceStatements(function, at).Failed + Viewed(list, "%r" + entry.payload(0))
+	position + row + Bounded + Viewed(list, "%r" + entry.payload(0)) + MlirDeviceStatements(function, at).Failed + ("  ^d" + at + "done:")
 Bounded Texts
-	MlirDeviceRows(Picking, 4).Bounded.Last is "    cf.cond_br %d4o, ^d4read, ^d4fail"
+	MlirDeviceRows(Picking, 4).Bounded.Last is "    %d4o = arith.andi %d4l, %d4h : i1"
 	MlirDeviceRows(Picking, 4).Emitted(Biased)(2) is "    %d4n = llvm.load %v_biases_n : !llvm.ptr -> i64"
 	let low = "    " + Temp("l") + " = arith.cmpi sge, " + Temp("k") + ", " + Temp("z") + " : i64"
 	let high = "    " + Temp("h") + " = arith.cmpi slt, " + Temp("k") + ", " + Temp("w") + "#2 : i64"
 	let inside = "    " + Temp("o") + " = arith.andi " + Temp("l") + ", " + Temp("h") + " : i1"
-	let branch = "    cf.cond_br " + Temp("o") + ", ^d" + at + "read, ^d" + at + "fail"
-	(MlirTyped.Integer.Constant(Temp("z"), "0"), low, high, inside, branch)
+	(MlirTyped.Integer.Constant(Temp("z"), "0"), low, high, inside)
 Viewed(list Text, target Text) Texts
-	MlirDeviceRows(Picking, 4).Viewed("%v_weights", "%r2")(1) is "    llvm.store %d4w#0, %r2_d : !llvm.ptr, !llvm.ptr"
+	MlirDeviceRows(Picking, 4).Viewed("%v_weights", "%r2")(0) is "    llvm.store %d4w#0, %r2_d : !llvm.ptr, !llvm.ptr"
 	let pointer = MlirTyped.Pointer.Store(Temp("w") + "#0", target + "_d")
 	let bits = MlirTyped.Integer.Store(Temp("w") + "#1", target + "_b")
-	let columns = (MlirTyped.Integer.Load(Temp("n"), list + "_n"), MlirTyped.Integer.Store(Temp("n"), target + "_n"))
-	let done = ("    cf.br ^d" + at + "done", "  ^d" + at + "done:")
-	(List(Text) + ("  ^d" + at + "read:") + pointer + bits) + columns + done
+	let counted = "    " + Temp("c") + " = arith.select " + Temp("o") + ", " + Temp("n") + ", " + Temp("z") + " : i64"
+	let columns = (MlirTyped.Integer.Load(Temp("n"), list + "_n"), counted, MlirTyped.Integer.Store(Temp("c"), target + "_n"))
+	(pointer, bits) + columns + ("    cf.cond_br " + Temp("o") + ", ^d" + at + "done, ^d" + at + "fail")
 Called(entry InstructionEntry) Texts
 	MlirDeviceRows(Measuring, 1).Called(Measuring.method.instructions(1))(1) is "    %d1 = arith.sitofp %d1n : i64 to f64"
 	MlirDeviceRows(Exactly, 1).Called(Lengthy) is Counting

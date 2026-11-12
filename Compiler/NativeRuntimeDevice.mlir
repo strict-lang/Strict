@@ -322,7 +322,8 @@
     return %scaleNumber, %minimumNumber : f32, f32
   }
   // a row of a matrix, its width and the number of rows, behind the header of strict_gpu_rows (row stride and row
-  // count in the first word, one width byte per row)
+  // count in the first word, one width byte per row), an index outside the rows reads the byte after the last width
+  // (still inside the buffer), the caller compares it with the count
   func.func private @strict_device_row(%source: !llvm.ptr, %at: i64) -> (!llvm.ptr, i64, i64) attributes {llvm.linkage = #llvm.linkage<internal>} {
     %eight = arith.constant 8 : i64
     %fifteen = arith.constant 15 : i64
@@ -332,7 +333,8 @@
     %word = llvm.load %source : !llvm.ptr -> i64
     %stride = arith.andi %word, %lowHalf : i64
     %count = arith.shrui %word, %thirtyTwo : i64
-    %widthAt = arith.addi %at, %eight : i64
+    %widthRow = arith.minui %at, %count : i64
+    %widthAt = arith.addi %widthRow, %eight : i64
     %widthSlot = llvm.getelementptr %source[%widthAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %width = llvm.load %widthSlot : !llvm.ptr -> i8
     %bits = arith.extui %width : i8 to i64
