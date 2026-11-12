@@ -20,7 +20,14 @@ constant Scaled = MlirWholeSpan(MlirFunction(Quads.function, method = MethodEntr
 constant Tripled = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 11, "sum"), InstructionEntry.Binary(InstructionType.Multiply, (11, 3, 12)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 12, "sum"))
 constant Rescaled = MlirWholeSpan(MlirFunction(Quads.function, method = MethodEntry(Quads.function.method, instructions = Quad.Slice(0, 14) + Tripled + Quad.Slice(14, 3))), 4)
 constant Pairs = MlirWholeSpan(MlirWholeFunction.Nesting, 4)
+constant CountStored = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "count"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "sum"))
+constant Gated = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "count"), InstructionEntry.LoadNumber(2, 3), InstructionEntry.Binary(InstructionType.LessThan, (1, 2)))
+constant Gating = CountStored + Gated + InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, 0) + MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 1), "sum")
+constant SumLooped = CountLooped.Slice(1, 3) + Operands + InstructionEntry.Binary(InstructionType.Add, (2, 3, 10)) + SumAdded.Slice(1, 2) + SumReturned
+constant GatedSum = MlirWholeSpan(MlirFunction(Quads.function, method = MethodEntry(Quads.function.method, instructions = Gating + InstructionEntry.Jump(InstructionType.JumpEnd, 0) + SumLooped)), 4)
 constant Bounded = (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply)
+constant Openers = (InstructionType.LoopBegin, InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)
+constant Closers = (InstructionType.LoopEnd, InstructionType.JumpEnd)
 constant Constants = (InstructionType.LoadConstantToRegister, InstructionType.StoreConstantToVariable)
 Lines Texts
 	Halving.Lines.Length is 0
@@ -55,7 +62,9 @@ At(at Number) Texts
 	if entry.kind is InstructionType.LoopBegin
 		return Counted(at)
 	if entry.kind is in Constants
-		return Listed(at)
+		let slot = entry.kind is InstructionType.StoreConstantToVariable then 0 else 1
+		let number = PayloadDecoder(entry).Value(slot).number.Absolute
+		return List(Text) + ("    " + Name("wb", at) + " = arith.constant " + MlirStatements.Copy.Hex(number) + " : f64")
 	if entry.kind is InstructionType.LoadVariableToRegister
 		return Loaded(at)
 	entry.kind is in Bounded then Combined(at) else List(Text)
@@ -66,10 +75,6 @@ Counted(at Number) Texts
 		return List(Text) + ("    " + Name("wn", at) + " = llvm.intr.fabs(" + start + ") : (f64) -> f64")
 	let end = Source(entry.payload(2), at)
 	List(Text) + ("    " + Name("wn", at) + " = arith.addf " + start + ", " + end + " : f64")
-Listed(at Number) Texts
-	let entry = function.method.instructions(at)
-	let number = PayloadDecoder(entry).Value(entry.kind is InstructionType.StoreConstantToVariable then 0 else 1).number
-	List(Text) + ("    " + Name("wb", at) + " = arith.constant " + MlirStatements.Copy.Hex(number.Absolute) + " : f64")
 Loaded(at Number) Texts
 	let entry = function.method.instructions(at)
 	let parameter = Parameter(entry.texts(0))
@@ -79,6 +84,7 @@ Loaded(at Number) Texts
 	List(Text) + ("    " + Name("wb", at) + " = llvm.intr.fabs(" + input + ") : (f64) -> f64")
 Combined(at Number) Texts
 	Rescaled.Combined(12).First is "    %t4wb12 = arith.addf %t4whlimit, %t4wb11 : f64"
+	GatedSum.Combined(13).First is "    %t4wb13 = arith.addf %t4whlimit, %t4wn10 : f64"
 	let entry = function.method.instructions(at)
 	let carried = Carried(at)
 	if (entry.kind is not InstructionType.Multiply) and (carried >= 0)
@@ -114,6 +120,7 @@ Source(register Number, at Number) Text
 	Quads.Source(3, 7) is "%t4wn3"
 	Splits.Source(2, 4) is "%t2whlimit"
 	Scaled.Source(2, 6) is "%t4whlimit"
+	GatedSum.Source(11, 17) is "%t4whlimit"
 	let writer = Earlier(register, at, false)
 	if writer < 0
 		return "%t" + position + "whlimit"
@@ -127,7 +134,7 @@ Variable(entry InstructionEntry, at Number) Text
 	if Parameter(entry.texts(0)) >= 0
 		return Name("wb", at)
 	let store = StoreBefore(entry.texts(0), at)
-	if (store < 0) or (LastStore(entry.texts(0), at) > at)
+	if (store < 0) or (LastStore(entry.texts(0), at) > at) or IsSkipped(store, at)
 		return "%t" + position + "whlimit"
 	let stored = function.method.instructions(store)
 	stored.kind is InstructionType.StoreConstantToVariable then Name("wb", store) else Source(stored.payload(0), store)
@@ -139,7 +146,8 @@ Carried(at Number) Number
 	let loaded = function.method.instructions(writer < 0 then at else writer)
 	if loaded.kind is not InstructionType.LoadVariableToRegister
 		return -1
-	LastStore(loaded.texts(0), at) is at + 1 then first else -1
+	let name = loaded.texts(0)
+	(LastStore(name, at) is at + 1) and (IsSkipped(StoreBefore(name, at), at) is false) then first else -1
 LastStore(name Text, at Number) Number
 	Quads.LastStore("sum", 12) is 13
 	Rescaled.LastStore("sum", 12) is 16
@@ -149,6 +157,17 @@ LastStore(name Text, at Number) Number
 		if opens and (function.method.LoopEndOf(value) >= at)
 			return StoreBefore(name, function.method.LoopEndOf(value))
 	-1
+IsSkipped(store Number, at Number) Boolean
+	GatedSum.IsSkipped(6, 8)
+	GatedSum.IsSkipped(14, 16)
+	GatedSum.IsSkipped(1, 11) is false
+	mutable depth = 0
+	for Range(store + 1, at)
+		let kind = function.method.instructions(value).kind
+		depth = depth + (kind is in Openers then 1 else kind is in Closers then -1 else 0)
+		if depth < 0
+			return true
+	false
 Earlier(register Number, at Number, isLoop Boolean) Number
 	Quads.Earlier(3, 7, false) is 5
 	Quads.Earlier(0, 7, true) is 3
