@@ -26,10 +26,7 @@ Packed(header Numbers, types List(TypeEntry), links Texts) Bytes
 Unpacked(bytes Bytes) List(ZipEntry)
 	Packing.Length is 2
 	Packing.First.content is (1, 0, 7)
-	mutable numbers = List(Mutable(Number))
-	for bytes
-		numbers.Add(value.number)
-	ZipReader(numbers).Entries
+	ZipReader(ZipReader.Copied(bytes, 0, bytes.Length)).Entries
 Head(bytes Bytes) List(ZipEntry)
 	Probe.Head(Greeting) is Packing
 	Probe.Head(Probe.Packed((1), (TypeEntry.HelloLogger, TypeEntry.HelloLogger), List(Text))).Length is 2
@@ -58,22 +55,16 @@ Entry(bytes Bytes, position Number) ZipEntry
 	let reader = Header(bytes, position)
 	let size = reader.Read(ZipReader.SizeOffset, 4)
 	let start = position + reader.End(0) - size
-	mutable content = List(Mutable(Number))
-	for Range(start, start + size)
-		content.Add(bytes(value).number)
 	let named = reader.bytes.Length - ZipReader.LocalHeaderSize
-	ZipEntry(ByteEncoder(reader.bytes).Spelled(ZipReader.LocalHeaderSize, named), content)
+	ZipEntry(ByteEncoder(reader.bytes).Spelled(ZipReader.LocalHeaderSize, named), ZipReader.Copied(bytes, start, size))
 Header(bytes Bytes, position Number) ZipReader
 	Probe.Header(List(Byte), 0).bytes.Length is 0
-	mutable header = List(Mutable(Number))
 	if position + ZipReader.LocalHeaderSize > bytes.Length
-		return ZipReader(header)
-	for Range(position, position + ZipReader.LocalHeaderSize)
-		header.Add(bytes(value).number)
+		return ZipReader(List(Number))
+	let header = ZipReader(ZipReader.Copied(bytes, position, ZipReader.LocalHeaderSize))
 	let start = position + ZipReader.LocalHeaderSize
-	for Range(start, (start + ZipReader(header).Read(ZipReader.NameLengthOffset, 2), bytes.Length).Minimum)
-		header.Add(bytes(value).number)
-	ZipReader(header)
+	let named = (header.Read(ZipReader.NameLengthOffset, 2), bytes.Length - start).Minimum
+	ZipReader(header.bytes + ZipReader.Copied(bytes, start, named))
 IsFresh(entries List(ZipEntry)) Boolean
 	Probe.IsFresh(Packing)
 	Probe.IsFresh(Packing + ZipEntry("links", ByteEncoder.Empty.UnicodeBytes("Missing\tStrict/Missing\t"))) is false
