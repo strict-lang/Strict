@@ -24,6 +24,10 @@ constant ConcatenatedLoads = ("    %t2lx = llvm.load %r0 : !llvm.ptr -> f64", " 
 constant ConcatenatedCalls = ("    %t2rx = func.call @strict_converted(%t2r, %t2rxc) : (f64, (f64) -> f64) -> f64", "    %t2c = func.call @strict_text_concat(%t2lx, %t2rx) : (f64, f64) -> f64", "    llvm.store %t2c, %r2 : f64, !llvm.ptr")
 constant ConcatenatedLines = ConcatenatedLoads + ConcatenatedCalls
 constant ShapeConverter = "    %t1dxc = func.constant @strict_automatic_Shape : (f64) -> f64"
+constant QuotedNumber = MethodEntry("to", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 1), InstructionEntry.Return(0)))
+constant Quoted = TypeEntry("Strict/Quoted", List(MemberEntry) + MemberEntry("text", "Strict/Text", List(InstructionEntry), false), List(MethodEntry) + QuotedNumber)
+constant Unquoting = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "quoted"), InstructionEntry.Invoke(1, ("Strict/Quoted", "to", "Strict/Number"), List(Number), 0))
+constant Quoting = MlirFunction(List(TypeEntry) + Quoted, Quoted, MethodEntry("Run", List(MemberEntry) + MemberEntry("quoted", "Strict/Quoted", List(InstructionEntry), false), "None", Unquoting))
 Temp(suffix Text) Text
 	MlirTexts(Joined, 2).Temp("l") is "%t2l"
 	MlirTexts(Joined, 7).IsNativeConversion(Joined.method.instructions(7), "Boolean") is false
@@ -54,13 +58,12 @@ IsNativeConversion(entry InstructionEntry, target Text) Boolean
 	MlirTexts(Joined, 7).IsNativeConversion(Joined.method.instructions(7), "Shape") is false
 	MlirTexts(Joined, 7).IsNativeConversion(Joined.method.instructions(7), "Text")
 	MlirTexts(Joined, 7).IsNativeConversion(Joined.method.instructions(7), "Character")
+	MlirTexts(Quoting, 1).IsNativeConversion(Unquoting(1), "Number") is false
 	let source = MlirKinds(function).KindOf(position, Instance(entry))
-	let layout = MlirLayout(function)
-	if (target is "Text") or (target is "Number") and (layout.Represented(source) is "Text")
-		return true
 	let own = function.TypeOf(source).Callee("to", 0, target, List(Text))
-	let isSame = layout.Represented(source) is layout.Represented(target)
-	(own.instructions.Length is 0) and ((target is in ("Number", "Character")) or isSame)
+	let isOwn = (source is not "Text") and (own.instructions.Length > 0)
+	let isSame = MlirLayout(function).Represented(source) is MlirLayout(function).Represented(target)
+	(target is "Text") or (isOwn is false) and ((target is in ("Number", "Character")) or isSame)
 Instance(entry InstructionEntry) Number
 	MlirTexts(Joined, 7).Instance(Joined.method.instructions(7)) is 1
 	MlirTexts(Listing, 1).Instance(ToNumbers) is 0
