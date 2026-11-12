@@ -82,6 +82,7 @@ Functions List(MlirFunction)
 Starts(mains List(MlirFunction)) List(MlirFunction)
 	Counters.Starts(Counters.Functions).Length is 0
 	Started.Starts(Started.Functions).First.Symbol is "Counter_$Start_0"
+	Started.Starts(Started.Functions).Length is 1
 	for mains
 		let start = DefaultInstance.Start(value.type)
 		if (index < entries) and (start.instructions.Length > 0)

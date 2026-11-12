@@ -18,7 +18,9 @@ constant VectorTypes = KnownTypes(List(Text) + "Vector2", List(Scope) + Scope(Li
 constant Vectors = TypeCodegen("Strict/C", List(Text), TypeInference(VectorTypes, List(Scope) + KnownTypes.NoMembers), List(Text))
 constant Texted = TypeCodegen("Strict/Digit", ("has a Number", "to Text", "\t\"c\""), NoTypes, List(Text))
 constant Leveled = TypeCodegen("Strict/L", ("has level = Fast", "constant Fast = \"a\""), NoTypes, List(Text))
-constant Defaulted = TypeCodegen("Strict/Bag", ("has items Texts = Plain.Flat", "Count Number", "\titems.Length"), DefaultInstance.Computing, List(Text))
+constant Flats = (Scope(("from", "from types", "items default"), ("items", "Texts", "Plain.Flat")), KnownTypes.NoMembers)
+constant Filling = TypeInference(KnownTypes(DefaultInstance.Bags, parameters = Flats), DefaultInstance.Computing.constants)
+constant Defaulted = TypeCodegen("Strict/Bag", ("has items Texts = Plain.Flat", "Count Number", "\titems.Length"), Filling, List(Text))
 constant Rebuilt = SyntaxParser(Tokenizer("Greeter(Greeter(\"a\"), text = \"b\")").Tokens).Parse
 Entry Slow(TypeEntry)
 	Texted.Methods(("to")).Length is 1
@@ -100,7 +102,8 @@ Methods(names Texts) List(MethodEntry)
 	methods + constants + Specialization(Generator).Methods(value, names) + Starts(names)
 Starts(names Texts) List(MethodEntry)
 	Limit.Starts(List(Text)).Length is 0
-	Defaulted.Starts(("Count")).Length is 0
+	Defaulted.Starts(("Count")).Length is 0 and (Defaulted.Starts((DefaultInstance.Starter)).Length is 1)
+	Defaulted.Starts(List(Text)).First.instructions(2).texts is ("Strict/Bag", "from", "Bag", "items")
 	Defaulted.Starts(List(Text)).First.instructions.Last.kind is InstructionType.Return
 	constant generator = Generator
 	let type = generator.target.TypeName
@@ -108,9 +111,8 @@ Starts(names Texts) List(MethodEntry)
 	if (isAsked and DefaultInstance(generator).HasComputed(type)) is false
 		return List(MethodEntry)
 	let scope = MethodScope(HeaderTokens(DefaultInstance.Starter), generator.target)
-	let body = SyntaxNode("Body", "", List(SyntaxNode) + SyntaxNode("Call", type))
-	let code = MethodCodegen(generator).Generate(body, scope, type)
-	List(MethodEntry) + MethodEntry(DefaultInstance.Starter, List(MemberEntry), fullName, code.instructions)
+	let code = generator.Expression(SyntaxNode("Call", type), CodeBlock(List(InstructionEntry), 0, 0, scope))
+	List(MethodEntry) + MethodEntry(DefaultInstance.Starter, List(MemberEntry), fullName, code.Ended(type).instructions)
 Method(start Number) Slow(MethodEntry)
 	(Hello.Method(1).returnType, Created.Method(1).returnType) is ("None", "Strict/C")
 	Iterating.Method(1).instructions(0).texts.First is "Strict/List(Number)"

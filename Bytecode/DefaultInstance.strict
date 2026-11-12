@@ -44,7 +44,7 @@ HasComputed(type Text) Boolean
 Start(type TypeEntry) MethodEntry
 	DefaultInstance.Start(TypeEntry.HelloLogger).instructions.Length is 0
 	DefaultInstance.Start(Starting).instructions.Length is 2
-	type.Callee(Starter, 0, "None", List(Text))
+	type.Callee(Starter, 0, "", List(Text))
 IsReading(type Text, method Text) Boolean
 	Bagged.IsReading("Bag", "Count")
 	Bagged.IsReading("Plain", "Count") is false
