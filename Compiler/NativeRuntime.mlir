@@ -2452,7 +2452,9 @@
     llvm.store %contextBits, %contextSlot : i64, !llvm.ptr
     %countSlot = llvm.mlir.addressof @strict_pool_count : !llvm.ptr
     llvm.store %count, %countSlot atomic monotonic {alignment = 8 : i64} : i64, !llvm.ptr
-    %threads = arith.addi %workers, %one : i64
+    // pieces only for the threads that will run them: the rest of a probed loop that gets few helpers is not cut for every worker
+    %engaged = arith.minsi %workers, %helperLimit : i64
+    %threads = arith.addi %engaged, %one : i64
     %four = arith.constant 4 : i64
     %pieces = arith.muli %threads, %four : i64
     %remaining = arith.subi %count, %start : i64
