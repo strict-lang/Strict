@@ -7,8 +7,13 @@ constant Called = MlirFunction(List(TypeEntry) + MlirFunction.Shape + Halves, Ha
 constant Unknown = (0, 0)
 constant Halfway = MlirArguments((MlirFunction(Called.types, Halves, MethodEntry("Run", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(2, 0.5), Calls(3), Calls(4)))), Called))
 constant Calling = MlirArguments((MlirFunction(Called.types, Halves, Caller), Called))
+constant Instance = Multiplied + InstructionEntry.Invoke(3, Calls(3).texts, List(Number) + 0, 1) + Calls(4)
+constant Overload = Multiplied + InstructionEntry.Invoke(3, Calls(3).texts + "other", (0, 1), -1) + Calls(4)
+constant Overloaded = MlirFunction(Called.types, Halves, MethodEntry(Caller, instructions = Overload))
+constant Instanced = MlirArguments(Calling.functions + MlirFunction(Called.types, Halves, MethodEntry(Caller, instructions = Instance)))
 Constant(callee MlirFunction, parameter Number, depth Number) Numbers
 	Calling.Constant(Called, 0, 0) is (12)
+	Instanced.Constant(Called, 0, 0).Length is 0
 	mutable found = List(Number)
 	if depth > 4
 		return found
@@ -24,12 +29,18 @@ Matched(caller MlirFunction, callee MlirFunction, parameter Number, depth Number
 	mutable found = List(Number)
 	for caller.method.instructions
 		if IsTargeting(caller, index, callee)
-			let register = value.payload(LoadReuse(caller.method.instructions).InvokeReads(value)(parameter))
-			let argument = Evaluated(caller, register, index, depth)
+			let argument = Argument(caller, index, parameter, depth)
 			if (argument.Length is 0) or ((found.Length > 0) and (found.First is not argument.First))
 				return Unknown
 			found = argument
 	found
+Argument(caller MlirFunction, at Number, parameter Number, depth Number) Numbers
+	Instanced.Argument(Instanced.functions.Last, 3, 0, 0) is (3)
+	Instanced.Argument(Instanced.functions.Last, 3, 1, 0).Length is 0
+	let entry = caller.method.instructions(at)
+	if parameter >= entry.payload(5 + entry.payload(3))
+		return List(Number)
+	Evaluated(caller, entry.payload(LoadReuse(caller.method.instructions).InvokeReads(entry)(parameter)), at, depth)
 Evaluated(caller MlirFunction, register Number, at Number, depth Number) Numbers
 	Calling.Evaluated(Calling.functions.First, 2, 3, 0) is (12)
 	let writer = Writer(caller, register, at)
@@ -64,10 +75,12 @@ Writer(caller MlirFunction, register Number, at Number) Number
 IsTargeting(caller MlirFunction, at Number, callee MlirFunction) Boolean
 	Calling.IsTargeting(Calling.functions.First, 3, Called)
 	Calling.IsTargeting(Calling.functions.First, 2, Called) is false
+	Calling.IsTargeting(Overloaded, 3, Called) is false
 	let entry = caller.method.instructions(at)
 	if entry.kind is not InstructionType.Invoke
 		return false
 	let decoder = PayloadDecoder(entry)
 	let isType = TypeEntry.ShortName(decoder.Text(1)) is TypeEntry.ShortName(callee.type.Name)
-	let isCounted = LoadReuse(caller.method.instructions).InvokeReads(entry).Length is callee.method.parameters.Length
-	isType and (decoder.Text(2) is callee.method.Name) and isCounted
+	if (isType is false) or (decoder.Text(2) is not callee.method.Name)
+		return false
+	MlirWholeFunction(caller).Callee(entry).Symbol is callee.Symbol
