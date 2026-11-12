@@ -36,7 +36,7 @@ HeaderScope(header HeaderTokens, members Scope) Scope
 		types.Add(value is "Other" then typeName else (value is "Generic" then argument else value))
 	let concrete = Instantiation(inference.types).Members(typeName, members)
 	mutable scope = concrete.With("value", InstanceType).With("self type", typeName).WithAll(header.ParameterNames, types)
-	for header.MutableParameters + Changes(shape.lines).Members + RefParameters(header)
+	for header.MutableParameters + Changes(shape.lines).Members + RefParameters(header) + Initialized(header)
 		scope = scope.With(value + " mutable", "mutable")
 	scope
 InstanceType Text
@@ -124,11 +124,12 @@ Declare(statement SyntaxNode, scope Scope) Scope
 	MethodBodies("Demo", Sample, NoInference).StatementType(Looped(0)) is "Number"
 	StatementType(ScopedStatement(SyntaxNode("Return", "", List(SyntaxNode) + SyntaxNode.one), NoScope, 0)) is "Number"
 	BlockType(BodyParser("Run", "	if a is", "		1 then \"x\"").Block(1, 1).children(0), NoScope) is "Text"
+	MethodBodies("Demo", Sample, NoInference).Statements.Last.scope.TypeOf("b let") is "let"
 	if statement.Kind is not "Declaration"
 		return scope
 	let name = Tokenizer(statement.text).Tokens.Last
-	let declared = scope.With(name, inference.TypeOf(statement.children(0), scope, Methods))
-	statement.text.StartsWith("mutable ") then declared.With(name + " mutable", "mutable") else declared
+	let keyword = Tokenizer(statement.text).Tokens.First
+	scope.With(name, inference.TypeOf(statement.children(0), scope, Methods)).With(name + " " + keyword, keyword)
 StatementType(scoped ScopedStatement) Text
 	StatementType(ScopedStatement(SyntaxNode("Number", "1"), NoScope, 0)) is "Number"
 	let statement = scoped.statement
@@ -172,3 +173,7 @@ RefParameters(header HeaderTokens) Texts
 	for header.ParameterNames
 		if Changes.HasChanges(inference.types.ParameterScope(types(index)))
 			value
+Initialized(header HeaderTokens) Texts
+	MethodBodies("Demo", Sample, NoInference).HeaderScope(FromGeneric, NoScope).TypeOf("a mutable") is "mutable"
+	MethodBodies("Demo", Sample, NoInference).Initialized(AddOther).Length is 0
+	header.tokens(0) is "from" then shape.MemberScope.names else List(Text)
