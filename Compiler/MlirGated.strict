@@ -50,8 +50,7 @@ IsUp(at Number, call Number) Boolean
 	let tokens = MlirTokens(function, position)
 	if tokens.IsDotted(at) is false
 		return false
-	let entry = function.method.instructions(at)
-	let arguments = PayloadDecoder(entry).Arguments
+	let arguments = PayloadDecoder(function.method.instructions(at)).Arguments
 	let names = tokens.Names(call)
 	let isRow = Shifted(arguments(0), at) is (names(0), names(3))
 	let isStart = tokens.Start(arguments(3), at) is (names(3), names(2))

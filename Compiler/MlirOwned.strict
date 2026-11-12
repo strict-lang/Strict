@@ -178,8 +178,7 @@ Rewritten(entry InstructionEntry, owner TypeEntry, name Text) Texts
 	let names = Invocation(entry, List(VmValue), VmValue.None).ParameterNames
 	mutable lines = List(Text)
 	for MlirInstances(function, 0).Stored(owner)
-		let chosen = names.Index(value.Name) < 0 then index else names.Index(value.Name)
-		let register = arguments(chosen)
+		let register = arguments(names.Index(value.Name) < 0 then index else names.Index(value.Name))
 		if IsKept(register, value.Name, name) is false
 			lines = lines + Put(owner, value, register)
 	lines

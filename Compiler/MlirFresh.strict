@@ -18,8 +18,7 @@ IsCall(at Number, depth Number) Boolean
 IsOwn(at Number, depth Number) Boolean
 	Checked.IsOwn(3, 0)
 	MlirFresh(MlirOwned.Rebuilt.function).IsCall(2, 0)
-	let entry = function.method.instructions(at)
-	let instance = PayloadDecoder(entry).Instance
+	let instance = PayloadDecoder(function.method.instructions(at)).Instance
 	instance >= 0 then MlirOwned(function, 0).IsFresh(function, at, instance, depth) else false
 IsMethod(depth Number, isOwn Boolean) Boolean
 	MlirFresh(MlirOwned.Moving).IsMethod(0, false) is false

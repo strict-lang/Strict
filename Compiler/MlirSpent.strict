@@ -10,8 +10,7 @@ Dead Texts
 	Passing.Dead.First is "    %t3dz0 = arith.constant 0.0 : f64"
 	Passing.Dead.Last is "    func.call @strict_rc_dead(%t3a0, %t3dz0) : (f64, f64) -> ()"
 	MlirSpent(Passing.function, 2).Dead.Length is 0
-	let entry = function.method.instructions(position)
-	let registers = PayloadDecoder(entry).Arguments
+	let registers = PayloadDecoder(function.method.instructions(position)).Arguments
 	mutable lines = List(Mutable(Text))
 	for registers
 		if (registers.Index(value) is index) and IsSpent(value)

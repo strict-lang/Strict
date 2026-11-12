@@ -43,8 +43,7 @@ Names(at Number) Texts
 	Summing.Names(12).Length is 0
 	if IsDotted(at) is false
 		return List(Text)
-	let entry = function.method.instructions(at)
-	let arguments = PayloadDecoder(entry).Arguments
+	let arguments = PayloadDecoder(function.method.instructions(at)).Arguments
 	let row = Row(arguments(0), at)
 	let start = Start(arguments(3), at)
 	let input = Variable(arguments(2), at)
