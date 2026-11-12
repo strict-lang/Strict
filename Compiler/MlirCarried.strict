@@ -121,7 +121,7 @@ IsPassing(caller MlirCarried, at Number, allowed Texts, depth Number) Boolean
 	MlirCarried(MlirFunction(Types, Holder, Itself), false).IsPassing(Selfing, 1, Kept, 0) is false
 	let entry = caller.function.method.instructions(at)
 	let positions = LoadReuse(caller.function.method.instructions).InvokeReads(entry)
-	let count = entry.payload(5 + entry.payload(3))
+	let count = PayloadDecoder(entry).ArgumentCount
 	for positions
 		let parameter = index < count then function.Parameters(index + 1) else "value"
 		if (parameter is in Typed) and (caller.IsKeptValue(at, entry.payload(value), allowed, depth) is false)

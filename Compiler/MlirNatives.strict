@@ -157,7 +157,7 @@ TextHelper(name Text) Text
 Emitted(entry InstructionEntry, type TypeEntry, helper Text) Texts
 	MlirNatives(Texts, 2).Emitted(Search, TextType, "strict_text_index").Length is 4
 	let calls = MlirCalls(function, position)
-	let count = entry.payload(5 + entry.payload(3))
+	let count = PayloadDecoder(entry).ArgumentCount
 	let owner = calls.Owner(entry, type)
 	let textual = Textual(entry, Element(owner), count)
 	let arguments = textual.Length > 0 then List(Text) + calls.Temp("ct") else calls.ArgumentNames(count)

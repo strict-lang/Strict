@@ -127,7 +127,7 @@ Handed(entry InstructionEntry) Text
 	Text.Combine(MlirCalls(Thinning.function, 3).Emitted).IndexOf("@strict_list_destine(") > 0
 	Caller.Stored(Calling(2), Calling(3), List(Text) + "call")(0) is "    %t2dold = llvm.load %v_moved : !llvm.ptr -> f64"
 	MlirDestined(Keeping.function, 5).Stored(Calling(2), Calling(3), List(Text) + "call") is ("call")
-	let count = entry.payload(5 + entry.payload(3))
+	let count = PayloadDecoder(entry).ArgumentCount
 	if MlirNatives(function, position).Helper(entry.texts(0), entry.texts(1), count) is in MlirNatives.Destining
 		return "strict_list_destine"
 	let callees = MlirModule(function.types, "").Called(function, position)

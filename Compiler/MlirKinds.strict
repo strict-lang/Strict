@@ -33,7 +33,7 @@ IsChanged(at Number, register Number) Boolean
 	MlirKinds(MlirChanged.Taking.function).IsChanged(0, 0) is false
 	let entry = function.method.instructions(at)
 	let offset = register - entry.payload(0)
-	if (entry.kind is not InstructionType.Invoke) or (offset < 1) or (offset > 1 + entry.payload(5 + entry.payload(3)))
+	if (entry.kind is not InstructionType.Invoke) or (offset < 1) or (offset > 1 + PayloadDecoder(entry).ArgumentCount)
 		return false
 	MlirChanged(function, at).IsRead(register)
 WrittenKind(writer Number) Text

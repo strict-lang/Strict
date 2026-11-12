@@ -81,7 +81,7 @@ IsFilled(entry InstructionEntry) Boolean
 	Twice.IsFilled(Twicing)
 	Filling.IsFilled(Twicing)
 	Required.IsFilled(Twicing) is false
-	let given = entry.payload(5 + entry.payload(3))
+	let given = PayloadDecoder(entry).ArgumentCount
 	let parameters = callee.method.parameters
 	for Range(given, parameters.Length)
 		if MlirDefaults(function).IsWhole(parameters(value)) is false
@@ -91,7 +91,7 @@ Filled(entry InstructionEntry) Texts
 	Twice.Filled(Twicing).Length is 0
 	Filling.Filled(Twicing) is ("    %d4p1 = arith.constant 3.0 : f64")
 	mutable lines = List(Mutable(Text))
-	for Range(entry.payload(5 + entry.payload(3)), callee.method.parameters.Length)
+	for Range(PayloadDecoder(entry).ArgumentCount, callee.method.parameters.Length)
 		let name = Temp("p" + value)
 		let number = MlirDefaults(function).Whole(callee.method.parameters(value))
 		let literal = MlirTyped(function.Float).Constant(name, number + ".0")

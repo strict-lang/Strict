@@ -44,7 +44,7 @@ IsKept(made InstructionEntry, at Number, name Text) Boolean
 	Changed.IsKept(MlirStructs.Checker.function.method.instructions(1), 1, "width") is false
 	let named = Invocation(made, List(VmValue), VmValue.None).ParameterNames.Index(name)
 	let index = named < 0 then MlirInstances(function, 0).StoredNames(function.type).Index(name) else named
-	if (index < 0) or (index >= made.payload(5 + made.payload(3)))
+	if (index < 0) or (index >= PayloadDecoder(made).ArgumentCount)
 		return false
 	let source = MlirKinds(function).Writer(at, made.payload(6 + made.payload(3) + index))
 	let loaded = source >= 0 then function.method.instructions(source) else made

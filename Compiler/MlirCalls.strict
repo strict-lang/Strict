@@ -39,7 +39,7 @@ Created(entry InstructionEntry, decoder PayloadDecoder) Texts
 	Text.Combine(MlirCalls(Hashes, 1).Created(Hashed, PayloadDecoder(Hashed))).IndexOf("@Hash_from_1(%t1m") > 0
 	Text.Combine(Counters.Created(NewCounter, PayloadDecoder(NewCounter))).IndexOf("@Counter_from_foreign(") > 0
 	let type = function.TypeOf(decoder.Text(1))
-	let count = entry.payload(5 + entry.payload(3))
+	let count = PayloadDecoder(entry).ArgumentCount
 	let custom = decoder.Callee(type)
 	let instances = MlirInstances(function, position)
 	let target = "%r" + entry.payload(0)
@@ -75,7 +75,7 @@ Invoked(entry InstructionEntry, decoder PayloadDecoder) Texts
 	let type = MlirLayout(function).Owner(function.TypeOf(decoder.Text(1)), decoder.Text(2))
 	if MlirTails(function, position).IsTail
 		return MlirTails(function, position).Jumped(entry, type)
-	let count = entry.payload(5 + entry.payload(3))
+	let count = PayloadDecoder(entry).ArgumentCount
 	let helper = NativeHelper(entry, decoder)
 	if helper is not ""
 		return MlirDestined(function, position).Destined(entry, MlirNatives(function, position).Emitted(entry, type, helper))
@@ -111,7 +111,7 @@ NativeHelper(entry InstructionEntry, decoder PayloadDecoder) Text
 	if MlirCodes(function, position).IsPairCode(entry)
 		return "strict_pairs_text"
 	let type = function.TypeOf(decoder.Text(1))
-	let count = entry.payload(5 + entry.payload(3))
+	let count = PayloadDecoder(entry).ArgumentCount
 	let isWrite = (decoder.Text(2) is "Write") and (decoder.Names.Length is 1)
 	let name = isWrite then "Write" + decoder.Names.First.Capitalize else decoder.Text(2)
 	let declared = MlirNatives(function, position).Helper(type.Name, name, count)
@@ -135,7 +135,7 @@ Loads(entry InstructionEntry, type TypeEntry) Texts
 ArgumentLoads(entry InstructionEntry, type TypeEntry) Texts
 	MlirCalls(Shapes, 2).ArgumentLoads(Area, AreaShape).Length is 0
 	Counters.ArgumentLoads(NewCounter, CounterType).First is "    %t2a0 = llvm.load %r0 : !llvm.ptr -> f64"
-	for entry.payload(5 + entry.payload(3))
+	for PayloadDecoder(entry).ArgumentCount
 		Argument(entry, type, index)
 Argument(entry InstructionEntry, type TypeEntry, number Number) Text
 	Counters.Argument(NewCounter, CounterType, 1) is "    %t2a1 = llvm.load %r1 : !llvm.ptr -> f64"

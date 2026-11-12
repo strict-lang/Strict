@@ -68,7 +68,7 @@ IsRebuilt(entry InstructionEntry, owner TypeEntry) Boolean
 	let checkedAt = MlirDestined(function, position).CheckedAt
 	let checked = function.method.instructions(checkedAt)
 	let next = MlirDestined(function, checkedAt).Next(checked)
-	let isFull = entry.payload(5 + entry.payload(3)) >= MlirInstances(function, 0).Stored(owner).Length
+	let isFull = PayloadDecoder(entry).ArgumentCount >= MlirInstances(function, 0).Stored(owner).Length
 	let isReturned = (next.kind is InstructionType.Return) and (next.payload(0) is checked.payload(0))
 	isReturned and isFull and (MlirConstants(function, position).IsConstant is false)
 Constructed(entry InstructionEntry, owner TypeEntry, built Texts) Texts

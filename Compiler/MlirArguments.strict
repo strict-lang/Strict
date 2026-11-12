@@ -38,7 +38,7 @@ Argument(caller MlirFunction, at Number, parameter Number, depth Number) Numbers
 	Instanced.Argument(Instanced.functions.Last, 3, 0, 0) is (3)
 	Instanced.Argument(Instanced.functions.Last, 3, 1, 0).Length is 0
 	let entry = caller.method.instructions(at)
-	if parameter >= entry.payload(5 + entry.payload(3))
+	if parameter >= PayloadDecoder(entry).ArgumentCount
 		return List(Number)
 	Evaluated(caller, entry.payload(LoadReuse(caller.method.instructions).InvokeReads(entry)(parameter)), at, depth)
 Evaluated(caller MlirFunction, register Number, at Number, depth Number) Numbers

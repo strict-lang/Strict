@@ -169,7 +169,7 @@ Target(entry InstructionEntry, owner TypeEntry) Text
 	let steps = function.method.instructions
 	let next = position + 1 < steps.Length then steps(position + 1) else entry
 	let isStored = (next.kind is Inliner.Store) and (next.payload(0) is entry.payload(0))
-	let isFull = entry.payload(5 + entry.payload(3)) >= MlirInstances(function, 0).Stored(owner).Length
+	let isFull = PayloadDecoder(entry).ArgumentCount >= MlirInstances(function, 0).Stored(owner).Length
 	let isBuilt = isFull and (MlirConstants(function, position).IsConstant is false)
 	(isStored and isBuilt then IsOwned(next.texts(0)) else false) then next.texts(0) else ""
 Rewritten(entry InstructionEntry, owner TypeEntry, name Text) Texts

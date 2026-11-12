@@ -40,7 +40,7 @@ IsDispatched Boolean
 	IsMatched(entry, MlirWholeFunction(MlirWholeFunction(function).Callee(entry)))
 IsMatched(entry InstructionEntry, callee MlirWholeFunction) Boolean
 	Defaulting.IsDispatched is false
-	let isComplete = entry.payload(5 + entry.payload(3)) is callee.function.method.parameters.Length
+	let isComplete = PayloadDecoder(entry).ArgumentCount is callee.function.method.parameters.Length
 	let isRead = LoadReuse(function.method.instructions).InvokeReads(entry).Length is callee.Kinds.Length
 	isComplete and isRead and callee.IsWhole
 Dispatched(compiled Texts) Texts
