@@ -53,15 +53,12 @@ DeclarationIssues(declaration SyntaxNode) ValidationIssues
 		issues.Add(ValidationIssue("UnusedMethodVariableMustBeRemoved", name, declaration.line))
 	issues
 HidingIssues(declaration SyntaxNode, name Text) ValidationIssues
-	Sample.HidingIssues(Sample.statements(0), "list").First.ruleName is "VariableHidesParameterUseDifferentName"
 	Sample.HidingIssues(Sample.statements(0), "x").First.ruleName is "VariableHidesMemberUseDifferentName"
 	Sample.HidingIssues(Sample.statements(0), "value").First.ruleName is "VariableHidesMemberUseDifferentName"
 	Sample.HidingIssues(Sample.statements(0), "aa").Length is 0
 	mutable issues = List(Mutable(ValidationIssue))
 	if (name is in memberNames) or (name is "value")
 		issues.Add(ValidationIssue("VariableHidesMemberUseDifferentName", name, declaration.line))
-	else if name is in header.ParameterNames
-		issues.Add(ValidationIssue("VariableHidesParameterUseDifferentName", name, declaration.line))
 	issues
 KindIssues(declaration SyntaxNode, name Text) ValidationIssues
 	Sample.KindIssues(Sample.statements(0), "aa").First.ruleName is "UseConstantHere"

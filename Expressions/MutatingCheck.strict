@@ -14,6 +14,12 @@ constant Ticking = SyntaxNode("Member", "Next", SyntaxNode("Identifier", "ticker
 constant Holding = Scope(List(Text) + "ticker", List(Text) + "Ticker")
 constant Typed = SyntaxNode("Member", "Next", SyntaxNode("Identifier", "Ticker"))
 constant Mutables = Holding.With("ticker mutable", "mutable")
+constant Letting = SyntaxNode("Declaration", "let a", SyntaxNode.one)
+constant Owned = Scope(("number", "self type"), ("Number", "Count"))
+constant Numbered = SyntaxNode("Declaration", "let number", SyntaxNode.one)
+constant Valued = SyntaxNode("Declaration", "let value", SyntaxNode.one)
+constant Looped = Counted.With("value", "Count")
+constant ValueLet = Looped.With("value let", "let")
 Issue(scoped ScopedStatement, current Scope) Text
 	Counting.Issue(Immutable, Counted).StartsWith("MutatingCallNeedsMutableVariable: a.Increment")
 	Counting.Issue(ScopedStatement(Increment, Counted.With("a mutable", "mutable"), 0), Counted) is ""
@@ -26,7 +32,20 @@ Issue(scoped ScopedStatement, current Scope) Text
 	Ticked.IsChangingCall(SyntaxNode("Member", "Next", List(SyntaxNode)), Holding, Holding) is false
 	Ticked.IsChangingCall(SyntaxNode("MethodCall", "Next", Ticking.children), Holding, Holding)
 	let changing = Changing(scoped.statement, scoped.scope, current)
-	changing is "" then Mutated(scoped, current) else changing
+	changing is "" then Redeclared(scoped, current) else changing
+Redeclared(scoped ScopedStatement, current Scope) Text
+	Counting.Redeclared(ScopedStatement(Letting, Counted.With("a let", "let"), 0), Counted) is "NameAlreadyDeclared: a"
+	Counting.Redeclared(ScopedStatement(Letting, Counted, 0), Counted) is "VariableHidesParameterUseDifferentName: a"
+	Counting.Redeclared(ScopedStatement(Valued, ValueLet, 0), Counted) is "NameAlreadyDeclared: value"
+	if scoped.statement.Kind is not "Declaration"
+		return Mutated(scoped, current)
+	let name = Tokenizer(scoped.statement.text).Tokens.Last
+	let scope = scoped.scope
+	let isMember = name is in inference.types.MembersOf(scope.TypeOf("self type")).names
+	let local = scope.TypeOf(name + " let") + scope.TypeOf(name + " mutable") + scope.TypeOf(name + " constant")
+	if (scope.TypeOf(name) is "") or isMember or (local is "") and (name is in ("value", "index", "outer"))
+		return ""
+	local is "" then "VariableHidesParameterUseDifferentName: " + name else "NameAlreadyDeclared: " + name
 Mutated(scoped ScopedStatement, current Scope) Text
 	Counting.Mutated(Immutable, Counted).StartsWith("MutatingCallNeedsMutableVariable: a.Increment")
 	Counting.Mutated(ScopedStatement(Increment, Counted.With(" dropped", ""), 0), Counted) is ""
@@ -83,6 +102,9 @@ IsMutating(statement SyntaxNode, scope Scope, current Scope) Boolean
 	Counting.IsMutating(Twice, Counted, Counted) is false
 	Counting.IsMutating(SyntaxNode("Member", "Increment", Added), Counted, Counted) is false
 	Counting.IsMutating(SyntaxNode("MethodCall", "Increment", Increment.children), Counted, Counted)
+	Counting.Issue(ScopedStatement(SyntaxNode("Declaration", "mutable b", SyntaxNode.one), Counted, 0), Counted) is ""
+	Counting.Issue(ScopedStatement(Numbered, Owned, 0), Owned) is ""
+	Counting.Issue(ScopedStatement(Valued, Looped, 0), Counted) is ""
 	if (statement.Kind is not in ("MethodCall", "Member")) or (statement.children(0).Kind is not "Identifier")
 		return false
 	let type = inference.TypeOf(statement.children(0), scope, current)

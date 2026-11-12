@@ -62,8 +62,8 @@ Recorded(pointer Text, typeName Text, suffix Text) Texts
 	mutable lines = memory.Allocated(stored.Length, suffix)
 	for stored
 		let field = memory.Loaded(pointer, index, suffix + "c" + index)
-		let stored = function.Store(Temp(suffix + "c" + index + "v"), Temp(suffix + "s" + index))
-		lines = lines + field + memory.Slot(Temp(suffix + "p"), index, suffix + "s" + index) + stored
+		let written = function.Store(Temp(suffix + "c" + index + "v"), Temp(suffix + "s" + index))
+		lines = lines + field + memory.Slot(Temp(suffix + "p"), index, suffix + "s" + index) + written
 	lines + memory.Bits(Temp(suffix + "p"), suffix)
 Fields(typeName Text) Texts
 	Trades.Fields("Strict/Trade").Last is "    llvm.store %t0r1v, %t0o1 : f64, !llvm.ptr"

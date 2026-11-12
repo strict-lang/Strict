@@ -124,11 +124,12 @@ Declare(statement SyntaxNode, scope Scope) Scope
 	MethodBodies("Demo", Sample, NoInference).StatementType(Looped(0)) is "Number"
 	StatementType(ScopedStatement(SyntaxNode("Return", "", List(SyntaxNode) + SyntaxNode.one), NoScope, 0)) is "Number"
 	BlockType(BodyParser("Run", "	if a is", "		1 then \"x\"").Block(1, 1).children(0), NoScope) is "Text"
+	MethodBodies("Demo", Sample, NoInference).Statements.Last.scope.TypeOf("b let") is "let"
 	if statement.Kind is not "Declaration"
 		return scope
 	let name = Tokenizer(statement.text).Tokens.Last
-	let declared = scope.With(name, inference.TypeOf(statement.children(0), scope, Methods))
-	statement.text.StartsWith("mutable ") then declared.With(name + " mutable", "mutable") else declared
+	let keyword = Tokenizer(statement.text).Tokens.First
+	scope.With(name, inference.TypeOf(statement.children(0), scope, Methods)).With(name + " " + keyword, keyword)
 StatementType(scoped ScopedStatement) Text
 	StatementType(ScopedStatement(SyntaxNode("Number", "1"), NoScope, 0)) is "Number"
 	let statement = scoped.statement
