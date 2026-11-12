@@ -35,14 +35,16 @@ Exported List(MethodEntry)
 IsExported(method MethodEntry) Boolean
 	Policy.IsExported(Start)
 	Policy.IsExported(MethodEntry.CountingLoop) is false
+	MlirLibrary(List(TypeEntry) + MlirForeign.Adder.type).IsExported(MlirForeign.Add) is false
 	let first = method.Name(0)
 	let isNamed = (first.Upper is first) and (first.Lower is not first)
 	let isPublic = isNamed and (method.Name is not in ("Run", TestCodegen.Runner))
 	mutable isSupported = Kind(method.returnType) is not ""
 	for method.parameters
 		isSupported = isSupported and (Kind(value.typeName) is not "")
-	let isPlain = MlirInstances(MlirFunction(types, types.First, method), 0).Stored(types.First).Length is 0
-	isPublic and isSupported and (isPlain or IsRecord(types.First.Name))
+	let function = MlirFunction(types, types.First, method)
+	let isPlain = MlirInstances(function, 0).Stored(types.First).Length is 0
+	isPublic and isSupported and (MlirForeign(function).IsForeign is false) and (isPlain or IsRecord(types.First.Name))
 IsRecord(typeName Text) Boolean
 	Trades.IsRecord("Strict/Trade")
 	Trades.IsRecord("Strict/Text") is false

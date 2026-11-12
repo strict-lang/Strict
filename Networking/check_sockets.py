@@ -1,4 +1,5 @@
-"""Run from Strict after building SocketChecks: python Networking/check_sockets.py."""
+"""Run from Strict after strict test Networking/SocketChecks.strict (its VM run builds native/Networking.dll) and
+strict build Networking/SocketChecks.strict: python Networking/check_sockets.py."""
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import socket
@@ -33,7 +34,7 @@ with socket.socket() as occupied:
 	occupied.bind(("0.0.0.0", 34567))
 	occupied.listen()
 	def checked(index):
-		result = subprocess.run([str(root / "Networking" / ("SocketChecks.test" + extension))],
+		result = subprocess.run([str(root / "Networking/obj" / ("SocketChecks.test" + extension))],
 			cwd=root, capture_output=True, text=True, timeout=15)
 		assert result.returncode == 0, result.stdout + result.stderr
 	with ThreadPoolExecutor(max_workers=8) as workers:

@@ -47,5 +47,6 @@ accepts, both send and receive bytes.
 Windows uses winsock2, Linux and MacOS the BSD sockets, so the same program
 runs on all of them. The native code is in `native/Socket.c`, the checks in
 `SocketChecks.strict` open a server and a client on the loopback interface and
-send bytes between them on OS-assigned ports. After building SocketChecks,
-`python Networking/check_sockets.py` runs 16 copies of it at once.
+send bytes between them on OS-assigned ports. After `strict test` (its VM run builds
+`native/Networking.dll`) and `strict build` of SocketChecks, `python Networking/check_sockets.py`
+listens on 16 threads of one process and runs 16 copies of `obj/SocketChecks.test` at once.
