@@ -68,3 +68,9 @@ Count(iterable VmValue) Number
 	Count(VmValue.OfText("abc")) is 3
 	Count(VmValue.OfNumber(-2)) is 0
 	iterable.kind is "Number" then (iterable.number < 0 then 0 else iterable.number.Floor) else iterable.Length
+Failed(iterable VmValue, ending VmValue) VmValue
+	Failed(VmValue.OfError("a"), VmValue.None).kind is "Strict/Error"
+	Failed(VmValue.OfNumber(3), VmValue.OfError("b")).items.First.text is "b"
+	Failed(VmValue.OfNumber(3), VmValue.OfNumber(5)).kind is "None"
+	let failing = iterable.kind is in VmValue.ErrorKinds then iterable else ending
+	failing.kind is in VmValue.ErrorKinds then failing else VmValue.None

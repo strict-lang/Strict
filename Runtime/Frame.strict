@@ -16,6 +16,7 @@ constant FailCall = InstructionEntry.Invoke(0, ("Strict/Failing", "Fail", "Stric
 constant Calling = Frame(Machine(Resolver(List(TypeEntry) + Invocation.Failing).Resolved), MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + FailCall), "Strict/Caller")
 constant Listed = (VmValue.OfText("ab"), VmValue.OfText("a"), VmValue.None, VmValue.OfBoolean(true), Looping.Counting, VmValue.None, VmValue.OfNumber(1), VmValue.OfList(VmValue.OfNumber(10), VmValue.OfNumber(20)), VmValue.OfNumber(5))
 constant Stopping = (Listed(3), Listed(0), Listed(0), Listed(2), Listed(4))
+constant Broken = (Listed(3), Listed(0), Listed(0), Listed(2), VmValue.OfError("ModuloByZero"))
 Finished(arguments List(VmValue)) List(VmValue)
 	mutable slots = arguments
 	mutable position = 0
@@ -32,7 +33,8 @@ Finished(arguments List(VmValue)) List(VmValue)
 Ended(slots List(VmValue)) List(VmValue)
 	Twice.Ended(Listed)(0).text is "ab"
 	Frame(Machine(Doubling, deadline = 0.001), Twice.method, "D").Ended(Listed)(ResultSlot).items.First.text is "Timeout"
-	MutationCache.Stopped(machine.deadline) is "" then slots else MutationCache.Exhausted(slots, machine.deadline)
+	let stopped = MutationCache.Stopped(machine.deadline)
+	stopped is "" then Returned(slots) else MutationCache.Exhausted(slots, machine.deadline)
 Value(entry InstructionEntry, position Number, slots List(VmValue)) VmValue
 	Twice.Value(InstructionEntry(InstructionType.LoadVariableToRegister, "a", (6, 8)), 0, Listed).number is 5
 	Twice.Value(InstructionEntry.Binary(InstructionType.LessThan, (6, 8)), 0, Listed).IsTrue
@@ -147,13 +149,27 @@ Looped(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	Twice.Looped(MethodEntry.CountingLoop.instructions(1), Listed, 1).items(2).number is 1
 	if entry.kind is InstructionType.LoopEnd
 		return Looping.Ended(slots(LoopSlot), (-1 is in entry.payload) and (slots(FlagSlot).IsTrue is false))
+	let failed = Looping.Failed(slots(entry.payload(0)), Ending(entry, slots))
+	if failed.kind is not "None"
+		return Traced(failed, position)
 	Looping.Begun(slots(LoopSlot), slots(entry.payload(0)), Ending(entry, slots), position)
 Entered(entry InstructionEntry, slots List(VmValue), position Number) Number
 	Twice.Entered(InstructionEntry.LoopBegin(2, -1), Listed, 0) is 4
 	Twice.Entered(MethodEntry.CountingLoop.instructions(0), Listed, 0) is 1
+	Twice.Entered(InstructionEntry.LoopBegin(2, -1), Broken, 0) is Twice.method.instructions.Length
 	Twice.Finished(Listed).Index(VmValue.OfNumber(42)) is ResultSlot
 	Twice.Traced(VmValue("Strict/ErrorWithValue", 0, "", (VmValue.OfError("a"), Listed(5))), 0).items(0).Traces.Length > 0
+	if slots(LoopSlot).kind is in VmValue.ErrorKinds
+		return method.instructions.Length
 	Looping.IsEmpty(slots(entry.payload(0)), Ending(entry, slots)) then method.LoopEndOf(position) + 1 else position + 1
+Returned(slots List(VmValue)) List(VmValue)
+	Twice.Returned(Broken)(ResultSlot).kind is "Strict/Error"
+	Twice.Returned(Listed) is Listed
+	if slots(LoopSlot).kind is not in VmValue.ErrorKinds
+		return slots
+	mutable failed = slots
+	failed(Frame.ResultSlot) = slots(LoopSlot)
+	failed
 Ending(entry InstructionEntry, slots List(VmValue)) VmValue
 	Twice.Ending(InstructionEntry.LoopBegin(6, 8), Listed).number is 5
 	Twice.Ending(InstructionEntry.LoopBegin(6, -1), Listed).kind is "None"

@@ -24,7 +24,7 @@ Finished(arguments List(VmValue)) List(VmValue)
 		slots(entry.Target) = (isReporting then untraced else frame).Value(entry, position, slots)
 		Logged(position, slots)
 		position = entry.kind < InstructionType.Return then position + 1 else frame.Next(entry, position, slots)
-	slots
+	frame.Returned(slots)
 IsReporting(entry InstructionEntry, isReporting Boolean) Boolean
 	Reporting.IsReporting(InstructionEntry.Print("x"), true)
 	Reporting.IsReporting(InstructionEntry.Print("x"), false) is false
