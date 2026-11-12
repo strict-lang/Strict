@@ -54,12 +54,6 @@ LibraryExtension(code Number) Text
 	Platform.LibraryExtension(Linux) is ".so"
 	Platform.LibraryExtension(MacOS) is ".dylib"
 	code is Windows then ".dll" else IsIOS(code) then ".a" else code is MacOS then ".dylib" else ".so"
-IsWindows(code Number) Boolean
-	code is Windows
-IsLinux(code Number) Boolean
-	code is Linux
-IsMacOS(code Number) Boolean
-	code is MacOS
 IsIOS(code Number) Boolean
 	IsIOS(IOSSimulator)
 	IsIOS(MacOS) is false
