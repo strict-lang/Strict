@@ -73,12 +73,16 @@ with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as 
 	assert compiled.returncode == 0, compiled.stdout + compiled.stderr
 	module = obj(nested, ".mlir").read_text(encoding="utf-8")
 	assert "func.call @strict_parallel(%t" in module and "func.call @strict_gpu_run(%t" in module, "Nested CPU/GPU paths missing"
+	expected = str(sum(number * number for number in range(256)) * 8192 + sum(range(8192)))
+	automatic = {name: value for name, value in os.environ.items() if name != "STRICT_GPU"}
 	for threads in ("1", "4"):
 		result = subprocess.run([str(nested.with_suffix(extension))], capture_output=True, text=True, timeout=10,
-			env=dict(os.environ, STRICT_THREADS=threads, STRICT_GPU="all"))
-		expected = str(sum(number * number for number in range(256)) * 8192 + sum(range(8192)))
+			env=dict(automatic, STRICT_THREADS=threads))
 		assert result.returncode == 0 and result.stdout.strip().endswith(expected), result.stdout + result.stderr
-	print("Nested GPU loops use correct CPU fallback inside pool jobs", flush=True)
+		forced = subprocess.run([str(nested.with_suffix(extension))], capture_output=True, text=True, timeout=10,
+			env=dict(automatic, STRICT_THREADS=threads, STRICT_GPU="all"))
+		assert forced.returncode == 1 and "GpuLoopMustRunOnGpu" in forced.stdout, forced.stdout + forced.stderr
+	print("A small GPU loop inside pool jobs runs on the CPU, one forced onto the GPU stops the program", flush=True)
 	profile = Path(folder) / "ProfileCheck.strict"
 	profile.write_text('has profile Compiler/BuildProfile\nRun Number\n'
 		'\tBuildProfile(Logger).Reported("Fast phase", Process.Elapsed)\n'
@@ -303,7 +307,7 @@ def check_native_folder():
 	print("Native libraries read files relative to the request of a resident server started elsewhere")
 	with tempfile.TemporaryDirectory(prefix="MovingCheck", dir=root / "Examples") as folder:
 		source = Path(folder) / "MovingCheck.strict"
-		source.write_text('Moved Number\n\tDirectory.Change("Math") is true\n\t1\n', encoding="utf-8")
+		source.write_text('Moved Number\n\tDirectory.Change("Math") is not Error\n\t1\n', encoding="utf-8")
 		built = subprocess.run([strict, "build", str(source)], cwd=root, capture_output=True, text=True, timeout=120)
 		assert built.returncode == 0, built.stdout + built.stderr
 	subprocess.run([strict, "stop"], cwd=root, capture_output=True, text=True, timeout=60)
