@@ -5,17 +5,13 @@ Run(path Text, count = 4)
 	let heldout = evaluation.Heldout(8)
 	let tokenizer = Gpt2Tokens.Folder(path)
 	mutable model = Gpt2.Loaded(path + "/model.safetensors", BFloat16.Bits)
-	mutable kept = List(Mutable(Number)) + Indices(model.blocks.Length)
+	mutable kept = List(Mutable(Number)) + Dataset.Indices(model.blocks.Length)
 	logger.Log(path + " with all " + kept.Length + " blocks: " + Reported(model, tokenizer, heldout))
 	for count
 		let removed = Weakest(model, tokenizer, calibrating(0) + calibrating(1))
 		model = model.Without(removed)
 		logger.Log("without block " + kept(removed) + ": " + Reported(model, tokenizer, heldout))
 		kept.Remove(kept(removed))
-Indices(count Number) Numbers
-	LayerDropping(Logger).Indices(3) is (0, 1, 2)
-	for count
-		index
 Weakest(model Gpt2, tokenizer Gpt2Tokens, texts Texts) Slow(Number)
 	LayerDropping(Logger).Weakest(Gpt2.Tiny, Gpt2Tokens.Tiny, ("ab ab")) is 0
 	mutable weakest = 0

@@ -59,7 +59,7 @@ HiddenDeltas(inputs List(Numbers), states List(Numbers), outputs List(Numbers)) 
 		let time = inputs.Length - 1 - index
 		let gradient = Network.Difference(output.Spread(outputs(time)), future * -1)
 		let step = Step(inputs(time), states(time), Clipped(gradient))
-		future = Part(step, 4 * size, size)
+		future = step.Slice(4 * size, size)
 		deltas.Add(step)
 	deltas.Reverse
 Step(step Numbers, previous Numbers, gradient Numbers) Numbers
@@ -69,11 +69,11 @@ Step(step Numbers, previous Numbers, gradient Numbers) Numbers
 	let gates = Gates(previous, step)
 	let updates = UpdateDeltas(gates, previous, gradient)
 	let candidates = CandidateDeltas(gates, gradient)
-	let fromCandidate = Part(candidate.Spread(candidates), step.Length, size)
+	let fromCandidate = candidate.Spread(candidates).Slice(step.Length, size)
 	let resets = ResetDeltas(gates, previous, fromCandidate)
-	let fromGates = Part(update.Spread(updates), step.Length, size) + Part(reset.Spread(resets), step.Length, size)
+	let fromGates = update.Spread(updates).Slice(step.Length, size) + reset.Spread(resets).Slice(step.Length, size)
 	let earlier = PreviousDeltas(gates, gradient, fromCandidate, fromGates)
-	updates + resets + candidates + Part(gates, size, size) * previous + earlier
+	updates + resets + candidates + gates.Slice(size, size) * previous + earlier
 UpdateDeltas(gates Numbers, previous Numbers, gradient Numbers) Numbers
 	Tiny.UpdateDeltas((0.5, 0.25, 0, 0, 1, 2), (0.5, 1), (2, 3)) is (0.25, 0.5625)
 	Tiny.UpdateDeltas((0.5, 0.5, 1), Zero, One) is List(Number) + 0.25
@@ -107,16 +107,12 @@ Clipped(gradient Numbers) Numbers
 	Tiny.Clipped((-3, 0.5, 2)) is (-1, 0.5, 1)
 	for gradient
 		value.Clamp(-1, 1)
-Part(values Numbers, start Number, count Number) Numbers
-	Tiny.Part((1, 2, 3, 4), 1, 2) is (2, 3)
-	for Range(start, start + count)
-		values(value)
 Updated(step Numbers, previous Numbers, delta Numbers, outputDelta Numbers, state Numbers, rate Number) Gru
 	Wide.Updated(One, (0, 0), (0, 1, 2, 3, 4, 5, 6, 7, 8, 9), One, (0, 0), 1).candidate.weights.First is (-3, -23, -27)
 	Tiny.Updated(One, Zero, (1, 1, 1, 0, 1), One, One, 1).output.weights is List(Numbers) + Zero
 	let size = previous.Length
 	let joined = step + previous
-	let updated = update.Updated(joined, Part(delta, 0, size), rate)
-	let resetted = reset.Updated(joined, Part(delta, size, size), rate)
-	let candidated = candidate.Updated(step + Part(delta, 3 * size, size), Part(delta, 2 * size, size), rate)
+	let updated = update.Updated(joined, delta.Slice(0, size), rate)
+	let resetted = reset.Updated(joined, delta.Slice(size, size), rate)
+	let candidated = candidate.Updated(step + delta.Slice(3 * size, size), delta.Slice(2 * size, size), rate)
 	Gru(updated, resetted, candidated, output.Updated(state, outputDelta, rate))
