@@ -6,9 +6,24 @@ constant Keeping = MethodEntry("Kept", List(MemberEntry), "Strict/Shape", WidthM
 constant Validator = TypeEntry("Strict/Shape", MlirFunction.Shape.members, (Validating, Keeping))
 constant Kept = MlirValidated(MlirFunction(List(TypeEntry) + Validator, Validator, Keeping), 2)
 constant Changed = MlirValidated(MlirFunction(List(TypeEntry) + Validator, Validator, MlirStructs.Checker.function.method), 2)
+constant Sixteens = (MlirLoops.Emptied, InstructionEntry.LoadNumber(0, 16), InstructionEntry.LoopBegin(0, -1))
+constant Pushed = (MlirCounter.IndexLoad, InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"))
+constant ForResult = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "forResult")
+constant Counted = Sixteens + Pushed + InstructionEntry.Jump(InstructionType.LoopEnd, 3) + ForResult
+constant Counting = MethodEntry("Counted", List(MemberEntry), "Strict/List(Number)", Counted + InstructionEntry.Return(0))
+constant SixteenMember = MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false, 32, 16)
+constant CountCall = InstructionEntry.Invoke(0, ("Strict/Sized", "Counted", "Strict/List(Number)"), List(Number), -1)
+constant FromCall = InstructionEntry.Invoke(1, ("Strict/Sized", "from", "Strict/Sized", "numbers"), 0, -1)
+constant SizedCheck = InstructionEntry.Invoke(2, ("Strict/Sized", "Validated", "Strict/Sized"), List(Number), 1)
+constant Sizing = MethodEntry("Sized", List(MemberEntry), "Strict/Sized", (CountCall, FromCall, SizedCheck))
+constant NumbersRead = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers")
+constant SizedValidated = MethodEntry("Validated", List(MemberEntry), "Strict/Sized", (NumbersRead, InstructionEntry.Return(0)))
+constant Sized = TypeEntry("Strict/Sized", List(MemberEntry) + SixteenMember, (SizedValidated, Counting, Sizing))
+constant Sizes = MlirValidated(MlirFunction(List(TypeEntry) + Sized, Sized, Sizing), 2)
 IsKnown Boolean
 	Kept.IsKnown
 	Changed.IsKnown is false
+	Sizes.IsKnown
 	let entry = function.method.instructions(position)
 	let isOwn = (entry.kind is InstructionType.Invoke) and (entry.texts(1) is "Validated")
 	if (isOwn is false) or (entry.texts(0) is not function.type.Name)
@@ -49,4 +64,33 @@ IsKept(made InstructionEntry, at Number, name Text) Boolean
 	let source = MlirKinds(function).Writer(at, PayloadDecoder(made).Arguments(index))
 	let loaded = source >= 0 then function.method.instructions(source) else made
 	let isMember = (loaded.kind is InstructionType.LoadVariableToRegister) and (loaded.texts(0) is name)
-	isMember and (name is not in function.method.ParameterNames) and MlirParameters(function).IsFixed(name)
+	let isCopied = isMember and (name is not in function.method.ParameterNames) and MlirParameters(function).IsFixed(name)
+	isCopied or ((Count(name) > 0) and (Returned(loaded) is Count(name)))
+Count(name Text) Number
+	Sizes.Count("numbers") is 16
+	Kept.Count("width") is 0
+	for function.type.members
+		if value.Name is name
+			return value.Count
+	0
+Returned(call InstructionEntry) Number
+	Sizes.Returned(CountCall) is 16
+	Sizes.Returned(FromCall) is 0
+	let name = call.kind is InstructionType.Invoke then call.texts(1) else "from"
+	if name is "from"
+		return 0
+	let decoder = PayloadDecoder(call)
+	let type = MlirLayout(function).Owner(function.TypeOf(decoder.Text(1)), name)
+	MlirValidated(MlirFunction(function.types, type, decoder.Callee(type)), 0).Collected
+Collected Number
+	MlirValidated(MlirFunction(List(TypeEntry) + Sized, Sized, Counting), 0).Collected is 16
+	Sizes.Collected is 0
+	let steps = function.method.instructions
+	let end = steps.Length - 3
+	let ending = end > 0 then steps(end) else steps.Last
+	let isRead = (end > 0) and ("forResult" is in steps(steps.Length - 2).texts)
+	if (ending.kind is not InstructionType.LoopEnd) or (isRead is false) or (steps.Last.kind is not InstructionType.Return)
+		return 0
+	let begin = function.method.LoopBeginOf(end)
+	let isRaw = MlirKernel(function, begin).IsSimple and MlirLoops(function, begin).IsCollecting
+	isRaw then MlirCounter(function, begin).Constant(steps(begin).payload(0), -1) else 0
