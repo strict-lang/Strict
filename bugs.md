@@ -10,7 +10,6 @@
 - `strict check .` is not clean: 11 `StatusNumberMustNotBeReturned` left, all in methods StrictComfy and Ben call, so they change together with those repos: Remote.Forwarded/Finished (behind Remote.Named/Sent), Resident.Opened/Taken (Opened, Accepted), Coordinator.Opened/Served, Forwarding.Answered/Interrupted/Started.
 - `Forwarding.Started` always returns -1, so StrictComfy `Backend.strict:53` (`forwarding.Started("") is not 0`) is always true and `Attempted` returns `Unserved` right after starting the backend instead of waiting for it; changes with the status numbers of that interface.
 - `Networking/check_sockets.py` is out of date: it loads `Networking/native/Networking.dll` and runs `Networking/SocketChecks.test.exe`, neither exists (`strict build Networking/SocketChecks.strict` makes `Networking/obj/SocketChecks.test.exe`, which passes).
-- `LinkRound.IsForwarded("Strict/B", 0, "Go")` is true for B's own Go method: line 66 only looks at the round's entry (`entries(index).Chosen(method, -1, ...) < 0`), never at the methods B declares itself.
 - `Tokenizer.IsGrouped` only compares the counts of `(` and `)`, so `") ("` counts as grouped (Tokenizer line 129).
 - `ShapeTyping.Expanded` sets the owner only for an Identifier (line 95): a call owner like `Box(3).Sample.Weight` gets no owner and does not resolve.
 - `next(a) = ...` with `next` already defined silently becomes a second Computed: `Definitions` line 51 only checks Identifier targets for `ComputedNameMustNotBeAssigned`.
