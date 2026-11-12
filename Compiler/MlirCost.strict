@@ -17,6 +17,8 @@ constant Devices = MlirCost(MlirFunction(List(TypeEntry) + MlirParallel.Rows, Ml
 constant Reader = RowsLoop + FileExists + DoubledRow + InstructionEntry.Jump(InstructionType.LoopEnd, 5)
 constant Device = 4096
 constant SlowLoop = MlirCost(MlirFunction(Doubling.function, method = MethodEntry(Doubling.function.method, declaredType = "Slow(Numbers)")), 2)
+constant Normed = MlirGroups.Norming.function
+constant Norming = MlirCost(Normed, 2)
 Threshold Number
 	SlowLoop.Threshold is Doubling.Threshold
 	Doubling.Threshold is 6250
@@ -40,7 +42,10 @@ IsDevice(inspected MlirFunction, first Number, last Number, depth Number) Boolea
 Iteration Number
 	Doubling.Iteration is 8
 	MlirCost(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, Reading), 2).Iteration is 20002
-	Sum(function, position + 1, function.method.LoopEndOf(position), 0)
+	Norming.Iteration < Norming.Sum(Normed, 3, Normed.method.LoopEndOf(2), 0)
+	let total = Sum(function, position + 1, function.method.LoopEndOf(position), 0)
+	let kept = MlirGroups(function, position).Call
+	kept < 0 then total else total - Called(function, kept, 0) + Native
 Sum(inspected MlirFunction, first Number, last Number, depth Number) Number
 	Doubling.Sum(Doubling.function, 3, 6, 0) is 8
 	mutable total = 0
