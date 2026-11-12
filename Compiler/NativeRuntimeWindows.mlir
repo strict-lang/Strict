@@ -438,6 +438,26 @@
     return %mixed : i64
   }
   llvm.func @MoveFileExA(!llvm.ptr, !llvm.ptr, i32) -> i32
+  llvm.func @GetLastError() -> i32
+  // true after a short wait when the last file call failed with access denied or the other given error, which another
+  // process briefly causes by holding or deleting the file (a reader or a scanner), up to 50 attempts
+  func.func private @strict_file_retried(%attempt: i32, %otherError: i32) -> i1 {
+    %error = llvm.call @GetLastError() : () -> i32
+    %accessDenied = arith.constant 5 : i32
+    %attempts = arith.constant 50 : i32
+    %once = arith.constant 1 : i32
+    %isDenied = arith.cmpi eq, %error, %accessDenied : i32
+    %isOther = arith.cmpi eq, %error, %otherError : i32
+    %isHeld = arith.ori %isDenied, %isOther : i1
+    %isLeft = arith.cmpi ult, %attempt, %attempts : i32
+    %isRetried = arith.andi %isHeld, %isLeft : i1
+    cf.cond_br %isRetried, ^wait, ^done
+  ^wait:
+    llvm.call @Sleep(%once) : (i32) -> ()
+    cf.br ^done
+  ^done:
+    return %isRetried : i1
+  }
   func.func private @strict_file_rename(%path: f64, %newPath: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %replacing = arith.constant 1 : i32
@@ -710,7 +730,8 @@
     %handle = llvm.call @CreateFileA(%name, %write, %share, %attributes, %always, %normal, %null) : (!llvm.ptr, i32, i32, !llvm.ptr, i32, i32, !llvm.ptr) -> !llvm.ptr
     return %handle : !llvm.ptr
   }
-  // holds the file exclusively until File.Delete or the end of this process, Windows deletes it then
+  // holds the file exclusively until File.Delete or the end of this process, Windows deletes it then; a file just
+  // deleted stays pending (access denied) while another process (a scanner) still has it open, that is retried
   func.func private @strict_file_locked(%path: f64) -> f64 {
     %name = func.call @strict_named(%path) : (f64) -> !llvm.ptr
     %access = arith.constant 1073807360 : i32
@@ -718,15 +739,24 @@
     %always = arith.constant 4 : i32
     %deleting = arith.constant 67108992 : i32
     %null = llvm.mlir.zero : !llvm.ptr
-    %handle = llvm.call @CreateFileA(%name, %access, %share, %null, %always, %deleting, %null) : (!llvm.ptr, i32, i32, !llvm.ptr, i32, i32, !llvm.ptr) -> !llvm.ptr
     %invalid = arith.constant -1 : i64
+    %first = arith.constant 0 : i32
+    %once = arith.constant 1 : i32
+    %accessDenied = arith.constant 5 : i32
+    cf.br ^try(%first : i32)
+  ^try(%attempt: i32):
+    %handle = llvm.call @CreateFileA(%name, %access, %share, %null, %always, %deleting, %null) : (!llvm.ptr, i32, i32, !llvm.ptr, i32, i32, !llvm.ptr) -> !llvm.ptr
     %address = llvm.ptrtoint %handle : !llvm.ptr to i64
-    %held = arith.cmpi ne, %address, %invalid : i64
-    cf.cond_br %held, ^kept, ^done
+    %isOpened = arith.cmpi ne, %address, %invalid : i64
+    cf.cond_br %isOpened, ^kept, ^failed
+  ^failed:
+    %next = arith.addi %attempt, %once : i32
+    %isRetried = func.call @strict_file_retried(%next, %accessDenied) : (i32, i32) -> i1
+    cf.cond_br %isRetried, ^try(%next : i32), ^done(%isOpened : i1)
   ^kept:
     func.call @strict_file_lock_kept(%path, %address) : (f64, i64) -> ()
-    cf.br ^done
-  ^done:
+    cf.br ^done(%isOpened : i1)
+  ^done(%held: i1):
     %result = arith.uitofp %held : i1 to f64
     return %result : f64
   }
