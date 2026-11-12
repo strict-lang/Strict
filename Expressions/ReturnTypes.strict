@@ -15,14 +15,26 @@ constant Unreturned = ScopedStatement(SyntaxNode("Declaration", "let a", Early.s
 constant Finals = Scope(List(Text) + "Made", List(Text) + "Couple(Text, Number)")
 constant Lines = ("Names Texts", "\tvalue")
 constant Looped = ("Names Texts", "\tfor names", "\t\tvalue")
+constant Drawers = Scope(("Drawn", "Count"), ("None", "Number"))
+constant Tail = ScopedStatement(SyntaxParser(Tokenizer("Drawn(1)").Tokens).Parse, Named, 1)
+constant Branched = ScopedStatement(SyntaxParser(Tokenizer("name is \"a\" then 0 else Drawn(1)").Tokens).Parse, Named, 1)
+constant Argued = ScopedStatement(SyntaxParser(Tokenizer("Count(Drawn(1))").Tokens).Parse, Dropped, 1)
+constant Compared = ScopedStatement(SyntaxParser(Tokenizer("Drawn(1) is Error").Tokens).Parse, Named, 1)
+constant Unreturning = ScopedStatement(SyntaxNode("Return", "", List(SyntaxNode) + Tail.statement), Dropped, 1)
+constant Valued = SyntaxParser(Tokenizer("Count(1)").Tokens).Parse
+constant Assigned = ScopedStatement(SyntaxNode("Declaration", "let x", List(SyntaxNode) + Tail.statement), Dropped, 1)
+constant Counting = ("Count Number", "\tDrawn(1)")
+constant Running = ("Run", "\tDrawn(1)")
+constant Keeping = ("Return", "Declaration", "Reassignment")
+constant Calls = ("Call", "Member", "MethodCall", "Identifier")
+constant Unvalued = "ReturnTypeMismatch: Drawn has no return type, its call gives no value"
 Issue(scoped ScopedStatement, current Scope, lines Texts) Text
 	Naming.Issue(Joined, Named, Lines).StartsWith("ReturnTypeMismatch: a Text is returned for Texts")
 	Naming.Issue(Splitted, Named, Lines) is ""
 	Naming.Issue(ScopedStatement(Joined.statement, Named, 2), Named, Looped) is ""
 	constant hint = ", brackets around an operator only group, List(Text) + value is a list of one"
 	let node = scoped.statement
-	let isReturned = (scoped.scope.TypeOf(" dropped") is "") and (lines(scoped.line).StartsWith("\t\t") is false)
-	if (isReturned is false) or node.HasBody or (node.Kind is in ("Declaration", "Reassignment", "Return"))
+	if (IsTail(scoped, lines) is false) or node.HasBody or (node.Kind is in ("Declaration", "Reassignment", "Return"))
 		return Split(scoped, current, lines)
 	let declared = Declared(lines, scoped.line)
 	let type = inference.TypeOf(node, scoped.scope, current)
@@ -54,3 +66,35 @@ Header(lines Texts, line Number) HeaderTokens
 		if lines(value).StartsWith("\t") is false
 			return HeaderTokens(Tokenizer(lines(value)).Tokens)
 	HeaderTokens(List(Text))
+Unresulted(scoped ScopedStatement, current Scope, lines Texts) Text
+	Naming.Unresulted(Tail, Drawers, Counting) is Unvalued
+	Naming.Unresulted(Unreturning, Drawers, Counting) is Unvalued
+	Naming.Unresulted(Branched, Drawers, Counting) is Unvalued
+	Naming.Unresulted(Assigned, Drawers, Running) is ""
+	Naming.Unresulted(Argued, Drawers, Running) is Unvalued
+	(Naming.Unresulted(Tail, Drawers, Running) + Naming.Unresulted(Compared, Drawers, Counting)) is ""
+	Naming.Unresulted(Unreturning, Drawers, Running) is ""
+	Naming.Unresulted(ScopedStatement(Tail.statement, Dropped, 1), Drawers, Counting) is ""
+	let isReturning = Declared(lines, scoped.line) is not "None"
+	let isValue = isReturning and ((scoped.statement.Kind is "Return") or IsTail(scoped, lines))
+	let names = Resultless(scoped.statement, isValue, scoped.scope, current)
+	names.Length is 0 then "" else "ReturnTypeMismatch: " + names.First + " has no return type, its call gives no value"
+Resultless(node SyntaxNode, isValue Boolean, scope Scope, current Scope) Texts
+	Naming.Resultless(Branched.statement, false, Named, Drawers) is (List(Text) + "Drawn")
+	Naming.Resultless(Valued, true, Named, Drawers).Length is 0
+	Naming.Resultless(SyntaxParser(Tokenizer("Drawn(1) + 1").Tokens).Parse, true, Named, Drawers) is (List(Text) + "Drawn")
+	let isCall = (node.Kind is in Calls) and (scope.TypeOf(node.text) is "")
+	if isValue and isCall and (inference.TypeOf(node, scope, current) is "None")
+		return List(Text) + node.text
+	if node.text.StartsWith("is") or (node.Kind is "Body")
+		return List(Text)
+	mutable names = List(Mutable(Text))
+	for node.children
+		names = names + Resultless(value, isValue or (node.Kind is not in Keeping), scope, current)
+	names
+IsTail(scoped ScopedStatement, lines Texts) Boolean
+	Naming.IsTail(Tail, Counting)
+	Naming.IsTail(Argued, Counting) is false
+	Naming.Resultless(SyntaxNode("Body", "", List(SyntaxNode) + Tail.statement), true, Named, Drawers).Length is 0
+	Naming.Resultless(SyntaxNode("Identifier", "shot"), true, Scope(("shot"), ("None")), Drawers).Length is 0
+	(scoped.scope.TypeOf(" dropped") is "") and (lines(scoped.line).StartsWith("\t\t") is false)

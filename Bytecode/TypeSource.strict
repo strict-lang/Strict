@@ -1,5 +1,6 @@
 has entry TypeEntry
 constant Sizing = TypeSource(TypeEntry("Strict/Math/Size", List(MemberEntry), List(MethodEntry)))
+constant Projected = "Compiler/output/Projected"
 constant InternalPackages = ("Compiler", "Runtime", "Bytecode", "Expressions")
 Root Text
 	TypeSource.Root is "."
@@ -51,8 +52,8 @@ Cased(path Text) Text
 	path
 Project(path Text) Text
 	Sizing.Project("Examples/Sum.strict") is ""
-	Directory.Create("Compiler/output/Projected") or Directory.Exists("Compiler/output/Projected")
-	Directory.Create("Compiler/output/Projected/.git") or Directory.Exists("Compiler/output/Projected/.git")
+	(Directory.Create(Projected) is not Error) and Directory.Exists(Projected)
+	(Directory.Create(Projected + "/.git") is not Error) and Directory.Exists(Projected + "/.git")
 	Sizing.Project("Compiler/output/Projected/A/B.strict") is Sizing.Absolute("Compiler/output/Projected")
 	Sizing.Project("Compiler/output/Projected") is Sizing.Absolute("Compiler/output/Projected")
 	Sizing.Project("Examples") is ""
