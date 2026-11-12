@@ -12,6 +12,8 @@ constant Making = TypeShape("has logger", "Made(name Text) Couple", "\tCouple(na
 constant Plain = TypeShape("Made Text", "\t\"a\"")
 constant Local = TypeShape("has logger", "Made(name Text) Couple", "\tlet other = name", "\tCouple(other, 2)")
 constant Lost = TypeShape("Made Couple", "\tCouple(missing, 2)")
+constant Twofold = TypeShape("Made(number Number) Couple", "\tCouple(number, 2)", "Made(name Text) Couple", "\tCouple(name, 2)")
+constant Declared = Scope(("Made", "Made"), ("Couple", "Couple"))
 Typed(shape TypeShape, scope Scope, typeName Text) Scope
 	Counting.Typed(TypeShape("constant a = 1"), KnownTypes.NoMembers, "Count").names.Length is 0
 	Counting.Typed(Twice, KnownTypes.NoMembers, "Count").TypeOf("Twice") is "Number"
@@ -19,11 +21,11 @@ Typed(shape TypeShape, scope Scope, typeName Text) Scope
 	for shape.lines
 		let tokens = value.StartsWith("\t") then List(Text) else Tokenizer(value).Tokens
 		if value.StartsWith("constant ")
-			result = Refined(result, tokens(1), ChainType(tokens, typeName, result))
+			result = Refined(result, tokens(1), 0, ChainType(tokens, typeName, result))
 		else if shape.IsComputed(value)
 			result = result.With(tokens(0), ComputedType(tokens, typeName, result))
 		else if shape.IsMethodHeader(value)
-			result = Known(result, tokens(0), Returned(shape, index, typeName))
+			result = Refined(result, tokens(0), shape.Overload(tokens(0), index), Returned(shape, index, typeName))
 	result
 Returned(shape TypeShape, position Number, typeName Text) Text
 	Swapped.Returned(Making, 1, "User") is "Couple(Text, Number)"
@@ -46,22 +48,22 @@ Result(shape TypeShape, position Number, typeName Text) Text
 	for body.children
 		scope = bodies.Declare(value, scope)
 	bodies.StatementType(ScopedStatement(body.children.Last, scope, position))
-Refined(scope Scope, name Text, type Text) Scope
-	Counting.Refined(Scope(List(Text) + "a", List(Text) + "Box"), "a", "Item").names.Length is 1
-	Counting.Refined(Scope(List(Text) + "a", List(Text) + "Box"), "a", "Item").TypeOf("a") is "Item"
-	Counting.Refined(KnownTypes.NoMembers, "a", "Item").TypeOf("a") is "Item"
-	if (type is "") or (scope.Count(name) is 0)
+Refined(scope Scope, name Text, ordinal Number, type Text) Scope
+	Counting.Refined(Scope(List(Text) + "a", List(Text) + "Box"), "a", 0, "Item").names.Length is 1
+	Counting.Refined(Scope(List(Text) + "a", List(Text) + "Box"), "a", 0, "Item").TypeOf("a") is "Item"
+	Counting.Refined(KnownTypes.NoMembers, "a", 0, "Item").TypeOf("a") is "Item"
+	let position = scope.Position(name, ordinal)
+	if (type is "") or (position < 0)
 		return Known(scope, name, type)
 	mutable types = scope.types
-	for scope.names
-		if value is name
-			types(index) = type
+	types(position) = type
 	Scope(scope.names, types)
 Known(scope Scope, name Text, type Text) Scope
 	Swapped.Typed(Instantiation.Swapping, KnownTypes.NoMembers, "Couple").TypeOf("Swapped") is "Couple(second, first)"
 	Counting.Typed(TypeShape("constant a = List(Number) + 3"), KnownTypes.NoMembers, "Count").TypeOf("a") is "Numbers"
-	Counting.Refined(Scope(List(Text) + "a", List(Text) + "Box"), "a", "").TypeOf("a") is "Box"
-	Counting.Refined(Scope(("a", "b"), ("Box", "Box")), "a", "Item").TypeOf("b") is "Box"
+	Counting.Refined(Scope(List(Text) + "a", List(Text) + "Box"), "a", 0, "").TypeOf("a") is "Box"
+	Counting.Refined(Scope(("a", "b"), ("Box", "Box")), "a", 0, "Item").TypeOf("b") is "Box"
+	Swapped.Typed(Twofold, Declared, "User").types is ("Couple(Number, Number)", "Couple(Text, Number)")
 	Counting.Known(KnownTypes.NoMembers, "a", "").names.Length is 0
 	Counting.Known(KnownTypes.NoMembers, "a", "Number").TypeOf("a") is "Number"
 	type is "" then scope else scope.With(name, type)

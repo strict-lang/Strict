@@ -30,14 +30,15 @@ Issue(scoped ScopedStatement, current Scope, lines Texts) Text
 	isSingle then "ReturnTypeMismatch: a " + type + " is returned for " + declared + hint else ""
 Split(scoped ScopedStatement, current Scope, lines Texts) Text
 	Coupling.Split(Early, Finals, Making).EndsWith(" gives a Couple(Number, Number) or a Couple(Text, Number)")
-	Coupling.Split(Early, Finals.With("Made", "Couple(Number, Number)"), Making) is ""
+	Coupling.Split(Early, Scope(Finals.names, List(Text) + "Couple(Number, Number)"), Making) is ""
 	Coupling.Split(Early, Finals, Making).StartsWith("ConditionalBranchesMustHaveOneType: return Couple(1, 2) gives a ")
 	(Coupling.Split(Unreturned, Finals, Making) + Coupling.Split(Bare, Finals, Making)) is ""
 	let node = scoped.statement
 	if (node.Kind is not "Return") or (node.HasValue is false)
 		return ""
 	let type = inference.TypeOf(node.children(0), scoped.scope, current)
-	let final = current.TypeOf(Header(lines, scoped.line).tokens.First)
+	let name = Header(lines, scoped.line).tokens.First
+	let final = current.TypeAt(name, TypeShape(lines).Overload(name, scoped.line))
 	let message = "ConditionalBranchesMustHaveOneType: " + node + " gives a " + type + " or a " + final
 	BranchTypes(inference).IsSplit(type, final) then message else ""
 Declared(lines Texts, line Number) Text
@@ -50,6 +51,7 @@ Declared(lines Texts, line Number) Text
 Header(lines Texts, line Number) HeaderTokens
 	Naming.Header(Lines, 1).tokens.First is "Names"
 	Naming.Header(Lines, 0).tokens.Length is 0
+	Coupling.Split(Early, Scope(("Made", "Made"), ("Couple(Number, Number)", "Couple(Text, Number)")), Making) is ""
 	for Range(0, line).Reverse
 		if lines(value).StartsWith("\t") is false
 			return HeaderTokens(Tokenizer(lines(value)).Tokens)

@@ -131,6 +131,14 @@ MethodScope Scope
 			names.Add(isMethod then header.tokens(0) else header.MemberName)
 			types.Add(isMethod then header.ReturnType else header.DeclaredType(1))
 	Scope(names, types)
+Overload(name Text, position Number) Number
+	TypeShape("Made(a Number) Text", "\tMade(\"b\")", "Made(b Text) Text", "\tb").Overload("Made", 3) is 1
+	TypeShape("MadeUp Text", "\t\"a\"", "Made Text", "\t\"b\"", "Made(a Text) Text").Overload("Made", 3) is 0
+	mutable ordinal = -1
+	for lines.Slice(0, position + 1)
+		if value.StartsWith(name) and (Tokenizer(value).Tokens.First is name)
+			ordinal = ordinal + 1
+	ordinal
 EnumValue(position Number) Number
 	TypeShape("constant A", "constant B = 10", "constant C").EnumValue(2) is 11
 	TypeShape("constant A").EnumValue(0) is 0

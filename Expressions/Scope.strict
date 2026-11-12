@@ -32,13 +32,18 @@ Count(name Text) Number
 TypeAt(name Text, ordinal Number) Text
 	Scope(("a", "b", "a"), ("A", "B", "C")).TypeAt("a", 1) is "C"
 	Scope(("a", "b"), ("A", "B")).TypeAt("a", 1) is ""
+	let position = Position(name, ordinal)
+	position < 0 then "" else types(position)
+Position(name Text, ordinal Number) Number
+	Scope(("a", "b", "a"), ("A", "B", "C")).Position("a", 1) is 2
+	Scope(("a", "b"), ("A", "B")).Position("a", 1) is -1
 	mutable found = -1
 	for names
 		if value is name
 			found = found + 1
 			if found is ordinal
-				return types(index)
-	""
+				return index
+	-1
 Indexed Scope
 	Scope(("a", "b", "a"), ("A", "B", "C")).Indexed.indexed is 3
 	Scope(("a", "b", "a"), ("A", "B", "C")).Indexed.TypeOf("a") is "C"
