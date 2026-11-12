@@ -2,7 +2,8 @@ has function MlirFunction
 has at Number
 constant Twice = MlirDeviceStatements.Twice
 constant Doubled = MlirDeviceStatements.Doubled
-constant Made = MlirFunction(MlirGpuCheck.Floored.types + MlirLayout.Degrees, MlirGpuCheck.Floored.type, MethodEntry("Made", List(MemberEntry), "Strict/Degrees", (GpuNumberSamples.ValueLoaded, MlirDeviceCalls.Making, InstructionEntry.Return(1))))
+constant Making = MethodEntry("Made", List(MemberEntry), "Strict/Degrees", (GpuNumberSamples.ValueLoaded, MlirDeviceCalls.Making, InstructionEntry.Return(1)))
+constant Made = MlirFunction(MlirGpuCheck.Floored.types + MlirLayout.Degrees, MlirGpuCheck.Floored.type, Making)
 constant Absolute = MlirGpuCheck.Absolute
 constant Summed = MlirDeviceStatements.Summed
 constant Records = MlirDeviceRecords.Holding
@@ -152,11 +153,11 @@ Finished(entry InstructionEntry) Texts
 	List(Text) + (entry.kind is InstructionType.JumpEnd then "}" else line)
 Recorded(entry InstructionEntry, slots Number) Texts
 	WgslStatement(Records, 4).Recorded(LaneFlow.Picking, 2).First is "let k4 = n_index(r1) * 2u;"
-	WgslStatement(Records, 4).Recorded(LaneFlow.Picking, 2)(1).StartsWith("if (r1.f >= 0.0 && k4 < v_")
 	let position = "k" + at
 	let target = "r" + entry.payload(0)
 	let first = "let " + position + " = n_index(r" + entry.payload(1) + ") * " + slots + "u;"
-	let read = "if (r" + entry.payload(1) + ".f >= 0.0 && " + position + " < v_" + entry.texts(0) + "l.y) { " + target + " = n_int(i32(" + position + ")); }"
+	let inside = "if (r" + entry.payload(1) + ".f >= 0.0 && " + position + " < v_" + entry.texts(0) + "l.y) { "
+	let read = inside + target + " = n_int(i32(" + position + ")); }"
 	(first, read, "else { failed[0] = 1u; " + target + " = n_int(0); }")
 Fielded(entry InstructionEntry) Texts
 	WgslStatement(Records, 5).Fielded(MlirDeviceRecords.Field)(1).EndsWith("r3 = n_of(n_item(v_pairsl.x, k5)); }")

@@ -61,8 +61,6 @@ Double(number Number) ByteEncoder
 	ByteEncoder(1, 2).Double(-2).bytes is (1, 2, 0, 0, 0, 0, 0, 0, 0, 192)
 	ByteEncoder(1, 2).Double(0.1).bytes is (1, 2, 154, 153, 153, 153, 153, 153, 185, 63)
 	ByteEncoder.Empty.Double(-3 * 2 ^ -1074).bytes is (3, 0, 0, 0, 0, 0, 0, 128)
-	if number is 0
-		return UInt(0, 8)
 	let isSubnormal = number.Absolute < 2 ^ (1 - ExponentBias)
 	let exponent = isSubnormal then -ExponentBias else Exponent(number.Absolute)
 	let normal = (number.Absolute / 2 ^ exponent - 1) * 2 ^ MantissaBits
