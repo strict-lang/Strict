@@ -1,6 +1,8 @@
 has function MlirFunction
 constant Twice = WgslFunction(MlirDeviceStatements.Twice)
 constant Summing = WgslFunction(MlirDeviceStatements.Summed)
+constant Half = MemberEntry("half", "Strict/Number", List(InstructionEntry) + InstructionEntry(InstructionType.Set, List(Text), (1, 0.5, 0)), false)
+constant Halving = WgslFunction(MlirFunction(Twice.function, method = MethodEntry("Run", List(MemberEntry) + Half, "Strict/Number", List(InstructionEntry))))
 Name Text
 	Twice.Name is "s_Rows_Twice_1"
 	"s_" + function.Symbol
@@ -26,7 +28,7 @@ IsList(parameter Number) Boolean
 	MlirDeviceStatements(function, 0).IsList(kind)
 Arguments(entry InstructionEntry) Text
 	Twice.Arguments(MlirDeviceStatements.Call) is ", r1"
-	WgslFunction(MlirDeviceCalls.Filling.callee).Arguments(MlirDeviceCalls.Twicing) is ", r1, n_int(3)"
+	WgslFunction(MlirDeviceCalls.Filling.callee).Arguments(MlirDeviceCalls.Twicing) is ", r1, n_of(3)"
 	let arguments = PayloadDecoder(entry).Arguments
 	mutable text = ""
 	for arguments
@@ -35,9 +37,10 @@ Arguments(entry InstructionEntry) Text
 	text + Defaults(arguments.Length)
 Defaults(given Number) Text
 	Twice.Defaults(1) is ""
+	Halving.Defaults(0) is ", n_of(0.5)"
 	mutable text = ""
 	for Range(given, function.method.parameters.Length)
-		text = text + ", n_int(" + MlirDefaults(function).Whole(function.method.parameters(value)) + ")"
+		text = text + ", n_of(" + MlirDefaults(function).Whole(function.method.parameters(value)) + ")"
 	text
 Declarations Texts
 	Twice.Declarations.First is "var flag = false;"
