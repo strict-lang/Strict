@@ -149,11 +149,12 @@ Started(count Number, written Number, slot Text) Texts
 Constructed(entry InstructionEntry, typeName Text, instances MlirInstances) Texts
 	MlirFlats(Made.function, 8).Constructed(Construction, "Tripling", MlirInstances(Made.function, 8)).Length is 2
 	Sample.Constructed(Construction, "Tripling", MlirInstances(Sample.function, 1))(1).IndexOf("flat_from_list(") > 0
-	let argument = entry.payload(6 + entry.payload(3))
+	if Count(typeName) is 0
+		return instances.Constructed(entry, typeName)
+	let argument = PayloadDecoder(entry).Arguments.First
 	let writer = MlirKinds(function).Writer(position, argument)
 	let loaded = writer >= 0 then function.method.instructions(writer) else entry
-	let isBuilt = (loaded.kind is InstructionType.LoadVariableToRegister) and (Packed(loaded.texts(0)) > 0)
-	if (Count(typeName) is 0) or isBuilt
+	if (loaded.kind is InstructionType.LoadVariableToRegister) and (Packed(loaded.texts(0)) > 0)
 		return instances.Constructed(entry, typeName)
 	let temp = "%t" + position
 	let converted = "    " + temp + "f = func.call @strict_flat_from_list(" + temp + "l) : (f64) -> f64"
