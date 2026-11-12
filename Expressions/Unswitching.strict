@@ -31,7 +31,7 @@ Found(start Number) Number
 Hoisted(at Number) Texts
 	Blurring.Hoisted(2).Length is 7
 	Blurring.Hoisted(2)(1) is "\t\tfor y, x in Range(-1, 2), Range(-1, 2)"
-	let tabs = lines(at).Substring(0, Callees(lines, folder).Depth(lines(at)))
+	let tabs = lines(at).Substring(0, BodyParser.Indent(lines(at)))
 	let end = Callees(lines, folder).BlockEnd(at)
 	let corners = Text.Combine(Corners(Unswitching(lines, folder), at).Calls, " and ")
 	let unchecked = (List(Text) + (tabs + "if " + corners) + ("\t" + lines(at))) + lines.Slice(at + 2, end - at - 2)
@@ -52,7 +52,7 @@ IsHoistable(at Number) Boolean
 	if (isLoop is false) or (lines(condition).TrimStart.StartsWith("if ") is false) or (Names(at).Length is 0)
 		return false
 	let isBody = (callees.BlockEnd(condition) is callees.BlockEnd(at)) and IsStatements(condition)
-	isBody and (callees.Depth(lines(condition)) is callees.Depth(lines(at)) + 1) and IsMonotone(at)
+	isBody and (BodyParser.Indent(lines(condition)) is BodyParser.Indent(lines(at)) + 1) and IsMonotone(at)
 IsStatements(condition Number) Boolean
 	Blurring.IsStatements(3)
 	Unswitching(Nested + Checked + "\t\t\t\tbitmap.Colors(pixel)", "ImageProcessing").IsStatements(3) is false

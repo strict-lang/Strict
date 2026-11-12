@@ -33,7 +33,7 @@ IsInlinable(at Number) Boolean
 	Inlines(("Run", "\tlet total = 1", "\t\tLog(total)")).IsInlinable(1) is false
 	Inlines(("Run", "\tlet total = 1")).IsInlinable(1) is false
 	let inlined = Value(lines(at))
-	if (inlined is "") or (Indent(Line(at + 1)) is not Indent(lines(at)))
+	if (inlined is "") or (BodyParser.Indent(Line(at + 1)) is not BodyParser.Indent(lines(at)))
 		return false
 	let name = Tokenizer(lines(at).Trim).Tokens(1)
 	let next = Tokenizer(Line(at + 1).Trim).Tokens
@@ -60,9 +60,6 @@ Value(line Text) Text
 	let trimmed = line.Trim
 	let at = trimmed.IndexOf(" = ") + 3
 	trimmed.StartsWith("let ") then trimmed.Substring(at, trimmed.Length - at) else ""
-Indent(line Text) Number
-	Evicted.Indent("\t\tx") is 2
-	line.Length - line.TrimStart.Length
 IsUsedLater(name Text, start Number) Boolean
 	Inlines(("Run", "\tLog(1)", "\t\ttotal")).IsUsedLater("total", 1)
 	Inlines(("Run", "\tLog(1)", "Other", "\ttotal")).IsUsedLater("total", 1) is false
@@ -127,7 +124,7 @@ Merged(at Number) Text
 	Inlines(("R Number", "\tif done", "\t\tLog(1)", "\t1")).Merged(1) is ""
 	let returned = Line(at + 1).Trim
 	let last = Line(at + 2)
-	let isValue = (Indent(last) is 1) and (Tokenizer(last.Trim).Tokens.First is not in Keywords)
+	let isValue = (BodyParser.Indent(last) is 1) and (Tokenizer(last.Trim).Tokens.First is not in Keywords)
 	let isBranch = lines(at).StartsWith("\tif ") and returned.StartsWith("return ")
 	if (isBranch and isValue and (Line(at + 3).StartsWith("\t") is false)) is false
 		return ""

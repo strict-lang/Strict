@@ -77,13 +77,13 @@ IsYielded(at Number) Boolean
 	Yielding.IsYielded(2) and (Stopping.IsYielded(2) is false) and (Waiting.IsYielded(2) is false)
 	StatusCodes(("A", "\tfor 3", "\t\tif value is 1", "\t\t\tLog(value)")).IsYielded(3)
 	StatusCodes(("A", "\tfor 3", "\t\t1", "\tif x", "\t\tLog(1)")).IsYielded(4) is false
-	mutable indent = Inlines(lines).Indent(lines(at))
+	mutable indent = BodyParser.Indent(lines(at))
 	for Range(0, at).Reverse
 		let trimmed = lines(value).Trim
-		if Inlines(lines).Indent(lines(value)) < indent
+		if BodyParser.Indent(lines(value)) < indent
 			if trimmed.StartsWith("for ") and (trimmed.StartsWith("for as long as ") is false)
 				return true
-			indent = Inlines(lines).Indent(lines(value))
+			indent = BodyParser.Indent(lines(value))
 	false
 Returned(at Number) ValidationIssues
 	(Stopping.Returned(0).Length is 1) and (Counting.Returned(0).First.Line is 3)
@@ -94,7 +94,7 @@ Returned(at Number) ValidationIssues
 	let name = Tokenizer(lines(at)).Tokens.First
 	for Range(at + 1, End(at))
 		let trimmed = lines(value).Trim
-		let isLast = (value is End(at) - 1) and (Inlines(lines).Indent(lines(value)) is 1)
+		let isLast = (value is End(at) - 1) and (BodyParser.Indent(lines(value)) is 1)
 		let returned = trimmed.StartsWith("return ") then trimmed.Substring(7, trimmed.Length - 7) else ""
 		issues = issues + Issued(name, Literals(isLast then trimmed else returned), value + 1)
 	issues

@@ -9,7 +9,7 @@ Lines Texts
 	let lines = fusion.lines
 	let ending = fusion.Ending(fusion.Header(name))
 	let last = lines(ending - 1)
-	let tabs = last.Substring(0, last.Length - last.TrimStart.Length)
+	let tabs = last.Substring(0, BodyParser.Indent(last))
 	let start = Statements(ending)
 	let body = lines.Slice(start, ending - start - 1) + (tabs + "let fused = " + last.TrimStart)
 	Signature + body + Accumulated(tabs) + Result

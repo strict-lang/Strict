@@ -58,10 +58,10 @@ IsLooped(at Number) Boolean
 	Changes(("Sum Number", "\tfor 3", "\t\tvalue")).IsLooped(2)
 	Changes(("Sum Number", "\tfor as long as true", "\t\tvalue")).IsLooped(2) is false
 	Changes(("Sum Number", "\tfor 3", "\t\t1", "\tvalue")).IsLooped(3) is false
-	mutable within = lines(at).Length - lines(at).TrimStart.Length
+	mutable within = BodyParser.Indent(lines(at))
 	for at
 		let line = lines(at - 1 - index)
-		let depth = line.Length - line.TrimStart.Length
+		let depth = BodyParser.Indent(line)
 		if depth < within
 			if depth is 0 or line.TrimStart.StartsWith("for ")
 				return depth > 0 and (line.TrimStart.StartsWith("for as long as ") is false)

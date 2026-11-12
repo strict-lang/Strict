@@ -1,6 +1,0 @@
-has expression Text
-has indexExpression Text
-has ElementTypeName Text
-to Text
-	ListCall("items", "0", "Number") to Text is "items(0)"
-	expression + "(" + indexExpression + ")"

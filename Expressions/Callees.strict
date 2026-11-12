@@ -28,7 +28,7 @@ TypeOf(name Text, at Number) Text
 	Callees(("has bitmap Bitmap", "Run", "\tbitmap"), "").TypeOf("bitmap", 2) is "Bitmap"
 	mutable header = 0
 	for at
-		header = Depth(lines(index)) is 0 then index else header
+		header = BodyParser.Indent(lines(index)) is 0 then index else header
 	for Parameters(lines(header)) + Members
 		let words = value.Split(" ")
 		if (words.First is name) and (words.Length > 1)
@@ -72,15 +72,12 @@ Closing(text Text, open Number) Number
 		if depth is 0
 			return value
 	-1
-Depth(line Text) Number
-	Blurring.Depth("\t\tx") is 2
-	line.Length - line.TrimStart.Length
 BlockEnd(at Number) Number
 	Blurring.BlockEnd(2) is 5
 	Blurring.BlockEnd(4) is 5
 	Blurring.BlockEnd(5) is 6
 	Blurring.BlockEnd(0) is 6
 	for Range(at + 1, lines.Length)
-		if Depth(lines(value)) <= Depth(lines(at))
+		if BodyParser.Indent(lines(value)) <= BodyParser.Indent(lines(at))
 			return value
 	lines.Length
