@@ -112,7 +112,7 @@ Packed(name Text) Number
 		let isLoaded = (value.kind is InstructionType.LoadVariableToRegister) and (value.texts(0) is name)
 		if isLoaded and (index + 1 < instructions.Length)
 			count = Constructing(instructions(index + 1), value.payload(0))
-	(count > 0) and (writes is count) then count else 0
+	writes is count then count else 0
 Constructing(entry InstructionEntry, register Number) Number
 	Made.Constructing(InstructionEntry.Return(3), 3) is 0
 	Made.Constructing(InstructionEntry.Invoke(4, ("Strict/Math/Tripling", "Of", "T"), List(Number) + 3, -1), 3) is 0

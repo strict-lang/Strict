@@ -85,7 +85,7 @@ Grouping(register Number, before Number) Text
 	Norming.Grouping(4, 7) is "?size"
 	Norming.Grouping(1, 11) is ""
 	let writer = Writer(register, before)
-	let entry = function.method.instructions(writer < 0 then before else writer)
+	let entry = function.method.instructions(writer)
 	if (writer < 0) or (entry.kind is InstructionType.LoadConstantToRegister)
 		return ""
 	if entry.kind is InstructionType.LoadVariableToRegister
@@ -128,7 +128,7 @@ Calculated(entry InstructionEntry, at Number) Text
 	let left = Grouping(entry.payload(1), at)
 	let right = Grouping(entry.payload(2), at)
 	let divisor = Writer(entry.payload(2), at)
-	let named = function.method.instructions(divisor < 0 then at else divisor)
+	let named = function.method.instructions(divisor)
 	let isNamed = (divisor >= 0) and (named.kind is InstructionType.LoadVariableToRegister)
 	let isGrouping = (entry.kind is InstructionType.Divide) and (left is "!") and (right is "") and isNamed
 	let aligned = Aligned(entry, at)
@@ -138,18 +138,18 @@ Aligned(entry InstructionEntry, at Number) Text
 	if (entry.kind is not InstructionType.Subtract) or (IsIndex(entry.payload(1), at) is false)
 		return ""
 	let writer = Resolved(entry.payload(2), at)
-	let remainder = function.method.instructions(writer < 0 then at else writer)
+	let remainder = function.method.instructions(writer)
 	if (writer < 0) or (remainder.kind is not InstructionType.Modulo) or (IsIndex(remainder.payload(1), writer) is false)
 		return ""
 	let divisor = Writer(remainder.payload(2), writer)
-	let named = function.method.instructions(divisor < 0 then writer else divisor)
+	let named = function.method.instructions(divisor)
 	let isNamed = (divisor >= 0) and (named.kind is InstructionType.LoadVariableToRegister)
 	isNamed and (Grouping(remainder.payload(2), writer) is "") then named.texts(0) else ""
 Resolved(register Number, before Number) Number
 	Aligning.Resolved(6, 9) is 6 and Aligning.Resolved(3, 9) is 5
 	Aligning.Resolved(4, 7) is 6 and Aligning.Resolved(9, 9) is -1
 	let writer = Writer(register, before)
-	let entry = function.method.instructions(writer < 0 then before else writer)
+	let entry = function.method.instructions(writer)
 	if (writer < 0) or (entry.kind is not InstructionType.LoadVariableToRegister)
 		return writer
 	for writer - position - 1
@@ -168,7 +168,7 @@ IsIndex(register Number, before Number) Boolean
 	if function.method.instructions(position).payload(1) is 1
 		return false
 	let writer = Writer(register, before)
-	let entry = function.method.instructions(writer < 0 then before else writer)
+	let entry = function.method.instructions(writer)
 	(writer >= 0) and (entry.kind is InstructionType.LoadVariableToRegister) and (entry.texts(0) is "index")
 Combined(left Text, right Text) Text
 	Norming.Combined("", "?size") is "!" and Norming.Combined("size", "size") is "size"

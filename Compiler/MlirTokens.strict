@@ -78,7 +78,7 @@ Row(register Number, before Number) Texts
 	(Grouped.Row(24, 13).Length is 0) and (Varied.Row(4, 43).Length is 0)
 	let groups = MlirGroups(function, position)
 	let writer = groups.Writer(register, before)
-	let read = function.method.instructions(writer < 0 then before else writer)
+	let read = function.method.instructions(writer)
 	if (writer < 0) or (read.kind is not InstructionType.IndexCall)
 		return List(Text)
 	let rows = Ranged(groups.Writer(read.payload(1), writer))
@@ -90,7 +90,7 @@ Ranged(at Number) Texts
 	let rows = Indexed(at, InstructionType.Modulo)
 	if rows is not ""
 		return List(Text) + rows
-	let sum = function.method.instructions(at < 0 then position else at)
+	let sum = function.method.instructions(at)
 	if (at < 0) or (sum.kind is not InstructionType.Add)
 		return List(Text)
 	let modulo = Indexed(MlirGroups(function, position).Writer(sum.payload(2), at), InstructionType.Modulo)
@@ -103,7 +103,7 @@ Based(register Number, before Number, rows Text) Text
 	Grouped.Based(23, 12, "") is ""
 	let groups = MlirGroups(function, position)
 	let writer = groups.Writer(register, before)
-	let read = function.method.instructions(writer < 0 then before else writer)
+	let read = function.method.instructions(writer)
 	if (writer < 0) or (read.kind is not InstructionType.IndexCall)
 		return ""
 	Tiled(groups.Writer(read.payload(1), writer)) is rows then read.texts(0) else ""
@@ -114,7 +114,7 @@ Start(register Number, before Number) Texts
 	Varied.Start(12, 41).Length is 0
 	let groups = MlirGroups(function, position)
 	let writer = groups.Writer(register, before)
-	let product = function.method.instructions(writer < 0 then before else writer)
+	let product = function.method.instructions(writer)
 	if (writer < 0) or (product.kind is not InstructionType.Multiply)
 		return List(Text)
 	let rows = Floored(groups.Writer(product.payload(1), writer))
@@ -124,7 +124,7 @@ Floor(at Number) Number
 	Summing.Floor(12) is 11
 	Summing.Floor(11) is -1
 	Summing.Floor(15) is -1
-	let floor = function.method.instructions(at < 0 then position else at)
+	let floor = function.method.instructions(at)
 	if (at < 0) or (floor.kind is not InstructionType.Invoke)
 		return -1
 	if floor.texts(1) is not "Floor"
@@ -143,12 +143,12 @@ Tiled(at Number) Text
 	Summing.Tiled(12) is ""
 	(Varied.Tiled(49) is "") and (Varied.Tiled(52) is "")
 	let quotient = Floor(at)
-	let divide = function.method.instructions(quotient < 0 then position else quotient)
+	let divide = function.method.instructions(quotient)
 	if (quotient < 0) or (divide.kind is not InstructionType.Divide)
 		return ""
 	let groups = MlirGroups(function, position)
 	let tile = groups.Writer(divide.payload(2), quotient)
-	let tiles = function.method.instructions(tile < 0 then position else tile)
+	let tiles = function.method.instructions(tile)
 	let isTile = (tile >= 0) and (tiles.payload is (divide.payload(2), 1, Tile))
 	isTile then Indexed(groups.Writer(divide.payload(1), quotient), InstructionType.Divide) else ""
 Indexed(at Number, kind Number) Text
@@ -157,7 +157,7 @@ Indexed(at Number, kind Number) Text
 	Summing.Indexed(14, InstructionType.Multiply) is ""
 	Varied.Ranged(28).Length is 0
 	(Varied.Ranged(29).Length is 0) and (Varied.Ranged(30).Length is 0)
-	let entry = function.method.instructions(at < 0 then position else at)
+	let entry = function.method.instructions(at)
 	if (at < 0) or (entry.kind is not kind)
 		return ""
 	Variable(entry.payload(1), at) is "index" then Variable(entry.payload(2), at) else ""
@@ -167,7 +167,7 @@ Variable(register Number, before Number) Text
 	Summing.Variable(99, 4) is ""
 	Summing.Variable(4, 15) is ""
 	let writer = MlirGroups(function, position).Writer(register, before)
-	let entry = function.method.instructions(writer < 0 then before else writer)
+	let entry = function.method.instructions(writer)
 	(writer >= 0) and (entry.kind is InstructionType.LoadVariableToRegister) then entry.texts(0) else ""
 IsConstant(register Number, before Number, number Number) Boolean
 	Summing.IsConstant(5, 15, 0)
@@ -175,6 +175,6 @@ IsConstant(register Number, before Number, number Number) Boolean
 	Summing.IsConstant(5, 7, 0) is false
 	Summing.IsConstant(5, 15, 1) is false
 	let writer = MlirGroups(function, position).Writer(register, before)
-	let entry = function.method.instructions(writer < 0 then before else writer)
+	let entry = function.method.instructions(writer)
 	let isLoad = (writer >= 0) and (entry.kind is InstructionType.LoadConstantToRegister)
 	isLoad and (entry.payload is InstructionEntry.LoadNumber(register, number).payload)

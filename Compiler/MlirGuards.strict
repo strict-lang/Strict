@@ -77,7 +77,7 @@ Sited(position Number) Texts
 		return Origins(position, entry.payload(1)) + Origins(position, entry.payload(2))
 	if kind is InstructionType.IndexCall
 		return Origins(position, entry.payload(1))
-	if (kind is InstructionType.LoopBegin) and (position > function.Guarded)
+	if kind is InstructionType.LoopBegin
 		return Origins(position, entry.payload(0))
 	let isFloor = (kind is InstructionType.Invoke) and (PayloadDecoder(entry).Text(2) is "Floor")
 	isFloor then Floored(position, entry) else List(Text) + "?"
