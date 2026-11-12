@@ -7,6 +7,8 @@ constant Branch = SyntaxNode("If", "", (SyntaxNode("Identifier", "a"), Body))
 constant NextTwo = SyntaxNode("Call", "next", List(SyntaxNode) + SyntaxNode("Number", "2"))
 constant CallsNext = SyntaxNode("Call", "f", List(SyntaxNode) + SyntaxNode("Identifier", "next"))
 constant Double = BodyParser(("Run", "\tdouble(x) = x * 2")).Block(1, 1).children(0)
+constant Computed = SyntaxNode("Computed", "next", Next.children)
+constant Unused = SyntaxNode("Body", "", (CallsNext, Next, SyntaxNode("Number", "1")))
 constant Member = SyntaxNode("Reassignment", "", (SyntaxNode("Member", "b"), Body))
 Inlined(body SyntaxNode, start Number) SyntaxNode
 	Positions.Inlined(Body, 1).children.Length is 4
@@ -26,7 +28,7 @@ Expanded(body SyntaxNode, known Texts, definitions SyntaxNodes) SyntaxNode
 	mutable computed = definitions
 	mutable statements = List(Mutable(SyntaxNode))
 	for body.children
-		let statement = Substituted(Defined(value, names, computed), computed)
+		let statement = Used(Substituted(Defined(value, names, computed), computed), body, index)
 		if statement.Kind is "Computed"
 			computed = computed + statement
 		else
@@ -53,6 +55,24 @@ Defined(statement SyntaxNode, known Texts, definitions SyntaxNodes) SyntaxNode
 		return SyntaxNode("Invalid", "ComputedNameMustNotBeAssigned: " + target.text, List(SyntaxNode), statement.line)
 	let isNew = (target.Kind is in ("Identifier", "Call")) and (target.text is not in known) and AreNames(target.children)
 	isNew then SyntaxNode("Computed", target.text, statement.children, statement.line) else statement
+Used(statement SyntaxNode, body SyntaxNode, position Number) SyntaxNode
+	Positions.Used(Computed, Body, 1) is Computed
+	Positions.Used(Computed, SyntaxNode("Body", "", (Next, Branch)), 0) is Computed
+	Positions.Used(Computed, Body, 4).Kind is "Invalid"
+	Positions.Used(Computed, Unused, 1).text is "UnusedComputedNameMustBeRemoved: next"
+	Positions.Used(Body.children(0), Body, 4) is Body.children(0)
+	let later = body.children.Slice(position + 1, body.children.Length - position - 1)
+	if (statement.Kind is not "Computed") or IsUsed(statement.text, later)
+		return statement
+	SyntaxNode("Invalid", "UnusedComputedNameMustBeRemoved: " + statement.text, List(SyntaxNode), statement.line)
+IsUsed(name Text, nodes SyntaxNodes) Boolean
+	Positions.IsUsed("next", List(SyntaxNode) + Branch)
+	Positions.IsUsed("other", List(SyntaxNode) + Branch) is false
+	Positions.IsUsed("next", List(SyntaxNode) + SyntaxNode("Text", "next")) is false
+	for nodes
+		if ((value.Kind is in ("Identifier", "Call")) and (value.text is name)) or IsUsed(name, value.children)
+			return true
+	false
 Substituted(node SyntaxNode, definitions SyntaxNodes) SyntaxNode
 	Positions.Substituted(NextTwo, List(SyntaxNode) + Next) to Text is "position + 2"
 	Positions.Substituted(SyntaxNode("Identifier", "other"), List(SyntaxNode) + Next) to Text is "other"

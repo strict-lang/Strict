@@ -187,7 +187,7 @@ TrimStart Text
 	""
 ```
 
-A computed name is one expression evaluated again on every use, only for very simple things (`Examples/ComputedRectangle.strict`):
+A computed name is one expression evaluated again on every use, only for very simple things (`Examples/ComputedRectangle.strict`), one no later line uses is `UnusedComputedNameMustBeRemoved` (often a misspelled assignment):
 ```
 	mutable position = 3
 	next(add = 1) = position + add
