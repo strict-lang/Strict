@@ -100,7 +100,7 @@ Builds, checks, folder tests on the VM, VS Code typing checks and value tracing 
 - Precedence from loosest to tightest: `then`/`else`, `or`, `xor`, `and`, comparisons (`is`, `is not`, `is in`, `is not in`, `<`, `>`, `<=`, `>=`), `in`, `+`/`-`, `*`/`/`/`%` (left to right: `a % b / c` is `(a % b) / c`), `^`, `to`. A prefix `not` belongs to the one operand that follows it and needs no brackets inside `and`/`or` chains: `isOpen and not isLocked or isForced` is `(isOpen and (not isLocked)) or isForced`; negate a comparison with `is not`, `is not in` or brackets (`not (a < b)`).
 - A conditional as one of several arguments needs brackets: `Text(value, (isShort then 2 else 4))`.
 - Constraints follow `with`: `has Width Number with value > 0`, `Run(frames = 0 with value >= 0)`. A value that does not fit is `Error("ConstraintNotMet: ...")`.
-- A decimal is a Number with a step: `has price Number with Step 0.01` rounds every value going into it (half to even), plain Number arithmetic stays binary.
+- A decimal is a Number with a step: `has price Number with Step 0.01` rounds every value going into it (half to even), plain Number arithmetic stays binary. Only a Number has a step (`StepMustBeOnNumber`).
 - Sums in a `for` may be added in any order (vectorized, parallel), compare sums of fractions with `IsNearlyEqual`.
 - `(x)` is a list with one element, brackets around operators only group: `(5 + 3) * 2 is 16`.
 - `and`, `or` and `xor` of Numbers are bitwise: `12 and 10 is 8`.

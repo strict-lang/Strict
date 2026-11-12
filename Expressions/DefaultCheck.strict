@@ -16,6 +16,7 @@ constant Coupled = DefaultCheck(Instantiation.Inferring)
 constant Empty = (KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers)
 constant Kept = (Scope(("pair"), ("Couple")), Instantiation.Couples.members(0), Scope(("value"), ("Number")))
 constant Keeping = DefaultCheck(TypeInference(KnownTypes(("Keeper", "Couple", "Valued"), Kept, Empty, Empty), List(Scope)))
+constant Unstepped = "StepMustBeOnNumber: Numbers in A:1, only a Number is rounded to its step"
 constant Paired = "GenericMemberTypeMustBeNamed: pair in A:1, name the type of each Generic member of Couple like has pair Couple(Number, Number)"
 constant Named = ("has pair Couple(Text, Number)", "has name Text", "has first Generic", "has items Generics", "has other Couple(first, Generic)")
 constant Typed = Named + ("constant Pair = Couple", "Swapped Couple", "\tCouple(1, 2)")
@@ -26,8 +27,23 @@ Unsupported(path Text, lines Texts) Texts
 	Counting.Unsupported("A.strict", Missed).First is "ConstantNotFound: Count.Missing in A.strict:1"
 	Counting.Unsupported("A.strict", Shifting).First is "LoopNameMustNotBeDeclared: index in A.strict:1"
 	Counting.Unsupported("A", List(Text) + "has value Number").Length is 1
+	Counting.Unsupported("A", List(Text) + "L(prices Numbers with Step 0.5) Number").First is Unstepped
 	let named = LoopNames(path, lines) + LoopParameters(path, lines) + Members(path, lines)
-	Defaults(path, lines) + Keyworded(path, lines) + named
+	Defaults(path, lines) + Keyworded(path, lines) + named + Stepped(path, lines)
+Stepped(path Text, lines Texts) Texts
+	Counting.Stepped("A", ("has price Number with Step 0.01", "T(a Number) Number with Step 0.5", "\tx")).Length is 0
+	for lines
+		let type = StepType(value)
+		if type is not ""
+			"StepMustBeOnNumber: " + type + " in " + path + ":" + (index + 1) + ", only a Number is rounded to its step"
+StepType(line Text) Text
+	DefaultCheck.StepType("B(a Number with Step 0.5, b List(Number) with Step 0.5)") is ")"
+	let parts = line.Split(" with Step ")
+	for parts.Slice(0, parts.Length - 1)
+		let type = Tokenizer(value).Tokens.Last
+		if type is not "Number"
+			return type
+	""
 Members(path Text, lines Texts) Texts
 	Coupled.Members("A", ("has value Number", "has pair Couple")).Length is 2
 	ValueMembers(path, lines) + OpenMembers(path, lines)
