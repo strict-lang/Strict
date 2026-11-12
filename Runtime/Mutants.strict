@@ -16,19 +16,19 @@ constant Valued = TypeEntry(Machine.Doubler, members = List(MemberEntry) + Membe
 constant Inputs = ("/File", "/Memo", "/Directory", "/Process", "/Logger", "/TextWriter", "/Time", "/Library", "/Http", "/Socket", "/Random", "/GpuMemory")
 constant Hint = " kept passing all tests, improve the tests!"
 constant Wave = 8
-Survivors(types List(TypeEntry)) Number
-	Sample.Survivors(Doubled) is 0
-	Mutants(Logger, "Compiler/output/Cached.strict", 0).Survivors(Doubled) is 0
+Survivors(types List(TypeEntry)) Texts
+	Sample.Survivors(Doubled).Length is 0
+	Mutants(Logger, "Compiler/output/Cached.strict", 0).Survivors(Doubled).Length is 0
 	let cache = MutationCache(path, isWhole)
 	let isCached = (part is "") and cache.IsCurrent
 	if (isCached is false) and (seconds is 0)
-		return 0
+		return List(Text)
 	let survivors = isCached then cache.Survivors else Lines(types)
 	for survivors
 		logger.Log(Shown(value))
 	if isWhole and (part is "") and (isCached is false)
 		cache.Saved(survivors)
-	survivors.Length
+	survivors
 Ran(types List(TypeEntry), root Text, files Texts, inference TypeInference) Number
 	let cache = MutationCache(path, isWhole)
 	let held = part is "" then cache.Held(TypeSource.Root + "/obj") else List(Text)
@@ -37,7 +37,7 @@ Ran(types List(TypeEntry), root Text, files Texts, inference TypeInference) Numb
 	let survivors = Survivors(isFresh then unoptimized.Built(path, root, true, files, inference).entries else types)
 	if cache.Released(held) is false
 		logger.Log("Could not release the mutation locks: " + Text.Combine(held, ", "))
-	survivors
+	survivors.Length
 Lines(types List(TypeEntry)) Texts
 	Sample.Lines(Doubled).Length is 0
 	let kept = Baseline(value).Kept(types)
