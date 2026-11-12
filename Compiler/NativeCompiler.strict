@@ -120,19 +120,6 @@ Configured(options Texts) NativeBuild
 	let configured = NativeBuild(logger, isCrossing, isWeb, "android" is in options, "ios" is in options)
 	let isFast = "fast" is in options
 	NativeBuild(configured, isSimulator = "simulator" is in options, isReleased = "windows" is in options, isFast = isFast)
-Replaced(executable Text, target Text) Boolean
-	Swapped.Saved((".exe", ".old.exe", ".new.exe"), ("a", "b", "built")) is not Error
-	NativeCompiler(Logger).Replaced("Compiler/output/Swapped.exe", "Compiler/output/Swapped.new.exe")
-	Swapped.Read(".exe") is "built"
-	let old = executable.Replace(".exe", ".old.exe")
-	Intermediates(logger).Deleted(old)
-	File(executable).Rename(old)
-	File(target).Rename(executable)
-	if File(target).Exists
-		File(old).Rename(executable)
-		return false
-	File(old).Delete
-	File(executable).Exists
 Options(rest Texts) Texts
 	NativeCompiler.Options(("a.strict", ".", "linux")) is ("linux")
 	rest.Length > 2 then rest.Slice(2, rest.Length - 2) else List(Text)

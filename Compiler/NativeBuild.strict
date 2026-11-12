@@ -123,9 +123,9 @@ Linked(base Text, tools Toolchain) Slow(Text)
 	let isSwapped = (Platform.Current is Platform.Windows) and (tools.isWeb is false) and File(executable).Exists
 	let target = isSwapped then executable.Replace(".exe", ".new.exe") else executable
 	let built = tools.isWeb then WebBuild(tools).Linked(base, target) else tools.Built(base, target)
-	let replaced = isSwapped and built.StartsWith("Built ") then NativeCompiler.Replaced(executable, target) else true
-	let failed = "Could not replace " + executable + " (still running?), the new build is " + target
-	replaced then built.Replace(target, executable) else failed
+	let problem = isSwapped and built.StartsWith("Built ") then Intermediates(logger).Replaced(executable, target) else ""
+	let failed = "Could not replace " + executable + ", " + problem + ", the new build is " + target
+	problem is "" then built.Replace(target, executable) else failed
 CrossBuild(base Text, program Text, tools Toolchain, isCounting Boolean)
 	NativeBuild(Logger).CrossBuild("Compiler/output/missing", "module {}", Toolchain.OnWindows, true) is not Error
 	NativeBuild(Logger, false).CrossBuild("Compiler/output/missing", "module {}", Toolchain.OnWindows, false) is not Error
