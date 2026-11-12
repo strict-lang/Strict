@@ -9,12 +9,13 @@ constant Fresh = Defaults(List(Text)).Constructors(KnownTypes.NoMembers, ("a", "
 Added(scope Scope) Scope
 	Defaults(("has a Number", "has b Number = 0", "constant C = 3")).Added(KnownTypes.NoMembers).names is ("b default")
 	Defaults(List(Text) + "mutable count = 2 with value > 0").Added(KnownTypes.NoMembers).TypeOf("count default") is "2"
+	Defaults(List(Text) + "has label = \"a with b\"").Added(KnownTypes.NoMembers).TypeOf("label default") is "\"a with b\""
 	mutable names = List(Mutable(Text))
 	mutable values = List(Mutable(Text))
 	for lines
 		let start = value.IndexOf(" = ")
 		if (value.StartsWith("has ") or value.StartsWith("mutable ")) and (start > 0)
-			let end = value.IndexOf(" with ") > start then value.IndexOf(" with ") else value.Length
+			let end = Constraint.WithStart(value) > start then Constraint.WithStart(value) else value.Length
 			names.Add(HeaderTokens(Tokenizer(value).Tokens).MemberName + " default")
 			values.Add(value.Substring(start + 3, end - start - 3))
 	scope.WithAll(names, values)

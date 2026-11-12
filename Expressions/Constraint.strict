@@ -102,10 +102,21 @@ Of(line Text) Text
 	Constraint.Of("has width Number with value > 0") is "value > 0"
 	Constraint.Of("has price Number with Step 0.01") is ""
 	Constraint.Of("has width Number") is ""
-	let start = line.IndexOf(" with ")
-	if (start < 0) or (line.IndexOf(" with Step ") >= 0)
+	Constraint.Of("has label = \"red with blue\" with value is not \"\"") is "value is not \"\""
+	let start = WithStart(line)
+	if (start < 0) or line.StartsWith(" with Step ", start)
 		return ""
 	Checking(line.Substring(start + 6, line.Length - start - 6))
+WithStart(line Text) Number
+	Constraint.WithStart("has a = \"b with c\" with value > 0") is 18
+	Constraint.WithStart("has a = \"b \\\" with c\"") is -1
+	Constraint.WithStart("has a Number") is -1
+	mutable isText = false
+	for line.Length
+		isText = (line.StartsWith("\"", index) and (line.StartsWith("\\", index - 1) is false)) is not isText
+		if (isText is false) and line.StartsWith(" with ", index)
+			return index
+	-1
 Parameter(header HeaderTokens, parameter Text) Text
 	Constraint.Parameter(HeaderTokens(Tokenizer(Framed).Tokens), "frames") is "value >= 0"
 	Constraint.Parameter(HeaderTokens(Tokenizer("Run(frames Number)").Tokens), "frames") is ""
