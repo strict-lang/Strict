@@ -35,11 +35,12 @@ Typed(parameters List(MemberEntry), arguments List(VmValue)) List(VmValue)
 	Hello.Typed(List(MemberEntry) + MemberEntry.LoggerMember, List(VmValue) + VmValue.OfText("a")).First.text is "a"
 	Hello.Typed(List(MemberEntry) + MemberEntry.NumbersMember, List(VmValue) + VmValue.OfText("5")).First.items.Length is 1
 	Hello.Typed((MemberEntry.NumbersMember, Paired.members.Last), (VmValue.OfText("5"), VmValue.OfText("6"))).Length is 2
+	Hello.Typed(List(MemberEntry) + Paired.members.Last, List(VmValue) + VmValue.OfText("abc")).Last.kind is "Strict/Error"
 	mutable typed = List(Mutable(VmValue))
 	for arguments
 		let parameter = index < parameters.Length then parameters(index) else parameters.Last
 		let isNumber = parameter.typeName is in ("Strict/Number", "Strict/List(Number)")
-		typed.Add(isNumber then VmValue.OfNumber(value.text to Number) else value)
+		typed.Add(isNumber then Natives(types).Parsed(value.text) else value)
 	let isListed = (parameters.Length is 1) and parameters.First.typeName.StartsWith("Strict/List(")
 	isListed then List(VmValue) + VmValue.OfList(typed) else typed
 Tested(typeName Text, runner Text = TestCodegen.Runner) Number
