@@ -3,7 +3,8 @@ has isQuiet Boolean = false
 constant Showing = " shown"
 constant Nearing = " near"
 constant Expected = "testExpected"
-constant Shown = SyntaxParser(Tokenizer("tested is Error then (tested to Text).Replace((tested to Text).Lines.First, tested.Code) else tested.Code").Tokens).Parse
+constant ErrorShown = "tested is Error then (tested to Text).Replace((tested to Text).Lines.First, tested.Code) else "
+constant Shown = SyntaxParser(Tokenizer(ErrorShown + "tested.Code").Tokens).Parse
 constant Duration = SyntaxParser(Tokenizer("elapsed.Round(2) + \" ms)\"").Tokens).Parse
 constant Elapsed = SyntaxParser(Tokenizer("Process.Elapsed").Tokens).Parse
 constant Even = TestReports(TestCodegen.Even.types)
@@ -12,7 +13,7 @@ constant ProcessMethods = (Scope(List(Text) + "Elapsed", List(Text) + "Number"),
 constant ProcessTypes = KnownTypes(("Process", "Image"), KnownTypes.NoMemberPair, ProcessMethods, KnownTypes.NoMemberPair)
 constant Processing = TestReports(TypeCodegen("Strict/Image", ("Process(number Number) Image", "	Process(1) is Image", "	Image"), TypeInference(ProcessTypes, KnownTypes.NoMemberPair), List(Text)))
 constant GotNumber = TestCodegen.Even.Got(TestCodegen.TestedNumber).scope
-constant Nothing = SyntaxNode("Text", "\"None\"")
+constant Nothing = SyntaxParser(Tokenizer(ErrorShown + "\"None\"").Tokens).Parse
 constant ElapsedParameter = MemberEntry("elapsed", "Strict/Number", List(InstructionEntry), false)
 Marked(scope Scope, marker Text) Texts
 	TestReports.Marked(TestCodegen.Even.Got(TestCodegen.Even.Got(TestCodegen.TestedNumber)).scope, Showing) is ("Number")
@@ -40,11 +41,12 @@ Helpers(scope Scope) Slow(List(MethodEntry))
 Helper(name Text, parameter Text, type Text, expression SyntaxNode) Slow(MethodEntry)
 	Even.Helper("Got1", ErrorCodegen.Tested, "Number", Shown).Name is "$TestsGot1"
 	Even.Helper("Took", "elapsed", "Number", Duration).returnType is "Strict/Text"
-	Even.Helpers(TestCodegen.Counter.Declare(Showing, "None")).First.instructions.Length is 2
+	Even.Helpers(TestCodegen.Counter.Declare(Showing, "None")).First is Even.Helper("Got0", "tested", "Error", Nothing)
 	Erring.Helper("Got0", "tested", "Number", Shown).instructions(2).texts is ("Strict/Erring", "Error", "Strict/Error")
 	let neutral = Neutral
-	let generated = neutral.Expression(expression, CodeBlock.Empty.Declare(parameter, type))
-	let entry = MemberEntry(parameter, neutral.target.FullName(type), List(InstructionEntry), false)
+	let declared = type is "None" then "Error" else type
+	let generated = neutral.Expression(expression, CodeBlock.Empty.Declare(parameter, declared))
+	let entry = MemberEntry(parameter, neutral.target.FullName(declared), List(InstructionEntry), false)
 	let returned = generated.Add(InstructionEntry.Return(generated.Result))
 	MethodEntry(TestCodegen.Runner + name, List(MemberEntry) + entry, "Strict/Text", returned.instructions)
 Near(kind Text, ordinal Number) Slow(MethodEntry)
