@@ -69,7 +69,7 @@ IsGeneric(type Text) Boolean
 	Traited.Name(Passing, List(Text) + "Counter", "Using", CodeBlock.Empty.Declare("w", "Many")) is "Through(Many)"
 	Plain.Name(Passing, List(Text) + "Wrapped", "Using", CodeBlock.Empty.Declare("w", "Halver")) is "Through"
 	let members = values.target.types.MembersOf(type).types
-	IsTrait(type) or values.target.types.IsKnown(type) and (("Generic" is in members) or ("Generics" is in members))
+	IsTrait(type) or ("Generic" is in members) or ("Generics" is in members)
 IsTrait(type Text) Boolean
 	Traited.IsTrait("Counter")
 	Plain.IsTrait("Halver") is false

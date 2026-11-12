@@ -126,7 +126,7 @@ IsReturningComputed Boolean
 	let reuse = LoadReuse(instructions)
 	mutable isLoaded = false
 	for instructions
-		if (reuse.Written(value) is instructions.Last.payload(0)) and (value.kind is not InstructionType.CheckError)
+		if reuse.Written(value) is instructions.Last.payload(0)
 			isLoaded = value.kind is InstructionType.LoadVariableToRegister
 	isLoaded is false
 IsLaned(type TypeEntry, call InstructionEntry, isReturning Boolean) Boolean

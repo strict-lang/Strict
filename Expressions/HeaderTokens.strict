@@ -103,7 +103,7 @@ ParametersEnd Number
 	mutable end = 0
 	for tokens
 		depth = depth + brackets.BracketDelta(value)
-		if (depth is 0) and (end is 0) and index > 0
+		if (depth is 0) and (end is 0)
 			end = index
 	end
 IsParameterStart(position Number) Boolean

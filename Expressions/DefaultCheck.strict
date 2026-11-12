@@ -171,7 +171,7 @@ IsConstant(node SyntaxNode) Boolean
 	if node.IsLiteral or (node.Kind is "Identifier")
 		return true
 	if node.Kind is in ("Binary", "Negate")
-		return IsConstant(node.children(0)) and ((node.Kind is "Negate") or IsConstant(node.children.Last))
+		return IsConstant(node.children(0)) and IsConstant(node.children.Last)
 	(node.Kind is "Call") and ((node.text is in ("List", "Dictionary")) or IsWrapper(node))
 IsConstantMember(member SyntaxNode) Boolean
 	Counting.IsConstantMember(SyntaxParser(Tokenizer("Count.Missing").Tokens).Parse)

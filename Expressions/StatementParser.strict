@@ -37,7 +37,7 @@ Keyword(first Text) SyntaxNode
 		return SyntaxNode(first.Capitalize, first)
 	if ((first is "for") and (tokens.Length > 4) and (tokens(1) is "as") and (tokens(3) is "as")) and (tokens(2) is "long")
 		return SyntaxNode("For", "for as long as", Rest(4))
-	(first is "for") and IsNamed then Named else SyntaxNode(first.Capitalize, "", Rest(1))
+	IsNamed then Named else SyntaxNode(first.Capitalize, "", Rest(1))
 IsNamed Boolean
 	StatementParser(Tokenizer("for y, x in 2, 3").Tokens).IsNamed
 	StatementParser(Tokenizer("for x in list").Tokens).IsNamed
@@ -74,7 +74,7 @@ Unnamed Text
 	StatementParser(Tokenizer("for a, b in x").Tokens).Unnamed is ""
 	for IteratorNames
 		let first = value(0)
-		if (first.Lower is not first) or (first.Upper is first)
+		if first.Upper is first
 			return value
 	""
 IteratorNames Texts
