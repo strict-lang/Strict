@@ -15,6 +15,13 @@ constant Blurred = MethodEntry("Blurred", List(MemberEntry) + MemberEntry("board
 constant Board = TypeEntry("Strict/Board", (MemberEntry("width", "Strict/Number", List(InstructionEntry), false), Cells), (Picked, Blurred))
 constant Types = (MlirLayout.Byting, MlirLanes.Rgb, Board)
 constant Kernel = MlirWholeKernel(MlirFunction(Types, Board, Blurred), 5)
+constant SecondCells = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "second"), InstructionEntry(InstructionType.FieldLoad, ("cells", "Board"), (5, 4, -1, -2)))
+constant PairedMethod = MethodEntry("Paired", (Picked.parameters(0), MemberEntry("second", "Strict/Board", List(InstructionEntry), false), Picked.parameters(1)), "Strict/Rgb", SecondCells + Picking)
+constant PairArguments = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "board"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "board"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 5, "index"))
+constant PairCollected = (InstructionEntry.Invoke(6, ("Strict/Board", "Paired", "Strict/Rgb", "board", "second", "pixel"), (3, 4, 5), -1), InstructionEntry.Named(InstructionType.InvokeWriteToList, 6, "forResult"))
+constant PairBlurred = MethodEntry("Blurred", Blurred.parameters, "Strict/List(Rgb)", ResultCreated + CellsStored + CellsLooped + PairArguments + PairCollected + InstructionEntry.Jump(InstructionType.LoopEnd, 10))
+constant PairBoard = TypeEntry("Strict/Board", Board.members, (PairedMethod, PairBlurred))
+constant Pairing = MlirWholeKernel(MlirFunction((MlirLayout.Byting, MlirLanes.Rgb, PairBoard), PairBoard, PairBlurred), 5)
 constant SizeLoaded = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "board"), InstructionEntry(InstructionType.FieldLoad, ("Size", "Board"), (3, 2, -1, -2)))
 constant PixelWrapped = (InstructionEntry(InstructionType.FieldLoad, ("Width", "Sizing"), (4, 3, -1)), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 5, "pixel"), InstructionEntry.Binary(InstructionType.Modulo, (5, 4, 6)))
 constant WrappedPicked = (InstructionEntry(InstructionType.IndexCall, "list0", (7, 6, -1)), InstructionEntry.Return(7))
@@ -98,13 +105,15 @@ MemberKinds(input Number) Texts
 	kinds
 Free Texts
 	Kernel.Free is List(Text) + "board_cells"
+	Pairing.Free is List(Text) + "board_cells"
 	let kinds = MlirWholeFunction(Callee).Kinds
 	mutable names = List(Mutable(Text))
 	for Reads
 		let name = Source(value)
-		if (kinds(index) is "o") and (name is not in names)
+		if kinds(index) is "o"
 			for MlirWholeInstance(Callee).Members(index)
-				names.Add(name + "_" + value)
+				if (name + "_" + value) is not in names
+					names.Add(name + "_" + value)
 		else if (name is not "index") and (name is not in names)
 			names.Add(name)
 	names
