@@ -6,6 +6,7 @@ constant Counts = KnownTypes(List(Text) + "Count", List(Scope) + KnownTypes.NoMe
 constant Limited = SureMethods(TypeInference(Counts, List(Scope) + Scope(List(Text) + "Limit", List(Text) + "3")))
 constant Ranged = SyntaxParser(Tokenizer("Range(0, 1)").Tokens).Parse
 constant Lists = List(Text) + "List.strict"
+constant Remainder = FileCheck.Parsed("low % Limit")
 Named(paths Texts) Slow(Texts)
 	SureMethods.Named(List(Text)).Length is 0
 	"PseudoRandom.Next" is in SureMethods(ResolveCheck(Logger).Inference(Randoms)).Named(Randoms)
@@ -29,9 +30,6 @@ Used(type Text, statements ScopedStatements, lines Texts, header Number) Texts
 		if (value.line > header) and (value.line <= last) and (Duplicates.IsTest(lines(value.line).Trim) is false)
 			keys = keys + Calls(type, value.statement, value.scope)
 	keys
-Parsed(code Text) SyntaxNode
-	SureMethods.Parsed("1").Kind is "Number"
-	SyntaxParser(Tokenizer(code).Tokens).Parse
 Kept(lines Texts, header Number) Boolean
 	SureMethods.Kept(("Next Number", "\tlow + 1"), 0)
 	SureMethods.Kept(("Send(socket Number)", "\tSend(0) is 1"), 0) is false
@@ -53,18 +51,18 @@ Fails(body Text) Boolean
 	let tokens = Tokenizer(body).Tokens
 	("Error" is in tokens) or ("to" is in tokens)
 Calls(type Text, node SyntaxNode, scope Scope) Texts
-	SureMethods.Calls("Demo", Parsed("low * (low + 1)"), Numbered) is ("Number.*", "Number.+")
-	SureMethods.Calls("Demo", Parsed("elements(0).Floor"), Numbered) is ("Number.Floor", "Index")
+	SureMethods.Calls("Demo", FileCheck.Parsed("low * (low + 1)"), Numbered) is ("Number.*", "Number.+")
+	SureMethods.Calls("Demo", FileCheck.Parsed("elements(0).Floor"), Numbered) is ("Number.Floor", "Index")
 	mutable keys = Direct(type, node, scope)
 	for node.children
 		keys = keys + Calls(type, value, scope)
 	keys
 Direct(type Text, node SyntaxNode, scope Scope) Texts
-	SureMethods.Direct("Demo", Parsed("low is 1"), Numbered).Length is 0
+	SureMethods.Direct("Demo", FileCheck.Parsed("low is 1"), Numbered).Length is 0
 	SureMethods.Direct("Demo", SyntaxNode("Text", "+"), Numbered).Length is 0
 	SureMethods.Direct("Demo", Ranged, Numbered).Length is 0
 	Limited.Direct("Count", SyntaxNode("Identifier", "Increment"), Numbered) is ("Count.Increment")
-	Limited.Direct("Count", Parsed("low % Limit"), Numbered).Length is 0
+	Limited.Direct("Count", Remainder, Numbered).Length is 0
 	if IsSafeDivision(type, node)
 		return List(Text)
 	if (node.Kind is in ("Member", "MethodCall")) or ((node.Kind is "Binary") and (node.text is in Operators))
@@ -73,12 +71,13 @@ Direct(type Text, node SyntaxNode, scope Scope) Texts
 		return List(Text) + "Index"
 	IsOwn(type, node, scope) then List(Text) + (type + "." + node.text) else List(Text)
 IsSafeDivision(type Text, node SyntaxNode) Boolean
-	Limited.IsSafeDivision("Count", Parsed("low % Limit")) and Limited.IsSafeDivision("Count", Parsed("low / 2"))
-	Limited.IsSafeDivision("Other", Parsed("low % Count.Limit"))
-	Limited.IsSafeDivision("Count", Parsed("low / 0")) is false
-	Limited.IsSafeDivision("Count", Parsed("low % high")) is false
-	Limited.IsSafeDivision("Count", Parsed("low % Increment")) is false
-	(Limited.IsSafeDivision("A", Parsed("low + 2")) or Limited.IsSafeDivision("A", SyntaxNode("Text", "/"))) is false
+	Limited.IsSafeDivision("Count", Remainder) and Limited.IsSafeDivision("Count", FileCheck.Parsed("low / 2"))
+	Limited.IsSafeDivision("Other", FileCheck.Parsed("low % Count.Limit"))
+	Limited.IsSafeDivision("Count", FileCheck.Parsed("low / 0")) is false
+	Limited.IsSafeDivision("Count", FileCheck.Parsed("low % high")) is false
+	Limited.IsSafeDivision("Count", FileCheck.Parsed("low % Increment")) is false
+	Limited.IsSafeDivision("A", FileCheck.Parsed("low + 2")) is false
+	Limited.IsSafeDivision("A", SyntaxNode("Text", "/")) is false
 	if (node.Kind is not "Binary") or (node.text is not in ("/", "%"))
 		return false
 	let divisor = node.children(1)
