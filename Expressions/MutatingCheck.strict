@@ -24,6 +24,17 @@ constant Reassigned = SyntaxNode("Reassignment", "", (SyntaxNode("Identifier", "
 constant Stored = SyntaxNode("Reassignment", "", (SyntaxNode("Call", "a", SyntaxNode.one), SyntaxNode.one))
 constant LoopAssigned = SyntaxNode("Reassignment", "", (SyntaxNode("Identifier", "value"), Added))
 constant Lets = Counted.With("a let", "let")
+constant Holders = KnownTypes(("Ticker", "Holder"), (Tickers.members(0), Holding), (Tickers.methods(0), KnownTypes.NoMembers), (NextChanges, KnownTypes.NoMembers))
+constant Held = MutatingCheck(TypeInference(Holders, TypeInference.Limits))
+constant Holder = Scope(("holder", "holder mutable", "tickers", "tickers mutable"), ("Holder", "mutable", "Tickers", "mutable"))
+constant HolderNext = SyntaxParser(Tokenizer("holder.ticker.Next").Tokens).Parse
+constant Counts = Scope(("counts", "counts mutable", " dropped"), ("Counts", "mutable", "dropped"))
+constant Lost = " and the change is lost, "
+constant ElementNext = SyntaxParser(Tokenizer("tickers(0).Next").Tokens).Parse
+constant NewNext = SyntaxParser(Tokenizer("Ticker(0).Next").Tokens).Parse
+constant ElementIncrement = ScopedStatement(SyntaxParser(Tokenizer("counts(0).Increment").Tokens).Parse, Counts, 0)
+constant DeclareMutable = ", declare it mutable"
+constant NoEffect = " has no effect, use a mutable variable or assign the result"
 Issue(scoped ScopedStatement, current Scope) Text
 	Counting.Issue(Immutable, Counted).StartsWith("MutatingCallNeedsMutableVariable: a.Increment")
 	Counting.Issue(ScopedStatement(Increment, Counted.With("a mutable", "mutable"), 0), Counted) is ""
@@ -85,18 +96,18 @@ Mutated(scoped ScopedStatement, current Scope) Text
 	let statement = scoped.statement
 	if (scoped.scope.TypeOf(" dropped") is "") or (IsMutating(statement, scoped.scope, current) is false)
 		return Unused(scoped, current)
-	let target = statement.children(0).text
-	if scoped.scope.TypeOf(target + " mutable") is not ""
+	let receiver = statement.children(0)
+	if (receiver.Kind is "Identifier") and (scoped.scope.TypeOf(receiver.text + " mutable") is not "")
 		return ""
-	let call = target + "." + statement.text
-	"MutatingCallNeedsMutableVariable: " + call + " has no effect, use a mutable variable or assign the result"
+	"MutatingCallNeedsMutableVariable: " + statement + Effect(receiver, scoped.scope, NoEffect)
 Changing(node SyntaxNode, scope Scope, current Scope) Text
 	Ticked.Changing(Ticking, Holding, Holding).StartsWith("ChangingCallNeedsMutableVariable: ticker.Next")
 	Ticked.Changing(Ticking, Mutables, Holding) is ""
 	Ticked.Changing(SyntaxNode("Binary", "+", (Ticking, Ticking)), Holding, Holding) is not ""
+	Held.Changing(HolderNext, Holder, Holder).EndsWith("member of holder" + Lost + "call it in a method of Holder")
 	if IsChangingCall(node, scope, current)
-		let target = node.children(0).text
-		return "ChangingCallNeedsMutableVariable: " + target + "." + node.text + " changes " + target + ", declare it mutable"
+		let target = node.children(0)
+		return "ChangingCallNeedsMutableVariable: " + node + Effect(target, scope, " changes " + target + DeclareMutable)
 	for node.children
 		let found = Changing(value, scope, current)
 		if found is not ""
@@ -107,13 +118,12 @@ IsChangingCall(node SyntaxNode, scope Scope, current Scope) Boolean
 	Ticked.IsChangingCall(Typed, KnownTypes.NoMembers, Holding) is false
 	Ticked.IsChangingCall(Ticking, KnownTypes.NoMembers, Holding) is false
 	let isMember = node.Kind is in ("MethodCall", "Member")
-	if (isMember is false) or (node.children.Length is 0) or (node.children(0).Kind is not "Identifier")
+	if (isMember is false) or (node.children.Length is 0) or IsTemporary(node.children(0), scope)
 		return false
-	let target = node.children(0).text
-	if (scope.TypeOf(target + " mutable") is not "") or (scope.TypeOf(target) is "")
+	let target = node.children(0)
+	if (target.Kind is "Identifier") and (scope.TypeOf(target.text + " mutable") is not "")
 		return false
-	let type = inference.TypeOf(node.children(0), scope, current)
-	inference.types.ParameterScope(type).TypeOf(node.text + " changes") is not ""
+	inference.types.ParameterScope(inference.TypeOf(target, scope, current)).TypeOf(node.text + " changes") is not ""
 Unused(scoped ScopedStatement, current Scope) Text
 	Counting.Unused(ScopedStatement(Added, Counted, 0), Counted).StartsWith("UnusedValueMustBeRemoved: a + a is")
 	Counting.Unused(ScopedStatement(Added, Counted.With(" dropped", ""), 0), Counted) is ""
@@ -127,16 +137,33 @@ Unused(scoped ScopedStatement, current Scope) Text
 		return ""
 	let type = inference.TypeOf(statement, scoped.scope, current)
 	type is in Unchecked then "" else "UnusedValueMustBeRemoved: " + statement + " is a " + type + ", assign or return it"
+Effect(receiver SyntaxNode, scope Scope, plain Text) Text
+	Counting.Mutated(ElementIncrement, Counted).EndsWith("counts" + Lost + "assign the changed element to counts(0)")
+	Held.Changing(ElementNext, Holder, Holder).StartsWith("ChangingCallNeedsMutableVariable: tickers(0).Next changes an")
+	Held.Changing(NewNext, Holder, Holder) is ""
+	if receiver.Kind is "Identifier"
+		return plain
+	let root = LoopNames.Root(receiver)
+	if receiver.Kind is "Call"
+		return " changes an element of " + root + Lost + "assign the changed element to " + receiver
+	" changes a member of " + root + Lost + "call it in a method of " + scope.TypeOf(root)
+IsTemporary(receiver SyntaxNode, scope Scope) Boolean
+	Held.IsTemporary(NewNext.children(0), Holder)
+	Held.IsTemporary(HolderNext.children(0), Holder) is false
+	Counting.IsMutating(Increment, KnownTypes.NoMembers, Counted)
+	Counting.Issue(ScopedStatement(SyntaxNode("Declaration", "mutable b", SyntaxNode.one), Counted, 0), Counted) is ""
+	Counting.Issue(ScopedStatement(Numbered, Owned, 0), Owned) is ""
+	(receiver.Kind is "Type") or (scope.TypeOf(LoopNames.Root(receiver)) is "")
 IsMutating(statement SyntaxNode, scope Scope, current Scope) Boolean
 	Counting.IsMutating(Increment, Counted, Counted)
 	Counting.IsMutating(Added, Counted, Counted) is false
 	Counting.IsMutating(Twice, Counted, Counted) is false
 	Counting.IsMutating(SyntaxNode("Member", "Increment", Added), Counted, Counted) is false
 	Counting.IsMutating(SyntaxNode("MethodCall", "Increment", Increment.children), Counted, Counted)
-	Counting.Issue(ScopedStatement(SyntaxNode("Declaration", "mutable b", SyntaxNode.one), Counted, 0), Counted) is ""
-	Counting.Issue(ScopedStatement(Numbered, Owned, 0), Owned) is ""
 	Counting.Issue(ScopedStatement(Valued, Looped, 0), Counted) is ""
-	if (statement.Kind is not in ("MethodCall", "Member")) or (statement.children(0).Kind is not "Identifier")
+	if statement.Kind is not in ("MethodCall", "Member")
+		return false
+	if (statement.children(0).Kind is not "Identifier") and IsTemporary(statement.children(0), scope)
 		return false
 	let type = inference.TypeOf(statement.children(0), scope, current)
 	inference.types.ParameterScope(type).TypeOf(statement.text + " mutable") is not ""
