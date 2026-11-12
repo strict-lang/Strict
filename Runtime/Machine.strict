@@ -161,7 +161,7 @@ Routed(call Invocation) VmValue
 	let entry = call.entry.payload.Length > at then call.entry else Resolver(types).Targeted(call.entry)
 	let route = entry.payload(at)
 	if route is Resolver.Hosting
-		return Hosted(call).Result
+		return Hosted(call).Contained
 	if route is Resolver.Searching
 		return Natives(types).Searched(call.MethodName, call.Instance.text, call.Arguments)
 	if (route < 0) or ((entry.payload(at + 2) is 1) and call.IsMemberValue(types(route)))

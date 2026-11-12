@@ -53,6 +53,11 @@ Result VmValue
 	if type is not in ("File", "Directory")
 		return type is "Json" then HostedJson(call).Result else HostedMath(call).Measured
 	call.MethodName is in ("ReadLines", "ReadBytes", "Files", "Directories") then Entries else Stored
+Contained VmValue
+	Hosted(HostedJson.Unnumbered).Contained.kind is "Strict/Error"
+	Hosted(SystemCall).Contained.text is Hosted(SystemCall).Result.text
+	let result = Result
+	result is Error then VmValue.OfError(result.Name.text) else result
 Read(name Text) Text
 	Hosted(SystemCall).Read("Current") is Directory.Current
 	name is "Input" then Process.Input else name is "InputLine" then Process.InputLine else Directory.Current
