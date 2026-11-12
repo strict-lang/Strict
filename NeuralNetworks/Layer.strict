@@ -34,7 +34,7 @@ Forward(input Numbers) Numbers
 	Halves.Forward((1, 1)) is List(Number) + 0.7310585786300049
 	Halves.Forward((0, 0)) is List(Number) + 0.5
 	for weights
-		activation.Output(Summed(value, input) + biases(index))
+		activation.Output(Batch.Dot(value, 0, input, 0) + biases(index))
 Sums(input Numbers) Numbers
 	Halves.Sums((1, 1)) is List(Number) + 1
 	Fours.Sums(Gpt2Block.Added(Fours.weights.First, Sixes.weights.First)).First.IsNearlyEqual(3134903.8125, 6000)
@@ -42,13 +42,7 @@ Sums(input Numbers) Numbers
 	Eights.Sums(Gpt2Block.Added(Eights.weights.First, Eights.weights.Last)).Last.IsNearlyEqual(25678.23355948925, 30)
 	Threes.Sums(Gguf("NeuralNetworks/tiny.gguf", 32).Rows("r2").Last).Last.IsNearlyEqual(45.75, 0.01)
 	for weights
-		Summed(value, input) + biases(index % biases.Length)
-Summed(row Numbers with value.Bits is 32, input Numbers with value.Bits is 32) Number
-	Halves.Summed((1, 2), (1, 3)) is 7
-	mutable sum = 0
-	for row
-		sum = sum + value * input(index)
-	sum
+		Batch.Dot(value, 0, input, 0) + biases(index % biases.Length)
 Spread(deltas Numbers) Numbers
 	Halves.Spread(List(Number) + 2) is (1, 1)
 	for weights.First.Length

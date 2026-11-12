@@ -7,7 +7,7 @@ constant MutationRate = 0.2
 Distance(angles Numbers) Number
 	Planar.Distance((0, 0)) is 0.6403124237432849
 	let difference = Network.Difference(arm.Reached(angles), target)
-	Layer.Summed(difference, difference).SquareRoot
+	Batch.Dot(difference, 0, difference, 0).SquareRoot
 Arms List(Numbers)
 	Planar.Arms.Length is Population
 	for Population

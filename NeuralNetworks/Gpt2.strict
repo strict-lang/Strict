@@ -40,7 +40,7 @@ Scored Slow(Numbers)
 Logits(normed Numbers) Slow(Numbers)
 	Tiny.Logits((1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)).Length is 5
 	for tokens
-		Layer.Summed(value, normed)
+		Batch.Dot(value, 0, normed, 0)
 Vectors List(Numbers)
 	Tiny.Vectors.Length is 10
 	Tiny.Vectors.Last is Tiny.bias

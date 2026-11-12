@@ -56,11 +56,4 @@ Gains(gradient Numbers) Numbers
 Biases(gradient Numbers) Numbers
 	Sample.Biases(Gradient).First.IsNearlyEqual(0.6)
 	Sample.Biases(Gradient).Last.IsNearlyEqual(0.2)
-	for gain.Length
-		Column(gradient, index)
-Column(values Numbers, column Number) Number
-	Sample.Column((1, 2, 3, 4, 5, 6), 1) is 7
-	mutable sum = 0
-	for values.Length / gain.Length
-		sum = sum + values(index * gain.Length + column)
-	sum
+	Gpt2Pass.Sums(gradient, gain.Length)

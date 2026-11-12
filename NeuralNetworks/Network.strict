@@ -81,12 +81,9 @@ Accuracy(data Dataset) Number
 	Single.Accuracy(Dataset(List(Numbers), List(Numbers))) is 0
 	mutable correct = 0
 	for data.inputs
-		if Best(Predict(value)) is Best(data.targets(index))
+		if Greedy.Largest(Predict(value)) is Greedy.Largest(data.targets(index))
 			correct = correct + 1
 	data.inputs.Length is 0 then 0 else correct / data.inputs.Length
-Best(output Numbers) Number
-	Single.Best((0.1, 0.7, 0.2)) is 1
-	output.Index(output.Maximum)
 Fresh Network
 	Pair.Trained((1, 1), List(Number) + 0, 1).Fresh.layers.First.previousWeights.Length is 0
 	Pair.Fresh.Predict((1, 1)) is Pair.Predict((1, 1))

@@ -30,7 +30,7 @@ Compensated(layer Layer, columns List(Numbers), means Numbers, kept Numbers) Num
 	Pruning.Compensated(Layer(((1, 2, 3), (4, 5, 6)), (0, 1)), ((1, 3), (4, 6)), (5, 7, 9), (0, 2)) is (14, 36)
 	let picked = Picked(means, kept)
 	for layer.weights
-		layer.biases(index) + layer.Summed(value, means) - layer.Summed(columns(index), picked)
+		layer.biases(index) + Batch.Dot(value, 0, means, 0) - Batch.Dot(columns(index), 0, picked, 0)
 Columns(rows List(Numbers), kept Numbers) List(Numbers)
 	Pruning.Columns(((1, 2, 3), (4, 5, 6)), (0, 2)) is ((1, 3), (4, 6))
 	for rows
