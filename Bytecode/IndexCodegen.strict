@@ -16,6 +16,7 @@ constant Counter = CallTarget(CallTarget.NoTypes, CallTarget.Greeter, "Strict/Co
 constant Limited = IndexCodegen(ValueCodegen(ConstantFolding.Counts, MethodCodegen.NoScope, Counter))
 constant LimitWrite = BodyParser("Run", "\tvalues(Limit) = 5").Block(1, 1).children(0)
 constant KeyedWrite = BodyParser("Run", "\tnamed(\"a\") = 1").Block(1, 1).children(0)
+constant Chained = SyntaxNode("Index", "", (SyntaxNode("Index", "", (ValueCodegen.Ones, One)), One))
 IsIndexing(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsIndexing(SyntaxNode("Call", "text", One), CodeBlock.Empty)
 	Plain.IsIndexing(SyntaxNode("Call", "Greet"), CodeBlock.Empty) is false
@@ -106,9 +107,9 @@ Element(node SyntaxNode, block CodeBlock) CodeBlock
 	let isComputed = (named.Kind is not "Identifier") and (named.IsLiteral is false)
 	let isMethod = values.target.Header(node.text).tokens.Length > 0
 	let isNamed = (node.Kind is "Call") and (isComputed is false) and (isMethod is false)
-	let name = isNamed then node.text else "list" + block.nextId
 	let source = node.Kind is "Call" then (isMethod then SyntaxNode("Call", node.text) else named) else Source(node)
 	let list = isNamed then ErrorScope(values).Guarded(node.text, block) else values.Expression(source, block)
+	let name = isNamed then node.text else "list" + list.nextId
 	let stored = isNamed then list else list.Stored(name).WithNextId
 	let index = values.Expression(GridIndex(node), stored)
 	index.Load(InstructionEntry(InstructionType.IndexCall, List(Text) + name, (index.register, index.Result, -1)))
@@ -121,6 +122,7 @@ Source(node SyntaxNode) SyntaxNode
 	Plain.Source(SyntaxNode("Index", "", (ValueCodegen.Ones, One))) is ValueCodegen.Ones
 	Plain.Source(SyntaxNode("Call", "text", One)).Kind is "Identifier"
 	Plain.Element(SyntaxNode("Call", "text", One), CodeBlock.Empty).nextId is 0
+	Plain.Element(Chained, CodeBlock.Empty).instructions.Last.texts is ("list1")
 	if node.Kind is "Index"
 		return node.children(0)
 	node.Kind is "Call" then SyntaxNode("Identifier", node.text) else SyntaxNode("Member", node.text, node.children(0))

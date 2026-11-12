@@ -1980,6 +1980,8 @@
     llvm.store %base, %baseSlot : i64, !llvm.ptr
     %topSlot = llvm.mlir.addressof @strict_gc_top : !llvm.ptr
     llvm.store %base, %topSlot : i64, !llvm.ptr
+    %collectedTopSlot = llvm.mlir.addressof @strict_gc_collected_top : !llvm.ptr
+    llvm.store %base, %collectedTopSlot : i64, !llvm.ptr
     %committedSlot = llvm.mlir.addressof @strict_gc_committed : !llvm.ptr
     llvm.store %base, %committedSlot : i64, !llvm.ptr
     %limitSlot = llvm.mlir.addressof @strict_gc_limit : !llvm.ptr
