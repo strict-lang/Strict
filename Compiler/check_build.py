@@ -364,6 +364,31 @@ def check_named_failure():
 		assert built.returncode == 1 and "ResultMustBeUsed: Next(3)" in built.stdout, built.stdout + built.stderr
 	print("A build stopped by a front end Error names it")
 
+def check_held_copy():
+	"""A rebuild succeeds while processes still run the executable and its previous old copy (Windows moves it to .old2)."""
+	if sys.platform != "win32":
+		return
+	strict = str(root / "strict.exe")
+	with tempfile.TemporaryDirectory(prefix="HeldCheck", dir=root / "Examples") as folder:
+		source = Path(folder) / "HeldCheck.strict"
+		executable = source.with_suffix(".exe")
+		running = []
+		try:
+			for attempt in range(3):
+				source.write_text("Run(seconds Number)\n\tlet started = Process.Elapsed\n\tfor as long as Process.Elapsed - "
+					"started < seconds\n\t\tProcess.Wait(0.1" + str(attempt) + ")\n", encoding="utf-8")
+				built = subprocess.run([strict, "build", str(source)], cwd=root, capture_output=True, text=True, timeout=120)
+				assert built.returncode == 0, built.stdout + built.stderr
+				if attempt < 2:
+					running.append(subprocess.Popen([str(executable), "60"]))
+			assert source.with_suffix(".old2.exe").exists(), "The held old copy was not kept beside a new .old2 copy"
+		finally:
+			for process in running:
+				process.kill()
+				process.wait()
+	print("A rebuild succeeds while the previous executable and its old copy still run")
+
+check_held_copy()
 check_named_failure()
 check_concurrent_builds()
 check_link_workers()
