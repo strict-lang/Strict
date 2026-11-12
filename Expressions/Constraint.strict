@@ -95,6 +95,7 @@ Checking(constraint Text) Text
 	Constraint.Parameter(HeaderTokens(Tokenizer("B(a N with value.Bits is 3, b N)").Tokens), "a") is "value.Bits is 3"
 	Constraint.Parameter(HeaderTokens(Tokenizer("B(a N with value.Bits is 3)").Tokens), "a") is "value.Bits is 3"
 	Constraint.Parameter(HeaderTokens(Tokenizer("B(a N with value is in (1, 2), b N)").Tokens), "a").EndsWith(")")
+	Constraint.Parameter(HeaderTokens(Tokenizer("B(a N with value < b, b N with value > 0)").Tokens), "b") is "value > 0"
 	let clause = "value.Bits is " + Bits(constraint)
 	constraint.Replace(" and " + clause, "").Replace(clause + " and ", "").Replace(clause, "")
 Of(line Text) Text
@@ -111,7 +112,7 @@ Parameter(header HeaderTokens, parameter Text) Text
 	Constraint.Parameter(HeaderTokens(Tokenizer("B(a Number with Step 0.5)").Tokens), "a") is ""
 	mutable words = List(Mutable(Text))
 	mutable isConstraint = false
-	for Range(header.tokens.Index(parameter) + 1, header.ParametersEnd)
+	for Range(header.ParameterPosition(parameter) + 1, header.ParametersEnd)
 		let word = header.tokens(value)
 		if (word is ",") and (header.Depth(value) is 1)
 			return Text.Combine(words, " ").Replace(" . ", ".")

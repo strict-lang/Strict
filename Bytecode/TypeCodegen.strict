@@ -166,7 +166,7 @@ Parameters(header HeaderTokens) List(MemberEntry)
 	for header.ParameterNames
 		let type = Generator.target.FullName(Concrete(types(index)))
 		let bits = Constraint.Bits(Constraint.Parameter(header, value))
-		parameters.Add(MemberEntry(value, type, Default(header, header.tokens.Index(value)), false, bits))
+		parameters.Add(MemberEntry(value, type, Default(header, header.ParameterPosition(value)), false, bits))
 	parameters
 Default(header HeaderTokens, position Number) List(InstructionEntry)
 	Hello.Default(HeaderTokens("Add", "(", "x", ")"), 2).Length is 0

@@ -24,7 +24,7 @@ ParameterTypes Texts
 	HeaderEntries(HeaderTokens(Tokenizer("A(x = Range(0, 2))").Tokens)).Default(2) is ("Range", "(", "0", ",", "2", ")")
 	HeaderEntries(HeaderTokens(Tokenizer("A(x B(c = 1) = d)").Tokens)).Default(2) is ("d")
 	for header.ParameterTypes
-		let position = header.tokens.Index(header.ParameterNames(index))
+		let position = header.ParameterPosition(header.ParameterNames(index))
 		let inferred = header.tokens(position + 1) is "=" then methods.TypeOf(value) else ""
 		inferred is "" then value else inferred
 Required Number

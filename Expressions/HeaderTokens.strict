@@ -114,6 +114,13 @@ IsParameterStart(position Number) Boolean
 		return true
 	let isAfterComma = (previous is ",") and (Depth(position) is 1)
 	((position is 2) or isAfterComma) and tokens(position) is not "mutable"
+ParameterPosition(name Text) Number
+	HeaderTokens(Tokenizer("B(a N with value < b, b N)").Tokens).ParameterPosition("b") is 9
+	HeaderTokens(Tokenizer("B(a N)").Tokens).ParameterPosition("c") is -1
+	for Range(2, ParametersEnd)
+		if IsParameterStart(value) and (tokens(value) is name)
+			return value
+	-1
 Depth(position Number) Number
 	HeaderTokens(Tokenizer("Link(entries List(Entry), depth Number)").Tokens).Depth(5) is 2
 	let brackets = SyntaxParser(tokens)

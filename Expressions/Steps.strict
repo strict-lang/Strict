@@ -20,7 +20,7 @@ Entries(header HeaderTokens) Scope
 	let name = header.tokens(0)
 	mutable entries = Scope(List(Text), List(Text))
 	for header.ParameterNames
-		let step = Steps(header.tokens).Of(header.tokens.Index(value))
+		let step = Steps(header.tokens).Of(header.ParameterPosition(value))
 		if step is not ""
 			entries = entries.With(name + " " + value + " step", step)
 	let returned = Steps(header.tokens).Of(header.ParametersEnd)
