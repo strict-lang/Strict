@@ -2,6 +2,7 @@ has path Text
 constant Corner = Image(Size(2, 2), (ColorValue(0, 0, 0), ColorValue(0, 0, 0), ColorValue(0, 0, 0), ColorValue(1, 1, 1)))
 constant Saved = "Compiler/output/ImageSaverCorner.png"
 Save(image Image)
+	Directory.Create("Compiler/output") is not Error
 	ImageSaver(Saved).Save(Corner) is not Error
 	ImageLoader(Saved).Loaded.Colors is Corner.Colors
 	ImageCodec.SavePng(path, Flat(image), image.Size.Width)
