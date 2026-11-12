@@ -56,7 +56,8 @@ Refined(inference TypeInference, shapes List(TypeShape)) TypeInference
 	mutable methods = List(Mutable(Scope))
 	mutable parameters = List(Mutable(Scope))
 	for shapes
-		methods.Add(ShapeTyping(indexed).Typed(value, types.methods(index), types.names(index)).Indexed)
+		let typed = ShapeTyping(indexed).Typed(value, types.methods(index), types.names(index))
+		methods.Add(typed.Indexed.Owned(types.names(index)))
 		parameters.Add(Overloaded(types, shapes, value, types.parameters(index)))
 	TypeInference(KnownTypes(types, methods = methods, parameters = parameters), inference.constants)
 Overloaded(types KnownTypes, shapes List(TypeShape), shape TypeShape, scope Scope) Scope
@@ -90,7 +91,7 @@ Inference(files Texts) TypeInference
 	mutable parameters = List(Mutable(Scope))
 	mutable constants = List(Mutable(Scope))
 	for shapes
-		members.Add(value.MemberScope.Indexed)
+		members.Add(value.MemberScope.Indexed.Owned(TypeName(files(index))))
 		methods.Add(value.MethodScope)
 		parameters.Add(value.CallScope(generics))
 		constants.Add(value.ConstantScope)

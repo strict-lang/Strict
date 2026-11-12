@@ -2,12 +2,13 @@ has names Texts
 has types Texts
 has positions Dictionary(Text, Number) = Dictionary(Text, Number)
 has indexed Number = 0
+has owner Text = ""
 With(name Text, type Text) Scope
 	Scope(("a", "b"), ("A", "B")).With("c", "C").TypeOf("c") is "C"
-	Scope(names + name, types + type, positions, indexed)
+	Scope(names + name, types + type, positions, indexed, owner)
 WithAll(otherNames Texts, otherTypes Texts) Scope
 	Scope(("a", "b"), ("A", "B")).WithAll(("c", "d"), ("C", "D")).TypeOf("d") is "D"
-	Scope(names + otherNames, types + otherTypes, positions, indexed)
+	Scope(names + otherNames, types + otherTypes, positions, indexed, owner)
 TypeOf(name Text) Text
 	Scope(("a", "b"), ("A", "B")).TypeOf("b") is "B"
 	Scope(("a", "b"), ("A", "B")).TypeOf("c") is ""
@@ -52,4 +53,7 @@ Indexed Scope
 	mutable named = Dictionary(Text, Number)
 	for names
 		named(value) = index
-	Scope(names, types, named, names.Length)
+	Scope(names, types, named, names.Length, owner)
+Owned(typeName Text) Scope
+	Scope(("a"), ("A")).Owned("T").Indexed.With("b", "B").owner is "T"
+	Scope(names, types, positions, indexed, typeName)

@@ -103,8 +103,8 @@ IsIndexed(name Text, current Scope) Boolean
 	TypeInference(KnownTypes.Sample, Limits).IsIndexed("Other", KnownTypes.CountMethods) is false
 	NoInference.IsIndexed("precedences", NoShape)
 	NoInference.IsIndexed("Length", NoShape) is false
-	TypeInference(KnownTypes.Sample, Limits).IsIndexed("Limit", KnownTypes.CountMethods)
-	let owner = types.methods.Index(current)
+	TypeInference(KnownTypes.Sample, Limits).IsIndexed("Limit", KnownTypes.CountMethods.Owned("Count"))
+	let owner = types.Index(current.owner)
 	let isConstant = owner >= 0 and owner < constants.Length then constants(owner).TypeOf(name) is not "" else false
 	isConstant or name(0).Lower is name(0)
 MemberCallType(node SyntaxNode, scope Scope, current Scope) Text
