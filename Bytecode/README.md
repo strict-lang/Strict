@@ -5,4 +5,4 @@ Numeric test comparisons use `Number.IsNearlyEqual` (relative tolerance `1e-5 * 
 
 Bytecode format 7 binds compact method references to the owner's serialized length and CRC32. Loading checks the owner's source stamps, format, fingerprint and method-index bounds; stale references trigger recompilation.
 
-`DataFiles` finds the test fixtures of a file from its decoded string literals for the VM and native test stamps. It skips `.git` and directories ignored by the repository's `.gitignore` (the rules are a dependency too), explicit existing file literals stay dependencies even when ignored. `python Bytecode/check_data.py` (also with `native`) checks it.
+`DataFiles.Excluded` keeps `.git` and the given ignored folders out of `BinaryFile.Contained`.

@@ -119,7 +119,7 @@ IsInput(name Text) Boolean
 	let isOutput = name.EndsWith(".exe") or name.EndsWith(".test") or name.EndsWith(".strictbinary")
 	(name.LastIndexOf(".") > name.LastIndexOf("/") + 1) and (isOutput is false)
 Contained(folder Text, ignored Texts = List(Text)) Texts
-	Probe.Contained("NeuralNetworks/images").Length is DataFiles.Found("NeuralNetworks/images").Length
+	Probe.Contained("NeuralNetworks/images").Length is 2
 	if DataFiles(ignored).Excluded(folder)
 		return List(Text)
 	mutable files = Directory.Files(folder)
