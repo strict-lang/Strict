@@ -111,21 +111,6 @@ Types(entries List(ZipEntry)) List(TypeEntry)
 		else if value.Name is "links"
 			return BinaryLinks(BinaryFile(source)).Resolved(types, value)
 	types
-Data(path Text, ignored Texts = List(Text)) Slow(Texts)
-	Probe.Data("Compiler/NativeBuild.strict") is ("Compiler/NativeRuntime.mlir")
-	Probe.Data("NeuralNetworks/Dataset.strict").Length is 2
-	mutable files = List(Mutable(Text))
-	for reference, found in DataFiles.References(path).Unique, Found(reference, ignored)
-		if (found is not in files) and (found.EndsWith(".strict") is false)
-			files.Add(found)
-	files
-Found(name Text, ignored Texts = List(Text)) Texts
-	Probe.Found("Compiler/NativeRuntime.mlir") is List(Text) + "Compiler/NativeRuntime.mlir"
-	Probe.Found("Bytecode").Length is 0
-	Probe.Found(".git").Length is 0
-	Probe.Found("NeuralNetworks/images").Length is 2
-	(Probe.Found("..") + Probe.Found("/") + Probe.Found(".") + Probe.Found("./")).Length is 0
-	DataFiles(ignored).Found(name)
 IsInput(name Text) Boolean
 	Probe.IsInput("Compiler/NativeRuntime.mlir")
 	Probe.IsInput("./Character.test") is false
@@ -133,7 +118,7 @@ IsInput(name Text) Boolean
 	let isOutput = name.EndsWith(".exe") or name.EndsWith(".test") or name.EndsWith(".strictbinary")
 	(name.LastIndexOf(".") > name.LastIndexOf("/") + 1) and (isOutput is false)
 Contained(folder Text, ignored Texts = List(Text)) Texts
-	Probe.Contained("NeuralNetworks/images").Length is Probe.Found("NeuralNetworks/images").Length
+	Probe.Contained("NeuralNetworks/images").Length is DataFiles.Found("NeuralNetworks/images").Length
 	if DataFiles(ignored).Excluded(folder)
 		return List(Text)
 	mutable files = Directory.Files(folder)
