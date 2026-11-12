@@ -98,7 +98,7 @@ Expression Text
 	if operation is in ("icmp", "fcmp")
 		return operation is "icmp" then Compared else Ordering
 	if operation is "select"
-		return Operand(1, "i1") + " ? " + Operand(3, Arguments.Slice(2, 1).First) + " : " + Operand(5, Arguments.Last)
+		return Operand(1, "i1") + " ? " + Operand(3, Arguments.Slice(2, 1).First) + " : " + Operand(5, Arguments(4))
 	if operation is "fneg"
 		return Arguments.First is "float" then "-" + Operand(1, "float") else ""
 	operation is in ("getelementptr", "load") then Memory else ""
@@ -110,6 +110,7 @@ Operand(at Number, type Text) Text
 	MetalInstruction("%17 = getelementptr half, ptr %3, i64 %13", true).Type is "ptr"
 	MetalInstruction("%4 = select i1 %1, float %2, float %3", true).Type is "float"
 	MetalInstruction("%5 = call fastcc float @f(float %4)", true).Type is "float"
+	MetalInstruction("%4 = select i1 %1, float %2, float 2.500000e-01", true).Expression is "v1 ? v2 : 2.500000e-01f"
 	let arguments = Arguments
 	MetalValue(arguments(at)).Operand(type)
 Binary(symbol Number) Text
