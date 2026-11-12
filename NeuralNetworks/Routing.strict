@@ -2,43 +2,31 @@ has scores Numbers
 has experts Number
 constant Sample = Routing((0.1, 0.5, 0.15, 0.25), 4)
 constant Pair = Routing((0.1, 0.5, 0.15, 0.25, 0.9, 0.2, 0.3, 0.1), 4)
-Ranks Numbers
-	Sample.Ranks is (3, 0, 2, 1)
-	Routing((0.2, 0.2), 2).Ranks is (0, 1)
-	Pair.Ranks is (3, 0, 2, 1, 0, 2, 1, 3)
-	for scores
-		let expert = index % experts
-		let first = index - expert
-		let own = value
-		mutable rank = 0
-		for experts
-			rank = rank + Ahead(scores(first + index), index, own, expert)
-		rank
-Ahead(other Number, position Number, own Number, expert Number) Number
-	Sample.Ahead(0.5, 1, 0.1, 0) is 1
-	Sample.Ahead(0.1, 0, 0.1, 1) is 1
-	Sample.Ahead(0.1, 2, 0.1, 1) is 0
-	other > own then 1 else Tied(other, position, own, expert)
-Tied(other Number, position Number, own Number, expert Number) Number
-	Sample.Tied(0.1, 0, 0.1, 1) is 1
-	Sample.Tied(0.2, 0, 0.1, 1) is 0
-	other is own then Earlier(position, expert) else 0
-Earlier(position Number, expert Number) Number
-	Sample.Earlier(0, 1) is 1
-	Sample.Earlier(1, 1) is 0
-	position < expert then 1 else 0
 Chosen(used Number) Numbers
 	Sample.Chosen(2) is (1, 3)
 	Pair.Chosen(2) is (1, 3, 0, 2)
-	let ranks = Ranks
 	for scores.Length / experts * used
-		let first = (index / used).Floor * experts
-		let slot = index % used
-		mutable expert = 0
-		for experts
-			expert = expert + Matched(ranks(first + index), slot, index)
-		expert
-Matched(rank Number, slot Number, expert Number) Number
-	Sample.Matched(1, 1, 3) is 3
-	Sample.Matched(0, 1, 3) is 0
-	rank is slot then expert else 0
+		Picked((index / used).Floor * experts, index % used)
+Picked(first Number, slot Number) Number
+	Sample.Picked(0, 0) is 1
+	Pair.Picked(4, 1) is 2
+	Routing((0.2, 0.2), 2).Picked(0, 1) is 1
+	mutable previous = -1
+	mutable limit = 1 / 0
+	for slot + 1
+		previous = Next(first, limit, previous)
+		limit = scores(first + previous)
+	previous
+Next(first Number, limit Number, previous Number) Number
+	Sample.Next(0, 1 / 0, -1) is 1
+	Sample.Next(0, 0.5, 1) is 3
+	Sample.Next(0, 0.15, 2) is 0
+	Routing((-0.2, -0.2), 2).Next(0, -0.2, 0) is 1
+	mutable best = -1
+	mutable top = 0
+	for experts
+		let score = scores(first + index)
+		if ((score < limit) or (score is limit) and (index > previous)) and ((best < 0) or (score > top))
+			best = index
+			top = score
+	best
