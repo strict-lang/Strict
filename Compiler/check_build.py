@@ -13,7 +13,9 @@ assert "@NativeCompiler_Checked_" in (root / "Compiler/Bootstrap.mlir").read_tex
 	"Bootstrap compiler bypasses the unit-test gate"
 runtime = (root / "Compiler/NativeRuntime.mlir").read_text(encoding="utf-8")
 assert "strict_gc_watching(0 : i64)" in runtime and "strict_gc_watching(1 : i64)" not in runtime
-assert "build Strict.strict . linux" in (root / "Compiler/bootstrap.sh").read_text(encoding="utf-8")
+bootstrap = (root / "Compiler/bootstrap.sh").read_text(encoding="utf-8")
+assert "\nrelease=linux\n" in bootstrap and "build Strict.strict . $release\n" in bootstrap, \
+	"Linux bootstrap does not build a release compiler"
 assert "build Strict.strict . windows" in (root / "Compiler/Bootstrap.cmd").read_text(encoding="utf-8")
 extension = ".exe" if sys.platform == "win32" else ""
 def obj(source, suffix):
@@ -46,12 +48,12 @@ with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as 
 	assert trait_build.returncode == 0, trait_build.stdout + trait_build.stderr
 	assert subprocess.run([str(trait.with_suffix(extension))], timeout=10).returncode == 49
 	trait_run = run(str(trait))
-	assert trait_run.returncode == 49 and trait_run.stdout.strip() == "49", trait_run.stdout + trait_run.stderr
+	assert trait_run.returncode == 49 and trait_run.stdout.strip().rsplit("\n", 1)[-1] == "49", trait_run.stdout + trait_run.stderr
 	print("Trait members and parameters call their concrete implementation", flush=True)
 	cleanup = Path(folder) / "CleanupCheck.strict"
 	locked_base = (Path(folder) / "Locked").as_posix()
 	cleanup.write_text('has build Compiler/NativeBuild\nRun Number\n'
-		f'\tIntermediates(Logger).Removed("{locked_base}") then 0 else 1', encoding="utf-8")
+		f'\tIntermediates(Logger).Removed("{locked_base}") is Error then 1 else 0', encoding="utf-8")
 	with open(locked_base + ".ll", "wb") as locked:
 		cleaned = run(str(cleanup))
 		assert "Could not remove build intermediate: " + locked_base + ".ll" in cleaned.stdout, cleaned.stdout + cleaned.stderr
