@@ -1,0 +1,29 @@
+has random PseudoRandom
+has row Numbers = List(Number)
+has rows List(Numbers) = List(Numbers)
+Taken(width Number) Draw
+	Draw(PseudoRandom(1)).Taken(2).row.Length is 2
+	Draw(PseudoRandom(1)).Taken(2).Taken(2).row is not Draw(PseudoRandom(1)).Taken(2).row
+	mutable state = random
+	mutable values = List(Mutable(Number))
+	for width
+		values.Add((2 * state.Get(0, 1) - 1) / width.SquareRoot)
+	Draw(state, values)
+Gathered(inputs Number, outputs Number) Draw
+	Draw(PseudoRandom(1)).Gathered(2, 2).rows.Length is 2
+	Draw(PseudoRandom(1)).Gathered(2, 2).rows.First is Draw(PseudoRandom(1)).Taken(2).row
+	mutable current = value
+	mutable built = List(Mutable(Numbers))
+	for outputs
+		current = current.Taken(inputs)
+		built.Add(current.row)
+	Draw(current.random, rows = built)
+Stacked(sizes Numbers) Network
+	Draw(PseudoRandom(1)).Stacked((2, 3, 1)).layers.Length is 2
+	Draw(PseudoRandom(1)).Stacked((2, 1)) is Draw(PseudoRandom(1)).Stacked((2, 1))
+	mutable current = value
+	mutable layers = List(Mutable(Layer))
+	for Range(1, sizes.Length)
+		current = current.Gathered(sizes(index - 1), sizes(index))
+		layers.Add(Layer(current.rows, Layer.Zeros(sizes(index))))
+	Network(layers)

@@ -3,6 +3,7 @@ Neural networks written in Strict, from single neurons to large language models,
 
 ## Small networks
 - `Layer` is a fully connected layer (one weight row per neuron), `Network` trains layers with backpropagation (softmax and cross entropy for several outputs, momentum), `Csv` and `Dataset` read, scale and one-hot encode samples. `Xor`, `Iris` and `Diabetes` are the first programs to run.
+- `Descent` averages one fresh step per sample, `Draw` builds a seeded network, `Smallest` reports the width a boolean gate needs against the width this search finds and the width left after cutting a wider net. `Curve` prints test accuracy at hidden widths 1, 2, 4 and 8. `Depth` and `Shortened` score one short sentence with the first, middle and last block removed.
 - `LogicGates` (`Perceptron`) and `LinearRegression` are even simpler, `Activation` gives a layer Sigmoid, Tanh, Relu, LeakyRelu, Softplus or Swish (`ActivationComparison`), `Optimizer` trains with Adam or RMSprop instead of momentum (`OptimizerComparison`).
 - `Recurrent` is an Elman network trained with backpropagation through time (`BinaryAddition`), `Gru` adds update and reset gates and learns the embedded Reber grammar (`ReberPrediction`), which the Elman network can not.
 - Evolution instead of gradients: `Weasel`, `Neuroevolution` (XOR weights) and `ArmEvolution`, a genetic algorithm (`Reach`) for the joint angles of an `Arm` (Denavit-Hartenberg chains like the Franka Emika Panda).

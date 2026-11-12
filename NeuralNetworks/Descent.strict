@@ -1,0 +1,83 @@
+has network Network
+constant Step = List(Numbers) + (1, 0)
+constant Down = List(Numbers) + (List(Number) + 1)
+constant Up = List(Numbers) + (List(Number) + 0)
+constant Rows = ((0, 0), (0, 1), (1, 0), (1, 1))
+constant Gate = (List(Number) + 0, List(Number) + 1, List(Number) + 1, List(Number) + 0)
+constant Once = Network.Pair.Trained((1, 0), List(Number) + 1, 1)
+constant Moved = Network.Pair.Fresh.Trained((1, 1), List(Number) + 0, 1)
+constant Both = List(Network) + Network.Pair + Moved
+constant PairRow = Network.Pair.layers.Last.weights.First
+constant MovedRow = Moved.layers.Last.weights.First
+constant MeanOut = Gpt2Block.Added(PairRow, MovedRow) / 2
+constant PairBias = Network.Pair.layers.Last.biases
+constant MovedBias = Moved.layers.Last.biases
+constant AveragedBias = Gpt2Block.Added(PairBias, MovedBias) / 2
+constant Stepped = Network.Pair.Fresh.Trained((1, 0), List(Number) + 0, 1)
+constant GateEpoch = Descent(Network.Pair).Epoch(Rows, Gate, 1)
+constant StepEpoch = Descent(Network.Pair).Epoch(Step, Up, 1)
+constant KeptMomentum = Descent(Once).Epoch(Step, Down, 1)
+constant Cleared = Descent(Once.Fresh).Epoch(Step, Down, 1)
+Probed(inputs List(Numbers), targets List(Numbers)) List(Network)
+	Descent(Network.Pair).Probed(Rows, Gate).Length is 4
+	mutable probes = List(Mutable(Network))
+	let fresh = network.Fresh
+	for inputs
+		probes.Add(fresh.Trained(value, targets(index), 1))
+	probes
+MeanRow(probes List(Network), layer Number, row Number) Numbers
+	Descent(Network.Pair).MeanRow(Both, 1, 0) is MeanOut
+	mutable sum = Layer.Zeros(probes.First.layers(layer).weights(row).Length)
+	for probes
+		sum = Gpt2Block.Added(sum, value.layers(layer).weights(row))
+	sum / probes.Length
+MeanBias(probes List(Network), layer Number) Numbers
+	Descent(Network.Pair).MeanBias(Both, 1) is AveragedBias
+	mutable sum = Layer.Zeros(probes.First.layers(layer).biases.Length)
+	for probes
+		sum = Gpt2Block.Added(sum, value.layers(layer).biases)
+	sum / probes.Length
+MeanLayer(probes List(Network), layer Number) Layer
+	Descent(Network.Pair).MeanLayer(Both, 1).weights.First is MeanOut
+	mutable rows = List(Mutable(Numbers))
+	for probes.First.layers(layer).weights
+		rows.Add(MeanRow(probes, layer, index))
+	Layer(rows, MeanBias(probes, layer), probes.First.layers(layer).activation)
+MeanLayers(probes List(Network)) List(Layer)
+	Descent(Network.Pair).MeanLayers(Both).Last.weights.First is MeanOut
+	mutable layers = List(Mutable(Layer))
+	for probes.First.layers
+		layers.Add(MeanLayer(probes, index))
+	layers
+Averaged(probes List(Network)) Network
+	Descent(Network.Pair).Averaged(Both).layers.Last.weights.First is MeanOut
+	Network(MeanLayers(probes))
+BlendRow(current Numbers, mean Numbers, previous Numbers, rate Number) Numbers
+	Descent(Network.Pair).BlendRow((1, 1), (3, 5), List(Number), 0.5) is (2, 3)
+	Descent(Network.Pair).BlendRow((4, 4), (0, 0), (0, 0), 0) is (6, 6)
+	let stepped = Gpt2Block.Added(current * (1 - rate), mean * rate)
+	if previous.Length is 0
+		return stepped
+	Gpt2Block.Added(stepped, Gpt2Block.Added(current, previous * -1) * Layer.Momentum)
+BlendLayer(current Layer, mean Layer, rate Number) Layer
+	Descent(Network.Pair).BlendLayer(Layer.Halves, Layer.Halves, 0).weights is Layer.Halves.weights
+	mutable rows = List(Mutable(Numbers))
+	for current.weights
+		let previous = current.previousWeights.Length is 0 then List(Number) else current.previousWeights(index)
+		rows.Add(BlendRow(value, mean.weights(index), previous, rate))
+	let earlier = current.previousBiases.Length is 0 then List(Number) else current.previousBiases
+	Layer(rows, BlendRow(current.biases, mean.biases, earlier, rate), current.activation, current.weights, current.biases)
+Mixed(average Network, rate Number) List(Layer)
+	Descent(Network.Pair).Mixed(Network.Pair, 0).First.weights is Network.Pair.layers.First.weights
+	mutable layers = List(Mutable(Layer))
+	for network.layers
+		layers.Add(BlendLayer(value, average.layers(index), rate))
+	layers
+Blended(average Network, rate Number) Network
+	Descent(Network.Pair).Blended(Network.Pair, 0).Predict((1, 1)) is Network.Pair.Predict((1, 1))
+	Network(Mixed(average, rate))
+Epoch(inputs List(Numbers), targets List(Numbers), rate Number) Network
+	Descent(Network.Pair).Epoch(Step, Up, 1).layers.Last.weights is Stepped.layers.Last.weights
+	GateEpoch.Predict((0, 1)) is not StepEpoch.Predict((0, 1))
+	KeptMomentum.layers.Last.biases is not Cleared.layers.Last.biases
+	Blended(Averaged(Probed(inputs, targets)), rate)
