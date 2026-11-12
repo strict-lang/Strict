@@ -168,7 +168,7 @@ Returned(slots List(VmValue)) List(VmValue)
 	if slots(LoopSlot).kind is not in VmValue.ErrorKinds
 		return slots
 	mutable failed = slots
-	failed(ResultSlot) = slots(LoopSlot)
+	failed(Frame.ResultSlot) = slots(LoopSlot)
 	failed
 Ending(entry InstructionEntry, slots List(VmValue)) VmValue
 	Twice.Ending(InstructionEntry.LoopBegin(6, 8), Listed).number is 5
