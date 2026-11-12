@@ -1,5 +1,7 @@
 has tokens Texts
 constant SecondStep = Steps(Tokenizer("B(a Number, b Number with Step 0.5)").Tokens)
+constant Rounded = ("has price Number with Step 0.01", "T(a Number) Number with Step 0.5", "	L(a Numbers with Step 1)")
+constant Mixed = Steps(Tokenizer("B(a Number with Step 0.5, b List(Number) with Step 0.5)").Tokens)
 Of(nameIndex Number) Text
 	Steps(Tokenizer("has price Number with Step 0.01").Tokens).Of(1) is "0.01" and (SecondStep.Of(2) is "")
 	Steps(Tokenizer("has lot Number with Step 0.001 Floor").Tokens).Of(1) is "0.001 Floor"
@@ -37,3 +39,20 @@ Members(lines Texts) Scope
 				names.Add(HeaderTokens(line).MemberName + " step")
 				types.Add(step)
 	Scope(names, types)
+Unnumbered(path Text, lines Texts) Texts
+	Steps(List(Text)).Unnumbered("A", Rounded).Length is 0
+	for lines
+		let type = value.StartsWith("	") then "" else Steps(Tokenizer(value).Tokens).Unrounded
+		if type is not ""
+			"StepMustBeOnNumber: " + type + " in " + path + ":" + (index + 1) + ", only a Number is rounded to its step"
+Unrounded Text
+	Mixed.Unrounded is ")"
+	Steps(Tokenizer("has a Numbers Step 1").Tokens).Unrounded is ""
+	Steps(Tokenizer("has a Numbers with value > 0").Tokens).Unrounded is ""
+	Steps(Tokenizer("has a Text = \"b with Step 1\"").Tokens).Unrounded is ""
+	Steps(("with", "Step")).Unrounded is ""
+	for tokens
+		if (value is "Step") and (index > 1)
+			if (tokens(index - 1) is "with") and (tokens(index - 2) is not "Number")
+				return tokens(index - 2)
+	""

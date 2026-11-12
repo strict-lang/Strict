@@ -29,24 +29,7 @@ Unsupported(path Text, lines Texts) Texts
 	Counting.Unsupported("A", List(Text) + "has value Number").Length is 1
 	Counting.Unsupported("A", List(Text) + "L(prices Numbers with Step 0.5) Number").First is Unstepped
 	let named = LoopNames(path, lines) + LoopParameters(path, lines) + Members(path, lines)
-	Defaults(path, lines) + Keyworded(path, lines) + named + Stepped(path, lines)
-Stepped(path Text, lines Texts) Texts
-	Counting.Stepped("A", ("has price Number with Step 0.01", "T(a Number) Number with Step 0.5", "\tL(a Numbers with Step 1)")).Length is 0
-	for lines
-		let type = value.StartsWith("\t") then "" else StepType(Tokenizer(value).Tokens)
-		if type is not ""
-			"StepMustBeOnNumber: " + type + " in " + path + ":" + (index + 1) + ", only a Number is rounded to its step"
-StepType(tokens Texts) Text
-	DefaultCheck.StepType(Tokenizer("B(a Number with Step 0.5, b List(Number) with Step 0.5)").Tokens) is ")"
-	DefaultCheck.StepType(Tokenizer("has a Numbers Step 1").Tokens) is ""
-	DefaultCheck.StepType(Tokenizer("has a Numbers with value > 0").Tokens) is ""
-	DefaultCheck.StepType(Tokenizer("has a Text = \"b with Step 1\"").Tokens) is ""
-	DefaultCheck.StepType(("with", "Step")) is ""
-	for tokens
-		if (value is "Step") and (index > 1)
-			if (tokens(index - 1) is "with") and (tokens(index - 2) is not "Number")
-				return tokens(index - 2)
-	""
+	Defaults(path, lines) + Keyworded(path, lines) + named + Steps(List(Text)).Unnumbered(path, lines)
 Members(path Text, lines Texts) Texts
 	Coupled.Members("A", ("has value Number", "has pair Couple")).Length is 2
 	ValueMembers(path, lines) + OpenMembers(path, lines)

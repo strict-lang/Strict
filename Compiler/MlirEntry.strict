@@ -5,6 +5,7 @@ constant Counted = MlirEntry(MlirModule.Counters.Functions.First)
 constant Frames = MemberEntry("frames", "Strict/Number", List(InstructionEntry) + InstructionEntry.Set(List(Text), (1, 7)), false)
 constant Loud = MemberEntry("loud", "Strict/Boolean", List(InstructionEntry), false)
 constant Valued = MemberEntry("values", "Strict/Numbers", Frames.initial, false)
+constant Mixed = MlirEntry(MlirFunction(Framed.entry, method = MethodEntry("Run", (Loud, Valued), "Strict/Number", List(InstructionEntry))))
 constant Both = MlirEntry(Counted.entry, List(MlirFunction) + Counted.entry)
 constant Framed = MlirEntry(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + Frames, "Strict/Number", List(InstructionEntry) + InstructionEntry.Return(0))))
 constant Folders = TypeCodegen("Strict/Folders", ("Run(folder = \"Content\") Number", "\t0"), ValueCodegen.NoTypes, List(Text)).Entry
@@ -68,7 +69,7 @@ Arguments Texts
 	Counted.Arguments.Length is 0
 	Framed.Arguments.Last is "    %arg0 = arith.select %arg0has, %arg0given, %arg0default : f64"
 	Foldered.Arguments.Last is "    %arg0 = arith.select %arg0has, %arg0given, %arg0default : f64"
-	MlirEntry(MlirFunction(Framed.entry, method = MethodEntry("Run", (Loud, Valued), "Strict/Number", List(InstructionEntry)))).Arguments.Length is 4
+	Mixed.Arguments.Length is 4
 	mutable lines = List(Mutable(Text))
 	for entry.method.parameters
 		let kind = TypeEntry.ShortName(value.typeName)

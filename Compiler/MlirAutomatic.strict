@@ -11,22 +11,22 @@ constant Priced = MemberEntry("prices", "Strict/Dictionary(Text, Shape)", List(I
 constant Nested = MemberEntry("inner", "Strict/Shape", List(InstructionEntry), false)
 constant Holder = TypeEntry("Strict/Holder", (Priced, Nested), List(MethodEntry))
 constant Stating = TypeEntry("Strict/States", List(MemberEntry) + MemberEntry("states", "Strict/Dictionary(Number, Missing)", List(InstructionEntry), false), List(MethodEntry))
+constant Doubled = MlirAutomatic(MlirFunction(Sample.function.types + MlirFunction.Shape + Stating, Stating, Sample.function.method))
+constant Shaped = Sample.Function(MlirFunction.Shape)
 constant Converting = "(f64) -> f64"
 constant PairSignature = " : (f64, (f64) -> f64, (f64) -> f64) -> f64"
 Functions Texts
 	Sample.Functions.First.StartsWith("  func.func private @strict_automatic_")
 	Text.Combine(Sample.Functions).IndexOf("@strict_automatic_list_list_") > 0
-	MlirAutomatic(MlirFunction(List(TypeEntry) + Stating, Stating, Sample.function.method)).Functions.Length is 0
-	MlirAutomatic(MlirFunction(Sample.function.types + MlirFunction.Shape, MlirFunction.Shape, Sample.function.method)).Functions is Sample.Functions
+	Doubled.Functions is Sample.Functions
 	mutable lines = List(Mutable(Text))
 	mutable symbols = List(Mutable(Text))
 	for function.types
 		let kind = TypeEntry.ShortName(value.Name)
-		let equality = MlirEquality(function, 0)
-		if equality.IsKnown(kind) and (equality.Symbol(kind) is not in symbols)
-			symbols.Add(equality.Symbol(kind))
-			let lists = Collection(equality.Symbol(kind)) + Collection("list_" + equality.Symbol(kind))
-			lines = lines + Function(value) + lists + Hash(equality.Symbol(kind))
+		let symbol = MlirEquality(function, 0).Symbol(kind)
+		if MlirEquality(function, 0).IsKnown(kind) and (symbol is not in symbols)
+			symbols.Add(symbol)
+			lines = lines + Function(value) + Collection(symbol) + Collection("list_" + symbol) + Hash(symbol)
 	lines
 Collection(symbol Text) Texts
 	Sample.Collection("Shape").Length is 5
@@ -42,8 +42,7 @@ Hash(symbol Text) Texts
 	let text = "    %text = func.call @strict_automatic_" + symbol + "(%value) : (f64) -> f64"
 	(header, text, "    %hash = func.call @strict_hash_text(%text) : (f64) -> i64", "    return %hash : i64", "  }")
 Function(type TypeEntry) Texts
-	Sample.Function(MlirFunction.Shape).Length is 24
-	Sample.Function(MlirFunction.Shape).First is "  func.func private @strict_automatic_Shape(%value: f64) -> f64 {"
+	(Shaped.Length is 24) and (Shaped.First is "  func.func private @strict_automatic_Shape(%value: f64) -> f64 {")
 	Text.Combine(Sample.Function(Stating)).IndexOf("@skip") is -1
 	let name = MlirEquality(function, 0).Symbol(TypeEntry.ShortName(type.Name))
 	mutable lines = List(Text) + ("  func.func private @strict_automatic_" + name + "(%value: f64) -> f64 {") + Prologue
