@@ -14,6 +14,9 @@ Ran(arguments Texts) Number
 	let cache = NativeCache(arguments(0), rest)
 	let result = Current(cache) then 0 else BuildProfile(logger).Compiled(cache)
 	let code = result is Error("InvalidTestRequest") then 2 else result is Error then 1 else result
+	let problem = result is Error then (result to Text).Lines.First.Replace("Error: ", "") else ""
+	if problem.IndexOf(": ") > 0
+		logger.Log(problem)
 	let reported = Reported(code, started)
 	Unlocked(rest(0)) then reported else 1
 Current(cache NativeCache) Boolean

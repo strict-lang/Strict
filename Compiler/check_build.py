@@ -328,6 +328,17 @@ def check_native_change():
 				assert result.returncode == 0 and "Up to date" not in result.stdout, changed + ": " + result.stdout + result.stderr
 	print("A changed native source or package of another folder rebuilds for strict build and strict <file>")
 
+def check_named_failure():
+	"""A build stopped by an Error of the front end names it instead of ending with exit 1 and no output."""
+	with tempfile.TemporaryDirectory(prefix="NamedCheck", dir=root / "Examples") as folder:
+		source = Path(folder) / "NamedCheck.strict"
+		source.write_text('has logger\nNext(number Number) Number\n\tnumber + 1\nRun\n\tNext(3)\n\tlogger.Log("done")\n', encoding="utf-8")
+		built = subprocess.run([str(root / ("strict" + extension)), "build", str(source)], cwd=root,
+			capture_output=True, text=True, timeout=120)
+		assert built.returncode == 1 and "ResultMustBeUsed: Next(3)" in built.stdout, built.stdout + built.stderr
+	print("A build stopped by a front end Error names it")
+
+check_named_failure()
 check_concurrent_builds()
 check_link_workers()
 check_moved_program()
