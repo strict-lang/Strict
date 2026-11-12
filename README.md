@@ -97,7 +97,7 @@ Builds, checks, folder tests on the VM, VS Code typing checks and value tracing 
 
 ## Rules worth knowing
 - Limits: 120 characters per indented line (240 for a constant), 13 lines per method (header and tests included), 18 methods (not for base types), 15 members, 40 constants, nesting depth 5. Files in a `Generated` folder get 10 times as much, in a `Content` folder twice as much.
-- Precedence from loosest to tightest: `then`/`else`, `not`, `or`, `xor`, `and`, comparisons (`is`, `is not`, `is in`, `is not in`, `<`, `>`, `<=`, `>=`), `in`, `+`/`-`, `*`/`/`/`%` (left to right: `a % b / c` is `(a % b) / c`), `^`, `to`.
+- Precedence from loosest to tightest: `then`/`else`, `or`, `xor`, `and`, comparisons (`is`, `is not`, `is in`, `is not in`, `<`, `>`, `<=`, `>=`), `in`, `+`/`-`, `*`/`/`/`%` (left to right: `a % b / c` is `(a % b) / c`), `^`, `to`. A prefix `not` belongs to the one operand that follows it and needs no brackets inside `and`/`or` chains: `isOpen and not isLocked or isForced` is `(isOpen and (not isLocked)) or isForced`; negate a comparison with `is not`, `is not in` or brackets (`not (a < b)`).
 - A conditional as one of several arguments needs brackets: `Text(value, (isShort then 2 else 4))`.
 - Constraints follow `with`: `has Width Number with value > 0`, `Run(frames = 0 with value >= 0)`. A value that does not fit is `Error("ConstraintNotMet: ...")`.
 - A decimal is a Number with a step: `has price Number with Step 0.01` rounds every value going into it (half to even), plain Number arithmetic stays binary.
