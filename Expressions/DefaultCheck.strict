@@ -12,14 +12,55 @@ constant Methods = ("Run", "\tfor 2", "\t\t1", "\t1", "Other", "\t1", "Last", "\
 constant Defaulted = ("has b Text", "constant c = Text(other)", "Run", "\tlet d = Text(other)")
 constant Declared = ("Run", "\tmutable outer = 1", "\tconstant outer = 1", "\tlet other = 1", "\tif outer", "\tlet", "constant outer = 1")
 constant Measuring = DefaultCheck(TypeInference(KnownTypes.Measured, (KnownTypes.NoMembers, KnownTypes.NoMembers)))
+constant Coupled = DefaultCheck(Instantiation.Inferring)
+constant Empty = (KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers)
+constant Kept = (Scope(("pair"), ("Couple")), Instantiation.Couples.members(0), Scope(("value"), ("Number")))
+constant Keeping = DefaultCheck(TypeInference(KnownTypes(("Keeper", "Couple", "Valued"), Kept, Empty, Empty), List(Scope)))
+constant Paired = "GenericMemberTypeMustBeNamed: pair in A:1, name the type of each Generic member of Couple like has pair Couple(Number, Number)"
+constant Named = ("has pair Couple(Text, Number)", "has name Text", "has first Generic", "has items Generics", "has other Couple(first, Generic)")
+constant Typed = Named + ("constant Pair = Couple", "Swapped Couple", "\tCouple(1, 2)")
 Unsupported(path Text, lines Texts) Texts
+	Coupled.Unsupported("A", List(Text) + "has pair Couple").Length is 1
 	Counting.Unsupported("A.strict", Moving).First is "CannotUseKeywordsAsName: from in A.strict:1"
 	Counting.Unsupported("A.strict", Countdown).First is "LoopNameMustNotBeDeclared: index in A.strict:2"
 	Counting.Unsupported("A.strict", Missed).First is "ConstantNotFound: Count.Missing in A.strict:1"
 	Counting.Unsupported("A.strict", Shifting).First is "LoopNameMustNotBeDeclared: index in A.strict:1"
 	Counting.Unsupported("A", List(Text) + "has value Number").Length is 1
-	let named = LoopNames(path, lines) + LoopParameters(path, lines) + ValueMembers(path, lines)
+	let named = LoopNames(path, lines) + LoopParameters(path, lines) + Members(path, lines)
 	Defaults(path, lines) + Keyworded(path, lines) + named
+Members(path Text, lines Texts) Texts
+	Coupled.Members("A", ("has value Number", "has pair Couple")).Length is 2
+	ValueMembers(path, lines) + OpenMembers(path, lines)
+HasCheckedMembers(typeName Text) Boolean
+	Keeping.HasCheckedMembers("Keeper") and Keeping.HasCheckedMembers("Valued")
+	Keeping.HasCheckedMembers("Couple") is false
+	let members = inference.types.MembersOf(typeName)
+	for members.types
+		if "Generic" is in inference.types.MembersOf(value).types
+			return true
+	"value" is in members.names
+OpenMembers(path Text, lines Texts) Texts
+	Coupled.OpenMembers("A", List(Text) + "has pair Couple").First is Paired
+	Coupled.OpenMembers("A", ("has name Text", "has couple")).First is Paired.Replace("pair", "couple").Replace(":1", ":2")
+	Coupled.OpenMembers("A", Typed).Length is 0
+	let shape = TypeShape(lines)
+	for lines
+		let isMember = shape.IsMemberLine(value) and (value.StartsWith("constant ") is false)
+		let issue = isMember then Unnamed(HeaderTokens(Tokenizer(value).Tokens), path + ":" + (index + 1)) else ""
+		if issue is not ""
+			issue
+Unnamed(member HeaderTokens, location Text) Text
+	Coupled.Unnamed(HeaderTokens("mutable", "pair", "Couple"), "A:1") is Paired.Replace("has", "mutable")
+	Counting.Unnamed(HeaderTokens("has", "count"), "A:1") is ""
+	let type = inference.types.BaseName(member.DeclaredType(1))
+	mutable types = List(Mutable(Text))
+	for inference.types.MembersOf(type).types
+		if value is "Generic"
+			types.Add("Number")
+	let named = member.tokens(0) + " " + member.MemberName + " " + type + "(" + Text.Combine(types, ", ") + ")"
+	let hint = ", name the type of each Generic member of " + type + " like " + named
+	let isNamed = (types.Length is 0) or (Text.Combine(member.tokens, " ").IndexOf(type + " (") > 0)
+	isNamed then "" else "GenericMemberTypeMustBeNamed: " + member.MemberName + " in " + location + hint
 ValueMembers(path Text, lines Texts) Texts
 	Counting.ValueMembers("A", List(Text) + "has value Number").First.StartsWith("MemberMustNotBeNamedValue: value in A:1")
 	Counting.ValueMembers("A.strict", Sized).Length is 0

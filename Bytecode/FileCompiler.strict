@@ -126,8 +126,8 @@ Resolved(source Text, inference TypeInference, files Texts = List(Text)) Slow(Bo
 	FileCompiler.Resolved("./Logger.strict", ResolveCheck.Inference(("./Logger.strict", "./TextWriter.strict")))
 	mutable unresolved = ResolveCheck(logger).Unresolved(source, inference)
 	for files
-		if (value is not source) and ("value" is in inference.types.MembersOf(ResolveCheck.TypeName(value)).names)
-			unresolved = unresolved + DefaultCheck(inference).ValueMembers(value, File(value).ReadLines)
+		if (value is not source) and DefaultCheck(inference).HasCheckedMembers(ResolveCheck.TypeName(value))
+			unresolved = unresolved + DefaultCheck(inference).Members(value, File(value).ReadLines)
 	for unresolved
 		logger.Log(value)
 	unresolved.Length is 0
