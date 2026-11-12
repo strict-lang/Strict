@@ -110,14 +110,14 @@ with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as 
 	assert built.returncode == 0, built.stdout + built.stderr
 	changed = datetime.fromtimestamp(source.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
 	last_build = datetime.fromtimestamp(executable.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
-	message = f"Up to date: {source} (last changed {changed}) < {executable.name} (last build {last_build})"
+	message = f"Up to date: {source.as_posix()} (last changed {changed}) < {executable.name} (last build {last_build})"
 	assert built.stdout.strip() == message, built.stdout
 	direct = subprocess.run([str(root / ("strict" + extension)), "build", str(source), "."],
 		cwd=root, capture_output=True, text=True, timeout=10)
 	assert direct.returncode == 0 and direct.stdout.strip() == message, direct.stdout + direct.stderr
 	message_source = Path(folder) / "MessageCheck.strict"
 	message_source.write_text('has cache Compiler/NativeCache\n'
-		f'constant Source = {json.dumps(str(source))}\nRun Number\n'
+		f'constant Source = {json.dumps(source.as_posix())}\nRun Number\n'
 		'\tLogger.Log(NativeCache("build", (Source, ".")).Message)\n\t0', encoding="utf-8")
 	interpreted = run(str(message_source))
 	assert interpreted.returncode == 0 and interpreted.stdout.strip().endswith(message), interpreted.stdout + interpreted.stderr
