@@ -49,17 +49,22 @@ Launched Texts
 	(function.Load(name + "d", "%v_" + groups.Size(call)), "    " + name + " = arith.fptosi " + name + "d : f64 to i64")
 Memos Texts
 	Calling.Memos.Length is 4 and Calling.Memos(1) is "    %memo11k" + Allocated
-	Calling.Memos(2) is "    %memo11n = arith.constant 0x7FF8000000000000 : f64"
+	Calling.Memos(2) is "    %memo11n = arith.constant 0x7FF8000000000000 : f64" and Doubling.Memos.Length is 0
 	MlirGrouped(MlirGroups.Norming.function, 0).Memos.First is "    %memo11 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
-	Doubling.Memos.Length is 0
 	mutable lines = List(Mutable(Text))
 	for function.method.instructions
 		let call = value.kind is InstructionType.LoopBegin then MlirGroups(function, index).Call else -1
 		if call >= 0
 			let memo = "%memo" + call
-			let unset = ("    " + memo + "n = arith.constant 0x7FF8000000000000 : f64", function.Store(memo + "n", memo + "k"))
-			lines = lines + ("    " + memo + Allocated, "    " + memo + "k" + Allocated) + unset
+			let unset = "    " + memo + "n = arith.constant 0x7FF8000000000000 : f64"
+			let allocated = ("    " + memo + Allocated, "    " + memo + "k" + Allocated, unset)
+			lines = lines + allocated + MlirGrouped(function, index).Unset
 	lines
+Unset Texts
+	MlirGrouped(MlirGroups.Norming.function, 2).Unset is ("    llvm.store %memo11n, %memo11k : f64, !llvm.ptr")
+	Doubling.Unset.Length is 0
+	let call = MlirGroups(function, position).Call
+	call < 0 then List(Text) else List(Text) + function.Store("%memo" + call + "n", "%memo" + call + "k")
 Kept(called Texts, register Number) Texts
 	Calling.Kept(List(Text) + "    call", 9) is Checking + "    call" + Joining
 	Calling.Kept(List(Text) + "    call", 9)(5) is "    %t11gh = arith.cmpf oeq, %t11gk, %t11gm : f64"

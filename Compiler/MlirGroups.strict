@@ -24,8 +24,10 @@ constant Aligning = MlirGroups(MlirFunction(Norming.function, method = MethodEnt
 constant Ranging = MlirGroups(MlirFunction(Aligning.function, method = MethodEntry(Normed, instructions = AlignedCode.Slice(0, 2) + InstructionEntry.LoopBegin(0, 1) + AlignedCode.Slice(3, 14))), 2)
 constant NormedCall = InstructionEntry.Invoke(3, ("Strict/Grouped", "Normed", "Strict/List(Number)", "input", "size", "count"), (0, 1, 2), -1)
 constant Delegated = MethodEntry(Scaled, instructions = Scaled.instructions.Slice(0, 3) + NormedCall + Scaled.instructions.Slice(4, 3))
+constant Unsized = InstructionEntry.Invoke(10, SquaredCall(0).texts, (1, 8, 8), -1)
+constant Twice = MlirGroups(MlirFunction(Norming.function, method = MethodEntry(Normed, instructions = Normed.instructions.Slice(0, 11) + Unsized + Normed.instructions.Slice(11, 6))), 2)
 Call Number
-	Norming.Call is 11
+	Norming.Call is 11 and Twice.Call is -1
 	MlirGroups(MlirGpu.Layering.function, 2).Call is -1
 	if MlirLoops(function, position).Collection is not ""
 		return -1
@@ -35,7 +37,7 @@ Call Number
 		if (function.method.instructions(value).kind is InstructionType.LoopBegin) or (adding < 0)
 			return -1
 		if adding > 0
-			found = (found >= 0) or (Size(value) is "") then -2 else value
+			found = (found is not -1) or (Size(value) is "") then -2 else value
 	found < 0 then -1 else found
 Adding(at Number) Number
 	Norming.Adding(11) is 1

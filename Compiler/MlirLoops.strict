@@ -30,13 +30,14 @@ Temp(suffix Text) Text
 Begin Texts
 	Counting.Begin.Length is 19
 	Text.Combine(Doubling.Begin).IndexOf("@strict_gpu_run(") < Text.Combine(Doubling.Begin).IndexOf("^floop2fast:")
+	"    llvm.store %memo11n, %memo11k : f64, !llvm.ptr" is in MlirLoops(MlirGroups.Norming.function, 2).Begin
 	let entry = function.method.instructions(position)
 	let isRange = entry.payload(1) is 1
 	let bounds = MlirChecks(function, position).Counted + (isRange then RangeBounds(entry) else CountBounds(entry))
-	let label = "^loop" + position
-	let saved = bounds + (function.Load(Temp("x"), "%v_index"), function.Load(Temp("y"), "%v_value")) + Outered
+	let indexes = (function.Load(Temp("x"), "%v_index"), function.Load(Temp("y"), "%v_value"))
+	let saved = bounds + MlirGrouped(function, position).Unset + indexes + Outered
 	let begun = saved + MlirGpu(function, position).Launched + MlirKernel(function, position).Versioned + Presized
-	let tail = MlirRangeLoop(function, position).Opened(label)
+	let tail = MlirRangeLoop(function, position).Opened("^loop" + position)
 	let looped = isRange then MlirRangeLoop(function, position).Value else Current
 	begun + MlirParallel(function, position).Forked + Items + MlirWholeLoop(function, position).Versioned + tail + looped
 Current Texts
