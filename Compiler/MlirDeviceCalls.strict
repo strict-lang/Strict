@@ -6,6 +6,12 @@ constant Twicing = Twice.function.method.instructions(4)
 constant Flooring = MlirDeviceCalls(MlirGpuCheck.Floored, 1, MlirGpuCheck.Floored)
 constant Making = InstructionEntry.Invoke(1, ("Strict/Degrees", "from", "Strict/Degrees", "number"), List(Number) + 0, -1)
 constant Rounding = InstructionEntry.Invoke(1, ("Strict/Float8", "from", "Strict/Float8", "number"), List(Number) + 0, -1)
+constant Turns = (MemberEntry("turns", "Strict/Number", List(InstructionEntry), false), MemberEntry("extra", "Strict/Number", List(InstructionEntry), false))
+constant TurnsMade = MethodEntry("from", Turns, "Strict/Angle", (InstructionEntry.LoadNumber(0, 3), InstructionEntry.Return(0)))
+constant Angle = TypeEntry("Strict/Angle", List(MemberEntry) + MemberEntry("degrees", "Strict/Number", List(InstructionEntry), false), List(MethodEntry) + TurnsMade)
+constant Turning = InstructionEntry.Invoke(1, ("Strict/Angle", "from", "Strict/Angle", "turns", "extra"), (0, 0), -1)
+constant TurnedMethod = MethodEntry("Turned", List(MemberEntry), "Strict/Angle", (GpuNumberSamples.ValueLoaded, Turning, InstructionEntry.Return(1)))
+constant Turned = MlirDeviceCalls(MlirFunction(MlirGpuCheck.Floored.types + Angle, MlirGpuCheck.Floored.type, TurnedMethod), 1, MlirGpuCheck.Floored)
 constant Heads = MlirDeviceCalls(MlirGpuCheck.Heading.function, 4, MlirDeviceMembers.Head)
 constant Decimals = MemberEntry("decimals", "Strict/Number", List(InstructionEntry) + InstructionEntry(InstructionType.Set, List(Text), (1, 3, 0)), false)
 constant Spaced = MemberEntry("spaces", "Strict/Text", List(InstructionEntry), false)
@@ -100,11 +106,12 @@ Register(entry InstructionEntry) Number
 	Twice.Register(Twicing) is -1
 	Flooring.Register(MlirGpuCheck.Flooring) is 0
 	PayloadDecoder(entry).Instance
-IsNative(entry InstructionEntry) Boolean
-	Flooring.IsNative(MlirGpuCheck.Flooring)
-	Twice.IsNative(Twicing) is false
+IsNative Boolean
+	Flooring.IsNative
+	Twice.IsNative is false
+	Turned.IsNative is false
 	let loop = function.method.LoopBeginOf(at)
-	(entry.texts(1) is in Natives) or ((loop >= 0) then MlirTokens(function, loop).Call is at else false)
+	MlirDeviceMembers(function).IsNativeCall(at) or ((loop >= 0) then MlirTokens(function, loop).Call is at else false)
 Native(entry InstructionEntry) Texts
 	Flooring.Native(MlirGpuCheck.Flooring)(1).IndexOf("llvm.intr.floor") > 0
 	Flooring.Native(Making).Last is "    llvm.store %d1, %r1 : f64, !llvm.ptr"
