@@ -114,7 +114,7 @@ Checked(entry InstructionEntry) Numbers
 Reaching(register Number, at Number, registers Text, naturals Text) Text
 	Reused.Reaching(2, 3, Reused.Part(0), Reused.Part(2)) is "i"
 	Reused.Reaching(2, 5, Reused.Part(0), Reused.Part(2)) is "f"
-	let writer = MlirArguments(List(MlirFunction)).Writer(function, register, at)
+	let writer = LoadReuse(function.method.instructions).Writer(register, at, -1)
 	if writer < 0
 		return registers(register) to Text
 	for Range(writer + 1, at)
@@ -180,6 +180,6 @@ Length(at Number) Text
 	if (entry.kind is not InstructionType.Invoke) or (PayloadDecoder(entry).Text(2) is not "Length")
 		return ""
 	let instance = entry.payload(LoadReuse(function.method.instructions).InvokeReads(entry).Last)
-	let writer = MlirArguments(List(MlirFunction)).Writer(function, instance, at)
+	let writer = LoadReuse(function.method.instructions).Writer(instance, at, -1)
 	let loaded = writer < 0 then "" else function.method.instructions(writer).texts.Last
 	MlirParameters(function).IsBytes(loaded) then loaded else ""

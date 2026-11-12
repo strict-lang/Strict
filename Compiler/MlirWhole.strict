@@ -83,13 +83,7 @@ Writer(register Number, at Number) Number
 	Row.Writer(13, 17) is 15
 	Row.Writer(4, 8) is -1
 	Row.Writer(-1, 17) is -1
-	if register < 0
-		return -1
-	for at - position - 1
-		let earlier = at - 1 - index
-		if LoadReuse(function.method.instructions).Written(function.method.instructions(earlier)) is register
-			return earlier
-	-1
+	LoadReuse(function.method.instructions).Writer(register, at, position)
 Kind(at Number) Text
 	Row.Kind(8) is "Number"
 	Row.Kind(11) is ""

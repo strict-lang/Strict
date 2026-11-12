@@ -92,11 +92,7 @@ IsAdded(load Number) Boolean
 Writer(before Number, register Number) Number
 	Summing.Writer(9, 1) is 3
 	MlirDeviceSums(MlirDeviceChoice.Choosing, 4).Accumulated is List(Text)
-	for before - at - 1
-		let candidate = before - 1 - index
-		if LoadReuse(function.method.instructions).Written(function.method.instructions(candidate)) is register
-			return candidate
-	-1
+	LoadReuse(function.method.instructions).Writer(register, before, at)
 IsWarped Boolean
 	MlirDeviceSums(MlirGpu.Layering.function, 2).IsWarped
 	Doubling.IsWarped is false

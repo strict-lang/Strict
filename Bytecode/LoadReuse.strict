@@ -110,6 +110,17 @@ Written(entry InstructionEntry) Number
 	Twice.Written(InstructionEntry.Return(2)) is -1
 	let position = WritePosition(entry)
 	position < 0 then -1 else entry.payload(position)
+Writer(register Number, before Number, after Number) Number
+	Twice.Writer(2, 4, -1) is 2
+	Twice.Writer(0, 4, 0) is -1
+	Twice.Writer(-1, 4, -1) is -1
+	if register < 0
+		return -1
+	for before - after - 1
+		let earlier = before - 1 - index
+		if Written(instructions(earlier)) is register
+			return earlier
+	-1
 WritePosition(entry InstructionEntry) Number
 	Twice.WritePosition(AddBoth) is 3
 	Twice.WritePosition(InstructionEntry.Binary(InstructionType.Equal, (0, 1))) is -1

@@ -54,7 +54,7 @@ Writer(register Number) Number
 	MlirWholeNarrow(Mixing, 21).Accumulated is "" and (MlirWholeNarrow(Mixing, 23).Accumulated is "")
 	MlirWholeNarrow(Mixing, 26).Accumulated is "" and (MlirWholeNarrow(Mixing, 29).Accumulated is "")
 	MlirWholeNarrow(Mixing, 31).Accumulated is ""
-	MlirArguments(List(MlirFunction)).Writer(function, register, position)
+	LoadReuse(function.method.instructions).Writer(register, position, -1)
 IsSmall(at Number) Boolean
 	Adding.IsSmall(4)
 	Adding.IsSmall(3) is false
@@ -94,7 +94,7 @@ Bounds(at Number) Numbers
 	MlirWholeNarrow(MlirKernel.Summing.function, 0).Bounds(1).Length is 0
 	let entry = function.method.instructions(at)
 	for (entry.payload(1) is 1 then (entry.payload(0), entry.payload(2)) else List(Number) + entry.payload(0))
-		let writer = MlirArguments(List(MlirFunction)).Writer(function, value, at)
+		let writer = LoadReuse(function.method.instructions).Writer(value, at, -1)
 		if (writer >= 0) and (function.method.instructions(writer).kind is InstructionType.LoadConstantToRegister)
 			PayloadDecoder(function.method.instructions(writer)).Value(1).number
 IsBounded(name Text) Boolean
@@ -119,7 +119,7 @@ IsSmallStore(at Number) Boolean
 	if entry.kind is InstructionType.StoreConstantToVariable
 		let number = PayloadDecoder(entry).Value(0).number
 		return (number >= 0) and (number <= Byte.Max) and (number.Floor is number)
-	let writer = MlirArguments(List(MlirFunction)).Writer(function, entry.payload(0), at)
+	let writer = LoadReuse(function.method.instructions).Writer(entry.payload(0), at, -1)
 	(writer >= 0) and (MlirWholeNarrow(function, writer).Accumulated is entry.texts.Last)
 Emitted Texts
 	Adding.Emitted.Last is "    %t6c = arith.extui %t6cn : i32 to i64"

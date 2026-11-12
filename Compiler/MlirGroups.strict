@@ -107,11 +107,7 @@ Writer(register Number, before Number) Number
 	Ranging.Aligned(AlignedCode(9), 9) is ""
 	Norming.Writer(7, 11) is 9
 	Norming.Writer(0, 5) is -1
-	for before - position - 1
-		let candidate = before - 1 - index
-		if LoadReuse(function.method.instructions).Written(function.method.instructions(candidate)) is register
-			return candidate
-	-1
+	LoadReuse(function.method.instructions).Writer(register, before, position)
 Loaded(name Text, at Number) Text
 	Aligning.Loaded("within", 9) is "!" and Aligning.Loaded("other", 9) is ""
 	Norming.Grouping(9, 11) is ""

@@ -117,7 +117,7 @@ IsSafeDivisor(register Number, at Number) Boolean
 	Zeroed.IsSafeDivisor(1, 2) is false
 	Remaining.IsSafeDivisor(1, 2) is false
 	MlirWholeFunction(MlirWholeKernel.Measure.Callee).IsSafeDivisor(4, 7)
-	let writer = MlirArguments(List(MlirFunction)).Writer(function, register, at)
+	let writer = LoadReuse(function.method.instructions).Writer(register, at, -1)
 	let divisor = writer < 0 then InstructionEntry.Return(0) else function.method.instructions(writer)
 	if divisor.kind is InstructionType.FieldLoad
 		return true
