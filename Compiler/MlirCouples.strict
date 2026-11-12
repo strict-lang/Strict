@@ -89,7 +89,7 @@ Argument(entry InstructionEntry, name Text, fallback Number) Text
 	constant run = MethodEntry("Run", List(MemberEntry) + Sizing.members.First, "None", List(InstructionEntry))
 	MlirCouples(MlirFunction(List(TypeEntry) + Sizing, Sizing, run), 0).Unpacked.Length is 3
 	let named = Invocation(entry, List(VmValue), VmValue.None).ParameterNames.Index(name)
-	"%r" + entry.payload(5 + entry.payload(3) + 1 + (named < 0 then fallback else named))
+	"%r" + PayloadDecoder(entry).Arguments(named < 0 then fallback else named)
 Rounded(member MemberEntry, register Number, loaded Text) Texts
 	Turns.Rounded(Turning.members.First, 0, "%a").Last is "    %a = func.call @strict_single(%aw) : (f64) -> f64"
 	Turns.Rounded(Sizing.members.First, 0, "%a").Last.IndexOf("@strict_single(%aw)") > 0

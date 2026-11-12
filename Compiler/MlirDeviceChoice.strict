@@ -46,9 +46,8 @@ IsPassed(call Number, name Text) Boolean
 	Maximum.IsPassed(10, "largest")
 	Maximum.IsPassed(10, "index") is false
 	let entry = function.method.instructions(call)
-	let countPosition = 5 + entry.payload(3)
-	for entry.payload(countPosition)
-		let writer = MlirDeviceSums(function, at).Writer(call, entry.payload(countPosition + 1 + index))
+	for PayloadDecoder(entry).Arguments
+		let writer = MlirDeviceSums(function, at).Writer(call, value)
 		let loaded = writer >= 0 then function.method.instructions(writer) else entry
 		if (loaded.kind is InstructionType.LoadVariableToRegister) and (loaded.texts(0) is name)
 			return true

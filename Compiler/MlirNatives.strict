@@ -171,9 +171,10 @@ Textual(entry InstructionEntry, element Text, count Number) Texts
 	MlirNatives(MlirKinds.Lettered.function, 2).Textual(Search, "Number", 1).Length is 0
 	MlirNatives(MlirKinds.Lettered.function, 2).Textual(Search, "Text", 2).Length is 0
 	MlirNatives(Texts, 2).Textual(Search, "Text", 1).Length is 0
-	let register = entry.payload(6 + entry.payload(3))
-	let isCharacter = MlirLayout(function).Represented(MlirKinds(function).KindOf(position, register)) is "Character"
-	if (element is not "Text") or (count is not 1) or (isCharacter is false)
+	if (element is not "Text") or (count is not 1)
+		return List(Text)
+	let register = PayloadDecoder(entry).Arguments.First
+	if MlirLayout(function).Represented(MlirKinds(function).KindOf(position, register)) is not "Character"
 		return List(Text)
 	let calls = MlirCalls(function, position)
 	List(Text) + MlirMemory(function, position).Called(calls.Temp("ct"), "strict_character_text", calls.ArgumentNames(1))

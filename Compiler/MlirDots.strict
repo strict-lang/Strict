@@ -48,8 +48,4 @@ IsPassed(at Number) Boolean
 Argument(entry InstructionEntry, register Number) Number
 	Layering.Argument(Layering.function.method.instructions(5), 2) is 1
 	Layering.Argument(Layering.function.method.instructions(5), 7) is -1
-	let countPosition = 5 + entry.payload(3)
-	for entry.payload(countPosition)
-		if entry.payload(countPosition + 1 + index) is register
-			return index
-	-1
+	PayloadDecoder(entry).Arguments.Index(register)

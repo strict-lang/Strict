@@ -79,7 +79,7 @@ Passed(entry InstructionEntry, name Text) Number
 	Sample.Passed(Painted, "alpha") is -1
 	let named = Invocation(entry, List(VmValue), VmValue.None).ParameterNames.Index(name)
 	let isPassed = (named >= 0) and (named < PayloadDecoder(entry).ArgumentCount)
-	isPassed then entry.payload(5 + entry.payload(3) + 1 + named) else -1
+	isPassed then PayloadDecoder(entry).Arguments(named) else -1
 Read(entry InstructionEntry, kind Text) Texts
 	MlirLanes(Sample.function, 4).Read(Greens, "Rgb")(2).EndsWith("@strict_byte_of(%t4p, %t4s) : (f64, i64) -> f64")
 	MlirKinds(Sample.function).KindOf(5, 4) is "Byte"

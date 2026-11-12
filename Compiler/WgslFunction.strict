@@ -27,12 +27,12 @@ IsList(parameter Number) Boolean
 Arguments(entry InstructionEntry) Text
 	Twice.Arguments(MlirDeviceStatements.Call) is ", r1"
 	WgslFunction(MlirDeviceCalls.Filling.callee).Arguments(MlirDeviceCalls.Twicing) is ", r1, n_int(3)"
-	let countPosition = 5 + entry.payload(3)
+	let arguments = PayloadDecoder(entry).Arguments
 	mutable text = ""
-	for entry.payload(countPosition)
-		let register = "r" + entry.payload(countPosition + 1 + index)
+	for arguments
+		let register = "r" + value
 		text = text + ", " + (IsList(index) then register + "l" else register)
-	text + Defaults(entry.payload(countPosition))
+	text + Defaults(arguments.Length)
 Defaults(given Number) Text
 	Twice.Defaults(1) is ""
 	mutable text = ""

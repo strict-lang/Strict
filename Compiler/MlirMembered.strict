@@ -41,11 +41,11 @@ Slot(at Number, register Number) Number
 	Moved.Slot(7, 5) is 1
 	Defaulted.Slot(0, 0) is -1
 	let entry = function.method.instructions(at)
-	let countPosition = 5 + entry.payload(3)
+	let arguments = PayloadDecoder(entry).Arguments
 	let names = Invocation(entry, List(VmValue), VmValue.None).ParameterNames
 	for MlirInstances(function, 0).Stored(function.TypeOf(entry.texts(0), true))
 		let chosen = names.Index(value.Name) < 0 then index else names.Index(value.Name)
-		if chosen < entry.payload(countPosition) then entry.payload(countPosition + 1 + chosen) is register else false
+		if chosen < arguments.Length then arguments(chosen) is register else false
 			return index
 	-1
 Target(at Number, slot Number) Text

@@ -113,8 +113,7 @@ Native(entry InstructionEntry, instance Text) Text
 	let slots = MlirDeviceRecords(function, at).Slots(MlirKinds(function).KindOf(at, register))
 	let counted = slots > 0 then "n_int(i32(" + instance + "l.y / " + slots + "u))" else "n_int(i32(" + instance + "l.y))"
 	let name = entry.texts(1)
-	let argument = "r" + entry.payload(6 + entry.payload(3))
-	let made = name is "from" then argument else "n_" + name + "(" + instance + ")"
+	let made = name is "from" then "r" + PayloadDecoder(entry).Arguments.First else "n_" + name + "(" + instance + ")"
 	let called = name is "Floor" then "n_floor(" + instance + ")" else made
 	"r" + entry.payload(0) + " = " + (name is "Length" then counted else called) + ";"
 Looped(entry InstructionEntry) Texts

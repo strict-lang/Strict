@@ -62,10 +62,9 @@ Types Text
 Loaded(entry InstructionEntry) Texts
 	Twice.Loaded(Twicing).Last is "    %d4p0 = llvm.load %r1 : !llvm.ptr -> f64"
 	Filling.Loaded(Twicing).Last is "    %d4p0 = llvm.load %r1 : !llvm.ptr -> f64"
-	let countPosition = 5 + entry.payload(3)
 	mutable lines = Instance(entry, Temp("i"))
-	for entry.payload(countPosition)
-		lines = lines + Argument(index, "%r" + entry.payload(countPosition + 1 + index))
+	for PayloadDecoder(entry).Arguments
+		lines = lines + Argument(index, "%r" + value)
 	lines + MemberLoads
 MemberLoads Texts
 	Heads.MemberLoads.First is "    %d4m0 = llvm.load %v_heads : !llvm.ptr -> f64"
@@ -122,7 +121,7 @@ Native(entry InstructionEntry) Texts
 Made(entry InstructionEntry) Texts
 	Flooring.Made(Making).Length is 2
 	Flooring.Made(Rounding)(1) is "    %d1r = func.call @strict_device_float8_rounded(%d1) : (f64) -> f64"
-	let source = "%r" + entry.payload(6 + entry.payload(3))
+	let source = "%r" + PayloadDecoder(entry).Arguments.First
 	let target = "%r" + entry.payload(0)
 	if IsRounding(entry) is false
 		return function.Copied(source, target, Temp("")) + MlirExact(function, at).Copied(source, target)

@@ -49,7 +49,7 @@ Constructed(entry InstructionEntry, typeName Text, instances MlirInstances) Text
 	Text.Combine(Rewrapped.Constructed(Constructing, "Pairing", Instances)).IndexOf("strict_two_from_list") is -1
 	if IsListed(typeName) is false
 		return MlirLanes(function, position).Built(entry, typeName, instances)
-	let register = entry.payload(5 + entry.payload(3) + 1)
+	let register = PayloadDecoder(entry).Arguments.First
 	let argument = "%r" + register
 	if IsBuiltArgument(entry) or IsPaired(MlirKinds(function).KindOf(position, register))
 		return function.Copied(argument, "%r" + entry.payload(0), "%t" + position + "pp")
@@ -71,7 +71,7 @@ IsPacking(entry InstructionEntry, register Number) Boolean
 	Built.IsPacking(Building.instructions(5), 2)
 	Built.IsPacking(Building.instructions(5), 1) is false
 	let isFrom = (entry.kind is InstructionType.Invoke) and (entry.texts(1) is "from") and IsPaired(entry.texts(0))
-	isFrom and (PayloadDecoder(entry).ArgumentCount is 1) and (entry.payload(6 + entry.payload(3)) is register)
+	isFrom and (PayloadDecoder(entry).ArgumentCount is 1) and (PayloadDecoder(entry).Arguments.First is register)
 IsBuiltArgument(entry InstructionEntry) Boolean
 	Sample.Constructed(Constructing, "Pairing", Instances)(0) is "    %t1pa = llvm.load %r0 : !llvm.ptr -> f64"
 	Sample.Constructed(Constructing, "Pairing", Instances)(1).EndsWith("_from_list(%t1pa) : (f64) -> f64")

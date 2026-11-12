@@ -7,12 +7,11 @@ constant Itself = MlirFresh(MlirFunction(MlirCarried.Types, MlirCarried.Holder, 
 IsCall(at Number, depth Number) Boolean
 	Checked.IsCall(3, 0) is false
 	let entry = function.method.instructions(at)
-	let arguments = PayloadDecoder(entry).ArgumentCount
-	let first = 6 + entry.payload(3)
+	let arguments = PayloadDecoder(entry).Arguments
 	if entry.texts(1) is "from"
-		let isBuilt = (arguments > 0) and MlirOwned(function, 0).IsFresh(function, at, entry.payload(first), depth)
+		let isBuilt = (arguments.Length > 0) and MlirOwned(function, 0).IsFresh(function, at, arguments.First, depth)
 		return MlirLayout(function).IsStruct(entry.texts(0)) or isBuilt
-	if MlirNatives(function, at).Helper(entry.texts(0), entry.texts(1), arguments) is in MlirNatives.Destining
+	if MlirNatives(function, at).Helper(entry.texts(0), entry.texts(1), arguments.Length) is in MlirNatives.Destining
 		return true
 	let callees = MlirModule(function.types, "").Called(function, at)
 	(depth < 4) and (callees.Length > 0) and MlirFresh(callees.First).IsMethod(depth + 1, IsOwn(at, depth))
@@ -20,8 +19,8 @@ IsOwn(at Number, depth Number) Boolean
 	Checked.IsOwn(3, 0)
 	MlirFresh(MlirOwned.Rebuilt.function).IsCall(2, 0)
 	let entry = function.method.instructions(at)
-	let flag = 6 + entry.payload(3) + PayloadDecoder(entry).ArgumentCount
-	entry.payload(flag) is 1 then MlirOwned(function, 0).IsFresh(function, at, entry.payload(flag + 1), depth) else false
+	let instance = PayloadDecoder(entry).Instance
+	instance >= 0 then MlirOwned(function, 0).IsFresh(function, at, instance, depth) else false
 IsMethod(depth Number, isOwn Boolean) Boolean
 	MlirFresh(MlirOwned.Moving).IsMethod(0, false) is false
 	MlirFresh(MlirOwned.Returning).IsMethod(0, false)

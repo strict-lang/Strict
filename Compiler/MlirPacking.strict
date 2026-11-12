@@ -57,14 +57,12 @@ Expected(reader InstructionEntry, register Number, written Text) Text
 Argument(decoder PayloadDecoder, register Number, written Text) Text
 	Listing.Argument(PayloadDecoder(Listing.function.method.instructions(1)), 0, "Pairing") is "List(Number)"
 	Packed.Argument(PayloadDecoder(Packed.function.method.instructions(1)), 0, "List(Number)") is "Pairing"
-	let count = decoder.ArgumentCount
-	let instance = 6 + decoder.entry.payload(3) + count
-	if (decoder.entry.payload(instance) is 1) and (decoder.entry.payload(instance + 1) is register)
+	if decoder.Instance is register
 		let helper = MlirPairs(function, position).Helper(decoder.entry, written, decoder.Text(2))
 		return helper is "" then Converted(written, decoder.entry.texts.First) else ""
 	let parameters = decoder.Callee(function.TypeOf(decoder.Text(1))).parameters
-	for count
-		if (decoder.entry.payload(instance - count + index) is register) and (index < parameters.Length)
+	for decoder.Arguments
+		if (value is register) and (index < parameters.Length)
 			return Converted(written, parameters(index).typeName)
 	""
 Converted(written Text, declared Text) Text

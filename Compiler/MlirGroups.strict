@@ -77,10 +77,9 @@ Size(at Number) Text
 	size.StartsWith("!") or size.StartsWith("?") then "" else size
 Arguments(entry InstructionEntry, at Number) Text
 	Norming.Arguments(Normed.instructions(11), 11) is "size"
-	let countPosition = 5 + entry.payload(3)
 	mutable grouping = ""
-	for entry.payload(countPosition)
-		grouping = Combined(grouping, Grouping(entry.payload(countPosition + 1 + index), at))
+	for PayloadDecoder(entry).Arguments
+		grouping = Combined(grouping, Grouping(value, at))
 	grouping
 Grouping(register Number, before Number) Text
 	Norming.Grouping(7, 11) is "size"

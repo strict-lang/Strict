@@ -109,10 +109,9 @@ IsPassed(position Number, register Number) Boolean
 	let callees = MlirModule(function.types, "").Called(function, position)
 	if callees.Length is 0
 		return false
-	let countPosition = 5 + entry.payload(3)
-	for entry.payload(countPosition)
+	for PayloadDecoder(entry).Arguments
 		let name = callees.First.method.parameters(index).Name
-		if (entry.payload(countPosition + 1 + index) is register) and MlirFeeding(callees.First, 0).IsLoaded(-1, name)
+		if (value is register) and MlirFeeding(callees.First, 0).IsLoaded(-1, name)
 			return true
 	false
 IsLoaded(position Number, name Text) Boolean

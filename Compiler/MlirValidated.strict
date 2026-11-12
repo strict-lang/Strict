@@ -46,7 +46,7 @@ IsKept(made InstructionEntry, at Number, name Text) Boolean
 	let index = named < 0 then MlirInstances(function, 0).StoredNames(function.type).Index(name) else named
 	if (index < 0) or (index >= PayloadDecoder(made).ArgumentCount)
 		return false
-	let source = MlirKinds(function).Writer(at, made.payload(6 + made.payload(3) + index))
+	let source = MlirKinds(function).Writer(at, PayloadDecoder(made).Arguments(index))
 	let loaded = source >= 0 then function.method.instructions(source) else made
 	let isMember = (loaded.kind is InstructionType.LoadVariableToRegister) and (loaded.texts(0) is name)
 	isMember and (name is not in function.method.ParameterNames) and MlirParameters(function).IsFixed(name)

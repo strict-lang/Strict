@@ -44,12 +44,12 @@ Names(at Number) Texts
 	if IsDotted(at) is false
 		return List(Text)
 	let entry = function.method.instructions(at)
-	let first = 6 + entry.payload(3)
-	let row = Row(entry.payload(first), at)
-	let start = Start(entry.payload(first + 3), at)
-	let input = Variable(entry.payload(first + 2), at)
+	let arguments = PayloadDecoder(entry).Arguments
+	let row = Row(arguments(0), at)
+	let start = Start(arguments(3), at)
+	let input = Variable(arguments(2), at)
 	let isShared = (row.Length >= 2) and (start.Length is 2) and (input is not "")
-	let isMatched = isShared and (row(1) is start.First) and IsConstant(entry.payload(first + 1), at, 0)
+	let isMatched = isShared and (row(1) is start.First) and IsConstant(arguments(1), at, 0)
 	isMatched then (row.First, input, start.Last) + row.Slice(1, row.Length - 1) else List(Text)
 IsDotted(at Number) Boolean
 	Summing.IsDotted(15)

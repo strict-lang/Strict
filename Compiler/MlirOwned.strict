@@ -174,12 +174,12 @@ Target(entry InstructionEntry, owner TypeEntry) Text
 	(isStored and isBuilt then IsOwned(next.texts(0)) else false) then next.texts(0) else ""
 Rewritten(entry InstructionEntry, owner TypeEntry, name Text) Texts
 	Rebuilt.Rewritten(Rebuilding(7), MlirInstances.Outer, "moved").Last is "    llvm.store %t7ra1, %t7r1 : f64, !llvm.ptr"
-	let countPosition = 5 + entry.payload(3)
+	let arguments = PayloadDecoder(entry).Arguments
 	let names = Invocation(entry, List(VmValue), VmValue.None).ParameterNames
 	mutable lines = List(Text)
 	for MlirInstances(function, 0).Stored(owner)
 		let chosen = names.Index(value.Name) < 0 then index else names.Index(value.Name)
-		let register = entry.payload(countPosition + 1 + chosen)
+		let register = arguments(chosen)
 		if IsKept(register, value.Name, name) is false
 			lines = lines + Put(owner, value, register)
 	lines

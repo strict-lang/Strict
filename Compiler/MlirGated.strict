@@ -51,12 +51,12 @@ IsUp(at Number, call Number) Boolean
 	if tokens.IsDotted(at) is false
 		return false
 	let entry = function.method.instructions(at)
-	let first = 6 + entry.payload(3)
+	let arguments = PayloadDecoder(entry).Arguments
 	let names = tokens.Names(call)
-	let isRow = Shifted(entry.payload(first), at) is (names(0), names(3))
-	let isStart = tokens.Start(entry.payload(first + 3), at) is (names(3), names(2))
-	let isInput = tokens.Variable(entry.payload(first + 2), at) is names(1)
-	isRow and isStart and isInput and tokens.IsConstant(entry.payload(first + 1), at, 0)
+	let isRow = Shifted(arguments(0), at) is (names(0), names(3))
+	let isStart = tokens.Start(arguments(3), at) is (names(3), names(2))
+	let isInput = tokens.Variable(arguments(2), at) is names(1)
+	isRow and isStart and isInput and tokens.IsConstant(arguments(1), at, 0)
 Shifted(register Number, before Number) Texts
 	Gating.Shifted(26, 38) is ("weights", "rows")
 	Gating.Shifted(4, 15).Length is 0
