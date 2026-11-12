@@ -5,7 +5,9 @@ has owners Numbers = List(Number)
 has shared Texts = List(Text)
 has placed Numbers = List(Number)
 constant Sample = MlirParts(MlirSplit.Sample).Laid
-constant Second = MlirParts(Sample, owners = (1, 0)).Part(1)
+constant Swapped = MlirParts(Sample, owners = (1, 0))
+constant Second = Swapped.Part(1, List(Text) + MlirSplit.Tricky, Sample.split.Owned(Sample.starts, (1, 0), 1))
+constant Ends = (" ", "(", ")", ",", ":", "\"", "\\", ">", "]", "}")
 Laid MlirParts
 	Sample.starts is (3, 7)
 	Sample.declarations.Length is 2
@@ -20,15 +22,31 @@ Owners(lines Numbers) Numbers
 	MlirParts(MlirSplit.Sample).Owners((3)) is (MlirSplit.Sample.Owner(MlirSplit.Sample.lines(3)))
 	for lines
 		split.Owner(split.lines(value))
-Part(index Number) Text
+Part(index Number, data Texts, owned Texts) Text
 	Second.IndexOf("  func.func private @B(f64) -> f64\n") > 0
 	Second.IndexOf("  func.func @A() -> f64 {\n") > 0
 	Second.IndexOf("  llvm.func @printf(!llvm.ptr, ...) -> i32\n") > 0
 	Second.StartsWith("module {\n")
 	Second.EndsWith("\n}")
-	let others = split.Data(index, shared, placed) + split.Externals(index, shared, placed)
-	let declared = others + split.Others(declarations, owners, index)
-	Text.Combine((List(Text) + "module {") + declared + split.Owned(starts, owners, index) + "}", "\n")
+	Second.IndexOf("module {\n" + MlirSplit.Tricky + "\n") is 0
+	let used = Used(data + owned)
+	let declared = split.Externals(index, shared, placed, used) + split.Others(declarations, owners, index, used)
+	Text.Combine((List(Text) + "module {") + data + declared + owned + "}", "\n")
+Used(texts Texts) Dictionary(Text, Number)
+	"x_1" is in Sample.Used(("    %a = llvm.mlir.addressof @x_10 : !llvm.ptr", "  call @x_1(%a)"))
+	"x_1" is not in Sample.Used(("    %a = llvm.mlir.addressof @x_10 : !llvm.ptr", "  }"))
+	mutable used = Dictionary(Text, Number)
+	for line, piece in texts, line.Split("@")
+		used(Token(piece)) = 0
+	used
+Token(piece Text) Text
+	Sample.Token("x_1 : !llvm.ptr") is "x_1"
+	Sample.Token("B() : () -> f64") is "B"
+	Sample.Token("d") is "d"
+	for Range(0, piece.Length)
+		if piece(value) is in Ends
+			return piece.Substring(0, value)
+	piece
 Changed(base Text, flags Text) Numbers
 	PtxCache("Compiler/output/Unsplit-0").Saved("", "stale") is not Error
 	Sample.Changed("Compiler/output/Unsplit", "a").Length > 0
@@ -37,10 +55,18 @@ Changed(base Text, flags Text) Numbers
 	for Range(0, Toolchain.Parts)
 		let part = base + "-" + value
 		File(part).Delete
-		if Written(part, flags, Text.Combine(split.Data(value, shared, placed) + split.Owned(starts, owners, value), "\n"))
-			File(part + ".mlir").Write(Part(value))
+		if Refreshed(part, flags, value)
 			changed.Add(value)
 	changed
+Refreshed(part Text, flags Text, index Number) Boolean
+	Sample.Refreshed("Compiler/output/Refreshed", "a", Sample.owners.First)
+	File("Compiler/output/Refreshed.mlir").ReadLines.Length > 4
+	let data = split.Data(index, shared, placed)
+	let owned = split.Owned(starts, owners, index)
+	if Written(part, flags, Text.Combine(data + owned, "\n")) is false
+		return false
+	File(part + ".mlir").Write(Part(index, data, owned))
+	true
 IsCurrent(part Text, key Text) Boolean
 	PtxCache("Compiler/output/Current").Saved((".o", ".owned"), ("compiled", "a")) is not Error
 	Sample.IsCurrent("Compiler/output/Current", "a")

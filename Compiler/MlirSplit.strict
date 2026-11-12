@@ -16,6 +16,8 @@ constant Common = Sample.Shared
 constant Placing = Sample.Placed(Common)
 constant LinkerOptions = "  llvm.linker_options"
 constant Nowhere = -1
+constant Using = Dictionary(("t", 0), ("A", 0), ("B", 0))
+constant Elsewhere = Placing.Last + 1
 Starts Numbers
 	Sample.Starts is (3, 7)
 	MlirSplit(("  llvm.func @a() {")).Starts is (0)
@@ -71,19 +73,21 @@ Data(part Number, shared Texts, placed Numbers) Texts
 	for shared
 		if placed(index) is part
 			Global(value, true)
-Externals(part Number, shared Texts, placed Numbers) Texts
-	Sample.Externals(Placing.Last, Common, Placing) is ("  llvm.func @printf(!llvm.ptr, ...) -> i32")
-	Sample.Externals(Placing.Last + 1, Common, Placing).Last.EndsWith(" external constant @t() : !llvm.array<2 x i8>")
-	Linking.Externals(1, Linking.lines, (0)).Length is 0
+Externals(part Number, shared Texts, placed Numbers, used Dictionary(Text, Number)) Texts
+	Sample.Externals(Placing.Last, Common, Placing, Using) is ("  llvm.func @printf(!llvm.ptr, ...) -> i32")
+	Sample.Externals(Elsewhere, Common, Placing, Using).Last.EndsWith(" external constant @t() : !llvm.array<2 x i8>")
+	Sample.Externals(Elsewhere, Common, Placing, Dictionary(Text, Number)).Length is 1
+	Linking.Externals(1, Linking.lines, (0), Using).Length is 0
 	for shared
 		if placed(index) is Nowhere
 			value
-		else if value.StartsWith(Visible) and (placed(index) is not part)
+		else if value.StartsWith(Visible) and (placed(index) is not part) and (Name(value) is in used)
 			Global(value, false)
-Others(declarations Texts, owners Numbers, part Number) Texts
-	Sample.Others(Sample.Declarations(Sample.Starts), (0, 1), 0) is ("  func.func private @B(f64) -> f64")
+Others(declarations Texts, owners Numbers, part Number, used Dictionary(Text, Number)) Texts
+	Sample.Others(Sample.Declarations(Sample.Starts), (0, 1), 0, Using) is ("  func.func private @B(f64) -> f64")
+	Sample.Others(Sample.Declarations(Sample.Starts), (0, 1), 0, Dictionary(Text, Number)).Length is 0
 	for declarations
-		if owners(index) is not part
+		if (owners(index) is not part) and (Name(value) is in used)
 			value
 Owned(starts Numbers, owners Numbers, part Number) Texts
 	Sample.Owned(Sample.Starts, (0, 1), 0).First is "  func.func @A() -> f64 {"
