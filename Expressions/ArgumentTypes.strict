@@ -29,6 +29,7 @@ constant Inheriting = ArgumentTypes(TypeInference(KnownTypes.Options, (KnownType
 constant Parsing = SyntaxParser(Tokenizer("settings.Parsed(5)").Tokens).Parse
 constant Indexing = ArgumentTypes(IndexedValues.Typed.inference)
 constant Mixed = "CopyChangesMustBeNamed: Area(area, size, depth = 2) copies area, name every change like depth = 2"
+constant MixedCopy = SyntaxParser(Tokenizer("Area(area, depth = 2, size)").Tokens).Parse
 Checked(node SyntaxNode, scope Scope, current Scope) Text
 	Sizing.Checked(Grown, Counted, Counted).StartsWith("ArgumentTypeMismatch")
 	Sizing.Checked(Listed, Counted, Counted).StartsWith("LogicalOperandIsAList")
@@ -96,13 +97,13 @@ OwnCall(call SyntaxNode, scope Scope, current Scope) Text
 Copied(call SyntaxNode, scope Scope, current Scope) Text
 	Sizing.Copied(SyntaxParser(Tokenizer("Area(area)").Tokens).Parse, Counted, Counted).EndsWith("use area itself")
 	Sizing.Copied(Copies(0), Counted, Counted) is Mixed
-	(Sizing.Copied(Copies(1), Counted, Counted) is "") and (Sizing.Copied(Copies(2), Counted, Counted) is "")
-	(Sizing.Copied(Copies(3), Counted, Counted) is "") and (Sizing.Copied(Copies(4), Counted, Counted) is "")
-	(Sizing.Copied(Copies(5), Counted, Counted) is "") and (Sizing.Copied(Copies(6), Counted, Counted) is "")
+	Sizing.Copied(MixedCopy, Counted, Counted).EndsWith("change like depth = 2")
 	let first = call.children.Length > 0 then call.children(0) else call
 	let isCopy = (first is not call) and (inference.TypeOf(first, scope, current) is call.text)
-	if isCopy and (call.children.Last.Kind is "Reassignment") and (call.children(1).Kind is not "Reassignment")
-		return "CopyChangesMustBeNamed: " + call + " copies " + first + ", name every change like " + call.children.Last
+	let named = call.Kinds.Count("Reassignment")
+	if isCopy and (named > 0) and (named < call.children.Length - 1)
+		let change = call.children(call.Kinds.Index("Reassignment"))
+		return "CopyChangesMustBeNamed: " + call + " copies " + first + ", name every change like " + change
 	if (isCopy is false) or (call.children.Length > 1) or (inference.types.MembersOf(call.text).names.Length < 2)
 		return ""
 	"CopyWithoutChanges: " + call + " copies " + first + " without naming a changed member, use " + first + " itself"
@@ -220,6 +221,9 @@ IsBaseMismatch(argument Text, parameter Text) Boolean
 IsListed(types Texts) Boolean
 	Sizing.IsListed(List(Text) + "Areas") and Sizing.IsListed(List(Text) + "Generic")
 	Sizing.IsListed(List(Text) + "Area") is false and (Sizing.IsListed(("Areas", "Area")) is false)
+	(Sizing.Copied(Copies(1), Counted, Counted) is "") and (Sizing.Copied(Copies(2), Counted, Counted) is "")
+	(Sizing.Copied(Copies(3), Counted, Counted) is "") and (Sizing.Copied(Copies(4), Counted, Counted) is "")
+	(Sizing.Copied(Copies(5), Counted, Counted) is "") and (Sizing.Copied(Copies(6), Counted, Counted) is "")
 	(types.Length is 1) and (inference.types.BaseName(types.First) is in ("List", "Generic", "Generics"))
 IsScalar(type Text) Boolean
 	Sizing.IsScalar("Boolean")

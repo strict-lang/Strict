@@ -115,6 +115,11 @@ HeadNames Texts
 		let isNamed = (Kind is "Call") and (value.Kind is "Reassignment")
 		names = names + (isNamed then value.children.Last.HeadNames else HeadNames)
 	names
+Kinds Texts
+	SyntaxParser(Tokenizer("Point(p, y = q)").Tokens).Parse.Kinds is ("Identifier", "Reassignment")
+	sum.Kinds is ("Number", "Number")
+	for children
+		value.Kind
 HasBody Boolean
 	SyntaxNode("For", "", (SyntaxNode("Number", "3"), SyntaxNode("Body", ""))).HasBody
 	SyntaxNode("Number", "3").HasBody is false
