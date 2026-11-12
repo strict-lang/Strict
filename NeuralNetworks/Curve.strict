@@ -1,0 +1,41 @@
+has logger
+constant Widths = (1, 2, 4, 8)
+constant Passes = 40
+constant Gray16 = 256
+constant Gray28 = 784
+constant Sugar = "NeuralNetworks/diabetes.csv"
+Shapes(features Number, classes Number) List(Numbers)
+	Curve.Shapes(4, 3).First is (4, 1, 3)
+	Curve.Shapes(4, 3).Last is (4, 8, 3)
+	for Widths
+		(features, value, classes)
+Reported(data Dataset, name Text, features Number, classes Number, epochs Number) Text
+	Curve.Reported(Dataset.Pairs, "Pairs", 4, 2, 0).StartsWith("Pairs width 1 test accuracy ")
+	mutable report = ""
+	for Shapes(features, classes)
+		report = report + data.Evaluated(name + " width " + value(1), value, epochs) + "\n"
+	report
+Lengths(data Dataset) Text
+	Curve.Lengths(Dataset.Pairs) is "4 4"
+	mutable text = ""
+	for data.inputs
+		text = text + (index is 0 then "" else " ") + value.Length
+	text
+Aligned(data Dataset, features Number) Boolean
+	Curve.Aligned(Dataset.Pairs, 4)
+	Curve.Aligned(Dataset.Pairs, 3) is false
+	mutable matched = true
+	for data.inputs
+		if value.Length is not features
+			matched = false
+	matched
+Tried(data Dataset, name Text, features Number, classes Number, epochs Number) Text
+	Curve.Tried(Dataset.Pairs, "Pairs", 4, 2, 0).StartsWith("Pairs width 1 test accuracy ")
+	Curve.Tried(Dataset.Pairs, "Pairs", 3, 2, 0) is "Pairs lengths 4 4"
+	Aligned(data, features) then Reported(data, name, features, classes, epochs) else name + " lengths " + Lengths(data)
+Run
+	logger.Log(Reported(Csv(File("NeuralNetworks/iris.csv").ReadLines).Classified(3), "Iris", 4, 3, Passes))
+	logger.Log(Reported(Csv(File(Sugar).ReadLines).Classified(2), "Diabetes", Diabetes.Features, 2, Passes))
+	logger.Log(Tried(Dataset.Images("NeuralNetworks/images", 2), "Digits", Gray28, 2, Passes))
+	logger.Log(Tried(Dataset.Images("../Mnist/mnist", 4), "Mnist16", Gray16, 4, Passes))
+	logger.Log(Tried(Dataset.Images("../Mnist/mnist28", 6), "Mnist28", Gray28, 6, Passes))

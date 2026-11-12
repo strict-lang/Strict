@@ -1,0 +1,121 @@
+has logger
+constant Rate = 5
+constant Budget = 80
+constant Long = 500
+constant Repair = 40
+constant Margin = 1.5
+Separated(model Network, targets Numbers) Boolean
+	Smallest.Separated(Smallest.Hand(8), Xor.Targets)
+	Smallest.Separated(Network.Single, Xor.Targets) is false
+	mutable wrong = 0
+	for Xor.Inputs
+		let output = model.Predict(value).First
+		if (targets(index) >= 0.5) is not (output >= 0.5)
+			wrong = wrong + 1
+	wrong is 0
+Hand(scale Number) Network
+	Smallest.Separated(Smallest.Hand(8), Xor.Targets)
+	Smallest.Separated(Smallest.Hand(1), Xor.Targets) is false
+	mutable layers = List(Mutable(Layer))
+	layers.Add(Layer(((1, 1) * scale, (-1, -1) * scale), (-0.5, Margin) * scale))
+	layers.Add(Layer(List(Numbers) + ((1, 1) * scale), List(Number) + -Margin * scale))
+	Network(layers)
+Decides(first Number, second Number, bias Number, targets Numbers) Boolean
+	Smallest.Decides(1, 1, -1, (0, 1, 1, 1))
+	Smallest.Decides(1, 1, -1, Xor.Targets) is false
+	Separated(Network(List(Layer) + Layer(List(Numbers) + (first, second), List(Number) + bias)), targets)
+HalfPlane(targets Numbers) Slow(Boolean)
+	Smallest.HalfPlane((0, 1, 1, 1))
+	Smallest.HalfPlane(Xor.Targets) is false
+	for Range(-4, 5)
+		let first = index
+		for Range(-4, 5)
+			let second = index
+			for Range(-4, 5)
+				if Decides(first, second, index, targets)
+					return true
+	false
+Wrapped(targets Numbers) List(Numbers)
+	Smallest.Wrapped((0, 1)).First is List(Number) + 0
+	for targets
+		List(Number) + value
+Tuned(model Network, targets Numbers, steps Number, rate Number) Network
+	Smallest.Separated(Smallest.Tuned(Smallest.Hand(4), Xor.Targets, 0, Rate), Xor.Targets)
+	mutable trained = model
+	let wrapped = Wrapped(targets)
+	for steps
+		trained = Descent(trained).Epoch(Xor.Inputs, wrapped, rate)
+	trained
+Fit(sizes Numbers, targets Numbers, steps Number, rate Number, seed Number) Slow(Network)
+	Smallest.Separated(Smallest.Fit((2, 1), (0, 1, 1, 1), Repair, Rate, 1), (0, 1, 1, 1))
+	Smallest.Separated(Smallest.Fit((2, 1), Xor.Targets, Repair, Rate, 1), Xor.Targets) is false
+	Tuned(Draw(PseudoRandom(seed)).Stacked(sizes), targets, steps, rate)
+Hits(targets Numbers, width Number, steps Number) Slow(Boolean)
+	Smallest.Hits((0, 1, 1, 1), 0, Repair)
+	Smallest.Hits(Xor.Targets, 0, Repair) is false
+	let sizes = width is 0 then (2, 1) else (2, width, 1)
+	for Range(1, 5)
+		if Separated(Fit(sizes, targets, steps, Rate, index), targets)
+			return true
+	false
+Found(targets Numbers, steps Number) Slow(Number)
+	Smallest.Found((0, 1, 1, 1), Repair) is 0
+	Smallest.Found(Xor.Targets, Budget) is 3
+	Smallest.Found(Xor.Targets, Long) is 2
+	if Hits(targets, 0, steps)
+		return 0
+	for Range(1, 5)
+		if Hits(targets, index, steps)
+			return index
+	-1
+Sought(targets Numbers) Slow(Numbers)
+	Smallest.Sought((0, 1, 1, 1)) is (0, 0)
+	Smallest.Sought(Xor.Targets) is (2, 3)
+	(HalfPlane(targets) then 0 else 2, Found(targets, Budget))
+Kept(rows List(Numbers), unit Number) List(Numbers)
+	Smallest.Kept(((1, 2), (3, 4)), 0) is List(Numbers) + (3, 4)
+	for rows
+		if index is not unit
+			value
+Dropped(values Numbers, unit Number) Numbers
+	Smallest.Dropped((4, 5, 6), 1) is (4, 6)
+	for values
+		if index is not unit
+			value
+Narrowed(model Network, unit Number) Network
+	Smallest.Narrowed(Smallest.Hand(8), 0).layers.First.weights.Length is 1
+	Smallest.Narrowed(Smallest.Hand(8), 0).layers.Last.weights.First.Length is 1
+	mutable built = List(Mutable(Layer))
+	for model.layers
+		if index is 0
+			built.Add(Layer(Kept(value.weights, unit), Dropped(value.biases, unit), value.activation))
+		else
+			built.Add(Layer(List(Numbers) + Dropped(value.weights.First, unit), value.biases, value.activation))
+	Network(built)
+Linear(targets Numbers, fallback Number) Slow(Number)
+	Smallest.Linear(Xor.Targets, 2) is 2
+	Smallest.Linear((0, 1, 1, 1), 4) is 0
+	Separated(Tuned(Draw(PseudoRandom(2)).Stacked((2, 1)), targets, Repair, Rate), targets) then 0 else fallback
+Cut(model Network, targets Numbers, width Number) Number
+	Smallest.Cut(Network.Single, Xor.Targets, 2) is -1
+	mutable current = model
+	mutable hidden = width
+	mutable working = Separated(current, targets) then hidden else -1
+	for width
+		if (working < 0) or (hidden <= 1)
+			return (hidden <= 1) and (working >= 0) then Linear(targets, working) else working
+		hidden = hidden - 1
+		current = Tuned(Narrowed(current, 0), targets, Repair, Rate)
+		working = Separated(current, targets) then hidden else working
+	working
+Shrunk(targets Numbers) Slow(Number)
+	Smallest.Shrunk((0, 1, 1, 1)) is 0
+	Smallest.Shrunk(Xor.Targets) is 2
+	Cut(Tuned(Draw(PseudoRandom(1)).Stacked((2, 6, 1)), targets, Budget, Rate), targets, 6)
+Run
+	for ("Or", "And", "Nor", "Nand", "Xor")
+		let targets = ((0, 1, 1, 1), (0, 0, 0, 1), (1, 0, 0, 0), (1, 1, 1, 0), Xor.Targets)(index)
+		let sought = Sought(targets)
+		let longer = Found(targets, Long)
+		let shrunk = Shrunk(targets)
+		logger.Log(value + " exists " + (sought to Text) + ", longer " + longer + ", shrunk " + shrunk)

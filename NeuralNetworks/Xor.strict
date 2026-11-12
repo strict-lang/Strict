@@ -1,20 +1,24 @@
 has logger
 constant Inputs = ((0, 0), (0, 1), (1, 0), (1, 1))
 constant Targets = (0, 1, 1, 0)
-constant Steps = 20000
+constant Epoch = Descent(Network.Pair).Epoch(Inputs, Smallest.Wrapped(Targets), 1)
 Run
-	let untrained = Network.Random((2, 3, 1))
+	let untrained = Draw(PseudoRandom(1)).Stacked((2, 3, 1))
 	let started = Process.Elapsed
-	let network = Trained(untrained, Steps)
+	let network = Trained(untrained, Smallest.Long, Smallest.Rate)
 	let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
 	logger.Log("Error before training " + Error(untrained) + ", after " + Error(network) + " in " + milliseconds + " ms")
 	for Inputs
 		logger.Log(value to Text + " gives " + network.Predict(value).First)
-Trained(network Network, steps Number) Slow(Network)
-	Xor.Error(Xor.Trained(Network.Pair, 200)) < Xor.Error(Network.Pair)
+	logger.Log("separated " + Smallest.Separated(network, Targets) + " after " + Smallest.Long + " steps")
+	logger.Log("exists " + (Smallest.Sought(Targets) to Text))
+Trained(network Network, steps Number, rate = 1) Slow(Network)
+	Xor.Trained(Network.Pair, 1, 1).layers.Last.weights is Epoch.layers.Last.weights
+	Xor.Error(Xor.Trained(Network.Pair, 4, 1)) < Xor.Error(Network.Pair)
 	mutable trained = network
+	let wrapped = Smallest.Wrapped(Targets)
 	for steps
-		trained = trained.Trained(Inputs(index % 4), List(Number) + Targets(index % 4), 0.1)
+		trained = Descent(trained).Epoch(Inputs, wrapped, rate)
 	trained
 Error(network Network) Number
 	Xor.Error(Network.Pair) > 0
