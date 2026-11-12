@@ -16,7 +16,7 @@ constant Unsent = VmValue.OfError("OutputNotChanged")
 constant FileMethods = ("File.ReadLines", "File.Exists", "File.Write", "File.Delete", "File.Rename", "File.ReadBytes", "File.WriteLines", "File.WriteBytes", "File.Modified", "File.Length", "File.Locked", "File.InMemory")
 constant DirectoryMethods = ("Directory.Files", "Directory.Directories", "Directory.Modified", "Directory.Exists", "Directory.Create", "Directory.Change", "Directory.Current")
 constant ProcessMethods = ("Process.Input", "Process.Variable", "Process.InputLine", "Process.OperatingSystem", "Process.Current", "Process.Built", "Process.Elapsed", "Process.MemoryUsed", "Process.FilesRead")
-constant ToolMethods = ("Process.Find", "Process.RunTool", "Process.RunTools", "Process.Started", "Process.Executed", "Process.Wait")
+constant ToolMethods = ("Process.Find", "Process.RunTool", "Process.RunTools", "Process.Started", "Process.Executed", "Process.Wait", "Process.Collected")
 constant MathMethods = ("Number.Logarithm", "Number.Random", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan", "Vector2.Atan")
 constant LibraryMethods = ("Library.Call", "Library.TextSlot", "Library.NumbersSlot", "Library.TextResult", "Library.NumbersResult", "Library.Failure")
 constant RuntimeMethods = ("Time.Now", "Socket.Output", "BuildProfile.Detailed", "TestBudget.Started", "TestBudget.Finished", "TestBudget.Entered", "TestBudget.Left", "TestBudget.Expired", "ConstantCache.At", "ConstantCache.Stored")
@@ -36,6 +36,7 @@ IsHosted Boolean
 	Hosted(SystemCall).IsHosted
 	Hosted(Invocation.AddCall).IsHosted is false
 	"Process.InputLine" is in Hosted.Methods
+	"Process.Collected" is in Hosted.Methods
 	Hosted(Releasing).IsHosted
 	Hosted(HostedJson.Getting).IsHosted
 	(TypeEntry.ShortName(call.TypeName) + "." + call.MethodName is in Methods) or HostedJson(call).IsHosted

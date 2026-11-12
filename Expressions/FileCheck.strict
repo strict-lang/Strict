@@ -67,7 +67,7 @@ CallIssue(call SyntaxNode, scope Scope, current Scope) Text
 	let instance = inference.TypeOf(call.children(0), scope, current)
 	let hidden = call.children(0).text
 	let isHidden = (call.children(0).Kind is "Identifier") and inference.types.IsKnown(hidden) and (instance is not hidden)
-	let hint = isHidden then HiddenType.Hint(hidden) else ""
+	let hint = isHidden then HiddenType.Hint(inference.Origin(hidden, scope), hidden) else ""
 	if IsMissing(instance, call.text)
 		return "MethodNotFound: " + instance + "." + call.text + hint
 	let fewest = Fewest(instance, call.text)

@@ -1,5 +1,7 @@
 has values ValueCodegen
+has isTestLine Boolean = false
 constant Plain = OperatorCodegen(ValueCodegen.Plain)
+constant Testing = OperatorCodegen(ValueCodegen.Plain, true)
 constant One = SyntaxNode("Number", "1")
 constant NoNode = SyntaxNode("Identifier", "x")
 constant Characters = OperatorCodegen(ValueCodegen(TypeInference(KnownTypes(("Character"), (KnownTypes.NoMembers), (Scope(("+"), ("Text"))), (KnownTypes.NoMembers)), CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
@@ -148,10 +150,14 @@ Logical(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Logical(SyntaxNode("Binary", "or", (One, One)), CodeBlock.Empty).instructions.Last.texts is ("logical0")
 	Plain.Logical(SyntaxNode("Binary", "or", (One, One)), CodeBlock.Empty).nextId is 1
 	let first = ErrorCodegen(values).IsErrorComparison(node.children(1), block) then 1 else 0
-	let left = values.Expression(node.children(first), block)
+	let left = Operand(node.children(first), block)
 	let name = "logical" + left.nextId
 	let jump = node.text is "and" then InstructionType.JumpToIdIfFalse else InstructionType.JumpToIdIfTrue
-	values.Expression(node.children(1 - first), left.Skipping(name, jump)).Joined(name, left.nextId)
+	Operand(node.children(1 - first), left.Skipping(name, jump)).Joined(name, left.nextId)
+Operand(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Operand(TestComparison.Logical, CodeBlock.Empty).scope.Count(TestReports.Nearing) is 0
+	Testing.Operand(TestComparison.Logical, CodeBlock.Empty).scope.Count(TestReports.Nearing) is 1
+	isTestLine then TestComparison(values).Evaluated(node, block) else values.Expression(node, block)
 Contains(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Contains(SyntaxNode("", "is in", (One, NoNode)), CodeBlock.Empty.Declare("x", "Errors")).nextId is 1
 	Plain.Contains(InOnes, CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke

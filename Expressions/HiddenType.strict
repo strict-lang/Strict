@@ -12,7 +12,7 @@ Issue(call SyntaxNode, scope Scope, current Scope) Text
 	Counting.Issue(Created, Valued, Owning).EndsWith("use outer.Count")
 	Counting.Issue(Created, Valued, FileCheck.Counted) is ""
 	Constants.Issue(Created, Valued, Owning) is ""
-	Counting.Issue(Created, Valued, Owning) is "MethodNotFound: Count.Count with 1 arguments" + Counting.Hint("Count")
+	Counting.Issue(Created, Valued, Owning).StartsWith("MethodNotFound: Count.Count with 1 arguments, method Count hides")
 	Counting.Issue(OuterCount, Valued, Owning) is ""
 	let owner = scope.TypeOf("self type")
 	let count = call.children.Length
@@ -20,7 +20,7 @@ Issue(call SyntaxNode, scope Scope, current Scope) Text
 	if (isHiding is false) or (inference.types.ParametersOf(owner, call.text, count).Length >= count)
 		return ""
 	let method = (owner is "" then "" else owner + ".") + call.text
-	"MethodNotFound: " + method + " with " + count + " arguments" + Hint(call.text)
+	"MethodNotFound: " + method + " with " + count + " arguments" + Hint(inference.Origin(call.text, scope), call.text)
 Ambiguous(call SyntaxNode, scope Scope, current Scope) Text
 	Counting.Ambiguous(Twiced, Valued, Owning).StartsWith("AmbiguousName: Count")
 	Counting.Ambiguous(Twiced, Valued, FileCheck.Counted) is ""
@@ -57,8 +57,9 @@ IsMethod(name Text, scope Scope, current Scope) Boolean
 	Counting.Ambiguous(SyntaxParser(Tokenizer("f(Count)").Tokens).Parse, Valued, Owning) is ""
 	let isOwn = (current.TypeOf(name) is not "") and (inference.ConstantOf(scope.TypeOf("self type"), name) is "")
 	isOwn and inference.types.IsKnown(name)
-Hint(name Text) Text
-	HiddenType.Hint("Size") is ", local Size hides the type Size, use outer.Size"
+Hint(origin Text, name Text) Text
+	HiddenType.Hint("local Size", "Size") is ", local Size hides the type Size, use outer.Size"
+	HiddenType.Hint("jobs.Outcome", "Outcome") is ", jobs.Outcome hides the type Outcome, use outer.Outcome"
 	Counting.Issue(Created, Owning, Owning).StartsWith("MethodNotFound: Count with 1 arguments")
 	Counting.Issue(SyntaxNode("Call", "Count"), Valued, Owning) is ""
 	Counting.Ambiguous(SyntaxParser(Tokenizer("Count(1).Twice").Tokens).Parse, Valued, Owning) is ""
@@ -66,4 +67,4 @@ Hint(name Text) Text
 	Counting.Ambiguous(SyntaxParser(Tokenizer("outer.Twice").Tokens).Parse, Looped, FileCheck.Counted) is ""
 	Counting.Ambiguous(SyntaxParser(Tokenizer("x.Count").Tokens).Parse, Looped, Owning) is ""
 	Counting.Ambiguous(SyntaxParser(Tokenizer("Count.Twice(1)").Tokens).Parse, Valued, Owning).StartsWith("AmbiguousName")
-	", local " + name + " hides the type " + name + ", use outer." + name
+	", " + origin + " hides the type " + name + ", use outer." + name

@@ -50,7 +50,8 @@ Helper(name Text, parameter Text, type Text, expression SyntaxNode) Slow(MethodE
 Near(kind Text, ordinal Number) Slow(MethodEntry)
 	Even.Near("Number", 1).Name is "$TestsNear1"
 	Even.Near("Number", 0).parameters.Last.typeName is "Strict/Number"
-	let values = types.Generator
+	Erring.Near("Number", 0).instructions(6).texts is ("Strict/Erring", "Error", "Strict/Error")
+	let values = Neutral
 	let tested = ErrorCodegen.Tested
 	let declared = CodeBlock.Empty.Declare(tested, kind).Declare(Expected, kind)
 	let lines = Closeness(values.inference.types).Lines(tested, Expected, (kind, kind), "1", false, List(Text))
@@ -62,5 +63,7 @@ Near(kind Text, ordinal Number) Slow(MethodEntry)
 Neutral Slow(ValueCodegen)
 	Processing.Neutral.Expression(Elapsed, TestCodegen.Counter).instructions.First.texts.First is "Strict/Process"
 	TestReports(TypeCodegen("P/H", List(Text), Even.types.inference, ("P/S"))).Neutral.target.FullName("S") is "P/S"
-	let neutral = CallTarget(types.inference.types, TypeShape(List(Text)), types.fullName, types.typeNames)
+	TestReports(TypeCodegen.Hello).Neutral.target.shape.lines is ("has logger")
+	let members = TypeShape(types.lines.Slice(0, TypeShape(types.lines).MembersEnd))
+	let neutral = CallTarget(types.inference.types, members, types.fullName, types.typeNames)
 	ValueCodegen(types.inference, MethodCodegen.NoScope, neutral)

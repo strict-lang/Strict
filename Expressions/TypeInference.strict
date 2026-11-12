@@ -14,6 +14,7 @@ constant Scaling = TypeInference(KnownTypes(List(Text) + "Pair", List(Scope) + N
 constant Paired = Scope(List(Text) + "p", List(Text) + "Pair")
 constant Primitives = ("None", "Boolean", "Number", "Byte", "Text", "Character", "Name", "Generic")
 constant ColorFrom = (Scope(("from", "from types"), ("current", "ColorValue")), KnownTypes.NoMembers)
+constant Measuring = TypeInference(KnownTypes.Measured, NoShapes)
 constant Colors = TypeInference(KnownTypes(("Color", "ColorValue"), (Scope(List(Text) + "Red", List(Text) + "Byte"), KnownTypes.NoMembers), (Scope(List(Text) + "to", List(Text) + "ColorValue"), KnownTypes.NoMembers), ColorFrom), NoShapes)
 ConstantOf(typeName Text, name Text) Text
 	NoInference.CallType("A", Scope(("A"), ("Texts")), NoShape) is "A"
@@ -60,13 +61,13 @@ IdentifierType(name Text, scope Scope, current Scope) Text
 	NoInference.Called(SyntaxNode("Call", "Mutable", (ToText, NoNode)), NoShape, NoShape) is "Mutable"
 	NoInference.IdentifierType("q", NoShape, Scope(("q"), ("Number"))) is "Number"
 	TypeInference(KnownTypes.Nested, NoShapes).IdentifierType("f", Scope(("value"), ("G")), NoShape) is "F"
-	NoInference.CallType("X", NoShape, Scope(("X"), ("Texts"))) is "Texts"
-	NoInference.IdentifierType("x", Scope(("x", "y"), ("Number", "Text")), NoShape) is "Number"
 	if scope.TypeOf(name) is not ""
 		return scope.TypeOf(name)
 	if ImplicitValueType(name, scope) is not ""
 		return ImplicitValueType(name, scope)
-	current.TypeOf(name) is not "" then current.TypeOf(name) else name(0).Upper is name(0) then name else "Unknown"
+	if current.TypeOf(name) is not ""
+		return current.TypeOf(name)
+	(name(0).Upper is name(0)) or (name is "outer") then name else "Unknown"
 Called(node SyntaxNode, scope Scope, current Scope) Text
 	NoInference.Called(SyntaxNode("Call", "Mutable", SyntaxNode("Number", "5")), NoShape, NoShape) is "Number"
 	NoInference.Called(Pairs, NoShape, NoShape) is "Dictionary(Number, Text)"
@@ -85,6 +86,7 @@ CallType(name Text, scope Scope, current Scope) Text
 	NoInference.CallType("x", NoShape, Scope(("x", "y"), ("Texts", "Y"))) is "Text"
 	NoInference.CallType("failed", Scope(("failed"), ("Error")), NoShape) is "ErrorWithValue"
 	NoInference.IdentifierType("other", NoShape, NoShape) is "Unknown"
+	NoInference.TypeOf(SyntaxParser(Tokenizer("outer.A").Tokens).Parse, NoShape, NoShape) is "A"
 	if current.TypeOf(name) is not ""
 		return IsIndexed(name, current) then types.ElementType(current.TypeOf(name)) else current.TypeOf(name)
 	if types.IsKnown(name)
@@ -177,10 +179,11 @@ ConditionalType(node SyntaxNode, scope Scope, current Scope) Text
 	NoInference.BinaryType(SyntaxParser(Tokenizer("12 and 10").Tokens).Parse, NoShape, NoShape) is "Number"
 	NoInference.BinaryType(SyntaxNode("Binary", "<", (SyntaxNode("Missing", ""), ToText)), NoShape, NoShape) is "Text"
 	NoInference.ConditionalType(SyntaxNode("Binary", "then", (NoNode, NoNode)), NoShape, NoShape) is "y"
+	NoInference.TypeOf(SyntaxParser(Tokenizer("true then other else 1").Tokens).Parse, NoShape, NoShape) is "Number"
 	if node.text is "then"
 		return TypeOf(node.children(1), scope, current)
 	let thenType = TypeOf(node.children(0), scope, current)
-	thenType is "Error" then TypeOf(node.children(1), scope, current) else thenType
+	thenType is in ("Error", "Unknown") then TypeOf(node.children(1), scope, current) else thenType
 Converter(source Text, type Text) Text
 	Colors.Converter("ColorValue", "Color") is "from"
 	Colors.Converter("Color", "ColorValue") is "to"
@@ -204,11 +207,13 @@ Assigned(target Text, assigned Text) Text
 	TypeInference(KnownTypes.Measured, NoShapes).Enumerated("Length").Length is 0
 	Colors.Assigned("Color", "ColorValue") is "Color"
 	Colors.Assigned("Number", "Number") is "Number"
+	NoInference.CallType("X", NoShape, Scope(("X"), ("Texts"))) is "Texts"
 	Converter(assigned, target) is "" then assigned else target
 Enumerated(typeName Text) Texts
 	TypeInference(KnownTypes.Sample, Limits).Enumerated("Text") is ("x", "z")
 	TypeInference(KnownTypes.Sample, Limits).Enumerated("Count").Length is 0
 	NoInference.Enumerated("Missing").Length is 0
+	NoInference.IdentifierType("x", Scope(("x", "y"), ("Number", "Text")), NoShape) is "Number"
 	let position = types.Index(typeName)
 	if (position < 0) or (position >= constants.Length) or (types.MembersOf(typeName).names.Length > 0)
 		return List(Text)
@@ -216,3 +221,14 @@ Enumerated(typeName Text) Texts
 		if value is not in constants(position).names
 			return List(Text)
 	constants(position).names
+Origin(name Text, scope Scope) Text
+	NoInference.Origin("Size", Scope(("self type", "Size"), ("A", "Number"))) is "local Size"
+	Measuring.Origin("Length", Scope(("Length", "self type"), ("Length", "F"))) is "member Length"
+	Measuring.Origin("Length", Scope(("value"), ("F"))) is "Length.Length"
+	Measuring.Origin("Length", Scope(("value", "outer"), ("F", "F"))) is "method Length"
+	NoInference.Origin("A", NoShape) is "method A"
+	if scope.TypeOf(name) is not ""
+		return (types.MembersOf(scope.TypeOf("self type")).TypeOf(name) is "" then "local " else "member ") + name
+	let isImplicit = (ImplicitValueType(name, scope) is not "") and (scope.TypeOf("outer") is "")
+	let holder = isImplicit then types.Holder(scope.TypeOf("value"), name, 1) else ""
+	holder is "" then "method " + name else holder + "." + name

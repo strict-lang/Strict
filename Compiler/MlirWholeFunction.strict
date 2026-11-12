@@ -20,7 +20,6 @@ constant Comparisons = (InstructionType.Equal, InstructionType.NotEqual, Instruc
 constant Flow = (InstructionType.Invoke, InstructionType.Return, InstructionType.LoopBegin, InstructionType.LoopEnd)
 constant Jumps = (InstructionType.JumpEnd, InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue, InstructionType.CheckError)
 constant Allowed = Accesses + Arithmetic + Comparisons + Flow + Jumps
-
 constant Validating = InstructionEntry.Invoke(3, ("Strict/Byte", "Validated", "Strict/Byte", "number"), List(Number) + 2, -1)
 Symbol Text
 	MlirWholeFunction(MlirLanes.Sample.function).IsCalled(4, 0)

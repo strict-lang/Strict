@@ -4,6 +4,8 @@
 !*/
 !LICENSE
 *.test
+*.test.js
+*.test.html
 **/*.test-[0-9]*
 # User-specific files and cache folders
 *.rsuser

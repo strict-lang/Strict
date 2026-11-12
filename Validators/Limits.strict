@@ -28,11 +28,11 @@ Issues ValidationIssues
 	Methods.Issues.Length is 1
 	Long.Issues.Length is 1
 	Limits(("Run", "\tlet a = 0 - b"), false).Issues.Length is 1
-	Limits(("Run", "\t1", "has a"), false).Issues.Length is 1
+	Limits(("Run", "\t1", "has a"), false).Issues.Length is 0
 	mutable issues = List(Mutable(ValidationIssue))
 	for lines
 		issues = issues + LineIssues(value, index) + NegationIssues(value, index)
-	issues + MethodIssues + CountIssues + OrderIssues
+	issues + MethodIssues + CountIssues
 OrderIssues ValidationIssues
 	Limits(("Run", "\t1", "has a"), false).OrderIssues.First to Text is "MembersMustComeBeforeMethods: has a"
 	Limits(("has a", "Run", "\t1"), false).OrderIssues.Length is 0

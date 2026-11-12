@@ -7,6 +7,12 @@ constant Dropped = Scope((" dropped", "name"), ("Boolean", "Text"))
 constant Returned = ScopedStatement(SyntaxNode("Return", "", List(SyntaxNode) + Joined.statement), Named, 1)
 constant Bodied = ScopedStatement(SyntaxNode("Binary", "+", Joined.statement.children + SyntaxNode("Body", "")), Named, 1)
 constant Counted = ScopedStatement(SyntaxParser(Tokenizer("1").Tokens).Parse, Named, 1)
+constant Coupling = ReturnTypes(Instantiation.Inferring)
+constant Early = ScopedStatement(SyntaxNode("Return", "", List(SyntaxNode) + BranchTypes.Paired.children(1)), Named, 2)
+constant Making = ("Made(first Boolean) Couple", "\tif first", "\t\treturn Couple(1, 2)", "\tCouple(\"a\", 2)")
+constant Bare = ScopedStatement(SyntaxNode("Return", "return"), Named, 2)
+constant Unreturned = ScopedStatement(SyntaxNode("Declaration", "let a", Early.statement.children), Named, 2)
+constant Finals = Scope(List(Text) + "Made", List(Text) + "Couple(Text, Number)")
 constant Lines = ("Names Texts", "\tvalue")
 constant Looped = ("Names Texts", "\tfor names", "\t\tvalue")
 Issue(scoped ScopedStatement, current Scope, lines Texts) Text
@@ -17,18 +23,34 @@ Issue(scoped ScopedStatement, current Scope, lines Texts) Text
 	let node = scoped.statement
 	let isReturned = (scoped.scope.TypeOf(" dropped") is "") and (lines(scoped.line).StartsWith("\t\t") is false)
 	if (isReturned is false) or node.HasBody or (node.Kind is in ("Declaration", "Reassignment", "Return"))
-		return ""
+		return Split(scoped, current, lines)
 	let declared = Declared(lines, scoped.line)
 	let type = inference.TypeOf(node, scoped.scope, current)
 	let isSingle = inference.types.IsPlural(declared) and (inference.types.ElementType(declared) is type)
 	isSingle then "ReturnTypeMismatch: a " + type + " is returned for " + declared + hint else ""
+Split(scoped ScopedStatement, current Scope, lines Texts) Text
+	Coupling.Split(Early, Finals, Making).EndsWith(" gives a Couple(Number, Number) or a Couple(Text, Number)")
+	Coupling.Split(Early, Finals.With("Made", "Couple(Number, Number)"), Making) is ""
+	Coupling.Split(Early, Finals, Making).StartsWith("ConditionalBranchesMustHaveOneType: return Couple(1, 2) gives a ")
+	(Coupling.Split(Unreturned, Finals, Making) + Coupling.Split(Bare, Finals, Making)) is ""
+	let node = scoped.statement
+	if (node.Kind is not "Return") or (node.HasValue is false)
+		return ""
+	let type = inference.TypeOf(node.children(0), scoped.scope, current)
+	let final = current.TypeOf(Header(lines, scoped.line).tokens.First)
+	let message = "ConditionalBranchesMustHaveOneType: " + node + " gives a " + type + " or a " + final
+	BranchTypes(inference).IsSplit(type, final) then message else ""
 Declared(lines Texts, line Number) Text
 	Naming.Declared(Lines, 1) is "Texts"
 	Naming.Declared(Looped, 2) is "Texts"
 	Naming.Issue(ScopedStatement(Joined.statement, Dropped, 1), Named, Lines) is ""
 	Naming.Issue(Returned, Named, ("Names Unknowns", "\tvalue")) is "" and (Naming.Issue(Bodied, Named, Lines) is "")
 	Naming.Issue(Counted, Named, ("Count Number", "\tvalue")) is ""
+	Header(lines, line).ReturnType
+Header(lines Texts, line Number) HeaderTokens
+	Naming.Header(Lines, 1).tokens.First is "Names"
+	Naming.Header(Lines, 0).tokens.Length is 0
 	for Range(0, line).Reverse
 		if lines(value).StartsWith("\t") is false
-			return HeaderTokens(Tokenizer(lines(value)).Tokens).ReturnType
-	""
+			return HeaderTokens(Tokenizer(lines(value)).Tokens)
+	HeaderTokens(List(Text))

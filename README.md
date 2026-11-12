@@ -96,7 +96,7 @@ Declare a method's return as `Slow(T)` to make its tests functional (file, model
 Builds, checks, folder tests on the VM, VS Code typing checks and value tracing skip Slow tests and the fixtures only they use. `strict test File.strict` and `strict test Folder native` include them, `strict test File.strict Method` selects one method, `native` or `lines` keep that selection. `strict File.strict` runs all its tests, Slow included, then `Run`. Only automatic unit runs write `.strictbinary`, explicit functional runs execute every time. See `Runtime/README.md` for the VM and `Compiler/README.md` for the build pipeline.
 
 ## Rules worth knowing
-- Limits: 120 characters per line, 13 lines per method (header and tests included), 4 parameters, 16 methods, 15 members, nesting depth 5, names 2-50 characters. Files in a `Generated` folder get 10 times as much.
+- Limits: 120 characters per indented line (240 for a constant), 13 lines per method (header and tests included), 18 methods (not for base types), 15 members, 40 constants, nesting depth 5. Files in a `Generated` folder get 10 times as much, in a `Content` folder twice as much.
 - Precedence from loosest to tightest: `then`/`else`, `not`, `or`, `xor`, `and`, comparisons (`is`, `is not`, `is in`, `is not in`, `<`, `>`, `<=`, `>=`), `in`, `+`/`-`, `*`/`/`/`%` (left to right: `a % b / c` is `(a % b) / c`), `^`, `to`.
 - A conditional as one of several arguments needs brackets: `Text(value, (isShort then 2 else 4))`.
 - Constraints follow `with`: `has Width Number with value > 0`, `Run(frames = 0 with value >= 0)`. A value that does not fit is `Error("ConstraintNotMet: ...")`.

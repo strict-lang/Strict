@@ -6688,6 +6688,20 @@
   ^done:
     return
   }
+  // `Process.Collected`: the full collection a program asks for between its stages or levels (never inside a frame or
+  // a step, nothing else collects on request), then the unused GPU pool blocks go back too; not inside a pool job
+  func.func private @strict_process_collected(%self: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %busy = func.call @strict_rc_busy() : () -> i1
+    cf.cond_br %busy, ^done(%zero : f64), ^collect
+  ^collect:
+    %full = arith.constant true
+    func.call @strict_gc_run(%full) : (i1) -> ()
+    %released = func.call @strict_gpu_trim_unused(%self) : (f64) -> f64
+    cf.br ^done(%released : f64)
+  ^done(%result: f64):
+    return %result : f64
+  }
   func.func private @strict_rc_check() {
     %down = arith.constant -1 : i32
     %up = arith.constant 1 : i32
@@ -17560,15 +17574,16 @@
     %released = arith.maxsi %after, %none : i64
     return %released : i64
   }
-  // explicit workload boundary: collect dead temporaries and release unused pool blocks, retaining live tensor copies;
-  // the budget is measured again at the next allocation, a resident server sees the memory a neighbour gave back since
-  // a refused allocation lowered it
+  // `GpuMemory.Released`: lists whose counts are gone give their blocks back and the unused pool blocks are released,
+  // live tensor copies stay; never a collection (`Process.Collected` is the one for stage boundaries); the budget is
+  // measured again at the next allocation, a resident server sees the memory a neighbour gave back since a refused
+  // allocation lowered it
   func.func private @strict_gpu_trim_unused(%self: f64) -> f64 {
     %unmeasured = arith.constant 0 : i64
     %budgetSlot = llvm.mlir.addressof @strict_gpu_budget : !llvm.ptr
     llvm.store %unmeasured, %budgetSlot : i64, !llvm.ptr
+    func.call @strict_rc_reclaim() : () -> ()
     %full = arith.constant true
-    func.call @strict_gc_run(%full) : (i1) -> ()
     %most = arith.constant 9223372036854775807 : i64
     %none = arith.constant 0 : i64
     %released = func.call @strict_gpu_trim(%most, %none, %full) : (i64, i64, i1) -> i64

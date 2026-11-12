@@ -22,16 +22,14 @@ Counts(files Texts, mutations Texts, isBase Boolean, shared Texts, duplicates Du
 	for files
 		let lines = File(value).ReadLines
 		let typeName = Path(value).FileName.RemoveExtension.text
-		let found = CheckFile(value, mutations, isBase, shared) + duplicates.Issues(value, lines)
+		let found = CheckFile(value, lines, typeName, mutations, isBase, shared) + duplicates.Issues(value, lines)
 		Logged(value, found + SureChecks(lines, sure, typeName, inference).Issues) + Unresolved(value, inference)
 Unresolved(path Text, inference Expressions/TypeInference) Number
 	let unresolved = ResolveCheck(logger).Unresolved(path, inference)
 	for unresolved
 		logger.Log(value)
 	unresolved.Length
-CheckFile(path Text, mutations Texts, isBase Boolean, shared Texts) List(ValidationIssue)
-	let lines = File(path).ReadLines
-	let typeName = Path(path).FileName.RemoveExtension.text
+CheckFile(path Text, lines Texts, typeName Text, mutations Texts, isBase Boolean, shared Texts) List(ValidationIssue)
 	let limits = Limits(lines, isBase, Limits.Scale(path)).Issues + SubstringLengths(lines).Issues
 	let rules = TypeValidator(TypeShape(lines), mutations, typeName).Validate + limits
 	let names = Names(lines).Issues + Recursions(lines, typeName).Issues + Inlines(lines).Issues

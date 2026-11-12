@@ -62,9 +62,9 @@ Issues(compiler FileCompiler, sources Texts, inference TypeInference) List(Texts
 	let issues = compiler.Issues(sources, inference)
 	Reported("Frontend / name validation (" + sources.Length + " files)", started)
 	issues
-Runtime(program Text, root Text, platform Number) Text
+Runtime(build NativeBuild, program Text, root Text) Text
 	let started = Process.Elapsed
-	let text = NativeBuild.Mlir(program, root, platform)
+	let text = build.Mlir(program, root, build.Target)
 	Reported("Host runtime assembly", started)
 	text
 Emitted(module MlirModule, texts List(MlirFunction), functions List(MlirFunction), recursive Texts) Texts

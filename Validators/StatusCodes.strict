@@ -35,8 +35,9 @@ IsWriting(at Number) Boolean
 	StatusCodes(("A Number", "\tLog(1)")).IsWriting(0) is false
 	StatusCodes(List(Text) + "A Number").IsWriting(0) is false
 	StatusCodes(("A Number", "\tLog(1)", "\t0")).IsWriting(0)
-	for Range(at + 1, End(at))
-		if (value < End(at) - 1) and IsStatement(value)
+	let end = End(at)
+	for Range(at + 1, end)
+		if (value < end - 1) and IsStatement(value)
 			return true
 	false
 IsStatement(at Number) Boolean

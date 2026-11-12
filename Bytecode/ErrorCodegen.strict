@@ -9,6 +9,8 @@ constant GreetingPlusOne = SyntaxNode("Binary", "+", (Greeting, ValueCodegen.One
 constant InTest = CodeBlock.Empty.Declare(FailureMarker, "7")
 constant Counted = CodeBlock.Empty.Declare("a", "Count")
 constant A = SyntaxNode("Identifier", "a")
+constant Logging = CodeBlock.Empty.Declare("a", "Logger")
+constant LogHi = SyntaxNode("MethodCall", "Log", (A, ValueCodegen.Hi))
 constant IsError = SyntaxNode("Binary", "is", (A, BareError))
 constant FailingSum = SyntaxNode("Binary", "is", (GreetingPlusOne, BareError))
 constant LeftSum = Plain.Compared(FailingSum, GreetingPlusOne, CodeBlock.Empty)
@@ -44,6 +46,8 @@ Dispatched(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Dispatched(ValueCodegen.GreeterText, Counted) is Plain.values.Call(ValueCodegen.GreeterText, Counted)
 	Plain.Dispatched(Greeting, CodeBlock.Empty) is Plain.values.Call(Greeting, CodeBlock.Empty)
 	Plain.Dispatched(IsOne, CodeBlock.Empty) is OperatorCodegen(Plain.values).Operation(IsOne, CodeBlock.Empty)
+	if IsLog(node, block)
+		return MethodCodegen(values).Log(node.children(1), block)
 	if node.Kind is in ("Number", "Text", "Boolean", "List", "Identifier")
 		return values.Leaf(node, block)
 	if (node.Kind is in ("Call", "Member", "MethodCall", "Not", "Index")) or (node.text is "to")
@@ -64,11 +68,21 @@ Check(register Number, block CodeBlock) InstructionEntry
 		return InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + register)
 	let jump = ByteEncoder.Empty.SevenBit(failure to Number).bytes
 	InstructionEntry(InstructionType.CheckError, List(Text) + Tested, List(Number) + register + jump)
+IsLog(node SyntaxNode, block CodeBlock) Boolean
+	Plain.IsLog(LogHi, Logging)
+	Plain.IsLog(SyntaxNode("Identifier", "Log"), Logging) is false
+	Plain.IsLog(SyntaxNode("MethodCall", "Reset", (A, A)), Logging) is false
+	Plain.MayFail(LogHi, Logging) is false
+	Plain.Dispatched(LogHi, Logging).instructions.Last.kind is InstructionType.Print
+	Plain.Dispatched(LogHi, CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
+	if (node.Kind is not "MethodCall") or (node.text is not "Log")
+		return false
+	TypeEntry.ShortName(values.TypeOf(node.children(0), block)) is "Logger"
 MayFail(node SyntaxNode, block CodeBlock) Boolean
 	Plain.MayFail(Greeting, CodeBlock.Empty)
 	Plain.MayFail(BareError, CodeBlock.Empty) is false
 	Plain.MayFail(A, FallibleA)
-	if values.TypeOf(node, block) is in ErrorTypes
+	if IsLog(node, block) or (values.TypeOf(node, block) is in ErrorTypes)
 		return false
 	if node.Kind is "Identifier"
 		return ErrorScope(values).IsFallible(node.text, block) or values.IsMethodCall(node, block)
