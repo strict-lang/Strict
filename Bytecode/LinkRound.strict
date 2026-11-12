@@ -21,14 +21,18 @@ Entries(signed Texts) Slow(List(TypeEntry))
 	Single.Entries(List(Text) + "Strict/Logger:").First.Name is "Strict/Logger"
 	constant cached = Linker(Linker.Hello, Known = Dictionary(("Strict/Logger:", Linker.Iterating)))
 	LinkRound(Single, linker = cached).Entries(List(Text) + "Strict/Logger:").First is Linker.Iterating
+	Twice.Entries(Twice.signatures).First is Linker.Go
+	let positions = Positions
 	for signed
-		(value is not in signatures) and (value is in linker.Known) then linker.Known(value) else Fresh(value)
+		if value is in positions
+			entries(positions(value) + 1)
+		else if value is in linker.Known
+			linker.Known(value)
+		else
+			Fresh(value)
 Fresh(signature Text) Slow(TypeEntry)
 	Single.Fresh("Strict/Logger:").Name is "Strict/Logger"
 	Twice.Fresh("Strict/Logger:Log").methods.Length is 2
-	let known = signatures.Index(signature)
-	if known >= 0
-		return entries(known + 1)
 	let earlier = Signature(signature).Earlier(signatures)
 	let names = Signature(signature).Names
 	let old = earlier < 0 then List(Text) else Signature(signatures(earlier)).Names
@@ -141,6 +145,14 @@ Known(known Dictionary(Text, TypeEntry)) Dictionary(Text, TypeEntry)
 		if value is not in result
 			result.Add(value, entries(index + 1))
 	result
+Positions Dictionary(Text, Number)
+	Chained.Positions("Strict/Degrees:Floor") is 1
+	LinkRound(Twice, signatures = ("Strict/A:", "Strict/A:")).Positions("Strict/A:") is 0
+	mutable positions = Dictionary(Text, Number)
+	for signatures
+		if value is not in positions
+			positions.Add(value, index)
+	positions
 Targets Texts
 	Single.Targets is ("Strict/B.Go")
 	Single.Advanced(Single.entries, List(Text)).Targets is ("Strict/B.Go")
@@ -164,10 +176,12 @@ Advanced(advanced List(TypeEntry), signed Texts) LinkRound
 	Twice.Advanced(Twice.entries, Twice.signatures).targeted is (List(Text) + "Strict/B.Go", List(Text) + "Strict/B.Go")
 	Twice.Advanced(Twice.entries, Twice.signatures).used.Length is 2
 	let isAligned = (targeted.Length is entries.Length) and (used.Length is entries.Length)
+	let positions = isAligned then Positions else Dictionary(Text, Number)
 	mutable targets = List(Mutable(Texts))
 	mutable types = List(Mutable(Texts))
 	for advanced
-		let known = (index is 0) or (isAligned is false) then -1 else signatures.Index(signed(index - 1))
+		let previous = index is 0 then "" else signed(index - 1)
+		let known = previous is in positions then positions(previous) else -1
 		targets.Add(known >= 0 then targeted(known + 1) else value.Invoked)
 		types.Add(known >= 0 then used(known + 1) else linker.UsedTypes(List(TypeEntry) + value))
 	LinkRound(linker, advanced, signed, targets, types)
