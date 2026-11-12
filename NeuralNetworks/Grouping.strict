@@ -24,21 +24,18 @@ Starts Numbers
 		start
 Positions(starts Numbers) Numbers
 	Sample.Positions(Sample.Starts) is (4, 0, 5, 2)
+	mutable placed = Layer.Zeros(experts)
 	for chosen
-		let pair = index
-		let expert = value
-		mutable position = starts(expert)
-		for pair
-			position = position + (chosen(index) is expert then 1 else 0)
+		let position = starts(value) + placed(value)
+		placed(value) = placed(value) + 1
 		position
 Ordered(positions Numbers, rows Number) Numbers
 	Sample.Ordered((4, 0, 5, 2), 6) is (1, -1, 3, -1, 0, 2)
-	for rows
-		let row = index
-		mutable pair = -1
-		for positions
-			pair = pair + (value is row then index + 1 else 0)
-		pair
+	mutable pairs = Layer.Zeros(rows)
+	for positions.Length
+		pairs(positions(index)) = index + 1
+	for pairs
+		value - 1
 Rows Number
 	Sample.Rows is 8
 	Grouping((0, 0, 0), 2, 1, 2).Rows is 6
