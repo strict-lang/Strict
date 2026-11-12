@@ -139,12 +139,13 @@ Specialized(codegen TypeCodegen, start Number, name Text) MethodEntry
 Completed(codegen TypeCodegen, entry TypeEntry, targets Texts) TypeEntry
 	Plain.Completed(Coding, Unused, List(Text) + "Strict/Boxes/Using.Through(Wrapped(Halver))").methods.Length is 1
 	Plain.Completed(TypeCodegen.Texted, TypeEntry.Converting, List(Text) + "Strict/Digit.to Text").methods.Length is 2
+	Plain.Completed(Coding, Unused, List(Text) + "Strict/Other.Go").methods.Length is 0
 	let prefix = codegen.fullName + "."
 	mutable names = List(Text)
 	for targets
 		let method = value.StartsWith(prefix) then value.Substring(prefix.Length, value.Length - prefix.Length) else ""
 		let converted = method.StartsWith("to ") then method.Split(" ") else (method, "")
-		let chosen = entry.Chosen(converted.First, -1, converted.Last, List(Text))
-		if (method is not "") and (chosen < 0) and (method is not in names)
+		let chosen = method is "" then 0 else entry.Chosen(converted.First, -1, converted.Last, List(Text))
+		if (chosen < 0) and (method is not in names)
 			names = names + method
 	names.Length is 0 then entry else TypeEntry(entry.Name, entry.members, entry.methods + codegen.Methods(names))
