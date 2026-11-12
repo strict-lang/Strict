@@ -99,6 +99,9 @@ Lowered(base Text, tools Toolchain) Text
 	lowered is "" then Ran("mlir-translate", translating, tools) else lowered
 Ran(tool Text, arguments Texts, tools Toolchain) Text
 	Sample.Ran("noSuchStrictTool", List(Text) + "", Toolchain.OnWindows).StartsWith("noSuchStrictTool failed")
+	Sample.Ran("noSuchStrictTool", List(Text), Toolchain.OnWindows) is ""
+	if arguments.Length is 0
+		return ""
 	for ToolRunner(tools.Located(tool)).ExecuteAll(arguments, tool)
 		if value.Failed
 			return tool + " failed: " + value.error
