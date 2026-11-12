@@ -30,6 +30,12 @@ Written(path Text) Boolean
 	let exists = File(path).Exists
 	File(path).Delete
 	exists
+Changed(path Text) Slow(Boolean)
+	Changed("Examples/BaseTypesTest/Changed")
+	Directory.Change(".")
+	let isWritten = Written(path + "/written")
+	Directory.Delete(path)
+	isWritten
 Renamed(path Text) Boolean
 	Renamed("Examples/BaseTypesTest/renamed")
 	File(path).Write(List(Text) + "renamed")

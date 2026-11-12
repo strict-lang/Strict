@@ -14684,7 +14684,8 @@
     %step = arith.constant 1 : i64
     %slash = arith.constant 47 : i8
     %backslash = arith.constant 92 : i8
-    %name = func.call @strict_named(%path) : (f64) -> !llvm.ptr
+    %full = func.call @strict_folder_joined(%path) : (f64) -> f64
+    %name = func.call @strict_ptr(%full) : (f64) -> !llvm.ptr
     %mode = llvm.mlir.addressof @strict_write_mode : !llvm.ptr
     %file = llvm.call @fopen(%name, %mode) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
@@ -14705,7 +14706,7 @@
     cf.cond_br %isSeparator, ^create, ^next
   ^create:
     %count = arith.sitofp %index : i64 to f64
-    %folder = func.call @strict_text_substring(%path, %zero, %count) : (f64, f64, f64) -> f64
+    %folder = func.call @strict_text_substring(%full, %zero, %count) : (f64, f64, f64) -> f64
     %created = func.call @strict_directory_create(%zero, %folder) : (f64, f64) -> f64
     cf.br ^next
   ^next:
