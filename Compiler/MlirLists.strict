@@ -15,6 +15,9 @@ constant MemberCopy = InstructionEntry(InstructionType.CopyList, "numbers.width"
 constant Pushing = InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult")
 constant Versioning = InstructionEntry(InstructionType.StoreRegisterToVariable, "numbers(1)", (0, -1, 1))
 constant Words = MemberEntry("words", "Strict/List(Text)", List(InstructionEntry), false)
+constant LettersStored = (InstructionEntry.LoadText(0, "ab"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "letters"))
+constant LetterRead = (InstructionEntry.LoadNumber(1, 1), InstructionEntry(InstructionType.IndexCall, "letters", (2, 1, -1)), InstructionEntry.Return(2))
+constant Lettered = MlirLists(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Letter", List(MemberEntry), "Strict/Text", LettersStored + LetterRead)), 3)
 constant LiteralLoad = InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Number)", (0, 6, -1, 2, 1, 1, 1, 2))
 constant Literals = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + LiteralLoad))
 Temp(suffix Text) Text
@@ -126,7 +129,7 @@ Appended(entry InstructionEntry) Texts
 Indexed(entry InstructionEntry) Texts
 	MlirLists(Listed, 2).Indexed(Steps(2)).Last is "    llvm.store %t2x, %r2 : f64, !llvm.ptr"
 	Text.Combine(Hoisting.Indexed(Hoisting.function.method.instructions(1))).IndexOf("@strict_hoisted_read(") > 0
-	Text.Combine(MlirLists(MlirStatements.Lettered, 3).Indexed(MlirStatements.LetterRead(1))).IndexOf("text_read(") > 0
+	Text.Combine(Lettered.Indexed(LetterRead(1))).IndexOf("text_read(") > 0
 	let isText = MlirLayout(function).Represented(MlirKinds(function).VariableKind(position, entry.texts(0))) is "Text"
 	let helper = isText then "strict_text_read" else "strict_list_read"
 	let access = MlirMemory(function, position).Called(Temp("x"), helper, (Temp("l"), Temp("i"), Temp("nb")))
