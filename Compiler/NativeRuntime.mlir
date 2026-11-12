@@ -13329,6 +13329,32 @@
     %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
     return %error : f64
   }
+  llvm.mlir.global internal constant @strict_true_text("true\00") : !llvm.array<5 x i8>
+  llvm.mlir.global internal constant @strict_false_text("false\00") : !llvm.array<6 x i8>
+  llvm.mlir.global internal constant @strict_invalid_boolean("InvalidBoolean\00") : !llvm.array<15 x i8>
+  func.func private @strict_text_boolean(%text: f64) -> f64 {
+    %zero = arith.constant 0 : i32
+    %pointer = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr
+    %trueText = llvm.mlir.addressof @strict_true_text : !llvm.ptr
+    %trueOrder = llvm.call @strcmp(%pointer, %trueText) : (!llvm.ptr, !llvm.ptr) -> i32
+    %isTrue = arith.cmpi eq, %trueOrder, %zero : i32
+    cf.cond_br %isTrue, ^truth, ^other
+  ^truth:
+    %one = arith.constant 1.0 : f64
+    return %one : f64
+  ^other:
+    %falseText = llvm.mlir.addressof @strict_false_text : !llvm.ptr
+    %falseOrder = llvm.call @strcmp(%pointer, %falseText) : (!llvm.ptr, !llvm.ptr) -> i32
+    %isFalse = arith.cmpi eq, %falseOrder, %zero : i32
+    cf.cond_br %isFalse, ^falsity, ^invalid
+  ^falsity:
+    %none = arith.constant 0.0 : f64
+    return %none : f64
+  ^invalid:
+    %name = llvm.mlir.addressof @strict_invalid_boolean : !llvm.ptr
+    %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
+    return %error : f64
+  }
   func.func private @strict_text_upper(%text: f64) -> f64 {
     %upper = arith.constant 1 : i1
     %result = func.call @strict_text_cased(%text, %upper) : (f64, i1) -> f64
