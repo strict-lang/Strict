@@ -19,6 +19,8 @@ constant LengthRead = (InstructionEntry.LoadText(0, "ab"), MlirNatives.LengthCal
 constant Measuring = MlirChecks(MlirFunction(List(TypeEntry), MlirNatives.Named, MethodEntry("Run", List(MemberEntry), "Strict/Number", LengthRead)), 2)
 constant WidthLoop = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "width"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Jump(InstructionType.LoopEnd, 1))
 constant CountLoaded = MlirChecks(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", WidthLoop)), 1)
+constant WidthRange = (WidthLoop(0), InstructionEntry.LoopBegin(0, 7), WidthLoop(2))
+constant StartLoaded = MlirChecks(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", WidthRange)), 1)
 Emitted Texts
 	FlatRead.Emitted is ("    cf.br ^bb3")
 	Returning.Emitted.Index("    cf.cond_br %t1k, ^bb1e, ^bb2") is 2
@@ -45,15 +47,40 @@ Counted Texts
 	CountLoaded.Counted(2) is "    cf.cond_br %t1uk, ^bb1ue, ^loop1counted"
 	CountLoaded.Counted.Last is "  ^loop1counted:"
 	MlirChecks(MlirLoops.Counting.function, 0).Counted.Length is 0
+	StartLoaded.Counted.First is "    %t1uv = llvm.load %r0 : !llvm.ptr -> f64"
+	StartLoaded.Counted(2) is "    cf.cond_br %t1uk, ^bb1ue, ^loop1counted"
 	let entry = function.method.instructions(position)
-	let register = entry.payload(1) is 1 then entry.payload(2) else entry.payload(0)
-	let writer = MlirKinds(function).Writer(position, register)
 	let isPlain = (function.FastLoop < 0) and (function.IsDeferred is false)
-	if (isPlain is false) or (writer < 0) or (MlirLoops(function, position).Collection is not "")
+	if (isPlain is false) or (MlirLoops(function, position).Collection is not "")
 		return List(Text)
-	if IsUnfailing(function, writer)
+	let isRange = entry.payload(1) is 1
+	Bounded(entry, isRange then entry.payload(0) else -1, isRange then entry.payload(2) else entry.payload(0))
+Bounded(entry InstructionEntry, starting Number, ending Number) Texts
+	StartLoaded.Bounded(WidthRange(1), 0, 0)(5) is "    %t1uv = llvm.load %r0 : !llvm.ptr -> f64"
+	StartLoaded.Bounded(WidthRange(1), 7, 0).First is "    %t1uv = llvm.load %r0 : !llvm.ptr -> f64"
+	let isEnding = CanFail(ending)
+	let isStarting = CanFail(starting)
+	if (isEnding or isStarting) is false
 		return List(Text)
-	Checked(entry, register, "^loop" + position + "counted") + ("  ^loop" + position + "counted:")
+	let selected = isEnding and isStarting then Selected(starting, ending) else List(Text)
+	let register = isEnding then ending else starting
+	selected + Checked(entry, register, "^loop" + position + "counted") + ("  ^loop" + position + "counted:")
+CanFail(register Number) Boolean
+	CountLoaded.CanFail(0)
+	CountLoaded.CanFail(7) is false
+	CountLoaded.CanFail(-1) is false
+	Measuring.CanFail(1) is false
+	let writer = MlirKinds(function).Writer(position, register)
+	(register >= 0) and (writer >= 0) and (IsUnfailing(function, writer) is false)
+Selected(starting Number, ending Number) Texts
+	StartLoaded.Selected(0, 2)(3) is "    %t1sf = arith.select %t1sk, %t1sv, %t1fe : f64"
+	StartLoaded.Selected(0, 2).Last is "    llvm.store %t1sf, %r2 : f64, !llvm.ptr"
+	let checked = "%t" + position
+	let start = function.Load(checked + "sv", "%r" + starting)
+	let test = "    " + checked + "sk = func.call @strict_is_failure(" + checked + "sv) : (f64) -> i1"
+	let end = function.Load(checked + "fe", "%r" + ending)
+	let select = "    " + checked + "sf = arith.select " + checked + "sk, " + checked + "sv, " + checked + "fe : f64"
+	(start, test, end, select, function.Store(checked + "sf", "%r" + ending))
 IsFlatRead Boolean
 	FlatRead.IsFlatRead
 	Returning.IsFlatRead is false
