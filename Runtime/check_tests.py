@@ -9,6 +9,21 @@ command = str(root / ("strict.exe" if os.name == "nt" else "strict"))
 environment = dict(os.environ, STRICT_THREADS="8")
 with tempfile.TemporaryDirectory(prefix="TestPolicy", dir=root / "Examples") as temporary:
 	folder = Path(temporary)
+	def tested(name):
+		return subprocess.run([command, "test", str(folder / (name + ".strict")), "unit"], cwd=root, env=environment,
+			capture_output=True, text=True, timeout=30)
+	doubling = folder / "Doubling.strict"
+	doubling.write_text('has number\nDoubled Number\n\tDoubling(2).Doubled is 4\n\tnumber * 2', encoding="utf-8")
+	(folder / "Tripling.strict").write_text('has number\nTripled Number\n\tTripling(0).Tripled is 0\n'
+		'\tnumber + Doubling(number).Doubled', encoding="utf-8")
+	(folder / "Sixfold.strict").write_text('has number\nSixfolded Number\n\tSixfold(2).Sixfolded is 12\n'
+		'\tTripling(number).Tripled * 2', encoding="utf-8")
+	first = tested("Sixfold")
+	assert first.returncode == 0, "The dependency chain failed before any change:\n" + first.stdout + first.stderr
+	doubling.write_text(doubling.read_text(encoding="utf-8").replace("is 4", "is 6").replace("* 2", "* 3"), encoding="utf-8")
+	assert tested("Tripling").returncode == 0, "A test that does not depend on the changed value failed"
+	changed = tested("Sixfold")
+	assert changed.returncode != 0, "A cached pass survived a change in a type of a used type:\n" + changed.stdout + changed.stderr
 	work = folder / "TestWork.strict"
 	work.write_text('constant Seconds = 0.15\nPause Number\n\tlet started = Process.Elapsed\n'
 		'\tmutable count = 0\n\tfor as long as Process.Elapsed - started < Seconds\n'
@@ -121,4 +136,4 @@ with tempfile.TemporaryDirectory(prefix="TestPolicy", dir=root / "Examples") as 
 	kept = subprocess.run([command, str(source)], cwd=root, env=environment, capture_output=True, text=True, timeout=10)
 	assert kept.stdout.count("threads 8") == 2, "STRICT_THREADS of the caller was not kept:\n" + kept.stdout + kept.stderr
 
-	print("Unit deadlines, native/build failures, Slow selection, internal packages, transparent values, manual Run order and tool thread shares passed")
+	print("Cached passes over changed dependencies, unit deadlines, native/build failures, Slow selection, internal packages, transparent values, manual Run order and tool thread shares passed")
