@@ -5,6 +5,7 @@ has typeNames Texts
 has isOptimizing Boolean = true
 constant NoTypes = ValueCodegen.NoTypes
 constant Hello = TypeCodegen("Strict/HelloLogger", ("has logger", "Run", "\tlogger.Log(\"Hi\")"), NoTypes, List(Text))
+constant Greeted = CodeBlock.Empty.Add(MethodEntry.PrintHi).Nothing.instructions
 constant Logging = HeaderTokens("has", "logger")
 constant Alpha = HeaderTokens("has", "alpha", "=", "1", "with", "value", ">", "0")
 constant Unscoped = Scope(List(Text), List(Text))
@@ -20,7 +21,7 @@ constant Leveled = TypeCodegen("Strict/L", ("has level = Fast", "constant Fast =
 constant Rebuilt = SyntaxParser(Tokenizer("Greeter(Greeter(\"a\"), text = \"b\")").Tokens).Parse
 Entry Slow(TypeEntry)
 	Texted.Methods(("to")).Length is 1
-	Hello.Entry is TypeEntry.HelloLogger
+	Hello.Entry is TypeEntry(TypeEntry.HelloLogger, methods = MethodEntry(MethodEntry.HelloRun, instructions = Greeted))
 	ConstantMethods.Counting.Methods(List(Text)).Length is 2
 	Specialization.Coding.Methods(List(Text) + Specialization.Halving).Length is 1
 	TypeEntry(Generator.target.TypeName, Members, Methods(List(Text)))

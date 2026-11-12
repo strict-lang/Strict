@@ -135,7 +135,7 @@ Loop(node SyntaxNode, block CodeBlock, aggregation Text) CodeBlock
 		return LoopPeeling(methods, block).Emitted(peeled, LoopCodegen(methods), aggregation)
 	Unpeeled(node, block, aggregation)
 Unpeeled(node SyntaxNode, block CodeBlock, aggregation Text) CodeBlock
-	MethodCodegen.Plain.Generate(MethodCodegen.LoopBody, MethodCodegen.NoScope, "None").instructions.Length is 6
+	MethodCodegen.Plain.Generate(MethodCodegen.LoopBody, MethodCodegen.NoScope, "Number").instructions.Length is 6
 	Plain.Loop(DoubledBody.children(0), CodeBlock.Empty, "list").instructions.Last.kind is InstructionType.LoopEnd
 	Plain.Loop(DoubledBody.children(0), CodeBlock.Empty, "list").instructions.Last.line is 2
 	Plain.Loop(DoubledBody.children(0), CodeBlock.Empty.Declare("value", "Text"), "").scope.TypeOf("outer") is ""

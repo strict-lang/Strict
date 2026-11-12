@@ -69,3 +69,11 @@ IsSmallOrMissing Boolean
 	ErrorHandling(2).IsSmallOrMissing
 	let found = Found
 	found < 3 or found is Error
+Skipped
+	ErrorHandling(5).Skipped is not Error
+	ErrorHandling(0).Skipped is not Error
+	if Found is Error
+		return
+Required
+	ErrorHandling(0).Required is Missing
+	ErrorHandling(Found).Skipped

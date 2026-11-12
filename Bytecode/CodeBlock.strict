@@ -17,6 +17,16 @@ Load(entry InstructionEntry) CodeBlock
 Result Number
 	CodeBlock.Empty.Load(InstructionEntry.LoadNumber(0, 5)).Result is 0
 	register - 1
+Nothing CodeBlock
+	CodeBlock.Empty.At(2).Nothing.instructions is (InstructionEntry.LoadNumber(2, 0), InstructionEntry.Return(2))
+	Load(InstructionEntry.LoadNumber(register, 0)).Add(InstructionEntry.Return(register))
+Ended(returned Text) CodeBlock
+	CodeBlock.Empty.At(2).Ended("Number").instructions.Last.payload is (1)
+	CodeBlock.Empty.Ended("Number").instructions.Last.payload is (0)
+	CodeBlock.Empty.At(2).Ended("None") is CodeBlock.Empty.At(2).Nothing
+	CodeBlock.Empty.At(2).Declare(ErrorMarker, "from").Ended("None").instructions.Last.payload is (1)
+	let isNothing = (returned is "None") and (scope.TypeOf(ErrorMarker) is not "from")
+	isNothing then Nothing else Add(InstructionEntry.Return(register is 0 then 0 else Result))
 At(start Number) CodeBlock
 	CodeBlock.Empty.Load(InstructionEntry.LoadNumber(0, 5)).At(0).register is 0
 	CodeBlock(instructions, start, nextId, scope)

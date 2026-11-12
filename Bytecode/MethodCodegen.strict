@@ -19,7 +19,7 @@ constant Letter = BodyParser("Letter Text", "\tx(0)").Block(1, 1)
 constant Texted = Scope(List(Text) + "x", List(Text) + "Text")
 constant Discarding = BodyParser("Letter Text", "	if x.Length > 1", "		x(0)", "	x(1)").Block(1, 1)
 Generate(body SyntaxNode, scope Scope, returnType Text) CodeBlock
-	Plain.Generate(BodyParser("Run Number", "\tx + 2").Block(1, 1), NoScope, "None").instructions.Length is 4
+	Plain.Generate(BodyParser("Run Number", "\tx + 2").Block(1, 1), NoScope, "Number").instructions.Length is 4
 	Plain.Generate(BodyParser("Run Number", "\treturn 1").Block(1, 1), NoScope, "None").instructions.Length is 2
 	Plain.Generate(SumBody, NoScope, "Number").instructions.Length is 11
 	Plain.Generate(FilterBody, NoScope, "Number").instructions(12).kind is InstructionType.JumpEnd
@@ -30,13 +30,13 @@ Generate(body SyntaxNode, scope Scope, returnType Text) CodeBlock
 	let block = LoopCodegen(MethodCodegen(values)).Aggregated(code, start, returnType)
 	if (code.children.Length is 0) or (block.instructions.Last.kind is InstructionType.Return)
 		return block
-	block.Add(InstructionEntry.Return(block.register is 0 then 0 else block.Result))
+	block.Ended(returnType)
 Production(body SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Log(SyntaxNode("Binary", "+", (ValueCodegen.Hi, NoNode)), InRun).instructions.Length is 2
 	Plain.Log(SyntaxNode("Binary", "+", (One, NoNode)), InRun).instructions.Length is 4
 	Plain.Production(LoopHoisting.Scaling, CodeBlock.Empty).children(0).Kind is "Declaration"
 	FileCompiler.Unoptimized.methods.Production(LoopHoisting.Scaling, CodeBlock.Empty).children(0).Kind is "For"
-	Plain.Generate(BodyParser("Run Number", "\tx + 2").Block(1, 1), NoScope, "None").instructions.Last.payload is (2)
+	Plain.Generate(BodyParser("Run Number", "\tx + 2").Block(1, 1), NoScope, "Number").instructions.Last.payload is (2)
 	Plain.Generate(BodyParser("Run", "\tlet a = 1").Block(1, 1), NoScope, "None").instructions.Last.payload is (0)
 	Plain.Production(BodyParser("Run", "\tconstant a = 2", "\ta").Block(1, 1), CodeBlock.Empty).Lines("") is ("2")
 	let inlined = ConstantFolding(values.target.TypeName, values.inference).Inlined(TestLines(values).Without(body, block))
@@ -45,6 +45,7 @@ Production(body SyntaxNode, block CodeBlock) SyntaxNode
 Body(body SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Body(BodyParser("Run", "\tRun", "\t2").Block(1, 1), CodeBlock.Empty).register is 1
 	Plain.Body(BodyParser("Run", "\tRun", "\t2").Block(1, 1), CodeBlock.Empty).instructions.Last.line is 3
+	Plain.Generate(BodyParser("Run", "\tRun").Block(1, 1), NoScope, "None").instructions.Last.payload is (1)
 	Valued(body, block, "")
 Valued(body SyntaxNode, block CodeBlock, wanted Text) CodeBlock
 	Plain.Valued(Letter, CodeBlock.Empty.Declare("x", "Text"), "Text").instructions(3).texts(1) is "to"
@@ -143,7 +144,7 @@ StoreConstant(load InstructionEntry, name Text) InstructionEntry
 	Plain.Statement(SyntaxNode("MethodCall", "Log", (NoNode, ValueCodegen.Hi)), Logging, false).instructions.Length is 1
 	Plain.Statement(SyntaxNode("MethodCall", "Add", (NoNode, One)), InRun, false).instructions.Length is 4
 	Plain.Statement(SyntaxNode("Identifier", "Log"), InRun, false).instructions.Length is 1
-	Plain.Statement(SyntaxNode("Return", ""), InRun, false).instructions.Length is 1
+	Plain.Statement(SyntaxNode("Return", ""), InRun, false).instructions.Length is 2
 	Plain.StoreConstant(InstructionEntry.LoadNumber(2, 7), "a").payload is (1, 7, -1, 0)
 	let texts = load.texts + name
 	InstructionEntry(InstructionType.StoreConstantToVariable, texts, LoadedValue(load) + (-1 - load.texts.Length) + 0)
@@ -160,7 +161,7 @@ LoadedValue(load InstructionEntry) Numbers
 		content = content + load.payload(value)
 	content
 Conditional(node SyntaxNode, block CodeBlock, hasElse Boolean, aggregation Text) CodeBlock
-	Plain.Generate(IfBody, NoScope, "None").instructions.Length is 9
+	Plain.Generate(IfBody, NoScope, "Number").instructions.Length is 9
 	Plain.Conditional(SelectorCodegen.Picked, CodeBlock.Empty, false, "").instructions.Length is 14
 	if MethodBodies(values.target.TypeName, values.target.shape, values.inference).IsSelector(node)
 		return SelectorCodegen(values).Selected(node, block)
@@ -171,7 +172,7 @@ Conditional(node SyntaxNode, block CodeBlock, hasElse Boolean, aggregation Text)
 	let skipsElse = hasElse and body.instructions.Last.kind is not InstructionType.Return
 	(skipsElse then body.Flagged else body).Add(InstructionEntry.Jump(InstructionType.JumpEnd, condition.nextId - 1))
 Else(node SyntaxNode, block CodeBlock, hasElse Boolean) CodeBlock
-	Plain.Generate(ElseBody, NoScope, "None").instructions.Length is 12
+	Plain.Generate(ElseBody, NoScope, "None").instructions.Length is 13
 	Plain.Generate(ReturnElse, NoScope, "None").instructions.Length is 9
 	if block.instructions(block.instructions.Length - 2).kind is InstructionType.Return
 		return node.Kind is "ElseIf" then Conditional(node, block, hasElse, "") else Body(node.children.Last, block)

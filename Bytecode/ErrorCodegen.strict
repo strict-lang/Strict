@@ -142,8 +142,9 @@ Statement(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Statement(Greeting, CodeBlock.Empty).instructions.Last.kind is InstructionType.CheckError
 	Plain.Statement(SyntaxNode("Return", ""), CodeBlock.Empty).instructions.Last.kind is InstructionType.Return
 	Plain.AnyError(SyntaxNode("Binary", "is", (A, A)), CodeBlock.Empty) to Text is "a is a"
+	Plain.Statement(SyntaxNode("Return", ""), CodeBlock.Empty.At(2)) is CodeBlock.Empty.At(2).Nothing
 	if node.Kind is "Return"
-		return node.HasValue then Handled(node.children(0), block) else block.Add(InstructionEntry.Return(0))
+		return node.HasValue then Handled(node.children(0), block) else block.Nothing
 	Checked(node, block)
 Right(node SyntaxNode, block CodeBlock, isConverted Boolean) CodeBlock
 	Plain.Right(IsError, CodeBlock.Empty, false).instructions.Last.kind is InstructionType.Invoke
