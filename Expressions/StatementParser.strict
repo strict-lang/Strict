@@ -135,9 +135,11 @@ Problem(line Text) Text
 	StatementParser.Problem("for x in list") is "SingleIteratorMustNotBeNamed: x" + SingleHint
 	StatementParser.Problem("x = for y") is ForProblem + "x = for y" + ForHint
 	StatementParser.Problem("a") is "ParsingFailed: a"
-	if line.IndexOf(" = for ") > 0
+	StatementParser.Problem("let b = \"a = for b\" + for") is "ParsingFailed: let b = \"a = for b\" + for"
+	let words = Tokenizer(line).Tokens
+	if (words.Index("for") > 0) and (words(words.Index("for") - 1) is "=")
 		return ForProblem + line + ForHint
-	let statement = StatementParser(Tokenizer(line).Tokens).ParseStatement
+	let statement = StatementParser(words).ParseStatement
 	if statement.Kind is "Invalid"
 		return statement.text
 	(Tokenizer(line).HasOpenText then "TextMustEndOnItsLine: " else "ParsingFailed: ") + line
