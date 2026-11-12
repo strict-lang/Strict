@@ -7,10 +7,12 @@ constant Known = PtxCache("Compiler/output/Known")
 constant Doubles = Text.Combine(MlirGpu.Exported(DeviceBuild.Doubling), ",")
 constant Combining = DeviceBuild.Local.Combined(DeviceBuild.Doubling, DeviceBuild.Without)
 constant Empty = "  llvm.mlir.global internal constant @strict_gpu_ptx(\"\\00\") : !llvm.array<1 x i8>\n}"
+constant Quoted = "module {\n  \"" + MlirGpu.Marker + "\"\n"
 Unlaunched(program Text) Text
 	Sample.Unlaunched("module {\n}") is "module {\n" + Empty
 	Sample.Unlaunched("module {\n}\n" + DeviceBuild.Doubling) is "module {\n" + Empty
-	let marker = program.IndexOf(MlirGpu.Marker)
+	Sample.Unlaunched(Quoted + "}\n" + DeviceBuild.Doubling) is Quoted + Empty
+	let marker = program.IndexOf("\n" + MlirGpu.Marker)
 	let host = marker < 0 then program else program.Substring(0, marker)
 	host.Substring(0, host.LastIndexOf("}")) + Empty
 Previous(device Text, isTiling Boolean, ending = ".kernels.mlir") Texts
