@@ -33,6 +33,7 @@ constant ListChecked = (InstructionEntry.Named(InstructionType.LoadVariableToReg
 constant IndexChecked = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "index"), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 6))
 constant Guarded = NumbersLoop + ListChecked + ElementRead + IndexChecked + SumAdded + InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 4, "sum") + InstructionEntry.Jump(InstructionType.LoopEnd, 10)
 constant Guarding = MlirKernel(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Sum", List(MemberEntry) + MlirLists.Items, "Strict/Number", Guarded)), 1)
+constant Accesses = (InstructionType.IndexCall, InstructionType.InvokeWriteToList, InstructionType.CheckError, InstructionType.Invoke)
 IsSimple Boolean
 	Doubling.IsSimple
 	Calling.IsSimple is false
@@ -49,7 +50,7 @@ IsSimple Boolean
 IsUseful Boolean
 	Doubling.IsUseful
 	Uncollected.IsUseful is false
-	Offsetting.IsSimple
+	Offsetting.IsSimple and MlirKernel(MlirParallel.Doubling.function, 2).IsSimple
 	let loops = MlirLoops(function, position)
 	mutable collected = 0
 	for Range(position + 1, function.method.LoopEndOf(position))
@@ -66,7 +67,7 @@ IsAllowed(at Number) Boolean
 		return PayloadDecoder(entry).Value(1).kind is in ("Number", "Boolean")
 	if kind is InstructionType.StoreRegisterToVariable
 		return (entry.texts(0).IndexOf("(") < 0) and (entry.texts(0) is not in Sources)
-	if kind is in (InstructionType.IndexCall, InstructionType.InvokeWriteToList, InstructionType.CheckError)
+	if kind is in Accesses
 		return IsAccessAllowed(at)
 	let isBinary = kind > InstructionType.StoreSeparator and kind < InstructionType.BinaryOperatorsSeparator
 	(kind is InstructionType.LoadVariableToRegister) or (isBinary and IsCalculated(at))
@@ -77,9 +78,21 @@ IsAccessAllowed(at Number) Boolean
 	let entry = function.method.instructions(at)
 	let previous = function.method.instructions(at - 1)
 	let isSource = (previous.kind is InstructionType.LoadVariableToRegister) and (previous.texts(0) is in Sources)
+	if entry.kind is InstructionType.Invoke
+		return IsCalled(at)
 	if entry.kind is InstructionType.CheckError
-		return ((previous.kind is InstructionType.IndexCall) or isSource) and (previous.payload(0) is entry.payload(0))
+		let isRead = ((previous.kind is InstructionType.IndexCall) or isSource) and (previous.payload(0) is entry.payload(0))
+		return isRead or MlirChecks(function, at).IsInfallible
 	entry.kind is InstructionType.IndexCall then IsIndexedByLoop(at) else entry.texts(0) is "forResult"
+IsCalled(at Number) Boolean
+	MlirKernel(MlirParallel.Doubling.function, 2).IsCalled(4)
+	Calling.IsCalled(2) is false
+	MlirKernel(MlirParallel.Timing.function, 2).IsCalled(4) is false
+	let entry = function.method.instructions(at)
+	if (entry.texts.Length < 3) or (entry.texts(2) is not "Strict/Number")
+		return false
+	let isSure = MlirChecks(function, at).IsFailing(function, at, 0) is false
+	isSure and MlirPurity(function, position).IsSafe(function, at, 0)
 IsCalculated(at Number) Boolean
 	Doubling.IsCalculated(6)
 	let isText = MlirTexts(function, at).IsSum

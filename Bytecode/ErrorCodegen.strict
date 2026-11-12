@@ -16,6 +16,7 @@ constant FailingSum = SyntaxNode("Binary", "is", (GreetingPlusOne, BareError))
 constant LeftSum = Plain.Compared(FailingSum, GreetingPlusOne, CodeBlock.Empty)
 constant RightSum = Plain.Compared(IsError, GreetingPlusOne, CodeBlock.Empty)
 constant IsOne = SyntaxNode("Binary", "is", (A, ValueCodegen.One))
+constant TextA = CodeBlock.Empty.Declare("a", "Text")
 constant FallibleA = ErrorScope.Plain.Fallible("a", CodeBlock.Empty.Declare("a", "Number"))
 constant NewSize = SyntaxNode("Call", "Size", ValueCodegen.One)
 constant SizeParameters = List(Scope) + Scope(List(Text) + TypeShape.Constrained, List(Text) + "2")
@@ -99,11 +100,16 @@ IsFailing(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsFailing(SyntaxNode("Binary", "-", (A, A)), ErrorScope.Numbered)
 	if node.text is "else"
 		return MayFail(node.children(0).children(1), block) or MayFail(node.children(1), block)
-	if (node.text is in ("to", "then")) or OperatorCodegen(values).IsCustom(node, block)
+	if (node.text is in ("to", "then")) or IsOverloaded(node, block)
 		return true
 	let type = values.TypeOf(node, block)
 	let isList = values.inference.types.IsPlural(type) or type.StartsWith("List(")
 	(node.text is in ("+", "-", "*", "/", "%", "^")) and isList
+IsOverloaded(node SyntaxNode, block CodeBlock) Boolean
+	ErrorCodegen(OperatorCodegen.Texts.values).IsOverloaded(SyntaxNode("Binary", "<", (A, A)), TextA)
+	Plain.IsOverloaded(SyntaxNode("Binary", "xor", (ValueCodegen.One, ValueCodegen.One)), CodeBlock.Empty) is false
+	let operators = OperatorCodegen(values)
+	operators.IsCustom(node, block) and (operators.IsBits(node, block) is false)
 Narrowed(condition SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Narrowed(IsError, Counted).scope.TypeOf("a") is "Error"
 	Plain.Narrowed(IsOne, Counted).scope.TypeOf("a") is "Count"

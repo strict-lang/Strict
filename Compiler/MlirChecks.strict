@@ -54,14 +54,16 @@ IsInfallible Boolean
 	Guarding.IsInfallible is false
 	Returning.IsInfallible is false
 	Measuring.IsInfallible
-	let previous = function.method.instructions(position - 1)
-	let isCalled = previous.kind is InstructionType.Invoke
-	if (isCalled is false) or (previous.payload(0) is not function.method.instructions(position).payload(0))
-		return false
-	IsFailing(function, position - 1, 0) is false
+	IsCallCheck(function, position) and (IsFailing(function, position - 1, 0) is false)
+IsCallCheck(callee MlirFunction, at Number) Boolean
+	Doubling.IsCallCheck(Measuring.function, 2)
+	Doubling.IsCallCheck(Guarding.function, 1) is false
+	let previous = callee.method.instructions(at - 1)
+	(previous.kind is InstructionType.Invoke) and (previous.payload(0) is callee.method.instructions(at).payload(0))
 CannotFail(callee MlirFunction, depth Number) Boolean
 	Doubling.CannotFail(MlirFunction(Doubling.function.types, Calls, MlirParallel.Twice), 0)
 	Doubling.CannotFail(MlirFunction(Doubling.function.types, Calls, Guarded), 0) is false
+	Doubling.CannotFail(Measuring.function, 0)
 	let returned = callee.method.declaredType
 	if returned.EndsWith("Error") or returned.EndsWith("ErrorWithValue") or MlirForeign(callee).IsForeign
 		return false
@@ -73,7 +75,9 @@ IsFailing(callee MlirFunction, at Number, depth Number) Boolean
 	Doubling.IsFailing(Guarding.function, 2, 0)
 	Doubling.IsFailing(Doubling.function, 1, 0) is false
 	let entry = callee.method.instructions(at)
-	if entry.kind is in (InstructionType.CheckError, InstructionType.IndexCall)
+	if entry.kind is InstructionType.CheckError
+		return (IsCallCheck(callee, at) is false) or IsFailing(callee, at - 1, depth)
+	if entry.kind is InstructionType.IndexCall
 		return true
 	if entry.kind is not InstructionType.Invoke
 		return false
