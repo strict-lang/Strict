@@ -18,6 +18,7 @@ constant VectorTypes = KnownTypes(List(Text) + "Vector2", List(Scope) + Scope(Li
 constant Vectors = TypeCodegen("Strict/C", List(Text), TypeInference(VectorTypes, List(Scope) + KnownTypes.NoMembers), List(Text))
 constant Texted = TypeCodegen("Strict/Digit", ("has a Number", "to Text", "\t\"c\""), NoTypes, List(Text))
 constant Leveled = TypeCodegen("Strict/L", ("has level = Fast", "constant Fast = \"a\""), NoTypes, List(Text))
+constant Defaulted = TypeCodegen("Strict/Bag", ("has items Texts = Plain.Flat", "Count Number", "\titems.Length"), DefaultInstance.Computing, List(Text))
 constant Rebuilt = SyntaxParser(Tokenizer("Greeter(Greeter(\"a\"), text = \"b\")").Tokens).Parse
 Entry Slow(TypeEntry)
 	Texted.Methods(("to")).Length is 1
@@ -86,8 +87,8 @@ Initial(node SyntaxNode) List(InstructionEntry)
 	List(InstructionEntry) + InstructionEntry.Set(load.texts, MethodCodegen.LoadedValue(load))
 Methods(names Texts) List(MethodEntry)
 	Limit.Methods(List(Text)).First.instructions.Length is 2
-	Texted.Methods(("to Text")).Length is 1
-	Limit.Methods(List(Text)).First.Name is "Run"
+	Limit.Methods(List(Text)).First.Name is "Run" and (Texted.Methods(("to Text")).Length is 1)
+	Defaulted.Methods(List(Text)).Last.Name is DefaultInstance.Starter and (Defaulted.Methods(("Count")).Length is 1)
 	mutable methods = List(Mutable(MethodEntry))
 	for lines
 		if TypeShape(lines).IsMethodHeader(value)
@@ -96,7 +97,20 @@ Methods(names Texts) List(MethodEntry)
 			if (names.Length is 0) or (tokens.First is in names) or (converted is in names)
 				methods.Add(Method(index))
 	let constants = ConstantMethods(inference, isOptimizing).Methods(value, names)
-	methods + constants + Specialization(Generator).Methods(value, names)
+	methods + constants + Specialization(Generator).Methods(value, names) + Starts(names)
+Starts(names Texts) List(MethodEntry)
+	Limit.Starts(List(Text)).Length is 0
+	Defaulted.Starts(("Count")).Length is 0
+	Defaulted.Starts(List(Text)).First.instructions.Last.kind is InstructionType.Return
+	constant generator = Generator
+	let type = generator.target.TypeName
+	let isAsked = (names.Length is 0) or (DefaultInstance.Starter is in names)
+	if (isAsked and DefaultInstance(generator).HasComputed(type)) is false
+		return List(MethodEntry)
+	let scope = MethodScope(HeaderTokens(DefaultInstance.Starter), generator.target)
+	let body = SyntaxNode("Body", "", List(SyntaxNode) + SyntaxNode("Call", type))
+	let code = MethodCodegen(generator).Generate(body, scope, type)
+	List(MethodEntry) + MethodEntry(DefaultInstance.Starter, List(MemberEntry), fullName, code.instructions)
 Method(start Number) Slow(MethodEntry)
 	(Hello.Method(1).returnType, Created.Method(1).returnType) is ("None", "Strict/C")
 	Iterating.Method(1).instructions(0).texts.First is "Strict/List(Number)"

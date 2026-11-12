@@ -15,11 +15,16 @@ constant Wrapper = TypeEntry("Strict/Wrapper", (MemberEntry.LoggerMember, Member
 constant Coded = InstructionEntry(InstructionType.FieldLoad, ("number", "Character"), (1, 0, -1, -2))
 constant Paired = TypeEntry("Strict/Pair", (MemberEntry.LoggerMember, MemberEntry("b", "Strict/Number", List(InstructionEntry), false)), List(MethodEntry) + MethodEntry.Initializing)
 constant Pairing = Machine(List(TypeEntry) + Paired)
+constant Five = InstructionEntry.Invoke(1, ("Strict/Pair", "from", "Strict/Pair", "b"), 0, -1)
+constant Starting = MethodEntry(DefaultInstance.Starter, List(MemberEntry), "Strict/Pair", (InstructionEntry.LoadNumber(0, 5), Five, InstructionEntry.Return(1)))
+constant Reading = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "b"), InstructionEntry.Return(0))
+constant Read = MethodEntry(TestCodegen.Runner, List(MemberEntry), "Strict/Number", Reading)
+constant Defaulting = Machine(Resolver(List(TypeEntry) + TypeEntry("Strict/Pair", Paired.members, (Starting, Read))).Resolved)
 Launch(typeName Text, arguments List(VmValue)) Number
 	let main = Natives(types).TypeOf(typeName)
 	let exact = main.Callee("Run", arguments.Length, "None", List(Text))
 	let run = exact.instructions.Length > 0 then exact else main.Callee("Run", 1, "None", List(Text))
-	let instance = Natives(types).Fresh(main)
+	let instance = Started(main)
 	let result = Execute(run, Bound(main, instance, run, Typed(run.parameters, arguments), instance), main.Name)
 	if result.kind is in VmValue.ErrorKinds
 		logger.Log(result to Text)
@@ -40,11 +45,20 @@ Typed(parameters List(MemberEntry), arguments List(VmValue)) List(VmValue)
 Tested(typeName Text, runner Text = TestCodegen.Runner) Number
 	Hello.Tested("HelloLogger") is 0
 	Machine(Hello, deadline = 0.001).Tested("HelloLogger") is 1
+	Defaulting.Tested("Pair") is 5
 	let main = Natives(types).TypeOf(typeName)
 	let tests = main.Callee(runner, 0, "None", List(Text))
-	let instance = Natives(types).Fresh(main)
+	let instance = Started(main)
 	let result = Execute(tests, Bound(main, instance, tests, List(VmValue), instance), main.Name)
 	result.kind is "Strict/Error" then 1 else result.number
+Started(main TypeEntry) VmValue
+	Defaulting.Started(Defaulting.types.First).items.Last.number is 5
+	Hello.Started(TypeEntry.HelloLogger) is Natives(Hello.types).Fresh(TypeEntry.HelloLogger)
+	let fresh = Natives(types).Fresh(main)
+	let start = DefaultInstance.Start(main)
+	if start.instructions.Length is 0
+		return fresh
+	Execute(start, Bound(main, fresh, start, List(VmValue), fresh), main.Name)
 Prepared Machine
 	Hello.Prepared.prototypes.entries.First.kind is "HelloLogger"
 	Hello.Prepared.sources("HelloLogger") is "HelloLogger.strict"

@@ -8,6 +8,8 @@ constant Owned = DefaultInstance(ValueCodegen(Bagged.values, target = CallTarget
 constant Flats = (Scope(("items default", "Count reads"), ("Plain.Flat", "reads")), KnownTypes.NoMembers)
 constant Computing = TypeInference(KnownTypes(Bags, parameters = Flats), Bagged.values.inference.constants)
 constant Computed = DefaultInstance(ValueCodegen(Owned.values, inference = Computing))
+constant Starter = "$Start"
+constant Starting = TypeEntry("A", List(MemberEntry), MethodEntry(MethodEntry.HelloRun, Name = Starter))
 Called(node SyntaxNode, block CodeBlock) CodeBlock
 	Bagged.Called(Counting, CodeBlock.Empty).instructions.First.texts(1) is "from"
 	Owned.Called(Counting, CodeBlock.Empty).instructions.First.texts(1) is "Count"
@@ -31,12 +33,18 @@ IsSelf(type Text) Boolean
 	Bagged.IsSelf("Bag") is false
 	Owned.IsSelf("Bag")
 	Computed.IsSelf("Bag") is false
-	if type is not TypeEntry.ShortName(values.target.TypeName)
-		return false
+	(type is TypeEntry.ShortName(values.target.TypeName)) and (HasComputed(type) is false)
+HasComputed(type Text) Boolean
+	Computed.HasComputed("Bag")
+	Owned.HasComputed("Bag") is false
 	for values.inference.types.MembersOf(type).names
 		if NamedArguments(values).IsComputed(type, value)
-			return false
-	true
+			return true
+	false
+Start(type TypeEntry) MethodEntry
+	DefaultInstance.Start(TypeEntry.HelloLogger).instructions.Length is 0
+	DefaultInstance.Start(Starting).instructions.Length is 2
+	type.Callee(Starter, 0, "None", List(Text))
 IsReading(type Text, method Text) Boolean
 	Bagged.IsReading("Bag", "Count")
 	Bagged.IsReading("Plain", "Count") is false

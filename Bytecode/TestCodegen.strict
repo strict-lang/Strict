@@ -34,8 +34,9 @@ Entry TypeEntry
 Runs(methods List(MethodEntry)) List(MethodEntry)
 	Even.Runs(List(MethodEntry) + MethodEntry.HelloRun).Length is 1
 	Even.Runs(List(MethodEntry) + MethodEntry.Logged).Length is 0
+	Even.Runs(DefaultInstance.Starting.methods).Length is 1
 	for methods
-		if value.Name is "Run"
+		if value.Name is in ("Run", DefaultInstance.Starter)
 			value
 Reachable(known List(MethodEntry), methods List(MethodEntry)) List(MethodEntry)
 	let targets = TypeEntry(types.fullName, List(MemberEntry), methods).Invoked

@@ -1,6 +1,7 @@
 has count Number
 has labeled Labeled = Labeled
 has shelf List(Labeled) = List(Labeled)
+has brief Labeled = Labeled.Short
 Label Text
 	Shelf(4).Label is "Names"
 	labeled.label
@@ -8,3 +9,7 @@ Counted(others List(Labeled) = List(Labeled)) Number
 	Shelf(4).Counted is 4
 	Shelf(4).Counted(List(Labeled) + Labeled) is 5
 	count + others.Length + shelf.Length
+Brief Text
+	Brief is "Short"
+	Shelf(4).Brief is "Short"
+	brief.label

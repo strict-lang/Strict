@@ -6,6 +6,7 @@ has entrySymbol Text = "main"
 constant Counters = MlirModule(List(TypeEntry) + TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry) + MethodEntry.CountingLoop), "Run")
 constant Pair = MlirModule(Counters.types + TypeEntry("Strict/Other", List(MemberEntry), List(MethodEntry) + MethodEntry.CountingLoop), "Run", List(Text), 2)
 constant NoFunctions = List(MlirFunction)
+constant Started = MlirModule(List(TypeEntry) + TypeEntry(Counters.types.First, methods = (MethodEntry.CountingLoop, MlirEntry.Start)), "Run")
 constant Floor = MethodEntry("Floor", List(MemberEntry), "Strict/Number", List(InstructionEntry) + InstructionEntry.Return(0))
 constant FloorCall = InstructionEntry.Invoke(0, ("Strict/Degrees", "Floor", "Strict/Number"), List(Number), -1)
 constant Caller = TypeEntry("Strict/Caller", List(MemberEntry), MethodEntry("Run", List(MemberEntry), "None", FloorCall))
@@ -40,7 +41,7 @@ Declared(texts List(MlirFunction), functions List(MlirFunction), edges List(Numb
 	Counters.Declared(Counters.Functions, Counters.Functions, List(Numbers) + List(Number)).First is "module {"
 	MlirRecursion.Looped.Text.IndexOf("^stackChecked") > MlirRecursion.Looped.Text.IndexOf("@Looped_Again_0(")
 	let started = Process.Elapsed
-	let recursive = MlirRecursion(functions, entries).Recursive(edges)
+	let recursive = MlirRecursion(functions, entries + Starts(functions).Length).Recursive(edges)
 	BuildProfile(Logger).Reported("Emission / recursion", started)
 	let lines = ("module {", "  llvm.func @printf(!llvm.ptr, ...) -> i32") + MlirTexts.Declarations
 	let emitted = BuildProfile(Logger).Emitted(value, texts, functions, recursive)
@@ -74,7 +75,17 @@ Functions List(MlirFunction)
 	Pair.Functions.Length is 2
 	Pair.Text.IndexOf("@Other_Run_0(%self1)") > 0
 	Floored.Functions.Last.Symbol is "Number_Floor_0"
-	Reachable(Entries, Entries)
+	Started.Functions.Last.Symbol is "Counter_$Start_0"
+	let mains = Entries
+	let roots = mains + Starts(mains)
+	Reachable(roots, roots)
+Starts(mains List(MlirFunction)) List(MlirFunction)
+	Counters.Starts(Counters.Functions).Length is 0
+	Started.Starts(Started.Functions).First.Symbol is "Counter_$Start_0"
+	for mains
+		let start = DefaultInstance.Start(value.type)
+		if (index < entries) and (start.instructions.Length > 0)
+			MlirFunction(value, method = start)
 Entries List(MlirFunction)
 	Pair.Entries.Last.Symbol is "Other_Run_0"
 	for Range(0, entries)

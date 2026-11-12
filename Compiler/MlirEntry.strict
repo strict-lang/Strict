@@ -7,6 +7,8 @@ constant Both = MlirEntry(Counted.entry, List(MlirFunction) + Counted.entry)
 constant Framed = MlirEntry(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + Frames, "Strict/Number", List(InstructionEntry) + InstructionEntry.Return(0))))
 constant Folders = TypeCodegen("Strict/Folders", ("Run(folder = \"Content\") Number", "\t0"), ValueCodegen.NoTypes, List(Text)).Entry
 constant Foldered = MlirEntry(MlirFunction(List(TypeEntry) + Folders, Folders, Folders.methods.First))
+constant Start = MethodEntry(DefaultInstance.Starter, List(MemberEntry), "Strict/Shape", List(InstructionEntry) + InstructionEntry.Return(0))
+constant Starting = MlirEntry(MlirFunction(List(TypeEntry), TypeEntry(MlirFunction.Shape, methods = List(MethodEntry) + Start), MethodEntry.CountingLoop))
 constant Unhandled = ("    %unhandled = func.call @strict_unhandled(%result) : (f64) -> i1", "    %failing = arith.constant 1 : i32")
 constant Finished = "    func.call @strict_rc_finished() : () -> ()"
 constant Exit = "    %exit = arith.select %unhandled, %failing, %code : i32"
@@ -17,9 +19,10 @@ Main Texts
 	Counted.Main.Length is 20
 	Counted.Main.Index("    func.call @strict_gc_init(%stackBase) : (!llvm.ptr) -> ()") is 2
 	Counted.Main(1).IndexOf("llvm.addressofreturnaddress.p0") > 0
+	Starting.Main.Index("    %started = func.call @Shape_$Start_0(%fresh) : (f64) -> f64") > 0
 	Both.Main.Index("    %total1 = func.call @strict_failures(%result, %result1) : (f64, f64) -> f64") > 0
 	constant self = "    %self = llvm.load %selfslot : !llvm.ptr -> f64"
-	let prepared = Header + MlirInstances(entry, 0).Fresh(entry.type, "%selfslot", "", List(Text)) + Arguments
+	let prepared = Header + Instance(entry, "") + Arguments
 	let printed = entry.IsCounted then List(Text) + MlirLines.Print else List(Text)
 	let called = prepared + (self, EntryCall) + Others + Code
 	called + Finished + Unhandled + Exit + printed + ("    return %exit : i32", "  }")
@@ -105,15 +108,29 @@ AllArguments(kind Text, name Text) Text
 Other(function MlirFunction, number Number) Texts
 	Both.Other(Counted.entry, 1).Index("    %result1 = func.call @Counter_Run_0(%self1) : (f64) -> f64") > 0
 	Both.Other(Counted.entry, 2).Last is "    %total2 = func.call @strict_failures(%total1, %result2) : (f64, f64) -> f64"
+	Both.Other(Starting.entry, 1).Index("    %started1 = func.call @Shape_$Start_0(%fresh1) : (f64) -> f64") > 0
 	let slot = "%selfslot" + number
 	let self = "%self" + number
 	let previous = number is 1 then "%result" else "%total" + (number - 1)
-	let fresh = MlirInstances(function, 0).Fresh(function.type, slot, "e" + number + "_", List(Text))
 	let call = "    %result" + number + " = func.call @" + function.Symbol + "(" + self + ") : (f64) -> f64"
 	let operands = "(" + previous + ", %result" + number + ") : (f64, f64) -> f64"
 	let sum = "    %total" + number + " = func.call @strict_failures" + operands
 	let loaded = "    " + self + " = llvm.load " + slot + " : !llvm.ptr -> f64"
-	List(Text) + ("    " + slot + " = llvm.alloca %one x f64 : (i64) -> !llvm.ptr") + fresh + (loaded, call, sum)
+	let allocated = "    " + slot + " = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
+	List(Text) + allocated + Instance(function, number to Text) + (loaded, call, sum)
+Instance(function MlirFunction, suffix Text) Texts
+	Counted.Instance(Counted.entry, "").Last is "    llvm.store %t0of, %selfslot : f64, !llvm.ptr"
+	Starting.Instance(Starting.entry, "").Last is "    llvm.store %started, %selfslot : f64, !llvm.ptr"
+	Starting.Instance(Starting.entry, "1").Index("    %fresh1 = llvm.load %selfslot1 : !llvm.ptr -> f64") > 0
+	let slot = "%selfslot" + suffix
+	let prefix = suffix is "" then "" else "e" + suffix + "_"
+	let fresh = MlirInstances(function, 0).Fresh(function.type, slot, prefix, List(Text))
+	let start = DefaultInstance.Start(function.type)
+	if start.instructions.Length is 0
+		return fresh
+	let callee = MlirFunction(function, method = start).Symbol
+	let called = "    %started" + suffix + " = func.call @" + callee + "(%fresh" + suffix + ") : (f64) -> f64"
+	fresh + (function.Load("%fresh" + suffix, slot), called, function.Store("%started" + suffix, slot))
 Optimized(method MethodEntry, emitted Text) Text
 	MlirEntry.Optimized(MethodEntry(MethodEntry.CountingLoop, Name = TestCodegen.Runner), Linked) is Unoptimized
 	MlirEntry.Optimized(MethodEntry.CountingLoop, Linked) is Linked
