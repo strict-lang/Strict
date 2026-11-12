@@ -8,6 +8,14 @@ has threads Number = 0
 has mode Text = "wait"
 constant Tiny = Need(minimumRam = 32, minimumVram = 8)
 constant Small = Need(minimumRam = 4, minimumVram = 2)
+Ram Number
+	Need.Small.Ram is 4
+	Need(minimumRam = 2, idealRam = 4).Ram is 4
+	idealRam > 0 then idealRam else minimumRam
+Vram Number
+	Need.Small.Vram is 2
+	Need(minimumVram = 2, idealVram = 4).Vram is 4
+	idealVram > 0 then idealVram else minimumVram
 Parsed(words Texts) Need
 	Need.Parsed(("need", "job", "label", "4", "8", "2", "4", "0", "wait")).minimumRam is 4
 	Need.Parsed(("need")).job is ""

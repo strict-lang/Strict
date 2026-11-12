@@ -7,6 +7,9 @@ mutable wantsFree Boolean = false
 mutable busyJob Text = ""
 mutable busyLabel Text = ""
 mutable isEnding Boolean = false
+mutable busyVram Number = 0
+constant LockNeed = 2147483648
+constant LockHeld = 1073741824
 constant StaleSeconds = 16
 constant BeatSeconds = 5
 constant Mebibyte = 1048576
@@ -64,7 +67,7 @@ Chosen(words Texts) Text
 		seenAt = Process.Elapsed
 		return wantsFree then "free" else "ok"
 	if (words.Length > 0) and (words(0) is "need")
-		return Needed(words, Seen)
+		return Needed(Need.Parsed(words), Seen)
 	let busy = "busy\t" + busyJob + "\t" + busyLabel
 	(words.Length > 0) and (words(0) is "status") then busy else RemoteRun(logger).Answered(words, Seen)
 Command Text
@@ -76,18 +79,21 @@ Command Text
 	isWindows then hidden else "-c \"nohup '" + exe + "' coordinator >/dev/null 2>&1 &\""
 Held(words Texts) Text
 	Sample.Granted(("need", "job", "label", "4", "8", "2", "4", "0", "wait"), MachineView.Wide) is "go\tjob\t0"
+	Coordinator(Logger, busyJob = "video", busyVram = LockNeed + 1).Held(("holding", "0", LockHeld to Text)) is "free"
+	Coordinator(Logger, busyJob = "video", busyVram = LockNeed).Held(("holding", "0", LockHeld to Text)) is "ok"
 	idleRam = words.Length > 1 then words(1) to Number else 0
 	idleVram = words.Length > 2 then words(2) to Number else 0
 	seenAt = Process.Elapsed
-	if wantsFree and ((busyLabel is "exit") or (idleRam > 0) or (idleVram > 0))
+	let isBlocking = (busyJob is not "") and (busyVram > LockNeed) and (idleVram >= LockHeld)
+	if (wantsFree or isBlocking) and ((busyLabel is "exit") or (idleRam > 0) or (idleVram > 0))
 		return busyLabel is "exit" then "exit" else "free"
 	"ok"
-Needed(words Texts, seen MachineView) Text
-	let need = Need.Parsed(words)
+Needed(need Need, seen MachineView) Text
 	let verdict = Admission(logger).Verdict(need, seen)
 	if verdict is "go"
 		busyJob = need.job
 		busyLabel = need.label
+		busyVram = need.Vram
 		wantsFree = false
 		return "go\t" + need.job + "\t" + need.threads
 	wantsFree = (verdict is "free") or ((verdict is "refused") and (Process.Elapsed - seenAt < StaleSeconds))
@@ -98,7 +104,8 @@ Needed(words Texts, seen MachineView) Text
 Granted(words Texts, seen MachineView) Text
 	Sample.Granted(("need", "job", "label", "4", "8", "2", "4", "0", "wait"), MachineView.Wide) is "go\tjob\t0"
 	mutable sample = Coordinator(Logger)
-	(sample.Held(("holding", "4", "2")) is "ok") and (sample.idleRam is 4) then sample.Needed(words, seen) else "bad"
+	let isHeld = (sample.Held(("holding", "4", "2")) is "ok") and (sample.idleRam is 4)
+	isHeld then sample.Needed(Need.Parsed(words), seen) else "bad"
 Seen Slow(MachineView)
 	Sample.Seen.freeRam >= 0
 	let video = Vram("")

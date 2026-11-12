@@ -28,9 +28,7 @@ Decided(need Need, seen MachineView) Text
 Fits(need Need, ram Number, vram Number) Boolean
 	Sample.Fits(Need.Small, 4, 2)
 	Sample.Fits(Need.Small, 2, 2) is false
-	let ramNeed = need.idealRam > 0 then need.idealRam else need.minimumRam
-	let vramNeed = need.idealVram > 0 then need.idealVram else need.minimumVram
-	(ram >= ramNeed) and (vram >= vramNeed)
+	(ram >= need.Ram) and (vram >= need.Vram)
 IsTiny(need Need, seen MachineView) Boolean
 	Sample.IsTiny(Need.Tiny, MachineView.Wide)
 	Sample.IsTiny(Need.Small, MachineView.Wide) is false
@@ -47,9 +45,7 @@ Reason(need Need, seen MachineView) Text
 	Sample.Reason(BigNeed, HeldMachine).EndsWith(", idle backends could free 40 GB RAM and 18 GB VRAM")
 	if IsTiny(need, seen)
 		return Undersized(need, seen)
-	let ram = need.idealRam > 0 then need.idealRam else need.minimumRam
-	let vram = need.idealVram > 0 then need.idealVram else need.minimumVram
-	let needs = "it needs " + Sized(ram) + " RAM and " + Sized(vram) + " VRAM, "
+	let needs = "it needs " + Sized(need.Ram) + " RAM and " + Sized(need.Vram) + " VRAM, "
 	let free = Sized(seen.freeRam) + " of " + Sized(seen.totalRam) + " RAM and " + Sized(seen.freeVram) + " of "
 	let idle = ", idle backends could free " + Sized(seen.idleRam) + " RAM and " + Sized(seen.idleVram) + " VRAM"
 	let text = needs + free + Sized(seen.totalVram) + " VRAM are free"

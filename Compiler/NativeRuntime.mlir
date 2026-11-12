@@ -16133,9 +16133,7 @@
   ^say:
     %holder = func.call @strict_gpu_lock_holder(%buffer) : (!llvm.ptr) -> !llvm.ptr
     %format = llvm.mlir.addressof @strict_gpu_lock_waiting : !llvm.ptr
-    %printed = llvm.call @printf(%format, %holder) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr) -> i32
-    %all = llvm.mlir.zero : !llvm.ptr
-    %flushed = llvm.call @fflush(%all) : (!llvm.ptr) -> i32
+    func.call @strict_log(%format, %holder) : (!llvm.ptr, !llvm.ptr) -> ()
     cf.br ^wait
   ^wait:
     %self = arith.constant 0.0 : f64
