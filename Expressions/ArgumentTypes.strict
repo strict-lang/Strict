@@ -27,6 +27,7 @@ constant Scaling = ArgumentTypes(Overloads.ScalerInference)
 constant Scalers = Overloads.Scalers
 constant Inheriting = ArgumentTypes(TypeInference(KnownTypes.Options, (KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers)))
 constant Parsing = SyntaxParser(Tokenizer("settings.Parsed(5)").Tokens).Parse
+constant Indexing = ArgumentTypes(IndexedValues.Typed.inference)
 constant Mixed = "CopyChangesMustBeNamed: Area(area, size, depth = 2) copies area, name every change like depth = 2"
 Checked(node SyntaxNode, scope Scope, current Scope) Text
 	Sizing.Checked(Grown, Counted, Counted).StartsWith("ArgumentTypeMismatch")
@@ -36,8 +37,10 @@ Checked(node SyntaxNode, scope Scope, current Scope) Text
 	Sizing.Operands(SyntaxNode("Call", "and", Listed.children)) is ""
 	Sizing.Operands(SyntaxNode("Binary", "+", Listed.children)) is ""
 	Sizing.Checked(TextJoins.Listed, TextJoins.Named, TextJoins.Named).StartsWith("ListToTextMustBeExplicit")
+	Indexing.Checked(IndexedValues.Parsed(0), IndexedValues.Named, Counted).StartsWith("IndexedValueMustHaveElements")
 	let branched = BranchTypes(inference).Issue(node, scope, current) + TextJoins(inference).Issue(node, scope, current)
-	let operands = Operands(node) + ConstantAccess(node, scope, current) + branched
+	let indexed = IndexedValues(inference).Issue(node, scope, current)
+	let operands = Operands(node) + ConstantAccess(node, scope, current) + branched + indexed
 	operands is "" then Issue(node, scope, current) + OwnCall(node, scope, current) else operands
 ConstantAccess(node SyntaxNode, scope Scope, current Scope) Text
 	Sizing.ConstantAccess(SyntaxParser(Tokenizer("count.Grow").Tokens).Parse, Counted, Counted) is ""

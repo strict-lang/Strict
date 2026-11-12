@@ -1,0 +1,39 @@
+has inference TypeInference
+constant NumberMethods = Scope(("Floor", "digits", "Rounded"), ("Number", "Numbers", "Number"))
+constant NumberParameters = Scope(("Floor", "Floor types", "digits", "digits types", "Rounded", "Rounded types", "Shift", "Shift"), ("", "", "", "", "bits", "Number", "steps", ""))
+constant Typed = IndexedValues(TypeInference(KnownTypes(("Number"), (KnownTypes.NoMembers), (NumberMethods), (NumberParameters)), (KnownTypes.NoMembers)))
+constant Named = Scope(("other", "others", "name", "done", "thing", "self type"), ("Number", "Numbers", "Text", "Boolean", "Xyz", "Number"))
+constant Indexes = ("other(0)", "other.Floor(1)", "done(0)", "Floor(1)", "others(0)", "name(0)", "other.digits(1)", "thing(0)", "Rounded(1)", "count(0)", "other.Floor", "other.Rounded(32)")
+Issue(node SyntaxNode, scope Scope, current Scope) Text
+	Typed.Issue(Parsed(0), Named, NumberMethods) is "IndexedValueMustHaveElements: other(0) indexes a Number"
+	Typed.Issue(Parsed(1), Named, NumberMethods) is "IndexedValueMustHaveElements: other.Floor(1) indexes a Number"
+	Typed.Issue(Parsed(2), Named, NumberMethods).EndsWith("indexes a Boolean")
+	Typed.Issue(Parsed(3), Named, NumberMethods).EndsWith("Floor(1) indexes a Number")
+	(Typed.Issue(Parsed(4), Named, NumberMethods) + Typed.Issue(Parsed(5), Named, NumberMethods)) is ""
+	(Typed.Issue(Parsed(6), Named, NumberMethods) + Typed.Issue(Parsed(7), Named, NumberMethods)) is ""
+	(Typed.Issue(Parsed(8), Named, NumberMethods) + Typed.Issue(Parsed(10), Named, NumberMethods)) is ""
+	Typed.Issue(Parsed(11), Named, NumberMethods) is ""
+	let type = IndexedType(node, scope, current)
+	type is in ("Number", "Boolean") then "IndexedValueMustHaveElements: " + node + " indexes a " + type else ""
+IndexedType(node SyntaxNode, scope Scope, current Scope) Text
+	Typed.IndexedType(Parsed(0), Named, NumberMethods) is "Number"
+	Typed.IndexedType(Parsed(9), Named, Scope(List(Text) + "count", List(Text) + "Number")) is "Number"
+	Typed.IndexedType(SyntaxNode("Call", "other"), Named, NumberMethods) is ""
+	Typed.IndexedType(SyntaxNode("Identifier", "other", List(SyntaxNode) + SyntaxNode("Number", "0")), Named, Named) is ""
+	let isCall = (node.Kind is "Call") and (node.children.Length > 0)
+	if isCall and (scope.TypeOf(node.text) is not "")
+		return scope.TypeOf(node.text)
+	if isCall
+		return HasNoParameters(scope.TypeOf("self type"), node.text) then current.TypeOf(node.text) else ""
+	let owner = node.Kind is "MethodCall" then inference.TypeOf(node.children(0), scope, current) else ""
+	HasNoParameters(owner, node.text) then inference.types.MethodsOf(owner).TypeOf(node.text) else ""
+HasNoParameters(type Text, method Text) Boolean
+	Typed.HasNoParameters("Number", "Floor")
+	Typed.HasNoParameters("Number", "Rounded") is false
+	Typed.HasNoParameters("Number", "count")
+	Typed.HasNoParameters("Number", "Shift") is false
+	let parameters = inference.types.ParameterScope(type)
+	(parameters.Count(method) <= 1) and (parameters.TypeOf(method) is "")
+Parsed(at Number) SyntaxNode
+	Parsed(1) to Text is "other.Floor(1)"
+	SyntaxParser(Tokenizer(Indexes(at)).Tokens).Parse
