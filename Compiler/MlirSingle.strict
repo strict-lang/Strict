@@ -124,13 +124,11 @@ Calculated(entry InstructionEntry, at Number) Texts
 Register(register Number, at Number) Text
 	Summing.Register(2, 8) is "%t2gs"
 	Summing.Register(5, 9) is "%t8s"
-	let reuse = LoadReuse(function.method.instructions)
-	for at - position - 1
-		let earlier = function.method.instructions(at - 1 - index)
-		let isVariable = earlier.kind is InstructionType.LoadVariableToRegister
-		if reuse.Written(earlier) is register
-			return isVariable then Variable(earlier.texts(0), at - 1 - index) else "%t" + (at - 1 - index) + "s"
-	"%t" + at + "s"
+	let writer = LoadReuse(function.method.instructions).Writer(register, at, position)
+	if writer < 0
+		return "%t" + at + "s"
+	let entry = function.method.instructions(writer)
+	entry.kind is InstructionType.LoadVariableToRegister then Variable(entry.texts(0), writer) else "%t" + writer + "s"
 Variable(name Text, at Number) Text
 	Summing.Variable("sum", 3) is "%t2u0"
 	Summing.Variable("sum", 11) is "%t9s"

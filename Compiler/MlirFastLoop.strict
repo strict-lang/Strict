@@ -204,8 +204,5 @@ IsAccumulated(at Number) Boolean
 Writer(register Number, at Number) InstructionEntry
 	Summing.Writer(3, 5).texts.First is "sum"
 	Summing.Writer(0, 5).kind is InstructionType.Add
-	for at - function.FastLoop - 1
-		let earlier = function.method.instructions(at - 1 - index)
-		if LoadReuse(function.method.instructions).Written(earlier) is register
-			return earlier
-	function.method.instructions(at)
+	let writer = LoadReuse(function.method.instructions).Writer(register, at, function.FastLoop)
+	function.method.instructions(writer < 0 then at else writer)
