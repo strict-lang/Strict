@@ -15,7 +15,7 @@ constant TextAdded = (InstructionEntry.LoadText(0, "a"), InstructionEntry.Named(
 constant Checking = MethodEntry("Validated", List(MemberEntry), "Strict/Math/Pairing", TextAdded)
 constant Reading = MlirPurity(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, MlirCost.Reading), 2)
 constant Filtering = MlirPurity(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, MlirParallel.Filtered), 2)
-constant Caching = MlirPurity(MlirFunction(Reading.function, method = MethodEntry("Cached", List(MemberEntry), "Strict/Number", InstructionEntry.Invoke(0, ("Strict/Runtime/ConstantCache", "Stored", "Strict/Number"), (1, 2), 0))), 0)
+constant Caching = MlirPurity(MlirFunction(Reading.function, method = MethodEntry("Cached", List(MemberEntry), "Strict/Number", InstructionEntry.Invoke(0, ("Strict/Runtime/ConstantCache", "Stored", "None"), (1, 2), 0))), 0)
 constant Writing = MlirFunction(Reading.function, method = MethodEntry("Writing", List(MemberEntry), "None", InstructionEntry.Invoke(0, ("Strict/File", "Write", "None", "text"), (1), 0)))
 constant InnerList = MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Number)", (0, 6, -1, 0)), "listResult1")
 constant InnerListLoop = (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoopBegin(0, -1), InnerList)

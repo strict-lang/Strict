@@ -37,6 +37,7 @@ Reduced(reduction Text, returnType Text) Text
 	LoopCodegen(Adding).Reduced("", "Plus") is "add"
 	Plain.Aggregated(Three, CodeBlock.Empty.Declare(CodeBlock.ErrorMarker, "from"), "None") is not Error
 	Plain.Aggregated(Three, CodeBlock.Empty.Declare(CodeBlock.ErrorMarker, "Run"), "None") is Error
+	Plain.Aggregated(RowsBody, CodeBlock.Empty, "List(Numbers)").instructions(6).kind is InstructionType.Add
 	let hasAdd = OperatorCodegen(methods.values).HasOperator(returnType, "+")
 	let member = methods.values.inference.types.MembersOf(returnType).TypeOf("number")
 	if ((hasAdd is false) and (member is "Number")) or (returnType is in ("Number", "Text"))
@@ -47,7 +48,6 @@ Aggregated(body SyntaxNode, block CodeBlock, returnType Text) CodeBlock
 	Plain.Aggregated(DoubledBody, CodeBlock.Empty, "Numbers").instructions(0).texts.Last is "forResult"
 	Plain.Aggregated(ProductBody, CodeBlock.Empty, "Number").instructions(0) is InstructionEntry.LoadNumber(0, 1)
 	Plain.Aggregated(DoubledBody, CodeBlock.Empty, "Boolean").instructions.Length is 13
-	Plain.Aggregated(RowsBody, CodeBlock.Empty, "List(Numbers)").instructions(6).kind is InstructionType.Add
 	let aggregation = Aggregation(body, returnType)
 	let wanted = block.scope.TypeOf(CodeBlock.ErrorMarker) is "from" then "" else returnType
 	if aggregation is in ("", "any")
