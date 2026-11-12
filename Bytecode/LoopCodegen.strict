@@ -17,7 +17,7 @@ constant Numbered = MethodCodegen(ValueCodegen(TypeInference(KnownTypes.Sample, 
 constant NumberPlus = KnownTypes(List(Text) + "Plus", List(Scope) + Scope(List(Text) + "number", List(Text) + "Number"), List(Scope) + Scope(List(Text) + "+", List(Text) + "Plus"), KnownTypes.NoMembers)
 constant Adding = MethodCodegen(ValueCodegen(TypeInference(NumberPlus, CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
 constant OnText = LoopCodegen(MethodCodegen(ValueCodegen(ValueCodegen.NoTypes, ValueCodegen.Plain.methods, CallTarget(CallTarget.NoTypes, TypeShape("has characters"), "Strict/Text", List(Text)))))
-constant Wanting = CodeBlock.Empty.Declare(CodeBlock.ValueMarker, "Text")
+constant Wanting = CodeBlock.Empty.Declare(CodeBlock.ElementMarker, "Text")
 constant Letters = BodyParser("Letters Texts", "\tfor 2", "\t\tx(index)").Block(1, 1)
 Aggregation(body SyntaxNode, returnType Text) Text
 	Plain.Aggregation(MethodCodegen.SumBody, "Number") is "sum"
@@ -47,7 +47,7 @@ Aggregated(body SyntaxNode, block CodeBlock, returnType Text) CodeBlock
 	Plain.Aggregated(RowsBody, CodeBlock.Empty, "List(Numbers)").instructions(6).kind is InstructionType.Add
 	let aggregation = Aggregation(body, returnType)
 	if aggregation is in ("", "any")
-		return methods.Body((aggregation is "any" then AnyTrue(body) else body), block)
+		return methods.Valued((aggregation is "any" then AnyTrue(body) else body), block, returnType)
 	let started = Initialized(body, block, returnType, aggregation)
 	if body.children.Last.Kind is not "For"
 		return Finished(methods.Body(BranchValues(aggregation).Rewritten(body), started), block.register)
@@ -55,12 +55,12 @@ Aggregated(body SyntaxNode, block CodeBlock, returnType Text) CodeBlock
 Initialized(body SyntaxNode, block CodeBlock, returnType Text, aggregation Text) CodeBlock
 	Plain.Initialized(DoubledBody, CodeBlock.Empty, "Numbers", "list").scope.TypeOf("forResult") is "Numbers"
 	Plain.Initialized(Leaded, CodeBlock.Empty, "Numbers", "list").instructions(0).texts.Last is "x"
-	Plain.Initialized(DoubledBody, Wanting, "Text", "sum").scope.TypeOf(CodeBlock.ValueMarker) is ""
+	Plain.Initialized(DoubledBody, Wanting, "Text", "sum").scope.TypeOf(CodeBlock.ElementMarker) is ""
 	Plain.Aggregated(Letters, CodeBlock.Empty.Declare("x", "Text"), "Texts").instructions(6).kind is InstructionType.Invoke
 	let leading = body.children.Last.Kind is "For" then Leading(body, block) else block
 	let element = aggregation is "list" then methods.values.inference.types.ElementType(returnType) else ""
 	let started = Started(leading, returnType, aggregation).Declare("forResult", returnType)
-	started.Declare(CodeBlock.ValueMarker, element).At(block.register)
+	started.Declare(CodeBlock.ElementMarker, element).At(block.register)
 Finished(looped CodeBlock, register Number) CodeBlock
 	Plain.Finished(CodeBlock.Empty.Declare("forResult", "Numbers"), 0).instructions.Last.texts.Last is "forResult"
 	Plain.Started(CodeBlock.Empty, "Text", "sum").instructions(0) is InstructionEntry.LoadText(0, "")
@@ -228,5 +228,5 @@ AggregatedLoop(body SyntaxNode, block CodeBlock, aggregation Text) CodeBlock
 	if BranchValues(aggregation).Reduction(last) is not ""
 		return Collected(methods.values.Expression(last.children(1), Leading(body, block)), aggregation)
 	if last.Kind is not in ("If", "ElseIf", "Else")
-		return Collected(methods.Body(body, block), aggregation)
+		return Collected(methods.Valued(body, block, block.scope.TypeOf(CodeBlock.ElementMarker)), aggregation)
 	methods.Body(BranchValues(aggregation).Rewritten(body), block)

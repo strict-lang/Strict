@@ -6,7 +6,7 @@ constant Empty = CodeBlock(List(InstructionEntry), 0, 0, Scope(List(Text), List(
 constant SharedMarker = " shares"
 constant ErrorMarker = " error"
 constant ReturnMarker = " returns"
-constant ValueMarker = " wanted"
+constant ElementMarker = " element"
 constant Falsity = Empty.Load(InstructionEntry.LoadBoolean(0, false)).Load(InstructionEntry.LoadBoolean(1, false))
 Add(entry InstructionEntry) CodeBlock
 	CodeBlock.Empty.Add(InstructionEntry.Return(0)).instructions.Length is 1

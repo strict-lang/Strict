@@ -18,7 +18,7 @@ constant HelperType = SyntaxParser(Tokenizer("\"Helper\" to Type").Tokens).Parse
 constant Nesting = SyntaxNode("Binary", "+", (SyntaxNode("Identifier", "x"), SyntaxNode("List", "", (ValueCodegen.One, ValueCodegen.One))))
 constant Pixelated = CodeBlock.Empty.Declare("pixels", "ColorValues")
 constant Letter = SyntaxNode("Index", "", (Pixels, ValueCodegen.One))
-constant Lettered = CodeBlock.Empty.Declare("pixels", "Text").Declare(CodeBlock.ReturnMarker, "Text").Declare(CodeBlock.ValueMarker, "Text")
+constant Lettered = CodeBlock.Empty.Declare("pixels", "Text").Declare(CodeBlock.ReturnMarker, "Text")
 ArgumentTypes(node SyntaxNode, owner Text, block CodeBlock) Texts
 	Plain.ArgumentTypes(SyntaxNode("Call", "Greet", ValueCodegen.One), "Greeter", CodeBlock.Empty) is ("Unknown")
 	Plain.Typed(SyntaxNode("Binary", "+", Typing.children), CodeBlock.Empty).text is "+"
@@ -141,19 +141,23 @@ Elements(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
 	constant element = SyntaxNode("Identifier", "value")
 	let converted = types.IsPlural(source) then Converted(element, types.ElementType(type), scoped) else element
 	converted.text is "value" then node else SyntaxNode("Converted", type, (node, converted))
-Valued(node SyntaxNode, block CodeBlock) SyntaxNode
-	Plain.Valued(Letter, Lettered).text is "to"
-	Plain.Valued(SyntaxNode("Return", "", Letter), Lettered).children(0).text is "to"
-	Plain.Valued(ValueCodegen.One, Lettered) is ValueCodegen.One
-	let isReturn = node.Kind is "Return"
-	let wanted = block.scope.TypeOf(isReturn then CodeBlock.ReturnMarker else CodeBlock.ValueMarker)
-	let given = isReturn and node.HasValue then node.children(0) else node
-	if (wanted is not "Text") or (given.Kind is "Return")
+Wanted(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
+	Plain.Wanted(Letter, "Text", Lettered).children(1).text is "Text"
+	Plain.Wanted(Letter, "", Lettered) is Letter
+	Plain.Wanted(ValueCodegen.One, "Text", Lettered) is ValueCodegen.One
+	Plain.Wanted(SyntaxNode("Return", "", Letter), "Text", Lettered).Kind is "Return"
+	if (type is not "Text") or (BranchValues.Returning.IsValue(node) is false)
 		return node
-	if values.TypeOf(given, block) is not "Character"
+	values.TypeOf(node, block) is "Character" then Changed(node, "to", "Text", block) else node
+Returned(node SyntaxNode, block CodeBlock) SyntaxNode
+	Plain.Returned(SyntaxNode("Return", "", Letter), Lettered).children(0).text is "to"
+	Plain.Returned(SyntaxNode("Return", "", Letter), Pixelated) is SyntaxNode("Return", "", Letter)
+	Plain.Returned(SyntaxNode("Return", ""), Lettered) is SyntaxNode("Return", "")
+	Plain.Returned(Letter, Lettered) is Letter
+	if (node.Kind is not "Return") or (node.HasValue is false)
 		return node
-	let text = Changed(given, "to", "Text", block)
-	isReturn then SyntaxNode("Return", node.text, text, node.line) else text
+	let wanted = Wanted(node.children(0), block.scope.TypeOf(CodeBlock.ReturnMarker), block)
+	SyntaxNode("Return", node.text, wanted, node.line)
 Operand(node SyntaxNode, block CodeBlock) SyntaxNode
 	Colored.Operand(SyntaxNode("Binary", "+", (Pixels, NewColor)), Pixelated).text is "to"
 	Plain.Operand(SyntaxNode("Binary", "+", (ValueCodegen.One, ValueCodegen.One)), CodeBlock.Empty).text is "1"
@@ -216,8 +220,6 @@ Replaced(call SyntaxNode) SyntaxNode
 Replacement(call SyntaxNode, name Text) SyntaxNode
 	Plain.Replacement(Repainted, "c") is NewColorValue
 	Plain.Replacement(Repainted, "size") to Text is "pixels.size"
-	Plain.Valued(SyntaxNode("Return", ""), Lettered) is SyntaxNode("Return", "")
-	Plain.Valued(Letter, Pixelated) is Letter
 	for call.children
 		if (value.Kind is "Reassignment") and (value.children(0).text is name)
 			return value.children(1)
