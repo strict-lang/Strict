@@ -9,7 +9,7 @@ import re
 root = Path(__file__).resolve().parent.parent
 assert os.name == "nt", "This check uses Windows events to force the pool interleaving"
 output = root / "Compiler/output/ParallelCheck"
-output.mkdir(exist_ok=True)
+output.mkdir(parents=True, exist_ok=True)
 runtime = (root / "Compiler/NativeRuntime.mlir").read_text(encoding="utf-8")
 for name in ("strict_parallel_from", "strict_pool_run"):
 	body = re.search(r"  (?:func.func private|llvm.func) @" + name + r"\(.*?\n  }", runtime, re.S).group()
@@ -17,6 +17,8 @@ for name in ("strict_parallel_from", "strict_pool_run"):
 		if re.search(r"llvm\.(?:load|store).*%(?:countSlot|chunkSlot)\b", line):
 			assert "atomic" in line, "Pool metadata can overlap an old generation: " + line
 pin = runtime.split("func.func private @strict_rc_pin(", 1)[1].split("\n  }", 1)[0]
+assert "func.call @strict_rc_pin_in(" in pin, "Shared pin flags need an atomic read: strict_rc_pin has its own body"
+pin = runtime.split("func.func private @strict_rc_pin_in(", 1)[1].split("\n  }", 1)[0]
 assert re.search(r"llvm.load %flags atomic", pin), "Shared pin flags need an atomic read"
 start = runtime.index("  func.func private @strict_parallel_from(")
 end = runtime.index("  func.func private @strict_pool_started()", start)
@@ -27,11 +29,17 @@ section = runtime[start:end].replace(published_count,
 runtime = runtime[:start] + section + runtime[end:]
 start = runtime.index("  llvm.func @strict_pool_run(")
 end = runtime.index("  llvm.func @strict_pool_chunk_run(", start)
-section = runtime[start:end].replace("  ^check:\n", "  ^check:\n    llvm.call @test_claiming(%job) : (i64) -> ()\n", 1)
+section = runtime[start:end].replace("  ^look:\n", "  ^look:\n    llvm.call @test_claiming(%job) : (i64) -> ()\n", 1)
 section = section.replace("  ^leave:\n", "  ^leave:\n    llvm.call @test_retired(%job) : (i64) -> ()\n", 1)
+assert "@test_claiming" in section and "@test_retired" in section, "Pool claim or leave block was renamed"
 runtime = runtime[:start] + section + runtime[end:]
 wrapper = '''
   llvm.mlir.global internal constant @strict_gpu_ptx("\\00") : !llvm.array<1 x i8>
+  llvm.mlir.global internal @strict_places(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  func.func private @strict_places_fill() -> i64 {
+    %none = arith.constant 0 : i64
+    return %none : i64
+  }
   func.func @test_published(%stack: !llvm.ptr) -> i64 {
     func.call @strict_gc_init(%stack) : (!llvm.ptr) -> ()
     %one = arith.constant 1 : i64
@@ -412,6 +420,9 @@ wrapper = '''
     %youngLimit = arith.constant 8388608 : i64
     %limitSlot = llvm.mlir.addressof @strict_gc_young_limit : !llvm.ptr
     llvm.store %youngLimit, %limitSlot : i64, !llvm.ptr
+    %smallestBudget = arith.constant 16777216 : i64
+    %budgetSlot = llvm.mlir.addressof @strict_gc_budget : !llvm.ptr
+    llvm.store %smallestBudget, %budgetSlot : i64, !llvm.ptr
     %baseSize = arith.constant 33554432 : i64
     %base = func.call @strict_alloc_text(%baseSize) : (i64) -> !llvm.ptr
     %copySize = arith.constant 16777216 : i64
@@ -547,11 +558,18 @@ wrapper = '''
   }
 '''
 module = output / "pool.mlir"
-declaration = next(line for line in (root / "Compiler/MlirTexts.strict").read_text(encoding="utf-8").splitlines()
-	if line.startswith("constant Declarations = "))
-declarations = json.loads("[" + declaration.split(" = (", 1)[1][:-1] + "]")
-cached = (root / "Compiler/MlirCached.strict").read_text(encoding="utf-8").splitlines()
-pieces = [json.loads("[" + next(line for line in cached if line.startswith("constant " + name + " = ")).split(" = (", 1)[1][:-1] + "]") for name in ("Checked", "Stored")]
+def constants(name):
+	"""Texts of a constant list of a Compiler file, also when it is a sum of other constants of that file."""
+	lines = dict(line[9:].split(" = ", 1) for line in (root / "Compiler" / name).read_text(encoding="utf-8").splitlines()
+		if line.startswith("constant "))
+	def texts(constant):
+		result = []
+		for term in re.findall(r'\((?:"(?:[^"\\]|\\.)*"|[ ,])*\)|\w+', lines[constant]):
+			result += json.loads("[" + term[1:-1] + "]") if term[0] == "(" else texts(term)
+		return result
+	return texts
+declarations = constants("MlirTexts.strict")("Declarations")
+pieces = [constants("MlirCached.strict")(name) for name in ("Checked", "Stored")]
 def cached(name, compute):
 	return [f'  llvm.func @{compute}() -> f64',
 		f'  llvm.mlir.global internal @{name}_cache(0.0 : f64) : f64',
@@ -681,9 +699,10 @@ static double busy(FILETIME user, FILETIME kernel) {
 		(double)(((ULONGLONG)kernel.dwHighDateTime << 32) | kernel.dwLowDateTime)) / 10000;
 }
 static double body(void* context, int64_t from, int64_t to) {
-	if (*(int*)context == 1)
+	if (*(int*)context == 1) {
 		waited(ready);
-	else if (atomic_load(&publishing))
+		Sleep(2); // a job under 1 ms makes the next one of this body run on the caller, never published to the pool
+	} else if (atomic_load(&publishing))
 		atomic_fetch_add(&premature, 1);
 	return 0;
 }
