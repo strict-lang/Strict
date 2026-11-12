@@ -32,6 +32,8 @@ constant Spreads = TypeEntry("Strict/Layered", GpuLayerSamples.Layered.members, 
 constant Spreading = MlirDeviceSums(MlirFunction(List(TypeEntry) + Spreads, Spreads, Spreader), 2)
 constant ReturnedInstructions = GpuLayerSamples.Summed.instructions.Slice(0, 7) + (InstructionEntry.Return(4), InstructionEntry.Return(4)) + GpuLayerSamples.Summed.instructions.Slice(9, 5)
 constant Returning = MlirDeviceSums(MlirFunction(MlirDeviceStatements.Summed.types, GpuLayerSamples.Layered, MethodEntry("Returning", GpuLayerSamples.Summed.parameters, "Strict/Number", ReturnedInstructions)), 2)
+constant ComparedInstructions = GpuLayerSamples.Summed.instructions.Slice(0, 7) + (InstructionEntry.Binary(InstructionType.LessThan, (1, 4, 7)), GpuLayerSamples.Summed.instructions(8)) + GpuLayerSamples.Summed.instructions.Slice(9, 5)
+constant Comparing = MlirDeviceSums(MlirFunction(MlirDeviceStatements.Summed.types, GpuLayerSamples.Layered, MethodEntry("Compared", GpuLayerSamples.Summed.parameters, "Strict/Number", ComparedInstructions)), 2)
 constant Laned = ("    %yw = arith.constant 32 : i64", "    %ys = arith.constant 1 : i64", "    %yt = arith.constant 32768 : i64", "    %ym = arith.cmpi sge, %c, %yt : i64", "    %y = arith.select %ym, %ys, %yw : i64")
 IsSum Boolean
 	Summing.IsSum
@@ -84,13 +86,15 @@ IsAccumulation(store Number) Boolean
 IsAdded(load Number) Boolean
 	Summing.IsAdded(3)
 	Sharing.IsAdded(3) is false
+	Comparing.IsAdded(3) is false
 	MlirDeviceSums(MlirDeviceChoice.Choosing, 4).IsSum is false
 	let register = function.method.instructions(load).payload(0)
 	for Range(load + 1, function.method.LoopEndOf(at))
 		let entry = function.method.instructions(value)
-		if (entry.kind is InstructionType.Add) or (entry.kind is InstructionType.Subtract)
-			if entry.payload(1) is register
-				return IsAccumulation(value + 1)
+		let isOperator = (entry.kind > InstructionType.StoreSeparator) and (entry.kind < InstructionType.BinaryOperatorsSeparator)
+		if isOperator and (register is in (entry.payload(1), entry.payload(2)))
+			let isSum = (entry.kind is InstructionType.Add) or (entry.kind is InstructionType.Subtract)
+			return isSum and (entry.payload(1) is register) and IsAccumulation(value + 1)
 	false
 Writer(before Number, register Number) Number
 	Summing.Writer(9, 1) is 3
