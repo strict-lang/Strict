@@ -208,6 +208,26 @@ static inline double strict_number(double list, uint64_t index)
 }
 /* Returns an Error with this name, the name must live as long as the program. */
 static inline double strict_fail(const char* name) { return strict_value(0x7FFC000000000000ull | (uint64_t)(uintptr_t)name); }
+/* Creates the missing folders of a path a native is about to write, like File writes do. */
+#ifdef _WIN32
+#include <direct.h>
+#define strict_mkdir(folder) _mkdir(folder)
+#else
+#include <sys/stat.h>
+#define strict_mkdir(folder) mkdir(folder, 0777)
+#endif
+static inline void strict_folders(const char* path)
+{
+	char folder[1024];
+	for (int index = 1; path[index] && index < (int)sizeof folder; index++)
+		if (path[index] == '/' || path[index] == '\\')
+		{
+			for (int copied = 0; copied < index; copied++)
+				folder[copied] = path[copied];
+			folder[index] = 0;
+			strict_mkdir(folder);
+		}
+}
 /* Room for count rows of elements numbers with bits (plus STRICT_KEPT_TOKENS) as a List(Numbers) result: the caller
    writes the packed numbers of each row at data + row * stride, then returns the result (data is 0 when there is not
    enough memory). A native build places them where the runtime keeps its rows, a library for the VM in one buffer it

@@ -1126,6 +1126,7 @@ STRICT_EXPORT double TensorFile_Written(double self, double path, double header,
 		size[index] = (unsigned char)((length + (8 - length % 8) % 8) >> (8 * index));
 	enum { chunk = 1 << 20 };
 	float* floats = malloc(chunk * sizeof(float));
+	strict_folders(strict_text(path));
 	FILE* file = floats ? fopen(strict_text(path), "wb") : 0;
 	if (!file)
 	{

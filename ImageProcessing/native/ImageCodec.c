@@ -237,6 +237,7 @@ STRICT_EXPORT double ImageCodec_SaveJpeg(double self, double path, double pixels
 	unsigned char* bytes = Room(pixels, width, 3, &height, &failure);
 	if (!bytes)
 		return strict_fail(failure);
+	strict_folders(strict_text(path));
 	int written = Striped(strict_text(path), pixels, (int)width, height, (int)quality, bytes);
 	free(bytes);
 	return written ? 0 : strict_fail("ImageNotWritable");
@@ -250,6 +251,7 @@ STRICT_EXPORT double ImageCodec_SavePng(double self, double path, double pixels,
 	if (!bytes)
 		return strict_fail(failure);
 	Converted(pixels, 0, strict_count(pixels), bytes);
+	strict_folders(strict_text(path));
 	int written = stbi_write_png(strict_text(path), (int)width, height, 4, bytes, (int)width * 4);
 	free(bytes);
 	return written ? 0 : strict_fail("ImageNotWritable");
