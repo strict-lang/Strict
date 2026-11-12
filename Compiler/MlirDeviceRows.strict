@@ -59,8 +59,7 @@ Called(entry InstructionEntry) Texts
 	MlirDeviceRows(Picking, 7).Called(Picking.method.instructions(7)).Last is "    llvm.store %d7, %r4 : f64, !llvm.ptr"
 	if entry.texts(1) is not "Length"
 		return MlirDeviceStatements(function, at).Called(entry)
-	let countPosition = 5 + entry.payload(3)
-	let instance = entry.payload(countPosition + 2 + entry.payload(countPosition))
+	let instance = PayloadDecoder(entry).Instance
 	let count = MlirDeviceRecords(function, at).Counted("%r" + instance + "_n", MlirKinds(function).KindOf(at, instance))
 	let converted = "    " + Temp("") + " = arith.sitofp " + Temp("n") + " : i64 to " + function.Float
 	let exact = MlirExact(function, at).Set(Temp("n"), "%one", "%r" + entry.payload(0))

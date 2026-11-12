@@ -61,7 +61,20 @@ Text(position Number) Text
 	entry.texts(-1 - entry.payload(position))
 Callee(type TypeEntry) MethodEntry
 	Scaled.Callee(TypeEntry.Scaling).parameters.First.Name is "scale"
-	type.Callee(Text(2), entry.payload(5 + entry.payload(3)), Text(4 + entry.payload(3)), Names)
+	type.Callee(Text(2), ArgumentCount, Text(4 + entry.payload(3)), Names)
+ArgumentCount Number
+	Scaled.ArgumentCount is 1
+	PayloadDecoder(InstructionEntry.Invoke(1, ("T", "Run", "N"), List(Number), -1)).ArgumentCount is 0
+	entry.payload(5 + entry.payload(3))
+Arguments Numbers
+	Scaled.Arguments is (0)
+	PayloadDecoder(InstructionEntry.Invoke(1, ("T", "Run", "N"), (3, 4), 5)).Arguments is (3, 4)
+	entry.payload.Slice(6 + entry.payload(3), ArgumentCount)
+Instance Number
+	Scaled.Instance is -1
+	PayloadDecoder(Invocation.AddCall.entry).Instance is 1
+	let flagPosition = 6 + entry.payload(3) + ArgumentCount
+	entry.payload(flagPosition) is 1 then entry.payload(flagPosition + 1) else -1
 SevenBit(position Number) Number
 	PayloadDecoder(InstructionEntry.Jump(InstructionType.LoopEnd, 300)).SevenBit(0) is 300
 	mutable result = 0

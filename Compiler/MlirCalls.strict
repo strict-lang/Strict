@@ -121,17 +121,13 @@ NativeHelper(entry InstructionEntry, decoder PayloadDecoder) Text
 	MlirReadText(function, position).Helper(paired is "" then fallback else paired)
 Owner(entry InstructionEntry, type TypeEntry) Text
 	MlirCalls(Shapes, 2).Owner(Area, AreaShape) is "Shape"
-	let countPosition = 5 + entry.payload(3)
-	let flagPosition = countPosition + 1 + entry.payload(countPosition)
-	let hasInstance = entry.payload(flagPosition) is 1
-	hasInstance then MlirKinds(function).KindOf(position, entry.payload(flagPosition + 1)) else type.Name
+	let instance = PayloadDecoder(entry).Instance
+	instance >= 0 then MlirKinds(function).KindOf(position, instance) else type.Name
 Loads(entry InstructionEntry, type TypeEntry) Texts
 	MlirCalls(Shapes, 2).Loads(Area, AreaShape).Length is 1
-	let countPosition = 5 + entry.payload(3)
-	let flagPosition = countPosition + 1 + entry.payload(countPosition)
-	let hasInstance = entry.payload(flagPosition) is 1
+	let instance = PayloadDecoder(entry).Instance
 	let isOwn = type.Name is function.type.Name
-	let owned = hasInstance then "%r" + entry.payload(flagPosition + 1) else isOwn then "%instance" else ""
+	let owned = instance >= 0 then "%r" + instance else isOwn then "%instance" else ""
 	let self = entry.texts(1) is "from" then "%r" + entry.payload(0) else owned
 	constant none = "    " + Temp("m") + " = arith.constant 0.0 : f64"
 	let first = self is "" then none else function.Load(Temp("m"), self)

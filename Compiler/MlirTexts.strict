@@ -70,8 +70,7 @@ Instance(entry InstructionEntry) Number
 	MlirTexts(Joined, 7).Instance(Joined.method.instructions(7)) is 1
 	MlirTexts(Listing, 1).Instance(ToNumbers) is 0
 	MlirTexts(Joined, 7).Converted(Joined.method.instructions(7)) is NumberText
-	let countPosition = 5 + entry.payload(3)
-	entry.payload(countPosition + 2 + entry.payload(countPosition))
+	PayloadDecoder(entry).Instance
 Converted(entry InstructionEntry) Texts
 	MlirTexts(Joined, 7).Converted(Joined.method.instructions(7)).Length is 4
 	let instance = Instance(entry)

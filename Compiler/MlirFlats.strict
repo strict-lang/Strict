@@ -82,9 +82,7 @@ IsAccessor(step InstructionEntry, register Number) Boolean
 	if step.kind is not InstructionType.Invoke
 		let isAlias = Text.Combine(step.texts).StartsWith("inline") and (step.payload(0) is register)
 		return (step.kind is InstructionType.StoreRegisterToVariable) and isAlias
-	let countPosition = 5 + step.payload(3)
-	let flagPosition = countPosition + 1 + step.payload(countPosition)
-	let instance = step.payload(flagPosition) is 1 then step.payload(flagPosition + 1) else -1
+	let instance = PayloadDecoder(step).Instance
 	let isText = (step.texts(1) is "Code") or ((step.texts(1) is "to") and step.texts(2).EndsWith("Text"))
 	(instance is register) and ((step.texts(1) is in Accessors) or isText)
 Helper(entry InstructionEntry, owner Text, name Text) Text

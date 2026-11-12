@@ -100,9 +100,7 @@ Filled(entry InstructionEntry) Texts
 Register(entry InstructionEntry) Number
 	Twice.Register(Twicing) is -1
 	Flooring.Register(MlirGpuCheck.Flooring) is 0
-	let countPosition = 5 + entry.payload(3)
-	let flagPosition = countPosition + 1 + entry.payload(countPosition)
-	entry.payload(flagPosition) is 1 then entry.payload(flagPosition + 1) else -1
+	PayloadDecoder(entry).Instance
 IsNative(entry InstructionEntry) Boolean
 	Flooring.IsNative(MlirGpuCheck.Flooring)
 	Twice.IsNative(Twicing) is false
