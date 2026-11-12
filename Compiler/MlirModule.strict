@@ -16,10 +16,10 @@ Text Text
 	Counters.Text.StartsWith("module {")
 	NoRun.Text.StartsWith("unsupported:")
 	let started = Process.Elapsed
-	let reachable = Functions
-	BuildProfile(Logger).Reported("Emission / reachability (" + reachable.Length + " functions)", started)
-	let edges = MlirRecursion(reachable, entries).Edges
-	let functions = Safe(reachable, edges)
+	let reachable = Linked
+	BuildProfile(Logger).Reported("Emission / reachability (" + reachable.functions.Length + " functions)", started)
+	let edges = reachable.Edges
+	let functions = Safe(reachable.functions, edges)
 	let problem = Problem(functions)
 	if problem is not ""
 		return problem
@@ -76,9 +76,12 @@ Functions List(MlirFunction)
 	Pair.Text.IndexOf("@Other_Run_0(%self1)") > 0
 	Floored.Functions.Last.Symbol is "Number_Floor_0"
 	Started.Functions.Last.Symbol is "Counter_$Start_0"
+	Linked.functions
+Linked MlirRecursion
+	Started.Linked.calls.Length is 2
 	let mains = Entries
 	let roots = mains + Starts(mains)
-	Reachable(roots, roots)
+	Reachable(roots, roots, List(Numbers))
 Starts(mains List(MlirFunction)) List(MlirFunction)
 	Counters.Starts(Counters.Functions).Length is 0
 	Started.Starts(Started.Functions).First.Symbol is "Counter_$Start_0"
@@ -117,16 +120,19 @@ RunMethod(main TypeEntry) MethodEntry
 		if value.Name is entryName
 			return value
 	MethodEntry(entryName, List(MemberEntry), "None", List(InstructionEntry))
-Reachable(known List(MlirFunction), fresh List(MlirFunction)) List(MlirFunction)
-	Counters.Reachable(Counters.Functions, Counters.Functions).Length is 1
+Reachable(known List(MlirFunction), fresh List(MlirFunction), prior List(Numbers)) MlirRecursion
+	Counters.Reachable(Counters.Functions, Counters.Functions, List(Numbers)).functions.Length is 1
 	mutable symbols = MlirRecursion.Symbols(known)
 	mutable found = List(Mutable(MlirFunction))
-	for function, callee in fresh, Callees(function)
-		let symbol = callee.Symbol
-		if symbol is not in symbols
-			found.Add(callee)
-			symbols = symbols + symbol
-	found.Length is 0 then known else Reachable(known + found, found)
+	mutable calls = List(Mutable(Numbers))
+	for fresh
+		let called = Callees(value)
+		for called
+			if value.Symbol is not in symbols
+				found.Add(value)
+				symbols = symbols + value.Symbol
+		calls.Add(MlirRecursion.Indexes(called, symbols))
+	found.Length is 0 then MlirRecursion(known, entries, prior + calls) else Reachable(known + found, found, prior + calls)
 Callees(function MlirFunction) List(MlirFunction)
 	Counters.Callees(Counters.Functions.First).Length is 0
 	mutable callees = List(Mutable(MlirFunction))

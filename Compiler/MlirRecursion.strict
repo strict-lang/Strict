@@ -1,5 +1,6 @@
 has functions List(MlirFunction)
 has entries Number
+has calls List(Numbers) = List(Numbers)
 constant AgainCalled = (InstructionEntry.Invoke(0, ("Strict/Looped", "Again", "Strict/Number"), List(Number), -1), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 0), InstructionEntry.Return(0))
 constant Again = MethodEntry("Again", List(MemberEntry), "Strict/Number", AgainCalled)
 constant Starting = MethodEntry("Run", List(MemberEntry), "Strict/Number", AgainCalled)
@@ -18,6 +19,9 @@ Recursive(edges List(Numbers)) Texts
 Edges List(Numbers)
 	Looping.Edges(1) is (1)
 	Looping.Edges(0) is (1)
+	MlirRecursion(Looped.Functions, 1, ((0), (0))).Edges(1) is (0)
+	if calls.Length is functions.Length
+		return calls
 	let symbols = Symbols(functions)
 	mutable edges = List(Mutable(Numbers))
 	for functions

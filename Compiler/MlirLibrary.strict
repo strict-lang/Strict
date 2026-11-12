@@ -24,7 +24,7 @@ Text Text
 	for Exported
 		roots.Add(MlirFunction(types, types.First, value))
 		wrappers = wrappers + Wrapper(value)
-	let functions = module.Reachable(roots, roots)
+	let functions = module.Reachable(roots, roots, List(Numbers)).functions
 	let declared = module.Declared(functions, functions, MlirRecursion(functions, module.entries).Edges)
 	outer.Text.Combine((declared + MlirGlobals(functions).Lines + wrappers + "}" + MlirGpu.Module(functions)) - "", "\n")
 Exported List(MethodEntry)
