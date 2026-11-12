@@ -16,8 +16,9 @@ constant Board = TypeEntry("Strict/Board", (MemberEntry("width", "Strict/Number"
 constant Types = (MlirLayout.Byting, MlirLanes.Rgb, Board)
 constant Kernel = MlirWholeKernel(MlirFunction(Types, Board, Blurred), 5)
 constant SecondCells = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "second"), InstructionEntry(InstructionType.FieldLoad, ("cells", "Board"), (5, 4, -1, -2)))
-constant PairedMethod = MethodEntry("Paired", (Picked.parameters(0), MemberEntry("second", "Strict/Board", List(InstructionEntry), false), Picked.parameters(1)), "Strict/Rgb", SecondCells + Picking)
-constant PairArguments = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "board"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "board"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 5, "index"))
+constant Second = MemberEntry("second", "Strict/Board", List(InstructionEntry), false)
+constant PairedMethod = MethodEntry("Paired", (Picked.parameters(0), Second, Picked.parameters(1)), "Strict/Rgb", SecondCells + Picking)
+constant PairArguments = (PickArguments(0), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "board"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 5, "index"))
 constant PairCollected = (InstructionEntry.Invoke(6, ("Strict/Board", "Paired", "Strict/Rgb", "board", "second", "pixel"), (3, 4, 5), -1), InstructionEntry.Named(InstructionType.InvokeWriteToList, 6, "forResult"))
 constant PairBlurred = MethodEntry("Blurred", Blurred.parameters, "Strict/List(Rgb)", ResultCreated + CellsStored + CellsLooped + PairArguments + PairCollected + InstructionEntry.Jump(InstructionType.LoopEnd, 10))
 constant PairBoard = TypeEntry("Strict/Board", Board.members, (PairedMethod, PairBlurred))
@@ -107,16 +108,19 @@ Free Texts
 	Kernel.Free is List(Text) + "board_cells"
 	Pairing.Free is List(Text) + "board_cells"
 	let kinds = MlirWholeFunction(Callee).Kinds
+	let reads = Reads
 	mutable names = List(Mutable(Text))
-	for Reads
-		let name = Source(value)
-		if kinds(index) is "o"
-			for MlirWholeInstance(Callee).Members(index)
-				if (name + "_" + value) is not in names
-					names.Add(name + "_" + value)
-		else if (name is not "index") and (name is not in names)
+	for position, name in Range(0, reads.Length), Inputs(Source(reads(position)), kinds(position), position)
+		if (name is not "index") and (name is not in names)
 			names.Add(name)
 	names
+Inputs(name Text, kind Text, input Number) Texts
+	Kernel.Inputs("board", "o", 0) is List(Text) + "board_cells"
+	Kernel.Inputs("index", "d", 1) is List(Text) + "index"
+	if kind is not "o"
+		return List(Text) + name
+	for MlirWholeInstance(Callee).Members(input)
+		name + "_" + value
 IsList(name Text) Boolean
 	Kernel.IsList("board_cells")
 	Kernel.IsList("board_width") is false

@@ -32,14 +32,14 @@ Emitted(entry InstructionEntry) Texts
 	Text.Combine(MlirDeviceRows(Picking, 4).Emitted(Lookup)).IndexOf("@strict_device_row(%d4d, %d4k)") > 0
 	MlirDeviceRows(Picking, 4).Emitted(Lookup).Last is "  ^d4done:"
 	MlirDeviceRows(Picking, 4).Emitted(Lookup) is Rowed
-	"    %d4c = arith.select %d4o, %d4n, %d4z : i64" is in MlirDeviceRows(Picking, 4).Emitted(Lookup)
 	if IsRows(MlirKinds(function).VariableKind(at, entry.texts(0))) is false
 		return MlirDeviceRecords(function, at).Indexed(entry)
 	let list = "%v_" + entry.texts(0)
 	let position = MlirExact(function, at).Position("%r" + entry.payload(1), Temp("k"))
 	let called = " = func.call @strict_device_row(" + Temp("d") + ", " + Temp("k") + ")" + Types
 	let row = (MlirTyped.Pointer.Load(Temp("d"), list + "_d"), "    " + Temp("w") + ":3" + called)
-	position + row + Bounded + Viewed(list, "%r" + entry.payload(0)) + MlirDeviceStatements(function, at).Failed + ("  ^d" + at + "done:")
+	let failed = MlirDeviceStatements(function, at).Failed + ("  ^d" + at + "done:")
+	position + row + Bounded + Viewed(list, "%r" + entry.payload(0)) + failed
 Bounded Texts
 	MlirDeviceRows(Picking, 4).Bounded.Last is "    %d4o = arith.andi %d4l, %d4h : i1"
 	MlirDeviceRows(Picking, 4).Emitted(Biased)(2) is "    %d4n = llvm.load %v_biases_n : !llvm.ptr -> i64"
@@ -52,8 +52,9 @@ Viewed(list Text, target Text) Texts
 	let pointer = MlirTyped.Pointer.Store(Temp("w") + "#0", target + "_d")
 	let bits = MlirTyped.Integer.Store(Temp("w") + "#1", target + "_b")
 	let counted = "    " + Temp("c") + " = arith.select " + Temp("o") + ", " + Temp("n") + ", " + Temp("z") + " : i64"
-	let columns = (MlirTyped.Integer.Load(Temp("n"), list + "_n"), counted, MlirTyped.Integer.Store(Temp("c"), target + "_n"))
-	(pointer, bits) + columns + ("    cf.cond_br " + Temp("o") + ", ^d" + at + "done, ^d" + at + "fail")
+	let loaded = MlirTyped.Integer.Load(Temp("n"), list + "_n")
+	let branch = "    cf.cond_br " + Temp("o") + ", ^d" + at + "done, ^d" + at + "fail"
+	(pointer, bits, loaded, counted, MlirTyped.Integer.Store(Temp("c"), target + "_n"), branch)
 Called(entry InstructionEntry) Texts
 	MlirDeviceRows(Measuring, 1).Called(Measuring.method.instructions(1))(1) is "    %d1 = arith.sitofp %d1n : i64 to f64"
 	MlirDeviceRows(Exactly, 1).Called(Lengthy) is Counting
