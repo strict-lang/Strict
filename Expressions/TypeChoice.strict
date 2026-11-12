@@ -46,12 +46,9 @@ Qualifying(candidates Texts) Texts
 IsQualified(path Text) Boolean
 	Qualified.IsQualified("./WebWars/Scene.strict")
 	Plain.IsQualified("./WebWars/Scene.strict") is false
+	TypeChoice(("has a WebWars/Scenery", "\tlet b = \"WebWars/Scene\"")).IsQualified("./WebWars/Scene.strict") is false
 	let parts = path.Replace("\\", "/").Split("/")
-	let qualified = parts(parts.Length - 2) + "/" + parts.Last.Replace(".strict", "")
-	for lines
-		if value.IndexOf(qualified) >= 0
-			return true
-	false
+	parts(parts.Length - 2) is in Packages(parts.Last.Replace(".strict", ""))
 Ambiguous(names Texts, path Text) Texts
 	Plain.Ambiguous(("Scene", "Scene", "Unit", "Unit"), "A").Length is 1
 	Plain.Ambiguous(("Scene", "Scene", "Unit"), "Catalog.strict").First.StartsWith("AmbiguousType: Scene")
