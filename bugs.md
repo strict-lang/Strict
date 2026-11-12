@@ -16,3 +16,4 @@
 - `NamedIterators` renames `x` to `outer` in the body of a `for as long as` inside a named loop but keeps `x` in its condition (`isCondition`, line 121; a test pins it): either both or none.
 - `next(a) = ...` with `next` already defined silently becomes a second Computed: `Definitions` line 51 only checks Identifier targets for `ComputedNameMustNotBeAssigned`.
 - A call's return type is `Strict/Unknown` where it is known: `IndexCodegen.Indexed` on a `Dictionary(Text, Number)` emits `get` returning Strict/Unknown instead of Number, `OperatorCodegen.Composite` of a Number `or` calls `or` returning Strict/Unknown.
+- A constructor call with arguments its type has no members for builds and runs: `Wrong(1, 2)` in a type with only `has logger` gives an instance (printed `(())`), no count or type check; a method named like its type (`Draws(twister, count)` in Draws.strict) is therefore silently the constructor, the method is never called (2026-11-12).
