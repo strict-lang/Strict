@@ -1,4 +1,5 @@
 has tokens Texts
+constant Made = HeaderTokens(Tokenizer("Made(pair Couple(Text, Number), count Number) Couple(Number, Text)").Tokens)
 DeclaredType(nameIndex Number) Text
 	HeaderTokens("has", "Math", "/", "Size").DeclaredType(1) is "Size"
 	HeaderTokens("has", "texts").DeclaredType(1) is "Texts"
@@ -15,6 +16,13 @@ ImplicitType(nameIndex Number) Text
 	HeaderTokens("constant", "add", "=", "1").ImplicitType(1) is "Add"
 	HeaderTokens("constant", "Add").ImplicitType(1) is "Number"
 	HeaderTokens("has", "texts").ImplicitType(1) is "Texts"
+	HeaderTokens(Tokenizer("has pair Couple(Text, Number) with x > 1").Tokens).DeclaredType(1) is "Couple(Text, Number)"
+	Made.ParameterTypes is ("Couple(Text, Number)", "Number") and (Made.ReturnType is "Couple(Number, Text)")
+	HeaderTokens(Tokenizer("has rows List(Numbers)").Tokens).DeclaredType(1) is "Numberss"
+	HeaderTokens(Tokenizer("has holder Holder(Size)").Tokens).DeclaredType(1) is "Holder(Size)"
+	HeaderTokens(Tokenizer("has sizes = Dictionary((1, 1), (2, 2))").Tokens).DeclaredType(1) is "Dictionary"
+	HeaderTokens(Tokenizer("has size = Size(1, 2)").Tokens).DeclaredType(1) is "Size"
+	HeaderTokens(Tokenizer("has width Number with value > (0)").Tokens).DeclaredType(1) is "Number"
 	(tokens(0) is "constant") and (nameIndex + 1 is tokens.Length) then "Number" else tokens(nameIndex).Capitalize
 ValueType(start Number) Text
 	HeaderTokens("constant", "a", "=", "(", "1", ",", "2", ")").ValueType(3) is "Numbers"
@@ -52,7 +60,7 @@ TypeName(start Number) Text
 		return inner
 	((tokens(start) is "List") and inner.Lower is not inner) then inner + "s" else Arguments(start, inner)
 Arguments(start Number, inner Text) Text
-	HeaderTokens("Map", "(", "Text", ",", "Number", ")").Arguments(0, "Text") is "Map"
+	HeaderTokens("Map", "(", "Text", ",", "Number", ")").Arguments(0, "Text") is "Map(Text, Number)"
 	HeaderTokens("Dictionary", "(", "Text", ")").Arguments(0, "Text") is "Dictionary(Text)"
 	HeaderTokens(Tokenizer("Dictionary(Text, Number) Text").Tokens).Arguments(0, "Text") is "Dictionary(Text, Number)"
 	HeaderTokens("Iterator", "(", "Vector2", ")", "a", "b", "c").Arguments(0, "Vector2") is "Iterator(Vector2)"
@@ -60,10 +68,22 @@ Arguments(start Number, inner Text) Text
 	HeaderTokens(Tokenizer("Dictionary(Text, Number)").Tokens).Arguments(0, "Text") is "Dictionary(Text, Number)"
 	HeaderTokens("Range", "(", "Number", ")").Arguments(0, "Number") is "Range"
 	HeaderTokens(Tokenizer("Wrapped(Halver)").Tokens).Arguments(0, "Halver") is "Wrapped(Halver)"
-	if (tokens(start) is "Dictionary") and (tokens(start + 3) is ",")
-		return "Dictionary(" + inner + ", " + TypeName(start + 4) + ")"
+	let further = (inner.Lower is inner) or (tokens(start) is "Range") then "" else Further(start)
 	let isKept = (tokens(start) is not "Range") and (tokens(start + 3) is in (")", "("))
-	tokens(start) + (isKept then "(" + inner + ")" else "")
+	tokens(start) + (isKept or (further is not "") then "(" + inner + further + ")" else "")
+Further(start Number) Text
+	HeaderTokens(Tokenizer("Box(List(Text), Number, Map(Text, Size)) a").Tokens).Further(0) is ", Number, Map(Text, Size)"
+	HeaderTokens(Tokenizer("Iterator(Vector2) Couple(Text, Number)").Tokens).Further(0) is ""
+	let brackets = SyntaxParser(tokens)
+	mutable depth = 0
+	mutable further = ""
+	for Range(start + 1, tokens.Length)
+		depth = depth + brackets.BracketDelta(tokens(value))
+		if depth is 0
+			return further
+		if (depth is 1) and (tokens(value) is ",")
+			further = further + ", " + TypeName(value + 1)
+	further
 ReturnType Text
 	HeaderTokens("Iterator", "(", "List", "(", "Text", ")", ")").Arguments(0, "Texts") is "Iterator(Texts)"
 	HeaderTokens(Tokenizer("Run").Tokens).ParametersEnd is 0
@@ -120,6 +140,7 @@ ParameterTypes Texts
 ParameterType(position Number) Text
 	HeaderTokens("Add", "(", "x", "Number", ")").ParameterType(2) is "Number"
 	HeaderTokens("Add", "(", "x", "=", "\"a\"", ")").ParameterType(2) is "Text"
+	HeaderTokens(Tokenizer("Range(Number, Number)").Tokens).TypeName(0) is "Range"
 	DeclaredType(position)
 ReturnsMutable Boolean
 	HeaderTokens("Add", "(", "x", ")").ReturnsMutable is false
