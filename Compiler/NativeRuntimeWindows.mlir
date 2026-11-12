@@ -458,12 +458,24 @@
   ^done:
     return %isRetried : i1
   }
+  // replaces newPath, retried briefly while another process (a reader or a scanner) still holds or deletes it
   func.func private @strict_file_rename(%path: f64, %newPath: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %replacing = arith.constant 1 : i32
     %name = func.call @strict_named(%path) : (f64) -> !llvm.ptr
     %newName = func.call @strict_named(%newPath) : (f64) -> !llvm.ptr
+    %failed = arith.constant 0 : i32
+    %sharingViolation = arith.constant 32 : i32
+    cf.br ^try(%failed : i32)
+  ^try(%attempt: i32):
     %moved = llvm.call @MoveFileExA(%name, %newName, %replacing) : (!llvm.ptr, !llvm.ptr, i32) -> i32
+    %isMoved = arith.cmpi ne, %moved, %failed : i32
+    cf.cond_br %isMoved, ^done, ^failed
+  ^failed:
+    %next = arith.addi %attempt, %replacing : i32
+    %isRetried = func.call @strict_file_retried(%next, %sharingViolation) : (i32, i32) -> i1
+    cf.cond_br %isRetried, ^try(%next : i32), ^done
+  ^done:
     return %zero : f64
   }
   llvm.mlir.global internal constant @strict_crash_suffix(".crash.txt\00") : !llvm.array<11 x i8>
