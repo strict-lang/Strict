@@ -48,8 +48,7 @@ Instructions(method MethodEntry, names Texts, scratch Number) List(InstructionEn
 	for method.instructions
 		let resolved = value.kind is InstructionType.Invoke then Targeted(value) else Slotted(value, names)
 		let placed = Placed(LoadReuse(List(InstructionEntry)).Rebased(resolved, names.Length), method, index, scratch)
-		let isChanged = (value.kind is InstructionType.Return) and (changed.Length > 0)
-		isChanged then InstructionEntry(placed, payload = placed.payload + changed) else placed
+		value.kind is InstructionType.Return then InstructionEntry(placed, payload = placed.payload + changed) else placed
 Changed(method MethodEntry, names Texts) Numbers
 	Doubling.Changed(MethodEntry.Logged, List(Text) + "changed_0") is (-1, 0)
 	Doubling.Changed(MethodEntry.Logged, List(Text) + ChangedInstance.Name) is (0, -1)
