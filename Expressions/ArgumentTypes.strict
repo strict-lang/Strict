@@ -1,5 +1,5 @@
 has inference TypeInference
-constant Scopes = (Scope(List(Text) + "number", List(Text) + "Number"), Scope(("size", "depth"), ("Size", "Number")), Scope(List(Text) + "width", List(Text) + "Number"), Scope(List(Text) + "number", List(Text) + "Number"))
+constant Scopes = (Scope(List(Text) + "number", List(Text) + "Number"), Scope(("size", "depth"), ("Size", "Number")), Scope(List(Text) + "width", List(Text) + "Number"), Scope(("number", "name"), ("Number", "Text")))
 constant Methods = (Scope(("Grow", "Spread"), ("Count", "Count")), KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers)
 constant CountParameters = Scope(("Grow", "Grow types", "Grow required", "Spread", "Spread types", "from", "from types"), ("area", "Area", "1", "area,size", "Area,Size", "size", "Size"))
 constant Parameters = (CountParameters, KnownTypes.NoMembers, Scope(List(Text) + "from", List(Text) + "width"), Scope(("from", "from types"), ("text", "Text")))
@@ -158,8 +158,10 @@ Matched(arguments Texts, types Texts, instance Text, method Text) Number
 	Sizing.Matched(List(Text) + "Number", List(Text) + "Text", "Letter", "from") is -1
 	Sizing.Matched(List(Text) + "Text", List(Text) + "Text", "Letter", "from") is -1
 	Sizing.Matched(List(Text) + "Text", List(Text) + "Size", "Count", "from") is 0
+	Sizing.Matched(("Text", "Number"), ("Number", "Text"), "Letter", "from") is 0
 	let members = inference.types.MembersOf(instance).types
-	((method is "from") and ((arguments - members).Length is 0)) then -1 else Mismatched(arguments, types)
+	let isMemberCall = ((arguments - members).Length is 0) and (Mismatched(arguments, members) < 0)
+	(method is "from") and isMemberCall then -1 else Mismatched(arguments, types)
 Arguments(call SyntaxNode, scope Scope, current Scope) Texts
 	Sizing.Compared(Grown, "Count", "Missing", Counted, Counted) is ""
 	Sizing.IsBaseMismatch("Number", "Count") is false
