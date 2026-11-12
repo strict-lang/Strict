@@ -30,14 +30,17 @@ constant SpreadInstructions = SpreadLoop + SpreadCall + SpreadWrite + (Instructi
 constant Spreader = MethodEntry("Spread", List(MemberEntry) + MemberEntry("stride", "Strict/Number", List(InstructionEntry), false), "Strict/List(Number)", SpreadInstructions)
 constant Spreads = TypeEntry("Strict/Layered", GpuLayerSamples.Layered.members, (Spreader, Strided))
 constant Spreading = MlirDeviceSums(MlirFunction(List(TypeEntry) + Spreads, Spreads, Spreader), 2)
+constant ReturnedInstructions = GpuLayerSamples.Summed.instructions.Slice(0, 7) + (InstructionEntry.Return(4), InstructionEntry.Return(4)) + GpuLayerSamples.Summed.instructions.Slice(9, 5)
+constant Returning = MlirDeviceSums(MlirFunction(MlirDeviceStatements.Summed.types, GpuLayerSamples.Layered, MethodEntry("Returning", GpuLayerSamples.Summed.parameters, "Strict/Number", ReturnedInstructions)), 2)
 constant Laned = ("    %yw = arith.constant 32 : i64", "    %ys = arith.constant 1 : i64", "    %yt = arith.constant 32768 : i64", "    %ym = arith.cmpi sge, %c, %yt : i64", "    %y = arith.select %ym, %ys, %yw : i64")
 IsSum Boolean
 	Summing.IsSum
 	Doubling.IsSum is false
+	Returning.IsSum is false
 	let names = Accumulated
 	for Range(at + 1, function.method.LoopEndOf(at))
 		let entry = function.method.instructions(value)
-		if (entry.kind is InstructionType.LoopBegin) or (entry.kind is InstructionType.InvokeWriteToList)
+		if entry.kind is in (InstructionType.LoopBegin, InstructionType.InvokeWriteToList, InstructionType.Return)
 			return false
 		let isRead = (entry.kind is InstructionType.LoadVariableToRegister) and (entry.texts(0) is in names)
 		if isRead and (IsAdded(value) is false)
