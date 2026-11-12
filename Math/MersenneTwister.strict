@@ -27,9 +27,7 @@ Spread(previous Number) Number
 Uints(count Number) Slow(Numbers)
 	MersenneTwister.Seeded(42).Uints(700)(624) is 108880612
 	MersenneTwister.Seeded(42).Uints(700).Last is 4009078418
-	mutable raw = List(Number)
-	for state
-		raw = raw + value
+	mutable raw = state
 	for (count / Twists).Ceiling
 		raw = raw + Generation(raw, index * Twists)
 	for count
