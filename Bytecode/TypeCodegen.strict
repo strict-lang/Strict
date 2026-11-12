@@ -119,7 +119,7 @@ Declared(header HeaderTokens) Text
 	header.ReturnsSlow then "Slow(" + full + ")" else full
 MethodScope(header HeaderTokens, target CallTarget) Scope
 	Hello.MethodScope(HeaderTokens("Run"), Hello.Generator.target).TypeOf(CodeBlock.ErrorMarker) is "Run"
-	TypeCodegen("S/C", ("Run(a = 0 with value > 0)", "\ta"), NoTypes, List(Text)).Method(0).instructions.First.line is 1
+	TypeCodegen("S/C", ("Run(a = 0 with value > 0) Number", "\ta"), NoTypes, List(Text)).Method(0).instructions.First.line is 1
 	let declared = Instantiation(inference.types).Members(target.TypeName, target.shape.MemberScope)
 	let members = MethodBodies(target.TypeName, target.shape, inference).HeaderScope(header, declared)
 	members.With(CodeBlock.ErrorMarker, header.tokens(0))

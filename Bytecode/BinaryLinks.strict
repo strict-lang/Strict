@@ -4,7 +4,7 @@ constant User = BinaryLinks(BinaryFile("./Examples/Linking.strict"))
 constant Homed = TypeEntry("Homed", TypeEntry.HelloLogger.members, TypeEntry.HelloLogger.methods)
 constant Needed = TypeEntry(Homed, Name = "Strict/Bytecode/Homed")
 constant Empty = BinarySources(List(Text)).Header
-constant Written = Home.Saved(Home.Packed(Empty, List(TypeEntry) + Homed, List(Text)))
+constant Written = Home.Saved(Home.Packed(Empty, List(TypeEntry) + Homed, List(Text))) is not Error
 constant Linking = "../../Bytecode/obj/Homed\tStrict/Bytecode/Homed\tRun"
 constant Extension = ".strictbinary"
 constant Separator = ";"
@@ -84,10 +84,10 @@ Added(own TypeEntry, type TypeEntry) List(MethodEntry)
 	for type.methods
 		if Named(TypeEntry("", List(MemberEntry), List(MethodEntry) + value)).First is in known
 			value
-Grown(own TypeEntry, entry TypeEntry, names Texts, sources BinarySources) Boolean
-	BinaryLinks(Growing).Grown(Unknown, Homed, List(Text), BinarySources(List(Text)))
+Grown(own TypeEntry, entry TypeEntry, names Texts, sources BinarySources)
+	BinaryLinks(Growing).Grown(Unknown, Homed, List(Text), BinarySources(List(Text))) is not Error
 	BinaryLinks(Growing).Own(Growing.Unpacked(File(Growing.Path).ReadBytes)) is Homed
-	BinaryLinks(Growing).Grown(Homed, Converter, List(Text), BinarySources(List(Text)))
+	BinaryLinks(Growing).Grown(Homed, Converter, List(Text), BinarySources(List(Text))) is not Error
 	BinaryLinks(Growing).Own(Growing.Unpacked(File(Growing.Path).ReadBytes)).methods.Length is 3
 	let short = TypeEntry.ShortName(entry.Name)
 	let whole = TypeEntry(short, entry.members, (own.methods + Added(own, entry)).Unique)
