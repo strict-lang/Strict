@@ -4,6 +4,8 @@ constant End = MlirWholeCounted(MlirWholeStatements.Row.At(19))
 constant Types = MlirWholeTypes(MlirWholeFunction.Nesting)
 constant Inner = MlirWholeCounted(MlirWholeStatements(MlirWholeFunction.Nesting, 6, Types.Part(0), Types.Part(1), Types.Part(2)))
 constant Closing = MlirWholeCounted(Inner.statements.At(13))
+constant ReturnTypes = MlirWholeTypes(MlirLoops.Returned)
+constant Returned = MlirWholeCounted(MlirWholeStatements(MlirLoops.Returned, 2, ReturnTypes.Part(0), ReturnTypes.Part(1), ReturnTypes.Part(2)))
 constant CountBounds = ("    %t6n = llvm.load %r4 : !llvm.ptr -> i64", "    %t6b = arith.constant 0 : i64", "    %t6s = arith.constant 1 : i64")
 constant LoopSaved = ("    %t6x = llvm.load %v_index : !llvm.ptr -> i64", "    %t6y = llvm.load %v_value : !llvm.ptr -> i64")
 constant LoopStarted = ("    %t6a = arith.constant 0 : i64", "    llvm.store %t6a, %loop6 : i64, !llvm.ptr", "    cf.br ^loop6", "  ^loop6:")
@@ -83,14 +85,16 @@ Checked Texts
 Ended Texts
 	"  ^loop6exit:" is in End.Ended
 	Closing.Ended.Last is "    llvm.store %t6z, %v_outer : i64, !llvm.ptr"
+	Returned.Ended.First is "  ^loop0exit:"
 	let values = MlirWholeValues(statements.position)
 	let begin = statements.function.method.LoopBeginOf(statements.position)
 	let counter = "%loop" + begin
 	let loaded = values.Line("k", "llvm.load " + counter + " : !llvm.ptr -> i64")
 	let added = statements.Operation("w", "arith.addi", "k", "o")
 	let stored = "    llvm.store " + statements.Temp("w") + ", " + counter + " : i64, !llvm.ptr"
-	let jumped = MlirLoops(statements.function, statements.position).Back(begin) + ("  ^loop" + begin + "exit:")
-	(loaded, values.Line("o", "arith.constant 1 : i64"), added, stored) + jumped + Restored(begin)
+	let one = values.Line("o", "arith.constant 1 : i64")
+	let stepped = MlirLoops(statements.function, statements.position).Stepped((loaded, one, added, stored), begin)
+	stepped + ("  ^loop" + begin + "exit:") + Restored(begin)
 Restored(begin Number) Texts
 	End.Restored(6).Length is 2
 	Closing.Ended is Closed

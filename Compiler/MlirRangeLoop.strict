@@ -73,7 +73,7 @@ Closed(begin Number) Texts
 	let one = "    " + Temp("u") + " = arith.constant 1 : i32"
 	let next = "    " + Temp("w") + " = arith.addi " + Temp("k") + ", " + Temp("u") + " : i32"
 	let store = "    llvm.store " + Temp("w") + ", " + loop + " : i32, !llvm.ptr"
-	(load, one, next, store) + MlirLoops(function, position).Back(begin) + Latch(begin)
+	MlirLoops(function, position).Stepped((load, one, next, store), begin) + Latch(begin)
 Latch(begin Number) Texts
 	let label = "^loop" + begin
 	let moved = Advanced(begin)

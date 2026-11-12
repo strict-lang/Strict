@@ -157,12 +157,14 @@ Body Texts
 	isReturning then lines else lines + counter.End + MlirLayout(value).Returned(-2)
 Label(position Number) Texts
 	Counter.Label(0).Length is 0
+	MlirLoops.Returned.Label(2).Length is 0
 	constant terminators = (InstructionType.Return, InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)
 	if position is 0
 		return List(Text)
 	let previous = method.instructions(position - 1).kind
 	let afterTerminator = (previous is in terminators) or (previous is InstructionType.CheckError)
-	if method.instructions(position).kind is not InstructionType.JumpEnd and (afterTerminator is false)
+	let isJumped = method.instructions(position).kind is InstructionType.JumpEnd
+	if (isJumped is false) and ((afterTerminator is false) or (previous is InstructionType.Return))
 		return List(Text)
 	let label = "  ^bb" + position + ":"
 	afterTerminator then List(Text) + label else ("    cf.br ^bb" + position, label)

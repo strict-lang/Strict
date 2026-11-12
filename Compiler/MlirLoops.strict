@@ -16,6 +16,8 @@ constant Ranging = MlirLoops(MlirFunction(List(TypeEntry) + MlirParallel.Rows, M
 constant IndexAssigned = (InstructionEntry.LoadNumber(1, 2), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "numbers(index)"), InstructionEntry.Jump(InstructionType.LoopEnd, 2))
 constant Assigning = MlirLoops(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", MlirBytes.Looped + IndexAssigned)), 1)
 constant Repeated = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoopBegin(0, -1), InstructionEntry(InstructionType.LoopEnd, List(Text), (1, -1)))))
+constant ReturningLoop = (InstructionEntry.LoopBegin(0, -1), InstructionEntry.Return(0), InstructionEntry.Jump(InstructionType.LoopEnd, 1))
+constant Returned = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "Strict/Number", ReturningLoop))
 Temp(suffix Text) Text
 	Counting.Temp("k") is "%t0k"
 	"%t" + position + suffix
@@ -172,8 +174,12 @@ End Texts
 	let next = "    " + Temp("w") + " = arith.addf " + Temp("k") + ", " + Temp("u") + " : f64"
 	let store = "    llvm.store " + Temp("w") + ", %loop" + begin + " : f64, !llvm.ptr"
 	let restore = (function.Store("%t" + begin + "x", "%v_index"), function.Store("%t" + begin + "y", "%v_value"))
-	let tail = (load, one, next, store) + Back(begin) + ("  ^loop" + begin + "exit:")
+	let tail = Stepped((load, one, next, store), begin) + ("  ^loop" + begin + "exit:")
 	tail + restore + Restored(begin) + MlirKernel(function, begin).Joined
+Stepped(steps Texts, begin Number) Texts
+	MlirLoops(Returned, 2).End.First is "  ^loop0exit:"
+	MlirLoops(Counting.function, 1).Stepped(List(Text) + "a", 0) is ("a", "    cf.br ^loop0")
+	function.method.instructions(position - 1).kind is InstructionType.Return then List(Text) else steps + Back(begin)
 Back(begin Number) Texts
 	MlirLoops(Counting.function, 1).Back(0).Length is 1
 	MlirLoops(Repeated, 1).Back(0).Last is "    cf.cond_br %t1f, ^loop0, ^loop0exit"
