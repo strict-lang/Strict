@@ -8,7 +8,8 @@ has known Dictionary(Text, TypeEntry) = Dictionary(Text, TypeEntry)
 constant Adder = BinaryFile("./Examples/NativeAdd/Adder.strict")
 constant AdderFiles = SourceFiles(".").Of(Adder.source)
 Run(arguments Texts) Number
-	let failed = Failures(List(Text) + arguments(0), arguments(1), true)
+	let paths = List(Text) + arguments(0)
+	let failed = Failures(paths, Stale(paths), arguments(1), true)
 	if failed > 0
 		return failed
 	let types = Loaded(arguments(0), arguments(1), false)
@@ -22,10 +23,9 @@ Run(arguments Texts) Number
 Test(path Text, root Text, isQuiet = false, sources Texts = List(Text)) Number
 	Execute(Logger).Test("Missing.strict", ".") is 1
 	if File(path).Exists and (Directory.Exists(path) is false)
-		return Failures(List(Text) + path, root, isQuiet, sources)
+		return Failures((path), Stale((path)), root, isQuiet, sources)
 	Directory.Exists(path) then Folders(logger).Tested(path, root, isRecursive, isMutating, isFull) else 1
-Failures(paths Texts, root Text, isQuiet Boolean, sources Texts = List(Text)) Number
-	let stale = selection is "" then Stale(paths) else paths
+Failures(paths Texts, stale Texts, root Text, isQuiet Boolean, sources Texts = List(Text)) Number
 	let files = Sourced(stale, root, sources)
 	let inference = ResolveCheck.Inference(files)
 	let isOwn = stale.Length is 1
@@ -53,6 +53,8 @@ Sourced(stale Texts, root Text, sources Texts) Texts
 		return stale.Length is 0 then List(Text) else sources
 	SourceFiles(root).Of(FileCompiler.Normalized(stale.First), stale)
 Stale(paths Texts) Texts
+	if selection is not ""
+		return paths
 	for paths
 		let cache = BinaryFile(FileCompiler.Normalized(value))
 		let entries = cache.Unpacked(File(cache.Path).ReadBytes)
@@ -72,8 +74,11 @@ Kept(path Text, root Text) Number
 Served(path Text, root Text, isQuiet = false, sources Texts = List(Text)) Answer
 	Execute(Logger).Served("Missing.strict", ".").code is 1
 	Execute(Logger).Served("Missing.strict", ".", true).Types.Length is 0
-	if Directory.Exists(path) or (File(path).Exists is false) or (selection is not "") or (Stale((path)).Length is 0)
+	if Directory.Exists(path) or (File(path).Exists is false) or (selection is not "")
 		return Answer(Test(path, root, isQuiet, sources), known)
+	let stale = Stale((path))
+	if stale.Length is 0
+		return Answer(Failures((path), stale, root, isQuiet, sources), known)
 	let files = Sourced((path), root, sources)
 	let answer = Verified(path, root, isQuiet, files, ResolveCheck.Inference(files), true)
 	if (answer.code is 0) and (isQuiet is false)
