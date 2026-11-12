@@ -5,6 +5,7 @@ constant Alone = "fast builds for this computer only, without a platform or othe
 constant Model = " uses NeuralNetworks and runs on the GPU, build it without fast"
 constant Summing = List(Text) + "Examples/Sum.strict"
 constant Learning = ("Examples/Sum.strict", "NeuralNetworks/Batch.strict")
+constant Logged = ("", "Error: InvalidTestRequest", "Error: UnsupportedBuildOptions")
 constant Whole = "fast builds single programs, build a complete game with its Content without fast: "
 Ran(arguments Texts) Number
 	let rest = arguments.Slice(1, arguments.Length - 1)
@@ -14,8 +15,7 @@ Ran(arguments Texts) Number
 	let cache = NativeCache(arguments(0), rest)
 	let result = Current(cache) then 0 else BuildProfile(logger).Compiled(cache)
 	let code = result is Error("InvalidTestRequest") then 2 else result is Error then 1 else result
-	let problem = result is Error then (result to Text).Lines.First.Replace("Error: ", "") else ""
-	let reported = Reported(code, started, problem)
+	let reported = Reported(code, started, result is Error then result to Text else "")
 	Unlocked(rest(0)) then reported else 1
 Current(cache NativeCache) Boolean
 	let isCurrent = BuildProfile(logger).Current(cache)
@@ -23,7 +23,9 @@ Current(cache NativeCache) Boolean
 		logger.Log(cache.Message)
 	isCurrent
 Reported(code Number, started Number, problem Text) Number
-	if problem.IndexOf(": ") > 0
+	NativeCompiler(Logger).Reported(1, Process.Elapsed, "Error: Failed\n\tat Compiler/NativeCompiler.strict:line 9") is 1
+	NativeCompiler(Logger).Reported(2, Process.Elapsed, "Error: InvalidTestRequest") is 2
+	if (problem is "" then "" else problem.Lines.First) is not in Logged
 		logger.Log(problem)
 	BuildProfile(logger).Reported(code is 0 then "Build total" else "Build FAILED (" + code + "), total", started)
 	code
