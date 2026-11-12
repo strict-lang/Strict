@@ -82,12 +82,12 @@ Inlined(types List(TypeEntry)) List(TypeEntry)
 	let inlined = StructLanes(Inliner(types, true).Inlined).Split
 	Reported("Frontend / inlining", started)
 	inlined
-Packaged(build NativeBuild, base Text, program Text, built Number, tools Toolchain) Number
+Packaged(build NativeBuild, base Text, program Text, tools Toolchain)
+	if build.isFast
+		return
 	let started = Process.Elapsed
-	let release = Release(logger, base)
-	let result = release.Packaged(program, built, tools.isWeb, build.isCrossing, build.Target, build.isReleased)
+	Release(logger, base).Packaged(program, tools.isWeb, build.isCrossing, build.Target, build.isReleased)
 	Reported("Packaging", started)
-	result
 Lowered(tools Toolchain, base Text) Text
 	let started = Process.Elapsed
 	let lowered = tools.Lowered(base, "", (tools.platform is Platform.Windows then Toolchain.Parts else 1))

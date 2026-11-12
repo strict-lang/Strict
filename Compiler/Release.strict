@@ -2,10 +2,9 @@ has logger
 has base Text
 constant Opening = "= func.call @" + "Window_Open("
 constant Sidecars = (".ptx", ".runtime.ptx", ".fatbin", ".runtime.fatbin", ".hsaco", ".metal")
-AndroidPackaged Number
+AndroidPackaged
 	let release = Parent + "/Release/Android"
-	if Content(Parent + "/Release/Content") < 0
-		return 1
+	Content(Parent + "/Release/Content")
 	Directory.Create(Parent + "/Release")
 	Directory.Create(release)
 	Directory.Create(release + "/jniLibs")
@@ -15,37 +14,35 @@ AndroidPackaged Number
 	Directory.Create(release + "/assets")
 	logger.Log("Android native library and assets: " + release)
 	Mirrored(release + "/assets/Content")
-IOSPackaged Number
-	if Content(Parent + "/Release/Content") < 0
-		return 1
+IOSPackaged
+	Content(Parent + "/Release/Content")
 	let release = Parent + "/Release/iOS"
 	Refreshed(release, release + "/Content", base, (".ios.a", ".simulator.a"))
-Packaged(program Text, built Number, isWeb = false, isCrossing = false, platform = -1, isReleased = false) Number
-	Release(Logger, "Examples/Sum").Packaged("module {\n}", 0) is 0
-	Release(Logger, "Examples/Sum").Packaged("module {\n}", 2) is 2
-	Release(Logger, "Missing/App.test").Packaged(Opening, 0) is 0
-	Release(Logger, "Compiler/output/Console").Packaged("module {\n}", 0, false, false, -1, true) is 0
+Packaged(program Text, isWeb = false, isCrossing = false, platform = -1, isReleased = false)
+	Release(Logger, "Examples/Sum").Packaged("module {\n}") is not Error
+	Release(Logger, "Missing/App.test").Packaged(Opening) is not Error
+	Release(Logger, "Compiler/output/Console").Packaged("module {\n}", false, false, -1, true) is not Error
 	Directory.Exists("Compiler/output/Release/" + Platform.NameOf(Platform.Current))
-	if (platform is in (Platform.Android, Platform.IOS, Platform.IOSSimulator)) and (built is 0)
+	if platform is in (Platform.Android, Platform.IOS, Platform.IOSSimulator)
 		return Platform.IsIOS(platform) then IOSPackaged else AndroidPackaged
-	if (built is not 0) or base.EndsWith(".test")
-		return built
+	if base.EndsWith(".test")
+		return
 	if isWeb
 		return Refreshed(Parent + "/Release/Web", "", base, List(Text))
-	(program.IndexOf(Opening) >= 0) or isReleased or isCrossing then NativePackaged(isCrossing) else built
-NativePackaged(isCrossing Boolean) Number
-	if Content(Parent + "/Release/Content") < 0
-		return 1
+	if (program.IndexOf(Opening) >= 0) or isReleased or isCrossing
+		NativePackaged(isCrossing)
+NativePackaged(isCrossing Boolean)
+	Content(Parent + "/Release/Content")
 	let ending = Platform.Current is Platform.Windows then ".exe" else ""
 	if IsDemo
 		return Refreshed(Parent + "/Release", "", BuildOutput.Delivered(base), List(Text) + ending)
 	if Platform.Current is Platform.MacOS
 		return MacOSBundle(logger, base).Released
 	let folder = Parent + "/Release/" + Platform.NameOf(Platform.Current)
-	let result = Refreshed(folder, folder + "/Content", BuildOutput.Delivered(base), List(Text) + ending)
+	Refreshed(folder, folder + "/Content", BuildOutput.Delivered(base), List(Text) + ending)
 	let linux = Parent + "/Release/Linux"
-	let isCrossed = isCrossing and (Platform.Current is Platform.Windows) and File(linux + "/" + Named(base)).Exists
-	(result is 0) and isCrossed then Refreshed(linux, linux + "/Content", base, List(Text)) else result
+	if isCrossing and (Platform.Current is Platform.Windows) and File(linux + "/" + Named(base)).Exists
+		Refreshed(linux, linux + "/Content", base, List(Text))
 IsDemo Boolean
 	Release(Logger, TypeSource.Root + "/Examples/NativeAdd/AtlasDemo").IsDemo
 	Release(Logger, "Missing/AtlasDemo").IsDemo is false
@@ -67,7 +64,7 @@ Icon Text
 	let own = BuildOutput.Delivered(base) + ".ico"
 	let folder = Parent + "/" + Path(Parent).FileName.text + ".ico"
 	File(own).Exists then own else File(folder).Exists then folder else TypeSource.Root + "/Strict.ico"
-Refreshed(release Text, content Text, stem Text, endings Texts) Number
+Refreshed(release Text, content Text, stem Text, endings Texts)
 	Directory.Create(Path(release).PathOnly.text)
 	Directory.Create(release)
 	for endings
@@ -75,7 +72,7 @@ Refreshed(release Text, content Text, stem Text, endings Texts) Number
 		if File(built).Exists
 			if Placed(built, release + "/" + Named(built)) is false
 				logger.Log("Release could not replace " + release + "/" + Named(built) + ", is it still running?")
-				return 1
+				return Error("ReleaseNotReplaced")
 	logger.Log("Release: " + release)
 	Sidecar(release)
 	Mirrored(content)
@@ -100,14 +97,14 @@ Sidecar(release Text)
 		let sidecar = base + value
 		if (isWeb is false) and File(sidecar).Exists and (File(sidecar).Length > 0)
 			File(BuildOutput.Shipped(release, sidecar)).Write(File(sidecar).ReadBytes)
-Mirrored(target Text) Number
-	target is "" then 0 else Synced(Parent + "/Release/Content", target)
-Synced(source Text, target Text) Number
+Mirrored(target Text)
+	if target is not ""
+		Synced(Parent + "/Release/Content", target)
+Synced(source Text, target Text)
 	Copied(source, target)
 	Removed(source, target)
-	0
-Content(target Text) Number
-	Release(Logger, "Missing/App").Content("Missing/Release/Content") is 0
+Content(target Text)
+	Release(Logger, "Missing/App").Content("Missing/Release/Content") is not Error
 	let source = Parent + "/Content"
 	let builder = Parent + "/ContentBuild.strict"
 	if File(builder).Exists is false
@@ -118,7 +115,7 @@ Content(target Text) Number
 	let built = compiled.Failed then compiled else program.Execute("\"" + source + "\" \"" + target + "\"")
 	if built.Failed
 		logger.Log("Content build failed: " + builder + " " + built.error + built.Output)
-	built.Failed then -1 else 0
+		return Error("ContentBuildFailed")
 Copied(source Text, target Text)
 	if Directory.Exists(source)
 		Created(target)

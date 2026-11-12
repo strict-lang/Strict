@@ -22,19 +22,20 @@ IsProgram(path Text) Boolean
 	NativeBuild.IsProgram("Examples/Sum.strict")
 	NativeBuild.IsProgram("Character.strict") is false
 	"Run" is in TypeShape(File(path).ReadLines).MethodScope.names
-Compile(path Text, root Text, isCounting = false, isGating = false, sources Texts = List(Text)) Number
-	let isTesting = (isCounting or isGating) and ((isAndroid or isIOS) is false)
+Compile(path Text, root Text, isTesting = false, isCounting = false, sources Texts = List(Text))
 	let isProgram = (isTesting is false) and IsProgram(path)
 	let module = Folder.Module(path, root, isCounting, isProgram, Target, sources)
 	if module.types.Length is 0
-		return 1
+		return Error("NoTypesCompiled")
 	let base = Output(path, isProgram)
 	let program = BuildProfile(logger).Program(module, base, root, value)
 	if program is ""
-		return 1
+		return Error("NoProgramEmitted")
 	let natives = NativeFolder(logger, isRecursive = isRecursive).Natives(path, root, module.types)
-	let built = Build(base, program, Toolchain(Platform.Current, root, natives, isWeb), isCounting)
-	isTesting and (built is 0) then Ran(base, Toolchain(Platform.Current, root), path, isCounting) else built
+	Build(base, program, Toolchain(Platform.Current, root, natives, isWeb), isCounting)
+Tested(path Text, root Text, isCounting Boolean, sources Texts) Number
+	Compile(path, root, true, isCounting, sources)
+	Ran(Output(path, false), Toolchain(Platform.Current, root), path, isCounting)
 Device(program Text, base Text, root Text) Text
 	NativeBuild.Device("module {\n}", "A", ".") is "module {\n" + PtxCache.Empty
 	NativeBuild(Logger, isWeb = true).Device("module {\n" + MlirGpu.Marker + "\n  x\n}", "Web", ".").Length > 0
@@ -67,19 +68,19 @@ Natives(path Text, root Text, types List(TypeEntry)) Texts
 			if Directory.Exists(folder) and (folder is not in folders)
 				folders.Add(folder)
 	folders
-Build(base Text, program Text, tools Toolchain, isCounting = false) Number
+Build(base Text, program Text, tools Toolchain, isCounting = false)
 	let missing = tools.Missing(tools.isWeb then Toolchain.Needed + "emcc" else Toolchain.Needed)
 	if missing.Length > 0
 		logger.Log(tools.Installing(missing))
-		return 1
+		return Error("ToolsMissing")
 	let mlir = BuildProfile(logger).Runtime(value, program, tools.root)
 	let built = Rebuilt(base, mlir, Toolchain(tools, cpu = isReleased then "x86-64-v3" else "native"))
 	logger.Log(built)
 	if built.StartsWith("Built ") is false
-		return 1
-	let crossed = CrossBuild(base, program, tools, isCounting)
-	let result = Intermediates(logger).Removed(base) is Error then 1 else crossed
-	isFast then result else BuildProfile(logger).Packaged(value, base, program, result, tools)
+		return Error("NotBuilt")
+	CrossBuild(base, program, tools, isCounting)
+	Intermediates(logger).Removed(base)
+	BuildProfile(logger).Packaged(value, base, program, tools)
 Target Number
 	NativeBuild(Logger, isIOS = true).Target is Platform.IOS
 	NativeBuild(Logger, isIOS = true, isSimulator = true).Target is Platform.IOSSimulator
@@ -123,15 +124,16 @@ Linked(base Text, tools Toolchain) Slow(Text)
 	let replaced = isSwapped and built.StartsWith("Built ") then NativeCompiler.Replaced(executable, target) else true
 	let failed = "Could not replace " + executable + " (still running?), the new build is " + target
 	replaced then built.Replace(target, executable) else failed
-CrossBuild(base Text, program Text, tools Toolchain, isCounting Boolean) Number
-	NativeBuild(Logger).CrossBuild("Compiler/output/missing", "module {}", Toolchain.OnWindows, true) is 0
-	NativeBuild(Logger, false).CrossBuild("Compiler/output/missing", "module {}", Toolchain.OnWindows, false) is 0
+CrossBuild(base Text, program Text, tools Toolchain, isCounting Boolean)
+	NativeBuild(Logger).CrossBuild("Compiler/output/missing", "module {}", Toolchain.OnWindows, true) is not Error
+	NativeBuild(Logger, false).CrossBuild("Compiler/output/missing", "module {}", Toolchain.OnWindows, false) is not Error
 	if (Target is not Platform.Windows) or isCounting or (isCrossing is false)
-		return 0
+		return
 	File(base + ".linux.mlir").Write(Mlir(program, tools.root, Platform.Linux))
 	let crossed = LinuxBuild(tools).Built(base)
 	logger.Log(crossed)
-	crossed.StartsWith("Built ") then 0 else 1
+	if crossed.StartsWith("Built ") is false
+		return Error("CrossBuildFailed")
 Output(path Text, isProgram Boolean) Text
 	NativeBuild.Output("Character.strict", false) is "./obj/Character.test"
 	NativeBuild.Output("C:/s/A.strict", true) is "C:/s/obj/A"

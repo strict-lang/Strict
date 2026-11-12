@@ -18,7 +18,8 @@ Held(cache NativeCache) Number
 		logger.Log(cache.Message)
 		BuildProfile(logger).Reported("Build total", started)
 		return 0
-	let failed = BuildProfile(logger).Compiled(cache)
+	let compiled = BuildProfile(logger).Compiled(cache)
+	let failed = compiled is Error then 1 else compiled
 	BuildProfile(logger).Reported(failed is 0 then "Build total" else "Build FAILED (" + failed + "), total", started)
 	failed
 Locked(target Text) Slow(Boolean)
@@ -57,19 +58,21 @@ Compiled(command Text, rest Texts, sources Texts = List(Text)) Number
 	let isCounting = request.Option is "lines"
 	let isRecursive = "--no-recursive" is not in request.Options
 	let build = NativeBuild(logger, false, selection = request.Selection, isRecursive = isRecursive)
-	build.Compile(rest(0), rest(1), isCounting, isCounting is false, sources)
+	build.Tested(rest(0), rest(1), isCounting, sources)
 Checked(rest Texts, sources Texts) Number
 	let gate = Execute(logger).Served(rest(0), rest(1), true, sources)
-	gate.code is 0 then Built(rest, sources, gate.Types) else gate.code
-Built(rest Texts, sources Texts, gated List(TypeEntry)) Number
+	if gate.code is 0
+		Built(rest, sources, gate.Types)
+	gate.code
+Built(rest Texts, sources Texts, gated List(TypeEntry))
 	let options = Options(rest)
 	if (rest.Length > 2) and (rest(2) is "library")
 		return LibraryBuild(logger).Built(rest(0), rest(1))
 	let problem = Problem(rest(0), options, sources)
 	if problem is not ""
 		logger.Log(problem)
-		return 1
-	NativeBuild(Configured(options), gated = gated).Compile(rest(0), rest(1), false, false, sources)
+		return Error("UnsupportedBuildOptions")
+	NativeBuild(Configured(options), gated = gated).Compile(rest(0), rest(1), sources = sources)
 Problem(path Text, options Texts, sources Texts) Text
 	NativeCompiler(Logger).Problem("Examples/Sum.strict", List(Text) + "fast", Summing) is ""
 	NativeCompiler(Logger).Problem("Examples/Sum.strict", ("android", "ios"), Summing) is Mixed

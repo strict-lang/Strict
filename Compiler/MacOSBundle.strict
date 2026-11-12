@@ -29,24 +29,23 @@ Signing(identity Text, app Text) Text
 	let quoted = "\"" + app + "\""
 	let developer = "--force --options runtime --timestamp --sign \"" + identity + "\" " + quoted
 	identity is "-" then "--force --sign - " + quoted else developer
-Released Number
-	MacOSBundle(Logger, "Compiler/output/App").Released is 1
+Released
+	MacOSBundle(Logger, "Compiler/output/App").Released is Error("ExecutableMissing")
 	Directory.Exists("Compiler/output/Release/MacOS/App.app/Contents/Resources")
 	let app = Contents.Substring(0, Contents.Length - 9)
 	let release = Release(logger, base)
 	let folder = release.Parent + "/Release"
 	for (release.Parent, folder, folder + "/MacOS", app, Contents, Contents + "/Resources")
 		Directory.Create(value)
-	let program = BuildOutput.Delivered(base)
-	let refreshed = release.Refreshed(Contents + "/MacOS", Contents + "/Resources/Content", program, List(Text) + "")
-	refreshed is not 0 then refreshed else Completed(release.Icon)
+	release.Refreshed(Contents + "/MacOS", Contents + "/Resources/Content", BuildOutput.Delivered(base), List(Text) + "")
+	Completed(release.Icon)
 Converting(icon Text) Text
 	MacOSBundle(Logger, "Missing/App").Converting("a.ico").StartsWith("-s format icns \"a.ico\" --out ")
 	"-s format icns \"" + icon + "\" --out \"" + Contents + "/Resources/" + Name + ".icns\""
-Completed(icon Text) Number
-	MacOSBundle(Logger, "Missing/App").Completed("Missing.ico") is 1
+Completed(icon Text)
+	MacOSBundle(Logger, "Missing/App").Completed("Missing.ico") is Error("ExecutableMissing")
 	if File(Contents + "/MacOS/" + Name).Exists is false
-		return 1
+		return Error("ExecutableMissing")
 	File(Contents + "/Info.plist").Write(Text.Combine(Plist, "\n"))
 	if ToolRunner("sips").Execute(Converting(icon)).Failed
 		logger.Log("sips could not convert " + icon)
@@ -54,4 +53,5 @@ Completed(icon Text) Number
 	let app = Contents.Substring(0, Contents.Length - 9)
 	let signed = ToolRunner("codesign").Execute(Signing(identity, app))
 	logger.Log(signed.Failed then "codesign failed: " + signed.error else "Signed " + app + " (" + identity + ")")
-	signed.Failed then 1 else 0
+	if signed.Failed
+		return Error("CodesignFailed")

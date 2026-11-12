@@ -155,8 +155,8 @@ with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as 
 	source.write_text('has release Compiler/Release\nRun Slow(Number)\n'
 		f'\tReleaseCheck(Release(Logger, "{base}")).Retained is true\n\t0\nRetained Boolean\n'
 		f'\tFile("{base + extension}").Write("built")\n'
-		f'\tlet result = release.Refreshed("{release}", "", "{base}", ("{extension}"))\n'
-		f'\t(result is 0) and File("{base + extension}").Exists', encoding="utf-8")
+		f'\trelease.Refreshed("{release}", "", "{base}", ("{extension}"))\n'
+		f'\tFile("{base + extension}").Exists', encoding="utf-8")
 	tested = run("test", str(source))
 	assert tested.returncode == 0, tested.stdout + tested.stderr
 	tested = run("test", str(source), "native")
