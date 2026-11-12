@@ -108,11 +108,22 @@ Started(slot Text, suffix Text) Texts
 	Built.Started("%v_listResult0", "") is List(Text) + "    llvm.store %zero, %v_listResult0 : f64, !llvm.ptr"
 	MlirPairs(Tripled, 0).Started("%v_listResult0", "")(0).IndexOf("0x401C") > 0
 	MlirPairs(Tripled, 0).Started("%v_listResult0", "").Last is "    llvm.store %t0l, %v_listResult0 : f64, !llvm.ptr"
+	MlirPairs(MlirLoops.Collecting.function, 0).Started("%v_forResult", "").First.StartsWith("    llvm.store %zero, ")
 	let name = slot.Substring(3, slot.Length - 3)
-	if IsBuilt(name)
+	if IsBuilt(name) or IsPresized(name)
 		return List(Text) + function.Store("%zero", slot)
 	let lists = MlirLists(function, position)
 	lists.Created(Writes(name), suffix) + function.Store(lists.Temp(suffix + "l"), slot)
+IsPresized(name Text) Boolean
+	MlirPairs(MlirLoops.Collecting.function, 0).IsPresized("forResult")
+	MlirPairs(MlirLoops.Collecting.function, 0).IsPresized("listResult0") is false
+	MlirPairs(MlirParallel.Byting.function, 0).IsPresized("forResult") is false
+	MlirPairs(MlirListDestined.Copied.function, 0).IsPresized("forResult")
+	let steps = function.method.instructions
+	for Range(position + 1, steps.Length)
+		if steps(value).kind is InstructionType.LoopBegin
+			return (name is "forResult") and (MlirLoops(function, value).Presized.Length > 0)
+	false
 Written(name Text) Number
 	Sample.Defaulted(Twice, "%s", "d3")(0) is "    %t1d3dx = arith.constant 0x3FF0000000000000 : f64"
 	Sample.Defaulted(Twice, "%s", "d3")(2).EndsWith("(%t1d3dx, %t1d3dy) : (f64, f64) -> f64")
