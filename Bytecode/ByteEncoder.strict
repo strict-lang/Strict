@@ -43,10 +43,8 @@ Integers Numbers
 	integers
 Spelled(start Number, length Number) Text
 	ByteEncoder(104, 105, 195, 164).Spelled(2, 2) is "ä"
-	mutable text = ""
 	for Range(start, start + length)
-		text = text + Character(bytes(value))
-	text
+		Character(bytes(value))
 SevenBitLength(number Number) Number
 	ByteEncoder(1, 2).SevenBitLength(300) is 2
 	number < SevenBitBase then 1 else 1 + SevenBitLength((number / SevenBitBase).Floor)
