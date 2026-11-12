@@ -22,6 +22,11 @@ constant FlattenedLoads = ("    %t2l = llvm.load %v_numbers : !llvm.ptr -> f64",
 constant ShapeBits = ("    %t2n = llvm.mlir.addressof @sShape_Run_1_2 : !llvm.ptr", "    %t2nb = func.call @strict_bits(%t2n) : (!llvm.ptr) -> f64")
 constant ListRead = ("    %t2x = func.call @strict_list_read(%t2l, %t2i, %t2nb) : (f64, f64, f64) -> f64", "    llvm.store %t2x, %r2 : f64, !llvm.ptr")
 constant Flattening = FlattenedLoads + ShapeBits + ListRead
+constant Projector = TypeEntry("Strict/Math/Projector", List(MemberEntry), List(MethodEntry) + MethodEntry("Projected", List(MemberEntry), "Strict/Math/Pairing", MlirChecks.Guarded.instructions))
+constant Projecting = InstructionEntry.Invoke(1, ("Strict/Math/Projector", "Projected", "Strict/Math/Pairing"), List(Number), -1)
+constant Projected = MlirPacking(MlirFunction((MlirPairs.Pairing, Projector), Projector, MethodEntry("Listed", List(MemberEntry), "Strict/List(Number)", List(InstructionEntry) + Projecting + MlirChecks.CheckedReturn)), 0)
+constant Checking = ("    %t0c = llvm.load %r1 : !llvm.ptr -> f64", "    %t0cf = func.call @strict_is_failure(%t0c) : (f64) -> i1", "    cf.cond_br %t0cf, ^bb0ck, ^bb0cl", "  ^bb0cl:")
+constant Unfailing = Checking + Repacking(1) + ("    llvm.store %t0cl, %r1 : f64, !llvm.ptr", "    cf.br ^bb0ck", "  ^bb0ck:")
 constant Indexing = ("    %t0l = llvm.load %v_numbers : !llvm.ptr -> f64", "    %t0i = llvm.load %r1 : !llvm.ptr -> f64", "    %t0x = func.call @strict_two_at(%t0l, %t0i) : (f64, f64) -> f64", "    llvm.store %t0x, %r7 : f64, !llvm.ptr")
 Kind(written Text) Text
 	Listing.Kind("Pairing") is "List(Number)" and (Listing.Kind("Number") is "Number")
@@ -88,10 +93,21 @@ Repacked Texts
 	let converted = register < 0 then "" else Kind(written)
 	if converted is written
 		return List(Text)
-	let helper = Helper(written, converted)
+	let slot = "%r" + register
 	let temp = "%t" + position + "c"
-	let call = "    " + temp + "l = func.call @" + helper + "(" + temp + ") : (f64) -> f64"
-	(function.Load(temp, "%r" + register), call, function.Store(temp + "l", "%r" + register))
+	let call = "    " + temp + "l = func.call @" + Helper(written, converted) + "(" + temp + ") : (f64) -> f64"
+	List(Text) + function.Load(temp, slot) + Unfailed(temp, (call, function.Store(temp + "l", slot)))
+Unfailed(temp Text, converting Texts) Texts
+	Listing.Unfailed("%t0c", Repacking) is Repacking
+	Projected.Repacked is Unfailing
+	MlirPacking(MlirFunction(Projected.function, FastLoop = 0), 0).Repacked.Length is 3
+	if (function.FastLoop >= 0) or (MlirChecks(function, position).IsFailing(function, position, 0) is false)
+		return converting
+	let kept = "^bb" + position + "ck"
+	let converted = "^bb" + position + "cl"
+	let test = "    " + temp + "f = func.call @strict_is_failure(" + temp + ") : (f64) -> i1"
+	let branch = "    cf.cond_br " + temp + "f, " + kept + ", " + converted
+	(test, branch, "  " + converted + ":") + converting + ("    cf.br " + kept, "  " + kept + ":")
 Indexed(entry InstructionEntry, fallback MlirLists) Texts
 	Listing.Indexed(Fetching, MlirLists(Listing.function, 0)) is Indexing
 	Plain.Indexed(MlirLists.Steps(2), MlirLists(MlirLists.Listed, 2)) is Flattening
