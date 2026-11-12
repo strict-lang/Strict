@@ -49,10 +49,7 @@ IsIterable(type Text) Boolean
 UnknownMethods(node SyntaxNode, scope Scope, current Scope) Texts
 	Counting.UnknownMethods(MissingCall.statement, Counted, KnownTypes.NoMembers) is ("MethodNotFound: Count.Missing")
 	mutable unknown = UnknownMembers(node)
-	let hidden = HiddenType(inference).Ambiguous(node, scope, current) + HiddenType(inference).Issue(node, scope, current)
-	let called = IsCall(node) then CallIssue(node, scope, current) else ""
-	let typed = called is "" then ArgumentTypes(inference).Checked(node, scope, current) else called
-	let issue = hidden is "" then typed else hidden
+	let issue = MethodIssue(node, scope, current)
 	if issue is not ""
 		unknown = unknown + issue
 	let narrowed = node.text is "then" then ErrorNarrowing(inference).Narrowed(node.children(0), scope, current) else scope
@@ -60,6 +57,13 @@ UnknownMethods(node SyntaxNode, scope Scope, current Scope) Texts
 		if value.Kind is not "Body"
 			unknown = unknown + UnknownMethods(value, narrowed, current)
 	unknown
+MethodIssue(node SyntaxNode, scope Scope, current Scope) Text
+	Counting.MethodIssue(MissingCall.statement, Counted, KnownTypes.NoMembers) is "MethodNotFound: Count.Missing"
+	Counting.MethodIssue(TwiceCall.statement, Counted, KnownTypes.NoMembers) is ""
+	let hidden = HiddenType(inference).Ambiguous(node, scope, current) + HiddenType(inference).Issue(node, scope, current)
+	let called = IsCall(node) then CallIssue(node, scope, current) else ""
+	let typed = called is "" then ArgumentTypes(inference).Checked(node, scope, current) else called
+	hidden is "" then typed else hidden
 CallIssue(call SyntaxNode, scope Scope, current Scope) Text
 	Counting.CallIssue(MissingCall.statement, Counted, KnownTypes.NoMembers) is "MethodNotFound: Count.Missing"
 	Requiring.CallIssue(TwiceCall.statement, Counted, KnownTypes.NoMembers) is "ArgumentMissing: Count.Twice got 0 of 1"
