@@ -17,6 +17,8 @@ constant Guarding = MlirChecks(MlirFunction(List(TypeEntry) + Calls, Calls, Meth
 constant Deferring = MlirChecks(MlirDeferred.Reading.function, 5)
 constant LengthRead = (InstructionEntry.LoadText(0, "ab"), MlirNatives.LengthCall) + CheckedReturn
 constant Measuring = MlirChecks(MlirFunction(List(TypeEntry), MlirNatives.Named, MethodEntry("Run", List(MemberEntry), "Strict/Number", LengthRead)), 2)
+constant WidthLoop = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "width"), InstructionEntry.LoopBegin(0, -1), InstructionEntry.Jump(InstructionType.LoopEnd, 1))
+constant CountLoaded = MlirChecks(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", WidthLoop)), 1)
 Emitted Texts
 	FlatRead.Emitted is ("    cf.br ^bb3")
 	Returning.Emitted.Index("    cf.cond_br %t1k, ^bb1e, ^bb2") is 2
@@ -28,14 +30,30 @@ Emitted Texts
 	if IsFlatRead or IsInfallible
 		return List(Text) + ("    cf.br ^bb" + (position + 1))
 	let entry = function.method.instructions(position)
-	function.IsDeferred then Deferred(entry) else Checked(entry)
-Checked(entry InstructionEntry) Texts
-	Text.Combine(Returning.Checked(Returning.function.method.instructions(1))).IndexOf("@strict_trace_checked(%t1v,") > 0
-	let checked = "%t" + position + "v"
-	let test = "    %t" + position + "k = func.call @strict_is_failure(" + checked + ") : (f64) -> i1"
-	let branch = "    cf.cond_br %t" + position + "k, ^bb" + position + "e, ^bb" + (position + 1)
-	let traced = MlirMemory(function, position).Traced(checked, "%t" + position + "tr", "strict_trace_checked")
-	(function.Load(checked, "%r" + entry.payload(0)), test, branch, "  ^bb" + position + "e:") + traced + Left(entry)
+	function.IsDeferred then Deferred(entry) else Checked(entry, entry.payload(0), "^bb" + (position + 1))
+Checked(entry InstructionEntry, register Number, continuation Text) Texts
+	Text.Combine(Returning.Checked(Guarded.instructions(1), 0, "^bb2")).IndexOf("@strict_trace_checked(%t1v,") > 0
+	let suffix = entry.kind is InstructionType.LoopBegin then "u" else ""
+	let checked = "%t" + position + suffix
+	let test = "    " + checked + "k = func.call @strict_is_failure(" + checked + "v) : (f64) -> i1"
+	let failure = "^bb" + position + suffix + "e"
+	let branch = "    cf.cond_br " + checked + "k, " + failure + ", " + continuation
+	let traced = MlirMemory(function, position).Traced(checked + "v", checked + "tr", "strict_trace_checked")
+	let loaded = function.Load(checked + "v", "%r" + register)
+	(loaded, test, branch, "  " + failure + ":") + traced + Left(entry, checked + "tr")
+Counted Texts
+	CountLoaded.Counted(2) is "    cf.cond_br %t1uk, ^bb1ue, ^loop1counted"
+	CountLoaded.Counted.Last is "  ^loop1counted:"
+	MlirChecks(MlirLoops.Counting.function, 0).Counted.Length is 0
+	let entry = function.method.instructions(position)
+	let register = entry.payload(1) is 1 then entry.payload(2) else entry.payload(0)
+	let writer = MlirKinds(function).Writer(position, register)
+	let isPlain = (function.FastLoop < 0) and (function.IsDeferred is false)
+	if (isPlain is false) or (writer < 0) or (MlirLoops(function, position).Collection is not "")
+		return List(Text)
+	if IsUnfailing(function, writer)
+		return List(Text)
+	Checked(entry, register, "^loop" + position + "counted") + ("  ^loop" + position + "counted:")
 IsFlatRead Boolean
 	FlatRead.IsFlatRead
 	Returning.IsFlatRead is false
@@ -43,12 +61,12 @@ IsFlatRead Boolean
 	let register = function.method.instructions(position).payload(0)
 	let isRead = previous.kind is InstructionType.IndexCall and (previous.payload(0) is register)
 	isRead then MlirCouples(function, position - 1).IsFlatRead(previous) else false
-Left(entry InstructionEntry) Texts
-	Returning.Left(Returning.function.method.instructions(1)) is ("    return %t1tr : f64")
+Left(entry InstructionEntry, traced Text) Texts
+	Returning.Left(Returning.function.method.instructions(1), "%t1tr") is ("    return %t1tr : f64")
 	if entry.texts.Length is 0
-		return MlirChanged(function, position).Unchanged + MlirLines(function).End + ("    return %t" + position + "tr : f64")
+		return MlirChanged(function, position).Unchanged + MlirLines(function).End + ("    return " + traced + " : f64")
 	let target = MlirStatements(function, position).JumpEnd(PayloadDecoder(entry).SevenBit(1))
-	(function.Store("%t" + position + "tr", "%v_" + entry.texts(0)), "    cf.br ^bb" + target)
+	(function.Store(traced, "%v_" + entry.texts(0)), "    cf.br ^bb" + target)
 IsInfallible Boolean
 	Doubling.IsInfallible
 	Guarding.IsInfallible is false
@@ -86,10 +104,17 @@ IsFailing(callee MlirFunction, at Number, depth Number) Boolean
 IsNativeFailing(callee MlirFunction, at Number) Boolean
 	Doubling.IsNativeFailing(Measuring.function, 1) is false
 	Doubling.IsNativeFailing(Guarding.function, 1)
+	(PayloadDecoder(callee.method.instructions(at)).Text(1) is not "Strict/Number") and (IsUnfailing(callee, at) is false)
+IsUnfailing(callee MlirFunction, at Number) Boolean
+	Doubling.IsUnfailing(Measuring.function, 1)
+	Doubling.IsUnfailing(Measuring.function, 0)
+	Doubling.IsUnfailing(Guarding.function, 1) is false
 	let entry = callee.method.instructions(at)
-	let decoder = PayloadDecoder(entry)
-	let helper = MlirCalls(callee, at).NativeHelper(entry, decoder)
-	(decoder.Text(1) is not "Strict/Number") and (helper is not in ("strict_text_length", "strict_list_length"))
+	if entry.kind is InstructionType.LoadConstantToRegister
+		return true
+	if entry.kind is not InstructionType.Invoke
+		return false
+	MlirCalls(callee, at).NativeHelper(entry, PayloadDecoder(entry)) is in ("strict_text_length", "strict_list_length")
 Returned(target MlirFunction, register Number) Texts
 	Text.Combine(MlirCalls(Doubling.function, 1).Emitted).IndexOf("@strict_trace(") < 0
 	Text.Combine(MlirCalls(Guarding.function, 1).Emitted).IndexOf("@strict_trace(") > 0

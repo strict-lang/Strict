@@ -31,9 +31,9 @@ Begin Texts
 	Counting.Begin.Length is 19
 	Text.Combine(Doubling.Begin).IndexOf("@strict_gpu_run(") < Text.Combine(Doubling.Begin).IndexOf("^floop2fast:")
 	let entry = function.method.instructions(position)
-	let bounds = entry.payload(1) is 1 then RangeBounds(entry) else CountBounds(entry)
-	let label = "^loop" + position
 	let isRange = entry.payload(1) is 1
+	let bounds = MlirChecks(function, position).Counted + (isRange then RangeBounds(entry) else CountBounds(entry))
+	let label = "^loop" + position
 	let saved = bounds + (function.Load(Temp("x"), "%v_index"), function.Load(Temp("y"), "%v_value")) + Outered
 	let begun = saved + MlirGpu(function, position).Launched + MlirKernel(function, position).Versioned + Presized
 	let tail = MlirRangeLoop(function, position).Opened(label)
