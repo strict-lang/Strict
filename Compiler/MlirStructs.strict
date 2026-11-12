@@ -18,6 +18,10 @@ constant MakingLoop = (ShapesEmptied, SizeLoad, InstructionEntry.LoopBegin(0, -1
 constant MadeAdding = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "made"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 2, "forResult"))
 constant Collecting = MethodEntry("Collected", List(MemberEntry) + Sizing, "Strict/List(Strict/Shape)", MakingLoop + MadeAdding + InstructionEntry.Jump(InstructionType.LoopEnd, 6))
 constant Collector = MlirStructs(MlirFunction(List(TypeEntry) + Maker, Maker, Collecting), 4)
+constant Probe = TypeEntry("Strict/Probe", (MemberEntry.LoggerMember, MlirFunction.Shape.members.First, MemberEntry("y", "Strict/Number", List(InstructionEntry), false)), List(MethodEntry))
+constant ProbeMade = InstructionEntry.Invoke(2, ("Strict/Probe", "from", "Strict/Probe", "logger", "width", "y"), (0, 1), -1)
+constant ProbeLoads = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "logger"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "width"))
+constant Probing = MlirStructs(MlirFunction(List(TypeEntry) + Probe, Probe, MethodEntry("Moved", MlirFunction.Shape.members, "Strict/Probe", ProbeLoads + ProbeMade + InstructionEntry.Return(2))), 2)
 constant DestinationRead = ("    %structDestinationGlobal = llvm.mlir.addressof @strict_struct_destination : !llvm.ptr", "    %structDestinationValue = llvm.load %structDestinationGlobal : !llvm.ptr -> f64")
 constant DestinationCopied = ("    %structDestination = llvm.alloca %one x f64 : (i64) -> !llvm.ptr", "    llvm.store %structDestinationValue, %structDestination : f64, !llvm.ptr")
 constant Taking = DestinationRead + "    llvm.store %zero, %structDestinationGlobal : f64, !llvm.ptr" + DestinationCopied
@@ -56,6 +60,7 @@ Prologue Texts
 	Made.Constructed(Making.instructions(1), MlirInstances.Outer, MlirOwned.Fresh) is MlirOwned.Fresh
 	Text.Combine(Made.Constructed(Making.instructions(1), Maker, MlirOwned.Fresh)).Length is 510
 	Made.Prologue is Taking
+	Probing.IsRebuilt(ProbeMade, Probe) is false
 	MlirStructs(MlirInstances.Shapes, 0).Prologue.Length is 0
 	Consumes(0) then Taking else List(Text)
 IsRebuilt(entry InstructionEntry, owner TypeEntry) Boolean
@@ -68,7 +73,7 @@ IsRebuilt(entry InstructionEntry, owner TypeEntry) Boolean
 	let checkedAt = MlirDestined(function, position).CheckedAt
 	let checked = function.method.instructions(checkedAt)
 	let next = MlirDestined(function, checkedAt).Next(checked)
-	let isFull = PayloadDecoder(entry).ArgumentCount >= MlirInstances(function, 0).Stored(owner).Length
+	let isFull = MlirOwned(function, position).IsArgued(entry, owner)
 	let isReturned = (next.kind is InstructionType.Return) and (next.payload(0) is checked.payload(0))
 	isReturned and isFull and (MlirConstants(function, position).IsConstant is false)
 Constructed(entry InstructionEntry, owner TypeEntry, built Texts) Texts

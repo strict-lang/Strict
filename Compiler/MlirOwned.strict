@@ -169,19 +169,30 @@ Target(entry InstructionEntry, owner TypeEntry) Text
 	let steps = function.method.instructions
 	let next = position + 1 < steps.Length then steps(position + 1) else entry
 	let isStored = (next.kind is Inliner.Store) and (next.payload(0) is entry.payload(0))
-	let isFull = PayloadDecoder(entry).ArgumentCount >= MlirInstances(function, 0).Stored(owner).Length
-	let isBuilt = isFull and (MlirConstants(function, position).IsConstant is false)
+	let isBuilt = IsArgued(entry, owner) and (MlirConstants(function, position).IsConstant is false)
 	(isStored and isBuilt then IsOwned(next.texts(0)) else false) then next.texts(0) else ""
 Rewritten(entry InstructionEntry, owner TypeEntry, name Text) Texts
 	Rebuilt.Rewritten(Rebuilding(7), MlirInstances.Outer, "moved").Last is "    llvm.store %t7ra1, %t7r1 : f64, !llvm.ptr"
 	let arguments = PayloadDecoder(entry).Arguments
-	let names = Invocation(entry, List(VmValue), VmValue.None).ParameterNames
 	mutable lines = List(Text)
 	for MlirInstances(function, 0).Stored(owner)
-		let register = arguments(names.Index(value.Name) < 0 then index else names.Index(value.Name))
+		let register = arguments(Argument(entry, value, index))
 		if IsKept(register, value.Name, name) is false
 			lines = lines + Put(owner, value, register)
 	lines
+Argument(entry InstructionEntry, member MemberEntry, slot Number) Number
+	Rebuilt.Argument(Rebuilding(7), MlirInstances.Outer.members.Last, 0) is 1
+	Rebuilt.Argument(MlirStructs.ProbeMade, MlirStructs.Probe.members.Last, 1) is -1
+	let names = Invocation(entry, List(VmValue), VmValue.None).ParameterNames
+	let chosen = names.Index(member.Name) < 0 then slot else names.Index(member.Name)
+	chosen < PayloadDecoder(entry).ArgumentCount then chosen else -1
+IsArgued(entry InstructionEntry, owner TypeEntry) Boolean
+	Rebuilt.IsArgued(Rebuilding(7), MlirInstances.Outer)
+	Rebuilt.IsArgued(MlirStructs.ProbeMade, MlirStructs.Probe) is false
+	for MlirInstances(function, 0).Stored(owner)
+		if Argument(entry, value, index) < 0
+			return false
+	true
 Put(owner TypeEntry, member MemberEntry, register Number) Texts
 	Rebuilt.Put(MlirInstances.Outer, MlirInstances.Outer.members.Last, 5).Last.StartsWith("    llvm.store %t7ra1, %t7r1")
 	Rebuilt.Put(MlirFunction.Shape, MlirFunction.Shape.members.First, 5).Last.StartsWith("    llvm.store %t7ra0, %t7r0")

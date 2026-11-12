@@ -52,12 +52,11 @@ Constructed(entry InstructionEntry, typeName Text) Texts
 	MlirStructs(function, position).Constructed(entry, owner, built)
 MemberValue(entry InstructionEntry, owner TypeEntry, member MemberEntry, slot Number) Texts
 	MlirInstances(Shapes, 1).MemberValue(Built, Shapes.type, Shapes.type.members.First, 0).Length is 4
-	let names = Invocation(entry, List(VmValue), VmValue.None).ParameterNames
 	let arguments = PayloadDecoder(entry).Arguments
-	let chosen = names.Index(member.Name) < 0 then slot else names.Index(member.Name)
+	let chosen = MlirOwned(function, position).Argument(entry, member, slot)
 	let offset = MlirEmbedded(function).Offset(owner, member.Name)
 	let target = MlirMemory(function, position).Slot(Temp("op"), offset, "s" + slot)
-	if chosen < arguments.Length
+	if chosen >= 0
 		let source = MlirCouples(function, position).Rounded(member, arguments(chosen), Temp("a" + slot))
 		let placed = MlirEmbedded(function).Placed(owner, member, Temp("a" + slot), Temp("s" + slot))
 		return ((List(Text) + target) + source) + placed
