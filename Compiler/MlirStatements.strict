@@ -52,10 +52,10 @@ Literal(literal Runtime/VmValue, slot Text, suffix Text, named = "") Texts
 	(number, function.Store(Temp(suffix + "c"), slot))
 Hex(number Number) Text
 	Copy.Hex(-2) is "0xC000000000000000"
+	let bytes = ByteEncoder.Empty.Double(number).bytes
 	mutable result = "0x"
 	for 8
-		let part = ByteEncoder.Empty.Double(number).bytes(7 - index)
-		result = result + MetalValue("").Hex(part, 2)
+		result = result + MetalValue("").Hex(bytes(7 - index), 2)
 	result
 Returned(entry InstructionEntry) Texts
 	MlirStatements(Copy.function, 2).Returned(InstructionEntry.Return(0)).Last is "    return %t2 : f64"
