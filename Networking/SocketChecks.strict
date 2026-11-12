@@ -10,7 +10,21 @@ Failures Slow(Number)
 	Socket.Local(-1) is Error("InvalidPort")
 	Loopback(Socket.Listen(0)) is not Error
 	Loopback(Socket.Local(0)) is not Error
+	Reopened(Socket.Listen(0)) is not Error
 	0
+Reopened(server Number)
+	if server is Error
+		return Error("ServerNotOpened")
+	let port = Socket.Port(server)
+	let second = Socket.Listen(port)
+	let served = Loopback(server)
+	if second is not Error
+		Socket.Close(second)
+	if served is Error
+		return served
+	if second is not Error("ListenFailed")
+		return Error("PortListenedTwice")
+	Loopback(Socket.Listen(port))
 Loopback(server Number)
 	if server is Error
 		return Error("ServerNotOpened")

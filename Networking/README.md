@@ -31,7 +31,8 @@ accepts, both send and receive bytes.
 
 - `Socket.Connect(host, port)`: the socket of a client, or an Error such as
   `HostNotFound` or `ConnectionFailed`.
-- `Socket.Listen(port)`: the socket of a server; zero asks the OS for an available port.
+- `Socket.Listen(port)`: the socket of a server; zero asks the OS for an available port,
+  a port another server listens on is `ListenFailed` (a restart right after closing works).
 - `Socket.Local(port)`: like Listen, but only programs on this computer can connect (127.0.0.1).
 - `Socket.Port(socket)`: its local port, including the port assigned by the OS.
 - `Socket.Accept(server)`: the socket of the client that connects.

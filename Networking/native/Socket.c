@@ -109,7 +109,8 @@ STRICT_EXPORT double Socket_Connect(double self, double host, double port)
 	return (double)sent_at_once(handle);
 }
 
-/* A server on all interfaces (other computers can connect) or on 127.0.0.1 only. */
+/* A server on all interfaces (other computers can connect) or on 127.0.0.1 only. A port in use fails, a restart
+   right after closing works: Windows SO_REUSEADDR would let a second server bind the port, it only reuses exclusively. */
 static double listening(double port, unsigned long host)
 {
 	if (!is_port(port))
@@ -120,7 +121,11 @@ static double listening(double port, unsigned long host)
 	if (handle == invalid())
 		return strict_fail("SocketFailed");
 	int reuse = 1;
+#ifdef _WIN32
+	setsockopt(handle, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (const char*)&reuse, (socket_size)sizeof(reuse));
+#else
 	setsockopt(handle, SOL_SOCKET, SO_REUSEADDR, (const char*)&reuse, (socket_size)sizeof(reuse));
+#endif
 	struct sockaddr_in address;
 	memset(&address, 0, sizeof(address));
 	address.sin_family = AF_INET;
@@ -349,7 +354,8 @@ STRICT_EXPORT double Socket_Try(double self, double host, double port, double se
 	return (double)sent_at_once(handle);
 }
 
-/* UDP socket on every interface, so a StrictGen can shout and hear on the local network. */
+/* UDP socket on every interface, so a StrictGen can shout and hear on the local network. Shared on purpose: every
+   program on this computer that opened the beacon port hears each broadcast. */
 STRICT_EXPORT double Socket_Beacon(double self, double port)
 {
 	if (!is_port(port))
