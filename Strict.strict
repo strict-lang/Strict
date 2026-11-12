@@ -90,7 +90,7 @@ Ran(arguments Texts, known = Dictionary(Text, TypeEntry)) Answer
 		logger.Log(message)
 		return Answer(command is in Informing then 0 else 2, known)
 	if command is in ("build", "check", "update", "format", "suggest")
-		return Answer(command is "build" then Native(command, rest) else Tool(command, rest), known)
+		return command is "build" then Answer(Native(command, rest), known) else Tool(command, rest, known)
 	command is "test" then Tested(rest, known) else Answer(Launched(rest, folder), known)
 Cleaned(command Text, rest Texts) Texts
 	Strict(Logger).Cleaned("build", ("Compiler/output/Clean/A.strict", ".", "full")).Last is "."
@@ -103,12 +103,12 @@ Message(command Text, rest Texts) Text
 	Strict.Message("version", List(Text)).StartsWith(Version + " 20")
 	Strict.Message("help", List(Text)).StartsWith("strict <file or Type> [arguments]  run")
 	Strict.Message("test", ("a.strict", ".")) is "a.strict not found"
-	Strict.Message("test", ("Compiler", ".")) is ""
-	Strict.Message("check", ("Compiler", ".")) is ""
+	(Strict.Message("test", ("Compiler", ".")) is "") and (Strict.Message("check", ("Compiler", ".")) is "")
+	Strict.Message("suggest", ("Strict.strict", ".")).StartsWith("strict <file or Type> [arguments]  run")
 	constant DateAndMinuteLength = 16
 	if command is in ("version", "--version")
 		return Version + " " + Process.Current.Built.Substring(0, DateAndMinuteLength)
-	if (command is in Informing) or (rest.Length < 2)
+	if (command is in Informing) or (rest.Length < (command is "suggest" then 3 else 2))
 		return Text.Combine(Help, "\n")
 	let isFolder = (command is "test") and Directory.Exists(rest(0))
 	(command is in ("check", "update")) or isFolder or File(rest(0)).Exists then "" else rest(0) + " not found"
@@ -195,33 +195,28 @@ Rest(arguments Texts) Texts
 	Strict.Rest(("test", "a", "b")) is ("a", "b")
 	for Range(1, arguments.Length)
 		arguments(value)
-Tool(command Text, rest Texts) Number
-	if command is "suggest"
-		return Suggested(rest)
+Tool(command Text, rest Texts, known = Dictionary(Text, TypeEntry)) Answer
 	if command is "format"
-		return Format(rest(0))
-	let updater = Repositories(logger, ".")
-	command is "check" then Checked(ValidateCheck(logger), rest(0), rest(1)) else Updated(updater, rest(0))
+		logger.Log(Formatted(rest(0)))
+	if command is "update"
+		Updated(Repositories(logger, "."), rest(0))
+	let checked = command is "check" then Checked(ValidateCheck(logger), rest(0), rest(1)) else 0
+	Answer(command is "suggest" then Suggested(rest) else checked, known)
 Checked(checker Validators/ValidateCheck, folder Text, root Text) Number
 	checker.Run(folder, root)
-Updated(updater Bytecode/Repositories, folder Text) Number
+Updated(updater Bytecode/Repositories, folder Text)
 	logger.Log("Updated " + updater.Updated(folder) + " packages in " + folder)
-	0
 Native(command Text, rest Texts) Number
 	Strict(Logger).Native("test", ("Missing.strict", ".", "values", "other")) is 2
 	NativeCompiler(logger).Ran((List(Text) + command) + rest)
-Format(path Text) Slow(Number)
-	Strict.Format("Examples/HelloLogger.strict") is 0
+Formatted(path Text) Slow(Text)
+	Strict.Formatted("Examples/HelloLogger.strict").StartsWith("has logger")
 	let lines = RoundTrip(logger).Tabbed(File(path).ReadLines)
 	let broken = FileCompiler.Unparsable(lines)
 	if broken >= 0
-		logger.Log(FileCheck.Problem(lines, broken) + " in " + FileCompiler.Normalized(path) + ":" + (broken + 1))
-		return 1
-	logger.Log(Text.Combine(RoundTrip(logger).Formatted(lines), "\n"))
-	0
+		return Error(FileCheck.Problem(lines, broken) + " in " + FileCompiler.Normalized(path) + ":" + (broken + 1))
+	Text.Combine(RoundTrip(logger).Formatted(lines), "\n")
 Suggested(rest Texts) Number
-	if rest.Length < 3
-		return 2
 	let source = FileCompiler.Normalized(rest(0))
 	if (rest.Length > 3) and (rest(3) is "-")
 		File(source).InMemory(Process.Input)
