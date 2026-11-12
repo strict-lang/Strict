@@ -155,7 +155,7 @@ Looped Texts
 		lines = lines + MlirLines(function).At(value, Temp("line")) + function.Emitted(value)
 	let one = "    " + Temp("one") + " = arith.constant 1 : i64"
 	let next = "    " + Temp("next") + " = arith.addi " + Temp("ki") + ", " + Temp("one") + " : i64"
-	lines + one + next + ("    cf.br ^loop" + position + "(" + Temp("next") + " : i64)")
+	lines + one + next + MlirCounter(function, position).Branched("^loop" + position + "(" + Temp("next") + " : i64)")
 Exited Texts
 	Doubling.Exited.First is "  ^loop2exit:"
 	Doubling.Exited(1) is "    %t2fill = func.call @strict_list_filled_numbers(%t2r, %t2n) : (f64, f64) -> f64"

@@ -15,6 +15,12 @@ constant Body = List(InstructionEntry) + MlirLoops.Emptied + Quarters
 constant Quartered = MethodEntry("Quartered", Doubler.method.parameters, "Strict/List(Number)", Body)
 constant Quotient = "    %t7i = arith.divsi %t2ki, %t7w : i64"
 constant Quartering = MlirCounter(MlirFunction(Doubler.types, Doubler.type, Quartered, List(Number), 2), 5)
+constant CountBegin = (MlirLoops.Emptied, InstructionEntry.LoadNumber(0, 16), InstructionEntry.LoopBegin(0, -1))
+constant Counted = CountBegin + IndexLoad + InstructionEntry.Jump(InstructionType.LoopEnd, 2)
+constant Sixteen = MethodEntry("Sixteen", Doubler.method.parameters, "None", Counted)
+constant Unrolling = MlirFastLoop(MlirFunction(Doubler.types, Doubler.type, Sixteen, List(Number), 2), 2)
+constant Unrollable = 16
+constant Unrolled = " {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}"
 Remainder(entry InstructionEntry, lines Texts) Texts
 	MlirStatements(Quartering.function, 5).Calculated(Remaining)(1) is "    %t5i = arith.remsi %t2ki, %t5w : i64"
 	Quartering.Remainder(Divided.First, List(Text)).Last is "    llvm.store %t5c, %r3 : f64, !llvm.ptr"
@@ -34,15 +40,26 @@ Divisor(left Number, right Number) Number
 	Quartering.Divisor(1, 2) is 4
 	Quartering.Divisor(2, 1) is 0
 	Quartering.At(4).Divisor(1, 2) is 0
-	let writer = LoadReuse(function.method.instructions).Writer(right, position, function.FastLoop)
 	let terms = MlirKernel(function, function.FastLoop).Terms(left, position)
-	if (function.FastLoop < 0) or (writer < 0) or (terms is not ("index"))
+	(function.FastLoop >= 0) and (terms is ("index")) then Constant(right, function.FastLoop) else 0
+Constant(register Number, after Number) Number
+	Quartering.Constant(2, 2) is 4
+	Quartering.Constant(1, 2) is 0
+	Quartering.At(2).Constant(0, -1) is 0
+	let writer = LoadReuse(function.method.instructions).Writer(register, position, after)
+	if writer < 0
 		return 0
 	let loaded = function.method.instructions(writer)
 	if loaded.kind is not InstructionType.LoadConstantToRegister
 		return 0
-	let divisor = PayloadDecoder(loaded).Value(1).number
-	(divisor >= 1) and (divisor is divisor.Floor) then divisor else 0
+	let number = PayloadDecoder(loaded).Value(1).number
+	(number >= 1) and (number is number.Floor) then number else 0
+Branched(target Text) Text
+	Unrolling.Looped.Last is "    llvm.br ^loop2(%t2next : i64)" + Unrolled
+	Quartering.At(2).Branched("^loop2") is "    cf.br ^loop2"
+	let isCounted = MlirLoops(function, position).Collection is ""
+	let count = isCounted then Constant(function.method.instructions(position).payload(0), -1) else 0
+	(count > 0) and (count <= Unrollable) then "    llvm.br " + target + Unrolled else "    cf.br " + target
 Whole(divisor Number, operation Text, register Number, lines Texts) Texts
 	Quartering.Whole(0, "remsi", 3, ("x")) is ("x")
 	Quartering.Whole(4, "divsi", 3, List(Text)).First is "    %t5w = arith.constant 4 : i64"
