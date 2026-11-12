@@ -1,8 +1,18 @@
 has function MlirFunction
 has position Number
 constant Layering = MlirDots(MlirGpu.Layering.function, 2)
+constant Extra = MemberEntry("extra", "Strict/List(Number)", List(InstructionEntry), false)
+constant ExtraRead = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 7, "extra")
+constant BothInstructions = (GpuLayerSamples.Summed.instructions.Slice(0, 12) + ExtraRead) + GpuLayerSamples.Summed.instructions.Slice(12, 2)
+constant Both = MethodEntry("Both", GpuLayerSamples.Summed.parameters + Extra, "Strict/Number", BothInstructions)
+constant MixedCall = InstructionEntry.Invoke(3, ("Strict/Layered", "Both", "Strict/Number", "row", "input", "extra"), (1, 2, 2), -1)
+constant MixedInstructions = (GpuLayerSamples.Sums.instructions.Slice(0, 5) + MixedCall) + GpuLayerSamples.Sums.instructions.Slice(6, 9)
+constant Mixed = MethodEntry("Mixed", GpuLayerSamples.Sums.parameters, "Strict/List(Number)", MixedInstructions)
+constant MixedType = TypeEntry("Strict/Layered", GpuLayerSamples.Layered.members, (Mixed, Both))
+constant Mixing = MlirDots(MlirFunction(List(TypeEntry) + MixedType, MixedType, Mixed), 2)
 Mask(free Texts) Number
 	Layering.Mask(("input", "biases")) is 1
+	Mixing.Mask(("input", "biases")) is 0
 	MlirDots(MlirTokens.Summing.function, 2).Mask(("weights", "input")) is 0
 	if MlirTokens(function, position).Call >= 0
 		return 0
@@ -36,16 +46,30 @@ Use(inspected MlirFunction, at Number, name Text, canPass Boolean) Number
 IsPassed(at Number) Boolean
 	Layering.IsPassed(4)
 	Layering.IsPassed(3) is false
+	Mixing.IsPassed(4) is false
 	let register = function.method.instructions(at).payload(0)
+	mutable isPassed = false
 	for Range(at + 1, function.method.LoopEndOf(position))
 		let entry = function.method.instructions(value)
-		let parameter = entry.kind is InstructionType.Invoke then Argument(entry, register) else -1
-		let callees = parameter >= 0 then MlirModule(function.types, "").Called(function, value) else List(MlirFunction)
-		if callees.Length is 1
-			let callee = callees.First
-			return IsDotted(callee, 0, callee.method.instructions.Length, callee.method.parameters(parameter).Name, false)
-	false
-Argument(entry InstructionEntry, register Number) Number
-	Layering.Argument(Layering.function.method.instructions(5), 2) is 1
-	Layering.Argument(Layering.function.method.instructions(5), 7) is -1
-	PayloadDecoder(entry).Arguments.Index(register)
+		let isRead = (entry.kind is InstructionType.Invoke) and (MlirKinds(function).Writer(value, register) is at)
+		if isRead and (IsDottedCall(value, register) is false)
+			return false
+		isPassed = isPassed or (isRead and (register is in PayloadDecoder(entry).Arguments))
+	isPassed
+IsDottedCall(call Number, register Number) Boolean
+	Layering.IsDottedCall(5, 2)
+	Mixing.IsDottedCall(5, 2) is false
+	let decoder = PayloadDecoder(function.method.instructions(call))
+	if register is not in decoder.Arguments
+		return decoder.Instance is not register
+	let callees = MlirModule(function.types, "").Called(function, call)
+	if (callees.Length is not 1) or (decoder.Instance is register)
+		return false
+	for decoder.Arguments
+		if (value is register) and (IsDottedParameter(callees.First, index) is false)
+			return false
+	true
+IsDottedParameter(callee MlirFunction, parameter Number) Boolean
+	Mixing.IsDottedParameter(MlirFunction(Mixing.function, method = Both), 1)
+	Mixing.IsDottedParameter(MlirFunction(Mixing.function, method = Both), 2) is false
+	IsDotted(callee, 0, callee.method.instructions.Length, callee.method.parameters(parameter).Name, false)
