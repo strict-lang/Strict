@@ -4,7 +4,8 @@ constant LinuxEndings = (".linux.mlir", ".linux.llvm.mlir", ".linux.ll", ".linux
 constant RuntimeEndings = (".runtime.gpu.mlir", ".runtime.gpu.kept.mlir", ".runtime.gpu.llvm.mlir", ".runtime.gpu.ll", ".runtime.sm_75.ptx", ".runtime.sm_80.ptx")
 constant Endings = CrossEndings + LinuxEndings + RuntimeEndings
 constant Swapped = PtxCache("Compiler/output/Swapped")
-constant Held = "./Compiler/output/Held"
+constant Held = PtxCache("./Compiler/output/Held")
+constant Renewing = Held.base + ".new.exe"
 constant Holding = "-NoProfile -Command $file = Get-Item -ErrorAction Ignore '"
 constant Running = "'; if ($file) { Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq $file.FullName"
 constant Before = " -and $_.CreationDate -lt $file.LastWriteTime } | ForEach-Object { $_.ProcessId } }"
@@ -35,18 +36,30 @@ Replaced(executable Text, target Text) Text
 	Swapped.Saved((".exe", ".old.exe", ".new.exe"), ("a", "b", "built")) is not Error
 	Intermediates(Logger).Replaced("Compiler/output/Swapped.exe", "Compiler/output/Swapped.new.exe") is ""
 	Swapped.Read(".exe") is "built"
-	let old = executable.Replace(".exe", ".old.exe")
-	if Deleted(old) is Error
-		return Used(old, executable)
+	let old = Free(executable)
 	File(executable).Rename(old)
 	File(target).Rename(executable)
 	if File(target).Exists
 		File(old).Rename(executable)
 	File(old).Delete
 	File(target).Exists then Used(executable, executable) else ""
+Free(executable Text) Text
+	Intermediates(Logger).Free("Compiler/output/Missing/A.exe") is "Compiler/output/Missing/A.old.exe"
+	let pattern = Path(executable).FileName.text.Replace(".exe", ".old*.exe")
+	for Directory.Files(Path(executable).PathOnly.text, pattern)
+		File(value).Delete
+	mutable number = 1
+	for as long as File(Old(executable, number)).Exists
+		number = number + 1
+	Old(executable, number)
+Old(executable Text, number Number) Text
+	Intermediates.Old("a.exe", 1) is "a.old.exe"
+	Intermediates.Old("a.exe", 3) is "a.old3.exe"
+	executable.Replace(".exe", number is 1 then ".old.exe" else ".old" + number + ".exe")
 Used(file Text, executable Text) Slow(Text)
-	File("Compiler/output/Held.old.exe").Locked
-	Intermediates(Logger).Replaced(Held + ".exe", "") is Held + ".old.exe is in use by another program"
-	File("Compiler/output/Held.old.exe").Delete
+	File("Compiler/output/Held.exe").Locked
+	Held.Saved(List(Text) + ".new.exe", List(Text) + "built") is not Error
+	Intermediates(Logger).Replaced(Held.base + ".exe", Renewing) is Held.base + ".exe is in use by another program"
+	File("Compiler/output/Held.exe").Delete
 	let found = Process.RunTool("powershell", Holding + executable + Running + Before).Output.Lines - ""
 	file + " is in use by " + (found.Length is 0 then "another program" else "process " + Text.Combine(found, ", "))
