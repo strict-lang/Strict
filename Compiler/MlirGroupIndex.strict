@@ -22,7 +22,7 @@ Matches(at Number, kind Number) Boolean
 		return false
 	let groups = MlirGroups(function, function.Guarded)
 	let writer = groups.Writer(entry.payload(2), at)
-	let divisor = function.method.instructions(writer < 0 then at else writer)
+	let divisor = function.method.instructions(writer)
 	let named = (writer >= 0) and (divisor.kind is InstructionType.LoadVariableToRegister)
 	named and IsDivisor(divisor.texts(0), at) and groups.IsIndex(entry.payload(1), at)
 IsDivisor(name Text, at Number) Boolean

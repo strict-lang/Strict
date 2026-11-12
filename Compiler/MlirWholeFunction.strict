@@ -138,7 +138,7 @@ IsCalled(at Number, depth Number) Boolean
 		return false
 	let callee = MlirWholeFunction(Callee(entry))
 	let isMatched = LoadReuse(function.method.instructions).InvokeReads(entry).Length is callee.Kinds.Length
-	isMatched and (callee.function.method.instructions.Length > 0) and callee.IsCallable(depth + 1)
+	isMatched and callee.IsCallable(depth + 1)
 IsBuilt(entry InstructionEntry, at Number) Boolean
 	MlirWholeFunction(MlirLanes.Sample.function).IsBuilt(MlirLanes.Made, 3)
 	MlirWholeFunction(MlirLanes.Sample.function).IsBuilt(MlirLanes.Greens, 4)

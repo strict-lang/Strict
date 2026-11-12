@@ -121,7 +121,7 @@ Traced(register Number, before Number) Number
 	Inlining.Traced(41, 25) is 21
 	Gating.Traced(15, 23) is 18
 	let writer = MlirGroups(function, position).Writer(register, before)
-	let entry = function.method.instructions(writer < 0 then position else writer)
+	let entry = function.method.instructions(writer)
 	if (writer < 0) or (entry.kind is not InstructionType.LoadVariableToRegister)
 		return writer
 	let store = Stored(entry.texts, writer)

@@ -52,19 +52,19 @@ Added(at Number, dot Number) Number
 Read(at Number) Text
 	Biasing.Read(20) is "biases"
 	Biasing.Read(6) is ""
-	let entry = function.method.instructions(at < 0 then position else at)
+	let entry = function.method.instructions(at)
 	if (at < 0) or (entry.kind is not InstructionType.IndexCall)
 		return ""
 	Measured(MlirGroups(function, position).Writer(entry.payload(1), at)) is entry.texts(0) then entry.texts(0) else ""
 Measured(at Number) Text
 	Biasing.Measured(19) is "biases"
 	Biasing.Measured(5) is ""
-	let entry = function.method.instructions(at < 0 then position else at)
+	let entry = function.method.instructions(at)
 	if (at < 0) or (entry.kind is not InstructionType.Modulo)
 		return ""
 	let tokens = MlirTokens(function, position)
 	let length = MlirGroups(function, position).Writer(entry.payload(2), at)
-	let call = function.method.instructions(length < 0 then position else length)
+	let call = function.method.instructions(length)
 	let isLength = (length >= 0) and (call.kind is InstructionType.Invoke) and (call.texts(1) is "Length")
 	let list = isLength then tokens.Variable(MlirDeviceCalls(function, length, function).Register(call), length) else ""
 	tokens.Variable(entry.payload(1), at) is "index" then list else ""
@@ -81,7 +81,7 @@ IsFused Boolean
 Operand Text
 	Summing.Operand is "%zero"
 	Biasing.Operand is "%t2gbias"
-	(IsFused and (Biases is not "")) then MlirGpu(function, position).Temp("gbias") else "%zero"
+	(Biases is not "") then MlirGpu(function, position).Temp("gbias") else "%zero"
 Loaded Texts
 	Summing.Loaded.Length is 0
 	MlirBiased(MlirGpu.Layering.function, 2).IsFused is false

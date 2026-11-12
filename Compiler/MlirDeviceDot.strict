@@ -83,7 +83,7 @@ IsCovered Boolean
 	MlirDeviceDot(Squaring.function, 17).IsCovered
 	Summing.IsCovered is false
 	let begin = function.method.LoopBeginOf(at)
-	(begin >= 0) and (begin < at) and MlirDeviceDot(function, begin).IsDot
+	(begin < at) and MlirDeviceDot(function, begin).IsDot
 Emitted Texts
 	Text.Combine(Summing.Emitted).IndexOf("@strict_device_dots(%failed, %d2rd, %d2rb, %d2rn, %d2od") > 0
 	Summing.Emitted.Last.StartsWith("    llvm.store %d2s1, %v_sum : f32, !llvm.ptr")
@@ -130,10 +130,7 @@ Operands Texts
 IsOperand(name Text) Boolean
 	MlirDeviceDot(Summed, 6).IsOperand("input")
 	MlirDeviceDot(Summed, 6).IsOperand("row") is false
-	let begin = function.method.LoopBeginOf(at)
-	if begin < 0
-		return false
-	let dot = MlirDeviceDot(MlirFunction(function, Float = "f32"), begin)
+	let dot = MlirDeviceDot(MlirFunction(function, Float = "f32"), function.method.LoopBeginOf(at))
 	dot.IsDot then name is in dot.Operands else false
 Whole(letter Text, slot Text) Texts
 	Squaring.OffsetEmitted(6) is "    %d2aif = llvm.load %v_start : !llvm.ptr -> f32"

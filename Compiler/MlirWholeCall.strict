@@ -42,7 +42,7 @@ IsMatched(entry InstructionEntry, callee MlirWholeFunction) Boolean
 	Defaulting.IsDispatched is false
 	let isComplete = entry.payload(5 + entry.payload(3)) is callee.function.method.parameters.Length
 	let isRead = LoadReuse(function.method.instructions).InvokeReads(entry).Length is callee.Kinds.Length
-	isComplete and isRead and (callee.function.method.instructions.Length > 0) and callee.IsWhole
+	isComplete and isRead and callee.IsWhole
 Dispatched(compiled Texts) Texts
 	Calling.Dispatched(List(Text) + "slow")(Calling.Dispatched(List(Text) + "slow").Index("  ^bb1slowcall:") + 1) is "slow"
 	Calling.Dispatched(List(Text) + "slow").Last is "  ^bb1called:"
