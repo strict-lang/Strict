@@ -27,6 +27,8 @@ constant TwiceIndex = (InstructionEntry.Named(InstructionType.LoadVariableToRegi
 constant TwiceRead = TwiceIndex + InstructionEntry(InstructionType.IndexCall, "numbers", (4, 3, -1))
 constant StoredRead = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 5, "sum"), InstructionEntry.Binary(InstructionType.Add, (5, 1, 6)), InstructionEntry(InstructionType.IndexCall, "numbers", (7, 6, -1)))
 constant BackRead = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 8, "start"), InstructionEntry.Binary(InstructionType.Subtract, (8, 1, 9)), InstructionEntry(InstructionType.IndexCall, "numbers", (10, 9, -1)))
+constant FlatBody = MlirCounter.CountBegin + ElementRead + InstructionEntry.Named(InstructionType.InvokeWriteToList, 2, "forResult") + InstructionEntry.Jump(InstructionType.LoopEnd, 4)
+constant FlatReading = MlirKernel(MlirFunction((MlirFlats.Tripling, MlirFlats.Summing), MlirFlats.Tripling, MethodEntry("Tripled", List(MemberEntry), "Strict/List(Number)", FlatBody)), 2)
 constant SumKept = (InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 10, "sum"), InstructionEntry.Jump(InstructionType.LoopEnd, 12))
 constant Rejecting = MlirKernel(MlirFunction(Doubler.types, Doubler.type, MethodEntry("Sum", List(MemberEntry) + MlirLists.Items, "Strict/Number", NumbersLoop + TwiceRead + StoredRead + BackRead + SumKept)), 1)
 constant ListChecked = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 5, "numbers"), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 5))
@@ -111,10 +113,12 @@ IsIndexedByLoop(at Number) Boolean
 	Squaring.IsIndexedByLoop(7)
 	Offsetting.IsIndexedByLoop(4) and Offsetting.IsIndexedByLoop(8) and Offsetting.IsIndexedByLoop(13)
 	(Rejecting.IsIndexedByLoop(5) or Rejecting.IsIndexedByLoop(8) or Rejecting.IsIndexedByLoop(11)) is false
+	FlatReading.IsIndexedByLoop(4)
 	let entry = function.method.instructions(at)
 	let kind = MlirLayout(function).Represented(MlirKinds(function).VariableKind(at, entry.texts(0)))
 	let terms = Terms(entry.payload(1), at)
-	kind.StartsWith("List(") and ("" is not in terms) and (terms.Count("index") is 1)
+	let isList = kind.StartsWith("List(") and ("" is not in terms) and (terms.Count("index") is 1)
+	isList or MlirCouples(function, at).IsFlatRead(entry)
 Terms(register Number, before Number) Texts
 	Offsetting.Terms(5, 8) is ("index", "0x4078D00000000000")
 	Rejecting.Terms(8, 10) is ("start")
@@ -156,10 +160,14 @@ Shifted(source Text) Numbers
 	reads
 Sources Texts
 	Doubling.Sources is ("numbers")
+	FlatReading.Sources.Length is 0
+	FlatReading.IsSimple
+	Text.Combine(FlatReading.Versioned).IndexOf("= func.call @strict_flat_at(%f4l, %f4i)") > 0
 	mutable names = List(Mutable(Text))
 	for Range(position + 1, function.method.LoopEndOf(position))
 		let entry = function.method.instructions(value)
-		if (entry.kind is InstructionType.IndexCall) and (entry.texts(0) is not in names)
+		let isList = (entry.kind is InstructionType.IndexCall) and (MlirCouples(function, value).IsFlatRead(entry) is false)
+		if isList and (entry.texts(0) is not in names)
 			names.Add(entry.texts(0))
 	names
 Checked Texts
