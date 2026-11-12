@@ -98,7 +98,7 @@ Accumulated(at Number, carried Number) Texts
 	Pairs.Accumulated(11, 4).First is "    %t4wb11c3 = arith.mulf %t4wn3, %t4wn6 : f64"
 	let entry = function.method.instructions(at)
 	let term = carried is entry.payload(1) then entry.payload(2) else entry.payload(1)
-	let loaded = function.method.instructions(Earlier(carried, at, false))
+	let loaded = function.method.instructions(LoadReuse(function.method.instructions).Writer(carried, at, -1))
 	let reached = StoreBefore(loaded.texts(0), at)
 	let initial = Variable(loaded, reached + 1)
 	let summed = "    " + Name("wb", at) + " = arith.addf " + initial + ", " + Name("wb", at) + "g : f64"
@@ -107,11 +107,11 @@ Accumulated(at Number, carried Number) Texts
 Product(at Number, reached Number, term Text) Texts
 	Pairs.Product(11, 0, "%x").Last is "    %t4wb11g = arith.mulf %t4wb11c3, %x : f64"
 	Quads.Product(12, 0, "%x") is ("    %t4wb12g = arith.mulf %t4wn3, %x : f64")
-	mutable loop = Earlier(0, at, true)
+	mutable loop = Loop(at)
 	mutable counted = Name("wn", loop)
 	mutable lines = List(Mutable(Text))
-	for as long as Earlier(0, loop, true) > reached
-		loop = Earlier(0, loop, true)
+	for as long as Loop(loop) > reached
+		loop = Loop(loop)
 		let name = Name("wb", at) + "c" + loop
 		lines = lines + ("    " + name + " = arith.mulf " + Name("wn", loop) + ", " + counted + " : f64")
 		counted = name
@@ -121,7 +121,8 @@ Source(register Number, at Number) Text
 	Splits.Source(2, 4) is "%t2whlimit"
 	Scaled.Source(2, 6) is "%t4whlimit"
 	GatedSum.Source(11, 17) is "%t4whlimit"
-	let writer = Earlier(register, at, false)
+	LoadReuse(Quads.function.method.instructions).Writer(3, 7, -1) is 5
+	let writer = LoadReuse(function.method.instructions).Writer(register, at, -1)
 	if writer < 0
 		return "%t" + position + "whlimit"
 	let entry = function.method.instructions(writer)
@@ -130,7 +131,7 @@ Source(register Number, at Number) Text
 	((entry.kind is in Bounded) or (entry.kind is in Constants)) then Name("wb", writer) else "%t" + position + "whlimit"
 Variable(entry InstructionEntry, at Number) Text
 	if entry.texts(0) is in ("value", "index")
-		return Name("wn", Earlier(0, at, true))
+		return Name("wn", Loop(at))
 	if Parameter(entry.texts(0)) >= 0
 		return Name("wb", at)
 	let store = StoreBefore(entry.texts(0), at)
@@ -142,7 +143,7 @@ Carried(at Number) Number
 	Quads.Carried(12) is 2
 	Quads.Carried(7) is -1
 	let first = function.method.instructions(at).payload(1)
-	let writer = Earlier(first, at, false)
+	let writer = LoadReuse(function.method.instructions).Writer(first, at, -1)
 	let loaded = function.method.instructions(writer < 0 then at else writer)
 	if loaded.kind is not InstructionType.LoadVariableToRegister
 		return -1
@@ -168,15 +169,12 @@ IsSkipped(store Number, at Number) Boolean
 		if depth < 0
 			return true
 	false
-Earlier(register Number, at Number, isLoop Boolean) Number
-	Quads.Earlier(3, 7, false) is 5
-	Quads.Earlier(0, 7, true) is 3
+Loop(at Number) Number
+	Quads.Loop(7) is 3
 	for at
 		let earlier = at - 1 - index
 		let entry = function.method.instructions(earlier)
-		let writes = LoadReuse(function.method.instructions).Written(entry) is register
-		let opens = entry.kind is InstructionType.LoopBegin
-		if (isLoop and opens and (function.method.LoopEndOf(earlier) >= at)) or ((isLoop is false) and writes)
+		if (entry.kind is InstructionType.LoopBegin) and (function.method.LoopEndOf(earlier) >= at)
 			return earlier
 	-1
 StoreBefore(name Text, at Number) Number
