@@ -5,6 +5,8 @@ constant Values = Looped + (InstructionEntry.Named(InstructionType.LoadVariableT
 constant Valuing = MlirBytes(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", Values)), 1)
 constant Indexes = Looped + (InstructionEntry.LoadNumber(1, 0), InstructionEntry(InstructionType.IndexCall, "value", (2, 1, -1)), InstructionEntry.Jump(InstructionType.LoopEnd, 3))
 constant Indexing = MlirBytes(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", Indexes)), 1)
+constant Placed = Looped + (InstructionEntry.LoadNumber(1, 0), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "numbers(value)"), InstructionEntry.Jump(InstructionType.LoopEnd, 3))
+constant Placing = MlirBytes(MlirFunction(Valuing.function, method = MethodEntry(Valuing.function.method, instructions = Placed)), 1)
 constant Iterating = MlirBytes(MlirLoops.Bytewise.function, 1)
 constant Collecting = MlirBytes(MlirFastLoop.Byting.function, 2)
 constant Doubling = MlirBytes(MlirFastLoop.Doubling.function, 2)
@@ -89,10 +91,16 @@ Stored(element Text, pointer Text) Texts
 IsValued Boolean
 	Valuing.IsValued
 	Indexing.IsValued
+	Placing.IsValued
 	MlirBytes(MlirLoops.Listing.function, 1).IsValued is false
 	for Range(position + 1, function.method.LoopEndOf(position))
-		let texts = function.method.instructions(value).texts
-		let named = texts.Length > 0 then texts(0) else ""
-		if (named is in ("value", "outer")) or named.StartsWith("value(") or named.StartsWith("outer.")
+		let entry = function.method.instructions(value)
+		let named = entry.texts.Length > 0 then entry.texts(0) else ""
+		let element = MlirLists(function, value).IsElementStore then PayloadDecoder(entry).ElementParts(1) else ""
+		if IsValueName(named) or IsValueName(element)
 			return true
 	false
+IsValueName(name Text) Boolean
+	Valuing.IsValueName("outer.index")
+	Valuing.IsValueName("numbers") is false
+	(name is in ("value", "outer")) or name.StartsWith("value(") or name.StartsWith("outer.")
