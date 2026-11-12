@@ -175,7 +175,8 @@ Launched(rest Texts, folder Text) Number
 		return tested
 	let base = NativeBuild.Output(rest(0), true)
 	let extension = Toolchain(Platform.Current, rest(1)).Extension
-	Started(rest, folder, BuildOutput.Fresh(base, extension, BuildOutput.Sources(rest(0))))
+	let cache = NativeCache("build", (rest(0), rest(1)))
+	Started(rest, folder, BuildOutput.Fresh(base, extension, cache.Inputs(cache.Files)))
 Compiled(rest Texts, fresh Text) Number
 	if fresh is not ""
 		return 0

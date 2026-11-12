@@ -1,5 +1,6 @@
 has command Text
 has rest Texts
+constant Adding = NativeCache("build", ("Examples/NativeAdd/NativeAdd.strict", "."))
 IsEnabled Boolean
 	NativeCache("test", ("Math", ".", "native")).IsEnabled
 	NativeCache("test", ("Math/Vector2.strict", ".", "native")).IsEnabled
@@ -57,6 +58,10 @@ Inputs(sources Texts) Texts
 	let content = Path(source).PathOnly.text + "/Content"
 	let inputs = sources + runtimes + tools + NativeInputs(Folders(sources))
 	command is "test" then inputs else inputs + (content + "/**")
+Files Slow(Texts)
+	"./Examples/NativeAdd/Adder.strict" is in Adding.Files
+	"./Examples/NativeAdd/native/Adder.c" is in Adding.Inputs(Adding.Files)
+	SourceFiles(rest(1)).Of(FileCompiler.Normalized(rest(0)))
 Folders(sources Texts) Texts
 	mutable folders = List(Text)
 	for sources

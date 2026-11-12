@@ -307,7 +307,23 @@ def check_native_folder():
 	subprocess.run([strict, "stop"], cwd=root, capture_output=True, text=True, timeout=60)
 	print("A test that changes the folder does not move the build")
 
+def check_native_change():
+	"""A changed native source or .strict file of a package in another folder rebuilds for strict build and strict <file>."""
+	strict = str(root / ("strict" + extension))
+	with tempfile.TemporaryDirectory(prefix="NativeChange", dir=root / "Examples") as folder:
+		source = Path(folder) / "NativeChange.strict"
+		source.write_text('has logger\nRun\n\tlogger.Log(Hmac.Sha256("key", "text"))\n', encoding="utf-8")
+		built = subprocess.run([strict, "build", str(source)], cwd=root, capture_output=True, text=True, timeout=270)
+		assert built.returncode == 0, built.stdout + built.stderr
+		for changed in ("Networking/native/Hmac.c", "Networking/Hmac.strict"):
+			for command in (["build"], []):
+				os.utime(root / changed)
+				result = subprocess.run([strict, *command, str(source)], cwd=root, capture_output=True, text=True, timeout=270)
+				assert result.returncode == 0 and "Up to date" not in result.stdout, changed + ": " + result.stdout + result.stderr
+	print("A changed native source or package of another folder rebuilds for strict build and strict <file>")
+
 check_concurrent_builds()
 check_link_workers()
 check_moved_program()
 check_native_folder()
+check_native_change()

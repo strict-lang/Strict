@@ -21,7 +21,7 @@ Inputs(cache NativeCache, files Texts) Texts
 	inputs
 Compiled(cache NativeCache) Number
 	let started = Process.Elapsed
-	let files = cache.IsEnabled then SourceFiles(cache.rest(1)).Of(FileCompiler.Normalized(cache.rest(0))) else List(Text)
+	let files = cache.IsEnabled then cache.Files else List(Text)
 	if files.Length > 0
 		Reported("Frontend / source discovery (" + files.Length + " files)", started)
 	let inputs = cache.IsEnabled then Inputs(cache, files) else List(Text)

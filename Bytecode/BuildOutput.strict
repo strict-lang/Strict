@@ -32,10 +32,6 @@ Shipped(release Text, sidecar Text) Text
 	if isShared
 		File(release + "/" + name).Delete
 	isShared then shared else release + "/" + name
-Sources(path Text) Texts
-	BuildOutput.Sources("BuildOutput.strict").Length > 0
-	let home = Path(FileCompiler.Normalized(path)).PathOnly.text
-	Directory.Files(home is "" then "." else home, "*.strict")
 Newer(path Text, sources Texts) Text
 	BuildOutput.Newer("Compiler/output/missing.exe", List(Text) + "BuildOutput.strict") is ""
 	if File(path).Exists is false
