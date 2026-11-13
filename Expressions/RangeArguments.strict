@@ -1,0 +1,29 @@
+constant Limit = 100
+constant Long = SyntaxParser(Tokenizer("Wrapped(Range(0, 200))").Tokens).Parse
+constant Short = SyntaxParser(Tokenizer("Wrapped(Range(0, 4))").Tokens).Parse
+constant Called = SyntaxParser(Tokenizer("a.Wrapped(Range(0, 200))").Tokens).Parse
+constant Hint = ", take an Iterator(Number) or build the list"
+constant Rejected = "RangeArgumentTooLong: A.Wrapped got Range(0, 200) for a Numbers" + Hint
+Issue(call SyntaxNode, name Text, types Texts) Text
+	RangeArguments.Issue(Long, "A.Wrapped", ("Numbers")) is Rejected
+	RangeArguments.Issue(Called, "A.Wrapped", ("Numbers")) is Rejected
+	RangeArguments.Issue(Short, "A.Wrapped", ("Numbers")) + RangeArguments.Issue(Long, "A.Wrapped", List(Text)) is ""
+	RangeArguments.Issue(Long, "A.Wrapped", ("Range")) is ""
+	let start = call.Kind is "MethodCall" then 1 else 0
+	for Range(start, call.children.Length)
+		let at = value - start
+		if (at < types.Length) and (types(at) is in ("Numbers", "List(Number)")) and (Length(call.children(value)) > Limit)
+			return "RangeArgumentTooLong: " + name + " got " + call.children(value) + " for a " + types(at) + Hint
+	""
+Length(node SyntaxNode) Number
+	RangeArguments.Length(Long.children(0)) is 200
+	RangeArguments.Length(SyntaxParser(Tokenizer("Range(5, 2)").Tokens).Parse) is 3
+	RangeArguments.Length(Long) + RangeArguments.Length(SyntaxParser(Tokenizer("Other(0, 200)").Tokens).Parse) is 0
+	RangeArguments.Length(SyntaxParser(Tokenizer("Range(n, 200)").Tokens).Parse) is 0
+	RangeArguments.Length(SyntaxParser(Tokenizer("Range(0, n)").Tokens).Parse) is 0
+	RangeArguments.Length(SyntaxParser(Tokenizer("Range(200)").Tokens).Parse) is 0
+	if (node.text is not "Range") or (node.children.Length is not 2)
+		return 0
+	if (node.children(0).Kind is not "Number") or (node.children(1).Kind is not "Number")
+		return 0
+	(node.children(1).text to Number - node.children(0).text to Number).Absolute

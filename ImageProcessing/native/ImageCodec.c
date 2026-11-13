@@ -200,7 +200,7 @@ static int Joined(FILE* file, Strip* strips, int count, int height, int interval
 static int Striped(const char* path, double pixels, int width, int height, int quality, unsigned char* bytes)
 {
 	int block = quality <= 90 ? 16 : 8;
-	int rows = (height / 24 + 31) / 32 * 32;
+	int rows = height < 24 ? 32 : (height / 24 + 31) / 32 * 32;
 	int count = (height + rows - 1) / rows;
 	int interval = (width + block - 1) / block * (rows / block);
 	Strip strips[STRIPS] = { 0 };

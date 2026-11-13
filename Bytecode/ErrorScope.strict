@@ -21,6 +21,11 @@ constant Growing = SyntaxNode("Member", "Add", Increment.children)
 constant Tickers = KnownTypes(("Ticker"), (KnownTypes.NoMembers), (KnownTypes.NoMembers), (Changes.Ticking.Added(KnownTypes.NoMembers)))
 constant Ticked = ErrorScope(ValueCodegen(TypeInference(Tickers, TypeInference.Limits), KnownTypes.NoMembers, CallTarget.Plain))
 constant Ticker = CodeBlock.Empty.Declare("a", "Ticker").Declare("a" + MutableMarker, "mutable")
+constant OwnTicked = ErrorScope(ValueCodegen(Ticked.values, target = CallTarget(Ticked.values.inference.types, CallTarget.Greeter, "Strict/Ticker", List(Text))))
+constant Nexted = SyntaxNode("Member", "Next", Increment.children)
+constant Sized = SyntaxNode("Member", "Size", Increment.children)
+constant OwnNext = SyntaxNode("Call", "Next")
+constant OwnSize = SyntaxNode("Call", "Size")
 constant ListMutated = CodeBlock.Empty.Declare("a", "List").Declare("a" + MutableMarker, "mutable")
 constant Listed = CodeBlock.Empty.Declare("a", "Counts").Declare("a" + MutableMarker, "mutable").Declare("Counts" + MutableMarker, "mutable")
 Prepared(body SyntaxNode, block CodeBlock) CodeBlock
@@ -90,16 +95,18 @@ Used(node SyntaxNode, block CodeBlock) SyntaxNode
 	let file = TypeEntry(values.target.fullName, List(MemberEntry), List(MethodEntry)).Source
 	Error("ResultMustBeUsed: " + (node to Text) + " in " + file + ":line " + node.line + Unused)
 IsChanging(node SyntaxNode, block CodeBlock) Boolean
-	Ticked.IsChanging(SyntaxNode("Member", "Next", Increment.children), Ticker)
-	Ticked.IsChanging(SyntaxNode("Member", "Size", Increment.children), Ticker) is false
+	Ticked.IsChanging(Nexted, Ticker) and (Ticked.IsChanging(Sized, Ticker) is false)
 	Counting.IsChanging(Increment, Mutated) and Plain.IsChanging(Growing, Mutated)
 	Plain.IsChanging(ValueCodegen.One, CodeBlock.Empty) is false
+	OwnTicked.IsChanging(OwnNext, Ticker) and (OwnTicked.IsChanging(OwnSize, Ticker) is false)
 	Plain.Used(SyntaxNode("Call", "Error", ValueCodegen.Hi), CodeBlock.Empty).Kind is "Call"
 	if IsMutating(node, block) or IsGrowing(node, block)
 		return true
-	if node.Kind is not in ("MethodCall", "Member")
+	if node.Kind is not in ("MethodCall", "Member", "Call")
 		return false
-	values.inference.types.ParameterScope(values.TypeOf(node.children(0), block)).TypeOf(node.text + " changes") is not ""
+	let own = TypeEntry.ShortName(values.target.TypeName)
+	let type = node.Kind is "Call" then own else values.TypeOf(node.children(0), block)
+	values.inference.types.ParameterScope(type).TypeOf(node.text + " changes") is not ""
 IsGrowing(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsGrowing(Growing, Mutated)
 	Plain.IsGrowing(Growing, CodeBlock.Empty.Declare("a", "Count")) is false

@@ -71,8 +71,8 @@ Given Texts
 Assumed Texts
 	Exact.Assumed is ("    llvm.store %one, %v_offset_q : i64, !llvm.ptr")
 	MlirDevice(MlirPassed.Wrapped, 2).Assumed(1) is "    llvm.intr.assume %e_offset_a : i1"
-	Exact.Given(0) is "    %f_offsets = arith.truncf %f_offset : f64 to f32"
-	Exact.Given(1) is "    llvm.store %f_offsets, %v_offset : f32, !llvm.ptr"
+	Exact.Given(0) is "    %f_offset_s = arith.truncf %f_offset : f64 to f32"
+	Exact.Given(1) is "    llvm.store %f_offset_s, %v_offset : f32, !llvm.ptr"
 	Exact.Given(2) is "    %e_offset_s = arith.constant -9223372036854775808 : i64"
 	mutable lines = MlirPassed(function, position).Assumed
 	for MlirGuards(function, position).Parameters

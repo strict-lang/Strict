@@ -117,7 +117,7 @@ Compared(call SyntaxNode, instance Text, method Text, scope Scope, current Scope
 	let at = Matched(arguments, types, instance, method)
 	let name = method is "from" then instance else instance + "." + method
 	if at < 0
-		return TooMany(call, name, types)
+		return TooMany(call, name, types) + RangeArguments.Issue(call, name, types)
 	"ArgumentTypeMismatch: " + name + " got a " + arguments(at) + " for a " + types(at)
 TooMany(call SyntaxNode, name Text, types Texts) Text
 	Logged.Compared(Made, "Wrong", "from", Counted, Counted) is "TooManyArguments: Wrong got 2 of 1"

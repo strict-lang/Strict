@@ -29,5 +29,5 @@ Elements(type Text) Texts
 	types.IsPlural(type) then List(Text) + types.ElementType(type) else List(Text)
 IsList(typeName Text) Boolean
 	ListFits(KnownTypes.Sample).IsList("Counts") and ListFits(KnownTypes.Sample).IsList("List(Count)")
-	ListFits(KnownTypes.Sample).IsList("Count") is false
-	types.IsPlural(typeName) or typeName.StartsWith("List(")
+	ListFits(KnownTypes.Sample).IsList("Count") is false and ListFits(KnownTypes.Sample).IsList("List")
+	types.IsPlural(typeName) or typeName.StartsWith("List(") or (typeName is "List")
