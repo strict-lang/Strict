@@ -13,6 +13,8 @@ constant Servers = 4
 constant GreetingSeconds = 1
 constant Settings = ("STRICT_THREADS", "STRICT_GPU", "STRICT_BUILD_PROFILE", "STRICT_GC_LOG", "STRICT_RC", "STRICT_RC_CHECK", "STRICT_RC_DEAD", "STRICT_HEAP", "STRICT_YOUNG")
 constant Sample = Resident("Compiler/output")
+constant Unaccepted = Error("NoConnection")
+constant Refused = -1
 Request(folder Text, arguments Texts, variables = "", claim = "") Text
 	Resident.Request("C:/a", ("test", "a.strict"), "1", "7") is "strict 3\nC:/a\ntest\ta.strict\n1\n7\n\n"
 	Version + "\n" + folder + "\n" + Text.Combine(arguments, "\t") + "\n" + variables + "\n" + claim + Ending
@@ -73,31 +75,32 @@ Received(socket Number, ending Text) Text
 Opened Number
 	let server = Socket.Local(0)
 	if server is Error
-		return 0
+		return server
 	let port = Socket.Port(server) to Text
 	File(Stamped).Write(port)
 	File(Freed).Write(port)
 	server
 Accepted(server Number, built Number, limit = IdleSeconds) Number
-	Sample.Accepted(0, -1) is 0
-	Sample.Accepted(Socket.Local(0), File(Process.Current.executable).Modified, 0) is 0
+	Sample.Accepted(0, -1) is Unaccepted
+	Sample.Accepted(Socket.Local(0), File(Process.Current.executable).Modified, 0) is Unaccepted
 	mutable idle = 0
 	for as long as (idle < limit) and (File(Process.Current.executable).Modified is built)
 		let waited = Socket.Waiting(server, WakeSeconds)
 		if waited is Error
-			return 0
+			return Unaccepted
 		if waited is 1
 			return Taken(server, built)
 		idle = idle + WakeSeconds
-	0
+	Unaccepted
 Taken(server Number, built Number) Number
 	let socket = Socket.Accept(server)
 	if File(Process.Current.executable).Modified is built
 		return socket
-	Ended(socket, -1)
-	0
+	Ended(socket, Refused)
+	Unaccepted
 Requested(socket Number) Text
-	Forwarding.Sample.Loopback is 3
+	Forwarding.Sample.Loopback(3) is 3
+	Forwarding.Sample.Loopback(Refused) is Forwarding.Unserved
 	(Send(socket, Greeting) is not Error) then Received(socket, Ending) else ""
 Finished(socket Number, code Number)
 	Sample.Finished(0, 1) is Error
