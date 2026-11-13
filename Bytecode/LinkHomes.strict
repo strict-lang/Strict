@@ -24,11 +24,11 @@ Saved LinkRound
 		if type is in round.linker.Places
 			Grew(BinaryLinks(BinaryFile(round.linker.Places(type))), round.linker.Homes(type), round.entries(index + 1))
 	round
-Grew(links BinaryLinks, own TypeEntry, entry TypeEntry) Boolean
-	Single.Grew(BinaryLinks.User, TypeEntry.HelloLogger, TypeEntry.HelloLogger) is false
-	if (own.Name is not "") and (links.Added(own, entry).Length is 0)
-		return false
-	links.Grown(own, entry, SourceNames(links.file.source, entry), round.linker.Sourced)
+Grew(links BinaryLinks, own TypeEntry, entry TypeEntry)
+	Single.Grew(BinaryLinks.User, TypeEntry.HelloLogger, TypeEntry.HelloLogger) is not Error
+	File(BinaryLinks.User.file.Path).Exists is false
+	if (own.Name is "") or (links.Added(own, entry).Length > 0)
+		links.Grown(own, entry, SourceNames(links.file.source, entry), round.linker.Sourced)
 SourceNames(source Text, entry TypeEntry) Texts
 	"Number" is in Single.SourceNames("./Math/Vector2.strict", TypeEntry.HelloLogger)
 	mutable names = SourceFiles(".").Mentioned(source)

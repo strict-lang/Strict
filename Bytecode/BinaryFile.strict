@@ -7,12 +7,11 @@ Path Text
 	Probe.Path is "./Bytecode/obj/Probe.strictbinary"
 	let intermediate = BuildOutput.Intermediate(source)
 	intermediate.Substring(0, intermediate.Length - 7) + ".strictbinary"
-Saved(bytes Bytes) Boolean
-	Probe.Saved(Probe.Packed((1, 2), List(TypeEntry), List(Text)))
+Saved(bytes Bytes)
+	(Probe.Saved(Greeting) is not Error) and (File(Probe.Path).ReadBytes is Greeting)
 	let temporary = Path + "." + 1000000000.Random.Floor + ".tmp"
 	File(temporary).Write(bytes)
 	File(temporary).Rename(Path)
-	File(Path).Exists
 Packed(header Numbers, types List(TypeEntry), links Texts) Bytes
 	Probe.Packed((1, 2), List(TypeEntry), List(Text)).Length > 50
 	Probe.Unpacked(Probe.Packed((1, 2), List(TypeEntry), List(Text) + "a")).Last.Name is "links"

@@ -20,7 +20,7 @@ Cleaned Text
 	let aligned = line.IndexOf(", align ")
 	let marked = line.IndexOf(", !")
 	let cut = aligned >= 0 then aligned else marked
-	let kept = cut >= 0 then line.Substring(0, cut) else line
+	mutable kept = cut >= 0 then line.Substring(0, cut) else line
 	for Wrapped
 		kept = Unwrapped(kept, value)
 	kept

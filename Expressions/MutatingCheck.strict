@@ -20,6 +20,10 @@ constant Numbered = SyntaxNode("Declaration", "let number", SyntaxNode.one)
 constant Valued = SyntaxNode("Declaration", "let value", SyntaxNode.one)
 constant Looped = Counted.With("value", "Count")
 constant ValueLet = Looped.With("value let", "let")
+constant Reassigned = SyntaxNode("Reassignment", "", (SyntaxNode("Identifier", "a"), Added))
+constant Stored = SyntaxNode("Reassignment", "", (SyntaxNode("Call", "a", SyntaxNode.one), SyntaxNode.one))
+constant LoopAssigned = SyntaxNode("Reassignment", "", (SyntaxNode("Identifier", "value"), Added))
+constant Lets = Counted.With("a let", "let")
 Issue(scoped ScopedStatement, current Scope) Text
 	Counting.Issue(Immutable, Counted).StartsWith("MutatingCallNeedsMutableVariable: a.Increment")
 	Counting.Issue(ScopedStatement(Increment, Counted.With("a mutable", "mutable"), 0), Counted) is ""
@@ -38,7 +42,7 @@ Redeclared(scoped ScopedStatement, current Scope) Text
 	Counting.Redeclared(ScopedStatement(Letting, Counted, 0), Counted) is "VariableHidesParameterUseDifferentName: a"
 	Counting.Redeclared(ScopedStatement(Valued, ValueLet, 0), Counted) is "NameAlreadyDeclared: value"
 	if scoped.statement.Kind is not "Declaration"
-		return Mutated(scoped, current)
+		return Assigned(scoped, current)
 	let name = Tokenizer(scoped.statement.text).Tokens.Last
 	let scope = scoped.scope
 	let isMember = name is in inference.types.MembersOf(scope.TypeOf("self type")).names
@@ -46,6 +50,33 @@ Redeclared(scoped ScopedStatement, current Scope) Text
 	if (scope.TypeOf(name) is "") or isMember or (local is "") and (name is in ("value", "index", "outer"))
 		return ""
 	local is "" then "VariableHidesParameterUseDifferentName: " + name else "NameAlreadyDeclared: " + name
+Assigned(scoped ScopedStatement, current Scope) Text
+	Counting.Assigned(ScopedStatement(Reassigned, Lets, 0), Counted).StartsWith("AssignmentNeedsMutableVariable: let a ")
+	Counting.Assigned(ScopedStatement(Stored, Counted.With("a constant", "constant"), 0), Counted).EndsWith("mutable")
+	Counting.Assigned(ScopedStatement(Reassigned, Counted.With("a mutable", "mutable"), 0), Counted) is ""
+	Counting.Assigned(ScopedStatement(LoopAssigned, Counted.With("value", "Count"), 0), Counted) is ""
+	Counting.Assigned(Immutable, Counted).StartsWith("MutatingCallNeedsMutableVariable: a.Increment")
+	if scoped.statement.Kind is not "Reassignment"
+		return Mutated(scoped, current)
+	let name = Root(scoped.statement.children(0))
+	let scope = scoped.scope
+	let isMutable = (scope.TypeOf(name) is "") or (scope.TypeOf(name + " mutable") is not "")
+	let isLoopValue = name is in ("value", "index", "outer")
+	isMutable or isLoopValue then "" else "AssignmentNeedsMutableVariable: " + Declared(name, scope)
+Declared(name Text, scope Scope) Text
+	Counting.Declared("a", Counted) is "parameter a can not be assigned, copy it into a mutable variable"
+	Counting.Declared("a", Lets) is "let a can not be assigned, declare it mutable"
+	Counting.Declared("number", Owned) is "has member number can not be assigned, declare it mutable"
+	let declared = scope.TypeOf(name + " let") + scope.TypeOf(name + " constant")
+	let isMember = name is in inference.types.MembersOf(scope.TypeOf("self type")).names
+	if (declared is "") and (isMember is false)
+		return "parameter " + name + " can not be assigned, copy it into a mutable variable"
+	(declared is "" then "has member" else declared) + " " + name + " can not be assigned, declare it mutable"
+Root(target SyntaxNode) Text
+	Counting.Root(SyntaxNode("Member", "number", Stored.children(0))) is "a"
+	Counting.Root(SyntaxNode("Member", "number")) is "number"
+	Counting.Assigned(ScopedStatement(Reassigned, Owned, 0), Owned) is ""
+	(target.Kind is "Member") and (target.children.Length > 0) then Root(target.children(0)) else target.text
 Mutated(scoped ScopedStatement, current Scope) Text
 	Counting.Mutated(Immutable, Counted).StartsWith("MutatingCallNeedsMutableVariable: a.Increment")
 	Counting.Mutated(ScopedStatement(Increment, Counted.With(" dropped", ""), 0), Counted) is ""

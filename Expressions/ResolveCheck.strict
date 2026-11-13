@@ -30,7 +30,9 @@ Found(check FileCheck, bodies MethodBodies, lines Texts, path Text) Texts
 	ResolveCheck.Found(FileCheck(Counting, List(Text)), Missed, Missing, "A").First.EndsWith("missing used in A:2")
 	for bodies.Statements
 		let found = check.Unknown(value, bodies.Methods)
-		let unknown = found is "" then ReturnTypes(check.inference).Issue(value, bodies.Methods, lines) else found
+		let returns = ReturnTypes(check.inference)
+		let returned = found is "" then returns.Issue(value, bodies.Methods, lines) else found
+		let unknown = returned is "" then returns.Unresulted(value, bodies.Methods, lines) else returned
 		if unknown is not ""
 			unknown + " used in " + path + ":" + (value.line + 1)
 Tree(folder Text) Texts

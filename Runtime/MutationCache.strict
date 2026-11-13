@@ -7,6 +7,7 @@ constant RunWait = 90
 constant MaxItems = 1048576
 constant Accepting = Invocation(InstructionEntry.Invoke(0, ("Strict/Networking/Socket", "Accept", "Strict/Number"), List(Number), -1), List(VmValue), VmValue.None)
 constant Sample = MutationCache("Compiler/output/Cached.strict")
+constant Survived = List(Text) + "line 1: MutationSurvived"
 Stamp Text
 	Sample.Stamp.StartsWith("unit ")
 	Sample.Stamp.EndsWith(" " + Version)
@@ -17,22 +18,21 @@ Location Text
 	Sample.Location.EndsWith("Cached.mutations")
 	BinaryFile(FileCompiler.Normalized(path)).Path.Replace(".strictbinary", ".mutations")
 IsCurrent Boolean
-	Sample.Saved(List(Text) + "line 1: MutationSurvived") and Sample.IsCurrent
+	(Sample.Saved(Survived) is not Error) and Sample.IsCurrent
 	MutationCache("Compiler/output/Cached.strict", true).IsCurrent is false
 	let lines = File(Location).Exists then File(Location).ReadLines else List(Text)
 	let whole = "whole " + Stamp.Substring(Stamp.IndexOf(" ") + 1, Stamp.Length - Stamp.IndexOf(" ") - 1)
 	(lines.Length > 0) and ((lines.First is Stamp) or (lines.First is whole))
 Survivors Texts
-	Sample.Saved(List(Text) + "line 1: MutationSurvived") and (Sample.Survivors is ("line 1: MutationSurvived"))
+	(Sample.Saved(Survived) is not Error) and (Sample.Survivors is Survived)
 	let lines = File(Location).ReadLines
 	lines.Slice(1, lines.Length - 1)
-Saved(survivors Texts) Boolean
-	Sample.Saved(List(Text))
+Saved(survivors Texts)
+	(Sample.Saved(List(Text)) is not Error) and (File(Sample.Location).ReadLines is (List(Text) + Sample.Stamp))
 	File(Location).Write(Text.Combine(List(Text) + Stamp + survivors, "\n"))
-	File(Location).Exists
 Held(slots Text) Texts
 	MutationCache("Compiler/output/Missing/Waiting.strict", true).Held("Compiler/output/Missing/Deeper").Length is 0
-	Sample.Saved(List(Text)) and (Sample.Held("Compiler/output/Missing/Deeper").Length is 0)
+	(Sample.Saved(List(Text)) is not Error) and (Sample.Held("Compiler/output/Missing/Deeper").Length is 0)
 	let whole = isWhole and (IsCurrent is false) then Claimed(List(Text) + Lock) else List(Text)
 	IsCurrent then (Released(whole) then List(Text) else whole) else whole + Claimed(Slotted(slots))
 Lock Text

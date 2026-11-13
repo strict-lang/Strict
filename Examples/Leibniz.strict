@@ -13,9 +13,9 @@ Run(times = 1) Number
 	let rounds = File("rounds.txt").ReadLines.First.Trim to Number
 	if times < 2
 		logger.Log(Pi(rounds).Fixed(Digits))
+		0
 	else
 		Timed(rounds, times)
-	0
 Timed(rounds Number, times Number) Number
 	Leibniz.Timed(0, 0) is 0
 	let warmup = Pi(rounds)
