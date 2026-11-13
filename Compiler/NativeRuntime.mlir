@@ -11380,6 +11380,27 @@
   }
   // List.SwapRemoved: the last element takes the removed place, a dying list its alone local handed over
   // (strict_list_destine) changes in place in O(1), any other list is copied first
+  // ascending numbers for qsort (strict_sort_numbers), two NaN-boxed values compare as equal
+  llvm.func @strict_number_order(%left: !llvm.ptr, %right: !llvm.ptr) -> i32 {
+    %first = llvm.load %left : !llvm.ptr -> f64
+    %second = llvm.load %right : !llvm.ptr -> f64
+    %less = llvm.fcmp "olt" %first, %second : f64
+    %greater = llvm.fcmp "ogt" %first, %second : f64
+    %lessOne = llvm.zext %less : i1 to i32
+    %greaterOne = llvm.zext %greater : i1 to i32
+    %order = llvm.sub %greaterOne, %lessOne : i32
+    llvm.return %order : i32
+  }
+  // List(Number).Sorted: a copy whose numbers the platform's qsort orders in place
+  func.func private @strict_list_sorted(%list: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %sorted = func.call @strict_list_copy(%list, %zero) : (f64, f64) -> f64
+    %length = func.call @strict_list_length(%sorted) : (f64) -> f64
+    %count = arith.fptosi %length : f64 to i64
+    %items = func.call @strict_list_items(%sorted) : (f64) -> !llvm.ptr
+    func.call @strict_sort_numbers(%items, %count) : (!llvm.ptr, i64) -> ()
+    return %sorted : f64
+  }
   func.func private @strict_list_swap_removed(%list: f64, %given: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %position = func.call @strict_list_wrapped(%list, %given) : (f64, f64) -> f64

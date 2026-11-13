@@ -291,6 +291,13 @@
   llvm.func @mkdir(!llvm.ptr, i32) -> i32
   llvm.func @fnmatch(!llvm.ptr, !llvm.ptr, i32) -> i32
   llvm.func @qsort(!llvm.ptr, i32, i32, !llvm.ptr)
+  func.func private @strict_sort_numbers(%items: !llvm.ptr, %count: i64) {
+    %slot = arith.constant 8 : i32
+    %narrow = arith.trunci %count : i64 to i32
+    %compare = llvm.mlir.addressof @strict_number_order : !llvm.ptr
+    llvm.call @qsort(%items, %narrow, %slot, %compare) : (!llvm.ptr, i32, i32, !llvm.ptr) -> ()
+    return
+  }
   llvm.func @strcasecmp(!llvm.ptr, !llvm.ptr) -> i32
   llvm.func @getenv(!llvm.ptr) -> !llvm.ptr
   llvm.func @stat(!llvm.ptr, !llvm.ptr) -> i32

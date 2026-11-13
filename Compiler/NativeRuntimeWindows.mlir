@@ -4,6 +4,13 @@
     llvm.call_intrinsic "llvm.x86.sse2.pause"() : () -> ()
     llvm.return
   }
+  llvm.func @qsort(!llvm.ptr, i64, i64, !llvm.ptr)
+  func.func private @strict_sort_numbers(%items: !llvm.ptr, %count: i64) {
+    %slot = arith.constant 8 : i64
+    %compare = llvm.mlir.addressof @strict_number_order : !llvm.ptr
+    llvm.call @qsort(%items, %count, %slot, %compare) : (!llvm.ptr, i64, i64, !llvm.ptr) -> ()
+    return
+  }
   // all values the collector has to see are on the stack (locals in wasm are not, see NativeRuntimeWeb.mlir)
   // the collector reads possible references 8 bytes at a time (wasm32 keeps pointers in 4 bytes)
   llvm.mlir.global internal constant @strict_word_bytes(8 : i64) : i64

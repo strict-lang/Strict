@@ -20,6 +20,7 @@ constant KeyFunctions = ("    %t2m = arith.constant 0.0 : f64", ArgumentLoad, " 
 constant DictionaryGet = "    %t2k = func.call @strict_dictionary_get(%t2m, %t2a0, %t2h, %t2e) : (f64, f64, (f64) -> i64, (f64, f64) -> f64) -> f64"
 constant ValueTraced = ("    %t2tw = llvm.mlir.addressof @wNamed_Run_0 : !llvm.ptr", "    %t2twl = arith.constant 0 : i64", "    %t2r = func.call @strict_trace(%t2k, %t2tw, %t2twl) : (f64, !llvm.ptr, i64) -> f64", ResultStore)
 constant GettingLines = KeyFunctions + DictionaryGet + ValueTraced
+constant Listing = MlirNatives(Texts, 1)
 Helper(typeName Text, name Text, count Number) Text
 	MlirNatives(Texts, 1).Helper("Strict/Text", "Length", 0) is "strict_text_length"
 	MlirNatives(Texts, 1).Helper("Strict/List(Number)", "Count", 0) is "strict_list_length"
@@ -56,9 +57,14 @@ CollectionHelper(kind Text, name Text, count Number) Text
 	if kind.StartsWith("Dictionary(")
 		return DictionaryHelper(name)
 	if name is not in ("in", "Index", "Count", "SwapRemoved") or count is not 1
-		return ""
+		return Sorting(kind, name, count)
 	let operation = name is "in" then "has" else (name is "SwapRemoved" then "swap_removed" else name.Lower)
 	"strict_list_" + (operation is "index" then "find" else operation)
+Sorting(kind Text, name Text, count Number) Text
+	Listing.CollectionHelper("List(Number)", "Sorted", 0) is "strict_list_sorted"
+	(Listing.Sorting("List(Text)", "Sorted", 0) is "") and (Listing.Sorting("List(Number)", "Sorted", 1) is "")
+	Listing.Sorting("List(Number)", "Reverse", 0) is ""
+	(name is "Sorted") and (count is 0) and (kind is "List(Number)") then "strict_list_sorted" else ""
 DictionaryHelper(name Text) Text
 	MlirNatives(Texts, 1).Helper("Strict/Text", "Upper", 0) is "strict_text_upper"
 	MlirNatives(Texts, 1).Helper("Strict/List(Text)", "in", 1) is "strict_list_has"
