@@ -92,9 +92,9 @@ Homed(type Text, methods Texts) TypeEntry
 		return Compiled(type, methods)
 	let absent = BinaryLinks.User.Compilable(own, methods, main.inference.types.MethodsOf(TypeEntry.ShortName(type)))
 	let added = (own.Name is "") or (absent.Length > 0) then Compiled(type, absent) else BinaryLinks.Unknown
-	let name = Path(type).PathOnly.text is Path(main.fullName).PathOnly.text then Path(type).FileName.text else type
 	let whole = TypeEntry(own, methods = own.methods + added.methods)
-	TypeEntry(name, own.Name is "" then added.members else own.members, BinaryLinks.User.Picked(whole, methods))
+	let members = own.Name is "" then added.members else own.members
+	TypeEntry(main.Local(type), members, BinaryLinks.User.Picked(whole, methods))
 Compiled(type Text, methods Texts) TypeEntry
 	Sample.Compiled("Strict/Bytecode/Crc", List(Text)).methods.Length is 0
 	Housed.Homed("Strict/Logger", ("Run", "from")).methods.Length is 1
@@ -104,9 +104,7 @@ Compiled(type Text, methods Texts) TypeEntry
 	let generator = Automatic(source, TypeEntry.ShortName(type), Instantiation(main.inference.types))
 	let automatic = generator.Lines(methods) + OptionsCodegen(generator, folder).Lines(methods)
 	let averaged = MemberAverage(type, main.inference.types).Replaced(automatic)
-	let entry = TypeCodegen(type, averaged, main.inference, main.typeNames).Selected(methods)
-	let isLocal = Path(type).PathOnly.text is Path(main.fullName).PathOnly.text
-	isLocal then TypeEntry(Path(type).FileName.text, entry.members, entry.methods) else entry
+	TypeEntry(TypeCodegen(type, averaged, main.inference, main.typeNames).Selected(methods), Name = main.Local(type))
 BaseTypes(used Texts, targets Texts) Texts
 	Sample.BaseTypes(List(Text), ("Strict/Bytecode/FileCompiler.Go")) is List(Text)
 	Sample.UsedMethods(("Strict/C.Go"), "Strict/B") is List(Text)

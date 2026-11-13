@@ -1,1 +1,0 @@
-- `strict check .` folder tests fail now and then with `UnresolvedLink: Strict/Number.Round` (also `Error.Code`, `Text.Lines`), more after many files changed, a different set each run, never alone: parallel runs racing on the base type caches? (2026-11-13).

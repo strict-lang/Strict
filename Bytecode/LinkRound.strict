@@ -17,17 +17,20 @@ constant Cycled = LinkRound(Linker.Sample, Chained.entries.Slice(0, 2) + TypeEnt
 constant Point = TypeEntry("Strict/Point", (MemberEntry("x", "Strict/Number", List(InstructionEntry), false), MemberEntry("y", "Strict/Number", List(InstructionEntry), false)), List(MethodEntry))
 constant Texting = LinkRound(Linker.Sample, (TypeEntry(Linker.Go, methods = MethodEntry(Linker.Go.methods.First, instructions = InstructionEntry.Invoke(0, ("Strict/Point", "to", "Strict/Text"), List(Number), -1))), Point), List(Text))
 constant Writing = LinkRound(Linker.Sample, List(TypeEntry) + TypeEntry(Linker.Go, methods = MethodEntry(Linker.Go.methods.First, instructions = InstructionEntry.Invoke(0, ("Strict/File", "Write", "None"), List(Number), -1))), List(Text))
+constant Rooted = Dictionary(("Strict/Logger:", TypeEntry(Linker.Iterating, Name = "Logger")))
+constant Cached = LinkRound(Single, linker = Linker(Linker.Hello, Known = Rooted))
+constant Moved = LinkRound(Single, linker = Linker(Linker.Sample, Known = Rooted))
 Entries(signed Texts) List(TypeEntry) slow
 	Single.Entries(List(Text) + "Strict/Logger:").First.Name is "Strict/Logger"
-	constant cached = Linker(Linker.Hello, Known = Dictionary(("Strict/Logger:", Linker.Iterating)))
-	LinkRound(Single, linker = cached).Entries(List(Text) + "Strict/Logger:").First is Linker.Iterating
+	Cached.Entries(List(Text) + "Strict/Logger:").First is Rooted("Strict/Logger:")
+	Moved.Entries(List(Text) + "Strict/Logger:").First.Name is "Strict/Logger"
 	Twice.Entries(Twice.signatures).First is Linker.Go
 	let positions = Positions
 	for signed
 		if value is in positions
 			entries(positions(value) + 1)
 		else if value is in linker.Known
-			linker.Known(value)
+			TypeEntry(linker.Known(value), Name = linker.main.Local(Signature(value).Type))
 		else
 			Fresh(value)
 Fresh(signature Text) TypeEntry slow

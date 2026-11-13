@@ -193,3 +193,7 @@ Concrete(type Text) Text
 	let elements = fullName.StartsWith("Strict/List(") and (fullName.IndexOf(",") > 0) then element else element + "s"
 	let other = type is in ("Generics", "List") then elements else Instantiation(inference.types).Own(fullName, type)
 	open is -1 then type.Replace("(Generic)", "") else (type is "Generic" then element else other)
+Local(type Text) Text
+	Hello.Local("Strict/Logger") is "Logger"
+	Hello.Local("Strict/Bytecode/Crc") is "Strict/Bytecode/Crc"
+	Path(type).PathOnly.text is Path(fullName).PathOnly.text then Path(type).FileName.text else type
