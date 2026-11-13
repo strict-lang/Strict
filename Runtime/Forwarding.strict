@@ -6,6 +6,8 @@ constant Sample = Forwarding(Logger, "Compiler/output", Nowhere)
 constant Server = Resident("Compiler/output")
 constant Missing = Forwarding(Logger, "Compiler/output/Missing", Nowhere)
 constant Dropped = -3
+constant Unserved = Error("NotServed")
+constant Ended = Error("RequestEnded")
 constant Output = "/server.log"
 constant Errors = "/server.errors.log"
 constant Previous = "/server.previous"
@@ -16,19 +18,27 @@ constant Serving = "' -and $_.CommandLine -like '* serve*' } | ForEach-Object { 
 constant Searching = "-c 'for found in $(pgrep -f \""
 constant Ending = " [s]erve\"); do pkill -KILL -P $found; kill -KILL $found; done'"
 Forwarded(arguments Texts) Number
-	Sample.Forwarded(List(Text) + "format") is -1
-	IsForwarded(arguments) is false then -1 else arguments(0) is Resident.Stopping then Stopped else Slotted(arguments, 0)
+	Sample.Forwarded(List(Text) + "format") is Unserved
+	if IsForwarded(arguments) is false
+		return Unserved
+	arguments(0) is Resident.Stopping then Stopped else Slotted(arguments, 0)
 Slotted(arguments Texts, slot Number) Number
-	Missing.Slotted(List(Text) + "test", Resident.Servers) is -1
+	Missing.Slotted(List(Text) + "test", Resident.Servers) is Unserved
 	if slot >= Resident.Servers
-		return -1
+		return Unserved
 	let server = Resident(root, slot is 0 then "" else slot to Text)
-	let stamp = File(server.Stamped)
-	let stamped = stamp.Exists then stamp.ReadLines.First to Number else 0
-	let port = stamped is Error then 0 else stamped
+	let port = Port(server)
 	if File(server.Freed).Exists and (port > 0)
 		return Answered(server, port, arguments)
-	((port is 0) or IsDead(port)) then Started(server.slot) else Slotted(arguments, slot + 1)
+	if (port is 0) or IsDead(port)
+		Started(server.slot)
+		return Unserved
+	Slotted(arguments, slot + 1)
+Port(server Resident) Number
+	Missing.Port(Resident("Compiler/output/Missing")) is 0
+	let stamp = File(server.Stamped)
+	let stamped = stamp.Exists then stamp.ReadLines.First to Number else 0
+	stamped is Error then 0 else stamped
 IsDead(port Number) Boolean
 	Sample.IsDead(0)
 	let socket = Socket.Connect("127.0.0.1", port)
@@ -37,28 +47,28 @@ IsDead(port Number) Boolean
 	Socket.Close(socket)
 	false
 Answered(server Resident, port Number, arguments Texts) Number
-	Sample.Answered(Server, 0, List(Text) + "test") is -1
+	Sample.Answered(Server, 0, List(Text) + "test") is Unserved
 	let socket = Socket.Connect("127.0.0.1", port)
 	if socket is Error
 		File(server.Stamped).Delete
-		return -1
+		return Unserved
 	let claim = Claimed(server, socket)
 	let request = Resident.Request(Directory.Current, arguments, Resident.Variables, claim)
-	let code = (claim is not "") and Greeted(socket) then Requested(socket, request) else -1
+	let code = (claim is not "") and Greeted(socket) then Requested(socket, request) else Unserved
 	Socket.Close(socket)
-	if (code is -1) and (claim is not "")
+	if (code is Unserved) and (claim is not "")
 		File(server.Freed + "." + claim).Rename(server.Freed)
 	code is Dropped then Interrupted(server, port) else code
 Requested(socket Number, request Text) Number
-	Sample.Requested(0, "") is -1
-	Server.Send(socket, request) is Error then -1 else Streamed(socket)
+	Sample.Requested(0, "") is Unserved
+	Server.Send(socket, request) is Error then Unserved else Streamed(socket)
 Interrupted(server Resident, port Number) Number
-	Missing.Interrupted(Resident("Compiler/output/Missing"), 0) is 1
+	Missing.Interrupted(Resident("Compiler/output/Missing"), 0) is Ended
 	let stamp = File(server.Stamped)
 	if stamp.Exists and (stamp.ReadLines.First is (port to Text))
-		return -1
+		return Unserved
 	logger.Log("strict stop ended this request")
-	1
+	Ended
 Stopped Number
 	Missing.Stopped is 0
 	let killed = Directory.Files(root + "/obj", "strict.server*").Length is 0 then 0 else Killed
@@ -89,7 +99,7 @@ IsForwarded(arguments Texts) Boolean
 	let isOptedOut = Process.Variable("STRICT_SERVER") is "0"
 	let isServed = (command is in ("test", "check", "build")) and (isLocal is false) and (isOptedOut is false)
 	(command is Resident.Stopping) or isServed
-Started(slot Text) Number
+Started(slot Text)
 	let executable = Process.Current.executable
 	let isWindows = Process.OperatingSystem is "Windows"
 	let served = " serve " + slot + Logged(root + "/obj", isWindows, slot)
@@ -98,7 +108,7 @@ Started(slot Text) Number
 	let started = Process.RunTool(isWindows then "powershell" else "sh", detached)
 	if started.exitCode is not 0
 		logger.Log("strict server " + slot + " did not start: " + started.Output + started.error)
-	-1
+		return Error("ServerNotStarted")
 Logged(objects Text, isWindows Boolean, slot Text) Text
 	Sample.Logged("Compiler", true, "").EndsWith(" 2>" + Quote + "Compiler/server.errors.log" + Quote)
 	Sample.Logged("Compiler", false, "2") is " >'Compiler/server2.log' 2>'Compiler/server2.errors.log'"
@@ -143,15 +153,15 @@ Streamed(socket Number) Number
 			if (isExit is false) and (index < block.Split("\n").Length - 1)
 				logger.Log(value)
 			code = isExit then value.Substring(exiting.Length, value.Length - exiting.Length) to Number else code
-	code
-Loopback Slow(Number)
+	code is Resident.Refused then Unserved else code
+Loopback(code Number) Slow(Number)
 	let server = Socket.Local(0)
 	let client = Socket.Connect("127.0.0.1", Socket.Port(server))
 	let accepted = Socket.Accept(server)
 	Server.Send(client, Resident.Request(Directory.Current, ("test", "a.strict")))
 	let isRequested = Resident.Arguments(Server.Requested(accepted)) is ("test", "a.strict")
-	Server.Finished(accepted, 3)
-	let code = isRequested and Greeted(client) then Streamed(client) else 1
+	Server.Finished(accepted, code)
+	let streamed = isRequested and Greeted(client) then Streamed(client) else 1
 	Socket.Close(client)
 	Socket.Close(server)
-	code
+	streamed

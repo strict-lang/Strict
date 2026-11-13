@@ -37,18 +37,17 @@ Sent(arguments Texts, absent Text, reply Text, line Text) Number
 	let chosen = Placement.Chosen(remote, verdict, Peers.Probed(line))
 	chosen is "" then -1 else Forwarded(chosen, Without(arguments))
 Forwarded(name Text, arguments Texts) Number
-	Sample.Forwarded("missing", List(Text)) is 1
+	Sample.Forwarded("missing", List(Text)) is Error
 	let host = Peers.Host(name)
 	if host is ""
 		logger.Log("No peer named " + name)
-		return 1
+		return Error("PeerNotFound")
 	let socket = Socket.Connect(host, Peers.Port)
-	socket is Error then 1 else Finished(socket, arguments)
+	socket is Error then socket else Finished(socket, arguments)
 Finished(socket Number, arguments Texts) Number
 	Peers.Host("missing") is ""
 	Resident("").Send(socket, "run\t" + Text.Combine(arguments, "\t") + "\n")
 	let reply = Resident("").Received(socket, "\n")
 	Socket.Close(socket)
 	logger.Log(reply.Trim)
-	let code = reply.Trim.Split("\t").First to Number
-	code is Error then 1 else code
+	reply.Trim.Split("\t").First to Number

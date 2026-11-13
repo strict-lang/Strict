@@ -28,23 +28,23 @@ Opened Number
 	let server = Socket.Local(Peers.Port)
 	let bound = server is Error then Socket.Local(0) else server
 	if bound is Error
-		return 0
+		return bound
 	Directory.Create(Path(Place).PathOnly.text)
 	File(Place).Write(Socket.Port(bound) to Text)
 	bound
-Served Number
+Served
 	Sample.Taken(0) is 0
 	let server = Opened
+	if server is Error
+		return server
 	mutable idle = Process.Elapsed
-	mutable socket = 0
-	for as long as (server > 0) and (isEnding is false) and (Process.Elapsed - idle < Resident.IdleSeconds)
-		socket = Taken(server)
+	for as long as (isEnding is false) and (Process.Elapsed - idle < Resident.IdleSeconds)
+		let socket = Taken(server)
 		if socket > 0
 			idle = Replied(socket) then Process.Elapsed else idle
 			Socket.Close(socket)
 	File(Place).Delete
 	Socket.Close(server)
-	0
 Taken(server Number) Number
 	Sample.Taken(0) is 0
 	let waiting = Socket.Waiting(server, 1)
