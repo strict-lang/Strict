@@ -59,7 +59,7 @@ Floored(result Text, number Text) Text
 	"    " + result + " = llvm.intr.floor(" + number + ") : (" + type + ") -> " + type
 Given(source Text, slot Text) Texts
 	Double.Given("%f", "%s") is ("    llvm.store %f, %s : f64, !llvm.ptr")
-	Single.Given("%f", "%s").First is "    %fs = arith.truncf %f : f64 to f32"
+	Single.Given("%f", "%s").First is "    %f_s = arith.truncf %f : f64 to f32"
 	if type is "f64"
 		return List(Text) + Store(source, slot)
-	("    " + source + "s = arith.truncf " + source + " : f64 to " + type, Store(source + "s", slot))
+	("    " + source + "_s = arith.truncf " + source + " : f64 to " + type, Store(source + "_s", slot))
