@@ -9,12 +9,20 @@ constant Attributes = ", %results: i64) attributes {nvvm.kernel} {"
 constant ThreadQueries = ("    %thread = func.call @strict_device_thread_index() : () -> i32", "    %block = func.call @strict_device_block_index() : () -> i32", "    %width = func.call @strict_device_block_size() : () -> i32")
 constant ThreadPosition = ("    %start = arith.muli %block, %width : i32", "    %sum = arith.addi %start, %thread : i32", "    %at = arith.extui %sum : i32 to i64")
 constant Threads = ThreadQueries + ThreadPosition
+constant PickedCall = "@Board_Picked_2_whole_flat(%wfailed, %f_board_cells_d, %at) : (!llvm.ptr, !llvm.ptr, i64)"
+constant Cleared = ("    %wfnone = arith.constant 0 : i64", "    llvm.store %wfnone, %wfailed : i64, !llvm.ptr")
+constant Failed = ("    %wfl = llvm.load %wfailed : !llvm.ptr -> i64", "    %wfc = arith.cmpi ne, %wfl, %wfnone : i64", "    cf.cond_br %wfc, ^wfail, ^exit", "  ^wfail:", "    llvm.store %wfl, %failed : i64, !llvm.ptr")
 Lines Texts
 	Body.Lines.First.StartsWith("  llvm.func @Board_Blurred_1_gpu5(" + MlirDevice.Fixed + ", %f_board_cells_d: !llvm.ptr")
 	Body.Lines.Last is "  }"
-	Text.Combine(Body.Lines).IndexOf("@Board_Picked_2_whole_flat(%f_board_cells_d, %at) : (!llvm.ptr, i64)") > 0
+	Body.Lines(8) is "    %wfailed.private = llvm.alloca %one x i64 : (i64) -> !llvm.ptr<5>"
+	Body.Lines(11) is "    llvm.store %wfnone, %wfailed : i64, !llvm.ptr"
+	Body.Lines(Body.Lines.Length - 5) is "    llvm.store %wfl, %failed : i64, !llvm.ptr"
+	Text.Combine(Body.Lines).IndexOf(PickedCall) > 0
 	let header = "  llvm.func @" + MlirDevice(function, position).Name + "(" + MlirDevice.Fixed + Freed + Attributes
-	(List(Text) + header) + Threads + MlirGrouped.Plain + "  ^body:" + Arguments + Stored + MlirDevice.Ending
+	let failing = ("    %one = arith.constant 1 : i64") + MlirTyped("i64").Private("%wfailed") + Cleared
+	let started = (List(Text) + header) + Threads + failing + MlirGrouped.Plain + "  ^body:"
+	started + Arguments + Stored + Failed + MlirDevice.Ending
 Kernels Texts
 	Body.Kernels.Length is Body.Lines.Length * 2 + Body.Functions.Length
 	Lines + MlirKernelBody(MlirFunction(function, Float = "f32"), position).Lines + Functions
@@ -68,7 +76,7 @@ Stored Texts
 	let kernel = MlirWholeKernel(function, position)
 	let statements = MlirWholeStatements(function, kernel.Call, "", "", "")
 	let calls = MlirFlatCall(statements, function.method.instructions(kernel.Call))
-	(calls.Call("%wr", MlirWholeFlat(kernel.Callee), Names), Narrowed, Placed, Store)
+	(calls.Call("%wr", MlirWholeFlat(kernel.Callee), Names, "%wfailed"), Narrowed, Placed, Store)
 Functions Texts
 	Body.Functions.First.StartsWith("  func.func private @Board_Picked_2_whole_flat(")
 	Text.Combine(Body.Functions).IndexOf("llvm.alloca %one x i64 : (i64) -> !llvm.ptr<5>") > 0

@@ -2,6 +2,7 @@ has function MlirFunction
 has callers List(MlirFunction) = List(MlirFunction)
 has row Number = -1
 constant Inlined = " attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = [\"alwaysinline\"]} {"
+constant RowHeader = "_row1(%failed: !llvm.ptr, %p0: !llvm.ptr, %p1: i64, %rx: i64, %ry: i64, %rw: i64)"
 constant Row = MlirWholeBody(MlirWhole.Row.function)
 constant Halving = MlirWholeBody(MlirWholeTypes.Halving.function)
 constant Picked = MlirWholeBody(MlirWholeKernel.Measure.Callee)
@@ -13,7 +14,7 @@ Lines Texts
 	Row.Lines.First.IndexOf("llvm.passthrough = [\"alwaysinline\"]") > 0
 	Row.Lines.Last is "  }"
 	MlirWholeBody(MlirLoops.Counting.function).Lines.Length is 0
-	Text.Combine(Picked.Lines).IndexOf("_row1(%p0: !llvm.ptr, %p1: i64, %rx: i64, %ry: i64, %rw: i64)") > 0
+	Text.Combine(Picked.Lines).IndexOf(RowHeader) > 0
 	if MlirWholeFunction(function).IsWhole is false
 		return List(Text)
 	mutable lines = Whole
@@ -34,10 +35,10 @@ Body(registers Text, variables Text, naturals Text, isFlat Boolean) Texts
 		lines = lines + function.Label(index) + emitted
 	lines
 Header Text
-	Halving.Header.StartsWith("  func.func private @Shape_Halved_1_whole(%p0: i64) -> i64")
+	Halving.Header.StartsWith("  func.func private @Shape_Halved_1_whole(%failed: !llvm.ptr, %p0: i64) -> i64")
 	Module.Text.IndexOf("@Halves_Halved_1_whole(") > 0
 	let values = MlirWholeValues(0)
-	mutable typed = List(Mutable(Text))
+	mutable typed = List(Mutable(Text)) + "%failed: !llvm.ptr"
 	for MlirWholeFunction(function).Kinds
 		typed.Add("%p" + index + ": " + values.Typed(value))
 	for row < 0 then List(Text) else MlirWholeRows.Extras

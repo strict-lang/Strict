@@ -6,6 +6,7 @@ constant Extras = ("%rx", "%ry", "%rw")
 constant RelayArguments = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "board"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "pixel"))
 constant RelayCall = (InstructionEntry.Invoke(2, ("Strict/Board", "Picked", "Strict/Rgb", "board", "pixel"), (0, 1), -1), InstructionEntry.Return(2))
 constant Relays = RelayArguments + RelayCall
+constant RelayedCall = "_whole_row1(%failed, %t2a0, %t2a1, %t2a2, %t2a3, %t2a4)"
 constant Relay = MlirFunction(MlirWholeKernel.Measure.function.types, MlirWholeKernel.Measured, MethodEntry("Relay", MlirWholeKernel.Picked.parameters, "Strict/Rgb", Relays))
 constant Relaying = MlirWholeRows(Relay, 1)
 constant Relayed = MlirWholeStatements(Relay, 2, MlirWholeTypes(Relay).Part(0), MlirWholeTypes(Relay).Part(1), MlirWholeTypes(Relay).Part(2))
@@ -50,15 +51,17 @@ Emitted(statements MlirWholeStatements) Texts
 		return Called(statements, entry, passed)
 	statements.Emitted
 Divided(statements MlirWholeStatements, entry InstructionEntry) Texts
-	Picking.Divided(Wrapping, MlirWholeKernel.Measuring(7))(3) is "    cf.cond_br %t7q, ^t7row, ^t7divide"
+	Picking.Divided(Wrapping, MlirWholeKernel.Measuring(7))(11) is "    cf.cond_br %t7q, ^t7row, ^t7divide"
+	Picking.Divided(Wrapping, MlirWholeKernel.Measuring(7))(13) is "    %t7d = arith.remsi %t7a, %t7s : i64"
 	let loads = statements.Load("a", entry.payload(1), "i") + statements.Load("b", entry.payload(2), "i")
-	loads + Branches(statements, entry.kind is InstructionType.Modulo) + statements.Store("c", "i", entry.payload(3))
-Branches(statements MlirWholeStatements, isModulo Boolean) Texts
-	Picking.Branches(Wrapping, false)(6) is "    cf.br ^t7rowed(%ry : i64)"
+	let branches = Branches(statements, entry.kind is InstructionType.Modulo, statements.Divisor(entry))
+	loads + statements.Guarded(entry) + branches + statements.Store("c", "i", entry.payload(3))
+Branches(statements MlirWholeStatements, isModulo Boolean, divisor Text) Texts
+	Picking.Branches(Wrapping, false, "%t7b")(6) is "    cf.br ^t7rowed(%ry : i64)"
 	let label = "^t" + statements.position
 	let quotient = statements.Temp("d")
 	let operation = (isModulo then "arith.remsi " else "arith.floordivsi ") + statements.Temp("a") + ", "
-	let divided = "    " + quotient + " = " + operation + statements.Temp("b") + " : i64"
+	let divided = "    " + quotient + " = " + operation + divisor + " : i64"
 	let compared = "    " + statements.Temp("q") + " = arith.cmpi eq, " + statements.Temp("b") + ", %rw : i64"
 	let branch = "    cf.cond_br " + statements.Temp("q") + ", " + label + "row, " + label + "divide"
 	let joined = "    cf.br " + label + "rowed("
@@ -66,7 +69,7 @@ Branches(statements MlirWholeStatements, isModulo Boolean) Texts
 	let division = ("  " + label + "divide:", divided, joined + quotient + " : i64)") + rowed
 	(compared, branch) + division + ("  " + label + "rowed(" + statements.Temp("c") + ": i64):")
 Called(statements MlirWholeStatements, entry InstructionEntry, passed Number) Texts
-	Text.Combine(Relaying.Called(Relayed, Relays(2), 1)).IndexOf("_whole_row1(%t2a0, %t2a1, %t2a2, %t2a3, %t2a4)") > 0
+	Text.Combine(Relaying.Called(Relayed, Relays(2), 1)).IndexOf(RelayedCall) > 0
 	let callee = MlirWholeFunction(function).Callee(entry)
 	let kinds = MlirWholeFunction(callee).Kinds
 	let values = MlirWholeValues(statements.position)
