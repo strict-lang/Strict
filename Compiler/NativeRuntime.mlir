@@ -532,7 +532,7 @@
     %result = llvm.inttoptr %found : i64 to !llvm.ptr
     return %result : !llvm.ptr
   }
-  llvm.mlir.global internal constant @strict_test_timeout("Test failed: %s\0A  got: TestDurationMustNotExceedHundredMilliseconds: unit test exceeded 100 ms; use Slow(ReturnType) for explicit functional tests\0A\00") : !llvm.array<148 x i8>
+  llvm.mlir.global internal constant @strict_test_timeout("Test failed: %s\0A  got: TestDurationMustNotExceedHundredMilliseconds: unit test exceeded 100 ms; end the method header with slow for explicit functional tests\0A\00") : !llvm.array<159 x i8>
   llvm.mlir.global internal constant @strict_test_unavailable("Test failed: %s\0A  got: TestBudgetWatchdogUnavailable: cannot enforce the unit-test deadline on this platform\0A\00") : !llvm.array<110 x i8>
   // a served request (output is its caller) gets the message and only its work fails, else the process ends
   func.func private @strict_test_failed(%place: i64, %unavailable: i1, %output: i64) {
