@@ -23,6 +23,7 @@ constant Picking = Overloads(Picker)
 constant Mixing = SyntaxParser(Tokenizer("p.Mixed((1, 2))").Tokens).Parse
 constant Choosing = SyntaxParser(Tokenizer("p.Chosen((\"a\", \"b\"))").Tokens).Parse
 constant LabelsMember = SyntaxNode("Member", "Labels", LabelsCall)
+constant Limits = ("constant Limit = 3", "has count", "constant Limit = 4")
 constant Valued = ("Value(name Text, default Number) Text", "\tname", "Value(name Text, default Text) Text", "\tname")
 constant ListToText = KnownTypes(List(Text) + "List", List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(List(Text) + "to", List(Text) + "Text"), List(Scope) + KnownTypes.NoMembers)
 constant DefaultNames = ("from", "from types", "from", "from types", "b default", "Get", "Get types", "Get", "Get types", "Get count default")
@@ -171,14 +172,18 @@ Specialized(type Text, declared Texts, arguments Texts) Text
 Ambiguities(path Text, lines Texts) Texts
 	Scaling.Ambiguities("A", Valued) is ("OverloadsNeedDifferentParameterNames: Value(name, default) in A:3 like line 1")
 	Scaling.Ambiguities("A", ("to Text", "\t\"a\"", "to Number", "\t1")).Length is 0
+	Scaling.Ambiguities("A", Limits) is ("NameAlreadyDeclared: Limit in A:3 like line 1")
 	let signatures = Signatures(lines)
 	for signatures
 		if (value is not "") and (signatures.Index(value) < index)
 			let first = signatures.Index(value) + 1
-			"OverloadsNeedDifferentParameterNames: " + value + " in " + path + ":" + (index + 1) + " like line " + first
+			let rule = value.EndsWith(")") then "OverloadsNeedDifferentParameterNames: " else "NameAlreadyDeclared: "
+			rule + value + " in " + path + ":" + (index + 1) + " like line " + first
 Signatures(lines Texts) Texts
 	Scaling.Signatures(Valued) is ("Value(name, default)", "", "Value(name, default)", "")
 	let shape = TypeShape(lines)
 	for lines
-		let name = shape.IsMethodHeader(value) then Tokenizer(value).Tokens.First else "to"
-		name is "to" then "" else name + "(" + Text.Combine(HeaderTokens(Tokenizer(value).Tokens).ParameterNames, ", ") + ")"
+		let tokens = Tokenizer(value).Tokens
+		let name = shape.IsMethodHeader(value) then tokens.First else "to"
+		let signature = name is "to" then "" else name + "(" + Text.Combine(HeaderTokens(tokens).ParameterNames, ", ") + ")"
+		shape.IsMemberLine(value) then tokens(1) else signature
