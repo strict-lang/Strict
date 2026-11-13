@@ -1,5 +1,6 @@
 has path Text
 constant Strips = "Compiler/output/ImageLoaderStrips.jpg"
+constant Short = "Compiler/output/ImageLoaderShort.jpg"
 Loaded Slow(Image)
 	ImageLoader("ImageProcessing/4x4.png").Loaded.Size is Size(4, 4)
 	ImageLoader("ImageProcessing/Digit.jpg").Loaded.Size is Size(28, 28)
@@ -16,6 +17,7 @@ Color(bytes Numbers, at Number) ColorValue
 Grays Slow(Numbers)
 	ImageLoader("ImageProcessing/Digit.jpg").Grays.Length is 784
 	ImageCodec.SaveJpeg(Strips, ImageCodec.Pixels("ImageProcessing/Digit.jpg", 3) / Byte.Max, 7, 100) is not Error
+	ImageCodec.SaveJpeg(Short, ImageCodec.Pixels("ImageProcessing/Progressive.jpg", 3) / Byte.Max, 48, 90) is not Error
 	ImageLoader(Strips).Grays.Sum.IsNearlyEqual(ImageLoader("ImageProcessing/Digit.jpg").Grays.Sum, 1)
 	for ImageCodec.Pixels(path, 1)
 		value / Byte.Max
