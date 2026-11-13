@@ -15229,10 +15229,13 @@
     return %zero : i64
   }
   // a kernel loop on the GPU and the CPU together: the kernel takes the first share of the elements, the pool blurs
-  // the rest into the host list meanwhile, then the GPU's part is copied into it
+  // the rest into the host list meanwhile, then the GPU's part is copied into it; a GPU part that set the failure word
+  // (a division by 0) runs again on the threads to give the Error, the word gets back what it had before
   func.func private @strict_gpu_shared(%ptx: !llvm.ptr, %name: !llvm.ptr, %slot: !llvm.ptr, %count: i64, %source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64, %rows: i64, %dots: i64, %lanes: i64, %group: i64, %packed: i64, %body: (!llvm.ptr, i64, i64) -> f64, %context: !llvm.ptr, %host: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
+    %earlierFlag = func.call @strict_gpu_failure_flag() : () -> !llvm.ptr
+    %earlier = llvm.load %earlierFlag : !llvm.ptr -> i64
     %share = func.call @strict_gpu_share(%count) : (i64) -> i64
     %brainBits = arith.constant 17 : i64
     %formatMask = arith.constant 255 : i64
@@ -15253,12 +15256,21 @@
   ^cpu(%start: i64):
     %failure = func.call @strict_parallel_from(%body, %context, %start, %count) : ((!llvm.ptr, i64, i64) -> f64, !llvm.ptr, i64, i64) -> f64
     %nothingTaken = arith.cmpi eq, %start, %none : i64
-    cf.cond_br %nothingTaken, ^done, ^merge
+    cf.cond_br %nothingTaken, ^done(%failure : f64), ^merge
   ^merge:
     func.call @strict_gpu_merge_finished(%host) : (f64) -> ()
-    cf.br ^done
-  ^done:
-    return %failure : f64
+    %flag = func.call @strict_gpu_failure_flag() : () -> !llvm.ptr
+    %flagged = llvm.load %flag : !llvm.ptr -> i64
+    %gpuFailed = arith.cmpi ne, %flagged, %none : i64
+    cf.cond_br %gpuFailed, ^rerun, ^done(%failure : f64)
+  ^rerun:
+    llvm.store %earlier, %flag : i64, !llvm.ptr
+    %again = func.call @strict_parallel_from(%body, %context, %none, %start) : ((!llvm.ptr, i64, i64) -> f64, !llvm.ptr, i64, i64) -> f64
+    %isFailure = func.call @strict_is_failure(%again) : (f64) -> i1
+    %first = arith.select %isFailure, %again, %failure : f64
+    cf.br ^done(%first : f64)
+  ^done(%result: f64):
+    return %result : f64
   }
   // the GPU's part of a shared loop: the graph with the kernel is replayed right away (strict_gpu_marked) so the GPU
   // works while the CPU threads do their part, afterwards the result bytes come through the pinned bounce buffer
@@ -18917,6 +18929,16 @@
   // the pinned word a loop on the GPU sets when it reads outside of a list, the host reads it after downloading
   // read instead of the failure word when no kernel that can not fail ran yet (results of checked kernels only)
   llvm.mlir.global internal @strict_gpu_no_failure(0 : i64) : i64
+  func.func private @strict_gpu_failure_flag() -> !llvm.ptr {
+    %none = arith.constant 0 : i64
+    %slot = llvm.mlir.addressof @strict_gpu_failure : !llvm.ptr
+    %word = llvm.load %slot : !llvm.ptr -> i64
+    %hasWord = arith.cmpi ne, %word, %none : i64
+    %wordPointer = llvm.inttoptr %word : i64 to !llvm.ptr
+    %noFailure = llvm.mlir.addressof @strict_gpu_no_failure : !llvm.ptr
+    %pointer = arith.select %hasWord, %wordPointer, %noFailure : !llvm.ptr
+    return %pointer : !llvm.ptr
+  }
   func.func private @strict_gpu_failure_word() -> i64 {
     %none = arith.constant 0 : i64
     %slot = llvm.mlir.addressof @strict_gpu_failure : !llvm.ptr
@@ -19358,12 +19380,7 @@
     %copied = llvm.call @memcpy(%host, %bounce, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     cf.br ^checked(%bouncedGot : i1)
   ^checked(%checkedGot: i1):
-    %failureSlot = llvm.mlir.addressof @strict_gpu_failure : !llvm.ptr
-    %word = llvm.load %failureSlot : !llvm.ptr -> i64
-    %hasWord = arith.cmpi ne, %word, %none : i64
-    %wordPointer = llvm.inttoptr %word : i64 to !llvm.ptr
-    %noFailure = llvm.mlir.addressof @strict_gpu_no_failure : !llvm.ptr
-    %pointer = arith.select %hasWord, %wordPointer, %noFailure : !llvm.ptr
+    %pointer = func.call @strict_gpu_failure_flag() : () -> !llvm.ptr
     %failed = llvm.load %pointer : !llvm.ptr -> i64
     %isFailed = arith.cmpi ne, %failed, %none : i64
     %problem = arith.xori %got, %isFailed : i1
