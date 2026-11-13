@@ -2,18 +2,16 @@ has logger
 constant Sentence = "Strict finds small networks."
 constant Span = "ab ab"
 constant Folder = "NeuralNetworks/gpt2"
-Loss(model Gpt2, tokenizer Gpt2Tokens, text Text) Number
-	Depth.Loss(Gpt2.Tiny, Gpt2Tokens.Tiny, Span) is Perplexity(Gpt2.Tiny).Measured(Gpt2Tokens.Tiny.Encoded(Span))
-	Perplexity(model).Measured(tokenizer.Encoded(text))
 Chosen(count Number) Numbers
-	Depth.Chosen(1) is (0)
+	Depth.Chosen(1) is (0) and (Depth.Chosen(0) is (0))
 	Depth.Chosen(12) is (0, 6, 11)
 	count <= 1 then (0) else (0, (count / 2).Floor, count - 1)
 Lines(model Gpt2, tokenizer Gpt2Tokens, text Text) Text
 	Depth.Lines(Gpt2.Tiny, Gpt2Tokens.Tiny, Span).StartsWith("1 blocks ")
-	mutable report = model.blocks.Length + " blocks " + Loss(model, tokenizer, text)
+	let tokens = tokenizer.Encoded(text)
+	mutable report = model.blocks.Length + " blocks " + Perplexity(model).Measured(tokens)
 	for Chosen(model.blocks.Length)
-		report = report + "\nwithout " + value + " " + Loss(model.Without(value), tokenizer, text)
+		report = report + "\nwithout " + value + " " + Perplexity(model.Without(value)).Measured(tokens)
 	report
 Run
 	logger.Log("short span on " + Folder + ", not a held-out layer search")

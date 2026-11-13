@@ -2,19 +2,17 @@ has logger
 constant Sentence = "Strict finds small networks."
 constant Span = "ab ab"
 constant Folder = "NeuralNetworks/qwen3/model.gguf"
-Kept(model Qwen3, tokenizer Gpt2Tokens, text Text) Number
-	Shortened.Kept(Qwen3.Tiny, Gpt2Tokens.Tiny, Span) is Perplexity(Qwen3.Tiny).Measured(Gpt2Tokens.Tiny.Encoded(Span))
-	Perplexity(model).Measured(tokenizer.Encoded(text))
 Cut(model Qwen3, layer Number) Qwen3
 	Shortened.Cut(Qwen3.Tiny, 0).blocks.Length is Qwen3.Tiny.blocks.Length - 1
 	MixturePruning(logger).Without(model, List(Number) + layer)
 Lines(model Qwen3, tokenizer Gpt2Tokens, text Text) Text
 	Shortened.Lines(Qwen3.Tiny, Gpt2Tokens.Tiny, Span).StartsWith("1 blocks ")
 	Shortened.Lines(Qwen3.Tiny, Gpt2Tokens.Tiny, Span).IndexOf("without") < 0
-	mutable report = model.blocks.Length + " blocks " + Kept(model, tokenizer, text)
+	let tokens = tokenizer.Encoded(text)
+	mutable report = model.blocks.Length + " blocks " + Perplexity(model).Measured(tokens)
 	if model.blocks.Length > 1
 		for Depth.Chosen(model.blocks.Length)
-			report = report + "\nwithout " + value + " " + Kept(Cut(model, value), tokenizer, text)
+			report = report + "\nwithout " + value + " " + Perplexity(Cut(model, value)).Measured(tokens)
 	report
 Run
 	logger.Log("local file " + Folder + ", 3B 8B and 27B weights are not in this tree")
