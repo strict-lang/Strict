@@ -11,6 +11,10 @@ constant Reassigning = BodyParser("Run", "\tmutable a = 1", "\ta = Greet").Block
 constant Adding = BodyParser("Run", "\tmutable a = 1", "\ta = a + 1").Block(1, 1)
 constant Increment = SyntaxNode("Member", "Increment", SyntaxNode("Identifier", "a"))
 constant Numbered = CodeBlock.Empty.Declare("a", "Numbers")
+constant Scalar = CodeBlock.Empty.Declare("a", "Number")
+constant Remaining = SyntaxParser(Tokenizer("7 % a").Tokens).Parse
+constant Called = FileCheck.Parsed("Next(7 % a)")
+constant Arithmetic = ("+", "-", "*", "/", "%", "^")
 constant Lists = KnownTypes(("List"), (KnownTypes.NoMembers), (KnownTypes.NoMembers), (Scope(("Add mutable", "Remove mutable", "Increment mutable"), ("Mutable", "Mutable", "Mutable"))))
 constant Listing = ErrorScope(ValueCodegen(TypeInference(Lists, TypeInference.Limits), KnownTypes.NoMembers, CallTarget.Plain))
 constant Growing = SyntaxNode("Member", "Add", Increment.children)
@@ -59,6 +63,19 @@ IsMutating(node SyntaxNode, block CodeBlock) Boolean
 		return false
 	let type = values.TypeOf(node.children(0), block)
 	values.inference.types.ParameterScope(type).TypeOf(node.text + MutableMarker) is not ""
+IsRemainder(node SyntaxNode) Boolean
+	Plain.IsRemainder(Remaining) and Plain.IsRemainder(FileCheck.Parsed("7 % a + 1"))
+	Plain.IsRemainder(FileCheck.Parsed("1 + 7 % a")) and Plain.IsRemainder(FileCheck.Parsed("-(7 % a)"))
+	Plain.IsRemainder(FileCheck.Parsed("7 % 0")) and (Plain.IsRemainder(FileCheck.Parsed("7 % 2")) is false)
+	(Plain.IsRemainder(FileCheck.Parsed("7 + a")) is false) and (Plain.IsRemainder(SyntaxNode("Text", "%")) is false)
+	(Plain.IsRemainder(Called) is false) and (Plain.IsRemainder(FileCheck.Parsed("7 % a is 2")) is false)
+	if node.Kind is "Negate"
+		return IsRemainder(node.children(0))
+	if (node.Kind is not "Binary") or (node.text is not in Arithmetic)
+		return false
+	let divisor = node.children(1)
+	let isUnsure = (node.text is "%") and ((divisor.Kind is not "Number") or (divisor.text to Number is 0))
+	isUnsure or IsRemainder(node.children(0)) or IsRemainder(divisor)
 Used(node SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Used(SyntaxParser(Tokenizer("1 is 2").Tokens).Parse, CodeBlock.Empty) is Error
 	Plain.Used(SyntaxParser(Tokenizer("1 + 2").Tokens).Parse, CodeBlock.Empty) is Error

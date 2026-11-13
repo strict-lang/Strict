@@ -69,6 +69,11 @@ IsSmallOrMissing Boolean
 	ErrorHandling(2).IsSmallOrMissing
 	let found = Found
 	found < 3 or found is Error
+HasLargeRemainder Boolean
+	ErrorHandling(4).HasLargeRemainder
+	ErrorHandling(5).HasLargeRemainder is false
+	ErrorHandling(0).HasLargeRemainder is Error
+	7 % number > 2
 Skipped
 	ErrorHandling(5).Skipped is not Error
 	ErrorHandling(0).Skipped is not Error
