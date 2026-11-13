@@ -73,12 +73,13 @@ ArgumentCount Number
 Arguments Numbers
 	Scaled.Arguments is (0)
 	PayloadDecoder(InstructionEntry.Invoke(1, ("T", "Run", "N"), (3, 4), 5)).Arguments is (3, 4)
-	entry.payload.Slice(6 + entry.payload(3), ArgumentCount)
+	for LoadReuse(List(InstructionEntry)).InvokeReads(entry).Slice(0, ArgumentCount)
+		entry.payload(value)
 Instance Number
 	Scaled.Instance is -1
 	PayloadDecoder(Invocation.AddCall.entry).Instance is 1
-	let flagPosition = 6 + entry.payload(3) + ArgumentCount
-	entry.payload(flagPosition) is 1 then entry.payload(flagPosition + 1) else -1
+	let reads = LoadReuse(List(InstructionEntry)).InvokeReads(entry)
+	reads.Length > ArgumentCount then entry.payload(reads.Last) else -1
 SevenBit(position Number) Number
 	PayloadDecoder(InstructionEntry.Jump(InstructionType.LoopEnd, 300)).SevenBit(0) is 300
 	mutable result = 0

@@ -13,7 +13,7 @@ PATH="$(cd .. && pwd)/Tools/LLVM-23.1.3-Linux-X64/bin:$(cd .. && pwd)/Tools/LLVM
 passes="--symbol-dce --convert-scf-to-cf --convert-arith-to-llvm --convert-func-to-llvm --convert-cf-to-llvm --reconcile-unrealized-casts"
 mlir-opt NativeCompiler.$platform.mlir $passes -o NativeCompiler.$platform.llvm.mlir
 mlir-translate --mlir-to-llvmir NativeCompiler.$platform.llvm.mlir -o NativeCompiler.$platform.ll
-clang NativeCompiler.$platform.ll -o NativeCompiler -O3 -march=native -Wno-override-module $linked
+clang NativeCompiler.$platform.ll ../Networking/native/Socket.c -I . -o NativeCompiler -O3 -march=native -Wno-override-module $linked
 cd ..
 # linux builds a release compiler: a long garbage collection warns instead of stopping
 release=linux

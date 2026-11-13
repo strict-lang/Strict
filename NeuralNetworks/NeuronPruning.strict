@@ -22,23 +22,19 @@ Pruned(model Gpt2, activity Activity, fraction Number) Gpt2 slow
 	Gpt2(model, blocks = blocks)
 Narrowed(block Gpt2Block, kept Numbers, means Numbers) Gpt2Block slow
 	Pruning.Narrowed(Gpt2Block.Tiny, (0, 2), Layer.Halves.Zeros(48)).contraction.weights.First.Length is 2
-	let expansion = Layer(Dataset.Picked(block.expansion.weights, kept), Picked(block.expansion.biases, kept))
+	let expansion = Layer(Dataset.Picked(block.expansion.weights, kept), Dataset.Picked(block.expansion.biases, kept))
 	let columns = Columns(block.contraction.weights, kept)
 	let contraction = Layer(columns, Compensated(block.contraction, columns, means, kept))
 	Gpt2Block(block, expansion = expansion, contraction = contraction)
 Compensated(layer Layer, columns List(Numbers), means Numbers, kept Numbers) Numbers
 	Pruning.Compensated(Layer(((1, 2, 3), (4, 5, 6)), (0, 1)), ((1, 3), (4, 6)), (5, 7, 9), (0, 2)) is (14, 36)
-	let picked = Picked(means, kept)
+	let picked = Dataset.Picked(means, kept)
 	for layer.weights
 		layer.biases(index) + Batch.Dot(value, 0, means, 0) - Batch.Dot(columns(index), 0, picked, 0)
 Columns(rows List(Numbers), kept Numbers) List(Numbers)
 	Pruning.Columns(((1, 2, 3), (4, 5, 6)), (0, 2)) is ((1, 3), (4, 6))
 	for rows
-		Picked(value, kept)
-Picked(row Numbers, kept Numbers) Numbers
-	Pruning.Picked((4, 5, 6), (0, 2)) is (4, 6)
-	for kept
-		row(value)
+		Dataset.Picked(value, kept)
 Kept(scores Numbers, count Number) Numbers
 	Pruning.Kept((3, 1, 2, 5), 2) is (0, 3)
 	let threshold = Threshold(scores, count)
