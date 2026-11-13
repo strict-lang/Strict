@@ -3,10 +3,9 @@
 Delete this file when the work below is landed and nothing is waiting on it.
 
 ## Where things are
-- Work happens in the worktree `.claude/worktrees/quality` (branch `quality`), on top of master ce9e1dc8.
+- Work happens in the worktree `.claude/worktrees/quality` (branch `quality`), master 39ab3f40 merged in.
 - Branch `landing` marks the last fully verified state, `strict.landing.exe` in the quality worktree is its compiler. Land it from the main checkout (PowerShell): `git merge --ff-only landing; .\strict.exe stop; Copy-Item .claude\worktrees\quality\strict.landing.exe strict.exe -Force`.
 - `quality` can be ahead of `landing`: `git log --oneline landing..quality`.
-- A second Strict session works on Ben-Home-PC (Orca environment `Ben-Home-PC`, workspace `C:/code/GitHub/strict-lang/Strict`, conversation 226c4849, resumed in terminal "Strict BenchBlur"): it took the BenchBlur regression on its branch `benchblur` and waits for Ben's yes on its fix (below). Messages from it do not reach this machine through Orca; read its terminal with `orca terminal read --environment Ben-Home-PC --terminal <handle> --screen`.
 
 ## Verifying a state before moving `landing`
 In the quality worktree, with `STRICT_GPU=0 STRICT_SERVER=0` (scratchpad `verify.sh` and `verify2.sh` did all of it):
@@ -27,8 +26,10 @@ In the quality worktree, with `STRICT_GPU=0 STRICT_SERVER=0` (scratchpad `verify
 - Waiting fixes decided one by one later: the three tightened rules (branch `tightened`: let reassignment, ReturnTypeMismatch, nested ResultMustBeUsed), swapped constructor arguments (worktree-agent-a81bd2b2377be5ecb), the lost-change rule (worktree-agent-adc730c3a8f42dcf9), the issue format (worktree-agent-adca418840c161373).
 
 ## Waiting for the owner (2026-11-13)
-- BenchBlur (Ben-Home-PC session): 20 times slower since 73f19bf3 (`MlirWholeFunction.HasConstantDivisor`), its average divides by a variable count, so no whole versions and no GPU kernel. Proposed: CPU whole-number functions get the `%failed` flag the GPU versions have (branch-free zero test, the loop reruns its slow path once when set); it also closes the `%` by zero line of bugs.md. Needs a yes because it touches the "no checks inside loops" decision.
-- bugs.md lines that need a semantic choice: a Range for a `Numbers` parameter (convert or reject), a call on the own type name (`Ticker.Next`), `%` by zero (above).
+- bugs.md lines that need a semantic choice: a Range for a `Numbers` parameter (convert or reject), a call on the own type name (`Ticker.Next`), `%` by a variable compared with an Error.
+
+## After landing
+- 2026-11-13 later: master got the BenchBlur fix (39ab3f40, `%failed` in whole number functions) and is merged into `quality`; after `landing` came the native `List(Number).Sorted`, `NameAlreadyDeclared` for a constant or member declared twice, the review duplicates removed, the Matrix product vectorized (`MlirBytes.Buffer`), bugs.md cleaned up. Compiler fixpoint e7e39c91; Compiler, Math, Expressions, Bytecode, ImageProcessing, Examples pass natively; the full verification above is not done yet.
 
 ## State when this was written (2026-11-13, 04:00)
 - `landing` is this commit, `strict.landing.exe` its compiler, verified by the steps above.
