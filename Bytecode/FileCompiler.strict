@@ -98,7 +98,8 @@ IsBrokenConstant(line Text) Boolean
 	FileCompiler.IsBrokenConstant(Trailing.Last)
 	FileCompiler.IsBrokenConstant("constant LoadConstantToRegister") is false
 	FileCompiler.IsBrokenConstant(Trailing.First) is false
-	line.StartsWith("constant ") and (line.IndexOf(" = ") > 0) and (IsParsed(line) is false)
+	FileCompiler.IsBrokenConstant("constant None = Style()") is false and (IsBrokenConstant("has pair = (1,)") is false)
+	line.StartsWith("constant ") and (IsComplete(StatementParser(Tokenizer(line).Tokens).ParseStatement) is false)
 IsParsed(line Text) Boolean
 	FileCompiler.IsParsed("let a = b + c")
 	FileCompiler.IsParsed("(number + other") is false and (FileCompiler.IsParsed("a + b)") is false)
