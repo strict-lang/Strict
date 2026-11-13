@@ -6,9 +6,11 @@ giving 8 GB of free pages back after a full collection is not counted as collect
 GpuMemory.Released never collects and Process.Collected always does, a list a method named Validated hands back
 is not refilled while the local it came from still reads it, a Realtime type collects at the end of its
 frames (Presented), reading 1000 lines of 80 KB measures the 80 MB text once (its remembered length survives reclaims
-that do not free it, measuring it again per line took 13 s)."""
+that do not free it, measuring it again per line took 13 s), a loop collecting more than the limit ends with
+GarbageCollectionExceedsLimit and names its young and full collections in the window."""
 import ctypes
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -147,4 +149,14 @@ with tempfile.TemporaryDirectory(prefix="MemoryCheck", dir=root / "Examples") as
 		"\tlogger.Log(\"lines \" + lines.Length + \" slow \" + (Process.Elapsed - started > 3))")
 	ran = subprocess.run([str(long)], capture_output=True, text=True, timeout=60, env=os.environ | {"STRICT_GPU": "0"})
 	assert ran.returncode == 0 and "lines 1001 slow false" in ran.stdout, ran.stdout[-300:]
+	churning = built(folder, "Churning", filled + "Run\n\tmutable recent = Filled(8192, 0)\n\tmutable total = 0\n"
+		"\tfor 100000000\n\t\tlet temporary = Filled(8192 + index % 2, recent(index % 8192))\n"
+		"\t\ttotal = total + temporary(5)\n\t\trecent = temporary\n\tlogger.Log(\"total \" + total)")
+	ran = subprocess.run([str(churning)], capture_output=True, text=True, timeout=60,
+		env=os.environ | {"STRICT_GC_LIMIT": "1", "STRICT_GC_WINDOW": "1", "STRICT_GPU": "0"})
+	explained = re.search(r"in that window: (\d+) young and (\d+) full collections, (\d+) for GPU memory, (\d+) for "
+		r"host memory, [\d.]+ s of them in the GPU sweep; the program waited [\d.]+ s for the GPU; heap \d+ MB, \d+ MB live "
+		r"after the last full collection", ran.stdout)
+	assert "GarbageCollectionExceedsLimit" in ran.stdout and explained, ran.stdout[-500:]
+	assert int(explained[1]) + int(explained[2]) > 0 and explained[3] == "0", ran.stdout[-500:]
 print("check_memory.py passed")

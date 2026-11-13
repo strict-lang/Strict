@@ -1,19 +1,9 @@
-- A `let` can be assigned again: rule `AssignmentNeedsMutableVariable` is ready (branch worktree-agent-aee4a04528b0f543e), waits for DeltaEngine Network.strict, Multiplayer/Peer.strict, ArenaWars/ArenaFog.strict.
-- `ResultMustBeUsed` misses dropped results inside `if` and `for` bodies (DeltaEngine LogoApp Drawn, Blocks PlayedSound), fix on branch `tightened`.
-- `strict check` prints two issue formats (Validators `File:line N: Rule`, Expressions `Rule: ... in File:N`), fix on branch worktree-agent-adca418840c161373.
-- An empty line between members or methods is accepted, DeltaEngine has 13 such lines in 11 files to remove first.
-- A method with a return type ending in a call without one returns 0 (DeltaEngine MeshRenderer.Placed and ~30 more, StrictComfy `resident.Closed`, Ben Enumerator 146), `ReturnTypeMismatch` on branch worktree-agent-a52b94f27ec2cea85.
-- `Ticker.Next` on the own type name reuses the instance the run started with, README says a new default instance every time: decide which one is right.
-- 11 `StatusNumberMustNotBeReturned` in Runtime (Remote, Resident, Coordinator, Forwarding), change together with StrictComfy and Ben.
-- `Forwarding.Started` always returns -1, so StrictComfy Backend.strict:53 `Attempted` returns `Unserved` right after starting the backend.
-- `NeuronPruning.Picked` duplicates `Dataset.Picked`, needs a generic element type.
-- `Up to date` does not tell whether the program is running (a pid stamp per running program would).
-- A `File.Locked` taken in a test line does not hold while a called method deletes old copies (`Intermediates.Free` through `Replaced`), not reduced.
-- `7 % divisor > 3` is false instead of the ModuloByZero Error for divisor 0 (a comparison drops the Error), VM and native: decide whether `%` by a variable is checked.
-- A changing call on an element or member chain loses its change (`rows(0).Add(5)`, `holder.ticker.Next`), rule on branch worktree-agent-adc730c3a8f42dcf9 waits for DeltaEngine GhostWars/GhostAi.strict:29.
-- Constructor arguments in the wrong order are accepted when the types match as a set, fix on branch worktree-agent-a81bd2b2377be5ecb waits for Ben (`Entry` gets a Text for `has Key Number` in Builder, Unifier, Enumerator).
-- `LoadReuse.InvokeReads` keeps its own copy of the Invoke layout (Runtime depends on Bytecode).
-- A Range for a `Numbers` parameter is not converted (`Wrapped(Range(0, 4))`: (0, 1, 2) on the VM, AccessViolation natively): convert it or reject it.
-- The shared GPU and CPU run of a loop (`strict_gpu_shared`, `strict_gpu_merge_finished`) ignores the kernel's `%failed`, a failed GPU part keeps wrong results (BenchBlur Neighbors limited to `value is not 0` on a Bitmap of width 1).
-- No rule requires `Slow(...)` on a method doing input or output, so file tests run with every `strict test` (StrictComfy `StrictGenForm.Listed` reads `Directory.Files` in a test line): add `InputOutputMustBeSlow`, mark File, Directory, Process and Socket methods.
-- `GarbageCollectionExceedsLimit` ends a resident program that loads its models a second time (StrictComfy MossImage: kill the client after 0.9 s, run it again) and does not say what was collected.
+- An empty line between members or methods is accepted, only one inside a method is `EmptyLineIsNotAllowed` (DeltaEngine has 13 such lines).
+- 11 `StatusNumberMustNotBeReturned` in Runtime (Remote, Resident, Coordinator, Forwarding), and `Forwarding.Started` always returns -1 (StrictComfy Backend.strict:53 never waits for its backend).
+- `NeuronPruning.Picked` duplicates `Dataset.Picked`.
+- `LoadReuse.InvokeReads` keeps its own copy of the Invoke layout.
+- A `File.Locked` taken in a test line does not hold while a called method deletes old copies (`Intermediates.Free` through `Replaced`).
+- A `%` by zero inside a comparison gives false instead of the ModuloByZero Error (`7 % divisor > 3` with divisor 0), VM and native.
+- A Range passed for a `Numbers` parameter is not converted (`Wrapped(Range(0, 4))`: (0, 1, 2) on the VM, AccessViolation natively).
+- No rule requires `Slow(...)` on a method doing file, directory, process or network input or output, so such tests run with every `strict test` (StrictComfy `StrictGenForm.Listed`).
+- `GarbageCollectionExceedsLimit` ends a resident program that loads its models a second time (StrictComfy MossImage: kill the client after 0.9 s, run it again), its message does not name the largest allocating call sites.
