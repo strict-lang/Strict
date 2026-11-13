@@ -8461,7 +8461,8 @@
     cf.br ^done(%returnedPages : f64)
   ^done(%pagesReturned: f64):
     func.call @strict_gc_log(%full, %startedAt) : (i1, f64) -> ()
-    %collectedFrom = arith.addf %ranBefore, %pagesReturned : f64
+    %returnedFrom = arith.addf %ranBefore, %pagesReturned : f64
+    %collectedFrom = arith.addf %returnedFrom, %gpuSwept : f64
     func.call @strict_gc_watch(%collectedFrom, %full, %gpuSwept) : (f64, i1, f64) -> ()
     %resetMadeSlot = llvm.mlir.addressof @strict_gc_small_made : !llvm.ptr
     %resetVisitedSlot = llvm.mlir.addressof @strict_gc_small_visited : !llvm.ptr
@@ -8479,7 +8480,10 @@
   // last 5 seconds ends the program, it allocates too much and has to be fixed first (a single long collection stays
   // below it); STRICT_GC_LIMIT (percent) and STRICT_GC_WINDOW (seconds) set the limit and the window, 5 % of 1 s finds
   // every allocation heavy loop; counted is the time the collecting thread ran (strict_thread_seconds), waiting for a
-  // core shared with other programs is not, nor giving free pages back to the system (0.1 s per GB)
+  // core shared with other programs is not, nor giving free pages back to the system (0.1 s per GB), nor the GPU sweep
+  // that gives the device memory of dead lists back to the driver (0.5 to 0.6 s for a dropped text encoder and Moss, 16
+  // GB: MossImage loading both again ended with 0.82 s in the window, 0.64 s of them in that sweep); the message still
+  // names the seconds of the sweep
   llvm.mlir.global internal @strict_gc_seconds(dense<0.0> : tensor<5xf64>) : !llvm.array<5 x f64>
   llvm.mlir.global internal @strict_gc_stamps(dense<-1> : tensor<5xi64>) : !llvm.array<5 x i64>
   llvm.mlir.global internal @strict_gc_window(5.0 : f64) : f64
