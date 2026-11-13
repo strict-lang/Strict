@@ -1,3 +1,2 @@
 - A `File.Locked` taken in a test line does not hold while a called method deletes old copies (`Intermediates.Free` through `Replaced`).
-- A `%` by zero kept in a variable still compares as false (`let rest = 7 % divisor`, then `rest > 3`), VM and native: only a `%` written in the comparison is checked (ErrorScope.IsRemainder). Following variables would check `pixel % Size.Width` in Bitmap.IsInside too, unless the inference knows member constraints (`Width with value > 0`), it only knows that a type has some.
 - `strict check .` folder tests fail now and then with `UnresolvedLink: Strict/Number.Round` (also `Error.Code`, `Text.Lines`), more after many files changed, a different set each run, never alone: parallel runs racing on the base type caches? (2026-11-13).

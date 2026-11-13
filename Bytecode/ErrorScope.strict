@@ -119,9 +119,11 @@ Declared(name Text, assigned SyntaxNode, isMutable Boolean, block CodeBlock) Cod
 	Plain.Declared("a", ErrorCodegen.Greeting, false, CodeBlock.Empty).scope.TypeOf("a" + FallibleMarker) is "fallible"
 	Plain.Declared("a", ValueCodegen.One, true, CodeBlock.Empty).scope.TypeOf("a" + MutableMarker) is "mutable"
 	Plain.Declared("a", ValueCodegen.One, false, CodeBlock.Empty).scope.names.Length is 0
+	Plain.Declared("a", Remaining, false, Scalar).scope.TypeOf("a" + FallibleMarker) is "fallible"
 	let marked = isMutable then block.Declare(name + MutableMarker, "mutable") else block
 	let errors = ErrorCodegen(values)
-	errors.MayFail(errors.Folded(assigned, block), block) then Fallible(name, marked) else marked
+	let folded = errors.Folded(assigned, block)
+	errors.MayFail(folded, block) or IsRemainder(folded) then Fallible(name, marked) else marked
 Fallible(name Text, block CodeBlock) CodeBlock
 	Plain.Fallible("a", CodeBlock.Empty).scope.TypeOf("a" + FallibleMarker) is "fallible"
 	Plain.Reassigned(SyntaxNode("Reassignment", "", (Increment.children(0), ValueCodegen.ToText))) is ("a")
