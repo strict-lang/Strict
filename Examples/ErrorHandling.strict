@@ -26,7 +26,7 @@ Described Text
 	ErrorHandling(5).Described is "5"
 	ErrorHandling(0).Described.StartsWith("Error: Missing")
 	let found = Found
-	found is Error then found to Text else found to Text
+	found is Error then "Error: " + found.Name else found to Text
 Passed Number
 	ErrorHandling(5).Passed is 6
 	ErrorHandling(0).Passed is Missing
