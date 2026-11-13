@@ -11,6 +11,9 @@ constant Helped = ("has width = 1", "constant Help = (\"first", "- second\")")
 constant Unspaced = List(Text) + "has width Number =5"
 constant Opened = List(Text) + "has name Text = \"open"
 constant Trailing = ("constant One = 1", "constant Pair = (\"a\",) + \"b\"")
+constant Spaced = ("has a", "Run", "	1", "", "Next", "	2")
+constant Ending = ("Run", "	1", "", "")
+constant Tabbed = ("Run", "	1", "	")
 constant Marked = "ByteOrderMarkIsNotAllowed: save the file as UTF-8 without BOM"
 constant Tips = " is not in this folder, next to strict, in a GitHub repository linked in README.md or in github.com/strict-lang. Fix the typo, add its package to this folder or link its repository in README.md"
 Compiled(path Text, root Text, withTests Boolean, known Texts = List(Text)) List(TypeEntry)
@@ -82,14 +85,14 @@ IsMarked(bytes Bytes) Boolean
 	FileCompiler.IsMarked((239, 187)) is false and (FileCompiler.IsMarked((239, 187, 104)) is false)
 	(bytes.Length > 2) and (bytes.Slice(0, 3) is ByteOrderMark)
 Unparsable(lines Texts) Number
-	FileCompiler.Unparsable(("Add(other Number) Number", "	number + + other")) is 1
-	FileCompiler.Unparsable(("Run", "	logger.Log(1 + 2)")) is -1 and (FileCompiler.Unparsable(("Run", "")) is -1)
+	FileCompiler.Unparsable(("Add(other Number) Number", "	number + + other")) is 1 and (Unparsable(Spaced) is 3)
+	Unparsable(("Run", "	logger.Log(1 + 2)")) is -1 and (Unparsable(Ending) is -1) and (Unparsable(Tabbed) is 2)
 	FileCompiler.Unparsable(("Run", "\t", "\t1")) is 1 and (FileCompiler.Unparsable(("Run", "", "\t1")) is 1)
 	FileCompiler.Unparsable(("Run", "\t1 is 1", "", "\t1")) is 2 and (FileCompiler.Unparsable(("\t1", "")) is -1)
 	(Unparsable(Helped) is 1) and (Unparsable(Trailing) is 1) and (Unparsable(Unspaced) is 0) and (Unparsable(Opened) is 0)
 	for lines
 		let next = index + 1 < lines.Length then lines(index + 1) else ""
-		let isEmpty = (value.Trim is "") and (value.StartsWith("\t") or next.StartsWith("\t"))
+		let isEmpty = (value.Trim is "") and (next.Trim is not "")
 		let isBroken = value.StartsWith("	") then IsParsed(value.Trim) is false else Declaration.IsUnspaced(value)
 		if isEmpty or isBroken or IsBrokenConstant(value) or Tokenizer(value).HasOpenText
 			return index

@@ -1,4 +1,3 @@
-- An empty line between members or methods is accepted, only one inside a method is `EmptyLineIsNotAllowed` (DeltaEngine has 13 such lines).
 - `NeuronPruning.Picked` duplicates `Dataset.Picked`.
 - `LoadReuse.InvokeReads` keeps its own copy of the Invoke layout.
 - A `File.Locked` taken in a test line does not hold while a called method deletes old copies (`Intermediates.Free` through `Replaced`).
