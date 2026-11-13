@@ -14,7 +14,9 @@ AndroidPackaged
 	Directory.Create(release + "/assets")
 	logger.Log("Android native library and assets: " + release)
 	Mirrored(release + "/assets/Content")
-IOSPackaged
+MobilePackaged(platform Number)
+	if platform is Platform.Android
+		return AndroidPackaged
 	Content(Parent + "/Release/Content")
 	let release = Parent + "/Release/iOS"
 	Refreshed(release, release + "/Content", base, (".ios.a", ".simulator.a"))
@@ -24,7 +26,7 @@ Packaged(program Text, isWeb = false, isCrossing = false, platform = -1, isRelea
 	Release(Logger, "Compiler/output/Console").Packaged("module {\n}", false, false, -1, true) is not Error
 	Directory.Exists("Compiler/output/Release/" + Platform.NameOf(Platform.Current))
 	if platform is in (Platform.Android, Platform.IOS, Platform.IOSSimulator)
-		return Platform.IsIOS(platform) then IOSPackaged else AndroidPackaged
+		return MobilePackaged(platform)
 	if base.EndsWith(".test")
 		return
 	if isWeb

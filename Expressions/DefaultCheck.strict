@@ -19,6 +19,8 @@ constant Kept = (Scope(("pair"), ("Couple")), Instantiation.Couples.members(0), 
 constant Keeping = DefaultCheck(TypeInference(KnownTypes(("Keeper", "Couple", "Valued"), Kept, Empty, Empty), List(Scope)))
 constant Unstepped = "A:line 1: StepMustBeOnNumber: Numbers, only a Number is rounded to its step"
 constant Paired = "A:line 1: GenericMemberTypeMustBeNamed: pair, name the type of each Generic member of Couple like has pair Couple(Number, Number)"
+constant Recoupled = Paired.Replace("pair", "couple").Replace("line 1", "line 2")
+constant Unlocated = Paired.Replace("A:line 1: ", "")
 constant Named = ("has pair Couple(Text, Number)", "has name Text", "has first Generic", "has items Generics", "has other Couple(first, Generic)")
 constant Typed = Named + ("constant Pair = Couple", "Swapped Couple", "\tCouple(1, 2)")
 Unsupported(path Text, lines Texts) Texts
@@ -44,7 +46,7 @@ HasCheckedMembers(typeName Text) Boolean
 	"value" is in members.names
 OpenMembers(path Text, lines Texts) Texts
 	Coupled.OpenMembers("A", List(Text) + "has pair Couple").First is Paired
-	Coupled.OpenMembers("A", ("has name Text", "has couple")).First is Paired.Replace("pair", "couple").Replace("line 1", "line 2")
+	Coupled.OpenMembers("A", ("has name Text", "has couple")).First is Recoupled
 	Coupled.OpenMembers("A", Typed).Length is 0
 	let shape = TypeShape(lines)
 	for lines
@@ -53,7 +55,7 @@ OpenMembers(path Text, lines Texts) Texts
 		if issue is not ""
 			ResolveCheck.Located(path, index + 1, issue)
 Unnamed(member HeaderTokens) Text
-	ResolveCheck.Located("A", 1, Coupled.Unnamed(HeaderTokens("mutable", "pair", "Couple"))) is Paired.Replace("has", "mutable")
+	Coupled.Unnamed(HeaderTokens("mutable", "pair", "Couple")) is Unlocated.Replace("has", "mutable")
 	Counting.Unnamed(HeaderTokens("has", "count")) is ""
 	let type = inference.types.BaseName(member.DeclaredType(1))
 	mutable types = List(Mutable(Text))
