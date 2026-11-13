@@ -102,8 +102,9 @@ Started(slot Text, suffix Text) Texts
 	MlirPairs(Tripled, 0).Started("%v_listResult0", "")(0).IndexOf("0x401C") > 0
 	MlirPairs(Tripled, 0).Started("%v_listResult0", "").Last is "    llvm.store %t0l, %v_listResult0 : f64, !llvm.ptr"
 	MlirPairs(MlirLoops.Collecting.function, 0).Started("%v_forResult", "").First.StartsWith("    llvm.store %zero, ")
+	MlirPairs(MlirFlats.Made.function, 0).Started("%v_listResult0", "").Length is 1
 	let name = slot.Substring(3, slot.Length - 3)
-	if IsBuilt(name) or IsPresized(name)
+	if IsBuilt(name) or IsPresized(name) or (MlirFlats(function, position).Packed(name) > 0)
 		return List(Text) + function.Store("%zero", slot)
 	let lists = MlirLists(function, position)
 	lists.Created(Writes(name), suffix) + function.Store(lists.Temp(suffix + "l"), slot)
