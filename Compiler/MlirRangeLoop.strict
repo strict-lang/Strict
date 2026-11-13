@@ -6,10 +6,11 @@ Slots Texts
 	MlirRangeLoop(MlirFunction.Counter, 0).Slots is MlirFunction.Counter.Slot("%loop0")
 	Ranging.Slots.First.IndexOf("x i32") > 0
 	MlirRangeLoop(MlirLoops.Spelling.function, 3).Slots.Last is "    llvm.store %zero, %spelled3 : f64, !llvm.ptr"
+	MlirRangeLoop(MlirBytes.Flattening.function, 2).Slots.Last is MlirBytes.Flattening.Buffer.First
 	let name = "%loop" + position
 	let spelled = MlirLoops(function, position).IsSpelling then function.Slot("%spelled" + position) else List(Text)
 	if function.method.instructions(position).payload(1) is not 1
-		return function.Slot(name) + spelled
+		return function.Slot(name) + spelled + MlirBytes(function, position).Buffer
 	let inner = "    " + name + " = llvm.alloca %one x i32 : (i64) -> !llvm.ptr"
 	let left = "    %left" + position + " = llvm.alloca %one x i64 : (i64) -> !llvm.ptr"
 	let base = "    %base" + position + " = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"

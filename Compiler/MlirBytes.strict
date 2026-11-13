@@ -27,6 +27,7 @@ constant Listing = MlirBytes(MlirFunction(Flattening.function, method = MethodEn
 constant Misread = MlirBytes(MlirFunction(Flattening.function, method = MethodEntry(Making, instructions = Tripled + Elsewhere)), 2)
 constant Single = ("    %eb = arith.truncf %e : f64 to f32", "    llvm.store %eb, %p : f32, !llvm.ptr")
 constant FlatStored = "    llvm.store %r, %v_forResult : f64, !llvm.ptr"
+constant Copy = "    \"llvm.intr.memcpy\"(%ritems, %flat2, %rbytes) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()"
 constant Elsewhere = InstructionEntry.Invoke(1, TriplingMade.texts, 3, -1)
 Flattened Number
 	Flattening.Flattened is 3
@@ -95,11 +96,14 @@ Started(result Text, items Text) Texts
 	Collecting.Started("%r", "%i").Last is "    %i = func.call @strict_list_data(%r) : (f64) -> !llvm.ptr"
 	Doubling.Started("%t2r", "%i").Last is "    %i = func.call @strict_list_items(%t2r) : (f64) -> !llvm.ptr"
 	Flattening.Started("%r", "%i").First is "    %r = func.call @strict_flat_new(%t2n) : (f64) -> f64"
+	Flattening.Started("%r", "%i").Last is "    %i = llvm.getelementptr %flat2[0] : (!llvm.ptr) -> !llvm.ptr, f32"
 	Collecting.Started("%r", "%i").First is "    %rpositive = arith.maximumf %t2n, %zero : f64"
 	Doubling.Started("%r", "%i").First is MlirLoops(Doubling.function, 2).Presized.First
+	let buffered = "    " + items + " = llvm.getelementptr %flat" + position + "[0] : (!llvm.ptr) -> !llvm.ptr, f32"
+	if Flattened > 0
+		return FlatCreated(result) + buffered
 	let collected = IsCollected then Created(result) else MlirLoops(function, position).Presized
-	let created = Flattened > 0 then FlatCreated(result) else collected
-	created + ("    " + items + " = func.call " + Itemizer + "(" + result + ") : (f64) -> !llvm.ptr")
+	collected + ("    " + items + " = func.call " + Itemizer + "(" + result + ") : (f64) -> !llvm.ptr")
 Hoisted(items Text, list Text, itemizer = "items") Texts
 	Iterating.Hoisted("%h", "%v")(1) is "    %h = func.call @strict_list_byte_items(%v) : (f64) -> !llvm.ptr"
 	Doubling.Hoisted("%h", "%v") is ("    %h = func.call @strict_list_items(%v) : (f64) -> !llvm.ptr")
@@ -127,6 +131,25 @@ FlatCreated(result Text) Texts
 	Flattening.FlatCreated("%r") is ("    %r = func.call @strict_flat_new(%t2n) : (f64) -> f64", FlatStored)
 	let created = "    " + result + " = func.call @strict_flat_new(%t" + position + "n) : (f64) -> f64"
 	(created, function.Store(result, "%v_forResult"))
+Buffer Texts
+	Flattening.Buffer is ("    %flat2 = llvm.alloca %one x !llvm.array<3 x f32> : (i64) -> !llvm.ptr")
+	Doubling.Buffer.Length is 0
+	let count = Flattened
+	if count is 0
+		return List(Text)
+	List(Text) + ("    %flat" + position + " = llvm.alloca %one x !llvm.array<" + count + " x f32> : (i64) -> !llvm.ptr")
+Unbuffered(result Text) Texts
+	Flattening.Unbuffered("%r")(0) is "    %ritems = func.call @strict_flat_items(%r) : (f64) -> !llvm.ptr"
+	Flattening.Unbuffered("%r")(1) is "    %rbytes = arith.constant 12 : i64"
+	Flattening.Unbuffered("%r").Last is Copy
+	Doubling.Unbuffered("%r").Length is 0
+	let count = Flattened
+	if count is 0
+		return List(Text)
+	let items = "    " + result + "items = func.call @strict_flat_items(" + result + ") : (f64) -> !llvm.ptr"
+	let bytes = "    " + result + "bytes = arith.constant " + count * 4 + " : i64"
+	let operands = "(" + result + "items, %flat" + position + ", " + result + "bytes)"
+	(items, bytes, "    \"llvm.intr.memcpy\"" + operands + " <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()")
 Stored(element Text, pointer Text) Texts
 	Collecting.Stored("%e", "%p").First is "    %eb = func.call @strict_byte_packed(%e) : (f64) -> i8"
 	Collecting.Stored("%e", "%p").Last is "    llvm.store %eb, %p : i8, !llvm.ptr"

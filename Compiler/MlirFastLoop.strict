@@ -161,12 +161,13 @@ Exited Texts
 	Doubling.Exited(1) is "    %t2fill = func.call @strict_list_filled_numbers(%t2r, %t2n) : (f64, f64) -> f64"
 	Doubling.Exited(2) is "    llvm.store %t2x, %v_index : f64, !llvm.ptr"
 	Doubling.Exited(3) is "    llvm.store %t2y, %v_value : f64, !llvm.ptr"
+	MlirFastLoop(MlirBytes.Flattening.function, 2).Exited(1) is MlirBytes.Flattening.Unbuffered("%t2r").First
 	let loops = MlirLoops(function, function.method.LoopEndOf(position))
 	let helper = MlirParallel(function, position).Filler
 	let filled = MlirMemory(function, position).Called(Temp("fill"), helper, (Temp("r"), Temp("n")))
 	let restored = (function.Store(Temp("x"), "%v_index"), function.Store(Temp("y"), "%v_value"))
 	let isFilled = MlirLoops(function, position).IsCollecting and (MlirBytes(function, position).Flattened is 0)
-	let collected = isFilled then List(Text) + filled else List(Text)
+	let collected = isFilled then List(Text) + filled else MlirBytes(function, position).Unbuffered(Temp("r"))
 	List(Text) + ("  ^loop" + position + "exit:") + collected + restored + loops.Restored(position)
 Emitted(at Number) Texts
 	Doubling.Emitted(4).First is "    %t4p = llvm.getelementptr %t2h_numbers[%t2ki] : (!llvm.ptr, i64) -> !llvm.ptr, f64"
