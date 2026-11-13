@@ -34,13 +34,13 @@ Flattened Number
 	MlirBytes(MlirFunction(Flattening.function, FastLoop = 2), 2).Flattened is 3
 	MlirBytes(MlirFunction(Flattening.function, method = Overcounted), 2).Flattened is 0
 	MlirBytes(MlirFunction(Flattening.function, method = Sourced), 2).Flattened is 0
-	MlirKernel(MlirFunction(Flattening.function, method = Sourced), 2).IsSimple
-	let end = function.method.LoopEndOf(position)
+	let type = Made(function.method.LoopEndOf(position))
+	if type is ""
+		return 0
 	let kernel = MlirKernel(MlirFunction(function, FastLoop = -1), position)
 	let isRaw = kernel.IsSimple and (kernel.Sources.Length is 0) and MlirLoops(function, position).IsCollecting
-	let type = isRaw then Made(end) else ""
 	let count = MlirCounter(function, position).Constant(function.method.instructions(position).payload(0), -1)
-	(type is not "") and (MlirFlats(function, position).Count(type) is count) then count else 0
+	isRaw and (MlirFlats(function, position).Count(type) is count) then count else 0
 Made(end Number) Text
 	Flattening.Made(5) is "Strict/Math/Tripling"
 	Flattening.Made(4) is ""
