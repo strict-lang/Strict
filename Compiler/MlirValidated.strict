@@ -65,7 +65,7 @@ IsKept(made InstructionEntry, at Number, name Text) Boolean
 	let loaded = source >= 0 then function.method.instructions(source) else made
 	let isMember = (loaded.kind is InstructionType.LoadVariableToRegister) and (loaded.texts(0) is name)
 	let isCopied = isMember and (name is not in function.method.ParameterNames) and MlirParameters(function).IsFixed(name)
-	isCopied or ((Count(name) > 0) and (Returned(loaded) is Count(name)))
+	isCopied or ((Count(name) > 0) and (MlirValidated(function, source).Gathered is Count(name)))
 Count(name Text) Number
 	Sizes.Count("numbers") is 16
 	Kept.Count("width") is 0
@@ -82,6 +82,16 @@ Returned(call InstructionEntry) Number
 	let decoder = PayloadDecoder(call)
 	let type = MlirLayout(function).Owner(function.TypeOf(decoder.Text(1)), name)
 	MlirValidated(MlirFunction(function.types, type, decoder.Callee(type)), 0).Collected
+Gathered Number
+	MlirValidated(MlirBytes.Flattening.function, 6).Gathered is 3
+	MlirValidated(MlirBytes.Flattening.function, 5).Gathered is 0
+	MlirValidated(Sizes.function, 0).Gathered is 16
+	if position < 0
+		return 0
+	let steps = function.method.instructions
+	let isLoaded = (position > 0) and (steps(position).kind is InstructionType.LoadVariableToRegister)
+	let isGathered = isLoaded and (steps(position - 1).kind is InstructionType.LoopEnd)
+	isGathered then MlirBytes(function, function.method.LoopBeginOf(position - 1)).Flattened else Returned(steps(position))
 Collected Number
 	MlirValidated(MlirFunction(List(TypeEntry) + Sized, Sized, Counting), 0).Collected is 16
 	Sizes.Collected is 0

@@ -12558,6 +12558,12 @@
     %result = func.call @strict_bits(%block) : (!llvm.ptr) -> f64
     return %result : f64
   }
+  // the floats of a flat block behind its count, a raw loop collecting into a flat type writes them directly
+  func.func private @strict_flat_items(%flat: f64) -> !llvm.ptr attributes {llvm.passthrough = ["alwaysinline"]} {
+    %block = func.call @strict_ptr(%flat) : (f64) -> !llvm.ptr
+    %items = llvm.getelementptr %block[1] : (!llvm.ptr) -> !llvm.ptr, f32
+    return %items : !llvm.ptr
+  }
   func.func private @strict_flat_set(%flat: f64, %index: f64, %value: f64) attributes {llvm.passthrough = ["alwaysinline"]} {
     %block = func.call @strict_ptr(%flat) : (f64) -> !llvm.ptr
     %at = arith.fptosi %index : f64 to i64

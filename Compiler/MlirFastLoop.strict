@@ -165,7 +165,8 @@ Exited Texts
 	let helper = MlirParallel(function, position).Filler
 	let filled = MlirMemory(function, position).Called(Temp("fill"), helper, (Temp("r"), Temp("n")))
 	let restored = (function.Store(Temp("x"), "%v_index"), function.Store(Temp("y"), "%v_value"))
-	let collected = MlirLoops(function, position).IsCollecting then List(Text) + filled else List(Text)
+	let isFilled = MlirLoops(function, position).IsCollecting and (MlirBytes(function, position).Flattened is 0)
+	let collected = isFilled then List(Text) + filled else List(Text)
 	List(Text) + ("  ^loop" + position + "exit:") + collected + restored + loops.Restored(position)
 Emitted(at Number) Texts
 	Doubling.Emitted(4).First is "    %t4p = llvm.getelementptr %t2h_numbers[%t2ki] : (!llvm.ptr, i64) -> !llvm.ptr, f64"

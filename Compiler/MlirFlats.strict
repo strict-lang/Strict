@@ -157,8 +157,15 @@ Constructed(entry InstructionEntry, typeName Text, instances MlirInstances) Text
 	if (loaded.kind is InstructionType.LoadVariableToRegister) and (Packed(loaded.texts(0)) > 0)
 		return instances.Constructed(entry, typeName)
 	let temp = "%t" + position
-	let converted = "    " + temp + "f = func.call @strict_flat_from_list(" + temp + "l) : (f64) -> f64"
+	let converted = "    " + temp + "f = func.call @" + Converter(writer) + "(" + temp + "l) : (f64) -> f64"
 	(function.Load(temp + "l", "%r" + argument), converted, function.Store(temp + "f", "%r" + entry.payload(0)))
+Converter(writer Number) Text
+	MlirFlats(MlirBytes.Flattening.function, 0).Converter(6) is "strict_validated"
+	Sample.Converter(-1) is "strict_flat_from_list"
+	MlirFlats(MlirBytes.Flattening.function, 0).Converter(3) is "strict_flat_from_list"
+	MlirFlats(MlirValidated.Sizes.function, 1).Converter(0) is "strict_flat_from_list"
+	let isLoaded = (writer >= 0) and (function.method.instructions(writer).kind is InstructionType.LoadVariableToRegister)
+	isLoaded and (MlirValidated(function, writer).Gathered > 0) then "strict_validated" else "strict_flat_from_list"
 Kind(kind Text) Text
 	Sample.Constructed(Construction, "Tripling", MlirInstances(Sample.function, 1))(0).IndexOf("l = llvm.load %r3 ") is 7
 	Sample.Constructed(Construction, "Tripling", MlirInstances(Sample.function, 1))(1).IndexOf("(%t1l) :") is 43

@@ -12,6 +12,46 @@ constant Collecting = MlirBytes(MlirFastLoop.Byting.function, 2)
 constant Doubling = MlirBytes(MlirFastLoop.Doubling.function, 2)
 constant Laning = MlirBytes(MlirLanes.Collecting, 2)
 constant Singling = MlirBytes(MlirFunction(List(TypeEntry), MlirFunction.Shape, MlirLayout.Singles.method), 2)
+constant Threes = (MlirLoops.Emptied, InstructionEntry.LoadNumber(0, 3), InstructionEntry.LoopBegin(0, -1)) + MlirValidated.Pushed
+constant Tripled = Threes + InstructionEntry.Jump(InstructionType.LoopEnd, 3) + MlirValidated.ForResult
+constant TriplingMade = InstructionEntry.Invoke(1, ("Strict/Math/Tripling", "from", "Strict/Math/Tripling", "numbers"), 0, -1)
+constant Making = MethodEntry("Made", List(MemberEntry), "Strict/Math/Tripling", Tripled + TriplingMade + InstructionEntry.Return(1))
+constant Flattening = MlirBytes(MlirFunction((MlirFlats.Tripling, MlirFlats.Summing), MlirFlats.Tripling, Making), 2)
+constant Fours = (MlirLoops.Emptied, InstructionEntry.LoadNumber(0, 4), InstructionEntry.LoopBegin(0, -1)) + MlirValidated.Pushed
+constant Overcounted = MethodEntry(Making, instructions = Fours + Tripled.Slice(5, 2) + TriplingMade + InstructionEntry.Return(1))
+constant Read = (MlirCounter.IndexLoad, InstructionEntry(InstructionType.IndexCall, "numbers", (2, 1, -1)))
+constant Picked = Threes.Slice(0, 3) + Read + InstructionEntry.Named(InstructionType.InvokeWriteToList, 2, "forResult")
+constant Sourcing = Picked + InstructionEntry.Jump(InstructionType.LoopEnd, 4) + MlirValidated.ForResult + TriplingMade
+constant Sourced = MethodEntry("Made", List(MemberEntry) + MlirLists.Items, Making.declaredType, Sourcing + InstructionEntry.Return(1))
+constant Listing = MlirBytes(MlirFunction(Flattening.function, method = MethodEntry(Making, instructions = Tripled)), 2)
+constant Misread = MlirBytes(MlirFunction(Flattening.function, method = MethodEntry(Making, instructions = Tripled + Elsewhere)), 2)
+constant Single = ("    %eb = arith.truncf %e : f64 to f32", "    llvm.store %eb, %p : f32, !llvm.ptr")
+constant FlatStored = "    llvm.store %r, %v_forResult : f64, !llvm.ptr"
+constant Elsewhere = InstructionEntry.Invoke(1, TriplingMade.texts, 3, -1)
+Flattened Number
+	Flattening.Flattened is 3
+	Doubling.Flattened is 0
+	MlirBytes(MlirFunction(Flattening.function, FastLoop = 2), 2).Flattened is 3
+	MlirBytes(MlirFunction(Flattening.function, method = Overcounted), 2).Flattened is 0
+	MlirBytes(MlirFunction(Flattening.function, method = Sourced), 2).Flattened is 0
+	MlirKernel(MlirFunction(Flattening.function, method = Sourced), 2).IsSimple
+	let end = function.method.LoopEndOf(position)
+	let kernel = MlirKernel(MlirFunction(function, FastLoop = -1), position)
+	let isRaw = kernel.IsSimple and (kernel.Sources.Length is 0) and MlirLoops(function, position).IsCollecting
+	let type = isRaw then Made(end) else ""
+	let count = MlirCounter(function, position).Constant(function.method.instructions(position).payload(0), -1)
+	(type is not "") and (MlirFlats(function, position).Count(type) is count) then count else 0
+Made(end Number) Text
+	Flattening.Made(5) is "Strict/Math/Tripling"
+	Flattening.Made(4) is ""
+	Listing.Made(5) is ""
+	Misread.Made(5) is ""
+	let steps = function.method.instructions
+	if (end + 2 >= steps.Length) or (Text.Combine(steps(end + 1).texts) is not "forResult")
+		return ""
+	let made = steps(end + 2)
+	let isMade = (made.kind is InstructionType.Invoke) and (made.texts(1) is "from")
+	isMade and (PayloadDecoder(made).Arguments is (steps(end + 1).payload(0))) then made.texts(0) else ""
 IsIterated Boolean
 	Iterating.IsIterated
 	Laning.IsIterated
@@ -39,18 +79,26 @@ IsCollected Boolean
 Itemizer Text
 	Collecting.Itemizer is "@strict_list_data"
 	Doubling.Itemizer is "@strict_list_items"
-	IsCollected then "@strict_list_data" else "@strict_list_items"
+	Flattening.Itemizer is "@strict_flat_items"
+	Flattened > 0 then "@strict_flat_items" else (IsCollected then "@strict_list_data" else "@strict_list_items")
 Width Text
 	Collecting.Width is "i8"
 	Doubling.Width is "f64"
 	Laning.Width is "i32"
 	Singling.Width is "f32"
+	Flattening.Width is "f32"
+	if Flattened > 0
+		return "f32"
 	let packed = MlirLayout(function).Packed(position)
 	IsCollected then ("i8", "f32", "i32")((9, MlirDoubles.Float32Format, MlirDoubles.LanesFormat).Index(packed)) else "f64"
 Started(result Text, items Text) Texts
 	Collecting.Started("%r", "%i").Last is "    %i = func.call @strict_list_data(%r) : (f64) -> !llvm.ptr"
 	Doubling.Started("%t2r", "%i").Last is "    %i = func.call @strict_list_items(%t2r) : (f64) -> !llvm.ptr"
-	let created = IsCollected then Created(result) else MlirLoops(function, position).Presized
+	Flattening.Started("%r", "%i").First is "    %r = func.call @strict_flat_new(%t2n) : (f64) -> f64"
+	Collecting.Started("%r", "%i").First is "    %rpositive = arith.maximumf %t2n, %zero : f64"
+	Doubling.Started("%r", "%i").First is MlirLoops(Doubling.function, 2).Presized.First
+	let collected = IsCollected then Created(result) else MlirLoops(function, position).Presized
+	let created = Flattened > 0 then FlatCreated(result) else collected
 	created + ("    " + items + " = func.call " + Itemizer + "(" + result + ") : (f64) -> !llvm.ptr")
 Hoisted(items Text, list Text, itemizer = "items") Texts
 	Iterating.Hoisted("%h", "%v")(1) is "    %h = func.call @strict_list_byte_items(%v) : (f64) -> !llvm.ptr"
@@ -75,13 +123,17 @@ Created(result Text) Texts
 	let operands = "(" + result + "elements, " + result + "format) : (i64, i64) -> f64"
 	let created = "    " + result + " = func.call @strict_packed_new" + operands
 	(count, whole, format, created, function.Store(result, "%v_forResult"))
+FlatCreated(result Text) Texts
+	Flattening.FlatCreated("%r") is ("    %r = func.call @strict_flat_new(%t2n) : (f64) -> f64", FlatStored)
+	let created = "    " + result + " = func.call @strict_flat_new(%t" + position + "n) : (f64) -> f64"
+	(created, function.Store(result, "%v_forResult"))
 Stored(element Text, pointer Text) Texts
 	Collecting.Stored("%e", "%p").First is "    %eb = func.call @strict_byte_packed(%e) : (f64) -> i8"
 	Collecting.Stored("%e", "%p").Last is "    llvm.store %eb, %p : i8, !llvm.ptr"
 	Doubling.Stored("%e", "%p") is ("    llvm.store %e, %p : f64, !llvm.ptr")
 	Laning.Stored("%e", "%p") is ("    %eb = arith.fptoui %e : f64 to i32", "    llvm.store %eb, %p : i32, !llvm.ptr")
-	Singling.Stored("%e", "%p") is ("    %eb = arith.truncf %e : f64 to f32", "    llvm.store %eb, %p : f32, !llvm.ptr")
-	if IsCollected is false
+	(Singling.Stored("%e", "%p") is Single) and (Flattening.Stored("%e", "%p") is Single)
+	if (IsCollected or (Flattened > 0)) is false
 		return List(Text) + ("    llvm.store " + element + ", " + pointer + " : f64, !llvm.ptr")
 	let byte = "    " + element + "b = func.call @strict_byte_packed(" + element + ") : (f64) -> i8"
 	let lanes = "    " + element + "b = arith.fptoui " + element + " : f64 to i32"

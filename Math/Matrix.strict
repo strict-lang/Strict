@@ -24,9 +24,6 @@ RotationZ(angle Degrees) Matrix
 *(other) Matrix
 	Moved * Identity is Moved
 	(Moved * Matrix.Scaling(2)).Transformed(Vector3.One) is Vector3(3, 4, 5)
-	Matrix(Product(other))
-Product(other Matrix) Numbers
-	Identity.Product(Identity) is Identity.values
 	for Cells
 		Cell(index % 4, (index / 4).Floor, other)
 Cell(row Number, column Number, other Matrix) Number
