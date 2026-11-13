@@ -74,7 +74,7 @@ def replacement(folder):
 	backup = folder / "app.old.exe"
 	source = folder / "ReplaceCheck.strict"
 	build = (root / "Compiler/NativeBuild.strict").read_text(encoding="utf-8")
-	body = build.split("Linked(base Text, tools Toolchain) Slow(Text)\n", 1)[1].split("\nCrossBuild(", 1)[0]
+	body = build.split("Linked(base Text, tools Toolchain) Text slow\n", 1)[1].split("\nCrossBuild(", 1)[0]
 	body = body[body.index("\tlet executable ="):]
 	body = body.replace("tools.Executable(base)", '"' + original.as_posix() + '"').replace("tools.isWeb", "false")
 	body = re.sub(r"\tlet built = .*", '\tlet built = "Built " + target', body)

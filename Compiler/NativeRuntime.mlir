@@ -582,8 +582,7 @@
     %fullSoon = arith.cmpi ugt, %allocatedTwice, %threshold : i64
     %youngSlot = llvm.mlir.addressof @strict_gc_young : !llvm.ptr
     %young = llvm.load %youngSlot : !llvm.ptr -> i64
-    %limitSlot = llvm.mlir.addressof @strict_gc_young_limit : !llvm.ptr
-    %limit = llvm.load %limitSlot : !llvm.ptr -> i64
+    %limit = func.call @strict_gc_young_room() : () -> i64
     %youngTwice = arith.muli %young, %two : i64
     %crowded = arith.cmpi ugt, %youngTwice, %limit : i64
     %enabled = arith.cmpi ne, %limit, %zero : i64
@@ -3449,12 +3448,34 @@
   // the heap top after the last collection: the heap growing by the young limit since makes a young collection due,
   // also when the counts gave the bytes back (freed blocks whose pages were not reused, pages taken in pool jobs)
   llvm.mlir.global internal @strict_gc_collected_top(0 : i64) : i64
+  // the young limit, but at most 4 times what lived after the last full collection and was kept since (at least 16 MB):
+  // a program with few live objects collects its young ones while they are still in the cache, a big heap seldom;
+  // within a frame the limit stays, its frame end collects
+  func.func private @strict_gc_young_room() -> i64 {
+    %limitSlot = llvm.mlir.addressof @strict_gc_young_limit : !llvm.ptr
+    %limit = llvm.load %limitSlot : !llvm.ptr -> i64
+    %liveSlot = llvm.mlir.addressof @strict_gc_live : !llvm.ptr
+    %live = llvm.load %liveSlot : !llvm.ptr -> i64
+    %agedSlot = llvm.mlir.addressof @strict_gc_aged : !llvm.ptr
+    %aged = llvm.load %agedSlot : !llvm.ptr -> i64
+    %kept = arith.addi %live, %aged : i64
+    %quadrupleShift = arith.constant 2 : i64
+    %scaled = arith.shli %kept, %quadrupleShift : i64
+    %smallest = arith.constant 16777216 : i64
+    %room = arith.maxui %scaled, %smallest : i64
+    %bounded = arith.minui %room, %limit : i64
+    %framedSlot = llvm.mlir.addressof @strict_gc_framed : !llvm.ptr
+    %framed = llvm.load %framedSlot : !llvm.ptr -> i64
+    %none = arith.constant 0 : i64
+    %isFramed = arith.cmpi ne, %framed, %none : i64
+    %chosen = arith.select %isFramed, %limit, %bounded : i64
+    return %chosen : i64
+  }
   func.func private @strict_gc_young_due() -> i1 {
     %none = arith.constant 0 : i64
     %youngSlot = llvm.mlir.addressof @strict_gc_young : !llvm.ptr
     %young = llvm.load %youngSlot : !llvm.ptr -> i64
-    %limitSlot = llvm.mlir.addressof @strict_gc_young_limit : !llvm.ptr
-    %limit = llvm.load %limitSlot : !llvm.ptr -> i64
+    %limit = func.call @strict_gc_young_room() : () -> i64
     %topSlot = llvm.mlir.addressof @strict_gc_top : !llvm.ptr
     %top = llvm.load %topSlot : !llvm.ptr -> i64
     %collectedSlot = llvm.mlir.addressof @strict_gc_collected_top : !llvm.ptr

@@ -152,7 +152,7 @@ with tempfile.TemporaryDirectory(prefix="BuildCheck", dir=root / "Examples") as 
 	source = Path(folder) / "ReleaseCheck.strict"
 	base = (Path(folder) / "Built").as_posix()
 	release = (Path(folder) / "Release").as_posix()
-	source.write_text('has release Compiler/Release\nRun Slow(Number)\n'
+	source.write_text('has release Compiler/Release\nRun Number slow\n'
 		f'\tReleaseCheck(Release(Logger, "{base}")).Retained is true\n\t0\nRetained Boolean\n'
 		f'\tFile("{base + extension}").Write("built")\n'
 		f'\trelease.Refreshed("{release}", "", "{base}", ("{extension}"))\n'

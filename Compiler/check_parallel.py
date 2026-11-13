@@ -450,7 +450,7 @@ wrapper = '''
     %bytes = arith.subi %top, %heapBase : i64
     return %bytes : i64
   }
-  // a pool job leaves 400 MB of garbage and nothing collects it until the next allocation
+  // a pool job leaves 400 MB of garbage (run with STRICT_YOUNG=0) and nothing collects it until the next allocation
   func.func @test_job_garbage(%stack: !llvm.ptr) -> i64 {
     func.call @strict_gc_init(%stack) : (!llvm.ptr) -> ()
     %body = func.constant @test_waste : (!llvm.ptr, i64, i64) -> f64
@@ -881,7 +881,8 @@ run("mlir-translate", ["--mlir-to-llvmir", lowered, "-o", llvm])
 executable = output / "check.exe"
 run("clang", [llvm, driver, "-O2", "-march=native", "-Wno-override-module", "-fuse-ld=lld", "-Wl,clang_rt.builtins-x86_64.lib", "-o", executable])
 for mode in ["updated", "memory", "owned", "big", "freed", "published", "literal", "j", "k", "xcycle", "gpu", "rsame", "rdifferent", "scan"]:
-	reused = subprocess.run([str(executable), mode], capture_output=True, text=True, timeout=15)
+	unyoung = dict(os.environ, STRICT_YOUNG="0") if mode == "freed" else None
+	reused = subprocess.run([str(executable), mode], capture_output=True, text=True, timeout=15, env=unyoung)
 	print(reused.stdout.strip(), flush=True)
 	assert reused.returncode == 0, reused.stdout + reused.stderr
 def tool_shares(environment):

@@ -7,7 +7,8 @@ GpuMemory.Released never collects and Process.Collected always does, a list a me
 is not refilled while the local it came from still reads it, a Realtime type collects at the end of its
 frames (Presented), reading 1000 lines of 80 KB measures the 80 MB text once (its remembered length survives reclaims
 that do not free it, measuring it again per line took 13 s), a loop collecting more than the limit ends with
-GarbageCollectionExceedsLimit and names its young and full collections in the window."""
+GarbageCollectionExceedsLimit and names its young and full collections in the window, 5 million short lived Matrix
+products stay in a heap below 64 MB (the young limit follows what lives, the products are collected while cached)."""
 import ctypes
 import os
 import re
@@ -123,8 +124,8 @@ with tempfile.TemporaryDirectory(prefix="MemoryCheck", dir=root / "Examples") as
 	uncollected(built(folder, "PassedLarge", filled + "Last(numbers Numbers) Number\n"
 		"\tPassedLarge(Logger).Last((1, 2)) is 2\n\tnumbers(numbers.Length - 1)\nRun\n\tmutable total = 0\n"
 		"\tfor 60000\n\t\ttotal = total + Last(Filled(8192, index))\n\tlogger.Log(\"total \" + total)"), 2291430000)
-	trimmed = built(folder, "TrimmedPool", filled + "Held(count Number) Slow(List(Numbers))\n"
-		"\tTrimmedPool(Logger).Held(1).Length is 1\n\tfor count\n\t\tFilled(16000000, index)\nLast(count Number) Slow(Number)\n"
+	trimmed = built(folder, "TrimmedPool", filled + "Held(count Number) List(Numbers) slow\n"
+		"\tTrimmedPool(Logger).Held(1).Length is 1\n\tfor count\n\t\tFilled(16000000, index)\nLast(count Number) Number slow\n"
 		"\tTrimmedPool(Logger).Last(1) is 1\n\tHeld(count).Last(1)\nRun\n\tmutable total = 0\n\tfor 3\n"
 		"\t\ttotal = total + Last(64)\n\t\tProcess.Collected\n\tlogger.Log(\"collected\")\n\tGpuMemory.Released\n"
 		"\tlogger.Log(\"total \" + total)")
@@ -159,4 +160,10 @@ with tempfile.TemporaryDirectory(prefix="MemoryCheck", dir=root / "Examples") as
 		r"after the last full collection", ran.stdout)
 	assert "GarbageCollectionExceedsLimit" in ran.stdout and explained, ran.stdout[-500:]
 	assert int(explained[1]) + int(explained[2]) > 0 and explained[3] == "0", ran.stdout[-500:]
+	products = built(folder, "Products", "has logger\nconstant Turn = Matrix.RotationZ(Degrees(1))\nRun\n"
+		"\tmutable current = Matrix.Identity\n\tfor 5000000\n\t\tcurrent = current * Turn\n\tlogger.Log(\"done\")")
+	ran = subprocess.run([str(products)], capture_output=True, text=True, timeout=60,
+		env=os.environ | {"STRICT_GC_LOG": "1", "STRICT_GPU": "0"})
+	heaps = [int(heap) for heap in re.findall(r"(\d+) MB heap", ran.stdout)]
+	assert ran.returncode == 0 and "done" in ran.stdout and heaps and max(heaps) < 64, ran.stdout[-500:]
 print("check_memory.py passed")
