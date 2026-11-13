@@ -2,10 +2,11 @@ has statements MlirWholeStatements
 has entry InstructionEntry
 constant Sized = MlirWholeFlat.Sized.function
 constant Fits = MlirWholeFlat.Fits.function
+constant FitsCall = "@Grid_Fits_1_whole_flat(%failed, %a, %b) : (!llvm.ptr, i64, i64) -> i64"
 constant Calling = MlirFlatCall(MlirWholeStatements(Sized, 5, "iiiii", "o-", "iiiii", true), MlirWholeFlat.Fitting)
 Called Texts
 	Calling.Called.Last is "    llvm.store %t5c, %r4 : i64, !llvm.ptr"
-	Calling.Called(2).EndsWith("@Grid_Fits_1_whole_flat(%t5a0, %t5a1_width) : (i64, i64) -> i64")
+	Calling.Called(2).EndsWith("@Grid_Fits_1_whole_flat(%failed, %t5a0, %t5a1_width) : (!llvm.ptr, i64, i64) -> i64")
 	let native = MlirWholeNative(statements).Emitted(entry)
 	if native.Length > 0
 		return native
@@ -32,14 +33,15 @@ Temps(callee MlirFunction, input Number) Texts
 	Calling.Temps(Fits, 1) is List(Text) + "%t5a1_width"
 	for MlirWholeInstance(callee).Members(input)
 		statements.Temp("a" + input + "_" + value)
-Call(result Text, flat MlirWholeFlat, names Texts) Text
-	Calling.Call("%r", MlirWholeFlat.Fits, ("%a", "%b")).EndsWith("@Grid_Fits_1_whole_flat(%a, %b) : (i64, i64) -> i64")
-	mutable types = List(Mutable(Text))
+Call(result Text, flat MlirWholeFlat, names Texts, failed = "%failed") Text
+	Calling.Call("%r", MlirWholeFlat.Fits, ("%a", "%b"), "%failed").EndsWith(FitsCall)
+	mutable types = List(Mutable(Text)) + "!llvm.ptr"
 	for flat.Kinds
 		types.Add(MlirWholeValues(0).Typed(value))
 	let returned = MlirWholeValues(0).Typed(MlirWholeTypes(flat.function).Returned)
 	let signature = " : (" + Text.Combine(types, ", ") + ") -> " + returned
-	"    " + result + " = func.call @" + flat.Symbol + "(" + Text.Combine(names, ", ") + ")" + signature
+	let arguments = Text.Combine((List(Text) + failed) + names, ", ")
+	"    " + result + " = func.call @" + flat.Symbol + "(" + arguments + ")" + signature
 Expanded(register Number, callee MlirFunction, input Number) Texts
 	Calling.Expanded(2, Fits, 1) is List(Text) + "    %t5a1_width = llvm.load %v_grid_width : !llvm.ptr -> i64"
 	let name = MlirWholeFlat(statements.function).Source(register, statements.position)

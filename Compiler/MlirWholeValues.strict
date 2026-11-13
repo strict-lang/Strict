@@ -1,5 +1,6 @@
 has position Number
 constant Sample = MlirWholeValues(3)
+constant FlaggedCall = "    %r = func.call @F(%f, %a0, %a1) : (!llvm.ptr, !llvm.ptr, i64) -> i64"
 Typed(type Text) Text
 	Sample.Typed("f") is "f64"
 	Sample.Typed("p") is "!llvm.ptr"
@@ -33,10 +34,10 @@ Constant(literal Runtime/VmValue, slot Text, wanted Text) Texts
 		return (number, "    llvm.store %t" + position + "c, " + slot + " : f64, !llvm.ptr")
 	let converted = Converted("%t" + position + "c", "f", "i", "%t" + position + "k")
 	(number, converted, "    llvm.store %t" + position + "k, " + slot + " : i64, !llvm.ptr")
-Called(result Text, symbol Text, prefix Text, kinds Texts, returned Text) Text
-	Sample.Called("%r", "F", "%a", ("p", "i"), "i") is "    %r = func.call @F(%a0, %a1) : (!llvm.ptr, i64) -> i64"
-	mutable names = List(Mutable(Text))
-	mutable types = List(Mutable(Text))
+Called(result Text, symbol Text, prefix Text, kinds Texts, returned Text, failed = "%failed") Text
+	Sample.Called("%r", "F", "%a", ("p", "i"), "i", "%f") is FlaggedCall
+	mutable names = List(Mutable(Text)) + failed
+	mutable types = List(Mutable(Text)) + "!llvm.ptr"
 	for kinds
 		names.Add(prefix + index)
 		types.Add(Typed(value))

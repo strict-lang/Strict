@@ -11,13 +11,16 @@ constant RowAdvanced = ("    %wy1 = arith.addi %wyv, %one : i64", "    %wyn = ar
 constant Advanced = ColumnWrapped + RowAdvanced
 constant Stored = ("    %wb = arith.trunci %wr : i64 to i32", "    %wp = llvm.getelementptr %wout[%wk] : (!llvm.ptr, i64) -> !llvm.ptr, i32", "    llvm.store %wb, %wp : i32, !llvm.ptr")
 Lines(header Text, fallback Texts) Texts
-	Text.Combine(Blurring.Lines("h", List(Text))).IndexOf("@Board_Picked_2_whole(%t8wa0, %t8wa1)") > 0
+	Text.Combine(Blurring.Lines("h", List(Text))).IndexOf("@Board_Picked_2_whole(%failed, %t8wa0, %t8wa1)") > 0
 	MlirWholeChild(Blurring.function, 5).IsWhole
-	Text.Combine(Sized.Lines("h", List(Text))).IndexOf("_row1(%t8wa0, %t8wa1, %t8wa2, %t8wa3, %t8wa4)") > 0
+	Blurring.Lines("h", List(Text))(5) is "    llvm.store %wfnone, %failed : i64, !llvm.ptr"
+	Sized.Lines("h", List(Text))(6) is "    %wx = llvm.alloca %one x i64 : (i64) -> !llvm.ptr"
+	Text.Combine(Sized.Lines("h", List(Text))).IndexOf("_row1(%failed, %t8wa0, %t8wa1, %t8wa2, %t8wa3, %t8wa4)") > 0
 	let body = MlirWholeBody(function)
 	let counter = body.Slot("%wloop", "i64")
 	let positions = Rowed < 0 then List(Text) else (body.Slot("%wx", "i64"), body.Slot("%wy", "i64"))
-	(header, "    %one = arith.constant 1 : i64", counter) + positions + Guarded + fallback + Looped + "  }"
+	let started = (header, "    %one = arith.constant 1 : i64", counter) + MlirWholeChild.Failing + positions
+	started + Guarded + fallback + Looped + "  }"
 Guarded Texts
 	Text.Combine(Blurring.Guarded).IndexOf("%t8wh0m0k = func.call @strict_list_packed(%t8wh0m0v)") > 0
 	Blurring.Guarded.Last is "    cf.cond_br %t8whok, ^wholestart, ^generic"
@@ -46,7 +49,7 @@ Input(read Number) Texts
 	let converted = MlirWholeValues(Kernel.Call).Converted(name, "f", "i", call.Temp("wa" + read))
 	loaded + call.Checked(read, kind) + (kind is in ("p", "d", "o") then List(Text) else List(Text) + converted)
 Looped Texts
-	Blurring.Looped(Blurring.Looped.Length - 7) is "    llvm.store %wb, %wp : i32, !llvm.ptr"
+	Blurring.Looped(Blurring.Looped.Length - 11) is "    llvm.store %wb, %wp : i32, !llvm.ptr"
 	let isRowed = Rowed >= 0
 	let callee = MlirWholeFunction(Kernel.Callee)
 	mutable lines = (isRowed then Begun else MlirWholeChild.Started) + MlirWholeChild.Checked

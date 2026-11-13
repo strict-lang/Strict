@@ -17,7 +17,9 @@ constant Items = "    %witems = func.call @strict_list_bytes(%wil) : (f64) -> !l
 constant Started = ("  ^wholestart:", "    llvm.store %from, %wloop : i64, !llvm.ptr", "    cf.br ^wloop", "  ^wloop:")
 constant Checked = ("    %wk = llvm.load %wloop : !llvm.ptr -> i64", "    %wm = arith.cmpi slt, %wk, %to : i64", "    cf.cond_br %wm, ^wbody, ^wexit", "  ^wbody:")
 constant Next = ("    %wk1 = arith.addi %wk, %one : i64", "    llvm.store %wk1, %wloop : i64, !llvm.ptr", "    cf.br ^wloop")
-constant Exit = ("  ^wexit:", "    %wz = arith.constant 0.0 : f64", "    return %wz : f64")
+constant Failing = ("    %failed = llvm.alloca %one x i64 : (i64) -> !llvm.ptr", "    %wfnone = arith.constant 0 : i64", "    llvm.store %wfnone, %failed : i64, !llvm.ptr")
+constant Rerun = ("    %wfl = llvm.load %failed : !llvm.ptr -> i64", "    %wfc = arith.cmpi ne, %wfl, %wfnone : i64", "    cf.cond_br %wfc, ^generic, ^wdone", "  ^wdone:")
+constant Exit = ("  ^wexit:") + Rerun + ("    %wz = arith.constant 0.0 : f64", "    return %wz : f64")
 constant Element = ("    %wvp = llvm.getelementptr %witems[%wk]" + Pointer, "    %wvb = llvm.load %wvp : !llvm.ptr -> i8", "    %wv = arith.extui %wvb : i8 to i64")
 IsWhole Boolean
 	Brightening.IsWhole
@@ -45,7 +47,7 @@ IsAllowed(at Number, settled Text) Boolean
 	(MlirWholeTypes(function).Length(at) is not "") or MlirWholeFunction(function).IsAllowed(at, 0)
 Symbol Text
 	Brightening.Symbol is "Rows_Brightened_1_loop2_whole"
-	Text.Combine(Brightening.Lines).Length is 4466
+	Text.Combine(Brightening.Lines).Length is 4779
 	function.Symbol + "_loop" + position + "_whole"
 Lines Texts
 	Brightening.Lines.First is "  func.func private @Rows_Brightened_1_loop2_whole" + MlirParallel.Signature
@@ -57,7 +59,8 @@ Lines Texts
 	if MlirWholeKernel(function, position).IsKernel
 		return MlirWholeLanes(function, position).Lines(header, Fallback)
 	let parts = MlirWholeTypes(function).Settled.Split("|")
-	let allocated = MlirWholeBody(function).Allocated(parts(0), parts(1)) + MlirWholeBody(function).Slot("%wloop", "i64")
+	let body = MlirWholeBody(function)
+	let allocated = body.Allocated(parts(0), parts(1)) + body.Slot("%wloop", "i64") + Failing
 	(List(Text) + header) + allocated + Guarded + Fallback + Looped(parts(0), parts(1), parts(2)) + "  }"
 Fallback Texts
 	Brightening.Fallback.Last is "    return %wg : f64"
@@ -126,7 +129,7 @@ Result Texts
 	Loaded("%wrl", "%v_forResult") + "    %wout = func.call @strict_list_data(%wrl) : (f64) -> !llvm.ptr"
 Looped(registers Text, variables Text, naturals Text) Texts
 	Text.Combine(Brightening.Looped(Types.Part(0), Types.Part(1), Types.Part(2))).IndexOf("@Rows_Twice_1_whole(") > 0
-	Text.Combine(Brightening.Looped(Types.Part(0), Types.Part(1), Types.Part(2))).Length is 1378
+	Text.Combine(Brightening.Looped(Types.Part(0), Types.Part(1), Types.Part(2))).Length is 1544
 	mutable lines = Started + Checked + Current(variables)
 	for Range(position + 1, function.method.LoopEndOf(position))
 		let statements = MlirWholeStatements(function, value, registers, variables, naturals)

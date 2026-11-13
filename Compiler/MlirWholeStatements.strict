@@ -7,6 +7,9 @@ has isFlat Boolean = false
 constant Row = MlirWholeStatements(MlirWhole.Row.function, 0, MlirWholeTypes.Row.Part(0), MlirWholeTypes.Row.Part(1), MlirWholeTypes.Row.Part(2))
 constant Halving = MlirWholeStatements(MlirWholeTypes.Halving.function, 0, MlirWholeTypes.Halving.Part(0), MlirWholeTypes.Halving.Part(1), MlirWholeTypes.Halving.Part(2))
 constant Mixed = MlirWholeStatements(MlirWholeTypes.Reused.function, 3, MlirWholeTypes.Reused.Part(0), MlirWholeTypes.Reused.Part(1), MlirWholeTypes.Reused.Part(2))
+constant RemainingTypes = MlirWholeTypes(MlirWholeFunction.Remaining.function)
+constant Remaining = MlirWholeStatements(RemainingTypes.function, 2, RemainingTypes.Part(0), RemainingTypes.Part(1), RemainingTypes.Part(2))
+constant FloatRemaining = MlirWholeStatements(RemainingTypes.function, 2, "fff", RemainingTypes.Part(1), "fff")
 constant Copies = (InstructionType.LoadConstantToRegister, InstructionType.StoreConstantToVariable, InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable)
 constant Less = InstructionEntry.Binary(InstructionType.LessThan, (0, 1, 2))
 constant Bytes = " : (!llvm.ptr, i64) -> !llvm.ptr, i8"
@@ -47,18 +50,25 @@ Calculated(entry InstructionEntry) Texts
 	Mixed.At(4).Emitted(3) is "    %t4b = arith.sitofp %t4bl : i64 to f64"
 	Mixed.At(4).Emitted(4) is "    %t4c = arith.divf %t4a, %t4b : f64"
 	Halving.At(2).Calculated(MlirWholeTypes.Halves(2))(2) is "    %t2c = arith.floordivsi %t2a, %t2b : i64"
-	Text.Combine(Narrowing.Calculated(MlirWholeNarrow.Lanes(6))).IndexOf(" : i32") > 0
+	Remaining.Calculated(MlirWholeFunction.Remainder(2))(10) is "    %t2c = arith.remsi %t2a, %t2s : i64"
 	let isWhole = naturals(position) is "i"
 	let type = isWhole then "i" else "f"
 	let loads = Load("a", entry.payload(1), type) + Load("b", entry.payload(2), type)
 	if isWhole and MlirWholeNarrow(function, position).IsNarrow
 		return loads + MlirWholeNarrow(function, position).Emitted + Store("c", type, entry.payload(3))
-	loads + Operation(entry.kind, isWhole) + Store("c", type, entry.payload(3))
-Operation(kind Number, isWhole Boolean) Text
-	Row.Operation(InstructionType.Add, false) is Reassociating
-	Row.Operation(InstructionType.Modulo, true) is "    %t0c = arith.remsi %t0a, %t0b : i64"
-	Row.Operation(InstructionType.Modulo, false) is Remainder
-	let operands = Temp("a") + ", " + Temp("b")
+	loads + Guarded(entry) + Operation(entry.kind, isWhole, Divisor(entry)) + Store("c", type, entry.payload(3))
+Divisor(entry InstructionEntry) Text
+	Remaining.Divisor(MlirWholeFunction.Remainder(2)) is "%t2s"
+	Halving.At(2).Divisor(MlirWholeTypes.Halves(2)) is "%t2b"
+	Guarded(entry).Length is 0 then Temp("b") else Temp("s")
+Guarded(entry InstructionEntry) Texts
+	Remaining.Guarded(MlirWholeFunction.Remainder(2)).Length is 8
+	MlirWholeDivision(At(position), entry).Lines
+Operation(kind Number, isWhole Boolean, divisor Text) Text
+	Row.Operation(InstructionType.Add, false, "%t0b") is Reassociating
+	Row.Operation(InstructionType.Modulo, true, "%t0b") is "    %t0c = arith.remsi %t0a, %t0b : i64"
+	Row.Operation(InstructionType.Modulo, false, "%t0b") is Remainder
+	let operands = Temp("a") + ", " + divisor
 	if (kind is InstructionType.Modulo) and (isWhole is false)
 		return "    " + Temp("c") + " = func.call @strict_remainder(" + operands + ") : (f64, f64) -> f64"
 	let generic = MlirStatements.Copy.Operation(kind)
@@ -81,7 +91,7 @@ Compared(entry InstructionEntry) Texts
 	flagged + ("    " + Temp("d") + " = arith.extui " + Temp("c") + " : i1 to i64") + Store("d", "i", entry.payload(3))
 Called(entry InstructionEntry) Texts
 	Halving.At(3).Emitted(0) is "    %t3a = llvm.load %r2 : !llvm.ptr -> i64"
-	Mixed.Emitted(1) is "    %t3c = func.call @Halves_Halved_1_whole(%t3a0) : (i64) -> i64"
+	Mixed.Emitted(1) is "    %t3c = func.call @Halves_Halved_1_whole(%failed, %t3a0) : (!llvm.ptr, i64) -> i64"
 	Mixed.Emitted(2) is "    llvm.store %t3c, %r3 : i64, !llvm.ptr"
 	Halving.At(3).Called(MlirWholeTypes.Halves(3)).Last is "    llvm.store %t3a, %r3 : i64, !llvm.ptr"
 	let native = MlirWholeNative(At(position)).Emitted(entry)

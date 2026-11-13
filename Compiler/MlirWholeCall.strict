@@ -11,8 +11,11 @@ constant GuardStart = ("    %t1whlimit = arith.constant 4503599627370496.0 : f64
 constant NumberTruncated = ("    %t1wh0t = llvm.intr.trunc(%t1wl0) : (f64) -> f64", "    %t1wh0e = arith.cmpf oeq, %t1wh0t, %t1wl0 : f64")
 constant NumberBounded = ("    %t1wh0a = llvm.intr.fabs(%t1wl0) : (f64) -> f64", "    %t1wh0s = arith.cmpf olt, %t1wh0a, %t1whlimit : f64", "    %t1wh0o = arith.andi %t1wh0e, %t1wh0s : i1")
 constant GuardEnd = ("    %t1whj = arith.constant true", "    %t1whok = arith.andi %t1whj, %t1wh0o : i1")
-constant WholeCalled = ("    cf.cond_br %t1whok, ^bb1wholecall, ^bb1slowcall", "  ^bb1wholecall:", "    %t1wa0 = arith.fptosi %t1wl0 : f64 to i64", "    %t1wr = func.call @Halves_Halved_1_whole(%t1wa0) : (i64) -> i64")
-constant SlowJoined = ("    %t1wf = arith.sitofp %t1wr : i64 to f64", "    llvm.store %t1wf, %r1 : f64, !llvm.ptr", "    cf.br ^bb1called", "  ^bb1slowcall:", "slow", "    cf.br ^bb1called", "  ^bb1called:")
+constant Cleared = ("    %t1wfn = arith.constant 0 : i64", "    llvm.store %t1wfn, %wfailed : i64, !llvm.ptr")
+constant HalvedCall = "    %t1wr = func.call @Halves_Halved_1_whole(%wfailed, %t1wa0) : (!llvm.ptr, i64) -> i64"
+constant WholeCalled = ("    cf.cond_br %t1whok, ^bb1wholecall, ^bb1slowcall", "  ^bb1wholecall:") + Cleared + ("    %t1wa0 = arith.fptosi %t1wl0 : f64 to i64", HalvedCall)
+constant FailureChecked = ("    %t1wfl = llvm.load %wfailed : !llvm.ptr -> i64", "    %t1wfc = arith.cmpi ne, %t1wfl, %t1wfn : i64", "    cf.cond_br %t1wfc, ^bb1slowcall, ^bb1called")
+constant SlowJoined = ("    %t1wf = arith.sitofp %t1wr : i64 to f64", "    llvm.store %t1wf, %r1 : f64, !llvm.ptr") + FailureChecked + ("  ^bb1slowcall:", "slow", "    cf.br ^bb1called", "  ^bb1called:")
 constant Dispatching = GuardStart + NumberTruncated + NumberBounded + GuardEnd + WholeCalled + SlowJoined
 constant InstanceLoaded = ("    %t1wa0 = func.call @strict_ptr(%t1wl0) : (f64) -> !llvm.ptr", "    %t1wh0c0 = arith.constant true")
 constant ListLoaded = ("    %t1wh0m0 = llvm.getelementptr %t1wa0[1] : (!llvm.ptr) -> !llvm.ptr, f64", "    %t1wh0m0v = llvm.load %t1wh0m0 : !llvm.ptr -> f64", "    %t1wh0m0k = func.call @strict_list_packed(%t1wh0m0v) : (f64) -> i64")
@@ -52,9 +55,9 @@ Dispatched(compiled Texts) Texts
 		return compiled
 	let label = "^bb" + position
 	let branch = "    cf.cond_br " + Temp("whok") + ", " + label + "wholecall, " + label + "slowcall"
-	let called = ("    cf.br " + label + "called", "  " + label + "slowcall:")
+	let called = Checking + ("  " + label + "slowcall:")
 	let slow = called + compiled + ("    cf.br " + label + "called", "  " + label + "called:")
-	Guarded + branch + ("  " + label + "wholecall:") + Direct + slow
+	Guarded + branch + ("  " + label + "wholecall:") + Clearing + Direct + slow
 Guarded Texts
 	Text.Combine(Calling.Guarded).IndexOf("%t1wh0t = llvm.intr.trunc(%t1wl0)") > 0
 	Calling.Guarded.Last.StartsWith("    %t1whok = arith.andi")
@@ -145,18 +148,27 @@ Present(number Number, kind Text) Texts
 	let bytes = "    " + pointer + " = func.call @" + listed + "(" + Temp("wl" + number) + ") : (f64) -> !llvm.ptr"
 	List(Text) + bytes + MlirWholeGuard(function, position).Present(pointer, number)
 Direct Texts
-	Text.Combine(Calling.Direct).IndexOf("func.call @Halves_Halved_1_whole(%t1wa0) : (i64) -> i64") > 0
+	HalvedCall is in Calling.Direct
 	Calling.Direct.Last is "    llvm.store %t1wf, %r1 : f64, !llvm.ptr"
-	let callee = MlirWholeFunction(function).Callee(function.method.instructions(position))
-	let kinds = MlirWholeFunction(callee).Kinds
+	let callee = MlirWholeFunction(MlirWholeFunction(function).Callee(function.method.instructions(position)))
+	let kinds = callee.Kinds
 	mutable lines = List(Mutable(Text))
 	for kinds
 		let converted = MlirWholeValues(position).Converted(Temp("wl" + index), "f", "i", Temp("wa" + index))
 		lines = value is in ("p", "d", "o") then lines else lines + converted
-	let returned = MlirWholeTypes(callee).Returned
+	let returned = MlirWholeTypes(callee.function).Returned
 	let result = Temp(returned is "f" then "wf" else "wr")
-	let call = MlirWholeValues(position).Called(result, MlirWholeFunction(callee).Symbol, Temp("wa"), kinds, returned)
+	let call = MlirWholeValues(position).Called(result, callee.Symbol, Temp("wa"), kinds, returned, "%wfailed")
 	lines + call + Returned(returned)
+Clearing Texts
+	Calling.Clearing is Cleared
+	("    " + Temp("wfn") + " = arith.constant 0 : i64", "    llvm.store " + Temp("wfn") + ", %wfailed : i64, !llvm.ptr")
+Checking Texts
+	Calling.Checking is FailureChecked
+	let loaded = "    " + Temp("wfl") + " = llvm.load %wfailed : !llvm.ptr -> i64"
+	let compared = "    " + Temp("wfc") + " = arith.cmpi ne, " + Temp("wfl") + ", " + Temp("wfn") + " : i64"
+	let label = "^bb" + position
+	(loaded, compared, "    cf.cond_br " + Temp("wfc") + ", " + label + "slowcall, " + label + "called")
 Returned(returned Text) Texts
 	Calling.Returned("i").Last is "    llvm.store %t1wf, %r1 : f64, !llvm.ptr"
 	Calling.Returned("f") is ("    llvm.store %t1wf, %r1 : f64, !llvm.ptr")

@@ -2,6 +2,7 @@ has function MlirFunction
 constant Sized = MlirWholeFlat(MlirWholeInstance.Sized.function)
 constant Fits = MlirWholeFlat(MlirWholeInstance.Fits.function)
 constant Fitting = MlirWholeInstance.Sizing.instructions(5)
+constant SizedHeader = "  func.func private @Grid_Sized_1_whole_flat(%failed: !llvm.ptr, %p0_cells: !llvm.ptr, %p0_width: i64)"
 Symbol Text
 	Sized.Symbol is "Grid_Sized_1_whole_flat"
 	MlirWholeFunction(function).Symbol + "_flat"
@@ -32,7 +33,7 @@ MemberNames(input Number) Texts
 	for MlirWholeInstance(function).Members(input)
 		"%p" + input + "_" + value
 Lines Texts
-	Sized.Lines.First.StartsWith("  func.func private @Grid_Sized_1_whole_flat(%p0_cells: !llvm.ptr, %p0_width: i64)")
+	Sized.Lines.First.StartsWith(SizedHeader)
 	Sized.Lines.Last is "  }"
 	Text.Combine(Sized.Lines).IndexOf("@Grid_Fits_1_whole_flat(") > 0
 	let parts = MlirWholeTypes(function).Settled.Split("|")
@@ -42,7 +43,7 @@ Lines Texts
 Header Text
 	Sized.Header.EndsWith(") -> i64" + MlirWholeBody.Inlined)
 	let kinds = Kinds
-	mutable typed = List(Mutable(Text))
+	mutable typed = List(Mutable(Text)) + "%failed: !llvm.ptr"
 	for Names
 		typed.Add(value + ": " + MlirWholeValues(0).Typed(kinds(index)))
 	let returned = ") -> " + MlirWholeValues(0).Typed(MlirWholeTypes(function).Returned)
