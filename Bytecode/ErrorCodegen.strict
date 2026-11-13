@@ -102,8 +102,7 @@ IsFailing(node SyntaxNode, block CodeBlock) Boolean
 		return MayFail(node.children(0).children(1), block) or MayFail(node.children(1), block)
 	if (node.text is in ("to", "then")) or IsOverloaded(node, block)
 		return true
-	let type = values.TypeOf(node, block)
-	let isList = values.inference.types.IsPlural(type) or type.StartsWith("List(")
+	let isList = ListFits(values.inference.types).IsList(values.TypeOf(node, block))
 	(node.text is in ("+", "-", "*", "/", "%", "^")) and isList
 IsOverloaded(node SyntaxNode, block CodeBlock) Boolean
 	ErrorCodegen(OperatorCodegen.Texts.values).IsOverloaded(SyntaxNode("Binary", "<", (A, A)), TextA)

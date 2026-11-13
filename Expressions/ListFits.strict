@@ -27,3 +27,7 @@ Elements(type Text) Texts
 	if type.StartsWith("List(")
 		return Instantiation(types).Arguments(type)
 	types.IsPlural(type) then List(Text) + types.ElementType(type) else List(Text)
+IsList(typeName Text) Boolean
+	ListFits(KnownTypes.Sample).IsList("Counts") and ListFits(KnownTypes.Sample).IsList("List(Count)")
+	ListFits(KnownTypes.Sample).IsList("Count") is false
+	types.IsPlural(typeName) or typeName.StartsWith("List(")

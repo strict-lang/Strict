@@ -13,8 +13,7 @@ Issue(node SyntaxNode, scope Scope, current Scope) Text
 	if (node.Kind is not "Binary") or (node.text is not "+")
 		return ""
 	let isText = inference.TypeOf(node.children(0), scope, current) is "Text"
-	let type = isText then inference.TypeOf(node.children.Last, scope, current) else ""
-	let isList = inference.types.IsPlural(type) or type.StartsWith("List(")
+	let isList = ListFits(inference.types).IsList(isText then inference.TypeOf(node.children.Last, scope, current) else "")
 	let right = node.children.Last
 	let advice = " implicitly, write " + right + " to Text"
 	isList then "ListToTextMustBeExplicit: " + node + " converts the list " + right + advice else ""

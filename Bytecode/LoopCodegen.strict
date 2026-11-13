@@ -26,7 +26,7 @@ Aggregation(body SyntaxNode, returnType Text) Text
 	Plain.Aggregation(BranchLoops, "Numbers") is "list"
 	LoopCodegen(Numbered).Aggregation(MethodCodegen.SumBody, "Count") is "sum"
 	let loop = BranchValues(returnType).LastLoop(body)
-	let isList = methods.values.inference.types.IsPlural(returnType) or returnType.StartsWith("List(")
+	let isList = ListFits(methods.values.inference.types).IsList(returnType)
 	if (loop.Kind is not "For") or (returnType is "Boolean") or isList
 		return loop.Kind is not "For" then "" else (isList then "list" else "any")
 	Reduced(BranchValues(returnType).Reduction(loop.children.Last.children.Last), returnType)
