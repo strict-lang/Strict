@@ -198,6 +198,34 @@ Zoomed(factor Number) Viewing
 (folder/'Viewing.strict').write_bytes(viewing.replace(chr(10), chr(13) + chr(10)).encode('utf-8'))
 built=subprocess.run([str(root/'strict.exe'),'build','Viewing.strict'],cwd=folder,capture_output=True,text=True)
 assert built.returncode==0,built.stdout[-2000:]+built.stderr[-2000:]
-tested=subprocess.run([str(folder/'Viewing.test.exe')],cwd=folder,capture_output=True,text=True)
+tested=subprocess.run([str(folder/'obj'/'Viewing.test.exe')],cwd=folder,capture_output=True,text=True)
 assert tested.returncode==0,'a type with Pair members (one with a default) compared with is failed natively: '+tested.stdout[-2000:]
+pending='''has logger
+Table(count Number) Numbers
+	PendingRead(Logger).Table(2) is (1, 1.125)
+	for count
+		index / 8 + 1
+Sampled(table Numbers) Bytes
+	PendingRead(Logger).Sampled((1, 2))(1) is 0
+	for 256
+		let start = table((index * 7919) % table.Length)
+		mutable sum = 0
+		for table.Length / 10
+			sum = sum + start / (index % 2 + 1)
+		(sum / table.Length) % 200
+Halved(sampled Numbers) Numbers
+	PendingRead(Logger).Halved((1, 2, 3, 4)) is (3, 7)
+	for sampled.Length / 2
+		sampled(2 * index) + sampled(2 * index + 1)
+Run
+	let halved = Halved(Sampled(Table(2000000)))
+	logger.Log("halved " + halved.Length + " " + halved(0))
+'''
+(folder/'PendingRead.strict').write_bytes(pending.replace('\n','\r\n').encode('utf-8'))
+built=subprocess.run([str(root/'strict.exe'),'build','PendingRead.strict'],cwd=folder,capture_output=True,text=True)
+assert built.returncode==0,built.stdout[-2000:]+built.stderr[-2000:]
+ran=subprocess.run([str(folder/'PendingRead.exe')],cwd=folder,capture_output=True,text=True,env=dict({key: value for key, value in os.environ.items() if key!='STRICT_GPU'},STRICT_GPU_DOWNLOADS='1'))
+print(ran.stdout,flush=True)
+assert 'halved 128 ' in ran.stdout,'wrong result: '+ran.stdout[-2000:]
+assert 'Strict GPU download of 256 numbers' not in ran.stdout,'a small loop downloaded a small GPU result while the GPU still computed it: the download waits for all GPU work (24 per MTP step of Qwen3.5)'
 print('A list computed on the GPU from numbers alone stays there until the CPU reads it')

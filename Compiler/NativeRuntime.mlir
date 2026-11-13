@@ -19495,9 +19495,30 @@
   ^plain:
     return %none : i64
   }
+  // a graph is being captured or the stream still runs: a download waits for all of that GPU work, a small loop reading
+  // a list there launches without waiting instead (DeltaChunks.Logs, 24 times in each MTP verify step of Qwen3.5)
+  func.func private @strict_gpu_pending() -> i1 {
+    %none = arith.constant 0 : i64
+    %true = arith.constant true
+    %graph = llvm.mlir.addressof @strict_gpu_graph : !llvm.ptr
+    %capturingSlot = llvm.getelementptr %graph[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %capturing = llvm.load %capturingSlot : !llvm.ptr -> i64
+    %isCapturing = arith.cmpi ne, %capturing, %none : i64
+    cf.cond_br %isCapturing, ^done(%true : i1), ^query
+  ^query:
+    %stream = func.call @strict_gpu_stream() : () -> !llvm.ptr
+    %queryIndex = arith.constant 25 : i64
+    %query = func.call @strict_gpu_call(%queryIndex) : (i64) -> !llvm.ptr
+    %status = llvm.call %query(%stream) : !llvm.ptr, (!llvm.ptr) -> i32
+    %finished = arith.constant 0 : i32
+    %running = arith.cmpi ne, %status, %finished : i32
+    cf.br ^done(%running : i1)
+  ^done(%pending: i1):
+    return %pending : i1
+  }
   // a list on the GPU keeps a loop there, except a small loop reading at least a quarter of it: a launch and reading its
   // result back cost as much as downloading the list once (List.Sorted launched a kernel per Slice down to single numbers,
-  // 25 times slower), a list is not downloaded for a few of its numbers
+  // 25 times slower), a list is not downloaded for a few of its numbers; a list stays while the GPU is busy
   func.func private @strict_gpu_worth_reading(%count: i64, %list: f64, %packedEnough: i1) -> i1 {
     %resides = func.call @strict_gpu_readable(%list, %packedEnough) : (f64, i1) -> i1
     %fewest = arith.constant 256 : i64
@@ -19507,8 +19528,15 @@
     %counted = arith.sitofp %count : i64 to f64
     %shortest = arith.mulf %counted, %four : f64
     %isShort = arith.cmpf ole, %length, %shortest : f64
-    %isCheap = arith.andi %isFew, %isShort : i1
+    %isSmallList = arith.andi %isFew, %isShort : i1
     %true = arith.constant true
+    %cheapCandidate = arith.andi %isSmallList, %resides : i1
+    cf.cond_br %cheapCandidate, ^asked, ^decided(%isSmallList : i1)
+  ^asked:
+    %pending = func.call @strict_gpu_pending() : () -> i1
+    %finished = arith.xori %pending, %true : i1
+    cf.br ^decided(%finished : i1)
+  ^decided(%isCheap: i1):
     %isWorth = arith.xori %isCheap, %true : i1
     %worth = arith.andi %resides, %isWorth : i1
     return %worth : i1

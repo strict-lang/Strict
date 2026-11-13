@@ -4,11 +4,13 @@ has projection Layer
 has blocks List(Qwen3Block)
 has headNorm Numbers
 has hidden Numbers = List(Number)
+has head List(Numbers) = List(Numbers)
 constant Model = Gguf("NeuralNetworks/tinyqwen35.gguf")
 constant Rows = Model.Rows("token_embd.weight")
 constant Pair = Rows(1) + Rows(2)
 constant Tiny = Drafter.Loaded(Model, 2)
 constant Stepped = Qwen3.TinyHybrid.Step(1, 0)
+constant Words = 32768
 constant None = Drafter(List(Number), List(Number), Layer.None, List(Qwen3Block), List(Number))
 Loaded(model Gguf, heads Number) Drafter slow
 	Tiny.projection.weights.Length is 8
@@ -44,20 +46,22 @@ Joined(first Numbers, second Numbers) Numbers slow
 		at < width then first(row + at) else second(row + at - width)
 Primed(model Qwen3, sequence Numbers) Drafter slow
 	Tiny.Primed(Stepped, (1, 2)).hidden.Length is 8
+	Tiny.Primed(Stepped, (1, 2)).head.Length is Stepped.outputs.Length
 	Tiny.Primed(Stepped, (1, 2)).Primed(Stepped, (1, 2, 3)).blocks.First.keys.Length is 4
 	Tiny.Primed(Qwen3.TinyHybrid.Prefilled((1, 2, 3), 0), (1, 2, 3, 4)).blocks.First.keys.Length is 12
 	if (hidden.Length > 0) or (headNorm.Length is 0)
 		return value
 	let count = model.hidden.Length / embedNorm.Length
 	let start = sequence.Length - count
-	Extended(model, model.hidden, Safetensors.Part(sequence, start, count, 1), Qwen3.Positions(start, count))
+	let headed = Drafter(value, head = model.outputs.Slice(0, Words.Clamp(0, model.outputs.Length)))
+	headed.Extended(model, model.hidden, Safetensors.Part(sequence, start, count, 1), Qwen3.Positions(start, count))
 Drafts(model Qwen3, position Number, count Number) Numbers slow
 	Tiny.Primed(Stepped, (1, 2)).Drafts(Stepped, 1, 3).Length is 3
 	Tiny.Primed(Stepped, (1, 2)).Drafts(Stepped, 1, 1).First is Tiny.Primed(Stepped, (1, 2)).Drafts(Stepped, 1, 3).First
 	mutable current = value
 	mutable drafts = List(Number)
 	for count
-		let drafted = Qwen3(model, hidden = current.hidden, norm = headNorm).Nexts
+		let drafted = Qwen3(model, outputs = head, hidden = current.hidden, norm = headNorm).Nexts
 		drafts = drafts + drafted
 		current = index + 1 < count then current.Further(model, drafted, position + index + 1) else current
 	drafts
