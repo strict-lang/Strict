@@ -6170,7 +6170,27 @@
     %newPointer = func.call @strict_ptr(%new) : (f64) -> !llvm.ptr
     %kept = llvm.ptrtoint %newPointer : !llvm.ptr to i64
     %isSame = arith.cmpi eq, %object, %kept : i64
-    cf.cond_br %isSame, ^done, ^check
+    cf.cond_br %isSame, ^done, ^sized
+  ^sized:
+    // like strict_gc_small, blocks below 256 bytes stay with the collector: freeing one costs more than sweeping it
+    %block:5 = func.call @strict_gc_locate(%object) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %sweptSize = arith.constant 256 : i64
+    %isSwept = arith.cmpi ult, %block#2, %sweptSize : i64
+    %notLarge = arith.constant false
+    %isSmallBlock = arith.cmpi eq, %block#3, %notLarge : i1
+    %noBlock = llvm.mlir.zero : !llvm.ptr
+    %isFound = llvm.icmp "ne" %block#0, %noBlock : !llvm.ptr
+    %isSmallFound = arith.andi %isSmallBlock, %isFound : i1
+    %isTiny = arith.andi %isSwept, %isSmallFound : i1
+    cf.cond_br %isTiny, ^holding, ^check
+  ^holding:
+    %blockFlags = func.call @strict_rc_flags(%block#0, %block#1, %block#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %flagByte = llvm.load %blockFlags : !llvm.ptr -> i8
+    %holdsFlag = arith.constant 4 : i8
+    %held = arith.andi %flagByte, %holdsFlag : i8
+    %noHolds = arith.constant 0 : i8
+    %holdsNothing = arith.cmpi eq, %held, %noHolds : i8
+    cf.cond_br %holdsNothing, ^done, ^check
   ^check:
     %unshared = func.call @strict_rc_unshared(%old) : (f64) -> i1
     cf.cond_br %unshared, ^dispose, ^large
