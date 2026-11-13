@@ -19,8 +19,9 @@ constant Letter = BodyParser("Letter Text", "\tx(0)").Block(1, 1)
 constant Texted = Scope(List(Text) + "x", List(Text) + "Text")
 constant Discarding = BodyParser("Letter Text", "	if x.Length > 1", "		x(0)", "	x(1)").Block(1, 1)
 constant Listed = Scope(List(Text) + "values", List(Text) + "Numbers")
-constant PackMethods = (NoScope, NoScope, Scope(List(Text) + "+", List(Text) + "Sums"))
-constant PackTypes = KnownTypes(("Pack", "Box", "Sums"), (Listed, Scope(List(Text) + "count", List(Text) + "Number"), Listed), PackMethods, LoopCodegen.Unscoped)
+constant PackMethods = (NoScope, NoScope, Scope(List(Text) + "+", List(Text) + "Sums"), NoScope)
+constant PackMembers = (Listed, Scope(List(Text) + "count", List(Text) + "Number"), Listed, Scope(List(Text) + "characters", List(Text) + "Characters"))
+constant PackTypes = KnownTypes(("Pack", "Box", "Sums", "Text"), PackMembers, PackMethods, LoopCodegen.Unscoped + NoScope)
 constant Packing = MethodCodegen(ValueCodegen(TypeInference(PackTypes, CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
 constant PackLoops = LoopCodegen(Packing)
 constant Doubled = LoopCodegen.DoubledBody
@@ -31,6 +32,10 @@ constant Unlooped = PackLoops.Aggregated(Packed, CodeBlock.Empty, "Pack")
 constant Boxed = PackLoops.Aggregated(Doubled, CodeBlock.Empty, "Box")
 constant Added = PackLoops.Aggregated(SumsBody, CodeBlock.Empty, "Sums")
 constant PackedLoop = Packing.Looped(Doubled, CodeBlock.Empty, "Pack")
+constant BoxLoop = Packing.Looped(Doubled, CodeBlock.Empty, "Box")
+constant TextLoop = Packing.Looped(Doubled, CodeBlock.Empty, "Text")
+constant TextSummed = PackLoops.Aggregated(Doubled, CodeBlock.Empty, "Text")
+constant ForResults = List(SyntaxNode) + SyntaxNode("Identifier", "forResult")
 constant SumsLoop = Packing.Looped(Doubled, CodeBlock.Empty, "Sums")
 Generate(body SyntaxNode, scope Scope, returnType Text) CodeBlock
 	Plain.Generate(BodyParser("Run Number", "\tx + 2").Block(1, 1), NoScope, "Number").instructions.Length is 4
@@ -48,16 +53,16 @@ Generate(body SyntaxNode, scope Scope, returnType Text) CodeBlock
 Looped(body SyntaxNode, block CodeBlock, returnType Text) CodeBlock
 	(PackedLoop.instructions.Length is 12) and (PackedLoop.instructions(-2).texts(1) is "from")
 	(SumsLoop.instructions(-2).texts(1) is "from") and (Packing.Looped(SumsBody, Blank, "Sums") is Added)
-	(Packing.Looped(Packed, Blank, "Pack") is Unlooped) and (Packing.Looped(Doubled, Blank, "Box") is Boxed)
+	(Packing.Looped(Packed, Blank, "Pack") is Unlooped) and (BoxLoop is Boxed) and (TextLoop is TextSummed)
 	let loops = LoopCodegen(value)
 	let member = values.inference.types.ValueOf(returnType)
 	let loop = BranchValues(returnType).LastLoop(body)
-	let isListed = (loop.Kind is "For") and ListFits(values.inference.types).IsList(member)
+	let isLooped = (loop.Kind is "For") and (loops.Aggregation(body, returnType) is in ("", "add"))
+	let isListed = isLooped and ListFits(values.inference.types).IsList(member)
 	let valued = isListed then values.TypeOf(loop.children.Last.children.Last, loops.Declared(loop, block)) else returnType
 	if valued is returnType
 		return loops.Aggregated(body, block, returnType)
-	let forResult = List(SyntaxNode) + SyntaxNode("Identifier", "forResult")
-	values.Expression(SyntaxNode("Call", returnType, forResult), loops.Aggregated(body, block, member))
+	values.Expression(SyntaxNode("Call", returnType, ForResults), loops.Aggregated(body, block, member))
 Production(body SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Log(SyntaxNode("Binary", "+", (ValueCodegen.Hi, NoNode)), InRun).instructions.Length is 2
 	Plain.Log(SyntaxNode("Binary", "+", (One, NoNode)), InRun).instructions.Length is 4

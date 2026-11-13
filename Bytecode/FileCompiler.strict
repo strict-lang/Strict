@@ -90,10 +90,15 @@ Unparsable(lines Texts) Number
 	for lines
 		let next = index + 1 < lines.Length then lines(index + 1) else ""
 		let isEmpty = (value.Trim is "") and (value.StartsWith("\t") or next.StartsWith("\t"))
-		let isParsed = (value.StartsWith("	") or value.StartsWith("constant ")) is false or IsParsed(value.Trim)
-		if isEmpty or Declaration.IsUnspaced(value) or (isParsed is false) or Tokenizer(value).HasOpenText
+		let isBroken = value.StartsWith("	") then IsParsed(value.Trim) is false else Declaration.IsUnspaced(value)
+		if isEmpty or isBroken or IsBrokenConstant(value) or Tokenizer(value).HasOpenText
 			return index
 	-1
+IsBrokenConstant(line Text) Boolean
+	FileCompiler.IsBrokenConstant(Trailing.Last)
+	FileCompiler.IsBrokenConstant("constant LoadConstantToRegister") is false
+	FileCompiler.IsBrokenConstant(Trailing.First) is false
+	line.StartsWith("constant ") and (line.IndexOf(" = ") > 0) and (IsParsed(line) is false)
 IsParsed(line Text) Boolean
 	FileCompiler.IsParsed("let a = b + c")
 	FileCompiler.IsParsed("(number + other") is false and (FileCompiler.IsParsed("a + b)") is false)
