@@ -5,7 +5,7 @@ constant Adding = HeaderEntries(HeaderTokens(Tokenizer("Add(x Number) Number").T
 constant Defaulting = HeaderEntries(HeaderTokens(Tokenizer("Add(x Number, y List(Text) = List(Text), z = Basis.None)").Tokens))
 constant Pair = HeaderEntries(HeaderTokens(Tokenizer("A(x Number, y Text)").Tokens))
 Parameters Scope
-	HeaderEntries(HeaderTokens(Tokenizer("Merged Slow(Numbers)").Tokens)).Parameters.TypeOf("Merged slow") is "Slow"
+	HeaderEntries(HeaderTokens(Tokenizer("Merged Numbers slow").Tokens)).Parameters.TypeOf("Merged slow") is "Slow"
 	Mutating.Parameters.TypeOf("Add mutable") is "Mutable"
 	Adding.Parameters.names is ("Add", "Add types", "Add required")
 	Defaulting.Parameters.TypeOf("Add z default") is "Basis . None"

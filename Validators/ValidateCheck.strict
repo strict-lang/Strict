@@ -5,7 +5,7 @@ Run(folder Text, root Text) Number
 		issues = issues + Checked(value, root)
 	logger.Log("Validation issues: " + issues)
 	issues + (issues is 0 then Folders(logger).Tested(folder, root) else 0)
-Checked(folder Text, root Text) Number
+Checked(folder Text, root Text) Number slow
 	let problems = FileCompiler.Problems(Files(folder))
 	let files = Parsed(Files(folder), problems)
 	let mutations = Mutations(files + ResolveCheck(logger).AllFiles(root))
@@ -14,23 +14,25 @@ Checked(folder Text, root Text) Number
 	let reached = files.Length is 0 then files else SourceFiles(root).Of(files.First, files)
 	let inference = ResolveCheck(logger).Inference(reached)
 	let sure = SureMethods(inference).Named(reached)
-	Reported(problems - "") + Counts(files, mutations, isBase, duplicates, inference, sure).Sum
+	let reaching = InputOutputs(inference).Named(reached)
+	Reported(problems - "") + Counts(files, mutations, isBase, duplicates, inference, (sure, reaching)).Sum
 Parsed(files Texts, problems Texts) Texts
 	ValidateCheck(Logger).Parsed(("A.strict", "B.strict"), ("EmptyLineIsNotAllowed", "")) is ("B.strict")
 	for files
 		if problems(index) is ""
 			value
-Files(folder Text) Texts
+Files(folder Text) Texts slow
 	ValidateCheck(Logger).Files("Validators/MagicNumbers.strict") is ("Validators/MagicNumbers.strict")
 	ValidateCheck(Logger).Files("Validators").Length > 1
 	folder.EndsWith(".strict") then List(Text) + folder else Directory.Files(folder, "*.strict")
-Counts(files Texts, mutations Texts, isBase Boolean, duplicates Duplicates, inference Expressions/TypeInference, sure Texts) Numbers
+Counts(files Texts, mutations Texts, isBase Boolean, duplicates Duplicates, inference Expressions/TypeInference, known List(Texts)) Numbers slow
 	for files
 		let lines = File(value).ReadLines
 		let typeName = Path(value).FileName.RemoveExtension.text
 		let found = CheckFile(value, lines, typeName, mutations, isBase) + duplicates.Issues(value, lines)
-		Logged(value, found + SureChecks(lines, sure, typeName, inference).Issues) + Unresolved(value, inference)
-Unresolved(path Text, inference Expressions/TypeInference) Number
+		let reached = SureChecks(lines, known(0), typeName, inference).Issues + InputOutputs.Issues(value, lines, known(1))
+		Logged(value, found + reached) + Unresolved(value, inference)
+Unresolved(path Text, inference Expressions/TypeInference) Number slow
 	Reported(ResolveCheck(logger).Unresolved(path, inference))
 Reported(issues Texts) Number
 	for issues
@@ -46,7 +48,7 @@ Logged(path Text, found List(ValidationIssue)) Number
 	for found
 		logger.Log(ResolveCheck.Located(path, value.Line, value to Text))
 	found.Length
-Mutations(files Texts) Texts
+Mutations(files Texts) Texts slow
 	mutable mutations = List(Mutable(Text))
 	for files
 		mutations = mutations + FileMutations(TypeShape(File(value).ReadLines), ResolveCheck.TypeName(value))

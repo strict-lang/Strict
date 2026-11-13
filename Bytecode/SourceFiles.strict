@@ -2,7 +2,7 @@ has root Text
 constant Imaging = List(Text) + "./Compression/Deflate.strict"
 constant Plain = SourceFiles(".")
 constant Compressed = Directory.Files("./Compression", "*.strict")
-Of(path Text, others Texts = List(Text)) Slow(Texts)
+Of(path Text, others Texts = List(Text)) Texts slow
 	SourceFiles(".").Of("./Missing/A.strict").Length is Directory.Files(".", "*.strict").Length
 	"./Math/Size.strict" is in SourceFiles(".").Of("./Math/Vector2.strict", List(Text) + "Math/Size.strict")
 	"./Math/Vector2.strict" is in SourceFiles(".").Of("./Math")
@@ -32,7 +32,7 @@ Indexed(paths Texts) Texts
 	for project.Length > 0 then Added(project, local) else Folders(local, 3)
 		files = files + Directory.Files(value, "*.strict")
 	files
-Reached(known Texts, frontier Texts, reached Texts) Slow(Texts)
+Reached(known Texts, frontier Texts, reached Texts) Texts slow
 	"./Compression/Inflate.strict" is in Plain.Reached(Compressed, Imaging, List(Text))
 	mutable all = reached
 	mutable pending = frontier

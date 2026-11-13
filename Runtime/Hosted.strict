@@ -116,7 +116,7 @@ Dated(path Text) Number
 	Hosted(Newest).Dated("Math") >= File("Math/Vector3.strict").Modified
 	Hosted(Newest).Dated("Missing") is 0
 	call.TypeName is "Strict/Directory" then Directory.Modified(path) else File(path).Modified
-Entries Slow(VmValue)
+Entries VmValue slow
 	Hosted(Listing).Entries.Length > 0
 	Hosted(Reading).Entries.items.First.number is 102
 	let path = Location

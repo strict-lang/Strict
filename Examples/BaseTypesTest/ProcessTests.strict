@@ -1,4 +1,4 @@
-Waited(seconds Number) Boolean
+Waited(seconds Number) Boolean slow
 	Waited(0.002)
 	let started = Process.Elapsed
 	Process.Wait(seconds)

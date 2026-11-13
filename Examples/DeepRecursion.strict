@@ -1,17 +1,17 @@
 has number
-Down Slow(Number)
+Down Number slow
 	DeepRecursion(10000).Down is 0
 	number is 0 then 0 else DeepRecursion(number - 1).Down
-Endless Slow(Number)
+Endless Number slow
 	DeepRecursion(1).Endless is Error
 	DeepRecursion(number + 1).Endless
-TraceLines Slow(Number)
+TraceLines Number slow
 	DeepRecursion(1).TraceLines is 52
 	let failure = Ping
 	failure is Error then (failure to Text).Lines.Length else 0
-Ping Slow(Number)
+Ping Number slow
 	DeepRecursion(1).Ping is Error
 	DeepRecursion(number + 1).Pong + 1
-Pong Slow(Number)
+Pong Number slow
 	DeepRecursion(1).Pong is Error
 	DeepRecursion(number + 1).Ping + 1

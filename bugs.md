@@ -4,4 +4,6 @@
 - A `File.Locked` taken in a test line does not hold while a called method deletes old copies (`Intermediates.Free` through `Replaced`).
 - A `%` by zero inside a comparison gives false instead of the ModuloByZero Error (`7 % divisor > 3` with divisor 0), VM and native.
 - A Range passed for a `Numbers` parameter is not converted (`Wrapped(Range(0, 4))`: (0, 1, 2) on the VM, AccessViolation natively): convert it, reject one of more than 100 elements (take an Iterator or build the list explicitly).
-- No rule requires `Slow(...)` on a method doing file, directory, process or network input or output, so such tests run with every `strict test` (StrictComfy `StrictGenForm.Listed`).
+- `ResultMustBeUsed` rejects the value of a `for` that is a method's result since c6c36edd (nested bodies): `Dictionary.set` (Dictionary.strict:41) and `List.Sum` (List.strict:70) fail `strict test` and `strict check .` (2026-11-13).
+- `strict check .` folder tests fail now and then with `UnresolvedLink: Strict/Number.Round` (also `Error.Code`, `Text.Lines`), more after many files changed, a different set each run, never alone: parallel runs racing on the base type caches? (2026-11-13).
+- `Compiler/Bootstrap.mlir` (seed of 2026-11-07, NativeCompiler before its merge into strict) no longer builds the current source: `Bootstrap.cmd` stops with `MethodNotFound: VmValue.Name` (Runtime/Hosted.strict:60) and `Number.Name` (Foreign.strict:119, Operations.strict:87); regenerate it from a fixpoint build of `Strict.strict`.

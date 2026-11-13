@@ -7,7 +7,7 @@ constant Asserting = ("One Boolean", "\tOne", "\t1 is 1", "Two Boolean", "\tTwo"
 constant Incrementing = Duplicates(List(Text) + "A.Next", List(Text) + "number + 1\n")
 constant MinBodyLength = 40
 constant Copies = Duplicates(("A.Halve", "B.Half"), ("let half = number / 2\nhalf < 0 then 0 - half else half\n", "x"))
-Of(files Texts) Duplicates
+Of(files Texts) Duplicates slow
 	Duplicates.Of(List(Text) + "Validators/ValidationIssue.strict").owners is ("ValidationIssue.to")
 	mutable named = List(Mutable(Text))
 	mutable implementations = List(Mutable(Text))

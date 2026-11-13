@@ -77,7 +77,7 @@ IsCall(node SyntaxNode, first SyntaxNode, owner Text = "") Boolean
 	let method = inference.types.MethodsOf(owner).TypeOf(node.text)
 	let implicit = (node.Kind is "Identifier") and (method is not "") and (inference.ConstantOf(owner, node.text) is "")
 	implicit or (node.Kind is "Member") or (node.Kind is "MethodCall") and (isConstructor is false)
-Methods(types TypeCodegen, names Texts) Slow(List(MethodEntry))
+Methods(types TypeCodegen, names Texts) List(MethodEntry) slow
 	Growing.Methods(Counting, List(Text) + "Started").Length is 1 and (Counting.lines.Length is 4)
 	Growing.Methods(Counting, List(Text)).First.instructions.Last.line is 2
 	Growing.Methods(Counting, List(Text)).First.Name is "Started"

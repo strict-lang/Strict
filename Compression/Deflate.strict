@@ -31,7 +31,7 @@ Adler Numbers
 		low = (low + value) % AdlerModulus
 		high = (high + low) % AdlerModulus
 	((high / Byte.Values).Floor, high % Byte.Values, (low / Byte.Values).Floor, low % Byte.Values)
-Zlib Slow(Numbers)
+Zlib Numbers slow
 	Inflate(Inflate.Part(Deflate(Repeated).Zlib, 2, Deflate(Repeated).Zlib.Length - 2)).Inflated is Repeated
 	Inflate(Inflate.Part(Deflate(List(Number)).Zlib, 2, 4)).Inflated.Length is 0
 	Inflate.Part(Deflate(Repeated).Zlib, 0, 2) is (120, 1)
@@ -114,7 +114,7 @@ Packed(codes Numbers) Numbers
 			accumulator = (accumulator / Byte.Values).Floor
 		count = count % 8
 	count > 0 then packed + accumulator else packed
-Heads Slow(Numbers)
+Heads Numbers slow
 	Deflate(Repeated).Heads.Length is 32768
 	for HeadCount
 		0

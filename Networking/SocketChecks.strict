@@ -1,5 +1,5 @@
 has logger
-Failures Slow(Number)
+Failures Number slow
 	Socket.Send(0, List(Number)) is Error("InvalidSocket")
 	Socket.Receive(0, 1) is Error("InvalidSocket")
 	Socket.Close(0) is not Error
@@ -12,7 +12,7 @@ Failures Slow(Number)
 	Loopback(Socket.Local(0)) is not Error
 	Reopened(Socket.Listen(0)) is not Error
 	0
-Reopened(server Number)
+Reopened(server Number) slow
 	if server is Error
 		return Error("ServerNotOpened")
 	let port = Socket.Port(server)
@@ -25,14 +25,14 @@ Reopened(server Number)
 	if second is not Error("ListenFailed")
 		return Error("PortListenedTwice")
 	Loopback(Socket.Listen(port))
-Loopback(server Number)
+Loopback(server Number) slow
 	if server is Error
 		return Error("ServerNotOpened")
 	let connected = Connected(server)
 	Socket.Close(server)
 	if connected is Error
 		return connected
-Connected(server Number)
+Connected(server Number) slow
 	let client = Socket.Connect("127.0.0.1", Socket.Port(server))
 	if client is Error
 		return Error("ClientNotConnected")
@@ -45,7 +45,7 @@ Connected(server Number)
 	Socket.Close(client)
 	if exchanged is Error
 		return exchanged
-Exchanged(client Number, accepted Number)
+Exchanged(client Number, accepted Number) slow
 	if Socket.Send(client, (1, 2, 3)) is Error
 		return Error("BytesNotSent")
 	let received = Socket.Receive(accepted, 3)

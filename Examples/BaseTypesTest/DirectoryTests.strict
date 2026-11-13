@@ -1,42 +1,42 @@
 has logger
 Run
 	logger.Log("Directory exists: " + Exists(Path(".")))
-Exists(path) Boolean
+Exists(path) Boolean slow
 	Exists(Path("."))
 	Exists(Path("")) is false
 	Directory.Exists(path)
-Files(path) Texts
+Files(path) Texts slow
 	Files(Path(".")).Length > 0
 	Directory.Files(path)
-Directories(path) Texts
+Directories(path) Texts slow
 	Directories(Path("..")).Length > 0
 	Directory.Directories(path)
-Create(path)
+Create(path) slow
 	Create(".") is not Error
 	Create("Missing/Nested/Created") is Error
 	Directory.Create(path)
-Change(path)
+Change(path) slow
 	Change("Missing/Changed") is Error
 	Directory.Change(path)
-Created(path Text) Slow(Boolean)
+Created(path Text) Boolean slow
 	Created("Examples/BaseTypesTest/NewFolder")
 	Directory.Create(path)
 	let exists = Directory.Exists(path)
 	Directory.Delete(path)
 	exists
-Written(path Text) Boolean
+Written(path Text) Boolean slow
 	Written("Examples/BaseTypesTest/Created/written")
 	File(path).Write(List(Text) + "written")
 	let exists = File(path).Exists
 	File(path).Delete
 	exists
-Changed(path Text) Slow(Boolean)
+Changed(path Text) Boolean slow
 	Changed("Examples/BaseTypesTest/Changed")
 	Directory.Change(".")
 	let isWritten = Written(path + "/written")
 	Directory.Delete(path)
 	isWritten
-Renamed(path Text) Boolean
+Renamed(path Text) Boolean slow
 	Renamed("Examples/BaseTypesTest/renamed")
 	File(path).Write(List(Text) + "renamed")
 	File(path).Rename(path + "2")

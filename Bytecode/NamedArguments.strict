@@ -14,7 +14,7 @@ constant Shined = NamedArguments(ValueCodegen(TypeInference(ShineTypes, CallTarg
 constant Lights = (Scope(List(Text) + "Light", List(Text) + "1"), KnownTypes.NoMembers)
 constant Lit = NamedArguments(ValueCodegen(Shined.values, inference = TypeInference(ShineTypes, Lights)))
 constant OwnDefaults = NamedArguments(ValueCodegen(Lit.values, inference = TypeInference(KnownTypes(ShineTypes, parameters = (Constructing.With("mask default", "Light"), KnownTypes.NoMembers)), Lights)))
-Arranged(call SyntaxNode, block CodeBlock) Slow(SyntaxNode)
+Arranged(call SyntaxNode, block CodeBlock) SyntaxNode slow
 	Parts.Arranged(Masked, CodeBlock.Empty) to Text is "Part(1, 0, 3)"
 	Parts.Arranged(SyntaxParser(Tokenizer("Part(1, 2)").Tokens).Parse, CodeBlock.Empty) to Text is "Part(1, 2)"
 	Parts.Arranged(Named, CodeBlock.Empty) to Text is "Part(1, 0, 3)"

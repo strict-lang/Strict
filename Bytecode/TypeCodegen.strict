@@ -23,13 +23,13 @@ constant Flats = (Scope(("from", "from types", "items default"), ("items", "Text
 constant Filling = TypeInference(KnownTypes(DefaultInstance.Bags, parameters = Flats), DefaultInstance.Computing.constants)
 constant Defaulted = TypeCodegen("Strict/Bag", ("has items Texts = Plain.Flat", "Count Number", "\titems.Length"), Filling, List(Text))
 constant Rebuilt = SyntaxParser(Tokenizer("Greeter(Greeter(\"a\"), text = \"b\")").Tokens).Parse
-Entry Slow(TypeEntry)
+Entry TypeEntry slow
 	Texted.Methods(("to")).Length is 1
 	Hello.Entry is TypeEntry(TypeEntry.HelloLogger, methods = MethodEntry(MethodEntry.HelloRun, instructions = Greeted))
 	ConstantMethods.Counting.Methods(List(Text)).Length is 2
 	Specialization.Coding.Methods(List(Text) + Specialization.Halving).Length is 1
 	TypeEntry(Generator.target.TypeName, Members, Methods(List(Text)))
-Selected(names Texts) Slow(TypeEntry)
+Selected(names Texts) TypeEntry slow
 	Limit.Selected("Run").Name is "Strict/Limit"
 	Limit.Selected("Missing").methods.Length is 0
 	Limit.Selected(List(Text)).methods.Length is 0
@@ -45,7 +45,7 @@ Generator ValueCodegen
 	Leveled.Member(HeaderTokens("has", "x", "Fast"), 0, Scope(("Fast"), ("Text"))).typeName is "Strict/Fast"
 	let target = CallTarget(inference.types, TypeShape(lines), fullName, typeNames)
 	ValueCodegen(inference, inference.types.MethodsOf(target.TypeName), target, isOptimizing)
-Members Slow(List(MemberEntry))
+Members List(MemberEntry) slow
 	Limit.Members.First.initial.First.payload is (1, 10, 0)
 	Leveled.Members.First.typeName is "Strict/Text"
 	mutable members = List(Mutable(MemberEntry))
@@ -114,7 +114,7 @@ Starts(names Texts) List(MethodEntry)
 	let scope = MethodScope(HeaderTokens(DefaultInstance.Starter), generator.target)
 	let code = generator.Expression(SyntaxNode("Call", type), CodeBlock(List(InstructionEntry), 0, 0, scope))
 	List(MethodEntry) + MethodEntry(DefaultInstance.Starter, List(MemberEntry), fullName, code.Ended(type).instructions)
-Method(start Number) Slow(MethodEntry)
+Method(start Number) MethodEntry slow
 	(Hello.Method(1).returnType, Created.Method(1).returnType) is ("None", "Strict/C")
 	Iterating.Method(1).instructions(0).texts.First is "Strict/List(Number)"
 	Iterating.Method(1).returnType is "Strict/Iterator(Number)"
@@ -128,7 +128,7 @@ Method(start Number) Slow(MethodEntry)
 	let optimized = LoadReuse(ChangedInstance(generator, header.tokens(0)).Kept(code).instructions).Optimized
 	MethodEntry(header.tokens(0), Parameters(header), returnType, optimized)
 Declared(header HeaderTokens) Text
-	Hello.Declared(HeaderTokens(Tokenizer("Run Slow(Number)").Tokens)) is "Slow(Strict/Number)"
+	Hello.Declared(HeaderTokens(Tokenizer("Run Number slow").Tokens)) is "Slow(Strict/Number)"
 	Created.Declared(HeaderTokens(Tokenizer("from(b Number)").Tokens)) is "Strict/C"
 	Hello.Member(HeaderTokens("constant", "Add"), 0, Unscoped).IsConstant
 	let result = header.tokens(0) is "from" then Generator.target.TypeName else Concrete(Returned(header))

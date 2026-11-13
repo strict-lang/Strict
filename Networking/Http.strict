@@ -1,15 +1,15 @@
 constant FormHeader = "Content-Type: application/x-www-form-urlencoded"
-Fetched(method Text, url Text, body Text = "", headers Text = "", seconds Number = 15, maximum Number = 67108864) HttpResponse
+Fetched(method Text, url Text, body Text = "", headers Text = "", seconds Number = 15, maximum Number = 67108864) HttpResponse slow
 	Http.Fetched("GET", "ftp://example.com") is Error("InvalidHttpUrl")
 	Http.Fetched("GET", "https://") is Error("InvalidHttpUrl")
 	Response(Requested(method, url, body, headers, seconds, maximum))
-Requested(method Text, url Text, body Text, headers Text, seconds Number, maximum Number) Text
-Started(method Text, url Text, body Text = "", headers Text = "", seconds Number = 15, maximum Number = 67108864) Number
-Received(request Number) HttpResponse
+Requested(method Text, url Text, body Text, headers Text, seconds Number, maximum Number) Text slow
+Started(method Text, url Text, body Text = "", headers Text = "", seconds Number = 15, maximum Number = 67108864) Number slow
+Received(request Number) HttpResponse slow
 	Http.Received(0) is Error("InvalidHttpRequest")
 	Http.Started("GET", "ftp://example.com") is Error("InvalidHttpUrl")
 	Response(Polled(request))
-Polled(request Number) Text
+Polled(request Number) Text slow
 Response(raw Text) HttpResponse
 	Http.Response("200\n\nbody") is HttpResponse(200, "", "body")
 	Http.Response("404\nA: b\nC: d\n\n{}") is HttpResponse(404, "A: b\nC: d", "{}")

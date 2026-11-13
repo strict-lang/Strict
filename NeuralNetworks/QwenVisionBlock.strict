@@ -17,7 +17,7 @@ Loaded(file Safetensors, prefix Text, headCount Number) QwenVisionBlock
 	let first = (file.Values(prefix + "norm1.weight"), file.Values(prefix + "norm1.bias"))
 	let second = (file.Values(prefix + "norm2.weight"), file.Values(prefix + "norm2.bias"))
 	QwenVisionBlock(first(0), first(1), combining, projecting, second(0), second(1), expanding, contracting, headCount)
-Forward(patches Numbers, rotations Numbers) Slow(Numbers)
+Forward(patches Numbers, rotations Numbers) Numbers slow
 	Tiny.Forward(QwenVision.Reference.Values("reference.embedded"), QwenVision.Tiny.Rotations((4, 6))).Length is 768
 	let width = firstNorm.Length
 	let combined = attention.Sums(Gpt2Block.Normalized(patches, firstNorm, firstShift, 0.000001))

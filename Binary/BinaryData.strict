@@ -9,7 +9,7 @@ constant InfinityExponent = 255
 constant SubnormalShift = 149
 constant MantissaRange = 8388608
 constant ExponentBias = 127
-Read(path Text) BinaryData
+Read(path Text) BinaryData slow
 	BinaryData.Read("Content/Missing.bin") is Error
 	File(path).Exists is false then Error("FileNotFound") else BinaryData(File(path).ReadBytes)
 UInt32(at Number) Number

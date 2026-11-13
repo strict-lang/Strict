@@ -154,7 +154,7 @@ Streamed(socket Number) Number
 				logger.Log(value)
 			code = isExit then value.Substring(exiting.Length, value.Length - exiting.Length) to Number else code
 	code is Resident.Refused then Unserved else code
-Loopback(code Number) Slow(Number)
+Loopback(code Number) Number slow
 	let server = Socket.Local(0)
 	let client = Socket.Connect("127.0.0.1", Socket.Port(server))
 	let accepted = Socket.Accept(server)

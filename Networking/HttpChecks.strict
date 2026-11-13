@@ -7,12 +7,12 @@ Signatures Number
 	Hmac.Sha256(LongKey, Order) is "9de0df3d6e3c6337bd5eef4be68141f85d566f877d14027f3c9850d6f6f9f6f1"
 	Hmac.Sha256("schlüssel", "Käse 中文") is "ef17733d8da28a154716597217ec5f1f15eea044c9494600fd112d825850536b"
 	0
-Online Slow(Number)
+Online Number slow
 	Http.Fetched("GET", "https://api.binance.com/api/v3/time").status is 200
 	Http.Fetched("GET", "https://api.binance.com/api/v3/time").body.StartsWith("{\"serverTime\":")
 	Awaited(Http.Started("GET", "https://api.binance.com/api/v3/time")).body.StartsWith("{\"serverTime\":")
 	0
-Awaited(request Number) HttpResponse
+Awaited(request Number) HttpResponse slow
 	mutable response = Http.Received(request)
 	for as long as response.status is 0
 		Process.Wait(0.01)

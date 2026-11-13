@@ -6,15 +6,15 @@ IsAvailable Boolean
 	Process("").IsAvailable is false
 	Process("strict").IsAvailable
 	executable is not ""
-Run(arguments Text) ProcessResult
+Run(arguments Text) ProcessResult slow
 	ProcessResult(1, "", "Process.Run is not available for: " + arguments)
-Started(arguments Text) Number
+Started(arguments Text) Number slow
 	Process.Find("missingStrictTool").Started("") is 127
 	Error("Process.Started needs the native runtime to start " + executable + " " + arguments)
-RunTool(name Text, arguments Text) ProcessResult
+RunTool(name Text, arguments Text) ProcessResult slow
 	let tool = Find(name)
 	tool.IsAvailable then tool.Run(arguments) else ProcessResult(NotFoundExitCode, "", "tool not found: " + name)
-RunTools(name Text, arguments Texts) List(ProcessResult)
+RunTools(name Text, arguments Texts) List(ProcessResult) slow
 	Process.RunTools("missingStrictTool", ("a", "b")).Length is 2
 	Process.RunTools("missingStrictTool", ("a", "b")).Last.exitCode is 127
 	Error("Process.RunTools needs the native runtime to run " + name + " " + (arguments to Text))
@@ -24,7 +24,7 @@ OperatingSystem Text
 Current Process
 	Process.Current.IsAvailable
 	Process("")
-Wait(seconds Number)
+Wait(seconds Number) slow
 Collected
 Elapsed Number
 	Process.Elapsed > 0
@@ -44,9 +44,9 @@ Variable(name Text) Text
 	Process.Variable("StrictVariableNeverSet") is ""
 	Process.Variable("PATH").Length > 0
 	Error("Process.Variable needs the native runtime to read " + name)
-Input Text
+Input Text slow
 	""
-InputLine Text
+InputLine Text slow
 	""
 Built Text
 	Process.Current.Built.Length is 19

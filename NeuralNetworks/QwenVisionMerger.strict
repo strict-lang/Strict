@@ -15,7 +15,7 @@ Loaded(file Safetensors, prefix Text) QwenVisionMerger
 	let expanding = Batch(file.Rows(prefix + "linear_fc1.weight"), file.Values(prefix + "linear_fc1.bias"))
 	let projecting = Batch(file.Rows(prefix + "linear_fc2.weight"), file.Values(prefix + "linear_fc2.bias"))
 	QwenVisionMerger(file.Values(prefix + "norm.weight"), file.Values(prefix + "norm.bias"), expanding, projecting)
-Merged(patches Numbers) Slow(Numbers)
+Merged(patches Numbers) Numbers slow
 	Tiny.Merged(QwenVision.Reference.Values("reference.embedded")).Length is 6 * 64
 	projection.Sums(Gelu(expansion.Sums(Gpt2Block.Normalized(patches, norm, shift, 0.000001))))
 Gelu(values Numbers) Numbers

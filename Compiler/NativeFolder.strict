@@ -8,7 +8,7 @@ constant Hellos = ("Examples/HelloLogger.strict", "Examples/HelloLogger.strict")
 constant Runless = List(TypeEntry) + TypeEntry("Strict/A", List(MemberEntry), List(MethodEntry))
 constant Other = TypeEntry("Strict/B", List(MemberEntry), List(MethodEntry))
 constant Greeting = List(TypeEntry) + TypeEntry.HelloLogger
-Module(path Text, root Text, isCounting Boolean, isProgram Boolean, platform = -1, sources Texts = List(Text)) Slow(MlirModule)
+Module(path Text, root Text, isCounting Boolean, isProgram Boolean, platform = -1, sources Texts = List(Text)) MlirModule slow
 	NativeFolder(Logger).Module("Examples/HelloLogger.strict", ".", false, true).entryName is "Run"
 	NativeFolder(Logger).Module("Examples/NativeAdd", ".", false, false).types.First.Name.EndsWith("Adder")
 	let started = Process.Elapsed
@@ -23,7 +23,7 @@ Module(path Text, root Text, isCounting Boolean, isProgram Boolean, platform = -
 Tested(path Text, root Text, sources Texts) List(TypeEntry)
 	NativeFolder(Logger, gated = Greeting).Tested("Missing.strict", ".", List(Text)) is Greeting
 	gated.Length > 0 then gated else Execute(logger, selection).Loaded(path, root, true, sources)
-Natives(path Text, root Text, types List(TypeEntry)) Slow(Texts)
+Natives(path Text, root Text, types List(TypeEntry)) Texts slow
 	NativeFolder(Logger).Natives("Examples", ".", List(TypeEntry) + Foreign.Adder) is ("Examples/NativeAdd/native")
 	let paths = Paths(path)
 	mutable folders = List(Mutable(Text))
@@ -80,7 +80,7 @@ Leading(types List(TypeEntry), count Number) List(TypeEntry)
 	NativeFolder.Leading((Counting, Other), 1) is List(TypeEntry) + Counting
 	for Range(0, count)
 		types(value)
-Counted(paths Texts, root Text) Slow(List(TypeEntry))
+Counted(paths Texts, root Text) List(TypeEntry) slow
 	NativeFolder(Logger).Counted(Hellos, ".")(1).Name is "Strict/Examples/HelloLogger"
 	let files = SourceFiles(root).Of(FileCompiler.Normalized(paths.First), paths)
 	let rounds = Rounds(paths, root, files, ResolveCheck.Inference(files))

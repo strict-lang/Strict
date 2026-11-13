@@ -13,7 +13,7 @@ constant Running = TestCodegen(TypeCodegen("Strict/Running", ("Run Number", "\t3
 constant Halving = TestCodegen(TypeCodegen("Strict/Halving", ("Half(number Number) Number", "\t3 / 2 is 1.5", "\tnumber / 2"), TypeCodegen.NoTypes, List(Text)))
 constant TookCall = InstructionEntry.Invoke(1, ("Strict/Even", "$TestsTook", "Strict/Text", "elapsed"), List(Number) + 0, -1)
 constant GotCall = InstructionEntry.Invoke(1, ("Strict/Even", "$TestsGot0", "Strict/Text", "tested"), List(Number) + 0, -1)
-Tests Slow(List(MethodEntry))
+Tests List(MethodEntry) slow
 	Even.Tests.First.Name is Runner and (Halving.Tests.Last.Name is "$TestsNear0")
 	Even.Tests.First.instructions.Last.kind is InstructionType.Return
 	let scope = types.Generator.target.shape.MemberScope.With("failed", "Number").With("started", "Number")
@@ -51,7 +51,7 @@ Included(line Text) Boolean
 	let header = HeaderTokens(Tokenizer(line).Tokens)
 	let matched = (selection is in ("", "*")) or (header.tokens(0) is selection)
 	matched and ((selection is not "") or (TypeSource.IsSlow(types.fullName, header) is false))
-Method(start Number, block CodeBlock) Slow(CodeBlock)
+Method(start Number, block CodeBlock) CodeBlock slow
 	Even.Method(0, Counter).instructions.Index(EvenFailed) > 0
 	Even.Method(0, Counter).instructions.Index(EvenPassed) > 0
 	TestCodegen(Even.types, true).Method(0, Counter).instructions.Index(EvenPassed) is -1
@@ -64,7 +64,7 @@ Method(start Number, block CodeBlock) Slow(CodeBlock)
 	for TestLines(types.Generator).Tests(BodyParser(types.lines).Method(start + 1), block)
 		result = MethodCodegen(types.Generator).Lined(Line(value, name, result.At(0)), result.instructions.Length, value.line)
 	result
-Line(line SyntaxNode, method Text, code CodeBlock) Slow(CodeBlock)
+Line(line SyntaxNode, method Text, code CodeBlock) CodeBlock slow
 	Even.Line(OneIsOne, "IsEven", Counter).instructions.Length > 4
 	Even.Line(Declaring, "IsEven", Counter).instructions(4).kind is InstructionType.StoreConstantToVariable
 	Even.Line(Declaring, "IsEven", Counter).scope.TypeOf(ErrorCodegen.Tested) is "Error"
@@ -76,7 +76,7 @@ Line(line SyntaxNode, method Text, code CodeBlock) Slow(CodeBlock)
 	let error = skip.Add(InstructionEntry.Jump(InstructionType.JumpEnd, code.nextId)).Declare(ErrorCodegen.Tested, "Error")
 	let printed = Got(Finished(error).Add(InstructionEntry.Print("Test error: " + Place(line, method))))
 	Counted(printed).Add(InstructionEntry.Jump(InstructionType.JumpEnd, skip.nextId - 1))
-Checked(test SyntaxNode, method Text, block CodeBlock) Slow(CodeBlock)
+Checked(test SyntaxNode, method Text, block CodeBlock) CodeBlock slow
 	Even.Checked(SyntaxNode("Boolean", "true"), "A", Counter).instructions.Last.kind is InstructionType.JumpEnd
 	let failure = block.nextId
 	let timed = Started(block.WithNextId.Declare(ErrorCodegen.FailureMarker, failure to Text), Place(test, method))
@@ -88,7 +88,7 @@ Checked(test SyntaxNode, method Text, block CodeBlock) Slow(CodeBlock)
 	let failed = jumped.Add(InstructionEntry.Jump(InstructionType.JumpEnd, failure))
 	let printed = Got(Timed(Finished(failed), "Test failed: " + place))
 	Counted(printed).Add(InstructionEntry.Jump(InstructionType.JumpEnd, jumped.nextId - 1))
-Compared(test SyntaxNode, block CodeBlock) Slow(CodeBlock)
+Compared(test SyntaxNode, block CodeBlock) CodeBlock slow
 	Even.Compared(OneIsOne, Counter).instructions.Last.kind is InstructionType.Equal
 	Even.Compared(OneIsOne, Counter).scope.TypeOf(ErrorCodegen.Tested) is "Number"
 	let isComparison = (test.Kind is "Binary") and (test.text is in ("is", "is not"))
@@ -104,11 +104,11 @@ Place(test SyntaxNode, method Text) Text
 	Even.Place(OneIsOne, "IsEven") is "1 is 1 in IsEven at Even.strict:line 0"
 	let file = TypeEntry(types.fullName, List(MemberEntry), List(MethodEntry)).Source
 	test to Text + " in " + method + " at " + file + ":line " + test.line
-Passed(compared CodeBlock, place Text) Slow(CodeBlock)
+Passed(compared CodeBlock, place Text) CodeBlock slow
 	Even.Passed(Counter, "x").instructions.Index(InstructionEntry.Print("Test passed: x")) is -1
 	let passed = compared.Add(InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, compared.nextId)).WithNextId
 	Timed(passed, "Test passed: " + place).Add(InstructionEntry.Jump(InstructionType.JumpEnd, passed.nextId - 1))
-Timed(block CodeBlock, message Text) Slow(CodeBlock)
+Timed(block CodeBlock, message Text) CodeBlock slow
 	Even.Timed(Counter, "x").instructions.Last.texts is ("x (")
 	Even.Timed(Counter, "x").instructions(0).texts is ("elapsed")
 	Even.Timed(Counter, "x").instructions(1) is TookCall
@@ -119,7 +119,7 @@ Timed(block CodeBlock, message Text) Slow(CodeBlock)
 	let signature = (types.fullName, Runner + "Took", "Strict/Text", "elapsed")
 	let duration = elapsed.Load(InstructionEntry.Invoke(elapsed.register, signature, List(Number) + elapsed.Result, -1))
 	duration.Add(InstructionEntry.PrintValue(message + " (", duration.Result, true))
-Got(block CodeBlock) Slow(CodeBlock)
+Got(block CodeBlock) CodeBlock slow
 	Even.Got(TestedNumber).instructions.Last.kind is InstructionType.Print
 	Even.Got(TestedNumber).instructions.First.texts is List(Text) + ErrorCodegen.Tested
 	Even.Got(TestedNumber).instructions(1) is GotCall

@@ -24,7 +24,7 @@ Decides(first Number, second Number, bias Number, targets Numbers) Boolean
 	Smallest.Decides(1, 1, -1, (0, 1, 1, 1))
 	Smallest.Decides(1, 1, -1, Xor.Targets) is false
 	Separated(Network(List(Layer) + Layer(List(Numbers) + (first, second), List(Number) + bias)), targets)
-HalfPlane(targets Numbers) Slow(Boolean)
+HalfPlane(targets Numbers) Boolean slow
 	Smallest.HalfPlane((0, 1, 1, 1))
 	Smallest.HalfPlane(Xor.Targets) is false
 	for Range(-4, 5)
@@ -46,11 +46,11 @@ Tuned(model Network, targets Numbers, steps Number, rate Number) Network
 	for steps
 		trained = Descent(trained).Epoch(Xor.Inputs, wrapped, rate)
 	trained
-Fit(sizes Numbers, targets Numbers, steps Number, rate Number, seed Number) Slow(Network)
+Fit(sizes Numbers, targets Numbers, steps Number, rate Number, seed Number) Network slow
 	Smallest.Separated(Smallest.Fit((2, 1), (0, 1, 1, 1), Repair, Rate, 1), (0, 1, 1, 1))
 	Smallest.Separated(Smallest.Fit((2, 1), Xor.Targets, Repair, Rate, 1), Xor.Targets) is false
 	Tuned(Draw(PseudoRandom(seed)).Stacked(sizes), targets, steps, rate)
-Hits(targets Numbers, width Number, steps Number) Slow(Boolean)
+Hits(targets Numbers, width Number, steps Number) Boolean slow
 	Smallest.Hits((0, 1, 1, 1), 0, Repair)
 	Smallest.Hits(Xor.Targets, 0, Repair) is false
 	let sizes = width is 0 then (2, 1) else (2, width, 1)
@@ -58,7 +58,7 @@ Hits(targets Numbers, width Number, steps Number) Slow(Boolean)
 		if Separated(Fit(sizes, targets, steps, Rate, index), targets)
 			return true
 	false
-Found(targets Numbers, steps Number) Slow(Number)
+Found(targets Numbers, steps Number) Number slow
 	Smallest.Found((0, 1, 1, 1), Repair) is 0
 	Smallest.Found(Xor.Targets, Budget) is 3
 	Smallest.Found(Xor.Targets, Long) is 2
@@ -68,7 +68,7 @@ Found(targets Numbers, steps Number) Slow(Number)
 		if Hits(targets, index, steps)
 			return index
 	-1
-Sought(targets Numbers) Slow(Numbers)
+Sought(targets Numbers) Numbers slow
 	Smallest.Sought((0, 1, 1, 1)) is (0, 0)
 	Smallest.Sought(Xor.Targets) is (2, 3)
 	(HalfPlane(targets) then 0 else 2, Found(targets, Budget))
@@ -92,7 +92,7 @@ Narrowed(model Network, unit Number) Network
 		else
 			built.Add(Layer(List(Numbers) + Dropped(value.weights.First, unit), value.biases, value.activation))
 	Network(built)
-Linear(targets Numbers, fallback Number) Slow(Number)
+Linear(targets Numbers, fallback Number) Number slow
 	Smallest.Linear(Xor.Targets, 2) is 2
 	Smallest.Linear((0, 1, 1, 1), 4) is 0
 	Separated(Tuned(Draw(PseudoRandom(2)).Stacked((2, 1)), targets, Repair, Rate), targets) then 0 else fallback
@@ -108,7 +108,7 @@ Cut(model Network, targets Numbers, width Number) Number
 		current = Tuned(Narrowed(current, 0), targets, Repair, Rate)
 		working = Separated(current, targets) then hidden else working
 	working
-Shrunk(targets Numbers) Slow(Number)
+Shrunk(targets Numbers) Number slow
 	Smallest.Shrunk((0, 1, 1, 1)) is 0
 	Smallest.Shrunk(Xor.Targets) is 2
 	Cut(Tuned(Draw(PseudoRandom(1)).Stacked((2, 6, 1)), targets, Budget, Rate), targets, 6)

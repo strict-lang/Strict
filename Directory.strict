@@ -1,13 +1,13 @@
 from(text)
-GetFiles Texts
-Directories(path) Texts
-Exists(path) Boolean
+GetFiles Texts slow
+Directories(path) Texts slow
+Exists(path) Boolean slow
 Current Text
-Files(path, pattern = "") Texts
-Modified(path) Number
-Create(path)
-Change(path)
-Delete(path Text)
+Files(path, pattern = "") Texts slow
+Modified(path) Number slow
+Create(path) slow
+Change(path) slow
+Delete(path Text) slow
 	Directory.Delete("Missing/Deleted") is not Error
 	let isWindows = Process.OperatingSystem is "Windows"
 	let command = isWindows then "/c rd /s /q \"" + path.Replace("/", "\\") + "\"" else "-rf \"" + path + "\""

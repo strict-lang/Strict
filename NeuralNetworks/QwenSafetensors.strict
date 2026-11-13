@@ -8,7 +8,7 @@ constant Opened = QwenSafetensors.Tiny.Loaded(10000)
 constant Expected = Qwen3.TinyHybrid.Prefilled((1, 2, 3), 0).hidden
 constant Linear = "layers.0.linear_attn."
 constant Plain = QwenSafetensors(Safetensors("NeuralNetworks/tinyqwen3vl.safetensors", 32, "model."), 16, 0, 0)
-Loaded(theta Number, picked = List(Number)) Slow(Qwen3)
+Loaded(theta Number, picked = List(Number)) Qwen3 slow
 	Opened.blocks.Length is 1
 	Opened.blocks.First.hybrid.layers.Length is 3
 	Opened.Prefilled((1, 2, 3), 0).hidden(0).IsNearlyEqual(Expected(0), 0.3)
@@ -21,7 +21,7 @@ Loaded(theta Number, picked = List(Number)) Slow(Qwen3)
 	let width = file.Shape("embed_tokens.weight")(1)
 	let normed = file.Entry("norm.weight") is "" then Layer.Zeros(width) else Norm("norm.weight")
 	Qwen3(Blocks(basis), file.Hosted("embed_tokens", picked), List(Numbers), normed, theta, rotary = rotary, basis = basis)
-Blocks(basis Basis) Slow(List(Qwen3Block))
+Blocks(basis Basis) List(Qwen3Block) slow
 	let completion = Completion(Logger, label, Layers, Process.Elapsed)
 	mutable blocks = List(Mutable(Qwen3Block))
 	mutable deltas = List(Mutable(DeltaBlock))
@@ -40,7 +40,7 @@ Layers Number
 	for as long as file.Entry("layers." + count + ".input_layernorm.weight") is not ""
 		count = count + 1
 	count
-Attending(layer Text, basis Basis) Slow(Qwen3Block)
+Attending(layer Text, basis Basis) Qwen3Block slow
 	Tiny.Attending("layers.3.", Basis.None).queryNorm.Length is 4
 	Tiny.Attending("layers.3.", Basis.None).heads is 2
 	let size = file.Shape(layer + "self_attn.q_norm.weight").First
@@ -59,7 +59,7 @@ Attended(layer Text, rows HeadRows) Layer
 	let keyed = rows.Permuted(file.Quantized(layer + "self_attn.k_proj", Number.SingleBits))
 	let valued = file.Quantized(layer + "self_attn.v_proj", Number.SingleBits)
 	Layer(rows.Queries(queried) + keyed + valued + rows.Gates(queried), Layer.Unbiased)
-Delta(layer Text, basis Basis) Slow(DeltaBlock)
+Delta(layer Text, basis Basis) DeltaBlock slow
 	Tiny.Delta("layers.0.", Basis.None).decays.Length is 4
 	let mixing = Mixing(layer + "linear_attn.", FeedForward(layer, basis))
 	let normed = Norm(layer + "input_layernorm.weight")
@@ -67,7 +67,7 @@ Delta(layer Text, basis Basis) Slow(DeltaBlock)
 	let window = Layer.Zeros(mixing.convolution.Length / 4 * 3)
 	let memory = Layer.Zeros(mixing.decays.Length * mixing.norm.Length * mixing.norm.Length)
 	DeltaBlock(mixing, attentionNorm = normed, mlpNorm = after, window = window, memory = memory)
-Mixing(prefix Text, feedForward Experts) Slow(DeltaBlock)
+Mixing(prefix Text, feedForward Experts) DeltaBlock slow
 	Tiny.Mixing(Linear, Experts.Single).steps.Length is 4
 	let keyHeads = KeyHeads(prefix)
 	let convolution = Convolution(prefix, keyHeads)
@@ -102,7 +102,7 @@ Convolution(prefix Text, keyHeads Number) Numbers
 	let taps = file.Values(prefix + "conv1d.weight")
 	let keys = 2 * keyHeads * size * 4
 	taps.Slice(0, keys) + Tiled(taps.Slice(keys, taps.Length - keys), size * 4, keyHeads)
-FeedForward(layer Text, basis Basis) Slow(Experts)
+FeedForward(layer Text, basis Basis) Experts slow
 	Tiny.FeedForward("layers.0.", Basis.None).used is 1
 	Plain.FeedForward("layers.0.", Basis.None).used is 1
 	let gated = file.Quantized(layer + "mlp.gate_proj", Number.SingleBits)
