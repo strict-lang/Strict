@@ -25,12 +25,13 @@ Run(arguments Texts) Number
 	let command = arguments.Length > 0 then arguments(0) else ""
 	if command is "coordinator"
 		mutable coordinator = Coordinator(logger)
-		return coordinator.Served
+		coordinator.Served
+		return 0
 	if command is in ("serve", "linked", "status")
 		Hosted(command, arguments, resident)
 		return 0
 	let forwarded = Forwarding(logger, resident.root).Forwarded(arguments)
-	forwarded >= 0 then forwarded else Logged(arguments).code
+	forwarded is Forwarding.Ended then 1 else forwarded is Error then Logged(arguments).code else forwarded
 Hosted(command Text, arguments Texts, resident Resident)
 	if command is "serve"
 		return Served(arguments.Length > 1 then Resident(resident.root, arguments(1)) else resident)
@@ -40,23 +41,23 @@ Hosted(command Text, arguments Texts, resident Resident)
 	NativeChunks(logger, rest(2)).Saved(rest(0), rest(1), rest.Slice(3, rest.Length - 3))
 Served(resident Resident)
 	let server = resident.Opened
-	if server is 0
-		return Error("ServerNotOpened")
+	if server is Error
+		return server
 	let built = File(Process.Current.executable).Modified
 	mutable socket = resident.Accepted(server, built)
 	mutable answer = Answer(0, Dictionary(Text, TypeEntry))
-	for as long as socket > 0
+	for as long as socket is not Error
 		let request = resident.Requested(socket)
 		let stopping = resident.Arguments(request) is (Resident.Stopping)
 		answer = Replied(resident, request, socket, stopping, answer)
-		socket = stopping then 0 else resident.Accepted(server, built)
+		socket = stopping then Resident.Unaccepted else resident.Accepted(server, built)
 	resident.Closed(server)
 Replied(resident Resident, request Text, socket Number, isStopping Boolean, last Answer) Answer
 	let started = Time.Now
 	let isAnswered = resident.IsCurrent(request) and (isStopping is false)
 	let answer = isAnswered then Answered(resident, request, socket, last).Stamped(started) else last
 	resident.Released(request)
-	resident.Ended(socket, isAnswered then answer.code else (isStopping then 0 else -1))
+	resident.Ended(socket, isAnswered then answer.code else (isStopping then 0 else Resident.Refused))
 	answer
 Answered(resident Resident, request Text, socket Number, last Answer) Answer
 	let home = Directory.Current
