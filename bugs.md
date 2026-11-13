@@ -1,2 +1,3 @@
 - `Intermediates.Free` skipping an old copy in use has no test: `File.Delete` releases this process's own `File.Locked` (`strict_file_unlocked`), so a test line needs another process holding `Held.old.exe`.
+- Qwen3Benchmark of Qwen3.5-9B crashes in prefill under `ncu --launch-skip 8000` with `STRICT_GRAPHS=0` (AccessViolation in `DeltaChunks.Multiplied` or `Corrected`, also with every small loop downloaded), one ncu run printed other text; plain runs and `CUDA_LAUNCH_BLOCKING=1` are fine.
 - `strict check .` folder tests fail now and then with `UnresolvedLink: Strict/Number.Round` (also `Error.Code`, `Text.Lines`), more after many files changed, a different set each run, never alone: parallel runs racing on the base type caches? (2026-11-13).
