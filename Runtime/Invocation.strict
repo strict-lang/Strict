@@ -22,7 +22,7 @@ MethodName Text
 ReturnType Text
 	AddCall.ReturnType is "Strict/Number"
 	Invocation(StructLanes.Constructed, List(VmValue), VmValue.None).ReturnType is "Pair"
-	PayloadDecoder(entry).Text(4 + entry.payload(3))
+	PayloadDecoder(entry).ReturnType
 ParameterNames Texts
 	AddCall.ParameterNames is ("x")
 	PayloadDecoder(entry).Names

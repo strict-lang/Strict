@@ -47,7 +47,7 @@ WrittenKind(writer Number) Text
 		let variable = VariableKind(writer, entry.texts(0))
 		return entry.kind is InstructionType.IndexCall then ElementKind(variable) else variable
 	if entry.kind is InstructionType.Invoke
-		return TypeEntry.ShortName(PayloadDecoder(entry).Text(4 + entry.payload(3)))
+		return TypeEntry.ShortName(PayloadDecoder(entry).ReturnType)
 	entry.kind is InstructionType.FieldLoad then FieldKind(writer, entry) else Calculated(writer, entry)
 Calculated(writer Number, entry InstructionEntry) Text
 	Graded.Calculated(4, InstructionEntry.Binary(InstructionType.Add, (1, 0, 3))) is "Text"

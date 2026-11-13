@@ -51,7 +51,7 @@ IsConversion Boolean
 	if entry.kind is not InstructionType.Invoke
 		return false
 	let decoder = PayloadDecoder(entry)
-	let target = TypeEntry.ShortName(decoder.Text(4 + entry.payload(3)))
+	let target = TypeEntry.ShortName(decoder.ReturnType)
 	let isTo = decoder.Text(2) is "to"
 	let isPairCode = MlirCodes(function, position).IsPairCode(entry)
 	isPairCode or (isTo and (target.StartsWith("List(") or IsNativeConversion(entry, target)))
@@ -75,7 +75,7 @@ Converted(entry InstructionEntry) Texts
 	MlirTexts(Joined, 7).Converted(Joined.method.instructions(7)).Length is 4
 	let instance = Instance(entry)
 	let result = "%r" + entry.payload(0)
-	let target = TypeEntry.ShortName(PayloadDecoder(entry).Text(4 + entry.payload(3)))
+	let target = TypeEntry.ShortName(PayloadDecoder(entry).ReturnType)
 	if PayloadDecoder(entry).Text(2) is "Code"
 		return MlirCodes(function, position).Coded(instance, result)
 	if target is "Number"

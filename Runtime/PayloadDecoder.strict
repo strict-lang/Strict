@@ -56,12 +56,15 @@ Names Texts
 	PayloadDecoder(Invocation.AddCall.entry).Names is ("x")
 	for entry.payload(3)
 		Text(4 + index)
+ReturnType Text
+	PayloadDecoder(InstructionEntry.Invoke(1, ("Strict/Vector", "Scaled", "Strict/Number", "x", "y"), (0, 0), -1)).ReturnType is "Strict/Number"
+	Text(4 + entry.payload(3))
 Text(position Number) Text
 	PayloadDecoder(InstructionEntry.LoadText(0, "a")).Text(2) is "a"
 	entry.texts(-1 - entry.payload(position))
 Callee(type TypeEntry) MethodEntry
 	Scaled.Callee(TypeEntry.Scaling).parameters.First.Name is "scale"
-	type.Callee(Text(2), ArgumentCount, Text(4 + entry.payload(3)), Names)
+	type.Callee(Text(2), ArgumentCount, ReturnType, Names)
 ArgumentCount Number
 	Scaled.ArgumentCount is 1
 	PayloadDecoder(InstructionEntry.Invoke(1, ("T", "Run", "N"), List(Number), -1)).ArgumentCount is 0
