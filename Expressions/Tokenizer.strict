@@ -112,7 +112,7 @@ IsDigit(character Text) Boolean
 	Tokenizer("1+2").WordLength(0) is 1 and (Tokenizer("1e+5").WordLength(0) is 2)
 	Tokenizer("1-5").WordLength(0) is 1 and (Tokenizer("a bc").WordLength(2) is 2)
 	Tokenizer("a. Size").Names.Length is 0 and (Tokenizer("x + Size").Names is ("Size"))
-	"0123456789".IndexOf(character) is not -1
+	IsDigitCode(character(0).number)
 IsDigitCode(code Number) Boolean
 	IsDigitCode(48)
 	IsDigitCode(57)
