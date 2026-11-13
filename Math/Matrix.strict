@@ -34,11 +34,14 @@ Cell(row Number, column Number, other Matrix) Number
 Clip(point Vector3) Numbers
 	Moved.Clip(Vector3.One) is (2, 3, 4, 1)
 	for 4
-		values(index) * point.X + values(4 + index) * point.Y + values(8 + index) * point.Z + values(LastColumn + index)
+		Projected(index, point)
 Transformed(point Vector3) Vector3
 	Moved.Transformed(Vector3.One) is Vector3(2, 3, 4)
-	let clip = Clip(point)
-	Vector3(clip(0), clip(1), clip(2))
+	for 3
+		Projected(index, point)
+Projected(row Number, point Vector3) Number
+	Moved.Projected(3, Vector3.One) is 1
+	values(row) * point.X + values(4 + row) * point.Y + values(8 + row) * point.Z + values(LastColumn + row)
 Axis(column Number) Vector3
 	Moved.Axis(3) is Vector3(1, 2, 3)
 	Vector3(values(column * 4), values(column * 4 + 1), values(column * 4 + 2))

@@ -25,7 +25,13 @@ constant Packing = MethodCodegen(ValueCodegen(TypeInference(PackTypes, CallTarge
 constant PackLoops = LoopCodegen(Packing)
 constant Doubled = LoopCodegen.DoubledBody
 constant Packed = BodyParser("Packed Pack", "\t(1, 2)").Block(1, 1)
+constant SumsBody = BodyParser("Summed Sums", "\tfor 3", "\t\tSums((index))").Block(1, 1)
+constant Blank = CodeBlock.Empty
+constant Unlooped = PackLoops.Aggregated(Packed, CodeBlock.Empty, "Pack")
+constant Boxed = PackLoops.Aggregated(Doubled, CodeBlock.Empty, "Box")
+constant Added = PackLoops.Aggregated(SumsBody, CodeBlock.Empty, "Sums")
 constant PackedLoop = Packing.Looped(Doubled, CodeBlock.Empty, "Pack")
+constant SumsLoop = Packing.Looped(Doubled, CodeBlock.Empty, "Sums")
 Generate(body SyntaxNode, scope Scope, returnType Text) CodeBlock
 	Plain.Generate(BodyParser("Run Number", "\tx + 2").Block(1, 1), NoScope, "Number").instructions.Length is 4
 	Plain.Generate(BodyParser("Run Number", "\treturn 1").Block(1, 1), NoScope, "None").instructions.Length is 2
@@ -40,15 +46,15 @@ Generate(body SyntaxNode, scope Scope, returnType Text) CodeBlock
 		return block
 	block.Ended(returnType)
 Looped(body SyntaxNode, block CodeBlock, returnType Text) CodeBlock
-	PackedLoop.instructions.Length is 12 and (PackedLoop.instructions(-2).texts(1) is "from")
-	Packing.Looped(Doubled, CodeBlock.Empty, "Numbers") is PackLoops.Aggregated(Doubled, CodeBlock.Empty, "Numbers")
-	Packing.Looped(Packed, CodeBlock.Empty, "Pack") is PackLoops.Aggregated(Packed, CodeBlock.Empty, "Pack")
-	Packing.Looped(Doubled, CodeBlock.Empty, "Box") is PackLoops.Aggregated(Doubled, CodeBlock.Empty, "Box")
-	Packing.Looped(Doubled, CodeBlock.Empty, "Sums") is PackLoops.Aggregated(Doubled, CodeBlock.Empty, "Sums")
+	(PackedLoop.instructions.Length is 12) and (PackedLoop.instructions(-2).texts(1) is "from")
+	(SumsLoop.instructions(-2).texts(1) is "from") and (Packing.Looped(SumsBody, Blank, "Sums") is Added)
+	(Packing.Looped(Packed, Blank, "Pack") is Unlooped) and (Packing.Looped(Doubled, Blank, "Box") is Boxed)
 	let loops = LoopCodegen(value)
 	let member = values.inference.types.ValueOf(returnType)
-	let isWrapped = ListFits(values.inference.types).IsList(member) and (loops.Aggregation(body, returnType) is "")
-	if ((BranchValues(returnType).LastLoop(body).Kind is "For") and isWrapped) is false
+	let loop = BranchValues(returnType).LastLoop(body)
+	let isListed = (loop.Kind is "For") and ListFits(values.inference.types).IsList(member)
+	let valued = isListed then values.TypeOf(loop.children.Last.children.Last, loops.Declared(loop, block)) else returnType
+	if valued is returnType
 		return loops.Aggregated(body, block, returnType)
 	let forResult = List(SyntaxNode) + SyntaxNode("Identifier", "forResult")
 	values.Expression(SyntaxNode("Call", returnType, forResult), loops.Aggregated(body, block, member))
