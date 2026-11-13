@@ -15259,7 +15259,7 @@
     %line = func.call @strict_list_get(%arguments, %at) : (f64, f64) -> f64
     %result = func.call @strict_process_runtool(%self, %name, %line) : (f64, f64, f64) -> f64
     %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
-    llvm.store %result, %slot : f64, !llvm.ptr
+    func.call @strict_rc_put(%slot, %result) : (!llvm.ptr, f64) -> ()
     %following = arith.addi %index, %one : i64
     cf.br ^next(%following : i64)
   ^done:

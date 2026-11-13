@@ -8,7 +8,8 @@ is not refilled while the local it came from still reads it, a Realtime type col
 frames (Presented), reading 1000 lines of 80 KB measures the 80 MB text once (its remembered length survives reclaims
 that do not free it, measuring it again per line took 13 s), a loop collecting more than the limit ends with
 GarbageCollectionExceedsLimit and names its young and full collections in the window, 5 million short lived Matrix
-products stay in a heap below 64 MB (the young limit follows what lives, the products are collected while cached)."""
+products stay in a heap below 64 MB (the young limit follows what lives, the products are collected while cached),
+the results of 128 tools survive young collections while the tools still run."""
 import ctypes
 import os
 import re
@@ -166,4 +167,11 @@ with tempfile.TemporaryDirectory(prefix="MemoryCheck", dir=root / "Examples") as
 		env=os.environ | {"STRICT_GC_LOG": "1", "STRICT_GPU": "0"})
 	heaps = [int(heap) for heap in re.findall(r"(\d+) MB heap", ran.stdout)]
 	assert ran.returncode == 0 and "done" in ran.stdout and heaps and max(heaps) < 64, ran.stdout[-500:]
+	(Path(folder) / "tool.txt").write_text("x" * 3000, encoding="utf-8")
+	typed = str(Path(folder) / "tool.txt").replace("\\", "\\\\")
+	outputs = built(folder, "ToolOutputs", "has logger\nLines(count Number) Texts\n\tToolOutputs(Logger).Lines(1).Length is 1\n"
+		f"\tfor count\n\t\t\"/c type {typed}\"\nRun\n\tmutable total = 0\n\tfor Process.RunTools(\"cmd\", Lines(128))\n"
+		"\t\ttotal = total + value.Output.Length\n\tlogger.Log(\"total \" + total)")
+	ran = subprocess.run([str(outputs)], capture_output=True, text=True, timeout=60, env=os.environ | {"STRICT_GPU": "0"})
+	assert ran.returncode == 0 and "total 384000" in ran.stdout, (ran.returncode, ran.stdout[-500:])
 print("check_memory.py passed")
