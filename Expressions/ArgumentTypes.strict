@@ -7,10 +7,10 @@ constant Shapes = (Scope(List(Text) + "Limit", List(Text) + "3"), KnownTypes.NoM
 constant Sizing = ArgumentTypes(TypeInference(KnownTypes(("Count", "Area", "Size", "Letter"), Scopes, Methods, Parameters), Shapes))
 constant RangeMembers = (Scope(List(Text) + "start", List(Text) + "Number"), Scope(List(Text) + "type", List(Text) + "Range"))
 constant Generics = ArgumentTypes(TypeInference(KnownTypes(("Range", "Generic"), RangeMembers, KnownTypes.NoMemberPair, KnownTypes.NoMemberPair), Shapes))
-constant LoggedMembers = (Scope(List(Text) + "logger", List(Text) + "Logger"), KnownTypes.NoMembers)
+constant LoggedMembers = (Scope(List(Text) + "logger", List(Text) + "Logger"), Scope(List(Text) + "textWriter", List(Text) + "TextWriter"))
 constant LoggedTypes = KnownTypes(("Wrong", "Logger"), LoggedMembers, KnownTypes.NoMemberPair, (Scope(List(Text) + "from", List(Text) + "logger"), KnownTypes.NoMembers))
 constant Logged = ArgumentTypes(TypeInference(LoggedTypes, Shapes))
-constant Made = SyntaxParser(Tokenizer("Wrong(1, 2)").Tokens).Parse
+constant Made = SyntaxParser(Tokenizer("Wrong(Logger, 2)").Tokens).Parse
 constant Couples = ArgumentTypes(TypeInference(Instantiation.Implicit.types, List(Scope)))
 constant Coupled = SyntaxParser(Tokenizer("Couple(\"a\", 2)").Tokens).Parse
 constant Grown = SyntaxParser(Tokenizer("count.Grow(count)").Tokens).Parse
@@ -209,15 +209,15 @@ IsBaseMismatch(argument Text, parameter Text) Boolean
 	Sizing.IsBaseMismatch("Text", "Count")
 	Sizing.IsBaseMismatch("Number", "Size") is false
 	Sizing.IsBaseMismatch("Text", "Text") is false
-	Sizing.IsBaseMismatch("Text", "Number")
-	Sizing.IsBaseMismatch("Number", "Text")
-	Sizing.IsBaseMismatch("Boolean", "Number")
-	Sizing.IsBaseMismatch("Numbers", "Number")
+	Sizing.IsBaseMismatch("Text", "Number") and Sizing.IsBaseMismatch("Number", "Text")
+	Sizing.IsBaseMismatch("Boolean", "Number") and Sizing.IsBaseMismatch("Numbers", "Number")
+	Logged.IsBaseMismatch("Number", "Logger")
 	let types = inference.types
 	let hasMembers = types.IsKnown(parameter) and (types.MembersOf(parameter).names.Length > 0)
 	let isComposite = hasMembers and (TypeEntry.IsBaseName(parameter) is false)
 	let isScalar = IsScalar(parameter) and (argument is not parameter) and (IsScalar(argument) or types.IsPlural(argument))
-	isScalar or (argument is "Text") and isComposite and (types.ValueOf(parameter) is not "Text")
+	let isUnnumbered = (argument is "Number") and ("Number" is not in types.MembersOf(parameter).types)
+	isScalar or isComposite and ((argument is "Text") and (types.ValueOf(parameter) is not "Text") or isUnnumbered)
 IsListed(types Texts) Boolean
 	Sizing.IsListed(List(Text) + "Areas") and Sizing.IsListed(List(Text) + "Generic")
 	Sizing.IsListed(List(Text) + "Area") is false and (Sizing.IsListed(("Areas", "Area")) is false)
