@@ -26,30 +26,14 @@ TypeOf(name Text, at Number) Text
 	Blurring.TypeOf("pixel", 2) is "Number"
 	Blurring.TypeOf("nothing", 2) is ""
 	Callees(("has bitmap Bitmap", "Run", "\tbitmap"), "").TypeOf("bitmap", 2) is "Bitmap"
+	Callees(("has bitmap Bitmap", "Run", "\t1", "Other(bitmap Number)", "\t1"), "").TypeOf("bitmap", 4) is "Number"
+	Callees(("has folder = \"\"", "Run", "\tfolder"), "").TypeOf("folder", 2) is "Text"
 	mutable header = 0
 	for at
 		header = BodyParser.Indent(lines(index)) is 0 then index else header
-	for Parameters(lines(header)) + Members
-		let words = value.Split(" ")
-		if (words.First is name) and (words.Length > 1)
-			return words(1) is "=" then HeaderTokens(Tokenizer("has " + value).Tokens).ValueType(3) else words(1)
-	""
-Members Texts
-	Callees(("has bitmap Bitmap", "Run"), "").Members is List(Text) + "bitmap Bitmap"
-	Callees(("has bitmap Bitmap", "Run", "\t1", "Other(bitmap Number)", "\t1"), "").TypeOf("bitmap", 4) is "Number"
-	Callees(("has folder = \"\"", "Run", "\tfolder"), "").TypeOf("folder", 2) is "Text"
-	for lines
-		if value.StartsWith("has ")
-			value.Substring(4, value.Length - 4)
-Parameters(header Text) Texts
-	Blurring.Parameters("IsInside(pixel Number, x Number, y Number) Boolean") is ("pixel Number", "x Number", "y Number")
-	Blurring.Parameters("Center Number").Length is 0
-	let open = header.IndexOf("(")
-	open < 0 then List(Text) else Parts(header.Substring(open + 1, header.LastIndexOf(")") - open - 1))
-ParameterNames(header Text) Texts
-	Blurring.ParameterNames("IsInside(pixel Number, x Number, y Number) Boolean") is ("pixel", "x", "y")
-	for Parameters(header)
-		value.Split(" ").First
+	let parameters = HeaderTokens(Tokenizer(lines(header)).Tokens)
+	let position = parameters.ParameterNames.Index(name)
+	position < 0 then TypeShape(lines).MemberScope.TypeOf(name) else parameters.ParameterTypes(position)
 Parts(text Text) Texts
 	Blurring.Parts("pixel, f(a, b), value") is ("pixel", "f(a, b)", "value")
 	mutable parts = List(Mutable(Text))

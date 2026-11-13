@@ -11,24 +11,17 @@ constant Food = List(MemberEntry) + MemberEntry("food", "Strict/Number", List(In
 constant Fed = MethodEntry("Fed", Food, "Strict/Number", (InstructionEntry.LoadNumber(0, 1), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "changed_0"), InstructionEntry.Return(0)))
 constant Keeping = MlirChanged(MlirFunction((Ticker, Caller), Ticker, Next), 2)
 constant Feeding = MlirChanged(MlirFunction((Ticker, Caller), Ticker, Fed), 2)
-Kept Texts
-	Keeping.Kept.Last is "    llvm.store %t2c0v, %t2c0a : f64, !llvm.ptr"
-	MlirChanged(Taking.function, 1).Kept.Length is 0
+Kept(isUnchanged Boolean) Texts
+	Keeping.Kept(false).First is "    %t2c0v = llvm.load %v_changed_instance : !llvm.ptr -> f64"
+	Keeping.Kept(true).First is "    %t2c0v = llvm.load %instance : !llvm.ptr -> f64"
+	Keeping.Kept(true).Last is "    llvm.store %t2c0v, %t2c0a : f64, !llvm.ptr"
+	MlirChanged(Taking.function, 1).Kept(false).Length + MlirChanged(Taking.function, 1).Kept(true).Length is 0
+	Keeping.Kept(true)(1) is Keeping.Address(ChangedInstance.Name, 0)
+	Feeding.Kept(true).First is "    %t2c0v = llvm.load %v_food : !llvm.ptr -> f64"
 	mutable lines = List(Mutable(Text))
 	for Names(function.method)
-		let loaded = "    " + Temp("c" + index + "v") + " = llvm.load %v_" + value + " : !llvm.ptr -> f64"
-		lines = lines + (loaded, Address(value, index), Stored(index, Temp("c" + index + "a")))
-	lines
-Unchanged Texts
-	Keeping.Unchanged.First is "    %t2c0v = llvm.load %instance : !llvm.ptr -> f64"
-	Keeping.Unchanged.Last is "    llvm.store %t2c0v, %t2c0a : f64, !llvm.ptr"
-	MlirChanged(Taking.function, 1).Unchanged.Length is 0
-	Keeping.Unchanged(1) is Keeping.Address(ChangedInstance.Name, 0)
-	Feeding.Unchanged.First is "    %t2c0v = llvm.load %v_food : !llvm.ptr -> f64"
-	mutable lines = List(Mutable(Text))
-	for Names(function.method)
-		let loaded = "    " + Temp("c" + index + "v") + " = llvm.load " + Given(value) + " : !llvm.ptr -> f64"
-		lines = lines + (loaded, Address(value, index), Stored(index, Temp("c" + index + "a")))
+		let source = isUnchanged then Given(value) else "%v_" + value
+		lines = lines + (Loaded(index, source), Address(value, index), Stored(index, Temp("c" + index + "a")))
 	lines
 Given(name Text) Text
 	Feeding.Given("changed_0") is "%v_food"
@@ -41,8 +34,8 @@ Taken Texts
 	let callee = Callee
 	mutable lines = List(Mutable(Text))
 	for callee.Name is "" then List(Text) else Names(callee)
-		let loaded = "    " + Temp("c" + index + "v") + " = llvm.load " + Temp("c" + index + "a") + " : !llvm.ptr -> f64"
-		lines = lines + (Address(value, index), loaded, Stored(index, "%r" + (entry.payload(0) + Offset(value))))
+		let slot = "%r" + (entry.payload(0) + Offset(value))
+		lines = lines + (Address(value, index), Loaded(index, Temp("c" + index + "a")), Stored(index, slot))
 	lines
 Callee MethodEntry
 	Taking.Callee is Next
@@ -83,6 +76,9 @@ Declarations(functions List(MlirFunction)) Texts
 Address(name Text, index Number) Text
 	Keeping.Address(ChangedInstance.Name, 0) is "    %t2c0a = llvm.mlir.addressof @strict_changed_instance : !llvm.ptr"
 	"    " + Temp("c" + index + "a") + " = llvm.mlir.addressof @strict_" + name + " : !llvm.ptr"
+Loaded(index Number, source Text) Text
+	Keeping.Loaded(1, "%v_a") is "    %t2c1v = llvm.load %v_a : !llvm.ptr -> f64"
+	"    " + Temp("c" + index + "v") + " = llvm.load " + source + " : !llvm.ptr -> f64"
 Stored(index Number, slot Text) Text
 	Keeping.Stored(0, "%r1") is "    llvm.store %t2c0v, %r1 : f64, !llvm.ptr"
 	"    llvm.store " + Temp("c" + index + "v") + ", " + slot + " : f64, !llvm.ptr"

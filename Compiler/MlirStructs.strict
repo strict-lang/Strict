@@ -105,10 +105,8 @@ Element(entry InstructionEntry, next InstructionEntry, compiled Texts, returned 
 	if IsTarget(entry, next, returned) is false
 		return Collected(entry, compiled, returned)
 	let parts = PayloadDecoder(next).ElementParts
-	let isNumber = "0123456789".IndexOf(parts(1)(0)) is not -1
 	let temp = "%t" + position + "s"
-	let literal = "    " + temp + "i = arith.constant " + parts(1) + ".0 : f64"
-	let index = isNumber then literal else function.Load(temp + "i", "%v_" + parts(1))
+	let index = MlirElements(function, position).Index(parts(1), temp + "i")
 	let destined = "    func.call @strict_struct_destine_element(" + temp + "l, " + temp + "i) : (f64, f64) -> ()"
 	(function.Load(temp + "l", "%v_" + parts(0)), index, destined) + compiled
 Collected(entry InstructionEntry, compiled Texts, returned Text) Texts

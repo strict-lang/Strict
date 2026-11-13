@@ -149,7 +149,7 @@ IsMonotone(at Number) Boolean
 	Unswitching(Nested + "\t\tif bitmap.IsOpaque", "ImageProcessing").IsMonotone(2) is false
 	let call = Call(at + 1)
 	let callee = call.Length < 3 then List(Text) else Callees(lines, folder).Lines(call(0), call(1), at)
-	let parameters = callee.Length < 2 then List(Text) else Callees(lines, folder).ParameterNames(callee.First)
+	let parameters = callee.Length < 2 then List(Text) else HeaderTokens(Tokenizer(callee.First).Tokens).ParameterNames
 	if (callee.Length < 2) or (parameters.Length is not call.Length - 2)
 		return false
 	let bound = Bound(at, parameters)

@@ -42,7 +42,7 @@ Emitted(entry InstructionEntry) Texts
 	position + row + Bounded + Viewed(list, "%r" + entry.payload(0)) + failed
 Bounded Texts
 	MlirDeviceRows(Picking, 4).Bounded.Last is "    %d4o = arith.andi %d4l, %d4h : i1"
-	MlirDeviceRows(Picking, 4).Emitted(Biased)(2) is "    %d4n = llvm.load %v_biases_n : !llvm.ptr -> i64"
+	MlirDeviceRows(Picking, 4).Emitted(Biased)(4) is "    %d4n = llvm.load %v_biases_n : !llvm.ptr -> i64"
 	let low = "    " + Temp("l") + " = arith.cmpi sge, " + Temp("k") + ", " + Temp("z") + " : i64"
 	let high = "    " + Temp("h") + " = arith.cmpi slt, " + Temp("k") + ", " + Temp("w") + "#2 : i64"
 	let inside = "    " + Temp("o") + " = arith.andi " + Temp("l") + ", " + Temp("h") + " : i1"

@@ -18,7 +18,7 @@ Element Text
 	fusion.Element(fusion.lines(fusion.Header(name)))
 Members Texts
 	Ones.Members is ("Sum")
-	Element is "Number" then List(Text) + "Sum" else fusion.Members(Element)
+	Element is "Number" then List(Text) + "Sum" else fusion.MemberScope(Element).names
 Signature Texts
 	Grays.Signature(0) is "GraysAveraged(count Number) Color"
 	Grays.Signature(2) is "\tmutable fusedRed = 0"
@@ -40,7 +40,7 @@ Result Text
 	Grays.Result.StartsWith("\tColor(Byte(fusedRed / fusedCount), Byte(fusedGreen / fusedCount), ")
 	if Element is "Number"
 		return "\tfusedSum / fusedCount"
-	let types = fusion.MemberTypes(Element)
+	let types = fusion.MemberScope(Element).types
 	mutable averages = List(Mutable(Text))
 	for Members
 		let average = "fused" + value + " / fusedCount"

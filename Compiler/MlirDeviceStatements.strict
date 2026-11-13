@@ -77,16 +77,13 @@ IsList(kind Text) Boolean
 	(MlirLayout(function).Represented(kind) is "List(Number)") or (MlirDeviceRecords(function, at).Slots(kind) > 0)
 Indexed(entry InstructionEntry) Texts
 	Text.Combine(Reading.Indexed(Lookup)).IndexOf("@strict_device_element(%d6d, %d6b, %d6k, %d6n)") > 0
-	Reading.Indexed(Lookup)(4).StartsWith("    llvm.store %d6y, %r")
+	Reading.Indexed(Lookup)(3).StartsWith("    llvm.store %d6y, %r")
 	Reading.Indexed(Lookup)(5) is "    %d6o = arith.cmpi ult, %d6k, %d6n : i64"
 	let list = "%v_" + entry.texts(0)
 	let position = MlirExact(function, at).Position("%r" + entry.payload(1), Temp("k"))
-	let length = MlirTyped.Integer.Load(Temp("n"), list + "_n")
 	let target = "%r" + entry.payload(0)
 	let cleared = MlirTyped(function.Float).Number(Temp("y"), "0x0") + MlirFeeding(function, at).Stored(Temp("y"), target)
-	let inside = "    " + Temp("o") + " = arith.cmpi ult, " + Temp("k") + ", " + Temp("n") + " : i64"
-	let branch = "    cf.cond_br " + Temp("o") + ", ^d" + at + "read, ^d" + at + "fail"
-	position + length + cleared + (inside, branch) + Failed + Read(list, target)
+	position + cleared + MlirDeviceRecords(function, at).Checked(Temp("k"), list) + Failed + Read(list, target)
 Failed Texts
 	Reading.Failed(1) is "    %d6f = arith.constant 1 : i64"
 	Reading.Failed(2) is "    llvm.store %d6f, %failed : i64, !llvm.ptr"
@@ -150,8 +147,8 @@ Called(entry InstructionEntry) Texts
 Callee MlirFunction
 	Reading.Emitted(0) is "    %d6kf = llvm.load %r3 : !llvm.ptr -> f64"
 	Reading.Emitted(1) is "    %d6k = arith.fptosi %d6kf : f64 to i64"
-	Reading.Emitted(2) is "    %d6n = llvm.load %v_input_n : !llvm.ptr -> i64"
-	Reading.Emitted(3) is "    %d6y = arith.constant 0x0 : f64"
+	Reading.Emitted(2) is "    %d6y = arith.constant 0x0 : f64"
+	Reading.Emitted(4) is "    %d6n = llvm.load %v_input_n : !llvm.ptr -> i64"
 	Reading.Emitted(6) is "    cf.cond_br %d6o, ^d6read, ^d6fail"
 	Reading.Emitted(7) is "  ^d6fail:"
 	Reading.Emitted(11) is "  ^d6read:"

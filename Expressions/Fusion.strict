@@ -63,7 +63,7 @@ IsFusable(name Text) Boolean
 	Averaging.IsFusable("Run") is false
 	let header = Header(name)
 	let element = header < 0 then "" else Element(lines(header))
-	if (element is "") or ((element is not "Number") and (Members(element).Length is 0))
+	if (element is "") or ((element is not "Number") and (MemberScope(element).names.Length is 0))
 		return false
 	let ending = Ending(header)
 	mutable last = ""
@@ -92,23 +92,11 @@ Element(header Text) Text
 	Averaging.Element("Run") is ""
 	Averaging.Element("Runs") is ""
 	Averaging.Element("Run Number") is ""
-	let returned = header.Substring(header.LastIndexOf(" ") + 1, header.Length - header.LastIndexOf(" ") - 1)
-	if returned.StartsWith("List(")
-		return returned.Substring(5, returned.Length - 6)
-	returned.EndsWith("s") and (header.IndexOf(" ") > 0) then returned.Substring(0, returned.Length - 1) else ""
-Members(element Text) Texts
-	Coloring.Members("Color") is ("Red", "Green", "Blue", "Alpha")
-	Averaging.Members("Color").Length is 0
-	for MemberLines(element)
-		Tokenizer(value).Tokens(1)
-MemberTypes(element Text) Texts
-	Coloring.MemberTypes("Color") is ("Byte", "Byte", "Byte", "Byte")
-	for MemberLines(element)
-		let tokens = Tokenizer(value).Tokens
-		tokens.Length > 2 then tokens(2) else "Number"
-MemberLines(element Text) Texts
-	Coloring.MemberLines("Color").First is "has Red Byte"
+	let returned = HeaderTokens(Tokenizer(header).Tokens).ReturnType
+	returned.EndsWith("s") then returned.Substring(0, returned.Length - 1) else ""
+MemberScope(element Text) Scope
+	Coloring.MemberScope("Color").names is ("Red", "Green", "Blue", "Alpha")
+	Coloring.MemberScope("Color").types is ("Byte", "Byte", "Byte", "Byte")
+	Averaging.MemberScope("Color").names.Length is 0
 	let path = folder + "/" + element + ".strict"
-	for ((folder is not "") and File(path).Exists then File(path).ReadLines else List(Text))
-		if value.StartsWith("has ")
-			value
+	TypeShape((folder is not "") and File(path).Exists then File(path).ReadLines else List(Text)).MemberScope

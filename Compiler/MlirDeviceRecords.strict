@@ -84,7 +84,7 @@ Flattened(loaded Text, kind Text) Texts
 	("    " + loaded + "s = arith.constant " + slots + ".0 : f64", "    " + loaded + "r" + call)
 Line(suffix Text, expression Text) Text
 	Sample.Line("o", "x") is "    %d4o = x"
-	Sample.Indexed(Listed)(3) is "    %d4y = arith.constant 0x0 : f64"
+	Sample.Indexed(Listed)(2) is "    %d4y = arith.constant 0x0 : f64"
 	Sample.Indexed(LaneFlow.Picking) is IndexedLines
 	Fielding.Fielded(Field) is FieldedLines
 	"    " + Temp(suffix) + " = " + expression

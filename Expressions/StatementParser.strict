@@ -52,7 +52,7 @@ Named SyntaxNode
 	StatementParser(Tokenizer("for a, b in ((1, 2), (3, 4))").Tokens).Named.children.Length is 1
 	StatementParser(Tokenizer("for x in list").Tokens).Named to Text is "SingleIteratorMustNotBeNamed: x" + SingleHint
 	Mismatched.Named to Text is "IteratorNamesMustMatchIterators: a, b, c" + MatchHint
-	let iterables = Parts(tokens.Index("in") + 1, tokens.Length)
+	let iterables = Syntax.Parts(tokens.Index("in") + 1, tokens.Length)
 	let problem = NamedProblem(iterables.Length)
 	if problem is not ""
 		return SyntaxNode("Invalid", problem)
@@ -81,18 +81,6 @@ IteratorNames Texts
 	StatementParser(Tokenizer("for y, x in 2, 3").Tokens).IteratorNames is ("y", "x")
 	StatementParser(Tokenizer("for y, x in").Tokens).IteratorNames is ("y", "x")
 	tokens.Slice(1, tokens.Index("in") - 1) - ","
-Parts(start Number, end Number) SyntaxNodes
-	StatementParser(Tokenizer("for y, x in Range(0, 2), 3").Tokens).Parts(5, 13).Last to Text is "3"
-	StatementParser(Tokenizer("f(a, b = (1, 2))").Tokens).Parts(2, 12).Length is 2
-	mutable parts = List(Mutable(SyntaxNode))
-	mutable segment = start
-	mutable depth = 0
-	for Range(start, end)
-		depth = depth + Syntax.BracketDelta(tokens(value))
-		if ((depth is 0) and (tokens(value) is ",")) or (depth < 0)
-			parts.Add(Syntax.ParseRange(segment, value))
-			segment = value + 1
-	segment < end then parts + Syntax.ParseRange(segment, end) else parts
 Rest(start Number) SyntaxNodes
 	StatementParser("return", "1").Rest(1).Length is 1
 	Syntax.Single(Syntax.ParseRange(start, tokens.Length))
@@ -118,7 +106,7 @@ ParseAssignmentOrExpression SyntaxNode
 	SyntaxNode("Reassignment", "", (Syntax.ParseRange(0, assignment), assigned))
 Signature(assignment Number) SyntaxNode
 	StatementParser(Tokenizer("f(a, b = (1, 2)) = a").Tokens).Signature(12) to Text is "f(a, b = (1, 2))"
-	SyntaxNode("Call", tokens(0), Parts(2, assignment))
+	SyntaxNode("Call", tokens(0), Syntax.Parts(2, assignment - 1))
 AssignmentIndex Number
 	StatementParser("a", "=", "1").AssignmentIndex is 1
 	StatementParser("f", "(", "a", ")").AssignmentIndex is -1

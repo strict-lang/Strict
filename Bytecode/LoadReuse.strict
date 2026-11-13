@@ -174,9 +174,6 @@ Origin(register Number, position Number) Number
 	Twice.Origin(1, 2) is 0
 	Twice.Origin(0, 2) is 0
 	Twice.Origin(5, 2) is 5
-	for position
-		let writer = position - 1 - index
-		if Written(instructions(writer)) is register
-			let source = Source(writer)
-			return source < 0 then register else instructions(source).payload(0)
-	register
+	let writer = Writer(register, position, -1)
+	let source = writer < 0 then -1 else Source(writer)
+	source < 0 then register else instructions(source).payload(0)

@@ -117,36 +117,36 @@ ParseCallOrMember(start Number, end Number) SyntaxNode
 	SyntaxParser(Tokenizer("Tree.Pose(2)(3).Length").Tokens).Parse to Text is "Tree.Pose(2)(3).Length"
 	let index = Postfix(tokens).IndexStart(start, end)
 	if index > start
-		return SyntaxNode("Index", "", Single(ParseRange(start, index)) + Arguments(index, end))
+		return SyntaxNode("Index", "", Single(ParseRange(start, index)) + Parts(index + 1, end - 1))
 	let dot = Postfix(tokens).LastDot(start, end)
 	if dot is not -1 and dot + 2 < end
-		return SyntaxNode("MethodCall", tokens(dot + 1), Single(ParseRange(start, dot)) + Arguments(dot + 2, end))
+		return SyntaxNode("MethodCall", tokens(dot + 1), Single(ParseRange(start, dot)) + Parts(dot + 3, end - 1))
 	dot is not -1 then SyntaxNode("Member", tokens(dot + 1), Single(ParseRange(start, dot))) else ParseCall(start, end)
 ParseCall(start Number, end Number) SyntaxNode
 	SyntaxParser("f", "(", "a", ")").ParseCall(0, 4) to Text is "f(a)"
 	SyntaxParser("(", "a", ")").ParseCall(0, 3) to Text is "(a)"
 	SyntaxParser("(", "a", "+", "b", ")").ParseCall(0, 5) to Text is "a + b"
 	if tokens(start) is not "("
-		return SyntaxNode("Call", tokens(start), Arguments(start + 1, end))
-	let arguments = Arguments(start, end)
+		return SyntaxNode("Call", tokens(start), Parts(start + 2, end - 1))
+	let arguments = Parts(start + 1, end - 1)
 	IsGrouping(arguments) then arguments(0) else SyntaxNode("List", "", arguments)
 IsGrouping(arguments SyntaxNodes) Boolean
 	SyntaxParser("1").IsGrouping(SyntaxNode("Identifier", "a"), SyntaxNode("Identifier", "b")) is false
 	SyntaxParser("1").IsGrouping(SyntaxNode("Binary", "+"), SyntaxNode("Identifier", "b")) is false
 	arguments.Length is not 1 then false else arguments(0).Kind is in ("Binary", "Not", "Negate")
-Arguments(open Number, end Number) SyntaxNodes
-	SyntaxParser("(", "1", ",", "2", ")").Arguments(0, 5).Length is 2
-	SyntaxParser("(", "f", "(", "1", ",", "2", ")", ")").Arguments(0, 8).Length is 1
-	mutable arguments = List(Mutable(SyntaxNode))
+Parts(start Number, end Number) SyntaxNodes
+	SyntaxParser("(", "1", ",", "2", ")").Parts(1, 4).Length is 2 and (SyntaxParser("f").Parts(1, 1)(0).Kind is "Missing")
+	SyntaxParser("(", "f", "(", "1", ",", "2", ")", ")").Parts(1, 7).Length is 1
+	SyntaxParser(Tokenizer("for y, x in Range(0, 2), 3").Tokens).Parts(5, 13).Last to Text is "3"
+	mutable parts = List(Mutable(SyntaxNode))
 	mutable depth = 0
-	mutable segmentStart = open + 1
-	for end - open - 1
-		depth = depth + BracketDelta(tokens(open + index))
-		if (depth is 1) and (tokens(open + index) is ",")
-			arguments.Add(ParseRange(segmentStart, open + index))
-			segmentStart = open + index + 1
-	arguments.Add(ParseRange(segmentStart, end - 1))
-	arguments
+	mutable segment = start
+	for end - start
+		depth = depth + BracketDelta(tokens(start + index))
+		if (depth is 0) and (tokens(start + index) is ",")
+			parts.Add(ParseRange(segment, start + index))
+			segment = start + index + 1
+	parts + ParseRange(segment, end)
 Binding(operator Text) Number
 	SyntaxParser("a").Binding("is not") is 7
 	SyntaxParser("a").Binding("x") is 0
