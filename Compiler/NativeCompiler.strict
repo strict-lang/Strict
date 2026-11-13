@@ -77,7 +77,7 @@ Built(rest Texts, sources Texts, gated List(TypeEntry))
 	if problem is not ""
 		logger.Log(problem)
 		return Error("UnsupportedBuildOptions")
-	NativeBuild(Configured(options), gated = gated).Compile(rest(0), rest(1), sources = sources)
+	NativeBuild(Configured(options, rest(0)), gated = gated).Compile(rest(0), rest(1), sources = sources)
 Problem(path Text, options Texts, sources Texts) Text
 	NativeCompiler(Logger).Problem("Examples/Sum.strict", List(Text) + "fast", Summing) is ""
 	NativeCompiler(Logger).Problem("Examples/Sum.strict", ("android", "ios"), Summing) is Mixed
@@ -110,16 +110,18 @@ IsMixed(options Texts) Boolean
 	let isMobile = ("android" is in options) or ("ios" is in options)
 	let isDesktop = ("web" is in options) or ("linux" is in options) or ("windows" is in options)
 	(("android" is in options) and ("ios" is in options)) or (isMobile and isDesktop)
-Configured(options Texts) NativeBuild
+Configured(options Texts, path = "") NativeBuild
 	NativeCompiler(Logger).Configured(("ios", "simulator")).Target is Platform.IOSSimulator
 	NativeCompiler(Logger).Configured(("linux", "web")).isCrossing is false
 	NativeCompiler(Logger).Configured(List(Text) + "windows").isReleased
 	NativeCompiler(Logger).Configured(List(Text) + "fast").isFast
+	NativeCompiler(Logger).Configured(List(Text), "./Strict.strict").isReleased
 	let isWeb = "web" is in options
 	let isCrossing = ("linux" is in options) and (isWeb is false)
 	let configured = NativeBuild(logger, isCrossing, isWeb, "android" is in options, "ios" is in options)
 	let isFast = "fast" is in options
-	NativeBuild(configured, isSimulator = "simulator" is in options, isReleased = "windows" is in options, isFast = isFast)
+	let isReleased = ("windows" is in options) or (Path(path).FileName.text is "Strict.strict")
+	NativeBuild(configured, isSimulator = "simulator" is in options, isReleased = isReleased, isFast = isFast)
 Options(rest Texts) Texts
 	NativeCompiler.Options(("a.strict", ".", "linux")) is ("linux")
 	rest.Length > 2 then rest.Slice(2, rest.Length - 2) else List(Text)

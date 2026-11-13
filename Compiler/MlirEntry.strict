@@ -24,11 +24,25 @@ Main Texts
 	Counted.Main(1).IndexOf("llvm.addressofreturnaddress.p0") > 0
 	Starting.Main.Index("    %started = func.call @Shape_$Start_0(%fresh) : (f64) -> f64") > 0
 	Both.Main.Index("    %total1 = func.call @strict_failures(%result, %result1) : (f64, f64) -> f64") > 0
+	"  ^usage:" is in Mixed.Main
 	constant self = "    %self = llvm.load %selfslot : !llvm.ptr -> f64"
-	let prepared = Header + Instance(entry, "") + Arguments
+	let prepared = Header + Instance(entry, "") + Arguments + Rejected
 	let printed = entry.IsCounted then List(Text) + MlirLines.Print else List(Text)
 	let called = prepared + (self, EntryCall) + Others + Code
 	called + Finished + Unhandled + Exit + printed + ("    return %exit : i32", "  }")
+Rejected Texts
+	Counted.Rejected.Length is 0
+	Mixed.Rejected(1) is "    %argfailed0 = func.call @strict_unhandled(%arg0) : (f64) -> i1"
+	Mixed.Rejected.Last is "  ^arguments:"
+	mutable lines = List(Mutable(Text))
+	mutable failed = "%argsnone"
+	for entry.method.parameters
+		lines.Add("    %argfailed" + index + " = func.call @strict_unhandled(%arg" + index + ") : (f64) -> i1")
+		lines.Add("    %argsfailed" + index + " = arith.ori " + failed + ", %argfailed" + index + " : i1")
+		failed = "%argsfailed" + index
+	let usage = ("    cf.cond_br " + failed + ", ^usage, ^arguments", "  ^usage:", "    %usage = arith.constant 2 : i32")
+	let ended = usage + ("    return %usage : i32", "  ^arguments:")
+	lines.Length is 0 then lines else (List(Text) + "    %argsnone = arith.constant false") + lines + ended
 Header Texts
 	MlirEntry(Counted, symbol = "strict_main").Header.First.StartsWith("  func.func @strict_main(")
 	Counted.Header.Length is 7

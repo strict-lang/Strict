@@ -13394,7 +13394,10 @@
     cf.cond_br %numbers, ^parse, ^add(%text : f64)
   ^parse:
     %number = func.call @strict_text_number(%text) : (f64) -> f64
-    cf.br ^add(%number : f64)
+    %invalid = func.call @strict_is_failure(%number) : (f64) -> i1
+    cf.cond_br %invalid, ^failed, ^add(%number : f64)
+  ^failed:
+    return %number : f64
   ^add(%element: f64):
     %added = func.call @strict_list_add(%elements, %element) : (f64, f64) -> f64
     %next = arith.addi %index, %one : i32
