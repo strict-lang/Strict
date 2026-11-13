@@ -77,8 +77,7 @@ HasLargeRemainder Boolean
 Skipped
 	ErrorHandling(5).Skipped is not Error
 	ErrorHandling(0).Skipped is not Error
-	if Found is Error
-		return
+	ignore(Found)
 Required
 	ErrorHandling(0).Required is Missing
 	ErrorHandling(Found).Skipped

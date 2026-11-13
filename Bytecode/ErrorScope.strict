@@ -1,10 +1,11 @@
 has values ValueCodegen
-constant Statements = ("If", "ElseIf", "Else", "For", "Declaration", "Reassignment", "Return")
+constant Statements = ("If", "ElseIf", "Else", "For", "Declaration", "Reassignment", "Return", "Ignore")
 constant FallibleMarker = " fallible"
 constant MutableMarker = " mutable"
 constant Unvalued = ("None", "", "Error")
 constant Plain = ErrorScope(ValueCodegen.Plain)
 constant Unused = ", use the value (condition, comparison, assignment, argument or result) or call a method without one"
+constant Ignoring = ", check the Error to keep the change: if call is Error"
 constant Mutated = CodeBlock.Empty.Declare("a", "Count").Declare("a" + MutableMarker, "mutable")
 constant Counting = ErrorScope(ValueCodegen(TypeInference(KnownTypes.Sample, TypeInference.Limits), KnownTypes.NoMembers, CallTarget.Plain))
 constant Reassigning = BodyParser("Run", "\tmutable a = 1", "\ta = Greet").Block(1, 1)
@@ -55,6 +56,9 @@ Dropped(node SyntaxNode, block CodeBlock) SyntaxNode
 	Counting.Dropped(Increment, CodeBlock.Empty.Declare("a", "Count")) to Text is "a.Increment"
 	Counting.Dropped(Increment, Mutated) to Text is "a = a.Increment"
 	Listing.Dropped(SyntaxNode("Member", "Add", Increment.children), ListMutated) to Text is "a = a.Add"
+	Counting.Dropped(SyntaxNode("Ignore", "ignore", Increment), Mutated) is Error
+	if node.Kind is "Ignore"
+		return IsMutating(node.children(0), block) then Error("IgnoredCallMustNotChange: " + node + Ignoring) else node
 	if IsMutating(node, block) is false
 		return node
 	let target = node.children(0)

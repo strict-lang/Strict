@@ -4,6 +4,7 @@ constant Tested = "tested"
 constant ErrorTypes = ("Error", "ErrorWithValue")
 constant Plain = ErrorCodegen(ValueCodegen.Plain)
 constant Greeting = SyntaxNode("Call", "Greet")
+constant Ignoring = SyntaxNode("Ignore", "ignore", Greeting)
 constant BareError = SyntaxNode("Identifier", "Error")
 constant GreetingPlusOne = SyntaxNode("Binary", "+", (Greeting, ValueCodegen.One))
 constant InTest = CodeBlock.Empty.Declare(FailureMarker, "7")
@@ -146,10 +147,11 @@ IsErrorComparison(node SyntaxNode, block CodeBlock) Boolean
 Statement(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Statement(SyntaxNode("Return", "", Greeting), CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
 	Plain.Statement(Greeting, CodeBlock.Empty).instructions.Last.kind is InstructionType.CheckError
+	Plain.Statement(Ignoring, CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
 	Plain.Statement(SyntaxNode("Return", ""), CodeBlock.Empty).instructions.Last.kind is InstructionType.Return
 	Plain.AnyError(SyntaxNode("Binary", "is", (A, A)), CodeBlock.Empty) to Text is "a is a"
 	Plain.Statement(SyntaxNode("Return", ""), CodeBlock.Empty.At(2)) is CodeBlock.Empty.At(2).Nothing
-	if node.Kind is "Return"
+	if node.Kind is in ("Return", "Ignore")
 		return node.HasValue then Handled(node.children(0), block) else block.Nothing
 	Checked(node, block)
 Right(node SyntaxNode, block CodeBlock, isConverted Boolean) CodeBlock

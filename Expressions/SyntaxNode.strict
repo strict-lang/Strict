@@ -46,7 +46,7 @@ CallText Text
 	SyntaxNode("Call", "Add", (SyntaxNode("Number", "1"), SyntaxNode("Number", "2"))).CallText is "Add(1, 2)"
 	SyntaxNode("Member", "Length", (SyntaxNode("Identifier", "x"), SyntaxNode("Identifier", "x"))).CallText is "x.Length"
 	SyntaxNode("MethodCall", "Add", (identifier, one, two)).CallText is "a.Add(1, 2)"
-	if Kind is "Call"
+	if Kind is in ("Call", "Ignore")
 		return text + "(" + ArgumentsText(0) + ")"
 	if Kind is "MethodCall"
 		return ChildText(0, MemberPrecedence) + "." + text + "(" + ArgumentsText(1) + ")"
