@@ -19,6 +19,8 @@ constant Nesting = SyntaxNode("Binary", "+", (SyntaxNode("Identifier", "x"), Syn
 constant Pixelated = CodeBlock.Empty.Declare("pixels", "ColorValues")
 constant Letter = SyntaxNode("Index", "", (Pixels, ValueCodegen.One))
 constant Lettered = CodeBlock.Empty.Declare("pixels", "Text").Declare(CodeBlock.ReturnMarker, "Text")
+constant Ranged = SyntaxNode("Call", "Range", (ValueCodegen.One, ValueCodegen.One))
+constant Ranging = Plain.Elements(Ranged, "Numbers", CodeBlock.Empty)
 ArgumentTypes(node SyntaxNode, owner Text, block CodeBlock) Texts
 	Plain.ArgumentTypes(SyntaxNode("Call", "Greet", ValueCodegen.One), "Greeter", CodeBlock.Empty) is ("Unknown")
 	Plain.Typed(SyntaxNode("Binary", "+", Typing.children), CodeBlock.Empty).text is "+"
@@ -130,7 +132,7 @@ ConvertedElements(node SyntaxNode, type Text, block CodeBlock) List(SyntaxNode)
 		Converted(value, type, block)
 Elements(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
 	Colored.Elements(SyntaxNode("List", "", NewColorValue), "Colors", CodeBlock.Empty).children(0).text is "Color"
-	Colored.Elements(Pixels, "Colors", Pixelated).children(1).text is "Color"
+	Colored.Elements(Pixels, "Colors", Pixelated).children(1).text is "Color" and (Ranging.Kind is "Converted")
 	Colored.Elements(Pixels, "ColorValues", Pixelated).Kind is "Identifier"
 	Colored.Held(Pixels, "Color", Pixelated) is Pixels
 	let types = values.inference.types
@@ -140,7 +142,7 @@ Elements(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
 	let scoped = block.Declare("value", types.ElementType(source))
 	constant element = SyntaxNode("Identifier", "value")
 	let converted = types.IsPlural(source) then Converted(element, types.ElementType(type), scoped) else element
-	converted.text is "value" then node else SyntaxNode("Converted", type, (node, converted))
+	(converted.text is "value") and (source is not "Range") then node else SyntaxNode("Converted", type, (node, converted))
 Wanted(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
 	Plain.Wanted(Letter, "Text", Lettered).children(1).text is "Text"
 	Plain.Wanted(Letter, "", Lettered) is Letter

@@ -2,5 +2,4 @@
 - `LoadReuse.InvokeReads` keeps its own copy of the Invoke layout.
 - A `File.Locked` taken in a test line does not hold while a called method deletes old copies (`Intermediates.Free` through `Replaced`).
 - A `%` by zero inside a comparison gives false instead of the ModuloByZero Error (`7 % divisor > 3` with divisor 0), VM and native.
-- A Range passed for a `Numbers` parameter is not converted (`Wrapped(Range(0, 4))`: (0, 1, 2) on the VM, AccessViolation natively): convert it, reject one of more than 100 elements (take an Iterator or build the list explicitly).
 - No rule requires `Slow(...)` on a method doing file, directory, process or network input or output, so such tests run with every `strict test` (StrictComfy `StrictGenForm.Listed`).
