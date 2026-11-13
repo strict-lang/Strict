@@ -7,7 +7,8 @@ constant Dropped = InstructionEntry.Return(4)
 constant Numbered = MlirDying(MlirFunction(Dropping.function, method = MethodEntry(Dropping.function.method, declaredType = "Strict/Number")), 10)
 constant Guarding = ("a", "b %t#same, x", "c", "d")
 constant Guard = "    %t#sv = llvm.load %v_start : !llvm.ptr -> f64"
-constant Kept = ("    %t#ss = arith.cmpf oeq, %t#o, %t#sv : f64", "    %t#sk = arith.ori %t#same, %t#ss : i1")
+constant Unset = ("    %t#sz = arith.cmpf oeq, %t#o, %zero : f64", "    %t#sa = arith.ori %t#same, %t#ss : i1")
+constant Kept = (List(Text) + "    %t#ss = arith.cmpf oeq, %t#o, %t#sv : f64") + Unset + "    %t#sk = arith.ori %t#sa, %t#sz : i1"
 Loaded(register Number) Text
 	MlirDying(Seeding, 1).Loaded(0) is "start"
 	MlirDying(Seeding, 4).Loaded(0) is "listResult0"
@@ -31,6 +32,7 @@ Guarded(lines Texts, seed Text) Texts
 	Text.Combine(MlirOwned(Seeding, 4).Stored(Seeding.method.instructions(4))).IndexOf("%t4sv = llvm.load %v_start") > 0
 	MlirDying(Seeding, 4).Guarded(MlirOwned.Fresh, "") is MlirOwned.Fresh
 	MlirDying(Seeding, 4).Guarded(Guarding, "start") is ((List(Text) + "a" + Guard) + Kept) + ("b %t#sk, x", "c", "d")
+	"    %t#sz = arith.cmpf oeq, %t#o, %zero : f64" is in MlirDying(Seeding, 4).Guarded(Guarding, "start")
 	if seed is ""
 		return lines
 	let skipped = lines(1).Replace("%t#same,", "%t#sk,")
