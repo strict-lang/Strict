@@ -297,6 +297,10 @@
     %bits = arith.ori %lowWide, %shifted : i32
     return %bits : i32
   }
+  func.func private @strict_device_warp_sync() attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+    llvm.call_intrinsic "llvm.amdgcn.wave.barrier"() : () -> ()
+    return
+  }
   func.func private @strict_device_barrier() attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     llvm.fence syncscope("workgroup") release
     llvm.call_intrinsic "llvm.amdgcn.s.barrier"() : () -> ()

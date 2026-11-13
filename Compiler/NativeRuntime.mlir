@@ -22903,7 +22903,7 @@
   llvm.mlir.global internal constant @strict_rows_only_error("RowsOnlyOnTheGpu\00") : !llvm.array<17 x i8>
   // the dot products of `Batch.Sums` for several tokens (strict_device_blocks, 64 or more with 8 bit tokens and Q4_K or Q6_K
   // rows strict_device_tiles, with 8 bit rows strict_device_eights, strict_device_whole when the first has one scale from
-  // sm_80 on, up to 4 tokens strict_device_tokens): every row with the numbers of every token (token t at
+  // sm_80 on, 1 or 2 tokens strict_device_tokens): every row with the numbers of every token (token t at
   // t * width of input), row r and token t at t * rows + r of the result plus biases(index % biases.Length) unless
   // biases is 0.0, the rows of token t start at bases(t / 64) unless bases is 0.0 (`Batch.Grouped`), 0.0 when the GPU
   // can not, the Error RowsOnlyOnTheGpu when the rows have no numbers on the host either (read from a URL on the web)
@@ -23329,8 +23329,8 @@
     %rowsAtLeast = arith.maximumf %rowCount, %oneRow : f64
     %countNumber = arith.sitofp %count : i64 to f64
     %tokens = arith.divf %countNumber, %rowsAtLeast : f64
-    %fiveTokens = arith.constant 5.0 : f64
-    %long = arith.cmpf oge, %tokens, %fiveTokens : f64
+    %threeTokens = arith.constant 3.0 : f64
+    %long = arith.cmpf oge, %tokens, %threeTokens : f64
     %blockLanes = arith.constant -64 : i64
     %rowLanes = arith.constant -8 : i64
     %perWarp = arith.select %long, %blockLanes, %rowLanes : i64

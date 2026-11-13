@@ -22,6 +22,12 @@
     %other = nvvm.shfl.sync bfly %all, %bits, %offset, %clamp : i32 -> i32
     return %other : i32
   }
+  // waits until every lane of the warp got here, what they wrote before is seen by all of them after
+  func.func private @strict_device_warp_sync() attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+    %all = arith.constant -1 : i32
+    llvm.call_intrinsic "llvm.nvvm.bar.warp.sync"(%all) : (i32) -> ()
+    return
+  }
   func.func private @strict_device_barrier() attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     nvvm.barrier
     return
