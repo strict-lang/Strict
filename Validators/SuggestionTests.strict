@@ -2,7 +2,7 @@ has main TypeCodegen
 has header HeaderTokens
 has root Text
 has path Text
-Passing(candidates Texts) Texts
+Passing(candidates Texts) Texts slow
 	if candidates.Length is 0
 		return List(Text)
 	let types = Prepared(candidates)
@@ -14,7 +14,7 @@ Passing(candidates Texts) Texts
 		if Machine(changed, Logger, List(VmValue), Path(path).PathOnly.text).Prepared.Tested(changed.First.Name) is 0
 			passed.Add(value)
 	passed
-Prepared(candidates Texts) List(TypeEntry)
+Prepared(candidates Texts) List(TypeEntry) slow
 	mutable methods = List(Mutable(MethodEntry))
 	for candidates
 		methods.Add(Compiled(value, index))

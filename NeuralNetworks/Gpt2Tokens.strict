@@ -39,7 +39,7 @@ Controls(model Gguf, names Texts) Dictionary(Text, Number)
 		if value is in ("3", "4")
 			found(names(index)) = index
 	found
-Folder(folder Text) Gpt2Tokens
+Folder(folder Text) Gpt2Tokens slow
 	Gpt2Tokens.Folder("NeuralNetworks/missing").tokens.Length is 0
 	Gpt2Tokens.Folder("NeuralNetworks/tinytokens").tokens is ("a", "b", " ", "ab", " ab")
 	Gpt2Tokens.Folder("NeuralNetworks/tinytokens").Encoded("<s>ab ab") is (5, 3, 4)

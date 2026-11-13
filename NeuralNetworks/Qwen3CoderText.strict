@@ -19,6 +19,6 @@ Ran(folder Text)
 	let milliseconds = ((Process.Elapsed - loaded) * 1000 / Count).Round(1)
 	logger.Log(Prompt + tokenizer.Decoded(generated))
 	logger.Log("Qwen3-Coder-30B-A3B loaded in " + (loaded - started).Round(1) + " s, " + milliseconds + " ms per token")
-Downloaded(path Text)
+Downloaded(path Text) slow
 	if Process.RunTool("curl", "-sfL --create-dirs -o \"" + path + "\" \"" + Address + Weights + "\"").Failed
 		return Error("DownloadFailed: " + Address + Weights)

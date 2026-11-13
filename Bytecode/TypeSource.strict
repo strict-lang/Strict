@@ -74,7 +74,7 @@ NativeFolder(path Text, root Text) Text
 	(parent is "" then "." else parent) + "/native"
 IsSlow(fullName Text, header HeaderTokens) Boolean
 	TypeSource.IsSlow("Strict/Compiler/Even", HeaderTokens("Run", "Number"))
-	TypeSource.IsSlow("Strict/Even", HeaderTokens("Run", "Slow", "(", "Number", ")"))
+	TypeSource.IsSlow("Strict/Even", HeaderTokens("Run", "Number", "slow"))
 	TypeSource.IsSlow("Strict/Even", HeaderTokens("Run", "Number")) is false
 	TypeSource.IsSlow("Game/Compiler/Even", HeaderTokens("Run", "Number")) is false
 	TypeSource.IsSlow("Strict/Compiler", HeaderTokens("Run", "Number")) is false

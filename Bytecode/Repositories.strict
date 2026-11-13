@@ -59,7 +59,7 @@ Downloaded(url Text, file Text)
 	Repositories(Logger, "artifacts").Downloaded("https://missing.invalid/a", "Compiler/output/a") is Error
 	if Process.RunTool("curl", "-sfL --create-dirs -o \"" + file + "\" \"" + url + "\"").Failed
 		return Error("DownloadFailed: " + url)
-Copied(folder Text, type Text) Slow(Text)
+Copied(folder Text, type Text) Text slow
 	Repositories(Logger, "artifacts").Copied("Examples/NativeAdd", "Adder") is "artifacts/NativeAdd"
 	let local = target + "/" + Path(folder).FileName.text
 	for BinaryFile(folder).Contained(folder)

@@ -113,7 +113,7 @@ SharedKept(device Text, isTiling Boolean, builder DeviceBuild) Texts
 	let isShipped = builder.isShipped and ptx.First.StartsWith("//")
 	let failed = isShipped then CubinBuild(builder.tools).Shipped(cache.base, base) else ""
 	failed is "" then ptx else List(Text) + failed
-Waited(key Text, isTiling Boolean) Slow(Texts)
+Waited(key Text, isTiling Boolean) Texts slow
 	PtxCache("Compiler/output/Unbuilt/module").Waited("module {\n}", false).Length is 0
 	let lock = File(Path(base).PathOnly.text + ".lock")
 	let started = Process.Elapsed

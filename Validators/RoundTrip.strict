@@ -21,7 +21,7 @@ Ended(lines Texts) Number
 		if value.Trim is not ""
 			end = index + 1
 	end
-Body(lines Texts, start Number) Slow(Texts)
+Body(lines Texts, start Number) Texts slow
 	RoundTrip.Body(("Run", "\t(1,2)"), 1) is ("\t(1, 2)")
 	RoundTrip.Body(("Run", Packed), 1) is (Packed)
 	RoundTrip.Body(("Run", "\t1", Packed), 1) is ("\t1", Packed)

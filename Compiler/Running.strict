@@ -43,7 +43,7 @@ Ended(id Text) Boolean
 	Missing.Ended("0") is false
 	let isClosed = Process.RunTool("taskkill", "/PID " + id).exitCode is 0
 	isClosed or (Process.RunTool("taskkill", "/F /PID " + id).exitCode is 0)
-Restarted(old Text) Slow(Text)
+Restarted(old Text) Text slow
 	Missing.Restarted("Compiler/output/Missing.old.exe") is ""
 	if Directory.Files(Path(executable).PathOnly.text + "/obj", "strict.server*").Length is 0
 		return ""

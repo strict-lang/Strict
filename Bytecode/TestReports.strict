@@ -25,7 +25,7 @@ Mark(block CodeBlock, marker Text, key Text) CodeBlock
 	TestReports.Mark(TestCodegen.Counter, Showing, "Number").scope.TypeOf(Showing) is "Number"
 	TestReports.Mark(TestReports.Mark(TestCodegen.Counter, Nearing, "A"), Nearing, "A").scope.Count(Nearing) is 1
 	key is in Marked(block.scope, marker) then block else block.Declare(marker, key)
-Helpers(scope Scope) Slow(List(MethodEntry))
+Helpers(scope Scope) List(MethodEntry) slow
 	Even.Helpers(GotNumber).First.Name is "$TestsGot0"
 	Even.Helpers(GotNumber).Last.Name is "$TestsTook"
 	Even.Helpers(GotNumber).Last.parameters is (ElapsedParameter)
@@ -38,7 +38,7 @@ Helpers(scope Scope) Slow(List(MethodEntry))
 	for Marked(scope, Nearing)
 		helpers.Add(Near(value, index))
 	helpers
-Helper(name Text, parameter Text, type Text, expression SyntaxNode) Slow(MethodEntry)
+Helper(name Text, parameter Text, type Text, expression SyntaxNode) MethodEntry slow
 	Even.Helper("Got1", ErrorCodegen.Tested, "Number", Shown).Name is "$TestsGot1"
 	Even.Helper("Took", "elapsed", "Number", Duration).returnType is "Strict/Text"
 	Even.Helpers(TestCodegen.Counter.Declare(Showing, "None")).First is Even.Helper("Got0", "tested", "Error", Nothing)
@@ -49,7 +49,7 @@ Helper(name Text, parameter Text, type Text, expression SyntaxNode) Slow(MethodE
 	let entry = MemberEntry(parameter, neutral.target.FullName(declared), List(InstructionEntry), false)
 	let returned = generated.Add(InstructionEntry.Return(generated.Result))
 	MethodEntry(TestCodegen.Runner + name, List(MemberEntry) + entry, "Strict/Text", returned.instructions)
-Near(kind Text, ordinal Number) Slow(MethodEntry)
+Near(kind Text, ordinal Number) MethodEntry slow
 	Even.Near("Number", 1).Name is "$TestsNear1"
 	Even.Near("Number", 0).parameters.Last.typeName is "Strict/Number"
 	Erring.Near("Number", 0).instructions(6).texts is ("Strict/Erring", "Error", "Strict/Error")
@@ -62,7 +62,7 @@ Near(kind Text, ordinal Number) Slow(MethodEntry)
 	let returned = body.Add(InstructionEntry.Return(body.Result))
 	let parameters = (parameter, MemberEntry(parameter, Name = Expected))
 	MethodEntry(TestCodegen.Runner + "Near" + ordinal, parameters, "Strict/Boolean", returned.instructions)
-Neutral Slow(ValueCodegen)
+Neutral ValueCodegen slow
 	Processing.Neutral.Expression(Elapsed, TestCodegen.Counter).instructions.First.texts.First is "Strict/Process"
 	TestReports(TypeCodegen("P/H", List(Text), Even.types.inference, ("P/S"))).Neutral.target.FullName("S") is "P/S"
 	TestReports(TypeCodegen.Hello).Neutral.target.shape.lines is ("has logger")

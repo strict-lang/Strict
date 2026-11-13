@@ -16,7 +16,7 @@ Built(platform Number, root Text) Text
 	let clang = Toolchain(platform, root).Located("clang")
 	let result = ToolRunner(clang).Execute(shared + sources.Arguments(platform, root) + " -o \"" + output + "\"")
 	Finished(result, output, library, shared)
-Objects(files Texts, platform Number, root Text, options Text) Slow(Texts)
+Objects(files Texts, platform Number, root Text, options Text) Texts slow
 	Adding.Objects(NativeSources.Adding.Files, Platform.Current, ".", "") is ("Examples/NativeAdd/native/Adder.o")
 	mutable missing = List(Mutable(Text))
 	mutable previous = List(Mutable(Text))
@@ -29,7 +29,7 @@ Objects(files Texts, platform Number, root Text, options Text) Slow(Texts)
 	for previous
 		let built = value is "" then compiled(missing.Index(files(index))) else value
 		built.StartsWith("Built ") then built.Substring(6, built.Length - 6) else built
-Compiled(files Texts, platform Number, root Text, options Text) Slow(Texts)
+Compiled(files Texts, platform Number, root Text, options Text) Texts slow
 	Adding.Compiled(List(Text) + "Compiler/output/No.c", Platform.Current, ".", "").First.StartsWith(NoObject)
 	if files.Length is 0
 		return List(Text)
@@ -42,7 +42,7 @@ Commands(files Texts, suffix Text, flags Text) Texts
 	Adding.Commands(List(Text) + "a/b.c", ".1.o", " -O2") is ("-c \"a/b.c\" -O2 -o \"a/b.1.o\"")
 	for files
 		"-c \"" + value + "\"" + flags + " -o \"" + Path(value).RemoveExtension.text + suffix + "\""
-Waited(target Text, inputs Texts, options Text) Slow(Text)
+Waited(target Text, inputs Texts, options Text) Text slow
 	Adding.Waited("Compiler/output/Missing.dll", List(Text), "") is ""
 	let started = Process.Elapsed
 	for as long as Process.Elapsed - started < Strict.BuildWait

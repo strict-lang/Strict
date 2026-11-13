@@ -95,7 +95,7 @@ IsUnchanged(base Text, mlir Text, tools Toolchain) Boolean
 	if isCross or (previous.Exists is false) or (sources.IsCurrent(tools.Executable(base), inputs) is false)
 		return false
 	previous.Length is not mlir.Length then false else Text.Combine(previous.ReadLines, "\n") is mlir
-Rebuilt(base Text, mlir Text, tools Toolchain) Slow(Text)
+Rebuilt(base Text, mlir Text, tools Toolchain) Text slow
 	NativeBuild(Logger).Rebuilt("Compiler/output/Written", Broken, Toolchain.OnWindows).StartsWith("mlir-opt failed")
 	let missing = tools.Missing(tools.isWeb then Toolchain.Needed + "emcc" else Toolchain.Needed)
 	if missing.Length > 0
@@ -117,7 +117,7 @@ Ran(base Text, tools Toolchain, path Text, isCounting Boolean) Number
 		File(executable).Delete
 		File(base + ".mlir").Delete
 	result.exitCode
-Linked(base Text, tools Toolchain) Slow(Text)
+Linked(base Text, tools Toolchain) Text slow
 	NativeBuild.Linked("Compiler/output/missing", Toolchain.OnWindows).StartsWith("mlir-opt failed")
 	let executable = tools.Executable(base)
 	let isSwapped = (Platform.Current is Platform.Windows) and (tools.isWeb is false) and File(executable).Exists
@@ -145,7 +145,7 @@ Output(path Text, isProgram Boolean) Text
 		return FileCompiler.Normalized(path) + "/obj/Tests.test"
 	let intermediate = BuildOutput.Intermediate(path)
 	intermediate.Substring(0, intermediate.Length - 7) + (isProgram then "" else ".test")
-Mlir(program Text, root Text, platform Number) Slow(Text)
+Mlir(program Text, root Text, platform Number) Text slow
 	NativeBuild.Mlir("module {\n}", ".", Platform.Linux).Length > 100000
 	NativeBuild.Mlir("module {\n}", ".", Platform.MacOS).IndexOf("llvm.func @strict_opendir(") > 0
 	NativeBuild.Mlir("module {\n}", ".", Platform.Web).IndexOf("@strict_web(") > 0

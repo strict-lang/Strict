@@ -12,7 +12,7 @@ Run(path Text, count = 4)
 		model = model.Without(removed)
 		logger.Log("without block " + kept(removed) + ": " + Reported(model, tokenizer, heldout))
 		kept.Remove(kept(removed))
-Weakest(model Gpt2, tokenizer Gpt2Tokens, texts Texts) Slow(Number)
+Weakest(model Gpt2, tokenizer Gpt2Tokens, texts Texts) Number slow
 	LayerDropping(Logger).Weakest(Gpt2.Tiny, Gpt2Tokens.Tiny, ("ab ab")) is 0
 	mutable weakest = 0
 	mutable lowest = -1
@@ -21,7 +21,7 @@ Weakest(model Gpt2, tokenizer Gpt2Tokens, texts Texts) Slow(Number)
 		weakest = (lowest < 0) or (loss < lowest) then index else weakest
 		lowest = (lowest < 0) or (loss < lowest) then loss else lowest
 	weakest
-Reported(model Gpt2, tokenizer Gpt2Tokens, texts List(Texts)) Slow(Text)
+Reported(model Gpt2, tokenizer Gpt2Tokens, texts List(Texts)) Text slow
 	LayerDropping(Logger).Reported(Gpt2.Tiny, Gpt2Tokens.Tiny, List(Texts) + ("ab ab")).StartsWith("English perplexity")
 	let reports = Perplexity(model).Reports(tokenizer, texts)
 	let evaluation = Evaluation(logger)

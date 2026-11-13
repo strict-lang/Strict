@@ -1,1 +1,1 @@
-Write(bytes Bytes)
+Write(bytes Bytes) slow

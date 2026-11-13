@@ -73,7 +73,7 @@ Located(path Text, root Text, withTests Boolean, type Text) List(TypeEntry)
 			return Compiled(path, root, withTests)
 	logger.Log(ResolveCheck.Located(path, LineOf(File(path).ReadLines, type), "TypeNotFound: " + type + Tips))
 	List(TypeEntry)
-Problems(files Texts) Slow(Texts)
+Problems(files Texts) Texts slow
 	FileCompiler.Problems(("./Number.strict", "./Text.strict")) is ("", "")
 	for files
 		let lines = File(value).ReadLines
@@ -135,7 +135,7 @@ IsOperand(node SyntaxNode, position Number) Boolean
 	FileCompiler.IsOperand(SyntaxNode("Not", "not", SyntaxNode("Missing", "")), 0)
 	let isBinary = (node.Kind is "Binary") and ((position is 0) or (node.text is not "is"))
 	(node.Kind is in ("Not", "Negate", "List")) or isBinary
-Resolved(source Text, inference TypeInference, files Texts = List(Text)) Slow(Boolean)
+Resolved(source Text, inference TypeInference, files Texts = List(Text)) Boolean slow
 	FileCompiler.Resolved("./Logger.strict", ResolveCheck.Inference(("./Logger.strict", "./TextWriter.strict")))
 	mutable unresolved = ResolveCheck(logger).Unresolved(source, inference)
 	for files

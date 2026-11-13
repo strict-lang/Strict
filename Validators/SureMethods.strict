@@ -4,10 +4,11 @@ constant Randoms = ("Number.strict", "HashCode.strict", "PseudoRandom.strict")
 constant Numbered = Scope(("low", "elements"), ("Number", "Numbers"))
 constant Counts = KnownTypes(List(Text) + "Count", List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(("Limit", "Increment"), ("Number", "Count")), List(Scope) + KnownTypes.NoMembers)
 constant Limited = SureMethods(TypeInference(Counts, List(Scope) + Scope(List(Text) + "Limit", List(Text) + "3")))
+constant Fielded = SureMethods(TypeInference(KnownTypes(List(Text) + "Count", List(Scope) + Scope(("low"), ("Number")), List(Scope) + KnownTypes.NoMembers, List(Scope) + KnownTypes.NoMembers), List(Scope) + KnownTypes.NoMembers))
 constant Ranged = SyntaxParser(Tokenizer("Range(0, 1)").Tokens).Parse
 constant Lists = List(Text) + "List.strict"
 constant Remainder = FileCheck.Parsed("low % Limit")
-Named(paths Texts) Slow(Texts)
+Named(paths Texts) Texts slow
 	SureMethods.Named(List(Text)).Length is 0
 	"PseudoRandom.Next" is in SureMethods(ResolveCheck(Logger).Inference(Randoms)).Named(Randoms)
 	("List.First" is in SureMethods(ResolveCheck(Logger).Inference(Lists)).Named(Lists)) is false
@@ -96,8 +97,10 @@ Keyed(receiver SyntaxNode, name Text, scope Scope, methods Scope) Texts
 	SureMethods.Keyed(SyntaxNode("Identifier", "elements"), "First", Numbered, Numbered) is ("List.First")
 	Limited.Keyed(SyntaxNode("Type", "Count"), "Limit", Numbered, Numbered).Length is 0
 	Limited.Keyed(SyntaxNode("Type", "Count"), "Increment", Numbered, Numbered) is ("Count.Increment")
+	Fielded.Keyed(SyntaxNode("Type", "Count"), "low", Numbered, Numbered).Length is 0
+	Fielded.Keyed(SyntaxNode("Type", "Count"), "ReadLines", Numbered, Numbered) is ("Count.ReadLines")
 	let base = inference.types.BaseName(inference.TypeOf(receiver, scope, methods))
-	let isField = (inference.types.Index(base) is not -1) and (IsMethod(base, name) is false)
+	let isField = (inference.types.MembersOf(base).TypeOf(name) is not "") or (inference.ConstantOf(base, name) is not "")
 	isField then List(Text) else List(Text) + (base + "." + name)
 Settled(records Texts) Texts
 	SureMethods.Settled(("Number.Floor|", "PseudoRandom.Next|Number.Floor")) is ("Number.Floor", "PseudoRandom.Next")

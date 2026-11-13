@@ -5,9 +5,9 @@ has TextReader
 has BytesWriter
 has BytesReader
 from(path)
-Exists Boolean
-Modified Number
-Locked Boolean
-Delete
-Rename(newPath Text)
+Exists Boolean slow
+Modified Number slow
+Locked Boolean slow
+Delete slow
+Rename(newPath Text) slow
 InMemory(content Text)

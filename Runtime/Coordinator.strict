@@ -106,7 +106,7 @@ Granted(words Texts, seen MachineView) Text
 	mutable sample = Coordinator(Logger)
 	let isHeld = (sample.Held(("holding", "4", "2")) is "ok") and (sample.idleRam is 4)
 	isHeld then sample.Needed(Need.Parsed(words), seen) else "bad"
-Seen Slow(MachineView)
+Seen MachineView slow
 	Sample.Seen.freeRam >= 0
 	let video = Vram("")
 	let idle = Process.Elapsed - seenAt < StaleSeconds then idleRam else 0

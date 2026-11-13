@@ -1,7 +1,7 @@
 has path Text
 constant Strips = "Compiler/output/ImageLoaderStrips.jpg"
 constant Short = "Compiler/output/ImageLoaderShort.jpg"
-Loaded Slow(Image)
+Loaded Image slow
 	ImageLoader("ImageProcessing/4x4.png").Loaded.Size is Size(4, 4)
 	ImageLoader("ImageProcessing/Digit.jpg").Loaded.Size is Size(28, 28)
 	ImageLoader("ImageProcessing/Progressive.jpg").Loaded.Size is Size(48, 16)
@@ -14,7 +14,7 @@ Colors(bytes Numbers) List(ColorValue)
 Color(bytes Numbers, at Number) ColorValue
 	ImageLoader("").Color((1, 51, 102, 153, 204), 1) is ColorValue(0.2, 0.4, 0.6, 0.8)
 	ColorValue(bytes(at) / Byte.Max, bytes(at + 1) / Byte.Max, bytes(at + 2) / Byte.Max, bytes(at + 3) / Byte.Max)
-Grays Slow(Numbers)
+Grays Numbers slow
 	ImageLoader("ImageProcessing/Digit.jpg").Grays.Length is 784
 	ImageCodec.SaveJpeg(Strips, ImageCodec.Pixels("ImageProcessing/Digit.jpg", 3) / Byte.Max, 7, 100) is not Error
 	ImageCodec.SaveJpeg(Short, ImageCodec.Pixels("ImageProcessing/Progressive.jpg", 3) / Byte.Max, 48, 90) is not Error

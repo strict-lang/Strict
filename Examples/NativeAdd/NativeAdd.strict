@@ -1,5 +1,5 @@
 has logger
-Added Slow(Number)
+Added Number slow
 	NativeAdd.Added is 3
 	Adder.Add(1, 2)
 Sums Number

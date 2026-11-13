@@ -74,11 +74,11 @@ with tempfile.TemporaryDirectory(prefix="TestPolicy", dir=root / "Examples") as 
 
 	source = folder / "Policy.strict"
 	source.write_text('has logger\nconstant Fixture = Policy.Value + 1\nRun Number\n\tlogger.Log("application")\n\t0\n'
-		'Value Slow(Number)\n\tPolicy.Value is 7\n\tlet started = Process.Elapsed\n'
+		'Value Number slow\n\tPolicy.Value is 7\n\tlet started = Process.Elapsed\n'
 		'\tmutable count = 0\n\tfor as long as Process.Elapsed - started < 0.04\n\t\tcount = count + 1\n'
 		'\tlogger.Log("manual fixture")\n\tcount > 0 then 7 else 0\n'
-		'Quick Number\n\tPolicy.Quick is 3\n\tSlow(3) + 0 is 3\n\tSlow((1, 2)).First is 1\n\t3\n'
-		'FixtureUsed Slow(Number)\n\tPolicy.Fixture is 8\n\tFixture', encoding="utf-8")
+		'Quick Number\n\tPolicy.Quick is 3\n\t3\n'
+		'FixtureUsed Number slow\n\tPolicy.Fixture is 8\n\tFixture', encoding="utf-8")
 	unit = subprocess.run([command, "test", str(source), "unit"], cwd=root, env=environment,
 		capture_output=True, text=True, timeout=10)
 	assert unit.returncode == 0 and "manual fixture" not in unit.stdout, unit.stdout + unit.stderr

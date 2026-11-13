@@ -2,7 +2,7 @@ has rounds Numbers
 constant Count = 50
 constant Doublings = 12
 constant RowLength = 4097
-Grown Slow(Number)
+Grown Number slow
 	ParallelGarbage(ParallelGarbage.Counted(256)).Grown < 1200000000
 	let before = Process.MemoryUsed
 	Lengths(Count).Sum is rounds.Length * Count * 16 * RowLength then Process.MemoryUsed - before else 1000000000000

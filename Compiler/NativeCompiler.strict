@@ -29,7 +29,7 @@ Reported(code Number, started Number, problem Text) Number
 		logger.Log(problem)
 	BuildProfile(logger).Reported(code is 0 then "Build total" else "Build FAILED (" + code + "), total", started)
 	code
-Locked(target Text) Slow(Boolean)
+Locked(target Text) Boolean slow
 	let lock = File(Lock(target))
 	if lock.Locked
 		return true

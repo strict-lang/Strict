@@ -1,7 +1,7 @@
 has text
 constant Sample = Xml("<Element Identifier=\"Play\" Margin=\"0 0.5 0 0\" BlendColor=\"(1.00, 0.50, 1.00, 1.00)\">")
 constant Menu = Xml("<?xml?><!-- > --><Menu>\n\t<Button\n\t\tText=\"Play\" />\n\t<Label>A &amp; B</Label>\n</Menu>")
-Read(path Text) Xml
+Read(path Text) Xml slow
 	Xml.Read("Xml/Settings.xml").get("MusicVolume").Content is "0.75"
 	Xml.Read("Xml/Animation.xml").get("MeshAnimationInfo").Children.Length is 2
 	Xml(Text.Combine(File(path).ReadLines, "\n"))

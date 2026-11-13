@@ -12,7 +12,7 @@ Run
 		logger.Log(value to Text + " gives " + network.Predict(value).First)
 	logger.Log("separated " + Smallest.Separated(network, Targets) + " after " + Smallest.Long + " steps")
 	logger.Log("exists " + (Smallest.Sought(Targets) to Text))
-Trained(network Network, steps Number, rate = 1) Slow(Network)
+Trained(network Network, steps Number, rate = 1) Network slow
 	Xor.Trained(Network.Pair, 1, 1).layers.Last.weights is Epoch.layers.Last.weights
 	Xor.Error(Xor.Trained(Network.Pair, 4, 1)) < Xor.Error(Network.Pair)
 	mutable trained = network

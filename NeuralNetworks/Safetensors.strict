@@ -16,7 +16,7 @@ constant Single = "\"x\":{\"dtype\":\"F32\",\"shape\":[2],\"data_offsets\":[0,8]
 constant Second = Safetensors.Bytes.Part(Safetensors.Bytes.Values("a.weight"), 64, 64, 1)
 constant Exact = Safetensors.Bytes.Quantized("a")
 constant Firsts = Safetensors.Bytes.Part(Safetensors.Bytes.Values("a.weight"), 0, 128, 1)
-Entry(name Text) Slow(Text)
+Entry(name Text) Text slow
 	Tiny.Entry("b") is "\"dtype\":\"F32\",\"shape\":[3],\"data_offsets\":[24,36]"
 	Tiny.Entry("missing") is ""
 	Safetensors("NeuralNetworks/tiny.safetensors", 32, "a").Entry("") is Tiny.Entry("a")
@@ -92,7 +92,7 @@ Hosted(name Text, picked = List(Number), part = 4096) List(Numbers)
 		let isRead = (picked.Length is 0) or (index is in picked)
 		rows = rows + (isRead then TensorFile.HostedPart(path, weight, scales, index * size, size) else (List(Number)))
 	rows
-Tuned(name Text, downs Numbers, ups Numbers, scales Numbers) Slow(List(Numbers))
+Tuned(name Text, downs Numbers, ups Numbers, scales Numbers) List(Numbers) slow
 	Batch.Wholes.Sums(Batch.Tokens) is Batch.Wholes.Sums(Batch.Tokens)
 	Bytes.Tuned("a", List(Number), List(Number), List(Number)) is Bytes.Quantized("a")
 	Bytes.Tuned("a", Second, (1, 0, 0, 0), List(Number) + 0.5)(2) is Bytes.Quantized("a")(2)

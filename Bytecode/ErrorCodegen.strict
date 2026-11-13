@@ -35,7 +35,6 @@ Handled(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.MayFail(SyntaxNode("Call", "List", Greeting), CodeBlock.Empty) is false
 	Plain.MayFail(SyntaxNode("Call", "Dictionary", Greeting), CodeBlock.Empty) is false
 	Plain.MayFail(SyntaxNode("Call", "Mutable", Greeting), CodeBlock.Empty)
-	Plain.MayFail(SyntaxNode("Call", "Slow", Greeting), CodeBlock.Empty)
 	Plain.MayFail(SyntaxNode("Call", "Mutable", ValueCodegen.One), CodeBlock.Empty) is false
 	Plain.MayFail(SyntaxNode("MethodCall", "Add", (A, ValueCodegen.One)), ErrorScope.Numbered)
 	Plain.MayFail(SyntaxNode("Index", "", (A, ValueCodegen.One)), ErrorScope.Numbered)
@@ -54,12 +53,14 @@ Dispatched(node SyntaxNode, block CodeBlock) CodeBlock
 	if (node.Kind is in ("Call", "Member", "MethodCall", "Not", "Index")) or (node.text is "to")
 		return values.Call(node, block)
 	OperatorCodegen(values).Operation(node, block)
-Checked(node SyntaxNode, block CodeBlock) CodeBlock
+Checked(node SyntaxNode, block CodeBlock, isRemainder = false) CodeBlock
 	Plain.Checked(Greeting, CodeBlock.Empty).instructions.Last.kind is InstructionType.CheckError
 	Plain.Checked(ValueCodegen.One, CodeBlock.Empty).instructions.Length is 1
+	Plain.Checked(ErrorScope.Remaining, ErrorScope.Scalar, true).instructions.Last.kind is InstructionType.CheckError
+	Plain.Checked(ErrorScope.Remaining, ErrorScope.Scalar).instructions.Last.kind is not InstructionType.CheckError
 	let folded = Folded(node, block)
 	let generated = Dispatched(folded, block)
-	MayFail(folded, block) then generated.Add(Check(generated.Result, block)) else generated
+	isRemainder or MayFail(folded, block) then generated.Add(Check(generated.Result, block)) else generated
 Check(register Number, block CodeBlock) InstructionEntry
 	Plain.Check(2, CodeBlock.Empty).payload is List(Number) + 2
 	Plain.Check(2, InTest).payload is (2, 7)
@@ -89,8 +90,8 @@ MayFail(node SyntaxNode, block CodeBlock) Boolean
 		return ErrorScope(values).IsFallible(node.text, block) or values.IsMethodCall(node, block)
 	if node.Kind is "Binary"
 		return IsFailing(node, block)
-	if (node.Kind is "Call") and (node.text is in ("List", "Dictionary", "Mutable", "Slow"))
-		return (node.text is in ("Mutable", "Slow")) and MayFail(node.children(0), block)
+	if (node.Kind is "Call") and (node.text is in ("List", "Dictionary", "Mutable"))
+		return (node.text is "Mutable") and MayFail(node.children(0), block)
 	(node.Kind is in ("Call", "MethodCall", "Index")) or (node.Kind is "Member") and values.IsMethodCall(node, block)
 IsFailing(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsFailing(SyntaxNode("Binary", "+", (ValueCodegen.One, ValueCodegen.One)), CodeBlock.Empty) is false
@@ -176,7 +177,7 @@ Compared(comparison SyntaxNode, operand SyntaxNode, block CodeBlock) CodeBlock
 	LeftSum.scope.TypeOf(Tested) is not ""
 	(RightSum.instructions(1).texts.Length is 0) and (Plain.Compared(IsError, A, CodeBlock.Empty).instructions.Length is 1)
 	if IsErrorComparison(comparison, block) is false
-		return Checked(operand, block)
+		return Checked(operand, block, ErrorScope(values).IsRemainder(Folded(operand, block)))
 	if (operand is not comparison.children(0)) or (operand.children.Length is 0)
 		return Handled(operand, block)
 	let caught = Caught(comparison, operand, block).Declare(Tested, values.TypeOf(operand, block))

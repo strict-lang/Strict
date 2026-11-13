@@ -1,16 +1,16 @@
-Connect(host Text, port Number) Number
-Try(host Text, port Number, seconds Number) Number
-Listen(port Number) Number
-Beacon(port Number) Number
-Tell(beacon Number, host Text, port Number, bytes Numbers) Number
-Shout(beacon Number, port Number, bytes Numbers) Number
-Hear(beacon Number) Text
-Local(port Number) Number
-Port(socket Number) Number
-Accept(server Number) Number
-Waiting(server Number, seconds = 0) Number
-Send(socket Number, bytes Numbers)
-Receive(socket Number, count Number) Numbers
-Pending(socket Number) Number
-Close(socket Number)
-Output(socket Number)
+Connect(host Text, port Number) Number slow
+Try(host Text, port Number, seconds Number) Number slow
+Listen(port Number) Number slow
+Beacon(port Number) Number slow
+Tell(beacon Number, host Text, port Number, bytes Numbers) Number slow
+Shout(beacon Number, port Number, bytes Numbers) Number slow
+Hear(beacon Number) Text slow
+Local(port Number) Number slow
+Port(socket Number) Number slow
+Accept(server Number) Number slow
+Waiting(server Number, seconds = 0) Number slow
+Send(socket Number, bytes Numbers) slow
+Receive(socket Number, count Number) Numbers slow
+Pending(socket Number) Number slow
+Close(socket Number) slow
+Output(socket Number) slow

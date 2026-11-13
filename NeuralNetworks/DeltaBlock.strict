@@ -13,7 +13,7 @@ has merged Numbers = List(Number)
 has sigmoidGate Boolean = false
 has rates Layer = Layer.None
 constant Tiny = DeltaBlock.Loaded(Drafter.Model, "blk.0.", Layer.Zeros(16), Basis.None)
-Loaded(model Gguf, prefix Text, zeros Numbers, basis Basis) Slow(DeltaBlock)
+Loaded(model Gguf, prefix Text, zeros Numbers, basis Basis) DeltaBlock slow
 	Tiny.inputs.weights.Length is 32
 	let mixing = Mixing(model, prefix, zeros, Experts(Qwen3Block.FeedForward(model, prefix), basis = basis))
 	let normed = model.Values(prefix + "attn_norm.weight")
@@ -24,7 +24,7 @@ Loaded(model Gguf, prefix Text, zeros Numbers, basis Basis) Slow(DeltaBlock)
 	let rated = isApart then Layer(mixing.inputs.weights.Slice(mixed, rating), Layer.Unbiased) else Layer.None
 	let after = model.Values(prefix + "post_attention_norm.weight")
 	DeltaBlock(mixing, attentionNorm = normed, mlpNorm = after, inputs = kept, rates = rated)
-Mixing(model Gguf, prefix Text, zeros Numbers, feedForward Experts) Slow(DeltaBlock)
+Mixing(model Gguf, prefix Text, zeros Numbers, feedForward Experts) DeltaBlock slow
 	DeltaBlock.Mixing(Drafter.Model, "blk.0.", Layer.Zeros(16), Tiny.experts).attentionNorm.Length is 0
 	let combined = Qwen3Block.Dense(model, prefix, ("attn_qkv", "attn_gate", "ssm_beta", "ssm_alpha"))
 	let taps = model.Values(prefix + "ssm_conv1d.weight")
@@ -55,7 +55,7 @@ Combined(input Numbers) Numbers
 		let token = (index / (mixing + rating)).Floor
 		let at = index % (mixing + rating)
 		at < mixing then mixed(token * mixing + at) else rated(token * rating + at - mixing)
-Cached(combined Numbers) Slow(DeltaBlock)
+Cached(combined Numbers) DeltaBlock slow
 	Tiny.Cached(Tiny.Combined(Drafter.Rows(1))).Output(Drafter.Rows(1)).First.IsNearlyEqual(0.54408, 0.00001)
 	Tiny.Cached(Tiny.Combined(Drafter.Pair)).Output(Drafter.Pair)(8).IsNearlyEqual(1.773538, 0.00001)
 	let tokens = combined.Length / Width
@@ -64,7 +64,7 @@ Cached(combined Numbers) Slow(DeltaBlock)
 	let chunks = DeltaChunks(decays.Length, KeyHeads, norm.Length, Chunk, tokens, keyed, Decayed(combined, tokens), memory)
 	let read = tokens is 1 then chunks.Stepped(value) else chunks.Read
 	DeltaBlock(value, memory = read.memory, window = Shifted(combined, tokens), merged = Gated(read.reads, combined))
-Rewound(combined Numbers) Slow(DeltaBlock)
+Rewound(combined Numbers) DeltaBlock slow
 	Tiny.Rewound(Tiny.Combined(Drafter.Rows(1))).memory is Tiny.Cached(Tiny.Combined(Drafter.Rows(1))).memory
 	Tiny.Rewound(Tiny.Combined(Drafter.Pair)).window is Tiny.Cached(Tiny.Combined(Drafter.Pair)).window
 	let tokens = combined.Length / Width

@@ -1,0 +1,90 @@
+has inference Expressions/TypeInference = TypeInference.NoInference
+constant Kinds = ("File", "Directory", "Process", "Socket", "Http")
+constant Traits = ("TextReader", "TextWriter", "BytesReader", "BytesWriter")
+constant Flagged = "InputOutputMustBeSlow: Reader.Loaded does file, directory, process or network input or output, end its header with slow"
+constant Hint = " does file, directory, process or network input or output, end its header with slow"
+constant Loading = ("Loaded(path Text) Texts", "\tLoaded(\"a\").Length is 0", "\tFile(path).ReadLines", "Run", "\tLoaded(\"b\")")
+constant Readers = KnownTypes(("Reader", "File"), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Scope(("Loaded", "Run"), ("Texts", "None")), Scope(("ReadLines"), ("Texts"))), (KnownTypes.NoMembers, KnownTypes.NoMembers))
+constant Reading = InputOutputs(TypeInference(Readers, (KnownTypes.NoMembers, KnownTypes.NoMembers)))
+constant Checking = ("Checked Boolean", "\tLoaded(\"a\").Length is 0", "\tlet loaded = Loaded(\"b\")", "\tloaded.Length is 1", "\tloaded.Length > 0", "IsLoaded Boolean", "\tLoaded(\"c\").Length > 0")
+constant Checks = MethodBodies("Reader", TypeShape(Checking), Reading.inference)
+constant Reversed = ("Reader.Shown||Reader.Loaded", "Reader.Loaded||File.ReadLines", "File.ReadLines|slow|")
+constant Reached = ("File.ReadLines|slow|", "Reader.Loaded||File.ReadLines", "Reader.Shown||Reader.Loaded", "Reader.Twice||Number.+")
+Named(paths Texts) Texts slow
+	InputOutputs.Named(List(Text)).Length is 0
+	mutable records = List(Mutable(Text))
+	for paths
+		let name = Path(value).FileName.RemoveExtension.text
+		records = records + Records(name is in Traits then "File" else name, File(value).ReadLines)
+	Settled(records)
+Records(type Text, lines Texts) Texts
+	Reading.Records("Reader", Loading) is ("Reader.Loaded||File.ReadLines", "Reader.Run||Reader.Loaded")
+	InputOutputs.Records("File", ("Name Text", "Exists Boolean slow")) is ("File.Name||", "File.Exists|slow|")
+	InputOutputs.Records("Reader", ("Exists Boolean slow")) is ("Reader.Exists||")
+	Reading.Records("Reader", Checking)(1) is "Reader.IsLoaded||List.Length,Reader.Loaded"
+	let shape = TypeShape(lines)
+	let bodies = MethodBodies(type, shape, inference)
+	let statements = bodies.Statements
+	for lines
+		if shape.IsMethodHeader(value)
+			let isSeed = HeaderTokens(Tokenizer(value).Tokens).ReturnsSlow and (type is in Kinds)
+			let calls = Text.Combine(Used(bodies, statements, lines, index), ",")
+			type + "." + Tokenizer(value).Tokens.First + (isSeed then "|slow|" else "||") + calls
+Used(bodies MethodBodies, statements ScopedStatements, lines Texts, header Number) Texts
+	Reading.Used(Checks, Checks.Statements, Checking, 0).Length is 3
+	"Reader.Loaded" is in Reading.Used(Checks, Checks.Statements, Checking, 0)
+	Reading.Used(Checks, Checks.Statements, Checking, 5).Length is 2
+	let last = FileCheck.LastLine(lines, header)
+	mutable isTesting = true
+	mutable keys = List(Mutable(Text))
+	for statements
+		if (value.line > header) and (value.line <= last)
+			isTesting = isTesting and (value.line < last) and (bodies.StatementType(value) is "Boolean")
+			if isTesting is false
+				keys = keys + SureMethods(inference).Calls(bodies.typeName, value.statement, value.scope)
+	keys
+Settled(records Texts) Texts
+	InputOutputs.Settled(Reached) is ("File.ReadLines", "Reader.Loaded", "Reader.Shown")
+	InputOutputs.Settled(List(Text) + "Reader.Loaded||File.ReadLines").Length is 0
+	InputOutputs.Settled(Reversed) is ("File.ReadLines", "Reader.Loaded", "Reader.Shown")
+	mutable reaching = Seeds(records)
+	mutable added = reaching.Length
+	for as long as added > 0
+		added = 0
+		for records
+			if (SureMethods.Key(value) is not in reaching) and IsReaching(SureMethods.CallList(value), reaching)
+				reaching = reaching + SureMethods.Key(value)
+				added = added + 1
+	reaching
+Seeds(records Texts) Texts
+	InputOutputs.Seeds(Reached) is ("File.ReadLines")
+	for records
+		if value.Split("|")(1) is "slow"
+			SureMethods.Key(value)
+IsReaching(calls Texts, reaching Texts) Boolean
+	InputOutputs.IsReaching(("Number.+", "File.ReadLines"), ("File.ReadLines"))
+	InputOutputs.IsReaching(("Number.+"), ("File.ReadLines")) is false
+	for calls
+		if value is in reaching
+			return true
+	false
+Issues(path Text, lines Texts, reaching Texts) List(ValidationIssue)
+	InputOutputs.Issues("Demo/Reader.strict", Loading, ("Reader.Loaded", "Reader.Run")).Length is 1
+	InputOutputs.Issues("Demo/Reader.strict", Loading, ("Reader.Loaded")).First to Text is Flagged
+	InputOutputs.Issues("Demo/Reader.strict", Loading, ("Reader.Loaded")).First.Line is 1
+	InputOutputs.Issues("Demo/Reader.strict", Loading, ("Reader.Loaded")).Length is 1
+	InputOutputs.Issues("Compiler/Reader.strict", Loading, ("Reader.Loaded")).Length is 0
+	InputOutputs.Issues("Demo/Reader.strict", ("has logger"), ("Reader.has")).Length is 0
+	let isInternal = Path(Path(path).PathOnly.text).FileName.text is in TypeSource.InternalPackages
+	let type = Path(path).FileName.RemoveExtension.text
+	let shape = TypeShape(lines)
+	for lines
+		if (isInternal is false) and shape.IsMethodHeader(value) and IsUnmarked(type, value, reaching)
+			ValidationIssue("InputOutputMustBeSlow", type + "." + Tokenizer(value).Tokens.First + Hint, index + 1)
+IsUnmarked(type Text, line Text, reaching Texts) Boolean
+	InputOutputs.IsUnmarked("Reader", "Loaded Texts", ("Reader.Loaded"))
+	InputOutputs.IsUnmarked("Reader", "Loaded Texts slow", ("Reader.Loaded")) is false
+	InputOutputs.IsUnmarked("Reader", "Run", ("Reader.Run")) is false
+	InputOutputs.IsUnmarked("Reader", "Shown Texts", ("Reader.Loaded")) is false
+	let header = HeaderTokens(Tokenizer(line).Tokens)
+	(header.tokens(0) is not "Run") and (header.ReturnsSlow is false) and ((type + "." + header.tokens(0)) is in reaching)

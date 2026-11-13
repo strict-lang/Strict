@@ -1,5 +1,5 @@
 has count Number
-Held Slow(Boolean)
+Held Boolean slow
 	LockedCycles(1100).Held
 	mutable held = 0
 	for count

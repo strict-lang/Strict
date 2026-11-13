@@ -12,13 +12,13 @@ Run(path Text)
 	let reports = isQwen then Perplexity(Qwen3.Loaded(path, 8)).Reports(tokenizer, texts) else gpt2
 	logger.Log(path + " English: " + Described(reports(0)))
 	logger.Log(path + " Strict: " + Described(reports(1)))
-Heldout(count Number) Slow(List(Texts))
+Heldout(count Number) List(Texts) slow
 	Evaluation(Logger).Heldout(1)(1).First.StartsWith("has real Number")
 	Texts(Downloaded(Corpus + "heldout.txt", Book), "To Sherlock Holmes", "Math", count)
-Calibration(count Number) Slow(List(Texts))
+Calibration(count Number) List(Texts) slow
 	Evaluation(Logger).Calibration(1)(0).First.StartsWith("It is a truth")
 	Texts(Downloaded(Corpus + "calibration.txt", Novel), "It is a truth", "Compiler", count)
-Downloaded(path Text, address Text) Text
+Downloaded(path Text, address Text) Text slow
 	Evaluation(Logger).Downloaded("NeuralNetworks/Perplexity.strict", "").StartsWith("has model")
 	Evaluation(Logger).Downloaded("NeuralNetworks/corpus/missing-download.txt", "") is Error
 	if File(path).Exists is false
@@ -28,7 +28,7 @@ Downloaded(path Text, address Text) Text
 			return Error("Corpus download failed for " + path + ": " + download to Text)
 		File(partial).Rename(path)
 	Text.Combine(File(path).ReadLines, "\n")
-Texts(english Text, anchor Text, folder Text, count Number) List(Texts)
+Texts(english Text, anchor Text, folder Text, count Number) List(Texts) slow
 	Evaluation(Logger).Texts(Sources("Math"), "has", "Math", 2)(0)(1).Length is Width
 	Evaluation(Logger).Texts(Sources("Math"), "has", "Math", 2)(1).First.StartsWith("has real Number")
 	(Spans(english, anchor, count), Spans(Sources(folder), "", count))
@@ -43,7 +43,7 @@ Spans(text Text, anchor Text, count Number) Texts
 		return Error("Corpus cannot provide " + count + " spans of " + Width + " characters")
 	for count
 		text.Substring(start + index * Width, Width)
-Sources(folder Text) Text
+Sources(folder Text) Text slow
 	Evaluation(Logger).Sources("Math").Length > 10000
 	mutable joined = ""
 	for Directory.Files(folder, "*.strict")

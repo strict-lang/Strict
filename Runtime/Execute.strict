@@ -110,7 +110,7 @@ Stored(cache BinaryFile, root Text, files Texts, stamped BinarySources, isOwn Bo
 	let names = BinarySources.Names(types) + LinkHomes(linked).SourceNames(cache.source, whole)
 	let header = Completed(cache, root, files, stamped, isOwn).Typed(kept, folder).Named(names).Header
 	cache.Saved(cache.Packed(header, (List(TypeEntry) + whole) + kept.Slice(1, kept.Length - 1), links - ""))
-Completed(cache BinaryFile, root Text, files Texts, stamped BinarySources, isOwn = false) Slow(BinarySources)
+Completed(cache BinaryFile, root Text, files Texts, stamped BinarySources, isOwn = false) BinarySources slow
 	Execute(Logger).Completed(Adder, ".", AdderFiles, BinarySources.Mixed).stamps is (1, 2, 3)
 	Execute(Logger).Completed(Adder, ".", List(Text), BinarySources.Mixed, true).stamps is (1, 2, 3)
 	if isOwn

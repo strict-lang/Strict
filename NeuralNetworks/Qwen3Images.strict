@@ -4,7 +4,7 @@ constant Language = QwenSafetensors(Safetensors("NeuralNetworks/tinyqwen3vl.safe
 constant Tiny = Qwen3Images(Qwen3Images.Language.Loaded(5000000), QwenVision.Tiny)
 constant Prompted = Qwen3Images.Tiny.Prefilled(((1, 2), (3, 4, 5)), List(Numbers) + QwenVision.Image, 32, 48)
 constant Twice = Qwen3Images.Tiny.Prefilled(((1, 2), (6, 7), (3, 4, 5)), (QwenVision.Image, QwenVision.Image), 32, 48)
-Prefilled(texts List(Numbers), images List(Numbers), height Number, width Number) Slow(Qwen3)
+Prefilled(texts List(Numbers), images List(Numbers), height Number, width Number) Qwen3 slow
 	Prompted.hidden(0).IsNearlyEqual(-6.42568, 0.05)
 	Prompted.hidden(150).IsNearlyEqual(-2.22829, 0.05)
 	Prompted.hidden(300).IsNearlyEqual(-4.96717, 0.05)
@@ -17,7 +17,7 @@ Prefilled(texts List(Numbers), images List(Numbers), height Number, width Number
 	let size = encoded.First.First.Length / model.norm.Length
 	let rotation = Rotation(lengths, size, vision.Grid(height, width)(1) / 2)
 	model.Forwarded(Embedded(texts, encoded), rotation, 1, Stacks(encoded), Rows(lengths, size))
-Encoded(images List(Numbers), height Number, width Number) Slow(List(List(Numbers)))
+Encoded(images List(Numbers), height Number, width Number) List(List(Numbers)) slow
 	Tiny.Encoded(List(Numbers) + QwenVision.Image, 32, 48).First.Length is 4
 	for images
 		vision.Encoded(value, height, width)
@@ -51,7 +51,7 @@ Rows(lengths Numbers, size Number) Numbers
 		if index < lengths.Length - 1
 			rows = rows + Counted(index * size, size, 1)
 	rows
-Rotation(lengths Numbers, size Number, columns Number) Slow(Numbers)
+Rotation(lengths Numbers, size Number, columns Number) Numbers slow
 	Tiny.Rotation((2, 3), 6, 3).Length is 11 * 32
 	let heights = Axis(1, lengths, size, columns)
 	model.Rotations(Axis(0, lengths, size, columns), heights, Axis(2, lengths, size, columns))
