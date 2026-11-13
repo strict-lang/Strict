@@ -111,3 +111,4 @@ All 440 DeltaEngine files were read for what `strict check` lets through (it rep
 - `TestMustNotTouchFiles`: tests and constants that write or list real files (`ArenaProfile.Empty.Saved` writes Profiles/Player.profile on every run, `constant Loaded = ArenaReplays(Directory.Files(...))`), about 15; engine packages whose tests load game content (Graphics3D/Scenery.strict, Weapon.strict).
 - `SameCallTwiceMustBeLet`: the token equal call with arguments twice in a method outside the tests (about 30).
 - `Up to date` could also say whether the program is running: a pid stamp written by each running program (like `obj/strict.server*`) makes that a file read instead of a 0.55 s process query.
+- `GarbageCollectionExceedsLimit` and `GarbageCollectionAboveTarget` could also name the largest allocating call sites of the window.
