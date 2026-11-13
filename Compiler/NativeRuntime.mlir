@@ -4130,7 +4130,8 @@
     cf.cond_br %busy, ^fail, ^collecting
   ^collecting:
     %full = arith.constant true
-    func.call @strict_gc_run(%full) : (i1) -> ()
+    %hostMemory = arith.constant 3 : i64
+    func.call @strict_gc_run_for(%full, %hostMemory) : (i1, i64) -> ()
     func.call @strict_gc_sweep_all() : () -> ()
     func.call @strict_gc_pool_runs() : () -> ()
     %keptPages = arith.constant 1024 : i64
@@ -8388,7 +8389,10 @@
     func.call @strict_rc_check() : () -> ()
     cf.br ^swept
   ^swept:
+    %sweepStarted = func.call @strict_thread_seconds() : () -> f64
     func.call @strict_gpu_sweep(%full) : (i1) -> ()
+    %sweepEnded = func.call @strict_thread_seconds() : () -> f64
+    %gpuSwept = arith.subf %sweepEnded, %sweepStarted : f64
     cf.br ^sweeps(%zero : i64)
   ^sweeps(%sweepClass: i64):
     %moreSweeps = arith.cmpi ult, %sweepClass, %classCount : i64
@@ -8433,6 +8437,8 @@
     %threshold = arith.select %isSmall, %smallest, %doubled : i64
     %thresholdSlot = llvm.mlir.addressof @strict_gc_threshold : !llvm.ptr
     llvm.store %threshold, %thresholdSlot : i64, !llvm.ptr
+    %liveSlot = llvm.mlir.addressof @strict_gc_live : !llvm.ptr
+    llvm.store %marked, %liveSlot : i64, !llvm.ptr
     %kept = arith.maxui %marked, %smallest : i64
     %keptSlot = llvm.mlir.addressof @strict_gc_kept : !llvm.ptr
     llvm.store %kept, %keptSlot : i64, !llvm.ptr
@@ -8456,7 +8462,7 @@
   ^done(%pagesReturned: f64):
     func.call @strict_gc_log(%full, %startedAt) : (i1, f64) -> ()
     %collectedFrom = arith.addf %ranBefore, %pagesReturned : f64
-    func.call @strict_gc_watch(%collectedFrom) : (f64) -> ()
+    func.call @strict_gc_watch(%collectedFrom, %full, %gpuSwept) : (f64, i1, f64) -> ()
     %resetMadeSlot = llvm.mlir.addressof @strict_gc_small_made : !llvm.ptr
     %resetVisitedSlot = llvm.mlir.addressof @strict_gc_small_visited : !llvm.ptr
     %resetNone = arith.constant 0 : i64
@@ -8480,6 +8486,15 @@
   llvm.mlir.global internal @strict_gc_time_limit(0.15 : f64) : f64
   llvm.mlir.global internal @strict_gc_target(0.1 : f64) : f64
   llvm.mlir.global internal @strict_gc_targeted(0 : i64) : i64
+  // what the limit's message names: young and full collections, the ones for GPU memory and for host memory, the
+  // seconds of them in the GPU sweep and the seconds the program waited for the GPU, totals since the start; each
+  // bucket of the window keeps the totals from before its first collection (strict_gc_tallied), cause is the index of
+  // the collection running now (2 GPU, 3 host memory, 0 due), live the bytes the last full collection marked
+  llvm.mlir.global internal @strict_gc_tally(dense<0.0> : tensor<6xf64>) : !llvm.array<6 x f64>
+  llvm.mlir.global internal @strict_gc_tallied(dense<0.0> : tensor<30xf64>) : !llvm.array<30 x f64>
+  llvm.mlir.global internal @strict_gc_cause(0 : i64) : i64
+  llvm.mlir.global internal @strict_gc_live(0 : i64) : i64
+  llvm.mlir.global internal constant @strict_gc_explained_text("  in that window: %.0f young and %.0f full collections, %.0f for GPU memory, %.0f for host memory, %.2f s of them in the GPU sweep; the program waited %.2f s for the GPU; heap %lld MB, %lld MB live after the last full collection\0A\00") : !llvm.array<230 x i8>
   llvm.mlir.global internal constant @strict_gc_exceeded("GarbageCollectionExceedsLimit: %.2f of the last %.1f seconds were spent collecting garbage (at most %.0f %%), allocate less in the loops of this program\0A\00") : !llvm.array<154 x i8>
   llvm.mlir.global internal constant @strict_gc_above("GarbageCollectionAboveTarget: %.2f of the last %.1f seconds were spent collecting garbage (below %.0f %% is the goal), allocate less in the loops of this program\0A\00") : !llvm.array<163 x i8>
   llvm.mlir.global internal constant @strict_gc_limit_switch("STRICT_GC_LIMIT\00") : !llvm.array<16 x i8>
@@ -8529,7 +8544,106 @@
   // (strict_gpu_kernel on the web, 35 an image with almost nothing allocated): it says nothing about the program
   llvm.mlir.global internal @strict_gc_housekeeping(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_warned(0 : i64) : i64
-  func.func private @strict_gc_watch(%ranBefore: f64) {
+  func.func private @strict_gc_run_for(%full: i1, %cause: i64) {
+    %causeSlot = llvm.mlir.addressof @strict_gc_cause : !llvm.ptr
+    llvm.store %cause, %causeSlot : i64, !llvm.ptr
+    func.call @strict_gc_run(%full) : (i1) -> ()
+    %due = arith.constant 0 : i64
+    llvm.store %due, %causeSlot : i64, !llvm.ptr
+    return
+  }
+  func.func private @strict_gc_counted_collection(%full: i1, %swept: f64) {
+    %one = arith.constant 1.0 : f64
+    %nothing = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %tally = llvm.mlir.addressof @strict_gc_tally : !llvm.ptr
+    %youngSlot = llvm.getelementptr %tally[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<6 x f64>
+    %fullSlot = llvm.getelementptr %tally[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<6 x f64>
+    %kindSlot = llvm.select %full, %fullSlot, %youngSlot : i1, !llvm.ptr
+    %kinds = llvm.load %kindSlot : !llvm.ptr -> f64
+    %moreKinds = arith.addf %kinds, %one : f64
+    llvm.store %moreKinds, %kindSlot : f64, !llvm.ptr
+    %causeSlot = llvm.mlir.addressof @strict_gc_cause : !llvm.ptr
+    %cause = llvm.load %causeSlot : !llvm.ptr -> i64
+    %hasCause = arith.cmpi ne, %cause, %none : i64
+    %causeAmount = arith.select %hasCause, %one, %nothing : f64
+    %causedSlot = llvm.getelementptr %tally[0, %cause] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<6 x f64>
+    %caused = llvm.load %causedSlot : !llvm.ptr -> f64
+    %moreCaused = arith.addf %caused, %causeAmount : f64
+    llvm.store %moreCaused, %causedSlot : f64, !llvm.ptr
+    %sweptSlot = llvm.getelementptr %tally[0, 4] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<6 x f64>
+    %sweeping = llvm.load %sweptSlot : !llvm.ptr -> f64
+    %moreSwept = arith.addf %sweeping, %swept : f64
+    llvm.store %moreSwept, %sweptSlot : f64, !llvm.ptr
+    return
+  }
+  // the second line of the limit's messages: the totals now less those before the first collection of the oldest
+  // bucket still in the window (oldest is the last stamp before the window)
+  func.func private @strict_gc_explain(%oldest: i64) {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %five = arith.constant 5 : i64
+    %six = arith.constant 6 : i64
+    %latest = arith.constant 9223372036854775807 : i64
+    %stamps = llvm.mlir.addressof @strict_gc_stamps : !llvm.ptr
+    cf.br ^bucket(%none, %latest, %none : i64, i64, i64)
+  ^bucket(%index: i64, %firstStamp: i64, %first: i64):
+    %isDone = arith.cmpi eq, %index, %five : i64
+    cf.cond_br %isDone, ^print, ^compare
+  ^compare:
+    %stampSlot = llvm.getelementptr %stamps[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<5 x i64>
+    %stamp = llvm.load %stampSlot : !llvm.ptr -> i64
+    %isRecent = arith.cmpi sgt, %stamp, %oldest : i64
+    %isEarlier = arith.cmpi slt, %stamp, %firstStamp : i64
+    %isFirst = arith.andi %isRecent, %isEarlier : i1
+    %nextStamp = arith.select %isFirst, %stamp, %firstStamp : i64
+    %nextFirst = arith.select %isFirst, %index, %first : i64
+    %next = arith.addi %index, %one : i64
+    cf.br ^bucket(%next, %nextStamp, %nextFirst : i64, i64, i64)
+  ^print:
+    %tally = llvm.mlir.addressof @strict_gc_tally : !llvm.ptr
+    %tallied = llvm.mlir.addressof @strict_gc_tallied : !llvm.ptr
+    %start = arith.muli %first, %six : i64
+    %before = llvm.getelementptr %tallied[0, %start] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<30 x f64>
+    %values:6 = func.call @strict_gc_window_values(%tally, %before) : (!llvm.ptr, !llvm.ptr) -> (f64, f64, f64, f64, f64, f64)
+    %shift = arith.constant 20 : i64
+    %topSlot = llvm.mlir.addressof @strict_gc_top : !llvm.ptr
+    %top = llvm.load %topSlot : !llvm.ptr -> i64
+    %baseSlot = llvm.mlir.addressof @strict_gc_base : !llvm.ptr
+    %base = llvm.load %baseSlot : !llvm.ptr -> i64
+    %used = arith.subi %top, %base : i64
+    %usedMb = arith.shrui %used, %shift : i64
+    %liveSlot = llvm.mlir.addressof @strict_gc_live : !llvm.ptr
+    %live = llvm.load %liveSlot : !llvm.ptr -> i64
+    %liveMb = arith.shrui %live, %shift : i64
+    %format = llvm.mlir.addressof @strict_gc_explained_text : !llvm.ptr
+    %printed = llvm.call @printf(%format, %values#0, %values#1, %values#2, %values#3, %values#4, %values#5, %usedMb, %liveMb) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, f64, f64, f64, f64, f64, f64, i64, i64) -> i32
+    return
+  }
+  func.func private @strict_gc_window_values(%now: !llvm.ptr, %before: !llvm.ptr) -> (f64, f64, f64, f64, f64, f64) {
+    %youngIndex = arith.constant 0 : i64
+    %fullIndex = arith.constant 1 : i64
+    %forGpuIndex = arith.constant 2 : i64
+    %forHostIndex = arith.constant 3 : i64
+    %sweptIndex = arith.constant 4 : i64
+    %waitedIndex = arith.constant 5 : i64
+    %young = func.call @strict_gc_window_value(%now, %before, %youngIndex) : (!llvm.ptr, !llvm.ptr, i64) -> f64
+    %full = func.call @strict_gc_window_value(%now, %before, %fullIndex) : (!llvm.ptr, !llvm.ptr, i64) -> f64
+    %forGpu = func.call @strict_gc_window_value(%now, %before, %forGpuIndex) : (!llvm.ptr, !llvm.ptr, i64) -> f64
+    %forHost = func.call @strict_gc_window_value(%now, %before, %forHostIndex) : (!llvm.ptr, !llvm.ptr, i64) -> f64
+    %swept = func.call @strict_gc_window_value(%now, %before, %sweptIndex) : (!llvm.ptr, !llvm.ptr, i64) -> f64
+    %waited = func.call @strict_gc_window_value(%now, %before, %waitedIndex) : (!llvm.ptr, !llvm.ptr, i64) -> f64
+    return %young, %full, %forGpu, %forHost, %swept, %waited : f64, f64, f64, f64, f64, f64
+  }
+  func.func private @strict_gc_window_value(%now: !llvm.ptr, %before: !llvm.ptr, %index: i64) -> f64 {
+    %nowSlot = llvm.getelementptr %now[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %beforeSlot = llvm.getelementptr %before[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %total = llvm.load %nowSlot : !llvm.ptr -> f64
+    %earlier = llvm.load %beforeSlot : !llvm.ptr -> f64
+    %difference = arith.subf %total, %earlier : f64
+    return %difference : f64
+  }
+  func.func private @strict_gc_watch(%ranBefore: f64, %full: i1, %swept: f64) {
     %housekeepingSlot = llvm.mlir.addressof @strict_gc_housekeeping : !llvm.ptr
     %housekeeping = llvm.load %housekeepingSlot : !llvm.ptr -> i64
     %noHousekeeping = arith.constant 0 : i64
@@ -8558,6 +8672,18 @@
     %secondSlot = llvm.getelementptr %seconds[0, %slot] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<5 x f64>
     %stamp = llvm.load %stampSlot : !llvm.ptr -> i64
     %sameSecond = arith.cmpi eq, %stamp, %second : i64
+    cf.cond_br %sameSecond, ^tally, ^snapshot
+  ^snapshot:
+    %six = arith.constant 6 : i64
+    %snapshotIndex = arith.muli %slot, %six : i64
+    %tallied = llvm.mlir.addressof @strict_gc_tallied : !llvm.ptr
+    %snapshotSlot = llvm.getelementptr %tallied[0, %snapshotIndex] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<30 x f64>
+    %tally = llvm.mlir.addressof @strict_gc_tally : !llvm.ptr
+    %tallyBytes = arith.constant 48 : i64
+    %snapshotted = llvm.call @memcpy(%snapshotSlot, %tally, %tallyBytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    cf.br ^tally
+  ^tally:
+    func.call @strict_gc_counted_collection(%full, %swept) : (i1, f64) -> ()
     %earlier = llvm.load %secondSlot : !llvm.ptr -> f64
     %nothing = arith.constant 0.0 : f64
     %kept = arith.select %sameSecond, %earlier, %nothing : f64
@@ -8609,6 +8735,7 @@
     %aboveFormat = llvm.mlir.addressof @strict_gc_above : !llvm.ptr
     %goalPercent = arith.mulf %target, %hundredth : f64
     %aboveShown = llvm.call @printf(%aboveFormat, %collecting, %window, %goalPercent) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, f64, f64, f64) -> i32
+    func.call @strict_gc_explain(%oldest) : (i64) -> ()
     cf.br ^done
   ^fail:
     %message = llvm.mlir.addressof @strict_gc_exceeded : !llvm.ptr
@@ -8619,6 +8746,7 @@
     cf.cond_br %isWatching, ^stop, ^warn
   ^stop:
     %printed = llvm.call @printf(%message, %collecting, %window, %percent) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, f64, f64, f64) -> i32
+    func.call @strict_gc_explain(%oldest) : (i64) -> ()
     llvm.call @strict_crash_log(%message) : (!llvm.ptr) -> ()
     %code = arith.constant 1 : i32
     llvm.call @exit(%code) : (i32) -> ()
@@ -8632,6 +8760,7 @@
     %once = arith.constant 1 : i64
     llvm.store %once, %warnedSlot : i64, !llvm.ptr
     %warning = llvm.call @printf(%message, %collecting, %window, %percent) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, f64, f64, f64) -> i32
+    func.call @strict_gc_explain(%oldest) : (i64) -> ()
     cf.br ^done
   ^done:
     return
@@ -16471,6 +16600,23 @@
   }
   // bytes of device into host once event has passed, on the download stream (the launches after it go on)
   func.func private @strict_gpu_get_after(%host: !llvm.ptr, %device: i64, %bytes: i64, %event: !llvm.ptr) -> i1 {
+    %started = func.call @strict_clock() : () -> f64
+    %got = func.call @strict_gpu_got_after(%host, %device, %bytes, %event) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i1
+    func.call @strict_gpu_waited(%started) : (f64) -> ()
+    return %got : i1
+  }
+  // the program thread waits for the GPU in downloads and synchronizations, the limit's message names how long
+  func.func private @strict_gpu_waited(%started: f64) {
+    %ended = func.call @strict_clock() : () -> f64
+    %seconds = arith.subf %ended, %started : f64
+    %tally = llvm.mlir.addressof @strict_gc_tally : !llvm.ptr
+    %waitedSlot = llvm.getelementptr %tally[0, 5] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<6 x f64>
+    %before = llvm.load %waitedSlot : !llvm.ptr -> f64
+    %after = arith.addf %before, %seconds : f64
+    llvm.store %after, %waitedSlot : f64, !llvm.ptr
+    return
+  }
+  func.func private @strict_gpu_got_after(%host: !llvm.ptr, %device: i64, %bytes: i64, %event: !llvm.ptr) -> i1 {
     %zero32 = arith.constant 0 : i32
     %none = arith.constant 0 : i64
     %waitIndex = arith.constant 28 : i64
@@ -16502,6 +16648,12 @@
     return %done : i1
   }
   func.func private @strict_gpu_get(%host: !llvm.ptr, %device: i64, %bytes: i64) -> i1 {
+    %started = func.call @strict_clock() : () -> f64
+    %got = func.call @strict_gpu_got(%host, %device, %bytes) : (!llvm.ptr, i64, i64) -> i1
+    func.call @strict_gpu_waited(%started) : (f64) -> ()
+    return %got : i1
+  }
+  func.func private @strict_gpu_got(%host: !llvm.ptr, %device: i64, %bytes: i64) -> i1 {
     %zero32 = arith.constant 0 : i32
     %getIndex = arith.constant 9 : i64
     %get = func.call @strict_gpu_call(%getIndex) : (i64) -> !llvm.ptr
@@ -17344,7 +17496,8 @@
     %due = arith.ori %crowded, %minor : i1
     cf.cond_br %due, ^collect, ^carve
   ^collect:
-    func.call @strict_gc_run(%crowded) : (i1) -> ()
+    %gpuMemory = arith.constant 2 : i64
+    func.call @strict_gc_run_for(%crowded, %gpuMemory) : (i1, i64) -> ()
     %afterCount = llvm.load %countSlot : !llvm.ptr -> i64
     %freed = arith.cmpi sgt, %afterCount, %none : i64
     cf.cond_br %freed, ^again, ^carve
@@ -17389,7 +17542,8 @@
     cf.cond_br %collecting, ^ownCollect(%markedResiding : i1), ^own
   ^ownCollect(%fully: i1):
     %collectStarted = func.call @strict_clock() : () -> f64
-    func.call @strict_gc_run(%fully) : (i1) -> ()
+    %ownMemory = arith.constant 2 : i64
+    func.call @strict_gc_run_for(%fully, %ownMemory) : (i1, i64) -> ()
     %restarted = arith.select %fully, %none, %ownSince : i64
     llvm.store %restarted, %ownSinceSlot : i64, !llvm.ptr
     %collectedCount = llvm.load %countSlot : !llvm.ptr -> i64
@@ -18030,7 +18184,8 @@
   ^collect:
     %availableBefore = func.call @strict_gpu_recoverable() : () -> i64
     %collectStarted = func.call @strict_clock() : () -> f64
-    func.call @strict_gc_run(%full) : (i1) -> ()
+    %gpuMemory = arith.constant 2 : i64
+    func.call @strict_gc_run_for(%full, %gpuMemory) : (i1, i64) -> ()
     %availableAfter = func.call @strict_gpu_recoverable() : () -> i64
     %gave = arith.cmpi ugt, %availableAfter, %availableBefore : i64
     %spares = llvm.mlir.addressof @strict_gpu_spares : !llvm.ptr
@@ -18806,7 +18961,8 @@
     %crowded = arith.cmpi ugt, %after, %limit : i64
     cf.cond_br %crowded, ^collect, ^count
   ^collect:
-    func.call @strict_gc_run(%full) : (i1) -> ()
+    %gpuMemory = arith.constant 2 : i64
+    func.call @strict_gc_run_for(%full, %gpuMemory) : (i1, i64) -> ()
     %free = func.call @strict_gpu_free_memory() : () -> i64
     %half = arith.shrui %free, %one : i64
     llvm.store %half, %limitSlot : i64, !llvm.ptr
@@ -19875,9 +20031,11 @@
     return
   }
   func.func private @strict_gpu_synchronize() {
+    %started = func.call @strict_clock() : () -> f64
     %synchronizeIndex = arith.constant 11 : i64
     %synchronize = func.call @strict_gpu_call(%synchronizeIndex) : (i64) -> !llvm.ptr
     %result = llvm.call %synchronize() : !llvm.ptr, () -> i32
+    func.call @strict_gpu_waited(%started) : (f64) -> ()
     return
   }
   // the next spilled rows go up on a copy stream of their own while the launches before their first use run: copy
