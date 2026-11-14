@@ -1,0 +1,66 @@
+has linker Linker
+constant Sample = LinkCompile(Linker.Sample)
+constant Housed = LinkCompile(Linker.Housed)
+constant Adding = TypeEntry("Strict/Logger", List(MemberEntry), List(MethodEntry) + MethodEntry.Logged)
+LinkedType(type Text, methods Texts, compiled TypeEntry) TypeEntry slow
+	Sample.LinkedType("Strict/Logger", List(Text), Sample.Compiling("Strict/Logger", List(Text))).Name is "Strict/Logger"
+	Sample.LinkedType("Strict/Bytecode/Crc", List(Text), Sample.Compiling("Strict/Bytecode/Crc", List(Text))).Name is "Crc"
+	Housed.Homed("Strict/Logger", List(Text) + "Missing").methods.Length is 0
+	Housed.Homed("Strict/Bytecode/Logged", ("Run")).Name is "Logged"
+	let homed = Assembled(type, methods, compiled)
+	if Linker.IsChecking is false
+		return homed
+	let checked = Compiled(type, methods)
+	if BinaryLinks.User.Picked(checked, methods) is not BinaryLinks.User.Picked(homed, methods)
+		Logger.Log("LinkCheckFailed: " + type + " " + Text.Combine(methods, ", "))
+	checked
+Own(type Text) TypeEntry
+	Housed.Own("Strict/Logger") is TypeEntry.HelloLogger
+	Sample.Own("Strict/Logger").Name is ""
+	type is in linker.Homes then linker.Homes(type) else BinaryLinks.Unknown
+Absent(type Text, methods Texts) Texts
+	Sample.Absent("Strict/Logger", List(Text)).Length is 0
+	Sample.Absent("Strict/Logger", List(Text) + "Log") is ("Log")
+	BinaryLinks.User.Compilable(Own(type), methods, linker.main.inference.types.MethodsOf(TypeEntry.ShortName(type)))
+IsCompiled(type Text, methods Texts) Boolean
+	Sample.IsCompiled("Strict/Logger", List(Text) + "from")
+	Housed.IsCompiled("Strict/Logger", List(Text))
+	Housed.IsCompiled("Strict/Logger", List(Text) + "Log")
+	Housed.IsCompiled("Strict/Logger", List(Text) + "Run") is false
+	(methods.Length is 0) or (Own(type).Name is "") or (Absent(type, methods).Length > 0)
+Compiling(type Text, methods Texts) TypeEntry slow
+	Sample.Compiling("Strict/Bytecode/Crc", List(Text)).Name is "Crc"
+	Housed.Compiling("Strict/Logger", List(Text) + "Run") is BinaryLinks.Unknown
+	IsCompiled(type, methods) then Compiled(type, Absent(type, methods)) else BinaryLinks.Unknown
+Assembled(type Text, methods Texts, compiled TypeEntry) TypeEntry
+	Housed.Assembled("Strict/Logger", List(Text) + "Run", BinaryLinks.Unknown).methods.Length is 1
+	Housed.Assembled("Strict/Logger", List(Text), Linker.Go) is Linker.Go
+	Housed.Assembled("Strict/Logger", ("Run", "Add"), Adding).methods.Length is 2
+	Housed.Assembled("Strict/Logger", List(Text) + "Run", Linker.Reading).members is TypeEntry.HelloLogger.members
+	Sample.Assembled("Strict/Logger", List(Text) + "Run", Linker.Reading).members is Linker.Reading.members
+	if methods.Length is 0
+		return compiled
+	let own = Own(type)
+	let whole = TypeEntry(own, methods = own.methods + compiled.methods)
+	let members = own.Name is "" then compiled.members else own.members
+	TypeEntry(linker.main.Local(type), members, BinaryLinks.User.Picked(whole, methods))
+Homed(type Text, methods Texts) TypeEntry slow
+	Housed.Homed("Strict/Logger", ("Run")).Name is "Strict/Logger"
+	Sample.Homed("Strict/Logger", ("Log", "Reset")).methods.First.Name is "Log"
+	Assembled(type, methods, Compiling(type, methods))
+Compiled(type Text, methods Texts) TypeEntry slow
+	Sample.Compiled("Strict/Bytecode/Crc", List(Text)).methods.Length is 0
+	Housed.Homed("Strict/Logger", ("Run", "from")).methods.Length is 1
+	Housed.Homed("Strict/Logger", List(Text) + "from").Name is "Strict/Logger"
+	Generated(type, Prepared(type, methods), methods)
+Prepared(type Text, methods Texts) Texts slow
+	Sample.Prepared("Strict/Bytecode/Crc", List(Text)).Length > 0
+	let folder = Path(linker.SourcePath(type)).PathOnly.text
+	let source = Fusion(File(linker.SourcePath(type)).ReadLines, folder).Fused
+	let generator = Automatic(source, TypeEntry.ShortName(type), Instantiation(linker.main.inference.types))
+	let automatic = generator.Lines(methods) + OptionsCodegen(generator, folder).Lines(methods)
+	MemberAverage(type, linker.main.inference.types).Replaced(automatic)
+Generated(type Text, lines Texts, methods Texts) TypeEntry
+	Sample.Generated("Strict/Logger", ("Run", "\t1"), List(Text)).Name is "Strict/Logger"
+	let generator = TypeCodegen(type, lines, linker.main.inference, linker.main.typeNames)
+	TypeEntry(generator.Selected(methods), Name = linker.main.Local(type))
