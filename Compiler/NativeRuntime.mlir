@@ -19101,7 +19101,8 @@
   // decode on a 3080 once) and ended with GarbageCollectionExceedsLimit on the 4090; an allocation that still fails
   // collects in strict_gpu_starved. The end of the last one that found nothing and when the next may run, also for the
   // budget check of strict_gpu_allocated: next to a model bigger than the GPU it collected for each block without
-  // finding any (a 19.5 GB heap, 40 ms each, 19 in a row ended Qwen3-Coder 30B with GarbageCollectionExceedsLimit)
+  // finding any (a 19.5 GB heap, 40 ms each, 19 in a row ended Qwen3-Coder 30B with GarbageCollectionExceedsLimit);
+  // every collection for GPU memory waits for it, and one that found something does not end a wait already set
   llvm.mlir.global internal @strict_gpu_own_wait(dense<0.0> : tensor<2xf64>) : !llvm.array<2 x f64>
   func.func private @strict_gpu_own_collectable() -> i1 {
     %wait = llvm.mlir.addressof @strict_gpu_own_wait : !llvm.ptr
@@ -19112,7 +19113,6 @@
     return %due : i1
   }
   func.func private @strict_gpu_own_collected(%started: f64, %reusable: i1) {
-    %zero = arith.constant 0.0 : f64
     %ten = arith.constant 10.0 : f64
     %wait = llvm.mlir.addressof @strict_gpu_own_wait : !llvm.ptr
     %untilSlot = llvm.getelementptr %wait[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<2 x f64>
@@ -19120,7 +19120,9 @@
     %took = arith.subf %ended, %started : f64
     %pause = arith.mulf %took, %ten : f64
     %later = arith.addf %ended, %pause : f64
-    %until = arith.select %reusable, %zero, %later : f64
+    %before = llvm.load %untilSlot : !llvm.ptr -> f64
+    %paused = arith.maximumf %before, %later : f64
+    %until = arith.select %reusable, %before, %paused : f64
     llvm.store %ended, %wait : f64, !llvm.ptr
     llvm.store %until, %untilSlot : f64, !llvm.ptr
     return
@@ -19166,10 +19168,15 @@
     %due = arith.ori %crowded, %minor : i1
     cf.cond_br %due, ^collect, ^carve
   ^collect:
+    %dueCollect = func.call @strict_gpu_own_collectable() : () -> i1
+    cf.cond_br %dueCollect, ^collecting, ^carve
+  ^collecting:
+    %dueStarted = func.call @strict_clock() : () -> f64
     %gpuMemory = arith.constant 2 : i64
     func.call @strict_gc_run_for(%crowded, %gpuMemory) : (i1, i64) -> ()
     %afterCount = llvm.load %countSlot : !llvm.ptr -> i64
     %freed = arith.cmpi sgt, %afterCount, %none : i64
+    func.call @strict_gpu_own_collected(%dueStarted, %freed) : (f64, i1) -> ()
     cf.cond_br %freed, ^again, ^carve
   ^again:
     %again = func.call @strict_gpu_obtain(%class) : (i64) -> i64
@@ -19833,7 +19840,8 @@
     return %total : i64
   }
   // drain and evict pinned rows first; only run a full collection before trimming pool blocks and cold host copies,
-  // mayWait: only the budget is short, the driver did not refuse, a last collection that found nothing makes it wait
+  // also when the driver refused (mayWait false) a last collection that found nothing makes it wait: H3 extends with 23 GB
+  // live ran one for every refused allocation, freed nothing and ended with GarbageCollectionExceedsLimit
   func.func private @strict_gpu_starved(%needed: i64, %mayWait: i1) -> i1 {
     %none = arith.constant 0 : i64
     func.call @strict_rc_reclaim() : () -> ()
@@ -19847,9 +19855,7 @@
     cf.cond_br %restored, ^enough, ^trim
   ^trim:
     %full = arith.constant true
-    %mayCollect = func.call @strict_gpu_own_collectable() : () -> i1
-    %mustCollect = arith.xori %mayWait, %full : i1
-    %collecting = arith.ori %mayCollect, %mustCollect : i1
+    %collecting = func.call @strict_gpu_own_collectable() : () -> i1
     cf.cond_br %collecting, ^collect, ^unspare
   ^collect:
     %availableBefore = func.call @strict_gpu_recoverable() : () -> i64
@@ -20633,10 +20639,18 @@
     %limit = arith.maxui %measured, %gigabyte : i64
     %after = arith.addi %since, %bytes : i64
     %crowded = arith.cmpi ugt, %after, %limit : i64
-    cf.cond_br %crowded, ^collect, ^count
+    cf.cond_br %crowded, ^due, ^count
+  ^due:
+    %mayCollect = func.call @strict_gpu_own_collectable() : () -> i1
+    cf.cond_br %mayCollect, ^collect, ^count
   ^collect:
+    %availableBefore = func.call @strict_gpu_recoverable() : () -> i64
+    %collectStarted = func.call @strict_clock() : () -> f64
     %gpuMemory = arith.constant 2 : i64
     func.call @strict_gc_run_for(%full, %gpuMemory) : (i1, i64) -> ()
+    %availableAfter = func.call @strict_gpu_recoverable() : () -> i64
+    %gave = arith.cmpi ugt, %availableAfter, %availableBefore : i64
+    func.call @strict_gpu_own_collected(%collectStarted, %gave) : (f64, i1) -> ()
     %free = func.call @strict_gpu_free_memory() : () -> i64
     %half = arith.shrui %free, %one : i64
     llvm.store %half, %limitSlot : i64, !llvm.ptr
