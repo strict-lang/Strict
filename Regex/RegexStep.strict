@@ -1,0 +1,30 @@
+has Kind Number
+has ranges Numbers = List(Number)
+has isNegated Boolean = false
+has First Number = 0
+has Second Number = 0
+constant Consume = 0
+constant Split = 1
+constant Jump = 2
+constant Save = 3
+constant Match = 4
+constant Begin = 5
+constant End = 6
+constant Letters = RegexStep(Consume, (97, 99))
+constant NotNewLine = RegexStep(Consume, (10, 10), true)
+Accepts(code Number) Boolean
+	Letters.Accepts(98)
+	Letters.Accepts(100) is false
+	Letters.Accepts(96) is false
+	NotNewLine.Accepts(97)
+	NotNewLine.Accepts(10) is false
+	RegexStep(Consume, (97, 97, 100, 102)).Accepts(101)
+	RegexStep(Consume, (97, 97, 100, 102)).Accepts(98) is false
+	for Range(0, ranges.Length / 2)
+		if (code >= ranges(value * 2)) and (code <= ranges(value * 2 + 1))
+			return isNegated is false
+	isNegated
+Literal(code Number) RegexStep
+	RegexStep.Literal(97).Accepts(97)
+	RegexStep.Literal(97).Accepts(98) is false
+	RegexStep(Consume, (code, code))

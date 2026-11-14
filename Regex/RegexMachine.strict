@@ -1,0 +1,95 @@
+has steps List(RegexStep)
+has text Text
+constant Plus = RegexMachine(RegexParser("a+b").Parsed, "xaab")
+constant Grouped = RegexMachine(RegexParser("(a|b)c").Parsed, "zbc")
+Found(start Number) Numbers
+	Plus.Found(0) is (1, 4)
+	Grouped.Found(0) is (1, 3, 1, 2)
+	mutable threads = List(Numbers)
+	mutable matched = List(Number)
+	for Range(start, text.Length + 1)
+		let current = matched.Length is 0 then Added(threads, Fresh, value) else threads
+		let cut = MatchIndex(current)
+		matched = cut < current.Length then current(cut).Slice(1, current(cut).Length - 1) else matched
+		threads = Advanced(current.Slice(0, cut), value)
+		if (threads.Length is 0) and (matched.Length > 0)
+			return matched
+	List(Number)
+IsFound(start Number) Boolean
+	RegexMachine(RegexParser("abc|a|d").Parsed, "abd").Found(0) is (0, 1)
+	RegexMachine(RegexParser("ab|a").Parsed, "ab").Found(0) is (0, 2)
+	RegexMachine(RegexParser("a+?").Parsed, "aaa").Found(0) is (0, 1)
+	RegexMachine(RegexParser("a*b").Parsed, "aab").Found(0) is (0, 3)
+	RegexMachine(RegexParser("^a").Parsed, "ab").IsFound(0)
+	RegexMachine(RegexParser("^b").Parsed, "ab").IsFound(0) is false
+	RegexMachine(RegexParser("a$").Parsed, "ab").IsFound(0) is false
+	RegexMachine(RegexParser("b$").Parsed, "ab").Found(0) is (1, 2)
+	RegexMachine(RegexParser("").Parsed, "x").Found(0) is (0, 0)
+	Plus.Found(2) is (2, 4) and (Plus.IsFound(4) is false)
+	Found(start).Length > 0
+Fresh Numbers
+	Plus.Fresh is (0, -1, -1)
+	Grouped.Fresh.Length is 5
+	mutable fresh = List(Number) + 0
+	for Slots
+		fresh = fresh + -1
+	fresh
+Slots Number
+	Plus.Slots is 2
+	Grouped.Slots is 4
+	RegexMachine(RegexParser("a|bcdef").Parsed, "").Slots is 2
+	mutable slots = 0
+	for steps
+		if (value.Kind is RegexStep.Save) and (value.First >= slots)
+			slots = value.First + 1
+	slots
+MatchIndex(threads List(Numbers)) Number
+	Plus.MatchIndex(List(Numbers) + (5, 0, 4)) is 0
+	Plus.MatchIndex(List(Numbers) + (1, -1, -1)) is 1
+	RegexMachine(RegexParser("a*").Parsed, "aa").Found(0) is (0, 2)
+	for threads
+		if steps(value(0)).Kind is RegexStep.Match
+			return index
+	threads.Length
+Advanced(threads List(Numbers), at Number) List(Numbers)
+	Plus.Advanced(List(Numbers) + (1, 1, -1), 1).Length is 3
+	Plus.Advanced(List(Numbers) + (1, 1, -1), 0).Length is 0
+	Plus.Advanced(List(Numbers) + (1, 1, -1), 4).Length is 0
+	mutable next = List(Numbers)
+	if at is text.Length
+		return next
+	let code = text(at).number
+	for threads
+		if steps(value(0)).Accepts(code)
+			next = Added(next, Moved(value, value(0) + 1), at + 1)
+	next
+Added(threads List(Numbers), thread Numbers, at Number) List(Numbers)
+	Plus.Added(List(Numbers), Plus.Fresh, 0).Length is 2
+	Plus.Added(List(Numbers) + (0, -1, -1), Plus.Fresh, 0).Length is 1
+	Has(threads, thread(0)) then threads else Followed(threads + thread, thread, at)
+Followed(listed List(Numbers), thread Numbers, at Number) List(Numbers)
+	Plus.Followed(List(Numbers), (2, 1, -1), 2).Length is 2
+	RegexMachine(RegexParser("^a").Parsed, "ba").Followed(List(Numbers), (1, 1, -1), 1).Length is 0
+	let step = steps(thread(0))
+	if step.Kind is RegexStep.Split
+		return Added(Added(listed, Moved(thread, thread(0) + step.First), at), Moved(thread, thread(0) + step.Second), at)
+	if step.Kind is RegexStep.Save
+		return Added(listed, Moved(Stored(thread, step.First, at), thread(0) + 1), at)
+	let isBegun = (step.Kind is RegexStep.Begin) and (at is 0)
+	let isEnded = (step.Kind is RegexStep.End) and (at is text.Length)
+	let target = step.Kind is RegexStep.Jump then thread(0) + step.First else thread(0) + 1
+	(step.Kind is RegexStep.Jump) or isBegun or isEnded then Added(listed, Moved(thread, target), at) else listed
+Moved(thread Numbers, step Number) Numbers
+	Plus.Moved((1, 7), 4) is (4, 7)
+	(List(Number) + step) + thread.Slice(1, thread.Length - 1)
+Stored(thread Numbers, slot Number, at Number) Numbers
+	Plus.Stored((1, -1, -1), 1, 9) is (1, -1, 9)
+	for thread
+		index is slot + 1 then at else value
+Has(threads List(Numbers), step Number) Boolean
+	Plus.Has(List(Numbers) + (1, 2), 1)
+	Plus.Has(List(Numbers) + (1, 2), 2) is false
+	for threads
+		if value(0) is step
+			return true
+	false

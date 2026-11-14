@@ -1,0 +1,79 @@
+has pattern Text
+constant Decimal = Regex("-?\\d+(\\.\\d+)?")
+constant Pair = Regex("(\\w+)=(\\w*)")
+IsMatch(text Text) Boolean
+	Decimal.IsMatch("x = 3.5;")
+	Decimal.IsMatch("x = y") is false
+	Regex("^b").IsMatch("ab") is false
+	Regex("b$").IsMatch("ab")
+	Regex("(").IsMatch("a") is Error
+	Regex("(a*)*b").IsMatch("aaaaaaaaaaaaaaaaaaaa") is false
+	Machine(text).IsFound(0)
+Find(text Text) Text
+	Decimal.Find("x = -3.5;") is "-3.5"
+	Regex("a+?").Find("aaa") is "a"
+	Regex("").Find("x") is ""
+	Regex("colou?r").Find("no match") is ""
+	let found = Machine(text).Found(0)
+	found.Length is 0 then "" else Captured(text, found, 0)
+FindAll(text Text) Texts
+	Decimal.FindAll("1, 22 and 3.5") is ("1", "22", "3.5")
+	Regex("x*").FindAll("ab").Length is 3
+	Regex("a").FindAll("aa") is ("a", "a")
+	Regex("a*").FindAll("baaa") is ("", "aaa")
+	for Spans(text)
+		Captured(text, value, 0)
+Groups(text Text) Texts
+	Pair.Groups("set name=Strict") is ("name", "Strict")
+	Regex("(a)|(b)").Groups("b") is ("", "b")
+	Pair.Groups("nothing").Length is 0
+	let found = Machine(text).Found(0)
+	if found.Length is 0
+		return List(Text)
+	for Range(1, found.Length / 2)
+		Captured(text, found, value)
+Replace(text Text, replacement Text) Text
+	Decimal.Replace("a1b22", "#") is "a#b#"
+	Pair.Replace("a=1, b=2", "$2=$1") is "1=a, 2=b"
+	Regex("x").Replace("abc", "y") is "abc"
+	mutable replaced = ""
+	mutable last = 0
+	for Spans(text)
+		replaced = replaced + text.Substring(last, value(0) - last) + Expanded(replacement, text, value)
+		last = value(1)
+	replaced + text.Substring(last, text.Length - last)
+Split(text Text) Texts
+	Regex(",\\s*").Split("a, b,c") is ("a", "b", "c")
+	Regex(",").Split("a,") is ("a", "")
+	Regex(",").Split("abc") is ("abc")
+	mutable pieces = List(Text)
+	mutable last = 0
+	for Spans(text)
+		pieces = pieces + text.Substring(last, value(0) - last)
+		last = value(1)
+	pieces + text.Substring(last, text.Length - last)
+Spans(text Text) List(Numbers)
+	Decimal.Spans("1 22").Length is 2
+	Decimal.Spans("1 22")(1) is (2, 4, -1, -1)
+	let machine = Machine(text)
+	mutable spans = List(Numbers)
+	mutable found = machine.Found(0)
+	for as long as found.Length > 0
+		spans = spans + found
+		let after = found(1) > found(0) then found(1) else found(1) + 1
+		found = found(1) < text.Length then machine.Found(after) else List(Number)
+	spans
+Machine(text Text) RegexMachine
+	Regex("a").Machine("b").text is "b"
+	RegexMachine(RegexParser(pattern).Parsed, text)
+Captured(text Text, found Numbers, group Number) Text
+	Pair.Captured("a=b", (0, 3, 0, 1, 2, 3), 2) is "b"
+	Pair.Captured("a=b", (0, 3, -1, -1), 1) is ""
+	text.Substring(found(group * 2), found(group * 2 + 1) - found(group * 2))
+Expanded(replacement Text, text Text, found Numbers) Text
+	Pair.Expanded("[$1]", "a=b", (0, 3, 0, 1, 2, 3)) is "[a]"
+	Pair.Expanded("$0", "a=b", (0, 3, 0, 1, 2, 3)) is "a=b"
+	mutable expanded = replacement
+	for Range(0, found.Length / 2).Reverse
+		expanded = expanded.Replace("$" + value, Captured(text, found, value))
+	expanded

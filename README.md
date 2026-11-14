@@ -30,7 +30,7 @@ This repository is the compiler, the runtime and the standard library in one. An
 - Time, Duration, PseudoRandom (deterministic, seeded), MovingWindow, PriorityQueue
 - traits like Any (every type is Any), App, Generic, Mutable, File, Directory, Realtime (a game: its Presented ends a frame, the collector cleans up then)
 
-More specific types live in packages like `Math`, `ImageProcessing`, `NeuralNetworks`, `MachineLearning`, `Compression`, `Json`, `Xml` and `Examples`, each with a short README. Strict is not a general purpose language: websites, databases or complex apps belong into external code, which Strict calls through native packages (C) or which calls Strict through generated libraries (C, C#).
+More specific types live in packages like `Math`, `ImageProcessing`, `NeuralNetworks`, `MachineLearning`, `Compression`, `Json`, `Xml`, `Regex` and `Examples`, each with a short README. Strict is not a general purpose language: websites, databases or complex apps belong into external code, which Strict calls through native packages (C) or which calls Strict through generated libraries (C, C#).
 
 An optional value uses `or None`, it can be checked but never assigned:
 ```
