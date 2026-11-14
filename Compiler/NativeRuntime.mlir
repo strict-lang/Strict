@@ -90,11 +90,12 @@
   // folder listings by folder and pattern, kept while the write time of the folder is unchanged and older than 2 s
   // (the write time granularity of some file systems): a resident strict server lists its project tree only once
   llvm.mlir.global internal @strict_listing_entries(0.0 : f64) : f64
-  llvm.mlir.global internal constant @strict_listing_separator("|\00") : !llvm.array<2 x i8>
-  llvm.mlir.global internal constant @strict_listing_folders("|folders\00") : !llvm.array<9 x i8>
+  llvm.mlir.global internal constant @strict_listing_separator("\01\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00|\00") : !llvm.array<18 x i8>
+  llvm.mlir.global internal constant @strict_listing_folders("\08\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00|folders\00") : !llvm.array<25 x i8>
   func.func private @strict_directory_files(%self: f64, %path: f64, %pattern: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
-    %separatorText = llvm.mlir.addressof @strict_listing_separator : !llvm.ptr
+    %separatorTextLengths = llvm.mlir.addressof @strict_listing_separator : !llvm.ptr
+    %separatorText = llvm.getelementptr %separatorTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %separator = func.call @strict_bits(%separatorText) : (!llvm.ptr) -> f64
     %isUnset = arith.cmpf oeq, %pattern, %zero : f64
     %safe = arith.select %isUnset, %separator, %pattern : f64
@@ -113,7 +114,8 @@
   }
   func.func private @strict_directory_directories(%self: f64, %path: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
-    %foldersText = llvm.mlir.addressof @strict_listing_folders : !llvm.ptr
+    %foldersTextLengths = llvm.mlir.addressof @strict_listing_folders : !llvm.ptr
+    %foldersText = llvm.getelementptr %foldersTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %folders = func.call @strict_bits(%foldersText) : (!llvm.ptr) -> f64
     %key = func.call @strict_text_concat(%path, %folders) : (f64, f64) -> f64
     %stamp = func.call @strict_listing_stamp(%path) : (f64) -> f64
@@ -129,7 +131,8 @@
   }
   // Memo of the resident strict server: texts kept for a kind of file while the file is unchanged, see Memo.strict
   func.func private @strict_memo_key(%file: f64, %kind: f64) -> f64 {
-    %separatorText = llvm.mlir.addressof @strict_listing_separator : !llvm.ptr
+    %separatorTextLengths = llvm.mlir.addressof @strict_listing_separator : !llvm.ptr
+    %separatorText = llvm.getelementptr %separatorTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %separator = func.call @strict_bits(%separatorText) : (!llvm.ptr) -> f64
     %joined = func.call @strict_text_concat(%file, %separator) : (f64, f64) -> f64
     %key = func.call @strict_text_concat(%joined, %kind) : (f64, f64) -> f64
@@ -158,7 +161,7 @@
   ^done(%result: f64):
     return %result : f64
   }
-  llvm.mlir.global internal constant @strict_memo_kindless("Memo needs a kind for \00") : !llvm.array<23 x i8>
+  llvm.mlir.global internal constant @strict_memo_kindless("\16\00\00\00\00\00\00\00\16\00\00\00\00\00\00\00Memo needs a kind for \00") : !llvm.array<39 x i8>
   // like Memo.Kept: an Error without a kind, otherwise the texts are kept while the file stays unchanged
   func.func private @strict_memo_kept(%self: f64, %file: f64, %kind: f64, %texts: f64) -> f64 {
     %none = arith.constant 0 : i64
@@ -167,7 +170,8 @@
     %isKindless = arith.cmpi eq, %kindLength, %none : i64
     cf.cond_br %isKindless, ^kindless, ^keep
   ^kindless:
-    %prefixText = llvm.mlir.addressof @strict_memo_kindless : !llvm.ptr
+    %prefixTextLengths = llvm.mlir.addressof @strict_memo_kindless : !llvm.ptr
+    %prefixText = llvm.getelementptr %prefixTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %prefix = func.call @strict_bits(%prefixText) : (!llvm.ptr) -> f64
     %message = func.call @strict_text_concat(%prefix, %file) : (f64, f64) -> f64
     %error = func.call @strict_error_text(%message) : (f64) -> f64
@@ -329,23 +333,22 @@
   ^done(%result: i64):
     return %result : i64
   }
-  llvm.mlir.global internal constant @strict_time_format("%Y-%m-%d %H:%M:%S\00") : !llvm.array<18 x i8>
+  llvm.mlir.global internal constant @strict_time_format("\11\00\00\00\00\00\00\00\11\00\00\00\00\00\00\00%Y-%m-%d %H:%M:%S\00") : !llvm.array<34 x i8>
   func.func private @strict_time_text(%local: !llvm.ptr) -> f64 {
     %null = llvm.mlir.zero : !llvm.ptr
     %invalid = llvm.icmp "eq" %local, %null : !llvm.ptr
     cf.cond_br %invalid, ^empty, ^format
   ^format:
     %size = arith.constant 32 : i64
-    %text = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
-    %pattern = llvm.mlir.addressof @strict_time_format : !llvm.ptr
+    %text = func.call @strict_text_room(%size) : (i64) -> !llvm.ptr
+    %patternLengths = llvm.mlir.addressof @strict_time_format : !llvm.ptr
+    %pattern = llvm.getelementptr %patternLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %written = llvm.call @strftime(%text, %size, %pattern, %local) : (!llvm.ptr, i64, !llvm.ptr, !llvm.ptr) -> i64
-    %end = llvm.getelementptr %text[%written] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %terminator = arith.constant 0 : i8
-    llvm.store %terminator, %end : i8, !llvm.ptr
-    %result = func.call @strict_bits(%text) : (!llvm.ptr) -> f64
+    %result = func.call @strict_text_made(%text, %written) : (!llvm.ptr, i64) -> f64
     return %result : f64
   ^empty:
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %emptyTextLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
+    %emptyText = llvm.getelementptr %emptyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %nothing = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
     return %nothing : f64
   }
@@ -407,19 +410,19 @@
   llvm.mlir.global internal @strict_gc_dirty(dense<0> : tensor<3xi64>) : !llvm.array<3 x i64>
   llvm.mlir.global internal @strict_gc_young(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_young_limit(67108864 : i64) : i64
-  llvm.mlir.global internal constant @strict_gc_young_switch("STRICT_YOUNG\00") : !llvm.array<13 x i8>
+  llvm.mlir.global internal constant @strict_gc_young_switch("\0C\00\00\00\00\00\00\00\0C\00\00\00\00\00\00\00STRICT_YOUNG\00") : !llvm.array<29 x i8>
   llvm.func @atoll(!llvm.ptr) -> i64
   llvm.mlir.global internal constant @strict_gc_sizes(dense<[16, 32, 48, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384, 448, 512, 640, 768, 896, 1024, 1280, 1536, 1792, 2048, 2560, 3072, 3584, 4096, 6144, 8192, 12288, 16384]> : tensor<32xi64>) : !llvm.array<32 x i64>
   llvm.mlir.global internal constant @strict_gc_classes(dense<[0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 12, 12, 13, 13, 13, 13, 14, 14, 14, 14, 15, 15, 15, 15, 16, 16, 16, 16, 16, 16, 16, 16, 17, 17, 17, 17, 17, 17, 17, 17, 18, 18, 18, 18, 18, 18, 18, 18, 19, 19, 19, 19, 19, 19, 19, 19]> : tensor<65xi8>) : !llvm.array<65 x i8>
-  llvm.mlir.global internal constant @strict_gc_out_of_memory("Error: OutOfMemory, the program needed more memory than the system could give\0A\00") : !llvm.array<79 x i8>
-  llvm.mlir.global internal constant @strict_dimensions("listsHaveDifferentDimensions\00") : !llvm.array<29 x i8>
-  llvm.mlir.global internal constant @strict_downcast_prefix("Cannot downcast Text to Number for list: Text \22\00") : !llvm.array<48 x i8>
-  llvm.mlir.global internal constant @strict_quote("\22\00") : !llvm.array<2 x i8>
-  llvm.mlir.global internal constant @strict_key_not_found("KeyNotFound\00") : !llvm.array<12 x i8>
-  llvm.mlir.global internal constant @strict_index_out_of_range("IndexOutOfRange\00") : !llvm.array<16 x i8>
-  llvm.mlir.global internal constant @strict_modulo_by_zero("ModuloByZero\00") : !llvm.array<13 x i8>
-  llvm.mlir.global internal constant @strict_substring_out_of_range("SubstringOutOfRange\00") : !llvm.array<20 x i8>
-  llvm.mlir.global internal constant @strict_duplicate_key("DuplicateKey\00") : !llvm.array<13 x i8>
+  llvm.mlir.global internal constant @strict_gc_out_of_memory("\4E\00\00\00\00\00\00\00\4E\00\00\00\00\00\00\00Error: OutOfMemory, the program needed more memory than the system could give\0A\00") : !llvm.array<95 x i8>
+  llvm.mlir.global internal constant @strict_dimensions("\1C\00\00\00\00\00\00\00\1C\00\00\00\00\00\00\00listsHaveDifferentDimensions\00") : !llvm.array<45 x i8>
+  llvm.mlir.global internal constant @strict_downcast_prefix("\2F\00\00\00\00\00\00\00\2F\00\00\00\00\00\00\00Cannot downcast Text to Number for list: Text \22\00") : !llvm.array<64 x i8>
+  llvm.mlir.global internal constant @strict_quote("\01\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00\22\00") : !llvm.array<18 x i8>
+  llvm.mlir.global internal constant @strict_key_not_found("\0B\00\00\00\00\00\00\00\0B\00\00\00\00\00\00\00KeyNotFound\00") : !llvm.array<28 x i8>
+  llvm.mlir.global internal constant @strict_index_out_of_range("\0F\00\00\00\00\00\00\00\0F\00\00\00\00\00\00\00IndexOutOfRange\00") : !llvm.array<32 x i8>
+  llvm.mlir.global internal constant @strict_modulo_by_zero("\0C\00\00\00\00\00\00\00\0C\00\00\00\00\00\00\00ModuloByZero\00") : !llvm.array<29 x i8>
+  llvm.mlir.global internal constant @strict_substring_out_of_range("\13\00\00\00\00\00\00\00\13\00\00\00\00\00\00\00SubstringOutOfRange\00") : !llvm.array<36 x i8>
+  llvm.mlir.global internal constant @strict_duplicate_key("\0C\00\00\00\00\00\00\00\0C\00\00\00\00\00\00\00DuplicateKey\00") : !llvm.array<29 x i8>
   llvm.mlir.global internal thread_local @strict_power_base(0 : i64) : i64
   llvm.mlir.global internal thread_local @strict_power_exponent(0 : i64) : i64
   llvm.mlir.global internal thread_local @strict_power_result(4607182418800017408 : i64) : i64
@@ -467,7 +470,8 @@
   ^checked:
     cf.cond_br %rightSet, ^fractional, ^zero
   ^zero:
-    %name = llvm.mlir.addressof @strict_modulo_by_zero : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_modulo_by_zero : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
     return %error : f64
   ^convert:
@@ -535,15 +539,17 @@
     %result = llvm.inttoptr %found : i64 to !llvm.ptr
     return %result : !llvm.ptr
   }
-  llvm.mlir.global internal constant @strict_test_timeout("Test failed: %s\0A  got: TestDurationMustNotExceedHundredMilliseconds: unit test exceeded 100 ms; end the method header with slow for explicit functional tests\0A\00") : !llvm.array<159 x i8>
-  llvm.mlir.global internal constant @strict_test_unavailable("Test failed: %s\0A  got: TestBudgetWatchdogUnavailable: cannot enforce the unit-test deadline on this platform\0A\00") : !llvm.array<110 x i8>
+  llvm.mlir.global internal constant @strict_test_timeout("\9E\00\00\00\00\00\00\00\9E\00\00\00\00\00\00\00Test failed: %s\0A  got: TestDurationMustNotExceedHundredMilliseconds: unit test exceeded 100 ms; end the method header with slow for explicit functional tests\0A\00") : !llvm.array<175 x i8>
+  llvm.mlir.global internal constant @strict_test_unavailable("\6D\00\00\00\00\00\00\00\6D\00\00\00\00\00\00\00Test failed: %s\0A  got: TestBudgetWatchdogUnavailable: cannot enforce the unit-test deadline on this platform\0A\00") : !llvm.array<126 x i8>
   // a served request (output is its caller) gets the message and only its work fails, else the process ends
   func.func private @strict_test_failed(%place: i64, %unavailable: i1, %output: i64) {
     %zero = arith.constant 0 : i64
     %one64 = arith.constant 1 : i64
     %name = llvm.inttoptr %place : i64 to !llvm.ptr
-    %timeoutFormat = llvm.mlir.addressof @strict_test_timeout : !llvm.ptr
-    %unavailableFormat = llvm.mlir.addressof @strict_test_unavailable : !llvm.ptr
+    %timeoutFormatLengths = llvm.mlir.addressof @strict_test_timeout : !llvm.ptr
+    %timeoutFormat = llvm.getelementptr %timeoutFormatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %unavailableFormatLengths = llvm.mlir.addressof @strict_test_unavailable : !llvm.ptr
+    %unavailableFormat = llvm.getelementptr %unavailableFormatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %format = arith.select %unavailable, %unavailableFormat, %timeoutFormat : !llvm.ptr
     %served = arith.cmpi ne, %output, %zero : i64
     cf.cond_br %served, ^answer, ^process
@@ -922,9 +928,9 @@
   ^done:
     return
   }
-  llvm.mlir.global internal constant @strict_test_running("\00") : !llvm.array<1 x i8>
-  llvm.mlir.global internal constant @strict_test_expired("TestDurationMustNotExceedHundredMilliseconds\00") : !llvm.array<45 x i8>
-  llvm.mlir.global internal constant @strict_test_disconnected("CallerDisconnected\00") : !llvm.array<19 x i8>
+  llvm.mlir.global internal constant @strict_test_running("\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00") : !llvm.array<17 x i8>
+  llvm.mlir.global internal constant @strict_test_expired("\2C\00\00\00\00\00\00\00\2C\00\00\00\00\00\00\00TestDurationMustNotExceedHundredMilliseconds\00") : !llvm.array<61 x i8>
+  llvm.mlir.global internal constant @strict_test_disconnected("\12\00\00\00\00\00\00\00\12\00\00\00\00\00\00\00CallerDisconnected\00") : !llvm.array<35 x i8>
   llvm.mlir.global internal thread_local @strict_test_heard(0.0 : f64) : f64
   // the Error name the VM work of a served request stops with at its next check: its test is over the deadline (until
   // the test finishes) or its caller disconnected (looked at every 20 ms, until the request ends); empty otherwise
@@ -933,7 +939,8 @@
     %one = arith.constant 1 : i64
     %two = arith.constant 2 : i64
     %three = arith.constant 3 : i64
-    %runningText = llvm.mlir.addressof @strict_test_running : !llvm.ptr
+    %runningTextLengths = llvm.mlir.addressof @strict_test_running : !llvm.ptr
+    %runningText = llvm.getelementptr %runningTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %running = func.call @strict_bits(%runningText) : (!llvm.ptr) -> f64
     %output = func.call @strict_output_handle() : () -> i64
     %served = arith.cmpi ne, %output, %zero : i64
@@ -954,7 +961,8 @@
     cf.cond_br %isOver, ^expired, ^listen
   ^expired:
     %seen = llvm.cmpxchg %stateSlot, %one, %three acq_rel acquire : !llvm.ptr, i64
-    %expiredText = llvm.mlir.addressof @strict_test_expired : !llvm.ptr
+    %expiredTextLengths = llvm.mlir.addressof @strict_test_expired : !llvm.ptr
+    %expiredText = llvm.getelementptr %expiredTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %expiredName = func.call @strict_bits(%expiredText) : (!llvm.ptr) -> f64
     cf.br ^done(%expiredName : f64)
   ^listen:
@@ -973,7 +981,8 @@
     llvm.store %two, %stateSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     cf.br ^disconnected
   ^disconnected:
-    %goneText = llvm.mlir.addressof @strict_test_disconnected : !llvm.ptr
+    %goneTextLengths = llvm.mlir.addressof @strict_test_disconnected : !llvm.ptr
+    %goneText = llvm.getelementptr %goneTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %goneName = func.call @strict_bits(%goneText) : (!llvm.ptr) -> f64
     cf.br ^done(%goneName : f64)
   ^done(%result: f64):
@@ -1043,7 +1052,7 @@
   ^done:
     return %built : f64
   }
-  llvm.mlir.global internal constant @strict_line_format("Line %s executed %.0f times in %.2f ms (self %.2f ms)\0A\00") : !llvm.array<55 x i8>
+  llvm.mlir.global internal constant @strict_line_format("\36\00\00\00\00\00\00\00\36\00\00\00\00\00\00\00Line %s executed %.0f times in %.2f ms (self %.2f ms)\0A\00") : !llvm.array<71 x i8>
   llvm.mlir.global internal @strict_line_callees(0.0 : f64) : f64
   func.func private @strict_line_enter(%state: !llvm.ptr) {
     %none = arith.constant -1.0 : f64
@@ -1141,7 +1150,8 @@
     %thousand = arith.constant 1000.0 : f64
     %spentMilliseconds = arith.mulf %spent, %thousand : f64
     %ownMilliseconds = arith.mulf %own, %thousand : f64
-    %format = llvm.mlir.addressof @strict_line_format : !llvm.ptr
+    %formatLengths = llvm.mlir.addressof @strict_line_format : !llvm.ptr
+    %format = llvm.getelementptr %formatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %printed = llvm.call @printf(%format, %place, %count, %spentMilliseconds, %ownMilliseconds) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr, f64, f64, f64) -> i32
     return
   }
@@ -1851,7 +1861,7 @@
   ^done:
     return %list : f64
   }
-  llvm.mlir.global internal constant @strict_library_no_failure("\00") : !llvm.array<1 x i8>
+  llvm.mlir.global internal constant @strict_library_no_failure("\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00") : !llvm.array<17 x i8>
   func.func private @strict_library_textslot(%library: f64, %text: f64) -> f64 {
     return %text : f64
   }
@@ -1874,14 +1884,15 @@
     %name = func.call @strict_text_copy(%bits) : (f64) -> f64
     return %name : f64
   ^none:
-    %empty = llvm.mlir.addressof @strict_library_no_failure : !llvm.ptr
+    %emptyLengths = llvm.mlir.addressof @strict_library_no_failure : !llvm.ptr
+    %empty = llvm.getelementptr %emptyLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %emptyBits = func.call @strict_bits(%empty) : (!llvm.ptr) -> f64
     %copied = func.call @strict_text_copy(%emptyBits) : (f64) -> f64
     return %copied : f64
   }
-  llvm.mlir.global internal constant @strict_library_missing("LibraryNotFound\00") : !llvm.array<16 x i8>
-  llvm.mlir.global internal constant @strict_library_symbol_missing("LibrarySymbolNotFound\00") : !llvm.array<22 x i8>
-  llvm.mlir.global internal constant @strict_library_arguments("LibraryCallNeedsOneToEightNumbers\00") : !llvm.array<34 x i8>
+  llvm.mlir.global internal constant @strict_library_missing("\0F\00\00\00\00\00\00\00\0F\00\00\00\00\00\00\00LibraryNotFound\00") : !llvm.array<32 x i8>
+  llvm.mlir.global internal constant @strict_library_symbol_missing("\15\00\00\00\00\00\00\00\15\00\00\00\00\00\00\00LibrarySymbolNotFound\00") : !llvm.array<38 x i8>
+  llvm.mlir.global internal constant @strict_library_arguments("\21\00\00\00\00\00\00\00\21\00\00\00\00\00\00\00LibraryCallNeedsOneToEightNumbers\00") : !llvm.array<50 x i8>
   func.func private @strict_library_invoke(%function: !llvm.ptr, %arguments: f64) -> f64 {
     %items = func.call @strict_list_items(%arguments) : (f64) -> !llvm.ptr
     %countNumber = func.call @strict_list_length(%arguments) : (f64) -> f64
@@ -1986,16 +1997,18 @@
     %r8 = llvm.call %function(%a80, %a81, %a82, %a83, %a84, %a85, %a86, %a87) : !llvm.ptr, (f64, f64, f64, f64, f64, f64, f64, f64) -> f64
     return %r8 : f64
   ^unsupported:
-    %argumentsMessage = llvm.mlir.addressof @strict_library_arguments : !llvm.ptr
+    %argumentsMessageLengths = llvm.mlir.addressof @strict_library_arguments : !llvm.ptr
+    %argumentsMessage = llvm.getelementptr %argumentsMessageLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %argumentsError = func.call @strict_error_named(%argumentsMessage) : (!llvm.ptr) -> f64
     return %argumentsError : f64
   }
-  llvm.mlir.global internal constant @strict_gc_heap_switch("STRICT_HEAP\00") : !llvm.array<12 x i8>
+  llvm.mlir.global internal constant @strict_gc_heap_switch("\0B\00\00\00\00\00\00\00\0B\00\00\00\00\00\00\00STRICT_HEAP\00") : !llvm.array<28 x i8>
   // STRICT_HEAP sets the collector heap in MB, a native run checks the 1 GB of iOS
   func.func private @strict_gc_heap_bytes() -> i64 {
     %heapSlot = llvm.mlir.addressof @strict_heap_bytes : !llvm.ptr
     %heapBytes = llvm.load %heapSlot : !llvm.ptr -> i64
-    %name = llvm.mlir.addressof @strict_gc_heap_switch : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_gc_heap_switch : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %setting = llvm.call @getenv(%name) : (!llvm.ptr) -> !llvm.ptr
     %unset = llvm.mlir.zero : !llvm.ptr
     %isUnset = llvm.icmp "eq" %setting, %unset : !llvm.ptr
@@ -2073,7 +2086,8 @@
     %running = arith.constant 0 : i64
     func.call @strict_gc_register(%stackBits, %running) : (i64, i64) -> ()
     func.call @strict_rc_init() : () -> ()
-    %checkName = llvm.mlir.addressof @strict_rc_check_switch : !llvm.ptr
+    %checkNameLengths = llvm.mlir.addressof @strict_rc_check_switch : !llvm.ptr
+    %checkName = llvm.getelementptr %checkNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %checkSetting = llvm.call @getenv(%checkName) : (!llvm.ptr) -> !llvm.ptr
     %checkPointer = llvm.ptrtoint %checkSetting : !llvm.ptr to i64
     %checkingSlot = llvm.mlir.addressof @strict_rc_checking : !llvm.ptr
@@ -2103,7 +2117,8 @@
     %firstThreshold = arith.select %checks, %checkThreshold, %budget : i64
     %firstThresholdSlot = llvm.mlir.addressof @strict_gc_threshold : !llvm.ptr
     llvm.store %firstThreshold, %firstThresholdSlot : i64, !llvm.ptr
-    %youngName = llvm.mlir.addressof @strict_gc_young_switch : !llvm.ptr
+    %youngNameLengths = llvm.mlir.addressof @strict_gc_young_switch : !llvm.ptr
+    %youngName = llvm.getelementptr %youngNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %youngSetting = llvm.call @getenv(%youngName) : (!llvm.ptr) -> !llvm.ptr
     %unset = llvm.mlir.zero : !llvm.ptr
     %youngUnset = llvm.icmp "eq" %youngSetting, %unset : !llvm.ptr
@@ -2126,8 +2141,9 @@
     return
   }
   llvm.mlir.global internal thread_local @strict_stack_bottom(0 : i64) : i64
-  llvm.mlir.global internal constant @strict_stack_overflow("StackOverflow\00") : !llvm.array<14 x i8>
+  llvm.mlir.global internal constant @strict_stack_overflow("\0D\00\00\00\00\00\00\00\0D\00\00\00\00\00\00\00StackOverflow\00") : !llvm.array<30 x i8>
   llvm.mlir.global internal constant @strict_recursive_constant("RecursiveConstant\00") : !llvm.array<18 x i8>
+  llvm.mlir.global internal constant @strict_recursive_constant_text("\11\00\00\00\00\00\00\00\11\00\00\00\00\00\00\00RecursiveConstant\00") : !llvm.array<34 x i8>
   llvm.mlir.global internal thread_local @strict_constant_wait(0 : i64) : i64
   // waits until the constant state at %set is ready, true when the threads owning it and the constants they wait
   // for lead back to this thread (%wait, its owner token): none of them can ever finish
@@ -2183,7 +2199,8 @@
     return %short : i1
   }
   func.func private @strict_stack_overflowed() -> f64 attributes {llvm.passthrough = ["noinline"]} {
-    %name = llvm.mlir.addressof @strict_stack_overflow : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_stack_overflow : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
     return %error : f64
   }
@@ -2219,17 +2236,18 @@
     return
   }
   func.func private @strict_gc_fail() {
-    %message = llvm.mlir.addressof @strict_gc_out_of_memory : !llvm.ptr
+    %messageLengths = llvm.mlir.addressof @strict_gc_out_of_memory : !llvm.ptr
+    %message = llvm.getelementptr %messageLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %printed = llvm.call @printf(%message) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr) -> i32
     llvm.call @strict_crash_log(%message) : (!llvm.ptr) -> ()
     %code = arith.constant 1 : i32
     llvm.call @exit(%code) : (i32) -> ()
     return
   }
-  llvm.mlir.global internal constant @strict_gc_out_of_memory_what("Error: OutOfMemory, the program needed more memory than the system could give: %s of %lld MB with a %lld MB heap\0A\00") : !llvm.array<114 x i8>
-  llvm.mlir.global internal constant @strict_gc_commit_name("a commit\00") : !llvm.array<9 x i8>
-  llvm.mlir.global internal constant @strict_gc_malloc_name("an allocation outside the heap\00") : !llvm.array<31 x i8>
-  llvm.mlir.global internal constant @strict_gc_pages_name("heap pages after a full collection\00") : !llvm.array<35 x i8>
+  llvm.mlir.global internal constant @strict_gc_out_of_memory_what("\71\00\00\00\00\00\00\00\71\00\00\00\00\00\00\00Error: OutOfMemory, the program needed more memory than the system could give: %s of %lld MB with a %lld MB heap\0A\00") : !llvm.array<130 x i8>
+  llvm.mlir.global internal constant @strict_gc_commit_name("\08\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00a commit\00") : !llvm.array<25 x i8>
+  llvm.mlir.global internal constant @strict_gc_malloc_name("\1E\00\00\00\00\00\00\00\1E\00\00\00\00\00\00\00an allocation outside the heap\00") : !llvm.array<47 x i8>
+  llvm.mlir.global internal constant @strict_gc_pages_name("\22\00\00\00\00\00\00\00\22\00\00\00\00\00\00\00heap pages after a full collection\00") : !llvm.array<51 x i8>
   // OutOfMemory naming what the system did not give (what, bytes) and the heap the program had
   func.func private @strict_gc_fail_bytes(%what: !llvm.ptr, %bytes: i64) {
     %shift = arith.constant 20 : i64
@@ -2240,9 +2258,11 @@
     %base = llvm.load %baseSlot : !llvm.ptr -> i64
     %used = arith.subi %top, %base : i64
     %heap = arith.shrui %used, %shift : i64
-    %format = llvm.mlir.addressof @strict_gc_out_of_memory_what : !llvm.ptr
+    %formatLengths = llvm.mlir.addressof @strict_gc_out_of_memory_what : !llvm.ptr
+    %format = llvm.getelementptr %formatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %printed = llvm.call @printf(%format, %what, %megabytes, %heap) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr, i64, i64) -> i32
-    %message = llvm.mlir.addressof @strict_gc_out_of_memory : !llvm.ptr
+    %messageLengths = llvm.mlir.addressof @strict_gc_out_of_memory : !llvm.ptr
+    %message = llvm.getelementptr %messageLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     func.call @strict_places_print() : () -> ()
     llvm.call @strict_crash_log(%message) : (!llvm.ptr) -> ()
     %code = arith.constant 1 : i32
@@ -2251,7 +2271,7 @@
   }
   // the Strict methods on the stack when memory runs out: the generated strict_places_fill writes the address and the
   // where text (Type.Method, file) of every method into strict_places only then, strict_stack_starts gives the frames
-  llvm.mlir.global internal constant @strict_place_format("\09at %s in %s\0A\00") : !llvm.array<14 x i8>
+  llvm.mlir.global internal constant @strict_place_format("\0D\00\00\00\00\00\00\00\0D\00\00\00\00\00\00\00\09at %s in %s\0A\00") : !llvm.array<30 x i8>
   func.func private @strict_places_print() {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -2286,7 +2306,8 @@
     %methodLength = llvm.call @strlen(%where) : (!llvm.ptr) -> i64
     %fileOffset = arith.addi %methodLength, %one : i64
     %file = llvm.getelementptr %where[%fileOffset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %format = llvm.mlir.addressof @strict_place_format : !llvm.ptr
+    %formatLengths = llvm.mlir.addressof @strict_place_format : !llvm.ptr
+    %format = llvm.getelementptr %formatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %printed = llvm.call @printf(%format, %where, %file) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
     cf.br ^frame(%next : i64)
   ^done:
@@ -2296,7 +2317,8 @@
     %committed = func.call @strict_committed(%at, %size) : (!llvm.ptr, i64) -> i1
     cf.cond_br %committed, ^done, ^fail
   ^fail:
-    %what = llvm.mlir.addressof @strict_gc_commit_name : !llvm.ptr
+    %whatLengths = llvm.mlir.addressof @strict_gc_commit_name : !llvm.ptr
+    %what = llvm.getelementptr %whatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     func.call @strict_gc_fail_bytes(%what, %size) : (!llvm.ptr, i64) -> ()
     cf.br ^done
   ^done:
@@ -2321,7 +2343,8 @@
     %failed = arith.andi %missing, %asked : i1
     cf.cond_br %failed, ^fail, ^done
   ^fail:
-    %what = llvm.mlir.addressof @strict_gc_malloc_name : !llvm.ptr
+    %whatLengths = llvm.mlir.addressof @strict_gc_malloc_name : !llvm.ptr
+    %what = llvm.getelementptr %whatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     func.call @strict_gc_fail_bytes(%what, %bytes) : (!llvm.ptr, i64) -> ()
     cf.br ^done
   ^done:
@@ -2351,6 +2374,127 @@
     llvm.store %zero, %filledSlot : i64, !llvm.ptr
     return %object : !llvm.ptr
   }
+  // a text is its byte length and its character length (i64 each), then its UTF-8 bytes and a zero byte; a Text value
+  // points at the first byte, so C calls read it as it is; equal lengths mean ASCII (a byte per character)
+  func.func private @strict_text_room(%bytes: i64) -> !llvm.ptr {
+    %lengths = arith.constant 17 : i64
+    %size = arith.addi %bytes, %lengths : i64
+    %block = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
+    %data = llvm.getelementptr %block[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    func.call @strict_text_sized(%data, %bytes, %bytes) : (!llvm.ptr, i64, i64) -> ()
+    return %data : !llvm.ptr
+  }
+  // like strict_text_room for a maker that writes all bytes and the zero byte itself (strict_alloc_text_filled)
+  func.func private @strict_text_room_filled(%bytes: i64) -> !llvm.ptr {
+    %lengths = arith.constant 17 : i64
+    %size = arith.addi %bytes, %lengths : i64
+    %block = func.call @strict_alloc_text_filled(%size) : (i64) -> !llvm.ptr
+    %data = llvm.getelementptr %block[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    func.call @strict_text_sized(%data, %bytes, %bytes) : (!llvm.ptr, i64, i64) -> ()
+    return %data : !llvm.ptr
+  }
+  func.func private @strict_text_sized(%data: !llvm.ptr, %bytes: i64, %characters: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
+    %bytesSlot = llvm.getelementptr %data[-16] : (!llvm.ptr) -> !llvm.ptr, i8
+    llvm.store %bytes, %bytesSlot {alignment = 1 : i64} : i64, !llvm.ptr
+    %charactersSlot = llvm.getelementptr %data[-8] : (!llvm.ptr) -> !llvm.ptr, i8
+    llvm.store %characters, %charactersSlot {alignment = 1 : i64} : i64, !llvm.ptr
+    return
+  }
+  func.func private @strict_text_bytes(%data: !llvm.ptr) -> i64 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %bytesSlot = llvm.getelementptr %data[-16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %bytes = llvm.load %bytesSlot {alignment = 1 : i64} : !llvm.ptr -> i64
+    return %bytes : i64
+  }
+  func.func private @strict_text_characters(%data: !llvm.ptr) -> i64 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %charactersSlot = llvm.getelementptr %data[-8] : (!llvm.ptr) -> !llvm.ptr, i8
+    %characters = llvm.load %charactersSlot {alignment = 1 : i64} : !llvm.ptr -> i64
+    return %characters : i64
+  }
+  // the characters of bytes UTF-8 bytes: every byte that does not continue a character (10xxxxxx)
+  func.func private @strict_text_counted(%data: !llvm.ptr, %bytes: i64) -> i64 {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %mask = arith.constant -64 : i8
+    %continuing = arith.constant -128 : i8
+    cf.br ^loop(%zero, %zero : i64, i64)
+  ^loop(%index: i64, %count: i64):
+    %more = arith.cmpi ult, %index, %bytes : i64
+    cf.cond_br %more, ^body, ^done
+  ^body:
+    %slot = llvm.getelementptr %data[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %byte = llvm.load %slot : !llvm.ptr -> i8
+    %top = arith.andi %byte, %mask : i8
+    %starts = arith.cmpi ne, %top, %continuing : i8
+    %step = arith.extui %starts : i1 to i64
+    %counted = arith.addi %count, %step : i64
+    %next = arith.addi %index, %one : i64
+    cf.br ^loop(%next, %counted : i64, i64)
+  ^done:
+    return %count : i64
+  }
+  // the Text of a constant: its global starts with the two lengths, the Text points behind them
+  func.func private @strict_text_constant(%lengths: !llvm.ptr) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %data = llvm.getelementptr %lengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %result = func.call @strict_bits(%data) : (!llvm.ptr) -> f64
+    return %result : f64
+  }
+  func.func private @strict_error_constant(%lengths: !llvm.ptr) -> f64 {
+    %data = llvm.getelementptr %lengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %error = func.call @strict_error_named(%data) : (!llvm.ptr) -> f64
+    return %error : f64
+  }
+  // moves count bytes behind the first skipped ones to the front (a byte order mark at the start of a file)
+  func.func private @strict_text_shifted(%data: !llvm.ptr, %skipped: i64, %count: i64) {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %isMoved = arith.cmpi ne, %skipped, %zero : i64
+    cf.cond_br %isMoved, ^loop(%zero : i64), ^done
+  ^loop(%index: i64):
+    %more = arith.cmpi ult, %index, %count : i64
+    cf.cond_br %more, ^body, ^done
+  ^body:
+    %from = arith.addi %index, %skipped : i64
+    %source = llvm.getelementptr %data[%from] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %byte = llvm.load %source : !llvm.ptr -> i8
+    %target = llvm.getelementptr %data[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %byte, %target : i8, !llvm.ptr
+    %next = arith.addi %index, %one : i64
+    cf.br ^loop(%next : i64)
+  ^done:
+    return
+  }
+  // the Text of bytes a maker wrote into its strict_text_room: both lengths are set, the zero byte is written
+  func.func private @strict_text_made(%data: !llvm.ptr, %bytes: i64) -> f64 {
+    %terminator = arith.constant 0 : i8
+    %end = llvm.getelementptr %data[%bytes] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %terminator, %end : i8, !llvm.ptr
+    %characters = func.call @strict_text_counted(%data, %bytes) : (!llvm.ptr, i64) -> i64
+    func.call @strict_text_sized(%data, %bytes, %characters) : (!llvm.ptr, i64, i64) -> ()
+    %result = func.call @strict_bits(%data) : (!llvm.ptr) -> f64
+    return %result : f64
+  }
+  // the Text a C call wrote into a strict_text_room up to its zero byte
+  func.func private @strict_text_sealed(%data: !llvm.ptr) -> f64 {
+    %bytes = llvm.call @strlen(%data) : (!llvm.ptr) -> i64
+    %result = func.call @strict_text_made(%data, %bytes) : (!llvm.ptr, i64) -> f64
+    return %result : f64
+  }
+  // the Text of the first bytes bytes of a host buffer (strict_malloc, strict_realloc), which is freed
+  func.func private @strict_text_taken(%buffer: !llvm.ptr, %bytes: i64) -> f64 {
+    %data = func.call @strict_text_room(%bytes) : (i64) -> !llvm.ptr
+    %copied = llvm.call @memcpy(%data, %buffer, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    llvm.call @free(%buffer) : (!llvm.ptr) -> ()
+    %result = func.call @strict_text_made(%data, %bytes) : (!llvm.ptr, i64) -> f64
+    return %result : f64
+  }
+  // a Text copy of a C text (an environment variable, an argument, a name the system returned)
+  func.func private @strict_text_from(%source: !llvm.ptr) -> f64 {
+    %bytes = llvm.call @strlen(%source) : (!llvm.ptr) -> i64
+    %data = func.call @strict_text_room(%bytes) : (i64) -> !llvm.ptr
+    %copied = llvm.call @memcpy(%data, %source, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %result = func.call @strict_text_made(%data, %bytes) : (!llvm.ptr, i64) -> f64
+    return %result : f64
+  }
   llvm.mlir.global internal @strict_pool_busy(0 : i64) : i64
   // the job this thread runs a chunk of (0 outside of pool jobs): allocating and counting ask this instead of the
   // shared busy flag, pages taken inside a job are tagged with it and the lane (strict_gc_mine)
@@ -2373,9 +2517,10 @@
   llvm.mlir.global internal @strict_pool_sleepers(0 : i64) : i64
   llvm.mlir.global internal @strict_pool_cheap(dense<0> : tensor<4096xi64>) : !llvm.array<4096 x i64>
   llvm.mlir.global internal @strict_gc_mutex(dense<0> : tensor<8xi64>) {alignment = 64 : i64} : !llvm.array<8 x i64>
-  llvm.mlir.global internal constant @strict_build_profile_name("STRICT_BUILD_PROFILE\00") : !llvm.array<21 x i8>
+  llvm.mlir.global internal constant @strict_build_profile_name("\14\00\00\00\00\00\00\00\14\00\00\00\00\00\00\00STRICT_BUILD_PROFILE\00") : !llvm.array<37 x i8>
   func.func private @strict_buildprofile_detailed(%self: f64) -> f64 {
-    %name = llvm.mlir.addressof @strict_build_profile_name : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_build_profile_name : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %setting = llvm.call @getenv(%name) : (!llvm.ptr) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     %missing = llvm.icmp "eq" %setting, %null : !llvm.ptr
@@ -4253,7 +4398,8 @@
     func.call @strict_gpu_unpin_spare() : () -> ()
     cf.br ^runs(%full : i1)
   ^fail:
-    %what = llvm.mlir.addressof @strict_gc_pages_name : !llvm.ptr
+    %whatLengths = llvm.mlir.addressof @strict_gc_pages_name : !llvm.ptr
+    %what = llvm.getelementptr %whatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %asked = arith.muli %count, %pageSize : i64
     func.call @strict_gc_fail_bytes(%what, %asked) : (!llvm.ptr, i64) -> ()
     return %zero : i64
@@ -5504,9 +5650,9 @@
   // counted; a small page keeps an i32 per object at the offset in header word 6, a large object in header word 5
   llvm.mlir.global internal @strict_rc_checking(0 : i64) : i64
   llvm.mlir.global internal @strict_rc_missing(0 : i64) : i64
-  llvm.mlir.global internal constant @strict_rc_check_switch("STRICT_RC_CHECK\00") : !llvm.array<16 x i8>
-  llvm.mlir.global internal constant @strict_rc_missing_format("Reference count too low: object %p (%lld bytes) at slot %lld of object %p (%lld bytes) starting %llx %llx %llx, target starting %llx\0A\00") : !llvm.array<134 x i8>
-  llvm.mlir.global internal constant @strict_rc_summary_format("Reference counts checked: %lld too low\0A\00") : !llvm.array<40 x i8>
+  llvm.mlir.global internal constant @strict_rc_check_switch("\0F\00\00\00\00\00\00\00\0F\00\00\00\00\00\00\00STRICT_RC_CHECK\00") : !llvm.array<32 x i8>
+  llvm.mlir.global internal constant @strict_rc_missing_format("\85\00\00\00\00\00\00\00\85\00\00\00\00\00\00\00Reference count too low: object %p (%lld bytes) at slot %lld of object %p (%lld bytes) starting %llx %llx %llx, target starting %llx\0A\00") : !llvm.array<150 x i8>
+  llvm.mlir.global internal constant @strict_rc_summary_format("\27\00\00\00\00\00\00\00\27\00\00\00\00\00\00\00Reference counts checked: %lld too low\0A\00") : !llvm.array<56 x i8>
   // the object a word points to: pointer bits or an Error, 0 for numbers and other tagged values
   func.func private @strict_rc_target(%word: i64) -> i64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %shift = arith.constant 48 : i64
@@ -5924,11 +6070,11 @@
   llvm.mlir.global internal @strict_rc_capacity(0 : i64) : i64
   llvm.mlir.global internal @strict_rc_allocated(0 : i64) : i64
   llvm.mlir.global internal @strict_rc_freed(0 : i64) : i64
-  llvm.mlir.global internal constant @strict_rc_freed_format("Reference counts freed %lld objects\0A\00") : !llvm.array<37 x i8>
+  llvm.mlir.global internal constant @strict_rc_freed_format("\24\00\00\00\00\00\00\00\24\00\00\00\00\00\00\00Reference counts freed %lld objects\0A\00") : !llvm.array<53 x i8>
   llvm.mlir.global internal @strict_rc_enabled(0 : i64) : i64
   llvm.mlir.global internal @strict_rc_disabled(0 : i64) : i64
   llvm.mlir.global internal @strict_rc_recycled(dense<0> : tensor<64xi64>) : !llvm.array<64 x i64>
-  llvm.mlir.global internal constant @strict_rc_switch("STRICT_RC\00") : !llvm.array<10 x i8>
+  llvm.mlir.global internal constant @strict_rc_switch("\09\00\00\00\00\00\00\00\09\00\00\00\00\00\00\00STRICT_RC\00") : !llvm.array<26 x i8>
   func.func private @strict_rc_init() {
     %capacity = arith.constant 65536 : i64
     %eight = arith.constant 8 : i64
@@ -5939,7 +6085,8 @@
     llvm.store %tableBits, %tableSlot : i64, !llvm.ptr
     %capacitySlot = llvm.mlir.addressof @strict_rc_capacity : !llvm.ptr
     llvm.store %capacity, %capacitySlot : i64, !llvm.ptr
-    %name = llvm.mlir.addressof @strict_rc_switch : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_rc_switch : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %setting = llvm.call @getenv(%name) : (!llvm.ptr) -> !llvm.ptr
     %unset = llvm.mlir.zero : !llvm.ptr
     %isUnset = llvm.icmp "eq" %setting, %unset : !llvm.ptr
@@ -6245,7 +6392,7 @@
   // overwritten or the method returns: without a count it is freed at once and its block is the next one allocated
   // of its size, not when the new value lives inside it (an item kept inline in a list)
   // STRICT_RC_DEAD=0 keeps replaced values for the collector (checks whether freeing them early changes results)
-  llvm.mlir.global internal constant @strict_rc_dead_switch("STRICT_RC_DEAD\00") : !llvm.array<15 x i8>
+  llvm.mlir.global internal constant @strict_rc_dead_switch("\0E\00\00\00\00\00\00\00\0E\00\00\00\00\00\00\00STRICT_RC_DEAD\00") : !llvm.array<31 x i8>
   llvm.mlir.global internal @strict_rc_dead_mode(-1 : i64) : i64
   func.func private @strict_rc_dead_enabled() -> i1 {
     %modeSlot = llvm.mlir.addressof @strict_rc_dead_mode : !llvm.ptr
@@ -6254,7 +6401,8 @@
     %isUnknown = arith.cmpi eq, %mode, %unknown : i64
     cf.cond_br %isUnknown, ^read, ^known(%mode : i64)
   ^read:
-    %name = llvm.mlir.addressof @strict_rc_dead_switch : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_rc_dead_switch : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %setting = llvm.call @getenv(%name) : (!llvm.ptr) -> !llvm.ptr
     %unset = llvm.mlir.zero : !llvm.ptr
     %isUnset = llvm.icmp "eq" %setting, %unset : !llvm.ptr
@@ -6435,10 +6583,10 @@
   }
   // STRICT_RC_CHECK marks everything from the roots before a reclaim: an object it would free that the marking
   // reached is still referenced somewhere the counts do not see, it is reported and kept
-  llvm.mlir.global internal constant @strict_rc_reachable_format("Reference counts would free a reachable object %p (%lld bytes) starting %llx %llx %llx, count %x, stack %lld\0A\00") : !llvm.array<110 x i8>
+  llvm.mlir.global internal constant @strict_rc_reachable_format("\6D\00\00\00\00\00\00\00\6D\00\00\00\00\00\00\00Reference counts would free a reachable object %p (%lld bytes) starting %llx %llx %llx, count %x, stack %lld\0A\00") : !llvm.array<126 x i8>
   llvm.mlir.global internal @strict_rc_searched(0 : i64) : i64
   llvm.mlir.global internal @strict_rc_searching(0 : i64) : i64
-  llvm.mlir.global internal constant @strict_rc_referrer_format("  referenced at slot %lld of object %p (%lld bytes) starting %llx %llx %llx\0A\00") : !llvm.array<77 x i8>
+  llvm.mlir.global internal constant @strict_rc_referrer_format("\4C\00\00\00\00\00\00\00\4C\00\00\00\00\00\00\00  referenced at slot %lld of object %p (%lld bytes) starting %llx %llx %llx\0A\00") : !llvm.array<93 x i8>
   func.func private @strict_rc_stack_hits(%object: i64, %size: i64) -> i64 {
     %eight = arith.constant 8 : i64
     %one = arith.constant 1 : i64
@@ -6527,7 +6675,8 @@
     %word1 = llvm.load %slot1 : !llvm.ptr -> i64
     %slot2 = llvm.getelementptr %pointer[2] : (!llvm.ptr) -> !llvm.ptr, i64
     %word2 = llvm.load %slot2 : !llvm.ptr -> i64
-    %format = llvm.mlir.addressof @strict_rc_reachable_format : !llvm.ptr
+    %formatLengths = llvm.mlir.addressof @strict_rc_reachable_format : !llvm.ptr
+    %format = llvm.getelementptr %formatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %located:5 = func.call @strict_gc_locate(%object) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
     %counter = func.call @strict_rc_counter(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
     %countWord = llvm.load %counter : !llvm.ptr -> i32
@@ -6779,7 +6928,8 @@
     func.call @strict_gc_run(%full) : (i1) -> ()
     %freedSlot = llvm.mlir.addressof @strict_rc_freed : !llvm.ptr
     %freed = llvm.load %freedSlot : !llvm.ptr -> i64
-    %format = llvm.mlir.addressof @strict_rc_freed_format : !llvm.ptr
+    %formatLengths = llvm.mlir.addressof @strict_rc_freed_format : !llvm.ptr
+    %format = llvm.getelementptr %formatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %printed = llvm.call @printf(%format, %freed) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, i64) -> i32
     cf.br ^done
   ^done:
@@ -6853,7 +7003,8 @@
     func.call @strict_rc_walk(%down) : (i32) -> ()
     func.call @strict_rc_walk(%up) : (i32) -> ()
     %missing = llvm.load %missingSlot : !llvm.ptr -> i64
-    %format = llvm.mlir.addressof @strict_rc_summary_format : !llvm.ptr
+    %formatLengths = llvm.mlir.addressof @strict_rc_summary_format : !llvm.ptr
+    %format = llvm.getelementptr %formatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %printed = llvm.call @printf(%format, %missing) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, i64) -> i32
     return
   }
@@ -6987,7 +7138,8 @@
     %isReferrer = arith.cmpi eq, %located#1, %searching : i64
     cf.cond_br %isReferrer, ^referrer, ^loop(%next : i64)
   ^referrer:
-    %referrerFormat = llvm.mlir.addressof @strict_rc_referrer_format : !llvm.ptr
+    %referrerFormatLengths = llvm.mlir.addressof @strict_rc_referrer_format : !llvm.ptr
+    %referrerFormat = llvm.getelementptr %referrerFormatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %first = llvm.load %objectPointer : !llvm.ptr -> i64
     %secondSlot = llvm.getelementptr %objectPointer[1] : (!llvm.ptr) -> !llvm.ptr, i64
     %second = llvm.load %secondSlot : !llvm.ptr -> i64
@@ -7022,7 +7174,8 @@
     %shown = arith.cmpi ult, %missing, %reportLimit : i64
     cf.cond_br %shown, ^print, ^loop(%next : i64)
   ^print:
-    %format = llvm.mlir.addressof @strict_rc_missing_format : !llvm.ptr
+    %formatLengths = llvm.mlir.addressof @strict_rc_missing_format : !llvm.ptr
+    %format = llvm.getelementptr %formatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %targetPointer = llvm.inttoptr %located#1 : i64 to !llvm.ptr
     %word0 = llvm.load %objectPointer : !llvm.ptr -> i64
     %slot1 = llvm.getelementptr %objectPointer[1] : (!llvm.ptr) -> !llvm.ptr, i64
@@ -7833,14 +7986,14 @@
     func.call @strict_gc_run(%full) : (i1) -> ()
     return
   }
-  llvm.mlir.global internal constant @strict_gc_log_switch("STRICT_GC_LOG\00") : !llvm.array<14 x i8>
-  llvm.mlir.global internal constant @strict_gc_log_format("Collection: %s, %.2f ms, %lld MB marked, %lld MB heap%s\0A\00") : !llvm.array<57 x i8>
-  llvm.mlir.global internal constant @strict_gc_log_counts("  %lld small objects made since the last collection, %lld visited\0A\00") : !llvm.array<67 x i8>
-  llvm.mlir.global internal constant @strict_gc_log_young("young\00") : !llvm.array<6 x i8>
-  llvm.mlir.global internal constant @strict_gc_log_full("full\00") : !llvm.array<5 x i8>
-  llvm.mlir.global internal constant @strict_gc_log_ending(", frame end\00") : !llvm.array<12 x i8>
-  llvm.mlir.global internal constant @strict_gc_log_within("\00") : !llvm.array<1 x i8>
-  llvm.mlir.global internal constant @strict_gc_log_job(", pool job\00") : !llvm.array<11 x i8>
+  llvm.mlir.global internal constant @strict_gc_log_switch("\0D\00\00\00\00\00\00\00\0D\00\00\00\00\00\00\00STRICT_GC_LOG\00") : !llvm.array<30 x i8>
+  llvm.mlir.global internal constant @strict_gc_log_format("\38\00\00\00\00\00\00\00\38\00\00\00\00\00\00\00Collection: %s, %.2f ms, %lld MB marked, %lld MB heap%s\0A\00") : !llvm.array<73 x i8>
+  llvm.mlir.global internal constant @strict_gc_log_counts("\42\00\00\00\00\00\00\00\42\00\00\00\00\00\00\00  %lld small objects made since the last collection, %lld visited\0A\00") : !llvm.array<83 x i8>
+  llvm.mlir.global internal constant @strict_gc_log_young("\05\00\00\00\00\00\00\00\05\00\00\00\00\00\00\00young\00") : !llvm.array<22 x i8>
+  llvm.mlir.global internal constant @strict_gc_log_full("\04\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00full\00") : !llvm.array<21 x i8>
+  llvm.mlir.global internal constant @strict_gc_log_ending("\0B\00\00\00\00\00\00\00\0B\00\00\00\00\00\00\00, frame end\00") : !llvm.array<28 x i8>
+  llvm.mlir.global internal constant @strict_gc_log_within("\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00") : !llvm.array<17 x i8>
+  llvm.mlir.global internal constant @strict_gc_log_job("\0A\00\00\00\00\00\00\00\0A\00\00\00\00\00\00\00, pool job\00") : !llvm.array<27 x i8>
   llvm.mlir.global internal @strict_gc_ending(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_framed(0 : i64) : i64
   llvm.mlir.global internal @strict_frame_collected(0.0 : f64) : f64
@@ -7898,17 +8051,18 @@
   llvm.mlir.global internal @strict_alloc_samples(0 : i64) : i64
   llvm.mlir.global internal @strict_alloc_counts(0 : i64) : i64
   llvm.mlir.global internal @strict_alloc_hash(0 : i64) : i64
-  llvm.mlir.global internal constant @strict_alloc_switch("STRICT_ALLOC_PROFILE\00") : !llvm.array<21 x i8>
-  llvm.mlir.global internal constant @strict_alloc_header("Allocation profile: %lld samples, one every %lld allocations, %s\0A\00") : !llvm.array<66 x i8>
-  llvm.mlir.global internal constant @strict_alloc_self("allocating in the method itself\00") : !llvm.array<32 x i8>
-  llvm.mlir.global internal constant @strict_alloc_inclusive("the method or one it calls\00") : !llvm.array<27 x i8>
-  llvm.mlir.global internal constant @strict_alloc_pair_line("  %8lld %5.1f%%  %s <- %s\0A\00") : !llvm.array<27 x i8>
-  llvm.mlir.global internal constant @strict_alloc_paired("the method and its caller\00") : !llvm.array<26 x i8>
-  llvm.mlir.global internal constant @strict_alloc_line("  %8lld %5.1f%%  %s\0A\00") : !llvm.array<21 x i8>
+  llvm.mlir.global internal constant @strict_alloc_switch("\14\00\00\00\00\00\00\00\14\00\00\00\00\00\00\00STRICT_ALLOC_PROFILE\00") : !llvm.array<37 x i8>
+  llvm.mlir.global internal constant @strict_alloc_header("\41\00\00\00\00\00\00\00\41\00\00\00\00\00\00\00Allocation profile: %lld samples, one every %lld allocations, %s\0A\00") : !llvm.array<82 x i8>
+  llvm.mlir.global internal constant @strict_alloc_self("\1F\00\00\00\00\00\00\00\1F\00\00\00\00\00\00\00allocating in the method itself\00") : !llvm.array<48 x i8>
+  llvm.mlir.global internal constant @strict_alloc_inclusive("\1A\00\00\00\00\00\00\00\1A\00\00\00\00\00\00\00the method or one it calls\00") : !llvm.array<43 x i8>
+  llvm.mlir.global internal constant @strict_alloc_pair_line("\1A\00\00\00\00\00\00\00\1A\00\00\00\00\00\00\00  %8lld %5.1f%%  %s <- %s\0A\00") : !llvm.array<43 x i8>
+  llvm.mlir.global internal constant @strict_alloc_paired("\19\00\00\00\00\00\00\00\19\00\00\00\00\00\00\00the method and its caller\00") : !llvm.array<42 x i8>
+  llvm.mlir.global internal constant @strict_alloc_line("\14\00\00\00\00\00\00\00\14\00\00\00\00\00\00\00  %8lld %5.1f%%  %s\0A\00") : !llvm.array<37 x i8>
   llvm.func @atexit(!llvm.ptr) -> i32
   func.func private @strict_alloc_start() {
     %zero = arith.constant 0 : i64
-    %name = llvm.mlir.addressof @strict_alloc_switch : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_alloc_switch : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %setting = llvm.call @getenv(%name) : (!llvm.ptr) -> !llvm.ptr
     %unset = llvm.mlir.zero : !llvm.ptr
     %isSet = llvm.icmp "ne" %setting, %unset : !llvm.ptr
@@ -8148,7 +8302,8 @@
     %pairsBits = llvm.load %pairsSlot : !llvm.ptr -> i64
     %pairs = llvm.inttoptr %pairsBits : i64 to !llvm.ptr
     %table = llvm.mlir.addressof @strict_places : !llvm.ptr
-    %format = llvm.mlir.addressof @strict_alloc_pair_line : !llvm.ptr
+    %formatLengths = llvm.mlir.addressof @strict_alloc_pair_line : !llvm.ptr
+    %format = llvm.getelementptr %formatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %total = arith.sitofp %samples : i64 to f64
     %hundred = arith.constant 100.0 : f64
     cf.br ^rank(%zero : i64)
@@ -8213,14 +8368,18 @@
     %every = llvm.load %everySlot : !llvm.ptr -> i64
     %leftSlot = llvm.mlir.addressof @strict_alloc_left : !llvm.ptr
     llvm.store %zero, %leftSlot : i64, !llvm.ptr
-    %header = llvm.mlir.addressof @strict_alloc_header : !llvm.ptr
-    %self = llvm.mlir.addressof @strict_alloc_self : !llvm.ptr
+    %headerLengths = llvm.mlir.addressof @strict_alloc_header : !llvm.ptr
+    %header = llvm.getelementptr %headerLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %selfLengths = llvm.mlir.addressof @strict_alloc_self : !llvm.ptr
+    %self = llvm.getelementptr %selfLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %printedSelf = llvm.call @printf(%header, %samples, %every, %self) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i32
     func.call @strict_alloc_top(%zero, %samples) : (i64, i64) -> ()
-    %inclusive = llvm.mlir.addressof @strict_alloc_inclusive : !llvm.ptr
+    %inclusiveLengths = llvm.mlir.addressof @strict_alloc_inclusive : !llvm.ptr
+    %inclusive = llvm.getelementptr %inclusiveLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %printedInclusive = llvm.call @printf(%header, %samples, %every, %inclusive) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i32
     func.call @strict_alloc_top(%one, %samples) : (i64, i64) -> ()
-    %paired = llvm.mlir.addressof @strict_alloc_paired : !llvm.ptr
+    %pairedLengths = llvm.mlir.addressof @strict_alloc_paired : !llvm.ptr
+    %paired = llvm.getelementptr %pairedLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %printedPaired = llvm.call @printf(%header, %samples, %every, %paired) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i32
     func.call @strict_alloc_pairs_top(%samples) : (i64) -> ()
     %null = llvm.mlir.zero : !llvm.ptr
@@ -8239,7 +8398,8 @@
     %countsBits = llvm.load %countsSlot : !llvm.ptr -> i64
     %counts = llvm.inttoptr %countsBits : i64 to !llvm.ptr
     %table = llvm.mlir.addressof @strict_places : !llvm.ptr
-    %format = llvm.mlir.addressof @strict_alloc_line : !llvm.ptr
+    %formatLengths = llvm.mlir.addressof @strict_alloc_line : !llvm.ptr
+    %format = llvm.getelementptr %formatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %total = arith.sitofp %samples : i64 to f64
     %hundred = arith.constant 100.0 : f64
     cf.br ^rank(%zero : i64)
@@ -8281,18 +8441,19 @@
   }
   // STRICT_GC_ROOTS=MB: a full collection marks root by root and prints each one that alone keeps that many MB alive
   // (the kind, thread, address, the word and the size of the object it points to): what holds a dropped model
-  llvm.mlir.global internal constant @strict_gc_roots_switch("STRICT_GC_ROOTS\00") : !llvm.array<16 x i8>
-  llvm.mlir.global internal constant @strict_gc_roots_format("  root %s of thread %lld at %llx keeps %lld MB alive (word %llx, an object of %lld bytes)\0A\00") : !llvm.array<91 x i8>
-  llvm.mlir.global internal constant @strict_gc_roots_stack("stack\00") : !llvm.array<6 x i8>
-  llvm.mlir.global internal constant @strict_gc_roots_pinned("pinned\00") : !llvm.array<7 x i8>
-  llvm.mlir.global internal constant @strict_gc_roots_spilled("register\00") : !llvm.array<9 x i8>
-  llvm.mlir.global internal constant @strict_gc_roots_locals("thread local\00") : !llvm.array<13 x i8>
-  llvm.mlir.global internal constant @strict_gc_roots_methods("  its stack ends at %llx, these Strict methods are on it:\0A\00") : !llvm.array<59 x i8>
+  llvm.mlir.global internal constant @strict_gc_roots_switch("\0F\00\00\00\00\00\00\00\0F\00\00\00\00\00\00\00STRICT_GC_ROOTS\00") : !llvm.array<32 x i8>
+  llvm.mlir.global internal constant @strict_gc_roots_format("\5A\00\00\00\00\00\00\00\5A\00\00\00\00\00\00\00  root %s of thread %lld at %llx keeps %lld MB alive (word %llx, an object of %lld bytes)\0A\00") : !llvm.array<107 x i8>
+  llvm.mlir.global internal constant @strict_gc_roots_stack("\05\00\00\00\00\00\00\00\05\00\00\00\00\00\00\00stack\00") : !llvm.array<22 x i8>
+  llvm.mlir.global internal constant @strict_gc_roots_pinned("\06\00\00\00\00\00\00\00\06\00\00\00\00\00\00\00pinned\00") : !llvm.array<23 x i8>
+  llvm.mlir.global internal constant @strict_gc_roots_spilled("\08\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00register\00") : !llvm.array<25 x i8>
+  llvm.mlir.global internal constant @strict_gc_roots_locals("\0C\00\00\00\00\00\00\00\0C\00\00\00\00\00\00\00thread local\00") : !llvm.array<29 x i8>
+  llvm.mlir.global internal constant @strict_gc_roots_methods("\3A\00\00\00\00\00\00\00\3A\00\00\00\00\00\00\00  its stack ends at %llx, these Strict methods are on it:\0A\00") : !llvm.array<75 x i8>
   func.func private @strict_gc_roots(%full: i1, %from: i64, %to: i64, %spilledFrom: i64, %spilledTo: i64) {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %eight = arith.constant 8 : i64
-    %name = llvm.mlir.addressof @strict_gc_roots_switch : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_gc_roots_switch : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %setting = llvm.call @getenv(%name) : (!llvm.ptr) -> !llvm.ptr
     %unset = llvm.mlir.zero : !llvm.ptr
     %isSet = llvm.icmp "ne" %setting, %unset : !llvm.ptr
@@ -8306,11 +8467,13 @@
     %least = arith.maxsi %asked, %oneMegabyte : i64
     %threadSlot = llvm.mlir.addressof @strict_gc_thread : !llvm.ptr
     %self = llvm.load %threadSlot : !llvm.ptr -> i64
-    %stack = llvm.mlir.addressof @strict_gc_roots_stack : !llvm.ptr
+    %stackLengths = llvm.mlir.addressof @strict_gc_roots_stack : !llvm.ptr
+    %stack = llvm.getelementptr %stackLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %held = func.call @strict_gc_roots_range(%stack, %self, %from, %to, %least) : (!llvm.ptr, i64, i64, i64, i64) -> i1
     cf.cond_br %held, ^methods, ^others
   ^methods:
-    %methodsFormat = llvm.mlir.addressof @strict_gc_roots_methods : !llvm.ptr
+    %methodsFormatLengths = llvm.mlir.addressof @strict_gc_roots_methods : !llvm.ptr
+    %methodsFormat = llvm.getelementptr %methodsFormatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %shown = llvm.call @printf(%methodsFormat, %to) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, i64) -> i32
     func.call @strict_places_print() : () -> ()
     cf.br ^others
@@ -8321,14 +8484,17 @@
     %pinnedCount = llvm.load %pinnedCountSlot : !llvm.ptr -> i64
     %pinnedBytes = arith.muli %pinnedCount, %eight : i64
     %pinnedEnd = arith.addi %pinnedStart, %pinnedBytes : i64
-    %pinned = llvm.mlir.addressof @strict_gc_roots_pinned : !llvm.ptr
+    %pinnedLengths = llvm.mlir.addressof @strict_gc_roots_pinned : !llvm.ptr
+    %pinned = llvm.getelementptr %pinnedLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %pinnedHeld = func.call @strict_gc_roots_range(%pinned, %self, %pinnedStart, %pinnedEnd, %least) : (!llvm.ptr, i64, i64, i64, i64) -> i1
-    %spilled = llvm.mlir.addressof @strict_gc_roots_spilled : !llvm.ptr
+    %spilledLengths = llvm.mlir.addressof @strict_gc_roots_spilled : !llvm.ptr
+    %spilled = llvm.getelementptr %spilledLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %spilledHeld = func.call @strict_gc_roots_range(%spilled, %self, %spilledFrom, %spilledTo, %least) : (!llvm.ptr, i64, i64, i64, i64) -> i1
     %own = func.call @strict_gc_own_entry() : () -> !llvm.ptr
     func.call @strict_gc_published(%own, %from) : (!llvm.ptr, i64) -> ()
     %count = func.call @strict_gc_thread_total() : () -> i64
-    %locals = llvm.mlir.addressof @strict_gc_roots_locals : !llvm.ptr
+    %localsLengths = llvm.mlir.addressof @strict_gc_roots_locals : !llvm.ptr
+    %locals = llvm.getelementptr %localsLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     cf.br ^thread(%zero : i64)
   ^thread(%index: i64):
     %more = arith.cmpi ult, %index, %count : i64
@@ -8359,7 +8525,8 @@
     %none = arith.constant false
     %some = arith.constant true
     %markedSlot = llvm.mlir.addressof @strict_gc_marked : !llvm.ptr
-    %format = llvm.mlir.addressof @strict_gc_roots_format : !llvm.ptr
+    %formatLengths = llvm.mlir.addressof @strict_gc_roots_format : !llvm.ptr
+    %format = llvm.getelementptr %formatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     cf.br ^word(%from, %none : i64, i1)
   ^word(%at: i64, %any: i1):
     %more = arith.cmpi ult, %at, %to : i64
@@ -8386,7 +8553,8 @@
   }
   // STRICT_GC_LOG prints every collection: young or full, its time, the bytes it marked and the heap used
   func.func private @strict_gc_log(%full: i1, %started: f64) {
-    %name = llvm.mlir.addressof @strict_gc_log_switch : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_gc_log_switch : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %setting = llvm.call @getenv(%name) : (!llvm.ptr) -> !llvm.ptr
     %unset = llvm.mlir.zero : !llvm.ptr
     %isUnset = llvm.icmp "eq" %setting, %unset : !llvm.ptr
@@ -8406,28 +8574,35 @@
     %base = llvm.load %baseSlot : !llvm.ptr -> i64
     %used = arith.subi %top, %base : i64
     %usedMb = arith.shrui %used, %shift : i64
-    %youngName = llvm.mlir.addressof @strict_gc_log_young : !llvm.ptr
-    %fullName = llvm.mlir.addressof @strict_gc_log_full : !llvm.ptr
+    %youngNameLengths = llvm.mlir.addressof @strict_gc_log_young : !llvm.ptr
+    %youngName = llvm.getelementptr %youngNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %fullNameLengths = llvm.mlir.addressof @strict_gc_log_full : !llvm.ptr
+    %fullName = llvm.getelementptr %fullNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %kind = llvm.select %full, %fullName, %youngName : i1, !llvm.ptr
     %endingSlot = llvm.mlir.addressof @strict_gc_ending : !llvm.ptr
     %ending = llvm.load %endingSlot : !llvm.ptr -> i64
     %none = arith.constant 0 : i64
     %isEnding = arith.cmpi ne, %ending, %none : i64
-    %endingName = llvm.mlir.addressof @strict_gc_log_ending : !llvm.ptr
-    %withinName = llvm.mlir.addressof @strict_gc_log_within : !llvm.ptr
+    %endingNameLengths = llvm.mlir.addressof @strict_gc_log_ending : !llvm.ptr
+    %endingName = llvm.getelementptr %endingNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %withinNameLengths = llvm.mlir.addressof @strict_gc_log_within : !llvm.ptr
+    %withinName = llvm.getelementptr %withinNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %busySlot = llvm.mlir.addressof @strict_pool_busy : !llvm.ptr
     %busy = llvm.load %busySlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
     %isBusy = arith.cmpi ne, %busy, %none : i64
-    %jobName = llvm.mlir.addressof @strict_gc_log_job : !llvm.ptr
+    %jobNameLengths = llvm.mlir.addressof @strict_gc_log_job : !llvm.ptr
+    %jobName = llvm.getelementptr %jobNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %plainName = llvm.select %isBusy, %jobName, %withinName : i1, !llvm.ptr
     %where = llvm.select %isEnding, %endingName, %plainName : i1, !llvm.ptr
-    %format = llvm.mlir.addressof @strict_gc_log_format : !llvm.ptr
+    %formatLengths = llvm.mlir.addressof @strict_gc_log_format : !llvm.ptr
+    %format = llvm.getelementptr %formatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %printed = llvm.call @printf(%format, %kind, %milliseconds, %markedMb, %usedMb, %where) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr, f64, i64, i64, !llvm.ptr) -> i32
     %madeSlot = llvm.mlir.addressof @strict_gc_small_made : !llvm.ptr
     %made = llvm.load %madeSlot : !llvm.ptr -> i64
     %visitedSlot = llvm.mlir.addressof @strict_gc_small_visited : !llvm.ptr
     %visited = llvm.load %visitedSlot : !llvm.ptr -> i64
-    %countsFormat = llvm.mlir.addressof @strict_gc_log_counts : !llvm.ptr
+    %countsFormatLengths = llvm.mlir.addressof @strict_gc_log_counts : !llvm.ptr
+    %countsFormat = llvm.getelementptr %countsFormatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %counted = llvm.call @printf(%countsFormat, %made, %visited) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, i64, i64) -> i32
     cf.br ^done
   ^done:
@@ -8637,17 +8812,18 @@
   llvm.mlir.global internal @strict_gc_tallied(dense<0.0> : tensor<30xf64>) : !llvm.array<30 x f64>
   llvm.mlir.global internal @strict_gc_cause(0 : i64) : i64
   llvm.mlir.global internal @strict_gc_live(0 : i64) : i64
-  llvm.mlir.global internal constant @strict_gc_explained_text("  in that window: %.0f young and %.0f full collections, %.0f for GPU memory, %.0f for host memory, %.2f s of them in the GPU sweep; the program waited %.2f s for the GPU; heap %lld MB, %lld MB live after the last full collection\0A\00") : !llvm.array<230 x i8>
-  llvm.mlir.global internal constant @strict_gc_exceeded("GarbageCollectionExceedsLimit: %.2f of the last %.1f seconds were spent collecting garbage (at most %.0f %%), allocate less in the loops of this program\0A\00") : !llvm.array<154 x i8>
-  llvm.mlir.global internal constant @strict_gc_above("GarbageCollectionAboveTarget: %.2f of the last %.1f seconds were spent collecting garbage (below %.0f %% is the goal), allocate less in the loops of this program\0A\00") : !llvm.array<163 x i8>
-  llvm.mlir.global internal constant @strict_gc_limit_switch("STRICT_GC_LIMIT\00") : !llvm.array<16 x i8>
-  llvm.mlir.global internal constant @strict_gc_window_switch("STRICT_GC_WINDOW\00") : !llvm.array<17 x i8>
+  llvm.mlir.global internal constant @strict_gc_explained_text("\E5\00\00\00\00\00\00\00\E5\00\00\00\00\00\00\00  in that window: %.0f young and %.0f full collections, %.0f for GPU memory, %.0f for host memory, %.2f s of them in the GPU sweep; the program waited %.2f s for the GPU; heap %lld MB, %lld MB live after the last full collection\0A\00") : !llvm.array<246 x i8>
+  llvm.mlir.global internal constant @strict_gc_exceeded("\99\00\00\00\00\00\00\00\99\00\00\00\00\00\00\00GarbageCollectionExceedsLimit: %.2f of the last %.1f seconds were spent collecting garbage (at most %.0f %%), allocate less in the loops of this program\0A\00") : !llvm.array<170 x i8>
+  llvm.mlir.global internal constant @strict_gc_above("\A2\00\00\00\00\00\00\00\A2\00\00\00\00\00\00\00GarbageCollectionAboveTarget: %.2f of the last %.1f seconds were spent collecting garbage (below %.0f %% is the goal), allocate less in the loops of this program\0A\00") : !llvm.array<179 x i8>
+  llvm.mlir.global internal constant @strict_gc_limit_switch("\0F\00\00\00\00\00\00\00\0F\00\00\00\00\00\00\00STRICT_GC_LIMIT\00") : !llvm.array<32 x i8>
+  llvm.mlir.global internal constant @strict_gc_window_switch("\10\00\00\00\00\00\00\00\10\00\00\00\00\00\00\00STRICT_GC_WINDOW\00") : !llvm.array<33 x i8>
   llvm.func @atof(!llvm.ptr) -> f64
   func.func private @strict_gc_limits() {
     %hundred = arith.constant 100.0 : f64
     %unset = llvm.mlir.zero : !llvm.ptr
     %nothing = arith.constant 0.0 : f64
-    %limitName = llvm.mlir.addressof @strict_gc_limit_switch : !llvm.ptr
+    %limitNameLengths = llvm.mlir.addressof @strict_gc_limit_switch : !llvm.ptr
+    %limitName = llvm.getelementptr %limitNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %limitText = llvm.call @getenv(%limitName) : (!llvm.ptr) -> !llvm.ptr
     %hasLimit = llvm.icmp "ne" %limitText, %unset : !llvm.ptr
     cf.cond_br %hasLimit, ^limit, ^window
@@ -8665,7 +8841,8 @@
     llvm.store %lower, %targetSlot : f64, !llvm.ptr
     cf.br ^window
   ^window:
-    %windowName = llvm.mlir.addressof @strict_gc_window_switch : !llvm.ptr
+    %windowNameLengths = llvm.mlir.addressof @strict_gc_window_switch : !llvm.ptr
+    %windowName = llvm.getelementptr %windowNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %windowText = llvm.call @getenv(%windowName) : (!llvm.ptr) -> !llvm.ptr
     %hasWindow = llvm.icmp "ne" %windowText, %unset : !llvm.ptr
     cf.cond_br %hasWindow, ^readWindow, ^done
@@ -8759,7 +8936,8 @@
     %liveSlot = llvm.mlir.addressof @strict_gc_live : !llvm.ptr
     %live = llvm.load %liveSlot : !llvm.ptr -> i64
     %liveMb = arith.shrui %live, %shift : i64
-    %format = llvm.mlir.addressof @strict_gc_explained_text : !llvm.ptr
+    %formatLengths = llvm.mlir.addressof @strict_gc_explained_text : !llvm.ptr
+    %format = llvm.getelementptr %formatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %printed = llvm.call @printf(%format, %values#0, %values#1, %values#2, %values#3, %values#4, %values#5, %usedMb, %liveMb) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, f64, f64, f64, f64, f64, f64, i64, i64) -> i32
     return
   }
@@ -8875,13 +9053,15 @@
   ^warnTarget:
     %marked = arith.constant 1 : i64
     llvm.store %marked, %targetedSlot : i64, !llvm.ptr
-    %aboveFormat = llvm.mlir.addressof @strict_gc_above : !llvm.ptr
+    %aboveFormatLengths = llvm.mlir.addressof @strict_gc_above : !llvm.ptr
+    %aboveFormat = llvm.getelementptr %aboveFormatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %goalPercent = arith.mulf %target, %hundredth : f64
     %aboveShown = llvm.call @printf(%aboveFormat, %collecting, %window, %goalPercent) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, f64, f64, f64) -> i32
     func.call @strict_gc_explain(%oldest) : (i64) -> ()
     cf.br ^done
   ^fail:
-    %message = llvm.mlir.addressof @strict_gc_exceeded : !llvm.ptr
+    %messageLengths = llvm.mlir.addressof @strict_gc_exceeded : !llvm.ptr
+    %message = llvm.getelementptr %messageLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %watchingSlot = llvm.mlir.addressof @strict_gc_watching : !llvm.ptr
     %watching = llvm.load %watchingSlot : !llvm.ptr -> i64
     %none = arith.constant 0 : i64
@@ -8986,15 +9166,15 @@
   ^done(%result: f64):
     return %result : f64
   }
-  llvm.mlir.global internal constant @strict_trace_at("\09at \00") : !llvm.array<5 x i8>
-  llvm.mlir.global internal constant @strict_trace_line(":line \00") : !llvm.array<7 x i8>
-  llvm.mlir.global internal constant @strict_trace_in(" in \00") : !llvm.array<5 x i8>
-  llvm.mlir.global internal constant @strict_error_prefix("Error: \00") : !llvm.array<8 x i8>
-  llvm.mlir.global internal constant @strict_error_newline("\0A\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @strict_trace_at("\04\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00\09at \00") : !llvm.array<21 x i8>
+  llvm.mlir.global internal constant @strict_trace_line("\06\00\00\00\00\00\00\00\06\00\00\00\00\00\00\00:line \00") : !llvm.array<23 x i8>
+  llvm.mlir.global internal constant @strict_trace_in("\04\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00 in \00") : !llvm.array<21 x i8>
+  llvm.mlir.global internal constant @strict_error_prefix("\07\00\00\00\00\00\00\00\07\00\00\00\00\00\00\00Error: \00") : !llvm.array<24 x i8>
+  llvm.mlir.global internal constant @strict_error_newline("\01\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00\0A\00") : !llvm.array<18 x i8>
   func.func private @strict_error_trace(%value: f64, %location: !llvm.ptr, %line: i64) -> f64 attributes {llvm.passthrough = ["noinline"]} {
     %one = arith.constant 1 : i64
     %error = func.call @strict_failed_error(%value) : (f64) -> f64
-    %method = func.call @strict_bits(%location) : (!llvm.ptr) -> f64
+    %method = func.call @strict_text_from(%location) : (!llvm.ptr) -> f64
     %repeated = func.call @strict_trace_repeated(%error, %method, %line) : (f64, f64, i64) -> i1
     cf.cond_br %repeated, ^skip, ^append
   ^skip:
@@ -9003,7 +9183,7 @@
     %methodLength = llvm.call @strlen(%location) : (!llvm.ptr) -> i64
     %skip = arith.addi %methodLength, %one : i64
     %filePointer = llvm.getelementptr %location[%skip] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %file = func.call @strict_bits(%filePointer) : (!llvm.ptr) -> f64
+    %file = func.call @strict_text_from(%filePointer) : (!llvm.ptr) -> f64
     %lineNumber = arith.sitofp %line : i64 to f64
     %size = arith.constant 24 : i64
     %entryBlock = func.call @strict_alloc(%size) : (i64) -> !llvm.ptr
@@ -9021,8 +9201,8 @@
     func.call @strict_gc_written(%tracesSlot) : (!llvm.ptr) -> ()
     return %value : f64
   }
-  llvm.mlir.global internal constant @strict_trace_skipped("...\00") : !llvm.array<4 x i8>
-  llvm.mlir.global internal constant @strict_trace_nowhere("\00") : !llvm.array<1 x i8>
+  llvm.mlir.global internal constant @strict_trace_skipped("\03\00\00\00\00\00\00\00\03\00\00\00\00\00\00\00...\00") : !llvm.array<20 x i8>
+  llvm.mlir.global internal constant @strict_trace_nowhere("\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00") : !llvm.array<17 x i8>
   // like Frame.Kept of the Strict VM: the first 40 traces, then one without a file counting the skipped ones, the last 10
   func.func private @strict_traces_kept(%traces: f64, %entry: f64) -> f64 {
     %one = arith.constant 1.0 : f64
@@ -9040,10 +9220,12 @@
   ^mark:
     %size = arith.constant 24 : i64
     %markerBlock = func.call @strict_alloc(%size) : (i64) -> !llvm.ptr
-    %skipped = llvm.mlir.addressof @strict_trace_skipped : !llvm.ptr
+    %skippedLengths = llvm.mlir.addressof @strict_trace_skipped : !llvm.ptr
+    %skipped = llvm.getelementptr %skippedLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %skippedBits = func.call @strict_bits(%skipped) : (!llvm.ptr) -> f64
     llvm.store %skippedBits, %markerBlock : f64, !llvm.ptr
-    %nowhere = llvm.mlir.addressof @strict_trace_nowhere : !llvm.ptr
+    %nowhereLengths = llvm.mlir.addressof @strict_trace_nowhere : !llvm.ptr
+    %nowhere = llvm.getelementptr %nowhereLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %nowhereBits = func.call @strict_bits(%nowhere) : (!llvm.ptr) -> f64
     %fileSlot = llvm.getelementptr %markerBlock[1] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %nowhereBits, %fileSlot : f64, !llvm.ptr
@@ -9086,7 +9268,7 @@
   }
   func.func private @strict_trace_failed(%value: f64, %where: !llvm.ptr, %line: i64) -> f64 attributes {llvm.passthrough = ["noinline", "cold"]} {
     %error = func.call @strict_failed_error(%value) : (f64) -> f64
-    %method = func.call @strict_bits(%where) : (!llvm.ptr) -> f64
+    %method = func.call @strict_text_from(%where) : (!llvm.ptr) -> f64
     %here = func.call @strict_traced_in(%error, %method) : (f64, f64) -> i1
     cf.cond_br %here, ^done, ^trace
   ^trace:
@@ -9148,14 +9330,15 @@
     %false = arith.constant false
     return %false : i1
   }
-  llvm.mlir.global internal constant @strict_unhandled_format("%s\0A\00") : !llvm.array<4 x i8>
+  llvm.mlir.global internal constant @strict_unhandled_format("\03\00\00\00\00\00\00\00\03\00\00\00\00\00\00\00%s\0A\00") : !llvm.array<20 x i8>
   func.func private @strict_unhandled(%value: f64) -> i1 {
     %failed = func.call @strict_is_failure(%value) : (f64) -> i1
     cf.cond_br %failed, ^report, ^done
   ^report:
     %text = func.call @strict_error_report(%value) : (f64) -> f64
     %pointer = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr
-    %format = llvm.mlir.addressof @strict_unhandled_format : !llvm.ptr
+    %formatLengths = llvm.mlir.addressof @strict_unhandled_format : !llvm.ptr
+    %format = llvm.getelementptr %formatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %printed = llvm.call @printf(%format, %pointer) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr) -> i32
     llvm.call @strict_crash_log(%pointer) : (!llvm.ptr) -> ()
     func.call @strict_flush() : () -> ()
@@ -9171,8 +9354,8 @@
     %sum = arith.addf %total, %counted : f64
     return %sum : f64
   }
-  llvm.mlir.global internal constant @strict_trace_skipping("\09... (skipped \00") : !llvm.array<15 x i8>
-  llvm.mlir.global internal constant @strict_trace_lines(" lines)\00") : !llvm.array<8 x i8>
+  llvm.mlir.global internal constant @strict_trace_skipping("\0E\00\00\00\00\00\00\00\0E\00\00\00\00\00\00\00\09... (skipped \00") : !llvm.array<31 x i8>
+  llvm.mlir.global internal constant @strict_trace_lines("\07\00\00\00\00\00\00\00\07\00\00\00\00\00\00\00 lines)\00") : !llvm.array<24 x i8>
   func.func private @strict_trace_text(%entry: f64) -> f64 {
     %block = func.call @strict_ptr(%entry) : (f64) -> !llvm.ptr
     %method = llvm.load %block : !llvm.ptr -> f64
@@ -9186,20 +9369,25 @@
     %isSkipped = arith.cmpi eq, %firstCharacter, %nothing : i8
     cf.cond_br %isSkipped, ^skipped, ^traced
   ^skipped:
-    %skipping = llvm.mlir.addressof @strict_trace_skipping : !llvm.ptr
+    %skippingLengths = llvm.mlir.addressof @strict_trace_skipping : !llvm.ptr
+    %skipping = llvm.getelementptr %skippingLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %skippingBits = func.call @strict_bits(%skipping) : (!llvm.ptr) -> f64
     %count = func.call @strict_number_text(%line) : (f64) -> f64
-    %lines = llvm.mlir.addressof @strict_trace_lines : !llvm.ptr
+    %linesLengths = llvm.mlir.addressof @strict_trace_lines : !llvm.ptr
+    %lines = llvm.getelementptr %linesLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %linesBits = func.call @strict_bits(%lines) : (!llvm.ptr) -> f64
     %counted = func.call @strict_text_concat(%skippingBits, %count) : (f64, f64) -> f64
     %skippedText = func.call @strict_text_concat(%counted, %linesBits) : (f64, f64) -> f64
     return %skippedText : f64
   ^traced:
-    %at = llvm.mlir.addressof @strict_trace_at : !llvm.ptr
+    %atLengths = llvm.mlir.addressof @strict_trace_at : !llvm.ptr
+    %at = llvm.getelementptr %atLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %atBits = func.call @strict_bits(%at) : (!llvm.ptr) -> f64
-    %in = llvm.mlir.addressof @strict_trace_in : !llvm.ptr
+    %inLengths = llvm.mlir.addressof @strict_trace_in : !llvm.ptr
+    %in = llvm.getelementptr %inLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %inBits = func.call @strict_bits(%in) : (!llvm.ptr) -> f64
-    %lineLabel = llvm.mlir.addressof @strict_trace_line : !llvm.ptr
+    %lineLabelLengths = llvm.mlir.addressof @strict_trace_line : !llvm.ptr
+    %lineLabel = llvm.getelementptr %lineLabelLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %lineBits = func.call @strict_bits(%lineLabel) : (!llvm.ptr) -> f64
     %number = func.call @strict_number_text(%line) : (f64) -> f64
     %first = func.call @strict_text_concat(%atBits, %method) : (f64, f64) -> f64
@@ -9213,11 +9401,13 @@
     %zero = arith.constant 0.0 : f64
     %one = arith.constant 1.0 : f64
     %error = func.call @strict_failed_error(%value) : (f64) -> f64
-    %prefix = llvm.mlir.addressof @strict_error_prefix : !llvm.ptr
+    %prefixLengths = llvm.mlir.addressof @strict_error_prefix : !llvm.ptr
+    %prefix = llvm.getelementptr %prefixLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %prefixBits = func.call @strict_bits(%prefix) : (!llvm.ptr) -> f64
     %name = func.call @strict_error_name(%error) : (f64) -> f64
     %named = func.call @strict_text_concat(%prefixBits, %name) : (f64, f64) -> f64
-    %newline = llvm.mlir.addressof @strict_error_newline : !llvm.ptr
+    %newlineLengths = llvm.mlir.addressof @strict_error_newline : !llvm.ptr
+    %newline = llvm.getelementptr %newlineLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %newlineBits = func.call @strict_bits(%newline) : (!llvm.ptr) -> f64
     %block = func.call @strict_ptr(%error) : (f64) -> !llvm.ptr
     %tracesSlot = llvm.getelementptr %block[1] : (!llvm.ptr) -> !llvm.ptr, f64
@@ -9328,8 +9518,11 @@
     %result = func.call @strict_bits(%view) : (!llvm.ptr) -> f64
     return %result : f64
   }
+  llvm.mlir.global internal constant @strict_empty_text("\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00") : !llvm.array<17 x i8>
   llvm.mlir.global internal constant @strict_open_paren("(\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @strict_open_paren_text("\01\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00(\00") : !llvm.array<18 x i8>
   llvm.mlir.global internal constant @strict_close_paren(")\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @strict_close_paren_text("\01\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00)\00") : !llvm.array<18 x i8>
   llvm.mlir.global internal @strict_empty_holder(dense<0.0> : tensor<5xf64>) : !llvm.array<5 x f64>
   llvm.mlir.global internal @strict_empty_view(dense<0.0> : tensor<2xf64>) : !llvm.array<2 x f64>
   func.func private @strict_number_and(%self: f64, %other: f64) -> f64 {
@@ -10306,7 +10499,8 @@
   }
   func.func private @strict_index_error(%name: f64) -> f64 attributes {llvm.passthrough = ["noinline"]} {
     %one = arith.constant 1 : i64
-    %errorName = llvm.mlir.addressof @strict_index_out_of_range : !llvm.ptr
+    %errorNameLengths = llvm.mlir.addressof @strict_index_out_of_range : !llvm.ptr
+    %errorName = llvm.getelementptr %errorNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %errorNameBits = func.call @strict_bits(%errorName) : (!llvm.ptr) -> f64
     %error = func.call @strict_error_text(%errorNameBits) : (f64) -> f64
     %pointer = func.call @strict_ptr(%name) : (f64) -> !llvm.ptr
@@ -10942,7 +11136,8 @@
     %outside = arith.ori %below, %beyond : i1
     cf.cond_br %outside, ^outside, ^inside
   ^outside:
-    %name = llvm.mlir.addressof @strict_index_out_of_range : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_index_out_of_range : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
     return %error : f64
   ^inside:
@@ -11689,7 +11884,8 @@
     %outside = arith.ori %below, %above : i1
     cf.cond_br %outside, ^error, ^inside
   ^error:
-    %errorName = llvm.mlir.addressof @strict_index_out_of_range : !llvm.ptr
+    %errorNameLengths = llvm.mlir.addressof @strict_index_out_of_range : !llvm.ptr
+    %errorName = llvm.getelementptr %errorNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %errorNameBits = func.call @strict_bits(%errorName) : (!llvm.ptr) -> f64
     %error = func.call @strict_error_text(%errorNameBits) : (f64) -> f64
     return %error : f64
@@ -11976,9 +12172,11 @@
     return %left : f64
   ^error:
     %first = func.call @strict_list_get(%right, %zero) : (f64, f64) -> f64
-    %prefixPointer = llvm.mlir.addressof @strict_downcast_prefix : !llvm.ptr
+    %prefixPointerLengths = llvm.mlir.addressof @strict_downcast_prefix : !llvm.ptr
+    %prefixPointer = llvm.getelementptr %prefixPointerLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %prefix = func.call @strict_bits(%prefixPointer) : (!llvm.ptr) -> f64
-    %quotePointer = llvm.mlir.addressof @strict_quote : !llvm.ptr
+    %quotePointerLengths = llvm.mlir.addressof @strict_quote : !llvm.ptr
+    %quotePointer = llvm.getelementptr %quotePointerLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %quote = func.call @strict_bits(%quotePointer) : (!llvm.ptr) -> f64
     %named = func.call @strict_text_concat(%prefix, %first) : (f64, f64) -> f64
     %message = func.call @strict_text_concat(%named, %quote) : (f64, f64) -> f64
@@ -12006,7 +12204,7 @@
   ^done:
     return %current : f64
   }
-  llvm.mlir.global internal constant @strict_directory_not_created("DirectoryNotCreated\00") : !llvm.array<20 x i8>
+  llvm.mlir.global internal constant @strict_directory_not_created("\13\00\00\00\00\00\00\00\13\00\00\00\00\00\00\00DirectoryNotCreated\00") : !llvm.array<36 x i8>
   // Directory.Create: None when the directory is there afterwards, else an Error
   func.func private @strict_directory_created(%made: i1, %path: f64) -> f64 {
     %none = arith.constant 0.0 : f64
@@ -12018,18 +12216,20 @@
     %isThere = arith.cmpf oeq, %exists, %created : f64
     cf.cond_br %isThere, ^done(%none : f64), ^failed
   ^failed:
-    %name = llvm.mlir.addressof @strict_directory_not_created : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_directory_not_created : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
     cf.br ^done(%error : f64)
   ^done(%result: f64):
     return %result : f64
   }
-  llvm.mlir.global internal constant @strict_directory_not_found("DirectoryNotFound\00") : !llvm.array<18 x i8>
+  llvm.mlir.global internal constant @strict_directory_not_found("\11\00\00\00\00\00\00\00\11\00\00\00\00\00\00\00DirectoryNotFound\00") : !llvm.array<34 x i8>
   func.func private @strict_directory_changed(%isChanged: i1) -> f64 {
     %none = arith.constant 0.0 : f64
     cf.cond_br %isChanged, ^done(%none : f64), ^failed
   ^failed:
-    %name = llvm.mlir.addressof @strict_directory_not_found : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_directory_not_found : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
     cf.br ^done(%error : f64)
   ^done(%result: f64):
@@ -12062,7 +12262,8 @@
     %fits = arith.ori %same, %spread : i1
     cf.cond_br %fits, ^combine, ^mismatch
   ^mismatch:
-    %name = llvm.mlir.addressof @strict_dimensions : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_dimensions : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
     return %error : f64
   ^combine:
@@ -12376,7 +12577,8 @@
     %value = func.call @strict_list_get(%pair, %one) : (f64, f64) -> f64
     return %value : f64
   ^missing:
-    %name = llvm.mlir.addressof @strict_key_not_found : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_key_not_found : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
     return %error : f64
   }
@@ -12395,7 +12597,8 @@
     %found = arith.cmpi ne, %position, %none : i64
     cf.cond_br %found, ^duplicate, ^append
   ^duplicate:
-    %name = llvm.mlir.addressof @strict_duplicate_key : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_duplicate_key : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
     return %error : f64
   ^append:
@@ -12484,6 +12687,19 @@
   ^kept:
     return
   }
+  // step 1 of plan.md: a text whose stored byte length is not its measured one was made by a writer not converted yet
+  llvm.mlir.global internal constant @strict_text_unsized("TextWithoutLength: stored %lld, measured %lld: %.60s\0A\00") : !llvm.array<54 x i8>
+  func.func private @strict_text_checked(%data: !llvm.ptr, %measured: i64) {
+    %stored = func.call @strict_text_bytes(%data) : (!llvm.ptr) -> i64
+    %same = arith.cmpi eq, %stored, %measured : i64
+    cf.cond_br %same, ^done, ^report
+  ^report:
+    %format = llvm.mlir.addressof @strict_text_unsized : !llvm.ptr
+    %printed = llvm.call @printf(%format, %stored, %measured, %data) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i32
+    cf.br ^done
+  ^done:
+    return
+  }
   func.func private @strict_text_length(%text: f64) -> f64 {
     %pointer = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr
     %address = llvm.ptrtoint %pointer : !llvm.ptr to i64
@@ -12506,6 +12722,7 @@
   ^measure:
     // only one long text stays cached, alternating two long texts re-measures, upgrade: length in a text header
     %length = llvm.call @strlen(%pointer) : (!llvm.ptr) -> i64
+    func.call @strict_text_checked(%pointer, %length) : (!llvm.ptr, i64) -> ()
     %longText = arith.constant 256 : i64
     %isLong = arith.cmpi uge, %length, %longText : i64
     cf.cond_br %isLong, ^remember, ^measured
@@ -12666,7 +12883,16 @@
   ^exit:
     return %last : f64
   }
-  llvm.mlir.global internal @strict_characters(dense<0> : tensor<512xi8>) : !llvm.array<512 x i8>
+  llvm.mlir.global internal @strict_characters(dense<0> : tensor<6144xi8>) {alignment = 16 : i64} : !llvm.array<6144 x i8>
+  func.func private @strict_character_shared(%code: i64) -> !llvm.ptr attributes {llvm.passthrough = ["alwaysinline"]} {
+    %entry = arith.constant 24 : i64
+    %lengths = arith.constant 16 : i64
+    %start = arith.muli %code, %entry : i64
+    %offset = arith.addi %start, %lengths : i64
+    %table = llvm.mlir.addressof @strict_characters : !llvm.ptr
+    %slot = llvm.getelementptr %table[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    return %slot : !llvm.ptr
+  }
   func.func private @strict_characters_init() {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -12677,10 +12903,10 @@
     %more = arith.cmpi ult, %code, %count : i64
     cf.cond_br %more, ^fill, ^done
   ^fill:
-    %offset = arith.addi %code, %code : i64
-    %slot = llvm.getelementptr %table[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %slot = func.call @strict_character_shared(%code) : (i64) -> !llvm.ptr
     %byte = arith.trunci %code : i64 to i8
     llvm.store %byte, %slot : i8, !llvm.ptr
+    func.call @strict_text_sized(%slot, %one, %one) : (!llvm.ptr, i64, i64) -> ()
     %next = arith.addi %code, %one : i64
     cf.br ^loop(%next : i64)
   ^done:
@@ -12702,7 +12928,8 @@
     %outside = arith.ori %outsideStart, %pastEnd : i1
     cf.cond_br %outside, ^outOfRange, ^inside
   ^outOfRange:
-    %errorName = llvm.mlir.addressof @strict_substring_out_of_range : !llvm.ptr
+    %errorNameLengths = llvm.mlir.addressof @strict_substring_out_of_range : !llvm.ptr
+    %errorName = llvm.getelementptr %errorNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %error = func.call @strict_error_named(%errorName) : (!llvm.ptr) -> f64
     return %error : f64
   ^inside:
@@ -12715,38 +12942,30 @@
   ^character:
     %byte = llvm.load %from : !llvm.ptr -> i8
     %code = arith.extui %byte : i8 to i64
-    %twice = arith.addi %code, %code : i64
-    %table = llvm.mlir.addressof @strict_characters : !llvm.ptr
-    %shared = llvm.getelementptr %table[%twice] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %shared = func.call @strict_character_shared(%code) : (i64) -> !llvm.ptr
     %sharedBits = func.call @strict_bits(%shared) : (!llvm.ptr) -> f64
     return %sharedBits : f64
   ^copy:
-    %size = arith.addi %count, %one : i64
-    %copy = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
+    %copy = func.call @strict_text_room(%count) : (i64) -> !llvm.ptr
     %done = llvm.call @memcpy(%copy, %from, %count) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
-    %end = llvm.getelementptr %copy[%count] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    llvm.store %terminator, %end : i8, !llvm.ptr
-    %result = func.call @strict_bits(%copy) : (!llvm.ptr) -> f64
+    %result = func.call @strict_text_made(%copy, %count) : (!llvm.ptr, i64) -> f64
     return %result : f64
   }
   func.func private @strict_text_copy(%text: f64) -> f64 {
     %one = arith.constant 1 : i64
     %pointer = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr
-    %length = llvm.call @strlen(%pointer) : (!llvm.ptr) -> i64
-    %size = arith.addi %length, %one : i64
-    %copy = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
-    %done = llvm.call @memcpy(%copy, %pointer, %size) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
-    %result = func.call @strict_bits(%copy) : (!llvm.ptr) -> f64
+    %result = func.call @strict_text_from(%pointer) : (!llvm.ptr) -> f64
     return %result : f64
   }
-  llvm.mlir.global internal constant @strict_variable_unset("\00") : !llvm.array<1 x i8>
+  llvm.mlir.global internal constant @strict_variable_unset("\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00") : !llvm.array<17 x i8>
   // the value of the environment variable name, "" when it is not set
   func.func private @strict_process_variable(%self: f64, %name: f64) -> f64 {
     %key = func.call @strict_ptr(%name) : (f64) -> !llvm.ptr
     %setting = llvm.call @getenv(%key) : (!llvm.ptr) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     %isSet = llvm.icmp "ne" %setting, %null : !llvm.ptr
-    %unset = llvm.mlir.addressof @strict_variable_unset : !llvm.ptr
+    %unsetLengths = llvm.mlir.addressof @strict_variable_unset : !llvm.ptr
+    %unset = llvm.getelementptr %unsetLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %source = llvm.select %isSet, %setting, %unset : i1, !llvm.ptr
     %bits = func.call @strict_bits(%source) : (!llvm.ptr) -> f64
     %copied = func.call @strict_text_copy(%bits) : (f64) -> f64
@@ -12781,9 +13000,7 @@
   func.func private @strict_character_text(%code: f64) -> f64 {
     %byte = arith.fptoui %code : f64 to i8
     %wide = arith.extui %byte : i8 to i64
-    %twice = arith.addi %wide, %wide : i64
-    %table = llvm.mlir.addressof @strict_characters : !llvm.ptr
-    %shared = llvm.getelementptr %table[%twice] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %shared = func.call @strict_character_shared(%wide) : (i64) -> !llvm.ptr
     %result = func.call @strict_bits(%shared) : (!llvm.ptr) -> f64
     return %result : f64
   }
@@ -12849,7 +13066,7 @@
     return %result : f64
   }
   // a type of two numbers (Vector2) is one 64-bit slot: the first number as f32 in the low, the second in the high 32 bits
-  llvm.mlir.global internal constant @strict_two_constraint("ConstraintNotMet: numbers with Length is 2\00") : !llvm.array<43 x i8>
+  llvm.mlir.global internal constant @strict_two_constraint("\2A\00\00\00\00\00\00\00\2A\00\00\00\00\00\00\00ConstraintNotMet: numbers with Length is 2\00") : !llvm.array<59 x i8>
   // a type of 3 to 16 numbers of 32 bits (Vector3, MlirFlats) is one block of floats, its count in front
   func.func private @strict_flat_new(%count: f64) -> f64 {
     %one = arith.constant 1.0 : f64
@@ -13494,10 +13711,11 @@
     return %text : f64
   }
   // a number stored into a Bytes list (format 9): its whole part like a C cast, below 0 is 0, above 255 is 255
-  llvm.mlir.global internal constant @strict_threads_name("STRICT_THREADS\00") : !llvm.array<15 x i8>
+  llvm.mlir.global internal constant @strict_threads_name("\0E\00\00\00\00\00\00\00\0E\00\00\00\00\00\00\00STRICT_THREADS\00") : !llvm.array<31 x i8>
   // the threads of the pool: STRICT_THREADS when it is a positive number (1 runs every loop on the calling thread), else the default
   func.func private @strict_pool_size(%default: i64) -> i64 {
-    %name = llvm.mlir.addressof @strict_threads_name : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_threads_name : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %text = llvm.call @getenv(%name) : (!llvm.ptr) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     %isSet = llvm.icmp "ne" %text, %null : !llvm.ptr
@@ -13556,7 +13774,8 @@
     %number = func.call @strict_two_half(%pair, %shift) : (f64, i64) -> f64
     return %number : f64
   ^outside:
-    %name = llvm.mlir.addressof @strict_index_out_of_range : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_index_out_of_range : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
     return %error : f64
   }
@@ -13573,7 +13792,8 @@
     %pair = func.call @strict_two_packed(%first, %second) : (f64, f64) -> f64
     return %pair : f64
   ^failed:
-    %name = llvm.mlir.addressof @strict_two_constraint : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_two_constraint : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
     return %error : f64
   }
@@ -13619,7 +13839,7 @@
     %result = func.call @strict_degrees(%angle) : (f64) -> f64
     return %result : f64
   }
-  llvm.mlir.global internal constant @strict_invalid_number("InvalidNumber\00") : !llvm.array<14 x i8>
+  llvm.mlir.global internal constant @strict_invalid_number("\0D\00\00\00\00\00\00\00\0D\00\00\00\00\00\00\00InvalidNumber\00") : !llvm.array<30 x i8>
   // all of the text has to be the number, strtod alone reads "abc" as 0 and "12 monkeys" as 12
   func.func private @strict_text_number(%text: f64) -> f64 {
     %a = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr
@@ -13636,17 +13856,19 @@
   ^number:
     return %result : f64
   ^invalid:
-    %name = llvm.mlir.addressof @strict_invalid_number : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_invalid_number : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
     return %error : f64
   }
-  llvm.mlir.global internal constant @strict_true_text("true\00") : !llvm.array<5 x i8>
-  llvm.mlir.global internal constant @strict_false_text("false\00") : !llvm.array<6 x i8>
-  llvm.mlir.global internal constant @strict_invalid_boolean("InvalidBoolean\00") : !llvm.array<15 x i8>
+  llvm.mlir.global internal constant @strict_true_text("\04\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00true\00") : !llvm.array<21 x i8>
+  llvm.mlir.global internal constant @strict_false_text("\05\00\00\00\00\00\00\00\05\00\00\00\00\00\00\00false\00") : !llvm.array<22 x i8>
+  llvm.mlir.global internal constant @strict_invalid_boolean("\0E\00\00\00\00\00\00\00\0E\00\00\00\00\00\00\00InvalidBoolean\00") : !llvm.array<31 x i8>
   func.func private @strict_text_boolean(%text: f64) -> f64 {
     %zero = arith.constant 0 : i32
     %pointer = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr
-    %trueText = llvm.mlir.addressof @strict_true_text : !llvm.ptr
+    %trueTextLengths = llvm.mlir.addressof @strict_true_text : !llvm.ptr
+    %trueText = llvm.getelementptr %trueTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %trueOrder = llvm.call @strcmp(%pointer, %trueText) : (!llvm.ptr, !llvm.ptr) -> i32
     %isTrue = arith.cmpi eq, %trueOrder, %zero : i32
     cf.cond_br %isTrue, ^truth, ^other
@@ -13654,7 +13876,8 @@
     %one = arith.constant 1.0 : f64
     return %one : f64
   ^other:
-    %falseText = llvm.mlir.addressof @strict_false_text : !llvm.ptr
+    %falseTextLengths = llvm.mlir.addressof @strict_false_text : !llvm.ptr
+    %falseText = llvm.getelementptr %falseTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %falseOrder = llvm.call @strcmp(%pointer, %falseText) : (!llvm.ptr, !llvm.ptr) -> i32
     %isFalse = arith.cmpi eq, %falseOrder, %zero : i32
     cf.cond_br %isFalse, ^falsity, ^invalid
@@ -13662,7 +13885,8 @@
     %none = arith.constant 0.0 : f64
     return %none : f64
   ^invalid:
-    %name = llvm.mlir.addressof @strict_invalid_boolean : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_invalid_boolean : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
     return %error : f64
   }
@@ -13683,10 +13907,11 @@
     %at = arith.extsi %index : i32 to i64
     %slot = llvm.getelementptr %values[%at] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.ptr
     %text = llvm.load %slot : !llvm.ptr -> !llvm.ptr
-    %bits = func.call @strict_bits(%text) : (!llvm.ptr) -> f64
+    %bits = func.call @strict_text_from(%text) : (!llvm.ptr) -> f64
     return %bits : f64
   ^missing:
-    %empty = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %emptyLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
+    %empty = llvm.getelementptr %emptyLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %none = func.call @strict_bits(%empty) : (!llvm.ptr) -> f64
     return %none : f64
   }
@@ -13726,12 +13951,12 @@
     %result = func.call @strict_argument_list(%count, %values, %numbers) : (i32, !llvm.ptr, i1) -> f64
     return %result : f64
   }
-  llvm.mlir.global internal constant @strict_precise("%.*g\00") : !llvm.array<5 x i8>
-  llvm.mlir.global internal constant @strict_scientific("%.16e\00") : !llvm.array<6 x i8>
-  llvm.mlir.global internal constant @strict_exponent("e%d\00") : !llvm.array<4 x i8>
-  llvm.mlir.global internal constant @strict_nan("NaN\00") : !llvm.array<4 x i8>
-  llvm.mlir.global internal constant @strict_infinity("Infinity\00") : !llvm.array<9 x i8>
-  llvm.mlir.global internal constant @strict_negative_infinity("-Infinity\00") : !llvm.array<10 x i8>
+  llvm.mlir.global internal constant @strict_precise("\04\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00%.*g\00") : !llvm.array<21 x i8>
+  llvm.mlir.global internal constant @strict_scientific("\05\00\00\00\00\00\00\00\05\00\00\00\00\00\00\00%.16e\00") : !llvm.array<22 x i8>
+  llvm.mlir.global internal constant @strict_exponent("\03\00\00\00\00\00\00\00\03\00\00\00\00\00\00\00e%d\00") : !llvm.array<20 x i8>
+  llvm.mlir.global internal constant @strict_nan("\03\00\00\00\00\00\00\00\03\00\00\00\00\00\00\00NaN\00") : !llvm.array<20 x i8>
+  llvm.mlir.global internal constant @strict_infinity("\08\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00Infinity\00") : !llvm.array<25 x i8>
+  llvm.mlir.global internal constant @strict_negative_infinity("\09\00\00\00\00\00\00\00\09\00\00\00\00\00\00\00-Infinity\00") : !llvm.array<26 x i8>
   func.func private @strict_number_text(%number: f64) -> f64 {
     %failed = func.call @strict_is_failure(%number) : (f64) -> i1
     cf.cond_br %failed, ^report, ^format
@@ -13747,9 +13972,12 @@
   ^special:
     %isNumber = arith.cmpf ord, %number, %number : f64
     %isBelow = arith.cmpf olt, %number, %zero : f64
-    %nanText = llvm.mlir.addressof @strict_nan : !llvm.ptr
-    %positiveText = llvm.mlir.addressof @strict_infinity : !llvm.ptr
-    %negativeText = llvm.mlir.addressof @strict_negative_infinity : !llvm.ptr
+    %nanTextLengths = llvm.mlir.addressof @strict_nan : !llvm.ptr
+    %nanText = llvm.getelementptr %nanTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %positiveTextLengths = llvm.mlir.addressof @strict_infinity : !llvm.ptr
+    %positiveText = llvm.getelementptr %positiveTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %negativeTextLengths = llvm.mlir.addressof @strict_negative_infinity : !llvm.ptr
+    %negativeText = llvm.getelementptr %negativeTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %infinite = arith.select %isBelow, %negativeText, %positiveText : !llvm.ptr
     %special = arith.select %isNumber, %infinite, %nanText : !llvm.ptr
     %specialBits = func.call @strict_bits(%special) : (!llvm.ptr) -> f64
@@ -13758,7 +13986,7 @@
     %size = arith.constant 40 : i64
     %large = arith.constant 1.0e7 : f64
     %tiny = arith.constant 1.0e-9 : f64
-    %buffer = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
+    %buffer = func.call @strict_text_room(%size) : (i64) -> !llvm.ptr
     %absolute = llvm.intr.fabs(%number) : (f64) -> f64
     %isLarge = arith.cmpf oge, %absolute, %large : f64
     %truncated = llvm.intr.trunc(%number) : (f64) -> f64
@@ -13822,7 +14050,8 @@
     %first = arith.constant 15 : i32
     cf.cond_br %scientific, ^exponent, ^plain(%first : i32)
   ^plain(%precision: i32):
-    %format = llvm.mlir.addressof @strict_precise : !llvm.ptr
+    %formatLengths = llvm.mlir.addressof @strict_precise : !llvm.ptr
+    %format = llvm.getelementptr %formatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %written = llvm.call @strict_print_precise(%buffer, %size, %format, %precision, %number) : (!llvm.ptr, i64, !llvm.ptr, i32, f64) -> i32
     %null = llvm.mlir.zero : !llvm.ptr
     %parsed = llvm.call @strtod(%buffer, %null) : (!llvm.ptr, !llvm.ptr) -> f64
@@ -13834,7 +14063,8 @@
     %more = arith.addi %precision, %one : i32
     cf.cond_br %finished, ^done, ^plain(%more : i32)
   ^exponent:
-    %scientificFormat = llvm.mlir.addressof @strict_scientific : !llvm.ptr
+    %scientificFormatLengths = llvm.mlir.addressof @strict_scientific : !llvm.ptr
+    %scientificFormat = llvm.getelementptr %scientificFormatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %digits = llvm.call @strict_print_number(%buffer, %size, %scientificFormat, %number) : (!llvm.ptr, i64, !llvm.ptr, f64) -> i32
     %letter = arith.constant 101 : i32
     %marker = llvm.call @strchr(%buffer, %letter) : (!llvm.ptr, i32) -> !llvm.ptr
@@ -13864,12 +14094,13 @@
     %next = arith.addi %mantissaEnd, %one64 : i64
     %tail = llvm.getelementptr %buffer[%next] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %remaining = arith.subi %size, %next : i64
-    %exponentFormat = llvm.mlir.addressof @strict_exponent : !llvm.ptr
+    %exponentFormatLengths = llvm.mlir.addressof @strict_exponent : !llvm.ptr
+    %exponentFormat = llvm.getelementptr %exponentFormatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %wide = arith.trunci %power : i64 to i32
     %appended = llvm.call @strict_print_integer(%tail, %remaining, %exponentFormat, %wide) : (!llvm.ptr, i64, !llvm.ptr, i32) -> i32
     cf.br ^done
   ^done:
-    %result = func.call @strict_bits(%buffer) : (!llvm.ptr) -> f64
+    %result = func.call @strict_text_sealed(%buffer) : (!llvm.ptr) -> f64
     return %result : f64
   }
   func.func private @strict_equal_number(%left: f64, %right: f64) -> f64 {
@@ -14003,12 +14234,15 @@
   ^join(%leftLength: i64):
     %rightLength = llvm.call @strlen(%b) : (!llvm.ptr) -> i64
     %total = arith.addi %leftLength, %rightLength : i64
-    %size = arith.addi %total, %one : i64
-    %buffer = func.call @strict_alloc_text_filled(%size) : (i64) -> !llvm.ptr
+    %buffer = func.call @strict_text_room_filled(%total) : (i64) -> !llvm.ptr
     %first = llvm.call @memcpy(%buffer, %a, %leftLength) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     %end = llvm.getelementptr %buffer[%leftLength] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %rightSize = arith.addi %rightLength, %one : i64
     %second = llvm.call @memcpy(%end, %b, %rightSize) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %leftCharacters = func.call @strict_text_characters(%a) : (!llvm.ptr) -> i64
+    %rightCharacters = func.call @strict_text_characters(%b) : (!llvm.ptr) -> i64
+    %characters = arith.addi %leftCharacters, %rightCharacters : i64
+    func.call @strict_text_sized(%buffer, %total, %characters) : (!llvm.ptr, i64, i64) -> ()
     %result = func.call @strict_bits(%buffer) : (!llvm.ptr) -> f64
     %longText = arith.constant 256 : i64
     %isLong = arith.cmpi uge, %total, %longText : i64
@@ -14028,9 +14262,10 @@
     %terminator = arith.constant 0 : i8
     %whole = llvm.intr.ceil(%capacity) : (f64) -> f64
     %count = arith.fptosi %whole : f64 to i64
-    %size = arith.addi %count, %one : i64
-    %buffer = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
+    %nothing = arith.constant 0 : i64
+    %buffer = func.call @strict_text_room(%count) : (i64) -> !llvm.ptr
     llvm.store %terminator, %buffer : i8, !llvm.ptr
+    func.call @strict_text_sized(%buffer, %nothing, %nothing) : (!llvm.ptr, i64, i64) -> ()
     %result = func.call @strict_bits(%buffer) : (!llvm.ptr) -> f64
     return %result : f64
   }
@@ -14045,12 +14280,14 @@
     %next = arith.addi %index, %one : i64
     %end = llvm.getelementptr %buffer[%next] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     llvm.store %terminator, %end : i8, !llvm.ptr
+    func.call @strict_text_sized(%buffer, %next, %next) : (!llvm.ptr, i64, i64) -> ()
     %advanced = arith.sitofp %next : i64 to f64
     return %advanced : f64
   }
-  llvm.mlir.global internal constant @strict_comma(", \00") : !llvm.array<3 x i8>
+  llvm.mlir.global internal constant @strict_comma("\02\00\00\00\00\00\00\00\02\00\00\00\00\00\00\00, \00") : !llvm.array<19 x i8>
   func.func private @strict_list_text(%list: f64, %isText: i1) -> f64 {
-    %commaText = llvm.mlir.addressof @strict_comma : !llvm.ptr
+    %commaTextLengths = llvm.mlir.addressof @strict_comma : !llvm.ptr
+    %commaText = llvm.getelementptr %commaTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %comma = func.call @strict_bits(%commaText) : (!llvm.ptr) -> f64
     %brackets = arith.constant true
     %result = func.call @strict_join(%list, %isText, %comma, %brackets) : (f64, i1, f64, i1) -> f64
@@ -14059,7 +14296,8 @@
   func.func private @strict_text_combine(%self: f64, %texts: f64, %separator: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %isUnset = arith.cmpf oeq, %separator, %zero : f64
-    %commaText = llvm.mlir.addressof @strict_comma : !llvm.ptr
+    %commaTextLengths = llvm.mlir.addressof @strict_comma : !llvm.ptr
+    %commaText = llvm.getelementptr %commaTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %comma = func.call @strict_bits(%commaText) : (!llvm.ptr) -> f64
     %chosen = arith.select %isUnset, %comma, %separator : f64
     %isText = arith.constant true
@@ -14106,8 +14344,7 @@
     %next = arith.addi %index, %step : i64
     cf.br ^measure(%next, %measured : i64, i64)
   ^allocate:
-    %bytes = arith.addi %total, %step : i64
-    %buffer = func.call @strict_alloc_text(%bytes) : (i64) -> !llvm.ptr
+    %buffer = func.call @strict_text_room(%total) : (i64) -> !llvm.ptr
     cf.cond_br %enclosed, ^opening, ^write(%start, %start : i64, i64)
   ^opening:
     %open = arith.constant 40 : i8
@@ -14143,10 +14380,7 @@
     %afterBracket = arith.addi %offset, %step : i64
     cf.br ^terminate(%afterBracket : i64)
   ^terminate(%finalAt: i64):
-    %terminator = arith.constant 0 : i8
-    %terminatorSlot = llvm.getelementptr %buffer[%finalAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    llvm.store %terminator, %terminatorSlot : i8, !llvm.ptr
-    %result = func.call @strict_bits(%buffer) : (!llvm.ptr) -> f64
+    %result = func.call @strict_text_made(%buffer, %finalAt) : (!llvm.ptr, i64) -> f64
     return %result : f64
   }
   func.func private @strict_list_mapped(%list: f64, %toText: i1) -> f64 {
@@ -14249,9 +14483,11 @@
   ^empty:
     return %joined : f64
   ^enclose:
-    %openText = llvm.mlir.addressof @strict_open_paren : !llvm.ptr
+    %openTextLengths = llvm.mlir.addressof @strict_open_paren_text : !llvm.ptr
+    %openText = llvm.getelementptr %openTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %open = func.call @strict_bits(%openText) : (!llvm.ptr) -> f64
-    %closeText = llvm.mlir.addressof @strict_close_paren : !llvm.ptr
+    %closeTextLengths = llvm.mlir.addressof @strict_close_paren_text : !llvm.ptr
+    %closeText = llvm.getelementptr %closeTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %close = func.call @strict_bits(%closeText) : (!llvm.ptr) -> f64
     %opened = func.call @strict_text_concat(%open, %joined) : (f64, f64) -> f64
     %result = func.call @strict_text_concat(%opened, %close) : (f64, f64) -> f64
@@ -14360,8 +14596,10 @@
   func.func private @strict_boolean_text(%value: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %isTrue = arith.cmpf one, %value, %zero : f64
-    %yes = llvm.mlir.addressof @strict_true : !llvm.ptr
-    %no = llvm.mlir.addressof @strict_false : !llvm.ptr
+    %yesLengths = llvm.mlir.addressof @strict_true_text : !llvm.ptr
+    %yes = llvm.getelementptr %yesLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %noLengths = llvm.mlir.addressof @strict_false_text : !llvm.ptr
+    %no = llvm.getelementptr %noLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %chosen = llvm.select %isTrue, %yes, %no : i1, !llvm.ptr
     %result = func.call @strict_bits(%chosen) : (!llvm.ptr) -> f64
     return %result : f64
@@ -14441,8 +14679,8 @@
     return %copy : f64
   }
   // N: a child started meanwhile (Process.RunTools) does not inherit the file on Windows, other C libraries ignore it
-  llvm.mlir.global internal constant @strict_read_mode("rbN\00") : !llvm.array<4 x i8>
-  llvm.mlir.global internal constant @strict_write_mode("wbN\00") : !llvm.array<4 x i8>
+  llvm.mlir.global internal constant @strict_read_mode("\03\00\00\00\00\00\00\00\03\00\00\00\00\00\00\00rbN\00") : !llvm.array<20 x i8>
+  llvm.mlir.global internal constant @strict_write_mode("\03\00\00\00\00\00\00\00\03\00\00\00\00\00\00\00wbN\00") : !llvm.array<20 x i8>
   // bytes of the file or of the text it was overridden with (File.InMemory), 0 when it is missing
   func.func private @strict_file_length(%path: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
@@ -14518,7 +14756,7 @@
   ^body:
     %slot = llvm.getelementptr %paths[%index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.ptr
     %path = llvm.load %slot : !llvm.ptr -> !llvm.ptr
-    %text = func.call @strict_bits(%path) : (!llvm.ptr) -> f64
+    %text = func.call @strict_text_from(%path) : (!llvm.ptr) -> f64
     %added = func.call @strict_list_add(%built, %text) : (f64, f64) -> f64
     %next = arith.addi %index, %one : i64
     cf.br ^loop(%next, %added : i64, f64)
@@ -14681,7 +14919,7 @@
     %isBackslash = arith.cmpi eq, %first, %backslash : i8
     %isRooted = arith.ori %isSlash, %isBackslash : i1
     %folderPointer = llvm.inttoptr %folder : i64 to !llvm.ptr
-    %folderText = func.call @strict_bits(%folderPointer) : (!llvm.ptr) -> f64
+    %folderText = func.call @strict_text_from(%folderPointer) : (!llvm.ptr) -> f64
     cf.cond_br %isEmpty, ^done(%folderText : f64), ^rooted
   ^rooted:
     cf.cond_br %isRooted, ^done(%path : f64), ^drive
@@ -14696,12 +14934,13 @@
   ^done(%result: f64):
     return %result : f64
   }
-  llvm.mlir.global internal constant @strict_separators("/\5C\00") : !llvm.array<3 x i8>
+  llvm.mlir.global internal constant @strict_separators("\02\00\00\00\00\00\00\00\02\00\00\00\00\00\00\00/\5C\00") : !llvm.array<19 x i8>
   llvm.func @strpbrk(!llvm.ptr, !llvm.ptr) -> !llvm.ptr
   // a program given with a folder starts from the folder of this thread, a bare name is searched on the PATH
   func.func private @strict_program_joined(%path: f64) -> f64 {
     %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
-    %separators = llvm.mlir.addressof @strict_separators : !llvm.ptr
+    %separatorsLengths = llvm.mlir.addressof @strict_separators : !llvm.ptr
+    %separators = llvm.getelementptr %separatorsLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %found = llvm.call @strpbrk(%name, %separators) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     %isBare = llvm.icmp "eq" %found, %null : !llvm.ptr
@@ -14712,8 +14951,8 @@
   ^done(%result: f64):
     return %result : f64
   }
-  llvm.mlir.global internal constant @strict_folder_enter("cd '\00") : !llvm.array<5 x i8>
-  llvm.mlir.global internal constant @strict_folder_then("' && \00") : !llvm.array<6 x i8>
+  llvm.mlir.global internal constant @strict_folder_enter("\04\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00cd '\00") : !llvm.array<21 x i8>
+  llvm.mlir.global internal constant @strict_folder_then("\05\00\00\00\00\00\00\00\05\00\00\00\00\00\00\00' && \00") : !llvm.array<22 x i8>
   // a shell command started from the folder of this thread (Posix processes start through sh)
   func.func private @strict_folder_command(%command: f64) -> f64 {
     %none = arith.constant 0 : i64
@@ -14721,12 +14960,14 @@
     %isSet = arith.cmpi ne, %folder, %none : i64
     cf.cond_br %isSet, ^enter, ^done(%command : f64)
   ^enter:
-    %enterText = llvm.mlir.addressof @strict_folder_enter : !llvm.ptr
+    %enterTextLengths = llvm.mlir.addressof @strict_folder_enter : !llvm.ptr
+    %enterText = llvm.getelementptr %enterTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %enter = func.call @strict_bits(%enterText) : (!llvm.ptr) -> f64
-    %thenText = llvm.mlir.addressof @strict_folder_then : !llvm.ptr
+    %thenTextLengths = llvm.mlir.addressof @strict_folder_then : !llvm.ptr
+    %thenText = llvm.getelementptr %thenTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %then = func.call @strict_bits(%thenText) : (!llvm.ptr) -> f64
     %folderPointer = llvm.inttoptr %folder : i64 to !llvm.ptr
-    %folderText = func.call @strict_bits(%folderPointer) : (!llvm.ptr) -> f64
+    %folderText = func.call @strict_text_from(%folderPointer) : (!llvm.ptr) -> f64
     %entering = func.call @strict_text_concat(%enter, %folderText) : (f64, f64) -> f64
     %entered = func.call @strict_text_concat(%entering, %then) : (f64, f64) -> f64
     %placed = func.call @strict_text_concat(%entered, %command) : (f64, f64) -> f64
@@ -14778,10 +15019,7 @@
     %one = arith.constant 1 : i64
     %folderPointer = llvm.inttoptr %folder : i64 to !llvm.ptr
     %length = llvm.call @strlen(%folderPointer) : (!llvm.ptr) -> i64
-    %size = arith.addi %length, %one : i64
-    %buffer = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
-    %copiedBytes = llvm.call @memcpy(%buffer, %folderPointer, %size) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
-    %copied = func.call @strict_bits(%buffer) : (!llvm.ptr) -> f64
+    %copied = func.call @strict_text_from(%folderPointer) : (!llvm.ptr) -> f64
     cf.br ^done(%copied : f64)
   ^done(%result: f64):
     return %result : f64
@@ -14885,9 +15123,7 @@
     %more = arith.cmpi eq, %count, %chunk : i64
     cf.cond_br %more, ^read(%grown, %total : !llvm.ptr, i64), ^done(%grown, %total : !llvm.ptr, i64)
   ^done(%text: !llvm.ptr, %length: i64):
-    %end = llvm.getelementptr %text[%length] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    llvm.store %terminator, %end : i8, !llvm.ptr
-    %result = func.call @strict_bits(%text) : (!llvm.ptr) -> f64
+    %result = func.call @strict_text_taken(%text, %length) : (!llvm.ptr, i64) -> f64
     return %result : f64
   }
   // the standard input, opened once so Process.InputLine keeps what its buffer read ahead for the next line
@@ -14964,9 +15200,7 @@
     %isCarriage = arith.cmpi eq, %last, %carriage : i8
     %strip = arith.andi %hasAny, %isCarriage : i1
     %trimmed = arith.select %strip, %lastIndex, %total : i64
-    %end = llvm.getelementptr %line[%trimmed] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    llvm.store %terminator, %end : i8, !llvm.ptr
-    %result = func.call @strict_bits(%line) : (!llvm.ptr) -> f64
+    %result = func.call @strict_text_taken(%line, %trimmed) : (!llvm.ptr, i64) -> f64
     return %result : f64
   }
   func.func private @strict_file_text(%path: f64) -> f64 {
@@ -14983,7 +15217,8 @@
     %one = arith.constant 1 : i64
     %terminator = arith.constant 0 : i8
     %name = func.call @strict_named(%path) : (f64) -> !llvm.ptr
-    %mode = llvm.mlir.addressof @strict_read_mode : !llvm.ptr
+    %modeLengths = llvm.mlir.addressof @strict_read_mode : !llvm.ptr
+    %mode = llvm.getelementptr %modeLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %file = llvm.call @fopen(%name, %mode) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     %missing = llvm.icmp "eq" %file, %null : !llvm.ptr
@@ -14993,18 +15228,18 @@
     %toEnd = llvm.call @fseek(%file, %start, %ending) : (!llvm.ptr, i64, i32) -> i32
     %size = llvm.call @ftell(%file) : (!llvm.ptr) -> i64
     %toStart = llvm.call @fseek(%file, %start, %beginning) : (!llvm.ptr, i64, i32) -> i32
-    %capacity = arith.addi %size, %one : i64
-    %buffer = func.call @strict_alloc_text(%capacity) : (i64) -> !llvm.ptr
+    %buffer = func.call @strict_text_room(%size) : (i64) -> !llvm.ptr
     %count = llvm.call @fread(%buffer, %one, %size, %file) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i64
-    %end = llvm.getelementptr %buffer[%count] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    llvm.store %terminator, %end : i8, !llvm.ptr
     %closed = llvm.call @fclose(%file) : (!llvm.ptr) -> i32
     %skipped = func.call @strict_bom_length(%buffer, %count) : (!llvm.ptr, i64) -> i64
-    %text = llvm.getelementptr %buffer[%skipped] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %result = func.call @strict_bits(%text) : (!llvm.ptr) -> f64
+    %marked = llvm.getelementptr %buffer[%skipped] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %kept = arith.subi %count, %skipped : i64
+    func.call @strict_text_shifted(%buffer, %skipped, %kept) : (!llvm.ptr, i64, i64) -> ()
+    %result = func.call @strict_text_made(%buffer, %kept) : (!llvm.ptr, i64) -> f64
     return %result : f64
   ^absent:
-    %empty = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %emptyLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
+    %empty = llvm.getelementptr %emptyLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %none = func.call @strict_bits(%empty) : (!llvm.ptr) -> f64
     return %none : f64
   }
@@ -15049,8 +15284,7 @@
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %length = llvm.call @strlen(%pointer) : (!llvm.ptr) -> i64
-    %capacity = arith.addi %length, %one : i64
-    %output = func.call @strict_alloc_text(%capacity) : (i64) -> !llvm.ptr
+    %output = func.call @strict_text_room(%length) : (i64) -> !llvm.ptr
     cf.br ^scan(%zero, %zero : i64, i64)
   ^scan(%index: i64, %written: i64):
     %more = arith.cmpi ult, %index, %length : i64
@@ -15075,10 +15309,7 @@
     %kept = arith.addi %written, %one : i64
     cf.br ^scan(%next, %kept : i64, i64)
   ^done:
-    %end = llvm.getelementptr %output[%written] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %terminator = arith.constant 0 : i8
-    llvm.store %terminator, %end : i8, !llvm.ptr
-    %result = func.call @strict_bits(%output) : (!llvm.ptr) -> f64
+    %result = func.call @strict_text_made(%output, %written) : (!llvm.ptr, i64) -> f64
     return %result : f64
   }
   func.func private @strict_file_read_lines(%path: f64) -> f64 {
@@ -15135,7 +15366,8 @@
     %backslash = arith.constant 92 : i8
     %full = func.call @strict_folder_joined(%path) : (f64) -> f64
     %name = func.call @strict_ptr(%full) : (f64) -> !llvm.ptr
-    %mode = llvm.mlir.addressof @strict_write_mode : !llvm.ptr
+    %modeLengths = llvm.mlir.addressof @strict_write_mode : !llvm.ptr
+    %mode = llvm.getelementptr %modeLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %file = llvm.call @fopen(%name, %mode) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     %failed = llvm.icmp "eq" %file, %null : !llvm.ptr
@@ -15215,7 +15447,8 @@
     %ending = arith.constant 2 : i32
     %beginning = arith.constant 0 : i32
     %name = func.call @strict_named(%path) : (f64) -> !llvm.ptr
-    %mode = llvm.mlir.addressof @strict_read_mode : !llvm.ptr
+    %modeLengths = llvm.mlir.addressof @strict_read_mode : !llvm.ptr
+    %mode = llvm.getelementptr %modeLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %file = llvm.call @fopen(%name, %mode) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     %missing = llvm.icmp "eq" %file, %null : !llvm.ptr
@@ -15305,7 +15538,7 @@
     %path = func.call @strict_tool_path(%name) : (f64) -> f64
     return %path : f64
   }
-  llvm.mlir.global internal constant @strict_tool_missing("tool not found: \00") : !llvm.array<17 x i8>
+  llvm.mlir.global internal constant @strict_tool_missing("\10\00\00\00\00\00\00\00\10\00\00\00\00\00\00\00tool not found: \00") : !llvm.array<33 x i8>
   func.func private @strict_process_runtool(%self: f64, %name: f64, %arguments: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %path = func.call @strict_tool_path(%name) : (f64) -> f64
@@ -15314,10 +15547,12 @@
     cf.cond_br %missing, ^absent, ^present
   ^absent:
     %code = arith.constant 127.0 : f64
-    %prefixText = llvm.mlir.addressof @strict_tool_missing : !llvm.ptr
+    %prefixTextLengths = llvm.mlir.addressof @strict_tool_missing : !llvm.ptr
+    %prefixText = llvm.getelementptr %prefixTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %prefix = func.call @strict_bits(%prefixText) : (!llvm.ptr) -> f64
     %error = func.call @strict_text_concat(%prefix, %name) : (f64, f64) -> f64
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %emptyTextLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
+    %emptyText = llvm.getelementptr %emptyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
     %failure = func.call @strict_process_result(%code, %empty, %error) : (f64, f64, f64) -> f64
     return %failure : f64
@@ -15333,7 +15568,8 @@
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %least = arith.constant 2 : i64
-    %name = llvm.mlir.addressof @strict_threads_name : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_threads_name : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %setting = llvm.call @getenv(%name) : (!llvm.ptr) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     %isSet = llvm.icmp "ne" %setting, %null : !llvm.ptr
@@ -15415,7 +15651,7 @@
   // (hipCtxSynchronize is not supported and hipMemAllocHost fails on the Windows driver, their replacements work)
   llvm.mlir.global internal constant @strict_gpu_amd_names("hipInit\00hipDeviceGet\00hipDevicePrimaryCtxRetain\00hipCtxSetCurrent\00hipModuleLoadDataEx\00hipModuleGetFunction\00hipMalloc\00hipFree\00hipMemcpyHtoD\00hipMemcpyDtoH\00hipModuleLaunchKernel\00hipDeviceSynchronize\00hipMallocHost\00hipHostFree\00hipMemcpyHtoDAsync\00hipMemcpyDtoDAsync\00hipStreamCreateWithFlags\00hipStreamBeginCapture\00hipStreamEndCapture\00hipGraphInstantiateWithFlags\00hipGraphExecUpdate\00hipGraphLaunch\00hipGraphDestroy\00hipGraphExecDestroy\00hipMemGetInfo\00hipStreamQuery\00hipEventCreateWithFlags\00hipEventRecord\00hipEventSynchronize\00hipMemcpyDtoHAsync\00hipStreamSynchronize\00hipFuncSetAttribute\00hipDeviceGetAttribute\00hipStreamWaitEvent\00hipEventQuery\00hipEventElapsedTime\00") : !llvm.array<647 x i8>
   llvm.mlir.global internal @strict_gpu_amd(0 : i64) : i64
-  llvm.mlir.global internal constant @strict_gpu_switch("STRICT_GPU\00") : !llvm.array<11 x i8>
+  llvm.mlir.global internal constant @strict_gpu_switch("\0A\00\00\00\00\00\00\00\0A\00\00\00\00\00\00\00STRICT_GPU\00") : !llvm.array<27 x i8>
   func.func private @strict_gpu_ready() -> i1 {
     %stateSlot = llvm.mlir.addressof @strict_gpu_state : !llvm.ptr
     %state = llvm.load %stateSlot : !llvm.ptr -> i64
@@ -15447,7 +15683,8 @@
     llvm.store %result, %stateSlot : i64, !llvm.ptr
     cf.cond_br %opened, ^opened, ^unopened
   ^unopened:
-    %unopened = llvm.mlir.addressof @strict_gpu_unopened_text : !llvm.ptr
+    %unopenedLengths = llvm.mlir.addressof @strict_gpu_unopened_text : !llvm.ptr
+    %unopened = llvm.getelementptr %unopenedLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     func.call @strict_gpu_required(%unopened) : (!llvm.ptr) -> ()
     cf.br ^opened
   ^opened:
@@ -15457,7 +15694,7 @@
   // platform) that loads the PTX, the state stays 3 (warming) until then, so the first big loop finds it ready; small
   // loops never open it (strict.exe 276 to 41 MB peak memory and 0.8 to 0.5 s CPU for a 0.5 s test without the GPU)
   llvm.mlir.global internal @strict_gpu_warm_ptx(0 : i64) : i64
-  llvm.mlir.global internal constant @strict_gpu_warm_switch("STRICT_GPU_WARM\00") : !llvm.array<16 x i8>
+  llvm.mlir.global internal constant @strict_gpu_warm_switch("\0F\00\00\00\00\00\00\00\0F\00\00\00\00\00\00\00STRICT_GPU_WARM\00") : !llvm.array<32 x i8>
   func.func private @strict_gpu_warm(%ptx: !llvm.ptr) {
     %zero = arith.constant 0 : i64
     %stateSlot = llvm.mlir.addressof @strict_gpu_state : !llvm.ptr
@@ -15468,7 +15705,8 @@
     %first = llvm.load %ptx : !llvm.ptr -> i8
     %nothing = arith.constant 0 : i8
     %empty = arith.cmpi eq, %first, %nothing : i8
-    %switch = llvm.mlir.addressof @strict_gpu_warm_switch : !llvm.ptr
+    %switchLengths = llvm.mlir.addressof @strict_gpu_warm_switch : !llvm.ptr
+    %switch = llvm.getelementptr %switchLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %setting = llvm.call @getenv(%switch) : (!llvm.ptr) -> !llvm.ptr
     %unset = llvm.mlir.zero : !llvm.ptr
     %isUnset = llvm.icmp "eq" %setting, %unset : !llvm.ptr
@@ -15528,7 +15766,8 @@
   ^unopened:
     %unopenedState = llvm.mlir.addressof @strict_gpu_state : !llvm.ptr
     llvm.store %two, %unopenedState atomic release {alignment = 8 : i64} : i64, !llvm.ptr
-    %unopened = llvm.mlir.addressof @strict_gpu_unopened_text : !llvm.ptr
+    %unopenedLengths = llvm.mlir.addressof @strict_gpu_unopened_text : !llvm.ptr
+    %unopened = llvm.getelementptr %unopenedLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     func.call @strict_gpu_required(%unopened) : (!llvm.ptr) -> ()
     cf.br ^store(%two : i64)
   ^load:
@@ -15553,7 +15792,7 @@
   // the elements of a kernel loop the GPU takes (STRICT_GPU_SHARE percent), the CPU threads take the rest, 0 without
   // a usable GPU; all of them by default: on a 13900KF with an RTX 3080 every share the CPU took made the blur slower
   // (90 percent 10.7 ms, 80 percent 13.1, all on the GPU 9.1, all on the CPU 29), the threads slow the copies down
-  llvm.mlir.global internal constant @strict_gpu_share_switch("STRICT_GPU_SHARE\00") : !llvm.array<17 x i8>
+  llvm.mlir.global internal constant @strict_gpu_share_switch("\10\00\00\00\00\00\00\00\10\00\00\00\00\00\00\00STRICT_GPU_SHARE\00") : !llvm.array<33 x i8>
   llvm.mlir.global internal @strict_gpu_share_percent(-1 : i64) : i64
   func.func private @strict_gpu_share(%count: i64) -> i64 {
     %zero = arith.constant 0 : i64
@@ -15575,7 +15814,8 @@
     cf.cond_br %isKnown, ^share(%known : i64), ^read
   ^read:
     %everything = arith.cmpi eq, %minimum, %one : i64
-    %name = llvm.mlir.addressof @strict_gpu_share_switch : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_gpu_share_switch : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %setting = llvm.call @getenv(%name) : (!llvm.ptr) -> !llvm.ptr
     %unset = llvm.mlir.zero : !llvm.ptr
     %isUnset = llvm.icmp "eq" %setting, %unset : !llvm.ptr
@@ -15704,7 +15944,8 @@
     cf.cond_br %isRead, ^known, ^read
   ^read:
     llvm.store %one, %settingSlot : i64, !llvm.ptr
-    %name = llvm.mlir.addressof @strict_gpu_switch : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_gpu_switch : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %setting = llvm.call @getenv(%name) : (!llvm.ptr) -> !llvm.ptr
     %unset = llvm.mlir.zero : !llvm.ptr
     %isUnset = llvm.icmp "eq" %setting, %unset : !llvm.ptr
@@ -15898,12 +16139,12 @@
   llvm.mlir.global internal @strict_gpu_runtime_code(0 : i64) : i64
   llvm.mlir.global internal @strict_gpu_binary(0 : i64) : i64
   llvm.mlir.global internal @strict_gpu_runtime_binary(0 : i64) : i64
-  llvm.mlir.global internal constant @strict_gpu_binary_ending(".fatbin\00") : !llvm.array<8 x i8>
-  llvm.mlir.global internal constant @strict_gpu_runtime_binary_ending(".runtime.fatbin\00") : !llvm.array<16 x i8>
-  llvm.mlir.global internal constant @strict_gpu_runtime_ending(".runtime.ptx\00") : !llvm.array<13 x i8>
-  llvm.mlir.global internal constant @strict_gpu_runtime_older_ending(".runtime.older.ptx\00") : !llvm.array<19 x i8>
-  llvm.mlir.global internal constant @strict_gpu_amd_ending(".hsaco\00") : !llvm.array<7 x i8>
-  llvm.mlir.global internal constant @strict_gpu_reading("rbN\00") : !llvm.array<4 x i8>
+  llvm.mlir.global internal constant @strict_gpu_binary_ending("\07\00\00\00\00\00\00\00\07\00\00\00\00\00\00\00.fatbin\00") : !llvm.array<24 x i8>
+  llvm.mlir.global internal constant @strict_gpu_runtime_binary_ending("\0F\00\00\00\00\00\00\00\0F\00\00\00\00\00\00\00.runtime.fatbin\00") : !llvm.array<32 x i8>
+  llvm.mlir.global internal constant @strict_gpu_runtime_ending("\0C\00\00\00\00\00\00\00\0C\00\00\00\00\00\00\00.runtime.ptx\00") : !llvm.array<29 x i8>
+  llvm.mlir.global internal constant @strict_gpu_runtime_older_ending("\12\00\00\00\00\00\00\00\12\00\00\00\00\00\00\00.runtime.older.ptx\00") : !llvm.array<35 x i8>
+  llvm.mlir.global internal constant @strict_gpu_amd_ending("\06\00\00\00\00\00\00\00\06\00\00\00\00\00\00\00.hsaco\00") : !llvm.array<23 x i8>
+  llvm.mlir.global internal constant @strict_gpu_reading("\03\00\00\00\00\00\00\00\03\00\00\00\00\00\00\00rbN\00") : !llvm.array<20 x i8>
   func.func private @strict_gpu_text(%ptx: !llvm.ptr) -> !llvm.ptr {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -15929,16 +16170,21 @@
     %isAmd = func.call @strict_gpu_is_amd() : () -> i1
     cf.cond_br %isAmd, ^amd, ^nvidia
   ^amd:
-    %amdEnding = llvm.mlir.addressof @strict_gpu_amd_ending : !llvm.ptr
+    %amdEndingLengths = llvm.mlir.addressof @strict_gpu_amd_ending : !llvm.ptr
+    %amdEnding = llvm.getelementptr %amdEndingLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %bundle = func.call @strict_gpu_beside(%stem, %amdEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %bundleBits = llvm.ptrtoint %bundle : !llvm.ptr to i64
     llvm.store %bundleBits, %codeSlot : i64, !llvm.ptr
     return %bundle : !llvm.ptr
   ^nvidia:
-    %newerEnding = llvm.mlir.addressof @strict_gpu_ptx_ending : !llvm.ptr
-    %olderEnding = llvm.mlir.addressof @strict_gpu_older_ending : !llvm.ptr
-    %runtimeEnding = llvm.mlir.addressof @strict_gpu_runtime_ending : !llvm.ptr
-    %runtimeOlderEnding = llvm.mlir.addressof @strict_gpu_runtime_older_ending : !llvm.ptr
+    %newerEndingLengths = llvm.mlir.addressof @strict_gpu_ptx_ending : !llvm.ptr
+    %newerEnding = llvm.getelementptr %newerEndingLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %olderEndingLengths = llvm.mlir.addressof @strict_gpu_older_ending : !llvm.ptr
+    %olderEnding = llvm.getelementptr %olderEndingLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %runtimeEndingLengths = llvm.mlir.addressof @strict_gpu_runtime_ending : !llvm.ptr
+    %runtimeEnding = llvm.getelementptr %runtimeEndingLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %runtimeOlderEndingLengths = llvm.mlir.addressof @strict_gpu_runtime_older_ending : !llvm.ptr
+    %runtimeOlderEnding = llvm.getelementptr %runtimeOlderEndingLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %newer = func.call @strict_gpu_beside(%stem, %newerEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %runtime = func.call @strict_gpu_beside_shared(%stem, %runtimeEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     func.call @strict_gpu_matched(%ptx, %newerEnding, %newer, %runtime) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> ()
@@ -15958,12 +16204,14 @@
     %buffer = func.call @strict_gpu_paired(%newer, %older) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %bufferBits = llvm.ptrtoint %buffer : !llvm.ptr to i64
     llvm.store %bufferBits, %codeSlot : i64, !llvm.ptr
-    %binaryEnding = llvm.mlir.addressof @strict_gpu_binary_ending : !llvm.ptr
+    %binaryEndingLengths = llvm.mlir.addressof @strict_gpu_binary_ending : !llvm.ptr
+    %binaryEnding = llvm.getelementptr %binaryEndingLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %binary = func.call @strict_gpu_beside(%stem, %binaryEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %binaryBits = llvm.ptrtoint %binary : !llvm.ptr to i64
     %binarySlot = llvm.mlir.addressof @strict_gpu_binary : !llvm.ptr
     llvm.store %binaryBits, %binarySlot : i64, !llvm.ptr
-    %runtimeBinaryEnding = llvm.mlir.addressof @strict_gpu_runtime_binary_ending : !llvm.ptr
+    %runtimeBinaryEndingLengths = llvm.mlir.addressof @strict_gpu_runtime_binary_ending : !llvm.ptr
+    %runtimeBinaryEnding = llvm.getelementptr %runtimeBinaryEndingLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %runtimeBinary = func.call @strict_gpu_beside_shared(%stem, %runtimeBinaryEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %runtimeBinaryBits = llvm.ptrtoint %runtimeBinary : !llvm.ptr to i64
     %runtimeBinarySlot = llvm.mlir.addressof @strict_gpu_runtime_binary : !llvm.ptr
@@ -16039,8 +16287,8 @@
   // the generated code names the PTX with the hash it was built with ("hash:Name\0hash\0", HashCode % 9999991), a
   // missing PTX or one of another program or version stops instead of running wrong kernels or all on the CPU,
   // "file:Name" of older compilers like the bootstrap seed is not checked
-  llvm.mlir.global internal constant @strict_gpu_missing_text("Error: %s%s next to %s (or in obj/ there) is missing or empty, build the program again with strict build\0A\00") : !llvm.array<106 x i8>
-  llvm.mlir.global internal constant @strict_gpu_mismatch_text("Error: %s%s next to %s was built for another program or version, build the program again with strict build\0A\00") : !llvm.array<108 x i8>
+  llvm.mlir.global internal constant @strict_gpu_missing_text("\69\00\00\00\00\00\00\00\69\00\00\00\00\00\00\00Error: %s%s next to %s (or in obj/ there) is missing or empty, build the program again with strict build\0A\00") : !llvm.array<122 x i8>
+  llvm.mlir.global internal constant @strict_gpu_mismatch_text("\6B\00\00\00\00\00\00\00\6B\00\00\00\00\00\00\00Error: %s%s next to %s was built for another program or version, build the program again with strict build\0A\00") : !llvm.array<124 x i8>
   func.func private @strict_gpu_matched(%ptx: !llvm.ptr, %ending: !llvm.ptr, %code: !llvm.ptr, %runtime: !llvm.ptr) {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -16056,7 +16304,8 @@
     %expected = llvm.call @atoll(%hashText) : (!llvm.ptr) -> i64
     %length = llvm.call @strlen(%code) : (!llvm.ptr) -> i64
     %isEmpty = arith.cmpi eq, %length, %zero : i64
-    %missing = llvm.mlir.addressof @strict_gpu_missing_text : !llvm.ptr
+    %missingLengths = llvm.mlir.addressof @strict_gpu_missing_text : !llvm.ptr
+    %missing = llvm.getelementptr %missingLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     cf.cond_br %isEmpty, ^failed(%missing : !llvm.ptr), ^compare
   ^compare:
     %codeHash = func.call @strict_gpu_hashed(%code, %zero) : (!llvm.ptr, i64) -> i64
@@ -16064,7 +16313,8 @@
     %prime = arith.constant 9999991 : i64
     %kept = arith.remui %hash, %prime : i64
     %isSame = arith.cmpi eq, %kept, %expected : i64
-    %mismatch = llvm.mlir.addressof @strict_gpu_mismatch_text : !llvm.ptr
+    %mismatchLengths = llvm.mlir.addressof @strict_gpu_mismatch_text : !llvm.ptr
+    %mismatch = llvm.getelementptr %mismatchLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     cf.cond_br %isSame, ^done, ^failed(%mismatch : !llvm.ptr)
   ^failed(%format: !llvm.ptr):
     %stateSlot = llvm.mlir.addressof @strict_gpu_state : !llvm.ptr
@@ -16109,10 +16359,10 @@
     return %hash : i64
   }
   // STRICT_GPU=all asks for every loop on the GPU, a GPU that can not be used stops the program, else it is logged once
-  llvm.mlir.global internal constant @strict_gpu_unopened_text("no GPU driver could be opened\00") : !llvm.array<30 x i8>
-  llvm.mlir.global internal constant @strict_gpu_unloaded_text("the GPU driver did not load the kernels next to the executable\00") : !llvm.array<63 x i8>
-  llvm.mlir.global internal constant @strict_gpu_required_format("Error: STRICT_GPU=all but %s\0A\00") : !llvm.array<30 x i8>
-  llvm.mlir.global internal constant @strict_gpu_cpu_format("%s, GPU loops run on the CPU\0A\00") : !llvm.array<30 x i8>
+  llvm.mlir.global internal constant @strict_gpu_unopened_text("\1D\00\00\00\00\00\00\00\1D\00\00\00\00\00\00\00no GPU driver could be opened\00") : !llvm.array<46 x i8>
+  llvm.mlir.global internal constant @strict_gpu_unloaded_text("\3E\00\00\00\00\00\00\00\3E\00\00\00\00\00\00\00the GPU driver did not load the kernels next to the executable\00") : !llvm.array<79 x i8>
+  llvm.mlir.global internal constant @strict_gpu_required_format("\1D\00\00\00\00\00\00\00\1D\00\00\00\00\00\00\00Error: STRICT_GPU=all but %s\0A\00") : !llvm.array<46 x i8>
+  llvm.mlir.global internal constant @strict_gpu_cpu_format("\1D\00\00\00\00\00\00\00\1D\00\00\00\00\00\00\00%s, GPU loops run on the CPU\0A\00") : !llvm.array<46 x i8>
   // web pages set it to 0 (NativeBuild.Released): their loops run through WGSL, no native driver is ever opened
   llvm.mlir.global internal @strict_gpu_cpu_notice(1 : i64) : i64
   func.func private @strict_gpu_required(%message: !llvm.ptr) {
@@ -16121,7 +16371,8 @@
     %isAll = arith.cmpi eq, %minimum, %one : i64
     cf.cond_br %isAll, ^failed, ^done
   ^failed:
-    %format = llvm.mlir.addressof @strict_gpu_required_format : !llvm.ptr
+    %formatLengths = llvm.mlir.addressof @strict_gpu_required_format : !llvm.ptr
+    %format = llvm.getelementptr %formatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %printed = llvm.call @printf(%format, %message) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr) -> i32
     %exitCode = arith.constant 1 : i32
     llvm.call @exit(%exitCode) : (i32) -> ()
@@ -16133,7 +16384,8 @@
     %isNoticed = arith.cmpi ne, %notice, %none : i64
     cf.cond_br %isNoticed, ^notify, ^quiet
   ^notify:
-    %cpuFormat = llvm.mlir.addressof @strict_gpu_cpu_format : !llvm.ptr
+    %cpuFormatLengths = llvm.mlir.addressof @strict_gpu_cpu_format : !llvm.ptr
+    %cpuFormat = llvm.getelementptr %cpuFormatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %logged = llvm.call @printf(%cpuFormat, %message) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr) -> i32
     cf.br ^quiet
   ^quiet:
@@ -16164,10 +16416,10 @@
     %path = llvm.inttoptr %bits : i64 to !llvm.ptr
     return %path : !llvm.ptr
   }
-  llvm.mlir.global internal constant @strict_gpu_beside_obj("obj/\00") : !llvm.array<5 x i8>
+  llvm.mlir.global internal constant @strict_gpu_beside_obj("\04\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00obj/\00") : !llvm.array<21 x i8>
   // the runtime kernels of a program (Name.runtime.ptx, Name.runtime.fatbin) or else the ones the programs of a release
   // folder share (shared.runtime.ptx, BuildOutput.Shipped): MossImage and H3Video shipped the same 12.5 MB twice
-  llvm.mlir.global internal constant @strict_gpu_shared_stem("shared\00") : !llvm.array<7 x i8>
+  llvm.mlir.global internal constant @strict_gpu_shared_stem("\06\00\00\00\00\00\00\00\06\00\00\00\00\00\00\00shared\00") : !llvm.array<23 x i8>
   func.func private @strict_gpu_beside_shared(%stem: !llvm.ptr, %ending: !llvm.ptr) -> !llvm.ptr {
     %own = func.call @strict_gpu_beside(%stem, %ending) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %first = llvm.load %own : !llvm.ptr -> i8
@@ -16177,7 +16429,8 @@
   ^found:
     return %own : !llvm.ptr
   ^shared:
-    %sharedStem = llvm.mlir.addressof @strict_gpu_shared_stem : !llvm.ptr
+    %sharedStemLengths = llvm.mlir.addressof @strict_gpu_shared_stem : !llvm.ptr
+    %sharedStem = llvm.getelementptr %sharedStemLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %shared = func.call @strict_gpu_beside(%sharedStem, %ending) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     return %shared : !llvm.ptr
   }
@@ -16248,7 +16501,8 @@
     %full = func.call @strict_malloc(%fullSize) : (i64) -> !llvm.ptr
     %folderCopied = llvm.call @memcpy(%full, %path, %folderLength) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     %objTarget = llvm.getelementptr %full[%folderLength] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %obj = llvm.mlir.addressof @strict_gpu_beside_obj : !llvm.ptr
+    %objLengths = llvm.mlir.addressof @strict_gpu_beside_obj : !llvm.ptr
+    %obj = llvm.getelementptr %objLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %objCopied = llvm.call @memcpy(%objTarget, %obj, %objLength) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     %stemTarget = llvm.getelementptr %full[%folderEnd] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %stemCopied = llvm.call @memcpy(%stemTarget, %stem, %stemLength) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
@@ -16257,7 +16511,8 @@
     %fullEnd = llvm.getelementptr %full[%fullLength] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %terminator = arith.constant 0 : i8
     llvm.store %terminator, %fullEnd : i8, !llvm.ptr
-    %mode = llvm.mlir.addressof @strict_gpu_reading : !llvm.ptr
+    %modeLengths = llvm.mlir.addressof @strict_gpu_reading : !llvm.ptr
+    %mode = llvm.getelementptr %modeLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %file = llvm.call @fopen(%full, %mode) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     return %file : !llvm.ptr
   }
@@ -16351,13 +16606,15 @@
     llvm.store %one, %olderSlot : i64, !llvm.ptr
     cf.cond_br %olderFailed, ^failed, ^loaded
   ^loaded:
-    %compiledText = llvm.mlir.addressof @strict_gpu_compiled_text : !llvm.ptr
+    %compiledTextLengths = llvm.mlir.addressof @strict_gpu_compiled_text : !llvm.ptr
+    %compiledText = llvm.getelementptr %compiledTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     func.call @strict_gpu_compiled(%started, %compiledText) : (f64, !llvm.ptr) -> ()
     func.call @strict_gpu_runtime_load(%loadData) : (!llvm.ptr) -> ()
     %newModule = llvm.load %moduleSlot : !llvm.ptr -> i64
     return %newModule : i64
   ^failed:
-    %unloaded = llvm.mlir.addressof @strict_gpu_unloaded_text : !llvm.ptr
+    %unloadedLengths = llvm.mlir.addressof @strict_gpu_unloaded_text : !llvm.ptr
+    %unloaded = llvm.getelementptr %unloadedLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     func.call @strict_gpu_required(%unloaded) : (!llvm.ptr) -> ()
     return %zero : i64
   }
@@ -16380,8 +16637,8 @@
   }
   // a module load over a second is the driver compiling its PTX (the first run of a new build or runtime), said with the
   // seconds so the wait is not mistaken for the program being slow
-  llvm.mlir.global internal constant @strict_gpu_compiled_text("The driver compiled the GPU kernels of this build in %.1f s, it caches them for the next runs\0A\00") : !llvm.array<95 x i8>
-  llvm.mlir.global internal constant @strict_gpu_runtime_compiled_text("The driver compiled the GPU kernels of the Strict runtime in %.1f s, it caches them for the next runs\0A\00") : !llvm.array<103 x i8>
+  llvm.mlir.global internal constant @strict_gpu_compiled_text("\5E\00\00\00\00\00\00\00\5E\00\00\00\00\00\00\00The driver compiled the GPU kernels of this build in %.1f s, it caches them for the next runs\0A\00") : !llvm.array<111 x i8>
+  llvm.mlir.global internal constant @strict_gpu_runtime_compiled_text("\66\00\00\00\00\00\00\00\66\00\00\00\00\00\00\00The driver compiled the GPU kernels of the Strict runtime in %.1f s, it caches them for the next runs\0A\00") : !llvm.array<119 x i8>
   func.func private @strict_gpu_compiled(%started: f64, %format: !llvm.ptr) {
     %now = func.call @strict_clock() : () -> f64
     %spent = arith.subf %now, %started : f64
@@ -16433,12 +16690,14 @@
     %failed = arith.cmpi ne, %loaded, %zero32 : i32
     cf.cond_br %failed, ^failed, ^compiled
   ^compiled:
-    %compiledText = llvm.mlir.addressof @strict_gpu_runtime_compiled_text : !llvm.ptr
+    %compiledTextLengths = llvm.mlir.addressof @strict_gpu_runtime_compiled_text : !llvm.ptr
+    %compiledText = llvm.getelementptr %compiledTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     func.call @strict_gpu_compiled(%started, %compiledText) : (f64, !llvm.ptr) -> ()
     cf.br ^done
   ^failed:
     llvm.store %zero, %moduleSlot : i64, !llvm.ptr
-    %unloaded = llvm.mlir.addressof @strict_gpu_unloaded_text : !llvm.ptr
+    %unloadedLengths = llvm.mlir.addressof @strict_gpu_unloaded_text : !llvm.ptr
+    %unloaded = llvm.getelementptr %unloadedLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     func.call @strict_gpu_required(%unloaded) : (!llvm.ptr) -> ()
     cf.br ^done
   ^done:
@@ -16515,7 +16774,7 @@
   // into shared memory and stall the whole computer), smaller ones run beside it; it is given back below 1 GB or at the
   // end of the process, the budget is measured again once it is taken (the other process gave its memory back)
   llvm.mlir.global internal @strict_gpu_lock_handle(0 : i64) : i64
-  llvm.mlir.global internal constant @strict_gpu_lock_waiting("Waiting for the GPU: %s holds it\0A\00") : !llvm.array<34 x i8>
+  llvm.mlir.global internal constant @strict_gpu_lock_waiting("\21\00\00\00\00\00\00\00\21\00\00\00\00\00\00\00Waiting for the GPU: %s holds it\0A\00") : !llvm.array<50 x i8>
   func.func private @strict_gpu_lock_ensure(%bytes: i64) {
     %none = arith.constant 0 : i64
     %slot = llvm.mlir.addressof @strict_gpu_lock_handle : !llvm.ptr
@@ -16555,7 +16814,8 @@
     cf.cond_br %said, ^wait, ^say
   ^say:
     %holder = func.call @strict_gpu_lock_holder(%buffer) : (!llvm.ptr) -> !llvm.ptr
-    %format = llvm.mlir.addressof @strict_gpu_lock_waiting : !llvm.ptr
+    %formatLengths = llvm.mlir.addressof @strict_gpu_lock_waiting : !llvm.ptr
+    %format = llvm.getelementptr %formatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     func.call @strict_log(%format, %holder) : (!llvm.ptr, !llvm.ptr) -> ()
     cf.br ^wait
   ^wait:
@@ -16991,9 +17251,9 @@
   // STRICT_GPU_CHECK=1 waits for every loop on the GPU and names the first one that read outside of a list (slow), and the
   // loops that run their generic body instead of their exact copy (strict_gpu_generic)
   llvm.mlir.global internal @strict_gpu_check(-1 : i64) : i64
-  llvm.mlir.global internal constant @strict_gpu_check_switch("STRICT_GPU_CHECK\00") : !llvm.array<17 x i8>
-  llvm.mlir.global internal constant @strict_gpu_check_text("Error: the GPU loop %s read outside of a list\0A\00") : !llvm.array<47 x i8>
-  llvm.mlir.global internal constant @strict_gpu_check_before("Error: a GPU kernel launched before the GPU loop %s read outside of a list\0A\00") : !llvm.array<76 x i8>
+  llvm.mlir.global internal constant @strict_gpu_check_switch("\10\00\00\00\00\00\00\00\10\00\00\00\00\00\00\00STRICT_GPU_CHECK\00") : !llvm.array<33 x i8>
+  llvm.mlir.global internal constant @strict_gpu_check_text("\2E\00\00\00\00\00\00\00\2E\00\00\00\00\00\00\00Error: the GPU loop %s read outside of a list\0A\00") : !llvm.array<63 x i8>
+  llvm.mlir.global internal constant @strict_gpu_check_before("\4B\00\00\00\00\00\00\00\4B\00\00\00\00\00\00\00Error: a GPU kernel launched before the GPU loop %s read outside of a list\0A\00") : !llvm.array<92 x i8>
   func.func private @strict_gpu_checking() -> i1 {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -17002,7 +17262,8 @@
     %unknown = arith.cmpi slt, %check, %none : i64
     cf.cond_br %unknown, ^read, ^known(%check : i64)
   ^read:
-    %switch = llvm.mlir.addressof @strict_gpu_check_switch : !llvm.ptr
+    %switchLengths = llvm.mlir.addressof @strict_gpu_check_switch : !llvm.ptr
+    %switch = llvm.getelementptr %switchLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %setting = llvm.call @getenv(%switch) : (!llvm.ptr) -> !llvm.ptr
     %unset = llvm.mlir.zero : !llvm.ptr
     %isSet = llvm.icmp "ne" %setting, %unset : !llvm.ptr
@@ -17016,8 +17277,8 @@
   // also names, once each, a GPU loop that has an exact copy (MlirGuards) but runs its generic body, which reads every
   // list through the format dispatch of strict_device_element, and the value that sent it there
   llvm.mlir.global internal @strict_gpu_generics(dense<0> : tensor<65xi64>) : !llvm.array<65 x i64>
-  llvm.mlir.global internal constant @strict_gpu_generic_list("GPU loop %s runs its generic body: value %lld is a list of %lld numbers of %lld bits (its exact copy reads 32 bit, bfloat16 or 16 bit lists)\0A\00") : !llvm.array<142 x i8>
-  llvm.mlir.global internal constant @strict_gpu_generic_number("GPU loop %s runs its generic body: value %lld is not a whole number (its exact copy needs whole numbers there)\0A\00") : !llvm.array<112 x i8>
+  llvm.mlir.global internal constant @strict_gpu_generic_list("\8D\00\00\00\00\00\00\00\8D\00\00\00\00\00\00\00GPU loop %s runs its generic body: value %lld is a list of %lld numbers of %lld bits (its exact copy reads 32 bit, bfloat16 or 16 bit lists)\0A\00") : !llvm.array<158 x i8>
+  llvm.mlir.global internal constant @strict_gpu_generic_number("\6F\00\00\00\00\00\00\00\6F\00\00\00\00\00\00\00GPU loop %s runs its generic body: value %lld is not a whole number (its exact copy needs whole numbers there)\0A\00") : !llvm.array<128 x i8>
   func.func private @strict_gpu_generic(%name: !llvm.ptr, %possible: i1, %value: i64, %bits: i64, %length: i64) {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -17055,11 +17316,13 @@
     %isNumber = arith.cmpi eq, %bits, %none : i64
     cf.cond_br %isNumber, ^number, ^list
   ^number:
-    %numberText = llvm.mlir.addressof @strict_gpu_generic_number : !llvm.ptr
+    %numberTextLengths = llvm.mlir.addressof @strict_gpu_generic_number : !llvm.ptr
+    %numberText = llvm.getelementptr %numberTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %numberPrinted = llvm.call @printf(%numberText, %name, %value) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr, i64) -> i32
     cf.br ^done
   ^list:
-    %listText = llvm.mlir.addressof @strict_gpu_generic_list : !llvm.ptr
+    %listTextLengths = llvm.mlir.addressof @strict_gpu_generic_list : !llvm.ptr
+    %listText = llvm.getelementptr %listTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %listPrinted = llvm.call @printf(%listText, %name, %value, %length, %bits) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr, i64, i64, i64) -> i32
     cf.br ^done
   ^done:
@@ -17108,7 +17371,7 @@
   // a GPU sized loop that a parallel loop's thread would run on the CPU stops the program (the GPU is only used from the
   // thread that forked the loop), not before the GPU is open
   llvm.mlir.global internal @strict_gpu_refusals(0 : i64) : i64
-  llvm.mlir.global internal constant @strict_gpu_refused_text("Error: GpuLoopMustRunOnGpu: the GPU loop %s ran on the CPU in a parallel loop (its threads cannot use the GPU), keep the loop around it serial\0A\00") : !llvm.array<144 x i8>
+  llvm.mlir.global internal constant @strict_gpu_refused_text("\8F\00\00\00\00\00\00\00\8F\00\00\00\00\00\00\00Error: GpuLoopMustRunOnGpu: the GPU loop %s ran on the CPU in a parallel loop (its threads cannot use the GPU), keep the loop around it serial\0A\00") : !llvm.array<160 x i8>
   func.func private @strict_gpu_refused(%name: !llvm.ptr, %count: i64) {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -17126,7 +17389,8 @@
     %isFirst = arith.cmpi eq, %before, %zero : i64
     cf.cond_br %isFirst, ^named, ^done
   ^named:
-    %text = llvm.mlir.addressof @strict_gpu_refused_text : !llvm.ptr
+    %textLengths = llvm.mlir.addressof @strict_gpu_refused_text : !llvm.ptr
+    %text = llvm.getelementptr %textLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %printed = llvm.call @printf(%text, %name) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr) -> i32
     %exitCode = arith.constant 1 : i32
     llvm.call @exit(%exitCode) : (i32) -> ()
@@ -17182,7 +17446,8 @@
     %three = arith.constant 3 : i64
     %four = arith.constant 4 : i64
     %five = arith.constant 5 : i64
-    %beforeText = llvm.mlir.addressof @strict_gpu_check_before : !llvm.ptr
+    %beforeTextLengths = llvm.mlir.addressof @strict_gpu_check_before : !llvm.ptr
+    %beforeText = llvm.getelementptr %beforeTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     func.call @strict_gpu_checked(%name, %beforeText) : (!llvm.ptr, !llvm.ptr) -> ()
     %six = arith.constant 6 : i64
     %eight = arith.constant 8 : i64
@@ -17479,7 +17744,8 @@
     %asyncLaunched = func.call @strict_gpu_launch(%function, %threadTotal, %threads, %parameters) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i1
     cf.cond_br %asyncLaunched, ^asyncDone, ^asyncFailed
   ^asyncDone:
-    %afterText = llvm.mlir.addressof @strict_gpu_check_text : !llvm.ptr
+    %afterTextLengths = llvm.mlir.addressof @strict_gpu_check_text : !llvm.ptr
+    %afterText = llvm.getelementptr %afterTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     func.call @strict_gpu_checked(%name, %afterText) : (!llvm.ptr, !llvm.ptr) -> ()
     %segment = func.call @strict_gpu_segment() : () -> i64
     %residentList = func.call @strict_gpu_resident(%count, %resident, %class, %resultBits) : (i64, i64, i64, i64) -> f64
@@ -17588,8 +17854,8 @@
   llvm.mlir.global internal @strict_gpu_residing(dense<0> : tensor<3xi64>) : !llvm.array<3 x i64>
   llvm.mlir.global internal @strict_gpu_failure(0 : i64) : i64
   llvm.mlir.global internal @strict_gpu_mutex(0 : i64) : i64
-  llvm.mlir.global internal constant @strict_gpu_broken_text("Error: the GPU stopped, out of GPU memory or a launch failed\0A\00") : !llvm.array<62 x i8>
-  llvm.mlir.global internal constant @strict_gpu_failed_text("Error: a loop on the GPU read outside of a list\0A\00") : !llvm.array<49 x i8>
+  llvm.mlir.global internal constant @strict_gpu_broken_text("\3D\00\00\00\00\00\00\00\3D\00\00\00\00\00\00\00Error: the GPU stopped, out of GPU memory or a launch failed\0A\00") : !llvm.array<78 x i8>
+  llvm.mlir.global internal constant @strict_gpu_failed_text("\30\00\00\00\00\00\00\00\30\00\00\00\00\00\00\00Error: a loop on the GPU read outside of a list\0A\00") : !llvm.array<65 x i8>
   func.func private @strict_gpu_class(%bytes: i64) -> i64 {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -18832,10 +19098,10 @@
   llvm.mlir.global internal @strict_gpu_hosted_bytes(0 : i64) : i64
   // the driver functions locking and unlocking host memory, 0 before they are looked up, -1 when missing (Metal)
   llvm.mlir.global internal @strict_gpu_lockers(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
-  llvm.mlir.global internal constant @strict_gpu_lock_name("cuMemHostRegister_v2\00") : !llvm.array<21 x i8>
-  llvm.mlir.global internal constant @strict_gpu_unlock_name("cuMemHostUnregister\00") : !llvm.array<20 x i8>
-  llvm.mlir.global internal constant @strict_gpu_amd_lock_name("hipHostRegister\00") : !llvm.array<16 x i8>
-  llvm.mlir.global internal constant @strict_gpu_amd_unlock_name("hipHostUnregister\00") : !llvm.array<18 x i8>
+  llvm.mlir.global internal constant @strict_gpu_lock_name("\14\00\00\00\00\00\00\00\14\00\00\00\00\00\00\00cuMemHostRegister_v2\00") : !llvm.array<37 x i8>
+  llvm.mlir.global internal constant @strict_gpu_unlock_name("\13\00\00\00\00\00\00\00\13\00\00\00\00\00\00\00cuMemHostUnregister\00") : !llvm.array<36 x i8>
+  llvm.mlir.global internal constant @strict_gpu_amd_lock_name("\0F\00\00\00\00\00\00\00\0F\00\00\00\00\00\00\00hipHostRegister\00") : !llvm.array<32 x i8>
+  llvm.mlir.global internal constant @strict_gpu_amd_unlock_name("\11\00\00\00\00\00\00\00\11\00\00\00\00\00\00\00hipHostUnregister\00") : !llvm.array<34 x i8>
   func.func private @strict_gpu_host_slot(%index: i64) -> !llvm.ptr {
     %four = arith.constant 4 : i64
     %hosts = llvm.mlir.addressof @strict_gpu_hosts : !llvm.ptr
@@ -18950,10 +19216,14 @@
     %isAmd = arith.cmpi ne, %amd, %none : i64
     %library = func.call @strict_gpu_library(%isAmd) : (i1) -> !llvm.ptr
     %isUnlock = arith.cmpi ne, %which, %none : i64
-    %lockName = llvm.mlir.addressof @strict_gpu_lock_name : !llvm.ptr
-    %unlockName = llvm.mlir.addressof @strict_gpu_unlock_name : !llvm.ptr
-    %amdLockName = llvm.mlir.addressof @strict_gpu_amd_lock_name : !llvm.ptr
-    %amdUnlockName = llvm.mlir.addressof @strict_gpu_amd_unlock_name : !llvm.ptr
+    %lockNameLengths = llvm.mlir.addressof @strict_gpu_lock_name : !llvm.ptr
+    %lockName = llvm.getelementptr %lockNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %unlockNameLengths = llvm.mlir.addressof @strict_gpu_unlock_name : !llvm.ptr
+    %unlockName = llvm.getelementptr %unlockNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %amdLockNameLengths = llvm.mlir.addressof @strict_gpu_amd_lock_name : !llvm.ptr
+    %amdLockName = llvm.getelementptr %amdLockNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %amdUnlockNameLengths = llvm.mlir.addressof @strict_gpu_amd_unlock_name : !llvm.ptr
+    %amdUnlockName = llvm.getelementptr %amdUnlockNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %nvidiaName = llvm.select %isUnlock, %unlockName, %lockName : i1, !llvm.ptr
     %amdName = llvm.select %isUnlock, %amdUnlockName, %amdLockName : i1, !llvm.ptr
     %name = llvm.select %isAmd, %amdName, %nvidiaName : i1, !llvm.ptr
@@ -19708,8 +19978,8 @@
   }
   // STRICT_GPU_DOWNLOADS=1 names every list of numbers going from the GPU to the host (check_gpu_residency.py)
   llvm.mlir.global internal @strict_gpu_downloads(-1 : i64) : i64
-  llvm.mlir.global internal constant @strict_gpu_downloads_switch("STRICT_GPU_DOWNLOADS\00") : !llvm.array<21 x i8>
-  llvm.mlir.global internal constant @strict_gpu_downloads_text("Strict GPU download of %lld numbers in %lld bits\0A\00") : !llvm.array<50 x i8>
+  llvm.mlir.global internal constant @strict_gpu_downloads_switch("\14\00\00\00\00\00\00\00\14\00\00\00\00\00\00\00STRICT_GPU_DOWNLOADS\00") : !llvm.array<37 x i8>
+  llvm.mlir.global internal constant @strict_gpu_downloads_text("\31\00\00\00\00\00\00\00\31\00\00\00\00\00\00\00Strict GPU download of %lld numbers in %lld bits\0A\00") : !llvm.array<66 x i8>
   func.func private @strict_gpu_downloaded(%count: i64, %bits: i64) {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -19718,7 +19988,8 @@
     %unknown = arith.cmpi slt, %log, %none : i64
     cf.cond_br %unknown, ^read, ^known(%log : i64)
   ^read:
-    %switch = llvm.mlir.addressof @strict_gpu_downloads_switch : !llvm.ptr
+    %switchLengths = llvm.mlir.addressof @strict_gpu_downloads_switch : !llvm.ptr
+    %switch = llvm.getelementptr %switchLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %setting = llvm.call @getenv(%switch) : (!llvm.ptr) -> !llvm.ptr
     %unset = llvm.mlir.zero : !llvm.ptr
     %isSet = llvm.icmp "ne" %setting, %unset : !llvm.ptr
@@ -19729,7 +20000,8 @@
     %wanted = arith.cmpi eq, %known, %one : i64
     cf.cond_br %wanted, ^print, ^done
   ^print:
-    %text = llvm.mlir.addressof @strict_gpu_downloads_text : !llvm.ptr
+    %textLengths = llvm.mlir.addressof @strict_gpu_downloads_text : !llvm.ptr
+    %text = llvm.getelementptr %textLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %printed = llvm.call @printf(%text, %count, %bits) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, i64, i64) -> i32
     cf.br ^done
   ^done:
@@ -19827,8 +20099,10 @@
   ^done(%result: !llvm.ptr):
     return %result : !llvm.ptr
   ^fail:
-    %outside = llvm.mlir.addressof @strict_gpu_failed_text : !llvm.ptr
-    %broken = llvm.mlir.addressof @strict_gpu_broken_text : !llvm.ptr
+    %outsideLengths = llvm.mlir.addressof @strict_gpu_failed_text : !llvm.ptr
+    %outside = llvm.getelementptr %outsideLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %brokenLengths = llvm.mlir.addressof @strict_gpu_broken_text : !llvm.ptr
+    %broken = llvm.getelementptr %brokenLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %message = arith.select %got, %outside, %broken : !llvm.ptr
     %printed = llvm.call @printf(%message) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr) -> i32
     %code = arith.constant 1 : i32
@@ -20051,8 +20325,8 @@
   // STRICT_GRAPHS=0 launches directly; state (0 unknown, 1 graphs, 2 direct), capturing, launches, print, segment size
   llvm.mlir.global internal @strict_gpu_graph(dense<[0, 0, 0, 0, 1024]> : tensor<5xi64>) : !llvm.array<5 x i64>
   llvm.mlir.global internal @strict_gpu_graphs(dense<0> : tensor<512xi64>) : !llvm.array<512 x i64>
-  llvm.mlir.global internal constant @strict_gpu_graph_switch("STRICT_GRAPHS\00") : !llvm.array<14 x i8>
-  llvm.mlir.global internal constant @strict_gpu_graph_failed("Error: the GPU launches of a graph failed\0A\00") : !llvm.array<43 x i8>
+  llvm.mlir.global internal constant @strict_gpu_graph_switch("\0D\00\00\00\00\00\00\00\0D\00\00\00\00\00\00\00STRICT_GRAPHS\00") : !llvm.array<30 x i8>
+  llvm.mlir.global internal constant @strict_gpu_graph_failed("\2A\00\00\00\00\00\00\00\2A\00\00\00\00\00\00\00Error: the GPU launches of a graph failed\0A\00") : !llvm.array<59 x i8>
   func.func private @strict_gpu_stream() -> !llvm.ptr {
     %handles = llvm.mlir.addressof @strict_gpu_handles : !llvm.ptr
     %streamSlot = llvm.getelementptr %handles[2] : (!llvm.ptr) -> !llvm.ptr, i64
@@ -20069,7 +20343,8 @@
     %isKnown = arith.cmpi ne, %state, %none : i64
     cf.cond_br %isKnown, ^known(%state : i64), ^read
   ^read:
-    %name = llvm.mlir.addressof @strict_gpu_graph_switch : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_gpu_graph_switch : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %setting = llvm.call @getenv(%name) : (!llvm.ptr) -> !llvm.ptr
     %unset = llvm.mlir.zero : !llvm.ptr
     %isUnset = llvm.icmp "eq" %setting, %unset : !llvm.ptr
@@ -20234,7 +20509,8 @@
     %launchFailed = arith.cmpi ne, %launched, %zero32 : i32
     cf.cond_br %launchFailed, ^fail, ^done
   ^fail:
-    %message = llvm.mlir.addressof @strict_gpu_graph_failed : !llvm.ptr
+    %messageLengths = llvm.mlir.addressof @strict_gpu_graph_failed : !llvm.ptr
+    %message = llvm.getelementptr %messageLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %printed = llvm.call @printf(%message) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr) -> i32
     %code = arith.constant 1 : i32
     llvm.call @exit(%code) : (i32) -> ()
@@ -20598,9 +20874,9 @@
     return %done : i1
   }
   // a launch runs the 32 bit kernel when any list it reads is packed (bits below 64), the double one otherwise
-  llvm.mlir.global internal constant @strict_gpu_quantize_name("strict_device_quantize\00") : !llvm.array<23 x i8>
+  llvm.mlir.global internal constant @strict_gpu_quantize_name("\16\00\00\00\00\00\00\00\16\00\00\00\00\00\00\00strict_device_quantize\00") : !llvm.array<39 x i8>
   llvm.mlir.global internal @strict_gpu_quantize_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
-  llvm.mlir.global internal constant @strict_gpu_quantize_tokens_name("strict_device_quantize_tokens\00") : !llvm.array<30 x i8>
+  llvm.mlir.global internal constant @strict_gpu_quantize_tokens_name("\1D\00\00\00\00\00\00\00\1D\00\00\00\00\00\00\00strict_device_quantize_tokens\00") : !llvm.array<46 x i8>
   llvm.mlir.global internal @strict_gpu_quantize_tokens_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   // the width of the tokens strict_gpu_tokens quantizes with one scale per token (rows with one scale each), 0 for a
   // scale per 32 numbers
@@ -20608,13 +20884,13 @@
   // the value (its index plus 1, 0 for none) strict_gpu_quantized transposes per number for strict_device_dense_attention,
   // the width and count of its rows, where the first starts and how far apart they are in the list (0: width apart)
   llvm.mlir.global internal @strict_gpu_transposed(dense<0> : tensor<5xi64>) : !llvm.array<5 x i64>
-  llvm.mlir.global internal constant @strict_gpu_transposed_name("strict_device_values_transposed\00") : !llvm.array<32 x i8>
+  llvm.mlir.global internal constant @strict_gpu_transposed_name("\1F\00\00\00\00\00\00\00\1F\00\00\00\00\00\00\00strict_device_values_transposed\00") : !llvm.array<48 x i8>
   llvm.mlir.global internal @strict_gpu_transposed_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   // device address, size and next offset of the 8 bit numbers made for dot products, one stream runs everything in order
   // so a quantization only overwrites bytes of dot products that ran already, it grows to 4 times a list that needs more
   // than a quarter (the inputs of a long prompt)
   llvm.mlir.global internal @strict_gpu_scratch(dense<0> : tensor<3xi64>) : !llvm.array<3 x i64>
-  llvm.mlir.global internal constant @strict_gpu_dp4a_switch("STRICT_DP4A\00") : !llvm.array<12 x i8>
+  llvm.mlir.global internal constant @strict_gpu_dp4a_switch("\0B\00\00\00\00\00\00\00\0B\00\00\00\00\00\00\00STRICT_DP4A\00") : !llvm.array<28 x i8>
   llvm.mlir.global internal @strict_gpu_dp4a_state(0 : i64) : i64
   // 1 while strict_gpu_tokens runs the dot products of rows that keep their tokens (strict_gpu_rows_kept)
   llvm.mlir.global internal @strict_gpu_tokens_kept(0 : i64) : i64
@@ -20631,7 +20907,8 @@
     %isKnown = arith.cmpi ne, %state, %none : i64
     cf.cond_br %isKnown, ^known(%state : i64), ^read
   ^read:
-    %name = llvm.mlir.addressof @strict_gpu_dp4a_switch : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_gpu_dp4a_switch : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %setting = llvm.call @getenv(%name) : (!llvm.ptr) -> !llvm.ptr
     %unset = llvm.mlir.zero : !llvm.ptr
     %isUnset = llvm.icmp "eq" %setting, %unset : !llvm.ptr
@@ -20825,7 +21102,8 @@
   ^tokens:
     cf.cond_br %fusing, ^fuse, ^unfused
   ^transpose:
-    %transposedName = llvm.mlir.addressof @strict_gpu_transposed_name : !llvm.ptr
+    %transposedNameLengths = llvm.mlir.addressof @strict_gpu_transposed_name : !llvm.ptr
+    %transposedName = llvm.getelementptr %transposedNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %transposedSlot = llvm.mlir.addressof @strict_gpu_transposed_slot : !llvm.ptr
     %transposing = func.call @strict_gpu_function(%ptx, %transposedName, %transposedSlot) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %noTransposing = llvm.mlir.zero : !llvm.ptr
@@ -20843,7 +21121,8 @@
     %transposedLaunched = func.call @strict_gpu_quantize_launch(%transposing, %rowsSource, %rowsCount, %rowWidth, %target, %bits, %transposeTotal, %groupThreads, %rowStride) : (!llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> i1
     cf.cond_br %transposedLaunched, ^swap, ^done
   ^fuse:
-    %fusedName = llvm.mlir.addressof @strict_gpu_hadamard_tokens_name : !llvm.ptr
+    %fusedNameLengths = llvm.mlir.addressof @strict_gpu_hadamard_tokens_name : !llvm.ptr
+    %fusedName = llvm.getelementptr %fusedNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %fusedSlot = llvm.mlir.addressof @strict_gpu_hadamard_tokens_slot : !llvm.ptr
     %fused = func.call @strict_gpu_function(%ptx, %fusedName, %fusedSlot) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %noFused = llvm.mlir.zero : !llvm.ptr
@@ -20859,9 +21138,11 @@
     cf.cond_br %fuseDone, ^swap, ^unfused
   ^unfused:
     func.call @strict_gpu_rotated(%device) : (i64) -> ()
-    %blockName = llvm.mlir.addressof @strict_gpu_quantize_name : !llvm.ptr
+    %blockNameLengths = llvm.mlir.addressof @strict_gpu_quantize_name : !llvm.ptr
+    %blockName = llvm.getelementptr %blockNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %blockSlot = llvm.mlir.addressof @strict_gpu_quantize_slot : !llvm.ptr
-    %tokenName = llvm.mlir.addressof @strict_gpu_quantize_tokens_name : !llvm.ptr
+    %tokenNameLengths = llvm.mlir.addressof @strict_gpu_quantize_tokens_name : !llvm.ptr
+    %tokenName = llvm.getelementptr %tokenNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %tokenSlot = llvm.mlir.addressof @strict_gpu_quantize_tokens_slot : !llvm.ptr
     %name = llvm.select %perToken, %tokenName, %blockName : i1, !llvm.ptr
     %slot = llvm.select %perToken, %tokenSlot, %blockSlot : i1, !llvm.ptr
@@ -21410,7 +21691,7 @@
   ^unable:
     return %false : i1
   }
-  llvm.mlir.global internal constant @strict_gpu_attention_web_name("strict_attention\00") : !llvm.array<17 x i8>
+  llvm.mlir.global internal constant @strict_gpu_attention_web_name("\10\00\00\00\00\00\00\00\10\00\00\00\00\00\00\00strict_attention\00") : !llvm.array<33 x i8>
   // `Attention.Merged` on WebGPU (strict_attention, head sizes up to 128, quantized keys and routing compute exactly
   // there) as bfloat16 results, 0.0 when the platform can not (native platforms run strict_gpu_attention on)
   func.func private @strict_gpu_attention_web(%queries: f64, %keys: f64, %values: f64, %heads: f64, %groups: f64, %size: f64, %sequences: f64, %causal: f64, %valueOffset: f64, %valueStride: f64) -> f64 {
@@ -21444,7 +21725,8 @@
     llvm.store %valueStride, %strideSlot : f64, !llvm.ptr
     %length = func.call @strict_list_length(%queries) : (f64) -> f64
     %count = arith.fptosi %length : f64 to i64
-    %name = llvm.mlir.addressof @strict_gpu_attention_web_name : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_gpu_attention_web_name : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %kind = arith.constant 2 : i64
     %lists = arith.constant 7 : i64
     %halves = arith.constant 17 : i64
@@ -21688,7 +21970,7 @@
     %chosen = arith.select %negative, %minus, %last : i64
     return %chosen : i64
   }
-  llvm.mlir.global internal constant @strict_gpu_softmax_web("strict_softmax\00") : !llvm.array<15 x i8>
+  llvm.mlir.global internal constant @strict_gpu_softmax_web("\0E\00\00\00\00\00\00\00\0E\00\00\00\00\00\00\00strict_softmax\00") : !llvm.array<31 x i8>
   // `Softmax.Shares` of scores in rows of width numbers as 32 bit numbers on WebGPU (strict_softmax of
   // NativeRuntimeWgsl.js), 0.0 elsewhere or for other lengths, then the method itself runs
   func.func private @strict_gpu_softmax(%ptx: !llvm.ptr, %scores: f64, %width: f64) -> f64 {
@@ -21712,7 +21994,8 @@
     llvm.store %scores, %slots : f64, !llvm.ptr
     %widthSlot = llvm.getelementptr %slots[1] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %width, %widthSlot : f64, !llvm.ptr
-    %webName = llvm.mlir.addressof @strict_gpu_softmax_web : !llvm.ptr
+    %webNameLengths = llvm.mlir.addressof @strict_gpu_softmax_web : !llvm.ptr
+    %webName = llvm.getelementptr %webNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %kernelKind = arith.constant 2 : i64
     %listMask = arith.constant 1 : i64
     %kernelFormat = arith.constant 32 : i64
@@ -21725,7 +22008,7 @@
   // strict_device_products): shape is batches, rows, inner and columns,
   // strides the start and the batch, row and inner strides of left, then of right with inner and column strides, 0.0
   // when the GPU can not (shape or strides of other lengths, reads outside the lists), then the method itself runs
-  llvm.mlir.global internal constant @strict_gpu_products_web("strict_products\00") : !llvm.array<16 x i8>
+  llvm.mlir.global internal constant @strict_gpu_products_web("\0F\00\00\00\00\00\00\00\0F\00\00\00\00\00\00\00strict_products\00") : !llvm.array<32 x i8>
   func.func private @strict_gpu_products(%ptx: !llvm.ptr, %left: f64, %right: f64, %shape: f64, %strides: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
@@ -21817,7 +22100,8 @@
     %fits = arith.andi %sized, %bothFit : i1
     cf.cond_br %fits, ^web, ^unable
   ^web:
-    %webName = llvm.mlir.addressof @strict_gpu_products_web : !llvm.ptr
+    %webNameLengths = llvm.mlir.addressof @strict_gpu_products_web : !llvm.ptr
+    %webName = llvm.getelementptr %webNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %kernelKind = arith.constant 2 : i64
     %listMask = arith.constant 3 : i64
     %kernelFormat = arith.constant 32 : i64
@@ -21913,7 +22197,7 @@
   // `Convrot.Rotated` (the 4 radix-4 butterflies of every group of 256 values) as one kernel, a block per group, 0.0
   // when the group is not 256, the length is no multiple of it or the GPU can not; of 32 or 16 bit numbers on the GPU
   // it waits (strict_gpu_rotations, in their format); on WebGPU strict_hadamard of NativeRuntimeWgsl.js
-  llvm.mlir.global internal constant @strict_gpu_hadamard_web("strict_hadamard\00") : !llvm.array<16 x i8>
+  llvm.mlir.global internal constant @strict_gpu_hadamard_web("\0F\00\00\00\00\00\00\00\0F\00\00\00\00\00\00\00strict_hadamard\00") : !llvm.array<32 x i8>
   func.func private @strict_gpu_hadamard(%ptx: !llvm.ptr, %values: f64, %size: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
@@ -21934,7 +22218,8 @@
   ^web:
     %webSlots = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
     llvm.store %values, %webSlots : f64, !llvm.ptr
-    %webName = llvm.mlir.addressof @strict_gpu_hadamard_web : !llvm.ptr
+    %webNameLengths = llvm.mlir.addressof @strict_gpu_hadamard_web : !llvm.ptr
+    %webName = llvm.getelementptr %webNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %kernelKind = arith.constant 2 : i64
     %brainResult = arith.constant 17 : i64
     %webbed = func.call @strict_gpu_shaded(%webName, %count, %zero, %kernelKind, %webSlots, %one, %one, %brainResult) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
@@ -22006,7 +22291,7 @@
   // by strict_device_tuned, the updated rows change in place; 0.0 when the GPU can not (rows not all 8 bit of one width,
   // factors not 64, 32 or 16 bit or not fitting the rows, STRICT_GPU=0 or no GPU, checked in this order
   // so a merge that can not run on the GPU never opens it)
-  llvm.mlir.global internal constant @strict_gpu_tuned_name("strict_device_tuned\00") : !llvm.array<20 x i8>
+  llvm.mlir.global internal constant @strict_gpu_tuned_name("\13\00\00\00\00\00\00\00\13\00\00\00\00\00\00\00strict_device_tuned\00") : !llvm.array<36 x i8>
   llvm.mlir.global internal @strict_gpu_tuned_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   func.func private @strict_gpu_tuned(%self: f64, %rows: f64, %downs: f64, %ups: f64, %scales: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
@@ -22313,7 +22598,7 @@
   }
   // the CPU merge rounds differently from the seeded GPU kernel, so a model merged there is not bit-identical: said once
   llvm.mlir.global internal @strict_gpu_tuned_fell(0 : i64) : i64
-  llvm.mlir.global internal constant @strict_gpu_tuned_fallback_text("GPU LoRA merge fell back to the CPU merge (no device or host memory for it), results differ slightly from the GPU merge\0A\00") : !llvm.array<121 x i8>
+  llvm.mlir.global internal constant @strict_gpu_tuned_fallback_text("\78\00\00\00\00\00\00\00\78\00\00\00\00\00\00\00GPU LoRA merge fell back to the CPU merge (no device or host memory for it), results differ slightly from the GPU merge\0A\00") : !llvm.array<137 x i8>
   func.func private @strict_gpu_tuned_fallback() {
     %one = arith.constant 1 : i64
     %fellSlot = llvm.mlir.addressof @strict_gpu_tuned_fell : !llvm.ptr
@@ -22321,7 +22606,8 @@
     %first = arith.cmpi ne, %fell, %one : i64
     cf.cond_br %first, ^say, ^done
   ^say:
-    %text = llvm.mlir.addressof @strict_gpu_tuned_fallback_text : !llvm.ptr
+    %textLengths = llvm.mlir.addressof @strict_gpu_tuned_fallback_text : !llvm.ptr
+    %text = llvm.getelementptr %textLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %said = llvm.call @printf(%text) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr) -> i32
     cf.br ^done
   ^done:
@@ -22368,7 +22654,8 @@
     %eleven = arith.constant 11 : i64
     %threads = arith.constant 256 : i64
     %ptx = llvm.mlir.addressof @strict_gpu_ptx : !llvm.ptr
-    %name = llvm.mlir.addressof @strict_gpu_tuned_name : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_gpu_tuned_name : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %slot = llvm.mlir.addressof @strict_gpu_tuned_slot : !llvm.ptr
     %function = func.call @strict_gpu_function(%ptx, %name, %slot) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %unset = llvm.mlir.zero : !llvm.ptr
@@ -22623,7 +22910,7 @@
   // its block is given back, a quantization of its list with one scale per token rotates the source itself
   // (strict_device_hadamard_tokens)
   llvm.mlir.global internal @strict_gpu_rotations(dense<0> : tensor<49xi64>) : !llvm.array<49 x i64>
-  llvm.mlir.global internal constant @strict_gpu_hadamard_tokens_name("strict_device_hadamard_tokens\00") : !llvm.array<30 x i8>
+  llvm.mlir.global internal constant @strict_gpu_hadamard_tokens_name("\1D\00\00\00\00\00\00\00\1D\00\00\00\00\00\00\00strict_device_hadamard_tokens\00") : !llvm.array<46 x i8>
   llvm.mlir.global internal @strict_gpu_hadamard_tokens_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   // the entry of a waiting rotation whose result (field 0) or source (field 1) is device, null when there is none
   func.func private @strict_gpu_rotation(%device: i64, %field: i64) -> !llvm.ptr {
@@ -22708,7 +22995,8 @@
     func.call @strict_gpu_kept(%source, %kept) : (i64, i64) -> ()
     cf.br ^done
   ^failed:
-    %broken = llvm.mlir.addressof @strict_gpu_broken_text : !llvm.ptr
+    %brokenLengths = llvm.mlir.addressof @strict_gpu_broken_text : !llvm.ptr
+    %broken = llvm.getelementptr %brokenLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %printed = llvm.call @printf(%broken) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr) -> i32
     %code = arith.constant 1 : i32
     llvm.call @exit(%code) : (i32) -> ()
@@ -22800,8 +23088,8 @@
   llvm.mlir.global internal constant @strict_gpu_convolution_name("strict_device_convolution\00strict_device_convolutions\00") : !llvm.array<53 x i8>
   llvm.mlir.global internal @strict_gpu_convolution_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   // the WGSL kernel of NativeRuntimeWgsl.js, run on WebGPU by strict_gpu_shaded of kind 2 (0.0 on other platforms)
-  llvm.mlir.global internal constant @strict_gpu_convolution_web("strict_convolution\00") : !llvm.array<19 x i8>
-  llvm.mlir.global internal constant @strict_gpu_normed_web("strict_normed\00") : !llvm.array<14 x i8>
+  llvm.mlir.global internal constant @strict_gpu_convolution_web("\12\00\00\00\00\00\00\00\12\00\00\00\00\00\00\00strict_convolution\00") : !llvm.array<35 x i8>
+  llvm.mlir.global internal constant @strict_gpu_normed_web("\0D\00\00\00\00\00\00\00\0D\00\00\00\00\00\00\00strict_normed\00") : !llvm.array<30 x i8>
   // `Convolved.Summed` on the 16 bit tensor cores (strict_device_convolution): a 3x3 convolution of values (height by
   // width pixels of channels numbers divided by factor, the affine scale and shift and swish applied on load, zeros
   // around) with weights (outputs rows of 9 taps of channels numbers; with a factor of 2 the image is doubled and the
@@ -22930,7 +23218,8 @@
     %swishing = llvm.load %swished : !llvm.ptr -> f64
     %normedSwish = llvm.getelementptr %normedSlots[3] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %swishing, %normedSwish : f64, !llvm.ptr
-    %normedName = llvm.mlir.addressof @strict_gpu_normed_web : !llvm.ptr
+    %normedNameLengths = llvm.mlir.addressof @strict_gpu_normed_web : !llvm.ptr
+    %normedName = llvm.getelementptr %normedNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %normedMask = arith.constant 3 : i64
     %webNormed = func.call @strict_gpu_shaded(%normedName, %valuesCount, %zero, %kernelKind, %normedSlots, %normedCount, %normedMask, %kernelFormat) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
     %isWebNormed = arith.cmpf one, %webNormed, %zero : f64
@@ -22943,7 +23232,8 @@
     %webSwish = arith.select %isWebNormed, %normedMark, %swishing : f64
     %webSwishSlot = llvm.getelementptr %webSlots[7] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %webSwish, %webSwishSlot : f64, !llvm.ptr
-    %webName = llvm.mlir.addressof @strict_gpu_convolution_web : !llvm.ptr
+    %webNameLengths = llvm.mlir.addressof @strict_gpu_convolution_web : !llvm.ptr
+    %webName = llvm.getelementptr %webNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %listMask = arith.constant 7 : i64
     %webbed = func.call @strict_gpu_shaded(%webName, %count, %zero, %kernelKind, %webSlots, %slotCount, %listMask, %kernelFormat) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
     %isWebbed = arith.cmpf one, %webbed, %zero : f64
@@ -23085,7 +23375,7 @@
   ^done(%resultName: !llvm.ptr, %resultSlot: !llvm.ptr):
     return %resultName, %resultSlot : !llvm.ptr, !llvm.ptr
   }
-  llvm.mlir.global internal constant @strict_rows_only_error("RowsOnlyOnTheGpu\00") : !llvm.array<17 x i8>
+  llvm.mlir.global internal constant @strict_rows_only_error("\10\00\00\00\00\00\00\00\10\00\00\00\00\00\00\00RowsOnlyOnTheGpu\00") : !llvm.array<33 x i8>
   // the dot products of `Batch.Sums` for several tokens (strict_device_blocks, 64 or more with 8 bit tokens and Q4_K or Q6_K
   // rows strict_device_tiles, with 8 bit rows strict_device_eights, strict_device_whole when the first has one scale from
   // sm_80 on, 1 or 2 tokens strict_device_tokens): every row with the numbers of every token (token t at
@@ -23104,7 +23394,8 @@
     %rowsOnly = func.call @strict_web_rows_only(%rows) : (f64) -> i1
     cf.cond_br %rowsOnly, ^gpuOnly, ^native
   ^gpuOnly:
-    %onlyName = llvm.mlir.addressof @strict_rows_only_error : !llvm.ptr
+    %onlyNameLengths = llvm.mlir.addressof @strict_rows_only_error : !llvm.ptr
+    %onlyName = llvm.getelementptr %onlyNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %onlyBits = func.call @strict_bits(%onlyName) : (!llvm.ptr) -> f64
     %onlyError = func.call @strict_error_text(%onlyBits) : (f64) -> f64
     return %onlyError : f64
@@ -23140,9 +23431,9 @@
     llvm.store %before, %keptSlot : i64, !llvm.ptr
     return %returned : f64
   }
-  llvm.mlir.global internal constant @strict_gpu_quantized_web("strict_quantized\00") : !llvm.array<17 x i8>
-  llvm.mlir.global internal constant @strict_gpu_eights_web("strict_eights\00") : !llvm.array<14 x i8>
-  llvm.mlir.global internal constant @strict_gpu_biased_web("strict_biased\00") : !llvm.array<14 x i8>
+  llvm.mlir.global internal constant @strict_gpu_quantized_web("\10\00\00\00\00\00\00\00\10\00\00\00\00\00\00\00strict_quantized\00") : !llvm.array<33 x i8>
+  llvm.mlir.global internal constant @strict_gpu_eights_web("\0D\00\00\00\00\00\00\00\0D\00\00\00\00\00\00\00strict_eights\00") : !llvm.array<30 x i8>
+  llvm.mlir.global internal constant @strict_gpu_biased_web("\0D\00\00\00\00\00\00\00\0D\00\00\00\00\00\00\00strict_biased\00") : !llvm.array<30 x i8>
   // `Batch.Sums` without bases or gates on WebGPU, 0.0 when the rows or the platform can not (native platforms run
   // strict_gpu_tokens on): rows of 8 bit codes (strict_rows: codes, then a 32 bit scale per 32 columns) take
   // strict_quantized (8 bit codes and a scale of every token) and strict_eights (dot products of 4 codes at a time,
@@ -23358,7 +23649,8 @@
     llvm.store %oneNumber, %rightInnerSlot : f64, !llvm.ptr
     %rightColumnSlot = llvm.getelementptr %productSlots[13] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %strideNumber, %rightColumnSlot : f64, !llvm.ptr
-    %productsName = llvm.mlir.addressof @strict_gpu_products_web : !llvm.ptr
+    %productsNameLengths = llvm.mlir.addressof @strict_gpu_products_web : !llvm.ptr
+    %productsName = llvm.getelementptr %productsNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %floatsFormat = arith.constant 32 : i64
     %products = func.call @strict_gpu_shaded(%productsName, %count, %zero, %kind, %productSlots, %fourteen, %three, %floatsFormat) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
     %hasBiases = arith.cmpf une, %biases, %zero : f64
@@ -23370,7 +23662,8 @@
     llvm.store %products, %biasSlots : f64, !llvm.ptr
     %biasesSlot = llvm.getelementptr %biasSlots[1] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %biases, %biasesSlot : f64, !llvm.ptr
-    %biasedName = llvm.mlir.addressof @strict_gpu_biased_web : !llvm.ptr
+    %biasedNameLengths = llvm.mlir.addressof @strict_gpu_biased_web : !llvm.ptr
+    %biasedName = llvm.getelementptr %biasedNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %biased = func.call @strict_gpu_shaded(%biasedName, %count, %zero, %kind, %biasSlots, %two, %three, %floatsFormat) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
     cf.br ^summed(%biased : f64)
   ^quantize:
@@ -23382,7 +23675,8 @@
     llvm.store %input, %quantizeSlots : f64, !llvm.ptr
     %widthSlot = llvm.getelementptr %quantizeSlots[1] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %width, %widthSlot : f64, !llvm.ptr
-    %quantizeName = llvm.mlir.addressof @strict_gpu_quantized_web : !llvm.ptr
+    %quantizeNameLengths = llvm.mlir.addressof @strict_gpu_quantized_web : !llvm.ptr
+    %quantizeName = llvm.getelementptr %quantizeNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %quantized = func.call @strict_gpu_shaded(%quantizeName, %quantizedCount, %zero, %kind, %quantizeSlots, %two, %one, %quantizeFormat) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
     %isQuantized = arith.cmpf une, %quantized, %zero : f64
     cf.cond_br %isQuantized, ^dots, ^summed(%zero : f64)
@@ -23408,7 +23702,8 @@
     %dotBiases = arith.cmpf une, %biases, %zero : f64
     %threeLists = arith.constant 7 : i64
     %dotMask = arith.select %dotBiases, %threeLists, %three : i64
-    %eightsName = llvm.mlir.addressof @strict_gpu_eights_web : !llvm.ptr
+    %eightsNameLengths = llvm.mlir.addressof @strict_gpu_eights_web : !llvm.ptr
+    %eightsName = llvm.getelementptr %eightsNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %halvesFormat = arith.constant 17 : i64
     %dotted = func.call @strict_gpu_shaded(%eightsName, %count, %zero, %kind, %dotSlots, %eightSlots, %dotMask, %halvesFormat) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
     cf.br ^summed(%dotted : f64)
@@ -24312,14 +24607,15 @@
     return
   }
   // the count doubles at source on the GPU as 32 bit floats at target, a thread per number
-  llvm.mlir.global internal constant @strict_gpu_narrow_name("strict_device_singles\00") : !llvm.array<22 x i8>
+  llvm.mlir.global internal constant @strict_gpu_narrow_name("\15\00\00\00\00\00\00\00\15\00\00\00\00\00\00\00strict_device_singles\00") : !llvm.array<38 x i8>
   llvm.mlir.global internal @strict_gpu_narrow_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   func.func private @strict_gpu_narrow(%ptx: !llvm.ptr, %source: i64, %count: i64, %target: i64) -> i1 {
     %none = arith.constant 0 : i64
     %sixtyFour = arith.constant 64 : i64
     %threads = arith.constant 256 : i64
     %false = arith.constant false
-    %name = llvm.mlir.addressof @strict_gpu_narrow_name : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_gpu_narrow_name : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %slot = llvm.mlir.addressof @strict_gpu_narrow_slot : !llvm.ptr
     %function = func.call @strict_gpu_function(%ptx, %name, %slot) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %unset = llvm.mlir.zero : !llvm.ptr
@@ -24337,7 +24633,7 @@
   // CPU) into one of two blocks kept for this, the view then points there, so every kernel reads 8 bit rows; the last two
   // matrices are remembered (a Batch.Sums of kept tokens runs twice, strict_gpu_tokens_split), false when the rows can't
   // (columns not a multiple of 32, rows of other formats than 5 and 8) or the GPU failed
-  llvm.mlir.global internal constant @strict_gpu_fours_name("strict_device_fours\00") : !llvm.array<20 x i8>
+  llvm.mlir.global internal constant @strict_gpu_fours_name("\13\00\00\00\00\00\00\00\13\00\00\00\00\00\00\00strict_device_fours\00") : !llvm.array<36 x i8>
   llvm.mlir.global internal @strict_gpu_fours_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   // per block its device address, bytes, rows list and the device address of their NVFP4 rows, then the block used next
   llvm.mlir.global internal @strict_gpu_fours(dense<0> : tensor<9xi64>) : !llvm.array<9 x i64>
@@ -24433,7 +24729,8 @@
     llvm.store %total, %sizeSlot : i64, !llvm.ptr
     cf.br ^launch(%fresh : i64)
   ^launch(%target: i64):
-    %name = llvm.mlir.addressof @strict_gpu_fours_name : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_gpu_fours_name : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %slot = llvm.mlir.addressof @strict_gpu_fours_slot : !llvm.ptr
     %function = func.call @strict_gpu_function(%ptx, %name, %slot) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %unset = llvm.mlir.zero : !llvm.ptr

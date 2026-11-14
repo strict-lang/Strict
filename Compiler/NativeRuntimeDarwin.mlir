@@ -98,8 +98,8 @@
   // stat64 has the 64 bit inode layout on Intel and arm64, opendir and readdir differ
   llvm.func @stat64(!llvm.ptr, !llvm.ptr) -> i32
   llvm.func @localtime(!llvm.ptr) -> !llvm.ptr
-  llvm.mlir.global internal constant @strict_separator_path("/\00") : !llvm.array<2 x i8>
-  llvm.mlir.global internal constant @strict_any_file("*\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @strict_separator_path("\01\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00/\00") : !llvm.array<18 x i8>
+  llvm.mlir.global internal constant @strict_any_file("\01\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00*\00") : !llvm.array<18 x i8>
   // whether a file (no directory) is at name, without opening it
   func.func private @strict_file_present(%name: !llvm.ptr) -> i1 {
     %false = arith.constant false
@@ -135,17 +135,18 @@
   llvm.func @fdopen(i32, !llvm.ptr) -> !llvm.ptr
   func.func private @strict_standard_input() -> !llvm.ptr {
     %standardInput = arith.constant 0 : i32
-    %mode = llvm.mlir.addressof @strict_read_mode : !llvm.ptr
+    %modeLengths = llvm.mlir.addressof @strict_read_mode : !llvm.ptr
+    %mode = llvm.getelementptr %modeLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %stream = llvm.call @fdopen(%standardInput, %mode) : (i32, !llvm.ptr) -> !llvm.ptr
     return %stream : !llvm.ptr
   }
   func.func private @strict_directory_current(%self: f64) -> f64 {
     %size = arith.constant 4096 : i64
-    %path = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
+    %path = func.call @strict_text_room(%size) : (i64) -> !llvm.ptr
     %terminator = arith.constant 0 : i8
     llvm.store %terminator, %path : i8, !llvm.ptr
     %found = llvm.call @getcwd(%path, %size) : (!llvm.ptr, i64) -> !llvm.ptr
-    %system = func.call @strict_bits(%path) : (!llvm.ptr) -> f64
+    %system = func.call @strict_text_sealed(%path) : (!llvm.ptr) -> f64
     %result = func.call @strict_folder_current(%system) : (f64) -> f64
     return %result : f64
   }
@@ -185,7 +186,8 @@
     return %answer : f64
   }
   func.func private @strict_path_join(%path: f64, %name: f64) -> f64 {
-    %separatorText = llvm.mlir.addressof @strict_separator_path : !llvm.ptr
+    %separatorTextLengths = llvm.mlir.addressof @strict_separator_path : !llvm.ptr
+    %separatorText = llvm.getelementptr %separatorTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %separator = func.call @strict_bits(%separatorText) : (!llvm.ptr) -> f64
     %prefix = func.call @strict_text_concat(%path, %separator) : (f64, f64) -> f64
     %result = func.call @strict_text_concat(%prefix, %name) : (f64, f64) -> f64
@@ -203,7 +205,8 @@
     %none = arith.constant 0 : i32
     %slotSize = arith.constant 8 : i64
     %directoryType = arith.constant 4 : i8
-    %anyText = llvm.mlir.addressof @strict_any_file : !llvm.ptr
+    %anyTextLengths = llvm.mlir.addressof @strict_any_file : !llvm.ptr
+    %anyText = llvm.getelementptr %anyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %any = func.call @strict_bits(%anyText) : (!llvm.ptr) -> f64
     %isUnset = arith.cmpf oeq, %pattern, %zero : f64
     %safePattern = arith.select %isUnset, %any, %pattern : f64
@@ -231,8 +234,9 @@
     %take = arith.andi %isFile, %isMatch : i1
     cf.cond_br %take, ^add(%found : f64), ^next(%found : f64)
   ^add(%before: f64):
-    %nameBits = func.call @strict_bits(%fileName) : (!llvm.ptr) -> f64
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %nameBits = func.call @strict_text_from(%fileName) : (!llvm.ptr) -> f64
+    %emptyTextLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
+    %emptyText = llvm.getelementptr %emptyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
     %copied = func.call @strict_text_concat(%nameBits, %empty) : (f64, f64) -> f64
     %full = func.call @strict_path_join(%path, %copied) : (f64, f64) -> f64
@@ -294,8 +298,9 @@
     %take = arith.andi %isDirectory, %notDot : i1
     cf.cond_br %take, ^add(%found : f64), ^next(%found : f64)
   ^add(%before: f64):
-    %nameBits = func.call @strict_bits(%fileName) : (!llvm.ptr) -> f64
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %nameBits = func.call @strict_text_from(%fileName) : (!llvm.ptr) -> f64
+    %emptyTextLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
+    %emptyText = llvm.getelementptr %emptyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
     %copied = func.call @strict_text_concat(%nameBits, %empty) : (f64, f64) -> f64
     %full = func.call @strict_path_join(%path, %copied) : (f64, f64) -> f64
@@ -312,19 +317,20 @@
   ^done(%result: f64):
     return %result : f64
   }
-  llvm.mlir.global internal constant @strict_path_variable("PATH\00") : !llvm.array<5 x i8>
-  llvm.mlir.global internal constant @strict_shell("/bin/sh\00") : !llvm.array<8 x i8>
-  llvm.mlir.global internal constant @strict_shell_name("sh\00") : !llvm.array<3 x i8>
-  llvm.mlir.global internal constant @strict_shell_command("-c\00") : !llvm.array<3 x i8>
-  llvm.mlir.global internal constant @strict_exec_quote("exec \22\00") : !llvm.array<7 x i8>
-  llvm.mlir.global internal constant @strict_quote_space("\22 \00") : !llvm.array<3 x i8>
-  llvm.mlir.global internal constant @strict_output_redirect(" > \22\00") : !llvm.array<5 x i8>
-  llvm.mlir.global internal constant @strict_error_redirect("\22 2> \22\00") : !llvm.array<7 x i8>
-  llvm.mlir.global internal constant @strict_start_failed("could not start \00") : !llvm.array<17 x i8>
+  llvm.mlir.global internal constant @strict_path_variable("\04\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00PATH\00") : !llvm.array<21 x i8>
+  llvm.mlir.global internal constant @strict_shell("\07\00\00\00\00\00\00\00\07\00\00\00\00\00\00\00/bin/sh\00") : !llvm.array<24 x i8>
+  llvm.mlir.global internal constant @strict_shell_name("\02\00\00\00\00\00\00\00\02\00\00\00\00\00\00\00sh\00") : !llvm.array<19 x i8>
+  llvm.mlir.global internal constant @strict_shell_command("\02\00\00\00\00\00\00\00\02\00\00\00\00\00\00\00-c\00") : !llvm.array<19 x i8>
+  llvm.mlir.global internal constant @strict_exec_quote("\06\00\00\00\00\00\00\00\06\00\00\00\00\00\00\00exec \22\00") : !llvm.array<23 x i8>
+  llvm.mlir.global internal constant @strict_quote_space("\02\00\00\00\00\00\00\00\02\00\00\00\00\00\00\00\22 \00") : !llvm.array<19 x i8>
+  llvm.mlir.global internal constant @strict_output_redirect("\04\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00 > \22\00") : !llvm.array<21 x i8>
+  llvm.mlir.global internal constant @strict_error_redirect("\06\00\00\00\00\00\00\00\06\00\00\00\00\00\00\00\22 2> \22\00") : !llvm.array<23 x i8>
+  llvm.mlir.global internal constant @strict_start_failed("\10\00\00\00\00\00\00\00\10\00\00\00\00\00\00\00could not start \00") : !llvm.array<33 x i8>
   // tools and downloads stop after 10 minutes (30 s stopped clang in parallel builds and model downloads)
-  llvm.mlir.global internal constant @strict_timed_out("timed out after 10 minutes\00") : !llvm.array<27 x i8>
+  llvm.mlir.global internal constant @strict_timed_out("\1A\00\00\00\00\00\00\00\1A\00\00\00\00\00\00\00timed out after 10 minutes\00") : !llvm.array<43 x i8>
   func.func private @strict_process_operatingsystem(%self: f64) -> f64 {
-    %name = llvm.mlir.addressof @strict_macos : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_macos : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %result = func.call @strict_bits(%name) : (!llvm.ptr) -> f64
     return %result : f64
   }
@@ -346,7 +352,7 @@
     %null = llvm.mlir.zero : !llvm.ptr
     %failed = llvm.icmp "eq" %resolved, %null : !llvm.ptr
     %chosen = arith.select %failed, %launched, %path : !llvm.ptr
-    %result = func.call @strict_bits(%chosen) : (!llvm.ptr) -> f64
+    %result = func.call @strict_text_from(%chosen) : (!llvm.ptr) -> f64
     return %result : f64
   }
   llvm.func @time(!llvm.ptr) -> i64
@@ -455,7 +461,7 @@
   llvm.func @sigaction(i32, !llvm.ptr, !llvm.ptr) -> i32
   llvm.func @sigaltstack(!llvm.ptr, !llvm.ptr) -> i32
   llvm.func @write(i32, !llvm.ptr, i64) -> i64
-  llvm.mlir.global internal constant @strict_overflow_text("Error: StackOverflow, methods called each other without end until the stack was used up\0A\00") : !llvm.array<89 x i8>
+  llvm.mlir.global internal constant @strict_overflow_text("\58\00\00\00\00\00\00\00\58\00\00\00\00\00\00\00Error: StackOverflow, methods called each other without end until the stack was used up\0A\00") : !llvm.array<105 x i8>
   llvm.func @strict_overflow_handler(%signal: i32, %info: !llvm.ptr, %context: !llvm.ptr) {
     %addressSlot = llvm.getelementptr %info[24] : (!llvm.ptr) -> !llvm.ptr, i8
     %address = llvm.load %addressSlot : !llvm.ptr -> i64
@@ -468,7 +474,8 @@
   ^report:
     %null = llvm.mlir.zero : !llvm.ptr
     %flushed = llvm.call @fflush(%null) : (!llvm.ptr) -> i32
-    %text = llvm.mlir.addressof @strict_overflow_text : !llvm.ptr
+    %textLengths = llvm.mlir.addressof @strict_overflow_text : !llvm.ptr
+    %text = llvm.getelementptr %textLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %length = llvm.mlir.constant(88 : i64) : i64
     %output = llvm.mlir.constant(1 : i32) : i32
     %written = llvm.call @write(%output, %text, %length) : (i32, !llvm.ptr, i64) -> i64
@@ -584,7 +591,8 @@
     %terminator = arith.constant 0 : i8
     %file = func.call @strict_ptr(%name) : (f64) -> !llvm.ptr
     %fileSize = llvm.call @strlen(%file) : (!llvm.ptr) -> i64
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %emptyTextLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
+    %emptyText = llvm.getelementptr %emptyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
     %null = llvm.mlir.zero : !llvm.ptr
     %slashAt = llvm.call @strchr(%file, %slash) : (!llvm.ptr, i32) -> !llvm.ptr
@@ -596,7 +604,8 @@
     %direct = arith.select %usable, %name, %empty : f64
     return %direct : f64
   ^search:
-    %variable = llvm.mlir.addressof @strict_path_variable : !llvm.ptr
+    %variableLengths = llvm.mlir.addressof @strict_path_variable : !llvm.ptr
+    %variable = llvm.getelementptr %variableLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %paths = llvm.call @getenv(%variable) : (!llvm.ptr) -> !llvm.ptr
     %noPath = llvm.icmp "eq" %paths, %null : !llvm.ptr
     cf.cond_br %noPath, ^missing, ^segment(%paths : !llvm.ptr)
@@ -627,7 +636,7 @@
     %following = llvm.getelementptr %end[1] : (!llvm.ptr) -> !llvm.ptr, i8
     cf.cond_br %isLast, ^missing, ^segment(%following : !llvm.ptr)
   ^located(%path: !llvm.ptr):
-    %located = func.call @strict_bits(%path) : (!llvm.ptr) -> f64
+    %located = func.call @strict_text_from(%path) : (!llvm.ptr) -> f64
     return %located : f64
   ^missing:
     return %empty : f64
@@ -638,8 +647,8 @@
     %deleted = llvm.call @unlink(%name) : (!llvm.ptr) -> i32
     return %text : f64
   }
-  llvm.mlir.global internal constant @strict_export_threads("export STRICT_THREADS=\00") : !llvm.array<23 x i8>
-  llvm.mlir.global internal constant @strict_export_end("; \00") : !llvm.array<3 x i8>
+  llvm.mlir.global internal constant @strict_export_threads("\16\00\00\00\00\00\00\00\16\00\00\00\00\00\00\00export STRICT_THREADS=\00") : !llvm.array<39 x i8>
+  llvm.mlir.global internal constant @strict_export_end("\02\00\00\00\00\00\00\00\02\00\00\00\00\00\00\00; \00") : !llvm.array<19 x i8>
   // the start of a tool's shell command: exports STRICT_THREADS for a child of a tool batch (a share above 0)
   func.func private @strict_tool_prefix() -> f64 {
     %zero = arith.constant 0 : i64
@@ -648,16 +657,19 @@
     %sharing = arith.cmpi sgt, %share, %zero : i64
     cf.cond_br %sharing, ^export, ^none
   ^none:
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %emptyTextLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
+    %emptyText = llvm.getelementptr %emptyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %empty = func.call @strict_text_of(%emptyText) : (!llvm.ptr) -> f64
     return %empty : f64
   ^export:
-    %exportText = llvm.mlir.addressof @strict_export_threads : !llvm.ptr
+    %exportTextLengths = llvm.mlir.addressof @strict_export_threads : !llvm.ptr
+    %exportText = llvm.getelementptr %exportTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %export = func.call @strict_text_of(%exportText) : (!llvm.ptr) -> f64
     %number = arith.sitofp %share : i64 to f64
     %value = func.call @strict_number_text(%number) : (f64) -> f64
     %assigned = func.call @strict_text_concat(%export, %value) : (f64, f64) -> f64
-    %endText = llvm.mlir.addressof @strict_export_end : !llvm.ptr
+    %endTextLengths = llvm.mlir.addressof @strict_export_end : !llvm.ptr
+    %endText = llvm.getelementptr %endTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %end = func.call @strict_text_of(%endText) : (!llvm.ptr) -> f64
     %started = func.call @strict_text_concat(%assigned, %end) : (f64, f64) -> f64
     return %started : f64
@@ -682,8 +694,10 @@
     %signals = arith.constant 127 : i32
     %none = arith.constant 0 : i32
     %signaled = arith.constant 128 : i32
-    %execQuote = llvm.mlir.addressof @strict_exec_quote : !llvm.ptr
-    %quoteSpace = llvm.mlir.addressof @strict_quote_space : !llvm.ptr
+    %execQuoteLengths = llvm.mlir.addressof @strict_exec_quote : !llvm.ptr
+    %execQuote = llvm.getelementptr %execQuoteLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %quoteSpaceLengths = llvm.mlir.addressof @strict_quote_space : !llvm.ptr
+    %quoteSpace = llvm.getelementptr %quoteSpaceLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %execText = func.call @strict_text_of(%execQuote) : (!llvm.ptr) -> f64
     %quoteSpaceText = func.call @strict_text_of(%quoteSpace) : (!llvm.ptr) -> f64
     %located = func.call @strict_program_joined(%path) : (f64) -> f64
@@ -712,11 +726,16 @@
     %limit = arith.constant 600000 : i32
     %step = arith.constant 1 : i32
     %statusSize = arith.constant 8 : i64
-    %execQuote = llvm.mlir.addressof @strict_exec_quote : !llvm.ptr
-    %quoteSpace = llvm.mlir.addressof @strict_quote_space : !llvm.ptr
-    %outputRedirect = llvm.mlir.addressof @strict_output_redirect : !llvm.ptr
-    %errorRedirect = llvm.mlir.addressof @strict_error_redirect : !llvm.ptr
-    %quote = llvm.mlir.addressof @strict_quote : !llvm.ptr
+    %execQuoteLengths = llvm.mlir.addressof @strict_exec_quote : !llvm.ptr
+    %execQuote = llvm.getelementptr %execQuoteLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %quoteSpaceLengths = llvm.mlir.addressof @strict_quote_space : !llvm.ptr
+    %quoteSpace = llvm.getelementptr %quoteSpaceLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %outputRedirectLengths = llvm.mlir.addressof @strict_output_redirect : !llvm.ptr
+    %outputRedirect = llvm.getelementptr %outputRedirectLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %errorRedirectLengths = llvm.mlir.addressof @strict_error_redirect : !llvm.ptr
+    %errorRedirect = llvm.getelementptr %errorRedirectLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %quoteLengths = llvm.mlir.addressof @strict_quote : !llvm.ptr
+    %quote = llvm.getelementptr %quoteLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %execText = func.call @strict_text_of(%execQuote) : (!llvm.ptr) -> f64
     %quoteSpaceText = func.call @strict_text_of(%quoteSpace) : (!llvm.ptr) -> f64
     %outputText = func.call @strict_text_of(%outputRedirect) : (!llvm.ptr) -> f64
@@ -737,9 +756,12 @@
     %command = func.call @strict_text_concat(%withError, %quoteText) : (f64, f64) -> f64
     %placed = func.call @strict_folder_command(%command) : (f64) -> f64
     %commandText = func.call @strict_ptr(%placed) : (f64) -> !llvm.ptr
-    %shell = llvm.mlir.addressof @strict_shell : !llvm.ptr
-    %shellName = llvm.mlir.addressof @strict_shell_name : !llvm.ptr
-    %shellCommand = llvm.mlir.addressof @strict_shell_command : !llvm.ptr
+    %shellLengths = llvm.mlir.addressof @strict_shell : !llvm.ptr
+    %shell = llvm.getelementptr %shellLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %shellNameLengths = llvm.mlir.addressof @strict_shell_name : !llvm.ptr
+    %shellName = llvm.getelementptr %shellNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %shellCommandLengths = llvm.mlir.addressof @strict_shell_command : !llvm.ptr
+    %shellCommand = llvm.getelementptr %shellCommandLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %null = llvm.mlir.zero : !llvm.ptr
     %status = func.call @strict_alloc_text(%statusSize) : (i64) -> !llvm.ptr
     %flushed = llvm.call @fflush(%null) : (!llvm.ptr) -> i32
@@ -757,10 +779,12 @@
     %unusedOutput = func.call @strict_removed_file(%outputPath) : (f64) -> f64
     %unusedError = func.call @strict_removed_file(%errorPath) : (f64) -> f64
     %startCode = arith.constant 1.0 : f64
-    %startText = llvm.mlir.addressof @strict_start_failed : !llvm.ptr
+    %startTextLengths = llvm.mlir.addressof @strict_start_failed : !llvm.ptr
+    %startText = llvm.getelementptr %startTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %startPrefix = func.call @strict_bits(%startText) : (!llvm.ptr) -> f64
     %startError = func.call @strict_text_concat(%startPrefix, %path) : (f64, f64) -> f64
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %emptyTextLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
+    %emptyText = llvm.getelementptr %emptyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
     %startFailure = func.call @strict_process_result(%startCode, %empty, %startError) : (f64, f64, f64) -> f64
     return %startFailure : f64
@@ -779,7 +803,8 @@
     %killed = llvm.call @kill(%child, %killSignal) : (i32, i32) -> i32
     %reaped = llvm.call @waitpid(%child, %status, %none) : (i32, !llvm.ptr, i32) -> i32
     %timeoutCode = arith.constant 124.0 : f64
-    %timedOutText = llvm.mlir.addressof @strict_timed_out : !llvm.ptr
+    %timedOutTextLengths = llvm.mlir.addressof @strict_timed_out : !llvm.ptr
+    %timedOutText = llvm.getelementptr %timedOutTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %timedOutMessage = func.call @strict_bits(%timedOutText) : (!llvm.ptr) -> f64
     cf.br ^collect(%timeoutCode, %timedOutMessage, %step : f64, f64, i32)
   ^exited:
@@ -815,7 +840,8 @@
     %isMissing = llvm.icmp "eq" %library, %null : !llvm.ptr
     cf.cond_br %isMissing, ^noLibrary, ^loaded
   ^noLibrary:
-    %libraryMessage = llvm.mlir.addressof @strict_library_missing : !llvm.ptr
+    %libraryMessageLengths = llvm.mlir.addressof @strict_library_missing : !llvm.ptr
+    %libraryMessage = llvm.getelementptr %libraryMessageLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %libraryError = func.call @strict_error_named(%libraryMessage) : (!llvm.ptr) -> f64
     return %libraryError : f64
   ^loaded:
@@ -824,7 +850,8 @@
     %isAbsent = llvm.icmp "eq" %function, %null : !llvm.ptr
     cf.cond_br %isAbsent, ^noSymbol, ^found
   ^noSymbol:
-    %symbolMessage = llvm.mlir.addressof @strict_library_symbol_missing : !llvm.ptr
+    %symbolMessageLengths = llvm.mlir.addressof @strict_library_symbol_missing : !llvm.ptr
+    %symbolMessage = llvm.getelementptr %symbolMessageLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %symbolError = func.call @strict_error_named(%symbolMessage) : (!llvm.ptr) -> f64
     return %symbolError : f64
   ^found:
@@ -1030,50 +1057,50 @@
   ^leave:
     llvm.return
   }
-  llvm.mlir.global internal constant @strict_gpu_ptx_ending(".metal\00") : !llvm.array<7 x i8>
-  llvm.mlir.global internal constant @strict_gpu_older_ending(".older.metal\00") : !llvm.array<13 x i8>
-  llvm.mlir.global internal constant @strict_metal_s_objectAtIndex("objectAtIndex:\00") : !llvm.array<15 x i8>
-  llvm.mlir.global internal constant @strict_metal_s_newCommandQueue("newCommandQueue\00") : !llvm.array<16 x i8>
-  llvm.mlir.global internal constant @strict_metal_s_recommendedMaxWorkingSetSize("recommendedMaxWorkingSetSize\00") : !llvm.array<29 x i8>
-  llvm.mlir.global internal constant @strict_metal_s_maxBufferLength("maxBufferLength\00") : !llvm.array<16 x i8>
-  llvm.mlir.global internal constant @strict_metal_s_newBufferWithLength_options("newBufferWithLength:options:\00") : !llvm.array<29 x i8>
-  llvm.mlir.global internal constant @strict_metal_s_contents("contents\00") : !llvm.array<9 x i8>
-  llvm.mlir.global internal constant @strict_metal_s_gpuAddress("gpuAddress\00") : !llvm.array<11 x i8>
-  llvm.mlir.global internal constant @strict_metal_s_stringWithUTF8String("stringWithUTF8String:\00") : !llvm.array<22 x i8>
-  llvm.mlir.global internal constant @strict_metal_s_new("new\00") : !llvm.array<4 x i8>
-  llvm.mlir.global internal constant @strict_metal_s_setFastMathEnabled("setFastMathEnabled:\00") : !llvm.array<20 x i8>
-  llvm.mlir.global internal constant @strict_metal_s_newLibraryWithSource_options_error("newLibraryWithSource:options:error:\00") : !llvm.array<36 x i8>
-  llvm.mlir.global internal constant @strict_metal_s_newFunctionWithName("newFunctionWithName:\00") : !llvm.array<21 x i8>
-  llvm.mlir.global internal constant @strict_metal_s_newComputePipelineStateWithFunction_error("newComputePipelineStateWithFunction:error:\00") : !llvm.array<43 x i8>
-  llvm.mlir.global internal constant @strict_metal_s_commandBuffer("commandBuffer\00") : !llvm.array<14 x i8>
-  llvm.mlir.global internal constant @strict_metal_s_computeCommandEncoder("computeCommandEncoder\00") : !llvm.array<22 x i8>
-  llvm.mlir.global internal constant @strict_metal_s_setComputePipelineState("setComputePipelineState:\00") : !llvm.array<25 x i8>
-  llvm.mlir.global internal constant @strict_metal_s_setBytes_length_atIndex("setBytes:length:atIndex:\00") : !llvm.array<25 x i8>
-  llvm.mlir.global internal constant @strict_metal_s_useResource_usage("useResource:usage:\00") : !llvm.array<19 x i8>
-  llvm.mlir.global internal constant @strict_metal_s_dispatchThreadgroups_threadsPerThreadgroup("dispatchThreadgroups:threadsPerThreadgroup:\00") : !llvm.array<44 x i8>
-  llvm.mlir.global internal constant @strict_metal_s_endEncoding("endEncoding\00") : !llvm.array<12 x i8>
-  llvm.mlir.global internal constant @strict_metal_s_commit("commit\00") : !llvm.array<7 x i8>
-  llvm.mlir.global internal constant @strict_metal_s_count("count\00") : !llvm.array<6 x i8>
-  llvm.mlir.global internal constant @strict_metal_s_respondsToSelector("respondsToSelector:\00") : !llvm.array<20 x i8>
-  llvm.mlir.global internal constant @strict_metal_s_retain("retain\00") : !llvm.array<7 x i8>
-  llvm.mlir.global internal constant @strict_metal_s_release("release\00") : !llvm.array<8 x i8>
-  llvm.mlir.global internal constant @strict_metal_s_waitUntilCompleted("waitUntilCompleted\00") : !llvm.array<19 x i8>
-  llvm.mlir.global internal constant @strict_metal_s_status("status\00") : !llvm.array<7 x i8>
-  llvm.mlir.global internal constant @strict_metal_s_localizedDescription("localizedDescription\00") : !llvm.array<21 x i8>
-  llvm.mlir.global internal constant @strict_metal_s_UTF8String("UTF8String\00") : !llvm.array<11 x i8>
-  llvm.mlir.global internal constant @strict_metal_n_library("/System/Library/Frameworks/Metal.framework/Metal\00") : !llvm.array<49 x i8>
-  llvm.mlir.global internal constant @strict_metal_n_send("objc_msgSend\00") : !llvm.array<13 x i8>
-  llvm.mlir.global internal constant @strict_metal_n_register("sel_registerName\00") : !llvm.array<17 x i8>
-  llvm.mlir.global internal constant @strict_metal_n_class("objc_getClass\00") : !llvm.array<14 x i8>
-  llvm.mlir.global internal constant @strict_metal_n_push("objc_autoreleasePoolPush\00") : !llvm.array<25 x i8>
-  llvm.mlir.global internal constant @strict_metal_n_pop("objc_autoreleasePoolPop\00") : !llvm.array<24 x i8>
-  llvm.mlir.global internal constant @strict_metal_n_devices("MTLCopyAllDevices\00") : !llvm.array<18 x i8>
-  llvm.mlir.global internal constant @strict_metal_n_string("NSString\00") : !llvm.array<9 x i8>
-  llvm.mlir.global internal constant @strict_metal_n_options("MTLCompileOptions\00") : !llvm.array<18 x i8>
-  llvm.mlir.global internal constant @strict_metal_marker("// parameters %s \00") : !llvm.array<18 x i8>
-  llvm.mlir.global internal constant @strict_metal_failed("Metal: \00") : !llvm.array<8 x i8>
-  llvm.mlir.global internal constant @strict_metal_newline("\0A\00") : !llvm.array<2 x i8>
-  llvm.mlir.global internal constant @strict_metal_command_failed("Metal: a command buffer failed\0A\00") : !llvm.array<32 x i8>
+  llvm.mlir.global internal constant @strict_gpu_ptx_ending("\06\00\00\00\00\00\00\00\06\00\00\00\00\00\00\00.metal\00") : !llvm.array<23 x i8>
+  llvm.mlir.global internal constant @strict_gpu_older_ending("\0C\00\00\00\00\00\00\00\0C\00\00\00\00\00\00\00.older.metal\00") : !llvm.array<29 x i8>
+  llvm.mlir.global internal constant @strict_metal_s_objectAtIndex("\0E\00\00\00\00\00\00\00\0E\00\00\00\00\00\00\00objectAtIndex:\00") : !llvm.array<31 x i8>
+  llvm.mlir.global internal constant @strict_metal_s_newCommandQueue("\0F\00\00\00\00\00\00\00\0F\00\00\00\00\00\00\00newCommandQueue\00") : !llvm.array<32 x i8>
+  llvm.mlir.global internal constant @strict_metal_s_recommendedMaxWorkingSetSize("\1C\00\00\00\00\00\00\00\1C\00\00\00\00\00\00\00recommendedMaxWorkingSetSize\00") : !llvm.array<45 x i8>
+  llvm.mlir.global internal constant @strict_metal_s_maxBufferLength("\0F\00\00\00\00\00\00\00\0F\00\00\00\00\00\00\00maxBufferLength\00") : !llvm.array<32 x i8>
+  llvm.mlir.global internal constant @strict_metal_s_newBufferWithLength_options("\1C\00\00\00\00\00\00\00\1C\00\00\00\00\00\00\00newBufferWithLength:options:\00") : !llvm.array<45 x i8>
+  llvm.mlir.global internal constant @strict_metal_s_contents("\08\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00contents\00") : !llvm.array<25 x i8>
+  llvm.mlir.global internal constant @strict_metal_s_gpuAddress("\0A\00\00\00\00\00\00\00\0A\00\00\00\00\00\00\00gpuAddress\00") : !llvm.array<27 x i8>
+  llvm.mlir.global internal constant @strict_metal_s_stringWithUTF8String("\15\00\00\00\00\00\00\00\15\00\00\00\00\00\00\00stringWithUTF8String:\00") : !llvm.array<38 x i8>
+  llvm.mlir.global internal constant @strict_metal_s_new("\03\00\00\00\00\00\00\00\03\00\00\00\00\00\00\00new\00") : !llvm.array<20 x i8>
+  llvm.mlir.global internal constant @strict_metal_s_setFastMathEnabled("\13\00\00\00\00\00\00\00\13\00\00\00\00\00\00\00setFastMathEnabled:\00") : !llvm.array<36 x i8>
+  llvm.mlir.global internal constant @strict_metal_s_newLibraryWithSource_options_error("\23\00\00\00\00\00\00\00\23\00\00\00\00\00\00\00newLibraryWithSource:options:error:\00") : !llvm.array<52 x i8>
+  llvm.mlir.global internal constant @strict_metal_s_newFunctionWithName("\14\00\00\00\00\00\00\00\14\00\00\00\00\00\00\00newFunctionWithName:\00") : !llvm.array<37 x i8>
+  llvm.mlir.global internal constant @strict_metal_s_newComputePipelineStateWithFunction_error("\2A\00\00\00\00\00\00\00\2A\00\00\00\00\00\00\00newComputePipelineStateWithFunction:error:\00") : !llvm.array<59 x i8>
+  llvm.mlir.global internal constant @strict_metal_s_commandBuffer("\0D\00\00\00\00\00\00\00\0D\00\00\00\00\00\00\00commandBuffer\00") : !llvm.array<30 x i8>
+  llvm.mlir.global internal constant @strict_metal_s_computeCommandEncoder("\15\00\00\00\00\00\00\00\15\00\00\00\00\00\00\00computeCommandEncoder\00") : !llvm.array<38 x i8>
+  llvm.mlir.global internal constant @strict_metal_s_setComputePipelineState("\18\00\00\00\00\00\00\00\18\00\00\00\00\00\00\00setComputePipelineState:\00") : !llvm.array<41 x i8>
+  llvm.mlir.global internal constant @strict_metal_s_setBytes_length_atIndex("\18\00\00\00\00\00\00\00\18\00\00\00\00\00\00\00setBytes:length:atIndex:\00") : !llvm.array<41 x i8>
+  llvm.mlir.global internal constant @strict_metal_s_useResource_usage("\12\00\00\00\00\00\00\00\12\00\00\00\00\00\00\00useResource:usage:\00") : !llvm.array<35 x i8>
+  llvm.mlir.global internal constant @strict_metal_s_dispatchThreadgroups_threadsPerThreadgroup("\2B\00\00\00\00\00\00\00\2B\00\00\00\00\00\00\00dispatchThreadgroups:threadsPerThreadgroup:\00") : !llvm.array<60 x i8>
+  llvm.mlir.global internal constant @strict_metal_s_endEncoding("\0B\00\00\00\00\00\00\00\0B\00\00\00\00\00\00\00endEncoding\00") : !llvm.array<28 x i8>
+  llvm.mlir.global internal constant @strict_metal_s_commit("\06\00\00\00\00\00\00\00\06\00\00\00\00\00\00\00commit\00") : !llvm.array<23 x i8>
+  llvm.mlir.global internal constant @strict_metal_s_count("\05\00\00\00\00\00\00\00\05\00\00\00\00\00\00\00count\00") : !llvm.array<22 x i8>
+  llvm.mlir.global internal constant @strict_metal_s_respondsToSelector("\13\00\00\00\00\00\00\00\13\00\00\00\00\00\00\00respondsToSelector:\00") : !llvm.array<36 x i8>
+  llvm.mlir.global internal constant @strict_metal_s_retain("\06\00\00\00\00\00\00\00\06\00\00\00\00\00\00\00retain\00") : !llvm.array<23 x i8>
+  llvm.mlir.global internal constant @strict_metal_s_release("\07\00\00\00\00\00\00\00\07\00\00\00\00\00\00\00release\00") : !llvm.array<24 x i8>
+  llvm.mlir.global internal constant @strict_metal_s_waitUntilCompleted("\12\00\00\00\00\00\00\00\12\00\00\00\00\00\00\00waitUntilCompleted\00") : !llvm.array<35 x i8>
+  llvm.mlir.global internal constant @strict_metal_s_status("\06\00\00\00\00\00\00\00\06\00\00\00\00\00\00\00status\00") : !llvm.array<23 x i8>
+  llvm.mlir.global internal constant @strict_metal_s_localizedDescription("\14\00\00\00\00\00\00\00\14\00\00\00\00\00\00\00localizedDescription\00") : !llvm.array<37 x i8>
+  llvm.mlir.global internal constant @strict_metal_s_UTF8String("\0A\00\00\00\00\00\00\00\0A\00\00\00\00\00\00\00UTF8String\00") : !llvm.array<27 x i8>
+  llvm.mlir.global internal constant @strict_metal_n_library("\30\00\00\00\00\00\00\00\30\00\00\00\00\00\00\00/System/Library/Frameworks/Metal.framework/Metal\00") : !llvm.array<65 x i8>
+  llvm.mlir.global internal constant @strict_metal_n_send("\0C\00\00\00\00\00\00\00\0C\00\00\00\00\00\00\00objc_msgSend\00") : !llvm.array<29 x i8>
+  llvm.mlir.global internal constant @strict_metal_n_register("\10\00\00\00\00\00\00\00\10\00\00\00\00\00\00\00sel_registerName\00") : !llvm.array<33 x i8>
+  llvm.mlir.global internal constant @strict_metal_n_class("\0D\00\00\00\00\00\00\00\0D\00\00\00\00\00\00\00objc_getClass\00") : !llvm.array<30 x i8>
+  llvm.mlir.global internal constant @strict_metal_n_push("\18\00\00\00\00\00\00\00\18\00\00\00\00\00\00\00objc_autoreleasePoolPush\00") : !llvm.array<41 x i8>
+  llvm.mlir.global internal constant @strict_metal_n_pop("\17\00\00\00\00\00\00\00\17\00\00\00\00\00\00\00objc_autoreleasePoolPop\00") : !llvm.array<40 x i8>
+  llvm.mlir.global internal constant @strict_metal_n_devices("\11\00\00\00\00\00\00\00\11\00\00\00\00\00\00\00MTLCopyAllDevices\00") : !llvm.array<34 x i8>
+  llvm.mlir.global internal constant @strict_metal_n_string("\08\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00NSString\00") : !llvm.array<25 x i8>
+  llvm.mlir.global internal constant @strict_metal_n_options("\11\00\00\00\00\00\00\00\11\00\00\00\00\00\00\00MTLCompileOptions\00") : !llvm.array<34 x i8>
+  llvm.mlir.global internal constant @strict_metal_marker("\11\00\00\00\00\00\00\00\11\00\00\00\00\00\00\00// parameters %s \00") : !llvm.array<34 x i8>
+  llvm.mlir.global internal constant @strict_metal_failed("\07\00\00\00\00\00\00\00\07\00\00\00\00\00\00\00Metal: \00") : !llvm.array<24 x i8>
+  llvm.mlir.global internal constant @strict_metal_newline("\01\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00\0A\00") : !llvm.array<18 x i8>
+  llvm.mlir.global internal constant @strict_metal_command_failed("\1F\00\00\00\00\00\00\00\1F\00\00\00\00\00\00\00Metal: a command buffer failed\0A\00") : !llvm.array<48 x i8>
   // the CUDA driver functions NativeRuntime.mlir calls, done with Metal (macOS has no CUDA): kernels are the Metal
   // source MetalShader.strict writes next to the executable, device memory is one shared buffer (addresses are its
   // gpuAddress plus an offset, freed all at once when nothing is allocated anymore), launches run right away in one
@@ -1131,9 +1158,11 @@
     llvm.return %result : !llvm.ptr
   }
   llvm.func @strict_metal_text(%text: !llvm.ptr) -> !llvm.ptr {
-    %className = llvm.mlir.addressof @strict_metal_n_string : !llvm.ptr
+    %classNameLengths = llvm.mlir.addressof @strict_metal_n_string : !llvm.ptr
+    %className = llvm.getelementptr %classNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %class = llvm.call @strict_metal_class(%className) : (!llvm.ptr) -> !llvm.ptr
-    %name = llvm.mlir.addressof @strict_metal_s_stringWithUTF8String : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_metal_s_stringWithUTF8String : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %string = llvm.call @strict_metal_with(%class, %name, %text) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
     llvm.return %string : !llvm.ptr
   }
@@ -1152,22 +1181,26 @@
   // writes "Metal: " and the description of an NSError to the error output
   llvm.func @strict_metal_report(%error: !llvm.ptr) {
     %output = llvm.mlir.constant(2 : i32) : i32
-    %prefix = llvm.mlir.addressof @strict_metal_failed : !llvm.ptr
+    %prefixLengths = llvm.mlir.addressof @strict_metal_failed : !llvm.ptr
+    %prefix = llvm.getelementptr %prefixLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %prefixLength = llvm.call @strlen(%prefix) : (!llvm.ptr) -> i64
     %wrotePrefix = llvm.call @write(%output, %prefix, %prefixLength) : (i32, !llvm.ptr, i64) -> i64
     %null = llvm.mlir.zero : !llvm.ptr
     %hasError = llvm.icmp "ne" %error, %null : !llvm.ptr
     llvm.cond_br %hasError, ^described, ^done
   ^described:
-    %describe = llvm.mlir.addressof @strict_metal_s_localizedDescription : !llvm.ptr
+    %describeLengths = llvm.mlir.addressof @strict_metal_s_localizedDescription : !llvm.ptr
+    %describe = llvm.getelementptr %describeLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %description = llvm.call @strict_metal_message(%error, %describe) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
-    %utf8 = llvm.mlir.addressof @strict_metal_s_UTF8String : !llvm.ptr
+    %utf8Lengths = llvm.mlir.addressof @strict_metal_s_UTF8String : !llvm.ptr
+    %utf8 = llvm.getelementptr %utf8Lengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %text = llvm.call @strict_metal_message(%description, %utf8) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %length = llvm.call @strlen(%text) : (!llvm.ptr) -> i64
     %wrote = llvm.call @write(%output, %text, %length) : (i32, !llvm.ptr, i64) -> i64
     llvm.br ^done
   ^done:
-    %newline = llvm.mlir.addressof @strict_metal_newline : !llvm.ptr
+    %newlineLengths = llvm.mlir.addressof @strict_metal_newline : !llvm.ptr
+    %newline = llvm.getelementptr %newlineLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %one = llvm.mlir.constant(1 : i64) : i64
     %ended = llvm.call @write(%output, %newline, %one) : (i32, !llvm.ptr, i64) -> i64
     llvm.return
@@ -1191,16 +1224,19 @@
     %none = llvm.icmp "eq" %last, %null : !llvm.ptr
     llvm.cond_br %none, ^done(%success : i32), ^wait
   ^wait:
-    %waitName = llvm.mlir.addressof @strict_metal_s_waitUntilCompleted : !llvm.ptr
+    %waitNameLengths = llvm.mlir.addressof @strict_metal_s_waitUntilCompleted : !llvm.ptr
+    %waitName = llvm.getelementptr %waitNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %waited = llvm.call @strict_metal_message(%last, %waitName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
-    %statusName = llvm.mlir.addressof @strict_metal_s_status : !llvm.ptr
+    %statusNameLengths = llvm.mlir.addressof @strict_metal_s_status : !llvm.ptr
+    %statusName = llvm.getelementptr %statusNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %status = llvm.call @strict_metal_number(%last, %statusName) : (!llvm.ptr, !llvm.ptr) -> i64
     %errorStatus = llvm.mlir.constant(5 : i64) : i64
     %failed = llvm.icmp "eq" %status, %errorStatus : i64
     llvm.cond_br %failed, ^report, ^done(%success : i32)
   ^report:
     %output = llvm.mlir.constant(2 : i32) : i32
-    %message = llvm.mlir.addressof @strict_metal_command_failed : !llvm.ptr
+    %messageLengths = llvm.mlir.addressof @strict_metal_command_failed : !llvm.ptr
+    %message = llvm.getelementptr %messageLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %length = llvm.call @strlen(%message) : (!llvm.ptr) -> i64
     %wrote = llvm.call @write(%output, %message, %length) : (i32, !llvm.ptr, i64) -> i64
     llvm.br ^done(%failure : i32)
@@ -1229,35 +1265,44 @@
     %null = llvm.mlir.zero : !llvm.ptr
     %libraryIndex = llvm.mlir.constant(14 : i64) : i64
     %library = llvm.call @strict_metal_pointer(%libraryIndex) : (i64) -> !llvm.ptr
-    %copyName = llvm.mlir.addressof @strict_metal_n_devices : !llvm.ptr
+    %copyNameLengths = llvm.mlir.addressof @strict_metal_n_devices : !llvm.ptr
+    %copyName = llvm.getelementptr %copyNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %copy = llvm.call @dlsym(%library, %copyName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %noCopy = llvm.icmp "eq" %copy, %null : !llvm.ptr
     llvm.cond_br %noCopy, ^failed, ^copy
   ^copy:
     %devices = llvm.call %copy() : !llvm.ptr, () -> !llvm.ptr
-    %countName = llvm.mlir.addressof @strict_metal_s_count : !llvm.ptr
+    %countNameLengths = llvm.mlir.addressof @strict_metal_s_count : !llvm.ptr
+    %countName = llvm.getelementptr %countNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %count = llvm.call @strict_metal_number(%devices, %countName) : (!llvm.ptr, !llvm.ptr) -> i64
     %empty = llvm.icmp "eq" %count, %zero : i64
     llvm.cond_br %empty, ^failed, ^first
   ^first:
     %send = llvm.call @strict_metal_pointer(%zero) : (i64) -> !llvm.ptr
-    %atName = llvm.mlir.addressof @strict_metal_s_objectAtIndex : !llvm.ptr
+    %atNameLengths = llvm.mlir.addressof @strict_metal_s_objectAtIndex : !llvm.ptr
+    %atName = llvm.getelementptr %atNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %at = llvm.call @strict_metal_selector(%atName) : (!llvm.ptr) -> !llvm.ptr
     %device = llvm.call %send(%devices, %at, %zero) : !llvm.ptr, (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
-    %respondsName = llvm.mlir.addressof @strict_metal_s_respondsToSelector : !llvm.ptr
+    %respondsNameLengths = llvm.mlir.addressof @strict_metal_s_respondsToSelector : !llvm.ptr
+    %respondsName = llvm.getelementptr %respondsNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %responds = llvm.call @strict_metal_selector(%respondsName) : (!llvm.ptr) -> !llvm.ptr
-    %addressName = llvm.mlir.addressof @strict_metal_s_gpuAddress : !llvm.ptr
+    %addressNameLengths = llvm.mlir.addressof @strict_metal_s_gpuAddress : !llvm.ptr
+    %addressName = llvm.getelementptr %addressNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %addressSelector = llvm.call @strict_metal_selector(%addressName) : (!llvm.ptr) -> !llvm.ptr
-    %queueName = llvm.mlir.addressof @strict_metal_s_newCommandQueue : !llvm.ptr
+    %queueNameLengths = llvm.mlir.addressof @strict_metal_s_newCommandQueue : !llvm.ptr
+    %queueName = llvm.getelementptr %queueNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %queue = llvm.call @strict_metal_message(%device, %queueName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
-    %workingName = llvm.mlir.addressof @strict_metal_s_recommendedMaxWorkingSetSize : !llvm.ptr
+    %workingNameLengths = llvm.mlir.addressof @strict_metal_s_recommendedMaxWorkingSetSize : !llvm.ptr
+    %workingName = llvm.getelementptr %workingNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %working = llvm.call @strict_metal_number(%device, %workingName) : (!llvm.ptr, !llvm.ptr) -> i64
-    %longestName = llvm.mlir.addressof @strict_metal_s_maxBufferLength : !llvm.ptr
+    %longestNameLengths = llvm.mlir.addressof @strict_metal_s_maxBufferLength : !llvm.ptr
+    %longestName = llvm.getelementptr %longestNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %longest = llvm.call @strict_metal_number(%device, %longestName) : (!llvm.ptr, !llvm.ptr) -> i64
     %two = llvm.mlir.constant(2 : i64) : i64
     %quarter = llvm.lshr %working, %two : i64
     %size = llvm.intr.umin(%quarter, %longest) : (i64, i64) -> i64
-    %bufferName = llvm.mlir.addressof @strict_metal_s_newBufferWithLength_options : !llvm.ptr
+    %bufferNameLengths = llvm.mlir.addressof @strict_metal_s_newBufferWithLength_options : !llvm.ptr
+    %bufferName = llvm.getelementptr %bufferNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %newBuffer = llvm.call @strict_metal_selector(%bufferName) : (!llvm.ptr) -> !llvm.ptr
     %buffer = llvm.call %send(%device, %newBuffer, %size, %zero) : !llvm.ptr, (!llvm.ptr, !llvm.ptr, i64, i64) -> !llvm.ptr
     %noBuffer = llvm.icmp "eq" %buffer, %null : !llvm.ptr
@@ -1268,7 +1313,8 @@
     %isOld = llvm.icmp "eq" %canAddress, %noAddress : i8
     llvm.cond_br %isOld, ^failed, ^ready
   ^ready:
-    %contentsName = llvm.mlir.addressof @strict_metal_s_contents : !llvm.ptr
+    %contentsNameLengths = llvm.mlir.addressof @strict_metal_s_contents : !llvm.ptr
+    %contentsName = llvm.getelementptr %contentsNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %contents = llvm.call @strict_metal_number(%buffer, %contentsName) : (!llvm.ptr, !llvm.ptr) -> i64
     %base = llvm.call @strict_metal_number(%buffer, %addressName) : (!llvm.ptr, !llvm.ptr) -> i64
     %deviceBits = llvm.ptrtoint %device : !llvm.ptr to i64
@@ -1313,18 +1359,22 @@
   ^compile:
     %pool = llvm.call @strict_metal_push() : () -> !llvm.ptr
     %source = llvm.call @strict_metal_text(%image) : (!llvm.ptr) -> !llvm.ptr
-    %optionsClassName = llvm.mlir.addressof @strict_metal_n_options : !llvm.ptr
+    %optionsClassNameLengths = llvm.mlir.addressof @strict_metal_n_options : !llvm.ptr
+    %optionsClassName = llvm.getelementptr %optionsClassNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %optionsClass = llvm.call @strict_metal_class(%optionsClassName) : (!llvm.ptr) -> !llvm.ptr
-    %newName = llvm.mlir.addressof @strict_metal_s_new : !llvm.ptr
+    %newNameLengths = llvm.mlir.addressof @strict_metal_s_new : !llvm.ptr
+    %newName = llvm.getelementptr %newNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %compileOptions = llvm.call @strict_metal_message(%optionsClass, %newName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %send = llvm.call @strict_metal_pointer(%zero) : (i64) -> !llvm.ptr
-    %fastName = llvm.mlir.addressof @strict_metal_s_setFastMathEnabled : !llvm.ptr
+    %fastNameLengths = llvm.mlir.addressof @strict_metal_s_setFastMathEnabled : !llvm.ptr
+    %fastName = llvm.getelementptr %fastNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %fast = llvm.call @strict_metal_selector(%fastName) : (!llvm.ptr) -> !llvm.ptr
     llvm.call %send(%compileOptions, %fast, %nothing) : !llvm.ptr, (!llvm.ptr, !llvm.ptr, i8) -> ()
     %errorSlot = llvm.alloca %one x !llvm.ptr : (i64) -> !llvm.ptr
     llvm.store %null, %errorSlot : !llvm.ptr, !llvm.ptr
     %device = llvm.call @strict_metal_pointer(%five) : (i64) -> !llvm.ptr
-    %compileName = llvm.mlir.addressof @strict_metal_s_newLibraryWithSource_options_error : !llvm.ptr
+    %compileNameLengths = llvm.mlir.addressof @strict_metal_s_newLibraryWithSource_options_error : !llvm.ptr
+    %compileName = llvm.getelementptr %compileNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %compile = llvm.call @strict_metal_selector(%compileName) : (!llvm.ptr) -> !llvm.ptr
     %library = llvm.call %send(%device, %compile, %source, %compileOptions, %errorSlot) : !llvm.ptr, (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %failed = llvm.icmp "eq" %library, %null : !llvm.ptr
@@ -1361,7 +1411,8 @@
     %source = llvm.load %sourceSlot : !llvm.ptr -> !llvm.ptr
     %patternSize = llvm.mlir.constant(512 : i64) : i64
     %pattern = llvm.alloca %patternSize x i8 : (i64) -> !llvm.ptr
-    %format = llvm.mlir.addressof @strict_metal_marker : !llvm.ptr
+    %formatLengths = llvm.mlir.addressof @strict_metal_marker : !llvm.ptr
+    %format = llvm.getelementptr %formatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %written = llvm.call @snprintf(%pattern, %patternSize, %format, %name) vararg(!llvm.func<i32 (ptr, i64, ptr, ...)>) : (!llvm.ptr, i64, !llvm.ptr, !llvm.ptr) -> i32
     %found = llvm.call @strstr(%source, %pattern) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %missing = llvm.icmp "eq" %found, %null : !llvm.ptr
@@ -1374,7 +1425,8 @@
     %count = llvm.call @strtol(%digits, %null, %ten) : (!llvm.ptr, !llvm.ptr, i32) -> i64
     %pool = llvm.call @strict_metal_push() : () -> !llvm.ptr
     %nameText = llvm.call @strict_metal_text(%name) : (!llvm.ptr) -> !llvm.ptr
-    %functionName = llvm.mlir.addressof @strict_metal_s_newFunctionWithName : !llvm.ptr
+    %functionNameLengths = llvm.mlir.addressof @strict_metal_s_newFunctionWithName : !llvm.ptr
+    %functionName = llvm.getelementptr %functionNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %metalFunction = llvm.call @strict_metal_with(%library, %functionName, %nameText) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %noFunction = llvm.icmp "eq" %metalFunction, %null : !llvm.ptr
     llvm.cond_br %noFunction, ^failed(%null : !llvm.ptr), ^pipeline
@@ -1384,7 +1436,8 @@
     %zero = llvm.mlir.constant(0 : i64) : i64
     %send = llvm.call @strict_metal_pointer(%zero) : (i64) -> !llvm.ptr
     %device = llvm.call @strict_metal_pointer(%five) : (i64) -> !llvm.ptr
-    %pipelineName = llvm.mlir.addressof @strict_metal_s_newComputePipelineStateWithFunction_error : !llvm.ptr
+    %pipelineNameLengths = llvm.mlir.addressof @strict_metal_s_newComputePipelineStateWithFunction_error : !llvm.ptr
+    %pipelineName = llvm.getelementptr %pipelineNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %newPipeline = llvm.call @strict_metal_selector(%pipelineName) : (!llvm.ptr) -> !llvm.ptr
     %pipeline = llvm.call %send(%device, %newPipeline, %metalFunction, %errorSlot) : !llvm.ptr, (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %noPipeline = llvm.icmp "eq" %pipeline, %null : !llvm.ptr
@@ -1496,21 +1549,26 @@
     %send = llvm.call @strict_metal_pointer(%zero) : (i64) -> !llvm.ptr
     %six = llvm.mlir.constant(6 : i64) : i64
     %queue = llvm.call @strict_metal_pointer(%six) : (i64) -> !llvm.ptr
-    %bufferName = llvm.mlir.addressof @strict_metal_s_commandBuffer : !llvm.ptr
+    %bufferNameLengths = llvm.mlir.addressof @strict_metal_s_commandBuffer : !llvm.ptr
+    %bufferName = llvm.getelementptr %bufferNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %commands = llvm.call @strict_metal_message(%queue, %bufferName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
-    %encoderName = llvm.mlir.addressof @strict_metal_s_computeCommandEncoder : !llvm.ptr
+    %encoderNameLengths = llvm.mlir.addressof @strict_metal_s_computeCommandEncoder : !llvm.ptr
+    %encoderName = llvm.getelementptr %encoderNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %encoder = llvm.call @strict_metal_message(%commands, %encoderName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
-    %stateName = llvm.mlir.addressof @strict_metal_s_setComputePipelineState : !llvm.ptr
+    %stateNameLengths = llvm.mlir.addressof @strict_metal_s_setComputePipelineState : !llvm.ptr
+    %stateName = llvm.getelementptr %stateNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %stated = llvm.call @strict_metal_with(%encoder, %stateName, %pipeline) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %eight = llvm.mlir.constant(8 : i64) : i64
     %used = llvm.intr.smax(%count, %one) : (i64, i64) -> i64
     %bytes = llvm.mul %used, %eight : i64
-    %bytesName = llvm.mlir.addressof @strict_metal_s_setBytes_length_atIndex : !llvm.ptr
+    %bytesNameLengths = llvm.mlir.addressof @strict_metal_s_setBytes_length_atIndex : !llvm.ptr
+    %bytesName = llvm.getelementptr %bytesNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %setBytes = llvm.call @strict_metal_selector(%bytesName) : (!llvm.ptr) -> !llvm.ptr
     llvm.call %send(%encoder, %setBytes, %slots, %bytes, %zero) : !llvm.ptr, (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, i64) -> ()
     %seven = llvm.mlir.constant(7 : i64) : i64
     %buffer = llvm.call @strict_metal_pointer(%seven) : (i64) -> !llvm.ptr
-    %useName = llvm.mlir.addressof @strict_metal_s_useResource_usage : !llvm.ptr
+    %useNameLengths = llvm.mlir.addressof @strict_metal_s_useResource_usage : !llvm.ptr
+    %useName = llvm.getelementptr %useNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %use = llvm.call @strict_metal_selector(%useName) : (!llvm.ptr) -> !llvm.ptr
     %readWrite = llvm.mlir.constant(3 : i64) : i64
     llvm.call %send(%encoder, %use, %buffer, %readWrite) : !llvm.ptr, (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64) -> ()
@@ -1519,12 +1577,15 @@
     %group = llvm.alloca %three x i64 : (i64) -> !llvm.ptr
     llvm.call @strict_metal_size(%grid, %gridX, %gridY, %gridZ) : (!llvm.ptr, i32, i32, i32) -> ()
     llvm.call @strict_metal_size(%group, %groupX, %groupY, %groupZ) : (!llvm.ptr, i32, i32, i32) -> ()
-    %dispatchName = llvm.mlir.addressof @strict_metal_s_dispatchThreadgroups_threadsPerThreadgroup : !llvm.ptr
+    %dispatchNameLengths = llvm.mlir.addressof @strict_metal_s_dispatchThreadgroups_threadsPerThreadgroup : !llvm.ptr
+    %dispatchName = llvm.getelementptr %dispatchNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %dispatch = llvm.call @strict_metal_selector(%dispatchName) : (!llvm.ptr) -> !llvm.ptr
     llvm.call @strict_metal_dispatch(%send, %encoder, %dispatch, %grid, %group) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> ()
-    %endName = llvm.mlir.addressof @strict_metal_s_endEncoding : !llvm.ptr
+    %endNameLengths = llvm.mlir.addressof @strict_metal_s_endEncoding : !llvm.ptr
+    %endName = llvm.getelementptr %endNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %ended = llvm.call @strict_metal_message(%encoder, %endName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
-    %commitName = llvm.mlir.addressof @strict_metal_s_commit : !llvm.ptr
+    %commitNameLengths = llvm.mlir.addressof @strict_metal_s_commit : !llvm.ptr
+    %commitName = llvm.getelementptr %commitNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %committed = llvm.call @strict_metal_message(%commands, %commitName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     llvm.call @strict_metal_remember(%commands) : (!llvm.ptr) -> ()
     llvm.call @strict_metal_pop(%pool) : (!llvm.ptr) -> ()
@@ -1544,7 +1605,8 @@
   // keeps the command buffer (autoreleased) as the last one, releasing the one before
   llvm.func @strict_metal_remember(%commands: !llvm.ptr) {
     %lastIndex = llvm.mlir.constant(13 : i64) : i64
-    %retainName = llvm.mlir.addressof @strict_metal_s_retain : !llvm.ptr
+    %retainNameLengths = llvm.mlir.addressof @strict_metal_s_retain : !llvm.ptr
+    %retainName = llvm.getelementptr %retainNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %kept = llvm.call @strict_metal_message(%commands, %retainName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %old = llvm.call @strict_metal_pointer(%lastIndex) : (i64) -> !llvm.ptr
     %keptBits = llvm.ptrtoint %kept : !llvm.ptr to i64
@@ -1553,7 +1615,8 @@
     %hadOld = llvm.icmp "ne" %old, %null : !llvm.ptr
     llvm.cond_br %hadOld, ^release, ^done
   ^release:
-    %releaseName = llvm.mlir.addressof @strict_metal_s_release : !llvm.ptr
+    %releaseNameLengths = llvm.mlir.addressof @strict_metal_s_release : !llvm.ptr
+    %releaseName = llvm.getelementptr %releaseNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %released = llvm.call @strict_metal_message(%old, %releaseName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     llvm.br ^done
   ^done:
@@ -1648,7 +1711,8 @@
     %none = llvm.icmp "eq" %last, %null : !llvm.ptr
     llvm.cond_br %none, ^done(%success : i32), ^status
   ^status:
-    %statusName = llvm.mlir.addressof @strict_metal_s_status : !llvm.ptr
+    %statusNameLengths = llvm.mlir.addressof @strict_metal_s_status : !llvm.ptr
+    %statusName = llvm.getelementptr %statusNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %status = llvm.call @strict_metal_number(%last, %statusName) : (!llvm.ptr, !llvm.ptr) -> i64
     %completed = llvm.mlir.constant(4 : i64) : i64
     %finished = llvm.icmp "sge" %status, %completed : i64
@@ -1680,7 +1744,8 @@
     %hasLast = llvm.icmp "ne" %last, %null : !llvm.ptr
     llvm.cond_br %hasLast, ^retain, ^store(%null : !llvm.ptr)
   ^retain:
-    %retainName = llvm.mlir.addressof @strict_metal_s_retain : !llvm.ptr
+    %retainNameLengths = llvm.mlir.addressof @strict_metal_s_retain : !llvm.ptr
+    %retainName = llvm.getelementptr %retainNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %kept = llvm.call @strict_metal_message(%last, %retainName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     llvm.br ^store(%kept : !llvm.ptr)
   ^store(%recorded: !llvm.ptr):
@@ -1688,7 +1753,8 @@
     %hadOld = llvm.icmp "ne" %old, %null : !llvm.ptr
     llvm.cond_br %hadOld, ^release, ^done
   ^release:
-    %releaseName = llvm.mlir.addressof @strict_metal_s_release : !llvm.ptr
+    %releaseNameLengths = llvm.mlir.addressof @strict_metal_s_release : !llvm.ptr
+    %releaseName = llvm.getelementptr %releaseNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %released = llvm.call @strict_metal_message(%old, %releaseName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     llvm.br ^done
   ^done:
@@ -1701,7 +1767,8 @@
     %none = llvm.icmp "eq" %recorded, %null : !llvm.ptr
     llvm.cond_br %none, ^done, ^wait
   ^wait:
-    %waitName = llvm.mlir.addressof @strict_metal_s_waitUntilCompleted : !llvm.ptr
+    %waitNameLengths = llvm.mlir.addressof @strict_metal_s_waitUntilCompleted : !llvm.ptr
+    %waitName = llvm.getelementptr %waitNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %waited = llvm.call @strict_metal_message(%recorded, %waitName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     llvm.br ^done
   ^done:

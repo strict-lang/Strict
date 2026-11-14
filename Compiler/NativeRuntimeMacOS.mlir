@@ -1,6 +1,6 @@
   llvm.mlir.global internal constant @strict_heap_bytes(68719476736 : i64) : i64
-  llvm.mlir.global internal constant @strict_macos("MacOS\00") : !llvm.array<6 x i8>
-  llvm.mlir.global internal constant @strict_temp_template("/tmp/strictXXXXXX\00") : !llvm.array<18 x i8>
+  llvm.mlir.global internal constant @strict_macos("\05\00\00\00\00\00\00\00\05\00\00\00\00\00\00\00MacOS\00") : !llvm.array<22 x i8>
+  llvm.mlir.global internal constant @strict_temp_template("\11\00\00\00\00\00\00\00\11\00\00\00\00\00\00\00/tmp/strictXXXXXX\00") : !llvm.array<34 x i8>
   // the web runs kernels as WebGPU shaders (NativeRuntimeWeb.mlir), everywhere else the device code takes them
   func.func private @strict_gpu_shaded(%name: !llvm.ptr, %count: i64, %source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64, %format: i64) -> f64 {
     %none = arith.constant 0.0 : f64
@@ -59,7 +59,8 @@
     %null = llvm.mlir.zero : !llvm.ptr
     cf.cond_br %isAmd, ^failed, ^open
   ^open:
-    %path = llvm.mlir.addressof @strict_metal_n_library : !llvm.ptr
+    %pathLengths = llvm.mlir.addressof @strict_metal_n_library : !llvm.ptr
+    %path = llvm.getelementptr %pathLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %now = arith.constant 2 : i32
     %library = llvm.call @dlopen(%path, %now) : (!llvm.ptr, i32) -> !llvm.ptr
     %missing = llvm.icmp "eq" %library, %null : !llvm.ptr
@@ -70,11 +71,16 @@
     llvm.call @strict_metal_put(%libraryIndex, %libraryBits) : (i64, i64) -> ()
     %everywhere = arith.constant -2 : i64
     %default = llvm.inttoptr %everywhere : i64 to !llvm.ptr
-    %send = llvm.mlir.addressof @strict_metal_n_send : !llvm.ptr
-    %register = llvm.mlir.addressof @strict_metal_n_register : !llvm.ptr
-    %class = llvm.mlir.addressof @strict_metal_n_class : !llvm.ptr
-    %push = llvm.mlir.addressof @strict_metal_n_push : !llvm.ptr
-    %pop = llvm.mlir.addressof @strict_metal_n_pop : !llvm.ptr
+    %sendLengths = llvm.mlir.addressof @strict_metal_n_send : !llvm.ptr
+    %send = llvm.getelementptr %sendLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %registerLengths = llvm.mlir.addressof @strict_metal_n_register : !llvm.ptr
+    %register = llvm.getelementptr %registerLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %classLengths = llvm.mlir.addressof @strict_metal_n_class : !llvm.ptr
+    %class = llvm.getelementptr %classLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %pushLengths = llvm.mlir.addressof @strict_metal_n_push : !llvm.ptr
+    %push = llvm.getelementptr %pushLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %popLengths = llvm.mlir.addressof @strict_metal_n_pop : !llvm.ptr
+    %pop = llvm.getelementptr %popLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %two = arith.constant 2 : i64
@@ -96,14 +102,15 @@
     return %null : !llvm.ptr
   }
   func.func private @strict_temp_file() -> f64 {
-    %template = llvm.mlir.addressof @strict_temp_template : !llvm.ptr
+    %templateLengths = llvm.mlir.addressof @strict_temp_template : !llvm.ptr
+    %template = llvm.getelementptr %templateLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %length = llvm.call @strlen(%template) : (!llvm.ptr) -> i64
     %one = arith.constant 1 : i64
     %size = arith.addi %length, %one : i64
-    %name = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
+    %name = func.call @strict_text_room(%size) : (i64) -> !llvm.ptr
     %copied = llvm.call @memcpy(%name, %template, %size) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     %descriptor = llvm.call @mkstemp(%name) : (!llvm.ptr) -> i32
     %closed = llvm.call @close(%descriptor) : (i32) -> i32
-    %result = func.call @strict_bits(%name) : (!llvm.ptr) -> f64
+    %result = func.call @strict_text_sealed(%name) : (!llvm.ptr) -> f64
     return %result : f64
   }

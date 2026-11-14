@@ -91,8 +91,8 @@
   llvm.func @GetModuleFileNameA(!llvm.ptr, !llvm.ptr, i32) -> i32
   llvm.func @GetFileAttributesExA(!llvm.ptr, i32, !llvm.ptr) -> i32
   llvm.func @_localtime64(!llvm.ptr) -> !llvm.ptr
-  llvm.mlir.global internal constant @strict_separator_path("/\00") : !llvm.array<2 x i8>
-  llvm.mlir.global internal constant @strict_any_file("*\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @strict_separator_path("\01\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00/\00") : !llvm.array<18 x i8>
+  llvm.mlir.global internal constant @strict_any_file("\01\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00*\00") : !llvm.array<18 x i8>
   // whether a file (no directory) is at name, without opening it (a file held by File.Locked opens for nobody else)
   func.func private @strict_file_present(%name: !llvm.ptr) -> i1 {
     %invalid = arith.constant -1 : i32
@@ -122,20 +122,21 @@
   llvm.func @_fdopen(i32, !llvm.ptr) -> !llvm.ptr
   func.func private @strict_standard_input() -> !llvm.ptr {
     %standardInput = arith.constant 0 : i32
-    %mode = llvm.mlir.addressof @strict_read_mode : !llvm.ptr
+    %modeLengths = llvm.mlir.addressof @strict_read_mode : !llvm.ptr
+    %mode = llvm.getelementptr %modeLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %stream = llvm.call @_fdopen(%standardInput, %mode) : (i32, !llvm.ptr) -> !llvm.ptr
     return %stream : !llvm.ptr
   }
   func.func private @strict_directory_current(%self: f64) -> f64 {
     %size = arith.constant 1024 : i64
     %limit = arith.constant 1023 : i32
-    %path = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
+    %path = func.call @strict_text_room(%size) : (i64) -> !llvm.ptr
     %length = llvm.call @GetCurrentDirectoryA(%limit, %path) : (i32, !llvm.ptr) -> i32
     %index = arith.extui %length : i32 to i64
     %end = llvm.getelementptr %path[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %terminator = arith.constant 0 : i8
     llvm.store %terminator, %end : i8, !llvm.ptr
-    %system = func.call @strict_bits(%path) : (!llvm.ptr) -> f64
+    %system = func.call @strict_text_sealed(%path) : (!llvm.ptr) -> f64
     %result = func.call @strict_folder_current(%system) : (f64) -> f64
     return %result : f64
   }
@@ -180,7 +181,8 @@
     return %answer : f64
   }
   func.func private @strict_path_join(%path: f64, %name: f64) -> f64 {
-    %separatorText = llvm.mlir.addressof @strict_separator_path : !llvm.ptr
+    %separatorTextLengths = llvm.mlir.addressof @strict_separator_path : !llvm.ptr
+    %separatorText = llvm.getelementptr %separatorTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %separator = func.call @strict_bits(%separatorText) : (!llvm.ptr) -> f64
     %prefix = func.call @strict_text_concat(%path, %separator) : (f64, f64) -> f64
     %result = func.call @strict_text_concat(%prefix, %name) : (f64, f64) -> f64
@@ -193,7 +195,8 @@
     %invalidHandle = arith.constant -1 : i64
     %directoryFlag = arith.constant 16 : i32
     %none = arith.constant 0 : i32
-    %anyText = llvm.mlir.addressof @strict_any_file : !llvm.ptr
+    %anyTextLengths = llvm.mlir.addressof @strict_any_file : !llvm.ptr
+    %anyText = llvm.getelementptr %anyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %any = func.call @strict_bits(%anyText) : (!llvm.ptr) -> f64
     %isUnset = arith.cmpf oeq, %pattern, %zero : f64
     %safePattern = arith.select %isUnset, %any, %pattern : f64
@@ -215,8 +218,9 @@
     cf.cond_br %isFile, ^add(%found : f64), ^next(%found : f64)
   ^add(%before: f64):
     %fileName = llvm.getelementptr %data[44] : (!llvm.ptr) -> !llvm.ptr, i8
-    %nameBits = func.call @strict_bits(%fileName) : (!llvm.ptr) -> f64
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %nameBits = func.call @strict_text_from(%fileName) : (!llvm.ptr) -> f64
+    %emptyTextLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
+    %emptyText = llvm.getelementptr %emptyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
     %copied = func.call @strict_text_concat(%nameBits, %empty) : (f64, f64) -> f64
     %full = func.call @strict_path_join(%path, %copied) : (f64, f64) -> f64
@@ -242,7 +246,8 @@
     %end = arith.constant 0 : i8
     %epoch = arith.constant 116444736000000000 : i64
     %perSecond = arith.constant 1.0e7 : f64
-    %anyText = llvm.mlir.addressof @strict_any_file : !llvm.ptr
+    %anyTextLengths = llvm.mlir.addressof @strict_any_file : !llvm.ptr
+    %anyText = llvm.getelementptr %anyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %any = func.call @strict_bits(%anyText) : (!llvm.ptr) -> f64
     %search = func.call @strict_path_join(%path, %any) : (f64, f64) -> f64
     %searchText = func.call @strict_named(%search) : (f64) -> !llvm.ptr
@@ -273,8 +278,9 @@
     %later = arith.maximumf %newest, %own : f64
     cf.cond_br %isChild, ^nested(%later : f64), ^next(%later : f64)
   ^nested(%before: f64):
-    %nameBits = func.call @strict_bits(%fileName) : (!llvm.ptr) -> f64
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %nameBits = func.call @strict_text_from(%fileName) : (!llvm.ptr) -> f64
+    %emptyTextLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
+    %emptyText = llvm.getelementptr %emptyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
     %copied = func.call @strict_text_concat(%nameBits, %empty) : (f64, f64) -> f64
     %full = func.call @strict_path_join(%path, %copied) : (f64, f64) -> f64
@@ -298,7 +304,8 @@
     %invalidHandle = arith.constant -1 : i64
     %directoryFlag = arith.constant 16 : i32
     %none = arith.constant 0 : i32
-    %anyText = llvm.mlir.addressof @strict_any_file : !llvm.ptr
+    %anyTextLengths = llvm.mlir.addressof @strict_any_file : !llvm.ptr
+    %anyText = llvm.getelementptr %anyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %any = func.call @strict_bits(%anyText) : (!llvm.ptr) -> f64
     %search = func.call @strict_path_join(%path, %any) : (f64, f64) -> f64
     %searchText = func.call @strict_named(%search) : (f64) -> !llvm.ptr
@@ -318,8 +325,9 @@
     %take = arith.andi %isDirectory, %notDot : i1
     cf.cond_br %take, ^add(%found : f64), ^next(%found : f64)
   ^add(%before: f64):
-    %nameBits = func.call @strict_bits(%fileName) : (!llvm.ptr) -> f64
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %nameBits = func.call @strict_text_from(%fileName) : (!llvm.ptr) -> f64
+    %emptyTextLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
+    %emptyText = llvm.getelementptr %emptyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
     %copied = func.call @strict_text_concat(%nameBits, %empty) : (f64, f64) -> f64
     %full = func.call @strict_path_join(%path, %copied) : (f64, f64) -> f64
@@ -335,16 +343,17 @@
   ^done(%result: f64):
     return %result : f64
   }
-  llvm.mlir.global internal constant @strict_windows("Windows\00") : !llvm.array<8 x i8>
-  llvm.mlir.global internal constant @strict_path_variable("PATH\00") : !llvm.array<5 x i8>
-  llvm.mlir.global internal constant @strict_exe_extension(".exe\00") : !llvm.array<5 x i8>
-  llvm.mlir.global internal constant @strict_temp_prefix("str\00") : !llvm.array<4 x i8>
-  llvm.mlir.global internal constant @strict_quote_space("\22 \00") : !llvm.array<3 x i8>
-  llvm.mlir.global internal constant @strict_start_failed("could not start \00") : !llvm.array<17 x i8>
+  llvm.mlir.global internal constant @strict_windows("\07\00\00\00\00\00\00\00\07\00\00\00\00\00\00\00Windows\00") : !llvm.array<24 x i8>
+  llvm.mlir.global internal constant @strict_path_variable("\04\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00PATH\00") : !llvm.array<21 x i8>
+  llvm.mlir.global internal constant @strict_exe_extension("\04\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00.exe\00") : !llvm.array<21 x i8>
+  llvm.mlir.global internal constant @strict_temp_prefix("\03\00\00\00\00\00\00\00\03\00\00\00\00\00\00\00str\00") : !llvm.array<20 x i8>
+  llvm.mlir.global internal constant @strict_quote_space("\02\00\00\00\00\00\00\00\02\00\00\00\00\00\00\00\22 \00") : !llvm.array<19 x i8>
+  llvm.mlir.global internal constant @strict_start_failed("\10\00\00\00\00\00\00\00\10\00\00\00\00\00\00\00could not start \00") : !llvm.array<33 x i8>
   // tools and downloads stop after 10 minutes (30 s stopped clang in parallel builds and model downloads)
-  llvm.mlir.global internal constant @strict_timed_out("timed out after 10 minutes\00") : !llvm.array<27 x i8>
+  llvm.mlir.global internal constant @strict_timed_out("\1A\00\00\00\00\00\00\00\1A\00\00\00\00\00\00\00timed out after 10 minutes\00") : !llvm.array<43 x i8>
   func.func private @strict_process_operatingsystem(%self: f64) -> f64 {
-    %name = llvm.mlir.addressof @strict_windows : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_windows : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %result = func.call @strict_bits(%name) : (!llvm.ptr) -> f64
     return %result : f64
   }
@@ -352,13 +361,13 @@
     %size = arith.constant 1024 : i64
     %limit = arith.constant 1023 : i32
     %null = llvm.mlir.zero : !llvm.ptr
-    %path = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
+    %path = func.call @strict_text_room(%size) : (i64) -> !llvm.ptr
     %length = llvm.call @GetModuleFileNameA(%null, %path, %limit) : (!llvm.ptr, !llvm.ptr, i32) -> i32
     %index = arith.extui %length : i32 to i64
     %end = llvm.getelementptr %path[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %terminator = arith.constant 0 : i8
     llvm.store %terminator, %end : i8, !llvm.ptr
-    %result = func.call @strict_bits(%path) : (!llvm.ptr) -> f64
+    %result = func.call @strict_text_sealed(%path) : (!llvm.ptr) -> f64
     return %result : f64
   }
   llvm.func @_time64(!llvm.ptr) -> i64
@@ -504,21 +513,24 @@
   ^done:
     return %zero : f64
   }
-  llvm.mlir.global internal constant @strict_crash_suffix(".crash.txt\00") : !llvm.array<11 x i8>
-  llvm.mlir.global internal constant @strict_crash_mode("wb\00") : !llvm.array<3 x i8>
-  llvm.mlir.global internal constant @strict_dialog_library("user32.dll\00") : !llvm.array<11 x i8>
-  llvm.mlir.global internal constant @strict_dialog_symbol("MessageBoxA\00") : !llvm.array<12 x i8>
-  llvm.mlir.global internal constant @strict_dialog_title("Application error\00") : !llvm.array<18 x i8>
+  llvm.mlir.global internal constant @strict_crash_suffix("\0A\00\00\00\00\00\00\00\0A\00\00\00\00\00\00\00.crash.txt\00") : !llvm.array<27 x i8>
+  llvm.mlir.global internal constant @strict_crash_mode("\02\00\00\00\00\00\00\00\02\00\00\00\00\00\00\00wb\00") : !llvm.array<19 x i8>
+  llvm.mlir.global internal constant @strict_dialog_library("\0A\00\00\00\00\00\00\00\0A\00\00\00\00\00\00\00user32.dll\00") : !llvm.array<27 x i8>
+  llvm.mlir.global internal constant @strict_dialog_symbol("\0B\00\00\00\00\00\00\00\0B\00\00\00\00\00\00\00MessageBoxA\00") : !llvm.array<28 x i8>
+  llvm.mlir.global internal constant @strict_dialog_title("\11\00\00\00\00\00\00\00\11\00\00\00\00\00\00\00Application error\00") : !llvm.array<34 x i8>
   llvm.func @strict_error_dialog(%text: !llvm.ptr) {
     %null = llvm.mlir.zero : !llvm.ptr
-    %libraryName = llvm.mlir.addressof @strict_dialog_library : !llvm.ptr
+    %libraryNameLengths = llvm.mlir.addressof @strict_dialog_library : !llvm.ptr
+    %libraryName = llvm.getelementptr %libraryNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %library = llvm.call @LoadLibraryA(%libraryName) : (!llvm.ptr) -> !llvm.ptr
-    %symbol = llvm.mlir.addressof @strict_dialog_symbol : !llvm.ptr
+    %symbolLengths = llvm.mlir.addressof @strict_dialog_symbol : !llvm.ptr
+    %symbol = llvm.getelementptr %symbolLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %function = llvm.call @GetProcAddress(%library, %symbol) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %missing = llvm.icmp "eq" %function, %null : !llvm.ptr
     llvm.cond_br %missing, ^done, ^show
   ^show:
-    %title = llvm.mlir.addressof @strict_dialog_title : !llvm.ptr
+    %titleLengths = llvm.mlir.addressof @strict_dialog_title : !llvm.ptr
+    %title = llvm.getelementptr %titleLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %flags = llvm.mlir.constant(16 : i32) : i32
     %shown = llvm.call %function(%null, %text, %title, %flags) : !llvm.ptr, (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32) -> i32
     llvm.br ^done
@@ -539,10 +551,12 @@
     %length = llvm.call @GetModuleFileNameA(%null, %path, %limit) : (!llvm.ptr, !llvm.ptr, i32) -> i32
     %offset = llvm.zext %length : i32 to i64
     %end = llvm.getelementptr %path[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %suffix = llvm.mlir.addressof @strict_crash_suffix : !llvm.ptr
+    %suffixLengths = llvm.mlir.addressof @strict_crash_suffix : !llvm.ptr
+    %suffix = llvm.getelementptr %suffixLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %suffixBytes = llvm.mlir.constant(11 : i64) : i64
     %appended = llvm.call @memcpy(%end, %suffix, %suffixBytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
-    %mode = llvm.mlir.addressof @strict_crash_mode : !llvm.ptr
+    %modeLengths = llvm.mlir.addressof @strict_crash_mode : !llvm.ptr
+    %mode = llvm.getelementptr %modeLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %file = llvm.call @fopen(%path, %mode) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %unopened = llvm.icmp "eq" %file, %null : !llvm.ptr
     llvm.cond_br %unopened, ^done, ^fill
@@ -558,7 +572,7 @@
   llvm.func @AddVectoredExceptionHandler(i32, !llvm.ptr) -> !llvm.ptr
   llvm.func @SetThreadStackGuarantee(!llvm.ptr) -> i32
   llvm.func @ExitProcess(i32)
-  llvm.mlir.global internal constant @strict_overflow_text("Error: StackOverflow, methods called each other without end until the stack was used up\0A\00") : !llvm.array<89 x i8>
+  llvm.mlir.global internal constant @strict_overflow_text("\58\00\00\00\00\00\00\00\58\00\00\00\00\00\00\00Error: StackOverflow, methods called each other without end until the stack was used up\0A\00") : !llvm.array<105 x i8>
   llvm.func @strict_overflow_handler(%pointers: !llvm.ptr) -> i32 {
     %record = llvm.load %pointers : !llvm.ptr -> !llvm.ptr
     %code = llvm.load %record : !llvm.ptr -> i32
@@ -566,7 +580,8 @@
     %isOverflow = llvm.icmp "eq" %code, %overflow : i32
     llvm.cond_br %isOverflow, ^report, ^search
   ^report:
-    %text = llvm.mlir.addressof @strict_overflow_text : !llvm.ptr
+    %textLengths = llvm.mlir.addressof @strict_overflow_text : !llvm.ptr
+    %text = llvm.getelementptr %textLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %printed = llvm.call @printf(%text) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr) -> i32
     llvm.call @strict_crash_log(%text) : (!llvm.ptr) -> ()
     %null = llvm.mlir.zero : !llvm.ptr
@@ -578,12 +593,13 @@
     llvm.return %continueSearch : i32
   }
   llvm.func @SetUnhandledExceptionFilter(!llvm.ptr) -> !llvm.ptr
-  llvm.mlir.global internal constant @strict_access_text("Error: AccessViolation, the program read or wrote memory it does not own (an instance used as a list or a missing value)\0A\00") : !llvm.array<122 x i8>
+  llvm.mlir.global internal constant @strict_access_text("\79\00\00\00\00\00\00\00\79\00\00\00\00\00\00\00Error: AccessViolation, the program read or wrote memory it does not own (an instance used as a list or a missing value)\0A\00") : !llvm.array<138 x i8>
   // an access violation nothing handled (the driver handles its own first) is reported instead of ending silently
   llvm.func @strict_crash_handler(%pointers: !llvm.ptr) -> i32 {
     %record = llvm.load %pointers : !llvm.ptr -> !llvm.ptr
     %code = llvm.load %record : !llvm.ptr -> i32
-    %text = llvm.mlir.addressof @strict_access_text : !llvm.ptr
+    %textLengths = llvm.mlir.addressof @strict_access_text : !llvm.ptr
+    %text = llvm.getelementptr %textLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %printed = llvm.call @printf(%text) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr) -> i32
     func.call @strict_places_print() : () -> ()
     llvm.call @strict_crash_log(%text) : (!llvm.ptr) -> ()
@@ -719,18 +735,21 @@
     %size = arith.constant 1024 : i32
     %bytes = arith.constant 1024 : i64
     %none = arith.constant 0 : i32
-    %variable = llvm.mlir.addressof @strict_path_variable : !llvm.ptr
+    %variableLengths = llvm.mlir.addressof @strict_path_variable : !llvm.ptr
+    %variable = llvm.getelementptr %variableLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %paths = llvm.call @getenv(%variable) : (!llvm.ptr) -> !llvm.ptr
-    %extension = llvm.mlir.addressof @strict_exe_extension : !llvm.ptr
+    %extensionLengths = llvm.mlir.addressof @strict_exe_extension : !llvm.ptr
+    %extension = llvm.getelementptr %extensionLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %file = func.call @strict_ptr(%name) : (f64) -> !llvm.ptr
-    %buffer = func.call @strict_alloc_text(%bytes) : (i64) -> !llvm.ptr
+    %buffer = func.call @strict_text_room(%bytes) : (i64) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     %length = llvm.call @SearchPathA(%paths, %file, %extension, %size, %buffer, %null) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, !llvm.ptr, !llvm.ptr) -> i32
     %found = arith.cmpi ugt, %length, %none : i32
     %fits = arith.cmpi ult, %length, %size : i32
     %usable = arith.andi %found, %fits : i1
-    %path = func.call @strict_bits(%buffer) : (!llvm.ptr) -> f64
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %path = func.call @strict_text_sealed(%buffer) : (!llvm.ptr) -> f64
+    %emptyTextLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
+    %emptyText = llvm.getelementptr %emptyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
     %result = arith.select %usable, %path, %empty : f64
     return %result : f64
@@ -741,10 +760,11 @@
     %unique = arith.constant 0 : i32
     %directory = func.call @strict_alloc_text(%bytes) : (i64) -> !llvm.ptr
     %length = llvm.call @GetTempPathA(%size, %directory) : (i32, !llvm.ptr) -> i32
-    %name = func.call @strict_alloc_text(%bytes) : (i64) -> !llvm.ptr
-    %prefix = llvm.mlir.addressof @strict_temp_prefix : !llvm.ptr
+    %name = func.call @strict_text_room(%bytes) : (i64) -> !llvm.ptr
+    %prefixLengths = llvm.mlir.addressof @strict_temp_prefix : !llvm.ptr
+    %prefix = llvm.getelementptr %prefixLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %created = llvm.call @GetTempFileNameA(%directory, %prefix, %unique, %name) : (!llvm.ptr, !llvm.ptr, i32, !llvm.ptr) -> i32
-    %result = func.call @strict_bits(%name) : (!llvm.ptr) -> f64
+    %result = func.call @strict_text_sealed(%name) : (!llvm.ptr) -> f64
     return %result : f64
   }
   func.func private @strict_inherited_file(%path: f64) -> !llvm.ptr {
@@ -827,9 +847,11 @@
     %inherit = arith.constant 1 : i32
     %noFlags = arith.constant 0 : i32
     %infinite = arith.constant -1 : i32
-    %quoteText = llvm.mlir.addressof @strict_quote : !llvm.ptr
+    %quoteTextLengths = llvm.mlir.addressof @strict_quote : !llvm.ptr
+    %quoteText = llvm.getelementptr %quoteTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %quote = func.call @strict_bits(%quoteText) : (!llvm.ptr) -> f64
-    %quoteSpaceText = llvm.mlir.addressof @strict_quote_space : !llvm.ptr
+    %quoteSpaceTextLengths = llvm.mlir.addressof @strict_quote_space : !llvm.ptr
+    %quoteSpaceText = llvm.getelementptr %quoteSpaceTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %quoteSpace = func.call @strict_bits(%quoteSpaceText) : (!llvm.ptr) -> f64
     %located = func.call @strict_program_joined(%path) : (f64) -> f64
     %quoted = func.call @strict_text_concat(%quote, %located) : (f64, f64) -> f64
@@ -872,7 +894,8 @@
     %sharing = arith.cmpi sgt, %share, %zero : i64
     cf.cond_br %sharing, ^set, ^done
   ^set:
-    %name = llvm.mlir.addressof @strict_threads_name : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_threads_name : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %set = llvm.call @SetEnvironmentVariableA(%name, %value) : (!llvm.ptr, !llvm.ptr) -> i32
     cf.br ^done
   ^done:
@@ -890,9 +913,11 @@
     %informationSize = arith.constant 24 : i64
     %inherit = arith.constant 1 : i32
     %noFlags = arith.constant 0 : i32
-    %quoteText = llvm.mlir.addressof @strict_quote : !llvm.ptr
+    %quoteTextLengths = llvm.mlir.addressof @strict_quote : !llvm.ptr
+    %quoteText = llvm.getelementptr %quoteTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %quote = func.call @strict_bits(%quoteText) : (!llvm.ptr) -> f64
-    %quoteSpaceText = llvm.mlir.addressof @strict_quote_space : !llvm.ptr
+    %quoteSpaceTextLengths = llvm.mlir.addressof @strict_quote_space : !llvm.ptr
+    %quoteSpaceText = llvm.getelementptr %quoteSpaceTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %quoteSpace = func.call @strict_bits(%quoteSpaceText) : (!llvm.ptr) -> f64
     %located = func.call @strict_program_joined(%path) : (f64) -> f64
     %quoted = func.call @strict_text_concat(%quote, %located) : (f64, f64) -> f64
@@ -940,10 +965,12 @@
     %unusedOutput = func.call @strict_removed_file(%outputPath) : (f64) -> f64
     %unusedError = func.call @strict_removed_file(%errorPath) : (f64) -> f64
     %startCode = arith.constant 1.0 : f64
-    %startText = llvm.mlir.addressof @strict_start_failed : !llvm.ptr
+    %startTextLengths = llvm.mlir.addressof @strict_start_failed : !llvm.ptr
+    %startText = llvm.getelementptr %startTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %startPrefix = func.call @strict_bits(%startText) : (!llvm.ptr) -> f64
     %startError = func.call @strict_text_concat(%startPrefix, %path) : (f64, f64) -> f64
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %emptyTextLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
+    %emptyText = llvm.getelementptr %emptyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
     %startFailure = func.call @strict_process_result(%startCode, %empty, %startError) : (f64, f64, f64) -> f64
     return %startFailure : f64
@@ -972,7 +999,8 @@
     %closedThread = llvm.call @CloseHandle(%thread) : (!llvm.ptr) -> i32
     %written = func.call @strict_removed_file(%outputPath) : (f64) -> f64
     %reported = func.call @strict_removed_file(%errorPath) : (f64) -> f64
-    %timedOutText = llvm.mlir.addressof @strict_timed_out : !llvm.ptr
+    %timedOutTextLengths = llvm.mlir.addressof @strict_timed_out : !llvm.ptr
+    %timedOutText = llvm.getelementptr %timedOutTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %timedOutMessage = func.call @strict_bits(%timedOutText) : (!llvm.ptr) -> f64
     %message = arith.select %timedOut, %timedOutMessage, %reported : f64
     %result = func.call @strict_process_result(%code, %written, %message) : (f64, f64, f64) -> f64
@@ -992,7 +1020,8 @@
     %isMissing = llvm.icmp "eq" %library, %null : !llvm.ptr
     cf.cond_br %isMissing, ^noLibrary, ^loaded
   ^noLibrary:
-    %libraryMessage = llvm.mlir.addressof @strict_library_missing : !llvm.ptr
+    %libraryMessageLengths = llvm.mlir.addressof @strict_library_missing : !llvm.ptr
+    %libraryMessage = llvm.getelementptr %libraryMessageLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %libraryError = func.call @strict_error_named(%libraryMessage) : (!llvm.ptr) -> f64
     return %libraryError : f64
   ^loaded:
@@ -1001,7 +1030,8 @@
     %isAbsent = llvm.icmp "eq" %function, %null : !llvm.ptr
     cf.cond_br %isAbsent, ^noSymbol, ^found
   ^noSymbol:
-    %symbolMessage = llvm.mlir.addressof @strict_library_symbol_missing : !llvm.ptr
+    %symbolMessageLengths = llvm.mlir.addressof @strict_library_symbol_missing : !llvm.ptr
+    %symbolMessage = llvm.getelementptr %symbolMessageLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %symbolError = func.call @strict_error_named(%symbolMessage) : (!llvm.ptr) -> f64
     return %symbolError : f64
   ^found:
@@ -1261,8 +1291,8 @@
   ^leave:
     llvm.return
   }
-  llvm.mlir.global internal constant @strict_gpu_driver("nvcuda.dll\00") : !llvm.array<11 x i8>
-  llvm.mlir.global internal constant @strict_gpu_amd_driver("amdhip64.dll\00") : !llvm.array<13 x i8>
+  llvm.mlir.global internal constant @strict_gpu_driver("\0A\00\00\00\00\00\00\00\0A\00\00\00\00\00\00\00nvcuda.dll\00") : !llvm.array<27 x i8>
+  llvm.mlir.global internal constant @strict_gpu_amd_driver("\0C\00\00\00\00\00\00\00\0C\00\00\00\00\00\00\00amdhip64.dll\00") : !llvm.array<29 x i8>
   // the web runs kernels as WebGPU shaders (NativeRuntimeWeb.mlir), everywhere else the device code takes them
   func.func private @strict_gpu_shaded(%name: !llvm.ptr, %count: i64, %source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64, %format: i64) -> f64 {
     %none = arith.constant 0.0 : f64
@@ -1318,8 +1348,10 @@
     return %none : f64
   }
   func.func private @strict_gpu_library(%isAmd: i1) -> !llvm.ptr {
-    %nvidia = llvm.mlir.addressof @strict_gpu_driver : !llvm.ptr
-    %amd = llvm.mlir.addressof @strict_gpu_amd_driver : !llvm.ptr
+    %nvidiaLengths = llvm.mlir.addressof @strict_gpu_driver : !llvm.ptr
+    %nvidia = llvm.getelementptr %nvidiaLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %amdLengths = llvm.mlir.addressof @strict_gpu_amd_driver : !llvm.ptr
+    %amd = llvm.getelementptr %amdLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %name = arith.select %isAmd, %amd, %nvidia : !llvm.ptr
     %library = llvm.call @LoadLibraryA(%name) : (!llvm.ptr) -> !llvm.ptr
     return %library : !llvm.ptr
@@ -1330,16 +1362,16 @@
   }
   // WDDM's cuMemGetInfo ignores other programs (22.5 of 24 GB free while another process held 12 GB, Windows paged
   // memory out instead of failing), NVML's free memory of the same device (by its PCI bus) counts them, all ones without
-  llvm.mlir.global internal constant @strict_nvml("nvml.dll\00") : !llvm.array<9 x i8>
-  llvm.mlir.global internal constant @strict_nvml_init("nvmlInit_v2\00") : !llvm.array<12 x i8>
-  llvm.mlir.global internal constant @strict_nvml_device("nvmlDeviceGetHandleByPciBusId_v2\00") : !llvm.array<33 x i8>
-  llvm.mlir.global internal constant @strict_nvml_memory("nvmlDeviceGetMemoryInfo\00") : !llvm.array<24 x i8>
-  llvm.mlir.global internal constant @strict_gpu_bus("cuDeviceGetPCIBusId\00") : !llvm.array<20 x i8>
+  llvm.mlir.global internal constant @strict_nvml("\08\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00nvml.dll\00") : !llvm.array<25 x i8>
+  llvm.mlir.global internal constant @strict_nvml_init("\0B\00\00\00\00\00\00\00\0B\00\00\00\00\00\00\00nvmlInit_v2\00") : !llvm.array<28 x i8>
+  llvm.mlir.global internal constant @strict_nvml_device("\20\00\00\00\00\00\00\00\20\00\00\00\00\00\00\00nvmlDeviceGetHandleByPciBusId_v2\00") : !llvm.array<49 x i8>
+  llvm.mlir.global internal constant @strict_nvml_memory("\17\00\00\00\00\00\00\00\17\00\00\00\00\00\00\00nvmlDeviceGetMemoryInfo\00") : !llvm.array<40 x i8>
+  llvm.mlir.global internal constant @strict_gpu_bus("\13\00\00\00\00\00\00\00\13\00\00\00\00\00\00\00cuDeviceGetPCIBusId\00") : !llvm.array<36 x i8>
   llvm.func @WriteFile(!llvm.ptr, !llvm.ptr, i32, !llvm.ptr, !llvm.ptr) -> i32
   llvm.func @ReadFile(!llvm.ptr, !llvm.ptr, i32, !llvm.ptr, !llvm.ptr) -> i32
   llvm.func @GetCurrentProcessId() -> i32
-  llvm.mlir.global internal constant @strict_gpu_lock_file("StrictGpu.lock\00") : !llvm.array<15 x i8>
-  llvm.mlir.global internal constant @strict_gpu_lock_owner(" pid %d\00") : !llvm.array<8 x i8>
+  llvm.mlir.global internal constant @strict_gpu_lock_file("\0E\00\00\00\00\00\00\00\0E\00\00\00\00\00\00\00StrictGpu.lock\00") : !llvm.array<31 x i8>
+  llvm.mlir.global internal constant @strict_gpu_lock_owner("\07\00\00\00\00\00\00\00\07\00\00\00\00\00\00\00 pid %d\00") : !llvm.array<24 x i8>
   // the GPU lock (strict_gpu_lock_take) is StrictGpu.lock in the temporary folder, only its holder writes it (others may
   // read the executable and process id in it) and Windows deletes it when it is closed or the holder ends; 0 when another
   // process holds it, its path is in buffer then
@@ -1349,7 +1381,8 @@
     %length = llvm.call @GetTempPathA(%pathSize, %buffer) : (i32, !llvm.ptr) -> i32
     %length64 = arith.extui %length : i32 to i64
     %end = llvm.getelementptr %buffer[%length64] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %name = llvm.mlir.addressof @strict_gpu_lock_file : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_gpu_lock_file : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %nameBytes = arith.constant 15 : i64
     "llvm.intr.memcpy"(%end, %name, %nameBytes) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
     %access = arith.constant 1073807360 : i32
@@ -1371,7 +1404,8 @@
     %exeLength64 = arith.extui %exeLength : i32 to i64
     %textEnd = llvm.getelementptr %text[%exeLength64] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %process = llvm.call @GetCurrentProcessId() : () -> i32
-    %owner = llvm.mlir.addressof @strict_gpu_lock_owner : !llvm.ptr
+    %ownerLengths = llvm.mlir.addressof @strict_gpu_lock_owner : !llvm.ptr
+    %owner = llvm.getelementptr %ownerLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %room = arith.constant 40 : i64
     %ownerLength = llvm.call @strict_print_integer(%textEnd, %room, %owner, %process) : (!llvm.ptr, i64, !llvm.ptr, i32) -> i32
     %total = arith.addi %exeLength, %ownerLength : i32
@@ -1422,20 +1456,26 @@
     %isAmd = func.call @strict_gpu_is_amd() : () -> i1
     cf.cond_br %isAmd, ^unknown, ^load
   ^load:
-    %nvmlName = llvm.mlir.addressof @strict_nvml : !llvm.ptr
+    %nvmlNameLengths = llvm.mlir.addressof @strict_nvml : !llvm.ptr
+    %nvmlName = llvm.getelementptr %nvmlNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %nvml = llvm.call @LoadLibraryA(%nvmlName) : (!llvm.ptr) -> !llvm.ptr
     %noNvml = llvm.icmp "eq" %nvml, %unset : !llvm.ptr
     cf.cond_br %noNvml, ^unknown, ^resolve
   ^resolve:
-    %initName = llvm.mlir.addressof @strict_nvml_init : !llvm.ptr
+    %initNameLengths = llvm.mlir.addressof @strict_nvml_init : !llvm.ptr
+    %initName = llvm.getelementptr %initNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %init = llvm.call @GetProcAddress(%nvml, %initName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
-    %deviceName = llvm.mlir.addressof @strict_nvml_device : !llvm.ptr
+    %deviceNameLengths = llvm.mlir.addressof @strict_nvml_device : !llvm.ptr
+    %deviceName = llvm.getelementptr %deviceNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %device = llvm.call @GetProcAddress(%nvml, %deviceName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
-    %memoryName = llvm.mlir.addressof @strict_nvml_memory : !llvm.ptr
+    %memoryNameLengths = llvm.mlir.addressof @strict_nvml_memory : !llvm.ptr
+    %memoryName = llvm.getelementptr %memoryNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %memory = llvm.call @GetProcAddress(%nvml, %memoryName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
-    %cudaName = llvm.mlir.addressof @strict_gpu_driver : !llvm.ptr
+    %cudaNameLengths = llvm.mlir.addressof @strict_gpu_driver : !llvm.ptr
+    %cudaName = llvm.getelementptr %cudaNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %cuda = llvm.call @LoadLibraryA(%cudaName) : (!llvm.ptr) -> !llvm.ptr
-    %busName = llvm.mlir.addressof @strict_gpu_bus : !llvm.ptr
+    %busNameLengths = llvm.mlir.addressof @strict_gpu_bus : !llvm.ptr
+    %busName = llvm.getelementptr %busNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %bus = llvm.call @GetProcAddress(%cuda, %busName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %noInit = llvm.icmp "eq" %init, %unset : !llvm.ptr
     %noDevice = llvm.icmp "eq" %device, %unset : !llvm.ptr
@@ -1471,8 +1511,8 @@
   ^unknown:
     return %unknown : i64
   }
-  llvm.mlir.global internal constant @strict_gpu_ptx_ending(".ptx\00") : !llvm.array<5 x i8>
-  llvm.mlir.global internal constant @strict_gpu_older_ending(".older.ptx\00") : !llvm.array<11 x i8>
+  llvm.mlir.global internal constant @strict_gpu_ptx_ending("\04\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00.ptx\00") : !llvm.array<21 x i8>
+  llvm.mlir.global internal constant @strict_gpu_older_ending("\0A\00\00\00\00\00\00\00\0A\00\00\00\00\00\00\00.older.ptx\00") : !llvm.array<27 x i8>
 
   llvm.func @Sleep(i32)
   // Process.Wait: blocks this thread for the given seconds
@@ -1516,18 +1556,21 @@
     %killed = llvm.call @TerminateProcess(%process, %failure) : (!llvm.ptr, i32) -> i32
     return
   }
-  llvm.mlir.global internal constant @strict_test_winsock("ws2_32.dll\00") : !llvm.array<11 x i8>
-  llvm.mlir.global internal constant @strict_test_select("select\00") : !llvm.array<7 x i8>
-  llvm.mlir.global internal constant @strict_test_receive("recv\00") : !llvm.array<5 x i8>
+  llvm.mlir.global internal constant @strict_test_winsock("\0A\00\00\00\00\00\00\00\0A\00\00\00\00\00\00\00ws2_32.dll\00") : !llvm.array<27 x i8>
+  llvm.mlir.global internal constant @strict_test_select("\06\00\00\00\00\00\00\00\06\00\00\00\00\00\00\00select\00") : !llvm.array<23 x i8>
+  llvm.mlir.global internal constant @strict_test_receive("\04\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00recv\00") : !llvm.array<21 x i8>
   // whether the peer closed the socket: readable at once but no byte to peek (a served request's caller went away)
   func.func private @strict_test_hungup(%socket: i64) -> i1 {
     %false = arith.constant false
     %null = llvm.mlir.zero : !llvm.ptr
-    %libraryName = llvm.mlir.addressof @strict_test_winsock : !llvm.ptr
+    %libraryNameLengths = llvm.mlir.addressof @strict_test_winsock : !llvm.ptr
+    %libraryName = llvm.getelementptr %libraryNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %library = llvm.call @LoadLibraryA(%libraryName) : (!llvm.ptr) -> !llvm.ptr
-    %selectName = llvm.mlir.addressof @strict_test_select : !llvm.ptr
+    %selectNameLengths = llvm.mlir.addressof @strict_test_select : !llvm.ptr
+    %selectName = llvm.getelementptr %selectNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %select = llvm.call @GetProcAddress(%library, %selectName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
-    %receiveName = llvm.mlir.addressof @strict_test_receive : !llvm.ptr
+    %receiveNameLengths = llvm.mlir.addressof @strict_test_receive : !llvm.ptr
+    %receiveName = llvm.getelementptr %receiveNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %receive = llvm.call @GetProcAddress(%library, %receiveName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %hasSelect = llvm.icmp "ne" %select, %null : !llvm.ptr
     %hasReceive = llvm.icmp "ne" %receive, %null : !llvm.ptr

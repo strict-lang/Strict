@@ -87,8 +87,8 @@
   llvm.func @readlink(!llvm.ptr, !llvm.ptr, i64) -> i64
   llvm.func @stat(!llvm.ptr, !llvm.ptr) -> i32
   llvm.func @localtime(!llvm.ptr) -> !llvm.ptr
-  llvm.mlir.global internal constant @strict_separator_path("/\00") : !llvm.array<2 x i8>
-  llvm.mlir.global internal constant @strict_any_file("*\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @strict_separator_path("\01\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00/\00") : !llvm.array<18 x i8>
+  llvm.mlir.global internal constant @strict_any_file("\01\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00*\00") : !llvm.array<18 x i8>
   // whether a file (no directory) is at name, without opening it
   func.func private @strict_file_present(%name: !llvm.ptr) -> i1 {
     %false = arith.constant false
@@ -124,17 +124,18 @@
   llvm.func @fdopen(i32, !llvm.ptr) -> !llvm.ptr
   func.func private @strict_standard_input() -> !llvm.ptr {
     %standardInput = arith.constant 0 : i32
-    %mode = llvm.mlir.addressof @strict_read_mode : !llvm.ptr
+    %modeLengths = llvm.mlir.addressof @strict_read_mode : !llvm.ptr
+    %mode = llvm.getelementptr %modeLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %stream = llvm.call @fdopen(%standardInput, %mode) : (i32, !llvm.ptr) -> !llvm.ptr
     return %stream : !llvm.ptr
   }
   func.func private @strict_directory_current(%self: f64) -> f64 {
     %size = arith.constant 4096 : i64
-    %path = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
+    %path = func.call @strict_text_room(%size) : (i64) -> !llvm.ptr
     %terminator = arith.constant 0 : i8
     llvm.store %terminator, %path : i8, !llvm.ptr
     %found = llvm.call @getcwd(%path, %size) : (!llvm.ptr, i64) -> !llvm.ptr
-    %system = func.call @strict_bits(%path) : (!llvm.ptr) -> f64
+    %system = func.call @strict_text_sealed(%path) : (!llvm.ptr) -> f64
     %result = func.call @strict_folder_current(%system) : (f64) -> f64
     return %result : f64
   }
@@ -175,7 +176,8 @@
     return %answer : f64
   }
   func.func private @strict_path_join(%path: f64, %name: f64) -> f64 {
-    %separatorText = llvm.mlir.addressof @strict_separator_path : !llvm.ptr
+    %separatorTextLengths = llvm.mlir.addressof @strict_separator_path : !llvm.ptr
+    %separatorText = llvm.getelementptr %separatorTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %separator = func.call @strict_bits(%separatorText) : (!llvm.ptr) -> f64
     %prefix = func.call @strict_text_concat(%path, %separator) : (f64, f64) -> f64
     %result = func.call @strict_text_concat(%prefix, %name) : (f64, f64) -> f64
@@ -193,7 +195,8 @@
     %none = arith.constant 0 : i32
     %slotSize = arith.constant 8 : i64
     %directoryType = arith.constant 4 : i8
-    %anyText = llvm.mlir.addressof @strict_any_file : !llvm.ptr
+    %anyTextLengths = llvm.mlir.addressof @strict_any_file : !llvm.ptr
+    %anyText = llvm.getelementptr %anyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %any = func.call @strict_bits(%anyText) : (!llvm.ptr) -> f64
     %isUnset = arith.cmpf oeq, %pattern, %zero : f64
     %safePattern = arith.select %isUnset, %any, %pattern : f64
@@ -221,8 +224,9 @@
     %take = arith.andi %isFile, %isMatch : i1
     cf.cond_br %take, ^add(%found : f64), ^next(%found : f64)
   ^add(%before: f64):
-    %nameBits = func.call @strict_bits(%fileName) : (!llvm.ptr) -> f64
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %nameBits = func.call @strict_text_from(%fileName) : (!llvm.ptr) -> f64
+    %emptyTextLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
+    %emptyText = llvm.getelementptr %emptyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
     %copied = func.call @strict_text_concat(%nameBits, %empty) : (f64, f64) -> f64
     %full = func.call @strict_path_join(%path, %copied) : (f64, f64) -> f64
@@ -243,16 +247,17 @@
   llvm.func @getpid() -> i32
   llvm.func @read(i32, !llvm.ptr, i64) -> i64
   llvm.func @ftruncate(i32, i64) -> i32
-  llvm.mlir.global internal constant @strict_gpu_lock_path("/tmp/StrictGpu.lock\00") : !llvm.array<20 x i8>
-  llvm.mlir.global internal constant @strict_gpu_lock_executable("/proc/self/exe\00") : !llvm.array<15 x i8>
-  llvm.mlir.global internal constant @strict_gpu_lock_owner(" pid %d\00") : !llvm.array<8 x i8>
+  llvm.mlir.global internal constant @strict_gpu_lock_path("\13\00\00\00\00\00\00\00\13\00\00\00\00\00\00\00/tmp/StrictGpu.lock\00") : !llvm.array<36 x i8>
+  llvm.mlir.global internal constant @strict_gpu_lock_executable("\0E\00\00\00\00\00\00\00\0E\00\00\00\00\00\00\00/proc/self/exe\00") : !llvm.array<31 x i8>
+  llvm.mlir.global internal constant @strict_gpu_lock_owner("\07\00\00\00\00\00\00\00\07\00\00\00\00\00\00\00 pid %d\00") : !llvm.array<24 x i8>
   // the GPU lock (strict_gpu_lock_take) is a flock on /tmp/StrictGpu.lock, its holder writes its executable and process
   // id into it, the descriptor + 1 is the handle (closed by the system when the holder ends); 0 when another process
   // holds it, -1 when the file can not be opened (no lock then)
   func.func private @strict_gpu_lock_try(%buffer: !llvm.ptr) -> i64 {
     %none = arith.constant 0 : i64
     %unlocked = arith.constant -1 : i64
-    %path = llvm.mlir.addressof @strict_gpu_lock_path : !llvm.ptr
+    %pathLengths = llvm.mlir.addressof @strict_gpu_lock_path : !llvm.ptr
+    %path = llvm.getelementptr %pathLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %flags = arith.constant 524354 : i32
     %mode = arith.constant 438 : i32
     %descriptor = llvm.call @open(%path, %flags, %mode) vararg(!llvm.func<i32 (ptr, i32, ...)>) : (!llvm.ptr, i32, i32) -> i32
@@ -272,14 +277,16 @@
   ^owned:
     %emptied = llvm.call @ftruncate(%descriptor, %none) : (i32, i64) -> i32
     %text = llvm.getelementptr %buffer[300] : (!llvm.ptr) -> !llvm.ptr, i8
-    %executable = llvm.mlir.addressof @strict_gpu_lock_executable : !llvm.ptr
+    %executableLengths = llvm.mlir.addressof @strict_gpu_lock_executable : !llvm.ptr
+    %executable = llvm.getelementptr %executableLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %exeSize = arith.constant 260 : i64
     %linked = llvm.call @readlink(%executable, %text, %exeSize) : (!llvm.ptr, !llvm.ptr, i64) -> i64
     %isLinked = arith.cmpi sgt, %linked, %none : i64
     %exeLength = arith.select %isLinked, %linked, %none : i64
     %textEnd = llvm.getelementptr %text[%exeLength] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %process = llvm.call @getpid() : () -> i32
-    %owner = llvm.mlir.addressof @strict_gpu_lock_owner : !llvm.ptr
+    %ownerLengths = llvm.mlir.addressof @strict_gpu_lock_owner : !llvm.ptr
+    %owner = llvm.getelementptr %ownerLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %room = arith.constant 40 : i64
     %ownerLength = llvm.call @strict_print_integer(%textEnd, %room, %owner, %process) : (!llvm.ptr, i64, !llvm.ptr, i32) -> i32
     %ownerLength64 = arith.extsi %ownerLength : i32 to i64
@@ -295,7 +302,8 @@
     %end = arith.constant 0 : i8
     %text = llvm.getelementptr %buffer[300] : (!llvm.ptr) -> !llvm.ptr, i8
     llvm.store %end, %text : i8, !llvm.ptr
-    %path = llvm.mlir.addressof @strict_gpu_lock_path : !llvm.ptr
+    %pathLengths = llvm.mlir.addressof @strict_gpu_lock_path : !llvm.ptr
+    %path = llvm.getelementptr %pathLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %reading = arith.constant 524288 : i32
     %mode = arith.constant 0 : i32
     %descriptor = llvm.call @open(%path, %reading, %mode) vararg(!llvm.func<i32 (ptr, i32, ...)>) : (!llvm.ptr, i32, i32) -> i32
@@ -361,8 +369,9 @@
     %take = arith.andi %isDirectory, %notDot : i1
     cf.cond_br %take, ^add(%found : f64), ^next(%found : f64)
   ^add(%before: f64):
-    %nameBits = func.call @strict_bits(%fileName) : (!llvm.ptr) -> f64
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %nameBits = func.call @strict_text_from(%fileName) : (!llvm.ptr) -> f64
+    %emptyTextLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
+    %emptyText = llvm.getelementptr %emptyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
     %copied = func.call @strict_text_concat(%nameBits, %empty) : (f64, f64) -> f64
     %full = func.call @strict_path_join(%path, %copied) : (f64, f64) -> f64
@@ -379,35 +388,37 @@
   ^done(%result: f64):
     return %result : f64
   }
-  llvm.mlir.global internal constant @strict_path_variable("PATH\00") : !llvm.array<5 x i8>
-  llvm.mlir.global internal constant @strict_shell_name("sh\00") : !llvm.array<3 x i8>
-  llvm.mlir.global internal constant @strict_shell_command("-c\00") : !llvm.array<3 x i8>
-  llvm.mlir.global internal constant @strict_exec_quote("exec \22\00") : !llvm.array<7 x i8>
-  llvm.mlir.global internal constant @strict_quote_space("\22 \00") : !llvm.array<3 x i8>
-  llvm.mlir.global internal constant @strict_output_redirect(" > \22\00") : !llvm.array<5 x i8>
-  llvm.mlir.global internal constant @strict_error_redirect("\22 2> \22\00") : !llvm.array<7 x i8>
-  llvm.mlir.global internal constant @strict_start_failed("could not start \00") : !llvm.array<17 x i8>
+  llvm.mlir.global internal constant @strict_path_variable("\04\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00PATH\00") : !llvm.array<21 x i8>
+  llvm.mlir.global internal constant @strict_shell_name("\02\00\00\00\00\00\00\00\02\00\00\00\00\00\00\00sh\00") : !llvm.array<19 x i8>
+  llvm.mlir.global internal constant @strict_shell_command("\02\00\00\00\00\00\00\00\02\00\00\00\00\00\00\00-c\00") : !llvm.array<19 x i8>
+  llvm.mlir.global internal constant @strict_exec_quote("\06\00\00\00\00\00\00\00\06\00\00\00\00\00\00\00exec \22\00") : !llvm.array<23 x i8>
+  llvm.mlir.global internal constant @strict_quote_space("\02\00\00\00\00\00\00\00\02\00\00\00\00\00\00\00\22 \00") : !llvm.array<19 x i8>
+  llvm.mlir.global internal constant @strict_output_redirect("\04\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00 > \22\00") : !llvm.array<21 x i8>
+  llvm.mlir.global internal constant @strict_error_redirect("\06\00\00\00\00\00\00\00\06\00\00\00\00\00\00\00\22 2> \22\00") : !llvm.array<23 x i8>
+  llvm.mlir.global internal constant @strict_start_failed("\10\00\00\00\00\00\00\00\10\00\00\00\00\00\00\00could not start \00") : !llvm.array<33 x i8>
   // tools and downloads stop after 10 minutes (30 s stopped clang in parallel builds and model downloads)
-  llvm.mlir.global internal constant @strict_timed_out("timed out after 10 minutes\00") : !llvm.array<27 x i8>
+  llvm.mlir.global internal constant @strict_timed_out("\1A\00\00\00\00\00\00\00\1A\00\00\00\00\00\00\00timed out after 10 minutes\00") : !llvm.array<43 x i8>
   func.func private @strict_process_operatingsystem(%self: f64) -> f64 {
-    %name = llvm.mlir.addressof @strict_linux : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_linux : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %result = func.call @strict_bits(%name) : (!llvm.ptr) -> f64
     return %result : f64
   }
-  llvm.mlir.global internal constant @strict_self_executable("/proc/self/exe\00") : !llvm.array<15 x i8>
+  llvm.mlir.global internal constant @strict_self_executable("\0E\00\00\00\00\00\00\00\0E\00\00\00\00\00\00\00/proc/self/exe\00") : !llvm.array<31 x i8>
   func.func private @strict_process_current(%self: f64) -> f64 {
     %size = arith.constant 4096 : i64
     %limit = arith.constant 4095 : i64
     %zero = arith.constant 0 : i64
-    %path = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
-    %link = llvm.mlir.addressof @strict_self_executable : !llvm.ptr
+    %path = func.call @strict_text_room(%size) : (i64) -> !llvm.ptr
+    %linkLengths = llvm.mlir.addressof @strict_self_executable : !llvm.ptr
+    %link = llvm.getelementptr %linkLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %length = llvm.call @readlink(%link, %path, %limit) : (!llvm.ptr, !llvm.ptr, i64) -> i64
     %failed = arith.cmpi slt, %length, %zero : i64
     %index = arith.select %failed, %zero, %length : i64
     %end = llvm.getelementptr %path[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %terminator = arith.constant 0 : i8
     llvm.store %terminator, %end : i8, !llvm.ptr
-    %result = func.call @strict_bits(%path) : (!llvm.ptr) -> f64
+    %result = func.call @strict_text_sealed(%path) : (!llvm.ptr) -> f64
     return %result : f64
   }
   llvm.func @time(!llvm.ptr) -> i64
@@ -529,7 +540,7 @@
   llvm.func @sigaction(i32, !llvm.ptr, !llvm.ptr) -> i32
   llvm.func @sigaltstack(!llvm.ptr, !llvm.ptr) -> i32
   llvm.func @write(i32, !llvm.ptr, i64) -> i64
-  llvm.mlir.global internal constant @strict_overflow_text("Error: StackOverflow, methods called each other without end until the stack was used up\0A\00") : !llvm.array<89 x i8>
+  llvm.mlir.global internal constant @strict_overflow_text("\58\00\00\00\00\00\00\00\58\00\00\00\00\00\00\00Error: StackOverflow, methods called each other without end until the stack was used up\0A\00") : !llvm.array<105 x i8>
   llvm.func @strict_overflow_handler(%signal: i32, %info: !llvm.ptr, %context: !llvm.ptr) {
     %addressSlot = llvm.getelementptr %info[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %address = llvm.load %addressSlot : !llvm.ptr -> i64
@@ -542,7 +553,8 @@
   ^report:
     %null = llvm.mlir.zero : !llvm.ptr
     %flushed = llvm.call @fflush(%null) : (!llvm.ptr) -> i32
-    %text = llvm.mlir.addressof @strict_overflow_text : !llvm.ptr
+    %textLengths = llvm.mlir.addressof @strict_overflow_text : !llvm.ptr
+    %text = llvm.getelementptr %textLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %length = llvm.mlir.constant(88 : i64) : i64
     %output = llvm.mlir.constant(1 : i32) : i32
     %written = llvm.call @write(%output, %text, %length) : (i32, !llvm.ptr, i64) -> i64
@@ -625,7 +637,8 @@
     %terminator = arith.constant 0 : i8
     %file = func.call @strict_ptr(%name) : (f64) -> !llvm.ptr
     %fileSize = llvm.call @strlen(%file) : (!llvm.ptr) -> i64
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %emptyTextLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
+    %emptyText = llvm.getelementptr %emptyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
     %null = llvm.mlir.zero : !llvm.ptr
     %slashAt = llvm.call @strchr(%file, %slash) : (!llvm.ptr, i32) -> !llvm.ptr
@@ -637,7 +650,8 @@
     %direct = arith.select %usable, %name, %empty : f64
     return %direct : f64
   ^search:
-    %variable = llvm.mlir.addressof @strict_path_variable : !llvm.ptr
+    %variableLengths = llvm.mlir.addressof @strict_path_variable : !llvm.ptr
+    %variable = llvm.getelementptr %variableLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %paths = llvm.call @getenv(%variable) : (!llvm.ptr) -> !llvm.ptr
     %noPath = llvm.icmp "eq" %paths, %null : !llvm.ptr
     cf.cond_br %noPath, ^missing, ^segment(%paths : !llvm.ptr)
@@ -668,7 +682,7 @@
     %following = llvm.getelementptr %end[1] : (!llvm.ptr) -> !llvm.ptr, i8
     cf.cond_br %isLast, ^missing, ^segment(%following : !llvm.ptr)
   ^located(%path: !llvm.ptr):
-    %located = func.call @strict_bits(%path) : (!llvm.ptr) -> f64
+    %located = func.call @strict_text_from(%path) : (!llvm.ptr) -> f64
     return %located : f64
   ^missing:
     return %empty : f64
@@ -679,8 +693,8 @@
     %deleted = llvm.call @unlink(%name) : (!llvm.ptr) -> i32
     return %text : f64
   }
-  llvm.mlir.global internal constant @strict_export_threads("export STRICT_THREADS=\00") : !llvm.array<23 x i8>
-  llvm.mlir.global internal constant @strict_export_end("; \00") : !llvm.array<3 x i8>
+  llvm.mlir.global internal constant @strict_export_threads("\16\00\00\00\00\00\00\00\16\00\00\00\00\00\00\00export STRICT_THREADS=\00") : !llvm.array<39 x i8>
+  llvm.mlir.global internal constant @strict_export_end("\02\00\00\00\00\00\00\00\02\00\00\00\00\00\00\00; \00") : !llvm.array<19 x i8>
   // the start of a tool's shell command: exports STRICT_THREADS for a child of a tool batch (a share above 0)
   func.func private @strict_tool_prefix() -> f64 {
     %zero = arith.constant 0 : i64
@@ -689,16 +703,19 @@
     %sharing = arith.cmpi sgt, %share, %zero : i64
     cf.cond_br %sharing, ^export, ^none
   ^none:
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %emptyTextLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
+    %emptyText = llvm.getelementptr %emptyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %empty = func.call @strict_text_of(%emptyText) : (!llvm.ptr) -> f64
     return %empty : f64
   ^export:
-    %exportText = llvm.mlir.addressof @strict_export_threads : !llvm.ptr
+    %exportTextLengths = llvm.mlir.addressof @strict_export_threads : !llvm.ptr
+    %exportText = llvm.getelementptr %exportTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %export = func.call @strict_text_of(%exportText) : (!llvm.ptr) -> f64
     %number = arith.sitofp %share : i64 to f64
     %value = func.call @strict_number_text(%number) : (f64) -> f64
     %assigned = func.call @strict_text_concat(%export, %value) : (f64, f64) -> f64
-    %endText = llvm.mlir.addressof @strict_export_end : !llvm.ptr
+    %endTextLengths = llvm.mlir.addressof @strict_export_end : !llvm.ptr
+    %endText = llvm.getelementptr %endTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %end = func.call @strict_text_of(%endText) : (!llvm.ptr) -> f64
     %started = func.call @strict_text_concat(%assigned, %end) : (f64, f64) -> f64
     return %started : f64
@@ -723,8 +740,10 @@
     %signals = arith.constant 127 : i32
     %none = arith.constant 0 : i32
     %signaled = arith.constant 128 : i32
-    %execQuote = llvm.mlir.addressof @strict_exec_quote : !llvm.ptr
-    %quoteSpace = llvm.mlir.addressof @strict_quote_space : !llvm.ptr
+    %execQuoteLengths = llvm.mlir.addressof @strict_exec_quote : !llvm.ptr
+    %execQuote = llvm.getelementptr %execQuoteLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %quoteSpaceLengths = llvm.mlir.addressof @strict_quote_space : !llvm.ptr
+    %quoteSpace = llvm.getelementptr %quoteSpaceLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %execText = func.call @strict_text_of(%execQuote) : (!llvm.ptr) -> f64
     %quoteSpaceText = func.call @strict_text_of(%quoteSpace) : (!llvm.ptr) -> f64
     %located = func.call @strict_program_joined(%path) : (f64) -> f64
@@ -753,11 +772,16 @@
     %limit = arith.constant 600000 : i32
     %step = arith.constant 1 : i32
     %statusSize = arith.constant 8 : i64
-    %execQuote = llvm.mlir.addressof @strict_exec_quote : !llvm.ptr
-    %quoteSpace = llvm.mlir.addressof @strict_quote_space : !llvm.ptr
-    %outputRedirect = llvm.mlir.addressof @strict_output_redirect : !llvm.ptr
-    %errorRedirect = llvm.mlir.addressof @strict_error_redirect : !llvm.ptr
-    %quote = llvm.mlir.addressof @strict_quote : !llvm.ptr
+    %execQuoteLengths = llvm.mlir.addressof @strict_exec_quote : !llvm.ptr
+    %execQuote = llvm.getelementptr %execQuoteLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %quoteSpaceLengths = llvm.mlir.addressof @strict_quote_space : !llvm.ptr
+    %quoteSpace = llvm.getelementptr %quoteSpaceLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %outputRedirectLengths = llvm.mlir.addressof @strict_output_redirect : !llvm.ptr
+    %outputRedirect = llvm.getelementptr %outputRedirectLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %errorRedirectLengths = llvm.mlir.addressof @strict_error_redirect : !llvm.ptr
+    %errorRedirect = llvm.getelementptr %errorRedirectLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %quoteLengths = llvm.mlir.addressof @strict_quote : !llvm.ptr
+    %quote = llvm.getelementptr %quoteLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %execText = func.call @strict_text_of(%execQuote) : (!llvm.ptr) -> f64
     %quoteSpaceText = func.call @strict_text_of(%quoteSpace) : (!llvm.ptr) -> f64
     %outputText = func.call @strict_text_of(%outputRedirect) : (!llvm.ptr) -> f64
@@ -778,9 +802,12 @@
     %command = func.call @strict_text_concat(%withError, %quoteText) : (f64, f64) -> f64
     %placed = func.call @strict_folder_command(%command) : (f64) -> f64
     %commandText = func.call @strict_ptr(%placed) : (f64) -> !llvm.ptr
-    %shell = llvm.mlir.addressof @strict_shell : !llvm.ptr
-    %shellName = llvm.mlir.addressof @strict_shell_name : !llvm.ptr
-    %shellCommand = llvm.mlir.addressof @strict_shell_command : !llvm.ptr
+    %shellLengths = llvm.mlir.addressof @strict_shell : !llvm.ptr
+    %shell = llvm.getelementptr %shellLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %shellNameLengths = llvm.mlir.addressof @strict_shell_name : !llvm.ptr
+    %shellName = llvm.getelementptr %shellNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %shellCommandLengths = llvm.mlir.addressof @strict_shell_command : !llvm.ptr
+    %shellCommand = llvm.getelementptr %shellCommandLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %null = llvm.mlir.zero : !llvm.ptr
     %status = func.call @strict_alloc_text(%statusSize) : (i64) -> !llvm.ptr
     %flushed = llvm.call @fflush(%null) : (!llvm.ptr) -> i32
@@ -798,10 +825,12 @@
     %unusedOutput = func.call @strict_removed_file(%outputPath) : (f64) -> f64
     %unusedError = func.call @strict_removed_file(%errorPath) : (f64) -> f64
     %startCode = arith.constant 1.0 : f64
-    %startText = llvm.mlir.addressof @strict_start_failed : !llvm.ptr
+    %startTextLengths = llvm.mlir.addressof @strict_start_failed : !llvm.ptr
+    %startText = llvm.getelementptr %startTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %startPrefix = func.call @strict_bits(%startText) : (!llvm.ptr) -> f64
     %startError = func.call @strict_text_concat(%startPrefix, %path) : (f64, f64) -> f64
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %emptyTextLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
+    %emptyText = llvm.getelementptr %emptyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
     %startFailure = func.call @strict_process_result(%startCode, %empty, %startError) : (f64, f64, f64) -> f64
     return %startFailure : f64
@@ -820,7 +849,8 @@
     %killed = llvm.call @kill(%child, %killSignal) : (i32, i32) -> i32
     %reaped = llvm.call @waitpid(%child, %status, %none) : (i32, !llvm.ptr, i32) -> i32
     %timeoutCode = arith.constant 124.0 : f64
-    %timedOutText = llvm.mlir.addressof @strict_timed_out : !llvm.ptr
+    %timedOutTextLengths = llvm.mlir.addressof @strict_timed_out : !llvm.ptr
+    %timedOutText = llvm.getelementptr %timedOutTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %timedOutMessage = func.call @strict_bits(%timedOutText) : (!llvm.ptr) -> f64
     cf.br ^collect(%timeoutCode, %timedOutMessage, %step : f64, f64, i32)
   ^exited:
@@ -856,7 +886,8 @@
     %isMissing = llvm.icmp "eq" %library, %null : !llvm.ptr
     cf.cond_br %isMissing, ^noLibrary, ^loaded
   ^noLibrary:
-    %libraryMessage = llvm.mlir.addressof @strict_library_missing : !llvm.ptr
+    %libraryMessageLengths = llvm.mlir.addressof @strict_library_missing : !llvm.ptr
+    %libraryMessage = llvm.getelementptr %libraryMessageLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %libraryError = func.call @strict_error_named(%libraryMessage) : (!llvm.ptr) -> f64
     return %libraryError : f64
   ^loaded:
@@ -865,7 +896,8 @@
     %isAbsent = llvm.icmp "eq" %function, %null : !llvm.ptr
     cf.cond_br %isAbsent, ^noSymbol, ^found
   ^noSymbol:
-    %symbolMessage = llvm.mlir.addressof @strict_library_symbol_missing : !llvm.ptr
+    %symbolMessageLengths = llvm.mlir.addressof @strict_library_symbol_missing : !llvm.ptr
+    %symbolMessage = llvm.getelementptr %symbolMessageLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %symbolError = func.call @strict_error_named(%symbolMessage) : (!llvm.ptr) -> f64
     return %symbolError : f64
   ^found:
@@ -961,8 +993,8 @@
     %bytes = arith.maxsi %product, %zero : i64
     return %bytes : i64
   }
-  llvm.mlir.global internal constant @strict_statm_path("/proc/self/statm\00") : !llvm.array<17 x i8>
-  llvm.mlir.global internal constant @strict_statm_format("%*s %ld\00") : !llvm.array<8 x i8>
+  llvm.mlir.global internal constant @strict_statm_path("\10\00\00\00\00\00\00\00\10\00\00\00\00\00\00\00/proc/self/statm\00") : !llvm.array<33 x i8>
+  llvm.mlir.global internal constant @strict_statm_format("\07\00\00\00\00\00\00\00\07\00\00\00\00\00\00\00%*s %ld\00") : !llvm.array<24 x i8>
   llvm.func @sscanf(!llvm.ptr, !llvm.ptr, ...) -> i32
   // Process.MemoryUsed: the resident set, the second number of /proc/self/statm in pages, 0 when unknown
   func.func private @strict_process_memoryused(%self: f64) -> f64 {
@@ -972,7 +1004,8 @@
     %buffer = llvm.alloca %one x !llvm.array<64 x i8> : (i64) -> !llvm.ptr
     %pages = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
     llvm.store %zero, %pages : i64, !llvm.ptr
-    %path = llvm.mlir.addressof @strict_statm_path : !llvm.ptr
+    %pathLengths = llvm.mlir.addressof @strict_statm_path : !llvm.ptr
+    %path = llvm.getelementptr %pathLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %descriptor = llvm.call @open(%path, %zero32) vararg(!llvm.func<i32 (ptr, i32, ...)>) : (!llvm.ptr, i32) -> i32
     %opened = arith.cmpi sge, %descriptor, %zero32 : i32
     cf.cond_br %opened, ^read, ^done
@@ -984,7 +1017,8 @@
     %end = llvm.getelementptr %buffer[%length] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %terminator = arith.constant 0 : i8
     llvm.store %terminator, %end : i8, !llvm.ptr
-    %format = llvm.mlir.addressof @strict_statm_format : !llvm.ptr
+    %formatLengths = llvm.mlir.addressof @strict_statm_format : !llvm.ptr
+    %format = llvm.getelementptr %formatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %scanned = llvm.call @sscanf(%buffer, %format, %pages) vararg(!llvm.func<i32 (ptr, ptr, ...)>) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
     cf.br ^done
   ^done:
@@ -1128,14 +1162,14 @@
   ^leave:
     llvm.return
   }
-  llvm.mlir.global internal constant @strict_gpu_driver("libcuda.so.1\00") : !llvm.array<13 x i8>
-  llvm.mlir.global internal constant @strict_gpu_amd_driver("libamdhip64.so\00") : !llvm.array<15 x i8>
+  llvm.mlir.global internal constant @strict_gpu_driver("\0C\00\00\00\00\00\00\00\0C\00\00\00\00\00\00\00libcuda.so.1\00") : !llvm.array<29 x i8>
+  llvm.mlir.global internal constant @strict_gpu_amd_driver("\0E\00\00\00\00\00\00\00\0E\00\00\00\00\00\00\00libamdhip64.so\00") : !llvm.array<31 x i8>
   func.func private @strict_gpu_lookup(%library: !llvm.ptr, %name: !llvm.ptr) -> !llvm.ptr {
     %function = llvm.call @dlsym(%library, %name) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     return %function : !llvm.ptr
   }
-  llvm.mlir.global internal constant @strict_gpu_ptx_ending(".ptx\00") : !llvm.array<5 x i8>
-  llvm.mlir.global internal constant @strict_gpu_older_ending(".older.ptx\00") : !llvm.array<11 x i8>
+  llvm.mlir.global internal constant @strict_gpu_ptx_ending("\04\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00.ptx\00") : !llvm.array<21 x i8>
+  llvm.mlir.global internal constant @strict_gpu_older_ending("\0A\00\00\00\00\00\00\00\0A\00\00\00\00\00\00\00.older.ptx\00") : !llvm.array<27 x i8>
 
   llvm.func @nanosleep(!llvm.ptr, !llvm.ptr) -> i32
   // Process.Wait: blocks this thread for the given seconds

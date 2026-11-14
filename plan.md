@@ -1,0 +1,24 @@
+# Texts with stored lengths, spans, growing lists, f32 members
+
+Decided by the user on 2026-11-14. Internals only, the language does not change. Each step is committed when it is green, measured before and after (a gain counts from 5%).
+
+## Text block
+Every text in memory is `byteLength` (i64), `characterLength` (i64), then its UTF-8 bytes. Both lengths count the payload only. `characterLength is byteLength` means ASCII: indexing, iteration and substrings are byte offsets, nothing is decoded. A Text value points at the first byte (the two lengths sit in the 16 bytes before it) and a zero byte still follows the payload, so C calls (`fopen`, `getenv`, the web page) and code not converted yet keep reading it as a C string. That is what lets the change land in steps instead of one switch of 47000 lines of runtime.
+
+## Steps
+1. Writers: every place that makes a text writes the two lengths. `strict_alloc_text`, the 45 callers that fill it, `strict_text_new`/`strict_text_written`, the shared one character table, runtime constants that become Text values (error names), texts from C (`getenv`, arguments, files), the web page's inputs, and the constants the compiler emits (`MlirConstants.Global`, 16 bytes in front, references point behind them). Debug builds check in `strict_text_length` that the stored length is the `strlen` and stop with the text when it is not: the tests find every writer that was missed.
+2. Rebuild `strict` twice and regenerate `Compiler/Bootstrap.mlir`, so every compiler that still runs writes the lengths. Only then:
+3. Readers: `strict_text_length`, concat, substring, index, compare, hash, starts, split and the rest read the stored length (55 `strlen` calls, the measured text and joined text caches go). ASCII paths for `strict_text_at`, substring and iteration; the UTF-8 path counts characters.
+4. Appending: a text that grows gets a block with room (doubling, +50% from 4 KB), the stored length moves, nothing is copied until the room is used up. Needs the text to be the only holder (ownership for Text like for lists, `MlirOwned.IsHeap`).
+5. Spans: a substring, a line of a file or a split part is (text block, start, length) into the block it came from, ASCII only, read only. The Text value of a span has its bytes out of line (a flag in the `characterLength` word, the pointer where the bytes would be), a C call gets a copy with the zero byte. Tokenizer, `File.ReadLines`, `Split` and `Substring` use them.
+6. Lists like a C# List: an append that fits writes in place, one that does not gets double the room. A list seeded from a parameter or from `List(Number) + first` appends as fast as an owned one (33 -> 8 ns per element): releasing a view must not free a holder another view uses.
+7. Collector: number lists from generic paths are scanned only up to their items (`strict_list_add`, `strict_list_new`), a full collection at a frame end marks over several frames.
+8. Members with `value.Bits is 32` are computed in f32 natively, the VM rounds every such result to f32, so a test shows where 32 bits are not enough (then the constraint goes).
+
+## Measure with
+`Probe/TextSpeed.strict` (20000 appends, 187-217 ms), `Probe/TokensSpeed.strict` (Qwen tokenizer folder, 0.28 s), `Probe/AppendSpeed.strict` (8.2 and 33 ns per element), `Probe/MatrixSpeed.strict` (product 14.2 ns), `strict build Strict.strict` (the compiler is the biggest text user).
+
+## State
+Step 1 is in (2026-11-14): 247 runtime constants and the compiler's own text constants carry the two lengths (`strict_text_constant`), `strict_text_room`, `strict_text_made`, `strict_text_sealed`, `strict_text_from` and `strict_text_taken` make every heap text, the shared one character texts are 24 bytes each. Checked on Windows (compiler check, root native tests) and a Linux build in WSL; the macOS, iOS, Android and web makers are converted the same way but not run. Readers still measure (`strlen`), `strict_text_length` reports a text whose stored length differs (`TextWithoutLength`). Cost so far: none measurable (self-build 16 s, tokenizer 0.28 s, 20000 appends 220 ms).
+Left from step 1: trace locations (`@w` tables of the emitter) are copied into texts per trace, they should carry lengths themselves; `strict_kept_text` (the folder of a thread) stays a C text.
+Next: step 2 (the running `strict` already writes the lengths, regenerate `Compiler/Bootstrap.mlir`), then step 3.

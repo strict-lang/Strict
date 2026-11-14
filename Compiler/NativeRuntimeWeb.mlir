@@ -302,8 +302,8 @@
   llvm.func @getenv(!llvm.ptr) -> !llvm.ptr
   llvm.func @stat(!llvm.ptr, !llvm.ptr) -> i32
   llvm.func @localtime(!llvm.ptr) -> !llvm.ptr
-  llvm.mlir.global internal constant @strict_separator_path("/\00") : !llvm.array<2 x i8>
-  llvm.mlir.global internal constant @strict_any_file("*\00") : !llvm.array<2 x i8>
+  llvm.mlir.global internal constant @strict_separator_path("\01\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00/\00") : !llvm.array<18 x i8>
+  llvm.mlir.global internal constant @strict_any_file("\01\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00*\00") : !llvm.array<18 x i8>
   llvm.func @access(!llvm.ptr, i32) -> i32
   // whether a file (no directory) is at name, without opening it
   func.func private @strict_file_present(%name: !llvm.ptr) -> i1 {
@@ -340,18 +340,19 @@
   llvm.func @fdopen(i32, !llvm.ptr) -> !llvm.ptr
   func.func private @strict_standard_input() -> !llvm.ptr {
     %standardInput = arith.constant 0 : i32
-    %mode = llvm.mlir.addressof @strict_read_mode : !llvm.ptr
+    %modeLengths = llvm.mlir.addressof @strict_read_mode : !llvm.ptr
+    %mode = llvm.getelementptr %modeLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %stream = llvm.call @fdopen(%standardInput, %mode) : (i32, !llvm.ptr) -> !llvm.ptr
     return %stream : !llvm.ptr
   }
   func.func private @strict_directory_current(%self: f64) -> f64 {
     %size = arith.constant 4096 : i64
-    %path = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
+    %path = func.call @strict_text_room(%size) : (i64) -> !llvm.ptr
     %terminator = arith.constant 0 : i8
     llvm.store %terminator, %path : i8, !llvm.ptr
     %narrow = arith.trunci %size : i64 to i32
     %found = llvm.call @getcwd(%path, %narrow) : (!llvm.ptr, i32) -> !llvm.ptr
-    %result = func.call @strict_bits(%path) : (!llvm.ptr) -> f64
+    %result = func.call @strict_text_sealed(%path) : (!llvm.ptr) -> f64
     return %result : f64
   }
   func.func private @strict_directory_create(%self: f64, %path: f64) -> f64 {
@@ -374,7 +375,8 @@
     return %result : f64
   }
   func.func private @strict_path_join(%path: f64, %name: f64) -> f64 {
-    %separatorText = llvm.mlir.addressof @strict_separator_path : !llvm.ptr
+    %separatorTextLengths = llvm.mlir.addressof @strict_separator_path : !llvm.ptr
+    %separatorText = llvm.getelementptr %separatorTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %separator = func.call @strict_bits(%separatorText) : (!llvm.ptr) -> f64
     %prefix = func.call @strict_text_concat(%path, %separator) : (f64, f64) -> f64
     %result = func.call @strict_text_concat(%prefix, %name) : (f64, f64) -> f64
@@ -392,7 +394,8 @@
     %none = arith.constant 0 : i32
     %slotSize = arith.constant 8 : i32
     %directoryType = arith.constant 4 : i8
-    %anyText = llvm.mlir.addressof @strict_any_file : !llvm.ptr
+    %anyTextLengths = llvm.mlir.addressof @strict_any_file : !llvm.ptr
+    %anyText = llvm.getelementptr %anyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %any = func.call @strict_bits(%anyText) : (!llvm.ptr) -> f64
     %isUnset = arith.cmpf oeq, %pattern, %zero : f64
     %safePattern = arith.select %isUnset, %any, %pattern : f64
@@ -420,8 +423,9 @@
     %take = arith.andi %isFile, %isMatch : i1
     cf.cond_br %take, ^add(%found : f64), ^next(%found : f64)
   ^add(%before: f64):
-    %nameBits = func.call @strict_bits(%fileName) : (!llvm.ptr) -> f64
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %nameBits = func.call @strict_text_from(%fileName) : (!llvm.ptr) -> f64
+    %emptyTextLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
+    %emptyText = llvm.getelementptr %emptyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
     %copied = func.call @strict_text_concat(%nameBits, %empty) : (f64, f64) -> f64
     %full = func.call @strict_path_join(%path, %copied) : (f64, f64) -> f64
@@ -483,8 +487,9 @@
     %take = arith.andi %isDirectory, %notDot : i1
     cf.cond_br %take, ^add(%found : f64), ^next(%found : f64)
   ^add(%before: f64):
-    %nameBits = func.call @strict_bits(%fileName) : (!llvm.ptr) -> f64
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %nameBits = func.call @strict_text_from(%fileName) : (!llvm.ptr) -> f64
+    %emptyTextLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
+    %emptyText = llvm.getelementptr %emptyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
     %copied = func.call @strict_text_concat(%nameBits, %empty) : (f64, f64) -> f64
     %full = func.call @strict_path_join(%path, %copied) : (f64, f64) -> f64
@@ -501,15 +506,17 @@
   ^done(%result: f64):
     return %result : f64
   }
-  llvm.mlir.global internal constant @strict_web("Web\00") : !llvm.array<4 x i8>
-  llvm.mlir.global internal constant @strict_start_failed("no processes in the browser, could not start \00") : !llvm.array<46 x i8>
+  llvm.mlir.global internal constant @strict_web("\03\00\00\00\00\00\00\00\03\00\00\00\00\00\00\00Web\00") : !llvm.array<20 x i8>
+  llvm.mlir.global internal constant @strict_start_failed("\2D\00\00\00\00\00\00\00\2D\00\00\00\00\00\00\00no processes in the browser, could not start \00") : !llvm.array<62 x i8>
   func.func private @strict_process_operatingsystem(%self: f64) -> f64 {
-    %name = llvm.mlir.addressof @strict_web : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_web : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %result = func.call @strict_bits(%name) : (!llvm.ptr) -> f64
     return %result : f64
   }
   func.func private @strict_process_current(%self: f64) -> f64 {
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %emptyTextLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
+    %emptyText = llvm.getelementptr %emptyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
     return %empty : f64
   }
@@ -646,7 +653,8 @@
     return %result : f64
   }
   func.func private @strict_tool_path(%name: f64) -> f64 {
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %emptyTextLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
+    %emptyText = llvm.getelementptr %emptyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
     return %empty : f64
   }
@@ -660,16 +668,19 @@
   }
   func.func private @strict_process_execute(%path: f64, %arguments: f64) -> f64 {
     %startCode = arith.constant 1.0 : f64
-    %startText = llvm.mlir.addressof @strict_start_failed : !llvm.ptr
+    %startTextLengths = llvm.mlir.addressof @strict_start_failed : !llvm.ptr
+    %startText = llvm.getelementptr %startTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %startPrefix = func.call @strict_bits(%startText) : (!llvm.ptr) -> f64
     %startError = func.call @strict_text_concat(%startPrefix, %path) : (f64, f64) -> f64
-    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %emptyTextLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
+    %emptyText = llvm.getelementptr %emptyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
     %startFailure = func.call @strict_process_result(%startCode, %empty, %startError) : (f64, f64, f64) -> f64
     return %startFailure : f64
   }
   func.func private @strict_library_call(%path: f64, %symbol: f64, %arguments: f64) -> f64 {
-    %libraryMessage = llvm.mlir.addressof @strict_library_missing : !llvm.ptr
+    %libraryMessageLengths = llvm.mlir.addressof @strict_library_missing : !llvm.ptr
+    %libraryMessage = llvm.getelementptr %libraryMessageLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %libraryError = func.call @strict_error_named(%libraryMessage) : (!llvm.ptr) -> f64
     return %libraryError : f64
   }
@@ -921,7 +932,7 @@
   ^other:
     return %none : i64
   }
-  llvm.mlir.global internal constant @strict_gpu_web_unread("Error: a result of the GPU could not be read back (WebGPU)\0A\00") : !llvm.array<60 x i8>
+  llvm.mlir.global internal constant @strict_gpu_web_unread("\3B\00\00\00\00\00\00\00\3B\00\00\00\00\00\00\00Error: a result of the GPU could not be read back (WebGPU)\0A\00") : !llvm.array<76 x i8>
   llvm.func @strict_webgpu_download(i32, !llvm.ptr, i32, i32) -> i32
   llvm.func @strict_webgpu_release(i32)
   // the numbers of the WebGPU buffer of device in a new host block of the list holder, stops the program when its
@@ -957,8 +968,10 @@
     func.call @strict_gc_written(%dataSlot) : (!llvm.ptr) -> ()
     return %host : !llvm.ptr
   ^fail(%isUnread: i1):
-    %unread = llvm.mlir.addressof @strict_gpu_web_unread : !llvm.ptr
-    %outside = llvm.mlir.addressof @strict_gpu_failed_text : !llvm.ptr
+    %unreadLengths = llvm.mlir.addressof @strict_gpu_web_unread : !llvm.ptr
+    %unread = llvm.getelementptr %unreadLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %outsideLengths = llvm.mlir.addressof @strict_gpu_failed_text : !llvm.ptr
+    %outside = llvm.getelementptr %outsideLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %message = arith.select %isUnread, %unread, %outside : !llvm.ptr
     %printed = llvm.call @printf(%message) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr) -> i32
     %code = arith.constant 1 : i32
@@ -1176,7 +1189,7 @@
     %buffer = func.call @strict_malloc(%size) : (i64) -> !llvm.ptr
     %size32 = arith.trunci %size : i64 to i32
     llvm.call @strict_webinput_copy(%buffer, %size32) : (!llvm.ptr, i32) -> ()
-    %text = func.call @strict_bits(%buffer) : (!llvm.ptr) -> f64
+    %text = func.call @strict_text_taken(%buffer, %length) : (!llvm.ptr, i64) -> f64
     return %text : f64
   }
   func.func private @strict_gpu_web_joined(%left: f64, %right: f64) -> f64 {
@@ -1224,7 +1237,7 @@
   }
   // two lists of 32 bit or bfloat16 numbers, one of them in a WebGPU buffer, joined into 32 bit floats on the GPU
   // (strict_joined: Moss's 32 bit image tokens and bfloat16 text tokens), 0.0 for any other pair
-  llvm.mlir.global internal constant @strict_gpu_joined_web("strict_joined\00") : !llvm.array<14 x i8>
+  llvm.mlir.global internal constant @strict_gpu_joined_web("\0D\00\00\00\00\00\00\00\0D\00\00\00\00\00\00\00strict_joined\00") : !llvm.array<30 x i8>
   func.func private @strict_gpu_web_mixed(%left: f64, %right: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
@@ -1255,7 +1268,8 @@
     %rightLength = func.call @strict_list_length(%right) : (f64) -> f64
     %total = arith.addf %leftLength, %rightLength : f64
     %count = arith.fptosi %total : f64 to i64
-    %name = llvm.mlir.addressof @strict_gpu_joined_web : !llvm.ptr
+    %nameLengths = llvm.mlir.addressof @strict_gpu_joined_web : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %kernelKind = arith.constant 2 : i64
     %bothLists = arith.constant 3 : i64
     %joined = func.call @strict_gpu_shaded(%name, %count, %zero, %kernelKind, %values, %two, %bothLists, %singleBits) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
@@ -1271,8 +1285,8 @@
     %null = llvm.mlir.zero : !llvm.ptr
     return %null : !llvm.ptr
   }
-  llvm.mlir.global internal constant @strict_gpu_ptx_ending(".ptx\00") : !llvm.array<5 x i8>
-  llvm.mlir.global internal constant @strict_gpu_older_ending(".older.ptx\00") : !llvm.array<11 x i8>
+  llvm.mlir.global internal constant @strict_gpu_ptx_ending("\04\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00.ptx\00") : !llvm.array<21 x i8>
+  llvm.mlir.global internal constant @strict_gpu_older_ending("\0A\00\00\00\00\00\00\00\0A\00\00\00\00\00\00\00.older.ptx\00") : !llvm.array<27 x i8>
 
   func.func private @strict_process_wait(%self: f64, %seconds: f64) -> f64 {
     %none = arith.constant 0.0 : f64

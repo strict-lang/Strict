@@ -1,9 +1,9 @@
 has function MlirFunction
 constant UnsetPrologue = ("    %zero = arith.constant 0.0 : f64", "    %unset = arith.cmpf oeq, %value, %zero : f64", "    cf.cond_br %unset, ^unset, ^set", "  ^unset:")
-constant EmptyReturned = ("    %emptyText = llvm.mlir.addressof @strict_empty : !llvm.ptr", "    %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64", "    return %empty : f64", "  ^set:")
+constant EmptyReturned = ("    %emptyText = llvm.mlir.addressof @strict_empty_text : !llvm.ptr", "    %empty = func.call @strict_text_constant(%emptyText) : (!llvm.ptr) -> f64", "    return %empty : f64", "  ^set:")
 constant Prologue = UnsetPrologue + EmptyReturned + ("    %p = func.call @strict_ptr(%value) : (f64) -> !llvm.ptr", "    %l0 = func.call @strict_list_empty() : () -> f64")
-constant OpenParenthesis = ("    %openText = llvm.mlir.addressof @strict_open_paren : !llvm.ptr", "    %open = func.call @strict_bits(%openText) : (!llvm.ptr) -> f64")
-constant CloseParenthesis = ("    %closeText = llvm.mlir.addressof @strict_close_paren : !llvm.ptr", "    %close = func.call @strict_bits(%closeText) : (!llvm.ptr) -> f64")
+constant OpenParenthesis = ("    %openText = llvm.mlir.addressof @strict_open_paren_text : !llvm.ptr", "    %open = func.call @strict_text_constant(%openText) : (!llvm.ptr) -> f64")
+constant CloseParenthesis = ("    %closeText = llvm.mlir.addressof @strict_close_paren_text : !llvm.ptr", "    %close = func.call @strict_text_constant(%closeText) : (!llvm.ptr) -> f64")
 constant Concatenated = ("    %opened = func.call @strict_text_concat(%open, %joined) : (f64, f64) -> f64", "    %result = func.call @strict_text_concat(%opened, %close) : (f64, f64) -> f64", "    return %result : f64", "  }")
 constant Parentheses = OpenParenthesis + CloseParenthesis + Concatenated
 constant Sample = MlirAutomatic(MlirEquality.Same)

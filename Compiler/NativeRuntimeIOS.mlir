@@ -1,6 +1,6 @@
   llvm.mlir.global internal constant @strict_heap_bytes(1073741824 : i64) : i64
-  llvm.mlir.global internal constant @strict_macos("iOS\00") : !llvm.array<4 x i8>
-  llvm.mlir.global internal constant @strict_temp_template("/strictXXXXXX\00") : !llvm.array<14 x i8>
+  llvm.mlir.global internal constant @strict_macos("\03\00\00\00\00\00\00\00\03\00\00\00\00\00\00\00iOS\00") : !llvm.array<20 x i8>
+  llvm.mlir.global internal constant @strict_temp_template("\0D\00\00\00\00\00\00\00\0D\00\00\00\00\00\00\00/strictXXXXXX\00") : !llvm.array<30 x i8>
   // the web runs kernels as WebGPU shaders (NativeRuntimeWeb.mlir), everywhere else the device code takes them
   func.func private @strict_gpu_shaded(%name: !llvm.ptr, %count: i64, %source: f64, %kind: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64, %format: i64) -> f64 {
     %none = arith.constant 0.0 : f64
@@ -59,17 +59,19 @@
     %null = llvm.mlir.zero : !llvm.ptr
     llvm.return %null : !llvm.ptr
   }
-  llvm.mlir.global internal constant @strict_temp_variable("TMPDIR\00") : !llvm.array<7 x i8>
-  llvm.mlir.global internal constant @strict_temp_failed("TemporaryFileCreateFailed\00") : !llvm.array<26 x i8>
+  llvm.mlir.global internal constant @strict_temp_variable("\06\00\00\00\00\00\00\00\06\00\00\00\00\00\00\00TMPDIR\00") : !llvm.array<23 x i8>
+  llvm.mlir.global internal constant @strict_temp_failed("\19\00\00\00\00\00\00\00\19\00\00\00\00\00\00\00TemporaryFileCreateFailed\00") : !llvm.array<42 x i8>
   func.func private @strict_temp_file() -> f64 {
-    %variable = llvm.mlir.addressof @strict_temp_variable : !llvm.ptr
+    %variableLengths = llvm.mlir.addressof @strict_temp_variable : !llvm.ptr
+    %variable = llvm.getelementptr %variableLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %directory = llvm.call @getenv(%variable) : (!llvm.ptr) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     %missing = llvm.icmp "eq" %directory, %null : !llvm.ptr
     cf.cond_br %missing, ^failed, ^create
   ^create:
-    %folder = func.call @strict_bits(%directory) : (!llvm.ptr) -> f64
-    %template = llvm.mlir.addressof @strict_temp_template : !llvm.ptr
+    %folder = func.call @strict_text_from(%directory) : (!llvm.ptr) -> f64
+    %templateLengths = llvm.mlir.addressof @strict_temp_template : !llvm.ptr
+    %template = llvm.getelementptr %templateLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %ending = func.call @strict_bits(%template) : (!llvm.ptr) -> f64
     %path = func.call @strict_text_concat(%folder, %ending) : (f64, f64) -> f64
     %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
@@ -81,7 +83,8 @@
     %closed = llvm.call @close(%descriptor) : (i32) -> i32
     return %path : f64
   ^failed:
-    %message = llvm.mlir.addressof @strict_temp_failed : !llvm.ptr
+    %messageLengths = llvm.mlir.addressof @strict_temp_failed : !llvm.ptr
+    %message = llvm.getelementptr %messageLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %error = func.call @strict_error_named(%message) : (!llvm.ptr) -> f64
     return %error : f64
   }
