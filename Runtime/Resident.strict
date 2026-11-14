@@ -83,13 +83,14 @@ Opened Number
 Accepted(server Number, built Number, limit = IdleSeconds) Number
 	Sample.Accepted(0, -1) is Unaccepted
 	Sample.Accepted(Socket.Local(0), File(Process.Current.executable).Modified, 0) is Unaccepted
+	Sample.Accepted(Socket.Local(0), File(Process.Current.executable).Modified, WakeSeconds) is Unaccepted
 	mutable idle = 0
-	for as long as (idle < limit) and (File(Process.Current.executable).Modified is built)
+	let own = File(Process.Current.executable)
+	let stamp = File(Stamped)
+	for as long as (idle < limit) and (own.Modified is built) and (stamp.ReadLines.First to Number is Socket.Port(server))
 		let waited = Socket.Waiting(server, WakeSeconds)
-		if waited is Error
-			return Unaccepted
-		if waited is 1
-			return Taken(server, built)
+		if waited is not 0
+			return waited is Error then Unaccepted else Taken(server, built)
 		idle = idle + WakeSeconds
 	Unaccepted
 Taken(server Number, built Number) Number
