@@ -1,0 +1,32 @@
+has logger
+constant Words = 200000
+constant Nanoseconds = 1000000000
+Sentence(count Number) Text
+	SpanSpeed.Sentence(2) is "word0 word1 "
+	mutable text = ""
+	for count
+		text = text + "word" + index % 10 + " "
+	text
+Lengths(text Text) Number
+	SpanSpeed.Lengths("word0 word1 ") is 10
+	mutable total = 0
+	mutable start = 0
+	mutable ending = text.IndexOf(" ", start)
+	for as long as ending >= 0
+		total = total + text.Substring(start, ending - start).Length
+		start = ending + 1
+		ending = text.IndexOf(" ", start)
+	total
+Split(text Text) Number
+	SpanSpeed.Split("word0 word1") is 2
+	text.Split(" ").Length
+Run
+	let text = Sentence(Words)
+	for 5
+		let started = Process.Elapsed
+		let total = Lengths(text)
+		let cut = (Process.Elapsed - started) * Nanoseconds / Words
+		let again = Process.Elapsed
+		let parts = Split(text)
+		let split = (Process.Elapsed - again) * Nanoseconds / Words
+		logger.Log("substring " + cut.Round(1) + " ns per word, split " + split.Round(1) + " ns per part, " + total + " " + parts)
