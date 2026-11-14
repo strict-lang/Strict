@@ -1,0 +1,24 @@
+has logger
+constant Sizes = (1000, 10000, 30000, 100000, 300000)
+constant Work = 6000000
+constant Nanoseconds = 1000000000
+Shifted(numbers Numbers, offset Number) Numbers
+	ParallelSpeed.Shifted((0, 1), 3)(0) is 0
+	for numbers
+		((value + offset).SquareRoot.Exponential + (value * offset + 1).Logarithm.Absolute.SquareRoot) * value
+Counted(size Number) Numbers
+	ParallelSpeed.Counted(3) is (0, 1, 2)
+	for size
+		index
+Timed(size Number, work Number) Number
+	ParallelSpeed.Timed(10, 100) > 0
+	let numbers = Counted(size)
+	let rounds = (work / size).Ceiling
+	let started = Process.Elapsed
+	mutable total = 0
+	for rounds
+		total = total + Shifted(numbers, index).Last
+	(Process.Elapsed - started + total * 0) * Nanoseconds / rounds
+Run
+	for Sizes
+		logger.Log(value + " elements: " + (Timed(value, Work) / 1000).Round(2) + " us per loop")

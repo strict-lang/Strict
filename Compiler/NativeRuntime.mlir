@@ -2440,7 +2440,7 @@
     %lastJob = llvm.load %soloJobSlot : !llvm.ptr -> i64
     %soloJob = arith.addi %lastJob, %one : i64
     llvm.store %soloJob, %soloJobSlot : i64, !llvm.ptr
-    func.call @strict_gc_lanes_carried() : () -> ()
+    func.call @strict_gc_lane_carried() : () -> ()
     %soloInsideSlot = llvm.mlir.addressof @strict_pool_inside : !llvm.ptr
     %soloWasInside = llvm.load %soloInsideSlot : !llvm.ptr -> i64
     llvm.store %soloJob, %soloInsideSlot : i64, !llvm.ptr
@@ -2467,7 +2467,7 @@
     %probeLast = llvm.load %probeJobSlot : !llvm.ptr -> i64
     %probeJob = arith.addi %probeLast, %one : i64
     llvm.store %probeJob, %probeJobSlot : i64, !llvm.ptr
-    func.call @strict_gc_lanes_carried() : () -> ()
+    func.call @strict_gc_lane_carried() : () -> ()
     %probeInsideSlot = llvm.mlir.addressof @strict_pool_inside : !llvm.ptr
     %probeWasInside = llvm.load %probeInsideSlot : !llvm.ptr -> i64
     llvm.store %probeJob, %probeInsideSlot : i64, !llvm.ptr
@@ -2577,7 +2577,7 @@
     llvm.store %start, %doneSlot : i64, !llvm.ptr
     %failureSlot = llvm.mlir.addressof @strict_pool_failure : !llvm.ptr
     llvm.store %zero, %failureSlot : i64, !llvm.ptr
-    func.call @strict_gc_lanes_carried() : () -> ()
+    func.call @strict_gc_lane_carried() : () -> ()
     llvm.store %job, %jobSlot atomic seq_cst {alignment = 8 : i64} : i64, !llvm.ptr
     %lastPart = arith.subi %chunk, %one : i64
     %rounded = arith.addi %remaining, %lastPart : i64
@@ -2659,6 +2659,7 @@
     %range = llvm.call @strict_pool_piece(%piece) : (i64) -> !llvm.struct<(i64, i64)>
     %start = llvm.extractvalue %range[0] : !llvm.struct<(i64, i64)>
     %end = llvm.extractvalue %range[1] : !llvm.struct<(i64, i64)>
+    func.call @strict_gc_joined(%job) : (i64) -> ()
     %insideSlot = llvm.mlir.addressof @strict_pool_inside : !llvm.ptr
     %wasInside = llvm.load %insideSlot : !llvm.ptr -> i64
     llvm.store %job, %insideSlot : i64, !llvm.ptr
@@ -3296,7 +3297,8 @@
     return %lane : i64
   }
   // before a pool job every lane keeps its spans and where they stand is copied: what a lane allocates from there in
-  // the job is its own like objects on the pages it takes in the job, which are tagged with the job and the lane
+  // the job is its own like objects on the pages it takes in the job, which are tagged with the job and the lane;
+  // a collection clears every row, a job copies only the row of each lane that joins it (strict_gc_joined)
   func.func private @strict_gc_lanes_carried() {
     %one = arith.constant 1 : i64
     %takenSlot = llvm.mlir.addressof @strict_gc_lanes_taken : !llvm.ptr
@@ -3309,6 +3311,32 @@
     %lanes = llvm.mlir.addressof @strict_gc_lanes : !llvm.ptr
     %carried = llvm.mlir.addressof @strict_gc_carried : !llvm.ptr
     %copied = llvm.call @memcpy(%carried, %lanes, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    return
+  }
+  // the 128 cursors and ends of this thread's lane as they stand now: all rows were 0.1 MB copied per job
+  func.func private @strict_gc_lane_carried() {
+    %lane = func.call @strict_gc_lane_index() : () -> i64
+    %rowBytes = arith.constant 1024 : i64
+    %offset = arith.muli %lane, %rowBytes : i64
+    %lanes = llvm.mlir.addressof @strict_gc_lanes : !llvm.ptr
+    %carried = llvm.mlir.addressof @strict_gc_carried : !llvm.ptr
+    %from = llvm.getelementptr %lanes[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %to = llvm.getelementptr %carried[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %copied = llvm.call @memcpy(%to, %from, %rowBytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    return
+  }
+  llvm.mlir.global internal thread_local @strict_gc_joined_job(0 : i64) : i64
+  // a worker's lane did not allocate since the job started, its row is carried before the first piece it runs
+  func.func private @strict_gc_joined(%job: i64) {
+    %joinedSlot = llvm.mlir.addressof @strict_gc_joined_job : !llvm.ptr
+    %joined = llvm.load %joinedSlot : !llvm.ptr -> i64
+    %isNew = arith.cmpi ne, %joined, %job : i64
+    cf.cond_br %isNew, ^carry, ^done
+  ^carry:
+    func.call @strict_gc_lane_carried() : () -> ()
+    llvm.store %job, %joinedSlot : i64, !llvm.ptr
+    cf.br ^done
+  ^done:
     return
   }
   // a span the lane takes in the job is carried from its start: lists made there still grow in place
