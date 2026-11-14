@@ -13,6 +13,7 @@ constant A = SyntaxNode("Identifier", "a")
 constant Logging = CodeBlock.Empty.Declare("a", "Logger")
 constant LogHi = SyntaxNode("MethodCall", "Log", (A, ValueCodegen.Hi))
 constant IsError = SyntaxNode("Binary", "is", (A, BareError))
+constant AnyCall = SyntaxNode("Call", "Error", SyntaxNode("Text", "\"\""))
 constant FailingSum = SyntaxNode("Binary", "is", (GreetingPlusOne, BareError))
 constant LeftSum = Plain.Compared(FailingSum, GreetingPlusOne, CodeBlock.Empty)
 constant RightSum = Plain.Compared(IsError, GreetingPlusOne, CodeBlock.Empty)
@@ -131,8 +132,7 @@ AnyError(node SyntaxNode, block CodeBlock) SyntaxNode
 	let isBare = (wanted.Kind is "Identifier") and (wanted.text is "Error") and (block.scope.TypeOf("Error") is "")
 	if (node.text is not in ("is", "is not")) or (isBare is false)
 		return node
-	let any = SyntaxNode("Call", "Error", SyntaxNode("Text", "\"\""))
-	SyntaxNode(node.Kind, node.text, (node.children(0), any), node.line)
+	SyntaxNode(node.Kind, node.text, (node.children(0), AnyCall), node.line)
 IsErrorComparison(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsErrorComparison(IsError, CodeBlock.Empty)
 	Plain.IsErrorComparison(IsOne, CodeBlock.Empty) is false
@@ -155,9 +155,9 @@ Statement(node SyntaxNode, block CodeBlock) CodeBlock
 		return node.HasValue then Handled(node.children(0), block) else block.Nothing
 	Checked(node, block)
 Right(node SyntaxNode, block CodeBlock, isConverted Boolean) CodeBlock
-	Plain.Right(IsError, CodeBlock.Empty, false).instructions.Last.kind is InstructionType.Invoke
-	Plain.Right(IsError, Counted, true) is Plain.Handled(Plain.AnyError(IsError, Counted).children(1), Counted)
-	Plain.Right(IsError, Counted, false) is Plain.Handled(Plain.AnyError(IsError, Counted).children(1), Counted)
+	Plain.Right(IsError, CodeBlock.Empty, false).instructions is (InstructionEntry.LoadAnyError(0))
+	Plain.Right(IsError, Counted, true) is Plain.Compared(IsError, AnyCall, Counted)
+	Plain.Right(IsError, Counted, false) is Plain.Compared(IsError, AnyCall, Counted)
 	Plain.IsFailing(SyntaxNode("Binary", "then", (A, A)), CodeBlock.Empty)
 	Plain.IsFailing(SyntaxNode("Binary", "+", (A, A)), CodeBlock.Empty.Declare("a", "List(Number)"))
 	Plain.IsFailing(SyntaxNode("Binary", "is", (A, A)), ErrorScope.Numbered) is false
@@ -181,7 +181,7 @@ Compared(comparison SyntaxNode, operand SyntaxNode, block CodeBlock) CodeBlock
 	if IsErrorComparison(comparison, block) is false
 		return Checked(operand, block, ErrorScope(values).IsRemainder(Folded(operand, block)))
 	if (operand is not comparison.children(0)) or (operand.children.Length is 0)
-		return Handled(operand, block)
+		return operand is AnyCall then block.Load(InstructionEntry.LoadAnyError(block.register)) else Handled(operand, block)
 	let caught = Caught(comparison, operand, block).Declare(Tested, values.TypeOf(operand, block))
 	caught.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, caught.register, Tested))
 Caught(comparison SyntaxNode, node SyntaxNode, block CodeBlock) CodeBlock

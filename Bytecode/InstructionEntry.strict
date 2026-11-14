@@ -46,6 +46,9 @@ Set(names Texts, content Numbers) InstructionEntry
 LoadText(register Number, text Text) InstructionEntry
 	InstructionEntry.LoadText(1, "a").payload is (1, 4, -1)
 	InstructionEntry(InstructionType.LoadConstantToRegister, text, (register, 4, -1))
+LoadAnyError(register Number) InstructionEntry
+	InstructionEntry.LoadAnyError(2).payload is (2, 7)
+	InstructionEntry(InstructionType.LoadConstantToRegister, List(Text), (register, 7))
 LoadBoolean(register Number, condition Boolean) InstructionEntry
 	InstructionEntry.LoadBoolean(1, true).payload is (1, 5, 1)
 	InstructionEntry(InstructionType.LoadConstantToRegister, List(Text), (register, 5, (condition then 1 else 0)))

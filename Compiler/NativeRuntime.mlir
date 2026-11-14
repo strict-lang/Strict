@@ -12063,6 +12063,23 @@
   ^done(%result: f64):
     return %result : f64
   }
+  // the Error any failure equals, built once: x is Error compares with it
+  llvm.mlir.global internal @strict_any_error_value(0.0 : f64) : f64
+  func.func private @strict_any_error() -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %slot = llvm.mlir.addressof @strict_any_error_value : !llvm.ptr
+    %cached = llvm.load %slot : !llvm.ptr -> f64
+    %isMissing = arith.cmpf oeq, %cached, %zero : f64
+    cf.cond_br %isMissing, ^create, ^done(%cached : f64)
+  ^create:
+    %empty = llvm.mlir.addressof @strict_empty : !llvm.ptr
+    %error = func.call @strict_error_named(%empty) : (!llvm.ptr) -> f64
+    func.call @strict_pin(%error) : (f64) -> ()
+    llvm.store %error, %slot : f64, !llvm.ptr
+    cf.br ^done(%error : f64)
+  ^done(%result: f64):
+    return %result : f64
+  }
   func.func private @strict_error_named(%name: !llvm.ptr) -> f64 {
     %sixteen = arith.constant 16 : i64
     %block = func.call @strict_alloc(%sixteen) : (i64) -> !llvm.ptr

@@ -7,6 +7,7 @@ constant TrueValue = VmValue("Boolean", 1, "", List(VmValue))
 constant FalseValue = VmValue("Boolean", 0, "", List(VmValue))
 constant ErrorKinds = ("Strict/Error", "Strict/ErrorWithValue")
 constant Failed = VmValue("Strict/Error", 0, "", (OfText("x"), OfList(List(VmValue) + VmValue("Strict/Stacktrace", 0, "", (OfText("B.C"), OfText("B.strict"), OfNumber(7))))))
+constant AnyError = VmValue("Strict/Error", 0, "", (OfText(""), OfList(List(VmValue))))
 constant Numbered = VmValue("Strict/List(Number)", 0, "", (OfNumber(5), OfNumber(6)))
 OfNumber(amount Number) VmValue
 	OfNumber(3).number is 3

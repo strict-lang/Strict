@@ -4,6 +4,7 @@ constant CopyInstructions = (InstructionEntry.LoadNumber(0, 7), InstructionEntry
 constant Copy = MlirStatements(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", CopyInstructions)), 0)
 constant Summing = MlirStatements(MlirFastLoop.Summing.function, 5)
 constant Reassociated = " fastmath<reassoc,contract>"
+constant AnyError = " = func.call @strict_any_error() : () -> f64"
 constant ListKinds = (InstructionType.IndexCall, InstructionType.InvokeWriteToList, InstructionType.CopyList, InstructionType.InvokeRemove)
 constant Exact = "    %t0c = arith.select %x0v, %x0i, %t0f : i1"
 constant LoadingBranch = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "a"), InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, 1))
@@ -42,14 +43,15 @@ Temp(suffix Text) Text
 Literal(literal Runtime/VmValue, slot Text, suffix Text, named = "") Texts
 	Copy.Literal(VmValue.OfNumber(1), "%r0", "").First is "    %t0c = arith.constant 0x3FF0000000000000 : f64"
 	Copy.Literal(VmValue.OfText("b"), "%s", "d0", "@dA_b").First.IndexOf(" @dA_b ") > 0
+	Copy.Literal(VmValue.AnyError, "%r0", "").First is "    %t0c = func.call @strict_any_error() : () -> f64"
 	if literal.kind is "Text"
 		return MlirConstants(function, position, named).Literal(literal.text, slot, suffix)
 	if literal.kind is "List"
 		return MlirLists(function, position, named).Literal(literal, slot, suffix)
-	if literal.kind is not in ("Number", "Boolean", "None")
+	if literal.kind is not in ("Number", "Boolean", "None", "Strict/Error")
 		return List(Text) + Unsupported(literal.kind + " constant")
-	let number = "    " + Temp(suffix + "c") + " = arith.constant " + Hex(literal.number) + " : f64"
-	(number, function.Store(Temp(suffix + "c"), slot))
+	let loaded = literal.kind is "Strict/Error" then AnyError else " = arith.constant " + Hex(literal.number) + " : f64"
+	("    " + Temp(suffix + "c") + loaded, function.Store(Temp(suffix + "c"), slot))
 Hex(number Number) Text
 	Copy.Hex(-2) is "0xC000000000000000"
 	let bytes = ByteEncoder.Empty.Double(number).bytes

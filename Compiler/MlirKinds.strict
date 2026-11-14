@@ -175,10 +175,11 @@ ElementKind(container Text) Text
 ConstantKind(literal Runtime/VmValue, texts Texts) Text
 	Graded.ConstantKind(VmValue.OfList(VmValue.OfText("a"), VmValue.OfText("b")), ("a", "b")) is "List(Text)"
 	Graded.ConstantKind(VmValue.OfNumber(1), List(Text)) is "Number"
+	Graded.ConstantKind(VmValue.AnyError, List(Text)) is "Error"
 	Graded.ConstantKind(VmValue.OfList(List(VmValue)), ("Strict/List(Mutable(Text))")) is "List(Text)"
 	Graded.ConstantKind(VmValue.OfList(VmValue.OfText("a"), VmValue.OfNumber(1)), List(Text)) is "List(Text, Number)"
 	if literal.kind is not "List"
-		return literal.kind
+		return TypeEntry.ShortName(literal.kind)
 	if literal.items.Length is 0
 		return texts.Length is 0 then "List(Number)" else TypeEntry.ShortName(texts(0))
 	let first = ConstantKind(literal.items.First, List(Text))
