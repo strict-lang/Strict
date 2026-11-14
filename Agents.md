@@ -55,10 +55,10 @@ Strict compiles itself natively (`Strict.strict` builds the `strict` command `st
 ## Speed
 The language exists so a computer can check and discard generated code in seconds (README: "within seconds", "almost immediately"). Tool time is product time. A warm run that used to be sub-second and is now many seconds, or a check that used to be about 5 s and is now minutes, is a failed change. Stop, name the command and the times, fix the cause or write one line in `performance.md`. Do not finish the suite, do not average more runs, do not call that a pass.
 
-Budgets on a warm cache (replace a number when `performance.md` has a newer measurement):
+Budgets on a warm cache (replace a number when `performance.md` or the Speed section of `ideas.md` has a newer measurement):
 - `strict test <file> unit`: milliseconds when `obj/Name.strictbinary` is current. About 1 s the first time for a heavy compiler file after a real edit. Several seconds on every file is a regression.
 - `strict test <file>` with no `unit` mutates every method in the file (README command line). That cost is real and expected only when the change is mutation or the user asked for mutants. A normal edit uses `unit`. `strict build` and `strict check` already skip mutation. A folder test is the light mutant pass (one random round), `full` wipes `obj/` and redoes everything.
-- `strict check <package>`: seconds. A warm check of a large game tree is about 10 s (DeltaEngine in `performance.md`, 442 files, was 160 s). Multiple minutes means stop.
+- `strict check <package>`: seconds. A warm check of a large game tree is about 10 s (DeltaEngine in the Speed section of `ideas.md`, 442 files, was 160 s). Multiple minutes means stop.
 - Rebuilding `strict.exe` (`strict build Strict.strict`) invalidates stamps once. One retest of the files you changed is the expected extra cost (a cold big check can be about 1-2 min). Do not rebuild it to be sure. Do not delete `obj/` or pass `full`.
 - Native folder tests, a self-build, and model or video runs (H3 and the rest of NeuralNetworks) are long on purpose. One run, only when this change needs that run. The all-folders all-games run stays once a day.
 
