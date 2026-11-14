@@ -48,7 +48,7 @@ Member(index Number) VmValue
 	None.Member(1).kind is "None"
 	OfNumber(3).Member(0).number is 3
 	Numbered.Member(1).items.Length is 2
-	let isBase = TypeEntry.ShortName(kind).Split("(").First is in ("Text", "Number", "Boolean", "List")
+	let isBase = TypeEntry.Based(kind) is in ("Text", "Number", "Boolean", "List")
 	isBase then value else index < items.Length then items(index) else None
 As(typeName Text) VmValue
 	(OfText("a").As("Strict/Number").number is 97) and (OfList(OfText("c")).As("Strict/Number").items.Length is 1)

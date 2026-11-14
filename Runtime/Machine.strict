@@ -131,10 +131,10 @@ Ownership(type TypeEntry, kind Text) Number
 	Hello.Ownership(Doubler, "Strict/Doubler") is 2
 	Hello.Ownership(TypeEntry.Numbers, VmValue.Numbered.kind) is 1
 	Hello.Ownership(TypeEntry("Strict/List", List(MemberEntry), List(MethodEntry)), "Strict/List") is 1
-	if (type.Name is kind) and (TypeEntry.ShortName(type.Name).Split("(").First is not "List")
+	let base = TypeEntry.Based(type.Name)
+	if (type.Name is kind) and (base is not "List")
 		return 2
-	let base = TypeEntry.ShortName(type.Name).Split("(").First
-	(kind is "List") or (base is TypeEntry.ShortName(kind).Split("(").First) then 1 else 0
+	(kind is "List") or (base is TypeEntry.Based(kind)) then 1 else 0
 Execute(method MethodEntry, locals List(VmValue), owner Text, depth = 0) VmValue
 	Frame.Doubling.Execute(Frame.Twice.method, Frame.Listed, "Strict/Doubler").number is 42
 	Machine(Frame.Doubling, isTracing = true).Execute(Frame.Twice.method, Frame.Listed, "D").number is 42
