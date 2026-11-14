@@ -964,6 +964,12 @@
   llvm.mlir.global internal constant @strict_statm_path("/proc/self/statm\00") : !llvm.array<17 x i8>
   llvm.mlir.global internal constant @strict_statm_format("%*s %ld\00") : !llvm.array<8 x i8>
   llvm.func @sscanf(!llvm.ptr, !llvm.ptr, ...) -> i32
+  // Process.Id: the id of this process, a strict.exe self-build skips its own server when it restarts them
+  func.func private @strict_process_id(%self: f64) -> f64 {
+    %process = llvm.call @getpid() : () -> i32
+    %id = arith.sitofp %process : i32 to f64
+    return %id : f64
+  }
   // Process.MemoryUsed: the resident set, the second number of /proc/self/statm in pages, 0 when unknown
   func.func private @strict_process_memoryused(%self: f64) -> f64 {
     %zero = arith.constant 0 : i64

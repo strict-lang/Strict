@@ -884,6 +884,13 @@
   }
   llvm.func @mach_task_self() -> i32
   llvm.func @task_info(i32, i32, !llvm.ptr, !llvm.ptr) -> i32
+  llvm.func @getpid() -> i32
+  // Process.Id: the id of this process, a strict.exe self-build skips its own server when it restarts them
+  func.func private @strict_process_id(%self: f64) -> f64 {
+    %process = llvm.call @getpid() : () -> i32
+    %id = arith.sitofp %process : i32 to f64
+    return %id : f64
+  }
   // Process.MemoryUsed: resident_size at byte 8 of mach_task_basic_info (flavor 20, 12 words), 0 when unknown
   func.func private @strict_process_memoryused(%self: f64) -> f64 {
     %zero = arith.constant 0 : i64

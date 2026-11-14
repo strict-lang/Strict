@@ -29,6 +29,9 @@ Collected
 Elapsed Number
 	Process.Elapsed > 0
 	0
+Id Number
+	Process.Id > 0
+	0
 MemoryUsed Number
 	Process.MemoryUsed > 1000000
 	0

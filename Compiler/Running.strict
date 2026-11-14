@@ -28,7 +28,8 @@ IsStopped(line Text) Boolean
 	Missing.IsStopped(Line)
 	Served.IsStopped("12\t\"C:/s/strict.exe\" serve 2")
 	Served.IsStopped("12\t\"C:/s/strict.exe\" build Strict.strict") is false
-	(IsStrict is false) or (Command(line).IndexOf(" serve") > 0)
+	Served.IsStopped((Process.Id to Text) + "\t\"C:/s/strict.exe\" serve 2") is false
+	(Id(line) is not (Process.Id to Text)) and ((IsStrict is false) or (Command(line).IndexOf(" serve") > 0))
 IsStrict Boolean
 	Served.IsStrict
 	Missing.IsStrict is false

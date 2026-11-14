@@ -1110,6 +1110,12 @@
     %bytes = arith.uitofp %available : i64 to f64
     return %bytes : f64
   }
+  // Process.Id: the id of this process, a strict.exe self-build skips its own server when it restarts them
+  func.func private @strict_process_id(%self: f64) -> f64 {
+    %process = llvm.call @GetCurrentProcessId() : () -> i32
+    %id = arith.uitofp %process : i32 to f64
+    return %id : f64
+  }
   llvm.func @K32GetProcessMemoryInfo(!llvm.ptr, !llvm.ptr, i32) -> i32
   // Process.MemoryUsed: the working set, WorkingSetSize at byte 16 of PROCESS_MEMORY_COUNTERS (72 bytes), 0 when unknown
   func.func private @strict_process_memoryused(%self: f64) -> f64 {

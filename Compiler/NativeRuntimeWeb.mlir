@@ -683,6 +683,11 @@
     %zero = arith.constant 0.0 : f64
     return %zero : f64
   }
+  // Process.Id: a browser page has no process id
+  func.func private @strict_process_id(%self: f64) -> f64 {
+    %none = arith.constant 0.0 : f64
+    return %none : f64
+  }
   // Process.MemoryUsed: bytes of the WebAssembly memory (the heap only grows, it is never given back)
   func.func private @strict_process_memoryused(%self: f64) -> f64 {
     %heap = llvm.call @emscripten_get_heap_size() : () -> i32
