@@ -36,7 +36,32 @@ IsDestined Boolean
 		if (IsSafe(value, index, writes) is false) or isWrite and (builder is not "") and (value.texts(0) is not builder)
 			return false
 		builder = isWrite then value.texts(0) else builder
-	builder is not ""
+	(builder is not "") or IsLooped
+IsLooped Boolean
+	MlirDestined(MlirBytes.Flattening.function, 0).IsDestined
+	Made.IsLooped is false
+	MlirDestined(MlirBytes.Listing.function, 0).IsLooped is false
+	mutable loops = 0
+	for function.method.instructions
+		if (value.kind is Write) and (MlirFlats(function, index).Packed(value.texts(0)) > 0)
+			return false
+		if (value.kind is InstructionType.LoopBegin) and (MlirBytes(function, index).Flattened > 0)
+			if IsEnding(function.method.LoopEndOf(index) + 3) is false
+				return false
+			loops = loops + 1
+	loops > 0
+IsEnding(start Number) Boolean
+	MlirDestined(MlirBytes.Flattening.function, 0).IsEnding(8)
+	MlirDestined(MlirBytes.Flattening.function, 0).IsEnding(7) is false
+	let steps = function.method.instructions
+	for Range(start, steps.Length)
+		let entry = steps(value)
+		if entry.kind is InstructionType.Return
+			return true
+		let isChecked = entry.kind is InstructionType.Invoke then entry.texts(1) is "Validated" else false
+		if (isChecked or (entry.kind is InstructionType.CheckError)) is false
+			return false
+	false
 IsSafe(entry InstructionEntry, at Number, writes Number) Boolean
 	Swapped.IsSafe(Swapping.instructions(5), 5, 1) is false
 	Swapped.IsSafe(Swapping.instructions(8), 8, 2)
