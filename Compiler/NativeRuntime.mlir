@@ -11158,12 +11158,13 @@
   // a copy to grow: its holder is a small block of its own, its items lie apart with twice the room like those of a
   // grown list; in a pool job a holder inside a large list block is never this thread's (strict_gc_mine), each Add
   // copied the whole list again (EntryDecoder.Of decoding chunks of a folder test took minutes)
-  // the copy a list grows in gets room for twice its items and 16 more: a list filled by Add from nothing (the
-  // tokens of a line, 15 on average) grew three times with 4 (4, 12, 28), 44-50 instead of 48-55 ns per token
+  // the copy a list grows in gets room for twice its items and 4 more, like a list made by its first Add
+  // (strict_list_first): room for 16 sped up the tokens of a line by 5% but made every short list four times as big,
+  // the 450000 lists of one to three numbers of the Qwen tokenizer folder took 0.49 instead of 0.28 s
   func.func private @strict_list_apart(%list: f64) -> f64 {
     %eight = arith.constant 8.0 : f64
     %two = arith.constant 2.0 : f64
-    %four = arith.constant 16.0 : f64
+    %four = arith.constant 4.0 : f64
     %none = arith.constant 0.0 : f64
     %length = func.call @strict_list_length(%list) : (f64) -> f64
     %copy = func.call @strict_list_new(%none, %length) : (f64, f64) -> f64
@@ -11347,7 +11348,7 @@
   // place, instead of a copy of nothing and one more view for the added version
   func.func private @strict_list_first(%element: f64) -> f64 attributes {llvm.passthrough = ["noinline"]} {
     %nothing = arith.constant 0.0 : f64
-    %room = arith.constant 16.0 : f64
+    %room = arith.constant 4.0 : f64
     %created = func.call @strict_list_new(%room, %nothing) : (f64, f64) -> f64
     %view = func.call @strict_ptr(%created) : (f64) -> !llvm.ptr
     %viewholder = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
@@ -16075,13 +16076,30 @@
     %result = func.call @strict_bits(%copy) : (!llvm.ptr) -> f64
     return %result : f64
   }
+  // a text outside of the heap with its two lengths in front like every text (the path and the text of File.InMemory
+  // are compared and read as texts), freed 16 bytes before it
+  func.func private @strict_kept_sized(%text: f64) -> f64 {
+    %one = arith.constant 1 : i64
+    %lengths = arith.constant 16 : i64
+    %pointer = func.call @strict_text_ptr(%text) : (f64) -> !llvm.ptr
+    %bytes = func.call @strict_text_size(%text) : (f64) -> i64
+    %withEnd = arith.addi %bytes, %one : i64
+    %size = arith.addi %withEnd, %lengths : i64
+    %block = func.call @strict_malloc(%size) : (i64) -> !llvm.ptr
+    %copy = llvm.getelementptr %block[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %copied = llvm.call @memcpy(%copy, %pointer, %withEnd) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %characters = func.call @strict_text_counted(%copy, %bytes) : (!llvm.ptr, i64) -> i64
+    func.call @strict_text_sized(%copy, %bytes, %characters) : (!llvm.ptr, i64, i64) -> ()
+    %result = func.call @strict_bits(%copy) : (!llvm.ptr) -> f64
+    return %result : f64
+  }
   // the previous block is freed outside of pool jobs, inside one a worker may still read the block of its forker
   func.func private @strict_file_inmemory(%path: f64, %text: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
     %pairBytes = arith.constant 16 : i64
-    %keptPath = func.call @strict_kept_text(%path) : (f64) -> f64
-    %keptText = func.call @strict_kept_text(%text) : (f64) -> f64
+    %keptPath = func.call @strict_kept_sized(%path) : (f64) -> f64
+    %keptText = func.call @strict_kept_sized(%text) : (f64) -> f64
     %pair = func.call @strict_malloc(%pairBytes) : (i64) -> !llvm.ptr
     llvm.store %keptPath, %pair : f64, !llvm.ptr
     %textSlot = llvm.getelementptr %pair[1] : (!llvm.ptr) -> !llvm.ptr, f64
@@ -16103,8 +16121,10 @@
     %oldText = llvm.load %oldTextSlot : !llvm.ptr -> f64
     %oldPathPointer = func.call @strict_text_ptr(%oldPath) : (f64) -> !llvm.ptr
     %oldTextPointer = func.call @strict_text_ptr(%oldText) : (f64) -> !llvm.ptr
-    llvm.call @free(%oldPathPointer) : (!llvm.ptr) -> ()
-    llvm.call @free(%oldTextPointer) : (!llvm.ptr) -> ()
+    %oldPathBlock = llvm.getelementptr %oldPathPointer[-16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %oldTextBlock = llvm.getelementptr %oldTextPointer[-16] : (!llvm.ptr) -> !llvm.ptr, i8
+    llvm.call @free(%oldPathBlock) : (!llvm.ptr) -> ()
+    llvm.call @free(%oldTextBlock) : (!llvm.ptr) -> ()
     llvm.call @free(%oldPair) : (!llvm.ptr) -> ()
     cf.br ^done
   ^done:
