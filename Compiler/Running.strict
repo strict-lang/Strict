@@ -6,6 +6,7 @@ constant Older = " -and $_.CreationDate -lt $file.LastWriteTime }"
 constant Printed = " | ForEach-Object { '' + $_.ProcessId + [char]9 + $_.CommandLine } }"
 constant Missing = Running(Logger, "Compiler/output/Missing.exe")
 constant Served = Running(Logger, "C:/s/strict.exe")
+constant EndedCodes = (0, 128)
 constant Line = "12\t\"C:/s/Sum.exe\" 5"
 Listed Texts
 	Missing.Listed.Length is 0
@@ -41,8 +42,9 @@ Stopping Texts
 	kept
 Ended(id Text) Boolean
 	Missing.Ended("0") is false
-	let isClosed = Process.RunTool("taskkill", "/PID " + id).exitCode is 0
-	isClosed or (Process.RunTool("taskkill", "/F /PID " + id).exitCode is 0)
+	Missing.Ended("3")
+	let isClosed = Process.RunTool("taskkill", "/PID " + id).exitCode is in EndedCodes
+	isClosed or (Process.RunTool("taskkill", "/F /PID " + id).exitCode is in EndedCodes)
 Restarted(old Text) Text slow
 	Missing.Restarted("Compiler/output/Missing.old.exe") is ""
 	if Directory.Files(Path(executable).PathOnly.text + "/obj", "strict.server*").Length is 0
