@@ -4,7 +4,7 @@ constant Returned = Inlines(("A Text", "\tif GpuMemory.Evicted is Error", "\t\tr
 constant Ordered = Inlines(("A Text", "\tlet answer = Run(1)", "\tGpuMemory.Evicted is Error then \"\" else answer"))
 constant Padding = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 constant Nested = "\t\treturn a then 1 else 2"
-constant Keywords = ("let", "mutable", "for", "if", "else", "return")
+constant Keywords = ("let", "mutable", "for", "if", "else", "return", "ignore")
 Issues ValidationIssues
 	Evicted.Issues.First to Text is "SingleUseLetMustBeInlined: evicted, use GpuMemory.Evicted in the next line"
 	Returned.Issues.First to Text is "IfReturnMustBeThenElse: GpuMemory.Evicted is Error then \"\" else answer"

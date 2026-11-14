@@ -9,6 +9,7 @@ constant WriterParameters = Scope(("Write", "Write", "Read", "Seek", "Seek", Typ
 constant Writers = KnownTypes(("W", "V"), (KnownTypes.NoMembers, KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers), (WriterParameters, Scope(("Go", "Go"), ("a", "b"))))
 constant OverloadShapes = (TypeShape("Write(lines Texts)"), TypeShape("Go Number", "\t1"))
 constant Writing = TypeShape("has W", "has V")
+constant DataNames = ("Content", "Tools")
 Unresolved(path Text, inference TypeInference) Texts
 	ResolveCheck.Unresolved("Logger.strict", Inference(("Logger.strict", "TextWriter.strict"))).Length is 0
 	let lines = File(path).ReadLines
@@ -41,13 +42,22 @@ Located(path Text, line Number, issue Text) Text
 Tree(folder Text) Texts
 	ResolveCheck.Tree("./Math") is List(Text) + "./Math"
 	"./Examples/NativeAdd" is in ResolveCheck.Tree("./Examples")
-	mutable folders = List(Mutable(Text)) + folder
+	ResolveCheck.Tree("./Tools").Length is 0
+	mutable folders = List(Mutable(Text))
+	if Directory.Files(folder, "*.strict").Length > 0
+		folders.Add(folder)
 	for Directory.Directories(folder)
 		let name = Path(value.Replace("\\", "/")).FileName.text
-		let first = name(0)
-		if (first is first.Upper) and (first is not first.Lower)
+		if IsCode(name, folder + "/" + name)
 			folders = folders + Tree(folder + "/" + name)
 	folders
+IsCode(name Text, path Text) Boolean
+	ResolveCheck.IsCode("Math", "./Math") and ResolveCheck.IsCode("Content", "./Math")
+	(ResolveCheck.IsCode("Release", "./Math") or ResolveCheck.IsCode("Tools", "./Tools")) is false
+	(ResolveCheck.IsCode("obj", "./obj") or ResolveCheck.IsCode(".git", "./.git")) is false
+	let first = name(0)
+	let isData = (name is "Release") or ((name is in DataNames) and (Directory.Files(path, "*.strict").Length is 0))
+	(first is first.Upper) and (first is not first.Lower) and (isData is false)
 AllFiles(root Text) Texts
 	mutable files = Directory.Files(root, "*.strict")
 	for Directory.Directories(root)

@@ -3,7 +3,25 @@ constant Batch = 128
 constant CrashExitCode = 128
 Tested(folder Text, root Text, isRecursive = true, isMutating = false, isFull = false) Number
 	Folders(Logger).Tested("Missing", ".") is 0
-	Ran(Commands("test", NativeFolder(logger, isRecursive = isRecursive).Files(folder), root, isMutating, isFull))
+	let files = NativeFolder(logger, isRecursive = isRecursive).Files(folder)
+	let pending = Pending(files, isMutating)
+	mutable failed = Ran(Commands("test", pending, root, isMutating, isFull))
+	for files - pending
+		failed = failed + Execute(logger, isMutating = isMutating).Cached(value)
+	failed
+Pending(files Texts, isMutating Boolean) Texts slow
+	Folders(Logger).Pending(List(Text) + "Missing.strict", false) is ("Missing.strict")
+	Execute(Logger).Kept("Examples/Sum.strict", ".") is 0
+	Folders(Logger).Pending(List(Text) + "Examples/Sum.strict", false).Length is 0
+	for files
+		if IsChanged(value) or (isMutating and (MutationCache(value).IsCurrent is false))
+			value
+IsChanged(path Text) Boolean slow
+	Folders(Logger).IsChanged("Missing.strict")
+	let cache = BinaryFile(FileCompiler.Normalized(path))
+	let entries = cache.Head(File(cache.Path).ReadBytes)
+	let isTested = cache.IsCurrent(entries) and BinaryLinks(cache).IsTested(entries)
+	Execute(logger).IsEdited(path) or (isTested is false)
 Commands(command Text, paths Texts, root Text, isMutating = false, isFull = false) Texts
 	Folders(Logger).Commands("test", List(Text) + "a.strict", ".") is ("test \"a.strict\" \".\" unit")
 	Folders(Logger).Commands("test", List(Text) + "a.strict", ".", true) is ("test \"a.strict\" \".\" unit mutations")

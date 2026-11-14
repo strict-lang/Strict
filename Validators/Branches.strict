@@ -1,0 +1,59 @@
+has lines Texts
+constant Hint = ", use it without the condition"
+constant Doubled = Branches(("Run", "\tPlay(click) is Error then 1 else 1"))
+constant Chained = Branches(("Run", "\ta then 1 else b then done else done"))
+constant Nested = Branches(("Run", "\tLog(a then (x, y) else (x, y), 2)"))
+constant Differing = Branches(("Run", "\ta then 1 else 2", "\tLog(a then x else y, x)", "\ta then 1 else 1 + 2", "\tLog(a then 1, 1)", "\tb then 1"))
+constant Same = Branches(("Run", "\tif a", "\t\tLog(0)", "\t\tLog(1)", "\telse", "\t\tLog(0)", "\t\tLog(1)", "\tLog(2)"))
+constant Chain = Branches(("Run", "\tif a", "\t\tLog(1)", "\telse if b", "\t\tLog(2)", "\telse", "\t\tLog(2)", "\t\tLog(3)"))
+Issues List(ValidationIssue)
+	Doubled.Issues.First to Text is "ConditionalBranchesMustDiffer: both branches are 1, use it without the condition"
+	(Doubled.Issues.First.Line is 2) and Chained.Issues.First.target.StartsWith("both branches are done")
+	(Nested.Issues.First.target is "both branches are ( x , y )" + Hint) and (Differing.Issues.Length is 0)
+	Same.Issues.Length is 1
+	mutable issues = List(Mutable(ValidationIssue))
+	for lines
+		issues = issues + Repeated(index) + Blocks(index)
+	issues
+Blocks(at Number) List(ValidationIssue)
+	Same.Blocks(4).First to Text is "ConditionalBranchesMustDiffer: both branches are Log(0), use it without the condition"
+	(Same.Blocks(1).Length is 0) and (Chain.Issues.Length is 0)
+	if lines(at).Trim is not "else"
+		return List(ValidationIssue)
+	let depth = BodyParser.Indent(lines(at))
+	let header = Header(at, depth)
+	let chosen = lines.Slice(header + 1, at - header - 1)
+	let other = lines.Slice(at + 1, BodyParser(lines).BlockEnd(at + 1, depth + 1) - at - 1)
+	chosen is other then List(ValidationIssue) + Issue(chosen.First.Trim, at) else List(ValidationIssue)
+Header(at Number, depth Number) Number
+	Chain.Header(5, 1) is 3
+	mutable header = 0
+	for Range(0, at)
+		if BodyParser.Indent(lines(value)) is depth
+			header = value
+	header
+Issue(branch Text, at Number) ValidationIssue
+	Same.Issue("1", 0).Line is 1
+	ValidationIssue("ConditionalBranchesMustDiffer", "both branches are " + branch + Hint, at + 1)
+Repeated(at Number) List(ValidationIssue)
+	Doubled.Repeated(1).Length is 1
+	Doubled.Repeated(0).Length is 0
+	Branches(List(Text) + "constant One = a then 1 else 1").Issues.Length is 1
+	let tokens = Tokenizer(lines(at).Trim).Tokens
+	for tokens
+		if value is "then"
+			let chosen = Branch(tokens, index + 1, ("else", ","))
+			let next = index + chosen.Length + 1
+			if (next < tokens.Length) and (tokens(next) is "else") and (Branch(tokens, next + 1, List(Text) + ",") is chosen)
+				Issue(Text.Combine(chosen, " "), at)
+Branch(tokens Texts, start Number, stops Texts) Texts
+	Branches.Branch(("a", "then", "1", "else", "2"), 2, List(Text) + "else") is ("1")
+	Branches.Branch(("f", "(", "a", ",", "b", ")", ")"), 0, List(Text) + ",") is ("f", "(", "a", ",", "b", ")")
+	mutable depth = 0
+	mutable branch = List(Mutable(Text))
+	for Range(start, tokens.Length)
+		depth = depth + (tokens(value) is "(" then 1 else (tokens(value) is ")" then -1 else 0))
+		if (depth < 0) or ((depth is 0) and (tokens(value) is in stops))
+			return branch
+		branch.Add(tokens(value))
+	branch

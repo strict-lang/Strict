@@ -1,6 +1,9 @@
 has tokens Texts
 constant ForProblem = "ForWithBodyOnlyAsMethodResult: "
 constant ForHint = ", a for with a body can only be the last line of a method, move it into one"
+constant Starters = ("return", "if", "for", "else")
+constant IgnoreProblem = "IgnoreMustWrapOneExpression: "
+constant IgnoreHint = ", write ignore(expression) to call it and drop its result and Error"
 constant SingleHint = ", a single iterator is value: for list instead of for x in list"
 constant MatchHint = ", name each iterator once: for y, x in Height, Width or for width, height in sizes"
 constant Mismatched = StatementParser(Tokenizer("for a, b, c in x, y").Tokens)
@@ -25,7 +28,18 @@ ParseStatement SyntaxNode
 		let declared = SyntaxNode("Declaration", first + " " + tokens(1), Rest(3))
 		let isLooped = (tokens.Length > 3) and (tokens(3) is "for")
 		return isLooped then SyntaxNode("Invalid", ForProblem + declared + ForHint) else declared
-	first is in ("return", "if", "for", "else") then Keyword(first) else ParseAssignmentOrExpression
+	first is "ignore" then Ignored else first is in Starters then Keyword(first) else ParseAssignmentOrExpression
+Ignored SyntaxNode
+	StatementParser(Tokenizer("ignore(File.Delete(name))").Tokens).ParseStatement to Text is "ignore(File.Delete(name))"
+	StatementParser(Tokenizer("ignore(Run)").Tokens).ParseStatement.Kind is "Ignore"
+	StatementParser(Tokenizer("ignore Run").Tokens).Ignored to Text is IgnoreProblem + "ignore Run" + IgnoreHint
+	StatementParser(Tokenizer("ignore(a) + 1").Tokens).Ignored.Kind is "Invalid"
+	StatementParser(Tokenizer("ignore(a, b)").Tokens).Ignored.Kind is "Invalid"
+	StatementParser(Tokenizer("ignore.Length").Tokens).Ignored.Kind is "Invalid"
+	let call = Syntax.ParseRange(0, tokens.Length)
+	let isWrapped = (call.text is "ignore") and (call.children.Length is 1) and (call.children(0).Kind is not "Missing")
+	let problem = IgnoreProblem + Text.Combine(tokens, " ") + IgnoreHint
+	isWrapped then SyntaxNode("Ignore", "ignore", call.children) else SyntaxNode("Invalid", problem)
 Keyword(first Text) SyntaxNode
 	StatementParser(Tokenizer("for as long as a").Tokens).Keyword("for").text is "for as long as"
 	StatementParser("return").Keyword("return").Kind is "Return"

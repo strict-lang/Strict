@@ -17,6 +17,7 @@ constant Lines = ("Names Texts", "\tvalue")
 constant Looped = ("Names Texts", "\tfor names", "\t\tvalue")
 constant Drawers = Scope(("Drawn", "Count"), ("None", "Number"))
 constant Tail = ScopedStatement(SyntaxParser(Tokenizer("Drawn(1)").Tokens).Parse, Named, 1)
+constant Ignored = SyntaxNode("Ignore", "ignore", List(SyntaxNode) + Tail.statement)
 constant Branched = ScopedStatement(SyntaxParser(Tokenizer("name is \"a\" then 0 else Drawn(1)").Tokens).Parse, Named, 1)
 constant Argued = ScopedStatement(SyntaxParser(Tokenizer("Count(Drawn(1))").Tokens).Parse, Dropped, 1)
 constant Compared = ScopedStatement(SyntaxParser(Tokenizer("Drawn(1) is Error").Tokens).Parse, Named, 1)
@@ -25,7 +26,7 @@ constant Valued = SyntaxParser(Tokenizer("Count(1)").Tokens).Parse
 constant Assigned = ScopedStatement(SyntaxNode("Declaration", "let x", List(SyntaxNode) + Tail.statement), Dropped, 1)
 constant Counting = ("Count Number", "\tDrawn(1)")
 constant Running = ("Run", "\tDrawn(1)")
-constant Keeping = ("Return", "Declaration", "Reassignment")
+constant Keeping = ("Return", "Declaration", "Reassignment", "Ignore")
 constant Calls = ("Call", "Member", "MethodCall", "Identifier")
 constant Unvalued = "ReturnTypeMismatch: Drawn has no return type, its call gives no value"
 Issue(scoped ScopedStatement, current Scope, lines Texts) Text
@@ -83,7 +84,7 @@ Unresulted(scoped ScopedStatement, current Scope, lines Texts) Text
 	names.Length is 0 then "" else "ReturnTypeMismatch: " + names.First + " has no return type, its call gives no value"
 Resultless(node SyntaxNode, isValue Boolean, scope Scope, current Scope) Texts
 	Naming.Resultless(Branched.statement, false, Named, Drawers) is (List(Text) + "Drawn")
-	Naming.Resultless(Valued, true, Named, Drawers).Length is 0
+	(Naming.Resultless(Valued, true, Named, Drawers) + Naming.Resultless(Ignored, false, Named, Drawers)).Length is 0
 	Naming.Resultless(SyntaxParser(Tokenizer("Drawn(1) + 1").Tokens).Parse, true, Named, Drawers) is (List(Text) + "Drawn")
 	let isCall = (node.Kind is in Calls) and (scope.TypeOf(node.text) is "")
 	if isValue and isCall and (inference.TypeOf(node, scope, current) is "None")

@@ -1,2 +1,1 @@
-- `Intermediates.Free` skipping an old copy in use has no test: `File.Delete` releases this process's own `File.Locked` (`strict_file_unlocked`), so a test line needs another process holding `Held.old.exe`.
-- `strict check .` folder tests fail now and then with `UnresolvedLink: Strict/Number.Round` (also `Error.Code`, `Text.Lines`), more after many files changed, a different set each run, never alone: parallel runs racing on the base type caches? (2026-11-13).
+- `strict test Games/TorinsTowers native` (DeltaEngine) crashes strict.exe with AccessViolation in MLIR emission (BuildProfile.Emitted <- MlirModule.Declared <- MlirModule.Text <- NativeBuild.Tested), also with the build before 0cc1d088 (2026-11-14).

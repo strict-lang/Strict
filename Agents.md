@@ -19,6 +19,7 @@ Before writing any code, stop at the first rung that holds:
 - Pick the edge-case-correct option when two stdlib approaches are the same size, lazy means less code, not the flimsier algorithm.
 - No marker comments. A comment is rarely needed (.strict files have none), when one is needed keep it short and precise.
 - Not lazy about: input validation at trust boundaries, error handling that prevents data loss, security, accessibility, the calibration real hardware needs (the platform is never the spec ideal, a clock drifts, a sensor reads off), anything explicitly requested. Lazy code without its check is unfinished: non-trivial logic leaves ONE runnable check behind, the smallest thing that fails if the logic breaks (an assert-based demo/self-check or one small test file; no frameworks, no fixtures). Trivial one-liners need no test.
+- Speed is a hard rule, same rank as correctness. Read Speed before any test, check, build or benchmark. A run that got much slower is the bug. Do not carry on.
 
 ## General Guidelines
 - Drop: articles (a/an/the), filler (just/really/basically), pleasantries, hedging
@@ -45,11 +46,68 @@ Strict compiles itself natively (`Strict.strict` builds the `strict` command `st
 - When debugging in this repo, continue working toward the root cause instead of stopping after a fixed small number of steps.
 
 ## Project-Specific Rules
-- Priorities: first clean strict rules, exactly one way to solve each problem; second performance and parallelism, everything as fast as possible and close to the hardware (CPU, GPU, NPU, TPU, CUDA, distributed over the network).
+- Priorities, both hard: exactly one way to solve each problem, and that way stays fast enough to use. Clean rules and runtime speed have the same rank. `strict check` and a file's unit tests finish in seconds (Speed). Native code stays close to the hardware (CPU, GPU, NPU, TPU, CUDA, distributed over the network). A change that is correct and makes those tools minutes-slow is not done. Do not add mutable language features to go faster; speed up the internal representation (next bullet).
 - Values are immutable in the language: there are no mutable data types like a growing list, appending gives a new list every time. The runtime (VM, interpreter, compiled code) does not copy for that: like functional languages it keeps the same list, changes it in place and hands back the same memory as the new list, the previous version is not used anymore. If an old version is used again the runtime has to copy, but that is bad code (a list is either fixed, or growing and then only its latest version is used). Never add mutable language features for speed, optimize the internal representation instead.
 - Test with `strict test <file>` (Strict VM, in memory), build natively with `strict build <file>` (`strict.exe` in the repository root, a type without Run builds its tests natively into `Name.test.exe`), validate a folder with `check <folder>` (see README "Command line"). After changing `Compiler/`, `Bytecode/`, `Expressions/` or `Compiler/NativeRuntime*.mlir`, rebuild it once (`strict build Strict.strict`; it holds the compiler and the VM) so the tests use the new code; the tests catch breakage. The slow fixpoint check (stage 2 and 3 identical) only runs before a bigger commit or at the end of the day, go back to it per change if things start breaking. A runtime change the old compiler's code can't use needs stage 1 built with the old runtime. When the bootstrap seed can no longer build the current source, regenerate `Compiler/Bootstrap.mlir` from a fixpoint build of `Strict.strict` in the same commit.
 - Commands for the user to run go into a Windows PowerShell 5.1 window: no `!` prefix, no `&&` (use `;`), no grep, xargs, sed, awk or heredocs (those only exist in the Bash tool). Use Where-Object/ForEach-Object.
 - Every type including Color should be able to call Any.strict methods like `to Text`; `to Text` should route through the Any-style text conversion rather than a wrong type-specific conversion.
+
+## Speed
+The language exists so a computer can check and discard generated code in seconds (README: "within seconds", "almost immediately"). Tool time is product time. A warm run that used to be sub-second and is now many seconds, or a check that used to be about 5 s and is now minutes, is a failed change. Stop, name the command and the times, fix the cause or write one line in `performance.md`. Do not finish the suite, do not average more runs, do not call that a pass.
+
+Budgets on a warm cache (replace a number when `performance.md` has a newer measurement):
+- `strict test <file> unit`: milliseconds when `obj/Name.strictbinary` is current. About 1 s the first time for a heavy compiler file after a real edit. Several seconds on every file is a regression.
+- `strict test <file>` with no `unit` mutates every method in the file (README command line). That cost is real and expected only when the change is mutation or the user asked for mutants. A normal edit uses `unit`. `strict build` and `strict check` already skip mutation. A folder test is the light mutant pass (one random round), `full` wipes `obj/` and redoes everything.
+- `strict check <package>`: seconds. A warm check of a large game tree is about 10 s (DeltaEngine in `performance.md`, 442 files, was 160 s). Multiple minutes means stop.
+- Rebuilding `strict.exe` (`strict build Strict.strict`) invalidates stamps once. One retest of the files you changed is the expected extra cost (a cold big check can be about 1-2 min). Do not rebuild it to be sure. Do not delete `obj/` or pass `full`.
+- Native folder tests, a self-build, and model or video runs (H3 and the rest of NeuralNetworks) are long on purpose. One run, only when this change needs that run. The all-folders all-games run stays once a day.
+
+Before starting a command, state how long it should take. Unknown means run the smallest slice first (`unit` on one file, one package, one quality, one benchmark case) and read that time. Then decide whether a wider run is justified.
+
+Repeats scale with one run, not with how sure you want to feel:
+- Under about 100 ms: a short warmup and a few repeats are reasonable.
+- A few seconds: one timed run. A second run only to separate a cold cache from the steady time.
+- Tens of seconds or longer (self-build, native game test, one H3 quality, a full mutant file, anything around half a minute or 35 minutes): take the first result. No warmup loop, no three-run average, no other modes "while you are here".
+
+Stop when a run is about 10x the last known time, when there is no progress and the budget above is already past, or when the output shows work outside the change. Kill it. Report the command, the elapsed time and the likely cause. Do not start the same command again hoping it finishes. Check these causes first: the command walked `obj/`, `artifacts/`, `Release/` or `Tools/`; it used `strict test` without `unit`; it repeated a long benchmark; it rebuilt `strict.exe` or wiped `obj/` without need; a new validator or test walks every file of every folder, including generated trees.
+
+Generated trees are not source. `strict check` already skips `obj`, `Release`, `.git`, lowercase folders such as `artifacts/`, and `Content` or `Tools` folders with no `.strict` file. Still do not point a recursive test, check, format, build or file search at `artifacts/`, `obj/`, `Release/` or `Tools/` unless the bug is in that tree. A `.strict` file under `artifacts/` is an old probe, not a package. Do not `strict check .` or `strict test .` from the repository root as a casual check; name the package you changed.
+
+The red run and the green run of TDD are two `unit` runs of that one file. That is the loop. A third run, the folder, the native build or a benchmark waits until those two were inside the budget.
+
+## Learned the hard way
+The same corrections, from this repo's sessions. Grok's own memory had almost none of them. Claude's project memory did.
+
+Work
+- Edit the main tree. No worktrees and no scratch copies of Strict, DeltaEngine, StrictComfy or Ben. Build and test in the real repo. Other sessions share the tree: leave their edits, and do not revert a file you did not change.
+- Commit on master when the files you changed are green, about once per 1-2 hours, without pushing. No branch per task. A branch only when the user wants master kept running across multi-day work. Stage by name. Never `git add -A`. Never commit `Release/`, executables, `.ptx`, `.fatbin`, `.safetensors` or other binaries. The user commits those for a release. Name a commit hash only from `git log` after the commit.
+- In another repo, compare `git status` after a check or test and restore tracked files that run rewrote. DeltaEngine commits `Content/*.strictbinary`. Do not commit there unless asked.
+- A self-build that crashes or runs far past a couple of minutes is a poisoned compiler. Recover with `Compiler\Bootstrap.cmd`. Keep the root `strict.exe` working. Other projects use it immediately. Do not kill every `strict.exe`. That kills other sessions. `strict stop` stops servers of that executable only. Compare executable variants with `STRICT_SERVER=0`.
+- This PC has an RTX 3080 with 10 GB. A 4090 timing is not verified here. Before a Moss or H3 run, check that no other `MossImage` or `H3Video` is running. Two of them page VRAM and stall the machine.
+- Say how long a command should take before it starts. A silent half hour reads as stuck. Post a line while a long run is still going.
+- Git Bash `python3` on this PC is the Windows Store stub. The real interpreter is Python 3.13 in `%LOCALAPPDATA%\Programs\Python\Python313`.
+
+What to measure
+- While fixing, check and `strict test <file> unit` the files you changed, or their folder. One full check at the end of a big change. The nightly run owns the rest.
+- Web and GPU benchmarks stay at 480p or below (256 and 512 crops). One run. Under 10% is noise. The number that matters is time per image or per video. Load time and a LoRA merge are not.
+- A GPU text difference is a bug when the logits diverge. Qwen3 0.6B position 10 is a near tie between two tokens. Compare logits against `STRICT_GPU=0` before calling the text wrong.
+- Speed beats a smaller file only above about 25%. A few percent is noise. A semantics fix that matches the README still lands. Write its measured cost in `performance.md` in that change. A blow-up of about 10x is the Speed rule.
+- Benchmark `Release/<Platform>`. A plain `strict build`, the VM and test executables keep debug checks. A check that costs more than about 1% stays out of release. An error in a release build still surfaces.
+- Do not time a step by waiting on the GPU. Queue the next step. Read a stamp when it is done.
+
+Code that looks right and does something else
+- A method whose only line is a test has no tests. That line is the body.
+- The test section ends at the first `let`, and also when two `constant` lines sit in a row. Later lines run as the body.
+- `and` and `or` run both sides. A guard that must skip the right side is `then`/`else` or an early return.
+- An Error passed as an argument returns from the caller. A test keeps it in a `let` and checks `is Error` before `.Name`.
+- A method named `Run` makes the file a program (`Name.exe`, no test executable).
+- Tests inside `Dictionary.strict` run the Strict methods, not the runtime natives. Test the natives from a type that uses a `Dictionary`.
+- A type already at the method limit gets a new small type. Do not grow `TypeInference`, `KnownTypes`, `ResolveCheck`, `FileCheck`, `TypeShape`, `Machine` or `Frame`.
+- `(x)` around one value is a one-element list.
+- There are no warnings. A loop that belongs on the GPU and falls back to the CPU is a fatal Error. No compatible GPU is one log line, then the CPU.
+- Do not add a file over about 1 MB. Fixtures stay tiny. Application data lives in its own repo. A README says what a package is and how to use it.
+- Mutation stays off IO and off anything that loads a model. Put that logic in a helper with small literal inputs. Ask before a test you expect to take more than a few minutes.
+- Do not pipe `strict build` or `strict test` through a command that hides the exit code.
 
 ## Code Style
 - No empty lines are allowed inside methods.
@@ -61,6 +119,7 @@ Strict compiles itself natively (`Strict.strict` builds the `strict` command `st
 - Do not remove TODOs until the code has actually been improved and fixed. When there are tests failing that cover the TODO, the TODO still needs to be tested and fixed before removal.
 
 ## Tests
+- A normal edit is `strict test <file> unit`. Without `unit`, a file run mutates every method and is a separate slow command (Speed). If that `unit` run is already over its budget, fix the slowness before the package, the native build or another run.
 - Tests are the lines at the start of every method. `strict test <file>` runs them on the Strict VM, its exit code is the number of failed tests. A file whose `.strictbinary` is up to date counts as passed without running; the `.strictbinary` also stamps the strict executable that compiled it, so a rebuilt (or copied) `strict.exe` compiles and tests every file again once (mutation results stay cached by source content). A native folder test (`strict test <folder> native`) stays `Tests up to date` while `Tests.test.exe` is newer than the sources, also after a compiler change: that is intended, delete `obj/Tests.test.exe` (or run the big nightly run from clean folders) to force it. `strict build <file>` of a type without Run compiles them into `Name.test.exe`, its exit code is the number of failed tests too (above 128 or negative: crashed). Run the tests of every changed file and of the changed package (VM and native), plus one obvious user of it (a change to Math or NeuralNetworks: build one of the games or programs using it). After compiler or runtime changes the rebuilt `strict` and its tests cover the compiler itself. Anything slow waits for a bigger commit or the end of the day. `strict test` and `strict build` of every file of every folder and every game runs once a day, not per change (failing tests listed in bugs.md excepted).
 - `strict check <folder>` must report 0 issues for every changed folder.
 - Do not ignore linker or platform-build errors; failures must surface instead of being swallowed.
@@ -68,7 +127,7 @@ Strict compiles itself natively (`Strict.strict` builds the `strict` command `st
 - User prefers not to weaken tests by changing or removing assertions; focus fixes on production code and diagnostics instead.
 
 ## Time Limits
-- Fast feedback over thoroughness: no tool call over 5 minutes, no sub-agent or workflow over 10 minutes, never sit idle 15 minutes waiting on anything. Hitting a limit means something is wrong: stop it (TaskStop), report what was slow and why, do not keep waiting. Never poll with sleep loops.
+- Speed has the real budgets. 5 minutes is the absolute stop for one tool call, not a target and not permission to use 4 minutes. A file test or a package check still running after its Speed budget is already a failure: kill it (TaskStop), report the command, the time and why, and do not keep waiting. No sub-agent or workflow over 10 minutes. Never poll with sleep loops.
 - Only run the tests a change can reach (seconds to a few minutes): the changed package and one obvious user. The full run of all folders and games (about 30 minutes) is once a day in the main session, never per change and never in sub-agents or workflows.
 - Test sets that may take long run in calls of at most 4.5 minutes with per-file results written to a file as they finish, never piped through grep at the end (no progress is visible until it ends). Split by folder when a set needs longer. A stopped run can leave test executables running, kill them.
 - No Workflow tool runs and at most 3 parallel sub-agents unless the user asks for it in the current prompt, also when ultracode is on (its workflows ran 1-3 hours each).
@@ -126,7 +185,8 @@ Write one minimal test showing what should happen.
 
 #### Verify RED - Watch It Fail
 **MANDATORY. Never skip.**
-`strict test <file>`
+`strict test <file> unit`
+Confirm the Speed budget as well as the failure. A slow failure is still a failure to stop on.
 Confirm:
 - Test fails (not errors)
 - Failure message is expected
@@ -143,7 +203,7 @@ Don't add features, refactor other code, or "improve" beyond the test.
 
 #### Verify GREEN - Watch It Pass
 **MANDATORY.**
-`strict test <file>`
+`strict test <file> unit` once. A pass that blew the Speed budget is not green. Do not re-run it to be sure.
 Confirm:
 - Test passes
 - Other tests still pass
@@ -261,6 +321,7 @@ Before marking work complete:
 - [ ] Each test failed for expected reason (feature missing, not typo)
 - [ ] Wrote minimal code to pass each test
 - [ ] All tests pass
+- [ ] The test command stayed inside the Speed budget. A slow pass is not a pass
 - [ ] Output pristine (no errors, warnings)
 - [ ] Tests use real code (mocks only if unavoidable)
 - [ ] Edge cases and errors covered

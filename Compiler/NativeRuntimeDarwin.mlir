@@ -362,6 +362,15 @@
     return %seconds : f64
   }
   // seconds this thread ran on a core (CLOCK_THREAD_CPUTIME_ID), what a collection really cost while cores were shared
+  // no CPU time clock another thread can read here: unit tests keep their wall time deadline
+  func.func private @strict_thread_clock() -> i64 {
+    %none = arith.constant 0 : i64
+    return %none : i64
+  }
+  func.func private @strict_thread_clock_seconds(%token: i64) -> f64 {
+    %seconds = func.call @strict_clock() : () -> f64
+    return %seconds : f64
+  }
   func.func private @strict_thread_seconds() -> f64 {
     %threadClock = arith.constant 16 : i32
     %seconds = func.call @strict_clock_read(%threadClock) : (i32) -> f64

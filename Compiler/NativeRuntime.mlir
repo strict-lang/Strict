@@ -492,7 +492,7 @@
   llvm.mlir.global internal @strict_test_watching(0 : i64) : i64
   // timed test state of each thread running tests (deadline, version, place, limit, shift, stop state, output in 64
   // bytes), the watchdog scans all claimed slots; a pool job uses the slot of the thread that forked it (strict_test_pooled)
-  llvm.mlir.global internal @strict_test_slots(dense<0> : tensor<2048xi64>) {alignment = 64 : i64} : !llvm.array<2048 x i64>
+  llvm.mlir.global internal @strict_test_slots(dense<0> : tensor<4096xi64>) {alignment = 64 : i64} : !llvm.array<4096 x i64>
   llvm.mlir.global internal @strict_test_claimed(0 : i64) : i64
   llvm.mlir.global internal thread_local @strict_test_slot(0 : i64) : i64
   llvm.mlir.global internal @strict_test_pooled(0 : i64) : i64
@@ -521,10 +521,13 @@
     %fits = arith.cmpi slt, %index, %capacity : i64
     cf.cond_br %fits, ^take, ^done(%zero : i64)
   ^take:
-    %words = arith.constant 8 : i64
+    %words = arith.constant 16 : i64
     %word = arith.muli %index, %words : i64
     %slots = llvm.mlir.addressof @strict_test_slots : !llvm.ptr
     %slot = llvm.getelementptr %slots[%word] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %clockSlot = llvm.getelementptr %slot[7] : (!llvm.ptr) -> !llvm.ptr, i64
+    %clock = func.call @strict_thread_clock() : () -> i64
+    llvm.store %clock, %clockSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     %bits = llvm.ptrtoint %slot : !llvm.ptr to i64
     llvm.store %bits, %mineSlot : i64, !llvm.ptr
     cf.br ^done(%bits : i64)
@@ -532,7 +535,7 @@
     %result = llvm.inttoptr %found : i64 to !llvm.ptr
     return %result : !llvm.ptr
   }
-  llvm.mlir.global internal constant @strict_test_timeout("Test failed: %s\0A  got: TestDurationMustNotExceedHundredMilliseconds: unit test exceeded 100 ms; use Slow(ReturnType) for explicit functional tests\0A\00") : !llvm.array<148 x i8>
+  llvm.mlir.global internal constant @strict_test_timeout("Test failed: %s\0A  got: TestDurationMustNotExceedHundredMilliseconds: unit test exceeded 100 ms; end the method header with slow for explicit functional tests\0A\00") : !llvm.array<159 x i8>
   llvm.mlir.global internal constant @strict_test_unavailable("Test failed: %s\0A  got: TestBudgetWatchdogUnavailable: cannot enforce the unit-test deadline on this platform\0A\00") : !llvm.array<110 x i8>
   // a served request (output is its caller) gets the message and only its work fails, else the process ends
   func.func private @strict_test_failed(%place: i64, %unavailable: i1, %output: i64) {
@@ -560,6 +563,34 @@
     func.call @strict_flush() : () -> ()
     func.call @strict_test_quit() : () -> ()
     return
+  }
+  // a unit test is timed on the CPU time of its thread (word 7 of its slot), other processes compiling meanwhile do
+  // not count; without such a clock (web, macOS) on the wall clock, the wall guard (word 8) still ends a hung test
+  func.func private @strict_test_now(%slot: !llvm.ptr) -> f64 {
+    %zero = arith.constant 0 : i64
+    %clockSlot = llvm.getelementptr %slot[7] : (!llvm.ptr) -> !llvm.ptr, i64
+    %clock = llvm.load %clockSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %none = arith.cmpi eq, %clock, %zero : i64
+    cf.cond_br %none, ^wall, ^cpu
+  ^wall:
+    %now = func.call @strict_clock() : () -> f64
+    return %now : f64
+  ^cpu:
+    %ran = func.call @strict_thread_clock_seconds(%clock) : (i64) -> f64
+    return %ran : f64
+  }
+  func.func private @strict_test_clock_now() -> f64 {
+    %claim = arith.constant false
+    %slot = func.call @strict_test_mine(%claim) : (i1) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %missing = llvm.icmp "eq" %slot, %null : !llvm.ptr
+    cf.cond_br %missing, ^wall, ^timed
+  ^wall:
+    %now = func.call @strict_clock() : () -> f64
+    return %now : f64
+  ^timed:
+    %ran = func.call @strict_test_now(%slot) : (!llvm.ptr) -> f64
+    return %ran : f64
   }
   func.func private @strict_testbudget_started(%self: f64, %place: f64, %isSlow: f64) -> f64 {
     %limit = arith.constant 0.1 : f64
@@ -628,6 +659,8 @@
     %freshLimit = arith.bitcast %limit : f64 to i64
     llvm.store %freshLimit, %limitSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     llvm.store %zero, %deadlineSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    %freshGuardSlot = llvm.getelementptr %deadlineSlot[8] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %zero, %freshGuardSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     %version = llvm.atomicrmw add %versionSlot, %one acq_rel : !llvm.ptr, i64
     llvm.store %nameBits, %placeSlot atomic monotonic {alignment = 8 : i64} : i64, !llvm.ptr
     %output = func.call @strict_output_handle() : () -> i64
@@ -654,7 +687,14 @@
     func.call @strict_test_failed(%nameBits, %unavailable, %failedOutput) : (i64, i1, i64) -> ()
     cf.br ^untimed
   ^arm:
-    %now = func.call @strict_clock() : () -> f64
+    %wall = func.call @strict_clock() : () -> f64
+    %guardFactor = arith.constant 10.0 : f64
+    %guardLimit = arith.mulf %limit, %guardFactor : f64
+    %guardUntil = arith.addf %wall, %guardLimit : f64
+    %guardBits = arith.bitcast %guardUntil : f64 to i64
+    %guardSlot = llvm.getelementptr %deadlineSlot[8] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %guardBits, %guardSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    %now = func.call @strict_test_now(%deadlineSlot) : (!llvm.ptr) -> f64
     %until = arith.addf %now, %limit : f64
     %bits = arith.bitcast %until : f64 to i64
     llvm.store %bits, %deadlineSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
@@ -672,12 +712,20 @@
     %null = llvm.mlir.zero : !llvm.ptr
     %missing = llvm.icmp "eq" %deadlineSlot, %null : !llvm.ptr
     %unshifted = arith.constant 0.0 : f64
-    cf.cond_br %missing, ^done(%unshifted : f64), ^timed
+    cf.cond_br %missing, ^untimed, ^timed
+  ^untimed:
+    %wallEnded = func.call @strict_clock() : () -> f64
+    cf.br ^done(%unshifted, %wallEnded : f64, f64)
   ^timed:
     %versionSlot = llvm.getelementptr %deadlineSlot[1] : (!llvm.ptr) -> !llvm.ptr, i64
     %version = llvm.atomicrmw add %versionSlot, %one acq_rel : !llvm.ptr, i64
     %bits = llvm.atomicrmw xchg %deadlineSlot, %zero acq_rel : !llvm.ptr, i64
-    %now = func.call @strict_clock() : () -> f64
+    %endedGuardSlot = llvm.getelementptr %deadlineSlot[8] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %zero, %endedGuardSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    %testNow = func.call @strict_test_now(%deadlineSlot) : (!llvm.ptr) -> f64
+    %wallNow = func.call @strict_clock() : () -> f64
+    %wasArmed = arith.cmpi ne, %bits, %zero : i64
+    %now = arith.select %wasArmed, %testNow, %wallNow : f64
     %until = arith.bitcast %bits : i64 to f64
     %active = arith.cmpi ne, %bits, %zero : i64
     %over = arith.cmpf ogt, %now, %until : f64
@@ -704,9 +752,8 @@
   ^shifted:
     %shiftSlot = llvm.getelementptr %deadlineSlot[4] : (!llvm.ptr) -> !llvm.ptr, i64
     %shift = llvm.load %shiftSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> f64
-    cf.br ^done(%shift : f64)
-  ^done(%moved: f64):
-    %ended = func.call @strict_clock() : () -> f64
+    cf.br ^done(%shift, %now : f64, f64)
+  ^done(%moved: f64, %ended: f64):
     %passed = arith.subf %ended, %started : f64
     %seconds = arith.subf %passed, %moved : f64
     %thousand = arith.constant 1000.0 : f64
@@ -716,6 +763,7 @@
   // a shared constant initializes on first use, once per run: its time does not count for the test that first used
   // it (the outermost of nested constants measures, the deadline is held off while it computes and then moves later)
   llvm.mlir.global internal thread_local @strict_test_constants(0 : i64) : i64
+  llvm.mlir.global internal thread_local @strict_test_constant_wall(0.0 : f64) : f64
   func.func private @strict_testbudget_entered(%self: f64) -> f64 {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -730,8 +778,11 @@
     return %none : f64
   ^measure:
     %held = arith.constant 1000000.0 : f64
-    func.call @strict_test_extended(%held) : (f64) -> ()
-    %now = func.call @strict_clock() : () -> f64
+    func.call @strict_test_extended(%held, %held) : (f64, f64) -> ()
+    %wall = func.call @strict_clock() : () -> f64
+    %wallSlot = llvm.mlir.addressof @strict_test_constant_wall : !llvm.ptr
+    llvm.store %wall, %wallSlot : f64, !llvm.ptr
+    %now = func.call @strict_test_clock_now() : () -> f64
     return %now : f64
   }
   func.func private @strict_testbudget_left(%self: f64, %entered: f64) -> f64 {
@@ -746,11 +797,16 @@
   ^nested:
     return %zero : f64
   ^shift:
-    %now = func.call @strict_clock() : () -> f64
+    %now = func.call @strict_test_clock_now() : () -> f64
     %seconds = arith.subf %now, %entered : f64
     %held = arith.constant 1000000.0 : f64
     %moved = arith.subf %seconds, %held : f64
-    func.call @strict_test_extended(%moved) : (f64) -> ()
+    %wall = func.call @strict_clock() : () -> f64
+    %wallSlot = llvm.mlir.addressof @strict_test_constant_wall : !llvm.ptr
+    %wallEntered = llvm.load %wallSlot : !llvm.ptr -> f64
+    %wallSeconds = arith.subf %wall, %wallEntered : f64
+    %wallMoved = arith.subf %wallSeconds, %held : f64
+    func.call @strict_test_extended(%moved, %wallMoved) : (f64, f64) -> ()
     %claim = arith.constant false
     %slot = func.call @strict_test_mine(%claim) : (i1) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
@@ -763,8 +819,8 @@
   ^untimed:
     return %seconds : f64
   }
-  // moves the deadline of the running timed test by seconds, nothing when no test is timed
-  func.func private @strict_test_extended(%seconds: f64) {
+  // moves the deadline of the running timed test by seconds of its clock and its wall guard by wall seconds
+  func.func private @strict_test_extended(%seconds: f64, %wallSeconds: f64) {
     %zero = arith.constant 0 : i64
     %claim = arith.constant false
     %deadlineSlot = func.call @strict_test_mine(%claim) : (i1) -> !llvm.ptr
@@ -781,7 +837,15 @@
     %laterBits = arith.bitcast %later : f64 to i64
     %swapped = llvm.cmpxchg %deadlineSlot, %bits, %laterBits acq_rel acquire : !llvm.ptr, i64
     %moved = llvm.extractvalue %swapped[1] : !llvm.struct<(i64, i1)>
-    cf.cond_br %moved, ^done, ^read
+    cf.cond_br %moved, ^guard, ^read
+  ^guard:
+    %guardSlot = llvm.getelementptr %deadlineSlot[8] : (!llvm.ptr) -> !llvm.ptr, i64
+    %guardBits = llvm.load %guardSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %guarded = arith.cmpi ne, %guardBits, %zero : i64
+    cf.cond_br %guarded, ^moveGuard, ^done
+  ^moveGuard:
+    %guardOld = llvm.atomicrmw fadd %guardSlot, %wallSeconds acq_rel : !llvm.ptr, f64
+    cf.br ^done
   ^done:
     return
   }
@@ -789,7 +853,7 @@
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %capacity = arith.constant 256 : i64
-    %words = arith.constant 8 : i64
+    %words = arith.constant 16 : i64
     %claimedSlot = llvm.mlir.addressof @strict_test_claimed : !llvm.ptr
     %slots = llvm.mlir.addressof @strict_test_slots : !llvm.ptr
     cf.br ^loop
@@ -819,8 +883,16 @@
     cf.cond_br %active, ^clock, ^done
   ^clock:
     %until = arith.bitcast %bits : i64 to f64
-    %now = func.call @strict_clock() : () -> f64
-    %over = arith.cmpf ogt, %now, %until : f64
+    %now = func.call @strict_test_now(%deadlineSlot) : (!llvm.ptr) -> f64
+    %ranOver = arith.cmpf ogt, %now, %until : f64
+    %guardSlot = llvm.getelementptr %deadlineSlot[8] : (!llvm.ptr) -> !llvm.ptr, i64
+    %guardBits = llvm.load %guardSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %guarded = arith.cmpi ne, %guardBits, %zero : i64
+    %guardUntil = arith.bitcast %guardBits : i64 to f64
+    %wall = func.call @strict_clock() : () -> f64
+    %hung = arith.cmpf ogt, %wall, %guardUntil : f64
+    %guardOver = arith.andi %guarded, %hung : i1
+    %over = arith.ori %ranOver, %guardOver : i1
     cf.cond_br %over, ^claim, ^done
   ^claim:
     %place = llvm.load %placeSlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64

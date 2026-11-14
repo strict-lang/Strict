@@ -1,6 +1,6 @@
 has inference TypeInference
 constant Counting = DefaultCheck(TypeInference(KnownTypes.Sample, (Scope(("Limit", "Started"), ("3", "Count(1, 2)")), KnownTypes.NoMembers)))
-constant Keywords = ("has", "constant", "let", "mutable", "if", "else", "for", "with", "return", "is", "in", "to", "and", "or", "xor", "not", "from", "then")
+constant Keywords = ("has", "constant", "let", "mutable", "if", "else", "for", "with", "return", "is", "in", "to", "and", "or", "xor", "not", "from", "then", "ignore")
 constant LoopVariables = ("value", "index", "outer")
 constant Moving = List(Text) + "M(from Number) Number"
 constant Countdown = ("Run Number", "\tmutable index = 3", "\tfor as long as index > 0", "\t\tindex", "\tindex")
@@ -113,6 +113,7 @@ HasLoop(lines Texts, position Number) Boolean
 Keyworded(path Text, lines Texts) Texts
 	Counting.Keyworded("A.strict", List(Text) + "Moved(other Number) Number").Length is 0
 	Counting.Keyworded("A.strict", List(Text) + "has (from)").Length is 0
+	Counting.Keyworded("A.strict", List(Text) + "Moved(ignore Number) Number").Length is 1
 	mutable issues = List(Mutable(Text))
 	for lines
 		let line = index + 1
