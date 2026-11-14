@@ -1,0 +1,36 @@
+Appended(count Number) Text
+	Growing.Appended(0) is ""
+	Growing.Appended(3) is "0, 1, 2, "
+	Growing.Appended(400).Length is 1890
+	mutable text = ""
+	for count
+		text = text + index + ", "
+	text
+Shared(piece Text) Texts
+	Growing.Shared("b") is ("ab", "abb", "abbb")
+	Growing.Shared("") is ("a", "a", "a")
+	mutable text = "a"
+	mutable kept = List(Text)
+	for 3
+		text = text + piece
+		kept = kept + text
+	kept
+Twice(piece Text) Text
+	Growing.Twice("ab") is "abab, abab"
+	mutable text = ""
+	text = text + piece
+	text = text + text
+	text + ", " + text
+Extended(start Numbers, count Number) Numbers
+	Growing.Extended((7, 8), 2) is (7, 8, 0, 1)
+	Growing.Extended(List(Number), 0).Length is 0
+	mutable raw = start
+	for count
+		raw = raw + index
+	raw
+Untouched(start Numbers) Number
+	Growing.Untouched((1, 2, 3)) is 10
+	Extended(start, 4).Length + start.Length
+Both(start Numbers) Numbers
+	Growing.Both((1, 2, 3)) is (1, 2, 3, 0, 1, 2, 3, 0, 1)
+	Extended(start, 1) + Extended(start, 2)
