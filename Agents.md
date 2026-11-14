@@ -89,9 +89,9 @@ Work
 
 What to measure
 - While fixing, check and `strict test <file> unit` the files you changed, or their folder. One full check at the end of a big change. The nightly run owns the rest.
-- Web and GPU benchmarks stay at 480p or below (256 and 512 crops). One run. Under 10% is noise. The number that matters is time per image or per video. Load time and a LoRA merge are not.
+- Web and GPU benchmarks stay at 480p or below (256 and 512 crops). One run. Under 5% is noise. The number that matters is time per image or per video. Load time and a LoRA merge are not.
 - A GPU text difference is a bug when the logits diverge. Qwen3 0.6B position 10 is a near tie between two tokens. Compare logits against `STRICT_GPU=0` before calling the text wrong.
-- Speed beats a smaller file only above about 25%. A few percent is noise. A semantics fix that matches the README still lands. Write its measured cost in `performance.md` in that change. A blow-up of about 10x is the Speed rule.
+- Speed beats a smaller file from about 5% on: gains get smaller now and stack up. Below that is noise. A semantics fix that matches the README still lands. Write its measured cost in `performance.md` in that change. A blow-up of about 10x is the Speed rule.
 - Benchmark `Release/<Platform>`. A plain `strict build`, the VM and test executables keep debug checks. A check that costs more than about 1% stays out of release. An error in a release build still surfaces.
 - Do not time a step by waiting on the GPU. Queue the next step. Read a stamp when it is done.
 
