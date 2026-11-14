@@ -173,7 +173,7 @@ from(text)
 	Character("ab") is Error
 	text.Characters(0)
 ```
-A Text is a list of characters (`has characters`), a Name is a Text with constraints (`has text with Length > 1 and " " is not in value`). A type with one member is that member: `Byte(5)` prints as `5`, calling it with a value of that member wraps the value unless the type has its own `from` taking it: `Float8(0.3)` is `0.3125` (E4M3: the nearest value, ties to even, at most 448, the same on the Strict VM, the CPU and the GPU).
+A Text is a list of characters (`has characters`): `Length`, `text(index)`, `Substring`, `IndexOf` and a `for` over it count characters (code points, `Character(8364) to Text` is one character of three bytes), `Bytes` gives its UTF-8 bytes and `Text.Utf8(bytes)` the text of such bytes; a Name is a Text with constraints (`has text with Length > 1 and " " is not in value`). A type with one member is that member: `Byte(5)` prints as `5`, calling it with a value of that member wraps the value unless the type has its own `from` taking it: `Float8(0.3)` is `0.3125` (E4M3: the nearest value, ties to even, at most 448, the same on the Strict VM, the CPU and the GPU).
 
 Variables live in a method body: `constant` for constant values, `let` for anything else that does not change, `mutable` only when it has to change:
 ```

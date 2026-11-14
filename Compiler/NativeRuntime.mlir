@@ -423,6 +423,17 @@
   llvm.mlir.global internal constant @strict_modulo_by_zero("\0C\00\00\00\00\00\00\00\0C\00\00\00\00\00\00\00ModuloByZero\00") : !llvm.array<29 x i8>
   llvm.mlir.global internal constant @strict_substring_out_of_range("\13\00\00\00\00\00\00\00\13\00\00\00\00\00\00\00SubstringOutOfRange\00") : !llvm.array<36 x i8>
   llvm.mlir.global internal constant @strict_duplicate_key("\0C\00\00\00\00\00\00\00\0C\00\00\00\00\00\00\00DuplicateKey\00") : !llvm.array<29 x i8>
+  // where the last walk over a text with characters of several bytes stopped (strict_text_offset): reading such a text
+  // by nearby indices stays linear (a text under 256 bytes is walked from its start and keeps the walk of a long one,
+  // a parser reads its long text and the short parts it cut out in turns); a walk marks the address of its text in strict_walk_seen, a text with such
+  // characters made at a marked address starts a new epoch, so a walk kept by any thread for a text that is gone is
+  // never used for another text at its address
+  llvm.mlir.global internal @strict_text_epoch(1 : i64) : i64
+  llvm.mlir.global internal @strict_walk_seen(dense<0> : tensor<4096xi8>) : !llvm.array<4096 x i8>
+  llvm.mlir.global internal thread_local @strict_walk_text(0 : i64) : i64
+  llvm.mlir.global internal thread_local @strict_walk_index(0 : i64) : i64
+  llvm.mlir.global internal thread_local @strict_walk_offset(0 : i64) : i64
+  llvm.mlir.global internal thread_local @strict_walk_epoch(0 : i64) : i64
   llvm.mlir.global internal thread_local @strict_power_base(0 : i64) : i64
   llvm.mlir.global internal thread_local @strict_power_exponent(0 : i64) : i64
   llvm.mlir.global internal thread_local @strict_power_result(4607182418800017408 : i64) : i64
@@ -2395,11 +2406,38 @@
     func.call @strict_text_sized(%data, %bytes, %bytes) : (!llvm.ptr, i64, i64) -> ()
     return %data : !llvm.ptr
   }
+  func.func private @strict_walk_slot(%address: i64) -> !llvm.ptr attributes {llvm.passthrough = ["alwaysinline"]} {
+    %four = arith.constant 4 : i64
+    %mask = arith.constant 4095 : i64
+    %shifted = arith.shrui %address, %four : i64
+    %index = arith.andi %shifted, %mask : i64
+    %table = llvm.mlir.addressof @strict_walk_seen : !llvm.ptr
+    %slot = llvm.getelementptr %table[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    return %slot : !llvm.ptr
+  }
   func.func private @strict_text_sized(%data: !llvm.ptr, %bytes: i64, %characters: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
     %bytesSlot = llvm.getelementptr %data[-16] : (!llvm.ptr) -> !llvm.ptr, i8
     llvm.store %bytes, %bytesSlot {alignment = 1 : i64} : i64, !llvm.ptr
     %charactersSlot = llvm.getelementptr %data[-8] : (!llvm.ptr) -> !llvm.ptr, i8
     llvm.store %characters, %charactersSlot {alignment = 1 : i64} : i64, !llvm.ptr
+    %isAscii = arith.cmpi eq, %bytes, %characters : i64
+    cf.cond_br %isAscii, ^done, ^wide
+  ^wide:
+    %address = llvm.ptrtoint %data : !llvm.ptr to i64
+    %seenSlot = func.call @strict_walk_slot(%address) : (i64) -> !llvm.ptr
+    %seen = llvm.load %seenSlot : !llvm.ptr -> i8
+    %unseen = arith.constant 0 : i8
+    %isSeen = arith.cmpi ne, %seen, %unseen : i8
+    cf.cond_br %isSeen, ^walked, ^done
+  ^walked:
+    %one = arith.constant 1 : i64
+    llvm.store %unseen, %seenSlot : i8, !llvm.ptr
+    %epochSlot = llvm.mlir.addressof @strict_text_epoch : !llvm.ptr
+    %epoch = llvm.load %epochSlot : !llvm.ptr -> i64
+    %next = arith.addi %epoch, %one : i64
+    llvm.store %next, %epochSlot : i64, !llvm.ptr
+    cf.br ^done
+  ^done:
     return
   }
   func.func private @strict_text_bytes(%data: !llvm.ptr) -> i64 attributes {llvm.passthrough = ["alwaysinline"]} {
@@ -12718,10 +12756,281 @@
   ^unchanged:
     return %dictionary : f64
   }
+  // the number of characters of a text, strict_text_long is its number of bytes (the same for ASCII and for a span)
   func.func private @strict_text_length(%text: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %characters = func.call @strict_text_count(%text) : (f64) -> i64
+    %result = arith.uitofp %characters : i64 to f64
+    return %result : f64
+  }
+  func.func private @strict_text_long(%text: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %bytes = func.call @strict_text_size(%text) : (f64) -> i64
     %result = arith.uitofp %bytes : i64 to f64
     return %result : f64
+  }
+  func.func private @strict_text_wide(%text: f64) -> i1 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %bits = arith.bitcast %text : f64 to i64
+    %isSpan = func.call @strict_span_is(%bits) : (i64) -> i1
+    cf.cond_br %isSpan, ^span, ^plain
+  ^span:
+    %no = arith.constant false
+    return %no : i1
+  ^plain:
+    %address = arith.constant 281474976710655 : i64
+    %untagged = arith.andi %bits, %address : i64
+    %pointer = llvm.inttoptr %untagged : i64 to !llvm.ptr
+    %bytes = func.call @strict_text_bytes(%pointer) : (!llvm.ptr) -> i64
+    %characters = func.call @strict_text_characters(%pointer) : (!llvm.ptr) -> i64
+    %wide = arith.cmpi ne, %bytes, %characters : i64
+    return %wide : i1
+  }
+  // the byte a character of a text with characters of several bytes starts at, the size of the text for an index
+  // behind its end; continues from where the last walk of this thread stopped when that was this text further left
+  func.func private @strict_text_offset(%text: f64, %index: i64) -> i64 attributes {llvm.passthrough = ["noinline"]} {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %mask = arith.constant -64 : i8
+    %continuing = arith.constant -128 : i8
+    %bits = arith.bitcast %text : f64 to i64
+    %data = func.call @strict_text_data(%text) : (f64) -> !llvm.ptr
+    %size = func.call @strict_text_size(%text) : (f64) -> i64
+    %epochSlot = llvm.mlir.addressof @strict_text_epoch : !llvm.ptr
+    %epoch = llvm.load %epochSlot : !llvm.ptr -> i64
+    %walkTextSlot = llvm.mlir.addressof @strict_walk_text : !llvm.ptr
+    %walkIndexSlot = llvm.mlir.addressof @strict_walk_index : !llvm.ptr
+    %walkOffsetSlot = llvm.mlir.addressof @strict_walk_offset : !llvm.ptr
+    %walkEpochSlot = llvm.mlir.addressof @strict_walk_epoch : !llvm.ptr
+    %walkText = llvm.load %walkTextSlot : !llvm.ptr -> i64
+    %walkIndex = llvm.load %walkIndexSlot : !llvm.ptr -> i64
+    %walkOffset = llvm.load %walkOffsetSlot : !llvm.ptr -> i64
+    %walkEpoch = llvm.load %walkEpochSlot : !llvm.ptr -> i64
+    %sameText = arith.cmpi eq, %walkText, %bits : i64
+    %sameEpoch = arith.cmpi eq, %walkEpoch, %epoch : i64
+    %long = arith.constant 256 : i64
+    %isLong = arith.cmpi uge, %size, %long : i64
+    %same = arith.andi %sameText, %sameEpoch : i1
+    %usable = arith.andi %same, %isLong : i1
+    %keptIndex = arith.select %usable, %walkIndex, %zero : i64
+    %keptOffset = arith.select %usable, %walkOffset, %zero : i64
+    %isBefore = arith.cmpi ult, %index, %keptIndex : i64
+    %distance = arith.subi %keptIndex, %index : i64
+    %isNear = arith.cmpi ult, %distance, %index : i64
+    %goesBack = arith.andi %isBefore, %isNear : i1
+    cf.cond_br %goesBack, ^back(%keptIndex, %keptOffset : i64, i64), ^forward
+  ^forward:
+    %startIndex = arith.select %isBefore, %zero, %keptIndex : i64
+    %startOffset = arith.select %isBefore, %zero, %keptOffset : i64
+    cf.br ^loop(%startIndex, %startOffset : i64, i64)
+  ^back(%backAt: i64, %backOffset: i64):
+    %isHigher = arith.cmpi ugt, %backAt, %index : i64
+    %hasBytes = arith.cmpi ugt, %backOffset, %zero : i64
+    %retreats = arith.andi %isHigher, %hasBytes : i1
+    cf.cond_br %retreats, ^retreat, ^finish(%backAt, %backOffset : i64, i64)
+  ^retreat:
+    %previous = arith.subi %backOffset, %one : i64
+    cf.br ^before(%previous : i64)
+  ^before(%spot: i64):
+    %spotSlot = llvm.getelementptr %data[%spot] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %spotByte = llvm.load %spotSlot : !llvm.ptr -> i8
+    %spotTop = arith.andi %spotByte, %mask : i8
+    %isInside = arith.cmpi eq, %spotTop, %continuing : i8
+    %isLater = arith.cmpi ugt, %spot, %zero : i64
+    %keepsOn = arith.andi %isInside, %isLater : i1
+    %earlier = arith.subi %spot, %one : i64
+    cf.cond_br %keepsOn, ^before(%earlier : i64), ^retreated
+  ^retreated:
+    %lower = arith.subi %backAt, %one : i64
+    cf.br ^back(%lower, %spot : i64, i64)
+  ^loop(%at: i64, %offset: i64):
+    %more = arith.cmpi ult, %at, %index : i64
+    %inside = arith.cmpi ult, %offset, %size : i64
+    %going = arith.andi %more, %inside : i1
+    cf.cond_br %going, ^step, ^finish(%at, %offset : i64, i64)
+  ^step:
+    %first = arith.addi %offset, %one : i64
+    cf.br ^skip(%first : i64)
+  ^skip(%position: i64):
+    %within = arith.cmpi ult, %position, %size : i64
+    cf.cond_br %within, ^look, ^stepped(%position : i64)
+  ^look:
+    %slot = llvm.getelementptr %data[%position] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %byte = llvm.load %slot : !llvm.ptr -> i8
+    %top = arith.andi %byte, %mask : i8
+    %isContinued = arith.cmpi eq, %top, %continuing : i8
+    %after = arith.addi %position, %one : i64
+    cf.cond_br %isContinued, ^skip(%after : i64), ^stepped(%position : i64)
+  ^stepped(%landed: i64):
+    %nextAt = arith.addi %at, %one : i64
+    cf.br ^loop(%nextAt, %landed : i64, i64)
+  ^finish(%foundIndex: i64, %foundOffset: i64):
+    cf.cond_br %isLong, ^keep, ^short
+  ^short:
+    return %foundOffset : i64
+  ^keep:
+    llvm.store %bits, %walkTextSlot : i64, !llvm.ptr
+    llvm.store %foundIndex, %walkIndexSlot : i64, !llvm.ptr
+    llvm.store %foundOffset, %walkOffsetSlot : i64, !llvm.ptr
+    llvm.store %epoch, %walkEpochSlot : i64, !llvm.ptr
+    %walkedAddress = llvm.ptrtoint %data : !llvm.ptr to i64
+    %walkedSlot = func.call @strict_walk_slot(%walkedAddress) : (i64) -> !llvm.ptr
+    %walked = arith.constant 1 : i8
+    llvm.store %walked, %walkedSlot : i8, !llvm.ptr
+    return %foundOffset : i64
+  }
+  // the index of the character starting at a byte of a text with characters of several bytes
+  func.func private @strict_text_index_at(%text: f64, %offset: i64) -> i64 attributes {llvm.passthrough = ["noinline"]} {
+    %zero = arith.constant 0 : i64
+    %bits = arith.bitcast %text : f64 to i64
+    %data = func.call @strict_text_data(%text) : (f64) -> !llvm.ptr
+    %epochSlot = llvm.mlir.addressof @strict_text_epoch : !llvm.ptr
+    %epoch = llvm.load %epochSlot : !llvm.ptr -> i64
+    %walkTextSlot = llvm.mlir.addressof @strict_walk_text : !llvm.ptr
+    %walkIndexSlot = llvm.mlir.addressof @strict_walk_index : !llvm.ptr
+    %walkOffsetSlot = llvm.mlir.addressof @strict_walk_offset : !llvm.ptr
+    %walkEpochSlot = llvm.mlir.addressof @strict_walk_epoch : !llvm.ptr
+    %walkText = llvm.load %walkTextSlot : !llvm.ptr -> i64
+    %walkIndex = llvm.load %walkIndexSlot : !llvm.ptr -> i64
+    %walkOffset = llvm.load %walkOffsetSlot : !llvm.ptr -> i64
+    %walkEpoch = llvm.load %walkEpochSlot : !llvm.ptr -> i64
+    %sameText = arith.cmpi eq, %walkText, %bits : i64
+    %sameEpoch = arith.cmpi eq, %walkEpoch, %epoch : i64
+    %size = func.call @strict_text_size(%text) : (f64) -> i64
+    %long = arith.constant 256 : i64
+    %isLong = arith.cmpi uge, %size, %long : i64
+    %same = arith.andi %sameText, %sameEpoch : i1
+    %usable = arith.andi %same, %isLong : i1
+    %keptIndex = arith.select %usable, %walkIndex, %zero : i64
+    %keptOffset = arith.select %usable, %walkOffset, %zero : i64
+    %isBefore = arith.cmpi ult, %offset, %keptOffset : i64
+    %distance = arith.subi %keptOffset, %offset : i64
+    %isNear = arith.cmpi ult, %distance, %offset : i64
+    %goesBack = arith.andi %isBefore, %isNear : i1
+    %restarts = arith.xori %isBefore, %goesBack : i1
+    %baseIndex = arith.select %restarts, %zero, %keptIndex : i64
+    %baseOffset = arith.select %restarts, %zero, %keptOffset : i64
+    %low = arith.select %goesBack, %offset, %baseOffset : i64
+    %high = arith.select %goesBack, %baseOffset, %offset : i64
+    %from = llvm.getelementptr %data[%low] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %bytes = arith.subi %high, %low : i64
+    %between = func.call @strict_text_counted(%from, %bytes) : (!llvm.ptr, i64) -> i64
+    %ahead = arith.addi %baseIndex, %between : i64
+    %behind = arith.subi %baseIndex, %between : i64
+    %index = arith.select %goesBack, %behind, %ahead : i64
+    cf.cond_br %isLong, ^keep, ^short
+  ^short:
+    return %index : i64
+  ^keep:
+    llvm.store %bits, %walkTextSlot : i64, !llvm.ptr
+    llvm.store %index, %walkIndexSlot : i64, !llvm.ptr
+    llvm.store %offset, %walkOffsetSlot : i64, !llvm.ptr
+    llvm.store %epoch, %walkEpochSlot : i64, !llvm.ptr
+    %walkedAddress = llvm.ptrtoint %data : !llvm.ptr to i64
+    %walkedSlot = func.call @strict_walk_slot(%walkedAddress) : (i64) -> !llvm.ptr
+    %walked = arith.constant 1 : i8
+    llvm.store %walked, %walkedSlot : i8, !llvm.ptr
+    return %index : i64
+  }
+  // the code point of the UTF-8 character starting at a byte; a sequence cut short ends at its last continuation byte
+  func.func private @strict_text_code(%data: !llvm.ptr, %offset: i64) -> i64 {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %three = arith.constant 3 : i64
+    %six = arith.constant 6 : i64
+    %ascii = arith.constant 128 : i64
+    %tops = arith.constant 192 : i64
+    %low = arith.constant 63 : i64
+    %threeLead = arith.constant 224 : i64
+    %fourLead = arith.constant 240 : i64
+    %twoMask = arith.constant 31 : i64
+    %threeMask = arith.constant 15 : i64
+    %fourMask = arith.constant 7 : i64
+    %slot = llvm.getelementptr %data[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %leadByte = llvm.load %slot : !llvm.ptr -> i8
+    %lead = arith.extui %leadByte : i8 to i64
+    %isAscii = arith.cmpi ult, %lead, %ascii : i64
+    cf.cond_br %isAscii, ^done(%lead : i64), ^wide
+  ^wide:
+    %isFour = arith.cmpi uge, %lead, %fourLead : i64
+    %isThree = arith.cmpi uge, %lead, %threeLead : i64
+    %shortMask = arith.select %isThree, %threeMask, %twoMask : i64
+    %leadMask = arith.select %isFour, %fourMask, %shortMask : i64
+    %shortMore = arith.select %isThree, %two, %one : i64
+    %more = arith.select %isFour, %three, %shortMore : i64
+    %start = arith.andi %lead, %leadMask : i64
+    %second = arith.addi %offset, %one : i64
+    cf.br ^next(%start, %more, %second : i64, i64, i64)
+  ^next(%code: i64, %left: i64, %position: i64):
+    %any = arith.cmpi ne, %left, %zero : i64
+    cf.cond_br %any, ^take, ^done(%code : i64)
+  ^take:
+    %nextSlot = llvm.getelementptr %data[%position] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %nextByte = llvm.load %nextSlot : !llvm.ptr -> i8
+    %wideByte = arith.extui %nextByte : i8 to i64
+    %top = arith.andi %wideByte, %tops : i64
+    %isContinued = arith.cmpi eq, %top, %ascii : i64
+    cf.cond_br %isContinued, ^add, ^done(%code : i64)
+  ^add:
+    %shifted = arith.shli %code, %six : i64
+    %payload = arith.andi %wideByte, %low : i64
+    %joined = arith.ori %shifted, %payload : i64
+    %fewer = arith.subi %left, %one : i64
+    %following = arith.addi %position, %one : i64
+    cf.br ^next(%joined, %fewer, %following : i64, i64, i64)
+  ^done(%result: i64):
+    return %result : i64
+  }
+  // writes a code point as UTF-8 and returns its number of bytes (1 to 4)
+  func.func private @strict_text_encoded(%to: !llvm.ptr, %code: i64) -> i64 {
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %three = arith.constant 3 : i64
+    %four = arith.constant 4 : i64
+    %six = arith.constant 6 : i64
+    %twelve = arith.constant 12 : i64
+    %eighteen = arith.constant 18 : i64
+    %low = arith.constant 63 : i64
+    %continued = arith.constant 128 : i64
+    %twoLead = arith.constant 192 : i64
+    %threeLead = arith.constant 224 : i64
+    %fourLead = arith.constant 240 : i64
+    %twoLimit = arith.constant 2048 : i64
+    %threeLimit = arith.constant 65536 : i64
+    %isAscii = arith.cmpi ult, %code, %continued : i64
+    %isTwo = arith.cmpi ult, %code, %twoLimit : i64
+    %isThree = arith.cmpi ult, %code, %threeLimit : i64
+    %longCount = arith.select %isThree, %three, %four : i64
+    %wideCount = arith.select %isTwo, %two, %longCount : i64
+    %count = arith.select %isAscii, %one, %wideCount : i64
+    %longLead = arith.select %isThree, %threeLead, %fourLead : i64
+    %wideLead = arith.select %isTwo, %twoLead, %longLead : i64
+    %longShift = arith.select %isThree, %twelve, %eighteen : i64
+    %wideShift = arith.select %isTwo, %six, %longShift : i64
+    cf.cond_br %isAscii, ^single, ^lead
+  ^single:
+    %only = arith.trunci %code : i64 to i8
+    llvm.store %only, %to : i8, !llvm.ptr
+    return %count : i64
+  ^lead:
+    %high = arith.shrui %code, %wideShift : i64
+    %leadBits = arith.ori %high, %wideLead : i64
+    %leadByte = arith.trunci %leadBits : i64 to i8
+    llvm.store %leadByte, %to : i8, !llvm.ptr
+    cf.br ^rest(%one, %wideShift : i64, i64)
+  ^rest(%at: i64, %shift: i64):
+    %more = arith.cmpi ult, %at, %count : i64
+    cf.cond_br %more, ^write, ^done
+  ^write:
+    %lower = arith.subi %shift, %six : i64
+    %moved = arith.shrui %code, %lower : i64
+    %payload = arith.andi %moved, %low : i64
+    %bits = arith.ori %payload, %continued : i64
+    %byte = arith.trunci %bits : i64 to i8
+    %slot = llvm.getelementptr %to[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %byte, %slot : i8, !llvm.ptr
+    %next = arith.addi %at, %one : i64
+    cf.br ^rest(%next, %lower : i64, i64)
+  ^done:
+    return %count : i64
   }
   func.func private @strict_text_at(%text: f64, %index: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
@@ -12734,10 +13043,18 @@
   ^read(%chosen: f64):
     %at = arith.fptosi %chosen : f64 to i64
     %pointer = func.call @strict_text_data(%text) : (f64) -> !llvm.ptr
+    %wide = func.call @strict_text_wide(%text) : (f64) -> i1
+    cf.cond_br %wide, ^decode, ^single
+  ^single:
     %slot = llvm.getelementptr %pointer[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %byte = llvm.load %slot : !llvm.ptr -> i8
     %result = arith.uitofp %byte : i8 to f64
     return %result : f64
+  ^decode:
+    %offset = func.call @strict_text_offset(%text, %at) : (f64, i64) -> i64
+    %code = func.call @strict_text_code(%pointer, %offset) : (!llvm.ptr, i64) -> i64
+    %decoded = arith.uitofp %code : i64 to f64
+    return %decoded : f64
   }
   // strict_text_at with IndexOutOfRange like strict_list_read: a byte behind the terminator belongs to something else,
   // so a read that is no terminator is compared with the length (texts of 256 bytes or more keep it cached)
@@ -12746,8 +13063,11 @@
   func.func private @strict_text_read(%text: f64, %index: f64, %name: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %at = arith.fptosi %index : f64 to i64
     %size = func.call @strict_text_size(%text) : (f64) -> i64
+    %count = func.call @strict_text_count(%text) : (f64) -> i64
     %inside = arith.cmpi ult, %at, %size : i64
-    cf.cond_br %inside, ^read, ^missed
+    %isAscii = arith.cmpi eq, %size, %count : i64
+    %direct = arith.andi %inside, %isAscii : i1
+    cf.cond_br %direct, ^read, ^missed
   ^read:
     %data = func.call @strict_text_data(%text) : (f64) -> !llvm.ptr
     %slot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
@@ -12760,26 +13080,20 @@
   }
   func.func private @strict_text_missed(%text: f64, %index: f64, %name: f64) -> f64 attributes {llvm.passthrough = ["noinline", "cold"]} {
     %zero = arith.constant 0.0 : f64
-    %negative = arith.cmpf olt, %index, %zero : f64
-    cf.cond_br %negative, ^wrap, ^read(%index : f64)
-  ^wrap:
     %length = func.call @strict_text_length(%text) : (f64) -> f64
+    %negative = arith.cmpf olt, %index, %zero : f64
     %wrapped = arith.addf %index, %length : f64
-    %below = arith.cmpf olt, %wrapped, %zero : f64
-    cf.cond_br %below, ^error, ^read(%wrapped : f64)
-  ^read(%chosen: f64):
-    %byte = func.call @strict_text_at(%text, %chosen) : (f64, f64) -> f64
-    %ended = arith.cmpf oeq, %byte, %zero : f64
-    cf.cond_br %ended, ^error, ^measure
-  ^measure:
-    %measured = func.call @strict_text_length(%text) : (f64) -> f64
-    %inside = arith.cmpf olt, %chosen, %measured : f64
-    cf.cond_br %inside, ^read_done, ^error
+    %chosen = arith.select %negative, %wrapped, %index : f64
+    %above = arith.cmpf oge, %chosen, %zero : f64
+    %below = arith.cmpf olt, %chosen, %length : f64
+    %inside = arith.andi %above, %below : i1
+    cf.cond_br %inside, ^read, ^error
   ^error:
     %error = func.call @strict_index_error(%name) : (f64) -> f64
     return %error : f64
-  ^read_done:
-    return %byte : f64
+  ^read:
+    %code = func.call @strict_text_at(%text, %chosen) : (f64, f64) -> f64
+    return %code : f64
   }
   func.func private @strict_boolean(%condition: i1) -> f64 {
     %result = arith.uitofp %condition : i1 to f64
@@ -12821,7 +13135,7 @@
     %result = func.call @strict_boolean(%less) : (i1) -> f64
     return %result : f64
   }
-  func.func private @strict_text_starts(%text: f64, %prefix: f64, %start: f64) -> f64 {
+  func.func private @strict_text_begins(%text: f64, %prefix: f64, %start: f64) -> f64 {
     %zero = arith.constant 0 : i32
     %no = arith.constant false
     %offset = arith.fptosi %start : f64 to i64
@@ -12841,7 +13155,7 @@
     %result = func.call @strict_boolean(%starts) : (i1) -> f64
     return %result : f64
   }
-  func.func private @strict_text_index(%text: f64, %search: f64, %start: f64) -> f64 {
+  func.func private @strict_text_find(%text: f64, %search: f64, %start: f64) -> f64 {
     %none = arith.constant -1.0 : f64
     %nothing = arith.constant 0 : i8
     %textBits = arith.bitcast %text : f64 to i64
@@ -12872,7 +13186,7 @@
     %fromStart = arith.cmpf ole, %start, %zeroStart : f64
     cf.cond_br %fromStart, ^search, ^measure
   ^measure:
-    %textLength = func.call @strict_text_length(%text) : (f64) -> f64
+    %textLength = func.call @strict_text_long(%text) : (f64) -> f64
     %short = arith.cmpf ogt, %start, %textLength : f64
     cf.cond_br %short, ^missing, ^search
   ^search:
@@ -12905,18 +13219,18 @@
   ^missing:
     return %none : f64
   }
-  func.func private @strict_text_last_index(%text: f64, %search: f64) -> f64 {
+  func.func private @strict_text_last_find(%text: f64, %search: f64) -> f64 {
     %none = arith.constant -1.0 : f64
     %one = arith.constant 1.0 : f64
     %begin = arith.constant 0.0 : f64
-    %first = func.call @strict_text_index(%text, %search, %begin) : (f64, f64, f64) -> f64
+    %first = func.call @strict_text_find(%text, %search, %begin) : (f64, f64, f64) -> f64
     cf.br ^check(%none, %first : f64, f64)
   ^check(%last: f64, %current: f64):
     %missing = arith.cmpf oeq, %current, %none : f64
     cf.cond_br %missing, ^exit, ^next
   ^next:
     %after = arith.addf %current, %one : f64
-    %following = func.call @strict_text_index(%text, %search, %after) : (f64, f64, f64) -> f64
+    %following = func.call @strict_text_find(%text, %search, %after) : (f64, f64, f64) -> f64
     cf.br ^check(%current, %following : f64, f64)
   ^exit:
     return %last : f64
@@ -12950,11 +13264,11 @@
   ^done:
     return
   }
-  func.func private @strict_text_substring(%text: f64, %start: f64, %length: f64) -> f64 {
+  func.func private @strict_text_cut(%text: f64, %start: f64, %length: f64) -> f64 {
     %one = arith.constant 1 : i64
     %terminator = arith.constant 0 : i8
     %zero = arith.constant 0.0 : f64
-    %textLength = func.call @strict_text_length(%text) : (f64) -> f64
+    %textLength = func.call @strict_text_long(%text) : (f64) -> f64
     %negativeStart = arith.cmpf olt, %start, %zero : f64
     %fromEnd = arith.addf %textLength, %start : f64
     %first = arith.select %negativeStart, %fromEnd, %start : f64
@@ -12988,6 +13302,126 @@
     %result = func.call @strict_text_part(%text, %offset, %count, %long) : (f64, i64, i64, i64) -> f64
     return %result : f64
   }
+  // Substring counts characters: a text with characters of several bytes is cut at the bytes they start at
+  func.func private @strict_text_substring(%text: f64, %start: f64, %length: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %wide = func.call @strict_text_wide(%text) : (f64) -> i1
+    cf.cond_br %wide, ^walk, ^plain
+  ^plain:
+    %direct = func.call @strict_text_cut(%text, %start, %length) : (f64, f64, f64) -> f64
+    return %direct : f64
+  ^walk:
+    %walked = func.call @strict_text_cut_wide(%text, %start, %length) : (f64, f64, f64) -> f64
+    return %walked : f64
+  }
+  func.func private @strict_text_cut_wide(%text: f64, %start: f64, %length: f64) -> f64 attributes {llvm.passthrough = ["noinline"]} {
+    %zero = arith.constant 0.0 : f64
+    %wide = func.call @strict_text_wide(%text) : (f64) -> i1
+    cf.cond_br %wide, ^walk, ^plain
+  ^plain:
+    %cut = func.call @strict_text_cut(%text, %start, %length) : (f64, f64, f64) -> f64
+    return %cut : f64
+  ^walk:
+    %textLength = func.call @strict_text_length(%text) : (f64) -> f64
+    %negativeStart = arith.cmpf olt, %start, %zero : f64
+    %fromEnd = arith.addf %textLength, %start : f64
+    %first = arith.select %negativeStart, %fromEnd, %start : f64
+    %last = arith.addf %first, %length : f64
+    %beforeText = arith.cmpf olt, %first, %zero : f64
+    %negativeCount = arith.cmpf olt, %length, %zero : f64
+    %pastEnd = arith.cmpf ogt, %last, %textLength : f64
+    %outsideStart = arith.ori %beforeText, %negativeCount : i1
+    %outside = arith.ori %outsideStart, %pastEnd : i1
+    cf.cond_br %outside, ^outOfRange, ^inside
+  ^outOfRange:
+    %errorNameLengths = llvm.mlir.addressof @strict_substring_out_of_range : !llvm.ptr
+    %errorName = llvm.getelementptr %errorNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %error = func.call @strict_error_named(%errorName) : (!llvm.ptr) -> f64
+    return %error : f64
+  ^inside:
+    %firstIndex = arith.fptosi %first : f64 to i64
+    %lastIndex = arith.fptosi %last : f64 to i64
+    %from = func.call @strict_text_offset(%text, %firstIndex) : (f64, i64) -> i64
+    %to = func.call @strict_text_offset(%text, %lastIndex) : (f64, i64) -> i64
+    %bytes = arith.subi %to, %from : i64
+    %long = arith.constant 256 : i64
+    %result = func.call @strict_text_part(%text, %from, %bytes, %long) : (f64, i64, i64, i64) -> f64
+    return %result : f64
+  }
+  // IndexOf, LastIndexOf and StartsWith count characters, strict_text_find, strict_text_last_find and
+  // strict_text_begins count bytes
+  func.func private @strict_text_index(%text: f64, %search: f64, %start: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %wide = func.call @strict_text_wide(%text) : (f64) -> i1
+    cf.cond_br %wide, ^walk, ^plain
+  ^plain:
+    %direct = func.call @strict_text_find(%text, %search, %start) : (f64, f64, f64) -> f64
+    return %direct : f64
+  ^walk:
+    %walked = func.call @strict_text_index_wide(%text, %search, %start) : (f64, f64, f64) -> f64
+    return %walked : f64
+  }
+  func.func private @strict_text_index_wide(%text: f64, %search: f64, %start: f64) -> f64 attributes {llvm.passthrough = ["noinline"]} {
+    %wide = func.call @strict_text_wide(%text) : (f64) -> i1
+    cf.cond_br %wide, ^walk, ^plain
+  ^plain:
+    %found = func.call @strict_text_find(%text, %search, %start) : (f64, f64, f64) -> f64
+    return %found : f64
+  ^walk:
+    %none = arith.constant 0 : i64
+    %startIndex = arith.fptosi %start : f64 to i64
+    %fromIndex = arith.maxsi %startIndex, %none : i64
+    %fromOffset = func.call @strict_text_offset(%text, %fromIndex) : (f64, i64) -> i64
+    %from = arith.sitofp %fromOffset : i64 to f64
+    %at = func.call @strict_text_find(%text, %search, %from) : (f64, f64, f64) -> f64
+    %index = func.call @strict_text_indexed(%text, %at) : (f64, f64) -> f64
+    return %index : f64
+  }
+  func.func private @strict_text_indexed(%text: f64, %at: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %isFound = arith.cmpf oge, %at, %zero : f64
+    cf.cond_br %isFound, ^convert, ^missing
+  ^missing:
+    return %at : f64
+  ^convert:
+    %offset = arith.fptosi %at : f64 to i64
+    %index = func.call @strict_text_index_at(%text, %offset) : (f64, i64) -> i64
+    %result = arith.sitofp %index : i64 to f64
+    return %result : f64
+  }
+  func.func private @strict_text_last_index(%text: f64, %search: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %at = func.call @strict_text_last_find(%text, %search) : (f64, f64) -> f64
+    %wide = func.call @strict_text_wide(%text) : (f64) -> i1
+    cf.cond_br %wide, ^walk, ^plain
+  ^plain:
+    return %at : f64
+  ^walk:
+    %index = func.call @strict_text_indexed(%text, %at) : (f64, f64) -> f64
+    return %index : f64
+  }
+  func.func private @strict_text_starts(%text: f64, %prefix: f64, %start: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %wide = func.call @strict_text_wide(%text) : (f64) -> i1
+    cf.cond_br %wide, ^walk, ^plain
+  ^plain:
+    %direct = func.call @strict_text_begins(%text, %prefix, %start) : (f64, f64, f64) -> f64
+    return %direct : f64
+  ^walk:
+    %walked = func.call @strict_text_starts_wide(%text, %prefix, %start) : (f64, f64, f64) -> f64
+    return %walked : f64
+  }
+  func.func private @strict_text_starts_wide(%text: f64, %prefix: f64, %start: f64) -> f64 attributes {llvm.passthrough = ["noinline"]} {
+    %wide = func.call @strict_text_wide(%text) : (f64) -> i1
+    cf.cond_br %wide, ^walk, ^plain
+  ^plain:
+    %starts = func.call @strict_text_begins(%text, %prefix, %start) : (f64, f64, f64) -> f64
+    return %starts : f64
+  ^walk:
+    %none = arith.constant 0 : i64
+    %startIndex = arith.fptosi %start : f64 to i64
+    %fromIndex = arith.maxsi %startIndex, %none : i64
+    %fromOffset = func.call @strict_text_offset(%text, %fromIndex) : (f64, i64) -> i64
+    %from = arith.sitofp %fromOffset : i64 to f64
+    %begins = func.call @strict_text_begins(%text, %prefix, %from) : (f64, f64, f64) -> f64
+    return %begins : f64
+  }
   func.func private @strict_text_copy(%text: f64) -> f64 {
     %one = arith.constant 1 : i64
     %pointer = func.call @strict_text_ptr(%text) : (f64) -> !llvm.ptr
@@ -13012,7 +13446,7 @@
     %zero = arith.constant 0.0 : f64
     %one = arith.constant 1 : i64
     %start = arith.constant 0 : i64
-    %length = func.call @strict_text_length(%text) : (f64) -> f64
+    %length = func.call @strict_text_long(%text) : (f64) -> f64
     %copy = func.call @strict_text_copy(%text) : (f64) -> f64
     %pointer = func.call @strict_text_ptr(%copy) : (f64) -> !llvm.ptr
     %count = arith.fptosi %length : f64 to i64
@@ -13034,12 +13468,22 @@
   ^exit:
     return %copy : f64
   }
+  // a character as a text: the shared text of one byte for ASCII, its UTF-8 bytes in a text of its own otherwise
   func.func private @strict_character_text(%code: f64) -> f64 {
-    %byte = arith.fptoui %code : f64 to i8
-    %wide = arith.extui %byte : i8 to i64
+    %ascii = arith.constant 128 : i64
+    %wide = arith.fptoui %code : f64 to i64
+    %isAscii = arith.cmpi ult, %wide, %ascii : i64
+    cf.cond_br %isAscii, ^single, ^encode
+  ^single:
     %shared = func.call @strict_character_shared(%wide) : (i64) -> !llvm.ptr
     %result = func.call @strict_bits(%shared) : (!llvm.ptr) -> f64
     return %result : f64
+  ^encode:
+    %four = arith.constant 4 : i64
+    %room = func.call @strict_text_room(%four) : (i64) -> !llvm.ptr
+    %bytes = func.call @strict_text_encoded(%room, %wide) : (!llvm.ptr, i64) -> i64
+    %text = func.call @strict_text_made(%room, %bytes) : (!llvm.ptr, i64) -> f64
+    return %text : f64
   }
   func.func private @strict_floor(%number: f64) -> f64 {
     %result = llvm.intr.floor(%number) : (f64) -> f64
@@ -14550,6 +14994,29 @@
     return %result : f64
   }
   // Text.Bytes: the UTF-8 bytes of a text or span as a packed byte list (format 9), loops over it read bytes
+  // Text.Utf8: the text of a list of UTF-8 bytes
+  func.func private @strict_text_utf8(%self: f64, %bytes: f64) -> f64 {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %length = func.call @strict_list_length(%bytes) : (f64) -> f64
+    %count = arith.fptosi %length : f64 to i64
+    %room = func.call @strict_text_room(%count) : (i64) -> !llvm.ptr
+    cf.br ^loop(%zero : i64)
+  ^loop(%at: i64):
+    %more = arith.cmpi ult, %at, %count : i64
+    cf.cond_br %more, ^copy, ^done
+  ^copy:
+    %index = arith.sitofp %at : i64 to f64
+    %value = func.call @strict_list_get(%bytes, %index) : (f64, f64) -> f64
+    %byte = arith.fptoui %value : f64 to i8
+    %slot = llvm.getelementptr %room[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %byte, %slot : i8, !llvm.ptr
+    %next = arith.addi %at, %one : i64
+    cf.br ^loop(%next : i64)
+  ^done:
+    %text = func.call @strict_text_made(%room, %count) : (!llvm.ptr, i64) -> f64
+    return %text : f64
+  }
   func.func private @strict_text_as_bytes(%text: f64) -> f64 {
     %zero = arith.constant 0 : i64
     %byteFormat = arith.constant 9 : i64
@@ -14789,13 +15256,16 @@
     return %result : f64
   }
   // an empty text with room for capacity one byte characters, filled by strict_text_written (a for collecting Characters)
+  // the text a loop over characters writes into: room for the widest UTF-8 character per character
   func.func private @strict_text_new(%capacity: f64) -> f64 {
     %one = arith.constant 1 : i64
     %terminator = arith.constant 0 : i8
     %whole = llvm.intr.ceil(%capacity) : (f64) -> f64
     %count = arith.fptosi %whole : f64 to i64
     %nothing = arith.constant 0 : i64
-    %buffer = func.call @strict_text_room(%count) : (i64) -> !llvm.ptr
+    %widest = arith.constant 4 : i64
+    %bytes = arith.muli %count, %widest : i64
+    %buffer = func.call @strict_text_room(%bytes) : (i64) -> !llvm.ptr
     llvm.store %terminator, %buffer : i8, !llvm.ptr
     func.call @strict_text_sized(%buffer, %nothing, %nothing) : (!llvm.ptr, i64, i64) -> ()
     %result = func.call @strict_bits(%buffer) : (!llvm.ptr) -> f64
@@ -14806,13 +15276,15 @@
     %terminator = arith.constant 0 : i8
     %buffer = func.call @strict_text_ptr(%text) : (f64) -> !llvm.ptr
     %index = arith.fptosi %at : f64 to i64
-    %byte = arith.fptoui %code : f64 to i8
+    %wide = arith.fptoui %code : f64 to i64
     %slot = llvm.getelementptr %buffer[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    llvm.store %byte, %slot : i8, !llvm.ptr
-    %next = arith.addi %index, %one : i64
+    %bytes = func.call @strict_text_encoded(%slot, %wide) : (!llvm.ptr, i64) -> i64
+    %next = arith.addi %index, %bytes : i64
     %end = llvm.getelementptr %buffer[%next] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     llvm.store %terminator, %end : i8, !llvm.ptr
-    func.call @strict_text_sized(%buffer, %next, %next) : (!llvm.ptr, i64, i64) -> ()
+    %before = func.call @strict_text_characters(%buffer) : (!llvm.ptr) -> i64
+    %characters = arith.addi %before, %one : i64
+    func.call @strict_text_sized(%buffer, %next, %characters) : (!llvm.ptr, i64, i64) -> ()
     %advanced = arith.sitofp %next : i64 to f64
     return %advanced : f64
   }
@@ -15168,7 +15640,7 @@
     %rest = arith.subi %length, %at : i64
     %from = arith.sitofp %at : i64 to f64
     %count = arith.sitofp %rest : i64 to f64
-    %result = func.call @strict_text_substring(%text, %from, %count) : (f64, f64, f64) -> f64
+    %result = func.call @strict_text_cut(%text, %from, %count) : (f64, f64, f64) -> f64
     return %result : f64
   }
   func.func private @strict_text_trim_end(%text: f64) -> f64 {
@@ -15189,7 +15661,7 @@
     cf.cond_br %isSpace, ^check(%last : i64), ^cut(%end : i64)
   ^cut(%at: i64):
     %count = arith.sitofp %at : i64 to f64
-    %result = func.call @strict_text_substring(%text, %zero, %count) : (f64, f64, f64) -> f64
+    %result = func.call @strict_text_cut(%text, %zero, %count) : (f64, f64, f64) -> f64
     return %result : f64
   }
   func.func private @strict_text_trim(%text: f64) -> f64 {
@@ -15199,7 +15671,7 @@
   }
   func.func private @strict_text_capitalize(%text: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
-    %length = func.call @strict_text_length(%text) : (f64) -> f64
+    %length = func.call @strict_text_long(%text) : (f64) -> f64
     %copy = func.call @strict_text_copy(%text) : (f64) -> f64
     %pointer = func.call @strict_text_ptr(%copy) : (f64) -> !llvm.ptr
     %first = llvm.load %pointer : !llvm.ptr -> i8
@@ -15917,7 +16389,7 @@
     cf.cond_br %isSeparator, ^create, ^next
   ^create:
     %count = arith.sitofp %index : i64 to f64
-    %folder = func.call @strict_text_substring(%full, %zero, %count) : (f64, f64, f64) -> f64
+    %folder = func.call @strict_text_cut(%full, %zero, %count) : (f64, f64, f64) -> f64
     %created = func.call @strict_directory_create(%zero, %folder) : (f64, f64) -> f64
     cf.br ^next
   ^next:
@@ -16072,7 +16544,7 @@
   func.func private @strict_process_runtool(%self: f64, %name: f64, %arguments: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %path = func.call @strict_tool_path(%name) : (f64) -> f64
-    %length = func.call @strict_text_length(%path) : (f64) -> f64
+    %length = func.call @strict_text_long(%path) : (f64) -> f64
     %missing = arith.cmpf oeq, %length, %zero : f64
     cf.cond_br %missing, ^absent, ^present
   ^absent:

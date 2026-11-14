@@ -7,9 +7,6 @@ constant Printable = 33
 constant DeleteOffset = 94
 constant SoftHyphenIndex = 67
 constant SoftHyphen = 173
-constant Ascii = 128
-constant Lead = 192
-constant Payload = 64
 constant Mapped = Json("\"\\u0120\"") to Text
 constant Spaced = "{\"b\": 0, \"a\": 1, \"ab\": 2, \" \": 3, \"" + Mapped + "\": 4}"
 constant Tiny = Gpt2Tokens.Parsed("{\"a\": 0, \"b\": 1, \"\\u0120\": 2, \"ab\": 3, \"\\u0120ab\": 4}", ("#version: 0.2", "a b", Mapped + " ab"))
@@ -93,14 +90,10 @@ Raw(mapped Text) Text
 	Raw(Mapped + "ab") is " ab"
 	Raw("ab") is "ab"
 	Raw(Json("\"\\u0121\"") to Text)(0).number is Character.Delete
-	mutable raw = ""
-	mutable position = 0
-	for as long as position < mapped.Length
-		let lead = mapped(position).number
-		let isAscii = lead < Ascii
-		raw = raw + Character(isAscii then lead else Unmapped((lead - Lead) * Payload + mapped(position + 1).number - Ascii))
-		position = position + (isAscii then 1 else 2)
-	raw
+	mutable raw = List(Number)
+	for mapped
+		raw = raw + Unmapped(value.number)
+	Text.Utf8(raw)
 Decoded(tokenIds Numbers) Text
 	Tiny.Decoded((4, 2, 0)) is " ab a"
 	for tokenIds

@@ -22,12 +22,17 @@ Right(words Texts) Number
 	right
 Kept(count Number) Number
 	Spans.Kept(Many) is Many
-	Spans.Kept(Big) is Big
 	let words = Words(count)
 	Process.Collected
 	let others = Words(count * 2)
 	Process.Collected
 	Right(words) + Right(others) - count * 2
+Scanned(count Number) Number
+	Spans.Scanned(Big) is Big
+	let words = Words(count)
+	Process.Collected
+	Process.Collected
+	Right(words)
 Part(text Text) Text
 	Spans.Part(Spans.Long(Many)).Length is Size
 	Spans.Part(Spans.Long(Many)).IndexOf(" ") is 4

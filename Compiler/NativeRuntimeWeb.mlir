@@ -399,7 +399,7 @@
     %any = func.call @strict_bits(%anyText) : (!llvm.ptr) -> f64
     %isUnset = arith.cmpf oeq, %pattern, %zero : f64
     %safePattern = arith.select %isUnset, %any, %pattern : f64
-    %patternLength = func.call @strict_text_length(%safePattern) : (f64) -> f64
+    %patternLength = func.call @strict_text_long(%safePattern) : (f64) -> f64
     %isEmpty = arith.cmpf oeq, %patternLength, %zero : f64
     %chosen = arith.select %isEmpty, %any, %safePattern : f64
     %patternText = func.call @strict_text_ptr(%chosen) : (f64) -> !llvm.ptr

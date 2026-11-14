@@ -158,7 +158,7 @@ Fits Boolean
 	("t" is not in kinds) or (kinds.Length <= Slots)
 Guarded(entry InstructionEntry, kinds Number, at Number) Texts
 	Sample.Guarded(Owning, 1, 4).First is "    %t4wl0 = llvm.load %instance : !llvm.ptr -> f64"
-	Sample.Guarded(Owning, 1, 4).Last is "    %t4wh0o = arith.constant true"
+	Sample.Guarded(Owning, 1, 4).Last is "    %t4wh0o = arith.cmpi eq, %t4wt0c, %t4wt0n : i64"
 	Sample.Guarded(Passing, 1, 4).Length is 0
 	if Extra(entry, MlirWholeFunction(function).Callee(entry)) is 0
 		return List(Text)

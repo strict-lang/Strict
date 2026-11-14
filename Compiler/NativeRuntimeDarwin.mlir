@@ -210,7 +210,7 @@
     %any = func.call @strict_bits(%anyText) : (!llvm.ptr) -> f64
     %isUnset = arith.cmpf oeq, %pattern, %zero : f64
     %safePattern = arith.select %isUnset, %any, %pattern : f64
-    %patternLength = func.call @strict_text_length(%safePattern) : (f64) -> f64
+    %patternLength = func.call @strict_text_long(%safePattern) : (f64) -> f64
     %isEmpty = arith.cmpf oeq, %patternLength, %zero : f64
     %chosen = arith.select %isEmpty, %any, %safePattern : f64
     %patternText = func.call @strict_text_ptr(%chosen) : (f64) -> !llvm.ptr
@@ -681,7 +681,7 @@
   llvm.func @system(!llvm.ptr) -> i32
   // runs a program with the console of this one (its output appears right away) and returns its exit code
   func.func private @strict_process_started(%path: f64, %arguments: f64) -> f64 {
-    %pathLength = func.call @strict_text_length(%path) : (f64) -> f64
+    %pathLength = func.call @strict_text_long(%path) : (f64) -> f64
     %noLength = arith.constant 0.0 : f64
     %isMissing = arith.cmpf oeq, %pathLength, %noLength : f64
     cf.cond_br %isMissing, ^missing, ^start

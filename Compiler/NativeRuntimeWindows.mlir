@@ -200,7 +200,7 @@
     %any = func.call @strict_bits(%anyText) : (!llvm.ptr) -> f64
     %isUnset = arith.cmpf oeq, %pattern, %zero : f64
     %safePattern = arith.select %isUnset, %any, %pattern : f64
-    %patternLength = func.call @strict_text_length(%safePattern) : (f64) -> f64
+    %patternLength = func.call @strict_text_long(%safePattern) : (f64) -> f64
     %isEmpty = arith.cmpf oeq, %patternLength, %zero : f64
     %chosen = arith.select %isEmpty, %any, %safePattern : f64
     %search = func.call @strict_path_join(%path, %chosen) : (f64, f64) -> f64

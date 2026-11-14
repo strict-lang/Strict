@@ -43,8 +43,7 @@ Integers Numbers
 	integers
 Spelled(start Number, length Number) Text
 	ByteEncoder(104, 105, 195, 164).Spelled(2, 2).Bytes is (195, 164)
-	for Range(start, start + length)
-		Character(bytes(value))
+	outer.Text.Utf8(bytes.Slice(start, length))
 SevenBitLength(number Number) Number
 	ByteEncoder(1, 2).SevenBitLength(300) is 2
 	number < SevenBitBase then 1 else 1 + SevenBitLength((number / SevenBitBase).Floor)

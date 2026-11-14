@@ -18,9 +18,11 @@ Lines(text Text) Texts
 	MlirWholeDescribed(4, 1).Lines("%v")(3).StartsWith("    %t4wa1 = ")
 	MlirWholeDescribed(4, 1).Lines("%v")(4).StartsWith("    %t4wt1s = llvm.getelementptr %wfailed[4] :")
 	MlirWholeDescribed(4, 1).Lines("%v")(6) is "    llvm.store %t4wt1n, %t4wt1s : i64, !llvm.ptr"
-	MlirWholeDescribed(4, 1).Lines("%v").Last is "    %t4wh1o = arith.constant true"
+	MlirWholeDescribed(4, 1).Lines("%v").Last is "    %t4wh1o = arith.cmpi eq, %t4wt1c, %t4wt1n : i64"
 	let prefix = "%t" + at + "wt" + order
 	let first = "    llvm.store " + prefix + "a, %t" + at + "wa" + order + " : i64, !llvm.ptr"
 	let stores = (first, "    llvm.store " + prefix + "n, " + prefix + "s : i64, !llvm.ptr")
 	let places = (Place("wa" + order, 1), Place("wt" + order + "s", 2))
-	Measured(text) + places + stores + MlirWholeValues(at).Line("wh" + order + "o", "arith.constant true")
+	let count = MlirWholeValues(at).Line("wt" + order + "c", "func.call @strict_text_count(" + text + ") : (f64) -> i64")
+	let ascii = MlirWholeValues(at).Line("wh" + order + "o", "arith.cmpi eq, " + prefix + "c, " + prefix + "n : i64")
+	Measured(text) + places + stores + count + ascii
