@@ -6529,7 +6529,6 @@
     cf.br ^free
   ^free:
     func.call @strict_rc_forget_device(%object) : (i64) -> ()
-    func.call @strict_measured_freed(%object, %located#2) : (i64, i64) -> ()
     %header = arith.subi %object, %headerBytes : i64
     func.call @strict_gc_free_large(%header) : (i64) -> ()
     func.call @strict_gc_uncount(%located#2) : (i64) -> ()
@@ -6736,7 +6735,6 @@
     cf.br ^cleared
   ^cleared:
     func.call @strict_rc_forget_device(%object) : (i64) -> ()
-    func.call @strict_measured_freed(%object, %size) : (i64, i64) -> ()
     %wiped = llvm.call @memset(%pointer, %clear, %size) : (!llvm.ptr, i32, i64) -> !llvm.ptr
     llvm.store %clear, %counter : i32, !llvm.ptr
     llvm.store %unmarked, %flags : i8, !llvm.ptr
@@ -8621,10 +8619,6 @@
     %spilled:2 = func.call @strict_registers_spilled() : () -> (i64, i64)
     %startedAt = func.call @strict_clock() : () -> f64
     %ranBefore = func.call @strict_thread_seconds() : () -> f64
-    %measuredSlot = llvm.mlir.addressof @strict_measured_text : !llvm.ptr
-    llvm.store %zero, %measuredSlot : i64, !llvm.ptr
-    %joinedSlot = llvm.mlir.addressof @strict_joined_text : !llvm.ptr
-    llvm.store %zero, %joinedSlot : i64, !llvm.ptr
     %one = arith.constant 1 : i64
     %classCount = arith.constant 64 : i64
     %minimumSlot = llvm.mlir.addressof @strict_gc_budget : !llvm.ptr
@@ -12658,80 +12652,10 @@
   ^unchanged:
     return %dictionary : f64
   }
-  llvm.mlir.global internal @strict_measured_text(0 : i64) : i64
-  llvm.mlir.global internal @strict_measured_length(0 : i64) : i64
-  // the last text of 256 bytes or more strict_text_concat made and its length: appending to it again (text = text +
-  // piece in a loop) does not measure it, forgotten like the measured text when its block is freed or a collection runs
-  llvm.mlir.global internal @strict_joined_text(0 : i64) : i64
-  llvm.mlir.global internal @strict_joined_length(0 : i64) : i64
-  // a block freed by its count may hold the text whose length is remembered: only then it is forgotten (a reclaim
-  // that forgot it every time measured an 80 MB text again for each of its lines, File.ReadLines)
-  func.func private @strict_measured_freed(%object: i64, %size: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
-    %zero = arith.constant 0 : i64
-    %textSlot = llvm.mlir.addressof @strict_measured_text : !llvm.ptr
-    %measured = llvm.load %textSlot : !llvm.ptr -> i64
-    %end = arith.addi %object, %size : i64
-    %inside = func.call @strict_gc_within(%measured, %object, %end) : (i64, i64, i64) -> i1
-    cf.cond_br %inside, ^forget, ^done
-  ^forget:
-    llvm.store %zero, %textSlot : i64, !llvm.ptr
-    cf.br ^done
-  ^done:
-    %joinedSlot = llvm.mlir.addressof @strict_joined_text : !llvm.ptr
-    %joined = llvm.load %joinedSlot : !llvm.ptr -> i64
-    %joinedInside = func.call @strict_gc_within(%joined, %object, %end) : (i64, i64, i64) -> i1
-    cf.cond_br %joinedInside, ^forgetJoined, ^kept
-  ^forgetJoined:
-    llvm.store %zero, %joinedSlot : i64, !llvm.ptr
-    cf.br ^kept
-  ^kept:
-    return
-  }
-  // step 1 of plan.md: a text whose stored byte length is not its measured one was made by a writer not converted yet
-  llvm.mlir.global internal constant @strict_text_unsized("TextWithoutLength: stored %lld, measured %lld: %.60s\0A\00") : !llvm.array<54 x i8>
-  func.func private @strict_text_checked(%data: !llvm.ptr, %measured: i64) {
-    %stored = func.call @strict_text_bytes(%data) : (!llvm.ptr) -> i64
-    %same = arith.cmpi eq, %stored, %measured : i64
-    cf.cond_br %same, ^done, ^report
-  ^report:
-    %format = llvm.mlir.addressof @strict_text_unsized : !llvm.ptr
-    %printed = llvm.call @printf(%format, %stored, %measured, %data) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i32
-    cf.br ^done
-  ^done:
-    return
-  }
-  func.func private @strict_text_length(%text: f64) -> f64 {
+  func.func private @strict_text_length(%text: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %pointer = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr
-    %address = llvm.ptrtoint %pointer : !llvm.ptr to i64
-    %textSlot = llvm.mlir.addressof @strict_measured_text : !llvm.ptr
-    %lengthSlot = llvm.mlir.addressof @strict_measured_length : !llvm.ptr
-    %shared = func.call @strict_rc_busy() : () -> i1
-    cf.cond_br %shared, ^direct, ^lookup
-  ^direct:
-    %directLength = llvm.call @strlen(%pointer) : (!llvm.ptr) -> i64
-    %directResult = arith.uitofp %directLength : i64 to f64
-    return %directResult : f64
-  ^lookup:
-    %measured = llvm.load %textSlot : !llvm.ptr -> i64
-    %known = arith.cmpi eq, %measured, %address : i64
-    cf.cond_br %known, ^cached, ^measure
-  ^cached:
-    %cachedLength = llvm.load %lengthSlot : !llvm.ptr -> i64
-    %cachedResult = arith.uitofp %cachedLength : i64 to f64
-    return %cachedResult : f64
-  ^measure:
-    // only one long text stays cached, alternating two long texts re-measures, upgrade: length in a text header
-    %length = llvm.call @strlen(%pointer) : (!llvm.ptr) -> i64
-    func.call @strict_text_checked(%pointer, %length) : (!llvm.ptr, i64) -> ()
-    %longText = arith.constant 256 : i64
-    %isLong = arith.cmpi uge, %length, %longText : i64
-    cf.cond_br %isLong, ^remember, ^measured
-  ^remember:
-    llvm.store %address, %textSlot : i64, !llvm.ptr
-    llvm.store %length, %lengthSlot : i64, !llvm.ptr
-    cf.br ^measured
-  ^measured:
-    %result = arith.uitofp %length : i64 to f64
+    %bytes = func.call @strict_text_bytes(%pointer) : (!llvm.ptr) -> i64
+    %result = arith.uitofp %bytes : i64 to f64
     return %result : f64
   }
   func.func private @strict_text_at(%text: f64, %index: f64) -> f64 {
@@ -12817,7 +12741,7 @@
     %whole = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr
     %a = llvm.getelementptr %whole[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %b = func.call @strict_ptr(%prefix) : (f64) -> !llvm.ptr
-    %length = llvm.call @strlen(%b) : (!llvm.ptr) -> i64
+    %length = func.call @strict_text_bytes(%b) : (!llvm.ptr) -> i64
     %compared = llvm.call @strncmp(%a, %b, %length) : (!llvm.ptr, !llvm.ptr, i64) -> i32
     %same = arith.cmpi eq, %compared, %zero : i32
     %result = func.call @strict_boolean(%same) : (i1) -> f64
@@ -14215,24 +14139,8 @@
     %one = arith.constant 1 : i64
     %a = func.call @strict_ptr(%left) : (f64) -> !llvm.ptr
     %b = func.call @strict_ptr(%right) : (f64) -> !llvm.ptr
-    %address = llvm.ptrtoint %a : !llvm.ptr to i64
-    %joinedSlot = llvm.mlir.addressof @strict_joined_text : !llvm.ptr
-    %joinedLengthSlot = llvm.mlir.addressof @strict_joined_length : !llvm.ptr
-    %joined = llvm.load %joinedSlot : !llvm.ptr -> i64
-    %isJoined = arith.cmpi eq, %joined, %address : i64
-    %shared = func.call @strict_rc_busy() : () -> i1
-    %yes = arith.constant true
-    %unshared = arith.xori %shared, %yes : i1
-    %known = arith.andi %isJoined, %unshared : i1
-    cf.cond_br %known, ^remembered, ^measure
-  ^remembered:
-    %rememberedLength = llvm.load %joinedLengthSlot : !llvm.ptr -> i64
-    cf.br ^join(%rememberedLength : i64)
-  ^measure:
-    %measuredLength = llvm.call @strlen(%a) : (!llvm.ptr) -> i64
-    cf.br ^join(%measuredLength : i64)
-  ^join(%leftLength: i64):
-    %rightLength = llvm.call @strlen(%b) : (!llvm.ptr) -> i64
+    %leftLength = func.call @strict_text_bytes(%a) : (!llvm.ptr) -> i64
+    %rightLength = func.call @strict_text_bytes(%b) : (!llvm.ptr) -> i64
     %total = arith.addi %leftLength, %rightLength : i64
     %buffer = func.call @strict_text_room_filled(%total) : (i64) -> !llvm.ptr
     %first = llvm.call @memcpy(%buffer, %a, %leftLength) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
@@ -14244,16 +14152,6 @@
     %characters = arith.addi %leftCharacters, %rightCharacters : i64
     func.call @strict_text_sized(%buffer, %total, %characters) : (!llvm.ptr, i64, i64) -> ()
     %result = func.call @strict_bits(%buffer) : (!llvm.ptr) -> f64
-    %longText = arith.constant 256 : i64
-    %isLong = arith.cmpi uge, %total, %longText : i64
-    %kept = arith.andi %isLong, %unshared : i1
-    cf.cond_br %kept, ^remember, ^done
-  ^remember:
-    %made = llvm.ptrtoint %buffer : !llvm.ptr to i64
-    llvm.store %made, %joinedSlot : i64, !llvm.ptr
-    llvm.store %total, %joinedLengthSlot : i64, !llvm.ptr
-    cf.br ^done
-  ^done:
     return %result : f64
   }
   // an empty text with room for capacity one byte characters, filled by strict_text_written (a for collecting Characters)
@@ -14314,7 +14212,7 @@
     %count = arith.fptosi %length : f64 to i64
     %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
     %separatorPointer = func.call @strict_ptr(%separator) : (f64) -> !llvm.ptr
-    %separatorSize = llvm.call @strlen(%separatorPointer) : (!llvm.ptr) -> i64
+    %separatorSize = func.call @strict_text_bytes(%separatorPointer) : (!llvm.ptr) -> i64
     %partsBytes = arith.muli %count, %eight : i64
     %parts = func.call @strict_alloc(%partsBytes) : (i64) -> !llvm.ptr
     %hasItems = arith.cmpi sgt, %count, %start : i64
@@ -14336,7 +14234,7 @@
     llvm.store %element, %partSlot : f64, !llvm.ptr
     func.call @strict_gc_written(%partSlot) : (!llvm.ptr) -> ()
     %pointer = func.call @strict_ptr(%element) : (f64) -> !llvm.ptr
-    %size = llvm.call @strlen(%pointer) : (!llvm.ptr) -> i64
+    %size = func.call @strict_text_bytes(%pointer) : (!llvm.ptr) -> i64
     %isFirst = arith.cmpi eq, %index, %start : i64
     %gap = arith.select %isFirst, %start, %separatorSize : i64
     %withGap = arith.addi %total, %gap : i64
@@ -14365,7 +14263,7 @@
     %partAt = llvm.getelementptr %parts[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     %part = llvm.load %partAt : !llvm.ptr -> f64
     %partPointer = func.call @strict_ptr(%part) : (f64) -> !llvm.ptr
-    %partSize = llvm.call @strlen(%partPointer) : (!llvm.ptr) -> i64
+    %partSize = func.call @strict_text_bytes(%partPointer) : (!llvm.ptr) -> i64
     %target = llvm.getelementptr %buffer[%position] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %copiedPart = llvm.call @memcpy(%target, %partPointer, %partSize) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     %advanced = arith.addi %position, %partSize : i64
@@ -14622,7 +14520,7 @@
     %start = arith.constant 0 : i64
     %step = arith.constant 1 : i64
     %pointer = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr
-    %length = llvm.call @strlen(%pointer) : (!llvm.ptr) -> i64
+    %length = func.call @strict_text_bytes(%pointer) : (!llvm.ptr) -> i64
     cf.br ^check(%start : i64)
   ^check(%index: i64):
     %more = arith.cmpi slt, %index, %length : i64
@@ -14645,7 +14543,7 @@
     %none = arith.constant 0 : i64
     %step = arith.constant 1 : i64
     %pointer = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr
-    %length = llvm.call @strlen(%pointer) : (!llvm.ptr) -> i64
+    %length = func.call @strict_text_bytes(%pointer) : (!llvm.ptr) -> i64
     cf.br ^check(%length : i64)
   ^check(%end: i64):
     %more = arith.cmpi sgt, %end, %none : i64
@@ -15283,7 +15181,7 @@
   ^copy:
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
-    %length = llvm.call @strlen(%pointer) : (!llvm.ptr) -> i64
+    %length = func.call @strict_text_bytes(%pointer) : (!llvm.ptr) -> i64
     %output = func.call @strict_text_room(%length) : (i64) -> !llvm.ptr
     cf.br ^scan(%zero, %zero : i64, i64)
   ^scan(%index: i64, %written: i64):
@@ -15321,7 +15219,7 @@
     %carriage = arith.constant 13 : i8
     %text = func.call @strict_file_text(%path) : (f64) -> f64
     %pointer = func.call @strict_ptr(%text) : (f64) -> !llvm.ptr
-    %length = llvm.call @strlen(%pointer) : (!llvm.ptr) -> i64
+    %length = func.call @strict_text_bytes(%pointer) : (!llvm.ptr) -> i64
     %lines = func.call @strict_list_new(%four, %zero) : (f64, f64) -> f64
     cf.br ^scan(%start, %start, %lines : i64, i64, f64)
   ^scan(%index: i64, %lineStart: i64, %found: f64):
