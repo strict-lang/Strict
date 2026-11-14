@@ -5300,7 +5300,7 @@
     cf.cond_br %isSpan, ^span, ^checked
   ^span:
     func.call @strict_span_seen(%value) : (i64) -> ()
-    cf.br ^loop(%next, %skipStart, %skipEnd, %referenced : i64, i64, i64, i64)
+    cf.br ^loop(%next, %skipStart, %skipEnd, %next : i64, i64, i64, i64)
   ^checked:
     cf.cond_br %skipped, ^loop(%next, %skipStart, %skipEnd, %refers : i64, i64, i64, i64), ^narrow
   ^narrow:
@@ -11286,7 +11286,13 @@
     %target = func.call @strict_rc_target(%elementBits) : (i64) -> i64
     %noTarget = arith.constant 0 : i64
     %isReference = arith.cmpi ne, %target, %noTarget : i64
-    cf.cond_br %isReference, ^written, ^counted
+    cf.cond_br %isReference, ^written, ^number
+  ^number:
+    %isSpan = func.call @strict_span_is(%elementBits) : (i64) -> i1
+    cf.cond_br %isSpan, ^spanned, ^counted
+  ^spanned:
+    func.call @strict_span_stored(%slot) : (!llvm.ptr) -> ()
+    cf.br ^counted
   ^written:
     func.call @strict_gc_written(%slot) : (!llvm.ptr) -> ()
     cf.br ^counted
@@ -12034,7 +12040,13 @@
     %target = func.call @strict_rc_target(%elementBits) : (i64) -> i64
     %noTarget = arith.constant 0 : i64
     %isReference = arith.cmpi ne, %target, %noTarget : i64
-    cf.cond_br %isReference, ^written, ^stored
+    cf.cond_br %isReference, ^written, ^number
+  ^number:
+    %isSpan = func.call @strict_span_is(%elementBits) : (i64) -> i1
+    cf.cond_br %isSpan, ^spanned, ^stored
+  ^spanned:
+    func.call @strict_span_stored(%slot) : (!llvm.ptr) -> ()
+    cf.br ^stored
   ^written:
     func.call @strict_gc_written(%slot) : (!llvm.ptr) -> ()
     cf.br ^stored
@@ -14612,6 +14624,26 @@
     cf.cond_br %inside, ^mark, ^done
   ^mark:
     %range:2 = func.call @strict_gc_mark(%base) : (i64) -> (i64, i64)
+    cf.br ^done
+  ^done:
+    return
+  }
+  // a span stored into a big block: the next full collection scans all of it again (strict_gc_drain keeps how far
+  // a big block held references), a span counts nothing and needs no card, young collections keep every window
+  func.func private @strict_span_stored(%slot: !llvm.ptr) {
+    %address = llvm.ptrtoint %slot : !llvm.ptr to i64
+    %baseSlot = llvm.mlir.addressof @strict_gc_base : !llvm.ptr
+    %base = llvm.load %baseSlot : !llvm.ptr -> i64
+    %topSlot = llvm.mlir.addressof @strict_gc_top : !llvm.ptr
+    %top = llvm.load %topSlot : !llvm.ptr -> i64
+    %offset = arith.subi %address, %base : i64
+    %size = arith.subi %top, %base : i64
+    %inHeap = arith.cmpi ult, %offset, %size : i64
+    cf.cond_br %inHeap, ^heap, ^done
+  ^heap:
+    %nine = arith.constant 9 : i64
+    %index = arith.shrui %offset, %nine : i64
+    func.call @strict_gc_unscanned(%index) : (i64) -> ()
     cf.br ^done
   ^done:
     return

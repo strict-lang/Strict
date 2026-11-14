@@ -1,6 +1,7 @@
 constant Many = 300
 constant Start = 400
 constant Size = 40
+constant Big = 2100
 Long(count Number) Text
 	Spans.Long(2) is "w0 w1 "
 	mutable text = ""
@@ -21,6 +22,7 @@ Right(words Texts) Number
 	right
 Kept(count Number) Number
 	Spans.Kept(Many) is Many
+	Spans.Kept(Big) is Big
 	let words = Words(count)
 	Process.Collected
 	let others = Words(count * 2)
