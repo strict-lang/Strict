@@ -11158,13 +11158,14 @@
   // a copy to grow: its holder is a small block of its own, its items lie apart with twice the room like those of a
   // grown list; in a pool job a holder inside a large list block is never this thread's (strict_gc_mine), each Add
   // copied the whole list again (EntryDecoder.Of decoding chunks of a folder test took minutes)
-  // the copy a list grows in gets room for twice its items and 4 more, like a list made by its first Add
-  // (strict_list_first): room for 16 sped up the tokens of a line by 5% but made every short list four times as big,
-  // the 450000 lists of one to three numbers of the Qwen tokenizer folder took 0.49 instead of 0.28 s
+  // the copy a list grows in gets room for twice its items and 8 more, like a list made by its first Add
+  // (strict_list_first). Measured 2026-11-14 with room for 2, 4, 8 and 16: the Qwen tokenizer folder (450000 lists of
+  // one to three numbers) 0.30, 0.30, 0.29 and 0.49 s, the tokens of a line 46.7, 44.8, 44.1 and 41-42 ns, the
+  // words of all .strict files 66, 66, 62 ns: 16 is a cliff (128 bytes per short list), 8 costs nothing
   func.func private @strict_list_apart(%list: f64) -> f64 {
     %eight = arith.constant 8.0 : f64
     %two = arith.constant 2.0 : f64
-    %four = arith.constant 4.0 : f64
+    %four = arith.constant 8.0 : f64
     %none = arith.constant 0.0 : f64
     %length = func.call @strict_list_length(%list) : (f64) -> f64
     %copy = func.call @strict_list_new(%none, %length) : (f64, f64) -> f64
@@ -11348,7 +11349,7 @@
   // place, instead of a copy of nothing and one more view for the added version
   func.func private @strict_list_first(%element: f64) -> f64 attributes {llvm.passthrough = ["noinline"]} {
     %nothing = arith.constant 0.0 : f64
-    %room = arith.constant 4.0 : f64
+    %room = arith.constant 8.0 : f64
     %created = func.call @strict_list_new(%room, %nothing) : (f64, f64) -> f64
     %view = func.call @strict_ptr(%created) : (f64) -> !llvm.ptr
     %viewholder = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
