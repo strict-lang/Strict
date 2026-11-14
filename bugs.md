@@ -1,0 +1,1 @@
+- `strict test Games/TorinsTowers native` (DeltaEngine) crashes strict.exe with AccessViolation in MLIR emission (BuildProfile.Emitted <- MlirModule.Declared <- MlirModule.Text <- NativeBuild.Tested), also with the build before 0cc1d088 (2026-11-14).
