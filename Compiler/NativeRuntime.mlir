@@ -11343,6 +11343,8 @@
   }
   // strict_list_add of a local that is the only holder of its list (MlirDying.Adder): when no heap object counts its
   // view and the items grow in place, the view takes the new length instead of a new view per Add
+  // the first Add to an empty list that cannot grow (the shared empty list) makes a list with room and fills it in
+  // place, instead of a copy of nothing and one more view for the added version
   func.func private @strict_list_add_owned(%list: f64, %element: f64) -> f64 {
     %nothing = arith.constant 0.0 : f64
     %unset = arith.cmpf oeq, %list, %nothing : f64
@@ -11361,7 +11363,15 @@
     %capacity = llvm.load %capacityslot : !llvm.ptr -> f64
     %growable = arith.cmpf ogt, %capacity, %nothing : f64
     %inPlace = arith.andi %newest, %growable : i1
-    cf.cond_br %inPlace, ^check, ^add
+    cf.cond_br %inPlace, ^check, ^other
+  ^other:
+    %isEmpty = arith.cmpf oeq, %length, %nothing : f64
+    cf.cond_br %isEmpty, ^first, ^add
+  ^first:
+    %room = arith.constant 16.0 : f64
+    %created = func.call @strict_list_new(%room, %nothing) : (f64, f64) -> f64
+    %filled = func.call @strict_list_add_owned(%created, %element) : (f64, f64) -> f64
+    return %filled : f64
   ^check:
     %unshared = func.call @strict_rc_unshared(%list) : (f64) -> i1
     cf.cond_br %unshared, ^grow, ^add
