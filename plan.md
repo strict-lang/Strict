@@ -24,4 +24,6 @@ Left from steps 1 to 3:
 - `Text.Length` and indexing still count bytes. `characterLength` is stored and right for every maker except `strict_text_written` (it counts a byte as a character); nothing reads it yet. Open: should `Length` and `text(index)` count characters for texts that are not ASCII?
 - Trace locations (`@w` tables of the emitter) are copied into texts per trace, they should carry lengths themselves.
 - `strict_kept_text` (the folder of a thread) stays a C text, the GPU and trace code keeps `strlen` on its C names (30 calls in the main runtime), compare, index and hash still run to the zero byte.
-Next: step 4 (appending in a block with room).
+Step 4 is in (2026-11-14): `text = text + piece` of a local that is the only holder of its text (`MlirAppended`: stored only from constants and concatenations, read only by `+`, comparisons, a return or calls returning a Number, Boolean or None) calls `strict_text_append`, which writes behind the text while its block has room and no heap object counts it, else moves both into a block with room for twice the bytes (half more from 4096 on). 20000 appends up to 280000 characters 207 -> 0.25 ms, tokenizer folder 0.256 -> 0.245 s, self-build unchanged at 15.5 s. `Examples/GrowingText.strict` checks that a text also held by a list keeps its value.
+Left from step 4: a text seeded from a parameter or member, or read by a call returning a Text (`Trim`, `Substring`), still copies on every append.
+Next: step 5 (spans).

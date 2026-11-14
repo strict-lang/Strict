@@ -1,0 +1,69 @@
+has function MlirFunction
+has position Number
+constant Stored = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "text")
+constant Piece = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "text"), InstructionEntry.LoadText(2, "b"))
+constant Added = (InstructionEntry.Binary(InstructionType.Add, (1, 2, 3)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 3, "text"))
+constant Start = (List(InstructionEntry) + InstructionEntry.LoadText(0, "") + Stored) + Piece + Added
+constant Reload = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "text")
+constant Kept = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 4, "other")
+constant Shape = List(TypeEntry) + MlirFunction.Shape
+constant Returned = MethodEntry("Run", List(MemberEntry), "Strict/Text", Start + Reload + InstructionEntry.Return(4))
+constant Growing = MlirAppended(MlirFunction(Shape, MlirFunction.Shape, Returned), 4)
+constant Aliased = MlirAppended(MlirFunction(Shape, MlirFunction.Shape, MethodEntry(Returned, instructions = Start + Reload + Kept)), 4)
+constant Given = List(MemberEntry) + MemberEntry("text", "Strict/Text", List(InstructionEntry), false)
+constant Seeded = MlirAppended(MlirFunction(Shape, MlirFunction.Shape, MethodEntry(Returned, parameters = Given)), 4)
+constant Harmless = (InstructionType.Add, InstructionType.Equal, InstructionType.NotEqual, InstructionType.Return)
+constant Values = ("Number", "Boolean", "None")
+IsOwned Boolean
+	Growing.IsOwned
+	Aliased.IsOwned is false
+	Seeded.IsOwned is false
+	MlirAppended(Growing.function, 3).IsOwned is false
+	let entry = function.method.instructions(position)
+	if (position + 1 >= function.method.instructions.Length) or (entry.kind is not InstructionType.Add)
+		return false
+	let next = function.method.instructions(position + 1)
+	let name = MlirDying(function, position).Loaded(entry.payload(1))
+	let isStored = (next.kind is InstructionType.StoreRegisterToVariable) and (next.payload(0) is entry.payload(3))
+	let isAppended = isStored and (name is not "") then next.texts(0) is name else false
+	isAppended and MlirSpent(function, position).IsUnread(entry.payload(1)) and IsLocal(name)
+IsLocal(name Text) Boolean
+	Growing.IsLocal("text")
+	Growing.IsLocal("value") is false
+	Seeded.IsLocal("text") is false
+	let isOuter = (name is in function.Parameters) or (name is in MlirInstances(function, 0).StoredNames(function.type))
+	let kind = MlirKinds(function).VariableKind(function.method.instructions.Length, name)
+	if isOuter or (name is in MlirOwned.Temporaries) or (kind is not "Text")
+		return false
+	for function.method.instructions
+		if (value.kind is in MlirAlone.Named) and (value.texts(0) is name) and (IsKept(value, index) is false)
+			return false
+	true
+IsKept(entry InstructionEntry, at Number) Boolean
+	Growing.IsKept(Stored, 1)
+	Growing.IsKept(Reload, 6)
+	Aliased.IsKept(Reload, 6) is false
+	if entry.kind is InstructionType.LoadVariableToRegister
+		return IsRead(at, entry.payload(0))
+	let writer = MlirKinds(function).Writer(at, entry.payload(0))
+	let made = writer >= 0 then function.method.instructions(writer).kind else InstructionType.Return
+	made is in (InstructionType.LoadConstantToRegister, InstructionType.Add)
+IsRead(at Number, register Number) Boolean
+	Growing.IsRead(2, 1)
+	Aliased.IsRead(6, 4) is false
+	let steps = function.method.instructions
+	let reuse = LoadReuse(steps)
+	for Range(at + 1, steps.Length)
+		if (register is in reuse.Reads(steps(value))) and (IsHarmless(steps(value)) is false)
+			return false
+		if reuse.Written(steps(value)) is register
+			return true
+	true
+IsHarmless(entry InstructionEntry) Boolean
+	Growing.IsHarmless(Added(0))
+	Growing.IsHarmless(Kept) is false
+	Growing.IsHarmless(InstructionEntry.Invoke(5, ("Strict/Text", "Length", "Strict/Number"), List(Number), 4))
+	Growing.IsHarmless(InstructionEntry.Invoke(5, ("Strict/Text", "Trim", "Strict/Text"), List(Number), 4)) is false
+	if entry.kind is not InstructionType.Invoke
+		return entry.kind is in Harmless
+	MlirLayout(function).Represented(TypeEntry.ShortName(entry.texts(2))) is in Values

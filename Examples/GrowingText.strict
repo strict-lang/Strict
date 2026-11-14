@@ -1,0 +1,23 @@
+Appended(count Number) Text
+	GrowingText.Appended(0) is ""
+	GrowingText.Appended(3) is "0, 1, 2, "
+	GrowingText.Appended(400).Length is 1890
+	mutable text = ""
+	for count
+		text = text + index + ", "
+	text
+Shared(piece Text) Texts
+	GrowingText.Shared("b") is ("ab", "abb", "abbb")
+	GrowingText.Shared("") is ("a", "a", "a")
+	mutable text = "a"
+	mutable kept = List(Text)
+	for 3
+		text = text + piece
+		kept = kept + text
+	kept
+Twice(piece Text) Text
+	GrowingText.Twice("ab") is "abab, abab"
+	mutable text = ""
+	text = text + piece
+	text = text + text
+	text + ", " + text

@@ -182,10 +182,12 @@ Concatenated(entry InstructionEntry) Texts
 	MlirTexts(Joined, 2).Concatenated(Joined.method.instructions(2)).Length is 6
 	MlirTexts(Joined, 2).Concatenated(Joined.method.instructions(2)) is ConcatenatedLines
 	Text.Combine(MlirTexts(MlirLoops.Spelling.function, 7).Concatenated(MlirLoops.Spelled(7))).IndexOf("_concat") is -1
+	MlirTexts(MlirAppended.Growing.function, 4).Concatenated(MlirAppended.Added(0))(2).IndexOf("@strict_text_append(") > 0
 	if IsLetter and MlirLoops(function, function.method.LoopBeginOf(position)).IsSpelling
 		return Spelled(entry)
 	let operands = TextBits(entry.payload(1), "l") + TextBits(entry.payload(2), "r")
-	let joined = MlirMemory(function, position).Called(Temp("c"), "strict_text_concat", (Temp("lx"), Temp("rx")))
+	let helper = MlirAppended(function, position).IsOwned then "strict_text_append" else "strict_text_concat"
+	let joined = MlirMemory(function, position).Called(Temp("c"), helper, (Temp("lx"), Temp("rx")))
 	operands + joined + function.Store(Temp("c"), "%r" + entry.payload(3))
 IsLetter Boolean
 	MlirTexts(MlirLoops.Spelling.function, 7).IsLetter

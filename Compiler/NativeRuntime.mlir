@@ -14154,6 +14154,78 @@
     %result = func.call @strict_bits(%buffer) : (!llvm.ptr) -> f64
     return %result : f64
   }
+  // text = text + piece of a local that is the only holder of its text (MlirAppended): the piece is written behind the
+  // text when its block has room and no heap object counts it, else both move into a block with room for twice the
+  // bytes (half more from 4096 bytes on), so a loop of appends copies its text a few times instead of every time
+  func.func private @strict_text_append(%left: f64, %right: f64) -> f64 {
+    %zero = arith.constant 0 : i64
+    %noCount = arith.constant 0 : i32
+    %noFlags = arith.constant 0 : i8
+    %terminator = arith.constant 0 : i8
+    %lengths = arith.constant 16 : i64
+    %framing = arith.constant 17 : i64
+    %a = func.call @strict_ptr(%left) : (f64) -> !llvm.ptr
+    %b = func.call @strict_ptr(%right) : (f64) -> !llvm.ptr
+    %leftLength = func.call @strict_text_bytes(%a) : (!llvm.ptr) -> i64
+    %rightLength = func.call @strict_text_bytes(%b) : (!llvm.ptr) -> i64
+    %total = arith.addi %leftLength, %rightLength : i64
+    %leftCharacters = func.call @strict_text_characters(%a) : (!llvm.ptr) -> i64
+    %rightCharacters = func.call @strict_text_characters(%b) : (!llvm.ptr) -> i64
+    %characters = arith.addi %leftCharacters, %rightCharacters : i64
+    %address = llvm.ptrtoint %a : !llvm.ptr to i64
+    %block = arith.subi %address, %lengths : i64
+    %busy = func.call @strict_rc_busy() : () -> i1
+    %enabledSlot = llvm.mlir.addressof @strict_rc_enabled : !llvm.ptr
+    %enabled = llvm.load %enabledSlot : !llvm.ptr -> i64
+    %isCounting = arith.cmpi ne, %enabled, %zero : i64
+    %located:5 = func.call @strict_gc_locate(%block) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %found = llvm.icmp "ne" %located#0, %unset : !llvm.ptr
+    %isWhole = arith.cmpi eq, %located#1, %block : i64
+    %needed = arith.addi %total, %framing : i64
+    %fits = arith.cmpi ule, %needed, %located#2 : i64
+    %isBlock = arith.andi %found, %isWhole : i1
+    %isRoomy = arith.andi %isBlock, %fits : i1
+    %isCounted = arith.andi %isRoomy, %isCounting : i1
+    %yes = arith.constant true
+    %idle = arith.xori %busy, %yes : i1
+    %usable = arith.andi %isCounted, %idle : i1
+    cf.cond_br %usable, ^held, ^fresh
+  ^held:
+    %counter = func.call @strict_rc_counter(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %count = llvm.load %counter : !llvm.ptr -> i32
+    %isLoose = arith.cmpi eq, %count, %noCount : i32
+    %flags = func.call @strict_rc_flags(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %flagByte = llvm.load %flags : !llvm.ptr -> i8
+    %pinnedFlag = arith.constant 32 : i8
+    %pinned = arith.andi %flagByte, %pinnedFlag : i8
+    %isFree = arith.cmpi eq, %pinned, %noFlags : i8
+    %alone = arith.andi %isLoose, %isFree : i1
+    cf.cond_br %alone, ^place, ^fresh
+  ^place:
+    %behind = llvm.getelementptr %a[%leftLength] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %placed = llvm.call @memcpy(%behind, %b, %rightLength) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %placedEnd = llvm.getelementptr %a[%total] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %terminator, %placedEnd : i8, !llvm.ptr
+    func.call @strict_text_sized(%a, %total, %characters) : (!llvm.ptr, i64, i64) -> ()
+    return %left : f64
+  ^fresh:
+    %halving = arith.constant 4096 : i64
+    %one = arith.constant 1 : i64
+    %isSmall = arith.cmpi ult, %total, %halving : i64
+    %half = arith.shrui %total, %one : i64
+    %more = arith.select %isSmall, %total, %half : i64
+    %capacity = arith.addi %total, %more : i64
+    %buffer = func.call @strict_text_room_filled(%capacity) : (i64) -> !llvm.ptr
+    %first = llvm.call @memcpy(%buffer, %a, %leftLength) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %end = llvm.getelementptr %buffer[%leftLength] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %second = llvm.call @memcpy(%end, %b, %rightLength) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %last = llvm.getelementptr %buffer[%total] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %terminator, %last : i8, !llvm.ptr
+    func.call @strict_text_sized(%buffer, %total, %characters) : (!llvm.ptr, i64, i64) -> ()
+    %result = func.call @strict_bits(%buffer) : (!llvm.ptr) -> f64
+    return %result : f64
+  }
   // an empty text with room for capacity one byte characters, filled by strict_text_written (a for collecting Characters)
   func.func private @strict_text_new(%capacity: f64) -> f64 {
     %one = arith.constant 1 : i64
