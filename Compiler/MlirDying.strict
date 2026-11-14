@@ -5,6 +5,8 @@ constant Seeding = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry
 constant Dropping = MlirDying(MlirOwned.Rebuilt.function, 10)
 constant Dropped = InstructionEntry.Return(4)
 constant Numbered = MlirDying(MlirFunction(Dropping.function, method = MethodEntry(Dropping.function.method, declaredType = "Strict/Number")), 10)
+constant Tripled = MlirFlats.Making.instructions.Slice(0, 9) + InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 4, "moved") + InstructionEntry.Return(0)
+constant Sweeping = MlirFunction(MlirFlats.Made.function, method = MethodEntry("Run", List(MemberEntry), "Strict/Number", Tripled))
 constant Guarding = ("a", "b %t#same, x", "c", "d")
 constant Guard = "    %t#sv = llvm.load %v_start : !llvm.ptr -> f64"
 constant Unset = ("    %t#sz = arith.cmpf oeq, %t#o, %zero : f64", "    %t#sa = arith.ori %t#same, %t#ss : i1")
@@ -37,6 +39,18 @@ Guarded(lines Texts, seed Text) Texts
 		return lines
 	let skipped = lines(1).Replace("%t#same,", "%t#sk,")
 	((List(Text) + lines(0) + function.Load("%t#sv", "%v_" + seed)) + Kept + skipped) + lines.Slice(2, lines.Length - 2)
+IsSwept(name Text, kind = "") Boolean
+	MlirDying(Sweeping, 9).IsSwept("moved")
+	Dropping.IsSwept("moved") is false
+	Dropping.IsSwept("", "Tripling") is false
+	let known = kind is "" then MlirKinds(function).VariableKind(function.method.instructions.Length, name) else kind
+	MlirFlats(function, 0).Kind(known) is "Flat"
+IsReleased(name Text, seed Text) Boolean
+	Dropping.IsReleased("moved", "")
+	MlirDying(Sweeping, 9).IsReleased("moved", "") is false
+	MlirOwned(Sweeping, 9).Stored(Tripled(9)).Length is 2
+	let isOwned = MlirOwned(function, position).IsOwned(name, 0, seed) or MlirCarried(function).IsCarried(name)
+	isOwned and (IsSwept(name) is false)
 Mutated Texts
 	Dropping.Mutated is ("moved")
 	MlirDying(Seeding, 4).Mutated.Length is 0
@@ -57,7 +71,7 @@ Returned(entry InstructionEntry) Texts
 	let kept = Loaded(entry.payload(0))
 	mutable lines = List(Text)
 	for Mutated
-		if value is not kept
+		if (value is not kept) and (IsSwept(value) is false)
 			let old = returned + "d" + index
 			let dead = "    func.call @strict_rc_dead(" + old + ", " + Survivor + ") : (f64, f64) -> ()"
 			lines = lines + function.Load(old, "%v_" + value) + dead
