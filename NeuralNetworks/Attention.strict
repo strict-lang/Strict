@@ -13,6 +13,8 @@ has routing Number = 0
 has exact Number = 0
 constant Single = Attention((1, 0), (1, 0, 0, 1), (3, 4, 5, 6), 1, 1, 2)
 constant Prompt = Gguf("NeuralNetworks/blocks.gguf", 32).Rows("prompt").First
+constant TiledTokens = 16
+constant Shared = Attention((1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16), (1, 8, 4, 11, 7, 3, 10, 6, 2, 9, 5, 1), List(Number), 4, 2, 1, 2)
 Merged Numbers slow
 	Single.Merged.First.IsNearlyEqual(3.6604769013466867)
 	Attention(Single, values = (0, 3, 4, 0, 5, 6), valueOffset = 1, valueStride = 3).Merged.First.IsNearlyEqual(3.6604769)
@@ -36,10 +38,45 @@ ValueStart(at Number) Number
 	let row = (at / size).Floor
 	let sequence = (at / (queries.Length / sequences)).Floor
 	valueOffset + (sequence * groups + ((row % heads) * groups / heads).Floor) * size + at % size
-Scores(positions Number) Numbers
+Scores(positions Number) Numbers slow
 	Single.Scores(2).First.IsNearlyEqual(0.7071067811865476)
 	Single.Scores(2).Last is 0
+	Prompted.Scores(24)(1000).IsNearlyEqual(-0.1641102558437736)
 	let tokens = queries.Length / heads / size / sequences
+	tokens < TiledTokens then Direct(positions, tokens) else Tiled(positions, tokens)
+Tiled(positions Number, tokens Number) Numbers slow
+	Prompted.Tiled(24, 16)(1000).IsNearlyEqual(-0.1641102558437736)
+	Prompted.Tiled(24, 16)(23) is -125000000
+	let shared = heads / groups
+	let shape = (sequences * groups, tokens * shared, size, positions)
+	let strides = (0, tokens * shared * size, size, 1, 0, size, 1, sequences * groups * size)
+	let scores = Products(Grouped(tokens), keys, shape, strides).Multiplied
+	for tokens * sequences * heads * positions
+		let row = (index / positions).Floor
+		let score = scores(Placed(row, tokens) * positions + index % positions)
+		Visible(score, index % positions, Last(row, positions, tokens)) / size.SquareRoot
+Placed(row Number, tokens Number) Number slow
+	Prompted.Placed(1, 16) is 1
+	Prompted.Placed(4, 16) is 2
+	Prompted.Placed(2, 16) is 32
+	let shared = heads / groups
+	let head = row % heads
+	let block = (row / heads / tokens).Floor * groups + (head / shared).Floor
+	(block * tokens + (row / heads).Floor % tokens) * shared + head % shared
+Grouped(tokens Number) Numbers slow
+	Prompted.Grouped(16)(128) is Prompted.queries(256)
+	Prompted.Grouped(16)(2048) is Prompted.queries(128)
+	let shared = heads / groups
+	for queries.Length
+		let row = (index / size).Floor
+		let block = (row / (shared * tokens)).Floor
+		let head = (block % groups) * shared + row % shared
+		let token = (row / shared).Floor % tokens
+		queries((((block / groups).Floor * tokens + token) * heads + head) * size + index % size)
+Direct(positions Number, tokens Number) Numbers
+	Attention((1, 2, 3, 5), (1, 7, 2, 9), List(Number), 2, 1, 2).Direct(2, 1)(2).IsNearlyEqual(26.870057685088806)
+	Shared.Direct(3, 2)(43) is 90
+	Shared.Direct(3, 2)(2) + 1000000000 is 0
 	for tokens * sequences * heads * positions
 		let row = (index / positions).Floor
 		let group = ((row / heads).Floor / tokens).Floor * groups + ((row % heads) * groups / heads).Floor
