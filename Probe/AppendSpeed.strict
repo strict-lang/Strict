@@ -14,6 +14,19 @@ Grown(start Numbers, count Number) Numbers
 	for count
 		raw = raw + index
 	raw
+Started(count Number) Numbers
+	AppendSpeed.Started(2) is (7, 0, 1)
+	mutable raw = List(Number) + 7
+	for count
+		raw = raw + index
+	raw
+Seeded(rounds Number) Number
+	AppendSpeed.Seeded(1) >= 0
+	let started = Process.Elapsed
+	mutable total = 0
+	for rounds
+		total = total + Started(Elements).Length
+	(Process.Elapsed - started + total * 0) * Nanoseconds / (rounds * Elements)
 Timed(rounds Number, isGrown Boolean) Number
 	AppendSpeed.Timed(1, true) >= 0
 	let started = Process.Elapsed
@@ -23,4 +36,4 @@ Timed(rounds Number, isGrown Boolean) Number
 	(Process.Elapsed - started + total * 0) * Nanoseconds / (rounds * Elements)
 Run
 	for 5
-		logger.Log("appended " + Timed(Rounds, false).Round(1) + " ns per element, grown from a parameter " + Timed(Rounds, true).Round(1))
+		logger.Log("appended " + Timed(Rounds, false).Round(1) + " ns per element, grown from a parameter " + Timed(Rounds, true).Round(1) + ", started with an element " + Seeded(Rounds).Round(1))
