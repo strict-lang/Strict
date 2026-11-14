@@ -1,0 +1,13 @@
+has logger
+constant Pieces = 20000
+Appended(count Number) Text
+	TextSpeed.Appended(2) is "piece of text piece of text "
+	mutable text = ""
+	for count
+		text = text + "piece of text "
+	text
+Run
+	for 5
+		let started = Process.Elapsed
+		let length = Appended(Pieces).Length
+		logger.Log("Appended " + length + " characters in " + ((Process.Elapsed - started) * 1000).Round(2) + " ms")
