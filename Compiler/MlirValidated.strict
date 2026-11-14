@@ -20,6 +20,7 @@ constant NumbersRead = InstructionEntry.Named(InstructionType.LoadVariableToRegi
 constant SizedValidated = MethodEntry("Validated", List(MemberEntry), "Strict/Sized", (NumbersRead, InstructionEntry.Return(0)))
 constant Sized = TypeEntry("Strict/Sized", List(MemberEntry) + SixteenMember, (SizedValidated, Counting, Sizing))
 constant Sizes = MlirValidated(MlirFunction(List(TypeEntry) + Sized, Sized, Sizing), 2)
+constant Emptied = MlirValidated(MlirFunction(List(TypeEntry) + Sized, Sized, MethodEntry("E", List(MemberEntry), "None", List(InstructionEntry))), 0)
 IsKnown Boolean
 	Kept.IsKnown
 	Changed.IsKnown is false
@@ -94,12 +95,13 @@ Gathered Number
 	isGathered then MlirBytes(function, function.method.LoopBeginOf(position - 1)).Flattened else Returned(steps(position))
 Collected Number
 	MlirValidated(MlirFunction(List(TypeEntry) + Sized, Sized, Counting), 0).Collected is 16
-	Sizes.Collected is 0
+	Emptied.Collected is 0
 	let steps = function.method.instructions
 	let end = steps.Length - 3
-	let ending = end > 0 then steps(end) else steps.Last
-	let isRead = (end > 0) and ("forResult" is in steps(steps.Length - 2).texts)
-	if (ending.kind is not InstructionType.LoopEnd) or (isRead is false) or (steps.Last.kind is not InstructionType.Return)
+	if end <= 0
+		return 0
+	let isRead = ("forResult" is in steps(end + 1).texts) and (steps.Last.kind is InstructionType.Return)
+	if (steps(end).kind is not InstructionType.LoopEnd) or (isRead is false)
 		return 0
 	let begin = function.method.LoopBeginOf(end)
 	let isRaw = MlirKernel(function, begin).IsSimple and MlirLoops(function, begin).IsCollecting

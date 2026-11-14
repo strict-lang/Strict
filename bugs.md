@@ -1,1 +1,1 @@
-- `strict test Games/TorinsTowers native` (DeltaEngine) crashes strict.exe with AccessViolation in MLIR emission (BuildProfile.Emitted <- MlirModule.Declared <- MlirModule.Text <- NativeBuild.Tested), also with the build before 0cc1d088 (2026-11-14).
+- An Error in a parallel `for` body on a pool thread crashes natively with AccessViolation (MlirModule.Emitted of TorinsTowers: IndexOutOfRange from MlirValidated.Collected), only `STRICT_THREADS=1` shows the Error and its stack.
