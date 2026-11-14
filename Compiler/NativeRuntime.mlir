@@ -2727,6 +2727,11 @@
     %failureSlot = llvm.mlir.addressof @strict_pool_failure : !llvm.ptr
     %none = llvm.mlir.constant(0 : i64) : i64
     %pair = llvm.cmpxchg %failureSlot, %none, %bits acq_rel monotonic : !llvm.ptr, i64
+    %won = llvm.extractvalue %pair[1] : !llvm.struct<(i64, i1)>
+    llvm.cond_br %won, ^kept, ^passed
+  ^kept:
+    // only this slot holds the Error until the caller of the job reads it while the other pieces still run and collect
+    func.call @strict_pin(%result) : (f64) -> ()
     llvm.return %failed : i1
   ^passed:
     llvm.return %failed : i1

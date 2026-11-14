@@ -1,1 +1,0 @@
-- An Error in a parallel `for` body on a pool thread crashes natively with AccessViolation (MlirModule.Emitted of TorinsTowers: IndexOutOfRange from MlirValidated.Collected), only `STRICT_THREADS=1` shows the Error and its stack.

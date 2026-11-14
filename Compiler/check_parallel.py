@@ -916,3 +916,19 @@ checked = subprocess.run([str(executable), "checked"], capture_output=True, text
 print("Collection after a reference count check marking: " + checked.stdout.strip())
 assert checked.returncode == 0 and "Reference counts checked: 0 too low" in checked.stdout, (
 	"The full collection after a check marking and a young collection counted a pinned target:\n" + checked.stdout + checked.stderr)
+failing = output / "PoolFailure.strict"
+failing.write_text("\n".join(("has logger", "Named(at Number, inner Number) Number",
+	"\tPoolFailure(Logger).Named(3, 1) is 4",
+	"\t(at is 5) and (inner is 7777) then List(Number).Last else at + inner % 3",
+	"Inner(at Number) Numbers slow", "\tPoolFailure(Logger).Inner(1).Length is 20000", "\tfor 20000", "\t\tNamed(at, index)",
+	"Summed(at Number) Text slow", "\tPoolFailure(Logger).Summed(1).Length > 0", "\t\"\" + Inner(at).Sum",
+	"All(count Number) Texts slow", "\tPoolFailure(Logger).All(2).Length is 2", "\tfor count", "\t\tSummed(index)",
+	"Run", "\tlogger.Log(\"count \" + All(64).Length)")) + "\n")
+built = subprocess.run([str(root / "strict.exe"), "build", failing.relative_to(root).as_posix()], cwd=root,
+	capture_output=True, text=True, timeout=280)
+assert built.returncode == 0, built.stdout + built.stderr
+for attempt in range(12):
+	failed = subprocess.run([str(failing.with_suffix(".exe"))], capture_output=True, text=True, timeout=30)
+	assert failed.stdout.startswith("Error: IndexOutOfRange"), (
+		"An Error of a nested parallel loop piece was collected before the caller read it:\n" + failed.stdout + failed.stderr)
+print("Nested parallel loop Error kept: 12 of 12")
