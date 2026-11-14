@@ -1,0 +1,26 @@
+has logger
+constant Elements = 624
+constant Rounds = 20000
+constant Nanoseconds = 1000000000
+Appended(count Number) Numbers
+	AppendSpeed.Appended(3) is (0, 1, 2)
+	mutable raw = List(Number)
+	for count
+		raw = raw + index
+	raw
+Grown(start Numbers, count Number) Numbers
+	AppendSpeed.Grown((7, 8), 2) is (7, 8, 0, 1)
+	mutable raw = start
+	for count
+		raw = raw + index
+	raw
+Timed(rounds Number, isGrown Boolean) Number
+	AppendSpeed.Timed(1, true) >= 0
+	let started = Process.Elapsed
+	mutable total = 0
+	for rounds
+		total = total + (isGrown then Grown((7, 8), Elements).Length else Appended(Elements).Length)
+	(Process.Elapsed - started + total * 0) * Nanoseconds / (rounds * Elements)
+Run
+	for 5
+		logger.Log("appended " + Timed(Rounds, false).Round(1) + " ns per element, grown from a parameter " + Timed(Rounds, true).Round(1))

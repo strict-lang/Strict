@@ -1,0 +1,6 @@
+has logger
+constant Tokenizer = "D:/ComfyUI_windows_portable/ComfyUI/comfy/text_encoders/qwen25_tokenizer"
+Run
+	let started = Process.Elapsed
+	let tokens = Gpt2Tokens.Folder(Tokenizer)
+	logger.Log("Folder " + (Process.Elapsed - started).Round(3) + " s, " + tokens.tokens.Length + " tokens")

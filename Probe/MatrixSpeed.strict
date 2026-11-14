@@ -1,0 +1,55 @@
+has logger
+constant Rounds = 200000
+constant Runs = 40
+constant Nanoseconds = 1000000000
+constant Kinds = ("product", "transformed", "axis", "reused")
+Chained(matrix Matrix, rounds Number) Number
+	MatrixSpeed.Chained(Matrix.Identity, 3) is 1
+	mutable product = matrix
+	for rounds
+		product = product * matrix
+	product.values(0)
+Reused(matrix Matrix, rounds Number) Number
+	MatrixSpeed.Reused(Matrix.Identity, 3) is 1
+	MatrixSpeed.Reused(Matrix.Scaling(2), 3) is 32
+	mutable product = matrix * matrix
+	for rounds
+		product = product * matrix
+	product.Transformed(Vector3.One).X
+Moved(matrix Matrix, rounds Number) Number
+	MatrixSpeed.Moved(Matrix.Identity, 3) is 1
+	MatrixSpeed.Moved(Matrix.Translation(Vector3(1, 2, 3)), 3) is 4
+	mutable point = Vector3.One
+	for rounds
+		point = matrix.Transformed(point)
+	point.X
+Axes(matrix Matrix, rounds Number) Number
+	MatrixSpeed.Axes(Matrix.Identity, 4) is 1
+	mutable sum = 0
+	for rounds
+		sum = sum + matrix.Axis(index % 4).Y
+	sum
+Once(kind Text, matrix Matrix, rounds Number) Number
+	MatrixSpeed.Once("axis", Matrix.Identity, 4) is 1
+	if kind is "product"
+		return Chained(matrix, rounds)
+	if kind is "reused"
+		return Reused(matrix, rounds)
+	kind is "transformed" then Moved(matrix, rounds) else Axes(matrix, rounds)
+Timed(kind Text, matrix Matrix, rounds = Rounds) Number
+	MatrixSpeed.Timed("axis", Matrix.Identity, 4) >= 0
+	let started = Process.Elapsed
+	let result = Once(kind, matrix, rounds)
+	(Process.Elapsed - started + result * 0) * Nanoseconds / rounds
+Column(times List(Numbers), kind Number) Numbers
+	MatrixSpeed.Column(List(Numbers) + (1, 2), 1) is (2)
+	for times
+		value(kind)
+Run
+	let matrix = Matrix.RotationZ(Degrees(1))
+	mutable times = List(Numbers)
+	for Runs
+		times = times + (Timed("product", matrix), Timed("transformed", matrix), Timed("axis", matrix), Timed("reused", matrix))
+	for Kinds
+		let column = Column(times, index)
+		logger.Log(value + " " + column.Minimum.Round(1) + " ns minimum, " + column.Sorted(Runs / 2).Round(1) + " median")

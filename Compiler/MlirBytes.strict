@@ -95,7 +95,7 @@ Width Text
 Started(result Text, items Text) Texts
 	Collecting.Started("%r", "%i").Last is "    %i = func.call @strict_list_data(%r) : (f64) -> !llvm.ptr"
 	Doubling.Started("%t2r", "%i").Last is "    %i = func.call @strict_list_items(%t2r) : (f64) -> !llvm.ptr"
-	Flattening.Started("%r", "%i").First is "    %r = func.call @strict_flat_new(%t2n) : (f64) -> f64"
+	Flattening.Started("%r", "%i").First.IndexOf("@strict_flat_into(%flatDestination, %t2n)") > 0
 	Flattening.Started("%r", "%i").Last is "    %i = llvm.getelementptr %flat2[0] : (!llvm.ptr) -> !llvm.ptr, f32"
 	Collecting.Started("%r", "%i").First is "    %rpositive = arith.maximumf %t2n, %zero : f64"
 	Doubling.Started("%r", "%i").First is MlirLoops(Doubling.function, 2).Presized.First
@@ -128,9 +128,13 @@ Created(result Text) Texts
 	let created = "    " + result + " = func.call @strict_packed_new" + operands
 	(count, whole, format, created, function.Store(result, "%v_forResult"))
 FlatCreated(result Text) Texts
-	Flattening.FlatCreated("%r") is ("    %r = func.call @strict_flat_new(%t2n) : (f64) -> f64", FlatStored)
-	let created = "    " + result + " = func.call @strict_flat_new(%t" + position + "n) : (f64) -> f64"
-	(created, function.Store(result, "%v_forResult"))
+	Flattening.FlatCreated("%r").First.IndexOf("= func.call @strict_flat_into(%flatDestination, %t2n) : (f64, f64)") is 7
+	Flattening.FlatCreated("%r").Last is FlatStored
+	Misread.FlatCreated("%r").First is "    %r = func.call @strict_flat_new(%t2n) : (f64) -> f64"
+	let fresh = "@strict_flat_new(%t" + position + "n) : (f64)"
+	let into = "@strict_flat_into(%flatDestination, %t" + position + "n) : (f64, f64)"
+	let call = MlirDestined(function, position).IsLooped then into else fresh
+	("    " + result + " = func.call " + call + " -> f64", function.Store(result, "%v_forResult"))
 Buffer Texts
 	Flattening.Buffer is ("    %flat2 = llvm.alloca %one x !llvm.array<3 x f32> : (i64) -> !llvm.ptr")
 	Doubling.Buffer.Length is 0

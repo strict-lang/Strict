@@ -25,7 +25,8 @@ IsSpent(register Number) Boolean
 	let writer = MlirKinds(function).Writer(position, register)
 	let owned = MlirOwned(function, position)
 	let isCall = writer >= 0 then function.method.instructions(writer).kind is InstructionType.Invoke else false
-	if (isCall and owned.IsHeap(MlirKinds(function).KindOf(position, register))) is false
+	let kind = MlirKinds(function).KindOf(position, register)
+	if ((isCall and owned.IsHeap(kind)) is false) or MlirDying(function, position).IsSwept("", kind)
 		return false
 	let isKept = MlirCarried(function).IsKeptValue(position, register, List(Text), 0)
 	let isNext = MlirHanded(function, writer).First(register) is position

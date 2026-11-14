@@ -145,7 +145,7 @@ Stored(entry InstructionEntry) Texts
 	let slot = entry.texts(0) is "#this" then "%instance" else "%v_" + entry.texts(0)
 	let copied = function.Copied("%r" + entry.payload(0), slot, "%t" + position)
 	let seed = MlirDying(function, position).Seed(entry.texts(0))
-	if (IsOwned(entry.texts(0), 0, seed) or MlirCarried(function).IsCarried(entry.texts(0))) is false
+	if MlirDying(function, position).IsReleased(entry.texts(0), seed) is false
 		return copied
 	let dying = Placed(MlirDying(function, position).Guarded(Reusing.Slice(8, 6), seed), 0, 0)
 	(List(Text) + function.Load("%t" + position + "o", slot)) + copied + dying
