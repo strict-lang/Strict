@@ -11158,10 +11158,12 @@
   // a copy to grow: its holder is a small block of its own, its items lie apart with twice the room like those of a
   // grown list; in a pool job a holder inside a large list block is never this thread's (strict_gc_mine), each Add
   // copied the whole list again (EntryDecoder.Of decoding chunks of a folder test took minutes)
+  // the copy a list grows in gets room for twice its items and 16 more: a list filled by Add from nothing (the
+  // tokens of a line, 15 on average) grew three times with 4 (4, 12, 28), 44-50 instead of 48-55 ns per token
   func.func private @strict_list_apart(%list: f64) -> f64 {
     %eight = arith.constant 8.0 : f64
     %two = arith.constant 2.0 : f64
-    %four = arith.constant 4.0 : f64
+    %four = arith.constant 16.0 : f64
     %none = arith.constant 0.0 : f64
     %length = func.call @strict_list_length(%list) : (f64) -> f64
     %copy = func.call @strict_list_new(%none, %length) : (f64, f64) -> f64
