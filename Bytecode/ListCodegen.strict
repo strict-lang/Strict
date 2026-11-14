@@ -6,6 +6,7 @@ constant Shared = CodeBlock.Empty.Declare("values", "Numbers").Sharing("values",
 constant Owned = CodeBlock.Empty.Declare("values", "Numbers").Sharing("values", false)
 constant Appending = BodyParser("Run", "\tvalues = values + 1").Block(1, 1).children(0)
 constant WritingLoop = BodyParser("Run", "\tfor 3", "\t\tvalues(index) = index").Block(1, 1).children(0)
+constant ReturningLoop = BodyParser("Run", "\tfor 3", "\t\tif index > 1", "\t\t\treturn Other.Keep(values)", "\t\tvalues(index) = index").Block(1, 1).children(0)
 constant SharingLoop = BodyParser("Run", "\tfor values", "\t\tvalues(index) = index").Block(1, 1).children(0)
 constant BranchCopy = BodyParser("Run", "\tmutable other = (1, 2)", "\tlet saved = other", "\tif 1 > 2", "\t\tother(0) = 5", "\tother(1) = 6").Block(1, 1)
 constant Iterated = ListCodegen(LoopCodegen.Iterating.methods.values)
@@ -88,6 +89,8 @@ CopiedBefore(loop SyntaxNode, block CodeBlock, isUsed Boolean) CodeBlock
 	MethodCodegen.Plain.Body(BranchCopy, CodeBlock.Empty).instructions.Last.payload.Length is 3
 	Plain.CopiedBefore(SharingLoop, Shared, false).instructions.Length is 0
 	Plain.CopiedBefore(WritingLoop, Owned, false).instructions.Length is 0
+	Plain.CopiedBefore(ReturningLoop, Shared, false).instructions(0).kind is InstructionType.CopyList
+	ListCodegen(ValueCodegen.Plain, ("Keep/0")).CopiedBefore(ReturningLoop, Shared, false).instructions.Length is 0
 	mutable result = block
 	for ElementWritten(loop.children.Last)
 		let owned = result.Sharing(value, false)
@@ -133,13 +136,17 @@ IsNew(node SyntaxNode) Boolean
 		return node.text is "+" then IsNew(node.children(0)) else node.text is not in ("to", "then", "else")
 	((node.Kind is "List") and (node.IsLiteral is false)) or ((node.Kind is "Call") and (node.text is "List"))
 Disowned(node SyntaxNode, block CodeBlock, isUsed Boolean) CodeBlock
-	Plain.Disowned(BodyParser("Run", "\tlet saved = values").Block(1, 1), Owned, false).Owns("values") is false
 	Plain.Disowned(BodyParser("Run", "\tvalues.Add(1)").Block(1, 1), Owned, false).Owns("values")
 	Plain.Disowned(BodyParser("Run", "\t1 is not in values").Block(1, 1), Owned, false).Owns("values")
 	Plain.Disowned(BodyParser("Run", "\tif 1 > 2", "\t\treturn values").Block(1, 1), Owned, false).Owns("values")
 	if node.Kind is "Identifier"
 		return isUsed then block.Disowned(node.text) else block
-	mutable result = IsShared(node, block) then block.Disowned(node.children(0) to Text) else block
+	if (node.Kind is "Return") and (borrowing.Length is 0)
+		return block
+	Children(node, IsShared(node, block) then block.Disowned(node.children(0) to Text) else block, isUsed)
+Children(node SyntaxNode, block CodeBlock, isUsed Boolean) CodeBlock
+	Plain.Children(BodyParser("Run", "\tlet saved = values").Block(1, 1), Owned, false).Owns("values") is false
+	mutable result = block
 	for node.children
 		let used = IsUsed(node, index, isUsed) and (Borrowing(values, borrowing).IsBorrowed(node, index, result) is false)
 		result = Disowned(value, result, used)
