@@ -12,7 +12,7 @@ Value(key Text) Text
 	Tiny.Value("general.architecture") is "qwen3"
 	Tiny.Value("qwen3.block_count") is "1"
 	Tiny.Value("qwen3.rope.freq_base") is "1000000"
-	Tiny.Value("tokenizer.ggml.tokens").Lines is ("a", "b", "c", "Ġ", "ab", "Ġc")
+	Tiny.Value("tokenizer.ggml.tokens").Lines is ("a", "b", "c", Gpt2Tokens.Mapped, "ab", Gpt2Tokens.Mapped + "c")
 	Tiny.Value("missing") is ""
 	Split.Value("general.architecture") is "qwen3"
 	GgufFile.Value(path, key)

@@ -39,7 +39,7 @@ Values Numbers
 to Text
 	Escaped to Text is "a\"b\ncA"
 	Json(" 82 ") to Text is "82"
-	Json("\"\\u00e9\\ud83d\\ude00\"") to Text is "é😀"
+	(Json("\"\\u00e9\\ud83d\\ude00\"") to Text).Bytes is (195, 169, 240, 159, 152, 128)
 	let start = Skip(0)
 	text.StartsWith("\"", start) then Unquoted(start) else text.Trim
 to Number

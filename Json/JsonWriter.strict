@@ -29,7 +29,7 @@ Quoted(content Text) Text
 	Object.Quoted("at\tline\r\n") is "\"at\\tline\\r\\n\""
 	Object.Quoted(Character(1) + Character(31)) is "\"\\u0001\\u001f\""
 	Object.Quoted(Character(8) + Character(12)) is "\"\\b\\f\""
-	Object.Quoted("Käse 中文") is "\"Käse 中文\""
+	Object.Quoted(JsonText.Escaped.Utf8(228)).Bytes is (34, 195, 164, 34)
 	Json(Object.Quoted("a\tb\"c")) to Text is "a\tb\"c"
 	mutable quoted = "\""
 	for content
