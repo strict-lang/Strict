@@ -661,6 +661,8 @@
     llvm.store %zero, %deadlineSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     %freshGuardSlot = llvm.getelementptr %deadlineSlot[8] : (!llvm.ptr) -> !llvm.ptr, i64
     llvm.store %zero, %freshGuardSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    %freshTestClockSlot = llvm.getelementptr %deadlineSlot[9] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %zero, %freshTestClockSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     %version = llvm.atomicrmw add %versionSlot, %one acq_rel : !llvm.ptr, i64
     llvm.store %nameBits, %placeSlot atomic monotonic {alignment = 8 : i64} : i64, !llvm.ptr
     %output = func.call @strict_output_handle() : () -> i64
@@ -697,6 +699,8 @@
     %now = func.call @strict_test_now(%deadlineSlot) : (!llvm.ptr) -> f64
     %until = arith.addf %now, %limit : f64
     %bits = arith.bitcast %until : f64 to i64
+    %armedTestClockSlot = llvm.getelementptr %deadlineSlot[9] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %one, %armedTestClockSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     llvm.store %bits, %deadlineSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     return %now : f64
   ^untimed:
@@ -724,7 +728,10 @@
     llvm.store %zero, %endedGuardSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     %testNow = func.call @strict_test_now(%deadlineSlot) : (!llvm.ptr) -> f64
     %wallNow = func.call @strict_clock() : () -> f64
-    %wasArmed = arith.cmpi ne, %bits, %zero : i64
+    // a second Finished of the same test (a failed comparison) measures on the clock its start was taken from
+    %testClockSlot = llvm.getelementptr %deadlineSlot[9] : (!llvm.ptr) -> !llvm.ptr, i64
+    %testClock = llvm.load %testClockSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %wasArmed = arith.cmpi ne, %testClock, %zero : i64
     %now = arith.select %wasArmed, %testNow, %wallNow : f64
     %until = arith.bitcast %bits : i64 to f64
     %active = arith.cmpi ne, %bits, %zero : i64
@@ -2372,6 +2379,7 @@
   llvm.mlir.global internal @strict_pool_failure(0 : i64) : i64
   llvm.mlir.global internal @strict_pool_sleepers(0 : i64) : i64
   llvm.mlir.global internal @strict_pool_cheap(dense<0> : tensor<4096xi64>) : !llvm.array<4096 x i64>
+  llvm.mlir.global internal @strict_pool_small(dense<0> : tensor<8192xi64>) : !llvm.array<8192 x i64>
   llvm.mlir.global internal @strict_gc_mutex(dense<0> : tensor<8xi64>) {alignment = 64 : i64} : !llvm.array<8 x i64>
   llvm.mlir.global internal constant @strict_build_profile_name("STRICT_BUILD_PROFILE\00") : !llvm.array<21 x i8>
   func.func private @strict_buildprofile_detailed(%self: f64) -> f64 {
@@ -2417,6 +2425,30 @@
     cf.br ^done
   ^done:
     return %result : f64
+  }
+  // a loop that ran whole on its caller in the probe runs serial from then on up to as many elements (Machine.Bound
+  // per VM call): no context, no bookkeeping; false only for such a body, the serial branch is always correct
+  func.func private @strict_parallel_worth(%body: (!llvm.ptr, i64, i64) -> f64, %count: i64) -> i1 {
+    %function = builtin.unrealized_conversion_cast %body : (!llvm.ptr, i64, i64) -> f64 to !llvm.ptr
+    %one = arith.constant 1 : i64
+    %bodyKey = llvm.ptrtoint %function : !llvm.ptr to i64
+    %keyShift = arith.constant 4 : i64
+    %keyHigh = arith.shrui %bodyKey, %keyShift : i64
+    %keyMask = arith.constant 4095 : i64
+    %keyIndex = arith.andi %keyHigh, %keyMask : i64
+    %keyAt = arith.shli %keyIndex, %one : i64
+    %countAt = arith.addi %keyAt, %one : i64
+    %table = llvm.mlir.addressof @strict_pool_small : !llvm.ptr
+    %keySlot = llvm.getelementptr %table[0, %keyAt] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<8192 x i64>
+    %countSlot = llvm.getelementptr %table[0, %countAt] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<8192 x i64>
+    %remembered = llvm.load %keySlot : !llvm.ptr -> i64
+    %small = llvm.load %countSlot : !llvm.ptr -> i64
+    %same = arith.cmpi eq, %remembered, %bodyKey : i64
+    %fits = arith.cmpi sle, %count, %small : i64
+    %serial = arith.andi %same, %fits : i1
+    %true = arith.constant true
+    %worth = arith.xori %serial, %true : i1
+    return %worth : i1
   }
   func.func private @strict_parallel_forked(%body: (!llvm.ptr, i64, i64) -> f64, %context: !llvm.ptr, %from: i64, %count: i64) -> f64 {
     %function = builtin.unrealized_conversion_cast %body : (!llvm.ptr, i64, i64) -> f64 to !llvm.ptr
@@ -2503,6 +2535,23 @@
   ^probed(%probeResult: f64):
     llvm.store %probeWasInside, %probeInsideSlot : i64, !llvm.ptr
     llvm.store %zero, %busySlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    %probeBits = arith.bitcast %probeResult : f64 to i64
+    %probeSucceeded = arith.cmpi eq, %probeBits, %zero : i64
+    %probedElements = arith.subi %count, %from : i64
+    %smallLimit = arith.constant 64 : i64
+    %probedSmall = arith.cmpi sle, %probedElements, %smallLimit : i64
+    %remember = arith.andi %probeSucceeded, %probedSmall : i1
+    cf.cond_br %remember, ^small, ^probedDone
+  ^small:
+    %smallKeyAt = arith.shli %keyIndex, %one : i64
+    %smallCountAt = arith.addi %smallKeyAt, %one : i64
+    %smallTable = llvm.mlir.addressof @strict_pool_small : !llvm.ptr
+    %smallKeySlot = llvm.getelementptr %smallTable[0, %smallKeyAt] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<8192 x i64>
+    %smallCountSlot = llvm.getelementptr %smallTable[0, %smallCountAt] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<8192 x i64>
+    llvm.store %count, %smallCountSlot : i64, !llvm.ptr
+    llvm.store %bodyKey, %smallKeySlot : i64, !llvm.ptr
+    cf.br ^probedDone
+  ^probedDone:
     return %probeResult : f64
   ^handoff(%rest: i64, %helpersWanted: i64):
     llvm.store %probeWasInside, %probeInsideSlot : i64, !llvm.ptr

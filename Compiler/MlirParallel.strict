@@ -66,17 +66,22 @@ Forked Texts
 	let checked = (List(Text) + count + threshold) + Enough + branch
 	checked + ("  " + label + "parallel:") + packed + Context + Joined + ("  " + label + "serial:")
 Enough Texts
-	Doubling.Enough is ("    %t2pb = arith.cmpi sge, %t2pn, %t2pt : i64")
-	Held.Enough(0) is "    %t2pwc = arith.cmpi sge, %t2pn, %t2pt : i64"
+	Doubling.Enough(2) is "    %t2pww = func.call @strict_parallel_worth(%t2pwf, %t2pn) : (" + Shape + ", i64) -> i1"
+	Doubling.Enough.Last is "    %t2pb = arith.andi %t2pwc, %t2pww : i1"
 	Held.Enough(1) is "    %t2pwr = func.call @strict_parallel_forkable() : () -> i1"
-	Held.Enough.Last is "    %t2pb = arith.andi %t2pwc, %t2pwr : i1"
 	Text.Combine(Held.Forked).IndexOf("forkable") > 0 and (Text.Combine(Doubling.Forked).IndexOf("forkable") < 0)
-	let compared = " = arith.cmpi sge, " + Temp("pn") + ", " + Temp("pt") + " : i64"
-	if MlirPurity(function, position).IsReachingGpu is false
-		return List(Text) + ("    " + Temp("pb") + compared)
-	let forkable = "    " + Temp("pwr") + " = func.call @strict_parallel_forkable() : () -> i1"
-	let both = "    " + Temp("pb") + " = arith.andi " + Temp("pwc") + ", " + Temp("pwr") + " : i1"
-	("    " + Temp("pwc") + compared, forkable, both)
+	let compared = "    " + Temp("pwc") + " = arith.cmpi sge, " + Temp("pn") + ", " + Temp("pt") + " : i64"
+	let isGpu = MlirPurity(function, position).IsReachingGpu
+	let flag = Temp(isGpu then "pwr" else "pww")
+	let body = "    " + Temp("pwf") + " = func.constant @" + Symbol + " : " + Shape
+	let called = "(" + Temp("pwf") + ", " + Temp("pn") + ") : (" + Shape + ", i64) -> i1"
+	let worth = (body, "    " + flag + " = func.call @strict_parallel_worth" + called)
+	let chosen = isGpu then List(Text) + ("    " + flag + " = func.call @strict_parallel_forkable() : () -> i1") else worth
+	(List(Text) + compared) + chosen + ("    " + Temp("pb") + " = arith.andi " + Temp("pwc") + ", " + flag + " : i1")
+Symbol Text
+	Doubling.Symbol is "Rows_Doubled_1_loop2"
+	let child = MlirWholeChild(function, position)
+	child.IsWhole then child.Symbol else function.Symbol + "_loop" + position
 Context Texts
 	Doubling.Context.Last is "    func.call @strict_rc_object(%t2pc, %t2ps) : (!llvm.ptr, i64) -> ()"
 	let names = Snapshot
@@ -97,9 +102,7 @@ Filler Text
 	isPlain then "strict_list_filled_numbers" else "strict_list_filled"
 Joined Texts
 	Doubling.Joined.Slice(Doubling.Joined.Length - 2, 2) is (Doubling.Released, "    cf.br ^loop2exit")
-	let child = MlirWholeChild(function, position)
-	let symbol = child.IsWhole then child.Symbol else function.Symbol + "_loop" + position
-	let body = "    " + Temp("pf") + " = func.constant @" + symbol + " : " + Shape
+	let body = "    " + Temp("pf") + " = func.constant @" + Symbol + " : " + Shape
 	let operands = "(" + Temp("pf") + ", " + Temp("pc") + ", " + Temp("pn") + ") : (" + Shape + ", !llvm.ptr, i64) -> f64"
 	let failed = "    " + Temp("pe") + " = func.call @strict_is_failure(" + Temp("pr") + ") : (f64) -> i1"
 	let branch = "    cf.cond_br " + Temp("pe") + ", ^loop" + position + "failed, ^loop" + position + "filled"

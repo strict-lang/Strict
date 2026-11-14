@@ -1,5 +1,6 @@
 has call Invocation
 Result VmValue
+	TestBudget.Finished(TestBudget.Started("a", false) + TestBudget.Finished(0) * 0) < 9 + TestBudget.Started("", true) * 0
 	let arguments = call.Arguments
 	if call.MethodName is "Started"
 		return VmValue.OfNumber(TestBudget.Started(arguments(0).text, arguments(1).IsTrue))
