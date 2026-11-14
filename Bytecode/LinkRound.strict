@@ -26,23 +26,10 @@ Entries(signed Texts) List(TypeEntry) slow
 	Moved.Entries(List(Text) + "Strict/Logger:").First.Name is "Strict/Logger"
 	Twice.Entries(Twice.signatures).First is Linker.Go
 	let positions = Positions
+	let fresh = LinkFresh(value)
+	let compiled = fresh.Precompiled(signed, positions)
 	for signed
-		if value is in positions
-			entries(positions(value) + 1)
-		else if value is in linker.Known
-			TypeEntry(linker.Known(value), Name = linker.main.Local(Signature(value).Type))
-		else
-			Fresh(value)
-Fresh(signature Text) TypeEntry slow
-	Single.Fresh("Strict/Logger:").Name is "Strict/Logger"
-	Twice.Fresh("Strict/Logger:Log").methods.Length is 2
-	let earlier = Signature(signature).Earlier(signatures)
-	let names = Signature(signature).Names
-	let old = earlier < 0 then List(Text) else Signature(signatures(earlier)).Names
-	if (earlier < 0) or ((old - names).Length > 0)
-		return linker.LinkedType(Signature(signature).Type, names)
-	let entry = entries(earlier + 1)
-	TypeEntry(entry.Name, entry.members, entry.methods + linker.LinkedType(Signature(signature).Type, names - old).methods)
+		fresh.Entry(value, positions, compiled)
 Forwarded(targets Texts, seen Texts = List(Text)) Texts
 	Wrapping.Forwarded(List(Text) + "Strict/Character.Floor") is ("Strict/Number.Floor")
 	Wrapping.Forwarded(("Strict/Character.from", "Strict/Dictionary(Text).in")).Length is 0

@@ -1,0 +1,78 @@
+has round LinkRound
+constant Single = LinkFresh(LinkRound.Single)
+constant Twice = LinkFresh(LinkRound.Twice)
+constant Logged = LinkFresh(LinkRound(LinkRound.Twice, signatures = List(Text) + "Strict/Logger:Log"))
+constant Running = LinkFresh(LinkRound(LinkRound.Twice, signatures = List(Text) + "Strict/Logger:Log;Run"))
+constant Nothing = Dictionary(Text, TypeEntry)
+constant Unplaced = Dictionary(Text, Number)
+constant Logging = List(Text) + "Strict/Logger:"
+constant Homing = LinkFresh(LinkRound(LinkRound.Single, linker = Linker.Housed))
+Entry(signature Text, positions Dictionary(Text, Number), compiled Dictionary(Text, TypeEntry)) TypeEntry slow
+	Twice.Entry("Strict/Logger:", LinkRound.Twice.Positions, Nothing) is Linker.Go
+	LinkFresh(LinkRound.Cached).Entry("Strict/Logger:", Unplaced, Nothing) is LinkRound.Rooted("Strict/Logger:")
+	Single.Entry("Strict/Logger:", Unplaced, Single.Precompiled(Logging, Unplaced)).Name is "Strict/Logger"
+	if signature is in positions
+		return round.entries(positions(signature) + 1)
+	if signature is in round.linker.Known
+		return TypeEntry(round.linker.Known(signature), Name = round.linker.main.Local(Signature(signature).Type))
+	Fresh(signature, compiled(signature))
+Precompiled(signed Texts, positions Dictionary(Text, Number)) Dictionary(Text, TypeEntry) slow
+	Single.Precompiled(Logging, Unplaced)("Strict/Logger:").Name is "Strict/Logger"
+	let fresh = Probed(signed, positions).Unique
+	let generated = Generating(fresh, Read(fresh))
+	mutable compiled = Dictionary(Text, TypeEntry)
+	for fresh
+		compiled.Add(value, generated(index))
+	compiled
+Probed(signed Texts, positions Dictionary(Text, Number)) Texts
+	Twice.Probed(("Strict/Logger:", "Strict/B:Go"), LinkRound.Twice.Positions) is ("Strict/B:Go")
+	LinkFresh(LinkRound.Cached).Probed(Logging, Unplaced).Length is 0
+	for signed
+		if (value is not in positions) and (value is not in round.linker.Known)
+			value
+Read(fresh Texts) List(Texts) slow
+	Single.Read(Logging).First.Length > 0
+	Twice.Read(List(Text) + "Strict/Logger:Log").Length is 1
+	let compile = LinkCompile(round.linker)
+	mutable read = List(Mutable(Texts))
+	for fresh
+		let type = Signature(value).Type
+		let wanted = Wanted(value)
+		read.Add(compile.IsCompiled(type, wanted) then compile.Prepared(type, compile.Absent(type, wanted)) else List(Text))
+	read
+Generating(fresh Texts, read List(Texts)) List(TypeEntry)
+	Single.Generating(Logging, List(Texts) + List(Text)).First.Name is "Strict/Logger"
+	Homing.Generating(List(Text) + "Strict/Logger:Run", List(Texts) + List(Text)).First is BinaryLinks.Unknown
+	let compile = LinkCompile(round.linker)
+	for fresh
+		let type = Signature(value).Type
+		let wanted = Wanted(value)
+		let absent = compile.Absent(type, wanted)
+		compile.IsCompiled(type, wanted) then compile.Generated(type, read(index), absent) else BinaryLinks.Unknown
+Compiled(signature Text) TypeEntry slow
+	Twice.Compiled("Strict/Logger:Log").methods.Length is 1
+	LinkCompile(round.linker).Compiling(Signature(signature).Type, Wanted(signature))
+IsWhole(signature Text) Boolean
+	Single.IsWhole("Strict/Logger:")
+	Twice.IsWhole("Strict/Logger:Log") is false
+	Logged.IsWhole("Strict/Logger:Reset")
+	(Signature(signature).Earlier(round.signatures) < 0) or ((Older(signature) - Signature(signature).Names).Length > 0)
+Older(signature Text) Texts
+	Twice.Older("Strict/Logger:Log").Length is 0
+	Single.Older("Strict/Logger:").Length is 0
+	Logged.Older("Strict/Logger:Log;Reset") is ("Log")
+	let earlier = Signature(signature).Earlier(round.signatures)
+	earlier < 0 then List(Text) else Signature(round.signatures(earlier)).Names
+Wanted(signature Text) Texts
+	Twice.Wanted("Strict/Logger:Log") is ("Log")
+	Logged.Wanted("Strict/Logger:Log;Reset") is ("Reset")
+	Running.Wanted("Strict/Logger:Log;Reset") is ("Log", "Reset")
+	IsWhole(signature) then Signature(signature).Names else Signature(signature).Names - Older(signature)
+Fresh(signature Text, compiled TypeEntry) TypeEntry slow
+	Single.Fresh("Strict/Logger:", Single.Compiled("Strict/Logger:")).Name is "Strict/Logger"
+	Twice.Fresh("Strict/Logger:Log", Twice.Compiled("Strict/Logger:Log")).methods.Length is 2
+	let linked = LinkCompile(round.linker).LinkedType(Signature(signature).Type, Wanted(signature), compiled)
+	if IsWhole(signature)
+		return linked
+	let entry = round.entries(Signature(signature).Earlier(round.signatures) + 1)
+	TypeEntry(entry.Name, entry.members, entry.methods + linked.methods)
