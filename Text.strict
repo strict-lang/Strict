@@ -145,6 +145,11 @@ Lower Text
 	"HeLlo".Lower is "hello"
 	for
 		Lower
+Bytes Numbers
+	"ab".Bytes is (97, 98)
+	"".Bytes.Length is 0
+	for characters
+		value.number
 Count(character) Number
 	"".Count("1") is 0
 	"abc".Count("a") is 1

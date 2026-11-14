@@ -29,4 +29,5 @@ Run
 		let again = Process.Elapsed
 		let parts = Split(text)
 		let split = (Process.Elapsed - again) * Nanoseconds / Words
-		logger.Log("substring " + cut.Round(1) + " ns per word, split " + split.Round(1) + " ns per part, " + total + " " + parts)
+		let cutting = "substring " + cut.Round(1) + " ns per word"
+		logger.Log(cutting + ", split " + split.Round(1) + " ns per part, " + total + " " + parts)

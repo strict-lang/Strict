@@ -12729,7 +12729,24 @@
   }
   // strict_text_at with IndexOutOfRange like strict_list_read: a byte behind the terminator belongs to something else,
   // so a read that is no terminator is compared with the length (texts of 256 bytes or more keep it cached)
-  func.func private @strict_text_read(%text: f64, %index: f64, %name: f64) -> f64 {
+  // a character of a text by index: inside the text it is one compare and one load in the caller (the length and the
+  // first byte of a text or span do not change in a loop), an index before 0 or behind the end takes strict_text_missed
+  func.func private @strict_text_read(%text: f64, %index: f64, %name: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %at = arith.fptosi %index : f64 to i64
+    %size = func.call @strict_text_size(%text) : (f64) -> i64
+    %inside = arith.cmpi ult, %at, %size : i64
+    cf.cond_br %inside, ^read, ^missed
+  ^read:
+    %data = func.call @strict_text_data(%text) : (f64) -> !llvm.ptr
+    %slot = llvm.getelementptr %data[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %byte = llvm.load %slot : !llvm.ptr -> i8
+    %code = arith.uitofp %byte : i8 to f64
+    return %code : f64
+  ^missed:
+    %other = func.call @strict_text_missed(%text, %index, %name) : (f64, f64, f64) -> f64
+    return %other : f64
+  }
+  func.func private @strict_text_missed(%text: f64, %index: f64, %name: f64) -> f64 attributes {llvm.passthrough = ["noinline", "cold"]} {
     %zero = arith.constant 0.0 : f64
     %negative = arith.cmpf olt, %index, %zero : f64
     cf.cond_br %negative, ^wrap, ^read(%index : f64)
@@ -12955,7 +12972,8 @@
     %sharedBits = func.call @strict_bits(%shared) : (!llvm.ptr) -> f64
     return %sharedBits : f64
   ^copy:
-    %result = func.call @strict_text_part(%text, %offset, %count) : (f64, i64, i64) -> f64
+    %long = arith.constant 256 : i64
+    %result = func.call @strict_text_part(%text, %offset, %count, %long) : (f64, i64, i64, i64) -> f64
     return %result : f64
   }
   func.func private @strict_text_copy(%text: f64) -> f64 {
@@ -14470,14 +14488,14 @@
     %characters = func.call @strict_text_characters(%pointer) : (!llvm.ptr) -> i64
     return %characters : i64
   }
-  // count bytes of a text from byte start on: a span when the text is one or is ASCII with 256 bytes or more (not in
-  // pool jobs, the windows are not locked), else a text of its own
-  func.func private @strict_text_part(%text: f64, %start: i64, %count: i64) -> f64 {
+  // count bytes of a text from byte start on: a span when the text is one or is ASCII with long bytes or more (256
+  // for Substring, the lines of a file are spans whatever its size; not in pool jobs, the windows are not locked),
+  // else a text of its own
+  func.func private @strict_text_part(%text: f64, %start: i64, %count: i64, %long: i64) -> f64 {
     %zero = arith.constant 0 : i64
     %nothing = arith.constant 0.0 : f64
     %half = arith.constant 32 : i64
     %mask = arith.constant 65535 : i64
-    %long = arith.constant 256 : i64
     %bits = arith.bitcast %text : f64 to i64
     %isSpan = func.call @strict_span_is(%bits) : (i64) -> i1
     %source = func.call @strict_text_data(%text) : (f64) -> !llvm.ptr
@@ -14518,6 +14536,23 @@
     %done = llvm.call @memcpy(%copy, %from, %count) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     %result = func.call @strict_text_made(%copy, %count) : (!llvm.ptr, i64) -> f64
     return %result : f64
+  }
+  // Text.Bytes: the UTF-8 bytes of a text or span as a packed byte list (format 9), loops over it read bytes
+  func.func private @strict_text_as_bytes(%text: f64) -> f64 {
+    %zero = arith.constant 0 : i64
+    %byteFormat = arith.constant 9 : i64
+    %size = func.call @strict_text_size(%text) : (f64) -> i64
+    %hasBytes = arith.cmpi ne, %size, %zero : i64
+    cf.cond_br %hasBytes, ^fill, ^empty
+  ^fill:
+    %bytes = func.call @strict_packed_new(%size, %byteFormat) : (i64, i64) -> f64
+    %target = func.call @strict_list_data(%bytes) : (f64) -> !llvm.ptr
+    %source = func.call @strict_text_data(%text) : (f64) -> !llvm.ptr
+    %copied = llvm.call @memcpy(%target, %source, %size) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    return %bytes : f64
+  ^empty:
+    %none = func.call @strict_list_empty() : () -> f64
+    return %none : f64
   }
   // the first position of needle in count bytes, -1 when it is not there (a span has no zero byte for strstr)
   func.func private @strict_bytes_find(%hay: !llvm.ptr, %count: i64, %needle: !llvm.ptr, %size: i64) -> i64 {
@@ -15817,10 +15852,9 @@
     %stripped = arith.andi %hasCharacters, %isCarriage : i1
     %trimmedEnd = arith.select %stripped, %last, %end : i64
     %count = arith.subi %trimmedEnd, %start : i64
-    %from = arith.sitofp %start : i64 to f64
-    %length = arith.sitofp %count : i64 to f64
-    %line = func.call @strict_text_substring(%text, %from, %length) : (f64, f64, f64) -> f64
-    %result = func.call @strict_list_add(%lines, %line) : (f64, f64) -> f64
+    %any = arith.constant 0 : i64
+    %line = func.call @strict_text_part(%text, %start, %count, %any) : (f64, i64, i64, i64) -> f64
+    %result = func.call @strict_list_add_owned(%lines, %line) : (f64, f64) -> f64
     return %result : f64
   }
   func.func private @strict_file_create(%path: f64) -> !llvm.ptr {

@@ -36,4 +36,6 @@ Timed(rounds Number, isGrown Boolean) Number
 	(Process.Elapsed - started + total * 0) * Nanoseconds / (rounds * Elements)
 Run
 	for 5
-		logger.Log("appended " + Timed(Rounds, false).Round(1) + " ns per element, grown from a parameter " + Timed(Rounds, true).Round(1) + ", started with an element " + Seeded(Rounds).Round(1))
+		let empty = "appended " + Timed(Rounds, false).Round(1) + " ns per element"
+		let grown = ", grown from a parameter " + Timed(Rounds, true).Round(1)
+		logger.Log(empty + grown + ", started with an element " + Seeded(Rounds).Round(1))

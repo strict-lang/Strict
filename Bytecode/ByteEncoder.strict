@@ -54,8 +54,7 @@ Text(text Text) ByteEncoder
 	ByteEncoder(SevenBit(unicode.Length).bytes + unicode)
 UnicodeBytes(text Text) Numbers
 	ByteEncoder(1, 2).UnicodeBytes("aä€") is (97, 195, 164, 226, 130, 172)
-	for text
-		Character(value).number
+	text.Bytes
 Double(number Number) ByteEncoder
 	ByteEncoder(1, 2).Double(1.5).bytes is (1, 2, 0, 0, 0, 0, 0, 0, 248, 63)
 	ByteEncoder(1, 2).Double(-2).bytes is (1, 2, 0, 0, 0, 0, 0, 0, 0, 192)
