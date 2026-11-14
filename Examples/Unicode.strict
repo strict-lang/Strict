@@ -1,0 +1,28 @@
+constant Umlaut = Character(228) to Text
+constant Euro = Character(8364) to Text
+constant Mixed = "a" + Umlaut + Euro + "b"
+Sizes(text Text) Numbers
+	Unicode.Sizes(Unicode.Mixed) is (4, 7)
+	Unicode.Sizes("ab") is (2, 2)
+	(text.Length, text.Bytes.Length)
+Codes(text Text) Numbers
+	Unicode.Codes(Unicode.Mixed) is (97, 228, 8364, 98)
+	for text
+		value.number
+Middle(text Text) Text
+	Unicode.Middle(Unicode.Mixed).Bytes is (195, 164, 226, 130, 172)
+	Unicode.Middle(Unicode.Mixed).Length is 2
+	text.Substring(1, text.Length - 2)
+Found(text Text) Numbers
+	Unicode.Found(Unicode.Mixed) is (2, 3, 3, 228)
+	(text.IndexOf(Euro), text.IndexOf("b"), text.LastIndexOf("b"), text(1).number)
+Started(text Text) Boolean
+	Unicode.Started(Unicode.Mixed)
+	text.StartsWith(Euro, 2) and (text.StartsWith(Euro, 1) is false)
+Letters(text Text) Number
+	Unicode.Letters(Unicode.Mixed) is 4
+	Unicode.Letters("ab1") is 2
+	mutable count = 0
+	for text.Length
+		count = count + (text(index).number > 64 then 1 else 0)
+	count

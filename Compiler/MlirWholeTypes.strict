@@ -165,6 +165,8 @@ Operands(entry InstructionEntry, at Number, registers Text, naturals Text) Text
 Called(entry InstructionEntry) Text
 	MlirWholeTypes(MlirWholeInstance.Sized.function).Called(MlirWholeInstance.Sizing.instructions(1)) is "d"
 	Halving.Called(Halves(3)) is "i"
+	if MlirWholeText(function).Kind(entry) is not ""
+		return MlirWholeText(function).Kind(entry)
 	if entry.kind is InstructionType.FieldLoad
 		return MlirWholeInstance(function).MemberKind(entry.texts(1), entry.texts(0))
 	let decoder = PayloadDecoder(entry)

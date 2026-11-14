@@ -39,8 +39,7 @@ Once(kind Text, matrix Matrix, rounds Number) Number
 Timed(kind Text, matrix Matrix, rounds = Rounds) Number
 	MatrixSpeed.Timed("axis", Matrix.Identity, 4) >= 0
 	let started = Process.Elapsed
-	let result = Once(kind, matrix, rounds)
-	(Process.Elapsed - started + result * 0) * Nanoseconds / rounds
+	(Once(kind, matrix, rounds) * 0 + Process.Elapsed - started) * Nanoseconds / rounds
 Column(times List(Numbers), kind Number) Numbers
 	MatrixSpeed.Column(List(Numbers) + (1, 2), 1) is (2)
 	for times
@@ -49,7 +48,9 @@ Run
 	let matrix = Matrix.RotationZ(Degrees(1))
 	mutable times = List(Numbers)
 	for Runs
-		times = times + (Timed("product", matrix), Timed("transformed", matrix), Timed("axis", matrix), Timed("reused", matrix))
+		let first = (Timed("product", matrix), Timed("transformed", matrix))
+		times = times + (first + Timed("axis", matrix) + Timed("reused", matrix))
+	let middle = Runs / 2
 	for Kinds
 		let column = Column(times, index)
-		logger.Log(value + " " + column.Minimum.Round(1) + " ns minimum, " + column.Sorted(Runs / 2).Round(1) + " median")
+		logger.Log(value + " " + column.Minimum.Round(1) + " ns minimum, " + column.Sorted(middle).Round(1) + " median")

@@ -6,7 +6,7 @@ Typed(type Text) Text
 	Sample.Typed("p") is "!llvm.ptr"
 	Sample.Typed("d") is "!llvm.ptr"
 	Sample.Typed("-") is "i64"
-	type is "f" then "f64" else (type is in ("p", "d", "o") then "!llvm.ptr" else "i64")
+	type is "f" then "f64" else (type is in ("p", "d", "o", "t") then "!llvm.ptr" else "i64")
 Converted(source Text, given Text, wanted Text, result Text) Text
 	Sample.Converted("%a", "i", "f", "%b") is "    %b = arith.sitofp %a : i64 to f64"
 	Sample.Converted("%a", "f", "i", "%b") is "    %b = arith.fptosi %a : f64 to i64"
@@ -58,14 +58,14 @@ Marked(types Text, at Number, type Text) Text
 	if at < 0
 		return types
 	let old = types(at) to Text
-	let isPointer = (old is in ("p", "d", "o")) or (type is in ("p", "d", "o"))
+	let isPointer = (old is in ("p", "d", "o", "t")) or (type is in ("p", "d", "o", "t"))
 	let isConflict = (old is "x") or (isPointer and (old is not type) and (old is not "-"))
 	let combined = isConflict then "x" else (((old is "f") or (type is "f")) then "f" else type)
 	types.Substring(0, at) + combined + types.Substring(at + 1, types.Length - at - 1)
 IsPointer(type Text) Boolean
 	Sample.IsPointer("o")
 	Sample.IsPointer("i") is false
-	type is in ("p", "d", "o")
+	type is in ("p", "d", "o", "t")
 Written(types Text, at Number, type Text) Text
 	Sample.Written("i-", 1, "d") is "i-"
 	Sample.Written("i-", 1, "i") is "ii"

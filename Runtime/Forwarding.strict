@@ -97,7 +97,7 @@ IsForwarded(arguments Texts) Boolean
 	let command = arguments.Length > 0 then arguments(0) else ""
 	let isLocal = ("native" is in arguments) or ("lines" is in arguments) or ("-" is in arguments)
 	let isOptedOut = Process.Variable("STRICT_SERVER") is "0"
-	let isServed = (command is in ("test", "check", "build")) and (isLocal is false) and (isOptedOut is false)
+	let isServed = (command is in ("test", "check", "build", "run")) and (isLocal is false) and (isOptedOut is false)
 	(command is Resident.Stopping) or isServed
 Started(slot Text)
 	let executable = Process.Current.executable

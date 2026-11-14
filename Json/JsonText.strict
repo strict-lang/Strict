@@ -5,14 +5,10 @@ constant HighSurrogate = 55296
 constant LowSurrogate = 56320
 constant SurrogateValues = 1024
 constant SupplementaryStart = 65536
-constant AsciiLimit = 128
-constant TwoByteLimit = 2048
-constant ContinuationMark = 128
-constant PayloadBase = 64
 constant Controls = ("\n", "\t", "\r", Character(8) to Text, Character(12) to Text)
 Unescaped Text
 	JsonText("plain").Unescaped is "plain"
-	Escaped.Unescaped is "a\"bAé😀\n"
+	Escaped.Unescaped.Bytes is (97, 34, 98, 65, 195, 169, 240, 159, 152, 128, 10)
 	mutable result = ""
 	mutable at = 0
 	for as long as at < raw.Length
@@ -30,7 +26,7 @@ Step(position Number) Number
 Escape(position Number) Text
 	Escaped.Escape(2) is "\""
 	Escaped.Escape(29) is "\n"
-	Escaped.Escape(17) is "😀"
+	Escaped.Escape(17).Bytes is (240, 159, 152, 128)
 	let code = raw(position) to Text
 	let high = Hex(position + 1)
 	if code is "u"
@@ -52,13 +48,7 @@ Hex(position Number) Number
 	number
 Utf8(code Number) Text
 	Escaped.Utf8(65) is "A"
-	Escaped.Utf8(233) is "é"
-	Escaped.Utf8(8364) is "€"
-	Escaped.Utf8(128512) is "😀"
-	if code < AsciiLimit
-		return Character(code) to Text
-	let count = code < TwoByteLimit then 2 else code < SupplementaryStart then 3 else 4
-	mutable text = Character((Byte.Values - 2 ^ (8 - count)) + (code / PayloadBase ^ (count - 1)).Floor) to Text
-	for Range(1, count)
-		text = text + (Character(ContinuationMark + (code / PayloadBase ^ (count - 1 - value)).Floor % PayloadBase) to Text)
-	text
+	Escaped.Utf8(233).Bytes is (195, 169)
+	Escaped.Utf8(8364).Bytes is (226, 130, 172)
+	Escaped.Utf8(128512).Bytes is (240, 159, 152, 128)
+	Character(code) to Text

@@ -46,6 +46,7 @@ The base types are the documentation: every method starts with tests showing how
 `strict` (`strict.exe` on Windows) is in this folder next to the base types, put it on the PATH. No .NET or other runtime is needed (the C# implementation that bootstrapped Strict is commit [4e4fc3da](https://github.com/strict-lang/Strict/tree/4e4fc3da6da3075da38dc3bd2f683ef27e34b26c) in the history).
 ```
 strict Examples/Sum.strict 5 10 20        run Examples/Sum.exe with these arguments, built first when outdated (or `strict Sum` in Examples)
+strict run -c "logger.Log(1 + 2 to Text)"  run these lines as the body of Run on the VM of the resident server, no file is written
 strict test Examples/Sum.strict           explicitly run this file, including Slow tests, on the VM
 strict test Examples/Sum.strict Run       explicitly run the tests of one method
 strict test Examples/Sum.strict unit      run only unit tests, no mutation testing (a folder on the VM too)
@@ -96,7 +97,7 @@ End a method header with `slow` to make its tests functional (file, model or app
 Builds, checks, folder tests on the VM, VS Code typing checks and value tracing skip Slow tests and the fixtures only they use. `strict test File.strict` and `strict test Folder native` include them, `strict test File.strict Method` selects one method, `native` or `lines` keep that selection. `strict File.strict` runs all its tests, Slow included, then `Run`. Only automatic unit runs write `.strictbinary`, explicit functional runs execute every time. See `Runtime/README.md` for the VM and `Compiler/README.md` for the build pipeline.
 
 ## Rules worth knowing
-- Limits: 120 characters per indented line (240 for a constant), 13 lines per method (header and tests included), 18 methods (not for base types), 15 members, 40 constants, nesting depth 5. Files in a `Generated` folder get 10 times as much, in a `Content` folder twice as much.
+- Limits: 120 characters per indented line (240 for a constant), 13 lines per method (header and tests included), 18 methods (not for base types), 15 members, 40 constants, nesting depth 5. Files in a `Generated` folder get 10 times as much, in a `Content` folder twice as much. A `.strict` file is ASCII only (`SourceMustBeAscii`): other text is loaded from a file or built from its code points.
 - Precedence from loosest to tightest: `then`/`else`, `or`, `xor`, `and`, comparisons (`is`, `is not`, `is in`, `is not in`, `<`, `>`, `<=`, `>=`), `in`, `+`/`-`, `*`/`/`/`%` (left to right: `a % b / c` is `(a % b) / c`), `^`, `to`. A prefix `not` belongs to the one operand that follows it and needs no brackets inside `and`/`or` chains: `isOpen and not isLocked or isForced` is `(isOpen and (not isLocked)) or isForced`; negate a comparison with `is not`, `is not in` or brackets (`not (a < b)`).
 - A conditional as one of several arguments needs brackets: `Text(value, (isShort then 2 else 4))`.
 - Constraints follow `with`: `has Width Number with value > 0`, `Run(frames = 0 with value >= 0)`. A value that does not fit is `Error("ConstraintNotMet: ...")`.
@@ -173,7 +174,7 @@ from(text)
 	Character("ab") is Error
 	text.Characters(0)
 ```
-A Text is a list of characters (`has characters`), a Name is a Text with constraints (`has text with Length > 1 and " " is not in value`). A type with one member is that member: `Byte(5)` prints as `5`, calling it with a value of that member wraps the value unless the type has its own `from` taking it: `Float8(0.3)` is `0.3125` (E4M3: the nearest value, ties to even, at most 448, the same on the Strict VM, the CPU and the GPU).
+A Text is a list of characters (`has characters`): `Length`, `text(index)`, `Substring`, `IndexOf` and a `for` over it count characters (code points, `Character(8364) to Text` is one character of three bytes), `Bytes` gives its UTF-8 bytes and `Text.Utf8(bytes)` the text of such bytes; a Name is a Text with constraints (`has text with Length > 1 and " " is not in value`). A type with one member is that member: `Byte(5)` prints as `5`, calling it with a value of that member wraps the value unless the type has its own `from` taking it: `Float8(0.3)` is `0.3125` (E4M3: the nearest value, ties to even, at most 448, the same on the Strict VM, the CPU and the GPU).
 
 Variables live in a method body: `constant` for constant values, `let` for anything else that does not change, `mutable` only when it has to change:
 ```

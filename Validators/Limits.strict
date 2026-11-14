@@ -31,7 +31,7 @@ Issues ValidationIssues
 	Limits(("Run", "\t1", "has a"), false).Issues.Length is 0
 	mutable issues = List(Mutable(ValidationIssue))
 	for lines
-		issues = issues + LineIssues(value, index) + NegationIssues(value, index)
+		issues = issues + LineIssues(value, index) + NegationIssues(value, index) + AsciiIssues(value, index)
 	issues + MethodIssues + CountIssues
 OrderIssues ValidationIssues
 	Limits(("Run", "\t1", "has a"), false).OrderIssues.First to Text is "MembersMustComeBeforeMethods: has a"
@@ -89,6 +89,14 @@ LengthIssues(line Text, number Number) ValidationIssues
 	if (line.StartsWith("\t") or line.StartsWith("constant ")) and (line.Length > limit)
 		issues.Add(ValidationIssue("CharacterCountMustBeWithinLimit", length, number + 1))
 	issues
+AsciiIssues(line Text, number Number) ValidationIssues
+	Sample.AsciiIssues("	let a = \"b\"", 0).Length is 0
+	Sample.AsciiIssues("	\"" + Character(228) + "\"", 4).First to Text is "SourceMustBeAscii: column 3"
+	Sample.AsciiIssues("	\"" + Character(228) + "\"", 4).First.Line is 5
+	for line.Bytes
+		if value > Character.Delete
+			return List(ValidationIssue) + ValidationIssue("SourceMustBeAscii", "column " + (index + 1), number + 1)
+	List(ValidationIssue)
 NegationIssues(line Text, number Number) ValidationIssues
 	Sample.NegationIssues("\tlet a = 0 - b.Y", 0).First to Text is "ZeroMinusMustBeNegation: write -b.Y instead of 0 - b.Y"
 	Sample.NegationIssues("\tlet a = b - 0 - c", 0).Length is 0

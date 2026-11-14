@@ -88,7 +88,9 @@ Adder(name Text) Text
 	MlirDying(MlirOwned.Copying, 0).Adder("moved") is "strict_list_add"
 	MlirDying(Seeding, 0).Adder("forResult") is "strict_list_push"
 	MlirDying(Seeding, 0).Adder("listResult3") is "strict_list_push"
-	if (name is "forResult") or name.StartsWith("listResult")
-		return "strict_list_push"
+	MlirDying(MlirAppended.Pushed.function, 3).Adder("text") is "strict_list_push"
 	let isOwned = MlirOwned(function, position).IsOwned(name) or MlirCarried(function).IsCarried(name)
+	let isFilled = isOwned then MlirAppended(function, position).IsFilled(name) else false
+	if (name is "forResult") or name.StartsWith("listResult") or isFilled
+		return "strict_list_push"
 	isOwned then "strict_list_add_owned" else "strict_list_add"

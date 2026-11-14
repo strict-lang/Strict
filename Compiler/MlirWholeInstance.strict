@@ -98,6 +98,8 @@ Field(entry InstructionEntry, at Number) Text
 ParameterKind(parameter MemberEntry) Text
 	Sized.ParameterKind(Sizing.parameters.First) is "o"
 	MlirWholeInstance(MlirWhole.Row.function).ParameterKind(MlirWhole.Parameters.First) is "p"
+	if parameter.typeName is "Strict/Text"
+		return "t"
 	if IsInstance(parameter.typeName)
 		return "o"
 	if MlirParameters(function).IsBytes(parameter.Name)
@@ -107,13 +109,14 @@ OwnKind(name Text) Text
 	Fits.OwnKind("width") is "i"
 	Sized.OwnKind("width") is "-"
 	let isOwn = UsesSelf and (name is in MlirInstances(function, 0).StoredNames(function.type))
-	isOwn then MemberKind(function.type.Name, name) else "-"
+	isOwn then MemberKind(function.type.Name, name) else (MlirWholeText(function).IsText(name) then "t" else "-")
 IsReadable(entry InstructionEntry) Boolean
 	Sized.IsReadable(Sizing.instructions(1))
 	Coupled.IsReadable(MlirWholeNative.Widths)
 	MlirWholeInstance(MlirLanes.Sample.function).IsReadable(MlirLanes.Greens)
 	let isPacked = MlirLanes(function, 0).IsPacked(entry.texts(1)) or MlirCouples(function, 0).IsCoupled(entry.texts(1))
-	(IsInstance(entry.texts(1)) or isPacked) and (MemberKind(entry.texts(1), entry.texts(0)) is not "")
+	let isMember = (IsInstance(entry.texts(1)) or isPacked) and (MemberKind(entry.texts(1), entry.texts(0)) is not "")
+	isMember or (MlirWholeText(function).Kind(entry) is not "")
 IsMemberList(name Text) Boolean
 	Sized.IsMemberList("list0")
 	Sized.IsMemberList("grid") is false

@@ -3,6 +3,8 @@ has position Number
 has named Text = ""
 constant Varying = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "value"), MlirInstances.Built)))
 constant PercentSign = 37
+constant Framing = 17
+constant LeadByte = 192
 constant EscapedCodes = (Character.Quote, PercentSign, Character.Backslash)
 IsConstant Boolean
 	MlirConstants(MlirTexts.Joined, 0).IsConstant
@@ -30,7 +32,7 @@ Constant Runtime/VmValue
 	let entry = function.method.instructions(position)
 	PayloadDecoder(entry).Value(entry.kind is InstructionType.LoadConstantToRegister then 1 else 0)
 Global Text
-	MlirConstants(MlirTexts.Joined, 0).Global.IndexOf("@cShape_Run_0_0(\"a%\\00\") : !llvm.array<3 x i8>") > 0
+	MlirConstants(MlirTexts.Joined, 0).Global.EndsWith("a%\\00\") : !llvm.array<19 x i8>")
 	MlirConstants(MlirLists.Literals, 0).Global is "  llvm.mlir.global internal @lShape_Run_0_0(0.0 : f64) : f64"
 	constant literal = Constant
 	if literal.kind is "Text"
@@ -78,10 +80,25 @@ Cache Text
 	MlirConstants(MlirLists.Literals, 0).Cache is "@lShape_Run_0_0"
 	"@l" + function.Symbol + "_" + position
 TextGlobal(text Text, symbol Text) Text
-	MlirConstants(MlirTexts.Joined, 0).TextGlobal("b", "_1").IndexOf("@cShape_Run_0_0_1(") > 0
+	MlirConstants(MlirTexts.Joined, 0).TextGlobal("b", "_1").IndexOf("@cShape_Run_0_0_1(\"\\01\\00") > 0
 	MlirConstants(MlirTexts.Joined, 0, "@dA_b").TextGlobal("b", "_1").IndexOf("@dA_b_1(") > 0
-	let name = Base + symbol + "(\"" + Escaped(text, false) + "\\00\")"
-	"  llvm.mlir.global internal constant " + name + " : !llvm.array<" + (EscapedLength(text, false) + 1) + " x i8>"
+	let bytes = ByteEncoder.Empty.UnicodeBytes(text)
+	let name = Base + symbol + "(\"" + Lengths(bytes) + Escaped(text, false) + "\\00\")"
+	"  llvm.mlir.global internal constant " + name + " : !llvm.array<" + (bytes.Length + Framing) + " x i8>"
+Lengths(bytes Numbers) Text
+	MlirConstants(MlirTexts.Joined, 0).Lengths((97, 195, 164)) is Word(3) + Word(2)
+	mutable characters = 0
+	for bytes
+		characters = characters + ((value < 128) or (value >= LeadByte) then 1 else 0)
+	Word(bytes.Length) + Word(characters)
+Word(count Number) Text
+	MlirConstants(MlirTexts.Joined, 0).Word(258) is "\\02\\01\\00\\00\\00\\00\\00\\00"
+	mutable word = ""
+	mutable rest = count
+	for 8
+		word = word + "\\" + MetalValue("").Hex(rest % 256, 2)
+		rest = (rest / 256).Floor
+	word
 Literal(text Text, slot Text, suffix Text) Texts
 	MlirConstants(MlirTexts.Joined, 0).Literal("a%", "%r0", "").Length is 3
 	MlirConstants(MlirTexts.Joined, 1).Literal("", "%s", "d0").First.IndexOf("@strict_empty") > 0
@@ -92,10 +109,12 @@ Literal(text Text, slot Text, suffix Text) Texts
 	Address(text, "", suffix) + function.Store(MlirMemory(function, position).Temp(suffix + "xf"), slot)
 Address(text Text, symbol Text, suffix Text) Texts
 	MlirConstants(MlirTexts.Joined, 0).Address("a", "_2", "e").First.IndexOf("@cShape_Run_0_0_2 ") > 0
+	MlirConstants(MlirTexts.Joined, 0).Address("a", "_2", "e").Last.IndexOf("exf = func.call @strict_text_constant(") > 0
 	let memory = MlirMemory(function, position)
-	let name = text is "" then "@strict_empty" else Base + symbol
+	let name = text is "" then "@strict_empty_text" else Base + symbol
 	let address = "    " + memory.Temp(suffix + "c") + " = llvm.mlir.addressof " + name + " : !llvm.ptr"
-	List(Text) + address + memory.Bits(memory.Temp(suffix + "c"), suffix + "x")
+	let made = " = func.call @strict_text_constant(" + memory.Temp(suffix + "c") + ") : (!llvm.ptr) -> f64"
+	(address, "    " + memory.Temp(suffix + "xf") + made)
 Base Text
 	MlirConstants(MlirTexts.Joined, 0).Base is "@cShape_Run_0_0"
 	MlirConstants(MlirTexts.Joined, 0, "@dA_b").Base is "@dA_b"

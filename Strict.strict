@@ -4,6 +4,7 @@ constant Commands = ("build", "test", "check", "update", "format", "suggest")
 constant BuildWait = 90
 constant Informing = ("version", "--version", "help", "--help")
 constant RunHelp = List(Text) + "strict <file or Type> [arguments]  run the program natively (built first when outdated); a type without Run runs its native tests, not again while they passed and nothing changed"
+constant CodeHelp = List(Text) + "strict run -c <code> [arguments]  run these lines as the body of Run on the Strict VM, no file is written"
 constant BuildHelp = ("strict build <file or Type>  compile a native executable without running tests (Name.test without Run)", "strict build [platform]    build the program named like this folder (in FractalZoomer/: FractalZoomer.strict)")
 constant PlatformHelp = ("strict build <file> linux  also the Linux executable (on Windows through WSL)", "strict build <file> web  build Name.html, .js and .wasm for the browser (Emscripten in Tools/emsdk)")
 constant AppHelp = ("strict build <file> android  build an arm64-v8a shared library and stage Release/Android (Android NDK)", "strict build <file> ios    build an arm64 iOS static archive and stage Release/iOS (native packages need Xcode)")
@@ -16,7 +17,7 @@ constant FullHelp = ("strict test <folder> full  remove its obj/ folders, then r
 constant SourceHelp = ("strict check <folder>      validate the .strict files: type rules, unused members, limits", "strict format <file>       print the file in its canonical form, each method body as the parser reads it")
 constant MaintenanceHelp = ("strict update <folder>     refresh the packages copied into the folder (.origin) from their clone or GitHub", "strict version             show the version number and when this strict executable was built")
 constant SuggestHelp = List(Text) + "strict suggest <file> <method>  print bodies passing its tests; add - to read unsaved source"
-constant Help = RunHelp + BuildHelp + PlatformHelp + AppHelp + BuildModeHelp + TestHelp + TestInputHelp + LinesHelp + ValuesHelp + FullHelp + SourceHelp + MaintenanceHelp + SuggestHelp
+constant Help = RunHelp + CodeHelp + BuildHelp + PlatformHelp + AppHelp + BuildModeHelp + TestHelp + TestInputHelp + LinesHelp + ValuesHelp + FullHelp + SourceHelp + MaintenanceHelp + SuggestHelp
 constant FirstTraceLines = 3
 constant LastTraceLines = 3
 constant LongTrace = "Error: A\n\t1\n\t2\n\t3\n\t4\n\t5\n\t6\n\tat Strict.Logged in Strict.strict:line 66"
@@ -30,7 +31,7 @@ Run(arguments Texts) Number
 	if command is in ("serve", "linked", "status")
 		Hosted(command, arguments, resident)
 		return 0
-	let forwarded = Forwarding(logger, resident.root).Forwarded(arguments)
+	let forwarded = Forwarding(logger, resident.root).Forwarded(Scripted.Packed(arguments))
 	forwarded is Forwarding.Ended then 1 else forwarded is Error then Logged(arguments).code else forwarded
 Hosted(command Text, arguments Texts, resident Resident) slow
 	if command is "serve"
@@ -72,11 +73,14 @@ Answered(resident Resident, request Text, socket Number, last Answer) Answer slo
 		Directory.Change(home)
 	Answer(answer.code, answer.known, folder, answer.stamps, answer.files).Carried(last)
 Logged(arguments Texts, known = Dictionary(Text, TypeEntry)) Answer slow
-	let answer = Ran(arguments, known)
+	let isCode = Scripted.IsCode(arguments)
+	let answer = isCode then Coded(arguments, known) else Ran(arguments, known)
 	if answer is Error
 		logger.Log(Shortened(answer to Text))
 		return Answer(1, known)
 	answer
+Coded(arguments Texts, known Dictionary(Text, TypeEntry)) Answer slow
+	Answer(Scripted(logger, arguments(2)).Ran(arguments, TypeSource.Root) then 0 else 1, known)
 Shortened(trace Text) Text
 	Strict.Shortened("Error: A\n\t1") is "Error: A\n\t1"
 	Strict.Shortened(LongTrace) is "Error: A\n\t1\n\t2\n\t... (skipped 1 lines)\n\t4\n\t5\n\t6"

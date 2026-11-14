@@ -3,9 +3,9 @@ has position Number
 constant LengthCall = InstructionEntry.Invoke(1, ("Strict/Text", "Length", "Strict/Number"), List(Number), 0)
 constant Search = InstructionEntry.Invoke(2, ("Strict/Text", "IndexOf", "Strict/Number", "text"), 1, 0)
 constant TextType = TypeEntry("Strict/Text", List(MemberEntry), List(MethodEntry))
-constant TextNames = ("StartsWith", "IndexOf", "LastIndexOf", "Substring", "Upper", "Lower", "Capitalize", "Trim", "TrimStart", "TrimEnd", "Combine")
+constant TextNames = ("StartsWith", "IndexOf", "LastIndexOf", "Substring", "Upper", "Lower", "Capitalize", "Trim", "TrimStart", "TrimEnd", "Combine", "Bytes", "Utf8")
 constant TextSearchHelpers = ("strict_text_starts", "strict_text_index", "strict_text_last_index", "strict_text_substring")
-constant TextChangeHelpers = ("strict_text_upper", "strict_text_lower", "strict_text_capitalize", "strict_text_trim", "strict_text_trim_start", "strict_text_trim_end", "strict_text_combine")
+constant TextChangeHelpers = ("strict_text_upper", "strict_text_lower", "strict_text_capitalize", "strict_text_trim", "strict_text_trim_start", "strict_text_trim_end", "strict_text_combine", "strict_text_as_bytes", "strict_text_utf8")
 constant TextHelpers = TextSearchHelpers + TextChangeHelpers
 constant Destining = List(Text) + "strict_list_swap_removed"
 constant DefaultedLast = ("strict_text_index", "strict_text_starts", "strict_directory_files", "strict_text_combine")
@@ -158,6 +158,7 @@ TextHelper(name Text) Text
 	MlirNatives(Texts, 1).TextHelper("Upper") is "strict_text_upper"
 	MlirNatives(Texts, 1).TextHelper("Split") is ""
 	MlirNatives(Texts, 1).TextHelper("Combine") is "strict_text_combine"
+	MlirNatives(Texts, 1).TextHelper("Bytes") is "strict_text_as_bytes"
 	let found = TextNames.Index(name)
 	found < 0 then "" else TextHelpers(found)
 Emitted(entry InstructionEntry, type TypeEntry, helper Text) Texts

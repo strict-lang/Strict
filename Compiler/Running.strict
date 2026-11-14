@@ -1,8 +1,10 @@
 has logger
 has executable Text
-constant Listing = "-NoProfile -Command $file = Get-Item -ErrorAction Ignore '"
+constant Own = "$me = (Get-CimInstance Win32_Process -Filter ProcessId=$PID).ParentProcessId; "
+constant Stopped = (0, 128)
+constant Listing = "-NoProfile -Command " + Own + "$file = Get-Item -ErrorAction Ignore '"
 constant Matching = "'; if ($file) { Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq $file.FullName"
-constant Older = " -and $_.CreationDate -lt $file.LastWriteTime }"
+constant Older = " -and $_.CreationDate -lt $file.LastWriteTime -and $_.ProcessId -ne $me }"
 constant Printed = " | ForEach-Object { '' + $_.ProcessId + [char]9 + $_.CommandLine } }"
 constant Missing = Running(Logger, "Compiler/output/Missing.exe")
 constant Served = Running(Logger, "C:/s/strict.exe")
@@ -43,9 +45,9 @@ Stopping Texts
 	kept
 Ended(id Text) Boolean
 	Missing.Ended("0") is false
-	Missing.Ended("3")
-	let isClosed = Process.RunTool("taskkill", "/PID " + id).exitCode is in EndedCodes
-	isClosed or (Process.RunTool("taskkill", "/F /PID " + id).exitCode is in EndedCodes)
+	(Process.OperatingSystem is not "Windows") or Missing.Ended("999999")
+	let isClosed = Process.RunTool("taskkill", "/PID " + id).exitCode is in Stopped
+	isClosed or (Process.RunTool("taskkill", "/F /PID " + id).exitCode is in Stopped)
 Restarted(old Text) Text slow
 	Missing.Restarted("Compiler/output/Missing.old.exe") is ""
 	if Directory.Files(Path(executable).PathOnly.text + "/obj", "strict.server*").Length is 0

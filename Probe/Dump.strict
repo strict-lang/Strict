@@ -1,0 +1,13 @@
+has logger
+Run(path Text, method Text)
+	for FileCompiler(logger, true).Compiled(path, ".", false)
+		let type = value
+		for type.methods
+			if (value.Name is method) and type.Name.EndsWith(Path(path).FileName.RemoveExtension.text)
+				for value.instructions
+					let decoder = PayloadDecoder(value)
+					let isCall = value.kind is InstructionType.Invoke
+					let instance = isCall then " instance " + decoder.Instance else ""
+					let arguments = isCall then " arguments " + (decoder.Arguments to Text) else ""
+					let line = index + " " + value.kind + " " + (value.texts to Text) + " " + (value.payload to Text)
+					logger.Log(line + instance + arguments)

@@ -42,20 +42,18 @@ Integers Numbers
 			scale = 1
 	integers
 Spelled(start Number, length Number) Text
-	ByteEncoder(104, 105, 195, 164).Spelled(2, 2) is "ä"
-	for Range(start, start + length)
-		Character(bytes(value))
+	ByteEncoder(104, 105, 195, 164).Spelled(2, 2).Bytes is (195, 164)
+	outer.Text.Utf8(bytes.Slice(start, length))
 SevenBitLength(number Number) Number
 	ByteEncoder(1, 2).SevenBitLength(300) is 2
 	number < SevenBitBase then 1 else 1 + SevenBitLength((number / SevenBitBase).Floor)
 Text(text Text) ByteEncoder
-	ByteEncoder(1, 2).Text("ä").bytes is (1, 2, 2, 195, 164)
+	ByteEncoder(1, 2).Text(ByteEncoder(195, 164).Spelled(0, 2)).bytes is (1, 2, 2, 195, 164)
 	let unicode = UnicodeBytes(text)
 	ByteEncoder(SevenBit(unicode.Length).bytes + unicode)
 UnicodeBytes(text Text) Numbers
-	ByteEncoder(1, 2).UnicodeBytes("aä€") is (97, 195, 164, 226, 130, 172)
-	for text
-		Character(value).number
+	ByteEncoder(1, 2).UnicodeBytes(ByteEncoder(97, 195, 164, 226, 130, 172).Spelled(0, 6)) is (97, 195, 164, 226, 130, 172)
+	text.Bytes
 Double(number Number) ByteEncoder
 	ByteEncoder(1, 2).Double(1.5).bytes is (1, 2, 0, 0, 0, 0, 0, 0, 248, 63)
 	ByteEncoder(1, 2).Double(-2).bytes is (1, 2, 0, 0, 0, 0, 0, 0, 0, 192)

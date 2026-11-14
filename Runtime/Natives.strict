@@ -14,7 +14,7 @@ constant NewSingle = Invocation(InstructionEntry.Invoke(1, ("Strict/Single", "fr
 constant Pairs = VmValue.OfList(VmValue.OfList(VmValue.OfNumber(1), VmValue.OfNumber(3)), VmValue.OfList(VmValue.OfNumber(2), VmValue.OfNumber(4)))
 constant BcTwo = (VmValue.OfText("bc"), VmValue.OfNumber(2))
 constant Cut = VmValue.OfError("SubstringOutOfRange")
-constant TextMethods = ("StartsWith", "IndexOf", "LastIndexOf", "Substring", "Upper", "Lower", "Capitalize", "Trim", "TrimStart", "TrimEnd")
+constant TextMethods = ("StartsWith", "IndexOf", "LastIndexOf", "Substring", "Upper", "Lower", "Capitalize", "Trim", "TrimStart", "TrimEnd", "Bytes", "Utf8")
 Result(call Invocation) VmValue
 	(Shapes.Result(NewShape).items.First.number is 3) and (Shapes.Result(Invocation.Parsing).number is 5)
 	let name = call.MethodName
@@ -107,8 +107,8 @@ Queried(name Text, instance VmValue, call Invocation) VmValue
 Searched(name Text, text Text, arguments List(VmValue)) VmValue
 	Shapes.Searched("StartsWith", "abbc", BcTwo).IsTrue and (Shapes.Searched("IndexOf", "bcbcbc", BcTwo).number is 2)
 	(Shapes.Searched("Substring", "abc", BcTwo).text is "ab") and (Shapes.Searched("Substring", "a", BcTwo) is Cut)
-	if arguments.Length is 0
-		return Edited(name, text)
+	if (arguments.Length is 0) or (name is "Utf8")
+		return name is in ("Bytes", "Utf8") then ByteTexts(name, text, arguments) else Edited(name, text)
 	let first = arguments.First
 	let second = arguments.Length > 1 then arguments(1).number else 0
 	if name is "Substring"
@@ -117,6 +117,19 @@ Searched(name Text, text Text, arguments List(VmValue)) VmValue
 	if name is "StartsWith"
 		return VmValue.OfBoolean(text.StartsWith(first.text, second))
 	VmValue.OfNumber(name is "IndexOf" then text.IndexOf(first.text, second) else text.LastIndexOf(first.text))
+ByteTexts(name Text, text Text, arguments List(VmValue)) VmValue
+	Shapes.ByteTexts("Bytes", "ab", List(VmValue)).items.Last.number is 98
+	Shapes.ByteTexts("Bytes", "", List(VmValue)).items.Length is 0
+	Shapes.ByteTexts("Utf8", "", List(VmValue) + Shapes.ByteTexts("Bytes", "ab", List(VmValue))).text is "ab"
+	mutable numbers = List(VmValue)
+	for text.Bytes
+		numbers = numbers + VmValue.OfNumber(value)
+	if name is "Bytes"
+		return VmValue.OfList(numbers)
+	mutable bytes = List(Number)
+	for arguments.First.items
+		bytes = bytes + value.number
+	VmValue.OfText(Text.Utf8(bytes))
 Edited(name Text, text Text) VmValue
 	(Shapes.Edited("Capitalize", "ab").text is "Ab") and (Shapes.Edited("Trim", " a ").text is "a")
 	(Shapes.Edited("TrimEnd", " a ").text is " a") and (Shapes.Edited("TrimStart", " a ").text is "a ")

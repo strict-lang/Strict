@@ -1,6 +1,6 @@
-  llvm.mlir.global internal constant @strict_linux("Linux\00") : !llvm.array<6 x i8>
-  llvm.mlir.global internal constant @strict_temp_template("/tmp/strictXXXXXX\00") : !llvm.array<18 x i8>
-  llvm.mlir.global internal constant @strict_shell("/bin/sh\00") : !llvm.array<8 x i8>
+  llvm.mlir.global internal constant @strict_linux("\05\00\00\00\00\00\00\00\05\00\00\00\00\00\00\00Linux\00") : !llvm.array<22 x i8>
+  llvm.mlir.global internal constant @strict_temp_template("\11\00\00\00\00\00\00\00\11\00\00\00\00\00\00\00/tmp/strictXXXXXX\00") : !llvm.array<34 x i8>
+  llvm.mlir.global internal constant @strict_shell("\07\00\00\00\00\00\00\00\07\00\00\00\00\00\00\00/bin/sh\00") : !llvm.array<24 x i8>
   llvm.mlir.global internal constant @strict_online(84 : i32) : i32
   llvm.mlir.global internal constant @strict_physical_pages(85 : i32) : i32
   llvm.mlir.global internal constant @strict_page_size(30 : i32) : i32
@@ -79,12 +79,13 @@
   }
   func.func private @strict_temp_file() -> f64 {
     %size = arith.constant 18 : i64
-    %template = llvm.mlir.addressof @strict_temp_template : !llvm.ptr
-    %name = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
+    %templateLengths = llvm.mlir.addressof @strict_temp_template : !llvm.ptr
+    %template = llvm.getelementptr %templateLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %name = func.call @strict_text_room(%size) : (i64) -> !llvm.ptr
     %copied = llvm.call @memcpy(%name, %template, %size) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     %descriptor = llvm.call @mkstemp(%name) : (!llvm.ptr) -> i32
     %closed = llvm.call @close(%descriptor) : (i32) -> i32
-    %result = func.call @strict_bits(%name) : (!llvm.ptr) -> f64
+    %result = func.call @strict_text_sealed(%name) : (!llvm.ptr) -> f64
     return %result : f64
   }
   // the web runs kernels as WebGPU shaders (NativeRuntimeWeb.mlir), everywhere else the device code takes them
@@ -142,8 +143,10 @@
     return %none : f64
   }
   func.func private @strict_gpu_library(%isAmd: i1) -> !llvm.ptr {
-    %nvidia = llvm.mlir.addressof @strict_gpu_driver : !llvm.ptr
-    %amd = llvm.mlir.addressof @strict_gpu_amd_driver : !llvm.ptr
+    %nvidiaLengths = llvm.mlir.addressof @strict_gpu_driver : !llvm.ptr
+    %nvidia = llvm.getelementptr %nvidiaLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %amdLengths = llvm.mlir.addressof @strict_gpu_amd_driver : !llvm.ptr
+    %amd = llvm.getelementptr %amdLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %name = arith.select %isAmd, %amd, %nvidia : !llvm.ptr
     %now = arith.constant 2 : i32
     %library = llvm.call @dlopen(%name, %now) : (!llvm.ptr, i32) -> !llvm.ptr
