@@ -171,13 +171,14 @@ Described(loaded Text, suffix Text, kind Text) Texts
 	let symbol = method.instructions.Length is 0 then automatic else MlirFunction(function.types, type, method).Symbol
 	List(Text) + loaded + MlirMemory(function, position).Converting(Temp(suffix + "x"), symbol, Temp(suffix))
 Pointer(register Number, suffix Text) Texts
-	MlirTexts(Joined, 3).Pointer(2, "b").Last is "    %t3bp = func.call @strict_ptr(%t3bs) : (f64) -> !llvm.ptr"
+	MlirTexts(Joined, 3).Pointer(2, "b").Last is "    %t3bp = func.call @strict_text_ptr(%t3bs) : (f64) -> !llvm.ptr"
 	MlirTexts(Joined, 3).Pointer(2, "b")(1) is "    %t3bs = func.call @strict_shown(%t3bx) : (f64) -> f64"
 	MlirTexts(Joined, 3).Pointer(2, "b").Length is 3
 	MlirTexts(Listing, 1).Converted(ToNumbers) is ElementLines
 	MlirTexts(MlirKinds.Lettered.function, 2).Numbered(1, "%r2")(1).IndexOf("@strict_character_text(%t2n)") > 0
 	let shown = MlirMemory(function, position).Called(Temp(suffix + "s"), "strict_shown", List(Text) + Temp(suffix + "x"))
-	TextBits(register, suffix) + shown + MlirMemory(function, position).Pointer(Temp(suffix + "s"), suffix)
+	let pointed = " = func.call @strict_text_ptr(" + Temp(suffix + "s") + ") : (f64) -> !llvm.ptr"
+	TextBits(register, suffix) + shown + ("    " + Temp(suffix + "p") + pointed)
 Concatenated(entry InstructionEntry) Texts
 	MlirTexts(Joined, 2).Concatenated(Joined.method.instructions(2)).Length is 6
 	MlirTexts(Joined, 2).Concatenated(Joined.method.instructions(2)) is ConcatenatedLines

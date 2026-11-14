@@ -1,0 +1,43 @@
+constant Many = 300
+constant Start = 400
+constant Size = 40
+Long(count Number) Text
+	Spans.Long(2) is "w0 w1 "
+	mutable text = ""
+	for count
+		text = text + "w" + index + " "
+	text
+Words(count Number) Texts
+	Spans.Words(Many).Length is Many + 1
+	Spans.Words(Many)(7) is "w7"
+	Spans.Words(Many)(Many - 1) + "!" is "w299!"
+	Spans.Words(Many).Last is ""
+	Long(count).Split(" ")
+Right(words Texts) Number
+	Spans.Right(("w0", "w1", "x")) is 2
+	mutable right = 0
+	for words
+		right = right + (value is "w" + index then 1 else 0)
+	right
+Kept(count Number) Number
+	Spans.Kept(Many) is Many
+	let words = Words(count)
+	Process.Collected
+	let others = Words(count * 2)
+	Process.Collected
+	Right(words) + Right(others) - count * 2
+Part(text Text) Text
+	Spans.Part(Spans.Long(Many)).Length is Size
+	Spans.Part(Spans.Long(Many)).IndexOf(" ") is 4
+	Spans.Part(Spans.Long(Many)).IndexOf("zz") is -1
+	Spans.Part(Spans.Long(Many)).StartsWith("w102 ")
+	Spans.Part(Spans.Long(Many)).Substring(5, 4) is "w103"
+	Spans.Part(Spans.Long(Many)).Substring(1, 3) to Number is 102
+	Spans.Part(Spans.Long(Many)) < "x"
+	text.Substring(Start, Size)
+Counted(count Number) Number
+	Spans.Counted(Many) is 3
+	mutable counts = Dictionary(Text, Number)
+	for Words(count)
+		counts(value) = index
+	counts("w3")
