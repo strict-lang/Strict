@@ -370,7 +370,28 @@
   // the cycles this thread ran (QueryThreadCycleTime) at the rate of the cycle counter since the start: GetThreadTimes
   // only moves in 15.6 ms clock ticks, a 5 ms collection counted as 0 or 15.6 ms; the first 10 ms still use it
   llvm.func @QueryThreadCycleTime(!llvm.ptr, !llvm.ptr) -> i32
+  llvm.func @GetCurrentThreadId() -> i32
+  llvm.func @OpenThread(i32, i32, i32) -> !llvm.ptr
   func.func private @strict_thread_seconds() -> f64 {
+    %current = llvm.call @GetCurrentThread() : () -> !llvm.ptr
+    %seconds = func.call @strict_thread_handle_seconds(%current) : (!llvm.ptr) -> f64
+    return %seconds : f64
+  }
+  // a handle to the current thread other threads can read the run time of (a unit test's watchdog), 0 when not opened
+  func.func private @strict_thread_clock() -> i64 {
+    %limitedQuery = arith.constant 2048 : i32
+    %noInherit = arith.constant 0 : i32
+    %id = llvm.call @GetCurrentThreadId() : () -> i32
+    %handle = llvm.call @OpenThread(%limitedQuery, %noInherit, %id) : (i32, i32, i32) -> !llvm.ptr
+    %token = llvm.ptrtoint %handle : !llvm.ptr to i64
+    return %token : i64
+  }
+  func.func private @strict_thread_clock_seconds(%token: i64) -> f64 {
+    %handle = llvm.inttoptr %token : i64 to !llvm.ptr
+    %seconds = func.call @strict_thread_handle_seconds(%handle) : (!llvm.ptr) -> f64
+    return %seconds : f64
+  }
+  func.func private @strict_thread_handle_seconds(%thread: !llvm.ptr) -> f64 {
     %one = arith.constant 1 : i64
     %now = func.call @strict_clock() : () -> f64
     %startedSlot = llvm.mlir.addressof @strict_started : !llvm.ptr
@@ -381,8 +402,7 @@
     cf.cond_br %isCalibrated, ^cycles, ^ticks
   ^cycles:
     %cyclesSlot = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
-    %cyclesThread = llvm.call @GetCurrentThread() : () -> !llvm.ptr
-    %queried = llvm.call @QueryThreadCycleTime(%cyclesThread, %cyclesSlot) : (!llvm.ptr, !llvm.ptr) -> i32
+    %queried = llvm.call @QueryThreadCycleTime(%thread, %cyclesSlot) : (!llvm.ptr, !llvm.ptr) -> i32
     %cycles = llvm.load %cyclesSlot : !llvm.ptr -> i64
     %counter = llvm.call_intrinsic "llvm.readcyclecounter"() : () -> i64
     %startedCyclesSlot = llvm.mlir.addressof @strict_started_cycles : !llvm.ptr
@@ -396,7 +416,6 @@
   ^ticks:
     %four = arith.constant 4 : i64
     %times = llvm.alloca %four x i64 : (i64) -> !llvm.ptr
-    %thread = llvm.call @GetCurrentThread() : () -> !llvm.ptr
     %exitSlot = llvm.getelementptr %times[1] : (!llvm.ptr) -> !llvm.ptr, i64
     %kernelSlot = llvm.getelementptr %times[2] : (!llvm.ptr) -> !llvm.ptr, i64
     %userSlot = llvm.getelementptr %times[3] : (!llvm.ptr) -> !llvm.ptr, i64

@@ -423,6 +423,28 @@
     return %seconds : f64
   }
   // seconds this thread ran on a core (CLOCK_THREAD_CPUTIME_ID), what a collection really cost while cores were shared
+  llvm.func @pthread_getcpuclockid(i64, !llvm.ptr) -> i32
+  // the CPU time clock of the current thread other threads can read (a unit test's watchdog), 0 when there is none
+  func.func private @strict_thread_clock() -> i64 {
+    %one = arith.constant 1 : i64
+    %zero = arith.constant 0 : i32
+    %clockSlot = llvm.alloca %one x i32 : (i64) -> !llvm.ptr
+    %thread = llvm.call @pthread_self() : () -> i64
+    %failed = llvm.call @pthread_getcpuclockid(%thread, %clockSlot) : (i64, !llvm.ptr) -> i32
+    %found = arith.cmpi eq, %failed, %zero : i32
+    %clock = llvm.load %clockSlot : !llvm.ptr -> i32
+    %bits = arith.extui %clock : i32 to i64
+    %marker = arith.constant 1099511627776 : i64
+    %token = arith.ori %bits, %marker : i64
+    %none = arith.constant 0 : i64
+    %result = arith.select %found, %token, %none : i64
+    return %result : i64
+  }
+  func.func private @strict_thread_clock_seconds(%token: i64) -> f64 {
+    %clock = arith.trunci %token : i64 to i32
+    %seconds = func.call @strict_clock_read(%clock) : (i32) -> f64
+    return %seconds : f64
+  }
   func.func private @strict_thread_seconds() -> f64 {
     %threadClock = arith.constant 3 : i32
     %seconds = func.call @strict_clock_read(%threadClock) : (i32) -> f64
