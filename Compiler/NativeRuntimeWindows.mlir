@@ -710,7 +710,7 @@
     %dataSize = arith.constant 40 : i64
     %data = llvm.alloca %dataSize x i8 : (i64) -> !llvm.ptr
     %seconds = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
-    %path = func.call @strict_ptr(%self) : (f64) -> !llvm.ptr
+    %path = func.call @strict_text_ptr(%self) : (f64) -> !llvm.ptr
     %standard = arith.constant 0 : i32
     %found = llvm.call @GetFileAttributesExA(%path, %standard, %data) : (!llvm.ptr, i32, !llvm.ptr) -> i32
     %none = arith.constant 0 : i32
@@ -740,7 +740,7 @@
     %paths = llvm.call @getenv(%variable) : (!llvm.ptr) -> !llvm.ptr
     %extensionLengths = llvm.mlir.addressof @strict_exe_extension : !llvm.ptr
     %extension = llvm.getelementptr %extensionLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
-    %file = func.call @strict_ptr(%name) : (f64) -> !llvm.ptr
+    %file = func.call @strict_text_ptr(%name) : (f64) -> !llvm.ptr
     %buffer = func.call @strict_text_room(%bytes) : (i64) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     %length = llvm.call @SearchPathA(%paths, %file, %extension, %size, %buffer, %null) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, !llvm.ptr, !llvm.ptr) -> i32
@@ -864,7 +864,7 @@
     llvm.store %startupLength, %startup : i32, !llvm.ptr
     %informationWords = arith.constant 3 : i64
     %information = llvm.alloca %informationWords x i64 : (i64) -> !llvm.ptr
-    %commandText = func.call @strict_ptr(%command) : (f64) -> !llvm.ptr
+    %commandText = func.call @strict_text_ptr(%command) : (f64) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     func.call @strict_flush() : () -> ()
     %startFolder = func.call @strict_folder_pointer() : () -> !llvm.ptr
@@ -929,7 +929,7 @@
     %toolShare = llvm.load %toolShareSlot : !llvm.ptr -> i64
     %toolShareNumber = arith.sitofp %toolShare : i64 to f64
     %toolShareText = func.call @strict_number_text(%toolShareNumber) : (f64) -> f64
-    %toolShareValue = func.call @strict_ptr(%toolShareText) : (f64) -> !llvm.ptr
+    %toolShareValue = func.call @strict_text_ptr(%toolShareText) : (f64) -> !llvm.ptr
     %lock = llvm.mlir.addressof @strict_process_lock : !llvm.ptr
     llvm.call @AcquireSRWLockExclusive(%lock) : (!llvm.ptr) -> ()
     %output = func.call @strict_inherited_file(%outputPath) : (f64) -> !llvm.ptr
@@ -950,7 +950,7 @@
     llvm.store %error, %errorSlot : !llvm.ptr, !llvm.ptr
     %informationWords = arith.constant 3 : i64
     %information = llvm.alloca %informationWords x i64 : (i64) -> !llvm.ptr
-    %commandText = func.call @strict_ptr(%command) : (f64) -> !llvm.ptr
+    %commandText = func.call @strict_text_ptr(%command) : (f64) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     func.call @strict_tool_environment(%toolShare, %toolShareValue) : (i64, !llvm.ptr) -> ()
     %startFolder = func.call @strict_folder_pointer() : () -> !llvm.ptr
@@ -1025,7 +1025,7 @@
     %libraryError = func.call @strict_error_named(%libraryMessage) : (!llvm.ptr) -> f64
     return %libraryError : f64
   ^loaded:
-    %symbolName = func.call @strict_ptr(%symbol) : (f64) -> !llvm.ptr
+    %symbolName = func.call @strict_text_ptr(%symbol) : (f64) -> !llvm.ptr
     %function = llvm.call @GetProcAddress(%library, %symbolName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %isAbsent = llvm.icmp "eq" %function, %null : !llvm.ptr
     cf.cond_br %isAbsent, ^noSymbol, ^found

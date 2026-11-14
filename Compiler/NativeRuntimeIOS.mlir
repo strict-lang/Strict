@@ -74,7 +74,7 @@
     %template = llvm.getelementptr %templateLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %ending = func.call @strict_bits(%template) : (!llvm.ptr) -> f64
     %path = func.call @strict_text_concat(%folder, %ending) : (f64, f64) -> f64
-    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %name = func.call @strict_text_ptr(%path) : (f64) -> !llvm.ptr
     %descriptor = llvm.call @mkstemp(%name) : (!llvm.ptr) -> i32
     %zero = arith.constant 0 : i32
     %invalid = arith.cmpi slt, %descriptor, %zero : i32

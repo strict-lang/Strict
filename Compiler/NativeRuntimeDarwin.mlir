@@ -213,7 +213,7 @@
     %patternLength = func.call @strict_text_length(%safePattern) : (f64) -> f64
     %isEmpty = arith.cmpf oeq, %patternLength, %zero : f64
     %chosen = arith.select %isEmpty, %any, %safePattern : f64
-    %patternText = func.call @strict_ptr(%chosen) : (f64) -> !llvm.ptr
+    %patternText = func.call @strict_text_ptr(%chosen) : (f64) -> !llvm.ptr
     %name = func.call @strict_named(%path) : (f64) -> !llvm.ptr
     %created = func.call @strict_list_new(%four, %zero) : (f64, f64) -> f64
     %directory = llvm.call @strict_opendir(%name) : (!llvm.ptr) -> !llvm.ptr
@@ -566,7 +566,7 @@
   func.func private @strict_process_built(%self: f64) -> f64 {
     %size = arith.constant 256 : i64
     %buffer = llvm.alloca %size x i8 : (i64) -> !llvm.ptr
-    %path = func.call @strict_ptr(%self) : (f64) -> !llvm.ptr
+    %path = func.call @strict_text_ptr(%self) : (f64) -> !llvm.ptr
     %status = llvm.call @stat64(%path, %buffer) : (!llvm.ptr, !llvm.ptr) -> i32
     %none = arith.constant 0 : i32
     %failed = arith.cmpi ne, %status, %none : i32
@@ -589,7 +589,7 @@
     %two = arith.constant 2 : i64
     %slashCharacter = arith.constant 47 : i8
     %terminator = arith.constant 0 : i8
-    %file = func.call @strict_ptr(%name) : (f64) -> !llvm.ptr
+    %file = func.call @strict_text_ptr(%name) : (f64) -> !llvm.ptr
     %fileSize = llvm.call @strlen(%file) : (!llvm.ptr) -> i64
     %emptyTextLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
     %emptyText = llvm.getelementptr %emptyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
@@ -705,7 +705,7 @@
     %program = func.call @strict_text_concat(%quoted, %quoteSpaceText) : (f64, f64) -> f64
     %command = func.call @strict_text_concat(%program, %arguments) : (f64, f64) -> f64
     %placed = func.call @strict_folder_command(%command) : (f64) -> f64
-    %commandText = func.call @strict_ptr(%placed) : (f64) -> !llvm.ptr
+    %commandText = func.call @strict_text_ptr(%placed) : (f64) -> !llvm.ptr
     func.call @strict_flush() : () -> ()
     %status = llvm.call @system(%commandText) : (!llvm.ptr) -> i32
     %signal = arith.andi %status, %signals : i32
@@ -755,7 +755,7 @@
     %withError = func.call @strict_text_concat(%toError, %errorPath) : (f64, f64) -> f64
     %command = func.call @strict_text_concat(%withError, %quoteText) : (f64, f64) -> f64
     %placed = func.call @strict_folder_command(%command) : (f64) -> f64
-    %commandText = func.call @strict_ptr(%placed) : (f64) -> !llvm.ptr
+    %commandText = func.call @strict_text_ptr(%placed) : (f64) -> !llvm.ptr
     %shellLengths = llvm.mlir.addressof @strict_shell : !llvm.ptr
     %shell = llvm.getelementptr %shellLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %shellNameLengths = llvm.mlir.addressof @strict_shell_name : !llvm.ptr
@@ -845,7 +845,7 @@
     %libraryError = func.call @strict_error_named(%libraryMessage) : (!llvm.ptr) -> f64
     return %libraryError : f64
   ^loaded:
-    %symbolName = func.call @strict_ptr(%symbol) : (f64) -> !llvm.ptr
+    %symbolName = func.call @strict_text_ptr(%symbol) : (f64) -> !llvm.ptr
     %function = llvm.call @dlsym(%library, %symbolName) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %isAbsent = llvm.icmp "eq" %function, %null : !llvm.ptr
     cf.cond_br %isAbsent, ^noSymbol, ^found

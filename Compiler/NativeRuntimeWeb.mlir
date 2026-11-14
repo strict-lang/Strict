@@ -324,7 +324,7 @@
     return %present : i1
   }
   func.func private @strict_directory_exists(%self: f64, %path: f64) -> f64 {
-    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %name = func.call @strict_text_ptr(%path) : (f64) -> !llvm.ptr
     %directory = llvm.call @opendir(%name) : (!llvm.ptr) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     %exists = llvm.icmp "ne" %directory, %null : !llvm.ptr
@@ -358,7 +358,7 @@
   func.func private @strict_directory_create(%self: f64, %path: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %mode = arith.constant 511 : i32
-    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %name = func.call @strict_text_ptr(%path) : (f64) -> !llvm.ptr
     %created = llvm.call @mkdir(%name, %mode) : (!llvm.ptr, i32) -> i32
     %success = arith.constant 0 : i32
     %made = arith.cmpi eq, %created, %success : i32
@@ -367,7 +367,7 @@
   }
   llvm.func @chdir(!llvm.ptr) -> i32
   func.func private @strict_directory_change(%self: f64, %path: f64) -> f64 {
-    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %name = func.call @strict_text_ptr(%path) : (f64) -> !llvm.ptr
     %changed = llvm.call @chdir(%name) : (!llvm.ptr) -> i32
     %zero = arith.constant 0 : i32
     %isChanged = arith.cmpi eq, %changed, %zero : i32
@@ -402,8 +402,8 @@
     %patternLength = func.call @strict_text_length(%safePattern) : (f64) -> f64
     %isEmpty = arith.cmpf oeq, %patternLength, %zero : f64
     %chosen = arith.select %isEmpty, %any, %safePattern : f64
-    %patternText = func.call @strict_ptr(%chosen) : (f64) -> !llvm.ptr
-    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %patternText = func.call @strict_text_ptr(%chosen) : (f64) -> !llvm.ptr
+    %name = func.call @strict_text_ptr(%path) : (f64) -> !llvm.ptr
     %created = func.call @strict_list_new(%four, %zero) : (f64, f64) -> f64
     %directory = llvm.call @opendir(%name) : (!llvm.ptr) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
@@ -467,7 +467,7 @@
     %four = arith.constant 4.0 : f64
     %slotSize = arith.constant 8 : i32
     %directoryType = arith.constant 4 : i8
-    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %name = func.call @strict_text_ptr(%path) : (f64) -> !llvm.ptr
     %created = func.call @strict_list_new(%four, %zero) : (f64, f64) -> f64
     %directory = llvm.call @opendir(%name) : (!llvm.ptr) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
@@ -581,8 +581,8 @@
   }
   func.func private @strict_file_rename(%path: f64, %newPath: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
-    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
-    %newName = func.call @strict_ptr(%newPath) : (f64) -> !llvm.ptr
+    %name = func.call @strict_text_ptr(%path) : (f64) -> !llvm.ptr
+    %newName = func.call @strict_text_ptr(%newPath) : (f64) -> !llvm.ptr
     %renamed = llvm.call @rename(%name, %newName) : (!llvm.ptr, !llvm.ptr) -> i32
     return %zero : f64
   }
@@ -614,7 +614,7 @@
   ^disk:
     %size = arith.constant 256 : i64
     %buffer = llvm.alloca %size x i8 : (i64) -> !llvm.ptr
-    %name = func.call @strict_ptr(%path) : (f64) -> !llvm.ptr
+    %name = func.call @strict_text_ptr(%path) : (f64) -> !llvm.ptr
     %status = llvm.call @stat(%name, %buffer) : (!llvm.ptr, !llvm.ptr) -> i32
     %none = arith.constant 0 : i32
     %failed = arith.cmpi ne, %status, %none : i32
@@ -638,7 +638,7 @@
   func.func private @strict_process_built(%self: f64) -> f64 {
     %size = arith.constant 256 : i64
     %buffer = llvm.alloca %size x i8 : (i64) -> !llvm.ptr
-    %path = func.call @strict_ptr(%self) : (f64) -> !llvm.ptr
+    %path = func.call @strict_text_ptr(%self) : (f64) -> !llvm.ptr
     %status = llvm.call @stat(%path, %buffer) : (!llvm.ptr, !llvm.ptr) -> i32
     %none = arith.constant 0 : i32
     %failed = arith.cmpi ne, %status, %none : i32
