@@ -12066,9 +12066,7 @@
     %unset = arith.cmpf oeq, %list, %zero : f64
     cf.cond_br %unset, ^fresh, ^check
   ^fresh:
-    %four = arith.constant 4.0 : f64
-    %created = func.call @strict_list_new(%four, %zero) : (f64, f64) -> f64
-    %first = func.call @strict_list_push(%created, %element) : (f64, f64) -> f64
+    %first = func.call @strict_list_first(%element) : (f64) -> f64
     return %first : f64
   ^check:
     %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
@@ -12088,8 +12086,16 @@
     %newestVersion = arith.cmpf oeq, %length, %used : f64
     %newest = func.call @strict_list_mine(%list, %newestVersion) : (f64, i1) -> i1
     %room = arith.cmpf olt, %used, %capacity : f64
-    %inPlace = arith.andi %newest, %room : i1
-    cf.cond_br %inPlace, ^push, ^add
+    cf.cond_br %newest, ^mine, ^add
+  ^mine:
+    cf.cond_br %room, ^push, ^full
+  ^full:
+    %growable = arith.cmpf ogt, %capacity, %zero : f64
+    cf.cond_br %growable, ^grow, ^add
+  ^grow:
+    %grown = func.call @strict_list_appended(%holder, %used, %element) : (!llvm.ptr, f64, f64) -> f64
+    llvm.store %grown, %view : f64, !llvm.ptr
+    return %list : f64
   ^push:
     %itemsBits = llvm.load %holder : !llvm.ptr -> f64
     %items = func.call @strict_ptr(%itemsBits) : (f64) -> !llvm.ptr
@@ -15062,18 +15068,24 @@
     %none = arith.constant -1 : i64
     %same = arith.constant 0 : i32
     %last = arith.subi %count, %size : i64
-    cf.br ^loop(%zero : i64)
+    %first = llvm.load %needle : !llvm.ptr -> i8
+    %isEmpty = arith.cmpi eq, %size, %zero : i64
+    cf.cond_br %isEmpty, ^found(%zero : i64), ^loop(%zero : i64)
   ^loop(%at: i64):
     %more = arith.cmpi sle, %at, %last : i64
-    cf.cond_br %more, ^compare, ^missing
-  ^compare:
+    cf.cond_br %more, ^look, ^missing
+  ^look:
     %from = llvm.getelementptr %hay[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %byte = llvm.load %from : !llvm.ptr -> i8
+    %next = arith.addi %at, %one : i64
+    %starts = arith.cmpi eq, %byte, %first : i8
+    cf.cond_br %starts, ^compare, ^loop(%next : i64)
+  ^compare:
     %compared = llvm.call @strncmp(%from, %needle, %size) : (!llvm.ptr, !llvm.ptr, i64) -> i32
     %isFound = arith.cmpi eq, %compared, %same : i32
-    %next = arith.addi %at, %one : i64
-    cf.cond_br %isFound, ^found, ^loop(%next : i64)
-  ^found:
-    return %at : i64
+    cf.cond_br %isFound, ^found(%at : i64), ^loop(%next : i64)
+  ^found(%position: i64):
+    return %position : i64
   ^missing:
     return %none : i64
   }

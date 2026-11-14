@@ -17,6 +17,13 @@ constant Element = (Piece(0), InstructionEntry.LoadNumber(2, 5))
 constant Listed = Taken + Element + Added + Reload + InstructionEntry.Return(4)
 constant Lists = MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "Strict/List(Number)", Listed)
 constant Filling = MlirAppended(MlirFunction(Shape, MlirFunction.Shape, Lists), 4)
+constant Pushing = (InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Number)", (0, 6, -1, 0)), Stored, InstructionEntry.LoadNumber(2, 5), InstructionEntry.Named(InstructionType.InvokeWriteToList, 2, "text"), Reload)
+constant Pushed = MlirAppended(MlirFunction(Shape, MlirFunction.Shape, MethodEntry(Returned, instructions = Pushing + InstructionEntry.Return(4))), 3)
+constant Handing = Pushing + InstructionEntry.Named(InstructionType.InvokeWriteToList, 4, "other") + InstructionEntry.Return(4)
+constant Passed = MlirAppended(MlirFunction(Shape, MlirFunction.Shape, MethodEntry(Returned, instructions = Handing)), 3)
+constant Fills = (InstructionType.InvokeWriteToList, InstructionType.IndexCall, InstructionType.StoreConstantToVariable)
+constant Joining = Pushing + (Piece(0), InstructionEntry.Binary(InstructionType.Add, (4, 1, 5)), InstructionEntry.Return(5))
+constant Joined = MlirAppended(MlirFunction(Shape, MlirFunction.Shape, MethodEntry(Lists, instructions = Joining)), 3)
 constant Harmless = (InstructionType.Add, InstructionType.Equal, InstructionType.NotEqual, InstructionType.Return)
 constant Values = ("Number", "Boolean", "None")
 IsOwned Boolean
@@ -96,3 +103,47 @@ IsHarmless(entry InstructionEntry, at Number) Boolean
 	let isAdded = entry.kind is InstructionType.Add
 	let isJoined = isAdded then lists.IsList(entry.payload(1)) and lists.IsList(entry.payload(2)) else false
 	(entry.kind is in Harmless) and (isJoined is false)
+IsFilled(name Text) Boolean
+	Pushed.IsFilled("text")
+	Growing.IsFilled("text") is false
+	Passed.IsFilled("text") is false
+	Joined.IsFilled("text")
+	Seeded.IsFilled("text") is false
+	for function.method.instructions
+		if (value.texts.Length > 0 then value.texts(0) is name else false) and (IsPushed(value, index) is false)
+			return false
+	((name is in function.Parameters) or (name is in MlirInstances(function, 0).StoredNames(function.type))) is false
+IsPushed(entry InstructionEntry, at Number) Boolean
+	Pushed.IsPushed(Stored, 1)
+	Pushed.IsPushed(Pushing(3), 3)
+	Growing.IsPushed(Added(1), 5) is false
+	if entry.kind is InstructionType.LoadVariableToRegister
+		return IsUnshared(at, entry.payload(0), entry.texts(0))
+	if entry.kind is not InstructionType.StoreRegisterToVariable
+		return entry.kind is in Fills
+	let writer = MlirKinds(function).Writer(at, entry.payload(0))
+	writer >= 0 then function.method.instructions(writer).kind is InstructionType.LoadConstantToRegister else false
+IsUnshared(at Number, register Number, name Text) Boolean
+	Pushed.IsUnshared(4, 4, "text")
+	Passed.IsUnshared(4, 4, "text") is false
+	let steps = function.method.instructions
+	for Range(at + 1, steps.Length)
+		let isChecked = (steps(value).kind is in (InstructionType.CheckError, InstructionType.Return)) or IsLast(value, name)
+		let isRead = register is in LoadReuse(steps).Reads(steps(value))
+		if isRead and (isChecked is false) and (IsHarmless(steps(value), value) is false)
+			return false
+		if LoadReuse(steps).Written(steps(value)) is register
+			return true
+	true
+IsLast(at Number, name Text) Boolean
+	Joined.IsLast(6, "text")
+	Growing.IsLast(3, "text") is false
+	Pushed.IsLast(2, "text") is false
+	let steps = function.method.instructions
+	if steps(at).kind is not InstructionType.Add
+		return false
+	for Range(at + 1, steps.Length)
+		let isAdded = steps(value).kind is InstructionType.InvokeWriteToList then steps(value).texts(0) is name else false
+		if isAdded or (steps(value).kind is InstructionType.LoopEnd)
+			return false
+	true
