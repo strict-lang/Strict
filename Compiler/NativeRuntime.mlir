@@ -11345,6 +11345,18 @@
   // view and the items grow in place, the view takes the new length instead of a new view per Add
   // the first Add to an empty list that cannot grow (the shared empty list) makes a list with room and fills it in
   // place, instead of a copy of nothing and one more view for the added version
+  func.func private @strict_list_first(%element: f64) -> f64 attributes {llvm.passthrough = ["noinline"]} {
+    %nothing = arith.constant 0.0 : f64
+    %room = arith.constant 16.0 : f64
+    %created = func.call @strict_list_new(%room, %nothing) : (f64, f64) -> f64
+    %view = func.call @strict_ptr(%created) : (f64) -> !llvm.ptr
+    %viewholder = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %holderbits = llvm.load %viewholder : !llvm.ptr -> f64
+    %holder = func.call @strict_ptr(%holderbits) : (f64) -> !llvm.ptr
+    %next = func.call @strict_list_appended(%holder, %nothing, %element) : (!llvm.ptr, f64, f64) -> f64
+    llvm.store %next, %view : f64, !llvm.ptr
+    return %created : f64
+  }
   func.func private @strict_list_add_owned(%list: f64, %element: f64) -> f64 {
     %nothing = arith.constant 0.0 : f64
     %unset = arith.cmpf oeq, %list, %nothing : f64
@@ -11368,9 +11380,7 @@
     %isEmpty = arith.cmpf oeq, %length, %nothing : f64
     cf.cond_br %isEmpty, ^first, ^add
   ^first:
-    %room = arith.constant 16.0 : f64
-    %created = func.call @strict_list_new(%room, %nothing) : (f64, f64) -> f64
-    %filled = func.call @strict_list_add_owned(%created, %element) : (f64, f64) -> f64
+    %filled = func.call @strict_list_first(%element) : (f64) -> f64
     return %filled : f64
   ^check:
     %unshared = func.call @strict_rc_unshared(%list) : (f64) -> i1
@@ -11386,7 +11396,7 @@
   // raw = raw + element of a local that started as a parameter and is read by nothing that could keep it
   // (MlirAppended): the parameter's own view gets a new one like strict_list_add, every later view is the local's alone
   // and takes the new length in place (strict_list_add_owned), so a loop of appends allocates one view
-  func.func private @strict_list_add_seeded(%list: f64, %element: f64, %seed: f64) -> f64 {
+  func.func private @strict_list_add_seeded(%list: f64, %element: f64, %seed: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %listBits = arith.bitcast %list : f64 to i64
     %seedBits = arith.bitcast %seed : f64 to i64
     %isSeed = arith.cmpi eq, %listBits, %seedBits : i64
