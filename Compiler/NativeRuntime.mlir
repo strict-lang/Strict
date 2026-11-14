@@ -11290,6 +11290,21 @@
     %added = func.call @strict_list_add(%list, %element) : (f64, f64) -> f64
     return %added : f64
   }
+  // raw = raw + element of a local that started as a parameter and is read by nothing that could keep it
+  // (MlirAppended): the parameter's own view gets a new one like strict_list_add, every later view is the local's alone
+  // and takes the new length in place (strict_list_add_owned), so a loop of appends allocates one view
+  func.func private @strict_list_add_seeded(%list: f64, %element: f64, %seed: f64) -> f64 {
+    %listBits = arith.bitcast %list : f64 to i64
+    %seedBits = arith.bitcast %seed : f64 to i64
+    %isSeed = arith.cmpi eq, %listBits, %seedBits : i64
+    cf.cond_br %isSeed, ^first, ^own
+  ^first:
+    %added = func.call @strict_list_add(%list, %element) : (f64, f64) -> f64
+    return %added : f64
+  ^own:
+    %grown = func.call @strict_list_add_owned(%list, %element) : (f64, f64) -> f64
+    return %grown : f64
+  }
   // compiled loops write their results straight into the items (parallel ones from other threads), so all cards
   // of the filled items are marked here; a list whose holder, items and their references all lie in its own
   // allocation (items of record blocks) needs neither cards nor counts, a large one is not scanned at all then
