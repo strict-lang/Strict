@@ -1,0 +1,50 @@
+has function MlirFunction
+has position Number
+constant Read = (InstructionEntry.LoadNumber(0, 0), InstructionEntry(InstructionType.IndexCall, "numbers", (1, 0)))
+constant Squared = InstructionEntry.Binary(InstructionType.Multiply, (1, 1, 2))
+constant Shifted = (InstructionEntry.LoadNumber(3, 2), InstructionEntry.Binary(InstructionType.Add, (2, 3, 4)), InstructionEntry.Return(4))
+constant Squaring = MethodEntry("Squared", List(MemberEntry), "Strict/Number", Read + Squared + Shifted)
+constant Sample = MlirRounded(MlirFunction((MlirFlats.Tripling, MlirFlats.Summing), MlirFlats.Tripling, Squaring), 2)
+constant Held = (InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 2, "first"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 5, "first"))
+constant Holding = MethodEntry("Squared", List(MemberEntry), "Strict/Number", Read + Squared + Held + InstructionEntry.Return(5))
+constant Kept = MlirRounded(MlirFunction(Sample.function, method = Holding), 5)
+constant Narrowed = ("    %t2cs = arith.truncf %t2c : f64 to f32", "    %t2cw = arith.extf %t2cs : f32 to f64")
+IsSingle(register Number) Boolean
+	Sample.IsSingle(1)
+	Sample.IsSingle(0) is false
+	MlirRounded(Sample.function, 4).IsSingle(2)
+	MlirRounded(Sample.function, 4).IsSingle(3) is false
+	Kept.IsSingle(5)
+	let writer = MlirKinds(function).Writer(position, register)
+	let entry = writer >= 0 then function.method.instructions(writer) else InstructionEntry.Return(0)
+	if entry.kind is InstructionType.IndexCall
+		return MlirCouples(function, writer).IsFlatRead(entry)
+	if entry.kind is InstructionType.LoadVariableToRegister
+		return IsHeld(entry.texts(0), writer)
+	(entry.kind is in MlirSingle.Operators) and MlirRounded(function, writer).IsRounded(entry)
+IsHeld(name Text, before Number) Boolean
+	Kept.IsHeld("first", 4)
+	Kept.IsHeld("first", 3) is false
+	Kept.IsHeld("numbers", 4) is false
+	mutable stores = 0
+	for function.method.instructions
+		if (value.kind is InstructionType.StoreRegisterToVariable) and (value.texts(0) is name)
+			if (index >= before) or (MlirRounded(function, index).IsSingle(value.payload(0)) is false)
+				return false
+			stores = stores + 1
+	stores is 1
+IsRounded(entry InstructionEntry) Boolean
+	Sample.IsRounded(Squared)
+	MlirRounded(Sample.function, 4).IsRounded(Shifted(1)) is false
+	Sample.IsRounded(Read(1)) is false
+	entry.kind is not in MlirSingle.Operators then false else IsSingle(entry.payload(1)) and IsSingle(entry.payload(2))
+Stored(entry InstructionEntry) Texts
+	Sample.Stored(Squared) is Narrowed + "    llvm.store %t2cw, %r2 : f64, !llvm.ptr"
+	MlirRounded(Sample.function, 4).Stored(Shifted(1)) is List(Text) + "    llvm.store %t4c, %r4 : f64, !llvm.ptr"
+	Text.Combine(MlirStatements(Sample.function, 2).Calculated(Squared)).IndexOf("arith.truncf %t2c ") > 0
+	let result = "%t" + position + "c"
+	if IsRounded(entry) is false
+		return List(Text) + function.Store(result, "%r" + entry.payload(3))
+	let single = "    " + result + "s = arith.truncf " + result + " : f64 to f32"
+	let wide = "    " + result + "w = arith.extf " + result + "s : f32 to f64"
+	(single, wide, function.Store(result + "w", "%r" + entry.payload(3)))
