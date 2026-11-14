@@ -8,7 +8,7 @@ Prologue Texts
 	for MlirWholeFunction(function).Kinds
 		if value is "o"
 			lines = lines + Fields(index)
-	lines
+	lines + MlirWholeText(function).Prologue
 Fields(input Number) Texts
 	Fits.Fields(1).First is "    %selfwidth = llvm.getelementptr %p1[0] : (!llvm.ptr) -> !llvm.ptr, f64"
 	Sized.Fields(0).First is "    %v_grid_cells = llvm.alloca %one x !llvm.ptr : (i64) -> !llvm.ptr"

@@ -47,7 +47,7 @@ Input(read Number) Texts
 	let name = call.Temp("wl" + read)
 	let loaded = MlirWholeChild(function, position).Loaded(name, "%v_" + Kernel.Source(Kernel.Reads(read)))
 	let converted = MlirWholeValues(Kernel.Call).Converted(name, "f", "i", call.Temp("wa" + read))
-	loaded + call.Checked(read, kind) + (kind is in ("p", "d", "o") then List(Text) else List(Text) + converted)
+	loaded + call.Checked(read, kind) + (kind is in ("p", "d", "o", "t") then List(Text) else List(Text) + converted)
 Looped Texts
 	Blurring.Looped(Blurring.Looped.Length - 11) is "    llvm.store %wb, %wp : i32, !llvm.ptr"
 	let isRowed = Rowed >= 0

@@ -29,7 +29,7 @@ Emitted Texts
 	if entry.kind is InstructionType.Invoke
 		return isFlat then MlirFlatCall(At(position), entry).Called else Called(entry)
 	if entry.kind is in (InstructionType.IndexCall, InstructionType.FieldLoad)
-		return entry.kind is InstructionType.IndexCall then Read(entry) else MlirWholeNative(At(position)).Read(entry)
+		return MlirWholeText(function).Accessed(At(position), entry)
 	entry.kind is InstructionType.Return then Returned(entry) else MlirWholeCounted(At(position)).Emitted(entry)
 Moved(entry InstructionEntry) Texts
 	Row.At(0).Moved(MlirWhole.Rows(0)).Last is "    llvm.store %t0k, %v_sum : i64, !llvm.ptr"
@@ -94,7 +94,7 @@ Called(entry InstructionEntry) Texts
 	Mixed.Emitted(1) is "    %t3c = func.call @Halves_Halved_1_whole(%failed, %t3a0) : (!llvm.ptr, i64) -> i64"
 	Mixed.Emitted(2) is "    llvm.store %t3c, %r3 : i64, !llvm.ptr"
 	Halving.At(3).Called(MlirWholeTypes.Halves(3)).Last is "    llvm.store %t3a, %r3 : i64, !llvm.ptr"
-	let native = MlirWholeNative(At(position)).Emitted(entry)
+	let native = MlirWholeText(function).Native(At(position), entry)
 	if native.Length > 0
 		return native
 	let callee = MlirWholeFunction(function).Callee(entry)
@@ -105,9 +105,10 @@ Called(entry InstructionEntry) Texts
 Arguments(entry InstructionEntry, kinds Texts) Texts
 	Halving.At(3).Arguments(MlirWholeTypes.Halves(3), ("i")) is ("    %t3a0 = llvm.load %r2 : !llvm.ptr -> i64")
 	mutable lines = List(Mutable(Text))
-	for LoadReuse(function.method.instructions).InvokeReads(entry)
+	let reads = LoadReuse(function.method.instructions).InvokeReads(entry)
+	for reads
 		lines = lines + Load("a" + index, entry.payload(value), kinds(index))
-	lines
+	lines + MlirWholeText(function).Owned(At(position), kinds.Length, reads.Length)
 Read(entry InstructionEntry) Texts
 	Row.At(15).Emitted(2) is "    %t15s = llvm.getelementptr %t15p[%t15i] : (!llvm.ptr, i64) -> !llvm.ptr, i8"
 	Row.At(15).Emitted(5) is "    llvm.store %t15c, %r13 : i64, !llvm.ptr"

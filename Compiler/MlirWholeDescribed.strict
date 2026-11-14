@@ -1,0 +1,26 @@
+has at Number
+has order Number
+Measured(text Text) Texts
+	MlirWholeDescribed(4, 1).Measured("%v").First is "    %t4wt1d = func.call @strict_text_data(%v) : (f64) -> !llvm.ptr"
+	MlirWholeDescribed(4, 1).Measured("%v")(1) is "    %t4wt1a = llvm.ptrtoint %t4wt1d : !llvm.ptr to i64"
+	MlirWholeDescribed(4, 1).Measured("%v").Last is "    %t4wt1n = func.call @strict_text_size(%v) : (f64) -> i64"
+	let name = "wt" + order
+	let values = MlirWholeValues(at)
+	let data = values.Line(name + "d", "func.call @strict_text_data(" + text + ") : (f64) -> !llvm.ptr")
+	let address = values.Line(name + "a", "llvm.ptrtoint %t" + at + name + "d : !llvm.ptr to i64")
+	(data, address, values.Line(name + "n", "func.call @strict_text_size(" + text + ") : (f64) -> i64"))
+Place(name Text, offset Number) Text
+	MlirWholeDescribed(4, 1).Place("wa1", 1).StartsWith("    %t4wa1 = llvm.getelementptr %wfailed[3] :")
+	let slot = "llvm.getelementptr %wfailed[" + (order * 2 + offset) + "]"
+	MlirWholeValues(at).Line(name, slot + " : (!llvm.ptr) -> !llvm.ptr, i64")
+Lines(text Text) Texts
+	MlirWholeDescribed(4, 1).Lines("%v")(5) is "    llvm.store %t4wt1a, %t4wa1 : i64, !llvm.ptr"
+	MlirWholeDescribed(4, 1).Lines("%v")(3).StartsWith("    %t4wa1 = ")
+	MlirWholeDescribed(4, 1).Lines("%v")(4).StartsWith("    %t4wt1s = llvm.getelementptr %wfailed[4] :")
+	MlirWholeDescribed(4, 1).Lines("%v")(6) is "    llvm.store %t4wt1n, %t4wt1s : i64, !llvm.ptr"
+	MlirWholeDescribed(4, 1).Lines("%v").Last is "    %t4wh1o = arith.constant true"
+	let prefix = "%t" + at + "wt" + order
+	let first = "    llvm.store " + prefix + "a, %t" + at + "wa" + order + " : i64, !llvm.ptr"
+	let stores = (first, "    llvm.store " + prefix + "n, " + prefix + "s : i64, !llvm.ptr")
+	let places = (Place("wa" + order, 1), Place("wt" + order + "s", 2))
+	Measured(text) + places + stores + MlirWholeValues(at).Line("wh" + order + "o", "arith.constant true")

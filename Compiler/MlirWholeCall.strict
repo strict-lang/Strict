@@ -44,7 +44,7 @@ IsDispatched Boolean
 IsMatched(entry InstructionEntry, callee MlirWholeFunction) Boolean
 	Defaulting.IsDispatched is false
 	let isComplete = PayloadDecoder(entry).ArgumentCount is callee.function.method.parameters.Length
-	let isRead = LoadReuse(function.method.instructions).InvokeReads(entry).Length is callee.Kinds.Length
+	let isRead = MlirWholeText(function).Reads(entry, callee.function) is callee.Kinds.Length
 	isComplete and isRead and callee.IsWhole
 Dispatched(compiled Texts) Texts
 	Calling.Dispatched(List(Text) + "slow")(Calling.Dispatched(List(Text) + "slow").Index("  ^bb1slowcall:") + 1) is "slow"
@@ -64,7 +64,7 @@ Guarded Texts
 	let guard = MlirWholeGuard(function, position)
 	let entry = function.method.instructions(position)
 	let kinds = MlirWholeFunction(MlirWholeFunction(function).Callee(entry)).Kinds
-	mutable lines = guard.Started
+	mutable lines = guard.Started + MlirWholeText(function).Guarded(entry, kinds.Length, position)
 	for LoadReuse(function.method.instructions).InvokeReads(entry)
 		let loaded = Temp("wl" + index)
 		let checked = Checked(index, kinds(index))
@@ -74,6 +74,8 @@ Guarded Texts
 Checked(number Number, kind Text) Texts
 	Calling.Checked(0, "i").First is "    %t1wh0t = llvm.intr.trunc(%t1wl0) : (f64) -> f64"
 	Calling.Checked(0, "p").First is "    %t1wa0 = func.call @strict_list_bytes(%t1wl0) : (f64) -> !llvm.ptr"
+	if kind is "t"
+		return MlirWholeDescribed(position, number).Lines(Temp("wl" + number))
 	if kind is "o"
 		return Members(number)
 	if kind is in ("p", "d")
@@ -155,7 +157,7 @@ Direct Texts
 	mutable lines = List(Mutable(Text))
 	for kinds
 		let converted = MlirWholeValues(position).Converted(Temp("wl" + index), "f", "i", Temp("wa" + index))
-		lines = value is in ("p", "d", "o") then lines else lines + converted
+		lines = value is in ("p", "d", "o", "t") then lines else lines + converted
 	let returned = MlirWholeTypes(callee.function).Returned
 	let result = Temp(returned is "f" then "wf" else "wr")
 	let call = MlirWholeValues(position).Called(result, callee.Symbol, Temp("wa"), kinds, returned, "%wfailed")

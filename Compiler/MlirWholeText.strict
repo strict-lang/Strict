@@ -1,0 +1,166 @@
+has function MlirFunction
+constant Line = MemberEntry("line", "Strict/Text", List(InstructionEntry), false)
+constant At = List(MemberEntry) + MemberEntry("at", "Strict/Number", List(InstructionEntry), false)
+constant Aliased = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "line"), InstructionEntry(InstructionType.FieldLoad, ("characters", "Text"), (1, 0, -1, -2)))
+constant Kept = (InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 1, "letters"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "at"))
+constant Picked = (InstructionEntry(InstructionType.IndexCall, "letters", (3, 2, -1)), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 3))
+constant Numbered = (InstructionEntry(InstructionType.FieldLoad, ("number", "Character"), (4, 3, -1, -2)), InstructionEntry.Return(4))
+constant Coding = MethodEntry("Code", At, "Strict/Number", Aliased + Kept + Picked + Numbered)
+constant Measured = InstructionEntry.Invoke(1, ("Strict/Text", "Length", "Strict/Number"), List(Number), 0)
+constant Sizing = MethodEntry("Size", List(MemberEntry), "Strict/Number", (Aliased(0), Measured, InstructionEntry.Return(1)))
+constant Doubling = MethodEntry("Twice", At, "Strict/Number", (Kept(1), InstructionEntry.Return(2)))
+constant Lined = TypeEntry("Strict/Lined", List(MemberEntry) + Line, (Coding, Sizing, Doubling))
+constant Types = List(TypeEntry) + Lined
+constant Sample = MlirWholeText(MlirFunction(Types, Lined, Coding))
+constant Sized = MlirWholeText(MlirFunction(Types, Lined, Sizing))
+constant Plain = MlirWholeText(MlirFunction(Types, Lined, Doubling))
+constant Reading = MlirWholeStatements(Sample.function, 4, MlirWholeTypes(Sample.function).Part(0), MlirWholeTypes(Sample.function).Part(1), MlirWholeTypes(Sample.function).Part(2))
+constant Slots = 4
+constant Inverted = InstructionEntry.Invoke(1, ("Strict/Boolean", "not", "Strict/Boolean"), List(Number), 0)
+constant Owning = InstructionEntry.Invoke(1, ("Strict/Lined", "Size", "Strict/Number"), List(Number), -1)
+constant Passing = InstructionEntry.Invoke(1, ("Strict/Lined", "Twice", "Strict/Number", "at"), 0, -1)
+constant Natives = ("Strict/Text.Length", "Strict/Boolean.not")
+constant Same = (Aliased(0), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "line"), InstructionEntry.Binary(InstructionType.Equal, (0, 1, 2)), InstructionEntry.Return(2))
+constant Compared = MlirWholeText(MlirFunction(Types, Lined, MethodEntry("Same", List(MemberEntry), "Strict/Boolean", Same)))
+constant Wide = MlirWholeText(MlirFunction(Types, Lined, MethodEntry("Wide", At + At + At + At, "Strict/Number", Coding.instructions)))
+Member Text
+	Sample.Member is "line"
+	MlirWholeText(MlirWholeTypes.Halving.function).Member is ""
+	let stored = MlirInstances(function, 0).Stored(function.type)
+	let isText = MlirLayout(function).Represented(TypeEntry.ShortName(function.type.Name)) is "Text"
+	(isText and (stored.Length is 1) then stored.First.typeName is "Strict/Text" else false) then stored.First.Name else ""
+Self Text
+	Sample.Self is "t"
+	Plain.Self is ""
+	MlirWholeText(MlirWholeTypes.Halving.function).Self is ""
+	let member = Member
+	for function.method.instructions
+		if (value.kind is InstructionType.LoadVariableToRegister) and (value.texts(0) is member)
+			return "t"
+	""
+IsText(name Text) Boolean
+	Sample.IsText("line")
+	Sample.IsText("letters")
+	Sample.IsText("at") is false
+	MlirWholeText(MlirWholeTypes.Halving.function).IsText("") is false
+	if (name is not "") and (name is Member)
+		return true
+	for function.method.instructions
+		if (value.kind is InstructionType.StoreRegisterToVariable) and (value.texts(0) is name)
+			let writer = MlirKinds(function).Writer(index, value.payload(0))
+			if writer >= 0 then Kind(function.method.instructions(writer)) is "t" else false
+				return true
+	false
+Kind(entry InstructionEntry) Text
+	Sample.Kind(Aliased(1)) is "t"
+	Sample.Kind(Numbered(0)) is "i"
+	Sample.Kind(Measured) is "i"
+	Sample.Kind(Inverted) is "i"
+	Sample.Kind(Picked(0)) is ""
+	Sample.Kind(InstructionEntry.Invoke(1, ("Strict/Text", "Trim", "Strict/Text"), List(Number), 0)) is ""
+	let field = entry.kind is InstructionType.FieldLoad then entry.texts(0) + " " + entry.texts(1) else ""
+	if entry.kind is not InstructionType.Invoke
+		return field is "characters Text" then "t" else field is "number Character" then "i" else ""
+	PayloadDecoder(entry).Text(1) + "." + PayloadDecoder(entry).Text(2) is in Natives then "i" else ""
+IsNumber(at Number) Boolean
+	Sample.IsNumber(1)
+	Compared.IsNumber(2) is false
+	MlirWholeFunction(Compared.function).IsWhole is false
+	let entry = function.method.instructions(at)
+	if entry.kind is not in MlirWholeFunction.Arithmetic + MlirWholeFunction.Comparisons
+		return true
+	(MlirKinds(function).IsText(at, entry.payload(0)) or MlirKinds(function).IsText(at, entry.payload(1))) is false
+Extra(entry InstructionEntry, callee MlirFunction) Number
+	Sample.Extra(Owning, Sized.function) is 1
+	Sample.Extra(Passing, Plain.function) is 0
+	Sample.Extra(Measured, Sized.function) is 0
+	let isOwn = (PayloadDecoder(entry).Instance < 0) and (callee.type.Name is function.type.Name)
+	isOwn and (MlirWholeText(callee).Self is "t") and (Member is not "") then 1 else 0
+Reads(entry InstructionEntry, callee MlirFunction) Number
+	Sample.Reads(Owning, Sized.function) is 1
+	Sample.Reads(Passing, Plain.function) is 1
+	LoadReuse(function.method.instructions).InvokeReads(entry).Length + Extra(entry, callee)
+Read(statements MlirWholeStatements, entry InstructionEntry) Texts
+	Sample.Read(Reading, Picked(0)).First is "    %t4p = llvm.load %v_letters : !llvm.ptr -> !llvm.ptr"
+	Sample.Read(Reading, Picked(0))(6) is "    %t4e = arith.cmpi uge, %t4i, %t4m : i64"
+	Sample.Read(Reading, Picked(0)).Last is "    llvm.store %t4c, %r3 : i64, !llvm.ptr"
+	let bounds = Sizes(statements) + statements.Operation("e", "arith.cmpi uge,", "i", "m")
+	let pointer = MlirWholeValues(statements.position).Loaded(statements.Temp("p"), "%v_" + entry.texts(0), "t", "t")
+	let read = pointer + statements.Load("i", entry.payload(1), "i") + bounds + Byte(statements)
+	read + MlirWholeDivision(statements, entry).Flagged + statements.Store("c", "i", entry.payload(0))
+Byte(statements MlirWholeStatements) Texts
+	Sample.Byte(Reading).First is "    %t4z = arith.constant 0 : i64"
+	Sample.Byte(Reading)(1) is "    %t4k = arith.select %t4e, %t4z, %t4i : i64"
+	Sample.Byte(Reading)(2) is "    %t4s = llvm.getelementptr %t4d[%t4k] : (!llvm.ptr, i64) -> !llvm.ptr, i8"
+	Sample.Byte(Reading)(3) is "    %t4b = llvm.load %t4s : !llvm.ptr -> i8"
+	Sample.Byte(Reading).Last is "    %t4c = arith.extui %t4b : i8 to i64"
+	let values = MlirWholeValues(statements.position)
+	let picked = statements.Temp("e") + ", " + statements.Temp("z") + ", " + statements.Temp("i")
+	let safe = (values.Line("z", "arith.constant 0 : i64"), values.Line("k", "arith.select " + picked + " : i64"))
+	let place = statements.Temp("d") + "[" + statements.Temp("k") + "]"
+	let slot = values.Line("s", "llvm.getelementptr " + place + " : (!llvm.ptr, i64) -> !llvm.ptr, i8")
+	let byte = values.Line("b", "llvm.load " + statements.Temp("s") + " : !llvm.ptr -> i8")
+	safe + slot + byte + values.Line("c", "arith.extui " + statements.Temp("b") + " : i8 to i64")
+Sizes(statements MlirWholeStatements) Texts
+	Sample.Sizes(Reading).First is "    %t4q = llvm.getelementptr %t4p[1] : (!llvm.ptr) -> !llvm.ptr, i64"
+	Sample.Sizes(Reading).Last is "    %t4d = llvm.inttoptr %t4a : i64 to !llvm.ptr"
+	let values = MlirWholeValues(statements.position)
+	let size = values.Line("q", "llvm.getelementptr " + statements.Temp("p") + "[1] : (!llvm.ptr) -> !llvm.ptr, i64")
+	let length = values.Line("m", "llvm.load " + statements.Temp("q") + " : !llvm.ptr -> i64")
+	let address = values.Line("a", "llvm.load " + statements.Temp("p") + " : !llvm.ptr -> i64")
+	(size, length, address, values.Line("d", "llvm.inttoptr " + statements.Temp("a") + " : i64 to !llvm.ptr"))
+Called(statements MlirWholeStatements, entry InstructionEntry) Texts
+	Sized.Called(Reading, Measured).First is "    %t4p = llvm.load %r0p : !llvm.ptr -> !llvm.ptr"
+	Sized.Called(Reading, Measured).Length is 4
+	Sized.Called(Reading, Measured).Last is "    llvm.store %t4m, %r1 : i64, !llvm.ptr"
+	Sized.Called(Reading, Inverted)(2) is "    %t4c = arith.xori %t4a, %t4o : i64"
+	let instance = PayloadDecoder(entry).Instance
+	let sized = statements.Load("p", instance, "t") + Sizes(statements).Slice(0, 2)
+	if PayloadDecoder(entry).Text(2) is "Length"
+		return sized + statements.Store("m", "i", entry.payload(0))
+	let one = MlirWholeValues(statements.position).Line("o", "arith.constant 1 : i64")
+	let inverted = statements.Operation("c", "arith.xori", "a", "o")
+	statements.Load("a", instance, "i") + one + inverted + statements.Store("c", "i", entry.payload(0))
+Copied(statements MlirWholeStatements, entry InstructionEntry) Texts
+	Sample.Copied(Reading, Aliased(1)).First is "    %t4a = llvm.load %r0p : !llvm.ptr -> !llvm.ptr"
+	Sample.Copied(Reading, Numbered(0)).Last is "    llvm.store %t4a, %r4 : i64, !llvm.ptr"
+	statements.Load("a", entry.payload(1), Kind(entry)) + statements.Store("a", Kind(entry), entry.payload(0))
+Accessed(statements MlirWholeStatements, entry InstructionEntry) Texts
+	Sample.Accessed(Reading, Picked(0)) is Sample.Read(Reading, Picked(0))
+	Sample.Accessed(Reading, Numbered(0)) is Sample.Copied(Reading, Numbered(0))
+	if Kind(entry) is not ""
+		return Copied(statements, entry)
+	if entry.kind is InstructionType.FieldLoad
+		return MlirWholeNative(statements).Read(entry)
+	statements.Variable(entry.texts(0)) is "t" then Read(statements, entry) else statements.Read(entry)
+Native(statements MlirWholeStatements, entry InstructionEntry) Texts
+	Sized.Native(Reading, Measured) is Sized.Called(Reading, Measured)
+	Sample.Native(Reading, MlirWholeTypes.Halves(3)) is MlirWholeNative(Reading).Emitted(MlirWholeTypes.Halves(3))
+	Kind(entry) is "" then MlirWholeNative(statements).Emitted(entry) else Called(statements, entry)
+Owned(statements MlirWholeStatements, kinds Number, reads Number) Texts
+	Sample.Owned(Reading, 1, 1).Length is 0
+	Sample.Owned(Reading, 0, 1).Length is 0
+	Sample.Owned(Reading, 1, 0) is ("    %t4a0 = llvm.load %v_line : !llvm.ptr -> !llvm.ptr")
+	if kinds <= reads
+		return List(Text)
+	MlirWholeValues(statements.position).Loaded(statements.Temp("a" + (kinds - 1)), "%v_" + Member, "t", "t")
+Prologue Texts
+	Sample.Prologue is ("    llvm.store %p1, %v_line : !llvm.ptr, !llvm.ptr")
+	Plain.Prologue.Length is 0
+	let last = MlirWholeFunction(function).Kinds.Length - 1
+	let stored = "    llvm.store %p" + last + ", %v_" + Member + " : !llvm.ptr, !llvm.ptr"
+	Self is "" then List(Text) else List(Text) + stored
+Fits Boolean
+	Sample.Fits
+	Wide.Fits is false
+	MlirWholeText(MlirWholeTypes.Halving.function).Fits
+	let kinds = MlirWholeFunction(function).Kinds
+	("t" is not in kinds) or (kinds.Length <= Slots)
+Guarded(entry InstructionEntry, kinds Number, at Number) Texts
+	Sample.Guarded(Owning, 1, 4).First is "    %t4wl0 = llvm.load %instance : !llvm.ptr -> f64"
+	Sample.Guarded(Owning, 1, 4).Last is "    %t4wh0o = arith.constant true"
+	Sample.Guarded(Passing, 1, 4).Length is 0
+	if Extra(entry, MlirWholeFunction(function).Callee(entry)) is 0
+		return List(Text)
+	let loaded = "%t" + at + "wl" + (kinds - 1)
+	(List(Text) + function.Load(loaded, "%instance")) + MlirWholeDescribed(at, kinds - 1).Lines(loaded)
