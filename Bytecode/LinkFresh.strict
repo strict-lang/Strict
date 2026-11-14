@@ -1,15 +1,17 @@
 has round LinkRound
-constant Single = LinkFresh(LinkRound.Single)
-constant Twice = LinkFresh(LinkRound.Twice)
-constant Logged = LinkFresh(LinkRound(LinkRound.Twice, signatures = List(Text) + "Strict/Logger:Log"))
-constant Running = LinkFresh(LinkRound(LinkRound.Twice, signatures = List(Text) + "Strict/Logger:Log;Run"))
+has earliest Dictionary(Text, Number)
 constant Nothing = Dictionary(Text, TypeEntry)
 constant Unplaced = Dictionary(Text, Number)
+constant Earliest = Dictionary(("Strict/Logger", 0))
 constant Logging = List(Text) + "Strict/Logger:"
-constant Homing = LinkFresh(LinkRound(LinkRound.Single, linker = Linker.Housed))
+constant Single = LinkFresh(LinkRound.Single, Unplaced)
+constant Twice = LinkFresh(LinkRound.Twice, Earliest)
+constant Logged = LinkFresh(LinkRound(LinkRound.Twice, signatures = List(Text) + "Strict/Logger:Log"), Earliest)
+constant Running = LinkFresh(LinkRound(LinkRound.Twice, signatures = List(Text) + "Strict/Logger:Log;Run"), Earliest)
+constant Homing = LinkFresh(LinkRound(LinkRound.Single, linker = Linker.Housed), Unplaced)
 Entry(signature Text, positions Dictionary(Text, Number), compiled Dictionary(Text, TypeEntry)) TypeEntry slow
-	Twice.Entry("Strict/Logger:", LinkRound.Twice.Positions, Nothing) is Linker.Go
-	LinkFresh(LinkRound.Cached).Entry("Strict/Logger:", Unplaced, Nothing) is LinkRound.Rooted("Strict/Logger:")
+	Twice.Entry("Strict/Logger:", ResolveCheck.Positions(LinkRound.Twice.signatures), Nothing) is Linker.Go
+	LinkFresh(LinkRound.Cached, Unplaced).Entry("Strict/Logger:", Unplaced, Nothing) is LinkRound.Rooted("Strict/Logger:")
 	Single.Entry("Strict/Logger:", Unplaced, Single.Precompiled(Logging, Unplaced)).Name is "Strict/Logger"
 	if signature is in positions
 		return round.entries(positions(signature) + 1)
@@ -25,8 +27,8 @@ Precompiled(signed Texts, positions Dictionary(Text, Number)) Dictionary(Text, T
 		compiled.Add(value, generated(index))
 	compiled
 Probed(signed Texts, positions Dictionary(Text, Number)) Texts
-	Twice.Probed(("Strict/Logger:", "Strict/B:Go"), LinkRound.Twice.Positions) is ("Strict/B:Go")
-	LinkFresh(LinkRound.Cached).Probed(Logging, Unplaced).Length is 0
+	Twice.Probed(("Strict/Logger:", "Strict/B:Go"), ResolveCheck.Positions(LinkRound.Twice.signatures)) is ("Strict/B:Go")
+	LinkFresh(LinkRound.Cached, Unplaced).Probed(Logging, Unplaced).Length is 0
 	for signed
 		if (value is not in positions) and (value is not in round.linker.Known)
 			value
@@ -56,13 +58,19 @@ IsWhole(signature Text) Boolean
 	Single.IsWhole("Strict/Logger:")
 	Twice.IsWhole("Strict/Logger:Log") is false
 	Logged.IsWhole("Strict/Logger:Reset")
-	(Signature(signature).Earlier(round.signatures) < 0) or ((Older(signature) - Signature(signature).Names).Length > 0)
+	LinkFresh(LinkRound.Twice, Unplaced).IsWhole("Strict/Logger:Log")
+	(Earlier(signature) < 0) or ((Older(signature) - Signature(signature).Names).Length > 0)
 Older(signature Text) Texts
 	Twice.Older("Strict/Logger:Log").Length is 0
 	Single.Older("Strict/Logger:").Length is 0
 	Logged.Older("Strict/Logger:Log;Reset") is ("Log")
-	let earlier = Signature(signature).Earlier(round.signatures)
+	let earlier = Earlier(signature)
 	earlier < 0 then List(Text) else Signature(round.signatures(earlier)).Names
+Earlier(signature Text) Number
+	Twice.Earlier("Strict/Logger:Log") is 0
+	Single.Earlier("Strict/Logger:Log") is -1
+	let type = Signature(signature).Type
+	type is in earliest then earliest(type) else -1
 Wanted(signature Text) Texts
 	Twice.Wanted("Strict/Logger:Log") is ("Log")
 	Logged.Wanted("Strict/Logger:Log;Reset") is ("Reset")
@@ -74,5 +82,5 @@ Fresh(signature Text, compiled TypeEntry) TypeEntry slow
 	let linked = LinkCompile(round.linker).LinkedType(Signature(signature).Type, Wanted(signature), compiled)
 	if IsWhole(signature)
 		return linked
-	let entry = round.entries(Signature(signature).Earlier(round.signatures) + 1)
+	let entry = round.entries(Earlier(signature) + 1)
 	TypeEntry(entry.Name, entry.members, entry.methods + linked.methods)

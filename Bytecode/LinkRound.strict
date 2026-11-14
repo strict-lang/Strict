@@ -25,8 +25,8 @@ Entries(signed Texts) List(TypeEntry) slow
 	Cached.Entries(List(Text) + "Strict/Logger:").First is Rooted("Strict/Logger:")
 	Moved.Entries(List(Text) + "Strict/Logger:").First.Name is "Strict/Logger"
 	Twice.Entries(Twice.signatures).First is Linker.Go
-	let positions = Positions
-	let fresh = LinkFresh(value)
+	let positions = ResolveCheck.Positions(signatures)
+	let fresh = LinkFresh(value, ResolveCheck.Positions(Types))
 	let compiled = fresh.Precompiled(signed, positions)
 	for signed
 		fresh.Entry(value, positions, compiled)
@@ -68,9 +68,9 @@ Indices Dictionary(Text, Number)
 			indices(names(index)) = index
 	indices
 TypeNames Texts
+	let folder = Path(linker.main.fullName).PathOnly.text + "/"
 	for entries
-		let local = Path(linker.main.fullName).PathOnly.text + "/" + value.Name
-		value.Name.IndexOf("/") < 0 then local else value.Name
+		value.Name.IndexOf("/") < 0 then folder + value.Name else value.Name
 Checked List(TypeEntry)
 	Linker.Hello.Linked(TypeEntry.HelloLogger, List(Text)).entries.Length is 15
 	Linker.Sample.Linked(Linker.Iterating, List(Text)).entries.Length is 1
@@ -135,14 +135,11 @@ Known(known Dictionary(Text, TypeEntry)) Dictionary(Text, TypeEntry)
 		if value is not in result
 			result.Add(value, entries(index + 1))
 	result
-Positions Dictionary(Text, Number)
-	Chained.Positions("Strict/Degrees:Floor") is 1
-	LinkRound(Twice, signatures = ("Strict/A:", "Strict/A:")).Positions("Strict/A:") is 0
-	mutable positions = Dictionary(Text, Number)
+Types Texts
+	Chained.Types is ("Strict/Angle", "Strict/Degrees")
+	Single.Types.Length is 0
 	for signatures
-		if value is not in positions
-			positions.Add(value, index)
-	positions
+		Signature(value).Type
 Targets Texts
 	Single.Targets is ("Strict/B.Go")
 	Single.Advanced(Single.entries, List(Text)).Targets is ("Strict/B.Go")
@@ -166,7 +163,7 @@ Advanced(advanced List(TypeEntry), signed Texts) LinkRound
 	Twice.Advanced(Twice.entries, Twice.signatures).targeted is (List(Text) + "Strict/B.Go", List(Text) + "Strict/B.Go")
 	Twice.Advanced(Twice.entries, Twice.signatures).used.Length is 2
 	let isAligned = (targeted.Length is entries.Length) and (used.Length is entries.Length)
-	let positions = isAligned then Positions else Dictionary(Text, Number)
+	let positions = isAligned then ResolveCheck.Positions(signatures) else Dictionary(Text, Number)
 	mutable targets = List(Mutable(Texts))
 	mutable types = List(Mutable(Texts))
 	for advanced
