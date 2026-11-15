@@ -24,6 +24,7 @@ constant Textual = Routes(List(TypeEntry) + TypeEntry("Strict/Text", List(Member
 constant Texted = List(MemberEntry) + MemberEntry("text", "Strict/Text", List(InstructionEntry), false)
 constant Characters = Routes(List(TypeEntry) + TypeEntry(TypeEntry.CharacterEntry, methods = List(MethodEntry) + MethodEntry("from", Texted, "Strict/Character", Returning)))
 constant DefaultAdd = Invocation(InstructionEntry.Invoke(0, ("Strict/Doubler", "Add", "Strict/Number"), List(Number) + 0, -1), List(VmValue) + VmValue.OfNumber(1), VmValue.None)
+constant Checking = MethodEntry(Failing, instructions = Failing.instructions.Slice(0, 2) + InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 0) + Failing.instructions.Last)
 constant JsonOnly = Routes(List(TypeEntry) + TypeEntry("Json", List(MemberEntry), List(MethodEntry)))
 Target(call Invocation) Numbers
 	Doubling.Target(Trimming) is (Resolver.Native, 0, 0)
@@ -64,9 +65,10 @@ IsInert(method MethodEntry) Boolean
 IsFailing(method MethodEntry) Boolean
 	Doubling.IsFailing(Failing)
 	Doubling.IsFailing(MethodEntry(Failing, instructions = List(InstructionEntry))) is false
-	Doubling.IsFailing(Membered)
+	Doubling.IsFailing(Checking) and Doubling.IsFailing(Membered)
 	(Doubling.IsFailing(Branching) is false) and (Doubling.IsFailing(Constructing) is false)
-	let count = method.instructions.Length
+	let checked = method.instructions.Length > 2 then method.instructions(-2).kind is InstructionType.CheckError else false
+	let count = checked then method.instructions.Length - 1 else method.instructions.Length
 	if (count < 2) or (method.instructions(count - 2).kind is not InstructionType.Invoke)
 		return false
 	for method.instructions
