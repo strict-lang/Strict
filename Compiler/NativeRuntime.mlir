@@ -3908,9 +3908,22 @@
     func.call @strict_gc_refill_busy(%class) : (i64) -> ()
     cf.br ^try
   }
-  func.func private @strict_rc_refill(%class: i64) {
+  // a reclaim scans the whole stack twice: a deep stack (deep recursion) waits for twice its bytes of allocation
+  func.func private @strict_reclaim_limit() -> i64 {
     %limitSlot = llvm.mlir.addressof @strict_reclaim_bytes : !llvm.ptr
     %limit = llvm.load %limitSlot : !llvm.ptr -> i64
+    %stackPointer = llvm.call_intrinsic "llvm.stacksave.p0"() : () -> !llvm.ptr
+    %from = llvm.ptrtoint %stackPointer : !llvm.ptr to i64
+    %stackSlot = llvm.mlir.addressof @strict_gc_stack : !llvm.ptr
+    %base = llvm.load %stackSlot : !llvm.ptr -> i64
+    %depth = arith.subi %base, %from : i64
+    %two = arith.constant 2 : i64
+    %scaled = arith.muli %depth, %two : i64
+    %chosen = arith.maxsi %limit, %scaled : i64
+    return %chosen : i64
+  }
+  func.func private @strict_rc_refill(%class: i64) {
+    %limit = func.call @strict_reclaim_limit() : () -> i64
     %allocatedSlot = llvm.mlir.addressof @strict_rc_allocated : !llvm.ptr
     %allocated = llvm.load %allocatedSlot : !llvm.ptr -> i64
     %isDue = arith.cmpi uge, %allocated, %limit : i64
@@ -4385,8 +4398,7 @@
     %objects:2 = func.call @strict_gc_page_objects(%class) : (i64) -> (i64, i64)
     %bytes = arith.muli %objects#0, %objects#1 : i64
     llvm.call @strict_gc_lock() : () -> ()
-    %limitSlot = llvm.mlir.addressof @strict_reclaim_bytes : !llvm.ptr
-    %limit = llvm.load %limitSlot : !llvm.ptr -> i64
+    %limit = func.call @strict_reclaim_limit() : () -> i64
     %allocatedSlot = llvm.mlir.addressof @strict_rc_allocated : !llvm.ptr
     %allocated = llvm.load %allocatedSlot : !llvm.ptr -> i64
     %isDue = arith.cmpi uge, %allocated, %limit : i64
