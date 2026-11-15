@@ -111,6 +111,7 @@ Answered(path Text) VmValue
 	File("Any.strict").Length is File("Any.strict").ReadBytes.Length
 	File("Runtime/Answered.lock").Locked and (File("Runtime/Answered.lock").Locked is false)
 	File("Runtime/Held.lock").Locked and File("Runtime/Held.lock").Exists
+	MutationCache.Released(("Runtime/Answered.lock", "Runtime/Held.lock"))
 	if call.MethodName is "Locked"
 		return VmValue.OfBoolean(File(path).Locked)
 	if call.MethodName is in ("Modified", "Length")
@@ -166,4 +167,5 @@ TextsOf(content VmValue) Texts
 		value.text
 Location Text
 	Hosted(Existing).Location is "."
+	Hosted(Dating).Location is "Any.strict"
 	TypeEntry.ShortName(call.TypeName) is "File" then call.Instance.Member(0).text else call.Arguments.First.text
