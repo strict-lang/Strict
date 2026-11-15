@@ -13,10 +13,19 @@ constant Reached = ("File.ReadLines|slow|", "Reader.Loaded||File.ReadLines", "Re
 Named(paths Texts) Texts slow
 	InputOutputs.Named(List(Text)).Length is 0
 	mutable records = List(Mutable(Text))
+	for Parsed(paths, Read(paths))
+		records = records + value
+	Settled(records)
+Read(paths Texts) List(Texts) slow
+	InputOutputs.Read(List(Text) + "Validators/InputOutputs.strict").First.First.StartsWith("has inference")
+	for paths
+		File(value).ReadLines
+Parsed(paths Texts, contents List(Texts)) List(Texts)
+	Reading.Parsed(List(Text) + "Demo/Reader.strict", List(Texts) + Loading).First is Reading.Records("Reader", Loading)
+	Reading.Parsed(List(Text) + "Demo/TextReader.strict", List(Texts) + Loading).First.First.StartsWith("File.Loaded")
 	for paths
 		let name = Path(value).FileName.RemoveExtension.text
-		records = records + Records(name is in Traits then "File" else name, File(value).ReadLines)
-	Settled(records)
+		Records(name is in Traits then "File" else name, contents(index))
 Records(type Text, lines Texts) Texts
 	Reading.Records("Reader", Loading) is ("Reader.Loaded||File.ReadLines", "Reader.Run||Reader.Loaded")
 	InputOutputs.Records("File", ("Name Text", "Exists Boolean slow")) is ("File.Name||", "File.Exists|slow|")
