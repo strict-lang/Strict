@@ -21,11 +21,11 @@ Finished(arguments List(VmValue)) List(VmValue)
 	mutable slots = arguments
 	mutable position = 0
 	for machine.deadline > 0 then MutationCache.Steps else Invocation.MaxSteps
-		if (position >= method.instructions.Length) or (MutationCache.Stopped(machine.deadline, index) is not "")
+		if position >= method.instructions.Length or (index % CheckSteps is 1 then MutationCache.IsLate(machine) else false)
 			return position >= method.instructions.Length then Ended(slots) else MutationCache.Exhausted(slots, machine.deadline)
 		let entry = method.instructions(position)
 		slots(entry.Target) = Value(entry, position, slots)
-		if (entry.kind is InstructionType.Invoke) and (slots(entry.Target).kind is "Changing")
+		if entry.kind is InstructionType.Invoke then slots(entry.Target).kind is "Changing" else false
 			for slots(entry.Target).items
 				slots(entry.Target + index) = value
 		position = entry.kind < InstructionType.Return then position + 1 else Next(entry, position, slots)

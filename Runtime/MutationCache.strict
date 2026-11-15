@@ -81,6 +81,9 @@ Budgeted(result VmValue, limit = MaxItems) VmValue
 	MutationCache.Budgeted(Operations.OneTwo, 1).items(0).text is "MemoryBudget"
 	MutationCache.Budgeted(Operations.OneTwo, 2) is Operations.OneTwo
 	IsOversized(result, limit) then VmValue.OfError("MemoryBudget") else result
+IsLate(machine Machine) Boolean
+	MutationCache.IsLate(Machine(Machine.Hello, deadline = 0.001)) and (MutationCache.IsLate(Machine.Hello) is false)
+	Stopped(machine.deadline) is not ""
 Stopped(deadline Number, step = 1) Text
 	MutationCache.Stopped(0) is ""
 	MutationCache.Stopped(0.001) is "Timeout"
