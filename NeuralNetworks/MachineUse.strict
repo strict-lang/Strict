@@ -10,7 +10,7 @@ constant VideoShare = 4
 constant HostShare = 2
 constant Force = "--force"
 constant Local = "--local"
-constant Programs = ("H3Video", "H3Image", "MossImage", "strict")
+constant Programs = ("H3Video", "H3Image", "MossImage", "strict", "Ben")
 constant Query = "--query-gpu=memory.total,memory.free,utilization.gpu --format=csv,noheader,nounits"
 constant VideoUse = "$g = @{}; Get-CimInstance Win32_PerfFormattedData_GPUPerformanceCounters_GPUProcessMemory | ForEach-Object { $id = [int]$_.Name.Split('_')[1]; $g[$id] = [long]$g[$id] + [long]$_.DedicatedUsage }; "
 constant HostUse = "Get-CimInstance Win32_Process | ForEach-Object { $v = [long]$g[[int]$_.ProcessId]; $r = [long]$_.PrivatePageCount; if ($r -gt 1GB -or $v -gt 512MB) { "
@@ -133,6 +133,7 @@ Listed(lines Texts) Texts
 User(line Text) Text
 	Sample.User("12|MossImage.exe|25769803776|7516192768|True") is Stopping
 	Sample.User("5|python.exe|32212254720|12884901888|False") is "  python (pid 5): 30 GB RAM, 12 GB VRAM"
+	Sample.User("3|Ben.exe|1073741824|0|True").IndexOf("backend") > 0
 	Sample.User("") is ""
 	let parts = line.Trim.Split("|")
 	if parts.Length < 5

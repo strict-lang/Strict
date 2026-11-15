@@ -59,17 +59,23 @@ Replied(socket Number) Boolean
 	(busyJob is not "") or (Process.Elapsed - seenAt < StaleSeconds)
 Chosen(words Texts) Text
 	Sample.Chosen(("status")) is "busy\t\t"
+	Coordinator(Logger, busyLabel = "H3Image").Chosen(("status")) is "busy\t\t"
 	if (words.Length > 0) and (words(0) is "holding")
 		return Held(words)
 	if (words.Length > 0) and ((words(0) is "done") or JobCancel.Matches(words, busyJob))
-		wantsFree = words(0) is not "done"
-		busyJob = ""
-		seenAt = Process.Elapsed
-		return wantsFree then "free" else "ok"
+		return Finished(words(0))
 	if (words.Length > 0) and (words(0) is "need")
 		return Needed(Need.Parsed(words), Seen)
-	let busy = "busy\t" + busyJob + "\t" + busyLabel
+	let busy = "busy\t" + busyJob + "\t" + (busyJob is "" then "" else busyLabel)
 	(words.Length > 0) and (words(0) is "status") then busy else RemoteRun(logger).Answered(words, Seen)
+Finished(word Text) Text
+	Coordinator(Logger, busyJob = "video", busyLabel = "H3Image").Finished("done") is "ok"
+	wantsFree = word is not "done"
+	busyJob = ""
+	busyLabel = ""
+	busyVram = 0
+	seenAt = Process.Elapsed
+	wantsFree then "free" else "ok"
 Command Text
 	Sample.Command.IndexOf("coordinator") > 0
 	let exe = Process.Current.executable

@@ -1,5 +1,5 @@
 has rest Texts
-constant Flags = ("native", "lines", "values", "trace", "--no-recursive", "mutations", "full")
+constant Flags = ("native", "lines", "values", "trace", "--no-recursive", "mutations", "full", "shown")
 Options Texts
 	rest.Length > 2 then rest.Slice(2, rest.Length - 2) else List(Text)
 Option Text
@@ -12,6 +12,7 @@ Selection Text
 	TestRequest(("a.strict", ".", "unit")).Selection is ""
 	TestRequest(("a.strict", ".", "mutations")).Selection is "*"
 	TestRequest(("a.strict", ".", "Merged")).Selection is "Merged"
+	TestRequest(("a.strict", ".", "shown")).Selection is "*"
 	TestRequest(("Math", ".", "native")).Selection is "*"
 	if (Directory.Exists(rest(0)) and ("native" is not in Options)) or IsWhole
 		return ""
@@ -43,7 +44,8 @@ IsMutating Boolean
 	TestRequest(("a.strict", ".", "mutations")).IsMutating
 	TestRequest(List(Text) + "a.strict").IsMutating
 	TestRequest(("a.strict", ".", "unit")).IsMutating is false
-	("mutations" is in Options) or ("unit" is not in Options)
+	TestRequest(("a.strict", ".", "shown")).IsMutating is false
+	("mutations" is in Options) or (("unit" is not in Options) and ("shown" is not in Options))
 IsWhole Boolean
 	TestRequest(("a.strict", ".", "mutations")).IsWhole is false
 	TestRequest(("a.strict", ".", "unit")).IsWhole
