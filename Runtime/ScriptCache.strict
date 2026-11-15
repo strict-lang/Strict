@@ -27,10 +27,11 @@ IsBuiltIn(target Text) Boolean
 	Sample.IsBuiltIn("Strict/Scratch.Helper")
 	Sample.IsBuiltIn("Strict/Number.to")
 	Sample.IsBuiltIn("Strict/B.Go") is false
+	Sample.IsBuiltIn("Strict/Error.from") is false
 	let dot = target.LastIndexOf(".")
 	let type = target.Substring(0, dot)
 	let method = target.Substring(dot + 1, target.Length - dot - 1)
-	let simple = method is in ("from", "in", "Index", "to", "to Text", "to Type")
+	let simple = (method is in ("from", "in", "Index", "to", "to Text", "to Type")) and (type is in typeNames)
 	target.StartsWith("Strict/Scratch.") or simple or Linker.Sample.IsNative(type, method)
 IsHit(entry TypeEntry) Boolean
 	Empty.IsHit(TypeEntry.HelloLogger) is false
