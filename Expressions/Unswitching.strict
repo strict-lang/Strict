@@ -1,6 +1,8 @@
 has lines Texts
 has folder = ""
 constant Blurring = Unswitching(Callees.Sums, "ImageProcessing")
+constant Blurred = Blurring.Lines
+constant Hoisting = Blurring.Hoisted(2)
 constant Nested = Callees.Sums.Slice(0, 3)
 constant Checked = "\t\t\tif bitmap.IsInside(pixel, x, y)"
 constant LoopVariables = ("value", "outer", "index")
@@ -9,10 +11,10 @@ constant Moving = Unswitching(Nested + "\t\tif bitmap.IsInside(pixel, x, y)" + "
 constant Mixed = Unswitching(("Sums(bitmap Bitmap, pixel Number) Number", "\tmutable sum = 0", "\tfor y, x in 3, Range(-1, 2)", "\t\tif bitmap.IsInside(pixel, x, 0)", "\t\t\tsum = sum + 1", "\tsum"), "ImageProcessing")
 Lines Texts
 	Blurring.Lines(2) is "\tif " + Text.Combine(Corners(Blurring, 2).Calls, " and ")
-	Blurring.Lines(4) is Callees.Sums(4)
-	Blurring.Lines(5) is "\telse"
-	Blurring.Lines(7) is Checked
-	Blurring.Lines.Length is 10
+	Blurred(4) is Callees.Sums(4)
+	Blurred(5) is "\telse"
+	Blurred(7) is Checked
+	Blurred.Length is 10
 	Unswitching(Fusion.Grays, "ImageProcessing").Lines is Fusion.Grays
 	Rewritten(0)
 Rewritten(start Number) Texts
@@ -30,7 +32,7 @@ Found(start Number) Number
 	-1
 Hoisted(at Number) Texts
 	Blurring.Hoisted(2).Length is 7
-	Blurring.Hoisted(2)(1) is "\t\tfor y, x in Range(-1, 2), Range(-1, 2)"
+	Hoisting(1) is "\t\tfor y, x in Range(-1, 2), Range(-1, 2)"
 	let tabs = lines(at).Substring(0, BodyParser.Indent(lines(at)))
 	let end = Callees(lines, folder).BlockEnd(at)
 	let corners = Text.Combine(Corners(Unswitching(lines, folder), at).Calls, " and ")

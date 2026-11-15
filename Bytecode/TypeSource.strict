@@ -18,6 +18,9 @@ Located(folder Text) Text
 	if File(local).Exists
 		return local
 	(Root is ".") or (File(Root + "/" + file).Exists is false) then file else Root + "/" + file
+Resolved(owner Text, folder Text) Text
+	TypeSource.Resolved("Strict/Math/Size", "./Fonts") is "Math/Size.strict"
+	TypeSource(TypeEntry(owner, List(MemberEntry), List(MethodEntry))).Located(folder)
 Location(methodName Text, file Text) Text
 	TypeSource(TypeEntry.CharacterEntry).Location("Lower", "Character.strict") is "Character.Lower in Character.strict"
 	TypeEntry.ShortName(entry.Name) + "." + methodName + " in " + file

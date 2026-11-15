@@ -74,7 +74,7 @@ Located(path Text, root Text, withTests Boolean, type Text) List(TypeEntry)
 	logger.Log(ResolveCheck.Located(path, LineOf(File(path).ReadLines, type), "TypeNotFound: " + type + Tips))
 	List(TypeEntry)
 Problems(files Texts) Texts slow
-	FileCompiler.Problems(("./Number.strict", "./Text.strict")) is ("", "")
+	FileCompiler.Problems(("./Any.strict", "./Boolean.strict")) is ("", "")
 	for files
 		let lines = File(value).ReadLines
 		let broken = Unparsable(lines)

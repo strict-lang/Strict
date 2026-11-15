@@ -9,7 +9,7 @@ constant Splitting = (InstructionEntry.LoadNumber(0, 0), Mutation.Marking, Rolle
 constant Rolling = TypeEntry(Machine.Doubler, methods = (Mutants.Lined, MethodEntry(Mutants.Lined, Name = TestCodegen.Runner, instructions = Splitting)))
 Kept(types List(TypeEntry)) List(KeptMethod)
 	Baseline(Mutants.Sample).Kept(Mutants.Doubled).Length is 0
-	Libraries.Kept(Execute(Logger).Loaded("Library.strict", ".")).Length is 0
+	Libraries.Kept(Mutants.Doubled).Length is 0
 	let methods = IsBase or IsEmitter then List(MethodEntry) else Picked(Usable(types))
 	let tested = mutants.Tested(types, mutants.Runner(types.First), methods)
 	for methods

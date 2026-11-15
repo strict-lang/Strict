@@ -5,6 +5,7 @@ constant Single = OptionsCodegen(Automatic(List(Text) + "has count = 1", "One", 
 constant Memberless = OptionsCodegen(Automatic(TypeCodegen.Hello.lines, "HelloLogger", Instantiation.Pairing), "Examples")
 constant HelloParsed = List(Text) + "Strict/HelloLogger.Parsed"
 constant Rendering = OptionsCodegen(Automatic(File("Examples/Rendering.strict").ReadLines, "Rendering", Instantiation.Pairing), "Examples")
+constant SettingsParsed = Settings.Parsed
 Lines(names Texts) Texts
 	Settings.Lines(List(Text)).Length is 0
 	Settings.Lines(("Parsed", "Usage")).Length is 5
@@ -23,20 +24,24 @@ Completed(main TypeCodegen, entry TypeEntry, targets Texts) TypeEntry
 	automatic.Appended(main, entry, automatic.lines + Lines(missing))
 Parsed Texts
 	Settings.Parsed.First is "Parsed(arguments Texts) Settings"
-	Settings.Parsed(1).EndsWith("\"loras\", \"jsonOutput\")).Checked")
-	Settings.Parsed.Last.StartsWith("\tSettings(line.Option(\"prompt\", \"prompt.txt\"), line.Chosen(\"kind\", ")
-	Settings.Parsed.Last.EndsWith("line.Repeated(\"loras\", List(Text)), line.Flag(\"jsonOutput\", false))")
+	SettingsParsed(1).EndsWith("\"loras\", \"jsonOutput\")).Checked")
+	SettingsParsed.Last.StartsWith("\tSettings(line.Option(\"prompt\", \"prompt.txt\"), line.Chosen(\"kind\", ")
+	SettingsParsed.Last.EndsWith("line.Repeated(\"loras\", List(Text)), line.Flag(\"jsonOutput\", false))")
 	Single.Parsed(1) is "\tlet line = CommandLine(arguments, List(Text) + \"count\").Checked"
 	Rendering.Parsed.Last.StartsWith("\tRendering(Resolution(line.Numeric(\"width\", 720), ")
-	let line = "\tlet line = CommandLine(arguments, " + Listed + ").Checked"
-	let built = "\t" + automatic.instance + "(" + Text.Combine(Arguments, ", ") + ")"
+	let members = Members
+	let line = "\tlet line = CommandLine(arguments, " + Joined(Quoted(MemberNames(members)), "Text") + ").Checked"
+	let built = "\t" + automatic.instance + "(" + Text.Combine(MemberArguments(members), ", ") + ")"
 	(List(Text) + ("Parsed(arguments Texts) " + automatic.instance) + line) + built
 Usage Texts
 	Settings.Usage.Last.EndsWith("false to Text), (\"\", \"\", \"\", \"\", \"\"))")
 	Single.Usage.Last.EndsWith(".Usage(List(Text) + 1 to Text, List(Text) + \"\")")
 	Rendering.Usage.Last.EndsWith(", (Resolution.Help(0), Resolution.Help(1), Help(0)))")
-	let usage = ").Usage(" + Joined(Shown, "Text") + ", " + Joined(Descriptions(""), "Text") + ")"
-	(List(Text) + "Usage Text") + ("\tCommandLine(List(Text), " + Listed + usage)
+	let members = Members
+	let shown = MemberShown(members)
+	let described = MemberDescriptions("", members)
+	let usage = ").Usage(" + Joined(shown, "Text") + ", " + Joined(described, "Text") + ")"
+	(List(Text) + "Usage Text") + ("\tCommandLine(List(Text), " + Joined(Quoted(MemberNames(members)), "Text") + usage)
 Listed Text
 	Single.Listed is "List(Text) + \"count\""
 	Joined(Quoted(Names), "Text")
@@ -47,28 +52,40 @@ Members List(OptionMember)
 Names Texts
 	Settings.Names is ("prompt", "kind", "count", "loras", "jsonOutput")
 	Rendering.Names is ("width", "height", "samples")
+	MemberNames(Members)
+MemberNames(members List(OptionMember)) Texts
+	Settings.MemberNames(Settings.Members) is ("prompt", "kind", "count", "loras", "jsonOutput")
 	mutable names = List(Text)
-	for Members
+	for members
 		names = names + value.Names
 	names
 Arguments Texts
 	Settings.Arguments(2) is "line.Numeric(\"count\", 1)"
-	for Members
+	MemberArguments(Members)
+MemberArguments(members List(OptionMember)) Texts
+	Settings.MemberArguments(Settings.Members)(2) is "line.Numeric(\"count\", 1)"
+	for members
 		value.Argument
 Shown Texts
 	Settings.Shown.First is "\"prompt.txt\""
 	Rendering.Shown is ("720 to Text", "1280 to Text", "4 to Text")
+	MemberShown(Members)
+MemberShown(members List(OptionMember)) Texts
+	Settings.MemberShown(Settings.Members).First is "\"prompt.txt\""
 	mutable shown = List(Text)
-	for Members
+	for members
 		shown = shown + value.Shown
 	shown
 Descriptions(prefix Text) Texts
 	Settings.Descriptions("").First is "\"\""
 	Rendering.Descriptions("") is ("Resolution.Help(0)", "Resolution.Help(1)", "Help(0)")
+	MemberDescriptions(prefix, Members)
+MemberDescriptions(prefix Text, members List(OptionMember)) Texts
+	Settings.MemberDescriptions("", Settings.Members).First is "\"\""
 	let help = Text.Combine(automatic.lines, "\n").IndexOf("constant Help =") >= 0 then prefix + "Help" else ""
 	mutable plain = 0
 	mutable described = List(Text)
-	for Members
+	for members
 		described = described + value.Described(help, plain)
 		plain = plain + (value.IsNested then 0 else 1)
 	described

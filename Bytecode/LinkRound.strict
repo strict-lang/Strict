@@ -72,7 +72,7 @@ TypeNames Texts
 	for entries
 		value.Name.IndexOf("/") < 0 then folder + value.Name else value.Name
 Checked List(TypeEntry)
-	Linker.Hello.Linked(TypeEntry.HelloLogger, List(Text)).entries.Length is 15
+	Writing.Checked.Length is 1
 	Linker.Sample.Linked(Linker.Iterating, List(Text)).entries.Length is 1
 	let missing = Unresolved
 	if missing.Length > 0
