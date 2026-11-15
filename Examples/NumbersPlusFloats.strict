@@ -1,0 +1,6 @@
+let rows = List(Numbers) + (1, 2)
+let floats = Float32s + Float32(3) + Float32(4)
+let numbers = rows + (5, 6) to Numbers
+let added = rows + floats
+logger.Log("numbers " + numbers.Length + " " + (numbers to Text))
+logger.Log("floats " + added.Length + " " + (added to Text))

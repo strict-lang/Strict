@@ -52,17 +52,17 @@ Changed(name Text, pairs VmValue, position Number, arguments List(VmValue)) VmVa
 			kept.Add(value)
 	VmValue.OfList(kept)
 Converted(instance VmValue, target Text) VmValue
-	Shapes.Converted(VmValue.OfNumber(2), "Strict/Text").text is "2"
 	Shapes.Converted(VmValue.OfText("5"), "Strict/Number").number is 5
+	Shapes.Converted(VmValue.OfList(VmValue.OfNumber(6)), "Strict/List(Number)").items.First.number is 6
+	Shapes.Converted(VmValue.OfNumber(2), "Strict/Text").text is "2"
 	Shapes.Converted(VmValue.OfNumber(75), "Strict/Character").text is "7"
-	Shapes.Converted(VmValue.OfList(VmValue.OfText("1")), "Strict/List(Number)").items.First.number is 1
 	if target.StartsWith("Strict/List(")
 		mutable converted = List(Mutable(VmValue))
 		for instance.items
 			converted.Add(Converted(value, target is "Strict/List(Text)" then "Strict/Text" else "Strict/Number"))
 		return VmValue.OfList(converted)
 	if target is "Strict/Number"
-		return Parsed(instance.text)
+		return instance.kind is "Number" then instance else Parsed(instance.text)
 	VmValue.OfText(target is "Strict/Character" then (instance to Text).characters(0) to Text else instance to Text)
 Parsed(text Text) VmValue
 	Shapes.Parsed("5").number is 5
