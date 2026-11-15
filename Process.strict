@@ -38,9 +38,9 @@ MemoryUsed Number
 	Process.MemoryUsed > 1000000
 	0
 Executed Numbers
-	Process.Executed.Length is 5
+	Process.Executed.Length is 6
 	Process.Executed(0) >= 1
-	(1, 0, 0, 0, 0)
+	(1, 0, 0, 0, 0, 0)
 FilesRead Texts
 	File("Process.strict").ReadLines.Length > 10
 	"Process.strict" is in Process.FilesRead

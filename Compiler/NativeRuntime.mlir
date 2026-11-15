@@ -1017,15 +1017,16 @@
     return %elapsed : f64
   }
   // Process.Executed counts once a program asked for it (strict_executed_on): loops and elements of parallel loops on
-  // the CPU (0, 1) and of GPU kernels (2, 3), with a relaxed add and no clock so counting costs nothing measurable
-  llvm.mlir.global internal @strict_executed(dense<0> : tensor<4xi64>) : !llvm.array<4 x i64>
+  // the CPU (0, 1) and of GPU kernels (2, 3) and allocations (4, strict_gc_allocate), with a relaxed add and no clock so
+  // counting costs nothing measurable
+  llvm.mlir.global internal @strict_executed(dense<0> : tensor<5xi64>) : !llvm.array<5 x i64>
   llvm.mlir.global internal @strict_executed_on(0 : i64) : i64
   func.func private @strict_executed_add(%offset: i64, %elements: i64) attributes {llvm.passthrough = ["alwaysinline"]} {
     %one = arith.constant 1 : i64
     %table = llvm.mlir.addressof @strict_executed : !llvm.ptr
-    %loopSlot = llvm.getelementptr %table[0, %offset] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<4 x i64>
+    %loopSlot = llvm.getelementptr %table[0, %offset] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<5 x i64>
     %elementOffset = arith.addi %offset, %one : i64
-    %elementSlot = llvm.getelementptr %table[0, %elementOffset] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<4 x i64>
+    %elementSlot = llvm.getelementptr %table[0, %elementOffset] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<5 x i64>
     %loops = llvm.load %loopSlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
     %moreLoops = arith.addi %loops, %one : i64
     llvm.store %moreLoops, %loopSlot atomic monotonic {alignment = 8 : i64} : i64, !llvm.ptr
@@ -1041,12 +1042,12 @@
     %wanted = arith.cmpi ne, %on, %none : i64
     return %wanted : i1
   }
-  // Process.Executed: threads, loops and elements of parallel loops on the CPU and of GPU kernels, each since the
-  // previous call (the first one starts counting)
+  // Process.Executed: threads, loops and elements of parallel loops on the CPU and of GPU kernels and allocations, each
+  // since the previous call (the first one starts counting)
   func.func private @strict_process_executed(%self: f64) -> f64 {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
-    %four = arith.constant 4 : i64
+    %five = arith.constant 5 : i64
     %onSlot = llvm.mlir.addressof @strict_executed_on : !llvm.ptr
     llvm.store %one, %onSlot atomic monotonic {alignment = 8 : i64} : i64, !llvm.ptr
     %workersSlot = llvm.mlir.addressof @strict_pool_workers : !llvm.ptr
@@ -1058,10 +1059,10 @@
     %table = llvm.mlir.addressof @strict_executed : !llvm.ptr
     cf.br ^loop(%zero, %first : i64, f64)
   ^loop(%index: i64, %built: f64):
-    %more = arith.cmpi slt, %index, %four : i64
+    %more = arith.cmpi slt, %index, %five : i64
     cf.cond_br %more, ^body, ^done
   ^body:
-    %slot = llvm.getelementptr %table[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<4 x i64>
+    %slot = llvm.getelementptr %table[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<5 x i64>
     %taken = llvm.atomicrmw xchg %slot, %zero monotonic : !llvm.ptr, i64
     %amount = arith.sitofp %taken : i64 to f64
     %added = func.call @strict_list_add(%built, %amount) : (f64, f64) -> f64
@@ -3490,6 +3491,17 @@
   func.func private @strict_gc_allocate(%size: i64, %list: i64) -> !llvm.ptr {
     %zero = arith.constant 0 : i64
     func.call @strict_alloc_check() : () -> ()
+    %isCounting = func.call @strict_executed_wanted() : () -> i1
+    cf.cond_br %isCounting, ^counting, ^counted
+  ^counting:
+    %countSlot = llvm.mlir.addressof @strict_executed : !llvm.ptr
+    %allocationSlot = llvm.getelementptr %countSlot[0, 4] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<5 x i64>
+    %allocations = llvm.load %allocationSlot atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> i64
+    %nextAllocation = arith.constant 1 : i64
+    %moreAllocations = arith.addi %allocations, %nextAllocation : i64
+    llvm.store %moreAllocations, %allocationSlot atomic monotonic {alignment = 8 : i64} : i64, !llvm.ptr
+    cf.br ^counted
+  ^counted:
     %shared = func.call @strict_rc_busy() : () -> i1
     %madeSlot = llvm.mlir.addressof @strict_gc_small_made : !llvm.ptr
     cf.cond_br %shared, ^locked, ^alone

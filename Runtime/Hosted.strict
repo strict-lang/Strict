@@ -133,7 +133,7 @@ Entries VmValue slow
 	let pattern = call.Arguments.Length > 1 then call.Arguments.Last.text else ""
 	Values(call.MethodName is "Files" then Directory.Files(path, pattern) else Directory.Directories(path))
 Reported(name Text) VmValue
-	Hosted(SystemCall).Reported("Executed").items.Length is 5
+	Hosted(SystemCall).Reported("Executed").items(5).number > 0
 	Hosted(SystemCall).Reported("MemoryUsed").number > 1000000
 	Hosted(SystemCall).Reported("Id").number > 0
 	if name is "FilesRead"
