@@ -1,0 +1,32 @@
+has call Invocation
+constant Names = ("IsMatch", "Find", "FindAll", "Groups", "Replace", "Split")
+constant Digits = VmValue.OfText("-?\\d+")
+constant Matching = Invocation(InstructionEntry.Invoke(1, ("Strict/Regex/Regex", "IsMatch", "Strict/Boolean", "text"), 0, 0), List(VmValue) + VmValue.OfText("x = 35"), Digits)
+constant Finding = Invocation(InstructionEntry.Invoke(1, ("Strict/Regex/Regex", "FindAll", "Strict/List(Text)", "text"), 0, 0), List(VmValue) + VmValue.OfText("1, -22"), Digits)
+constant Grouping = Invocation(InstructionEntry.Invoke(1, ("Strict/Regex/Regex", "Groups", "Strict/List(Text)", "text"), 0, 0), List(VmValue) + VmValue.OfText("a=b"), VmValue.OfText("(\\w)=(\\w)"))
+constant Splitting = Invocation(InstructionEntry.Invoke(1, ("Strict/Regex/Regex", "Split", "Strict/List(Text)", "text"), 0, 0), List(VmValue) + VmValue.OfText("a1b"), Digits)
+constant Replacing = Invocation(InstructionEntry.Invoke(1, ("Strict/Regex/Regex", "Replace", "Strict/Text", "text", "replacement"), (0, 1), 0), (VmValue.OfText("a1b22"), VmValue.OfText("#")), Digits)
+constant Searching = Invocation(InstructionEntry.Invoke(1, ("Strict/Regex/Regex", "Find", "Strict/Text", "text"), 0, 0), List(VmValue) + VmValue.OfText("x -7 y"), Digits)
+constant Texting = Invocation(InstructionEntry.Invoke(1, ("Strict/Text", "Find", "Strict/Text", "text"), 0, 0), List(VmValue) + VmValue.OfText("x"), Digits)
+constant Machining = Invocation(Matching, entry = InstructionEntry(Matching.entry, texts = ("Strict/Regex/Regex", "Machine")))
+IsHosted Boolean
+	HostedRegex(Matching).IsHosted and HostedRegex(Replacing).IsHosted
+	HostedRegex(Texting).IsHosted is false
+	HostedRegex(Machining).IsHosted is false
+	(call.TypeName is "Strict/Regex/Regex") and (call.MethodName is in Names)
+Result VmValue
+	HostedRegex(Matching).Result.IsTrue and (HostedRegex(Searching).Result.text is "-7")
+	HostedRegex(Finding).Result.items.Last.text is "-22" and (HostedRegex(Replacing).Result.text is "a#b#")
+	HostedRegex(Grouping).Result.items.Last.text is "b" and (HostedRegex(Splitting).Result.items.Last.text is "b")
+	let regex = Regex(call.Instance.text)
+	let text = call.Arguments.First.text
+	if call.MethodName is "IsMatch"
+		return VmValue.OfBoolean(regex.IsMatch(text))
+	if call.MethodName is "Find"
+		return VmValue.OfText(regex.Find(text))
+	if call.MethodName is "Replace"
+		return VmValue.OfText(regex.Replace(text, call.Arguments.Last.text))
+	Hosted(call).Values(call.MethodName is "FindAll" then regex.FindAll(text) else Listed(regex, text))
+Listed(regex Regex, text Text) Texts
+	HostedRegex(Splitting).Listed(Regex("\\d"), "a1b") is ("a", "b")
+	call.MethodName is "Groups" then regex.Groups(text) else regex.Split(text)
