@@ -24,11 +24,12 @@ Variables Text
 	for Settings
 		values.Add(Process.Variable(value))
 	Text.Combine(values, "\t")
-IsCurrent(request Text) Boolean
+IsCurrent(request Text, expected = "") Boolean
 	Resident.IsCurrent(Resident.Request("C:/a", List(Text) + "test", Resident.Variables))
 	Resident.IsCurrent(Resident.Request("C:/a", List(Text) + "test", "other")) is false
+	Resident.IsCurrent(Resident.Request("C:/a", List(Text) + "test", "expected"), "expected")
 	let lines = request.Split("\n")
-	(lines.Length > 3) and (lines(3) is Variables)
+	(lines.Length > 3) and (lines(3) is (expected is "" then Variables else expected))
 Arguments(request Text) Texts
 	Resident.Arguments(Resident.Request("C:/a", ("test", "a.strict"))) is ("test", "a.strict")
 	Resident.Arguments("strict 1\nC:/a\ntest\n\n") is List(Text)

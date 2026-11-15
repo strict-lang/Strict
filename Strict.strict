@@ -4,7 +4,7 @@ constant Commands = ("build", "test", "check", "update", "format", "suggest")
 constant BuildWait = 90
 constant Informing = ("version", "--version", "help", "--help")
 constant RunHelp = List(Text) + "strict <file or Type> [arguments]  run the program natively (built first when outdated); a type without Run runs its native tests, not again while they passed and nothing changed"
-constant CodeHelp = List(Text) + "strict run -c <code> [arguments]  run these lines as the body of Run on the Strict VM, no file is written"
+constant CodeHelp = ("strict run -c <code> [arguments]  run these lines on the Strict VM (short: strict -c <code>)", "strict run <file.strict> [args]   run a single .strict script file on the Strict VM")
 constant BuildHelp = ("strict build <file or Type>  compile a native executable without running tests (Name.test without Run)", "strict build [platform]    build the program named like this folder (in FractalZoomer/: FractalZoomer.strict)")
 constant PlatformHelp = ("strict build <file> linux  also the Linux executable (on Windows through WSL)", "strict build <file> web  build Name.html, .js and .wasm for the browser (Emscripten in Tools/emsdk)")
 constant AppHelp = ("strict build <file> android  build an arm64-v8a shared library and stage Release/Android (Android NDK)", "strict build <file> ios    build an arm64 iOS static archive and stage Release/iOS (native packages need Xcode)")
@@ -31,8 +31,9 @@ Run(arguments Texts) Number
 	if command is in ("serve", "linked", "status")
 		Hosted(command, arguments, resident)
 		return 0
-	let forwarded = Forwarding(logger, resident.root).Forwarded(Scripted.Packed(arguments))
-	forwarded is Forwarding.Ended then 1 else forwarded is Error then Logged(arguments).code else forwarded
+	let passed = Scripted.Packed(arguments)
+	let forwarded = Forwarding(logger, resident.root).Forwarded(passed)
+	forwarded is Forwarding.Ended then 1 else forwarded is Error then Logged(passed).code else forwarded
 Hosted(command Text, arguments Texts, resident Resident) slow
 	if command is "serve"
 		return Served(arguments.Length > 1 then Resident(resident.root, arguments(1)) else resident)
@@ -45,42 +46,53 @@ Served(resident Resident) slow
 	if server is Error
 		return server
 	let built = File(Process.Current.executable).Modified
+	let variables = Resident.Variables
 	mutable socket = resident.Accepted(server, built)
 	mutable answer = Answer(0, Dictionary(Text, TypeEntry))
 	for as long as socket is not Error
 		let request = resident.Requested(socket)
-		let stopping = resident.Arguments(request) is (Resident.Stopping)
-		answer = Replied(resident, request, socket, stopping, answer)
-		socket = stopping then Resident.Unaccepted else resident.Accepted(server, built)
+		let arguments = resident.Arguments(request)
+		answer = Replied(resident, request, socket, arguments, variables, answer)
+		socket = arguments is (Resident.Stopping) then Resident.Unaccepted else resident.Accepted(server, built)
 	resident.Closed(server)
-Replied(resident Resident, request Text, socket Number, isStopping Boolean, last Answer) Answer slow
-	let started = Time.Now
-	let isAnswered = resident.IsCurrent(request) and (isStopping is false)
-	let answer = isAnswered then Answered(resident, request, socket, last).Stamped(started) else last
+Replied(resident Resident, request Text, socket Number, arguments Texts, variables Text, last Answer) Answer slow
+	let isStopping = arguments is (Resident.Stopping)
+	let isAnswered = (isStopping is false) and resident.IsCurrent(request, variables)
+	let started = isAnswered and (Scripted.IsRun(arguments) is false) then Time.Now else 0
+	let answer = isAnswered then Answered(resident, request, socket, arguments, last) else last
+	let stamped = isAnswered and (started > 0) then answer.Stamped(started) else answer
 	resident.Released(request)
-	resident.Ended(socket, isAnswered then answer.code else (isStopping then 0 else Resident.Refused))
-	answer
-Answered(resident Resident, request Text, socket Number, last Answer) Answer slow
+	resident.Ended(socket, isAnswered then stamped.code else (isStopping then 0 else Resident.Refused))
+	stamped
+Answered(resident Resident, request Text, socket Number, arguments Texts, last Answer) Answer slow
 	let home = Directory.Current
 	let folder = resident.Folder(request)
 	let isMoved = folder is not home
 	if isMoved
 		Directory.Change(folder)
 	Socket.Output(socket)
-	let answer = Logged(resident.Arguments(request), last.Fresh(folder))
+	let isCode = Scripted.IsRun(arguments)
+	let answer = Logged(arguments, isCode then last else Answer(last, known = last.Fresh(folder)))
 	Socket.Output(0)
 	if isMoved
 		Directory.Change(home)
-	Answer(answer.code, answer.known, folder, answer.stamps, answer.files).Carried(last)
-Logged(arguments Texts, known = Dictionary(Text, TypeEntry)) Answer slow
-	let isCode = Scripted.IsCode(arguments)
-	let answer = isCode then Coded(arguments, known) else Ran(arguments, known)
+	isCode then answer else Answer(answer, folder = folder).Carried(last)
+Logged(arguments Texts, last = Answer(0, Dictionary(Text, TypeEntry))) Answer slow
+	let isCode = Scripted.IsRun(arguments)
+	let answer = isCode then Coded(arguments, last) else Ran(arguments, last.known)
 	if answer is Error
 		logger.Log(Shortened(answer to Text))
-		return Answer(1, known)
+		return Answer(1, last.known, last.folder, last.stamps, last.files, last.Types, last.script)
 	answer
-Coded(arguments Texts, known Dictionary(Text, TypeEntry)) Answer slow
-	Answer(Scripted(logger, arguments(2)).Ran(arguments, TypeSource.Root) then 0 else 1, known)
+Coded(arguments Texts, last Answer) Answer slow
+	if Scripted.IsCode(arguments)
+		return Scripted(logger, arguments(2)).RanWith(arguments, TypeSource.Root, last)
+	let given = arguments(1)
+	let path = File(given).Exists then given else TypeSource.Cased(given)
+	if File(path).Exists is false
+		logger.Log(given + " not found")
+		return Answer(2, last.known, last.folder, last.stamps, last.files, last.Types, last.script)
+	Scripted(logger, Text.Combine(File(path).ReadLines, "\n")).RanWith(arguments, TypeSource.Root, last, path)
 Shortened(trace Text) Text
 	Strict.Shortened("Error: A\n\t1") is "Error: A\n\t1"
 	Strict.Shortened(LongTrace) is "Error: A\n\t1\n\t2\n\t... (skipped 1 lines)\n\t4\n\t5\n\t6"
@@ -92,7 +104,8 @@ Shortened(trace Text) Text
 	Text.Combine(lines.Slice(0, FirstTraceLines) + gap + lines.Slice(lines.Length - LastTraceLines, LastTraceLines), "\n")
 Ran(arguments Texts, known = Dictionary(Text, TypeEntry)) Answer slow
 	let folder = Directory.Current
-	let given = Projected(Mained(arguments))
+	let head = arguments.Length > 0 then arguments(0) else "help"
+	let given = head is in Informing then List(Text) + head else Projected(Mained(arguments))
 	let command = given.Length > 0 then given(0) else "help"
 	let rooted = Rooted(command is in Commands then Rest(given) else given)
 	let rest = "full" is in rooted then Cleaned(command, rooted) else rooted

@@ -131,6 +131,8 @@ Ownership(type TypeEntry, kind Text) Number
 	Hello.Ownership(Doubler, "Strict/Doubler") is 2
 	Hello.Ownership(TypeEntry.Numbers, VmValue.Numbered.kind) is 1
 	Hello.Ownership(TypeEntry("Strict/List", List(MemberEntry), List(MethodEntry)), "Strict/List") is 1
+	if (type.Name is kind) and (type.Name.IndexOf("List") < 0)
+		return 2
 	let base = TypeEntry.Based(type.Name)
 	if (type.Name is kind) and (base is not "List")
 		return 2

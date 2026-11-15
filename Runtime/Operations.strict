@@ -73,6 +73,12 @@ Calculated(kind Number, left VmValue, right VmValue) VmValue
 	Calculated(InstructionType.Multiply, OneTwo, OneTwo).Length is 2
 	Calculated(InstructionType.Divide, OneTwo, VmValue.OfNumber(2)).Length is 2
 	Calculated(InstructionType.Modulo, VmValue.OfNumber(7), Undefined) is VmValue.OfError("ModuloByZero")
+	if (left.kind is "Number") and (right.kind is "Number")
+		if kind is InstructionType.Add
+			return VmValue.OfNumber(left.number + right.number)
+		return Computed(kind, left.number, right.number)
+	Mixed(kind, left, right)
+Mixed(kind Number, left VmValue, right VmValue) VmValue
 	let isValue = (left.kind is not in ("Text", "List")) and (right.kind is not in ("Text", "List"))
 	if isValue and ((left.kind is "Strict/Error") or (right.kind is "Strict/Error"))
 		return left.kind is "Strict/Error" then left else right
