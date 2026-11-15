@@ -9,9 +9,23 @@ constant ErrorKinds = ("Strict/Error", "Strict/ErrorWithValue")
 constant Failed = VmValue("Strict/Error", 0, "", (OfText("x"), OfList(List(VmValue) + VmValue("Strict/Stacktrace", 0, "", (OfText("B.C"), OfText("B.strict"), OfNumber(7))))))
 constant AnyError = VmValue("Strict/Error", 0, "", (OfText(""), OfList(List(VmValue))))
 constant Numbered = VmValue("Strict/List(Number)", 0, "", (OfNumber(5), OfNumber(6)))
+constant SmallNumbers = Integers
 OfNumber(amount Number) VmValue
 	OfNumber(3).number is 3
-	VmValue("Number", amount, "", List(VmValue))
+	OfNumber(2.5).number is 2.5
+	Allocations.OfNumber(1023) < Allocations.OfNumber(1024)
+	IsSmall(amount) then SmallNumbers(amount) else VmValue("Number", amount, "", List(VmValue))
+IsSmall(amount Number) Boolean
+	IsSmall(0) and IsSmall(1023)
+	IsSmall(1024) is false
+	IsSmall(-0) is false
+	IsSmall(-3) is false
+	IsSmall(2.5) is false
+	(amount < 1024) and (1 / amount > 0) and (amount % 1 is 0)
+Integers List(VmValue)
+	VmValue.Integers(1023).number is 1023
+	for 1024
+		VmValue("Number", index, "", List(VmValue))
 OfText(content Text) VmValue
 	OfText("a").text is "a"
 	VmValue("Text", 0, content, List(VmValue))

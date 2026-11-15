@@ -18,8 +18,10 @@ Iterated(loop VmValue, iteration Number) VmValue
 	Iterated(Counting.items(0), 2).items(3).number is 2
 	(Iterated(Ranged.items(0), 1).items(2).number is 4) and (Iterated(Listed.items(0), 1).items(2).number is 1)
 	Iterated(VmValue("Loop", 2, "", List(VmValue) + VmValue.OfText("ab")), 1).items(3).text is "b"
+	Allocations.Iterated(Counting.items(0), 2000) < Allocations.Iterated(Ranged.items(0), 2000)
 	let counted = VmValue.OfNumber(iteration)
-	let element = Element(loop, iteration)
+	let isCounting = loop.number is 0 then (loop.items(1).number is 0) and (loop.items(2).number >= 0) else false
+	let element = isCounting then counted else Element(loop, iteration)
 	VmValue.OfList(loop, counted, loop.number > 0 then counted else element, element)
 Ended(state VmValue, isStopped Boolean) VmValue
 	Ended(Counting, false).items(2).number is 1
@@ -56,6 +58,7 @@ Element(loop VmValue, iteration Number) VmValue
 	Element(Counting.items(0), 2).number is 2
 	Element(Ranged.items(0), 1).number is 4
 	Element(Listed.items(0), 1).number is 6
+	Element(VmValue("Loop", 2, "", List(VmValue) + VmValue.OfText("ab")), 1).text is "b"
 	let iterable = loop.items(0)
 	if loop.number is 1
 		return iterable.items(iteration)

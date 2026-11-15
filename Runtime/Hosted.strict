@@ -105,8 +105,7 @@ Moved VmValue
 		File(Location).Rename(call.Arguments.First.text)
 	Answered(Location)
 Answered(path Text) VmValue
-	Hosted(Existing).Answered(".").IsTrue
-	Hosted(Probing).Answered(".").IsTrue is false
+	Hosted(Existing).Answered(".").IsTrue and (Hosted(Probing).Answered(".").IsTrue is false)
 	Hosted(Dating).Answered("Any.strict").number > 1.7e9
 	File("Any.strict").Length is File("Any.strict").ReadBytes.Length
 	File("Runtime/Answered.lock").Locked and (File("Runtime/Answered.lock").Locked is false)

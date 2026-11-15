@@ -1,0 +1,11 @@
+let before = Process.Executed(5)
+let total = Sum(500)
+let made = Process.Executed(5)
+logger.Log("a VM loop of 500 iterations made " + made + " allocations, sum " + total)
+if made > 1500
+	return Error("LoopAllocatesTooMuch: " + made)
+Sum(count Number) Number
+	mutable sum = 0
+	for Range(0, count)
+		sum = sum + value * 2
+	sum
