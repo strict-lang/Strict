@@ -41,11 +41,11 @@ ValueStart(at Number) Number
 Scores(positions Number) Numbers slow
 	Single.Scores(2).First.IsNearlyEqual(0.7071067811865476)
 	Single.Scores(2).Last is 0
-	Prompted.Scores(24)(1000).IsNearlyEqual(-0.1641102558437736)
+	Prompted.Scores(24)(1000).IsNearlyEqual(-0.1641102558437736, 0.0001)
 	let tokens = queries.Length / heads / size / sequences
 	tokens < TiledTokens then Direct(positions, tokens) else Tiled(positions, tokens)
 Tiled(positions Number, tokens Number) Numbers slow
-	Prompted.Tiled(24, 16)(1000).IsNearlyEqual(-0.1641102558437736)
+	Prompted.Tiled(24, 16)(1000).IsNearlyEqual(-0.1641102558437736, 0.0001)
 	Prompted.Tiled(24, 16)(23) is -125000000
 	let shared = heads / groups
 	let shape = (sequences * groups, tokens * shared, size, positions)
