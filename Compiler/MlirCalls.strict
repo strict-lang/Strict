@@ -15,7 +15,7 @@ constant NewCounter = InstructionEntry.Invoke(2, (CounterType.Name, "from", Coun
 constant Counters = MlirCalls(MlirFunction(List(TypeEntry) + CounterType, CounterType, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 10), InstructionEntry.LoadNumber(1, 5), NewCounter))), 2)
 Temp(suffix Text) Text
 	Text.Combine(MlirCalls(Shapes, 3).Printed(InstructionEntry.Print("Hi"))).Length is 128
-	Text.Combine(MlirCalls(Shapes, 3).Printed(InstructionEntry.PrintValue("Hi ", 0, false))).Length is 443
+	Text.Combine(MlirCalls(Shapes, 3).Printed(InstructionEntry.PrintValue("Hi ", 0, false))).Length is 448
 	MlirCalls(Shapes, 3).Printed(InstructionEntry.Print("Hi")).Last.IndexOf("@strict_log(%t3a, %t3a)") > 0
 	Text.Combine(MlirCalls(Shapes, 2).Compiled(Area, PayloadDecoder(Area), AreaShape, 0)).Length is 143
 	Text.Combine(Counters.Created(NewCounter, PayloadDecoder(NewCounter))).Length is 554

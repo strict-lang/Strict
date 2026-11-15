@@ -50,7 +50,7 @@ Literal(literal Runtime/VmValue, slot Text, suffix Text) Texts
 	MlirLists(Listed, 0).Literal(VmValue.OfList(List(VmValue)), "%v_a", "").Length is 2
 	MlirLists(Literals, 0).Literal(Pair, "%r0", "").First is "    %t0g = llvm.mlir.addressof @lShape_Run_0_0 : !llvm.ptr"
 	MlirLists(Literals, 0).Literal(Pair, "%r0", "").Last is "    llvm.store %t0r, %r0 : f64, !llvm.ptr"
-	Text.Combine(MlirLists(Literals, 0).Literal(Pair, "%r0", "")).Length is 929
+	Text.Combine(MlirLists(Literals, 0).Literal(Pair, "%r0", "")).Length is 938
 	let count = literal.items.Length
 	if count is 0
 		return MlirPairs(function, position).Started(slot, suffix)
@@ -61,7 +61,7 @@ Literal(literal Runtime/VmValue, slot Text, suffix Text) Texts
 Built(literal Runtime/VmValue, suffix Text) Texts
 	MlirLists(Literals, 0).Cached(List(Text), "%x", "pin").Index("    func.call @pin(%x) : (f64) -> ()") is 7
 	MlirLists(Listed, 0).Built(Pair, "").Last.IndexOf("%t0e1l = func.call @strict_list_add(%t0e0l, %t0e1xf)") > 0
-	Text.Combine(MlirLists(Listed, 0).Built(Pair, "")).Length is 460
+	Text.Combine(MlirLists(Listed, 0).Built(Pair, "")).Length is 469
 	let memory = MlirMemory(function, position)
 	mutable lines = Created(literal.items.Length, suffix)
 	mutable current = Temp(suffix + "l")
@@ -112,7 +112,7 @@ ElementName(item Runtime/VmValue, element Text) Text
 	MlirLists(Listed, 0).ElementName(VmValue.OfText("a"), "e1") is "%t0e1xf"
 	MlirLists(Listed, 0).ElementName(VmValue.OfNumber(1), "e1") is "%t0e1c"
 	MlirLists(Literals, 0).Literal(VmValue.OfList(List(VmValue)), "%r0", "").Length is 2
-	Text.Combine(MlirLists(Literals, 0).Literal(Pair, "%r0", "x")).Length is 519
+	Text.Combine(MlirLists(Literals, 0).Literal(Pair, "%r0", "x")).Length is 528
 	item.kind is "Text" then Temp(element + "xf") else Temp(element + "c")
 Appended(entry InstructionEntry) Texts
 	MlirLists(Listed, 3).Appended(Steps(3)).Last is "    llvm.store %t3n, %v_numbers : f64, !llvm.ptr"
@@ -145,7 +145,7 @@ NameBits Texts
 	Text.Combine(MlirLists(MlirParameters.Aliasing.function, 3).Emitted).IndexOf("@strict_hoisted_read(%h_numbers") > 0
 	MlirLists(Listed, 2).NameBits.First is "    %t2n = llvm.mlir.addressof @sShape_Run_1_2 : !llvm.ptr"
 	MlirLists(Listed, 2).NameBits(1) is "    %t2nb = func.call @strict_bits(%t2n) : (!llvm.ptr) -> f64"
-	Text.Combine(MlirLists(MlirPairs.Built.function, 0).Literal(Pair, "%v_listResult0", "")).Length is 522
+	Text.Combine(MlirLists(MlirPairs.Built.function, 0).Literal(Pair, "%v_listResult0", "")).Length is 531
 	let address = "    " + Temp("n") + " = llvm.mlir.addressof @s" + function.Symbol + "_" + position + " : !llvm.ptr"
 	(address, "    " + Temp("nb") + " = func.call @strict_bits(" + Temp("n") + ") : (!llvm.ptr) -> f64")
 IsElementStore Boolean

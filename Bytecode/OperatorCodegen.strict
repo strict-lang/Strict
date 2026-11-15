@@ -138,7 +138,7 @@ Composite(node SyntaxNode, block CodeBlock) CodeBlock
 Choice(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Choice(Choose, CodeBlock.Empty).instructions.Length is 14
 	Plain.Choice(Choose, CodeBlock.Empty).instructions(12).payload is (1)
-	Plain.Choice(Narrowing, CodeBlock.Empty.Declare("x", "Number")).instructions(6).texts.First is "Strict/Error"
+	Plain.Choice(Narrowing, CodeBlock.Empty.Declare("x", "Number")).instructions(5).texts.First is "Strict/Error"
 	let decision = node.children(0)
 	let condition = Condition(decision.children(0), block)
 	let name = "conditional" + (condition.nextId - 1)

@@ -6,16 +6,19 @@ constant Instances = MlirInstances(Labeling.function, 0)
 constant Greeting = TypeCodegen("Strict/Greeting", ("Greeted(name = \"Hi\") Text", "\tname"), ValueCodegen.NoTypes, List(Text)).Entry
 constant Greets = MlirDefaults(MlirFunction(List(TypeEntry) + Greeting, Greeting, MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry))))
 constant LargestWhole = 1000000
-constant LabelGlobal = "  llvm.mlir.global internal constant @dLabeled_label(\"Names\\00\") : !llvm.array<6 x i8>"
+constant Mixed = TypeCodegen("Strict/Mixed", ("has empty Text = \"\"", "has count = 3", "Run(name = \"Hi\", other = \"\", again = \"Hi\", count = 3) Text", "\tname"), ValueCodegen.NoTypes, List(Text)).Entry
+constant Mixing = MlirDefaults(MlirFunction(List(TypeEntry) + Mixed, Mixed, MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry))))
+constant LabelGlobal = "  llvm.mlir.global internal constant @dLabeled_label(\"\\05\\00\\00\\00\\00\\00\\00\\00\\05\\00\\00\\00\\00\\00\\00\\00Names\\00\") : !llvm.array<22 x i8>"
+constant HiGlobal = "  llvm.mlir.global internal constant @dp0(\"\\02\\00\\00\\00\\00\\00\\00\\00\\02\\00\\00\\00\\00\\00\\00\\00Hi\\00\") : !llvm.array<19 x i8>"
 Name(owner TypeEntry, member MemberEntry) Text
 	Labeling.Name(Labeled, Label) is "@dLabeled_label"
 	Text.Combine(Instances.Default(Labeled, Label, "%s", "d")).IndexOf(" @dLabeled_label ") > 0
 	"@d" + MlirEquality(function, 0).Symbol(owner.JustName) + "_" + member.Name
 Globals Texts
 	Labeling.Globals.First is LabelGlobal
-	Labeling.Globals.Last.StartsWith("  llvm.mlir.global internal constant @dLabeled_names_1(\"b\\00\")")
+	Labeling.Globals.Last.StartsWith("  llvm.mlir.global internal constant @dLabeled_names_1(\"\\01")
 	Labeling.Globals.Length is 3
-	Greets.Globals is List(Text) + "  llvm.mlir.global internal constant @dp0(\"Hi\\00\") : !llvm.array<3 x i8>"
+	Greets.Globals is List(Text) + HiGlobal
 	mutable lines = List(Mutable(Text))
 	for function.types
 		let type = value
@@ -24,15 +27,18 @@ Globals Texts
 	lines + ParameterGlobals
 Declared(owner TypeEntry, member MemberEntry) Texts
 	Labeling.Declared(Labeled, Label) is (LabelGlobal)
+	Mixing.Declared(Mixed, Mixed.members.First).Length is 0
+	Mixing.Declared(Mixed, Mixed.members.Last).Length is 0
 	let literal = Natives(function.types).Initial(member)
 	let constants = MlirConstants(function, 0, Name(owner, member))
 	if literal.kind is "Text"
 		return literal.text is "" then List(Text) else List(Text) + constants.TextGlobal(literal.text, "")
-	for (literal.kind is "List" then constants.TextElements(literal) else List(Number))
+	for constants.TextElements(literal)
 		constants.TextGlobal(literal.items(value).text, "_" + value)
 ParameterName(text Text) Text
 	Greets.ParameterName("Hi") is "@dp0"
-	"@dp" + ParameterTexts.Index(text)
+	Greets.ParameterName("") is ""
+	text is "" then "" else "@dp" + ParameterTexts.Index(text)
 ParameterGlobals Texts
 	Greets.ParameterGlobals.Length is 1
 	for ParameterTexts
@@ -45,10 +51,11 @@ ParameterTexts Texts
 	texts
 Added(texts Texts, parameters List(MemberEntry)) Texts
 	Greets.Added(List(Text), Greeting.methods.First.parameters) is ("Hi")
+	Mixing.Added(List(Text), Mixed.methods.First.parameters) is ("Hi")
 	mutable added = texts
 	for parameters
 		let initial = Natives(function.types).Initial(value)
-		if (initial.kind is "Text") and (initial.text is not "") and (initial.text is not in added)
+		if (initial.text is not "") and (initial.text is not in added)
 			added = added + initial.text
 	added
 IsWhole(parameter MemberEntry) Boolean
@@ -58,6 +65,7 @@ IsWhole(parameter MemberEntry) Boolean
 	MlirDefaults(MlirDeviceCalls.Twice.function).IsWhole(MlirDeviceCalls.Tiny) is false
 	MlirDefaults(MlirDeviceCalls.Twice.function).IsWhole(MlirDeviceCalls.Large) is false
 	MlirDefaults(MlirDeviceCalls.Twice.function).IsWhole(MlirDeviceCalls.Twice.callee.method.parameters.First) is false
+	Greets.IsWhole(Greeting.methods.First.parameters.First) is false
 	let initial = Natives(function.types).Initial(parameter)
 	let isFraction = (initial.number - initial.number.Floor) > 0
 	let isNumber = (parameter.initial.Length > 0) and (initial.kind is "Number")

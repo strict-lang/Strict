@@ -87,7 +87,7 @@ Accepted(server Number, built Number, limit = IdleSeconds) Number
 	mutable idle = 0
 	let own = File(Process.Current.executable)
 	let stamp = File(Stamped)
-	for as long as (idle < limit) and (own.Modified is built) and (stamp.ReadLines.First to Number is Socket.Port(server))
+	for as long as (idle < limit) and (own.Modified is built) and ((Socket.Port(server) to Text) is in stamp.ReadLines)
 		let waited = Socket.Waiting(server, WakeSeconds)
 		if waited is not 0
 			return waited is Error then Unaccepted else Taken(server, built)
