@@ -77,6 +77,10 @@ IsOversized(result VmValue, limit = MaxItems) Boolean
 	MutationCache.IsOversized(VmValue.OfText("abc"), 2)
 	MutationCache.IsOversized(VmValue.OfNumber(5), 0) is false
 	(result.kind is "List" then result.items.Length else result.text.Length) > limit
+Budgeted(result VmValue, limit = MaxItems) VmValue
+	MutationCache.Budgeted(Operations.OneTwo, 1).items(0).text is "MemoryBudget"
+	MutationCache.Budgeted(Operations.OneTwo, 2) is Operations.OneTwo
+	IsOversized(result, limit) then VmValue.OfError("MemoryBudget") else result
 Stopped(deadline Number, step = 1) Text
 	MutationCache.Stopped(0) is ""
 	MutationCache.Stopped(0.001) is "Timeout"
