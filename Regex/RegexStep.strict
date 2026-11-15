@@ -28,3 +28,8 @@ Literal(code Number) RegexStep
 	RegexStep.Literal(97).Accepts(97)
 	RegexStep.Literal(97).Accepts(98) is false
 	RegexStep(Consume, (code, code))
+IsLiteral Boolean
+	RegexStep.Literal(97).IsLiteral
+	Letters.IsLiteral is false
+	RegexStep(Save).IsLiteral is false
+	(Kind is Consume) and (isNegated is false) and (ranges.Length is 2) then ranges(0) is ranges(1) else false

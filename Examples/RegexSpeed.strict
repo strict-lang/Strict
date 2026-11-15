@@ -1,0 +1,38 @@
+has logger
+constant Pattern = "constant \\w+ = "
+Run
+	let lines = Lines("Compiler")
+	let reused = Regex(Pattern)
+	let started = Process.Elapsed
+	let built = Matches(lines, "")
+	let parsed = Process.Elapsed
+	let kept = Kept(lines, reused)
+	let matched = Process.Elapsed
+	let found = Found(lines)
+	let ended = Process.Elapsed
+	let perLine = Milliseconds(parsed - started) + " ms, one Regex " + Milliseconds(matched - parsed)
+	logger.Log(lines.Length + " lines, a Regex per line " + perLine + " ms, IndexOf " + Milliseconds(ended - matched) + " ms")
+	logger.Log("hits: " + built + ", " + kept + ", " + found)
+Lines(folder Text) Texts slow
+	mutable lines = List(Text)
+	for Directory.Files(folder, "*.strict")
+		lines = lines + File(value).ReadLines
+	lines
+Matches(lines Texts, prefix Text) Number
+	RegexSpeed(Logger).Matches(("constant Wait = 1", "x"), "") is 1
+	for lines
+		if Regex(prefix + Pattern).IsMatch(value)
+			1
+Kept(lines Texts, regex Regex) Number
+	RegexSpeed(Logger).Kept(("constant Wait = 1", "x"), Regex(Pattern)) is 1
+	for lines
+		if regex.IsMatch(value)
+			1
+Found(lines Texts) Number
+	RegexSpeed(Logger).Found(("constant Wait = 1", "x")) is 1
+	for lines
+		if value.IndexOf("constant ") >= 0
+			1
+Milliseconds(seconds Number) Number
+	RegexSpeed(Logger).Milliseconds(0.0015) is 1.5
+	(seconds * 1000).Round(1)
