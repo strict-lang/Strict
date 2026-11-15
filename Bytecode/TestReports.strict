@@ -14,6 +14,8 @@ constant ProcessTypes = KnownTypes(("Process", "Image"), KnownTypes.NoMemberPair
 constant Processing = TestReports(TypeCodegen("Strict/Image", ("Process(number Number) Image", "	Process(1) is Image", "	Image"), TypeInference(ProcessTypes, KnownTypes.NoMemberPair), List(Text)))
 constant GotNumber = TestCodegen.Even.Got(TestCodegen.TestedNumber).scope
 constant Nothing = SyntaxParser(Tokenizer(ErrorShown + "\"None\"").Tokens).Parse
+constant NearNumbers = Even.Near("Numbers", 0)
+constant NearText = NearNumbers.instructions to Text
 constant ElapsedParameter = MemberEntry("elapsed", "Strict/Number", List(InstructionEntry), false)
 Marked(scope Scope, marker Text) Texts
 	TestReports.Marked(TestCodegen.Even.Got(TestCodegen.Even.Got(TestCodegen.TestedNumber)).scope, Showing) is ("Number")
@@ -51,13 +53,13 @@ Helper(name Text, parameter Text, type Text, expression SyntaxNode) MethodEntry 
 	let returned = generated.Add(InstructionEntry.Return(generated.Result))
 	MethodEntry(TestCodegen.Runner + name, List(MemberEntry) + entry, "Strict/Text", returned.instructions)
 Near(kind Text, ordinal Number) MethodEntry slow
-	Even.Near("Number", 1).Name is "$TestsNear1" and (Even.Near("Number", 1).returnType is "Strict/Boolean")
-	Even.Near("Number", 0).parameters.Last is MemberEntry(Expected, "Strict/Number", List(InstructionEntry), false)
+	NearNumbers.Name is "$TestsNear0" and (NearNumbers.returnType is "Strict/Boolean")
+	NearNumbers.parameters.Last.Name is Expected and (NearText.IndexOf("Strict/Unknown, ") is -1)
 	Erring.Near("Number", 0).instructions(5).payload is InstructionEntry.LoadAnyError(1).payload
 	let values = Neutral
 	let tested = ErrorCodegen.Tested
-	let declared = CodeBlock.Empty.Declare(tested, kind)
-	let lines = Closeness(values.inference.types).Lines(tested, Expected, (kind, kind), "", false, List(Text))
+	let declared = CodeBlock.Empty.Declare(tested, kind).Declare(Expected, kind)
+	let lines = Closeness(values.inference.types).Lines(tested, Expected, (kind, kind), "1", false, List(Text))
 	let body = MethodCodegen(values).Body(BodyParser(TestComparison(values).Shortcut(tested, lines)).Block(1, 1), declared)
 	let parameter = MemberEntry(tested, values.target.FullName(kind), List(InstructionEntry), false)
 	let returned = body.Add(InstructionEntry.Return(body.Result))
