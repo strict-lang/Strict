@@ -59,13 +59,21 @@ Double(number Number) ByteEncoder
 	ByteEncoder(1, 2).Double(-2).bytes is (1, 2, 0, 0, 0, 0, 0, 0, 0, 192)
 	ByteEncoder(1, 2).Double(0.1).bytes is (1, 2, 154, 153, 153, 153, 153, 153, 185, 63)
 	ByteEncoder.Empty.Double(-3 * 2 ^ -1074).bytes is (3, 0, 0, 0, 0, 0, 0, 128)
+	if number.IsFinite is false
+		return Packed(number.Absolute > 0 then 0 else 2 ^ (MantissaBits - 1), ExponentBias + 1, number < 0)
 	let isSubnormal = number.Absolute < 2 ^ (1 - ExponentBias)
 	let exponent = isSubnormal then -ExponentBias else Exponent(number.Absolute)
 	let normal = (number.Absolute / 2 ^ exponent - 1) * 2 ^ MantissaBits
 	let mantissa = isSubnormal then number.Absolute / 2 ^ (1 - ExponentBias - MantissaBits) else normal
+	Packed(mantissa, exponent, 1 / number < 0)
+Packed(mantissa Number, exponent Number, isNegative Boolean) ByteEncoder
+	ByteEncoder.Empty.Packed(0, 0, false).bytes is (0, 0, 0, 0, 0, 0, 240, 63)
+	ByteEncoder.Empty.Double(-1 / 0).bytes is (0, 0, 0, 0, 0, 0, 240, 255)
+	ByteEncoder.Empty.Double(0 / 0).bytes is (0, 0, 0, 0, 0, 0, 248, 127)
+	ByteEncoder.Empty.Double(-1 / (1 / 0)).bytes.Last is 128
 	let low = UInt(mantissa % 2 ^ LowMantissaBits, 6)
 	let high = (mantissa / 2 ^ LowMantissaBits).Floor + ((exponent + ExponentBias) % ExponentLowBits) * ExponentLowBits
-	let top = ((exponent + ExponentBias) / ExponentLowBits).Floor + (number < 0 then SignBit else 0)
+	let top = ((exponent + ExponentBias) / ExponentLowBits).Floor + (isNegative then SignBit else 0)
 	low.UInt(high, 1).UInt(top, 1)
 Exponent(positive Number) Number
 	ByteEncoder(1, 2).Exponent(10) is 3

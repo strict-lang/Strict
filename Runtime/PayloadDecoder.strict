@@ -3,6 +3,8 @@ constant Ones = PayloadDecoder(InstructionEntry(InstructionType.LoadConstantToRe
 constant ElementStore = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "list(index)")
 constant Paired = PayloadDecoder(InstructionEntry.Invoke(1, ("Strict/Vector", "Scaled", "Strict/Number", "x", "y"), (0, 0), -1))
 constant Scaled = PayloadDecoder(InstructionEntry.Invoke(1, ("Strict/Vector", "*", "Strict/Vector", "scale"), List(Number) + 0, -1))
+constant Infinite = 2047
+constant Undefined = PayloadDecoder(InstructionEntry.LoadNumber(0, 0 / 0)).Double(2)
 Value(position Number) VmValue
 	PayloadDecoder(InstructionEntry.LoadNumber(0, 7)).Value(1).number is 7
 	PayloadDecoder(InstructionEntry.LoadText(0, "a")).Value(1).text is "a"
@@ -38,16 +40,16 @@ Elements(position Number) VmValue
 Double(position Number) Number
 	PayloadDecoder(InstructionEntry.LoadNumber(0, 1.5)).Double(2) is 1.5
 	PayloadDecoder(InstructionEntry.LoadNumber(0, -1000)).Double(2) is -1000
+	Undefined.IsFinite is false and (Undefined is not 1 / 0)
 	let top = entry.payload(position + 7)
 	let sixth = entry.payload(position + 6)
 	let exponent = (top % ByteEncoder.SignBit) * ByteEncoder.ExponentLowBits + (sixth / ByteEncoder.ExponentLowBits).Floor
 	mutable mantissa = sixth % ByteEncoder.ExponentLowBits
 	for 6
 		mantissa = mantissa * Byte.Values + entry.payload(position + 5 - index)
-	let scaled = mantissa / 2 ^ ByteEncoder.MantissaBits
-	let fraction = exponent is 0 then scaled else 1 + scaled
+	let fraction = (exponent is 0 then 0 else 1) + mantissa / 2 ^ ByteEncoder.MantissaBits
 	let magnitude = fraction * 2 ^ ((exponent is 0 then 1 else exponent) - ByteEncoder.ExponentBias)
-	top < ByteEncoder.SignBit then magnitude else -magnitude
+	(exponent < Infinite) or (mantissa is 0) then (top < ByteEncoder.SignBit then magnitude else -magnitude) else 0 / 0
 ElementParts Texts
 	PayloadDecoder(ElementStore).ElementParts is ("list", "index")
 	PayloadDecoder(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "list")).ElementParts.Length is 0

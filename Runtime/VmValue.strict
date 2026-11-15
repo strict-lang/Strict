@@ -18,7 +18,7 @@ OfNumber(amount Number) VmValue
 IsSmall(amount Number) Boolean
 	IsSmall(0) and IsSmall(1023)
 	IsSmall(1024) is false
-	IsSmall(-0) is false
+	IsSmall(-1 / (1 / 0)) is false
 	IsSmall(-3) is false
 	IsSmall(2.5) is false
 	(amount < 1024) and (1 / amount > 0) and (amount % 1 is 0)
