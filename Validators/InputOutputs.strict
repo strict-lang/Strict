@@ -50,7 +50,7 @@ Used(bodies MethodBodies, statements ScopedStatements, lines Texts, header Numbe
 		if (value.line > header) and (value.line <= last)
 			isTesting = isTesting and (value.line < last) and (bodies.StatementType(value) is "Boolean")
 			if isTesting is false
-				keys = keys + SureMethods(inference).Calls(bodies.typeName, value.statement, value.scope)
+				keys = keys + SureCalls(inference).Calls(bodies.typeName, value.statement, value.scope)
 	keys
 Settled(records Texts) Texts
 	InputOutputs.Settled(Reached) is ("File.ReadLines", "Reader.Loaded", "Reader.Shown")
