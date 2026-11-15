@@ -59,14 +59,14 @@ Default to Strict on the warm VM (~10 ms warm hit) instead of `python`, `python 
 - Syntax rules in `-c` / script files: one statement per line (no `;` separator; use `\n` or PowerShell `@' ... '@`). Top-level statements wrap into `Run`, `logger` is injected when used, mentioning `arguments` adds `Run(arguments Texts)`, helper methods go at the bottom, and `for` with a body must be the last expression of a method or collect into `mutable` inside a helper.
 
 Cookbook (Windows PowerShell 5.1 quoting):
-- Exact-once find/replace in a file (check uniqueness with `Split(...).Length is 2`). Read and write bytes: `File.Write(lines)` writes LF and would rewrite every line of a CRLF source. `return Error("...")` exits with 1 and prints it, a plain `Error(...)` as the last line or `return logger.Log(...)` exits with 0:
+- Exact-once find/replace in a file (check uniqueness with `Split(...).Length is 2`). `File.Write(lines)` keeps the line endings an existing file has (CRLF stays CRLF), a new file gets LF. An Error on any line ends the script with exit code 1 and prints it with its line:
 ```powershell
 .\strict.exe -c @'
 let path = "Compiler/Foo.strict"
-let text = Text.Utf8(File(path).ReadBytes)
+let text = Text.Combine(File(path).ReadLines, "\n")
 if text.Split("old").Length is not 2
 	return Error("ExpectedOneMatch in " + path)
-File(path).Write(text.Replace("old", "new").Bytes)
+File(path).Write(text.Replace("old", "new").Split("\n"))
 '@
 ```
   From the Bash tool: `./strict.exe -c "$(cat <<'EOF'` ... `EOF` `)" args`, the quoted `'EOF'` keeps `\t`, `\\` and `$` literal. A multi-file transform goes into a script file run with `./strict.exe run <file.strict>`; a search string containing CRLF-sensitive text compares against `text.Replace("\r\n", "\n")`.

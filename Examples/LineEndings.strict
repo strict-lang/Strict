@@ -1,0 +1,12 @@
+has logger
+constant Sample = "Examples/obj/LineEndings.txt"
+Bytes(path Text) Bytes slow
+	File(Sample).Write("a\r\nb\r\n".Bytes) is not Error
+	File(Sample).Write(("x", "y", "")) is not Error
+	LineEndings(Logger).Bytes(Sample) is "x\r\ny\r\n".Bytes
+	File(Sample).Write(("x\r", "y")) is not Error
+	LineEndings(Logger).Bytes(Sample) is "x\r\ny".Bytes
+	File(Sample).Delete is not Error
+	File(Sample).Write(("x", "y")) is not Error
+	LineEndings(Logger).Bytes(Sample) is "x\ny".Bytes
+	File(path).ReadBytes

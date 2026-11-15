@@ -16561,11 +16561,42 @@
   ^done(%result: !llvm.ptr):
     return %result : !llvm.ptr
   }
+  // a file that already exists keeps its line endings: CRLF when its first line ends with one, also for lines that
+  // still carry their CR (split from a CRLF text), so agents and tools stop flipping every line of a file back and forth
+  func.func private @strict_file_crlf(%path: f64) -> i1 {
+    %false = arith.constant false
+    %none = arith.constant 0 : i32
+    %name = func.call @strict_named(%path) : (f64) -> !llvm.ptr
+    %modeLengths = llvm.mlir.addressof @strict_read_mode : !llvm.ptr
+    %mode = llvm.getelementptr %modeLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %file = llvm.call @fopen(%name, %mode) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %missing = llvm.icmp "eq" %file, %null : !llvm.ptr
+    cf.cond_br %missing, ^done(%false : i1), ^scan(%none : i32)
+  ^scan(%previous: i32):
+    %character = llvm.call @fgetc(%file) : (!llvm.ptr) -> i32
+    %ended = arith.cmpi slt, %character, %none : i32
+    %lineFeed = arith.constant 10 : i32
+    %isLineFeed = arith.cmpi eq, %character, %lineFeed : i32
+    %carriage = arith.constant 13 : i32
+    %afterCarriage = arith.cmpi eq, %previous, %carriage : i32
+    %stop = arith.ori %ended, %isLineFeed : i1
+    %found = arith.andi %isLineFeed, %afterCarriage : i1
+    cf.cond_br %stop, ^close(%found : i1), ^scan(%character : i32)
+  ^close(%crlf: i1):
+    %closed = llvm.call @fclose(%file) : (!llvm.ptr) -> i32
+    cf.br ^done(%crlf : i1)
+  ^done(%result: i1):
+    return %result : i1
+  }
   func.func private @strict_file_writelines(%path: f64, %lines: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %start = arith.constant 0 : i64
     %step = arith.constant 1 : i64
     %newline = arith.constant 10 : i32
+    %carriage = arith.constant 13 : i32
+    %carriageByte = arith.constant 13 : i8
+    %crlf = func.call @strict_file_crlf(%path) : (f64) -> i1
     %file = func.call @strict_file_create(%path) : (f64) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     %failed = llvm.icmp "eq" %file, %null : !llvm.ptr
@@ -16585,13 +16616,27 @@
     %first = arith.cmpi eq, %index, %start : i64
     cf.cond_br %first, ^text, ^newline
   ^newline:
+    cf.cond_br %crlf, ^carriageReturn, ^lineFeed
+  ^carriageReturn:
+    %putCarriage = llvm.call @fputc(%carriage, %file) : (i32, !llvm.ptr) -> i32
+    cf.br ^lineFeed
+  ^lineFeed:
     %put = llvm.call @fputc(%newline, %file) : (i32, !llvm.ptr) -> i32
     cf.br ^text
   ^text:
     %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     %line = llvm.load %slot : !llvm.ptr -> f64
     %content = func.call @strict_text_ptr(%line) : (f64) -> !llvm.ptr
-    %length = llvm.call @strlen(%content) : (!llvm.ptr) -> i64
+    %fullLength = llvm.call @strlen(%content) : (!llvm.ptr) -> i64
+    %hasContent = arith.cmpi sgt, %fullLength, %start : i64
+    %lastIndex = arith.subi %fullLength, %step : i64
+    %lastAt = arith.select %hasContent, %lastIndex, %start : i64
+    %lastSlot = llvm.getelementptr %content[%lastAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %last = llvm.load %lastSlot : !llvm.ptr -> i8
+    %endsCarriage = arith.cmpi eq, %last, %carriageByte : i8
+    %carried = arith.andi %hasContent, %endsCarriage : i1
+    %stripped = arith.andi %carried, %crlf : i1
+    %length = arith.select %stripped, %lastIndex, %fullLength : i64
     %written = llvm.call @fwrite(%content, %step, %length, %file) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i64
     %next = arith.addi %index, %step : i64
     cf.br ^line(%next : i64)
