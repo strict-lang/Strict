@@ -10480,7 +10480,23 @@
     %newest = func.call @strict_list_mine(%list, %newestVersion) : (f64, i1) -> i1
     %growable = arith.cmpf ogt, %capacity, %zero : f64
     %inPlace = arith.andi %newest, %growable : i1
-    cf.cond_br %inPlace, ^check_separate, ^copy
+    cf.cond_br %inPlace, ^check_alone, ^copy
+  ^check_alone:
+    // no heap object holds this view (only locals): an older version of it is not kept, write in place
+    %alone = func.call @strict_rc_unshared(%list) : (f64) -> i1
+    cf.cond_br %alone, ^direct, ^check_separate
+  ^direct:
+    %directBits = llvm.load %holder : !llvm.ptr -> f64
+    %directItems = func.call @strict_ptr(%directBits) : (f64) -> !llvm.ptr
+    %directAt = arith.fptosi %index : f64 to i64
+    %directSlot = llvm.getelementptr %directItems[%directAt] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    func.call @strict_rc_put(%directSlot, %element) : (!llvm.ptr, f64) -> ()
+    %directVersions = llvm.mlir.addressof @strict_versions : !llvm.ptr
+    %directVersion = llvm.load %directVersions : !llvm.ptr -> i64
+    %directStep = arith.constant 1 : i64
+    %directNext = arith.addi %directVersion, %directStep : i64
+    llvm.store %directNext, %directVersions : i64, !llvm.ptr
+    return %list : f64
   ^check_separate:
     %startBits = llvm.load %holder : !llvm.ptr -> f64
     %start = func.call @strict_ptr(%startBits) : (f64) -> !llvm.ptr

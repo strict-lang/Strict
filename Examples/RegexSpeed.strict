@@ -11,7 +11,7 @@ Run
 	let found = Found(lines)
 	let ended = Process.Elapsed
 	let perLine = Milliseconds(parsed - started) + " ms, one Regex " + Milliseconds(matched - parsed)
-	logger.Log(lines.Length + " lines, a Regex per line " + perLine + " ms, IndexOf " + Milliseconds(ended - matched) + " ms")
+	logger.Log(lines.Length + " lines, a Regex per line " + perLine + " ms, IndexOf " + Milliseconds(ended - matched))
 	logger.Log("hits: " + built + ", " + kept + ", " + found)
 Lines(folder Text) Texts slow
 	mutable lines = List(Text)
