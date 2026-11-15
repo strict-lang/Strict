@@ -1,0 +1,8 @@
+has logger
+Failing
+	ErrorStatements(Logger).Failing is Error
+	Error("InHelper")
+Calling
+	ErrorStatements(Logger).Calling is Error
+	Failing
+	logger.Log("after")

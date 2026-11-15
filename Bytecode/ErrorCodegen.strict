@@ -6,6 +6,7 @@ constant Plain = ErrorCodegen(ValueCodegen.Plain)
 constant Greeting = SyntaxNode("Call", "Greet")
 constant Ignoring = SyntaxNode("Ignore", "ignore", Greeting)
 constant BareError = SyntaxNode("Identifier", "Error")
+constant Failing = SyntaxNode("Call", "Error", SyntaxNode("Text", "\"Failed\""))
 constant GreetingPlusOne = SyntaxNode("Binary", "+", (Greeting, ValueCodegen.One))
 constant InTest = CodeBlock.Empty.Declare(FailureMarker, "7")
 constant Counted = CodeBlock.Empty.Declare("a", "Count")
@@ -151,9 +152,10 @@ Statement(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Statement(SyntaxNode("Return", ""), CodeBlock.Empty).instructions.Last.kind is InstructionType.Return
 	Plain.AnyError(SyntaxNode("Binary", "is", (A, A)), CodeBlock.Empty) to Text is "a is a"
 	Plain.Statement(SyntaxNode("Return", ""), CodeBlock.Empty.At(2)) is CodeBlock.Empty.At(2).Nothing
+	Plain.Statement(Failing, CodeBlock.Empty).instructions.Last.kind is InstructionType.CheckError
 	if node.Kind is in ("Return", "Ignore")
 		return node.HasValue then Handled(node.children(0), block) else block.Nothing
-	Checked(node, block)
+	Checked(node, block, values.TypeOf(node, block) is in ErrorTypes)
 Right(node SyntaxNode, block CodeBlock, isConverted Boolean) CodeBlock
 	Plain.Right(IsError, CodeBlock.Empty, false).instructions is (InstructionEntry.LoadAnyError(0))
 	Plain.Right(IsError, Counted, true) is Plain.Compared(IsError, AnyCall, Counted)
