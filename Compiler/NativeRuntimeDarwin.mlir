@@ -717,13 +717,15 @@
     %number = arith.sitofp %code : i32 to f64
     return %number : f64
   }
-  func.func private @strict_process_execute(%path: f64, %arguments: f64) -> f64 {
+  func.func private @strict_process_execute(%path: f64, %arguments: f64, %seconds: f64) -> f64 {
     %none = arith.constant 0 : i32
     %noHang = arith.constant 1 : i32
     %killSignal = arith.constant 9 : i32
     %failure = arith.constant 127 : i32
     %millisecond = arith.constant 1000 : i32
-    %limit = arith.constant 600000 : i32
+    %thousand = arith.constant 1000.0 : f64
+    %milliseconds = arith.mulf %seconds, %thousand : f64
+    %limit = arith.fptosi %milliseconds : f64 to i32
     %step = arith.constant 1 : i32
     %statusSize = arith.constant 8 : i64
     %execQuoteLengths = llvm.mlir.addressof @strict_exec_quote : !llvm.ptr

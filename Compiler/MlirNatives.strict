@@ -9,6 +9,7 @@ constant TextChangeHelpers = ("strict_text_upper", "strict_text_lower", "strict_
 constant TextHelpers = TextSearchHelpers + TextChangeHelpers
 constant Destining = List(Text) + "strict_list_swap_removed"
 constant DefaultedLast = ("strict_text_index", "strict_text_starts", "strict_directory_files", "strict_text_combine")
+constant DefaultedThird = ("strict_process_runtool", "strict_process_runtools")
 constant Named = TypeEntry("Strict/Named", (MemberEntry("name", "Strict/Text", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
 constant Texts = MlirFunction(List(TypeEntry), Named, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadText(0, "ab"), LengthCall, Search)))
 constant Getting = InstructionEntry.Invoke(2, ("Strict/Dictionary(Text, Number)", "get", "Strict/Number", "key"), 1, -1)
@@ -169,11 +170,15 @@ Emitted(entry InstructionEntry, type TypeEntry, helper Text) Texts
 	let textual = Textual(entry, Element(owner), count)
 	let arguments = textual.Length > 0 then List(Text) + calls.Temp("ct") else calls.ArgumentNames(count)
 	let operands = List(Text) + calls.Temp("m") + arguments
-	let completed = (helper is in DefaultedLast) and (count is 1) then operands + "%zero" else operands
+	let completed = IsShort(helper, count) then operands + "%zero" else operands
 	let plain = MlirMemory(function, position).Passed(calls.Temp("r"), helper, completed, Element(owner))
 	let call = helper.StartsWith("strict_dictionary_") then Keying(helper, completed, owner) else plain
 	let lines = calls.Loads(entry, type) + textual + call + function.Store(calls.Temp("r"), "%r" + entry.payload(0))
 	helper is "strict_floor" then MlirCounter(function, position).Floor(entry, lines) else lines
+IsShort(helper Text, count Number) Boolean
+	MlirNatives.IsShort("strict_text_index", 1) and MlirNatives.IsShort("strict_process_runtool", 2)
+	(MlirNatives.IsShort("strict_text_index", 2) is false) and (MlirNatives.IsShort("strict_process_runtool", 3) is false)
+	((helper is in DefaultedLast) and (count is 1)) or ((helper is in DefaultedThird) and (count is 2))
 Textual(entry InstructionEntry, element Text, count Number) Texts
 	MlirNatives(MlirKinds.Lettered.function, 2).Textual(Search, "Text", 1)(0).IndexOf("ct = func.call @strict_char") > 0
 	MlirNatives(MlirKinds.Lettered.function, 2).Textual(Search, "Number", 1).Length is 0

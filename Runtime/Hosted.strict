@@ -79,7 +79,7 @@ Processed VmValue
 	let first = name is "Current" then Process.Current.executable else call.Arguments.First.text
 	if name is in ("Find", "Current")
 		return VmValue("Strict/Process", 0, "", List(VmValue) + VmValue.OfText(Process.Find(first).executable))
-	HostedProcess(call).Resulted(Process.RunTool(first, call.Arguments.Last.text))
+	HostedProcess(call).Resulted(Process.RunTool(first, call.Arguments(1).text, HostedProcess(call).Seconds))
 Stored VmValue
 	Hosted(Existing).Stored.IsTrue
 	if call.MethodName is "Write"

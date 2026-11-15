@@ -904,7 +904,7 @@
   // Process.RunTools starts several at once: a child must not inherit the output files of another one, an SRW lock lets
   // the threads waiting for it sleep while CreateProcessA takes milliseconds (spinning cost a core per waiting thread)
   llvm.mlir.global internal @strict_process_lock(0 : i64) : i64
-  func.func private @strict_process_execute(%path: f64, %arguments: f64) -> f64 {
+  func.func private @strict_process_execute(%path: f64, %arguments: f64, %seconds: f64) -> f64 {
     %count = arith.constant 1 : i64
     %startupSize = arith.constant 104 : i64
     %startupLength = arith.constant 104 : i32
@@ -975,7 +975,9 @@
     %startFailure = func.call @strict_process_result(%startCode, %empty, %startError) : (f64, f64, f64) -> f64
     return %startFailure : f64
   ^running:
-    %timeout = arith.constant 600000 : i32
+    %thousand = arith.constant 1000.0 : f64
+    %milliseconds = arith.mulf %seconds, %thousand : f64
+    %timeout = arith.fptosi %milliseconds : f64 to i32
     %process = llvm.load %information : !llvm.ptr -> !llvm.ptr
     %threadSlot = llvm.getelementptr %information[8] : (!llvm.ptr) -> !llvm.ptr, i8
     %thread = llvm.load %threadSlot : !llvm.ptr -> !llvm.ptr

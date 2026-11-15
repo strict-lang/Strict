@@ -1,23 +1,25 @@
 has executable Text
 constant NotFoundExitCode = 127
+constant TimedOutExitCode = 124
+constant ToolSeconds = 600
 Find(name Text) Process
 	Process(name)
 IsAvailable Boolean
 	Process("").IsAvailable is false
 	Process("strict").IsAvailable
 	executable is not ""
-Run(arguments Text) ProcessResult slow
-	ProcessResult(1, "", "Process.Run is not available for: " + arguments)
+Run(arguments Text, seconds = ToolSeconds) ProcessResult slow
+	ProcessResult(1, "", "Process.Run is not available for: " + arguments + " within " + seconds + " s")
 Started(arguments Text) Number slow
 	Process.Find("missingStrictTool").Started("") is 127
 	Error("Process.Started needs the native runtime to start " + executable + " " + arguments)
-RunTool(name Text, arguments Text) ProcessResult slow
+RunTool(name Text, arguments Text, seconds = ToolSeconds) ProcessResult slow
 	let tool = Find(name)
-	tool.IsAvailable then tool.Run(arguments) else ProcessResult(NotFoundExitCode, "", "tool not found: " + name)
-RunTools(name Text, arguments Texts) List(ProcessResult) slow
+	tool.IsAvailable then tool.Run(arguments, seconds) else ProcessResult(NotFoundExitCode, "", "tool not found: " + name)
+RunTools(name Text, arguments Texts, seconds = ToolSeconds) List(ProcessResult) slow
 	Process.RunTools("missingStrictTool", ("a", "b")).Length is 2
 	Process.RunTools("missingStrictTool", ("a", "b")).Last.exitCode is 127
-	Error("Process.RunTools needs the native runtime to run " + name + " " + (arguments to Text))
+	Error("Process.RunTools needs the native runtime: " + name + " " + arguments.Length + " times, " + seconds + " s")
 OperatingSystem Text
 	Process.OperatingSystem is in ("Windows", "Linux", "MacOS")
 	"Unknown"

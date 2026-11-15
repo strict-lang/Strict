@@ -666,7 +666,7 @@
     %missing = arith.constant 127.0 : f64
     return %missing : f64
   }
-  func.func private @strict_process_execute(%path: f64, %arguments: f64) -> f64 {
+  func.func private @strict_process_execute(%path: f64, %arguments: f64, %seconds: f64) -> f64 {
     %startCode = arith.constant 1.0 : f64
     %startTextLengths = llvm.mlir.addressof @strict_start_failed : !llvm.ptr
     %startText = llvm.getelementptr %startTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8

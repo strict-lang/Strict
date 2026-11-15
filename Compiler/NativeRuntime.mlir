@@ -16746,7 +16746,7 @@
     return %path : f64
   }
   llvm.mlir.global internal constant @strict_tool_missing("\10\00\00\00\00\00\00\00\10\00\00\00\00\00\00\00tool not found: \00") : !llvm.array<33 x i8>
-  func.func private @strict_process_runtool(%self: f64, %name: f64, %arguments: f64) -> f64 {
+  func.func private @strict_process_runtool(%self: f64, %name: f64, %arguments: f64, %seconds: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %path = func.call @strict_tool_path(%name) : (f64) -> f64
     %length = func.call @strict_text_long(%path) : (f64) -> f64
@@ -16764,7 +16764,12 @@
     %failure = func.call @strict_process_result(%code, %empty, %error) : (f64, f64, f64) -> f64
     return %failure : f64
   ^present:
-    %result = func.call @strict_process_execute(%path, %arguments) : (f64, f64) -> f64
+    // 0 (a call without its seconds, MlirNatives.DefaultedThird) is Process.ToolSeconds
+    %unlimited = arith.constant 0.0 : f64
+    %toolSeconds = arith.constant 600.0 : f64
+    %isDefault = arith.cmpf ole, %seconds, %unlimited : f64
+    %limit = arith.select %isDefault, %toolSeconds, %seconds : f64
+    %result = func.call @strict_process_execute(%path, %arguments, %limit) : (f64, f64, f64) -> f64
     return %result : f64
   }
   // tools started together share the pool: unless STRICT_THREADS is set every child that reads it (the strict test of
@@ -16790,10 +16795,10 @@
     return %chosen : i64
   }
   // Process.RunTools: the pool runs the tool for every argument line at the same time, the results keep their order
-  func.func private @strict_process_runtools(%self: f64, %name: f64, %arguments: f64) -> f64 {
+  func.func private @strict_process_runtools(%self: f64, %name: f64, %arguments: f64, %seconds: f64) -> f64 {
     func.call @strict_gc_release() : () -> ()
     %zero = arith.constant 0.0 : f64
-    %size = arith.constant 40 : i64
+    %size = arith.constant 48 : i64
     %count = func.call @strict_list_length(%arguments) : (f64) -> f64
     %results = func.call @strict_list_new(%count, %zero) : (f64, f64) -> f64
     %items = func.call @strict_list_items(%results) : (f64) -> !llvm.ptr
@@ -16810,6 +16815,8 @@
     %share = func.call @strict_tool_share(%lines) : (i64) -> i64
     %shareSlot = llvm.getelementptr %context[4] : (!llvm.ptr) -> !llvm.ptr, i64
     llvm.store %share, %shareSlot : i64, !llvm.ptr
+    %secondsSlot = llvm.getelementptr %context[5] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %seconds, %secondsSlot : f64, !llvm.ptr
     %ran = func.call @strict_parallel(%body, %context, %lines) : ((!llvm.ptr, i64, i64) -> f64, !llvm.ptr, i64) -> f64
     llvm.call @free(%context) : (!llvm.ptr) -> ()
     %filled = func.call @strict_list_filled(%results, %count) : (f64, f64) -> f64
@@ -16826,6 +16833,8 @@
     %items = llvm.load %itemsSlot : !llvm.ptr -> !llvm.ptr
     %shareSlot = llvm.getelementptr %context[4] : (!llvm.ptr) -> !llvm.ptr, i64
     %share = llvm.load %shareSlot : !llvm.ptr -> i64
+    %secondsSlot = llvm.getelementptr %context[5] : (!llvm.ptr) -> !llvm.ptr, f64
+    %seconds = llvm.load %secondsSlot : !llvm.ptr -> f64
     %threadShare = llvm.mlir.addressof @strict_tool_threads : !llvm.ptr
     %outerShare = llvm.load %threadShare : !llvm.ptr -> i64
     llvm.store %share, %threadShare : i64, !llvm.ptr
@@ -16836,7 +16845,7 @@
   ^run:
     %at = arith.sitofp %index : i64 to f64
     %line = func.call @strict_list_get(%arguments, %at) : (f64, f64) -> f64
-    %result = func.call @strict_process_runtool(%self, %name, %line) : (f64, f64, f64) -> f64
+    %result = func.call @strict_process_runtool(%self, %name, %line, %seconds) : (f64, f64, f64, f64) -> f64
     %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     func.call @strict_rc_put(%slot, %result) : (!llvm.ptr, f64) -> ()
     %following = arith.addi %index, %one : i64
