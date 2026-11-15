@@ -4,6 +4,7 @@ has folder Text = ""
 has stamps Dictionary(Text, Number) = Dictionary(Text, Number)
 has files Texts = List(Text)
 has Types List(TypeEntry) = List(TypeEntry)
+has script ScriptCache = ScriptCache.Empty
 constant Sources = ("./Character.strict", "./Number.strict")
 constant Known = Dictionary(("Strict/Character:", TypeEntry.CharacterEntry))
 constant Holder = TypeEntry("Strict/Holder", List(MemberEntry) + MemberEntry("items", "Strict/List(Number)", List(InstructionEntry), false), List(MethodEntry))
@@ -15,7 +16,7 @@ Stamped(started Number) Answer
 	for files
 		let modified = File(value).Modified
 		stamped(value) = modified < started then modified else -1
-	Answer(code, known, folder, stamped, files)
+	Answer(code, known, folder, stamped, files, Types, script)
 Fresh(current Text) Dictionary(Text, TypeEntry)
 	Character.Fresh("elsewhere").Length is 0
 	Character.Fresh(".").Length is 1
@@ -45,6 +46,8 @@ IsUsing(entry TypeEntry, names Texts) Boolean
 Carried(last Answer) Answer
 	Answer(0, Known).Carried(Character).files is Sources
 	Character.Carried(Answer(0, Known)).files is Sources
+	Answer(0, Known, script = ScriptCache.Sample).Carried(Character).script.IsFresh(".", ".")
+	let kept = script.files.Length > 0 then script else last.script
 	if files.Length > 0
-		return Answer(code, known, folder, stamps, files)
-	Answer(code, known, last.folder, last.stamps, last.files)
+		return Answer(code, known, folder, stamps, files, Types, kept)
+	Answer(code, known, last.folder, last.stamps, last.files, Types, kept)

@@ -4,6 +4,7 @@ has Known Dictionary(Text, TypeEntry) = Dictionary(Text, TypeEntry)
 has Sourced BinarySources = Unsourced
 has Homes Dictionary(Text, TypeEntry) = Dictionary(Text, TypeEntry)
 has Places Dictionary(Text, Text) = Dictionary(Text, Text)
+has isFast Boolean = false
 constant Unsourced = BinarySources(List(Text))
 constant Go = TypeEntry("A", List(MemberEntry), MethodEntry.GoRun)
 constant CountCall = InstructionEntry.Invoke(0, ("Strict/Range", "Count", "Strict/Number"), List(Number), -1)
@@ -21,26 +22,29 @@ constant IsChecking = Process.Variable("STRICT_LINK_CHECK") is "1"
 constant Natives = ("to", "not", "and", "or", "xor", "Exists", "ReadLines")
 Linked(entries List(TypeEntry), signatures Texts) LinkRound slow
 	Sample.Linked(Go, List(Text)).entries.Length is 0
+	Linker(Sample, isFast = true).Linked(Go, List(Text)).linker.Homes.Length is 0
 	mutable round = LinkRound(value, entries, signatures)
 	for as long as true
 		let started = Process.Elapsed
 		let next = Next(round)
-		let complete = round.IsSettled(next)
-		let phase = "Frontend / link pass (" + next.entries.Length + " types, complete " + complete + ")"
-		BuildProfile(Logger).Reported(phase, started)
-		if complete
-			return next.With(next.Checked)
+		if Settled(next, round.IsSettled(next), started)
+			return isFast then next else next.With(next.Checked)
 		round = next
 	round
+Settled(next LinkRound, complete Boolean, started Number) Boolean
+	let phase = "Frontend / link pass (" + next.entries.Length + " types, complete " + complete + ")"
+	BuildProfile(Logger).Reported(phase, started)
+	complete
 Next(round LinkRound) LinkRound slow
 	Sample.Next(LinkRound.Single).entries.Length is 1
 	Hello.Next(LinkRound.Greeting).signatures is ("Strict/Logger:")
 	Hello.Next(LinkRound(Hello, LinkRound.Forwarding, List(Text) + "Strict/W:Code")).entries.First.methods.Length is 2
+	Linker(Hello, isFast = true).Next(LinkRound.Greeting).linker.Homes.Length is 0
 	let invoked = round.Targets.Unique
 	let completed = LinkRound(round, entries = Completed(round.entries, invoked))
 	let targets = invoked + completed.Forwarded(invoked)
 	let signed = Signatures(Linkable(BaseTypes(round.UsedTypes, targets), round.signatures), targets)
-	let homed = LinkHomes(completed).Homing(signed)
+	let homed = isFast then completed else LinkHomes(completed).Homing(signed)
 	homed.Advanced((List(TypeEntry) + Completed(completed.entries, targets).First) + homed.Entries(signed), signed)
 Completed(entries List(TypeEntry), targets Texts) List(TypeEntry) slow
 	Sample.Completed(Go, List(Text)).Length is 1

@@ -94,8 +94,10 @@ IsForwarded(arguments Texts) Boolean
 	Sample.IsForwarded(List(Text) + "stop")
 	Sample.IsForwarded(("test", "a.strict")) or (Process.Variable("STRICT_SERVER") is "0")
 	Sample.IsForwarded(("test", "a.strict", "native")) is false
+	Sample.IsForwarded(("run", "-c", "logger.Log(Process.Input)")) is false
 	let command = arguments.Length > 0 then arguments(0) else ""
-	let isLocal = ("native" is in arguments) or ("lines" is in arguments) or ("-" is in arguments)
+	let isInput = Scripted.IsCode(arguments) then "Process.Input" is in arguments(2) else false
+	let isLocal = ("native" is in arguments) or ("lines" is in arguments) or ("-" is in arguments) or isInput
 	let isOptedOut = Process.Variable("STRICT_SERVER") is "0"
 	let isServed = (command is in ("test", "check", "build", "run")) and (isLocal is false) and (isOptedOut is false)
 	(command is Resident.Stopping) or isServed
@@ -143,16 +145,16 @@ Greeted(socket Number) Boolean
 	ByteEncoder(Socket.Receive(socket, greeting.Length)).Spelled(0, greeting.Length) is greeting
 Streamed(socket Number) Number
 	Sample.Streamed(0) is Dropped
-	let exiting = Resident.Exiting
 	mutable code = -2
 	for as long as code is -2
 		let block = Server.Received(socket, "\n")
 		code = block.EndsWith("\n") then code else Dropped
-		for block.Split("\n")
-			let isExit = value.StartsWith(exiting)
-			if (isExit is false) and (index < block.Split("\n").Length - 1)
+		let lines = block.Split("\n")
+		for lines
+			let isExit = value.StartsWith(Resident.Exiting)
+			if (isExit is false) and (index < lines.Length - 1)
 				logger.Log(value)
-			code = isExit then value.Substring(exiting.Length, value.Length - exiting.Length) to Number else code
+			code = isExit then value.Replace(Resident.Exiting, "") to Number else code
 	code is Resident.Refused then Unserved else code
 Loopback(code Number) Number slow
 	let server = Socket.Local(0)

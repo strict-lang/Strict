@@ -18,8 +18,8 @@ constant TextMethods = ("StartsWith", "IndexOf", "LastIndexOf", "Substring", "Up
 Result(call Invocation) VmValue
 	(Shapes.Result(NewShape).items.First.number is 3) and (Shapes.Result(Invocation.Parsing).number is 5)
 	let name = call.MethodName
-	let foreign = Foreign(call, types, folder)
 	if name is "from"
+		let foreign = Foreign(call, types, folder)
 		return foreign.IsForeign(TypeOf(call.TypeName)) then foreign.Called else Constructed(call)
 	if name is in ("to", "Code")
 		return name is "to" then Converted(call.Instance, call.ReturnType) else VmValue.OfText(ValueCode(call.Instance).Code)

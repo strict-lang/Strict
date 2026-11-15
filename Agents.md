@@ -52,6 +52,44 @@ Strict compiles itself natively (`Strict.strict` builds the `strict` command `st
 - Commands for the user to run go into a Windows PowerShell 5.1 window: no `!` prefix, no `&&` (use `;`), no grep, xargs, sed, awk or heredocs (those only exist in the Bash tool). Use Where-Object/ForEach-Object.
 - Every type including Color should be able to call Any.strict methods like `to Text`; `to Text` should route through the Any-style text conversion rather than a wrong type-specific conversion.
 
+## Quick Scripting with Strict (`-c` and `run`)
+Default to Strict on the warm VM (~10 ms warm hit) instead of `python`, `python -c`, `sed`/`awk`, or ad-hoc PowerShell loops for file edits, find/replace, regex transforms, directory scans, and external CLI calls:
+- Inline snippet: `.\strict.exe -c '<code>' [args...]` (or `.\strict.exe run -c '<code>' [args...]`).
+- Multi-line / script file (larger transforms, helpers, same style as `-c`: no `Run` header or tests needed): `.\strict.exe run <file.strict> [args...]`.
+- Syntax rules in `-c` / script files: one statement per line (no `;` separator; use `\n` or PowerShell `@' ... '@`). Top-level statements wrap into `Run`, `logger` is injected when used, mentioning `arguments` adds `Run(arguments Texts)`, helper methods go at the bottom, and `for` with a body must be the last expression of a method or collect into `mutable` inside a helper.
+
+Cookbook (Windows PowerShell 5.1 quoting):
+- Exact-once find/replace in a file (check uniqueness with `Split(...).Length is 2`):
+```powershell
+.\strict.exe -c @'
+let path = "Compiler/Foo.strict"
+let text = Text.Combine(File(path).ReadLines, "\n")
+if text.Split("old").Length is not 2
+	return logger.Log("expected 1 match in " + path)
+File(path).Write(text.Replace("old", "new").Split("\n"))
+'@
+```
+- Regex search / extract / capture replace (`Regex` supports `IsMatch`, `Find`, `FindAll`, `Groups`, `Replace`, `Split`; escape `\d`/`\w`/`\s` as `\\d`/`\\w`/`\\s`):
+  `.\strict.exe -c 'logger.Log(Regex("(\\w+)=(\\w*)").Replace("a=1, b=2", "$2=$1"))'`
+- Files & directory globs / recursive walk:
+  `File(path).Exists`, `.ReadLines`, `.ReadBytes`, `.Write(lines)`, `.Rename(newPath)`, `.Delete`, `Directory.Create(path)`, `Directory.Files("Runtime", "*.strict")`. Recursive helper:
+```strict
+Walk(folder Text) Texts
+	mutable found = Directory.Files(folder, "*.strict")
+	for Directory.Directories(folder)
+		found = found + Walk(value)
+	found
+```
+- External process / env vars (`Process.RunTool` returns `ProcessResult` with `exitCode`, `Output`, `error`, `Succeeded`):
+```powershell
+.\strict.exe -c @'
+let res = Process.RunTool("git", "status -s")
+logger.Log((res.exitCode to Text) + ":" + res.Output.Trim)
+'@
+```
+- Piped stdin: `"hello" | .\strict.exe -c 'logger.Log(Process.Input)'` (`Process.Input` / `Process.InputLine`; `-c` auto-runs locally so stdin is not blocked by `strict serve`; for a `.strict` file reading stdin, set `$env:STRICT_SERVER = "0"`).
+- Fallback only when Strict cannot express the operation directly (e.g. arbitrary binary diffs or interactive/HTTP client downloads).
+
 ## Speed
 The language exists so a computer can check and discard generated code in seconds (README: "within seconds", "almost immediately"). Tool time is product time. A warm run that used to be sub-second and is now many seconds, or a check that used to be about 5 s and is now minutes, is a failed change. Stop, name the command and the times, fix the cause or write one line in `performance.md`. Do not finish the suite, do not average more runs, do not call that a pass.
 
