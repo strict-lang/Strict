@@ -19,7 +19,7 @@ Parsed List(RegexStep)
 	RegexParser("\\da").Parsed(1).Accepts(55)
 	RegexParser("^").Parsed(1).Kind is RegexStep.Begin
 	let part = Alternation(0, 0)
-	part.next < pattern.Length then InvalidPattern else part.Captured(0) + RegexStep(RegexStep.Match)
+	part.next < pattern.Length then InvalidPattern(pattern) else part.Captured(0) + RegexStep(RegexStep.Match)
 Alternation(start Number, groups Number) RegexPart
 	RegexParser("a|b").Alternation(0, 0).steps.Length is 4
 	RegexParser("a|b|c").Alternation(0, 0).steps.Length is 7
