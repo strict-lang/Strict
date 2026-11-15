@@ -2267,6 +2267,7 @@
   llvm.mlir.global internal constant @strict_gc_out_of_memory_what("\71\00\00\00\00\00\00\00\71\00\00\00\00\00\00\00Error: OutOfMemory, the program needed more memory than the system could give: %s of %lld MB with a %lld MB heap\0A\00") : !llvm.array<130 x i8>
   llvm.mlir.global internal constant @strict_gc_commit_name("\08\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00a commit\00") : !llvm.array<25 x i8>
   llvm.mlir.global internal constant @strict_gc_malloc_name("\1E\00\00\00\00\00\00\00\1E\00\00\00\00\00\00\00an allocation outside the heap\00") : !llvm.array<47 x i8>
+  llvm.mlir.global internal constant @strict_gc_huge_name("\18\00\00\00\00\00\00\00\18\00\00\00\00\00\00\00one allocation over 1 TB\00") : !llvm.array<41 x i8>
   llvm.mlir.global internal constant @strict_gc_pages_name("\22\00\00\00\00\00\00\00\22\00\00\00\00\00\00\00heap pages after a full collection\00") : !llvm.array<51 x i8>
   // OutOfMemory naming what the system did not give (what, bytes) and the heap the program had
   func.func private @strict_gc_fail_bytes(%what: !llvm.ptr, %bytes: i64) {
@@ -4675,6 +4676,16 @@
     %hasTail = arith.cmpi ult, %list, %size : i64
     %listClear = arith.select %hasTail, %zero, %list : i64
     %clearBytes = arith.select %isTailed, %listClear, %size : i64
+    // more than 1 TB is a wrong size (a count read from a file, a bad length), it fails at once with the stack
+    %terabyte = arith.constant 1099511627776 : i64
+    %isHuge = arith.cmpi ugt, %size, %terabyte : i64
+    cf.cond_br %isHuge, ^huge, ^sized
+  ^huge:
+    %hugeLengths = llvm.mlir.addressof @strict_gc_huge_name : !llvm.ptr
+    %hugeName = llvm.getelementptr %hugeLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    func.call @strict_gc_fail_bytes(%hugeName, %size) : (!llvm.ptr, i64) -> ()
+    cf.br ^sized
+  ^sized:
     %filledSlot = llvm.mlir.addressof @strict_gc_filled : !llvm.ptr
     %filled = llvm.load %filledSlot : !llvm.ptr -> i64
     llvm.store %zero, %filledSlot : i64, !llvm.ptr
