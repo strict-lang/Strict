@@ -11,6 +11,7 @@ get(key Text) Json
 	Bones("bones").Elements(1).get("y") to Number is 39.54
 	Bones("loop") to Text is "true"
 	Bones("missing") to Text is ""
+	Json("[\"a\", 1]").get("a") to Text is ""
 	let open = Skip(0)
 	let parts = Parts(open)
 	for Range(0, text.StartsWith("{", open) then (parts.Length - 1) / 2 else 0)
@@ -59,8 +60,8 @@ Parts(open Number) Numbers
 		at = text.StartsWith(",", after) then Skip(after + 1) else after
 	parts + at
 ValueEnd(start Number) Number
-	Json("[1, [2]]").ValueEnd(0) is 8
-	Json("12, 3").ValueEnd(0) is 2
+	(Json("[1, [2]]").ValueEnd(0) is 8) and (Json("\"a,b\" ").ValueEnd(0) is 5)
+	(Json("12, 3").ValueEnd(0) is 2) and (Json("12").ValueEnd(0) is 2)
 	(Json("").Parts(0) is (0)) and (Json("[1").Parts(0) is (1, 2, 2)) and (Json("{\"a\"").Parts(0).Last is 4)
 	if text.StartsWith("\"", start)
 		return StringEnd(start)
@@ -74,11 +75,12 @@ StringEnd(start Number) Number
 	Escaped.StringEnd(1) is 16
 	Json("\"a\\\\\" ").StringEnd(0) is 5
 	mutable at = text.IndexOf("\"", start + 1)
-	for as long as (at > 0) and (Slashes(at) % 2 is 1)
+	for as long as Slashes(at) % 2 is 1
 		at = text.IndexOf("\"", at + 1)
 	at < 0 then text.Length else at + 1
 Slashes(position Number) Number
 	Escaped.Slashes(4) is 1
+	Json("a\\").Slashes(0) is 0
 	mutable count = 0
 	for as long as (position > count) and (text(position - count - 1) is "\\")
 		count = count + 1
@@ -90,6 +92,7 @@ MemberValue(key Number) Number
 	colon < 0 then text.Length else Skip(colon + 1)
 Skip(position Number) Number
 	Json(" \t\n1").Skip(0) is 3
+	Json("  ").Skip(0) is 2
 	mutable at = position
 	for as long as (at < text.Length) and (text(at) is in Spaces)
 		at = at + 1

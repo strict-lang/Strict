@@ -8,7 +8,14 @@ constant Reporting = TracedFrame(Frame(Frame.Doubling, MethodEntry(TestCodegen.R
 constant Pairs = TracedFrame(Frame(Machine.Pairing, Frame.Twice.method, "Strict/Pair"))
 constant Printed = InstructionEntry(InstructionType.Print, "a", List(Number), 4)
 constant Same = TracedFrame(Frame(Frame.Doubling, MethodEntry("Twice", List(MemberEntry), "None", (Printed, Printed, InstructionEntry(InstructionType.JumpEnd, List(Text), List(Number), 3), Printed)), "A"))
-constant Ending = TracedFrame(Frame(Frame.Doubling, MethodEntry("Twice", List(MemberEntry), "Strict/Number", (Used, InstructionEntry(InstructionType.LoopEnd, List(Text), List(Number) + 2, 4))), "Strict/Doubler"))
+constant Loading = InstructionEntry(InstructionType.LoadConstantToRegister, List(Text), (0, 0), 5, 1)
+constant Repeated = InstructionEntry(InstructionType.LoopEnd, List(Text), List(Number) + 2, 4)
+constant Unlined = InstructionEntry(InstructionType.LoopEnd, List(Text), List(Number) + 2)
+constant Checked = InstructionEntry(InstructionType.CheckError, List(Text), (0, 0), 6, 1)
+constant Branched = InstructionEntry(InstructionType.JumpToIdIfFalse, List(Text), (0, 0), 7, 1)
+constant Ending = TracedFrame(Frame(Frame.Doubling, MethodEntry("Twice", List(MemberEntry), "Strict/Number", (Loading, Repeated, Unlined, Checked, Branched)), "Strict/Doubler"))
+constant Sevens = TracedFrame(Frame(Machine(List(TypeEntry) + TypeEntry("Strict/Seven", List(MemberEntry) + MemberEntry.SevenMember, List(MethodEntry))), Frame.Twice.method, "Strict/Seven"))
+constant Stopped = (VmValue.None, VmValue.None, VmValue.None, VmValue.None, VmValue.None)
 constant Seven = VmValue.OfNumber(7)
 constant Letters = "abcdefghijklmnopqrstuvwxyz"
 constant Started = (VmValue.None, VmValue.None, VmValue.None, VmValue.None, Looping.Begun(VmValue.None, VmValue.OfNumber(3), VmValue.None, 2))
@@ -43,6 +50,9 @@ Logged(position Number, slots List(VmValue))
 Logs(position Number, slots List(VmValue)) Texts
 	Lined.Logs(4, Frame.Listed).Length is 0 and (Lined.Logs(0, Frame.Listed).Length is 2)
 	Lined.Logs(2, Started).Length is 2
+	Ending.Logs(0, Frame.Listed).Last is "$Result Strict/Doubler|5|\"a\""
+	Ending.Logs(3, Frame.Listed).Last is "$Result Strict/Doubler|6|\"ab\""
+	Ending.Logs(4, Frame.Listed).Last is "$Result Strict/Doubler|7|true"
 	if frame.method.Name is TestCodegen.Runner
 		return List(Text)
 	let entry = frame.method.instructions(position)
@@ -100,6 +110,7 @@ Iteration(position Number, slots List(VmValue)) Texts
 	Lined.Iteration(3, Started).Length is 0
 	Lined.Iteration(2, Started).Last is "$Set Strict/Doubler|4|for|0"
 	Ending.Iteration(1, Started).Length is 2
+	Ending.Iteration(2, Started).Length is 0 and (Lined.Iteration(2, Stopped).Length is 0)
 	let entry = frame.method.instructions(position)
 	let begin = entry.kind is InstructionType.LoopBegin then position else entry.payload.Last
 	let state = slots(Frame.LoopSlot)
@@ -131,6 +142,8 @@ Members(record VmValue, isChanged Boolean) Texts
 	Pairs.Members(VmValue("Strict/Pair", 0, "", List(VmValue) + VmValue.None), true).Length is 0
 	Pairs.Members(VmValue("Strict/Pair", 0, "", (VmValue.None, VmValue.OfNumber(0))), false) is ("b = 0")
 	Pairs.Members(VmValue("Strict/Pair", 0, "", (VmValue.None, VmValue.OfNumber(0))), true).Length is 0
+	Pairs.Members(VmValue("Strict/Pair", 0, "", (VmValue.None, VmValue.OfNumber(2))), true) is ("b = 2")
+	Sevens.Members(VmValue("Strict/Seven", 0, "", List(VmValue) + VmValue.OfNumber(8)), true).Length is 0
 	let natives = Natives(frame.machine.types)
 	for natives.TypeOf(record.kind).members
 		let item = index < record.items.Length then record.items(index) else VmValue.None

@@ -37,6 +37,7 @@ Escape(position Number) Text
 IsPair(position Number) Boolean
 	Escaped.IsPair(17)
 	Escaped.IsPair(11) is false
+	JsonText("\\ud800\\udc00").IsPair(1) and (JsonText("\\udc00\\udc00").IsPair(1) is false)
 	let high = Hex(position + 1)
 	(high >= HighSurrogate) and (high < LowSurrogate) and raw.StartsWith("\\u", position + 5)
 Hex(position Number) Number

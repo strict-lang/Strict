@@ -31,7 +31,7 @@ IsPlainCall(code Text, methods Scope) Boolean
 	(Plain.IsPlainCall("Label(97).IsShown", NoMethods) or Plain.IsPlainCall("A(1) is A(1)", NoMethods)) is false
 	(Plain.IsPlainCall("A(1) < A(2)", NoMethods) or Plain.IsPlainCall("A(1) > A(2)", NoMethods)) is false
 	(Plain.IsPlainCall("Label", NoMethods) or Plain.IsPlainCall("A.B(1)", NoMethods)) is false
-	Plain.IsPlainCall("A(1) + 2", NoMethods) is false
+	(Plain.IsPlainCall("A(1) + 2", NoMethods) or Plain.IsPlainCall("A(1).B(2)", NoMethods)) is false
 	let tokens = Tokenizer(code).Tokens
 	let isCompared = (" is " is in code) or (" < " is in code) or (" > " is in code) or (")." is in code)
 	if isCompared or (tokens.Length < 3) or (tokens(1) is not "(") or (tokens.Last is not ")")

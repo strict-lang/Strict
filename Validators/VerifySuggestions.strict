@@ -70,6 +70,7 @@ CheckedCase(folder Text, root Text, name Text, method Text, lines Texts, expecte
 	logger.Log(name + "." + method + ": " + (bodies to Text) + " (" + elapsed + " ms)")
 Bodies(output Text) Texts
 	Bodies("Suggestion: a\nSuggestion: b") is ("a", "b")
+	Bodies("x\nSuggestion: a") is ("a")
 	for output.Lines
 		if value.StartsWith(Prefix)
 			value.Substring(Prefix.Length, value.Length - Prefix.Length)
@@ -77,6 +78,8 @@ HasBlocked(bodies Texts) Boolean
 	HasBlocked(List(Text) + "number")
 	HasBlocked(List(Text) + "Bogus.Pi")
 	HasBlocked(List(Text) + "number + number") is false
+	HasBlocked(List(Text) + "Number.Epsilon") and HasBlocked(List(Text) + "Number.Pi")
+	HasBlocked(List(Text) + "Bogus.Zero")
 	for bodies
 		let bad = (".Epsilon" is in value) or (".Pi" is in value)
 		if (value is in ("number", "celsius", "minimum", "maximum")) or ("Bogus." is in value) or bad
@@ -85,6 +88,7 @@ HasBlocked(bodies Texts) Boolean
 OnlyPrefix(output Text) Boolean
 	OnlyPrefix("Suggestion: a\nSuggestion: b")
 	OnlyPrefix("bad") is false
+	OnlyPrefix("Suggestion: a\n\nSuggestion: b")
 	for output.Lines
 		if (value is not "") and (value.StartsWith("Suggestion: ") is false)
 			return false

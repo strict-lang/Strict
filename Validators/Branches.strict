@@ -38,6 +38,7 @@ Issue(branch Text, at Number) ValidationIssue
 Repeated(at Number) List(ValidationIssue)
 	Doubled.Repeated(1).Length is 1
 	Doubled.Repeated(0).Length is 0
+	Branches(List(Text) + "\tb 1 else 1").Repeated(0).Length is 0
 	Branches(List(Text) + "constant One = a then 1 else 1").Issues.Length is 1
 	let tokens = Tokenizer(lines(at).Trim).Tokens
 	for tokens

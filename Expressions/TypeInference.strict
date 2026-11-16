@@ -47,6 +47,8 @@ ConstructedType(node SyntaxNode) Text
 	Scaling.MemberCallType(SyntaxParser(Tokenizer("p.x(1)").Tokens).Parse, Paired, NoShape) is "Unknown"
 	Scaling.TypeOf(SyntaxParser(Tokenizer("p.x").Tokens).Parse, Paired, NoShape) is "y"
 	NoInference.ConstructedType(SyntaxNode("Identifier", "Mutable", NoNode)) is "Mutable"
+	TypeInference(KnownTypes.Sample, Limits).IsIndexed("Other", KnownTypes.CountMethods.Owned("Count")) is false
+	TypeInference(KnownTypes.Sample, (Limits(0))).IsIndexed("Limit", KnownTypes.CountMethods.Owned("Text")) is false
 	NoInference.ConstructedType(SyntaxNode("Call", "List", NoNode)) is "List"
 	NoInference.OperatorType(SyntaxNode("Negate", "", (SyntaxNode("Number", "1"), NoNode)), NoShape, NoShape) is "Number"
 	NoInference.OperatorType(SyntaxNode("Missing", "", NoNode), NoShape, NoShape) is "Unknown"
@@ -134,6 +136,7 @@ ImplicitValueType(name Text, scope Scope) Text
 OperatorType(node SyntaxNode, scope Scope, current Scope) Text
 	NoInference.OperatorType(SyntaxNode("Not", ""), NoShape, NoShape) is "Boolean"
 	NoInference.OperatorType(Pairs.children(0), NoShape, NoShape) is "List(Number, Text)"
+	TypeInference(KnownTypes.Sample, (NoShape, Limits(0))).IsIndexed("Limit", KnownTypes.CountMethods.Owned("Text"))
 	if node.Kind is "Not"
 		return "Boolean"
 	if node.Kind is "Binary"
@@ -206,12 +209,14 @@ Assigned(target Text, assigned Text) Text
 	Colors.Assigned("Color", "ColorValue") is "Color"
 	Colors.Assigned("Number", "Number") is "Number"
 	NoInference.CallType("X", NoShape, Scope(("X"), ("Texts"))) is "Texts"
+	TypeInference(KnownTypes.Sample, List(Scope)).Enumerated("Text").Length is 0
 	Converter(assigned, target) is "" then assigned else target
 Enumerated(typeName Text) Texts
 	TypeInference(KnownTypes.Sample, Limits).Enumerated("Text") is ("x", "z")
 	TypeInference(KnownTypes.Sample, Limits).Enumerated("Count").Length is 0
 	NoInference.Enumerated("Missing").Length is 0
 	NoInference.IdentifierType("x", Scope(("x", "y"), ("Number", "Text")), NoShape) is "Number"
+	NoInference.ImplicitValueType("Key", Scope(("value", "outer"), ("List(Text, Number)", "A"))) is "Text"
 	let position = types.Index(typeName)
 	if (position < 0) or (position >= constants.Length) or (types.MembersOf(typeName).names.Length > 0)
 		return List(Text)

@@ -37,7 +37,8 @@ constant CountNamed = Counted.With("Count", "Count")
 constant NoScopes = (KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers)
 constant OddMembers = (Scope(List(Text) + "code", List(Text) + "Number"), KnownTypes.NoMembers, Scope(List(Text) + "text", List(Text) + "Text"), Scope(("first", "second"), ("Number", "Generic")))
 constant Odd = ArgumentTypes(TypeInference(KnownTypes(("Character", "Empty", "Word", "Pair"), OddMembers, NoScopes, NoScopes), Shapes))
-constant AreaCall = SyntaxNode("MethodCall", "Area", (SyntaxNode("Identifier", "area")))
+constant ListMembers = (Scope(List(Text) + "elements", List(Text) + "Generics"), Scope(List(Text) + "number", List(Text) + "Number"))
+constant Listing = ArgumentTypes(TypeInference(KnownTypes(("List", "Count"), ListMembers, KnownTypes.NoMemberPair, KnownTypes.NoMemberPair), Shapes))
 Checked(node SyntaxNode, scope Scope, current Scope) Text
 	Sizing.Checked(Grown, Counted, Counted).StartsWith("ArgumentTypeMismatch")
 	Sizing.Checked(Listed, Counted, Counted).StartsWith("LogicalOperandIsAList")
@@ -196,6 +197,8 @@ Mismatched(arguments Texts, types Texts) Number
 	Sizing.Mismatched(List(Text) + "Area", List(Text) + "Area") is -1
 	Sizing.Mismatched(("Text", "Text"), ("Sizes", "Text")) is 0
 	Sizing.Mismatched(("Text", "Text"), ("Texts", "Text")) is -1
+	(Listing.Mismatch("Count", "Counts") is false) and (Listing.IsBaseMismatch("Text", "Texts") is false)
+	Scaling.Issue(SyntaxNode("MethodCall", "Scaled", (Overloads.Rescaled.children(0))), Scalers, Scalers) is ""
 	for arguments
 		if (index < types.Length) and (Mismatch(value, types(index)) or IsWrongElement(value, types(index)))
 			return index
@@ -258,6 +261,6 @@ IsScalar(type Text) Boolean
 	Sizing.IsBaseMismatch("Count", "Area") is false
 	Sizing.IsBaseMismatch("Text", "Area")
 	Odd.TooMany(Made, "Pair", List(Text) + "Number") is ""
-	Sizing.Issue(AreaCall, Counted, Counted).StartsWith("Copy") is false
+	Sizing.Issue(SyntaxNode("MethodCall", "Area", Copies(0).children), Counted, Counted).StartsWith("Copy") is false
 	Sizing.Copied(SyntaxParser(Tokenizer("Area(area)").Tokens).Parse, Counted, Counted).Split(" ")(2) is "copies"
 	type is in ("Boolean", "Number", "Text")
