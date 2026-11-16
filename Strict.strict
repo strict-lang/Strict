@@ -24,11 +24,7 @@ constant LongTrace = "Error: A\n\t1\n\t2\n\t3\n\t4\n\t5\n\t6\n\tat Strict.Logged
 Run(arguments Texts) Number
 	let resident = Resident(Path(Process.Current.executable).PathOnly.text)
 	let command = arguments.Length > 0 then arguments(0) else ""
-	if command is "coordinator"
-		mutable coordinator = Coordinator(logger)
-		coordinator.Served
-		return 0
-	if command is in ("serve", "linked", "status")
+	if command is in ("coordinator", "serve", "linked", "status")
 		Hosted(command, arguments, resident)
 		return 0
 	let rebuilt = SelfBuild(logger, resident.root, Process.Current.executable).Rebuilt(arguments)
@@ -38,6 +34,9 @@ Run(arguments Texts) Number
 	let forwarded = Forwarding(logger, resident.root).Forwarded(passed)
 	forwarded is Forwarding.Ended then 1 else forwarded is Error then Logged(passed).code else forwarded
 Hosted(command Text, arguments Texts, resident Resident) slow
+	if command is "coordinator"
+		mutable coordinator = Coordinator(logger)
+		return coordinator.Served
 	if command is "serve"
 		return Served(arguments.Length > 1 then Resident(resident.root, arguments(1)) else resident)
 	if command is "status"
@@ -49,13 +48,12 @@ Served(resident Resident) slow
 	if server is Error
 		return server
 	let built = File(Process.Current.executable).Modified
-	let variables = Resident.Variables
 	mutable socket = resident.Accepted(server, built)
 	mutable answer = Answer(0, Dictionary(Text, TypeEntry))
 	for as long as socket is not Error
 		let request = resident.Requested(socket)
 		let arguments = resident.Arguments(request)
-		answer = Replied(resident, request, socket, arguments, variables, answer)
+		answer = Replied(resident, request, socket, arguments, Resident.Variables, answer)
 		socket = arguments is (Resident.Stopping) then Resident.Unaccepted else resident.Accepted(server, built)
 	resident.Closed(server)
 Replied(resident Resident, request Text, socket Number, arguments Texts, variables Text, last Answer) Answer slow
@@ -81,8 +79,7 @@ Answered(resident Resident, request Text, socket Number, arguments Texts, last A
 		Directory.Change(home)
 	isCode then answer else Answer(answer, folder = folder).Carried(last)
 Logged(arguments Texts, last = Answer(0, Dictionary(Text, TypeEntry))) Answer slow
-	let isCode = Scripted.IsRun(arguments)
-	let answer = isCode then Coded(arguments, last) else Ran(arguments, last.known)
+	let answer = Scripted.IsRun(arguments) then Coded(arguments, last) else Ran(arguments, last.known)
 	if answer is Error
 		logger.Log(Shortened(answer to Text))
 		return Answer(1, last.known, last.folder, last.stamps, last.files, last.Types, last.script)
@@ -95,7 +92,7 @@ Coded(arguments Texts, last Answer) Answer slow
 	if File(path).Exists is false
 		logger.Log(given + " not found")
 		return Answer(2, last.known, last.folder, last.stamps, last.files, last.Types, last.script)
-	Scripted(logger, Text.Combine(File(path).ReadLines, "\n")).RanWith(arguments, TypeSource.Root, last, path)
+	Scripted(logger, File(path).ReadText).RanWith(arguments, TypeSource.Root, last, path)
 Shortened(trace Text) Text
 	Strict.Shortened("Error: A\n\t1") is "Error: A\n\t1"
 	Strict.Shortened(LongTrace) is "Error: A\n\t1\n\t2\n\t... (skipped 1 lines)\n\t4\n\t5\n\t6"
@@ -110,8 +107,7 @@ Ran(arguments Texts, known = Dictionary(Text, TypeEntry)) Answer slow
 	let head = arguments.Length > 0 then arguments(0) else "help"
 	let given = head is in Informing then List(Text) + head else Projected(Mained(arguments))
 	let command = given.Length > 0 then given(0) else "help"
-	let rooted = Rooted(command is in Commands then Rest(given) else given)
-	let rest = "full" is in rooted then Cleaned(command, rooted) else rooted
+	let rest = Cleaned(command, Rooted(command is in Commands then Rest(given) else given))
 	let message = Message(command, rest)
 	if message is not ""
 		logger.Log(message)
@@ -122,6 +118,8 @@ Ran(arguments Texts, known = Dictionary(Text, TypeEntry)) Answer slow
 Cleaned(command Text, rest Texts) Texts slow
 	Strict(Logger).Cleaned("build", ("Compiler/output/Clean/A.strict", ".", "full")).Last is "."
 	Strict(Logger).Cleaned("test", ("Compiler/output/Clean", ".", "full")).Last is "full"
+	if "full" is not in rest
+		return rest
 	let folder = Directory.Exists(rest(0)) then rest(0) else Path(rest(0)).PathOnly.text
 	let target = folder is "" then "." else folder
 	logger.Log("Removed " + Folders(logger).Cleaned(target) + " files in the obj folders of " + target)

@@ -37,7 +37,7 @@ Zlib Numbers slow
 	Inflate.Part(Deflate(Repeated).Zlib, 0, 2) is (120, 1)
 	(List(Number) + ZlibHeader + 1) + Packed(Codes) + Adler
 Codes Numbers
-	(Deflate(Repeated).Codes.Length < 24) and (Deflate(Repeated).Codes is RepeatedCodes)
+	Deflate(Repeated).Codes is RepeatedCodes
 	mutable codes = List(Mutable(Number)) + 3 + 3
 	mutable heads = Heads
 	mutable position = 0

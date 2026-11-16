@@ -23,7 +23,7 @@ Run(arguments Texts) Number
 	let result = Checked(folder, "native" is in arguments)
 	Directory.Delete(folder)
 	result is Error then result else 0
-Checked(folder Text, isNative Boolean)
+Checked(folder Text, isNative Boolean) slow
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
 	File(folder + "/Server.strict").Write(ServerLines)
