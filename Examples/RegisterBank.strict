@@ -9,6 +9,7 @@ has RTwo Number
 	RegisterBank(RZero - other.RZero, ROne - other.ROne, RTwo - other.RTwo)
 *(other RegisterBank) RegisterBank
 	RegisterBank(0, 1, 2) * RegisterBank(1, 2, 3) is RegisterBank(0, 2, 6)
+	RegisterBank(2, 1, 1) * RegisterBank(4, 1, 1) is RegisterBank(8, 1, 1)
 	RegisterBank(RZero * other.RZero, ROne * other.ROne, RTwo * other.RTwo)
 /(other RegisterBank) RegisterBank
 	RegisterBank(5, 5, 5) / RegisterBank(5, 5, 5) is RegisterBank(1, 1, 1)

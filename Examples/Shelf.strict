@@ -6,7 +6,7 @@ Label Text
 	Shelf(4).Label is "Names"
 	labeled.label
 Counted(others List(Labeled) = List(Labeled)) Number
-	Shelf(4).Counted is 4
+	Shelf(4).Counted is 4 and Shelf(4, Labeled, List(Labeled) + Labeled).Counted is 5
 	Shelf(4).Counted(List(Labeled) + Labeled) is 5
 	count + others.Length + shelf.Length
 Brief Text

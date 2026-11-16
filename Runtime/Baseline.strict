@@ -10,7 +10,7 @@ constant Rolling = TypeEntry(Machine.Doubler, methods = (Mutants.Lined, MethodEn
 Kept(types List(TypeEntry)) List(KeptMethod)
 	Baseline(Mutants.Sample).Kept(Mutants.Doubled).Length is 0
 	Libraries.Kept(Mutants.Doubled).Length is 0
-	let methods = IsBase or IsEmitter or IsMachine then List(MethodEntry) else Picked(Usable(types))
+	let methods = IsBase or IsInternal then List(MethodEntry) else Picked(Usable(types))
 	let tested = mutants.Tested(types, mutants.Runner(types.First), methods)
 	for methods
 		let kept = Checked(tested, value, TestCodegen.Runner + index)
@@ -105,22 +105,15 @@ IsBase Boolean
 	Baseline(Mutants(Logger, "Math/Size.strict")).IsBase is false
 	let folder = Path(mutants.path).PathOnly.text
 	File((folder is "" then "." else folder) + "/Strict.strict").Exists
-IsEmitter Boolean
-	Baseline(Mutants(Logger, "Compiler/MlirCalls.strict")).IsEmitter
-	Baseline(Mutants(Logger, ".\\Compiler\\MlirLists.strict")).IsEmitter
-	Baseline(Mutants(Logger, "Compiler/NativeBuild.strict")).IsEmitter is false
-	Baseline(Mutants(Logger, "Math/MlirLike.strict")).IsEmitter is false
-	let folder = Path(Path(mutants.path).PathOnly.text).FileName.text
-	folder is "Compiler" and Path(mutants.path).FileName.text.StartsWith("Mlir")
-IsMachine Boolean
-	Baseline(Mutants(Logger, "Runtime/Natives.strict")).IsMachine
-	Baseline(Mutants(Logger, ".\\Runtime\\Machine.strict")).IsMachine
-	Baseline(Mutants(Logger, "Runtime/Rounding.strict")).IsMachine
-	Baseline(Mutants(Logger, "Runtime/Frame.strict")).IsMachine is false
-	Baseline(Mutants(Logger, "Math/Machine.strict")).IsMachine is false
-	let folder = Path(Path(mutants.path).PathOnly.text).FileName.text
-	let file = Path(mutants.path).FileName.text
-	folder is "Runtime" and file is in ("Natives.strict", "Machine.strict", "Rounding.strict")
+IsInternal Boolean
+	Baseline(Mutants(Logger, "Compiler/NativeBuild.strict")).IsInternal
+	Baseline(Mutants(Logger, ".\\Bytecode\\BinaryNames.strict")).IsInternal
+	Baseline(Mutants(Logger, "Expressions/Tokenizer.strict")).IsInternal is false
+	Baseline(Mutants(Logger, "Math/MlirLike.strict")).IsInternal is false
+	Baseline(Mutants(Logger, "Probe/MatrixSpeed.strict")).IsInternal
+	Baseline(Mutants(Logger, ".\\Runtime\\Frame.strict")).IsInternal
+	Baseline(Mutants(Logger, "Math/Machine.strict")).IsInternal is false
+	Path(Path(mutants.path).PathOnly.text).FileName.text is in ("Compiler", "Bytecode", "Runtime", "Probe")
 Reason(started Machine, runner Text, limit Number) Text
 	Baseline(Mutants.Sample).Reason(Machine.Hello, TestCodegen.Runner, 1) is ""
 	Baseline(Mutants.Sample).Reason(Frame.Doubling, "Missing", 0) is "its tests fail or take over 0s"

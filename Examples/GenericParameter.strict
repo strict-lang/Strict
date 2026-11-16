@@ -1,6 +1,7 @@
 has number
 Scored(model Generic) Number
 	GenericParameter(1).Scored(Size(2, 3)) is 6
+	GenericParameter(2).Scored(Size(2, 3)) is 12
 	model.Area * number
 Scored(model Generic, scale Number) Number
 	GenericParameter(1).Scored(Size(2, 3), 2) is 12

@@ -22,10 +22,10 @@ Grown(rows List(Numbers), depth Number, picked Number) DecisionTree
 	let left = Node(split).Grown(Side(rows, split, true), depth - 1, picked)
 	left.Grown(Side(rows, split, false), depth - 1, picked).Linked(position, left.features.Length)
 Leaf(label Number) DecisionTree
-	Empty.Leaf(1).labels is (1)
+	Empty.Leaf(1) is DecisionTree((-1), (0), (-1), (1))
 	DecisionTree(features + -1, thresholds + 0, rights + -1, labels + label)
 Node(split Numbers) DecisionTree
-	Empty.Node((0, 1)).thresholds is (1)
+	Empty.Node((0, 1)) is DecisionTree((0), (1), (-1), (-1))
 	DecisionTree(features + split(0), thresholds + split(1), rights + -1, labels + -1)
 Linked(position Number, right Number) DecisionTree
 	Empty.Node((0, 1)).Linked(0, 2).rights is (2)
@@ -97,8 +97,8 @@ Kinds(rows List(Numbers)) Numbers
 	for rows
 		value.Last
 Classified(sample Numbers) Number
-	Stump.Classified((5, 4)) is 1
-	Stump.Classified((0.5, 0)) is 0
+	(Stump.Classified((5, 4)) is 1) and (Stump.Classified((5, 0)) is 1)
+	(Stump.Classified((0.5, 0)) is 0) and (Stump.Classified((1, 0)) is 0)
 	mutable position = 0
 	for features.Length
 		if labels(position) >= 0

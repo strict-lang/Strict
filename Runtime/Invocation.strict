@@ -7,6 +7,7 @@ constant MaxDepth = 20000
 constant MaxSteps = 1000000000000000
 constant FirstTraces = 40
 constant LastTraces = 10
+constant Traces = VmValue.SmallNumbers.Slice(0, 50)
 constant AddCall = Invocation(InstructionEntry.Invoke(2, ("T", "Add", "Strict/Number", "x"), 0, 1), List(VmValue) + VmValue.OfNumber(3), VmValue.OfNumber(4))
 constant Parsing = Invocation(InstructionEntry.Invoke(1, ("Strict/Text", "to", "Strict/Number"), List(Number), 0), List(VmValue), VmValue.OfText("5"))
 constant Uppered = Invocation(InstructionEntry.Invoke(1, ("Strict/Text", "Upper", "Strict/Text"), List(Number), 0), List(VmValue), VmValue.OfText("ab"))
@@ -81,6 +82,10 @@ IsWrapping(type TypeEntry) Boolean
 	MethodName is "from" and type.Changing.Length is 1 and Count is 1
 Kept(traces List(VmValue), trace VmValue) List(VmValue)
 	AddCall.Kept(List(VmValue), VmValue.None).Length is 1
+	AddCall.Kept(Traces, VmValue.None).Length is 51 and (AddCall.Kept(Traces.Slice(0, 49), VmValue.None).Length is 50)
+	AddCall.Kept(Traces, VmValue.None)(40).kind is "Strict/Stacktrace"
+	AddCall.Kept(Traces, VmValue.None)(40).items(0).text is "..."
+	AddCall.Kept(AddCall.Kept(Traces, VmValue.None), VmValue.None)(40).items(2).number is 2
 	let last = LastTraces - 1
 	if traces.Length < FirstTraces + LastTraces
 		return traces + trace

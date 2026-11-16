@@ -4,6 +4,8 @@ Calculate(operation Text) Number
 	ArithmeticFunction(10, 5).Calculate("add") is 15
 	ArithmeticFunction(10, 5).Calculate("subtract") is 5
 	ArithmeticFunction(10, 5).Calculate("multiply") is 50
+	ArithmeticFunction(10, 5).Calculate("divide") is 2
+	ArithmeticFunction(10, 5).Calculate("mod") is Error
 	if operation is
 		"add" then first + second
 		"subtract" then first - second

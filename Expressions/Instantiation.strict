@@ -9,6 +9,7 @@ constant Boxed = KnownTypes(("Box", "Meter", "Number", "Any"), BoxMembers, BoxMe
 constant Inferring = TypeInference(Couples, (KnownTypes.NoMembers, KnownTypes.NoMembers))
 constant Swapping = TypeShape("has first Generic", "has second Generic", "Swapped Couple", "\tCouple(second, first)")
 constant Mixed = SyntaxParser(Tokenizer("Couple(\"a\", 2)").Tokens).Parse
+constant Boxing = SyntaxParser(Tokenizer("Box(\"a\", 1, 2)").Tokens).Parse
 Name(node SyntaxNode, inference TypeInference, scope Scope, current Scope) Text
 	Pairing.Name(Mixed, Inferring, KnownTypes.NoMembers, KnownTypes.NoMembers) is "Couple(Text, Number)"
 	Pairing.Name(SyntaxNode("Call", "Text"), Inferring, KnownTypes.NoMembers, KnownTypes.NoMembers) is ""
@@ -23,14 +24,9 @@ Name(node SyntaxNode, inference TypeInference, scope Scope, current Scope) Text
 			arguments.Add(inference.TypeOf(node.children(index), scope, current))
 	arguments.Length is 0 then "" else node.text + "(" + Text.Combine(arguments, ", ") + ")"
 ConstructorTypes(node SyntaxNode) Texts
-	Pairing.Filled("Strict/List(Number)", "Dictionary(Text, Generic)") is "Dictionary(Text, Number)"
-	Pairing.Filled("Strict/List(Number)", "Couple(Text, Generic, Number)") is "Couple(Text, Number, Number)"
-	Pairing.Filled("Strict/Number", "List(Generic)") is "List(Generic)"
 	Pairing.Argument("Couple(Text, Number)", "missing") is "Unknown"
 	Pairing.Position("Couple(Text, Number)", "first") is 0
 	Pairing.IsGeneric("Generics") and Pairing.IsGeneric("Text") is false
-	Pairing.Template(TypeShape("has first Text", "Swapped Couple", "	Couple(first)"), 1, "Couple") is ""
-	Pairing.Template(TypeShape("has first Generic", "Swapped Couple", "	first"), 1, "Couple") is ""
 	let explicit = types.ParametersOf(node.text, "from types", node.children.Length)
 	explicit.Length is node.children.Length then explicit else types.MembersOf(node.text).types
 Argument(instanceType Text, name Text) Text
@@ -41,7 +37,7 @@ Argument(instanceType Text, name Text) Text
 	let arguments = Arguments(instanceType)
 	let base = types.BaseName(instanceType)
 	if arguments.Length is 0 or base is in ("List", "Dictionary", "Iterator")
-		return base is "List" and arguments.Length is 1 then arguments(0) else types.ElementType(instanceType)
+		return arguments.Length is 1 then arguments(0) else types.ElementType(instanceType)
 	let position = Position(instanceType, name)
 	position >= 0 and position < arguments.Length then arguments(position) else "Unknown"
 Position(instanceType Text, name Text) Number
@@ -58,6 +54,7 @@ Arguments(instanceType Text) Texts
 	Pairing.Arguments("Couple(Text, Number)") is ("Text", "Number")
 	Pairing.Arguments("Couple(List(Text, Number), Number)") is ("List(Text, Number)", "Number")
 	Pairing.Arguments("Couple").Length is 0
+	Instantiation(Boxed).Name(Boxing, Inferring, KnownTypes.NoMembers, KnownTypes.NoMembers) is "Box(Text, Number)"
 	if instanceType.IndexOf("(") < 0
 		return List(Text)
 	for SyntaxParser(Tokenizer(instanceType).Tokens).Parse.children
@@ -78,6 +75,9 @@ Members(typeName Text, members Scope) Scope
 IsGeneric(type Text) Boolean
 	Pairing.IsGeneric("Generic") and Pairing.IsGeneric("Couple") is false
 	Instantiation(KnownTypes(("S"), Couples.members, Couples.methods, (Scope((" trait"), ("true"))))).IsGeneric("S")
+	Pairing.Filled("Strict/List(Number)", "Dictionary(Text, Generic)") is "Dictionary(Text, Number)"
+	Pairing.Filled("Strict/List(Number)", "Couple(Text, Generic, Number)") is "Couple(Text, Number, Number)"
+	Pairing.Filled("Strict/Number", "List(Generic)") is "List(Generic)"
 	type is in ("Generic", "Generics") or types.ParameterScope(type).TypeOf(" trait") is "true"
 Plural(element Text) Text
 	Instantiation(Boxed).Position("Box(Text, Number)", "second") is 1
@@ -106,6 +106,9 @@ Template(shape TypeShape, position Number, typeName Text) Text
 	Pairing.Template(TypeShape("has first Generic", "Swapped Couple", "	\"Couple\""), 1, "Couple") is ""
 	Pairing.Template(Swapping, 2, "Couple") is "Couple(second, first)"
 	Pairing.Template(Swapping, 2, "Pair") is ""
+	Pairing.Template(TypeShape("has first Text", "Swapped Couple", "	Couple(first)"), 1, "Couple") is ""
+	Pairing.Template(TypeShape("has first Generic", "Swapped Couple", "	first"), 1, "Couple") is ""
+	Pairing.Template(TypeShape("has first Generic", "Swapped Couple", "	Couple"), 1, "Couple") is ""
 	if HeaderTokens(Tokenizer(shape.lines(position)).Tokens).ReturnType is not typeName or shape.UsesGenerics is false
 		return ""
 	let result = BodyParser(shape.lines).Method(position + 1).children.Last
@@ -129,7 +132,7 @@ Filled(owner Text, type Text) Text
 	Pairing.Filled("Strict/Dictionary(Text, Number)", "List(Generic)") is "List(Generic)"
 	Pairing.Filled("Strict/List(Number)", "Number") is "Number"
 	let open = owner.IndexOf("(")
-	if open < 0 or owner.IndexOf(",") > 0 or type.IndexOf("Generic") < 0
+	if open < 0 or owner.IndexOf(",") > 0
 		return type
 	let argument = owner.Substring(open + 1, owner.Length - open - 2)
 	let first = type.Replace("(Generic)", "(" + argument + ")").Replace("(Generic, ", "(" + argument + ", ")

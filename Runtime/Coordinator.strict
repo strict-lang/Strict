@@ -12,8 +12,6 @@ constant LockNeed = 2147483648
 constant LockHeld = 1073741824
 constant StaleSeconds = 16
 constant BeatSeconds = 5
-constant Mebibyte = 1048576
-constant Query = "--query-gpu=memory.total,memory.free --format=csv,noheader,nounits"
 constant Start = "-NoProfile -Command Start-Process -FilePath cmd -ArgumentList '/c "
 constant Sample = Coordinator(Logger)
 Place Text
@@ -114,25 +112,12 @@ Granted(words Texts, seen MachineView) Text
 	isHeld then sample.Needed(Need.Parsed(words), seen) else "bad"
 Seen MachineView slow
 	Sample.Seen.freeRam >= 0
-	let video = Vram("")
+	let video = MachineView.Vram("")
 	let idle = Process.Elapsed - seenAt < StaleSeconds then idleRam else 0
 	let device = Process.Elapsed - seenAt < StaleSeconds then idleVram else 0
-	let freeRam = Forced("STRICT_MACHINE_RAM", GpuMemory.HostAvailable)
-	let totalRam = Forced("STRICT_MACHINE_RAM", GpuMemory.HostTotal)
+	let freeRam = MachineView.Forced("STRICT_MACHINE_RAM", GpuMemory.HostAvailable)
+	let totalRam = MachineView.Forced("STRICT_MACHINE_RAM", GpuMemory.HostTotal)
 	MachineView(freeRam, video(1), totalRam, video(0), idle, device, busyJob is not "")
-Forced(name Text, fallback Number) Number
-	Sample.Forced("StrictVariableNeverSet", 4) is 4
-	let forced = Process.Variable(name)
-	forced is "" or forced to Number is Error then fallback else forced to Number
-Vram(text Text) Numbers
-	Sample.Vram("24564, 24049") is (24564 * Mebibyte, 24049 * Mebibyte)
-	Sample.Vram("nope") is (0, 0)
-	let measured = text is "" then Process.RunTool("nvidia-smi", Query).Output else text
-	let forced = Process.Variable("STRICT_MACHINE_VRAM")
-	if text is "" and forced is not ""
-		return (forced to Number, forced to Number)
-	let parts = measured.Split(",")
-	parts.Length < 2 then (0, 0) else (parts(0).Trim to Number * Mebibyte, parts(1).Trim to Number * Mebibyte)
 Sent(line Text, isStarting = true) Text
 	Coordinator(Logger, "Compiler/output/MissingCoordinator").Sent("status") is ""
 	Coordinator(Logger, "Compiler/output/MissingCoordinator").Sent("exit\tH3Video", false) is ""

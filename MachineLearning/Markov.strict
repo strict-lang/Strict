@@ -8,11 +8,11 @@ Count(context Text) Number
 	Position(context, text.Length)
 Position(context Text, wanted Number) Number
 	Sample.Position("ab", 1) is 3
-	Sample.Position("ab", 6) is 2 and Sample.Position("ab", 5) is -1
+	Sample.Position("ab", 6) is 2 and Sample.Position("ab", 5) is -1 and Sample.Position("ab", 9) is 2
 	mutable found = 0
 	mutable start = text.IndexOf(context)
 	for text.Length
-		if start < 0 or start + context.Length >= text.Length
+		if start < 0 or start + context.Length is text.Length
 			return wanted >= text.Length then found else -1
 		if found is wanted
 			return start

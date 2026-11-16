@@ -22,7 +22,7 @@ Run Number
 	let result = Checked(folder)
 	Directory.Delete(folder)
 	result is Error then result else 0
-Checked(folder Text)
+Checked(folder Text) slow
 	let parallel = CheckedThreads(folder)
 	if parallel is Error
 		return parallel
@@ -35,13 +35,13 @@ Checked(folder Text)
 		if value.exitCode is not 0
 			return Error("ConcurrentSocketChecksFailed: " + value.Output + value.error)
 	logger.Log("Concurrent loopbacks pass with the old fixed port occupied")
-RanConcurrent List(ProcessResult)
+RanConcurrent List(ProcessResult) slow
 	let extension = Process.OperatingSystem is "Windows" then ".exe" else ""
 	Process.RunTools("Networking/obj/SocketChecks.test" + extension, EmptyArguments, ToolSeconds)
 EmptyArguments Texts
 	for Threads
 		""
-CheckedThreads(folder Text)
+CheckedThreads(folder Text) slow
 	let isWindows = Process.OperatingSystem is "Windows"
 	let cFile = folder + "/threads.c"
 	let exe = folder + "/threads" + (isWindows then ".exe" else "")

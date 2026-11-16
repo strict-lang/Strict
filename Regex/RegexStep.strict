@@ -32,4 +32,6 @@ IsLiteral Boolean
 	RegexStep.Literal(97).IsLiteral
 	Letters.IsLiteral is false
 	RegexStep(Save).IsLiteral is false
+	NotNewLine.IsLiteral is false and RegexStep(Save, (97, 97)).IsLiteral is false
+	RegexStep(Consume, (97, 97, 100, 102)).IsLiteral is false
 	Kind is Consume and isNegated is false and ranges.Length is 2 then ranges(0) is ranges(1) else false

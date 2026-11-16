@@ -12,12 +12,11 @@ Parameters Scope
 	HeaderEntries(HeaderTokens(Tokenizer("B(a Number with Step 0.5)").Tokens)).Parameters.TypeOf("B a step") is "0.5"
 	HeaderEntries(HeaderTokens(Tokenizer("T(a Number) Number with Step 0.5").Tokens)).Parameters.TypeOf("T step") is "0.5"
 	let steps = "Step" is in header.tokens then Steps(header.tokens).Entries(header) else KnownTypes.NoMembers
-	WithModifiers(steps.names.Length > 0 then Summary.WithAll(steps.names, steps.types) else Summary)
+	WithModifiers(Summary.WithAll(steps.names, steps.types))
 Summary Scope
 	Adding.Summary.TypeOf("Add required") is "1" and Defaulting.Summary.TypeOf("Add z default") is "Basis . None"
+	Defaulting.Summary.TypeOf("Add required") is "1"
 	let name = header.tokens(0)
-	if header.ParametersEnd is 0
-		return Scope((name, name + " types", name + " required"), ("", "", "0"))
 	let names = header.ParameterNames
 	let hasDefaults = "=" is in header.tokens
 	let key = (name, name + " types", name + " required")
@@ -46,7 +45,7 @@ Required Number
 	Defaulting.Required is 1
 	mutable required = 0
 	for header.ParametersEnd
-		if index > 1 and header.IsParameterStart(index) and Default(index).Length is 0
+		if header.IsParameterStart(index) and Default(index).Length is 0
 			required = required + 1
 	required
 Defaults(scope Scope) Scope
@@ -54,7 +53,7 @@ Defaults(scope Scope) Scope
 	mutable names = List(Mutable(Text))
 	mutable values = List(Mutable(Text))
 	for header.ParametersEnd
-		if index > 1 and header.IsParameterStart(index)
+		if header.IsParameterStart(index)
 			let tokens = Default(index)
 			if tokens.Length > 0
 				names.Add(header.tokens(0) + " " + header.tokens(index) + " default")

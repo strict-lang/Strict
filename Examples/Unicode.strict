@@ -18,6 +18,7 @@ Found(text Text) Numbers
 	(text.IndexOf(Euro), text.IndexOf("b"), text.LastIndexOf("b"), text(1).number)
 Started(text Text) Boolean
 	Unicode.Started(Unicode.Mixed)
+	Unicode.Started("ab") is false and Unicode.Started("a" + Unicode.Euro + Unicode.Euro) is false
 	text.StartsWith(Euro, 2) and text.StartsWith(Euro, 1) is false
 Letters(text Text) Number
 	Unicode.Letters(Unicode.Mixed) is 4

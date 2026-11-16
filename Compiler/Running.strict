@@ -5,7 +5,7 @@ constant Stopped = (0, 128)
 constant Listing = "-NoProfile -Command " + Own + "$file = Get-Item -ErrorAction Ignore '"
 constant Matching = "'; if ($file) { Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq $file.FullName"
 constant Older = " -and $_.CreationDate -lt $file.LastWriteTime -and $_.ProcessId -ne $me }"
-constant Printed = " | ForEach-Object { '' + $_.ProcessId + [char]9 + $_.CommandLine } }"
+constant Printed = " | ForEach-Object { '' + $_.ProcessId + [char]9 + ($_.CommandLine -replace '[\\r\\n]+', ' ') } }"
 constant Missing = Running(Logger, "Compiler/output/Missing.exe")
 constant Served = Running(Logger, "C:/s/strict.exe")
 constant EndedCodes = (0, 128)

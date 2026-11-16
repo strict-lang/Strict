@@ -1,5 +1,6 @@
 has command Text
 has rest Texts
+has isRunning = false
 constant Adding = NativeCache("build", ("Examples/NativeAdd/NativeAdd.strict", "."))
 IsEnabled Boolean
 	NativeCache("test", ("Math", ".", "native")).IsEnabled
@@ -40,9 +41,13 @@ IsCurrent Boolean
 	let lines = File(CacheFile).ReadLines
 	lines.Length > 1 and lines.Length % 2 is 1 and lines.First is Key and Matches(lines.Slice(1, lines.Length - 1))
 Matches(lines Texts) Boolean
+	NativeCache("build", ("A.strict", "C:/s"), isRunning = true).Matches(("C:/s/strict.exe", "1"))
+	NativeCache("build", ("A.strict", "C:/s")).Matches(("C:/s/strict.exe", "1")) is false
+	let installed = SelfBuild(Logger, rest(1), "")
 	for Range(0, lines.Length / 2)
 		let position = value * 2
-		if Value(lines(position)) is not lines(position + 1)
+		let isSkipped = isRunning then installed.IsToolchainFile(lines(position)) else false
+		if (isSkipped is false) and (Value(lines(position)) is not lines(position + 1))
 			return false
 	true
 Saved(inputs Texts)

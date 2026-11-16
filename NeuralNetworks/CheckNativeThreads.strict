@@ -48,7 +48,7 @@ Run(arguments Texts) Number
 		return result
 	logger.Log("Returned matrices remain thread-owned; overlapping matrix loads pass")
 	0
-Checked(folder Text, provider Text)
+Checked(folder Text, provider Text) slow
 	let isWindows = Process.OperatingSystem is "Windows"
 	let dll = "Compiler/output/" + provider + "Threads." + (isWindows then "dll" else "so")
 	let cSrc = "NeuralNetworks/native/" + provider + ".c"
@@ -57,7 +57,7 @@ Checked(folder Text, provider Text)
 	if build.exitCode is not 0
 		return Error("BuildProviderFailed: " + build.Output + build.error)
 	CheckedHarness(folder, dll, provider, isWindows)
-CheckedHarness(folder Text, dll Text, provider Text, isWindows Boolean)
+CheckedHarness(folder Text, dll Text, provider Text, isWindows Boolean) slow
 	let cFile = folder + "/harness.c"
 	let exe = folder + "/harness" + (isWindows then ".exe" else "")
 	File(cFile).Write(HarnessHead + HarnessBody + HarnessTail)
@@ -69,7 +69,7 @@ CheckedHarness(folder Text, dll Text, provider Text, isWindows Boolean)
 	let ran = Process.RunTool(exe, args, ToolSeconds)
 	if ran.exitCode is not 0
 		return Error("NativeThreadsFailed (" + ran.exitCode + "): " + ran.Output + ran.error)
-BuildExtra(provider Text, isWindows Boolean) Text
+BuildExtra(provider Text, isWindows Boolean) Text slow
 	let raw = Text.Combine(File("NeuralNetworks/native/Windows.flags").ReadLines, " ")
 	isWindows then (provider is "GgufFile" then " " + raw else "") else " -fPIC -lpthread -lm"
 HarnessHead Texts

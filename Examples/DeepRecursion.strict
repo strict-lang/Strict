@@ -1,13 +1,15 @@
 has number
 Down Number slow
 	DeepRecursion(10000).Down is 0
+	DeepRecursion(-1).Down is Error
 	number is 0 then 0 else DeepRecursion(number - 1).Down
 Endless Number slow
 	DeepRecursion(1).Endless is Error
 	DeepRecursion(number + 1).Endless
 TraceLines Number slow
 	DeepRecursion(1).TraceLines is 52
-	let failure = Ping
+	DeepRecursion(0).TraceLines is 0
+	let failure = number > 0 then Ping else number
 	failure is Error then (failure to Text).Lines.Length else 0
 Ping Number slow
 	DeepRecursion(1).Ping is Error

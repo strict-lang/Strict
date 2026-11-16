@@ -42,31 +42,20 @@ Found(members Texts, changing Texts) Texts
 	for lines
 		if value.StartsWith("\t")
 			if method is not in result
-				if MightMention(value, members, changing) and IsChanging(Tokens(index), members, changing)
+				if IsChanging(Tokens(index), members, changing)
 					result.Add(method)
 		else if shape.IsMethodHeader(value)
 			method = Tokenizer(value).Tokens.First
 	result
-MightMention(line Text, members Texts, changing Texts) Boolean
-	Ticking.MightMention("\tcount = count + 1", ("count"), List(Text))
-	Ticking.MightMention("\tother + 1", ("count"), List(Text)) is false
-	if isReading and line.IndexOf("value") >= 0
-		return true
-	for members
-		if line.IndexOf(value) >= 0
-			return true
-	for changing
-		if line.IndexOf(value) >= 0
-			return true
-	false
 Tokens(at Number) Texts
 	Reading.Tokens(3) is ("count", "=", "count", "+", "step")
 	Changes(("Sum Number", "\tfor 3", "\t\tvalue + 1")).Tokens(2) is ("value", "+", "1")
 	Changes(("Sum Number", "\tvalue + 1"), true).Tokens(1) is ("value", "+", "1")
 	Changes(("Sum Number", "\tfor 3", "\t\t1 + 1"), true).Tokens(2) is ("1", "+", "1")
 	Changes(("Sum Number", "\tfor 3", "\t\tvalue + 1"), true).Tokens(2) is ("+", "1")
+	Changes(("Next Number", "\tcount = 1", "has count Number", "\tcount = 2")).Found(("count"), List(Text)) is ("Next")
 	let tokens = Tokenizer(lines(at).TrimStart).Tokens
-	isReading and "value" is in tokens and IsLooped(at) then tokens - "value" else tokens
+	isReading and IsLooped(at) then tokens - "value" else tokens
 IsLooped(at Number) Boolean
 	Changes(("Sum Number", "\tfor 3", "\t\tvalue")).IsLooped(2)
 	Changes(("Sum Number", "\tfor as long as true", "\t\tvalue")).IsLooped(2) is false

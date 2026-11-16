@@ -106,6 +106,14 @@
     return %present : i1
   }
   func.func private @strict_directory_exists(%self: f64, %path: f64) -> f64 {
+    %pathLength = func.call @strict_text_long(%path) : (f64) -> f64
+    %noLength = arith.constant 0.0 : f64
+    %isNamed = arith.cmpf one, %pathLength, %noLength : f64
+    cf.cond_br %isNamed, ^named, ^unnamed
+  ^unnamed:
+    %absent = func.call @strict_boolean(%isNamed) : (i1) -> f64
+    return %absent : f64
+  ^named:
     %invalid = arith.constant -1 : i32
     %directoryFlag = arith.constant 16 : i32
     %none = arith.constant 0 : i32

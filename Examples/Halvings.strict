@@ -1,8 +1,7 @@
 has number
 Multiples(count Number) Numbers
 	Halvings(48).Multiples(2) is (3, 6)
-	mutable odd = number
-	for as long as odd % 2 is 0
-		odd = odd / 2
+	if number % 2 is 0
+		return Halvings(number / 2).Multiples(count)
 	for count
-		odd * 2 ^ index
+		number * 2 ^ index

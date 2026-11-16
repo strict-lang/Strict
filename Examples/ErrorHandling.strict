@@ -12,6 +12,7 @@ Doubled Number
 IsSmall Boolean
 	ErrorHandling(2).IsSmall
 	ErrorHandling(0).IsSmall is Missing
+	ErrorHandling(5).IsSmall is false
 	Found < 3
 IsNearlyFive Boolean
 	ErrorHandling(5).IsNearlyFive
@@ -41,11 +42,12 @@ Collected Numbers
 Branched Number
 	ErrorHandling(5).Branched is 1
 	ErrorHandling(0).Branched is Missing
+	ErrorHandling(2).Branched is 2
 	Found > 3 then 1 else 2
 Counted Number
 	ErrorHandling(5).Counted is 2
 	mutable known = Dictionary(Text, Number)
-	known.Add("a", 1)
+	known.Add("", 1)
 	known.Add("b", number)
 	known.Length
 Duplicated Number
@@ -74,10 +76,13 @@ HasLargeRemainder Boolean
 	ErrorHandling(5).HasLargeRemainder is false
 	ErrorHandling(0).HasLargeRemainder is Error
 	7 % number > 2
-Skipped
+Skipped Number
+	ErrorHandling(5).Skipped is 5
 	ErrorHandling(5).Skipped is not Error
 	ErrorHandling(0).Skipped is not Error
-	ignore(Found)
-Required
+	ignore(7 % number)
+	number
+Required Number
 	ErrorHandling(0).Required is Missing
+	ErrorHandling(5).Required is 5
 	ErrorHandling(Found).Skipped

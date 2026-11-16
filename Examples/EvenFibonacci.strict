@@ -1,6 +1,6 @@
 has number
 Sum Number
-	EvenFibonacci(100).Sum is 44
+	(EvenFibonacci(100).Sum is 44) and (EvenFibonacci(8).Sum is 2)
 	mutable first = 1
 	mutable second = 1
 	mutable total = 0

@@ -15,6 +15,7 @@ Result(kind Number, left VmValue, right VmValue) VmValue
 	Result(InstructionType.Multiply, OneTwo, VmValue.OfNumber(2)).items.Last.number is 4
 	Result(InstructionType.Divide, OneTwo, VmValue.OfList(List(VmValue) + VmValue.OfNumber(2))).items.Last.number is 1
 	Result(InstructionType.Divide, VmValue.OfList(List(VmValue) + VmValue.OfNumber(2)), OneTwo).Length is 2
+	Result(InstructionType.NotEqual, VmValue.OfText("a"), VmValue.OfText("b")).IsTrue
 	if kind > InstructionType.ArithmeticSeparator
 		return VmValue.OfBoolean(Comparison(kind, left, right))
 	Calculated(kind, left, right)
@@ -46,7 +47,7 @@ Ordered(isLess Boolean, left VmValue, right VmValue) Boolean
 IsSame(left VmValue, right VmValue) Boolean
 	IsSame(DimensionError, VmValue.OfError("")) and IsSame(VmValue.OfNumber(1), VmValue.OfNumber(1))
 	IsSame(VmValue.OfNumber(1), VmValue.OfError("")) is false and IsSame(DimensionError, VmValue.OfError("x")) is false
-	IsSame(VmValue.OfError(""), DimensionError)
+	IsSame(VmValue.OfError(""), DimensionError) and IsSame(VmValue.OfNumber(0), VmValue.OfText("x")) is false
 	IsSame(EmptyTextList, DimensionError) is false and IsSame(DimensionError, EmptyTextList) is false
 	if left.kind is right.kind and left.kind is in ("Number", "Text", "Boolean", "None")
 		return left.kind is "Text" then left.text is right.text else left.number is right.number
@@ -74,6 +75,8 @@ Calculated(kind Number, left VmValue, right VmValue) VmValue
 	Calculated(InstructionType.Multiply, OneTwo, OneTwo).Length is 2
 	Calculated(InstructionType.Divide, OneTwo, VmValue.OfNumber(2)).Length is 2
 	Calculated(InstructionType.Modulo, VmValue.OfNumber(7), Undefined) is VmValue.OfError("ModuloByZero")
+	Calculated(InstructionType.Add, VmValue.OfNumber(3), OneTwo).Length is 3
+	Calculated(InstructionType.Divide, OneTwo, VmValue.OfList(List(VmValue))) is DimensionError
 	if left.kind is "Number" and right.kind is "Number"
 		if kind <= InstructionType.Multiply
 			return VmValue.OfNumber(QuickNumeric(kind, left.number, right.number))
@@ -82,8 +85,13 @@ Calculated(kind Number, left VmValue, right VmValue) VmValue
 QuickNumeric(kind Number, left Number, right Number) Number
 	QuickNumeric(InstructionType.Add, 2, 3) is 5
 	QuickNumeric(InstructionType.Multiply, 2, 3) is 6
+	QuickNumeric(InstructionType.Subtract, 2, 3) is -1
 	kind is InstructionType.Add then left + right else kind is InstructionType.Subtract then left - right else left * right
 Mixed(kind Number, left VmValue, right VmValue) VmValue
+	Mixed(InstructionType.Add, DimensionError, VmValue.OfText("a")).kind is "Text"
+	Mixed(InstructionType.Add, VmValue.OfNumber(1), VmValue.OfNumber(2)).number is 3
+	Mixed(InstructionType.Multiply, VmValue.OfNumber(2), VmValue.OfNumber(3)).number is 6
+	Mixed(InstructionType.Subtract, OneTwo, VmValue.OfNumber(1)).Length is 1
 	let isValue = left.kind is not in ("Text", "List") and right.kind is not in ("Text", "List")
 	if isValue and (left.kind is "Strict/Error" or right.kind is "Strict/Error")
 		return left.kind is "Strict/Error" then left else right
@@ -111,7 +119,7 @@ Numeric(kind Number, left Number, right Number) Number
 	kind is InstructionType.Modulo then left % right else left ^ right
 Added(left VmValue, right VmValue) VmValue
 	Added(VmValue.OfText("a"), VmValue.OfNumber(1)).text is "a1"
-	Added(VmValue.OfList(List(VmValue)), VmValue.OfNumber(1)).Length is 1
+	Added(VmValue.OfList(List(VmValue)), VmValue.OfNumber(1)).Length is 1 and Added(OneTwo, OneTwo).Length is 4
 	Added(OneTwo, VmValue.OfNumber(3)).items.Last.number is 3 and Added(Letter, OneTwo).items.First is Letter
 	Added(VmValue.OfNumber(1), VmValue.OfText("b")).text is "1b" and Added(Letter, OneTwo).Length is 3
 	Added(VmValue.OfList(List(VmValue) + VmValue.OfText("a")), OneTwo).items.Last.kind is "Text"

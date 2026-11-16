@@ -46,6 +46,7 @@ CallsOwn(lines Texts, body Text) Boolean
 	Copies.CallsOwn(Looping, "start + 1") is false
 	Copies.CallsOwn(("has number Number", "Run", "\t1"), "has(1)") is false
 	Copies.CallsOwn(Looping, "Next is start") is false
+	Copies.CallsOwn(Looping, "Next(start)")
 	for lines
 		if TypeShape(lines).IsMethodHeader(value) and body.IndexOf(Tokenizer(value).Tokens.First + "(") >= 0
 			return true

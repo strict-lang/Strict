@@ -1,0 +1,3 @@
+Rooted(slots List(VmValue)) List(VmValue)
+	FrameSlots.Rooted(Frame.Listed) is Frame.Listed
+	slots

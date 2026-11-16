@@ -117,6 +117,9 @@ ComputedType(tokens Texts, typeName Text, methods Scope) Text
 	Counting.ChainType(Tokenizer("constant a + Twice(2)").Tokens, "Count", KnownTypes.NoMembers) is ""
 	Counting.ChainType(("constant", "a", "="), "Count", KnownTypes.NoMembers) is ""
 	Counting.ComputedType(Next, "Count", KnownTypes.NoMembers) is "Number"
+	Chained.Expanded(SyntaxParser(Tokenizer("Box(3).Sample").Tokens).Parse).Kind is "Member"
+	Counting.ChainType(Tokenizer("constant a = Twice").Tokens, "Count", KnownTypes.NoMembers) is "Count"
+	Counting.ChainType(Tokenizer("constant b = a.Twice(2)").Tokens, "Count", NoScope.With("a", "Text")) is not "Count"
 	let header = HeaderTokens(tokens)
 	let node = SyntaxParser(tokens).ParseRange(header.ParametersEnd + 2, tokens.Length)
 	let current = inference.types.ShapeScope(typeName).WithAll(methods.names, methods.types)
