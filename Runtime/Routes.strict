@@ -16,6 +16,7 @@ constant Ticking = Routes((TypeEntry(Machine.Doubler, members = TypeEntry.Holdin
 constant Holder = TypeEntry(TypeEntry.Holding(1), methods = TypeEntry.Holding(1).methods + Machine.Doubler.methods(0))
 constant Wrapper = TypeEntry("Strict/Wrapper", List(MemberEntry) + MemberEntry("inner", "Strict/Holder", List(InstructionEntry), false), List(MethodEntry))
 constant Redirecting = Routes((Wrapper, Holder))
+constant TwoMembers = TypeEntry(Holder, members = (TypeEntry.Holding(0).members.First, Holder.members.First))
 constant WrapperTwice = Invocation(InstructionEntry.Invoke(0, ("Strict/Wrapper", "Twice", "Strict/Number"), List(Number), -1), List(VmValue), VmValue.None)
 constant WrapperFrom = Invocation(InstructionEntry.Invoke(1, ("Strict/Wrapper", "from", "Strict/Wrapper", "counter"), 0, -1), List(VmValue) + VmValue.OfNumber(5), VmValue.None)
 constant Defaulting = Routes(List(TypeEntry) + TypeEntry(Machine.Doubler, methods = Machine.Doubler.methods + Machine.Defaulted))
@@ -104,4 +105,10 @@ ConstructionSlot(type TypeEntry) Number
 	Doubling.ConstructionSlot(Machine.Doubler) is 1
 	Redirecting.ConstructionSlot(Wrapper) is 1
 	Redirecting.ConstructionSlot(Holder) is 0
-	(type.members.Length is 1) and (type.methods.Length > 0) then 0 else Resolver(types).Position(type) + 1
+	Ticking.ConstructionSlot(Ticking.types.First) is 1
+	Routes(List(TypeEntry) + TwoMembers).ConstructionSlot(TwoMembers) is 1
+	if type.members.Length is 1
+		for type.methods
+			if value.Name is "from"
+				return 0
+	Resolver(types).Position(type) + 1

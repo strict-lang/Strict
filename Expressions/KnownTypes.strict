@@ -61,10 +61,10 @@ BaseName(typeName Text) Text
 	Sample.BaseName("Counts") is "List"
 	Sample.BaseName("Count(Number)") is "Count"
 	Sample.BaseName("Count") is "Count"
-	if IsPlural(typeName)
-		return "List"
 	let open = typeName.IndexOf("(")
-	open > 0 then typeName.Substring(0, open) else typeName
+	if open > 0
+		return typeName.Substring(0, open)
+	typeName.EndsWith("s") then (IsPlural(typeName) then "List" else typeName) else typeName
 MembersOf(typeName Text) Scope
 	Instantiation.Boxed.ResolvedType("Meter", "to", 1) is "Text"
 	KnownTypes(("M"), Lengths, (Scope(("get", "x"), ("Number", "Generic"))), Lengths).ResolvedType("M", "x", 1) is "Number"

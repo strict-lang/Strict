@@ -188,4 +188,4 @@ TypeName Text
 	CallTarget(NoTypes, Greeter, "S/E/G", ("S/Helper", "S/E/Helper")).PackageType("Helper") is "S/E/Helper"
 	CallTarget(NoTypes, Greeter, "S/G", ("S/E/Helper")).PackageType("Helper") is "S/E/Helper"
 	CallTarget(NoTypes, Greeter, "Strict/E/G", ("XHelper", "Helper")).PackageType("Helper") is "Helper"
-	Path(fullName).FileName.text
+	TypeEntry.ShortName(fullName)
