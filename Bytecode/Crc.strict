@@ -1,13 +1,13 @@
 has bytes Numbers
 constant Polynomial = 3.988292384e9
 constant AllBits = 4.294967295e9
+constant Lookup = Crc(List(Number)).Table
 Value Number
 	Crc(49, 50, 51, 52, 53, 54, 55, 56, 57).Value is 3.421780262e9
 	Crc(104, 105).Value is 3.633523372e9
-	let table = Table
 	mutable crc = AllBits
 	for bytes
-		crc = table((crc xor value) and Byte.Max) xor (crc / Byte.Values).Floor
+		crc = Lookup((crc xor value) and Byte.Max) xor (crc / Byte.Values).Floor
 	crc xor AllBits
 Table Numbers
 	Crc(1).Table.Last is 7.55167117e8
