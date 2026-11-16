@@ -40,9 +40,9 @@ IsHosted Boolean
 	"Process.Collected" is in Hosted.Methods
 	Hosted(Releasing).IsHosted
 	Hosted(HostedJson.Getting).IsHosted
-	Hosted(HostedRegex.Matching).IsHosted
+	Hosted(HostedRegex.Matching).IsHosted and Hosted(HostedTokenizer.Tokening).IsHosted
 	let name = TypeEntry.ShortName(call.TypeName) + "." + call.MethodName
-	(name is in Methods) or HostedJson(call).IsHosted or HostedRegex(call).IsHosted
+	(name is in Methods) or HostedJson(call).IsHosted or HostedRegex(call).IsHosted or HostedTokenizer(call).IsHosted
 Result VmValue
 	Hosted(SystemCall).Result.text is in ("Windows", "Linux", "MacOS", "Unknown")
 	Hosted(Existing).Result.IsTrue and (Hosted(Timing).Result.number > 0) and (Hosted(Releasing).Result.kind is "None")
@@ -54,12 +54,19 @@ Result VmValue
 	if type is in ("Socket", "GpuMemory")
 		return (type is "GpuMemory") or (Socket.Output(call.Arguments(0).number) is not Error) then VmValue.None else Unsent
 	if type is not in ("File", "Directory")
-		return type is in ("Json", "Regex") then Packaged else HostedMath(call).Measured
-	HostedText(call).IsText then HostedText(call).Result else call.MethodName is in ("ReadLines", "ReadBytes", "Files", "Directories") then Entries else Stored
+		return type is in ("Json", "Regex", "Tokenizer") then Packaged else HostedMath(call).Measured
+	if HostedText(call).IsText
+		HostedText(call).Result
+	else
+		call.MethodName is in ("ReadLines", "ReadBytes", "Files", "Directories") then Entries else Stored
 Packaged VmValue
 	Hosted(HostedRegex.Replacing).Packaged.text is "a#b#"
 	Hosted(HostedJson.Getting).Packaged.text is "[1, 2.5]"
-	TypeEntry.ShortName(call.TypeName) is "Json" then HostedJson(call).Result else HostedRegex(call).Result
+	Hosted(HostedTokenizer.Tokening).Packaged.items.Length is 3
+	let type = TypeEntry.ShortName(call.TypeName)
+	if type is "Tokenizer"
+		return HostedTokenizer(call).Result
+	type is "Json" then HostedJson(call).Result else HostedRegex(call).Result
 Contained VmValue
 	Hosted(HostedJson.Unnumbered).Contained.kind is "Strict/Error"
 	Hosted(SystemCall).Contained.text is Hosted(SystemCall).Result.text

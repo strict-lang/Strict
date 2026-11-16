@@ -115,10 +115,12 @@ IsEmitter Boolean
 IsMachine Boolean
 	Baseline(Mutants(Logger, "Runtime/Natives.strict")).IsMachine
 	Baseline(Mutants(Logger, ".\\Runtime\\Machine.strict")).IsMachine
+	Baseline(Mutants(Logger, "Runtime/Rounding.strict")).IsMachine
 	Baseline(Mutants(Logger, "Runtime/Frame.strict")).IsMachine is false
 	Baseline(Mutants(Logger, "Math/Machine.strict")).IsMachine is false
 	let folder = Path(Path(mutants.path).PathOnly.text).FileName.text
-	(folder is "Runtime") and (Path(mutants.path).FileName.text is in ("Natives.strict", "Machine.strict"))
+	let file = Path(mutants.path).FileName.text
+	(folder is "Runtime") and (file is in ("Natives.strict", "Machine.strict", "Rounding.strict"))
 Reason(started Machine, runner Text, limit Number) Text
 	Baseline(Mutants.Sample).Reason(Machine.Hello, TestCodegen.Runner, 1) is ""
 	Baseline(Mutants.Sample).Reason(Frame.Doubling, "Missing", 0) is "its tests fail or take over 0s"

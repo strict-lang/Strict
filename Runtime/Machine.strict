@@ -7,6 +7,7 @@ has sources Dictionary(Text, Text) = Dictionary(Text, Text)
 has deadline Number = 0
 has isQuiet = false
 has isSampling = false
+has places Dictionary(Text, Number) = Dictionary(Text, Number)
 constant Hello = Machine(List(TypeEntry) + TypeEntry.HelloLogger)
 constant TwiceMethod = MethodEntry("Twice", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 21), InstructionEntry.Binary(InstructionType.Add, (0, 0, 1)), InstructionEntry.Return(1)))
 constant Doubler = TypeEntry("Strict/Doubler", List(MemberEntry), List(MethodEntry) + TwiceMethod)
@@ -65,13 +66,16 @@ Started(main TypeEntry) VmValue
 Prepared Machine
 	Hello.Prepared.prototypes.entries.First.kind is "HelloLogger"
 	Hello.Prepared.sources("HelloLogger") is "HelloLogger.strict"
-	Machine(Hello, isSampling = true).Prepared.isSampling
+	Machine(Hello, isSampling = true).Prepared.isSampling and (Hello.Prepared.places("HelloLogger") is 0)
 	mutable created = List(Mutable(VmValue))
 	mutable located = Dictionary(Text, Text)
+	mutable placed = Dictionary(Text, Number)
 	for types
 		created.Add(Natives(types).Fresh(value))
 		located(value.Name) = TypeSource(value).Located(folder)
-	Constants(Machine(types, logger, ConstantCache(created), folder, isTracing, located, isSampling = isSampling)).Computed
+		placed(value.Name) = index
+	let prepared = Machine(types, logger, ConstantCache(created), folder, isTracing, located, isSampling = isSampling)
+	Constants(Machine(prepared, places = placed)).Computed
 Bound(type TypeEntry, instance VmValue, method MethodEntry, arguments List(VmValue), prototype VmValue) List(VmValue)
 	Hello.Bound(Doubler, VmValue.OfNumber(2), Doubler.methods.First, List(VmValue), VmValue.None).First.number is 2
 	Hello.Bound(Doubler, VmValue.None, Defaulted, List(VmValue), VmValue.None).Last.number is 7
@@ -169,7 +173,7 @@ Routed(call Invocation) VmValue
 	if route is Resolver.Searching
 		return Natives(types).Searched(call.MethodName, call.Instance.text, call.Arguments)
 	if (route is Resolver.Native) and (entry.payload(at + 1) > 0)
-		return Rounding.Single.Built(types(entry.payload(at + 1) - 1), call, Natives(types, folder))
+		return Rounding.Single.Built(types(entry.payload(at + 1) - 1), call, Natives(types), entry.payload(at + 2) is 1)
 	let skip = (route < 0) or (entry.payload(at + 2) is 1 then call.IsMemberValue(types(route)) else false)
 	skip then Natives(types, folder).Result(call) else Executed(route, types(route).methods(entry.payload(at + 1)), call)
 Executed(route Number, method MethodEntry, call Invocation) VmValue
@@ -184,7 +188,8 @@ Field(entry InstructionEntry, instance VmValue) VmValue
 	Hello.Field(InstructionEntry(InstructionType.FieldLoad, "characters", (1, 0, -1)), VmValue.OfText("ab")).text is "ab"
 	Hello.Field(InstructionEntry(InstructionType.FieldLoad, "c", (1, 0, -1)), VmValue.OfError("a")).kind is "Strict/Error"
 	Machine(List(TypeEntry) + TypeEntry.CharacterEntry).Field(Coded, VmValue.OfText("a")).number is 97
-	let owner = Natives(types).TypeOf(entry.texts.Length > 1 then entry.texts.Last else instance.kind)
+	let name = entry.texts.Length > 1 then entry.texts.Last else instance.kind
+	let owner = name is in places then types(places(name)) else Natives(types).TypeOf(name)
 	mutable found = instance
 	for owner.members
 		if value.Name is entry.texts(0)

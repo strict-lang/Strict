@@ -139,15 +139,20 @@ Outer(node SyntaxNode) SyntaxNode
 	Limits.Outer(SyntaxParser(Tokenizer("outer.Count.Twice").Tokens).Parse).children(0).Kind is "Type"
 	Limits.Outer(SyntaxParser(Tokenizer("outer.index").Tokens).Parse).children(0).Kind is "Identifier"
 	Limits.Outer(SyntaxParser(Tokenizer("outer.Count(1)").Tokens).Parse).children(0).Kind is "Type"
-	if (node.Kind is "Member") and (node.children(0) to Text is "outer") and inference.types.IsKnown(node.text)
-		return SyntaxNode("Type", node.text, List(SyntaxNode), node.line)
-	let isOuterCall = (node.Kind is "MethodCall") and (node.children.Length > 0) and (node.children(0) to Text is "outer")
-	if isOuterCall and inference.types.IsKnown(node.text)
-		return SyntaxNode("MethodCall", node.text, OuterTyped(node), node.line)
+	if node.Kind is in ("Member", "MethodCall")
+		let isOuter = node.children.Length > 0 then node.children(0) to Text is "outer" else false
+		if isOuter then inference.types.IsKnown(node.text) else false
+			return OuterNode(node)
 	mutable children = List(Mutable(SyntaxNode))
 	for node.children
 		children.Add(Outer(value))
 	SyntaxNode(node.Kind, node.text, children, node.line)
+OuterNode(node SyntaxNode) SyntaxNode
+	Limits.OuterNode(SyntaxParser(Tokenizer("outer.Count").Tokens).Parse).Kind is "Type"
+	Limits.OuterNode(SyntaxParser(Tokenizer("outer.Count(1)").Tokens).Parse).Kind is "MethodCall"
+	if node.Kind is "Member"
+		return SyntaxNode("Type", node.text, List(SyntaxNode), node.line)
+	SyntaxNode("MethodCall", node.text, OuterTyped(node), node.line)
 OuterTyped(call SyntaxNode) List(SyntaxNode)
 	Limits.OuterTyped(SyntaxParser(Tokenizer("outer.Count(1)").Tokens).Parse).Last.text is "1"
 	Limits.Outer(SyntaxParser(Tokenizer("other.Count").Tokens).Parse).Kind is "Member"
