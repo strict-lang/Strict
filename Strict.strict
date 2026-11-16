@@ -31,6 +31,9 @@ Run(arguments Texts) Number
 	if command is in ("serve", "linked", "status")
 		Hosted(command, arguments, resident)
 		return 0
+	let rebuilt = SelfBuild(logger, resident.root, Process.Current.executable).Rebuilt(arguments)
+	if rebuilt is not SelfBuild.Current
+		return rebuilt
 	let passed = Scripted.Packed(arguments)
 	let forwarded = Forwarding(logger, resident.root).Forwarded(passed)
 	forwarded is Forwarding.Ended then 1 else forwarded is Error then Logged(passed).code else forwarded
