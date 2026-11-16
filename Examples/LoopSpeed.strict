@@ -43,8 +43,9 @@ Summed(count Number) Number
 		sum = sum + value
 	sum
 Once(kind Text, exact Numbers, padded Numbers) Number
-	LoopSpeed.Once("offsets", LoopSpeed.Counted(2), LoopSpeed.Counted(400)) is 400
-	LoopSpeed.Once("summed", LoopSpeed.Counted(4), LoopSpeed.Counted(4)) is 6
+	Once("offsets", Counted(2), Counted(400)) is 400 and Once("locals", Counted(2), Counted(400)) is 400
+	Once("remainders", Counted(9), Counted(9)) is 1 and Once("gathered", Counted(9), Counted(9)) is 8
+	Once("summed", Counted(4), Counted(4)) is 6 and Once("twisted", Counted(1), Counted(1)) is 1608637542
 	if kind is "offsets"
 		return Offsets(padded, exact.Length).Last
 	if kind is "locals"
