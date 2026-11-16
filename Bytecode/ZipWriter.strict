@@ -1,7 +1,7 @@
 has entries List(ZipEntry)
 has withChecksums Boolean = true
 constant DosDate = 20513
-constant Sample = ZipWriter(ZipEntry("a", (104, 105)), ZipEntry("b", (1, 2)))
+constant Sample = ZipWriter((ZipEntry("a", (104, 105)), ZipEntry("b", (1, 2))))
 Bytes Numbers
 	Sample.Bytes.Length is 182
 	mutable local = List(Mutable(Number))

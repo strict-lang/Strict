@@ -19,7 +19,7 @@ Distinct(tokens Texts, typed Texts, own Texts) Texts
 			result.Add(value)
 	result
 CollectedNames(sources Texts) Texts
-	Mentions(List(Text)).CollectedNames(("a + b", "c")) is ("a", "b", "c")
+	Mentions(List(Text)).CollectedNames(("A + b", "C")) is ("A", "C")
 	mutable names = List(Text)
 	for sources
 		names = names + Tokenizer(value.Trim).Names
