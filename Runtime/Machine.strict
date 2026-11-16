@@ -173,7 +173,7 @@ Routed(call Invocation) VmValue
 	if route is Resolver.Searching
 		return Natives(types).Searched(call.MethodName, call.Instance.text, call.Arguments)
 	if (route is Resolver.Native) and (entry.payload(at + 1) > 0)
-		return Rounding.Single.Built(types(entry.payload(at + 1) - 1), call, Natives(types, folder))
+		return Rounding.Single.Built(types(entry.payload(at + 1) - 1), call, Natives(types), entry.payload(at + 2) is 1)
 	let skip = (route < 0) or (entry.payload(at + 2) is 1 then call.IsMemberValue(types(route)) else false)
 	skip then Natives(types, folder).Result(call) else Executed(route, types(route).methods(entry.payload(at + 1)), call)
 Executed(route Number, method MethodEntry, call Invocation) VmValue

@@ -54,10 +54,11 @@ IsPlainStruct(member MemberEntry, raw VmValue) Boolean
 	if (member.Bits > 0) or (raw.kind is "List") or (raw.items.Length > 1)
 		return (member.Bits is 0) and ((raw.kind is "List") or (raw.items.Length > 1))
 	raw.items.Length is 1 then raw.items.First.kind is in ("Text", "Boolean", "None", "List") else false
-Built(type TypeEntry, call Invocation, natives Natives) VmValue
-	Single.Built(Natives.Single, Natives.NewSingle, Natives.Shapes).number is 0.10000000149011612
-	Single.Built(Natives.Shape, Natives.NewShape, Natives.Shapes).kind is "Strict/Shape"
-	if (type.members.Length is 0) or (type.IsStruct is false)
+Built(type TypeEntry, call Invocation, natives Natives, isStruct Boolean) VmValue
+	Single.Built(Natives.Single, Natives.NewSingle, Natives.Shapes, false).number is 0.10000000149011612
+	Single.Built(Natives.Shape, Natives.NewShape, Natives.Shapes, true).kind is "Strict/Shape"
+	Single.Built(Natives.Shape, Natives.NewShape, Natives.Shapes, false).number is 3
+	if (type.members.Length is 0) or (isStruct is false)
 		return Wrapped(type, call)
 	VmValue(call.TypeName, 0, "", Members(type, call, natives))
 Wrapped(type TypeEntry, call Invocation) VmValue
