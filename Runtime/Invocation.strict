@@ -15,14 +15,14 @@ constant Held = Invocation(InstructionEntry.HolderFrom, List(VmValue) + VmValue.
 constant Failing = TypeEntry("Strict/Failing", List(MemberEntry), List(MethodEntry) + MethodEntry("Fail", List(MemberEntry), "Strict/Number", (InstructionEntry(InstructionType.IndexCall, "list", (0, 0, 6)), InstructionEntry.Return(0))))
 TypeName Text
 	AddCall.TypeName is "T"
-	PayloadDecoder(entry).Text(1)
+	entry.texts(-1 - entry.payload(1))
 MethodName Text
 	AddCall.MethodName is "Add"
-	PayloadDecoder(entry).Text(2)
+	entry.texts(-1 - entry.payload(2))
 ReturnType Text
 	AddCall.ReturnType is "Strict/Number"
 	Invocation(StructLanes.Constructed, List(VmValue), VmValue.None).ReturnType is "Pair"
-	PayloadDecoder(entry).ReturnType
+	entry.texts(-1 - entry.payload(4 + entry.payload(3)))
 ParameterNames Texts
 	AddCall.ParameterNames is ("x")
 	PayloadDecoder(entry).Names

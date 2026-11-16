@@ -102,8 +102,7 @@ Wrapped Text
 		return ShortName(changing.First.typeName)
 	numbered and (changing.Length is 0) then "Number" else ""
 IsStruct Boolean
-	HelloLogger.IsStruct is false
-	CharacterEntry.IsStruct is false
+	HelloLogger.IsStruct is false and (CharacterEntry.IsStruct is false)
 	Converting.IsStruct
 	TypeEntry("Strict/File", List(MemberEntry) + MemberEntry.LoggerMember, List(MethodEntry)).IsStruct
 	Initialized.IsStruct and TypeEntry("Strict/S", List(MemberEntry) + Lighting, MethodEntry.HelloRun).IsStruct
@@ -111,9 +110,10 @@ IsStruct Boolean
 	let short = ShortName(Name)
 	if IsBaseName(short) or (short is in ("Logger", "File"))
 		return short is in ("Logger", "File")
+	let changing = Changing.Length
 	if (members.Length is 0) or (methods.Length > 0)
-		return (members.Length is 0) or (Changing.Length is not 1)
-	(Changing.Length is not 1) and ((Changing.Length > 0) or (members.First.typeName is not "Strict/Number"))
+		return (members.Length is 0) or (changing is not 1)
+	(changing is not 1) and ((changing > 0) or (members.First.typeName is not "Strict/Number"))
 Changing List(MemberEntry)
 	HelloLogger.Changing.Length is 1
 	TypeEntry("A", List(MemberEntry) + MemberEntry.SevenMember, List(MethodEntry)).Changing.Length is 0

@@ -19,10 +19,10 @@ OfNumber(amount Number) VmValue
 IsSmall(amount Number) Boolean
 	IsSmall(0) and IsSmall(1023)
 	IsSmall(1024) is false
-	IsSmall(-1 / (1 / 0)) is false
+	IsSmall(-1 / (1 / 0))
 	IsSmall(-3) is false
 	IsSmall(2.5) is false
-	(amount < 1024) and (1 / amount > 0) and (amount % 1 is 0)
+	(amount < 1024) and (amount >= 0) and (amount % 1 is 0)
 Integers List(VmValue)
 	VmValue.Integers(1023).number is 1023
 	for 1024
@@ -63,7 +63,7 @@ Member(index Number) VmValue
 	None.Member(1).kind is "None"
 	OfNumber(3).Member(0).number is 3
 	Numbered.Member(1).items.Length is 2
-	if kind is in ("Text", "Number", "Boolean", "List")
+	if (kind is in ("Text", "Number", "Boolean", "List")) or kind.StartsWith("Strict/List(")
 		return value
 	let isBase = TypeEntry.Based(kind) is in ("Text", "Number", "Boolean", "List")
 	isBase then value else index < items.Length then items(index) else None
