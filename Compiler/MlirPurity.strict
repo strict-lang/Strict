@@ -133,7 +133,7 @@ IsExternalSafe(kind Text, method Text) Boolean
 	Doubling.IsExternalSafe("File", "ReadLines") and Doubling.IsExternalSafe("TestBudget", "Entered")
 	Doubling.IsExternalSafe("File", "from") and Doubling.IsExternalSafe("Number", "Random")
 	if kind is "File"
-		return method is in ("from", "Exists", "Modified", "Length", "ReadLines", "ReadBytes")
+		return method is in ("from", "Exists", "Modified", "Length", "ReadLines", "ReadBytes", "ReadText")
 	if kind is "Directory"
 		return method is in ("from", "Files", "Directories", "Exists", "Current", "Modified")
 	if kind is in ("Process", "TestBudget")

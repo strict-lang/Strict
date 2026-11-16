@@ -65,7 +65,7 @@ AllFiles(root Text) Texts
 	files
 Refined(inference TypeInference, shapes List(TypeShape)) TypeInference
 	ResolveCheck.Refined(Counting, List(TypeShape)).types.methods.Length is 0
-	Inference(("File.strict", "TextWriter.strict", "BytesWriter.strict")).types.ParameterScope("File").Count("Write") is 2
+	Inference(("File.strict", "TextWriter.strict", "BytesWriter.strict")).types.ParameterScope("File").Count("Write") is 3
 	let types = KnownTypes(inference.types, positions = Positions(inference.types.names))
 	let indexed = TypeInference(types, inference.constants)
 	mutable methods = List(Mutable(Scope))
