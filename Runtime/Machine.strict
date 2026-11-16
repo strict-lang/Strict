@@ -17,6 +17,7 @@ constant Coded = InstructionEntry(InstructionType.FieldLoad, ("number", "Charact
 constant Paired = TypeEntry("Strict/Pair", (MemberEntry.LoggerMember, MemberEntry("b", "Strict/Number", List(InstructionEntry), false)), List(MethodEntry) + MethodEntry.Initializing)
 constant Pairing = Machine(List(TypeEntry) + Paired)
 constant Five = InstructionEntry.Invoke(1, ("Strict/Pair", "from", "Strict/Pair", "b"), 0, -1)
+constant Index = Frame.IndexSlot
 constant Starting = MethodEntry(DefaultInstance.Starter, List(MemberEntry), "Strict/Pair", (InstructionEntry.LoadNumber(0, 5), Five, InstructionEntry.Return(1)))
 constant Reading = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "b"), InstructionEntry.Return(0))
 constant Read = MethodEntry(TestCodegen.Runner, List(MemberEntry), "Strict/Number", Reading)
@@ -81,7 +82,7 @@ Bound(type TypeEntry, instance VmValue, method MethodEntry, arguments List(VmVal
 	let mode = type.members.Length is 0 then 0 else Ownership(type, instance.kind)
 	let empty = VmValue.None
 	for (end, method.Slots).Maximum
-		let head = index < 2 then instance else index is Frame.IndexSlot then Indexed(method, arguments) else empty
+		let head = index < 2 then instance else (index is Index) and (end > start) then Indexed(method, arguments) else empty
 		let arg = index >= start then (index < end then Argument(method, arguments, index - start) else empty) else empty
 		index < Frame.MembersSlot then head else index < start then Member(type, instance, index, mode, prototype) else arg
 Member(type TypeEntry, instance VmValue, slot Number, ownership Number, prototype VmValue) VmValue
@@ -146,7 +147,7 @@ Execute(method MethodEntry, locals List(VmValue), owner Text, depth = 0) VmValue
 	Machine(Frame.Doubling, isQuiet = true, isSampling = true).Execute(Frame.Twice.method, Frame.Listed, "D").number is 42
 	if depth > Invocation.MaxDepth
 		return VmValue.OfError("StackOverflow")
-	let stopped = MutationCache.Stopped(deadline)
+	let stopped = (deadline > 0) or (depth % 64 is 0) then MutationCache.Stopped(deadline) else ""
 	if stopped is not ""
 		return VmValue.OfError(stopped)
 	let frame = Frame(value, method, owner, depth)
@@ -167,9 +168,10 @@ Routed(call Invocation) VmValue
 		return Hosted(call).Contained
 	if route is Resolver.Searching
 		return Natives(types).Searched(call.MethodName, call.Instance.text, call.Arguments)
-	if (route < 0) or (entry.payload(at + 2) is 1 then call.IsMemberValue(types(route)) else false)
-		return Natives(types, folder).Result(call)
-	Executed(route, types(route).methods(entry.payload(at + 1)), call)
+	if (route is Resolver.Native) and (entry.payload(at + 1) > 0)
+		return Rounding.Single.Built(types(entry.payload(at + 1) - 1), call, Natives(types, folder))
+	let skip = (route < 0) or (entry.payload(at + 2) is 1 then call.IsMemberValue(types(route)) else false)
+	skip then Natives(types, folder).Result(call) else Executed(route, types(route).methods(entry.payload(at + 1)), call)
 Executed(route Number, method MethodEntry, call Invocation) VmValue
 	Pairing.Executed(0, Resolver.Doubling.Methods(Paired).First, Invocation.AddCall).items.First.number is 7
 	let type = types(route)

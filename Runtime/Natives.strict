@@ -210,7 +210,7 @@ TypeOf(name Text) TypeEntry
 	for types
 		if value.Name is name
 			return value
-	let short = Path(name).FileName.text
+	let short = name.Substring(name.LastIndexOf("/") + 1, name.Length - name.LastIndexOf("/") - 1)
 	let qualified = "/" + short
 	for types
 		if IsNamed(value, name, short, qualified)

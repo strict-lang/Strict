@@ -43,10 +43,17 @@ Bits(member MemberEntry, natives Natives) Number
 	own is 0 then Number.DoubleBits else own
 RoundedValue(member MemberEntry, raw VmValue, natives Natives) VmValue
 	Single.RoundedValue(Natives.Width, VmValue.OfNumber(3), Natives.Shapes).number is 3
-	if raw.kind is in ("Text", "Boolean", "None")
+	if (raw.kind is in ("Text", "Boolean", "None")) or IsPlainStruct(member, raw)
+		return raw
+	if (member.Bits is 0) and (member.typeName is "Strict/Number")
 		return raw
 	let bitWidth = Bits(member, natives)
 	bitWidth is in (0, Number.DoubleBits) then raw else Rounding(bitWidth).Of(raw)
+IsPlainStruct(member MemberEntry, raw VmValue) Boolean
+	Single.IsPlainStruct(Natives.Width, VmValue.OfNumber(3)) is false
+	if (member.Bits > 0) or (raw.kind is "List") or (raw.items.Length > 1)
+		return (member.Bits is 0) and ((raw.kind is "List") or (raw.items.Length > 1))
+	raw.items.Length is 1 then raw.items.First.kind is in ("Text", "Boolean", "None", "List") else false
 Built(type TypeEntry, call Invocation, natives Natives) VmValue
 	Single.Built(Natives.Single, Natives.NewSingle, Natives.Shapes).number is 0.10000000149011612
 	Single.Built(Natives.Shape, Natives.NewShape, Natives.Shapes).kind is "Strict/Shape"
@@ -74,7 +81,13 @@ Members(type TypeEntry, call Invocation, natives Natives) List(VmValue)
 	let arguments = call.Arguments
 	let names = arguments.Length > 0 then call.ParameterNames else List(Text)
 	for type.members
-		let argument = names.Index(value.Name)
-		let chosen = argument < 0 then index else argument
-		let isGiven = (value.IsConstant is false) and (chosen < arguments.Length)
-		isGiven then RoundedValue(value, arguments(chosen), natives) else natives.Initial(value)
+		let chosen = value.IsConstant then arguments.Length else Positional(names, value.Name, index)
+		chosen < arguments.Length then RoundedValue(value, arguments(chosen), natives) else natives.Initial(value)
+Positional(names Texts, name Text, position Number) Number
+	Single.Positional(("a", "b"), "b", 1) is 1
+	Single.Positional(("a", "b"), "b", 0) is 1
+	if position < names.Length
+		if names(position) is name
+			return position
+	let found = names.Index(name)
+	found < 0 then position else found

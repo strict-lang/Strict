@@ -48,7 +48,7 @@ IsSame(left VmValue, right VmValue) Boolean
 	(IsSame(VmValue.OfNumber(1), VmValue.OfError("")) is false) and (IsSame(DimensionError, VmValue.OfError("x")) is false)
 	IsSame(VmValue.OfError(""), DimensionError)
 	(IsSame(EmptyTextList, DimensionError) is false) and (IsSame(DimensionError, EmptyTextList) is false)
-	if (left.kind is right.kind) and ((left.kind is "Number") or (left.kind is "Text") or (left.kind is "Boolean"))
+	if (left.kind is right.kind) and (left.kind is in ("Number", "Text", "Boolean", "None"))
 		return left.kind is "Text" then left.text is right.text else left.number is right.number
 	let compared = Comparable(left)
 	let other = Comparable(right)

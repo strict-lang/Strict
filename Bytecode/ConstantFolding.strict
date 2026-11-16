@@ -29,7 +29,7 @@ Folded(node SyntaxNode) SyntaxNode
 		return negated
 	let left = Folded(negated.children(0))
 	let right = Folded(negated.children(1))
-	if left.Kind is not "Number" or right.Kind is not "Number" or (right.text is "0")
+	if left.Kind is not "Number" or right.Kind is not "Number" or (right.text is in ("0", "-0"))
 		return Appended(negated, left, right)
 	SyntaxNode("Number", Calculated(negated.text, left.text to Number, right.text to Number) to Text)
 Appended(binary SyntaxNode, list SyntaxNode, element SyntaxNode) SyntaxNode

@@ -312,44 +312,36 @@ addToLibrary({
 				halves[index] = (words[index] + 0x7fff + ((words[index] >>> 16) & 1)) >>> 16;
 		}
 	},
-	$strictWebGpuRun__deps: ['$strictWebGpu', '$strictWebGpuPipeline', '$strictWebGpuDevice', '$strictWebGpuWritten',
-		'$strictWebGpuEncoder', '$strictWebGpuFlush', '$strictWebGpuStaged', '$strictWebGpuDestroyed', '$strictWebGpuBuffer',
-		'$strictWebGpuStore', '$strictWebGpuPass', '$strictWebGpuFlag', '$strictWebGpuLimit', '$strictWebGpuThrottled'],
-	$strictWebGpuRun: async (name, count, inputs, output, bits) => {
-		const device = inputs && (strictWebGpu.device ||= await strictWebGpuDevice());
-		if (inputs && !device) {
-			console.warn('WebGPU has no adapter here, GPU loops and kernels run on the CPU');
-			strictWebGpu.failed = true;
-		}
-		if (!device)
-			return 0;
-		// a kernel with a variant needing 32 KB of workgroup memory (Module.strictLarger) takes it where the device has it
-		const larger = (Module['strictLarger'] || {})[name];
-		if (larger && strictWebGpu.pipelines[larger] !== null && device.limits.maxComputeWorkgroupStorageSize >= 32768)
-			try {
-				strictWebGpu.pipelines[larger] ||= await (strictWebGpu.compiling[larger] ||
-					strictWebGpuPipeline(device, Module['strictShaders'][larger]));
-				name = larger;
-			} catch {
-				strictWebGpu.pipelines[larger] = null;
-			}
-		const pipeline = strictWebGpu.pipelines[name] ||= await (strictWebGpu.compiling[name] ||
-			strictWebGpuPipeline(device, Module['strictShaders'][name]));
+	// records one kernel whose pipelines are already compiled. undefined when a pipeline is still missing, so the caller
+	// takes the path that can wait; no await, a step is hundreds of these and unwinding the wasm stack for each one was
+	// the whole 1.4 s
+	$strictWebGpuRecord__deps: ['$strictWebGpu', '$strictWebGpuEncoder', '$strictWebGpuFlush', '$strictWebGpuStaged',
+		'$strictWebGpuDestroyed', '$strictWebGpuBuffer', '$strictWebGpuStore', '$strictWebGpuPass', '$strictWebGpuFlag',
+		'$strictWebGpuLimit'],
+	$strictWebGpuRecord: (pipeline, name, count, inputs, output, bits) => {
+		const device = strictWebGpu.device;
+		const grouped = (Module['strictKernelGroups'] || {})[name], groups = Math.ceil(count / 64);
+		const [tiles, part, splits = 1] = grouped ? grouped(inputs.places) : [groups, groups];
+		if ((splits > 1 && !strictWebGpu.pipelines['strict_splits']) ||
+			(!output && bits === 17 && !strictWebGpu.pipelines['strict_packed']))
+			return undefined;
 		const read = 128 | 4;
 		const input = strictWebGpuStaged(inputs.size * 4), places = strictWebGpuStaged(inputs.places.byteLength);
-		inputs.written.forEach(([offset, part]) => strictWebGpuStore(input, offset * 4, part));
+		inputs.written.forEach(([offset, numbers]) => strictWebGpuStore(input, offset * 4, numbers));
 		strictWebGpuStore(places, 0, inputs.places);
 		const results = strictWebGpuBuffer(count * 4, read), failures = strictWebGpuFlag();
 		const buffers = [{ buffer: results }, input, places, { buffer: failures }];
-		const grouped = (Module['strictKernelGroups'] || {})[name], groups = Math.ceil(count / 64);
-		const [tiles, part, splits = 1] = grouped ? grouped(inputs.places) : [groups, groups];
 		const lists = [0, 1, 2, 3].map((at) => ({ buffer: (inputs.bound || [])[at] ||
 			(strictWebGpu.empty ||= device.createBuffer({ size: 4, usage: 128 })) }));
 		// a part of tiles is one dispatch, sized to stay short (Windows resets the device when a submit runs for 2 s)
 		const dispatched = (used, tiles, part, bound) => {
 			const parts = Math.ceil(tiles / part), work = strictWebGpuStaged(parts * 256);
-			for (let at = 0; at < parts; at++)
-				strictWebGpuStore(work, at * 256, new Uint32Array([at * part, splits]));
+			const workWords = strictWebGpu.workWords ||= new Uint32Array(2);
+			for (let at = 0; at < parts; at++) {
+				workWords[0] = at * part;
+				workWords[1] = splits;
+				strictWebGpuStore(work, at * 256, workWords);
+			}
 			const worked = { buffer: work.buffer, offset: work.offset, size: 8 };
 			const entries = bound.concat(worked, lists).map((resource, binding) => ({ binding, resource }));
 			const group = device.createBindGroup({ layout: strictWebGpu.layout, entries }), pass = strictWebGpuPass();
@@ -361,10 +353,8 @@ addToLibrary({
 				strictWebGpu.recorded++;
 			}
 		};
-		const runtimePipeline = async (key) => strictWebGpu.pipelines[key] ||=
-			await (strictWebGpu.compiling[key] || strictWebGpuPipeline(device, Module['strictShaders'][key]));
-		const splitting = splits > 1 && await runtimePipeline('strict_splits');
-		const packing = !output && bits === 17 && await runtimePipeline('strict_packed');
+		const splitting = splits > 1 && strictWebGpu.pipelines['strict_splits'];
+		const packing = !output && bits === 17 && strictWebGpu.pipelines['strict_packed'];
 		for (const [source, offset, length] of inputs.copies || [])
 			strictWebGpuEncoder().copyBufferToBuffer(source, 0, input.buffer, input.offset + offset * 4, length * 4);
 		strictWebGpu.fresh += count * 4;
@@ -393,32 +383,111 @@ addToLibrary({
 			strictWebGpu.grown += kept.size;
 			if (strictWebGpu.recorded >= 64 || strictWebGpu.fresh > strictWebGpuLimit() / 4)
 				strictWebGpuFlush();
-			await strictWebGpuThrottled(0);
+			if (strictWebGpu.queued > strictWebGpuLimit())
+				strictWebGpu.needsDrain = true;
 			return handle;
 		}
 		const copy = strictWebGpuBuffer(count * 4 + 4, 1 | 8), encoder = strictWebGpuEncoder();
 		encoder.copyBufferToBuffer(results, 0, copy, 0, count * 4);
 		encoder.copyBufferToBuffer(failures, 0, copy, count * 4, 4);
 		strictWebGpuFlush();
-		let isMapped = !navigator.userAgent.includes('Firefox');
-		const mapping = copy.mapAsync(1).finally(() => isMapped = true);
-		// Firefox maps only when it polls the device, every 100 ms or on a submit: empty submits make that 2 ms (Chrome
-		// is 3 ms slower with them).
-		while (!isMapped) {
-			device.queue.submit([]);
-			await new Promise((resolve) => {
-				const channel = new MessageChannel();
-				channel.port1.onmessage = resolve;
-				channel.port2.postMessage(0);
-			});
+		return { copy, results, failures, count };
+	},
+	$strictWebGpuRun__deps: ['$strictWebGpu', '$strictWebGpuPipeline', '$strictWebGpuDevice', '$strictWebGpuWritten',
+		'$strictWebGpuRecord', '$strictWebGpuLimit', '$strictWebGpuThrottled', '$strictWebGpuDestroyed'],
+	$strictWebGpuRun: async (name, count, inputs, output, bits) => {
+		const device = inputs && (strictWebGpu.device ||= await strictWebGpuDevice());
+		if (inputs && !device) {
+			console.warn('WebGPU has no adapter here, GPU loops and kernels run on the CPU');
+			strictWebGpu.failed = true;
 		}
-		await mapping;
-		const mapped = copy.getMappedRange(), isFailed = new Uint32Array(mapped, count * 4, 1)[0] !== 0;
-		if (!isFailed)
-			strictWebGpuWritten(new Float32Array(mapped, 0, count), output, bits);
-		copy.unmap();
-		[results, failures, copy].forEach(strictWebGpuDestroyed);
-		return isFailed ? 0 : 1;
+		if (!device)
+			return 0;
+		// a kernel with a variant needing 32 KB of workgroup memory (Module.strictLarger) takes it where the device has it
+		const larger = (Module['strictLarger'] || {})[name];
+		if (larger && strictWebGpu.pipelines[larger] !== null && device.limits.maxComputeWorkgroupStorageSize >= 32768)
+			try {
+				strictWebGpu.pipelines[larger] ||= await (strictWebGpu.compiling[larger] ||
+					strictWebGpuPipeline(device, Module['strictShaders'][larger]));
+				name = larger;
+			} catch {
+				strictWebGpu.pipelines[larger] = null;
+			}
+		const pipeline = strictWebGpu.pipelines[name] ||= await (strictWebGpu.compiling[name] ||
+			strictWebGpuPipeline(device, Module['strictShaders'][name]));
+		const grouped = (Module['strictKernelGroups'] || {})[name];
+		const splits = grouped ? grouped(inputs.places)[2] || 1 : 1;
+		const compile = async (key) => strictWebGpu.pipelines[key] ||=
+			await (strictWebGpu.compiling[key] || strictWebGpuPipeline(device, Module['strictShaders'][key]));
+		if (splits > 1)
+			await compile('strict_splits');
+		if (!output && bits === 17)
+			await compile('strict_packed');
+		const recorded = strictWebGpuRecord(pipeline, name, count, inputs, output, bits);
+		if (recorded === undefined)
+			return 0;
+		if (typeof recorded !== 'number') {
+			let isMapped = !navigator.userAgent.includes('Firefox');
+			const mapping = recorded.copy.mapAsync(1).finally(() => isMapped = true);
+			// Firefox maps only when it polls the device, every 100 ms or on a submit: empty submits make that 2 ms
+			// (Chrome is 3 ms slower with them).
+			while (!isMapped) {
+				device.queue.submit([]);
+				await new Promise((resolve) => {
+					const channel = new MessageChannel();
+					channel.port1.onmessage = resolve;
+					channel.port2.postMessage(0);
+				});
+			}
+			await mapping;
+			const mapped = recorded.copy.getMappedRange();
+			const isFailed = new Uint32Array(mapped, recorded.count * 4, 1)[0] !== 0;
+			if (!isFailed)
+				strictWebGpuWritten(new Float32Array(mapped, 0, recorded.count), output, bits);
+			recorded.copy.unmap();
+			[recorded.results, recorded.failures, recorded.copy].forEach(strictWebGpuDestroyed);
+			return isFailed ? 0 : 1;
+		}
+		await strictWebGpuThrottled(0);
+		strictWebGpu.needsDrain = strictWebGpu.queued > strictWebGpuLimit();
+		return recorded;
+	},
+	// a compiled kernel with nothing to upload and room in the queue, recorded without unwinding wasm (strictWebGpuRun
+	// does the first of each shader, and any kernel that would wait for the GPU)
+	$strictWebGpuFast__deps: ['$strictWebGpu', '$strictWebGpuRecord', '$strictWebGpuKernelInputs', '$UTF8ToString',
+		'$strictWebGpuLimit'],
+	$strictWebGpuFast: (namePtr, count, table, slots, bits) => {
+		const device = strictWebGpu.device;
+		if (!device)
+			return undefined;
+		// one kernel waits when the queue is past its limit, then the rest record without unwinding wasm. Checking the
+		// limit on every kernel kept the whole step on the slow path (MossWeb 480p, about 1.4 s of that unwind)
+		if (strictWebGpu.needsDrain) {
+			strictWebGpu.needsDrain = false;
+			return undefined;
+		}
+		const key = UTF8ToString(namePtr);
+		const entries = HEAPF64.subarray((table >>> 0) / 8, (table >>> 0) / 8 + slots * 3);
+		for (let slot = 0; slot < slots; slot++)
+			if (entries[slot * 3 + 2] === 255 && entries[slot * 3] in strictWebGpu.lazy)
+				return undefined;
+		let name = key;
+		const larger = (Module['strictLarger'] || {})[key];
+		if (larger && strictWebGpu.pipelines[larger] !== null && device.limits.maxComputeWorkgroupStorageSize >= 32768) {
+			if (!strictWebGpu.pipelines[larger])
+				return undefined;
+			name = larger;
+		} else if (!strictWebGpu.pipelines[key])
+			return undefined;
+		const inputs = strictWebGpuKernelInputs(count, table >>> 0, slots);
+		if (!inputs)
+			return 0;
+		const grouped = (Module['strictKernelGroups'] || {})[name];
+		const splits = grouped ? grouped(inputs.places)[2] || 1 : 1;
+		if ((splits > 1 && !strictWebGpu.pipelines['strict_splits']) ||
+			(bits === 17 && !strictWebGpu.pipelines['strict_packed']))
+			return undefined;
+		return strictWebGpuRecord(strictWebGpu.pipelines[name], name, count, inputs, 0, bits);
 	},
 	$strictWebGpuStarted__deps: ['$strictWebGpu', '$strictWebGpuRun', '$UTF8ToString', '$Asyncify'],
 	$strictWebGpuStarted: (name, count, inputs, output, bits, placed) => Asyncify.handleSleep((wakeUp) => {
@@ -434,6 +503,19 @@ addToLibrary({
 	strict_webgpu_kernel__async: true,
 	strict_webgpu_kernel: (name, count, table, slots, bits) => strictWebGpuStarted(name, count,
 		() => strictWebGpuKernelInputs(count, table >>> 0, slots), 0, bits, strictWebGpuPlacedInputs(table >>> 0, slots)),
+	// -1 when this kernel must wait (compile, upload or the queue is full): a synchronous return from the async import
+	// left Asyncify unable to rewind the next wait. 0 is a failed kernel, a positive handle is the kept result
+	strict_webgpu_kernel_fast__deps: ['$strictWebGpuFast', '$UTF8ToString'],
+	strict_webgpu_kernel_fast: (name, count, table, slots, bits) => {
+		try {
+			const fast = strictWebGpuFast(name, count, table, slots, bits);
+			return fast === undefined ? -1 : fast;
+		} catch (error) {
+			console.error('WebGPU kernel ' + UTF8ToString(name) + ' runs on the CPU: ' + error);
+			strictWebGpu.pipelines[UTF8ToString(name)] = null;
+			return 0;
+		}
+	},
 	// the numbers of a kept kernel result (strict_gpu_web_get) as bits into target: 1, 2 when its loop read outside of a
 	// list, 0 when the buffer is gone
 	strict_webgpu_download__deps: ['$strictWebGpu', '$strictWebGpuWritten', '$strictWebGpuWidened', '$strictWebGpuEncoder',

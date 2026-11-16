@@ -10,6 +10,7 @@ constant LoopSlot = 4
 constant IndexSlot = 5
 constant MembersSlot = 6
 constant CheckSteps = 4096
+constant End = 4095
 constant Doubling = Machine(Resolver(List(TypeEntry) + Machine.Doubler).Resolved)
 constant Twice = Frame(Doubling, Doubling.types.First.methods.First, "Strict/Doubler")
 constant FailCall = InstructionEntry.Invoke(0, ("Strict/Failing", "Fail", "Strict/Number"), List(Number), -1)
@@ -21,7 +22,7 @@ Finished(arguments List(VmValue)) List(VmValue)
 	mutable slots = arguments
 	mutable position = 0
 	for machine.deadline > 0 then MutationCache.Steps else Invocation.MaxSteps
-		if position >= method.instructions.Length or (index % CheckSteps is 1 then MutationCache.IsLate(machine) else false)
+		if position >= method.instructions.Length or (index % CheckSteps is End then MutationCache.IsLate(machine) else false)
 			return position >= method.instructions.Length then Ended(slots) else MutationCache.Exhausted(slots, machine.deadline)
 		let entry = method.instructions(position)
 		slots(entry.Target) = Value(entry, position, slots)
@@ -33,7 +34,7 @@ Finished(arguments List(VmValue)) List(VmValue)
 Ended(slots List(VmValue)) List(VmValue)
 	Twice.Ended(Listed)(0).text is "ab"
 	Frame(Machine(Doubling, deadline = 0.001), Twice.method, "D").Ended(Listed)(ResultSlot).items.First.text is "Timeout"
-	let stopped = MutationCache.Stopped(machine.deadline)
+	let stopped = (machine.deadline > 0) or (depth is 0) then MutationCache.Stopped(machine.deadline) else ""
 	stopped is "" then Returned(slots) else MutationCache.Exhausted(slots, machine.deadline)
 Value(entry InstructionEntry, position Number, slots List(VmValue)) VmValue
 	Twice.Value(InstructionEntry(InstructionType.LoadVariableToRegister, "a", (6, 8)), 0, Listed).number is 5
@@ -112,7 +113,7 @@ Invoked(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	Twice.Other(InstructionEntry.LoopBegin(6, 8), Listed, 0).items(3).number is 1
 	Twice.Other(InstructionEntry(InstructionType.InvokeWriteToList, "list", (8, 7)), Listed, 0).Length is 3
 	let call = Called(entry, slots)
-	let accessed = Accessor(machine).Accessed(call)
+	let accessed = entry.payload.Length > call.Resolution + 3 then Accessor(machine).Accessed(call) else VmValue.None
 	let result = accessed.kind is "None" then machine.Call(call) else accessed
 	result.kind is in VmValue.ErrorKinds then Traced(result, position) else result
 Called(entry InstructionEntry, slots List(VmValue)) Invocation
