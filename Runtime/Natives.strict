@@ -14,7 +14,7 @@ constant NewSingle = Invocation(InstructionEntry.Invoke(1, ("Strict/Single", "fr
 constant Pairs = VmValue.OfList(VmValue.OfList(VmValue.OfNumber(1), VmValue.OfNumber(3)), VmValue.OfList(VmValue.OfNumber(2), VmValue.OfNumber(4)))
 constant BcTwo = (VmValue.OfText("bc"), VmValue.OfNumber(2))
 constant Cut = VmValue.OfError("SubstringOutOfRange")
-constant TextMethods = ("StartsWith", "IndexOf", "LastIndexOf", "Substring", "Upper", "Lower", "Capitalize", "Trim", "TrimStart", "TrimEnd", "Bytes", "Utf8")
+constant TextMethods = ("StartsWith", "EndsWith", "IndexOf", "LastIndexOf", "Substring", "Upper", "Lower", "Capitalize", "Trim", "TrimStart", "TrimEnd", "Bytes", "Utf8")
 Result(call Invocation) VmValue
 	(Shapes.Result(NewShape).items.First.number is 3) and (Shapes.Result(Invocation.Parsing).number is 5)
 	let name = call.MethodName
@@ -69,6 +69,7 @@ Converted(instance VmValue, target Text) VmValue
 Parsed(text Text) VmValue
 	Shapes.Parsed("5").number is 5
 	Shapes.Parsed("abc").items.First.text is "InvalidNumber"
+	Shapes.Searched("EndsWith", "abbc", BcTwo).IsTrue and (Shapes.Searched("EndsWith", "ab", BcTwo).IsTrue is false)
 	let number = text to Number
 	number is Error then VmValue.OfError("InvalidNumber") else VmValue.OfNumber(number)
 Logical(name Text, left VmValue, call Invocation) VmValue
@@ -115,8 +116,8 @@ Searched(name Text, text Text, arguments List(VmValue)) VmValue
 	if name is "Substring"
 		let part = text.Substring(first.number, second)
 		return part is Error then Cut else VmValue.OfText(part)
-	if name is "StartsWith"
-		return VmValue.OfBoolean(text.StartsWith(first.text, second))
+	if name is in ("StartsWith", "EndsWith")
+		return VmValue.OfBoolean(name is "EndsWith" then text.EndsWith(first.text) else text.StartsWith(first.text, second))
 	VmValue.OfNumber(name is "IndexOf" then text.IndexOf(first.text, second) else text.LastIndexOf(first.text))
 ByteTexts(name Text, text Text, arguments List(VmValue)) VmValue
 	Shapes.ByteTexts("Bytes", "ab", List(VmValue)).items.Last.number is 98
