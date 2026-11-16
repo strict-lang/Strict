@@ -14,6 +14,26 @@ constant Requiring = FileCheck(TypeInference(RequiredTwice, List(Scope) + KnownT
 constant HiddenCall = SyntaxParser(Tokenizer("Count.Missing").Tokens).Parse
 constant Flagged = Scope(List(Text) + "flag", List(Text) + "Boolean")
 constant FlagLoop = ScopedStatement(StatementParser(Tokenizer("for flag").Tokens).ParseStatement, Flagged, 0)
+constant WhileFlag = ScopedStatement(StatementParser(Tokenizer("for as long as flag").Tokens).ParseStatement, Flagged, 0)
+constant OtherLoop = ScopedStatement(StatementParser(Tokenizer("for other").Tokens).ParseStatement, Flagged, 0)
+constant TextLoop = ScopedStatement(StatementParser(Tokenizer("for \"ab\"").Tokens).ParseStatement, Flagged, 0)
+constant CountLoop = ScopedStatement(StatementParser(Tokenizer("for count").Tokens).ParseStatement, Counted, 0)
+constant Increment = ScopedStatement(SyntaxParser(Tokenizer("count.Increment").Tokens).Parse, Counted.With(" dropped", "dropped"), 0)
+constant Numbered = ScopedStatement(SyntaxParser(Tokenizer("number").Tokens).Parse, Scope(("value"), ("Count")), 0)
+constant Enumerating = FileCheck(TypeInference(KnownTypes(("A", "B"), KnownTypes.NoMemberPair, NoScopes, NoScopes), NoScopes), ("A"))
+constant ForMethod = Scope(List(Text) + "for", List(Text) + "Numbers")
+constant Loops = KnownTypes(("Count", "Text"), KnownTypes.NoMemberPair, (ForMethod, KnownTypes.NoMembers), KnownTypes.NoMemberPair)
+constant Looping = FileCheck(TypeInference(Loops, KnownTypes.NoMemberPair), ("Count"))
+constant HiddenBody = SyntaxNode("For", "", List(SyntaxNode) + SyntaxNode("Body", "", List(SyntaxNode) + MissingCall.statement))
+constant Requirements = Scope(("Twice required", "Twice required", "Twice required"), ("2", "1", "3"))
+constant SelfCounted = Counted.With("self type", "Count")
+constant Owning = Counted.With("Count", "Count")
+constant Lists = KnownTypes(("List", "Generic"), KnownTypes.NoMemberPair, KnownTypes.NoMemberPair, KnownTypes.NoMemberPair)
+constant Listing = FileCheck(TypeInference(Lists, NoScopes), ("A"))
+constant Boxes = KnownTypes(List(Text) + "Box", List(Scope) + Scope(List(Text) + "first", List(Text) + "Generic"), List(Scope) + KnownTypes.NoMembers, List(Scope) + KnownTypes.NoMembers)
+constant Boxing = FileCheck(TypeInference(Boxes, NoScopes), ("A"))
+constant TextMissing = SyntaxNode("Member", "Missing", List(SyntaxNode) + SyntaxNode("Text", "Count"))
+constant RequiredThrice = KnownTypes(RequiredTwice.names, RequiredTwice.members, RequiredTwice.methods, List(Scope) + Requirements)
 Unknown(scoped ScopedStatement, current Scope) Text
 	Counting.Unknown(TwiceCall, KnownTypes.NoMembers) is ""
 	Counting.Unknown(MissingCall, KnownTypes.NoMembers) is "MethodNotFound: Count.Missing"
@@ -30,6 +50,7 @@ Unknown(scoped ScopedStatement, current Scope) Text
 NotIterable(scoped ScopedStatement, current Scope) Text
 	Counting.NotIterable(FlagLoop, KnownTypes.NoMembers) is "NotIterable: flag is a Boolean, use for as long as flag"
 	Counting.NotIterable(TwiceCall, KnownTypes.NoMembers) is ""
+	Counting.NotIterable(ScopedStatement(SyntaxNode("For", ""), Counted, 0), Counted) is ""
 	let loop = scoped.statement
 	if (loop.Kind is not "For") or (loop.HasValue is false) or (loop.text is "for as long as")
 		return ""
@@ -43,6 +64,10 @@ IsIterable(type Text) Boolean
 	Counting.IsIterable("Boolean") is false
 	Counting.IsIterable("Count") is false
 	Counting.Unknown(ScopedStatement(SyntaxNode("Invalid", "Broken: x"), Counted, 0), Counted) is "Broken: x"
+	Enumerating.IsIterable("A") and Looping.IsIterable("Count")
+	Counting.NotIterable(WhileFlag, Flagged) is "" and (Counting.NotIterable(OtherLoop, Flagged) is "")
+	Counting.NotIterable(TextLoop, Flagged) is ""
+	Counting.NotIterable(CountLoop, Counted) is "NotIterable: count is a Count"
 	let element = inference.types.ElementType(type)
 	let iterated = inference.types.ElementType(inference.types.MethodsOf(type).TypeOf("for"))
 	(element is not "Unknown") or (iterated is not "Unknown") or (inference.Enumerated(type).Length > 0)
@@ -60,6 +85,12 @@ UnknownMethods(node SyntaxNode, scope Scope, current Scope) Texts
 MethodIssue(node SyntaxNode, scope Scope, current Scope) Text
 	Counting.MethodIssue(MissingCall.statement, Counted, KnownTypes.NoMembers) is "MethodNotFound: Count.Missing"
 	Counting.MethodIssue(TwiceCall.statement, Counted, KnownTypes.NoMembers) is ""
+	Counting.Unknown(Numbered, Counted).StartsWith("Name") is false
+	Counting.Unknown(Increment, Counted) is not ""
+	Counting.UnknownMethods(HiddenBody, Counted, Counted).Length is 0
+	Counting.CallIssue(HiddenCall, Counted, KnownTypes.NoMembers) is "MethodNotFound: Count.Missing"
+	Counting.MethodIssue(Counting.Parsed("1 > 0 and (count)"), Counted, Counted).StartsWith("LogicalOperandIsAList")
+	Counting.MethodIssue(Counting.Parsed("Count.Twice"), SelfCounted, Owning).StartsWith("AmbiguousName")
 	let hidden = HiddenType(inference).Ambiguous(node, scope, current) + HiddenType(inference).Issue(node, scope, current)
 	let called = IsCall(node) then CallIssue(node, scope, current) else ""
 	let typed = called is "" then ArgumentTypes(inference).Checked(node, scope, current) else called
@@ -80,6 +111,7 @@ CallIssue(call SyntaxNode, scope Scope, current Scope) Text
 Fewest(instance Text, name Text) Number
 	Requiring.Fewest("Count", "Twice") is 1
 	Counting.Fewest("Count", "Twice") is 0
+	FileCheck(TypeInference(RequiredThrice, NoScopes), ("Count")).Fewest("Count", "Twice") is 1
 	let scope = inference.types.ParameterScope(instance)
 	mutable fewest = -1
 	for scope.names
@@ -93,6 +125,7 @@ UnknownMembers(call SyntaxNode) Texts
 	Counting.UnknownMembers(SyntaxParser(Tokenizer("Count(c, number = 2)").Tokens).Parse).Length is 0
 	Counting.UnknownMembers(SyntaxParser(Tokenizer("Count(c, size = 2)").Tokens).Parse) is ("MemberNotFound: Count.size")
 	Counting.UnknownMembers(SyntaxParser(Tokenizer("c in cs").Tokens).Parse) is ("InMustFollowIs: write c is in cs")
+	Counting.UnknownMembers(SyntaxNode("Member", "in")).Length is 0
 	if (call.Kind is "Binary") and (call.text is "in")
 		return List(Text) + ("InMustFollowIs: write " + call.children(0) + " is in " + call.children(1))
 	let members = inference.types.MembersOf(call.text).names
@@ -107,6 +140,7 @@ IsCall(node SyntaxNode) Boolean
 	Counting.IsCall(SyntaxParser(Tokenizer("count.index").Tokens).Parse) is false
 	Counting.IsCall(MissingCall.statement)
 	Counting.IsCall(OtherName.statement) is false
+	Counting.IsCall(SyntaxNode("Member", "1", MissingCall.statement.children)) is false
 	let isNamed = (node.text.Length > 0) and (node.text(0).Upper is not node.text(0).Lower)
 	let isMember = (node.Kind is in ("Member", "MethodCall")) and (node.children.Length > 0)
 	isMember and isNamed and (node.text is not in ("value", "index"))
@@ -117,6 +151,9 @@ IsMissing(instance Text, name Text) Boolean
 	Counting.IsMissing("Count", "Twice") is false
 	Counting.IsMissing("Generic", "number") is false
 	FileCheck(TypeInference(KnownTypes.Options, NoScopes), ("Text")).IsMissing("Text", "Parsed")
+	FileCheck(TypeInference(KnownTypes.Options, NoScopes), ("Text")).IsMissing("Settings", "Parsed") is false
+	Listing.IsMissing("Generic", "number") is false and (Listing.IsMissing("List(Text, Number)", "Key") is false)
+	Boxing.IsMissing("Box", "first") is false
 	let types = inference.types
 	let isChecked = types.IsKnown(types.BaseName(instance)) and (instance is not in ("Generic", "Generics"))
 	isChecked and (types.DeclaredType(instance, name, 3) is "") and (types.MemberType(instance, name) is "Unknown")
@@ -125,7 +162,8 @@ ValueNames(scope Scope) Texts
 	Counting.ValueNames(Scope(List(Text) + "value", List(Text) + "Count")) is ("number", "unused", "Increment", "Twice")
 	Counting.IsMissing("Count", "number") is false
 	Counting.IsMissing("Text", "Missing")
-	scope.TypeOf("value") is "" then List(Text) else inference.types.ShapeScope(scope.TypeOf("value")).names
+	Counting.CallIssue(TextMissing, Counted, Counted) is "MethodNotFound: Text.Missing"
+	inference.types.ShapeScope(scope.TypeOf("value")).names
 UnknownNames(statement SyntaxNode, names Texts) Texts
 	Counting.IsUnimplemented(("Add Number", "\tAdd is 1"), 0, "A")
 	Counting.IsUnimplemented(("Add(other) Number", "\tAdder(1) is 1"), 0, "A") is false
@@ -187,6 +225,8 @@ Problem(lines Texts, broken Number) Text
 	Counting.Problem(("Run", "	let a = for 3"), 1).StartsWith("ForWithBodyOnlyAsMethodResult: let a = for 3, ")
 	Counting.Problem(("has number", "Run", "	1", "", "	2"), 3) is "EmptyLineIsNotAllowed: remove it"
 	Counting.Problem(("", "Run"), 0) is "EmptyLineIsNotAllowed: remove it"
+	Counting.Unimplemented("A.strict", ("Run", "\tA.\t", "\tA.\t is 1")).Length is 0
+	Counting.IsUnimplemented(("has number", "\thas 1 is 1"), 0, "A") is false
 	lines(broken).Trim is "" then "EmptyLineIsNotAllowed: remove it" else StatementParser.Problem(lines(broken).Trim)
 Parsed(code Text) SyntaxNode
 	Counting.UnknownMethods(Parsed("count is Error then count.Missing else 1"), Counted, KnownTypes.NoMembers).Length is 0
