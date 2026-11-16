@@ -41,7 +41,7 @@ Arguments Texts
 	mutable lines = List(Mutable(Text))
 	for kernel.Reads
 		let name = kernel.Source(value)
-		if (kinds(index) is "i") and (name is not "index")
+		if kinds(index) is "i" and name is not "index"
 			lines.Add("    %w" + index + " = arith.fptosi %f_" + name + " : f64 to i64")
 		else if kinds(index) is "o"
 			lines = lines + Members(name, index)
@@ -91,14 +91,14 @@ Flattened(callee MlirFunction, depth Number) List(MlirFunction)
 	Body.Flattened(MlirWholeKernel.Kernel.Callee, 0).Length is 1
 	mutable found = List(MlirFunction) + callee
 	for callee.method.instructions
-		let isCall = (value.kind is InstructionType.Invoke) and (depth < 3)
-		if isCall and (MlirWholeFunction(callee).IsBuilt(value, index) is false) and (IsNative(callee, value, index) is false)
+		let isCall = value.kind is InstructionType.Invoke and depth < 3
+		if isCall and MlirWholeFunction(callee).IsBuilt(value, index) is false and IsNative(callee, value, index) is false
 			found = found + Flattened(MlirWholeFunction(callee).Callee(value), depth + 1)
 	found
 IsNative(callee MlirFunction, entry InstructionEntry, at Number) Boolean
 	Body.IsNative(Body.function, MlirWholeKernel.Blurring(8), 8) is false
 	let helper = MlirCalls(callee, at).NativeHelper(entry, PayloadDecoder(entry))
-	(PayloadDecoder(entry).Text(2) is in ("Floor", "Length")) or (helper is not "")
+	PayloadDecoder(entry).Text(2) is in ("Floor", "Length") or helper is not ""
 Privatized(lines Texts) Texts
 	Body.Privatized(List(Text) + "    %r0 = llvm.alloca %one x i64 : (i64) -> !llvm.ptr").Length is 2
 	Body.Privatized(List(Text) + "    %a = x") is List(Text) + "    %a = x"

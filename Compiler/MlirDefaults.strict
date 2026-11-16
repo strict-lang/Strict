@@ -55,7 +55,7 @@ Added(texts Texts, parameters List(MemberEntry)) Texts
 	mutable added = texts
 	for parameters
 		let initial = Natives(function.types).Initial(value)
-		if (initial.text is not "") and (initial.text is not in added)
+		if initial.text is not "" and initial.text is not in added
 			added = added + initial.text
 	added
 IsWhole(parameter MemberEntry) Boolean
@@ -68,8 +68,8 @@ IsWhole(parameter MemberEntry) Boolean
 	Greets.IsWhole(Greeting.methods.First.parameters.First) is false
 	let initial = Natives(function.types).Initial(parameter)
 	let isFraction = (initial.number - initial.number.Floor) > 0
-	let isNumber = (parameter.initial.Length > 0) and (initial.kind is "Number")
-	isNumber and (isFraction is false) and (initial.number.Absolute < LargestWhole)
+	let isNumber = parameter.initial.Length > 0 and initial.kind is "Number"
+	isNumber and isFraction is false and initial.number.Absolute < LargestWhole
 Whole(parameter MemberEntry) Number
 	MlirDefaults(MlirDeviceCalls.Twice.function).Whole(MlirDeviceCalls.Decimals) is 3
 	Natives(function.types).Initial(parameter).number

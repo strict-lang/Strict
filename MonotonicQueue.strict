@@ -9,7 +9,7 @@ Pushed(age Number, values Numbers, capacity Number) MonotonicQueue
 	Lows.Pushed(0, (3), 2).Pushed(1, (3, 1), 2).Value((3, 1), 2) is 1
 	Lows.Pushed(0, (1), 2).Pushed(1, (1, 3), 2).Pushed(2, (2, 3), 2).Value((2, 3), 2) is 2
 	Highs.Pushed(0, (1), 2).Pushed(1, (1, 3), 2).Pushed(2, (2, 3), 2).Value((2, 3), 2) is 3
-	let expired = (last > first) and (ages(first % capacity) <= age - capacity)
+	let expired = last > first and ages(first % capacity) <= age - capacity
 	let started = MonotonicQueue(value, first = expired then first + 1 else first)
 	started.Popped(values(age % capacity), values, capacity).Appended(age, capacity)
 Popped(number Number, values Numbers, capacity Number) MonotonicQueue

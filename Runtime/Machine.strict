@@ -44,7 +44,7 @@ Typed(parameters List(MemberEntry), arguments List(VmValue)) List(VmValue)
 		let parameter = index < parameters.Length then parameters(index) else parameters.Last
 		let isNumber = parameter.typeName is in ("Strict/Number", "Strict/List(Number)")
 		typed.Add(isNumber then Natives(types).Parsed(value.text) else value)
-	let isListed = (parameters.Length is 1) and parameters.First.typeName.StartsWith("Strict/List(")
+	let isListed = parameters.Length is 1 and parameters.First.typeName.StartsWith("Strict/List(")
 	isListed then List(VmValue) + VmValue.OfList(typed) else typed
 Tested(typeName Text, runner Text = TestCodegen.Runner) Number
 	Hello.Tested("HelloLogger") is 0
@@ -66,7 +66,7 @@ Started(main TypeEntry) VmValue
 Prepared Machine
 	Hello.Prepared.prototypes.entries.First.kind is "HelloLogger"
 	Hello.Prepared.sources("HelloLogger") is "HelloLogger.strict"
-	Machine(Hello, isSampling = true).Prepared.isSampling and (Hello.Prepared.places("HelloLogger") is 0)
+	Machine(Hello, isSampling = true).Prepared.isSampling and Hello.Prepared.places("HelloLogger") is 0
 	mutable created = List(Mutable(VmValue))
 	mutable located = Dictionary(Text, Text)
 	mutable placed = Dictionary(Text, Number)
@@ -86,7 +86,7 @@ Bound(type TypeEntry, instance VmValue, method MethodEntry, arguments List(VmVal
 	let mode = type.members.Length is 0 then 0 else Ownership(type, instance.kind)
 	let empty = VmValue.None
 	for (end, method.Slots).Maximum
-		let head = index < 2 then instance else (index is Index) and (end > start) then Indexed(method, arguments) else empty
+		let head = index < 2 then instance else index is Index and end > start then Indexed(method, arguments) else empty
 		let arg = index >= start then (index < end then Argument(method, arguments, index - start) else empty) else empty
 		index < Frame.MembersSlot then head else index < start then Member(type, instance, index, mode, prototype) else arg
 Member(type TypeEntry, instance VmValue, slot Number, ownership Number, prototype VmValue) VmValue
@@ -96,7 +96,7 @@ Member(type TypeEntry, instance VmValue, slot Number, ownership Number, prototyp
 	if slot < Frame.MembersSlot
 		return slot < 2 then instance else VmValue.None
 	let position = slot - Frame.MembersSlot
-	if (ownership is 2) and (position < instance.items.Length)
+	if ownership is 2 and position < instance.items.Length
 		return instance.items(position)
 	let member = type.members(position)
 	if member.IsConstant
@@ -151,7 +151,7 @@ Execute(method MethodEntry, locals List(VmValue), owner Text, depth = 0) VmValue
 	Machine(Frame.Doubling, isQuiet = true, isSampling = true).Execute(Frame.Twice.method, Frame.Listed, "D").number is 42
 	if depth > Invocation.MaxDepth
 		return VmValue.OfError("StackOverflow")
-	let stopped = (deadline > 0) or (depth % 64 is 0) then MutationCache.Stopped(deadline) else ""
+	let stopped = deadline > 0 or depth % 64 is 0 then MutationCache.Stopped(deadline) else ""
 	if stopped is not ""
 		return VmValue.OfError(stopped)
 	let frame = Frame(value, method, owner, depth)
@@ -172,9 +172,9 @@ Routed(call Invocation) VmValue
 		return Hosted(call).Contained
 	if route is Resolver.Searching
 		return Natives(types).Searched(call.MethodName, call.Instance.text, call.Arguments)
-	if (route is Resolver.Native) and (entry.payload(at + 1) > 0)
+	if route is Resolver.Native and entry.payload(at + 1) > 0
 		return Rounding.Single.Built(types(entry.payload(at + 1) - 1), call, Natives(types), entry.payload(at + 2) is 1)
-	let skip = (route < 0) or (entry.payload(at + 2) is 1 then call.IsMemberValue(types(route)) else false)
+	let skip = route < 0 or (entry.payload(at + 2) is 1 then call.IsMemberValue(types(route)) else false)
 	skip then Natives(types, folder).Result(call) else Executed(route, types(route).methods(entry.payload(at + 1)), call)
 Executed(route Number, method MethodEntry, call Invocation) VmValue
 	Pairing.Executed(0, Resolver.Doubling.Methods(Paired).First, Invocation.AddCall).items.First.number is 7
@@ -198,11 +198,11 @@ Field(entry InstructionEntry, instance VmValue) VmValue
 Logged(message Text)
 	Hello.Logged("") is not Error
 	Machine(Hello, isQuiet = true).Logged("a") is not Error
-	if (message is not "") and IsShown(message)
+	if message is not "" and IsShown(message)
 		logger.Log(message)
 IsShown(message Text) Boolean
 	Hello.IsShown("a")
 	Machine(Hello, isQuiet = true).IsShown("a") is false
 	Machine(Hello, isQuiet = true).IsShown("Test failed: a")
 	Machine(Hello, isQuiet = true).IsShown("  got: 1")
-	(isQuiet is false) or message.StartsWith("Test failed: ") or message.StartsWith("  got: ")
+	isQuiet is false or message.StartsWith("Test failed: ") or message.StartsWith("  got: ")

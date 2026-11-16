@@ -73,8 +73,8 @@ Counted(rounding Text) Number
 	let tolerance = Absolute * RelativeTolerance + 0.000000001
 	let floor = (value + tolerance).Floor
 	let fraction = value - floor
-	let isEvenUp = (fraction > 0.5 + tolerance) or ((fraction - 0.5).Absolute <= tolerance) and ((floor % 2).Absolute is 1)
-	floor + ((rounding is "Ceiling" then fraction > tolerance else (rounding is "Even") and isEvenUp) then 1 else 0)
+	let isEvenUp = fraction > 0.5 + tolerance or (fraction - 0.5).Absolute <= tolerance and (floor % 2).Absolute is 1
+	floor + ((rounding is "Ceiling" then fraction > tolerance else rounding is "Even" and isEvenUp) then 1 else 0)
 Absolute Number
 	-1.Absolute is 1
 	1.Absolute is 1
@@ -89,7 +89,7 @@ IsNearlyEqual(other, difference = 0) Boolean
 	0.IsNearlyEqual(0.0000100001) and 0.0000100001.IsNearlyEqual(0)
 	let delta = (value - other).Absolute
 	let scale = value.Absolute > other.Absolute then value.Absolute else other.Absolute
-	(value is other) or ((delta < 1 / 0) and ((delta <= difference) or (delta <= Epsilon * (1 + scale))))
+	value is other or delta < 1 / 0 and (delta <= difference or delta <= Epsilon * (1 + scale))
 Clamp(minimum = 0, maximum = 1) Number
 	1.7.Clamp(0.5, 1.5) is 1.5
 	0.3.Clamp is 0.3
@@ -169,7 +169,7 @@ and(other) Number
 	mutable result = 0
 	for IntegerBits
 		let bit = 2 ^ index
-		if ((left / bit).Floor % 2 is 1) and ((right / bit).Floor % 2 is 1)
+		if (left / bit).Floor % 2 is 1 and (right / bit).Floor % 2 is 1
 			result = result + bit
 	result >= 2 ^ (IntegerBits - 1) then result - 2 ^ IntegerBits else result
 or(other) Number
@@ -205,7 +205,7 @@ Decrement(amount = 1) Mutable(Number)
 IsFinite Boolean
 	1.IsFinite
 	(1 / 0).IsFinite is false
-	(value is value) and (value - value is 0)
+	value is value and value - value is 0
 Exponential Number
 	0.Exponential is 1
 	1.Exponential is E
@@ -224,7 +224,7 @@ Rounded(bits Number) Number
 	16777217.Rounded(32) is 16777216
 	-0.1.Rounded(32) is -0.10000000149011612
 	3.Rounded(32) is 3
-	if (bits is not SingleBits) or (IsFinite is false) or (value is 0)
+	if bits is not SingleBits or IsFinite is false or value is 0
 		return value
 	let step = 2 ^ ((Absolute.Logarithm / 2.Logarithm).Floor - SingleMantissaBits)
 	(value / step).Counted("Even") * step

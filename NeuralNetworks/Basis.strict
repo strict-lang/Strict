@@ -28,7 +28,7 @@ IsFolded(name Text) Boolean
 	Tiny.IsFolded("blk.0.ssm_beta.weight") is false
 	None.IsFolded("blk.0.ssm_beta.weight")
 	Tiny.IsFolded("blk.0.ssm_out.weight")
-	(signs.Length is 0) or (name is in folded)
+	signs.Length is 0 or name is in folded
 Signs(width Number) Numbers
 	Tiny.Signs(12).Length is 12
 	Tiny.Signs(5) is Error

@@ -25,7 +25,7 @@ IsEntry(position Number) Boolean
 	ZipReader((80, 75, 3, 4) + Sample.Content(Sample.bytes.Length - EndRecordSize, EndRecordSize)).IsEntry(0) is false
 	if position + LocalHeaderSize > bytes.Length
 		return false
-	(Read(bytes.Length - EndRecordSize, 4) is EndHeader) and (Read(position, 4) is LocalHeader)
+	Read(bytes.Length - EndRecordSize, 4) is EndHeader and Read(position, 4) is LocalHeader
 Entry(position Number) ZipEntry
 	Sample.Entry(0) is ZipWriter.Sample.entries.First
 	let size = Read(position + SizeOffset, 4)

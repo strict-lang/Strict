@@ -28,31 +28,31 @@ Checked(folder Text) Boolean
 	out is Error then out else CheckCacheHit(program, folder + "/Program" + ext, out)
 CheckProbeVm(probe Text, exe Text) Boolean
 	let v1 = Ran(Process.Current.executable, probe, "1")
-	if (v1 is Error) or ("Fast profile probe:" is not in v1)
+	if v1 is Error or "Fast profile probe:" is not in v1
 		return Error("DetailedVmTimingsMissing: " + (v1 to Text))
 	let v0 = Ran(Process.Current.executable, probe, "0")
-	if (v0 is Error) or ("Fast profile probe:" is in v0)
+	if v0 is Error or "Fast profile probe:" is in v0
 		return Error("QuietVmUnexpectedProbe: " + (v0 to Text))
 	let built = Ran(Process.Current.executable, "build " + probe, "1")
 	built is Error then built else CheckProbeNative(exe)
 CheckProbeNative(exe Text) Boolean
 	let n1 = Ran(exe, "", "1")
 	let n0 = Ran(exe, "", "0")
-	let bad = (n1 is Error) or ("Fast profile probe:" is not in n1) or (n0 is Error) or ("Fast profile probe:" is in n0)
+	let bad = n1 is Error or "Fast profile probe:" is not in n1 or n0 is Error or "Fast profile probe:" is in n0
 	bad then Error("NativeProfileCheckFailed") else true
 CheckCacheHit(program Text, exe Text, buildOut Text) Boolean
 	let stageErr = MissingStage(buildOut)
 	if stageErr is Error
 		return stageErr
-	if ("Test passed:" is in buildOut) or ("Test failed:" is in buildOut)
+	if "Test passed:" is in buildOut or "Test failed:" is in buildOut
 		return Error("UnexpectedTestInBuild: " + buildOut)
 	CheckHitLoop(program, exe, File(exe).Modified)
 CheckHitLoop(program Text, exe Text, stamp Number) Boolean
 	for ("1", "0")
 		let hit = Ran(Process.Current.executable, "build " + program, value)
-		if (hit is Error) or ("Up to date:" is not in hit) or ("Frontend /" is in hit)
+		if hit is Error or "Up to date:" is not in hit or "Frontend /" is in hit
 			return Error("CacheHitFailed: " + (hit to Text))
-		if (("Compiler build cache hit:" is in hit) is not (value is "1")) or (File(exe).Modified is not stamp)
+		if ("Compiler build cache hit:" is in hit) is not (value is "1") or File(exe).Modified is not stamp
 			return Error("CacheProfileFlagOrMtimeWrong: " + (hit to Text))
 	true
 MissingStage(buildOut Text) Boolean

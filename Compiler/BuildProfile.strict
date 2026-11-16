@@ -4,7 +4,7 @@ Detailed Boolean
 	IsRequested
 Reported(phase Text, started Number)
 	let elapsed = Process.Elapsed - started
-	if Detailed or (elapsed >= 3)
+	if Detailed or elapsed >= 3
 		logger.Log((Detailed then "[build] " + phase else phase) + ": " + elapsed.Round(Detailed then 4 else 2) + " s")
 Current(cache NativeCache, phase = "Compiler build cache") Boolean
 	let started = Process.Elapsed

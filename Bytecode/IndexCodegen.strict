@@ -26,10 +26,10 @@ IsIndexing(node SyntaxNode, block CodeBlock) Boolean
 	Primed.IsIndexing(PrimeCall, CodeBlock.Empty)
 	if node.Kind is "Call"
 		return IsIndexedCall(node, block)
-	let isMember = (node.Kind is "MethodCall") and (node.children.Length is in (2, 3))
+	let isMember = node.Kind is "MethodCall" and node.children.Length is in (2, 3)
 	let isConstant = isMember and IsConstantList(node)
 	let isOwned = isMember and IsOwnedList(node, block)
-	isMember and (node.text is "value") or isConstant or isOwned or (node.Kind is "Index")
+	isMember and node.text is "value" or isConstant or isOwned or node.Kind is "Index"
 IsOwnedList(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsIndexedCall(SyntaxNode("Call", "failed", One), Failed)
 	Plain.IsIndexedCall(SyntaxNode("Call", "unknown", One), CodeBlock.Empty) is false
@@ -37,7 +37,7 @@ IsOwnedList(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsIndexedCall(SyntaxNode("Call", "failed"), Failed) is false
 	Plain.IsIndexedCall(SyntaxNode("Call", "Greet", One), CodeBlock.Empty) is false
 	Plain.IsIndexedCall(SyntaxNode("Call", "text", (One, One)), CodeBlock.Empty)
-	MemberA.values.methods is MethodCodegen.NoScope and (MemberA.values.inference is ValueCodegen.NoTypes)
+	MemberA.values.methods is MethodCodegen.NoScope and MemberA.values.inference is ValueCodegen.NoTypes
 	Positioning.IsOwnedList(Indexing.Positioned, CodeBlock.Empty.Declare("t", "Trigger"))
 	let type = values.TypeOf(node.children(0), block)
 	let isMethod = Indexing(values.inference.types).IsIndexed(type, node.text, node.children.Length - 1)
@@ -61,11 +61,11 @@ IsIndexedCall(node SyntaxNode, block CodeBlock) Boolean
 	MemberA.IsIndexedCall(SyntaxNode("Call", "A", One), CodeBlock.Empty) is false
 	Plain.IsIndexedCall(SyntaxNode("Call", "text"), CodeBlock.Empty) is false
 	let isOwnMember = values.target.IsMember(values.target.TypeName, node.text)
-	let isConstant = values.methods.TypeOf(node.text) is not "" and (values.target.Header(node.text).tokens.Length is 0)
+	let isConstant = values.methods.TypeOf(node.text) is not "" and values.target.Header(node.text).tokens.Length is 0
 	let isMethod = values.target.Header(node.text).tokens.Length > 0
 	let isOwnList = isMethod and Indexing(values.inference.types).IsIndexed(values.target.TypeName, node.text, 1)
 	let isNamed = block.scope.TypeOf(node.text) is not "" or isOwnMember or isConstant or isOwnList
-	let isIndexed = (node.children.Length is 1) and isNamed or (node.children.Length is 2) and isOwnMember
+	let isIndexed = node.children.Length is 1 and isNamed or node.children.Length is 2 and isOwnMember
 	isIndexed and (isConstant or isOwnList or values.inference.types.IsKnown(node.text) is false)
 Indexed(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Indexed(SyntaxNode("Call", "text", One), CodeBlock.Empty).instructions.Last.kind is InstructionType.IndexCall
@@ -74,11 +74,11 @@ Indexed(node SyntaxNode, block CodeBlock) CodeBlock
 	let isCall = node.Kind is "Call"
 	let named = Source(node)
 	let type = values.TypeOf(named, block)
-	if type.StartsWith("Dictionary(") or (values.inference.types.MethodsOf(type).TypeOf("get") is not "")
+	if type.StartsWith("Dictionary(") or values.inference.types.MethodsOf(type).TypeOf("get") is not ""
 		return ErrorCodegen(values).Handled(SyntaxNode("MethodCall", "get", (named, node.children.Last)), block)
 	let folded = ConstantFolding(values.target.TypeName, values.inference).Folded(SyntaxNode("Identifier", node.text))
-	let isConstant = (folded.Kind is "Call") and (folded.text is "Error")
-	let isError = isCall and ((block.scope.TypeOf(node.text) is "Error") or isConstant)
+	let isConstant = folded.Kind is "Call" and folded.text is "Error"
+	let isError = isCall and (block.scope.TypeOf(node.text) is "Error" or isConstant)
 	isError then WithValue(node, block) else Element(node, block)
 Keyed(statement SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Keyed(One, Named) is One
@@ -88,7 +88,7 @@ Keyed(statement SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Keyed(Computed.children(0), Named) is Computed.children(0)
 	let target = statement.Kind is "Reassignment" then statement.children(0) else One
 	let named = SyntaxNode("Identifier", target.text)
-	if (target.Kind is not "Call") or (values.TypeOf(named, block).StartsWith("Dictionary(") is false)
+	if target.Kind is not "Call" or values.TypeOf(named, block).StartsWith("Dictionary(") is false
 		return statement
 	let set = SyntaxNode("MethodCall", "set", (named, target.children.Last, statement.children(1)))
 	SyntaxNode("Reassignment", statement.text, (named, set), statement.line)
@@ -107,9 +107,9 @@ Element(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Element(SyntaxNode("Call", "text", One), CodeBlock.Empty).instructions.Last.payload is (1, 0, -1)
 	Plain.Element(SyntaxNode("MethodCall", "text", (ValueCodegen.NewGreeter, One)), CodeBlock.Empty).nextId is 1
 	let named = ConstantFolding(values.target.TypeName, values.inference).Folded(SyntaxNode("Identifier", node.text))
-	let isComputed = (named.Kind is not "Identifier") and (named.IsLiteral is false)
+	let isComputed = named.Kind is not "Identifier" and named.IsLiteral is false
 	let isMethod = values.target.Header(node.text).tokens.Length > 0
-	let isNamed = (node.Kind is "Call") and (isComputed is false) and (isMethod is false)
+	let isNamed = node.Kind is "Call" and isComputed is false and isMethod is false
 	let source = node.Kind is "Call" then (isMethod then SyntaxNode("Call", node.text) else named) else Source(node)
 	let list = isNamed then ErrorScope(values).Guarded(node.text, block) else values.Expression(source, block)
 	let name = isNamed then node.text else "list" + list.nextId
@@ -180,8 +180,8 @@ IsKept(target SyntaxNode) Boolean
 	Plain.IsKept(SyntaxNode("Call", "a", One))
 	Plain.IsKept(One)
 	Limited.IsKept(LimitWrite.children(0)) is false
-	if ((target.Kind is in ("Call", "MethodCall")) is false) or (target.children.Length is 0)
+	if (target.Kind is in ("Call", "MethodCall")) is false or target.children.Length is 0
 		return true
 	let index = GridIndex(target)
 	let isOwnConstant = values.inference.ConstantOf(values.target.TypeName, index.text) is not ""
-	(index.Kind is "Number") or ((index.Kind is "Identifier") and (isOwnConstant is false))
+	index.Kind is "Number" or index.Kind is "Identifier" and isOwnConstant is false

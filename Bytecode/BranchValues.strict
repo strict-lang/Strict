@@ -12,7 +12,7 @@ constant Selector = Selecting.children(0)
 constant Unmatched = SyntaxParser(Tokenizer("Error(\"NoCaseMatched\")").Tokens).Parse
 Rewritten(body SyntaxNode) SyntaxNode
 	BranchValues("Text").Rewritten(Selecting).children(0).children.Last.children.Last.Kind is "ElseValue"
-	Returning.Rewritten(Mixed).children is Mixed.children and (Returning.Rewritten(Mixed).Kind is "Body")
+	Returning.Rewritten(Mixed).children is Mixed.children and Returning.Rewritten(Mixed).Kind is "Body"
 	Returning.Rewritten(Chained).children.Last.children.Last.children(0).Kind is "Return"
 	BranchValues("None").Rewritten(Chained).children(0).children.Last.children(0).Kind is "Number"
 	if mode is "None"
@@ -25,10 +25,10 @@ Rewritten(body SyntaxNode) SyntaxNode
 Defaulted(node SyntaxNode) SyntaxNode
 	BranchValues("Boolean").Defaulted(Selector).children.Last.children.Last.children(0) is Unmatched
 	BranchValues("Texts").Defaulted(Selector).children.Last.children.Last.Kind is "ElseValue"
-	(BranchValues("None").Defaulted(Selector) is Selector) and (Returning.Defaulted(Value) is Value)
+	BranchValues("None").Defaulted(Selector) is Selector and Returning.Defaulted(Value) is Value
 	Returning.Defaulted(Returning.Defaulted(Selector)).children.Last.children.Length is 2
 	BranchValues("Text").Defaulted(Selector).children.Last.children(0) is Selector.children.Last.children(0)
-	if (mode is in ("", "None")) or (MethodBodies.IsSelector(node) is false)
+	if mode is in ("", "None") or MethodBodies.IsSelector(node) is false
 		return node
 	let cases = node.children.Last
 	let unmatched = SyntaxNode("ElseValue", "", Unmatched)
@@ -99,12 +99,12 @@ LastLoop(body SyntaxNode) SyntaxNode
 	if body.children.Length is 0
 		return body
 	let last = body.children.Last
-	((last.Kind is in ("If", "ElseIf", "Else")) and last.HasBody) then LastLoop(last.children.Last) else last
+	last.Kind is in ("If", "ElseIf", "Else") and last.HasBody then LastLoop(last.children.Last) else last
 Reduction(line SyntaxNode) Text
 	Returning.Reduction(SyntaxNode("Binary", "+", (Value, Value))) is ""
 	Returning.Reduction(SyntaxNode("Identifier", "value")) is ""
 	Returning.Reduction(LoopCodegen.ProductBody.children(0).children.Last.children(0)) is "*"
-	(line.Kind is "Binary") and (line.children(0).Kind is "Missing") then line.text else ""
+	line.Kind is "Binary" and line.children(0).Kind is "Missing" then line.text else ""
 Accumulated(line SyntaxNode) SyntaxNode
 	BranchValues("list").Accumulated(Value) is SyntaxNode("MethodCall", "Add", (Result, Value))
 	BranchValues("sum").Accumulated(Value).children is (Result, SyntaxNode("Binary", "+", (Result, Value)))
@@ -125,6 +125,6 @@ IsValue(line SyntaxNode) Boolean
 	Returning.IsValue(SyntaxNode("Binary", "then", (Value, Value))) is false
 	if line.Kind is in ("Declaration", "Reassignment", "Return", "If", "ElseIf", "Else", "For", "ElseValue")
 		return false
-	if (line.Kind is "Binary") and (line.text is "then")
+	if line.Kind is "Binary" and line.text is "then"
 		return false
-	(line.Kind is not "MethodCall") or (line.text is not in ("Log", "Add", "Remove"))
+	line.Kind is not "MethodCall" or line.text is not in ("Log", "Add", "Remove")

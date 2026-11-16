@@ -21,15 +21,15 @@ IsSingle(register Number) Boolean
 		return MlirCouples(function, writer).IsFlatRead(entry)
 	if entry.kind is InstructionType.LoadVariableToRegister
 		return IsHeld(entry.texts(0), writer)
-	(entry.kind is in MlirSingle.Operators) and MlirRounded(function, writer).IsRounded(entry)
+	entry.kind is in MlirSingle.Operators and MlirRounded(function, writer).IsRounded(entry)
 IsHeld(name Text, before Number) Boolean
 	Kept.IsHeld("first", 4)
 	Kept.IsHeld("first", 3) is false
 	Kept.IsHeld("numbers", 4) is false
 	mutable stores = 0
 	for function.method.instructions
-		if (value.kind is InstructionType.StoreRegisterToVariable) and (value.texts(0) is name)
-			if (index >= before) or (MlirRounded(function, index).IsSingle(value.payload(0)) is false)
+		if value.kind is InstructionType.StoreRegisterToVariable and value.texts(0) is name
+			if index >= before or MlirRounded(function, index).IsSingle(value.payload(0)) is false
 				return false
 			stores = stores + 1
 	stores is 1

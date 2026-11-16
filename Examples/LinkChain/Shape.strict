@@ -1,6 +1,5 @@
-has width Number
-has height Number
+has Size
 Perimeter Number
-	2 * (width + height)
+	2 * (Size.Width + Size.Height)
 Area Number
-	Doubler(width).Twice * height
+	Doubler(Size.Width).Twice * Size.Height

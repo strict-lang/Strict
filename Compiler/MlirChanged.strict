@@ -57,8 +57,8 @@ Names(method MethodEntry) Texts
 	Keeping.Names(Calls).Length is 0
 	mutable names = List(Mutable(Text))
 	for method.instructions
-		let isChanged = (value.kind is InstructionType.StoreRegisterToVariable) and value.texts(0).StartsWith("changed_")
-		if isChanged and (value.texts(0) is not in names)
+		let isChanged = value.kind is InstructionType.StoreRegisterToVariable and value.texts(0).StartsWith("changed_")
+		if isChanged and value.texts(0) is not in names
 			names.Add(value.texts(0))
 	names
 Offset(name Text) Number

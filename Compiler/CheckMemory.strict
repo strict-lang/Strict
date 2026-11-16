@@ -62,8 +62,8 @@ CheckJobAndPressure(folder Text) Boolean
 		return Error("JobCompileFailed: " + comp.Output + comp.error)
 	let r1 = Process.RunTool(folder + "/job.exe", "\"" + exe + "\" " + JobLimitMb + " " + SmallInput, RunSeconds)
 	let r2 = Process.RunTool(folder + "/job.exe", "\"" + exe + "\" " + JobLimitMb + " " + OomInput, RunSeconds)
-	let hasOom = ("OutOfMemory" is in r2.Output) and ("AccessViolation" is not in r2.Output)
-	("EXIT:1000" is not in r1.Output) or (not hasOom) then Error("JobOomFailed: " + r1.Output) else CheckHeaps(folder)
+	let hasOom = "OutOfMemory" is in r2.Output and "AccessViolation" is not in r2.Output
+	"EXIT:1000" is not in r1.Output or not hasOom then Error("JobOomFailed: " + r1.Output) else CheckHeaps(folder)
 CheckHeaps(folder Text) Boolean
 	let p1 = RunBuilt(folder, "MemoryPressure", FilledSrc + KeptSrc + PresSrc, "", "STRICT_HEAP=1024", "total 3720", "")
 	if p1 is Error
@@ -72,7 +72,7 @@ CheckHeaps(folder Text) Boolean
 	if webJs is Error
 		return webJs
 	let web = Process.RunTool(Directory.Directories("Tools/emsdk/node").First + "/node.exe", webJs, RunSeconds)
-	if (web.exitCode is not 0) or ("total 1924" is not in web.Output)
+	if web.exitCode is not 0 or "total 1924" is not in web.Output
 		return Error("WebPressureFailed: " + web.Output + web.error)
 	RunBuilt(folder, "SmallPressure", FilledSrc + SmallA + SmallB1 + SmallB2, "", SmallEnv, "total 1757700", "")
 CheckUncollected(folder Text) Boolean
@@ -89,17 +89,17 @@ CheckCollections(folder Text) Boolean
 	if trimOut is Error
 		return trimOut
 	let parts = trimOut.Split("collected")
-	if (parts(0).Split("Collection: full").Length < 4) or ("Collection: " is in parts(1))
+	if parts(0).Split("Collection: full").Length < 4 or "Collection: " is in parts(1)
 		return Error("TrimmedPoolWrong: " + trimOut)
 	let handed = RunBuilt(folder, "HandedBack", HandA + HandB1 + HandB2, "", "STRICT_GPU=0", "total 1010000", "")
 	handed is Error then handed else CheckChurnAndProducts(folder)
 CheckChurnAndProducts(folder Text) Boolean
 	let churnExe = Built(folder, "Churning", FilledSrc + ChurnSrc, "")
 	let cmd = "/c set " + ChurnEnv + "&& \"" + churnExe + "\""
-	let churn = churnExe is Error then (churnExe to Text) else Process.RunTool("cmd", cmd, RunSeconds).Output
+	let churn = churnExe is Error then churnExe to Text else Process.RunTool("cmd", cmd, RunSeconds).Output
 	let grp = Regex(ChurnPattern).Groups(churn)
-	let badC = ("GarbageCollectionExceedsLimit" is not in churn) or (grp.Length < 4)
-	if badC or (((grp(1) to Number) + (grp(2) to Number)) <= 0) or (grp(3) is not "0")
+	let badC = "GarbageCollectionExceedsLimit" is not in churn or grp.Length < 4
+	if badC or grp(1) to Number + (grp(2) to Number) <= 0 or grp(3) is not "0"
 		return Error("ChurnWrong: " + churn)
 	let prodOut = RunBuilt(folder, "Products", ProdSrc, "", LogEnv, "done", "")
 	let ok = prodOut is Error then prodOut else CheckedMaxHeap(Regex("(\\d+) MB heap").FindAll(prodOut))
@@ -114,10 +114,10 @@ CheckedMaxHeap(matches Texts) Boolean
 	true
 CheckTickersAndFiles(folder Text) Boolean
 	let f = FrameTicker(folder, "FrameTicker", "Numbers", "index + seed", "(1, 2)", "5000000", "10")
-	if (f is Error) or not CheckedFramesEnded(f, true)
+	if f is Error or not CheckedFramesEnded(f, true)
 		return Error("FrameTickerWrong")
 	let w = FrameTicker(folder, "WordTicker", "Texts", "\"w\" + (index + seed)", "(\"w1\", \"w2\")", "100000", "40")
-	(w is Error) or not CheckedWordsEnded(w) then Error("WordTickerWrong") else CheckLongLines(folder)
+	w is Error or not CheckedWordsEnded(w) then Error("WordTickerWrong") else CheckLongLines(folder)
 FrameTicker(folder Text, name Text, itemType Text, item Text, two Text, size Text, frames Text) Texts
 	let elem = itemType.Substring(0, itemType.Length - 1)
 	let hdr = "has size Number\nhas frame Number = 0\nhas kept " + itemType + " = List(" + elem + ")\n"
@@ -141,7 +141,7 @@ CheckedFramesEnded(cols Texts, needMultiple Boolean) Boolean
 		else
 			if seenTrue
 				return false
-	seenTrue and (not needMultiple or (trueCount >= MinFrameEnds))
+	seenTrue and (not needMultiple or trueCount >= MinFrameEnds)
 CheckedWordsEnded(cols Texts) Boolean
 	if cols.Length > MaxWordCollections
 		return false
@@ -183,8 +183,8 @@ RunBuilt(folder Text, name Text, code Text, platform Text, env Text, want Text, 
 	if exe is Error
 		return exe
 	let res = Process.RunTool("cmd", "/c " + (env is "" then "" else "set " + env + "&& ") + "\"" + exe + "\"", RunSeconds)
-	let miss = (want is not "") and (want is not in res.Output)
-	let bad = (res.exitCode is not 0) or miss or ((ban is not "") and (ban is in res.Output))
+	let miss = want is not "" and want is not in res.Output
+	let bad = res.exitCode is not 0 or miss or ban is not "" and ban is in res.Output
 	bad then Error(name + " failed: " + res.Output + res.error) else res.Output
 JobCode Text
 	mutable out = List(Text)

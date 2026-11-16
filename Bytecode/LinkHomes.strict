@@ -7,10 +7,10 @@ Homing(signed Texts) LinkRound
 	mutable places = round.linker.Places
 	for signed
 		let type = Signature(value).Type
-		if (type is not in homes) and (type.IndexOf("(") < 0)
+		if type is not in homes and type.IndexOf("(") < 0
 			let file = BinaryFile(FileCompiler.Normalized(round.linker.SourcePath(type)))
 			homes(type) = BinaryLinks(file).Owned(file.Head(File(file.Path).ReadBytes), stamps)
-			if (file.source is in stamps) and (stamps(file.source) > 0)
+			if file.source is in stamps and stamps(file.source) > 0
 				places(type) = file.source
 	LinkRound(round, linker = Linker(round.linker, Homes = homes, Places = places))
 Saved LinkRound
@@ -27,7 +27,7 @@ Saved LinkRound
 Grew(links BinaryLinks, own TypeEntry, entry TypeEntry)
 	Single.Grew(BinaryLinks.User, TypeEntry.HelloLogger, TypeEntry.HelloLogger) is not Error
 	File(BinaryLinks.User.file.Path).Exists is false
-	if (own.Name is "") or (links.Added(own, entry).Length > 0)
+	if own.Name is "" or links.Added(own, entry).Length > 0
 		links.Grown(own, entry, SourceNames(links.file.source, entry), round.linker.Sourced)
 SourceNames(source Text, entry TypeEntry) Texts
 	"Number" is in Single.SourceNames("./Math/Vector2.strict", TypeEntry.HelloLogger)

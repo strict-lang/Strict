@@ -20,7 +20,7 @@ Variables(instructions List(InstructionEntry), candidates Texts, rounds Number) 
 	Sample.Variables(Chained, List(Text), 1) is ("pair Pair", "copy Pair")
 	Sample.Variables(Chained, List(Text), 4) is ("pair Pair", "copy Pair", "again Pair")
 	let found = Scan(instructions, candidates)
-	(found is candidates) or (rounds is 0) then found else Variables(instructions, found, rounds - 1)
+	found is candidates or rounds is 0 then found else Variables(instructions, found, rounds - 1)
 Scan(instructions List(InstructionEntry), candidates Texts) Texts
 	Sample.Scan(Copying, ("pair Pair")) is ("pair Pair", "copy Pair")
 	Sample.Scan(Checked, ("pair Pair")) is ("pair Pair")
@@ -30,7 +30,7 @@ Scan(instructions List(InstructionEntry), candidates Texts) Texts
 		if value.kind is InstructionType.StoreRegisterToVariable
 			let type = Typed(laned, value.payload(0) to Text)
 			stores = stores + (value.texts(0) + " " + (type is "" then "-" else type))
-		if (value.kind is in Naming) and (value.texts.Length > 0)
+		if value.kind is in Naming and value.texts.Length > 0
 			stores = stores + (value.texts(0) + " -")
 		laned = Tracked(value, laned, candidates + fixed)
 	Agreed(stores)
@@ -39,7 +39,7 @@ Agreed(stores Texts) Texts
 	LaneFlow(Sample.types, List(Text), ("pair Pair")).Scan(Copying, List(Text)) is ("pair Pair", "copy Pair")
 	Sample.Scan(Copying + InstructionEntry(InstructionType.StoreConstantToVariable, "pair", (0)), List(Text)).Length is 0
 	for stores
-		if (stores.Index(value) is index) and IsUniform(stores, value)
+		if stores.Index(value) is index and IsUniform(stores, value)
 			value
 IsUniform(stores Texts, entry Text) Boolean
 	Sample.IsUniform(("a Pair", "a -"), "a Pair") is false
@@ -49,7 +49,7 @@ IsUniform(stores Texts, entry Text) Boolean
 		return false
 	let prefix = entry.Substring(0, entry.IndexOf(" ") + 1)
 	for stores
-		if value.StartsWith(prefix) and (value is not entry)
+		if value.StartsWith(prefix) and value is not entry
 			return false
 	true
 Tracked(entry InstructionEntry, laned Texts, variables Texts) Texts
@@ -81,11 +81,11 @@ IsBuilt(entry InstructionEntry) Boolean
 	Sample.IsBuilt(StructLanes.Calling(0)) is false
 	Sample.IsBuilt(LaneCalls.Paired) is false
 	Sample.IsBuilt(InstructionEntry.Invoke(2, ("Pair", "from", "Pair", "real"), List(Number) + 0, -1)) is false
-	if (entry.kind is not InstructionType.Invoke) or (entry.texts(1) is not "from")
+	if entry.kind is not InstructionType.Invoke or entry.texts(1) is not "from"
 		return false
 	let reads = LoadReuse(List(InstructionEntry)).InvokeReads(entry)
 	let isPlain = reads.Length is entry.texts.Length - 3
-	isPlain and (StructLanes.Members(Inliner(types).TypeOf(entry.texts(0))).Length is reads.Length)
+	isPlain and StructLanes.Members(Inliner(types).TypeOf(entry.texts(0))).Length is reads.Length
 Typed(entries Texts, name Text) Text
 	Sample.Typed(("pair Pair", "other Strict/Other"), "other") is "Strict/Other"
 	Sample.Typed(("pair Pair"), "pa") is ""
@@ -113,7 +113,7 @@ Element(typeName Text) Text
 	Sample.Element("Strict/List(Pair)") is "Strict/Pair"
 	Sample.Element("Strict/Pairs") is "Strict/Pair"
 	Sample.Element("Strict/List(Number)") is ""
-	Sample.Element("Strict/Pairx") is "" and (Sample.Element("Strict/Callers") is "")
+	Sample.Element("Strict/Pairx") is "" and Sample.Element("Strict/Callers") is ""
 	let short = TypeEntry.ShortName(typeName)
 	let plural = short.EndsWith("s") then short.Substring(0, short.Length - 1) else ""
 	let element = Inliner(types).TypeOf(short.StartsWith("List(") then short.Substring(5, short.Length - 6) else plural)

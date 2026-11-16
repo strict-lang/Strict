@@ -20,7 +20,7 @@ Precedence Number
 	SyntaxNode("Binary", "is not").Precedence is 7
 	SyntaxNode("Number", "1").Precedence is 0
 	SyntaxNode("Binary", "x").Precedence is 0
-	SyntaxNode("Not", "").Precedence is 3 and (SyntaxNode("Number", "+").Precedence is 0)
+	SyntaxNode("Not", "").Precedence is 3 and SyntaxNode("Number", "+").Precedence is 0
 	if Kind is "Not"
 		return 3
 	Kind is not "Binary" or text is not in operators then 0 else precedences(operators.Index(text))
@@ -72,7 +72,7 @@ StatementText Text
 		return text + " = " + ChildText(0, 0)
 	if Kind is in ("Reassignment", "Computed")
 		return ChildText(0, 0) + " = " + ChildText(1, 0)
-	if (HasValue is false) or (Kind is not in keywordKinds)
+	if HasValue is false or Kind is not in keywordKinds
 		return text
 	(text is "" then keywordTexts(keywordKinds.Index(Kind)) else text) + " " + ValuesText
 ValuesText Text
@@ -112,8 +112,7 @@ HeadNames Texts
 	if Kind is "Call"
 		names.Add(text)
 	for children
-		let isNamed = (Kind is "Call") and (value.Kind is "Reassignment")
-		names = names + (isNamed then value.children.Last.HeadNames else HeadNames)
+		names = names + (Kind is "Call" and value.Kind is "Reassignment" then value.children.Last.HeadNames else HeadNames)
 	names
 Kinds Texts
 	SyntaxParser(Tokenizer("Point(p, y = q)").Tokens).Parse.Kinds is ("Identifier", "Reassignment")
@@ -123,7 +122,7 @@ Kinds Texts
 HasBody Boolean
 	SyntaxNode("For", "", (SyntaxNode("Number", "3"), SyntaxNode("Body", ""))).HasBody
 	SyntaxNode("Number", "3").HasBody is false
-	children.Length > 0 and (children.Last.Kind is "Body")
+	children.Length > 0 and children.Last.Kind is "Body"
 HasValue Boolean
 	SyntaxNode("For", "", (SyntaxNode("Body", ""), SyntaxNode("Body", ""))).HasValue is false
 	SyntaxNode("Body", "b").HeadNames.Length is 0

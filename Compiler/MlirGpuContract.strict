@@ -23,7 +23,7 @@ Issue Text
 	Free.Issue is ""
 	Doubling.Issue is ""
 	let listed = ContractedList
-	if (IsRequired is false) and (listed is "")
+	if IsRequired is false and listed is ""
 		return ""
 	let instructions = function.method.instructions
 	let end = function.method.LoopEndOf(position)
@@ -38,7 +38,7 @@ ContractedList Text
 	Doubling.ContractedList is ""
 	let iterated = MlirKinds(function).KindOf(position, function.method.instructions(position).payload(0))
 	let check = MlirGpuCheck(function, position)
-	let isBlocked = check.IsPure and (check.IsGpu is false)
+	let isBlocked = check.IsPure and check.IsGpu is false
 	let isSmall = MlirLayout(function).Represented(iterated) is not in MlirGpuCheck.Rows
 	isBlocked and isSmall and HasContractOn(iterated) then iterated else ""
 HasContractOn(kind Text) Boolean
@@ -46,7 +46,7 @@ HasContractOn(kind Text) Boolean
 	Laned.HasContractOn("List(Number)") is false
 	Unbound.HasContractOn("List(Rgb)") is false
 	for function.type.members
-		if (value.Bits is 32) and (TypeEntry.ShortName(value.typeName) is kind)
+		if value.Bits is 32 and TypeEntry.ShortName(value.typeName) is kind
 			return true
 	false
 IsRequired Boolean
@@ -60,8 +60,8 @@ IsRequired Boolean
 	Running.IsRequired is false
 	let check = MlirGpuCheck(function, position)
 	let isListed = MlirLoops(function, position).Collection is in MlirGpuCheck.Rows
-	let isPlain = isListed and (MlirLanes(function, position).IsTouched is false) and check.IsPure
-	HasContract and isPlain and (MlirNarrowing(function, position).IsFew is false) and (check.IsGpu is false)
+	let isPlain = isListed and MlirLanes(function, position).IsTouched is false and check.IsPure
+	HasContract and isPlain and MlirNarrowing(function, position).IsFew is false and check.IsGpu is false
 HasContract Boolean
 	Weighing.HasContract
 	Free.HasContract is false

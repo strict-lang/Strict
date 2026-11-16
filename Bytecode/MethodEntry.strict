@@ -58,7 +58,7 @@ IsInitializer(members List(MemberEntry)) Boolean
 	for members
 		names.Add(value.Name)
 	for instructions
-		if (value.kind is InstructionType.StoreRegisterToVariable) and (value.texts(0) is in names)
+		if value.kind is InstructionType.StoreRegisterToVariable and value.texts(0) is in names
 			return true
 	false
 ParameterNames Texts
@@ -73,14 +73,14 @@ Fit(name Text, count Number, target Text, names Texts) Number
 	Logged.Fit("Add", 1, "None", List(Text) + "other") is 2
 	GoRun.Fit("Go", 0, "None", List(Text)) is 0
 	Logged.Fit("Add", -1, "None", List(Text)) is 1
-	let check = (name is "to") and (target is not "")
-	if (Name is not name) or (check then TypeEntry.ShortName(target) is not TypeEntry.ShortName(returnType) else false)
+	let check = name is "to" and target is not ""
+	if Name is not name or (check then TypeEntry.ShortName(target) is not TypeEntry.ShortName(returnType) else false)
 		return 0
 	if count < 0
 		return 1
 	if parameters.Length is count
 		return ParameterNames is names then 3 else 2
-	(count < parameters.Length) and (parameters(count).initial.Length > 0) then 1 else 0
+	count < parameters.Length and parameters(count).initial.Length > 0 then 1 else 0
 SignatureTypes Texts
 	Logged.SignatureTypes is ("Strict/Number", "Strict/Logger")
 	mutable types = List(Mutable(Text))
@@ -112,7 +112,7 @@ Implied(entry InstructionEntry) Texts
 	Converting.Implied(Converting.instructions.Last) is ("Strict/Digit.to Text")
 	if entry.texts(1) is "to"
 		return List(Text) + (entry.texts(0) + ".to " + TypeEntry.ShortName(entry.texts(2)))
-	let isCode = entry.texts(0).StartsWith("Strict/Dictionary(") and (entry.texts(1) is "Code")
+	let isCode = entry.texts(0).StartsWith("Strict/Dictionary(") and entry.texts(1) is "Code"
 	isCode then List(Text) + "Strict/Text.Code" else List(Text)
 LoopBeginOf(position Number) Number
 	MlirKinds.Paired.function.method.LoopBeginOf(5) is 1
@@ -122,7 +122,7 @@ LoopBeginOf(position Number) Number
 	for position
 		let candidate = position - 1 - index
 		let kind = instructions(candidate).kind
-		if (kind is InstructionType.LoopBegin) and (depth is 0)
+		if kind is InstructionType.LoopBegin and depth is 0
 			return candidate
 		depth = depth + (kind is InstructionType.LoopEnd then 1 else kind is InstructionType.LoopBegin then -1 else 0)
 	0
@@ -135,7 +135,7 @@ JumpEndOf(jump InstructionEntry) Number
 	Branching.JumpEndOf(Branching.instructions(0)) is 2
 	Branching.JumpEndOf(InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, 5)) is 4
 	for instructions
-		if (value.kind is InstructionType.JumpEnd) and (value.payload is jump.payload)
+		if value.kind is InstructionType.JumpEnd and value.payload is jump.payload
 			return index
 	instructions.Length
 LoopEndOf(position Number) Number
@@ -145,7 +145,7 @@ LoopEndOf(position Number) Number
 	mutable depth = 0
 	for Range(position + 1, instructions.Length)
 		let kind = instructions(value).kind
-		if (kind is InstructionType.LoopEnd) and (depth is 0)
+		if kind is InstructionType.LoopEnd and depth is 0
 			return value
 		depth = depth + (kind is InstructionType.LoopBegin then 1 else kind is InstructionType.LoopEnd then -1 else 0)
 	instructions.Length
@@ -156,7 +156,7 @@ IsWritingResult(position Number) Boolean
 	let end = LoopEndOf(position)
 	for as long as at < end
 		let entry = instructions(at)
-		if (entry.kind is InstructionType.InvokeWriteToList) and (entry.texts.Last is "forResult")
+		if entry.kind is InstructionType.InvokeWriteToList and entry.texts.Last is "forResult"
 			return true
 		at = entry.kind is InstructionType.LoopBegin then LoopEndOf(at) + 1 else at + 1
 	false

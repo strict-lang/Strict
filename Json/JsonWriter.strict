@@ -43,7 +43,7 @@ Escaped(character Character) Text
 	Object.Escaped(Character(9)) is "\\t"
 	Object.Escaped(Character(1)) is "\\u0001"
 	Object.Escaped(Character("\\")) is "\\\\"
-	if (character is "\"") or (character is "\\")
+	if character is "\"" or character is "\\"
 		return "\\" + character
 	if character.number >= Character.Space
 		return character to Text

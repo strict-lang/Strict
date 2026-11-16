@@ -38,7 +38,7 @@ Use(inspected MlirFunction, at Number, name Text, canPass Boolean) Number
 	Layering.Use(Layering.function, 10, "biases", true) is 0
 	let entry = inspected.method.instructions(at)
 	let isRead = entry.kind is in (InstructionType.LoadVariableToRegister, InstructionType.IndexCall)
-	if (isRead then entry.texts(0) is not name else true)
+	if isRead then entry.texts(0) is not name else true
 		return 0
 	if entry.kind is InstructionType.IndexCall
 		return MlirDeviceDot(inspected, at).IsOperand(name) then 1 else -1
@@ -51,10 +51,10 @@ IsPassed(at Number) Boolean
 	mutable isPassed = false
 	for Range(at + 1, function.method.LoopEndOf(position))
 		let entry = function.method.instructions(value)
-		let isRead = (entry.kind is InstructionType.Invoke) and (MlirKinds(function).Writer(value, register) is at)
-		if isRead and (IsDottedCall(value, register) is false)
+		let isRead = entry.kind is InstructionType.Invoke and MlirKinds(function).Writer(value, register) is at
+		if isRead and IsDottedCall(value, register) is false
 			return false
-		isPassed = isPassed or (isRead and (register is in PayloadDecoder(entry).Arguments))
+		isPassed = isPassed or isRead and register is in PayloadDecoder(entry).Arguments
 	isPassed
 IsDottedCall(call Number, register Number) Boolean
 	Layering.IsDottedCall(5, 2)
@@ -63,10 +63,10 @@ IsDottedCall(call Number, register Number) Boolean
 	if register is not in decoder.Arguments
 		return decoder.Instance is not register
 	let callees = MlirModule(function.types, "").Called(function, call)
-	if (callees.Length is not 1) or (decoder.Instance is register)
+	if callees.Length is not 1 or decoder.Instance is register
 		return false
 	for decoder.Arguments
-		if (value is register) and (IsDottedParameter(callees.First, index) is false)
+		if value is register and IsDottedParameter(callees.First, index) is false
 			return false
 	true
 IsDottedParameter(callee MlirFunction, parameter Number) Boolean

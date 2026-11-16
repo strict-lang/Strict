@@ -12,8 +12,8 @@ Lines Texts
 	Remaining.Lines is Checked + Flagging
 	Adding.Lines.Length is 0
 	let isDivided = entry.kind is in (InstructionType.Divide, InstructionType.Modulo)
-	let isChecked = isDivided and (statements.naturals(statements.position) is "i")
-	if (isChecked is false) or MlirWholeFunction(statements.function).IsSafeDivisor(entry.payload(2), statements.position)
+	let isChecked = isDivided and statements.naturals(statements.position) is "i"
+	if isChecked is false or MlirWholeFunction(statements.function).IsSafeDivisor(entry.payload(2), statements.position)
 		return List(Text)
 	let values = MlirWholeValues(statements.position)
 	let constants = (values.Line("z", "arith.constant 0 : i64"), values.Line("o", "arith.constant 1 : i64"))

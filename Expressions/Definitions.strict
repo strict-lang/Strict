@@ -51,9 +51,9 @@ Defined(statement SyntaxNode, known Texts, definitions SyntaxNodes) SyntaxNode
 	if statement.Kind is not "Reassignment"
 		return statement
 	let target = statement.children(0)
-	if (target.Kind is in ("Identifier", "Call")) and (target.text is in Names(definitions))
+	if target.Kind is in ("Identifier", "Call") and target.text is in Names(definitions)
 		return SyntaxNode("Invalid", "ComputedNameMustNotBeAssigned: " + target.text, List(SyntaxNode), statement.line)
-	let isNew = (target.Kind is in ("Identifier", "Call")) and (target.text is not in known) and AreNames(target.children)
+	let isNew = target.Kind is in ("Identifier", "Call") and target.text is not in known and AreNames(target.children)
 	isNew then SyntaxNode("Computed", target.text, statement.children, statement.line) else statement
 Used(statement SyntaxNode, body SyntaxNode, position Number) SyntaxNode
 	Positions.Used(Computed, Body, 1) is Computed
@@ -62,7 +62,7 @@ Used(statement SyntaxNode, body SyntaxNode, position Number) SyntaxNode
 	Positions.Used(Computed, Unused, 1).text is "UnusedComputedNameMustBeRemoved: next"
 	Positions.Used(Body.children(0), Body, 4) is Body.children(0)
 	let later = body.children.Slice(position + 1, body.children.Length - position - 1)
-	if (statement.Kind is not "Computed") or IsUsed(statement.text, later)
+	if statement.Kind is not "Computed" or IsUsed(statement.text, later)
 		return statement
 	SyntaxNode("Invalid", "UnusedComputedNameMustBeRemoved: " + statement.text, List(SyntaxNode), statement.line)
 IsUsed(name Text, nodes SyntaxNodes) Boolean
@@ -70,7 +70,7 @@ IsUsed(name Text, nodes SyntaxNodes) Boolean
 	Positions.IsUsed("other", List(SyntaxNode) + Branch) is false
 	Positions.IsUsed("next", List(SyntaxNode) + SyntaxNode("Text", "next")) is false
 	for nodes
-		if ((value.Kind is in ("Identifier", "Call")) and (value.text is name)) or IsUsed(name, value.children)
+		if value.Kind is in ("Identifier", "Call") and value.text is name or IsUsed(name, value.children)
 			return true
 	false
 Substituted(node SyntaxNode, definitions SyntaxNodes) SyntaxNode
@@ -82,7 +82,7 @@ Substituted(node SyntaxNode, definitions SyntaxNodes) SyntaxNode
 	for node.children
 		children.Add(value.Kind is "Body" then value else Substituted(value, definitions))
 	for definitions
-		if (node.Kind is in ("Identifier", "Call")) and (node.text is value.text)
+		if node.Kind is in ("Identifier", "Call") and node.text is value.text
 			let applied = Applied(value, children)
 			return SyntaxNode(applied.Kind, applied.text, applied.children, node.line)
 	SyntaxNode(node.Kind, node.text, children, node.line)

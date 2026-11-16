@@ -14,7 +14,7 @@ Message(done Number, elapsed Number) Text
 	let quarter = (done * 4 / total).Floor
 	let crossed = quarter > ((done - 1) * 4 / total).Floor
 	let projected = elapsed * total / done
-	let shown = (label is not "") and crossed and (quarter < 4) and (projected >= 3)
+	let shown = label is not "" and crossed and quarter < 4 and projected >= 3
 	shown then label + " " + quarter * QuarterPercent + "% " + elapsed.Round(1) + "s/" + projected.Round(1) + "s" else ""
 Report(done Number)
 	let message = Message(done, Process.Elapsed - started)

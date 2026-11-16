@@ -4,8 +4,8 @@ constant Simulator = IOSBuild(Toolchain.OnWindows, true)
 Architecture Text
 	IOSBuild(Toolchain.OnWindows).Architecture.StartsWith(" --target=arm64-apple-ios15.0 ")
 	Simulator.Architecture.IndexOf("-apple-ios15.0-simulator ") > 0
-	(Platform.Architecture is "Arm64") or (Simulator.Architecture.IndexOf(" -march=x86-64-v2") > 0)
-	let machine = isSimulator and (Platform.Architecture is "X64") then "x86_64" else "arm64"
+	Platform.Architecture is "Arm64" or Simulator.Architecture.IndexOf(" -march=x86-64-v2") > 0
+	let machine = isSimulator and Platform.Architecture is "X64" then "x86_64" else "arm64"
 	let target = machine + "-apple-ios15.0" + (isSimulator then "-simulator" else "")
 	let vectors = machine is "x86_64" then " -march=x86-64-v2" else ""
 	" --target=" + target + vectors + " -fPIC -Wno-override-module" + Toolchain.Optimization
@@ -52,10 +52,10 @@ Linked(base Text) Text
 	if compiled is not ""
 		return compiled
 	let sdk = Sdk
-	if (tools.natives.Length > 0) and (sdk is "")
+	if tools.natives.Length > 0 and sdk is ""
 		return "iOS native packages require macOS with full Xcode: xcrun --sdk " + SdkName + " --show-sdk-path"
 	let objects = Objects(base, sdk)
-	(objects.Length > 0) and objects.First.StartsWith("iOS clang failed") then objects.First else Archived(base, objects)
+	objects.Length > 0 and objects.First.StartsWith("iOS clang failed") then objects.First else Archived(base, objects)
 Archived(base Text, objects Texts) Text
 	let building = base + ".ios.new.a"
 	File(building).Delete

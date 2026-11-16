@@ -47,8 +47,8 @@ Names(at Number) Texts
 	let row = Row(arguments(0), at)
 	let start = Start(arguments(3), at)
 	let input = Variable(arguments(2), at)
-	let isShared = (row.Length >= 2) and (start.Length is 2) and (input is not "")
-	let isMatched = isShared and (row(1) is start.First) and IsConstant(arguments(1), at, 0)
+	let isShared = row.Length >= 2 and start.Length is 2 and input is not ""
+	let isMatched = isShared and row(1) is start.First and IsConstant(arguments(1), at, 0)
 	isMatched then (row.First, input, start.Last) + row.Slice(1, row.Length - 1) else List(Text)
 IsDotted(at Number) Boolean
 	Summing.IsDotted(15)
@@ -63,25 +63,25 @@ IsRowDot(callee MlirFunction) Boolean
 	Summing.IsRowDot(Summing.function) is false
 	let names = callee.Parameters
 	let code = callee.method.instructions
-	if (names.Length is not 5) or (code.Length is not DotCode.Length)
+	if names.Length is not 5 or code.Length is not DotCode.Length
 		return false
 	let dot = MlirDeviceDot(MlirFunction(callee, Float = "f32"), 4)
-	if ((code(1).kind, code(2).kind, code(SumLoad).kind, code(Returned).kind) is not Ends) or (dot.IsDot is false)
+	if (code(1).kind, code(2).kind, code(SumLoad).kind, code(Returned).kind) is not Ends or dot.IsDot is false
 		return false
 	let loads = (code(1).texts(0), code(2).texts(1), code(6).texts(0), code(StartLoad).texts(0), code(SumLoad).texts(0))
 	let expected = (names(1), "Length", names(2), names(4), code(5).texts(0))
-	(code(4).payload(0) is code(2).payload(0)) and (loads is expected) and (dot.Operands is (names(1), names(3)))
+	code(4).payload(0) is code(2).payload(0) and loads is expected and dot.Operands is (names(1), names(3))
 Row(register Number, before Number) Texts
 	Summing.Row(4, 15) is ("weights", "rows")
 	Summing.Row(12, 15).Length is 0
-	(Grouped.Row(24, 13).Length is 0) and (Varied.Row(4, 43).Length is 0)
+	Grouped.Row(24, 13).Length is 0 and Varied.Row(4, 43).Length is 0
 	let groups = MlirGroups(function, position)
 	let writer = groups.Writer(register, before)
 	let read = function.method.instructions(writer)
-	if (writer < 0) or (read.kind is not InstructionType.IndexCall)
+	if writer < 0 or read.kind is not InstructionType.IndexCall
 		return List(Text)
 	let rows = Ranged(groups.Writer(read.payload(1), writer))
-	rows.Length is 0 then rows else (List(Text) + read.texts(0)) + rows
+	rows.Length is 0 then rows else List(Text) + read.texts(0) + rows
 Ranged(at Number) Texts
 	Summing.Ranged(5) is List(Text) + "rows"
 	Grouped.Ranged(13) is ("rows", "bases")
@@ -90,11 +90,11 @@ Ranged(at Number) Texts
 	if rows is not ""
 		return List(Text) + rows
 	let sum = function.method.instructions(at)
-	if (at < 0) or (sum.kind is not InstructionType.Add)
+	if at < 0 or sum.kind is not InstructionType.Add
 		return List(Text)
 	let modulo = Indexed(MlirGroups(function, position).Writer(sum.payload(2), at), InstructionType.Modulo)
 	let bases = Based(sum.payload(1), at, modulo)
-	(modulo is "") or (bases is "") then List(Text) else (modulo, bases)
+	modulo is "" or bases is "" then List(Text) else (modulo, bases)
 Based(register Number, before Number, rows Text) Text
 	Grouped.Based(24, 13, "rows") is "bases"
 	Grouped.Based(24, 13, "width") is ""
@@ -103,28 +103,28 @@ Based(register Number, before Number, rows Text) Text
 	let groups = MlirGroups(function, position)
 	let writer = groups.Writer(register, before)
 	let read = function.method.instructions(writer)
-	if (writer < 0) or (read.kind is not InstructionType.IndexCall)
+	if writer < 0 or read.kind is not InstructionType.IndexCall
 		return ""
 	Tiled(groups.Writer(read.payload(1), writer)) is rows then read.texts(0) else ""
 Start(register Number, before Number) Texts
 	Summing.Start(12, 15) is ("rows", "width")
 	Summing.Start(4, 15).Length is 0
-	(Varied.Start(12, 38).Length is 0) and (Varied.Start(12, 40).Length is 0)
+	Varied.Start(12, 38).Length is 0 and Varied.Start(12, 40).Length is 0
 	Varied.Start(12, 41).Length is 0
 	let groups = MlirGroups(function, position)
 	let writer = groups.Writer(register, before)
 	let product = function.method.instructions(writer)
-	if (writer < 0) or (product.kind is not InstructionType.Multiply)
+	if writer < 0 or product.kind is not InstructionType.Multiply
 		return List(Text)
 	let rows = Floored(groups.Writer(product.payload(1), writer))
 	let width = Variable(product.payload(2), writer)
-	(rows is "") or (width is "") then List(Text) else (rows, width)
+	rows is "" or width is "" then List(Text) else (rows, width)
 Floor(at Number) Number
 	Summing.Floor(12) is 11
 	Summing.Floor(11) is -1
 	Summing.Floor(15) is -1
 	let floor = function.method.instructions(at)
-	if (at < 0) or (floor.kind is not InstructionType.Invoke)
+	if at < 0 or floor.kind is not InstructionType.Invoke
 		return -1
 	if floor.texts(1) is not "Floor"
 		return -1
@@ -133,31 +133,31 @@ Floored(at Number) Text
 	Summing.Floored(12) is "rows"
 	Summing.Floored(11) is ""
 	Grouped.Names(23) is ("weights", "input", "width", "rows", "bases")
-	(Varied.Names(32).Length is 0) and (Varied.Names(35).Length is 0)
-	(Varied.Names(38).Length is 0) and (Varied.Names(43).Length is 0)
+	Varied.Names(32).Length is 0 and Varied.Names(35).Length is 0
+	Varied.Names(38).Length is 0 and Varied.Names(43).Length is 0
 	Varied.Names(46).Length is 0
 	Indexed(Floor(at), InstructionType.Divide)
 Tiled(at Number) Text
 	Grouped.Tiled(11) is "rows"
 	Summing.Tiled(12) is ""
-	(Varied.Tiled(49) is "") and (Varied.Tiled(52) is "")
+	Varied.Tiled(49) is "" and Varied.Tiled(52) is ""
 	let quotient = Floor(at)
 	let divide = function.method.instructions(quotient)
-	if (quotient < 0) or (divide.kind is not InstructionType.Divide)
+	if quotient < 0 or divide.kind is not InstructionType.Divide
 		return ""
 	let groups = MlirGroups(function, position)
 	let tile = groups.Writer(divide.payload(2), quotient)
 	let tiles = function.method.instructions(tile)
-	let isTile = (tile >= 0) and (tiles.payload is (divide.payload(2), 1, Tile))
+	let isTile = tile >= 0 and tiles.payload is (divide.payload(2), 1, Tile)
 	isTile then Indexed(groups.Writer(divide.payload(1), quotient), InstructionType.Divide) else ""
 Indexed(at Number, kind Number) Text
 	Summing.Indexed(5, InstructionType.Modulo) is "rows"
 	Summing.Indexed(11, InstructionType.Modulo) is ""
 	Summing.Indexed(14, InstructionType.Multiply) is ""
 	Varied.Ranged(28).Length is 0
-	(Varied.Ranged(29).Length is 0) and (Varied.Ranged(30).Length is 0)
+	Varied.Ranged(29).Length is 0 and Varied.Ranged(30).Length is 0
 	let entry = function.method.instructions(at)
-	if (at < 0) or (entry.kind is not kind)
+	if at < 0 or entry.kind is not kind
 		return ""
 	Variable(entry.payload(1), at) is "index" then Variable(entry.payload(2), at) else ""
 Variable(register Number, before Number) Text
@@ -167,7 +167,7 @@ Variable(register Number, before Number) Text
 	Summing.Variable(4, 15) is ""
 	let writer = MlirGroups(function, position).Writer(register, before)
 	let entry = function.method.instructions(writer)
-	(writer >= 0) and (entry.kind is InstructionType.LoadVariableToRegister) then entry.texts(0) else ""
+	writer >= 0 and entry.kind is InstructionType.LoadVariableToRegister then entry.texts(0) else ""
 IsConstant(register Number, before Number, number Number) Boolean
 	Summing.IsConstant(5, 15, 0)
 	Summing.IsConstant(4, 15, 0) is false
@@ -175,5 +175,5 @@ IsConstant(register Number, before Number, number Number) Boolean
 	Summing.IsConstant(5, 15, 1) is false
 	let writer = MlirGroups(function, position).Writer(register, before)
 	let entry = function.method.instructions(writer)
-	let isLoad = (writer >= 0) and (entry.kind is InstructionType.LoadConstantToRegister)
-	isLoad and (entry.payload is InstructionEntry.LoadNumber(register, number).payload)
+	let isLoad = writer >= 0 and entry.kind is InstructionType.LoadConstantToRegister
+	isLoad and entry.payload is InstructionEntry.LoadNumber(register, number).payload

@@ -1,0 +1,67 @@
+has lines Texts
+has typeName Text
+constant Exempt = ("Size", "Vector2", "Vector3", "Rectangle")
+constant WidthHint = "width and height must use has Size"
+constant Vector2Hint = "x and y must use has Vector2"
+constant Vector3Hint = "x, y and z must use has Vector3"
+constant RectangleHint = "Center and Size must use has Rectangle"
+constant Sample = GeometryTypes(("has width Number", "has height Number"), "Box")
+constant HelpLines = ("has width = 720", "has height = 1280", "constant Help = (\"w\", \"h\")")
+constant BoxLines = ("has Center Vector2", "has Width Number", "has Height Number")
+Issues List(ValidationIssue)
+	Sample.Issues.First to Text is "WidthAndHeightMustBeSize: " + WidthHint
+	GeometryTypes(("has Width Number", "has Height Number"), "Size").Issues.Length is 0
+	GeometryTypes(HelpLines, "Resolution").Issues.Length is 0
+	GeometryTypes(BoxLines, "Box").Issues.First to Text is "CenterAndSizeMustBeRectangle: " + RectangleHint
+	if typeName is in Exempt or IsOptions
+		return List(ValidationIssue)
+	let scope = TypeShape(lines).MemberScope
+	SizeOrRectangleIssues(Lowered(scope.names), scope.types) + CoordinateIssues(Lowered(scope.names), scope.types)
+SizeOrRectangleIssues(names Texts, types Texts) List(ValidationIssue)
+	Sample.SizeOrRectangleIssues(("center", "size"), ("Vector2", "Size")).Length is 1
+	Sample.SizeOrRectangleIssues(("center", "width"), ("Vector2", "Number")).Length is 0
+	let hasWidthHeight = IsNumber(names, types, "width") and IsNumber(names, types, "height")
+	let hasSize = IsTyped(names, types, "size", "Size") or IsTyped(names, types, "size", "Math/Size")
+	if IsTyped(names, types, "center", "Vector2") and (hasSize or hasWidthHeight)
+		return Issue("CenterAndSizeMustBeRectangle", RectangleHint, ("center", "size", "width"))
+	hasWidthHeight then Issue("WidthAndHeightMustBeSize", WidthHint, ("width", "height")) else List(ValidationIssue)
+CoordinateIssues(names Texts, types Texts) List(ValidationIssue)
+	Sample.CoordinateIssues(("x", "y"), ("Number", "Number")).First to Text is "CoordinatesMustBeVector2: " + Vector2Hint
+	Sample.CoordinateIssues(("x", "y", "z"), ("Number", "Number", "Number")).First.target is Vector3Hint
+	Sample.CoordinateIssues(("x", "y"), ("Text", "Number")).Length is 0
+	if (IsNumber(names, types, "x") and IsNumber(names, types, "y")) is false
+		return List(ValidationIssue)
+	if IsNumber(names, types, "z")
+		return Issue("CoordinatesMustBeVector3", Vector3Hint, ("x", "y", "z"))
+	Issue("CoordinatesMustBeVector2", Vector2Hint, ("x", "y"))
+Issue(rule Text, detail Text, targets Texts) List(ValidationIssue)
+	Sample.Issue("R", "D", List(Text) + "height").First.Line is 2
+	List(ValidationIssue) + ValidationIssue(rule, detail, MemberLine(targets))
+IsOptions Boolean
+	GeometryTypes(List(Text) + "constant Help = (\"a\")", "Opt").IsOptions
+	Sample.IsOptions is false
+	for lines
+		if value.StartsWith("constant Help =")
+			return true
+	false
+Lowered(names Texts) Texts
+	Sample.Lowered(("Width", "Y")) is ("width", "y")
+	for names
+		value.Lower
+IsNumber(names Texts, types Texts, target Text) Boolean
+	Sample.IsNumber(("width", "name"), ("Number", "Text"), "width")
+	Sample.IsNumber(("width", "name"), ("Number", "Text"), "name") is false
+	IsTyped(names, types, target, "Number")
+IsTyped(names Texts, types Texts, target Text, expected Text) Boolean
+	Sample.IsTyped(("center"), List(Text) + "Math/Vector2", "center", "Vector2")
+	Sample.IsTyped(("center"), List(Text) + "Number", "center", "Vector2") is false
+	let at = names.Index(target)
+	at >= 0 and (types(at) is expected or types(at).EndsWith("/" + expected))
+MemberLine(targets Texts) Number
+	Sample.MemberLine(List(Text) + "height") is 2
+	Sample.MemberLine(List(Text) + "missing") is 1
+	let shape = TypeShape(lines)
+	for lines
+		if shape.IsMemberLine(value) and HeaderTokens(Tokenizer(value).Tokens).MemberName.Lower is in targets
+			return index + 1
+	1

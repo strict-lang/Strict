@@ -18,7 +18,7 @@ Run(name Text, files Texts) Number
 Header(name Text) Number
 	for lines
 		if TypeShape(lines).IsMethodHeader(value)
-			if (Tokenizer(value).Tokens.First is name) or ((index + 1) to Text is name)
+			if Tokenizer(value).Tokens.First is name or (index + 1) to Text is name
 				return index
 	-1
 Search(header HeaderTokens) SuggestionCalls

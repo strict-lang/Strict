@@ -37,22 +37,22 @@ IsExported(method MethodEntry) Boolean
 	Policy.IsExported(MethodEntry.CountingLoop) is false
 	MlirLibrary(List(TypeEntry) + MlirForeign.Adder.type).IsExported(MlirForeign.Add) is false
 	let first = method.Name(0)
-	let isNamed = (first.Upper is first) and (first.Lower is not first)
-	let isPublic = isNamed and (method.Name is not in ("Run", TestCodegen.Runner))
+	let isNamed = first.Upper is first and first.Lower is not first
+	let isPublic = isNamed and method.Name is not in ("Run", TestCodegen.Runner)
 	mutable isSupported = Kind(method.returnType) is not ""
 	for method.parameters
-		isSupported = isSupported and (Kind(value.typeName) is not "")
+		isSupported = isSupported and Kind(value.typeName) is not ""
 	let function = MlirFunction(types, types.First, method)
 	let isPlain = MlirInstances(function, 0).Stored(types.First).Length is 0
-	isPublic and isSupported and (MlirForeign(function).IsForeign is false) and (isPlain or IsRecord(types.First.Name))
+	isPublic and isSupported and MlirForeign(function).IsForeign is false and (isPlain or IsRecord(types.First.Name))
 IsRecord(typeName Text) Boolean
 	Trades.IsRecord("Strict/Trade")
 	Trades.IsRecord("Strict/Text") is false
 	let type = MlirFunction(types, types.First, MethodEntry.CountingLoop).TypeOf(typeName)
 	let stored = MlirInstances(MlirFunction(types, type, MethodEntry.CountingLoop), 0).Stored(type)
-	mutable isPlain = (stored.Length > 0) and (TypeEntry.ShortName(typeName) is not in ("Number", "Text", "Boolean"))
+	mutable isPlain = stored.Length > 0 and TypeEntry.ShortName(typeName) is not in ("Number", "Text", "Boolean")
 	for stored
-		isPlain = isPlain and (TypeEntry.ShortName(value.typeName) is in ("Number", "Boolean"))
+		isPlain = isPlain and TypeEntry.ShortName(value.typeName) is in ("Number", "Boolean")
 	isPlain
 Recorded(pointer Text, typeName Text, suffix Text) Texts
 	Trades.Recorded("%a0", "Strict/Trade", "a0").Last is "    %t0a0f = func.call @strict_bits(%t0a0p) : (!llvm.ptr) -> f64"

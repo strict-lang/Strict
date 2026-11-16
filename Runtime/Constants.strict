@@ -46,7 +46,7 @@ Saved(route Number, slot Number, result VmValue)
 	machine.prototypes.Stored(route, VmValue(prototype, items = items))
 Member(type TypeEntry, slot Number) VmValue
 	let route = Resolver(machine.types).Position(type)
-	let isPrepared = (route >= 0) and (route < machine.prototypes.entries.Length)
+	let isPrepared = route >= 0 and route < machine.prototypes.entries.Length
 	isPrepared then Value(route, slot) else Natives.Initial(type.members(slot))
 Seeded(cache Dictionary(Text, VmValue)) Machine
 	if cache.Length is 0
@@ -61,18 +61,18 @@ Seeded(cache Dictionary(Text, VmValue)) Machine
 Merged(current List(VmValue), cached List(VmValue)) List(VmValue)
 	Constants(Machine.Hello.Prepared).Merged(List(VmValue) + Unset, List(VmValue) + VmValue.OfNumber(7)).First.number is 7
 	for current
-		let keep = (value.kind is "$Constant") and (cached(index).kind is not in ("$Constant", "$Computing"))
-		keep and (cached(index).kind is not in VmValue.ErrorKinds) then cached(index) else value
+		let keep = value.kind is "$Constant" and cached(index).kind is not in ("$Constant", "$Computing")
+		keep and cached(index).kind is not in VmValue.ErrorKinds then cached(index) else value
 Recorded(cache Dictionary(Text, VmValue)) Dictionary(Text, VmValue)
 	mutable result = cache
 	for machine.types
 		let proto = machine.prototypes.At(index)
-		if (proto.items.Length > 0) and IsEvaluated(value, proto.items)
+		if proto.items.Length > 0 and IsEvaluated(value, proto.items)
 			result(value.Name) = proto
 	result
 IsEvaluated(type TypeEntry, items List(VmValue)) Boolean
 	Constants(Machine.Hello.Prepared).IsEvaluated(Keeping, List(VmValue) + VmValue.OfNumber(7))
 	for type.members
-		if value.IsConstant and (items(index).kind is not in ("$Constant", "$Computing", "None"))
+		if value.IsConstant and items(index).kind is not in ("$Constant", "$Computing", "None")
 			return true
 	false

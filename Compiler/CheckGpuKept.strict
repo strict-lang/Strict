@@ -46,7 +46,7 @@ RanCases(folder Text) Boolean
 	let comp = Process.RunTool("clang", ccArgs, ToolSeconds)
 	comp.exitCode is not 0 then Error("CompileFailed: " + comp.Output + comp.error) else RunTokenCounts(folder, exe, win)
 RunTokenCounts(folder Text, exe Text, win Boolean) Boolean
-	let env = (win then "set STRICT_GPU=all&& " else "STRICT_GPU=all ")
+	let env = win then "set STRICT_GPU=all&& " else "STRICT_GPU=all "
 	let target = "\"" + folder + "/KeptTokens" + (win then ".exe" else "") + "\""
 	for ("96", "20")
 		let args = value + " kept.safetensors " + target + " plain.safetensors kept.out.safetensors"

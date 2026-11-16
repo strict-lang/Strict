@@ -65,7 +65,7 @@ OverloadSuffix(method MethodEntry) Text
 	Scaling.OverloadSuffix(MethodEntry("*", List(MemberEntry), "C", List(InstructionEntry))) is ""
 	mutable count = 0
 	for methods
-		if (value.Name is method.Name) and (value.Name is not "to") and (value.parameters.Length is method.parameters.Length)
+		if value.Name is method.Name and value.Name is not "to" and value.parameters.Length is method.parameters.Length
 			count = count + 1
 	count > 1 then "_" + Text.Combine(method.ParameterNames, "_") else ""
 ShortName(typeName Text) Text
@@ -91,29 +91,29 @@ Based(typeName Text) Text
 	open < 0 then short else short.Substring(0, open)
 Wrapped Text
 	HelloLogger.Wrapped is "Logger"
-	Converting.Wrapped is "" and (CharacterEntry.Wrapped is "")
+	Converting.Wrapped is "" and CharacterEntry.Wrapped is ""
 	TypeEntry("Strict/Shade", List(MemberEntry) + Lighting, List(MethodEntry)).Wrapped is "Number"
 	let short = ShortName(Name)
-	if IsBaseName(short) or (short is in ("Logger", "File"))
+	if IsBaseName(short) or short is in ("Logger", "File")
 		return ""
 	let changing = Changing
-	let numbered = (members.Length > 0) and (members.First.typeName is "Strict/Number") and (methods.Length is 0)
+	let numbered = members.Length > 0 and members.First.typeName is "Strict/Number" and methods.Length is 0
 	if changing.Length is 1
 		return ShortName(changing.First.typeName)
-	numbered and (changing.Length is 0) then "Number" else ""
+	numbered and changing.Length is 0 then "Number" else ""
 IsStruct Boolean
-	HelloLogger.IsStruct is false and (CharacterEntry.IsStruct is false)
+	HelloLogger.IsStruct is false and CharacterEntry.IsStruct is false
 	Converting.IsStruct
 	TypeEntry("Strict/File", List(MemberEntry) + MemberEntry.LoggerMember, List(MethodEntry)).IsStruct
 	Initialized.IsStruct and TypeEntry("Strict/S", List(MemberEntry) + Lighting, MethodEntry.HelloRun).IsStruct
 	TypeEntry("Strict/S", (CharacterEntry.members.First, CharacterEntry.members.First), List(MethodEntry)).IsStruct
 	let short = ShortName(Name)
-	if IsBaseName(short) or (short is in ("Logger", "File"))
+	if IsBaseName(short) or short is in ("Logger", "File")
 		return short is in ("Logger", "File")
 	let changing = Changing.Length
-	if (members.Length is 0) or (methods.Length > 0)
-		return (members.Length is 0) or (changing is not 1)
-	(changing is not 1) and ((changing > 0) or (members.First.typeName is not "Strict/Number"))
+	if members.Length is 0 or methods.Length > 0
+		return members.Length is 0 or changing is not 1
+	changing is not 1 and (changing > 0 or members.First.typeName is not "Strict/Number")
 Changing List(MemberEntry)
 	HelloLogger.Changing.Length is 1
 	TypeEntry("A", List(MemberEntry) + MemberEntry.SevenMember, List(MethodEntry)).Changing.Length is 0
@@ -130,7 +130,7 @@ IsBaseName(short Text) Boolean
 	HelloLogger.IsBaseName("Character")
 	HelloLogger.IsBaseName("List(Text)")
 	HelloLogger.IsBaseName("Shape") is false
-	(short is in ("Number", "Text", "Boolean", "Character", "None")) or short.StartsWith("List(")
+	short is in ("Number", "Text", "Boolean", "Character", "None") or short.StartsWith("List(")
 JustName Text
 	TypeEntry("Strict/Process", List(MemberEntry), List(MethodEntry)).JustName is "Process"
 	HelloLogger.JustName is "HelloLogger"
@@ -156,7 +156,7 @@ ConstantSlot(method MethodEntry) Number
 	if method.parameters.Length > 0
 		return -1
 	for members
-		if value.IsConstant and (value.Name is method.Name)
+		if value.IsConstant and value.Name is method.Name
 			return index
 	-1
 Invoked Texts

@@ -35,7 +35,7 @@ Kernel Texts
 	Text.Combine(MlirDevice(MlirFunction(Doubling.function, Float = "f32"), 2).Kernel).IndexOf("i32 to f32") > 0
 	Text.Combine(Exact.Kernel).IndexOf("^generic") is -1
 	let call = MlirGroups(function, position).Call
-	if (function.Group < 0) and (call >= 0)
+	if function.Group < 0 and call >= 0
 		return MlirDevice(MlirFunction(function, Group = call), position, Format).Kernel
 	let header = "  llvm.func @" + Name + "(" + Fixed + Freed + MlirPassed(function, position).Header
 	let body = MlirBatched(function, position).Body
@@ -171,7 +171,7 @@ Rowed Texts
 	Layering.Rowed.First is "    %rowed:3 = func.call @strict_device_row(%source, %at)" + MlirDeviceRows.Types
 	Layering.Rowed is Rows
 	Gated.Started.Last is "    llvm.store %index, %v_value : f64, !llvm.ptr"
-	Layering.Started(0) is "  ^body:" and (Layering.Started(1) is "    %narrow = arith.trunci %at : i64 to i32")
+	Layering.Started(0) is "  ^body:" and Layering.Started(1) is "    %narrow = arith.trunci %at : i64 to i32"
 	Layering.Started(3) is "    llvm.store %index, %v_index : f64, !llvm.ptr"
 	Doubling.Started(4).StartsWith("    %element = func.call @strict_device_element(%source, %bits, %at, %count)")
 	constant row = "    %rowed:3 = func.call @strict_device_row(%source, %at)" + MlirDeviceRows.Types

@@ -12,7 +12,7 @@ Tested(folder Text, root Text, isRecursive = true, isMutating = false, isFull = 
 	let pending = Pending(files, isMutating)
 	mutable failed = 0
 	if pending.Length > 0
-		if (isMutating is false) and (isFull is false)
+		if isMutating is false and isFull is false
 			failed = Execute(logger).Failures(pending, pending, root, false)
 		else
 			failed = Ran(Commands("test", pending, root, isMutating, isFull))
@@ -24,19 +24,19 @@ Pending(files Texts, isMutating Boolean) Texts slow
 	PendingFile.Saved(PendingBytes) is not Error
 	Folders(Logger).Pending(List(Text) + PendingPath, false).Length is 0
 	for files
-		if IsChanged(value) or (isMutating and (MutationCache(value).IsCurrent is false))
+		if IsChanged(value) or isMutating and MutationCache(value).IsCurrent is false
 			value
 IsChanged(path Text) Boolean slow
 	Folders(Logger).IsChanged("Missing.strict")
 	let cache = BinaryFile(FileCompiler.Normalized(path))
 	let entries = cache.Head(File(cache.Path).ReadBytes)
 	let isTested = cache.IsCurrent(entries) and BinaryLinks(cache).IsTested(entries)
-	Execute(logger).IsEdited(path) or (isTested is false)
+	Execute(logger).IsEdited(path) or isTested is false
 Commands(command Text, paths Texts, root Text, isMutating = false, isFull = false) Texts
 	Folders(Logger).Commands("test", List(Text) + "a.strict", ".") is ("test \"a.strict\" \".\" unit")
 	Folders(Logger).Commands("test", List(Text) + "a.strict", ".", true) is ("test \"a.strict\" \".\" unit mutations")
 	Folders(Logger).Commands("test", List(Text) + "a.strict", ".", true, true) is ("test \"a.strict\" \".\" mutations")
-	let isUnit = (command is "test") and (isFull is false)
+	let isUnit = command is "test" and isFull is false
 	let options = (isUnit then " unit" else "") + (isMutating then " mutations" else "")
 	for paths
 		command + " \"" + value + "\" \"" + root + "\"" + options
@@ -87,4 +87,4 @@ Failed(exitCode Number) Number
 	Folders.Failed(3) is 3
 	Folders.Failed(-1073741819) is 1
 	Folders.Failed(0) is 0 and Folders.Failed(200) is 1
-	(exitCode >= 0) and (exitCode < CrashExitCode) then exitCode else 1
+	exitCode >= 0 and exitCode < CrashExitCode then exitCode else 1

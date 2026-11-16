@@ -56,8 +56,8 @@ IsCode(name Text, path Text) Boolean
 	(ResolveCheck.IsCode("Release", "./Math") or ResolveCheck.IsCode("Tools", "./Tools")) is false
 	(ResolveCheck.IsCode("obj", "./obj") or ResolveCheck.IsCode(".git", "./.git")) is false
 	let first = name(0)
-	let isData = (name is "Release") or ((name is in DataNames) and (Directory.Files(path, "*.strict").Length is 0))
-	(first is first.Upper) and (first is not first.Lower) and (isData is false)
+	let isData = name is "Release" or name is in DataNames and Directory.Files(path, "*.strict").Length is 0
+	first is first.Upper and first is not first.Lower and isData is false
 AllFiles(root Text) Texts
 	mutable files = Directory.Files(root, "*.strict")
 	for Directory.Directories(root)
@@ -83,11 +83,11 @@ OverloadedMembers(types KnownTypes, shapes List(TypeShape), memberTypes Texts, s
 	mutable traits = KnownTypes.NoMembers
 	for memberTypes
 		let position = types.Index(value)
-		if (position >= 0) and shapes(position).IsTrait
+		if position >= 0 and shapes(position).IsTrait
 			traits = traits.WithAll(types.parameters(position).names, types.parameters(position).types)
 	mutable result = scope
 	for traits.names
-		if (traits.Count(value) > 1) and (scope.Count(value) is 0) and (value is not TypeShape.Constrained)
+		if traits.Count(value) > 1 and scope.Count(value) is 0 and value is not TypeShape.Constrained
 			result = result.With(value, traits.types(index))
 	result
 Positions(names Texts) Dictionary(Text, Number)

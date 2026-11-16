@@ -49,7 +49,7 @@ Primed(model Qwen3, sequence Numbers) Drafter slow
 	Tiny.Primed(Stepped, (1, 2)).head.Length is Stepped.outputs.Length
 	Tiny.Primed(Stepped, (1, 2)).Primed(Stepped, (1, 2, 3)).blocks.First.keys.Length is 4
 	Tiny.Primed(Qwen3.TinyHybrid.Prefilled((1, 2, 3), 0), (1, 2, 3, 4)).blocks.First.keys.Length is 12
-	if (hidden.Length > 0) or (headNorm.Length is 0)
+	if hidden.Length > 0 or headNorm.Length is 0
 		return value
 	let count = model.hidden.Length / embedNorm.Length
 	let start = sequence.Length - count

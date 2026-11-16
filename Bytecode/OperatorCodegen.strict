@@ -58,13 +58,13 @@ IsBits(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsBits(SyntaxNode("Binary", "xor", (One, One)), CodeBlock.Empty)
 	Plain.IsBits(SyntaxNode("Binary", "+", (One, One)), CodeBlock.Empty) is false
 	ErrorCodegen.Plain.IsFailing(SyntaxNode("Binary", "xor", (One, One)), CodeBlock.Empty) is false
-	(node.text is in ("and", "or", "xor")) and (values.TypeOf(node.children(0), block) is "Number")
+	node.text is in ("and", "or", "xor") and values.TypeOf(node.children(0), block) is "Number"
 HasOperator(type Text, operator Text) Boolean
 	Texts.HasOperator("Text", "<")
 	Texts.HasOperator("Text", "+") is false
 	Plain.HasOperator("Number", "<") is false
 	let isOrdered = operator is in ("<", ">", "<=", ">=")
-	let isBase = (type is in ("Number", "Boolean")) or ((type is "Text") and (isOrdered is false))
+	let isBase = type is in ("Number", "Boolean") or type is "Text" and isOrdered is false
 	if isBase or type.StartsWith("List(") or values.inference.types.IsPlural(type)
 		return false
 	values.inference.types.MethodsOf(type).TypeOf(operator) is not ""
@@ -76,8 +76,8 @@ IsComposite(node SyntaxNode, block CodeBlock) Boolean
 	Plain.Composite(SyntaxNode("Binary", "or", (One, One)), CodeBlock.Empty).instructions.Last.texts.Length is 3
 	Plain.IsComposite(Choose, CodeBlock.Empty)
 	Plain.IsComposite(SyntaxNode("Binary", "+", (One, One)), CodeBlock.Empty) is false
-	let isFixed = (node.Kind is "Converted") or (node.text is in ("and", "or", "is in", "is not in", "else"))
-	isFixed or IsCustom(node, block) or (Decided(node, block) is not "")
+	let isFixed = node.Kind is "Converted" or node.text is in ("and", "or", "is in", "is not in", "else")
+	isFixed or IsCustom(node, block) or Decided(node, block) is not ""
 Decided(node SyntaxNode, block CodeBlock) Text
 	Plain.Decided(Mismatched, CodeBlock.Empty) is "false"
 	Plain.Decided(SyntaxNode("Binary", "is not", (One, SyntaxNode("Identifier", "B"))), CodeBlock.Empty) is "true"
@@ -87,7 +87,7 @@ Decided(node SyntaxNode, block CodeBlock) Text
 		return ""
 	let wanted = node.children.Last
 	let isType = IsTypeTest(wanted, block)
-	if (isType is false) and (IsMismatched(node, block) is false)
+	if isType is false and IsMismatched(node, block) is false
 		return ""
 	((isType and Matches(values.TypeOf(node.children(0), block), wanted.text)) is (node.text is "is")) to Text
 IsTypeTest(wanted SyntaxNode, block CodeBlock) Boolean
@@ -98,8 +98,8 @@ IsTypeTest(wanted SyntaxNode, block CodeBlock) Boolean
 	Plain.Choice(Narrowing, CodeBlock.Empty.Declare("x", "Number")).scope.TypeOf("x") is "Number"
 	Plain.IsTypeTest(SyntaxNode("Identifier", "B"), CodeBlock.Empty)
 	Hiding.IsTypeTest(SyntaxNode("Identifier", "B"), CodeBlock.Empty) is false
-	let isHiding = values.IsMethodCall(wanted, block) or (wanted.text is "Error")
-	values.IsTypeName(wanted, block) and (isHiding is false)
+	let isHiding = values.IsMethodCall(wanted, block) or wanted.text is "Error"
+	values.IsTypeName(wanted, block) and isHiding is false
 IsMismatched(node SyntaxNode, block CodeBlock) Boolean
 	Plain.Decided(SyntaxNode("", "is", (NoNode, Mismatched.children(1))), CodeBlock.Empty.Declare("x", "Dictionary")) is ""
 	Plain.IsMismatched(Mismatched, CodeBlock.Empty)
@@ -109,10 +109,10 @@ IsMismatched(node SyntaxNode, block CodeBlock) Boolean
 		return false
 	let left = values.TypeOf(node.children(0), block)
 	let right = values.TypeOf(node.children(1), block)
-	let isInstance = (left.IndexOf("(") > 0) and (right.IndexOf("(") > 0) and (left is not right)
+	let isInstance = left.IndexOf("(") > 0 and right.IndexOf("(") > 0 and left is not right
 	let types = values.inference.types
 	let isMethodGeneric = "Generic" is in types.ParametersOf(left, "from types", -1)
-	isInstance and (isMethodGeneric is false) and (types.BaseName(left) is types.BaseName(right))
+	isInstance and isMethodGeneric is false and types.BaseName(left) is types.BaseName(right)
 Matches(type Text, wanted Text) Boolean
 	Plain.Matches("Range", "Iterator") and Plain.Matches("Text", "Iterator") and Plain.Matches("Number", "Iterator")
 	Plain.Matches("Boolean", "Iterator") is false
@@ -122,8 +122,8 @@ Matches(type Text, wanted Text) Boolean
 	Plain.Matches("A(Number)", "A")
 	Plain.Matches("Number", "B") is false
 	let types = values.inference.types
-	let isIterable = (type is in ("Number", "Range", "Text")) or types.IsPlural(type) or (types.BaseName(type) is "List")
-	(type is wanted) or (types.BaseName(type) is wanted) or (wanted is "Iterator") and isIterable
+	let isIterable = type is in ("Number", "Range", "Text") or types.IsPlural(type) or types.BaseName(type) is "List"
+	type is wanted or types.BaseName(type) is wanted or wanted is "Iterator" and isIterable
 Composite(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Composite(Choose, CodeBlock.Empty).instructions.Last.kind is InstructionType.LoadVariableToRegister
 	if Decided(node, block) is not ""
@@ -188,8 +188,8 @@ Compared(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Compared(SyntaxNode("Binary", ">", (NoNode, NoNode)), CodeBlock.Empty).instructions.Length is 3
 	Plain.Compared(NoNode, CodeBlock.Empty).instructions.Last.kind is InstructionType.Equal
 	Plain.Compared(SyntaxNode("Identifier", "<"), CodeBlock.Empty.Declare("<", "Boolean")).instructions.Length is 3
-	let isCompared = (node.Kind is "Binary") and (node.text is in ("is", "is not", "<", ">"))
-	let isComparison = isCompared and (Decided(node, block) is "") and (IsCustom(node, block) is false)
+	let isCompared = node.Kind is "Binary" and node.text is in ("is", "is not", "<", ">")
+	let isComparison = isCompared and Decided(node, block) is "" and IsCustom(node, block) is false
 	let operand = isComparison then node.children(0) else node
 	let errors = ErrorCodegen(values)
 	let left = errors.Compared(node, operand, block)

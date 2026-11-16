@@ -28,7 +28,7 @@ ParameterNames Texts
 	PayloadDecoder(entry).Names
 Count Number
 	AddCall.Count is 1
-	(AddCall.Arguments.First.number is 3) and (Parsing.Instance.text is "5")
+	AddCall.Arguments.First.number is 3 and Parsing.Instance.text is "5"
 	entry.payload(5 + entry.payload(3))
 IsNativeConversion Boolean
 	Parsing.IsNativeConversion
@@ -42,9 +42,9 @@ IsConversion(source Text, method Text, target Text) Boolean
 	Parsing.IsConversion("Text", "Upper", "Strict/Text") is false
 	Parsing.IsConversion("Number", "to", "Strict/Number") is false
 	Parsing.IsConversion("Text", "to", "Strict/Boolean") is false
-	let isBase = (source is in ("Number", "Character", "Boolean", "Text")) or source.StartsWith("List(")
-	let isTextual = (target is "Strict/Text") and isBase
-	(method is "to") and (isTextual or ((target is "Strict/Number") and (source is "Text")))
+	let isBase = source is in ("Number", "Character", "Boolean", "Text") or source.StartsWith("List(")
+	let isTextual = target is "Strict/Text" and isBase
+	method is "to" and (isTextual or target is "Strict/Number" and source is "Text")
 IsMemberValue(type TypeEntry) Boolean
 	Coding.IsMemberValue(TypeEntry.CharacterEntry)
 	Parsing.IsMemberValue(TypeEntry.CharacterEntry) is false
@@ -57,7 +57,7 @@ IsMemberKind(kind Text, typeName Text, member Text) Boolean
 	Coding.IsMemberKind("List", "Character", "List(Number)")
 	Coding.IsMemberKind("Text", "Character", "Number") is false
 	Coding.IsMemberKind("List", "Character", "ListNumber") is false
-	(kind is typeName) or (member is kind) or member.StartsWith(kind + "(")
+	kind is typeName or member is kind or member.StartsWith(kind + "(")
 Flag Number
 	AddCall.Flag is 8
 	6 + entry.payload(3) + Count
@@ -78,7 +78,7 @@ IsWrapping(type TypeEntry) Boolean
 	AddCall.IsWrapping(TypeEntry.CharacterEntry) is false
 	Coding.IsWrapping(TypeEntry.Numbers) is false
 	Invocation(StructLanes.Constructed, List(VmValue), VmValue.None).IsWrapping(TypeEntry.CharacterEntry) is false
-	(MethodName is "from") and (type.Changing.Length is 1) and (Count is 1)
+	MethodName is "from" and type.Changing.Length is 1 and Count is 1
 Kept(traces List(VmValue), trace VmValue) List(VmValue)
 	AddCall.Kept(List(VmValue), VmValue.None).Length is 1
 	let last = LastTraces - 1

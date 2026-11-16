@@ -27,7 +27,7 @@ Run(arguments Texts) Number
 	result is Error then result else 0
 RanSelected(folder Text, arguments Texts) Boolean
 	for ("locks", "replace", "discovery", "linking", "values")
-		if (arguments.Length is 0) or (value is in arguments)
+		if arguments.Length is 0 or value is in arguments
 			let err = RanNamed(folder, value)
 			if err is Error
 				return err
@@ -77,12 +77,12 @@ CheckReplace(folder Text) Boolean
 VerifyReplace(folder Text) Boolean
 	let cmd = "\"" + Process.Current.executable + "\" \"" + folder + "/ReplaceCheck.strict\""
 	let held = Process.RunTool(folder + "/hold.exe", "\"" + folder + "/app.new.exe\" \"" + cmd + "\"", ToolSeconds)
-	let keptOld = File(folder + "/app.exe").Exists and (File(folder + "/app.exe").ReadBytes is "old".Bytes)
-	if (held.exitCode is not 0) or (not keptOld) or (File(folder + "/app.new.exe").ReadBytes is not "new".Bytes)
+	let keptOld = File(folder + "/app.exe").Exists and File(folder + "/app.exe").ReadBytes is "old".Bytes
+	if held.exitCode is not 0 or not keptOld or File(folder + "/app.new.exe").ReadBytes is not "new".Bytes
 		return Error("FailedInstallCorruptedFiles: " + held.Output + held.error)
 	let open = Process.RunTool(Process.Current.executable, folder + "/ReplaceCheck.strict", ToolSeconds)
-	let ok = (open.exitCode is 0) and (File(folder + "/app.exe").ReadBytes is "new".Bytes)
-	if (not ok) or File(folder + "/app.new.exe").Exists or File(folder + "/app.old.exe").Exists
+	let ok = open.exitCode is 0 and File(folder + "/app.exe").ReadBytes is "new".Bytes
+	if not ok or File(folder + "/app.new.exe").Exists or File(folder + "/app.old.exe").Exists
 		return Error("CleanReplaceFailed: " + open.Output + open.error)
 	logger.Log("Failed replacement restores original; successful replacement removes backup")
 	true
@@ -101,7 +101,7 @@ CheckDiscovery(folder Text) Boolean
 	let sfLine = "\tlogger.Log((\"./" + folder + "/Hop69.strict\" is in " + sfArg + ") to Text)"
 	File(folder + "/DiscoveryCheck.strict").Write(("has logger", "Run", sfLine))
 	let res = Process.RunTool(Process.Current.executable, folder + "/DiscoveryCheck.strict", ToolSeconds)
-	if (res.exitCode is not 0) or (not res.Output.Trim.EndsWith("true"))
+	if res.exitCode is not 0 or not res.Output.Trim.EndsWith("true")
 		return Error("DiscoveryFailed: " + res.Output + res.error)
 	logger.Log("Source discovery reaches all 70 dependency edges")
 	true
@@ -113,7 +113,7 @@ CheckLinking(folder Text) Boolean
 	let line = "\tlogger.Log((" + cmpCall + ") to Text)"
 	File(folder + "/LinkCheck.strict").Write(("has logger", "Run", line))
 	let res = Process.RunTool(Process.Current.executable, folder + "/LinkCheck.strict", ToolSeconds)
-	if (res.exitCode is not 0) or (not res.Output.Trim.EndsWith("true"))
+	if res.exitCode is not 0 or not res.Output.Trim.EndsWith("true")
 		return Error("LinkingFailed: " + res.Output + res.error)
 	logger.Log("Linking closes a chain longer than 50 rounds")
 	true
@@ -125,8 +125,8 @@ CheckValues(folder Text) Boolean
 	if built.exitCode is not 0
 		return Error("BuildValuesFailed: " + built.Output + built.error)
 	let mlir = Text.Combine(File(folder + "/obj/ValueCheck.mlir").ReadLines, "\n")
-	let hasClaim = ("strict_cache_claim(" is in mlir) and ("strict_cache_publish(" is in mlir)
-	if (not hasClaim) or ("ValueCheck_Results_1_loop" is not in mlir)
+	let hasClaim = "strict_cache_claim(" is in mlir and "strict_cache_publish(" is in mlir
+	if not hasClaim or "ValueCheck_Results_1_loop" is not in mlir
 		return Error("MissingCacheOrParallelMlir")
 	RunValues(folder + "/ValueCheck" + (Process.OperatingSystem is "Windows" then ".exe" else ""))
 RunValues(exe Text) Boolean
@@ -135,7 +135,7 @@ RunValues(exe Text) Boolean
 		let env = "STRICT_THREADS=" + value + (win then "&& set STRICT_GPU=0&& " else " STRICT_GPU=0 ")
 		let shArgs = (win then "/c set " else "-c \"") + env + "\"" + exe + "\"" + (win then "" else "\"")
 		let res = Process.RunTool(win then "cmd" else "sh", shArgs, RunSeconds)
-		if (res.exitCode is not 0) or (res.Output.Trim is not "1024")
+		if res.exitCode is not 0 or res.Output.Trim is not "1024"
 			return Error("ValuesRunFailed: " + res.Output + res.error)
 	logger.Log("Native literal/constructor caches and constant list reuse preserve values on 1 and 4 threads")
 	true

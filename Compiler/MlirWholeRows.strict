@@ -19,7 +19,7 @@ IsRowed Boolean
 		return false
 	for function.method.instructions
 		let isDivided = value.kind is in (InstructionType.Modulo, InstructionType.Divide)
-		if isDivided and IsIndex(value.payload(1), index) or (Passed(value, index) >= 0)
+		if isDivided and IsIndex(value.payload(1), index) or Passed(value, index) >= 0
 			return true
 	false
 IsIndex(register Number, at Number) Boolean
@@ -27,13 +27,13 @@ IsIndex(register Number, at Number) Boolean
 	Picking.IsIndex(4, 7) is false
 	let writer = MlirKinds(function).Writer(at, register)
 	let loaded = writer < 0 then InstructionEntry.Return(0) else function.method.instructions(writer)
-	(loaded.kind is InstructionType.LoadVariableToRegister) and (loaded.texts(0) is function.method.parameters(row).Name)
+	loaded.kind is InstructionType.LoadVariableToRegister and loaded.texts(0) is function.method.parameters(row).Name
 Passed(entry InstructionEntry, at Number) Number
 	Picking.Passed(MlirWholeKernel.Measuring(7), 7) is -1
 	if entry.kind is not InstructionType.Invoke
 		return -1
 	let callee = MlirWholeFunction(function).Callee(entry)
-	let isWhole = (callee.Symbol is not function.Symbol) and MlirWholeFunction(callee).IsWhole
+	let isWhole = callee.Symbol is not function.Symbol and MlirWholeFunction(callee).IsWhole
 	for LoadReuse(function.method.instructions).InvokeReads(entry)
 		if isWhole and IsIndex(entry.payload(value), at) and MlirWholeRows(callee, index).IsRowed
 			return index
@@ -44,10 +44,10 @@ Emitted(statements MlirWholeStatements) Texts
 	let at = statements.position
 	let entry = function.method.instructions(at)
 	let isDivided = entry.kind is in (InstructionType.Modulo, InstructionType.Divide)
-	if isDivided and IsIndex(entry.payload(1), at) and (statements.naturals(at) is "i")
+	if isDivided and IsIndex(entry.payload(1), at) and statements.naturals(at) is "i"
 		return Divided(statements, entry)
 	let passed = Passed(entry, at)
-	if (passed >= 0) and (MlirWholeNative(statements).Emitted(entry).Length is 0)
+	if passed >= 0 and MlirWholeNative(statements).Emitted(entry).Length is 0
 		return Called(statements, entry, passed)
 	statements.Emitted
 Divided(statements MlirWholeStatements, entry InstructionEntry) Texts

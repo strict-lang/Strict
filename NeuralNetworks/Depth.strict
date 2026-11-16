@@ -3,7 +3,7 @@ constant Sentence = "Strict finds small networks."
 constant Span = "ab ab"
 constant Folder = "NeuralNetworks/gpt2"
 Chosen(count Number) Numbers
-	Depth.Chosen(1) is (0) and (Depth.Chosen(0) is (0))
+	Depth.Chosen(1) is (0) and Depth.Chosen(0) is (0)
 	Depth.Chosen(12) is (0, 6, 11)
 	count <= 1 then (0) else (0, (count / 2).Floor, count - 1)
 Lines(model Gpt2, tokenizer Gpt2Tokens, text Text) Text

@@ -34,7 +34,7 @@ Finished(arguments List(VmValue)) List(VmValue)
 Ended(slots List(VmValue)) List(VmValue)
 	Twice.Ended(Listed)(0).text is "ab"
 	Frame(Machine(Doubling, deadline = 0.001), Twice.method, "D").Ended(Listed)(ResultSlot).items.First.text is "Timeout"
-	let stopped = (machine.deadline > 0) or (depth is 0) then MutationCache.Stopped(machine.deadline) else ""
+	let stopped = machine.deadline > 0 or depth is 0 then MutationCache.Stopped(machine.deadline) else ""
 	stopped is "" then Returned(slots) else MutationCache.Exhausted(slots, machine.deadline)
 Value(entry InstructionEntry, position Number, slots List(VmValue)) VmValue
 	Twice.Value(InstructionEntry(InstructionType.LoadVariableToRegister, "a", (6, 8)), 0, Listed).number is 5
@@ -49,7 +49,7 @@ Value(entry InstructionEntry, position Number, slots List(VmValue)) VmValue
 	Other(entry, slots, position)
 Next(entry InstructionEntry, position Number, slots List(VmValue)) Number
 	Twice.Next(InstructionEntry(InstructionType.JumpToIdIfTrue, List(Text), (0, 7)), 1, Listed) is 7
-	if (entry.kind < InstructionType.Return) or (entry.kind > InstructionType.JumpToIdIfTrue)
+	if entry.kind < InstructionType.Return or entry.kind > InstructionType.JumpToIdIfTrue
 		return ErrorCheck(entry).Next(position, slots(entry.payload(0)), method.instructions.Length)
 	if entry.kind is InstructionType.Return
 		return method.instructions.Length
@@ -59,7 +59,7 @@ Next(entry InstructionEntry, position Number, slots List(VmValue)) Number
 	if entry.kind is InstructionType.LoopEnd
 		return Looping.Next(slots(LoopSlot), position, linked)
 	let isTaken = slots(FlagSlot).IsTrue is (entry.kind is InstructionType.JumpToIdIfTrue)
-	(entry.kind >= InstructionType.JumpToIdIfFalse) and isTaken then linked else position + 1
+	entry.kind >= InstructionType.JumpToIdIfFalse and isTaken then linked else position + 1
 Stored(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	Twice.Stored(Twice.method.instructions(0), Listed, 0).number is 21
 	Twice.Stored(InstructionEntry(InstructionType.StoreRegisterToVariable, "a", (6, 8)), Listed, 0).number is 1
@@ -76,7 +76,7 @@ Stored(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 Written(entry InstructionEntry, slots List(VmValue)) VmValue
 	Twice.Written(Storage.StoreSecond, Listed).items(1).number is 1
 	Twice.Local(ThisSlot, Listed).text is "ab"
-	Twice.Local(MembersSlot, Listed).number is 1 and (Twice.Local(7, Listed).items.Length is 2)
+	Twice.Local(MembersSlot, Listed).number is 1 and Twice.Local(7, Listed).items.Length is 2
 	Twice.Local(Resolver.OuterIndexSlot, Listed).kind is "None"
 	Twice.Local(ValueSlot, (Listed(5), Listed(6), Listed(5), Listed(5), Listed(5), Listed(8))).number is 1
 	Twice.Local(IndexSlot, (Listed(5), Listed(6), Listed(5), Listed(5), Listed(5), Listed(8))).number is 5
@@ -88,12 +88,12 @@ Local(slot Number, slots List(VmValue)) VmValue
 	Twice.Local(ResultSlot, Listed).kind is "None"
 	Twice.Local(IndexSlot, Listed).number is 0
 	Twice.Local(Resolver.OuterSlot, Listed).text is "a"
-	if (slot > IndexSlot) or ((slot >= 0) and (slot is not ValueSlot) and (slot is not IndexSlot))
+	if slot > IndexSlot or slot >= 0 and slot is not ValueSlot and slot is not IndexSlot
 		let found = slots(slot)
 		return found.kind is "$Constant" then Constants(machine).Value(found.number, found.text to Number) else found
 	let state = slots(LoopSlot)
-	let isIndex = (slot is IndexSlot) or (slot is Resolver.OuterIndexSlot)
-	if (slot > 0) and (state.items.Length > 0)
+	let isIndex = slot is IndexSlot or slot is Resolver.OuterIndexSlot
+	if slot > 0 and state.items.Length > 0
 		return state.items(isIndex then 2 else 3)
 	Looping.Current(state, slot < 0, isIndex, slots(isIndex then IndexSlot else ValueSlot))
 Indexed(entry InstructionEntry, slots List(VmValue), position Number) VmValue
@@ -138,7 +138,7 @@ Traced(error VmValue, position Number) VmValue
 	let file = VmValue.OfText(resolved)
 	let trace = VmValue("Strict/Stacktrace", 0, "", (called, file, VmValue.OfNumber(method.instructions(position).line)))
 	let traces = error.items(1).items
-	let isRepeated = (traces.Length > 0) and (traces.Last is trace)
+	let isRepeated = traces.Length > 0 and traces.Last is trace
 	let traced = isRepeated then error.items(1) else VmValue.OfList(Invocation.Kept(traces, trace))
 	VmValue(error.kind, error.number, error.text, (error.items(0), traced))
 Looped(entry InstructionEntry, slots List(VmValue), position Number) VmValue
@@ -149,7 +149,7 @@ Looped(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	Twice.Looped(InstructionEntry(InstructionType.LoopEnd, List(Text), (-1)), Stopping, 0).kind is "None"
 	Twice.Looped(MethodEntry.CountingLoop.instructions(1), Listed, 1).items(2).number is 1
 	if entry.kind is InstructionType.LoopEnd
-		return Looping.Ended(slots(LoopSlot), (-1 is in entry.payload) and (slots(FlagSlot).IsTrue is false))
+		return Looping.Ended(slots(LoopSlot), -1 is in entry.payload and slots(FlagSlot).IsTrue is false)
 	let failed = Looping.Failed(slots(entry.payload(0)), Ending(entry, slots))
 	if failed.kind is not "None"
 		return Traced(failed, position)
@@ -192,7 +192,7 @@ Other(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	Twice.Other(InstructionEntry.Return(8), Listed, 0).number is 5
 	if entry.kind is InstructionType.Invoke
 		return Invoked(entry, slots, position)
-	if (entry.kind is InstructionType.LoopBegin) or (entry.kind is InstructionType.LoopEnd)
+	if entry.kind is InstructionType.LoopBegin or entry.kind is InstructionType.LoopEnd
 		return Looped(entry, slots, position)
 	if entry.kind is InstructionType.Return
 		let result = slots(entry.payload(0))

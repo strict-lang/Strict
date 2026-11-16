@@ -33,7 +33,7 @@ Emitted(entry InstructionEntry) Texts
 		return Copied(entry)
 	if decoder.Text(2) is "from"
 		return Built(entry)
-	(decoder.Text(1) is "Strict/Number") and (decoder.Text(2) is "Floor") then Floored(entry) else List(Text)
+	decoder.Text(1) is "Strict/Number" and decoder.Text(2) is "Floor" then Floored(entry) else List(Text)
 Lengthed(entry InstructionEntry) Texts
 	Lengthening.Lengthed(MlirWholeChild.Lengths(4))(0) is "    %t4c = llvm.load %v_pixels_length : !llvm.ptr -> i64"
 	Lengthening.Lengthed(MlirWholeChild.Lengths(4))(1) is "    llvm.store %t4c, %r2 : i64, !llvm.ptr"
@@ -146,13 +146,13 @@ Member(entry InstructionEntry) Texts
 	let read = MlirWholeFields(statements.function).Field(statements.Temp("a"), slot, statements.Temp("m"), kind)
 	statements.Load("a", entry.payload(1), "o") + read + statements.Store("m" + kind, kind, entry.payload(0))
 Constant(entry InstructionEntry) Texts
-	Mixed.Constant(InstructionEntry.LoadNumber(0, 0.5)).Length is 2 and (Framed.Built(MlirCouples.Sized).Length is 0)
+	Mixed.Constant(InstructionEntry.LoadNumber(0, 0.5)).Length is 2 and Framed.Built(MlirCouples.Sized).Length is 0
 	Mixed.Constant(Mixing.method.instructions(0)).Last is "    llvm.store %t0c, %r0 : f64, !llvm.ptr"
 	"    llvm.store %t0k, %r0i : i64, !llvm.ptr" is in Mixed.Constant(Mixing.method.instructions(0))
 	let values = MlirWholeValues(statements.position)
 	let literal = PayloadDecoder(entry).Value(1)
 	let register = "%r" + entry.payload(0)
-	if (statements.Register(entry.payload(0)) is "f") and values.IsWhole(literal)
+	if statements.Register(entry.payload(0)) is "f" and values.IsWhole(literal)
 		let floating = "    llvm.store " + statements.Temp("c") + ", " + register + " : f64, !llvm.ptr"
 		return values.Constant(literal, register + "i", "i") + floating
 	values.Constant(literal, register, statements.Register(entry.payload(0)))

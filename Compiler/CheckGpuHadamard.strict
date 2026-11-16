@@ -67,7 +67,7 @@ RanHarness(folder Text) Boolean
 	logger.Log(ran.Output.Trim)
 	ran.exitCode is not 0 then Error("HadamardCheckFailed: " + ran.Output + ran.error) else true
 FindTool(name Text, windowsPath Text) Text
-	(Process.OperatingSystem is "Windows") and File(windowsPath).Exists then windowsPath else name
+	Process.OperatingSystem is "Windows" and File(windowsPath).Exists then windowsPath else name
 HarnessCode Texts
 	let h = HeadA + HeadB + HeadC + CudaHelpA + CudaHelpB + CudaRotA + CudaRotB + CudaBrn
 	let g = CudaRunG1 + CudaRunG2 + CudaRunH + CudaRunI + CudaMainA + CudaMainA2

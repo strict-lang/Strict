@@ -69,7 +69,7 @@ IsLinkable(type Text) Boolean
 	Hello.IsLinkable("Strict/Logger")
 	Hello.IsLinkable("Strict/Missing") is false
 	let source = File(SourcePath(type))
-	source.Exists and ((type.IndexOf("(") is -1) or (TypeShape(source.ReadLines).IsTrait is false))
+	source.Exists and (type.IndexOf("(") is -1 or TypeShape(source.ReadLines).IsTrait is false)
 Signatures(types Texts, targets Texts) Texts
 	Sample.Signatures(("Strict/B"), ("Strict/B.Go")) is ("Strict/B:Go")
 	Sample.Signatures(("Strict/B"), ("Strict/B.Go", "Strict/B.Add")) is ("Strict/B:Add;Go")
@@ -97,7 +97,7 @@ UsedMethods(targets Texts, type Text) Texts
 	mutable used = List(Mutable(Text))
 	for targets
 		let method = value.StartsWith(prefix) then value.Substring(prefix.Length, value.Length - prefix.Length) else ""
-		if (method is not "") and (method is not in used) and (IsNative(type, value.Split(".").Last) is false)
+		if method is not "" and method is not in used and IsNative(type, value.Split(".").Last) is false
 			used.Add(method)
 	used
 IsNative(type Text, method Text) Boolean
@@ -109,10 +109,10 @@ IsNative(type Text, method Text) Boolean
 	Sample.IsNative("Strict/NativeIO", "Exists") is false
 	if type.LastIndexOf("/") > 6
 		return TypeEntry.ShortName(type) + "." + method is in Hosted.Methods
-	if (method is in ("Length", "Count")) or (SourceName(type) is "Dictionary")
-		return (SourceName(type) is in ("List", "File", "Dictionary")) or ((type is "Strict/Text") and (method is "Length"))
-	let isOwn = TypeEntry.IsBaseName(TypeEntry.ShortName(type)) or (SourceName(type) is in ("File", "Directory"))
-	(method.Split(" ").First is in Natives) and isOwn
+	if method is in ("Length", "Count") or SourceName(type) is "Dictionary"
+		return SourceName(type) is in ("List", "File", "Dictionary") or type is "Strict/Text" and method is "Length"
+	let isOwn = TypeEntry.IsBaseName(TypeEntry.ShortName(type)) or SourceName(type) is in ("File", "Directory")
+	method.Split(" ").First is in Natives and isOwn
 SourceName(type Text) Text
 	Sample.IsNative("Strict/List(Number)", "Length")
 	Sample.IsNative("Strict/File", "Count")
@@ -147,7 +147,7 @@ Elements(types Texts, package Text) Texts
 	mutable result = List(Mutable(Text))
 	for types
 		result.Add(value)
-		if value.StartsWith(listPrefix) and (value.LastIndexOf("(") is listPrefix.Length - 1)
+		if value.StartsWith(listPrefix) and value.LastIndexOf("(") is listPrefix.Length - 1
 			result.Add(Qualified(value.Substring(listPrefix.Length, value.Length - listPrefix.Length - 1), package))
 	result
 Qualified(element Text, package Text) Text

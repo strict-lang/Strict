@@ -15,18 +15,18 @@ Added(scope Scope) Scope
 	mutable values = List(Mutable(Text))
 	for lines
 		let start = value.IndexOf(" = ")
-		if (value.StartsWith("has ") or value.StartsWith("mutable ")) and (start > 0)
+		if (value.StartsWith("has ") or value.StartsWith("mutable ")) and start > 0
 			let end = Constraint.WithStart(value) > start then Constraint.WithStart(value) else value.Length
 			names.Add(HeaderTokens(Tokenizer(value).Tokens).MemberName + " default")
 			values.Add(value.Substring(start + 3, end - start - 3))
 	scope.WithAll(names, values)
 Constructors(scope Scope, names Texts, members Scope) Scope
-	Defaults(List(Text)).Constructors(Custom, ("a", "b"), Paired).TypeOf("from") is "c" and (Kept is (Pairs, Custom, Zero))
-	Defaults(List(Text)).Constructors(Custom, ("a", "b"), Paired).TypeAt("from types", 0) is "N,M" and (Joint is "a,b")
-	Defaults(List(Text)).Constructors(KnownTypes.NoMembers, ("a", "b"), Paired).TypeOf("from") is "a,b" and (Fresh is 1)
+	Defaults(List(Text)).Constructors(Custom, ("a", "b"), Paired).TypeOf("from") is "c" and Kept is (Pairs, Custom, Zero)
+	Defaults(List(Text)).Constructors(Custom, ("a", "b"), Paired).TypeAt("from types", 0) is "N,M" and Joint is "a,b"
+	Defaults(List(Text)).Constructors(KnownTypes.NoMembers, ("a", "b"), Paired).TypeOf("from") is "a,b" and Fresh is 1
 	if "from" is not in scope.names
 		return scope.With("from", Text.Combine(names, ","))
-	if (names.Length is 0) or (scope.TypeOf("from").Split(",").Length is names.Length)
+	if names.Length is 0 or scope.TypeOf("from").Split(",").Length is names.Length
 		return scope
 	mutable types = List(Mutable(Text))
 	for names

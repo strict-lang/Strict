@@ -111,7 +111,7 @@ IsNative Boolean
 	Twice.IsNative is false
 	Turned.IsNative is false
 	let loop = function.method.LoopBeginOf(at)
-	MlirDeviceMembers(function).IsNativeCall(at) or ((loop >= 0) then MlirTokens(function, loop).Call is at else false)
+	MlirDeviceMembers(function).IsNativeCall(at) or (loop >= 0 then MlirTokens(function, loop).Call is at else false)
 Native(entry InstructionEntry) Texts
 	Flooring.Native(MlirGpuCheck.Flooring)(1).IndexOf("llvm.intr.floor") > 0
 	Flooring.Native(Making).Last is "    llvm.store %d1, %r1 : f64, !llvm.ptr"
@@ -142,7 +142,7 @@ IsRounding(entry InstructionEntry) Boolean
 	Flooring.IsRounding(MlirGpuCheck.Floored.method.instructions(0)) is false
 	if entry.kind is not InstructionType.Invoke
 		return false
-	(entry.texts(1) is "from") and (TypeEntry.ShortName(entry.texts(0)) is "Float8")
+	entry.texts(1) is "from" and TypeEntry.ShortName(entry.texts(0)) is "Float8"
 Approximated(entry InstructionEntry) Texts
 	Text.Combine(Flooring.Approximated(Logarithmic)).IndexOf("@strict_device_logarithm(%failed, %d1i)") > 0
 	Text.Combine(Flooring.Approximated(Sining)).IndexOf("@strict_device_sine(%failed, %d1i)") > 0

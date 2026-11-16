@@ -23,10 +23,10 @@ WordEnd(text Text, start Number) Number
 	let contraction = Contracted(text, start)
 	if contraction > start
 		return contraction
-	let first = (text(start) is " ") and (Kind(text, start + 1) > 0) then start + 1 else start
+	let first = text(start) is " " and Kind(text, start + 1) > 0 then start + 1 else start
 	let kind = Kind(text, first)
 	let ending = Stretched(text, first + 1, kind)
-	(kind is 0) and (Kind(text, ending) > 0) and (ending - start > 1) then ending - 1 else ending
+	kind is 0 and Kind(text, ending) > 0 and ending - start > 1 then ending - 1 else ending
 QwenEnd(text Text, start Number) Number
 	Qwen.QwenEnd("(hello", 0) is 6
 	Qwen.QwenEnd(" 42", 0) is 1
@@ -42,13 +42,13 @@ IsWordStart(text Text, start Number) Boolean
 	Qwen.IsWordStart("\na", 0) is false
 	let kind = Kind(text, start)
 	let isBreak = text(start) is in ("\r", "\n")
-	(kind is 1) or ((kind is not 2) and (isBreak is false) and (Kind(text, start + 1) is 1))
+	kind is 1 or kind is not 2 and isBreak is false and Kind(text, start + 1) is 1
 Contracted(text Text, start Number) Number
 	Gpt.Contracted("it's", 2) is 4
 	Gpt.Contracted("it'S", 2) is 2
 	Qwen.Contracted("we'LL", 2) is 5
 	for ("'s", "'t", "'re", "'ve", "'m", "'ll", "'d")
-		if text.StartsWith(value, start) or (qwen and text.StartsWith(value.Upper, start))
+		if text.StartsWith(value, start) or qwen and text.StartsWith(value.Upper, start)
 			return start + value.Length
 	start
 Punctuated(text Text, start Number) Number
@@ -58,7 +58,7 @@ Punctuated(text Text, start Number) Number
 	if Kind(text, first) is not 3
 		return Spaced(text, start)
 	mutable breaks = Stretched(text, first + 1, 3)
-	for as long as (breaks < text.Length) and (text(breaks) is in ("\r", "\n"))
+	for as long as breaks < text.Length and text(breaks) is in ("\r", "\n")
 		breaks = breaks + 1
 	breaks
 Spaced(text Text, start Number) Number
@@ -70,7 +70,7 @@ Spaced(text Text, start Number) Number
 	for Range(start, ending)
 		if text(value) is in ("\r", "\n")
 			lastBreak = value
-	lastBreak >= 0 then lastBreak + 1 else (ending < text.Length) and (ending - start > 1) then ending - 1 else ending
+	lastBreak >= 0 then lastBreak + 1 else ending < text.Length and ending - start > 1 then ending - 1 else ending
 Stretched(text Text, first Number, kind Number) Number
 	Gpt.Stretched("aab ", 1, 1) is 3
 	mutable ending = first
@@ -85,8 +85,8 @@ Kind(text Text, index Number) Number
 	if index >= text.Length
 		return -1
 	let code = text(index).number
-	if (code is Character.Space) or (code is in Whitespace)
+	if code is Character.Space or code is in Whitespace
 		return 0
-	if (code > Character.Delete) or (code is in Uppercase) or (code is in Lowercase)
+	if code > Character.Delete or code is in Uppercase or code is in Lowercase
 		return 1
 	code is in Digits then 2 else 3

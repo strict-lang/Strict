@@ -28,12 +28,12 @@ IsGated Boolean
 	Summing.IsGated is false
 	let written = MlirBiased(function, position).Written
 	let up = Up
-	if (written < 0) or (up < 0)
+	if written < 0 or up < 0
 		return false
 	let product = Traced(function.method.instructions(written).payload(0), written)
 	let entry = function.method.instructions(product < 0 then position else product)
-	let isUp = (entry.kind is InstructionType.Multiply) and (Traced(entry.payload(2), product) is up)
-	(product >= 0) and isUp and IsActivated(Traced(entry.payload(1), product))
+	let isUp = entry.kind is InstructionType.Multiply and Traced(entry.payload(2), product) is up
+	product >= 0 and isUp and IsActivated(Traced(entry.payload(1), product))
 Up Number
 	Gating.Up is 38
 	Summing.Up is -1
@@ -62,25 +62,25 @@ Shifted(register Number, before Number) Texts
 	let groups = MlirGroups(function, position)
 	let read = groups.Writer(register, before)
 	let entry = function.method.instructions(read < 0 then position else read)
-	let sum = (read >= 0) and (entry.kind is InstructionType.IndexCall) then groups.Writer(entry.payload(1), read) else -1
+	let sum = read >= 0 and entry.kind is InstructionType.IndexCall then groups.Writer(entry.payload(1), read) else -1
 	let added = function.method.instructions(sum < 0 then position else sum)
-	if (sum < 0) or (added.kind is not InstructionType.Add)
+	if sum < 0 or added.kind is not InstructionType.Add
 		return List(Text)
 	let tokens = MlirTokens(function, position)
 	let rows = tokens.Indexed(groups.Writer(added.payload(1), sum), InstructionType.Modulo)
-	(rows is not "") and (tokens.Variable(added.payload(2), sum) is rows) then (entry.texts(0), rows) else List(Text)
+	rows is not "" and tokens.Variable(added.payload(2), sum) is rows then (entry.texts(0), rows) else List(Text)
 IsActivated(at Number) Boolean
 	Gating.IsActivated(24)
 	Gating.IsActivated(23) is false
 	let entry = function.method.instructions(at < 0 then position else at)
-	if (at < 0) or (entry.kind is not InstructionType.Divide)
+	if at < 0 or entry.kind is not InstructionType.Divide
 		return false
 	IsGate(entry.payload(1), at) and IsDecayed(Traced(entry.payload(2), at))
 IsDecayed(at Number) Boolean
 	Gating.IsDecayed(23)
 	Gating.IsDecayed(21) is false
 	let entry = function.method.instructions(at < 0 then position else at)
-	if (at < 0) or (entry.kind is not InstructionType.Add)
+	if at < 0 or entry.kind is not InstructionType.Add
 		return false
 	MlirTokens(function, position).IsConstant(entry.payload(1), at, 1) and IsExponential(Traced(entry.payload(2), at))
 IsExponential(at Number) Boolean
@@ -89,7 +89,7 @@ IsExponential(at Number) Boolean
 	Gating.IsExponential(21) is false
 	let entry = function.method.instructions(at < 0 then position else at)
 	let isPower = entry.kind is InstructionType.Power
-	if (at < 0) or (((entry.kind is InstructionType.Invoke) is false) and (isPower is false))
+	if at < 0 or entry.kind is InstructionType.Invoke is false and isPower is false
 		return false
 	let tokens = MlirTokens(function, position)
 	let isBase = isPower then tokens.IsConstant(entry.payload(1), at, Euler) else entry.texts(1) is "Exponential"
@@ -99,14 +99,14 @@ IsNegated(at Number) Boolean
 	Gating.IsNegated(21)
 	Gating.IsNegated(23) is false
 	let entry = function.method.instructions(at < 0 then position else at)
-	if (at < 0) or (entry.kind is not InstructionType.Subtract)
+	if at < 0 or entry.kind is not InstructionType.Subtract
 		return false
 	MlirTokens(function, position).IsConstant(entry.payload(1), at, 0) and IsGate(entry.payload(2), at)
 IsGate(register Number, before Number) Boolean
 	Gating.IsGate(14, 24)
 	Gating.IsGate(15, 23) is false
 	let call = MlirTokens(function, position).Call
-	(call >= 0) and (Traced(register, before) is call)
+	call >= 0 and Traced(register, before) is call
 Operand Text
 	Gating.Operand is "%t2ggated"
 	Summing.Operand is "%zero"
@@ -121,7 +121,7 @@ Traced(register Number, before Number) Number
 	Gating.Traced(15, 23) is 18
 	let writer = MlirGroups(function, position).Writer(register, before)
 	let entry = function.method.instructions(writer)
-	if (writer < 0) or (entry.kind is not InstructionType.LoadVariableToRegister)
+	if writer < 0 or entry.kind is not InstructionType.LoadVariableToRegister
 		return writer
 	let store = Stored(entry.texts, writer)
 	store < 0 then writer else Traced(function.method.instructions(store).payload(0), store)
@@ -131,6 +131,6 @@ Stored(name Texts, before Number) Number
 	for before - position - 1
 		let candidate = before - 1 - index
 		let entry = function.method.instructions(candidate)
-		if (entry.kind is InstructionType.StoreRegisterToVariable) and (entry.texts is name)
+		if entry.kind is InstructionType.StoreRegisterToVariable and entry.texts is name
 			return candidate
 	-1

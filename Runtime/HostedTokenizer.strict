@@ -6,8 +6,8 @@ constant Other = Invocation(Tokening, entry = InstructionEntry(Tokening.entry, t
 IsHosted Boolean
 	HostedTokenizer(Tokening).IsHosted and HostedTokenizer(Naming).IsHosted
 	HostedTokenizer(Lengthening).IsHosted is false
-	(HostedTokenizer(HostedRegex.Matching).IsHosted is false) and (HostedTokenizer(Other).IsHosted is false)
-	(call.TypeName is "Strict/Expressions/Tokenizer") and (call.MethodName is in ("Tokens", "Names"))
+	HostedTokenizer(HostedRegex.Matching).IsHosted is false and HostedTokenizer(Other).IsHosted is false
+	call.TypeName is "Strict/Expressions/Tokenizer" and call.MethodName is in ("Tokens", "Names")
 Result VmValue
 	HostedTokenizer(Tokening).Result.items.Length is 3
 	HostedTokenizer(Naming).Result.items.First.text is "Size"

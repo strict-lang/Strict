@@ -12,7 +12,7 @@ Lines(receiver Text, method Text, at Number) Texts
 	Blurring.Lines("", "Sums", 4) is Sums
 	let found = receiver is "" then lines else Source(TypeOf(receiver, at))
 	for found
-		if value.StartsWith(method + "(") or (value is method)
+		if value.StartsWith(method + "(") or value is method
 			return found.Slice(index, Callees(found, folder).BlockEnd(index) - index)
 	List(Text)
 Source(type Text) Texts
@@ -20,7 +20,7 @@ Source(type Text) Texts
 	Blurring.Source("").Length is 0
 	Blurring.Source("Missing").Length is 0
 	let path = folder + "/" + type + ".strict"
-	(type is not "") and (folder is not "") and File(path).Exists then File(path).ReadLines else List(Text)
+	type is not "" and folder is not "" and File(path).Exists then File(path).ReadLines else List(Text)
 TypeOf(name Text, at Number) Text
 	Blurring.TypeOf("bitmap", 2) is "Bitmap"
 	Blurring.TypeOf("pixel", 2) is "Number"
@@ -42,7 +42,7 @@ Parts(text Text) Texts
 	for text.Length
 		let character = text(index)
 		depth = depth + (character is "(" then 1 else (character is ")" then -1 else 0))
-		if (depth is 0) and (character is ",")
+		if depth is 0 and character is ","
 			parts.Add(text.Substring(start, index - start))
 			start = index + 2
 	parts + text.Substring(start, text.Length - start)

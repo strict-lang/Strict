@@ -80,7 +80,7 @@ Rowed Number
 	if Width is ""
 		return -1
 	for Kernel.Reads
-		if (Kernel.Source(value) is "index") and MlirWholeRows(Kernel.Callee, index).IsRowed
+		if Kernel.Source(value) is "index" and MlirWholeRows(Kernel.Callee, index).IsRowed
 			return index
 	-1
 Width Text
@@ -88,6 +88,6 @@ Width Text
 	Sized.Width is "%t8wh0m1xv"
 	for Kernel.Reads
 		let found = MlirWholeInstance(Kernel.Callee).Members(index).Index("Size")
-		if (MlirWholeFunction(Kernel.Callee).Kinds(index) is "o") and (found >= 0)
+		if MlirWholeFunction(Kernel.Callee).Kinds(index) is "o" and found >= 0
 			return MlirWholeCall(function, Kernel.Call).Temp("wh" + index + "m" + found + "xv")
 	""

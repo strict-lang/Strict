@@ -37,7 +37,7 @@ IsHeavy(function MlirFunction) Boolean
 	if MlirTensors(function).Kind is not ""
 		return true
 	for function.method.instructions
-		if (value.kind is InstructionType.LoopBegin) and (MlirTokens(function, index).Call >= 0)
+		if value.kind is InstructionType.LoopBegin and MlirTokens(function, index).Call >= 0
 			return true
 	false
 IsDirect(function MlirFunction) Boolean
@@ -62,11 +62,11 @@ Spreading(flags Numbers) Numbers
 	Chain.Spreading((0, 2)) is (0, 2)
 	Chain.Spreading((2, 1)) is (2, 1)
 	for edges
-		(flags(index) is 0) and IsCalling(value, flags) then 1 else flags(index)
+		flags(index) is 0 and IsCalling(value, flags) then 1 else flags(index)
 IsCalling(callees Numbers, flags Numbers) Boolean
 	Rowed.IsCalling((2), (0, 0, 1))
 	Rowed.IsCalling((1), (0, 0, 1)) is false
 	for callees
-		if (value < 0) or (flags(value) is 1)
+		if value < 0 or flags(value) is 1
 			return true
 	false

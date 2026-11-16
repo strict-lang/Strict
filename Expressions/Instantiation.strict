@@ -15,11 +15,11 @@ Name(node SyntaxNode, inference TypeInference, scope Scope, current Scope) Text
 	Pairing.Name(SyntaxNode("Call", "Couple"), Inferring, KnownTypes.NoMembers, KnownTypes.NoMembers) is ""
 	Implicit.Name(Mixed, Inferring, KnownTypes.NoMembers, KnownTypes.NoMembers) is "Couple(Text, Number)"
 	Pairing.Name(Mixed, Inferring, KnownTypes.NoMembers, Scope(("Couple"), ("Text"))) is ""
-	let isType = types.IsKnown(node.text) and (current.TypeOf(node.text) is "") and (scope.TypeOf(node.text) is "")
+	let isType = types.IsKnown(node.text) and current.TypeOf(node.text) is "" and scope.TypeOf(node.text) is ""
 	let declared = isType then ConstructorTypes(node) else List(Text)
 	mutable arguments = List(Mutable(Text))
 	for declared
-		if IsGeneric(value) and (index < node.children.Length)
+		if IsGeneric(value) and index < node.children.Length
 			arguments.Add(inference.TypeOf(node.children(index), scope, current))
 	arguments.Length is 0 then "" else node.text + "(" + Text.Combine(arguments, ", ") + ")"
 ConstructorTypes(node SyntaxNode) Texts
@@ -28,7 +28,7 @@ ConstructorTypes(node SyntaxNode) Texts
 	Pairing.Filled("Strict/Number", "List(Generic)") is "List(Generic)"
 	Pairing.Argument("Couple(Text, Number)", "missing") is "Unknown"
 	Pairing.Position("Couple(Text, Number)", "first") is 0
-	Pairing.IsGeneric("Generics") and (Pairing.IsGeneric("Text") is false)
+	Pairing.IsGeneric("Generics") and Pairing.IsGeneric("Text") is false
 	Pairing.Template(TypeShape("has first Text", "Swapped Couple", "	Couple(first)"), 1, "Couple") is ""
 	Pairing.Template(TypeShape("has first Generic", "Swapped Couple", "	first"), 1, "Couple") is ""
 	let explicit = types.ParametersOf(node.text, "from types", node.children.Length)
@@ -40,10 +40,10 @@ Argument(instanceType Text, name Text) Text
 	Pairing.Argument("List(Text)", "elements") is "Text"
 	let arguments = Arguments(instanceType)
 	let base = types.BaseName(instanceType)
-	if (arguments.Length is 0) or (base is in ("List", "Dictionary", "Iterator"))
-		return (base is "List") and (arguments.Length is 1) then arguments(0) else types.ElementType(instanceType)
+	if arguments.Length is 0 or base is in ("List", "Dictionary", "Iterator")
+		return base is "List" and arguments.Length is 1 then arguments(0) else types.ElementType(instanceType)
 	let position = Position(instanceType, name)
-	(position >= 0) and (position < arguments.Length) then arguments(position) else "Unknown"
+	position >= 0 and position < arguments.Length then arguments(position) else "Unknown"
 Position(instanceType Text, name Text) Number
 	Pairing.Position("Couple(Text, Number)", "second") is 1
 	Pairing.Position("Couple(Text, Number)", "missing") is -1
@@ -76,9 +76,9 @@ Members(typeName Text, members Scope) Scope
 		concrete.Add(type is "Generics" then Plural(argument) else argument)
 	Scope(members.names, concrete)
 IsGeneric(type Text) Boolean
-	Pairing.IsGeneric("Generic") and (Pairing.IsGeneric("Couple") is false)
+	Pairing.IsGeneric("Generic") and Pairing.IsGeneric("Couple") is false
 	Instantiation(KnownTypes(("S"), Couples.members, Couples.methods, (Scope((" trait"), ("true"))))).IsGeneric("S")
-	(type is in ("Generic", "Generics")) or (types.ParameterScope(type).TypeOf(" trait") is "true")
+	type is in ("Generic", "Generics") or types.ParameterScope(type).TypeOf(" trait") is "true"
 Plural(element Text) Text
 	Instantiation(Boxed).Position("Box(Text, Number)", "second") is 1
 	Instantiation(Boxed).Position("Box(Text, Number)", "size") is -1
@@ -97,7 +97,7 @@ Own(fullName Text, type Text) Text
 	Pairing.Own("Strict/Couple(Text, Number)", "Text") is "Text"
 	Pairing.Own("Strict/Couple(Text, Number)", "Couple(second, first)") is "Couple(Number, Text)"
 	let typeName = fullName.Substring(fullName.LastIndexOf("/") + 1, fullName.Length - fullName.LastIndexOf("/") - 1)
-	if (type is in ("List", "Dictionary")) or (types.BaseName(type) is not types.BaseName(typeName))
+	if type is in ("List", "Dictionary") or types.BaseName(type) is not types.BaseName(typeName)
 		return type
 	type is types.BaseName(typeName) then typeName else Substituted(typeName, type)
 Template(shape TypeShape, position Number, typeName Text) Text
@@ -106,10 +106,10 @@ Template(shape TypeShape, position Number, typeName Text) Text
 	Pairing.Template(TypeShape("has first Generic", "Swapped Couple", "	\"Couple\""), 1, "Couple") is ""
 	Pairing.Template(Swapping, 2, "Couple") is "Couple(second, first)"
 	Pairing.Template(Swapping, 2, "Pair") is ""
-	if (HeaderTokens(Tokenizer(shape.lines(position)).Tokens).ReturnType is not typeName) or (shape.UsesGenerics is false)
+	if HeaderTokens(Tokenizer(shape.lines(position)).Tokens).ReturnType is not typeName or shape.UsesGenerics is false
 		return ""
 	let result = BodyParser(shape.lines).Method(position + 1).children.Last
-	(result.Kind is "Call") and (result.text is typeName) then result to Text else ""
+	result.Kind is "Call" and result.text is typeName then result to Text else ""
 Substituted(instanceType Text, template Text) Text
 	Pairing.Substituted("Couple(Text, Number)", "Couple(second, first)") is "Couple(Number, Text)"
 	Pairing.Substituted("Couple(Text, Number)", "Couple(1, first)") is "Couple(Text, Number)"
@@ -117,7 +117,7 @@ Substituted(instanceType Text, template Text) Text
 	let members = types.MembersOf(instanceType)
 	mutable arguments = List(Mutable(Text))
 	for Arguments(template)
-		if (index < members.types.Length) and (members.types(index) is "Generic")
+		if index < members.types.Length and members.types(index) is "Generic"
 			let argument = Argument(instanceType, value)
 			if argument is "Unknown"
 				return instanceType
@@ -129,7 +129,7 @@ Filled(owner Text, type Text) Text
 	Pairing.Filled("Strict/Dictionary(Text, Number)", "List(Generic)") is "List(Generic)"
 	Pairing.Filled("Strict/List(Number)", "Number") is "Number"
 	let open = owner.IndexOf("(")
-	if (open < 0) or (owner.IndexOf(",") > 0) or (type.IndexOf("Generic") < 0)
+	if open < 0 or owner.IndexOf(",") > 0 or type.IndexOf("Generic") < 0
 		return type
 	let argument = owner.Substring(open + 1, owner.Length - open - 2)
 	let first = type.Replace("(Generic)", "(" + argument + ")").Replace("(Generic, ", "(" + argument + ", ")

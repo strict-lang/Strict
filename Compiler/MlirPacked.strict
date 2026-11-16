@@ -91,7 +91,7 @@ Mixed(count Number) Numbers
 	for Widths.Length * Widths.Length
 		let first = Widths(index % Widths.Length)
 		let second = Widths((index / Widths.Length).Floor)
-		if (first is not second) or (first is not in SharedWidths)
+		if first is not second or first is not in SharedWidths
 			first + WidthBase * second
 Dispatched Texts
 	Text.Combine(Summing.Dispatched).IndexOf("[default: ^loop1generic, 0: ^floop1fast, 1040: ^fkloop1fast") > 0

@@ -22,7 +22,7 @@ Starts Numbers
 	Sample.Starts is (3, 7)
 	MlirSplit(("  llvm.func @a() {")).Starts is (0)
 	for lines
-		if (value.EndsWith("{") and (value.StartsWith("  func.func ") or value.StartsWith("  llvm.func ")))
+		if value.EndsWith("{") and (value.StartsWith("  func.func ") or value.StartsWith("  llvm.func "))
 			index
 Declarations(starts Numbers) Texts
 	Sample.Declarations(Sample.Starts) is ("  func.func private @A() -> f64", "  func.func private @B(f64) -> f64")
@@ -59,7 +59,7 @@ Shared Texts
 	for lines
 		if value.StartsWith(Visible) or value.StartsWith(LinkerOptions)
 			value
-		else if (value.StartsWith("  llvm.func ") or value.StartsWith("  func.func ")) and (value.EndsWith("{") is false)
+		else if (value.StartsWith("  llvm.func ") or value.StartsWith("  func.func ")) and value.EndsWith("{") is false
 			value
 Placed(shared Texts) Numbers
 	Placing is (Nowhere, Sample.Owner(Sample.lines(2)))
@@ -81,13 +81,13 @@ Externals(part Number, shared Texts, placed Numbers, used Dictionary(Text, Numbe
 	for shared
 		if placed(index) is Nowhere
 			value
-		else if value.StartsWith(Visible) and (placed(index) is not part) and (Name(value) is in used)
+		else if value.StartsWith(Visible) and placed(index) is not part and Name(value) is in used
 			Global(value, false)
 Others(declarations Texts, owners Numbers, part Number, used Dictionary(Text, Number)) Texts
 	Sample.Others(Sample.Declarations(Sample.Starts), (0, 1), 0, Using) is ("  func.func private @B(f64) -> f64")
 	Sample.Others(Sample.Declarations(Sample.Starts), (0, 1), 0, Dictionary(Text, Number)).Length is 0
 	for declarations
-		if (owners(index) is not part) and (Name(value) is in used)
+		if owners(index) is not part and Name(value) is in used
 			value
 Owned(starts Numbers, owners Numbers, part Number) Texts
 	Sample.Owned(Sample.Starts, (0, 1), 0).First is "  func.func @A() -> f64 {"

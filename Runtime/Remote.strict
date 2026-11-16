@@ -9,7 +9,7 @@ Target(arguments Texts, absent Text) Text
 	Sample.Target(("--remote", "any"), "") is "any"
 	Sample.Target(List(Text), Ben) is "any"
 	let at = arguments.Index(Flag)
-	(at < 0) or (at + 1 >= arguments.Length) then absent else arguments(at + 1)
+	at < 0 or at + 1 >= arguments.Length then absent else arguments(at + 1)
 Without(arguments Texts) Texts
 	Sample.Without(("--remote", "AiServer", "--quality", "fast")) is ("--quality", "fast")
 	Sample.Without(("--quality", "fast")) is ("--quality", "fast")
@@ -26,13 +26,13 @@ Without(arguments Texts) Texts
 Named(arguments Texts) Number
 	Sample.Named(List(Text)) is -1
 	let remote = Target(arguments, "")
-	Peers.IsAny(remote) or (remote is "") then -1 else Forwarded(remote, Without(arguments))
+	Peers.IsAny(remote) or remote is "" then -1 else Forwarded(remote, Without(arguments))
 Sent(arguments Texts, absent Text, reply Text, line Text) Number
 	Sample.Sent(List(Text), Ben, "go\tjob\t0", "need") is -1
 	Sample.Sent(List(Text), Ben, "", "need") is -1
 	let remote = Target(arguments, absent)
 	let verdict = reply.Split("\t").First
-	if (Peers.IsAny(remote) is false) or (verdict is "go") or (verdict is "")
+	if Peers.IsAny(remote) is false or verdict is "go" or verdict is ""
 		return -1
 	let chosen = Placement.Chosen(remote, verdict, Peers.Probed(line))
 	chosen is "" then -1 else Forwarded(chosen, Without(arguments))

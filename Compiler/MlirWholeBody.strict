@@ -19,7 +19,7 @@ Lines Texts
 		return List(Text)
 	mutable lines = Whole
 	for function.method.parameters
-		if (row < 0) and MlirWholeRows(function, index).IsRowed
+		if row < 0 and MlirWholeRows(function, index).IsRowed
 			lines = lines + MlirWholeBody(function, callers, index).Whole
 	lines
 Whole Texts
@@ -76,7 +76,7 @@ Parameter(number Number, type Text) Texts
 	Halfway.Parameter(0, "i64") is ("    llvm.store %p0, %v_number : i64, !llvm.ptr")
 	let slot = ", %v_" + function.method.parameters(number).Name + " : " + type + ", !llvm.ptr"
 	let found = MlirArguments(callers).Constant(function, number, 0)
-	if (found.Length is 0) or (found.First.Floor is not found.First)
+	if found.Length is 0 or found.First.Floor is not found.First
 		return List(Text) + ("    llvm.store %p" + number + slot)
 	let literal = "    %c" + number + " = arith.constant " + MlirStatements.Copy.Hex(found.First) + " : f64"
 	let converted = MlirWholeValues(0).Converted("%c" + number, "f", "i", "%c" + number + "i")

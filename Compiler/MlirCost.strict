@@ -26,17 +26,17 @@ Threshold Number
 	Devices.Threshold is Device
 	MlirCost(MlirFunction(Devices.function, method = MethodEntry(Doubler, instructions = Reader)), 2).Threshold is 3
 	let count = (Work / Iteration).Ceiling
-	let isDevice = (Iteration < Outside) and IsDevice(function, position + 1, function.method.LoopEndOf(position), 0)
+	let isDevice = Iteration < Outside and IsDevice(function, position + 1, function.method.LoopEndOf(position), 0)
 	let least = isDevice then Device else 2
 	count < least then least else count
 IsDevice(inspected MlirFunction, first Number, last Number, depth Number) Boolean
 	Devices.IsDevice(Devices.function, 3, 6, 0)
 	Doubling.IsDevice(Doubling.function, 3, 6, 0) is false
 	for Range(first, last)
-		if (inspected.method.instructions(value).kind is InstructionType.LoopBegin) and MlirGpuCheck(inspected, value).IsGpu
+		if inspected.method.instructions(value).kind is InstructionType.LoopBegin and MlirGpuCheck(inspected, value).IsGpu
 			return true
 		let callees = depth < 8 then MlirModule(inspected.types, "").Called(inspected, value) else List(MlirFunction)
-		if (callees.Length > 0) and IsDevice(callees.First, 0, callees.First.method.instructions.Length, depth + 1)
+		if callees.Length > 0 and IsDevice(callees.First, 0, callees.First.method.instructions.Length, depth + 1)
 			return true
 	false
 Iteration Number

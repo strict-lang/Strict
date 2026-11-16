@@ -22,7 +22,7 @@ IsSmall(amount Number) Boolean
 	IsSmall(-1 / (1 / 0))
 	IsSmall(-3) is false
 	IsSmall(2.5) is false
-	(amount < 1024) and (amount >= 0) and (amount % 1 is 0)
+	amount < 1024 and amount >= 0 and amount % 1 is 0
 Integers List(VmValue)
 	VmValue.Integers(1023).number is 1023
 	for 1024
@@ -39,7 +39,7 @@ OfList(elements List(VmValue)) VmValue
 	VmValue("List", 0, "", elements)
 OfError(name Text) VmValue
 	OfError("Missing").items.First.text is "Missing"
-	(OfError("M").kind is "Strict/Error") and (OfError("M").items.Length is 2)
+	OfError("M").kind is "Strict/Error" and OfError("M").items.Length is 2
 	VmValue("Strict/Error", 0, "", (OfText(name), OfList(List(VmValue))))
 Counted(arguments List(VmValue)) Number
 	OfList(OfNumber(1), OfNumber(2), OfNumber(1)).Counted(List(VmValue) + OfNumber(1)) is 2
@@ -55,21 +55,21 @@ Member(index Number) VmValue
 	None.Member(1).kind is "None"
 	OfNumber(3).Member(0).number is 3
 	Numbered.Member(1).items.Length is 2
-	if (kind is in ("Text", "Number", "Boolean", "List")) or kind.StartsWith("Strict/List(")
+	if kind is in ("Text", "Number", "Boolean", "List") or kind.StartsWith("Strict/List(")
 		return value
 	let isBase = TypeEntry.Based(kind) is in ("Text", "Number", "Boolean", "List")
 	isBase then value else index < items.Length then items(index) else None
 As(typeName Text) VmValue
-	(OfText("a").As("Strict/Number").number is 97) and (OfList(OfText("c")).As("Strict/Number").items.Length is 1)
-	(OfNumber(98).As("Strict/Character").text is "b") and (OfNumber(5).As("Strict/Text").number is 5)
-	(OfText("ab").As("Strict/List(Character)").text is "ab") and (OfText("ab").As("Strict/Character").text is "ab")
-	(OfText("ab").As("Strict/Number").text is "ab") and (VmValue("N", 0, "a", None.items).As("Strict/Number").number is 0)
-	(OfList(OfText("c"), OfText("b")).As("Strict/Text").text is "cb") and (OfText("a").As("Strict/Text").number is 0)
+	OfText("a").As("Strict/Number").number is 97 and OfList(OfText("c")).As("Strict/Number").items.Length is 1
+	OfNumber(98).As("Strict/Character").text is "b" and OfNumber(5).As("Strict/Text").number is 5
+	OfText("ab").As("Strict/List(Character)").text is "ab" and OfText("ab").As("Strict/Character").text is "ab"
+	OfText("ab").As("Strict/Number").text is "ab" and VmValue("N", 0, "a", None.items).As("Strict/Number").number is 0
+	OfList(OfText("c"), OfText("b")).As("Strict/Text").text is "cb" and OfText("a").As("Strict/Text").number is 0
 	if kind is "Number"
 		return typeName is in ("Strict/Character", "Character") then OfText(Character(number) to Text) else value
-	if (kind is "Text") and (text.Length is 1)
+	if kind is "Text" and text.Length is 1
 		return typeName is in ("Strict/Number", "Number") then OfNumber(Character(text).number) else value
-	(kind is "List") and (typeName is in ("Strict/Text", "Text")) then OfText(Concatenated) else value
+	kind is "List" and typeName is in ("Strict/Text", "Text") then OfText(Concatenated) else value
 IsTrue Boolean
 	OfBoolean(false).IsTrue is false
 	number is 1
@@ -79,9 +79,9 @@ Length Number
 	kind is "Text" then text.Length else items.Length
 to Text
 	OfNumber(2.5) to Text is "2.5"
-	(OfBoolean(true) to Text is "true") and (OfBoolean(false) to Text is "false")
-	(OfText("a") to Text is "a") and (VmValue("P", 0, "", List(VmValue) + OfText("b")) to Text is "(b)")
-	(OfList(OfNumber(1), OfNumber(2)) to Text is "(1, 2)") and (OfList(List(VmValue)) to Text is "")
+	OfBoolean(true) to Text is "true" and OfBoolean(false) to Text is "false"
+	OfText("a") to Text is "a" and VmValue("P", 0, "", List(VmValue) + OfText("b")) to Text is "(b)"
+	OfList(OfNumber(1), OfNumber(2)) to Text is "(1, 2)" and OfList(List(VmValue)) to Text is ""
 	if kind is "Number"
 		return number to Text
 	if kind is "Boolean"

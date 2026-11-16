@@ -48,7 +48,7 @@ Method(type TypeEntry) MethodEntry
 	Adding.Method(Adder).Name is "Add"
 	Adding.Method(TypeEntry("T", List(MemberEntry), (MlirForeign.Next, Add))) is Add
 	Defaulted.parameters is (Add.parameters(0), Add.parameters(1), MemberEntry.SevenMember)
-	(Defaulted.Name is "Add") and (Defaulted.returnType is "Strict/Number")
+	Defaulted.Name is "Add" and Defaulted.returnType is "Strict/Number"
 	for type.methods
 		if value.Name is call.MethodName
 			return value
@@ -100,7 +100,7 @@ Folder(type TypeEntry) Text
 	Foreign(Invocation.AddCall, List(TypeEntry), "Examples/NativeAdd").Folder(Shorter) is "Examples/NativeAdd/native"
 	let parent = Path(type.Name.IndexOf("/") < 0 then folder + "/" + type.Source else type.Source).PathOnly.text
 	let native = parent is "" then "native" else parent + "/native"
-	Directory.Exists(native) or (TypeSource.Root is ".") then native else TypeSource.Root + "/" + native
+	Directory.Exists(native) or TypeSource.Root is "." then native else TypeSource.Root + "/" + native
 Numbers(values List(VmValue)) Numbers
 	Adding.Numbers((VmValue.OfNumber(1), VmValue.OfNumber(2))) is (1, 2)
 	Missing.kind is "Strict/Library"

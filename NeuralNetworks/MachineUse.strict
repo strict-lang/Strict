@@ -41,12 +41,12 @@ Weights(logging Logger, name Text, path Text) MachineUse slow
 	MachineUse(logging, name, size, size is 0 then 0 else size + Gigabyte, IsForced(List(Text)))
 IsForced(arguments Texts) Boolean
 	MachineUse.IsForced(("--quality", "best", Force))
-	(Force is in arguments) or (Process.Variable("STRICT_FORCE") is "1")
+	Force is in arguments or Process.Variable("STRICT_FORCE") is "1"
 IsChecked(arguments Texts, root Text) Boolean
 	MachineUse.IsChecked(List(Text) + Resident.Stopping, "artifacts/h3test") is false
 	MachineUse.IsChecked(("--quality", "best"), "artifacts/missing")
-	let isResident = (Local is in arguments is false) and File(root + Resident.Stamp).Exists
-	(isResident or (arguments is (Resident.Stopping))) is false
+	let isResident = Local is in arguments is false and File(root + Resident.Stamp).Exists
+	(isResident or arguments is (Resident.Stopping)) is false
 Needed Text
 	MachineUse(Logger, "H3Video", 4, 2).Needed.StartsWith("need\tH3Video\tH3Video\t4\t4\t2\t2\t0\t")
 	let mode = isForced then "force" else "wait"
@@ -61,10 +61,10 @@ Admitted Boolean slow
 Checked Boolean slow
 	let device = Device
 	let problem = Problem(GpuMemory.HostAvailable, GpuMemory.HostTotal, device(1), device(0))
-	if (problem is not "") and isForced
+	if problem is not "" and isForced
 		logger.Log(problem)
 		logger.Log("Running anyway (--force), this can be very slow while other programs hold the memory")
-	if (problem is "") or isForced
+	if problem is "" or isForced
 		Noted(device(0))
 		return true
 	Explained
@@ -98,16 +98,16 @@ IsShort(needed Number, free Number, total Number, share Number) Boolean
 	Sample.IsShort(25 * Gigabyte, 17 * Gigabyte, 32 * Gigabyte, HostShare) is false
 	Sample.IsShort(25 * Gigabyte, 15 * Gigabyte, 32 * Gigabyte, HostShare)
 	Sample.IsShort(25 * Gigabyte, 0, 128 * Gigabyte, HostShare) is false
-	(free > 0) and (total > 0) and (free < Usable(needed, total, share))
+	free > 0 and total > 0 and free < Usable(needed, total, share)
 Usable(needed Number, total Number, share Number) Number
 	Sample.Usable(22 * Gigabyte, 24 * Gigabyte, VideoShare) is 18 * Gigabyte
 	Sample.Usable(6 * Gigabyte, 24 * Gigabyte, VideoShare) is 6 * Gigabyte
 	Sample.Usable(6 * Gigabyte, 0, VideoShare) is 6 * Gigabyte
 	let usable = total - total / share
-	(total is 0) or (needed < usable) then needed else usable
+	total is 0 or needed < usable then needed else usable
 Noted(deviceTotal Number)
 	Sample.Noted(0) is not Error
-	if (deviceTotal > 0) and (deviceTotal < vram)
+	if deviceTotal > 0 and deviceTotal < vram
 		logger.Log("The GPU has " + Sized(deviceTotal) + " of VRAM, less than the " + Sized(vram) + Slower)
 Sized(bytes Number) Text
 	Sample.Sized(24 * Gigabyte) is "24 GB"
@@ -117,7 +117,7 @@ Device Numbers slow
 	Sample.Device.Length is 3
 	let result = Process.RunTool("nvidia-smi", Query)
 	let parts = result.Output.Split("\n").First.Split(",")
-	(result.Failed or (parts.Length < 3)) then (0, 0, 0) else Measured(parts)
+	result.Failed or parts.Length < 3 then (0, 0, 0) else Measured(parts)
 Measured(parts Texts) Numbers
 	Sample.Measured(("24564", " 24049", " 3")) is (24564 * Mebibyte, 24049 * Mebibyte, 3)
 	(parts(0).Trim to Number * Mebibyte, parts(1).Trim to Number * Mebibyte, parts(2).Trim to Number)
@@ -139,7 +139,7 @@ User(line Text) Text
 	if parts.Length < 5
 		return ""
 	let name = parts(1).Replace(".exe", "")
-	let isBackend = (name is in Programs) and (parts(4) is "True")
+	let isBackend = name is in Programs and parts(4) is "True"
 	let usage = ": " + Sized(parts(2) to Number) + " RAM, " + Sized(parts(3) to Number) + " VRAM"
 	let stop = isBackend then ", type '" + name + " stop' to free them" else ""
 	"  " + name + (isBackend then " backend" else "") + " (pid " + parts(0) + ")" + usage + stop

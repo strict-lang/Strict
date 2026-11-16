@@ -140,9 +140,9 @@ Current Texts
 Copied Texts
 	Halving.Copied.First is "  ^loop2fast:"
 	Halving.Copied.Index(Halving.Checked.First) is 1
-	Doubling.Copied(10) is Doubling.Started(1) and (Doubling.Copied(20) is Doubling.Counted.First)
-	Doubling.Copied(27) is Doubling.Current.First and (Doubling.Copied(32) is Doubling.Looped.First)
-	Doubling.Copied(49) is "  ^loop2exit:" and (Doubling.Copied.Length is 53)
+	Doubling.Copied(10) is Doubling.Started(1) and Doubling.Copied(20) is Doubling.Counted.First
+	Doubling.Copied(27) is Doubling.Current.First and Doubling.Copied(32) is Doubling.Looped.First
+	Doubling.Copied(49) is "  ^loop2exit:" and Doubling.Copied.Length is 53
 	let started = Started
 	List(Text) + started.First + Checked + (started - started.First) + Counted + Current + Looped + Exited
 Looped Texts
@@ -166,7 +166,7 @@ Exited Texts
 	let helper = MlirParallel(function, position).Filler
 	let filled = MlirMemory(function, position).Called(Temp("fill"), helper, (Temp("r"), Temp("n")))
 	let restored = (function.Store(Temp("x"), "%v_index"), function.Store(Temp("y"), "%v_value"))
-	let isFilled = MlirLoops(function, position).IsCollecting and (MlirBytes(function, position).Flattened is 0)
+	let isFilled = MlirLoops(function, position).IsCollecting and MlirBytes(function, position).Flattened is 0
 	let collected = isFilled then List(Text) + filled else MlirBytes(function, position).Unbuffered(Temp("r"))
 	List(Text) + ("  ^loop" + position + "exit:") + collected + restored + loops.Restored(position)
 Emitted(at Number) Texts
@@ -197,12 +197,12 @@ IsAccumulated(at Number) Boolean
 	Doubling.IsAccumulated(6) is false
 	let entry = function.method.instructions(at)
 	let next = function.method.instructions(at + 1)
-	let isSum = (entry.kind is InstructionType.Add) or (entry.kind is InstructionType.Subtract)
-	if (function.FastLoop < 0) or (isSum is false) or (next.kind is not InstructionType.StoreRegisterToVariable)
+	let isSum = entry.kind is InstructionType.Add or entry.kind is InstructionType.Subtract
+	if function.FastLoop < 0 or isSum is false or next.kind is not InstructionType.StoreRegisterToVariable
 		return false
 	let writer = Writer(entry.payload(1), at)
-	let isLoaded = (writer.kind is InstructionType.LoadVariableToRegister) and (next.texts(0) is in writer.texts)
-	isLoaded and (next.payload(0) is entry.payload(3))
+	let isLoaded = writer.kind is InstructionType.LoadVariableToRegister and next.texts(0) is in writer.texts
+	isLoaded and next.payload(0) is entry.payload(3)
 Writer(register Number, at Number) InstructionEntry
 	Summing.Writer(3, 5).texts.First is "sum"
 	Summing.Writer(0, 5).kind is InstructionType.Add

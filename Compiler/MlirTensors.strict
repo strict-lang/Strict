@@ -31,32 +31,32 @@ Kind Text
 	MlirTensors(MlirGpu.Layering.function).Kind is ""
 	Softmaxing.Kind is "Softmax"
 	MlirTensors(MlirFunction(List(TypeEntry) + Attended, Attended, Multiplying.function.method)).Kind is ""
-	MlirTensors(MlirFunction(List(TypeEntry) + Multiplied, Multiplied, Merging)).Kind is "" and (Rotating.Kind is "")
+	MlirTensors(MlirFunction(List(TypeEntry) + Multiplied, Multiplied, Merging)).Kind is "" and Rotating.Kind is ""
 	let stored = MlirInstances(function, 0).StoredNames(function.type)
 	if function.method.parameters.Length > 0
 		return IsSoftmax then "Softmax" else ""
-	if (stored is Attentions) and IsInvoked("Softmax.Shares") and IsInvoked("Softmax.Weighted")
+	if stored is Attentions and IsInvoked("Softmax.Shares") and IsInvoked("Softmax.Weighted")
 		return "Attention"
 	Named(stored)
 Named(stored Texts) Text
 	Multiplying.Named(Productions) is "Products"
 	Multiplying.Named(Convolutions) is ""
-	Rotating.Named(Hadamards) is "Hadamard" and (Rotating.Named(Sylvesters) is "Sylvester")
-	Rotating.Named(Convolutions) is "" and (Rotating.Named(Productions) is "") and (Multiplying.Named(Hadamards) is "")
-	if (stored is Hadamards) and (function.method.Name is "Rotated")
+	Rotating.Named(Hadamards) is "Hadamard" and Rotating.Named(Sylvesters) is "Sylvester"
+	Rotating.Named(Convolutions) is "" and Rotating.Named(Productions) is "" and Multiplying.Named(Hadamards) is ""
+	if stored is Hadamards and function.method.Name is "Rotated"
 		return "Hadamard"
-	if (stored is Sylvesters) and (function.method.Name is "Rotated")
+	if stored is Sylvesters and function.method.Name is "Rotated"
 		return "Sylvester"
-	if (stored is Convolutions) and (function.method.Name is "Summed")
+	if stored is Convolutions and function.method.Name is "Summed"
 		return "Convolution"
-	(stored is Productions) and (function.method.Name is "Multiplied") then "Products" else ""
+	stored is Productions and function.method.Name is "Multiplied" then "Products" else ""
 IsSoftmax Boolean
 	Softmaxing.IsSoftmax
 	Multiplying.IsSoftmax is false
 	MlirTensors(MlirFunction(List(TypeEntry), Multiplied, Softmaxing.function.method)).IsSoftmax is false
 	MlirTensors(MlirFunction(List(TypeEntry), Softmaxing.function.type, TypeEntry.ToNumber)).IsSoftmax is false
-	let isShares = (function.type.JustName is "Softmax") and (function.method.Name is "Shares")
-	isShares and (function.Parameters is ("value", "scores", "width"))
+	let isShares = function.type.JustName is "Softmax" and function.method.Name is "Shares"
+	isShares and function.Parameters is ("value", "scores", "width")
 IsInvoked(name Text) Boolean
 	Attending.IsInvoked("Softmax.Shares")
 	Attending.IsInvoked("Softmax.Largests") is false
@@ -69,7 +69,7 @@ IsComputed Boolean
 	Attending.IsComputed
 	MlirTensors(MlirFunction.Counter).IsComputed is false
 	for function.method.instructions
-		if (value.kind is InstructionType.LoopBegin) and MlirGpuCheck(function, index).IsGpu
+		if value.kind is InstructionType.LoopBegin and MlirGpuCheck(function, index).IsGpu
 			return true
 	false
 Prologue Texts
@@ -78,7 +78,7 @@ Prologue Texts
 	MlirTensors(MlirGpu.Layering.function).Prologue.Length is 0
 	Softmaxing.Prologue(3).EndsWith("@strict_gpu_softmax(%tensorPtx, %tensor0, %tensor1) : (!llvm.ptr, f64, f64) -> f64")
 	let kind = Kind
-	(kind is "") or (IsComputed is false) then List(Text) else Loads(kind) + Called(kind)
+	kind is "" or IsComputed is false then List(Text) else Loads(kind) + Called(kind)
 Loads(kind Text) Texts
 	Attending.Loads("Attention").First is "    %tensor0 = llvm.load %v_queries : !llvm.ptr -> f64"
 	for Members(kind)
@@ -108,7 +108,7 @@ Members(kind Text) Texts
 	kind is "Attention" then Attentions else (kind is "Products" then Productions else Hadamards)
 Marker(kind Text) Text
 	Attending.Marker("Products") is "@strict_gpu_products("
-	Attending.Members("Softmax") is ("scores", "width") and (Multiplying.Named(Sylvesters) is "")
+	Attending.Members("Softmax") is ("scores", "width") and Multiplying.Named(Sylvesters) is ""
 	MlirTensors(MlirFunction(List(TypeEntry), Multiplied, GpuLayerSamples.Summed)).Named(Convolutions) is "Convolution"
 	MlirTensors(MlirFunction(List(TypeEntry), Multiplied, GpuLayerSamples.Summed)).Named(Productions) is ""
 	"@strict_gpu_" + kind.Lower + "("
@@ -119,5 +119,5 @@ Used(program Text) Texts
 	Attending.Used("x @strict_gpu_convolution(y") is ("Products", "Convolution")
 	let convolving = program.IndexOf(Marker("Convolution")) >= 0
 	for Kinds
-		if program.IndexOf(Marker(value)) >= 0 or (convolving and value is "Products")
+		if program.IndexOf(Marker(value)) >= 0 or convolving and value is "Products"
 			value

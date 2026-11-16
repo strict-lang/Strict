@@ -15,8 +15,8 @@ IsOperation Boolean
 	MlirListOperators(MlirLists.Listed, 1).IsOperation is false
 	MlirListOperators(Mixed, 5).IsOperation
 	let entry = function.method.instructions(position)
-	let isList = IsList(entry.payload(1)) or (entry.kind is InstructionType.Add) and IsList(entry.payload(2))
-	isList and (entry.kind is in Operators)
+	let isList = IsList(entry.payload(1)) or entry.kind is InstructionType.Add and IsList(entry.payload(2))
+	isList and entry.kind is in Operators
 IsList(register Number) Boolean
 	MlirListOperators(Mixed, 2).IsList(0)
 	MlirListOperators(Mixed, 2).IsList(1) is false
@@ -43,7 +43,7 @@ Added(entry InstructionEntry, isList Boolean) Text
 	if IsList(entry.payload(1)) is false
 		return "strict_list_prepend"
 	let isNumbers = ElementSuffix(entry.payload(1)) is "number"
-	let isDowncast = isList and isNumbers and (ElementSuffix(entry.payload(2)) is "text")
+	let isDowncast = isList and isNumbers and ElementSuffix(entry.payload(2)) is "text"
 	isDowncast then "strict_list_downcast" else (isList then "strict_list_concat" else Adder)
 Adder Text
 	MlirListOperators(MlirAppended.Filling.function, 4).Adder is "strict_list_add_seeded"
@@ -83,7 +83,7 @@ RightOperand(entry InstructionEntry, isList Boolean) Texts
 	let kinds = MlirKinds(function)
 	let right = kinds.KindOf(position, entry.payload(2))
 	let isNumbers = (isList then kinds.ElementKind(right) else right) is "Number"
-	let needsTexts = isNumbers and (kinds.ElementKind(kinds.KindOf(position, entry.payload(1))) is "Text")
+	let needsTexts = isNumbers and kinds.ElementKind(kinds.KindOf(position, entry.payload(1))) is "Text"
 	let helper = isList then "strict_list_texts" else "strict_number_text"
 	let names = MlirLists(function, position)
 	let raw = function.Load(names.Temp(needsTexts then "br" else "b"), "%r" + entry.payload(2))

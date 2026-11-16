@@ -39,7 +39,7 @@ Spans(text Text, anchor Text, count Number) Texts
 	let start = anchor is "" then 0 else text.IndexOf(anchor)
 	if start < 0
 		return Error("Corpus anchor not found: " + anchor)
-	if (count < 0) or (count % 1 is not 0) or (start + count * Width > text.Length)
+	if count < 0 or count % 1 is not 0 or start + count * Width > text.Length
 		return Error("Corpus cannot provide " + count + " spans of " + Width + " characters")
 	for count
 		text.Substring(start + index * Width, Width)

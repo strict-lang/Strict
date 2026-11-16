@@ -11,7 +11,6 @@ Narrowed(condition SyntaxNode, scope Scope, methods Scope) Scope
 	ErrorNarrowing(MethodBodies.NoInference).Narrowed(Negated, NumberA, NumberA).TypeOf("a") is "Number"
 	ErrorNarrowing(MethodBodies.NoInference).Narrowed(Literal, NumberA, NumberA) is NumberA
 	ErrorNarrowing(MethodBodies.NoInference).Narrowed(Called, NumberA, NumberA) is NumberA
-	let isBinary = (condition.Kind is "Binary") and (condition.text is "is")
-	let isChecked = isBinary and (condition.children(0).Kind is "Identifier")
-	let isError = isChecked and (inference.TypeOf(condition.children(1), scope, methods) is "Error")
+	let isChecked = condition.Kind is "Binary" and condition.text is "is" and condition.children(0).Kind is "Identifier"
+	let isError = isChecked and inference.TypeOf(condition.children(1), scope, methods) is "Error"
 	isError then scope.With(condition.children(0).text, "Error") else scope

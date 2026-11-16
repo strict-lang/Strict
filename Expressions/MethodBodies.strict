@@ -23,7 +23,7 @@ Statements ScopedStatements
 		if shape.IsMethodHeader(value)
 			let parameters = HeaderScope(HeaderTokens(Tokenizer(value).Tokens), members)
 			statements = statements + Flatten(BodyParser(shape.lines).Method(index + 1), parameters, index + 1)
-		if value.StartsWith("constant ") and (value.IndexOf(" = ") > 0)
+		if value.StartsWith("constant ") and value.IndexOf(" = ") > 0
 			statements.Add(ScopedStatement(BodyParser(shape.lines).Statement(index, 0), members, index))
 	statements
 HeaderScope(header HeaderTokens, members Scope) Scope
@@ -42,11 +42,11 @@ HeaderScope(header HeaderTokens, members Scope) Scope
 InstanceType Text
 	MethodBodies("List", Sample, NoInference).InstanceType is "Generics"
 	Looped.Length is 4
-	Looped(0).scope.TypeOf(" dropped") is "dropped" and (Looped(3).scope.TypeOf(" dropped") is "")
+	Looped(0).scope.TypeOf(" dropped") is "dropped" and Looped(3).scope.TypeOf(" dropped") is ""
 	Looped(2).scope.TypeOf(" dropped") is ""
 	(Looped(0).line, Looped(2).line) is (1, 3)
 	Looped(1).scope.TypeOf("t mutable") is "mutable"
-	Looped(2).scope.TypeOf("value") is "Number" and (Looped(2).scope.TypeOf("index") is "Number")
+	Looped(2).scope.TypeOf("value") is "Number" and Looped(2).scope.TypeOf("index") is "Number"
 	Looped(2).scope.TypeOf("outer") is "Demo"
 	Constanted.scope.TypeOf("self type") is "Demo"
 	typeName is "List" then "Generics" else typeName
@@ -118,7 +118,7 @@ Pair(type Text) Texts
 	MethodBodies.Pair("List(Text)").Length is 0
 	MethodBodies.Pair("List(Text, List(Number))") is ("Text", "List(Number)")
 	let comma = type.IndexOf(", ")
-	let isPair = type.StartsWith("List(") and (comma > 0) and (type.Substring(5, comma - 5).IndexOf("(") < 0)
+	let isPair = type.StartsWith("List(") and comma > 0 and type.Substring(5, comma - 5).IndexOf("(") < 0
 	isPair then (type.Substring(5, comma - 5), type.Substring(comma + 2, type.Length - comma - 3)) else List(Text)
 Declare(statement SyntaxNode, scope Scope) Scope
 	MethodBodies("Demo", Sample, NoInference).StatementType(Looped(0)) is "Number"
@@ -135,7 +135,7 @@ StatementType(scoped ScopedStatement) Text
 	let statement = scoped.statement
 	if statement.Kind is in ("If", "For")
 		return BlockType(statement, scoped.scope)
-	if (statement.Kind is in ("ElseIf", "Else", "ElseValue")) or (statement.Kind is "Return") and (not statement.HasValue)
+	if statement.Kind is in ("ElseIf", "Else", "ElseValue") or statement.Kind is "Return" and not statement.HasValue
 		return ""
 	if statement.Kind is "Reassignment"
 		return Reassigned(statement, scoped.scope)
@@ -165,7 +165,7 @@ IsSelector(statement SyntaxNode) Boolean
 	if not (statement.HasValue and statement.HasBody)
 		return false
 	let condition = statement.children(0)
-	(condition.Kind is "Binary") and (condition.children(1).Kind is "Missing")
+	condition.Kind is "Binary" and condition.children(1).Kind is "Missing"
 RefParameters(header HeaderTokens) Texts
 	MethodBodies("Demo", Sample, Ticking).RefParameters(Picking) is ("random")
 	MethodBodies("Demo", Sample, NoInference).RefParameters(AddOther).Length is 0

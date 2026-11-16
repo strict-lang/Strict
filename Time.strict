@@ -21,7 +21,7 @@ Day Number
 	(Now / Duration.Day.seconds).Floor
 Date Numbers
 	Moment.Date is (2023, 11, 14)
-	(Time(0).Date is (1970, 1, 1)) and (Time(951782400).Date is (2000, 2, 29))
+	Time(0).Date is (1970, 1, 1) and Time(951782400).Date is (2000, 2, 29)
 	let shifted = (seconds / Duration.Day.seconds).Floor + DaysBeforeEpoch
 	let era = (shifted / DaysPerEra).Floor
 	let dayOfEra = shifted - era * DaysPerEra
@@ -62,7 +62,7 @@ Parse(text Text) Time
 	Time.Parse("2023-11-14T22:13:20Z") is Moment
 	Time.Parse("1970-01-01") is Time(0)
 	Time.Parse("Nov 14") is Error
-	if (text.Length < 10) or (text(4) is not "-") or (text(7) is not "-")
+	if text.Length < 10 or text(4) is not "-" or text(7) is not "-"
 		return Error("InvalidTime")
 	let date = Days(text.Substring(0, 4) to Number, text.Substring(5, 2) to Number, text.Substring(8, 2) to Number)
 	let hasClock = text.Length >= ClockLength
@@ -87,7 +87,7 @@ IsWithin(start Time, end Time) Boolean
 	Moment.IsWithin(Time(0), Time(1800000000))
 	Moment.IsWithin(Time(0), Time(10)) is false
 	Moment.IsWithin(Time(1800000000), Time(1900000000)) is false
-	(seconds >= start.seconds) and (seconds <= end.seconds)
+	seconds >= start.seconds and seconds <= end.seconds
 Elapsed(current Time) Text
 	Moment.Elapsed(Time(1700000003)) is "just now"
 	Moment.Elapsed(Time(1700000180)) is "about 3 minutes ago"

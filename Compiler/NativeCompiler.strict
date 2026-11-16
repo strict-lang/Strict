@@ -71,7 +71,7 @@ Checked(rest Texts, sources Texts) Number
 	gate.code
 Built(rest Texts, sources Texts, gated List(TypeEntry))
 	let options = Options(rest)
-	if (rest.Length > 2) and (rest(2) is "library")
+	if rest.Length > 2 and rest(2) is "library"
 		return LibraryBuild(logger).Built(rest(0), rest(1))
 	let problem = Problem(rest(0), options, sources)
 	if problem is not ""
@@ -85,7 +85,7 @@ Problem(path Text, options Texts, sources Texts) Text
 	NativeCompiler(Logger).Problem("Examples/Sum.strict", List(Text) + "fast", Learning) is "Examples/Sum.strict" + Model
 	NativeCompiler(Logger).Problem("Examples/Sum.strict", List(Text), Learning) is ""
 	let isFast = "fast" is in options
-	if IsMixed(options) or (isFast and (options.Length > 1))
+	if IsMixed(options) or isFast and options.Length > 1
 		return isFast then Alone else Mixed
 	isFast and IsGame(path) then Whole + path else isFast and IsLearning(sources) then path + Model else ""
 IsGame(path Text) Boolean
@@ -95,7 +95,7 @@ IsGame(path Text) Boolean
 	NativeCompiler.IsGame("Compiler/output/Game/Demo.strict") is false
 	let folder = Path(path).PathOnly.text
 	let content = Directory.Exists(folder + "/Content") or File(folder + "/ContentBuild.strict").Exists
-	(Path(path).FileName.text is Path(folder).FileName.text + ".strict") and content
+	Path(path).FileName.text is Path(folder).FileName.text + ".strict" and content
 IsLearning(sources Texts) Boolean
 	NativeCompiler.IsLearning(Learning)
 	NativeCompiler.IsLearning(Summing) is false
@@ -107,9 +107,9 @@ IsMixed(options Texts) Boolean
 	NativeCompiler.IsMixed(("android", "ios"))
 	NativeCompiler.IsMixed(("ios", "web"))
 	NativeCompiler.IsMixed(("ios", "simulator")) is false
-	let isMobile = ("android" is in options) or ("ios" is in options)
-	let isDesktop = ("web" is in options) or ("linux" is in options) or ("windows" is in options)
-	(("android" is in options) and ("ios" is in options)) or (isMobile and isDesktop)
+	let isMobile = "android" is in options or "ios" is in options
+	let isDesktop = "web" is in options or "linux" is in options or "windows" is in options
+	"android" is in options and "ios" is in options or isMobile and isDesktop
 Configured(options Texts, path = "") NativeBuild
 	NativeCompiler(Logger).Configured(("ios", "simulator")).Target is Platform.IOSSimulator
 	NativeCompiler(Logger).Configured(("linux", "web")).isCrossing is false
@@ -117,10 +117,10 @@ Configured(options Texts, path = "") NativeBuild
 	NativeCompiler(Logger).Configured(List(Text) + "fast").isFast
 	NativeCompiler(Logger).Configured(List(Text), "./Strict.strict").isReleased
 	let isWeb = "web" is in options
-	let isCrossing = ("linux" is in options) and (isWeb is false)
+	let isCrossing = "linux" is in options and isWeb is false
 	let configured = NativeBuild(logger, isCrossing, isWeb, "android" is in options, "ios" is in options)
 	let isFast = "fast" is in options
-	let isReleased = ("windows" is in options) or (Path(path).FileName.text is "Strict.strict")
+	let isReleased = "windows" is in options or Path(path).FileName.text is "Strict.strict"
 	NativeBuild(configured, isSimulator = "simulator" is in options, isReleased = isReleased, isFast = isFast)
 Options(rest Texts) Texts
 	NativeCompiler.Options(("a.strict", ".", "linux")) is ("linux")

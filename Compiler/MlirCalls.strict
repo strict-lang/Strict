@@ -44,7 +44,7 @@ Created(entry InstructionEntry, decoder PayloadDecoder) Texts
 	let instances = MlirInstances(function, position)
 	let target = "%r" + entry.payload(0)
 	let isForeign = MlirForeign(MlirFunction(function.types, type, custom, typeIndex = function.typeIndex)).IsForeign
-	if ((custom.instructions.Length is 0) and (isForeign is false)) or IsMemberValue(entry, type, custom)
+	if custom.instructions.Length is 0 and isForeign is false or IsMemberValue(entry, type, custom)
 		return Shared(MlirPairs(function, position).Constructed(entry, decoder.Text(1), instances), target)
 	instances.Fresh(type, target, "f", List(Text)) + Compiled(entry, decoder, type, count)
 Shared(constructed Texts, target Text) Texts
@@ -61,13 +61,13 @@ IsMemberValue(entry InstructionEntry, type TypeEntry, chosen MethodEntry) Boolea
 	let layout = MlirLayout(function)
 	let members = type.Changing
 	let arguments = PayloadDecoder(entry).Arguments
-	if (members.Length is not 1) or (arguments.Length is not 1) or (chosen.parameters.Length is not 1)
+	if members.Length is not 1 or arguments.Length is not 1 or chosen.parameters.Length is not 1
 		return false
 	let member = layout.Represented(TypeEntry.ShortName(members.First.typeName))
 	if layout.Represented(TypeEntry.ShortName(chosen.parameters.First.typeName)) is member
 		return false
 	let argument = MlirKinds(function).KindOf(position, arguments.First)
-	(argument is TypeEntry.ShortName(type.Name)) or (layout.Represented(argument) is member)
+	argument is TypeEntry.ShortName(type.Name) or layout.Represented(argument) is member
 Invoked(entry InstructionEntry, decoder PayloadDecoder) Texts
 	MlirCalls(Shapes, 2).Invoked(Area, PayloadDecoder(Area)).Last is "    llvm.store %t2r, %r2 : f64, !llvm.ptr"
 	Text.Combine(MlirCalls(MlirGroups.Norming.function, 11).Emitted).IndexOf("^t11kept") > 0
@@ -85,7 +85,7 @@ Compiled(entry InstructionEntry, decoder PayloadDecoder, type TypeEntry, count N
 	MlirCalls(Shapes, 2).Compiled(Area, PayloadDecoder(Area), AreaShape, 0).Length is 3
 	let callee = decoder.Callee(type)
 	let target = MlirFunction(function.types, type, callee, typeIndex = function.typeIndex)
-	if (callee.instructions.Length is 0) and (MlirForeign(target).IsForeign is false)
+	if callee.instructions.Length is 0 and MlirForeign(target).IsForeign is false
 		return List(Text) + MlirStatements(function, position).Unsupported("call of " + type.Name + "." + decoder.Text(2))
 	let types = Text.Combine(ArgumentTypes(target.Parameters.Length), ", ")
 	let names = Text.Combine(List(Text) + Temp("m") + ArgumentNames(callee.parameters.Length), ", ")
@@ -112,12 +112,12 @@ NativeHelper(entry InstructionEntry, decoder PayloadDecoder) Text
 		return "strict_pairs_text"
 	let type = function.TypeOf(decoder.Text(1))
 	let count = PayloadDecoder(entry).ArgumentCount
-	let isWrite = (decoder.Text(2) is "Write") and (decoder.Names.Length is 1)
+	let isWrite = decoder.Text(2) is "Write" and decoder.Names.Length is 1
 	let name = isWrite then "Write" + decoder.Names.First.Capitalize else decoder.Text(2)
 	let declared = MlirNatives(function, position).Helper(type.Name, name, count)
 	let owned = MlirNatives(function, position).Helper(Owner(entry, type), name, count)
 	let paired = MlirPairs(function, position).Helper(entry, Owner(entry, type), name)
-	let fallback = TypeEntry.ShortName(type.Name).StartsWith("Dictionary") or (owned is "") then declared else owned
+	let fallback = TypeEntry.ShortName(type.Name).StartsWith("Dictionary") or owned is "" then declared else owned
 	MlirReadText(function, position).Helper(paired is "" then fallback else paired)
 Owner(entry InstructionEntry, type TypeEntry) Text
 	MlirCalls(Shapes, 2).Owner(Area, AreaShape) is "Shape"

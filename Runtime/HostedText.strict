@@ -4,10 +4,10 @@ constant Methods = ("File.ReadText", "File.WriteText")
 IsText Boolean
 	HostedText(Reading).IsText
 	HostedText(Hosted.Reading).IsText is false
-	(call.MethodName is "ReadText") or ((call.MethodName is "Write") and ("text" is in call.ParameterNames))
+	call.MethodName is "ReadText" or call.MethodName is "Write" and "text" is in call.ParameterNames
 Result VmValue
 	HostedText(Reading).Result.text is Text.Combine(File("Any.strict").ReadLines, "\n")
-	(File("Runtime/obj/Written.txt").Write("a\nb") is not Error) and (File("Runtime/obj/Written.txt").ReadText is "a\nb")
+	File("Runtime/obj/Written.txt").Write("a\nb") is not Error and File("Runtime/obj/Written.txt").ReadText is "a\nb"
 	let file = File(call.Instance.Member(0).text)
 	if call.MethodName is "ReadText"
 		return VmValue.OfText(file.ReadText)

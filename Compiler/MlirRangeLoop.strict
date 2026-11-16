@@ -21,7 +21,7 @@ IsRanged Boolean
 	let begin = function.method.LoopBeginOf(position)
 	let opened = function.method.instructions(begin)
 	let covers = function.method.LoopEndOf(begin) >= position
-	(opened.kind is InstructionType.LoopBegin) and covers and (opened.payload(1) is 1)
+	opened.kind is InstructionType.LoopBegin and covers and opened.payload(1) is 1
 Opened(label Text) Texts
 	Text.Combine(MlirRangeLoop(MlirLoops.Counting.function, 0).Opened("^loop0")).IndexOf("cmpf olt") > 0
 	Text.Combine(Ranging.Opened("^loop3")).IndexOf("i32") > 0

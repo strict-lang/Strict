@@ -23,9 +23,9 @@ Checked(tested List(TypeEntry), method MethodEntry, runner Text) KeptMethod
 	let begun = Process.Elapsed
 	let reason = Reason(started, runner, limit)
 	let budget = Budget(begun)
-	if (reason is not "") and (mutants.part is "")
+	if reason is not "" and mutants.part is ""
 		mutants.logger.Log(mutants.path + ": " + method.Name + " is not mutated, " + reason)
-	KeptMethod(method, ((reason is "") and IsRun(tested, method, runner)) then budget else 0)
+	KeptMethod(method, reason is "" and IsRun(tested, method, runner) then budget else 0)
 Methods(kept List(KeptMethod)) List(MethodEntry)
 	Sampled.Methods(List(KeptMethod) + KeptMethod(Mutants.Twice, 2)).First is Mutants.Twice
 	for kept
@@ -56,7 +56,7 @@ Reaching(types List(TypeEntry)) Texts
 		count = reaching.Length
 		for type, method in types, type.methods
 			let name = TypeEntry.ShortName(type.Name) + "." + method.Name
-			if (name is not in reaching) and IsReaching(method, reaching)
+			if name is not in reaching and IsReaching(method, reaching)
 				reaching.Add(name)
 	reaching
 Usable(types List(TypeEntry)) List(MethodEntry)
@@ -67,7 +67,7 @@ Usable(types List(TypeEntry)) List(MethodEntry)
 	let runner = mutants.Runner(types.First)
 	for mutants.Mutated(types.First)
 		let reason = Inputs(value, TypeEntry.ShortName(types.First.Name) + "." + value.Name, runner, reaching)
-		if (reason is not "") and (mutants.part is "")
+		if reason is not "" and mutants.part is ""
 			mutants.logger.Log(mutants.path + ": " + value.Name + " is not mutated, " + reason)
 		if reason is ""
 			value
@@ -81,24 +81,24 @@ Inputs(method MethodEntry, name Text, runner MethodEntry, reaching Texts) Text
 	let tests = MethodEntry(runner, instructions = Mutation(runner).Split(List(Text) + method.Name))
 	mutable hasTests = false
 	for runner.instructions
-		hasTests = hasTests or (Mutation(runner).Section(index) is method.Name)
+		hasTests = hasTests or Mutation(runner).Section(index) is method.Name
 	let other = hasTests then "its tests" else "it has no tests, the other tests"
 	IsReaching(tests, reaching) then other + " use input or Random" else ""
 IsReaching(method MethodEntry, reaching Texts) Boolean
-	Sampled.IsReaching(Reader, List(Text)) and (Sampled.IsReaching(Calling, List(Text)) is false)
+	Sampled.IsReaching(Reader, List(Text)) and Sampled.IsReaching(Calling, List(Text)) is false
 	Baseline(Mutants.Sample).IsReaching(Calling, List(Text) + "T.Read")
 	Sampled.IsReaching(MethodEntry(Reader, instructions = List(InstructionEntry) + Rolled), List(Text))
 	for method.instructions
-		if (value.kind is InstructionType.Invoke) and (value.texts.Length > 1)
+		if value.kind is InstructionType.Invoke and value.texts.Length > 1
 			let name = TypeEntry.ShortName(value.texts(0)) + "." + value.texts(1)
-			if mutants.IsInput(value.texts(0)) or (value.texts(1) is "Random") or (name is in reaching)
+			if mutants.IsInput(value.texts(0)) or value.texts(1) is "Random" or name is in reaching
 				return true
 	false
 Picked(methods List(MethodEntry)) List(MethodEntry)
 	Sampled.Picked((Reader, Calling, Reader, Calling)).Length is 3
 	Baseline(Mutants(Logger, "a.strict", isWhole = true)).Picked((Reader, Calling, Reader, Calling)).Length is 4
 	constant LightMethods = 3
-	let isAll = mutants.isWhole or (methods.Length <= LightMethods)
+	let isAll = mutants.isWhole or methods.Length <= LightMethods
 	isAll then methods else methods.Shuffled(PseudoRandom(Byte.Values.Random)).Slice(0, LightMethods)
 IsBase Boolean
 	Baseline(Mutants(Logger, "Number.strict")).IsBase and Baseline(Mutants(Logger, "./Text.strict")).IsBase
@@ -111,7 +111,7 @@ IsEmitter Boolean
 	Baseline(Mutants(Logger, "Compiler/NativeBuild.strict")).IsEmitter is false
 	Baseline(Mutants(Logger, "Math/MlirLike.strict")).IsEmitter is false
 	let folder = Path(Path(mutants.path).PathOnly.text).FileName.text
-	(folder is "Compiler") and Path(mutants.path).FileName.text.StartsWith("Mlir")
+	folder is "Compiler" and Path(mutants.path).FileName.text.StartsWith("Mlir")
 IsMachine Boolean
 	Baseline(Mutants(Logger, "Runtime/Natives.strict")).IsMachine
 	Baseline(Mutants(Logger, ".\\Runtime\\Machine.strict")).IsMachine
@@ -120,12 +120,12 @@ IsMachine Boolean
 	Baseline(Mutants(Logger, "Math/Machine.strict")).IsMachine is false
 	let folder = Path(Path(mutants.path).PathOnly.text).FileName.text
 	let file = Path(mutants.path).FileName.text
-	(folder is "Runtime") and (file is in ("Natives.strict", "Machine.strict", "Rounding.strict"))
+	folder is "Runtime" and file is in ("Natives.strict", "Machine.strict", "Rounding.strict")
 Reason(started Machine, runner Text, limit Number) Text
 	Baseline(Mutants.Sample).Reason(Machine.Hello, TestCodegen.Runner, 1) is ""
 	Baseline(Mutants.Sample).Reason(Frame.Doubling, "Missing", 0) is "its tests fail or take over 0s"
 	let read = Process.FilesRead.Length
 	let begun = Process.Elapsed
 	let failed = Machine(started, deadline = begun + limit).Tested(started.types.First.Name, runner)
-	let slow = (failed > 0) or Expired(begun, limit) then "its tests fail or take over " + limit + "s" else ""
+	let slow = failed > 0 or Expired(begun, limit) then "its tests fail or take over " + limit + "s" else ""
 	Process.FilesRead.Length > read then "its tests read files" else slow

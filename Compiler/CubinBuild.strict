@@ -14,7 +14,7 @@ Fatbin(base Text) Text
 	Local.Fatbin(Cubin) is ""
 	File(Cubin + ".fatbin").Exists is (Local.tools.Located("ptxas") is not "")
 	let ptxas = Outdated(base) and isShipped then tools.Located("ptxas") else ""
-	if (ptxas is "") or (File(base + ".ptx").Exists is false)
+	if ptxas is "" or File(base + ".ptx").Exists is false
 		return ""
 	let stem = base + "." + 1000000000.Random.Floor
 	let failures = Cubins(ptxas, base, stem)
@@ -26,7 +26,7 @@ Outdated(base Text) Boolean
 	File(Outdating + ".fatbin").Exists is false
 	let ptx = File(base + ".ptx")
 	let target = File(base + ".fatbin")
-	if ptx.Exists and target.Exists and (target.Modified > ptx.Modified)
+	if ptx.Exists and target.Exists and target.Modified > ptx.Modified
 		return false
 	target.Delete
 	true
@@ -37,7 +37,7 @@ Cubins(ptxas Text, base Text, stem Text) Texts
 	constant splitting = " --split-compile 8 "
 	mutable arguments = List(Mutable(Text))
 	for Architectures
-		let source = (value is "sm_75") and (File(base + ".older.ptx").Length > 0) then ".older.ptx" else ".ptx"
+		let source = value is "sm_75" and File(base + ".older.ptx").Length > 0 then ".older.ptx" else ".ptx"
 		let output = tools.Quoted(stem + "." + value + ".cubin")
 		arguments.Add("-arch=" + value + splitting + tools.Quoted(base + source) + " -o " + output)
 	for ToolRunner(ptxas).ExecuteAll(arguments, "GPU cubins " + Path(base).FileName.text)
@@ -46,7 +46,7 @@ Cubins(ptxas Text, base Text, stem Text) Texts
 Packed(stem Text, base Text) Text
 	Local.Packed("Compiler/output/missing", "Compiler/output/missing").StartsWith("fatbinary failed")
 	PtxCache(Broken).Saved((".ptx", ".older.ptx"), (Tiny, "broken")) is not Error
-	Local.Fatbin(Broken).StartsWith("ptxas failed") or (Local.tools.Located("ptxas") is "")
+	Local.Fatbin(Broken).StartsWith("ptxas failed") or Local.tools.Located("ptxas") is ""
 	Directory.Files("Compiler/output", "Broken.*.cubin").Length is 0
 	let arguments = "--compress-all --create=" + tools.Quoted(stem + ".fatbin") + Images(stem)
 	let packed = ToolRunner(tools.Located("fatbinary")).Execute(arguments)

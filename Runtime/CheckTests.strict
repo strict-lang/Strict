@@ -50,7 +50,7 @@ CheckBudget(folder Text) Boolean
 	File(folder + "/OverBudget.strict").Write(("Delay Number", "	OverBudget.Delay is 1", "	TestWork.Pause"))
 	let overSource = folder + "/OverBudget.strict"
 	let unit = CheckFail(Ran("test " + overSource + " unit"), DeadlineName, "OverBudgetVm")
-	if (unit is Error) or File(folder + "/obj/OverBudget.strictbinary").Exists
+	if unit is Error or File(folder + "/obj/OverBudget.strictbinary").Exists
 		return Error("FailedUnitWasCachedOrPassed")
 	let built = CheckFail(Ran("build " + overSource), DeadlineName, "OverBudgetBuild")
 	let natCmd = "test " + overSource + " unit native"
@@ -64,7 +64,7 @@ CheckSharedBudget(folder Text) Boolean
 CheckLazy(folder Text) Boolean
 	File(folder + "/LazyFixture.strict").Write(LazyHead + LazyTail)
 	let lazy = Ran("test " + folder + "/LazyFixture.strict unit")
-	if (lazy.exitCode is not 0) or (lazy.Output.Split("fixture computed").Length is not 2)
+	if lazy.exitCode is not 0 or lazy.Output.Split("fixture computed").Length is not 2
 		return Error("LazyFixtureCountWrong: " + lazy.Output)
 	if lazy.Output.IndexOf(PassedLine) >= lazy.Output.IndexOf("fixture computed")
 		return Error("FixtureInitializedTooEarly: " + lazy.Output)
@@ -81,21 +81,21 @@ CheckPolicy(folder Text) Boolean
 	File(folder + "/Policy.strict").Write(PolicyHead + PolicyMid + PolicyTail)
 	let source = folder + "/Policy.strict"
 	let unit = Ran("test " + source + " unit")
-	if (unit.exitCode is not 0) or ("manual fixture" is in unit.Output)
+	if unit.exitCode is not 0 or "manual fixture" is in unit.Output
 		return Error("UnitRanSlowTest: " + unit.Output)
 	let full = CheckPass(Ran("test " + source), "manual fixture", "ExplicitSlow")
 	let sel = Ran("test " + source + " Quick")
-	if (full is Error) or (sel.exitCode is not 0) or ("manual fixture" is in sel.Output)
+	if full is Error or sel.exitCode is not 0 or "manual fixture" is in sel.Output
 		return Error("SelectedRanSlowTest: " + sel.Output)
 	CheckPolicyRun(source)
 CheckPolicyRun(source Text) Boolean
 	let ran = Ran(source)
-	if (ran.exitCode is not 0) or (ran.Output.IndexOf("manual fixture") >= ran.Output.IndexOf("application"))
+	if ran.exitCode is not 0 or ran.Output.IndexOf("manual fixture") >= ran.Output.IndexOf("application")
 		return Error("ManualRunOrderWrong: " + ran.Output)
 	let unitNat = Ran("test " + source + " unit native")
 	let slowNat = Ran("test " + source + " native Value")
-	let badUnit = (unitNat.exitCode is not 0) or ("manual fixture" is in unitNat.Output)
-	let bad = badUnit or (slowNat.exitCode is not 0) or ("manual fixture" is not in slowNat.Output)
+	let badUnit = unitNat.exitCode is not 0 or "manual fixture" is in unitNat.Output
+	let bad = badUnit or slowNat.exitCode is not 0 or "manual fixture" is not in slowNat.Output
 	bad then Error("NativeSlowSelectionWrong") else true
 CheckWaiting(folder Text) Boolean
 	let waitSource = folder + "/Waiting.strict"
@@ -106,8 +106,8 @@ CheckProbe Boolean
 	File(ProbePath).Write(ProbeLines)
 	let unitRes = Ran("test " + ProbePath + " unit")
 	let natRes = Ran("test " + ProbePath + " unit native")
-	let badUnit = (unitRes.exitCode is not 0) or ("Test passed" is in unitRes.Output)
-	let badNat = (natRes.exitCode is not 0) or ("Test passed" is in natRes.Output)
+	let badUnit = unitRes.exitCode is not 0 or "Test passed" is in unitRes.Output
+	let badNat = natRes.exitCode is not 0 or "Test passed" is in natRes.Output
 	let passed = CheckPass(Ran("test " + ProbePath), "Test passed: PolicyProbe.Delay", "ExplicitInternalProbe")
 	let res = badUnit or badNat then Error("InternalTestedAutomatically") else passed
 	File(ProbePath).Delete
@@ -124,15 +124,15 @@ CheckShares(folder Text) Boolean
 	let sharesCode = ("has logger", "Run Number", callLine, "		logger.Log(\"threads \" + value.Output.Trim)", "	0")
 	File(folder + "/Shares.strict").Write(sharesCode)
 	let shared = RanEnv(folder + "/Shares.strict", "")
-	if (shared.exitCode is not 0) or (SharedCount(shared.Output) is not 2)
+	if shared.exitCode is not 0 or SharedCount(shared.Output) is not 2
 		return Error("ToolSharesWrong: " + shared.Output)
 	let kept = RanEnv(folder + "/Shares.strict", "8")
-	let badKept = (kept.exitCode is not 0) or (kept.Output.Split("threads 8").Length is not 3)
+	let badKept = kept.exitCode is not 0 or kept.Output.Split("threads 8").Length is not 3
 	badKept then Error("ExplicitThreadsNotKept: " + kept.Output) else true
 SharedCount(output Text) Number
 	mutable count = 0
 	for output.Lines
-		if value.StartsWith("threads ") and ((value.Substring(8, value.Length - 8) to Number) >= 2)
+		if value.StartsWith("threads ") and value.Substring(8, value.Length - 8) to Number >= 2
 			count = count + 1
 	count
 Ran(arguments Text) ProcessResult
@@ -145,8 +145,8 @@ RanEnv(arguments Text, threads Text) ProcessResult
 	let cmd = (win then winEnv else nixEnv) + exe + arguments
 	Process.RunTool(win then "cmd" else "sh", win then "/c " + cmd else "-c \"" + cmd + "\"", ToolSeconds)
 CheckPass(res ProcessResult, needle Text, tag Text) Boolean
-	let bad = (res.exitCode is not 0) or ((needle is not "") and (needle is not in res.Output))
+	let bad = res.exitCode is not 0 or needle is not "" and needle is not in res.Output
 	bad then Error(tag + " failed: " + res.Output + res.error) else true
 CheckFail(res ProcessResult, needle Text, tag Text) Boolean
-	let bad = (res.exitCode is 0) or (needle is not in (res.Output + res.error))
+	let bad = res.exitCode is 0 or needle is not in (res.Output + res.error)
 	bad then Error(tag + " unexpectedly passed: " + res.Output + res.error) else true

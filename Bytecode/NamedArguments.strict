@@ -22,8 +22,8 @@ Arranged(call SyntaxNode, block CodeBlock) SyntaxNode slow
 	Curved.Arranged(SyntaxParser(Tokenizer("Part()").Tokens).Parse, CodeBlock.Empty).children(0).Kind is "Identifier"
 	let positional = Positional(call)
 	let isType = IsConstructor(call)
-	let isReplacing = isType and (positional > 0) and (values.TypeOf(call.children(0), block) is call.text)
-	if (isType is false) or isReplacing
+	let isReplacing = isType and positional > 0 and values.TypeOf(call.children(0), block) is call.text
+	if isType is false or isReplacing
 		return call
 	let names = values.target.FromNames(call.text)
 	Last(call, names) < positional then call else Filled(call, names, positional)
@@ -34,7 +34,7 @@ IsConstructor(call SyntaxNode) Boolean
 	Parts.IsConstructor(Masked)
 	Parts.IsConstructor(SyntaxParser(Tokenizer("Missing(1)").Tokens).Parse) is false
 	let isOwnMethod = values.target.Header(call.text).tokens.Length > 0
-	(call.Kind is "Call") and values.inference.types.IsKnown(call.text) and (isOwnMethod is false)
+	call.Kind is "Call" and values.inference.types.IsKnown(call.text) and isOwnMethod is false
 Filled(call SyntaxNode, names Texts, positional Number) SyntaxNode
 	Parts.Filled(Masked, ("buffer", "light", "mask"), 1) to Text is "Part(1, 0, 3)"
 	mutable arguments = List(Mutable(SyntaxNode))
@@ -56,7 +56,7 @@ Last(call SyntaxNode, names Texts) Number
 	Curved.Last(SyntaxParser(Tokenizer("Part(1)").Tokens).Parse, ("buffer", "light", "mask")) is 2
 	mutable last = -1
 	for names
-		let isDefaulted = (call.children.Length is 0) and (last is index - 1) and (Fallback(call.text, value) is not "")
+		let isDefaulted = call.children.Length is 0 and last is index - 1 and Fallback(call.text, value) is not ""
 		if IsComputed(call.text, value) or isDefaulted
 			last = index
 	for call.children
@@ -69,14 +69,14 @@ IsComputed(owner Text, key Text) Boolean
 	Curved.IsComputed("Part", "light") is false
 	Shined.IsComputed("Part", "Shine mask")
 	let fallback = Fallback(owner, key)
-	(fallback is not "") and (ConstantFolding(owner, values.inference).Unwrapped(Parsed(fallback)).IsLiteral is false)
+	fallback is not "" and ConstantFolding(owner, values.inference).Unwrapped(Parsed(fallback)).IsLiteral is false
 Argument(call SyntaxNode, owner Text, prefix Text, name Text) SyntaxNode
 	OwnDefaults.Argument(SyntaxNode("Call", "Part"), "Part", "", "mask") to Text is "Part.Light"
 	Parts.Argument(Masked, "Part", "", "light").text is "0"
 	Parts.Argument(Masked, "Part", "", "mask").text is "3"
 	Shined.Argument(SyntaxNode("Call", "Shine"), "Part", "Shine ", "mask").Kind is "Member"
 	for call.children
-		if (value.Kind is "Reassignment") and (value.children(0).text is name)
+		if value.Kind is "Reassignment" and value.children(0).text is name
 			return value.children(1)
 	let fallback = Fallback(owner, prefix + name)
 	fallback is "" then SyntaxNode("Identifier", name) else Qualified(owner, fallback)
@@ -99,7 +99,7 @@ Computed(call SyntaxNode, owner Text, names Texts, given Number) Number
 	Shined.Computed(SyntaxNode("Call", "Shine"), "Part", List(Text) + "light", 0) is -1
 	mutable last = given - 1
 	for names
-		if (index >= given) and IsComputed(owner, call.text + " " + value)
+		if index >= given and IsComputed(owner, call.text + " " + value)
 			last = index
 	for call.children
 		let named = value.Kind is "Reassignment" then names.Index(value.children(0).text) else -1
@@ -116,7 +116,7 @@ Qualified(owner Text, fallback Text) SyntaxNode
 	Lit.Qualified("Part", "Light") to Text is "Part.Light"
 	Lit.Qualified("Part", "Dark") to Text is "Dark"
 	let node = Parsed(fallback)
-	let isOwn = (node.Kind is "Identifier") and (values.inference.ConstantOf(owner, node.text) is not "")
+	let isOwn = node.Kind is "Identifier" and values.inference.ConstantOf(owner, node.text) is not ""
 	isOwn then Parsed(TypeEntry.ShortName(owner) + "." + fallback) else node
 Parsed(text Text) SyntaxNode
 	Parts.Parsed("Curve.Flat").Kind is "Member"

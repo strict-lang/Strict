@@ -29,14 +29,14 @@ constant NoMethod = MethodEntry("", List(MemberEntry), "None", List(InstructionE
 constant Failing = MethodEntry(StructLanes.Squared, instructions = (StructLanes.Made, StructLanes.Squared.instructions(9)) + StructLanes.Squared.instructions)
 constant Failed = Inliner((StructLanes.Caller, TypeEntry(StructLanes.Pair.Name, StructLanes.Pair.members, List(MethodEntry) + Failing)), true)
 Inlined List(TypeEntry)
-	Calling.Name is "Run" and (Caller.Name is "Strict/Caller")
+	Calling.Name is "Run" and Caller.Name is "Strict/Caller"
 	Calling.parameters is (MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false))
-	Calling.declaredType is "Strict/Number" and (Calling.instructions(0).texts is ("numbers"))
+	Calling.declaredType is "Strict/Number" and Calling.instructions(0).texts is ("numbers")
 	Calling.instructions(1).texts is ("Strict/List(Number)", "X", "Strict/Number")
-	Calling.instructions(2).payload is (1) and (First.instructions(2).payload is (1))
-	First.declaredType is "Strict/Number" and (Listed.members is (Elements))
-	Listed.Name is "Strict/List(Number)" and (First.instructions.Length is 4)
-	Again.Name is "Again" and (Again.declaredType is "None")
+	Calling.instructions(2).payload is (1) and First.instructions(2).payload is (1)
+	First.declaredType is "Strict/Number" and Listed.members is (Elements)
+	Listed.Name is "Strict/List(Number)" and First.instructions.Length is 4
+	Again.Name is "Again" and Again.declaredType is "None"
 	Sample.Inlined.First.methods.First.instructions.Length is 6
 	for types
 		TypeEntry(value.Name, value.members, Methods(value))
@@ -73,7 +73,7 @@ Reserved(callee MethodEntry, call InstructionEntry) Number
 	Sample.Reserved(NoMethod, Calling.instructions(1)) is 0
 	if callee.Name is ""
 		return 0
-	let isLaned = isSplitting and (StructLanes.Members(TypeOf(call.texts(0))).Length > 0)
+	let isLaned = isSplitting and StructLanes.Members(TypeOf(call.texts(0))).Length > 0
 	LoadReuse(callee.instructions).RegisterCount + (isLaned then 1 else 0)
 IsWatching(instructions List(InstructionEntry)) Boolean
 	Sample.IsWatching(Calling.instructions) is false
@@ -81,9 +81,9 @@ IsWatching(instructions List(InstructionEntry)) Boolean
 	Sample.IsWatching(List(InstructionEntry) + ReadTested)
 	Failed.Inlinable(StructLanes.Caller, StructLanes.Calling(4), StructLanes.Calling(6), false).Name is "Squared"
 	for instructions
-		if (value.kind is InstructionType.Invoke) and (TypeEntry.ShortName(value.texts(0)) is "Error")
+		if value.kind is InstructionType.Invoke and TypeEntry.ShortName(value.texts(0)) is "Error"
 			return true
-		if (value.kind is InstructionType.LoadVariableToRegister) and (value.texts(0) is ErrorCodegen.Tested)
+		if value.kind is InstructionType.LoadVariableToRegister and value.texts(0) is ErrorCodegen.Tested
 			return true
 	false
 Inlinable(owner TypeEntry, call InstructionEntry, next InstructionEntry, isWatching = true) MethodEntry
@@ -97,24 +97,24 @@ Inlinable(owner TypeEntry, call InstructionEntry, next InstructionEntry, isWatch
 	let rules = InlineRules(callee)
 	let isMatched = IsMatched(call, next)
 	let isLanable = rules.IsLaned(type, call, IsReturning(callee))
-	let isLaned = isSplitting and (isMatched or rules.IsUnchecked or (isWatching is false)) and isLanable
-	(isMatched and rules.Fits(owner, type, call)) or isLaned then callee else NoMethod
+	let isLaned = isSplitting and (isMatched or rules.IsUnchecked or isWatching is false) and isLanable
+	isMatched and rules.Fits(owner, type, call) or isLaned then callee else NoMethod
 IsMatched(call InstructionEntry, next InstructionEntry) Boolean
 	Sample.IsMatched(StructLanes.Calling(4), StructLanes.Calling(5))
 	Sample.IsMatched(StructLanes.Calling(4), StructLanes.Calling(6)) is false
 	Failed.Inlinable(StructLanes.Caller, StructLanes.Calling(4), StructLanes.Calling(5)).Name is "Squared"
 	Sample.IsMatched(ReadTested, InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 1)) is false
 	Sample.IsMatched(ReadTested, InstructionEntry(InstructionType.CheckError, ("a"), List(Number) + 0)) is false
-	((next.kind is InstructionType.CheckError) and (next.texts.Length is 0)) and (next.payload(0) is call.payload(0))
+	next.kind is InstructionType.CheckError and next.texts.Length is 0 and next.payload(0) is call.payload(0)
 TypeOf(name Text) TypeEntry
-	Sample.TypeOf("List(Number)").Name is "Strict/List(Number)" and (Sample.TypeOf("Caller").Name is "Strict/Caller")
+	Sample.TypeOf("List(Number)").Name is "Strict/List(Number)" and Sample.TypeOf("Caller").Name is "Strict/Caller"
 	Sample.TypeOf("Strict/List(Number)").methods.Length is 1
-	Sample.TypeOf("Strict/Missing").Name is "" and (Sample.TypeOf("aller").Name is "")
-	(Unprefixed.TypeOf("Strict/Caller").Name is "Caller") and (Unprefixed.TypeOf(Mutated).Name is Mutated)
+	Sample.TypeOf("Strict/Missing").Name is "" and Sample.TypeOf("aller").Name is ""
+	Unprefixed.TypeOf("Strict/Caller").Name is "Caller" and Unprefixed.TypeOf(Mutated).Name is Mutated
 	let short = TypeEntry.ShortName(name)
 	let qualified = "/" + short
 	for types
-		if (value.Name is name) or (value.Name is short) or value.Name.EndsWith(qualified)
+		if value.Name is name or value.Name is short or value.Name.EndsWith(qualified)
 			return value
 	TypeEntry("", List(MemberEntry), List(MethodEntry))
 Callee(type TypeEntry, call InstructionEntry) MethodEntry
@@ -166,5 +166,5 @@ Ended(entry InstructionEntry, steps Number) InstructionEntry
 	for entry.payload
 		if isSteps is false
 			rest = rest + value
-		isSteps = isSteps and (value >= ByteEncoder.SevenBitBase)
+		isSteps = isSteps and value >= ByteEncoder.SevenBitBase
 	InstructionEntry(entry.kind, entry.texts, InstructionEntry.Jump(entry.kind, steps).payload + rest, entry.line)

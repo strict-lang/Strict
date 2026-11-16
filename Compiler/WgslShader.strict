@@ -48,13 +48,13 @@ IsShaded Boolean
 	let collection = MlirLoops(function, position).Collection
 	let isFloats = MlirDoubles(function, position).Format is in (0, MlirDoubles.BFloat16Format, Number.SingleBits)
 	let isKernel = MlirWholeKernel(function, position).IsKernel
-	(collection is in ("", "List(Number)")) and isFloats and (isKernel is false) and MlirGpuCheck(function, position).IsGpu
+	collection is in ("", "List(Number)") and isFloats and isKernel is false and MlirGpuCheck(function, position).IsGpu
 Functions Texts
 	Doubling.Functions.First is "fn s_Rows_Twice_1(instance: num, p0: num) -> num {"
 	mutable symbols = List(Text)
 	mutable lines = List(Text)
 	for MlirGpu.Devices(function, position + 1, function.method.LoopEndOf(position), 0)
-		if (value.Symbol is not in symbols) and (value.method.Name is not in ("Floor", "Length"))
+		if value.Symbol is not in symbols and value.method.Name is not in ("Floor", "Length")
 			symbols = symbols + value.Symbol
 			lines = lines + WgslFunction(value).Lines
 	lines
@@ -117,6 +117,6 @@ Singles Text
 	let free = MlirGpuCheck(function, position).Free
 	mutable singles = List(Text)
 	for function.type.members
-		if (value.Bits is Number.SingleBits) and (value.Name is in free)
+		if value.Bits is Number.SingleBits and value.Name is in free
 			singles = singles + (free.Index(value.Name) to Text)
 	"[" + Text.Combine(singles, ", ") + "]"

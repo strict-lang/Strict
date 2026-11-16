@@ -33,17 +33,17 @@ IsOwned Boolean
 	MlirAppended(Growing.function, 3).IsOwned is false
 	Filling.IsOwned
 	let entry = function.method.instructions(position)
-	(Name is not "") and MlirSpent(function, position).IsUnread(entry.payload(1)) and IsLocal(Name)
+	Name is not "" and MlirSpent(function, position).IsUnread(entry.payload(1)) and IsLocal(Name)
 Name Text
 	Growing.Name is "text"
 	MlirAppended(Growing.function, 3).Name is ""
 	let entry = function.method.instructions(position)
-	if (position + 1 >= function.method.instructions.Length) or (entry.kind is not InstructionType.Add)
+	if position + 1 >= function.method.instructions.Length or entry.kind is not InstructionType.Add
 		return ""
 	let next = function.method.instructions(position + 1)
 	let name = MlirDying(function, position).Loaded(entry.payload(1))
-	let isStored = (next.kind is InstructionType.StoreRegisterToVariable) and (next.payload(0) is entry.payload(3))
-	(isStored and (name is not "") then next.texts(0) is name else false) then name else ""
+	let isStored = next.kind is InstructionType.StoreRegisterToVariable and next.payload(0) is entry.payload(3)
+	(isStored and name is not "" then next.texts(0) is name else false) then name else ""
 Seed Text
 	Filling.Seed is "numbers"
 	Growing.Seed is ""
@@ -52,11 +52,11 @@ IsLocal(name Text) Boolean
 	Growing.IsLocal("text")
 	Growing.IsLocal("value") is false
 	Seeded.IsLocal("text") is false
-	let isOuter = (name is in function.Parameters) or (name is in MlirInstances(function, 0).StoredNames(function.type))
-	if isOuter or (name is in MlirOwned.Temporaries) or (IsText(name) or IsList(name)) is false
+	let isOuter = name is in function.Parameters or name is in MlirInstances(function, 0).StoredNames(function.type)
+	if isOuter or name is in MlirOwned.Temporaries or (IsText(name) or IsList(name)) is false
 		return false
 	for function.method.instructions
-		if (value.kind is in MlirAlone.Named) and (value.texts(0) is name) and (IsKept(value, index) is false)
+		if value.kind is in MlirAlone.Named and value.texts(0) is name and IsKept(value, index) is false
 			return false
 	true
 IsText(name Text) Boolean
@@ -78,15 +78,15 @@ IsKept(entry InstructionEntry, at Number) Boolean
 	let writer = MlirKinds(function).Writer(at, entry.payload(0))
 	let made = writer >= 0 then function.method.instructions(writer) else InstructionEntry.Return(0)
 	if made.kind is InstructionType.LoadVariableToRegister
-		return IsList(entry.texts(0)) and (made.texts(0) is in function.method.ParameterNames)
-	(made.kind is InstructionType.LoadConstantToRegister) or IsHarmless(made, writer)
+		return IsList(entry.texts(0)) and made.texts(0) is in function.method.ParameterNames
+	made.kind is InstructionType.LoadConstantToRegister or IsHarmless(made, writer)
 IsRead(at Number, register Number) Boolean
 	Growing.IsRead(2, 1)
 	Aliased.IsRead(6, 4) is false
 	let steps = function.method.instructions
 	let reuse = LoadReuse(steps)
 	for Range(at + 1, steps.Length)
-		if (register is in reuse.Reads(steps(value))) and (IsHarmless(steps(value), value) is false)
+		if register is in reuse.Reads(steps(value)) and IsHarmless(steps(value), value) is false
 			return false
 		if reuse.Written(steps(value)) is register
 			return true
@@ -102,7 +102,7 @@ IsHarmless(entry InstructionEntry, at Number) Boolean
 	let lists = MlirListOperators(function, at)
 	let isAdded = entry.kind is InstructionType.Add
 	let isJoined = isAdded then lists.IsList(entry.payload(1)) and lists.IsList(entry.payload(2)) else false
-	(entry.kind is in Harmless) and (isJoined is false)
+	entry.kind is in Harmless and isJoined is false
 IsFilled(name Text) Boolean
 	Pushed.IsFilled("text")
 	Growing.IsFilled("text") is false
@@ -110,9 +110,9 @@ IsFilled(name Text) Boolean
 	Joined.IsFilled("text")
 	Seeded.IsFilled("text") is false
 	for function.method.instructions
-		if (value.texts.Length > 0 then value.texts(0) is name else false) and (IsPushed(value, index) is false)
+		if (value.texts.Length > 0 then value.texts(0) is name else false) and IsPushed(value, index) is false
 			return false
-	((name is in function.Parameters) or (name is in MlirInstances(function, 0).StoredNames(function.type))) is false
+	(name is in function.Parameters or name is in MlirInstances(function, 0).StoredNames(function.type)) is false
 IsPushed(entry InstructionEntry, at Number) Boolean
 	Pushed.IsPushed(Stored, 1)
 	Pushed.IsPushed(Pushing(3), 3)
@@ -128,9 +128,9 @@ IsUnshared(at Number, register Number, name Text) Boolean
 	Passed.IsUnshared(4, 4, "text") is false
 	let steps = function.method.instructions
 	for Range(at + 1, steps.Length)
-		let isChecked = (steps(value).kind is in (InstructionType.CheckError, InstructionType.Return)) or IsLast(value, name)
+		let isChecked = steps(value).kind is in (InstructionType.CheckError, InstructionType.Return) or IsLast(value, name)
 		let isRead = register is in LoadReuse(steps).Reads(steps(value))
-		if isRead and (isChecked is false) and (IsHarmless(steps(value), value) is false)
+		if isRead and isChecked is false and IsHarmless(steps(value), value) is false
 			return false
 		if LoadReuse(steps).Written(steps(value)) is register
 			return true
@@ -144,6 +144,6 @@ IsLast(at Number, name Text) Boolean
 		return false
 	for Range(at + 1, steps.Length)
 		let isAdded = steps(value).kind is InstructionType.InvokeWriteToList then steps(value).texts(0) is name else false
-		if isAdded or (steps(value).kind is InstructionType.LoopEnd)
+		if isAdded or steps(value).kind is InstructionType.LoopEnd
 			return false
 	true

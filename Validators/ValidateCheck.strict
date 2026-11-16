@@ -43,7 +43,8 @@ CheckFile(path Text, lines Texts, typeName Text, mutations Texts, isBase Boolean
 	let rules = TypeValidator(TypeShape(lines), mutations, typeName).Validate + limits
 	let names = Names(lines).Issues + Recursions(lines, typeName).Issues + Inlines(lines).Issues
 	let shaped = names + TestChecks(lines).Issues + Writes(lines, typeName).Issues + StatusCodes(lines).Issues
-	rules + shaped + (LoopBodies(lines).Issues + MagicNumbers(lines).Issues + Branches(lines).Issues)
+	let extra = LoopBodies(lines).Issues + MagicNumbers(lines).Issues + Branches(lines).Issues
+	rules + shaped + extra + Brackets(lines).Issues + GeometryTypes(lines, typeName).Issues
 Logged(path Text, found List(ValidationIssue)) Number
 	for found
 		logger.Log(ResolveCheck.Located(path, value.Line, value to Text))
@@ -64,4 +65,4 @@ FileMutations(shape Expressions/TypeShape, typeName Text = "") Texts
 		if shape.IsMethodHeader(value) and HeaderTokens(Tokenizer(value).Tokens).ReturnsMutable
 			mutations.Add(Tokenizer(value).Tokens.First)
 	let changing = Changes(shape.lines).Methods
-	mutations + changing + ((changing.Length is 0) or (typeName is "") then List(Text) else List(Text) + typeName)
+	mutations + changing + (changing.Length is 0 or typeName is "" then List(Text) else List(Text) + typeName)

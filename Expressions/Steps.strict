@@ -3,15 +3,15 @@ constant SecondStep = Steps(Tokenizer("B(a Number, b Number with Step 0.5)").Tok
 constant Rounded = ("has price Number with Step 0.01", "T(a Number) Number with Step 0.5", "	L(a Numbers with Step 1)")
 constant Mixed = Steps(Tokenizer("B(a Number with Step 0.5, b List(Number) with Step 0.5)").Tokens)
 Of(nameIndex Number) Text
-	Steps(Tokenizer("has price Number with Step 0.01").Tokens).Of(1) is "0.01" and (SecondStep.Of(2) is "")
+	Steps(Tokenizer("has price Number with Step 0.01").Tokens).Of(1) is "0.01" and SecondStep.Of(2) is ""
 	Steps(Tokenizer("has lot Number with Step 0.001 Floor").Tokens).Of(1) is "0.001 Floor"
-	Steps(Tokenizer("has width Number with value > 0").Tokens).Of(1) is "" and (SecondStep.Of(5) is "0.5")
-	Steps(Tokenizer("has iterator").Tokens).Of(1) is "" and (Steps(Tokenizer("has a Number Step 0.5").Tokens).Of(1) is "")
+	Steps(Tokenizer("has width Number with value > 0").Tokens).Of(1) is "" and SecondStep.Of(5) is "0.5"
+	Steps(Tokenizer("has iterator").Tokens).Of(1) is "" and Steps(Tokenizer("has a Number Step 0.5").Tokens).Of(1) is ""
 	for Range(nameIndex + 1, tokens.Length - 2 > nameIndex then tokens.Length - 2 else nameIndex + 1)
 		if tokens(value) is in (",", ")")
 			return ""
-		if (tokens(value) is "with") and (tokens(value + 1) is "Step")
-			let isRounding = (value + 3 < tokens.Length) and (tokens(value + 3) is in ("Floor", "Ceiling"))
+		if tokens(value) is "with" and tokens(value + 1) is "Step"
+			let isRounding = value + 3 < tokens.Length and tokens(value + 3) is in ("Floor", "Ceiling")
 			return tokens(value + 2) + (isRounding then " " + tokens(value + 3) else "")
 	""
 Entries(header HeaderTokens) Scope
@@ -32,7 +32,7 @@ Members(lines Texts) Scope
 	mutable names = List(Mutable(Text))
 	mutable types = List(Mutable(Text))
 	for lines
-		if TypeShape(lines).IsMemberLine(value) and (value.IndexOf("Step") > 0)
+		if TypeShape(lines).IsMemberLine(value) and value.IndexOf("Step") > 0
 			let line = Tokenizer(value).Tokens
 			let step = Steps(line).Of(1)
 			if step is not ""
@@ -52,7 +52,7 @@ Unrounded Text
 	Steps(Tokenizer("has a Text = \"b with Step 1\"").Tokens).Unrounded is ""
 	Steps(("with", "Step")).Unrounded is ""
 	for tokens
-		if (value is "Step") and (index > 1)
-			if (tokens(index - 1) is "with") and (tokens(index - 2) is not "Number")
+		if value is "Step" and index > 1
+			if tokens(index - 1) is "with" and tokens(index - 2) is not "Number"
 				return tokens(index - 2)
 	""

@@ -8,7 +8,7 @@ Checked CommandLine
 	Sample.Checked is Sample
 	CommandLine(List(Text) + "--colour", List(Text) + "color").Checked is Error("UnknownOption:--colour")
 	for arguments
-		if value.StartsWith("--") and (value.Split("=").First is not in Spellings)
+		if value.StartsWith("--") and value.Split("=").First is not in Spellings
 			return Error("UnknownOption:" + value.Split("=").First)
 	CommandLine(arguments, names)
 Option(name Text, default Text) Text
@@ -26,7 +26,7 @@ Numeric(name Text, default Number) Number
 	let number = text to Number
 	if number is Error
 		return Error("InvalidNumber:" + Spelled(name))
-	number.IsFinite and ((number to Text) is text) then number else Error("InvalidNumber:" + Spelled(name))
+	number.IsFinite and number to Text is text then number else Error("InvalidNumber:" + Spelled(name))
 Flag(name Text, default Boolean) Boolean
 	Sample.Flag("jsonOutput", false)
 	Sample.Flag("width", false) is false
@@ -57,7 +57,7 @@ Spelled(name Text) Text
 	mutable spelled = "--"
 	for name
 		let letter = value to Text
-		spelled = spelled + ((letter.Lower is letter) or (index is 0) then letter.Lower else "_" + letter.Lower)
+		spelled = spelled + (letter.Lower is letter or index is 0 then letter.Lower else "_" + letter.Lower)
 	spelled
 Usage(defaults Texts, descriptions Texts) Text
 	Flags.Usage(("1", "false"), ("Outputs", "")) is "--count 1  Outputs\n--json_output false"
@@ -83,5 +83,5 @@ Lines(defaults Texts, descriptions Texts) Texts
 	Flags.Lines(("1", "false"), ("Outputs", "")) is ("--count 1  Outputs", "--json_output false")
 	Flags.Lines(("1", "false"), List(Text) + "Outputs") is ("--count 1  Outputs", "--json_output false")
 	for names
-		let described = (index < descriptions.Length) and (descriptions(index) is not "")
+		let described = index < descriptions.Length and descriptions(index) is not ""
 		Spelled(value) + " " + defaults(index) + (described then "  " + descriptions(index) else "")

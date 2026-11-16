@@ -12,7 +12,7 @@ Found(start Number) Numbers
 		let cut = MatchIndex(current)
 		matched = cut < current.Length then current(cut).Slice(1, current(cut).Length - 1) else matched
 		threads = Advanced(current.Slice(0, cut), value)
-		if (threads.Length is 0) and (matched.Length > 0)
+		if threads.Length is 0 and matched.Length > 0
 			return matched
 	List(Number)
 IsFound(start Number) Boolean
@@ -25,7 +25,7 @@ IsFound(start Number) Boolean
 	RegexMachine(RegexParser("a$").Parsed, "ab").IsFound(0) is false
 	RegexMachine(RegexParser("b$").Parsed, "ab").Found(0) is (1, 2)
 	RegexMachine(RegexParser("").Parsed, "x").Found(0) is (0, 0)
-	Plus.Found(2) is (2, 4) and (Plus.IsFound(4) is false)
+	Plus.Found(2) is (2, 4) and Plus.IsFound(4) is false
 	Found(start).Length > 0
 Fresh Numbers
 	Plus.Fresh is (0, -1, -1)
@@ -40,7 +40,7 @@ Slots Number
 	RegexMachine(RegexParser("a|bcdef").Parsed, "").Slots is 2
 	mutable slots = 0
 	for steps
-		if (value.Kind is RegexStep.Save) and (value.First >= slots)
+		if value.Kind is RegexStep.Save and value.First >= slots
 			slots = value.First + 1
 	slots
 MatchIndex(threads List(Numbers)) Number
@@ -75,10 +75,10 @@ Followed(listed List(Numbers), thread Numbers, at Number) List(Numbers)
 		return Added(Added(listed, Moved(thread, thread(0) + step.First), at), Moved(thread, thread(0) + step.Second), at)
 	if step.Kind is RegexStep.Save
 		return Added(listed, Moved(Stored(thread, step.First, at), thread(0) + 1), at)
-	let isBegun = (step.Kind is RegexStep.Begin) and (at is 0)
-	let isEnded = (step.Kind is RegexStep.End) and (at is text.Length)
+	let isBegun = step.Kind is RegexStep.Begin and at is 0
+	let isEnded = step.Kind is RegexStep.End and at is text.Length
 	let target = step.Kind is RegexStep.Jump then thread(0) + step.First else thread(0) + 1
-	(step.Kind is RegexStep.Jump) or isBegun or isEnded then Added(listed, Moved(thread, target), at) else listed
+	step.Kind is RegexStep.Jump or isBegun or isEnded then Added(listed, Moved(thread, target), at) else listed
 Moved(thread Numbers, step Number) Numbers
 	Plus.Moved((1, 7), 4) is (4, 7)
 	(List(Number) + step) + thread.Slice(1, thread.Length - 1)

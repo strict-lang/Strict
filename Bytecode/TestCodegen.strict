@@ -14,7 +14,7 @@ constant Halving = TestCodegen(TypeCodegen("Strict/Halving", ("Half(number Numbe
 constant TookCall = InstructionEntry.Invoke(1, ("Strict/Even", "$TestsTook", "Strict/Text", "elapsed"), List(Number) + 0, -1)
 constant GotCall = InstructionEntry.Invoke(1, ("Strict/Even", "$TestsGot0", "Strict/Text", "tested"), List(Number) + 0, -1)
 Tests List(MethodEntry) slow
-	Even.Tests.First.Name is Runner and (Halving.Tests.Last.Name is "$TestsNear0")
+	Even.Tests.First.Name is Runner and Halving.Tests.Last.Name is "$TestsNear0"
 	Even.Tests.First.instructions.Last.kind is InstructionType.Return
 	let scope = types.Generator.target.shape.MemberScope.With("failed", "Number").With("started", "Number")
 	let start = CodeBlock(List(InstructionEntry), 0, 0, scope.With("elapsed", "Number"))
@@ -44,13 +44,13 @@ Reachable(known List(MethodEntry), methods List(MethodEntry)) List(MethodEntry)
 	for known
 		let name = types.fullName + "." + value.Name
 		let typed = name + " " + TypeEntry.ShortName(value.returnType)
-		if ((name is in targets) or (typed is in targets)) and (value is not in methods)
+		if (name is in targets or typed is in targets) and value is not in methods
 			added.Add(value)
 	added.Length is 0 then methods else Reachable(known, methods + added)
 Included(line Text) Boolean
 	let header = HeaderTokens(Tokenizer(line).Tokens)
-	let matched = (selection is in ("", "*")) or (header.tokens(0) is selection)
-	matched and ((selection is not "") or (TypeSource.IsSlow(types.fullName, header) is false))
+	let matched = selection is in ("", "*") or header.tokens(0) is selection
+	matched and (selection is not "" or TypeSource.IsSlow(types.fullName, header) is false)
 Method(start Number, block CodeBlock) CodeBlock slow
 	Even.Method(0, Counter).instructions.Index(EvenFailed) > 0
 	Even.Method(0, Counter).instructions.Index(EvenPassed) > 0
@@ -91,7 +91,7 @@ Checked(test SyntaxNode, method Text, block CodeBlock) CodeBlock slow
 Compared(test SyntaxNode, block CodeBlock) CodeBlock slow
 	Even.Compared(OneIsOne, Counter).instructions.Last.kind is InstructionType.Equal
 	Even.Compared(OneIsOne, Counter).scope.TypeOf(ErrorCodegen.Tested) is "Number"
-	let isComparison = (test.Kind is "Binary") and (test.text is in ("is", "is not"))
+	let isComparison = test.Kind is "Binary" and test.text is in ("is", "is not")
 	let left = isComparison then test.children(0) else test
 	let stored = TestComparison(types.Generator).Stored(test, left, block)
 	let declared = stored.Declare(ErrorCodegen.Tested, types.Generator.TypeOf(left, block))

@@ -33,7 +33,7 @@ VerifiedBuild(folder Text, isWin Boolean) Boolean
 	if not Regex("mma\\.sync\\.aligned\\.m16n8k16\\.row\\.col\\.f32\\.bf16\\.bf16\\.f32").IsMatch(ptx)
 		return Error("Bf16PromptAttentionStillConvertsToFp16")
 	let ran = RunGpu(folder, "AttentionBrains" + (isWin then ".exe" else ""))
-	if (ran.exitCode is not 0) or ("attention 2113536 0 1" is not in ran.Output)
+	if ran.exitCode is not 0 or "attention 2113536 0 1" is not in ran.Output
 		return Error("AttentionFailed: " + ran.Output + ran.error)
 	logger.Log(ran.Output.Trim)
 	true

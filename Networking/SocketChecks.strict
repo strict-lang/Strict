@@ -5,7 +5,7 @@ Failures Number slow
 	Socket.Close(0) is not Error
 	Socket.Waiting(0) is Error("InvalidSocket")
 	Socket.Port(0) is Error("InvalidSocket")
-	(Socket.Listen(-1) is Error("InvalidPort")) and (Socket.Listen(65536) is Error("InvalidPort"))
+	Socket.Listen(-1) is Error("InvalidPort") and Socket.Listen(65536) is Error("InvalidPort")
 	Socket.Connect("127.0.0.1", 70000) is Error("InvalidPort")
 	Socket.Local(-1) is Error("InvalidPort")
 	Loopback(Socket.Listen(0)) is not Error
@@ -49,7 +49,7 @@ Exchanged(client Number, accepted Number) slow
 	if Socket.Send(client, (1, 2, 3)) is Error
 		return Error("BytesNotSent")
 	let received = Socket.Receive(accepted, 3)
-	if (received is Error) or (received is not (1, 2, 3))
+	if received is Error or received is not (1, 2, 3)
 		return Error("BytesNotReceived")
 	Socket.Output(accepted)
 	logger.Log("a")

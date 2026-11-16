@@ -27,13 +27,13 @@ constant Effects = MlirPurity.Caching.function.method.instructions + Instruction
 constant Held = MlirParallel(MlirFunction(Doubling.function, safeCalls = Dictionary(("Rows_Twice_1", 2))), 2)
 constant Logging = MlirParallel(MlirFunction(List(TypeEntry) + Rows + MlirPurity.Hosting, Rows, MethodEntry(Timed, instructions = Timed.instructions.Slice(0, 4) + Effects + Timed.instructions.Slice(5, 2))), 2)
 IsParallel Boolean
-	Doubling.IsParallel and Logging.IsParallel and Randomizing.IsParallel and (Timing.IsParallel is false)
+	Doubling.IsParallel and Logging.IsParallel and Randomizing.IsParallel and Timing.IsParallel is false
 	MlirParallel(MlirFunction(List(TypeEntry) + Rows, Rows, Filtered), 2).IsParallel is false
 	MlirParallel(MlirKernel.Doubling.function, 2).IsParallel
 	MlirParallel(MlirFunction(Logging.function, method = MlirPurity.Written), 2).IsParallel is false
 	let isBegin = function.method.instructions(position).kind is InstructionType.LoopBegin
 	let isSpecial = function.IsCounted or MlirLayout(function).IsInitializer
-	if (isBegin is false) or isSpecial or (MlirLoops(function, position).IsCollecting is false)
+	if isBegin is false or isSpecial or MlirLoops(function, position).IsCollecting is false
 		return false
 	for Range(position + 1, function.method.LoopEndOf(position))
 		if MlirPurity(function, position).IsSafe(function, value, 0) is false
@@ -69,7 +69,7 @@ Enough Texts
 	Doubling.Enough(2) is "    %t2pww = func.call @strict_parallel_worth(%t2pwf, %t2pn) : (" + Shape + ", i64) -> i1"
 	Doubling.Enough.Last is "    %t2pb = arith.andi %t2pwc, %t2pww : i1"
 	Held.Enough(1) is "    %t2pwr = func.call @strict_parallel_forkable() : () -> i1"
-	Text.Combine(Held.Forked).IndexOf("forkable") > 0 and (Text.Combine(Doubling.Forked).IndexOf("forkable") < 0)
+	Text.Combine(Held.Forked).IndexOf("forkable") > 0 and Text.Combine(Doubling.Forked).IndexOf("forkable") < 0
 	let compared = "    " + Temp("pwc") + " = arith.cmpi sge, " + Temp("pn") + ", " + Temp("pt") + " : i64"
 	let isGpu = MlirPurity(function, position).IsReachingGpu
 	let flag = Temp(isGpu then "pwr" else "pww")
@@ -98,7 +98,7 @@ Filler Text
 	Doubling.Filler is "strict_list_filled_numbers"
 	Byting.Filler is "strict_list_filled_numbers"
 	let kind = MlirLayout(function).Represented(MlirKinds(function).VariableKind(position, "forResult"))
-	let isPlain = (kind is "List(Number)") or MlirBytes(function, position).IsCollected
+	let isPlain = kind is "List(Number)" or MlirBytes(function, position).IsCollected
 	isPlain then "strict_list_filled_numbers" else "strict_list_filled"
 Joined Texts
 	Doubling.Joined.Slice(Doubling.Joined.Length - 2, 2) is (Doubling.Released, "    cf.br ^loop2exit")
@@ -119,7 +119,7 @@ Outlined Texts
 	Timing.Outlined.Length is 0
 	mutable lines = List(Mutable(Text))
 	for function.method.instructions
-		if (value.kind is InstructionType.LoopBegin) and MlirParallel(function, index).IsParallel
+		if value.kind is InstructionType.LoopBegin and MlirParallel(function, index).IsParallel
 			lines = lines + MlirParallel(function, index).Child + MlirWholeChild(function, index).Lines
 	lines
 Child Texts
@@ -170,7 +170,7 @@ Body Texts
 	mutable lines = List(Mutable(Text))
 	for Range(position + 1, function.method.LoopEndOf(position))
 		let entry = function.method.instructions(value)
-		let isCollect = (entry.kind is InstructionType.InvokeWriteToList) and (entry.texts(0) is "forResult")
+		let isCollect = entry.kind is InstructionType.InvokeWriteToList and entry.texts(0) is "forResult"
 		let emitted = isCollect then Collected(value) else function.Emitted(value)
 		lines = lines + function.Label(value) + emitted
 	let end = function.method.LoopEndOf(position)

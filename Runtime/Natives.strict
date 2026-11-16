@@ -16,11 +16,11 @@ constant BcTwo = (VmValue.OfText("bc"), VmValue.OfNumber(2))
 constant Cut = VmValue.OfError("SubstringOutOfRange")
 constant TextMethods = ("StartsWith", "EndsWith", "IndexOf", "LastIndexOf", "Substring", "Upper", "Lower", "Capitalize", "Trim", "TrimStart", "TrimEnd", "Bytes", "Utf8")
 Result(call Invocation) VmValue
-	(Shapes.Result(NewShape).items.First.number is 3) and (Shapes.Result(Invocation.Parsing).number is 5)
+	Shapes.Result(NewShape).items.First.number is 3 and Shapes.Result(Invocation.Parsing).number is 5
 	let name = call.MethodName
 	if name is "from"
 		let type = TypeOf(call.TypeName)
-		if (type.members.Length is 1) and (type.methods.Length > 0)
+		if type.members.Length is 1 and type.methods.Length > 0
 			return Foreign(call, types, folder).Constructed(type)
 		return Rounding.Single.Built(type, call, value, type.IsStruct)
 	if name is in ("to", "Code")
@@ -69,7 +69,7 @@ Converted(instance VmValue, target Text) VmValue
 Parsed(text Text) VmValue
 	Shapes.Parsed("5").number is 5
 	Shapes.Parsed("abc").items.First.text is "InvalidNumber"
-	Shapes.Searched("EndsWith", "abbc", BcTwo).IsTrue and (Shapes.Searched("EndsWith", "ab", BcTwo).IsTrue is false)
+	Shapes.Searched("EndsWith", "abbc", BcTwo).IsTrue and Shapes.Searched("EndsWith", "ab", BcTwo).IsTrue is false
 	let number = text to Number
 	number is Error then VmValue.OfError("InvalidNumber") else VmValue.OfNumber(number)
 Logical(name Text, left VmValue, call Invocation) VmValue
@@ -107,9 +107,9 @@ Queried(name Text, instance VmValue, call Invocation) VmValue
 		return VmValue.OfBoolean(position >= 0)
 	name is "Index" then VmValue.OfNumber(position) else Foreign(call, types, folder).Called
 Searched(name Text, text Text, arguments List(VmValue)) VmValue
-	Shapes.Searched("StartsWith", "abbc", BcTwo).IsTrue and (Shapes.Searched("IndexOf", "bcbcbc", BcTwo).number is 2)
-	(Shapes.Searched("Substring", "abc", BcTwo).text is "ab") and (Shapes.Searched("Substring", "a", BcTwo) is Cut)
-	if (arguments.Length is 0) or (name is "Utf8")
+	Shapes.Searched("StartsWith", "abbc", BcTwo).IsTrue and Shapes.Searched("IndexOf", "bcbcbc", BcTwo).number is 2
+	Shapes.Searched("Substring", "abc", BcTwo).text is "ab" and Shapes.Searched("Substring", "a", BcTwo) is Cut
+	if arguments.Length is 0 or name is "Utf8"
 		return name is in ("Bytes", "Utf8") then ByteTexts(name, text, arguments) else Edited(name, text)
 	let first = arguments.First
 	let second = arguments.Length > 1 then arguments(1).number else 0
@@ -133,9 +133,9 @@ ByteTexts(name Text, text Text, arguments List(VmValue)) VmValue
 		bytes = bytes + value.number
 	VmValue.OfText(Text.Utf8(bytes))
 Edited(name Text, text Text) VmValue
-	(Shapes.Edited("Capitalize", "ab").text is "Ab") and (Shapes.Edited("Trim", " a ").text is "a")
-	(Shapes.Edited("TrimEnd", " a ").text is " a") and (Shapes.Edited("TrimStart", " a ").text is "a ")
-	(Shapes.Edited("Upper", "ab").text is "AB") and (Shapes.Edited("Lower", "AB").text is "ab")
+	Shapes.Edited("Capitalize", "ab").text is "Ab" and Shapes.Edited("Trim", " a ").text is "a"
+	Shapes.Edited("TrimEnd", " a ").text is " a" and Shapes.Edited("TrimStart", " a ").text is "a "
+	Shapes.Edited("Upper", "ab").text is "AB" and Shapes.Edited("Lower", "AB").text is "ab"
 	if name is "Upper"
 		return VmValue.OfText(text.Upper)
 	if name is "Lower"
@@ -180,11 +180,11 @@ Constructed(type TypeEntry, finished List(VmValue)) VmValue
 	let changed = result.kind is "Changing" then result.items.Slice(1, result.items.Length - 1) else List(VmValue)
 	changed.Length is 0 then built else VmValue(result, items = (List(VmValue) + built) + changed)
 Initial(member MemberEntry) VmValue
-	(Shapes.Initial(Width).number is 0) and (Shapes.Initial(Width).kind is "Number")
-	(Shapes.Initial(MemberEntry.SevenMember).number is 7) and (Shapes.Initial(MemberEntry.LoggerMember).kind is "None")
+	Shapes.Initial(Width).number is 0 and Shapes.Initial(Width).kind is "Number"
+	Shapes.Initial(MemberEntry.SevenMember).number is 7 and Shapes.Initial(MemberEntry.LoggerMember).kind is "None"
 	Shapes.Initial(MemberEntry("t", "Strict/Text", List(InstructionEntry), false)).kind is "Text"
 	Shapes.Initial(MemberEntry("table", "Strict/Dictionary(Number, Number)", List(InstructionEntry), false)).kind is "List"
-	if member.IsConstant or (member.initial.Length > 0)
+	if member.IsConstant or member.initial.Length > 0
 		return member.initial.Length is 0 then VmValue.None else PayloadDecoder(member.initial.First).Value(0)
 	if member.typeName is "Strict/Number"
 		return VmValue.OfNumber(0)
@@ -203,7 +203,7 @@ IsMemberCall(call Invocation, type TypeEntry, chosen MethodEntry) Boolean
 	Natives(TypeEntry.Holding).IsMemberCall(Invocation.Coding, TypeEntry.CharacterEntry, TypeEntry.ToNumber)
 	let parameter = TypeOf(chosen.parameters.Length is 1 then chosen.parameters.First.typeName else "")
 	let kind = parameter.Wrapped is "" then TypeEntry.ShortName(parameter.Name) else parameter.Wrapped
-	call.IsWrapping(type) and (kind is not TypeEntry.ShortName(type.Changing.First.typeName))
+	call.IsWrapping(type) and kind is not TypeEntry.ShortName(type.Changing.First.typeName)
 TypeOf(name Text) TypeEntry
 	Shapes.TypeOf("Strict/Shape").members.Length is 2
 	Shapes.TypeOf("Strict/Other").members.Length is 0
@@ -224,4 +224,4 @@ IsNamed(type TypeEntry, name Text, short Text, qualified Text) Boolean
 	Shapes.IsNamed(Shape, "Strict/Shape", "X", "/X")
 	Shapes.IsNamed(Shape, "X/Shape", "Shape", "/Shape")
 	Shapes.IsNamed(Shape, "B/ape", "ape", "/ape") is false
-	(type.Name is name) or (type.Name is short) or type.Name.EndsWith(qualified)
+	type.Name is name or type.Name is short or type.Name.EndsWith(qualified)

@@ -54,8 +54,8 @@ Counted Texts
 	StartLoaded.Counted.First is "    %t1uv = llvm.load %r0 : !llvm.ptr -> f64"
 	StartLoaded.Counted(2) is "    cf.cond_br %t1uk, ^bb1ue, ^loop1counted"
 	let entry = function.method.instructions(position)
-	let isPlain = (function.FastLoop < 0) and (function.IsDeferred is false)
-	if (isPlain is false) or (MlirLoops(function, position).Collection is not "")
+	let isPlain = function.FastLoop < 0 and function.IsDeferred is false
+	if isPlain is false or MlirLoops(function, position).Collection is not ""
 		return List(Text)
 	let isRange = entry.payload(1) is 1
 	Bounded(entry, isRange then entry.payload(0) else -1, isRange then entry.payload(2) else entry.payload(0))
@@ -75,7 +75,7 @@ CanFail(register Number) Boolean
 	CountLoaded.CanFail(-1) is false
 	Measuring.CanFail(1) is false
 	let writer = MlirKinds(function).Writer(position, register)
-	(register >= 0) and (writer >= 0) and (IsUnfailing(function, writer) is false)
+	register >= 0 and writer >= 0 and IsUnfailing(function, writer) is false
 Selected(starting Number, ending Number) Texts
 	StartLoaded.Selected(0, 2)(3) is "    %t1sf = arith.select %t1sk, %t1sv, %t1fe : f64"
 	StartLoaded.Selected(0, 2).Last is "    llvm.store %t1sf, %r2 : f64, !llvm.ptr"
@@ -91,28 +91,28 @@ IsSafeRead Boolean
 	Knowing.IsSafeRead
 	let previous = function.method.instructions(position - 1)
 	let register = function.method.instructions(position).payload(0)
-	let isRead = previous.kind is InstructionType.IndexCall and (previous.payload(0) is register)
-	isRead then (MlirCouples(function, position - 1).IsFlatRead(previous) or IsInside(previous)) else false
+	let isRead = previous.kind is InstructionType.IndexCall and previous.payload(0) is register
+	isRead then MlirCouples(function, position - 1).IsFlatRead(previous) or IsInside(previous) else false
 IsInside(read InstructionEntry) Boolean
 	Knowing.IsInside(KnownRead(3))
 	Knowing.IsInside(InstructionEntry(InstructionType.IndexCall, "other", (2, 1, -1))) is false
 	let index = MlirKinds(function).Writer(position - 1, read.payload(1))
 	let loaded = index >= 0 then function.method.instructions(index) else read
 	let number = loaded.kind is InstructionType.LoadConstantToRegister then PayloadDecoder(loaded).Value(1).number else -1
-	(number >= 0) and (number is number.Floor) and (number < KnownLength(read.texts(0), position - 1))
+	number >= 0 and number is number.Floor and number < KnownLength(read.texts(0), position - 1)
 KnownLength(name Text, at Number) Number
 	Knowing.KnownLength("counted", 3) is 16
 	Knowing.KnownLength("other", 3) is 0
 	mutable stores = 0
 	for function.method.instructions
-		if (value.kind is in MlirParameters.Writers) and (name is in value.texts)
+		if value.kind is in MlirParameters.Writers and name is in value.texts
 			stores = stores + 1
 	let stored = stores is 1 then MlirKinds(function).Stored(at, name) else -1
 	let entry = stored >= 0 then function.method.instructions(stored) else function.method.instructions(at)
 	let isStore = entry.kind is InstructionType.StoreRegisterToVariable
 	let call = isStore then MlirKinds(function).Writer(stored, entry.payload(0)) else -1
 	let length = call >= 0 then MlirValidated(function, call).Returned(function.method.instructions(call)) else 0
-	(length > 0) and (IsFailing(function, call, 0) is false) then length else 0
+	length > 0 and IsFailing(function, call, 0) is false then length else 0
 Left(entry InstructionEntry, traced Text) Texts
 	Returning.Left(Returning.function.method.instructions(1), "%t1tr") is ("    return %t1tr : f64")
 	if entry.texts.Length is 0
@@ -124,12 +124,12 @@ IsInfallible Boolean
 	Guarding.IsInfallible is false
 	Returning.IsInfallible is false
 	Measuring.IsInfallible
-	IsCallCheck(function, position) and (IsFailing(function, position - 1, 0) is false)
+	IsCallCheck(function, position) and IsFailing(function, position - 1, 0) is false
 IsCallCheck(callee MlirFunction, at Number) Boolean
 	Doubling.IsCallCheck(Measuring.function, 2)
 	Doubling.IsCallCheck(Guarding.function, 1) is false
 	let previous = callee.method.instructions(at - 1)
-	(previous.kind is InstructionType.Invoke) and (previous.payload(0) is callee.method.instructions(at).payload(0))
+	previous.kind is InstructionType.Invoke and previous.payload(0) is callee.method.instructions(at).payload(0)
 CannotFail(callee MlirFunction, depth Number) Boolean
 	Doubling.CannotFail(MlirFunction(Doubling.function.types, Calls, MlirParallel.Twice), 0)
 	Doubling.CannotFail(MlirFunction(Doubling.function.types, Calls, Guarded), 0) is false
@@ -149,17 +149,17 @@ IsFailing(callee MlirFunction, at Number, depth Number) Boolean
 	Doubling.IsFailing(Knowing.function, 3, 0) is false
 	let entry = callee.method.instructions(at)
 	if entry.kind is InstructionType.CheckError
-		return ((IsCallCheck(callee, at) or MlirChecks(callee, at).IsSafeRead) is false) or IsFailing(callee, at - 1, depth)
+		return (IsCallCheck(callee, at) or MlirChecks(callee, at).IsSafeRead) is false or IsFailing(callee, at - 1, depth)
 	if entry.kind is InstructionType.IndexCall
 		return MlirChecks(callee, at + 1).IsSafeRead is false
 	if entry.kind is not InstructionType.Invoke
 		return false
 	let nested = MlirModule(callee.types, "").Called(callee, at)
-	nested.Length is 0 then IsNativeFailing(callee, at) else (depth >= 3) or (CannotFail(nested.First, depth + 1) is false)
+	nested.Length is 0 then IsNativeFailing(callee, at) else depth >= 3 or CannotFail(nested.First, depth + 1) is false
 IsNativeFailing(callee MlirFunction, at Number) Boolean
 	Doubling.IsNativeFailing(Measuring.function, 1) is false
 	Doubling.IsNativeFailing(Guarding.function, 1)
-	(PayloadDecoder(callee.method.instructions(at)).Text(1) is not "Strict/Number") and (IsUnfailing(callee, at) is false)
+	PayloadDecoder(callee.method.instructions(at)).Text(1) is not "Strict/Number" and IsUnfailing(callee, at) is false
 IsUnfailing(callee MlirFunction, at Number) Boolean
 	Doubling.IsUnfailing(Measuring.function, 1)
 	Doubling.IsUnfailing(Measuring.function, 0)

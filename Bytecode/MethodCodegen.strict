@@ -48,17 +48,17 @@ Generate(body SyntaxNode, scope Scope, returnType Text) CodeBlock
 	let start = ErrorScope(values).Prepared(body, CodeBlock(List(InstructionEntry), 0, 0, typed))
 	let code = BranchValues(returnType).Rewritten(Production(body, start))
 	let block = Looped(code, start, returnType)
-	if (code.children.Length is 0) or (block.instructions.Last.kind is InstructionType.Return)
+	if code.children.Length is 0 or block.instructions.Last.kind is InstructionType.Return
 		return block
 	block.Ended(returnType)
 Looped(body SyntaxNode, block CodeBlock, returnType Text) CodeBlock
-	(PackedLoop.instructions.Length is 12) and (PackedLoop.instructions(-2).texts(1) is "from")
-	(SumsLoop.instructions(-2).texts(1) is "from") and (Packing.Looped(SumsBody, Blank, "Sums") is Added)
-	(Packing.Looped(Packed, Blank, "Pack") is Unlooped) and (BoxLoop is Boxed) and (TextLoop is TextSummed)
+	PackedLoop.instructions.Length is 12 and PackedLoop.instructions(-2).texts(1) is "from"
+	SumsLoop.instructions(-2).texts(1) is "from" and Packing.Looped(SumsBody, Blank, "Sums") is Added
+	Packing.Looped(Packed, Blank, "Pack") is Unlooped and BoxLoop is Boxed and TextLoop is TextSummed
 	let loops = LoopCodegen(value)
 	let member = values.inference.types.ValueOf(returnType)
 	let loop = BranchValues(returnType).LastLoop(body)
-	let isLooped = (loop.Kind is "For") and (loops.Aggregation(body, returnType) is in ("", "add"))
+	let isLooped = loop.Kind is "For" and loops.Aggregation(body, returnType) is in ("", "add")
 	let isListed = isLooped and ListFits(values.inference.types).IsList(member)
 	let valued = isListed then values.TypeOf(loop.children.Last.children.Last, loops.Declared(loop, block)) else returnType
 	if valued is returnType
@@ -87,7 +87,7 @@ Valued(body SyntaxNode, block CodeBlock, wanted Text) CodeBlock
 	for body.children
 		let isLast = index is body.children.Length - 1
 		let dropped = ErrorScope(values).Dropped(value, result)
-		let used = isLast and (wanted is not "None") then dropped else ErrorScope(values).Used(dropped, result)
+		let used = isLast and wanted is not "None" then dropped else ErrorScope(values).Used(dropped, result)
 		let rewritten = ConversionCodegen(values).Wanted(used, (isLast then wanted else ""), result)
 		let statement = Statement(rewritten, result.At(block.register), HasElse(body, index))
 		result = Lined(statement, result.instructions.Length, value.line)
@@ -112,7 +112,7 @@ HasElse(body SyntaxNode, position Number) Boolean
 	Plain.Conditional(IfBody.children(0), CodeBlock.Empty, false, "Sum").instructions.Length is 10
 	Plain.HasElse(ElseBody, 0)
 	Plain.HasElse(ElseBody, 1) is false
-	position + 1 < body.children.Length and (body.children(position + 1).Kind is in ("ElseIf", "Else"))
+	position + 1 < body.children.Length and body.children(position + 1).Kind is in ("ElseIf", "Else")
 Statement(node SyntaxNode, previous CodeBlock, hasElse Boolean) CodeBlock
 	Plain.Statement(SyntaxNode("Return", "", One), CodeBlock.Empty, false).instructions.Length is 2
 	let block = ListCodegen(values).Disowned(node, previous, false)
@@ -123,7 +123,7 @@ Statement(node SyntaxNode, previous CodeBlock, hasElse Boolean) CodeBlock
 	if node.Kind is "For"
 		return node.text is "slices" then Slices(node, block) else LoopCodegen(MethodCodegen(values)).Loop(node, block, "")
 	let generated = ErrorCodegen(values).Statement(ConversionCodegen(values).Returned(node, block), block)
-	(node.Kind is "Return") and node.HasValue then generated.Add(InstructionEntry.Return(generated.Result)) else generated
+	node.Kind is "Return" and node.HasValue then generated.Add(InstructionEntry.Return(generated.Result)) else generated
 Assignment(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Assignment(SyntaxNode("Declaration", "let a", One), CodeBlock.Empty).scope.TypeOf("a") is "Number"
 	Plain.Assignment(SyntaxNode("Declaration", "let a", One), CodeBlock.Empty).instructions.First.payload is (1, 1, -1, 0)
@@ -146,7 +146,7 @@ Stored(assigned SyntaxNode, name Text, block CodeBlock, isDeclaration Boolean) C
 	let isLocal = isDeclaration or ErrorScope(values).IsFallible(name, block)
 	let generated = isLocal then ErrorCodegen(values).Handled(assigned, named) else values.Expression(assigned, named)
 	let restored = CodeBlock(generated.instructions, generated.register, generated.nextId, block.scope)
-	let isConstant = assigned.IsLiteral and (name.IndexOf("(") < 0)
+	let isConstant = assigned.IsLiteral and name.IndexOf("(") < 0
 	isConstant then block.Add(StoreConstant(generated.instructions.Last, name)) else restored.Stored(name)
 AssignedName(node SyntaxNode) Text
 	Plain.Stored(ErrorCodegen.Greeting, "a", CodeBlock.Empty, true).instructions.Length is 2
@@ -220,7 +220,7 @@ Log(argument SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Log(SyntaxNode("Text", "\"\""), CodeBlock.Empty).instructions.Length is 0
 	if argument.Kind is "Text"
 		return argument.Unquoted is "" then block else block.Add(InstructionEntry.Print(argument.Unquoted))
-	let hasPrefix = (argument.Kind is "Binary") and (argument.text is "+") and (argument.children(0).Kind is "Text")
+	let hasPrefix = argument.Kind is "Binary" and argument.text is "+" and argument.children(0).Kind is "Text"
 	let printed = ConversionCodegen(values).Converted(hasPrefix then argument.children(1) else argument, "Text", block)
 	let generated = values.Expression(printed, block)
 	let prefix = hasPrefix then argument.children(0).Unquoted else ""

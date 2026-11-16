@@ -14,7 +14,7 @@ Distinct(tokens Texts, typed Texts, own Texts) Texts
 	mutable seen = Dictionary(Text, Boolean)
 	mutable result = List(Text)
 	for tokens
-		if (value is not in seen) and ((value is in typed) or (value is not in own))
+		if value is not in seen and (value is in typed or value is not in own)
 			seen(value) = true
 			result = result + value
 	result
@@ -40,7 +40,7 @@ Outer(tokens Texts) Texts
 	Mentions(("\tRun(value Size)")).Typed(TypeShape("has x Number")) is ("Number")
 	Mentions.Declared(TypeShape(("has x List(Size)", "Run", "A Number", "B Number"))) is ("Sizes", "None", "Number")
 	for tokens
-		if (index > 1) and (tokens(index - 1) is ".") and (tokens(index - 2) is "outer")
+		if index > 1 and tokens(index - 1) is "." and tokens(index - 2) is "outer"
 			value
 Missing(files Texts) Texts
 	Typo.Missing(Directory.Files(".", "*.strict")) is ("Numbr")
@@ -86,12 +86,12 @@ Declared(shape Expressions/TypeShape) Texts
 	mutable result = List(Mutable(Text))
 	for types
 		let name = value.IndexOf("(") > 0 then value.Substring(0, value.IndexOf("(")) else value
-		if (name is not "") and (name.IndexOf(")") < 0) and (name.IndexOf(" ") < 0) and (name is not in result)
+		if name is not "" and name.IndexOf(")") < 0 and name.IndexOf(" ") < 0 and name is not in result
 			result.Add(name)
 	result
 Returned(shape Expressions/TypeShape) Texts
 	Mentions.Returned(TypeShape(("constant Pair = (1, 2)", "Add(other) Number", "	other"))) is ("Number")
 	Mentions.Returned(TypeShape(("has x Number", "Area = 1", "Add(other) Number", "\tother"))) is ("Number")
 	for shape.lines
-		if shape.IsMethodHeader(value) and (shape.IsComputed(value) is false)
+		if shape.IsMethodHeader(value) and shape.IsComputed(value) is false
 			HeaderTokens(Tokenizer(value).Tokens).ReturnType

@@ -30,7 +30,7 @@ Lanes(member MemberEntry) Texts
 	Sample.Lanes(Counted).Length is 0
 	Sample.Lanes(MemberEntry("seed", "Strict/Pair", List(InstructionEntry) + StructLanes.Constructed, false)).Length is 0
 	Sample.Lanes(MemberEntry("zero", "Strict/Pair", List(InstructionEntry), true)).Length is 0
-	let isPlain = member.IsConstant or (member.initial.Length > 0)
+	let isPlain = member.IsConstant or member.initial.Length > 0
 	isPlain then List(Text) else StructLanes.Members(Inliner(types).TypeOf(member.typeName))
 Divided(members List(MemberEntry)) List(MemberEntry)
 	Sample.Divided(Drawer.members).Length is 3
@@ -58,7 +58,7 @@ Signature(call InstructionEntry) Texts
 	if call.texts(1) is "from"
 		return StructLanes.Members(type).Length > 0 then List(Text) else Laned(type.members)
 	let callee = Inliner(types).Declared(type, call)
-	let isOwn = (StructLanes.Members(type).Length > 0) or (callee.instructions.Length is 0)
+	let isOwn = StructLanes.Members(type).Length > 0 or callee.instructions.Length is 0
 	isOwn then List(Text) else Laned(callee.parameters)
 Width(call InstructionEntry, position Number) Number
 	Sample.Width(Shift, 0) is 2
@@ -84,7 +84,7 @@ Given(call InstructionEntry) Number
 	Sample.Spread(StructLanes.Constructed, "Pair", 8)(1).texts is ("real", "Pair")
 	Sample.Spread(StructLanes.Constructed, "Pair", 8)(1).payload is (8, 2, -1, -2)
 	Sample.Spread(Offsets, "Pair", 8).First.payload is (8, 2, -1, -2)
-	Sample.Spread(Offsets, "Pair", 8).Length is 4 and (Sample.Spread(Offsets, "Pair", 8)(1).texts is ("lanes3_real"))
+	Sample.Spread(Offsets, "Pair", 8).Length is 4 and Sample.Spread(Offsets, "Pair", 8)(1).texts is ("lanes3_real")
 	call.payload(5 + call.payload(3))
 Names(call InstructionEntry) Texts
 	Sample.Names(Made) is ("offset_real", "offset_imaginary", "count")

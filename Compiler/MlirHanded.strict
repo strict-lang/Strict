@@ -21,20 +21,20 @@ First(register Number) Number
 	let reuse = LoadReuse(steps)
 	for Range(position + 1, steps.Length)
 		let isChecked = steps(value).kind is InstructionType.CheckError
-		if (register is in reuse.Reads(steps(value))) and (isChecked is false)
+		if register is in reuse.Reads(steps(value)) and isChecked is false
 			return value
-		if IsFlow(steps(value).kind) or (reuse.Written(steps(value)) is register)
+		if IsFlow(steps(value).kind) or reuse.Written(steps(value)) is register
 			return -1
 	-1
 IsFlow(kind Number) Boolean
 	Built.IsFlow(InstructionType.Return)
 	Built.IsFlow(InstructionType.Invoke) is false
-	(kind >= InstructionType.Return) and (kind <= InstructionType.JumpToIdIfTrue)
+	kind >= InstructionType.Return and kind <= InstructionType.JumpToIdIfTrue
 IsPlain(at Number) Boolean
 	Built.IsPlain(1)
 	Built.IsPlain(0) is false
 	let tails = MlirTails(function, at)
-	tails.IsCall and (tails.IsTail is false) and (MlirWholeFunction(function).IsInsideLoop(at) is false)
+	tails.IsCall and tails.IsTail is false and MlirWholeFunction(function).IsInsideLoop(at) is false
 IsReference Boolean
 	Built.IsReference
 	Area.IsReference is false
@@ -56,7 +56,7 @@ Writers Numbers
 	mutable writers = List(Mutable(Number))
 	for LoadReuse(steps).Reads(steps(position))
 		let writer = MlirKinds(function).Writer(position, value)
-		if (writer >= 0) and (MlirHanded(function, writer).Reader is position)
+		if writer >= 0 and MlirHanded(function, writer).Reader is position
 			writers.Add(writer)
 	writers
 Reloaded(writer Number) Texts

@@ -26,7 +26,7 @@ Part(name Text) Texts
 Deleted(path Text)
 	Intermediates(Logger).Deleted("Compiler/output/missing") is not Error
 	let started = Process.Elapsed
-	for as long as File(path).Exists and (Process.Elapsed - started < 5)
+	for as long as File(path).Exists and Process.Elapsed - started < 5
 		File(path).Delete
 		if File(path).Exists
 			Process.Wait(0.1)
@@ -45,8 +45,8 @@ Replaced(executable Text, target Text) Text
 	File(target).Exists then Used(executable, executable) else Running(logger, executable).Restarted(old)
 Free(executable Text) Text
 	Intermediates(Logger).Free("Compiler/output/Missing/A.exe") is "Compiler/output/Missing/A.old.exe"
-	(IsWindows is false) or (Process.Find(Process.Variable("ComSpec")).Started(Holding) is 0)
-	(IsWindows is false) or (Intermediates(Logger).Free(Held.base + ".exe") is Held.base + ".old2.exe")
+	IsWindows is false or Process.Find(Process.Variable("ComSpec")).Started(Holding) is 0
+	IsWindows is false or Intermediates(Logger).Free(Held.base + ".exe") is Held.base + ".old2.exe"
 	let pattern = Path(executable).FileName.text.Replace(".exe", ".old*.exe")
 	for Directory.Files(Path(executable).PathOnly.text, pattern)
 		File(value).Delete

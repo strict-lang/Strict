@@ -16,17 +16,17 @@ Selection Text
 	TestRequest(("a.strict", ".", "Merged")).Selection is "Merged"
 	TestRequest(("a.strict", ".", "shown")).Selection is "*"
 	TestRequest(("Math", ".", "native")).Selection is "*"
-	if (Directory.Exists(rest(0)) and ("native" is not in Options)) or IsWhole
+	if Directory.Exists(rest(0)) and "native" is not in Options or IsWhole
 		return ""
 	for Options
-		if (value is not in Flags) and (value.StartsWith("rounds:") is false)
+		if value is not in Flags and value.StartsWith("rounds:") is false
 			return value
 	"*"
 Methods Texts
 	TestRequest(("a.strict", ".", "unit", "rounds:1/4", "Area")).Methods is ("Area")
 	TestRequest(("a.strict", ".", "-")).Methods.Length is 0
 	for Options
-		if (value is not in Flags + "unit" + "-") and (value.StartsWith("rounds:") is false)
+		if value is not in Flags + "unit" + "-" and value.StartsWith("rounds:") is false
 			value
 Part Text
 	TestRequest(("a.strict", ".", "unit", "rounds:1/4")).Part is "1/4"
@@ -49,13 +49,13 @@ IsMutating Boolean
 	TestRequest(("a.strict", ".", "unit")).IsMutating is false
 	TestRequest(("a.strict", ".", "shown")).IsMutating is false
 	TestRequest(("a.strict", ".", "unit", "mutations")).IsMutating
-	("mutations" is in Options) or (("unit" is not in Options) and ("shown" is not in Options))
+	"mutations" is in Options or "unit" is not in Options and "shown" is not in Options
 IsWhole Boolean
 	TestRequest(("a.strict", ".", "mutations")).IsWhole is false
 	TestRequest(("a.strict", ".", "unit")).IsWhole
 	TestRequest(List(Text) + "a.strict").IsWhole is false
 	TestRequest(("a.strict", ".", "-")).IsWhole
-	("unit" is in Options) or ("-" is in Options)
+	"unit" is in Options or "-" is in Options
 Message Text
 	TestRequest(("a.strict", ".", "mutations")).Message is ""
 	TestRequest((".", ".", "native", "--no-recursive")).Message is ""
@@ -64,7 +64,7 @@ Message Text
 		return "Only one test file or method can be selected"
 	if methods.Length is 0
 		return ""
-	if Directory.Exists(rest(0)) or ("unit" is in Options)
+	if Directory.Exists(rest(0)) or "unit" is in Options
 		return "A functional test method requires one explicit file"
 	let names = TypeShape(File(rest(0)).ReadLines).MethodScope.names
 	methods.First is in names then "" else "MethodNotFound: " + methods.First + " in " + rest(0)

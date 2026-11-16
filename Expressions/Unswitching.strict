@@ -50,11 +50,11 @@ IsHoistable(at Number) Boolean
 	Mixed.IsHoistable(2)
 	let callees = Callees(lines, folder)
 	let condition = at + 1
-	let isLoop = lines(at).TrimStart.StartsWith("for ") and (condition < lines.Length)
-	if (isLoop is false) or (lines(condition).TrimStart.StartsWith("if ") is false) or (Names(at).Length is 0)
+	let isLoop = lines(at).TrimStart.StartsWith("for ") and condition < lines.Length
+	if isLoop is false or lines(condition).TrimStart.StartsWith("if ") is false or Names(at).Length is 0
 		return false
-	let isBody = (callees.BlockEnd(condition) is callees.BlockEnd(at)) and IsStatements(condition)
-	isBody and (BodyParser.Indent(lines(condition)) is BodyParser.Indent(lines(at)) + 1) and IsMonotone(at)
+	let isBody = callees.BlockEnd(condition) is callees.BlockEnd(at) and IsStatements(condition)
+	isBody and BodyParser.Indent(lines(condition)) is BodyParser.Indent(lines(at)) + 1 and IsMonotone(at)
 IsStatements(condition Number) Boolean
 	Blurring.IsStatements(3)
 	Unswitching(Nested + Checked + "\t\t\t\tbitmap.Colors(pixel)", "ImageProcessing").IsStatements(3) is false
@@ -75,8 +75,8 @@ IsIndependent(tokens Texts, checked Texts) Boolean
 	Blurring.IsIndependent(Tokenizer("log.Write(sum)").Tokens, ("pixel", "x")) is false
 	Blurring.IsIndependent(Tokenizer("let pixel = 1").Tokens, ("pixel", "x")) is false
 	let isDeclared = tokens.First is in ("let", "mutable")
-	let isAssigned = isDeclared or (tokens.Length > 1) and (tokens(1) is "=")
-	isAssigned and (Monotone(List(Text) + (isDeclared then tokens(1) else tokens.First)).Mentions(checked) is false)
+	let isAssigned = isDeclared or tokens.Length > 1 and tokens(1) is "="
+	isAssigned and Monotone(List(Text) + (isDeclared then tokens(1) else tokens.First)).Mentions(checked) is false
 Names(at Number) Texts
 	Blurring.Names(2) is ("y", "x")
 	Blurring.Names(3).Length is 0
@@ -88,12 +88,12 @@ Names(at Number) Texts
 	let names = parser.IsNamed then parser.IteratorNames else List(Text) + "value"
 	let iterables = Iterables(at)
 	let isFree = Monotone(names + LoopVariables).Mentions(Tokenizer(Text.Combine(iterables)).Tokens) is false
-	(iterables.Length is names.Length) and isFree then names else List(Text)
+	iterables.Length is names.Length and isFree then names else List(Text)
 Iterables(at Number) Texts
 	Blurring.Iterables(2) is ("Range(-1, 2)", "Range(-1, 2)")
 	Single.Iterables(1) is ("Range(-1, 2)")
 	Single.Iterables(2).Length is 0
-	Blurring.Iterables(10).Length is 0 and (Blurring.Names(10).Length is 0)
+	Blurring.Iterables(10).Length is 0 and Blurring.Names(10).Length is 0
 	let line = at < lines.Length then lines(at).TrimStart else ""
 	if line.StartsWith("for ") is false
 		return List(Text)
@@ -107,7 +107,7 @@ Bounds(at Number, position Number) Texts
 	Unswitching(List(Text) + "\tfor Range(1, 2).Reverse", "").Bounds(0, 0).Length is 0
 	let iterables = Iterables(at)
 	let iterable = position < iterables.Length then iterables(position) else ""
-	if (iterable.StartsWith("Range(") is false) or (iterable.EndsWith(")") is false)
+	if iterable.StartsWith("Range(") is false or iterable.EndsWith(")") is false
 		return List(Text)
 	let parts = Callees(lines, folder).Parts(iterable.Substring(6, iterable.Length - 7))
 	parts.Length is 2 then parts else List(Text)
@@ -119,7 +119,7 @@ Call(at Number) Texts
 	let line = lines(at).TrimStart
 	let text = line.StartsWith("if ") then line.Substring(3, line.Length - 3) else ""
 	let open = text.IndexOf("(")
-	if (open < 1) or (text.EndsWith(")") is false) or (Callees(lines, folder).Closing(text, open) is not text.Length - 1)
+	if open < 1 or text.EndsWith(")") is false or Callees(lines, folder).Closing(text, open) is not text.Length - 1
 		return List(Text)
 	let dot = text.Substring(0, open).IndexOf(".")
 	let named = List(Text) + (dot < 0 then "" else text.Substring(0, dot)) + text.Substring(dot + 1, open - dot - 1)
@@ -132,7 +132,7 @@ LoopNames(at Number) Texts
 	let loops = Names(at)
 	mutable names = List(Mutable(Text))
 	for Arguments(at)
-		if (value is in loops) and (value is not in names) and (Bounds(at, loops.Index(value)).Length is 2)
+		if value is in loops and value is not in names and Bounds(at, loops.Index(value)).Length is 2
 			names.Add(value)
 	names
 Arguments(at Number) Texts
@@ -152,10 +152,10 @@ IsMonotone(at Number) Boolean
 	let call = Call(at + 1)
 	let callee = call.Length < 3 then List(Text) else Callees(lines, folder).Lines(call(0), call(1), at)
 	let parameters = callee.Length < 2 then List(Text) else HeaderTokens(Tokenizer(callee.First).Tokens).ParameterNames
-	if (callee.Length < 2) or (parameters.Length is not call.Length - 2)
+	if callee.Length < 2 or parameters.Length is not call.Length - 2
 		return false
 	let bound = Bound(at, parameters)
-	(bound.Length > 0) and Monotone(bound).IsBounded(Monotone(bound).Condition(callee.Slice(1, callee.Length - 1)))
+	bound.Length > 0 and Monotone(bound).IsBounded(Monotone(bound).Condition(callee.Slice(1, callee.Length - 1)))
 Bound(at Number, parameters Texts) Texts
 	Blurring.Bound(2, ("pixel", "x", "y")) is ("x", "y")
 	Blurring.Bound(3, ("pixel", "x", "y")).Length is 0

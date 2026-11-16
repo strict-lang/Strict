@@ -11,7 +11,7 @@ Of(original VmValue) VmValue
 	Single.Of(VmValue.OfList(VmValue.OfNumber(0.1), VmValue.OfNumber(1))).items.First.number is 0.10000000149011612
 	Single.Of(VmValue.OfError("a")).kind is "Strict/Error"
 	Rounding(8).Of(VmValue("Strict/Byte", 127.5, "", List(VmValue))).number is 127
-	if (bits is in (0, Number.DoubleBits)) or (original.kind is in VmValue.ErrorKinds)
+	if bits is in (0, Number.DoubleBits) or original.kind is in VmValue.ErrorKinds
 		return original
 	if original.items.Length is 0
 		return VmValue(original.kind, Rounded(original.number), original.text, original.items)
@@ -25,8 +25,8 @@ Rounded(number Number) Number
 	Rounding(8).Rounded(-1) is 255
 	Single.Rounded(0.1) is 0.10000000149011612
 	(Single.Of(VmValue.OfList((VmValue.OfNumber(0.1), VmValue.OfNumber(1)))).items.First.number is 0.1) is false
-	(Single.Of(VmValue("Strict/Error", 0.1, "", List(VmValue))).number is 0.1) and (Single.bits is 32)
-	(Single.Of(VmValue("Strict/ErrorWithValue", 0.1, "", List(VmValue))).number is 0.1) and (Single.bits is 32)
+	Single.Of(VmValue("Strict/Error", 0.1, "", List(VmValue))).number is 0.1 and Single.bits is 32
+	Single.Of(VmValue("Strict/ErrorWithValue", 0.1, "", List(VmValue))).number is 0.1 and Single.bits is 32
 	bits is 8 then (number.Floor % Byte.Values + Byte.Values) % Byte.Values else number.Rounded(bits)
 Bits(member MemberEntry, natives Natives) Number
 	Single.Bits(Natives.Width, Natives.Shapes) is 64
@@ -34,7 +34,7 @@ Bits(member MemberEntry, natives Natives) Number
 	Single.Bits(MemberEntry("x", "Strict/Byte", List(InstructionEntry), false, 32), Bytes) is 32
 	if member.Bits > 0
 		return member.Bits
-	if (member.typeName is in PlainTypes) or member.typeName.StartsWith("Strict/List")
+	if member.typeName is in PlainTypes or member.typeName.StartsWith("Strict/List")
 		return Number.DoubleBits
 	if member.typeName.StartsWith("Strict/Dictionary")
 		return Number.DoubleBits
@@ -43,22 +43,22 @@ Bits(member MemberEntry, natives Natives) Number
 	own is 0 then Number.DoubleBits else own
 RoundedValue(member MemberEntry, raw VmValue, natives Natives) VmValue
 	Single.RoundedValue(Natives.Width, VmValue.OfNumber(3), Natives.Shapes).number is 3
-	if (raw.kind is in ("Text", "Boolean", "None")) or IsPlainStruct(member, raw)
+	if raw.kind is in ("Text", "Boolean", "None") or IsPlainStruct(member, raw)
 		return raw
-	if (member.Bits is 0) and (member.typeName is "Strict/Number")
+	if member.Bits is 0 and member.typeName is "Strict/Number"
 		return raw
 	let bitWidth = Bits(member, natives)
 	bitWidth is in (0, Number.DoubleBits) then raw else Rounding(bitWidth).Of(raw)
 IsPlainStruct(member MemberEntry, raw VmValue) Boolean
 	Single.IsPlainStruct(Natives.Width, VmValue.OfNumber(3)) is false
-	if (member.Bits > 0) or (raw.kind is "List") or (raw.items.Length > 1)
-		return (member.Bits is 0) and ((raw.kind is "List") or (raw.items.Length > 1))
+	if member.Bits > 0 or raw.kind is "List" or raw.items.Length > 1
+		return member.Bits is 0 and (raw.kind is "List" or raw.items.Length > 1)
 	raw.items.Length is 1 then raw.items.First.kind is in ("Text", "Boolean", "None", "List") else false
 Built(type TypeEntry, call Invocation, natives Natives, isStruct Boolean) VmValue
 	Single.Built(Natives.Single, Natives.NewSingle, Natives.Shapes, false).number is 0.10000000149011612
 	Single.Built(Natives.Shape, Natives.NewShape, Natives.Shapes, true).kind is "Strict/Shape"
 	Single.Built(Natives.Shape, Natives.NewShape, Natives.Shapes, false).number is 3
-	if (type.members.Length is 0) or (isStruct is false)
+	if type.members.Length is 0 or isStruct is false
 		return Wrapped(type, call)
 	VmValue(call.TypeName, 0, "", Members(type, call, natives))
 Wrapped(type TypeEntry, call Invocation) VmValue
@@ -66,7 +66,7 @@ Wrapped(type TypeEntry, call Invocation) VmValue
 	Single.Wrapped(Natives.Degree, Natives.NewDegree).number is 3
 	Single.Wrapped(Counter, Invocation(Natives.NewDegree.entry, List(VmValue), VmValue.None)).number is 7
 	(Single.Wrapped(Natives.Single, Natives.NewSingle).number is 0.1) is false
-	(Single.Wrapped(Empty, Natives.NewSingle).number is 0.1) and (Single.bits is 32)
+	Single.Wrapped(Empty, Natives.NewSingle).number is 0.1 and Single.bits is 32
 	Single.Wrapped(Empty, Invocation(Natives.NewDegree.entry, List(VmValue), VmValue.None)).kind is "None"
 	if call.Arguments.Length is 0
 		return type.members.Length is 0 then VmValue.None else Natives(List(TypeEntry)).Initial(type.members.First)
@@ -76,8 +76,8 @@ Wrapped(type TypeEntry, call Invocation) VmValue
 Members(type TypeEntry, call Invocation, natives Natives) List(VmValue)
 	Single.Members(Natives.Shape, Natives.NewShape, Natives.Shapes).First.number is 3
 	Single.Members(Natives.Shape, Swapped, Natives.Shapes).First.number is 5
-	(Single.Members(Natives.Byted, ByteCall, Bytes)(1).kind is "None") and (Single.bits is 32)
-	(Single.Members(Natives.Byted, ByteCall, Bytes).First.number is 3) and (Single.bits is 32)
+	Single.Members(Natives.Byted, ByteCall, Bytes)(1).kind is "None" and Single.bits is 32
+	Single.Members(Natives.Byted, ByteCall, Bytes).First.number is 3 and Single.bits is 32
 	Single.Members(Natives.Shape, ByteCall, Natives.Shapes)(1).number is 9
 	let arguments = call.Arguments
 	let names = arguments.Length > 0 then call.ParameterNames else List(Text)

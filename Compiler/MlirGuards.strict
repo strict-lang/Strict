@@ -73,13 +73,13 @@ Sited(position Number) Texts
 	Shifts.Sited(5) is ("?")
 	let entry = function.method.instructions(position)
 	let kind = entry.kind
-	if (kind > InstructionType.ArithmeticSeparator) and (kind < InstructionType.BinaryOperatorsSeparator)
+	if kind > InstructionType.ArithmeticSeparator and kind < InstructionType.BinaryOperatorsSeparator
 		return Origins(position, entry.payload(1)) + Origins(position, entry.payload(2))
 	if kind is InstructionType.IndexCall
 		return Origins(position, entry.payload(1))
 	if kind is InstructionType.LoopBegin
 		return Origins(position, entry.payload(0))
-	let isFloor = (kind is InstructionType.Invoke) and (PayloadDecoder(entry).Text(2) is "Floor")
+	let isFloor = kind is InstructionType.Invoke and PayloadDecoder(entry).Text(2) is "Floor"
 	isFloor then Floored(position, entry) else List(Text) + "?"
 Floored(position Number, entry InstructionEntry) Texts
 	Shifts.Named is ExactNamed
@@ -103,7 +103,7 @@ IsKnown(slots Texts) Boolean
 	if function.Guarded < 0
 		return false
 	for slots
-		if (value.StartsWith("%r") is false) or ("?" is in Origins(at, value.Substring(2, value.Length - 2) to Number))
+		if value.StartsWith("%r") is false or "?" is in Origins(at, value.Substring(2, value.Length - 2) to Number)
 			return false
 	true
 IsWhole(slot Text) Boolean
@@ -111,7 +111,7 @@ IsWhole(slot Text) Boolean
 	Reading.IsWhole("%r5") is false
 	MlirGuards(Nested, 10).IsWhole("%r6") is false
 	MlirGuards(Nested, 10).IsKnown(List(Text) + "ab6") is false
-	IsKnown(List(Text) + slot) and ("/" is not in Origins(at, slot.Substring(2, slot.Length - 2) to Number))
+	IsKnown(List(Text) + slot) and "/" is not in Origins(at, slot.Substring(2, slot.Length - 2) to Number)
 Parameters Texts
 	Shifts.Parameters is ("offset")
 	mutable names = List(Mutable(Text))
@@ -142,11 +142,11 @@ IsSingle(position Number) Boolean
 	Shifts.IsSingle(6)
 	Shifts.IsSingle(5) is false
 	let entry = function.method.instructions(position)
-	if (function.Guarded < 0) or (entry.kind is not InstructionType.IndexCall)
+	if function.Guarded < 0 or entry.kind is not InstructionType.IndexCall
 		return false
 	let name = entry.texts(0)
 	let isRows = MlirDeviceRows(function, position).IsRows(MlirKinds(function).VariableKind(position, name))
-	(isRows is false) and (MlirKinds(function).Stored(position, name) < function.Guarded)
+	isRows is false and MlirKinds(function).Stored(position, name) < function.Guarded
 Mask Number
 	Shifts.Mask > 0
 	MlirGuards(MlirFunction(Shifted, Float = "f64"), 2).Mask is 0
@@ -156,8 +156,8 @@ Mask Number
 	mutable mask = 0
 	let divisors = MlirPassed(MlirFunction(function, Guarded = at), at).Divisors
 	for MlirGpuCheck(function, at).Free
-		mask = (value is in Parameters) or (value is in Reads) then mask + 2 ^ index else mask
-		mask = (index < MaximumDivisors) and (value is in divisors) then mask + 2 ^ (DivisorShift + index) else mask
+		mask = value is in Parameters or value is in Reads then mask + 2 ^ index else mask
+		mask = index < MaximumDivisors and value is in divisors then mask + 2 ^ (DivisorShift + index) else mask
 	mask
 Kernel Texts
 	Text.Combine(Shifts.Kernel).IndexOf("_gpu2sx(") > 0

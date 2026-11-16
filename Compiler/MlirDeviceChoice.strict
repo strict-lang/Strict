@@ -17,11 +17,11 @@ IsChoice Boolean
 	mutable loads = 0
 	for Range(at + 1, function.method.LoopEndOf(at))
 		let entry = function.method.instructions(value)
-		if (entry.kind is InstructionType.LoopBegin) or (entry.kind is InstructionType.InvokeWriteToList)
+		if entry.kind is InstructionType.LoopBegin or entry.kind is InstructionType.InvokeWriteToList
 			return false
-		if (entry.kind is InstructionType.LoadVariableToRegister) and (entry.texts(0) is in names)
+		if entry.kind is InstructionType.LoadVariableToRegister and entry.texts(0) is in names
 			loads = loads + 1
-	(names.Length > 0) and (loads is names.Length)
+	names.Length > 0 and loads is names.Length
 Chosen Texts
 	Maximum.Chosen is ("largest")
 	Summing.Chosen.Length is 0
@@ -37,11 +37,11 @@ IsUpdate(store Number) Boolean
 	Maximum.IsUpdate(11)
 	Summing.IsUpdate(10) is false
 	let call = function.method.instructions(store - 1)
-	if (call.kind is not InstructionType.Invoke) or (call.payload(0) is not function.method.instructions(store).payload(0))
+	if call.kind is not InstructionType.Invoke or call.payload(0) is not function.method.instructions(store).payload(0)
 		return false
 	let callees = MlirModule(function.types, "").Called(function, store - 1)
 	let isPassed = IsPassed(store - 1, function.method.instructions(store).texts(0))
-	(callees.Length is 1) and isPassed and IsChoosing(callees.First)
+	callees.Length is 1 and isPassed and IsChoosing(callees.First)
 IsPassed(call Number, name Text) Boolean
 	Maximum.IsPassed(10, "largest")
 	Maximum.IsPassed(10, "index") is false
@@ -49,19 +49,19 @@ IsPassed(call Number, name Text) Boolean
 	for PayloadDecoder(entry).Arguments
 		let writer = MlirDeviceSums(function, at).Writer(call, value)
 		let loaded = writer >= 0 then function.method.instructions(writer) else entry
-		if (loaded.kind is InstructionType.LoadVariableToRegister) and (loaded.texts(0) is name)
+		if loaded.kind is InstructionType.LoadVariableToRegister and loaded.texts(0) is name
 			return true
 	false
 IsChoosing(callee MlirFunction) Boolean
 	Maximum.IsChoosing(Chooser)
 	Maximum.IsChoosing(MlirGpuCheck.Absolute) is false
 	let parameters = callee.method.parameters
-	if (parameters.Length is not 2) or (parameters(0).typeName is not "Strict/Number")
+	if parameters.Length is not 2 or parameters(0).typeName is not "Strict/Number"
 		return false
 	for callee.method.instructions
-		if (value.kind is not in Allowed) or (IsPlain(value, parameters) is false)
+		if value.kind is not in Allowed or IsPlain(value, parameters) is false
 			return false
-	(parameters(1).typeName is "Strict/Number") and IsCompared(callee)
+	parameters(1).typeName is "Strict/Number" and IsCompared(callee)
 IsPlain(entry InstructionEntry, parameters List(MemberEntry)) Boolean
 	Maximum.IsPlain(GpuChoiceSamples.Larger.instructions(0), GpuChoiceSamples.Larger.parameters)
 	Maximum.IsPlain(InstructionEntry.LoadNumber(0, 1), GpuChoiceSamples.Larger.parameters) is false
@@ -70,19 +70,19 @@ IsPlain(entry InstructionEntry, parameters List(MemberEntry)) Boolean
 	if entry.kind is not in Moves
 		return true
 	let name = entry.texts(0)
-	name.StartsWith("conditional") or (name is parameters(0).Name) or (name is parameters(1).Name)
+	name.StartsWith("conditional") or name is parameters(0).Name or name is parameters(1).Name
 IsCompared(callee MlirFunction) Boolean
 	Maximum.IsCompared(Chooser)
 	Maximum.IsCompared(MlirFunction(Choosing.types, GpuChoiceSamples.Chosen, GpuChoiceSamples.Largest)) is false
 	mutable compared = List(Mutable(Text))
 	for callee.method.instructions
-		if (value.kind is InstructionType.LessThan) or (value.kind is InstructionType.GreaterThan)
+		if value.kind is InstructionType.LessThan or value.kind is InstructionType.GreaterThan
 			let position = index
 			for (value.payload(1), value.payload(2))
 				let writer = MlirDeviceSums(callee, -1).Writer(position, value)
 				compared.Add(writer >= 0 then callee.method.instructions(writer).texts(0) else "")
 	let names = (callee.method.parameters(0).Name, callee.method.parameters(1).Name)
-	(compared is names) or (compared is names.Reverse)
+	compared is names or compared is names.Reverse
 Reduced(end Number) Texts
 	Maximum.Reduced(12).First is "    %d12c0r0 = llvm.load %v_largest : !llvm.ptr -> f64"
 	Text.Combine(Maximum.Reduced(12)).IndexOf("@strict_device_shuffle(%d12c0r4, %d12o0r4)") > 0

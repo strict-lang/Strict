@@ -10,7 +10,7 @@ Issue(node SyntaxNode, scope Scope, current Scope) Text
 	Issues(0).StartsWith("ListToTextMustBeExplicit") and Issues(1).StartsWith("ListToTextMustBeExplicit")
 	Passes is ("", "", "", "", "")
 	Sizing.Issue(SyntaxNode("Call", "+"), Named, Named) is ""
-	if (node.Kind is not "Binary") or (node.text is not "+")
+	if node.Kind is not "Binary" or node.text is not "+"
 		return ""
 	let isText = inference.TypeOf(node.children(0), scope, current) is "Text"
 	let isList = ListFits(inference.types).IsList(isText then inference.TypeOf(node.children.Last, scope, current) else "")

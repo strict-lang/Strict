@@ -41,7 +41,7 @@ Constructed(entry InstructionEntry, typeName Text) Texts
 	MlirInstances(Shapes, 1).Constructed(Built, "Strict/Shape").Last is "    llvm.store %t1of, %r1 : f64, !llvm.ptr"
 	MlirInstances(Shapes, 1).Constructed(Built, "Strict/Character").Length is 2
 	Text.Combine(MlirInstances(Shapes, 1).Constructed(Built, "Strict/Error")).IndexOf("@strict_error_bits(") > 0
-	if (TypeEntry.ShortName(typeName) is "File") or (MlirLayout(function).IsStruct(typeName) is false)
+	if TypeEntry.ShortName(typeName) is "File" or MlirLayout(function).IsStruct(typeName) is false
 		return function.Copied("%r" + PayloadDecoder(entry).Arguments.First, "%r" + entry.payload(0), Temp("o"))
 	let owner = function.TypeOf(typeName)
 	let memory = MlirMemory(function, position)
@@ -88,8 +88,8 @@ Initialized(owner TypeEntry, member MemberEntry, slot Text, prefix Text, creatin
 	MlirInstances(Nesting, 0).Initialized(Outer, Outer.members.First, "%s", "0", List(Text)).Length < 5
 	MlirInstances(Nesting, 0).Initialized(Outer, Outer.members.First, "%s", "0", ("Strict/Shape")).Last is Written
 	let memberType = function.TypeOf(member.typeName)
-	let isNested = MlirLayout(function).IsStruct(member.typeName) and (memberType.members.Length > 0)
-	let isFresh = isNested and (member.initial.Length is 0) and (memberType.Name is not in creating)
+	let isNested = MlirLayout(function).IsStruct(member.typeName) and memberType.members.Length > 0
+	let isFresh = isNested and member.initial.Length is 0 and memberType.Name is not in creating
 	if isFresh and MlirEmbedded(function).IsInline(owner, member)
 		return MlirEmbedded(function).Inlined(value, memberType, slot, prefix + "_", creating)
 	let fresh = isFresh then Fresh(memberType, slot, prefix + "_", creating) else List(Text)
@@ -122,7 +122,7 @@ Unpacked Texts
 	MlirInstances(Looping, 0).Unpacked.Length is 10
 	MlirInstances(Looping, 0).Unpacked.Last is "  ^unpacked:"
 	MlirInstances(Sizing, 0).Unpacked.Length < MlirInstances(Nesting, 0).Unpacked.Length
-	if (MlirLayout(function).IsStruct(function.type.Name) is false) or (Stored(function.type).Length is 0)
+	if MlirLayout(function).IsStruct(function.type.Name) is false or Stored(function.type).Length is 0
 		return Aliased
 	let memory = MlirMemory(function, -1)
 	mutable lines = List(Text) + function.Load("%self", "%instance") + SelfGuard + memory.Pointer("%self", "self")
@@ -171,7 +171,7 @@ IsReferenced(name Text) Boolean
 	MlirInstances(MlirLanes.Collecting, 0).IsReferenced("colors")
 	MlirInstances(Shapes, 0).IsReferenced("width") is false
 	for function.method.instructions
-		if (value.kind is in (InstructionType.IndexCall, InstructionType.LoadVariableToRegister)) and (value.texts(0) is name)
+		if value.kind is in (InstructionType.IndexCall, InstructionType.LoadVariableToRegister) and value.texts(0) is name
 			return true
 	false
 Constants Texts

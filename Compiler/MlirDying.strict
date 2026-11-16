@@ -25,7 +25,7 @@ Seed(name Text) Text
 	MlirDying(Seeding, 0).Seed("other") is ""
 	MlirDying(Seeding, 0).Seed("start") is ""
 	for function.method.instructions
-		if (value.kind is InstructionType.StoreRegisterToVariable) and (value.texts(0) is name)
+		if value.kind is InstructionType.StoreRegisterToVariable and value.texts(0) is name
 			let loaded = MlirDying(function, index).Loaded(value.payload(0))
 			if loaded is in function.method.ParameterNames
 				return loaded
@@ -50,7 +50,7 @@ IsReleased(name Text, seed Text) Boolean
 	MlirDying(Sweeping, 9).IsReleased("moved", "") is false
 	MlirOwned(Sweeping, 9).Stored(Tripled(9)).Length is 2
 	let isOwned = MlirOwned(function, position).IsOwned(name, 0, seed) or MlirCarried(function).IsCarried(name)
-	isOwned and (IsSwept(name) is false)
+	isOwned and IsSwept(name) is false
 Mutated Texts
 	Dropping.Mutated is ("moved")
 	MlirDying(Seeding, 4).Mutated.Length is 0
@@ -61,7 +61,7 @@ Mutated Texts
 		if value.kind is InstructionType.StoreRegisterToVariable
 			stored = stored + value.texts(0)
 	for stored
-		if ((stored.Index(value) is index) and (stored.Count(value) > 1)) and MlirOwned(function, 0).IsOwned(value)
+		if stored.Index(value) is index and stored.Count(value) > 1 and MlirOwned(function, 0).IsOwned(value)
 			value
 Returned(entry InstructionEntry) Texts
 	Dropping.Returned(Dropped).First is "    %t10d0 = llvm.load %v_moved : !llvm.ptr -> f64"
@@ -71,7 +71,7 @@ Returned(entry InstructionEntry) Texts
 	let kept = Loaded(entry.payload(0))
 	mutable lines = List(Text)
 	for Mutated
-		if (value is not kept) and (IsSwept(value) is false)
+		if value is not kept and IsSwept(value) is false
 			let old = returned + "d" + index
 			let dead = "    func.call @strict_rc_dead(" + old + ", " + Survivor + ") : (f64, f64) -> ()"
 			lines = lines + function.Load(old, "%v_" + value) + dead
@@ -91,6 +91,6 @@ Adder(name Text) Text
 	MlirDying(MlirAppended.Pushed.function, 3).Adder("text") is "strict_list_push"
 	let isOwned = MlirOwned(function, position).IsOwned(name) or MlirCarried(function).IsCarried(name)
 	let isFilled = isOwned then MlirAppended(function, position).IsFilled(name) else false
-	if (name is "forResult") or name.StartsWith("listResult") or isFilled
+	if name is "forResult" or name.StartsWith("listResult") or isFilled
 		return "strict_list_push"
 	isOwned then "strict_list_add_owned" else "strict_list_add"

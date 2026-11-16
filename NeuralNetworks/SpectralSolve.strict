@@ -18,7 +18,7 @@ Reduced(rows Numbers, pivot Number) Numbers
 	let width = right.Length + 1
 	let start = pivot * width
 	let diagonal = rows(start + pivot)
-	if (diagonal.IsFinite is false) or (diagonal.Absolute < 0.000000000001)
+	if diagonal.IsFinite is false or diagonal.Absolute < 0.000000000001
 		return Error("Singular spectral fit")
 	for rows.Length
 		let row = (index / width).Floor

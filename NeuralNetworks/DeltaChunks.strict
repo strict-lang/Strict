@@ -40,7 +40,7 @@ Position(token Number, head Number, part Number) Number
 	DeltaChunks(Probe, groups = 2).Position(1, 1, 2) is 22
 	Probe.Position(1, 1, 2) is 14
 	Probe.Position(2, 1, 1) is 18
-	let offset = part < 2 then part * groups + (head % groups) else 2 * groups + head
+	let offset = part < 2 then part * groups + head % groups else 2 * groups + head
 	(token * (2 * groups + heads) + offset) * size
 Length(start Number) Number
 	Probe.Read.reads(10).IsNearlyEqual(DeltaChunks(Probe, chunk = 4).Read.reads(10))
@@ -71,7 +71,7 @@ Paired(part Number) Numbers
 		let token = (index / chunk).Floor % tokens
 		let head = (index / chunk / tokens).Floor
 		let other = token - (token % chunk) + (index % chunk)
-		let isPaired = (other < token) or ((part is 0) and (other is token))
+		let isPaired = other < token or part is 0 and other is token
 		mutable sum = 0
 		for isPaired then size else 0
 			sum = sum + keyed(Position(token, head, part) + index) * keyed(Position(other, head, 1) + index)
@@ -87,7 +87,7 @@ Inverted(result Numbers, power Numbers, span Number) Numbers
 	DeltaChunks(Probe, chunk = 4).Inverted((1, 2), (3, 4), 3) is (1, 2)
 	Probe.Inverted((1, 0, 2, 1), (1, 0, 2, 1), 1) is (2, 0, 8, 2)
 	Probe.Inverted((1, 2), (3, 4), 2) is (1, 2)
-	if (span >= chunk) or (span >= tokens)
+	if span >= chunk or span >= tokens
 		return result
 	let squared = Multiplied(power, power, 0)
 	Inverted(Multiplied(result, squared, 1), squared, span * 2)

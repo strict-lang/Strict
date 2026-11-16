@@ -52,7 +52,7 @@ Grown Boolean
 	Halving.Grown is false
 	Quads.Grown
 	for function.method.instructions
-		if (value.kind is in Bounded) or (value.kind is InstructionType.LoopBegin)
+		if value.kind is in Bounded or value.kind is InstructionType.LoopBegin
 			return true
 	false
 At(at Number) Texts
@@ -78,7 +78,7 @@ Counted(at Number) Texts
 Loaded(at Number) Texts
 	let entry = function.method.instructions(at)
 	let parameter = Parameter(entry.texts(0))
-	if (parameter < 0) or (entry.texts(0) is in ("value", "index"))
+	if parameter < 0 or entry.texts(0) is in ("value", "index")
 		return List(Text)
 	let input = "%t" + position + "wl" + parameter
 	List(Text) + ("    " + Name("wb", at) + " = llvm.intr.fabs(" + input + ") : (f64) -> f64")
@@ -87,7 +87,7 @@ Combined(at Number) Texts
 	GatedSum.Combined(13).First is "    %t4wb13 = arith.addf %t4whlimit, %t4wn10 : f64"
 	let entry = function.method.instructions(at)
 	let carried = Carried(at)
-	if (entry.kind is not InstructionType.Multiply) and (carried >= 0)
+	if entry.kind is not InstructionType.Multiply and carried >= 0
 		return Accumulated(at, carried)
 	let operation = entry.kind is InstructionType.Multiply then "mulf" else "addf"
 	let factors = Source(entry.payload(1), at) + ", " + Source(entry.payload(2), at)
@@ -128,14 +128,14 @@ Source(register Number, at Number) Text
 	let entry = function.method.instructions(writer)
 	if entry.kind is InstructionType.LoadVariableToRegister
 		return Variable(entry, writer)
-	((entry.kind is in Bounded) or (entry.kind is in Constants)) then Name("wb", writer) else "%t" + position + "whlimit"
+	entry.kind is in Bounded or entry.kind is in Constants then Name("wb", writer) else "%t" + position + "whlimit"
 Variable(entry InstructionEntry, at Number) Text
 	if entry.texts(0) is in ("value", "index")
 		return Name("wn", Loop(at))
 	if Parameter(entry.texts(0)) >= 0
 		return Name("wb", at)
 	let store = StoreBefore(entry.texts(0), at)
-	if (store < 0) or (LastStore(entry.texts(0), at) > at) or IsSkipped(store, at)
+	if store < 0 or LastStore(entry.texts(0), at) > at or IsSkipped(store, at)
 		return "%t" + position + "whlimit"
 	let stored = function.method.instructions(store)
 	stored.kind is InstructionType.StoreConstantToVariable then Name("wb", store) else Source(stored.payload(0), store)
@@ -148,14 +148,14 @@ Carried(at Number) Number
 	if loaded.kind is not InstructionType.LoadVariableToRegister
 		return -1
 	let name = loaded.texts(0)
-	(LastStore(name, at) is at + 1) and (IsSkipped(StoreBefore(name, at), at) is false) then first else -1
+	LastStore(name, at) is at + 1 and IsSkipped(StoreBefore(name, at), at) is false then first else -1
 LastStore(name Text, at Number) Number
 	Quads.LastStore("sum", 12) is 13
 	Rescaled.LastStore("sum", 12) is 16
 	Quads.LastStore("sum", 15) is -1
 	for Range(StoreBefore(name, at) + 1, at)
 		let opens = function.method.instructions(value).kind is InstructionType.LoopBegin
-		if opens and (function.method.LoopEndOf(value) >= at)
+		if opens and function.method.LoopEndOf(value) >= at
 			return StoreBefore(name, function.method.LoopEndOf(value))
 	-1
 IsSkipped(store Number, at Number) Boolean
@@ -174,7 +174,7 @@ Loop(at Number) Number
 	for at
 		let earlier = at - 1 - index
 		let entry = function.method.instructions(earlier)
-		if (entry.kind is InstructionType.LoopBegin) and (function.method.LoopEndOf(earlier) >= at)
+		if entry.kind is InstructionType.LoopBegin and function.method.LoopEndOf(earlier) >= at
 			return earlier
 	-1
 StoreBefore(name Text, at Number) Number
@@ -183,7 +183,7 @@ StoreBefore(name Text, at Number) Number
 		let earlier = at - 1 - index
 		let entry = function.method.instructions(earlier)
 		let isStore = entry.kind is in (InstructionType.StoreRegisterToVariable, InstructionType.StoreConstantToVariable)
-		if isStore and (entry.texts.Last is name)
+		if isStore and entry.texts.Last is name
 			return earlier
 	-1
 Parameter(name Text) Number

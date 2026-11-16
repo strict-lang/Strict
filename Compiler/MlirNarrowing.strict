@@ -61,7 +61,7 @@ Wide Texts
 	Singling.Wide is ("numbers")
 	let all = ((IsResulted then List(Text) + "result" else List(Text)) + Iterated) + MlirKernel(function, position).Sources
 	for all
-		if (all.Index(value) is index) and ((value is "result") or IsWide(value))
+		if all.Index(value) is index and (value is "result" or IsWide(value))
 			value
 IsResulted Boolean
 	MlirNarrowing(MlirKernel.Doubling.function, 2).IsResulted
@@ -73,15 +73,15 @@ IsWide(name Text) Boolean
 	Floats.IsWide("numbers") is false
 	Texting.IsWide("numbers") is false
 	Marked.IsWide("numbers") is false
-	if (Bits(name) > 0) and (Bits(name) < Number.DoubleBits)
+	if Bits(name) > 0 and Bits(name) < Number.DoubleBits
 		return false
 	let kind = MlirKinds(function).VariableKind(position, name)
-	(MlirLayout(function).Represented(kind) is "List(Number)") and (Format(kind) is 0)
+	MlirLayout(function).Represented(kind) is "List(Number)" and Format(kind) is 0
 Iterated Texts
 	Summing.Iterated is ("numbers")
 	Few.Iterated.Length is 0
 	let writer = MlirKinds(function).Writer(position, function.method.instructions(position).payload(0))
-	if (writer < 0) or (MlirLoops(function, position).Collection is "")
+	if writer < 0 or MlirLoops(function, position).Collection is ""
 		return List(Text)
 	let entry = function.method.instructions(writer)
 	entry.kind is InstructionType.LoadVariableToRegister then List(Text) + entry.texts(0) else List(Text)
@@ -92,12 +92,12 @@ IsCandidate Boolean
 	Listed.IsCandidate is false
 	MlirNarrowing(MlirKernel.Doubling.function, 2).IsCandidate is false
 	Forced.IsCandidate is false
-	if TypeEntry.IsBaseName(TypeEntry.ShortName(function.type.Name)) or (MlirKernel(function, position).IsSimple is false)
+	if TypeEntry.IsBaseName(TypeEntry.ShortName(function.type.Name)) or MlirKernel(function, position).IsSimple is false
 		return false
 	for Range(position + 1, function.method.LoopEndOf(position))
 		if function.method.instructions(value).kind is not in MlirSingle.Allowed
 			return false
-	(MlirGpuCheck(function, position).IsGpu is false) and (IsFew is false) and (IsForced is false)
+	MlirGpuCheck(function, position).IsGpu is false and IsFew is false and IsForced is false
 IsFew Boolean
 	Few.IsFew
 	Summing.IsFew is false
@@ -108,7 +108,7 @@ IsFew Boolean
 	if entry.kind is not InstructionType.LoadConstantToRegister
 		return false
 	let literal = PayloadDecoder(entry).Value(1)
-	(literal.kind is not "Number") or (literal.number < MlirCost(function, position).Threshold)
+	literal.kind is not "Number" or literal.number < MlirCost(function, position).Threshold
 Problem(functions List(MlirFunction)) Text
 	MlirNarrowing.Problem(List(MlirFunction) + Few.function) is ""
 	MlirNarrowing.Problem(List(MlirFunction) + Summing.function) is "unsupported: loops\n" + Summing.Issue

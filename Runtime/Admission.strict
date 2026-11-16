@@ -16,9 +16,9 @@ Decided(need Need, seen MachineView) Text
 	Sample.Decided(Need.Small, MachineView.Busy) is "wait"
 	Sample.Decided(Need.Small, MachineView.Room) is "go"
 	Sample.Decided(Need(Need.Tiny, mode = "force"), MachineView.Wide) is "go"
-	if IsTiny(need, seen) and (need.mode is not "force")
+	if IsTiny(need, seen) and need.mode is not "force"
 		return "refused"
-	if seen.isBusy and (Fits(need, seen.freeRam, seen.freeVram) is false)
+	if seen.isBusy and Fits(need, seen.freeRam, seen.freeVram) is false
 		return "wait"
 	if Fits(need, seen.freeRam, seen.freeVram)
 		return "go"
@@ -28,12 +28,12 @@ Decided(need Need, seen MachineView) Text
 Fits(need Need, ram Number, vram Number) Boolean
 	Sample.Fits(Need.Small, 4, 2)
 	Sample.Fits(Need.Small, 2, 2) is false
-	(ram >= need.Ram) and (vram >= need.Vram)
+	ram >= need.Ram and vram >= need.Vram
 IsTiny(need Need, seen MachineView) Boolean
 	Sample.IsTiny(Need.Tiny, MachineView.Wide)
 	Sample.IsTiny(Need.Small, MachineView.Wide) is false
-	let ram = (seen.totalRam > 0) and (seen.totalRam < need.minimumRam)
-	let vram = (seen.totalVram > 0) and (seen.totalVram < need.minimumVram)
+	let ram = seen.totalRam > 0 and seen.totalRam < need.minimumRam
+	let vram = seen.totalVram > 0 and seen.totalVram < need.minimumVram
 	ram or vram
 Usable(total Number, share Number) Number
 	Sample.Usable(16, HostShare) is 8
@@ -49,7 +49,7 @@ Reason(need Need, seen MachineView) Text
 	let free = Sized(seen.freeRam) + " of " + Sized(seen.totalRam) + " RAM and " + Sized(seen.freeVram) + " of "
 	let idle = ", idle backends could free " + Sized(seen.idleRam) + " RAM and " + Sized(seen.idleVram) + " VRAM"
 	let text = needs + free + Sized(seen.totalVram) + " VRAM are free"
-	(seen.idleRam > 0) or (seen.idleVram > 0) then text + idle else text
+	seen.idleRam > 0 or seen.idleVram > 0 then text + idle else text
 Undersized(need Need, seen MachineView) Text
 	Sample.Undersized(BigNeed, SmallMachine).EndsWith(" VRAM, it needs at least 64 GB RAM and 10 GB VRAM")
 	let total = "this machine has " + Sized(seen.totalRam) + " RAM and " + Sized(seen.totalVram) + " VRAM"

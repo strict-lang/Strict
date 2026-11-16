@@ -32,27 +32,27 @@ IsNarrow Boolean
 	MlirWholeNarrow(MlirWholeFunction.Nesting, 11).IsNarrow is false
 	MlirWholeNarrow(Mixing, 19).IsNarrow is false
 	let name = Accumulated
-	(name is not "") and IsBounded(name)
+	name is not "" and IsBounded(name)
 Accumulated Text
 	Adding.Accumulated is "sum"
 	MlirWholeNarrow(MlirWholeFunction.Nesting, 11).Accumulated is ""
 	let steps = function.method.instructions
 	let entry = steps(position)
 	let next = steps(position + 1 < steps.Length then position + 1 else position)
-	let isStored = (next.kind is InstructionType.StoreRegisterToVariable) and (next.payload(0) is entry.payload(3))
-	if (entry.kind is not InstructionType.Add) or (isStored is false)
+	let isStored = next.kind is InstructionType.StoreRegisterToVariable and next.payload(0) is entry.payload(3)
+	if entry.kind is not InstructionType.Add or isStored is false
 		return ""
 	let loaded = Writer(entry.payload(1))
-	let isLoaded = (loaded >= 0) and (steps(loaded).kind is InstructionType.LoadVariableToRegister)
-	let isSelf = isLoaded and (steps(loaded).texts.Last is next.texts.Last)
-	isSelf and IsSmall(Writer(entry.payload(2))) and (Trips > 0) and (Trips <= Most) then next.texts.Last else ""
+	let isLoaded = loaded >= 0 and steps(loaded).kind is InstructionType.LoadVariableToRegister
+	let isSelf = isLoaded and steps(loaded).texts.Last is next.texts.Last
+	isSelf and IsSmall(Writer(entry.payload(2))) and Trips > 0 and Trips <= Most then next.texts.Last else ""
 Writer(register Number) Number
 	Adding.Writer(3) is 5
 	MlirWholeNarrow(Summing, 10).Accumulated is ""
 	MlirWholeNarrow(Mixing, 19).Accumulated is "big"
-	MlirWholeNarrow(Mixing, 9).Accumulated is "" and (MlirWholeNarrow(Mixing, 14).Accumulated is "")
-	MlirWholeNarrow(Mixing, 21).Accumulated is "" and (MlirWholeNarrow(Mixing, 23).Accumulated is "")
-	MlirWholeNarrow(Mixing, 26).Accumulated is "" and (MlirWholeNarrow(Mixing, 29).Accumulated is "")
+	MlirWholeNarrow(Mixing, 9).Accumulated is "" and MlirWholeNarrow(Mixing, 14).Accumulated is ""
+	MlirWholeNarrow(Mixing, 21).Accumulated is "" and MlirWholeNarrow(Mixing, 23).Accumulated is ""
+	MlirWholeNarrow(Mixing, 26).Accumulated is "" and MlirWholeNarrow(Mixing, 29).Accumulated is ""
 	MlirWholeNarrow(Mixing, 31).Accumulated is ""
 	LoadReuse(function.method.instructions).Writer(register, position, -1)
 IsSmall(at Number) Boolean
@@ -67,35 +67,35 @@ IsSmall(at Number) Boolean
 	if entry.kind is not InstructionType.LoadConstantToRegister
 		return false
 	let number = PayloadDecoder(entry).Value(1).number
-	(number >= 0) and (number <= Byte.Max) and (number.Floor is number)
+	number >= 0 and number <= Byte.Max and number.Floor is number
 Trips Number
 	Adding.Trips is 9
 	MlirWholeNarrow(Summing, 9).Trips is 1
 	MlirWholeNarrow(MlirWholeFunction.Nesting, 11).Trips is 9
-	MlirWholeNarrow(Mixing, 9).Trips is 8998 and (MlirWholeNarrow(Mixing, 14).Trips is 0)
+	MlirWholeNarrow(Mixing, 9).Trips is 8998 and MlirWholeNarrow(Mixing, 14).Trips is 0
 	mutable trips = 1
 	for position
 		let entry = function.method.instructions(index)
-		if (entry.kind is InstructionType.LoopBegin) and (function.method.LoopEndOf(index) > position)
+		if entry.kind is InstructionType.LoopBegin and function.method.LoopEndOf(index) > position
 			trips = trips * Count(index)
 	trips
 Count(at Number) Number
 	Adding.Count(2) is 9
 	MlirWholeNarrow(MlirWholeFunction.Nesting, 11).Count(6) is 3
 	MlirWholeNarrow(Mixing, 0).Count(6) is 8998
-	MlirWholeNarrow(Mixing, 0).Count(12) is 0 and (MlirWholeNarrow(Mixing, 0).Count(17) is 255)
+	MlirWholeNarrow(Mixing, 0).Count(12) is 0 and MlirWholeNarrow(Mixing, 0).Count(17) is 255
 	let isRange = function.method.instructions(at).payload(1) is 1
 	let bounds = Bounds(at)
 	bounds.Length < (isRange then 2 else 1) then 0 else isRange then (bounds(1) - bounds(0)).Absolute else bounds(0)
 Bounds(at Number) Numbers
 	Adding.Bounds(2) is (9)
 	MlirWholeNarrow(MlirWholeFunction.Nesting, 11).Bounds(6) is (0, 3)
-	MlirWholeNarrow(Mixing, 0).Bounds(12) is (2) and (MlirWholeNarrow(Mixing, 0).Bounds(6) is (2, 9000))
+	MlirWholeNarrow(Mixing, 0).Bounds(12) is (2) and MlirWholeNarrow(Mixing, 0).Bounds(6) is (2, 9000)
 	MlirWholeNarrow(MlirKernel.Summing.function, 0).Bounds(1).Length is 0
 	let entry = function.method.instructions(at)
 	for (entry.payload(1) is 1 then (entry.payload(0), entry.payload(2)) else List(Number) + entry.payload(0))
 		let writer = LoadReuse(function.method.instructions).Writer(value, at, -1)
-		if (writer >= 0) and (function.method.instructions(writer).kind is InstructionType.LoadConstantToRegister)
+		if writer >= 0 and function.method.instructions(writer).kind is InstructionType.LoadConstantToRegister
 			PayloadDecoder(function.method.instructions(writer)).Value(1).number
 IsBounded(name Text) Boolean
 	Adding.IsBounded("sum")
@@ -103,29 +103,29 @@ IsBounded(name Text) Boolean
 	MlirWholeNarrow(MlirWholeFunction.Nesting, 11).IsBounded("sum") is false
 	MlirWholeNarrow(Mixing, 0).IsBounded("big") is false
 	MlirWholeNarrow(Mixing, 0).IsBounded("sum")
-	MlirWholeNarrow(Mixing, 0).IsBounded("") and (MlirWholeNarrow(Mixing, 0).IsBounded("total") is false)
+	MlirWholeNarrow(Mixing, 0).IsBounded("") and MlirWholeNarrow(Mixing, 0).IsBounded("total") is false
 	for function.method.instructions
 		let isStore = value.kind is in (InstructionType.StoreConstantToVariable, InstructionType.StoreRegisterToVariable)
-		if isStore and (value.texts.Last is name) and (IsSmallStore(index) is false)
+		if isStore and value.texts.Last is name and IsSmallStore(index) is false
 			return false
 	true
 IsSmallStore(at Number) Boolean
 	Adding.IsSmallStore(0)
 	Adding.IsSmallStore(7)
 	MlirWholeNarrow(Mixing, 0).IsSmallStore(0) and MlirWholeNarrow(Mixing, 0).IsSmallStore(20)
-	MlirWholeNarrow(Mixing, 0).IsSmallStore(1) is false and (MlirWholeNarrow(Mixing, 0).IsSmallStore(2) is false)
-	MlirWholeNarrow(Mixing, 0).IsSmallStore(3) is false and (MlirWholeNarrow(Mixing, 0).IsSmallStore(22) is false)
+	MlirWholeNarrow(Mixing, 0).IsSmallStore(1) is false and MlirWholeNarrow(Mixing, 0).IsSmallStore(2) is false
+	MlirWholeNarrow(Mixing, 0).IsSmallStore(3) is false and MlirWholeNarrow(Mixing, 0).IsSmallStore(22) is false
 	let entry = function.method.instructions(at)
 	if entry.kind is InstructionType.StoreConstantToVariable
 		let number = PayloadDecoder(entry).Value(0).number
-		return (number >= 0) and (number <= Byte.Max) and (number.Floor is number)
+		return number >= 0 and number <= Byte.Max and number.Floor is number
 	let writer = LoadReuse(function.method.instructions).Writer(entry.payload(0), at, -1)
-	(writer >= 0) and (MlirWholeNarrow(function, writer).Accumulated is entry.texts.Last)
+	writer >= 0 and MlirWholeNarrow(function, writer).Accumulated is entry.texts.Last
 Emitted Texts
 	Adding.Emitted.Last is "    %t6c = arith.extui %t6cn : i32 to i64"
 	Adding.Emitted is Narrowed
 	MlirWholeNarrow(Mixing, 0).IsSmall(-1) is false and MlirWholeNarrow(Mixing, 0).IsSmall(7)
-	MlirWholeNarrow(Mixing, 0).IsSmall(34) is false and (MlirWholeNarrow(Mixing, 0).IsSmall(35) is false)
+	MlirWholeNarrow(Mixing, 0).IsSmall(34) is false and MlirWholeNarrow(Mixing, 0).IsSmall(35) is false
 	MlirWholeNarrow(Mixing, 0).IsSmall(36) is false and MlirWholeNarrow(Mixing, 0).IsSmall(37)
 	let temp = "%t" + position
 	let left = "    " + temp + "an = arith.trunci " + temp + "a : i64 to i32"

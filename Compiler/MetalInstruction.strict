@@ -40,7 +40,7 @@ Words Texts
 	Adding.Words is ("%12", "=", "add", "i32", "%11", "%8")
 	MetalInstruction("%8 = call noundef range(i32 0, 1024) i32 @f()", true).Words is ("%8", "=", "call", "i32", "@f()")
 	for Cleaned.Replace(",", "").Split(" ")
-		if (value is not "") and (value is not in Flags)
+		if value is not "" and value is not in Flags
 			value
 Result Text
 	Adding.Result is "%12"
@@ -48,13 +48,13 @@ Result Text
 	MetalInstruction("unreachable", true).Result is ""
 	MetalInstruction("%5 = alloca float", true).Expression is ""
 	let words = Words
-	(words.Length > 1) and (words(1) is "=") then words(0) else ""
+	words.Length > 1 and words(1) is "=" then words(0) else ""
 Operation Text
 	Adding.Operation is "add"
 	MetalInstruction("unreachable", true).Operation is "unreachable"
 	MetalInstruction("store float %1, ptr %2", true).Operation is "store"
 	let words = Words
-	(words.Length > 1) and (words(1) is "=") then words(2) else words(0)
+	words.Length > 1 and words(1) is "=" then words(2) else words(0)
 Arguments Texts
 	Adding.Arguments is ("i32", "%11", "%8")
 	MetalInstruction("unreachable", true).Arguments.Length is 0
@@ -62,7 +62,7 @@ Arguments Texts
 	MetalInstruction("%15 = fneg double %14", true).Expression is ""
 	MetalInstruction("%15 = fneg float 2.500000e-01", true).Expression is "-2.500000e-01f"
 	let words = Words
-	let start = (words.Length > 1) and (words(1) is "=") then 3 else 1
+	let start = words.Length > 1 and words(1) is "=" then 3 else 1
 	words.Slice(start, words.Length - start)
 Type Text
 	Adding.Type is "i32"
@@ -121,7 +121,7 @@ Binary(symbol Number) Text
 	constant firstUnsigned = 14
 	let llvm = Arguments.First
 	let type = MetalValue(llvm)
-	if (llvm is "double") or (type.Type is "")
+	if llvm is "double" or type.Type is ""
 		return ""
 	let prefix = symbol >= firstUnsigned then "(" + type.UnsignedType + ")" else ""
 	"(" + type.Type + ")(" + (prefix + Operand(1, llvm) + " " + Operators(symbol) + " " + prefix + Operand(2, llvm)) + ")"
@@ -144,7 +144,7 @@ Ordering Text
 	let left = Operand(2, arguments(1))
 	let right = Operand(3, arguments(1))
 	let nan = "isnan(" + left + ") || isnan(" + right + ")"
-	if (arguments(1) is "double") or (predicate is not in Ordered + Unordered + "ord" + "uno")
+	if arguments(1) is "double" or predicate is not in Ordered + Unordered + "ord" + "uno"
 		return ""
 	if predicate is in ("ord", "uno")
 		return predicate is "ord" then "!(" + nan + ")" else nan
@@ -154,11 +154,11 @@ Memory Text
 	MetalInstruction("%17 = getelementptr half, ptr %3, i64 %13", true).Memory is "(ulong)((long)v3 + (long)v13 * 2)"
 	let arguments = Arguments
 	let type = MetalValue(arguments(0))
-	if (type.Type is "") or (arguments(1) is not "ptr")
+	if type.Type is "" or arguments(1) is not "ptr"
 		return ""
 	if Operation is "load"
 		return "*reinterpret_cast<device " + type.Type + "*>(" + Operand(2, "ptr") + ")"
-	if (arguments.Length is not 5) or (type.Bytes is 0)
+	if arguments.Length is not 5 or type.Bytes is 0
 		return ""
 	let offset = " + (long)" + Operand(4, arguments(3)) + " * " + type.Bytes
 	"(ulong)((long)" + Operand(2, "ptr") + offset + ")"
@@ -168,6 +168,6 @@ Stored Text
 	MetalInstruction("store float %1, float* %2", true).Stored is ""
 	let arguments = Arguments
 	let type = MetalValue(arguments(0)).Type
-	if (type is "") or (arguments(2) is not "ptr")
+	if type is "" or arguments(2) is not "ptr"
 		return ""
 	"*reinterpret_cast<device " + type + "*>(" + Operand(3, "ptr") + ") = " + Operand(1, arguments(0)) + ";"

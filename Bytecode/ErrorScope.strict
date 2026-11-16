@@ -44,10 +44,10 @@ Prepared(body SyntaxNode, block CodeBlock) CodeBlock
 Reassigned(node SyntaxNode) Texts
 	Plain.Reassigned(BodyParser("Run", "\tmutable a = 1", "\tfor 2", "\t\ta = Greet").Block(1, 1)) is ("a")
 	constant safe = ("Number", "Text", "Boolean", "Not", "Negate")
-	if (node.Kind is "Reassignment") and (node.children(0).Kind is "Identifier")
+	if node.Kind is "Reassignment" and node.children(0).Kind is "Identifier"
 		let assigned = node.children(1)
-		let isOperator = (assigned.Kind is "Binary") and (assigned.text is not in ("to", "then", "else"))
-		return ((assigned.Kind is in safe) or isOperator) then List(Text) else List(Text) + node.children(0).text
+		let isOperator = assigned.Kind is "Binary" and assigned.text is not in ("to", "then", "else")
+		return assigned.Kind is in safe or isOperator then List(Text) else List(Text) + node.children(0).text
 	mutable names = List(Mutable(Text))
 	for node.children
 		names = names + Reassigned(value)
@@ -62,47 +62,47 @@ Dropped(node SyntaxNode, block CodeBlock) SyntaxNode
 	if IsMutating(node, block) is false
 		return node
 	let target = node.children(0)
-	let isInPlace = (node.text is in ("Add", "Remove")) and values.inference.types.IsPlural(values.TypeOf(target, block))
+	let isInPlace = node.text is in ("Add", "Remove") and values.inference.types.IsPlural(values.TypeOf(target, block))
 	let isMutable = block.scope.TypeOf(target.text + MutableMarker) is not ""
-	isMutable and (isInPlace is false) then SyntaxNode("Reassignment", "", (target, node), node.line) else node
+	isMutable and isInPlace is false then SyntaxNode("Reassignment", "", (target, node), node.line) else node
 IsMutating(node SyntaxNode, block CodeBlock) Boolean
 	Counting.IsMutating(Increment, Mutated)
 	Counting.IsMutating(SyntaxNode("Member", "Twice", Increment.children), Mutated) is false
-	if (node.Kind is not in ("MethodCall", "Member")) or (node.children(0).Kind is not "Identifier")
+	if node.Kind is not in ("MethodCall", "Member") or node.children(0).Kind is not "Identifier"
 		return false
 	let type = values.TypeOf(node.children(0), block)
 	values.inference.types.ParameterScope(type).TypeOf(node.text + MutableMarker) is not ""
 IsRemainder(node SyntaxNode) Boolean
 	Plain.IsRemainder(Remaining) and Plain.IsRemainder(FileCheck.Parsed("7 % a + 1"))
 	Plain.IsRemainder(FileCheck.Parsed("1 + 7 % a")) and Plain.IsRemainder(FileCheck.Parsed("-(7 % a)"))
-	Plain.IsRemainder(FileCheck.Parsed("7 % 0")) and (Plain.IsRemainder(FileCheck.Parsed("7 % 2")) is false)
-	(Plain.IsRemainder(FileCheck.Parsed("7 + a")) is false) and (Plain.IsRemainder(SyntaxNode("Text", "%")) is false)
-	(Plain.IsRemainder(Called) is false) and (Plain.IsRemainder(FileCheck.Parsed("7 % a is 2")) is false)
+	Plain.IsRemainder(FileCheck.Parsed("7 % 0")) and Plain.IsRemainder(FileCheck.Parsed("7 % 2")) is false
+	Plain.IsRemainder(FileCheck.Parsed("7 + a")) is false and Plain.IsRemainder(SyntaxNode("Text", "%")) is false
+	Plain.IsRemainder(Called) is false and Plain.IsRemainder(FileCheck.Parsed("7 % a is 2")) is false
 	if node.Kind is "Negate"
 		return IsRemainder(node.children(0))
-	if (node.Kind is not "Binary") or (node.text is not in Arithmetic)
+	if node.Kind is not "Binary" or node.text is not in Arithmetic
 		return false
 	let divisor = node.children(1)
-	let isUnsure = (node.text is "%") and ((divisor.Kind is not "Number") or (divisor.text to Number is 0))
+	let isUnsure = node.text is "%" and (divisor.Kind is not "Number" or divisor.text to Number is 0)
 	isUnsure or IsRemainder(node.children(0)) or IsRemainder(divisor)
 Used(node SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Used(SyntaxParser(Tokenizer("1 is 2").Tokens).Parse, CodeBlock.Empty) is Error
 	Plain.Used(SyntaxParser(Tokenizer("1 + 2").Tokens).Parse, CodeBlock.Empty) is Error
 	Plain.Used(ValueCodegen.One, Mutated) is Error("ResultMustBeUsed: 1 in Examples/Greeter.strict:line 0" + Unused)
-	(Counting.Used(Increment, Mutated) is Increment) and (Plain.Used(Growing, Mutated).Kind is "Member")
+	Counting.Used(Increment, Mutated) is Increment and Plain.Used(Growing, Mutated).Kind is "Member"
 	Ticked.Used(SyntaxNode("Member", "Next", Increment.children), Ticker).Kind is "Member"
 	Plain.Used(SyntaxNode("Identifier", "a"), CodeBlock.Empty.Declare("a", "None")).Kind is "Identifier"
 	Plain.Used(BodyParser("Run", "\tif 1 is 2", "\t\t3").Block(1, 1).children(0), CodeBlock.Empty).Kind is "If"
 	Plain.Used(SyntaxNode("Member", "Greet", ValueCodegen.NewGreeter), CodeBlock.Empty) is Error
-	if (node.Kind is in Statements) or (values.TypeOf(node, block) is in Unvalued) or IsChanging(node, block)
+	if node.Kind is in Statements or values.TypeOf(node, block) is in Unvalued or IsChanging(node, block)
 		return node
 	let file = TypeEntry(values.target.fullName, List(MemberEntry), List(MethodEntry)).Source
 	Error("ResultMustBeUsed: " + (node to Text) + " in " + file + ":line " + node.line + Unused)
 IsChanging(node SyntaxNode, block CodeBlock) Boolean
-	Ticked.IsChanging(Nexted, Ticker) and (Ticked.IsChanging(Sized, Ticker) is false)
+	Ticked.IsChanging(Nexted, Ticker) and Ticked.IsChanging(Sized, Ticker) is false
 	Counting.IsChanging(Increment, Mutated) and Plain.IsChanging(Growing, Mutated)
 	Plain.IsChanging(ValueCodegen.One, CodeBlock.Empty) is false
-	OwnTicked.IsChanging(OwnNext, Ticker) and (OwnTicked.IsChanging(OwnSize, Ticker) is false)
+	OwnTicked.IsChanging(OwnNext, Ticker) and OwnTicked.IsChanging(OwnSize, Ticker) is false
 	Plain.Used(SyntaxNode("Call", "Error", ValueCodegen.Hi), CodeBlock.Empty).Kind is "Call"
 	if IsMutating(node, block) or IsGrowing(node, block)
 		return true
@@ -116,7 +116,7 @@ IsGrowing(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsGrowing(Growing, CodeBlock.Empty.Declare("a", "Count")) is false
 	Plain.IsGrowing(Increment, Mutated) is false
 	Plain.IsGrowing(SyntaxNode("Identifier", "Add"), Mutated) is false
-	if (node.Kind is not in ("MethodCall", "Member")) or (node.text is not in ("Add", "Remove"))
+	if node.Kind is not in ("MethodCall", "Member") or node.text is not in ("Add", "Remove")
 		return false
 	block.scope.TypeOf(node.children(0).text + MutableMarker) is not ""
 Declared(name Text, assigned SyntaxNode, isMutable Boolean, block CodeBlock) CodeBlock

@@ -20,7 +20,7 @@ Located(name Text) Text
 	OnWindows.Located("noSuchStrictTool") is ""
 	Toolchain(Platform.MacOS, "/s").Located("clang") is ""
 	Toolchain(Platform.Current, ".", isWeb = true).Located("emcc").StartsWith("./") is false
-	if (platform is not Platform.MacOS) and Process.Find(name).IsAvailable
+	if platform is not Platform.MacOS and Process.Find(name).IsAvailable
 		return name
 	for Folders
 		if File(value + name + Extension).Exists
@@ -36,7 +36,7 @@ Folders Texts
 	let unix = List(Text) + (root + "/Tools/" + release + "/bin/")
 	let folders = platform is Platform.Windows then WindowsFolders else unix
 	let emsdk = root + "/Tools/emsdk/upstream/"
-	isWeb then (List(Text) + (emsdk + "bin/")) + folders + (emsdk + "emscripten/") else folders
+	isWeb then List(Text) + (emsdk + "bin/") + folders + (emsdk + "emscripten/") else folders
 Extension Text
 	OnWindows.Extension is ".exe"
 	OnLinux.Extension is ""
@@ -109,7 +109,7 @@ Built(base Text, executable Text) Text
 	linked.Failed then "clang failed: " + linked.error + linked.Output else "Built " + executable
 Inputs(base Text) Text
 	OnLinux.Inputs("Compiler/output/missing") is "\"Compiler/output/missing.ll\""
-	if ((platform is Platform.Windows) and (File(base + ".ll").Exists is false)) is false
+	if (platform is Platform.Windows and File(base + ".ll").Exists is false) is false
 		return Quoted(base + ".ll") + (platform is Platform.Windows then Direct else "")
 	if PartsCompiled(base) is false
 		return Quoted(base + ".ll")
@@ -131,7 +131,7 @@ PartsCompiled(base Text) Boolean
 	mutable compiling = List(Mutable(Text))
 	for Parts
 		let part = base + "-" + value
-		if File(part).Exists and (File(part + ".o").Exists is false)
+		if File(part).Exists and File(part + ".o").Exists is false
 			compiling.Add(Bitcode(part))
 	for ToolRunner(Located("clang")).ExecuteAll(compiling, "Host clang (" + compiling.Length + " jobs)")
 		if value.Failed
@@ -154,7 +154,7 @@ WslPath(path Text) Text
 	slashed.IndexOf(":") is 1 then "/mnt/" + slashed(0).Lower + slashed.Substring(2, slashed.Length - 2) else slashed
 Lowered(base Text, kept = "", parts = 1) Text
 	OnWindows.Lowered("Compiler/output/missing").StartsWith("mlir-opt failed")
-	if (parts > 1) and File(base + ".mlir").Exists
+	if parts > 1 and File(base + ".mlir").Exists
 		let split = MlirSplit(File(base + ".mlir").ReadLines)
 		return MlirParts(split).Laid.Lowered(base, Toolchain(platform, root, natives, isWeb, cpu))
 	let privatized = kept is "" then "" else " --symbol-privatize=exclude=" + kept

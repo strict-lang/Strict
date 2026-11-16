@@ -72,18 +72,18 @@ CheckedBytes(bytes Bytes) Boolean
 	true
 CheckSmallAndPair(folder Text) Boolean
 	let small = BuiltAndRan(folder, "SmallGpu", SmallA + "\n" + SmallB + "\n" + SmallC, false, false)
-	if (small is Error) or ("gpu kernels 2, doubled 6, opened 2" is not in small)
+	if small is Error or "gpu kernels 2, doubled 6, opened 2" is not in small
 		return Error("SmallGpu failed: " + (small to Text))
 	File(folder + "/Pair.strict").Write((PairA + "\n" + PairB).Split("\n"))
 	let pair = BuiltAndRan(folder, "PairEscape", EscapeSrc, false, false)
-	(pair is Error) or ("gpu kernels 1, 64 3" is not in pair) then Error("PairEscape failed: " + (pair to Text)) else true
+	pair is Error or "gpu kernels 1, 64 3" is not in pair then Error("PairEscape failed: " + (pair to Text)) else true
 CheckSimpleAndOrbit(folder Text) Boolean
 	let simple = BuiltAndRan(folder, "SimpleRead", SimpleA + "\n" + SimpleB, false, false)
-	if (simple is Error) or ("read 0 1.998" is not in simple)
+	if simple is Error or "read 0 1.998" is not in simple
 		return Error("SimpleRead failed: " + (simple to Text))
 	File(folder + "/Orbiting.strict").Write(OrbitingSrc.Split("\n"))
 	let orbit = BuiltAndRan(folder, "OrbitGpu", OrbitGpuSrc, false, false)
-	let badOrbit = (orbit is Error) or ("gpu kernels 1, 3 6 32" is not in orbit)
+	let badOrbit = orbit is Error or "gpu kernels 1, 3 6 32" is not in orbit
 	badOrbit then Error("OrbitGpu failed: " + (orbit to Text)) else true
 CheckViewingAndPending(folder Text) Boolean
 	File(folder + "/Pair.strict").Write(UpdatedPair.Split("\n"))
@@ -96,7 +96,7 @@ CheckViewingAndPending(folder Text) Boolean
 	if tested.exitCode is not 0
 		return Error("Viewing native test failed: " + tested.Output + tested.error)
 	let pend = BuiltAndRan(folder, "PendingRead", PendingSrc, false, true)
-	let out = pend is Error then (pend to Text) else pend
+	let out = pend is Error then pend to Text else pend
 	CheckedStrings(out, List(Text) + "halved 128 ", List(Text) + "Strict GPU download of 256 numbers")
 UpdatedPair Text
 	(PairA + "\n" + PairB).Replace("has imaginary Number\n", "has imaginary Number\nconstant Zero = Pair(0, 0)\n")

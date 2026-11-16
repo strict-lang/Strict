@@ -26,7 +26,7 @@ Has(name Text, type Text) Boolean
 	Scope(("to", "to"), ("A", "B")).Has("to", "C") is false
 	Scope(("a", "b"), ("A", "B")).Has("a", "B") is false
 	for names
-		if (value is name) and (types(index) is type)
+		if value is name and types(index) is type
 			return true
 	false
 Count(name Text) Number

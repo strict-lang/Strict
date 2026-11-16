@@ -40,6 +40,6 @@ Renamed(path Text) Boolean slow
 	Renamed("Examples/BaseTypesTest/renamed")
 	File(path).Write(List(Text) + "renamed")
 	File(path).Rename(path + "2")
-	let isMoved = File(path + "2").Exists and (File(path).Exists is false)
+	let isMoved = File(path + "2").Exists and File(path).Exists is false
 	File(path + "2").Delete
 	isMoved

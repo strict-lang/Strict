@@ -24,7 +24,7 @@ Run(arguments Texts) Number
 	Started(types, arguments(0)).Completed(types.First.Name, texts) then 0 else 1
 Test(path Text, root Text, isQuiet = false, sources Texts = List(Text)) Number
 	Execute(Logger).Test("Missing.strict", ".") is 1
-	if File(path).Exists and (Directory.Exists(path) is false)
+	if File(path).Exists and Directory.Exists(path) is false
 		return Failures((path), Stale((path)), root, isQuiet, sources)
 	Directory.Exists(path) then Folders(logger).Tested(path, root, isRecursive, isMutating, isFull) else 1
 Failures(paths Texts, stale Texts, root Text, isQuiet Boolean, sources Texts = List(Text)) Number
@@ -36,7 +36,7 @@ Failures(paths Texts, stale Texts, root Text, isQuiet Boolean, sources Texts = L
 		let hit = value is in stale then Answer(0, known) else Answer(Cached(value), known)
 		let got = value is in stale then host.Verified(value, root, isQuiet, files, types, stale.Length is 1) else hit
 		host = value is in stale then Execute(host, known = got.known, cached = got.constants) else host
-		if (got.code is 0) and (isQuiet is false)
+		if got.code is 0 and isQuiet is false
 			logger.Log(Summary(0, value))
 		failed = failed + got.code
 	failed
@@ -44,7 +44,7 @@ Cached(path Text) Number
 	Execute(Logger).Cached("Missing.strict") is 0
 	Execute(Logger, isMutating = true).Cached("Missing.strict") is 0
 	let cache = MutationCache(path)
-	if (isMutating is false) or (cache.IsCurrent is false)
+	if isMutating is false or cache.IsCurrent is false
 		return 0
 	for cache.Survivors
 		logger.Log(value)
@@ -53,7 +53,7 @@ Sourced(stale Texts, root Text, sources Texts) Texts
 	Execute(Logger).Sourced(List(Text), ".", List(Text) + "A.strict").Length is 0
 	Execute(Logger).Sourced(List(Text) + "Examples/Sum.strict", ".", List(Text) + "A.strict") is ("A.strict")
 	"./Examples/Sum.strict" is in Execute(Logger).Sourced(List(Text) + "Examples/Sum.strict", ".", List(Text))
-	if (stale.Length is 0) or (sources.Length > 0)
+	if stale.Length is 0 or sources.Length > 0
 		return stale.Length is 0 then List(Text) else sources
 	SourceFiles(root).Of(FileCompiler.Normalized(stale.First), stale)
 Stale(paths Texts) Texts
@@ -62,13 +62,13 @@ Stale(paths Texts) Texts
 	for paths
 		let cache = BinaryFile(FileCompiler.Normalized(value))
 		let entries = cache.Unpacked(File(cache.Path).ReadBytes)
-		if IsEdited(value) or (cache.IsFresh(entries) is false) or (BinaryLinks(cache).IsTested(entries) is false)
+		if IsEdited(value) or cache.IsFresh(entries) is false or BinaryLinks(cache).IsTested(entries) is false
 			value
 IsEdited(path Text) Boolean
 	Execute(Logger).IsEdited("Execute.strict") is false
 	Execute(Logger).IsEdited("Missing.strict") is false
 	let source = FileCompiler.Normalized(path)
-	File(source).Exists and (File(source).Modified is 0)
+	File(source).Exists and File(source).Modified is 0
 Kept(path Text, root Text) Number
 	Execute(Logger).Kept("Missing.strict", ".") is 1
 	if File(path).Exists is false
@@ -78,14 +78,14 @@ Kept(path Text, root Text) Number
 Served(path Text, root Text, isQuiet = false, sources Texts = List(Text)) Answer
 	Execute(Logger).Served("Missing.strict", ".").code is 1
 	Execute(Logger).Served("Missing.strict", ".", true).Types.Length is 0
-	if Directory.Exists(path) or (File(path).Exists is false) or (selection is not "")
+	if Directory.Exists(path) or File(path).Exists is false or selection is not ""
 		return Answer(Test(path, root, isQuiet, sources), known)
 	let stale = Stale((path))
 	if stale.Length is 0
 		return Answer(Failures((path), stale, root, isQuiet, sources), known)
 	let files = Sourced((path), root, sources)
 	let answer = Verified(path, root, isQuiet, files, ResolveCheck.Inference(files), true)
-	if (answer.code is 0) and (isQuiet is false)
+	if answer.code is 0 and isQuiet is false
 		logger.Log(Summary(0, path))
 	answer
 Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInference, isOwn = false, isTested = true) Answer
@@ -97,9 +97,9 @@ Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInfer
 		return Answer(1, known)
 	let started = Process.Elapsed
 	let tested = isTested then Tested(types, path, isQuiet) else Answer(0, known, constants = cached)
-	if (tested.code is 0) and (selection is "") and (IsEdited(path) is false)
+	if tested.code is 0 and selection is "" and IsEdited(path) is false
 		Stored(cache, root, files, stamped, isOwn, linked)
-	let survived = (tested.code is 0) and isTested then Mutated(types, path, root, files, inference, started) else 0
+	let survived = tested.code is 0 and isTested then Mutated(types, path, root, files, inference, started) else 0
 	Answer(tested.code + survived, linked.Known(known), files = files, Types = types, constants = tested.constants)
 Stored(cache BinaryFile, root Text, files Texts, stamped BinarySources, isOwn Boolean, linked LinkRound)
 	Execute(Logger).Stored(BinaryFile.Probe, ".", List(Text), Unstamped, true, LinkRound.Greeting) is not Error
@@ -131,14 +131,14 @@ Tested(types List(TypeEntry), path Text, isQuiet = false) Answer
 Mutated(types List(TypeEntry), path Text, root Text, files Texts, inference TypeInference, started Number) Number
 	let home = Directory.Current
 	let mutants = Mutants(logger, path, Baseline.Budget(started), part, selection is "*")
-	let survived = isMutating and (selection is in ("", "*")) then mutants.Ran(types, root, files, inference) else 0
+	let survived = isMutating and selection is in ("", "*") then mutants.Ran(types, root, files, inference) else 0
 	Directory.Change(home)
 	survived
 Loaded(path Text, root Text, withTests = true, sources Texts = List(Text)) List(TypeEntry)
 	let started = Process.Elapsed
 	let cache = BinaryFile(FileCompiler.Normalized(path))
 	let entries = cache.Unpacked(File(cache.Path).ReadBytes)
-	let isReady = withTests and (selection is "") and (IsEdited(path) is false) and BinaryLinks(cache).IsTested(entries)
+	let isReady = withTests and selection is "" and IsEdited(path) is false and BinaryLinks(cache).IsTested(entries)
 	let types = isReady then cache.Current(entries) else List(TypeEntry)
 	let status = types.Length > 0 then "hit" else "miss"
 	BuildProfile(logger).Reported("Bytecode cache " + status, started)

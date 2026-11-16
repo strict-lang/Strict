@@ -26,13 +26,13 @@ constant StoredOffsets = ("    %t2go = arith.constant 2 : i64", "    %t2gj = ari
 constant Stored = StoredAlloca + StoredWeights + StoredInput + StoredCounts + StoredOffsets
 constant FunctionStart = "  llvm.func @"
 Launched Texts
-	Doubling.Launched.Last is "  ^loop2host:" and (Doubling.Launched is Launching)
+	Doubling.Launched.Last is "  ^loop2host:" and Doubling.Launched is Launching
 	Timing.Launched.Length is 0
 	Text.Combine(Doubling.Launched).IndexOf("strict_gpu_ready") is -1
 	Text.Combine(Doubling.Launched).IndexOf("@strict_gpu_wanted(%t2gc)") > 0
 	Text.Combine(MlirGpu(MlirLoops.Ranging.function, 3).Launched).IndexOf("%t3gd = arith.andi %t3gu, %t3ge : i1") > 0
 	Text.Combine(MlirGpu(MlirLoops.Ranging.function, 3).Launched).IndexOf("%t3gc, %t3b, %t3gq") > 0
-	if (MlirGpuCheck(function, position).IsGpu is false) or MlirWholeKernel(function, position).IsKernel
+	if MlirGpuCheck(function, position).IsGpu is false or MlirWholeKernel(function, position).IsKernel
 		return List(Text)
 	let count = "    " + Temp("gc") + " = arith.fptosi " + Temp("n") + " : f64 to i64"
 	let branch = "    cf.cond_br " + Temp("gd") + ", ^loop" + position + "gpu, ^loop" + position + "host"
@@ -75,7 +75,7 @@ Value(at Number, name Text) Texts
 	Doubling.Value(0, "input").Last is "    llvm.store %t2gv0, %t2gx0 : f64, !llvm.ptr"
 	MlirGpu(MlirWholeKernel.Kernel.function, 5).Value(0, "a_b") is MlirKernelBody.Body.Value(0, "a_b")
 	MlirGpu(MlirWholeKernel.Kernel.function, 5).Value(0, "b").First is "    %t5gv0 = llvm.load %v_b : !llvm.ptr -> f64"
-	if MlirWholeKernel(function, position).IsKernel and (name.IndexOf("_") > 0)
+	if MlirWholeKernel(function, position).IsKernel and name.IndexOf("_") > 0
 		return MlirKernelBody(function, position).Value(at, name)
 	let loaded = Temp("gv" + at)
 	let slot = "    " + Temp("gx" + at) + " = llvm.getelementptr " + Temp("ga") + "[" + at + Indexing
@@ -111,7 +111,7 @@ Globals Texts
 	Timing.Globals.Length is 0
 	mutable lines = List(Mutable(Text))
 	for function.method.instructions
-		if (value.kind is InstructionType.LoopBegin) and MlirGpuCheck(function, index).IsGpu
+		if value.kind is InstructionType.LoopBegin and MlirGpuCheck(function, index).IsGpu
 			lines = lines + MlirGuards(MlirFunction(function, Float = "f32", Guarded = index), index).Named
 	lines
 Module(functions List(MlirFunction)) Text
@@ -134,14 +134,14 @@ Exported(device Text) Texts
 	MlirGpu.Module(List(MlirFunction) + Doubling.function).Lines.Last is "}"
 	MlirGpu.Module(List(MlirFunction) + Doubling.function).EndsWith(Text.Combine(MlirGpu.Functions(Twiced), "\n") + "\n}")
 	for device.Lines
-		if value.StartsWith(FunctionStart) and (value.IndexOf("nvvm.kernel") > 0)
+		if value.StartsWith(FunctionStart) and value.IndexOf("nvvm.kernel") > 0
 			value.Substring(FunctionStart.Length, value.IndexOf("(") - FunctionStart.Length)
 Kernels(inspected MlirFunction) Texts
 	MlirGpu.Kernels(Doubling.function).First is MlirDevice.DoublingHeader
 	Text.Combine(MlirGpu.Kernels(Doubling.function)).IndexOf("llvm.func @Rows_Doubled_1_gpu2s(") > 0
 	mutable lines = List(Mutable(Text))
 	for inspected.method.instructions
-		if (value.kind is InstructionType.LoopBegin) and MlirGpuCheck(inspected, index).IsGpu
+		if value.kind is InstructionType.LoopBegin and MlirGpuCheck(inspected, index).IsGpu
 			let single = MlirFunction(inspected, Float = "f32")
 			let exact = MlirGuards(MlirFunction(single, Guarded = index), index).Kernel
 			let doubled = MlirDoubles(inspected, index).Failing then List(Text) else MlirDevice(inspected, index).Kernel
@@ -156,7 +156,7 @@ Callees(inspected MlirFunction) List(MlirFunction)
 	MlirGpu.Callees(MlirWholeKernel.Kernel.function).Length is 0
 	mutable found = List(Mutable(MlirFunction))
 	for inspected.method.instructions
-		if (value.kind is InstructionType.LoopBegin) and MlirGpuCheck(inspected, index).IsGpu
+		if value.kind is InstructionType.LoopBegin and MlirGpuCheck(inspected, index).IsGpu
 			let isKernel = MlirWholeKernel(inspected, index).IsKernel
 			found = isKernel then found else found + Devices(inspected, index + 1, inspected.method.LoopEndOf(index), 0)
 	found
@@ -167,7 +167,7 @@ Devices(inspected MlirFunction, first Number, limit Number, depth Number) List(M
 	for Range(first, limit)
 		let entry = inspected.method.instructions(value)
 		let isRounding = MlirDeviceCalls(inspected, value, inspected).IsRounding(entry)
-		if (depth < 3) and (entry.kind is InstructionType.Invoke) and (isRounding is false)
+		if depth < 3 and entry.kind is InstructionType.Invoke and isRounding is false
 			for MlirModule(inspected.types, "").Called(inspected, value)
 				found = found + value + Devices(value, 0, value.method.instructions.Length, depth + 1)
 	found

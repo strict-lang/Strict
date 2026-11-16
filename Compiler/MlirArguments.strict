@@ -19,7 +19,7 @@ Constant(callee MlirFunction, parameter Number, depth Number) Numbers
 		return found
 	for functions
 		let matched = Matched(value, callee, parameter, depth)
-		if (matched.Length > 1) or ((matched.Length is 1) and (found.Length is 1) and (found.First is not matched.First))
+		if matched.Length > 1 or matched.Length is 1 and found.Length is 1 and found.First is not matched.First
 			return List(Number)
 		found = matched.Length is 1 then matched else found
 	found
@@ -30,7 +30,7 @@ Matched(caller MlirFunction, callee MlirFunction, parameter Number, depth Number
 	for caller.method.instructions
 		if IsTargeting(caller, index, callee)
 			let argument = Argument(caller, index, parameter, depth)
-			if (argument.Length is 0) or ((found.Length > 0) and (found.First is not argument.First))
+			if argument.Length is 0 or found.Length > 0 and found.First is not argument.First
 				return Unknown
 			found = argument
 	found
@@ -62,7 +62,7 @@ Combined(caller MlirFunction, entry InstructionEntry, at Number, depth Number) N
 		return List(Number)
 	let left = Evaluated(caller, entry.payload(1), at, depth)
 	let right = Evaluated(caller, entry.payload(2), at, depth)
-	if (left.Length is 0) or (right.Length is 0)
+	if left.Length is 0 or right.Length is 0
 		return List(Number)
 	let sum = entry.kind is InstructionType.Add then left.First + right.First else left.First - right.First
 	List(Number) + (entry.kind is InstructionType.Multiply then left.First * right.First else sum)
@@ -75,6 +75,6 @@ IsTargeting(caller MlirFunction, at Number, callee MlirFunction) Boolean
 		return false
 	let decoder = PayloadDecoder(entry)
 	let isType = TypeEntry.ShortName(decoder.Text(1)) is TypeEntry.ShortName(callee.type.Name)
-	if (isType is false) or (decoder.Text(2) is not callee.method.Name)
+	if isType is false or decoder.Text(2) is not callee.method.Name
 		return false
 	MlirWholeFunction(caller).Callee(entry).Symbol is callee.Symbol

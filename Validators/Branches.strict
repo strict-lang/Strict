@@ -8,8 +8,8 @@ constant Same = Branches(("Run", "\tif a", "\t\tLog(0)", "\t\tLog(1)", "\telse",
 constant Chain = Branches(("Run", "\tif a", "\t\tLog(1)", "\telse if b", "\t\tLog(2)", "\telse", "\t\tLog(2)", "\t\tLog(3)"))
 Issues List(ValidationIssue)
 	Doubled.Issues.First to Text is "ConditionalBranchesMustDiffer: both branches are 1, use it without the condition"
-	(Doubled.Issues.First.Line is 2) and Chained.Issues.First.target.StartsWith("both branches are done")
-	(Nested.Issues.First.target is "both branches are ( x , y )" + Hint) and (Differing.Issues.Length is 0)
+	Doubled.Issues.First.Line is 2 and Chained.Issues.First.target.StartsWith("both branches are done")
+	Nested.Issues.First.target is "both branches are ( x , y )" + Hint and Differing.Issues.Length is 0
 	Same.Issues.Length is 1
 	mutable issues = List(Mutable(ValidationIssue))
 	for lines
@@ -17,7 +17,7 @@ Issues List(ValidationIssue)
 	issues
 Blocks(at Number) List(ValidationIssue)
 	Same.Blocks(4).First to Text is "ConditionalBranchesMustDiffer: both branches are Log(0), use it without the condition"
-	(Same.Blocks(1).Length is 0) and (Chain.Issues.Length is 0)
+	Same.Blocks(1).Length is 0 and Chain.Issues.Length is 0
 	if lines(at).Trim is not "else"
 		return List(ValidationIssue)
 	let depth = BodyParser.Indent(lines(at))
@@ -44,7 +44,7 @@ Repeated(at Number) List(ValidationIssue)
 		if value is "then"
 			let chosen = Branch(tokens, index + 1, ("else", ","))
 			let next = index + chosen.Length + 1
-			if (next < tokens.Length) and (tokens(next) is "else") and (Branch(tokens, next + 1, List(Text) + ",") is chosen)
+			if next < tokens.Length and tokens(next) is "else" and Branch(tokens, next + 1, List(Text) + ",") is chosen
 				Issue(Text.Combine(chosen, " "), at)
 Branch(tokens Texts, start Number, stops Texts) Texts
 	Branches.Branch(("a", "then", "1", "else", "2"), 2, List(Text) + "else") is ("1")
@@ -53,7 +53,7 @@ Branch(tokens Texts, start Number, stops Texts) Texts
 	mutable branch = List(Mutable(Text))
 	for Range(start, tokens.Length)
 		depth = depth + (tokens(value) is "(" then 1 else (tokens(value) is ")" then -1 else 0))
-		if (depth < 0) or ((depth is 0) and (tokens(value) is in stops))
+		if depth < 0 or depth is 0 and tokens(value) is in stops
 			return branch
 		branch.Add(tokens(value))
 	branch

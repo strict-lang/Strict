@@ -28,7 +28,7 @@ Verified(folder Text, root Text) slow
 CheckedMore(folder Text, root Text) slow
 	let failing = File(folder + "/Temperature.strict").ReadLines + Extra
 	let third = RanSuggest(folder, root, "Temperature.strict Clamped -", failing)
-	if third is Error or ("Suggestion: celsius.Clamp(minimum, maximum)" is not in third) or (OnlyPrefix(third) is false)
+	if third is Error or "Suggestion: celsius.Clamp(minimum, maximum)" is not in third or OnlyPrefix(third) is false
 		return Error("UnsavedOrFailingMethodsBroken: " + (third to Text))
 	if File(folder + "/Temperature.strict").ReadLines is not Temp
 		return Error("TemperatureFileModified")
@@ -38,21 +38,21 @@ CheckedEdges(folder Text, root Text) slow
 	File(folder + "/Wrapper.strict").Write(Wrapper)
 	File(folder + "/Dispatcher.strict").Write(Dispatcher)
 	let looped = RanSuggest(folder, root, "Wrapper.strict Clamped", List(Text))
-	if (looped is Error) or (looped.Trim is not "") or HasBinary(folder)
+	if looped is Error or looped.Trim is not "" or HasBinary(folder)
 		return Error("RecursiveDispatcherFailed: " + (looped to Text))
 	logger.Log("Recursive dispatcher: no passing suggestions")
 	File(folder + "/Dual.strict").Write(Dual)
 	let dual = RanSuggest(folder, root, "Dual.strict 5", List(Text))
-	if (dual is Error) or ("Suggestion: number + number" is not in dual)
+	if dual is Error or "Suggestion: number + number" is not in dual
 		return Error("OverloadSelectionFailed: " + (dual to Text))
 	logger.Log("Overloaded method selected by header line: passed")
 	CheckedMissing(folder, root)
 CheckedMissing(folder Text, root Text) slow
 	let empty = RanSuggest(folder, root, "Suggesting.strict Doubled -", ("has number", "Doubled Number"))
-	if (empty is Error) or (empty.Trim is not "")
+	if empty is Error or empty.Trim is not ""
 		return Error("NoTestsCaseFailed: " + (empty to Text))
 	let missing = RanResult(folder, root, "Suggesting.strict Missing", List(Text))
-	if (missing.exitCode is not 2) or ("MethodNotFound" is not in missing.Output)
+	if missing.exitCode is not 2 or "MethodNotFound" is not in missing.Output
 		return Error("UnknownMethodCaseFailed: " + (missing.exitCode to Text) + " " + missing.Output)
 	logger.Log("No tests and unknown method: passed")
 CheckedCase(folder Text, root Text, name Text, method Text, lines Texts, expected Text) slow
@@ -63,8 +63,8 @@ CheckedCase(folder Text, root Text, name Text, method Text, lines Texts, expecte
 	if output is Error
 		return output
 	let bodies = Bodies(output)
-	let bad = (expected is not in bodies) or HasBlocked(bodies) or (OnlyPrefix(output) is false)
-	if bad or (File(path).ReadLines is not lines) or HasBinary(folder)
+	let bad = expected is not in bodies or HasBlocked(bodies) or OnlyPrefix(output) is false
+	if bad or File(path).ReadLines is not lines or HasBinary(folder)
 		return Error("CaseFailed " + name + "." + method + ": " + output)
 	let elapsed = ((Process.Elapsed - started) * 1000).Round
 	logger.Log(name + "." + method + ": " + (bodies to Text) + " (" + elapsed + " ms)")
@@ -78,19 +78,19 @@ HasBlocked(bodies Texts) Boolean
 	HasBlocked(List(Text) + "Bogus.Pi")
 	HasBlocked(List(Text) + "number + number") is false
 	for bodies
-		let bad = (".Epsilon" is in value) or (".Pi" is in value)
-		if (value is in ("number", "celsius", "minimum", "maximum")) or ("Bogus." is in value) or bad
+		let bad = ".Epsilon" is in value or ".Pi" is in value
+		if value is in ("number", "celsius", "minimum", "maximum") or "Bogus." is in value or bad
 			return true
 	false
 OnlyPrefix(output Text) Boolean
 	OnlyPrefix("Suggestion: a\nSuggestion: b")
 	OnlyPrefix("bad") is false
 	for output.Lines
-		if (value is not "") and (value.StartsWith("Suggestion: ") is false)
+		if value is not "" and value.StartsWith("Suggestion: ") is false
 			return false
 	true
 HasBinary(folder Text) Boolean slow
-	Directory.Exists(folder + "/obj") and (Directory.Files(folder + "/obj", "*.strictbinary").Length > 0)
+	Directory.Exists(folder + "/obj") and Directory.Files(folder + "/obj", "*.strictbinary").Length > 0
 RanSuggest(folder Text, root Text, tail Text, input Texts) Text slow
 	let result = RanResult(folder, root, tail, input)
 	result.exitCode is 0 then result.Output else Error(result.Output + result.error)

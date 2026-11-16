@@ -15,9 +15,9 @@ Lines Texts
 		lines = lines + Function(value, files(value.type.Name))
 	lines + MlirDefaults(functions.First).Globals + MlirChanged.Declarations(functions) + Places
 Places Texts
-	(Counted.Places.First is Table + "2xi64>) : !llvm.array<2 x i64>") and Foreign.Places.Length is 6
-	(Counted.Places(1) is Filling.First) and Counted.Places(3).StartsWith("    %f0 = func.constant @")
-	(Counted.Places.Last is "  }") and Counted.Places(Counted.Places.Length - 3).EndsWith(" 1 : i64")
+	Counted.Places.First is Table + "2xi64>) : !llvm.array<2 x i64>" and Foreign.Places.Length is 6
+	Counted.Places(1) is Filling.First and Counted.Places(3).StartsWith("    %f0 = func.constant @")
+	Counted.Places.Last is "  }" and Counted.Places(Counted.Places.Length - 3).EndsWith(" 1 : i64")
 	mutable fills = List(Mutable(Text))
 	mutable count = 0
 	for functions
@@ -70,7 +70,7 @@ Positions(function MlirFunction) Numbers
 	positions
 IsGlobal(function MlirFunction, position Number) Boolean
 	Counted.IsGlobal(MlirCalls.Shapes, 3)
-	let kind = (position < function.method.instructions.Length) then function.method.instructions(position).kind else -1
+	let kind = position < function.method.instructions.Length then function.method.instructions(position).kind else -1
 	if kind is in (InstructionType.Print, InstructionType.IndexCall)
 		return true
 	MlirConstants(function, position).IsConstant

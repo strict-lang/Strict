@@ -91,10 +91,10 @@ ParametersOf(typeName Text, method Text, arguments Number) Texts
 	Sample.ParametersOf("Count", "Increment", 0).Length is 0
 	let scope = ParameterScope(typeName)
 	for scope.names
-		if (value is method) and (ParameterNames(scope.types(index)).Length is arguments)
+		if value is method and ParameterNames(scope.types(index)).Length is arguments
 			return ParameterNames(scope.types(index))
 	for scope.names
-		if (value is method) and (arguments > 0) and (ParameterNames(scope.types(index)).Length > arguments)
+		if value is method and arguments > 0 and ParameterNames(scope.types(index)).Length > arguments
 			return ParameterNames(scope.types(index))
 	ParameterNames(scope.TypeOf(method))
 ParameterScope(typeName Text) Scope
@@ -117,8 +117,8 @@ ShapeScope(typeName Text) Scope
 	let typeMethods = MethodsOf(typeName)
 	MembersOf(typeName).WithAll(typeMethods.names, typeMethods.types)
 ElementType(typeName Text) Text
-	Sample.ElementType("Texts") is "Text" and (Sample.ElementType("Range") is "Number")
-	Sample.ElementType("Iterator(Text)") is "Text" and (Sample.ElementType("Text") is "Character")
+	Sample.ElementType("Texts") is "Text" and Sample.ElementType("Range") is "Number"
+	Sample.ElementType("Iterator(Text)") is "Text" and Sample.ElementType("Text") is "Character"
 	Sample.ElementType("Dictionary(Text, Number)") is "Number"
 	Sample.ElementType("Iterator(Couple(Text, Number))") is "Couple(Text, Number)"
 	Sample.ElementType("Dictionary(Text, Couple(Text, Number))") is "Couple(Text, Number)"
@@ -136,10 +136,10 @@ MemberType(instanceType Text, name Text) Text
 	Sample.MemberType("outer", "Count") is "Count"
 	Sample.MemberType("List(Text, Number)", "Key") is "Text"
 	Sample.MemberType("List(Text, Number)", "Value") is "Number"
-	if (instanceType is "outer") and IsKnown(name)
+	if instanceType is "outer" and IsKnown(name)
 		return name
 	let pair = MethodBodies.Pair(instanceType)
-	if (pair.Length is 0) or (name is not in ("Key", "Value"))
+	if pair.Length is 0 or name is not in ("Key", "Value")
 		return ResolvedType(instanceType, name, 3)
 	name is "Key" then pair(0) else pair(1)
 ResolvedType(instanceType Text, name Text, depth Number) Text
@@ -150,11 +150,11 @@ ResolvedType(instanceType Text, name Text, depth Number) Text
 		return "Unknown"
 	if type is "Generic"
 		return Instantiation(value).Argument(instanceType, name)
-	if (type.IndexOf("(") > 0) and (BaseName(type) is BaseName(instanceType))
+	if type.IndexOf("(") > 0 and BaseName(type) is BaseName(instanceType)
 		return Instantiation(value).Substituted(instanceType, type)
-	let isInherited = (MembersOf(instanceType).TypeOf(name) is "") and (MethodsOf(instanceType).TypeOf(name) is "")
-	let isOwn = (type is in ("List", BaseName(instanceType))) or (isInherited and (MethodsOf("Any").TypeOf(name) is "Any"))
-	isOwn or isInherited and (type is ValueOf(instanceType)) then instanceType else type
+	let isInherited = MembersOf(instanceType).TypeOf(name) is "" and MethodsOf(instanceType).TypeOf(name) is ""
+	let isOwn = type is in ("List", BaseName(instanceType)) or isInherited and MethodsOf("Any").TypeOf(name) is "Any"
+	isOwn or isInherited and type is ValueOf(instanceType) then instanceType else type
 ValueOf(typeName Text) Text
 	Sample.ValueOf("Text") is ""
 	let typeMembers = MembersOf(typeName)
@@ -166,9 +166,9 @@ DeclaredType(typeName Text, name Text, depth Number) Text
 	Options.DeclaredType("Text", "to", 3) is "Text"
 	let typeMembers = Instantiation(value).Members(typeName, MembersOf(typeName))
 	let member = typeMembers.TypeOf(name)
-	if (member is not "") and ((member is not name) or (MethodsOf(member).TypeOf(name) is ""))
+	if member is not "" and (member is not name or MethodsOf(member).TypeOf(name) is "")
 		return member
-	if (MethodsOf(typeName).TypeOf(name) is not "") or (depth is 0)
+	if MethodsOf(typeName).TypeOf(name) is not "" or depth is 0
 		return MethodsOf(typeName).TypeOf(name)
 	let holder = Holder(typeName, name, depth)
 	holder is "" then Inherited(typeName, name) else MemberMethodType(typeMembers.TypeOf(holder), name, depth - 1)

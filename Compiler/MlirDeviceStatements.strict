@@ -74,7 +74,7 @@ IsList(kind Text) Boolean
 	MlirDeviceStatements(MlirDeviceRows.Nesting, 5).Emitted(2) is "    %d5_n = llvm.load %r2_n : !llvm.ptr -> i64"
 	Reading.IsList("Numbers")
 	Reading.IsList("Number") is false
-	(MlirLayout(function).Represented(kind) is "List(Number)") or (MlirDeviceRecords(function, at).Slots(kind) > 0)
+	MlirLayout(function).Represented(kind) is "List(Number)" or MlirDeviceRecords(function, at).Slots(kind) > 0
 Indexed(entry InstructionEntry) Texts
 	Text.Combine(Reading.Indexed(Lookup)).IndexOf("@strict_device_element(%d6d, %d6b, %d6k, %d6n)") > 0
 	Reading.Indexed(Lookup)(3).StartsWith("    llvm.store %d6y, %r")
@@ -129,7 +129,7 @@ IsContracted(entry InstructionEntry) Boolean
 	MlirDeviceStatements(Summed, 9).IsContracted(Summed.method.instructions(9))
 	Multiplying.IsContracted(Twice.method.instructions(2)) is false
 	let begin = function.method.LoopBeginOf(at)
-	let isLooped = (begin < at) and (function.method.instructions(begin).kind is InstructionType.LoopBegin)
+	let isLooped = begin < at and function.method.instructions(begin).kind is InstructionType.LoopBegin
 	let isCalculation = entry.kind is in (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply)
 	isCalculation and isLooped and MlirDeviceSums(function, begin).IsSum
 Called(entry InstructionEntry) Texts
@@ -182,11 +182,11 @@ Returned(register Text) Texts
 Labeled Texts
 	MlirDeviceStatements(Absolute.function, 4).Labeled is ("  ^bb4:")
 	MlirDeviceStatements(Absolute.function, 10).Labeled is ("    cf.br ^bb10", "  ^bb10:")
-	if (at is 0) or (function.Label(at).Length is 0)
+	if at is 0 or function.Label(at).Length is 0
 		return List(Text)
 	let previous = function.method.instructions(at - 1).kind
 	let isJump = previous is in (InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)
-	let isTerminated = isJump or (previous is InstructionType.Return)
+	let isTerminated = isJump or previous is InstructionType.Return
 	isTerminated then List(Text) + ("  ^bb" + at + ":") else ("    cf.br ^bb" + at, "  ^bb" + at + ":")
 Collected(entry InstructionEntry) Texts
 	MlirDeviceStatements(MlirGrouped.Norming.function, 13).Collected(Call).Last is "  ^d13skip:"

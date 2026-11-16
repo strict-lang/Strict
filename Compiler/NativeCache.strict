@@ -8,18 +8,18 @@ IsEnabled Boolean
 	NativeCache("build", ("Examples/Sum.strict", ".", "fast")).IsEnabled
 	if rest.Length < 2
 		return false
-	let isSource = Directory.Exists(rest(0)) or (File(rest(0)).Exists and (File(rest(0)).Modified is not 0))
-	if (isSource is false) or ((command is "test") and (TestRequest(rest).Selection is not in ("", "*")))
+	let isSource = Directory.Exists(rest(0)) or File(rest(0)).Exists and File(rest(0)).Modified is not 0
+	if isSource is false or command is "test" and TestRequest(rest).Selection is not in ("", "*")
 		return false
 	(NativeCompiler.Options(rest) - "native" - "unit" - "fast" - "windows" - "linux").Length is 0
 CacheFile Text
 	NativeCache("test", ("Math", ".", "native")).CacheFile is "./Math/obj/Tests.test.nativecache"
 	NativeCache("build", ("Examples/Sum.strict", ".")).CacheFile is "./Examples/obj/Sum.nativecache"
-	NativeBuild.Output(rest(0), (command is "build") and NativeBuild.IsProgram(rest(0))) + ".nativecache"
+	NativeBuild.Output(rest(0), command is "build" and NativeBuild.IsProgram(rest(0))) + ".nativecache"
 Key Text
 	"3\t" + Directory.Current + "\t" + command + "\t" + Text.Combine(rest, "\t")
 Output Text
-	let program = (command is "build") and NativeBuild.IsProgram(rest(0))
+	let program = command is "build" and NativeBuild.IsProgram(rest(0))
 	Toolchain(Platform.Current, rest(1)).Executable(NativeBuild.Output(rest(0), program))
 Stamp(path Text) Text
 	NativeCache.Stamp("Compiler/output/missing") is "unknown"
@@ -35,10 +35,10 @@ Message Text
 	let prefix = command is "test" then "Tests up to date: " else "Up to date: "
 	prefix + source + changed + " < " + Path(executable).FileName.text + built
 IsCurrent Boolean
-	if (IsEnabled is false) or (File(CacheFile).Exists is false) or (File(Output).Exists is false)
+	if IsEnabled is false or File(CacheFile).Exists is false or File(Output).Exists is false
 		return false
 	let lines = File(CacheFile).ReadLines
-	((lines.Length > 1) and (lines.Length % 2 is 1) and (lines.First is Key)) and Matches(lines.Slice(1, lines.Length - 1))
+	lines.Length > 1 and lines.Length % 2 is 1 and lines.First is Key and Matches(lines.Slice(1, lines.Length - 1))
 Matches(lines Texts) Boolean
 	for Range(0, lines.Length / 2)
 		let position = value * 2
@@ -98,7 +98,7 @@ Value(path Text) Text
 		files = files + Directory.Files(folder, value)
 	Text.Combine(files.Sorted, "\t")
 Outputs Texts
-	let base = NativeBuild.Output(rest(0), (command is "build") and NativeBuild.IsProgram(rest(0)))
+	let base = NativeBuild.Output(rest(0), command is "build" and NativeBuild.IsProgram(rest(0)))
 	let release = Release(Logger, base)
 	mutable files = List(Text) + Output
 	for Release.Sidecars

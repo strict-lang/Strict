@@ -20,7 +20,7 @@ Positions(type Text, name Text) Numbers
 	Repaint.Kind is "Member"
 	Painting.StoredBack(Short, Holding.At(1), Holding.Declare("painter mutable", "mutable")).instructions.Length is 0
 	for values.inference.types.ParameterScope(type).TypeOf(name + " types").Split(",")
-		if (value is not "") and Changes.HasChanges(values.inference.types.ParameterScope(value.Trim))
+		if value is not "" and Changes.HasChanges(values.inference.types.ParameterScope(value.Trim))
 			index
 Owner(call SyntaxNode, block CodeBlock) Text
 	Painting.Owner(Paint, Holding) is "Painter"
@@ -50,10 +50,10 @@ StoredBack(call SyntaxNode, invoked CodeBlock, block CodeBlock) CodeBlock
 	Painting.StoredBack(Paint, Holding.At(1), Holding).instructions.First.payload is (3, -1)
 	Painting.StoredBack(Paint, Holding.At(1), CodeBlock.Empty.Declare("ticker", "Ticker")).instructions.Length is 0
 	let start = values.ArgumentStart(call)
-	let isConstructed = (start is 0) and values.inference.types.IsKnown(call.text)
+	let isConstructed = start is 0 and values.inference.types.IsKnown(call.text)
 	mutable stored = invoked
 	for Positions(TypeEntry.ShortName(Owner(call, block)), isConstructed then "from" else method)
 		let argument = start + value < call.children.Length then call.children(start + value) else call
-		if (argument.Kind is "Identifier") and (block.scope.TypeOf(argument.text + " mutable") is not "")
+		if argument.Kind is "Identifier" and block.scope.TypeOf(argument.text + " mutable") is not ""
 			stored = stored.Add(InstructionEntry.Named(Store, invoked.Result + 2 + value, argument.text))
 	stored

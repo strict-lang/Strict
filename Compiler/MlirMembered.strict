@@ -31,7 +31,7 @@ Rebuilding(register Number) Number
 	for Range(position + 1, steps.Length)
 		let step = steps(value)
 		let isBuilt = step.kind is InstructionType.Invoke then step.texts(1) is "from" else false
-		if isBuilt and (register is in reuse.Reads(step))
+		if isBuilt and register is in reuse.Reads(step)
 			return value
 		if reuse.Written(step) is register
 			return -1
@@ -54,7 +54,7 @@ Target(at Number, slot Number) Text
 	let entry = function.method.instructions(at)
 	let owner = function.TypeOf(entry.texts(0), true)
 	let name = MlirOwned(function, at).Target(entry, owner)
-	if (name is "") or (MlirAlone(function).IsAlone(name) is false)
+	if name is "" or MlirAlone(function).IsAlone(name) is false
 		return ""
 	IsKept(MlirInstances(function, 0).Stored(owner)(slot).Name) then name else ""
 IsKept(member Text) Boolean
@@ -64,7 +64,7 @@ IsKept(member Text) Boolean
 	for steps
 		let isField = value.kind is InstructionType.FieldLoad then value.texts(0) is member else false
 		let isConsumed = isField then MlirFlats(function, index).IsConsumed(steps, index, value.payload(0)) else true
-		if (isConsumed or (Reader(index, value.payload(0)) is position)) is false
+		if (isConsumed or Reader(index, value.payload(0)) is position) is false
 			return false
 	true
 Reader(at Number, register Number) Number
@@ -73,6 +73,6 @@ Reader(at Number, register Number) Number
 	let steps = function.method.instructions
 	let reuse = LoadReuse(steps)
 	for Range(at + 1, steps.Length)
-		if (register is in reuse.Reads(steps(value))) and (steps(value).kind is not InstructionType.CheckError)
+		if register is in reuse.Reads(steps(value)) and steps(value).kind is not InstructionType.CheckError
 			return value
 	-1

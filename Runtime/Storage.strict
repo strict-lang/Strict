@@ -12,9 +12,9 @@ Written(owner VmValue, target Text, position Number, element VmValue) VmValue
 	let found = dot > 0 then Member(owner, target.Substring(dot + 1, target.Length - dot - 1)) else -1
 	let list = found < 0 then owner else owner.items(found)
 	let at = position < 0 then position + list.items.Length else position
-	let isOutside = (at < 0) or (at >= list.items.Length)
+	let isOutside = at < 0 or at >= list.items.Length
 	let changed = isOutside then VmValue.OfError("IndexOutOfRange") else VmValue.OfList(Replaced(list.items, at, element))
-	if (found < 0) or isOutside
+	if found < 0 or isOutside
 		return changed
 	VmValue(owner.kind, owner.number, owner.text, Replaced(owner.items, found, changed))
 Member(owner VmValue, name Text) Number

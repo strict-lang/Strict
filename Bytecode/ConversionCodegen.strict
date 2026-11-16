@@ -55,11 +55,11 @@ Converted(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
 	Kinded.Converted(SyntaxNode("Call", "Kind"), "Text", CodeBlock.Empty).text is "to"
 	if values.inference.types.IsPlural(type)
 		return Elements(Held(node, type, block), type, block)
-	let isConstructed = values.inference.types.IsKnown(type) and (type is not in TypeInference.Primitives)
-	if (node.Kind is "List") and isConstructed and (type is not "List")
+	let isConstructed = values.inference.types.IsKnown(type) and type is not in TypeInference.Primitives
+	if node.Kind is "List" and isConstructed and type is not "List"
 		return SyntaxNode("Call", type, node.children)
 	let converter = values.inference.Converter(values.TypeOf(node, block), type)
-	(type is "Text") and (converter is "") then Bracketed(node, block) else Changed(node, converter, type, block)
+	type is "Text" and converter is "" then Bracketed(node, block) else Changed(node, converter, type, block)
 Held(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
 	Colored.Held(NewColor, "Byte", CodeBlock.Empty).text is "Red"
 	Colored.Held(NewColor, "ColorValue", CodeBlock.Empty) is NewColor
@@ -68,10 +68,10 @@ Held(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
 	let source = values.TypeOf(node, block)
 	let index = types.MembersOf(source).types.Index(type)
 	let isConverted = values.inference.Converter(source, type) is not ""
-	if (index < 0) or isConverted or (type is in ("Text", "Generic", "Generics", "Any")) or types.IsPlural(source)
+	if index < 0 or isConverted or type is in ("Text", "Generic", "Generics", "Any") or types.IsPlural(source)
 		return node
 	let traitMethods = types.MethodsOf(type).names
-	let isImplemented = (traitMethods.Length > 0) and ((traitMethods - types.MethodsOf(source).names).Length is 0)
+	let isImplemented = traitMethods.Length > 0 and (traitMethods - types.MethodsOf(source).names).Length is 0
 	isImplemented then node else SyntaxNode("Member", types.MembersOf(source).names(index), List(SyntaxNode) + node)
 Bracketed(node SyntaxNode, block CodeBlock) SyntaxNode
 	Stepped.Bracketed(SyntaxNode("Call", "Step"), CodeBlock.Empty).text is "+"
@@ -79,7 +79,7 @@ Bracketed(node SyntaxNode, block CodeBlock) SyntaxNode
 	Mapped.Bracketed(SyntaxNode("Call", "Dictionary", ValueCodegen.Ones), CodeBlock.Empty).Kind is "Call"
 	let type = values.TypeOf(node, block)
 	let members = values.inference.types.MembersOf(type)
-	if (members.names.Length is not 1) or type.StartsWith("Dictionary(")
+	if members.names.Length is not 1 or type.StartsWith("Dictionary(")
 		return node
 	if members.names(0).Lower is members.types(0).Lower
 		return node
@@ -101,7 +101,7 @@ Typed(node SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Typed(ValueCodegen.ToText, CodeBlock.Empty) is ValueCodegen.ToText
 	Plain.Typed(Typing, CodeBlock.Empty) to Text is "Type(\"Number\", \"Strict\")"
 	Plain.Typed(SyntaxNode("Call", "to", Typing.children), CodeBlock.Empty).text is "to"
-	if ((node.Kind is "Binary") and (node.text is "to") and (node.children(1).text is "Type")) is false
+	if (node.Kind is "Binary" and node.text is "to" and node.children(1).text is "Type") is false
 		return node
 	let source = node.children(0)
 	if source.Kind is "Text"
@@ -110,7 +110,7 @@ Typed(node SyntaxNode, block CodeBlock) SyntaxNode
 	known is "Text" then node else TypeValue(values.target.FullName(known))
 TypeValue(full Text) SyntaxNode
 	Plain.TypeValue("Strict/Number") to Text is "Type(\"Number\", \"Strict\")"
-	Plain.TypeValue("Strict/Number").children(0).Kind is "Text" and (Plain.TypeValue("A/B").children(1).Kind is "Text")
+	Plain.TypeValue("Strict/Number").children(0).Kind is "Text" and Plain.TypeValue("A/B").children(1).Kind is "Text"
 	Stepped.Bracketed(SyntaxNode("Call", "Step"), CodeBlock.Empty) to Text is "\"(\" + (Step().step + \")\")"
 	Plain.Changed(ValueCodegen.One, "to", "Text", CodeBlock.Empty) to Text is "1 to Text"
 	Colored.Held(NewColor, "Byte", CodeBlock.Empty) to Text is "Color(1).Red"
@@ -132,7 +132,7 @@ ConvertedElements(node SyntaxNode, type Text, block CodeBlock) List(SyntaxNode)
 		Converted(value, type, block)
 Elements(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
 	Colored.Elements(SyntaxNode("List", "", NewColorValue), "Colors", CodeBlock.Empty).children(0).text is "Color"
-	Colored.Elements(Pixels, "Colors", Pixelated).children(1).text is "Color" and (Ranging.Kind is "Converted")
+	Colored.Elements(Pixels, "Colors", Pixelated).children(1).text is "Color" and Ranging.Kind is "Converted"
 	Colored.Elements(Pixels, "ColorValues", Pixelated).Kind is "Identifier"
 	Colored.Held(Pixels, "Color", Pixelated) is Pixels
 	let types = values.inference.types
@@ -142,13 +142,13 @@ Elements(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
 	let scoped = block.Declare("value", types.ElementType(source))
 	constant element = SyntaxNode("Identifier", "value")
 	let converted = types.IsPlural(source) then Converted(element, types.ElementType(type), scoped) else element
-	(converted.text is "value") and (source is not "Range") then node else SyntaxNode("Converted", type, (node, converted))
+	converted.text is "value" and source is not "Range" then node else SyntaxNode("Converted", type, (node, converted))
 Wanted(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
 	Plain.Wanted(Letter, "Text", Lettered).children(1).text is "Text"
 	Plain.Wanted(Letter, "", Lettered) is Letter
 	Plain.Wanted(ValueCodegen.One, "Text", Lettered) is ValueCodegen.One
 	Plain.Wanted(SyntaxNode("Return", "", Letter), "Text", Lettered).Kind is "Return"
-	if (type is not "Text") or (BranchValues.Returning.IsValue(node) is false)
+	if type is not "Text" or BranchValues.Returning.IsValue(node) is false
 		return node
 	values.TypeOf(node, block) is "Character" then Changed(node, "to", "Text", block) else node
 Returned(node SyntaxNode, block CodeBlock) SyntaxNode
@@ -156,7 +156,7 @@ Returned(node SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Returned(SyntaxNode("Return", "", Letter), Pixelated) is SyntaxNode("Return", "", Letter)
 	Plain.Returned(SyntaxNode("Return", ""), Lettered) is SyntaxNode("Return", "")
 	Plain.Returned(Letter, Lettered) is Letter
-	if (node.Kind is not "Return") or (node.HasValue is false)
+	if node.Kind is not "Return" or node.HasValue is false
 		return node
 	let wanted = Wanted(node.children(0), block.scope.TypeOf(CodeBlock.ReturnMarker), block)
 	SyntaxNode("Return", node.text, wanted, node.line)
@@ -167,11 +167,11 @@ Operand(node SyntaxNode, block CodeBlock) SyntaxNode
 	let types = values.inference.types
 	let listType = values.TypeOf(node.children(0), block)
 	let operand = node.children(1)
-	if (node.text is "+") and IsElement(listType, operand, block)
+	if node.text is "+" and IsElement(listType, operand, block)
 		return SyntaxNode("List", "", List(SyntaxNode) + operand)
 	if types.IsPlural(listType) is false
 		return node.text is "+" then Textual(node, block) else operand
-	let isList = (operand.Kind is "List") or types.IsPlural(values.TypeOf(operand, block))
+	let isList = operand.Kind is "List" or types.IsPlural(values.TypeOf(operand, block))
 	Converted(operand, (isList then listType else types.ElementType(listType)), block)
 IsElement(collection Text, operand SyntaxNode, block CodeBlock) Boolean
 	Plain.IsElement("List(Numbers)", Nesting.children.Last, CodeBlock.Empty)
@@ -181,11 +181,11 @@ IsElement(collection Text, operand SyntaxNode, block CodeBlock) Boolean
 	Plain.IsElement("List(Numbers)", ValueCodegen.One, CodeBlock.Empty) is false
 	Plain.IsElement("List(Numbers)", Pixels, CodeBlock.Empty.Declare("pixels", "List(Number)"))
 	let types = values.inference.types
-	let isSpelled = collection.StartsWith("List(") and (collection.IndexOf(",") < 0)
+	let isSpelled = collection.StartsWith("List(") and collection.IndexOf(",") < 0
 	let element = isSpelled then collection.Substring(5, collection.Length - 6) else types.ElementType(collection)
 	let isListElement = ListFits(types).IsList(element) or types.IsPlural(types.ValueOf(element))
 	let type = values.TypeOf(operand, block)
-	isListElement and ((type is element) or (ListFits(types).IsList(type) and ListFits(types).Widened(type, element)))
+	isListElement and (type is element or ListFits(types).IsList(type) and ListFits(types).Widened(type, element))
 Textual(node SyntaxNode, block CodeBlock) SyntaxNode
 	Kinded.Textual(SyntaxNode("Binary", "+", (ValueCodegen.Hi, SyntaxNode("Call", "Kind"))), CodeBlock.Empty).text is "to"
 	Kinded.Textual(SyntaxNode("Binary", "+", (ValueCodegen.Hi, ValueCodegen.One)), CodeBlock.Empty).text is "1"
@@ -196,7 +196,7 @@ Textual(node SyntaxNode, block CodeBlock) SyntaxNode
 	let types = values.inference.types
 	let left = values.TypeOf(node.children(0), block)
 	let isText = "Text" is in (left, types.ValueOf(left))
-	if (types.MethodsOf(type).Has("to", "Text") is false) or TypeEntry.IsBaseName(type)
+	if types.MethodsOf(type).Has("to", "Text") is false or TypeEntry.IsBaseName(type)
 		return isText then Bracketed(operand, block) else operand
 	isText then SyntaxNode("Binary", "to", (operand, SyntaxNode("Identifier", "Text"))) else operand
 Looped(node SyntaxNode, block CodeBlock) CodeBlock
@@ -215,7 +215,7 @@ Replaced(call SyntaxNode) SyntaxNode
 	Plain.Replaced(Repainted) to Text is "Greeter(pixels.text)"
 	Plain.Replaced(NewColor) is NewColor
 	let names = values.target.FromNames(call.text, List(Text) + call.text)
-	if (call.children.Length < 2) or (call.children(1).Kind is not "Reassignment") or (names.Length is 0)
+	if call.children.Length < 2 or call.children(1).Kind is not "Reassignment" or names.Length is 0
 		return call
 	mutable arguments = List(Mutable(SyntaxNode))
 	for names
@@ -225,6 +225,6 @@ Replacement(call SyntaxNode, name Text) SyntaxNode
 	Plain.Replacement(Repainted, "c") is NewColorValue
 	Plain.Replacement(Repainted, "size") to Text is "pixels.size"
 	for call.children
-		if (value.Kind is "Reassignment") and (value.children(0).text is name)
+		if value.Kind is "Reassignment" and value.children(0).text is name
 			return value.children(1)
 	SyntaxNode("Member", name, call.children(0))

@@ -86,7 +86,7 @@ LengthIssues(line Text, number Number) ValidationIssues
 	mutable issues = List(Mutable(ValidationIssue))
 	let limit = (line.StartsWith("constant ") then 2 else 1) * MaxCharacters * scale
 	let length = line.Length to Text + " > " + limit
-	if (line.StartsWith("\t") or line.StartsWith("constant ")) and (line.Length > limit)
+	if (line.StartsWith("\t") or line.StartsWith("constant ")) and line.Length > limit
 		issues.Add(ValidationIssue("CharacterCountMustBeWithinLimit", length, number + 1))
 	issues
 AsciiIssues(line Text, number Number) ValidationIssues
@@ -121,7 +121,7 @@ IsZeroMinus(tokens Texts, index Number) Boolean
 	Sample.IsZeroMinus(("return", "0", "-", "b"), 1)
 	let before = index is 0 then "(" else tokens(index - 1)
 	let precedence = SyntaxNode("Binary", before).Precedence
-	let opening = before is in ("(", ",", "=", "not", "return", "if") or (precedence > 0 and precedence < MinusPrecedence)
+	let opening = before is in ("(", ",", "=", "not", "return", "if") or precedence > 0 and precedence < MinusPrecedence
 	tokens(index) is "0" and tokens(index + 1) is "-" and opening
 Operand(tokens Texts, start Number) Text
 	Sample.Operand(("b", ".", "Y", "*", "2"), 0) is "b.Y"
@@ -131,7 +131,7 @@ Operand(tokens Texts, start Number) Text
 	Sample.NegationIssues("\tlet a = 0-b", 0).Length is 0
 	mutable text = tokens(start)
 	for tokens.Length - start - 1
-		if tokens(start + index + 1) is not "." and (text.EndsWith(".") is false)
+		if tokens(start + index + 1) is not "." and text.EndsWith(".") is false
 			return text
 		text = text + tokens(start + index + 1)
 	text
@@ -151,7 +151,7 @@ MethodIssues ValidationIssues
 IsHeader(index Number) Boolean
 	Long.IsHeader(0) and Long.IsHeader(14)
 	Long.IsHeader(3) is false
-	(index is lines.Length) or (lines(index).StartsWith("\t") is false)
+	index is lines.Length or lines(index).StartsWith("\t") is false
 IsTooLong(start Number, index Number) Boolean
 	Long.IsTooLong(0, 14)
 	Long.IsTooLong(0, 13) is false
@@ -159,15 +159,15 @@ IsTooLong(start Number, index Number) Boolean
 	Long.IsTooLong(1, 14) is false
 	Twice.IsTooLong(0, 14) is false
 	Limits(Long.lines + Long.lines, false).IsTooLong(0, 15) is false
-	IsHeader(index) and (start >= 0) and (index - start > MaxMethodLines * scale)
+	IsHeader(index) and start >= 0 and index - start > MaxMethodLines * scale
 Started(shape TypeShape, start Number, index Number) Number
 	Long.Started(TypeShape(Long.lines), 5, 0) is 0
 	Long.Started(TypeShape(Long.lines), 5, 3) is 5
 	Long.Started(TypeShape(Long.lines), 5, 14) is 5
 	Sample.Started(TypeShape(Sample.lines), 5, 0) is 5
-	if (index < lines.Length) and (lines(index) is "")
+	if index < lines.Length and lines(index) is ""
 		return -1
-	(index < lines.Length) and shape.IsMethodHeader(lines(index)) then index else start
+	index < lines.Length and shape.IsMethodHeader(lines(index)) then index else start
 CountIssues ValidationIssues
 	Limits(("has a Number", "has b Number"), false).CountIssues.Length is 0 and Methods.CountIssues.Length is 1
 	Limits(OnlyConstants.lines, false).CountIssues.Length is 0 and Limits(Methods.lines, true).CountIssues.Length is 0
@@ -186,7 +186,7 @@ Count(start Text) Number
 	Sample.Count("has ") is 1
 	Long.Count("\t1") is 5
 	Crowded.CountIssues.First to Text is "ConstantCountShouldNotExceedLimit: 48 > 40"
-	Limits(Crowded.lines, false, 2).CountIssues.Length is 0 and (Limits(Crowding.lines, false, 2).CountIssues.Length is 0)
+	Limits(Crowded.lines, false, 2).CountIssues.Length is 0 and Limits(Crowding.lines, false, 2).CountIssues.Length is 0
 	Crowding.CountIssues.First to Text is "MemberCountShouldNotExceedLimit: 16 > 15"
 	Limits(OnlyConstants.lines + OnlyConstants.lines + Long.lines, false).CountIssues.Length is 0
 	Limits(Methods.lines + Crowding.lines, false).CountIssues.Length is 2

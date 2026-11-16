@@ -18,12 +18,12 @@ Element Text
 IsAveraged Boolean
 	Rg.IsAveraged
 	MemberAverage("Strict/List(Byte)", Rg.types).IsAveraged is false
-	MemberAverage("Strict/List(Xy)", Xy).IsAveraged and (MemberAverage("Strict/List(Named)", Xy).IsAveraged is false)
+	MemberAverage("Strict/List(Xy)", Xy).IsAveraged and MemberAverage("Strict/List(Named)", Xy).IsAveraged is false
 	let members = types.MembersOf(Element)
 	if members.names.Length < 2
 		return false
 	for members.types
-		if (value is not "Number") and (types.MembersOf(value).TypeOf("number") is not "Number")
+		if value is not "Number" and types.MembersOf(value).TypeOf("number") is not "Number"
 			return false
 	true
 Lines Texts
@@ -52,9 +52,9 @@ Replaced(lines Texts) Texts
 	Rg.Replaced(Averaging).Last is "Median Number"
 	MemberAverage("Strict/List(Byte)", Rg.types).Replaced(Averaging) is Averaging
 	let start = lines.Index("Average Generic")
-	if (start < 0) or (IsAveraged is false)
+	if start < 0 or IsAveraged is false
 		return lines
 	mutable ending = start + 1
-	for as long as (ending < lines.Length) and lines(ending).StartsWith("\t")
+	for as long as ending < lines.Length and lines(ending).StartsWith("\t")
 		ending = ending + 1
 	lines.Slice(0, start) + Lines + lines.Slice(ending, lines.Length - ending)

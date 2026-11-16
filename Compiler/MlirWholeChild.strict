@@ -25,13 +25,13 @@ IsWhole Boolean
 	Brightening.IsWhole
 	MlirWholeChild(MlirParallel.Doubling.function, 2).IsWhole is false
 	let isKernel = MlirWholeKernel(function, position).IsKernel
-	if isKernel or MlirParallel(function, position).IsParallel is false or (MlirLayout(function).Packed(position) is not 9)
+	if isKernel or MlirParallel(function, position).IsParallel is false or MlirLayout(function).Packed(position) is not 9
 		return isKernel
-	if (MlirLoops(function, position).Collection is not "") and (MlirBytes(function, position).Iterated is not 9)
+	if MlirLoops(function, position).Collection is not "" and MlirBytes(function, position).Iterated is not 9
 		return false
 	let settled = MlirWholeTypes(function).Settled
 	for Range(position + 1, function.method.LoopEndOf(position))
-		if (IsAllowed(value, settled) is false) or MlirWholeTypes(function).IsFractional(value, settled)
+		if IsAllowed(value, settled) is false or MlirWholeTypes(function).IsFractional(value, settled)
 			return false
 	true
 IsAllowed(at Number, settled Text) Boolean
@@ -40,11 +40,11 @@ IsAllowed(at Number, settled Text) Boolean
 	Brightening.IsAllowed(4, "--x-||") is false
 	let entry = function.method.instructions(at)
 	let written = LoadReuse(function.method.instructions).Written(entry)
-	if (written >= 0) and (settled(written) is "x")
+	if written >= 0 and settled(written) is "x"
 		return false
 	if entry.kind is InstructionType.InvokeWriteToList
 		return entry.texts(0) is "forResult"
-	(MlirWholeTypes(function).Length(at) is not "") or MlirWholeFunction(function).IsAllowed(at, 0)
+	MlirWholeTypes(function).Length(at) is not "" or MlirWholeFunction(function).IsAllowed(at, 0)
 Symbol Text
 	Brightening.Symbol is "Rows_Brightened_1_loop2_whole"
 	Text.Combine(Brightening.Lines).Length is 4779
@@ -74,12 +74,12 @@ Inputs Texts
 	for Range(position + 1, function.method.LoopEndOf(position))
 		let entry = function.method.instructions(value)
 		let isUsed = entry.kind is in (InstructionType.LoadVariableToRegister, InstructionType.IndexCall)
-		if isUsed and (entry.texts(0) is not in ("value", "index")) and (entry.texts(0) is not in names)
+		if isUsed and entry.texts(0) is not in ("value", "index") and entry.texts(0) is not in names
 			names.Add(entry.texts(0))
 	names
 Guarded Texts
 	Brightening.Guarded.Last is "    cf.cond_br %t2whok, ^wholestart, ^generic"
-	(Text.Combine(Brightening.Guarded).Length is 1347) and (Text.Combine(Reading.Guarded).Length is 995)
+	Text.Combine(Brightening.Guarded).Length is 1347 and Text.Combine(Reading.Guarded).Length is 995
 	let guard = MlirWholeGuard(function, position)
 	mutable lines = guard.Started
 	for Inputs

@@ -25,12 +25,12 @@ IsNested(typeName Text, depth Number) Boolean
 	Sample.IsNested("Strict/Outer", 0)
 	Sample.IsNested("Strict/Outer", 9) is false
 	let layout = MlirLayout(function)
-	if (depth > 8) or (layout.IsStruct(typeName) is false)
+	if depth > 8 or layout.IsStruct(typeName) is false
 		return false
 	let stored = MlirInstances(function, 0).Stored(function.TypeOf(typeName, true))
 	for stored
 		let isNumber = layout.Represented(TypeEntry.ShortName(value.typeName)) is in ("Number", "Pair")
-		if (isNumber is false) and (IsNested(value.typeName, depth + 1) is false)
+		if isNumber is false and IsNested(value.typeName, depth + 1) is false
 			return false
 	stored.Length > 0
 Slots(typeName Text) Number
@@ -75,7 +75,7 @@ StackSlots(at Number) Number
 	Wrapper.StackSlots(2) is 0
 	MlirEmbedded(MlirStructs.Forwarder.function).StackSlots(1) is 0
 	let entry = function.method.instructions(at)
-	if (entry.kind is not InstructionType.Invoke) or (IsCopied(at, entry.payload(0)) is false)
+	if entry.kind is not InstructionType.Invoke or IsCopied(at, entry.payload(0)) is false
 		return 0
 	let callees = MlirModule(function.types, "").Called(function, at)
 	let returned = callees.Length > 0 then callees.First.method.returnType else ""
@@ -86,13 +86,13 @@ IsCopied(at Number, register Number) Boolean
 	Wrapper.IsCopied(0, 0) is false
 	let membered = MlirMembered(function, at)
 	let built = membered.Rebuilding(register)
-	if (built < 0) or (membered.Reader(at, register) is not built)
+	if built < 0 or membered.Reader(at, register) is not built
 		return false
 	let owner = function.TypeOf(function.method.instructions(built).texts(0), true)
 	let slot = membered.Slot(built, register)
 	if slot < 0
 		return false
-	IsInline(owner, MlirInstances(function, 0).Stored(owner)(slot)) and (membered.Reader(built, register) < 0)
+	IsInline(owner, MlirInstances(function, 0).Stored(owner)(slot)) and membered.Reader(built, register) < 0
 Stacks Texts
 	Wrapper.Stacks.Last is "    %stack1 = llvm.alloca %stack1n x f64 : (i64) -> !llvm.ptr"
 	MlirEmbedded(MlirStructs.Forwarder.function).Stacks.Length is 0

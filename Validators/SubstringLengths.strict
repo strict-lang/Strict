@@ -18,7 +18,7 @@ Lengths(tokens Texts, line Number) List(ValidationIssue)
 	for tokens
 		if value is "Substring"
 			let close = Closing(tokens, index + 1)
-			if (close < tokens.Length) and (tokens(close - 1) is in ("0", "1")) and (tokens(close - 2) is ",")
+			if close < tokens.Length and tokens(close - 1) is in ("0", "1") and tokens(close - 2) is ","
 				let detail = "Substring length " + tokens(close - 1) + ", use index access or \"\""
 				issues.Add(ValidationIssue("SubstringLengthMustBeAtLeastTwo", detail, line))
 	issues

@@ -102,8 +102,8 @@ Cut(model Network, targets Numbers, width Number) Number
 	mutable hidden = width
 	mutable working = Separated(current, targets) then hidden else -1
 	for width
-		if (working < 0) or (hidden <= 1)
-			return (hidden <= 1) and (working >= 0) then Linear(targets, working) else working
+		if working < 0 or hidden <= 1
+			return hidden <= 1 and working >= 0 then Linear(targets, working) else working
 		hidden = hidden - 1
 		current = Tuned(Narrowed(current, 0), targets, Repair, Rate)
 		working = Separated(current, targets) then hidden else working

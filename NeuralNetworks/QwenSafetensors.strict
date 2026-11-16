@@ -114,7 +114,7 @@ IsFolded(layer Text) Boolean
 	Plain.IsFolded("layers.0.")
 	Tiny.IsFolded("layers.0.") is false
 	let inputs = file.Entry(layer + "mlp.down_proj.pre_quant_scale")
-	(inputs is not "") and file.IsFours(layer + "mlp.up_proj") and file.IsFours(layer + "mlp.down_proj")
+	inputs is not "" and file.IsFours(layer + "mlp.up_proj") and file.IsFours(layer + "mlp.down_proj")
 Projection(layer Text, kind Text, inputs Text) List(Numbers)
 	Plain.Projection("layers.0.", "mlp.up_proj", "").Length is Plain.file.Shape("layers.0.mlp.up_proj.weight").First
 	let name = layer + kind

@@ -58,7 +58,7 @@ Redeclared(scoped ScopedStatement, current Scope) Text
 	let scope = scoped.scope
 	let isMember = name is in inference.types.MembersOf(scope.TypeOf("self type")).names
 	let local = scope.TypeOf(name + " let") + scope.TypeOf(name + " mutable") + scope.TypeOf(name + " constant")
-	if (scope.TypeOf(name) is "") or isMember or (local is "") and (name is in ("value", "index", "outer"))
+	if scope.TypeOf(name) is "" or isMember or local is "" and name is in ("value", "index", "outer")
 		return ""
 	local is "" then "VariableHidesParameterUseDifferentName: " + name else "NameAlreadyDeclared: " + name
 Assigned(scoped ScopedStatement, current Scope) Text
@@ -71,7 +71,7 @@ Assigned(scoped ScopedStatement, current Scope) Text
 		return Mutated(scoped, current)
 	let name = Root(scoped.statement.children(0))
 	let scope = scoped.scope
-	let isMutable = (scope.TypeOf(name) is "") or (scope.TypeOf(name + " mutable") is not "")
+	let isMutable = scope.TypeOf(name) is "" or scope.TypeOf(name + " mutable") is not ""
 	let isLoopValue = name is in ("value", "index", "outer")
 	isMutable or isLoopValue then "" else "AssignmentNeedsMutableVariable: " + Declared(name, scope)
 Declared(name Text, scope Scope) Text
@@ -80,24 +80,24 @@ Declared(name Text, scope Scope) Text
 	Counting.Declared("number", Owned) is "has member number can not be assigned, declare it mutable"
 	let declared = scope.TypeOf(name + " let") + scope.TypeOf(name + " constant")
 	let isMember = name is in inference.types.MembersOf(scope.TypeOf("self type")).names
-	if (declared is "") and (isMember is false)
+	if declared is "" and isMember is false
 		return "parameter " + name + " can not be assigned, copy it into a mutable variable"
 	(declared is "" then "has member" else declared) + " " + name + " can not be assigned, declare it mutable"
 Root(target SyntaxNode) Text
 	Counting.Root(SyntaxNode("Member", "number", Stored.children(0))) is "a"
 	Counting.Root(SyntaxNode("Member", "number")) is "number"
 	Counting.Assigned(ScopedStatement(Reassigned, Owned, 0), Owned) is ""
-	(target.Kind is "Member") and (target.children.Length > 0) then Root(target.children(0)) else target.text
+	target.Kind is "Member" and target.children.Length > 0 then Root(target.children(0)) else target.text
 Mutated(scoped ScopedStatement, current Scope) Text
 	Counting.Mutated(Immutable, Counted).StartsWith("MutatingCallNeedsMutableVariable: a.Increment")
 	Counting.Mutated(ScopedStatement(Increment, Counted.With(" dropped", ""), 0), Counted) is ""
 	Counting.Mutated(ScopedStatement(Added, Counted, 0), Counted).StartsWith("UnusedValueMustBeRemoved")
 	Ticked.Changing(SyntaxNode("Member", "Next", SyntaxNode("Type", "Ticker")), Scope(("Ticker"), ("a")), Holding) is ""
 	let statement = scoped.statement
-	if (scoped.scope.TypeOf(" dropped") is "") or (IsMutating(statement, scoped.scope, current) is false)
+	if scoped.scope.TypeOf(" dropped") is "" or IsMutating(statement, scoped.scope, current) is false
 		return Unused(scoped, current)
 	let receiver = statement.children(0)
-	if (receiver.Kind is "Identifier") and (scoped.scope.TypeOf(receiver.text + " mutable") is not "")
+	if receiver.Kind is "Identifier" and scoped.scope.TypeOf(receiver.text + " mutable") is not ""
 		return ""
 	"MutatingCallNeedsMutableVariable: " + statement + Effect(receiver, scoped.scope, NoEffect)
 Changing(node SyntaxNode, scope Scope, current Scope) Text
@@ -118,10 +118,10 @@ IsChangingCall(node SyntaxNode, scope Scope, current Scope) Boolean
 	Ticked.IsChangingCall(Typed, KnownTypes.NoMembers, Holding) is false
 	Ticked.IsChangingCall(Ticking, KnownTypes.NoMembers, Holding) is false
 	let isMember = node.Kind is in ("MethodCall", "Member")
-	if (isMember is false) or (node.children.Length is 0) or IsTemporary(node.children(0), scope)
+	if isMember is false or node.children.Length is 0 or IsTemporary(node.children(0), scope)
 		return false
 	let target = node.children(0)
-	if (target.Kind is "Identifier") and (scope.TypeOf(target.text + " mutable") is not "")
+	if target.Kind is "Identifier" and scope.TypeOf(target.text + " mutable") is not ""
 		return false
 	inference.types.ParameterScope(inference.TypeOf(target, scope, current)).TypeOf(node.text + " changes") is not ""
 Unused(scoped ScopedStatement, current Scope) Text
@@ -131,9 +131,9 @@ Unused(scoped ScopedStatement, current Scope) Text
 	Counting.Unused(ScopedStatement(SyntaxNode("Identifier", "Twice"), Counted, 0), KnownTypes.CountMethods) is ""
 	Counting.Unused(ScopedStatement(SyntaxNode("Binary", "then", Added.children), Counted, 0), Counted) is ""
 	let statement = scoped.statement
-	let isVariable = (statement.Kind is "Identifier") and (current.TypeOf(statement.text) is "")
-	let isValue = (statement.Kind is in Values) and (statement.text is not "then")
-	if (scoped.scope.TypeOf(" dropped") is "") or (isValue or isVariable) is false
+	let isVariable = statement.Kind is "Identifier" and current.TypeOf(statement.text) is ""
+	let isValue = statement.Kind is in Values and statement.text is not "then"
+	if scoped.scope.TypeOf(" dropped") is "" or (isValue or isVariable) is false
 		return ""
 	let type = inference.TypeOf(statement, scoped.scope, current)
 	type is in Unchecked then "" else "UnusedValueMustBeRemoved: " + statement + " is a " + type + ", assign or return it"
@@ -153,7 +153,7 @@ IsTemporary(receiver SyntaxNode, scope Scope) Boolean
 	Counting.IsMutating(Increment, KnownTypes.NoMembers, Counted)
 	Counting.Issue(ScopedStatement(SyntaxNode("Declaration", "mutable b", SyntaxNode.one), Counted, 0), Counted) is ""
 	Counting.Issue(ScopedStatement(Numbered, Owned, 0), Owned) is ""
-	(receiver.Kind is "Type") or (scope.TypeOf(LoopNames.Root(receiver)) is "")
+	receiver.Kind is "Type" or scope.TypeOf(LoopNames.Root(receiver)) is ""
 IsMutating(statement SyntaxNode, scope Scope, current Scope) Boolean
 	Counting.IsMutating(Increment, Counted, Counted)
 	Counting.IsMutating(Added, Counted, Counted) is false
@@ -163,7 +163,7 @@ IsMutating(statement SyntaxNode, scope Scope, current Scope) Boolean
 	Counting.Issue(ScopedStatement(Valued, Looped, 0), Counted) is ""
 	if statement.Kind is not in ("MethodCall", "Member")
 		return false
-	if (statement.children(0).Kind is not "Identifier") and IsTemporary(statement.children(0), scope)
+	if statement.children(0).Kind is not "Identifier" and IsTemporary(statement.children(0), scope)
 		return false
 	let type = inference.TypeOf(statement.children(0), scope, current)
 	inference.types.ParameterScope(type).TypeOf(statement.text + " mutable") is not ""

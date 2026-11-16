@@ -35,7 +35,7 @@ Signature(name Text, type Text, returnType Text, argumentTypes Texts) Texts
 	Hiding.Signature("C", "C", "Number", List(Text) + "Number") is ("Strict/C", "C", "Strict/Number", "first")
 	if type is not TypeName
 		return OtherSignature(name, type, returnType, argumentTypes)
-	if ((name is TypeName) or TypeName.StartsWith(name + "(")) and (Header(name).tokens.Length is 0)
+	if (name is TypeName or TypeName.StartsWith(name + "(")) and Header(name).tokens.Length is 0
 		return (fullName, "from", TypeName) + FromNames(TypeName, argumentTypes)
 	(fullName, name, FullName(returnType)) + Chosen(name, argumentTypes).ParameterNames
 OtherSignature(name Text, type Text, returnType Text, argumentTypes Texts) Texts
@@ -44,7 +44,7 @@ OtherSignature(name Text, type Text, returnType Text, argumentTypes Texts) Texts
 	Plain.OtherSignature("Length", "Text", "Number", List(Text)) is ("Strict/Text", "Length", "Strict/Number")
 	Plain.OtherSignature("Text", "Texts", "Number", List(Text))(1) is "Text"
 	Plain.OtherSignature("Greeter", "Greeter", "Greeter", List(Text))(3) is "text"
-	if (name is type) or type.StartsWith(name + "(")
+	if name is type or type.StartsWith(name + "(")
 		return (FullName(type), "from", type) + FromNames(type, argumentTypes)
 	(FullName(type), name, FullName(returnType)) + Declared(type, name, argumentTypes, "")
 ParameterTypes(name Text, type Text, argumentTypes Texts) Texts
@@ -53,7 +53,7 @@ ParameterTypes(name Text, type Text, argumentTypes Texts) Texts
 	Colored.ParameterTypes("Color", "Color", ("Number", "Number", "Number")) is ("ColorValue")
 	Plain.ParameterTypes("Length", "Text", List(Text)).Length is 0
 	Counting.ParameterTypes("Twice", "Count", List(Text) + "Number") is ("Number")
-	if (type is TypeName) and (name is not type or (Header(name).tokens.Length > 0))
+	if type is TypeName and (name is not type or Header(name).tokens.Length > 0)
 		return HeaderEntries(Chosen(name, argumentTypes), types.MethodsOf(type)).ParameterTypes
 	let declared = Declared(type, (name is type then "from" else name), argumentTypes, " types")
 	if name is not type or declared.Length > 0
@@ -75,14 +75,14 @@ FromNames(type Text, argumentTypes Texts = List(Text)) Texts
 Chosen(name Text, argumentTypes Texts) HeaderTokens
 	Overloaded.Chosen("Members", List(Text) + "Number").ParameterNames is ("lines")
 	Overloaded.Chosen("Members", List(Text)).ParameterNames.Length is 0
-	Plain.Chosen("Gree", List(Text)).tokens.Length is 0 and (Plain.Chosen("has", List(Text)).tokens.Length is 0)
+	Plain.Chosen("Gree", List(Text)).tokens.Length is 0 and Plain.Chosen("has", List(Text)).tokens.Length is 0
 	let ordinal = Overloads(types).Chosen(TypeName, name, argumentTypes)
 	mutable seen = -1
 	for shape.lines
-		if value.StartsWith(name) and shape.IsMethodHeader(value) and (Tokenizer(value).Tokens.First is name)
+		if value.StartsWith(name) and shape.IsMethodHeader(value) and Tokenizer(value).Tokens.First is name
 			seen = seen + 1
 			let header = HeaderTokens(Tokenizer(value).Tokens)
-			if (seen is ordinal) or ((ordinal < 0) and (header.ParameterNames.Length is argumentTypes.Length))
+			if seen is ordinal or ordinal < 0 and header.ParameterNames.Length is argumentTypes.Length
 				return header
 	Header(name)
 IsOverloaded(name Text, type Text) Boolean
@@ -103,7 +103,7 @@ Header(name Text) HeaderTokens
 	Plain.Header("has").tokens.Length is 0
 	Hiding.ParameterTypes("C", "C", ("Number")) is ("Number")
 	for shape.lines
-		if value.StartsWith(name) and shape.IsMethodHeader(value) and (Tokenizer(value).Tokens.First is name)
+		if value.StartsWith(name) and shape.IsMethodHeader(value) and Tokenizer(value).Tokens.First is name
 			return HeaderTokens(Tokenizer(value).Tokens)
 	HeaderTokens(List(Text))
 WithErrorArguments(node SyntaxNode, scope Scope) SyntaxNode
@@ -135,7 +135,7 @@ IsLoopMember(type Text, name Text) Boolean
 	Iterated.IsLoopMember("One", "Length")
 	Iterated.IsLoopMember("Number", "Code")
 	let names = types.MembersOf(type).names
-	if (names.Length is 1) and (names.First is "iterator")
+	if names.Length is 1 and names.First is "iterator"
 		return types.MethodsOf(type).TypeOf(name) is not "" or types.MethodsOf("Any").TypeOf(name) is not ""
 	types.MemberType(type, name) is not "Unknown"
 IsMember(type Text, name Text) Boolean
@@ -146,7 +146,7 @@ IsMember(type Text, name Text) Boolean
 	CallTarget(KnownTypes.Sample, TypeShape("has Twice Count"), "Strict/C", List(Text)).IsMember("C", "Twice")
 	CallTarget(NoTypes, TypeShape("has x x"), "Strict/C", List(Text)).IsMember("C", "x")
 	let member = type is TypeName then shape.MemberScope.TypeOf(name) else types.MembersOf(type).TypeOf(name)
-	(member is not "") and ((member is not name) or (types.MethodsOf(member).TypeOf(name) is ""))
+	member is not "" and (member is not name or types.MethodsOf(member).TypeOf(name) is "")
 InheritingMember(name Text) Text
 	CallTarget(NoTypes, TypeShape("has a A"), "Strict/C", List(Text)).InheritingMember("x") is "a"
 	Plain.InheritingMember("x") is ""
@@ -178,7 +178,7 @@ PackageType(type Text) Text
 	if local is in typeNames
 		return local + arguments
 	for typeNames
-		if value.EndsWith("/" + base) or (value is base)
+		if value.EndsWith("/" + base) or value is base
 			return value + arguments
 	""
 TypeName Text

@@ -33,11 +33,11 @@ Indexed List(MemberEntry)
 	MlirParameters(MlirFunction(List(TypeEntry) + Texting, Texting, Membered.function.method)).Indexed.Length is 0
 	let layout = MlirLayout(function)
 	let isWrapper = layout.Represented(TypeEntry.ShortName(function.type.Name)).StartsWith("List(")
-	if MlirFlats(function, 0).IsListed(function.type.Name) or ((layout.IsStruct(function.type.Name) or isWrapper) is false)
+	if MlirFlats(function, 0).IsListed(function.type.Name) or (layout.IsStruct(function.type.Name) or isWrapper) is false
 		return List(MemberEntry)
 	for function.type.members
 		let kind = layout.Represented(TypeEntry.ShortName(value.typeName))
-		if (value.IsConstant is false) and kind.StartsWith("List(") and IsLooped(value.Name)
+		if value.IsConstant is false and kind.StartsWith("List(") and IsLooped(value.Name)
 			value
 IsLooped(name Text) Boolean
 	Membered.IsLooped("numbers")
@@ -48,7 +48,7 @@ IsLooped(name Text) Boolean
 	for function.method.instructions
 		let isEnd = value.kind is InstructionType.LoopEnd
 		depth = depth + (value.kind is InstructionType.LoopBegin then 1 else (isEnd then -1 else 0))
-		if (depth > 0) and (value.kind is InstructionType.IndexCall) and (value.texts(0) is name)
+		if depth > 0 and value.kind is InstructionType.IndexCall and value.texts(0) is name
 			return true
 	false
 IsFixed(name Text) Boolean
@@ -56,7 +56,7 @@ IsFixed(name Text) Boolean
 	for function.method.instructions
 		if value.kind is in Writers
 			let target = value.kind is InstructionType.StoreConstantToVariable then value.texts.Last else value.texts.First
-			if (target is name) or target.StartsWith(name + "(")
+			if target is name or target.StartsWith(name + "(")
 				return false
 	true
 Hoisted(entries List(MemberEntry)) Texts
@@ -89,7 +89,7 @@ Read(name Text, list Text, position Text, nameBits Text, result Text) Text
 Fetched(name Text, list Text, position Text, nameBits Text, result Text) Texts
 	Reading.Fetched("a", "%l", "%i", "%nb", "%x").Length is 1
 	Deferring.Fetched("a", "%l", "%i", "%nb", "%x").Length is 3
-	if function.IsDeferred and (IsBytes(name) is false)
+	if function.IsDeferred and IsBytes(name) is false
 		return Deferred(name, position, result)
 	List(Text) + Read(name, list, position, nameBits, result)
 Deferred(name Text, position Text, result Text) Texts
@@ -108,7 +108,7 @@ Fixed(name Text) Text
 	mutable source = ""
 	for function.method.instructions
 		let written = Source(index, name)
-		if (written is "?") or ((written is not "") and (source is not "") and (written is not source))
+		if written is "?" or written is not "" and source is not "" and written is not source
 			return ""
 		source = written is "" then source else written
 	source
@@ -137,6 +137,6 @@ IsBytes(name Text) Boolean
 	Bytes.IsBytes("pixels")
 	Reading.IsBytes("numbers") is false
 	for function.method.parameters
-		if (value.Name is name) and (value.typeName is in ("Strict/List(Byte)", "Strict/Bytes"))
+		if value.Name is name and value.typeName is in ("Strict/List(Byte)", "Strict/Bytes")
 			return true
 	false

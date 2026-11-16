@@ -31,14 +31,14 @@ IsEnumerated Boolean
 IsEnumeratedSource(source Texts) Boolean
 	Kind.IsEnumeratedSource(Kind.Source)
 	for source
-		if (value is not "") and (value.StartsWith("constant ") is false)
+		if value is not "" and value.StartsWith("constant ") is false
 			return false
 	source.Length > 0
 IsNested Boolean
 	Sized.IsNested
 	Kind.IsNested is false
 	let source = Source
-	(source.Length > 0) and (IsEnumeratedSource(source) is false)
+	source.Length > 0 and IsEnumeratedSource(source) is false
 Choices Scope
 	Kind.Choices.names(6) is "greaterthan"
 	Kind.Choices.types(1) is "1"
@@ -57,7 +57,7 @@ Names Texts
 	Sized.Names is ("width", "height")
 	Count.Names is ("count")
 	let source = Source
-	(source.Length > 0) and (IsEnumeratedSource(source) is false) then NestedOf(source).Names else List(Text) + Name
+	source.Length > 0 and IsEnumeratedSource(source) is false then NestedOf(source).Names else List(Text) + Name
 Argument Text
 	Count.Argument is "line.Numeric(\"count\", 1)"
 	Sized.Argument is "Resolution(line.Numeric(\"width\", 720), line.Numeric(\"height\", 1280))"
@@ -79,7 +79,7 @@ Shown Texts
 	Count.Shown is ("1 to Text")
 	Sized.Shown is ("720 to Text", "1280 to Text")
 	let source = Source
-	(source.Length > 0) and (IsEnumeratedSource(source) is false) then NestedOf(source).Shown else List(Text) + Displayed
+	source.Length > 0 and IsEnumeratedSource(source) is false then NestedOf(source).Shown else List(Text) + Displayed
 Displayed Text
 	Count.Displayed is "1 to Text"
 	Kind.Displayed.EndsWith("|jumpbackifnonzero)\"")
@@ -87,7 +87,7 @@ Displayed Text
 	if kind is in ("Text", "Texts")
 		return kind is "Text" then Default else "Text.Combine(" + Default + ", \" \")"
 	let source = kind is in ("Number", "Boolean") then List(Text) else Source
-	if (source.Length is 0) or (IsEnumeratedSource(source) is false)
+	if source.Length is 0 or IsEnumeratedSource(source) is false
 		return Default + " to Text"
 	let choices = ChoicesOf(source)
 	let names = choices.names
@@ -98,6 +98,6 @@ Described(help Text, at Number) Texts
 	Count.Described("", 0) is ("\"\"")
 	Sized.Described("", 0) is ("Resolution.Help(0)", "Resolution.Help(1)")
 	let source = Source
-	if (source.Length > 0) and (IsEnumeratedSource(source) is false)
+	if source.Length > 0 and IsEnumeratedSource(source) is false
 		return NestedOf(source).Descriptions(Type + ".")
 	List(Text) + (help is "" then "\"\"" else help + "(" + at + ")")

@@ -54,14 +54,14 @@ Matching(names Texts, files Texts) Texts
 		let slash = slashed.LastIndexOf("/")
 		let end = slashed.EndsWith(".strict") then slashed.Length - 7 else slashed.Length
 		let name = slash < 0 then slashed.Substring(0, end) else slashed.Substring(slash + 1, end - slash - 1)
-		if (name is in wanted) or ((name + "s") is in wanted)
+		if name is in wanted or name + "s" is in wanted
 			value
 Folders(folders Texts, depth Number, scanned = 0) Texts
 	SourceFiles(".").Folders(List(Text) + "./Missing", 2).Length is 1
 	mutable result = folders
 	for Range(scanned, folders.Length)
 		result = Added(result, Referenced(folders(value)))
-	(depth is 0) or (result.Length is folders.Length) then result else Folders(result, depth - 1, folders.Length)
+	depth is 0 or result.Length is folders.Length then result else Folders(result, depth - 1, folders.Length)
 Added(folders Texts, more Texts) Texts
 	SourceFiles(".").Added(("a", "b"), ("b", "c")) is ("a", "b", "c")
 	if more.Length is 0
@@ -99,7 +99,7 @@ PackagesIn(lines Texts) Texts
 	mutable result = List(Mutable(Text))
 	for lines
 		if value.IndexOf("/") >= 0
-			if (value.Trim.StartsWith("//") is false) and (value.Replace(" / ", "").IndexOf("/") >= 0)
+			if value.Trim.StartsWith("//") is false and value.Replace(" / ", "").IndexOf("/") >= 0
 				result = Added(result, PackageNames(Tokenizer(value).Tokens))
 	result
 PackageNames(tokens Texts) Texts
@@ -114,7 +114,7 @@ Package(name Text) Text
 	SourceFiles(".").Package("Bytecode") is "./Bytecode"
 	SourceFiles(".").Package("Strict") is ""
 	SourceFiles("C:/Missing").Package("Missing") is ""
-	if (name is "Strict") or Directory.Exists("./" + name)
+	if name is "Strict" or Directory.Exists("./" + name)
 		return name is "Strict" then "" else "./" + name
 	Directory.Exists(root + "/" + name) then root + "/" + name else ""
 Nearby(types Texts) Texts
@@ -124,7 +124,7 @@ Nearby(types Texts) Texts
 	if local.Length < types.Length
 		for Directory.Directories("..")
 			let project = Path(value.Replace("\\", "/")).FileName.text
-			if (project(0) is project(0).Upper) and (project(0) is not project(0).Lower)
+			if project(0) is project(0).Upper and project(0) is not project(0).Lower
 				parents = parents + ("../" + project)
 	mutable files = List(Mutable(Text))
 	for parents.Length is 1 then local else MatchedFolders(FolderIndex(parents), types)
@@ -147,7 +147,7 @@ MatchedFolders(indexed Dictionary(Text, Text), types Texts) Texts
 	mutable matched = List(Mutable(Text))
 	for types
 		mutable name = value
-		for as long as name.EndsWith("s") and (name is not in indexed)
+		for as long as name.EndsWith("s") and name is not in indexed
 			name = name.Substring(0, name.Length - 1)
 		if name is in indexed
 			matched = Added(matched, List(Text) + indexed(name))
@@ -157,7 +157,7 @@ PackageWith(type Text, projects Text) Text
 	for Directory.Directories(projects)
 		let project = Path(value.Replace("\\", "/")).FileName.text
 		let first = project(0)
-		let sub = (first is first.Upper) and (first is not first.Lower) then projects + "/" + project else ""
+		let sub = first is first.Upper and first is not first.Lower then projects + "/" + project else ""
 		let folder = sub is "" then "" else SubfolderWith(sub, type)
 		if folder is not ""
 			return folder

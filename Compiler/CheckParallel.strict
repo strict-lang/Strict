@@ -123,7 +123,7 @@ RanPostModes(folder Text, exe Text) Boolean
 		if res.exitCode is not 0
 			return Error("PostModeFailed " + value + ": " + res.Output + res.error)
 	let chk = Process.RunTool(exe, "checked", ShortSeconds)
-	let ok = (chk.exitCode is 0) and ("Reference counts checked: 0 too low" is in chk.Output)
+	let ok = chk.exitCode is 0 and "Reference counts checked: 0 too low" is in chk.Output
 	let shareOk = CheckedToolShares(folder, exe)
 	ok then (shareOk is Error then shareOk else CheckedPoolFailure(folder)) else Error("Checked")
 CheckedToolShares(folder Text, exe Text) Boolean
@@ -136,14 +136,14 @@ CheckedToolShares(folder Text, exe Text) Boolean
 		if res.exitCode is not 0
 			return Error("ToolsShareFailed: " + res.Output)
 		let sErr = CheckedBatch(shares, "slow", BatchSlowCount, value)
-		if (sErr is Error) or (CheckedBatch(shares, "quick", 2, value) is Error)
+		if sErr is Error or CheckedBatch(shares, "quick", 2, value) is Error
 			return Error("BadToolBatch")
 	true
 CheckedBatch(shares Text, kind Text, count Number, expected Text) Boolean
 	mutable first = ""
 	for count
 		let txt = Text.Combine(File(shares + "/" + kind + value + ".txt").ReadLines, "").Trim
-		if (txt is "") or (not Regex("^\\d+$").IsMatch(txt)) or ((expected is not "") and (txt is not expected))
+		if txt is "" or not Regex("^\\d+$").IsMatch(txt) or expected is not "" and txt is not expected
 			return Error("MissingOrWrongThreadShare")
 		if first is ""
 			first = txt

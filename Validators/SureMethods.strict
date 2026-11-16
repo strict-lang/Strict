@@ -30,7 +30,7 @@ Used(type Text, statements ScopedStatements, lines Texts, header Number) Texts
 	let last = FileCheck.LastLine(lines, header)
 	mutable keys = List(Mutable(Text))
 	for statements
-		if (value.line > header) and (value.line <= last) and (Duplicates.IsTest(lines(value.line).Trim) is false)
+		if value.line > header and value.line <= last and Duplicates.IsTest(lines(value.line).Trim) is false
 			keys = keys + SureCalls(inference).Calls(type, value.statement, value.scope)
 	keys
 Kept(lines Texts, header Number) Boolean
@@ -39,7 +39,7 @@ Kept(lines Texts, header Number) Boolean
 	SureMethods.Kept(("Parsed Number", "\tname to Number"), 0) is false
 	SureMethods.Kept(("Added(other Numbers) Numbers", "\t(1) + (\"Hi\") is Error", "\tother"), 0) is false
 	let body = Duplicates.Implementation(lines, header)
-	(Fails(body) is false) and HasBody(body) and (IsTestedFailing(lines, header) is false)
+	Fails(body) is false and HasBody(body) and IsTestedFailing(lines, header) is false
 IsTestedFailing(lines Texts, header Number) Boolean
 	SureMethods.IsTestedFailing(("A Number", "\tA is Error", "\t1", "B", "\tB is Error"), 0)
 	SureMethods.IsTestedFailing(("A Number", "\tA is not Error", "\t1", "B", "\tB is Error"), 0) is false
@@ -52,7 +52,7 @@ Fails(body Text) Boolean
 	SureMethods.Fails("value to Number")
 	SureMethods.Fails("low + high") is false
 	let tokens = Tokenizer(body).Tokens
-	("Error" is in tokens) or ("to" is in tokens)
+	"Error" is in tokens or "to" is in tokens
 Settled(records Texts) Texts
 	SureMethods.Settled(("Number.Floor|", "PseudoRandom.Next|Number.Floor")) is ("Number.Floor", "PseudoRandom.Next")
 	SureMethods.Settled(("Demo.Run|Index", "Demo.Twice|Demo.Twice")).Length is 0
@@ -61,7 +61,7 @@ Settled(records Texts) Texts
 	for as long as added > 0
 		added = 0
 		for records
-			if (Key(value) is not in sure) and Accepts(CallList(value), sure)
+			if Key(value) is not in sure and Accepts(CallList(value), sure)
 				sure = sure + Key(value)
 				added = 1
 	sure
@@ -87,7 +87,7 @@ HasBody(body Text) Boolean
 	SureMethods.HasBody("Next is 1") is false
 	SureMethods.HasBody("") is false
 	for body.Split("\n")
-		if (value is not "") and (Duplicates.IsTest(value) is false)
+		if value is not "" and Duplicates.IsTest(value) is false
 			return true
 	false
 IsBase(path Text) Boolean
@@ -96,4 +96,4 @@ IsBase(path Text) Boolean
 	SureMethods.IsBase("Networking/Socket.strict") is false
 	SureMethods.IsBase("Networking\\Socket.strict") is false
 	let parts = path.Replace("\\", "/").Split("/")
-	(parts.Length is 1) or (parts(parts.Length - 2) is in ("Strict", "."))
+	parts.Length is 1 or parts(parts.Length - 2) is in ("Strict", ".")

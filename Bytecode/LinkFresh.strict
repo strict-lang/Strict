@@ -30,7 +30,7 @@ Probed(signed Texts, positions Dictionary(Text, Number)) Texts
 	Twice.Probed(("Strict/Logger:", "Strict/B:Go"), ResolveCheck.Positions(LinkRound.Twice.signatures)) is ("Strict/B:Go")
 	LinkFresh(LinkRound.Cached, Unplaced).Probed(Logging, Unplaced).Length is 0
 	for signed
-		if (value is not in positions) and (value is not in round.linker.Known)
+		if value is not in positions and value is not in round.linker.Known
 			value
 Read(fresh Texts) List(Texts) slow
 	Single.Read(Logging).First.Length > 0
@@ -59,7 +59,7 @@ IsWhole(signature Text) Boolean
 	Twice.IsWhole("Strict/Logger:Log") is false
 	Logged.IsWhole("Strict/Logger:Reset")
 	LinkFresh(LinkRound.Twice, Unplaced).IsWhole("Strict/Logger:Log")
-	(Earlier(signature) < 0) or ((Older(signature) - Signature(signature).Names).Length > 0)
+	Earlier(signature) < 0 or (Older(signature) - Signature(signature).Names).Length > 0
 Older(signature Text) Texts
 	Twice.Older("Strict/Logger:Log").Length is 0
 	Single.Older("Strict/Logger:").Length is 0

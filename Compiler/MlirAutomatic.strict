@@ -24,7 +24,7 @@ Functions Texts
 	for function.types
 		let kind = TypeEntry.ShortName(value.Name)
 		let symbol = MlirEquality(function, 0).Symbol(kind)
-		if MlirEquality(function, 0).IsKnown(kind) and (symbol is not in symbols)
+		if MlirEquality(function, 0).IsKnown(kind) and symbol is not in symbols
 			symbols.Add(symbol)
 			lines = lines + Function(value) + Collection(symbol) + Collection("list_" + symbol) + Hash(symbol)
 	lines
@@ -42,7 +42,7 @@ Hash(symbol Text) Texts
 	let text = "    %text = func.call @strict_automatic_" + symbol + "(%value) : (f64) -> f64"
 	(header, text, "    %hash = func.call @strict_hash_text(%text) : (f64) -> i64", "    return %hash : i64", "  }")
 Function(type TypeEntry) Texts
-	(Shaped.Length is 24) and (Shaped.First is "  func.func private @strict_automatic_Shape(%value: f64) -> f64 {")
+	Shaped.Length is 24 and Shaped.First is "  func.func private @strict_automatic_Shape(%value: f64) -> f64 {"
 	Text.Combine(Sample.Function(Stating)).IndexOf("@skip") is -1
 	let name = MlirEquality(function, 0).Symbol(TypeEntry.ShortName(type.Name))
 	mutable lines = List(Text) + ("  func.func private @strict_automatic_" + name + "(%value: f64) -> f64 {") + Prologue

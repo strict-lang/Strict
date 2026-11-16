@@ -40,11 +40,11 @@ IsCompared(tokens Texts) Boolean
 	InX.IsCompared(Tokenizer("a + x >= 0").Tokens)
 	InX.IsCompared(Tokenizer("not (x < 0)").Tokens) is false
 	InX.IsCompared(Tokenizer("(x < 0) < 1").Tokens) is false
-	InX.IsCompared(Tokenizer("x < a + 1").Tokens) and (InX.IsCompared(Tokenizer("a < x * 2").Tokens) is false)
-	InX.IsCompared(Tokenizer("x < a < 1").Tokens) is false and (InX.IsCompared(Tokenizer("x < a or b").Tokens) is false)
+	InX.IsCompared(Tokenizer("x < a + 1").Tokens) and InX.IsCompared(Tokenizer("a < x * 2").Tokens) is false
+	InX.IsCompared(Tokenizer("x < a < 1").Tokens) is false and InX.IsCompared(Tokenizer("x < a or b").Tokens) is false
 	let at = Split(tokens, Compares)
 	let right = at < 0 then List(Text) else tokens.Slice(at + 1, tokens.Length - at - 1)
-	if (at < 1) or (Split(right, Compares) >= 0) or Monotone(("or", "is", "not")).Mentions(tokens)
+	if at < 1 or Split(right, Compares) >= 0 or Monotone(("or", "is", "not")).Mentions(tokens)
 		return false
 	IsAdditive(tokens.Slice(0, at)) and IsAdditive(right)
 Split(tokens Texts, operators Texts) Number
@@ -53,7 +53,7 @@ Split(tokens Texts, operators Texts) Number
 	mutable depth = 0
 	for tokens
 		depth = depth + (value is "(" then 1 else (value is ")" then -1 else 0))
-		if (depth is 0) and (value is in operators)
+		if depth is 0 and value is in operators
 			return index
 	-1
 IsAdditive(tokens Texts) Boolean
@@ -75,7 +75,7 @@ Binary(tokens Texts) Number
 	mutable depth = 0
 	for tokens
 		depth = depth + (value is "(" then 1 else (value is ")" then -1 else 0))
-		if (depth is 0) and (index > 0) and (value is in ("+", "-")) and (tokens(index - 1) is not in Operators)
+		if depth is 0 and index > 0 and value is in ("+", "-") and tokens(index - 1) is not in Operators
 			return index
 	-1
 IsTerm(tokens Texts) Boolean
@@ -89,7 +89,7 @@ IsTerm(tokens Texts) Boolean
 	let unsigned = tokens.First is "-" then tokens.Slice(1, tokens.Length - 1) else tokens
 	if unsigned.Length is 1
 		return true
-	let isGrouped = (unsigned.First is "(") and (Matching(unsigned, 0) is unsigned.Length - 1)
+	let isGrouped = unsigned.First is "(" and Matching(unsigned, 0) is unsigned.Length - 1
 	isGrouped and IsAdditive(unsigned.Slice(1, unsigned.Length - 2))
 Matching(tokens Texts, open Number) Number
 	InX.Matching(("(", "a", "(", "b", ")", ")", "+", "c"), 0) is 5

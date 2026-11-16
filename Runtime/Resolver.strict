@@ -19,7 +19,7 @@ Resolved List(TypeEntry)
 	Doubling.Local(MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 7), "a")) is "a"
 	Doubling.Local(InstructionEntry(InstructionType.CheckError, List(Text), List(Number), 0)) is "#result"
 	Doubling.Local(InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "pair.b(1)")) is "pair.b(1)"
-	Doubling.Local(Sample.instructions(1)) is "a" and (Doubling.Local(ElementStore) is "a")
+	Doubling.Local(Sample.instructions(1)) is "a" and Doubling.Local(ElementStore) is "a"
 	Doubling.Slotted(MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 7), "index"), Specials).payload.Length is 5
 	Doubling.Slotted(ElementStore, Specials + "a").payload is (0, 6, LiteralIndex, 1)
 	Doubling.Resolved.First.methods.First.instructions.Length is 3
@@ -60,7 +60,7 @@ Changed(method MethodEntry, names Texts) Numbers
 	for method.parameters
 		let slot = names.Index("changed_" + index)
 		slots.Add(slot)
-		isChanged = isChanged or (slot >= 0)
+		isChanged = isChanged or slot >= 0
 	isChanged then slots else List(Number)
 Targeted(entry InstructionEntry) InstructionEntry
 	Doubling.Placed(InstructionEntry(InstructionType.CheckError, List(Text), (5, 0)), Sample, 0, 9).payload is (5, 0)
@@ -96,19 +96,19 @@ Slots(type TypeEntry, method MethodEntry) Texts
 		names.Add(value.Name)
 	for method.instructions
 		let local = Local(value)
-		if (local is not in names) and (local is not in ("", "outer", "outer.index"))
+		if local is not in names and local is not in ("", "outer", "outer.index")
 			names.Add(local)
 	names
 Local(entry InstructionEntry) Text
 	Doubling.Local(InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "a")) is "a"
 	Doubling.Local(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "pair.b(1)")) is "pair"
 	Doubling.Local(InstructionEntry.LoadNumber(0, 7)) is ""
-	if (entry.kind is InstructionType.StoreConstantToVariable) or (entry.kind is InstructionType.CheckError)
+	if entry.kind is InstructionType.StoreConstantToVariable or entry.kind is InstructionType.CheckError
 		return entry.texts.Length > 0 then entry.texts.Last else "#result"
 	if entry.kind is not in Named
 		return ""
 	let parts = PayloadDecoder(entry).ElementParts
-	if (entry.kind is not InstructionType.StoreRegisterToVariable) or (parts.Length is 0)
+	if entry.kind is not InstructionType.StoreRegisterToVariable or parts.Length is 0
 		return entry.texts(0)
 	let dot = parts(0).IndexOf(".")
 	dot > 0 then parts(0).Substring(0, dot) else parts(0)
@@ -120,7 +120,7 @@ Slotted(entry InstructionEntry, names Texts) InstructionEntry
 		return Decoded(entry)
 	let kind = entry.kind
 	let slot = Slot(local, names)
-	if (kind is InstructionType.StoreConstantToVariable) or (kind is InstructionType.CheckError)
+	if kind is InstructionType.StoreConstantToVariable or kind is InstructionType.CheckError
 		return Decoded(InstructionEntry(kind, entry.texts, entry.payload + slot, entry.line))
 	let payload = entry.payload
 	let start = kind is InstructionType.IndexCall then (payload(0), payload(1)) else List(Number) + payload(0)
@@ -130,7 +130,7 @@ Decoded(entry InstructionEntry) InstructionEntry
 	Doubling.Decoded(InstructionEntry.LoadNumber(0, 7)).payload is (0, 1, 7)
 	Doubling.Decoded(MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 0.5), "a")).payload is (1, 0.5, -1, 0)
 	let at = entry.kind is InstructionType.LoadConstantToRegister then 1 else 0
-	if (((at is 1) or (entry.kind is InstructionType.StoreConstantToVariable)) is false) or (entry.payload(at) is not 3)
+	if (at is 1 or entry.kind is InstructionType.StoreConstantToVariable) is false or entry.payload(at) is not 3
 		return entry
 	let number = PayloadDecoder(entry).Double(at + 1)
 	mutable payload = at is 1 then (entry.payload(0), 1, number) else (1, number)
@@ -168,8 +168,8 @@ Placed(entry InstructionEntry, method MethodEntry, position Number, scratch Numb
 	Doubling.Placed(MethodEntry.Branching.instructions(0), MethodEntry.Branching, 0, 9).payload is (0, 2)
 	Doubling.Placed(MethodEntry.Branching.instructions(0), MethodEntry.Branching, 0, 9).Target is 9
 	Doubling.Placed(MethodEntry.CountingLoop.instructions(1), MethodEntry.CountingLoop, 1, 9).payload is (1, 0)
-	let isJump = (entry.kind is InstructionType.JumpToIdIfFalse) or (entry.kind is InstructionType.JumpToIdIfTrue)
-	let isFailing = (entry.kind is InstructionType.CheckError) and (entry.texts.Length > 0)
+	let isJump = entry.kind is InstructionType.JumpToIdIfFalse or entry.kind is InstructionType.JumpToIdIfTrue
+	let isFailing = entry.kind is InstructionType.CheckError and entry.texts.Length > 0
 	let ended = isFailing then InstructionEntry.Jump(InstructionType.JumpEnd, PayloadDecoder(entry).SevenBit(1)) else entry
 	let jumped = isJump or isFailing then entry.payload + method.JumpEndOf(ended) else entry.payload
 	let looped = entry.kind is InstructionType.LoopEnd then jumped + method.LoopBeginOf(position) else jumped

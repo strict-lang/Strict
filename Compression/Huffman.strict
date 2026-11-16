@@ -49,7 +49,7 @@ Sorted(lengths Numbers) Numbers
 Decoded(stream Inflate, position Number) Symbol
 	Sample.Decoded(Inflate(List(Number) + 6), 1) is Symbol(2, 3)
 	Longest.Decoded(Inflate((1, 0)), 0) is Symbol(9, 16)
-	(Sample.Decoded(Inflate((1, 7)), 0) is Symbol(0, 2)) and (Sample.Decoded(Inflate((1, 7)), 8) is Symbol(3, 3))
+	Sample.Decoded(Inflate((1, 7)), 0) is Symbol(0, 2) and Sample.Decoded(Inflate((1, 7)), 8) is Symbol(3, 3)
 	let entry = table.Length > 0 then table(stream.Peek(position)) else 0
 	entry > 0 then Symbol((entry / EntryScale).Floor, entry % EntryScale) else Walked(stream, position)
 Walked(stream Inflate, position Number) Symbol

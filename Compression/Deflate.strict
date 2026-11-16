@@ -37,7 +37,7 @@ Zlib Numbers slow
 	Inflate.Part(Deflate(Repeated).Zlib, 0, 2) is (120, 1)
 	(List(Number) + ZlibHeader + 1) + Packed(Codes) + Adler
 Codes Numbers
-	(Deflate(Repeated).Codes.Length < 24) and (Deflate(Repeated).Codes is RepeatedCodes)
+	Deflate(Repeated).Codes.Length < 24 and Deflate(Repeated).Codes is RepeatedCodes
 	mutable codes = List(Mutable(Number)) + 3 + 3
 	mutable heads = Heads
 	mutable position = 0
@@ -51,11 +51,11 @@ Codes Numbers
 	codes + 0 + 7
 Matched(candidate Number, position Number) Number
 	Deflate(Repeated).Matched(0, 3) is 6
-	(Deflate(Repeated).Matched(-1, 3) is 0) and (Deflate(Repeated).Matched(-1, 9) is 0)
+	Deflate(Repeated).Matched(-1, 3) is 0 and Deflate(Repeated).Matched(-1, 9) is 0
 	Deflate((1, 2, 1, 2)).Matched(0, 2) is 2
 	Deflate(Deflate(Repeated).Heads + 0 + 0).Matched(0, 32769) is 0
 	Deflate(Deflate(Repeated).Heads + Repeated).Matched(16385, 16386) is 258
-	if (candidate < 0) or (position - candidate > WindowSize)
+	if candidate < 0 or position - candidate > WindowSize
 		return 0
 	let most = (bytes.Length - position).Clamp(0, LongestMatch)
 	for most
@@ -64,7 +64,7 @@ Matched(candidate Number, position Number) Number
 	most
 Symbols(length Number, position Number, candidate Number) Numbers
 	Deflate(Repeated).Symbols(0, 0, -1) is (140, 8)
-	(Deflate(Repeated).Symbols(3, 3, 0).Length is 8) and (Deflate(Repeated).Symbols(3, 6, 3) is (64, 7, 0, 0, 8, 5, 0, 0))
+	Deflate(Repeated).Symbols(3, 3, 0).Length is 8 and Deflate(Repeated).Symbols(3, 6, 3) is (64, 7, 0, 0, 8, 5, 0, 0)
 	length >= 3 then LengthCodes(length) + DistanceCodes(position - candidate) else Literal(bytes(position))
 Literal(byte Number) Numbers
 	Deflate(Repeated).Literal(1) is (140, 8)
@@ -102,7 +102,7 @@ Reversed(code Number, length Number) Number
 		result = result * 2 + (code / 2 ^ index).Floor % 2
 	result
 Packed(codes Numbers) Numbers
-	(Deflate(Repeated).Packed((3, 3, 0, 7)) is (3, 0)) and (Deflate(Repeated).Packed((5, 3, 100, 7, 1, 6)) is (37, 7))
+	Deflate(Repeated).Packed((3, 3, 0, 7)) is (3, 0) and Deflate(Repeated).Packed((5, 3, 100, 7, 1, 6)) is (37, 7)
 	mutable packed = List(Mutable(Number))
 	mutable accumulator = 0
 	mutable count = 0

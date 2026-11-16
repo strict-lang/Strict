@@ -31,7 +31,7 @@ Packaged(program Text, isWeb = false, isCrossing = false, platform = -1, isRelea
 		return
 	if isWeb
 		return Refreshed(Parent + "/Release/Web", "", base, List(Text))
-	if (program.IndexOf(Opening) >= 0) or isReleased or isCrossing
+	if program.IndexOf(Opening) >= 0 or isReleased or isCrossing
 		NativePackaged(isCrossing)
 NativePackaged(isCrossing Boolean)
 	Content(Parent + "/Release/Content")
@@ -43,7 +43,7 @@ NativePackaged(isCrossing Boolean)
 	let folder = Parent + "/Release/" + Platform.NameOf(Platform.Current)
 	Refreshed(folder, folder + "/Content", BuildOutput.Delivered(base), List(Text) + ending)
 	let linux = Parent + "/Release/Linux"
-	if isCrossing and (Platform.Current is Platform.Windows) and File(linux + "/" + Named(base)).Exists
+	if isCrossing and Platform.Current is Platform.Windows and File(linux + "/" + Named(base)).Exists
 		Refreshed(linux, linux + "/Content", base, List(Text))
 IsDemo Boolean
 	Release(Logger, TypeSource.Root + "/Examples/NativeAdd/AtlasDemo").IsDemo
@@ -57,7 +57,7 @@ Parent Text
 	Release(Logger, "./Missing/obj/App.test").Parent is "./Missing"
 	let parent = Path(base).PathOnly.text
 	let source = parent.EndsWith("/obj") then parent.Substring(0, parent.Length - 4) else parent
-	(source is "") or (source is "obj") then "." else source
+	source is "" or source is "obj" then "." else source
 Icon Text
 	Release(Logger, "Examples/NativeAdd/NativeAdd").Icon is "Examples/NativeAdd/NativeAdd.ico"
 	Release(Logger, "Examples/NativeAdd/Adder").Icon is "Examples/NativeAdd/NativeAdd.ico"
@@ -81,10 +81,10 @@ Placed(source Text, target Text) Boolean
 	let temporary = target + "." + 1000000000.Random.Floor + ".tmp"
 	let bytes = File(source).ReadBytes
 	File(temporary).Write(bytes)
-	let isComplete = File(temporary).Exists and (File(temporary).ReadBytes.Length is bytes.Length)
+	let isComplete = File(temporary).Exists and File(temporary).ReadBytes.Length is bytes.Length
 	if isComplete
 		File(temporary).Rename(target)
-	let isPlaced = isComplete and (File(temporary).Exists is false) and File(target).Exists
+	let isPlaced = isComplete and File(temporary).Exists is false and File(target).Exists
 	File(temporary).Delete
 	isPlaced
 Sidecar(release Text)
@@ -92,11 +92,11 @@ Sidecar(release Text)
 	PtxCache("Compiler/output/Sided").Written(List(Text) + "// a", ".ptx")
 	Release(Logger, "Compiler/output/Sided").Sidecar("Compiler/output/Release/Web") is not Error
 	let isWeb = Path(release).FileName.text is "Web"
-	if isWeb and (Icon is not TypeSource.Root + "/Strict.ico") and (Placed(Icon, release + "/favicon.ico") is false)
+	if isWeb and Icon is not TypeSource.Root + "/Strict.ico" and Placed(Icon, release + "/favicon.ico") is false
 		logger.Log("Release could not place " + release + "/favicon.ico")
 	for Sidecars
 		let sidecar = base + value
-		if (isWeb is false) and File(sidecar).Exists and (File(sidecar).Length > 0)
+		if isWeb is false and File(sidecar).Exists and File(sidecar).Length > 0
 			File(BuildOutput.Shipped(release, sidecar)).Write(File(sidecar).ReadBytes)
 Mirrored(target Text)
 	if target is not ""
@@ -127,14 +127,14 @@ Copied(source Text, target Text)
 		Created(target)
 		for Directory.Files(source)
 			let copy = target + "/" + Named(value)
-			if (File(copy).Exists is false) or (File(value).Modified > File(copy).Modified)
+			if File(copy).Exists is false or File(value).Modified > File(copy).Modified
 				File(copy).Write(File(value).ReadBytes)
 		for Directory.Directories(source)
 			Copied(value, target + "/" + Named(value))
 Created(path Text)
 	Release(Logger, "Missing/App").Created("artifacts/Release/Content") is not Error
 	Release(Logger, "Missing/App").Created("") is not Error
-	if (path is not "") and (Directory.Exists(path) is false)
+	if path is not "" and Directory.Exists(path) is false
 		Created(Path(path).PathOnly.text)
 		Directory.Create(path)
 Removed(source Text, target Text)

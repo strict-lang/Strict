@@ -51,6 +51,6 @@ Statements(ending Number) Number
 	for Range(fusion.Header(name) + 1, ending)
 		let line = fusion.lines(value)
 		let isStatement = Tokenizer(line.TrimStart).Tokens.First is in ("for", "let", "mutable", "if", "return")
-		if isStatement and (line.StartsWith("\t\t") is false)
+		if isStatement and line.StartsWith("\t\t") is false
 			return value
 	ending

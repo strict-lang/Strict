@@ -42,7 +42,7 @@ Rejected Texts
 		failed = "%argsfailed" + index
 	let usage = ("    cf.cond_br " + failed + ", ^usage, ^arguments", "  ^usage:", "    %usage = arith.constant 2 : i32")
 	let ended = usage + ("    return %usage : i32", "  ^arguments:")
-	lines.Length is 0 then lines else (List(Text) + "    %argsnone = arith.constant false") + lines + ended
+	lines.Length is 0 then lines else List(Text) + "    %argsnone = arith.constant false" + lines + ended
 Header Texts
 	MlirEntry(Counted, symbol = "strict_main").Header.First.StartsWith("  func.func @strict_main(")
 	Counted.Header.Length is 7
@@ -87,7 +87,7 @@ Arguments Texts
 	mutable lines = List(Mutable(Text))
 	for entry.method.parameters
 		let kind = TypeEntry.ShortName(value.typeName)
-		let isDefaulted = (value.initial.Length > 0) and (kind is in ("Number", "Boolean", "Text"))
+		let isDefaulted = value.initial.Length > 0 and kind is in ("Number", "Boolean", "Text")
 		let name = "%arg" + index + (isDefaulted then "given" else "")
 		lines = lines + Argument(kind, index, name) + (isDefaulted then Defaulted(value, index) else List(Text))
 	lines
@@ -107,7 +107,7 @@ Argument(kind Text, index Number, name Text) Texts
 	Counted.Argument("Text", 0, "%arg0").Last.StartsWith("    %arg0 = func.call @strict_argument(%argc, %argv")
 	Counted.Argument("List(Number)", 1, "%arg1").Length is 1
 	Counted.Argument("Boolean", 0, "%a")(2) is "    %a = func.call @strict_text_boolean(%atext) : (f64) -> f64"
-	if kind.StartsWith("List(") or (kind is in ("Numbers", "Texts"))
+	if kind.StartsWith("List(") or kind is in ("Numbers", "Texts")
 		return List(Text) + AllArguments(kind, name)
 	let parser = kind is "Number" then "strict_text_number" else (kind is "Boolean" then "strict_text_boolean" else "")
 	let read = parser is "" then name else name + "text"

@@ -21,9 +21,9 @@ Direct(type Text, node SyntaxNode, scope Scope) Texts
 	Limited.Direct("Count", Remainder, Numbered).Length is 0
 	if IsSafeDivision(type, node)
 		return List(Text)
-	if (node.Kind is in ("Member", "MethodCall")) or ((node.Kind is "Binary") and (node.text is in Operators))
+	if node.Kind is in ("Member", "MethodCall") or node.Kind is "Binary" and node.text is in Operators
 		return Keyed(node.children(0), node.text, scope, inference.types.MethodsOf(type))
-	if (node.Kind is "Call") and (scope.TypeOf(node.text) is not "")
+	if node.Kind is "Call" and scope.TypeOf(node.text) is not ""
 		return List(Text) + "Index"
 	IsOwn(type, node, scope) then List(Text) + (type + "." + node.text) else List(Text)
 IsSafeDivision(type Text, node SyntaxNode) Boolean
@@ -34,7 +34,7 @@ IsSafeDivision(type Text, node SyntaxNode) Boolean
 	Limited.IsSafeDivision("Count", FileCheck.Parsed("low % Increment")) is false
 	Limited.IsSafeDivision("A", FileCheck.Parsed("low + 2")) is false
 	Limited.IsSafeDivision("A", SyntaxNode("Text", "/")) is false
-	if (node.Kind is not "Binary") or (node.text is not in ("/", "%"))
+	if node.Kind is not "Binary" or node.text is not in ("/", "%")
 		return false
 	let divisor = node.children(1)
 	let owner = divisor.Kind is "Member" then divisor.children(0).text else type
@@ -43,11 +43,11 @@ IsOwn(type Text, node SyntaxNode, scope Scope) Boolean
 	Limited.IsOwn("Count", SyntaxNode("Identifier", "Increment"), Numbered)
 	Limited.IsOwn("Count", SyntaxNode("Identifier", "Increment"), Scope(("Increment"), ("Number"))) is false
 	Limited.IsOwn("Count", SyntaxNode("Text", "Increment"), Numbered) is false
-	(node.Kind is in ("Identifier", "Call")) and (scope.TypeOf(node.text) is "") and IsMethod(type, node.text)
+	node.Kind is in ("Identifier", "Call") and scope.TypeOf(node.text) is "" and IsMethod(type, node.text)
 IsMethod(type Text, name Text) Boolean
 	Limited.IsMethod("Count", "Increment")
-	(Limited.IsMethod("Count", "Limit") is false) and (Limited.IsMethod("Count", "Missing") is false)
-	(inference.types.MethodsOf(type).TypeOf(name) is not "") and (inference.ConstantOf(type, name) is "")
+	Limited.IsMethod("Count", "Limit") is false and Limited.IsMethod("Count", "Missing") is false
+	inference.types.MethodsOf(type).TypeOf(name) is not "" and inference.ConstantOf(type, name) is ""
 Keyed(receiver SyntaxNode, name Text, scope Scope, methods Scope) Texts
 	SureCalls.Keyed(SyntaxNode("Identifier", "elements"), "First", Numbered, Numbered) is ("List.First")
 	Limited.Keyed(SyntaxNode("Type", "Count"), "Limit", Numbered, Numbered).Length is 0
@@ -55,5 +55,5 @@ Keyed(receiver SyntaxNode, name Text, scope Scope, methods Scope) Texts
 	Fielded.Keyed(SyntaxNode("Type", "Count"), "low", Numbered, Numbered).Length is 0
 	Fielded.Keyed(SyntaxNode("Type", "Count"), "ReadLines", Numbered, Numbered) is ("Count.ReadLines")
 	let base = inference.types.BaseName(inference.TypeOf(receiver, scope, methods))
-	let isField = (inference.types.MembersOf(base).TypeOf(name) is not "") or (inference.ConstantOf(base, name) is not "")
+	let isField = inference.types.MembersOf(base).TypeOf(name) is not "" or inference.ConstantOf(base, name) is not ""
 	isField then List(Text) else List(Text) + (base + "." + name)

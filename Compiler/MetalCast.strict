@@ -7,7 +7,7 @@ Expression Text
 	MetalCast(("i64", "%1", "to", "double"), "bitcast").Expression is "as_type<ulong>(v1)"
 	if operation is "freeze"
 		return Value
-	if (arguments.Length is not 4) or (Source.Type is "") or (Target.Type is "")
+	if arguments.Length is not 4 or Source.Type is "" or Target.Type is ""
 		return ""
 	if operation is in ("zext", "sext", "trunc")
 		return Integer
@@ -36,10 +36,10 @@ Floating Text
 	MetalCast(("double", "%1", "to", "float"), "fptrunc").Floating is "strict_float(v1)"
 	MetalCast(("float", "%1", "to", "double"), "fpext").Floating is "strict_double(v1)"
 	MetalCast(("i32", "%1", "to", "double"), "sitofp").Floating is ""
-	let isDouble = (arguments(0) is "double") or (arguments(3) is "double")
-	if operation is "fptrunc" and (arguments(0) is "double")
+	let isDouble = arguments(0) is "double" or arguments(3) is "double"
+	if operation is "fptrunc" and arguments(0) is "double"
 		return arguments(3) is "float" then "strict_float(" + Value + ")" else ""
-	if operation is "fpext" and (arguments(3) is "double")
+	if operation is "fpext" and arguments(3) is "double"
 		return arguments(0) is "float" then "strict_double(" + Value + ")" else ""
 	isDouble then "" else "(" + Target.Type + ")" + Unsigned + Value
 Unsigned Text

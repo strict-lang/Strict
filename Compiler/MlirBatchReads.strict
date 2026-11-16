@@ -56,7 +56,7 @@ IsComputed(at Number, entry InstructionEntry) Boolean
 	if entry.kind is in (InstructionType.StoreRegisterToVariable, InstructionType.StoreConstantToVariable)
 		return feeding.IsFloatedVariable(at, entry.texts.Last)
 	let written = LoadReuse(function.method.instructions).Written(entry)
-	(written < 0) or feeding.IsFloated(at, written)
+	written < 0 or feeding.IsFloated(at, written)
 Cached(at Number) Texts
 	let temp = "%d" + at
 	let pointer = "    " + temp + "Pointer = llvm.getelementptr %cached" + at + "[%batchIndex]"

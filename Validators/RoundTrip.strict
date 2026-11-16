@@ -4,12 +4,12 @@ constant Packed = "\t(" + Digits + "," + Digits + ")"
 Formatted(lines Texts) Texts
 	RoundTrip.Formatted(("Run", "	let x=(1,2)")) is ("Run", "	let x = (1, 2)")
 	RoundTrip.Formatted(("has number ", "Twice Number", "	number*2")) is ("has number", "Twice Number", "	number * 2")
-	(RoundTrip.Formatted(("Run", "\t1", "")) is ("Run", "\t1")) and (RoundTrip.Formatted(("has x", "\t1")) is ("has x"))
+	RoundTrip.Formatted(("Run", "\t1", "")) is ("Run", "\t1") and RoundTrip.Formatted(("has x", "\t1")) is ("has x")
 	let shape = TypeShape(lines)
 	let end = Ended(lines)
 	mutable formatted = List(Mutable(Text))
 	for lines
-		if (value.StartsWith("	") is false) and (index < end)
+		if value.StartsWith("	") is false and index < end
 			formatted.Add(value.Trim)
 			if shape.IsMethodHeader(value)
 				formatted = formatted + Body(lines, index + 1)

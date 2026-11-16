@@ -13,7 +13,7 @@ Run(path Text, root Text) Number
 	let lines = result.Output.Lines
 	for Plain(lines) + Valued(lines, Path(path).PathOnly.text)
 		logger.Log(value)
-	if (result.exitCode >= 0) and (result.exitCode < Folders.CrashExitCode)
+	if result.exitCode >= 0 and result.exitCode < Folders.CrashExitCode
 		logger.Log(Execute.Summary(result.exitCode, path))
 	result.exitCode
 Plain(lines Texts) Texts
@@ -77,8 +77,8 @@ Help(code Text, summaries Texts) Text
 	for summaries
 		if Outcome(value, prefix) is not ""
 			results.Add(Outcome(value, prefix))
-	let isSame = (results.Length is summaries.Length) and (results.Length is results.Count(results.First))
-	isSame and (isLoop is false) then Same(code, named, summaries.First, results.First) else Each(results)
+	let isSame = results.Length is summaries.Length and results.Length is results.Count(results.First)
+	isSame and isLoop is false then Same(code, named, summaries.First, results.First) else Each(results)
 Each(results Texts) Text
 	ValueTrace.Each(("1", "2")) is ", each: 1, 2"
 	ValueTrace.Each(List(Text)) is ""
@@ -110,25 +110,25 @@ Same(code Text, named Texts, summary Text, result Text) Text
 	let shown = isSimple then result else Substituted(expression, summary) + " = " + result
 	if named.Length is 2
 		return ": " + named(0) + " = " + shown
-	let isHidden = (code.StartsWith("return ") is false) and ((result is "true") or isSimple and (expression is result))
+	let isHidden = code.StartsWith("return ") is false and (result is "true" or isSimple and expression is result)
 	isHidden then "" else ": " + (isSimple then expression + " = " + shown else shown)
 Unselected(code Text) Text
 	ValueTrace.Same("a > b", List(Text), "", "true") is ""
 	ValueTrace.Unselected("\"add\" then first + second") is "first + second"
 	ValueTrace.Unselected("a > 0 then a else 0") is "a > 0 then a else 0"
 	let at = code.IndexOf(" then ")
-	(at < 0) or (code.IndexOf(" else ") >= 0) then code else code.Substring(at + 6, code.Length - at - 6)
+	at < 0 or code.IndexOf(" else ") >= 0 then code else code.Substring(at + 6, code.Length - at - 6)
 Substituted(expression Text, summary Text) Text
 	ValueTrace.Substituted("numbers(0) + b", Summed) is "numbers(0) + 5"
 	ValueTrace.Substituted("number.b", Summed) is "number.b"
-	ValueTrace.Substituted("b + b", Summed) is "5 + 5" and (ValueTrace.Substituted("b.", Summed) is "5.")
+	ValueTrace.Substituted("b + b", Summed) is "5 + 5" and ValueTrace.Substituted("b.", Summed) is "5."
 	let tokens = Tokenizer(expression).Tokens
 	mutable text = ""
 	for tokens
 		let previous = index > 0 then tokens(index - 1) else ""
 		let used = previous is "." then "" else Outcome(summary, "Use|" + value + "|")
-		let isClosing = (index is 0) or (value is in (")", ",", ".")) or (previous is in ("(", "."))
-		let isTight = isClosing or (value is "(") and (previous is not in Operators)
+		let isClosing = index is 0 or value is in (")", ",", ".") or previous is in ("(", ".")
+		let isTight = isClosing or value is "(" and previous is not in Operators
 		text = text + (isTight then "" else " ") + (used is "" then value else used)
 	text
 Assigned(line Text) Texts
@@ -137,4 +137,4 @@ Assigned(line Text) Texts
 	ValueTrace.Assigned("has number with value >= -1").Length is 0
 	let words = line.Trim.Split(" ")
 	let at = words.First is in ("let", "mutable") then 1 else 0
-	(words.Length > at + 2) and (words(at + 1) is "=") then (words(at), words(at)) else List(Text)
+	words.Length > at + 2 and words(at + 1) is "=" then (words(at), words(at)) else List(Text)

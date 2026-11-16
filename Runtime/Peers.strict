@@ -15,7 +15,7 @@ IsAny(name Text) Boolean
 	Peers.IsAny("Any")
 	Peers.IsAny(Server) is false
 	Peers.IsAny("") is false
-	(name is "any") or (name is "Any")
+	name is "any" or name is "Any"
 Probed(line Text) Texts
 	Peers.Host("missing") is ""
 	mutable open = List(Mutable(Text))

@@ -21,7 +21,7 @@ constant Destining = "destine_element(%t4ev, %listDestination, %t4ei, %t4er) : (
 constant DestinationOperands = ("    %t4ev = llvm.load %v_value : !llvm.ptr -> f64", "    %t4ei = llvm.load %v_items : !llvm.ptr -> f64", "    %t4er = llvm.load %v_forResult : !llvm.ptr -> f64")
 constant DestinationCall = ("    func.call @strict_flat_destine_element(%t4ev, %listDestination, %t4ei, %t4er) : (f64, f64, f64, f64) -> ()", "call")
 constant Destinations = DestinationOperands + DestinationCall
-constant TriplingsCreated = (List(InstructionEntry) + MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Strict/Math/Tripling)", (0, 6, -1, 0)), "forResult"))
+constant TriplingsCreated = List(InstructionEntry) + MethodCodegen.StoreConstant(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Strict/Math/Tripling)", (0, 6, -1, 0)), "forResult")
 constant LinedInstructions = TriplingsCreated + MlirFlats.Making.instructions.Slice(0, 9) + InstructionEntry.Named(InstructionType.InvokeWriteToList, 4, "forResult")
 constant Lined = MlirListDestined(MlirFunction((MlirFlats.Tripling, MlirFlats.Summing), MlirFlats.Tripling, MethodEntry("Lined", List(MemberEntry), "Strict/List(Strict/Math/Tripling)", LinedInstructions)), 1)
 constant Validating = InstructionEntry.Invoke(5, ("Strict/Math/Tripling", "Validated", "Strict/Math/Tripling"), List(Number), 4)
@@ -41,7 +41,7 @@ IsDestined Boolean
 	let steps = function.method.instructions
 	let begin = ResultLoop
 	let returned = MlirLayout(function).Represented(TypeEntry.ShortName(function.method.returnType))
-	if (begin < 0) or (returned.StartsWith("List(") is false)
+	if begin < 0 or returned.StartsWith("List(") is false
 		return false
 	for Range(begin + 1, steps.Length)
 		if Text.Combine(steps(value).texts.Slice(0, steps(value).texts.Length.Clamp(0, 1))) is in Sources
@@ -54,12 +54,12 @@ ResultLoop Number
 	mutable loops = 0
 	mutable begin = -1
 	for steps
-		if (value.kind is InstructionType.StoreConstantToVariable) and Text.Combine(value.texts).EndsWith("forResult")
+		if value.kind is InstructionType.StoreConstantToVariable and Text.Combine(value.texts).EndsWith("forResult")
 			loops = loops + 1
-		begin = (value.kind is InstructionType.LoopBegin) and (begin < 0) then index else begin
+		begin = value.kind is InstructionType.LoopBegin and begin < 0 then index else begin
 	let writer = begin < 0 then -1 else MlirKinds(function).Writer(begin, steps(begin).payload(0))
 	let isParameter = writer >= 0 then Text.Combine(steps(writer).texts) is in function.method.ParameterNames else false
-	(loops is 1) and isParameter then begin else -1
+	loops is 1 and isParameter then begin else -1
 Sources Texts
 	Copied.Sources is ("items")
 	MlirListDestined(MlirFunction(List(TypeEntry), MlirFunction.Shape, Weighing), 0).Sources is ("items")
@@ -84,7 +84,7 @@ Allocation(result Text, capacity Text, element Text) Text
 	MlirListDestined(Copied.function, 2).Allocation("%r", "%a", "Tripling").StartsWith("@strict_list_into(")
 	MlirListDestined(Copied.function, 2).Allocation("%r", "%a", "Tripling").EndsWith("%a, %rc) : (f64, f64, f64)")
 	let isNumber = element is "Number"
-	if IsDestined and (ResultLoop is position)
+	if IsDestined and ResultLoop is position
 		let into = "@strict_list_into(%listDestination, " + capacity + ", " + result + "c) : (f64, f64, f64)"
 		return isNumber then "@strict_numbers_into(%listDestination, " + capacity + ") : (f64, f64)" else into
 	let numbers = "@strict_numbers_new(" + capacity + ") : (f64)"
@@ -106,8 +106,8 @@ IsKept(at Number) Boolean
 	let steps = function.method.instructions
 	for steps
 		let isValue = value.kind is InstructionType.LoadVariableToRegister then value.texts(0) is "value" else false
-		let isOther = isValue and (index is not at)
-		if isOther and (MlirFlats(function, index).IsConsumed(steps, index, value.payload(0)) is false)
+		let isOther = isValue and index is not at
+		if isOther and MlirFlats(function, index).IsConsumed(steps, index, value.payload(0)) is false
 			return false
 	true
 Element(entry InstructionEntry, next InstructionEntry, compiled Texts) Texts
@@ -115,7 +115,7 @@ Element(entry InstructionEntry, next InstructionEntry, compiled Texts) Texts
 	Remade.Element(Remaking.instructions(4), Remaking.instructions(5), List(Text) + "call") is ("call")
 	Remade.Element(Remaking.instructions(4), Remaking.instructions(6), List(Text) + "call") is Destinations
 	MlirListDestined(Remade.function, 3).Element(Remaking.instructions(4), Remaking.instructions(6), ("call")) is ("call")
-	if (Text.Combine(next.texts) is not "forResult") or (IsElement(entry) is false)
+	if Text.Combine(next.texts) is not "forResult" or IsElement(entry) is false
 		return compiled
 	let temp = "%t" + position + "e"
 	let arguments = temp + "v, %listDestination, " + temp + "i, " + temp + "r"
@@ -130,8 +130,8 @@ IsCollected(name Text) Boolean
 	let steps = function.method.instructions
 	for steps
 		let isLoaded = value.kind is InstructionType.LoadVariableToRegister then value.texts(0) is name else false
-		let built = isLoaded and (index + 1 < steps.Length) then index + 1 else -1
-		if (built > 0) and (MlirFlats(function, built).Constructing(steps(built), value.payload(0)) > 0)
+		let built = isLoaded and index + 1 < steps.Length then index + 1 else -1
+		if built > 0 and MlirFlats(function, built).Constructing(steps(built), value.payload(0)) > 0
 			return Collected(built)
 	false
 Collected(at Number) Boolean
@@ -143,7 +143,7 @@ Collected(at Number) Boolean
 	let checked = function.method.instructions(checkedAt)
 	let written = MlirDestined(function, checkedAt).Next(checked)
 	let isWrite = written.kind is InstructionType.InvokeWriteToList
-	isWrite and (Text.Combine(written.texts) is "forResult") and (written.payload(0) is checked.payload(0))
+	isWrite and Text.Combine(written.texts) is "forResult" and written.payload(0) is checked.payload(0)
 Iterated Text
 	Remade.IsElement(InstructionEntry.Invoke(2, ("T", "Made", "T"), List(Number), -1)) is false
 	Remade.IsElement(InstructionEntry.Invoke(2, ("T", "Made", "T"), List(Number), 0)) is false

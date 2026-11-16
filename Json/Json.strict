@@ -49,10 +49,10 @@ Parts(open Number) Numbers
 	Json("[1, \"b\"]").Parts(0) is (1, 2, 4, 7, 7)
 	let isObject = text.StartsWith("{", open)
 	mutable parts = List(Mutable(Number))
-	if (isObject is false) and (text.StartsWith("[", open) is false)
+	if isObject is false and text.StartsWith("[", open) is false
 		return parts + open
 	mutable at = Skip(open + 1)
-	for as long as (at < text.Length) and (text(at) is not in ("}", "]"))
+	for as long as at < text.Length and text(at) is not in ("}", "]")
 		let finish = ValueEnd(isObject then MemberValue(at) else at)
 		parts = parts + at + finish
 		let after = Skip(finish)
@@ -61,26 +61,26 @@ Parts(open Number) Numbers
 ValueEnd(start Number) Number
 	Json("[1, [2]]").ValueEnd(0) is 8
 	Json("12, 3").ValueEnd(0) is 2
-	(Json("").Parts(0) is (0)) and (Json("[1").Parts(0) is (1, 2, 2)) and (Json("{\"a\"").Parts(0).Last is 4)
+	Json("").Parts(0) is (0) and Json("[1").Parts(0) is (1, 2, 2) and Json("{\"a\"").Parts(0).Last is 4
 	if text.StartsWith("\"", start)
 		return StringEnd(start)
 	if text.StartsWith("{", start) or text.StartsWith("[", start)
 		return Parts(start).Last + 1
 	mutable after = start
-	for as long as (after < text.Length) and (text(after) is not in Ends)
+	for as long as after < text.Length and text(after) is not in Ends
 		after = after + 1
 	after
 StringEnd(start Number) Number
 	Escaped.StringEnd(1) is 16
 	Json("\"a\\\\\" ").StringEnd(0) is 5
 	mutable at = text.IndexOf("\"", start + 1)
-	for as long as (at > 0) and (Slashes(at) % 2 is 1)
+	for as long as at > 0 and Slashes(at) % 2 is 1
 		at = text.IndexOf("\"", at + 1)
 	at < 0 then text.Length else at + 1
 Slashes(position Number) Number
 	Escaped.Slashes(4) is 1
 	mutable count = 0
-	for as long as (position > count) and (text(position - count - 1) is "\\")
+	for as long as position > count and text(position - count - 1) is "\\"
 		count = count + 1
 	count
 MemberValue(key Number) Number
@@ -91,7 +91,7 @@ MemberValue(key Number) Number
 Skip(position Number) Number
 	Json(" \t\n1").Skip(0) is 3
 	mutable at = position
-	for as long as (at < text.Length) and (text(at) is in Spaces)
+	for as long as at < text.Length and text(at) is in Spaces
 		at = at + 1
 	at
 Slice(start Number, finish Number) Json

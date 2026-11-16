@@ -48,4 +48,4 @@ Source(pixel Number, tap Number) Number
 Parity(pixel Number) Number
 	Convolved(Square, (1, 0), Center, (4, 4, 1, 1, 6, 2)).Parity(6) is 2
 	Convolved(Square, (1, 0), Box, (2, 2, 1, 1, 6, 1)).Parity(3) is 0
-	shape(5) is 1 then 0 else ((pixel / shape(1)).Floor % 2) * 2 + (pixel % shape(1)) % 2
+	shape(5) is 1 then 0 else (pixel / shape(1)).Floor % 2 * 2 + (pixel % shape(1)) % 2

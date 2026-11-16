@@ -11,10 +11,10 @@ Drawn(logits Numbers) Sampling
 	Plain.Drawn((1, 3, 2)).token is 1
 	Warm.Drawn((0, 0, 0, 20)).token is 3
 	Paired.Drawn((5, 0, 0, 5)).token % 3 is 0
-	if (temperature is 0) or (topK is 1)
+	if temperature is 0 or topK is 1
 		return Sampling(value, token = Greedy.Largest(logits))
 	let maxima = Greedy.Maxima(Greedy.Best(logits, Chunk, logits.Length))
-	let bound = (topK is 0) or (topK >= maxima.Length) then maxima.Minimum else Threshold(maxima, topK)
+	let bound = topK is 0 or topK >= maxima.Length then maxima.Minimum else Threshold(maxima, topK)
 	let chunks = Selected(maxima, bound)
 	mutable state = random
 	let picked = state.Get(0, 1)
@@ -97,5 +97,5 @@ Below(numbers Numbers, limit Number) Number
 	Warm.Below((1, 2, 3), 3) is 2
 	mutable below = numbers.Minimum
 	for numbers
-		below = (value < limit) and (value > below) then value else below
+		below = value < limit and value > below then value else below
 	below

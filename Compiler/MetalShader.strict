@@ -12,7 +12,7 @@ Functions List(MetalFunction)
 	for lines
 		if value.StartsWith("define ")
 			start = index
-		if (value is "}") and (start >= 0)
+		if value is "}" and start >= 0
 			functions.Add(MetalFunction(lines.Slice(start, index - start + 1)))
 	functions
 Translated(functions List(MetalFunction)) Texts
@@ -26,7 +26,7 @@ Kept(names Texts, functions List(MetalFunction)) Texts
 Supporting(names Texts, functions List(MetalFunction)) Texts
 	Sample.Supporting(("twice", "K", "L"), Sample.Functions) is ("twice", "K")
 	for functions
-		if (value.Name is in names) and ((value.Callees - names).Length is 0)
+		if value.Name is in names and (value.Callees - names).Length is 0
 			value.Name
 Source(prelude Texts) Texts
 	Sample.Source(List(Text)).First is "// parameters K 1"
@@ -43,12 +43,12 @@ Translatable(translated Texts, functions List(MetalFunction)) Texts
 Markers(functions List(MetalFunction), kept Texts) Texts
 	Sample.Markers(Sample.Functions, ("K")) is ("// parameters K 1")
 	for functions
-		if value.IsKernel and (value.Name is in kept)
+		if value.IsKernel and value.Name is in kept
 			"// parameters " + value.Name + " " + value.Parameters.Length
 Prototypes(functions List(MetalFunction), kept Texts) Texts
 	Sample.Prototypes(Sample.Functions, ("twice", "K")) is ("float twice(float v0);")
 	for functions
-		if (value.IsKernel is false) and (value.Name is in kept)
+		if value.IsKernel is false and value.Name is in kept
 			value.Signature + ";"
 Bodies(translated Texts, functions List(MetalFunction), kept Texts) Texts
 	Sample.Bodies(Sample.Translated(Sample.Functions), Sample.Functions, ("K")).Length is 1

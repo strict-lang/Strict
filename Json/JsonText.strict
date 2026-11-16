@@ -38,7 +38,7 @@ IsPair(position Number) Boolean
 	Escaped.IsPair(17)
 	Escaped.IsPair(11) is false
 	let high = Hex(position + 1)
-	(high >= HighSurrogate) and (high < LowSurrogate) and raw.StartsWith("\\u", position + 5)
+	high >= HighSurrogate and high < LowSurrogate and raw.StartsWith("\\u", position + 5)
 Hex(position Number) Number
 	Escaped.Hex(6) is 65
 	JsonText("D83d").Hex(0) is 55357

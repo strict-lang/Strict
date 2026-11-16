@@ -27,7 +27,7 @@ IsCompiled(type Text, methods Texts) Boolean
 	Housed.IsCompiled("Strict/Logger", List(Text))
 	Housed.IsCompiled("Strict/Logger", List(Text) + "Log")
 	Housed.IsCompiled("Strict/Logger", List(Text) + "Run") is false
-	(methods.Length is 0) or (Own(type).Name is "") or (Absent(type, methods).Length > 0)
+	methods.Length is 0 or Own(type).Name is "" or Absent(type, methods).Length > 0
 Compiling(type Text, methods Texts) TypeEntry slow
 	Sample.Compiling("Strict/Bytecode/Crc", List(Text)).Name is "Crc"
 	Housed.Compiling("Strict/Logger", List(Text) + "Run") is BinaryLinks.Unknown

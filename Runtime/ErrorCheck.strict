@@ -6,7 +6,7 @@ Next(position Number, checked VmValue, length Number) Number
 	Testing.Next(3, VmValue.Failed, 10) is 12
 	Returning.Next(3, VmValue.OfNumber(1), 10) is 4
 	ErrorCheck(InstructionEntry.Return(0)).Next(3, VmValue.Failed, 10) is 4
-	if (entry.kind is not InstructionType.CheckError) or (checked.kind is not in VmValue.ErrorKinds)
+	if entry.kind is not InstructionType.CheckError or checked.kind is not in VmValue.ErrorKinds
 		return position + 1
 	entry.texts.Length is 0 then length else entry.payload.Last
 Value(checked VmValue, target VmValue, frame Frame, position Number) VmValue

@@ -16,8 +16,8 @@ Issue(call SyntaxNode, scope Scope, current Scope) Text
 	Counting.Issue(OuterCount, Valued, Owning) is ""
 	let owner = scope.TypeOf("self type")
 	let count = call.children.Length
-	let isHiding = (call.Kind is "Call") and IsMethod(call.text, scope, current)
-	if (isHiding is false) or (inference.types.ParametersOf(owner, call.text, count).Length >= count)
+	let isHiding = call.Kind is "Call" and IsMethod(call.text, scope, current)
+	if isHiding is false or inference.types.ParametersOf(owner, call.text, count).Length >= count
 		return ""
 	let method = (owner is "" then "" else owner + ".") + call.text
 	"MethodNotFound: " + method + " with " + count + " arguments" + Hint(inference.Origin(call.text, scope), call.text)
@@ -26,11 +26,11 @@ Ambiguous(call SyntaxNode, scope Scope, current Scope) Text
 	Counting.Ambiguous(Twiced, Valued, FileCheck.Counted) is ""
 	Counting.Ambiguous(OuterCount, Looped, FileCheck.Counted).StartsWith("AmbiguousName: outer.Count inside a loop")
 	let first = call.children.Length > 0 then call.children(0) else call
-	let isMember = (call.Kind is in ("Member", "MethodCall")) and (first.Kind is "Identifier")
+	let isMember = call.Kind is in ("Member", "MethodCall") and first.Kind is "Identifier"
 	let outside = OuterType(call, scope)
 	if outside is not ""
 		return "AmbiguousName: outer." + outside + " inside a loop is the value outside the loop, not the type"
-	if (isMember is false) or (IsMethod(first.text, scope, current) is false)
+	if isMember is false or IsMethod(first.text, scope, current) is false
 		return ""
 	let tip = ", use outer." + first.text + " for the type or value." + first.text + " for the method"
 	"AmbiguousName: " + first.text + " is a method and a type" + tip
@@ -45,7 +45,7 @@ OuterType(call SyntaxNode, scope Scope) Text
 	let first = call.children(0)
 	if first.text is not "outer"
 		return OuterType(first, scope)
-	("outer" is in scope.names) and inference.types.IsKnown(call.text) then call.text else ""
+	"outer" is in scope.names and inference.types.IsKnown(call.text) then call.text else ""
 IsMethod(name Text, scope Scope, current Scope) Boolean
 	Counting.IsMethod("Count", Valued, Owning)
 	Constants.IsMethod("Count", Valued, Owning) is false
@@ -55,7 +55,7 @@ IsMethod(name Text, scope Scope, current Scope) Boolean
 	Counting.Ambiguous(Twiced, Valued, Owning).EndsWith(" for the type or value.Count for the method")
 	Counting.Ambiguous(SyntaxNode("Identifier", "Count"), Valued, Owning) is ""
 	Counting.Ambiguous(SyntaxParser(Tokenizer("f(Count)").Tokens).Parse, Valued, Owning) is ""
-	let isOwn = (current.TypeOf(name) is not "") and (inference.ConstantOf(scope.TypeOf("self type"), name) is "")
+	let isOwn = current.TypeOf(name) is not "" and inference.ConstantOf(scope.TypeOf("self type"), name) is ""
 	isOwn and inference.types.IsKnown(name)
 Hint(origin Text, name Text) Text
 	HiddenType.Hint("local Size", "Size") is ", local Size hides the type Size, use outer.Size"

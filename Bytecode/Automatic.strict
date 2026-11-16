@@ -33,13 +33,13 @@ Generated(name Text) Texts
 	if name is "Members"
 		return List(Text) + "Members Variables" + Described
 	if name is in ("to HashCode", "Code")
-		return name is "Code" then (List(Text) + "Code Text" + Coded) else (List(Text) + "to HashCode" + Hashed)
+		return name is "Code" then List(Text) + "Code Text" + Coded else List(Text) + "to HashCode" + Hashed
 	name is "IsNearlyEqual" then Closed else List(Text) + ("Validated " + instance) + "\tvalue"
 Closed Texts
 	Point.Closed.First is "IsNearlyEqual(other Point) Boolean"
 	Point.Closed.Last is "\ttestEqual0"
 	Point.Closed(1) is "\tmutable testEqual0 = true"
-	Outer.instantiation is Instantiation(Closeness.Nested.types) and (Outer.lines is ("has inner Inner"))
+	Outer.instantiation is Instantiation(Closeness.Nested.types) and Outer.lines is ("has inner Inner")
 	Outer.Closed(2) is "\tlet testEqual0x0 = inner.IsNearlyEqual(other.inner)"
 	Point.Lines(List(Text) + "IsNearlyEqual").Index("IsNearlyEqual(other Point) Boolean") is 6
 	mutable closed = List(Text) + ("IsNearlyEqual(other " + instance + ") Boolean")
@@ -63,14 +63,14 @@ IsWanted(name Text, names Texts) Boolean
 	Point.IsWanted("Members", List(Text)) is false
 	Automatic(List(Text) + "has text", "Name", Instantiation.Pairing).IsWanted("to HashCode", Names)
 	Automatic(("has red Number with value >= 0", "has alpha = 1"), "T", Instantiation.Pairing).IsWanted("Validated", Names)
-	Coding.IsWanted("Code", Names) and (Coding.IsWanted("Codes", List(Text) + "Codes") is false)
-	if (name is not in names) or ((name is "Validated") and (Constraint.IsConstrained(lines) is false))
+	Coding.IsWanted("Code", Names) and Coding.IsWanted("Codes", List(Text) + "Codes") is false
+	if name is not in names or name is "Validated" and Constraint.IsConstrained(lines) is false
 		return false
 	for lines
-		if (value is name) or value.StartsWith(name + " ") or value.StartsWith(name + "(")
+		if value is name or value.StartsWith(name + " ") or value.StartsWith(name + "(")
 			return false
 	let shape = TypeShape(lines)
-	(shape.IsTrait is false) or (shape.ParameterScope.names.Length is 0)
+	shape.IsTrait is false or shape.ParameterScope.names.Length is 0
 Described Text
 	Point.Described.StartsWith("\tList(Variable) + Variable(\"X\", \"Number\" to Type, X to Text) + ")
 	Point.Described.EndsWith(" + Variable(\"Y\", \"Number\" to Type, Y to Text, true)")
@@ -122,10 +122,10 @@ Stored Texts
 	Automatic(("has x Number", "has Counter"), "S", Instantiation(Closeness.Nested.types)).Stored is ("has x Number")
 	let shape = TypeShape(lines)
 	for lines
-		if shape.IsMemberLine(value) and (value.StartsWith("constant ") is false)
+		if shape.IsMemberLine(value) and value.StartsWith("constant ") is false
 			let type = Header(value).DeclaredType(1)
 			let isTrait = instantiation.types.ParameterScope(type).TypeOf(" trait") is "true"
-			if (type is not "Logger") and (isTrait is false)
+			if type is not "Logger" and isTrait is false
 				value
 Header(line Text) HeaderTokens
 	Point.Header("has X Number").MemberName is "X"
@@ -152,5 +152,5 @@ Missing(entry TypeEntry, targets Texts, fullName Text) Texts
 	Point.Missing(Hashable, List(Text) + "Strict/HelloLogger.to HashCode", "Strict/HelloLogger").Length is 0
 	for Generating
 		let words = value.Split(" ")
-		if ((fullName + "." + value) is in targets) and (entry.Chosen(words.First, -1, words.Last, List(Text)) < 0)
+		if (fullName + "." + value) is in targets and entry.Chosen(words.First, -1, words.Last, List(Text)) < 0
 			value

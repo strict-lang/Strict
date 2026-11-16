@@ -19,7 +19,7 @@ SevenBit(number Number) ByteEncoder
 	mutable result = bytes
 	mutable rest = number
 	for (rest / SevenBitBase).Floor > 0 then SevenBitLength(rest) else 1
-		result = result + ((rest < SevenBitBase) then rest else rest % SevenBitBase + SevenBitBase)
+		result = result + (rest < SevenBitBase then rest else rest % SevenBitBase + SevenBitBase)
 		rest = (rest / SevenBitBase).Floor
 	ByteEncoder(result)
 SevenBits(numbers Numbers) ByteEncoder

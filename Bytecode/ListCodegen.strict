@@ -94,16 +94,16 @@ CopiedBefore(loop SyntaxNode, block CodeBlock, isUsed Boolean) CodeBlock
 	mutable result = block
 	for ElementWritten(loop.children.Last)
 		let owned = result.Sharing(value, false)
-		if (result.Owns(value) is false) and Disowned(loop, owned, isUsed).Owns(value)
+		if result.Owns(value) is false and Disowned(loop, owned, isUsed).Owns(value)
 			result = owned.Add(InstructionEntry(InstructionType.CopyList, value, -1))
 	result
 ElementWritten(node SyntaxNode) Texts
 	Plain.ElementWritten(WritingLoop) is ("values")
 	Plain.ElementWritten(Appending).Length is 0
 	Plain.ElementWritten(BodyParser("Run", "\tx.a(0) = 5").Block(1, 1).children(0)) is ("x.a")
-	if (node.Kind is "Reassignment") and (node.children(0).Kind is "Call")
+	if node.Kind is "Reassignment" and node.children(0).Kind is "Call"
 		return List(Text) + node.children(0).text
-	if (node.Kind is "Reassignment") and (node.children(0).Kind is "MethodCall")
+	if node.Kind is "Reassignment" and node.children(0).Kind is "MethodCall"
 		return List(Text) + (node.children(0).children(0) to Text + "." + node.children(0).text)
 	mutable names = List(Mutable(Text))
 	for node.children
@@ -119,9 +119,9 @@ IsAppend(node SyntaxNode, block CodeBlock) Boolean
 		return false
 	let list = sum.children(0)
 	let types = values.inference.types
-	let isList = (list to Text is node.children(0) to Text) and types.IsPlural(values.TypeOf(list, block))
-	let isVariable = (list.Kind is "Identifier") and (values.target.IsMember(values.target.TypeName, list.text) is false)
-	isList and isVariable and (types.IsPlural(values.TypeOf(sum.children(1), block)) is false)
+	let isList = list to Text is node.children(0) to Text and types.IsPlural(values.TypeOf(list, block))
+	let isVariable = list.Kind is "Identifier" and values.target.IsMember(values.target.TypeName, list.text) is false
+	isList and isVariable and types.IsPlural(values.TypeOf(sum.children(1), block)) is false
 IsNew(node SyntaxNode) Boolean
 	Plain.IsNew(ValueCodegen.Ones) is false
 	Plain.IsNew(SyntaxNode("List", "", (SyntaxNode("Number", "1"), SyntaxNode("Identifier", "x"))))
@@ -134,39 +134,39 @@ IsNew(node SyntaxNode) Boolean
 	Plain.IsNew(SyntaxNode("Member", "List", ValueCodegen.One)) is false
 	if node.Kind is "Binary"
 		return node.text is "+" then IsNew(node.children(0)) else node.text is not in ("to", "then", "else")
-	((node.Kind is "List") and (node.IsLiteral is false)) or ((node.Kind is "Call") and (node.text is "List"))
+	node.Kind is "List" and node.IsLiteral is false or node.Kind is "Call" and node.text is "List"
 Disowned(node SyntaxNode, block CodeBlock, isUsed Boolean) CodeBlock
 	Plain.Disowned(BodyParser("Run", "\tvalues.Add(1)").Block(1, 1), Owned, false).Owns("values")
 	Plain.Disowned(BodyParser("Run", "\t1 is not in values").Block(1, 1), Owned, false).Owns("values")
 	Plain.Disowned(BodyParser("Run", "\tif 1 > 2", "\t\treturn values").Block(1, 1), Owned, false).Owns("values")
 	if node.Kind is "Identifier"
 		return isUsed then block.Disowned(node.text) else block
-	if (node.Kind is "Return") and (borrowing.Length is 0)
+	if node.Kind is "Return" and borrowing.Length is 0
 		return block
 	Children(node, IsShared(node, block) then block.Disowned(node.children(0) to Text) else block, isUsed)
 Children(node SyntaxNode, block CodeBlock, isUsed Boolean) CodeBlock
 	Plain.Children(BodyParser("Run", "\tlet saved = values").Block(1, 1), Owned, false).Owns("values") is false
 	mutable result = block
 	for node.children
-		let used = IsUsed(node, index, isUsed) and (Borrowing(values, borrowing).IsBorrowed(node, index, result) is false)
+		let used = IsUsed(node, index, isUsed) and Borrowing(values, borrowing).IsBorrowed(node, index, result) is false
 		result = Disowned(value, result, used)
 	result
 IsShared(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsShared(BodyParser("Run", "\tvalues = other").Block(1, 1).children(0), Owned)
 	Plain.IsShared(Appending, Owned) is false
 	Plain.IsShared(BodyParser("Run", "\tvalues = List(Number)").Block(1, 1).children(0), Owned) is false
-	(node.Kind is "Reassignment") and (IsNew(node.children(1)) is false) and (IsAppend(node, block) is false)
+	node.Kind is "Reassignment" and IsNew(node.children(1)) is false and IsAppend(node, block) is false
 IsUsed(parent SyntaxNode, position Number, isUsed Boolean) Boolean
 	Plain.IsUsed(ValueCodegen.Edits(0), 0, true)
 	Plain.IsUsed(ValueCodegen.GreeterText, 0, true) is false
 	let isLast = position is parent.children.Length - 1
 	if parent.Kind is in ("Body", "Return")
-		return parent.Kind is "Body" then (isUsed and isLast) else (isUsed or (borrowing.Length > 0))
-	let isBranch = isLast and ((parent.Kind is in ("If", "ElseIf", "Else", "ElseValue", "For")) or (parent.text is "then"))
-	if isBranch or (parent.text is "else")
+		return parent.Kind is "Body" then isUsed and isLast else isUsed or borrowing.Length > 0
+	let isBranch = isLast and (parent.Kind is in ("If", "ElseIf", "Else", "ElseValue", "For") or parent.text is "then")
+	if isBranch or parent.text is "else"
 		return isUsed
-	if (parent.Kind is "MethodCall") and (position is 0)
-		return isUsed and (parent.text is in ("Add", "Remove"))
+	if parent.Kind is "MethodCall" and position is 0
+		return isUsed and parent.text is in ("Add", "Remove")
 	let instance = parent.text is in ("is in", "is not in") then 1 else 0
 	position is not instance or parent.Kind is not in ("Member", "Binary", "If", "ElseIf", "Reassignment")
 Argument(node SyntaxNode, position Number, parameters Texts, block CodeBlock) CodeBlock

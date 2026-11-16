@@ -41,7 +41,7 @@ IsPacked(kind Text) Boolean
 			if layout.IsByte(value.typeName) is false
 				return false
 			parts = parts + 1
-	(parts >= 2) and (parts <= 6)
+	parts >= 2 and parts <= 6
 Members(kind Text) Texts
 	Sample.Members("Rgb") is ("red", "green", "blue")
 	(Ranges.IsPacked("Mono") or Ranges.IsPacked("Septet")) is false
@@ -78,7 +78,7 @@ Passed(entry InstructionEntry, name Text) Number
 	Sample.Passed(Tinted, "alpha") is -1
 	Sample.Passed(Painted, "alpha") is -1
 	let named = Invocation(entry, List(VmValue), VmValue.None).ParameterNames.Index(name)
-	(named >= 0) and (named < PayloadDecoder(entry).ArgumentCount) then PayloadDecoder(entry).Arguments(named) else -1
+	named >= 0 and named < PayloadDecoder(entry).ArgumentCount then PayloadDecoder(entry).Arguments(named) else -1
 Read(entry InstructionEntry, kind Text) Texts
 	MlirLanes(Sample.function, 4).Read(Greens, "Rgb")(2).EndsWith("@strict_byte_of(%t4p, %t4s) : (f64, i64) -> f64")
 	MlirKinds(Sample.function).KindOf(5, 4) is "Byte"
@@ -120,7 +120,7 @@ Initial(entry InstructionEntry, name Text) Number
 	Sample.Initial(Tinted, "red") is 0
 	mutable number = 0
 	for MlirCouples(function, 0).Halves(function.TypeOf(entry.texts(0), true))
-		if (value.Name is name) and (value.initial.Length > 0)
+		if value.Name is name and value.initial.Length > 0
 			number = PayloadDecoder(value.initial.First).Value(0).number
 	number
 IsLaneEntry(at Number) Boolean

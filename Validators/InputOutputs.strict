@@ -36,7 +36,7 @@ Records(type Text, lines Texts) Texts
 	let statements = bodies.Statements
 	for lines
 		if shape.IsMethodHeader(value)
-			let isSeed = HeaderTokens(Tokenizer(value).Tokens).ReturnsSlow and (type is in Kinds)
+			let isSeed = HeaderTokens(Tokenizer(value).Tokens).ReturnsSlow and type is in Kinds
 			let calls = Text.Combine(Used(bodies, statements, lines, index), ",")
 			type + "." + Tokenizer(value).Tokens.First + (isSeed then "|slow|" else "||") + calls
 Used(bodies MethodBodies, statements ScopedStatements, lines Texts, header Number) Texts
@@ -47,8 +47,8 @@ Used(bodies MethodBodies, statements ScopedStatements, lines Texts, header Numbe
 	mutable isTesting = true
 	mutable keys = List(Mutable(Text))
 	for statements
-		if (value.line > header) and (value.line <= last)
-			isTesting = isTesting and (value.line < last) and (bodies.StatementType(value) is "Boolean")
+		if value.line > header and value.line <= last
+			isTesting = isTesting and value.line < last and bodies.StatementType(value) is "Boolean"
 			if isTesting is false
 				keys = keys + SureCalls(inference).Calls(bodies.typeName, value.statement, value.scope)
 	keys
@@ -61,7 +61,7 @@ Settled(records Texts) Texts
 	for as long as added > 0
 		added = 0
 		for records
-			if (SureMethods.Key(value) is not in reaching) and IsReaching(SureMethods.CallList(value), reaching)
+			if SureMethods.Key(value) is not in reaching and IsReaching(SureMethods.CallList(value), reaching)
 				reaching = reaching + SureMethods.Key(value)
 				added = added + 1
 	reaching
@@ -88,7 +88,7 @@ Issues(path Text, lines Texts, reaching Texts) List(ValidationIssue)
 	let type = Path(path).FileName.RemoveExtension.text
 	let shape = TypeShape(lines)
 	for lines
-		if (isInternal is false) and shape.IsMethodHeader(value) and IsUnmarked(type, value, reaching)
+		if isInternal is false and shape.IsMethodHeader(value) and IsUnmarked(type, value, reaching)
 			ValidationIssue("InputOutputMustBeSlow", type + "." + Tokenizer(value).Tokens.First + Hint, index + 1)
 IsUnmarked(type Text, line Text, reaching Texts) Boolean
 	InputOutputs.IsUnmarked("Reader", "Loaded Texts", ("Reader.Loaded"))
@@ -96,4 +96,4 @@ IsUnmarked(type Text, line Text, reaching Texts) Boolean
 	InputOutputs.IsUnmarked("Reader", "Run", ("Reader.Run")) is false
 	InputOutputs.IsUnmarked("Reader", "Shown Texts", ("Reader.Loaded")) is false
 	let header = HeaderTokens(Tokenizer(line).Tokens)
-	(header.tokens(0) is not "Run") and (header.ReturnsSlow is false) and ((type + "." + header.tokens(0)) is in reaching)
+	header.tokens(0) is not "Run" and header.ReturnsSlow is false and type + "." + header.tokens(0) is in reaching

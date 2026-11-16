@@ -31,7 +31,7 @@ Returned Text
 	Halving.Returned is "i"
 	let registers = Part(0)
 	for function.method.instructions
-		if (value.kind is InstructionType.Return) and (registers(value.payload(0)) is "f")
+		if value.kind is InstructionType.Return and registers(value.payload(0)) is "f"
 			return "f"
 	"i"
 Settled Text
@@ -54,7 +54,7 @@ Initial Text
 	mutable variables = ""
 	for function.VariableNames
 		let parameter = function.method.ParameterNames.Index(value)
-		let other = (value is in function.Parameters) then "i" else MlirWholeInstance(function).OwnKind(value)
+		let other = value is in function.Parameters then "i" else MlirWholeInstance(function).OwnKind(value)
 		variables = variables + (parameter >= 0 then kinds(parameter) else other)
 	registers + "|" + variables + "|"
 Step(combined Text) Text
@@ -107,7 +107,7 @@ Checked(entry InstructionEntry) Numbers
 		return List(Number) + entry.payload(1)
 	if entry.kind is InstructionType.LoopBegin
 		return entry.payload(1) is 1 then (entry.payload(0), entry.payload(2)) else List(Number)
-	if (entry.kind is not InstructionType.Invoke) or (PayloadDecoder(entry).Text(2) is in ("Floor", "from", "Validated"))
+	if entry.kind is not InstructionType.Invoke or PayloadDecoder(entry).Text(2) is in ("Floor", "from", "Validated")
 		return List(Number)
 	for LoadReuse(function.method.instructions).InvokeReads(entry)
 		entry.payload(value)
@@ -139,10 +139,10 @@ Calculated(entry InstructionEntry, at Number, registers Text, naturals Text) Tex
 	Byting.Calculated(Halves(2), 2, "iiii", "ii") is "i"
 	Shadowed.Calculated(Shadowed.function.method.instructions(4), 4, Shadowed.Part(0), Shadowed.Part(2)) is "f"
 	let operands = Operands(entry, at, registers, naturals)
-	if (entry.kind is not InstructionType.Divide) or (operands is "f") or (at + 1 >= function.method.instructions.Length)
+	if entry.kind is not InstructionType.Divide or operands is "f" or at + 1 >= function.method.instructions.Length
 		return operands
 	let next = function.method.instructions(at + 1)
-	if (next.kind is not InstructionType.Invoke) or (Floored(next) is false)
+	if next.kind is not InstructionType.Invoke or Floored(next) is false
 		return "f"
 	next.payload(LoadReuse(function.method.instructions).InvokeReads(next).Last) is entry.payload(3) then "i" else "f"
 Floored(next InstructionEntry) Boolean
@@ -170,8 +170,8 @@ Called(entry InstructionEntry) Text
 	if entry.kind is InstructionType.FieldLoad
 		return MlirWholeInstance(function).MemberKind(entry.texts(1), entry.texts(0))
 	let decoder = PayloadDecoder(entry)
-	let isFloor = (decoder.Text(1) is "Strict/Number") and (decoder.Text(2) is "Floor")
-	if isFloor or (decoder.Text(2) is in ("Length", "Validated", "from"))
+	let isFloor = decoder.Text(1) is "Strict/Number" and decoder.Text(2) is "Floor"
+	if isFloor or decoder.Text(2) is in ("Length", "Validated", "from")
 		return "i"
 	let type = function.TypeOf(decoder.Text(1))
 	MlirWholeTypes(MlirFunction(function.types, type, decoder.Callee(type), typeIndex = function.typeIndex)).Returned
@@ -179,7 +179,7 @@ Length(at Number) Text
 	MlirWholeTypes(MlirWholeChild.Brightening.function).Length(4) is "pixels"
 	Halving.Length(3) is ""
 	let entry = function.method.instructions(at)
-	if (entry.kind is not InstructionType.Invoke) or (PayloadDecoder(entry).Text(2) is not "Length")
+	if entry.kind is not InstructionType.Invoke or PayloadDecoder(entry).Text(2) is not "Length"
 		return ""
 	let instance = entry.payload(LoadReuse(function.method.instructions).InvokeReads(entry).Last)
 	let writer = LoadReuse(function.method.instructions).Writer(instance, at, -1)

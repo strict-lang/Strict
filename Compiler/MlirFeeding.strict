@@ -75,7 +75,7 @@ IsFeeding(position Number, register Number) Boolean
 	let reuse = LoadReuse(function.method.instructions)
 	for Range(position + 1, function.method.instructions.Length)
 		let entry = function.method.instructions(value)
-		if ((register is in reuse.Reads(entry)) and IsPositional(value, entry, register)) or IsStored(value, entry, register)
+		if register is in reuse.Reads(entry) and IsPositional(value, entry, register) or IsStored(value, entry, register)
 			return true
 		if reuse.Written(entry) is register
 			return false
@@ -89,19 +89,19 @@ IsStored(position Number, entry InstructionEntry, register Number) Boolean
 	MlirFeeding(MlirWhole.Row.function, 0).IsFloating(13, MlirWhole.Rows(13)) is false
 	MlirFeeding(MlirWhole.Row.function, 0).IsFloating(10, MlirWhole.Rows(10))
 	MlirFeeding(MlirFiltering.Filtering.function, 0).IsFloating(5, MlirParallel.Filtered.instructions(5)) is false
-	let isStore = (entry.kind is InstructionType.StoreRegisterToVariable) and (entry.payload(0) is register)
+	let isStore = entry.kind is InstructionType.StoreRegisterToVariable and entry.payload(0) is register
 	isStore and IsLoaded(position, entry.texts(0))
 IsPositional(position Number, entry InstructionEntry, register Number) Boolean
 	Chained.IsPositional(4, Chained.function.method.instructions(4), 3)
 	Passing.IsPositional(6, Passing.function.method.instructions(6), 2)
 	Summing.IsPositional(8, Summing.function.method.instructions(8), 5) is false
 	let kind = entry.kind
-	let isCompared = (kind > InstructionType.ArithmeticSeparator) and (kind < InstructionType.BinaryOperatorsSeparator)
-	if (kind is InstructionType.IndexCall) or isCompared or IsPassed(position, register)
+	let isCompared = kind > InstructionType.ArithmeticSeparator and kind < InstructionType.BinaryOperatorsSeparator
+	if kind is InstructionType.IndexCall or isCompared or IsPassed(position, register)
 		return true
-	let isCalculated = (kind > InstructionType.StoreSeparator) and (kind < InstructionType.ArithmeticSeparator)
+	let isCalculated = kind > InstructionType.StoreSeparator and kind < InstructionType.ArithmeticSeparator
 	let written = LoadReuse(function.method.instructions).Written(entry)
-	((kind is InstructionType.Invoke) or isCalculated) and IsFeeding(position, written)
+	(kind is InstructionType.Invoke or isCalculated) and IsFeeding(position, written)
 IsPassed(position Number, register Number) Boolean
 	Passing.IsPassed(6, 2)
 	MlirFeeding(MlirParallel.Doubling.function, 4).IsPassed(4, 1) is false
@@ -111,7 +111,7 @@ IsPassed(position Number, register Number) Boolean
 		return false
 	for PayloadDecoder(entry).Arguments
 		let name = callees.First.method.parameters(index).Name
-		if (value is register) and MlirFeeding(callees.First, 0).IsLoaded(-1, name)
+		if value is register and MlirFeeding(callees.First, 0).IsLoaded(-1, name)
 			return true
 	false
 IsLoaded(position Number, name Text) Boolean
@@ -122,7 +122,7 @@ IsLoaded(position Number, name Text) Boolean
 	Chained.IsFeeding(0, 1) is false
 	for Range(position + 1, function.method.instructions.Length)
 		let entry = function.method.instructions(value)
-		let isNamed = (entry.kind is InstructionType.LoadVariableToRegister) and (entry.texts(0) is name)
+		let isNamed = entry.kind is InstructionType.LoadVariableToRegister and entry.texts(0) is name
 		if isNamed and IsFeeding(value, entry.payload(0))
 			return true
 	false
@@ -132,9 +132,9 @@ IsFloated(position Number, register Number) Boolean
 	let reuse = LoadReuse(function.method.instructions)
 	for Range(position + 1, function.method.instructions.Length)
 		let entry = function.method.instructions(value)
-		let isStored = (entry.kind is InstructionType.StoreRegisterToVariable) and (entry.payload(0) is register)
-		let isRead = (register is in reuse.Reads(entry)) and IsFloating(value, entry)
-		if isRead or (isStored and IsFloatedVariable(value, entry.texts(0)))
+		let isStored = entry.kind is InstructionType.StoreRegisterToVariable and entry.payload(0) is register
+		let isRead = register is in reuse.Reads(entry) and IsFloating(value, entry)
+		if isRead or isStored and IsFloatedVariable(value, entry.texts(0))
 			return true
 		if reuse.Written(entry) is register
 			return false
@@ -143,12 +143,12 @@ IsFloating(position Number, entry InstructionEntry) Boolean
 	Chained.IsFloating(5, Chained.function.method.instructions(5))
 	Chained.IsFloating(4, Chained.function.method.instructions(4)) is false
 	let kind = entry.kind
-	let isCompared = (kind > InstructionType.ArithmeticSeparator) and (kind < InstructionType.BinaryOperatorsSeparator)
-	if (position is function.Group) or isCompared or (kind is in Unfloated)
+	let isCompared = kind > InstructionType.ArithmeticSeparator and kind < InstructionType.BinaryOperatorsSeparator
+	if position is function.Group or isCompared or kind is in Unfloated
 		return false
-	let isCalculated = (kind > InstructionType.StoreSeparator) and (kind < InstructionType.ArithmeticSeparator)
-	let isWhole = (kind is InstructionType.Invoke) and (entry.texts(1) is in ("Floor", "Length"))
-	(isCalculated or isWhole) then IsFloated(position, LoadReuse(function.method.instructions).Written(entry)) else true
+	let isCalculated = kind > InstructionType.StoreSeparator and kind < InstructionType.ArithmeticSeparator
+	let isWhole = kind is InstructionType.Invoke and entry.texts(1) is in ("Floor", "Length")
+	isCalculated or isWhole then IsFloated(position, LoadReuse(function.method.instructions).Written(entry)) else true
 IsFloatedVariable(position Number, name Text) Boolean
 	Chained.IsFloatedVariable(2, "offset") is false
 	Summing.IsFloatedVariable(10, "sum")
@@ -156,7 +156,7 @@ IsFloatedVariable(position Number, name Text) Boolean
 	Summing.IsFloated(9, 6)
 	for Range(position + 1, function.method.instructions.Length)
 		let entry = function.method.instructions(value)
-		let isNamed = (entry.kind is InstructionType.LoadVariableToRegister) and (entry.texts(0) is name)
+		let isNamed = entry.kind is InstructionType.LoadVariableToRegister and entry.texts(0) is name
 		if isNamed and IsFloated(value, entry.payload(0))
 			return true
 	false

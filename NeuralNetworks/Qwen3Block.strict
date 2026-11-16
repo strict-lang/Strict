@@ -100,7 +100,7 @@ Normalized(input Numbers, start Number, count Number, weights Numbers) Numbers
 	Tiny.Normalized((3, 4, 0, 1), 2, 2, (1, 2)).Last.IsNearlyEqual(2.828424)
 	Tiny.Normalized((3, 4, 0, 1), 2, 2, List(Number)) is (0, 1)
 	let size = weights.Length
-	let part = (start is 0) and (count is input.Length) then input else Safetensors.Part(input, start, count, 1)
+	let part = start is 0 and count is input.Length then input else Safetensors.Part(input, start, count, 1)
 	if size is 0
 		return part
 	let scales = Scales(part, size, Epsilon)
@@ -109,7 +109,7 @@ Normalized(input Numbers, start Number, count Number, weights Numbers) Numbers
 Scales(input Numbers, size Number, epsilon Number) Float32s
 	Tiny.Scales((3, 4, 0, 1), 2, Epsilon)(1).IsNearlyEqual(1.41421215)
 	constant WebParts = 32
-	if (Process.OperatingSystem is "Web") and (size % WebParts is 0)
+	if Process.OperatingSystem is "Web" and size % WebParts is 0
 		return Normalization.Chunked(input, size, epsilon, WebParts)
 	for input.Length / size
 		Normalization.Scale(Normalization.Squared(input, index * size, size), size, epsilon)

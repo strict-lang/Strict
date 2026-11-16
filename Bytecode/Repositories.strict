@@ -11,7 +11,7 @@ constant Listed = ("  {", "    \"full_name\": \"strict-lang/Strict\",", "    \"f
 Downloaded(type Text) Text
 	for Clones
 		let local = SourceFiles(value).SubfolderWith(value, type)
-		if (local is not "") and (IsHere(value) is false)
+		if local is not "" and IsHere(value) is false
 			return Directory.Exists(target + "/" + Path(local).FileName.text) then "" else Copied(local, type)
 	if Directory.Exists(Development + "/strict-lang")
 		return ""
@@ -30,7 +30,7 @@ Clones Texts
 	let readme = file.Exists then Linked(file.ReadLines) else List(Text)
 	mutable clones = List(Mutable(Text))
 	for readme + Owned("strict-lang")
-		if Directory.Exists(Development + "/" + value) and (Development + "/" + value is not in clones)
+		if Directory.Exists(Development + "/" + value) and Development + "/" + value is not in clones
 			clones.Add(Development + "/" + value)
 	clones
 Owned(owner Text) Texts
@@ -49,7 +49,7 @@ Fetched(repository Text, type Text) Text
 	let folder = Folder(paths, type)
 	if folder is ""
 		return ""
-	let local = target + "/" + Path((folder is "." then repository else folder)).FileName.text
+	let local = target + "/" + Path(folder is "." then repository else folder).FileName.text
 	for Files(paths, folder)
 		Downloaded(Raw + repository + "/HEAD/" + value, local + "/" + Relative(value, folder))
 	File(local + "/.origin").Write(List(Text) + "https://github.com/" + repository + "/tree/HEAD/" + folder)
@@ -63,14 +63,14 @@ Copied(folder Text, type Text) Text slow
 	Repositories(Logger, "artifacts").Copied("Examples/NativeAdd", "Adder") is "artifacts/NativeAdd"
 	let local = target + "/" + Path(folder).FileName.text
 	for BinaryFile(folder).Contained(folder)
-		if value.EndsWith(".strict") or (value.Replace("\\", "/").IndexOf("/native/") > 0)
+		if value.EndsWith(".strict") or value.Replace("\\", "/").IndexOf("/native/") > 0
 			File(local + "/" + Relative(value.Replace("\\", "/"), folder)).Write(File(value).ReadBytes)
 	File(local + "/.origin").Write(List(Text) + folder)
 	logger.Log("Copied " + local + " from " + folder)
 	Provided(local, type)
 Fetch(url Text) Texts
 	let token = Process.RunTool("gh", "auth token")
-	let isAuthorized = token.Succeeded and (token.Output.Trim is not "")
+	let isAuthorized = token.Succeeded and token.Output.Trim is not ""
 	let header = isAuthorized then "-H \"Authorization: Bearer " + token.Output.Trim + "\" " else ""
 	Process.RunTool("curl", "-sfL " + header + "\"" + url + "\"").Output.Split("\n")
 Linked(lines Texts) Texts
@@ -82,7 +82,7 @@ Linked(lines Texts) Texts
 		let start = value.IndexOf(host)
 		if start >= 0
 			let repository = Repository(value.Substring(start + host.Length, value.Length - start - host.Length))
-			if (repository is not "") and (repository is not in repositories)
+			if repository is not "" and repository is not in repositories
 				repositories.Add(repository)
 	repositories
 Repository(link Text) Text
@@ -93,7 +93,7 @@ Repository(link Text) Text
 		return ""
 	mutable end = slash + 1
 	for Range(slash + 1, link.Length)
-		if (end is value) and (link(value) is not in Delimiters)
+		if end is value and link(value) is not in Delimiters
 			end = value + 1
 	let repository = link.Substring(0, end).Replace(".git", "")
 	let last = repository.Length - 1
@@ -121,7 +121,7 @@ Files(paths Texts, folder Text) Texts
 	Repositories.Files(("Pack/A.strict", "Pack/native/A.c", "Pack/B.txt"), "Pack") is ("Pack/A.strict", "Pack/native/A.c")
 	let prefix = folder is "." then "" else folder + "/"
 	for paths
-		if value.StartsWith(prefix) and (value.EndsWith(".strict") or (value.IndexOf("/native/") > 0))
+		if value.StartsWith(prefix) and (value.EndsWith(".strict") or value.IndexOf("/native/") > 0)
 			value
 Relative(path Text, folder Text) Text
 	Repositories.Relative("Math/Shapes/Circle.strict", "Math") is "Shapes/Circle.strict"
@@ -139,7 +139,7 @@ Updated(folder Text) Number
 	mutable updated = 0
 	for Directory.Directories(folder)
 		let files = Directory.Files(value, "*.strict")
-		if File(value + "/.origin").Exists and (files.Length > 0)
+		if File(value + "/.origin").Exists and files.Length > 0
 			let type = Path(files.First.Replace("\\", "/")).FileName.text
 			if Repositories(logger, folder).Downloaded(type.Substring(0, type.Length - 7)) is not ""
 				updated = updated + 1

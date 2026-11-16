@@ -55,10 +55,10 @@ IsNegative Boolean
 	DoubleDouble(0, -0.5).IsNegative
 	DoubleDouble(0, 0.5).IsNegative is false
 	DoubleDouble(1, -0.5).IsNegative is false
-	high < 0 or (high is 0 and low < 0)
+	high < 0 or high is 0 and low < 0
 Decimals(count Number) Text
 	DoubleDouble(1, 0.00000000000000001).Decimals(17) is "1.00000000000000001"
-	(DoubleDouble(-1.25).Decimals(2) is "-1.25") and (DoubleDouble(0, -0.5).Decimals(1) is "-0.5")
+	DoubleDouble(-1.25).Decimals(2) is "-1.25" and DoubleDouble(0, -0.5).Decimals(1) is "-0.5"
 	let negative = IsNegative
 	let magnitude = negative then DoubleDouble(-high, -low) else value
 	mutable rest = magnitude - DoubleDouble(magnitude.Whole)

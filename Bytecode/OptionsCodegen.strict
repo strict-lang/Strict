@@ -16,10 +16,10 @@ Completed(main TypeCodegen, entry TypeEntry, targets Texts) TypeEntry
 	Settings.Completed(TypeCodegen.Hello, TypeEntry.HelloLogger, List(Text)) is TypeEntry.HelloLogger
 	Memberless.Completed(TypeCodegen.Hello, TypeEntry.HelloLogger, HelloParsed) is TypeEntry.HelloLogger
 	let prefix = main.fullName + "."
-	let wanted = ((prefix + "Parsed") is in targets) or ((prefix + "Usage") is in targets)
-	if (wanted is false) or (automatic.instantiation.types.Inherited(automatic.instance, "Parsed") is "")
+	let wanted = (prefix + "Parsed") is in targets or prefix + "Usage" is in targets
+	if wanted is false or automatic.instantiation.types.Inherited(automatic.instance, "Parsed") is ""
 		return entry
-	let names = (entry.Chosen("Parsed", -1, "Parsed", List(Text)) < 0 then List(Text) + "Parsed" else List(Text))
+	let names = entry.Chosen("Parsed", -1, "Parsed", List(Text)) < 0 then List(Text) + "Parsed" else List(Text)
 	let missing = names + (entry.Chosen("Usage", -1, "Usage", List(Text)) < 0 then List(Text) + "Usage" else List(Text))
 	automatic.Appended(main, entry, automatic.lines + Lines(missing))
 Parsed Texts

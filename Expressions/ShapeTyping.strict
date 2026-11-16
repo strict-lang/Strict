@@ -49,7 +49,7 @@ Returned(shape TypeShape, position Number, typeName Text) Text
 	if "Generic" is not in inference.types.MembersOf(returned).types
 		return ""
 	let type = Result(shape, position, typeName)
-	(inference.types.BaseName(type) is returned) and (type.IndexOf("Unknown") < 0) then type else ""
+	inference.types.BaseName(type) is returned and type.IndexOf("Unknown") < 0 then type else ""
 Result(shape TypeShape, position Number, typeName Text) Text
 	Swapped.Result(Local, 1, "User") is "Couple(Text, Number)"
 	Swapped.Result(Plain, 0, "User") is "Text"
@@ -65,7 +65,7 @@ Refined(scope Scope, name Text, ordinal Number, type Text) Scope
 	Counting.Refined(Scope(List(Text) + "a", List(Text) + "Box"), "a", 0, "Item").TypeOf("a") is "Item"
 	Counting.Refined(KnownTypes.NoMembers, "a", 0, "Item").TypeOf("a") is "Item"
 	let position = scope.Position(name, ordinal)
-	if (type is "") or (position < 0)
+	if type is "" or position < 0
 		return Known(scope, name, type)
 	mutable types = scope.types
 	types(position) = type
@@ -86,11 +86,11 @@ ChainType(tokens Texts, typeName Text, known Scope) Text
 	Counting.ChainType(Tokenizer("constant a = List(Number) + 3").Tokens, "Count", KnownTypes.NoMembers) is "Numbers"
 	Counting.ChainType(Tokenizer("constant b = a.Twice(2)").Tokens, "C", NoScope.With("a", "Count")) is "Count"
 	Swapped.ChainType(Tokenizer("constant a = Couple(\"a\", 2)").Tokens, "U", NoScope) is "Couple(Text, Number)"
-	if (tokens.Length < 4) or (tokens(2) is not "=")
+	if tokens.Length < 4 or tokens(2) is not "="
 		return ""
 	let node = SyntaxParser(tokens).ParseRange(3, tokens.Length)
 	let own = node.Kind is in ("Call", "Identifier") then inference.types.MethodsOf(typeName).TypeOf(node.text) else ""
-	let isInferred = (own is "") and (node.Kind is in ("MethodCall", "Member", "Binary", "List", "Call"))
+	let isInferred = own is "" and node.Kind is in ("MethodCall", "Member", "Binary", "List", "Call")
 	isInferred then Inferred(node, typeName, known) else own
 Inferred(node SyntaxNode, typeName Text, known Scope) Text
 	Chained.Inferred(SyntaxParser(Tokenizer("Box(3).Sample").Tokens).Parse, "User", KnownTypes.NoMembers) is "Item"
@@ -104,7 +104,7 @@ Inferred(node SyntaxNode, typeName Text, known Scope) Text
 	chained is "" then inference.TypeOf(Expanded(node), NoScope, current) else chained
 Expanded(node SyntaxNode) SyntaxNode
 	Chained.Expanded(SyntaxParser(Tokenizer("Box.Sample").Tokens).Parse) is SyntaxNode("Type", "Item")
-	let owner = (node.Kind is "Member") and (node.children(0).Kind is "Identifier") then node.children(0).text else ""
+	let owner = node.Kind is "Member" and node.children(0).Kind is "Identifier" then node.children(0).text else ""
 	let definition = inference.types.IsKnown(owner) then inference.ConstantOf(owner, node.text) else ""
 	let typed = definition is "" then "" else ChainType(Tokenizer("constant a = " + definition).Tokens, owner, NoScope)
 	if typed is not ""

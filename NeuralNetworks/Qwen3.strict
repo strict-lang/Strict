@@ -22,7 +22,7 @@ Loaded(path Text, bits = 8, isGenerating = true) Qwen3 slow
 	let model = Gguf(path, bits)
 	let base = model.Value(model.Value("general.architecture") + ".rope.freq_base") to Number
 	let embedding = model.Rows("token_embd.weight")
-	let output = isGenerating and (model.Shape("output.weight").Length > 0) then model.Rows("output.weight") else embedding
+	let output = isGenerating and model.Shape("output.weight").Length > 0 then model.Rows("output.weight") else embedding
 	let normed = model.Values("output_norm.weight")
 	let folding = Basis.Loaded(model)
 	Qwen3(Blocks(model, folding), embedding, output, normed, base, rotary = Rotary(model), basis = folding)

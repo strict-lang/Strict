@@ -52,5 +52,5 @@ Accepted(draft Numbers, predictions Numbers) Number
 	Greedy.Accepted((4, 5), (3, 5, 1)) is 0
 	mutable count = 0
 	for draft
-		count = (count is index) and (value is predictions(index)) then count + 1 else count
+		count = count is index and value is predictions(index) then count + 1 else count
 	count

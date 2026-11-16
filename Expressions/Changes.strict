@@ -31,11 +31,11 @@ IsDefaulted Boolean
 	Changes(List(Text) + "has count Number").IsDefaulted is false
 	for lines
 		if value.IndexOf(" = ") > 0
-			if TypeShape(lines).IsMemberLine(value) and (value.StartsWith("constant ") is false)
+			if TypeShape(lines).IsMemberLine(value) and value.StartsWith("constant ") is false
 				return true
 	false
 Found(members Texts, changing Texts) Texts
-	Ticking.Found(("count"), List(Text)) is ("Next") and (Ticking.Found(("count"), ("Next")) is ("Next", "Twice"))
+	Ticking.Found(("count"), List(Text)) is ("Next") and Ticking.Found(("count"), ("Next")) is ("Next", "Twice")
 	let shape = TypeShape(lines)
 	mutable method = ""
 	mutable result = List(Mutable(Text))
@@ -50,7 +50,7 @@ Found(members Texts, changing Texts) Texts
 MightMention(line Text, members Texts, changing Texts) Boolean
 	Ticking.MightMention("\tcount = count + 1", ("count"), List(Text))
 	Ticking.MightMention("\tother + 1", ("count"), List(Text)) is false
-	if isReading and (line.IndexOf("value") >= 0)
+	if isReading and line.IndexOf("value") >= 0
 		return true
 	for members
 		if line.IndexOf(value) >= 0
@@ -66,7 +66,7 @@ Tokens(at Number) Texts
 	Changes(("Sum Number", "\tfor 3", "\t\t1 + 1"), true).Tokens(2) is ("1", "+", "1")
 	Changes(("Sum Number", "\tfor 3", "\t\tvalue + 1"), true).Tokens(2) is ("+", "1")
 	let tokens = Tokenizer(lines(at).TrimStart).Tokens
-	isReading and ("value" is in tokens) and IsLooped(at) then tokens - "value" else tokens
+	isReading and "value" is in tokens and IsLooped(at) then tokens - "value" else tokens
 IsLooped(at Number) Boolean
 	Changes(("Sum Number", "\tfor 3", "\t\tvalue")).IsLooped(2)
 	Changes(("Sum Number", "\tfor as long as true", "\t\tvalue")).IsLooped(2) is false
@@ -77,7 +77,7 @@ IsLooped(at Number) Boolean
 		let depth = BodyParser.Indent(line)
 		if depth < within
 			if depth is 0 or line.TrimStart.StartsWith("for ")
-				return depth > 0 and (line.TrimStart.StartsWith("for as long as ") is false)
+				return depth > 0 and line.TrimStart.StartsWith("for as long as ") is false
 			within = depth
 	false
 IsChanging(tokens Texts, members Texts, changing Texts) Boolean
@@ -86,7 +86,7 @@ IsChanging(tokens Texts, members Texts, changing Texts) Boolean
 	Ticking.IsChanging(("Next", "+", "Next"), List(Text), ("Next"))
 	Ticking.IsChanging(("a", ".", "Next"), List(Text), ("Next")) is false
 	Ticking.IsChanging(("random", ".", "Get"), ("random"), List(Text))
-	if (tokens.Length > 0) and (tokens.First is in members) and ("=" is in tokens)
+	if tokens.Length > 0 and tokens.First is in members and "=" is in tokens
 		return true
 	for tokens
 		if IsUsed(tokens, index, members, changing)
@@ -101,10 +101,10 @@ IsUsed(tokens Texts, at Number, members Texts, changing Texts) Boolean
 	Ticking.IsUsed(List(Text) + "step", 0, List(Text) + "step", List(Text)) is false
 	Reading.IsUsed(List(Text) + "other", 0, List(Text) + "step", List(Text)) is false
 	let token = tokens(at)
-	if (at > 0) and (tokens(at - 1) is ".")
+	if at > 0 and tokens(at - 1) is "."
 		return false
-	let isCalled = (token is in members) and (at + 1 < tokens.Length) and (tokens(at + 1) is ".")
-	(token is in changing) or isCalled or isReading and ((token is in members) or (token is "value"))
+	let isCalled = token is in members and at + 1 < tokens.Length and tokens(at + 1) is "."
+	token is in changing or isCalled or isReading and (token is in members or token is "value")
 Added(scope Scope) Scope
 	Ticking.Added(KnownTypes.NoMembers).TypeOf("Twice changes") is "changes"
 	Reading.Added(KnownTypes.NoMembers).TypeOf("Size reads") is "reads"

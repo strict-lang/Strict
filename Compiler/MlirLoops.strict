@@ -59,7 +59,7 @@ Read Texts
 	MlirLoops(Listing.function, 1, true).Read.Last.IndexOf("%t1ep {alias_scopes") > 0
 	MlirLoops(MlirKernel.Calling.function, 1).Read.Length is 1
 	MlirLoops(MlirFunction(Listing.function, Packing = "for 32"), 1, true).Read.Last.EndsWith("extf %t1gn : f32 to f64")
-	if MlirBytes(function, position).IsIterated or ((isChunk or MlirPurity(function, position).IsSteady) is false)
+	if MlirBytes(function, position).IsIterated or (isChunk or MlirPurity(function, position).IsSteady) is false
 		return List(Text) + Element
 	let at = "    " + Temp("ea") + " = arith.fptosi " + Temp("c") + " : f64 to i64"
 	let call = "    " + Temp("g") + " = func.call @strict_steady_item(" + Temp("h") + ", " + Temp("ea") + ", " + Temp("v")
@@ -83,7 +83,7 @@ Collection Text
 	if entry.payload(1) is 1
 		return ""
 	let kind = MlirLayout(function).Represented(MlirKinds(function).KindOf(position, entry.payload(0)))
-	(kind is "Text") or kind.StartsWith("List(") then kind else ""
+	kind is "Text" or kind.StartsWith("List(") then kind else ""
 Wanted Texts
 	Doubling.Wanted is ("    %t2gd = func.call @strict_gpu_wanted(%t2gc) : (i64) -> i1")
 	Ranging.Wanted.Last is "    %t3gd = arith.andi %t3gu, %t3ge : i1"
@@ -126,7 +126,7 @@ Items Texts
 	Bytewise.Items(1).IndexOf("@strict_list_byte_items(%t1v)") > 0
 	Text.Combine(Doubling.Begin).IndexOf("hoisted(%t2v)") > Text.Combine(Doubling.Begin).IndexOf("^loop2serial:")
 	constant collection = Collection
-	if (collection is "") or (collection is "Text")
+	if collection is "" or collection is "Text"
 		return List(Text)
 	let version = "    " + Temp("hv") + " = func.call @strict_list_version() : () -> i64"
 	let itemizer = MlirDeferred(function, position).IsItemized(isChunk) then "items" else "hoisted"
@@ -148,17 +148,17 @@ IsCollecting Boolean
 		let entry = function.method.instructions(position - 1 - index)
 		if entry.kind is in (InstructionType.LoopBegin, InstructionType.LoopEnd)
 			return false
-		if (entry.kind is InstructionType.StoreConstantToVariable) and (entry.texts.Last is "forResult")
-			return (entry.payload(0) is 6) and function.method.IsWritingResult(position)
+		if entry.kind is InstructionType.StoreConstantToVariable and entry.texts.Last is "forResult"
+			return entry.payload(0) is 6 and function.method.IsWritingResult(position)
 	false
 IsSpelling Boolean
 	Spelling.IsSpelling
 	let method = function.method
 	let stored = MlirKinds(function).Stored(position, "forResult")
 	let start = stored > 0 then method.instructions(stored - 1) else method.instructions(position)
-	let isEmptied = (start.kind is InstructionType.LoadConstantToRegister) and (Text.Combine(start.texts) is "")
-	let isText = isEmptied and (MlirKinds(function).VariableKind(position, "forResult") is "Text")
-	if (isText is false) or (method.LoopBeginOf(stored) is not method.LoopBeginOf(position))
+	let isEmptied = start.kind is InstructionType.LoadConstantToRegister and Text.Combine(start.texts) is ""
+	let isText = isEmptied and MlirKinds(function).VariableKind(position, "forResult") is "Text"
+	if isText is false or method.LoopBeginOf(stored) is not method.LoopBeginOf(position)
 		return false
 	for Range(position + 1, method.LoopEndOf(position))
 		if MlirTexts(function, value).IsMisspelled(position)
@@ -170,7 +170,7 @@ Presized Texts
 	MlirLoops(MlirParallel.Byting.function, 2).Presized.Length is 0
 	Spelling.Presized is TextCreated
 	let isForked = MlirBytes(function, position).IsCollected and MlirParallel(function, position).IsParallel
-	if ((IsCollecting or IsSpelling) is false) or isForked
+	if (IsCollecting or IsSpelling) is false or isForked
 		return List(Text)
 	constant capacity = "    " + Temp("a") + " = arith.maximumf " + Temp("n") + ", %zero : f64"
 	let reset = function.Store("%zero", "%spelled" + position)

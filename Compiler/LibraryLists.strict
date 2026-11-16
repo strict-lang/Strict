@@ -13,7 +13,7 @@ Element(typeName Text) Text
 	let short = TypeEntry.ShortName(typeName)
 	let listed = short.StartsWith("List(") then short.Substring(5, short.Length - 6) else ""
 	let element = short is "Numbers" then "Number" else listed
-	(element is "Number") or ((element is not "") and library.IsRecord(element)) then element else ""
+	element is "Number" or element is not "" and library.IsRecord(element) then element else ""
 Records(typeName Text) Number
 	Book.Records("Strict/List(Trade)") is 2
 	Book.Records("Strict/List(Number)") is 0

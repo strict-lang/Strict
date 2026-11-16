@@ -18,7 +18,7 @@ Optimized List(InstructionEntry)
 	Printed.Optimized.Length is 4
 	Stored.Optimized.Length is 4
 	Printed.Optimized(1).texts(0) is "a"
-	Blocked.instructions.Length is 5 and (Rewritten.instructions.Length is 6)
+	Blocked.instructions.Length is 5 and Rewritten.instructions.Length is 6
 	mutable result = List(Mutable(InstructionEntry))
 	for instructions
 		if Source(index) < 0
@@ -27,7 +27,7 @@ Optimized List(InstructionEntry)
 Source(load Number) Number
 	Twice.Source(1) is 0
 	Twice.Source(2) is -1
-	Chain.Source(2) is 0 and (Blocked.Source(1) is -1) and (Spread.Source(3) is -1)
+	Chain.Source(2) is 0 and Blocked.Source(1) is -1 and Spread.Source(3) is -1
 	if instructions(load).kind is not InstructionType.LoadVariableToRegister
 		return -1
 	let latest = EarlierLoad(load)
@@ -62,16 +62,16 @@ IsUnchanged(register Number, first Number, load Number) Boolean
 	true
 CanRedirect(load Number, register Number) Boolean
 	Twice.CanRedirect(1, 0)
-	Rewritten.CanRedirect(1, 0) and (Blocked.CanRedirect(1, 0) is false)
+	Rewritten.CanRedirect(1, 0) and Blocked.CanRedirect(1, 0) is false
 	let reloaded = instructions(load).payload(0)
 	mutable isBlocked = false
 	for Range(load + 1, instructions.Length)
 		let entry = instructions(value)
-		if (reloaded is in Reads(entry)) and isBlocked
+		if reloaded is in Reads(entry) and isBlocked
 			return false
 		if Written(entry) is reloaded
 			return true
-		isBlocked = isBlocked or (Written(entry) is register) or IsBoundary(entry)
+		isBlocked = isBlocked or Written(entry) is register or IsBoundary(entry)
 	true
 Reads(entry InstructionEntry) Numbers
 	Twice.Reads(AddBoth) is (0, 1)
@@ -129,10 +129,10 @@ WritePosition(entry InstructionEntry) Number
 	if entry.kind is in WritingKinds
 		return 0
 	let isBinary = entry.kind > InstructionType.StoreSeparator and entry.kind < InstructionType.BinaryOperatorsSeparator
-	isBinary and (entry.payload(0) is 3) then 3 else -1
+	isBinary and entry.payload(0) is 3 then 3 else -1
 RegisterCount Number
 	Twice.RegisterCount is 3
-	LoadReuse((ReloadA, LoadA)).RegisterCount is 2 and (LoadReuse((AddCall)).RegisterCount is 8)
+	LoadReuse((ReloadA, LoadA)).RegisterCount is 2 and LoadReuse((AddCall)).RegisterCount is 8
 	LoadReuse((InstructionEntry.Return(4), InstructionEntry.Return(5), InstructionEntry.Return(1))).RegisterCount is 6
 	mutable most = 0
 	for instructions
@@ -158,7 +158,7 @@ IsBoundary(entry InstructionEntry) Boolean
 	Twice.IsBoundary(AddCall)
 	LoadReuse((LoadA, InstructionEntry.Jump(InstructionType.JumpEnd, 1), ReloadA)).EarlierLoad(2) is -1
 	LoadReuse((LoadA, ReloadA, InstructionEntry.Jump(InstructionType.JumpEnd, 1), AddBoth)).CanRedirect(1, 0) is false
-	(entry.kind is InstructionType.Invoke) or entry.kind >= InstructionType.LoopBegin
+	entry.kind is InstructionType.Invoke or entry.kind >= InstructionType.LoopBegin
 Remapped(entry InstructionEntry, position Number) InstructionEntry
 	Twice.Remapped(AddBoth, 2).payload is (3, 0, 0, 2)
 	Twice.Remapped(InstructionEntry(InstructionType.Add, List(Text), (3, 0, 1, 2), 4), 2).line is 4

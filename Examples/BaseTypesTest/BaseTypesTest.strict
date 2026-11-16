@@ -10,7 +10,7 @@ Run
 	constant numbersSum = numbers.Sum
 	logger.Log("(1, 2, 3).Sum = " + numbersSum)
 TestBoolean Boolean
-	(not false) is true
+	not false is true
 	(false or true) is true
 	(true and true) is true
 	true

@@ -43,5 +43,5 @@ Changed(types List(TypeEntry), candidate Number) List(TypeEntry)
 	changed(0) = TypeEntry(types.First, methods = methods)
 	changed
 Matches(method MethodEntry, replacement MethodEntry) Boolean
-	let same = (method.Name is header.tokens.First) and (method.returnType is replacement.returnType)
-	same and (method.parameters is replacement.parameters)
+	let same = method.Name is header.tokens.First and method.returnType is replacement.returnType
+	same and method.parameters is replacement.parameters

@@ -7,7 +7,7 @@ IsPairCode(entry InstructionEntry) Boolean
 	MlirCodes(Pricing, 1).IsPairCode(Pricing.method.instructions(1))
 	MlirCodes(MlirTexts.Joined, 7).IsPairCode(MlirTexts.Joined.method.instructions(7)) is false
 	let hasInstance = PayloadDecoder(entry).Instance >= 0
-	if (PayloadDecoder(entry).Text(2) is not "Code") or (hasInstance is false)
+	if PayloadDecoder(entry).Text(2) is not "Code" or hasInstance is false
 		return false
 	MlirLayout(function).Paired(TypeEntry.ShortName(PayloadDecoder(entry).Text(1))).Length > 0
 Coded(instance Number, result Text) Texts

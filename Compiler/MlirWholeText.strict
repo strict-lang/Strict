@@ -28,14 +28,14 @@ Member Text
 	MlirWholeText(MlirWholeTypes.Halving.function).Member is ""
 	let stored = MlirInstances(function, 0).Stored(function.type)
 	let isText = MlirLayout(function).Represented(TypeEntry.ShortName(function.type.Name)) is "Text"
-	(isText and (stored.Length is 1) then stored.First.typeName is "Strict/Text" else false) then stored.First.Name else ""
+	(isText and stored.Length is 1 then stored.First.typeName is "Strict/Text" else false) then stored.First.Name else ""
 Self Text
 	Sample.Self is "t"
 	Plain.Self is ""
 	MlirWholeText(MlirWholeTypes.Halving.function).Self is ""
 	let member = Member
 	for function.method.instructions
-		if (value.kind is InstructionType.LoadVariableToRegister) and (value.texts(0) is member)
+		if value.kind is InstructionType.LoadVariableToRegister and value.texts(0) is member
 			return "t"
 	""
 IsText(name Text) Boolean
@@ -43,10 +43,10 @@ IsText(name Text) Boolean
 	Sample.IsText("letters")
 	Sample.IsText("at") is false
 	MlirWholeText(MlirWholeTypes.Halving.function).IsText("") is false
-	if (name is not "") and (name is Member)
+	if name is not "" and name is Member
 		return true
 	for function.method.instructions
-		if (value.kind is InstructionType.StoreRegisterToVariable) and (value.texts(0) is name)
+		if value.kind is InstructionType.StoreRegisterToVariable and value.texts(0) is name
 			let writer = MlirKinds(function).Writer(index, value.payload(0))
 			if writer >= 0 then Kind(function.method.instructions(writer)) is "t" else false
 				return true
@@ -74,8 +74,8 @@ Extra(entry InstructionEntry, callee MlirFunction) Number
 	Sample.Extra(Owning, Sized.function) is 1
 	Sample.Extra(Passing, Plain.function) is 0
 	Sample.Extra(Measured, Sized.function) is 0
-	let isOwn = (PayloadDecoder(entry).Instance < 0) and (callee.type.Name is function.type.Name)
-	isOwn and (MlirWholeText(callee).Self is "t") and (Member is not "") then 1 else 0
+	let isOwn = PayloadDecoder(entry).Instance < 0 and callee.type.Name is function.type.Name
+	isOwn and MlirWholeText(callee).Self is "t" and Member is not "" then 1 else 0
 Reads(entry InstructionEntry, callee MlirFunction) Number
 	Sample.Reads(Owning, Sized.function) is 1
 	Sample.Reads(Passing, Plain.function) is 1
@@ -155,7 +155,7 @@ Fits Boolean
 	Wide.Fits is false
 	MlirWholeText(MlirWholeTypes.Halving.function).Fits
 	let kinds = MlirWholeFunction(function).Kinds
-	("t" is not in kinds) or (kinds.Length <= Slots)
+	"t" is not in kinds or kinds.Length <= Slots
 Guarded(entry InstructionEntry, kinds Number, at Number) Texts
 	Sample.Guarded(Owning, 1, 4).First is "    %t4wl0 = llvm.load %instance : !llvm.ptr -> f64"
 	Sample.Guarded(Owning, 1, 4).Last is "    %t4wh0o = arith.cmpi eq, %t4wt0c, %t4wt0n : i64"

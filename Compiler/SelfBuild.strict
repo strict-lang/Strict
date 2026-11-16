@@ -27,9 +27,9 @@ Built(arguments Texts) Number slow
 		return Error("Locked")
 	let home = Directory.Current
 	Directory.Change(root)
-	let current = (IsStale(arguments) is false) or NativeCache("build", ("Strict.strict", ".")).IsCurrent
+	let current = IsStale(arguments) is false or NativeCache("build", ("Strict.strict", ".")).IsCurrent
 	let code = current then (File(TargetExecutable).Modified > exeBefore then 0 else Current) else RebuiltCore
-	if (code is 0) or (code is Current)
+	if code is 0 or code is Current
 		Marked
 	Unlocked
 	Directory.Change(home)
@@ -58,14 +58,14 @@ Marked
 	File(root + CheckedFile).Write("checked")
 IsStale(arguments Texts) Boolean
 	SelfBuild(Logger, "Compiler/output/Missing", "strict.exe").IsStale(List(Text) + "test") is false
-	if (File(root + "/Strict.strict").Exists is false) or IsSkipped(arguments)
+	if File(root + "/Strict.strict").Exists is false or IsSkipped(arguments)
 		return false
 	let exeTime = File(TargetExecutable).Modified
 	if exeTime is 0
 		return false
 	let checkedTime = File(root + CheckedFile).Modified
 	let stamp = checkedTime > exeTime then checkedTime else exeTime
-	IsGitNewer(stamp) then true else IsSourceScanNeeded(arguments) and (NewestSource > stamp)
+	IsGitNewer(stamp) then true else IsSourceScanNeeded(arguments) and NewestSource > stamp
 IsGitNewer(stamp Number) Boolean
 	SelfBuild(Logger, "Compiler/output/Missing", "strict.exe").IsGitNewer(0) is false
 	let log = File(root + "/.git/logs/HEAD")
@@ -74,22 +74,22 @@ IsGitNewer(stamp Number) Boolean
 	if File(root + "/.git/HEAD").Exists is false
 		return false
 	let result = Process.RunTool("git", "-C \"" + root + "\" log -1 --format=%ct")
-	let parsed = result.Succeeded then (result.Output.Trim to Number) else 0
-	(parsed is not Error) and (parsed > stamp)
+	let parsed = result.Succeeded then result.Output.Trim to Number else 0
+	parsed is not Error and parsed > stamp
 IsSkipped(arguments Texts) Boolean
 	SelfBuild(Logger, ".", "strict.exe").IsSkipped(("build", "Strict.strict"))
 	SelfBuild(Logger, ".", "strict.exe").IsSkipped(("build", "Examples/Sum.strict")) is false
 	let command = arguments.Length > 0 then arguments(0) else ""
-	if (command is in DaemonCommands) or (command is in InfoCommands)
+	if command is in DaemonCommands or command is in InfoCommands
 		return true
 	if command is not "build"
 		return false
 	let second = arguments.Length > 1 then arguments(1).Replace("\\", "/").Lower else ""
-	(second is in BuildOptions) or second.EndsWith("strict.strict")
+	second is in BuildOptions or second.EndsWith("strict.strict")
 IsSourceScanNeeded(arguments Texts) Boolean
 	SelfBuild(Logger, ".", "strict.exe").IsSourceScanNeeded(("test", "Bytecode/SourceFiles.strict")) is false
 	SelfBuild(Logger, ".", "strict.exe").IsSourceScanNeeded(List(Text) + "Examples/Sum.strict")
-	if (root is not ".") and (Directory.Current.Replace("\\", "/").Lower is not root.Replace("\\", "/").Lower)
+	if root is not "." and Directory.Current.Replace("\\", "/").Lower is not root.Replace("\\", "/").Lower
 		return true
 	let command = arguments.Length > 0 then arguments(0) else ""
 	if command is in ("check", "format", "suggest")
@@ -100,10 +100,10 @@ IsSourceScanNeeded(arguments Texts) Boolean
 IsCoreTarget(target Text) Boolean
 	SelfBuild(Logger, ".", "strict.exe").IsCoreTarget("Bytecode/SourceFiles.strict")
 	SelfBuild(Logger, ".", "strict.exe").IsCoreTarget("Examples/Sum.strict") is false
-	if (target is "") or (target.EndsWith(".strict") and (target.IndexOf("/") < 0))
+	if target is "" or target.EndsWith(".strict") and target.IndexOf("/") < 0
 		return true
 	for CorePackages + ExtraPackages
-		if (target is value) or target.StartsWith(value + "/")
+		if target is value or target.StartsWith(value + "/")
 			return true
 	false
 NewestSource Number
@@ -126,7 +126,7 @@ Quoted(arguments Texts) Text
 	SelfBuild(Logger, ".", "strict.exe").Quoted(("a b", "c\"d")) is "\"a b\" \"c\\\"d\""
 	mutable text = ""
 	for arguments
-		let quoted = (value.IndexOf(" ") >= 0) or (value.IndexOf("\"") >= 0) or (value is "")
+		let quoted = value.IndexOf(" ") >= 0 or value.IndexOf("\"") >= 0 or value is ""
 		let part = quoted then "\"" + value.Replace("\"", "\\\"") + "\"" else value
 		text = index is 0 then part else text + " " + part
 	text

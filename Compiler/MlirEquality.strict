@@ -30,8 +30,8 @@ Handles(entry InstructionEntry) Boolean
 	if kinds.IsText(position, entry.payload(1)) or kinds.IsText(position, entry.payload(2))
 		return true
 	let kind = ComparedKind(entry, false)
-	let isValue = (kind is in (Packed + "Error")) or kind.StartsWith("List(") or MlirLayout(function).IsStruct(kind)
-	isValue and (entry.kind is in Comparisons)
+	let isValue = kind is in Packed + "Error" or kind.StartsWith("List(") or MlirLayout(function).IsStruct(kind)
+	isValue and entry.kind is in Comparisons
 ComparedKind(entry InstructionEntry, isText Boolean) Text
 	MlirEquality(Same, 2).ComparedKind(Same.method.instructions(2), true) is "Text"
 	MlirEquality(Same, 2).ComparedKind(Same.method.instructions(2), false) is "Shape"
@@ -39,7 +39,7 @@ ComparedKind(entry InstructionEntry, isText Boolean) Text
 	let layout = MlirLayout(function)
 	let left = layout.Represented(MlirKinds(function).KindOf(position, entry.payload(1)))
 	let right = layout.Represented(MlirKinds(function).KindOf(position, entry.payload(2)))
-	if (left is in ErrorKinds) or (right is in ErrorKinds)
+	if left is in ErrorKinds or right is in ErrorKinds
 		return "Error"
 	let packed = left is in Packed then left else right
 	packed is in Packed then packed else isText then "Text" else left
@@ -76,9 +76,9 @@ Operand(register Number, suffix Text, compared Text) Texts
 	let kind = MlirLayout(function).Represented(MlirKinds(function).KindOf(position, register))
 	let loaded = function.Load(Temp(suffix + "c"), "%r" + register)
 	let converter = compared is "Pair" then "strict_two_from_list" else "strict_flat_from_list"
-	if (compared is in Packed) and (kind is not compared)
+	if compared is in Packed and kind is not compared
 		return (loaded, MlirMemory(function, position).Called(Temp(suffix), converter, (Temp(suffix + "c"))))
-	if (compared is not "Text") or (kind is not "Character")
+	if compared is not "Text" or kind is not "Character"
 		return List(Text) + function.Load(Temp(suffix), "%r" + register)
 	(loaded, MlirMemory(function, position).Called(Temp(suffix), "strict_character_text", List(Text) + Temp(suffix + "c")))
 Call(kind Text, result Text, left Text, right Text) Texts
@@ -163,7 +163,7 @@ Functions Texts
 	mutable symbols = List(Mutable(Text))
 	for function.types
 		let kind = TypeEntry.ShortName(value.Name)
-		if IsKnown(kind) and (Symbol(kind) is not in symbols)
+		if IsKnown(kind) and Symbol(kind) is not in symbols
 			symbols.Add(Symbol(kind))
 			lines = lines + Function(value)
 	lines

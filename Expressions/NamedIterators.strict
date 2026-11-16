@@ -36,10 +36,10 @@ IsNamed(statement SyntaxNode) Boolean
 	NamedIterators.IsNamed(SyntaxNode("For", "y in", List(SyntaxNode) + SyntaxNode("Number", "2"))) is false
 	NamedIterators.IsNamed(Pairing.children(0))
 	NamedIterators.IsNamed(SyntaxNode("For", "", List(SyntaxNode) + SyntaxNode("Number", "2"))) is false
-	(statement.Kind is "For") and statement.text.EndsWith(" in") and statement.HasBody
+	statement.Kind is "For" and statement.text.EndsWith(" in") and statement.HasBody
 Statements(body SyntaxNode) SyntaxNodes
 	NamedIterators.Statements(HidingBody).First to Text is "let x = 5"
-	NamedIterators.Expanded(Sizing).Kind is "For" and (NamedIterators.Expanded(Sizing).children.Last.Kind is "Body")
+	NamedIterators.Expanded(Sizing).Kind is "For" and NamedIterators.Expanded(Sizing).children.Last.Kind is "Body"
 	NamedIterators.Expanded(Sizing).children.Last.Lines("\t")(1) is "\tlet width = value(1)"
 	NamedIterators.Statements(Pairing).First.children(0) to Text is "height"
 	for body.children
@@ -118,9 +118,9 @@ RenamedChildren(node SyntaxNode, level Number) SyntaxNodes
 	Pairs.RenamedChildren(Inner, 2).First to Text is "4"
 	Pairs.RenamedChildren(Inner, 0).Last.Lines("\t") is ("\tx + y")
 	for node.children
-		let isMember = (node.Kind is in ("Member", "MethodCall")) and (index is 0) and (Distance(value, level) is 1)
-		let isCondition = (node.text is "for as long as") and (index is 0)
-		let deeper = (level > 0) and (node.Kind is "For") and (value.Kind is "Body") then level + 1 else level
+		let isMember = node.Kind is in ("Member", "MethodCall") and index is 0 and Distance(value, level) is 1
+		let isCondition = node.text is "for as long as" and index is 0
+		let deeper = level > 0 and node.Kind is "For" and value.Kind is "Body" then level + 1 else level
 		IsTarget(node, index) or isMember or isCondition then value else Renamed(value, deeper)
 Distance(node SyntaxNode, level Number) Number
 	Pairs.Distance(SyntaxNode("Identifier", "y"), 2) is 1
@@ -132,7 +132,7 @@ IsTarget(node SyntaxNode, position Number) Boolean
 	Pairs.IsTarget(SyntaxNode("Reassignment", "", (SyntaxNode("Number", "5"), SyntaxNode("Number", "1"))), 0) is false
 	Pairs.IsTarget(SyntaxParser(Tokenizer("x = 1").Tokens).Parse, 0)
 	Pairs.IsTarget(SyntaxParser(Tokenizer("x = 1").Tokens).Parse, 1) is false
-	(node.Kind is "Reassignment") and (position is 0) and (node.children(0).Kind is "Identifier")
+	node.Kind is "Reassignment" and position is 0 and node.children(0).Kind is "Identifier"
 Mentions(node SyntaxNode) Texts
 	Cubes.Mentions(SyntaxParser(Tokenizer("z + f(x = 1)").Tokens).Parse) is ("z")
 	Cubes.Mentions(SyntaxParser(Tokenizer("a.y").Tokens).Parse).Length is 0

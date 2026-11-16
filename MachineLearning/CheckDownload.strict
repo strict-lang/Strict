@@ -30,7 +30,7 @@ Checked(folder Text, isNative Boolean)
 	File(folder + "/Client.strict").Write(ClientLines)
 	let commands = ("run " + folder + "/Server.strict " + folder + "/port.txt", ClientArgs(folder, isNative))
 	let results = Process.RunTools("strict", commands, ToolSeconds)
-	if (results.First.exitCode is not 0) or (results.Last.exitCode is not 0)
+	if results.First.exitCode is not 0 or results.Last.exitCode is not 0
 		let err = results.First.Output + results.First.error + " | " + results.Last.Output + results.Last.error
 		return Error("DownloadCheckFailed: " + err)
 	logger.Log(results.Last.Output.Trim)

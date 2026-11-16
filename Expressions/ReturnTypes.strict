@@ -35,11 +35,11 @@ Issue(scoped ScopedStatement, current Scope, lines Texts) Text
 	Naming.Issue(ScopedStatement(Joined.statement, Named, 2), Named, Looped) is ""
 	constant hint = ", brackets around an operator only group, List(Text) + value is a list of one"
 	let node = scoped.statement
-	if (IsTail(scoped, lines) is false) or node.HasBody or (node.Kind is in ("Declaration", "Reassignment", "Return"))
+	if IsTail(scoped, lines) is false or node.HasBody or node.Kind is in ("Declaration", "Reassignment", "Return")
 		return Split(scoped, current, lines)
 	let declared = Declared(lines, scoped.line)
 	let type = inference.TypeOf(node, scoped.scope, current)
-	let isSingle = inference.types.IsPlural(declared) and (inference.types.ElementType(declared) is type)
+	let isSingle = inference.types.IsPlural(declared) and inference.types.ElementType(declared) is type
 	isSingle then "ReturnTypeMismatch: a " + type + " is returned for " + declared + hint else ""
 Split(scoped ScopedStatement, current Scope, lines Texts) Text
 	Coupling.Split(Early, Finals, Making).EndsWith(" gives a Couple(Number, Number) or a Couple(Text, Number)")
@@ -47,7 +47,7 @@ Split(scoped ScopedStatement, current Scope, lines Texts) Text
 	Coupling.Split(Early, Finals, Making).StartsWith("ConditionalBranchesMustHaveOneType: return Couple(1, 2) gives a ")
 	(Coupling.Split(Unreturned, Finals, Making) + Coupling.Split(Bare, Finals, Making)) is ""
 	let node = scoped.statement
-	if (node.Kind is not "Return") or (node.HasValue is false)
+	if node.Kind is not "Return" or node.HasValue is false
 		return ""
 	let type = inference.TypeOf(node.children(0), scoped.scope, current)
 	let name = Header(lines, scoped.line).tokens.First
@@ -58,7 +58,7 @@ Declared(lines Texts, line Number) Text
 	Naming.Declared(Lines, 1) is "Texts"
 	Naming.Declared(Looped, 2) is "Texts"
 	Naming.Issue(ScopedStatement(Joined.statement, Dropped, 1), Named, Lines) is ""
-	Naming.Issue(Returned, Named, ("Names Unknowns", "\tvalue")) is "" and (Naming.Issue(Bodied, Named, Lines) is "")
+	Naming.Issue(Returned, Named, ("Names Unknowns", "\tvalue")) is "" and Naming.Issue(Bodied, Named, Lines) is ""
 	Naming.Issue(Counted, Named, ("Count Number", "\tvalue")) is ""
 	Header(lines, line).ReturnType
 Header(lines Texts, line Number) HeaderTokens
@@ -79,25 +79,25 @@ Unresulted(scoped ScopedStatement, current Scope, lines Texts) Text
 	Naming.Unresulted(Unreturning, Drawers, Running) is ""
 	Naming.Unresulted(ScopedStatement(Tail.statement, Dropped, 1), Drawers, Counting) is ""
 	let isReturning = Declared(lines, scoped.line) is not "None"
-	let isValue = isReturning and ((scoped.statement.Kind is "Return") or IsTail(scoped, lines))
+	let isValue = isReturning and (scoped.statement.Kind is "Return" or IsTail(scoped, lines))
 	let names = Resultless(scoped.statement, isValue, scoped.scope, current)
 	names.Length is 0 then "" else "ReturnTypeMismatch: " + names.First + " has no return type, its call gives no value"
 Resultless(node SyntaxNode, isValue Boolean, scope Scope, current Scope) Texts
 	Naming.Resultless(Branched.statement, false, Named, Drawers) is (List(Text) + "Drawn")
 	(Naming.Resultless(Valued, true, Named, Drawers) + Naming.Resultless(Ignored, false, Named, Drawers)).Length is 0
 	Naming.Resultless(SyntaxParser(Tokenizer("Drawn(1) + 1").Tokens).Parse, true, Named, Drawers) is (List(Text) + "Drawn")
-	let isCall = (node.Kind is in Calls) and (scope.TypeOf(node.text) is "")
-	if isValue and isCall and (inference.TypeOf(node, scope, current) is "None")
+	let isCall = node.Kind is in Calls and scope.TypeOf(node.text) is ""
+	if isValue and isCall and inference.TypeOf(node, scope, current) is "None"
 		return List(Text) + node.text
-	if node.text.StartsWith("is") or (node.Kind is "Body")
+	if node.text.StartsWith("is") or node.Kind is "Body"
 		return List(Text)
 	mutable names = List(Mutable(Text))
 	for node.children
-		names = names + Resultless(value, isValue or (node.Kind is not in Keeping), scope, current)
+		names = names + Resultless(value, isValue or node.Kind is not in Keeping, scope, current)
 	names
 IsTail(scoped ScopedStatement, lines Texts) Boolean
 	Naming.IsTail(Tail, Counting)
 	Naming.IsTail(Argued, Counting) is false
 	Naming.Resultless(SyntaxNode("Body", "", List(SyntaxNode) + Tail.statement), true, Named, Drawers).Length is 0
 	Naming.Resultless(SyntaxNode("Identifier", "shot"), true, Scope(("shot"), ("None")), Drawers).Length is 0
-	(scoped.scope.TypeOf(" dropped") is "") and (lines(scoped.line).StartsWith("\t\t") is false)
+	scoped.scope.TypeOf(" dropped") is "" and lines(scoped.line).StartsWith("\t\t") is false

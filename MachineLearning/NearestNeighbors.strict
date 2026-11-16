@@ -18,7 +18,7 @@ Closest(distances Numbers, chosen Numbers) Number
 	Points.Closest((3, 1, 2), List(Number) + 1) is 2
 	mutable best = -1
 	for distances
-		if (index is not in chosen) and ((best is -1) or (value < distances(best)))
+		if index is not in chosen and (best is -1 or value < distances(best))
 			best = index
 	best
 Predicted(tests List(Numbers), count Number) Numbers

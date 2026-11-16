@@ -14,7 +14,7 @@ Chosen(files Texts, source Text) Texts
 		counts(value) = (value is in counts then counts(value) else 0) + 1
 	for files
 		let best = counts(names(index)) is 1 then value else Best(SameNamed(files, names, names(index)), source)
-		if (best is "") or (best is value)
+		if best is "" or best is value
 			value
 Names(files Texts) Texts
 	Plain.Names(("x\\Scene.strict")) is ("Scene.strict")
@@ -35,7 +35,7 @@ Best(candidates Texts, source Text) Text
 	Plain.Best(Scenes, "./Content/Catalog.strict") is ""
 	Both.Best(Scenes, "./Content/Catalog.strict") is ""
 	let qualified = Qualifying(candidates)
-	if (candidates.Length is 1) or (qualified.Length > 0)
+	if candidates.Length is 1 or qualified.Length > 0
 		return candidates.Length is 1 then candidates.First else (qualified.Length is 1 then qualified.First else "")
 	let folder = Path(source.Replace("\\", "/")).PathOnly.text
 	for candidates
@@ -60,14 +60,14 @@ Ambiguous(names Texts, path Text) Texts
 	Plain.Ambiguous(("Scene", "Unit"), "./Content/Catalog.strict").Length is 0
 	Both.Ambiguous(("Scene", "Scene"), "A.strict").First.StartsWith("A.strict:line 1: SameNamedTypes: Scene from")
 	for names
-		if (names.Index(value) is index) and (names.Count(value) > 1) and (UsedLine(value) > 0)
+		if names.Index(value) is index and names.Count(value) > 1 and UsedLine(value) > 0
 			let packages = Packages(value)
 			let clash = " from " + Text.Combine(packages, " and ") + ", a build keys types by their plain name, rename one"
 			let advice = " is defined in several packages here, write Package/" + value + " in a declaration"
 			let issue = packages.Length > 1 then "SameNamedTypes: " else "AmbiguousType: "
 			ResolveCheck.Located(path, UsedLine(value), issue + value + (packages.Length > 1 then clash else advice))
 Packages(name Text) Texts
-	Plain.Packages("Units").Length is 0 and (Both.Packages("Unit").Length is 0)
+	Plain.Packages("Units").Length is 0 and Both.Packages("Unit").Length is 0
 	TypeChoice(("Scene")).Packages("Scene").Length is 0
 	TypeChoice(("a WebWars/Scene", "b WebWars/Scene")).Packages("Scene") is ("WebWars")
 	Both.Packages("Scene") is ("LogoApp", "WebWars")
@@ -76,7 +76,7 @@ Packages(name Text) Texts
 	for lines
 		let tokens = Tokenizer(value).Tokens
 		for Range(0, tokens.Length > 2 then tokens.Length - 2 else 0)
-			if (tokens(value + 1) is "/") and (tokens(value + 2) is name) and (tokens(value) is not in packages)
+			if tokens(value + 1) is "/" and tokens(value + 2) is name and tokens(value) is not in packages
 				packages.Add(tokens(value))
 	packages
 UsedLine(name Text) Number

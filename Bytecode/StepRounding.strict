@@ -18,12 +18,12 @@ Rounded(node SyntaxNode, block CodeBlock) SyntaxNode
 	Stepping.Rounded(SyntaxNode("Reassignment", "x", (Price, Price)), InGreet).children(1) is Plain.Wrapped(Price, "0.01")
 	mutable children = List(Mutable(SyntaxNode))
 	for node.children
-		let isKept = (index is 0) and (node.Kind is "Reassignment" or node.text is "Stepped")
+		let isKept = index is 0 and (node.Kind is "Reassignment" or node.text is "Stepped")
 		children.Add(isKept then value else Rounded(value, block))
 	let rebuilt = SyntaxNode(node.Kind, node.text, children, node.line)
 	if node.Kind is in ("Call", "MethodCall", "Identifier", "Member")
 		return Read(rebuilt, block)
-	let isComparison = (node.Kind is "Binary") and (node.text is in ("<", ">", "<=", ">=", "is", "is not"))
+	let isComparison = node.Kind is "Binary" and node.text is in ("<", ">", "<=", ">=", "is", "is not")
 	isComparison then Compared(rebuilt, block) else rebuilt
 Read(node SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Read(Price, CodeBlock.Empty) is Price
@@ -41,13 +41,13 @@ Read(node SyntaxNode, block CodeBlock) SyntaxNode
 Arguments(call SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Arguments(SyntaxNode("Call", "Greet"), CodeBlock.Empty).children.Length is 0
 	let owner = values.Owner(call, block)
-	let isCreating = (call.Kind is "Call") and values.inference.types.IsKnown(call.text)
+	let isCreating = call.Kind is "Call" and values.inference.types.IsKnown(call.text)
 	let names = isCreating then values.inference.types.MembersOf(owner).names else Parameters(owner, call.text)
 	let start = values.ArgumentStart(call)
 	mutable children = List(Mutable(SyntaxNode))
 	for call.children
 		let position = index - start
-		let name = (position >= 0) and (position < names.Length) then names(position) else ""
+		let name = position >= 0 and position < names.Length then names(position) else ""
 		let key = isCreating then name else call.text + " " + name
 		children.Add(name is "" then value else Argument(value, owner, key))
 	SyntaxNode(call.Kind, call.text, children, call.line)
@@ -74,7 +74,7 @@ Argument(argument SyntaxNode, owner Text, key Text) SyntaxNode
 	let isNamed = argument.Kind is "Reassignment"
 	let named = isNamed then key.Substring(0, key.LastIndexOf(" ") + 1) + argument.children(0).text else key
 	let step = values.inference.types.ParameterScope(owner).TypeOf(named.Trim + " step")
-	if (step is "") or isNamed is false
+	if step is "" or isNamed is false
 		return step is "" then argument else Wrapped(argument, step)
 	SyntaxNode("Reassignment", argument.text, (argument.children(0), Wrapped(argument.children(1), step)), argument.line)
 Wrapped(node SyntaxNode, step Text) SyntaxNode
@@ -84,7 +84,7 @@ Wrapped(node SyntaxNode, step Text) SyntaxNode
 	Plain.Wrapped(Price, "0.5 Floor").children(1) is SyntaxNode("Number", "0.5")
 	Plain.Wrapped(Price, "0.5 Floor").children(2) is SyntaxNode("Text", "\"Floor\"")
 	Plain.Wrapped(SyntaxNode("Call", "Stepped"), "1").Kind is "MethodCall"
-	if (node.Kind is "MethodCall") and (node.text is "Stepped")
+	if node.Kind is "MethodCall" and node.text is "Stepped"
 		return node
 	let parts = step.Split(" ")
 	let quoted = "\"" + parts.Last + "\""
@@ -106,10 +106,10 @@ Compared(node SyntaxNode, block CodeBlock) SyntaxNode
 StepOf(node SyntaxNode, block CodeBlock) Text
 	Plain.StepOf(SyntaxNode("Number", "1"), CodeBlock.Empty) is ""
 	Plain.StepOf(OwnStepped, CodeBlock.Empty) is ""
-	let isStepped = (node.Kind is "MethodCall") and (node.text is "Stepped")
+	let isStepped = node.Kind is "MethodCall" and node.text is "Stepped"
 	if isStepped then values.TypeOf(node.children(0), block) is "Number" else false
 		return node.children(1).text
-	if (node.Kind is "Binary") and (node.text is in ("+", "-"))
+	if node.Kind is "Binary" and node.text is in ("+", "-")
 		return Finest(StepOf(node.children(0), block), StepOf(node.children(1), block))
 	let owner = node.Kind is "Member" then values.TypeOf(node.children(0), block) else values.target.TypeName
 	let method = node.Kind is "Identifier" then block.scope.TypeOf(CodeBlock.ErrorMarker) + " " else ""
@@ -126,6 +126,6 @@ Finest(first Text, second Text) Text
 	Stepping.StepOf(SyntaxNode("Call", "amount"), InGreet) is ""
 	Stepping.StepOf(SyntaxNode("Call", "+", (Price, Price)), Empty) is ""
 	Stepping.StepOf(SyntaxNode("Binary", "+", (Price, One)), Empty) is "0.01"
-	if (first is "") or (second is "")
+	if first is "" or second is ""
 		return first is "" then second else first
 	first to Number < second to Number then first else second

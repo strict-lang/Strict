@@ -40,7 +40,7 @@ Operated(entry InstructionEntry) Texts
 	Single.Operated(Adding) is Sums
 	MlirRational(MlirExact(MlirGroupIndex.Aligning.function, 6)).Operated(Adding) is MlirGroupIndex.Aligning.Remainder
 	Single.Operated(InstructionEntry.Binary(InstructionType.Power, (0, 1, 2))).Length is 0
-	if (exact.Parts.Length is 0) or (entry.kind is not in Kinds)
+	if exact.Parts.Length is 0 or entry.kind is not in Kinds
 		return List(Text)
 	let grouped = MlirGroupIndex(exact.function, exact.at).Remainder
 	grouped.Length > 0 then grouped else OrdinaryOperated(entry)
@@ -95,7 +95,7 @@ Crossed Texts
 	let left = Integer("l", "arith.muli " + Temp("a_e") + ", " + Temp("b_q"))
 	(left, Integer("r", "arith.muli " + Temp("b_e") + ", " + Temp("a_q")))
 Remainder Texts
-	Single.Remainder(3) is "    %x2nm = arith.muli %x2nq, %x2s : i64" and (Single.Remainder is Remainders)
+	Single.Remainder(3) is "    %x2nm = arith.muli %x2nq, %x2s : i64" and Single.Remainder is Remainders
 	let zero = Integer("z", "arith.cmpi eq, " + Temp("r") + ", %inexact")
 	let safe = Integer("s", "arith.select " + Temp("z") + ", %one, " + Temp("r"))
 	let divisor = "%r" + exact.function.method.instructions(exact.at).payload(2)

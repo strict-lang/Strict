@@ -14,7 +14,7 @@ Definition(owner Text, name Text) SyntaxNode
 	Growing.Definition("Count", "Alias").children(0).Kind is "Identifier"
 	Growing.IsCall(SyntaxNode("MethodCall", "Count", SyntaxNode("Identifier", "Count")), SyntaxNode("Identifier", "Count"))
 	Growing.IsCall(SyntaxNode("Identifier", "Unknown"), SyntaxNode("Identifier", "Unknown"), "Count") is false
-	Growing.Methods(Lettered, List(Text)).Length is 0 and (Lettered.fullName is "Strict/Count")
+	Growing.Methods(Lettered, List(Text)).Length is 0 and Lettered.fullName is "Strict/Count"
 	let tokens = Tokenizer(inference.ConstantOf(owner, name)).Tokens
 	let folding = ConstantFolding(owner, inference)
 	folding.Unhidden(folding.Qualified(folding.Outer(SyntaxParser(tokens).ParseRange(0, tokens.Length))))
@@ -28,15 +28,15 @@ IsCached(owner Text, name Text) Boolean
 	Growing.HasCall(SyntaxNode("Member", "Twice", SyntaxNode("Type", "Count")))
 	Growing.HasCall(SyntaxNode("Member", "Plain", SyntaxNode("Identifier", "Count"))) is false
 	let definition = Definition(owner, name)
-	let isOther = (definition.Kind is "Member") and (definition.children(0).Kind is in ("Identifier", "Type"))
-	let isAlias = isOther and (inference.ConstantOf(definition.children(0).text, definition.text) is not "")
-	((isOptimizing is false) and (definition.text is not "Error")) or ((isAlias is false) and HasCall(definition, owner))
+	let isOther = definition.Kind is "Member" and definition.children(0).Kind is in ("Identifier", "Type")
+	let isAlias = isOther and inference.ConstantOf(definition.children(0).text, definition.text) is not ""
+	isOptimizing is false and definition.text is not "Error" or isAlias is false and HasCall(definition, owner)
 HasCall(node SyntaxNode, owner Text = "") Boolean
 	Growing.HasCall(SyntaxNode("Member", "Started", SyntaxNode("Type", "Count")))
 	Growing.HasCall(SyntaxNode("Member", "Plain", SyntaxNode("Type", "Count"))) is false
 	let first = node.children.Length > 0 then node.children(0) else node
-	let isOwned = (node.Kind is "Member") and (first.Kind is in ("Identifier", "Type"))
-	if isOwned and (inference.ConstantOf(first.text, node.text) is not "")
+	let isOwned = node.Kind is "Member" and first.Kind is in ("Identifier", "Type")
+	if isOwned and inference.ConstantOf(first.text, node.text) is not ""
 		return IsCached(first.text, node.text)
 	if IsCall(node, first, owner) or IsListBuilt(node, owner)
 		return true
@@ -73,21 +73,21 @@ IsCall(node SyntaxNode, first SyntaxNode, owner Text = "") Boolean
 	Growing.IsCall(SyntaxNode("MethodCall", "Count", Value), Value)
 	Growing.IsCall(SyntaxParser(Tokenizer("Count(1).Twice(2)").Tokens).Parse, SyntaxNode("Call", "Count"))
 	Growing.IsCall(SyntaxNode("MethodCall", "Count", SyntaxNode("Type", "Count")), SyntaxNode("Type", "Count")) is false
-	let isConstructor = (first.Kind is "Type") and (first.text is node.text)
+	let isConstructor = first.Kind is "Type" and first.text is node.text
 	let method = inference.types.MethodsOf(owner).TypeOf(node.text)
-	let implicit = (node.Kind is "Identifier") and (method is not "") and (inference.ConstantOf(owner, node.text) is "")
-	implicit or (node.Kind is "Member") or (node.Kind is "MethodCall") and (isConstructor is false)
+	let implicit = node.Kind is "Identifier" and method is not "" and inference.ConstantOf(owner, node.text) is ""
+	implicit or node.Kind is "Member" or node.Kind is "MethodCall" and isConstructor is false
 Methods(types TypeCodegen, names Texts) List(MethodEntry) slow
-	Growing.Methods(Counting, List(Text) + "Started").Length is 1 and (Counting.lines.Length is 4)
+	Growing.Methods(Counting, List(Text) + "Started").Length is 1 and Counting.lines.Length is 4
 	Growing.Methods(Counting, List(Text)).First.instructions.Last.line is 2
 	Growing.Methods(Counting, List(Text)).First.Name is "Started"
-	Growing.Methods(Counting, List(Text) + "Twice").Length is 0 and (Unoptimized.Methods(Lettered, List(Text)).Length is 1)
+	Growing.Methods(Counting, List(Text) + "Twice").Length is 0 and Unoptimized.Methods(Lettered, List(Text)).Length is 1
 	let owner = types.Generator.target.TypeName
 	mutable methods = List(Mutable(MethodEntry))
 	for types.lines
-		let isConstant = value.StartsWith("constant ") and ((value.IndexOf(" = ") > 0) or (isOptimizing is false))
+		let isConstant = value.StartsWith("constant ") and (value.IndexOf(" = ") > 0 or isOptimizing is false)
 		let name = isConstant then Tokenizer(value).Tokens(1) else ""
-		if (name is not "") and ((names.Length is 0) or (name is in names)) and IsCached(owner, name)
+		if name is not "" and (names.Length is 0 or name is in names) and IsCached(owner, name)
 			methods.Add(Method(types, name, index + 1))
 	methods
 Method(types TypeCodegen, name Text, line Number) MethodEntry

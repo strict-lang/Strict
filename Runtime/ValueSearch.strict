@@ -21,5 +21,5 @@ Matches(left VmValue, right VmValue) Boolean
 	ValueSearch.Matches(VmValue.OfNumber(1), VmValue(VmValue.OfNumber(1), number = 2)) is false
 	ValueSearch.Matches(VmValue("A", 0, "", List(VmValue)), VmValue.None) is false
 	ValueSearch.Matches(VmValue.OfList(VmValue.OfNumber(1)), VmValue.EmptyList) is false
-	let isScalar = (left.text is right.text) and (left.number is right.number)
+	let isScalar = left.text is right.text and left.number is right.number
 	isScalar then (left.kind is right.kind then left.items is right.items else false) else false

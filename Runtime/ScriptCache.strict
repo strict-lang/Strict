@@ -22,7 +22,7 @@ constant Sample = ScriptCache(SampleBase, rawTypes = List(TypeEntry) + TypeEntry
 IsFresh(currentRoot Text, currentFolder Text) Boolean
 	Empty.IsFresh(".", ".") is false
 	Sample.IsFresh(".", ".")
-	(files.Length > 0) and (root is currentRoot) and (folder is currentFolder)
+	files.Length > 0 and root is currentRoot and folder is currentFolder
 IsBuiltIn(target Text) Boolean
 	Sample.IsBuiltIn("Strict/Scratch.Helper")
 	Sample.IsBuiltIn("Strict/Number.to")
@@ -31,7 +31,7 @@ IsBuiltIn(target Text) Boolean
 	let dot = target.LastIndexOf(".")
 	let type = target.Substring(0, dot)
 	let method = target.Substring(dot + 1, target.Length - dot - 1)
-	let simple = (method is in ("from", "in", "Index", "to", "to Text", "to Type")) and (type is in typeNames)
+	let simple = method is in ("from", "in", "Index", "to", "to Text", "to Type") and type is in typeNames
 	target.StartsWith("Strict/Scratch.") or simple or Linker.Sample.IsNative(type, method)
 IsHit(entry TypeEntry) Boolean
 	Empty.IsHit(TypeEntry.HelloLogger) is false
@@ -39,10 +39,10 @@ IsHit(entry TypeEntry) Boolean
 	if resolvedTypes.Length is 0
 		return false
 	for Linker.Sample.Targets(List(TypeEntry) + entry)
-		if (value is not in targets) and (IsBuiltIn(value) is false)
+		if value is not in targets and IsBuiltIn(value) is false
 			return false
 	for entry.UsedTypes
-		if (value is not entry.Name) and (value.IndexOf("(") < 0) and (value is not in typeNames)
+		if value is not entry.Name and value.IndexOf("(") < 0 and value is not in typeNames
 			return false
 	true
 BaseRaw List(TypeEntry)
@@ -51,7 +51,7 @@ BaseResolved List(TypeEntry)
 	resolvedTypes.Length > 1 then resolvedTypes.Slice(1, resolvedTypes.Length - 1) else List(TypeEntry)
 GenericsOf(knownTypes KnownTypes) Texts
 	for knownTypes.names
-		if ("Generic" is in knownTypes.members(index).types) or ("Generic" is in knownTypes.methods(index).types)
+		if "Generic" is in knownTypes.members(index).types or "Generic" is in knownTypes.methods(index).types
 			value
 WithBase(baseFiles Texts, currentRoot Text, currentFolder Text) ScriptCache
 	let nextInference = ResolveCheck.Inference(baseFiles)
@@ -60,12 +60,12 @@ WithBase(baseFiles Texts, currentRoot Text, currentFolder Text) ScriptCache
 BaseOnly(discovered Texts, skip = "") Texts
 	Empty.BaseOnly((Scripted.Path, "./A.strict", "./B.strict"), "./A.strict") is (List(Text) + "./B.strict")
 	for discovered
-		if (value is not Scripted.Path) and (value is not skip)
+		if value is not Scripted.Path and value is not skip
 			value
 BaseLoaded(lines Texts, currentRoot Text, logger Logger, skip = "") ScriptCache
 	ScriptCache(Sample, folder = Directory.Current, code = 1).BaseLoaded(("Run", "\t1"), ".", Logger).code is 0
 	let currentFolder = Directory.Current
-	if IsFresh(currentRoot, currentFolder) and (Mentions(lines).Missing(files).Length is 0)
+	if IsFresh(currentRoot, currentFolder) and Mentions(lines).Missing(files).Length is 0
 		return code is 0 then value else ScriptCache(value, code = 0)
 	File(Scripted.Path).InMemory(Text.Combine(lines, "\n"))
 	let discovered = SourceFiles(currentRoot).Of(Scripted.Path)

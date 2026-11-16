@@ -16,17 +16,17 @@ constant Paired = SyntaxParser(Tokenizer("1 is 1 then Couple(\"a\", 2) else Coup
 constant Unchecked = ("", "Unknown", "Error", "ErrorWithValue", "None", "Generic")
 Issue(node SyntaxNode, scope Scope, current Scope) Text
 	Sizing.Issue(Mixed, Counted, Counted) is Message
-	(Sizing.Issue(Same, Counted, Counted) is "") and (Sizing.Issue(Failing, Counted, Counted) is "")
-	(Sizing.Issue(ArgumentTypes.Grown, Counted, Counted) is "") and (Sizing.Issue(Statement, Counted, Counted) is "")
-	(Sizing.Issue(Compared, Counted, Counted) is "") and (Sizing.Issue(Fallback, Counted, Counted) is "")
-	if (node.Kind is not "Binary") or (node.text is not "else") or (node.children(0).text is not "then")
+	Sizing.Issue(Same, Counted, Counted) is "" and Sizing.Issue(Failing, Counted, Counted) is ""
+	Sizing.Issue(ArgumentTypes.Grown, Counted, Counted) is "" and Sizing.Issue(Statement, Counted, Counted) is ""
+	Sizing.Issue(Compared, Counted, Counted) is "" and Sizing.Issue(Fallback, Counted, Counted) is ""
+	if node.Kind is not "Binary" or node.text is not "else" or node.children(0).text is not "then"
 		return ""
 	let thenType = Then(node.children(0), scope, current)
 	let elseType = inference.TypeOf(node.children(1), scope, current)
 	let checks = ArgumentTypes(inference)
 	let isMixed = checks.Mismatch(elseType, thenType) or checks.Mismatch(thenType, elseType) or IsSplit(thenType, elseType)
 	let message = "ConditionalBranchesMustHaveOneType: " + node + " gives a " + thenType + " or a " + elseType
-	(thenType is not in Unchecked) and (elseType is not in Unchecked) and isMixed then message else ""
+	thenType is not in Unchecked and elseType is not in Unchecked and isMixed then message else ""
 IsSplit(first Text, second Text) Boolean
 	Coupled.IsSplit("Couple(Text, Number)", "Couple(Number, Number)")
 	(Coupled.IsSplit("Couple(Text)", "Couple") or Coupled.IsSplit("Couple", "Couple(Text)")) is false
@@ -35,8 +35,8 @@ IsSplit(first Text, second Text) Boolean
 	Coupled.IsSplit("Couple(Text, Number)", "Pair(Number)") is false
 	let types = inference.types
 	let isOpen = "Generic" is in types.MembersOf(types.BaseName(first)).types
-	let isArgued = (first.IndexOf("(") > 0) and (second.IndexOf("(") > 0)
-	isOpen and isArgued and (first is not second) and (types.BaseName(first) is types.BaseName(second))
+	let isArgued = first.IndexOf("(") > 0 and second.IndexOf("(") > 0
+	isOpen and isArgued and first is not second and types.BaseName(first) is types.BaseName(second)
 Then(branch SyntaxNode, scope Scope, current Scope) Text
 	Sizing.Then(Handed.children(0), Counted, Counted) is "Error"
 	Sizing.Then(Mixed.children(0), Counted, Counted) is "Count"
@@ -48,5 +48,4 @@ IsHanded(branch SyntaxNode) Boolean
 	Sizing.IsHanded(Kept.children(0)) is false
 	Sizing.Issue(Handed, Counted, Counted) is ""
 	let condition = branch.children(0)
-	let isError = (condition.text is "is") and (condition.children.Last.text is "Error")
-	isError and (condition.children(0) is branch.children(1))
+	condition.text is "is" and condition.children.Last.text is "Error" and condition.children(0) is branch.children(1)

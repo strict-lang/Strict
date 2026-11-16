@@ -46,7 +46,7 @@ Forwarded(targets Texts, seen Texts = List(Text)) Texts
 ForwardedTarget(target Text, indices Dictionary(Text, Number)) Text
 	let type = target.Substring(0, target.LastIndexOf("."))
 	let method = target.Substring(type.Length + 1, target.Length - type.Length - 1)
-	if (type is in indices) and IsForwarded(type, indices(type), method)
+	if type is in indices and IsForwarded(type, indices(type), method)
 		return entries(indices(type)).Changing.First.typeName + "." + method
 	""
 IsForwarded(type Text, index Number, method Text) Boolean
@@ -55,9 +55,9 @@ IsForwarded(type Text, index Number, method Text) Boolean
 	Cycled.Forwarded(List(Text) + "Strict/Angle.Floor").Length is 2
 	Wrapping.IsForwarded("Strict/Character", 0, "Floor")
 	Wrapping.IsForwarded("Strict/Character", 0, "from") is false
-	let isRequested = (index is 0) or (method is in Signature(signatures(index - 1)).Names)
-	let isOwn = (method is "from") or linker.IsNative(type, method)
-	isRequested and (isOwn is false) and (entries(index).Chosen(method, -1, "", List(Text)) < 0)
+	let isRequested = index is 0 or method is in Signature(signatures(index - 1)).Names
+	let isOwn = method is "from" or linker.IsNative(type, method)
+	isRequested and isOwn is false and entries(index).Chosen(method, -1, "", List(Text)) < 0
 Indices Dictionary(Text, Number)
 	Wrapping.Indices("Strict/Character") is 1
 	Wrapping.Indices.Length is 2
@@ -100,23 +100,23 @@ Missing(target Text, seen Texts, positions Dictionary(Text, Number)) Boolean
 	let type = target.Substring(0, target.LastIndexOf("."))
 	let method = target.Substring(type.Length + 1, target.Length - type.Length - 1)
 	let hosted = TypeEntry.ShortName(type) + "." + method is in Hosted.Methods
-	if (method is in ("from", "in", "Index", "to", "to Text", "to Type")) or hosted or linker.IsNative(type, method)
+	if method is in ("from", "in", "Index", "to", "to Text", "to Type") or hosted or linker.IsNative(type, method)
 		return false
-	if (type is not in positions) or (target is in seen)
+	if type is not in positions or target is in seen
 		return true
 	let entry = entries(positions(type))
 	let converted = method.StartsWith("to ") then method.Split(" ") else (method, "")
 	let found = entry.Chosen(converted.First, -1, converted.Last, List(Text)) >= 0
 	let next = entry.Changing.Length is 1 then entry.Changing.First.typeName + "." + method else ""
-	(found is false) and ((next is "") or Missing(next, seen + target, positions))
+	found is false and (next is "" or Missing(next, seen + target, positions))
 IsSettled(next LinkRound) Boolean
 	Single.IsSettled(Single)
 	Single.IsSettled(Twice) is false
 	Single.IsSettled(LinkRound(Linker.Sample, List(TypeEntry) + TypeEntry.Converting, List(Text))) is false
 	Twice.IsSettled(Single) is false
 	Twice.IsSettled(LinkRound(Linker.Sample, Twice.entries, List(Text) + "Strict/Other:")) is false
-	let isSame = (next.signatures.Length is signatures.Length) and ((next.signatures - signatures).Length is 0)
-	isSame and (next.entries.First.methods.Length is entries.First.methods.Length)
+	let isSame = next.signatures.Length is signatures.Length and (next.signatures - signatures).Length is 0
+	isSame and next.entries.First.methods.Length is entries.First.methods.Length
 With(linked List(TypeEntry)) LinkRound
 	Single.With(List(TypeEntry)).entries.Length is 0
 	Twice.With(List(TypeEntry)).signatures is ("Strict/Logger:")
@@ -162,7 +162,7 @@ UsedTypes Texts
 Advanced(advanced List(TypeEntry), signed Texts) LinkRound
 	Twice.Advanced(Twice.entries, Twice.signatures).targeted is (List(Text) + "Strict/B.Go", List(Text) + "Strict/B.Go")
 	Twice.Advanced(Twice.entries, Twice.signatures).used.Length is 2
-	let isAligned = (targeted.Length is entries.Length) and (used.Length is entries.Length)
+	let isAligned = targeted.Length is entries.Length and used.Length is entries.Length
 	let positions = isAligned then ResolveCheck.Positions(signatures) else Dictionary(Text, Number)
 	mutable targets = List(Mutable(Texts))
 	mutable types = List(Mutable(Texts))

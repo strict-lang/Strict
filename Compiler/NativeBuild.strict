@@ -24,7 +24,7 @@ IsProgram(path Text) Boolean
 	NativeBuild.IsProgram("Character.strict") is false
 	"Run" is in TypeShape(File(path).ReadLines).MethodScope.names
 Compile(path Text, root Text, isTesting = false, isCounting = false, sources Texts = List(Text))
-	let isProgram = (isTesting is false) and IsProgram(path)
+	let isProgram = isTesting is false and IsProgram(path)
 	let module = Folder.Module(path, root, isCounting, isProgram, Target, sources)
 	if module.types.Length is 0
 		return Error("NoTypesCompiled")
@@ -44,7 +44,7 @@ Device(program Text, base Text, root Text) Text
 	if failure is not ""
 		return Checked("Native compilation failed, " + failure)
 	let marker = program.IndexOf("\n" + MlirGpu.Marker)
-	if (marker < 0) or isFast
+	if marker < 0 or isFast
 		return PtxCache(base).Unlaunched(program)
 	let gpu = DeviceBuild(Toolchain(Platform.Current, root), base.EndsWith(".test") is false)
 	let device = program.Substring(marker + 1, program.Length - marker - 1)
@@ -66,7 +66,7 @@ Natives(path Text, root Text, types List(TypeEntry)) Texts
 	for types
 		if NativeFolder.IsNative(value, types)
 			let folder = TypeSource(value).NativeFolder(path, root)
-			if Directory.Exists(folder) and (folder is not in folders)
+			if Directory.Exists(folder) and folder is not in folders
 				folders.Add(folder)
 	folders
 Build(base Text, program Text, tools Toolchain, isCounting = false)
@@ -91,8 +91,8 @@ IsUnchanged(base Text, mlir Text, tools Toolchain) Boolean
 	let headers = tools.natives.Length is 0 then List(Text) else sources.Inputs(Platform.Current, tools.root)
 	let inputs = (base + ".mlir", Process.Current.executable, Release(logger, base).Icon) + sources.Files + headers
 	let previous = File(base + ".mlir")
-	let isCross = isAndroid or isIOS or tools.isWeb or (tools.cpu is not "native")
-	if isCross or (previous.Exists is false) or (sources.IsCurrent(tools.Executable(base), inputs) is false)
+	let isCross = isAndroid or isIOS or tools.isWeb or tools.cpu is not "native"
+	if isCross or previous.Exists is false or sources.IsCurrent(tools.Executable(base), inputs) is false
 		return false
 	previous.Length is not mlir.Length then false else Text.Combine(previous.ReadLines, "\n") is mlir
 Rebuilt(base Text, mlir Text, tools Toolchain) Text slow
@@ -120,7 +120,7 @@ Ran(base Text, tools Toolchain, path Text, isCounting Boolean) Number
 Linked(base Text, tools Toolchain) Text slow
 	NativeBuild.Linked("Compiler/output/missing", Toolchain.OnWindows).StartsWith("mlir-opt failed")
 	let executable = tools.Executable(base)
-	let isSwapped = (Platform.Current is Platform.Windows) and (tools.isWeb is false) and File(executable).Exists
+	let isSwapped = Platform.Current is Platform.Windows and tools.isWeb is false and File(executable).Exists
 	let target = isSwapped then executable.Replace(".exe", ".new.exe") else executable
 	let built = tools.isWeb then WebBuild(tools).Linked(base, target) else tools.Built(base, target)
 	let problem = isSwapped and built.StartsWith("Built ") then Intermediates(logger).Replaced(executable, target) else ""
@@ -130,7 +130,7 @@ Linked(base Text, tools Toolchain) Text slow
 CrossBuild(base Text, program Text, tools Toolchain, isCounting Boolean)
 	NativeBuild(Logger).CrossBuild("Compiler/output/missing", "module {}", Toolchain.OnWindows, true) is not Error
 	NativeBuild(Logger, false).CrossBuild("Compiler/output/missing", "module {}", Toolchain.OnWindows, false) is not Error
-	if (Target is not Platform.Windows) or isCounting or (isCrossing is false)
+	if Target is not Platform.Windows or isCounting or isCrossing is false
 		return
 	File(base + ".linux.mlir").Write(Mlir(program, tools.root, Platform.Linux))
 	let crossed = LinuxBuild(tools).Built(base)

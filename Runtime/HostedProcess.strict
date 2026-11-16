@@ -21,7 +21,7 @@ Result VmValue
 		return Ran(Process.RunTools(call.Arguments.First.text, Hosted(call).TextsOf(call.Arguments(1)), Seconds))
 	Hosted(call).Processed
 Direct VmValue
-	(HostedProcess(Sampling).Direct.kind is not "None") and (HostedProcess(Sampling).Direct.IsTrue is false)
+	HostedProcess(Sampling).Direct.kind is not "None" and HostedProcess(Sampling).Direct.IsTrue is false
 	if TypeEntry.ShortName(call.TypeName) is "Memo"
 		return Memoized
 	if TypeEntry.ShortName(call.TypeName) is "Sampler"

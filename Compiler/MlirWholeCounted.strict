@@ -66,7 +66,7 @@ Saved Texts
 	for ("index", "value", "outer")
 		if value is in names
 			lines = lines + values.Loaded(statements.Temp(Kept(value)), "%v_" + value, statements.Variable(value), "i")
-	let isOuter = ("outer" is in names) and ("value" is in names)
+	let isOuter = "outer" is in names and "value" is in names
 	isOuter then lines + values.Stored(statements.Temp("y"), "i", "%v_outer", statements.Variable("outer")) else lines
 Kept(name Text) Text
 	Begin.Kept("outer") is "z"

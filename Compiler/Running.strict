@@ -31,7 +31,7 @@ IsStopped(line Text) Boolean
 	Served.IsStopped("12\t\"C:/s/strict.exe\" serve 2")
 	Served.IsStopped("12\t\"C:/s/strict.exe\" build Strict.strict") is false
 	Served.IsStopped((Process.Id to Text) + "\t\"C:/s/strict.exe\" serve 2") is false
-	(Id(line) is not (Process.Id to Text)) and ((IsStrict is false) or (Command(line).IndexOf(" serve") > 0))
+	Id(line) is not Process.Id to Text and (IsStrict is false or Command(line).IndexOf(" serve") > 0)
 IsStrict Boolean
 	Served.IsStrict
 	Missing.IsStrict is false
@@ -45,9 +45,9 @@ Stopping Texts
 	kept
 Ended(id Text) Boolean
 	Missing.Ended("0") is false
-	(Process.OperatingSystem is not "Windows") or Missing.Ended("999999")
+	Process.OperatingSystem is not "Windows" or Missing.Ended("999999")
 	let isClosed = Process.RunTool("taskkill", "/PID " + id).exitCode is in Stopped
-	isClosed or (Process.RunTool("taskkill", "/F /PID " + id).exitCode is in Stopped)
+	isClosed or Process.RunTool("taskkill", "/F /PID " + id).exitCode is in Stopped
 Restarted(old Text) Text slow
 	Missing.Restarted("Compiler/output/Missing.old.exe") is ""
 	if Directory.Files(Path(executable).PathOnly.text + "/obj", "strict.server*").Length is 0
@@ -57,7 +57,7 @@ Restarted(old Text) Text slow
 		logger.Log("Stopping " + executable + " (process " + Id(value) + ")")
 		if Ended(Id(value)) is false
 			return "process " + Id(value) + " did not stop"
-	if (stopping.Length > 0) and (IsStrict is false) and (Intermediates(logger).Deleted(old) is Error)
+	if stopping.Length > 0 and IsStrict is false and Intermediates(logger).Deleted(old) is Error
 		return old + " is still in use by " + Described
 	Started(stopping)
 Started(lines Texts) Text

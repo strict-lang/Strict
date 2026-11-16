@@ -42,17 +42,17 @@ IsHosted Boolean
 	Hosted(HostedJson.Getting).IsHosted
 	Hosted(HostedRegex.Matching).IsHosted and Hosted(HostedTokenizer.Tokening).IsHosted
 	let name = TypeEntry.ShortName(call.TypeName) + "." + call.MethodName
-	(name is in Methods) or HostedJson(call).IsHosted or HostedRegex(call).IsHosted or HostedTokenizer(call).IsHosted
+	name is in Methods or HostedJson(call).IsHosted or HostedRegex(call).IsHosted or HostedTokenizer(call).IsHosted
 Result VmValue
 	Hosted(SystemCall).Result.text is in ("Windows", "Linux", "MacOS", "Unknown")
-	Hosted(Existing).Result.IsTrue and (Hosted(Timing).Result.number > 0) and (Hosted(Releasing).Result.kind is "None")
+	Hosted(Existing).Result.IsTrue and Hosted(Timing).Result.number > 0 and Hosted(Releasing).Result.kind is "None"
 	let type = TypeEntry.ShortName(call.TypeName)
-	if (call.MethodName is in ("Input", "InputLine")) or (type is "Directory") and (call.MethodName is "Current")
+	if call.MethodName is in ("Input", "InputLine") or type is "Directory" and call.MethodName is "Current"
 		return VmValue.OfText(Read(call.MethodName))
 	if type is in ("Process", "Library", "BuildProfile", "TestBudget", "ConstantCache", "Memo", "Sampler")
 		return type is "Library" then Foreign(call, List(TypeEntry)).Hosted else HostedProcess(call).Result
 	if type is in ("Socket", "GpuMemory")
-		return (type is "GpuMemory") or (Socket.Output(call.Arguments(0).number) is not Error) then VmValue.None else Unsent
+		return type is "GpuMemory" or Socket.Output(call.Arguments(0).number) is not Error then VmValue.None else Unsent
 	if type is not in ("File", "Directory")
 		return type is in ("Json", "Regex", "Tokenizer") then Packaged else HostedMath(call).Measured
 	if HostedText(call).IsText
@@ -113,10 +113,10 @@ Moved VmValue
 		File(Location).Rename(call.Arguments.First.text)
 	Answered(Location)
 Answered(path Text) VmValue
-	Hosted(Existing).Answered(".").IsTrue and (Hosted(Probing).Answered(".").IsTrue is false)
+	Hosted(Existing).Answered(".").IsTrue and Hosted(Probing).Answered(".").IsTrue is false
 	Hosted(Dating).Answered("Any.strict").number > 1.7e9
 	File("Any.strict").Length is File("Any.strict").ReadBytes.Length
-	File("Runtime/Answered.lock").Locked and (File("Runtime/Answered.lock").Locked is false)
+	File("Runtime/Answered.lock").Locked and File("Runtime/Answered.lock").Locked is false
 	File("Runtime/Held.lock").Locked and File("Runtime/Held.lock").Exists
 	MutationCache.Released(("Runtime/Answered.lock", "Runtime/Held.lock"))
 	if call.MethodName is "Locked"

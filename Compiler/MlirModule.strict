@@ -92,7 +92,7 @@ Starts(mains List(MlirFunction)) List(MlirFunction)
 	Started.Starts(Started.Functions).Length is 1
 	for mains
 		let start = DefaultInstance.Start(value.type)
-		if (index < entries) and (start.instructions.Length > 0)
+		if index < entries and start.instructions.Length > 0
 			MlirFunction(value, method = start)
 Entries List(MlirFunction)
 	Pair.Entries.Last.Symbol is "Other_Run_0"
@@ -154,4 +154,4 @@ Called(function MlirFunction, position Number) List(MlirFunction)
 	let type = MlirLayout(function).Owner(function.TypeOf(decoder.Text(1)), decoder.Text(2))
 	let callee = decoder.Callee(type)
 	let called = MlirFunction(types, type, callee, typeIndex = function.typeIndex)
-	(callee.instructions.Length > 0) or MlirForeign(called).IsForeign then NoFunctions + called else NoFunctions
+	callee.instructions.Length > 0 or MlirForeign(called).IsForeign then NoFunctions + called else NoFunctions

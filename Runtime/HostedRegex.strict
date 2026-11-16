@@ -13,11 +13,11 @@ IsHosted Boolean
 	HostedRegex(Matching).IsHosted and HostedRegex(Replacing).IsHosted
 	HostedRegex(Texting).IsHosted is false
 	HostedRegex(Machining).IsHosted is false
-	(call.TypeName is "Strict/Regex/Regex") and (call.MethodName is in Names)
+	call.TypeName is "Strict/Regex/Regex" and call.MethodName is in Names
 Result VmValue
-	HostedRegex(Matching).Result.IsTrue and (HostedRegex(Searching).Result.text is "-7")
-	HostedRegex(Finding).Result.items.Last.text is "-22" and (HostedRegex(Replacing).Result.text is "a#b#")
-	HostedRegex(Grouping).Result.items.Last.text is "b" and (HostedRegex(Splitting).Result.items.Last.text is "b")
+	HostedRegex(Matching).Result.IsTrue and HostedRegex(Searching).Result.text is "-7"
+	HostedRegex(Finding).Result.items.Last.text is "-22" and HostedRegex(Replacing).Result.text is "a#b#"
+	HostedRegex(Grouping).Result.items.Last.text is "b" and HostedRegex(Splitting).Result.items.Last.text is "b"
 	let regex = Regex(call.Instance.Member(0).text)
 	let text = call.Arguments.First.text
 	if call.MethodName is "IsMatch"

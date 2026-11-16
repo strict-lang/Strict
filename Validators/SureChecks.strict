@@ -22,7 +22,7 @@ Issues List(ValidationIssue)
 	mutable found = List(Mutable(ValidationIssue))
 	for bodies.Statements
 		let key = Key(value.statement, value.scope)
-		if (Duplicates.IsTest(lines(value.line).Trim) is false) and (key is in sure)
+		if Duplicates.IsTest(lines(value.line).Trim) is false and key is in sure
 			found = found + ValidationIssue("ErrorCheckCannotFail", key + " never returns Error", value.line + 1)
 	found
 Key(node SyntaxNode, scope Scope) Text
@@ -30,7 +30,7 @@ Key(node SyntaxNode, scope Scope) Text
 	SureChecks.Key(PlainCall, Random) is ""
 	SureChecks.Key(Firsts, Scope(("numbers"), ("Numbers"))) is "List.First"
 	let side = Compared(node)
-	if (side.Kind is not "Binary") or (side.text is not "is") or (IsReported(side.children(1)) is false)
+	if side.Kind is not "Binary" or side.text is not "is" or IsReported(side.children(1)) is false
 		return ""
 	let call = side.children(0)
 	if call.Kind is not in ("Member", "MethodCall")
@@ -44,7 +44,7 @@ Compared(node SyntaxNode) SyntaxNode
 	SureChecks.Compared(SyntaxNode("Identifier", "and")).text is "and"
 	if node.Kind is in ("If", "ElseIf")
 		return Compared(node.children(0))
-	if (node.Kind is "Binary") and (node.text is in ("and", "or"))
+	if node.Kind is "Binary" and node.text is in ("and", "or")
 		let right = Compared(node.children(1))
 		return right.text is "is" then right else Compared(node.children(0))
 	node
@@ -54,4 +54,4 @@ IsReported(node SyntaxNode) Boolean
 	SureChecks.IsReported(SyntaxNode("Number", "1")) is false
 	SureChecks.IsReported(SyntaxNode("Text", "Error")) is false
 	SureChecks.IsReported(SyntaxNode("Identifier", "done")) is false
-	((node.Kind is "Identifier") or (node.Kind is "Call")) and (node.text is "Error")
+	(node.Kind is "Identifier" or node.Kind is "Call") and node.text is "Error"

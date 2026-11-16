@@ -37,10 +37,10 @@ IsCandidate Boolean
 	MlirWideMembers(MlirParallel.Doubling.function, 2).IsCandidate is false
 	let narrowing = MlirNarrowing(function, position)
 	let iterated = narrowing.Iterated
-	let isMarked = (iterated.Length > 0) and (narrowing.Bits(iterated.First) > 0)
-	let isStruct = MlirEmbedded(function).IsNumbers(Element) and (MlirPairs(function, 0).IsPaired(Element) is false)
+	let isMarked = iterated.Length > 0 and narrowing.Bits(iterated.First) > 0
+	let isStruct = MlirEmbedded(function).IsNumbers(Element) and MlirPairs(function, 0).IsPaired(Element) is false
 	let isCpu = MlirGpuCheck(function, position).IsGpu is false
-	isStruct and (isMarked is false) and isCpu and MlirParallel(function, position).IsParallel
+	isStruct and isMarked is false and isCpu and MlirParallel(function, position).IsParallel
 Wide(typeName Text, prefix Text, depth Number) Texts
 	Sparking.Wide("Strict/Spark", "", 0) is ("size")
 	Flaming.Wide("Strict/Flame", "f.", 0) is ("f.spark.size", "f.cold")
@@ -48,18 +48,18 @@ Wide(typeName Text, prefix Text, depth Number) Texts
 	mutable names = List(Text)
 	for MlirInstances(function, 0).Stored(function.TypeOf(typeName, true))
 		let kind = MlirLayout(function).Represented(TypeEntry.ShortName(value.typeName))
-		let isWide = (kind is "Number") and (IsMarked(value) is false)
-		let nested = (kind is "Number") or (kind is "Pair") or (depth > 8) or (value.Bits > 0)
+		let isWide = kind is "Number" and IsMarked(value) is false
+		let nested = kind is "Number" or kind is "Pair" or depth > 8 or value.Bits > 0
 		names = names + (isWide then List(Text) + (prefix + value.Name) else List(Text))
 		names = nested then names else names + Wide(value.typeName, prefix + value.Name + ".", depth + 1)
 	names
 IsMarked(member MemberEntry) Boolean
 	Sparking.IsMarked(Spark.members.Last)
 	Sparking.IsMarked(Spark.members.First) is false
-	Flaming.IsMarked(Flame.members(1)) and (Flaming.IsMarked(Flame.members(2)) is false)
-	Flaming.IsMarked(Flame.members(3)) and (Flaming.IsMarked(Flame.members.First) is false)
+	Flaming.IsMarked(Flame.members(1)) and Flaming.IsMarked(Flame.members(2)) is false
+	Flaming.IsMarked(Flame.members(3)) and Flaming.IsMarked(Flame.members.First) is false
 	Flaming.IsMarked(Flame.members.Last) is false
-	if (member.Bits > 0) or (TypeEntry.ShortName(member.typeName) is "Number")
+	if member.Bits > 0 or TypeEntry.ShortName(member.typeName) is "Number"
 		return member.Bits > 0
 	let stored = MlirInstances(function, 0).Stored(function.TypeOf(member.typeName, true))
-	(stored.Length is 1) and (stored.First.Bits > 0)
+	stored.Length is 1 and stored.First.Bits > 0

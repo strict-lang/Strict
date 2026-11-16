@@ -67,7 +67,7 @@ Vocabulary(json Text) Texts
 Unescaped(key Text) Text
 	Unescaped("\\u0120a\\\"") is " a\""
 	Unescaped(Mapped + "a") is " a"
-	Raw((key.IndexOf("\\") < 0) then key else Json("\"" + key + "\"") to Text)
+	Raw(key.IndexOf("\\") < 0 then key else Json("\"" + key + "\"") to Text)
 Unmapped(code Number) Number
 	Unmapped(97) is 97
 	Unmapped(288) is 32
@@ -82,7 +82,7 @@ Ranked(merges Texts, known Dictionary(Text, Number), width Number) Dictionary(Nu
 	Tiny.ranks(13) is 1
 	mutable ranked = Dictionary(Number, Number)
 	for merges
-		if (" " is in value) and (value.StartsWith("#version") is false)
+		if " " is in value and value.StartsWith("#version") is false
 			let parts = value.Split(" ")
 			ranked(known(Raw(parts(0))) * width + known(Raw(parts(1)))) = index - 1
 	ranked
@@ -117,7 +117,7 @@ Special(text Text) Text
 	mutable at = text.Length
 	for specials
 		let found = text.IndexOf(value.Key)
-		if (found >= 0) and ((found < at) or ((found is at) and (value.Key.Length > earliest.Length)))
+		if found >= 0 and (found < at or found is at and value.Key.Length > earliest.Length)
 			earliest = value.Key
 			at = found
 	earliest
@@ -145,7 +145,7 @@ Best(symbols Numbers) Number
 	mutable lowest = ranks.Length
 	for Range(1, symbols.Length)
 		let pair = symbols(value - 1) * tokens.Length + symbols(value)
-		if (pair is in ranks) and (ranks(pair) < lowest)
+		if pair is in ranks and ranks(pair) < lowest
 			best = value - 1
 			lowest = ranks(pair)
 	best

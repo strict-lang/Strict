@@ -37,8 +37,8 @@ IsDispatched Boolean
 	if entry.kind is not InstructionType.Invoke
 		return false
 	let decoder = PayloadDecoder(entry)
-	let isFloor = (decoder.Text(1) is "Strict/Number") and (decoder.Text(2) is "Floor")
-	if isFloor or (MlirCalls(function, position).NativeHelper(entry, decoder) is not "")
+	let isFloor = decoder.Text(1) is "Strict/Number" and decoder.Text(2) is "Floor"
+	if isFloor or MlirCalls(function, position).NativeHelper(entry, decoder) is not ""
 		return false
 	IsMatched(entry, MlirWholeFunction(MlirWholeFunction(function).Callee(entry)))
 IsMatched(entry InstructionEntry, callee MlirWholeFunction) Boolean

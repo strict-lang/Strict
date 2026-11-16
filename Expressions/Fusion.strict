@@ -28,7 +28,7 @@ Called Texts
 	mutable names = List(Mutable(Text))
 	for lines
 		let name = Averaged(value)
-		if (name is not "") and (name is not in names)
+		if name is not "" and name is not in names
 			names.Add(name)
 	names
 Averaged(line Text) Text
@@ -39,13 +39,13 @@ Averaged(line Text) Text
 	if start < 1
 		return ""
 	let name = Name(line, start)
-	((start - name.Length is 0) or (line(start - name.Length - 1) is not ".")) and IsFusable(name) then name else ""
+	(start - name.Length is 0 or line(start - name.Length - 1) is not ".") and IsFusable(name) then name else ""
 Opening(line Text, closing Number) Number
 	Averaging.Opening("Ones(f(2)).Average", 9) is 4
 	mutable depth = 0
 	for closing
 		let character = line(closing - 1 - index)
-		if (character is "(") and (depth is 0)
+		if character is "(" and depth is 0
 			return closing - 1 - index
 		depth = character is ")" then depth + 1 else (character is "(" then depth - 1 else depth)
 	-1
@@ -55,7 +55,7 @@ Name(line Text, start Number) Text
 	mutable begin = start
 	for start
 		let character = line(start - 1 - index)
-		if (begin is start - index) and (character.Upper is not character.Lower)
+		if begin is start - index and character.Upper is not character.Lower
 			begin = start - 1 - index
 	line.Substring(begin, start - begin)
 IsFusable(name Text) Boolean
@@ -63,7 +63,7 @@ IsFusable(name Text) Boolean
 	Averaging.IsFusable("Run") is false
 	let header = Header(name)
 	let element = header < 0 then "" else Element(lines(header))
-	if (element is "") or ((element is not "Number") and (MemberScope(element).names.Length is 0))
+	if element is "" or element is not "Number" and MemberScope(element).names.Length is 0
 		return false
 	let ending = Ending(header)
 	mutable last = ""
@@ -99,4 +99,4 @@ MemberScope(element Text) Scope
 	Coloring.MemberScope("Color").types is ("Byte", "Byte", "Byte", "Byte")
 	Averaging.MemberScope("Color").names.Length is 0
 	let path = folder + "/" + element + ".strict"
-	TypeShape((folder is not "") and File(path).Exists then File(path).ReadLines else List(Text)).MemberScope
+	TypeShape(folder is not "" and File(path).Exists then File(path).ReadLines else List(Text)).MemberScope

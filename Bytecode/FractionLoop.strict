@@ -5,45 +5,45 @@ Merged(loop SyntaxNode) SyntaxNode
 	Text.Combine(FractionLoop.Merged(Sample).Lines(""), " ").IndexOf("2500") > 0
 	Text.Combine(FractionLoop.Merged(Sample).Lines(""), " ").IndexOf("sum = sum + -2") > 0
 	let term = Term(loop)
-	if (term.Kind is not "Binary") or (term.text is not "/")
+	if term.Kind is not "Binary" or term.text is not "/"
 		return loop
 	let parts = (term.children(0) to Text) is "1 - 2 * (value % 2)" then Linear(term.children(1), "value") else ""
-	(parts is "") or (Bound(loop).Kind is not "Number") then loop else Built(loop, parts)
+	parts is "" or Bound(loop).Kind is not "Number" then loop else Built(loop, parts)
 Term(loop SyntaxNode) SyntaxNode
 	let body = loop.Kind is "For" then loop.children.Last else loop
 	let statement = body.Kind is "Body" then (body.children.Length is 1 then body.children(0) else loop) else body
 	if statement.Kind is not "Reassignment"
 		return statement
 	let sum = statement.children(1)
-	if (sum.Kind is not "Binary") or (sum.text is not "+") or (sum.children(0).text is not statement.children(0).text)
+	if sum.Kind is not "Binary" or sum.text is not "+" or sum.children(0).text is not statement.children(0).text
 		return statement
 	sum.children(1)
 Bound(loop SyntaxNode) SyntaxNode
 	let count = loop.Kind is "For" then loop.children(0) else loop
-	(count.Kind is "Call") and (count.text is "Range") and (count.children.Length is 2) then count.children(0) else loop
+	count.Kind is "Call" and count.text is "Range" and count.children.Length is 2 then count.children(0) else loop
 Linear(node SyntaxNode, name Text) Text
-	if (node.Kind is "Binary") and (node.text is "*")
+	if node.Kind is "Binary" and node.text is "*"
 		let product = Product(node, name)
 		return product is "" then "" else product + "*0"
-	if (node.Kind is not "Binary") or (node.text is not "+")
+	if node.Kind is not "Binary" or node.text is not "+"
 		return ""
 	let left = node.children(0)
 	let right = node.children(1)
 	let product = left.Kind is "Binary" then Product(left, name) else Product(right, name)
 	let offset = left.Kind is "Number" then left.text else (right.Kind is "Number" then right.text else "")
-	(product is "") or (offset is "") then "" else product + "*" + offset
+	product is "" or offset is "" then "" else product + "*" + offset
 Product(node SyntaxNode, name Text) Text
 	let left = node.children(0)
 	let right = node.children(1)
-	if (left.Kind is "Number") and (right.Kind is "Identifier") and (right.text is name)
+	if left.Kind is "Number" and right.Kind is "Identifier" and right.text is name
 		return left.text
-	(right.Kind is "Number") and (left.Kind is "Identifier") and (left.text is name) then right.text else ""
+	right.Kind is "Number" and left.Kind is "Identifier" and left.text is name then right.text else ""
 Built(loop SyntaxNode, parts Text) SyntaxNode
 	let coefficient = parts.Split("*")(0)
 	let offset = parts.Split("*")(1)
 	let start = loop.children(0).children(0)
 	let tail = start.text.EndsWith("0") or start.text.EndsWith("2") or start.text.EndsWith("4")
-	let factor = (tail or start.text.EndsWith("6") or start.text.EndsWith("8")) then coefficient else "-" + coefficient
+	let factor = tail or start.text.EndsWith("6") or start.text.EndsWith("8") then coefficient else "-" + coefficient
 	let name = SyntaxNode("Identifier", loop.children.Last.children(0).children(0).text)
 	let summed = SyntaxNode("MethodCall", "Sum", List(SyntaxNode) + SyntaxNode("Identifier", "forResult"))
 	let total = SyntaxNode("Reassignment", "", (name, Bin("+", name, summed)))
@@ -100,9 +100,9 @@ Shift(start SyntaxNode, name Text) SyntaxNode
 	let span = Bin("*", SyntaxNode("Number", "4"), SyntaxNode("Identifier", name))
 	start.text is "0" then span else Bin("+", start, span)
 Scale(times Text, coefficient Text) SyntaxNode
-	if (coefficient is "2") and (times is "2")
+	if coefficient is "2" and times is "2"
 		return SyntaxNode("Number", "4")
-	if (coefficient is "2") and (times is "3")
+	if coefficient is "2" and times is "3"
 		return SyntaxNode("Number", "6")
 	Bin("*", SyntaxNode("Number", times), SyntaxNode("Number", coefficient))
 Bin(op Text, left SyntaxNode, right SyntaxNode) SyntaxNode

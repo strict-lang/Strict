@@ -22,7 +22,7 @@ Validate ValidationIssues
 			issues = issues + UsageRules(header, statements, shape.MemberScope.names, mutations, index + 1).Issues
 	MemberIssues + ConstantIssues + issues
 MemberIssues ValidationIssues slow
-	(Sample.MemberIssues.Length is 1) and (Sample.MemberIssues.First.Line is 1)
+	Sample.MemberIssues.Length is 1 and Sample.MemberIssues.First.Line is 1
 	Sample.MemberIssues.First to Text is "UnusedMemberMustBeRemoved: unused, capitalize it when other types use it"
 	Replacing.MemberIssues.Length is 0
 	TypeValidator(TypeShape("has elements Numbers", "has Width Number", "Run", "\t2"), ("Add")).MemberIssues.Length is 0
@@ -31,7 +31,7 @@ MemberIssues ValidationIssues slow
 	for shape.lines
 		if shape.IsMemberLine(value)
 			let name = HeaderTokens(Tokenizer(value).Tokens).MemberName
-			if name is not in ReservedNames and (not IsPublic(name)) and UsageCount(name) < 2 and (name is not in kept)
+			if name is not in ReservedNames and not IsPublic(name) and UsageCount(name) < 2 and name is not in kept
 				issues.Add(ValidationIssue("UnusedMemberMustBeRemoved", name + Hint, index + 1))
 	issues
 MemberNames Texts
@@ -65,10 +65,10 @@ IsExempt Boolean
 	TypeValidator(TypeShape("has a Number", "has b Number", "Run"), ("Add")).IsExempt
 	TypeValidator(TypeShape("has a Number", "Run", "\ta"), ("Add")).IsExempt
 	TypeValidator(TypeShape("has a Number", "from(text Text)", "\ta", "Run", "\ta"), ("Add")).IsExempt
-	if (shape.MethodScope.names.Length is MemberNames.Length) or (not HasMethodBody)
+	if shape.MethodScope.names.Length is MemberNames.Length or not HasMethodBody
 		return true
-	let usesValue = UsageCount("value") > 0 or ("from" is in shape.MethodScope.names)
-	(shape.MemberScope.names.Length is 1) and usesValue
+	let usesValue = UsageCount("value") > 0 or "from" is in shape.MethodScope.names
+	shape.MemberScope.names.Length is 1 and usesValue
 HasMethodBody Boolean
 	Sample.HasMethodBody
 	TypeValidator(TypeShape("has a Number", "Run"), ("Add")).HasMethodBody is false
@@ -87,14 +87,14 @@ ConstantIssues ValidationIssues
 IsComputedMember(line Text) Boolean
 	Sample.IsComputedMember("has number = 17 + 4") and Sample.IsComputedMember("mutable count = 3 + 4")
 	Sample.IsComputedMember("has scale = 1") is false
-	(Sample.IsComputedMember("Run = 3 + 4") is false) and (Sample.IsComputedMember("constant Sum = 3 + 4") is false)
-	(Sample.IsComputedMember("has number Number") is false) and (Sample.IsComputedMember("has scale = 3 + x") is false)
+	Sample.IsComputedMember("Run = 3 + 4") is false and Sample.IsComputedMember("constant Sum = 3 + 4") is false
+	Sample.IsComputedMember("has number Number") is false and Sample.IsComputedMember("has scale = 3 + x") is false
 	let tokens = Tokenizer(line).Tokens
 	let equals = tokens.Index("=")
-	if (not shape.IsMemberLine(line)) or line.StartsWith("constant ")
+	if not shape.IsMemberLine(line) or line.StartsWith("constant ")
 		return false
 	let initial = SyntaxParser(tokens).ParseRange(equals + 1, tokens.Length)
-	(initial.Kind is "Binary") and IsConstantNode(initial)
+	initial.Kind is "Binary" and IsConstantNode(initial)
 IsConstantNode(node SyntaxNode) Boolean
 	Sample.IsConstantNode(SyntaxNode("Number", "1"))
 	Sample.IsConstantNode(SyntaxParser(Tokenizer("3 + 2").Tokens).Parse)
@@ -102,7 +102,7 @@ IsConstantNode(node SyntaxNode) Boolean
 	Sample.IsConstantNode(SyntaxParser(Tokenizer("x + 3").Tokens).Parse) is false
 	if node.Kind is in ("Number", "Text", "Boolean")
 		return true
-	(node.Kind is "Binary") and IsConstantNode(node.children(0)) and IsConstantNode(node.children(1))
+	node.Kind is "Binary" and IsConstantNode(node.children(0)) and IsConstantNode(node.children(1))
 Copied Texts
 	Replacing.Copied is ("b")
 	mutable copied = List(Mutable(Text))
@@ -120,7 +120,7 @@ Unnamed(node SyntaxNode) Texts
 	mutable unnamed = List(Mutable(Text))
 	for node.children
 		unnamed = unnamed + Unnamed(value)
-	if (node.Kind is not "Call") or (node.text is not typeName) or (node.children.Length < 2)
+	if node.Kind is not "Call" or node.text is not typeName or node.children.Length < 2
 		return unnamed
 	node.children(1).Kind is "Reassignment" then unnamed + Unread(node) else unnamed
 Unread(call SyntaxNode) Texts

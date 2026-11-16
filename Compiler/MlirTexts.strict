@@ -42,7 +42,7 @@ IsSum Boolean
 	MlirTexts(Joined, 2).IsSum
 	MlirTexts(Joined, 1).IsSum is false
 	let entry = function.method.instructions(position)
-	(entry.kind is InstructionType.Add) and MlirKinds(function).IsText(position + 1, entry.payload(3))
+	entry.kind is InstructionType.Add and MlirKinds(function).IsText(position + 1, entry.payload(3))
 IsConversion Boolean
 	MlirTexts(Joined, 7).IsConversion
 	MlirTexts(Joined, 6).IsConversion is false
@@ -54,7 +54,7 @@ IsConversion Boolean
 	let target = TypeEntry.ShortName(decoder.ReturnType)
 	let isTo = decoder.Text(2) is "to"
 	let isPairCode = MlirCodes(function, position).IsPairCode(entry)
-	isPairCode or (isTo and (target.StartsWith("List(") or IsNativeConversion(entry, target)))
+	isPairCode or isTo and (target.StartsWith("List(") or IsNativeConversion(entry, target))
 IsNativeConversion(entry InstructionEntry, target Text) Boolean
 	MlirTexts(Joined, 7).IsNativeConversion(Joined.method.instructions(7), "Number")
 	MlirTexts(Joined, 7).IsNativeConversion(Joined.method.instructions(7), "Shape") is false
@@ -63,9 +63,9 @@ IsNativeConversion(entry InstructionEntry, target Text) Boolean
 	MlirTexts(Quoting, 1).IsNativeConversion(Unquoting(1), "Number") is false
 	let source = MlirKinds(function).KindOf(position, Instance(entry))
 	let own = function.TypeOf(source).Callee("to", 0, target, List(Text))
-	let isOwn = (source is not "Text") and (own.instructions.Length > 0)
+	let isOwn = source is not "Text" and own.instructions.Length > 0
 	let isSame = MlirLayout(function).Represented(source) is MlirLayout(function).Represented(target)
-	(target is "Text") or (isOwn is false) and ((target is in ("Number", "Character")) or isSame)
+	target is "Text" or isOwn is false and (target is in ("Number", "Character") or isSame)
 Instance(entry InstructionEntry) Number
 	MlirTexts(Joined, 7).Instance(Joined.method.instructions(7)) is 1
 	MlirTexts(Listing, 1).Instance(ToNumbers) is 0
@@ -104,7 +104,7 @@ Elements(instance Number, target Text, result Text) Texts
 	let source = kinds.ElementKind(kinds.KindOf(position, instance))
 	let element = kinds.ElementKind(target)
 	let loaded = function.Load(Temp("w"), "%r" + instance)
-	if (source is element) or (element is not in ("Number", "Text")) or (source is not in ("Number", "Text"))
+	if source is element or element is not in ("Number", "Text") or source is not in ("Number", "Text")
 		return (loaded, function.Store(Temp("w"), result))
 	let helper = element is "Number" then "strict_list_numbers" else "strict_list_texts"
 	let converted = MlirMemory(function, position).Called(Temp("wc"), helper, List(Text) + Temp("w"))
@@ -141,7 +141,7 @@ Printable(kind Text) Text
 	MlirTexts(Joined, 0).Helper("Flat") is "strict_flat_text"
 	MlirTexts(Joined, 0).Helper("Lanes3") is "strict_lanes3_text"
 	let own = function.TypeOf(kind).Callee("to", 0, "Text", List(Text))
-	if (own.instructions.Length is 0) and MlirLanes(function, 0).IsPacked(kind)
+	if own.instructions.Length is 0 and MlirLanes(function, 0).IsPacked(kind)
 		return "Lanes" + MlirLanes(function, 0).Members(kind).Length
 	own.instructions.Length > 0 then kind else MlirLayout(function).Represented(kind)
 Helper(kind Text) Text
@@ -153,7 +153,7 @@ Helper(kind Text) Text
 		return "strict_" + kind.Lower + "_text"
 	if kind is "Error"
 		return "strict_error_report"
-	if (kind is in ("Pair", "Flat")) or kind.StartsWith("Lanes")
+	if kind is in ("Pair", "Flat") or kind.StartsWith("Lanes")
 		return kind is "Pair" then "strict_two_text" else "strict_" + kind.Lower + "_text"
 	let suffix = kind.StartsWith("List(") then MlirKinds(function).ElementSuffix(kind) else ""
 	suffix is "" then "" else "strict_list_text_" + suffix
@@ -164,9 +164,9 @@ Described(loaded Text, suffix Text, kind Text) Texts
 	let type = function.TypeOf(kind)
 	let method = type.Callee("to", 0, "Text", List(Text))
 	let automatic = MlirAutomatic(function).Conversion(kind)
-	if (method.instructions.Length is 0) and (MlirLayout(function).Paired(kind).Length > 0)
+	if method.instructions.Length is 0 and MlirLayout(function).Paired(kind).Length > 0
 		return List(Text) + loaded + MlirAutomatic(function).Pairs(Temp(suffix + "x"), kind, Temp(suffix))
-	if (method.instructions.Length is 0) and (automatic is "skip")
+	if method.instructions.Length is 0 and automatic is "skip"
 		return List(Text) + MlirStatements(function, position).Unsupported("text of " + kind)
 	let symbol = method.instructions.Length is 0 then automatic else MlirFunction(function.types, type, method).Symbol
 	List(Text) + loaded + MlirMemory(function, position).Converting(Temp(suffix + "x"), symbol, Temp(suffix))
@@ -196,21 +196,21 @@ IsLetter Boolean
 	MlirTexts(Joined, 2).IsLetter is false
 	let steps = function.method.instructions
 	let entry = steps(position)
-	if (entry.kind is not InstructionType.Add) or (position + 1 >= steps.Length)
+	if entry.kind is not InstructionType.Add or position + 1 >= steps.Length
 		return false
 	let loaded = steps(position - 1)
 	let stored = steps(position + 1)
-	let isLoaded = (Text.Combine(loaded.texts) is "forResult") and (loaded.payload(0) is entry.payload(1))
-	let isStored = (stored.kind is InstructionType.StoreRegisterToVariable) and (Text.Combine(stored.texts) is "forResult")
-	isLoaded and isStored and (MlirKinds(function).KindOf(position, entry.payload(2)) is "Character")
+	let isLoaded = Text.Combine(loaded.texts) is "forResult" and loaded.payload(0) is entry.payload(1)
+	let isStored = stored.kind is InstructionType.StoreRegisterToVariable and Text.Combine(stored.texts) is "forResult"
+	isLoaded and isStored and MlirKinds(function).KindOf(position, entry.payload(2)) is "Character"
 IsMisspelled(begin Number) Boolean
 	MlirTexts(MlirLoops.Spelling.function, 8).IsMisspelled(3) is false
 	MlirTexts(MlirLoops.Spelling.function, 8).IsMisspelled(0)
 	MlirTexts(MlirLoops.Spelling.function, 7).IsMisspelled(0) is false
 	let entry = function.method.instructions(position)
-	if (entry.kind is not InstructionType.StoreRegisterToVariable) or (Text.Combine(entry.texts) is not "forResult")
+	if entry.kind is not InstructionType.StoreRegisterToVariable or Text.Combine(entry.texts) is not "forResult"
 		return false
-	(function.method.LoopBeginOf(position) is not begin) or (MlirTexts(function, position - 1).IsLetter is false)
+	function.method.LoopBeginOf(position) is not begin or MlirTexts(function, position - 1).IsLetter is false
 Spelled(entry InstructionEntry) Texts
 	MlirTexts(MlirLoops.Spelling.function, 7).Spelled(MlirLoops.Spelled(7)) is SpelledLoads + SpelledWrites
 	let slot = "%spelled" + function.method.LoopBeginOf(position)

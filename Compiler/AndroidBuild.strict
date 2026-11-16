@@ -18,7 +18,7 @@ Folder(ndk Text) Text
 Compiler(ndk Text) Text
 	AndroidBuild(Toolchain.OnWindows).Compiler("Compiler/output/missing") is ""
 	let compiler = Folder(ndk) + "clang" + tools.Extension
-	(ndk is not "") and File(compiler).Exists then compiler else ""
+	ndk is not "" and File(compiler).Exists then compiler else ""
 Ndk Text
 	let home = Environment("ANDROID_HOME")
 	let sdk = home is "" then Environment("ANDROID_SDK_ROOT") else home

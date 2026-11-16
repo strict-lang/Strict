@@ -16,14 +16,14 @@ IsBorrowed(call SyntaxNode, position Number, block CodeBlock) Boolean
 	if call.Kind is not "Call"
 		return false
 	let argument = call.children(position)
-	if (argument.Kind is not "Identifier") or (block.scope.TypeOf(argument.text + CodeBlock.SharedMarker) is not "owned")
+	if argument.Kind is not "Identifier" or block.scope.TypeOf(argument.text + CodeBlock.SharedMarker) is not "owned"
 		return false
-	(call.text + "/" + position is in borrowing) or (Keeps(call.text, call.children.Length, position) is false)
+	call.text + "/" + position is in borrowing or Keeps(call.text, call.children.Length, position) is false
 Keeps(name Text, count Number, position Number) Boolean
 	Lending.Keeps("Read", 1, 0) is false
 	Lending.Keeps("Keep", 1, 0)
-	Lending.Keeps("Twice", 1, 0) and (Lending.Header("Twice", 2) is -1)
-	Lending.Keeps("Early", 1, 0) and (Lending.Header("Keep", 2) is -1)
+	Lending.Keeps("Twice", 1, 0) and Lending.Header("Twice", 2) is -1
+	Lending.Keeps("Early", 1, 0) and Lending.Header("Keep", 2) is -1
 	let start = Header(name, count)
 	if start < 0
 		return true
@@ -40,6 +40,6 @@ Header(name Text, count Number) Number
 	Lending.IsBorrowed(SyntaxNode("Call", "Read", SyntaxNode("Text", "values")), 0, Owned) is false
 	mutable found = -1
 	for values.target.shape.lines
-		if values.target.shape.IsMethodHeader(value) and (Tokenizer(value).Tokens.First is name)
-			found = ((found is -1) and (HeaderTokens(Tokenizer(value).Tokens).ParameterNames.Length is count)) then index else -2
+		if values.target.shape.IsMethodHeader(value) and Tokenizer(value).Tokens.First is name
+			found = found is -1 and HeaderTokens(Tokenizer(value).Tokens).ParameterNames.Length is count then index else -2
 	found < 0 then -1 else found

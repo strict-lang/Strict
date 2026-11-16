@@ -1,0 +1,118 @@
+has lines Texts
+constant Openers = ("(", ",", "=", "if", "else", "then", "return", "not", "or", "xor", "and", "is", "in", "as", "<", ">", "<=", ">=", "+", "-", "*", "/", "%", "^", "to")
+constant BooleanPrecedences = (1, 4, 5, 6)
+constant NoPrecedence = 99
+constant NotHint = ", write not without brackets"
+constant UnneededHint = ", brackets are not needed here"
+constant Sample = Brackets(("Run", "\tif (a < 1) or (a > 2)", "\t(a or b) and c", "\t(a + b).Length", "\tf(1, (a then b else c))", "\tnot (a and b)"))
+constant Kept = Brackets(("\tif (not a) or b", "\ta is (not b)", "\t((a + b)) * c", "\t3 + (4)", "\tDecisionTree((-1))", "\t(a then b else c) then d else e"))
+Issues List(ValidationIssue)
+	Sample.Issues.Length is 2 and Sample.Issues.First.Line is 2
+	Kept.Issues.Length is 2
+	mutable issues = List(Mutable(ValidationIssue))
+	for lines
+		if "(" is in value
+			issues = issues + LineIssues(Tokenizer(value.Trim).Tokens, index + 1)
+	issues
+LineIssues(tokens Texts, line Number) List(ValidationIssue)
+	Sample.LineIssues(("if", "(", "a", "<", "1", ")"), 3).First.target is "( a < 1 )" + UnneededHint
+	Sample.LineIssues(("if", "(", "a", ",", "b", ")"), 3).Length is 0
+	mutable issues = List(Mutable(ValidationIssue))
+	for tokens.Length - 2
+		if tokens(index) is "(" and IsGroupOpen(tokens, index)
+			let close = Closing(tokens, index)
+			if close < tokens.Length and HasComma(tokens, index, close) is false
+				let detail = RedundantDetail(tokens, index, close)
+				if detail is not ""
+					issues.Add(ValidationIssue("BracketsMustBeNecessary", detail, line))
+	issues
+IsGroupOpen(tokens Texts, open Number) Boolean
+	Sample.IsGroupOpen(("if", "(", "a", ")"), 1)
+	Sample.IsGroupOpen(("Foo", "(", "a", ")"), 1) is false
+	open is 0 then true else tokens(open - 1) is in Openers
+Closing(tokens Texts, open Number) Number
+	Sample.Closing(("(", "(", "a", ")", ")"), 0) is 4
+	Sample.Closing(("(", "a"), 0) is 2
+	mutable depth = 1
+	for Range(open + 1, tokens.Length)
+		depth = depth + (tokens(value) is "(" then 1 else tokens(value) is ")" then -1 else 0)
+		if depth is 0
+			return value
+	tokens.Length
+HasComma(tokens Texts, open Number, close Number) Boolean
+	Sample.HasComma(("(", "1", ",", "2", ")"), 0, 4)
+	Sample.HasComma(("(", "f", "(", "1", ",", "2", ")", ")"), 0, 7) is false
+	mutable depth = 0
+	for Range(open + 1, close)
+		depth = depth + (tokens(value) is "(" then 1 else tokens(value) is ")" then -1 else 0)
+		if depth is 0 and tokens(value) is ","
+			return true
+	false
+InnerLowest(tokens Texts, open Number, close Number) Number
+	Sample.InnerLowest(("(", "a", "+", "b", "*", "c", ")"), 0, 6) is 11
+	Sample.InnerLowest(("(", "-", "1", ")"), 0, 3) is NoPrecedence
+	mutable depth = 0
+	mutable lowest = NoPrecedence
+	for Range(open + 1, close)
+		depth = depth + (tokens(value) is "(" then 1 else tokens(value) is ")" then -1 else 0)
+		if depth is 0 and (tokens(value) is not "-" or value > open + 1 and tokens(value - 1) is not in Openers)
+			let precedence = Precedence(tokens(value))
+			if precedence > 0 and precedence < lowest
+				lowest = precedence
+	lowest
+LeftPrecedence(tokens Texts, open Number) Number
+	Sample.LeftPrecedence(("a", "is", "not", "(", "b", ")"), 3) is 7
+	Sample.LeftPrecedence(("not", "(", "a", "and", "b", ")"), 1) is -1
+	if open is 0
+		return 0
+	let previous = tokens(open - 1)
+	if IsCompoundIs(tokens, open, previous)
+		return Precedence("is")
+	if previous is "not" or previous is "-" and (open is 1 or tokens(open - 2) is in Openers)
+		return -1
+	Precedence(previous)
+IsCompoundIs(tokens Texts, open Number, previous Text) Boolean
+	Sample.IsCompoundIs(("a", "is", "not", "in", "(", "b", ")"), 4, "in")
+	Sample.IsCompoundIs(("not", "(", "a", ")"), 1, "not") is false
+	let isTwo = open >= 2 and tokens(open - 2) is "is" and previous is in ("not", "in")
+	isTwo or open >= 3 and tokens(open - 3) is "is" and tokens(open - 2) is "not" and previous is "in"
+RedundantDetail(tokens Texts, open Number, close Number) Text
+	Sample.RedundantDetail(("(", "not", "a", ")", "and", "b"), 0, 3) is "( not a )" + NotHint
+	Sample.RedundantDetail(("(", "a", "+", "b", ")", ".", "Length"), 0, 4) is ""
+	Sample.RedundantDetail(("(", "a", "*", "b", ")", "+", "c"), 0, 4) is ""
+	let after = close + 1 < tokens.Length then tokens(close + 1) else ""
+	let left = LeftPrecedence(tokens, open)
+	if left < 0 or after is in (".", "(") or IsProtectedNot(tokens, open) or IsWrappedGroup(tokens, open, after)
+		return ""
+	let inner = InnerLowest(tokens, open, close)
+	let snippet = Text.Combine(tokens.Slice(open, close - open + 1), " ")
+	if inner is NoPrecedence and (tokens(open + 1) is "not" or IsDouble(tokens, open, close))
+		return snippet + (tokens(open + 1) is "not" then NotHint else UnneededHint)
+	InnerRedundant(tokens, open, after, inner, left) then snippet + UnneededHint else ""
+IsProtectedNot(tokens Texts, open Number) Boolean
+	Sample.IsProtectedNot(("a", "is", "(", "not", "b", ")"), 2)
+	Sample.IsProtectedNot(("(", "not", "a", ")"), 0) is false
+	open > 0 and tokens(open - 1) is "is" and tokens(open + 1) is "not"
+IsWrappedGroup(tokens Texts, open Number, after Text) Boolean
+	Sample.IsWrappedGroup(("(", "(", "a", "+", "b", ")", ")", "*", "c"), 1, ")")
+	Sample.IsWrappedGroup(("f", "(", "(", "a", "<", "1", ")", ")"), 2, ")") is false
+	open > 0 and tokens(open - 1) is "(" and after is ")" and IsGroupOpen(tokens, open - 1)
+IsDouble(tokens Texts, open Number, close Number) Boolean
+	Sample.IsDouble(("(", "(", "a", "+", "b", ")", ")"), 0, 6)
+	Sample.IsDouble(("(", "(", "a", ",", "b", ")", ")"), 0, 6) is false
+	if tokens(open + 1) is not "(" or Closing(tokens, open + 1) is not close - 1 or HasComma(tokens, open + 1, close - 1)
+		return false
+	InnerLowest(tokens, open + 1, close - 1) < NoPrecedence or tokens(open + 2) is "not"
+InnerRedundant(tokens Texts, open Number, after Text, inner Number, left Number) Boolean
+	Sample.InnerRedundant(("(", "a", "<", "1", ")", "or", "b"), 0, "or", 7, 0)
+	Sample.InnerRedundant(("(", "a", "or", "b", ")", "and", "c"), 0, "and", 4, 0) is false
+	let right = Precedence(after)
+	let needsRight = right > 0 and (inner < right or inner is 1 and right is 1)
+	let hasComma = after is "," or open > 0 and tokens(open - 1) is ","
+	if inner is NoPrecedence or left > 0 and inner <= left or needsRight or hasComma and inner is 1
+		return false
+	left is in BooleanPrecedences or right is in BooleanPrecedences or left is 0 and right is 0
+Precedence(operator Text) Number
+	Sample.Precedence("and") is 6 and Sample.Precedence("x") is 0
+	let at = SyntaxNode.operators.Index(operator)
+	at < 0 then 0 else SyntaxNode.precedences(at)

@@ -69,12 +69,12 @@ Operation(kind Number, isWhole Boolean, divisor Text) Text
 	Row.Operation(InstructionType.Modulo, true, "%t0b") is "    %t0c = arith.remsi %t0a, %t0b : i64"
 	Row.Operation(InstructionType.Modulo, false, "%t0b") is Remainder
 	let operands = Temp("a") + ", " + divisor
-	if (kind is InstructionType.Modulo) and (isWhole is false)
+	if kind is InstructionType.Modulo and isWhole is false
 		return "    " + Temp("c") + " = func.call @strict_remainder(" + operands + ") : (f64, f64) -> f64"
 	let generic = MlirStatements.Copy.Operation(kind)
 	let divided = kind is InstructionType.Divide then "floordivsi" else generic.Substring(0, 3) + "i"
 	let whole = kind is InstructionType.Modulo then "remsi" else divided
-	let isSum = (isWhole is false) and (kind is in (InstructionType.Add, InstructionType.Subtract))
+	let isSum = isWhole is false and kind is in (InstructionType.Add, InstructionType.Subtract)
 	let typed = (isSum then MlirStatements.Reassociated else "") + " : " + (isWhole then "i64" else "f64")
 	"    " + Temp("c") + " = arith." + (isWhole then whole else generic) + " " + operands + typed
 Compared(entry InstructionEntry) Texts
@@ -136,7 +136,7 @@ Load(suffix Text, register Number, wanted Text) Texts
 	if MlirWholeValues(position).IsPointer(wanted)
 		return MlirWholeValues(position).Loaded(Temp(suffix), "%r" + register + "p", wanted, wanted)
 	let reaching = MlirWholeTypes(function).Reaching(register, position, registers, naturals)
-	if (Register(register) is "f") and (reaching is "i")
+	if Register(register) is "f" and reaching is "i"
 		return MlirWholeValues(position).Loaded(Temp(suffix), "%r" + register + "i", "i", wanted)
 	MlirWholeValues(position).Loaded(Temp(suffix), "%r" + register, Register(register), wanted)
 Store(suffix Text, given Text, register Number) Texts
@@ -149,7 +149,7 @@ Store(suffix Text, given Text, register Number) Texts
 	if MlirWholeValues(position).IsPointer(given)
 		return MlirWholeValues(position).Stored(Temp(suffix), given, "%r" + register + "p", given)
 	let stored = MlirWholeValues(position).Stored(Temp(suffix), given, "%r" + register, Register(register))
-	if (Register(register) is "f") and (given is "i")
+	if Register(register) is "f" and given is "i"
 		return MlirWholeValues(position).Stored(Temp(suffix), "i", "%r" + register + "i", "i") + stored
 	stored
 Register(register Number) Text

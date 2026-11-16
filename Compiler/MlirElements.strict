@@ -31,8 +31,8 @@ IsKept(list Text) Boolean
 	for steps
 		let isRead = value.kind is InstructionType.IndexCall then value.texts(0) is list else false
 		let isConsumed = isRead then MlirFlats(function, index).IsConsumed(steps, index, value.payload(0)) else true
-		let isLater = isRead and (index > position) then IsStored(index, value.payload(0)) is false else false
-		if (isConsumed or isLater or (MlirMembered(function, position).Reader(index, value.payload(0)) is position)) is false
+		let isLater = isRead and index > position then IsStored(index, value.payload(0)) is false else false
+		if (isConsumed or isLater or MlirMembered(function, position).Reader(index, value.payload(0)) is position) is false
 			return false
 	true
 Index(text Text, temp Text) Text
@@ -53,7 +53,7 @@ IsStored(at Number, register Number) Boolean
 	let reuse = LoadReuse(steps)
 	for Range(at + 1, steps.Length)
 		let isKeeping = steps(value).kind is in (Inliner.Store, InstructionType.InvokeWriteToList)
-		if isKeeping and (register is in reuse.Reads(steps(value)))
+		if isKeeping and register is in reuse.Reads(steps(value))
 			return true
 		if reuse.Written(steps(value)) is register
 			return false

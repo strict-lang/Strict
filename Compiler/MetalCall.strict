@@ -46,10 +46,10 @@ Statement Text
 	Thread.Statement is "v8 = (int)strict_lane.x;"
 	MetalCall("call void @llvm.assume(i1 %3)", true).Statement is ";"
 	MetalCall("tail call void @llvm.nvvm.barrier0()", true).Statement is "threadgroup_barrier(mem_flags::mem_device);"
-	if (Callee is in Ignored) or (Callee is in Barriers)
+	if Callee is in Ignored or Callee is in Barriers
 		return Callee is in Ignored then ";" else "threadgroup_barrier(mem_flags::mem_device);"
 	let result = MetalInstruction(line, isKernel).Result
 	let expression = Expression
-	if (expression is "") or (MetalValue(Type).Type is "")
+	if expression is "" or MetalValue(Type).Type is ""
 		return ""
 	result is "" then expression + ";" else MetalValue(result).Operand("") + " = " + expression + ";"

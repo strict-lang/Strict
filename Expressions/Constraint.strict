@@ -46,7 +46,7 @@ IsConstrained(lines Texts) Boolean
 	Constraint.IsConstrained(List(Text) + "has x Number with value.Bits is 32") is false
 	Constraint.IsConstrained(List(Text) + "Run(a Number with value > 0)") is false
 	for lines
-		if TypeShape(lines).IsMemberLine(value) and (Of(value) is not "")
+		if TypeShape(lines).IsMemberLine(value) and Of(value) is not ""
 			return true
 	false
 Kind(lines Texts) Text
@@ -55,12 +55,11 @@ Kind(lines Texts) Text
 	Constraint.Kind(("has numbers with Length is 3", "has name Text")) is "true"
 	mutable checked = List(Text)
 	for lines
-		if TypeShape(lines).IsMemberLine(value) and (Of(value) is not "")
+		if TypeShape(lines).IsMemberLine(value) and Of(value) is not ""
 			checked = checked + value
 	if checked.Length is 0
 		return ""
-	let isOnly = (checked.Length is 1) and (TypeShape(lines).MemberScope.names.Length is 1)
-	let length = isOnly then Length(checked.First) else 0
+	let length = checked.Length is 1 and TypeShape(lines).MemberScope.names.Length is 1 then Length(checked.First) else 0
 	length > 0 then length to Text else "true"
 Length(line Text) Number
 	Constraint.Length("has numbers with Length is 3 and value.Bits is 32") is 3
@@ -71,7 +70,7 @@ Length(line Text) Number
 	Constraint.Length("has colors with Length is Size.Length") is 0
 	let checking = Of(line.Replace(" . ", "."))
 	let words = checking.Split(" ")
-	(words.Length is 3) and checking.StartsWith("Length is ") then Literal(words.Last) else 0
+	words.Length is 3 and checking.StartsWith("Length is ") then Literal(words.Last) else 0
 Literal(word Text) Number
 	Constraint.Literal("3") is 3
 	Constraint.Literal("Size.Length") is 0
@@ -104,7 +103,7 @@ Of(line Text) Text
 	Constraint.Of("has width Number") is ""
 	Constraint.Of("has label = \"red with blue\" with value is not \"\"") is "value is not \"\""
 	let start = WithStart(line)
-	if (start < 0) or line.StartsWith(" with Step ", start)
+	if start < 0 or line.StartsWith(" with Step ", start)
 		return ""
 	Checking(line.Substring(start + 6, line.Length - start - 6))
 WithStart(line Text) Number
@@ -113,8 +112,8 @@ WithStart(line Text) Number
 	Constraint.WithStart("has a Number") is -1
 	mutable isText = false
 	for line.Length
-		isText = (line.StartsWith("\"", index) and (line.StartsWith("\\", index - 1) is false)) is not isText
-		if (isText is false) and line.StartsWith(" with ", index)
+		isText = (line.StartsWith("\"", index) and line.StartsWith("\\", index - 1) is false) is not isText
+		if isText is false and line.StartsWith(" with ", index)
 			return index
 	-1
 Parameter(header HeaderTokens, parameter Text) Text
@@ -125,15 +124,15 @@ Parameter(header HeaderTokens, parameter Text) Text
 	mutable isConstraint = false
 	for Range(header.ParameterPosition(parameter) + 1, header.ParametersEnd)
 		let word = header.tokens(value)
-		if (word is ",") and (header.Depth(value) is 1)
+		if word is "," and header.Depth(value) is 1
 			return Text.Combine(words, " ").Replace(" . ", ".")
 		words = isConstraint then words + word else words
-		isConstraint = isConstraint or (word is "with") and (header.tokens(value + 1) is not "Step")
+		isConstraint = isConstraint or word is "with" and header.tokens(value + 1) is not "Step"
 	Text.Combine(words, " ").Replace(" . ", ".")
 Where(path Text, lines Texts) Texts
 	Constraint.Where("A.strict", List(Text) + "has a Number where value > 0").First is Misnamed
 	Constraint.Where("A.strict", List(Text) + "has a Number with value > 0").Length is 0
 	Constraint.Where("A.strict", List(Text) + "	has a Number where value > 0").Length is 0
 	for lines
-		if (value.StartsWith("	") is false) and ("where" is in Tokenizer(value).Tokens)
+		if value.StartsWith("	") is false and "where" is in Tokenizer(value).Tokens
 			ResolveCheck.Located(path, index + 1, "ConstraintNeedsWith: where, write " + value.Replace(" where ", " with "))

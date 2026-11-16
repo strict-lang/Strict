@@ -13,7 +13,7 @@ Dead Texts
 	let registers = PayloadDecoder(function.method.instructions(position)).Arguments
 	mutable lines = List(Mutable(Text))
 	for registers
-		if (registers.Index(value) is index) and IsSpent(value)
+		if registers.Index(value) is index and IsSpent(value)
 			let zero = "%t" + position + "dz" + index
 			let dead = "    func.call @strict_rc_dead(%t" + position + "a" + index + ", " + zero + ") : (f64, f64) -> ()"
 			lines = lines + ("    " + zero + " = arith.constant 0.0 : f64") + dead
@@ -26,11 +26,11 @@ IsSpent(register Number) Boolean
 	let owned = MlirOwned(function, position)
 	let isCall = writer >= 0 then function.method.instructions(writer).kind is InstructionType.Invoke else false
 	let kind = MlirKinds(function).KindOf(position, register)
-	if ((isCall and owned.IsHeap(kind)) is false) or MlirDying(function, position).IsSwept("", kind)
+	if (isCall and owned.IsHeap(kind)) is false or MlirDying(function, position).IsSwept("", kind)
 		return false
 	let isKept = MlirCarried(function).IsKeptValue(position, register, List(Text), 0)
 	let isNext = MlirHanded(function, writer).First(register) is position
-	isKept and isNext and (owned.IsLeaked(position, register) is false) and IsUnread(register)
+	isKept and isNext and owned.IsLeaked(position, register) is false and IsUnread(register)
 IsUnread(register Number) Boolean
 	Passing.IsUnread(2)
 	Twice.IsUnread(2) is false

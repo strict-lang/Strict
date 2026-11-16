@@ -37,7 +37,7 @@ IsKernel Boolean
 	MlirWholeKernel(MlirParallel.Doubling.function, 2).IsKernel is false
 	MlirWholeKernel(Kernel.function, 0).IsKernel is false
 	let isBegin = function.method.instructions(position).kind is InstructionType.LoopBegin
-	if (isBegin is false) or (Call < 0) or (MlirLayout(function).Packed(position) is not MlirDoubles.LanesFormat)
+	if isBegin is false or Call < 0 or MlirLayout(function).Packed(position) is not MlirDoubles.LanesFormat
 		return false
 	let callee = Callee
 	let isWhole = MlirWholeFunction(callee).IsWhole and MlirWholeFlat(callee).IsFlat
@@ -63,10 +63,10 @@ IsPlain Boolean
 	let invoke = function.method.instructions(Call)
 	for Range(position + 1, function.method.LoopEndOf(position))
 		let entry = function.method.instructions(value)
-		let isWrite = (entry.kind is InstructionType.InvokeWriteToList) and (entry.texts(0) is "forResult")
-		let isCollected = isWrite and (entry.payload(0) is invoke.payload(0))
-		let isMove = (entry.kind is InstructionType.LoadVariableToRegister) and (entry.texts(0) is not "value")
-		if (isMove or isCollected or (value is Call) or (entry.kind is InstructionType.CheckError)) is false
+		let isWrite = entry.kind is InstructionType.InvokeWriteToList and entry.texts(0) is "forResult"
+		let isCollected = isWrite and entry.payload(0) is invoke.payload(0)
+		let isMove = entry.kind is InstructionType.LoadVariableToRegister and entry.texts(0) is not "value"
+		if (isMove or isCollected or value is Call or entry.kind is InstructionType.CheckError) is false
 			return false
 	true
 IsSourced Boolean
@@ -75,10 +75,10 @@ IsSourced Boolean
 	let kinds = MlirWholeFunction(Callee).Kinds
 	for Reads
 		let name = MlirWholeFlat(function).Source(value, Call)
-		let isIndexed = (name is "") and (Source(value) is "index")
-		if (kinds(index) is "o") and ((name is "") or (MemberKinds(index).Length is 0))
+		let isIndexed = name is "" and Source(value) is "index"
+		if kinds(index) is "o" and (name is "" or MemberKinds(index).Length is 0)
 			return false
-		if (kinds(index) is "i") and (isIndexed is false) and (name is "")
+		if kinds(index) is "i" and isIndexed is false and name is ""
 			return false
 	true
 Reads Numbers
@@ -111,7 +111,7 @@ Free Texts
 	let reads = Reads
 	mutable names = List(Mutable(Text))
 	for position, name in Range(0, reads.Length), Inputs(Source(reads(position)), kinds(position), position)
-		if (name is not "index") and (name is not in names)
+		if name is not "index" and name is not in names
 			names.Add(name)
 	names
 Inputs(name Text, kind Text, input Number) Texts

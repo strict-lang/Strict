@@ -25,16 +25,16 @@ IsForeign Boolean
 	MlirForeign(MlirFunction(List(TypeEntry), Adder.type, TypeEntry.ToNumber)).IsForeign is false
 	MlirForeign(Counting).IsForeign
 	let name = function.type.Name
-	let isBase = (name.IndexOf("/") >= 0) and (name.IndexOf("/") is name.LastIndexOf("/"))
-	let isBodyless = (function.method.instructions.Length is 0) and (function.type.members.Length < 2)
-	isBodyless and (isBase is false) and IsNative(function.method)
+	let isBase = name.IndexOf("/") >= 0 and name.IndexOf("/") is name.LastIndexOf("/")
+	let isBodyless = function.method.instructions.Length is 0 and function.type.members.Length < 2
+	isBodyless and isBase is false and IsNative(function.method)
 IsNative(method MethodEntry) Boolean
 	MlirForeign(Adder).IsNative(Add)
 	MlirForeign(Counting).IsNative(Started)
 	MlirForeign(Counting).IsNative(MethodEntry("from", List(MemberEntry), "None", List(InstructionEntry))) is false
 	let first = method.Name(0)
-	let isConstructor = (method.Name is "from") and (method.parameters.Length > 0) and (function.type.members.Length is 1)
-	(first.Lower is not first) or isConstructor
+	let isConstructor = method.Name is "from" and method.parameters.Length > 0 and function.type.members.Length is 1
+	first.Lower is not first or isConstructor
 Symbol Text
 	MlirForeign(Adder).Symbol is "Adder_Add"
 	function.type.JustName + "_" + function.method.Name
@@ -88,7 +88,7 @@ Returned Texts
 	MlirForeign(Splitter).Returned.First.IndexOf("@strict_foreign_rows(") > 0
 	MlirForeign(Closing).Returned.First.IndexOf("@strict_foreign_none(") > 0
 	let returned = function.method.returnType
-	let single = (returned is "None") then "none" else (returned.EndsWith("Text") then "text" else "number")
+	let single = returned is "None" then "none" else (returned.EndsWith("Text") then "text" else "number")
 	let kind = IsNumbers(returned) then "numbers" else IsRows(returned) then "rows" else single
 	("    %converted = func.call @strict_foreign_" + kind + "(%result) : (f64) -> f64", "    return %converted : f64")
 IsNumbers(typeName Text) Boolean

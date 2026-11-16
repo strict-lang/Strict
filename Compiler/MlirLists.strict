@@ -35,8 +35,8 @@ Temp(suffix Text) Text
 Emitted Texts
 	MlirLists(Listed, 3).Emitted.Length is 4
 	let entry = function.method.instructions(position)
-	let isFlat = (entry.kind is InstructionType.IndexCall) and MlirCouples(function, position).IsFlatRead(entry)
-	if (function.FastLoop >= 0) and (isFlat is false)
+	let isFlat = entry.kind is InstructionType.IndexCall and MlirCouples(function, position).IsFlatRead(entry)
+	if function.FastLoop >= 0 and isFlat is false
 		return MlirFastLoop(function, function.FastLoop).Emitted(position)
 	if entry.kind is InstructionType.CopyList
 		return Copied(entry)
@@ -55,7 +55,7 @@ Literal(literal Runtime/VmValue, slot Text, suffix Text) Texts
 	if count is 0
 		return MlirPairs(function, position).Started(slot, suffix)
 	let result = Temp(suffix + "e" + (count - 1) + "l")
-	if (suffix is not "") or (MlirConstants(function, position).IsConstant is false)
+	if suffix is not "" or MlirConstants(function, position).IsConstant is false
 		return Built(literal, suffix) + function.Store(result, slot)
 	Cached(Built(literal, suffix), result, "strict_list_pin") + function.Store(Temp("r"), slot)
 Built(literal Runtime/VmValue, suffix Text) Texts

@@ -30,8 +30,8 @@ IsAliased(entry InstructionEntry, position Number) Boolean
 	MlirLayout(Logged).IsAliased(LoggerField, 2)
 	MlirLayout(MlirKinds.Graded.function).IsAliased(MlirKinds.Characters, 1)
 	let kinds = MlirKinds(function)
-	let isValue = (entry.texts(0) is "value") or (IsStruct(kinds.KindOf(position, entry.payload(1))) is false)
-	isValue or (TypeEntry.ShortName(kinds.WrittenKind(position)) is "Logger")
+	let isValue = entry.texts(0) is "value" or IsStruct(kinds.KindOf(position, entry.payload(1))) is false
+	isValue or TypeEntry.ShortName(kinds.WrittenKind(position)) is "Logger"
 IsStruct(typeName Text) Boolean
 	MlirLayout(MlirLanes.Sample.function).IsStruct("Rgb") is false
 	Wrapping.IsStruct("Shape")
@@ -41,10 +41,10 @@ IsStruct(typeName Text) Boolean
 	let isStruct = function.TypeOf(typeName, true).IsStruct
 	let couples = MlirCouples(function, 0)
 	let isPacked = couples.IsCoupled(typeName) or couples.IsSingle(typeName) or MlirLanes(function, 0).IsPacked(typeName)
-	isStruct and (isPacked is false)
+	isStruct and isPacked is false
 Represented(kind Text) Text
-	(Wrapping.Represented("Angle") is "Number") and (Wrapping.Represented("Shape") is "Shape")
-	(Wrapping.Represented("Texts") is "List(Text)") and (Wrapping.Represented("Boolean") is "Boolean")
+	Wrapping.Represented("Angle") is "Number" and Wrapping.Represented("Shape") is "Shape"
+	Wrapping.Represented("Texts") is "List(Text)" and Wrapping.Represented("Boolean") is "Boolean"
 	Wrapping.Represented("Dictionary(Text, Number)") is "List(List(Text, Number))"
 	if kind is in Plain
 		return kind
@@ -61,12 +61,12 @@ Plural(kind Text) Text
 	if kind.StartsWith("List(") and kind.EndsWith(")")
 		return IsNumeric(kind.Substring(5, kind.Length - 6)) then "List(Number)" else kind
 	let type = function.TypeOf(kind)
-	let isUnknown = (type.members.Length is 0) and (type.methods.Length is 0) and kind.EndsWith("s")
+	let isUnknown = type.members.Length is 0 and type.methods.Length is 0 and kind.EndsWith("s")
 	isUnknown then Plural("List(" + kind.Substring(0, kind.Length - 1) + ")") else kind
 IsNumeric(kind Text) Boolean
 	Wrapping.IsNumeric("Byte")
 	MlirLayout(MlirLanes.Sample.function).IsNumeric("Rgb") is false
-	(Represented(kind) is "Number") and (MlirLanes(function, 0).IsPacked(kind) is false)
+	Represented(kind) is "Number" and MlirLanes(function, 0).IsPacked(kind) is false
 Wrapped(typeName Text) Text
 	MlirLayout(Eights).Stored("%d", "%p", 4)(0).Length is 76
 	Wrapping.Wrapped("Angle") is "Degrees"
@@ -81,7 +81,7 @@ Owner(type TypeEntry, name Text) TypeEntry
 		if value.Name is name
 			return type
 	let inner = type.Wrapped is "" then type else function.TypeOf(type.Wrapped, true)
-	(inner.Name is "") or (inner.Name is type.Name) then type else Owner(inner, name)
+	inner.Name is "" or inner.Name is type.Name then type else Owner(inner, name)
 IsInitializer Boolean
 	Packing.Returned(2)(0) is "    %t2nz = arith.constant 8 : i64"
 	Packing.Returned(2)(2) is "    %t2n0 = llvm.getelementptr %t2np[0] : (!llvm.ptr) -> !llvm.ptr, f64"
@@ -119,7 +119,7 @@ IsByte(typeName Text) Boolean
 	Wrapping.IsByte("Byte")
 	Wrapping.IsByte("Number") is false
 	let changing = function.TypeOf(typeName, true).Changing
-	(changing.Length is 1) and (changing.First.Bits is 8)
+	changing.Length is 1 and changing.First.Bits is 8
 Paired(kind Text) Texts
 	Wrapping.Paired("List(Text, Number)") is ("Text", "Number")
 	Wrapping.Paired("Dictionary(Text, Shape)") is ("Text", "Shape")

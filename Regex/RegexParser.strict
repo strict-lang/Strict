@@ -68,7 +68,7 @@ Atom(start Number, groups Number) RegexPart
 	RegexParser("*").Atom(0, 0) is InvalidPattern
 	RegexParser("\\d").Atom(0, 0).next is 2
 	RegexParser("[ab]").Atom(0, 0).next is 4
-	RegexParser("\\da").Atom(0, 0).steps(0).Accepts(55) and (RegexParser("[ab]").Atom(0, 0).steps(0).Accepts(91) is false)
+	RegexParser("\\da").Atom(0, 0).steps(0).Accepts(55) and RegexParser("[ab]").Atom(0, 0).steps(0).Accepts(91) is false
 	let character = At(start)
 	if character is "("
 		return Group(start, groups)
@@ -93,9 +93,9 @@ Group(start Number, groups Number) RegexPart
 Class(start Number, groups Number) RegexPart
 	RegexParser("[a-c_]").Class(1, 0).steps(0).Accepts(98) and RegexParser("[a_]").Class(1, 0).steps(0).Accepts(95)
 	RegexParser("[a]").Class(1, 0).steps(0).Accepts(98) is false
-	(NotA.Accepts(97) is false) and NotA.Accepts(94)
-	RegexParser("[]a]").Class(1, 0).steps(0).Accepts(93) and (RegexParser("[").Class(1, 0) is InvalidPattern)
-	(RegexParser("[a").Class(1, 0) is InvalidPattern) and (RegexParser("[ab]c").Class(1, 0).next is 4)
+	NotA.Accepts(97) is false and NotA.Accepts(94)
+	RegexParser("[]a]").Class(1, 0).steps(0).Accepts(93) and RegexParser("[").Class(1, 0) is InvalidPattern
+	RegexParser("[a").Class(1, 0) is InvalidPattern and RegexParser("[ab]c").Class(1, 0).next is 4
 	let isNegated = At(start) is "^"
 	mutable item = Item(isNegated then start + 1 else start)
 	mutable ranges = item.steps(0).ranges
@@ -113,7 +113,7 @@ Item(start Number) RegexPart
 	let after = start + (isEscape then 2 else 1)
 	if low.isNegated
 		return InvalidPattern
-	if (At(after) is not "-") or (At(after + 1) is in ("]", ""))
+	if At(after) is not "-" or At(after + 1) is in ("]", "")
 		return RegexPart(List(RegexStep) + low, after, 0)
 	RegexPart(List(RegexStep) + RegexStep(RegexStep.Consume, (low.ranges(0), Code(after + 1))), after + 2, 0)
 Escaped(character Text) RegexStep

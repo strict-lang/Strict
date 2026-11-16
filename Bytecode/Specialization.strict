@@ -33,9 +33,9 @@ Name(node SyntaxNode, parameters Texts, owner Text, block CodeBlock) Text
 	mutable actuals = List(Text)
 	for parameters
 		let trait = IsTrait(value)
-		let isTyped = IsGeneric(value) or (IsPlain(owner) and (value is "Generic"))
-		let actual = isTyped and (index < arguments.Length) then arguments(index) else ""
-		if actual.StartsWith(value + "(") or ((value is "Generic") or trait) and (actual is not in ("", "Generic", value))
+		let isTyped = IsGeneric(value) or IsPlain(owner) and value is "Generic"
+		let actual = isTyped and index < arguments.Length then arguments(index) else ""
+		if actual.StartsWith(value + "(") or (value is "Generic" or trait) and actual is not in ("", "Generic", value)
 			actuals = actuals + actual
 	actuals.Length is 0 then node.text else node.text + "(" + Text.Combine(arguments) + ")"
 Arguments(node SyntaxNode, block CodeBlock) Texts
@@ -59,7 +59,7 @@ IsPlain(owner Text) Boolean
 	Traited.IsPlain("Many") is false
 	let short = TypeEntry.ShortName(owner)
 	let members = Text.Combine(values.target.types.MembersOf(short).types)
-	(values.target.types.BaseName(short) is short) and (members.IndexOf("Generic") < 0)
+	values.target.types.BaseName(short) is short and members.IndexOf("Generic") < 0
 IsGeneric(type Text) Boolean
 	Plain.IsGeneric("Wrapped")
 	Plain.IsGeneric("Halver") is false
@@ -69,7 +69,7 @@ IsGeneric(type Text) Boolean
 	Traited.Name(Passing, List(Text) + "Counter", "Using", CodeBlock.Empty.Declare("w", "Many")) is "Through(Many)"
 	Plain.Name(Passing, List(Text) + "Wrapped", "Using", CodeBlock.Empty.Declare("w", "Halver")) is "Through"
 	let members = values.target.types.MembersOf(type).types
-	IsTrait(type) or ("Generic" is in members) or ("Generics" is in members)
+	IsTrait(type) or "Generic" is in members or "Generics" is in members
 IsTrait(type Text) Boolean
 	Traited.IsTrait("Counter")
 	Plain.IsTrait("Halver") is false
@@ -89,8 +89,8 @@ Header(line Text, name Text) Text
 		let base = " " + Parameter(line, name, index)
 		let at = header.IndexOf(base, after)
 		let rest = header.Substring(at + base.Length, header.Length - at - base.Length)
-		header = (at < 0) or (base is " ") then header else header.Substring(0, at + 1) + value + rest
-		after = (at < 0) or (base is " ") then after else at + value.Length
+		header = at < 0 or base is " " then header else header.Substring(0, at + 1) + value + rest
+		after = at < 0 or base is " " then after else at + value.Length
 	header
 Parameter(line Text, name Text, index Number) Text
 	Plain.Parameter(Using(1), Halving, 0) is "Wrapped"
@@ -102,7 +102,7 @@ Parameter(line Text, name Text, index Number) Text
 	let parameters = HeaderTokens(Tokenizer(line).Tokens).ParameterTypes
 	if arguments.Length is parameters.Length
 		let type = parameters(index)
-		return IsGeneric(type) or (type is "Generic") then type else ""
+		return IsGeneric(type) or type is "Generic" then type else ""
 	let actual = arguments(index)
 	actual.IndexOf("(") > 0 then actual.Substring(0, actual.IndexOf("(")) else "Generic"
 Methods(codegen TypeCodegen, names Texts) List(MethodEntry)
@@ -122,9 +122,9 @@ Start(lines Texts, method Text) Number
 	let ordinal = Overloads(values.target.types).Chosen(values.target.TypeName, base, arguments)
 	mutable seen = -1
 	for lines
-		if TypeShape(lines).IsMethodHeader(value) and (Tokenizer(value).Tokens.First is base)
+		if TypeShape(lines).IsMethodHeader(value) and Tokenizer(value).Tokens.First is base
 			seen = seen + 1
-			if (ordinal < 0) or (seen is ordinal)
+			if ordinal < 0 or seen is ordinal
 				return index
 	-1
 Specialized(codegen TypeCodegen, start Number, name Text) MethodEntry
@@ -146,6 +146,6 @@ Completed(codegen TypeCodegen, entry TypeEntry, targets Texts) TypeEntry
 		let method = value.StartsWith(prefix) then value.Substring(prefix.Length, value.Length - prefix.Length) else ""
 		let converted = method.StartsWith("to ") then method.Split(" ") else (method, "")
 		let chosen = method is "" then 0 else entry.Chosen(converted.First, -1, converted.Last, List(Text))
-		if (chosen < 0) and (method is not in names)
+		if chosen < 0 and method is not in names
 			names = names + method
 	names.Length is 0 then entry else TypeEntry(entry.Name, entry.members, entry.methods + codegen.Methods(names))

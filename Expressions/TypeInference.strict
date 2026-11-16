@@ -52,7 +52,7 @@ ConstructedType(node SyntaxNode) Text
 	NoInference.OperatorType(SyntaxNode("Missing", "", NoNode), NoShape, NoShape) is "Unknown"
 	NoInference.OperatorType(SyntaxParser(Tokenizer("(1, 2, 3)").Tokens).Parse, NoShape, NoShape) is "Numbers"
 	NoInference.ConstructedType(SyntaxNode("Call", "Mutable", (SyntaxNode("Identifier", "Text"), NoNode))) is "Text"
-	(node.Kind is "Call") and (node.text is "Mutable") then ConstructedType(node.children(0)) else node.text
+	node.Kind is "Call" and node.text is "Mutable" then ConstructedType(node.children(0)) else node.text
 IdentifierType(name Text, scope Scope, current Scope) Text
 	NoInference.MemberCallType(SyntaxNode("Member", "+", (ToText, ToText)), NoShape, NoShape) is "Unknown"
 	NoInference.MemberCallType(SyntaxParser(Tokenizer("t.value(1)").Tokens).Parse, Scope(("t"), ("Bs")), NoShape) is "B"
@@ -65,16 +65,16 @@ IdentifierType(name Text, scope Scope, current Scope) Text
 		return ImplicitValueType(name, scope)
 	if current.TypeOf(name) is not ""
 		return current.TypeOf(name)
-	(name(0).Upper is name(0)) or (name is "outer") then name else "Unknown"
+	name(0).Upper is name(0) or name is "outer" then name else "Unknown"
 Called(node SyntaxNode, scope Scope, current Scope) Text
 	NoInference.Called(SyntaxNode("Call", "Mutable", SyntaxNode("Number", "5")), NoShape, NoShape) is "Number"
 	NoInference.Called(Pairs, NoShape, NoShape) is "Dictionary(Number, Text)"
 	NoInference.Called(Typed, NoShape, NoShape) is "Dictionary(Text, Number)"
 	Hashing.Called(SyntaxNode("Call", "Hash", SyntaxNode("Number", "5")), NoShape, NoShape) is "Hash(Number)"
-	if (node.text is "Dictionary") and (node.children.Length > 0)
+	if node.text is "Dictionary" and node.children.Length > 0
 		let pair = node.children(0).Kind is "List" then node.children(0).children else node.children
 		return "Dictionary(" + TypeOf(pair(0), scope, current) + ", " + TypeOf(pair.Last, scope, current) + ")"
-	if (node.text is "Mutable") and (node.children.Length is 1)
+	if node.text is "Mutable" and node.children.Length is 1
 		return TypeOf(node.children(0), scope, current)
 	let instantiated = Instantiation(types).Name(node, value, scope, current)
 	let overloaded = instantiated is "" then Overloads(types).Returned(node, value, scope, current) else instantiated
@@ -113,11 +113,11 @@ MemberCallType(node SyntaxNode, scope Scope, current Scope) Text
 	Overloads.LabelInference.MemberCallType(Overloads.LabelerLabels, NoShape, NoShape) is "Numbers"
 	let instanceType = TypeOf(node.children(0), scope, current)
 	let precedence = node.Kind is "MethodCall" then SyntaxNode("Binary", node.text).Precedence else 0
-	if precedence is in SyntaxNode.ArithmeticPrecedences or (types.MethodsOf(instanceType).Count(node.text) > 1)
+	if precedence is in SyntaxNode.ArithmeticPrecedences or types.MethodsOf(instanceType).Count(node.text) > 1
 		return ArithmeticType(SyntaxNode("Binary", node.text, node.children), scope, current)
 	let type = Overloads(types).Typed(node, instanceType, value, scope, current)
-	let isMember = (node.text is "value") or Indexing(types).IsIndexed(instanceType, node.text, node.children.Length - 1)
-	(node.Kind is "MethodCall") and isMember then types.ElementType(type) else type
+	let isMember = node.text is "value" or Indexing(types).IsIndexed(instanceType, node.text, node.children.Length - 1)
+	node.Kind is "MethodCall" and isMember then types.ElementType(type) else type
 ImplicitValueType(name Text, scope Scope) Text
 	NoInference.TypeOf(SyntaxParser(Tokenizer("(1, 2) + 3").Tokens).Parse, NoShape, NoShape) is "Numbers"
 	TypeInference(KnownTypes.Nested, NoShapes).ImplicitValueType("f", Scope(("value", "outer"), ("G", "G"))) is "F"
@@ -138,7 +138,7 @@ OperatorType(node SyntaxNode, scope Scope, current Scope) Text
 		return "Boolean"
 	if node.Kind is "Binary"
 		return BinaryType(node, scope, current)
-	if (node.Kind is "List") and (node.children.Length is 2)
+	if node.Kind is "List" and node.children.Length is 2
 		return MethodBodies.Item(TypeOf(node.children(0), scope, current) + ", " + TypeOf(node.children(1), scope, current))
 	if node.Kind is "List"
 		return TypeOf(node.children(0), scope, current) + "s"
@@ -153,7 +153,7 @@ BinaryType(node SyntaxNode, scope Scope, current Scope) Text
 		return ConditionalType(node, scope, current)
 	if node.children(0).Kind is "Missing"
 		return TypeOf(node.children(1), scope, current)
-	if (node.text is in ("and", "or", "xor")) and (TypeOf(node.children(0), scope, current) is "Number")
+	if node.text is in ("and", "or", "xor") and TypeOf(node.children(0), scope, current) is "Number"
 		return "Number"
 	node.Precedence < SyntaxNode.AdditivePrecedence then "Boolean" else ArithmeticType(node, scope, current)
 ArithmeticType(node SyntaxNode, scope Scope, current Scope) Text
@@ -163,7 +163,7 @@ ArithmeticType(node SyntaxNode, scope Scope, current Scope) Text
 	mutable arguments = List(Mutable(Text))
 	for Range(1, node.children.Length)
 		arguments.Add(TypeOf(node.children(value), scope, current))
-	let isJoined = (node.text is "+") and (left is "Number") and (arguments(0) is "Text" or types.IsPlural(arguments(0)))
+	let isJoined = node.text is "+" and left is "Number" and (arguments(0) is "Text" or types.IsPlural(arguments(0)))
 	let ordinal = Overloads(types).Chosen(left, node.text, arguments)
 	let declared = types.MethodsOf(left).TypeAt(node.text, ordinal)
 	let overloaded = declared is in ("List", types.BaseName(left)) then left else declared
@@ -188,17 +188,17 @@ Converter(source Text, type Text) Text
 	Colors.Converter("Number", "Color") is ""
 	Colors.Converter("Character", "Text") is "to"
 	Colors.Converter("Text", "Character") is "to"
-	if (source is in ("Character", "Text")) and (type is in ("Character", "Text")) and (source is not type)
+	if source is in ("Character", "Text") and type is in ("Character", "Text") and source is not type
 		return "to"
-	if (source is in Primitives) or (source is type)
+	if source is in Primitives or source is type
 		return ""
 	let origins = types.ParametersOf(type, "from types", 1)
-	let isFrom = (type is not in Primitives) and (origins.Length is 1) and (origins(0) is source)
+	let isFrom = type is not in Primitives and origins.Length is 1 and origins(0) is source
 	types.MethodsOf(source).Has("to", type) then "to" else (isFrom then "from" else "")
 Assigned(target Text, assigned Text) Text
 	Colors.Assigned("Number", "Text") is "Text"
-	Colors.Converter("Text", "Text") is "" and (Colors.Converter("Number", "Text") is "")
-	Colors.Converter("Text", "Number") is "" and (Colors.Converter("Hash", "Color") is "")
+	Colors.Converter("Text", "Text") is "" and Colors.Converter("Number", "Text") is ""
+	Colors.Converter("Text", "Number") is "" and Colors.Converter("Hash", "Color") is ""
 	TypeInference(KnownTypes.Sample, (KnownTypes.CountMethods, NoShape)).Enumerated("Count").Length is 0
 	TypeInference(KnownTypes.Sample, (NoShape)).Enumerated("Text").Length is 0
 	TypeInference(KnownTypes.Measured, (NoShape, Scope(("Length"), ("1")))).Enumerated("Length") is ("Length")
@@ -213,7 +213,7 @@ Enumerated(typeName Text) Texts
 	NoInference.Enumerated("Missing").Length is 0
 	NoInference.IdentifierType("x", Scope(("x", "y"), ("Number", "Text")), NoShape) is "Number"
 	let position = types.Index(typeName)
-	if (position < 0) or (position >= constants.Length) or (types.MembersOf(typeName).names.Length > 0)
+	if position < 0 or position >= constants.Length or types.MembersOf(typeName).names.Length > 0
 		return List(Text)
 	for types.MethodsOf(typeName).names
 		if value is not in constants(position).names
@@ -227,6 +227,6 @@ Origin(name Text, scope Scope) Text
 	NoInference.Origin("A", NoShape) is "method A"
 	if scope.TypeOf(name) is not ""
 		return (types.MembersOf(scope.TypeOf("self type")).TypeOf(name) is "" then "local " else "member ") + name
-	let isImplicit = (ImplicitValueType(name, scope) is not "") and (scope.TypeOf("outer") is "")
+	let isImplicit = ImplicitValueType(name, scope) is not "" and scope.TypeOf("outer") is ""
 	let holder = isImplicit then types.Holder(scope.TypeOf("value"), name, 1) else ""
 	holder is "" then "method " + name else holder + "." + name

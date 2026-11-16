@@ -39,20 +39,20 @@ Flattened Number
 	if type is ""
 		return 0
 	let kernel = MlirKernel(MlirFunction(function, FastLoop = -1), position)
-	let isRaw = kernel.IsSimple and (kernel.Sources.Length is 0) and MlirLoops(function, position).IsCollecting
+	let isRaw = kernel.IsSimple and kernel.Sources.Length is 0 and MlirLoops(function, position).IsCollecting
 	let count = MlirCounter(function, position).Constant(function.method.instructions(position).payload(0), -1)
-	isRaw and (MlirFlats(function, position).Count(type) is count) then count else 0
+	isRaw and MlirFlats(function, position).Count(type) is count then count else 0
 Made(end Number) Text
 	Flattening.Made(5) is "Strict/Math/Tripling"
 	Flattening.Made(4) is ""
 	Listing.Made(5) is ""
 	Misread.Made(5) is ""
 	let steps = function.method.instructions
-	if (end + 2 >= steps.Length) or (Text.Combine(steps(end + 1).texts) is not "forResult")
+	if end + 2 >= steps.Length or Text.Combine(steps(end + 1).texts) is not "forResult"
 		return ""
 	let made = steps(end + 2)
-	let isMade = (made.kind is InstructionType.Invoke) and (made.texts(1) is "from")
-	isMade and (PayloadDecoder(made).Arguments is (steps(end + 1).payload(0))) then made.texts(0) else ""
+	let isMade = made.kind is InstructionType.Invoke and made.texts(1) is "from"
+	isMade and PayloadDecoder(made).Arguments is (steps(end + 1).payload(0)) then made.texts(0) else ""
 IsIterated Boolean
 	Iterating.IsIterated
 	Laning.IsIterated
@@ -159,8 +159,8 @@ Stored(element Text, pointer Text) Texts
 	Collecting.Stored("%e", "%p").Last is "    llvm.store %eb, %p : i8, !llvm.ptr"
 	Doubling.Stored("%e", "%p") is ("    llvm.store %e, %p : f64, !llvm.ptr")
 	Laning.Stored("%e", "%p") is ("    %eb = arith.fptoui %e : f64 to i32", "    llvm.store %eb, %p : i32, !llvm.ptr")
-	(Singling.Stored("%e", "%p") is Single) and (Flattening.Stored("%e", "%p") is Single)
-	if (IsCollected or (Flattened > 0)) is false
+	Singling.Stored("%e", "%p") is Single and Flattening.Stored("%e", "%p") is Single
+	if (IsCollected or Flattened > 0) is false
 		return List(Text) + ("    llvm.store " + element + ", " + pointer + " : f64, !llvm.ptr")
 	let byte = "    " + element + "b = func.call @strict_byte_packed(" + element + ") : (f64) -> i8"
 	let lanes = "    " + element + "b = arith.fptoui " + element + " : f64 to i32"
@@ -182,4 +182,4 @@ IsValued Boolean
 IsValueName(name Text) Boolean
 	Valuing.IsValueName("outer.index")
 	Valuing.IsValueName("numbers") is false
-	(name is in ("value", "outer")) or name.StartsWith("value(") or name.StartsWith("outer.")
+	name is in ("value", "outer") or name.StartsWith("value(") or name.StartsWith("outer.")

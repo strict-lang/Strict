@@ -27,7 +27,7 @@ Members(type TypeEntry) Texts
 		if value.Name is in ("from", "Validated")
 			return List(Text)
 	let fields = Fields(type)
-	(fields.Length < 2) or (fields.Length > 4) or ("" is in fields) then List(Text) else fields
+	fields.Length < 2 or fields.Length > 4 or "" is in fields then List(Text) else fields
 Fields(type TypeEntry) Texts
 	StructLanes.Fields(Pair) is ("real", "imaginary")
 	StructLanes.Fields(Kept) is ("real")
@@ -40,7 +40,7 @@ IsLane(member MemberEntry) Boolean
 	StructLanes.IsLane(MemberEntry("half", "Strict/Number", List(InstructionEntry), false, 32)) is false
 	StructLanes.IsLane(MemberEntry("named", "Strict/Text", List(InstructionEntry), false)) is false
 	StructLanes.IsLane(MemberEntry("real", "Strict/Number", (InstructionEntry.Return(0)), false)) is false
-	(member.typeName is "Strict/Number") and (member.Bits is in (0, Number.DoubleBits)) and (member.initial.Length is 0)
+	member.typeName is "Strict/Number" and member.Bits is in (0, Number.DoubleBits) and member.initial.Length is 0
 Split List(TypeEntry)
 	Sample.Split.First.methods.First.instructions.Length is 11
 	Splitting.Split.First.methods.First.instructions.Length is 20
@@ -82,7 +82,7 @@ Other(entry InstructionEntry, flow LaneFlow, laned Texts, base Number) List(Inst
 	Sample.Other(Calling(4), LaneFlow.Sample, ("2 Pair"), 8).Last is Calling(4)
 	let source = entry.kind is InstructionType.FieldLoad then 1 else 0
 	let laneType = entry.payload.Length > source then flow.Typed(laned, entry.payload(source) to Text) else ""
-	if (laneType is not "") and (entry.kind is in (InstructionType.FieldLoad, InstructionType.CheckError))
+	if laneType is not "" and entry.kind is in (InstructionType.FieldLoad, InstructionType.CheckError)
 		return Forwarded(entry)
 	let calls = LaneCalls(types)
 	calls.Signature(entry).Length > 0 then calls.Called(entry, laned, base) else Materialized(entry, laned, base) + entry

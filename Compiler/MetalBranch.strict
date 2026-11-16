@@ -16,7 +16,7 @@ Translated Text
 	let line = body(at)
 	if line.EndsWith(":")
 		return Entered
-	if (line is "]") or IsCase(line) or (line.IndexOf(" = phi ") > 0)
+	if line is "]" or IsCase(line) or line.IndexOf(" = phi ") > 0
 		return ";"
 	let isTerminator = MetalInstruction(line, isKernel).Operation is in ("br", "switch", "ret", "unreachable")
 	let translated = isTerminator then Terminator else MetalInstruction(line, isKernel).Statement
@@ -42,7 +42,7 @@ Phis(label Number) Texts
 	mutable phis = List(Mutable(Text))
 	mutable isPhi = true
 	for body.Slice(label + 1, body.Length - label - 1)
-		isPhi = isPhi and (value.IndexOf(" = phi ") > 0)
+		isPhi = isPhi and value.IndexOf(" = phi ") > 0
 		if isPhi
 			phis.Add(value)
 	phis
@@ -70,7 +70,7 @@ Terminator Text
 	if words.First is "br"
 		let condition = words.Length is 3 then "" else "if (" + MetalValue(words(2)).Operand("i1") + ") { "
 		return words.Length is 3 then Jump(words.Last) else condition + Jump(words(4)) + " } else { " + Jump(words(6)) + " }"
-	if (words.First is "ret") and (words.Length is 3)
+	if words.First is "ret" and words.Length is 3
 		return "return " + MetalValue(words.Last).Operand(words(1)) + ";"
 	isVoid then "return;" else "return {};"
 Switched(words Texts) Text
@@ -78,7 +78,7 @@ Switched(words Texts) Text
 	mutable cases = ""
 	mutable next = at + 1
 	for body.Slice(at + 1, body.Length - at - 1)
-		if IsCase(value) and (next is at + 1 + index)
+		if IsCase(value) and next is at + 1 + index
 			let parts = MetalInstruction(value, isKernel).Words
 			let compared = MetalValue(words(2)).Operand(words(1)) + " == " + MetalValue(parts(1)).Operand(parts.First)
 			cases = cases + "if (" + compared + ") { " + Jump(parts.Last) + " } "
@@ -87,4 +87,4 @@ Switched(words Texts) Text
 IsCase(line Text) Boolean
 	Branching.IsCase("i64 16, label %4")
 	Branching.IsCase("br label %4") is false
-	line.StartsWith("i") and (line.IndexOf(", label %") > 0)
+	line.StartsWith("i") and line.IndexOf(", label %") > 0

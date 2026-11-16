@@ -16,11 +16,11 @@ IsInvariant(node SyntaxNode) Boolean
 	if node.Kind is in ("Number", "Text", "Boolean")
 		return true
 	if node.Kind is "Identifier"
-		return (node.text is not in varying) and (IsLower(node.text) or (node.text is in constants))
+		return node.text is not in varying and (IsLower(node.text) or node.text is in constants)
 	if node.Kind is "Member"
-		return (node.children(0).Kind is not "Number") and IsInvariant(node.children(0))
-	let isIndexed = (node.Kind is "Call") and IsLower(node.text) and (node.text is not in varying)
-	(isIndexed or (node.Kind is in ("Binary", "Not", "Negate", "List"))) and IsAllInvariant(node.children)
+		return node.children(0).Kind is not "Number" and IsInvariant(node.children(0))
+	let isIndexed = node.Kind is "Call" and IsLower(node.text) and node.text is not in varying
+	(isIndexed or node.Kind is in ("Binary", "Not", "Negate", "List")) and IsAllInvariant(node.children)
 IsAllInvariant(nodes SyntaxNodes) Boolean
 	Steps.IsAllInvariant(List(SyntaxNode) + SyntaxNode("Identifier", "value")) is false
 	Steps.IsAllInvariant(List(SyntaxNode) + StatementParser(Tokenizer("1.Random").Tokens).ParseStatement) is false
@@ -58,11 +58,11 @@ Iterators(node SyntaxNode) Texts
 	isNamed then node.text.Substring(4, node.text.Length - 7).Split(", ") else List(Text)
 Names(node SyntaxNode) Texts
 	LoopNames.Names(SyntaxNode("Declaration", "let width", List(SyntaxNode) + SyntaxNode("Number", "1"))) is ("width")
-	let changed = (node.Kind is in ("Reassignment", "MethodCall")) then List(Text) + Root(node.children(0)) else List(Text)
+	let changed = node.Kind is in ("Reassignment", "MethodCall") then List(Text) + Root(node.children(0)) else List(Text)
 	mutable names = node.Kind is "Declaration" then changed + node.text.Split(" ").Last else changed
-	let isCalled = (node.Kind is "Call") and (IsLower(node.text) is false)
+	let isCalled = node.Kind is "Call" and IsLower(node.text) is false
 	for node.children
-		names = names + (isCalled and (value.Kind is "Identifier") then List(Text) + value.text else Names(value))
+		names = names + (isCalled and value.Kind is "Identifier" then List(Text) + value.text else Names(value))
 	names
 Root(node SyntaxNode) Text
 	LoopNames.Root(SyntaxNode("Member", "Length", List(SyntaxNode) + SyntaxNode("Identifier", "list"))) is "list"

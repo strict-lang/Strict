@@ -18,7 +18,7 @@ IsConstant Boolean
 	if kind is not in (InstructionType.LoadConstantToRegister, InstructionType.StoreConstantToVariable)
 		return false
 	constant literal = Constant
-	(literal.kind is "Text") or (literal.kind is "List") and (literal.items.Length > 0)
+	literal.kind is "Text" or literal.kind is "List" and literal.items.Length > 0
 TextElements(literal Runtime/VmValue) Numbers
 	MlirConstants(MlirTexts.Joined, 0).TextElements(VmValue.OfList(VmValue.OfNumber(1), VmValue.OfText("a"))) is (1)
 	for literal.items
@@ -54,7 +54,7 @@ IsPlain(decoder PayloadDecoder) Boolean
 	MlirConstants(MlirCalls.Hashes, 1).IsPlain(PayloadDecoder(MlirCalls.Hashed)) is false
 	let typeName = decoder.Text(1)
 	let short = TypeEntry.ShortName(typeName)
-	if (MlirLayout(function).IsStruct(typeName) is false) or (short is in ("File", "Error", "ErrorWithValue"))
+	if MlirLayout(function).IsStruct(typeName) is false or short is in ("File", "Error", "ErrorWithValue")
 		return false
 	decoder.Callee(function.TypeOf(typeName)).instructions.Length is 0
 AreConstants(entry InstructionEntry) Boolean
@@ -89,7 +89,7 @@ Lengths(bytes Numbers) Text
 	MlirConstants(MlirTexts.Joined, 0).Lengths((97, 195, 164)) is Word(3) + Word(2)
 	mutable characters = 0
 	for bytes
-		characters = characters + ((value < 128) or (value >= LeadByte) then 1 else 0)
+		characters = characters + (value < 128 or value >= LeadByte then 1 else 0)
 	Word(bytes.Length) + Word(characters)
 Word(count Number) Text
 	MlirConstants(MlirTexts.Joined, 0).Word(258) is "\\02\\01\\00\\00\\00\\00\\00\\00"
@@ -104,7 +104,7 @@ Literal(text Text, slot Text, suffix Text) Texts
 	MlirConstants(MlirTexts.Joined, 1).Literal("", "%s", "d0").First.IndexOf("@strict_empty") > 0
 	MlirConstants(MlirTexts.Joined, 1).Literal("b", "%s", "").First.StartsWith("unsupported")
 	MlirConstants(MlirTexts.Joined, 1, "@dA_b").Literal("b", "%s", "d0").First.IndexOf(" @dA_b ") > 0
-	if (text is not "") and (named is "") and (IsConstant is false)
+	if text is not "" and named is "" and IsConstant is false
 		return List(Text) + MlirStatements(function, position).Unsupported("Text constant")
 	Address(text, "", suffix) + function.Store(MlirMemory(function, position).Temp(suffix + "xf"), slot)
 Address(text Text, symbol Text, suffix Text) Texts

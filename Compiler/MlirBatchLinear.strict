@@ -64,18 +64,18 @@ Arithmetic(at Number, entry InstructionEntry) Number
 		return -1
 	let left = Slope(at, entry.payload(1))
 	let right = Slope(at, entry.payload(2))
-	if (left is 0) and (right is 0)
+	if left is 0 and right is 0
 		return entry.kind is InstructionType.Divide then 3 else 0
-	if (entry.kind is InstructionType.Add) and (left >= 0) and (right >= 0) and (left + right is 1)
+	if entry.kind is InstructionType.Add and left >= 0 and right >= 0 and left + right is 1
 		return 1
-	(entry.kind is InstructionType.Subtract) and (left is 1) and (right is 0) then 1 else Divided(at, entry, left, right)
+	entry.kind is InstructionType.Subtract and left is 1 and right is 0 then 1 else Divided(at, entry, left, right)
 Divided(at Number, entry InstructionEntry, left Number, right Number) Number
 	Negative.Divided(6, InstructionEntry.Binary(InstructionType.Divide, (4, 3, 7)), 1, 0) is 2
 	Negative.Divided(6, InstructionEntry.Binary(InstructionType.Modulo, (1, 3, 7)), 1, 0) is 1
 	Negative.Divided(6, InstructionEntry.Binary(InstructionType.Multiply, (4, 3, 7)), 1, 0) is -1
-	if (left is not 1) or (right is not 0)
+	if left is not 1 or right is not 0
 		return -1
-	if (Aligned(at, entry.payload(1)) is false) or (Divisor(at, entry.payload(2)) is false)
+	if Aligned(at, entry.payload(1)) is false or Divisor(at, entry.payload(2)) is false
 		return -1
 	if entry.kind is InstructionType.Modulo
 		return MlirBatchSign(function, position).IsNonnegative(at, entry.payload(1)) then 1 else -1
@@ -99,7 +99,7 @@ Aligned(at Number, register Number) Boolean
 	Scaled.Aligned(9, 6)
 	Scaled.Arithmetic(6, InstructionEntry.Binary(InstructionType.Add, (4, 0, 8))) is -1
 	let writer = MlirKinds(function).Writer(at, register)
-	(writer > position) and AlignedWritten(writer)
+	writer > position and AlignedWritten(writer)
 AlignedWritten(at Number) Boolean
 	let entry = function.method.instructions(at)
 	if entry.kind is InstructionType.LoadVariableToRegister
@@ -121,7 +121,7 @@ AlignedConstant(at Number, entry InstructionEntry) Boolean
 	Paired.AlignedConstant(5, InstructionEntry.LoadNumber(3, 4.5)) is false
 	Paired.AlignedWritten(5) is false
 	let number = PayloadDecoder(entry).Value(1)
-	MlirWholeValues(at).IsWhole(number) and (number.number % 4 is 0)
+	MlirWholeValues(at).IsWhole(number) and number.number % 4 is 0
 AlignedVariable(at Number, name Text) Boolean
 	Paired.AlignedVariable(3, "index")
 	Paired.AlignedVariable(3, "value")
@@ -131,7 +131,7 @@ AlignedVariable(at Number, name Text) Boolean
 	let stored = MlirKinds(function).Stored(at, name)
 	if stored > position
 		return Aligned(stored, function.method.instructions(stored).payload(0))
-	(name is in ("index", "value")) or (name is in Parameters)
+	name is in ("index", "value") or name is in Parameters
 Divisor(at Number, register Number) Boolean
 	Negative.Divisor(6, 3)
 	Paired.Divisor(6, 3) is false
@@ -142,12 +142,12 @@ Divisor(at Number, register Number) Boolean
 	Scaled.DivisorWritten(4)
 	Scaled.DivisorWritten(10) is false
 	let writer = MlirKinds(function).Writer(at, register)
-	(writer > position) and DivisorWritten(writer)
+	writer > position and DivisorWritten(writer)
 DivisorWritten(at Number) Boolean
 	let entry = function.method.instructions(at)
 	if entry.kind is InstructionType.LoadConstantToRegister
 		let number = PayloadDecoder(entry).Value(1).number
-		return (number > 0) and (number % 4 is 0)
+		return number > 0 and number % 4 is 0
 	if entry.kind is not InstructionType.LoadVariableToRegister
 		return false
 	let stored = MlirKinds(function).Stored(at, entry.texts(0))

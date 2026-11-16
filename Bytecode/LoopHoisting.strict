@@ -21,7 +21,7 @@ Hoisted(body SyntaxNode, block CodeBlock) SyntaxNode
 	Hoisting.Hoisted(Shadowing, Bag).children.Length is 2
 	mutable statements = List(Mutable(SyntaxNode))
 	for child, lifted in body.children, (child.Kind is "For" then Lifted(child, block) else List(SyntaxNode) + child)
-		if (lifted.Kind is not "Declaration") or (lifted is not in statements)
+		if lifted.Kind is not "Declaration" or lifted is not in statements
 			statements.Add(lifted)
 	SyntaxNode("Body", body.text, statements, body.line)
 Lifted(loop SyntaxNode, block CodeBlock) SyntaxNodes
@@ -29,7 +29,7 @@ Lifted(loop SyntaxNode, block CodeBlock) SyntaxNodes
 	let declared = Declared(loop)
 	mutable reads = List(Mutable(SyntaxNode))
 	for Reads(loop, block)
-		if (value.children(0).text is not in declared) and (value is not in reads)
+		if value.children(0).text is not in declared and value is not in reads
 			reads.Add(value)
 	if reads.Length is 0
 		return Invariant(loop, block)
@@ -54,7 +54,7 @@ Found(node SyntaxNode, names LoopNames) SyntaxNodes
 	Hoisting.Found(StatementParser(Tokenizer("-steps").Tokens).ParseStatement, LoopNames.Steps).Length is 0
 	Hoisting.Found(StatementParser(Tokenizer("steps * outer").Tokens).ParseStatement, LoopNames.Steps).Length is 0
 	Hoisting.Found(Scaling.children(0).children.Last, LoopNames.Steps).Length is 1
-	let isArithmetic = (node.Kind is "Binary") and (node.text is in ("+", "-", "*", "/", "%", "^"))
+	let isArithmetic = node.Kind is "Binary" and node.text is in ("+", "-", "*", "/", "%", "^")
 	if isArithmetic and names.IsInvariant(node) and LoopNames.HasName(node) and IsSafe(node)
 		return List(SyntaxNode) + node
 	mutable found = List(Mutable(SyntaxNode))
@@ -68,7 +68,7 @@ IsSafe(node SyntaxNode) Boolean
 	if node.Kind is in ("Number", "Text", "Boolean", "Identifier")
 		return node.text is not "outer"
 	if node.Kind is "Member"
-		return ((node.text is "Length") or LoopNames.IsLower(node.text)) and IsSafe(node.children(0))
+		return (node.text is "Length" or LoopNames.IsLower(node.text)) and IsSafe(node.children(0))
 	if node.Kind is not in ("Binary", "Negate")
 		return false
 	for node.children
@@ -112,29 +112,29 @@ Reads(node SyntaxNode, block CodeBlock) SyntaxNodes
 IsHoistable(node SyntaxNode, block CodeBlock) Boolean
 	Hoisting.IsHoistable(Looping.children(0).children(1).children(0).children(0), Bag)
 	Hoisting.IsHoistable(Looping.children(0).children(1).children(0).children(0), CodeBlock.Empty) is false
-	if (node.Kind is not "MethodCall") or (node.children.Length is not 2) or (node.children(0).Kind is not "Identifier")
+	if node.Kind is not "MethodCall" or node.children.Length is not 2 or node.children(0).Kind is not "Identifier"
 		return false
 	let root = node.children(0).text
 	let own = values.target.shape.MemberScope.TypeOf(root)
 	let type = block.scope.TypeOf(root) is "" then own else block.scope.TypeOf(root)
-	(root is not in ("value", "index", "outer")) and (type is not "") and values.target.IsMember(type, node.text)
+	root is not in ("value", "index", "outer") and type is not "" and values.target.IsMember(type, node.text)
 Replaced(node SyntaxNode, reads SyntaxNodes) SyntaxNode
 	Hoisting.Replaced(Looping.children(0), Hoisting.Reads(Looping, Bag)) to Text is "for 3"
 	let member = node.children.Length is 2 then Member(node) else node
-	if (node.Kind is "MethodCall") and (member is in reads)
+	if node.Kind is "MethodCall" and member is in reads
 		return SyntaxNode("Call", Name(member), List(SyntaxNode) + Replaced(node.children(1), reads))
 	mutable children = List(Mutable(SyntaxNode))
 	for node.children
 		children.Add(Replaced(value, reads))
 	SyntaxNode(node.Kind, node.text, children, node.line)
 Member(call SyntaxNode) SyntaxNode
-	Valued.scope.TypeOf("value") is "Bag" and (Valued.scope.TypeOf("index") is "Bag")
+	Valued.scope.TypeOf("value") is "Bag" and Valued.scope.TypeOf("index") is "Bag"
 	Hoisting.Invariant(Counting.children(0), Bag)(0) to Text is "let invariant2x0 = bags.count / 2"
 	Hoisting.Hoisted(Looping, Bag).Kind is "Body"
 	Scaled(1).Kind is "For"
 	Hoisting.Substituted(MethodCodegen.One, List(SyntaxNode) + MethodCodegen.One, 2).Kind is "Identifier"
 	Hoisting.Prefixed("mutable ").Length is 0
-	Hoisting.Hoisted(Repeated, Bag).children.Length is 3 and (Repeated.Kind is "Body")
+	Hoisting.Hoisted(Repeated, Bag).children.Length is 3 and Repeated.Kind is "Body"
 	Hoisting.Replaced(StatementParser(Tokenizer("bag.values(1, 2)").Tokens).ParseStatement, Read).Kind is "MethodCall"
 	Hoisting.Replaced(StatementParser(Tokenizer("bag.values").Tokens).ParseStatement, Read).Kind is "Member"
 	Hoisting.Member(Looping.children(0).children(1).children(0).children(0)) to Text is "bag.values"

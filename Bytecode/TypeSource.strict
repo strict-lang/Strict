@@ -17,7 +17,7 @@ Located(folder Text) Text
 	let local = folder is "" then file else relative + "/" + file
 	if File(local).Exists
 		return local
-	(Root is ".") or (File(Root + "/" + file).Exists is false) then file else Root + "/" + file
+	Root is "." or File(Root + "/" + file).Exists is false then file else Root + "/" + file
 Resolved(owner Text, folder Text) Text
 	TypeSource.Resolved("Strict/Math/Size", "./Fonts") is "Math/Size.strict"
 	TypeSource(TypeEntry(owner, List(MemberEntry), List(MethodEntry))).Located(folder)
@@ -36,14 +36,14 @@ Absolute(path Text) Text
 	Sizing.Absolute("./a.strict") is Directory.Current.Replace("\\", "/") + "/a.strict"
 	Sizing.Absolute(".") is Directory.Current.Replace("\\", "/")
 	let slashed = path.Replace("\\", "/")
-	if (slashed.IndexOf(":") is 1) or slashed.StartsWith("/")
+	if slashed.IndexOf(":") is 1 or slashed.StartsWith("/")
 		return slashed
 	let inside = slashed.StartsWith("./") then slashed.Substring(2, slashed.Length - 2) else slashed
 	let current = Directory.Current.Replace("\\", "/")
 	inside is "." then current else current + "/" + inside
 Cased(path Text) Text
-	(Sizing.Cased("strict") is "Strict.strict") and (Sizing.Cased("Examples/sum.STRICT") is "Examples/Sum.strict")
-	(Sizing.Cased("Missing") is "Missing") and (Sizing.Cased("Examples") is "Examples")
+	Sizing.Cased("strict") is "Strict.strict" and Sizing.Cased("Examples/sum.STRICT") is "Examples/Sum.strict"
+	Sizing.Cased("Missing") is "Missing" and Sizing.Cased("Examples") is "Examples"
 	let slashed = path.Replace("\\", "/")
 	let named = slashed.Lower.EndsWith(".strict") then Path(slashed).RemoveExtension.text else slashed
 	let folder = named.IndexOf("/") < 0 then "." else Path(named).PathOnly.text
@@ -55,16 +55,16 @@ Cased(path Text) Text
 	path
 Project(path Text) Text
 	Sizing.Project("Examples/Sum.strict") is ""
-	(Directory.Create(Projected) is not Error) and Directory.Exists(Projected)
-	(Directory.Create(Projected + "/.git") is not Error) and Directory.Exists(Projected + "/.git")
+	Directory.Create(Projected) is not Error and Directory.Exists(Projected)
+	Directory.Create(Projected + "/.git") is not Error and Directory.Exists(Projected + "/.git")
 	Sizing.Project("Compiler/output/Projected/A/B.strict") is Sizing.Absolute("Compiler/output/Projected")
 	Sizing.Project("Compiler/output/Projected") is Sizing.Absolute("Compiler/output/Projected")
 	Sizing.Project("Examples") is ""
 	let full = Absolute(path)
 	mutable folder = Directory.Exists(full) then full else Path(full).PathOnly.text
-	for as long as (folder.Length > 3) and (IsProject(folder) is false)
+	for as long as folder.Length > 3 and IsProject(folder) is false
 		folder = Path(folder).PathOnly.text
-	IsProject(folder) and (folder.Lower is not Directory.Current.Replace("\\", "/").Lower) then folder else ""
+	IsProject(folder) and folder.Lower is not Directory.Current.Replace("\\", "/").Lower then folder else ""
 IsProject(folder Text) Boolean
 	Sizing.IsProject(".")
 	Sizing.IsProject("Examples") is false
@@ -83,4 +83,4 @@ IsSlow(fullName Text, header HeaderTokens) Boolean
 	TypeSource.IsSlow("Strict/Compiler", HeaderTokens("Run", "Number")) is false
 	TypeSource.IsSlow("Strict/Math/Size", HeaderTokens("Run", "Number")) is false
 	let parts = fullName.Split("/")
-	header.ReturnsSlow or ((parts.Length > 2) and (parts(0) is "Strict") and (parts(1) is in InternalPackages))
+	header.ReturnsSlow or parts.Length > 2 and parts(0) is "Strict" and parts(1) is in InternalPackages

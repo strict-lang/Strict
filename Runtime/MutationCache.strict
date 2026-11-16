@@ -18,22 +18,22 @@ Location Text
 	Sample.Location.EndsWith("Cached.mutations")
 	BinaryFile(FileCompiler.Normalized(path)).Path.Replace(".strictbinary", ".mutations")
 IsCurrent Boolean
-	(Sample.Saved(Survived) is not Error) and Sample.IsCurrent
+	Sample.Saved(Survived) is not Error and Sample.IsCurrent
 	MutationCache("Compiler/output/Cached.strict", true).IsCurrent is false
 	let lines = File(Location).Exists then File(Location).ReadLines else List(Text)
 	let whole = "whole " + Stamp.Substring(Stamp.IndexOf(" ") + 1, Stamp.Length - Stamp.IndexOf(" ") - 1)
-	(lines.Length > 0) and ((lines.First is Stamp) or (lines.First is whole))
+	lines.Length > 0 and (lines.First is Stamp or lines.First is whole)
 Survivors Texts
-	(Sample.Saved(Survived) is not Error) and (Sample.Survivors is Survived)
+	Sample.Saved(Survived) is not Error and Sample.Survivors is Survived
 	let lines = File(Location).ReadLines
 	lines.Slice(1, lines.Length - 1)
 Saved(survivors Texts)
-	(Sample.Saved(List(Text)) is not Error) and (File(Sample.Location).ReadLines is (List(Text) + Sample.Stamp))
+	Sample.Saved(List(Text)) is not Error and File(Sample.Location).ReadLines is (List(Text) + Sample.Stamp)
 	File(Location).Write(Text.Combine(List(Text) + Stamp + survivors, "\n"))
 Held(slots Text) Texts
 	MutationCache("Compiler/output/Missing/Waiting.strict", true).Held("Compiler/output/Missing/Deeper").Length is 0
-	(Sample.Saved(List(Text)) is not Error) and (Sample.Held("Compiler/output/Missing/Deeper").Length is 0)
-	let whole = isWhole and (IsCurrent is false) then Claimed(List(Text) + Lock) else List(Text)
+	Sample.Saved(List(Text)) is not Error and Sample.Held("Compiler/output/Missing/Deeper").Length is 0
+	let whole = isWhole and IsCurrent is false then Claimed(List(Text) + Lock) else List(Text)
 	IsCurrent then (Released(whole) then List(Text) else whole) else whole + Claimed(Slotted(slots))
 Lock Text
 	Sample.Lock is Sample.Location + "." + HashCode(Sample.Stamp).number + ".lock"
@@ -42,10 +42,10 @@ Claimed(locks Texts) Texts
 	MutationCache.Claimed(List(Text) + "Compiler/output/Missing/Deeper/Waiting.lock").Length is 0
 	MutationCache.Claimed(List(Text) + ("Compiler/output/Claimed" + Process.Elapsed + ".lock")).Length is 1
 	let folder = Path(locks.First).PathOnly.text
-	if (Directory.Exists(folder) is false) and Directory.Exists(Path(folder).PathOnly.text)
+	if Directory.Exists(folder) is false and Directory.Exists(Path(folder).PathOnly.text)
 		Directory.Create(folder)
 	let started = Process.Elapsed
-	for as long as Directory.Exists(folder) and (Process.Elapsed - started < RunWait)
+	for as long as Directory.Exists(folder) and Process.Elapsed - started < RunWait
 		for locks
 			if File(value).Locked
 				return List(Text) + value
@@ -82,7 +82,7 @@ Budgeted(result VmValue, limit = MaxItems) VmValue
 	MutationCache.Budgeted(Operations.OneTwo, 2) is Operations.OneTwo
 	IsOversized(result, limit) then VmValue.OfError("MemoryBudget") else result
 IsLate(machine Machine) Boolean
-	MutationCache.IsLate(Machine(Machine.Hello, deadline = 0.001)) and (MutationCache.IsLate(Machine.Hello) is false)
+	MutationCache.IsLate(Machine(Machine.Hello, deadline = 0.001)) and MutationCache.IsLate(Machine.Hello) is false
 	Stopped(machine.deadline) is not ""
 Stopped(deadline Number, step = 1) Text
 	MutationCache.Stopped(0) is ""

@@ -64,11 +64,11 @@ CheckedPatterns(src Text) Boolean
 	CheckedUploadCalls(src, ExtractedFn(src, "strict_gpu_obtain").Split("  ^ownCollect")(1))
 CheckedUploadCalls(src Text, collect Text) Boolean
 	let lp = collect.IndexOf("call @strict_gpu_lend")
-	if (lp < 0) or (lp >= collect.IndexOf("call @strict_gpu_alloc"))
+	if lp < 0 or lp >= collect.IndexOf("call @strict_gpu_alloc")
 		return Error("Lend must precede alloc in obtain")
-	if ("call @strict_gpu_ahead_hit" is not in ExtractedFn(src, "strict_gpu_rows"))
+	if "call @strict_gpu_ahead_hit" is not in ExtractedFn(src, "strict_gpu_rows")
 		return Error("rows missing ahead_hit")
-	if ("call @strict_gpu_ahead_join" is not in ExtractedFn(src, "strict_gpu_replay"))
+	if "call @strict_gpu_ahead_join" is not in ExtractedFn(src, "strict_gpu_replay")
 		return Error("replay missing ahead_join")
 	"call @strict_gpu_ahead_join" is not in ExtractedFn(src, "strict_gpu_capture") then Error("capture missing") else true
 ExtractedFn(src Text, name Text) Text

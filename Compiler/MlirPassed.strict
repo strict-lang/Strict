@@ -28,7 +28,7 @@ Header Text
 	Doubled.Header is ", %results: i64) attributes {nvvm.kernel} {"
 	mutable text = ", %results: i64"
 	for MlirGpuCheck(function, position).Free
-		if (function.Float is "f32") and (MlirDevice(function, position).IsList(value) is false)
+		if function.Float is "f32" and MlirDevice(function, position).IsList(value) is false
 			text = text + ", %e_" + value + ": i64, %m_" + value + ": i64"
 	text + ") attributes {nvvm.kernel} {"
 Given(name Text, slot Text) Texts
@@ -46,15 +46,15 @@ Candidate(slot Text) Text
 	Wraps.Candidate("%r2") is "offset"
 	MlirPassed(Wrapped, 9).Candidate("%r6") is "offset"
 	MlirPassed(MlirFunction(Wrapped, Guarded = -1), 5).Candidate("%r2") is ""
-	if (function.Guarded < 0) or (slot.StartsWith("%r") is false)
+	if function.Guarded < 0 or slot.StartsWith("%r") is false
 		return ""
 	let register = slot.Substring(2, slot.Length - 2) to Number
 	let writer = MlirKinds(function).Writer(position, register)
-	let isDivided = (writer > function.Guarded) and (function.method.instructions(writer).kind is InstructionType.Divide)
+	let isDivided = writer > function.Guarded and function.method.instructions(writer).kind is InstructionType.Divide
 	let source = isDivided then function.method.instructions(writer).payload(2) else register
 	let origins = MlirGuards(function, function.Guarded).Origins(isDivided then writer else position, source)
 	let free = MlirGpuCheck(function, function.Guarded).Free
-	(origins.Length is 1) and (origins(0) is in free) then origins(0) else ""
+	origins.Length is 1 and origins(0) is in free then origins(0) else ""
 Divided(numerator Text, divisor Text, slot Text, quotient Text) Texts
 	MlirPassed(Wrapped, 3).Divided("%a", "%b", "%r2", "%q") is ("    %q = arith.divsi %a, %b : i64")
 	Wraps.Divided("%a", "%b", "%r2", "%q").Last is "  ^qdivided(%q: i64):"

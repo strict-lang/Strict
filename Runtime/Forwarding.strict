@@ -28,9 +28,9 @@ Slotted(arguments Texts, slot Number) Number
 		return Unserved
 	let server = Resident(root, slot is 0 then "" else slot to Text)
 	let port = Port(server)
-	if File(server.Freed).Exists and (port > 0)
+	if File(server.Freed).Exists and port > 0
 		return Answered(server, port, arguments)
-	if (port is 0) or IsDead(port)
+	if port is 0 or IsDead(port)
 		Started(server.slot)
 		return Unserved
 	Slotted(arguments, slot + 1)
@@ -54,9 +54,9 @@ Answered(server Resident, port Number, arguments Texts) Number
 		return Unserved
 	let claim = Claimed(server, socket)
 	let request = Resident.Request(Directory.Current, arguments, Resident.Variables, claim)
-	let code = (claim is not "") and Greeted(socket) then Requested(socket, request) else Unserved
+	let code = claim is not "" and Greeted(socket) then Requested(socket, request) else Unserved
 	Socket.Close(socket)
-	if (code is Unserved) and (claim is not "")
+	if code is Unserved and claim is not ""
 		File(server.Freed + "." + claim).Rename(server.Freed)
 	code is Dropped then Interrupted(server, port) else code
 Requested(socket Number, request Text) Number
@@ -65,7 +65,7 @@ Requested(socket Number, request Text) Number
 Interrupted(server Resident, port Number) Number
 	Missing.Interrupted(Resident("Compiler/output/Missing"), 0) is Ended
 	let stamp = File(server.Stamped)
-	if stamp.Exists and (stamp.ReadLines.First is (port to Text))
+	if stamp.Exists and stamp.ReadLines.First is (port to Text)
 		return Unserved
 	logger.Log("strict stop ended this request")
 	Ended
@@ -90,17 +90,17 @@ Killing(executable Text, isWindows Boolean) Text
 	isWindows then Finding + executable.Replace("/", "\\") + Serving else Searching + executable + Ending
 IsForwarded(arguments Texts) Boolean
 	Sample.IsForwarded(List(Text) + "format") is false
-	Sample.IsForwarded(("build", "a.strict")) or (Process.Variable("STRICT_SERVER") is "0")
+	Sample.IsForwarded(("build", "a.strict")) or Process.Variable("STRICT_SERVER") is "0"
 	Sample.IsForwarded(List(Text) + "stop")
-	Sample.IsForwarded(("test", "a.strict")) or (Process.Variable("STRICT_SERVER") is "0")
+	Sample.IsForwarded(("test", "a.strict")) or Process.Variable("STRICT_SERVER") is "0"
 	Sample.IsForwarded(("test", "a.strict", "native")) is false
 	Sample.IsForwarded(("run", "-c", "logger.Log(Process.Input)")) is false
 	let command = arguments.Length > 0 then arguments(0) else ""
 	let isInput = Scripted.IsCode(arguments) then "Process.Input" is in arguments(2) else false
-	let isLocal = ("native" is in arguments) or ("lines" is in arguments) or ("-" is in arguments) or isInput
+	let isLocal = "native" is in arguments or "lines" is in arguments or "-" is in arguments or isInput
 	let isOptedOut = Process.Variable("STRICT_SERVER") is "0"
-	let isServed = (command is in ("test", "check", "build", "run")) and (isLocal is false) and (isOptedOut is false)
-	(command is Resident.Stopping) or isServed
+	let isServed = command is in ("test", "check", "build", "run") and isLocal is false and isOptedOut is false
+	command is Resident.Stopping or isServed
 Started(slot Text)
 	let executable = Process.Current.executable
 	let isWindows = Process.OperatingSystem is "Windows"
@@ -139,7 +139,7 @@ Claimed(server Resident, socket Number) Text
 Greeted(socket Number) Boolean
 	Sample.Greeted(0) is false
 	let waited = Socket.Waiting(socket, Resident.GreetingSeconds)
-	if (waited is Error) or (waited is not 1)
+	if waited is Error or waited is not 1
 		return false
 	let greeting = Resident.Greeting
 	ByteEncoder(Socket.Receive(socket, greeting.Length)).Spelled(0, greeting.Length) is greeting
@@ -152,7 +152,7 @@ Streamed(socket Number) Number
 		let lines = block.Split("\n")
 		for lines
 			let isExit = value.StartsWith(Resident.Exiting)
-			if (isExit is false) and (index < lines.Length - 1)
+			if isExit is false and index < lines.Length - 1
 				logger.Log(value)
 			code = isExit then value.Replace(Resident.Exiting, "") to Number else code
 	code is Resident.Refused then Unserved else code

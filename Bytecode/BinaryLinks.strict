@@ -21,9 +21,9 @@ Lines(types List(TypeEntry), names Texts, linker Linker) Texts
 	User.Lines((Needed, Missing), (Needed.Name, Missing.Name), Pooled) is ("\tStrict/Bytecode/Homed\tRun", "")
 	User.Lines((Missing, Needed), (Missing.Name, Needed.Name), Pooled)(1) is Linking
 	for types
-		let isHomed = (index > 0) and (names(index) is in linker.Places)
+		let isHomed = index > 0 and names(index) is in linker.Places
 		let place = isHomed then Relative(BinaryFile(linker.Places(names(index))).Path) else ""
-		(index is 0) or isHomed then Line(place, value) else ""
+		index is 0 or isHomed then Line(place, value) else ""
 Line(place Text, type TypeEntry) Text
 	User.Line("a", Homed) is "a\tHomed\tRun"
 	User.Line("a", Converter) is "a\tA\tto Text;Texted"
@@ -42,13 +42,13 @@ Kept(types List(TypeEntry), lines Texts) List(TypeEntry)
 	User.Kept((Needed, Homed), ("x", "")) is (Needed, Homed)
 	User.Kept((Needed, Homed), ("", "x")) is List(TypeEntry) + Needed
 	for types
-		if (index is 0) or (lines(index) is "")
+		if index is 0 or lines(index) is ""
 			value
 IsNamed(method MethodEntry, name Text) Boolean
 	User.IsNamed(MethodEntry.HelloRun, "Run")
-	User.IsNamed(Converter.methods.First, "to Text") and (User.IsNamed(Converter.methods.First, "to Number") is false)
+	User.IsNamed(Converter.methods.First, "to Text") and User.IsNamed(Converter.methods.First, "to Number") is false
 	User.IsNamed(Texted, "to Text") is false
-	(method.Name is name) or ((method.Name is "to") and (("to " + TypeEntry.ShortName(method.returnType)) is name))
+	method.Name is name or method.Name is "to" and "to " + TypeEntry.ShortName(method.returnType) is name
 Picked(own TypeEntry, names Texts) List(MethodEntry)
 	User.Picked(Converter, ("Texted", "to Text")) is (Texted, Converter.methods.First)
 	User.Picked(Converter, ("Missing", "Texted")) is List(MethodEntry) + Texted
@@ -74,8 +74,8 @@ Compilable(own TypeEntry, names Texts, declared Scope) Texts
 	User.Compilable(Converter, List(Text) + "to", Scope(List(Text) + "to", List(Text) + "A")).Length is 0
 	for names
 		let found = Matching(own, value).Length
-		let isConstructor = (value is "from") and (value is not in declared.names)
-		if ((found is 0) and (isConstructor is false)) or ((value is "to") and (found < declared.Count("to")))
+		let isConstructor = value is "from" and value is not in declared.names
+		if found is 0 and isConstructor is false or value is "to" and found < declared.Count("to")
 			value
 Added(own TypeEntry, type TypeEntry) List(MethodEntry)
 	User.Added(Homed, Converter) is Converter.methods
@@ -97,7 +97,7 @@ Grown(own TypeEntry, entry TypeEntry, names Texts, sources BinarySources)
 	file.Saved(file.Rewritten(BinarySources(found).Stamped(sources.Indexed).Header, whole, rest))
 Owned(entries List(ZipEntry), stamps Dictionary(Text, Number)) TypeEntry
 	BinaryLinks(BinaryFile("./Missing.strict")).Owned(List(ZipEntry), Dictionary(Text, Number)) is Unknown
-	Written and (BinaryLinks(Home).Owned(Home.Head(File(Home.Path).ReadBytes), Dictionary(Text, Number)) is Homed)
+	Written and BinaryLinks(Home).Owned(Home.Head(File(Home.Path).ReadBytes), Dictionary(Text, Number)) is Homed
 	file.IsCurrent(entries, stamps) then Own(entries) else Unknown
 IsTested(entries List(ZipEntry)) Boolean
 	User.IsTested(BinaryFile.Packing) is false
@@ -116,7 +116,7 @@ Relative(target Text) Text
 	let place = TypeSource.Absolute(target) is target then target else file.Relative(target)
 	place.Substring(0, place.Length - Extension.Length)
 Resolved(stored List(TypeEntry), entry ZipEntry) List(TypeEntry)
-	Written and (User.Resolved(List(TypeEntry) + Homed, Pointing).Last is Needed)
+	Written and User.Resolved(List(TypeEntry) + Homed, Pointing).Last is Needed
 	User.Resolved(List(TypeEntry) + Converter, Selecting).First.methods is List(MethodEntry) + Texted
 	mutable types = stored
 	for ByteEncoder(entry.content).Spelled(0, entry.content.Length).Lines
@@ -127,13 +127,13 @@ Resolved(stored List(TypeEntry), entry ZipEntry) List(TypeEntry)
 			types.Add(Linked(parts))
 	types
 Linked(parts Texts) TypeEntry
-	Written and (User.Linked(Linking.Split("\t")) is Needed)
+	Written and User.Linked(Linking.Split("\t")) is Needed
 	User.Linked("../../Bytecode/obj/Missing\tStrict/Missing\t".Split("\t")) is Unknown
 	User.Linked(List(Text) + "a") is Unknown
-	Written and (User.Linked((TypeSource.Absolute("./Bytecode/obj/Homed"), Needed.Name, "Run")) is Needed)
+	Written and User.Linked((TypeSource.Absolute("./Bytecode/obj/Homed"), Needed.Name, "Run")) is Needed
 	let folder = TypeSource.Absolute(parts(0)) is parts(0) then "" else Path(file.Path).PathOnly.text + "/"
 	let path = folder + parts(0) + Extension
-	if (parts.Length is not 3) or (File(path).Exists is false)
+	if parts.Length is not 3 or File(path).Exists is false
 		return Unknown
 	let entries = file.Head(File(path).ReadBytes)
 	file.IsCurrent(entries) then Selected(Own(entries), parts(1), parts(2)) else Unknown

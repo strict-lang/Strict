@@ -72,7 +72,7 @@ IsCurrent(part Text, key Text) Boolean
 	Sample.IsCurrent("Compiler/output/Current", "a")
 	Sample.IsCurrent("Compiler/output/Current", "b") is false
 	Sample.IsCurrent("Compiler/output/Absent", "a") is false
-	File(part + ".o").Exists and File(part + ".owned").Exists and (PtxCache(part).Read(".owned") is key)
+	File(part + ".o").Exists and File(part + ".owned").Exists and PtxCache(part).Read(".owned") is key
 Written(part Text, flags Text, owned Text) Boolean
 	PtxCache("Compiler/output/Keyed").Saved(".o", "compiled") is not Error
 	Sample.Written("Compiler/output/Keyed", "f", "") is false

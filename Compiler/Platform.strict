@@ -43,7 +43,7 @@ Darwin(code Number) Texts
 	Platform.Darwin(IOS) is ("Darwin", "IOS", "Arm64", "Directories")
 	Platform.Darwin(IOSSimulator) is ("Darwin", "IOS", Platform.Architecture, "Directories")
 	let machine = code is IOS then "Arm64" else Architecture
-	let directories = (code is MacOS) and (machine is "X64") then "MacOSX64" else "Directories"
+	let directories = code is MacOS and machine is "X64" then "MacOSX64" else "Directories"
 	("Darwin", code is MacOS then "MacOS" else "IOS", machine, directories)
 Runtime(code Number, root Text) Texts
 	Platform.Runtime(Linux, ".").First.StartsWith("  // the heap")

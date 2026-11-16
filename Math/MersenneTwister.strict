@@ -9,7 +9,7 @@ Seeded(seed Number) MersenneTwister slow
 	MersenneTwister.Seeded(4294967338).Uints(1) is MersenneTwister.Seeded(42).Uints(1)
 	MersenneTwister.Seeded(-1) is Error("InvalidSeed")
 	MersenneTwister.Seeded(1.5) is Error("InvalidSeed")
-	if (seed < 0) or (seed % 1 is not 0)
+	if seed < 0 or seed % 1 is not 0
 		return Error("InvalidSeed")
 	mutable seeded = List(Number) + seed % WordRange
 	for StateSize - 1
@@ -56,8 +56,8 @@ Tempered(number Number) Number
 	constant ThirdMask = 4022730752
 	constant LastShift = 262144
 	let first = number xor (number / FirstShift).Floor
-	let second = first xor (first * SecondShift % WordRange and SecondMask)
-	let third = second xor (second * ThirdShift % WordRange and ThirdMask)
+	let second = first xor first * SecondShift % WordRange and SecondMask
+	let third = second xor second * ThirdShift % WordRange and ThirdMask
 	third xor (third / LastShift).Floor
 Normals(count Number) Numbers slow
 	MersenneTwister.Seeded(42).Normals(16).First.IsNearlyEqual(1.9269153, 0.00001)

@@ -32,7 +32,7 @@ Helper(typeName Text, name Text, count Number) Text
 	MlirNatives(Texts, 1).Helper("Strict/Compiler/BuildProfile", "Detailed", 0) is "strict_buildprofile_detailed"
 	let kind = TypeEntry.ShortName(typeName)
 	let isList = kind.StartsWith("List(") or kind.StartsWith("Dictionary(")
-	if (name is in ("Length", "Count")) and (count is 0) and ((kind is "Text") or isList)
+	if name is in ("Length", "Count") and count is 0 and (kind is "Text" or isList)
 		return kind is "Text" then "strict_text_length" else "strict_list_length"
 	isList then CollectionHelper(kind, name, count) else ValueHelper(kind, name, count)
 ValueHelper(kind Text, name Text, count Number) Text
@@ -41,11 +41,11 @@ ValueHelper(kind Text, name Text, count Number) Text
 	MlirNatives(Texts, 1).ValueHelper("Number", "Decrement", 1) is "strict_decrement"
 	MlirNatives(Texts, 1).ValueHelper("Number", "xor", 1) is "strict_number_xor"
 	MlirNatives(Texts, 1).ValueHelper("Number", "Logarithm", 0) is "strict_number_logarithm"
-	if (kind is "Number") and (name is "Floor")
+	if kind is "Number" and name is "Floor"
 		return "strict_floor"
-	if (kind is "Number") and (name is in ("Increment", "Decrement"))
+	if kind is "Number" and name is in ("Increment", "Decrement")
 		return "strict_" + name.Lower + (count is 0 then "_one" else "")
-	if (kind is in ("Boolean", "Number")) and (name is in ("not", "and", "or", "xor"))
+	if kind is in ("Boolean", "Number") and name is in ("not", "and", "or", "xor")
 		return "strict_" + (kind is "Number" then "number_" else "") + name
 	kind is "Text" then TextHelper(name) else TypeHelper(kind, name)
 CollectionHelper(kind Text, name Text, count Number) Text
@@ -63,9 +63,9 @@ CollectionHelper(kind Text, name Text, count Number) Text
 	"strict_list_" + (operation is "index" then "find" else operation)
 Sorting(kind Text, name Text, count Number) Text
 	Listing.CollectionHelper("List(Number)", "Sorted", 0) is "strict_list_sorted"
-	(Listing.Sorting("List(Text)", "Sorted", 0) is "") and (Listing.Sorting("List(Number)", "Sorted", 1) is "")
+	Listing.Sorting("List(Text)", "Sorted", 0) is "" and Listing.Sorting("List(Number)", "Sorted", 1) is ""
 	Listing.Sorting("List(Number)", "Reverse", 0) is ""
-	(name is "Sorted") and (count is 0) and (kind is "List(Number)") then "strict_list_sorted" else ""
+	name is "Sorted" and count is 0 and kind is "List(Number)" then "strict_list_sorted" else ""
 DictionaryHelper(name Text) Text
 	MlirNatives(Texts, 1).Helper("Strict/Text", "Upper", 0) is "strict_text_upper"
 	MlirNatives(Texts, 1).Helper("Strict/List(Text)", "in", 1) is "strict_list_has"
@@ -126,10 +126,10 @@ TypeHelper(kind Text, name Text) Text
 	MlirNatives(Texts, 1).TypeHelper("Process", "RunTool") is "strict_process_runtool"
 	MlirNatives(Texts, 1).TypeHelper("Degrees", "Sin") is "strict_degrees_sin"
 	MlirNatives(Texts, 1).TypeHelper("Memo", "Kept") is "strict_memo_kept"
-	if (kind is "ConstantCache") and (name is in ("At", "Stored"))
+	if kind is "ConstantCache" and name is in ("At", "Stored")
 		return name is "At" then "strict_list_get" else "strict_list_set"
 	let isHosted = kind is in Hosted.Kinds then kind + "." + name is in Hosted.Methods else false
-	if (isHosted is false) and ((kind is not "Memo") or name.StartsWith(TestCodegen.Runner))
+	if isHosted is false and (kind is not "Memo" or name.StartsWith(TestCodegen.Runner))
 		return kind is "GpuMemory" then GpuHelper(name) else Validated(name)
 	"strict_" + kind.Lower + "_" + (name is "ReadLines" then "read_lines" else name.Lower)
 GpuHelper(name Text) Text
@@ -177,14 +177,14 @@ Emitted(entry InstructionEntry, type TypeEntry, helper Text) Texts
 	helper is "strict_floor" then MlirCounter(function, position).Floor(entry, lines) else lines
 IsShort(helper Text, count Number) Boolean
 	MlirNatives.IsShort("strict_text_index", 1) and MlirNatives.IsShort("strict_process_runtool", 2)
-	(MlirNatives.IsShort("strict_text_index", 2) is false) and (MlirNatives.IsShort("strict_process_runtool", 3) is false)
-	((helper is in DefaultedLast) and (count is 1)) or ((helper is in DefaultedThird) and (count is 2))
+	MlirNatives.IsShort("strict_text_index", 2) is false and MlirNatives.IsShort("strict_process_runtool", 3) is false
+	helper is in DefaultedLast and count is 1 or helper is in DefaultedThird and count is 2
 Textual(entry InstructionEntry, element Text, count Number) Texts
 	MlirNatives(MlirKinds.Lettered.function, 2).Textual(Search, "Text", 1)(0).IndexOf("ct = func.call @strict_char") > 0
 	MlirNatives(MlirKinds.Lettered.function, 2).Textual(Search, "Number", 1).Length is 0
 	MlirNatives(MlirKinds.Lettered.function, 2).Textual(Search, "Text", 2).Length is 0
 	MlirNatives(Texts, 2).Textual(Search, "Text", 1).Length is 0
-	if (element is not "Text") or (count is not 1)
+	if element is not "Text" or count is not 1
 		return List(Text)
 	let register = PayloadDecoder(entry).Arguments.First
 	if MlirLayout(function).Represented(MlirKinds(function).KindOf(position, register)) is not "Character"

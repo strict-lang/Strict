@@ -87,7 +87,7 @@ JumpEnd(id Number) Number
 	Loading.JumpEnd(1) is 3
 	Loading.JumpEnd(0) is 2
 	for function.method.instructions
-		if (value.kind is InstructionType.JumpEnd) and (PayloadDecoder(value).SevenBit(0) is id)
+		if value.kind is InstructionType.JumpEnd and PayloadDecoder(value).SevenBit(0) is id
 			return index
 	function.method.instructions.Length
 Unsupported(what Text) Text

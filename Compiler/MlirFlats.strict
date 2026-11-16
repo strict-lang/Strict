@@ -24,7 +24,7 @@ constant Listed = TypeEntry(Tripling, members = List(MemberEntry) + MemberEntry(
 constant Unflat = MemberEntry("", "Strict/Number", List(InstructionEntry), false)
 constant Looked = MlirFlats(MlirFunction((Tripling, Summing), Tripling, Zed, typeIndex = Dictionary(("Strict/Math/Tripling", 0), ("Tripling", 0))), 1)
 Count(kind Text) Number
-	(Sample.Count("Tripling") is 3) and (Sample.Count("Strict/Math/Tripling") is 3)
+	Sample.Count("Tripling") is 3 and Sample.Count("Strict/Math/Tripling") is 3
 	Sample.Count("Summing") is 0
 	MlirFlats(MlirPacking.Halved.function, 0).Count("Halving") is 3
 	Sample.Count("Number") is 0
@@ -32,10 +32,10 @@ Count(kind Text) Number
 	let type = function.TypeOf(kind, true)
 	let member = Flat(type)
 	let isListed = member.typeName.EndsWith("s") or member.typeName.EndsWith(")")
-	if (isListed is false) or (TypeEntry.ShortName(member.typeName) is not in ("List(Number)", "Numbers"))
+	if isListed is false or TypeEntry.ShortName(member.typeName) is not in ("List(Number)", "Numbers")
 		return 0
 	let count = member.Count
-	(count >= 3) and (count <= MaximumCount) and IsSupported(type, member.Name) then count else 0
+	count >= 3 and count <= MaximumCount and IsSupported(type, member.Name) then count else 0
 Flat(type TypeEntry) MemberEntry
 	Sample.Flat(Tripling) is Numbers
 	MlirFlats(MlirFunction(List(TypeEntry) + Listed, Listed, Zed), 1).Count("Tripling") is 3
@@ -68,23 +68,23 @@ IsSupported(type TypeEntry, member Text) Boolean
 		let steps = value.instructions
 		for steps
 			let name = value.texts.Length > 0 then value.texts(0) else ""
-			let isNamed = (name is member) or name.StartsWith(member + "(") or name.StartsWith(member + ".")
+			let isNamed = name is member or name.StartsWith(member + "(") or name.StartsWith(member + ".")
 			let isRead = value.kind is InstructionType.LoadVariableToRegister
 			let isKept = isRead then IsConsumed(steps, index, value.payload(0)) else value.kind is in MlirKinds.Indexing
-			if isNamed and (isKept is false)
+			if isNamed and isKept is false
 				return false
 	true
 IsAccessor(step InstructionEntry, register Number) Boolean
-	Sample.IsAccessor(Reading, 0) and (Sample.IsAccessor(Reading, 1) is false)
+	Sample.IsAccessor(Reading, 0) and Sample.IsAccessor(Reading, 1) is false
 	Sample.IsAccessor(InstructionEntry.Return(0), 0) is false
 	Sample.IsAccessor(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "inline2_elements"), 0)
 	Sample.IsAccessor(InstructionEntry.Invoke(1, ("Strict/List(Number)", "to", "Strict/Text"), List(Number), 0), 0)
 	if step.kind is not InstructionType.Invoke
-		let isAlias = Text.Combine(step.texts).StartsWith("inline") and (step.payload(0) is register)
-		return (step.kind is InstructionType.StoreRegisterToVariable) and isAlias
+		let isAlias = Text.Combine(step.texts).StartsWith("inline") and step.payload(0) is register
+		return step.kind is InstructionType.StoreRegisterToVariable and isAlias
 	let instance = PayloadDecoder(step).Instance
-	let isText = (step.texts(1) is "Code") or ((step.texts(1) is "to") and step.texts(2).EndsWith("Text"))
-	(instance is register) and ((step.texts(1) is in Accessors) or isText)
+	let isText = step.texts(1) is "Code" or step.texts(1) is "to" and step.texts(2).EndsWith("Text")
+	instance is register and (step.texts(1) is in Accessors or isText)
 Helper(entry InstructionEntry, owner Text, name Text) Text
 	Sample.IsConsumed((InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "x")), -1, 0) is false
 	Sample.Helper(Construction, "Tripling", "Z") is ""
@@ -93,7 +93,7 @@ Helper(entry InstructionEntry, owner Text, name Text) Text
 	Sample.Helper(Reading, "Tripling", "Length") is "strict_flat_length"
 	Sample.Helper(Reading, "Summing", "Z") is ""
 	Sample.Helper(Reading, "Tripling", "Code") is "strict_flat_text"
-	if (Count(owner) is 0) or (entry.texts.First.StartsWith("Strict/List(") is false)
+	if Count(owner) is 0 or entry.texts.First.StartsWith("Strict/List(") is false
 		return ""
 	if name is in ("Length", "Count", "Code")
 		return name is "Code" then "strict_flat_text" else "strict_flat_length"
@@ -105,10 +105,10 @@ Packed(name Text) Number
 	mutable writes = 0
 	mutable count = 0
 	for instructions
-		if (value.kind is InstructionType.InvokeWriteToList) and (value.texts(0) is name)
+		if value.kind is InstructionType.InvokeWriteToList and value.texts(0) is name
 			writes = writes + 1
-		let isLoaded = (value.kind is InstructionType.LoadVariableToRegister) and (value.texts(0) is name)
-		if isLoaded and (index + 1 < instructions.Length)
+		let isLoaded = value.kind is InstructionType.LoadVariableToRegister and value.texts(0) is name
+		if isLoaded and index + 1 < instructions.Length
 			count = Constructing(instructions(index + 1), value.payload(0))
 	writes is count then count else 0
 Constructing(entry InstructionEntry, register Number) Number
@@ -120,8 +120,8 @@ Constructing(entry InstructionEntry, register Number) Number
 	if entry.kind is not InstructionType.Invoke
 		return 0
 	let arguments = PayloadDecoder(entry).Arguments
-	let isOnly = (entry.texts(1) is "from") and (arguments.Length is 1)
-	isOnly and (arguments.First is register) then Count(entry.texts(0)) else 0
+	let isOnly = entry.texts(1) is "from" and arguments.Length is 1
+	isOnly and arguments.First is register then Count(entry.texts(0)) else 0
 Appended(entry InstructionEntry, fallback MlirLists) Texts
 	Made.Appended(Making.instructions(2), MlirLists(Made.function, 2)).Last.IndexOf("_set(%t2f, %t2k, %t2e)") > 0
 	MlirFlats(Made.function, 4).Appended(Making.instructions(4), MlirLists(Made.function, 4)).Last.IndexOf("%t4k") > 0
@@ -154,7 +154,7 @@ Constructed(entry InstructionEntry, typeName Text, instances MlirInstances) Text
 	let argument = PayloadDecoder(entry).Arguments.First
 	let writer = MlirKinds(function).Writer(position, argument)
 	let loaded = writer >= 0 then function.method.instructions(writer) else entry
-	if (loaded.kind is InstructionType.LoadVariableToRegister) and (Packed(loaded.texts(0)) > 0)
+	if loaded.kind is InstructionType.LoadVariableToRegister and Packed(loaded.texts(0)) > 0
 		return instances.Constructed(entry, typeName)
 	let temp = "%t" + position
 	let converted = "    " + temp + "f = func.call @" + Converter(writer) + "(" + temp + "l) : (f64) -> f64"
@@ -164,8 +164,8 @@ Converter(writer Number) Text
 	Sample.Converter(-1) is "strict_flat_from_list"
 	MlirFlats(MlirBytes.Flattening.function, 0).Converter(3) is "strict_flat_from_list"
 	MlirFlats(MlirValidated.Sizes.function, 1).Converter(0) is "strict_flat_from_list"
-	let isLoaded = (writer >= 0) and (function.method.instructions(writer).kind is InstructionType.LoadVariableToRegister)
-	isLoaded and (MlirValidated(function, writer).Gathered > 0) then "strict_validated" else "strict_flat_from_list"
+	let isLoaded = writer >= 0 and function.method.instructions(writer).kind is InstructionType.LoadVariableToRegister
+	isLoaded and MlirValidated(function, writer).Gathered > 0 then "strict_validated" else "strict_flat_from_list"
 Kind(kind Text) Text
 	Sample.Constructed(Construction, "Tripling", MlirInstances(Sample.function, 1))(0).IndexOf("l = llvm.load %r3 ") is 7
 	Sample.Constructed(Construction, "Tripling", MlirInstances(Sample.function, 1))(1).IndexOf("(%t1l) :") is 43
@@ -187,7 +187,7 @@ IsListed(kind Text) Boolean
 	Sample.IsListed("Tripling")
 	MlirFlats(MlirPairs.Sample.function, 0).IsListed("Pairing")
 	MlirFlats(MlirCouples.Sample.function, 0).IsListed("Sizing") is false
-	MlirPairs(function, 0).IsListed(kind) or (Count(kind) > 0)
+	MlirPairs(function, 0).IsListed(kind) or Count(kind) > 0
 Defaulted(kind Text, initial Runtime/VmValue, slot Text, suffix Text) Texts
 	Sample.Defaulted("Tripling", MlirPairs.Twice, "%s", "d0").Last is "    llvm.store %t1d0f, %s : f64, !llvm.ptr"
 	if Kind(kind) is "Pair"
@@ -218,7 +218,7 @@ IsConsumed(steps List(InstructionEntry), at Number, register Number) Boolean
 	let reuse = LoadReuse(steps)
 	for Range(at + 1, steps.Length)
 		let kind = steps(value).kind
-		let isArithmetic = (kind > InstructionType.StoreSeparator) and (kind < InstructionType.ArithmeticSeparator)
-		if (register is in reuse.Reads(steps(value))) and (kind is not InstructionType.CheckError)
-			return isArithmetic or (kind is in MlirEquality.Comparisons) or IsAccessor(steps(value), register)
+		let isArithmetic = kind > InstructionType.StoreSeparator and kind < InstructionType.ArithmeticSeparator
+		if register is in reuse.Reads(steps(value)) and kind is not InstructionType.CheckError
+			return isArithmetic or kind is in MlirEquality.Comparisons or IsAccessor(steps(value), register)
 	true

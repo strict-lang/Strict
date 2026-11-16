@@ -9,9 +9,9 @@ DeclaredType(nameIndex Number) Text
 	HeaderTokens(Tokenizer("has numbers = List(Number)").Tokens).DeclaredType(1) is "Numbers"
 	HeaderTokens("has", "ops", "Bytecode", "/", "InstructionList").DeclaredType(1) is "InstructionList"
 	let next = nameIndex + 1
-	if next < tokens.Length and (tokens(next) is "/")
+	if next < tokens.Length and tokens(next) is "/"
 		return TypeName(nameIndex)
-	if next + 1 < tokens.Length and (tokens(next) is "=")
+	if next + 1 < tokens.Length and tokens(next) is "="
 		return ValueType(next + 1)
 	next < tokens.Length and tokens(next) is not in ("with", ",", ")") then TypeName(next) else ImplicitType(nameIndex)
 ImplicitType(nameIndex Number) Text
@@ -19,20 +19,20 @@ ImplicitType(nameIndex Number) Text
 	HeaderTokens("constant", "Add").ImplicitType(1) is "Number"
 	HeaderTokens("has", "texts").ImplicitType(1) is "Texts"
 	HeaderTokens(Tokenizer("has pair Couple(Text, Number) with x > 1").Tokens).DeclaredType(1) is "Couple(Text, Number)"
-	Made.ParameterTypes is ("Couple(Text, Number)", "Number") and (Made.ReturnType is "Couple(Number, Text)")
+	Made.ParameterTypes is ("Couple(Text, Number)", "Number") and Made.ReturnType is "Couple(Number, Text)"
 	HeaderTokens(Tokenizer("has rows List(Numbers)").Tokens).DeclaredType(1) is "Numberss"
 	HeaderTokens(Tokenizer("has holder Holder(Size)").Tokens).DeclaredType(1) is "Holder(Size)"
 	HeaderTokens(Tokenizer("has sizes = Dictionary((1, 1), (2, 2))").Tokens).DeclaredType(1) is "Dictionary"
 	HeaderTokens(Tokenizer("has size = Size(1, 2)").Tokens).DeclaredType(1) is "Size"
 	HeaderTokens(Tokenizer("has width Number with value > (0)").Tokens).DeclaredType(1) is "Number"
-	(tokens(0) is "constant") and (nameIndex + 1 is tokens.Length) then "Number" else tokens(nameIndex).Capitalize
+	tokens(0) is "constant" and nameIndex + 1 is tokens.Length then "Number" else tokens(nameIndex).Capitalize
 ValueType(start Number) Text
 	HeaderTokens("constant", "a", "=", "(", "1", ",", "2", ")").ValueType(3) is "Numbers"
 	HeaderTokens("constant", "a", "=", "-", "1").ValueType(3) is "Number"
 	HeaderTokens(Tokenizer("constant a = IsWindows then \"x\" else \"\"").Tokens).ValueType(3) is "Text"
 	let isWhole = tokens(0) is in ("constant", "has")
 	let lowest = isWhole then SyntaxParser(tokens).LowestOperatorIndex(start, tokens.Length) else -1
-	if (lowest > 0) and (tokens(lowest) is "else")
+	if lowest > 0 and tokens(lowest) is "else"
 		return ValueType(lowest + 1)
 	let first = tokens(start)
 	if first is "("
@@ -48,7 +48,7 @@ MemberName Text
 	HeaderTokens("constant", "a", "=", "Vector2", "(", "1", ")").ValueType(3) is "Vector2"
 	HeaderTokens("has", "Math", "/", "Size").MemberName is "Size"
 	HeaderTokens("has", "count", "Number").MemberName is "count"
-	tokens.Length > 3 and (tokens(2) is "/") then tokens(3) else tokens(1)
+	tokens.Length > 3 and tokens(2) is "/" then tokens(3) else tokens(1)
 TypeName(start Number) Text
 	HeaderTokens("Mutable", "(", "List", ")").TypeName(0) is "List"
 	HeaderTokens("List", "(", "Mutable", "(", "Text", ")", ")").TypeName(0) is "Texts"
@@ -58,9 +58,9 @@ TypeName(start Number) Text
 	if start + 2 >= tokens.Length or tokens(start + 1) is not in ("/", "(")
 		return tokens(start)
 	let inner = TypeName(start + 2)
-	if (tokens(start + 1) is "/") or (tokens(start) is "Mutable")
+	if tokens(start + 1) is "/" or tokens(start) is "Mutable"
 		return inner
-	((tokens(start) is "List") and inner.Lower is not inner) then inner + "s" else Arguments(start, inner)
+	tokens(start) is "List" and inner.Lower is not inner then inner + "s" else Arguments(start, inner)
 Arguments(start Number, inner Text) Text
 	HeaderTokens("Map", "(", "Text", ",", "Number", ")").Arguments(0, "Text") is "Map(Text, Number)"
 	HeaderTokens("Dictionary", "(", "Text", ")").Arguments(0, "Text") is "Dictionary(Text)"
@@ -70,9 +70,9 @@ Arguments(start Number, inner Text) Text
 	HeaderTokens(Tokenizer("Dictionary(Text, Number)").Tokens).Arguments(0, "Text") is "Dictionary(Text, Number)"
 	HeaderTokens("Range", "(", "Number", ")").Arguments(0, "Number") is "Range"
 	HeaderTokens(Tokenizer("Wrapped(Halver)").Tokens).Arguments(0, "Halver") is "Wrapped(Halver)"
-	let further = (inner.Lower is inner) or (tokens(start) is "Range") then "" else Further(start)
-	let isKept = (tokens(start) is not "Range") and (tokens(start + 3) is in (")", "("))
-	tokens(start) + (isKept or (further is not "") then "(" + inner + further + ")" else "")
+	let further = inner.Lower is inner or tokens(start) is "Range" then "" else Further(start)
+	let isKept = tokens(start) is not "Range" and tokens(start + 3) is in (")", "(")
+	tokens(start) + (isKept or further is not "" then "(" + inner + further + ")" else "")
 Further(start Number) Text
 	HeaderTokens(Tokenizer("Box(List(Text), Number, Map(Text, Size)) a").Tokens).Further(0) is ", Number, Map(Text, Size)"
 	HeaderTokens(Tokenizer("Iterator(Vector2) Couple(Text, Number)").Tokens).Further(0) is ""
@@ -83,7 +83,7 @@ Further(start Number) Text
 		depth = depth + brackets.BracketDelta(tokens(value))
 		if depth is 0
 			return further
-		if (depth is 1) and (tokens(value) is ",")
+		if depth is 1 and tokens(value) is ","
 			further = further + ", " + TypeName(value + 1)
 	further
 ReturnType Text
@@ -91,12 +91,12 @@ ReturnType Text
 	HeaderTokens(Tokenizer("Run").Tokens).ParametersEnd is 0
 	HeaderTokens(Tokenizer("Merged Numbers slow").Tokens).ReturnType is "Numbers"
 	HeaderTokens("Run", "Number").ReturnType is "Number"
-	(Loading.ReturnType is "Image") and (Deleting.ReturnType is "None")
+	Loading.ReturnType is "Image" and Deleting.ReturnType is "None"
 	HeaderTokens("Run").ReturnType is "None"
 	HeaderTokens("Add", "(", "x", ")").ReturnType is "None"
 	HeaderTokens("Add", "(", "x", ")", "Mutable", "(", "List", ")").ReturnType is "List"
 	constant start = ParametersEnd + 1
-	(start >= tokens.Length) or (tokens(start) is "slow") then "None" else TypeName(start)
+	start >= tokens.Length or tokens(start) is "slow" then "None" else TypeName(start)
 ParametersEnd Number
 	HeaderTokens("Add", "(", "x", ")", "Number").ParametersEnd is 3
 	HeaderTokens("Add", "(", "x", "Iterator", "(", "Text", ")", ")").ParametersEnd is 7
@@ -107,7 +107,7 @@ ParametersEnd Number
 	mutable end = 0
 	for tokens
 		depth = depth + brackets.BracketDelta(value)
-		if (depth is 0) and (end is 0)
+		if depth is 0 and end is 0
 			end = index
 	end
 IsParameterStart(position Number) Boolean
@@ -116,13 +116,13 @@ IsParameterStart(position Number) Boolean
 	let previous = tokens(position - 1)
 	if previous is "mutable"
 		return true
-	let isAfterComma = (previous is ",") and (Depth(position) is 1)
-	((position is 2) or isAfterComma) and tokens(position) is not "mutable"
+	let isAfterComma = previous is "," and Depth(position) is 1
+	(position is 2 or isAfterComma) and tokens(position) is not "mutable"
 ParameterPosition(name Text) Number
 	HeaderTokens(Tokenizer("B(a N with value < b, b N)").Tokens).ParameterPosition("b") is 9
 	HeaderTokens(Tokenizer("B(a N)").Tokens).ParameterPosition("c") is -1
 	for Range(2, ParametersEnd)
-		if IsParameterStart(value) and (tokens(value) is name)
+		if IsParameterStart(value) and tokens(value) is name
 			return value
 	-1
 Depth(position Number) Number
@@ -158,7 +158,7 @@ ReturnsMutable Boolean
 	HeaderTokens("Add", "(", "x", ")", "Mutable", "(", "List", ")").ReturnsMutable
 	HeaderTokens("Run", "Number").ReturnsMutable is false
 	constant start = ParametersEnd + 1
-	start < tokens.Length and (tokens(start) is "Mutable")
+	start < tokens.Length and tokens(start) is "Mutable"
 ReturnsSlow Boolean
 	HeaderTokens("Add", "(", "x", ")").ReturnsSlow is false
 	HeaderTokens(Tokenizer("Merged Numbers slow").Tokens).ReturnsSlow
@@ -169,6 +169,6 @@ MutableParameters Texts
 	HeaderTokens(Tokenizer("Add(x, mutable list) Mutable(List)").Tokens).MutableParameters is ("list")
 	mutable names = List(Mutable(Text))
 	for ParametersEnd
-		if index > 1 and (tokens(index - 1) is "mutable")
+		if index > 1 and tokens(index - 1) is "mutable"
 			names.Add(tokens(index))
 	names

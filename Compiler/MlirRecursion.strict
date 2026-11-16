@@ -43,7 +43,7 @@ Finished(node Number, path Numbers, order Numbers, edges List(Numbers)) Numbers
 	let onPath = path + node
 	mutable done = order
 	for edges(node)
-		if (value is not in done) and (value is not in onPath)
+		if value is not in done and value is not in onPath
 			done = Finished(value, onPath, done, edges)
 	done + node
 IsBack(callees Numbers, rank Number, order Numbers) Boolean
@@ -52,7 +52,7 @@ IsBack(callees Numbers, rank Number, order Numbers) Boolean
 	if rank < 0
 		return true
 	for callees
-		if (value < 0) or (order.Index(value) >= rank)
+		if value < 0 or order.Index(value) >= rank
 			return true
 	false
 Symbols(listed List(MlirFunction)) Texts

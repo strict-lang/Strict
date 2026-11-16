@@ -28,9 +28,9 @@ Mark(block CodeBlock, marker Text, key Text) CodeBlock
 	TestReports.Mark(TestReports.Mark(TestCodegen.Counter, Nearing, "A"), Nearing, "A").scope.Count(Nearing) is 1
 	key is in Marked(block.scope, marker) then block else block.Declare(marker, key)
 Helpers(scope Scope) List(MethodEntry) slow
-	Even.Helpers(GotNumber).First.Name is "$TestsGot0" and (Even.Helpers(GotNumber).First.instructions.Length is 30)
+	Even.Helpers(GotNumber).First.Name is "$TestsGot0" and Even.Helpers(GotNumber).First.instructions.Length is 30
 	Even.Helpers(GotNumber.With(Nearing, "Number")).Last.Name is "$TestsNear0"
-	Even.Helpers(GotNumber).Last.Name is "$TestsTook" and (Even.Helpers(GotNumber).Last.parameters is (ElapsedParameter))
+	Even.Helpers(GotNumber).Last.Name is "$TestsTook" and Even.Helpers(GotNumber).Last.parameters is (ElapsedParameter)
 	TestReports(Even.types, true).Helpers(GotNumber).Length is 1
 	mutable helpers = List(Mutable(MethodEntry))
 	for Marked(scope, Showing)
@@ -53,8 +53,8 @@ Helper(name Text, parameter Text, type Text, expression SyntaxNode) MethodEntry 
 	let returned = generated.Add(InstructionEntry.Return(generated.Result))
 	MethodEntry(TestCodegen.Runner + name, List(MemberEntry) + entry, "Strict/Text", returned.instructions)
 Near(kind Text, ordinal Number) MethodEntry slow
-	NearNumbers.Name is "$TestsNear0" and (NearNumbers.returnType is "Strict/Boolean")
-	NearNumbers.parameters.Last.Name is Expected and (NearText.IndexOf("Strict/Unknown, ") is -1)
+	NearNumbers.Name is "$TestsNear0" and NearNumbers.returnType is "Strict/Boolean"
+	NearNumbers.parameters.Last.Name is Expected and NearText.IndexOf("Strict/Unknown, ") is -1
 	Erring.Near("Number", 0).instructions(5).payload is InstructionEntry.LoadAnyError(1).payload
 	let values = Neutral
 	let tested = ErrorCodegen.Tested

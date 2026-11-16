@@ -18,7 +18,7 @@ Memory(model Gguf) Numbers
 	let architecture = model.Value("general.architecture")
 	let heads = model.Value(architecture + ".ssm.time_step_rank")
 	let size = model.Value(architecture + ".ssm.state_size")
-	Layer.Zeros(heads is "" then 0 else (heads to Number) * (size to Number) * (size to Number))
+	Layer.Zeros(heads is "" then 0 else heads to Number * (size to Number) * (size to Number))
 Rewound(before Hybrid, tokens Number) Hybrid
 	Tiny.Prepared(Drafter.Pair).Rewound(Tiny, 1).layers(0).memory is Single.layers(0).memory
 	mutable rewound = List(Mutable(DeltaBlock))

@@ -71,8 +71,8 @@ IsRead(entry InstructionEntry) Boolean
 	if entry.kind is InstructionType.IndexCall
 		return MlirGpuCheck(function, at).IsList(function, at, entry.texts(0))
 	let source = MlirKinds(function).Writer(at, entry.payload(1))
-	let isIndexed = (source >= 0) and (function.method.instructions(source).kind is InstructionType.IndexCall)
-	isIndexed and (Slots(MlirKinds(function).VariableKind(source, function.method.instructions(source).texts(0))) > 0)
+	let isIndexed = source >= 0 and function.method.instructions(source).kind is InstructionType.IndexCall
+	isIndexed and Slots(MlirKinds(function).VariableKind(source, function.method.instructions(source).texts(0))) > 0
 Flattened(loaded Text, kind Text) Texts
 	Sample.Flattened("%a", "List(Pair)").Last is "    %ar = func.call @strict_records_flat(%a, %as) : (f64, f64) -> f64"
 	Sample.Flattened("%a", "Numbers").Length is 0

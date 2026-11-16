@@ -14,8 +14,8 @@ IsFiltering Boolean
 	Doubling.IsFiltering is false
 	for Range(position + 1, function.method.LoopEndOf(position))
 		let entry = function.method.instructions(value)
-		let isResult = (entry.kind is InstructionType.InvokeWriteToList) and (entry.texts(0) is "forResult")
-		if isResult and (MlirPurity(function, position).IsCollected(value) is false)
+		let isResult = entry.kind is InstructionType.InvokeWriteToList and entry.texts(0) is "forResult"
+		if isResult and MlirPurity(function, position).IsCollected(value) is false
 			return true
 	false
 IsFilteringValues Boolean
@@ -25,7 +25,7 @@ IsFilteringValues Boolean
 	MlirParallel(Keeping.function, 2).IsParallel
 	let kinds = MlirKinds(function)
 	let flats = MlirFlats(function, position).Count(kinds.ElementKind(kinds.VariableKind(position, "forResult")))
-	IsFiltering and ((MlirParallel(function, position).Filler is not "strict_list_filled") or (flats > 0))
+	IsFiltering and (MlirParallel(function, position).Filler is not "strict_list_filled" or flats > 0)
 Holed Texts
 	Keeping.Holed.Last is "    func.call @strict_list_holes(%t2ph, %t2n) : (f64, f64) -> ()"
 	Doubling.Holed.Length is 0

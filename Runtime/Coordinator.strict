@@ -38,7 +38,7 @@ Served
 	if server is Error
 		return server
 	mutable idle = Process.Elapsed
-	for as long as (isEnding is false) and (Process.Elapsed - idle < Resident.IdleSeconds)
+	for as long as isEnding is false and Process.Elapsed - idle < Resident.IdleSeconds
 		let socket = Taken(server)
 		if socket > 0
 			idle = Replied(socket) then Process.Elapsed else idle
@@ -48,26 +48,26 @@ Served
 Taken(server Number) Number
 	Sample.Taken(0) is 0
 	let waiting = Socket.Waiting(server, 1)
-	(waiting is Error) or (waiting is not 1) then 0 else Socket.Accept(server)
+	waiting is Error or waiting is not 1 then 0 else Socket.Accept(server)
 Replied(socket Number) Boolean
 	Sample.Chosen(("hello", "a", "1", "b", "0")) is "ok"
 	let words = Resident("").Received(socket, "\n").Trim.Split("\t")
-	isEnding = (words(0) is "exit") and ((busyJob is "") or (words.Last is busyJob))
+	isEnding = words(0) is "exit" and (busyJob is "" or words.Last is busyJob)
 	let answer = words(0) is "exit" then (isEnding then "ok" else "busy") else Chosen(words)
 	if Resident("").Send(socket, answer + "\n") is Error
 		logger.Log("The client left before the result was sent")
-	(busyJob is not "") or (Process.Elapsed - seenAt < StaleSeconds)
+	busyJob is not "" or Process.Elapsed - seenAt < StaleSeconds
 Chosen(words Texts) Text
 	Sample.Chosen(("status")) is "busy\t\t"
 	Coordinator(Logger, busyLabel = "H3Image").Chosen(("status")) is "busy\t\t"
-	if (words.Length > 0) and (words(0) is "holding")
+	if words.Length > 0 and words(0) is "holding"
 		return Held(words)
-	if (words.Length > 0) and ((words(0) is "done") or JobCancel.Matches(words, busyJob))
+	if words.Length > 0 and (words(0) is "done" or JobCancel.Matches(words, busyJob))
 		return Finished(words(0))
-	if (words.Length > 0) and (words(0) is "need")
+	if words.Length > 0 and words(0) is "need"
 		return Needed(Need.Parsed(words), Seen)
 	let busy = "busy\t" + busyJob + "\t" + (busyJob is "" then "" else busyLabel)
-	(words.Length > 0) and (words(0) is "status") then busy else RemoteRun(logger).Answered(words, Seen)
+	words.Length > 0 and words(0) is "status" then busy else RemoteRun(logger).Answered(words, Seen)
 Finished(word Text) Text
 	Coordinator(Logger, busyJob = "video", busyLabel = "H3Image").Finished("done") is "ok"
 	wantsFree = word is not "done"
@@ -90,8 +90,8 @@ Held(words Texts) Text
 	idleRam = words.Length > 1 then words(1) to Number else 0
 	idleVram = words.Length > 2 then words(2) to Number else 0
 	seenAt = Process.Elapsed
-	let isBlocking = (busyJob is not "") and (busyVram > LockNeed) and (idleVram >= LockHeld)
-	if (wantsFree or isBlocking) and ((busyLabel is "exit") or (idleRam > 0) or (idleVram > 0))
+	let isBlocking = busyJob is not "" and busyVram > LockNeed and idleVram >= LockHeld
+	if (wantsFree or isBlocking) and (busyLabel is "exit" or idleRam > 0 or idleVram > 0)
 		return busyLabel is "exit" then "exit" else "free"
 	"ok"
 Needed(need Need, seen MachineView) Text
@@ -102,15 +102,15 @@ Needed(need Need, seen MachineView) Text
 		busyVram = need.Vram
 		wantsFree = false
 		return "go\t" + need.job + "\t" + need.threads
-	wantsFree = (verdict is "free") or ((verdict is "refused") and (Process.Elapsed - seenAt < StaleSeconds))
-	busyLabel = (verdict is "refused") and wantsFree then "exit" else busyLabel
-	if (verdict is "refused") and (wantsFree is false)
+	wantsFree = verdict is "free" or verdict is "refused" and Process.Elapsed - seenAt < StaleSeconds
+	busyLabel = verdict is "refused" and wantsFree then "exit" else busyLabel
+	if verdict is "refused" and wantsFree is false
 		return "refused\t" + need.job + "\t" + Admission(logger).Reason(need, seen)
 	"wait\t" + need.job + "\t1\t" + need.label + "\t0\t0"
 Granted(words Texts, seen MachineView) Text
 	Sample.Granted(("need", "job", "label", "4", "8", "2", "4", "0", "wait"), MachineView.Wide) is "go\tjob\t0"
 	mutable sample = Coordinator(Logger)
-	let isHeld = (sample.Held(("holding", "4", "2")) is "ok") and (sample.idleRam is 4)
+	let isHeld = sample.Held(("holding", "4", "2")) is "ok" and sample.idleRam is 4
 	isHeld then sample.Needed(Need.Parsed(words), seen) else "bad"
 Seen MachineView slow
 	Sample.Seen.freeRam >= 0
@@ -123,20 +123,20 @@ Seen MachineView slow
 Forced(name Text, fallback Number) Number
 	Sample.Forced("StrictVariableNeverSet", 4) is 4
 	let forced = Process.Variable(name)
-	(forced is "") or (forced to Number is Error) then fallback else forced to Number
+	forced is "" or forced to Number is Error then fallback else forced to Number
 Vram(text Text) Numbers
 	Sample.Vram("24564, 24049") is (24564 * Mebibyte, 24049 * Mebibyte)
 	Sample.Vram("nope") is (0, 0)
 	let measured = text is "" then Process.RunTool("nvidia-smi", Query).Output else text
 	let forced = Process.Variable("STRICT_MACHINE_VRAM")
-	if (text is "") and (forced is not "")
+	if text is "" and forced is not ""
 		return (forced to Number, forced to Number)
 	let parts = measured.Split(",")
 	parts.Length < 2 then (0, 0) else (parts(0).Trim to Number * Mebibyte, parts(1).Trim to Number * Mebibyte)
 Sent(line Text, isStarting = true) Text
 	Coordinator(Logger, "Compiler/output/MissingCoordinator").Sent("status") is ""
 	Coordinator(Logger, "Compiler/output/MissingCoordinator").Sent("exit\tH3Video", false) is ""
-	let socket = (root is "") and isStarting then Linked else Connected
+	let socket = root is "" and isStarting then Linked else Connected
 	if socket is 0
 		return ""
 	if Resident("").Send(socket, line + "\n") is Error
@@ -158,7 +158,7 @@ Resolved(line Text) Text
 Connected Number
 	Coordinator(Logger, "Compiler/output/MissingCoordinator").Connected is 0
 	let port = File(Place).Exists then File(Place).ReadLines.First to Number else 0
-	if (port is Error) or (port is 0)
+	if port is Error or port is 0
 		return 0
 	let socket = Socket.Connect("127.0.0.1", port)
 	socket is Error then 0 else socket

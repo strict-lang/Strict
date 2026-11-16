@@ -1,3 +1,3 @@
 Taken(tick Number) Boolean
-	Sampler.Taken(0) and Sampler.Taken(5) and (Sampler.Taken(-1) is false)
+	Sampler.Taken(0) and Sampler.Taken(5) and Sampler.Taken(-1) is false
 	tick >= 0

@@ -20,8 +20,8 @@ IndexedType(node SyntaxNode, scope Scope, current Scope) Text
 	Typed.IndexedType(Parsed(9), Named, Scope(List(Text) + "count", List(Text) + "Number")) is "Number"
 	Typed.IndexedType(SyntaxNode("Call", "other"), Named, NumberMethods) is ""
 	Typed.IndexedType(SyntaxNode("Identifier", "other", List(SyntaxNode) + SyntaxNode("Number", "0")), Named, Named) is ""
-	let isCall = (node.Kind is "Call") and (node.children.Length > 0)
-	if isCall and (scope.TypeOf(node.text) is not "")
+	let isCall = node.Kind is "Call" and node.children.Length > 0
+	if isCall and scope.TypeOf(node.text) is not ""
 		return scope.TypeOf(node.text)
 	if isCall
 		return HasNoParameters(scope.TypeOf("self type"), node.text) then current.TypeOf(node.text) else ""
@@ -33,7 +33,7 @@ HasNoParameters(type Text, method Text) Boolean
 	Typed.HasNoParameters("Number", "count")
 	Typed.HasNoParameters("Number", "Shift") is false
 	let parameters = inference.types.ParameterScope(type)
-	(parameters.Count(method) <= 1) and (parameters.TypeOf(method) is "")
+	parameters.Count(method) <= 1 and parameters.TypeOf(method) is ""
 Parsed(at Number) SyntaxNode
 	Parsed(1) to Text is "other.Floor(1)"
 	SyntaxParser(Tokenizer(Indexes(at)).Tokens).Parse

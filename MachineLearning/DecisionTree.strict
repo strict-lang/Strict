@@ -16,7 +16,7 @@ Grown(rows List(Numbers), depth Number, picked Number) DecisionTree
 	Empty.Grown(Alternating, 1, 1) is DecisionTree((0, -1, -1), (0, 0, 0), (2, -1, -1), (-1, 0, 1))
 	Empty.Grown(Reversed, 1, 1) is DecisionTree((0, -1, -1), (4, 0, 0), (2, -1, -1), (-1, 1, 0))
 	let split = BestSplit(rows, picked)
-	if (depth is 0) or (split.Length is 0)
+	if depth is 0 or split.Length is 0
 		return Leaf(Majority(Kinds(rows)))
 	let position = features.Length
 	let left = Node(split).Grown(Side(rows, split, true), depth - 1, picked)
@@ -71,7 +71,7 @@ SplitGini(rows List(Numbers), split Numbers) Number
 	Empty.SplitGini(Rows, (0, 0)) is 0.2666667
 	let left = Side(rows, split, true)
 	let right = Side(rows, split, false)
-	if (left.Length is 0) or (right.Length is 0)
+	if left.Length is 0 or right.Length is 0
 		return 2
 	(left.Length * Gini(Kinds(left)) + right.Length * Gini(Kinds(right))) / rows.Length
 Side(rows List(Numbers), split Numbers, isLeft Boolean) List(Numbers)

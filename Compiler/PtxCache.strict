@@ -23,8 +23,8 @@ Previous(device Text, isTiling Boolean, ending = ".kernels.mlir") Texts
 	Sample.Previous("module {\n\n}", false) is ("// new")
 	Sample.Previous("module {\n}", true).Length is 0
 	let key = File(base + ending)
-	let missing = isTiling and (File(base + ".older.ptx").Exists is false)
-	if ((key.Exists and (missing is false) and File(base + ".ptx").Exists) is false) or (Read(ending) is not device)
+	let missing = isTiling and File(base + ".older.ptx").Exists is false
+	if (key.Exists and missing is false and File(base + ".ptx").Exists) is false or Read(ending) is not device
 		return List(Text)
 	isTiling then (Read(".ptx"), Read(".older.ptx")) else List(Text) + Read(".ptx")
 Read(ending Text) Text
@@ -51,7 +51,7 @@ Built(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Texts
 	if previous.Length > 0
 		return previous
 	File(base + ".gpu.mlir").Write(device)
-	let built = isCached and (kept is not "") then Reduced(isTiling, builder, kept) else builder.Ptx(base, isTiling, kept)
+	let built = isCached and kept is not "" then Reduced(isTiling, builder, kept) else builder.Ptx(base, isTiling, kept)
 	isCached then Remembered(key, built) else built
 Reduced(isTiling Boolean, builder DeviceBuild, kept Text) Texts
 	Reducing.Built(Combining, false, DeviceBuild.Local, Doubles).First.StartsWith("//")
@@ -63,7 +63,7 @@ Reduced(isTiling Boolean, builder DeviceBuild, kept Text) Texts
 		return previous
 	File(base + ".kept.mlir").Delete
 	let built = builder.Ptx(base, isTiling, kept)
-	if (key is not "") and built.First.StartsWith("//") and Written(built, ".ptx")
+	if key is not "" and built.First.StartsWith("//") and Written(built, ".ptx")
 		Saved(".kept.mlir", key)
 	built
 Kept(tools Toolchain, kept Text) Text
@@ -92,7 +92,7 @@ Shared(device Text, isTiling Boolean, builder DeviceBuild) Texts
 	Known.Shared("x", false, DeviceBuild.Missing) is ("// known")
 	Known.Shared("y", false, DeviceBuild.Missing) is Error("DirectoryNotCreated")
 	let direct = Fingerprint(device, isTiling, builder, "")
-	let isReady = (builder.isShipped is false) or File(base + ".fatbin").Exists
+	let isReady = builder.isShipped is false or File(base + ".fatbin").Exists
 	let known = isReady then Previous(direct, isTiling, ".shared.mlir") else List(Text)
 	if known.Length > 0
 		return known
@@ -119,7 +119,7 @@ Waited(key Text, isTiling Boolean) Texts slow
 	let started = Process.Elapsed
 	for as long as Process.Elapsed - started < Strict.BuildWait
 		let previous = Previous(key, isTiling)
-		if (previous.Length > 0) or lock.Locked
+		if previous.Length > 0 or lock.Locked
 			return previous.Length > 0 then previous else Previous(key, isTiling)
 		Process.Wait(0.1)
 	List(Text)
@@ -144,7 +144,7 @@ IsWritten(ptx Texts, ending Text) Boolean
 	Sample.IsWritten(("// other", "// old"), ".ptx") is false
 	let older = ptx.Length > 1 then ptx.Last else ""
 	let isOlder = older is "" then File(base + ".older" + ending).Exists is false else Read(".older" + ending) is older
-	File(base + ending).Exists and (Read(ending) is ptx.First) and isOlder
+	File(base + ending).Exists and Read(ending) is ptx.First and isOlder
 Written(ptx Texts, ending Text) Boolean
 	Single.Written(List(Text) + "// only", ".ptx")
 	File("Compiler/output/Single.older.ptx").Exists is false and Single.IsWritten(("// only"), ".ptx")
@@ -170,5 +170,5 @@ Saved(ending Text, text Text)
 		File(temporary).Rename(path)
 	let isLeft = File(temporary).Exists
 	File(temporary).Delete
-	if isLeft or (File(path).Exists is false)
+	if isLeft or File(path).Exists is false
 		return Error("CacheNotWritten")

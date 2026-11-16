@@ -22,7 +22,7 @@ Numbers Numbers
 	MlirLines(Lined).Numbers is (2, 3)
 	mutable numbers = List(Mutable(Number))
 	for function.method.instructions
-		if (value.line > 0) and (value.line is not in numbers)
+		if value.line > 0 and value.line is not in numbers
 			numbers.Add(value.line)
 	numbers
 Allocated Texts
@@ -40,7 +40,7 @@ At(position Number, name Text) Texts
 		return List(Text)
 	let entry = function.method.instructions(position)
 	let previous = position > 0 then function.method.instructions(position - 1).line else 0
-	let isStart = (entry.line > 0) and (entry.kind is not InstructionType.JumpEnd) and (entry.line is not previous)
+	let isStart = entry.line > 0 and entry.kind is not InstructionType.JumpEnd and entry.line is not previous
 	let started = isStart then Started(position, entry.line, name) else List(Text)
 	entry.kind is InstructionType.Return then started + Stop else started
 Started(position Number, line Number, name Text) Texts
@@ -58,7 +58,7 @@ End Texts
 Framed Texts
 	MlirLines(MlirChecks.Presenting).Framed is ("    func.call @strict_frame_ended() : () -> ()")
 	MlirLines(Unlined).Framed.Length is 0
-	let isFramed = function.type.IsRealtime and (function.method.Name is "Presented")
+	let isFramed = function.type.IsRealtime and function.method.Name is "Presented"
 	isFramed then List(Text) + "    func.call @strict_frame_ended() : () -> ()" else List(Text)
 Placed Texts
 	MlirLines(Lined).Placed is ("Shape.strict:2", "Shape.strict:3")

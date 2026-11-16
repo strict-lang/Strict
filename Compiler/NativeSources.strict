@@ -71,12 +71,12 @@ Options(tokens Texts, isLinking Boolean) Text
 	mutable options = ""
 	for tokens
 		let isLinked = value.StartsWith("-l") or value.StartsWith("-Wl")
-		if (value is not "") and (IsSource(value) is false) and (isLinked is isLinking)
+		if value is not "" and IsSource(value) is false and isLinked is isLinking
 			options = options + " " + value
 	options
 IsCompiled(target Text, inputs Texts, options Text) Boolean
 	let flags = File(target + ".nativecache")
-	flags.Exists and (Text.Combine(flags.ReadLines, "\n") is options) and IsCurrent(target, inputs)
+	flags.Exists and Text.Combine(flags.ReadLines, "\n") is options and IsCurrent(target, inputs)
 Inputs(platform Number, root Text) Texts
 	Adding.Inputs(Platform.Windows, ".").Last is "Examples/NativeAdd/native/Windows.flags"
 	"NeuralNetworks/native/Parallel.h" is in Paralleled.Inputs(Platform.Windows, ".")
@@ -98,7 +98,7 @@ IsCurrent(target Text, inputs Texts) Boolean
 		return false
 	let built = File(target).Modified
 	for inputs
-		if File(value).Exists and (File(value).Modified > built)
+		if File(value).Exists and File(value).Modified > built
 			return false
 	true
 Resource(base Text, platform Number, root Text) Text
@@ -106,7 +106,7 @@ Resource(base Text, platform Number, root Text) Text
 	Adding.Resource(Iconed, Platform.Linux, ".") is ""
 	Adding.Resource(Iconed, Platform.Current, ".") is (Platform.Current is Platform.Windows then Resourced else "")
 	let icon = Release(Logger, base).Icon
-	if (platform is not Platform.Windows) or (File(icon).Exists is false)
+	if platform is not Platform.Windows or File(icon).Exists is false
 		return ""
 	let full = icon.IndexOf(":") > 0 then icon else Directory.Current.Replace("\\", "/") + "/" + icon
 	File(base + ".rc").Write("GLFW_ICON ICON \"" + full + "\"")

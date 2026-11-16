@@ -25,7 +25,7 @@ Fastest(model Qwen3, prompt Numbers) Number slow
 		let before = Process.Elapsed
 		let first = model.Prefilled(prompt, 0).Next
 		let milliseconds = (Process.Elapsed - before) * 1000 / prompt.Length
-		fastest = (first >= 0) and (milliseconds < fastest) then milliseconds else fastest
+		fastest = first >= 0 and milliseconds < fastest then milliseconds else fastest
 	fastest
 Sampled(model Qwen3, position Number, count Number, temperature Number) Numbers slow
 	Qwen3Benchmark(Logger).Sampled(Qwen3.Tiny.Step(1, 0), 1, 2, 1).Length is 2

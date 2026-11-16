@@ -33,14 +33,14 @@ IsReporting(entry InstructionEntry, isReporting Boolean) Boolean
 	Reporting.IsReporting(InstructionEntry.Print("Test failed: a"), false)
 	Reporting.IsReporting(InstructionEntry.PrintValue("  got: ", 1, true), true) is false
 	Lined.IsReporting(InstructionEntry.Print("Test failed: a"), false) is false
-	if (frame.method.Name is not TestCodegen.Runner) or (entry.kind is not InstructionType.Print)
+	if frame.method.Name is not TestCodegen.Runner or entry.kind is not InstructionType.Print
 		return isReporting
-	entry.texts(0).StartsWith("Test failed: ") or isReporting and (entry.texts(0) is not "  got: ")
+	entry.texts(0).StartsWith("Test failed: ") or isReporting and entry.texts(0) is not "  got: "
 Logged(position Number, slots List(VmValue))
 	for Logs(position, slots)
 		frame.machine.logger.Log(value)
 Logs(position Number, slots List(VmValue)) Texts
-	Lined.Logs(4, Frame.Listed).Length is 0 and (Lined.Logs(0, Frame.Listed).Length is 2)
+	Lined.Logs(4, Frame.Listed).Length is 0 and Lined.Logs(0, Frame.Listed).Length is 2
 	Lined.Logs(2, Started).Length is 2
 	if frame.method.Name is TestCodegen.Runner
 		return List(Text)
@@ -70,15 +70,15 @@ Hit(position Number) Texts
 	Same.Hit(2).Length is 0
 	let entry = frame.method.instructions(position)
 	let previous = position > 0 then frame.method.instructions(position - 1).line else 0
-	let isStart = (entry.kind is not InstructionType.JumpEnd) and (entry.line is not previous)
+	let isStart = entry.kind is not InstructionType.JumpEnd and entry.line is not previous
 	let hit = "$Hit " + frame.owner + "|" + entry.line
-	isStart and (IsLoopLine(entry.line) is false) then List(Text) + hit else List(Text)
+	isStart and IsLoopLine(entry.line) is false then List(Text) + hit else List(Text)
 IsLoopLine(line Number) Boolean
 	Reporting.Logs(0, Frame.Listed).Length is 0
 	Lined.IsLoopLine(4)
 	Lined.IsLoopLine(2) is false
 	for frame.method.instructions
-		if (value.kind is InstructionType.LoopBegin) and (value.line is line)
+		if value.kind is InstructionType.LoopBegin and value.line is line
 			return true
 	false
 Ended(position Number, place Text, result VmValue) Texts
@@ -91,9 +91,9 @@ Ended(position Number, place Text, result VmValue) Texts
 	Lined.Ended(4, "A|0", Seven) is ("$Result A|0|7")
 	let instructions = frame.method.instructions
 	let entry = instructions(position)
-	let isLast = (position + 1 >= instructions.Length) or (instructions(position + 1).line is not entry.line)
-	let isControl = (entry.kind > InstructionType.Return) and (entry.kind <= InstructionType.JumpEnd)
-	isLast and (isControl is false) then List(Text) + ("$Result " + place + "|" + Shown(result)) else List(Text)
+	let isLast = position + 1 >= instructions.Length or instructions(position + 1).line is not entry.line
+	let isControl = entry.kind > InstructionType.Return and entry.kind <= InstructionType.JumpEnd
+	isLast and isControl is false then List(Text) + ("$Result " + place + "|" + Shown(result)) else List(Text)
 Iteration(position Number, slots List(VmValue)) Texts
 	Lined.Iteration(2, Counted).Length is 0
 	Lined.Iteration(3, Started).Length is 0
@@ -101,7 +101,7 @@ Iteration(position Number, slots List(VmValue)) Texts
 	let entry = frame.method.instructions(position)
 	let begin = entry.kind is InstructionType.LoopBegin then position else entry.payload.Last
 	let state = slots(Frame.LoopSlot)
-	let isOwn = (entry.line > 0) and (state.items.Length > 0) and (state.items(0).items(3).number is begin)
+	let isOwn = entry.line > 0 and state.items.Length > 0 and state.items(0).items(3).number is begin
 	let place = frame.owner + "|" + entry.line
 	let current = isOwn then Shown(Looping.Current(state, false, false, VmValue.None)) else ""
 	isOwn then ("$Hit " + place, "$Set " + place + "|for|" + current) else List(Text)
@@ -114,7 +114,7 @@ Shown(result VmValue) Text
 	constant MaxShownLength = 80
 	let items = result.items
 	let elements = "(" + Text.Combine(Elements(items)) + (items.Length > 5 then ", ...)" else ")")
-	let isRecord = (result.items.Length > 0) and (result.kind is not in ("List", "Strict/Error"))
+	let isRecord = result.items.Length > 0 and result.kind is not in ("List", "Strict/Error")
 	let code = result.kind is "List" then elements else isRecord then Named(result) else ValueCode(result).Code
 	code.Length > MaxShownLength then code.Substring(0, MaxShownLength) + "..." else code
 Named(record VmValue) Text
@@ -131,7 +131,7 @@ Members(record VmValue, isChanged Boolean) Texts
 	let natives = Natives(frame.machine.types)
 	for natives.TypeOf(record.kind).members
 		let item = index < record.items.Length then record.items(index) else VmValue.None
-		if ((value.IsConstant is false) and (item.kind is not "None")) and ((item is natives.Initial(value)) is not isChanged)
+		if value.IsConstant is false and item.kind is not "None" and item is natives.Initial(value) is not isChanged
 			value.Name + " = " + ValueCode(item).Code
 Elements(items List(VmValue)) Texts
 	Lined.Elements((Seven, Seven, Seven, Seven, Seven, Seven)) is ("7", "7", "7", "7", "7")

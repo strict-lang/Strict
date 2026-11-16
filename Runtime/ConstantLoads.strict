@@ -27,7 +27,7 @@ Methods(type TypeEntry, start Number) List(MethodEntry)
 		next = next + count
 	methods
 Instructions(method MethodEntry, start Number) List(InstructionEntry)
-	Ones.Instructions(Both, 4)(1).payload(1) is 5 and (Ones.Instructions(Both, 4).Last is InstructionEntry.Return(0))
+	Ones.Instructions(Both, 4)(1).payload(1) is 5 and Ones.Instructions(Both, 4).Last is InstructionEntry.Return(0)
 	Ones.Instructions(Late, 4)(1).payload(2) is 4
 	mutable next = start
 	mutable instructions = List(Mutable(InstructionEntry))
@@ -42,7 +42,7 @@ Marked(entry InstructionEntry, at Number, index Number) InstructionEntry
 	InstructionEntry(entry, payload = entry.payload.Slice(0, at) + Cached + index + rest)
 Decoded List(VmValue)
 	Ones.Decoded.First to Text is "(1, 1.5)"
-	Pair.Decoded.Length is 5 and (Pair.Decoded(4) to Text is "(2)")
+	Pair.Decoded.Length is 5 and Pair.Decoded(4) to Text is "(2)"
 	mutable decoded = List(Mutable(VmValue))
 	for type, method, entry in types, type.methods, method.instructions
 		if At(entry) >= 0
@@ -55,14 +55,14 @@ Count(type TypeEntry) Number
 		count = count + Counted(value)
 	count
 Counted(method MethodEntry) Number
-	Ones.Counted(Both) is 2 and (Ones.Counted(Machine.TwiceMethod) is 0)
+	Ones.Counted(Both) is 2 and Ones.Counted(Machine.TwiceMethod) is 0
 	mutable count = 0
 	for method.instructions
 		count = At(value) < 0 then count else count + 1
 	count
 At(entry InstructionEntry) Number
-	Ones.At(PayloadDecoder.Ones.entry) is 1 and (Ones.At(Stored) is 0)
-	Ones.At(InstructionEntry.LoadNumber(0, 7)) is -1 and (Ones.At(InstructionEntry.Return(6)) is -1)
+	Ones.At(PayloadDecoder.Ones.entry) is 1 and Ones.At(Stored) is 0
+	Ones.At(InstructionEntry.LoadNumber(0, 7)) is -1 and Ones.At(InstructionEntry.Return(6)) is -1
 	Ones.At(InstructionEntry(InstructionType.Return, List(Text), List(Number))) is -1
 	let isLoad = entry.kind is InstructionType.LoadConstantToRegister
 	let at = isLoad then 1 else (entry.kind is InstructionType.StoreConstantToVariable then 0 else -1)
