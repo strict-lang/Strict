@@ -95,8 +95,7 @@ TagEnd(position Number) Number
 	let found = text.IndexOf(">", position)
 	found < 0 then text.Length else found + 1
 ElementEnd(start Number) Number
-	Menu.ElementEnd(17) is Menu.text.Length
-	Sample.ElementEnd(0) is Sample.text.Length
+	(Menu.ElementEnd(17) is Menu.text.Length) and (Sample.ElementEnd(0) is Sample.text.Length)
 	(Xml("<A>b").ElementEnd(0) is 4) and (Xml("<A/>b").ElementEnd(-1) is 5)
 	(Xml("<A><B/></A>c").ElementEnd(0) is 11) and (Xml("</A>b").ElementEnd(0) is 4)
 	mutable depth = 0
