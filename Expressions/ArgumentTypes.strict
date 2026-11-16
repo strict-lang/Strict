@@ -10,6 +10,8 @@ constant Generics = ArgumentTypes(TypeInference(KnownTypes(("Range", "Generic"),
 constant LoggedMembers = (Scope(List(Text) + "logger", List(Text) + "Logger"), Scope(List(Text) + "textWriter", List(Text) + "TextWriter"))
 constant LoggedTypes = KnownTypes(("Wrong", "Logger"), LoggedMembers, KnownTypes.NoMemberPair, (Scope(List(Text) + "from", List(Text) + "logger"), KnownTypes.NoMembers))
 constant Logged = ArgumentTypes(TypeInference(LoggedTypes, Shapes))
+constant ErrorMembers = List(Scope) + Scope(List(Text) + "name", List(Text) + "Text")
+constant Erring = ArgumentTypes(TypeInference(KnownTypes(List(Text) + "Error", ErrorMembers, List(Scope) + KnownTypes.NoMembers, List(Scope) + KnownTypes.NoMembers), Shapes))
 constant Made = SyntaxParser(Tokenizer("Wrong(Logger, 2)").Tokens).Parse
 constant Couples = ArgumentTypes(TypeInference(Instantiation.Implicit.types, List(Scope)))
 constant Coupled = SyntaxParser(Tokenizer("Couple(\"a\", 2)").Tokens).Parse
@@ -196,17 +198,18 @@ IsWrongElement(argument Text, parameter Text) Boolean
 	let compared = (listed.Length is not 1) or ("Text" is in elements) then argument else listed(0)
 	IsScalar(compared) and (elements.Length is 1) and Mismatch(compared, elements(0))
 Mismatch(argument Text, parameter Text) Boolean
-	Sizing.Mismatch("Count", "Area")
-	Sizing.Mismatch("Area", "Size") is false
-	Sizing.Mismatch("Number", "Area") is false
-	Sizing.Mismatch("Area", "Area") is false
-	Generics.Mismatch("Range", "Generic") is false
-	Sizing.Mismatch("Text", "Size")
+	Sizing.Mismatch("Count", "Area") and Sizing.Mismatch("Text", "Size")
+	(Sizing.Mismatch("Area", "Size") is false) and (Sizing.Mismatch("Number", "Area") is false)
+	(Sizing.Mismatch("Area", "Area") is false) and (Generics.Mismatch("Range", "Generic") is false)
+	Sizing.Mismatch("Count", "Boolean") and (Sizing.Mismatch("Count", "Number") is false)
 	let types = inference.types
-	let isUser = (TypeEntry.IsBaseName(argument) or TypeEntry.IsBaseName(parameter) or (parameter is "Generic")) is false
-	let isKnown = types.IsKnown(argument) and types.IsKnown(parameter)
-	let isChecked = isUser and isKnown and (types.MembersOf(parameter).names.Length > 0) and (argument is not parameter)
-	IsBaseMismatch(argument, parameter) or isChecked and (parameter is not in types.MembersOf(argument).types)
+	let isUser = ((TypeEntry.IsBaseName(argument) or (parameter is "Generic")) is false) and types.IsKnown(argument)
+	let members = types.MembersOf(argument)
+	let isScalarLost = IsScalar(parameter) and (members.names.Length > 0) and (argument is not "Error")
+	let isComposite = types.IsKnown(parameter) and (types.MembersOf(parameter).names.Length > 0)
+	let isShaped = TypeEntry.IsBaseName(parameter) then isScalarLost else isComposite
+	let isChecked = isUser and isShaped and (argument is not parameter)
+	IsBaseMismatch(argument, parameter) or isChecked and (parameter is not in members.types)
 IsBaseMismatch(argument Text, parameter Text) Boolean
 	Sizing.IsBaseMismatch("Text", "Count")
 	Sizing.IsBaseMismatch("Number", "Size") is false
@@ -230,6 +233,7 @@ IsListed(types Texts) Boolean
 IsScalar(type Text) Boolean
 	Sizing.IsScalar("Boolean")
 	Sizing.IsScalar("Count") is false
+	Erring.Mismatch("Error", "Number") is false
 	Sizing.IsWrongElement("Count", "Areas") is false
 	Sizing.Mismatch("Xyz", "Area") is false
 	Sizing.IsBaseMismatch("Count", "Area") is false
