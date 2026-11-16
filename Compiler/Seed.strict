@@ -1,0 +1,22 @@
+has logger
+constant Passes = " --mem2reg --cse --canonicalize -o "
+constant Lowered = "Compiler/obj/Seed.opt.mlir"
+constant ToolSeconds = 270
+Run(arguments Texts) Number
+	if arguments.Length is 0
+		Written
+	else
+		NativeCompiler(logger).Built(arguments.Slice(1, arguments.Length - 1), List(Text), List(TypeEntry))
+	0
+Written
+	if Process.Variable("STRICT_GPU") is not "0"
+		return Error("SeedNeedsStrictGpuZero")
+	let tool = Toolchain(Platform.Current, ".").Located("mlir-opt")
+	let shrunk = Process.RunTool(tool, "Compiler/obj/Seed.mlir" + Passes + Lowered, ToolSeconds)
+	if shrunk.exitCode is not 0
+		return Error("SeedNotShrunk: " + shrunk.Output + shrunk.error)
+	File("Compiler/Bootstrap.mlir").Write(Cut(File(Lowered).ReadText, File("Compiler/NativeRuntime.mlir").ReadLines.First))
+	logger.Log("Written Compiler/Bootstrap.mlir, " + File("Compiler/Bootstrap.mlir").Length + " bytes")
+Cut(module Text, runtime Text) Text
+	Seed.Cut("module {\n  a\n  b\n  c\n}", "  b") is "module {\n  a\n"
+	module.Substring(0, module.IndexOf("\n" + runtime) + 1)
