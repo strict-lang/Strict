@@ -1,0 +1,1 @@
+- `STRICT_RC_CHECK=1 STRICT_SERVER=0 strict test Examples/DeepRecursion.strict unit` crashes with a segmentation fault (also with the strict.exe of 05:44 before strict_rc_pinned_last), Runtime/Machine.strict first reports `Reference counts would free a reachable object` (128 bytes, count 0) before it crashes (2026-11-16).
