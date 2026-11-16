@@ -1,10 +1,12 @@
 has rest Texts
-constant Flags = ("native", "lines", "values", "trace", "--no-recursive", "mutations", "full", "shown")
+constant Flags = ("native", "lines", "values", "trace", "profile", "sampled", "--no-recursive", "mutations", "full", "shown")
 Options Texts
 	rest.Length > 2 then rest.Slice(2, rest.Length - 2) else List(Text)
 Option Text
+	TestRequest(("a.strict", ".", "profile")).Option is "profile"
+	TestRequest(("a.strict", ".", "mutations")).Option is ""
 	for Options
-		if value is in ("unit", "native", "lines", "values", "trace", "-") and (value is not "unit")
+		if value is in ("native", "lines", "values", "trace", "profile", "sampled", "-")
 			return value
 	""
 Selection Text
@@ -22,6 +24,7 @@ Selection Text
 	"*"
 Methods Texts
 	TestRequest(("a.strict", ".", "unit", "rounds:1/4", "Area")).Methods is ("Area")
+	TestRequest(("a.strict", ".", "-")).Methods.Length is 0
 	for Options
 		if (value is not in Flags + "unit" + "-") and (value.StartsWith("rounds:") is false)
 			value
@@ -45,11 +48,13 @@ IsMutating Boolean
 	TestRequest(List(Text) + "a.strict").IsMutating
 	TestRequest(("a.strict", ".", "unit")).IsMutating is false
 	TestRequest(("a.strict", ".", "shown")).IsMutating is false
+	TestRequest(("a.strict", ".", "unit", "mutations")).IsMutating
 	("mutations" is in Options) or (("unit" is not in Options) and ("shown" is not in Options))
 IsWhole Boolean
 	TestRequest(("a.strict", ".", "mutations")).IsWhole is false
 	TestRequest(("a.strict", ".", "unit")).IsWhole
 	TestRequest(List(Text) + "a.strict").IsWhole is false
+	TestRequest(("a.strict", ".", "-")).IsWhole
 	("unit" is in Options) or ("-" is in Options)
 Message Text
 	TestRequest(("a.strict", ".", "mutations")).Message is ""

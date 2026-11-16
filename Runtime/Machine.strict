@@ -6,6 +6,7 @@ has isTracing = false
 has sources Dictionary(Text, Text) = Dictionary(Text, Text)
 has deadline Number = 0
 has isQuiet = false
+has isSampling = false
 constant Hello = Machine(List(TypeEntry) + TypeEntry.HelloLogger)
 constant TwiceMethod = MethodEntry("Twice", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 21), InstructionEntry.Binary(InstructionType.Add, (0, 0, 1)), InstructionEntry.Return(1)))
 constant Doubler = TypeEntry("Strict/Doubler", List(MemberEntry), List(MethodEntry) + TwiceMethod)
@@ -63,12 +64,13 @@ Started(main TypeEntry) VmValue
 Prepared Machine
 	Hello.Prepared.prototypes.entries.First.kind is "HelloLogger"
 	Hello.Prepared.sources("HelloLogger") is "HelloLogger.strict"
+	Machine(Hello, isSampling = true).Prepared.isSampling
 	mutable created = List(Mutable(VmValue))
 	mutable located = Dictionary(Text, Text)
 	for types
 		created.Add(Natives(types).Fresh(value))
 		located(value.Name) = TypeSource(value).Located(folder)
-	Constants(Machine(types, logger, ConstantCache(created), folder, isTracing, located)).Computed
+	Constants(Machine(types, logger, ConstantCache(created), folder, isTracing, located, isSampling = isSampling)).Computed
 Bound(type TypeEntry, instance VmValue, method MethodEntry, arguments List(VmValue), prototype VmValue) List(VmValue)
 	Hello.Bound(Doubler, VmValue.OfNumber(2), Doubler.methods.First, List(VmValue), VmValue.None).First.number is 2
 	Hello.Bound(Doubler, VmValue.None, Defaulted, List(VmValue), VmValue.None).Last.number is 7
@@ -141,13 +143,14 @@ Execute(method MethodEntry, locals List(VmValue), owner Text, depth = 0) VmValue
 	Machine(Frame.Doubling, isTracing = true).Execute(Frame.Twice.method, Frame.Listed, "D").number is 42
 	Frame.Doubling.Execute(Frame.Twice.method, Frame.Listed, "D", Invocation.MaxDepth + 1).items(0).text is "StackOverflow"
 	Machine(Frame.Doubling, deadline = 0.001).Execute(Frame.Twice.method, Frame.Listed, "D").items(0).text is "Timeout"
+	Machine(Frame.Doubling, isQuiet = true, isSampling = true).Execute(Frame.Twice.method, Frame.Listed, "D").number is 42
 	if depth > Invocation.MaxDepth
 		return VmValue.OfError("StackOverflow")
 	let stopped = MutationCache.Stopped(deadline)
 	if stopped is not ""
 		return VmValue.OfError(stopped)
 	let frame = Frame(value, method, owner, depth)
-	(isTracing then TracedFrame(frame).Finished(locals) else frame.Finished(locals))(Frame.ResultSlot)
+	(isTracing or isSampling then SampledFrame(frame).Chosen(locals) else frame.Finished(locals))(Frame.ResultSlot)
 Call(call Invocation) VmValue
 	Machine(List(TypeEntry) + Doubler).Call(Invocation.AddCall).kind is "Strict/Error"
 	Hello.Call(Invocation.Uppered).text is "AB"

@@ -609,6 +609,16 @@
     %ran = func.call @strict_test_now(%slot) : (!llvm.ptr) -> f64
     return %ran : f64
   }
+  // the millisecond tick Sampler.Taken took last, one sample per millisecond of the whole process (SampledFrame)
+  llvm.mlir.global internal @strict_sampler_tick(-1.0e+300 : f64) : f64
+  func.func private @strict_sampler_taken(%self: f64, %tick: f64) -> f64 {
+    %slot = llvm.mlir.addressof @strict_sampler_tick : !llvm.ptr
+    %last = llvm.load %slot : !llvm.ptr -> f64
+    %isNew = arith.cmpf une, %last, %tick : f64
+    llvm.store %tick, %slot : f64, !llvm.ptr
+    %taken = func.call @strict_boolean(%isNew) : (i1) -> f64
+    return %taken : f64
+  }
   func.func private @strict_testbudget_started(%self: f64, %place: f64, %isSlow: f64) -> f64 {
     %limit = arith.constant 0.2 : f64
     %started = func.call @strict_test_begin(%self, %place, %isSlow, %limit) : (f64, f64, f64, f64) -> f64

@@ -66,9 +66,9 @@ Stored(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	Twice.Stored(InstructionEntry(InstructionType.IndexCall, "list", (6, 6, 7)), Listed, 0).number is 20
 	Twice.Stored(Storage.StoreSecond, Listed, 0).items(1).number is 1
 	if entry.kind is InstructionType.LoadConstantToRegister
-		return entry.payload(1) is 1 then VmValue.OfNumber(entry.payload(2)) else PayloadDecoder(entry).Value(1)
+		return PayloadDecoder(entry).Cached(1, machine.prototypes)
 	if entry.kind is InstructionType.StoreConstantToVariable
-		return entry.payload(0) is 1 then VmValue.OfNumber(entry.payload(1)) else PayloadDecoder(entry).Value(0)
+		return PayloadDecoder(entry).Cached(0, machine.prototypes)
 	if entry.kind is InstructionType.IndexCall
 		return Indexed(entry, slots, position)
 	entry.payload.Length < 3 then slots(entry.payload(0)) else Written(entry, slots)

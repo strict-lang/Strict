@@ -70,6 +70,7 @@ strict test . native --no-recursive       build and run only the root types' tes
 strict test Examples/Sum.strict shown     run every test, including Slow, and print each one, without mutation
 strict test Examples/Sum.strict lines     run the tests natively, then show how often and how long each line ran
 strict test Examples/Sum.strict values    run the tests on the Strict VM, then show the values each line produced
+strict test Examples/Sum.strict profile   run all its tests on the Strict VM, sample the running line every ms, show the slowest lines and methods
 strict update .                           copy or download the packages of a folder again
 strict version                            version and build time of this strict
 ```

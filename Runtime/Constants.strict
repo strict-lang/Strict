@@ -1,12 +1,17 @@
 has machine Machine
 constant SevenMethod = MethodEntry("Seven", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 7), InstructionEntry.Return(0)))
 constant Keeping = TypeEntry("Strict/Keeping", List(MemberEntry) + MemberEntry("Seven", "Strict/Number", List(InstructionEntry), true), List(MethodEntry) + SevenMethod)
+constant OnesMethod = MethodEntry("Ones", List(MemberEntry), "Strict/List(Number)", (PayloadDecoder.Ones.entry, InstructionEntry.Return(0)))
+constant Listing = Machine(Resolver(List(TypeEntry) + TypeEntry("Strict/Listing", List(MemberEntry), List(MethodEntry) + OnesMethod)).Resolved).Prepared
 Computed Machine
 	Constants(Machine(Resolver(List(TypeEntry) + Keeping).Resolved).Prepared).Value(0, 0).number is 7
+	Listing.types.First.methods.First.instructions.First.payload(1) is 8
+	Listing.prototypes.At(Listing.types.First.methods.First.instructions.First.payload(2)) to Text is "(1, 1.5)"
 	mutable created = List(Mutable(VmValue))
 	for machine.types
 		created.Add(Filled(index))
-	Machine(machine, prototypes = ConstantCache(created))
+	let loads = ConstantLoads(machine.types, created.Length)
+	Machine(machine, types = loads.Rewritten, prototypes = ConstantCache(created + loads.Decoded))
 Filled(route Number) VmValue
 	Constants(Machine.Hello.Prepared).Filled(0).kind is "HelloLogger"
 	let type = machine.types(route)

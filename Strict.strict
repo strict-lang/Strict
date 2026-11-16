@@ -147,13 +147,16 @@ Tested(rest Texts, known = Dictionary(Text, TypeEntry)) Answer slow
 		return Answer(2, known)
 	if request.Option is "-"
 		File(FileCompiler.Normalized(rest(0))).InMemory(Process.Input)
-	if request.Option is in ("values", "trace")
+	if request.Option is in ("values", "trace", "profile", "sampled")
 		return Answer(Traced(request, rest), known)
 	let selection = request.Selection
 	let execute = Execute(logger, selection, request.IsRecursive, request.IsMutating, request.Part, request.IsFull, known)
 	request.Option is in ("lines", "native") then Answer(Native("test", rest), known) else execute.Served(rest(0), rest(1))
 Traced(request TestRequest, rest Texts) Number slow
 	let trace = ValueTrace(logger, request.Selection)
+	let profile = Profile(logger, request.Selection)
+	if request.Option is in ("profile", "sampled")
+		return request.Option is "profile" then profile.Run(rest(0), rest(1)) else profile.Sampled(rest(0), rest(1))
 	request.Option is "values" then trace.Run(rest(0), rest(1)) else trace.Traced(rest(0), rest(1))
 Rooted(arguments Texts) Texts slow
 	Strict.Rooted(List(Text) + "a.strict") is ("a.strict", ".")

@@ -151,9 +151,11 @@ Summary(failed Number, path Text) Text
 	Execute.Summary(0, "A.strict") is "All tests passed in A.strict"
 	Execute.Summary(2, "A.strict") is "2 tests failed in A.strict"
 	failed is 0 then "All tests passed in " + path else failed + " tests failed in " + path
-Started(types List(TypeEntry), path Text, isTracing = false, isInlining = true) Machine
+Started(types List(TypeEntry), path Text, isTracing = false, isInlining = true, isSampling = false) Machine
 	Execute(Logger).Started(List(TypeEntry) + TypeEntry.HelloLogger, "Examples/HelloLogger.strict").folder is "Examples"
 	Execute(Logger).Started(List(TypeEntry) + TypeEntry.HelloLogger, "A.strict", true).isTracing
+	Execute(Logger).Started(List(TypeEntry) + TypeEntry.HelloLogger, "A.strict", false, true, true).isSampling
 	let rewritten = TailCalls(isInlining then Inliner(types).Inlined else types).Rewritten
 	let folder = Path(path).PathOnly.text
-	Machine(Resolver(rewritten).Resolved, logger, ConstantCache(List(VmValue)), folder, isTracing).Prepared
+	let resolved = Resolver(rewritten).Resolved
+	Machine(resolved, logger, ConstantCache(List(VmValue)), folder, isTracing, isSampling = isSampling).Prepared
