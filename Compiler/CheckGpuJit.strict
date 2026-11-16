@@ -1,0 +1,50 @@
+has logger
+constant ToolSeconds = 120
+constant JitHead = ("has logger", "Table(count Number) Numbers", "	GpuJit(Logger).Table(2) is (0, 0.001)", "	for count", "		index * 0.001", "Brains(input Numbers) BFloat16s")
+constant JitMid = ("	GpuJit(Logger).Brains((0, 1)) is (0, 1)", "	for input.Length", "		input(index)")
+constant JitRun = ("Run", "	let numbers = Brains(Table(129 * 128 * 128))", "	logger.Log(\"attention \" + Attention(numbers, numbers, numbers, 1, 1, 128, 128, false).Merged.Length)")
+Run Number
+	let folder = "Compiler/output/GpuJit" + 1000000.Random.Floor
+	if Directory.Create(folder) is Error
+		return Error("DirectoryNotCreated")
+	let result = Checked(folder)
+	Directory.Delete(folder)
+	if result is Error
+		return result
+	logger.Log("Shipped cubins load cleanly; driver compiles are logged, cached loads are silent")
+	0
+Checked(folder Text) Boolean
+	let src = folder + "/GpuJit.strict"
+	File(src).Write(JitHead + JitMid + JitRun)
+	let built = Process.RunTool(Process.Current.executable, "build " + src, ToolSeconds)
+	if built.exitCode is not 0
+		return Error("BuildFailed: " + built.Output + built.error)
+	let obj = folder + "/obj/GpuJit"
+	if (not File(obj + ".fatbin").Exists) or (not File(obj + ".runtime.fatbin").Exists)
+		return Error("With ptxas installed a program build ships its cubins: " + built.Output)
+	VerifiedShipping(obj, folder + "/GpuJit" + (Process.OperatingSystem is "Windows" then ".exe" else ""))
+VerifiedShipping(obj Text, exe Text) Boolean
+	let shipped = Ran(exe, true)
+	if (shipped is Error) or ("The driver compiled" is in shipped)
+		return Error("Shipped cubins were not loaded: " + (shipped to Text))
+	File(obj + ".fatbin").Delete
+	File(obj + ".runtime.fatbin").Delete
+	CheckCompiledAndCached(exe)
+CheckCompiledAndCached(exe Text) Boolean
+	let compiled = Ran(exe, true)
+	logger.Log(compiled.Trim)
+	if (compiled is Error) or ("The driver compiled the GPU" is not in compiled)
+		return Error("Driver compilation was not mentioned: " + (compiled to Text))
+	let warm = Ran(exe, false)
+	let cached = warm is Error then warm else Ran(exe, false)
+	if (cached is Error) or ("The driver compiled" is in cached)
+		return Error("Cached load called compiled: " + (cached to Text))
+	true
+Ran(exe Text, noCache Boolean) Text
+	let win = Process.OperatingSystem is "Windows"
+	let extra = noCache then (win then "set CUDA_CACHE_DISABLE=1&& " else "CUDA_CACHE_DISABLE=1 ") else ""
+	let cmd = (win then "set STRICT_GPU=all&& " else "STRICT_GPU=all ") + extra + "\"" + exe + "\""
+	let res = Process.RunTool(win then "cmd" else "sh", win then "/c " + cmd else "-c \"" + cmd + "\"", ToolSeconds)
+	if (res.exitCode is not 0) or ("attention 2113536" is not in res.Output)
+		return Error("RunFailed: " + res.Output + res.error)
+	res.Output

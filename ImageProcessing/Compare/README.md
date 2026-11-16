@@ -12,6 +12,5 @@ Create the input once (Python with Pillow): `python -c "from PIL import Image; I
 | Goose | `goose build blur.goose --cc clang -o blur_goose.exe` ([goose](https://github.com/aardappel/goose) built with CMake) |
 | C# | `dotnet run -c Release blur.cs` (`blur_parallel.cs` uses `Parallel.For`) |
 | TypeScript | `node blur.ts` |
-| Python | `python blur.py` (a few minutes), `python blur_numpy.py` adds each of the 81 offsets for all pixels at once with NumPy |
 
 Every version blurs the raw RGBA bytes (a PPM has no alpha, it is loaded as 255) with the same loop and no hand optimizations. Strict averages the Colors of the neighbors inside the image (`Neighbors(bitmap, index).Average`), the compiler turns that into one loop with a sum per member, keeps a Color as one whole number and picks the threads.

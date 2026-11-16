@@ -5,6 +5,7 @@ constant Pairs = Scope(List(Text) + "from", List(Text) + "x,y")
 constant Kept = (Defaults(List(Text)).Constructors(Pairs, ("a", "b"), Paired), Defaults(List(Text)).Constructors(Custom, List(Text), Paired), Defaults(List(Text) + "has b Number = 0").Added(KnownTypes.NoMembers))
 constant Joint = Defaults(List(Text)).Constructors(Custom, ("a", "b"), Paired).TypeAt("from", 0)
 constant Zero = Scope(("b default"), ("0"))
+constant Sampled = Defaults(("has x Number", "Add(a Number) Number", "\ta"))
 constant Fresh = Defaults(List(Text)).Constructors(KnownTypes.NoMembers, ("a", "b"), Paired).names.Length
 Added(scope Scope) Scope
 	Defaults(("has a Number", "has b Number = 0", "constant C = 3")).Added(KnownTypes.NoMembers).names is ("b default")
@@ -31,3 +32,48 @@ Constructors(scope Scope, names Texts, members Scope) Scope
 	for names
 		types.Add(members.TypeOf(value))
 	Scope(("from", "from types"), (Text.Combine(names, ","), Text.Combine(types, ","))).WithAll(scope.names, scope.types)
+Parameters(methods Scope, isContract Boolean) Scope
+	Defaults(("A(x Number) N", "\tx")).Parameters(Scope(("A"), ("N")), false).TypeOf("A types") is "Number"
+	mutable scope = isContract then Scope(List(Text) + " trait", List(Text) + "true") else Scope(List(Text), List(Text))
+	let shape = TypeShape(lines)
+	for lines
+		if shape.IsMethodHeader(value)
+			let entries = HeaderEntries(HeaderTokens(Tokenizer(value).Tokens), methods).Parameters
+			scope = scope.WithAll(entries.names, entries.types)
+	let added = Changes(lines).Added(Changes(lines, true).Added(Steps(List(Text)).Members(lines)))
+	scope.WithAll(added.names, added.types)
+Of(methods Scope, members Scope, names Texts) Scope
+	Sampled.Of(Scope(("Add"), ("Number")), Scope(("x"), ("Number")), ("x")).TypeOf("from") is "x"
+	let parameters = Added(Parameters(methods, TypeShape(lines).IsContract))
+	let kind = Constraint.Kind(lines)
+	Constructors(kind is "" then parameters else parameters.With(TypeShape.Constrained, kind), names, members)
+ConstantScope(end Number) Scope
+	Defaults(("constant A", "constant B = 10", "constant C")).ConstantScope(3).TypeOf("C") is "11"
+	mutable names = List(Mutable(Text))
+	mutable values = List(Mutable(Text))
+	mutable next = 0
+	for lines.Slice(0, end)
+		if value.StartsWith("constant ")
+			let literal = ConstantAt(value, next)
+			next = NextEnum(value, next)
+			if literal is not ""
+				names.Add(value.Substring(9, value.Length - 9).Split(" ").First)
+				values.Add(literal)
+	Scope(names, values)
+ConstantAt(line Text, next Number) Text
+	Defaults(List(Text)).ConstantAt("constant A", 3) is "3"
+	Defaults(List(Text)).ConstantAt("constant A = ", 3) is ""
+	if line.IndexOf("=") < 0
+		return next to Text
+	let equal = line.IndexOf(" = ")
+	equal < 0 then "" else line.Substring(equal + 3, line.Length - equal - 3)
+NextEnum(line Text, current Number) Number
+	Defaults(List(Text)).NextEnum("constant A", 0) is 1
+	Defaults(List(Text)).NextEnum("constant A = 10", 0) is 11
+	if line.IndexOf("=") < 0
+		return current + 1
+	let tokens = Tokenizer(line).Tokens
+	if tokens.Length > 3
+		if SyntaxParser(tokens).Leaf(tokens(3)).Kind is "Number"
+			return tokens(3) to Number + 1
+	current

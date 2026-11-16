@@ -1,0 +1,83 @@
+has logger
+constant ToolSeconds = 90
+constant HeadA = ("#include <math.h>", "#include <stdint.h>", "#include <stdio.h>", "#include <stdlib.h>", "#include <string.h>")
+constant HeadB = ("#ifdef _WIN32", "#include <windows.h>", "#include <process.h>", "#define DOPEN(p) LoadLibraryA(p)", "#define DSYM(d,n) (void*)GetProcAddress((HMODULE)(d),(n))")
+constant HeadC = ("#else", "#include <dlfcn.h>", "#include <pthread.h>", "#define DOPEN(p) dlopen(p, RTLD_NOW)", "#define DSYM(d,n) dlsym((d),(n))", "#endif")
+constant TypesA = ("typedef double (*FnRows)(double,double,double,double);", "typedef double (*FnVals)(double,double,double);", "typedef double (*FnExp)(double,double,double,double,double);")
+constant TypesB = ("static FnRows fn_rows; static FnVals fn_vals; static FnExp fn_exp;", "static char paths[2][512]; static int is_gguf = 0;")
+constant TypesC = List(Text) + "static const char* entry_json = \"\\\"dtype\\\":\\\"F32\\\",\\\"shape\\\":[128,64],\\\"data_offsets\\\":[0,32768]\";"
+constant HelpersA = ("static double enc(const char* s){ double d; uint64_t u=(uint64_t)(uintptr_t)s; memcpy(&d,&u,8); return d; }", "static uint64_t ptr(double d){ uint64_t u; memcpy(&u,&d,8);")
+constant HelpersB = ("  if((u>>48)==0x7ffc){ fprintf(stderr,\"ERR:%s\\n\",(char*)(u&0xffffffffffffULL)); exit(1);} return u&0xffffffffffffULL; }")
+constant CheckRowsA = ("static void chk(uint64_t r, float ex){ if(*(double*)r!=128) exit(2); int idx[3]={0,64,127};", "  for(int k=0;k<3;k++){ uint64_t row=ptr(*(double*)(r+(idx[k]+1)*8));")
+constant CheckRowsB = ("    if(*(double*)row!=64) exit(3); float* f=(float*)(row+16); for(int j=0;j<64;j++) if(f[j]!=ex) exit(4); } }")
+constant WriteSafeA = ("static void wsafe(const char* p, float val){ FILE* f=fopen(p,\"wb\");", "  const char* h=\"{\\\"matrix\\\":{\\\"dtype\\\":\\\"F32\\\",\\\"shape\\\":[128,64],\\\"data_offsets\\\":[0,32768]}}\";")
+constant WriteSafeB = ("  uint64_t n=strlen(h); fwrite(&n,8,1,f); fwrite(h,1,n,f); for(int i=0;i<8192;i++) fwrite(&val,4,1,f); fclose(f); }")
+constant WriteGgufA = ("static void wgguf(const char* p, float val){ FILE* f=fopen(p,\"wb\"); uint32_t m=0x46554747,v=3;", "  uint64_t tc=1,kv=0,nl=6,d0=64,d1=128,off=0; uint32_t nd=2,dt=0;")
+constant WriteGgufB = ("  fwrite(&m,4,1,f); fwrite(&v,4,1,f); fwrite(&tc,8,1,f); fwrite(&kv,8,1,f);", "  fwrite(&nl,8,1,f); fwrite(\"matrix\",1,6,f); fwrite(&nd,4,1,f);")
+constant WriteGgufC = ("  fwrite(&d0,8,1,f);fwrite(&d1,8,1,f);fwrite(&dt,4,1,f);fwrite(&off,8,1,f);", "  long pos=ftell(f);int pad=(32-(pos%32))%32;while(pad-->0)fputc(0,f);", "  for(int i=0;i<8192;i++)fwrite(&val,4,1,f);fclose(f);}")
+constant SyncWin = ("static HANDLE ev1, ev2; static void sig1(){SetEvent(ev1);} static void wait1(){WaitForSingleObject(ev1,10000);} static void sig2(){SetEvent(ev2);} static void wait2(){WaitForSingleObject(ev2,10000);}")
+constant SyncNixA = ("static pthread_mutex_t mx=PTHREAD_MUTEX_INITIALIZER;static pthread_cond_t cv=PTHREAD_COND_INITIALIZER;static int f1=0,f2=0;")
+constant SyncNixB = ("static void sig1(){pthread_mutex_lock(&mx);f1=1;pthread_cond_broadcast(&cv);pthread_mutex_unlock(&mx);}", "static void wait1(){pthread_mutex_lock(&mx);while(!f1)pthread_cond_wait(&cv,&mx);pthread_mutex_unlock(&mx);}")
+constant SyncNixC = ("static void sig2(){pthread_mutex_lock(&mx);f2=1;pthread_cond_broadcast(&cv);pthread_mutex_unlock(&mx);}", "static void wait2(){pthread_mutex_lock(&mx);while(!f2)pthread_cond_wait(&cv,&mx);pthread_mutex_unlock(&mx);}")
+constant WorkersA = ("static const char* ent(){ return is_gguf?\"matrix\":entry_json; }", "static void run1(){ uint64_t r=ptr(fn_rows(0,enc(paths[0]),enc(ent()),32));")
+constant WorkersB = ("  uint64_t row=ptr(*(double*)(r+8)); chk(r,1.25f); sig1(); wait2(); if(*(float*)(row+16)!=1.25f) exit(5); }", "static void run2(){ wait1(); ptr(fn_rows(0,enc(paths[1]),enc(ent()),32)); sig2(); }")
+constant WorkersC = ("static void rep(int idx){ float ex=(idx%2)?9.5f:1.25f; for(int k=0;k<20;k++) chk(ptr(fn_rows(0,enc(paths[idx%2]),enc(ent()),32)),ex); }")
+constant ExpertsA = ("static void ev(int idx){ uint64_t inp=ptr(fn_vals(0,enc(\"NeuralNetworks/experts.gguf\"),enc(\"blk.0.ffn_gate_inp.weight\")));", "  double rt[257]; rt[0]=256;")
+constant ExpertsB = ("  for(int i=0;i<256;i++) rt[i+1]=*(double*)(inp+8+i*8); double ch[3]={2,1,0};", "  const char* p=(idx%2)?\"blk.1.\":\"blk.0.\"; double ex=(idx%2)?100.175:12.111;")
+constant ExpertsC = List(Text) + "  for(int r=0;r<5;r++){ uint64_t res=ptr(fn_exp(0,enc(\"NeuralNetworks/experts.gguf\"),enc(p),enc((char*)ch),enc((char*)rt)));"
+constant ExpertsD = List(Text) + "    if(*(double*)res!=512) exit(6); double ac=*(double*)(res+8+261*8); if(fabs(ac-ex)>=0.05) exit(7); } }"
+constant GlueWinA = ("#ifdef _WIN32", "static unsigned __stdcall w1(void*a){run1();return 0;} static unsigned __stdcall w2(void*a){run2();return 0;}")
+constant GlueWinB = ("static unsigned __stdcall wrep(void*a){rep((int)(size_t)a);return 0;}", "static unsigned __stdcall wev(void*a){ev((int)(size_t)a);return 0;}")
+constant GlueNix = ("#else", "static void* w1(void*a){run1();return 0;} static void* w2(void*a){run2();return 0;}", "static void* wrep(void*a){rep((int)(size_t)a);return 0;} static void* wev(void*a){ev((int)(size_t)a);return 0;}", "#endif")
+constant MainA = ("int main(int argc, char** argv){ void* lib=DOPEN(argv[1]); is_gguf=argc>3;", "  fn_rows=(FnRows)DSYM(lib,is_gguf?\"GgufFile_Rows\":\"TensorFile_Rows\");")
+constant MainB = ("  fn_vals=(FnVals)DSYM(lib,\"GgufFile_Values\"); fn_exp=(FnExp)DSYM(lib,\"GgufFile_ExpertOutputs\");", "  snprintf(paths[0],512,\"%s/0.safetensors\",argv[2]); snprintf(paths[1],512,\"%s/1.safetensors\",argv[2]);")
+constant MainDataA = ("  if(is_gguf){wgguf(paths[0],1.25f);wgguf(paths[1],9.5f);} else {wsafe(paths[0],1.25f);wsafe(paths[1],9.5f);}", "#ifdef _WIN32", "  ev1=CreateEventA(0,1,0,0); ev2=CreateEventA(0,1,0,0); HANDLE h[8];")
+constant MainDataB = ("  h[0]=(HANDLE)_beginthreadex(0,0,w1,0,0,0); h[1]=(HANDLE)_beginthreadex(0,0,w2,0,0,0);", "  WaitForMultipleObjects(2,h,1,15000); CloseHandle(h[0]); CloseHandle(h[1]);")
+constant MainStressA = ("  for(int i=0;i<8;i++) h[i]=(HANDLE)_beginthreadex(0,0,wrep,(void*)(size_t)i,0,0);", "  WaitForMultipleObjects(8,h,1,30000); for(int i=0;i<8;i++) CloseHandle(h[i]);")
+constant MainStressB = ("  if(is_gguf){ for(int i=0;i<8;i++) h[i]=(HANDLE)_beginthreadex(0,0,wev,(void*)(size_t)i,0,0);", "    WaitForMultipleObjects(8,h,1,30000); for(int i=0;i<8;i++) CloseHandle(h[i]); }", "#else")
+constant MainNixA = ("  pthread_t t[8]; pthread_create(&t[0],0,w1,0); pthread_create(&t[1],0,w2,0);", "  pthread_join(t[0],0); pthread_join(t[1],0); for(int i=0;i<8;i++) pthread_create(&t[i],0,wrep,(void*)(size_t)i);")
+constant MainNixB = ("  for(int i=0;i<8;i++) pthread_join(t[i],0);", "  if(is_gguf){ for(int i=0;i<8;i++) pthread_create(&t[i],0,wev,(void*)(size_t)i); for(int i=0;i<8;i++) pthread_join(t[i],0); }", "#endif", "  return 0; }")
+Run(arguments Texts) Number
+	let provider = arguments.Length > 0 then arguments.First else "TensorFile"
+	let folder = "Examples/NativeThreads" + 1000000.Random.Floor
+	if Directory.Create(folder) is Error
+		return Error("DirectoryNotCreated")
+	let result = Checked(folder, provider)
+	Directory.Delete(folder)
+	if result is Error
+		return result
+	logger.Log("Returned matrices remain thread-owned; overlapping matrix loads pass")
+	0
+Checked(folder Text, provider Text)
+	let isWindows = Process.OperatingSystem is "Windows"
+	let dll = "Compiler/output/" + provider + "Threads." + (isWindows then "dll" else "so")
+	let cSrc = "NeuralNetworks/native/" + provider + ".c"
+	let buildCmd = "-shared -O2 -DSTRICT_LIBRARY -ICompiler " + cSrc + " -o " + dll + BuildExtra(provider, isWindows)
+	let build = Process.RunTool("clang", buildCmd, ToolSeconds)
+	if build.exitCode is not 0
+		return Error("BuildProviderFailed: " + build.Output + build.error)
+	CheckedHarness(folder, dll, provider, isWindows)
+CheckedHarness(folder Text, dll Text, provider Text, isWindows Boolean)
+	let cFile = folder + "/harness.c"
+	let exe = folder + "/harness" + (isWindows then ".exe" else "")
+	File(cFile).Write(HarnessHead + HarnessBody + HarnessTail)
+	let libs = isWindows then "" else " -ldl -lpthread -lm"
+	let comp = Process.RunTool("clang", "-O2 \"" + cFile + "\" -o \"" + exe + "\"" + libs, ToolSeconds)
+	if comp.exitCode is not 0
+		return Error("CompileHarnessFailed: " + comp.Output + comp.error)
+	let args = "\"" + dll + "\" \"" + folder + "\"" + (provider is "GgufFile" then " gguf" else "")
+	let ran = Process.RunTool(exe, args, ToolSeconds)
+	if ran.exitCode is not 0
+		return Error("NativeThreadsFailed (" + ran.exitCode + "): " + ran.Output + ran.error)
+BuildExtra(provider Text, isWindows Boolean) Text
+	let raw = Text.Combine(File("NeuralNetworks/native/Windows.flags").ReadLines, " ")
+	isWindows then (provider is "GgufFile" then " " + raw else "") else " -fPIC -lpthread -lm"
+HarnessHead Texts
+	let top = HeadA + HeadB + HeadC + TypesA + TypesB + TypesC
+	top + HelpersA + HelpersB + CheckRowsA + CheckRowsB + WriteSafeA + WriteSafeB
+HarnessBody Texts
+	let sync = Process.OperatingSystem is "Windows" then SyncWin else SyncNixA + SyncNixB + SyncNixC
+	let body = WriteGgufA + WriteGgufB + WriteGgufC + sync + WorkersA + WorkersB + WorkersC
+	body + ExpertsA + ExpertsB + ExpertsC + ExpertsD
+HarnessTail Texts
+	GlueWinA + GlueWinB + GlueNix + MainA + MainB + MainDataA + MainDataB + MainStressA + MainStressB + MainNixA + MainNixB

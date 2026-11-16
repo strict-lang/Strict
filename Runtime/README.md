@@ -6,7 +6,7 @@ Automatic test runs select unmarked methods and enforce 100 ms per test (the goa
 
 VM constants are cached per `Machine`: a getter runs on first use and its result is stored, recursive access reports `RecursiveConstant`. Unused Slow fixtures are never initialized.
 
-`python Runtime/check_tests.py` checks deadlines, Slow selection and fixture exclusion, `python Runtime/check_frames.py` frame initialization speed.
+`strict run Runtime/CheckTests.strict` checks deadlines, Slow selection and fixture exclusion, `strict run Runtime/CheckFrames.strict` frame initialization speed.
 
 ## Coordinator
 One process per OS user (`strict coordinator`) admits GPU and memory jobs. Its port is in `%LOCALAPPDATA%/Strict/coordinator` on Windows and `~/.cache/strict/coordinator` elsewhere, and it also listens on `Peers.Port` when that port is free. A program sends `need`, `holding`, `progress` and `done`; the coordinator answers `go`, `wait`, `free`, `exit` or `refused`. `fit` asks the same admission without taking the machine. `run` executes a command in the same folder and returns its exit code. `STRICT_MACHINE_RAM` and `STRICT_MACHINE_VRAM` replace the measured totals. `strict status` prints the running job. If the coordinator is not there, programs keep the `MachineUse` check and the GPU lock. `Admission` is the decision, with no sockets.

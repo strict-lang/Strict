@@ -1,0 +1,111 @@
+has logger
+constant Bogus = ("Doubled(number Number) Number", "	Doubled(3) is 6", "	Doubled(0) is 0", "	number + number")
+constant Suggest = ("has number", "Doubled Number", "	Suggesting(3).Doubled is 6", "	Suggesting(0).Doubled is 0")
+constant Temp = ("has celsius Number", "Clamped(minimum Number, maximum Number) Number", "	Temperature(30).Clamped(0, 20) is 20", "	Temperature(10).Clamped(0, 20) is 10")
+constant Extra = ("Doubled Number", "	Temperature(2).Doubled is 5", "	celsius * 2", "Other Number", "	Temperature(2).Other is 2")
+constant Wrapper = ("has dispatcher Dispatcher", "Clamped Number", "	Wrapper(Dispatcher(1)).Clamped is 1")
+constant Dispatcher = ("has number", "Clamped Number", "	Wrapper(Dispatcher(number)).Clamped")
+constant Dual = ("has number", "Pick(other Number) Number", "	Dual(2).Pick(3) is 5", "	number + other", "Pick Number", "	Dual(3).Pick is 6", "	Dual(0).Pick is 0")
+constant Prefix = "Suggestion: "
+constant ToolSeconds = 30
+Run(arguments Texts) Number
+	let root = arguments.Length > 0 then arguments.First else "."
+	let folder = "Examples/SuggestCheck" + 1000000.Random.Floor
+	let result = Verified(folder, root)
+	Directory.Delete(folder)
+	result is Error then result else 0
+Verified(folder Text, root Text) slow
+	if Directory.Create(folder) is Error
+		return Error("DirectoryNotCreated")
+	File(folder + "/Bogus.strict").Write(Bogus)
+	let first = CheckedCase(folder, root, "Suggesting", "Doubled", Suggest, "number + number")
+	if first is Error
+		return first
+	let second = CheckedCase(folder, root, "Temperature", "Clamped", Temp, "celsius.Clamp(minimum, maximum)")
+	if second is Error
+		return second
+	CheckedMore(folder, root)
+CheckedMore(folder Text, root Text) slow
+	let failing = File(folder + "/Temperature.strict").ReadLines + Extra
+	let third = RanSuggest(folder, root, "Temperature.strict Clamped -", failing)
+	if third is Error or ("Suggestion: celsius.Clamp(minimum, maximum)" is not in third) or (OnlyPrefix(third) is false)
+		return Error("UnsavedOrFailingMethodsBroken: " + (third to Text))
+	if File(folder + "/Temperature.strict").ReadLines is not Temp
+		return Error("TemperatureFileModified")
+	logger.Log("Unrelated failing/pending methods and unsaved source: passed")
+	CheckedEdges(folder, root)
+CheckedEdges(folder Text, root Text) slow
+	File(folder + "/Wrapper.strict").Write(Wrapper)
+	File(folder + "/Dispatcher.strict").Write(Dispatcher)
+	let looped = RanSuggest(folder, root, "Wrapper.strict Clamped", List(Text))
+	if (looped is Error) or (looped.Trim is not "") or HasBinary(folder)
+		return Error("RecursiveDispatcherFailed: " + (looped to Text))
+	logger.Log("Recursive dispatcher: no passing suggestions")
+	File(folder + "/Dual.strict").Write(Dual)
+	let dual = RanSuggest(folder, root, "Dual.strict 5", List(Text))
+	if (dual is Error) or ("Suggestion: number + number" is not in dual)
+		return Error("OverloadSelectionFailed: " + (dual to Text))
+	logger.Log("Overloaded method selected by header line: passed")
+	CheckedMissing(folder, root)
+CheckedMissing(folder Text, root Text) slow
+	let empty = RanSuggest(folder, root, "Suggesting.strict Doubled -", ("has number", "Doubled Number"))
+	if (empty is Error) or (empty.Trim is not "")
+		return Error("NoTestsCaseFailed: " + (empty to Text))
+	let missing = RanResult(folder, root, "Suggesting.strict Missing", List(Text))
+	if (missing.exitCode is not 2) or ("MethodNotFound" is not in missing.Output)
+		return Error("UnknownMethodCaseFailed: " + (missing.exitCode to Text) + " " + missing.Output)
+	logger.Log("No tests and unknown method: passed")
+CheckedCase(folder Text, root Text, name Text, method Text, lines Texts, expected Text) slow
+	let path = folder + "/" + name + ".strict"
+	File(path).Write(lines)
+	let started = Process.Elapsed
+	let output = RanSuggest(folder, root, name + ".strict " + method + " -", lines)
+	if output is Error
+		return output
+	let bodies = Bodies(output)
+	let bad = (expected is not in bodies) or HasBlocked(bodies) or (OnlyPrefix(output) is false)
+	if bad or (File(path).ReadLines is not lines) or HasBinary(folder)
+		return Error("CaseFailed " + name + "." + method + ": " + output)
+	let elapsed = ((Process.Elapsed - started) * 1000).Round
+	logger.Log(name + "." + method + ": " + (bodies to Text) + " (" + elapsed + " ms)")
+Bodies(output Text) Texts
+	Bodies("Suggestion: a\nSuggestion: b") is ("a", "b")
+	for output.Lines
+		if value.StartsWith(Prefix)
+			value.Substring(Prefix.Length, value.Length - Prefix.Length)
+HasBlocked(bodies Texts) Boolean
+	HasBlocked(List(Text) + "number")
+	HasBlocked(List(Text) + "Bogus.Pi")
+	HasBlocked(List(Text) + "number + number") is false
+	for bodies
+		let bad = (".Epsilon" is in value) or (".Pi" is in value)
+		if (value is in ("number", "celsius", "minimum", "maximum")) or ("Bogus." is in value) or bad
+			return true
+	false
+OnlyPrefix(output Text) Boolean
+	OnlyPrefix("Suggestion: a\nSuggestion: b")
+	OnlyPrefix("bad") is false
+	for output.Lines
+		if (value is not "") and (value.StartsWith("Suggestion: ") is false)
+			return false
+	true
+HasBinary(folder Text) Boolean slow
+	Directory.Exists(folder + "/obj") and (Directory.Files(folder + "/obj", "*.strictbinary").Length > 0)
+RanSuggest(folder Text, root Text, tail Text, input Texts) Text slow
+	let result = RanResult(folder, root, tail, input)
+	result.exitCode is 0 then result.Output else Error(result.Output + result.error)
+Command(root Text, tail Text) Text
+	let head = tail.Split(" ").First
+	"\"" + Process.Current.executable + "\" suggest " + tail.Replace(head, head + " \"" + TypeSource.Absolute(root) + "\"")
+RanResult(folder Text, root Text, tail Text, input Texts) ProcessResult slow
+	let home = Directory.Current
+	let command = Command(root, tail)
+	if input.Length > 0
+		File(folder + "/stdin.txt").Write(Text.Combine(input, "\n").Lines)
+	Directory.Change(folder)
+	let isWindows = Process.OperatingSystem is "Windows"
+	let redirected = input.Length > 0 then command + " < stdin.txt" else command
+	let flag = isWindows then "/c \"" else "-c \""
+	let result = Process.RunTool(isWindows then "cmd" else "sh", flag + redirected + "\"", ToolSeconds)
+	Directory.Change(home)
+	result

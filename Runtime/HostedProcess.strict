@@ -10,8 +10,8 @@ Seconds Number
 Result VmValue
 	HostedProcess(Hosted.SystemCall).Result.text is in ("Windows", "Linux", "MacOS", "Unknown")
 	HostedProcess(Running).Result.items.Last.items.First.number is 127
-	if TypeEntry.ShortName(call.TypeName) is in ("TestBudget", "ConstantCache")
-		return call.MethodName is in ("At", "Stored") then ConstantCache.Hosted(call) else HostedBudget(call).Result
+	if TypeEntry.ShortName(call.TypeName) is in ("TestBudget", "ConstantCache", "Memo")
+		return Direct
 	if call.MethodName is "Started"
 		return VmValue.OfNumber(Process(call.Instance.Member(0).text).Started(call.Arguments.First.text))
 	if call.MethodName is in ("Wait", "Collected")
@@ -19,6 +19,24 @@ Result VmValue
 	if call.MethodName is "RunTools"
 		return Ran(Process.RunTools(call.Arguments.First.text, Hosted(call).TextsOf(call.Arguments(1)), Seconds))
 	Hosted(call).Processed
+Direct VmValue
+	HostedProcess(Collecting).Direct.kind is "None"
+	if TypeEntry.ShortName(call.TypeName) is "Memo"
+		return Memoized
+	call.MethodName is in ("At", "Stored") then ConstantCache.Hosted(call) else HostedBudget(call).Result
+Memoized VmValue
+	HostedProcess(Collecting).Memoized.kind is "Strict/Error"
+	if call.Arguments.Length < 2
+		return VmValue.OfError("Memo needs file and kind")
+	let file = call.Arguments(0).text
+	let kind = call.Arguments(1).text
+	if call.MethodName is "Has"
+		return VmValue.OfBoolean(Memo.Has(file, kind))
+	if call.MethodName is "Texts"
+		return Hosted(call).Values(Memo.Texts(file, kind))
+	if kind.Length is 0
+		return VmValue.OfError("Memo needs a kind for " + file)
+	Hosted(call).Values(Memo.Kept(file, kind, Hosted(call).TextsOf(call.Arguments(2))))
 Paused VmValue
 	HostedProcess(Collecting).Paused.kind is "None"
 	if call.MethodName is "Wait"

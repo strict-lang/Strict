@@ -1,0 +1,59 @@
+has logger
+constant FixedPort = 34567
+constant Threads = 16
+constant ToolSeconds = 30
+constant CIncludes = ("#include <stdio.h>", "#include <stdlib.h>", "#include <string.h>")
+constant CWinHead = ("#ifdef _WIN32", "#include <windows.h>", "#include <process.h>", "#define DLL_OPEN(p) LoadLibraryA(p)", "#define DLL_SYM(d,n) (void*)GetProcAddress((HMODULE)(d), (n))")
+constant CPosix = ("#else", "#include <dlfcn.h>", "#include <pthread.h>", "#define DLL_OPEN(p) dlopen(p, RTLD_NOW)", "#define DLL_SYM(d,n) dlsym((d), (n))", "#endif")
+constant CState = ("typedef double (*Fn)(double, double);", "static Fn fn_listen, fn_port, fn_close;", "static double assigned[16];", "static volatile long ready_count = 0;")
+constant CWin = ("#ifdef _WIN32", "static unsigned __stdcall worker(void* arg) {", "  int idx = (int)(size_t)arg; InterlockedIncrement(&ready_count); while (ready_count < 16) SwitchToThread();")
+constant CWinTail = ("  double h = fn_listen(0, 0); if (h <= 0) return 1;", "  assigned[idx] = fn_port(0, h); fn_close(0, h); return 0;", "}")
+constant CNix = ("#else", "static void* worker(void* arg) {", "  int idx = (int)(size_t)arg; __atomic_add_fetch(&ready_count, 1, __ATOMIC_SEQ_CST); while (ready_count < 16);")
+constant CNixTail = ("  double h = fn_listen(0, 0); if (h <= 0) return (void*)1;", "  assigned[idx] = fn_port(0, h); fn_close(0, h); return 0;", "}", "#endif")
+constant CWinRun = ("#ifdef _WIN32", "  HANDLE h[16];", "  for (int i = 0; i < 16; i++) h[i] = (HANDLE)_beginthreadex(0, 0, worker, (void*)(size_t)i, 0, 0);")
+constant CWinWait = ("  WaitForMultipleObjects(16, h, TRUE, 10000); for (int i = 0; i < 16; i++) CloseHandle(h[i]);", "#else")
+constant CNixRun = ("  pthread_t t[16];", "  for (int i = 0; i < 16; i++) pthread_create(&t[i], 0, worker, (void*)(size_t)i);", "  for (int i = 0; i < 16; i++) pthread_join(t[i], 0);", "#endif")
+constant CCheck = ("  for (int i = 0; i < 16; i++) { if (assigned[i] <= 0 || assigned[i] >= 65536) return 2;", "    for (int j = i + 1; j < 16; j++) if (assigned[i] == assigned[j]) return 3; }", "  return 0;", "}")
+constant CLookup = ("  fn_listen = (Fn)DLL_SYM(lib, \"Socket_Listen\");", "  fn_port = (Fn)DLL_SYM(lib, \"Socket_Port\");", "  fn_close = (Fn)DLL_SYM(lib, \"Socket_Close\");")
+Run Number
+	let folder = "Examples/SocketCheck" + 1000000.Random.Floor
+	if Directory.Create(folder) is Error
+		return Error("DirectoryNotCreated")
+	let result = Checked(folder)
+	Directory.Delete(folder)
+	result is Error then result else 0
+Checked(folder Text)
+	let parallel = CheckedThreads(folder)
+	if parallel is Error
+		return parallel
+	let occupied = Socket.Listen(FixedPort)
+	if occupied is Error
+		return Error("PortOpenFailed: " + (occupied to Text))
+	let results = RanConcurrent
+	Socket.Close(occupied)
+	for results
+		if value.exitCode is not 0
+			return Error("ConcurrentSocketChecksFailed: " + value.Output + value.error)
+	logger.Log("Concurrent loopbacks pass with the old fixed port occupied")
+RanConcurrent List(ProcessResult)
+	let extension = Process.OperatingSystem is "Windows" then ".exe" else ""
+	Process.RunTools("Networking/obj/SocketChecks.test" + extension, EmptyArguments, ToolSeconds)
+EmptyArguments Texts
+	for Threads
+		""
+CheckedThreads(folder Text)
+	let isWindows = Process.OperatingSystem is "Windows"
+	let cFile = folder + "/threads.c"
+	let exe = folder + "/threads" + (isWindows then ".exe" else "")
+	File(cFile).Write(ThreadCode("Networking/native/Networking." + (isWindows then "dll" else "so")))
+	let args = "-O2 \"" + cFile + "\" -o \"" + exe + "\"" + (isWindows then "" else " -ldl -lpthread")
+	let compile = Process.RunTool("clang", args, ToolSeconds)
+	if compile.exitCode is not 0
+		return Error("CompileFailed: " + compile.Output + compile.error)
+	let ran = Process.RunTool(exe, "", ToolSeconds)
+	if ran.exitCode is not 0
+		return Error("ThreadCheckFailed: " + ran.Output + ran.error)
+ThreadCode(dll Text) Texts
+	let body = ("int main(void) {", "  void* lib = DLL_OPEN(\"" + dll + "\");") + CLookup
+	let middle = body + CWinRun + CWinWait + CNixRun
+	CIncludes + CWinHead + CPosix + CState + CWin + CWinTail + CNix + CNixTail + middle + CCheck

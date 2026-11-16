@@ -1,0 +1,208 @@
+has logger
+constant ToolSeconds = 280
+constant ShortSeconds = 30
+constant FailAttempts = 12
+constant OutputFolder = "Compiler/output/ParallelCheck"
+constant BatchSlowCount = 4
+constant PublishLine = "    llvm.store %count, %countSlot atomic monotonic {alignment = 8 : i64} : i64, !llvm.ptr"
+constant ExA = "test_put_card,test_swept,test_owned,test_copies,test_job_garbage,test_released,test_parallel,"
+constant ExB = "test_pinned,test_carried,test_checked_collection,test_reused_counts,test_scan_invalidation,"
+constant ExC = "test_pool_gpu,test_cached,test_first,test_second,test_tools,test_literal,test_published"
+constant OptFlags = "--symbol-dce --convert-scf-to-cf --convert-arith-to-llvm --convert-func-to-llvm --convert-cf-to-llvm --reconcile-unrealized-casts"
+constant ClangFlags = "-O2 -march=native -Wno-override-module -fuse-ld=lld -Wl,clang_rt.builtins-x86_64.lib"
+constant PfA = "has logger\nNamed(at Number, inner Number) Number\n\tPoolFailure(Logger).Named(3, 1) is 4\n\t(at is 5) and (inner is 7777) then List(Number).Last else at + inner % 3\n"
+constant PfB = "Inner(at Number) Numbers slow\n\tPoolFailure(Logger).Inner(1).Length is 20000\n\tfor 20000\n\t\tNamed(at, index)\nSummed(at Number) Text slow\n\tPoolFailure(Logger).Summed(1).Length > 0\n"
+constant PfC = "\t\"\" + Inner(at).Sum\nAll(count Number) Texts slow\n\tPoolFailure(Logger).All(2).Length is 2\n\tfor count\n\t\tSummed(index)\nRun\n\tlogger.Log(\"count \" + All(64).Length)"
+constant D01 = "#include <windows.h>\n#include <stdint.h>\n#include <stdatomic.h>\n#include <stdio.h>\n#include <stdlib.h>\n#include <psapi.h>\ntypedef int64_t i64;typedef double f64;"
+constant D02 = "extern i64 test_swept(void*),test_owned(void*),test_copies(void*),test_put_card(void*),test_job_garbage(void*),test_pinned(void*),test_carried(void*),test_checked_collection(void*);"
+constant D03 = "extern i64 test_reused_counts(void*,_Bool),test_scan_invalidation(void*),test_pool_gpu(void),test_published(void*);extern void test_released(void);"
+constant D04 = "extern f64 test_cached(void),test_literal(void),test_first(void),test_second(void),test_tools(char**,i64),test_parallel(f64(*)(void*,i64,i64),void*,i64);"
+constant D05 = "static size_t ws(void){PROCESS_MEMORY_COUNTERS c={sizeof(c)};K32GetProcessMemoryInfo(GetCurrentProcess(),&c,sizeof(c));return c.WorkingSetSize;}"
+constant D06 = "static atomic_int cmp,own,fc,sc,pub,pre;static int rec,lit;static HANDLE c_st,rdy,pub_e,ret_e,beg_e;static DWORD cal;static char*sl[4],*ql[2];"
+constant D07 = "f64 test_compute(void){atomic_fetch_add(&cmp,1);Sleep(20);if(rec&&atomic_load(&cmp)==1)return test_cached();return 7;}"
+constant D08 = "static DWORD WINAPI cr(void*u){WaitForSingleObject(c_st,INFINITE);f64 r=lit?test_literal():test_cached();union{f64 v;uint64_t b;}c={r};return rec?(c.b>>48)!=32762:r!=7;}"
+constant D09 = "static int is_err(f64 r){union{f64 v;uint64_t b;}c={r};return(c.b>>48)==32762;}static void both(void){atomic_fetch_add(&own,1);while(atomic_load(&own)<2)Sleep(1);}"
+constant D10 = "f64 test_first_compute(void){atomic_fetch_add(&fc,1);both();return test_second();}f64 test_second_compute(void){atomic_fetch_add(&sc,1);both();return test_first();}"
+constant D11 = "static DWORD WINAPI cf(void*u){return is_err(test_first());}static DWORD WINAPI cs(void*u){return is_err(test_second());}"
+constant D12 = "static f64 batches(void*x,i64 f,i64 t){for(i64 i=f;i<t&&i<2;i++)test_tools(i==0?sl:ql,i==0?4:2);return 0;}"
+constant D13 = "static void waited(HANDLE e){if(WaitForSingleObject(e,5000)!=WAIT_OBJECT_0){fprintf(stderr,\"Timeout\\n\");exit(3);}}"
+constant D14 = "void test_claiming(i64 j){if(j==1&&GetCurrentThreadId()!=cal){SetEvent(rdy);waited(pub_e);}}"
+constant D15 = "void test_publishing(i64 n){if(n==2){atomic_store(&pub,1);SetEvent(pub_e);waited(ret_e);atomic_store(&pub,0);}}void test_retired(i64 j){if(j==1&&GetCurrentThreadId()!=cal)SetEvent(ret_e);}"
+constant D16 = "static f64 tail(void*x,i64 f,i64 t){if(GetCurrentThreadId()==cal)waited(beg_e);else{SetEvent(beg_e);Sleep(300);}return 0;}"
+constant D17 = "static f64 busy(FILETIME u,FILETIME k){return((f64)(((ULONGLONG)u.dwHighDateTime<<32)|u.dwLowDateTime)+(f64)(((ULONGLONG)k.dwHighDateTime<<32)|k.dwLowDateTime))/10000;}"
+constant D18 = "static f64 body(void*x,i64 f,i64 t){if(*(int*)x==1){waited(rdy);Sleep(2);}else if(atomic_load(&pub))atomic_fetch_add(&pre,1);return 0;}"
+constant D19 = "int main(int c,char**v){if(c>1&&v[1][0]=='f'){pub_e=CreateEventA(0,1,1,0);test_job_garbage(&c);size_t b=ws();test_released();size_t a=ws();return b>a+(200<<20)?0:1;}"
+constant D20 = "if(c>1&&v[1][0]=='u')return test_put_card(&c)!=1;if(c>1&&v[1][0]=='b'){i64 b=test_copies(&c);return b>0&&b<(200<<20)?0:1;}"
+constant D21 = "if(c>1&&v[1][0]=='o'){pub_e=CreateEventA(0,1,1,0);return test_owned(&c)!=0;}if(c>1&&v[1][0]=='m'){pub_e=CreateEventA(0,1,1,0);i64 b=test_swept(&c);return b>0&&b<(32<<20)?0:1;}"
+constant D22 = "if(c>1&&(v[1][0]=='k'||v[1][0]=='j'||v[1][0]=='l')){rec=v[1][0]=='j';lit=v[1][0]=='l';if(rec)test_scan_invalidation(&c);HANDLE h[16];c_st=CreateEventA(0,1,0,0);"
+constant D23 = "for(int i=0;i<16;i++)h[i]=CreateThread(0,0,cr,0,0,0);SetEvent(c_st);if(WaitForMultipleObjects(16,h,1,5000)!=0)return 2;"
+constant D24 = "for(int i=0;i<16;i++){DWORD e;GetExitCodeThread(h[i],&e);if(e)return 3;CloseHandle(h[i]);}CloseHandle(c_st);return atomic_load(&cmp)!=1;}"
+constant D25 = "if(c>1&&v[1][0]=='p'){_putenv_s(\"STRICT_THREADS\",\"1\");return test_published(&c)!=1;}if(c>1&&v[1][0]=='x'){test_scan_invalidation(&c);"
+Run Number
+	if Process.OperatingSystem is not "Windows"
+		return Error("CheckParallel uses Windows events to force pool interleaving")
+	if Directory.Create(OutputFolder) is Error
+		return Error("DirectoryNotCreated")
+	File(OutputFolder + "/driver.c").Write(DriverSrc.Split("\n"))
+	let result = BuiltAndChecked(OutputFolder)
+	Directory.Delete(OutputFolder)
+	if result is Error
+		return result
+	logger.Log("CheckParallel passed")
+	0
+BuiltAndChecked(folder Text) Boolean
+	if BuiltPoolMlir(folder) is Error
+		return Error("BuiltPoolMlirFailed")
+	let oArgs = "\"" + folder + "/pool.mlir\" --symbol-privatize=exclude=" + (ExA + ExB + ExC) + " " + OptFlags
+	let opt = Process.RunTool("C:/msys64/ucrt64/bin/mlir-opt.exe", oArgs + " -o \"" + folder + "/pool.1\"", ToolSeconds)
+	if opt.exitCode is not 0
+		return Error("OptFailed: " + opt.Output + opt.error)
+	let trArgs = "--mlir-disable-threading --mlir-to-llvmir \"" + folder + "/pool.1\" -o \"" + folder + "/pool.ll\""
+	if Process.RunTool("C:/msys64/ucrt64/bin/mlir-translate.exe", trArgs, ToolSeconds).exitCode is not 0
+		return Error("TranslateFailed")
+	let cOut = "\"" + folder + "/pool.ll\" \"" + folder + "/driver.c\" " + ClangFlags + " -o \"" + folder + "/check.exe\""
+	let cc = Process.RunTool("C:/Program Files/LLVM/bin/clang.exe", cOut, ToolSeconds)
+	cc.exitCode is not 0 then Error("BuildCheckExeFailed: " + cc.Output) else RanModes(folder, folder + "/check.exe")
+BuiltPoolMlir(folder Text) Boolean
+	let rt = PatchedRuntime
+	if rt is Error
+		return rt
+	let dec = MlirConst("Compiler/MlirTexts.strict", "Declarations")
+	let chk = MlirConst("Compiler/MlirCached.strict", "Checked")
+	let sto = MlirConst("Compiler/MlirCached.strict", "Stored")
+	let c1 = CachedFn("test_cached", "test_compute", chk, sto) + CachedFn("test_first", "test_first_compute", chk, sto)
+	let caches = c1 + CachedFn("test_second", "test_second_compute", chk, sto)
+	let win = Text.Combine(File("Compiler/NativeRuntimeWindows.mlir").ReadLines, "\n")
+	let hdr = "module {\n  llvm.func @printf(!llvm.ptr, ...) -> i32\n" + dec + "\n" + rt + win
+	File(folder + "/pool.mlir").Write((hdr + CheckParallelMlir.All + caches + "\n}").Split("\n"))
+	true
+PatchedRuntime Text
+	let raw = Text.Combine(File("Compiler/NativeRuntime.mlir").ReadLines, "\n")
+	if "func.call @strict_rc_pin_in(" is not in raw.Split("func.func private @strict_rc_pin(")(1).Split("\n  }")(0)
+		return Error("Missing strict_rc_pin_in")
+	let s1 = raw.IndexOf("  func.func private @strict_parallel_from(")
+	let e1 = raw.IndexOf("  func.func private @strict_pool_started()", s1)
+	let sub = raw.Substring(s1, e1 - s1)
+	let p1 = sub.Replace(PublishLine, PublishLine + "\n    llvm.call @test_publishing(%count) : (i64) -> ()")
+	PatchedPoolRun(raw.Substring(0, s1) + p1 + raw.Substring(e1, raw.Length - e1))
+PatchedPoolRun(runtime Text) Text
+	let s2 = runtime.IndexOf("  llvm.func @strict_pool_run(")
+	let e2 = runtime.IndexOf("  llvm.func @strict_pool_chunk_run(", s2)
+	mutable sub = runtime.Substring(s2, e2 - s2)
+	sub = sub.Replace("  ^look:\n", "  ^look:\n    llvm.call @test_claiming(%job) : (i64) -> ()\n")
+	sub = sub.Replace("  ^leave:\n", "  ^leave:\n    llvm.call @test_retired(%job) : (i64) -> ()\n")
+	runtime.Substring(0, s2) + sub + runtime.Substring(e2, runtime.Length - e2)
+MlirConst(path Text, name Text) Text
+	let prefix = "constant " + name + " = "
+	mutable resolved = ""
+	for File(path).ReadLines
+		if value.StartsWith(prefix)
+			let rhs = value.Substring(prefix.Length, value.Length - prefix.Length)
+			for Regex("\"((?:[^\"\\\\]|\\\\.)*)\"|([A-Za-z_][A-Za-z0-9_]*)").FindAll(rhs)
+				resolved = resolved + (value.StartsWith("\"") then Unescaped(value) else MlirConst(path, value)) + "\n"
+	resolved
+Unescaped(quoted Text) Text
+	quoted.Substring(1, quoted.Length - 2).Replace("\\\"", "\"").Replace("\\n", "\n").Replace("\\\\", "\\")
+CachedFn(name Text, compute Text, chk Text, sto Text) Text
+	let h1 = "  llvm.func @" + compute + "() -> f64\n  llvm.mlir.global internal @" + name + "_cache(0.0 : f64) : f64\n"
+	let h2 = "  llvm.mlir.global internal @" + name + "_set(0 : i64) : i64\n  func.func @" + name + "() -> f64 {\n"
+	let h3 = "    %cache = llvm.mlir.addressof @" + name + "_cache : !llvm.ptr\n"
+	let h4 = "    %set = llvm.mlir.addressof @" + name + "_set : !llvm.ptr\n"
+	h1 + h2 + h3 + h4 + chk + "\n    %computed = llvm.call @" + compute + "() : () -> f64\n" + sto
+RanModes(folder Text, exe Text) Boolean
+	let freed = "/c set STRICT_YOUNG=0&& " + exe.Replace("/", "\\") + " freed"
+	for "updated memory owned big freed published literal j k xcycle gpu rsame rdifferent scan".Split(" ")
+		let isFreed = value is "freed"
+		let res = Process.RunTool(isFreed then "cmd" else exe, isFreed then freed else value, ShortSeconds)
+		if res.exitCode is not 0
+			return Error("ModeFailed " + value + ": " + res.Output + res.error)
+	RanPostModes(folder, exe)
+RanPostModes(folder Text, exe Text) Boolean
+	for ("", "carried", "wake", "await")
+		let res = Process.RunTool(exe, value, ShortSeconds)
+		if res.exitCode is not 0
+			return Error("PostModeFailed " + value + ": " + res.Output + res.error)
+	let chk = Process.RunTool(exe, "checked", ShortSeconds)
+	let ok = (chk.exitCode is 0) and ("Reference counts checked: 0 too low" is in chk.Output)
+	let shareOk = CheckedToolShares(folder, exe)
+	ok then (shareOk is Error then shareOk else CheckedPoolFailure(folder)) else Error("Checked")
+CheckedToolShares(folder Text, exe Text) Boolean
+	let shares = folder + "/ToolShares"
+	for ("", "7")
+		Directory.Delete(shares)
+		Directory.Create(shares)
+		let cmd = "/c set STRICT_THREADS=7&& " + exe.Replace("/", "\\") + " tools " + shares
+		let res = Process.RunTool(value is "" then exe else "cmd", value is "" then "tools " + shares else cmd, ShortSeconds)
+		if res.exitCode is not 0
+			return Error("ToolsShareFailed: " + res.Output)
+		let sErr = CheckedBatch(shares, "slow", BatchSlowCount, value)
+		if (sErr is Error) or (CheckedBatch(shares, "quick", 2, value) is Error)
+			return Error("BadToolBatch")
+	true
+CheckedBatch(shares Text, kind Text, count Number, expected Text) Boolean
+	mutable first = ""
+	for count
+		let txt = Text.Combine(File(shares + "/" + kind + value + ".txt").ReadLines, "").Trim
+		if (txt is "") or (not Regex("^\\d+$").IsMatch(txt)) or ((expected is not "") and (txt is not expected))
+			return Error("MissingOrWrongThreadShare")
+		if first is ""
+			first = txt
+		if txt is not first
+			return Error("BatchThreadShareChanged")
+	true
+CheckedPoolFailure(folder Text) Boolean
+	let src = folder + "/PoolFailure.strict"
+	File(src).Write((PfA + PfB + PfC).Split("\n"))
+	let built = Process.RunTool(Process.Current.executable, "build " + src, ToolSeconds)
+	if built.exitCode is not 0
+		return Error("PoolFailureBuildFailed: " + built.Output + built.error)
+	for FailAttempts
+		let res = Process.RunTool(folder + "/PoolFailure.exe", "", ShortSeconds)
+		if not res.Output.StartsWith("Error: IndexOutOfRange")
+			return Error("NestedParallelErrorLost: " + res.Output + res.error)
+	true
+DriverSrc Text
+	let head = D01 + "\n" + D02 + "\n" + D03 + "\n" + D04 + "\n" + D05 + "\n" + D06 + "\n" + D07 + "\n" + D08 + "\n" + D09
+	let mid = D10 + "\n" + D11 + "\n" + D12 + "\n" + D13 + "\n" + D14 + "\n" + D15 + "\n" + D16 + "\n" + D17 + "\n" + D18
+	let tail = D19 + "\n" + D20 + "\n" + D21 + "\n" + D22 + "\n" + D23 + "\n" + D24 + "\n" + D25 + "\n" + DriverTail
+	head + "\n" + mid + "\n" + tail
+DriverTail Text
+	mutable out = List(Text)
+	out = out + "HANDLE t[2]={CreateThread(0,0,cf,0,0,0),CreateThread(0,0,cs,0,0,0)};"
+	out = out + "if(WaitForMultipleObjects(2,t,1,5000)!=0)return 2;DWORD e[2];GetExitCodeThread(t[0],&e[0]);"
+	out = out + "GetExitCodeThread(t[1],&e[1]);return e[0]+e[1]!=2||atomic_load(&fc)!=1||atomic_load(&sc)!=1;}"
+	out = out + "if(c>2&&v[1][0]=='t'){test_scan_invalidation(&c);for(int i=0;i<4;i++){sl[i]=malloc(512);"
+	out = out + "snprintf(sl[i],512,\"/c ping -n 2 127.0.0.1 >nul & (echo %%STRICT_THREADS%%)> %s/slow%d.txt\",v[2],i);}"
+	out = out + "for(int i=0;i<2;i++){ql[i]=malloc(512);"
+	out = out + "snprintf(ql[i],512,\"/c (echo %%STRICT_THREADS%%)> %s/quick%d.txt\",v[2],i);}"
+	out = out + "pub_e=CreateEventA(0,1,1,0);int idle=0;test_parallel(batches,&idle,3);return 0;}"
+	out = out + "if(c>1&&v[1][0]=='g')return test_pool_gpu()!=-1;"
+	out = out + ("if(c>1&&v[1][0]=='s')return test_scan_invalidation(&c)!=0;\n" + DriverMid)
+	Text.Combine(out, "\n")
+DriverMid Text
+	mutable out = List(Text)
+	out = out + "if(c>1&&v[1][0]=='r')return test_reused_counts(&c,v[1][1]=='s')!=11;"
+	out = out + "if(c>1&&v[1][0]=='w'){_putenv_s(\"STRICT_THREADS\",\"64\");pub_e=CreateEventA(0,1,1,0);int idle=0;"
+	out = out + "test_parallel(body,&idle,64);LARGE_INTEGER fq,st,en;QueryPerformanceFrequency(&fq);f64 sp=0;"
+	out = out + "for(int j=0;j<1000;j++){QueryPerformanceCounter(&st);do QueryPerformanceCounter(&en);"
+	out = out + "while((en.QuadPart-st.QuadPart)*10000<3*fq.QuadPart);QueryPerformanceCounter(&st);"
+	out = out + "test_parallel(body,&idle,4);QueryPerformanceCounter(&en);"
+	out = out + "sp+=(f64)(en.QuadPart-st.QuadPart)/fq.QuadPart;}printf(\"w:%f\\n\",sp*1000);return sp*1000>50;}"
+	out = out + "if(c>1&&v[1][0]=='c'){_putenv_s(\"STRICT_RC_CHECK\",\"1\");"
+	out = out + "volatile i64 h=test_checked_collection(&c);return h==0;}if(c>1&&v[1][0]=='a'){"
+	out = out + "_putenv_s(\"STRICT_THREADS\",\"2\");pub_e=CreateEventA(0,1,1,0);beg_e=CreateEventA(0,1,0,0);"
+	Text.Combine(out, "\n") + "\n" + DriverEnd
+DriverEnd Text
+	mutable out = List(Text)
+	out = out + "cal=GetCurrentThreadId();FILETIME a,b,k1,u1,k2,u2;GetThreadTimes(GetCurrentThread(),&a,&b,&k1,&u1);"
+	out = out + "int idle=0;test_parallel(tail,&idle,3);GetThreadTimes(GetCurrentThread(),&a,&b,&k2,&u2);"
+	out = out + ("return busy(u2,k2)-busy(u1,k1)>100;}\n" + DriverFinal)
+	Text.Combine(out, "\n")
+DriverFinal Text
+	mutable out = List(Text)
+	out = out + "if(c>1){_putenv_s(\"STRICT_THREADS\",\"1\");return test_carried(&c)!=3;}"
+	out = out + "_putenv_s(\"STRICT_THREADS\",\"2\");cal=GetCurrentThreadId();rdy=CreateEventA(0,1,0,0);"
+	out = out + "pub_e=CreateEventA(0,1,0,0);ret_e=CreateEventA(0,1,0,0);int n1=1,n2=2;test_parallel(body,&n1,1);"
+	out = out + "test_parallel(body,&n2,2);CloseHandle(rdy);CloseHandle(pub_e);CloseHandle(ret_e);"
+	out = out + "return atomic_load(&pre)!=0||test_pinned(&n1)!=0;}"
+	Text.Combine(out, "\n")

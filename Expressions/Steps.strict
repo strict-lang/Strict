@@ -21,11 +21,11 @@ Entries(header HeaderTokens) Scope
 	Steps(List(Text)).Members(("has maxStep Number", "Run(a Number with Step 0.5)")).names.Length is 0
 	let name = header.tokens(0)
 	mutable entries = Scope(List(Text), List(Text))
-	for header.ParameterNames
+	for "Step" is in header.tokens then header.ParameterNames else List(Text)
 		let step = Steps(header.tokens).Of(header.ParameterPosition(value))
 		if step is not ""
 			entries = entries.With(name + " " + value + " step", step)
-	let returned = Steps(header.tokens).Of(header.ParametersEnd)
+	let returned = "Step" is in header.tokens then Steps(header.tokens).Of(header.ParametersEnd) else ""
 	returned is "" then entries else entries.With(name + " step", returned)
 Members(lines Texts) Scope
 	Steps(List(Text)).Members(("has price Number with Step 0.01", "has count Number")).TypeOf("price step") is "0.01"

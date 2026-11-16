@@ -73,12 +73,15 @@ Refined(inference TypeInference, shapes List(TypeShape)) TypeInference
 	for shapes
 		let typed = ShapeTyping(indexed).Typed(value, types.methods(index), types.names(index))
 		methods.Add(typed.Indexed.Owned(types.names(index)))
-		parameters.Add(Overloaded(types, shapes, value, types.parameters(index)))
+		parameters.Add(OverloadedMembers(types, shapes, types.members(index).types, types.parameters(index)))
 	TypeInference(KnownTypes(types, methods = methods, parameters = parameters), inference.constants)
 Overloaded(types KnownTypes, shapes List(TypeShape), shape TypeShape, scope Scope) Scope
 	ResolveCheck.Overloaded(Counting.types, List(TypeShape), TypeShape("has a"), KnownTypes.NoMembers).names.Length is 0
+	OverloadedMembers(types, shapes, shape.MemberScope.types, scope)
+OverloadedMembers(types KnownTypes, shapes List(TypeShape), memberTypes Texts, scope Scope) Scope
+	OverloadedMembers(Counting.types, List(TypeShape), List(Text) + "N", KnownTypes.NoMembers).names.Length is 0
 	mutable traits = KnownTypes.NoMembers
-	for shape.MemberScope.types
+	for memberTypes
 		let position = types.Index(value)
 		if (position >= 0) and shapes(position).IsTrait
 			traits = traits.WithAll(types.parameters(position).names, types.parameters(position).types)
@@ -108,7 +111,7 @@ Inference(files Texts) TypeInference
 	for shapes
 		members.Add(value.MemberScope.Indexed.Owned(TypeName(files(index))))
 		methods.Add(value.MethodScope)
-		parameters.Add(value.CallScope(generics))
+		parameters.Add(Defaults(value.lines).Of(methods.Last, members.Last, value.ConstructorNames(members.Last, generics)))
 		constants.Add(value.ConstantScope)
 	Refined(TypeInference(KnownTypes(TypeNames(files), members, methods, parameters), constants), shapes)
 Shapes(files Texts) List(TypeShape)

@@ -1,0 +1,241 @@
+constant M01 = "\n  llvm.mlir.global internal constant @strict_gpu_ptx(\"\\00\") : !llvm.array<1 x i8>\n  llvm.mlir.global internal @strict_places(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>"
+constant M02 = "\n  func.func private @strict_places_fill() -> i64 {\n%z = ~a0 : i64\nreturn %z : i64\n}\n  func.func @test_published(%st: ~p) -> i64 {"
+constant M03 = "\n~cgc_init(%st) : (~p) -> ()\n%o = ~a1 : i64\n%z = ~a0 : i64\n%in = ~mad@strict_pool_inside : ~p\n~s%o, %in : i64, ~p"
+constant M04 = "\n%cap = ~a4.0 : f64\n%no = ~a0.0 : f64\n%ls = ~clist_new(%cap, %no) : (f64, f64) -> f64\n%vw = ~cptr(%ls) : (f64) -> ~p"
+constant M05 = "\n%sl = ~g%vw[1] : (~p) -> ~p, f64\n%hb = ~l%sl : ~p -> i64\n%bf = ~cgc_mine(%hb) : (i64) -> i1"
+constant M06 = "\n%sz = ~a16 : i64\n%rc = ~calloc(%sz) : (i64) -> ~p\n~s%ls, %rc : f64, ~p\n%rb = ~cbits(%rc) : (~p) -> f64"
+constant M07 = "\n%cy = ~g%rc[1] : (~p) -> ~p, f64\n~s%rb, %cy : f64, ~p\n~cpin(%rb) : (f64) -> ()\n%af = ~cgc_mine(%hb) : (i64) -> i1"
+constant M08 = "\n%na = arith.xori %af, %bf : i1\n%ok = arith.andi %bf, %na : i1\n%ap = ~clist_add(%ls, %cap) : (f64, f64) -> f64"
+constant M09 = "\n%ru = ~clist_into(%ls, %cap, %no) : (f64, f64, f64) -> f64\n%rv = ~cptr(%ru) : (f64) -> ~p\n%rs = ~g%rv[1] : (~p) -> ~p, i64"
+constant M10 = "\n%rh = ~l%rs : ~p -> i64\n%cp = arith.cmpi ne, %rh, %hb : i64\n%pu = ~clist_push(%ru, %cap) : (f64, f64) -> f64\n%hd = llvm.inttoptr %hb : i64 to ~p"
+constant M11 = "\n%us = ~g%hd[1] : (~p) -> ~p, f64\n%uv = ~l%us : ~p -> f64\n%uc = arith.cmpf oeq, %uv, %no : f64\n%pr = arith.andi %ok, %uc : i1"
+constant M12 = "\n%sf = arith.andi %pr, %cp : i1\n%re = arith.extui %sf : i1 to i64\n~s%z, %in : i64, ~p\nreturn %re : i64\n}\nllvm.mlir.global internal @test_literal_cache(0 : i64) : i64"
+constant M13 = "\nfunc.func @test_literal() -> f64 {\n%c = ~mad@test_literal_cache : ~p\n%cl = ~ccache_claim(%c) : (~p) -> i1\ncf.cond_br %cl, ^b, ^r\n^b:\n%v = llvm.call @test_compute() : () -> f64"
+constant M14 = "\n~ccache_publish(%c, %v) : (~p, f64) -> ()\nreturn %v : f64\n^r:\n%x = ~l%c : ~p -> f64\nreturn %x : f64\n}\nfunc.func @test_pool_gpu() -> i64 {"
+constant M15 = "\n%in = ~mad@strict_pool_inside : ~p\n%o = ~a1 : i64\n~s%o, %in : i64, ~p\n%ck = ~mad@strict_gpu_check : ~p\n%un = ~a-1 : i64"
+constant M16 = "\n~s%un, %ck : i64, ~p\n%p = llvm.mlir.zero : ~p\n%n = ~a0 : i64\n%z = ~a0.0 : f64"
+constant M17 = "\n%r = ~cgpu_run(%p, %p, %p, %n, %z, %n, %p, %n, %n, %n, %n, %n, %n, %n, %n) : (~p, ~p, ~p, i64, f64, i64, ~p, i64, i64, i64, i64, i64, i64, i64, i64) -> f64"
+constant M18 = "\n%af = ~l%ck : ~p -> i64\n~s%n, %in : i64, ~p\nreturn %af : i64\n}\nfunc.func @test_scan_invalidation(%st: ~p) -> i64 {\n~cgc_init(%st) : (~p) -> ()"
+constant M19 = "\n%sz = ~a32768 : i64\n%b = ~calloc(%sz) : (i64) -> ~p\n%sm = ~a96 : i64\n%f1 = ~calloc(%sm) : (i64) -> ~p\n%f2 = ~calloc(%sm) : (i64) -> ~p"
+constant M20 = "\n%fb = llvm.ptrtoint %f1 : ~p to i64\n~s%fb, %b : i64, ~p\n~cgc_written(%b) : (~p) -> ()\n%bb = ~cbits(%b) : (~p) -> f64\n~cpin(%bb) : (f64) -> ()"
+constant M21 = "\n~crc_mark_all() : () -> ()\n%nx = ~g%b[1] : (~p) -> ~p, i64\n%sb = llvm.ptrtoint %f2 : ~p to i64\n~s%sb, %nx : i64, ~p"
+constant M22 = "\n~cgc_written(%nx) : (~p) -> ()\n%ss = ~g%b[-12] : (~p) -> ~p, i8\n%sc = ~l%ss : ~p -> i32\n%re = arith.extui %sc : i32 to i64\nreturn %re : i64\n}"
+constant M23 = "\nfunc.func @test_reused_counts(%st: ~p, %same: i1) -> i64 {\n~cgc_init(%st) : (~p) -> ()\n~crc_counted() : () -> ()\n%c = ~a4.0 : f64\n%l = ~a1.0 : f64\n%z = ~a0.0 : f64"
+constant M24 = "\n%ls = ~clist_new(%c, %l) : (f64, f64) -> f64\n%it = ~clist_items(%ls) : (f64) -> ~p\n%sz = ~a256 : i64\n%old = ~calloc(%sz) : (i64) -> ~p\n%fr = ~calloc(%sz) : (i64) -> ~p"
+constant M25 = "\n%el = arith.select %same, %old, %fr : ~p\n%ob = llvm.ptrtoint %old : ~p to i64\n~s%ob, %it : i64, ~p\n%tl = ~g%it[1] : (~p) -> ~p, i64"
+constant M26 = "\n~s%ob, %tl : i64, ~p\n%ol:5 = ~cgc_locate(%ob) : (i64) -> (~p, i64, i64, i1, i1)\n%oc = ~crc_counter(%ol#0, %ol#1, %ol#3) : (~p, i64, i1) -> ~p"
+constant M27 = "\n%n0 = ~a0 : i32\n%n1 = ~a1 : i32\n%hl = arith.select %same, %n0, %n1 : i32\n~s%hl, %oc : i32, ~p\n%ru = ~clist_into(%ls, %c, %z) : (f64, f64, f64) -> f64"
+constant M28 = "\n%vl = ~cbits(%el) : (~p) -> f64\n%pu = ~clist_push(%ru, %vl) : (f64, f64) -> f64\n%eb = llvm.ptrtoint %el : ~p to i64\n%elc:5 = ~cgc_locate(%eb) : (i64) -> (~p, i64, i64, i1, i1)"
+constant M29 = "\n%ec = ~crc_counter(%elc#0, %elc#1, %elc#3) : (~p, i64, i1) -> ~p\n%c1 = ~l%oc : ~p -> i32\n%c2 = ~l%ec : ~p -> i32\n%t10 = ~a10 : i32"
+constant M30 = "\n%ts = arith.muli %c1, %t10 : i32\n%tot = arith.addi %ts, %c2 : i32\n%w = ~a3.0 : f64\n%fl = ~cflat_list_new(%c, %w) : (f64, f64) -> f64\n%fi = ~clist_items(%fl) : (f64) -> ~p"
+constant M31 = "\n%in = ~l%fi : ~p -> f64\n%fru = ~clist_into(%fl, %c, %w) : (f64, f64, f64) -> f64\n%fpu = ~clist_push(%fru, %in) : (f64, f64) -> f64\n%fp = ~cptr(%fl) : (f64) -> ~p"
+constant M32 = "\n%fa = llvm.ptrtoint %fp : ~p to i64\n%flc:5 = ~cgc_locate(%fa) : (i64) -> (~p, i64, i64, i1, i1)\n%fc = ~crc_counter(%flc#0, %flc#1, %flc#3) : (~p, i64, i1) -> ~p"
+constant M33 = "\n%fn = ~l%fc : ~p -> i32\n%fk = arith.cmpi eq, %fn, %n1 : i32\n%tb = ~l%tl : ~p -> i64\n%e0 = ~a0 : i64\n%tk = arith.cmpi eq, %tb, %e0 : i64"
+constant M34 = "\n%ok = arith.andi %fk, %tk : i1\n%fail = ~a99 : i32\n%ch = arith.select %ok, %tot, %fail : i32\n%re = arith.extui %ch : i32 to i64\nreturn %re : i64\n}"
+constant M35 = "\nfunc.func @test_pinned(%st: ~p) -> i64 {\n~cgc_init(%st) : (~p) -> ()\n~crc_counted() : () -> ()\n%sz = ~a48 : i64"
+constant M36 = "\n%ob = ~calloc(%sz) : (i64) -> ~p\n%b = func.constant @test_pin_body : (~p, i64, i64) -> f64\n%c = ~a3 : i64"
+constant M37 = "\n%r = ~cparallel(%b, %ob, %c) : ((~p, i64, i64) -> f64, ~p, i64) -> f64\n%a = llvm.ptrtoint %ob : ~p to i64\n%f = ~crc_fate(%a) : (i64) -> i64\nreturn %f : i64\n}"
+constant M38 = "\nfunc.func private @test_pin_body(%o: ~p, %f: i64, %t: i64) -> f64 {\n%a = llvm.ptrtoint %o : ~p to i64\n~crc_pin(%a) : (i64) -> ()\n%z = ~a0.0 : f64\nreturn %z : f64\n}"
+constant M39 = "\nfunc.func @test_released() {\n~cgc_release() : () -> ()\nreturn\n}"
+All Text
+	CheckParallelMlir.All.Length > 0
+	let raw = FirstPart + CarriedPart + SweptPart + OwnedPart + CopiesPart + CardsPart + ToolsPart + M39
+	let s = raw.Replace("~p", "!llvm.ptr").Replace("~c", "func.call @strict_").Replace("~a", "arith.constant ")
+	let u = s.Replace("~g", "llvm.getelementptr ").Replace("~l", "llvm.load ").Replace("~s", "llvm.store ")
+	u.Replace("~mad", "llvm.mlir.addressof ")
+FirstPart Text
+	CheckParallelMlir.FirstPart.Length > 0
+	let a = M01 + M02 + M03 + M04 + M05 + M06 + M07 + M08 + M09 + M10 + M11 + M12 + M13
+	let b = M14 + M15 + M16 + M17 + M18 + M19 + M20 + M21 + M22 + M23 + M24 + M25 + M26
+	a + b + M27 + M28 + M29 + M30 + M31 + M32 + M33 + M34 + M35 + M36 + M37 + M38
+CarriedPart Text
+	CheckParallelMlir.CarriedPart.Length > 0
+	mutable out = List(Text)
+	out = out + "func.func @test_carried(%st: ~p) -> i64 {\n~cgc_init(%st) : (~p) -> ()"
+	out = out + "%sz = ~a48 : i64\n%bf = ~calloc(%sz) : (i64) -> ~p\n%sl = ~a5 : i64"
+	out = out + "%cx = llvm.alloca %sl x i64 : (i64) -> ~p\n%ba = llvm.ptrtoint %bf : ~p to i64"
+	out = out + "~s%ba, %cx : i64, ~p\n%b = func.constant @test_carried_body : (~p, i64, i64) -> f64"
+	out = out + "%o = ~a1 : i64\n%r = ~cparallel(%b, %cx, %o) : ((~p, i64, i64) -> f64, ~p, i64) -> f64"
+	out = out + "%is = ~g%cx[1] : (~p) -> ~p, i64\n%iv = ~l%is : ~p -> i64"
+	out = out + "%nx = arith.addi %ba, %sz : i64\n%ad = arith.cmpi eq, %iv, %nx : i64\n%a1 = arith.extui %ad : i1 to i64"
+	out = out + "%ms = ~g%cx[2] : (~p) -> ~p, i64\n%mv = ~l%ms : ~p -> i64"
+	out = out + "%os = ~g%cx[3] : (~p) -> ~p, i64\n%ov = ~l%os : ~p -> i64"
+	"\n" + Text.Combine(out, "\n") + CarriedRest
+CarriedRest Text
+	CheckParallelMlir.CarriedRest.Length > 0
+	mutable out = List(Text)
+	out = out + "%c2 = ~a2 : i64\n%c4 = ~a4 : i64\n%mb = arith.muli %mv, %c2 : i64\n%ob = arith.muli %ov, %c4 : i64"
+	out = out + "%p1 = arith.addi %a1, %mb : i64\n%p2 = arith.addi %p1, %ob : i64"
+	out = out + "%ss = ~g%cx[4] : (~p) -> ~p, i64\n%sv = ~l%ss : ~p -> i64"
+	out = out + "%c8 = ~a8 : i64\n%sb = arith.muli %sv, %c8 : i64\n%re = arith.addi %p2, %sb : i64\nreturn %re : i64\n}"
+	out = out + "func.func private @test_carried_body(%cx: ~p, %f: i64, %t: i64) -> f64 {\n%sz = ~a48 : i64"
+	out = out + "%o = ~calloc(%sz) : (i64) -> ~p\n%a = llvm.ptrtoint %o : ~p to i64"
+	out = out + "%is = ~g%cx[1] : (~p) -> ~p, i64\n~s%a, %is : i64, ~p"
+	out = out + "%m = ~cgc_mine(%a) : (i64) -> i1\n%mn = arith.extui %m : i1 to i64"
+	out = out + ("%ms = ~g%cx[2] : (~p) -> ~p, i64\n~s%mn, %ms : i64, ~p\n" + CarriedBody)
+	"\n" + Text.Combine(out, "\n")
+CarriedBody Text
+	CheckParallelMlir.CarriedBody.Length > 0
+	mutable out = List(Text)
+	out = out + "%bf = ~l%cx : ~p -> i64\n%ol = ~cgc_mine(%bf) : (i64) -> i1\n%on = arith.extui %ol : i1 to i64"
+	out = out + "%os = ~g%cx[3] : (~p) -> ~p, i64\n~s%on, %os : i64, ~p"
+	out = out + "%ls = ~mad@strict_gc_lane : ~p\n%ow = ~l%ls : ~p -> i64\n%sh = ~a0 : i64"
+	out = out + "~s%sh, %ls : i64, ~p\n%so = ~calloc(%sz) : (i64) -> ~p\n%sa = llvm.ptrtoint %so : ~p to i64"
+	out = out + "%sm = ~cgc_mine(%sa) : (i64) -> i1\n~s%ow, %ls : i64, ~p\n%sn = arith.extui %sm : i1 to i64"
+	out = out + "%ss = ~g%cx[4] : (~p) -> ~p, i64\n~s%sn, %ss : i64, ~p"
+	out = out + "%z = ~a0.0 : f64\nreturn %z : f64\n}"
+	"\n" + Text.Combine(out, "\n")
+SweptPart Text
+	CheckParallelMlir.SweptPart.Length > 0
+	mutable out = List(Text)
+	out = out + "func.func @test_swept(%s: ~p) -> i64 {\n~cgc_init(%s) : (~p) -> ()\n%ks = ~a65536 : i64"
+	out = out + "%k = ~calloc(%ks) : (i64) -> ~p\n%aw = ~a42 : i64\n~svolatile %aw, %k : i64, ~p"
+	out = out + "%rs = ~g%k[1] : (~p) -> ~p, i64\n%bd = func.constant @test_garbage : (~p, i64, i64) -> f64"
+	out = out + "%cn = ~a8192 : i64\n%z = ~a0 : i64\n%o = ~a1 : i64\n%rn = ~a8 : i64\n%fl = ~atrue"
+	out = out + "cf.br ^lp(%z : i64)\n^lp(%rd: i64):\n%m = arith.cmpi ult, %rd, %rn : i64\ncf.cond_br %m, ^wk, ^dn\n^wk:"
+	out = out + "~svolatile %rd, %rs : i64, ~p\n%rv = ~cparallel(%bd, %k, %cn) : ((~p, i64, i64) -> f64, ~p, i64) -> f64"
+	out = out + "~cgc_run(%fl) : (i1) -> ()\n%nx = arith.addi %rd, %o : i64\ncf.br ^lp(%nx : i64)\n^dn:"
+	out = out + "%ts = ~mad@strict_gc_top : ~p\n%tp = ~l%ts : ~p -> i64"
+	out = out + "%bs = ~mad@strict_gc_base : ~p\n%bp = ~l%bs : ~p -> i64"
+	"\n" + Text.Combine(out, "\n") + SweptEnd
+SweptEnd Text
+	CheckParallelMlir.SweptEnd.Length > 0
+	mutable out = List(Text)
+	out = out + "%by = arith.subi %tp, %bp : i64\n%st = ~lvolatile %k : ~p -> i64\n%pr = arith.cmpi eq, %st, %aw : i64"
+	out = out + "%fs = ~g%k[7] : (~p) -> ~p, i64\n%ft = ~lvolatile %fs : ~p -> ~p"
+	out = out + "%fi = ~lvolatile %ft : ~p -> i64\n%ei = ~a320 : i64\n%sv = arith.cmpi eq, %fi, %ei : i64"
+	out = out + "%ok = arith.andi %pr, %sv : i1\n%ch = arith.select %ok, %by, %z : i64\nreturn %ch : i64\n}"
+	out = out + "func.func private @test_garbage(%cx: ~p, %fr: i64, %to: i64) -> f64 {"
+	out = out + "%sz = ~a1024 : i64\n%o = ~a1 : i64"
+	out = out + "%tw = ~a2 : i64\n%pr = ~a128 : i64\n%sp = ~a64 : i64\n%no = ~a0 : i64\n%zr = ~a0.0 : f64"
+	out = out + "%rs = ~g%cx[1] : (~p) -> ~p, i64\n%rd = ~lvolatile %rs : ~p -> i64"
+	out = out + "%st = arith.muli %rd, %pr : i64\n%ks = arith.addi %st, %tw : i64\ncf.br ^lp(%fr : i64)\n^lp(%i: i64):"
+	"\n" + Text.Combine(out, "\n") + "\n" + GarbageKeep
+GarbageKeep Text
+	CheckParallelMlir.GarbageKeep.Length > 0
+	mutable out = List(Text)
+	out = out + "%mr = arith.cmpi ult, %i, %to : i64\ncf.cond_br %mr, ^al, ^dn\n^al:"
+	out = out + "%ob = ~calloc_text(%sz) : (i64) -> ~p\n~svolatile %i, %ob : i64, ~p\n%nx = arith.addi %i, %o : i64"
+	out = out + "%rm = arith.remui %i, %sp : i64\n%ik = arith.cmpi eq, %rm, %no : i64"
+	out = out + "cf.cond_br %ik, ^kp, ^lp(%nx : i64)"
+	out = out + "^kp:\n%ps = arith.divui %i, %sp : i64\n%en = arith.addi %ks, %ps : i64"
+	out = out + "%sl = ~g%cx[%en] : (~p, i64) -> ~p, ~p\n~svolatile %ob, %sl : ~p, ~p"
+	out = out + "~cgc_written(%sl) : (~p) -> ()\ncf.br ^lp(%nx : i64)\n^dn:\nreturn %zr : f64\n}"
+	"\n" + Text.Combine(out, "\n")
+OwnedPart Text
+	CheckParallelMlir.OwnedPart.Length > 0
+	mutable out = List(Text)
+	out = out + "func.func @test_owned(%s: ~p) -> i64 {\n~cgc_init(%s) : (~p) -> ()\n%ks = ~a65536 : i64"
+	out = out + "%k = ~calloc(%ks) : (i64) -> ~p\n%rs = ~g%k[1] : (~p) -> ~p, i64"
+	out = out + "%gb = func.constant @test_garbage : (~p, i64, i64) -> f64\n%cn = ~a8192 : i64\n%z = ~a0 : i64"
+	out = out + "%o = ~a1 : i64\n%fl = ~atrue\n~svolatile %z, %rs : i64, ~p"
+	out = out + "~svolatile %o, %rs : i64, ~p\n%f2 = ~cparallel(%gb, %k, %cn) : ((~p, i64, i64) -> f64, ~p, i64) -> f64"
+	out = out + "~cgc_run(%fl) : (i1) -> ()\n%ls = ~a16 : i64\n%lt = ~cmalloc(%ls) : (i64) -> ~p"
+	out = out + "~s%z, %lt : i64, ~p\n%qs = ~g%lt[1] : (~p) -> ~p, ~p\n~s%k, %qs : ~p, ~p"
+	out = out + "%bd = func.constant @test_ownership : (~p, i64, i64) -> f64\n%it = ~a64 : i64"
+	out = out + ("%ow = ~cparallel(%bd, %lt, %it) : ((~p, i64, i64) -> f64, ~p, i64) -> f64\n" + OwnedTail)
+	"\n" + Text.Combine(out, "\n")
+OwnedTail Text
+	CheckParallelMlir.OwnedTail.Length > 0
+	mutable out = List(Text)
+	out = out + "%lc = ~l%lt : ~p -> i64\nreturn %lc : i64\n}"
+	out = out + "func.func private @test_ownership(%cx: ~p, %fr: i64, %to: i64) -> f64 {"
+	out = out + "%sz = ~a1024 : i64\n%o = ~a1 : i64"
+	out = out + "%no = ~a0 : i64\n%ot = ~a200 : i64\n%zr = ~a0.0 : f64\ncf.br ^it(%fr : i64)\n^it(%i: i64):"
+	out = out + "%mr = arith.cmpi ult, %i, %to : i64\ncf.cond_br %mr, ^fs, ^dn\n^fs:"
+	out = out + "%ob = ~calloc_text(%sz) : (i64) -> ~p\ncf.br ^fl(%no : i64)\n^fl(%fd: i64):"
+	out = out + "%mf = arith.cmpi ult, %fd, %ot : i64\ncf.cond_br %mf, ^oh, ^ck\n^oh:"
+	out = out + "%oh = ~calloc_text(%sz) : (i64) -> ~p\n%nf = arith.addi %fd, %o : i64\ncf.br ^fl(%nf : i64)\n^ck:"
+	out = out + "%ad = llvm.ptrtoint %ob : ~p to i64\n%mn = ~cgc_mine(%ad) : (i64) -> i1\n%nx = arith.addi %i, %o : i64"
+	"\n" + Text.Combine(out, "\n") + OwnershipClaims
+OwnershipClaims Text
+	CheckParallelMlir.OwnershipClaims.Length > 0
+	mutable out = List(Text)
+	out = out + "%ks = ~g%cx[1] : (~p) -> ~p, ~p\n%k = ~l%ks : ~p -> ~p\n%fk = ~a2 : i64"
+	out = out + "%ke = ~a258 : i64\ncf.cond_br %mn, ^cl(%fk : i64), ^lt"
+	out = out + "^lt:\n%pv = llvm.atomicrmw add %cx, %o monotonic : ~p, i64\ncf.br ^cl(%fk : i64)\n^cl(%en: i64):"
+	out = out + "%mk = arith.cmpi ult, %en, %ke : i64\ncf.cond_br %mk, ^cm, ^it(%nx : i64)\n^cm:"
+	out = out + "%sl = ~g%k[%en] : (~p, i64) -> ~p, i64\n%ka = ~lvolatile %sl : ~p -> i64"
+	out = out + "%cd = ~cgc_mine(%ka) : (i64) -> i1\n%ne = arith.addi %en, %o : i64"
+	out = out + "cf.cond_br %cd, ^wg, ^cl(%ne : i64)\n^wg:\n%ct = llvm.atomicrmw add %cx, %o monotonic : ~p, i64"
+	out = out + "cf.br ^cl(%ne : i64)\n^dn:\nreturn %zr : f64\n}"
+	"\n" + Text.Combine(out, "\n")
+CopiesPart Text
+	CheckParallelMlir.CopiesPart.Length > 0
+	mutable out = List(Text)
+	out = out + "func.func @test_copies(%s: ~p) -> i64 {\n~cgc_init(%s) : (~p) -> ()\n%yl = ~a8388608 : i64"
+	out = out + "%ls = ~mad@strict_gc_young_limit : ~p\n~s%yl, %ls : i64, ~p\n%sb = ~a16777216 : i64"
+	out = out + "%bs = ~mad@strict_gc_budget : ~p\n~s%sb, %bs : i64, ~p\n%bz = ~a33554432 : i64"
+	out = out + "%ba = ~calloc_text(%bz) : (i64) -> ~p\n%cs = ~a16777216 : i64\n%o = ~a1 : i64"
+	out = out + "%z = ~a0 : i64\n%cp = ~a40 : i64\n%nw = llvm.alloca %o x ~p : (i64) -> ~p"
+	out = out + "%ft = ~calloc_text(%cs) : (i64) -> ~p\n~svolatile %ft, %nw : ~p, ~p"
+	out = out + "cf.br ^cp(%z : i64)\n^cp(%i: i64):\n%mr = arith.cmpi ult, %i, %cp : i64\ncf.cond_br %mr, ^nx, ^dn"
+	out = out + "^nx:\n%co = ~calloc_text(%cs) : (i64) -> ~p\n~svolatile %co, %nw : ~p, ~p"
+	out = out + ("%fl = arith.addi %i, %o : i64\ncf.br ^cp(%fl : i64)\n^dn:\n~svolatile %z, %ba : i64, ~p\n" + CopiesTail)
+	"\n" + Text.Combine(out, "\n")
+CopiesTail Text
+	CheckParallelMlir.CopiesTail.Length > 0
+	mutable out = List(Text)
+	out = out + "%ts = ~mad@strict_gc_top : ~p\n%tp = ~l%ts : ~p -> i64"
+	out = out + "%gs = ~mad@strict_gc_base : ~p\n%hb = ~l%gs : ~p -> i64"
+	out = out + "%by = arith.subi %tp, %hb : i64\nreturn %by : i64\n}"
+	out = out + "func.func @test_job_garbage(%s: ~p) -> i64 {\n~cgc_init(%s) : (~p) -> ()"
+	out = out + "%bd = func.constant @test_waste : (~p, i64, i64) -> f64\n%cx = llvm.mlir.zero : ~p"
+	out = out + "%cn = ~a409600 : i64\n%dn = ~cparallel(%bd, %cx, %cn) : ((~p, i64, i64) -> f64, ~p, i64) -> f64"
+	out = out + ("%z = ~a0 : i64\nreturn %z : i64\n}\n" + WasteMlir)
+	"\n" + Text.Combine(out, "\n")
+WasteMlir Text
+	CheckParallelMlir.WasteMlir.Length > 0
+	mutable out = List(Text)
+	out = out + "func.func private @test_waste(%cx: ~p, %fr: i64, %to: i64) -> f64 {"
+	out = out + "%sz = ~a1024 : i64\n%o = ~a1 : i64\n%zr = ~a0.0 : f64\ncf.br ^lp(%fr : i64)\n^lp(%i: i64):"
+	out = out + "%mr = arith.cmpi ult, %i, %to : i64\ncf.cond_br %mr, ^al, ^dn\n^al:"
+	out = out + "%ob = ~calloc_text(%sz) : (i64) -> ~p\n~svolatile %i, %ob : i64, ~p"
+	out = out + "%nx = arith.addi %i, %o : i64\ncf.br ^lp(%nx : i64)\n^dn:\nreturn %zr : f64\n}"
+	Text.Combine(out, "\n")
+CardsPart Text
+	CheckParallelMlir.CardsPart.Length > 0
+	mutable out = List(Text)
+	out = out + "func.func @test_put_card(%s: ~p) -> i64 {\n~cgc_init(%s) : (~p) -> ()\n%sz = ~a24 : i64"
+	out = out + "%kp = ~calloc(%sz) : (i64) -> ~p"
+	out = out + "%fl = ~atrue\n~cgc_run(%fl) : (i1) -> ()\n%ts = ~a32 : i64"
+	out = out + "%yg = ~calloc_text(%ts) : (i64) -> ~p\n%yb = ~cbits(%yg) : (~p) -> f64"
+	out = out + "%sl = ~g%kp[2] : (~p) -> ~p, f64\n~crc_put(%sl, %yb) : (~p, f64) -> ()"
+	out = out + "%ad = llvm.ptrtoint %sl : ~p to i64\n%bs = ~mad@strict_gc_base : ~p\n%bp = ~l%bs : ~p -> i64"
+	out = out + "%of = arith.subi %ad, %bp : i64\n%nn = ~a9 : i64\n%i = arith.shrui %of, %nn : i64"
+	out = out + "%cs = ~mad@strict_gc_cards : ~p\n%cb = ~l%cs : ~p -> i64\n%cr = llvm.inttoptr %cb : i64 to ~p"
+	out = out + ("%cd = ~g%cr[%i] : (~p, i64) -> ~p, i8\n%st = ~l%cd : ~p -> i8\n" + CardsTail)
+	"\n" + Text.Combine(out, "\n")
+CardsTail Text
+	CheckParallelMlir.CardsTail.Length > 0
+	mutable out = List(Text)
+	out = out + "%re = arith.extui %st : i8 to i64\nreturn %re : i64\n}"
+	out = out + "func.func @test_checked_collection(%s: ~p) -> i64 {"
+	out = out + "~cgc_init(%s) : (~p) -> ()\n%sz = ~a48 : i64\n%hl = ~calloc(%sz) : (i64) -> ~p"
+	out = out + "%tg = ~calloc(%sz) : (i64) -> ~p\n%tw = llvm.ptrtoint %tg : ~p to i64"
+	out = out + "%sl = ~g%hl[2] : (~p) -> ~p, i64\n~s%tw, %sl : i64, ~p\n~crc_pin(%tw) : (i64) -> ()"
+	out = out + "~crc_mark_all() : () -> ()\n%yg = ~afalse\n~cgc_run(%yg) : (i1) -> ()"
+	out = out + "%fl = ~atrue\n~cgc_run(%fl) : (i1) -> ()\n%hw = llvm.ptrtoint %hl : ~p to i64\nreturn %hw : i64\n}"
+	"\n" + Text.Combine(out, "\n")
+ToolsPart Text
+	CheckParallelMlir.ToolsPart.Length > 0
+	mutable out = List(Text)
+	out = out + "llvm.func @test_claiming(i64)\nllvm.func @test_publishing(i64)\nllvm.func @test_retired(i64)"
+	out = out + "llvm.mlir.global internal constant @test_shell(\"cmd\\00\") : !llvm.array<4 x i8>"
+	out = out + "func.func @test_tools(%ln: ~p, %cn: i64) -> f64 {\n%z = ~a0.0 : f64\n%st = ~a0 : i64\n%o = ~a1 : i64"
+	out = out + "%to = arith.sitofp %cn : i64 to f64\n%ls = ~clist_new(%to, %to) : (f64, f64) -> f64\ncf.br ^nx(%st : i64)"
+	out = out + "^nx(%i: i64):\n%mr = arith.cmpi slt, %i, %cn : i64\ncf.cond_br %mr, ^fl, ^rn\n^fl:"
+	out = out + "%sl = ~g%ln[%i] : (~p, i64) -> ~p, ~p\n%l = ~l%sl : ~p -> ~p\n%tx = ~ctext_from(%l) : (~p) -> f64"
+	out = out + "%at = arith.sitofp %i : i64 to f64\n%sr = ~clist_set(%ls, %at, %tx) : (f64, f64, f64) -> f64"
+	out = out + "%fl = arith.addi %i, %o : i64\ncf.br ^nx(%fl : i64)\n^rn:\n%sh = ~mad@test_shell : ~p"
+	"\n" + Text.Combine(out, "\n") + ToolsTail
+ToolsTail Text
+	CheckParallelMlir.ToolsTail.Length > 0
+	mutable out = List(Text)
+	out = out + "%t = ~a30.0 : f64\n%sp = ~ctext_from(%sh) : (~p) -> f64"
+	out = out + "%rs = ~cprocess_runtools(%z, %sp, %ls, %t) : (f64, f64, f64, f64) -> f64"
+	out = out + "return %rs : f64\n}"
+	out = out + "func.func @test_parallel(%bd: ~p, %cx: ~p, %cn: i64) -> f64 {"
+	out = out + "%cb = builtin.unrealized_conversion_cast %bd : ~p to (~p, i64, i64) -> f64"
+	out = out + "%rs = ~cparallel(%cb, %cx, %cn) : ((~p, i64, i64) -> f64, ~p, i64) -> f64\nreturn %rs : f64\n}"
+	"\n" + Text.Combine(out, "\n")

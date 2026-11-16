@@ -1,0 +1,208 @@
+has logger
+constant ToolSeconds = 270
+constant RunSeconds = 60
+constant CompileSeconds = 60
+constant LineCount = 1000
+constant Doublings = 16
+constant LineWidth = 80000
+constant ToolWidth = 3000
+constant MaxHeap = 64
+constant MinFrameEnds = 2
+constant MaxWordCollections = 20
+constant JobLimitMb = 128
+constant SmallInput = 1000
+constant OomInput = 268435456
+constant SmallEnv = "STRICT_HEAP=128&& set STRICT_THREADS=1&& set STRICT_GPU=0"
+constant LogEnv = "STRICT_GC_LOG=1&& set STRICT_GPU=0"
+constant ChurnEnv = "STRICT_GC_LIMIT=1&& set STRICT_GC_WINDOW=1&& set STRICT_GPU=0"
+constant FilledSrc = "has logger\nFilled(count Number, offset Number) Numbers\n\tFilled(2, 1) is (1, 2)\n\tfor count\n\t\tindex + offset\n"
+constant GrowA = "Grown(count Number, offset Number) List(Numbers)\n\tName(Logger).Grown(13, 0)(12) is (12, 13)\n"
+constant GrowB = "\tmutable grown = List(Mutable(Numbers))\n\tfor count\n\t\tgrown.Add(Filled(count is 13 then 2 else 8192, index + offset))\n\tgrown\n"
+constant KeptSrc = "Run\n\tlet kept = (Filled(6500000, 1), Filled(6500000, 2), Filled(6500000, 3), Filled(6500000, 4), Filled(6500000, 5))\n"
+constant PresSrc = "\tmutable total = 0\n\tfor 60\n\t\tlet temporary = Filled(6500000 + index % 2 * 8192, 0)\n\t\ttotal = total + temporary(index) + kept(index % 5)(index)\n\tlogger.Log(\"total \" + total)"
+constant WebA = "\tmutable recent = kept(0)\n\tmutable seed = 0.7071067811865476\n\tfor 60\n\t\tlet temporary = Filled(6500000 + index % 2 * 8192, recent(index) + seed)\n"
+constant WebB = "\t\tseed = (seed * 9301.123 + 0.49297) % 1\n\t\trecent = temporary\n\tlogger.Log(\"total \" + (recent(59) + kept(4)(59)).Round)"
+constant ProdSrc = "has logger\nconstant Turn = Matrix.RotationZ(Degrees(1))\nRun\n\tmutable current = Matrix.Identity\n\tfor 5000000\n\t\tcurrent = current * Turn\n\tlogger.Log(\"done\")"
+constant ChurnPattern = "in that window: (\\d+) young and (\\d+) full collections, (\\d+) for GPU memory, (\\d+) for host memory"
+constant TickerA = "has logger\nhas Realtime\nPresented NAME\n\tNAME(3).Presented.kept.Length is 3\n\tNAME(size, frame + 1, Filled(frame))\n"
+constant TickerB = "Filled(seed Number) TYPE\n\tNAME(2).Filled(1) is TWO\n\tfor size\n\t\tITEM\nRun\n\tmutable ticker = NAME(SIZE)\n\tfor FRAMES\n\t\tticker = ticker.Presented\n\tlogger.Log(\"frames \" + ticker.frame)"
+constant GrownRun = "Run\n\tmutable total = 0\n\tfor 4000\n\t\ttotal = total + Grown(16, index)(15)(1)\n\tlogger.Log(\"total \" + total)"
+constant GrownPassA = "Picked(lists List(Numbers)) Number\n\tGrownPassed(Logger).Picked(((1, 2), (3, 4))) is 4\n\tlists(lists.Length - 1)(1)\n"
+constant GrownPassB = "Run\n\tmutable total = 0\n\tfor 4000\n\t\ttotal = total + Picked(Grown(16, index))\n\tlogger.Log(\"total \" + total)"
+constant PassedSrc = "Last(n Numbers) Number\n\tPassedLarge(Logger).Last((1, 2)) is 2\n\tn(n.Length - 1)\nRun\n\tmutable total = 0\n\tfor 60000\n\t\ttotal = total + Last(Filled(8192, index))\n\tlogger.Log(\"total \" + total)"
+constant SmallA = "Words(c Number, o Number) Texts\n\tWords(2, 1) is (\"w1\", \"w2\")\n\tfor c\n\t\t\"w\" + (index + o)\nHeld(c Number) List(Numbers)\n\tHeld(0).Length is 0\n\tfor c\n\t\tFilled(2000000, index)\n"
+constant SmallB1 = "Run\n\tlet held = Held(4)\n\tmutable recent = held(0)\n\tmutable total = 0\n\tfor 1500\n\t\tlet temporary = Filled(400000 + index % 3 * 8192, recent(index % 1000))\n"
+constant SmallB2 = "\t\tlet ts = Words(3000, index)\n\t\ttotal = total + ts(index % 3000).Length + held(index % 4)(index)\n\t\trecent = temporary\n\tlogger.Log(\"total \" + (total + recent(5)).Round)"
+constant TrimA = "Held(c Number) List(Numbers) slow\n\tTrimmedPool(Logger).Held(1).Length is 1\n\tfor c\n\t\tFilled(16000000, index)\nLast(c Number) Number slow\n\tTrimmedPool(Logger).Last(1) is 1\n\tHeld(c).Last(1)\n"
+constant TrimB = "Run\n\tmutable total = 0\n\tfor 3\n\t\ttotal = total + Last(64)\n\t\tProcess.Collected\n\tlogger.Log(\"collected\")\n\tGpuMemory.Released\n\tlogger.Log(\"total \" + total)"
+constant HandA = "has logger\nconstant Plain = HandedBack(Logger)\nFilled(c Number, o Number) Numbers\n\tFilled(2, 1) is (1, 2)\n\tfor c\n\t\tindex + o\n"
+constant HandB1 = "Validated(n Numbers) Numbers\n\tPlain.Validated((1, 2)) is (1, 2)\n\tn\nRun\n\tmutable total = 0\n\tfor 1000\n\t\tlet made = Filled(300, index)\n\t\tmutable chk = Plain.Validated(made)\n"
+constant HandB2 = "\t\tchk = Filled(300, index + 1)\n\t\ttotal = total + made(5) + chk(5)\n\tlogger.Log(\"total \" + total)"
+constant ChurnSrc = "Run\n\tmutable r = Filled(8192, 0)\n\tmutable total = 0\n\tfor 100000000\n\t\tlet t = Filled(8192 + index % 2, r(index % 8192))\n\t\ttotal = total + t(5)\n\t\tr = t\n\tlogger.Log(\"total \" + total)"
+Run Number
+	if Process.OperatingSystem is not "Windows"
+		return Error("CheckMemory limits process memory with a Windows job object")
+	let folder = "Examples/MemoryCheck" + 1000000.Random.Floor
+	if Directory.Create(folder) is Error
+		return Error("DirectoryNotCreated")
+	let s1 = CheckJobAndPressure(folder) is Error then Error("JobFailed") else CheckUncollected(folder)
+	let err = s1 is Error then s1 else CheckCollections(folder)
+	Directory.Delete(folder)
+	if err is Error
+		return err
+	logger.Log("CheckMemory passed")
+	0
+CheckJobAndPressure(folder Text) Boolean
+	let exe = Built(folder, "MemoryCheck", "Run Number\n\tProcess.Input.Length", "")
+	if exe is Error
+		return exe
+	File(folder + "/job.c").Write(JobCode.Split("\n"))
+	let comp = Process.RunTool("clang", "-O2 \"" + folder + "/job.c\" -o \"" + folder + "/job.exe\"", CompileSeconds)
+	if comp.exitCode is not 0
+		return Error("JobCompileFailed: " + comp.Output + comp.error)
+	let r1 = Process.RunTool(folder + "/job.exe", "\"" + exe + "\" " + JobLimitMb + " " + SmallInput, RunSeconds)
+	let r2 = Process.RunTool(folder + "/job.exe", "\"" + exe + "\" " + JobLimitMb + " " + OomInput, RunSeconds)
+	let hasOom = ("OutOfMemory" is in r2.Output) and ("AccessViolation" is not in r2.Output)
+	("EXIT:1000" is not in r1.Output) or (not hasOom) then Error("JobOomFailed: " + r1.Output) else CheckHeaps(folder)
+CheckHeaps(folder Text) Boolean
+	let p1 = RunBuilt(folder, "MemoryPressure", FilledSrc + KeptSrc + PresSrc, "", "STRICT_HEAP=1024", "total 3720", "")
+	if p1 is Error
+		return p1
+	let webJs = Built(folder, "WebPressure", FilledSrc + KeptSrc + WebA + WebB, "web")
+	if webJs is Error
+		return webJs
+	let web = Process.RunTool(Directory.Directories("Tools/emsdk/node").First + "/node.exe", webJs, RunSeconds)
+	if (web.exitCode is not 0) or ("total 1924" is not in web.Output)
+		return Error("WebPressureFailed: " + web.Output + web.error)
+	RunBuilt(folder, "SmallPressure", FilledSrc + SmallA + SmallB1 + SmallB2, "", SmallEnv, "total 1757700", "")
+CheckUncollected(folder Text) Boolean
+	let grown = (FilledSrc + (GrowA + GrowB)).Replace("Name", "GrownLists") + GrownRun
+	let u1 = RunBuilt(folder, "GrownLists", grown, "", LogEnv, "total 8062000", "Collection: ")
+	if u1 is Error
+		return u1
+	let g2 = (FilledSrc + (GrowA + GrowB)).Replace("Name", "GrownPassed") + GrownPassA + GrownPassB
+	let u2 = RunBuilt(folder, "GrownPassed", g2, "", LogEnv, "total 8062000", "Collection: ")
+	let pSrc = FilledSrc + PassedSrc
+	u2 is Error then u2 else RunBuilt(folder, "PassedLarge", pSrc, "", LogEnv, "total 2291430000", "Collection: ")
+CheckCollections(folder Text) Boolean
+	let trimOut = RunBuilt(folder, "TrimmedPool", FilledSrc + TrimA + TrimB, "", LogEnv, "total 192", "")
+	if trimOut is Error
+		return trimOut
+	let parts = trimOut.Split("collected")
+	if (parts(0).Split("Collection: full").Length < 4) or ("Collection: " is in parts(1))
+		return Error("TrimmedPoolWrong: " + trimOut)
+	let handed = RunBuilt(folder, "HandedBack", HandA + HandB1 + HandB2, "", "STRICT_GPU=0", "total 1010000", "")
+	handed is Error then handed else CheckChurnAndProducts(folder)
+CheckChurnAndProducts(folder Text) Boolean
+	let churnExe = Built(folder, "Churning", FilledSrc + ChurnSrc, "")
+	let cmd = "/c set " + ChurnEnv + "&& \"" + churnExe + "\""
+	let churn = churnExe is Error then (churnExe to Text) else Process.RunTool("cmd", cmd, RunSeconds).Output
+	let grp = Regex(ChurnPattern).Groups(churn)
+	let badC = ("GarbageCollectionExceedsLimit" is not in churn) or (grp.Length < 4)
+	if badC or (((grp(1) to Number) + (grp(2) to Number)) <= 0) or (grp(3) is not "0")
+		return Error("ChurnWrong: " + churn)
+	let prodOut = RunBuilt(folder, "Products", ProdSrc, "", LogEnv, "done", "")
+	let ok = prodOut is Error then prodOut else CheckedMaxHeap(Regex("(\\d+) MB heap").FindAll(prodOut))
+	ok is Error then ok else CheckTickersAndFiles(folder)
+CheckedMaxHeap(matches Texts) Boolean
+	if matches.Length is 0
+		return Error("NoHeapLogged")
+	for matches
+		let mb = Text.Combine(Regex("(\\d+)").Groups(value), "") to Number
+		if mb >= MaxHeap
+			return Error("HeapExceededLimit: " + mb)
+	true
+CheckTickersAndFiles(folder Text) Boolean
+	let f = FrameTicker(folder, "FrameTicker", "Numbers", "index + seed", "(1, 2)", "5000000", "10")
+	if (f is Error) or not CheckedFramesEnded(f, true)
+		return Error("FrameTickerWrong")
+	let w = FrameTicker(folder, "WordTicker", "Texts", "\"w\" + (index + seed)", "(\"w1\", \"w2\")", "100000", "40")
+	(w is Error) or not CheckedWordsEnded(w) then Error("WordTickerWrong") else CheckLongLines(folder)
+FrameTicker(folder Text, name Text, itemType Text, item Text, two Text, size Text, frames Text) Texts
+	let elem = itemType.Substring(0, itemType.Length - 1)
+	let hdr = "has size Number\nhas frame Number = 0\nhas kept " + itemType + " = List(" + elem + ")\n"
+	let base = (hdr + TickerA + TickerB).Replace("NAME", name).Replace("TYPE", itemType).Replace("TWO", two)
+	let code = base.Replace("ITEM", item).Replace("SIZE", size).Replace("FRAMES", frames)
+	let out = RunBuilt(folder, name, code, "", LogEnv, "frames " + frames, "")
+	if out is Error
+		return out
+	mutable cols = List(Text)
+	for out.Lines
+		if value.StartsWith("Collection: ")
+			cols = cols + value
+	cols
+CheckedFramesEnded(cols Texts, needMultiple Boolean) Boolean
+	mutable seenTrue = false
+	mutable trueCount = 0
+	for cols
+		if value.EndsWith(", frame end")
+			seenTrue = true
+			trueCount = trueCount + 1
+		else
+			if seenTrue
+				return false
+	seenTrue and (not needMultiple or (trueCount >= MinFrameEnds))
+CheckedWordsEnded(cols Texts) Boolean
+	if cols.Length > MaxWordCollections
+		return false
+	for cols
+		if not value.EndsWith(", frame end")
+			return false
+	true
+CheckLongLines(folder Text) Boolean
+	mutable word = "x"
+	for Doublings
+		word = word + word
+	File(folder + "/long.txt").Write(RepeatedLine(word.Substring(0, LineWidth), LineCount))
+	let l1 = "has logger\nRun\n\tlet started = Process.Elapsed\n\tlet lines = File(\"" + folder + "/long.txt\").ReadLines"
+	let longSrc = l1 + "\n\tlogger.Log(\"lines \" + lines.Length + \" slow \" + (Process.Elapsed - started > 3))"
+	let longOut = RunBuilt(folder, "LongLines", longSrc, "", "STRICT_GPU=0", "lines 1001 slow false", "")
+	if longOut is Error
+		return longOut
+	File(folder + "/tool.txt").Write(List(Text) + word.Substring(0, ToolWidth))
+	CheckTools(folder)
+CheckTools(folder Text) Boolean
+	let typed = folder.Replace("/", "\\\\") + "\\\\tool.txt"
+	mutable code = "has logger\nLines(count Number) Texts\n\tToolOutputs(Logger).Lines(1).Length is 1\n"
+	code = code + "\tfor count\n\t\t\"/c type " + typed + "\"\nRun\n\tmutable total = 0\n"
+	code = code + "\tfor Process.RunTools(\"cmd\", Lines(128))\n\t\ttotal = total + value.Output.Length\n"
+	RunBuilt(folder, "ToolOutputs", code + "\tlogger.Log(\"total \" + total)", "", "STRICT_GPU=0", "total 384000", "")
+RepeatedLine(line Text, count Number) Texts
+	for count
+		line
+Built(folder Text, name Text, code Text, platform Text) Text
+	let src = folder + "/" + name + ".strict"
+	File(src).Write(code.Split("\n"))
+	let arg = "build " + src + (platform is "" then "" else " " + platform)
+	let built = Process.RunTool(Process.Current.executable, arg, ToolSeconds)
+	if built.exitCode is not 0
+		return Error("BuildFailed " + name + ": " + built.Output + built.error)
+	platform is "" then folder + "/" + name + ".exe" else folder + "/Release/Web/" + name + ".js"
+RunBuilt(folder Text, name Text, code Text, platform Text, env Text, want Text, ban Text) Text
+	let exe = Built(folder, name, code, platform)
+	if exe is Error
+		return exe
+	let res = Process.RunTool("cmd", "/c " + (env is "" then "" else "set " + env + "&& ") + "\"" + exe + "\"", RunSeconds)
+	let miss = (want is not "") and (want is not in res.Output)
+	let bad = (res.exitCode is not 0) or miss or ((ban is not "") and (ban is in res.Output))
+	bad then Error(name + " failed: " + res.Output + res.error) else res.Output
+JobCode Text
+	mutable out = List(Text)
+	out = out + "#define _CRT_SECURE_NO_WARNINGS\n#include <windows.h>\n#include <stdio.h>\n#include <stdlib.h>"
+	out = out + "int main(int c,char**v){HANDLE j=CreateJobObjectA(0,0);JOBOBJECT_EXTENDED_LIMIT_INFORMATION info={0};"
+	out = out + "info.BasicLimitInformation.LimitFlags=0x100;info.ProcessMemoryLimit=(size_t)atoi(v[2])<<20;"
+	out = out + "if(!SetInformationJobObject(j,9,&info,sizeof(info)))return 2;HANDLE iR,iW,oR,oW;"
+	out = out + "SECURITY_ATTRIBUTES sa={sizeof(sa),0,1};CreatePipe(&iR,&iW,&sa,0);CreatePipe(&oR,&oW,&sa,0);"
+	out = out + "SetHandleInformation(iW,1,0);SetHandleInformation(oR,1,0);STARTUPINFOA si={sizeof(si)};"
+	out = out + "si.dwFlags=STARTF_USESTDHANDLES;si.hStdInput=iR;si.hStdOutput=oW;si.hStdError=oW;"
+	out = out + "PROCESS_INFORMATION pi={0};if(!CreateProcessA(v[1],0,0,0,1,0,0,0,&si,&pi))return 3;"
+	out = out + "AssignProcessToJobObject(j,pi.hProcess);CloseHandle(iR);CloseHandle(oW);"
+	out = out + ("size_t n=(size_t)strtoull(v[3],0,10);char*b=(char*)malloc(65536);memset(b,'x',65536);\n" + JobCodeTail)
+	Text.Combine(out, "\n")
+JobCodeTail Text
+	mutable out = List(Text)
+	out = out + "for(size_t w=0;w<n;){DWORD k=(DWORD)((n-w)>65536?65536:(n-w)),d=0;"
+	out = out + "if(!WriteFile(iW,b,k,&d,0))break;w+=d;}CloseHandle(iW);char bf[4096];DWORD r=0;"
+	out = out + "while(ReadFile(oR,bf,4095,&r,0)&&r>0){bf[r]=0;printf(\"%s\",bf);}WaitForSingleObject(pi.hProcess,60000);"
+	out = out + "DWORD ec=1;GetExitCodeProcess(pi.hProcess,&ec);printf(\"\\nEXIT:%lu\\n\",ec);return 0;}"
+	Text.Combine(out, "\n")

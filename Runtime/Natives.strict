@@ -19,8 +19,10 @@ Result(call Invocation) VmValue
 	(Shapes.Result(NewShape).items.First.number is 3) and (Shapes.Result(Invocation.Parsing).number is 5)
 	let name = call.MethodName
 	if name is "from"
-		let foreign = Foreign(call, types, folder)
-		return foreign.IsForeign(TypeOf(call.TypeName)) then foreign.Called else Constructed(call)
+		let type = TypeOf(call.TypeName)
+		if (type.members.Length is 1) and (type.methods.Length > 0)
+			return Foreign(call, types, folder).Constructed(type)
+		return Rounding.Single.Built(type, call, value)
 	if name is in ("to", "Code")
 		return name is "to" then Converted(call.Instance, call.ReturnType) else VmValue.OfText(ValueCode(call.Instance).Code)
 	if name is in ("Length", "Count")
@@ -75,7 +77,7 @@ Logical(name Text, left VmValue, call Invocation) VmValue
 	if name is "not"
 		return VmValue.OfBoolean(left.IsTrue is false)
 	let right = call.Arguments.First
-	if TypeEntry.ShortName(call.TypeName) is "Number"
+	if call.TypeName.EndsWith("Number") then TypeEntry.ShortName(call.TypeName) is "Number" else false
 		return VmValue.OfNumber(Bitwise(name, left.number, right.number))
 	let isLeft = left.IsTrue
 	let isRight = right.IsTrue
@@ -151,10 +153,7 @@ Constructed(call Invocation) VmValue
 	Natives(List(TypeEntry) + Degree).Constructed(NewDegree).number is 3
 	Natives(List(TypeEntry) + Single).Constructed(NewSingle).number is 0.10000000149011612
 	Natives((Byted, Pixel)).Constructed(NewPixel).items.First.number is 127
-	let type = TypeOf(call.TypeName)
-	if (type.members.Length is 0) or (type.IsStruct is false)
-		return Rounding.Single.Wrapped(type, call)
-	VmValue(call.TypeName, 0, "", Rounding.Single.Members(type, call, value))
+	Rounding.Single.Built(TypeOf(call.TypeName), call, value)
 Fresh(type TypeEntry) VmValue
 	Shapes.Keyed("in", Pairs, List(VmValue) + VmValue.OfNumber(2)) is VmValue.TrueValue
 	Shapes.Keyed("in", Pairs, List(VmValue) + VmValue.OfNumber(7)) is VmValue.FalseValue
@@ -175,7 +174,7 @@ Constructed(type TypeEntry, finished List(VmValue)) VmValue
 	let natives = value
 	mutable values = List(Mutable(VmValue))
 	for type.members
-		values.Add(Rounding(Rounding.Single.Bits(value, natives)).Of(finished(Frame.MembersSlot + index)))
+		values.Add(Rounding.Single.RoundedValue(value, finished(Frame.MembersSlot + index), natives))
 	let built = VmValue(type.Name, 0, "", values)
 	let changed = result.kind is "Changing" then result.items.Slice(1, result.items.Length - 1) else List(VmValue)
 	changed.Length is 0 then built else VmValue(result, items = (List(VmValue) + built) + changed)
