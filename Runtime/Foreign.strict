@@ -25,7 +25,7 @@ Called VmValue
 	let failure = library.Failure(bits)
 	failure is "" then Converted(library, method.returnType, bits) else VmValue.OfError(failure)
 Constructed(type TypeEntry) VmValue
-	Adding.Constructed(Adder).kind is "Strict/Error"
+	Adding.Constructed(Adder) is Adding.Called
 	IsForeign(type) then Called else Rounding.Single.Built(type, call, Natives(types, folder), type.IsStruct)
 Built(type TypeEntry) Text
 	Adding.Built(Framing).StartsWith("TraitHasNoImplementation: Frame.Add has no body")
